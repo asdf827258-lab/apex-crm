@@ -11,12 +11,16 @@ jobs:
     env:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
     steps:
-      - name: 토큰으로 접근 가능한 Netlify 사이트 목록
+      - name: 토큰으로 접근 가능한 Netlify 사이트 (API 직접 호출)
         run: |
           if [ -z "$NETLIFY_AUTH_TOKEN" ]; then
             echo "NO_TOKEN: NETLIFY_AUTH_TOKEN 시크릿이 비어 있습니다."
             exit 0
           fi
-          echo "=== 이 토큰이 접근 가능한 사이트 (id | name | url) ==="
-          npx --yes netlify-cli@latest api listSites 2>/dev/null | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const a=JSON.parse(d);if(!a.length){console.log("(사이트 없음 — 토큰이 다른 계정일 수 있음)");}a.forEach(s=>console.log((s.id||"?")+" | "+(s.name||"?")+" | "+(s.ssl_url||s.url||"?")))}catch(e){console.log("PARSE_ERR:",String(d).slice(0,300))}})'
-          echo "=== 끝 ==="
+          echo "=== HTTP 상태 확인 ==="
+          curl -sS -o /tmp/sites.json -w "HTTP %{http_code}\n" \
+            -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
+            "https://api.netlify.com/api/v1/sites?per_page=100"
+          echo "=== 접근 가능한 사이트 (id | name | url) ==="
+          node -e 'const d=require("fs").readFileSync("/tmp/sites.json","utf8");try{const a=JSON.parse(d);if(!Array.isArray(a)){console.log("RESP:",d.slice(0,400));process.exit(0)}if(!a.length){console.log("(사이트 0개 — 이 토큰은 다른 Netlify 계정일 가능성)")}a.forEach(s=>console.log((s.id||s.site_id||"?")+" | "+(s.name||"?")+" | "+(s.ssl_url||s.url||"?")))}catch(e){console.log("PARSE_ERR:",d.slice(0,400))}'
+          echo "=== 코드에 넣은 사이트(358d3c54...)가 위 목록에 있는지 확인하세요 ==="
