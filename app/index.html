@@ -2057,7 +2057,8 @@ var TABS=[
    {id:'biz_tax',icon:'🧾',title:'세금컨설팅',cnt:''},
    {id:'biz_ins',icon:'☂️',title:'보험 솔루션',cnt:''},
    {id:'biz_retire',icon:'🪙',title:'퇴직금 관리',cnt:''},
-   {id:'biz_staff',icon:'👥',title:'직원관리',cnt:''}
+   {id:'biz_staff',icon:'👥',title:'직원관리',cnt:''},
+   {id:'biz_news',icon:'📰',title:'정책·상품 뉴스',cnt:''}
  ]},
  {group:'상담 AI 코치',items:[
    {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''},
@@ -7956,7 +7957,7 @@ function bizRecalc(){
 /* ── 상단 바(고객 선택 + 서브내비) ─────────────────────────────────────── */
 var BIZ_TABS=[
  {id:'biz_diag',ic:'🧭',t:'사업자 진단'},{id:'biz_fund',ic:'🏦',t:'정책자금'},{id:'biz_tax',ic:'🧾',t:'세금컨설팅'},
- {id:'biz_ins',ic:'☂️',t:'보험 솔루션'},{id:'biz_retire',ic:'🪙',t:'퇴직금 관리'},{id:'biz_staff',ic:'👥',t:'직원관리'}
+ {id:'biz_ins',ic:'☂️',t:'보험 솔루션'},{id:'biz_retire',ic:'🪙',t:'퇴직금 관리'},{id:'biz_staff',ic:'👥',t:'직원관리'},{id:'biz_news',ic:'📰',t:'정책·상품 뉴스'}
 ];
 function bizClientBar(){
   var opts=BIZ.clients.map(function(c){return '<option value="'+osEsc(c.id)+'"'+(c.id===BIZ.curId?' selected':'')+'>'+osEsc(bizClientLabel(c))+'</option>';}).join('');
@@ -8057,6 +8058,7 @@ function renderBiz(tab){
   if(tab==='biz_ins')return renderBizInsure();
   if(tab==='biz_retire')return renderBizRetire();
   if(tab==='biz_staff')return renderBizStaff();
+  if(tab==='biz_news')return renderBizNews();
   return renderBizDiag();
 }
 
@@ -8324,6 +8326,72 @@ function bizStaffBody(){
 }
 
 /* ── 스타일 주입 ─────────────────────────────────────────────────────────── */
+/* ══════════════ 7) 정책·절세상품 뉴스 (biz_news) ══════════════
+   청년저축 · 국가지원 · ISA · IRP · 연금저축펀드
+   ── 이 BIZ_NEWS 블록은 매월 자동 점검 Routine이 최신화합니다.
+   ── 값 변경 시 asOf(YYYY-MM)와 각 item.date/url을 함께 갱신하세요.
+   @auto-update:BIZ_NEWS start */
+var BIZ_NEWS={
+  asOf:'2026-07',
+  topics:[
+   {id:'youth',ic:'🌱',title:'청년저축 (청년도약계좌)',
+    overview:['대상: (기존 가입자) 만 19~34세, 개인소득 총급여 7,500만원 이하·가구 중위소득 250% 이하',
+              '구조: 월 최대 70만원 × 5년, 소득구간별 정부기여금(월 최대 3.3만원 매칭) + 이자소득 비과세',
+              '만기 수령: 약 5,000만원 목돈 형성(납입·수익률에 따라 상이)'],
+    items:[
+     {date:'2025-12',tag:'종료',title:'청년도약계좌 신규 가입 종료',desc:'신규 가입 접수가 2025년 12월로 종료. 기존 가입자는 5년 만기까지 정부기여금·비과세 혜택 유지. 후속 "청년미래적금" 갈아타기 논의가 진행 중.',url:'https://kbthink.com/youth-guide/youth-future-savings.html'}
+    ]},
+   {id:'gov',ic:'🏛️',title:'국가지원 (정부지원제도)',
+    overview:['국민내일배움카드: 구직자·재직자·자영업자 직업훈련비 지원(5년 300~500만원)',
+              '근로장려금(EITC): 저소득 근로·사업소득 가구 현금 지원',
+              '국민취업지원제도: 1유형(중위 60% 이하) 구직촉진수당·취업지원'],
+    items:[
+     {date:'2026',tag:'개편',title:'국민내일배움카드 2026 개편',desc:'특화훈련 자기부담금(최대 10%, 상한 60만원) 신설, KDT·산업구조변화대응 훈련장려금 월 11.6만→20만원 인상. 취약계층 지원 확대.',url:'https://grantinfo.co.kr/national-learning-card-2026-guide/'}
+    ]},
+   {id:'isa',ic:'💼',title:'ISA (개인종합자산관리계좌)',
+    overview:['절세계좌: 순이익에 대해 비과세 + 초과분 9.9% 분리과세, 손익통산',
+              '유형: 일반형 / 서민형 / (신설 예정) 청년형·국민성장 ISA',
+              '만기 후 연금계좌 이전 시 추가 세액공제 연계 가능'],
+    items:[
+     {date:'2026',tag:'개정예정',title:'ISA 납입한도·비과세 대폭 확대(개정 진행)',desc:'연 납입한도 2,000만→4,000만원(총 2억), 비과세 한도 일반형 200만→500만·서민형 400만→1,000만원. 1인 1계좌 규제 폐지 논의. ※ 조세특례제한법 개정 통과가 전제 — 확정 전 국회 진행 확인 필요.',url:'https://www.fsc.go.kr/po020201/27339'}
+    ]},
+   {id:'irp',ic:'🪺',title:'IRP (개인형퇴직연금)',
+    overview:['세액공제: 연금저축과 합산 연 900만원(IRP 단독 900만원까지 가능)',
+              '납입한도: 연 1,800만원(연금저축·퇴직연금 합산)',
+              '공제율: 총급여 5,500만원 이하 16.5% / 초과 13.2%(지방세 포함) → 최대 환급 148.5만원'],
+    items:[
+     {date:'2026',tag:'유지',title:'2026 세액공제 한도·공제율 유지',desc:'연금저축+IRP 합산 900만원 세액공제 한도와 16.5%/13.2% 공제율은 2025년과 동일하게 유지. 중도인출 제한·연금 수령 요건 유의.',url:'https://www.kick-off.co.kr/6425'}
+    ]},
+   {id:'pension',ic:'📈',title:'연금저축펀드',
+    overview:['증권사에서 가입하는 연금저축 = 연금저축펀드(펀드·ETF 운용)',
+              '세액공제: 단독 600만원(최대 99만원), IRP 합산 900만원(최대 148.5만원)',
+              '납입한도 연 1,800만원 · 공제율 16.5%/13.2% · 낮은 수수료·상품 자유도'],
+    items:[
+     {date:'2026',tag:'유지',title:'2026 한도·공제율 2025와 동일',desc:'연금저축펀드 단독 600만원 공제 한도와 공제율 유지. 연금저축 600만원 우선 납입 후 IRP 300만원 추가가 일반적 절세 전략.',url:'https://www.qbr.co.kr/retirement-calc/tax-deduction/'}
+    ]}
+  ]
+};
+/* @auto-update:BIZ_NEWS end */
+function bizNewsTag(t){ var m={'종료':'r','개정예정':'a','개편':'a','유지':'g'}; return m[t]||'n'; }
+function renderBizNews(){
+  var n=BIZ_NEWS;
+  var body=n.topics.map(function(tp){
+    var ov='<ul class="biz-news-ov">'+tp.overview.map(function(o){return '<li>'+osEsc(o)+'</li>';}).join('')+'</ul>';
+    var items=tp.items.map(function(it){
+      return '<div class="biz-news-item"><div class="hd"><span class="biz-news-tag '+bizNewsTag(it.tag)+'">'+osEsc(it.tag)+'</span>'+
+        '<span class="dt">'+osEsc(it.date)+'</span><span class="ti">'+osEsc(it.title)+'</span></div>'+
+        '<div class="ds">'+osEsc(it.desc)+'</div>'+
+        (it.url?'<a class="btn btn-ghost" href="'+osEsc(it.url)+'" target="_blank" rel="noopener">출처·자세히 ↗</a>':'')+'</div>';
+    }).join('');
+    return '<div class="rpt-sec"><div class="hd"><span class="n">'+tp.ic+'</span>'+osEsc(tp.title)+'</div>'+
+      '<div class="biz-news-ovwrap">'+ov+'</div>'+items+'</div>';
+  }).join('');
+  var head='<div class="biz-news-top"><span>🗓 최종 점검: <b>'+osEsc(n.asOf)+'</b></span><span class="biz-news-auto">🔄 매월 자동 점검</span></div>';
+  return osPage('제도·상품','정책·절세상품 뉴스','청년저축·국가지원·ISA·IRP·연금저축펀드의 최신 제도 변경을 한곳에서 봅니다. 매월 자동 점검으로 갱신되며, 개정 진행 중 항목은 확정 전 국회·공식 공고를 확인하세요.',
+    bizTabsBar('biz_news')+head+body+
+    bizDisc('본 내용은 '+osEsc(n.asOf)+' 기준 <b>참고용 요약</b>이며 특정 상품 가입 권유가 아닙니다. "개정예정"으로 표시된 항목은 법 개정(예: 조세특례제한법) 통과가 전제이므로 확정 전 국회 진행과 공식 공고(기획재정부·금융위원회·국세청)를 확인하세요. 한도·요건·세율은 시행연도·개인 상황에 따라 달라지며, 실제 가입·절세는 세무사 등 전문가 확인이 필요합니다.'));
+}
+
 (function bizInjectStyle(){
   if(typeof document==='undefined')return;
   if(document.getElementById('bizStyle'))return;
@@ -8380,7 +8448,17 @@ function bizStaffBody(){
    '.biz-aiout{border:1px solid #E5E9F0;border-radius:12px;overflow:hidden;margin-top:4px}',
    '.biz-aiout-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 12px;background:#F5F9FF;border-bottom:1px solid #E5E9F0}',
    '.biz-aiout-hd>span:first-child{font-size:12px;font-weight:800;color:#1A56DB}',
-   '.biz-aiout .rpt-body{padding:14px 16px}'
+   '.biz-aiout .rpt-body{padding:14px 16px}',
+   '.biz-news-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#F5F9FF;border:1px solid #E5E9F0;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#374151}',
+   '.biz-news-auto{font-size:11px;font-weight:800;color:#15803D;background:#F0FDF4;border:1px solid #DCFCE7;border-radius:999px;padding:3px 10px}',
+   '.biz-news-ovwrap{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:4px 6px;margin-bottom:10px}',
+   '.biz-news-ov{margin:0;padding:8px 8px 8px 24px}.biz-news-ov li{font-size:12px;color:#374151;line-height:1.6;margin:2px 0}',
+   '.biz-news-item{border:1px solid #E5E9F0;border-radius:11px;padding:11px 13px;margin-bottom:8px;background:#fff}',
+   '.biz-news-item .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}',
+   '.biz-news-item .dt{font-size:11px;color:#9AA2AD;font-weight:700}.biz-news-item .ti{font-size:13px;font-weight:800;color:#1C2434}',
+   '.biz-news-item .ds{font-size:12px;color:#4B5563;line-height:1.6;margin-bottom:8px}',
+   '.biz-news-tag{font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;white-space:nowrap}',
+   '.biz-news-tag.r{background:#FEF2F2;color:#B91C1C}.biz-news-tag.a{background:#FFFBEB;color:#B45309}.biz-news-tag.g{background:#F0FDF4;color:#15803D}.biz-news-tag.n{background:#F1F5F9;color:#475569}'
   ].join('');
   document.head.appendChild(s);
 })();
