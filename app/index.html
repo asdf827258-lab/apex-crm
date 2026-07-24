@@ -7729,32 +7729,39 @@ function osToggleRule(rid,on){
 
 /* ════════ 법인·사업자 컨설팅 모듈 (자동 삽입) ════════ */
 /* ══════════════════════════════════════════════════════════════════════════
-   법인·사업자 컨설팅 모듈 (biz_*)
+   법인·사업자 컨설팅 모듈 (biz_*)  v2
    개인/법인 진단 · 정책자금 · 세금컨설팅 · 보험솔루션 · 퇴직금 · 직원관리
-   - 로컬 우선(localStorage: apex_biz), 로그인 불필요(TreatPay·Wallets 패턴)
+   - 다중 사업자(고객사) 관리: 여러 사업자를 저장하고 전환
+   - 로컬 우선(localStorage: apex_biz) + 로그인 시 Supabase(business_clients) 동기화
    - 결정형 계산(퇴직금·4대보험·세금 개산·정책자금 매칭)은 AI 없이 동작
    - 상담자료 생성은 기존 callClaude 재사용(준법 면책 포함)
-   - 제도값(요율/세율/한도)은 BIZ_RATES에 시행연도와 함께 보관(하드코딩 경고 · 매년 확인)
+   - 제도값(요율/세율/한도)은 BIZ_RATES에 시행연도와 함께 보관(매년 확인 필요)
    ══════════════════════════════════════════════════════════════════════════ */
 
 /* ── 제도값(버전형) — 시행연도 표기, 매년 공식자료로 확인 필요 ─────────────── */
 var BIZ_RATES={
   asOf:'2025',
-  ins:{ np:0.045, health:0.03545, ltc:0.1295, ei:0.0115, wc:0.007 }, /* 사업주 부담 요율(개산). 국민연금4.5·건강3.545·장기요양(건보료의12.95%)·고용~1.15·산재 업종평균0.7 */
-  corpTax:[[20000,0.09],[2000000,0.19],[30000000,0.21],[Infinity,0.24]], /* 과표(만원),세율 · 지방소득세10% 별도 */
-  incomeTax:[ /* 종합소득세 과표(만원),세율,누진공제(만원) · 지방소득세10% 별도 */
+  ins:{ np:0.045, health:0.03545, ltc:0.1295, ei:0.0115, wc:0.007 }, /* 사업주 부담 요율(개산) */
+  corpTax:[[20000,0.09],[2000000,0.19],[30000000,0.21],[Infinity,0.24]], /* 과표(만원),세율 · 지방세10% 별도 */
+  incomeTax:[ /* 종합소득세 과표(만원),세율,누진공제(만원) · 지방세10% 별도 */
     [1400,0.06,0],[5000,0.15,126],[8800,0.24,576],[15000,0.35,1544],
     [30000,0.38,1994],[50000,0.40,2594],[100000,0.42,3594],[Infinity,0.45,6594]
   ],
   garizipRate:0.046, /* 가지급금 인정이자 기준(당좌대출이자율) 4.6% */
-  execMultipleCap:2  /* 2020.1.1 이후 근속분 임원퇴직금 지급배수 손금 상한(정관 규정 필요) */
+  execMultipleCap:2  /* 2020.1.1 이후 근속분 임원퇴직금 지급배수 손금 상한 */
 };
 
-/* ── 정책자금 데이터베이스(요약) — 조건·한도·금리는 매년/수시 변경, 공식사이트 확인 ─── */
+/* ── 정책자금 데이터베이스(요약) — 조건·한도·금리는 수시 변경, 공식사이트 확인 ─── */
 var BIZ_FUNDS=[
  {id:'kosmes_startup',name:'창업기업지원자금',org:'중소벤처기업진흥공단(중진공)',url:'https://www.kosmes.or.kr',
-  target:'업력 7년 미만 중소기업(예비창업 포함)',use:'창업 초기 운전·시설자금',limit:'기업당 연간 최대 5~6억원 내외(운전은 별도 한도)',rate:'정책자금 기준금리 연동(변동)',
+  target:'업력 7년 미만 중소기업(예비창업 포함)',use:'창업 초기 운전·시설자금',limit:'기업당 연간 최대 5~6억원 내외',rate:'정책자금 기준금리 연동(변동)',
   merit:'낮은 정책금리·장기 분할상환, 창업 초기 신용부족 보완',tags:['startup','sme']},
+ {id:'kosmes_youth',name:'청년전용 창업자금',org:'중소벤처기업진흥공단(중진공)',url:'https://www.kosmes.or.kr',
+  target:'만 39세 이하 대표, 업력 3년 미만',use:'청년 창업 운전·시설',limit:'기업당 최대 1억원 내외',rate:'저리 고정(정책)',
+  merit:'청년 창업자 우대·교육 연계, 신용 문턱 완화',tags:['startup','youth','sme']},
+ {id:'kosmes_urgent',name:'긴급경영안정자금',org:'중소벤처기업진흥공단(중진공)',url:'https://www.kosmes.or.kr',
+  target:'재해·매출급감 등 일시적 경영애로 중소기업',use:'긴급 운전자금',limit:'기업당 최대 10억원 내외(사유별)',rate:'정책자금 기준금리 연동',
+  merit:'재해·거래처 부도 등 급격한 애로 시 신속 지원',tags:['established','sme']},
  {id:'kosmes_growth',name:'신성장기반자금',org:'중소벤처기업진흥공단(중진공)',url:'https://www.kosmes.or.kr',
   target:'업력 7년 이상 성장기 중소기업',use:'생산성 향상·시설 투자',limit:'시설자금 중심 대규모 한도',rate:'정책자금 기준금리 연동(변동)',
   merit:'설비·공장 등 시설 투자 장기 저리 조달',tags:['established','sme']},
@@ -7762,8 +7769,11 @@ var BIZ_FUNDS=[
   target:'소상공인(제조·건설·운수 10인 미만 / 그 외 5인 미만)',use:'경영 안정 운전자금',limit:'업체당 최대 7천만원 내외',rate:'소상공인 정책금리(변동)',
   merit:'담보력 약한 소상공인 저리 운전자금, 직접·대리대출',tags:['small','sole']},
  {id:'semas_growth',name:'소상공인 성장기반자금',org:'소상공인시장진흥공단(소진공)',url:'https://ols.semas.or.kr',
-  target:'성장 가능성 있는 소상공인·스마트화 사업장',use:'시설 현대화·스마트기기 도입',limit:'최대 2억원 내외',rate:'소상공인 정책금리(변동)',
+  target:'성장 가능성 있는 소상공인·스마트 사업장',use:'시설 현대화·스마트기기 도입',limit:'최대 2억원 내외',rate:'소상공인 정책금리(변동)',
   merit:'시설 개선·스마트상점 등 성장 투자 지원',tags:['small','sole']},
+ {id:'semas_retry',name:'재도전 특별자금',org:'소상공인시장진흥공단(소진공)',url:'https://ols.semas.or.kr',
+  target:'재창업·저신용 소상공인',use:'재창업 운전·시설',limit:'업체당 정책 한도',rate:'저신용 우대 정책금리',
+  merit:'폐업 후 재도전·저신용층 자금 접근성 확보',tags:['small','sole']},
  {id:'kodit',name:'신용보증서 발급',org:'신용보증기금(신보)',url:'https://www.kodit.co.kr',
   target:'담보력이 부족한 중소기업',use:'운전·시설 대출을 위한 보증',limit:'기업 규모·매출 기준 보증한도',rate:'보증료(연 0.5~2%대) + 은행 대출금리',
   merit:'담보 없이 은행 대출 가능(보증서 담보), 창업·성장기 자금조달',tags:['sme','guarantee']},
@@ -7775,25 +7785,28 @@ var BIZ_FUNDS=[
   merit:'지역 소상공인 문턱 낮은 보증, 지자체 이차보전 연계',tags:['small','sole','guarantee']},
  {id:'duru',name:'두루누리 사회보험료 지원',org:'근로복지공단·고용노동부',url:'https://www.insurancesupport.or.kr',
   target:'근로자 10인 미만 사업, 월보수 일정액 미만 근로자',use:'국민연금·고용보험료 지원',limit:'근로자·사업주 보험료의 일부 지원',rate:'해당 없음(보험료 지원)',
-  merit:'저임금 근로자 4대보험 부담 완화, 직원 채용 유지에 유리',tags:['employer','small']},
+  merit:'저임금 근로자 4대보험 부담 완화, 채용 유지에 유리',tags:['employer','small']},
  {id:'local_fund',name:'지자체 중소기업 육성자금(이차보전)',org:'관할 시·도/시·군·구',url:'https://www.bizinfo.go.kr',
   target:'관할 지역 소재 중소기업·소상공인',use:'운전·시설자금 이차보전',limit:'지자체 예산·업체 규모 기준',rate:'대출금리 중 일부를 지자체가 보전(실부담↓)',
-  merit:'거주·소재 지자체별 이자 부담 경감, 지역 특화 우대',tags:['sole','sme','small']}
+  merit:'소재 지자체별 이자 부담 경감, 지역 특화 우대',tags:['sole','sme','small']}
 ];
 
 /* ── 세금(절세) 체크리스트 — 개인/법인 ──────────────────────────────────── */
 var BIZ_TAX_ITEMS=[
  {kind:'corp',title:'대표이사 급여·상여 적정화',desc:'급여는 법인 손금이지만 근로소득세·4대보험이 붙는다. 법인세율과 대표 개인세율의 균형점에서 급여/상여/배당 비중을 설계한다.',flag:'핵심'},
- {kind:'corp',title:'가지급금 정리',desc:'대표가 법인에서 명목 없이 인출한 돈. 매년 인정이자(익금산입)·대손 불인정·폐업 시 상여처분 위험. 급여·배당·퇴직금·자기주식 등으로 단계적 정리.',flag:'위험'},
+ {kind:'corp',title:'가지급금 정리',desc:'대표가 명목 없이 인출한 돈. 매년 인정이자(익금)·대손 불인정·폐업 시 상여처분 위험. 급여·배당·퇴직금·자기주식 등으로 단계적 정리.',flag:'위험'},
  {kind:'corp',title:'임원 퇴직금 정관 규정 정비',desc:'임원 퇴직금은 정관(또는 위임 규정)에 지급배수가 명시돼야 손금. 2020년 이후 근속분은 배수 2배 상한. 규정 없으면 과다 지급분 손금부인.',flag:'핵심'},
  {kind:'corp',title:'배당 정책 설계',desc:'유보이익을 배당으로 분산하면 가지급금·상속재원 관리에 유리하나, 개인별 금융소득 2천만원 초과 시 종합과세. 가족 주주 배분·시기 분산 검토.',flag:''},
+ {kind:'corp',title:'중소기업 특별세액감면',desc:'업종·지역·규모 요건 충족 시 산출세액의 일정률을 감면. 요건과 최저한세를 확인해 누락 없이 적용.',flag:''},
+ {kind:'corp',title:'통합투자·R&D 세액공제',desc:'사업용 자산 투자(통합투자세액공제)와 연구·인력개발비 세액공제는 절세 폭이 크다. 증빙·전담부서 요건을 갖춰 사전 관리.',flag:''},
  {kind:'corp',title:'접대비·복리후생비 한도 관리',desc:'접대비(기업업무추진비)는 매출 규모별 한도 초과분 손금부인. 적격증빙(법인카드) 관리로 손금 확보.',flag:''},
  {kind:'corp',title:'가업승계·증여 특례 사전 설계',desc:'가업상속공제·증여세 과세특례는 요건(업력·고용유지·사후관리)이 엄격. 대표 생전에 지분 이전 로드맵을 미리 설계.',flag:''},
  {kind:'sole',title:'법인전환 시점 검토',desc:'사업소득이 커지면 개인 종합소득세(최대 45%)보다 법인세(9~24%)+급여/배당이 유리해지는 구간이 생긴다. 이익 규모·재투자 여부로 전환 시점 판단.',flag:'핵심'},
  {kind:'sole',title:'노란우산공제 가입',desc:'소기업·소상공인 공제. 납입액 연 최대 500만원 소득공제(사업소득 규모별 한도) + 폐업 시 퇴직금 성격 수령 + 압류 보호.',flag:'핵심'},
+ {kind:'sole',title:'창업중소기업 세액감면',desc:'수도권 외 지역·청년 창업 등 요건 충족 시 소득세를 일정 기간 감면. 창업 유형·지역·연령 요건을 확인.',flag:''},
  {kind:'sole',title:'성실신고확인 대상 관리',desc:'업종별 수입금액 기준 초과 시 성실신고확인 대상. 확인비용 세액공제·신고 일정 관리, 사전 경비·증빙 정비 필요.',flag:''},
- {kind:'sole',title:'적격증빙·경비 처리',desc:'세금계산서·현금영수증·사업용카드 등 적격증빙으로 필요경비 인정. 사업용 계좌·카드 분리로 경비 누락 방지.',flag:''},
- {kind:'sole',title:'연금계좌·기부금 등 소득공제',desc:'연금저축·IRP 세액공제(연 최대 납입한도), 기부금·노란우산 등 개인 종합소득 공제 항목 점검.',flag:''},
+ {kind:'sole',title:'복식부기·사업용계좌',desc:'복식부기 의무자는 장부·사업용 계좌/카드 분리가 필수. 미이행 시 가산세, 경비 누락으로 세부담 증가.',flag:''},
+ {kind:'sole',title:'연금계좌·기부금 등 소득공제',desc:'연금저축·IRP 세액공제(연 납입한도), 기부금·노란우산 등 개인 종합소득 공제 항목 점검.',flag:''},
  {kind:'both',title:'4대보험 최적화',desc:'대표 급여 수준이 국민연금·건강보험료를 좌우한다. 급여/배당 비중, 피부양자 요건, 소득월액 보험료를 함께 점검.',flag:''}
 ];
 
@@ -7807,31 +7820,84 @@ var BIZ_INS_SOL=[
  {id:'income',title:'대표 소득·유족 보장',kind:'both',purpose:'대표 개인의 소득 중단·유족 생활 보장',need:'대표 나이·가족·개인부채',note:'법인 리스크와 별개로 대표 가정의 안전판 설계.'}
 ];
 
-/* ── 상태 ──────────────────────────────────────────────────────────────── */
-var BIZ={
-  profile:{ kind:'corp', bizName:'', ceoName:'', ceoAge:'', industry:'제조', foundYear:'',
-            revenue:'', profit:'', ceoSalary:'', empCount:'', assets:'', debt:'',
-            garizip:'', retireReserve:'', credit:'보통' },
-  staff:[],
-  ai:{}
-};
-function bizLoad(){
-  try{var m=JSON.parse(localStorage.getItem('apex_biz')||'{}');
-    if(m.profile){for(var k in m.profile){if(m.profile.hasOwnProperty(k))BIZ.profile[k]=m.profile[k];}}
-    if(m.staff&&m.staff.length)BIZ.staff=m.staff;
-    if(m.ai)BIZ.ai=m.ai;
-  }catch(e){}
+/* ══════════════ 상태: 다중 사업자 ══════════════ */
+var BIZ={ clients:[], curId:'', profile:null, staff:null, ai:null, _seq:0 };
+var BIZR={ pay:'', join:'', end:'', bonus:'', leave:'', execAvg:'', execYears:'', execMul:'2' };
+
+function bizDefaultProfile(){ return { kind:'corp', bizName:'', ceoName:'', ceoAge:'', industry:'제조', foundYear:'',
+  revenue:'', profit:'', ceoSalary:'', empCount:'', assets:'', debt:'', garizip:'', retireReserve:'', credit:'보통' }; }
+function bizMergeProfile(p){ var d=bizDefaultProfile(); if(p){for(var k in d){if(d.hasOwnProperty(k)&&p[k]!=null)d[k]=p[k];}} return d; }
+function bizUuid(){
+  try{ if(typeof crypto!=='undefined'&&crypto.randomUUID)return crypto.randomUUID(); }catch(e){}
+  var s='xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'; BIZ._seq++;
+  return s.replace(/[xy]/g,function(ch){ var r=(Math.floor(Math.random()*16)+BIZ._seq)%16; var v=ch==='x'?r:(r&0x3|0x8); return v.toString(16); });
 }
-function bizSave(){try{localStorage.setItem('apex_biz',JSON.stringify({profile:BIZ.profile,staff:BIZ.staff,ai:BIZ.ai}));}catch(e){}}
+function bizNewClient(name){ return { id:bizUuid(), name:name||'새 사업자', profile:bizDefaultProfile(), staff:[], ai:{}, updated:(new Date()).getTime() }; }
+function bizCur(){ for(var i=0;i<BIZ.clients.length;i++){if(BIZ.clients[i].id===BIZ.curId)return BIZ.clients[i];} return BIZ.clients[0]; }
+function bizPoint(){ var c=bizCur(); if(c){BIZ.profile=c.profile;BIZ.staff=c.staff;BIZ.ai=c.ai;} }
+function bizLoad(){
+  BIZ.clients=[];
+  try{ var raw=JSON.parse(localStorage.getItem('apex_biz')||'{}');
+    if(raw.clients&&raw.clients.length){
+      BIZ.clients=raw.clients.map(function(c){return {id:c.id||bizUuid(),name:c.name||'사업자',profile:bizMergeProfile(c.profile),staff:c.staff||[],ai:c.ai||{},updated:c.updated||0};});
+      BIZ.curId=raw.curId||BIZ.clients[0].id;
+    }else if(raw.profile){ /* v1 단일 프로필 → 마이그레이션 */
+      var c=bizNewClient(raw.profile.bizName||'내 사업자'); c.profile=bizMergeProfile(raw.profile); c.staff=raw.staff||[]; c.ai=raw.ai||{};
+      BIZ.clients=[c]; BIZ.curId=c.id;
+    }
+  }catch(e){}
+  if(!BIZ.clients.length){ var c0=bizNewClient('내 사업자'); BIZ.clients=[c0]; BIZ.curId=c0.id; }
+  if(!bizCur())BIZ.curId=BIZ.clients[0].id;
+  bizPoint();
+}
+function bizSaveLocal(){ var c=bizCur(); if(c)c.updated=(new Date()).getTime(); try{localStorage.setItem('apex_biz',JSON.stringify({clients:BIZ.clients,curId:BIZ.curId}));}catch(e){} }
+function bizSave(){ bizSaveLocal(); }
+
+/* ── 사업자(고객사) 관리 ─────────────────────────────────────────────── */
+function bizClientLabel(c){ return (c.profile&&c.profile.bizName)?c.profile.bizName:(c.name||'사업자'); }
+function bizSwitch(id){ BIZ.curId=id; bizPoint(); bizSaveLocal(); go(lastTab); }
+function bizAddClient(){ var n=(typeof window!=='undefined'&&window.prompt)?window.prompt('새 사업자(고객사) 이름','새 사업자'):'새 사업자'; if(n===null)return; var c=bizNewClient((n||'').trim()||'새 사업자'); BIZ.clients.push(c); BIZ.curId=c.id; bizPoint(); bizSaveLocal(); toast('사업자를 추가했습니다.'); go(lastTab); }
+function bizRenameClient(){ var c=bizCur(); if(!c)return; var n=(typeof window!=='undefined'&&window.prompt)?window.prompt('사업자 이름',bizClientLabel(c)):null; if(n===null)return; c.name=(n||'').trim()||c.name; bizSaveLocal(); go(lastTab); }
+function bizDeleteClient(){ if(BIZ.clients.length<=1){toast('최소 1개 사업자가 필요합니다.');return;} if(typeof window!=='undefined'&&window.confirm&&!window.confirm('현재 사업자와 관련 입력을 삭제할까요?'))return; var del=BIZ.curId; BIZ.clients=BIZ.clients.filter(function(x){return x.id!==del;}); BIZ.curId=BIZ.clients[0].id; bizPoint(); bizSaveLocal(); if(bizServerReady()){var sb=osClient();if(sb)sb.from('business_clients').delete().eq('id',del).then(function(){},function(){});} toast('사업자를 삭제했습니다.'); go(lastTab); }
+
+/* ── Supabase 동기화(로그인 시) ──────────────────────────────────────── */
+function bizServerReady(){ try{ return typeof osClient==='function' && !!osClient() && typeof OS!=='undefined' && OS && !!OS.profile; }catch(e){ return false; } }
+function bizCloudPush(){
+  if(!bizServerReady()){toast('로그인 후 서버 저장이 가능합니다.');return;}
+  var sb=osClient(), c=bizCur();
+  sb.from('business_clients').upsert({id:c.id,name:bizClientLabel(c),data:{profile:c.profile,staff:c.staff,ai:c.ai}},{onConflict:'id'}).then(function(r){
+    if(r&&r.error){toast('서버 저장 실패: '+r.error.message);return;}
+    if(typeof osAudit==='function')try{osAudit('biz_cloud_push','business_client',c.id,{});}catch(e){}
+    toast('☁ 서버에 저장했습니다.');
+  });
+}
+function bizCloudPushAll(){
+  if(!bizServerReady()){toast('로그인 후 서버 저장이 가능합니다.');return;}
+  var sb=osClient();
+  var rows=BIZ.clients.map(function(c){return {id:c.id,name:bizClientLabel(c),data:{profile:c.profile,staff:c.staff,ai:c.ai}};});
+  sb.from('business_clients').upsert(rows,{onConflict:'id'}).then(function(r){
+    if(r&&r.error){toast('서버 저장 실패: '+r.error.message);return;}
+    toast('☁ 전체 '+rows.length+'개 사업자를 서버에 저장했습니다.');
+  });
+}
+function bizCloudPull(){
+  if(!bizServerReady()){toast('로그인 후 이용 가능합니다.');return;}
+  var sb=osClient();
+  sb.from('business_clients').select('id,name,data,updated_at').order('updated_at',{ascending:false}).then(function(r){
+    if(r&&r.error){toast('불러오기 실패: '+r.error.message);return;}
+    var data=r.data||[]; if(!data.length){toast('서버에 저장된 사업자가 없습니다.');return;}
+    BIZ.clients=data.map(function(row){var d=row.data||{};return {id:row.id,name:row.name||'사업자',profile:bizMergeProfile(d.profile),staff:(d.staff||[]),ai:(d.ai||{}),updated:0};});
+    BIZ.curId=BIZ.clients[0].id; bizPoint(); bizSaveLocal(); toast('⬇ 서버에서 '+data.length+'개 사업자를 불러왔습니다.'); go(lastTab);
+  });
+}
 
 /* ── 유틸 ──────────────────────────────────────────────────────────────── */
 function bizNum(x){ if(typeof x==='number')return isFinite(x)?x:0; var n=parseFloat((''+(x==null?'':x)).replace(/[^0-9.\-]/g,'')); return isFinite(n)?n:0; }
 function bizWon(man){ man=Math.round(bizNum(man)); if(typeof vizWon==='function')return vizWon(man); return man.toLocaleString('ko-KR')+'만원'; }
-function bizToday(){ return new Date(); }
 function bizParseDate(s){ if(!s)return null; var m=(''+s).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/); if(!m)return null; var d=new Date(+m[1],+m[2]-1,+m[3]); return isNaN(d.getTime())?null:d; }
 function bizYearsBetween(d1,d2){ if(!d1||!d2)return 0; return Math.max(0,(d2-d1)/86400000/365); }
 function bizFmtYears(y){ var yr=Math.floor(y); var mo=Math.round((y-yr)*12); if(mo===12){yr++;mo=0;} return yr+'년'+(mo?' '+mo+'개월':''); }
-function bizThisYear(){ return bizToday().getFullYear(); }
+function bizThisYear(){ return (new Date()).getFullYear(); }
 
 /* ── 세금 계산(개산) ──────────────────────────────────────────────────── */
 function bizCorpTax(baseMan){ baseMan=Math.max(0,bizNum(baseMan)); var br=BIZ_RATES.corpTax,tax=0,prev=0; for(var i=0;i<br.length;i++){var cap=br[i][0],rate=br[i][1]; if(baseMan>cap){tax+=(cap-prev)*rate;prev=cap;}else{tax+=(baseMan-prev)*rate;break;}} return tax; }
@@ -7842,12 +7908,12 @@ function bizEmployerInsurance(monthlyMan){ var m=Math.max(0,bizNum(monthlyMan));
 
 /* ── 퇴직금 계산 ────────────────────────────────────────────────────────── */
 function bizLegalSeverance(monthlyMan,joinDate,endDate,annualBonusMan,annualLeaveMan){
-  var d1=bizParseDate(joinDate), d2=endDate?bizParseDate(endDate):bizToday();
+  var d1=bizParseDate(joinDate), d2=endDate?bizParseDate(endDate):(new Date());
   if(!d1||!d2||d2<=d1)return {days:0,years:0,dailyAvg:0,amount:0};
   var days=Math.round((d2-d1)/86400000);
   var threeMo=bizNum(monthlyMan)*3 + bizNum(annualBonusMan)*3/12 + bizNum(annualLeaveMan)*3/12;
-  var dailyAvg=threeMo/91.3;               /* 1일 평균임금(만원) */
-  var amount=dailyAvg*30*(days/365);       /* 30일분 × 근속연수 */
+  var dailyAvg=threeMo/91.3;
+  var amount=dailyAvg*30*(days/365);
   return {days:days, years:days/365, dailyAvg:dailyAvg, amount:amount};
 }
 function bizExecRetireLimit(avg3yrAnnualMan,years,multiple){ return Math.max(0,bizNum(avg3yrAnnualMan))*0.1*Math.max(0,bizNum(years))*Math.max(0,bizNum(multiple)); }
@@ -7857,18 +7923,15 @@ function bizStaffTotals(){
   var t={count:BIZ.staff.length,payMonthly:0,insMonthly:0,severance:0,duru:0};
   for(var i=0;i<BIZ.staff.length;i++){
     var s=BIZ.staff[i], pay=bizNum(s.pay);
-    t.payMonthly+=pay;
-    t.insMonthly+=bizEmployerInsurance(pay).total;
-    t.severance+=bizLegalSeverance(pay,s.join,'',0,0).amount;
-    if(pay>0 && pay<270 && BIZ.staff.length<10)t.duru++;    /* 두루누리 개산 힌트: 월보수 270만원 미만 & 10인 미만 */
+    t.payMonthly+=pay; t.insMonthly+=bizEmployerInsurance(pay).total; t.severance+=bizLegalSeverance(pay,s.join,'',0,0).amount;
+    if(pay>0 && pay<270 && BIZ.staff.length<10)t.duru++;
   }
   return t;
 }
 
 /* ── 입력 위젯 ─────────────────────────────────────────────────────────── */
 function bizField(k,label,hint,type){
-  var v=BIZ.profile[k]; if(v==null)v='';
-  type=type||'number';
+  var v=BIZ.profile[k]; if(v==null)v=''; type=type||'number';
   var attr=(type==='number')?' min="0" step="1" inputmode="numeric"':'';
   return '<div class="biz-f"><label>'+osEsc(label)+(hint?' <span class="hint">'+osEsc(hint)+'</span>':'')+'</label>'+
     '<input type="'+type+'" value="'+osEsc(''+v)+'"'+attr+' onchange="bizSet(\''+k+'\',this.value)" placeholder="'+(type==='number'?'0':'')+'"></div>';
@@ -7878,8 +7941,8 @@ function bizSelect(k,label,opts){
   var o=opts.map(function(x){return '<option value="'+osEsc(x)+'"'+(x===v?' selected':'')+'>'+osEsc(x)+'</option>';}).join('');
   return '<div class="biz-f"><label>'+osEsc(label)+'</label><select onchange="bizSet(\''+k+'\',this.value)">'+o+'</select></div>';
 }
-function bizSet(k,v){ BIZ.profile[k]=v; bizSave(); bizRecalc(); }
-function bizSetKind(k){ BIZ.profile.kind=k; bizSave(); go(lastTab); }
+function bizSet(k,v){ BIZ.profile[k]=v; bizSaveLocal(); bizRecalc(); }
+function bizSetKind(k){ BIZ.profile.kind=k; bizSaveLocal(); go(lastTab); }
 function bizRecalc(){
   var el;
   if(el=$('bizDiagCalc'))el.innerHTML=bizDiagCalc();
@@ -7887,16 +7950,30 @@ function bizRecalc(){
   if(el=$('bizTaxCalc'))el.innerHTML=bizTaxCalc();
   if(el=$('bizInsCalc'))el.innerHTML=bizInsCalc();
   if(el=$('bizRetireCalc'))el.innerHTML=bizRetireCalc();
+  if(el=$('bizClientName'))el.textContent=bizClientLabel(bizCur());
 }
 
-/* ── 상단 서브내비 + 공용 조각 ─────────────────────────────────────────── */
+/* ── 상단 바(고객 선택 + 서브내비) ─────────────────────────────────────── */
 var BIZ_TABS=[
  {id:'biz_diag',ic:'🧭',t:'사업자 진단'},{id:'biz_fund',ic:'🏦',t:'정책자금'},{id:'biz_tax',ic:'🧾',t:'세금컨설팅'},
  {id:'biz_ins',ic:'☂️',t:'보험 솔루션'},{id:'biz_retire',ic:'🪙',t:'퇴직금 관리'},{id:'biz_staff',ic:'👥',t:'직원관리'}
 ];
-function bizTabsBar(active){
-  return '<div class="biz-tabs">'+BIZ_TABS.map(function(x){return '<button class="'+(x.id===active?'on':'')+'" onclick="go(\''+x.id+'\')">'+x.ic+' '+osEsc(x.t)+'</button>';}).join('')+'</div>';
+function bizClientBar(){
+  var opts=BIZ.clients.map(function(c){return '<option value="'+osEsc(c.id)+'"'+(c.id===BIZ.curId?' selected':'')+'>'+osEsc(bizClientLabel(c))+'</option>';}).join('');
+  var srv=bizServerReady()
+    ? '<button class="btn btn-ghost" onclick="bizCloudPush()" title="현재 사업자 서버 저장">☁ 저장</button><button class="btn btn-ghost" onclick="bizCloudPull()" title="서버에서 불러오기">⬇ 불러오기</button>'
+    : '<span class="biz-srv-note">💾 이 기기 저장</span>';
+  return '<div class="biz-clientbar">'+
+    '<span class="lb">관리 중 사업자</span>'+
+    '<select onchange="bizSwitch(this.value)">'+opts+'</select>'+
+    '<button class="btn btn-ghost" onclick="bizAddClient()">＋ 새 사업자</button>'+
+    '<button class="btn btn-ghost" onclick="bizRenameClient()">이름변경</button>'+
+    '<button class="btn btn-ghost" onclick="bizDeleteClient()">삭제</button>'+
+    '<span class="sp"></span>'+srv+
+    '</div>';
 }
+function bizTabsBar(active){ return '<div class="biz-tabs">'+BIZ_TABS.map(function(x){return '<button class="'+(x.id===active?'on':'')+'" onclick="go(\''+x.id+'\')">'+x.ic+' '+osEsc(x.t)+'</button>';}).join('')+'</div>'; }
+function bizTop(active){ return bizClientBar()+bizTabsBar(active); }
 function bizKindPill(){
   var k=BIZ.profile.kind;
   return '<div class="biz-kind">'+
@@ -7910,7 +7987,7 @@ var BIZ_DISC_GEN='본 자료는 입력값 기반 참고용 상담자료이며, �
 /* ── AI 상담자료 생성(공용) ─────────────────────────────────────────────── */
 function bizProfileText(){
   var p=BIZ.profile, t=bizStaffTotals();
-  var lines=[
+  return [
    '사업자 형태: '+(p.kind==='corp'?'법인사업자':'개인사업자'),
    '상호: '+(p.bizName||'미입력'),
    '대표: '+(p.ceoName||'미입력')+(p.ceoAge?(' / 나이 '+p.ceoAge+'세'):''),
@@ -7922,16 +7999,15 @@ function bizProfileText(){
    '가지급금: '+(p.garizip?bizWon(p.garizip):'미입력')+' / 퇴직급여충당: '+(p.retireReserve?bizWon(p.retireReserve):'미입력'),
    '신용상태(자가): '+(p.credit||'미입력'),
    '전직원 예상 퇴직금부채(개산): '+bizWon(t.severance)+' / 월 급여합: '+bizWon(t.payMonthly)+' / 월 4대보험 사업주부담(개산): '+bizWon(t.insMonthly)
-  ];
-  return lines.join('\n');
+  ].join('\n');
 }
 var BIZ_SYS='당신은 대한민국 중소기업·소상공인·법인 대표를 상담하는 재무·경영 컨설턴트입니다. 정책자금·세금(절세)·법인/경영인 보험·퇴직금(퇴직연금)·인사노무를 통합적으로 봅니다.\n원칙:\n1) 상품이나 대출부터 권하지 않고 대표의 상황·현금흐름·리스크를 먼저 진단한다.\n2) 세무·법률 결론을 단정하지 않고 "예상 쟁점 + 전문가(세무사·노무사·변호사) 확인 항목"으로 제시한다.\n3) 확정 수익·절세액·정책자금 승인·보험금 지급을 보장하지 않는다.\n4) 제도·요율·한도·정책자금 조건은 시행연도 확인이 필요함을 명시한다.\n5) 근거를 밝히고, 마지막에 단계별 실행 로드맵(우선순위 1~3개)을 제시한다.\n한국어로, 표와 소제목을 활용해 실무적으로 작성한다. 과장·단정 표현을 피한다.';
 function bizPrompt(section){
   var base='아래는 상담 대상 사업자 정보다.\n\n'+bizProfileText()+'\n\n';
   var map={
    diag:{ask:'이 사업자에 대한 종합 진단을 작성해줘. (1) 현재 상태 요약과 강점, (2) 가장 시급한 리스크·기회 3가지(정책자금/세금/보험/퇴직금/인사 중), (3) 각 영역별 점검 포인트, (4) 30·60·90일 실행 로드맵. 정보가 비어 있으면 "확인 필요"로 남긴다.',max:2600},
-   fund:{ask:'이 사업자가 활용할 수 있는 정책자금·보증 전략을 제안해줘. 어떤 기관(중진공/소진공/신보/기보/지자체/두루누리)이 적합한지 우선순위와 이유, 준비해야 할 서류·재무요건·사업계획 포인트, 신청 전 개선할 지표, 주의사항(중복·상환능력)을 단계로. 승인을 보장하지 않는다고 명시.',max:2400},
-   tax:{ask:'이 사업자의 절세·세무 컨설팅 방향을 제안해줘. '+(BIZ.profile.kind==='corp'?'법인이라면 대표급여/상여/배당 균형, 가지급금 정리 단계, 임원퇴직금 정관 규정, 접대비·가업승계를 다룬다.':'개인사업자라면 노란우산공제, 경비·증빙, 법인전환 검토 시점, 성실신고, 연금계좌 공제를 다룬다.')+' 각 항목의 효과와 리스크, 전문가 확인이 필요한 지점을 표로. 절세액을 보장하지 않는다고 명시.',max:2400},
+   fund:{ask:'이 사업자가 활용할 수 있는 정책자금·보증 전략을 제안해줘. 어떤 기관(중진공/소진공/신보/기보/지자체/두루누리)이 적합한지 우선순위와 이유, 준비 서류·재무요건·사업계획 포인트, 신청 전 개선할 지표, 주의사항(중복·상환능력)을 단계로. 승인을 보장하지 않는다고 명시.',max:2400},
+   tax:{ask:'이 사업자의 절세·세무 컨설팅 방향을 제안해줘. '+(BIZ.profile.kind==='corp'?'법인이라면 대표급여/상여/배당 균형, 가지급금 정리 단계, 임원퇴직금 정관 규정, 세액공제(투자·R&D), 가업승계를 다룬다.':'개인사업자라면 노란우산공제, 경비·증빙, 법인전환 검토 시점, 창업감면, 성실신고, 연금계좌 공제를 다룬다.')+' 각 항목의 효과와 리스크, 전문가 확인이 필요한 지점을 표로. 절세액을 보장하지 않는다고 명시.',max:2400},
    ins:{ask:'이 사업자에게 맞는 보험 솔루션 방향을 제안해줘. 경영인정기보험/키맨/퇴직금 재원/상속·가업승계 재원/단체보험/대표 유족보장 중 무엇이 왜 필요한지 우선순위와 근거, 재원 규모의 개략 감(퇴직금부채·부채·상속 예상), 계약구조 시 주의점(손금 요건·수익자)을 정리. 특정 상품 권유·지급 보장이 아님을 명시.',max:2400},
    retire:{ask:'이 사업자의 퇴직금·퇴직연금 관리 방향을 제안해줘. 임직원 법정 퇴직금 사외적립(DB/DC/IRP) 필요성, 임원 퇴직금 정관 규정·손금 한도(2020년 이후 배수 2배), 충당부채 대비 재원 마련, 폐업/승계 시 유의점을 단계로. 개산임을 명시.',max:2200},
    staff:{ask:'이 사업자의 인사·노무 관리 체크리스트를 작성해줘. 근로계약서·취업규칙·4대보험 취득신고·최저임금·주52시간·연차·퇴직금(퇴직연금 의무)·두루누리 지원 등 규모에 맞는 필수 항목과 리스크(미비 시 과태료·체불), 개선 우선순위를 표로. 노무사 확인이 필요한 지점을 표시.',max:2200}
@@ -7944,7 +8020,7 @@ function bizGenerate(section){
   if(out)out.innerHTML='<div class="loading"><div class="spinner"></div>AI가 상담자료를 작성하는 중… (10~30초)</div>';
   var pk=bizPrompt(section);
   callClaude(pk.system,pk.user,pk.max).then(function(md){
-    BIZ.ai[section]=md; bizSave();
+    BIZ.ai[section]=md; bizSaveLocal();
     var o=$('bizOut_'+section); if(o)o.innerHTML=bizOutBox(section,md);
   }).catch(function(e){
     var o=$('bizOut_'+section);
@@ -7962,7 +8038,7 @@ function bizPrint(section){
   var md=BIZ.ai[section]||''; if(!md){toast('먼저 상담자료를 생성하세요');return;}
   var w=window.open('','_blank','width=900,height=1200'); if(!w){toast('팝업이 차단되었습니다');return;}
   var css='<style>body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#0D1117;margin:26px;line-height:1.6}h1{font-size:19px}table{border-collapse:collapse;width:100%;margin:8px 0}th,td{border:1px solid #E5E7EB;padding:6px 8px;font-size:12px;text-align:left}.foot{margin-top:18px;font-size:10px;color:#94A3B8;border-top:1px solid #E5E9F0;padding-top:8px}</style>';
-  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>법인·사업자 컨설팅 상담자료</title>'+css+'</head><body>'+renderMd(md)+'<div class="foot">'+BIZ_DISC_GEN+'</div></body></html>');
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>법인·사업자 컨설팅 상담자료</title>'+css+'</head><body><h1>'+osEsc(bizClientLabel(bizCur()))+' — 상담자료</h1>'+renderMd(md)+'<div class="foot">'+BIZ_DISC_GEN+'</div></body></html>');
   w.document.close(); setTimeout(function(){try{w.print();}catch(e){}},300);
 }
 function bizAIBlock(section){
@@ -7987,29 +8063,19 @@ function renderBiz(tab){
 /* ══════════════ 1) 사업자 진단(허브) ══════════════ */
 function renderBizDiag(){
   var p=BIZ.profile;
-  var form='<div class="rpt-sec"><div class="hd"><span class="n">1</span>사업자 기본 정보 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(금액 단위: 만원 · 이 기기에만 저장)</span></div>'+
+  var form='<div class="rpt-sec"><div class="hd"><span class="n">1</span>사업자 기본 정보 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(금액 단위: 만원)</span></div>'+
     '<div class="sub">아는 값만 입력하면 아래 진단과 각 메뉴(정책자금·세금·보험·퇴직금)가 즉시 반영됩니다.</div>'+
     bizKindPill()+
     '<div class="biz-form">'+
-     bizField('bizName','상호/법인명','','text')+
-     bizField('ceoName','대표자명','','text')+
-     bizField('ceoAge','대표 나이','세')+
+     bizField('bizName','상호/법인명','','text')+bizField('ceoName','대표자명','','text')+bizField('ceoAge','대표 나이','세')+
      bizSelect('industry','업종',['제조','건설','도소매','음식·숙박','운수','서비스','IT·기술','기타'])+
-     bizField('foundYear','설립연도','예: 2019')+
-     bizField('revenue','연매출','만원')+
-     bizField('profit','당기순이익/사업소득','만원')+
-     bizField('ceoSalary','대표 연봉','만원')+
-     bizField('empCount','직원 수(명부 미사용 시)','명')+
-     bizField('assets','총 자산','만원')+
-     bizField('debt','총 부채','만원')+
+     bizField('foundYear','설립연도','예: 2019')+bizField('revenue','연매출','만원')+bizField('profit','당기순이익/사업소득','만원')+
+     bizField('ceoSalary','대표 연봉','만원')+bizField('empCount','직원 수(명부 미사용 시)','명')+bizField('assets','총 자산','만원')+bizField('debt','총 부채','만원')+
      (p.kind==='corp'?bizField('garizip','가지급금','만원')+bizField('retireReserve','퇴직급여충당','만원'):'')+
      bizSelect('credit','신용상태(자가진단)',['우수','보통','주의','미상'])+
     '</div></div>';
-  return osPage('B2B 컨설팅','사업자 종합 진단','개인사업자·법인 대표를 위한 통합 컨설팅 허브입니다. 기본 정보를 넣으면 정책자금·세금·보험·퇴직금·인사 각 영역의 우선순위를 한 번에 진단합니다.',
-    bizTabsBar('biz_diag')+form+
-    '<div id="bizDiagCalc">'+bizDiagCalc()+'</div>'+
-    bizAIBlock('diag')+
-    bizDisc(BIZ_DISC_GEN));
+  return osPage('B2B 컨설팅','사업자 종합 진단','개인사업자·법인 대표를 위한 통합 컨설팅 허브입니다. 여러 사업자를 등록·전환하며 정책자금·세금·보험·퇴직금·인사 우선순위를 한 번에 진단합니다.',
+    bizTop('biz_diag')+form+'<div id="bizDiagCalc">'+bizDiagCalc()+'</div>'+bizAIBlock('diag')+bizDisc(BIZ_DISC_GEN));
 }
 function bizDiagCalc(){
   var p=BIZ.profile, t=bizStaffTotals();
@@ -8025,44 +8091,52 @@ function bizDiagCalc(){
   ];
   var kh='<div class="rpt-kpis">'+kpis.map(function(x){return '<div class="rpt-kpi"><div class="k">'+x.k+'</div><div class="v" style="font-size:16px;color:#1A56DB">'+osEsc(x.v)+'</div><div class="s">'+osEsc(x.s)+'</div></div>';}).join('')+'</div>';
 
-  /* 적용 가능한 솔루션 매핑 */
+  /* 리스크 신호 */
+  var flags=[];
+  if(p.kind==='corp'&&bizNum(p.garizip)>0)flags.push({r:1,t:'가지급금 '+bizWon(p.garizip)+' — 인정이자·상여처분 위험'});
+  if(t.severance>bizNum(p.retireReserve))flags.push({r:1,t:'퇴직금 사외적립 부족(부채 '+bizWon(t.severance)+' > 충당 '+bizWon(p.retireReserve)+')'});
+  if(bizNum(p.debt)>bizNum(p.assets)&&bizNum(p.debt)>0)flags.push({r:1,t:'부채('+bizWon(p.debt)+') > 자산('+bizWon(p.assets)+') — 재무 리스크'});
+  if(bizNum(p.ceoAge)>=55)flags.push({r:0,t:'대표 '+p.ceoAge+'세 — 승계·상속 재원 설계 시점'});
+  if(p.kind==='sole'&&bizNum(p.profit)>=8800)flags.push({r:0,t:'사업소득 큼 — 법인전환 실익 검토'});
+  if(empN>0&&t.duru>0)flags.push({r:0,t:'두루누리 대상 후보 '+t.duru+'명 — 보험료 지원 신청 검토'});
+  var flagBox=flags.length?'<div class="rpt-sec"><div class="hd"><span class="n">!</span>리스크·기회 신호</div><div class="biz-flags">'+flags.map(function(f){return '<span class="biz-sig '+(f.r?'r':'a')+'">'+(f.r?'⚠️':'💡')+' '+osEsc(f.t)+'</span>';}).join('')+'</div></div>':'';
+
+  /* 적용 가능한 솔루션 */
   var recs=[];
-  if(p.foundYear&&age<7)recs.push({ic:'🏦',t:'정책자금',why:'업력 7년 미만 — 중진공 창업기업지원자금·보증 대상 가능',go:'biz_fund'});
+  if(p.foundYear&&age<7)recs.push({ic:'🏦',t:'정책자금',why:'업력 7년 미만 — 창업기업지원자금·보증 대상 가능',go:'biz_fund'});
   else if(p.revenue&&empN&&empN<10)recs.push({ic:'🏦',t:'정책자금',why:'소상공인 범위 가능 — 소진공 정책자금·지역보증 검토',go:'biz_fund'});
   else recs.push({ic:'🏦',t:'정책자금',why:'매출·업력 입력 시 적합 정책자금을 매칭합니다',go:'biz_fund'});
-  if(p.kind==='corp'&&bizNum(p.garizip)>0)recs.push({ic:'🧾',t:'세금컨설팅',why:'가지급금 '+bizWon(p.garizip)+' — 인정이자·상여처분 위험, 정리 설계 필요',go:'biz_tax'});
-  else if(p.kind==='sole'&&bizNum(p.profit)>=8800)recs.push({ic:'🧾',t:'세금컨설팅',why:'사업소득 규모 — 법인전환·노란우산 등 절세 검토 실익 큼',go:'biz_tax'});
-  else recs.push({ic:'🧾',t:'세금컨설팅',why:(p.kind==='corp'?'급여/배당/임원퇴직금 등 법인 절세 점검':'노란우산·경비·소득공제 점검'),go:'biz_tax'});
-  if(t.severance>0)recs.push({ic:'🪙',t:'퇴직금 관리',why:'예상 퇴직금부채 '+bizWon(t.severance)+' — 사외적립(퇴직연금) 재원 점검',go:'biz_retire'});
-  else recs.push({ic:'🪙',t:'퇴직금 관리',why:'직원 명부를 넣으면 법정 퇴직금·충당을 자동 계산합니다',go:'biz_retire'});
-  if(bizNum(p.ceoAge)>=45||bizNum(p.debt)>0)recs.push({ic:'☂️',t:'보험 솔루션',why:'대표 유고·부채·상속 리스크 — 경영인정기·재원 설계 검토',go:'biz_ins'});
-  else recs.push({ic:'☂️',t:'보험 솔루션',why:'퇴직금·상속 재원과 대표 소득보장 설계를 점검합니다',go:'biz_ins'});
-  if(empN>0)recs.push({ic:'👥',t:'직원관리',why:empN+'명 — 근로계약·4대보험·퇴직연금·두루누리 점검'+(t.duru?(' (두루누리 대상 후보 '+t.duru+'명)'):''),go:'biz_staff'});
-
+  if(p.kind==='corp'&&bizNum(p.garizip)>0)recs.push({ic:'🧾',t:'세금컨설팅',why:'가지급금 정리 설계가 시급합니다',go:'biz_tax'});
+  else if(p.kind==='sole'&&bizNum(p.profit)>=8800)recs.push({ic:'🧾',t:'세금컨설팅',why:'법인전환·노란우산 등 절세 실익 큼',go:'biz_tax'});
+  else recs.push({ic:'🧾',t:'세금컨설팅',why:(p.kind==='corp'?'급여/배당/임원퇴직금·세액공제 점검':'노란우산·경비·소득공제 점검'),go:'biz_tax'});
+  if(t.severance>0)recs.push({ic:'🪙',t:'퇴직금 관리',why:'예상 퇴직금부채 '+bizWon(t.severance)+' — 사외적립 점검',go:'biz_retire'});
+  else recs.push({ic:'🪙',t:'퇴직금 관리',why:'직원 명부를 넣으면 법정 퇴직금·충당을 자동 계산',go:'biz_retire'});
+  if(bizNum(p.ceoAge)>=45||bizNum(p.debt)>0)recs.push({ic:'☂️',t:'보험 솔루션',why:'대표 유고·부채·상속 리스크 — 재원 설계 검토',go:'biz_ins'});
+  else recs.push({ic:'☂️',t:'보험 솔루션',why:'퇴직금·상속 재원과 대표 소득보장 점검',go:'biz_ins'});
+  if(empN>0)recs.push({ic:'👥',t:'직원관리',why:empN+'명 — 근로계약·4대보험·퇴직연금 점검',go:'biz_staff'});
   var rh='<div class="biz-recs">'+recs.map(function(r){return '<button class="biz-rec" onclick="go(\''+r.go+'\')"><div class="ic">'+r.ic+'</div><div class="tx"><div class="t">'+osEsc(r.t)+' <span class="ar">→</span></div><div class="w">'+osEsc(r.why)+'</div></div></button>';}).join('')+'</div>';
 
-  return '<div class="rpt-sec"><div class="hd"><span class="n">2</span>핵심 지표</div><div class="sub">입력값 기반 개산입니다.</div>'+kh+'</div>'+
-    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>적용 가능한 솔루션 — 지금 이 사업자에게</div>'+
-    '<div class="sub">진단 결과 우선 검토할 영역입니다. 카드를 누르면 해당 메뉴로 이동합니다.</div>'+rh+'</div>';
+  return '<div class="rpt-sec"><div class="hd"><span class="n">2</span>핵심 지표</div><div class="sub">입력값 기반 개산입니다.</div>'+kh+'</div>'+flagBox+
+    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>적용 가능한 솔루션 — 지금 이 사업자에게</div><div class="sub">진단 결과 우선 검토할 영역입니다. 카드를 누르면 해당 메뉴로 이동합니다.</div>'+rh+'</div>';
 }
 
 /* ══════════════ 2) 정책자금 ══════════════ */
 function renderBizFund(){
   return osPage('B2B 컨설팅','정책자금 매칭','사업자 정보를 기준으로 활용 가능한 정책자금·보증을 적합도순으로 보여주고, 준비 로드맵을 제안합니다. (조건·한도·금리는 매년 변경 — 신청 전 공식사이트 확인)',
-    bizTabsBar('biz_fund')+
-    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>내 사업자 정보</div><div class="sub">진단 탭에서 입력한 값을 사용합니다. 여기서 바로 수정할 수도 있습니다.</div>'+bizKindPill()+
+    bizTop('biz_fund')+
+    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>내 사업자 정보</div><div class="sub">진단 탭 값을 사용합니다. 여기서 바로 수정할 수도 있습니다.</div>'+bizKindPill()+
     '<div class="biz-form">'+bizField('foundYear','설립연도','업력')+bizField('revenue','연매출','만원')+bizField('empCount','직원 수','명')+bizSelect('industry','업종',['제조','건설','도소매','음식·숙박','운수','서비스','IT·기술','기타'])+'</div></div>'+
-    '<div id="bizFundList">'+bizFundList()+'</div>'+
-    bizAIBlock('fund')+
+    '<div id="bizFundList">'+bizFundList()+'</div>'+bizAIBlock('fund')+
     bizDisc('정책자금·보증의 <b>대상·한도·금리·심사 기준은 기관과 연도에 따라 수시로 바뀝니다.</b> 본 매칭은 참고용이며 승인·한도를 보장하지 않습니다. 신청 전 기업마당(bizinfo.go.kr)과 각 기관 공식 공고를 확인하고, 중복지원·상환능력을 검토하세요. '+BIZ_RATES.asOf+'년 기준.'));
 }
 function bizFundScore(f){
   var p=BIZ.profile, age=bizNum(p.foundYear)?(bizThisYear()-bizNum(p.foundYear)):null;
   var empN=BIZ.staff.length||bizNum(p.empCount);
-  var small=(empN>0&&empN<10)||(bizNum(p.revenue)>0&&bizNum(p.revenue)<100000); /* 소상공인 근사(매출 10억 미만) */
+  var small=(empN>0&&empN<10)||(bizNum(p.revenue)>0&&bizNum(p.revenue)<100000);
   var reasons=[], score=1;
   function up(r){score++;reasons.push(r);}
   if(f.tags.indexOf('startup')>=0){ if(age!=null&&age<7)up('업력 '+age+'년(7년 미만) 창업기업'); else if(age!=null)reasons.push('업력 7년 이상 — 창업자금은 대상 아님'); }
+  if(f.tags.indexOf('youth')>=0){ if(bizNum(p.ceoAge)>0&&bizNum(p.ceoAge)<=39)up('대표 39세 이하 — 청년전용 대상'); }
   if(f.tags.indexOf('established')>=0){ if(age!=null&&age>=7)up('업력 '+age+'년(7년 이상) 성장기'); }
   if(f.tags.indexOf('small')>=0||f.tags.indexOf('sole')>=0){ if(small||p.kind==='sole')up('소상공인/소규모 범위 가능'); }
   if(f.tags.indexOf('sme')>=0){ if(p.kind==='corp')up('법인 중소기업'); else reasons.push('개인사업자도 중소기업 범위면 가능'); }
@@ -8078,115 +8152,97 @@ function bizFundList(){
   scored.sort(function(a,b){return b.s.score-a.s.score;});
   var cards=scored.map(function(o){
     var f=o.f,s=o.s;
-    return '<div class="biz-fund">'+
-      '<div class="biz-fund-top"><div><div class="nm">'+osEsc(f.name)+'</div><div class="org">'+osEsc(f.org)+'</div></div>'+
+    return '<div class="biz-fund"><div class="biz-fund-top"><div><div class="nm">'+osEsc(f.name)+'</div><div class="org">'+osEsc(f.org)+'</div></div>'+
       '<span class="biz-badge '+s.cls+'">'+s.label+'</span></div>'+
-      '<div class="biz-fund-grid">'+
-        '<div><span>대상</span>'+osEsc(f.target)+'</div>'+
-        '<div><span>용도</span>'+osEsc(f.use)+'</div>'+
-        '<div><span>한도</span>'+osEsc(f.limit)+'</div>'+
-        '<div><span>금리·비용</span>'+osEsc(f.rate)+'</div>'+
-      '</div>'+
+      '<div class="biz-fund-grid"><div><span>대상</span>'+osEsc(f.target)+'</div><div><span>용도</span>'+osEsc(f.use)+'</div><div><span>한도</span>'+osEsc(f.limit)+'</div><div><span>금리·비용</span>'+osEsc(f.rate)+'</div></div>'+
       '<div class="biz-fund-merit">💡 '+osEsc(f.merit)+'</div>'+
       (s.reasons.length?'<div class="biz-fund-why">'+s.reasons.map(function(r){return '<span>'+osEsc(r)+'</span>';}).join('')+'</div>':'')+
-      '<a class="btn btn-ghost" href="'+osEsc(f.url)+'" target="_blank" rel="noopener">공식사이트 ↗</a>'+
-    '</div>';
+      '<a class="btn btn-ghost" href="'+osEsc(f.url)+'" target="_blank" rel="noopener">공식사이트 ↗</a></div>';
   }).join('');
-  return '<div class="rpt-sec"><div class="hd"><span class="n">2</span>적합도순 정책자금·보증</div>'+
-    '<div class="sub">입력값 기준 적합도 추정입니다. 실제 자격은 기관 심사로 결정됩니다.</div>'+
-    '<div class="biz-funds">'+cards+'</div></div>';
+  return '<div class="rpt-sec"><div class="hd"><span class="n">2</span>적합도순 정책자금·보증 ('+BIZ_FUNDS.length+'종)</div><div class="sub">입력값 기준 적합도 추정입니다. 실제 자격은 기관 심사로 결정됩니다.</div><div class="biz-funds">'+cards+'</div></div>';
 }
 
 /* ══════════════ 3) 세금컨설팅 ══════════════ */
 function renderBizTax(){
   var p=BIZ.profile;
-  return osPage('B2B 컨설팅','세금 컨설팅',(p.kind==='corp'?'법인':'개인사업자')+' 절세 체크리스트와 세부담 개산을 제공합니다. 개인·법인 세율 비교와 가지급금 인정이자까지 한 번에 확인하세요.',
-    bizTabsBar('biz_tax')+
+  return osPage('B2B 컨설팅','세금 컨설팅',(p.kind==='corp'?'법인':'개인사업자')+' 절세 체크리스트와 세부담 개산을 제공합니다. 개인·법인 세율 비교, 대표 4대보험, 가지급금 인정이자까지 한 번에 확인하세요.',
+    bizTop('biz_tax')+
     '<div class="rpt-sec"><div class="hd"><span class="n">1</span>과세 정보</div>'+bizKindPill()+
     '<div class="biz-form">'+bizField('profit','당기순이익/사업소득','만원')+bizField('ceoSalary','대표 연봉','만원')+(p.kind==='corp'?bizField('garizip','가지급금','만원'):'')+'</div></div>'+
-    '<div id="bizTaxCalc">'+bizTaxCalc()+'</div>'+
-    bizAIBlock('tax')+
-    bizDisc(BIZ_DISC_TAX));
+    '<div id="bizTaxCalc">'+bizTaxCalc()+'</div>'+bizAIBlock('tax')+bizDisc(BIZ_DISC_TAX));
 }
 function bizTaxCalc(){
   var p=BIZ.profile, profit=bizNum(p.profit);
-  var inc=bizIncomeTax(profit), corp=bizCorpTax(profit);
-  var incTot=inc*1.1, corpTot=corp*1.1; /* 지방소득세 10% 포함 개산 */
+  var incTot=bizIncomeTax(profit)*1.1, corpTot=bizCorpTax(profit)*1.1;
   var kpis='<div class="rpt-kpis">'+
     '<div class="rpt-kpi"><div class="k">개인 종합소득세(개산)</div><div class="v" style="font-size:16px;color:#DC2626">'+bizWon(incTot)+'</div><div class="s">지방세 포함 · 공제 미반영</div></div>'+
     '<div class="rpt-kpi"><div class="k">법인세(개산)</div><div class="v" style="font-size:16px;color:#059669">'+bizWon(corpTot)+'</div><div class="s">동일 과표 가정 · 지방세 포함</div></div>'+
     '<div class="rpt-kpi"><div class="k">단순 세율차</div><div class="v" style="font-size:16px;color:#1A56DB">'+bizWon(Math.max(0,incTot-corpTot))+'</div><div class="s">법인이 유리한 폭(개산)</div></div>'+
     '</div>';
   var cmp='<div class="rpt-sec"><div class="hd"><span class="n">2</span>개인 vs 법인 세부담 개산</div>'+
-    '<div class="sub">동일 이익('+ (profit?bizWon(profit):'값 입력 필요') +')을 개인 종합소득세와 법인세로 단순 비교한 <b>참고 개산</b>입니다. 실제로는 대표 급여·배당·사회보험·유보이익 활용까지 종합해야 하며, 세무사 검토가 필요합니다.</div>'+kpis+
-    (profit>=8800&&p.kind==='sole'?'<div class="biz-note">📌 사업소득이 커서 <b>법인전환 실익</b>이 있을 수 있습니다. 급여·배당 설계와 4대보험까지 포함한 정밀 비교를 권장합니다.</div>':'')+
-    '</div>';
+    '<div class="sub">동일 이익('+(profit?bizWon(profit):'값 입력 필요')+')을 개인 종합소득세와 법인세로 단순 비교한 <b>참고 개산</b>입니다. 실제로는 대표 급여·배당·사회보험·유보이익 활용까지 종합해야 하며 세무사 검토가 필요합니다.</div>'+kpis+
+    (profit>=8800&&p.kind==='sole'?'<div class="biz-note">📌 사업소득이 커서 <b>법인전환 실익</b>이 있을 수 있습니다. 급여·배당·4대보험까지 포함한 정밀 비교를 권장합니다.</div>':'')+'</div>';
+  /* 대표 4대보험 개산 */
+  var sal=bizNum(p.ceoSalary), salMon=sal/12, ceoIns=bizEmployerInsurance(salMon);
+  var ceoBox=sal>0?'<div class="rpt-sec"><div class="hd"><span class="n">3</span>대표 급여 관련 부담 개산</div>'+
+    '<div class="sub">대표 연봉 '+bizWon(sal)+' 기준. 급여를 올리면 법인세는 줄지만 근로소득세·4대보험이 늘어 균형점을 찾아야 합니다.</div>'+
+    '<div class="rpt-kpis"><div class="rpt-kpi"><div class="k">월 급여</div><div class="v" style="font-size:15px">'+bizWon(salMon)+'</div><div class="s">연 '+bizWon(sal)+'</div></div>'+
+    '<div class="rpt-kpi"><div class="k">월 4대보험(사업주+본인 개산)</div><div class="v" style="font-size:15px;color:#D97706">'+bizWon(ceoIns.total*2)+'</div><div class="s">노사 합산 근사</div></div>'+
+    '<div class="rpt-kpi"><div class="k">급여 손금효과(법인세 절감 개산)</div><div class="v" style="font-size:15px;color:#059669">'+bizWon(sal*0.09)+'~'+bizWon(sal*0.19)+'</div><div class="s">과표 구간별</div></div></div></div>':'';
   var gari='';
   if(p.kind==='corp'){
     var g=bizNum(p.garizip), interest=g*BIZ_RATES.garizipRate;
-    gari='<div class="rpt-sec"><div class="hd"><span class="n">3</span>가지급금 인정이자 개산</div>'+
+    gari='<div class="rpt-sec"><div class="hd"><span class="n">'+(sal>0?'4':'3')+'</span>가지급금 인정이자 개산</div>'+
       '<div class="sub">가지급금은 매년 인정이자(기준 '+(BIZ_RATES.garizipRate*100).toFixed(1)+'%)만큼 익금산입되어 법인세가 늘고, 정리하지 못하면 폐업·청산 시 대표 상여로 처분될 위험이 있습니다.</div>'+
-      '<div class="rpt-kpis">'+
-        '<div class="rpt-kpi"><div class="k">가지급금</div><div class="v" style="font-size:16px">'+bizWon(g)+'</div><div class="s">대표 미상환 인출</div></div>'+
-        '<div class="rpt-kpi"><div class="k">연 인정이자(익금)</div><div class="v" style="font-size:16px;color:#DC2626">'+bizWon(interest)+'</div><div class="s">매년 반복 발생</div></div>'+
-        '<div class="rpt-kpi"><div class="k">정리 방향</div><div class="v" style="font-size:13px">급여·배당·퇴직금·자기주식</div><div class="s">단계적 설계 필요</div></div>'+
-      '</div>'+
-      (g>0?'<div class="biz-note">⚠️ 가지급금은 <b>방치할수록 커집니다.</b> 대표 퇴직금·배당·특허권 자본화 등과 연계한 정리 플랜을 세무사와 설계하세요.</div>':'')+
-      '</div>';
+      '<div class="rpt-kpis"><div class="rpt-kpi"><div class="k">가지급금</div><div class="v" style="font-size:16px">'+bizWon(g)+'</div><div class="s">대표 미상환 인출</div></div>'+
+      '<div class="rpt-kpi"><div class="k">연 인정이자(익금)</div><div class="v" style="font-size:16px;color:#DC2626">'+bizWon(interest)+'</div><div class="s">매년 반복 발생</div></div>'+
+      '<div class="rpt-kpi"><div class="k">정리 방향</div><div class="v" style="font-size:13px">급여·배당·퇴직금·자기주식</div><div class="s">단계적 설계 필요</div></div></div>'+
+      (g>0?'<div class="biz-note">⚠️ 가지급금은 <b>방치할수록 커집니다.</b> 대표 퇴직금·배당·특허권 자본화 등과 연계한 정리 플랜을 세무사와 설계하세요.</div>':'')+'</div>';
   }
-  /* 절세 체크리스트 */
   var items=BIZ_TAX_ITEMS.filter(function(x){return x.kind===p.kind||x.kind==='both';});
-  var chk='<div class="rpt-sec"><div class="hd"><span class="n">'+(p.kind==='corp'?'4':'3')+'</span>'+(p.kind==='corp'?'법인':'개인사업자')+' 절세 체크리스트</div>'+
+  var chk='<div class="rpt-sec"><div class="hd"><span class="n">'+(p.kind==='corp'?(sal>0?'5':'4'):(sal>0?'4':'3'))+'</span>'+(p.kind==='corp'?'법인':'개인사업자')+' 절세 체크리스트 ('+items.length+')</div>'+
     '<div class="sub">해당 사업자에 자주 적용되는 항목입니다. 실행 전 세무사 확인이 필요합니다.</div>'+
     '<div class="biz-chks">'+items.map(function(x){return '<div class="biz-chk"><div class="t">'+(x.flag?'<span class="biz-flag '+(x.flag==='위험'?'r':'')+'">'+x.flag+'</span>':'')+osEsc(x.title)+'</div><div class="d">'+osEsc(x.desc)+'</div></div>';}).join('')+'</div></div>';
-  return kpis?(cmp+gari+chk):(cmp+gari+chk);
+  return cmp+ceoBox+gari+chk;
 }
 
 /* ══════════════ 4) 보험 솔루션 ══════════════ */
 function renderBizInsure(){
   var p=BIZ.profile;
-  return osPage('B2B 컨설팅','보험 솔루션',(p.kind==='corp'?'법인':'개인사업자')+' 대표의 리스크(유고·부채·퇴직금·상속)를 재원 관점에서 진단하고 필요한 보험 방향을 제안합니다. 특정 상품 권유가 아닌 설계 방향 안내입니다.',
-    bizTabsBar('biz_ins')+
+  return osPage('B2B 컨설팅','보험 솔루션',(p.kind==='corp'?'법인':'개인사업자')+' 대표의 리스크(유고·부채·퇴직금·상속)를 재원 관점에서 진단하고 필요한 보험 방향과 권장 재원 규모를 제안합니다. 특정 상품 권유가 아닌 설계 방향 안내입니다.',
+    bizTop('biz_ins')+
     '<div class="rpt-sec"><div class="hd"><span class="n">1</span>대표·법인 리스크 정보</div>'+bizKindPill()+
     '<div class="biz-form">'+bizField('ceoAge','대표 나이','세')+bizField('debt','총 부채','만원')+bizField('assets','총 자산','만원')+bizField('retireReserve','퇴직급여충당','만원')+'</div></div>'+
-    '<div id="bizInsCalc">'+bizInsCalc()+'</div>'+
-    bizAIBlock('ins')+
-    bizDisc(BIZ_DISC_GEN));
+    '<div id="bizInsCalc">'+bizInsCalc()+'</div>'+bizAIBlock('ins')+bizDisc(BIZ_DISC_GEN));
 }
 function bizInsCalc(){
   var p=BIZ.profile, t=bizStaffTotals();
-  var needs=[];
-  if(bizNum(p.debt)>0)needs.push('부채 '+bizWon(p.debt)+' — 대표 유고 시 상환·연대보증 리스크');
-  if(t.severance>0)needs.push('퇴직금부채 '+bizWon(t.severance)+' — 사외적립 재원 필요');
-  if(bizNum(p.assets)>=50000)needs.push('자산 '+bizWon(p.assets)+' — 상속세 납부재원(유동성) 점검');
-  if(bizNum(p.ceoAge)>=45)needs.push('대표 나이 '+p.ceoAge+'세 — 승계·유족 보장 설계 시점');
-  var needBox=needs.length?'<div class="biz-note">🔎 이 사업자에서 감지된 재원 니즈:<ul style="margin:6px 0 0;padding-left:18px">'+needs.map(function(n){return '<li>'+osEsc(n)+'</li>';}).join('')+'</ul></div>':'<div class="biz-note">기본 정보(부채·자산·대표 나이·퇴직금)를 입력하면 재원 니즈를 진단합니다.</div>';
-
+  var debt=bizNum(p.debt), reserveGap=Math.max(0,t.severance-bizNum(p.retireReserve));
+  var recFund=debt+reserveGap;
+  var needBox='<div class="rpt-sec"><div class="hd"><span class="n">2</span>권장 보장재원 개산</div>'+
+    '<div class="sub">대표 유고·퇴직 등에 대비해 최소한으로 확보를 검토할 재원의 개략치입니다. 상속세 납부재원(자산 유동성)은 별도 산정이 필요합니다.</div>'+
+    '<div class="rpt-kpis">'+
+      '<div class="rpt-kpi"><div class="k">부채 상환재원</div><div class="v" style="font-size:15px">'+bizWon(debt)+'</div><div class="s">대표 유고 대비</div></div>'+
+      '<div class="rpt-kpi"><div class="k">퇴직금 미적립분</div><div class="v" style="font-size:15px">'+bizWon(reserveGap)+'</div><div class="s">사외적립 필요</div></div>'+
+      '<div class="rpt-kpi"><div class="k">권장 재원 합계(개산)</div><div class="v" style="font-size:17px;color:#1A56DB">'+bizWon(recFund)+'</div><div class="s">+ 상속 유동성 별도</div></div>'+
+    '</div>'+
+    (bizNum(p.assets)>=50000?'<div class="biz-note">🏠 자산 '+bizWon(p.assets)+' 규모 — 부동산·비상장주식 비중이 크면 <b>상속세 납부재원(유동성)</b> 부족 위험이 있습니다. 종신/정기보험 등 납세재원 설계를 별도로 검토하세요.</div>':'')+'</div>';
   var sols=BIZ_INS_SOL.filter(function(s){return s.kind===p.kind||s.kind==='both';});
   var cards='<div class="biz-inscards">'+sols.map(function(s){
-    return '<div class="biz-inscard"><div class="t">'+osEsc(s.title)+'</div>'+
-      '<div class="p"><b>목적</b> '+osEsc(s.purpose)+'</div>'+
-      '<div class="p"><b>필요 판단</b> '+osEsc(s.need)+'</div>'+
-      '<div class="n">'+osEsc(s.note)+'</div></div>';
+    return '<div class="biz-inscard"><div class="t">'+osEsc(s.title)+'</div><div class="p"><b>목적</b> '+osEsc(s.purpose)+'</div><div class="p"><b>필요 판단</b> '+osEsc(s.need)+'</div><div class="n">'+osEsc(s.note)+'</div></div>';
   }).join('')+'</div>';
-  return '<div class="rpt-sec"><div class="hd"><span class="n">2</span>재원 니즈 진단</div>'+needBox+'</div>'+
-    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>'+(p.kind==='corp'?'법인':'사업자')+' 보험 솔루션 카탈로그</div>'+
-    '<div class="sub">상황에 맞는 설계 방향입니다. 손금 요건·계약자/수익자 구조는 반드시 사전에 검토해야 합니다.</div>'+cards+'</div>';
+  return needBox+'<div class="rpt-sec"><div class="hd"><span class="n">3</span>'+(p.kind==='corp'?'법인':'사업자')+' 보험 솔루션 카탈로그</div><div class="sub">상황에 맞는 설계 방향입니다. 손금 요건·계약자/수익자 구조는 반드시 사전에 검토해야 합니다.</div>'+cards+'</div>';
 }
 
 /* ══════════════ 5) 퇴직금 관리 ══════════════ */
-var BIZR={ pay:'', join:'', end:'', bonus:'', leave:'', execAvg:'', execYears:'', execMul:'2' };
 function bizrSet(k,v){ BIZR[k]=v; var el=$('bizRetireCalc'); if(el)el.innerHTML=bizRetireCalc(); }
 function renderBizRetire(){
   return osPage('B2B 컨설팅','퇴직금 관리','법정 퇴직금과 임원 퇴직금 손금 한도를 계산하고, 전 직원 퇴직금 충당(사외적립 필요액)을 한눈에 봅니다.',
-    bizTabsBar('biz_retire')+
-    '<div id="bizRetireCalc">'+bizRetireCalc()+'</div>'+
-    bizAIBlock('retire')+
+    bizTop('biz_retire')+'<div id="bizRetireCalc">'+bizRetireCalc()+'</div>'+bizAIBlock('retire')+
     bizDisc('퇴직금은 <b>1일 평균임금 × 30일 × 근속연수</b>로 계산하는 개산이며, 실제 평균임금 산정(상여·연차수당 포함)과 지급은 근로기준법·취업규칙·판례에 따릅니다. 임원 퇴직금 손금 한도는 정관 규정이 전제이며 2020.1.1 이후 근속분은 배수 2배 상한입니다. 확정 전 노무사·세무사 확인이 필요합니다.'));
 }
 function bizRetireCalc(){
-  var r=BIZR;
-  var leg=bizLegalSeverance(r.pay,r.join,r.end,r.bonus,r.leave);
+  var r=BIZR, leg=bizLegalSeverance(r.pay,r.join,r.end,r.bonus,r.leave);
   var legBox='<div class="rpt-sec"><div class="hd"><span class="n">1</span>법정 퇴직금 계산기(직원 1인)</div>'+
     '<div class="sub">월 평균임금과 입사·퇴사일을 넣으면 법정 퇴직금을 개산합니다. (상여·연차수당은 평균임금에 3/12 반영)</div>'+
     '<div class="biz-form">'+
@@ -8201,7 +8257,6 @@ function bizRetireCalc(){
       '<div class="rpt-kpi"><div class="k">1일 평균임금</div><div class="v" style="font-size:15px">'+bizWon(leg.dailyAvg)+'</div><div class="s">3개월 기준</div></div>'+
       '<div class="rpt-kpi"><div class="k">예상 법정 퇴직금</div><div class="v" style="font-size:17px;color:#1A56DB">'+bizWon(leg.amount)+'</div><div class="s">30일분 × 근속</div></div>'+
     '</div></div>';
-
   var lim=bizExecRetireLimit(r.execAvg,r.execYears,r.execMul);
   var execBox='<div class="rpt-sec"><div class="hd"><span class="n">2</span>임원 퇴직금 손금 한도(법인)</div>'+
     '<div class="sub">임원 퇴직금은 <b>연평균급여 × 10% × 근속연수 × 지급배수</b>까지 손금 인정됩니다. 배수는 정관(또는 위임 규정)에 있어야 하며 2020.1.1 이후 근속분은 <b>2배 상한</b>입니다.</div>'+
@@ -8210,12 +8265,8 @@ function bizRetireCalc(){
       '<div class="biz-f"><label>근속연수 <span class="hint">년</span></label><input type="number" min="0" step="0.1" value="'+osEsc(''+r.execYears)+'" onchange="bizrSet(\'execYears\',this.value)"></div>'+
       '<div class="biz-f"><label>지급배수 <span class="hint">정관 규정(최대 2)</span></label><input type="number" min="0" step="0.1" value="'+osEsc(''+r.execMul)+'" onchange="bizrSet(\'execMul\',this.value)"></div>'+
     '</div>'+
-    '<div class="rpt-kpis" style="margin-top:10px">'+
-      '<div class="rpt-kpi"><div class="k">손금 인정 한도</div><div class="v" style="font-size:17px;color:#059669">'+bizWon(lim)+'</div><div class="s">초과분은 손금부인·근로소득 과세</div></div>'+
-    '</div>'+
-    (bizNum(r.execMul)>BIZ_RATES.execMultipleCap?'<div class="biz-note">⚠️ 지급배수 '+r.execMul+'배는 2020.1.1 이후 근속분 손금 상한(2배)을 초과합니다. 초과분은 손금부인될 수 있습니다.</div>':'')+
-    '</div>';
-
+    '<div class="rpt-kpis" style="margin-top:10px"><div class="rpt-kpi"><div class="k">손금 인정 한도</div><div class="v" style="font-size:17px;color:#059669">'+bizWon(lim)+'</div><div class="s">초과분은 손금부인·근로소득 과세</div></div></div>'+
+    (bizNum(r.execMul)>BIZ_RATES.execMultipleCap?'<div class="biz-note">⚠️ 지급배수 '+r.execMul+'배는 2020.1.1 이후 근속분 손금 상한(2배)을 초과합니다. 초과분은 손금부인될 수 있습니다.</div>':'')+'</div>';
   var t=bizStaffTotals();
   var poolBox='<div class="rpt-sec"><div class="hd"><span class="n">3</span>전 직원 퇴직금 충당 요약</div>'+
     '<div class="sub">직원관리 탭의 명부를 기준으로 오늘까지의 예상 퇴직금(사외적립 필요액)을 합산합니다.</div>'+
@@ -8225,32 +8276,28 @@ function bizRetireCalc(){
       '<div class="rpt-kpi"><div class="k">이미 적립(충당)</div><div class="v" style="font-size:16px">'+bizWon(BIZ.profile.retireReserve)+'</div><div class="s">진단 입력값</div></div>'+
       '<div class="rpt-kpi"><div class="k">추가 재원 필요</div><div class="v" style="font-size:16px;color:#D97706">'+bizWon(Math.max(0,t.severance-bizNum(BIZ.profile.retireReserve)))+'</div><div class="s">퇴직연금 등 검토</div></div>'+
       '</div>'+(t.severance>bizNum(BIZ.profile.retireReserve)?'<div class="biz-note">📌 충당이 부족하면 퇴직자 발생 시 현금흐름이 흔들립니다. <b>퇴직연금(DB/DC)·IRP</b>로 사외적립을 검토하세요.</div>':''))
-    :'<div class="biz-note">직원관리 탭에서 직원을 등록하면 자동으로 집계됩니다. <button class="btn btn-ghost" onclick="go(\'biz_staff\')">직원관리 열기 →</button></div>')+
-    '</div>';
+    :'<div class="biz-note">직원관리 탭에서 직원을 등록하면 자동으로 집계됩니다. <button class="btn btn-ghost" onclick="go(\'biz_staff\')">직원관리 열기 →</button></div>')+'</div>';
   return legBox+execBox+poolBox;
 }
 
 /* ══════════════ 6) 직원관리 ══════════════ */
-function bizStaffAdd(){ BIZ.staff.push({id:'s'+(BIZ.staff.length+1)+'_'+Math.floor(bizToday().getTime()%100000),name:'',join:'',pay:'',type:'정규직'}); bizSave(); bizStaffRerender(); }
-function bizStaffDel(id){ BIZ.staff=BIZ.staff.filter(function(s){return s.id!==id;}); bizSave(); bizStaffRerender(); }
-function bizStaffSet(id,k,v){ for(var i=0;i<BIZ.staff.length;i++){if(BIZ.staff[i].id===id){BIZ.staff[i][k]=v;break;}} bizSave(); bizStaffRerender(); }
+function bizStaffAdd(){ BIZ.staff.push({id:'s_'+bizUuid().slice(0,8),name:'',join:'',pay:'',type:'정규직'}); bizSaveLocal(); bizStaffRerender(); }
+function bizStaffDel(id){ var arr=BIZ.staff; for(var i=0;i<arr.length;i++){if(arr[i].id===id){arr.splice(i,1);break;}} bizSaveLocal(); bizStaffRerender(); }
+function bizStaffSet(id,k,v){ for(var i=0;i<BIZ.staff.length;i++){if(BIZ.staff[i].id===id){BIZ.staff[i][k]=v;break;}} bizSaveLocal(); bizStaffRerender(); }
 function bizStaffRerender(){ var el=$('bizStaffBody'); if(el)el.innerHTML=bizStaffBody(); }
 function renderBizStaff(){
-  return osPage('B2B 컨설팅','직원 관리','직원 명부를 등록하면 근속·예상 퇴직금·4대보험 사업주 부담을 자동 집계합니다. (개인정보는 이 기기에만 저장됩니다)',
-    bizTabsBar('biz_staff')+
-    '<div id="bizStaffBody">'+bizStaffBody()+'</div>'+
-    bizAIBlock('staff')+
+  return osPage('B2B 컨설팅','직원 관리','직원 명부를 등록하면 근속·예상 퇴직금·4대보험 사업주 부담을 자동 집계합니다. (기본 로컬 저장 · 로그인 시 상단에서 서버 저장 가능)',
+    bizTop('biz_staff')+'<div id="bizStaffBody">'+bizStaffBody()+'</div>'+bizAIBlock('staff')+
     bizDisc('4대보험 요율은 '+BIZ_RATES.asOf+'년 사업주 부담 <b>개산</b>이며(국민연금·건강·장기요양·고용·산재), 산재는 업종별로 다릅니다. 상한·감면·두루누리 지원은 미반영입니다. 퇴직금은 월급여를 평균임금으로 본 개산입니다. 근로계약·취업규칙·신고는 노무사 확인을 권장합니다.'));
 }
 function bizStaffBody(){
   var t=bizStaffTotals();
-  var head='<div class="rpt-sec"><div class="hd"><span class="n">1</span>직원 명부 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(금액 단위: 만원 · 이 기기에만 저장)</span></div>'+
+  var head='<div class="rpt-sec"><div class="hd"><span class="n">1</span>직원 명부 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(금액 단위: 만원)</span></div>'+
     '<div class="sub">이름은 실명 대신 라벨(예: 직원A)로 넣어도 됩니다. 월급여·입사일을 넣으면 아래 집계가 자동 갱신됩니다.</div>'+
     '<button class="btn" style="background:#1A56DB;color:#fff" onclick="bizStaffAdd()">＋ 직원 추가</button>';
   var rows='';
-  if(!BIZ.staff.length){
-    rows='<div class="biz-note" style="margin-top:12px">아직 등록된 직원이 없습니다. <b>＋ 직원 추가</b>를 눌러 시작하세요.</div>';
-  }else{
+  if(!BIZ.staff.length){ rows='<div class="biz-note" style="margin-top:12px">아직 등록된 직원이 없습니다. <b>＋ 직원 추가</b>를 눌러 시작하세요.</div>'; }
+  else{
     rows='<div class="biz-staff-wrap"><table class="biz-staff"><thead><tr><th>이름/라벨</th><th>입사일</th><th>월급여</th><th>고용형태</th><th>근속</th><th>예상 퇴직금</th><th>월 4대보험(사업주)</th><th></th></tr></thead><tbody>';
     for(var i=0;i<BIZ.staff.length;i++){
       var s=BIZ.staff[i], leg=bizLegalSeverance(s.pay,s.join,'',0,0), ins=bizEmployerInsurance(s.pay);
@@ -8262,21 +8309,17 @@ function bizStaffBody(){
         '<td>'+(leg.days?bizFmtYears(leg.years):'-')+'</td>'+
         '<td style="font-weight:700;color:#1A56DB">'+bizWon(leg.amount)+'</td>'+
         '<td>'+bizWon(ins.total)+'</td>'+
-        '<td><button class="btn btn-ghost" style="padding:4px 8px" onclick="bizStaffDel(\''+s.id+'\')">삭제</button></td>'+
-      '</tr>';
+        '<td><button class="btn btn-ghost" style="padding:4px 8px" onclick="bizStaffDel(\''+s.id+'\')">삭제</button></td></tr>';
     }
     rows+='</tbody></table></div>';
   }
   head+=rows+'</div>';
-  var sum='<div class="rpt-sec"><div class="hd"><span class="n">2</span>인건비·부담 요약</div>'+
-    '<div class="rpt-kpis">'+
+  var sum='<div class="rpt-sec"><div class="hd"><span class="n">2</span>인건비·부담 요약</div><div class="rpt-kpis">'+
       '<div class="rpt-kpi"><div class="k">총 인원</div><div class="v" style="font-size:16px">'+t.count+'명</div><div class="s">'+(t.duru?('두루누리 후보 '+t.duru+'명'):'명부 기준')+'</div></div>'+
       '<div class="rpt-kpi"><div class="k">월 급여 합계</div><div class="v" style="font-size:16px">'+bizWon(t.payMonthly)+'</div><div class="s">연 '+bizWon(t.payMonthly*12)+'</div></div>'+
       '<div class="rpt-kpi"><div class="k">월 4대보험(사업주)</div><div class="v" style="font-size:16px;color:#D97706">'+bizWon(t.insMonthly)+'</div><div class="s">연 '+bizWon(t.insMonthly*12)+' 개산</div></div>'+
       '<div class="rpt-kpi"><div class="k">예상 퇴직금부채</div><div class="v" style="font-size:16px;color:#DC2626">'+bizWon(t.severance)+'</div><div class="s">오늘 기준 누적</div></div>'+
-    '</div>'+
-    (t.duru?'<div class="biz-note">📌 10인 미만 사업장의 월보수 270만원 미만 근로자는 <b>두루누리 사회보험료 지원</b> 대상일 수 있습니다. 국민연금·고용보험료 일부를 지원받아 부담을 줄이세요.</div>':'')+
-    '</div>';
+    '</div>'+(t.duru?'<div class="biz-note">📌 10인 미만 사업장의 월보수 270만원 미만 근로자는 <b>두루누리 사회보험료 지원</b> 대상일 수 있습니다. 국민연금·고용보험료 일부를 지원받아 부담을 줄이세요.</div>':'')+'</div>';
   return head+sum;
 }
 
@@ -8286,6 +8329,12 @@ function bizStaffBody(){
   if(document.getElementById('bizStyle'))return;
   var s=document.createElement('style'); s.id='bizStyle';
   s.textContent=[
+   '.biz-clientbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:#F5F9FF;border:1px solid #E5E9F0;border-radius:12px;padding:8px 12px;margin-bottom:12px}',
+   '.biz-clientbar .lb{font-size:11.5px;font-weight:800;color:#1A56DB}',
+   '.biz-clientbar select{border:1px solid #CBD5E1;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:700;font-family:inherit;background:#fff;min-width:150px}',
+   '.biz-clientbar .btn{padding:5px 10px;font-size:11.5px}',
+   '.biz-clientbar .sp{flex:1}',
+   '.biz-srv-note{font-size:11px;color:#94A3B8;font-weight:700}',
    '.biz-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 14px}',
    '.biz-tabs button{border:1px solid #E5E9F0;background:#fff;border-radius:999px;padding:7px 12px;font-size:12.5px;font-weight:700;color:#4B5563;cursor:pointer}',
    '.biz-tabs button.on{background:#1A56DB;border-color:#1A56DB;color:#fff}',
@@ -8297,6 +8346,10 @@ function bizStaffBody(){
    '.biz-f .hint{color:#9AA2AD;font-weight:600}',
    '.biz-f input,.biz-f select{width:100%;box-sizing:border-box;border:1px solid #E5E9F0;border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit;background:#fff}',
    '.biz-f input:focus,.biz-f select:focus{outline:none;border-color:#1A56DB}',
+   '.biz-flags{display:flex;flex-direction:column;gap:6px}',
+   '.biz-sig{font-size:12px;font-weight:700;border-radius:8px;padding:7px 11px;line-height:1.5}',
+   '.biz-sig.r{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C}',
+   '.biz-sig.a{background:#F0F9FF;border:1px solid #BAE6FD;color:#0369A1}',
    '.biz-recs{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}',
    '.biz-rec{display:flex;gap:10px;align-items:flex-start;text-align:left;border:1px solid #E5E9F0;background:#fff;border-radius:12px;padding:12px;cursor:pointer}',
    '.biz-rec:hover{border-color:#1A56DB;background:#F7FAFF}',
@@ -8331,6 +8384,7 @@ function bizStaffBody(){
   ].join('');
   document.head.appendChild(s);
 })();
+
 
 /* 새 도구·재배치 반영해 현재 화면 갱신 */
 renderNav();updateKeyPill();
