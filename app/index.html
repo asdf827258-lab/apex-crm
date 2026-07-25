@@ -2113,7 +2113,7 @@ var TABS=[
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'내 성장',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''}]},
  {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
- {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
+ {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attendance',icon:'📅',title:'출근 달력',cnt:''},{id:'followup',icon:'🔔',title:'AI 후속관리',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
  {group:'계약관리',items:[
@@ -2285,6 +2285,8 @@ function go(tab){
   else if(tab==='manual')dyn.innerHTML=renderManual();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
+  else if(tab==='attendance'){dyn.innerHTML=(typeof renderAttendance==='function')?renderAttendance():'';if(typeof osAttendanceAfterRender==='function')osAttendanceAfterRender();}
+  else if(tab==='followup'){dyn.innerHTML=(typeof renderFollowup==='function')?renderFollowup():'';if(typeof osFollowupAfterRender==='function')osFollowupAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
   $('main').scrollTop=0;
@@ -8631,6 +8633,249 @@ function renderBizNews(){
   document.head.appendChild(s);
 })();
 
+
+/* ════════ 출근 달력 (native · 자동삽입) ════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   출근 달력 (native) — 메인 앱의 Supabase 연결(osClient/OS.profile)을 그대로 사용.
+   DB CRM(iframe, 다른 오리진)과 달리 별도 "서버 연결 설정"이 필요 없다.
+   기존 public.attendance 테이블/RLS(migration_07_attendance.sql)를 사용.
+   ══════════════════════════════════════════════════════════════════════════ */
+var ATT={ month:null, att:[], profiles:[], loaded:false };
+function attTodayStr(){ var d=new Date(); function p(n){return (n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function attMsg(title,sub,showSql){
+  var sql=showSql?'<div style="margin-top:12px"><a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>':'';
+  return '<div class="rpt-sec" style="text-align:center;padding:28px 18px"><div style="font-size:15px;font-weight:800;color:#1C2434;margin-bottom:6px">'+osEsc(title)+'</div>'+
+    (sub?'<div style="font-size:12.5px;color:#6B7280;line-height:1.6">'+osEsc(sub)+'</div>':'')+sql+'</div>';
+}
+function renderAttendance(){
+  return osPage('DB CRM','출근 달력','팀원별 월간 출근(접속) 기록을 한눈에 봅니다. 매일 앱에 접속만 하면 자동으로 기록돼요. (메인 앱 서버 연결을 그대로 사용 — 별도 설정 불필요)',
+    '<div id="attWrap"><div class="loading"><div class="spinner"></div>불러오는 중…</div></div>');
+}
+function osAttendanceAfterRender(){ attLoad(); }
+function attLoad(){
+  var wrap=$('attWrap'); if(!wrap)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ wrap.innerHTML=attMsg('서버 연결을 확인할 수 없습니다.','설정에서 Supabase 연결 상태를 확인하세요.'); return; }
+  if(!(typeof OS!=='undefined'&&OS&&OS.profile)){
+    wrap.innerHTML=attMsg('로그인 후 이용할 수 있습니다.','로그인하면 오늘 출근이 자동 기록되고, 팀 전체 출근 달력이 열립니다. (우측 상단에서 로그인)');
+    return;
+  }
+  /* 오늘 출근 자동 기록(best-effort) → 팀원·출근 데이터 로드 */
+  sb.from('attendance').upsert({member_id:OS.profile.id, att_date:attTodayStr()},{onConflict:'member_id,att_date'}).then(function(){
+    return Promise.all([
+      sb.from('profiles').select('id,name,role,active').eq('active',true).order('name'),
+      sb.from('attendance').select('member_id,att_date')
+    ]);
+  }).then(function(res){
+    var p=res[0], a=res[1];
+    if(a&&a.error){
+      wrap.innerHTML=attMsg('출근 달력 테이블이 아직 없습니다.','migration_07_attendance.sql 을 Supabase SQL Editor에서 한 번 실행하면 바로 열립니다.',true);
+      return;
+    }
+    ATT.profiles=(p&&p.data)||[]; ATT.att=(a&&a.data)||[]; ATT.loaded=true;
+    if(!ATT.month)ATT.month=new Date();
+    attRender();
+  }).catch(function(e){
+    wrap.innerHTML=attMsg('불러오기 실패','다시 시도해 주세요. ('+((e&&e.message)||'')+')');
+  });
+}
+function attShift(delta){
+  var m=ATT.month||new Date();
+  if(delta===0)ATT.month=new Date(); else ATT.month=new Date(m.getFullYear(),m.getMonth()+delta,1);
+  attRender();
+}
+function attRender(){
+  var wrap=$('attWrap'); if(!wrap)return;
+  var m=ATT.month||new Date();
+  var y=m.getFullYear(), mo=m.getMonth(), days=new Date(y,mo+1,0).getDate();
+  var now=new Date(), isCur=(y===now.getFullYear()&&mo===now.getMonth()), todayD=now.getDate();
+  function p2(n){return (n<10?'0':'')+n;} var wd=['일','월','화','수','목','금','토'];
+  var set={}; ATT.att.forEach(function(a){ set[a.member_id+'|'+a.att_date]=1; });
+  var mem=ATT.profiles.filter(function(x){return x.active!==false;});
+  var th='<tr><th class="att-name">담당자</th>';
+  for(var d=1;d<=days;d++){ var dow=new Date(y,mo,d).getDay(), wk=(dow===0||dow===6); th+='<th class="att-d'+(wk?' wk':'')+'">'+d+'<br><small>'+wd[dow]+'</small></th>'; }
+  th+='<th class="att-sum">출근</th><th class="att-sum">미접속</th></tr>';
+  var rows=mem.map(function(pf){
+    var row='<tr><td class="att-name">'+osEsc(pf.name)+'</td>', present=0, missed=0;
+    for(var d=1;d<=days;d++){
+      var key=pf.id+'|'+y+'-'+p2(mo+1)+'-'+p2(d), has=set[key];
+      var future=isCur?(d>todayD):(new Date(y,mo,d)>now), cell;
+      if(has){ cell='<span class="att-p" title="출근">●</span>'; present++; }
+      else if(future){ cell='<span class="att-f">·</span>'; }
+      else{ cell='<span class="att-x" title="미접속">×</span>'; missed++; }
+      row+='<td class="att-c">'+cell+'</td>';
+    }
+    row+='<td class="att-c"><span class="att-badge g">'+present+'</span></td><td class="att-c">'+(missed?'<span class="att-badge r">'+missed+'</span>':'<span class="att-badge z">0</span>')+'</td></tr>';
+    return row;
+  }).join('') || '<tr><td colspan="'+(days+3)+'" style="text-align:center;padding:28px;color:#9AA2AD">활성 팀원이 없습니다.</td></tr>';
+  wrap.innerHTML=
+    '<div class="rpt-sec">'+
+      '<div class="att-bar">'+
+        '<div class="att-nav"><button class="btn btn-ghost" onclick="attShift(-1)">◀ 이전달</button>'+
+        '<b>'+y+'년 '+(mo+1)+'월</b>'+
+        '<button class="btn btn-ghost" onclick="attShift(1)">다음달 ▶</button></div>'+
+        '<button class="btn btn-ghost" onclick="attShift(0)">이번달</button>'+
+      '</div>'+
+      '<div class="att-legend"><span class="att-p">●</span> 출근 · <span class="att-x">×</span> 미접속(지난 날) · <span class="att-f">·</span> 예정 &nbsp;—&nbsp; 매일 접속만 해도 자동 기록됩니다(팀 전체 공유).</div>'+
+      '<div class="att-tablewrap"><table class="att-table"><thead>'+th+'</thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>';
+}
+(function attInjectStyle(){
+  if(typeof document==='undefined')return; if(document.getElementById('attStyle'))return;
+  var s=document.createElement('style'); s.id='attStyle';
+  s.textContent=[
+   '.att-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px}',
+   '.att-nav{display:flex;align-items:center;gap:10px}.att-nav b{min-width:110px;text-align:center;font-size:14px;color:#1C2434}',
+   '.att-legend{font-size:11.5px;color:#6B7280;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:9px;padding:8px 10px;margin-bottom:12px}',
+   '.att-tablewrap{overflow-x:auto}',
+   '.att-table{border-collapse:collapse;width:100%;min-width:760px}',
+   '.att-table th,.att-table td{border-bottom:1px solid #EEF0F3;padding:6px 4px;font-size:11.5px;text-align:center;white-space:nowrap}',
+   '.att-table thead th{background:#F8FAFC;color:#596575;font-weight:700;position:sticky;top:0}',
+   '.att-table th.att-d{min-width:30px}.att-table th.att-d small{font-weight:400;color:#9AA2AD}.att-table th.att-d.wk{color:#C0392B}',
+   '.att-table th.att-name,.att-table td.att-name{position:sticky;left:0;background:#fff;text-align:left;font-weight:800;color:#1C2434;min-width:90px;z-index:1;box-shadow:1px 0 0 #EEF0F3}',
+   '.att-table thead th.att-name{background:#F8FAFC;z-index:2}',
+   '.att-table th.att-sum{background:#F5F9FF;color:#1A56DB}',
+   '.att-p{color:#20c997;font-size:15px;font-weight:900}.att-x{color:#f04452;font-weight:900}.att-f{color:#D0D5DB}',
+   '.att-badge{display:inline-block;min-width:22px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:800}',
+   '.att-badge.g{background:#E6FCF5;color:#087f5b}.att-badge.r{background:#FFF0F1;color:#f04452}.att-badge.z{background:#EEF1F4;color:#66717f}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+
+/* ════════ AI 후속관리 센터 (native · 자동삽입) ════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   AI 후속관리 센터 (native) — CRM(dbs·calls) 데이터를 읽어 '오늘 후속할 대상'을
+   자동 도출하고, 각 건에 AI 카톡 문구를 생성한다. 메인 앱 Supabase 연결 사용.
+   외부 준비물 0. (기존 public.dbs / public.calls · RLS로 담당자 배정분만 조회)
+   ══════════════════════════════════════════════════════════════════════════ */
+var FUP={ dbs:[], calls:[], items:[], ai:{}, loaded:false };
+var FUP_CAT={
+  appt:{ic:'📅',label:'상담약속',cls:'p'},
+  recall:{ic:'🔁',label:'재콜',cls:'b'},
+  rec:{ic:'🎙',label:'녹음 미전달',cls:'a'},
+  idle:{ic:'💤',label:'방치 리드',cls:'g'},
+  report:{ic:'📣',label:'단톡 미보고',cls:'n'}
+};
+function fupDaysSince(v){ if(!v)return 0; var d=new Date(v); if(isNaN(d.getTime()))return 0; return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000)); }
+function fupMsg(title,sub,showSql){
+  var sql=showSql?'<div style="margin-top:12px"><a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>':'';
+  return '<div class="rpt-sec" style="text-align:center;padding:28px 18px"><div style="font-size:15px;font-weight:800;color:#1C2434;margin-bottom:6px">'+osEsc(title)+'</div>'+
+    (sub?'<div style="font-size:12.5px;color:#6B7280;line-height:1.6">'+osEsc(sub)+'</div>':'')+sql+'</div>';
+}
+function renderFollowup(){
+  return osPage('DB CRM','AI 후속관리','CRM의 DB·통화 기록을 읽어 오늘 후속할 대상을 자동으로 뽑고, 각 건에 맞는 카톡 문구를 AI가 만들어 줍니다. (메인 앱 서버 연결 사용 · 담당자 배정분만 표시)',
+    '<div id="fupWrap"><div class="loading"><div class="spinner"></div>후속 대상을 분석하는 중…</div></div>');
+}
+function osFollowupAfterRender(){ fupLoad(); }
+function fupLoad(){
+  var wrap=$('fupWrap'); if(!wrap)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ wrap.innerHTML=fupMsg('서버 연결을 확인할 수 없습니다.','설정에서 Supabase 연결을 확인하세요.'); return; }
+  if(!(typeof OS!=='undefined'&&OS&&OS.profile)){ wrap.innerHTML=fupMsg('로그인 후 이용할 수 있습니다.','로그인하면 본인에게 배정된 DB의 후속관리 목록이 자동으로 열립니다.'); return; }
+  Promise.all([
+    sb.from('dbs').select('id,customer_name,phone,region,assigned_date,report_name'),
+    sb.from('calls').select('db_id,result,call_at,appointment_at,first_call_issue,recording_delivered,group_reported')
+  ]).then(function(res){
+    var d=res[0], c=res[1];
+    if(d&&d.error){ wrap.innerHTML=fupMsg('DB 조회 권한이 없거나 테이블이 없습니다.','DB CRM 스키마(supabase_schema.sql)가 적용돼 있어야 합니다.',true); return; }
+    FUP.dbs=(d&&d.data)||[]; FUP.calls=(c&&!c.error&&c.data)||[]; FUP.loaded=true;
+    FUP.items=fupCompute(); fupRender();
+  }).catch(function(e){ wrap.innerHTML=fupMsg('불러오기 실패','다시 시도해 주세요. ('+((e&&e.message)||'')+')'); });
+}
+function fupCompute(){
+  var byDb={}; FUP.calls.forEach(function(c){ (byDb[c.db_id]=byDb[c.db_id]||[]).push(c); });
+  for(var k in byDb){ if(byDb.hasOwnProperty(k))byDb[k].sort(function(a,b){return new Date(b.call_at)-new Date(a.call_at);}); }
+  var now=Date.now(), items=[];
+  FUP.dbs.forEach(function(db){
+    var cs=byDb[db.id]||[], last=cs[0];
+    var absent=cs.filter(function(c){return c.result==='부재';}).length;
+    /* 상담 약속(임박/지연) */
+    var apptCall=null; for(var i=0;i<cs.length;i++){ if(cs[i].appointment_at&&cs[i].result==='상담'){apptCall=cs[i];break;} }
+    if(apptCall){ var ad=new Date(apptCall.appointment_at).getTime(); var dd=Math.round((ad-now)/86400000);
+      if(dd>=-2&&dd<=3){ items.push({db:db,cat:'appt',reason:(dd<0?('상담약속 '+(-dd)+'일 지남'):(dd===0?'오늘 상담약속':'상담약속 D-'+dd)),days:Math.abs(dd),pri:6}); } }
+    /* 재콜(마지막이 부재) */
+    if(last&&last.result==='부재'){ var rd=fupDaysSince(last.call_at); items.push({db:db,cat:'recall',reason:absent+'차 부재 · '+rd+'일 경과',days:rd,pri:3+(rd>=2?2:0)}); }
+    /* 녹음 미전달 */
+    var recNeed=cs.filter(function(c){return (c.result==='거절'||c.result==='상담'||c.first_call_issue)&&!c.recording_delivered;}).length;
+    if(recNeed){ items.push({db:db,cat:'rec',reason:'녹음 미전달 '+recNeed+'건',days:0,pri:4}); }
+    /* 방치(통화 없음) */
+    if(!cs.length){ var idl=fupDaysSince(db.assigned_date); items.push({db:db,cat:'idle',reason:'미진행 · 배정 '+idl+'일',days:idl,pri:idl>=3?4:2}); }
+    /* 단톡 미보고 */
+    var unrep=cs.filter(function(c){return c.result==='부재'&&!c.group_reported;}).length;
+    if(unrep){ items.push({db:db,cat:'report',reason:'단톡 미보고 '+unrep+'건',days:0,pri:2}); }
+  });
+  items.sort(function(a,b){ return (b.pri-a.pri)||(b.days-a.days); });
+  return items;
+}
+function fupMaskName(n){ n=''+(n||''); if(n.length<=1)return n; if(n.length===2)return n[0]+'*'; return n[0]+'*'+n.slice(2); }
+function fupRender(){
+  var wrap=$('fupWrap'); if(!wrap)return;
+  var items=FUP.items||[];
+  if(!items.length){ wrap.innerHTML=fupMsg('🎉 오늘 후속할 대상이 없습니다.','배정된 DB의 재콜·상담약속·녹음·단톡 처리가 모두 최신 상태입니다.'); return; }
+  var cnt={}; items.forEach(function(it){cnt[it.cat]=(cnt[it.cat]||0)+1;});
+  var kpis='<div class="rpt-kpis">'+Object.keys(FUP_CAT).map(function(cat){ var n=cnt[cat]||0; var m=FUP_CAT[cat];
+    return '<div class="rpt-kpi"><div class="k">'+m.ic+' '+m.label+'</div><div class="v" style="font-size:18px;color:'+(n?'#1A56DB':'#9AA2AD')+'">'+n+'</div><div class="s">건</div></div>';
+  }).join('')+'</div>';
+  var rows=items.map(function(it,idx){
+    var m=FUP_CAT[it.cat], db=it.db, id=db.id;
+    return '<div class="fup-item">'+
+      '<div class="fup-lead"><span class="fup-badge '+m.cls+'">'+m.ic+' '+m.label+'</span>'+
+        '<span class="fup-name">'+osEsc(fupMaskName(db.customer_name))+'</span>'+
+        (db.region?'<span class="fup-reg">'+osEsc(db.region)+'</span>':'')+
+        '<span class="fup-reason">'+osEsc(it.reason)+'</span></div>'+
+      '<div class="fup-act">'+
+        (db.phone?'<a class="btn btn-ghost" href="tel:'+osEsc((''+db.phone).replace(/[^0-9]/g,''))+'">📞 전화</a>':'')+
+        '<button class="btn btn-ghost" onclick="fupGen(\''+id+'\',\''+it.cat+'\','+idx+')">🤖 카톡 문구</button></div>'+
+      '<div class="fup-out" id="fupOut_'+idx+'">'+(FUP.ai[id+'_'+it.cat]?fupOutBox(idx,FUP.ai[id+'_'+it.cat]):'')+'</div>'+
+    '</div>';
+  }).join('');
+  wrap.innerHTML='<div class="rpt-sec"><div class="hd"><span class="n">'+items.length+'</span>오늘 후속할 대상</div>'+
+    '<div class="sub">우선순위(상담약속 › 녹음 › 재콜 › 방치 › 단톡)순으로 정렬. 각 건의 "카톡 문구"를 누르면 상황에 맞는 안내 메시지를 AI가 만들어 줍니다.</div>'+kpis+'</div>'+
+    '<div class="fup-list">'+rows+'</div>'+
+    '<div class="rpt-disc">고객 이름은 일부 마스킹되어 표시됩니다. AI가 만든 문구는 <b>발송 전 확인·수정</b>하고, 보험 안내 메시지는 금융소비자보호법 등 광고·권유 규정 준수 및 수신동의를 확인하세요.</div>';
+}
+function fupOutBox(idx,md){
+  return '<div class="biz-aiout"><div class="biz-aiout-hd"><span>💬 카톡 문구(초안)</span>'+
+    '<button class="btn btn-ghost" onclick="fupCopy('+idx+')">📋 복사</button></div>'+
+    '<div class="rpt-body" id="fupMd_'+idx+'" style="white-space:pre-wrap">'+osEsc(md)+'</div></div>';
+}
+function fupGen(dbId,cat,idx){
+  var out=$('fupOut_'+idx); if(out)out.innerHTML='<div class="loading"><div class="spinner"></div>문구 생성 중…</div>';
+  var db=null; for(var i=0;i<FUP.dbs.length;i++){if(FUP.dbs[i].id===dbId){db=FUP.dbs[i];break;}}
+  var catLabel=(FUP_CAT[cat]||{}).label||cat;
+  var sys='당신은 보험 상담 담당자를 돕는 어시스턴트다. 고객에게 보낼 짧고 정중한 한국어 카카오톡 안내 문구를 작성한다. 원칙: 과장·수익보장·단정 표현 금지, 부담 없는 톤, 3~5문장, 상담 강요 대신 선택권 제시, 마지막에 담당자 이름 자리([담당자])와 연락처 자리 표시. 보험 상품을 직접 권유·광고하지 말고 "안내/확인/약속 리마인드" 위주로.';
+  var ctx='상황: '+catLabel+'\n고객: '+fupMaskName(db?db.customer_name:'')+'\n지역: '+((db&&db.region)||'-')+'\n메모: '+catLabel;
+  var ask={
+    appt:'상담 약속을 정중히 리마인드하는 카톡 문구. 시간 재확인과 변경 가능 안내 포함.',
+    recall:'여러 번 부재중이라 다시 연락드린다는, 부담 없는 재통화 요청 카톡 문구. 편한 시간을 여쭙는 톤.',
+    rec:'앞서 상담/통화 내용 관련 자료(녹음/안내)를 전달드리겠다는 후속 카톡 문구.',
+    idle:'배정 후 아직 연락드리지 못해 처음 인사드리는, 부담 없는 첫 안내 카톡 문구.',
+    report:'내부 보고용이 아니라, 고객에게 보내는 가벼운 안부·확인 카톡 문구.'
+  }[cat]||'고객에게 보낼 정중한 후속 안내 카톡 문구.';
+  callClaude(sys, ctx+'\n\n요청: '+ask, 700).then(function(md){
+    FUP.ai[dbId+'_'+cat]=md; var o=$('fupOut_'+idx); if(o)o.innerHTML=fupOutBox(idx,md);
+  }).catch(function(e){
+    var o=$('fupOut_'+idx); if(o)o.innerHTML='<div class="err-box">⚠️ '+osEsc((e&&e.message)||'생성 실패')+' — 설정에서 AI 연결을 확인하세요.</div>';
+  });
+}
+function fupCopy(idx){ var md=$('fupMd_'+idx); var t=md?md.textContent:''; if(typeof copyText==='function')copyText(t); else if(navigator.clipboard)navigator.clipboard.writeText(t); toast('카톡 문구를 복사했습니다.'); }
+(function fupInjectStyle(){
+  if(typeof document==='undefined')return; if(document.getElementById('fupStyle'))return;
+  var s=document.createElement('style'); s.id='fupStyle';
+  s.textContent=[
+   '.fup-list{display:flex;flex-direction:column;gap:8px}',
+   '.fup-item{border:1px solid #E5E9F0;border-radius:12px;padding:11px 13px;background:#fff}',
+   '.fup-lead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}',
+   '.fup-badge{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}',
+   '.fup-badge.p{background:#F3E8FF;color:#7C3AED}.fup-badge.b{background:#EBF3FF;color:#1A56DB}.fup-badge.a{background:#FFFBEB;color:#B45309}.fup-badge.g{background:#F1F5F9;color:#475569}.fup-badge.n{background:#ECFEFF;color:#0E7490}',
+   '.fup-name{font-size:14px;font-weight:800;color:#1C2434}',
+   '.fup-reg{font-size:11.5px;color:#6B7280;background:#F3F4F6;border-radius:6px;padding:2px 7px}',
+   '.fup-reason{font-size:12px;color:#4B5563}',
+   '.fup-act{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}',
+   '.fup-out:not(:empty){margin-top:10px}'
+  ].join('');
+  document.head.appendChild(s);
+})();
 
 /* 새 도구·재배치 반영해 현재 화면 갱신 */
 renderNav();updateKeyPill();
