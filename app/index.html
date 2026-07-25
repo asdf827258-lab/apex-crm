@@ -2113,7 +2113,7 @@ var TABS=[
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'내 성장',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''}]},
  {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
- {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
+ {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attendance',icon:'📅',title:'출근 달력',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
  {group:'계약관리',items:[
@@ -2285,6 +2285,7 @@ function go(tab){
   else if(tab==='manual')dyn.innerHTML=renderManual();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
+  else if(tab==='attendance'){dyn.innerHTML=(typeof renderAttendance==='function')?renderAttendance():'';if(typeof osAttendanceAfterRender==='function')osAttendanceAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
   $('main').scrollTop=0;
@@ -8631,6 +8632,114 @@ function renderBizNews(){
   document.head.appendChild(s);
 })();
 
+
+/* ════════ 출근 달력 (native · 자동삽입) ════════ */
+/* ══════════════════════════════════════════════════════════════════════════
+   출근 달력 (native) — 메인 앱의 Supabase 연결(osClient/OS.profile)을 그대로 사용.
+   DB CRM(iframe, 다른 오리진)과 달리 별도 "서버 연결 설정"이 필요 없다.
+   기존 public.attendance 테이블/RLS(migration_07_attendance.sql)를 사용.
+   ══════════════════════════════════════════════════════════════════════════ */
+var ATT={ month:null, att:[], profiles:[], loaded:false };
+function attTodayStr(){ var d=new Date(); function p(n){return (n<10?'0':'')+n;} return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
+function attMsg(title,sub,showSql){
+  var sql=showSql?'<div style="margin-top:12px"><a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>':'';
+  return '<div class="rpt-sec" style="text-align:center;padding:28px 18px"><div style="font-size:15px;font-weight:800;color:#1C2434;margin-bottom:6px">'+osEsc(title)+'</div>'+
+    (sub?'<div style="font-size:12.5px;color:#6B7280;line-height:1.6">'+osEsc(sub)+'</div>':'')+sql+'</div>';
+}
+function renderAttendance(){
+  return osPage('DB CRM','출근 달력','팀원별 월간 출근(접속) 기록을 한눈에 봅니다. 매일 앱에 접속만 하면 자동으로 기록돼요. (메인 앱 서버 연결을 그대로 사용 — 별도 설정 불필요)',
+    '<div id="attWrap"><div class="loading"><div class="spinner"></div>불러오는 중…</div></div>');
+}
+function osAttendanceAfterRender(){ attLoad(); }
+function attLoad(){
+  var wrap=$('attWrap'); if(!wrap)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ wrap.innerHTML=attMsg('서버 연결을 확인할 수 없습니다.','설정에서 Supabase 연결 상태를 확인하세요.'); return; }
+  if(!(typeof OS!=='undefined'&&OS&&OS.profile)){
+    wrap.innerHTML=attMsg('로그인 후 이용할 수 있습니다.','로그인하면 오늘 출근이 자동 기록되고, 팀 전체 출근 달력이 열립니다. (우측 상단에서 로그인)');
+    return;
+  }
+  /* 오늘 출근 자동 기록(best-effort) → 팀원·출근 데이터 로드 */
+  sb.from('attendance').upsert({member_id:OS.profile.id, att_date:attTodayStr()},{onConflict:'member_id,att_date'}).then(function(){
+    return Promise.all([
+      sb.from('profiles').select('id,name,role,active').eq('active',true).order('name'),
+      sb.from('attendance').select('member_id,att_date')
+    ]);
+  }).then(function(res){
+    var p=res[0], a=res[1];
+    if(a&&a.error){
+      wrap.innerHTML=attMsg('출근 달력 테이블이 아직 없습니다.','migration_07_attendance.sql 을 Supabase SQL Editor에서 한 번 실행하면 바로 열립니다.',true);
+      return;
+    }
+    ATT.profiles=(p&&p.data)||[]; ATT.att=(a&&a.data)||[]; ATT.loaded=true;
+    if(!ATT.month)ATT.month=new Date();
+    attRender();
+  }).catch(function(e){
+    wrap.innerHTML=attMsg('불러오기 실패','다시 시도해 주세요. ('+((e&&e.message)||'')+')');
+  });
+}
+function attShift(delta){
+  var m=ATT.month||new Date();
+  if(delta===0)ATT.month=new Date(); else ATT.month=new Date(m.getFullYear(),m.getMonth()+delta,1);
+  attRender();
+}
+function attRender(){
+  var wrap=$('attWrap'); if(!wrap)return;
+  var m=ATT.month||new Date();
+  var y=m.getFullYear(), mo=m.getMonth(), days=new Date(y,mo+1,0).getDate();
+  var now=new Date(), isCur=(y===now.getFullYear()&&mo===now.getMonth()), todayD=now.getDate();
+  function p2(n){return (n<10?'0':'')+n;} var wd=['일','월','화','수','목','금','토'];
+  var set={}; ATT.att.forEach(function(a){ set[a.member_id+'|'+a.att_date]=1; });
+  var mem=ATT.profiles.filter(function(x){return x.active!==false;});
+  var th='<tr><th class="att-name">담당자</th>';
+  for(var d=1;d<=days;d++){ var dow=new Date(y,mo,d).getDay(), wk=(dow===0||dow===6); th+='<th class="att-d'+(wk?' wk':'')+'">'+d+'<br><small>'+wd[dow]+'</small></th>'; }
+  th+='<th class="att-sum">출근</th><th class="att-sum">미접속</th></tr>';
+  var rows=mem.map(function(pf){
+    var row='<tr><td class="att-name">'+osEsc(pf.name)+'</td>', present=0, missed=0;
+    for(var d=1;d<=days;d++){
+      var key=pf.id+'|'+y+'-'+p2(mo+1)+'-'+p2(d), has=set[key];
+      var future=isCur?(d>todayD):(new Date(y,mo,d)>now), cell;
+      if(has){ cell='<span class="att-p" title="출근">●</span>'; present++; }
+      else if(future){ cell='<span class="att-f">·</span>'; }
+      else{ cell='<span class="att-x" title="미접속">×</span>'; missed++; }
+      row+='<td class="att-c">'+cell+'</td>';
+    }
+    row+='<td class="att-c"><span class="att-badge g">'+present+'</span></td><td class="att-c">'+(missed?'<span class="att-badge r">'+missed+'</span>':'<span class="att-badge z">0</span>')+'</td></tr>';
+    return row;
+  }).join('') || '<tr><td colspan="'+(days+3)+'" style="text-align:center;padding:28px;color:#9AA2AD">활성 팀원이 없습니다.</td></tr>';
+  wrap.innerHTML=
+    '<div class="rpt-sec">'+
+      '<div class="att-bar">'+
+        '<div class="att-nav"><button class="btn btn-ghost" onclick="attShift(-1)">◀ 이전달</button>'+
+        '<b>'+y+'년 '+(mo+1)+'월</b>'+
+        '<button class="btn btn-ghost" onclick="attShift(1)">다음달 ▶</button></div>'+
+        '<button class="btn btn-ghost" onclick="attShift(0)">이번달</button>'+
+      '</div>'+
+      '<div class="att-legend"><span class="att-p">●</span> 출근 · <span class="att-x">×</span> 미접속(지난 날) · <span class="att-f">·</span> 예정 &nbsp;—&nbsp; 매일 접속만 해도 자동 기록됩니다(팀 전체 공유).</div>'+
+      '<div class="att-tablewrap"><table class="att-table"><thead>'+th+'</thead><tbody>'+rows+'</tbody></table></div>'+
+    '</div>';
+}
+(function attInjectStyle(){
+  if(typeof document==='undefined')return; if(document.getElementById('attStyle'))return;
+  var s=document.createElement('style'); s.id='attStyle';
+  s.textContent=[
+   '.att-bar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px}',
+   '.att-nav{display:flex;align-items:center;gap:10px}.att-nav b{min-width:110px;text-align:center;font-size:14px;color:#1C2434}',
+   '.att-legend{font-size:11.5px;color:#6B7280;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:9px;padding:8px 10px;margin-bottom:12px}',
+   '.att-tablewrap{overflow-x:auto}',
+   '.att-table{border-collapse:collapse;width:100%;min-width:760px}',
+   '.att-table th,.att-table td{border-bottom:1px solid #EEF0F3;padding:6px 4px;font-size:11.5px;text-align:center;white-space:nowrap}',
+   '.att-table thead th{background:#F8FAFC;color:#596575;font-weight:700;position:sticky;top:0}',
+   '.att-table th.att-d{min-width:30px}.att-table th.att-d small{font-weight:400;color:#9AA2AD}.att-table th.att-d.wk{color:#C0392B}',
+   '.att-table th.att-name,.att-table td.att-name{position:sticky;left:0;background:#fff;text-align:left;font-weight:800;color:#1C2434;min-width:90px;z-index:1;box-shadow:1px 0 0 #EEF0F3}',
+   '.att-table thead th.att-name{background:#F8FAFC;z-index:2}',
+   '.att-table th.att-sum{background:#F5F9FF;color:#1A56DB}',
+   '.att-p{color:#20c997;font-size:15px;font-weight:900}.att-x{color:#f04452;font-weight:900}.att-f{color:#D0D5DB}',
+   '.att-badge{display:inline-block;min-width:22px;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:800}',
+   '.att-badge.g{background:#E6FCF5;color:#087f5b}.att-badge.r{background:#FFF0F1;color:#f04452}.att-badge.z{background:#EEF1F4;color:#66717f}'
+  ].join('');
+  document.head.appendChild(s);
+})();
 
 /* 새 도구·재배치 반영해 현재 화면 갱신 */
 renderNav();updateKeyPill();
