@@ -2186,6 +2186,7 @@ var TABS=[
 ];
 var TAB_META={
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
+ cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
  blog:{tag:'CONTENT',title:'블로그 콘텐츠 생성',desc:'주제·타깃을 정하면 SEO/GEO 최적화 블로그 글을 Claude가 작성합니다.'},
  threads:{tag:'CONTENT',title:'Threads 생성',desc:'한 번에 여러 개의 스레드 게시글을 타깃에 맞춰 생성합니다.'},
  insta:{tag:'CONTENT',title:'인스타그램 피드',desc:'피드 캡션·해시태그를 브랜드 톤으로 생성합니다.'},
@@ -5709,10 +5710,107 @@ function osAudioCard(tab){
     '<div class="notice" style="margin-top:10px;font-size:11px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">📌 15MB 이하 파일 권장. 고객 녹취는 <b>사전 동의·법령 준수</b>로 취득·보관하세요.</div>'+
     '</div></div>';
 }
+/* ═══════════ #10 AI 통합상담 어시스턴트 — 윤시현 「고객이익 통합상담」 방법론 ═══════════
+   PDF: A+ ASSET ACADEMY 고객이익 통합상담 마스터클래스 — "보험료 받기 전에 받을 돈부터 찾아라"
+   흐름: 관계형성 → 가구 생활분석(8통장) → 받을 돈(국가지원·국민연금) → 보험 분배(A/B/C) → 계약 → 사후관리
+   ‣ 상담 준비 브리핑 / 상담 복기(녹취) 두 모드. 녹취는 텍스트 붙여넣기(무제한) 또는 오디오(Gemini). */
+var CSA={mode:'prep'};
+var CSA_IN='text';
+var CSA_SPINE='[윤시현 「고객이익 통합상담」 방법론 — 반드시 이 흐름을 지킨다]\n'
++'핵심 철학: "보험료 받기 전에, 고객이 받을 돈부터 찾아라." 보험을 팔기 전에 국가지원·국민연금 등 이미 받을 수 있는 돈을 먼저 찾아주고, 그 위에 꼭 필요한 보장만 분배한다. 고객은 "설계사가 내 편"이라 느껴야 계약이 따라온다.\n'
++'[표준 5단계] ①관계형성(라포) ②현황파악(가구 생활 분석) ③핵심문제 3가지 압축 ④설계·시각화(A/B/C 3가지 해결안) ⑤클로징·사후관리\n'
++'[8통장 진단] 1)생활비 2)병원비(실손) 3)치료비(정액 진단·수술·입원) 4)소득공백(가장 유고·실직·질병으로 소득 단절) 5)가족보호(사망보장) 6)은퇴연금 7)간병·장기요양 8)자산·상속\n'
++'[받을 돈 먼저 — 국가지원 점검] 기준 중위소득·소득인정액 기준의 4대 급여(생계·의료·주거·교육), 한부모·다자녀 혜택, 근로·자녀장려금, 긴급복지지원, 국민취업지원제도 등 이 가구가 받을 수 있는 제도를 상담 초반에 먼저 짚는다.\n'
++'[국민연금 공백 채우기] 소득재분배 효과와 "가입기간 확보"가 핵심. 임의가입·임의계속가입·추후납부(추납)·크레딧(출산·군복무·실업)으로 공백을 메우는 방향을 안내.\n'
++'[보험은 필요한 만큼만] 가처분소득 안에서 우선순위로 분배. 결정순서: 꼭 필요한 보장(치료비·소득공백·가족보호)이 먼저, 그다음 여유분. 제안은 항상 A(최소·필수)/B(권장·균형)/C(완성·여유) 3가지 선택형으로.\n'
++'[준법] 확정수익·지급보장·절세 단정 금지. 정책자금·국가지원은 "연도별 기준 변동, 신청조건·한도는 관계기관 확인" 단서. 고객 발송·게시용 문구는 "발송 전 준법감시 확인". 모르는 수치는 지어내지 말고 (예상)/(확인 필요)로 표기.';
+function csaSys(){var kb=(typeof brainKbGet==='function')?brainKbGet():'';var extra='너는 윤시현 사업단장의 「고객이익 통합상담」 어시스턴트다. 반드시 아래 방법론을 따른다.\n\n'+CSA_SPINE+(kb?('\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb):'');return sys(extra);}
+function csaErr(retry,e){return '<div class="result-body"><div class="err-box">⚠️ '+esc((e&&e.message)||'오류')+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.<div style="margin-top:10px"><button class="btn btn-ghost" onclick="'+retry+'">🔄 다시 시도</button></div></div></div>';}
+function csaField(id,l,ph,span,ta){var w=span?' span2':'';var st='width:100%;font-size:12.5px;border:1px solid var(--ink-7);border-radius:8px;padding:9px;box-sizing:border-box';var inp=ta?('<textarea id="csa_'+id+'" style="'+st+';min-height:54px" placeholder="'+esc(ph)+'"></textarea>'):('<input id="csa_'+id+'" type="text" style="'+st+'" placeholder="'+esc(ph)+'"/>');return '<div class="fld'+w+'" style="display:flex;flex-direction:column;gap:5px"><label style="font-size:11.5px;font-weight:700">'+esc(l)+'</label>'+inp+'</div>';}
+function csAssistStudio(){
+  var hero='<div class="osc-panel" style="background:linear-gradient(135deg,#0F172A 0%,#4C1D95 58%,#7C3AED 100%);color:#fff;border:none;margin-bottom:14px">'
+   +'<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">AI 통합상담 어시스턴트 · CONSULT ASSISTANT</div>'
+   +'<div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">💬 받을 돈부터 찾고, 필요한 만큼만 설계합니다</div>'
+   +'<div style="font-size:12.5px;opacity:.92;margin-top:8px;line-height:1.65">윤시현 <b>「고객이익 통합상담」</b> 방법론(관계→가구분석→국가지원→국민연금→보험분배 A/B/C→계약→사후관리)에 따라 상담 <b>준비</b>와 <b>복기</b>를 도와줍니다. 녹취는 <b>텍스트 붙여넣기(길이 제한 없음)</b> 또는 오디오 업로드.</div>'
+   +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">'+['관계형성','받을 돈(국가지원)','국민연금 공백','8통장 진단','A/B/C 제안','클로징·사후관리'].map(function(s){return '<span style="font-size:10.5px;font-weight:700;background:rgba(255,255,255,.16);padding:4px 10px;border-radius:999px">'+esc(s)+'</span>';}).join('')+'</div>'
+   +'</div>';
+  var seg='<div class="chips" style="margin-bottom:14px">'
+   +'<button type="button" id="csaSeg_prep" class="chip-opt'+(CSA.mode==='prep'?' on':'')+'" onclick="csaMode(\'prep\')">🧭 상담 준비 브리핑</button>'
+   +'<button type="button" id="csaSeg_debrief" class="chip-opt'+(CSA.mode==='debrief'?' on':'')+'" onclick="csaMode(\'debrief\')">🎙️ 상담 복기(녹취 분석)</button></div>';
+  return '<div class="card"><div class="card-body">'+hero+seg
+   +'<div id="csa_prep" style="display:'+(CSA.mode==='prep'?'block':'none')+'">'+csaPrepPanel()+'</div>'
+   +'<div id="csa_debrief" style="display:'+(CSA.mode==='debrief'?'block':'none')+'">'+csaDebriefPanel()+'</div>'
+   +'</div></div>';
+}
+function csaMode(m){CSA.mode=m;['prep','debrief'].forEach(function(k){var pane=$('csa_'+k);if(pane)pane.style.display=(k===m?'block':'none');var seg=$('csaSeg_'+k);if(seg){if(k===m)seg.classList.add('on');else seg.classList.remove('on');}});}
+function csaPrepPanel(){
+  var f=csaField('p_name','고객명','예: 홍길동',0)
+   +csaField('p_age','나이·성별','예: 45세 남',0)
+   +csaField('p_family','가구구성·부양가족','예: 배우자(전업), 자녀 2명(8·5세), 부모 봉양',1)
+   +csaField('p_income','직업·월소득','예: 제조 자영업 / 월 550만',0)
+   +csaField('p_dispo','월 여윳돈(가처분)·보험예산','예: 여윳돈 120만 / 보험 40~60만',0)
+   +csaField('p_exist','기존 보험·국민연금','예: 실손, 종신 1억, 국민연금 15년 납부',1)
+   +csaField('p_support','해당 가능 국가지원 단서','예: 다자녀, 최근 소득 감소, 배우자 무소득, 한부모',1)
+   +csaField('p_health','건강·가족력','예: 고혈압약 복용, 부친 위암력',0)
+   +csaField('p_goal','상담 목표·관심사','예: 자녀보장 + 은퇴 + 세금',0)
+   +csaField('p_extra','추가 메모(자유)','상담 배경, 고객 성향, 지난 대화 등 자유롭게',1,1);
+  return '<div style="font-size:11px;color:var(--ink-4);margin:0 0 10px;line-height:1.6">고객 정보를 아는 만큼만 입력하면 <b>받을 돈(국가지원·국민연금)부터</b> 짚고, 8통장 진단 · A/B/C 3해결안 · 상담 스크립트까지 <b>상담 준비 브리핑</b>을 만들어 드립니다.</div>'
+   +'<div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+f+'</div>'
+   +'<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="csaPrepRun()">🧭 상담 준비 브리핑 생성</button><button class="btn btn-ghost" onclick="csaClearPrep()">비우기</button></div>'
+   +'<div class="result" id="csa_prepRes" style="margin-top:8px"></div>';
+}
+function csaClearPrep(){['p_name','p_age','p_family','p_income','p_dispo','p_exist','p_support','p_health','p_goal','p_extra'].forEach(function(id){var e=$('csa_'+id);if(e)e.value='';});var r=$('csa_prepRes');if(r){r.innerHTML='';r.classList.remove('on');}}
+function csaPrepRun(){
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 어시스턴트가 작동합니다.');go('settings');return;}
+  var ids=[['p_name','고객명'],['p_age','나이·성별'],['p_family','가구구성·부양가족'],['p_income','직업·월소득'],['p_dispo','월 여윳돈·보험예산'],['p_exist','기존 보험·국민연금'],['p_support','국가지원 단서'],['p_health','건강·가족력'],['p_goal','상담 목표'],['p_extra','추가 메모']];
+  var lines=[],filled=0;ids.forEach(function(x){var e=$('csa_'+x[0]);var v=e?e.value.trim():'';if(v){lines.push('- '+x[1]+': '+v);filled++;}});
+  if(filled<2){toast('고객 정보를 최소 2개 이상 입력해주세요');return;}
+  var res=$('csa_prepRes');res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>받을 돈부터 짚고 상담 준비 브리핑을 설계하는 중… (20~40초)</div>';
+  var nm=($('csa_p_name')&&$('csa_p_name').value.trim())||'고객';
+  var user='아래 고객의 <상담 준비 브리핑>을 방법론 순서대로 작성해줘. 설계사가 상담 직전에 읽고 바로 상담에 들어갈 실전 자료다.\n\n[고객 정보]\n'+lines.join('\n')+'\n\n반드시 아래 형식으로:\n\n> **한 줄 전략** — 이 고객에게 가장 먼저 짚어줄 "받을 돈"과 핵심 니즈 한 가지.\n\n## 1. 관계형성(라포) 오프닝\n이 고객 상황에 맞는 첫 마디·공감 포인트 2~3개.\n\n## 2. 받을 돈부터 — 국가지원·국민연금 점검\n표: | 제도 | 해당 가능성 | 확인할 것 | 예상 도움 | — 이 가구가 받을 수 있는 국가지원(4대급여·다자녀·한부모·장려금·긴급복지·국민취업 등)과 국민연금 공백 보완(임의가입·추후납부·크레딧)을 먼저 짚는다. "연도별 기준·조건은 관계기관 확인" 단서를 표 아래 한 줄.\n\n## 3. 8통장 현황 진단\n8통장 중 이 고객이 비어 있을 가능성이 큰 통장 Top3와 이유. 표: | 통장 | 현재 추정 | 우선순위 |\n\n## 4. 핵심 문제 3가지\n이 고객의 재무·보장 문제를 3가지로 압축(번호목록), 각 문제의 "왜 시급한가".\n\n## 5. A/B/C 3가지 해결안\n표: | 구분 | 초점 | 월 예상보험료 | 채우는 통장 | — A(최소·필수)/B(권장·균형)/C(완성·여유). 가처분소득 안에서. 금액은 (예상).\n\n## 6. 상담 스크립트\n- **핵심 질문 5개** (팩트파인딩·니즈환기용)\n- **선택형 제안 멘트** (A/B/C를 고객이 직접 고르게 하는 화법)\n- **예상 거절 3개 + 대응 멘트**\n\n## 7. 사후관리 메모\n계약 시 / 미계약 시 각각의 다음 약속·후속 카톡 방향 1줄씩.\n\n금액·연금은 (예상), 확정은 설계·심사 필요. 과장·확정수익·지급보장 표현 금지.';
+  callAI(csaSys(),user,8000,'brain').then(function(out){res._raw=out;res.innerHTML=reportResultBox('csa_prepRes','csaPrepRun()','상담 준비 브리핑',nm+' 님',out);}).catch(function(e){res.innerHTML=csaErr('csaPrepRun()',e);});
+}
+function csaDebriefPanel(){
+  return '<div style="font-size:11px;color:var(--ink-4);margin:0 0 10px;line-height:1.6">상담 <b>녹취를 텍스트로 붙여넣거나</b>(길이 제한 없음, 권장) 오디오 파일을 올리면 방법론 관점으로 <b>복기</b>합니다 — 받을 돈·8통장·A/B/C·클로징을 얼마나 짚었는지 진단하고 다음 상담 준비까지.</div>'
+   +'<div class="chips" style="margin-bottom:10px"><button type="button" id="csaIn_text" class="chip-opt on" onclick="csaInMode(\'text\')">📝 텍스트 붙여넣기</button><button type="button" id="csaIn_audio" class="chip-opt" onclick="csaInMode(\'audio\')">🎧 오디오 업로드</button></div>'
+   +'<div id="csaInText"><textarea id="csa_transcript" style="width:100%;min-height:190px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="상담 녹취를 텍스트로 붙여넣으세요. (네이버 클로바노트·다글로·릴리스 등에서 변환한 텍스트를 그대로 붙여넣기 — 길이 제한 없음, Claude가 바로 분석)"></textarea></div>'
+   +'<div id="csaInAudio" style="display:none"><div class="btn-row"><button class="btn btn-ghost" onclick="csaAudioPick()">🎧 녹취 파일 선택</button><input type="file" id="csa_auf" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" style="display:none" onchange="csaAudioFile(this)"></div>'
+   +'<div id="csa_aus" style="font-size:11.5px;color:var(--ink-3);margin:8px 0"></div>'
+   +'<div class="notice" style="font-size:11px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">오디오는 Gemini로 처리됩니다(Claude는 오디오 미지원). 긴 녹취는 <b>텍스트 붙여넣기가 더 안정적이고 길이 제한이 없습니다.</b> 오디오는 25MB 이하 권장.</div></div>'
+   +'<div class="fld span2" style="margin-top:10px;display:flex;flex-direction:column;gap:5px"><label style="font-size:11.5px;font-weight:700">상담 배경 메모(선택)</label><textarea id="csa_note" style="width:100%;min-height:50px;font-size:12.5px;border:1px solid var(--ink-7);border-radius:8px;padding:9px;box-sizing:border-box" placeholder="예: 52세 자영업, 기존 실손만, 암 가족력, 2차 상담"></textarea></div>'
+   +'<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" id="csa_debtn" onclick="csaDebriefRun()">🎙️ 상담 복기 분석</button><button class="btn btn-ghost" onclick="csaClearDebrief()">비우기</button></div>'
+   +'<div class="result" id="csa_debRes" style="margin-top:8px"></div>'
+   +osAudioDisclaimer();
+}
+function csaInMode(m){CSA_IN=m;var t=$('csaInText'),a=$('csaInAudio');if(t)t.style.display=(m==='text'?'block':'none');if(a)a.style.display=(m==='audio'?'block':'none');['text','audio'].forEach(function(k){var b=$('csaIn_'+k);if(b){if(k===m)b.classList.add('on');else b.classList.remove('on');}});}
+function csaAudioPick(){var el=$('csa_auf');if(el){el.value='';el.click();}}
+function csaAudioFile(input){var f=input&&input.files&&input.files[0];if(!f)return;var mb=f.size/1048576;if(mb>25)toast('녹취 파일이 큽니다('+mb.toFixed(1)+'MB). 긴 녹취는 텍스트 붙여넣기를 권장합니다.');var rd=new FileReader();rd.onload=function(){var r=''+rd.result;var comma=r.indexOf(',');var b64=comma>=0?r.slice(comma+1):r;OS_AUDIO['cs_assist']={name:f.name,size:f.size,mime:f.type||'audio/mpeg',data:b64};var s=$('csa_aus');if(s)s.innerHTML='🎧 <b>'+osEsc(f.name)+'</b> · '+mb.toFixed(1)+'MB 준비됨';};rd.onerror=function(){toast('파일을 읽지 못했습니다.');};rd.readAsDataURL(f);}
+function csaClearDebrief(){var t=$('csa_transcript');if(t)t.value='';var n=$('csa_note');if(n)n.value='';OS_AUDIO['cs_assist']=null;var s=$('csa_aus');if(s)s.innerHTML='';var r=$('csa_debRes');if(r){r.innerHTML='';r.classList.remove('on');}}
+function csaDebriefRun(){
+  var res=$('csa_debRes'),btn=$('csa_debtn');
+  var note=($('csa_note')&&$('csa_note').value.trim())||'';
+  var fmt='\n\n반드시 아래 형식으로:\n\n> **한 줄 총평** — 이 상담의 가장 큰 성과 또는 가장 아까운 지점 한 가지.\n\n## 1. 상담 요약\n무슨 상담이었고 어디까지 진행됐는지 3~4줄.\n\n## 2. 방법론 체크 — 무엇을 짚고 무엇을 놓쳤나\n표: | 단계 | 짚었나 | 근거(발화 인용) | 놓친 것 | — 행: 관계형성 / 받을 돈(국가지원·국민연금) / 8통장 진단 / 핵심문제 압축 / A·B·C 선택형 제안 / 클로징 / 고지·준법.\n\n## 3. 잘한 점 3가지 (실제 발화 인용)\n## 4. 개선점 3가지 (문제 발화 인용 + 윤시현식 대안 멘트)\n## 5. 결정적 순간 — 놓친 "받을 돈"·니즈환기·클로징 포인트\n## 6. 다음 상담 준비 체크리스트\n## 7. 지금 보낼 후속 카톡 초안 (공감 + 다음 약속, 준법 준수)\n\n녹취가 불명확한 부분은 [추정]으로 표기. 확정·과장·지급보장 표현 금지.';
+  if(CSA_IN==='audio'){
+    var a=OS_AUDIO['cs_assist'];if(!a){toast('먼저 녹취 파일을 올리세요.');return;}
+    if(typeof geminiReady==='function'&&!geminiReady()){toast('오디오 분석은 Gemini 연결이 필요합니다(Claude는 오디오 미지원). 텍스트 붙여넣기는 Claude로 바로 됩니다.');return;}
+    if(btn){btn.disabled=true;btn.textContent='분석 중…';}
+    res.classList.add('on');res.innerHTML='<div class="loading" style="padding:14px"><div class="spinner"></div>녹취를 듣고 방법론 관점으로 복기하는 중… (길면 1~2분)</div>';
+    var uAudio='이 상담 녹취(오디오)를 직접 듣고 윤시현의 「고객이익 통합상담」 어시스턴트로서 복기해줘.'+(note?('\n\n[상담 배경 메모] '+note):'')+fmt;
+    callGemini(csaSys(),uAudio,8000,[{mime:a.mime,data:a.data}],getGeminiModel()).then(function(out){AI_LAST={engine:'gemini',model:getGeminiModel(),fellback:false,note:'녹취 오디오 분석'};res._raw=out;res.innerHTML=reportResultBox('csa_debRes','csaDebriefRun()','상담 복기 리포트','녹취(오디오) 분석',out);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}}).catch(function(e){res.innerHTML=csaErr('csaDebriefRun()',e);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}});
+    return;
+  }
+  var tx=($('csa_transcript')&&$('csa_transcript').value.trim())||'';
+  if(tx.length<30){toast('상담 녹취 텍스트를 붙여넣어 주세요(30자 이상).');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 복기가 작동합니다.');go('settings');return;}
+  if(btn){btn.disabled=true;btn.textContent='분석 중…';}
+  res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>녹취 텍스트를 방법론 관점으로 복기하는 중… (20~50초)</div>';
+  var uText='아래 상담 녹취(텍스트)를 윤시현의 「고객이익 통합상담」 어시스턴트로서 복기해줘.'+(note?('\n\n[상담 배경 메모] '+note):'')+'\n\n[상담 녹취]\n'+tx+fmt;
+  callAI(csaSys(),uText,8000,'brain').then(function(out){res._raw=out;res.innerHTML=reportResultBox('csa_debRes','csaDebriefRun()','상담 복기 리포트','녹취(텍스트) 분석',out);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}}).catch(function(e){res.innerHTML=csaErr('csaDebriefRun()',e);if(btn){btn.disabled=false;btn.textContent='🎙️ 상담 복기 분석';}});
+}
 var CUSTOM=[
 {tab:'blog',render:function(){return blogSeoKit();}},
 {tab:'cs_feedback',render:function(){return osAudioCard('cs_feedback');}},
-{tab:'cs_assist',render:function(){return osAudioCard('cs_assist');}},
+{tab:'cs_assist',render:function(){return csAssistStudio();}},
 {tab:'med_disclosure',render:function(){return disclosurePathMap();}},
 {tab:'insta',render:function(){return instaStudioCard();}},
 {tab:'mkt_combine',render:function(){
