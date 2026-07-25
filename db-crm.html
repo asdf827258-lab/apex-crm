@@ -105,6 +105,7 @@
       <button data-page="recordings" onclick="goPage('recordings',this)">녹음 전달</button>
       <button data-page="team" id="teamNav" onclick="goPage('team',this)">담당자 통계</button>
       <button data-page="attendance" onclick="goPage('attendance',this)">출근 달력</button>
+      <button data-page="members" id="membersNav" class="hidden" onclick="goPage('members',this)">🔐 권한 관리</button>
     </nav>
     <div class="user"><small>접속 사용자</small><strong id="userName">-</strong><small id="userRole">-</small><br><button onclick="signOut()">로그아웃</button></div>
   </aside>
@@ -164,6 +165,11 @@
           <div class="table-wrap"><table id="attTable"><thead id="attHead"></thead><tbody id="attBody"></tbody></table></div>
         </div>
       </section>
+
+      <section class="page" id="page-members">
+        <div class="hero"><div><h2>권한 관리</h2><p>마스터(관리자)만 팀원의 권한을 지정할 수 있습니다. <b>클릭 한 번</b>으로 마스터 권한을 주거나 회수하세요.</p></div></div>
+        <div class="card section"><div id="membersBody"></div></div>
+      </section>
     </div>
   </main>
 </div>
@@ -198,7 +204,7 @@
 
 <script>
 const CONFIG_KEY="apexSupabaseConfigV1";
-let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[];
+let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[], allMembers=[];
 let attMonth=null;
 
 const $=id=>document.getElementById(id);
@@ -254,7 +260,7 @@ async function startApp(){
   if(error||!p){toast("프로필을 불러오지 못했습니다.");return}
   profile=p;if(!profile.active){await sb.auth.signOut();toast("비활성화된 계정입니다.");return}
   $("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("userName").textContent=profile.name;$("userRole").textContent=isAdmin()?"관리자":"담당자";
-  $("teamNav").classList.toggle("hidden",!isAdmin());$("newDbBtn").classList.toggle("hidden",!isAdmin());$("ownerFilter").classList.toggle("hidden",!isAdmin());
+  $("teamNav").classList.toggle("hidden",!isAdmin());$("newDbBtn").classList.toggle("hidden",!isAdmin());$("ownerFilter").classList.toggle("hidden",!isAdmin());$("membersNav").classList.toggle("hidden",!isAdmin());
   $("dashboardTitle").textContent=isAdmin()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=isAdmin()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
@@ -275,9 +281,52 @@ function fillProfiles(){
   $("assignedTo").innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
-function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"대시보드",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",team:"담당자 통계",attendance:"출근 달력"}[pg];$("sidebar").classList.remove("open");renderAll()}
+function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"대시보드",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",team:"담당자 통계",attendance:"출근 달력",members:"권한 관리"}[pg];$("sidebar").classList.remove("open");if(pg==="members")loadMembers();renderAll()}
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
-function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance()}
+function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance();renderMembers()}
+async function loadMembers(){
+  if(!isAdmin()){renderMembers();return;}
+  const {data,error}=await sb.from("profiles").select("id,name,role,active").order("name");
+  if(error){const h=$("membersBody");if(h)h.innerHTML='<div class="notice">목록을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.</div>';return;}
+  allMembers=data||[];renderMembers();
+}
+function mRoleLabel(r){return r==="admin"?"마스터":(r==="leader"?"지점장":"설계사");}
+function renderMembers(){
+  const host=$("membersBody");if(!host)return;
+  if(!isAdmin()){host.innerHTML='<div class="notice">이 화면은 마스터(관리자)만 사용할 수 있습니다.</div>';return;}
+  const list=(allMembers.length?allMembers:profiles).slice().sort((a,b)=>((b.role==="admin")-(a.role==="admin"))||String(a.name||"").localeCompare(String(b.name||"")));
+  const rows=list.map(p=>{
+    const me=p.id===profile.id, isM=p.role==="admin";
+    const master=me?'<span style="color:#94a3b8;font-size:12px">본인</span>':(isM
+      ?`<button class="btn btn-sm" style="background:#fee2e2;color:#b91c1c" onclick="setMaster('${p.id}',false)">마스터 해제</button>`
+      :`<button class="btn btn-sm btn-primary" onclick="setMaster('${p.id}',true)">＋ 마스터 지정</button>`);
+    const act=me?'':(p.active
+      ?`<button class="btn btn-sm btn-light" onclick="setActive('${p.id}',false)">비활성화</button>`
+      :`<button class="btn btn-sm btn-light" onclick="setActive('${p.id}',true)">활성화</button>`);
+    return `<tr><td class="name">${esc(p.name)}${me?' <span class="badge gray">나</span>':''}</td><td><span class="badge ${isM?'green':'gray'}">${mRoleLabel(p.role)}</span></td><td><span class="badge ${p.active?'green':'red'}">${p.active?'활성':'비활성'}</span></td><td style="white-space:nowrap">${master} ${act}</td></tr>`;
+  }).join("");
+  host.innerHTML=`<div class="notice" style="margin-bottom:12px">🔐 <b>마스터(관리자)</b>는 전체 DB·담당자 통계·권한 관리를 볼 수 있습니다. 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 이 화면에서 바꿀 수 없습니다.</div><div class="table-wrap"><table><thead><tr><th>담당자</th><th>권한</th><th>상태</th><th>관리</th></tr></thead><tbody>${rows||'<tr><td colspan="4" class="empty">팀원이 없습니다.</td></tr>'}</tbody></table></div>`;
+}
+async function setMaster(id,makeAdmin){
+  if(!isAdmin()){toast("마스터만 권한을 변경할 수 있습니다.");return;}
+  if(id===profile.id){toast("본인 권한은 변경할 수 없습니다.");return;}
+  const t=allMembers.concat(profiles).find(p=>p.id===id),nm=t?t.name:"";
+  if(!confirm(makeAdmin?`'${nm}' 님에게 마스터 권한을 줄까요? 전체 DB·통계·권한 관리를 볼 수 있게 됩니다.`:`'${nm}' 님의 마스터 권한을 회수할까요?`))return;
+  const {error}=await sb.from("profiles").update({role:makeAdmin?"admin":"member"}).eq("id",id);
+  if(error){toast("변경 실패: "+(error.message||"권한 또는 정책을 확인하세요."));return;}
+  toast(makeAdmin?`${nm} 님이 마스터가 되었습니다.`:`${nm} 님의 마스터 권한을 회수했습니다.`);
+  await loadMembers();await loadAll();
+}
+async function setActive(id,active){
+  if(!isAdmin()){toast("마스터만 변경할 수 있습니다.");return;}
+  if(id===profile.id){toast("본인 상태는 변경할 수 없습니다.");return;}
+  const t=allMembers.concat(profiles).find(p=>p.id===id),nm=t?t.name:"";
+  if(!confirm(active?`'${nm}' 님을 활성화할까요?`:`'${nm}' 님을 비활성화하면 로그인이 차단됩니다. 진행할까요?`))return;
+  const {error}=await sb.from("profiles").update({active:active}).eq("id",id);
+  if(error){toast("변경 실패: "+(error.message||"권한 또는 정책을 확인하세요."));return;}
+  toast(`${nm} 님을 ${active?'활성화':'비활성화'}했습니다.`);
+  await loadMembers();await loadAll();
+}
 function renderDashboard(){
   const done=dbs.filter(d=>result(d)!=="미진행"),consult=dbs.filter(d=>result(d)==="상담"),pending=dbs.filter(d=>recStatus(d)==="미완료").length+calls.filter(c=>c.result==="부재"&&!c.group_reported).length;
   $("kTotal").textContent=dbs.length;$("kDone").textContent=done.length;$("kConsult").textContent=consult.length;$("kPending").textContent=pending;
