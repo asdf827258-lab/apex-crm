@@ -2111,7 +2111,7 @@ var TABS=[
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
- {group:'내 성장',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''}]},
+ {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
  {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
@@ -2154,10 +2154,9 @@ var TABS=[
    {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:''},
    {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:''}
  ]},
- {group:'교육센터',items:[{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
- {group:'지점장 코칭',role:'lead',items:[{id:'branch_coach',icon:'🧑‍🏫',title:'팀 코칭',cnt:''}]},
- {group:'본부장 관리',role:'hq',items:[
-   {id:'hq',icon:'🏛️',title:'본부 승인·규칙',cnt:''},
+ {group:'매니저 관리',role:'lead',items:[
+   {id:'branch_coach',icon:'🧑‍🏫',title:'팀 코칭',cnt:''},
+   {id:'hq',icon:'🏛️',title:'승인·규칙',cnt:''},
    {id:'audit',icon:'🛡️',title:'감사로그',cnt:''}
  ]},
  {group:'콘텐츠·마케팅',items:[
@@ -4632,7 +4631,7 @@ function renderTool(g){
   var fh='';
   var cols=g.fields.length>2;
   g.fields.forEach(function(f){
-    var span=(f.span||f.type==='textarea')?' span2':'';
+    var span=(f.span||f.type==='textarea'||f.type==='multichips')?' span2':'';
     fh+='<div class="fld'+span+'" data-field="'+f.name+'">';
     fh+='<label>'+esc(f.label)+(f.hint?' <span class="hint">'+esc(f.hint)+'</span>':'')+'</label>';
     if(f.type==='textarea'){
@@ -4642,6 +4641,9 @@ function renderTool(g){
     }else if(f.type==='chips'){
       fh+='<div class="chips" data-chips="'+f.name+'" data-val="'+esc(f.def||f.options[0])+'">'+
         f.options.map(function(o){return '<button type="button" class="chip-opt'+((f.def||f.options[0])===o?' on':'')+'" onclick="pickChip(this,\''+f.name+'\')">'+esc(o)+'</button>';}).join('')+'</div>';
+    }else if(f.type==='multichips'){
+      fh+='<div class="chips" data-mchips="'+f.name+'">'+
+        f.options.map(function(o){return '<button type="button" class="chip-opt" onclick="this.classList.toggle(\'on\')">'+esc(o)+'</button>';}).join('')+'</div>';
     }else{
       fh+='<input type="text" data-input="'+f.name+'" placeholder="'+esc(f.ph||'')+'"/>';
     }
@@ -4669,6 +4671,7 @@ function collectVals(g){
   var card=$('card_'+g.id);var v={};
   g.fields.forEach(function(f){
     if(f.type==='chips'){var w=card.querySelector('[data-chips="'+f.name+'"]');v[f.name]=w?w.getAttribute('data-val'):'';}
+    else if(f.type==='multichips'){var w=card.querySelector('[data-mchips="'+f.name+'"]');var arr=[];if(w)w.querySelectorAll('.chip-opt.on').forEach(function(b){arr.push(b.textContent);});v[f.name]=arr.join(', ');}
     else{var inp=card.querySelector('[data-input="'+f.name+'"]');v[f.name]=inp?inp.value.trim():'';}
   });
   return v;
@@ -6259,10 +6262,20 @@ gen('cs_feedback','cs_feedback','🎙️','AI 상담 피드백','상담 내용�
  '보험 상담 코치. 비난 없이 구체적으로. 라포·니즈환기·반론처리·클로징 관점에서 피드백.',
  function(v){return '다음 상담을 코칭해줘.\n\n'+v.log+'\n\n[출력]\n## 잘한 점 3가지\n## 개선점 3가지(대안 멘트 포함)\n## 다음 상담 액션 플랜';},2400);
 
-gen('cs_needs','cs_needs','⚡','니즈 시뮬레이터','고객 프로필로 잠재 니즈·우선순위·접근 시나리오를 도출합니다.',
- [TA('profile','고객 프로필','예: 45세 자영업, 배우자/자녀2, 기존 실손만, 가족력 암')],
- '보험 니즈 분석가. 치료비 통장 관점에서 우선순위를 매긴다. 단정 금지, 가정은 가정으로 표기.',
- function(v){return '고객 프로필 기반 니즈를 분석해줘.\n\n'+v.profile+'\n\n[출력]\n## 잠재 니즈 목록\n## 우선순위 Top3와 이유\n## 첫 상담 접근 시나리오(질문 흐름)';},2400);
+gen('cs_needs','cs_needs','⚡','니즈 시뮬레이터','고객 상황을 카테고리별로 선택하면 잠재 니즈·우선순위·상담 시나리오·추천 메뉴를 도출합니다.',
+ [
+  {name:'life',label:'① 생애주기·가족 (복수선택)',type:'multichips',options:['신혼','임신·출산','영유아 자녀','자녀 교육기','자녀 대학·독립','1인 가구','맞벌이','외벌이','다자녀','은퇴 임박(50대)','은퇴 후','부모 부양','싱글맘·대디','재혼가정']},
+  {name:'job',label:'② 직업·소득',type:'multichips',options:['직장인','공무원·교사','전문직','자영업자','법인 대표','프리랜서','플랫폼 노동','주부','구직·무직','고소득','소득 불안정','정년 후 재취업']},
+  {name:'health',label:'③ 건강·가족력',type:'multichips',options:['암 가족력','심장·뇌혈관 가족력','고혈압·당뇨','최근 수술·입원','건강검진 이상소견','흡연','과음','비만','정신건강(불면·우울)','직업상 위험','만성질환 관리 중','유병력(가입 어려움)']},
+  {name:'money',label:'④ 재무 상황',type:'multichips',options:['부채 많음','여유자금 적음','목돈 마련 필요','은퇴자금 부족','상속·증여 고민','절세 필요','사업자금 필요','자녀 교육비 부담','주택 마련','투자 관심']},
+  {name:'have',label:'⑤ 기존 보험',type:'multichips',options:['보험 없음','실손만 있음','오래된 보험(구실손)','과다 가입','갱신형 부담','보장 공백','해지 고민 중','최근 보험금 청구','타사 제안 받음']},
+  {name:'trigger',label:'⑥ 관심·계기',type:'multichips',options:['지인 발병','뉴스 보고 불안','자녀 보험 관심','노후 걱정','목돈 필요','세금 걱정','국가지원 관심','건강 악화','결혼·출산 예정','사업 시작']},
+  {name:'goal',label:'⑦ 가입 목적',type:'multichips',options:['치료비 대비','소득 보장','목돈 마련','노후 연금','상속 재원','자녀 교육비','사업 리스크','간병·요양 대비','절세']},
+  TA('memo','추가 메모(선택)','예: 45세 자영업, 배우자·자녀2, 월소득 700만, 특이사항')
+ ],
+ '보험 니즈 분석가. 선택된 고객 상황(생애주기·직업·건강·재무·기존보험·계기·목적)을 교차해 잠재 니즈와 우선순위를 도출한다. "국가가 줄 수 있는 돈부터"의 고객이익 관점(정책자금·복지·국민연금·건강보험)을 먼저 점검한 뒤 보험을 필요한 만큼만 배분한다. 치료비 통장·8통장 프레임. 단정 금지, 가정은 (가정)으로 표기, 확정수익·지급보장 표현 금지.',
+ function(v){var picked=[['생애주기·가족',v.life],['직업·소득',v.job],['건강·가족력',v.health],['재무 상황',v.money],['기존 보험',v.have],['관심·계기',v.trigger],['가입 목적',v.goal]].filter(function(x){return x[1];}).map(function(x){return '- '+x[0]+': '+x[1];}).join('\n');
+   return '아래 [선택된 고객 상황]을 종합해 니즈를 분석해줘. 선택이 많을수록 상황을 교차해 정밀하게.\n\n[선택된 고객 상황]\n'+(picked||'(선택 없음 — 메모 참고)')+(v.memo?'\n\n[추가 메모] '+v.memo:'')+'\n\n[출력 형식]\n> **한 줄 요약** — 이 고객의 핵심 니즈 1가지.\n\n## 1. 먼저 챙길 국가·제도 (고객이익)\n선택 상황에 해당되는 정책자금·복지·국민연금·건강보험 등 받을 수 있는 지원을 먼저 짚는다(해당 없으면 생략).\n\n## 2. 잠재 니즈 목록\n표: | 니즈 | 근거(어떤 상황에서) | 시급도 |\n\n## 3. 우선순위 Top 3 + 이유\n가계 타격이 큰 순서로 각 2~3문장.\n\n## 4. 첫 상담 접근 시나리오\n관계형성 → 현황질문 → 핵심문제 3개 환기 → 선택형 제안(A/B/C) 흐름의 실제 질문·화법.\n\n## 5. 추천 메뉴(이 앱)\n이 고객에 바로 쓸 메뉴(8통장 진단·보장분석·재무설계·비포애프터 등)를 이유와 함께.\n\n숫자·지급은 단정 금지, 국가지원은 조건 전제, 발송 문구는 준법감시 확인 권장.';},3200);
 
 gen('cs_gso','cs_gso','🤖','금소법 AI','문구가 금융소비자보호법에 맞는지 점검하고 교정합니다.',
  [TA('text','점검할 문구','상담/제안/광고 문구를 붙여넣으세요')],
