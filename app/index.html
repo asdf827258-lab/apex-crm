@@ -2300,9 +2300,8 @@ function openFinanceNewTab(){
 }
 /* ════════ DB CRM 모듈 (실시간 연결 · 독립 CRM 사이트를 iframe로 직접 로드) ════════
    OS와 오리진이 달라 세션은 공유되지 않는다 → CRM 탭에서 한 번 로그인하면 그 브라우저에 유지된다.
-   CRM을 어디서 수정·배포하든(apex-crm 사이트) 이 탭이 항상 '최신본'을 실시간으로 보여준다.
-   ※ 같은 사이트의 db-crm.html을 로드해 항상 최신 CRM(권한 관리·출근 달력 포함)을 보여준다. */
-var CRM_URL='../db-crm.html';
+   CRM을 어디서 수정·배포하든(apex-crm 사이트) 이 탭이 항상 '최신본'을 실시간으로 보여준다. */
+var CRM_URL='https://apex-crm-a500b6.netlify.app/';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
   f.src=CRM_URL;f._mounted=true;
@@ -4839,6 +4838,8 @@ function renderSettings(){
 
     osApprovalCardHtml()+
 
+    osMembersCardHtml()+
+
     osTossCardHtml()+
 
     osAccessCardHtml()+
@@ -6789,7 +6790,7 @@ function osHidePending(){var o=document.getElementById('osGateOvl');if(o)o.style
 function osGateRecheck(){var sb=osClient();if(!sb){return;}toast('승인 상태를 확인합니다…');if(OS.session)osLoadProfile();}
 function osGatePricing(){osHidePending();if(typeof go==='function')go('pricing');}
 /* ── 관리자: 가입 승인 큐 ── */
-function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'&&typeof osLoadApprovals==='function')osLoadApprovals();}
+function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
@@ -6853,6 +6854,54 @@ function osApprovalCardHtml(){
       '<a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>'+
     '</div>'+
     '</div></div>';
+}
+/* ════════ 팀원 권한 관리 — 결제·가입한 팀원에게 마스터(관리자) 권한 부여/회수 ════════
+   같은 Supabase 프로젝트를 쓰므로 CRM은 전혀 건드리지 않는다. RLS(profiles_admin_all/update)+가드가 관리자 변경을 허용. */
+function osMembersCardHtml(){
+  if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  return '<div class="card set-card" style="border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>팀원 권한 관리 <span class="badge">관리자</span></div>'+
+    '<div class="card-desc">결제·가입한 팀원에게 <b>마스터(관리자) 권한</b>을 클릭으로 부여/회수합니다</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">마스터는 전체 자료·가입 승인·권한 관리를 볼 수 있습니다. 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 바꿀 수 없습니다.</div>'+
+    '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-ghost" onclick="osLoadMembers()">🔄 팀원 목록 새로고침</button></div>'+
+    '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
+    '</div></div>';
+}
+function osPillHtml(txt,bg,fg){return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+bg+';color:'+fg+'">'+osEsc(txt)+'</span>';}
+function osLoadMembers(){
+  var box=document.getElementById('osMembersList');if(!box)return;
+  var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
+  box.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>팀원 목록을 불러오는 중…</div>';
+  sb.from('profiles').select('id,name,role,status,plan').order('role',{ascending:false}).order('name').then(function(r){
+    if(r.error){box.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">목록을 불러오지 못했습니다. 위 <b>가입 승인 관리</b>의 "가입 승인 SQL"을 한 번 실행하면 관리자 권한 정책이 켜집니다. <span style="color:var(--ink-4)">('+osEsc(r.error.message||'')+')</span></div>';return;}
+    var rows=r.data||[],me=OS.profile&&OS.profile.id;
+    if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">팀원이 없습니다.</div>';return;}
+    var h='<div style="border:1px solid var(--ink-7);border-radius:10px;overflow:hidden">';
+    rows.forEach(function(p,i){
+      var isM=p.role==='admin',mine=(p.id===me);
+      var rolePill=osPillHtml(osRoleLabel(p.role),isM?'#DCFCE7':'#F1F5F9',isM?'#15803D':'#475569');
+      var statPill=p.status==='pending'?osPillHtml('승인대기','#FEF3C7','#B45309'):(p.status==='rejected'?osPillHtml('거절됨','#FEE2E2','#B91C1C'):osPillHtml('이용중','#E0F2FE','#0369A1'));
+      var planPill=p.plan?osPillHtml(p.plan,'#EDE9FE','#6D28D9'):'';
+      var ctrl=mine?'<span style="font-size:11px;color:var(--ink-5)">본인</span>':(isM
+        ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetMaster(\''+p.id+'\',false)">마스터 해제</button>'
+        :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px" onclick="osSetMaster(\''+p.id+'\',true)">＋ 마스터 지정</button>');
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(i?'border-top:1px solid var(--ink-8)':'')+'">'+
+        '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
+        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+planPill+'</div></div>'+
+        '<div style="white-space:nowrap">'+ctrl+'</div></div>';
+    });
+    h+='</div>';box.innerHTML=h;
+  },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
+}
+function osSetMaster(id,makeAdmin){
+  var sb=osClient();if(!sb)return;
+  if(OS.profile&&id===OS.profile.id){toast('본인 권한은 변경할 수 없습니다.');return;}
+  if(!confirm(makeAdmin?'이 팀원에게 마스터(관리자) 권한을 줄까요?\n전체 자료·가입 승인·권한 관리를 볼 수 있게 됩니다.':'이 팀원의 마스터 권한을 회수할까요?'))return;
+  sb.from('profiles').update({role:makeAdmin?'admin':'member'}).eq('id',id).then(function(r){
+    if(r.error){toast('변경 실패: '+(r.error.message||'권한/정책을 확인하세요'));return;}
+    if(typeof osAudit==='function')osAudit(makeAdmin?'grant_admin':'revoke_admin','profile',id,null);
+    toast(makeAdmin?'✅ 마스터 권한을 부여했습니다.':'마스터 권한을 회수했습니다.');osLoadMembers();
+  });
 }
 /* ════════ 공지사항 시스템 — 메인 홈 배너 + 사이드바 상단 공지(모두에게 표시) ════════
    저장: 이 브라우저(localStorage) 즉시 반영 + (테이블이 있으면) Supabase 'os_notices'로 전체 공유.
