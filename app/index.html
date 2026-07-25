@@ -1695,6 +1695,7 @@ function osLoadToss(cb){
   s.onload=function(){cb(true);};s.onerror=function(){cb(false);};document.head.appendChild(s);
 }
 function osStartCheckout(planId){
+  if(!OS.profile){var g=document.getElementById('osLoginGate');if(g&&g.style.display!=='none'){toast('먼저 로그인 또는 계정 등록을 해주세요.');if(typeof osAuthTab==='function')osAuthTab('signup');var nm=document.getElementById('osName');if(nm)nm.focus();}else if(typeof osOpenModal==='function'){osOpenModal();}return;}
   var plan=null;for(var i=0;i<TOSS_PLANS.length;i++){if(TOSS_PLANS[i].id===planId)plan=TOSS_PLANS[i];}
   if(!plan)return;
   var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
@@ -6743,7 +6744,7 @@ function osLoadProfile(){
     /* 승인 게이트: status 컬럼이 있을 때만 작동(없으면 하위호환으로 통과). 관리자·거절 우회 없음 */
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
-      osHidePending();
+      osHidePending();osHideLoginGate();
       OS.profile=prof;if(extra){OS.profile.status=extra.status;OS.profile.plan=extra.plan;OS.profile.plan_until=extra.plan_until;}
       osRenderPill();osOnLogin();
     });
@@ -6763,6 +6764,7 @@ function osCheckApproval(sb,uid,cb){
 }
 /* 가입 승인 대기/거절 전체화면 — 로그인은 됐지만 아직 입장 불가 상태 안내 */
 function osShowPending(kind,email,extra){
+  osHideLoginGate();
   var ovl=document.getElementById('osGateOvl');
   if(!ovl){ovl=document.createElement('div');ovl.id='osGateOvl';document.body.appendChild(ovl);}
   ovl.style.cssText='position:fixed;inset:0;z-index:4000;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 70%,#38BDF8 100%);display:flex;align-items:center;justify-content:center;padding:24px';
@@ -6789,6 +6791,49 @@ function osShowPending(kind,email,extra){
 function osHidePending(){var o=document.getElementById('osGateOvl');if(o)o.style.display='none';}
 function osGateRecheck(){var sb=osClient();if(!sb){return;}toast('승인 상태를 확인합니다…');if(OS.session)osLoadProfile();}
 function osGatePricing(){osHidePending();if(typeof go==='function')go('pricing');}
+/* ════════ 로그인 게이트 — 로그인 전에는 앱을 가리고 요금제·로그인 화면만 노출 ════════ */
+function osHasStoredSession(){try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&/^sb-.+-auth-token$/.test(k)&&localStorage.getItem(k))return true;}}catch(e){}return false;}
+function osLoginGateHtml(){
+  var logo='<svg viewBox="0 0 240 220" fill="#fff" style="width:38px;height:36px" aria-hidden="true"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>';
+  var chips=['치료비 통장','AI 보장분석','제2의 두뇌','정책자금','90일 아카데미'];
+  var chipH='';for(var i=0;i<chips.length;i++){chipH+='<span style="font-size:11px;font-weight:700;background:rgba(255,255,255,.15);padding:5px 11px;border-radius:999px">'+esc(chips[i])+'</span>';}
+  var loginCard='<div style="background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.28);padding:26px 24px;width:100%;max-width:380px;box-sizing:border-box">'+
+    '<div style="font-size:17px;font-weight:800;color:#0F172A;margin-bottom:4px">로그인 후 이용하세요</div>'+
+    '<div style="font-size:12px;color:#64748B;margin-bottom:16px">설계사 계정으로 로그인하면 모든 도구가 열립니다.</div>'+
+    '<div class="os-tabs"><button id="osTabLogin" class="on" onclick="osAuthTab(\'login\')">로그인</button><button id="osTabSignup" onclick="osAuthTab(\'signup\')">계정 등록</button></div>'+
+    '<div class="os-fld" id="osNameFld" style="display:none"><label>이름</label><input id="osName" placeholder="홍길동"/></div>'+
+    '<div class="os-fld"><label>이메일</label><input id="osEmail" type="email" placeholder="you@example.com" autocomplete="username"/></div>'+
+    '<div class="os-fld"><label>비밀번호</label><input id="osPw" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')osSubmit()"/></div>'+
+    '<div class="os-err" id="osErr"></div>'+
+    '<button class="os-btn" id="osSubmit" onclick="osSubmit()">로그인</button>'+
+    '<div style="font-size:11px;color:#94A3B8;margin-top:10px;text-align:center;line-height:1.6">계정 등록 후 <b>관리자 승인</b>이 필요합니다.<br>아래 요금제에서 플랜을 확인하세요.</div>'+
+  '</div>';
+  var hero='<div style="background:linear-gradient(135deg,#0F172A 0%,#1A56DB 66%,#38BDF8 100%);color:#fff;padding:34px 22px 42px">'+
+    '<div style="max-width:1040px;margin:0 auto;display:flex;gap:30px;flex-wrap:wrap;align-items:center;justify-content:center">'+
+      '<div style="flex:1;min-width:280px;max-width:520px">'+
+        '<div style="display:flex;align-items:center;gap:10px">'+logo+'<div style="font-size:18px;font-weight:800;letter-spacing:.3px">APEX <span style="font-weight:400;opacity:.85">YUN PRO</span></div></div>'+
+        '<div style="font-size:28px;font-weight:800;line-height:1.32;margin-top:22px;letter-spacing:-.5px">보험을 파는 설계사가 아닌,<br>삶을 설계하는 설계사의 무기</div>'+
+        '<div style="font-size:13.5px;opacity:.92;line-height:1.7;margin-top:14px">재무설계·보장분석·AI 상담코치·CRM·마케팅까지 하나로. 로그인하면 바로 시작합니다.</div>'+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">'+chipH+'</div>'+
+      '</div>'+
+      '<div style="flex:none">'+loginCard+'</div>'+
+    '</div></div>';
+  var plans='<div style="max-width:1040px;margin:38px auto 0;padding:0 20px"><div style="font-size:22px;font-weight:800;color:#0F172A;text-align:center;margin-bottom:6px">요금제</div>'+
+    '<div style="font-size:12.5px;color:#64748B;text-align:center;margin-bottom:18px">규모에 맞게 선택하세요 · 부가세 별도 · 결제는 토스페이먼츠 · 언제든 해지</div>'+
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:stretch">'+TOSS_PLANS.map(apexPlanCard).join('')+'</div></div>';
+  var foot='<div style="max-width:900px;margin:32px auto;padding:0 20px 34px;text-align:center;font-size:10.5px;color:#94A3B8;line-height:1.7">APEX YUN PRO · 에이플러스에셋 온탑본부 윤시현 사업단장 &nbsp;|&nbsp; 본 서비스는 보험 상담 업무 보조 도구이며 특정 상품의 가입·수익을 보장하지 않습니다. 금융소비자보호법 등 관련 법령을 준수하며, 모든 상담 콘텐츠는 게시·발송 전 준법 확인을 권장합니다.</div>';
+  return '<div style="min-height:100%;background:#F7F9FC">'+hero+plans+foot+'</div>';
+}
+function osShowLoginGate(){
+  if(OS.profile)return;
+  var ovl=document.getElementById('osLoginGate');
+  if(!ovl){ovl=document.createElement('div');ovl.id='osLoginGate';document.body.appendChild(ovl);}
+  ovl.style.cssText='position:fixed;inset:0;z-index:3500;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#F7F9FC';
+  ovl.innerHTML=osLoginGateHtml();ovl.style.display='block';
+  if(typeof osAuthTab==='function')osAuthTab('login');
+  try{document.body.style.overflow='hidden';}catch(e){}
+}
+function osHideLoginGate(){var o=document.getElementById('osLoginGate');if(o){o.style.display='none';o.innerHTML='';}try{document.body.style.overflow='';}catch(e){}}
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();}}
 function osLoadApprovals(){
@@ -7022,9 +7067,11 @@ function osRefreshIfClients(){
 function osBootAuth(){
   osRenderPill();
   if(typeof osTossReturnCheck==='function'){try{osTossReturnCheck();}catch(e){}}
+  /* 로그인 전에는 앱을 가린다: 저장된 세션이 없으면 즉시 게이트 표시(콘텐츠 깜빡임 방지) */
+  if(!osHasStoredSession())osShowLoginGate();
   var sb=osClient();if(!sb)return;
-  sb.auth.onAuthStateChange(function(evt,s){OS.session=s;if(s){osLoadProfile();}else{OS.profile=null;osHidePending();osRenderPill();osRefreshIfClients();}});
-  sb.auth.getSession().then(function(r){OS.session=(r.data&&r.data.session)||null;if(OS.session)osLoadProfile();else osRenderPill();});
+  sb.auth.onAuthStateChange(function(evt,s){OS.session=s;if(s){osLoadProfile();}else{OS.profile=null;osHidePending();osRenderPill();osRefreshIfClients();osShowLoginGate();}});
+  sb.auth.getSession().then(function(r){OS.session=(r.data&&r.data.session)||null;if(OS.session)osLoadProfile();else{osRenderPill();osShowLoginGate();}});
 }
 
 /* ════════ Phase 2 — 고객 보장분석 프로젝트 ════════ */
