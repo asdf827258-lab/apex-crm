@@ -527,7 +527,7 @@ a{color:inherit;text-decoration:none;}
 .sb-scroll{flex:1;overflow-y:auto;padding:12px 12px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;}
 .sb-scroll::-webkit-scrollbar{width:3px;}
 .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px;}
-.nav-group-label{font-size:11.5px;font-weight:800;letter-spacing:-.01em;color:#9ec1ff;text-transform:none;padding:13px 9px 6px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:6px;user-select:none;transition:color .15s;}
+.nav-group-label{font-size:9px;font-weight:700;letter-spacing:.09em;color:rgba(255,255,255,.4);text-transform:none;padding:14px 10px 5px;}
 .nav-group-label:hover{color:#cbddff;}.ngl-left{display:flex;align-items:center;gap:7px;min-width:0;}.ngl-ic{font-size:15px;line-height:1;flex:none;filter:saturate(1.15);}.ngl-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ngl-caret{font-size:9px;opacity:.5;transition:transform .22s var(--ease);}
 .nav-group.collapsed .ngl-caret{transform:rotate(-90deg);}
@@ -537,7 +537,7 @@ a{color:inherit;text-decoration:none;}
 .nav-allbtns button{flex:1;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:none;border-radius:6px;padding:5px;cursor:pointer;transition:all .15s;}
 .nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);}
 .nav-group-label:first-child{padding-top:2px;}
-.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:500;color:rgba(255,255,255,.5);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
+.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:600;color:rgba(255,255,255,.84);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
 .tab-btn:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);}
 .tab-btn.on{background:rgba(96,165,250,.12);color:#93C5FD;font-weight:700;}
 .tab-btn.on::before{content:'';position:absolute;left:0;width:3px;height:22px;background:#60A5FA;border-radius:0 4px 4px 0;}
@@ -2145,7 +2145,6 @@ var TABS=[
  {group:'상담 AI 코치',items:[
    {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''},
    {id:'cs_assist',icon:'💬',title:'AI 상담 어시스턴트',cnt:''},
-   {id:'cs_feedback',icon:'🎙️',title:'AI 상담 피드백',cnt:''},
    {id:'cs_needs',icon:'⚡',title:'니즈 시뮬레이터',cnt:''},
    {id:'cs_gso',icon:'🤖',title:'금소법 AI',cnt:''}
  ]},
@@ -2205,36 +2204,16 @@ var TAB_META={
 };
 
 /* ════════ 네비 렌더 ════════ */
-var GROUP_ICONS={'업무매뉴얼':'📖','조직':'👥','홈':'🏠','오늘의 AI 비서':'🤖','내 성장':'📈','고객':'🗂️','DB CRM':'🗄️','보험 해석':'🔍','8통장 지도':'🗺️','계약관리':'📋','보장분석':'📑','재무설계':'📊','법인·사업자 컨설팅':'🏢','상담 AI 코치':'🧠','청구·사후관리':'🧾','교육센터':'🎓','지점장 코칭':'🧑‍🏫','본부장 관리':'🏛️','콘텐츠·마케팅':'📣','보험 레퍼런스':'📚','구독·요금제':'💳','시스템 설정':'⚙️'};
-function navColGet(){try{return JSON.parse(localStorage.getItem('apex_nav_col')||'{}')||{};}catch(e){return {};}}
-function navColSet(o){try{localStorage.setItem('apex_nav_col',JSON.stringify(o));}catch(e){}}
-function navToggleGroup(el){
-  var g=el.parentNode;if(!g)return;
-  var t=el.querySelector('.ngl-t');var name=t?t.textContent:'';
-  var on=g.classList.toggle('collapsed');
-  var o=navColGet();if(on)o[name]=1;else delete o[name];navColSet(o);
-}
-function navAllGroups(open){
-  var o={};
-  if(!open){var gs=(typeof visibleTabs==='function')?visibleTabs():TABS;gs.forEach(function(g){o[g.group]=1;});}
-  navColSet(o);renderNav();
-}
 function renderNav(){
   var h='<div id="osNoticeNav"></div>';
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
-  var col=navColGet();
-  h+='<div class="nav-allbtns"><button type="button" onclick="navAllGroups(true)">모두 펼치기</button><button type="button" onclick="navAllGroups(false)">모두 접기</button></div>';
   groups.forEach(function(g){
-    var isCol=col[g.group]?' collapsed':'';
-    h+='<div class="nav-group'+isCol+'">';
-    h+='<div class="nav-group-label" onclick="navToggleGroup(this)"><span class="ngl-left"><span class="ngl-ic">'+(GROUP_ICONS[g.group]||'📁')+'</span><span class="ngl-t">'+esc(g.group)+'</span></span><span class="ngl-caret">▾</span></div>';
-    h+='<div class="nav-group-items">';
+    h+='<div class="nav-group-label">'+esc(g.group)+'</div>';
     g.items.forEach(function(it){
       h+='<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
          '<span class="ti">'+it.icon+'</span><span class="tt">'+esc(it.title)+'</span>'+
          (it.cnt?'<span class="tc">'+it.cnt+'</span>':'')+'</button>';
     });
-    h+='</div></div>';
   });
   $('navHost').innerHTML=h;
   if(typeof osNoticeApply==='function')osNoticeApply();
