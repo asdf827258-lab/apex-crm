@@ -8365,6 +8365,120 @@ function bizAIBlock(section){
     '<div id="bizOut_'+section+'" style="margin-top:12px">'+(md?bizOutBox(section,md):'')+'</div></div>';
 }
 
+/* ── #1 법인·사업자 상담 진단 슬라이드(PPT) — 대표님께 바로 보여주는 프레젠테이션 ── */
+var BIZ_DECK={slides:[],i:0,title:''};
+function bizDeckGen(){
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 슬라이드가 생성됩니다.');go('settings');return;}
+  var host=$('bizDeckHost');if(host)host.innerHTML='<div class="loading"><div class="spinner"></div>대표님께 보여줄 상담 진단 슬라이드를 만드는 중… (15~40초)</div>';
+  var label=(typeof bizClientLabel==='function'?bizClientLabel(bizCur()):'')||'대표님';
+  var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 정확히 이 구조로, 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 슬라이드 큰 제목(짧고 강하게)\n- 핵심 불릿(짧게, 3~5개)\n- 불릿\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단", 부제로 오늘 다룰 핵심 3가지\n2) 현황 진단 — 업종·규모·재무 요약과 강점\n3) 핵심 이슈 3가지 — 정책자금/세금/보험/퇴직금/인사 중 가장 시급한 것\n4) 정책자금 방향 — 적합 자금과 "신청→지급까지" 흐름 요지\n5) 절세 포인트 — 이 사업자 유형에 맞는 절세 카드\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원 관점\n7) 실행 로드맵 — 30·60·90일 할 일\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
+  callAI(BIZ_SYS,user,3800,'biz_deck').then(function(md){
+    var slides=bizDeckParse(md);
+    if(slides.length<2)slides=[{kicker:'상담 진단',title:label+' 통합 컨설팅',bullets:[],note:'',raw:md}];
+    BIZ_DECK.slides=slides;BIZ_DECK.i=0;BIZ_DECK.title=label;
+    var h=$('bizDeckHost');if(h)h.innerHTML=bizDeckView();
+  }).catch(function(e){var h=$('bizDeckHost');if(h)h.innerHTML='<div class="err-box">⚠️ '+osEsc((e&&e.message)||'생성 실패')+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;cursor:pointer;text-decoration:underline" onclick="go(\'settings\')">설정</a>에서 AI 연결을 확인하세요.</div>';});
+}
+function bizDeckParse(md){
+  var blocks=(md||'').split(/@@SLIDE/i).slice(1);var out=[];
+  blocks.forEach(function(b){
+    b=b.split(/@@END/i)[0];
+    var kicker='',title='',note='',bullets=[];
+    b.split(/\r?\n/).forEach(function(ln){
+      var t=ln.trim();if(!t)return;
+      var mk=t.match(/^kicker\s*:\s*(.+)/i),mt=t.match(/^title\s*:\s*(.+)/i),mn=t.match(/^note\s*:\s*(.+)/i);
+      if(mk)kicker=mk[1].trim();
+      else if(mt)title=mt[1].trim();
+      else if(mn)note=mn[1].trim();
+      else if(/^[-•*]\s+/.test(t))bullets.push(t.replace(/^[-•*]\s+/,'').replace(/\*\*/g,'').trim());
+      else if(!title)title=t.replace(/^#+\s*/,'').replace(/\*\*/g,'').trim();
+    });
+    if(title||bullets.length)out.push({kicker:kicker,title:title,bullets:bullets,note:note});
+  });
+  return out;
+}
+function bizDeckView(){
+  var n=BIZ_DECK.slides.length,i=BIZ_DECK.i;
+  return '<div class="bizdeck-bar"><span class="bizdeck-cnt" id="bizDeckCnt">슬라이드 '+(i+1)+' / '+n+'</span><span style="flex:1"></span>'+
+    '<button class="btn btn-ghost" onclick="bizDeckNav(-1)">◀ 이전</button>'+
+    '<button class="btn btn-ghost" onclick="bizDeckNav(1)">다음 ▶</button>'+
+    '<button class="btn btn-ghost" onclick="bizDeckFull()">⛶ 전체화면</button>'+
+    '<button class="btn btn-primary" onclick="bizDeckPrint()">🖨 PDF 저장</button>'+
+    '<button class="btn btn-ghost" onclick="bizDeckGen()">🔄 재생성</button></div>'+
+    '<div class="bizdeck-stage" id="bizDeckStage" tabindex="0" onkeydown="bizDeckKey(event)">'+bizDeckSlide(BIZ_DECK.slides[i],i,n)+'</div>'+
+    '<div class="bizdeck-dots">'+BIZ_DECK.slides.map(function(s,k){return '<button class="bizdeck-dot'+(k===i?' on':'')+'" onclick="bizDeckGo('+k+')" aria-label="슬라이드 '+(k+1)+'"></button>';}).join('')+'</div>';
+}
+function bizDeckSlide(s,i,n){
+  if(!s)return '';
+  var cover=(i===0),body;
+  if(s.raw){body='<div class="bizslide-raw">'+renderMd(s.raw)+'</div>';}
+  else{
+    var bl=(s.bullets&&s.bullets.length)?'<ul class="bizslide-ul">'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'';
+    body=bl+(s.note?'<div class="bizslide-note">'+osEsc(s.note)+'</div>':'');
+  }
+  return '<button class="bizdeck-arrow l" onclick="bizDeckNav(-1)" aria-label="이전">‹</button>'+
+    '<div class="bizslide'+(cover?' cover':'')+'">'+
+    (s.kicker?'<div class="bizslide-kicker">'+osEsc(s.kicker)+'</div>':'')+
+    '<div class="bizslide-title">'+osEsc(s.title||'')+'</div>'+body+
+    '<div class="bizslide-foot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+n+'</span></div></div>'+
+    '<button class="bizdeck-arrow r" onclick="bizDeckNav(1)" aria-label="다음">›</button>';
+}
+function bizDeckGo(k){
+  var n=BIZ_DECK.slides.length;if(!n)return;BIZ_DECK.i=(k%n+n)%n;
+  var st=$('bizDeckStage');if(st)st.innerHTML=bizDeckSlide(BIZ_DECK.slides[BIZ_DECK.i],BIZ_DECK.i,n);
+  var c=$('bizDeckCnt');if(c)c.textContent='슬라이드 '+(BIZ_DECK.i+1)+' / '+n;
+  document.querySelectorAll('.bizdeck-dot').forEach(function(b,idx){if(idx===BIZ_DECK.i)b.classList.add('on');else b.classList.remove('on');});
+}
+function bizDeckNav(d){bizDeckGo(BIZ_DECK.i+d);}
+function bizDeckKey(e){if(!e)return;if(e.key==='ArrowRight')bizDeckNav(1);else if(e.key==='ArrowLeft')bizDeckNav(-1);}
+function bizDeckFull(){var el=$('bizDeckStage');if(!el)return;try{if(document.fullscreenElement){document.exitFullscreen();return;}if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();el.focus();}catch(x){}}
+function bizDeckPrint(){
+  if(!BIZ_DECK.slides.length){toast('먼저 슬라이드를 생성하세요');return;}
+  var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
+  var pages=BIZ_DECK.slides.map(function(s,i){
+    var bl=s.raw?renderMd(s.raw):((s.bullets&&s.bullets.length?'<ul>'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'')+(s.note?'<div class="note">'+osEsc(s.note)+'</div>':''));
+    return '<section class="pg'+(i===0?' cover':'')+'">'+(s.kicker?'<div class="kick">'+osEsc(s.kicker)+'</div>':'')+'<h2>'+osEsc(s.title||'')+'</h2>'+bl+'<div class="pgfoot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+BIZ_DECK.slides.length+'</span></div></section>';
+  }).join('');
+  var css='@page{size:A4 landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif}'+
+   '.pg{position:relative;width:297mm;height:209mm;padding:20mm 24mm;page-break-after:always;display:flex;flex-direction:column;overflow:hidden}'+
+   '.kick{font-size:15px;font-weight:800;color:#1A56DB;margin-bottom:8px}h2{font-size:30px;font-weight:800;color:#0F172A;margin:0;line-height:1.25}'+
+   'ul{margin:20px 0 0;padding:0;list-style:none}li{position:relative;padding-left:22px;font-size:18px;line-height:1.55;color:#334155;margin:10px 0}li:before{content:"▪";position:absolute;left:0;color:#1A56DB}'+
+   '.note{margin-top:auto;font-size:13px;color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:10px 14px;border-radius:0 8px 8px 0}'+
+   '.pgfoot{position:absolute;left:24mm;right:24mm;bottom:12mm;display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;font-weight:700}'+
+   '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+osEsc(BIZ_DECK.title)+' 상담 진단 슬라이드</title><style>'+css+'</style></head><body>'+pages+'</body></html>');
+  w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
+}
+(function bizDeckInjectStyle(){
+  if(typeof document==='undefined'||document.getElementById('bizDeckStyle'))return;
+  var s=document.createElement('style');s.id='bizDeckStyle';
+  s.textContent=[
+   '.bizdeck-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px}',
+   '.bizdeck-cnt{font-size:12px;font-weight:800;color:#1C2434}',
+   '.bizdeck-stage{position:relative;width:100%;aspect-ratio:16/9;background:#fff;border:1px solid #E5E9F0;border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,.10);outline:none}',
+   '.bizdeck-stage:fullscreen{border-radius:0;border:none;background:#0F172A}',
+   '.bizslide{position:absolute;inset:0;display:flex;flex-direction:column;padding:6% 7%;box-sizing:border-box;background:#fff}',
+   '.bizslide-kicker{font-size:clamp(11px,1.7vw,16px);font-weight:800;color:#1A56DB;letter-spacing:.02em;margin-bottom:2%}',
+   '.bizslide-title{font-size:clamp(18px,3.4vw,36px);font-weight:800;color:#0F172A;line-height:1.24;letter-spacing:-.02em}',
+   '.bizslide-ul{margin:3.6% 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:2.2%}',
+   '.bizslide-ul li{position:relative;padding-left:1.5em;font-size:clamp(12px,1.95vw,20px);line-height:1.5;color:#334155}',
+   '.bizslide-ul li:before{content:"▪";position:absolute;left:0;color:#1A56DB}',
+   '.bizslide-note{margin-top:auto;font-size:clamp(10px,1.45vw,15px);color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:1.6% 2.4%;border-radius:0 8px 8px 0}',
+   '.bizslide-raw{overflow:auto;font-size:clamp(11px,1.6vw,15px);color:#334155}',
+   '.bizslide-foot{position:absolute;left:7%;right:7%;bottom:3.6%;display:flex;justify-content:space-between;font-size:clamp(9px,1.2vw,13px);color:#94A3B8;font-weight:700}',
+   '.bizslide.cover{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 70%,#38BDF8 130%);justify-content:center}',
+   '.bizslide.cover .bizslide-kicker{color:#93C5FD}.bizslide.cover .bizslide-title{color:#fff;font-size:clamp(22px,4.6vw,46px)}',
+   '.bizslide.cover .bizslide-ul li{color:rgba(255,255,255,.92)}.bizslide.cover .bizslide-ul li:before{color:#93C5FD}',
+   '.bizslide.cover .bizslide-foot{color:rgba(255,255,255,.72)}.bizslide.cover .bizslide-note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}',
+   '.bizdeck-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:38px;height:38px;border-radius:50%;border:none;background:rgba(15,23,42,.26);color:#fff;font-size:24px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}',
+   '.bizdeck-arrow:hover{background:rgba(15,23,42,.5)}.bizdeck-arrow.l{left:12px}.bizdeck-arrow.r{right:12px}',
+   '.bizdeck-dots{display:flex;gap:6px;justify-content:center;margin-top:10px;flex-wrap:wrap}',
+   '.bizdeck-dot{width:9px;height:9px;border-radius:50%;border:none;background:#CBD5E1;cursor:pointer;padding:0;transition:all .15s}',
+   '.bizdeck-dot.on{background:#1A56DB;width:22px;border-radius:5px}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+
 /* ══════════════ 라우터 ══════════════ */
 function renderBiz(tab){
   bizLoad();
@@ -8391,8 +8505,12 @@ function renderBizDiag(){
      (p.kind==='corp'?bizField('garizip','가지급금','만원')+bizField('retireReserve','퇴직급여충당','만원'):'')+
      bizSelect('credit','신용상태(자가진단)',['우수','보통','주의','미상'])+
     '</div></div>';
-  return osPage('B2B 컨설팅','사업자 종합 진단','개인사업자·법인 대표를 위한 통합 컨설팅 허브입니다. 여러 사업자를 등록·전환하며 정책자금·세금·보험·퇴직금·인사 우선순위를 한 번에 진단합니다.',
-    bizTop('biz_diag')+form+'<div id="bizDiagCalc">'+bizDiagCalc()+'</div>'+bizAIBlock('diag')+bizDisc(BIZ_DISC_GEN));
+  var deck='<div class="rpt-sec"><div class="hd"><span class="n">📊</span>상담 진단 슬라이드 (PPT)</div>'+
+    '<div class="sub">위 입력값으로 <b>대표님께 바로 보여줄 프레젠테이션</b>을 만듭니다. 전체화면 발표 · PDF(A4 가로) 저장이 됩니다.</div>'+
+    '<button class="btn" style="background:linear-gradient(135deg,#4C1D95,#7C3AED);color:#fff;border:none" onclick="bizDeckGen()">📊 상담 슬라이드 생성</button>'+
+    '<div id="bizDeckHost" style="margin-top:12px"></div></div>';
+  return osPage('B2B 컨설팅','사업자 종합 진단','개인사업자·법인 대표를 위한 통합 컨설팅 허브입니다. 여러 사업자를 등록·전환하며 정책자금·세금·보험·퇴직금·인사 우선순위를 한 번에 진단하고, 상담 슬라이드(PPT)까지 만듭니다.',
+    bizTop('biz_diag')+form+'<div id="bizDiagCalc">'+bizDiagCalc()+'</div>'+bizAIBlock('diag')+deck+bizDisc(BIZ_DISC_GEN));
 }
 function bizDiagCalc(){
   var p=BIZ.profile, t=bizStaffTotals();
