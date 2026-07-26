@@ -2153,7 +2153,7 @@ var TABS=[
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
  {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
- {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'📅',title:'출근 현황',cnt:''}]},
+ {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
  {group:'계약관리',items:[
@@ -2297,7 +2297,6 @@ function go(tab){
   else if(tab==='endorse')dyn.innerHTML=renderEndorse();
   else if(tab==='contracts')dyn.innerHTML=renderContracts();
   else if(tab==='claims')dyn.innerHTML=renderClaims();
-  else if(tab==='attend'){dyn.innerHTML=renderAttend();if(typeof osAttendLoad==='function')osAttendLoad();}
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();}
   else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
@@ -2341,13 +2340,10 @@ function openFinanceNewTab(){
     setTimeout(function(){URL.revokeObjectURL(url);},60000);
   }catch(e){toast('새 탭 열기 실패: '+e.message);}
 }
-/* ════════ DB CRM 모듈 — 같은 사이트의 db-crm.html(출근 현황 포함)을 iframe로 로드 ════════
-   같은 오리진이라 Supabase 설정(공개 anon)을 localStorage로 넘겨 자동 연결한다.
-   config.js는 그대로(placeholder) 두고, 앱이 가진 공개 설정만 전달한다. 데이터는 동일 프로젝트라 CRM과 같다. */
-var CRM_URL='../db-crm.html';
+/* ════════ DB CRM 모듈 (원래 쓰던 독립 CRM 사이트를 iframe로 로드 · 디자인 원상복구) ════════ */
+var CRM_URL='https://apex-crm-a500b6.netlify.app/';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
-  try{if(window.APEX_SB&&window.APEX_SB.url&&window.localStorage){localStorage.setItem('apexSupabaseConfigV1',JSON.stringify({url:window.APEX_SB.url,key:window.APEX_SB.key}));}}catch(e){}
   f.src=CRM_URL;f._mounted=true;
 }
 function reloadCrm(){var f=$('crmFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCrm,30);toast('DB CRM 새로고침');}}
@@ -7073,28 +7069,34 @@ function osLoadApprovals(){
 function osApprove(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'approved'}).eq('id',id).then(function(r){if(r.error){toast('승인 실패: '+(r.error.message||''));return;}osAudit('approve','profile',id,null);toast('승인했습니다 — 해당 사용자는 다음 로그인부터 입장 가능합니다.');osLoadApprovals();});}
 function osReject(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'rejected'}).eq('id',id).then(function(r){if(r.error){toast('거절 실패: '+(r.error.message||''));return;}osAudit('reject','profile',id,null);toast('가입을 거절했습니다.');osLoadApprovals();});}
 var OS_APPROVAL_SQL=[
- '-- APEX 가입 승인 게이트 (Supabase SQL Editor에서 한 번만 실행)',
+ '-- APEX 가입 승인 + 팀원 권한 관리 (Supabase SQL Editor에 붙여넣고 RUN · 여러 번 실행해도 안전)',
  '-- 1) 프로필에 승인상태·구독 컬럼 추가',
- 'alter table profiles add column if not exists status text;',
- 'alter table profiles add column if not exists plan text;',
- 'alter table profiles add column if not exists plan_until timestamptz;',
- '-- 2) 기존 계정은 잠기지 않도록 승인 처리, 이후 신규는 pending 기본값',
- "update profiles set status='approved' where status is null;",
- "alter table profiles alter column status set default 'pending';",
- '-- 3) 관리자는 모든 프로필을 조회·수정(승인)할 수 있게 정책 추가',
- 'drop policy if exists profiles_admin_all on profiles;',
- 'create policy profiles_admin_all on profiles for all to authenticated',
- "  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role='admin'))",
- "  with check (exists(select 1 from profiles p where p.id=auth.uid() and p.role='admin'));",
- '-- 4) 신규 가입 시 프로필 자동 생성(트리거가 없다면) — 이미 있으면 건너뜀',
- 'create or replace function public.handle_new_user() returns trigger language plpgsql security definer as $$',
+ 'alter table public.profiles add column if not exists status text;',
+ 'alter table public.profiles add column if not exists plan text;',
+ 'alter table public.profiles add column if not exists plan_until timestamptz;',
+ "update public.profiles set status='approved' where status is null;",
+ "alter table public.profiles alter column status set default 'pending';",
+ '-- 2) 관리자 판별 함수 (SECURITY DEFINER = RLS 우회 → 정책 무한재귀 방지: 이게 없으면 목록이 안 뜹니다)',
+ 'create or replace function public.is_admin() returns boolean',
+ '  language sql stable security definer set search_path = public as $$',
+ "    select exists(select 1 from public.profiles where id = auth.uid() and role = 'admin');",
+ '  $$;',
+ '-- 3) 관리자는 모든 프로필 조회·수정(승인·권한 부여) 가능 (재귀 없이 is_admin 사용)',
+ 'drop policy if exists profiles_admin_all on public.profiles;',
+ 'create policy profiles_admin_all on public.profiles for all to authenticated',
+ '  using (public.is_admin()) with check (public.is_admin());',
+ '-- 4) 신규 가입 시 프로필 자동 생성(pending)',
+ 'create or replace function public.handle_new_user() returns trigger',
+ '  language plpgsql security definer set search_path = public as $$',
  'begin',
- "  insert into public.profiles(id,name,role,status) values(new.id, coalesce(new.raw_user_meta_data->>'name',''), 'member','pending')",
+ "  insert into public.profiles(id, name, role, status)",
+ "  values (new.id, coalesce(new.raw_user_meta_data->>'name',''), 'member', 'pending')",
  '  on conflict (id) do nothing;',
  '  return new;',
- 'end;$$;',
+ 'end; $$;',
  'drop trigger if exists on_auth_user_created on auth.users;',
- 'create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();'
+ 'create trigger on_auth_user_created after insert on auth.users for each row execute function public.handle_new_user();',
+ "notify pgrst, 'reload schema';"
 ].join('\n');
 function osApprovalCopySql(){copyText(OS_APPROVAL_SQL);}
 function osApprovalSqlToggle(){var e=document.getElementById('apprSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
