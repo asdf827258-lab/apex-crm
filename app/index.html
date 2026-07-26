@@ -1465,6 +1465,139 @@ function renderInsAsst(){
   return osPage('상담 AI 코치','APEX 보험 비서','담보·약관·청구·질병/수술·고지의무를 바로 답하는 보험 실무 전문 비서입니다.',hero+ask);
 }
 function osInsAsstAfter(){var t=$('insQ');if(t)t.focus();insRenderThread();}
+/* ═══════════ #10 고객 상담카드 · 팩트파인딩 — 정보 취합 + AI 니즈분석 + 상담지 인쇄 ═══════════
+   기초 상담자료를 만들어 고객 정보를 취합·저장(이 기기)하고, AI 니즈분석과 상담지 출력까지. */
+var FACT={list:null,cur:'',busy:false};
+var FACT_DISC='본 상담카드·니즈분석은 판매 목적의 상담 참고자료이며, 확정 수익·지급 보장·과장 표현을 포함하지 않습니다. 상품 가입 전 약관·상품설명서 확인과 적합성 원칙(금융소비자보호법)에 따른 안내가 필요합니다.';
+var FACT_FIELDS=[
+ {id:'name',l:'고객명',ph:'예: 홍길동'},
+ {id:'age',l:'나이·성별',ph:'예: 45세 남'},
+ {id:'contact',l:'연락처',ph:'예: 010-1234-5678'},
+ {id:'job',l:'직업·직장',ph:'예: 제조업 대표'},
+ {id:'income',l:'월 소득(대략)',ph:'예: 900만원'},
+ {id:'family',l:'가족구성',ph:'예: 배우자·자녀 2명(8·5세)'},
+ {id:'asset',l:'보유자산',ph:'예: 아파트, 금융자산 2억, 사업지분',ta:1},
+ {id:'debt',l:'부채',ph:'예: 주택담보 1.5억'},
+ {id:'exist',l:'기존 보험·연금',ph:'예: 종신 1억, 실손, 연금저축 월 30만',ta:1},
+ {id:'budget',l:'월 납입 가능 예산',ph:'예: 40~60만원'},
+ {id:'health',l:'건강상태·가족력',ph:'예: 고혈압약 복용, 부친 위암력',ta:1},
+ {id:'goal',l:'상담 목표·관심사',ph:'예: 은퇴자금 + 상속 절세 + 자녀 보장',ta:1}
+];
+var FACT_CATS=[{id:'pension',t:'연금·은퇴',e:'🌴'},{id:'health',t:'건강·실손',e:'🩺'},{id:'death',t:'사망보장·상속',e:'🛡️'},{id:'child',t:'자녀·교육',e:'👨‍👩‍👧‍👦'},{id:'biz',t:'사업자·법인',e:'🏢'},{id:'tax',t:'절세·자산',e:'🧾'}];
+function factStoreKey(){var who='local';try{if(typeof OS!=='undefined'&&OS.profile)who=OS.profile.email||OS.profile.id||'local';}catch(e){}return 'apex_fact_cards_'+who;}
+function factLoad(){if(FACT.list)return FACT.list;var raw='';try{raw=localStorage.getItem(factStoreKey())||'';}catch(e){}var arr;try{arr=raw?JSON.parse(raw):[];}catch(e){arr=[];}FACT.list=(arr&&arr.push)?arr:[];return FACT.list;}
+function factPersist(){try{localStorage.setItem(factStoreKey(),JSON.stringify(FACT.list||[]));}catch(e){toast('저장 공간이 부족합니다 — 오래된 카드를 삭제해 주세요.');}}
+function factNewId(){var t='0';try{t=String(Date.now());}catch(e){}return 'fc_'+t+'_'+Math.floor(Math.random()*100000);}
+function factFindCard(id){var L=factLoad();for(var i=0;i<L.length;i++){if(L[i].id===id)return L[i];}return null;}
+function factCatChips(sel){sel=sel||[];return FACT_CATS.map(function(c){var on=sel.indexOf(c.id)>=0?' on':'';return '<button type="button" class="chip-opt'+on+'" data-fcat="'+c.id+'" onclick="this.classList.toggle(\'on\')">'+c.e+' '+c.t+'</button>';}).join('');}
+function factFieldsHtml(card){card=card||{};return FACT_FIELDS.map(function(f){
+  var v=osEsc(card[f.id]||'');var w=f.ta?' span2':'';
+  var inp=f.ta?'<textarea id="ff_'+f.id+'" style="width:100%;min-height:52px;font-size:13px;line-height:1.55;border:1px solid var(--ink-7);border-radius:9px;padding:9px;box-sizing:border-box" placeholder="'+esc(f.ph)+'">'+v+'</textarea>'
+    :'<input id="ff_'+f.id+'" type="text" value="'+v+'" style="width:100%;font-size:13px;border:1px solid var(--ink-7);border-radius:9px;padding:9px;box-sizing:border-box" placeholder="'+esc(f.ph)+'"/>';
+  return '<div class="fld'+w+'" style="display:flex;flex-direction:column;gap:5px"><label style="font-size:11.5px;font-weight:700;color:var(--ink-3)">'+esc(f.l)+'</label>'+inp+'</div>';
+}).join('');}
+function factListHtml(){
+  var L=factLoad();
+  if(!L.length)return '<div style="font-size:12.5px;color:var(--ink-5);padding:10px 2px">아직 저장된 상담카드가 없습니다. 아래에 고객 정보를 입력하고 <b>저장</b>하면 여기에 쌓입니다.</div>';
+  var rows=L.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).map(function(c){
+    var when='';try{when=c.ts?new Date(c.ts).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}):'';}catch(e){}
+    var cats=(c.cats||[]).map(function(id){var f=FACT_CATS.filter(function(x){return x.id===id;})[0];return f?f.e:'';}).join('');
+    var ai=c.ai?'<span class="badge green" style="font-size:9.5px">AI분석</span>':'';
+    return '<div class="fact-row'+(c.id===FACT.cur?' on':'')+'" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--ink-7);border-radius:10px;margin-bottom:7px;background:#fff">'+
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="factOpen(\''+c.id+'\')">'+
+        '<div style="font-size:13.5px;font-weight:800;color:var(--ink-1)">'+osEsc(c.name||'(무명)')+' '+cats+' '+ai+'</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:2px">'+osEsc(c.age||'')+(c.goal?' · '+osEsc((c.goal||'').slice(0,28)):'')+(when?' · '+when:'')+'</div>'+
+      '</div>'+
+      '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="factOpen(\''+c.id+'\')">열기</button>'+
+      '<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;color:#DC2626" onclick="factDelete(\''+c.id+'\')">삭제</button></div>';
+  }).join('');
+  return '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">저장된 상담카드 ('+L.length+')</div>'+rows;
+}
+function renderFactFind(){
+  factLoad();
+  var cur=FACT.cur?factFindCard(FACT.cur):null;
+  var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none">'+
+    '<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">고객 상담자료 · FACT-FINDING</div>'+
+    '<div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">📝 고객 상담카드</div>'+
+    '<div style="font-size:12.5px;opacity:.92;margin-top:8px;line-height:1.6">상담 자리에서 고객 정보를 한 장으로 취합하세요. 저장하면 고객별로 쌓이고, <b>AI 니즈분석</b>과 <b>상담지 인쇄</b>까지 바로 됩니다. (이 기기에 저장)</div></div>';
+  var list='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>내 상담카드</div><div class="card-desc">고객을 클릭하면 아래에서 열람·수정할 수 있습니다.</div></div><div class="card-body"><div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="factNew()">＋ 새 상담카드</button></div><div id="factList">'+factListHtml()+'</div></div></div>';
+  var editor='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span><span id="factEditTitle">'+(cur?osEsc(cur.name||'상담카드')+' — 수정':'새 상담카드')+'</span></div><div class="card-desc">아는 값만 입력해도 됩니다. 저장 후 언제든 다시 열어 이어서 채울 수 있습니다.</div></div><div class="card-body">'+
+    '<input type="hidden" id="factCurId" value="'+osEsc(FACT.cur||'')+'"/>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">관심 분야 (복수 선택)</div><div class="chips" id="factCats" style="margin-bottom:14px">'+factCatChips(cur?cur.cats:[])+'</div>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">팩트파인딩</div><div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:11px">'+factFieldsHtml(cur)+'</div>'+
+    '<div class="btn-row" style="margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" onclick="factSaveCard()">💾 저장</button>'+
+    '<button class="btn" style="background:#1A56DB;color:#fff" onclick="factAnalyze()">🎯 AI 니즈분석</button>'+
+    '<button class="btn btn-ghost" onclick="factPrint()">🖨 상담지 인쇄</button>'+
+    '<button class="btn btn-ghost" onclick="factNew()">비우기</button></div>'+
+    '<div class="result" id="factRes" style="margin-top:12px">'+(cur&&cur.ai?reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(cur.name||'고객')+' 님',cur.ai):'')+'</div>'+
+    '<div class="rpt-disc" style="margin-top:12px;font-size:11px;color:var(--ink-5)">'+osEsc(FACT_DISC)+'</div></div></div>';
+  return osPage('고객','고객 상담카드 · 팩트파인딩','상담 현장에서 고객 정보를 한 장으로 취합하고, AI 니즈분석·상담지 출력까지 한 번에 처리하는 기초 상담자료 도구입니다.',hero+list+editor);
+}
+function osFactAfter(){var r=$('factRes');if(r&&r._pendRaw){/*noop*/}}
+function factReadForm(){
+  var o={};FACT_FIELDS.forEach(function(f){var e=$('ff_'+f.id);o[f.id]=e?e.value.replace(/^\s+|\s+$/g,''):'';});
+  var cats=[];document.querySelectorAll('#factCats [data-fcat]').forEach(function(b){if(b.classList.contains('on'))cats.push(b.getAttribute('data-fcat'));});
+  o.cats=cats;return o;
+}
+function factNew(){FACT.cur='';var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var m=$('main');if(m)m.scrollTop=0;}
+function factOpen(id){FACT.cur=id;var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var el=document.getElementById('factEditTitle');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});}
+function factSaveCard(){
+  var o=factReadForm();
+  if(!o.name){toast('고객명을 입력하면 카드로 저장됩니다.');var n=$('ff_name');if(n)n.focus();return;}
+  var L=factLoad();var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';
+  var card=id?factFindCard(id):null;
+  if(card){for(var k in o){card[k]=o[k];}card.ts=Date.now();}
+  else{card={id:factNewId()};for(var k2 in o){card[k2]=o[k2];}card.ts=Date.now();L.push(card);FACT.cur=card.id;}
+  factPersist();
+  var lst=$('factList');if(lst)lst.innerHTML=factListHtml();
+  var cid=$('factCurId');if(cid)cid.value=FACT.cur;
+  var et=$('factEditTitle');if(et)et.textContent=(card.name||'상담카드')+' — 수정';
+  toast('상담카드를 저장했습니다 ('+L.length+'개).');
+}
+function factDelete(id){
+  if(!confirm('이 상담카드를 삭제할까요?'))return;
+  var L=factLoad();for(var i=0;i<L.length;i++){if(L[i].id===id){L.splice(i,1);break;}}
+  if(FACT.cur===id)FACT.cur='';factPersist();
+  var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();
+  toast('삭제했습니다.');
+}
+function factSys(){var kb=(typeof brainKbGet==='function')?brainKbGet():'';var base='너는 "윤시현의 두뇌" 재무설계 컨설팅 엔진이다. 상담카드(팩트파인딩)를 근거로 고객의 니즈를 분석하고, 보험·연금뿐 아니라 정책자금·세제까지 고려한 우선순위와 상담 설계를 제시한다.\n[원칙]\n- 팩트파인딩의 사실만 근거로. 없는 수치는 지어내지 말고 "확인 필요" 또는 합리적 (가정)으로 표기.\n- 보험료·연금액은 시장 통상범위의 (예상/추정)으로, 정확값은 "설계 필요".\n- 치료비 통장·8통장 프레임 활용. 표·번호목록·콜아웃(>)으로 구조화.\n- 준법: 확정 수익·지급 보장·절세 단정 금지. 정책자금·대출은 조건·심사 전제. 고객 발송용은 "발송 전 준법감시 확인". 적합성 원칙(금융소비자보호법) 준수.';if(kb)base+='\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb;return sys(base);}
+function factAnalyze(){
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 니즈분석이 작동합니다.');go('settings');return;}
+  var o=factReadForm();var filled=0;FACT_FIELDS.forEach(function(f){if(o[f.id])filled++;});
+  if(filled<2){toast('팩트파인딩을 최소 2개 이상 입력해주세요.');return;}
+  if(FACT.busy)return;FACT.busy=true;
+  var fact=FACT_FIELDS.filter(function(f){return o[f.id];}).map(function(f){return '- '+f.l+': '+o[f.id];}).join('\n');
+  var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?c.t:'';}).filter(Boolean).join(', ')||'미선택(설계사 판단)';
+  var res=$('factRes');if(res){res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>상담카드를 바탕으로 니즈분석·상담 설계 중… (15~40초)</div>';}
+  var user='[상담카드 · 팩트파인딩]\n'+fact+'\n\n[관심 분야]\n'+catLabels+'\n\n위 고객의 <니즈분석 · 상담 설계 요약>을 아래 형식으로 작성해줘. 상담 자리에서 바로 활용할 수 있게, 각 판단의 "왜"를 설계사답게.\n\n> **한 줄 니즈 진단** — 이 고객의 핵심 니즈와 가장 시급한 준비 한 가지.\n\n## 1. 니즈 분석\n팩트에서 읽히는 재무 라이프사이클상 위치와 우선순위 3가지(근거와 함께).\n\n## 2. 보장·준비 우선순위\n표: | 우선순위 | 목적 | 상품유형(예) | 월 예상보험료 | 이유 | — 월 예산 안에서 배분하고 표 아래 월 합계(예상).\n\n## 3. 추가 검토 (정책자금·세제·연금)\n해당 고객에게 도움될 제도·세제·연금 방향을 실제 제도명으로 2~4개. 조건은 "연도별 변동, 관계기관 확인".\n\n## 4. 다음 상담 talking point\n다음 만남에서 확인/제안할 질문·화법 4~6개(바로 말할 수 있게).\n\n## 5. 고객 설명용 요약\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 쉬운 요약.\n\n금액·연금액은 (예상) 표기, 확정은 설계·심사 필요. 과장·확정수익 표현 금지.';
+  callAI(factSys(),user,7000,'brain').then(function(out){
+    FACT.busy=false;
+    // 현재 카드가 저장돼 있으면 분석결과 저장
+    var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';
+    if(id){var card=factFindCard(id);if(card){card.ai=out;card.ts=Date.now();factPersist();var lst=$('factList');if(lst)lst.innerHTML=factListHtml();}}
+    var r=$('factRes');if(r){r._raw=out;r.innerHTML=reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(o.name||'고객')+' 님',out);}
+  }).catch(function(e){FACT.busy=false;var r=$('factRes');if(r)r.innerHTML='<div class="result-body"><div class="err-box">⚠️ '+esc((e&&e.message)||'오류')+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.<div style="margin-top:10px"><button class="btn btn-ghost" onclick="factAnalyze()">🔄 다시 시도</button></div></div></div>';});
+}
+function factPrint(){
+  var o=factReadForm();
+  var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
+  var rows=FACT_FIELDS.map(function(f){return '<tr><th>'+osEsc(f.l)+'</th><td>'+(osEsc(o[f.id]||'')||'<span class="muted">—</span>')+'</td></tr>';}).join('');
+  var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?(c.e+' '+c.t):'';}).filter(Boolean).join('　')||'—';
+  var aiHtml='';var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';var card=id?factFindCard(id):null;
+  if(card&&card.ai)aiHtml='<h3 class="sec">AI 니즈분석 · 상담 설계</h3><div class="ai">'+renderMd(card.ai)+'</div>';
+  var dt='';try{dt=new Date().toLocaleDateString('ko-KR');}catch(e){}
+  var css='@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif;color:#0F172A;margin:0}'+
+    'h1{font-size:22px;margin:0 0 2px}.sub{color:#64748B;font-size:12px;margin-bottom:14px}.cats{margin:0 0 14px;font-size:14px;font-weight:700;color:#1A56DB}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #E2E8F0;padding:8px 11px;font-size:13px;text-align:left;vertical-align:top}'+
+    'th{background:#F5F9FF;color:#0F172A;width:32%;font-weight:800}.muted{color:#CBD5E1}.sec{font-size:15px;margin:18px 0 8px;color:#0F172A;border-left:4px solid #1A56DB;padding-left:9px}'+
+    '.ai{font-size:12.5px;line-height:1.6;color:#334155}.ai table{margin:8px 0}.ai th{width:auto;background:#0F172A;color:#fff}.foot{margin-top:18px;font-size:10.5px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:8px;line-height:1.5}';
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+(osEsc(o.name||'고객')+' 상담카드')+'</title><style>'+css+'</style></head><body>'+
+    '<h1>'+osEsc(o.name||'고객')+' 님 상담카드</h1><div class="sub">APEX YUN PRO · 팩트파인딩 상담자료'+(dt?' · '+dt:'')+'</div>'+
+    '<div class="cats">관심분야: '+catLabels+'</div><table>'+rows+'</table>'+aiHtml+
+    '<div class="foot">'+osEsc(FACT_DISC)+'</div></body></html>');
+  w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
+}
 /* ===== #3 고객 컨설팅 · 팩트파인딩 엔진 (윤시현의 두뇌) ===== */
 var CONSULT_CATS=[{id:'pension',t:'연금',e:'🌴'},{id:'whole',t:'종신보험',e:'🛡️'},{id:'sole',t:'개인사업자',e:'🏪'},{id:'corp',t:'법인사업자',e:'🏢'},{id:'health',t:'건강보험',e:'🩺'},{id:'child',t:'다자녀',e:'👨‍👩‍👧‍👦'}];
 var CONSULT_GUIDE={
@@ -1733,18 +1866,24 @@ function osLoadToss(cb){
   var s=document.createElement('script');s.src='https://js.tosspayments.com/v1/payment';
   s.onload=function(){cb(true);};s.onerror=function(){cb(false);};document.head.appendChild(s);
 }
+function osPlanById(id){for(var i=0;i<TOSS_PLANS.length;i++){if(TOSS_PLANS[i].id===id)return TOSS_PLANS[i];}return null;}
 function osStartCheckout(planId){
   if(!OS.profile){var g=document.getElementById('osLoginGate');if(g&&g.style.display!=='none'){toast('먼저 로그인 또는 계정 등록을 해주세요.');if(typeof osAuthTab==='function')osAuthTab('signup');var nm=document.getElementById('osName');if(nm)nm.focus();}else if(typeof osOpenModal==='function'){osOpenModal();}return;}
-  var plan=null;for(var i=0;i<TOSS_PLANS.length;i++){if(TOSS_PLANS[i].id===planId)plan=TOSS_PLANS[i];}
+  if(typeof osPayOpen==='function')osPayOpen(planId);
+}
+/* 카드(토스페이먼츠) 결제 — 결제수단 선택 모달에서 호출 */
+function osPayCard(planId){
+  var plan=osPlanById(planId);
   if(!plan)return;
   var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
   var ck=getTossKey();
   if(!ck){
-    toast('결제를 받으려면 먼저 설정에서 토스페이먼츠 키를 연결하세요.');
-    if(OS.profile&&OS.profile.role==='admin'){go('settings');}
-    else{toast('운영자에게 결제 연결을 요청해 주세요.');}
+    toast('카드 결제를 받으려면 먼저 설정에서 토스페이먼츠 키를 연결하세요.');
+    if(OS.profile&&OS.profile.role==='admin'){if(typeof osPayModalClose==='function')osPayModalClose();go('settings');}
+    else{toast('운영자에게 카드 연결을 요청하거나 계좌이체를 이용해 주세요.');}
     return;
   }
+  if(typeof osPayModalClose==='function')osPayModalClose();
   osLoadToss(function(ok){
     if(!ok||typeof TossPayments==='undefined'){toast('결제 모듈을 불러오지 못했습니다. 네트워크 확인 후 다시 시도하세요.');return;}
     try{
@@ -1831,6 +1970,197 @@ function osTossCardHtml(){
         '4. 배포된 함수 주소를 위 <b>승인 주소</b>에 저장 → 실제 결제·정산 완료</div>'+
       '<textarea readonly style="width:100%;min-height:210px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(TOSS_FN_CODE)+'</textarea>'+
       '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osTossCopyFn()">함수 코드 복사</button></div>'+
+    '</div>'+
+    '</div></div>';
+}
+/* ═══════════ #3 결제수단 확대 — 카드(토스)·계좌이체·네이버페이·카카오페이 ═══════════
+   계좌이체는 PG 없이 즉시 사용 가능(운영 계좌만 등록). 네이버/카카오는 운영자 링크로 연결.
+   설정은 이 브라우저 저장 + (테이블 있으면) app_config로 팀 공유. */
+var PAY_CFG=null;
+function payCfg(){
+  if(PAY_CFG)return PAY_CFG;
+  var d={bank:'',account:'',holder:'',naver:'',kakao:''};
+  try{var s=localStorage.getItem('apex_pay_cfg');if(s){var o=JSON.parse(s);if(o&&typeof o==='object'){d.bank=o.bank||'';d.account=o.account||'';d.holder=o.holder||'';d.naver=o.naver||'';d.kakao=o.kakao||'';}}}catch(e){}
+  PAY_CFG=d;return d;
+}
+function osPaySync(){
+  var sb=osClient();if(!sb)return;
+  try{sb.from('app_config').select('k,v').eq('k','pay').then(function(r){
+    if(r.error||!r.data||!r.data.length)return;
+    var v=r.data[0].v;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
+    if(v&&typeof v==='object'){PAY_CFG={bank:v.bank||'',account:v.account||'',holder:v.holder||'',naver:v.naver||'',kakao:v.kakao||''};try{localStorage.setItem('apex_pay_cfg',JSON.stringify(PAY_CFG));}catch(e){}}
+  },function(){});}catch(e){}
+}
+function osPayModalClose(){var o=document.getElementById('osPayOverlay');if(o&&o.parentNode)o.parentNode.removeChild(o);try{document.body.style.overflow='';}catch(e){}}
+function osPayMethodCard(icon,title,desc,onclick,accent){
+  return '<button type="button" onclick="'+onclick+'" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--ink-7,#E2E8F0);border-radius:13px;padding:13px 15px;cursor:pointer;margin-bottom:9px">'+
+    '<span style="font-size:22px;flex:none;width:34px;text-align:center">'+icon+'</span>'+
+    '<span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:800;color:#0F172A">'+osEsc(title)+'</span>'+
+    '<span style="display:block;font-size:11px;color:#64748B;margin-top:2px">'+osEsc(desc)+'</span></span>'+
+    '<span style="color:'+(accent||'#1A56DB')+';font-weight:900;font-size:18px;flex:none">›</span></button>';
+}
+function osPayOpen(planId){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'연간':'월간';
+  osPayModalClose();
+  var body='<div style="font-size:11.5px;color:#64748B">'+osEsc(cyc)+' 구독</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#0F172A;margin:2px 0 2px">APEX '+osEsc(plan.name)+'</div>'+
+    '<div style="font-size:22px;font-weight:900;color:#1A56DB;margin-bottom:14px">'+apexWon(amount)+'</div>'+
+    '<div style="font-size:11px;font-weight:800;color:#334155;margin:0 0 9px">결제수단 선택</div>'+
+    osPayMethodCard('💳','카드 결제','토스페이먼츠 · 국내 모든 카드','osPayCard(\''+plan.id+'\')','#1A56DB')+
+    osPayMethodCard('🏦','계좌이체 · 무통장입금','운영 계좌로 이체 후 확인','osPayBank(\''+plan.id+'\')','#0EA5A5')+
+    osPayMethodCard('Ⓝ','네이버페이','네이버페이로 간편결제','osPaySimple(\''+plan.id+'\',\'naver\')','#03C75A')+
+    osPayMethodCard('🟡','카카오페이 · 카카오뱅크','카카오페이/카카오뱅크 송금','osPaySimple(\''+plan.id+'\',\'kakao\')','#FEE500')+
+    '<div style="font-size:10.5px;color:#94A3B8;line-height:1.6;margin-top:8px">구독은 결제/입금 확인 후 운영자 승인으로 활성화됩니다. 카드 결제는 운영자 토스 연결 시 즉시 처리됩니다.</div>';
+  osPayShell('결제하기', body);
+}
+function osPayShell(title, inner){
+  var ov=document.createElement('div');ov.id='osPayOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center;padding:0';
+  ov.onclick=function(e){if(e.target===ov)osPayModalClose();};
+  ov.innerHTML='<div role="dialog" style="background:#fff;width:100%;max-width:440px;border-radius:18px 18px 0 0;padding:18px 18px 22px;max-height:88vh;overflow:auto;box-shadow:0 -10px 40px rgba(0,0,0,.2)">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:900;color:#0F172A">'+osEsc(title)+'</div>'+
+    '<button type="button" onclick="osPayModalClose()" style="border:none;background:#F1F5F9;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;color:#475569">✕</button></div>'+
+    inner+'</div>';
+  document.body.appendChild(ov);try{document.body.style.overflow='hidden';}catch(e){}
+}
+function osPayBank(planId){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'연간':'월간';
+  var c=payCfg();var nm=(OS.profile&&OS.profile.name)||'';
+  var inner;
+  if(!c.account){
+    inner='<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">아직 <b>입금 계좌</b>가 등록되지 않았습니다.'+
+      (OS.profile&&OS.profile.role==='admin'?' 관리자 <b>설정 → 결제수단 설정</b>에서 계좌를 등록해 주세요.':' 운영자에게 계좌이체 안내를 요청해 주세요.')+'</div>'+
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="osPayOpen(\''+plan.id+'\')">← 결제수단</button>'+
+      (OS.profile&&OS.profile.role==='admin'?'<button class="btn btn-primary" onclick="osPayModalClose();go(\'settings\')">결제 설정 열기</button>':'')+'</div>';
+  }else{
+    var acctLine=osEsc(c.bank)+' '+osEsc(c.account)+(c.holder?(' ('+osEsc(c.holder)+')'):'');
+    inner='<div style="font-size:11.5px;color:#64748B">'+osEsc(cyc)+' 구독 · APEX '+osEsc(plan.name)+'</div>'+
+      '<div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:13px;padding:15px;margin:10px 0 12px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11.5px;color:#0F766E;font-weight:700">입금 계좌</span>'+
+          '<button type="button" onclick="osPayCopy(\''+encodeURIComponent(c.bank+' '+c.account)+'\')" style="border:1px solid #99F6E4;background:#fff;color:#0F766E;font-size:11px;font-weight:800;border-radius:8px;padding:4px 10px;cursor:pointer">📋 복사</button></div>'+
+        '<div style="font-size:16px;font-weight:900;color:#0F172A;letter-spacing:.01em">'+acctLine+'</div>'+
+        '<div style="border-top:1px dashed #99F6E4;margin:11px 0;height:1px"></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:#64748B">입금 금액</span><b style="color:#0F172A">'+apexWon(amount)+'</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#64748B">입금자명</span><b style="color:#0F172A">'+osEsc(nm||'가입하신 성함')+'</b></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#64748B;line-height:1.7;margin-bottom:12px">위 계좌로 <b>정확한 금액</b>을 <b>가입하신 성함</b>으로 이체해 주세요. 이체 후 아래 버튼을 누르면 운영자에게 확인 요청이 접수되고, 확인 후 구독이 활성화됩니다.</div>'+
+      '<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;background:#0EA5A5" onclick="osPayReq(\''+plan.id+'\',\'bank\')">이체 완료 · 확인 요청</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="osPayOpen(\''+plan.id+'\')">← 다른 결제수단</button>';
+  }
+  osPayShell('계좌이체 · 무통장입금', inner);
+}
+function osPayCopy(enc){var t='';try{t=decodeURIComponent(enc);}catch(e){t=enc;}if(typeof copyText==='function')copyText(t);else{try{navigator.clipboard.writeText(t);}catch(e){}}toast('계좌번호를 복사했습니다.');}
+function osPaySimple(planId, kind){
+  var c=payCfg();var url=(kind==='naver')?c.naver:c.kakao;var label=(kind==='naver')?'네이버페이':'카카오페이/카카오뱅크';
+  if(url){
+    try{window.open(url,'_blank','noopener');}catch(e){location.href=url;}
+    toast(label+' 결제창을 열었습니다. 결제 후 "확인 요청"을 눌러주세요.');
+    var plan=osPlanById(planId);var amount=plan?((PRICE_CYCLE==='year')?plan.year:plan.month):0;
+    var inner='<div style="font-size:12.5px;color:#334155;line-height:1.8;margin-bottom:12px">'+osEsc(label)+' 결제를 진행하셨나요? 결제가 끝나면 아래 버튼으로 확인을 요청해 주세요. 확인 후 구독이 활성화됩니다.</div>'+
+      '<a class="btn btn-ghost" style="width:100%;box-sizing:border-box;text-align:center;display:block;margin-bottom:8px" href="'+osEsc(url)+'" target="_blank" rel="noopener">↗ '+osEsc(label)+' 다시 열기</a>'+
+      '<button class="btn btn-primary" style="width:100%;padding:13px" onclick="osPayReq(\''+planId+'\',\''+kind+'\')">결제 완료 · 확인 요청</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="osPayOpen(\''+planId+'\')">← 다른 결제수단</button>';
+    osPayShell(label, inner);
+  }else{
+    var admin=OS.profile&&OS.profile.role==='admin';
+    var inner2='<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">'+osEsc(label)+' 결제 링크가 아직 연결되지 않았습니다.'+
+      (admin?' 관리자 <b>설정 → 결제수단 설정</b>에서 '+osEsc(label)+' 링크를 등록하면 바로 사용됩니다.':' 지금은 <b>계좌이체</b> 또는 <b>카드</b>로 결제해 주세요.')+'</div>'+
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="osPayOpen(\''+planId+'\')">← 결제수단</button>'+
+      (admin?'<button class="btn btn-primary" onclick="osPayModalClose();go(\'settings\')">결제 설정 열기</button>':'')+'</div>';
+    osPayShell(label, inner2);
+  }
+}
+function osPayReq(planId, method){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'year':'month';
+  var rec={name:(OS.profile&&OS.profile.name)||'',plan:plan.id,amount:amount,cycle:cyc,method:method,status:'pending'};
+  try{if(OS.profile&&OS.profile.id)rec.user_id=OS.profile.id;}catch(e){}
+  var sb=osClient();
+  var done=function(){
+    if(typeof osAudit==='function')try{osAudit('pay_request','subscription',plan.id,{method:method,amount:amount,cycle:cyc});}catch(e){}
+    osPayShell('요청 접수 완료', '<div style="text-align:center;padding:6px 4px 2px"><div style="font-size:40px">✅</div>'+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin-top:8px">확인 요청이 접수되었습니다</div>'+
+      '<div style="font-size:12.5px;color:#64748B;line-height:1.7;margin-top:8px">운영자가 입금/결제를 확인한 뒤 <b>APEX '+osEsc(plan.name)+'</b> 구독을 활성화합니다. 잠시만 기다려 주세요.</div>'+
+      '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="osPayModalClose()">확인</button></div>');
+  };
+  if(sb){
+    try{sb.from('payment_requests').insert(rec).then(function(r){ done(); },function(){ done(); });}
+    catch(e){ done(); }
+  }else{ done(); }
+}
+/* 관리자: 결제수단 설정 카드 (계좌이체 계좌 + 네이버/카카오 링크) */
+var OS_PAY_SQL=[
+ '-- APEX 결제 공유 설정 · 입금확인 요청 (Supabase SQL Editor에서 한 번만 실행)',
+ 'create table if not exists public.app_config(',
+ '  k text primary key,',
+ '  v jsonb not null default \'{}\',',
+ '  updated_at timestamptz default now()',
+ ');',
+ 'alter table public.app_config enable row level security;',
+ 'drop policy if exists app_config_read on public.app_config;',
+ 'create policy app_config_read on public.app_config for select using (true);',
+ 'drop policy if exists app_config_write on public.app_config;',
+ 'create policy app_config_write on public.app_config for all to authenticated',
+ '  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'))',
+ '  with check (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'));',
+ '',
+ 'create table if not exists public.payment_requests(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  created_at timestamptz default now(),',
+ '  user_id uuid,',
+ '  name text, plan text, amount int, cycle text, method text,',
+ '  status text default \'pending\'',
+ ');',
+ 'alter table public.payment_requests enable row level security;',
+ 'drop policy if exists pay_req_insert on public.payment_requests;',
+ 'create policy pay_req_insert on public.payment_requests for insert to authenticated with check (true);',
+ 'drop policy if exists pay_req_admin on public.payment_requests;',
+ 'create policy pay_req_admin on public.payment_requests for select to authenticated',
+ '  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'));'
+].join('\n');
+function osPayCopySql(){copyText(OS_PAY_SQL);}
+function osPaySqlToggle(){var e=document.getElementById('paySql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
+function osPayCfgSave(){
+  var o={bank:(osVal('payBank')||'').replace(/^\s+|\s+$/g,''),account:(osVal('payAccount')||'').replace(/^\s+|\s+$/g,''),holder:(osVal('payHolder')||'').replace(/^\s+|\s+$/g,''),naver:(osVal('payNaver')||'').replace(/^\s+|\s+$/g,''),kakao:(osVal('payKakao')||'').replace(/^\s+|\s+$/g,'')};
+  PAY_CFG=o;try{localStorage.setItem('apex_pay_cfg',JSON.stringify(o));}catch(e){}
+  var sb=osClient();
+  if(sb&&OS.profile&&OS.profile.role==='admin'){
+    try{sb.from('app_config').upsert({k:'pay',v:o},{onConflict:'k'}).then(function(r){
+      if(r.error){toast('이 브라우저에 저장됨 · 팀 공유는 아래 결제설정 SQL 실행 후');}
+      else{toast('결제 설정 저장 · 팀에 공유되었습니다.');}
+      go('settings');
+    },function(){toast('이 브라우저에 저장되었습니다.');go('settings');});}
+    catch(e){toast('이 브라우저에 저장되었습니다.');go('settings');}
+  }else{toast('저장되었습니다.');go('settings');}
+}
+function osPayCfgCardHtml(){
+  if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  var c=payCfg();var has=c.account?'<span class="badge green">계좌 등록됨</span>':'<span class="badge amber">계좌 미등록</span>';
+  return '<div class="card set-card" style="border-color:#99F6E4"><div class="card-hd"><div class="card-title"><span class="ci">🏦</span>결제수단 설정 — 계좌이체·네이버·카카오 <span class="badge">관리자</span></div>'+
+    '<div class="card-desc">카드(토스) 외 <b>계좌이체·네이버페이·카카오페이</b>를 추가로 받습니다 · '+has+'</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:12px">계좌이체는 PG 계약 없이 <b>운영 계좌만 등록하면 바로</b> 사용됩니다. 네이버페이·카카오페이는 각 <b>결제/송금 링크</b>를 넣으면 버튼이 그 링크로 연결됩니다. (버튼 링크가 없으면 고객에겐 계좌이체·카드가 안내됩니다.)</div>'+
+    '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">은행</label><input type="text" id="payBank" value="'+osEsc(c.bank)+'" placeholder="예: 국민은행" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">계좌번호</label><input type="text" id="payAccount" value="'+osEsc(c.account)+'" placeholder="예: 123456-01-789012" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">예금주</label><input type="text" id="payHolder" value="'+osEsc(c.holder)+'" placeholder="예: 윤시현" style="width:100%"/></div>'+
+    '</div>'+
+    '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">네이버페이 링크(선택)</label><input type="text" id="payNaver" value="'+osEsc(c.naver)+'" placeholder="https://…" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">카카오페이/뱅크 링크(선택)</label><input type="text" id="payKakao" value="'+osEsc(c.kakao)+'" placeholder="https://qr.kakaopay.com/…" style="width:100%"/></div>'+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="osPayCfgSave()">결제 설정 저장</button>'+
+    '<button class="btn btn-ghost" onclick="osPaySqlToggle()">🛢️ 팀 공유·입금확인 SQL</button></div>'+
+    '<div id="paySql" style="display:none;margin-top:12px">'+
+      '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL을 <b>한 번만</b> 실행하면 결제 설정이 <b>모든 팀원</b>에게 공유되고, 고객의 <b>입금/결제 확인 요청</b>이 저장됩니다.</div>'+
+      '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_PAY_SQL)+'</textarea>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osPayCopySql()">SQL 복사</button>'+
+      '<a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>'+
     '</div>'+
     '</div></div>';
 }
@@ -2152,7 +2482,7 @@ var TABS=[
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
- {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
+ {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
@@ -2305,6 +2635,7 @@ function go(tab){
   else if(tab==='manual')dyn.innerHTML=renderManual();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
+  else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
@@ -5070,6 +5401,8 @@ function renderSettings(){
 
     osTossCardHtml()+
 
+    osPayCfgCardHtml()+
+
     osAccessCardHtml()+
 
     osBackupCardHtml()+
@@ -6770,7 +7103,30 @@ function osIsEdu(r){r=r||osRole();return r==='education_manager'||r==='admin';}
 var OS_ACCESS=null;               /* {groupKey:[role,...]} — null이면 기본 노출 */
 var OS_ACCESS_SRC='default';      /* 'default'|'local'|'server' */
 var OS_ROLE_COLS=[['member','설계사'],['leader','지점장'],['education_manager','교육매니저'],['branch_manager','본부장']];
+/* #4·#5 결제 카테고리(등급) — 개인 회원별 접근 구분 + 요금 조건. 기본 free(rank0)=전체 개방이라 미설정 시 기존과 동일 */
+var OS_TIERS=[
+ {id:'free', label:'무료·체험',  price:0,      rank:0, color:'#475569', bg:'#F1F5F9'},
+ {id:'basic',label:'베이직',     price:29000,  rank:1, color:'#0369A1', bg:'#E0F2FE'},
+ {id:'pro',  label:'프로',       price:49000,  rank:2, color:'#6D28D9', bg:'#EDE9FE'},
+ {id:'team', label:'팀·프리미엄',price:149000, rank:3, color:'#B45309', bg:'#FEF3C7'},
+ {id:'vip',  label:'VIP·전체개방',price:null,   rank:4, color:'#15803D', bg:'#DCFCE7'}
+];
+function osTierById(id){for(var i=0;i<OS_TIERS.length;i++){if(OS_TIERS[i].id===id)return OS_TIERS[i];}return null;}
+function osTierRank(id){var t=osTierById(id);return t?t.rank:0;}
+function osPlanToTier(plan){ /* profiles.plan → 카테고리 id */
+  if(!plan)return 'free';var p=(''+plan).toLowerCase();
+  if(osTierById(p))return p;
+  if(p.indexOf('team')>=0||p.indexOf('팀')>=0)return 'team';
+  if(p.indexOf('pro')>=0||p.indexOf('프로')>=0)return 'pro';
+  if(p.indexOf('basic')>=0||p.indexOf('베이직')>=0)return 'basic';
+  if(p.indexOf('vip')>=0)return 'vip';
+  return 'free';
+}
+function osMyTier(){var pf=OS.profile;if(!pf)return 'free';if(pf.role==='admin')return 'vip';return osPlanToTier(pf.plan);}
+var OS_GROUP_TIER=null; /* {groupKey: tierId} — 그룹별 요구 카테고리(없으면 free=개방) */
 function osAccessKey(g){return g.key||g.group;}
+function osGroupReqTier(g){var k=osAccessKey(g);if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];return 'free';}
+function osGroupTierOk(g,tierId){return osTierRank(tierId)>=osTierRank(osGroupReqTier(g));}
 function osGroupDefaultRoles(g){
   if(g.role==='hq')return ['branch_manager'];
   if(g.role==='edu')return ['education_manager','branch_manager'];
@@ -6786,45 +7142,48 @@ function osGroupAllowedRoles(g){
 function visibleTabs(role){
   role=role||osRole();
   if(role==='admin')return TABS;
-  return TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0;});
+  var myT=osMyTier();
+  return TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0 && osGroupTierOk(g,myT);});
 }
 function osLoadAccessLocal(){
   try{var s=localStorage.getItem('apex_tool_access');if(s){var m=JSON.parse(s);if(m&&typeof m==='object'){OS_ACCESS=m;OS_ACCESS_SRC='local';}}}catch(e){}
+  try{var t=localStorage.getItem('apex_group_tier');if(t){var mt=JSON.parse(t);if(mt&&typeof mt==='object')OS_GROUP_TIER=mt;}}catch(e){}
 }
 osLoadAccessLocal();
 /* 로그인 후 서버(tool_access)에 팀 공유 설정이 있으면 가져와 적용(없으면 로컬/기본 유지) */
 function osSyncAccess(){
   var sb=osClient();if(!sb)return;
-  sb.from('tool_access').select('group_key,roles').then(function(r){
+  sb.from('tool_access').select('*').then(function(r){
     if(r.error||!r.data||!r.data.length)return;
-    var m={};r.data.forEach(function(row){if(row&&row.group_key)m[row.group_key]=row.roles||[];});
-    OS_ACCESS=m;OS_ACCESS_SRC='server';
-    try{localStorage.setItem('apex_tool_access',JSON.stringify(m));}catch(e){}
+    var m={},mt={};r.data.forEach(function(row){if(row&&row.group_key){m[row.group_key]=row.roles||[];if(row.min_tier)mt[row.group_key]=row.min_tier;}});
+    OS_ACCESS=m;OS_ACCESS_SRC='server';OS_GROUP_TIER=mt;
+    try{localStorage.setItem('apex_tool_access',JSON.stringify(m));localStorage.setItem('apex_group_tier',JSON.stringify(mt));}catch(e){}
     if(typeof renderNav==='function')renderNav();
     var t=(typeof currentTab==='function')?currentTab():'';if(t==='settings'&&typeof go==='function')go('settings');
   },function(){});
 }
 /* 관리자 접근 매트릭스 저장: 로컬 즉시 + 서버 upsert(테이블 있으면 팀 공유) */
 function osAccessSave(){
-  var map={};
+  var map={},tmap={};
   TABS.forEach(function(g,i){
     var k=osAccessKey(g),arr=[];
     OS_ROLE_COLS.forEach(function(rc){var cb=document.getElementById('acc_'+i+'_'+rc[0]);if(cb&&cb.checked)arr.push(rc[0]);});
     map[k]=arr;
+    var ts=document.getElementById('acctier_'+i);if(ts&&ts.value&&ts.value!=='free')tmap[k]=ts.value;
   });
-  OS_ACCESS=map;OS_ACCESS_SRC='local';
-  try{localStorage.setItem('apex_tool_access',JSON.stringify(map));}catch(e){}
+  OS_ACCESS=map;OS_GROUP_TIER=tmap;OS_ACCESS_SRC='local';
+  try{localStorage.setItem('apex_tool_access',JSON.stringify(map));localStorage.setItem('apex_group_tier',JSON.stringify(tmap));}catch(e){}
   if(typeof renderNav==='function')renderNav();
   var sb=osClient();
   if(sb&&OS.profile&&OS.profile.role==='admin'){
-    var rows=[];for(var k in map){if(map.hasOwnProperty(k))rows.push({group_key:k,roles:map[k]});}
+    var rows=[];for(var k in map){if(map.hasOwnProperty(k))rows.push({group_key:k,roles:map[k],min_tier:tmap[k]||null});}
     sb.from('tool_access').upsert(rows,{onConflict:'group_key'}).then(function(r){
-      if(r.error){toast('이 브라우저에 저장됨 · 팀 공유는 아래 SQL 실행 후 활성화');}
+      if(r.error){toast('이 브라우저에 저장됨 · 팀 공유(등급 포함)는 아래 SQL 실행 후 활성화');}
       else{OS_ACCESS_SRC='server';toast('저장 완료 · 팀 전체에 공유되었습니다');go('settings');}
     },function(){toast('이 브라우저에 저장되었습니다.');});
   }else{toast('이 브라우저에 저장되었습니다.');go('settings');}
 }
-function osAccessReset(){OS_ACCESS=null;OS_ACCESS_SRC='default';try{localStorage.removeItem('apex_tool_access');}catch(e){}if(typeof renderNav==='function')renderNav();toast('기본 노출로 되돌렸습니다');go('settings');}
+function osAccessReset(){OS_ACCESS=null;OS_GROUP_TIER=null;OS_ACCESS_SRC='default';try{localStorage.removeItem('apex_tool_access');localStorage.removeItem('apex_group_tier');}catch(e){}if(typeof renderNav==='function')renderNav();toast('기본 노출로 되돌렸습니다');go('settings');}
 function osAccessSqlToggle(){var e=document.getElementById('accSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
 var OS_ACCESS_SQL=[
  '-- APEX 도구 접근권한 팀 공유 테이블 (한 번만 실행)',
@@ -6833,6 +7192,8 @@ var OS_ACCESS_SQL=[
  '  roles text[] not null default \'{}\',',
  '  updated_at timestamptz default now()',
  ');',
+ '-- 결제 카테고리(등급) 요구값 컬럼 — 있으면 건너뜀(재실행 안전)',
+ 'alter table tool_access add column if not exists min_tier text;',
  'alter table tool_access enable row level security;',
  'drop policy if exists tool_access_read on tool_access;',
  'create policy tool_access_read on tool_access for select using (true);',
@@ -6848,19 +7209,37 @@ function osAccessSqlHtml(){
     '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osAccessCopySql()">SQL 복사</button>'+
     '<a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>';
 }
+/* 카테고리(등급) 배지·범례·셀렉트 — #4·#5 공용 */
+function osTierBadge(tierId){var t=osTierById(tierId)||osTierById('free');return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+t.bg+';color:'+t.color+'">'+osEsc(t.label)+'</span>';}
+function osTierPrice(t){return t.price?apexWon(t.price)+'/월':(t.id==='vip'?'관리자 지정':'무료');}
+function osTierLegendHtml(){
+  var cells=OS_TIERS.map(function(t){
+    return '<div style="flex:1;min-width:120px;border:1px solid '+t.bg+';border-left:4px solid '+t.color+';border-radius:10px;padding:9px 11px;background:#fff">'+
+      '<div style="display:flex;align-items:center;gap:6px">'+osTierBadge(t.id)+'</div>'+
+      '<div style="font-size:13px;font-weight:800;color:'+t.color+';margin-top:6px">'+osEsc(osTierPrice(t))+'</div></div>';
+  }).join('');
+  return '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px">'+cells+'</div>';
+}
+function osTierSelectHtml(id,cur){
+  cur=cur||'free';
+  return '<select id="'+id+'" style="font-size:11.5px;padding:5px 8px;border:1px solid var(--ink-7);border-radius:8px;background:#fff;cursor:pointer">'+
+    OS_TIERS.map(function(t){return '<option value="'+t.id+'"'+(t.id===cur?' selected':'')+'>'+osEsc(t.label)+(t.price?(' · '+apexWon(t.price)):'')+'</option>';}).join('')+'</select>';
+}
 function osAccessCardHtml(){
   if(!(OS.profile&&OS.profile.role==='admin'))return '';
   var srcLabel=OS_ACCESS_SRC==='server'?'<span class="badge green">팀 공유중</span>':(OS_ACCESS_SRC==='local'?'<span class="badge amber">이 브라우저</span>':'<span class="badge">기본값</span>');
-  var h='<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🔓</span>도구 접근 권한 — 구분별 개방</div>'+
-    '<div class="card-desc">각 구분(카테고리)을 어떤 직급까지 열지 정합니다. '+srcLabel+'</div></div>'+
+  var h='<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🔓</span>도구 접근 권한 — 카테고리(등급)별 개방</div>'+
+    '<div class="card-desc">각 도구 구분을 <b>어떤 결제 카테고리(등급)부터</b> 열지 정합니다. 등급은 팀원마다 아래 <b>팀원 권한 관리</b>에서 개별 지정합니다. '+srcLabel+'</div></div>'+
     '<div class="card-body">'+
-    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:6px">이 앱은 <b>APEX CRM과 같은 계정</b>으로 로그인합니다 — 팀원이 CRM 계정으로 로그인하면 여기서 열어준 도구만 보입니다. 관리자(본부장·대표)는 항상 전체를 봅니다. 체크된 직급만 해당 구분을 사용할 수 있고, <b>모두 해제하면</b> 관리자 전용이 됩니다.</div>'+
-    '<div style="overflow-x:auto"><table class="uw-table" style="min-width:520px;margin-top:8px"><thead><tr><th style="text-align:left">구분</th>';
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">회원이 지정된 카테고리 이상이면 해당 도구가 보입니다. 카테고리는 결제 금액으로 사용조건을 나눈 것입니다(아래). <b>무료</b>로 두면 전원 공개(기본), 상위 등급으로 올리면 그 등급부터 사용됩니다. 관리자(대표)는 항상 전체를 봅니다.</div>'+
+    osTierLegendHtml()+
+    '<div style="overflow-x:auto"><table class="uw-table" style="min-width:640px;margin-top:2px"><thead><tr><th style="text-align:left">구분</th><th style="text-align:center;background:#EEF4FF">필요 카테고리(등급)</th>';
   OS_ROLE_COLS.forEach(function(rc){h+='<th>'+rc[1]+'</th>';});
   h+='</tr></thead><tbody>';
   TABS.forEach(function(g,i){
     var allowed=osGroupAllowedRoles(g);
     h+='<tr><td style="text-align:left;font-weight:700">'+osEsc(g.group)+'</td>';
+    h+='<td style="text-align:center;background:#F7FAFF">'+osTierSelectHtml('acctier_'+i,osGroupReqTier(g))+'</td>';
     OS_ROLE_COLS.forEach(function(rc){
       var on=allowed.indexOf(rc[0])>=0;
       h+='<td style="text-align:center"><input type="checkbox" id="acc_'+i+'_'+rc[0]+'"'+(on?' checked':'')+' style="width:17px;height:17px;cursor:pointer"/></td>';
@@ -6868,6 +7247,7 @@ function osAccessCardHtml(){
     h+='</tr>';
   });
   h+='</tbody></table></div>'+
+    '<div style="font-size:10.5px;color:var(--ink-5);margin-top:7px">※ 직급 체크는 보조 조건입니다(예: 매니저 전용 도구). 일반 도구는 <b>카테고리(등급)</b>로 나누는 것을 권장합니다.</div>'+
     '<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="osAccessSave()">접근 설정 저장</button>'+
     '<button class="btn btn-ghost" onclick="osAccessReset()">기본값으로</button>'+
     '<button class="btn btn-ghost" onclick="osAccessSqlToggle()">🛢️ 팀 전체 공유 SQL</button></div>'+
@@ -7161,9 +7541,9 @@ function osApprovalCardHtml(){
 function osMembersCardHtml(){
   if(!(OS.profile&&OS.profile.role==='admin'))return '';
   return '<div class="card set-card" style="border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>팀원 권한 관리 <span class="badge">관리자</span></div>'+
-    '<div class="card-desc">결제·가입한 팀원에게 <b>마스터(관리자) 권한</b>을 클릭으로 부여/회수합니다</div></div>'+
+    '<div class="card-desc">팀원마다 <b>카테고리(등급)</b>를 지정하고, 필요 시 <b>마스터(관리자) 권한</b>을 부여/회수합니다</div></div>'+
     '<div class="card-body">'+
-    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">마스터는 전체 자료·가입 승인·권한 관리를 볼 수 있습니다. 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 바꿀 수 없습니다.</div>'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">각 팀원을 <b>결제 카테고리(무료·베이직·프로·팀·VIP)</b>로 분류하면, 위 <b>도구 접근 권한</b>에서 그 등급에 열어둔 도구만 보입니다. 마스터는 전체 자료·가입 승인·권한 관리를 볼 수 있으니 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 바꿀 수 없습니다.</div>'+
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-ghost" onclick="osLoadMembers()">🔄 팀원 목록 새로고침</button></div>'+
     '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
     '</div></div>';
@@ -7182,14 +7562,15 @@ function osLoadMembers(){
       var isM=p.role==='admin',mine=(p.id===me);
       var rolePill=osPillHtml(osRoleLabel(p.role),isM?'#DCFCE7':'#F1F5F9',isM?'#15803D':'#475569');
       var statPill=p.status==='pending'?osPillHtml('승인대기','#FEF3C7','#B45309'):(p.status==='rejected'?osPillHtml('거절됨','#FEE2E2','#B91C1C'):osPillHtml('이용중','#E0F2FE','#0369A1'));
-      var planPill=p.plan?osPillHtml(p.plan,'#EDE9FE','#6D28D9'):'';
+      var tierPill=osTierBadge(osPlanToTier(p.plan));
+      var tierCtrl=isM?'<span style="font-size:10.5px;color:var(--ink-5)">전체개방</span>':('<select onchange="osSetTier(\''+p.id+'\',this.value)" title="카테고리(등급) 지정" style="font-size:11px;padding:5px 7px;border:1px solid var(--ink-7);border-radius:8px;background:#fff;cursor:pointer">'+OS_TIERS.map(function(t){var cur=osPlanToTier(p.plan)===t.id;return '<option value="'+t.id+'"'+(cur?' selected':'')+'>'+osEsc(t.label)+'</option>';}).join('')+'</select>');
       var ctrl=mine?'<span style="font-size:11px;color:var(--ink-5)">본인</span>':(isM
         ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetMaster(\''+p.id+'\',false)">마스터 해제</button>'
         :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px" onclick="osSetMaster(\''+p.id+'\',true)">＋ 마스터 지정</button>');
       h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(i?'border-top:1px solid var(--ink-8)':'')+'">'+
         '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
-        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+planPill+'</div></div>'+
-        '<div style="white-space:nowrap">'+ctrl+'</div></div>';
+        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+tierPill+'</div></div>'+
+        '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+(mine?'':tierCtrl)+ctrl+'</div></div>';
     });
     h+='</div>';box.innerHTML=h;
   },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
@@ -7203,6 +7584,17 @@ function osSetMaster(id,makeAdmin){
     if(typeof osAudit==='function')osAudit(makeAdmin?'grant_admin':'revoke_admin','profile',id,null);
     toast(makeAdmin?'✅ 마스터 권한을 부여했습니다.':'마스터 권한을 회수했습니다.');osLoadMembers();
   });
+}
+/* #4 개인 회원별 카테고리(등급) 지정 — profiles.plan에 저장(요금 카테고리=사용조건). CRM 스키마는 그대로. */
+function osSetTier(id,tier){
+  var sb=osClient();if(!sb)return;
+  if(OS.profile&&id===OS.profile.id){toast('본인 등급은 여기서 바꿀 수 없습니다.');return;}
+  var t=osTierById(tier);
+  sb.from('profiles').update({plan:tier}).eq('id',id).then(function(r){
+    if(r.error){toast('변경 실패: '+(r.error.message||'권한/정책을 확인하세요'));osLoadMembers();return;}
+    if(typeof osAudit==='function')osAudit('set_tier','profile',id,tier);
+    toast('카테고리를 "'+(t?t.label:tier)+'"(으)로 지정했습니다.');osLoadMembers();
+  },function(){toast('변경 실패 — 네트워크/권한을 확인하세요.');});
 }
 /* ════════ 공지사항 시스템 — 메인 홈 배너 + 사이드바 상단 공지(모두에게 표시) ════════
    저장: 이 브라우저(localStorage) 즉시 반영 + (테이블이 있으면) Supabase 'os_notices'로 전체 공유.
@@ -7318,7 +7710,7 @@ function osNoticeCardHtml(){
     '<div class="notice" style="margin-top:12px;font-size:11px;line-height:1.65">이미지는 <b>400KB 이하</b>를 권장합니다(팀 전체 공유 로딩 속도). 게시 전 준법감시 확인을 권장합니다.</div>'+
     '</div></div>';
 }
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
@@ -8734,8 +9126,8 @@ function bizDeckGen(){
   if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 슬라이드가 생성됩니다.');go('settings');return;}
   var host=$('bizDeckHost');if(host)host.innerHTML='<div class="loading"><div class="spinner"></div>대표님께 보여줄 상담 진단 슬라이드를 만드는 중… (15~40초)</div>';
   var label=(typeof bizClientLabel==='function'?bizClientLabel(bizCur()):'')||'대표님';
-  var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 정확히 이 구조로, 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 슬라이드 큰 제목(짧고 강하게)\n- 핵심 불릿(짧게, 3~5개)\n- 불릿\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단", 부제로 오늘 다룰 핵심 3가지\n2) 현황 진단 — 업종·규모·재무 요약과 강점\n3) 핵심 이슈 3가지 — 정책자금/세금/보험/퇴직금/인사 중 가장 시급한 것\n4) 정책자금 방향 — 적합 자금과 "신청→지급까지" 흐름 요지\n5) 절세 포인트 — 이 사업자 유형에 맞는 절세 카드\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원 관점\n7) 실행 로드맵 — 30·60·90일 할 일\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
-  callAI(BIZ_SYS,user,3800,'biz_deck').then(function(md){
+  var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘. 비교가 한눈에 들어오도록 표·막대그래프·핵심수치(KPI)를 적극 활용해.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 이 구조로, @@SLIDE 로 시작하고 @@END 로 끝. 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 큰 제목(짧고 강하게)\nicon: 관련 이모지 1개(선택 · 예 💰 🏦 📊 🛡 🧾 ⏱ ✅ 📈)\n- 핵심 불릿(짧게, 최대 3~4개)\nkpi: 5,000만원 | 예상 정책자금 한도\nkpi: 40% | 세부담 절감(예상)\nbar: 현재 세부담 | 2000\nbar: 개선 후 | 1200\ntable: 구분 | 현재 | 개선 후\nrow: 세금(연) | 2,000만 | 1,200만\nrow: 퇴직재원 | 없음 | 확보\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[시각화 규칙 — 매우 중요]\n· "현황 vs 개선 후" 또는 "옵션 A/B/C"처럼 비교가 필요한 슬라이드는 반드시 table 또는 bar 로 시각화한다.\n· 핵심 수치가 있는 슬라이드는 kpi 카드(최대 3개)로 크게 보여준다.\n· 한 슬라이드에는 시각요소 1종(표 또는 그래프 또는 KPI)만, 불릿은 짧게.\n· bar 값은 숫자만(콤마 허용). table 은 마지막 열이 "개선 후/추천안"이 되도록 배치(강조됨).\n· 모든 항목은 | 로 구분.\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단"(불릿으로 오늘 다룰 핵심 3가지)\n2) 현황 진단 — 업종·규모·재무 요약(kpi 로 매출·이익·직원수 등)\n3) 핵심 이슈 — 정책자금/세금/보험/퇴직금/인사 중 시급도(bar 로 시급도 비교)\n4) 정책자금 방향 — 적합 자금 한도(kpi) + 신청→지급 흐름\n5) 절세 포인트 — 현재 vs 개선 후 세부담(bar 또는 table 비교)\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원(table 비교)\n7) 실행 로드맵 — 30·60·90일(table: 기간|할 일|기대효과)\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
+  callAI(BIZ_SYS,user,4200,'biz_deck').then(function(md){
     var slides=bizDeckParse(md);
     if(slides.length<2)slides=[{kicker:'상담 진단',title:label+' 통합 컨설팅',bullets:[],note:'',raw:md}];
     BIZ_DECK.slides=slides;BIZ_DECK.i=0;BIZ_DECK.title=label;
@@ -8744,21 +9136,66 @@ function bizDeckGen(){
 }
 function bizDeckParse(md){
   var blocks=(md||'').split(/@@SLIDE/i).slice(1);var out=[];
+  function cell(x){return (x||'').replace(/\*\*/g,'').trim();}
   blocks.forEach(function(b){
     b=b.split(/@@END/i)[0];
-    var kicker='',title='',note='',bullets=[];
+    var s={kicker:'',title:'',note:'',icon:'',bullets:[],kpis:[],bars:[],table:null};
     b.split(/\r?\n/).forEach(function(ln){
-      var t=ln.trim();if(!t)return;
-      var mk=t.match(/^kicker\s*:\s*(.+)/i),mt=t.match(/^title\s*:\s*(.+)/i),mn=t.match(/^note\s*:\s*(.+)/i);
-      if(mk)kicker=mk[1].trim();
-      else if(mt)title=mt[1].trim();
-      else if(mn)note=mn[1].trim();
-      else if(/^[-•*]\s+/.test(t))bullets.push(t.replace(/^[-•*]\s+/,'').replace(/\*\*/g,'').trim());
-      else if(!title)title=t.replace(/^#+\s*/,'').replace(/\*\*/g,'').trim();
+      var t=ln.trim();if(!t)return;var m;
+      if(m=t.match(/^kicker\s*:\s*(.+)/i)){s.kicker=cell(m[1]);}
+      else if(m=t.match(/^title\s*:\s*(.+)/i)){s.title=cell(m[1]);}
+      else if(m=t.match(/^note\s*:\s*(.+)/i)){s.note=cell(m[1]);}
+      else if(m=t.match(/^icon\s*:\s*(.+)/i)){s.icon=m[1].trim().slice(0,4);}
+      else if(m=t.match(/^kpi\s*:\s*(.+)/i)){var p=m[1].split('|');s.kpis.push({v:cell(p[0]),label:cell(p[1])});}
+      else if(m=t.match(/^bar\s*:\s*(.+)/i)){
+        var p2=m[1].split('|');var raw=(p2.length>1?p2[1]:p2[0])||'';
+        var num=parseFloat(String(raw).replace(/[^0-9.\-]/g,''))||0;
+        s.bars.push({label:cell(p2[0]),val:num,disp:cell(raw)});
+      }
+      else if(m=t.match(/^table\s*:\s*(.+)/i)){if(!s.table)s.table={head:[],rows:[]};s.table.head=m[1].split('|').map(cell);}
+      else if(m=t.match(/^row\s*:\s*(.+)/i)){if(!s.table)s.table={head:[],rows:[]};s.table.rows.push(m[1].split('|').map(cell));}
+      else if(/^[-•*]\s+/.test(t))s.bullets.push(cell(t.replace(/^[-•*]\s+/,'')));
+      else if(!s.title)s.title=cell(t.replace(/^#+\s*/,''));
     });
-    if(title||bullets.length)out.push({kicker:kicker,title:title,bullets:bullets,note:note});
+    if(s.title||s.bullets.length||s.kpis.length||s.bars.length||(s.table&&(s.table.head.length||s.table.rows.length)))out.push(s);
   });
   return out;
+}
+/* 비교 시각화 빌더 — 화면/인쇄 공용 마크업 */
+function bizDeckKpis(kpis){
+  return '<div class="bd-kpis">'+kpis.map(function(k){
+    return '<div class="bd-kpi"><div class="bd-kpi-v">'+osEsc(k.v)+'</div>'+(k.label?'<div class="bd-kpi-l">'+osEsc(k.label)+'</div>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function bizDeckBars(bars){
+  var max=1;bars.forEach(function(b){if(b.val>max)max=b.val;});
+  return '<div class="bd-bars">'+bars.map(function(b){
+    var w=Math.max(4,Math.round(b.val/max*100));
+    return '<div class="bd-bar"><span class="bd-bar-l">'+osEsc(b.label)+'</span>'+
+      '<span class="bd-bar-t"><span class="bd-bar-f" style="width:'+w+'%"></span></span>'+
+      '<span class="bd-bar-v">'+osEsc(b.disp)+'</span></div>';
+  }).join('')+'</div>';
+}
+function bizDeckTable(tb){
+  var head=(tb.head&&tb.head.length)?tb.head:(tb.rows[0]||[]);
+  var rows=(tb.head&&tb.head.length)?tb.rows:tb.rows.slice(1);
+  var last=head.length-1;
+  var thead='<tr>'+head.map(function(h,i){return '<th'+(i===last&&last>0?' class="hot"':'')+'>'+osEsc(h)+'</th>';}).join('')+'</tr>';
+  var body=rows.map(function(r){return '<tr>'+r.map(function(c,i){
+    var cls=[];if(i===0)cls.push('k');if(i===last&&last>0)cls.push('hot');
+    return '<td'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+osEsc(c)+'</td>';
+  }).join('')+'</tr>';}).join('');
+  return '<table class="bd-table"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table>';
+}
+function bizDeckBody(s){
+  if(s.raw)return '<div class="bizslide-raw">'+renderMd(s.raw)+'</div>';
+  var h='';
+  if(s.bullets&&s.bullets.length)h+='<ul class="bizslide-ul">'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>';
+  if(s.kpis&&s.kpis.length)h+=bizDeckKpis(s.kpis);
+  if(s.bars&&s.bars.length)h+=bizDeckBars(s.bars);
+  if(s.table&&(s.table.rows.length||s.table.head.length))h+=bizDeckTable(s.table);
+  if(s.note)h+='<div class="bizslide-note">'+osEsc(s.note)+'</div>';
+  return h;
 }
 function bizDeckView(){
   var n=BIZ_DECK.slides.length,i=BIZ_DECK.i;
@@ -8773,16 +9210,12 @@ function bizDeckView(){
 }
 function bizDeckSlide(s,i,n){
   if(!s)return '';
-  var cover=(i===0),body;
-  if(s.raw){body='<div class="bizslide-raw">'+renderMd(s.raw)+'</div>';}
-  else{
-    var bl=(s.bullets&&s.bullets.length)?'<ul class="bizslide-ul">'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'';
-    body=bl+(s.note?'<div class="bizslide-note">'+osEsc(s.note)+'</div>':'');
-  }
+  var cover=(i===0);
+  var icon=s.icon?'<div class="bizslide-icon">'+osEsc(s.icon)+'</div>':'';
   return '<button class="bizdeck-arrow l" onclick="bizDeckNav(-1)" aria-label="이전">‹</button>'+
-    '<div class="bizslide'+(cover?' cover':'')+'">'+
+    '<div class="bizslide'+(cover?' cover':'')+'">'+icon+
     (s.kicker?'<div class="bizslide-kicker">'+osEsc(s.kicker)+'</div>':'')+
-    '<div class="bizslide-title">'+osEsc(s.title||'')+'</div>'+body+
+    '<div class="bizslide-title">'+osEsc(s.title||'')+'</div>'+bizDeckBody(s)+
     '<div class="bizslide-foot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+n+'</span></div></div>'+
     '<button class="bizdeck-arrow r" onclick="bizDeckNav(1)" aria-label="다음">›</button>';
 }
@@ -8799,16 +9232,21 @@ function bizDeckPrint(){
   if(!BIZ_DECK.slides.length){toast('먼저 슬라이드를 생성하세요');return;}
   var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
   var pages=BIZ_DECK.slides.map(function(s,i){
-    var bl=s.raw?renderMd(s.raw):((s.bullets&&s.bullets.length?'<ul>'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'')+(s.note?'<div class="note">'+osEsc(s.note)+'</div>':''));
-    return '<section class="pg'+(i===0?' cover':'')+'">'+(s.kicker?'<div class="kick">'+osEsc(s.kicker)+'</div>':'')+'<h2>'+osEsc(s.title||'')+'</h2>'+bl+'<div class="pgfoot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+BIZ_DECK.slides.length+'</span></div></section>';
+    var icon=s.icon?'<div class="picon">'+osEsc(s.icon)+'</div>':'';
+    return '<section class="pg'+(i===0?' cover':'')+'">'+icon+(s.kicker?'<div class="kick">'+osEsc(s.kicker)+'</div>':'')+'<h2>'+osEsc(s.title||'')+'</h2>'+bizDeckBody(s)+'<div class="pgfoot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+BIZ_DECK.slides.length+'</span></div></section>';
   }).join('');
   var css='@page{size:A4 landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif}'+
    '.pg{position:relative;width:297mm;height:209mm;padding:20mm 24mm;page-break-after:always;display:flex;flex-direction:column;overflow:hidden}'+
    '.kick{font-size:15px;font-weight:800;color:#1A56DB;margin-bottom:8px}h2{font-size:30px;font-weight:800;color:#0F172A;margin:0;line-height:1.25}'+
-   'ul{margin:20px 0 0;padding:0;list-style:none}li{position:relative;padding-left:22px;font-size:18px;line-height:1.55;color:#334155;margin:10px 0}li:before{content:"▪";position:absolute;left:0;color:#1A56DB}'+
-   '.note{margin-top:auto;font-size:13px;color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:10px 14px;border-radius:0 8px 8px 0}'+
+   '.picon{position:absolute;top:16mm;right:22mm;font-size:44px;line-height:1}'+
+   '.bizslide-ul{margin:20px 0 0;padding:0;list-style:none}.bizslide-ul li{position:relative;padding-left:22px;font-size:18px;line-height:1.55;color:#334155;margin:10px 0}.bizslide-ul li:before{content:"▪";position:absolute;left:0;color:#1A56DB}'+
+   '.bizslide-note{margin-top:auto;font-size:13px;color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:10px 14px;border-radius:0 8px 8px 0}'+
+   '.bizslide-raw{font-size:14px;color:#334155}'+
+   '.bd-kpis{display:flex;gap:14px;margin:22px 0 0}.bd-kpi{flex:1;background:linear-gradient(135deg,#F5F9FF,#EAF1FF);border:1px solid #DCE6FF;border-radius:14px;padding:16px 12px;text-align:center}.bd-kpi-v{font-size:30px;font-weight:900;color:#1A56DB;line-height:1.1}.bd-kpi-l{font-size:13px;color:#475569;margin-top:8px;font-weight:700}'+
+   '.bd-bars{margin:22px 0 0;display:flex;flex-direction:column;gap:14px}.bd-bar{display:flex;align-items:center;gap:12px}.bd-bar-l{flex:0 0 26%;font-size:15px;font-weight:700;color:#334155;text-align:right}.bd-bar-t{flex:1;height:24px;background:#EEF2F8;border-radius:8px;overflow:hidden}.bd-bar-f{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#1A56DB,#38BDF8)}.bd-bar-v{flex:0 0 auto;min-width:64px;font-size:15px;font-weight:800;color:#0F172A}'+
+   '.bd-table{width:100%;border-collapse:collapse;margin:22px 0 0;font-size:16px}.bd-table th,.bd-table td{border:1px solid #E2E8F0;padding:10px 12px;text-align:center;color:#334155}.bd-table th{background:#0F172A;color:#fff;font-weight:800}.bd-table th.hot{background:#1A56DB}.bd-table td.k{background:#F8FAFC;font-weight:800;color:#0F172A;text-align:left}.bd-table td.hot{background:#EFF5FF;font-weight:800;color:#1A56DB}'+
    '.pgfoot{position:absolute;left:24mm;right:24mm;bottom:12mm;display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;font-weight:700}'+
-   '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
+   '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover .bizslide-ul li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .bizslide-note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+osEsc(BIZ_DECK.title)+' 상담 진단 슬라이드</title><style>'+css+'</style></head><body>'+pages+'</body></html>');
   w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
 }
@@ -8828,6 +9266,22 @@ function bizDeckPrint(){
    '.bizslide-ul li:before{content:"▪";position:absolute;left:0;color:#1A56DB}',
    '.bizslide-note{margin-top:auto;font-size:clamp(10px,1.45vw,15px);color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:1.6% 2.4%;border-radius:0 8px 8px 0}',
    '.bizslide-raw{overflow:auto;font-size:clamp(11px,1.6vw,15px);color:#334155}',
+   '.bizslide-icon{position:absolute;top:5.2%;right:6.4%;font-size:clamp(26px,4.6vw,52px);line-height:1;opacity:.92}',
+   '.bd-kpis{display:flex;gap:2.4%;margin:3.4% 0 0;flex-wrap:wrap}',
+   '.bd-kpi{flex:1 1 0;min-width:22%;background:linear-gradient(135deg,#F5F9FF,#EAF1FF);border:1px solid #DCE6FF;border-radius:14px;padding:2.4% 2%;text-align:center}',
+   '.bd-kpi-v{font-size:clamp(18px,3.2vw,34px);font-weight:900;color:#1A56DB;line-height:1.1;letter-spacing:-.02em}',
+   '.bd-kpi-l{font-size:clamp(9px,1.35vw,14px);color:#475569;margin-top:5%;font-weight:700;line-height:1.35}',
+   '.bd-bars{margin:3.4% 0 0;display:flex;flex-direction:column;gap:2.6%}',
+   '.bd-bar{display:flex;align-items:center;gap:2.2%}',
+   '.bd-bar-l{flex:0 0 26%;font-size:clamp(10px,1.5vw,15px);font-weight:700;color:#334155;text-align:right}',
+   '.bd-bar-t{flex:1;height:clamp(14px,2.4vw,26px);background:#EEF2F8;border-radius:8px;overflow:hidden}',
+   '.bd-bar-f{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#1A56DB,#38BDF8)}',
+   '.bd-bar-v{flex:0 0 auto;min-width:14%;font-size:clamp(10px,1.5vw,15px);font-weight:800;color:#0F172A}',
+   '.bd-table{width:100%;border-collapse:collapse;margin:3.2% 0 0;font-size:clamp(10px,1.5vw,16px)}',
+   '.bd-table th,.bd-table td{border:1px solid #E2E8F0;padding:1.3% 1.6%;text-align:center;color:#334155}',
+   '.bd-table th{background:#0F172A;color:#fff;font-weight:800}.bd-table th.hot{background:#1A56DB}',
+   '.bd-table td.k{background:#F8FAFC;font-weight:800;color:#0F172A;text-align:left}.bd-table td.hot{background:#EFF5FF;font-weight:800;color:#1A56DB}',
+   '.bizslide.cover .bizslide-icon{filter:drop-shadow(0 4px 10px rgba(0,0,0,.28))}',
    '.bizslide-foot{position:absolute;left:7%;right:7%;bottom:3.6%;display:flex;justify-content:space-between;font-size:clamp(9px,1.2vw,13px);color:#94A3B8;font-weight:700}',
    '.bizslide.cover{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 70%,#38BDF8 130%);justify-content:center}',
    '.bizslide.cover .bizslide-kicker{color:#93C5FD}.bizslide.cover .bizslide-title{color:#fff;font-size:clamp(22px,4.6vw,46px)}',
