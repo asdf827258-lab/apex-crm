@@ -1465,6 +1465,139 @@ function renderInsAsst(){
   return osPage('상담 AI 코치','APEX 보험 비서','담보·약관·청구·질병/수술·고지의무를 바로 답하는 보험 실무 전문 비서입니다.',hero+ask);
 }
 function osInsAsstAfter(){var t=$('insQ');if(t)t.focus();insRenderThread();}
+/* ═══════════ #10 고객 상담카드 · 팩트파인딩 — 정보 취합 + AI 니즈분석 + 상담지 인쇄 ═══════════
+   기초 상담자료를 만들어 고객 정보를 취합·저장(이 기기)하고, AI 니즈분석과 상담지 출력까지. */
+var FACT={list:null,cur:'',busy:false};
+var FACT_DISC='본 상담카드·니즈분석은 판매 목적의 상담 참고자료이며, 확정 수익·지급 보장·과장 표현을 포함하지 않습니다. 상품 가입 전 약관·상품설명서 확인과 적합성 원칙(금융소비자보호법)에 따른 안내가 필요합니다.';
+var FACT_FIELDS=[
+ {id:'name',l:'고객명',ph:'예: 홍길동'},
+ {id:'age',l:'나이·성별',ph:'예: 45세 남'},
+ {id:'contact',l:'연락처',ph:'예: 010-1234-5678'},
+ {id:'job',l:'직업·직장',ph:'예: 제조업 대표'},
+ {id:'income',l:'월 소득(대략)',ph:'예: 900만원'},
+ {id:'family',l:'가족구성',ph:'예: 배우자·자녀 2명(8·5세)'},
+ {id:'asset',l:'보유자산',ph:'예: 아파트, 금융자산 2억, 사업지분',ta:1},
+ {id:'debt',l:'부채',ph:'예: 주택담보 1.5억'},
+ {id:'exist',l:'기존 보험·연금',ph:'예: 종신 1억, 실손, 연금저축 월 30만',ta:1},
+ {id:'budget',l:'월 납입 가능 예산',ph:'예: 40~60만원'},
+ {id:'health',l:'건강상태·가족력',ph:'예: 고혈압약 복용, 부친 위암력',ta:1},
+ {id:'goal',l:'상담 목표·관심사',ph:'예: 은퇴자금 + 상속 절세 + 자녀 보장',ta:1}
+];
+var FACT_CATS=[{id:'pension',t:'연금·은퇴',e:'🌴'},{id:'health',t:'건강·실손',e:'🩺'},{id:'death',t:'사망보장·상속',e:'🛡️'},{id:'child',t:'자녀·교육',e:'👨‍👩‍👧‍👦'},{id:'biz',t:'사업자·법인',e:'🏢'},{id:'tax',t:'절세·자산',e:'🧾'}];
+function factStoreKey(){var who='local';try{if(typeof OS!=='undefined'&&OS.profile)who=OS.profile.email||OS.profile.id||'local';}catch(e){}return 'apex_fact_cards_'+who;}
+function factLoad(){if(FACT.list)return FACT.list;var raw='';try{raw=localStorage.getItem(factStoreKey())||'';}catch(e){}var arr;try{arr=raw?JSON.parse(raw):[];}catch(e){arr=[];}FACT.list=(arr&&arr.push)?arr:[];return FACT.list;}
+function factPersist(){try{localStorage.setItem(factStoreKey(),JSON.stringify(FACT.list||[]));}catch(e){toast('저장 공간이 부족합니다 — 오래된 카드를 삭제해 주세요.');}}
+function factNewId(){var t='0';try{t=String(Date.now());}catch(e){}return 'fc_'+t+'_'+Math.floor(Math.random()*100000);}
+function factFindCard(id){var L=factLoad();for(var i=0;i<L.length;i++){if(L[i].id===id)return L[i];}return null;}
+function factCatChips(sel){sel=sel||[];return FACT_CATS.map(function(c){var on=sel.indexOf(c.id)>=0?' on':'';return '<button type="button" class="chip-opt'+on+'" data-fcat="'+c.id+'" onclick="this.classList.toggle(\'on\')">'+c.e+' '+c.t+'</button>';}).join('');}
+function factFieldsHtml(card){card=card||{};return FACT_FIELDS.map(function(f){
+  var v=osEsc(card[f.id]||'');var w=f.ta?' span2':'';
+  var inp=f.ta?'<textarea id="ff_'+f.id+'" style="width:100%;min-height:52px;font-size:13px;line-height:1.55;border:1px solid var(--ink-7);border-radius:9px;padding:9px;box-sizing:border-box" placeholder="'+esc(f.ph)+'">'+v+'</textarea>'
+    :'<input id="ff_'+f.id+'" type="text" value="'+v+'" style="width:100%;font-size:13px;border:1px solid var(--ink-7);border-radius:9px;padding:9px;box-sizing:border-box" placeholder="'+esc(f.ph)+'"/>';
+  return '<div class="fld'+w+'" style="display:flex;flex-direction:column;gap:5px"><label style="font-size:11.5px;font-weight:700;color:var(--ink-3)">'+esc(f.l)+'</label>'+inp+'</div>';
+}).join('');}
+function factListHtml(){
+  var L=factLoad();
+  if(!L.length)return '<div style="font-size:12.5px;color:var(--ink-5);padding:10px 2px">아직 저장된 상담카드가 없습니다. 아래에 고객 정보를 입력하고 <b>저장</b>하면 여기에 쌓입니다.</div>';
+  var rows=L.slice().sort(function(a,b){return (b.ts||0)-(a.ts||0);}).map(function(c){
+    var when='';try{when=c.ts?new Date(c.ts).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}):'';}catch(e){}
+    var cats=(c.cats||[]).map(function(id){var f=FACT_CATS.filter(function(x){return x.id===id;})[0];return f?f.e:'';}).join('');
+    var ai=c.ai?'<span class="badge green" style="font-size:9.5px">AI분석</span>':'';
+    return '<div class="fact-row'+(c.id===FACT.cur?' on':'')+'" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--ink-7);border-radius:10px;margin-bottom:7px;background:#fff">'+
+      '<div style="flex:1;min-width:0;cursor:pointer" onclick="factOpen(\''+c.id+'\')">'+
+        '<div style="font-size:13.5px;font-weight:800;color:var(--ink-1)">'+osEsc(c.name||'(무명)')+' '+cats+' '+ai+'</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:2px">'+osEsc(c.age||'')+(c.goal?' · '+osEsc((c.goal||'').slice(0,28)):'')+(when?' · '+when:'')+'</div>'+
+      '</div>'+
+      '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="factOpen(\''+c.id+'\')">열기</button>'+
+      '<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;color:#DC2626" onclick="factDelete(\''+c.id+'\')">삭제</button></div>';
+  }).join('');
+  return '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">저장된 상담카드 ('+L.length+')</div>'+rows;
+}
+function renderFactFind(){
+  factLoad();
+  var cur=FACT.cur?factFindCard(FACT.cur):null;
+  var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none">'+
+    '<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">고객 상담자료 · FACT-FINDING</div>'+
+    '<div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">📝 고객 상담카드</div>'+
+    '<div style="font-size:12.5px;opacity:.92;margin-top:8px;line-height:1.6">상담 자리에서 고객 정보를 한 장으로 취합하세요. 저장하면 고객별로 쌓이고, <b>AI 니즈분석</b>과 <b>상담지 인쇄</b>까지 바로 됩니다. (이 기기에 저장)</div></div>';
+  var list='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>내 상담카드</div><div class="card-desc">고객을 클릭하면 아래에서 열람·수정할 수 있습니다.</div></div><div class="card-body"><div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="factNew()">＋ 새 상담카드</button></div><div id="factList">'+factListHtml()+'</div></div></div>';
+  var editor='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span><span id="factEditTitle">'+(cur?osEsc(cur.name||'상담카드')+' — 수정':'새 상담카드')+'</span></div><div class="card-desc">아는 값만 입력해도 됩니다. 저장 후 언제든 다시 열어 이어서 채울 수 있습니다.</div></div><div class="card-body">'+
+    '<input type="hidden" id="factCurId" value="'+osEsc(FACT.cur||'')+'"/>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">관심 분야 (복수 선택)</div><div class="chips" id="factCats" style="margin-bottom:14px">'+factCatChips(cur?cur.cats:[])+'</div>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">팩트파인딩</div><div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:11px">'+factFieldsHtml(cur)+'</div>'+
+    '<div class="btn-row" style="margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" onclick="factSaveCard()">💾 저장</button>'+
+    '<button class="btn" style="background:#1A56DB;color:#fff" onclick="factAnalyze()">🎯 AI 니즈분석</button>'+
+    '<button class="btn btn-ghost" onclick="factPrint()">🖨 상담지 인쇄</button>'+
+    '<button class="btn btn-ghost" onclick="factNew()">비우기</button></div>'+
+    '<div class="result" id="factRes" style="margin-top:12px">'+(cur&&cur.ai?reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(cur.name||'고객')+' 님',cur.ai):'')+'</div>'+
+    '<div class="rpt-disc" style="margin-top:12px;font-size:11px;color:var(--ink-5)">'+osEsc(FACT_DISC)+'</div></div></div>';
+  return osPage('고객','고객 상담카드 · 팩트파인딩','상담 현장에서 고객 정보를 한 장으로 취합하고, AI 니즈분석·상담지 출력까지 한 번에 처리하는 기초 상담자료 도구입니다.',hero+list+editor);
+}
+function osFactAfter(){var r=$('factRes');if(r&&r._pendRaw){/*noop*/}}
+function factReadForm(){
+  var o={};FACT_FIELDS.forEach(function(f){var e=$('ff_'+f.id);o[f.id]=e?e.value.replace(/^\s+|\s+$/g,''):'';});
+  var cats=[];document.querySelectorAll('#factCats [data-fcat]').forEach(function(b){if(b.classList.contains('on'))cats.push(b.getAttribute('data-fcat'));});
+  o.cats=cats;return o;
+}
+function factNew(){FACT.cur='';var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var m=$('main');if(m)m.scrollTop=0;}
+function factOpen(id){FACT.cur=id;var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var el=document.getElementById('factEditTitle');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});}
+function factSaveCard(){
+  var o=factReadForm();
+  if(!o.name){toast('고객명을 입력하면 카드로 저장됩니다.');var n=$('ff_name');if(n)n.focus();return;}
+  var L=factLoad();var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';
+  var card=id?factFindCard(id):null;
+  if(card){for(var k in o){card[k]=o[k];}card.ts=Date.now();}
+  else{card={id:factNewId()};for(var k2 in o){card[k2]=o[k2];}card.ts=Date.now();L.push(card);FACT.cur=card.id;}
+  factPersist();
+  var lst=$('factList');if(lst)lst.innerHTML=factListHtml();
+  var cid=$('factCurId');if(cid)cid.value=FACT.cur;
+  var et=$('factEditTitle');if(et)et.textContent=(card.name||'상담카드')+' — 수정';
+  toast('상담카드를 저장했습니다 ('+L.length+'개).');
+}
+function factDelete(id){
+  if(!confirm('이 상담카드를 삭제할까요?'))return;
+  var L=factLoad();for(var i=0;i<L.length;i++){if(L[i].id===id){L.splice(i,1);break;}}
+  if(FACT.cur===id)FACT.cur='';factPersist();
+  var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();
+  toast('삭제했습니다.');
+}
+function factSys(){var kb=(typeof brainKbGet==='function')?brainKbGet():'';var base='너는 "윤시현의 두뇌" 재무설계 컨설팅 엔진이다. 상담카드(팩트파인딩)를 근거로 고객의 니즈를 분석하고, 보험·연금뿐 아니라 정책자금·세제까지 고려한 우선순위와 상담 설계를 제시한다.\n[원칙]\n- 팩트파인딩의 사실만 근거로. 없는 수치는 지어내지 말고 "확인 필요" 또는 합리적 (가정)으로 표기.\n- 보험료·연금액은 시장 통상범위의 (예상/추정)으로, 정확값은 "설계 필요".\n- 치료비 통장·8통장 프레임 활용. 표·번호목록·콜아웃(>)으로 구조화.\n- 준법: 확정 수익·지급 보장·절세 단정 금지. 정책자금·대출은 조건·심사 전제. 고객 발송용은 "발송 전 준법감시 확인". 적합성 원칙(금융소비자보호법) 준수.';if(kb)base+='\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb;return sys(base);}
+function factAnalyze(){
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 니즈분석이 작동합니다.');go('settings');return;}
+  var o=factReadForm();var filled=0;FACT_FIELDS.forEach(function(f){if(o[f.id])filled++;});
+  if(filled<2){toast('팩트파인딩을 최소 2개 이상 입력해주세요.');return;}
+  if(FACT.busy)return;FACT.busy=true;
+  var fact=FACT_FIELDS.filter(function(f){return o[f.id];}).map(function(f){return '- '+f.l+': '+o[f.id];}).join('\n');
+  var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?c.t:'';}).filter(Boolean).join(', ')||'미선택(설계사 판단)';
+  var res=$('factRes');if(res){res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>상담카드를 바탕으로 니즈분석·상담 설계 중… (15~40초)</div>';}
+  var user='[상담카드 · 팩트파인딩]\n'+fact+'\n\n[관심 분야]\n'+catLabels+'\n\n위 고객의 <니즈분석 · 상담 설계 요약>을 아래 형식으로 작성해줘. 상담 자리에서 바로 활용할 수 있게, 각 판단의 "왜"를 설계사답게.\n\n> **한 줄 니즈 진단** — 이 고객의 핵심 니즈와 가장 시급한 준비 한 가지.\n\n## 1. 니즈 분석\n팩트에서 읽히는 재무 라이프사이클상 위치와 우선순위 3가지(근거와 함께).\n\n## 2. 보장·준비 우선순위\n표: | 우선순위 | 목적 | 상품유형(예) | 월 예상보험료 | 이유 | — 월 예산 안에서 배분하고 표 아래 월 합계(예상).\n\n## 3. 추가 검토 (정책자금·세제·연금)\n해당 고객에게 도움될 제도·세제·연금 방향을 실제 제도명으로 2~4개. 조건은 "연도별 변동, 관계기관 확인".\n\n## 4. 다음 상담 talking point\n다음 만남에서 확인/제안할 질문·화법 4~6개(바로 말할 수 있게).\n\n## 5. 고객 설명용 요약\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 쉬운 요약.\n\n금액·연금액은 (예상) 표기, 확정은 설계·심사 필요. 과장·확정수익 표현 금지.';
+  callAI(factSys(),user,7000,'brain').then(function(out){
+    FACT.busy=false;
+    // 현재 카드가 저장돼 있으면 분석결과 저장
+    var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';
+    if(id){var card=factFindCard(id);if(card){card.ai=out;card.ts=Date.now();factPersist();var lst=$('factList');if(lst)lst.innerHTML=factListHtml();}}
+    var r=$('factRes');if(r){r._raw=out;r.innerHTML=reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(o.name||'고객')+' 님',out);}
+  }).catch(function(e){FACT.busy=false;var r=$('factRes');if(r)r.innerHTML='<div class="result-body"><div class="err-box">⚠️ '+esc((e&&e.message)||'오류')+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.<div style="margin-top:10px"><button class="btn btn-ghost" onclick="factAnalyze()">🔄 다시 시도</button></div></div></div>';});
+}
+function factPrint(){
+  var o=factReadForm();
+  var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
+  var rows=FACT_FIELDS.map(function(f){return '<tr><th>'+osEsc(f.l)+'</th><td>'+(osEsc(o[f.id]||'')||'<span class="muted">—</span>')+'</td></tr>';}).join('');
+  var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?(c.e+' '+c.t):'';}).filter(Boolean).join('　')||'—';
+  var aiHtml='';var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';var card=id?factFindCard(id):null;
+  if(card&&card.ai)aiHtml='<h3 class="sec">AI 니즈분석 · 상담 설계</h3><div class="ai">'+renderMd(card.ai)+'</div>';
+  var dt='';try{dt=new Date().toLocaleDateString('ko-KR');}catch(e){}
+  var css='@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif;color:#0F172A;margin:0}'+
+    'h1{font-size:22px;margin:0 0 2px}.sub{color:#64748B;font-size:12px;margin-bottom:14px}.cats{margin:0 0 14px;font-size:14px;font-weight:700;color:#1A56DB}'+
+    'table{width:100%;border-collapse:collapse;margin-bottom:12px}th,td{border:1px solid #E2E8F0;padding:8px 11px;font-size:13px;text-align:left;vertical-align:top}'+
+    'th{background:#F5F9FF;color:#0F172A;width:32%;font-weight:800}.muted{color:#CBD5E1}.sec{font-size:15px;margin:18px 0 8px;color:#0F172A;border-left:4px solid #1A56DB;padding-left:9px}'+
+    '.ai{font-size:12.5px;line-height:1.6;color:#334155}.ai table{margin:8px 0}.ai th{width:auto;background:#0F172A;color:#fff}.foot{margin-top:18px;font-size:10.5px;color:#94A3B8;border-top:1px solid #E2E8F0;padding-top:8px;line-height:1.5}';
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+(osEsc(o.name||'고객')+' 상담카드')+'</title><style>'+css+'</style></head><body>'+
+    '<h1>'+osEsc(o.name||'고객')+' 님 상담카드</h1><div class="sub">APEX YUN PRO · 팩트파인딩 상담자료'+(dt?' · '+dt:'')+'</div>'+
+    '<div class="cats">관심분야: '+catLabels+'</div><table>'+rows+'</table>'+aiHtml+
+    '<div class="foot">'+osEsc(FACT_DISC)+'</div></body></html>');
+  w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
+}
 /* ===== #3 고객 컨설팅 · 팩트파인딩 엔진 (윤시현의 두뇌) ===== */
 var CONSULT_CATS=[{id:'pension',t:'연금',e:'🌴'},{id:'whole',t:'종신보험',e:'🛡️'},{id:'sole',t:'개인사업자',e:'🏪'},{id:'corp',t:'법인사업자',e:'🏢'},{id:'health',t:'건강보험',e:'🩺'},{id:'child',t:'다자녀',e:'👨‍👩‍👧‍👦'}];
 var CONSULT_GUIDE={
@@ -2152,7 +2285,7 @@ var TABS=[
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
- {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''}]},
+ {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 360',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
@@ -2305,6 +2438,7 @@ function go(tab){
   else if(tab==='manual')dyn.innerHTML=renderManual();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
+  else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
