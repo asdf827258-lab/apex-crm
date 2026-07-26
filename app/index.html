@@ -1905,20 +1905,39 @@ function osTossCleanParams(){try{if(window.history&&history.replaceState)history
 function osTossReturnCheck(){
   var t=osTossQ('toss');if(!t)return;
   if(t==='fail'){toast('결제가 취소되었거나 실패했습니다.');osTossCleanParams();return;}
-  if(t==='success'){
-    var paymentKey=osTossQ('paymentKey'),orderId=osTossQ('orderId'),amount=osTossQ('amount');
-    var confirmUrl='';try{confirmUrl=localStorage.getItem('apex_toss_confirm_url')||'';}catch(e){}
-    if(confirmUrl&&paymentKey&&orderId&&amount){
-      toast('결제 승인을 확인하는 중…');
-      fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount)})})
-        .then(function(r){return r.text().then(function(tx){var j={};try{j=JSON.parse(tx);}catch(e){}return {ok:r.ok,j:j};});})
-        .then(function(res){toast(res.ok?'✅ 결제가 완료되었습니다. 구독이 활성화됩니다.':('결제 승인 확인 실패 — '+((res.j&&res.j.message)||'운영자에게 문의')));osTossCleanParams();})
-        .catch(function(){toast('결제 승인 서버에 연결하지 못했습니다.');osTossCleanParams();});
-    }else{
-      toast('결제창 인증은 완료됐지만, 최종 승인(서버 확인)이 아직 연결되지 않았습니다. 설정 → 토스 결제에서 확인 함수를 연결하세요.');
-      osTossCleanParams();
+  if(t!=='success')return;
+  var paymentKey=osTossQ('paymentKey'),orderId=osTossQ('orderId'),amount=osTossQ('amount');
+  osTossCleanParams();
+  var confirmUrl='';try{confirmUrl=localStorage.getItem('apex_toss_confirm_url')||'';}catch(e){}
+  /* orderId(APEX-<plan>-<Y|M>-<ts>)에서 구매 플랜·주기 파싱 → 서버가 자동 활성화에 사용 */
+  var plan='',cycle='month',mm=(orderId||'').match(/^APEX-([A-Za-z]+)-([YM])-/);
+  if(mm){plan=mm[1].toLowerCase();cycle=(mm[2].toUpperCase()==='Y')?'year':'month';}
+  function doConfirm(uid){
+    if(!(confirmUrl&&paymentKey&&orderId&&amount)){
+      toast('결제창 인증은 완료됐지만, 최종 승인(서버 확인)이 아직 연결되지 않았습니다. 설정 → 토스 결제에서 확인 함수를 연결하면 자동 활성화됩니다.');
+      return;
     }
+    toast('결제를 확인하고 구독을 활성화하는 중…');
+    fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount),userId:uid,plan:plan,cycle:cycle})})
+      .then(function(r){return r.text().then(function(tx){var j={};try{j=JSON.parse(tx);}catch(e){}return {ok:r.ok,j:j};});})
+      .then(function(res){
+        if(res.ok){
+          var act=res.j&&res.j.__activated;
+          toast(act===false?'✅ 결제 완료 · 활성화는 잠시 후 반영됩니다(운영자 확인).':'✅ 결제 완료 · 구독이 바로 활성화되었습니다.');
+          if(typeof osLoadProfile==='function'){setTimeout(function(){osLoadProfile();},400);}
+        }else{
+          toast('결제 승인 확인 실패 — '+((res.j&&(res.j.message||res.j.__activateError))||'운영자에게 문의'));
+        }
+      })
+      .catch(function(){toast('결제 승인 서버에 연결하지 못했습니다. 운영자에게 문의해 주세요.');});
   }
+  var sb=osClient();
+  if(sb&&sb.auth&&sb.auth.getSession){
+    sb.auth.getSession().then(function(r){
+      var s=(r&&r.data&&r.data.session)||null;if(s&&!OS.session)OS.session=s;
+      doConfirm((s&&s.user&&s.user.id)||'');
+    },function(){doConfirm('');});
+  }else{doConfirm((OS.session&&OS.session.user&&OS.session.user.id)||'');}
 }
 /* ── 운영자: 토스페이먼츠 연결 설정(관리자 전용) ── */
 function osTossGetConfirm(){try{return localStorage.getItem('apex_toss_confirm_url')||'';}catch(e){return '';}}
@@ -1926,12 +1945,14 @@ function osTossSaveKey(){var v=(osVal('setTossKey')||'').trim();if(!v){toast('�
 function osTossClearKey(){setTossKeyVal('');toast('토스 클라이언트 키를 삭제했습니다.');go('settings');}
 function osTossSaveConfirm(){var v=(osVal('setTossConfirm')||'').trim();try{localStorage.setItem('apex_toss_confirm_url',v);}catch(e){}toast('결제 확인(승인) 주소를 저장했습니다.');go('settings');}
 var TOSS_FN_CODE=[
- '// netlify/functions/toss-confirm.js — 토스 결제 최종 승인(서버, 시크릿 키 필요)',
+ '// netlify/functions/toss-confirm.js — 토스 결제 최종 승인 + 구독 자동 활성화(서버)',
+ '// Netlify 환경변수: TOSS_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
  'exports.handler = async function(event){',
- "  if(event.httpMethod!=='POST')return{statusCode:405,body:'method not allowed'};",
+ "  var CORS={'Access-Control-Allow-Origin':'*','Content-Type':'application/json'};",
+ "  if(event.httpMethod!=='POST')return{statusCode:405,headers:CORS,body:'{\"message\":\"method not allowed\"}'};",
  '  try{',
  "    var b=JSON.parse(event.body||'{}');",
- '    var secret=process.env.TOSS_SECRET_KEY;               // Netlify 환경변수에 설정',
+ '    var secret=process.env.TOSS_SECRET_KEY;',
  "    var auth='Basic '+Buffer.from(secret+':').toString('base64');",
  "    var res=await fetch('https://api.tosspayments.com/v1/payments/confirm',{",
  "      method:'POST',",
@@ -1939,8 +1960,22 @@ var TOSS_FN_CODE=[
  '      body:JSON.stringify({paymentKey:b.paymentKey,orderId:b.orderId,amount:b.amount})',
  '    });',
  '    var data=await res.json();',
- "    return{statusCode:res.status,headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(data)};",
- '  }catch(e){return{statusCode:500,body:JSON.stringify({message:String(e)})};}',
+ '    // 토스가 결제를 정상 승인하면(=res.ok) 해당 회원 등급을 자동 부여(service_role로 RLS 우회)',
+ '    if(res.ok && b.userId && b.plan && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY){',
+ '      try{',
+ '        var until=new Date();',
+ "        if(b.cycle==='year')until.setFullYear(until.getFullYear()+1);else until.setMonth(until.getMonth()+1);",
+ "        var up=await fetch(process.env.SUPABASE_URL+'/rest/v1/profiles?id=eq.'+encodeURIComponent(b.userId),{",
+ "          method:'PATCH',",
+ "          headers:{'apikey':process.env.SUPABASE_SERVICE_ROLE_KEY,'Authorization':'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},",
+ "          body:JSON.stringify({plan:b.plan,status:'approved',plan_until:until.toISOString()})",
+ '        });',
+ '        data.__activated = up.ok;',
+ '        if(!up.ok) data.__activateError = await up.text();',
+ '      }catch(e){ data.__activated=false; data.__activateError=String(e); }',
+ '    }',
+ '    return{statusCode:res.status,headers:CORS,body:JSON.stringify(data)};',
+ "  }catch(e){return{statusCode:500,headers:CORS,body:JSON.stringify({message:String(e)})};}",
  '};'
 ].join('\n');
 function osTossCopyFn(){copyText(TOSS_FN_CODE);}
@@ -1966,8 +2001,8 @@ function osTossCardHtml(){
       '<div style="font-size:11px;color:var(--ink-3);line-height:1.8;background:var(--ink-9);border:1px solid var(--ink-7);border-radius:8px;padding:12px 14px;margin-bottom:8px">'+
         '<b>연결 4단계</b><br>1. <a href="https://docs.tosspayments.com" target="_blank" rel="noopener" style="color:var(--primary);font-weight:700;text-decoration:underline">토스페이먼츠</a>에 가맹점 가입 → <b>클라이언트 키/시크릿 키</b> 발급<br>'+
         '2. 위 칸에 <b>클라이언트 키</b> 저장<br>'+
-        '3. 아래 코드를 <b>netlify/functions/toss-confirm.js</b>로 배포하고, Netlify 환경변수 <b>TOSS_SECRET_KEY</b>에 시크릿 키 등록<br>'+
-        '4. 배포된 함수 주소를 위 <b>승인 주소</b>에 저장 → 실제 결제·정산 완료</div>'+
+        '3. 아래 코드를 <b>netlify/functions/toss-confirm.js</b>로 배포하고, Netlify 환경변수 3개 등록: <b>TOSS_SECRET_KEY</b>(토스 시크릿), <b>SUPABASE_URL</b>(https://miakdhxtqofpndtlyzxa.supabase.co), <b>SUPABASE_SERVICE_ROLE_KEY</b>(Supabase 설정 → API → service_role 키)<br>'+
+        '4. 배포된 함수 주소를 위 <b>승인 주소</b>에 저장 → <b>결제 성공 시 구독이 자동 활성화</b>(관리자 승인 불필요)됩니다. <span style="color:#B45309">※ service_role 키는 Netlify 환경변수에만 넣고, 절대 앱/브라우저에는 넣지 마세요.</span></div>'+
       '<textarea readonly style="width:100%;min-height:210px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(TOSS_FN_CODE)+'</textarea>'+
       '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osTossCopyFn()">함수 코드 복사</button></div>'+
     '</div>'+
