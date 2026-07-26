@@ -7435,16 +7435,23 @@ function osGateRecheck(){var sb=osClient();if(!sb){return;}toast('승인 상태�
 function osGatePricing(){osHidePending();if(typeof go==='function')go('pricing');}
 /* ════════ 로그인 게이트 — 로그인 전에는 앱을 가리고 요금제·로그인 화면만 노출 ════════ */
 function osHasStoredSession(){try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&/^sb-.+-auth-token$/.test(k)&&localStorage.getItem(k))return true;}}catch(e){}return false;}
-/* 로그인 랜딩 — "실제 결과물" 쇼케이스: 우리가 만드는 자료를 미니 목업으로 보여준다(이미지 없이 CSS로). */
+/* 로그인 랜딩 — 상세 제품 투어: 두뇌·보장분석·치료비통장·상담카드·카드뉴스·블로그를 목업+상세설명으로. */
 function osLandingShowcase(){
-  function row(vis,kicker,title,desc,use,rev){
-    return '<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;margin-bottom:42px'+(rev?';flex-direction:row-reverse':'')+'">'+
-      '<div style="flex:1.15;min-width:272px">'+vis+'</div>'+
-      '<div style="flex:1;min-width:250px">'+
-        '<div style="font-size:12px;font-weight:800;color:#1A56DB;letter-spacing:.4px">'+esc(kicker)+'</div>'+
-        '<div style="font-size:22px;font-weight:800;color:#0F172A;margin-top:7px;letter-spacing:-.5px;line-height:1.3">'+esc(title)+'</div>'+
-        '<div style="font-size:13.5px;color:#4B5563;line-height:1.72;margin-top:11px">'+esc(desc)+'</div>'+
-        '<div style="margin-top:14px;display:inline-flex;align-items:center;gap:7px;background:#F5F9FF;border:1px solid #DBEAFE;border-radius:11px;padding:9px 13px;font-size:12.5px;color:#1E40AF;font-weight:600">💡 '+esc(use)+'</div>'+
+  function section(vis,kicker,title,intro,points,outcome,rev){
+    var pts=points.map(function(p){
+      return '<div style="display:flex;gap:11px;align-items:flex-start;margin-top:13px">'+
+        '<span style="flex:none;font-size:17px;line-height:1.35">'+p[0]+'</span>'+
+        '<div><div style="font-size:14px;font-weight:800;color:#0F172A">'+esc(p[1])+'</div>'+
+        '<div style="font-size:12.5px;color:#64748B;line-height:1.62;margin-top:2px">'+esc(p[2])+'</div></div></div>';
+    }).join('');
+    return '<div style="display:flex;gap:40px;flex-wrap:wrap;align-items:center;margin-bottom:62px'+(rev?';flex-direction:row-reverse':'')+'">'+
+      '<div style="flex:1.05;min-width:290px">'+vis+'</div>'+
+      '<div style="flex:1.05;min-width:290px">'+
+        '<div style="font-size:12px;font-weight:800;color:#1A56DB;letter-spacing:.5px">'+esc(kicker)+'</div>'+
+        '<div style="font-size:25px;font-weight:800;color:#0F172A;margin-top:8px;letter-spacing:-.6px;line-height:1.3">'+esc(title)+'</div>'+
+        '<div style="font-size:14px;color:#4B5563;line-height:1.72;margin-top:12px">'+esc(intro)+'</div>'+
+        pts+
+        '<div style="margin-top:17px;display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#EFF5FF,#F5F9FF);border:1px solid #DBEAFE;border-radius:12px;padding:11px 15px;font-size:13px;color:#1E40AF;font-weight:700">🎯 '+esc(outcome)+'</div>'+
       '</div></div>';
   }
   var shadow='box-shadow:0 14px 34px rgba(15,23,42,.12)';
@@ -7483,14 +7490,39 @@ function osLandingShowcase(){
     '<div style="flex:1;aspect-ratio:4/5;background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:11px;font-weight:800;color:#1A56DB">치료비 현실</div><div style="font-size:10px;color:#475569;margin-top:6px;line-height:1.5">표적항암 1회<br>수백만원…</div></div>'+
     '<div style="flex:1;aspect-ratio:4/5;background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:11px;font-weight:800;color:#1A56DB">그래서</div><div style="font-size:10px;color:#475569;margin-top:6px;line-height:1.5">진단비 5천<br>+ 통원까지</div></div>'+
     '</div>';
-  return '<div style="max-width:1040px;margin:0 auto;padding:58px 20px 8px">'+
-    '<div style="text-align:center;margin-bottom:40px"><div style="font-size:13px;font-weight:800;color:#1A56DB;letter-spacing:.5px">REAL OUTPUT · 실제 결과물</div>'+
-    '<div style="font-size:27px;font-weight:800;color:#0F172A;margin-top:9px;letter-spacing:-.6px;line-height:1.32">말로 설명하지 않습니다.<br>실제로 이런 자료가 나옵니다</div>'+
-    '<div style="font-size:13.5px;color:#64748B;margin-top:11px;line-height:1.65">고객·대표 앞에 그대로 내놓는 결과물 — 클릭 몇 번이면 완성됩니다.</div></div>'+
-    row(m1,'AI 보장분석','증권 PDF → 1:1 보장 리포트','고객 증권을 올리면 담보 공백·중복을 찾아 현재→권장을 표와 점수로. 비포&애프터 비교까지 자동으로 만듭니다.','상담 자리에서 "이 부분이 비어 있어요"를 눈으로 증명',false)+
-    row(m2,'법인 상담 PPT','대표님 앞에서 바로 발표','절세·정책자금·퇴직재원을 표·막대그래프·KPI로. 비교가 한눈에 들어오는 발표 슬라이드가 자동 생성됩니다.','현재 vs 개선 후를 그래프로 → 계약 설득력 상승',true)+
-    row(m3,'고객 상담카드','정보 취합 → AI 니즈분석','상담 현장에서 고객 정보를 한 장으로 모으면, AI가 우선순위·화법·상담지까지 만들어 고객별로 쌓아 둡니다.','나만의 상담 DB로 재상담·소개까지 이어짐',false)+
-    row(m4,'매일 카드뉴스','후킹 → 설명, 5장 콘텐츠','이미지만 넣으면 인스타 5장 카드뉴스 완성. 첫 장에서 시선을 잡고 다음 장에서 설득합니다.','매일 새 주제 → SNS 콘텐츠 걱정 끝',true)+
+  /* ⑤ 제2의 두뇌 — 상담 채팅 */
+  var mBrain='<div style="background:#fff;border:1px solid #E5E9F0;border-radius:15px;'+shadow+';padding:16px">'+
+    '<div style="font-size:11.5px;font-weight:800;color:#1A56DB;margin-bottom:12px">🧠 윤시현의 두뇌 · 실시간 상담 지원</div>'+
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><div style="max-width:84%;background:#1A56DB;color:#fff;padding:9px 13px;border-radius:13px 13px 4px 13px;font-size:12px;line-height:1.5">협심증 진단인데 급성심근경색진단비만 있어요. 지급될까요?</div></div>'+
+    '<div style="background:#F8FAFC;border:1px solid #EEF2F7;border-radius:13px 13px 13px 4px;padding:11px 13px;font-size:11.5px;color:#334155;line-height:1.6"><b style="color:#0F172A">결론</b> — 협심증(I20)은 급성심근경색(AMI) 진단비 대상이 아닐 가능성이 높습니다.<br><span style="color:#64748B">· 대상 상병 I21~I22 · 진단코드·약관 정의 확인 · 최종은 보험사 심사</span></div></div>';
+  /* ⑥ 치료비 통장 — 8통장 지도 */
+  var wallets=[['치료비','#1A56DB',1],['생활비','#0EA5A5',0],['간병비','#8B5CF6',0],['자녀교육','#F59E0B',0],['노후','#EF4444',0],['주택','#3B82F6',0],['비상금','#10B981',0],['투자','#6366F1',0]];
+  var mWallet='<div style="background:#fff;border:1px solid #E5E9F0;border-radius:15px;'+shadow+';padding:17px">'+
+    '<div style="font-size:13px;font-weight:800;color:#0F172A">🗺 8통장 진단지도</div>'+
+    '<div style="font-size:10.5px;color:#94A3B8;margin:2px 0 12px">삶의 리스크를 8개의 통장으로 — 빈 통장이 곧 니즈</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:7px">'+
+      wallets.map(function(w){return '<div style="border:1px solid '+(w[2]?w[1]:'#EEF2F7')+';background:'+(w[2]?'#EFF5FF':'#fff')+';border-radius:10px;padding:9px 5px;text-align:center"><div style="font-size:15px">'+(w[2]?'⚠️':'✓')+'</div><div style="font-size:10px;font-weight:700;color:'+(w[2]?w[1]:'#64748B')+';margin-top:3px">'+w[0]+'</div></div>';}).join('')+
+    '</div>'+
+    '<div style="margin-top:11px;background:#EFF5FF;border-left:3px solid #1A56DB;padding:8px 10px;border-radius:0 8px 8px 0;font-size:10.5px;color:#334155;line-height:1.5"><b style="color:#1A56DB">치료비 통장</b>이 비어 있습니다 — 아플 때 병원비+생활비를 함께 지킬 정액 보장 필요</div></div>';
+  /* ⑦ 블로그·SNS */
+  var mBlog='<div style="background:#fff;border:1px solid #E5E9F0;border-radius:15px;'+shadow+';padding:17px">'+
+    '<div style="font-size:10px;color:#94A3B8">NAVER 블로그 · 상위노출</div>'+
+    '<div style="font-size:14px;font-weight:800;color:#0F172A;margin-top:3px;line-height:1.35">40대가 꼭 알아야 할 "치료비 통장" 완벽 정리</div>'+
+    '<div style="font-size:10.5px;color:#64748B;line-height:1.6;margin-top:7px">암·뇌·심장 3대 진단비, 실손만으로 충분할까요? 표적항암 치료비의 현실과 준비법…</div>'+
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:9px">'+['#치료비통장','#40대보험','#암보험준비'].map(function(t){return '<span style="background:#F1F5F9;color:#475569;font-size:9.5px;padding:2px 8px;border-radius:6px">'+t+'</span>';}).join('')+'</div>'+
+    '<div style="border-top:1px solid #EEF2F7;margin-top:12px;padding-top:12px;display:flex;gap:16px;justify-content:center">'+[['📝','블로그'],['📸','인스타'],['🧵','스레드'],['🎬','릴스']].map(function(s){return '<div style="text-align:center"><div style="font-size:18px">'+s[0]+'</div><div style="font-size:9px;color:#94A3B8;margin-top:2px">'+s[1]+'</div></div>';}).join('')+'</div></div>';
+  return '<div style="max-width:1080px;margin:0 auto;padding:64px 20px 8px">'+
+    '<div style="text-align:center;margin-bottom:52px">'+
+      '<div style="font-size:13px;font-weight:800;color:#1A56DB;letter-spacing:.5px">WHY APEX YUN PRO</div>'+
+      '<div style="font-size:29px;font-weight:800;color:#0F172A;margin-top:9px;letter-spacing:-.7px;line-height:1.3">설명하지 않아도, 보여주면 팔립니다</div>'+
+      '<div style="font-size:14px;color:#64748B;margin-top:12px;line-height:1.65">상담 자신감부터 콘텐츠 유입까지 — 계약을 만드는 6가지 무기를 하나씩 소개합니다.</div>'+
+    '</div>'+
+    section(mBrain,'제2의 두뇌 · SECOND BRAIN','상담 중에도, 답이 막히지 않습니다','고객의 어떤 질문에도 — 약관·담보·청구·화법·반론처리까지 윤시현의 관점으로 즉답합니다. 신입도 베테랑처럼 상담하게 됩니다.',[['💬','약관·담보 즉답','"이 진단, 이 담보로 지급되나요?"에 기준과 근거로 바로 답합니다.'],['🎯','반론처리·클로징 화법','상황별 스크립트로 "생각해볼게요"를 계약으로 돌립니다.'],['📚','나를 학습','내 노하우·문구를 넣으면 나처럼 답하는 제2의 두뇌가 됩니다.']],'상담 자신감 = 계약 전환율',false)+
+    section(m1,'AI 보장분석 · COVERAGE','증권만 올리면, 3분 만에 진단서','고객의 기존 증권에서 담보 공백·중복·과부족을 자동으로 찾아 현재 vs 권장을 표와 점수로. "왜 바꿔야 하는지"를 눈으로 증명합니다.',[['🔍','담보 공백·중복 진단','빠진 담보, 겹치는 담보, 과보험을 자동으로 짚어냅니다.'],['📊','보장 점수 + 비포·애프터','62→94점처럼 개선 효과를 숫자와 그래프로.'],['🖨','고객 이름 리포트 PDF','1:1 맞춤 진단서로 신뢰를 줍니다.']],'말이 아니라 문서로 설득 → 리모델링 계약',true)+
+    section(mWallet,'치료비 통장 · 8-WALLET','"병원비"가 아니라 "못 버는 돈"을','아파서 일 못 하는 동안의 생활비까지 — 8개의 통장으로 삶의 리스크를 한눈에. 자산가일수록 강하게 반응하는 프레임입니다.',[['🗺','8통장으로 니즈 시각화','치료비·생활비·간병·노후… 빈 통장이 곧 니즈가 됩니다.'],['💊','치료비 통장 각인','실손 너머 정액 보장의 필요성을 스스로 느끼게.'],['👨‍👩‍👧','가족 상황별 진단','외벌이·자녀·자산가별로 맞춤 설계.']],'니즈를 스스로 느끼게 → 큰 보장 설계',false)+
+    section(m3,'고객 상담카드 · FACT-FINDING','정보 취합 → AI 니즈분석','상담 현장에서 고객 정보를 한 장으로 모으면, AI가 우선순위·화법·상담지까지 만들어 고객별로 쌓아 둡니다.',[['📝','한 장 팩트파인딩','12개 항목으로 고객을 빠르게 파악합니다.'],['🎯','AI 니즈분석·우선순위','예산 안에서 무엇부터 준비할지 자동 제안.'],['🗂','나만의 상담 DB','고객별로 저장 — 재상담·소개로 이어집니다.']],'한 번 만난 고객을 평생 고객으로',true)+
+    section(m4,'매일 카드뉴스 · CONTENT','콘텐츠 고민 없이, 매일 새 카드뉴스','이미지만 넣으면 후킹→설명 5장이 자동 완성. 인스타·카톡으로 바로 뿌리는 전문가 콘텐츠.',[['🎨','후킹→설득 5장 구조','첫 장에서 시선을 잡고 다음 장에서 설득합니다.'],['🖼','로고 삽입·고화질 저장','우리 로고가 박힌 1080×1350 이미지로.'],['📅','매일 새 주제 추천','소재 고갈 없이 꾸준히.']],'꾸준한 콘텐츠 = 문의 유입',false)+
+    section(mBlog,'블로그 · SNS · MARKETING','검색으로 찾아오게, 브랜드로 기억되게','SEO 블로그 글, 인스타·스레드·릴스 대본, 리드 랜딩페이지까지 — 유입부터 상담 예약까지의 마케팅을 한 번에.',[['✍️','상위노출형 블로그','네이버·티스토리 SEO 글을 제목·본문·태그까지.'],['📱','SNS 대본 + 캘린더','인스타·스레드·유튜브 대본과 발행 캘린더.'],['🎯','리드 랜딩·디지털 명함','상담 예약으로 이어지는 유입 페이지.']],'가만히 있어도 고객이 찾아오는 구조',true)+
   '</div>';
 }
 function osLoginGateHtml(){
