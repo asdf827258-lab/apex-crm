@@ -104,7 +104,7 @@
       <button data-page="absence" onclick="goPage('absence',this)">부재 이력</button>
       <button data-page="recordings" onclick="goPage('recordings',this)">녹음 전달</button>
       <button data-page="team" id="teamNav" onclick="goPage('team',this)">담당자 통계</button>
-      <button data-page="attendance" onclick="goPage('attendance',this)">출근 달력</button>
+      <button data-page="attendance" onclick="goPage('attendance',this)">출근 현황</button>
     </nav>
     <div class="user"><small>접속 사용자</small><strong id="userName">-</strong><small id="userRole">-</small><br><button onclick="signOut()">로그아웃</button></div>
   </aside>
@@ -154,7 +154,8 @@
       </section>
 
       <section class="page" id="page-attendance">
-        <div class="hero"><div><h2>출근 달력</h2><p>매일 접속하면 자동으로 출근이 기록됩니다. 팀원별 월간 출근·미접속일을 한눈에 확인하세요.</p></div></div>
+        <div class="hero"><div><h2>출근 현황</h2><p>로그인(접속)하면 <b>본인 아이디로 출근이 자동 기록</b>됩니다. 팀 전체 월간 출근·미접속을 한눈에 확인하세요.</p></div></div>
+        <div class="grid kpis" id="attKpi" style="margin-bottom:18px"></div>
         <div class="card section">
           <div class="section-head">
             <div class="actions"><button class="btn btn-light btn-sm" onclick="attShift(-1)">◀ 이전달</button><h3 id="attMonthLabel" style="min-width:120px;text-align:center">-</h3><button class="btn btn-light btn-sm" onclick="attShift(1)">다음달 ▶</button></div>
@@ -275,7 +276,7 @@ function fillProfiles(){
   $("assignedTo").innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
-function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"대시보드",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",team:"담당자 통계",attendance:"출근 달력"}[pg];$("sidebar").classList.remove("open");renderAll()}
+function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"대시보드",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",team:"담당자 통계",attendance:"출근 현황"}[pg];$("sidebar").classList.remove("open");renderAll()}
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
 function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance()}
 function renderDashboard(){
@@ -323,8 +324,20 @@ function renderAttendance(){
   head.innerHTML=th;
   const mem=profiles.filter(p=>p.active!==false),set={};
   attendance.forEach(a=>{set[a.member_id+"|"+a.att_date]=1});
+  // KPI: 총 팀원 / 오늘 출근 / 오늘 미접속 / 이번달 출근율 + 나의 이번달 출근
+  const kpiEl=$("attKpi");
+  if(kpiEl){
+    const todayKey=`${now.getFullYear()}-${p2(now.getMonth()+1)}-${p2(now.getDate())}`;
+    let presentToday=0;mem.forEach(p=>{if(set[p.id+"|"+todayKey])presentToday++;});
+    const elapsed=isCur?todayD:days;let pc=0;mem.forEach(p=>{for(let d=1;d<=elapsed;d++){if(set[p.id+"|"+`${y}-${p2(mo+1)}-${p2(d)}`])pc++;}});
+    const rate=mem.length*elapsed?Math.round(pc/(mem.length*elapsed)*100):0;
+    let myPresent=0;if(profile){for(let d=1;d<=days;d++){if(set[profile.id+"|"+`${y}-${p2(mo+1)}-${p2(d)}`])myPresent++;}}
+    const kc=(label,val,sub,color)=>`<div class="card kpi"><div class="label">${label}</div><div class="value"${color?` style="color:${color}"`:""}>${val}</div><div class="sub">${sub}</div></div>`;
+    kpiEl.innerHTML=kc("총 팀원",mem.length+"명","활성 팀원")+kc("오늘 출근",presentToday+"명","접속 완료","#20c997")+kc("오늘 미접속",(mem.length-presentToday)+"명","아직 미접속",(mem.length-presentToday)>0?"#f04452":"#20c997")+kc("나의 출근",myPresent+"일","이번달 내 접속","#3182f6");
+  }
   body.innerHTML=mem.map(p=>{
-    let row=`<tr><td class="name" style="position:sticky;left:0;background:#fff;z-index:1">${esc(p.name)}</td>`,present=0,missed=0;
+    const mine=profile&&p.id===profile.id;
+    let row=`<tr${mine?' style="background:#f0f7ff"':''}><td class="name" style="position:sticky;left:0;background:${mine?'#f0f7ff':'#fff'};z-index:1">${esc(p.name)}${mine?' <span class="badge blue">나</span>':''}</td>`,present=0,missed=0;
     for(let d=1;d<=days;d++){
       const key=p.id+"|"+`${y}-${p2(mo+1)}-${p2(d)}`,has=set[key];
       const future=isCur?(d>todayD):(new Date(y,mo,d)>now);
