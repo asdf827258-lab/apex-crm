@@ -7400,6 +7400,64 @@ function osGateRecheck(){var sb=osClient();if(!sb){return;}toast('승인 상태�
 function osGatePricing(){osHidePending();if(typeof go==='function')go('pricing');}
 /* ════════ 로그인 게이트 — 로그인 전에는 앱을 가리고 요금제·로그인 화면만 노출 ════════ */
 function osHasStoredSession(){try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&/^sb-.+-auth-token$/.test(k)&&localStorage.getItem(k))return true;}}catch(e){}return false;}
+/* 로그인 랜딩 — "실제 결과물" 쇼케이스: 우리가 만드는 자료를 미니 목업으로 보여준다(이미지 없이 CSS로). */
+function osLandingShowcase(){
+  function row(vis,kicker,title,desc,use,rev){
+    return '<div style="display:flex;gap:32px;flex-wrap:wrap;align-items:center;margin-bottom:42px'+(rev?';flex-direction:row-reverse':'')+'">'+
+      '<div style="flex:1.15;min-width:272px">'+vis+'</div>'+
+      '<div style="flex:1;min-width:250px">'+
+        '<div style="font-size:12px;font-weight:800;color:#1A56DB;letter-spacing:.4px">'+esc(kicker)+'</div>'+
+        '<div style="font-size:22px;font-weight:800;color:#0F172A;margin-top:7px;letter-spacing:-.5px;line-height:1.3">'+esc(title)+'</div>'+
+        '<div style="font-size:13.5px;color:#4B5563;line-height:1.72;margin-top:11px">'+esc(desc)+'</div>'+
+        '<div style="margin-top:14px;display:inline-flex;align-items:center;gap:7px;background:#F5F9FF;border:1px solid #DBEAFE;border-radius:11px;padding:9px 13px;font-size:12.5px;color:#1E40AF;font-weight:600">💡 '+esc(use)+'</div>'+
+      '</div></div>';
+  }
+  var shadow='box-shadow:0 14px 34px rgba(15,23,42,.12)';
+  /* ① 보장분석 리포트 */
+  var m1='<div style="background:#fff;border:1px solid #E5E9F0;border-radius:15px;'+shadow+';padding:17px 17px 15px">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #1A56DB;padding-bottom:9px;margin-bottom:11px"><b style="font-size:13.5px;color:#0F172A">김○○님 보장분석 리포트</b><span style="font-size:11px;font-weight:900;color:#1A56DB">APEX</span></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+      '<tr style="color:#94A3B8;font-size:10px"><td style="text-align:left;padding:3px 4px">담보</td><td style="text-align:center">현재</td><td style="text-align:center">권장</td><td style="text-align:center">상태</td></tr>'+
+      '<tr><td style="text-align:left;padding:4px;font-weight:700;color:#0F172A">암진단비</td><td style="text-align:center;color:#475569">3,000만</td><td style="text-align:center;color:#475569">5,000만</td><td style="text-align:center"><span style="background:#FEE2E2;color:#B91C1C;font-size:9.5px;padding:1px 7px;border-radius:6px">부족</span></td></tr>'+
+      '<tr style="background:#F8FAFC"><td style="text-align:left;padding:4px;font-weight:700;color:#0F172A">뇌혈관</td><td style="text-align:center;color:#475569">없음</td><td style="text-align:center;color:#475569">3,000만</td><td style="text-align:center"><span style="background:#FEF3C7;color:#B45309;font-size:9.5px;padding:1px 7px;border-radius:6px">공백</span></td></tr>'+
+      '<tr><td style="text-align:left;padding:4px;font-weight:700;color:#0F172A">실손</td><td style="text-align:center;color:#475569">1세대</td><td style="text-align:center;color:#475569">유지</td><td style="text-align:center"><span style="background:#DCFCE7;color:#166534;font-size:9.5px;padding:1px 7px;border-radius:6px">양호</span></td></tr>'+
+    '</table>'+
+    '<div style="margin-top:12px;display:flex;gap:8px;align-items:center"><span style="font-size:10px;color:#64748B;white-space:nowrap">보장 점수</span><span style="flex:1;height:9px;background:#EEF2F8;border-radius:5px;overflow:hidden"><span style="display:block;width:62%;height:100%;background:linear-gradient(90deg,#1A56DB,#38BDF8)"></span></span><b style="font-size:11.5px;color:#1A56DB;white-space:nowrap">62 → 94점</b></div></div>';
+  /* ② 법인 PPT 슬라이드 */
+  var m2='<div style="aspect-ratio:16/9;background:#fff;border:1px solid #E5E9F0;border-radius:13px;'+shadow+';padding:17px 19px;display:flex;flex-direction:column">'+
+    '<div style="font-size:10.5px;font-weight:800;color:#1A56DB">절세 포인트</div>'+
+    '<div style="font-size:16px;font-weight:900;color:#0F172A;margin-top:2px;letter-spacing:-.3px">현재 vs 개선 후 세부담</div>'+
+    '<div style="margin-top:auto;display:flex;flex-direction:column;gap:9px">'+
+      '<div style="display:flex;align-items:center;gap:9px"><span style="font-size:10.5px;width:60px;text-align:right;color:#334155;font-weight:700">현재</span><span style="flex:1;height:17px;background:#EEF2F8;border-radius:5px;overflow:hidden"><span style="display:block;width:100%;height:100%;background:linear-gradient(90deg,#0F172A,#334155)"></span></span><b style="font-size:10.5px;color:#0F172A">2,000만</b></div>'+
+      '<div style="display:flex;align-items:center;gap:9px"><span style="font-size:10.5px;width:60px;text-align:right;color:#334155;font-weight:700">개선 후</span><span style="flex:1;height:17px;background:#EEF2F8;border-radius:5px;overflow:hidden"><span style="display:block;width:60%;height:100%;background:linear-gradient(90deg,#1A56DB,#38BDF8)"></span></span><b style="font-size:10.5px;color:#1A56DB">1,200만</b></div>'+
+    '</div></div>';
+  /* ③ 고객 상담카드 */
+  var m3='<div style="background:#fff;border:1px solid #E5E9F0;border-radius:15px;'+shadow+';padding:17px">'+
+    '<div style="font-size:13.5px;font-weight:800;color:#0F172A">📝 김○○ 상담카드</div>'+
+    '<div style="display:flex;gap:5px;flex-wrap:wrap;margin:9px 0 11px"><span style="background:#EDE9FE;color:#6D28D9;font-size:9.5px;font-weight:700;padding:2px 9px;border-radius:999px">연금·은퇴</span><span style="background:#E0F2FE;color:#0369A1;font-size:9.5px;font-weight:700;padding:2px 9px;border-radius:999px">건강·실손</span></div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:10px;color:#94A3B8">'+
+      '<div>나이·성별<div style="font-size:12px;color:#0F172A;font-weight:800;margin-top:1px">45세 남</div></div>'+
+      '<div>월 소득<div style="font-size:12px;color:#0F172A;font-weight:800;margin-top:1px">900만원</div></div>'+
+      '<div>가족구성<div style="font-size:12px;color:#0F172A;font-weight:800;margin-top:1px">배우자·자녀 2</div></div>'+
+      '<div>월 예산<div style="font-size:12px;color:#0F172A;font-weight:800;margin-top:1px">40~60만</div></div>'+
+    '</div>'+
+    '<div style="margin-top:11px;background:#F5F9FF;border-left:3px solid #1A56DB;padding:8px 10px;border-radius:0 8px 8px 0;font-size:10.5px;color:#334155;line-height:1.5"><b style="color:#1A56DB">🎯 AI 니즈분석</b> — 은퇴자금 + 자녀보장 우선, 월 48만 배분…</div></div>';
+  /* ④ 카드뉴스 5장(후킹→설명) */
+  var m4='<div style="display:flex;gap:8px">'+
+    '<div style="flex:1;aspect-ratio:4/5;background:linear-gradient(150deg,#0F172A,#1A56DB);border-radius:12px;padding:12px;color:#fff;display:flex;flex-direction:column;justify-content:flex-end;'+shadow+'"><div style="font-size:15px;font-weight:900;line-height:1.28">암 진단비<br>3천이면<br>충분할까?</div></div>'+
+    '<div style="flex:1;aspect-ratio:4/5;background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:11px;font-weight:800;color:#1A56DB">치료비 현실</div><div style="font-size:10px;color:#475569;margin-top:6px;line-height:1.5">표적항암 1회<br>수백만원…</div></div>'+
+    '<div style="flex:1;aspect-ratio:4/5;background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px;display:flex;flex-direction:column;justify-content:center"><div style="font-size:11px;font-weight:800;color:#1A56DB">그래서</div><div style="font-size:10px;color:#475569;margin-top:6px;line-height:1.5">진단비 5천<br>+ 통원까지</div></div>'+
+    '</div>';
+  return '<div style="max-width:1040px;margin:0 auto;padding:58px 20px 8px">'+
+    '<div style="text-align:center;margin-bottom:40px"><div style="font-size:13px;font-weight:800;color:#1A56DB;letter-spacing:.5px">REAL OUTPUT · 실제 결과물</div>'+
+    '<div style="font-size:27px;font-weight:800;color:#0F172A;margin-top:9px;letter-spacing:-.6px;line-height:1.32">말로 설명하지 않습니다.<br>실제로 이런 자료가 나옵니다</div>'+
+    '<div style="font-size:13.5px;color:#64748B;margin-top:11px;line-height:1.65">고객·대표 앞에 그대로 내놓는 결과물 — 클릭 몇 번이면 완성됩니다.</div></div>'+
+    row(m1,'AI 보장분석','증권 PDF → 1:1 보장 리포트','고객 증권을 올리면 담보 공백·중복을 찾아 현재→권장을 표와 점수로. 비포&애프터 비교까지 자동으로 만듭니다.','상담 자리에서 "이 부분이 비어 있어요"를 눈으로 증명',false)+
+    row(m2,'법인 상담 PPT','대표님 앞에서 바로 발표','절세·정책자금·퇴직재원을 표·막대그래프·KPI로. 비교가 한눈에 들어오는 발표 슬라이드가 자동 생성됩니다.','현재 vs 개선 후를 그래프로 → 계약 설득력 상승',true)+
+    row(m3,'고객 상담카드','정보 취합 → AI 니즈분석','상담 현장에서 고객 정보를 한 장으로 모으면, AI가 우선순위·화법·상담지까지 만들어 고객별로 쌓아 둡니다.','나만의 상담 DB로 재상담·소개까지 이어짐',false)+
+    row(m4,'매일 카드뉴스','후킹 → 설명, 5장 콘텐츠','이미지만 넣으면 인스타 5장 카드뉴스 완성. 첫 장에서 시선을 잡고 다음 장에서 설득합니다.','매일 새 주제 → SNS 콘텐츠 걱정 끝',true)+
+  '</div>';
+}
 function osLoginGateHtml(){
   var logo='<svg viewBox="0 0 240 220" fill="#fff" style="width:38px;height:36px" aria-hidden="true"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>';
   var chips=['치료비 통장','AI 보장분석','제2의 두뇌','정책자금','90일 아카데미'];
@@ -7452,7 +7510,7 @@ function osLoginGateHtml(){
   var finalCta='<div style="max-width:1080px;margin:52px auto 0;padding:0 20px"><div style="background:linear-gradient(135deg,#1A56DB,#38BDF8);border-radius:24px;padding:44px 28px;text-align:center;color:#fff"><div style="font-size:25px;font-weight:800;line-height:1.4;letter-spacing:-.5px">오늘, 삶을 설계하는 설계사로</div><div style="font-size:14px;opacity:.93;margin-top:10px;line-height:1.6">계정 등록 후 관리자 승인만 받으면 바로 시작합니다.</div>'+
     '<button onclick="osAuthTab(\'signup\');var e=document.getElementById(\'osName\')||document.getElementById(\'osEmail\');if(e){e.scrollIntoView({behavior:\'smooth\',block:\'center\'});e.focus();}" style="margin-top:20px;border:none;background:#fff;color:#1A56DB;font-size:15px;font-weight:800;padding:14px 32px;border-radius:12px;cursor:pointer">무료로 계정 만들기</button></div></div>';
   var foot='<div style="max-width:900px;margin:34px auto;padding:0 20px 36px;text-align:center;font-size:10.5px;color:#94A3B8;line-height:1.7">APEX YUN PRO · 에이플러스에셋 온탑본부 윤시현 사업단장 &nbsp;|&nbsp; 본 서비스는 보험 상담 업무 보조 도구이며 특정 상품의 가입·수익을 보장하지 않습니다. 금융소비자보호법 등 관련 법령을 준수하며, 모든 상담 콘텐츠는 게시·발송 전 준법 확인을 권장합니다.</div>';
-  return '<div style="min-height:100%;background:#F7F9FC">'+topbar+hero+features+how+plans+finalCta+foot+'</div>';
+  return '<div style="min-height:100%;background:#F7F9FC">'+topbar+hero+osLandingShowcase()+features+how+plans+finalCta+foot+'</div>';
 }
 function osShowLoginGate(){
   if(OS.profile)return;
