@@ -128,6 +128,9 @@
           </div>
           <div class="card section"><div class="section-head"><div><h3>TA 결과 분포</h3><p>완료된 통화 기준</p></div></div><div class="bars" id="bars"></div><div class="notice" style="margin-top:18px">담당자가 기록을 저장하면 로그인한 이름과 저장시간이 서버에 남습니다.</div></div>
         </div>
+        <div class="card section" style="margin-top:16px"><div class="section-head"><div><h3>오늘 출근관리</h3><p id="dashAttSub">접속(로그인)하면 시각이 자동 기록됩니다</p></div><a href="#" onclick="goPage('attendance');return false" style="font-size:12px;color:#3182f6;font-weight:700;text-decoration:none;white-space:nowrap">월간 출근표 →</a></div>
+          <div class="table-wrap"><table><thead><tr><th>담당자</th><th style="text-align:center">상태</th><th style="text-align:center">로그인 시각</th><th style="text-align:center">최근 접속</th></tr></thead><tbody id="dashAttBody"></tbody></table></div>
+        </div>
       </section>
 
       <section class="page" id="page-db">
@@ -262,6 +265,8 @@ async function startApp(){
   $("dashboardTitle").textContent=isAdmin()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=isAdmin()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
+  /* 최근 접속시각 갱신(베스트에포트) — last_seen 컬럼이 있으면 기록, 없으면 조용히 무시(출근 기록엔 영향 없음) */
+  try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",todayLocal());}catch(e){}
   await loadAll();
 }
 async function loadAll(){
@@ -289,6 +294,28 @@ function renderDashboard(){
   $("recentBody").innerHTML=dbs.slice(0,8).map(d=>{const c=lastCall(d);return `<tr><td class="name">${esc(d.customer_name)}</td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region)}</td><td>${badge(result(d))}</td><td>${esc(pname(c?.created_by||d.created_by))}</td><td>${c?fmt(c.call_at,true):"-"}</td></tr>`}).join("")||`<tr><td colspan="6" class="empty">등록된 DB가 없습니다.</td></tr>`;
   const count={부재:done.filter(d=>result(d)==="부재").length,거절:done.filter(d=>result(d)==="거절").length,상담:consult.length};
   $("bars").innerHTML=["부재","거절","상담"].map(k=>{const pct=done.length?Math.round(count[k]/done.length*100):0;return `<div class="barrow"><strong>${k}</strong><div class="bar"><span style="width:${pct}%"></span></div><span>${count[k]}</span></div>`}).join("");
+  renderDashAttendance();
+}
+/* 대시보드 하단 오늘 출근관리 — 접속(로그인) 시각 표시 (attendance 테이블 공유) */
+function renderDashAttendance(){
+  const body=$("dashAttBody");if(!body)return;
+  const sub=$("dashAttSub");
+  if(attErr){
+    if(sub)sub.textContent="출근 SQL 실행 후 자동 집계됩니다";
+    body.innerHTML='<tr><td colspan="4" class="empty">출근 기록 테이블이 아직 없습니다 — 관리자가 출근 SQL을 1회 실행하면 켜집니다.</td></tr>';
+    return;
+  }
+  const p2=n=>String(n).padStart(2,"0");
+  const hm=t=>{if(!t)return "-";const d=new Date(t);return p2(d.getHours())+":"+p2(d.getMinutes())};
+  const tkey=todayLocal(),mem=profiles.filter(p=>p.active!==false),byId={};
+  attendance.forEach(a=>{if(a.att_date===tkey)byId[a.member_id]=a;});
+  let present=0;
+  body.innerHTML=mem.map(p=>{
+    const a=byId[p.id],mine=profile&&p.id===profile.id;if(a)present++;
+    const st=a?'<span class="badge green">출근</span>':'<span class="badge gray">미접속</span>';
+    return `<tr${mine?' style="background:#f0f7ff"':''}><td class="name" style="position:sticky;left:0;background:${mine?'#f0f7ff':'#fff'}">${esc(p.name)}${mine?' <span class="badge blue">나</span>':''}</td><td style="text-align:center">${st}</td><td style="text-align:center;font-weight:700;color:${a?'#191f28':'#c0c6cf'}">${a?hm(a.first_seen):"-"}</td><td style="text-align:center;color:${a?'#3182f6':'#c0c6cf'}">${a?hm(a.last_seen||a.first_seen):"-"}</td></tr>`;
+  }).join("")||`<tr><td colspan="4" class="empty">등록된 팀원이 없습니다.</td></tr>`;
+  if(sub)sub.textContent=`오늘 ${present}/${mem.length}명 접속 · 로그인 시각 자동 기록`;
 }
 function renderDb(){
   const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"";
