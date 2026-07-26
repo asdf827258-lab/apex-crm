@@ -2341,12 +2341,13 @@ function openFinanceNewTab(){
     setTimeout(function(){URL.revokeObjectURL(url);},60000);
   }catch(e){toast('새 탭 열기 실패: '+e.message);}
 }
-/* ════════ DB CRM 모듈 (실시간 연결 · 독립 CRM 사이트를 iframe로 직접 로드) ════════
-   OS와 오리진이 달라 세션은 공유되지 않는다 → CRM 탭에서 한 번 로그인하면 그 브라우저에 유지된다.
-   CRM을 어디서 수정·배포하든(apex-crm 사이트) 이 탭이 항상 '최신본'을 실시간으로 보여준다. */
-var CRM_URL='https://apex-crm-a500b6.netlify.app/';
+/* ════════ DB CRM 모듈 — 같은 사이트의 db-crm.html(출근 현황 포함)을 iframe로 로드 ════════
+   같은 오리진이라 Supabase 설정(공개 anon)을 localStorage로 넘겨 자동 연결한다.
+   config.js는 그대로(placeholder) 두고, 앱이 가진 공개 설정만 전달한다. 데이터는 동일 프로젝트라 CRM과 같다. */
+var CRM_URL='../db-crm.html';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
+  try{if(window.APEX_SB&&window.APEX_SB.url&&window.localStorage){localStorage.setItem('apexSupabaseConfigV1',JSON.stringify({url:window.APEX_SB.url,key:window.APEX_SB.key}));}}catch(e){}
   f.src=CRM_URL;f._mounted=true;
 }
 function reloadCrm(){var f=$('crmFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCrm,30);toast('DB CRM 새로고침');}}
