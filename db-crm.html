@@ -199,7 +199,7 @@
 
 <script>
 const CONFIG_KEY="apexSupabaseConfigV1";
-let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[];
+let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[], attErr=null;
 let attMonth=null;
 
 const $=id=>document.getElementById(id);
@@ -272,7 +272,7 @@ async function loadAll(){
     sb.from("attendance").select("*")
   ]);
   if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
-  profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];fillProfiles();renderAll();
+  profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;fillProfiles();renderAll();
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.role==="member"||p.role==="admin");
@@ -316,6 +316,12 @@ function todayLocal(){const d=new Date(),p=n=>String(n).padStart(2,"0");return d
 function attShift(dir){const base=attMonth||new Date();attMonth=dir===0?new Date():new Date(base.getFullYear(),base.getMonth()+dir,1);renderAttendance()}
 function renderAttendance(){
   const head=$("attHead"),body=$("attBody");if(!head||!body)return;
+  if(attErr){
+    const kpi0=$("attKpi");
+    if(kpi0)kpi0.innerHTML='<div class="notice" style="background:#fff5f5;border:1px solid #ffd0d0;color:#c0392b;font-weight:600">⚠ 출근 기록 테이블(attendance)이 아직 없어 카운팅이 표시되지 않습니다. 관리자가 Supabase에서 <b>출근 SQL</b>을 1회 실행하면, 그때부터 접속이 자동 기록·집계됩니다.</div>';
+    head.innerHTML='';body.innerHTML='<tr><td class="empty" style="padding:22px">출근 SQL 실행 후 이곳에 월간 출근표가 표시됩니다.</td></tr>';
+    return;
+  }
   if(!attMonth)attMonth=new Date();
   const y=attMonth.getFullYear(),mo=attMonth.getMonth(),days=new Date(y,mo+1,0).getDate();
   const now=new Date(),isCur=(y===now.getFullYear()&&mo===now.getMonth()),todayD=now.getDate();
