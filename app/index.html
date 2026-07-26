@@ -1866,18 +1866,24 @@ function osLoadToss(cb){
   var s=document.createElement('script');s.src='https://js.tosspayments.com/v1/payment';
   s.onload=function(){cb(true);};s.onerror=function(){cb(false);};document.head.appendChild(s);
 }
+function osPlanById(id){for(var i=0;i<TOSS_PLANS.length;i++){if(TOSS_PLANS[i].id===id)return TOSS_PLANS[i];}return null;}
 function osStartCheckout(planId){
   if(!OS.profile){var g=document.getElementById('osLoginGate');if(g&&g.style.display!=='none'){toast('먼저 로그인 또는 계정 등록을 해주세요.');if(typeof osAuthTab==='function')osAuthTab('signup');var nm=document.getElementById('osName');if(nm)nm.focus();}else if(typeof osOpenModal==='function'){osOpenModal();}return;}
-  var plan=null;for(var i=0;i<TOSS_PLANS.length;i++){if(TOSS_PLANS[i].id===planId)plan=TOSS_PLANS[i];}
+  if(typeof osPayOpen==='function')osPayOpen(planId);
+}
+/* 카드(토스페이먼츠) 결제 — 결제수단 선택 모달에서 호출 */
+function osPayCard(planId){
+  var plan=osPlanById(planId);
   if(!plan)return;
   var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
   var ck=getTossKey();
   if(!ck){
-    toast('결제를 받으려면 먼저 설정에서 토스페이먼츠 키를 연결하세요.');
-    if(OS.profile&&OS.profile.role==='admin'){go('settings');}
-    else{toast('운영자에게 결제 연결을 요청해 주세요.');}
+    toast('카드 결제를 받으려면 먼저 설정에서 토스페이먼츠 키를 연결하세요.');
+    if(OS.profile&&OS.profile.role==='admin'){if(typeof osPayModalClose==='function')osPayModalClose();go('settings');}
+    else{toast('운영자에게 카드 연결을 요청하거나 계좌이체를 이용해 주세요.');}
     return;
   }
+  if(typeof osPayModalClose==='function')osPayModalClose();
   osLoadToss(function(ok){
     if(!ok||typeof TossPayments==='undefined'){toast('결제 모듈을 불러오지 못했습니다. 네트워크 확인 후 다시 시도하세요.');return;}
     try{
@@ -1964,6 +1970,197 @@ function osTossCardHtml(){
         '4. 배포된 함수 주소를 위 <b>승인 주소</b>에 저장 → 실제 결제·정산 완료</div>'+
       '<textarea readonly style="width:100%;min-height:210px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(TOSS_FN_CODE)+'</textarea>'+
       '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osTossCopyFn()">함수 코드 복사</button></div>'+
+    '</div>'+
+    '</div></div>';
+}
+/* ═══════════ #3 결제수단 확대 — 카드(토스)·계좌이체·네이버페이·카카오페이 ═══════════
+   계좌이체는 PG 없이 즉시 사용 가능(운영 계좌만 등록). 네이버/카카오는 운영자 링크로 연결.
+   설정은 이 브라우저 저장 + (테이블 있으면) app_config로 팀 공유. */
+var PAY_CFG=null;
+function payCfg(){
+  if(PAY_CFG)return PAY_CFG;
+  var d={bank:'',account:'',holder:'',naver:'',kakao:''};
+  try{var s=localStorage.getItem('apex_pay_cfg');if(s){var o=JSON.parse(s);if(o&&typeof o==='object'){d.bank=o.bank||'';d.account=o.account||'';d.holder=o.holder||'';d.naver=o.naver||'';d.kakao=o.kakao||'';}}}catch(e){}
+  PAY_CFG=d;return d;
+}
+function osPaySync(){
+  var sb=osClient();if(!sb)return;
+  try{sb.from('app_config').select('k,v').eq('k','pay').then(function(r){
+    if(r.error||!r.data||!r.data.length)return;
+    var v=r.data[0].v;if(typeof v==='string'){try{v=JSON.parse(v);}catch(e){v=null;}}
+    if(v&&typeof v==='object'){PAY_CFG={bank:v.bank||'',account:v.account||'',holder:v.holder||'',naver:v.naver||'',kakao:v.kakao||''};try{localStorage.setItem('apex_pay_cfg',JSON.stringify(PAY_CFG));}catch(e){}}
+  },function(){});}catch(e){}
+}
+function osPayModalClose(){var o=document.getElementById('osPayOverlay');if(o&&o.parentNode)o.parentNode.removeChild(o);try{document.body.style.overflow='';}catch(e){}}
+function osPayMethodCard(icon,title,desc,onclick,accent){
+  return '<button type="button" onclick="'+onclick+'" style="display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--ink-7,#E2E8F0);border-radius:13px;padding:13px 15px;cursor:pointer;margin-bottom:9px">'+
+    '<span style="font-size:22px;flex:none;width:34px;text-align:center">'+icon+'</span>'+
+    '<span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:800;color:#0F172A">'+osEsc(title)+'</span>'+
+    '<span style="display:block;font-size:11px;color:#64748B;margin-top:2px">'+osEsc(desc)+'</span></span>'+
+    '<span style="color:'+(accent||'#1A56DB')+';font-weight:900;font-size:18px;flex:none">›</span></button>';
+}
+function osPayOpen(planId){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'연간':'월간';
+  osPayModalClose();
+  var body='<div style="font-size:11.5px;color:#64748B">'+osEsc(cyc)+' 구독</div>'+
+    '<div style="font-size:18px;font-weight:900;color:#0F172A;margin:2px 0 2px">APEX '+osEsc(plan.name)+'</div>'+
+    '<div style="font-size:22px;font-weight:900;color:#1A56DB;margin-bottom:14px">'+apexWon(amount)+'</div>'+
+    '<div style="font-size:11px;font-weight:800;color:#334155;margin:0 0 9px">결제수단 선택</div>'+
+    osPayMethodCard('💳','카드 결제','토스페이먼츠 · 국내 모든 카드','osPayCard(\''+plan.id+'\')','#1A56DB')+
+    osPayMethodCard('🏦','계좌이체 · 무통장입금','운영 계좌로 이체 후 확인','osPayBank(\''+plan.id+'\')','#0EA5A5')+
+    osPayMethodCard('Ⓝ','네이버페이','네이버페이로 간편결제','osPaySimple(\''+plan.id+'\',\'naver\')','#03C75A')+
+    osPayMethodCard('🟡','카카오페이 · 카카오뱅크','카카오페이/카카오뱅크 송금','osPaySimple(\''+plan.id+'\',\'kakao\')','#FEE500')+
+    '<div style="font-size:10.5px;color:#94A3B8;line-height:1.6;margin-top:8px">구독은 결제/입금 확인 후 운영자 승인으로 활성화됩니다. 카드 결제는 운영자 토스 연결 시 즉시 처리됩니다.</div>';
+  osPayShell('결제하기', body);
+}
+function osPayShell(title, inner){
+  var ov=document.createElement('div');ov.id='osPayOverlay';
+  ov.style.cssText='position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.55);display:flex;align-items:flex-end;justify-content:center;padding:0';
+  ov.onclick=function(e){if(e.target===ov)osPayModalClose();};
+  ov.innerHTML='<div role="dialog" style="background:#fff;width:100%;max-width:440px;border-radius:18px 18px 0 0;padding:18px 18px 22px;max-height:88vh;overflow:auto;box-shadow:0 -10px 40px rgba(0,0,0,.2)">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-size:14px;font-weight:900;color:#0F172A">'+osEsc(title)+'</div>'+
+    '<button type="button" onclick="osPayModalClose()" style="border:none;background:#F1F5F9;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;color:#475569">✕</button></div>'+
+    inner+'</div>';
+  document.body.appendChild(ov);try{document.body.style.overflow='hidden';}catch(e){}
+}
+function osPayBank(planId){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'연간':'월간';
+  var c=payCfg();var nm=(OS.profile&&OS.profile.name)||'';
+  var inner;
+  if(!c.account){
+    inner='<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">아직 <b>입금 계좌</b>가 등록되지 않았습니다.'+
+      (OS.profile&&OS.profile.role==='admin'?' 관리자 <b>설정 → 결제수단 설정</b>에서 계좌를 등록해 주세요.':' 운영자에게 계좌이체 안내를 요청해 주세요.')+'</div>'+
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="osPayOpen(\''+plan.id+'\')">← 결제수단</button>'+
+      (OS.profile&&OS.profile.role==='admin'?'<button class="btn btn-primary" onclick="osPayModalClose();go(\'settings\')">결제 설정 열기</button>':'')+'</div>';
+  }else{
+    var acctLine=osEsc(c.bank)+' '+osEsc(c.account)+(c.holder?(' ('+osEsc(c.holder)+')'):'');
+    inner='<div style="font-size:11.5px;color:#64748B">'+osEsc(cyc)+' 구독 · APEX '+osEsc(plan.name)+'</div>'+
+      '<div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:13px;padding:15px;margin:10px 0 12px">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11.5px;color:#0F766E;font-weight:700">입금 계좌</span>'+
+          '<button type="button" onclick="osPayCopy(\''+encodeURIComponent(c.bank+' '+c.account)+'\')" style="border:1px solid #99F6E4;background:#fff;color:#0F766E;font-size:11px;font-weight:800;border-radius:8px;padding:4px 10px;cursor:pointer">📋 복사</button></div>'+
+        '<div style="font-size:16px;font-weight:900;color:#0F172A;letter-spacing:.01em">'+acctLine+'</div>'+
+        '<div style="border-top:1px dashed #99F6E4;margin:11px 0;height:1px"></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:#64748B">입금 금액</span><b style="color:#0F172A">'+apexWon(amount)+'</b></div>'+
+        '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#64748B">입금자명</span><b style="color:#0F172A">'+osEsc(nm||'가입하신 성함')+'</b></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#64748B;line-height:1.7;margin-bottom:12px">위 계좌로 <b>정확한 금액</b>을 <b>가입하신 성함</b>으로 이체해 주세요. 이체 후 아래 버튼을 누르면 운영자에게 확인 요청이 접수되고, 확인 후 구독이 활성화됩니다.</div>'+
+      '<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;background:#0EA5A5" onclick="osPayReq(\''+plan.id+'\',\'bank\')">이체 완료 · 확인 요청</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="osPayOpen(\''+plan.id+'\')">← 다른 결제수단</button>';
+  }
+  osPayShell('계좌이체 · 무통장입금', inner);
+}
+function osPayCopy(enc){var t='';try{t=decodeURIComponent(enc);}catch(e){t=enc;}if(typeof copyText==='function')copyText(t);else{try{navigator.clipboard.writeText(t);}catch(e){}}toast('계좌번호를 복사했습니다.');}
+function osPaySimple(planId, kind){
+  var c=payCfg();var url=(kind==='naver')?c.naver:c.kakao;var label=(kind==='naver')?'네이버페이':'카카오페이/카카오뱅크';
+  if(url){
+    try{window.open(url,'_blank','noopener');}catch(e){location.href=url;}
+    toast(label+' 결제창을 열었습니다. 결제 후 "확인 요청"을 눌러주세요.');
+    var plan=osPlanById(planId);var amount=plan?((PRICE_CYCLE==='year')?plan.year:plan.month):0;
+    var inner='<div style="font-size:12.5px;color:#334155;line-height:1.8;margin-bottom:12px">'+osEsc(label)+' 결제를 진행하셨나요? 결제가 끝나면 아래 버튼으로 확인을 요청해 주세요. 확인 후 구독이 활성화됩니다.</div>'+
+      '<a class="btn btn-ghost" style="width:100%;box-sizing:border-box;text-align:center;display:block;margin-bottom:8px" href="'+osEsc(url)+'" target="_blank" rel="noopener">↗ '+osEsc(label)+' 다시 열기</a>'+
+      '<button class="btn btn-primary" style="width:100%;padding:13px" onclick="osPayReq(\''+planId+'\',\''+kind+'\')">결제 완료 · 확인 요청</button>'+
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="osPayOpen(\''+planId+'\')">← 다른 결제수단</button>';
+    osPayShell(label, inner);
+  }else{
+    var admin=OS.profile&&OS.profile.role==='admin';
+    var inner2='<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">'+osEsc(label)+' 결제 링크가 아직 연결되지 않았습니다.'+
+      (admin?' 관리자 <b>설정 → 결제수단 설정</b>에서 '+osEsc(label)+' 링크를 등록하면 바로 사용됩니다.':' 지금은 <b>계좌이체</b> 또는 <b>카드</b>로 결제해 주세요.')+'</div>'+
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="osPayOpen(\''+planId+'\')">← 결제수단</button>'+
+      (admin?'<button class="btn btn-primary" onclick="osPayModalClose();go(\'settings\')">결제 설정 열기</button>':'')+'</div>';
+    osPayShell(label, inner2);
+  }
+}
+function osPayReq(planId, method){
+  var plan=osPlanById(planId);if(!plan)return;
+  var amount=(PRICE_CYCLE==='year')?plan.year:plan.month;
+  var cyc=(PRICE_CYCLE==='year')?'year':'month';
+  var rec={name:(OS.profile&&OS.profile.name)||'',plan:plan.id,amount:amount,cycle:cyc,method:method,status:'pending'};
+  try{if(OS.profile&&OS.profile.id)rec.user_id=OS.profile.id;}catch(e){}
+  var sb=osClient();
+  var done=function(){
+    if(typeof osAudit==='function')try{osAudit('pay_request','subscription',plan.id,{method:method,amount:amount,cycle:cyc});}catch(e){}
+    osPayShell('요청 접수 완료', '<div style="text-align:center;padding:6px 4px 2px"><div style="font-size:40px">✅</div>'+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin-top:8px">확인 요청이 접수되었습니다</div>'+
+      '<div style="font-size:12.5px;color:#64748B;line-height:1.7;margin-top:8px">운영자가 입금/결제를 확인한 뒤 <b>APEX '+osEsc(plan.name)+'</b> 구독을 활성화합니다. 잠시만 기다려 주세요.</div>'+
+      '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="osPayModalClose()">확인</button></div>');
+  };
+  if(sb){
+    try{sb.from('payment_requests').insert(rec).then(function(r){ done(); },function(){ done(); });}
+    catch(e){ done(); }
+  }else{ done(); }
+}
+/* 관리자: 결제수단 설정 카드 (계좌이체 계좌 + 네이버/카카오 링크) */
+var OS_PAY_SQL=[
+ '-- APEX 결제 공유 설정 · 입금확인 요청 (Supabase SQL Editor에서 한 번만 실행)',
+ 'create table if not exists public.app_config(',
+ '  k text primary key,',
+ '  v jsonb not null default \'{}\',',
+ '  updated_at timestamptz default now()',
+ ');',
+ 'alter table public.app_config enable row level security;',
+ 'drop policy if exists app_config_read on public.app_config;',
+ 'create policy app_config_read on public.app_config for select using (true);',
+ 'drop policy if exists app_config_write on public.app_config;',
+ 'create policy app_config_write on public.app_config for all to authenticated',
+ '  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'))',
+ '  with check (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'));',
+ '',
+ 'create table if not exists public.payment_requests(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  created_at timestamptz default now(),',
+ '  user_id uuid,',
+ '  name text, plan text, amount int, cycle text, method text,',
+ '  status text default \'pending\'',
+ ');',
+ 'alter table public.payment_requests enable row level security;',
+ 'drop policy if exists pay_req_insert on public.payment_requests;',
+ 'create policy pay_req_insert on public.payment_requests for insert to authenticated with check (true);',
+ 'drop policy if exists pay_req_admin on public.payment_requests;',
+ 'create policy pay_req_admin on public.payment_requests for select to authenticated',
+ '  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role=\'admin\'));'
+].join('\n');
+function osPayCopySql(){copyText(OS_PAY_SQL);}
+function osPaySqlToggle(){var e=document.getElementById('paySql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
+function osPayCfgSave(){
+  var o={bank:(osVal('payBank')||'').replace(/^\s+|\s+$/g,''),account:(osVal('payAccount')||'').replace(/^\s+|\s+$/g,''),holder:(osVal('payHolder')||'').replace(/^\s+|\s+$/g,''),naver:(osVal('payNaver')||'').replace(/^\s+|\s+$/g,''),kakao:(osVal('payKakao')||'').replace(/^\s+|\s+$/g,'')};
+  PAY_CFG=o;try{localStorage.setItem('apex_pay_cfg',JSON.stringify(o));}catch(e){}
+  var sb=osClient();
+  if(sb&&OS.profile&&OS.profile.role==='admin'){
+    try{sb.from('app_config').upsert({k:'pay',v:o},{onConflict:'k'}).then(function(r){
+      if(r.error){toast('이 브라우저에 저장됨 · 팀 공유는 아래 결제설정 SQL 실행 후');}
+      else{toast('결제 설정 저장 · 팀에 공유되었습니다.');}
+      go('settings');
+    },function(){toast('이 브라우저에 저장되었습니다.');go('settings');});}
+    catch(e){toast('이 브라우저에 저장되었습니다.');go('settings');}
+  }else{toast('저장되었습니다.');go('settings');}
+}
+function osPayCfgCardHtml(){
+  if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  var c=payCfg();var has=c.account?'<span class="badge green">계좌 등록됨</span>':'<span class="badge amber">계좌 미등록</span>';
+  return '<div class="card set-card" style="border-color:#99F6E4"><div class="card-hd"><div class="card-title"><span class="ci">🏦</span>결제수단 설정 — 계좌이체·네이버·카카오 <span class="badge">관리자</span></div>'+
+    '<div class="card-desc">카드(토스) 외 <b>계좌이체·네이버페이·카카오페이</b>를 추가로 받습니다 · '+has+'</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:12px">계좌이체는 PG 계약 없이 <b>운영 계좌만 등록하면 바로</b> 사용됩니다. 네이버페이·카카오페이는 각 <b>결제/송금 링크</b>를 넣으면 버튼이 그 링크로 연결됩니다. (버튼 링크가 없으면 고객에겐 계좌이체·카드가 안내됩니다.)</div>'+
+    '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">은행</label><input type="text" id="payBank" value="'+osEsc(c.bank)+'" placeholder="예: 국민은행" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">계좌번호</label><input type="text" id="payAccount" value="'+osEsc(c.account)+'" placeholder="예: 123456-01-789012" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">예금주</label><input type="text" id="payHolder" value="'+osEsc(c.holder)+'" placeholder="예: 윤시현" style="width:100%"/></div>'+
+    '</div>'+
+    '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">네이버페이 링크(선택)</label><input type="text" id="payNaver" value="'+osEsc(c.naver)+'" placeholder="https://…" style="width:100%"/></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">카카오페이/뱅크 링크(선택)</label><input type="text" id="payKakao" value="'+osEsc(c.kakao)+'" placeholder="https://qr.kakaopay.com/…" style="width:100%"/></div>'+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="osPayCfgSave()">결제 설정 저장</button>'+
+    '<button class="btn btn-ghost" onclick="osPaySqlToggle()">🛢️ 팀 공유·입금확인 SQL</button></div>'+
+    '<div id="paySql" style="display:none;margin-top:12px">'+
+      '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL을 <b>한 번만</b> 실행하면 결제 설정이 <b>모든 팀원</b>에게 공유되고, 고객의 <b>입금/결제 확인 요청</b>이 저장됩니다.</div>'+
+      '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_PAY_SQL)+'</textarea>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osPayCopySql()">SQL 복사</button>'+
+      '<a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>'+
     '</div>'+
     '</div></div>';
 }
@@ -5204,6 +5401,8 @@ function renderSettings(){
 
     osTossCardHtml()+
 
+    osPayCfgCardHtml()+
+
     osAccessCardHtml()+
 
     osBackupCardHtml()+
@@ -7511,7 +7710,7 @@ function osNoticeCardHtml(){
     '<div class="notice" style="margin-top:12px;font-size:11px;line-height:1.65">이미지는 <b>400KB 이하</b>를 권장합니다(팀 전체 공유 로딩 속도). 게시 전 준법감시 확인을 권장합니다.</div>'+
     '</div></div>';
 }
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
