@@ -1121,16 +1121,16 @@ function claudeUserContent(user,images){
   return arr;
 }
 /* max_tokens로 잘리면(stop_reason=max_tokens) 자동으로 이어써서 끝까지 완성한다. */
-function _claudeOnce(system,messages,maxTokens){
+function _claudeOnce(system,messages,maxTokens,forceKey){
   var payload={model:getModel(),max_tokens:maxTokens||2000,system:system,messages:messages};
   var url,headers;
-  if(getConn()==='proxy'){
+  if(!forceKey&&getConn()==='proxy'){
     var px=getProxy();
     if(!px)return Promise.reject(new Error('NO_KEY'));
     url=px;headers={'Content-Type':'application/json'};   /* 프록시 서버가 키를 보관 */
     var _tok=getAppToken();if(_tok)headers['X-App-Token']=_tok;   /* 서버에 SHARED_TOKEN 설정 시 남용방지 통과용 */
   }else{
-    var key=getKey();
+    var key=forceKey||getKey();   /* forceKey = 회원 개인 백업 키(공용 한도 초과 시 대체) */
     if(!key)return Promise.reject(new Error('NO_KEY'));
     url='https://api.anthropic.com/v1/messages';
     headers={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'};
@@ -1149,11 +1149,13 @@ function _claudeOnce(system,messages,maxTokens){
     });
   });
 }
-function callClaude(system,user,maxTokens,images){
-  var messages=[{role:'user',content:claudeUserContent(user,images)}];
-  var cap=maxTokens||2000,acc='',rounds=0,MAXR=8;
+/* 회원 개인 백업 키(선택) — 공용(회사) 한도가 차면 본인 Claude 키로 자동 이어감. 이 기기에만 저장. */
+function getPersonalKey(){try{return (localStorage.getItem('apex_personal_key')||'').replace(/^\s+|\s+$/g,'');}catch(e){return '';}}
+function setPersonalKeyVal(v){try{localStorage.setItem('apex_personal_key',(v||'').replace(/^\s+|\s+$/g,''));}catch(e){}}
+function _claudeRun(system,messages,cap,forceKey){
+  var acc='',rounds=0,MAXR=8;
   function step(){
-    return _claudeOnce(system,messages,cap).then(function(r){
+    return _claudeOnce(system,messages,cap,forceKey).then(function(r){
       acc+=r.text;
       if(r.stop==='max_tokens'&&rounds<MAXR&&r.text){
         rounds++;
@@ -1161,11 +1163,43 @@ function callClaude(system,user,maxTokens,images){
         messages.push({role:'user',content:'방금 응답이 길이 제한으로 중간에 끊겼어. 마지막 글자 바로 다음부터, 인사말·머리말 없이 이어서 끝까지 완성해줘. 이미 쓴 내용은 반복하지 마.'});
         return step();
       }
-      AI_LAST={engine:'claude',model:getModel(),fellback:false,note:rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''};
+      AI_LAST={engine:'claude',model:getModel(),fellback:!!forceKey,note:(forceKey?'공용 한도 → 내 API 키':(rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''))};
       return acc;
     });
   }
   return step();
+}
+function osByokSave(){var v=(osVal('setByok')||'').replace(/^\s+|\s+$/g,'');if(!v){toast('내 API 키를 입력하세요');return;}if(!/^sk-ant-/.test(v)){toast('Claude 키 형식(sk-ant-...)이 맞는지 확인하세요');}setPersonalKeyVal(v);toast('내 백업 API 키를 저장했습니다 — 공용 한도가 차면 자동으로 이 키로 이어집니다.');go('settings');}
+function osByokClear(){setPersonalKeyVal('');toast('내 백업 API 키를 삭제했습니다.');go('settings');}
+function osByokCardHtml(){
+  if(!OS.profile)return '';
+  var has=getPersonalKey();
+  var mask=has?(has.slice(0,10)+'••••••'+has.slice(-4)):'';
+  return '<div class="card set-card" style="border-color:#FBCFE8"><div class="card-hd"><div class="card-title"><span class="ci">🔑</span>내 API 키 (공용 한도 초과 시 백업) '+(has?'<span class="badge green">연결됨</span>':'<span class="badge">선택</span>')+'</div>'+
+    '<div class="card-desc">회사 공용 AI 한도가 차면, <b>내 Claude 키로 자동으로 이어서</b> 계속 쓸 수 있습니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:11px">평소엔 회사 공용 AI로 무료처럼 쓰다가, 한도가 차는 순간 자동으로 <b>내 키</b>로 넘어가 끊김 없이 상담·생성을 이어갑니다. (이 키 사용분은 <b>내 Anthropic 계정에 청구</b>됩니다. 이 기기에만 저장.)</div>'+
+    '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:9px 11px;font-size:11px;color:#92400E;line-height:1.6;margin-bottom:12px">발급: <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener" style="color:var(--primary);font-weight:700;text-decoration:underline">console.anthropic.com → API Keys</a> 에서 <b>Create Key</b> → <b>sk-ant-…</b> 복사. Billing에 <b>월 상한(Usage limit)</b>을 걸어두면 과금 걱정이 없습니다.</div>'+
+    '<div class="frm"><div class="fld span2"><label>내 Claude API 키 (sk-ant-…) '+(has?'<span class="badge green">저장됨</span>':'')+'</label>'+
+      '<input type="password" id="setByok" placeholder="'+(has?osEsc(mask):'sk-ant-...')+'" autocomplete="off"/>'+
+      '<span class="hint" style="font-size:9.5px;color:var(--ink-5)">이 값은 서버로 전송되지 않고 이 브라우저에만 저장됩니다. Anthropic에 직접 호출됩니다.</span></div></div>'+
+    '<div class="btn-row"><button class="btn btn-primary" onclick="osByokSave()">내 키 저장</button>'+(has?'<button class="btn btn-ghost" onclick="osByokClear()">삭제</button>':'')+'</div>'+
+    '</div></div>';
+}
+function callClaude(system,user,maxTokens,images){
+  var cap=maxTokens||2000;
+  var mk=function(){return [{role:'user',content:claudeUserContent(user,images)}];};
+  return _claudeRun(system,mk(),cap,null).catch(function(e){
+    /* 공용 프록시가 한도/크레딧으로 막히고, 회원 개인 백업 키가 있으면 그 키로 이어간다 */
+    var m=((e&&e.message)||'')+'';
+    var capHit=/credit|billing|quota|insufficient|balance|too many|rate.?limit|exhausted|overloaded|충전|한도|limit reached|usage/i.test(m)||(e&&(e.status===429||e.status===402));
+    var pk=getPersonalKey();
+    if(capHit&&getConn()==='proxy'&&pk){
+      try{toast('공용 AI 한도 도달 → 내 API 키로 이어갑니다.');}catch(_){}
+      return _claudeRun(system,mk(),cap,pk);
+    }
+    throw e;
+  });
 }
 
 /* ════════ Gemini API (무료 티어) — 응답이 잘리면 자동으로 이어써서 끝까지 완성 ════════ */
@@ -1783,7 +1817,7 @@ var TOSS_PLANS=[
 var PRICE_CYCLE='year';
 function setPriceCycle(c){PRICE_CYCLE=c;if(typeof go==='function')go('pricing');}
 function apexWon(n){return (''+n).replace(/\B(?=(\d{3})+(?!\d))/g,',')+'원';}
-function osPricingAfterRender(){var m=$('main');if(m)m.scrollTop=0;}
+function osPricingAfterRender(){var m=$('main');if(m)m.scrollTop=0;if(typeof apexSimCalc==='function'){try{apexSimCalc();}catch(e){}}}
 function apexPlanCard(p){
   var yr=(PRICE_CYCLE==='year');
   var price=yr?p.year:p.month;
@@ -1803,16 +1837,51 @@ function apexPlanCard(p){
 }
 function apexRevenueSim(){
   if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  var GOAL=10000000;
   var rows=TOSS_PLANS.map(function(p){
-    var need=Math.ceil(3000000/p.month);
-    return '<tr><td style="text-align:left;font-weight:700;padding:7px 10px">'+esc(p.name)+'</td><td style="text-align:right;padding:7px 10px">'+apexWon(p.month)+'</td><td style="text-align:right;padding:7px 10px;color:#1A56DB;font-weight:800">'+need+'명</td></tr>';
+    var n=Math.ceil(GOAL/p.month);
+    return '<tr><td style="text-align:left;font-weight:700;padding:7px 10px">'+esc(p.name)+'</td><td style="text-align:right;padding:7px 10px">'+apexWon(p.month)+'</td><td style="text-align:right;padding:7px 10px;color:#93C5FD;font-weight:800">'+n+'명</td></tr>';
   }).join('');
-  return '<div style="max-width:1040px;margin:30px auto 0;padding:0 20px"><div style="background:#0F172A;border-radius:18px;padding:22px 24px;color:#fff">'+
-    '<div style="font-size:13px;font-weight:800;color:#93C5FD">🎯 운영자 전용 · 월 300만원 목표 시뮬레이터</div>'+
-    '<div style="font-size:12px;color:#CBD5E1;line-height:1.6;margin-top:6px">목표(월 300만원) 달성에 필요한 유료 구독자 수입니다. 프로 플랜 기준 <b style="color:#fff">약 '+Math.ceil(3000000/49000)+'명</b>이면 목표를 넘깁니다.</div>'+
-    '<table style="width:100%;margin-top:14px;border-collapse:collapse;font-size:12.5px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden"><thead><tr style="color:#93C5FD;font-size:11px"><th style="text-align:left;padding:7px 10px">플랜</th><th style="text-align:right;padding:7px 10px">월 요금</th><th style="text-align:right;padding:7px 10px">필요 구독자</th></tr></thead><tbody>'+rows+'</tbody></table>'+
-    '<div style="font-size:10.5px;color:#64748B;margin-top:10px">이 시뮬레이터는 관리자에게만 보입니다. 연간 구독은 이탈이 낮아 실제 목표 달성이 더 안정적입니다.</div>'+
+  function inp(id,val,w){return '<input id="'+id+'" type="number" min="0" step="'+(id==='simFee'?'0.1':'1')+'" value="'+val+'" oninput="apexSimCalc()" style="width:'+(w||62)+'px;padding:7px 8px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.09);color:#fff;font-size:13px;font-weight:800;text-align:center">';}
+  return '<div style="max-width:1040px;margin:30px auto 0;padding:0 20px"><div style="background:#0F172A;border-radius:18px;padding:24px;color:#fff">'+
+    '<div style="font-size:14px;font-weight:800;color:#93C5FD">🎯 운영자 전용 · 월 1,000만원 사업 시뮬레이터</div>'+
+    '<div style="font-size:11.5px;color:#CBD5E1;line-height:1.6;margin-top:6px">구독 매출에서 카드 수수료·AI 지출을 빼면 실제 순이익입니다. 아래 숫자를 바꿔 내 목표를 설계하세요.</div>'+
+    '<table style="width:100%;margin-top:14px;border-collapse:collapse;font-size:12.5px;background:rgba(255,255,255,.04);border-radius:10px;overflow:hidden"><thead><tr style="color:#93C5FD;font-size:11px"><th style="text-align:left;padding:7px 10px">플랜</th><th style="text-align:right;padding:7px 10px">월 요금</th><th style="text-align:right;padding:7px 10px">1천만 필요 구독자</th></tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div style="margin-top:16px;background:rgba(255,255,255,.05);border-radius:12px;padding:16px">'+
+      '<div style="font-size:12.5px;font-weight:800;color:#fff;margin-bottom:11px">내 시나리오 계산기</div>'+
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:#CBD5E1">'+
+        '<span>베이직 '+inp('simB',0)+'명</span>'+
+        '<span>프로 '+inp('simP',150)+'명</span>'+
+        '<span>팀(5인) '+inp('simT',0)+'개</span>'+
+        '<span style="border-left:1px solid rgba(255,255,255,.2);padding-left:14px">인당 월 AI비용 '+inp('simAI',3000,74)+'원</span>'+
+        '<span>카드수수료 '+inp('simFee',2.2,54)+'%</span>'+
+      '</div>'+
+      '<div id="apexSimOut" style="margin-top:15px"></div>'+
+    '</div>'+
+    '<div style="font-size:10.5px;color:#64748B;margin-top:10px">※ AI 지출 = 활성 사용자 수 × 인당 월 비용(추정). 실제 비용은 사용량에 따라 달라지며, <a href="https://console.anthropic.com/settings/billing" target="_blank" rel="noopener" style="color:#93C5FD;text-decoration:underline">Anthropic Billing</a>에서 월 상한을 걸면 초과 청구가 없습니다. 관리자 전용.</div>'+
   '</div></div>';
+}
+function apexSimCalc(){
+  var g=function(id,d){var e=document.getElementById(id);if(!e)return d;var v=parseFloat(e.value);return isNaN(v)?d:v;};
+  var b=g('simB',0),p=g('simP',0),t=g('simT',0),ai=g('simAI',3000),fee=g('simFee',2.2);
+  var plan={basic:26500,pro:49900,team:119000};
+  try{TOSS_PLANS.forEach(function(x){plan[x.id]=x.month;});}catch(e){}
+  var rev=b*plan.basic+p*plan.pro+t*plan.team;
+  var users=b+p+t*5;
+  var aiCost=Math.round(users*ai);
+  var feeCost=Math.round(rev*fee/100);
+  var net=rev-aiCost-feeCost;
+  var GOAL=10000000,pct=Math.round(net/GOAL*100);
+  var out=document.getElementById('apexSimOut');if(!out)return;
+  function ln(label,val,color){return '<div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px"><span style="color:#CBD5E1">'+label+'</span><b style="color:'+(color||'#fff')+'">'+val+'</b></div>';}
+  out.innerHTML=
+    ln('월 구독 매출', apexWon(rev),'#fff')+
+    ln('− 카드 수수료('+fee+'%)', '-'+apexWon(feeCost),'#FCA5A5')+
+    ln('− AI 지출('+users+'명 × '+apexWon(ai)+')', '-'+apexWon(aiCost),'#FCA5A5')+
+    '<div style="border-top:1px solid rgba(255,255,255,.15);margin:7px 0"></div>'+
+    ln('월 순이익', apexWon(net), net>=0?'#6EE7B7':'#FCA5A5')+
+    '<div style="margin-top:11px;height:10px;background:rgba(255,255,255,.1);border-radius:6px;overflow:hidden"><span style="display:block;height:100%;width:'+Math.max(0,Math.min(100,pct))+'%;background:linear-gradient(90deg,#22D3EE,#34D399)"></span></div>'+
+    '<div style="text-align:center;font-size:12.5px;color:#93C5FD;font-weight:800;margin-top:7px">월 1,000만원 목표의 '+pct+'%'+(net>=GOAL?' 🎉 달성!':'')+'</div>';
 }
 function renderPricing(){
   var yr=(PRICE_CYCLE==='year');
@@ -5441,6 +5510,8 @@ function renderSettings(){
     osAccessCardHtml()+
 
     osBackupCardHtml()+
+
+    osByokCardHtml()+
 
     osCapCardHtml()+
 
