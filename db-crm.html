@@ -217,9 +217,12 @@ function recStatus(d){const x=getCalls(d.id).filter(recNeeded);return !x.length?
 function pname(id){return profiles.find(p=>p.id===id)?.name||"-"} function report(d){return `${d.report_name||"보장분석 3DB"} / ${d.region||"-"} / ${result(d)}`}
 function isAdmin(){return profile?.role==="admin"}
 
+/* APEX YUN PRO 앱과 동일한 Supabase 프로젝트(공개 anon 키) — 같은 계정으로 로그인되도록 통일.
+   별도 설정을 하지 않아도 앱과 CRM이 같은 auth·profiles를 공유합니다. (필요 시 아래 설정에서 덮어쓰기 가능) */
+const APEX_DEFAULT_SB={url:"https://miakdhxtqofpndtlyzxa.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU"};
 function init(){
   const fileCfg=(window.APEX_CONFIG && !String(window.APEX_CONFIG.url||"").includes("YOUR_PROJECT")) ? window.APEX_CONFIG : null;
-  const cfg=fileCfg || JSON.parse(localStorage.getItem(CONFIG_KEY)||"null");
+  const cfg=fileCfg || JSON.parse(localStorage.getItem(CONFIG_KEY)||"null") || APEX_DEFAULT_SB;
   if(!cfg){$("configScreen").classList.remove("hidden");return}
   connect(cfg.url,cfg.key);
 }
