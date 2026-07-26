@@ -8734,8 +8734,8 @@ function bizDeckGen(){
   if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 슬라이드가 생성됩니다.');go('settings');return;}
   var host=$('bizDeckHost');if(host)host.innerHTML='<div class="loading"><div class="spinner"></div>대표님께 보여줄 상담 진단 슬라이드를 만드는 중… (15~40초)</div>';
   var label=(typeof bizClientLabel==='function'?bizClientLabel(bizCur()):'')||'대표님';
-  var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 정확히 이 구조로, 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 슬라이드 큰 제목(짧고 강하게)\n- 핵심 불릿(짧게, 3~5개)\n- 불릿\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단", 부제로 오늘 다룰 핵심 3가지\n2) 현황 진단 — 업종·규모·재무 요약과 강점\n3) 핵심 이슈 3가지 — 정책자금/세금/보험/퇴직금/인사 중 가장 시급한 것\n4) 정책자금 방향 — 적합 자금과 "신청→지급까지" 흐름 요지\n5) 절세 포인트 — 이 사업자 유형에 맞는 절세 카드\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원 관점\n7) 실행 로드맵 — 30·60·90일 할 일\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
-  callAI(BIZ_SYS,user,3800,'biz_deck').then(function(md){
+  var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘. 비교가 한눈에 들어오도록 표·막대그래프·핵심수치(KPI)를 적극 활용해.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 이 구조로, @@SLIDE 로 시작하고 @@END 로 끝. 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 큰 제목(짧고 강하게)\nicon: 관련 이모지 1개(선택 · 예 💰 🏦 📊 🛡 🧾 ⏱ ✅ 📈)\n- 핵심 불릿(짧게, 최대 3~4개)\nkpi: 5,000만원 | 예상 정책자금 한도\nkpi: 40% | 세부담 절감(예상)\nbar: 현재 세부담 | 2000\nbar: 개선 후 | 1200\ntable: 구분 | 현재 | 개선 후\nrow: 세금(연) | 2,000만 | 1,200만\nrow: 퇴직재원 | 없음 | 확보\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[시각화 규칙 — 매우 중요]\n· "현황 vs 개선 후" 또는 "옵션 A/B/C"처럼 비교가 필요한 슬라이드는 반드시 table 또는 bar 로 시각화한다.\n· 핵심 수치가 있는 슬라이드는 kpi 카드(최대 3개)로 크게 보여준다.\n· 한 슬라이드에는 시각요소 1종(표 또는 그래프 또는 KPI)만, 불릿은 짧게.\n· bar 값은 숫자만(콤마 허용). table 은 마지막 열이 "개선 후/추천안"이 되도록 배치(강조됨).\n· 모든 항목은 | 로 구분.\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단"(불릿으로 오늘 다룰 핵심 3가지)\n2) 현황 진단 — 업종·규모·재무 요약(kpi 로 매출·이익·직원수 등)\n3) 핵심 이슈 — 정책자금/세금/보험/퇴직금/인사 중 시급도(bar 로 시급도 비교)\n4) 정책자금 방향 — 적합 자금 한도(kpi) + 신청→지급 흐름\n5) 절세 포인트 — 현재 vs 개선 후 세부담(bar 또는 table 비교)\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원(table 비교)\n7) 실행 로드맵 — 30·60·90일(table: 기간|할 일|기대효과)\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
+  callAI(BIZ_SYS,user,4200,'biz_deck').then(function(md){
     var slides=bizDeckParse(md);
     if(slides.length<2)slides=[{kicker:'상담 진단',title:label+' 통합 컨설팅',bullets:[],note:'',raw:md}];
     BIZ_DECK.slides=slides;BIZ_DECK.i=0;BIZ_DECK.title=label;
@@ -8744,21 +8744,66 @@ function bizDeckGen(){
 }
 function bizDeckParse(md){
   var blocks=(md||'').split(/@@SLIDE/i).slice(1);var out=[];
+  function cell(x){return (x||'').replace(/\*\*/g,'').trim();}
   blocks.forEach(function(b){
     b=b.split(/@@END/i)[0];
-    var kicker='',title='',note='',bullets=[];
+    var s={kicker:'',title:'',note:'',icon:'',bullets:[],kpis:[],bars:[],table:null};
     b.split(/\r?\n/).forEach(function(ln){
-      var t=ln.trim();if(!t)return;
-      var mk=t.match(/^kicker\s*:\s*(.+)/i),mt=t.match(/^title\s*:\s*(.+)/i),mn=t.match(/^note\s*:\s*(.+)/i);
-      if(mk)kicker=mk[1].trim();
-      else if(mt)title=mt[1].trim();
-      else if(mn)note=mn[1].trim();
-      else if(/^[-•*]\s+/.test(t))bullets.push(t.replace(/^[-•*]\s+/,'').replace(/\*\*/g,'').trim());
-      else if(!title)title=t.replace(/^#+\s*/,'').replace(/\*\*/g,'').trim();
+      var t=ln.trim();if(!t)return;var m;
+      if(m=t.match(/^kicker\s*:\s*(.+)/i)){s.kicker=cell(m[1]);}
+      else if(m=t.match(/^title\s*:\s*(.+)/i)){s.title=cell(m[1]);}
+      else if(m=t.match(/^note\s*:\s*(.+)/i)){s.note=cell(m[1]);}
+      else if(m=t.match(/^icon\s*:\s*(.+)/i)){s.icon=m[1].trim().slice(0,4);}
+      else if(m=t.match(/^kpi\s*:\s*(.+)/i)){var p=m[1].split('|');s.kpis.push({v:cell(p[0]),label:cell(p[1])});}
+      else if(m=t.match(/^bar\s*:\s*(.+)/i)){
+        var p2=m[1].split('|');var raw=(p2.length>1?p2[1]:p2[0])||'';
+        var num=parseFloat(String(raw).replace(/[^0-9.\-]/g,''))||0;
+        s.bars.push({label:cell(p2[0]),val:num,disp:cell(raw)});
+      }
+      else if(m=t.match(/^table\s*:\s*(.+)/i)){if(!s.table)s.table={head:[],rows:[]};s.table.head=m[1].split('|').map(cell);}
+      else if(m=t.match(/^row\s*:\s*(.+)/i)){if(!s.table)s.table={head:[],rows:[]};s.table.rows.push(m[1].split('|').map(cell));}
+      else if(/^[-•*]\s+/.test(t))s.bullets.push(cell(t.replace(/^[-•*]\s+/,'')));
+      else if(!s.title)s.title=cell(t.replace(/^#+\s*/,''));
     });
-    if(title||bullets.length)out.push({kicker:kicker,title:title,bullets:bullets,note:note});
+    if(s.title||s.bullets.length||s.kpis.length||s.bars.length||(s.table&&(s.table.head.length||s.table.rows.length)))out.push(s);
   });
   return out;
+}
+/* 비교 시각화 빌더 — 화면/인쇄 공용 마크업 */
+function bizDeckKpis(kpis){
+  return '<div class="bd-kpis">'+kpis.map(function(k){
+    return '<div class="bd-kpi"><div class="bd-kpi-v">'+osEsc(k.v)+'</div>'+(k.label?'<div class="bd-kpi-l">'+osEsc(k.label)+'</div>':'')+'</div>';
+  }).join('')+'</div>';
+}
+function bizDeckBars(bars){
+  var max=1;bars.forEach(function(b){if(b.val>max)max=b.val;});
+  return '<div class="bd-bars">'+bars.map(function(b){
+    var w=Math.max(4,Math.round(b.val/max*100));
+    return '<div class="bd-bar"><span class="bd-bar-l">'+osEsc(b.label)+'</span>'+
+      '<span class="bd-bar-t"><span class="bd-bar-f" style="width:'+w+'%"></span></span>'+
+      '<span class="bd-bar-v">'+osEsc(b.disp)+'</span></div>';
+  }).join('')+'</div>';
+}
+function bizDeckTable(tb){
+  var head=(tb.head&&tb.head.length)?tb.head:(tb.rows[0]||[]);
+  var rows=(tb.head&&tb.head.length)?tb.rows:tb.rows.slice(1);
+  var last=head.length-1;
+  var thead='<tr>'+head.map(function(h,i){return '<th'+(i===last&&last>0?' class="hot"':'')+'>'+osEsc(h)+'</th>';}).join('')+'</tr>';
+  var body=rows.map(function(r){return '<tr>'+r.map(function(c,i){
+    var cls=[];if(i===0)cls.push('k');if(i===last&&last>0)cls.push('hot');
+    return '<td'+(cls.length?' class="'+cls.join(' ')+'"':'')+'>'+osEsc(c)+'</td>';
+  }).join('')+'</tr>';}).join('');
+  return '<table class="bd-table"><thead>'+thead+'</thead><tbody>'+body+'</tbody></table>';
+}
+function bizDeckBody(s){
+  if(s.raw)return '<div class="bizslide-raw">'+renderMd(s.raw)+'</div>';
+  var h='';
+  if(s.bullets&&s.bullets.length)h+='<ul class="bizslide-ul">'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>';
+  if(s.kpis&&s.kpis.length)h+=bizDeckKpis(s.kpis);
+  if(s.bars&&s.bars.length)h+=bizDeckBars(s.bars);
+  if(s.table&&(s.table.rows.length||s.table.head.length))h+=bizDeckTable(s.table);
+  if(s.note)h+='<div class="bizslide-note">'+osEsc(s.note)+'</div>';
+  return h;
 }
 function bizDeckView(){
   var n=BIZ_DECK.slides.length,i=BIZ_DECK.i;
@@ -8773,16 +8818,12 @@ function bizDeckView(){
 }
 function bizDeckSlide(s,i,n){
   if(!s)return '';
-  var cover=(i===0),body;
-  if(s.raw){body='<div class="bizslide-raw">'+renderMd(s.raw)+'</div>';}
-  else{
-    var bl=(s.bullets&&s.bullets.length)?'<ul class="bizslide-ul">'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'';
-    body=bl+(s.note?'<div class="bizslide-note">'+osEsc(s.note)+'</div>':'');
-  }
+  var cover=(i===0);
+  var icon=s.icon?'<div class="bizslide-icon">'+osEsc(s.icon)+'</div>':'';
   return '<button class="bizdeck-arrow l" onclick="bizDeckNav(-1)" aria-label="이전">‹</button>'+
-    '<div class="bizslide'+(cover?' cover':'')+'">'+
+    '<div class="bizslide'+(cover?' cover':'')+'">'+icon+
     (s.kicker?'<div class="bizslide-kicker">'+osEsc(s.kicker)+'</div>':'')+
-    '<div class="bizslide-title">'+osEsc(s.title||'')+'</div>'+body+
+    '<div class="bizslide-title">'+osEsc(s.title||'')+'</div>'+bizDeckBody(s)+
     '<div class="bizslide-foot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+n+'</span></div></div>'+
     '<button class="bizdeck-arrow r" onclick="bizDeckNav(1)" aria-label="다음">›</button>';
 }
@@ -8799,16 +8840,21 @@ function bizDeckPrint(){
   if(!BIZ_DECK.slides.length){toast('먼저 슬라이드를 생성하세요');return;}
   var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
   var pages=BIZ_DECK.slides.map(function(s,i){
-    var bl=s.raw?renderMd(s.raw):((s.bullets&&s.bullets.length?'<ul>'+s.bullets.map(function(b){return '<li>'+osEsc(b)+'</li>';}).join('')+'</ul>':'')+(s.note?'<div class="note">'+osEsc(s.note)+'</div>':''));
-    return '<section class="pg'+(i===0?' cover':'')+'">'+(s.kicker?'<div class="kick">'+osEsc(s.kicker)+'</div>':'')+'<h2>'+osEsc(s.title||'')+'</h2>'+bl+'<div class="pgfoot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+BIZ_DECK.slides.length+'</span></div></section>';
+    var icon=s.icon?'<div class="picon">'+osEsc(s.icon)+'</div>':'';
+    return '<section class="pg'+(i===0?' cover':'')+'">'+icon+(s.kicker?'<div class="kick">'+osEsc(s.kicker)+'</div>':'')+'<h2>'+osEsc(s.title||'')+'</h2>'+bizDeckBody(s)+'<div class="pgfoot"><span>APEX YUN PRO · 통합 컨설팅</span><span>'+(i+1)+' / '+BIZ_DECK.slides.length+'</span></div></section>';
   }).join('');
   var css='@page{size:A4 landscape;margin:0}*{box-sizing:border-box}body{margin:0;font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif}'+
    '.pg{position:relative;width:297mm;height:209mm;padding:20mm 24mm;page-break-after:always;display:flex;flex-direction:column;overflow:hidden}'+
    '.kick{font-size:15px;font-weight:800;color:#1A56DB;margin-bottom:8px}h2{font-size:30px;font-weight:800;color:#0F172A;margin:0;line-height:1.25}'+
-   'ul{margin:20px 0 0;padding:0;list-style:none}li{position:relative;padding-left:22px;font-size:18px;line-height:1.55;color:#334155;margin:10px 0}li:before{content:"▪";position:absolute;left:0;color:#1A56DB}'+
-   '.note{margin-top:auto;font-size:13px;color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:10px 14px;border-radius:0 8px 8px 0}'+
+   '.picon{position:absolute;top:16mm;right:22mm;font-size:44px;line-height:1}'+
+   '.bizslide-ul{margin:20px 0 0;padding:0;list-style:none}.bizslide-ul li{position:relative;padding-left:22px;font-size:18px;line-height:1.55;color:#334155;margin:10px 0}.bizslide-ul li:before{content:"▪";position:absolute;left:0;color:#1A56DB}'+
+   '.bizslide-note{margin-top:auto;font-size:13px;color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:10px 14px;border-radius:0 8px 8px 0}'+
+   '.bizslide-raw{font-size:14px;color:#334155}'+
+   '.bd-kpis{display:flex;gap:14px;margin:22px 0 0}.bd-kpi{flex:1;background:linear-gradient(135deg,#F5F9FF,#EAF1FF);border:1px solid #DCE6FF;border-radius:14px;padding:16px 12px;text-align:center}.bd-kpi-v{font-size:30px;font-weight:900;color:#1A56DB;line-height:1.1}.bd-kpi-l{font-size:13px;color:#475569;margin-top:8px;font-weight:700}'+
+   '.bd-bars{margin:22px 0 0;display:flex;flex-direction:column;gap:14px}.bd-bar{display:flex;align-items:center;gap:12px}.bd-bar-l{flex:0 0 26%;font-size:15px;font-weight:700;color:#334155;text-align:right}.bd-bar-t{flex:1;height:24px;background:#EEF2F8;border-radius:8px;overflow:hidden}.bd-bar-f{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#1A56DB,#38BDF8)}.bd-bar-v{flex:0 0 auto;min-width:64px;font-size:15px;font-weight:800;color:#0F172A}'+
+   '.bd-table{width:100%;border-collapse:collapse;margin:22px 0 0;font-size:16px}.bd-table th,.bd-table td{border:1px solid #E2E8F0;padding:10px 12px;text-align:center;color:#334155}.bd-table th{background:#0F172A;color:#fff;font-weight:800}.bd-table th.hot{background:#1A56DB}.bd-table td.k{background:#F8FAFC;font-weight:800;color:#0F172A;text-align:left}.bd-table td.hot{background:#EFF5FF;font-weight:800;color:#1A56DB}'+
    '.pgfoot{position:absolute;left:24mm;right:24mm;bottom:12mm;display:flex;justify-content:space-between;font-size:11px;color:#94A3B8;font-weight:700}'+
-   '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
+   '.pg.cover{background:linear-gradient(135deg,#0F172A,#1A56DB 72%,#38BDF8);justify-content:center}.pg.cover .kick{color:#93C5FD}.pg.cover h2{color:#fff;font-size:40px}.pg.cover .bizslide-ul li{color:rgba(255,255,255,.92)}.pg.cover .pgfoot{color:rgba(255,255,255,.75)}.pg.cover .bizslide-note{background:rgba(255,255,255,.12);color:#E0F2FE;border-left-color:#93C5FD}';
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>'+osEsc(BIZ_DECK.title)+' 상담 진단 슬라이드</title><style>'+css+'</style></head><body>'+pages+'</body></html>');
   w.document.close();setTimeout(function(){try{w.print();}catch(e){}},350);
 }
@@ -8828,6 +8874,22 @@ function bizDeckPrint(){
    '.bizslide-ul li:before{content:"▪";position:absolute;left:0;color:#1A56DB}',
    '.bizslide-note{margin-top:auto;font-size:clamp(10px,1.45vw,15px);color:#64748B;background:#F5F9FF;border-left:3px solid #1A56DB;padding:1.6% 2.4%;border-radius:0 8px 8px 0}',
    '.bizslide-raw{overflow:auto;font-size:clamp(11px,1.6vw,15px);color:#334155}',
+   '.bizslide-icon{position:absolute;top:5.2%;right:6.4%;font-size:clamp(26px,4.6vw,52px);line-height:1;opacity:.92}',
+   '.bd-kpis{display:flex;gap:2.4%;margin:3.4% 0 0;flex-wrap:wrap}',
+   '.bd-kpi{flex:1 1 0;min-width:22%;background:linear-gradient(135deg,#F5F9FF,#EAF1FF);border:1px solid #DCE6FF;border-radius:14px;padding:2.4% 2%;text-align:center}',
+   '.bd-kpi-v{font-size:clamp(18px,3.2vw,34px);font-weight:900;color:#1A56DB;line-height:1.1;letter-spacing:-.02em}',
+   '.bd-kpi-l{font-size:clamp(9px,1.35vw,14px);color:#475569;margin-top:5%;font-weight:700;line-height:1.35}',
+   '.bd-bars{margin:3.4% 0 0;display:flex;flex-direction:column;gap:2.6%}',
+   '.bd-bar{display:flex;align-items:center;gap:2.2%}',
+   '.bd-bar-l{flex:0 0 26%;font-size:clamp(10px,1.5vw,15px);font-weight:700;color:#334155;text-align:right}',
+   '.bd-bar-t{flex:1;height:clamp(14px,2.4vw,26px);background:#EEF2F8;border-radius:8px;overflow:hidden}',
+   '.bd-bar-f{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#1A56DB,#38BDF8)}',
+   '.bd-bar-v{flex:0 0 auto;min-width:14%;font-size:clamp(10px,1.5vw,15px);font-weight:800;color:#0F172A}',
+   '.bd-table{width:100%;border-collapse:collapse;margin:3.2% 0 0;font-size:clamp(10px,1.5vw,16px)}',
+   '.bd-table th,.bd-table td{border:1px solid #E2E8F0;padding:1.3% 1.6%;text-align:center;color:#334155}',
+   '.bd-table th{background:#0F172A;color:#fff;font-weight:800}.bd-table th.hot{background:#1A56DB}',
+   '.bd-table td.k{background:#F8FAFC;font-weight:800;color:#0F172A;text-align:left}.bd-table td.hot{background:#EFF5FF;font-weight:800;color:#1A56DB}',
+   '.bizslide.cover .bizslide-icon{filter:drop-shadow(0 4px 10px rgba(0,0,0,.28))}',
    '.bizslide-foot{position:absolute;left:7%;right:7%;bottom:3.6%;display:flex;justify-content:space-between;font-size:clamp(9px,1.2vw,13px);color:#94A3B8;font-weight:700}',
    '.bizslide.cover{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 70%,#38BDF8 130%);justify-content:center}',
    '.bizslide.cover .bizslide-kicker{color:#93C5FD}.bizslide.cover .bizslide-title{color:#fff;font-size:clamp(22px,4.6vw,46px)}',
