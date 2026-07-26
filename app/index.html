@@ -7973,7 +7973,53 @@ function osNoticeCardHtml(){
     '<div class="notice" style="margin-top:12px;font-size:11px;line-height:1.65">이미지는 <b>400KB 이하</b>를 권장합니다(팀 전체 공유 로딩 속도). 게시 전 준법감시 확인을 권장합니다.</div>'+
     '</div></div>';
 }
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();}
+/* ═══════════ 빠른 시작 가이드 — 플로팅 버튼 + 첫 로그인 시 1회 자동 안내 ═══════════ */
+function osGuideSeen(){try{return localStorage.getItem('apex_guide_seen')==='1';}catch(e){return false;}}
+function osGuideDontToggle(cb){try{localStorage.setItem('apex_guide_seen',cb.checked?'1':'0');}catch(e){}}
+function osGuideRows(arr){return arr.map(function(s){return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9"><span style="flex:none;font-size:21px;line-height:1.3">'+s[0]+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A">'+osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.6;margin-top:3px">'+osEsc(s[2])+'</div></div></div>';}).join('');}
+function osQuickGuideBody(){
+  var admin=OS.profile&&OS.profile.role==='admin';
+  var member=[
+    ['🧠','윤시현의 두뇌 — 막힘 없는 상담','상담이 막히면 질문만 입력 → 약관·화법·전략을 즉답. "지식 추가"에 내 노하우를 넣을수록 더 나처럼 답합니다.'],
+    ['📑','AI 보장분석','고객 증권을 올리면 담보 공백·중복을 찾아 1:1 리포트. 리모델링 상담의 결정적 무기.'],
+    ['📝','고객 상담카드','상담 현장에서 정보를 한 장으로 취합 → AI 니즈분석·상담지 인쇄까지.'],
+    ['📊','재무설계 계산기','은퇴자금·필요보장액을 즉석 계산 → "숫자로" 니즈를 확정.'],
+    ['🃏','카드뉴스·블로그','이미지만 넣으면 5장 카드뉴스, 주제만 넣으면 SEO 블로그가 자동.'],
+    ['💳','결제·구독','요금제 → 구독 시작 → 카드·계좌이체·네이버·카카오. 카드는 결제 즉시 자동 개방.'],
+    ['🔑','한도 백업 키','설정 → "내 API 키"를 넣으면 공용 한도가 차도 내 키로 자동 이어갑니다.']
+  ];
+  var adminArr=[
+    ['✅','가입 승인 + 등급','설정 → 팀원 권한 관리에서 신규 승인 + 카테고리(무료~VIP) 지정.'],
+    ['🔓','도구 개방','설정 → 도구 접근 권한에서 등급별로 열 도구를 선택.'],
+    ['🏦','결제 설정','설정 → 결제수단 설정에 계좌·토스·네이버·카카오 등록.'],
+    ['🎯','매출 시뮬레이터','요금제 맨 아래에서 월 1,000만원 목표를 계산.'],
+    ['🕘','출근관리','DB CRM 대시보드에서 팀 로그인·접속 시각 확인.']
+  ];
+  return '<div style="font-size:12px;font-weight:800;color:#1A56DB;margin:2px 0 2px">매일 쓰는 도구</div>'+osGuideRows(member)+
+    (admin?('<div style="font-size:12px;font-weight:800;color:#7C3AED;margin:16px 0 2px">👑 관리자(대표) 전용</div>'+osGuideRows(adminArr)):'');
+}
+function osGuideOpen(){
+  osGuideClose();
+  var ov=document.createElement('div');ov.id='osGuideOvl';
+  ov.style.cssText='position:fixed;inset:0;z-index:9997;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.onclick=function(e){if(e.target===ov)osGuideClose();};
+  ov.innerHTML='<div style="background:#fff;width:100%;max-width:470px;max-height:88vh;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)">'+
+    '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">QUICK START</div><div style="font-size:18px;font-weight:800;margin-top:2px">🚀 빠른 시작 가이드</div></div><button onclick="osGuideClose()" style="border:none;background:rgba(255,255,255,.16);color:#fff;width:31px;height:31px;border-radius:50%;font-size:16px;cursor:pointer">✕</button></div>'+
+    '<div style="padding:14px 20px;overflow-y:auto">'+osQuickGuideBody()+'</div>'+
+    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between;align-items:center"><label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="osGuideDont" onchange="osGuideDontToggle(this)"'+(osGuideSeen()?' checked':'')+'/> 다시 안 보기</label><button onclick="osGuideClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">시작하기</button></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+function osGuideClose(){var o=document.getElementById('osGuideOvl');if(o&&o.parentNode)o.parentNode.removeChild(o);}
+function osGuideFab(){
+  if(document.getElementById('osGuideFab'))return;
+  var b=document.createElement('button');b.id='osGuideFab';b.title='빠른 시작 가이드';b.setAttribute('aria-label','빠른 시작 가이드');
+  b.onclick=function(){osGuideOpen();};b.textContent='?';
+  b.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9990;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,#1A56DB,#38BDF8);color:#fff;font-size:22px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,219,.42)';
+  document.body.appendChild(b);
+}
+function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
