@@ -1203,10 +1203,109 @@ function osByokCardHtml(){
     '<div class="btn-row"><button class="btn btn-primary" onclick="osByokSave()">내 키 저장</button>'+(has?'<button class="btn btn-ghost" onclick="osByokClear()">삭제</button>':'')+'</div>'+
     '</div></div>';
 }
+/* ════════ 보안: 전역설정 + 접속 IP 승인제 + 개인 AI 하루 한도 (기본 OFF · 서버=Supabase · 실패 시 통과) ════════ */
+function osCfgGet(k,def){var v=(OS.cfg&&OS.cfg[k]!=null)?OS.cfg[k]:null;return (v==null||v==='')?def:v;}
+function osCfgLoad(cb){
+  var sb=osClient();OS.cfg=OS.cfg||{};
+  if(!sb){if(cb)cb();return;}
+  try{sb.from('app_config').select('key,value').then(function(r){OS.cfg={};if(r&&r.data){for(var i=0;i<r.data.length;i++)OS.cfg[r.data[i].key]=r.data[i].value;}if(cb)cb();},function(){if(cb)cb();});}
+  catch(e){if(cb)cb();}
+}
+function osCfgSet(k,v,cb){
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  sb.from('app_config').upsert({key:k,value:''+v,updated_at:new Date().toISOString()},{onConflict:'key'}).then(function(r){
+    if(r&&r.error){toast('저장 실패: '+r.error.message);}else{OS.cfg=OS.cfg||{};OS.cfg[k]=''+v;toast('저장했습니다.');}
+    if(cb)cb();
+  },function(){toast('저장 실패');if(cb)cb();});
+}
+/* 개인 AI 하루 한도 */
+function osAiDailyLimit(){var n=parseInt(osCfgGet('ai_daily_limit','0'),10);return isNaN(n)?0:n;}
+function osAiOverLimit(){if(osRole()==='admin')return false;var lim=osAiDailyLimit();if(!lim)return false;return (OS.aiCnt||0)>=lim;}
+function osAiLoad(){var sb=osClient(),uid=OS.profile&&OS.profile.id;if(OS.aiCnt==null)OS.aiCnt=0;if(!sb||!uid)return;try{sb.from('ai_usage').select('cnt').eq('member_id',uid).eq('usage_date',osAttToday()).then(function(r){if(r&&r.data&&r.data[0])OS.aiCnt=r.data[0].cnt||0;},function(){});}catch(e){}}
+function osAiTick(){var sb=osClient();OS.aiCnt=(OS.aiCnt||0)+1;if(!sb)return;try{sb.rpc('bump_ai_usage').then(function(r){if(r&&typeof r.data==='number')OS.aiCnt=r.data;},function(){});}catch(e){}}
+/* 접속 IP 승인제 */
+function osIpGuardOn(){return osCfgGet('ip_guard','off')==='on';}
+function osIpGuardCheck(cb){
+  if(!osIpGuardOn()){cb(true);return;}
+  var sb=osClient(),uid=OS.profile&&OS.profile.id;
+  if(!sb||!uid){cb(true);return;}
+  if(osRole()==='admin'){cb(true);return;}
+  var done=false,to,fin=function(v){if(done)return;done=true;clearTimeout(to);cb(v);};
+  to=setTimeout(function(){fin(true);},6000);
+  try{
+    fetch('https://api.ipify.org?format=json').then(function(r){return r.json();}).then(function(j){
+      var ip=j&&j.ip;if(!ip){fin(true);return;}
+      OS.loginIp=ip;
+      sb.from('login_ips').upsert({member_id:uid,ip:ip,last_seen:new Date().toISOString()},{onConflict:'member_id,ip'}).then(function(){
+        sb.from('login_ips').select('status').eq('member_id',uid).eq('ip',ip).then(function(r){
+          var st=(r&&r.data&&r.data[0])?r.data[0].status:'approved';fin(st==='approved');
+        },function(){fin(true);});
+      },function(){fin(true);});
+    },function(){fin(true);})['catch'](function(){fin(true);});
+  }catch(e){fin(true);}
+}
+function osShowIpBlock(){
+  osHideLoginGate();
+  var ovl=document.getElementById('osGateOvl');
+  if(!ovl){ovl=document.createElement('div');ovl.id='osGateOvl';document.body.appendChild(ovl);}
+  ovl.style.cssText='position:fixed;inset:0;z-index:4000;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 70%,#38BDF8 100%);display:flex;align-items:center;justify-content:center;padding:24px';
+  ovl.innerHTML='<div style="max-width:460px;width:100%;background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden"><div style="padding:30px 30px 22px;text-align:center"><div style="font-size:48px;margin-bottom:12px">🔒</div><div style="font-size:20px;font-weight:800;color:#0F172A;margin-bottom:8px">승인되지 않은 접속 위치</div><div style="font-size:13px;color:#475569;line-height:1.7">이 위치(IP: <b>'+osEsc(OS.loginIp||'-')+'</b>)에서의 접속은 아직 등록되지 않았습니다.<br>운영자 승인 후 이용하실 수 있습니다. 승인되면 아래 <b>다시 확인</b>을 눌러 주세요.</div></div><div style="display:flex;gap:8px;padding:0 26px 26px"><button onclick="location.reload()" style="flex:1;border:none;background:#1A56DB;color:#fff;font-weight:800;font-size:14px;padding:13px;border-radius:11px;cursor:pointer">다시 확인</button><button onclick="osLogout();setTimeout(function(){location.reload();},300)" style="border:1px solid #E2E8F0;background:#fff;color:#475569;font-weight:700;font-size:14px;padding:13px 18px;border-radius:11px;cursor:pointer">로그아웃</button></div></div>';
+}
+/* 관리자(운영자) 보안 설정 카드 + 목록 */
+function osSecurityCardsHtml(){
+  if(osRole()!=='admin')return '';
+  var ipOn=osIpGuardOn(),lim=osAiDailyLimit();
+  var ipCard='<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🔒</span>접속 IP 승인제 '+(ipOn?'<span class="badge green">ON</span>':'<span class="badge">OFF</span>')+'</div><div class="card-desc">등록되지 않은 새 IP(접속 위치)에서 로그인하면 차단하고, 운영자 승인 후 이용하게 합니다. 각자의 <b>첫 기기는 자동 승인</b>되고, 운영자는 제한에서 예외입니다.</div></div><div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:10px"><button class="btn '+(ipOn?'btn-ghost':'btn-primary')+'" onclick="osIpGuardSet(true)">승인제 켜기</button><button class="btn '+(ipOn?'btn-primary':'btn-ghost')+'" onclick="osIpGuardSet(false)">끄기</button></div>'+
+    '<div style="font-size:11px;color:var(--ink-5);line-height:1.6;margin-bottom:10px">※ 브라우저 앱 특성상 완전 차단이 아니라 <b>강력한 억제 + 전체 기록</b>입니다. 혹시 잠기면 Supabase의 login_ips에서 해당 IP를 approved로 바꾸면 됩니다.</div>'+
+    '<div id="osIpList"><div class="loading" style="padding:10px"><div class="spinner"></div>접속 IP 불러오는 중…</div></div>'+
+    '</div></div>';
+  var limCard='<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>개인 AI 하루 사용 한도</div><div class="card-desc">팀원 1인당 하루 회사 공용 AI 사용 횟수를 제한합니다. 넘으면 자동으로 <b>본인 API 키</b>로 이어집니다(미등록 시 안내 후 중단). <b>0이면 무제한</b>, 운영자는 예외입니다.</div></div><div class="card-body">'+
+    '<div class="frm"><div class="fld"><label>하루 한도 (회) · 0=무제한</label><input type="number" id="osAiLimitInput" value="'+lim+'" min="0" style="max-width:160px"/></div></div>'+
+    '<div class="btn-row"><button class="btn btn-primary" onclick="osAiLimitSave()">한도 저장</button><span style="font-size:11px;color:var(--ink-5)">현재: '+(lim?(lim+'회/일'):'무제한')+'</span></div>'+
+    '</div></div>';
+  return ipCard+limCard;
+}
+function osIpGuardSet(on){
+  if(on){osIpSelfApprove(function(){osCfgSet('ip_guard','on',function(){go('settings');});});}
+  else{osCfgSet('ip_guard','off',function(){go('settings');});}
+}
+function osIpSelfApprove(cb){
+  var sb=osClient(),uid=OS.profile&&OS.profile.id;if(!sb||!uid){if(cb)cb();return;}
+  try{fetch('https://api.ipify.org?format=json').then(function(r){return r.json();}).then(function(j){
+    var ip=j&&j.ip;if(!ip){if(cb)cb();return;}
+    sb.from('login_ips').upsert({member_id:uid,ip:ip,status:'approved',last_seen:new Date().toISOString()},{onConflict:'member_id,ip'}).then(function(){if(cb)cb();},function(){if(cb)cb();});
+  },function(){if(cb)cb();})['catch'](function(){if(cb)cb();});}catch(e){if(cb)cb();}
+}
+function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)||v<0)v=0;osCfgSet('ai_daily_limit',v);}
+function osIpLoadList(){
+  var host=document.getElementById('osIpList');if(!host)return;var sb=osClient();if(!sb){host.innerHTML='';return;}
+  Promise.all([sb.from('login_ips').select('member_id,ip,status,last_seen').order('last_seen',{ascending:false}),sb.from('profiles').select('id,name')]).then(function(res){
+    if(res[0]&&res[0].error){host.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;font-size:11.5px">접속 IP 테이블이 아직 없습니다 — 보안 SQL(migration_09_security.sql)을 Supabase에서 1회 실행하세요.</div>';return;}
+    var rows=(res[0]&&res[0].data)||[],profs=(res[1]&&res[1].data)||[],nm={};for(var i=0;i<profs.length;i++)nm[profs[i].id]=profs[i].name;
+    if(!rows.length){host.innerHTML='<div style="font-size:12px;color:var(--ink-5);padding:8px">아직 기록된 접속 IP가 없습니다.</div>';return;}
+    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
+    for(var k=0;k<rows.length;k++){var r=rows[k];
+      var b=r.status==='approved'?'<span class="badge green">승인</span>':(r.status==='blocked'?'<span class="badge red">차단</span>':'<span class="badge">대기</span>');
+      var act=r.status==='approved'?'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'blocked\')">차단</button>':'<button class="btn btn-primary" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'approved\')">승인</button>';
+      h+='<tr style="border-top:1px solid var(--ink-8)"><td style="padding:6px 5px">'+osEsc(nm[r.member_id]||'-')+'</td><td style="padding:6px 5px;font-family:monospace">'+osEsc(r.ip)+'</td><td style="text-align:center;padding:6px 5px">'+b+'</td><td style="text-align:right;padding:6px 5px;color:var(--ink-5)">'+osEsc((''+(r.last_seen||'')).slice(5,16).replace('T',' '))+'</td><td style="text-align:right;padding:6px 5px">'+act+'</td></tr>';
+    }
+    h+='</tbody></table></div>';host.innerHTML=h;
+  },function(){host.innerHTML='';});
+}
+function osIpSet(mid,ip,status){var sb=osClient();if(!sb)return;sb.from('login_ips').update({status:status}).eq('member_id',mid).eq('ip',ip).then(function(r){if(r&&r.error){toast('변경 실패: '+r.error.message);}else{toast(status==='approved'?'승인했습니다':'차단했습니다');osIpLoadList();}},function(){toast('변경 실패');});}
+function osSecurityAfterRender(){if(osRole()==='admin'&&typeof osIpLoadList==='function')osIpLoadList();}
 function callClaude(system,user,maxTokens,images){
   var cap=maxTokens||2000;
   var mk=function(){return [{role:'user',content:claudeUserContent(user,images)}];};
-  return _claudeRun(system,mk(),cap,null).catch(function(e){
+  var usingProxy=(getConn()==='proxy');
+  /* 개인 하루 한도 초과 시: 본인 키가 있으면 그 키로, 없으면 안내하고 중단 */
+  if(usingProxy&&typeof osAiOverLimit==='function'&&osAiOverLimit()){
+    var pkL=getPersonalKey();
+    if(pkL){try{toast('오늘 회사 공용 AI 한도 초과 → 내 API 키로 이어갑니다.');}catch(_){}return _claudeRun(system,mk(),cap,pkL);}
+    return Promise.reject(new Error('오늘 회사 공용 AI 사용 한도를 초과했습니다. 설정 → 내 API 키를 등록하면 계속 이용할 수 있어요.'));
+  }
+  return _claudeRun(system,mk(),cap,null).then(function(txt){if(usingProxy&&typeof osAiTick==='function')osAiTick();return txt;}).catch(function(e){
     /* 공용 프록시가 한도/크레딧으로 막히고, 회원 개인 백업 키가 있으면 그 키로 이어간다 */
     var m=((e&&e.message)||'')+'';
     var capHit=/credit|billing|quota|insufficient|balance|too many|rate.?limit|exhausted|overloaded|충전|한도|limit reached|usage/i.test(m)||(e&&(e.status===429||e.status===402));
@@ -5579,6 +5678,7 @@ function renderSettings(){
     osBackupCardHtml()+
 
     osByokCardHtml()+
+    osSecurityCardsHtml()+
 
     osCapCardHtml()+
 
@@ -7524,9 +7624,13 @@ function osLoadProfile(){
     /* 승인 게이트: status 컬럼이 있을 때만 작동(없으면 하위호환으로 통과). 관리자·거절 우회 없음 */
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
-      osHidePending();osHideLoginGate();
       OS.profile=prof;if(extra){OS.profile.status=extra.status;OS.profile.plan=extra.plan;OS.profile.plan_until=extra.plan_until;}
-      osRenderPill();osOnLogin();
+      osCfgLoad(function(){
+        osIpGuardCheck(function(ipOk){
+          if(!ipOk){OS.profile=null;osRenderPill();osShowIpBlock();return;}
+          osHidePending();osHideLoginGate();osRenderPill();osOnLogin();
+        });
+      });
     });
   });
 }
@@ -7811,7 +7915,7 @@ function osShowLoginGate(){
 }
 function osHideLoginGate(){var o=document.getElementById('osLoginGate');if(o){o.style.display='none';o.innerHTML='';}try{document.body.style.overflow='';}catch(e){}}
 /* ── 관리자: 가입 승인 큐 ── */
-function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();}}
+function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
@@ -8102,7 +8206,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
