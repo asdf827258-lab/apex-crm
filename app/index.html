@@ -10255,7 +10255,7 @@ var CARD_NEWS_POOL=[
    {k:'압류 보호',d:'압류·양도·담보가 금지돼 수급권이 보호됩니다.'}],cta:'중소기업중앙회에서 가입',src:'중소기업중앙회'}
 ];
 var CN_OFF=0;
-var CN={i:0,imgs:{}};
+var CN={i:0,imgs:{},ai:null,aiPlan:null};
 /* 카드별 테마(색) — 각 장이 서로 다른 톤. 이미지 없을 때 배경, 있을 때는 강조색(accent)만 사용 */
 var CN_THEMES=[
  {g:'linear-gradient(150deg,#0F172A,#1E3A8A 58%,#2563EB)', cs:[[0,'#0F172A'],[0.58,'#1E3A8A'],[1,'#2563EB']], a:'#93C5FD'},
@@ -10269,7 +10269,7 @@ function cnImgCount(){var n=0,k;for(k in CN.imgs){if(CN.imgs.hasOwnProperty(k)&&
 function cnDayIdx(){try{return Math.floor(Date.now()/86400000);}catch(e){return 0;}}
 function cnDateStr(){try{var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate());}catch(e){return '';}}
 function cardnewsPick(){var L=CARD_NEWS_POOL,i=((cnDayIdx()+CN_OFF)%L.length+L.length)%L.length,it=L[i];it._date=cnDateStr();return it;}
-function cardnewsSlides(){var it=cardnewsPick();var s=[{t:'cover',kicker:it.kicker,ic:it.ic,hook:it.hook}];(it.cards||[]).slice(0,3).forEach(function(c,i){s.push({t:'point',n:i+1,k:c.k,d:c.d});});s.push({t:'cta',cta:it.cta,src:it.src});return s;}
+function cardnewsSlides(){if(CN.ai&&CN.ai.length)return CN.ai;var it=cardnewsPick();var s=[{t:'cover',kicker:it.kicker,ic:it.ic,hook:it.hook}];(it.cards||[]).slice(0,3).forEach(function(c,i){s.push({t:'point',n:i+1,k:c.k,d:c.d});});s.push({t:'cta',cta:it.cta,src:it.src});return s;}
 /* ── APEX 로고(벡터) — HTML/캔버스 공용 ── */
 var APEX_LOGO_SVG='<svg viewBox="0 0 240 220" xmlns="http://www.w3.org/2000/svg" fill="currentColor" aria-hidden="true"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>';
 function drawApexMark(ctx,cx,cy,h,color){ctx.save();ctx.fillStyle=color;var u=h/164;function P(pts){ctx.beginPath();for(var i=0;i<pts.length;i++){var X=cx+(pts[i][0]-120)*u,Y=cy+(pts[i][1]-26)*u;if(i===0)ctx.moveTo(X,Y);else ctx.lineTo(X,Y);}ctx.closePath();ctx.fill();}P([[120,26],[212,190],[168,190],[120,104],[72,190],[28,190]]);P([[120,120],[176,214],[146,214],[120,168],[94,214],[64,214]]);ctx.restore();}
@@ -10286,6 +10286,7 @@ function cardnewsShuffle(){CN_OFF++;CN.i=0;var h=$('cnHost');if(h)h.innerHTML=re
 /* ── 화면 미리보기(HTML) — 세로 4:5 ── */
 /* 매거진 텍스트 매핑 — 카드별 (라벨 / 헤드라인 / 서브카피) */
 function cnMagText(sl){
+  if(sl.mk!=null||sl.mt!=null)return {k:sl.mk||'', t:sl.mt||'', s:sl.ms||''};
   if(sl.t==='cover')return {k:(sl.ic?sl.ic+' ':'')+sl.kicker, t:sl.hook, s:'넘겨서 확인하기  →'};
   if(sl.t==='point')return {k:'POINT '+(sl.n<10?'0'+sl.n:''+sl.n), t:sl.k, s:sl.d};
   return {k:'전문가 무료 점검', t:'이 내용, 내 상황엔\n어떻게 적용될까요?', s:'내 보장·정책자금·세금·노후 — 지금 무료로 점검받으세요.  프로필 링크 →'};
@@ -10305,24 +10306,66 @@ function cnSlidePreview(sl,idx,n){
     '<div class="cn2-mag-sub">'+osEsc(m.s)+'</div></div>';
   return '<div class="cn2-slide cn2-mag" style="'+bg+'">'+logo+mast+pageno+body+'</div>';
 }
+/* ── AI 카드뉴스 기획·생성 (인스타 캐러셀 전문 기획자 프롬프트) ── */
+function cnAiSys(){
+  return sys('너는 인스타그램 캐러셀 콘텐츠 전문 기획자다. 사용자가 준 주제/초안을 단순 나열하지 말고, 사람들이 멈춰 읽고 저장·팔로우하고 싶은 8~10장 캐러셀로 재구성한다.\n[원칙]\n- 이 콘텐츠가 가장 필요한 핵심 타깃 한 명을 구체적으로 정의한다.\n- 표지 제목은 주제명이 아니라 독자가 얻을 결과/변화/이득 또는 피할 손해가 드러나게 쓴다.\n- 누구나 아는 뻔한 조언은 피하고 경험·반전·구체 사례·새로운 해석을 활용한다.\n- 한 장에는 하나의 메시지만. 각 장의 첫 문장에서 결론이 보이게. 설명은 짧고 쉬운 입말.\n- 어려운 용어·과장된 성과 보장 금지. 친근하고 자연스러운 말투.\n- 보험/재무 주제면 준법: 확정 수익·지급 보장 단정 금지, 통계·수치는 (예시)로 표기. 게시 전 준법확인 권장을 마지막 CTA 부근에 자연스럽게.\n[출력은 아래 JSON 하나만. 코드블록·설명·머리말 없이 순수 JSON만 출력한다.]\n{"target":"핵심 타깃 1명 구체 묘사","benefit":"독자가 얻는 핵이득 한 문장","titles":["표지 제목 후보 10개 배열"],"pickTitle":"가장 추천하는 표지 제목","pickWhy":"추천 이유 1~2문장","cta":"댓글/저장/팔로우 중 목적에 맞는 CTA 문장","selfcheck":"제목·타깃·차별성·가독성·독자이득 자체 점검 후 개선점 요약","slides":[{"kicker":"표지 상단 라벨(짧게)","title":"표지 제목(핵이득형, 14자 내외)","sub":"표지 보조 한 줄"},{"kicker":"01","title":"장 제목(결론 먼저, 12자 내외)","sub":"쉬운 입말 설명 1~2문장(45자 이내)"}]}\n[slides 규칙] 총 8~10장. 1번=표지, 마지막 1장=CTA(kicker에 저장/팔로우 유도 문구), 중간은 포인트(kicker는 01,02,… 숫자). title은 짧고 강하게, sub는 45자 이내.');
+}
+function cnAiParse(txt){try{var t=''+txt,s=t.indexOf('{'),e=t.lastIndexOf('}');if(s<0||e<0)return null;return JSON.parse(t.slice(s,e+1));}catch(x){return null;}}
+function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{},tp=(i===0?'cover':(i===arr.length-1?'cta':'point'));out.push({t:tp,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),n:i});}return out;}
+function cnAiGen(){
+  var topic=(osVal('cnAiTopic')||'').replace(/^\s+|\s+$/g,'');
+  if(!topic){toast('주제나 초안을 입력하세요');return;}
+  CN.aiTopic=topic;
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');go('settings');return;}
+  var btn=$('cnAiBtn');if(btn){btn.disabled=true;btn.textContent='기획 중… (15~40초)';}
+  callAI(cnAiSys(),'주제/초안: '+topic+'\n\n위 주제로 8~10장 인스타 캐러셀을 기획해서 JSON으로만 출력해줘.',4000,'cardnews').then(function(txt){
+    var plan=cnAiParse(txt);
+    if(!plan||!plan.slides||!plan.slides.length){toast('결과 해석 실패 — 다시 시도해 주세요.');if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}return;}
+    CN.aiPlan=plan;CN.ai=cnAiToSlides(plan.slides);CN.i=0;CN.imgs={};
+    var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();
+    toast('AI가 '+CN.ai.length+'장 캐러셀을 만들었습니다.');
+  }).catch(function(e){toast('생성 실패: '+((e&&e.message)||e));if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}});
+}
+function cnAiClear(){CN.ai=null;CN.aiPlan=null;CN.imgs={};CN.i=0;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
+function cnAiCopyPlan(){var p=CN.aiPlan;if(!p)return;var t='[핵심 타깃] '+(p.target||'')+'\n[핵이득] '+(p.benefit||'')+'\n\n[제목 후보]\n'+((p.titles||[]).map(function(x,i){return (i+1)+'. '+x;}).join('\n'))+'\n\n[추천 제목] '+(p.pickTitle||'')+'\n → '+(p.pickWhy||'')+'\n\n[페이지 문구]\n'+((CN.ai||[]).map(function(s,i){return (i+1)+'. ['+(s.mk||'')+'] '+(s.mt||'')+' — '+(s.ms||'');}).join('\n'))+'\n\n[CTA] '+(p.cta||'')+'\n\n[자체 점검] '+(p.selfcheck||'');copyText(t);}
+function cnAiPlanHtml(){
+  var p=CN.aiPlan;if(!p)return '';
+  var titles=(p.titles||[]).map(function(x){return '<li>'+osEsc(x)+'</li>';}).join('');
+  return '<div class="cn-plan"><div class="cn-plan-hd">🧠 AI 기획안 <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiCopyPlan()">📋 기획안 복사</button> <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiClear()">기본 주제로</button></div>'+
+    '<div class="cn-plan-row"><b>핵심 타깃</b> '+osEsc(p.target||'-')+'</div>'+
+    '<div class="cn-plan-row"><b>핵이득</b> '+osEsc(p.benefit||'-')+'</div>'+
+    '<div class="cn-plan-row"><b>추천 제목</b> '+osEsc(p.pickTitle||'-')+' <span style="color:#94A3B8">— '+osEsc(p.pickWhy||'')+'</span></div>'+
+    (titles?'<details class="cn-plan-det"><summary>표지 제목 후보 10개</summary><ol style="margin:6px 0 0 18px;padding:0;font-size:11.5px;color:#475569;line-height:1.7">'+titles+'</ol></details>':'')+
+    '<div class="cn-plan-row"><b>CTA</b> '+osEsc(p.cta||'-')+'</div>'+
+    (p.selfcheck?'<div class="cn-plan-row" style="color:#64748B"><b>자체 점검</b> '+osEsc(p.selfcheck)+'</div>':'')+
+  '</div>';
+}
 function renderTodayCard(){
   var slides=cardnewsSlides();var n=slides.length;if(CN.i>=n)CN.i=0;
+  var isAi=!!(CN.ai&&CN.ai.length);
   var dots='';for(var k=0;k<slides.length;k++){dots+='<button class="cn2-dot'+(k===CN.i?' on':'')+'" onclick="cnGo('+k+')" aria-label="'+(k+1)+'"></button>';}
   var cur=CN.imgs[CN.i],cnt=cnImgCount();
   var thisImgBtn=cur?'<button class="btn btn-ghost" onclick="cnClearImg()">🗑 이 카드 빼기</button>':'';
   var clearAllBtn=cnt?'<button class="btn btn-ghost" onclick="cnClearAllImg()">전체 초기화('+cnt+')</button>':'';
-  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">5장 · 사진 매거진 스타일</span></div>'+
-    '<div class="cn2-intro"><b>사진 매거진 스타일</b> — 각 장에서 <b>이 카드에 이미지</b>를 누르면 <b>그 장에 사진이 꽉 차게</b> 깔리고, 위에 라벨·헤드라인·설명이 얹힙니다(장마다 다른 사진 OK). 사진을 안 넣은 장은 카드별 색 테마가 자동으로 들어갑니다. 저장하면 로고가 함께 들어갑니다.</div>'+
+  var aiBox='<div class="cn-ai"><div class="cn-ai-lb">✍️ AI 카드뉴스 기획 — 주제·초안만 넣으면 인스타 캐러셀 전문 기획자가 8~10장으로 재구성합니다</div>'+
+    '<textarea id="cnAiTopic" class="cn-ai-ta" placeholder="예) 40대 가장이 놓치기 쉬운 보장 3가지 / 실손 4세대 전환, 지금 갈아타야 할까?">'+(CN.aiTopic?osEsc(CN.aiTopic):'')+'</textarea>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 8~10장 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
+  var badge=isAi?(n+'장 · AI 기획 · 매거진'):'5장 · 사진 매거진 스타일';
+  var intro=isAi
+    ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
+    : '<div class="cn2-intro"><b>사진 매거진 스타일</b> — 각 장에서 <b>이 카드에 이미지</b>를 누르면 그 장에 사진이 꽉 차게 깔립니다(장마다 다른 사진 OK). 사진 없는 장은 색 테마 자동. 저장하면 로고가 함께 들어갑니다.</div>';
+  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">'+badge+'</span></div>'+
+    aiBox+(isAi?cnAiPlanHtml():'')+intro+
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="cnPick()">🖼 이 카드에 이미지</button>'+thisImgBtn+
-    '<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>'+clearAllBtn+
+    (isAi?'':'<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>')+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
     '<div class="cn2-stage"><button class="cn2-arrow l" onclick="cnNav(-1)" aria-label="이전">‹</button>'+
     cnSlidePreview(slides[CN.i],CN.i,n)+
     '<button class="cn2-arrow r" onclick="cnNav(1)" aria-label="다음">›</button></div>'+
     '<div class="cn2-dots">'+dots+'</div>'+
     '<div class="btn-row" style="justify-content:center"><button class="btn btn-primary" onclick="cardnewsSaveOne()">🖼 이 장 저장</button>'+
-    '<button class="btn" style="background:linear-gradient(135deg,#4C1D95,#7C3AED);color:#fff;border:none" onclick="cardnewsSaveAll()">⬇️ 5장 모두 저장</button>'+
-    '<button class="btn btn-ghost" onclick="cardnewsCopy()">📋 문구 복사</button></div>';
+    '<button class="btn" style="background:linear-gradient(135deg,#4C1D95,#7C3AED);color:#fff;border:none" onclick="cardnewsSaveAll()">⬇️ '+n+'장 모두 저장</button>'+
+    '<button class="btn btn-ghost" onclick="'+(isAi?'cnAiCopyPlan()':'cardnewsCopy()')+'">📋 문구 복사</button></div>';
 }
 function cardnewsCopy(){var it=cardnewsPick();var t='['+it.kicker+'] '+(''+it.hook).replace(/\n/g,' ')+'\n\n'+(it.cards||[]).map(function(c,i){return (i+1)+'. '+c.k+' — '+c.d;}).join('\n')+'\n\n👉 '+it.cta+'\n참고: '+it.src+' (조건·수치는 관계기관 확인, 참고용)';copyText(t);}
 /* ── 저장(캔버스 1080×1350 세로) ── */
@@ -10393,7 +10436,15 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cn2-mag-rule{width:34px;height:3px;border-radius:2px;margin-bottom:13px}',
    '.cn2-mag-kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;margin-bottom:9px}',
    '.cn2-mag-title{font-size:29px;font-weight:900;line-height:1.24;letter-spacing:-.5px}',
-   '.cn2-mag-sub{font-size:13.5px;font-weight:500;line-height:1.55;color:rgba(255,255,255,.86);margin-top:11px}'
+   '.cn2-mag-sub{font-size:13.5px;font-weight:500;line-height:1.55;color:rgba(255,255,255,.86);margin-top:11px}',
+   '.cn-ai{background:#F5F3FF;border:1px solid #E9D5FF;border-radius:12px;padding:11px 13px;margin-bottom:12px}',
+   '.cn-ai-lb{font-size:11.5px;font-weight:700;color:#6D28D9;margin-bottom:7px;line-height:1.5}',
+   '.cn-ai-ta{width:100%;box-sizing:border-box;min-height:58px;border:1px solid #E9D5FF;border-radius:9px;padding:9px 11px;font-size:12.5px;font-family:inherit;line-height:1.55;resize:vertical}',
+   '.cn-plan{background:#F8FAFC;border:1px solid #E5E9F0;border-radius:12px;padding:12px 14px;margin-bottom:12px}',
+   '.cn-plan-hd{font-size:12.5px;font-weight:800;color:#1C2434;margin-bottom:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}',
+   '.cn-plan-row{font-size:12px;color:#334155;line-height:1.6;margin:4px 0}',
+   '.cn-plan-row b{color:#6D28D9;margin-right:5px}',
+   '.cn-plan-det{margin:5px 0}.cn-plan-det>summary{cursor:pointer;font-size:11.5px;font-weight:700;color:#1A56DB}'
   ].join('');
   document.head.appendChild(s);
 })();
