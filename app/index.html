@@ -2794,9 +2794,7 @@ function openFinanceNewTab(){
   }catch(e){toast('새 탭 열기 실패: '+e.message);}
 }
 /* ════════ DB CRM 모듈 (원래 쓰던 독립 CRM 사이트를 iframe로 로드 · 디자인 원상복구) ════════ */
-/* DB 통합 CRM — 같은 저장소의 db-crm.html(같은 Supabase 프로젝트)을 로드한다.
-   출근 현황(월간 달력)·팀 관리(권한 4단계)가 포함된 최신본이며, 데이터는 앱과 공유된다. */
-var CRM_URL='/db-crm.html';
+var CRM_URL='https://apex-crm-a500b6.netlify.app/';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
   f.src=CRM_URL;f._mounted=true;
@@ -2816,6 +2814,8 @@ document.addEventListener('keydown',function(e){
 /* ════════ 출근 현황(네이티브) — 출근 달력 + KPI 한눈에 (CRM과 같은 attendance 데이터, CRM 미접촉) ════════ */
 var ATTEND={month:null,profiles:[],att:[]};
 function osAttToday(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+/* 로그인(접속)만 해도 오늘 출근이 자동 기록되게 — 앱과 같은 Supabase attendance 테이블 */
+function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
 function renderAttend(){
   if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div>'+
@@ -8102,7 +8102,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
