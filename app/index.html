@@ -10255,7 +10255,17 @@ var CARD_NEWS_POOL=[
    {k:'압류 보호',d:'압류·양도·담보가 금지돼 수급권이 보호됩니다.'}],cta:'중소기업중앙회에서 가입',src:'중소기업중앙회'}
 ];
 var CN_OFF=0;
-var CN={i:0,img:null,imgURL:'',allBg:false};
+var CN={i:0,imgs:{}};
+/* 카드별 테마(색) — 각 장이 서로 다른 톤. 이미지 없을 때 배경, 있을 때는 강조색(accent)만 사용 */
+var CN_THEMES=[
+ {g:'linear-gradient(150deg,#0F172A,#1E3A8A 58%,#2563EB)', cs:[[0,'#0F172A'],[0.58,'#1E3A8A'],[1,'#2563EB']], a:'#93C5FD'},
+ {g:'linear-gradient(150deg,#052E2A,#0F766E 58%,#14B8A6)', cs:[[0,'#052E2A'],[0.58,'#0F766E'],[1,'#14B8A6']], a:'#5EEAD4'},
+ {g:'linear-gradient(150deg,#2E1065,#6D28D9 58%,#8B5CF6)', cs:[[0,'#2E1065'],[0.58,'#6D28D9'],[1,'#8B5CF6']], a:'#DDD6FE'},
+ {g:'linear-gradient(150deg,#7C2D12,#C2410C 58%,#F59E0B)', cs:[[0,'#7C2D12'],[0.58,'#C2410C'],[1,'#F59E0B']], a:'#FDE68A'},
+ {g:'linear-gradient(150deg,#0F172A,#1A56DB 62%,#38BDF8)', cs:[[0,'#0F172A'],[0.62,'#1A56DB'],[1,'#38BDF8']], a:'#93C5FD'}
+];
+function cnTheme(idx){return CN_THEMES[((idx%CN_THEMES.length)+CN_THEMES.length)%CN_THEMES.length];}
+function cnImgCount(){var n=0,k;for(k in CN.imgs){if(CN.imgs.hasOwnProperty(k)&&CN.imgs[k])n++;}return n;}
 function cnDayIdx(){try{return Math.floor(Date.now()/86400000);}catch(e){return 0;}}
 function cnDateStr(){try{var d=new Date(),p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate());}catch(e){return '';}}
 function cardnewsPick(){var L=CARD_NEWS_POOL,i=((cnDayIdx()+CN_OFF)%L.length+L.length)%L.length,it=L[i];it._date=cnDateStr();return it;}
@@ -10267,37 +10277,36 @@ function cnWrap(ctx,t,maxW){var out=[],lines=(''+t).split('\n');for(var j=0;j<li
 function cnRoundRect(x,X,Y,W,H,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+W,Y,X+W,Y+H,r);x.arcTo(X+W,Y+H,X,Y+H,r);x.arcTo(X,Y+H,X,Y,r);x.arcTo(X,Y,X+W,Y,r);x.closePath();}
 /* ── 이미지 삽입 ── */
 function cnPick(){var el=$('cnFile');if(el){el.value='';el.click();}}
-function cnUpload(input){var f=input&&input.files&&input.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){CN.imgURL=''+rd.result;var im=new Image();im.onload=function(){CN.img=im;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();};im.onerror=function(){CN.img=null;};im.src=CN.imgURL;};rd.onerror=function(){toast('이미지를 읽지 못했습니다.');};rd.readAsDataURL(f);}
-function cnClearImg(){CN.img=null;CN.imgURL='';CN.allBg=false;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
-function cnToggleAllBg(){CN.allBg=!CN.allBg;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
+function cnUpload(input){var f=input&&input.files&&input.files[0];if(!f)return;var idx=CN.i;var rd=new FileReader();rd.onload=function(){var url=''+rd.result;var im=new Image();im.onload=function(){CN.imgs[idx]={img:im,url:url};var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();};im.onerror=function(){toast('이미지를 읽지 못했습니다.');};im.src=url;};rd.onerror=function(){toast('이미지를 읽지 못했습니다.');};rd.readAsDataURL(f);}
+function cnClearImg(){delete CN.imgs[CN.i];var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
+function cnClearAllImg(){CN.imgs={};var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
 function cnGo(k){var slides=cardnewsSlides();var n=slides.length;CN.i=(k%n+n)%n;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
 function cnNav(d){cnGo(CN.i+d);}
 function cardnewsShuffle(){CN_OFF++;CN.i=0;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
 /* ── 화면 미리보기(HTML) — 세로 4:5 ── */
 function cnSlidePreview(sl,idx,n){
+  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx];
   var logo='<span class="cn2-logo">'+APEX_LOGO_SVG+'</span>';
   var pageno='<span class="cn2-page">'+(idx+1)+' / '+n+'</span>';
-  var cls='cn2-slide',bg='';
-  var useImg=CN.imgURL&&(sl.t==='cover'||CN.allBg);
-  if(useImg){var ov=(sl.t==='cover')?'rgba(10,12,20,.12),rgba(8,10,18,.92)':'rgba(10,12,20,.66),rgba(8,10,18,.86)';bg=' style="background-image:linear-gradient('+ov+'),url('+CN.imgURL+');background-size:cover;background-position:center"';cls+=' '+(sl.t==='cover'?'cover':sl.t==='cta'?'cta':'point')+' img';}
-  else if(sl.t==='cover'){cls+=' cover';}
-  else if(sl.t==='cta'){cls+=' cta';}
-  else{cls+=' point';}
+  var bg;
+  if(im&&im.url){bg='background-image:linear-gradient(rgba(8,10,18,.34),rgba(8,10,18,.82)),url('+im.url+');background-size:cover;background-position:center';}
+  else{bg='background-image:linear-gradient(180deg,rgba(8,10,18,.10),rgba(8,10,18,.50)),'+th.g;}
   var inner='';
-  if(sl.t==='cover'){inner='<div class="cn2-bottom"><div class="cn2-kicker">'+(sl.ic?sl.ic+' ':'')+osEsc(sl.kicker)+'</div><div class="cn2-hook">'+osEsc(sl.hook).replace(/\n/g,'<br>')+'</div><div class="cn2-hint">넘겨서 확인하기 →</div></div>';}
-  else if(sl.t==='point'){inner='<div class="cn2-nb">'+(sl.n<10?'0'+sl.n:sl.n)+'</div><div class="cn2-mid2"><div class="cn2-ph">'+osEsc(sl.k)+'</div><div class="cn2-pd">'+osEsc(sl.d)+'</div></div>';}
-  else{inner='<div class="cn2-ctabox"><div class="cn2-ctakick">✅ 마지막 · 전문가 점검</div><div class="cn2-ctatitle">이 내용, 내 상황엔<br>어떻게 적용될까요?</div><div class="cn2-chklist"><div>내 보장, 빈틈은 없는지</div><div>받을 수 있는 정책·자금은</div><div>세금·절세, 놓친 건 없는지</div><div>노후·연금 준비는 충분한지</div></div><div class="cn2-ctabtn">전문가 무료 점검 신청 →</div><div class="cn2-src">참고: '+osEsc(sl.src||'')+' · 조건은 관계기관 확인 · 참고용</div></div>';}
-  return '<div class="'+cls+'"'+bg+'>'+logo+pageno+inner+'</div>';
+  if(sl.t==='cover'){inner='<div class="cn2-bottom"><div class="cn2-kicker" style="color:'+acc+'">'+(sl.ic?sl.ic+' ':'')+osEsc(sl.kicker)+'</div><div class="cn2-hook">'+osEsc(sl.hook).replace(/\n/g,'<br>')+'</div><div class="cn2-hint">넘겨서 확인하기 →</div></div>';}
+  else if(sl.t==='point'){inner='<div class="cn2-nb" style="color:'+acc+'">'+(sl.n<10?'0'+sl.n:sl.n)+'</div><div class="cn2-mid2"><div class="cn2-ph">'+osEsc(sl.k)+'</div><div class="cn2-pd">'+osEsc(sl.d)+'</div></div>';}
+  else{inner='<div class="cn2-ctabox"><div class="cn2-ctakick" style="color:'+acc+'">✅ 마지막 · 전문가 점검</div><div class="cn2-ctatitle">이 내용, 내 상황엔<br>어떻게 적용될까요?</div><div class="cn2-chklist"><div>내 보장, 빈틈은 없는지</div><div>받을 수 있는 정책·자금은</div><div>세금·절세, 놓친 건 없는지</div><div>노후·연금 준비는 충분한지</div></div><div class="cn2-ctabtn">전문가 무료 점검 신청 →</div><div class="cn2-src">참고: '+osEsc(sl.src||'')+' · 조건은 관계기관 확인 · 참고용</div></div>';}
+  return '<div class="cn2-slide" style="'+bg+'">'+logo+pageno+inner+'</div>';
 }
 function renderTodayCard(){
   var slides=cardnewsSlides();var n=slides.length;if(CN.i>=n)CN.i=0;
   var dots='';for(var k=0;k<slides.length;k++){dots+='<button class="cn2-dot'+(k===CN.i?' on':'')+'" onclick="cnGo('+k+')" aria-label="'+(k+1)+'"></button>';}
-  var imgBtn=CN.imgURL?'<button class="btn btn-ghost" onclick="cnClearImg()">🗑 이미지 빼기</button>':'';
-  var allBgBtn=CN.imgURL?'<button class="btn '+(CN.allBg?'btn-primary':'btn-ghost')+'" onclick="cnToggleAllBg()">🖼 모든 장 배경 '+(CN.allBg?'ON':'OFF')+'</button>':'';
-  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">5장 · 큰글씨+설명 · 매일 새 주제</span></div>'+
-    '<div class="cn2-intro">이미지를 <b>삽입</b>하면 표지에 깔립니다. <b>모든 장 배경</b>을 켜면 5장 전체에 이미지가 깔려 통일감 있는 인스타 카드뉴스가 됩니다. <b>큰 글씨 후킹 → 밑에 설명</b> 구조로 첫 장에서 눈길을 잡고, 저장하면 로고가 함께 들어갑니다.</div>'+
-    '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="cnPick()">🖼 이미지 삽입</button>'+imgBtn+allBgBtn+
-    '<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>'+
+  var cur=CN.imgs[CN.i],cnt=cnImgCount();
+  var thisImgBtn=cur?'<button class="btn btn-ghost" onclick="cnClearImg()">🗑 이 카드 빼기</button>':'';
+  var clearAllBtn=cnt?'<button class="btn btn-ghost" onclick="cnClearAllImg()">전체 초기화('+cnt+')</button>':'';
+  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">5장 · 카드마다 다른 테마·이미지</span></div>'+
+    '<div class="cn2-intro"><b>카드마다 색 테마가 다르게</b> 만들어져 정보가 한눈에 들어옵니다. 각 장에서 <b>이 카드에 이미지</b>를 누르면 <b>그 장에만</b> 사진이 깔립니다(장마다 다른 사진 OK). 저장하면 로고가 함께 들어갑니다.</div>'+
+    '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="cnPick()">🖼 이 카드에 이미지</button>'+thisImgBtn+
+    '<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>'+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
     '<div class="cn2-stage"><button class="cn2-arrow l" onclick="cnNav(-1)" aria-label="이전">‹</button>'+
     cnSlidePreview(slides[CN.i],CN.i,n)+
@@ -10313,28 +10322,28 @@ function cnCoverFit(ctx,img,W,H){var ir=img.width/img.height,cr=W/H,dw,dh,dx,dy;
 function cnDrawSlide(sl,idx,n){
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
-  var useImg=CN.img&&(sl.t==='cover'||CN.allBg);
-  if(useImg){cnCoverFit(x,CN.img,W,H);var g=x.createLinearGradient(0,0,0,H);if(sl.t==='cover'){g.addColorStop(0,'rgba(10,12,20,.12)');g.addColorStop(.5,'rgba(10,12,20,.32)');g.addColorStop(1,'rgba(8,10,18,.93)');}else{g.addColorStop(0,'rgba(10,12,20,.72)');g.addColorStop(1,'rgba(8,10,18,.82)');}x.fillStyle=g;x.fillRect(0,0,W,H);}
-  else{var g2=x.createLinearGradient(0,0,W*0.45,H);if(sl.t==='cta'){g2.addColorStop(0,'#0F172A');g2.addColorStop(.6,'#1A56DB');g2.addColorStop(1,'#38BDF8');}else{g2.addColorStop(0,'#0F172A');g2.addColorStop(.55,'#131A2A');g2.addColorStop(1,'#1F2937');}x.fillStyle=g2;x.fillRect(0,0,W,H);}
+  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx];
+  if(im&&im.img){cnCoverFit(x,im.img,W,H);var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(8,10,18,.34)');g.addColorStop(1,'rgba(8,10,18,.85)');x.fillStyle=g;x.fillRect(0,0,W,H);}
+  else{var g2=x.createLinearGradient(0,0,W*0.5,H);for(var gi=0;gi<th.cs.length;gi++)g2.addColorStop(th.cs[gi][0],th.cs[gi][1]);x.fillStyle=g2;x.fillRect(0,0,W,H);var ov=x.createLinearGradient(0,0,0,H);ov.addColorStop(0,'rgba(8,10,18,.10)');ov.addColorStop(1,'rgba(8,10,18,.48)');x.fillStyle=ov;x.fillRect(0,0,W,H);}
   var PAD=96;x.textBaseline='top';
   drawApexMark(x,PAD+28,74,62,'rgba(255,255,255,.94)');
   x.font='700 30px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.6)';x.textAlign='right';x.fillText((idx+1)+' / '+n,W-PAD,86);x.textAlign='left';
   if(sl.t==='cover'){
-    x.font='800 38px Pretendard'+FF;x.fillStyle='#93C5FD';var kk=(sl.ic?sl.ic+' ':'')+sl.kicker;
+    x.font='800 38px Pretendard'+FF;x.fillStyle=acc;var kk=(sl.ic?sl.ic+' ':'')+sl.kicker;
     var hk=cnWrap(x,sl.hook,W-PAD*2);
     var hy=H-360-(hk.length*92);
     x.fillText(kk,PAD,hy-58);
     x.fillStyle='#fff';x.font='900 84px Pretendard'+FF;var ty=hy;hk.slice(0,4).forEach(function(ln){x.fillText(ln,PAD,ty);ty+=92;});
     x.font='600 32px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.74)';x.fillText('넘겨서 확인하기 →',PAD,ty+18);
   }else if(sl.t==='point'){
-    x.fillStyle='rgba(147,197,253,.9)';x.font='900 60px Pretendard'+FF;x.fillText((sl.n<10?'0'+sl.n:''+sl.n),PAD,200);
+    x.fillStyle=acc;x.font='900 60px Pretendard'+FF;x.fillText((sl.n<10?'0'+sl.n:''+sl.n),PAD,200);
     x.fillStyle='#fff';x.font='900 92px Pretendard'+FF;var kl=cnWrap(x,sl.k,W-PAD*2);var ky=430;kl.forEach(function(ln){x.fillText(ln,PAD,ky);ky+=104;});
     ky+=18;x.fillStyle='rgba(255,255,255,.86)';x.font='500 42px Pretendard'+FF;var dl=cnWrap(x,sl.d,W-PAD*2);dl.forEach(function(ln){x.fillText(ln,PAD,ky);ky+=58;});
   }else{
-    x.fillStyle='#93C5FD';x.font='800 34px Pretendard'+FF;x.fillText('✅ 마지막 · 전문가 점검',PAD,210);
+    x.fillStyle=acc;x.font='800 34px Pretendard'+FF;x.fillText('✅ 마지막 · 전문가 점검',PAD,210);
     x.fillStyle='#fff';x.font='900 76px Pretendard'+FF;var ctt=['이 내용, 내 상황엔','어떻게 적용될까요?'];var ty2=290;ctt.forEach(function(ln){x.fillText(ln,PAD,ty2);ty2+=90;});
     var chks=['내 보장, 빈틈은 없는지','받을 수 있는 정책·자금은','세금·절세, 놓친 건 없는지','노후·연금 준비는 충분한지'];
-    var chy=ty2+44;x.font='600 42px Pretendard'+FF;chks.forEach(function(t){x.fillStyle='#93C5FD';x.fillText('✓',PAD,chy);x.fillStyle='rgba(255,255,255,.92)';x.fillText(t,PAD+66,chy);chy+=74;});
+    var chy=ty2+44;x.font='600 42px Pretendard'+FF;chks.forEach(function(t){x.fillStyle=acc;x.fillText('✓',PAD,chy);x.fillStyle='rgba(255,255,255,.92)';x.fillText(t,PAD+66,chy);chy+=74;});
     var by=chy+36;x.fillStyle='rgba(255,255,255,.18)';cnRoundRect(x,PAD,by,W-PAD*2,128,22);x.fill();
     x.fillStyle='#fff';x.font='800 44px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('전문가 무료 점검 신청 →',W/2,by+64);x.textAlign='left';x.textBaseline='top';
     x.font='500 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.62)';x.fillText('참고: '+(sl.src||'')+' · 조건은 관계기관 확인 · 참고용',PAD,H-116);
