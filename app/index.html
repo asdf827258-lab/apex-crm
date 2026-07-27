@@ -10284,18 +10284,26 @@ function cnGo(k){var slides=cardnewsSlides();var n=slides.length;CN.i=(k%n+n)%n;
 function cnNav(d){cnGo(CN.i+d);}
 function cardnewsShuffle(){CN_OFF++;CN.i=0;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
 /* ── 화면 미리보기(HTML) — 세로 4:5 ── */
+/* 매거진 텍스트 매핑 — 카드별 (라벨 / 헤드라인 / 서브카피) */
+function cnMagText(sl){
+  if(sl.t==='cover')return {k:(sl.ic?sl.ic+' ':'')+sl.kicker, t:sl.hook, s:'넘겨서 확인하기  →'};
+  if(sl.t==='point')return {k:'POINT '+(sl.n<10?'0'+sl.n:''+sl.n), t:sl.k, s:sl.d};
+  return {k:'전문가 무료 점검', t:'이 내용, 내 상황엔\n어떻게 적용될까요?', s:'내 보장·정책자금·세금·노후 — 지금 무료로 점검받으세요.  프로필 링크 →'};
+}
 function cnSlidePreview(sl,idx,n){
-  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx];
+  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx],m=cnMagText(sl);
   var logo='<span class="cn2-logo">'+APEX_LOGO_SVG+'</span>';
+  var mast='<span class="cn2-mag-mast">APEX YUN PRO</span>';
   var pageno='<span class="cn2-page">'+(idx+1)+' / '+n+'</span>';
   var bg;
-  if(im&&im.url){bg='background-image:linear-gradient(rgba(8,10,18,.34),rgba(8,10,18,.82)),url('+im.url+');background-size:cover;background-position:center';}
-  else{bg='background-image:linear-gradient(180deg,rgba(8,10,18,.10),rgba(8,10,18,.50)),'+th.g;}
-  var inner='';
-  if(sl.t==='cover'){inner='<div class="cn2-bottom"><div class="cn2-kicker" style="color:'+acc+'">'+(sl.ic?sl.ic+' ':'')+osEsc(sl.kicker)+'</div><div class="cn2-hook">'+osEsc(sl.hook).replace(/\n/g,'<br>')+'</div><div class="cn2-hint">넘겨서 확인하기 →</div></div>';}
-  else if(sl.t==='point'){inner='<div class="cn2-nb" style="color:'+acc+'">'+(sl.n<10?'0'+sl.n:sl.n)+'</div><div class="cn2-mid2"><div class="cn2-ph">'+osEsc(sl.k)+'</div><div class="cn2-pd">'+osEsc(sl.d)+'</div></div>';}
-  else{inner='<div class="cn2-ctabox"><div class="cn2-ctakick" style="color:'+acc+'">✅ 마지막 · 전문가 점검</div><div class="cn2-ctatitle">이 내용, 내 상황엔<br>어떻게 적용될까요?</div><div class="cn2-chklist"><div>내 보장, 빈틈은 없는지</div><div>받을 수 있는 정책·자금은</div><div>세금·절세, 놓친 건 없는지</div><div>노후·연금 준비는 충분한지</div></div><div class="cn2-ctabtn">전문가 무료 점검 신청 →</div><div class="cn2-src">참고: '+osEsc(sl.src||'')+' · 조건은 관계기관 확인 · 참고용</div></div>';}
-  return '<div class="cn2-slide" style="'+bg+'">'+logo+pageno+inner+'</div>';
+  if(im&&im.url){bg='background-image:linear-gradient(180deg,rgba(8,10,18,.22),rgba(8,10,18,.04) 34%,rgba(8,10,18,.90)),url('+im.url+');background-size:cover;background-position:center';}
+  else{bg='background-image:linear-gradient(180deg,rgba(8,10,18,.10),rgba(8,10,18,.72)),'+th.g;}
+  var body='<div class="cn2-mag-body">'+
+    '<div class="cn2-mag-rule" style="background:'+acc+'"></div>'+
+    '<div class="cn2-mag-kicker" style="color:'+acc+'">'+osEsc(m.k)+'</div>'+
+    '<div class="cn2-mag-title">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+
+    '<div class="cn2-mag-sub">'+osEsc(m.s)+'</div></div>';
+  return '<div class="cn2-slide cn2-mag" style="'+bg+'">'+logo+mast+pageno+body+'</div>';
 }
 function renderTodayCard(){
   var slides=cardnewsSlides();var n=slides.length;if(CN.i>=n)CN.i=0;
@@ -10303,8 +10311,8 @@ function renderTodayCard(){
   var cur=CN.imgs[CN.i],cnt=cnImgCount();
   var thisImgBtn=cur?'<button class="btn btn-ghost" onclick="cnClearImg()">🗑 이 카드 빼기</button>':'';
   var clearAllBtn=cnt?'<button class="btn btn-ghost" onclick="cnClearAllImg()">전체 초기화('+cnt+')</button>':'';
-  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">5장 · 카드마다 다른 테마·이미지</span></div>'+
-    '<div class="cn2-intro"><b>카드마다 색 테마가 다르게</b> 만들어져 정보가 한눈에 들어옵니다. 각 장에서 <b>이 카드에 이미지</b>를 누르면 <b>그 장에만</b> 사진이 깔립니다(장마다 다른 사진 OK). 저장하면 로고가 함께 들어갑니다.</div>'+
+  return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">5장 · 사진 매거진 스타일</span></div>'+
+    '<div class="cn2-intro"><b>사진 매거진 스타일</b> — 각 장에서 <b>이 카드에 이미지</b>를 누르면 <b>그 장에 사진이 꽉 차게</b> 깔리고, 위에 라벨·헤드라인·설명이 얹힙니다(장마다 다른 사진 OK). 사진을 안 넣은 장은 카드별 색 테마가 자동으로 들어갑니다. 저장하면 로고가 함께 들어갑니다.</div>'+
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="cnPick()">🖼 이 카드에 이미지</button>'+thisImgBtn+
     '<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>'+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
@@ -10322,32 +10330,24 @@ function cnCoverFit(ctx,img,W,H){var ir=img.width/img.height,cr=W/H,dw,dh,dx,dy;
 function cnDrawSlide(sl,idx,n){
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
-  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx];
-  if(im&&im.img){cnCoverFit(x,im.img,W,H);var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(8,10,18,.34)');g.addColorStop(1,'rgba(8,10,18,.85)');x.fillStyle=g;x.fillRect(0,0,W,H);}
-  else{var g2=x.createLinearGradient(0,0,W*0.5,H);for(var gi=0;gi<th.cs.length;gi++)g2.addColorStop(th.cs[gi][0],th.cs[gi][1]);x.fillStyle=g2;x.fillRect(0,0,W,H);var ov=x.createLinearGradient(0,0,0,H);ov.addColorStop(0,'rgba(8,10,18,.10)');ov.addColorStop(1,'rgba(8,10,18,.48)');x.fillStyle=ov;x.fillRect(0,0,W,H);}
-  var PAD=96;x.textBaseline='top';
-  drawApexMark(x,PAD+28,74,62,'rgba(255,255,255,.94)');
-  x.font='700 30px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.6)';x.textAlign='right';x.fillText((idx+1)+' / '+n,W-PAD,86);x.textAlign='left';
-  if(sl.t==='cover'){
-    x.font='800 38px Pretendard'+FF;x.fillStyle=acc;var kk=(sl.ic?sl.ic+' ':'')+sl.kicker;
-    var hk=cnWrap(x,sl.hook,W-PAD*2);
-    var hy=H-360-(hk.length*92);
-    x.fillText(kk,PAD,hy-58);
-    x.fillStyle='#fff';x.font='900 84px Pretendard'+FF;var ty=hy;hk.slice(0,4).forEach(function(ln){x.fillText(ln,PAD,ty);ty+=92;});
-    x.font='600 32px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.74)';x.fillText('넘겨서 확인하기 →',PAD,ty+18);
-  }else if(sl.t==='point'){
-    x.fillStyle=acc;x.font='900 60px Pretendard'+FF;x.fillText((sl.n<10?'0'+sl.n:''+sl.n),PAD,200);
-    x.fillStyle='#fff';x.font='900 92px Pretendard'+FF;var kl=cnWrap(x,sl.k,W-PAD*2);var ky=430;kl.forEach(function(ln){x.fillText(ln,PAD,ky);ky+=104;});
-    ky+=18;x.fillStyle='rgba(255,255,255,.86)';x.font='500 42px Pretendard'+FF;var dl=cnWrap(x,sl.d,W-PAD*2);dl.forEach(function(ln){x.fillText(ln,PAD,ky);ky+=58;});
-  }else{
-    x.fillStyle=acc;x.font='800 34px Pretendard'+FF;x.fillText('✅ 마지막 · 전문가 점검',PAD,210);
-    x.fillStyle='#fff';x.font='900 76px Pretendard'+FF;var ctt=['이 내용, 내 상황엔','어떻게 적용될까요?'];var ty2=290;ctt.forEach(function(ln){x.fillText(ln,PAD,ty2);ty2+=90;});
-    var chks=['내 보장, 빈틈은 없는지','받을 수 있는 정책·자금은','세금·절세, 놓친 건 없는지','노후·연금 준비는 충분한지'];
-    var chy=ty2+44;x.font='600 42px Pretendard'+FF;chks.forEach(function(t){x.fillStyle=acc;x.fillText('✓',PAD,chy);x.fillStyle='rgba(255,255,255,.92)';x.fillText(t,PAD+66,chy);chy+=74;});
-    var by=chy+36;x.fillStyle='rgba(255,255,255,.18)';cnRoundRect(x,PAD,by,W-PAD*2,128,22);x.fill();
-    x.fillStyle='#fff';x.font='800 44px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('전문가 무료 점검 신청 →',W/2,by+64);x.textAlign='left';x.textBaseline='top';
-    x.font='500 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.62)';x.fillText('참고: '+(sl.src||'')+' · 조건은 관계기관 확인 · 참고용',PAD,H-116);
-  }
+  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx],m=cnMagText(sl);
+  if(im&&im.img){cnCoverFit(x,im.img,W,H);var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(8,10,18,.22)');g.addColorStop(0.34,'rgba(8,10,18,.04)');g.addColorStop(1,'rgba(8,10,18,.90)');x.fillStyle=g;x.fillRect(0,0,W,H);}
+  else{var g2=x.createLinearGradient(0,0,W*0.5,H);for(var gi=0;gi<th.cs.length;gi++)g2.addColorStop(th.cs[gi][0],th.cs[gi][1]);x.fillStyle=g2;x.fillRect(0,0,W,H);var ov=x.createLinearGradient(0,0,0,H);ov.addColorStop(0,'rgba(8,10,18,.10)');ov.addColorStop(1,'rgba(8,10,18,.72)');x.fillStyle=ov;x.fillRect(0,0,W,H);}
+  var PAD=96;x.textBaseline='top';x.textAlign='left';
+  drawApexMark(x,PAD+24,68,54,'rgba(255,255,255,.95)');
+  x.font='800 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.9)';x.fillText('APEX YUN PRO',PAD+66,80);
+  x.font='700 30px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.6)';x.textAlign='right';x.fillText((idx+1)+' / '+n,W-PAD,82);x.textAlign='left';
+  var maxW=W-PAD*2;
+  x.font='900 84px Pretendard'+FF;var tl=cnWrap(x,m.t,maxW).slice(0,4);
+  x.font='500 40px Pretendard'+FF;var sll=cnWrap(x,m.s,maxW).slice(0,3);
+  var titleLH=94,subLH=54,blockBottom=H-118;
+  var subH=sll.length*subLH,subTop=blockBottom-subH;
+  var titleH=tl.length*titleLH,titleTop=subTop-32-titleH;
+  var kickerY=titleTop-52,ruleY=kickerY-30;
+  x.fillStyle=acc;cnRoundRect(x,PAD,ruleY,56,5,3);x.fill();
+  x.font='800 30px Pretendard'+FF;x.fillStyle=acc;x.fillText(m.k,PAD,kickerY);
+  x.fillStyle='#fff';x.font='900 84px Pretendard'+FF;var ty=titleTop;for(var ti=0;ti<tl.length;ti++){x.fillText(tl[ti],PAD,ty);ty+=titleLH;}
+  x.fillStyle='rgba(255,255,255,.88)';x.font='500 40px Pretendard'+FF;var sy=subTop;for(var si=0;si<sll.length;si++){x.fillText(sll[si],PAD,sy);sy+=subLH;}
   return c;
 }
 function cnDownload(canvas,name){try{if(canvas.toBlob){canvas.toBlob(function(b){if(!b)return;var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name+'.png';a.click();setTimeout(function(){URL.revokeObjectURL(u);},2000);},'image/png');}else{var a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download=name+'.png';a.click();}}catch(e){toast('이미지 저장 실패');}}
@@ -10386,7 +10386,14 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cn2-arrow:hover{background:rgba(15,23,42,.55)}.cn2-arrow.l{left:-10px}.cn2-arrow.r{right:-10px}',
    '.cn2-dots{display:flex;gap:6px;justify-content:center;margin:12px 0}',
    '.cn2-dot{width:8px;height:8px;border-radius:50%;border:none;background:#CBD5E1;cursor:pointer;padding:0}',
-   '.cn2-dot.on{background:#7C3AED;width:20px;border-radius:5px}'
+   '.cn2-dot.on{background:#7C3AED;width:20px;border-radius:5px}',
+   '.cn2-mag{justify-content:flex-end}',
+   '.cn2-mag-mast{position:absolute;top:20px;left:60px;font-size:11px;font-weight:800;letter-spacing:1.5px;color:rgba(255,255,255,.92)}',
+   '.cn2-mag-body{margin-top:auto}',
+   '.cn2-mag-rule{width:34px;height:3px;border-radius:2px;margin-bottom:13px}',
+   '.cn2-mag-kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;margin-bottom:9px}',
+   '.cn2-mag-title{font-size:29px;font-weight:900;line-height:1.24;letter-spacing:-.5px}',
+   '.cn2-mag-sub{font-size:13.5px;font-weight:500;line-height:1.55;color:rgba(255,255,255,.86);margin-top:11px}'
   ].join('');
   document.head.appendChild(s);
 })();
