@@ -10313,7 +10313,7 @@ function cnSlidePreview(sl,idx,n){
     var its=(sl.items||[]).slice(0,4).map(function(z){return '<li>'+osEsc(z)+'</li>';}).join('');
     body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-list-t">'+osEsc(m.t)+'</div><ul class="cn2-list" style="--acc:'+acc+'">'+its+'</ul></div>';
   }else if(lay==='cta'){
-    body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-mag-title">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+(m.s?'<div class="cn2-cta-pill">'+osEsc(m.s)+'</div>':'')+'</div>';
+    body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-mag-title">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+(m.s?'<div class="cn2-cta-pill">'+osEsc(m.s)+'</div>':'')+'<div class="cn2-disc">본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.</div></div>';
   }else if(lay==='point'){
     body='<div class="cn2-mag-body">'+(m.k?'<div class="cn2-nb2" style="color:'+acc+'">'+osEsc(m.k)+'</div>':'')+'<div class="cn2-ph2">'+osEsc(m.t)+'</div>'+sub+'</div>';
   }else{ /* cover */
@@ -10323,17 +10323,19 @@ function cnSlidePreview(sl,idx,n){
 }
 /* ── AI 카드뉴스 기획·생성 (인스타 캐러셀 전문 기획자 프롬프트) ── */
 function cnAiSys(){
-  return sys('너는 인스타그램 캐러셀 콘텐츠 전문 기획자다. 사용자가 준 주제/초안을 단순 나열하지 말고, 사람들이 멈춰 읽고 저장·팔로우하고 싶은 8~10장 캐러셀로 재구성한다.\n[원칙]\n- 이 콘텐츠가 가장 필요한 핵심 타깃 한 명을 구체적으로 정의한다.\n- 표지 제목은 주제명이 아니라 독자가 얻을 결과/변화/이득 또는 피할 손해가 드러나게 쓴다.\n- 누구나 아는 뻔한 조언은 피하고 경험·반전·구체 사례·새로운 해석을 활용한다.\n- 한 장에는 하나의 메시지만. 각 장의 첫 문장에서 결론이 보이게. 설명은 짧고 쉬운 입말.\n- 어려운 용어·과장된 성과 보장 금지. 친근하고 자연스러운 말투.\n- 보험/재무 주제면 준법: 확정 수익·지급 보장 단정 금지, 통계·수치는 (예시)로 표기. 게시 전 준법확인 권장을 마지막 CTA 부근에 자연스럽게.\n[출력은 아래 JSON 하나만. 코드블록·설명·머리말 없이 순수 JSON만 출력한다.]\n{"target":"핵심 타깃 1명 구체 묘사","benefit":"독자가 얻는 핵이득 한 문장","titles":["표지 제목 후보 10개 배열"],"pickTitle":"가장 추천하는 표지 제목","pickWhy":"추천 이유 1~2문장","cta":"댓글/저장/팔로우 중 목적에 맞는 CTA 문장","selfcheck":"제목·타깃·차별성·가독성·독자이득 자체 점검 후 개선점 요약","slides":[{"layout":"cover","kicker":"짧은 라벨","title":"핵이득형 표지 제목","sub":"보조 한 줄"},{"layout":"stat","kicker":"라벨","big":"강조 숫자·수치","title":"짧은 라벨","sub":"한 줄"},{"layout":"quote","title":"강한 한 문장(짧게)","sub":""},{"layout":"point","kicker":"01","title":"장 제목(결론 먼저)","sub":"쉬운 입말 1~2문장"},{"layout":"list","kicker":"라벨","title":"목록 제목","items":["짧은 항목","짧은 항목","짧은 항목"]},{"layout":"cta","kicker":"저장·팔로우 유도","title":"행동 유도 제목","sub":"버튼 문구"}]}\n[중요 · 형식 다양성] slides는 총 8~10장. 위 layout(cover/stat/quote/point/list/cta)을 섞어서 매 장 형식·정보량·글자 크기가 다르게 구성한다. 최소 4종류 이상 사용하고, 같은 layout을 3연속 쓰지 마라. 1번=cover, 마지막=cta. stat은 big에 숫자/핵심 수치를 넣고 글자는 최소화, quote는 sub를 비우고 강한 한 문장만, list는 items 2~4개를 짧게, point는 설명을 조금 더 길게. 어떤 장은 아주 짧게, 어떤 장은 촘촘하게 — 리듬을 만들어라.');
+  return sys('너는 금융·보험 분야 인스타그램 캐러셀 전문 편집자다. 사용자가 기준 날짜·뉴스 원문·기사 URL·키워드를 주면, 뉴스를 단순 요약하지 말고 고객이 멈춰 읽고 저장하며 자기 금융 상태를 점검하게 만드는 8~10장 캐러셀을 만든다. 각 뉴스가 고객의 월급·생활비·투자금·보험료·치료비·노후자금에 어떤 영향을 줄 수 있는지 쉽게 연결해 설명한다.\n[목적] 수익 보장·특정 상품 가입 유도가 아니다. 고객이 ①돈의 흐름이 어떻게 바뀌는지 ②어떤 금융 위험을 미리 확인해야 하는지 ③내 주식·펀드·변액보험에 어떤 영향인지 ④현재 보험·치료비 준비가 충분한지 ⑤지금 확인·질문할 것이 무엇인지 이해하게 돕는 것.\n[타깃] 기본: 35~55세 직장인·자영업자 중 주식·펀드·변액보험·보험료·치료비·노후에 관심은 있지만 금융용어가 어려운 사람(주식 있으나 흐름 모름, 변액 수익률 오래 안 봄, 보험료는 내는데 보장 모름, 암·뇌·심장 치료비 걱정, 자녀 교육비+부모 의료비 이중부담, 노후 불안). 사용자가 타깃을 주면 그것을 우선.\n[뉴스 선택] 우선순위: 자산·지출에 직접 영향 > 주식·펀드·변액·보험·치료비와 연결 > 숫자 변화가 큼 > 많이 놓치는 제도 변화 > 기한·조건 임박 > 상담에서 자주 나올 질문. 연예·자극 사건·무관 뉴스 제외.\n[사실 원칙] 입력 자료에 있는 숫자·날짜·조건만 사용한다. 날짜·금액·수익률·지수·보험료·치료비·보장 조건을 절대 추측하지 마라. 확인 안 되면 "현재 제공된 자료만으로는 정확한 확인이 어렵습니다"라고 쓴다. URL만 있고 본문이 없으면 내용을 지어내지 말고 일반 원리 중심으로 쓰되 숫자를 만들지 마라. 오래된 정보와 최신 정보를 섞지 말고, 기사 작성일과 사건 발생일이 다르면 구분한다.\n[제목] 주제명만 쓰지 마라("오늘의 경제뉴스" 금지). 독자의 이득/피할 손해/지금 확인할 이유/반전/돈과의 직접 연결 중 최소 하나가 보이게. 22자 이내. "무조건·확실한 수익·지금 안 하면 손해·대박 종목·원금 보장" 금지. 공포 과장 금지.\n[구성] 장수는 입력값(기본 10). 흐름: 1 표지(layout cover: 결과가 보이는 제목+보조문구+기준날짜 라벨) → 2 고객 상황(point: 자신의 이야기라 느낄 질문, 첫 문장에 결론) → 3 핵심뉴스1(stat: 가장 중요한 변화, big에 검증된 숫자) → 4 핵심뉴스2(point: 주식·펀드·변액 연결, 확인할 항목 중심) → 5 핵심뉴스3(point 또는 stat: 보험료·보장·실손·치료비 연결, 실제 부담 비용) → 6 놓치기 쉬운 반전(quote: 흔한 오해, 사실과 해석 구분) → 7 고객별 영향(list: 주식투자자/펀드/변액/실손/암뇌심장/자녀가정/은퇴준비/대출자 중 관련 3개, 각 "무엇을 확인해야 하는지" 한 문장) → 8 오늘 확인할 체크리스트(list: 실행 가능한 3~5개) → 9 한 줄 정리(quote: 불안 대신 방향) → 10 CTA(cta: 목적에 맞는 문구 하나). 8~9장이면 6 또는 9를 합쳐 줄인다. 같은 layout 3연속 금지, 최소 4종 사용 — 장마다 정보량·글자 크기 리듬을 다르게.\n[페이지 문장] 한 장=한 메시지. 결론형 제목 22자 이내, 본문(sub)은 쉬운 입말 1~3문장·70자 이내, 핵심 숫자나 체크포인트 1개 포함. 전문용어는 바로 풀기(예: 비급여는 건강보험이 적용되지 않아 직접 부담하는 비용). "문제는 여기부터입니다 / 많은 분이 이 부분을 놓칩니다 / 주가가 올랐다고 내 계좌도 오른 것은 아닙니다 / 보험이 있다는 것과 치료비가 충분하다는 것은 다릅니다 / 지금 필요한 건 불안이 아니라 확인입니다" 같은 표현을 자연스럽게 활용.\n[안전] 특정 종목 매수·매도 권유 금지, 특정 상품 가입 강요 금지, 수익률·보험금 지급 보장 금지, 과거 수익률이 미래를 보장하지 않음을 표시, 보험금 지급은 약관·가입시기·심사에 따라 다름, 치료비는 환자 상태·병원·급여 여부에 따라 다름, 사실과 의견 분리, 불확실한 전망은 "가능성이 있습니다", 공포심·죄책감 주지 않기.\n[이미지] 각 장의 img에 글자·로고·숫자가 보이지 않는 실사 사진 프롬프트를 1줄로 쓴다. 한국인 고객의 생활 장면, 경제신문·비즈니스 매거진 톤, 네이비·화이트·블루·골드 포인트, 세로 4:5, 텍스트 얹을 여백, 과도한 연출·자극적 표현(환자 고통 등) 금지.\n[출력은 아래 JSON 하나만. 코드블록·설명·머리말 없이 순수 JSON만 출력한다.]\n{"baseDate":"기준 날짜","target":"핵심 타깃","benefit":"독자가 얻는 핵심 이득 한 문장","newsPick":"선정한 주요 뉴스와 선정 이유 1~2문장","titles":["표지 제목 후보 10개 — 이득형2·손실방지형2·질문형2·반전형2·체크리스트형2"],"pickTitle":"가장 추천하는 제목","pickWhy":"추천 이유","caption":"인스타 캡션 2~4문장 + 해시태그 8~12개","sources":"뉴스 출처와 날짜(입력 자료 기준, 지어내지 말 것)","cta":"목적에 맞는 CTA 한 문장","selfcheck":"자체 점검(제목 이득·타깃 구체성·한 장 한 메시지·결론 먼저·돈 연결·숫자 출처·보장 표현 없음·행동 명확성) 후 수정 반영 요약","slides":[{"layout":"cover|stat|quote|point|list|cta","kicker":"짧은 라벨(포인트는 01,02 같은 번호 가능)","title":"결론형 제목(22자 이내)","sub":"본문(쉬운 입말, 70자 이내)","big":"stat일 때 강조 숫자·수치","items":["list일 때 항목 2~5개"],"img":"이 장의 실사 사진 프롬프트 1줄"}]}\n[자체 점검] 점검에서 발견한 문제는 점검으로 끝내지 말고, 고친 최종 문구를 slides에 반영해 출력한다.');
 }
 function cnAiParse(txt){try{var t=''+txt,s=t.indexOf('{'),e=t.lastIndexOf('}');if(s<0||e<0)return null;return JSON.parse(t.slice(s,e+1));}catch(x){return null;}}
-function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{};var lay=a.layout||(i===0?'cover':(i===arr.length-1?'cta':'point'));if(i===0)lay='cover';if(i===arr.length-1&&arr.length>1)lay='cta';var tp=(lay==='cover'?'cover':(lay==='cta'?'cta':'point'));out.push({t:tp,layout:lay,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),big:(a.big||''),items:(a.items||[]),n:i});}return out;}
+function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{};var lay=a.layout||(i===0?'cover':(i===arr.length-1?'cta':'point'));if(i===0)lay='cover';if(i===arr.length-1&&arr.length>1)lay='cta';var tp=(lay==='cover'?'cover':(lay==='cta'?'cta':'point'));out.push({t:tp,layout:lay,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),big:(a.big||''),items:(a.items||[]),img:(a.img||''),n:i});}return out;}
 function cnAiGen(){
   var topic=(osVal('cnAiTopic')||'').replace(/^\s+|\s+$/g,'');
-  if(!topic){toast('주제나 초안을 입력하세요');return;}
+  if(!topic){toast('뉴스 원문·키워드를 입력하세요');return;}
   CN.aiTopic=topic;
+  CN.aiPurpose=osVal('cnAiPurpose')||'저장';CN.aiTone=osVal('cnAiTone')||'친근한 전문가';CN.aiCount=osVal('cnAiCount')||'10장';
   if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');go('settings');return;}
-  var btn=$('cnAiBtn');if(btn){btn.disabled=true;btn.textContent='기획 중… (15~40초)';}
-  callAI(cnAiSys(),'주제/초안: '+topic+'\n\n위 주제로 8~10장 인스타 캐러셀을 기획해서 JSON으로만 출력해줘.',4000,'cardnews').then(function(txt){
+  var btn=$('cnAiBtn');if(btn){btn.disabled=true;btn.textContent='편집 중… (20~50초)';}
+  var user='[입력값]\n기준 날짜: '+cnDateStr()+'\n뉴스 원문/URL/키워드: '+topic+'\n핵심 타깃: (미입력 — 기본 타깃 적용)\n캐러셀 장수: '+CN.aiCount+'\n콘텐츠 목적: '+CN.aiPurpose+'\n브랜드명: APEX YUN PRO\n말투: '+CN.aiTone+'\n디자인 스타일: 네이비 경제신문(다크 매거진)\n\n위 입력으로 캐러셀을 만들어 JSON으로만 출력해줘.';
+  callAI(cnAiSys(),user,6000,'cardnews').then(function(txt){
     var plan=cnAiParse(txt);
     if(!plan||!plan.slides||!plan.slides.length){toast('결과 해석 실패 — 다시 시도해 주세요.');if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}return;}
     CN.aiPlan=plan;CN.ai=cnAiToSlides(plan.slides);CN.i=0;CN.imgs={};
@@ -10342,16 +10344,21 @@ function cnAiGen(){
   }).catch(function(e){toast('생성 실패: '+((e&&e.message)||e));if(btn){btn.disabled=false;btn.textContent='🤖 AI로 8~10장 만들기';}});
 }
 function cnAiClear(){CN.ai=null;CN.aiPlan=null;CN.imgs={};CN.i=0;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
-function cnAiCopyPlan(){var p=CN.aiPlan;if(!p)return;var t='[핵심 타깃] '+(p.target||'')+'\n[핵이득] '+(p.benefit||'')+'\n\n[제목 후보]\n'+((p.titles||[]).map(function(x,i){return (i+1)+'. '+x;}).join('\n'))+'\n\n[추천 제목] '+(p.pickTitle||'')+'\n → '+(p.pickWhy||'')+'\n\n[페이지 문구]\n'+((CN.ai||[]).map(function(s,i){return (i+1)+'. ['+(s.mk||'')+'] '+(s.mt||'')+' — '+(s.ms||'');}).join('\n'))+'\n\n[CTA] '+(p.cta||'')+'\n\n[자체 점검] '+(p.selfcheck||'');copyText(t);}
+function cnAiCopyPlan(){var p=CN.aiPlan;if(!p)return;var t='[기준 날짜] '+(p.baseDate||'')+'\n[뉴스 선정] '+(p.newsPick||'')+'\n[핵심 타깃] '+(p.target||'')+'\n[핵이득] '+(p.benefit||'')+'\n\n[제목 후보]\n'+((p.titles||[]).map(function(x,i){return (i+1)+'. '+x;}).join('\n'))+'\n\n[추천 제목] '+(p.pickTitle||'')+'\n → '+(p.pickWhy||'')+'\n\n[페이지 문구]\n'+((CN.ai||[]).map(function(s,i){return (i+1)+'. ['+(s.mk||'')+'] '+(s.mt||'')+' — '+(s.ms||'')+((s.items&&s.items.length)?(' / '+s.items.join(' · ')):'');}).join('\n'))+'\n\n[장별 이미지 프롬프트]\n'+((CN.ai||[]).map(function(s,i){return s.img?((i+1)+'. '+s.img):'';}).filter(Boolean).join('\n'))+'\n\n[캡션]\n'+(p.caption||'')+'\n\n[CTA] '+(p.cta||'')+'\n[출처] '+(p.sources||'')+'\n\n[자체 점검] '+(p.selfcheck||'')+'\n\n※ 본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험 계약의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.';copyText(t);}
 function cnAiPlanHtml(){
   var p=CN.aiPlan;if(!p)return '';
   var titles=(p.titles||[]).map(function(x){return '<li>'+osEsc(x)+'</li>';}).join('');
-  return '<div class="cn-plan"><div class="cn-plan-hd">🧠 AI 기획안 <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiCopyPlan()">📋 기획안 복사</button> <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiClear()">기본 주제로</button></div>'+
+  var imgs=(CN.ai||[]).map(function(s,i){return s.img?'<li><b>'+(i+1)+'장</b> '+osEsc(s.img)+'</li>':'';}).join('');
+  return '<div class="cn-plan"><div class="cn-plan-hd">🧠 AI 편집안 <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiCopyPlan()">📋 전체 복사</button> <button class="btn btn-ghost" style="padding:3px 9px;font-size:11px" onclick="cnAiClear()">기본 주제로</button></div>'+
+    ((p.baseDate||p.newsPick)?'<div class="cn-plan-row"><b>뉴스 선정</b> '+(p.baseDate?osEsc(p.baseDate)+' · ':'')+osEsc(p.newsPick||'')+'</div>':'')+
     '<div class="cn-plan-row"><b>핵심 타깃</b> '+osEsc(p.target||'-')+'</div>'+
     '<div class="cn-plan-row"><b>핵이득</b> '+osEsc(p.benefit||'-')+'</div>'+
     '<div class="cn-plan-row"><b>추천 제목</b> '+osEsc(p.pickTitle||'-')+' <span style="color:#94A3B8">— '+osEsc(p.pickWhy||'')+'</span></div>'+
     (titles?'<details class="cn-plan-det"><summary>표지 제목 후보 10개</summary><ol style="margin:6px 0 0 18px;padding:0;font-size:11.5px;color:#475569;line-height:1.7">'+titles+'</ol></details>':'')+
+    (p.caption?'<details class="cn-plan-det"><summary>인스타 캡션 (붙여넣기용)</summary><div style="font-size:11.5px;color:#475569;line-height:1.7;margin-top:6px;white-space:pre-wrap">'+osEsc(p.caption)+'</div></details>':'')+
+    (imgs?'<details class="cn-plan-det"><summary>장별 실사 이미지 프롬프트 (사진 준비용)</summary><ol style="margin:6px 0 0 18px;padding:0;font-size:11.5px;color:#475569;line-height:1.7">'+imgs+'</ol></details>':'')+
     '<div class="cn-plan-row"><b>CTA</b> '+osEsc(p.cta||'-')+'</div>'+
+    (p.sources?'<div class="cn-plan-row" style="color:#94A3B8"><b>출처</b> '+osEsc(p.sources)+'</div>':'')+
     (p.selfcheck?'<div class="cn-plan-row" style="color:#64748B"><b>자체 점검</b> '+osEsc(p.selfcheck)+'</div>':'')+
   '</div>';
 }
@@ -10362,9 +10369,13 @@ function renderTodayCard(){
   var cur=CN.imgs[CN.i],cnt=cnImgCount();
   var thisImgBtn=cur?'<button class="btn btn-ghost" onclick="cnClearImg()">🗑 이 카드 빼기</button>':'';
   var clearAllBtn=cnt?'<button class="btn btn-ghost" onclick="cnClearAllImg()">전체 초기화('+cnt+')</button>':'';
-  var aiBox='<div class="cn-ai"><div class="cn-ai-lb">✍️ AI 카드뉴스 기획 — 주제·초안만 넣으면 인스타 캐러셀 전문 기획자가 8~10장으로 재구성합니다</div>'+
-    '<textarea id="cnAiTopic" class="cn-ai-ta" placeholder="예) 40대 가장이 놓치기 쉬운 보장 3가지 / 실손 4세대 전환, 지금 갈아타야 할까?">'+(CN.aiTopic?osEsc(CN.aiTopic):'')+'</textarea>'+
-    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 8~10장 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
+  function cnSel(id,opts,cur){var h='<select id="'+id+'" class="cn-ai-sel">';for(var oi=0;oi<opts.length;oi++){h+='<option'+(opts[oi]===cur?' selected':'')+'>'+opts[oi]+'</option>';}return h+'</select>';}
+  var aiBox='<div class="cn-ai"><div class="cn-ai-lb">📰 AI 카드뉴스 편집 — 뉴스 원문·키워드를 넣으면 금융·보험 전문 편집자가 내 돈과 연결된 8~10장 캐러셀로 만듭니다</div>'+
+    '<textarea id="cnAiTopic" class="cn-ai-ta" placeholder="뉴스 본문을 붙여넣는 게 가장 정확합니다(URL만으로는 내용을 읽지 못해요). 예) 기준금리 동결 기사 본문 / 실손 세대 개편 기사 / 키워드: 금리·치료비">'+(CN.aiTopic?osEsc(CN.aiTopic):'')+'</textarea>'+
+    '<div class="cn-ai-row"><label>목적</label>'+cnSel('cnAiPurpose',['저장','댓글','팔로우','상담 전 점검'],CN.aiPurpose||'저장')+
+    '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
+    '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
+    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
   var badge=isAi?(n+'장 · AI 기획 · 매거진'):'5장 · 사진 매거진 스타일';
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
@@ -10425,11 +10436,14 @@ function cnDrawSlide(sl,idx,n){
     for(var b=0;b<items.length;b++){x.fillStyle=acc;x.font='800 44px Pretendard'+FF;x.fillText('—',PAD,iy);x.fillStyle='rgba(255,255,255,.92)';x.font='600 44px Pretendard'+FF;for(var w=0;w<wItems[b].length;w++){x.fillText(wItems[b][w],PAD+58,iy);iy+=58;}iy+=16;}
   }else if(lay==='cta'){
     x.font='900 78px Pretendard'+FF;var cl=cnWrap(x,m.t,maxW).slice(0,3);
-    var blockBottom=H-250,titleTop=blockBottom-cl.length*90,kickerY=titleTop-52,ruleY=kickerY-30;
+    var blockBottom=H-330,titleTop=blockBottom-cl.length*90,kickerY=titleTop-52,ruleY=kickerY-30;
     cnRule(ruleY);cnKick(kickerY);
     cnDrawLines(cl,'900 78px Pretendard'+FF,'#fff',titleTop,90);
     var py=blockBottom+34;x.fillStyle='rgba(255,255,255,.18)';cnRoundRect(x,PAD,py,W-PAD*2,120,20);x.fill();
     x.fillStyle='#fff';x.font='800 42px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText(m.s||'저장 · 프로필 링크 →',W/2,py+60);x.textAlign='left';x.textBaseline='top';
+    x.font='500 24px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.55)';
+    var dl=cnWrap(x,'본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.',maxW).slice(0,2);
+    var dy=H-134;for(var di=0;di<dl.length;di++){x.fillText(dl[di],PAD,dy);dy+=32;}
   }else if(lay==='cover'){
     var L=(''+m.t).replace(/\s/g,'').length,ts=L<=9?112:(L<=15?92:(L<=24?76:64)),tLH=Math.round(ts*1.14);
     x.font='900 '+ts+'px Pretendard'+FF;var tl=cnWrap(x,m.t,maxW).slice(0,5);
@@ -10512,7 +10526,11 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cn2-cover-t{font-weight:900;line-height:1.18;letter-spacing:-.5px}',
    '.cn2-nb2{font-size:22px;font-weight:900;letter-spacing:1px;margin-bottom:8px}',
    '.cn2-ph2{font-size:26px;font-weight:900;line-height:1.28}',
-   '.cn2-cta-pill{display:inline-block;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 16px;font-size:14px;font-weight:800;margin-top:14px}'
+   '.cn2-cta-pill{display:inline-block;background:rgba(255,255,255,.16);border-radius:12px;padding:11px 16px;font-size:14px;font-weight:800;margin-top:14px}',
+   '.cn2-disc{font-size:8.5px;color:rgba(255,255,255,.55);line-height:1.55;margin-top:12px}',
+   '.cn-ai-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}',
+   '.cn-ai-row label{font-size:10.5px;font-weight:700;color:#6D28D9}',
+   '.cn-ai-sel{border:1px solid #E9D5FF;border-radius:8px;padding:5px 9px;font-size:11.5px;font-family:inherit;background:#fff;color:#374151}'
   ].join('');
   document.head.appendChild(s);
 })();
