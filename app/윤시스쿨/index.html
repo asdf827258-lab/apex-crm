@@ -1,0 +1,310 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>윤시스쿨 · 통합 앱</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='84'>🏫</text></svg>">
+<style>
+  :root{--ink:#2e2740;--sub:#7a7391;--line:#eae6f5;--card:#fff;--b:#2bb3a3;--cta:#ff6b6b;--shadow:0 8px 20px rgba(80,70,130,.10);}
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:linear-gradient(180deg,#eef4f7,#f4f0fa 60%,#fdf6ef);-webkit-font-smoothing:antialiased}
+  /* app bar */
+  .appbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:#ffffffcc;backdrop-filter:blur(8px);border-bottom:2px solid var(--line);padding:10px 16px}
+  .brand{font-size:16px;font-weight:900}
+  .tabs{display:flex;gap:6px}
+  .tab{border:2px solid var(--line);background:#fff;font-family:inherit;font-weight:800;font-size:13px;padding:8px 13px;border-radius:10px;cursor:pointer;color:var(--sub)}
+  .tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .hc{margin-left:auto;font-size:12px;font-weight:900;background:var(--ink);color:#8ef0b0;padding:6px 11px;border-radius:8px}
+  .view{display:none;padding:16px}
+  .view.on{display:block}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ===== OFFICE ===== */
+  #view-office .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  #view-office .b{border:3px solid var(--ink);background:#fff;font-family:inherit;font-weight:900;font-size:12px;padding:7px 11px;border-radius:8px;cursor:pointer;box-shadow:3px 3px 0 rgba(46,39,64,.2)}
+  #view-office .b.on{background:#ffd23f}
+  #view-office .scroll{overflow:auto;border:4px solid var(--ink);box-shadow:var(--shadow);max-height:74vh;border-radius:10px}
+  #view-office .stage{position:relative;width:1180px;height:810px;background:repeating-linear-gradient(0deg,rgba(46,39,64,.04) 0 1px,transparent 1px 30px),repeating-linear-gradient(90deg,rgba(46,39,64,.04) 0 1px,transparent 1px 30px),linear-gradient(180deg,#f7f3ea,#efeaf7)}
+  #view-office .zone{position:absolute;border-radius:12px}
+  #view-office .zlab{position:absolute;font-size:11px;font-weight:900;color:#5f5878;background:#fff;padding:2px 9px;border:2px solid rgba(46,39,64,.3);border-radius:7px;white-space:nowrap;z-index:5}
+  #view-office .room{position:absolute;border:3px dashed rgba(46,39,64,.3);border-radius:10px}
+  #view-office .rlab{position:absolute;font-size:12px;font-weight:900;color:#8a83a0;background:#fff;padding:3px 10px;border:2px solid rgba(46,39,64,.25);border-radius:7px}
+  #view-office .furn{position:absolute;font-size:24px}
+  #view-office .desk{position:absolute;width:50px;height:20px;background:#d7b489;border:2px solid var(--ink);border-radius:4px;transform:translate(-25px,8px)}
+  #view-office .desk.w{background:#c9b6e6}
+  #view-office .ch{position:absolute;left:0;top:0;width:42px;height:50px;will-change:transform}
+  #view-office .face{width:42px;height:42px}
+  #view-office .body{width:42px;height:42px;image-rendering:pixelated}
+  #view-office .ch.walking .body{animation:bob .34s steps(2) infinite}
+  @keyframes bob{50%{transform:translateY(-3px)}}
+  #view-office .tag{position:absolute;left:50%;top:41px;transform:translateX(-50%);white-space:nowrap;font-size:9.5px;font-weight:900;background:var(--ink);color:#fff;padding:1px 5px;border-radius:5px}
+  #view-office .tag.lead{background:#b8860b}
+  #view-office .bub{position:absolute;left:50%;bottom:46px;transform:translateX(-50%);white-space:nowrap;font-size:9.5px;font-weight:800;background:#fff;color:var(--ink);border:2px solid var(--ink);padding:2px 6px;border-radius:8px;opacity:0;transition:opacity .3s}
+  #view-office .bub.show{opacity:1}
+  #view-office .ch.sleepy .body{filter:saturate(.6)}
+
+  /* ===== BOARD ===== */
+  #view-board .sumrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  #view-board .pill{font-size:12px;font-weight:900;padding:6px 11px;border-radius:999px;border:2px solid var(--line);background:#fff}
+  #view-board .pill.run{color:#b5851a}#view-board .pill.done{color:#1f8a4c}#view-board .pill.wait{color:#6a4bd0}
+  #view-board .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  #view-board .dept{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+  #view-board .dhead{display:flex;align-items:center;gap:8px;padding:11px 14px;color:#fff;font-weight:900}
+  #view-board .dhead .cnt{margin-left:auto;font-size:11px;background:rgba(255,255,255,.25);padding:3px 9px;border-radius:999px}
+  #view-board .rows{padding:8px 12px 12px}
+  #view-board .row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid #f2eff8}
+  #view-board .row:last-child{border:0}
+  #view-board .av{width:34px;height:34px;flex:none;image-rendering:pixelated}
+  #view-board .info{min-width:0;flex:1}
+  #view-board .nmrow{display:flex;align-items:center;gap:6px}
+  #view-board .who{font-size:13px;font-weight:900}
+  #view-board .who .star{color:#e0a800}
+  #view-board .task{font-size:12px;color:#55506a;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  #view-board .chip{font-size:10px;font-weight:900;padding:3px 8px;border-radius:999px;white-space:nowrap;flex:none}
+  #view-board .c-run{background:#fff2d9;color:#b5851a}#view-board .c-done{background:#dff5e8;color:#1f8a4c}#view-board .c-wait{background:#ece4ff;color:#6a4bd0}
+  #view-board .bar{height:5px;background:#eef0f4;border-radius:99px;margin-top:5px;overflow:hidden}
+  #view-board .bar>i{display:block;height:100%;width:0;border-radius:99px;transition:width .6s linear}
+
+  /* ===== CONSOLE ===== */
+  #view-console .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){#view-console .cols{grid-template-columns:1fr}}
+  #view-console .panel{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+  #view-console .panel h2{margin:0 0 12px;font-size:15px;font-weight:900}
+  #view-console label{font-size:11.5px;font-weight:800;color:var(--sub);display:block;margin:9px 0 4px}
+  #view-console input,#view-console select,#view-console textarea{width:100%;border:2px solid var(--line);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;background:#fff}
+  #view-console .row2{display:flex;gap:8px}#view-console .row2>*{flex:1}
+  #view-console .go{width:100%;margin-top:14px;border:0;border-radius:11px;padding:12px;font-weight:900;font-size:14.5px;cursor:pointer;font-family:inherit;color:#fff}
+  #view-console .go.hire{background:var(--ink)}#view-console .go.meet{background:var(--b)}
+  #view-console .msg{font-size:12px;font-weight:800;margin-top:8px;min-height:15px}
+  #view-console .msg.ok{color:#1f8a4c}#view-console .msg.no{color:var(--cta)}
+  #view-console .dept{margin-bottom:12px}
+  #view-console .dh{font-size:12px;font-weight:900;color:#fff;padding:4px 10px;border-radius:7px;display:inline-block;margin-bottom:6px}
+  #view-console .plist{display:flex;flex-wrap:wrap;gap:6px}
+  #view-console .p{display:flex;align-items:center;gap:6px;background:#f7f4fc;border:1px solid var(--line);border-radius:999px;padding:3px 9px 3px 3px;font-size:12px;font-weight:800}
+  #view-console .p .av{width:26px;height:26px;image-rendering:pixelated}
+  #view-console .p .star{color:#e0a800}
+  #view-console .p .new{background:#ffe066;color:#7a5c00;font-size:9px;font-weight:900;padding:1px 5px;border-radius:6px}
+  #view-console .p .del{border:0;background:none;color:#c9c2d8;font-weight:900;cursor:pointer;font-size:14px;padding:0 2px}
+  #view-console .p .del:hover{color:var(--cta)}
+  #view-console .log{list-style:none;margin:0;padding:0;max-height:230px;overflow:auto}
+  #view-console .log li{border-bottom:1px solid #f2eff8;padding:9px 2px;font-size:13px}
+  #view-console .tp{font-weight:900}#view-console .mt{font-size:11px;color:var(--sub);font-weight:700;margin-top:2px}
+  #view-console .empty{color:#b3adc9;font-size:12.5px;font-weight:700;padding:8px}
+  #view-console .backup{display:flex;gap:8px;flex-wrap:wrap}
+  #view-console .backup button{border:2px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
+  #view-console .backup .danger{color:var(--cta);border-color:#ffd2cc}
+  #view-console .note{font-size:11px;color:#9a94b0;font-weight:700;line-height:1.6;margin-top:10px}
+</style>
+
+<div class="appbar">
+  <div class="brand">🏫 윤시스쿨</div>
+  <div class="tabs">
+    <button class="tab on" data-tab="office">🏢 오피스</button>
+    <button class="tab" data-tab="board">📋 업무현황</button>
+    <button class="tab" data-tab="console">🎛️ 경영실</button>
+  </div>
+  <span class="hc" id="hc">32명</span>
+</div>
+
+<div id="view-office" class="view on"><div class="wrap">
+  <div class="bar">
+    <button class="b" id="meetBtn">📣 팀장 회의</button>
+    <button class="b" id="deskBtn">🪑 자리로</button>
+    <button class="b" id="focusBtn">🎯 집중 모드</button>
+  </div>
+  <div class="scroll"><div class="stage" id="stage"></div></div>
+</div></div>
+
+<div id="view-board" class="view"><div class="wrap">
+  <div class="sumrow">
+    <span class="pill run">진행중 <b id="cRun">0</b></span>
+    <span class="pill done">완료 <b id="cDone">0</b></span>
+    <span class="pill wait">연동대기 <b id="cWait">0</b></span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div></div>
+
+<div id="view-console" class="view"><div class="wrap">
+  <div class="cols">
+    <div class="panel">
+      <h2>🧑‍💼 직원 채용</h2>
+      <label>이름</label><input id="h_name" placeholder="예: 김대리">
+      <div class="row2"><div><label>부서</label><select id="h_dept"></select></div><div><label>직책</label><select id="h_role"><option value="팀원">팀원</option><option value="팀장">팀장</option></select></div></div>
+      <div id="newDeptWrap" style="display:none"><label>새 부서 이름</label><input id="h_newdept" placeholder="예: 유튜브팀"></div>
+      <label>코드명 (선택)</label><input id="h_code" placeholder="예: 스나이퍼">
+      <button class="go hire" id="hireBtn">＋ 채용하기</button><div class="msg" id="hireMsg"></div>
+    </div>
+    <div class="panel">
+      <h2>📣 회의 소집 · 주제 정하기</h2>
+      <label>회의 주제</label><textarea id="m_topic" rows="2" placeholder="예: 2일차 — 새는 돈 히트맵 어떻게 만들지"></textarea>
+      <div class="row2"><div><label>참석</label><select id="m_dept"></select></div><div><label>유형</label><select id="m_type"><option>아이디어 회의</option><option>검수 회의</option><option>결재 회의</option><option>주간 회의</option></select></div></div>
+      <button class="go meet" id="cMeetBtn">📣 회의 소집</button><div class="msg" id="meetMsg"></div>
+    </div>
+  </div>
+  <div class="panel"><h2>👥 현재 인원 <span style="font-size:11px;color:var(--sub)" id="rosterCnt"></span></h2><div id="roster"></div></div>
+  <div class="panel"><h2>🗒️ 회의 기록</h2><ul class="log" id="meetLog"></ul></div>
+  <div class="panel"><h2>💾 백업 · 내 컴퓨터에 저장</h2>
+    <div class="backup"><button id="exportBtn">💾 파일로 내보내기</button><button id="importBtn">📂 파일 불러오기</button><input id="importFile" type="file" accept=".json" style="display:none"><button class="danger" id="resetBtn">🗑️ 채용·회의 초기화</button></div>
+    <div class="note">채용·회의 데이터는 <b>이 컴퓨터(브라우저)에 자동 저장</b>. 한 파일 앱이라 <b>탭을 옮겨도 바로 반영</b>돼요. 내보내기로 파일 백업 가능.</div>
+  </div>
+</div></div>
+
+<script>
+const PAL={K:"#2e2740",E:"#ffffff",P:"#2e2740",C:"#ff7fb3",M:"#2e2740"};
+const EARS={horn:[[4,2],[4,3],[5,3],[11,2],[11,3],[10,3]],ear:[[4,1],[4,2],[4,3],[3,3],[11,1],[11,2],[11,3],[12,3]],antenna:[[5,2],[5,3],[10,2],[10,3]],fin:[[7,1],[7,2],[7,3],[6,3],[8,3]],wing:[[2,8],[2,9],[1,9],[13,8],[13,9],[14,9]]};
+const EARLIST=["antenna","horn","ear","fin","wing"], NEWCOLORS=["#ff8f5e","#5ec8ff","#c58fff","#5ee0a8","#ffcf2e","#ff6fae"];
+function shade(hex,p){const n=parseInt(hex.slice(1),16);let r=n>>16,g=(n>>8)&255,b=n&255;const f=t=>Math.round(p>0?t+(255-t)*p:t*(1+p));return '#'+[f(r),f(g),f(b)].map(v=>Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');}
+function sprite(c){const W=16,H=16,g=Array.from({length:H},()=>Array(W).fill(null));const inb=(x,y)=>x>=0&&x<W&&y>=0&&y<H,set=(x,y,v)=>{if(inb(x,y))g[y][x]=v;};
+  const ell=(cx,cy,rx,ry,v,m)=>{for(let y=0;y<H;y++)for(let x=0;x<W;x++){const dx=(x+.5-cx)/rx,dy=(y+.5-cy)/ry;if(dx*dx+dy*dy<=1&&(!m||m.includes(g[y][x])))set(x,y,v);}};
+  ell(8,8.7,5.6,6.2,'B');ell(5.5,14.2,1.8,1.7,'B');ell(10.5,14.2,1.8,1.7,'B');(EARS[c.ear]||[]).forEach(([x,y])=>set(x,y,'B'));
+  for(let y=12;y<H;y++)for(let x=0;x<W;x++)if(g[y][x]==='B')g[y][x]='D';ell(8,10.6,3.5,3.6,'L',['B','D']);
+  [[5,6],[6,6],[5,7],[6,7],[5,8],[6,8],[9,6],[10,6],[9,7],[10,7],[9,8],[10,8]].forEach(([x,y])=>set(x,y,'E'));
+  [[6,7],[6,8],[9,7],[9,8]].forEach(([x,y])=>set(x,y,'P'));[[4,9],[11,9]].forEach(([x,y])=>set(x,y,'C'));[[7,9],[8,9]].forEach(([x,y])=>set(x,y,'M'));
+  if(c.ear==='antenna'){set(5,1,'A');set(10,1,'A');}
+  const solid=v=>v==='B'||v==='D'||v==='L',mk=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(g[y][x]==null){for(const[dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(inb(x+dx,y+dy)&&solid(g[y+dy][x+dx])){mk.push([x,y]);break;}}}
+  mk.forEach(([x,y])=>g[y][x]='K');const COL=Object.assign({B:c.body,D:c.dark,L:c.belly,A:c.attrC},PAL);const s=9;let r="";
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=g[y][x];if(v)r+=`<rect x="${x*s}" y="${y*s}" width="${s}" height="${s}" fill="${COL[v]}"/>`;}
+  return `<svg viewBox="0 0 144 144" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${r}</svg>`;}
+
+// ===== 공유 데이터 =====
+const BASE=[
+ {t:"시장조사",c:"#2fc4b2",p:[["김상중","팀장","fin",["보험 뉴스 스캔","금리 동향 정리","규제 개정안 확인","출처 교차검증"]],["장원영","팀원","antenna",["새벽 뉴스 수집","헤드라인 분류"]],["카리나","팀원","ear",["시장 동향 조사","이슈 태깅"]]]},
+ {t:"브랜드 분석",c:"#ff9dc6",p:[["이효리","팀장","ear",["타깃 페르소나 갱신","진단 문항 적합성"]],["제니","팀원","antenna",["지표 분석(가설)","니즈 정리"]],["지수","팀원","horn",["페르소나 검증","저장 가능성"]]]},
+ {t:"기획 1팀",c:"#ffcf2e",p:[["신동엽","팀장","antenna",["유입 소재 10개","캠페인 기획"]],["이광수","팀원","fin",["소재 발굴","각 잡기"]],["하하","팀원","horn",["후킹 카피 A/B","첫 3초 훅"]]]},
+ {t:"검수",c:"#a99cf0",p:[["김구라","팀장","horn",["과장광고 금칙어 스캔","준법 문구 대조"]],["김희철","팀원","ear",["중복 검사","근거 링크 확인"]],["안유진","팀원","antenna",["톤 검수","반 톤 조정"]]]},
+ {t:"기획 2팀",c:"#ff9f4d",p:[["송강호","팀장","horn",["진단→상담 플로우 설계","결과보고서 문안"]],["박보검","팀원","fin",["영상 대본","컷 나누기"]],["이지은","팀원","ear",["상담자료 원고","카드 메시지"]]]},
+ {t:"영상 제작",c:"#ff8080",p:[["마동석","팀장","horn",["원본 접수·백업","숏폼 접수"]],["차은우","팀원","antenna",["컷 편집","자막 싱크"]],["김태형","팀원","wing",["썸네일 2종","A/B"]]]},
+ {t:"이미지 제작",c:"#c08bff",p:[["권지용","팀장","wing",["카드뉴스 레이아웃","3기둥 디자인"]],["로제","팀원","ear",["그리드 정리","여백 조정"]],["리사","팀원","antenna",["텍스트 교체","오타 검수"]]]},
+ {t:"협업 소통",c:"#4bc6e0",p:[["전현무","팀장","antenna",["협업 메일 초안(발송보류)","제휴 정리"]],["조정석","팀원","ear",["답장 초안","문의 분류"]]]},
+ {t:"정산",c:"#7ed69a",p:[["박명수","팀장","ear",["정산 프로세스 설계","입금 대기 확인"]],["정형돈","팀원","horn",[],"정산 자료 없음 — 대표 파일 대기"]]},
+ {t:"성과 리뷰",c:"#7b8cf0",p:[["이경규","팀장","horn",["학습 포인트 정리","성공 패턴 추출"]],["전정국","팀원","antenna",[],"계정 통계 미연동"],["민지","팀원","fin",["포맷 아카이빙","패턴 태깅"]]]},
+ {t:"자동화 운영",c:"#a3d94f",p:[["김종국","팀장","fin",["CRM 연결 모니터링","RLS 점검"]],["규현","팀원","ear",["핑 체크","에러 로그 감시"]]]},
+ {t:"비서실",c:"#6cb6ff",p:[["유재석","실장","antenna",["전사 현황 취합","대표 브리핑 준비"]],["조세호","팀원","horn",["부서 보고 수집","일정 정리"]]]},
+];
+const NEWTASKS=["신입 온보딩","업무 익히는 중","선배 따라 배우기"];
+const LS={hires:"yoonsi_hires",meetings:"yoonsi_meetings",extra:"yoonsi_extradepts"};
+const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const saveLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let hires=load(LS.hires,[]), meetings=load(LS.meetings,[]), extradepts=load(LS.extra,{});
+const $=id=>document.getElementById(id);
+function deptColor(n){const b=BASE.find(d=>d.t===n);if(b)return b.c;if(extradepts[n])return extradepts[n];const c=NEWCOLORS[Object.keys(extradepts).length%NEWCOLORS.length];extradepts[n]=c;saveLS(LS.extra,extradepts);return c;}
+function ROSTER(){
+  const list=BASE.map(d=>({t:d.t,c:d.c,p:d.p.map(([n,r,e,T,w])=>({n,role:r,ear:e,T:T||[],wait:w||null,base:true}))}));
+  hires.forEach(h=>{let d=list.find(x=>x.t===h.dept);if(!d){d={t:h.dept,c:deptColor(h.dept),p:[]};list.push(d);}d.p.push({n:h.name,role:h.role,ear:h.ear||'ear',T:NEWTASKS,wait:null,base:false,id:h.id});});
+  return list;
+}
+function headcount(){let n=0;ROSTER().forEach(d=>n+=d.p.length);return n;}
+
+// ===== OFFICE =====
+const stage=$("stage");let chars=[],leads=[],meetingOn=false,focusOn=false,MEET=[];
+function buildOffice(){
+  stage.innerHTML="";chars=[];leads=[];
+  const R=ROSTER();const colX=[165,455,745,1035],rowY=[52,262,472];
+  R.slice(0,12).forEach((tm,ti)=>{
+    const cx=colX[ti%4],cy=rowY[Math.floor(ti/4)];const co={body:tm.c,belly:shade(tm.c,.55),dark:shade(tm.c,-.28),attrC:shade(tm.c,-.28)};
+    const z=document.createElement("div");z.className="zone";z.style.cssText=`left:${cx-128}px;top:${cy-6}px;width:256px;height:196px;background:${tm.c}22`;stage.appendChild(z);
+    const zl=document.createElement("div");zl.className="zlab";zl.textContent=tm.t;zl.style.left=(cx-118)+"px";zl.style.top=(cy-2)+"px";stage.appendChild(zl);
+    const slots=tm.p.length===2?[[cx-52,cy+96],[cx+52,cy+96]]:[[cx,cy+50],[cx-80,cy+132],[cx+80,cy+132]];
+    tm.p.filter(p=>p.base).slice(0,3).forEach((pp,pi)=>{const home=slots[pi]||[cx,cy+50];const lead=(pp.role==='팀장'||pp.role==='실장');
+      const desk=document.createElement("div");desk.className="desk"+(pp.wait?" w":"");desk.style.left=home[0]+"px";desk.style.top=home[1]+"px";stage.appendChild(desk);
+      const el=document.createElement("div");el.className="ch"+(pp.wait?" sleepy":"");
+      el.innerHTML=`<div class="bub"></div><div class="face"><div class="body">${sprite({...co,ear:pp.ear})}</div></div><div class="tag${lead?' lead':''}">${lead?'★':''}${pp.n}</div>`;
+      stage.appendChild(el);
+      const c={mn:pp.n,lead,wait:!!pp.wait,el,faceEl:el.querySelector(".face"),bub:el.querySelector(".bub"),lines:pp.wait?["연동 대기 💤"]:[pp.T[0]||"일하는 중…","일하는 중…"],
+        _:{x:home[0],y:home[1],tx:home[0],ty:home[1],home,phase:"work",dwell:400+Math.random()*2600,face:1,walking:false,li:0}};
+      chars.push(c);if(lead)leads.push(c);});
+  });
+  // 신입(채용)
+  let ni=0;R.forEach(d=>d.p.forEach(pp=>{if(!pp.base){const c=deptColor(d.t);const co={ear:pp.ear,body:c,belly:shade(c,.55),dark:shade(c,-.28),attrC:shade(c,-.28)};
+    const home=[130+(ni%7)*88,622];ni++;const el=document.createElement("div");el.className="ch";
+    el.innerHTML=`<div class="bub"></div><div class="face"><div class="body">${sprite(co)}</div></div><div class="tag">🆕${pp.n}</div>`;stage.appendChild(el);
+    chars.push({mn:pp.n,lead:false,wait:false,el,faceEl:el.querySelector(".face"),bub:el.querySelector(".bub"),lines:["신입입니다!","배우는 중이에요"],_:{x:home[0],y:home[1],tx:home[0],ty:home[1],home,phase:"work",dwell:500+Math.random()*1500,face:1,walking:false,li:0}});}}));
+  // rooms
+  const mk=(x,y,w,h,l)=>{const r=document.createElement("div");r.className="room";r.style.cssText=`left:${x}px;top:${y}px;width:${w}px;height:${h}px`;stage.appendChild(r);const ll=document.createElement("div");ll.className="rlab";ll.textContent=l;ll.style.left=(x+14)+"px";ll.style.top=(y-2)+"px";stage.appendChild(ll);};
+  mk(30,652,590,150,"📣 회의실");mk(650,652,500,150,"☕ 휴게실");
+  [["🟫",320,706],["🛋️",760,720],["🪴",1080,690],["☕",1050,750]].forEach(([e,x,y])=>{const f=document.createElement("div");f.className="furn";f.textContent=e;f.style.left=x+"px";f.style.top=y+"px";stage.appendChild(f);});
+  MEET=[];for(let r=0;r<2;r++)for(let i=0;i<6;i++)MEET.push([80+i*88,700+r*58]);leads.forEach((c,i)=>c.meetSpot=MEET[i]||MEET[0]);
+  chars.forEach(drawCh);
+}
+function moveTo(s,dt,sp){const dx=s.tx-s.x,dy=s.ty-s.y,d=Math.hypot(dx,dy);if(d<2){s.x=s.tx;s.y=s.ty;s.walking=false;return true;}const v=sp*dt;s.x+=dx/d*Math.min(v,d);s.y+=dy/d*Math.min(v,d);if(dx<-.5)s.face=-1;else if(dx>.5)s.face=1;s.walking=true;return false;}
+function wander(c){const s=c._;if(Math.random()<.4)return[700+Math.random()*380,690+Math.random()*90];return[s.home[0]+(Math.random()*220-110),s.home[1]+(Math.random()*120-60)];}
+function stepCh(c,dt){const s=c._;if(c.wait){moveTo(s,dt,.05);s.walking=false;return;}
+  if(meetingOn&&c.lead){s.tx=c.meetSpot[0];s.ty=c.meetSpot[1];if(moveTo(s,dt,.09))s.phase="meet";else s.phase="go";return;}
+  if(s.phase==="meet"||s.phase==="go"){s.tx=s.home[0];s.ty=s.home[1];if(moveTo(s,dt,.07)){s.phase="work";s.dwell=1400+Math.random()*2600;}return;}
+  if(s.phase==="work"){s.walking=false;s.dwell-=dt;if(s.dwell<=0){if(!focusOn&&Math.random()<.5){const t=wander(c);s.tx=t[0];s.ty=t[1];s.phase="out";}else s.dwell=1600+Math.random()*2400;}return;}
+  if(s.phase==="out"){if(moveTo(s,dt,.055)){s.phase="pause";s.dwell=500+Math.random()*1400;}return;}
+  if(s.phase==="pause"){s.walking=false;s.dwell-=dt;if(s.dwell<=0){s.tx=s.home[0];s.ty=s.home[1];s.phase="back";}return;}
+  if(s.phase==="back"){if(moveTo(s,dt,.055)){s.phase="work";s.dwell=1500+Math.random()*3000;}return;}}
+function drawCh(c){const s=c._;c.el.style.transform=`translate(${s.x-21}px,${s.y-34}px)`;c.el.style.zIndex=Math.round(s.y);c.el.classList.toggle("walking",s.walking);c.faceEl.style.transform=s.face<0?"scaleX(-1)":"scaleX(1)";}
+let last=performance.now();
+function frame(now){const dt=Math.min(now-last,60);last=now;if(curTab==='office'){for(const c of chars){stepCh(c,dt);drawCh(c);}}requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+function officeTalk(){if(curTab!=='office')return;for(const c of chars){if(Math.random()<.4){c._.li=(c._.li+1)%c.lines.length;c.bub.textContent=(meetingOn&&c.lead)?"회의 중…":c.lines[c._.li];c.bub.classList.add("show");setTimeout(()=>c.bub.classList.remove("show"),2500);}}}
+setInterval(officeTalk,3000);
+$("meetBtn").onclick=e=>{meetingOn=true;e.target.classList.add("on");focusOn=false;$("focusBtn").classList.remove("on");};
+$("deskBtn").onclick=()=>{meetingOn=false;focusOn=false;document.querySelectorAll("#view-office .b").forEach(b=>b.classList.remove("on"));};
+$("focusBtn").onclick=e=>{focusOn=!focusOn;e.target.classList.toggle("on",focusOn);if(focusOn){meetingOn=false;$("meetBtn").classList.remove("on");}};
+
+// ===== BOARD =====
+let people=[];
+function buildBoard(){
+  const grid=$("grid");grid.innerHTML="";people=[];
+  ROSTER().forEach(d=>{const co={body:d.c,belly:shade(d.c,.55),dark:shade(d.c,-.28),attrC:shade(d.c,-.28)};
+    const card=document.createElement("div");card.className="dept";
+    card.innerHTML=`<div class="dhead" style="background:${shade(d.c,-.12)}"><span>${d.t}</span><span class="cnt">${d.p.length}명</span></div><div class="rows"></div>`;
+    const rows=card.querySelector(".rows");
+    d.p.forEach(pp=>{const lead=(pp.role==='팀장'||pp.role==='실장');const el=document.createElement("div");el.className="row";
+      el.innerHTML=`<div class="av">${sprite({...co,ear:pp.ear})}</div><div class="info"><div class="nmrow"><span class="who">${lead?'<span class="star">★</span>':''}${pp.n}</span><span class="chip" data-chip></span></div><div class="task" data-task>대기 중…</div><div class="bar"><i data-bar style="background:${d.c}"></i></div></div>`;
+      rows.appendChild(el);
+      const T=pp.T&&pp.T.length?pp.T:NEWTASKS;
+      people.push({T,wait:!!pp.wait,waitMsg:pp.wait,taskEl:el.querySelector('[data-task]'),chipEl:el.querySelector('[data-chip]'),barEl:el.querySelector('[data-bar]'),state:pp.wait?'wait':'run',prog:pp.wait?0:Math.random()*30,ti:0});});
+    grid.appendChild(card);});
+  paintBoard();
+}
+function paintBoard(){let run=0,done=0,wait=0;for(const m of people){if(m.wait){m.chipEl.textContent="🟣 연동대기";m.chipEl.className="chip c-wait";m.taskEl.textContent=m.waitMsg;m.barEl.style.width="0%";wait++;continue;}
+  if(m.state==='done'){m.chipEl.textContent="완료";m.chipEl.className="chip c-done";m.barEl.style.width="100%";done++;}else{m.chipEl.textContent="진행중";m.chipEl.className="chip c-run";m.barEl.style.width=Math.round(m.prog)+"%";run++;}
+  m.taskEl.textContent=m.T[m.ti]||"업무 준비";}
+  $("cRun").textContent=run;$("cDone").textContent=done;$("cWait").textContent=wait;}
+function boardTick(){if(curTab!=='board')return;for(const m of people){if(m.wait)continue;if(m.state==='done'){m.state='run';m.prog=Math.random()*12;m.ti=(m.ti+1)%m.T.length;continue;}m.prog+=3+Math.random()*8;if(m.prog>=100){m.prog=100;m.state='done';}}paintBoard();}
+setInterval(boardTick,680);
+
+// ===== CONSOLE =====
+function allDepts(){const s=BASE.map(d=>d.t);Object.keys(extradepts).forEach(n=>{if(!s.includes(n))s.push(n)});hires.forEach(h=>{if(!s.includes(h.dept))s.push(h.dept)});return s;}
+function fillSelects(){const o=allDepts().map(n=>`<option>${n}</option>`).join('');$("h_dept").innerHTML=o+`<option value="__new">＋ 새 부서…</option>`;$("m_dept").innerHTML=`<option value="전체">전체 팀장</option>`+o;}
+$("h_dept").onchange=()=>{$("newDeptWrap").style.display=$("h_dept").value==="__new"?"block":"none";};
+function buildConsole(){
+  const box=$("roster");box.innerHTML="";
+  ROSTER().forEach(d=>{const co={body:d.c,belly:shade(d.c,.55),dark:shade(d.c,-.28),attrC:shade(d.c,-.28)};
+    const el=document.createElement("div");el.className="dept";el.innerHTML=`<div class="dh" style="background:${shade(d.c,-.12)}">${d.t} · ${d.p.length}명</div><div class="plist"></div>`;
+    const pl=el.querySelector(".plist");
+    d.p.forEach(p=>{const lead=(p.role==='팀장'||p.role==='실장');const e=document.createElement("div");e.className="p";
+      e.innerHTML=`<span class="av">${sprite({...co,ear:p.ear})}</span>${lead?'<span class="star">★</span>':''}${p.n}${!p.base?' <span class="new">NEW</span>':''}`;
+      if(!p.base){const b=document.createElement("button");b.className="del";b.textContent="×";b.onclick=()=>fire(p.id);e.appendChild(b);}pl.appendChild(e);});
+    box.appendChild(el);});
+  $("rosterCnt").textContent=`· 기본 32 + 채용 ${hires.length}`;$("hc").textContent=headcount()+"명";
+  renderMeetings();
+}
+function renderMeetings(){const ul=$("meetLog");if(!meetings.length){ul.innerHTML=`<div class="empty">아직 소집한 회의가 없어요.</div>`;return;}ul.innerHTML=meetings.slice().reverse().map(m=>`<li><div class="tp">${m.type} — ${m.topic}</div><div class="mt">${m.at} · 참석: ${m.dept}</div></li>`).join('');}
+function refreshAll(){fillSelects();buildConsole();buildBoard();buildOffice();}
+function msg(el,t,cls){$(el).textContent=t;$(el).className="msg "+cls;}
+$("hireBtn").onclick=()=>{const name=$("h_name").value.trim();let dept=$("h_dept").value;if(dept==="__new"){dept=$("h_newdept").value.trim();if(!dept){msg("hireMsg","부서 이름을 입력해요.","no");return;}}if(!name){msg("hireMsg","이름을 입력해요.","no");return;}
+  deptColor(dept);hires.push({id:"h"+Date.now(),name,dept,role:$("h_role").value,codename:$("h_code").value.trim(),ear:EARLIST[Math.floor(Math.random()*EARLIST.length)]});saveLS(LS.hires,hires);
+  $("h_name").value="";$("h_code").value="";$("h_newdept").value="";$("newDeptWrap").style.display="none";refreshAll();$("h_dept").value=dept;msg("hireMsg",`✅ ${name} 채용! (${dept}) — 오피스·현황판에 바로 떠요.`,"ok");};
+$("cMeetBtn").onclick=()=>{const topic=$("m_topic").value.trim();if(!topic){msg("meetMsg","회의 주제를 입력해요.","no");return;}
+  meetings.push({id:"m"+Date.now(),topic,type:$("m_type").value,dept:$("m_dept").value,at:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});saveLS(LS.meetings,meetings);$("m_topic").value="";renderMeetings();meetingOn=true;$("meetBtn").classList.add("on");msg("meetMsg",`📣 "${topic}" 소집 — 오피스 탭에서 팀장들이 모여요.`,"ok");};
+function fire(id){const h=hires.find(x=>x.id===id);if(!h||!confirm(`${h.name} 님을 내보낼까요?`))return;hires=hires.filter(x=>x.id!==id);saveLS(LS.hires,hires);refreshAll();}
+$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({hires,meetings,extradepts,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="윤시스쿨_회사데이터.json";a.click();};
+$("importBtn").onclick=()=>$("importFile").click();
+$("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);hires=d.hires||[];meetings=d.meetings||[];extradepts=d.extradepts||{};saveLS(LS.hires,hires);saveLS(LS.meetings,meetings);saveLS(LS.extra,extradepts);refreshAll();alert("불러왔어요!");}catch(err){alert("읽기 실패: "+err.message);}};r.readAsText(f);};
+$("resetBtn").onclick=()=>{if(!confirm("채용·회의 데이터를 지울까요? (기본 32명 유지)"))return;hires=[];meetings=[];extradepts={};[LS.hires,LS.meetings,LS.extra].forEach(k=>localStorage.removeItem(k));refreshAll();};
+
+// ===== TABS =====
+let curTab='office';
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  curTab=t.dataset.tab;document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x===t));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='view-'+curTab));
+});
+
+// init
+fillSelects();buildOffice();buildBoard();buildConsole();
+</script>
