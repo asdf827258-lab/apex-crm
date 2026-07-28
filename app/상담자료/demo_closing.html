@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>마무리 — 보험, 그리고 사람</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:'Noto Sans KR',sans-serif;overflow:hidden;background:#05070f;color:#fff;}
+  #app{position:fixed;inset:0;cursor:pointer;}
+  .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;transition:background 1s ease;}
+  #orbA{width:60vw;height:60vw;top:-15vw;left:-10vw;background:#1e40af;}
+  #orbB{width:55vw;height:55vw;bottom:-18vw;right:-12vw;background:#7c3aed;}
+  .vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,transparent 28%,rgba(5,7,15,.72) 92%);pointer-events:none;}
+  #prog{position:absolute;top:0;left:0;height:3px;width:0;z-index:30;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width .5s;}
+
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;}
+  .slide{position:absolute;width:min(460px,92vw);max-height:90vh;overflow-y:auto;scrollbar-width:none;
+    display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;
+    opacity:0;transform:translateY(34px) scale(.97);filter:blur(6px);pointer-events:none;
+    transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1),filter .55s ease;}
+  .slide::-webkit-scrollbar{display:none;}
+  .slide.on{opacity:1;transform:none;filter:none;pointer-events:auto;}
+  .slide.out{opacity:0;transform:translateY(-26px) scale(1.02);filter:blur(6px);}
+
+  .kick{font-size:12px;font-weight:800;letter-spacing:2px;color:#7bb3f4;}
+  .emoji{font-size:clamp(48px,10vw,68px);filter:drop-shadow(0 10px 30px rgba(0,0,0,.5));}
+  .big{font-size:clamp(25px,6.2vw,38px);font-weight:900;line-height:1.36;letter-spacing:-.3px;}
+  .big b{background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .big b.blue{background:linear-gradient(135deg,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .big b.warn{background:linear-gradient(135deg,#f87171,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{font-size:14px;color:#aab3c5;line-height:1.75;max-width:400px;}
+  .sub b{color:#e5e7eb;}
+
+  .box{width:min(430px,90vw);border-radius:14px;padding:16px 18px;font-size:15px;line-height:1.85;text-align:left;border:1px solid;}
+  .box.blue{background:rgba(26,115,232,.08);border-color:rgba(26,115,232,.22);}
+  .box.green{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.22);}
+  .box b.g{color:#86efac;} .box b.b{color:#7bb3f4;} .box b.y{color:#fcd34d;}
+
+  .cells{display:grid;grid-template-columns:1fr 1fr;gap:11px;width:min(420px,90vw);}
+  .cell{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:16px 12px;text-align:center;}
+  .cell .ic{font-size:30px;}
+  .cell .v{font-weight:900;font-size:15px;color:#86efac;margin-top:6px;}
+  .cell .k{font-size:12px;color:#9ca3af;margin-top:4px;line-height:1.45;}
+
+  #hud{position:absolute;bottom:22px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:25;pointer-events:none;}
+  #dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:80vw;}
+  #dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.24);transition:.35s;}
+  #dots i.on{width:18px;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#22c55e);}
+  #dots i.done{background:rgba(255,255,255,.4);}
+  #tap{font-size:11px;letter-spacing:2px;color:#7e8aa3;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="orb" id="orbA"></div><div class="orb" id="orbB"></div><div class="vignette"></div>
+  <div id="prog"></div>
+  <div id="stage"></div>
+  <div id="hud"><div id="dots"></div><div id="tap">탭 / → 다음</div></div>
+</div>
+<script>
+  const B=['#1e40af','#7c3aed'],G=['#065f46','#0e7490'],R=['#7f1d1d','#854d0e'],Y=['#854d0e','#7c3aed'],P=['#3730a3','#7c3aed'];
+  const SLIDES=[
+    {type:'intro',hue:Y,emoji:'😮‍💨',kick:'혹시',big:'보험 상담받을 때마다 —<br><b class="warn">늘 답답하셨죠?</b>',
+      sub:'\'내 건 늘 부족한 것 같고\', \'다들 안 좋다고만 하고\', \'항상 똑같은 소리\' — 상담을 받을수록 오히려 더 답답해지셨을 겁니다. 그 마음, 충분히 압니다.'},
+    {type:'intro',hue:B,emoji:'🧭',kick:'그 답답함의 정체',big:'문제는 —<br><b class="blue">\'기준점\'</b>이 없었기 때문입니다',
+      sub:'\'내가 어떤 기준으로 보험을 들어야 하는지\'를 알면 — 이 답답함에서 벗어납니다. 기준이 없으니 남의 말에 흔들리고, 늘 내 것만 부족하게 느껴지는 겁니다.'},
+    {type:'box',hue:G,emoji:'🧱',kick:'사실은',big:'보험은 기본만 잘 잡으면<br><b>바꿀 일이 없습니다</b>',
+      box:{cls:'green',html:'\'이 정도면 다시 가입할 일 없다\'는 — <b style="color:#fca5a5;">구두상의 말</b>이 아니라,<br><b class="g">데이터로 비교</b>해야 하는 이유가 바로 이겁니다.'},
+      sub:'기본 베이스를 데이터로 정확히 잡아두면 평생 갈아엎을 일이 없습니다. 남이 \'좋다\'고 말해주는 게 아니라, 숫자로 증명되어야 진짜입니다.'},
+    {type:'intro',hue:B,emoji:'🛡️',kick:'정리하자면',big:'보험이란 결국 —<br><b class="blue">노후자금을 지키는 안전장치</b>',
+      sub:'그 이상도, 그 이하도 아닙니다. 오늘 보신 모든 이야기의 뿌리는 결국 \'내 노후자금을 어떻게 지키느냐\'였습니다.'},
+    {type:'box',hue:R,emoji:'🧾',kick:'그런데',big:'아무리 잘 들어놔도 —',
+      box:{cls:'green',html:'처음에 보신 <b class="b">실효 부활 사례</b>처럼,<br><b class="y">어디서·어떻게 받아야 하는지</b> 모른다면<br>아무리 좋은 보험도 — <b style="color:#fca5a5;">아무 의미가 없습니다.</b>'},
+      sub:'같은 사고, 같은 보험인데 누구는 4,000만 원을 받고 누구는 0원을 받았습니다. 차이는 \'받을 줄 아느냐\'였습니다.'},
+    {type:'intro',hue:B,emoji:'🤖',kick:'AI 시대',big:'보험을 <b class="blue">잘 드는 건</b><br>이제 당연합니다',
+      sub:'AI·빅데이터로 전 보험사를 비교하고 설계하는 건 — 너무 쉬워졌습니다. 그것만으로는 더 이상 차별점이 아닙니다.'},
+    {type:'intro',hue:Y,emoji:'🧭',kick:'진짜 문제',big:'어떤 <b class="warn">기준점</b>으로<br>준비해야 하는가',
+      sub:'정작 \'어떤 기준으로 준비해야 하는지\' 정확히 말해주는 사람이 없습니다. 바로 그래서 — 저 같은 사람이 필요합니다.'},
+    {type:'box',hue:G,emoji:'💰',kick:'보험의 진실',big:'알면 <b>받아먹을 게 많고</b><br>모르면 <b class="warn">못 받습니다</b>',
+      box:{cls:'green',html:'보험은 — 알고 나면 챙길 게 생각보다 많은데,<br>모르면 그냥 흘려보내는 것입니다.<br>그래서 <b class="g">\'받게 도와주는\' 담당자</b>의 역할이 결정적입니다.'},
+      sub:'좋은 상품을 드는 것보다, 사고·진단·청구의 순간에 \'제대로 받게\' 해주는 사람이 결과를 만듭니다.'},
+    {type:'cells',hue:P,emoji:'👥',kick:'말로만이 아닙니다',big:'현실적으로 —<br><b>이렇게 도와드립니다</b>',
+      cells:[['🧑‍💼','청구 전담 비서 2명','서류·접수·진행 직접 챙김'],['🧾','실제 지급 사례','오늘 보신 그 증거들'],['📞','즉시 연결','사고 순간 바로 코칭'],['🤝','평생 관리','한 번 설계로 끝 아님']],
+      sub:'말이 아니라 시스템으로 — 청구만 전담하는 비서 2명, 그리고 오늘 보신 실제 지급 사례가 증거입니다.'},
+    {type:'intro',hue:B,emoji:'🤝',kick:'관계',big:'그리고 —<br><b class="blue">평생의 파트너로</b>',
+      sub:'오늘 한 번의 설계로 끝나는 관계가 아닙니다. 살아가는 내내, 보험과 돈에 관한 모든 순간을 함께 가는 파트너가 되겠습니다.'},
+    {type:'box',hue:R,emoji:'📈',kick:'마지막으로',big:'정말 — <b class="warn">돈을 모으셔야</b> 합니다',
+      box:{cls:'green',html:'이제 <b style="color:#fca5a5;">보험만으로 대비할 수 있는 시대는 지났습니다.</b><br>보험으로 \'지키고\', 그 위에 <b class="g">자산을 쌓아야</b> 노후가 완성됩니다.'},
+      sub:'앞에서 번 돈이 뒤에서 새지 않게 — 보험으로 막고, 모으는 것까지가 진짜 준비입니다.'},
+    {type:'intro',hue:G,emoji:'✅',kick:'오늘 상담',big:'만족스러우셨길<br><b>바랍니다</b>',
+      sub:'다음엔 — 설계를 가져와 세세한 데이터로, 오늘 말씀드린 \'기준점\'을 토대로 분석해 오겠습니다. 오늘은 방향을, 다음엔 구체적인 답을.'},
+    {type:'intro',hue:P,emoji:'🙏',kick:'마무리',big:'저라는 사람이<br><b class="blue">믿어지신다면</b>',
+      sub:'다음에 만족하셨을 때 — 믿고 맡겨주십시오. 대표님의 노후와 보험, 끝까지 책임지고 함께 가겠습니다.'},
+  ];
+  const stage=document.getElementById('stage'),dots=document.getElementById('dots');
+  const orbA=document.getElementById('orbA'),orbB=document.getElementById('orbB'),prog=document.getElementById('prog');
+
+  stage.innerHTML=SLIDES.map((s,n)=>{
+    let mid='';
+    if(s.type==='box') mid=`<div class="box ${s.box.cls}">${s.box.html}</div>`;
+    else if(s.type==='cells') mid=`<div class="cells">${s.cells.map(c=>`<div class="cell"><div class="ic">${c[0]}</div><div class="v">${c[1]}</div><div class="k">${c[2]}</div></div>`).join('')}</div>`;
+    return `<div class="slide" data-n="${n}">
+      ${s.kick?`<div class="kick">${s.kick}</div>`:''}
+      <div class="emoji">${s.emoji}</div>
+      <div class="big">${s.big}</div>
+      ${mid}
+      ${s.sub?`<div class="sub">${s.sub}</div>`:''}
+    </div>`;
+  }).join('');
+  dots.innerHTML=SLIDES.map((_,n)=>`<i data-n="${n}"></i>`).join('');
+
+  let i=0,busy=false;
+  function show(n){
+    document.querySelectorAll('.slide').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('out',k<n);});
+    document.querySelectorAll('#dots i').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('done',k<n);});
+    const h=SLIDES[n].hue;orbA.style.background=h[0];orbB.style.background=h[1];
+    prog.style.width=((n+1)/SLIDES.length*100)+'%';
+    const sl=document.querySelector(`.slide[data-n="${n}"]`);if(sl)sl.scrollTop=0;
+  }
+  function next(){if(busy||i>=SLIDES.length-1)return;busy=true;setTimeout(()=>busy=false,340);i++;show(i);}
+  function prev(){if(busy||i<=0)return;busy=true;setTimeout(()=>busy=false,340);i--;show(i);}
+  document.getElementById('app').addEventListener('click',e=>{if(e.clientX<window.innerWidth*0.22)prev();else next();});
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}else if(e.key==='ArrowLeft'){e.preventDefault();prev();}});
+  let tx=0;document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  document.addEventListener('touchend',e=>{var d=e.changedTouches[0].clientX-tx;if(d<-40)next();else if(d>40)prev();},{passive:true});
+  show(0);
+</script>
+</body>
+</html>

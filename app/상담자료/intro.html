@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>이동엽 · 소개카드</title>
+<style>
+/* ===== 기본 ===== */
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{font-family:'Apple SD Gothic Neo','Helvetica Neue',sans-serif;color:#f4ecd8}
+.stage{position:absolute;top:50%;left:50%;width:1920px;height:1080px;transform-origin:center;overflow:hidden;background:#050505}
+
+/* ===== 인물 풀블리드 + 켄번스 ===== */
+.hero{position:absolute;inset:0;overflow:hidden;opacity:0;transform:scale(1.06) translateX(-36px);
+  animation:heroIn 1.8s cubic-bezier(.16,1,.3,1) .3s forwards}
+.hero .img{position:absolute;inset:0;background:url('photo1.jpg') left 14%/auto 116%;background-repeat:no-repeat;
+  filter:saturate(.82) contrast(1.06) brightness(.98);transform:scale(1.08);transform-origin:left center;animation:ken 22s ease-out .3s forwards}
+@keyframes heroIn{from{opacity:0;transform:scale(1.06) translateX(-36px)}to{opacity:1;transform:scale(1) translateX(0)}}
+@keyframes ken{to{transform:scale(1.0)}}
+
+/* 시네마틱 인트로 (검정 → 씬, 라이트 플래시) */
+.intro{position:absolute;inset:0;background:#000;z-index:40;pointer-events:none;animation:introOut 1.1s ease .25s forwards}
+@keyframes introOut{to{opacity:0}}
+.flash{position:absolute;inset:0;z-index:39;pointer-events:none;mix-blend-mode:screen;opacity:0;
+  background:radial-gradient(60% 50% at 78% 38%,rgba(255,244,214,.9),transparent 70%);animation:flash 1.6s ease 1.0s forwards}
+@keyframes flash{0%{opacity:0}22%{opacity:.85}100%{opacity:0}}
+
+/* 골드 광선 스트릭 (대각선으로 빠르게 지나감) */
+.streak{position:absolute;top:-30%;width:2px;height:160%;z-index:6;pointer-events:none;transform:rotate(20deg);
+  background:linear-gradient(180deg,transparent,rgba(255,238,200,.85),transparent);filter:blur(1px);opacity:0}
+.streak.s1{left:46%;animation:streak 2.6s ease-in 1.2s forwards}
+.streak.s2{left:62%;height:120%;animation:streak 2.6s ease-in 1.5s forwards}
+.streak.s3{left:54%;height:90%;animation:streak 2.6s ease-in 1.75s forwards}
+@keyframes streak{0%{opacity:0;transform:translateX(-200px) rotate(20deg)}
+  14%{opacity:1}40%{opacity:0}100%{opacity:0;transform:translateX(900px) rotate(20deg)}}
+
+/* 골드 톤 / 어둠 그라데이션 (우측 정보영역 가독성) */
+.tone{position:absolute;inset:0;mix-blend-mode:soft-light;
+  background:linear-gradient(115deg,rgba(212,175,90,.42),transparent 52%);
+  opacity:0;animation:fade 2s ease 0.5s forwards}
+.shade{position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(5,5,5,.05) 0%,rgba(5,5,5,.25) 30%,rgba(5,5,5,.82) 60%,rgba(5,5,5,.96) 100%),
+            linear-gradient(180deg,rgba(5,5,5,.55),transparent 24%,transparent 66%,rgba(5,5,5,.9));
+  opacity:0;animation:fade 1.6s ease .55s forwards}
+.vig{position:absolute;inset:0;box-shadow:inset 0 0 240px 60px rgba(0,0,0,.6);pointer-events:none;animation:breathe 7s ease-in-out 2s infinite alternate}
+@keyframes breathe{from{box-shadow:inset 0 0 240px 60px rgba(0,0,0,.6)}to{box-shadow:inset 0 0 300px 80px rgba(0,0,0,.72)}}
+@keyframes fade{to{opacity:1}}
+
+/* 대각선 빛 스윕 (배경 위 천천히 지나감) */
+.lightbeam{position:absolute;top:-40%;left:-30%;width:60%;height:180%;transform:rotate(18deg);pointer-events:none;z-index:3;
+  background:linear-gradient(90deg,transparent,rgba(212,175,90,.10),transparent);
+  filter:blur(14px);opacity:0;animation:beam 9s ease-in-out 1.4s infinite}
+@keyframes beam{0%{opacity:0;transform:translateX(0) rotate(18deg)}
+  18%{opacity:1}40%{opacity:0}100%{opacity:0;transform:translateX(2400px) rotate(18deg)}}
+
+/* 배경 거대 영문 타이포 (패럴럭스) */
+.bgtype{position:absolute;right:-40px;top:50%;transform:translateY(-50%);z-index:2;
+  font-family:'Georgia',serif;font-weight:700;font-size:300px;line-height:.9;letter-spacing:-6px;
+  color:transparent;-webkit-text-stroke:1px rgba(212,175,90,.10);white-space:nowrap;text-align:right;
+  opacity:0;animation:bgtypeIn 2.4s ease .9s forwards,bgFloat 16s ease-in-out 3s infinite alternate}
+@keyframes bgtypeIn{to{opacity:1}}
+@keyframes bgFloat{to{transform:translateY(-52%)}}
+
+/* 골드 입자 */
+.dust span{position:absolute;width:3px;height:3px;border-radius:50%;background:rgba(212,175,90,.7);
+  box-shadow:0 0 8px rgba(212,175,90,.8);opacity:0;animation:floatUp linear infinite}
+@keyframes floatUp{0%{opacity:0;transform:translateY(40px) scale(.6)}
+  12%{opacity:.9}88%{opacity:.7}100%{opacity:0;transform:translateY(-160px) scale(1)}}
+
+/* ===== 시네마 레터박스 (안쪽으로 닫힘) ===== */
+.bar{position:absolute;left:0;right:0;height:0;background:#040404;z-index:20}
+.bar.t{top:0;animation:barIn 1s cubic-bezier(.7,0,.2,1) .05s forwards}
+.bar.b{bottom:0;animation:barIn 1s cubic-bezier(.7,0,.2,1) .05s forwards}
+@keyframes barIn{to{height:62px}}
+
+/* ===== 우측 정보 ===== */
+.info{position:absolute;right:118px;top:0;bottom:0;width:840px;display:flex;flex-direction:column;justify-content:center;z-index:12;text-align:right;align-items:flex-end}
+.kick{display:flex;align-items:center;gap:20px;font-size:17px;letter-spacing:13px;color:#d4af5a;
+  opacity:0;animation:slideR .9s cubic-bezier(.16,1,.3,1) .8s forwards}
+.kick::before{content:'';width:60px;height:1px;background:linear-gradient(90deg,transparent,#d4af5a)}
+
+.name{font-family:'AppleMyungjo',serif;font-size:210px;line-height:.9;font-weight:400;letter-spacing:6px;
+  margin-top:18px;color:#f6efdc;position:relative;display:flex}
+.name .ch{display:inline-block;opacity:0;transform:translateY(70px) rotate(6deg);filter:blur(14px);
+  color:#f6efdc;text-shadow:0 10px 60px rgba(212,175,90,.4);
+  animation:chIn 1.2s cubic-bezier(.16,1,.3,1) forwards,chGlow 4.5s ease-in-out 3.4s infinite}
+@keyframes chIn{to{opacity:1;transform:translateY(0) rotate(0);filter:blur(0)}}
+@keyframes chGlow{0%,100%{text-shadow:0 10px 60px rgba(212,175,90,.35)}
+  50%{text-shadow:0 10px 50px rgba(212,175,90,.7),0 0 24px rgba(255,236,196,.45)}}
+/* 이름 위 빛 반사 스윕 */
+.name::after{content:'';position:absolute;top:0;left:-60%;width:50%;height:100%;z-index:2;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:skewX(-18deg);opacity:0;animation:shine 1.4s ease-out 2.4s forwards}
+@keyframes shine{0%{left:-60%;opacity:0}10%{opacity:1}100%{left:130%;opacity:0}}
+
+.en{margin-top:24px;font-family:'Georgia',serif;font-size:22px;letter-spacing:11px;color:#b09a63;text-transform:uppercase;
+  opacity:0;animation:slideR .9s cubic-bezier(.16,1,.3,1) 1.9s forwards}
+.role{margin-top:40px;font-size:30px;letter-spacing:5px;color:#efe6cf;
+  opacity:0;animation:slideR .9s cubic-bezier(.16,1,.3,1) 2.05s forwards}
+.role b{color:#d4af5a;font-weight:600}
+.slogan{margin-top:16px;font-family:'AppleMyungjo',serif;font-style:italic;font-size:26px;color:#c3b48d;
+  opacity:0;animation:slideR .9s cubic-bezier(.16,1,.3,1) 2.2s forwards}
+.slogan::before{content:'\201C';color:#d4af5a}.slogan::after{content:'\201D';color:#d4af5a}
+
+/* 골드 언더라인 (좌→우로 그려짐) */
+.rule{height:1px;width:0;margin:42px 0 30px;align-self:flex-end;
+  background:linear-gradient(90deg,transparent,#d4af5a);box-shadow:0 0 12px rgba(212,175,90,.6);
+  animation:ruleIn 1.1s cubic-bezier(.7,0,.2,1) 2.3s forwards,ruleGlow 3.5s ease-in-out 3.5s infinite}
+@keyframes ruleIn{to{width:380px}}
+@keyframes ruleGlow{0%,100%{box-shadow:0 0 10px rgba(212,175,90,.4)}50%{box-shadow:0 0 20px rgba(212,175,90,.85)}}
+
+.meta{display:flex;gap:64px;justify-content:flex-end}
+.meta .c{opacity:0;transform:translateY(20px);animation:up .8s cubic-bezier(.16,1,.3,1) forwards}
+.meta .c:nth-child(1){animation-delay:2.45s}
+.meta .c:nth-child(2){animation-delay:2.58s}
+.meta .c:nth-child(3){animation-delay:2.71s}
+.meta .c .k{font-size:12px;letter-spacing:4px;color:#8a8268;text-transform:uppercase}
+.meta .c .v{margin-top:11px;font-size:21px;color:#ece2c8}
+.meta .c .v b{color:#d4af5a;font-weight:500}
+@keyframes up{to{opacity:1;transform:translateY(0)}}
+
+/* ON AIR 방송 스틸 인서트 갤러리 (사진 여러 장 자동 배치) */
+.gallery{margin-top:38px;display:flex;gap:18px;justify-content:flex-end;perspective:1000px}
+.gcard{width:210px;opacity:0;transform:translateY(28px) rotateY(-22deg);transform-origin:right center;
+  animation:cardIn 1s cubic-bezier(.16,1,.3,1) forwards}
+@keyframes cardIn{to{opacity:1;transform:translateY(0) rotateY(0)}}
+.gcard .pic{width:100%;height:118px;background-size:cover;background-repeat:no-repeat;
+  border:1px solid rgba(212,175,90,.55);box-shadow:0 16px 44px rgba(0,0,0,.6);
+  filter:saturate(.9) contrast(1.03);position:relative;overflow:hidden}
+.gcard .pic::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(5,5,5,.55))}
+.gcard .cap{margin-top:10px;font-size:11px;letter-spacing:1.5px;color:#cdbf95;display:flex;align-items:center;gap:7px;justify-content:flex-end;white-space:nowrap}
+.gcard .cap b{color:#e7dcc1;font-weight:500}
+.gcard .cap .dot{width:7px;height:7px;border-radius:50%;background:#e0533c;box-shadow:0 0 11px #e0533c;flex-shrink:0;
+  animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.tags{margin-top:34px;display:flex;gap:11px;justify-content:flex-end}
+.tags span{font-size:15px;padding:9px 19px;border:1px solid rgba(212,175,90,.4);border-radius:40px;color:#ece2c8;background:rgba(212,175,90,.05);
+  opacity:0;transform:translateY(18px);animation:up .7s cubic-bezier(.16,1,.3,1) forwards}
+.tags span:nth-child(1){animation-delay:2.8s}
+.tags span:nth-child(2){animation-delay:2.9s}
+.tags span:nth-child(3){animation-delay:3.0s}
+.tags span:nth-child(4){animation-delay:3.1s}
+
+/* 우상단 넘버 + 좌측 세로 캡션 */
+.no{position:absolute;top:96px;right:118px;font-family:'Georgia',serif;font-size:24px;letter-spacing:2px;color:rgba(246,239,220,.85);z-index:14;
+  opacity:0;animation:slideR .9s ease 1.2s forwards}
+.side{position:absolute;left:74px;top:50%;transform:translateY(-50%);writing-mode:vertical-rl;
+  font-family:'Georgia',serif;font-size:14px;letter-spacing:8px;color:#8a7d57;z-index:14;
+  opacity:0;animation:fade 1s ease 1.6s forwards}
+.foot{position:absolute;left:118px;bottom:92px;font-size:13px;letter-spacing:6px;color:#7d745a;z-index:14;
+  opacity:0;animation:fade 1.2s ease 3.1s forwards}
+.foot b{color:#a8985f;font-weight:500}
+
+@keyframes slideR{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
+/* 필름 그레인 */
+.grain{position:absolute;inset:0;opacity:.05;mix-blend-mode:screen;pointer-events:none;z-index:25;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:grainShift .5s steps(2) infinite}
+@keyframes grainShift{to{transform:translate(-6px,4px)}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="hero"><div class="img"></div></div>
+  <div class="tone"></div>
+  <div class="shade"></div>
+  <div class="lightbeam"></div>
+  <div class="bgtype">LDY</div>
+  <div class="dust" id="dust"></div>
+  <div class="vig"></div>
+
+  <div class="bar t"></div><div class="bar b"></div>
+
+  <div class="no">No.07 / 08</div>
+  <div class="side">NBN · SEOUL ECONOMIC TV</div>
+
+  <div class="info">
+    <div class="kick">STARRING</div>
+    <h1 class="name" id="name">이동엽</h1>
+    <div class="en">LEE&nbsp;&nbsp;DONG&nbsp;&nbsp;YEOP</div>
+    <div class="role"><b>보장분석 전문가</b></div>
+    <div class="slogan">한 사람의 인생에 꼭 맞는 보장을 설계합니다.</div>
+    <div class="rule"></div>
+    <div class="meta">
+      <div class="c"><div class="k">License</div><div class="v"><b>생명·손해·변액</b></div></div>
+      <div class="c"><div class="k">On Air</div><div class="v">NBN 「보험 불만제로」<br>서울경제TV 「인생설계 원픽」</div></div>
+      <div class="c"><div class="k">Career</div><div class="v">상담 <b id="count">0</b>+ · 8년</div></div>
+    </div>
+    <div class="tags">
+      <span>운전자보험</span><span>종신·정기보험</span><span>보장분석</span><span>은퇴·연금설계</span>
+    </div>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <div class="foot"><b>TEAM ROY</b> · INSURANCE PROFESSIONALS</div>
+  <div class="streak s1"></div><div class="streak s2"></div><div class="streak s3"></div>
+  <div class="flash"></div>
+  <div class="grain"></div>
+  <div class="intro"></div>
+</div>
+
+<script>
+// 1920x1080 스테이지 화면비 맞춤
+function fit(){var s=Math.min(innerWidth/1920,innerHeight/1080);
+  document.getElementById('stage').style.transform='translate(-50%,-50%) scale('+s+')';}
+addEventListener('resize',fit);fit();
+
+// 이름 글자별 등장 (스태거)
+(function(){
+  var el=document.getElementById('name');var t=el.textContent.trim();el.textContent='';
+  t.split('').forEach(function(c,i){
+    var s=document.createElement('span');s.className='ch';s.textContent=c;
+    s.style.animationDelay=(1.0+i*0.16)+'s';el.appendChild(s);
+  });
+})();
+
+// ON AIR 방송 스틸 갤러리 (사진 배열 — 여기에 추가하면 자동으로 카드 생성)
+(function(){
+  var stills=[
+    {img:'photo2.png', size:'200%', pos:'58% 26%', cap:'NBN 「보험 불만제로」'},
+    {img:'photo3.jpg', size:'200%', pos:'24% 28%', cap:'서울경제TV 「인생설계 원픽」'}
+  ];
+  var g=document.getElementById('gallery');
+  stills.forEach(function(s,i){
+    var card=document.createElement('div');card.className='gcard';
+    card.style.animationDelay=(3.0+i*0.18)+'s';
+    card.innerHTML='<div class="pic" style="background-image:url(\''+encodeURI(s.img)+'\');background-size:'+s.size+';background-position:'+s.pos+'"></div>'+
+      '<div class="cap"><span class="dot"></span>ON AIR&nbsp;<b>'+s.cap+'</b></div>';
+    g.appendChild(card);
+  });
+})();
+
+// 상담 수 카운트업 (0 → 1,200) — 유한 setTimeout 스텝 (headless 호환)
+(function(){
+  var el=document.getElementById('count');if(!el)return;
+  var target=1200,steps=28;
+  setTimeout(function(){
+    var i=0;
+    (function step(){
+      i++;var p=i/steps;var e=1-Math.pow(1-p,3); // ease-out cubic
+      el.textContent=Math.round(target*e).toLocaleString();
+      if(i<steps)setTimeout(step,50);
+    })();
+  },2700); // 시작 지연 2.7s
+})();
+
+// 골드 입자 생성
+(function(){
+  var box=document.getElementById('dust');
+  for(var i=0;i<26;i++){
+    var d=document.createElement('span');
+    d.style.left=(Math.random()*55+40)+'%';
+    d.style.top=(Math.random()*80+15)+'%';
+    var dur=(Math.random()*6+6);
+    d.style.animationDuration=dur+'s';
+    d.style.animationDelay=(Math.random()*8)+'s';
+    d.style.opacity=String(Math.random()*0.5+0.3);
+    box.appendChild(d);
+  }
+})();
+</script>
+</body>
+</html>

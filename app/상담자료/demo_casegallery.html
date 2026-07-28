@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>데모 C · 사례 + 한 줄 스토리</title>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:'Noto Sans KR',sans-serif;overflow:hidden;background:#05070f;color:#fff;}
+  #app{position:fixed;inset:0;cursor:pointer;}
+  .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;transition:background 1s ease;}
+  #orbA{width:60vw;height:60vw;top:-15vw;left:-10vw;background:#1e40af;}
+  #orbB{width:55vw;height:55vw;bottom:-18vw;right:-12vw;background:#7c3aed;}
+  .vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,transparent 28%,rgba(5,7,15,.72) 92%);pointer-events:none;}
+  #prog{position:absolute;top:0;left:0;height:3px;width:0;z-index:30;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width .5s;}
+
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:26px;}
+  .slide{position:absolute;width:min(440px,92vw);display:flex;flex-direction:column;align-items:center;gap:15px;text-align:center;
+    opacity:0;transform:translateY(34px) scale(.97);filter:blur(6px);pointer-events:none;
+    transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1),filter .55s ease;}
+  .slide.on{opacity:1;transform:none;filter:none;pointer-events:auto;}
+  .slide.out{opacity:0;transform:translateY(-26px) scale(1.02);filter:blur(6px);}
+
+  .kick{font-size:12px;font-weight:800;letter-spacing:2px;color:#7bb3f4;}
+  .imgcard{position:relative;width:min(280px,72vw);border-radius:20px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.16);box-shadow:0 20px 60px rgba(0,0,0,.55);background:#000;}
+  .imgcard img{width:100%;display:block;max-height:44vh;object-fit:cover;object-position:top;}
+  .imgcard .badge{position:absolute;top:12px;right:12px;font-family:'Montserrat',sans-serif;font-weight:900;font-size:16px;
+    padding:6px 14px;border-radius:30px;color:#fff;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+  .badge.pay{background:rgba(22,163,74,.95);} .badge.waive{background:rgba(37,99,235,.95);} .badge.voice{background:rgba(217,119,6,.95);}
+  .co{font-size:13px;font-weight:800;color:#93c5fd;letter-spacing:.5px;}
+  .story{font-size:clamp(19px,5vw,26px);font-weight:900;line-height:1.4;letter-spacing:-.3px;}
+  .story b{background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{font-size:13px;color:#9ca3af;line-height:1.6;max-width:360px;}
+
+  .big{font-size:clamp(25px,6.4vw,38px);font-weight:900;line-height:1.34;}
+  .big b{background:linear-gradient(135deg,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .big b.g{background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .emoji{font-size:clamp(46px,9.5vw,64px);}
+  .cells{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:min(380px,86vw);}
+  .cell{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:13px;text-align:center;}
+  .cell .v{font-weight:900;font-size:16px;color:#86efac;}
+  .cell .k{font-size:12px;color:#9ca3af;margin-top:4px;line-height:1.45;}
+
+  /* 전체 갤러리 슬라이드 */
+  .gal{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;width:min(420px,90vw);}
+  .gal img{width:100%;aspect-ratio:3/4;object-fit:cover;object-position:top;border-radius:6px;border:1px solid rgba(255,255,255,.12);
+    opacity:0;transform:scale(.8);transition:opacity .4s ease,transform .4s cubic-bezier(.2,.8,.2,1);}
+  .slide.on .gal img{opacity:.9;transform:none;}
+
+  #hud{position:absolute;bottom:22px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:25;pointer-events:none;}
+  #dots{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:80vw;}
+  #dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.24);transition:.35s;}
+  #dots i.on{width:18px;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#22c55e);}
+  #dots i.done{background:rgba(255,255,255,.4);}
+  #tap{font-size:11px;letter-spacing:2px;color:#7e8aa3;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="orb" id="orbA"></div><div class="orb" id="orbB"></div><div class="vignette"></div>
+  <div id="prog"></div>
+  <div id="stage"></div>
+  <div id="hud"><div id="dots"></div><div id="tap">탭 / → 다음</div></div>
+</div>
+<script>
+  const DIR='';
+  const B=['#1e40af','#7c3aed'],G=['#065f46','#0e7490'],R=['#7f1d1d','#854d0e'],P=['#3730a3','#7c3aed'],O=['#854d0e','#7c3aed'];
+  // 전체 18장 (갤러리용)
+  const GALLERY=['dcase01.jpg','dcase02.jpg','dcase03.jpg','dcase04.jpg','dcase05.jpg','dcase06.jpg','dcase07.jpg','dcase08.jpg','dcase09.jpg','dcase10.jpg','dcase11.jpg','dcase12.jpg','dcase13.jpg','dcase14.jpg','dcase15.jpg','dcase16.jpg','dcase17.jpg','dcase18.jpg'];
+  const SLIDES=[
+    {type:'intro',emoji:'🧾',big:'"이런 말, <b>누구나 합니다</b><br>— 근데 진짜 받나요?"',sub:'그래서 말 대신, 실제로 받은 분들의 알림톡 일부를 가져왔습니다',hue:B},
+    {type:'case',f:'dcase01.jpg',co:'KB손해보험 · 4세대 실손',t:'744만',type2:'pay',
+      story:'실손 하나로 비급여 입원비<br><b>744만 원</b> 지급',sub:'4세대 질병비급여 실손 703만 원 포함 — "이게 다 나오네요?"',hue:G},
+    {type:'case',f:'dcase05.jpg',co:'현대해상 · 질병수술',t:'620만',type2:'pay',
+      story:'수술 한 번에<br><b>620만 원</b>이 들어왔습니다',sub:'질병수술·120대질병수술 담보 합산 지급 — 간편심사로 가입한 분',hue:G},
+    {type:'case',f:'dcase03.jpg',co:'DB손해보험 · 운전자상해',t:'177만',type2:'pay',
+      story:'운전 중 사고 한 번에<br><b>177만 원</b>',sub:'출퇴근길 누구에게나 올 수 있는 일 — 참좋은운전자상해보험',hue:R},
+    {type:'case',f:'dcase04.jpg',co:'현대해상 · 어린이종합보험',t:'30만',type2:'pay',
+      story:'임신 중 당뇨 진단까지<br><b>보장됐습니다</b>',sub:'"이런 것도 되나요?" 싶은 특정 진단까지 — 모르면 못 받는 보험금',hue:B},
+    {type:'case',f:'dcase13.jpg',co:'고객의 목소리',t:'후기',type2:'voice',
+      story:'"바로 입금되어 놀랐어요<br><b>실비까지</b> 지급되어 더 감사"',sub:'청구 다음 날 입금 — 생각 못 한 실비까지 챙겨드린 실제 고객 후기',hue:O},
+    {type:'case',f:'dcase16.jpg',co:'롯데손해보험 · 납입면제',t:'면제',type2:'waive',
+      story:'이제 보험료 안 내도<br><b>보장은 그대로</b>',sub:'납입면제 — 조건 충족 시 앞으로 낼 보험료 전액 면제, 보장은 만기까지',hue:P},
+    {type:'gallery',emoji:'📂',big:'이건 <b class="g">일부일 뿐</b>입니다<br>— 셀 수 없이 많은 지급 건',
+      sub:'국내 전 생명·손해보험사에서 무수히 많은 지급 건 중 일부 캡처. 꾸민 게 아니라, 받은 그대로',hue:B},
+    {type:'outro',emoji:'☂️',big:'그래서 <b class="g">좋은 설계</b>는<br>이렇게 돌아옵니다',
+      cells:[['8억 원+','누적 지급 실적'],['2억','최고 단일 지급'],['전 보험사','생·손보 전체'],['납입면제','다건']],
+      sub:'실제 고객 동의 자료 · 개인정보 가림 · 상품·담보에 따라 결과는 달라질 수 있습니다',hue:G},
+  ];
+  const stage=document.getElementById('stage'),dots=document.getElementById('dots');
+  const orbA=document.getElementById('orbA'),orbB=document.getElementById('orbB'),prog=document.getElementById('prog');
+
+  stage.innerHTML=SLIDES.map((s,n)=>{
+    let inner='';
+    if(s.type==='case'){
+      inner=`<div class="kick">CASE</div>
+        <div class="imgcard"><img src="${encodeURI(DIR+s.f)}" alt="">
+          <span class="badge ${s.type2}">${s.type2==='pay'?s.t+'원':(s.type2==='waive'?'납입면제':'고객후기')}</span></div>
+        <div class="co">${s.co}</div><div class="story">${s.story}</div><div class="sub">${s.sub}</div>`;
+    }else if(s.type==='intro'){
+      inner=`<div class="emoji">${s.emoji}</div><div class="big">${s.big}</div><div class="sub">${s.sub}</div>`;
+    }else if(s.type==='gallery'){
+      inner=`<div class="emoji">${s.emoji}</div><div class="big">${s.big}</div>
+        <div class="gal">${GALLERY.map(f=>`<img src="${encodeURI(DIR+f)}" alt="" loading="lazy">`).join('')}</div>
+        <div class="sub">${s.sub}</div>`;
+    }else{
+      inner=`<div class="emoji">${s.emoji}</div><div class="big">${s.big}</div>
+        <div class="cells">${s.cells.map(c=>`<div class="cell"><div class="v">${c[0]}</div><div class="k">${c[1]}</div></div>`).join('')}</div>
+        <div class="sub">${s.sub}</div>`;
+    }
+    return `<div class="slide" data-n="${n}">${inner}</div>`;
+  }).join('');
+  dots.innerHTML=SLIDES.map((_,n)=>`<i data-n="${n}"></i>`).join('');
+
+  let i=0,busy=false;
+  function show(n){
+    document.querySelectorAll('.slide').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('out',k<n);});
+    document.querySelectorAll('#dots i').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('done',k<n);});
+    const h=SLIDES[n].hue;orbA.style.background=h[0];orbB.style.background=h[1];
+    prog.style.width=((n+1)/SLIDES.length*100)+'%';
+  }
+  function next(){if(busy||i>=SLIDES.length-1)return;busy=true;setTimeout(()=>busy=false,340);i++;show(i);}
+  function prev(){if(busy||i<=0)return;busy=true;setTimeout(()=>busy=false,340);i--;show(i);}
+  document.getElementById('app').addEventListener('click',e=>{if(e.clientX<window.innerWidth*0.22)prev();else next();});
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}else if(e.key==='ArrowLeft'){e.preventDefault();prev();}});
+  let tx=0;document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  document.addEventListener('touchend',e=>{var d=e.changedTouches[0].clientX-tx;if(d<-40)next();else if(d>40)prev();},{passive:true});
+  show(0);
+</script>
+</body>
+</html>
