@@ -772,6 +772,11 @@ body.crm-mode #crmScreen{display:block;}
 body.sangdam-mode .app{display:none;}
 body.sangdam-mode #sangdamScreen{display:block;}
 #sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 윤시스쿨 전용 화면 (상담자료와 동일 패턴) */
+#yoonsiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.yoonsi-mode .app{display:none;}
+body.yoonsi-mode #yoonsiScreen{display:block;}
+#yoonsiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 
 /* 모바일 */
 .mobile-bar{display:none;}
@@ -887,6 +892,16 @@ body.sangdam-mode #sangdamScreen{display:block;}
     <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 윤시스쿨 전용 화면 -->
+<div id="yoonsiScreen">
+  <iframe id="yoonsiFrame" class="fin-frame" title="윤시스쿨"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitYoonsi()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadYoonsi()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openYoonsiNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -2714,6 +2729,7 @@ var GEN=[
 var TABS=[
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
@@ -2828,6 +2844,7 @@ function renderNav(){
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
 function go(tab){
+  document.body.classList.remove('yoonsi-mode');
   if(tab==='finance'){
     mountFinance();
     document.body.classList.remove('crm-mode','sangdam-mode');
@@ -2841,6 +2858,14 @@ function go(tab){
     document.body.classList.remove('finance-mode','sangdam-mode');
     document.body.classList.add('crm-mode');
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='crm');});
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='yoonsi'){
+    mountYoonsi();
+    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    document.body.classList.add('yoonsi-mode');
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='yoonsi');});
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -2934,11 +2959,18 @@ function mountSangdam(){var f=$('sangdamFrame');if(!f||f._mounted)return;f.src=S
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* 윤시스쿨 모듈 (번들: 윤시스쿨/index.html) */
+var YOONSI_URL='윤시스쿨/index.html';
+function mountYoonsi(){var f=$('yoonsiFrame');if(!f||f._mounted)return;f.src=YOONSI_URL;f._mounted=true;}
+function reloadYoonsi(){var f=$('yoonsiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountYoonsi,30);toast('윤시스쿨 새로고침');}}
+function openYoonsiNewTab(){var w=window.open(YOONSI_URL,'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
+function exitYoonsi(){go(lastTab||'home');}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
 /* ════════ 출근 현황(네이티브) — 출근 달력 + KPI 한눈에 (CRM과 같은 attendance 데이터, CRM 미접촉) ════════ */
