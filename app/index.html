@@ -10291,42 +10291,43 @@ function cnMagText(sl){
   if(sl.t==='point')return {k:'POINT '+(sl.n<10?'0'+sl.n:''+sl.n), t:sl.k, s:sl.d};
   return {k:'전문가 무료 점검', t:'이 내용, 내 상황엔\n어떻게 적용될까요?', s:'내 보장·정책자금·세금·노후 — 지금 무료로 점검받으세요.  프로필 링크 →'};
 }
-function cnLayout(sl){var L=sl.layout;if(L==='cover'||L==='stat'||L==='quote'||L==='point'||L==='list'||L==='cta')return L;return sl.t==='cover'?'cover':(sl.t==='cta'?'cta':'point');}
-function cnTitleSize(t){var L=(''+t).replace(/\s/g,'').length;return L<=9?38:(L<=15?32:(L<=24?27:23));}
+function cnLayout(sl){var L=sl.layout;if(L==='cover'||L==='stat'||L==='quote'||L==='point'||L==='list'||L==='cta'||L==='news')return L;return sl.t==='cover'?'cover':(sl.t==='cta'?'cta':'point');}
+function cnHl(t,color){var h=osEsc(t);h=h.replace(/\*\*(.+?)\*\*/g,'<span style="color:'+color+'">$1</span>');return h.replace(/\n/g,'<br>');}
+function cnStatHtml(s){var h=osEsc(s);h=h.replace(/(▲[^\s]*)/g,'<span style="color:#DC2626">$1</span>');h=h.replace(/(▼[^\s]*)/g,'<span style="color:#2563EB">$1</span>');return h;}
+function cnPhotoHtml(idx,cls){var im=CN.imgs[idx];if(im&&im.url)return '<div class="cnw-photo'+(cls||'')+'" style="background-image:url('+im.url+')"></div>';return '<div class="cnw-photo ph'+(cls||'')+'">'+'이미지 삽입 가능 (🖼 버튼)'+'</div>';}
 function cnSlidePreview(sl,idx,n){
-  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx],m=cnMagText(sl),lay=cnLayout(sl);
-  var top='<span class="cn2-logo">'+APEX_LOGO_SVG+'</span><span class="cn2-mag-mast">APEX YUN PRO</span><span class="cn2-page">'+(idx+1)+' / '+n+'</span>';
-  var bg;
-  if(im&&im.url){bg='background-image:linear-gradient(180deg,rgba(8,10,18,.24),rgba(8,10,18,.05) 34%,rgba(8,10,18,.90)),url('+im.url+');background-size:cover;background-position:center';}
-  else{bg='background-image:linear-gradient(180deg,rgba(8,10,18,.10),rgba(8,10,18,.72)),'+th.g;}
-  var rule='<div class="cn2-mag-rule" style="background:'+acc+'"></div>';
-  var kick=m.k?'<div class="cn2-mag-kicker" style="color:'+acc+'">'+osEsc(m.k)+'</div>':'';
-  var sub=m.s?'<div class="cn2-mag-sub">'+osEsc(m.s)+'</div>':'';
-  var body='',cc='';
-  if(lay==='stat'){
-    cc=' cn2-cc';
-    body='<div class="cn2-body">'+kick+'<div class="cn2-stat" style="color:'+acc+'">'+osEsc(sl.big||m.t)+'</div><div class="cn2-stat-lb">'+osEsc(m.t)+'</div>'+(m.s?'<div class="cn2-mag-sub" style="margin-top:8px">'+osEsc(m.s)+'</div>':'')+'</div>';
-  }else if(lay==='quote'){
-    cc=' cn2-cc';
-    body='<div class="cn2-body"><div class="cn2-quote-mk" style="color:'+acc+'">“</div><div class="cn2-quote">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+(m.s?'<div class="cn2-mag-sub" style="margin-top:12px">'+osEsc(m.s)+'</div>':'')+'</div>';
-  }else if(lay==='list'){
-    var its=(sl.items||[]).slice(0,4).map(function(z){return '<li>'+osEsc(z)+'</li>';}).join('');
-    body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-list-t">'+osEsc(m.t)+'</div><ul class="cn2-list" style="--acc:'+acc+'">'+its+'</ul></div>';
-  }else if(lay==='cta'){
-    body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-mag-title">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+(m.s?'<div class="cn2-cta-pill">'+osEsc(m.s)+'</div>':'')+'<div class="cn2-disc">본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.</div></div>';
-  }else if(lay==='point'){
-    body='<div class="cn2-mag-body">'+(m.k?'<div class="cn2-nb2" style="color:'+acc+'">'+osEsc(m.k)+'</div>':'')+'<div class="cn2-ph2">'+osEsc(m.t)+'</div>'+sub+'</div>';
-  }else{ /* cover */
-    body='<div class="cn2-mag-body">'+rule+kick+'<div class="cn2-cover-t" style="font-size:'+cnTitleSize(m.t)+'px">'+osEsc(m.t).replace(/\n/g,'<br>')+'</div>'+sub+'</div>';
+  var m=cnMagText(sl),lay=cnLayout(sl);
+  var badge='<span class="cnw-badge'+(lay==='cover'?' cv':'')+'">'+(idx+1)+'</span>';
+  var statTx=sl.stat||sl.big||'';
+  if(lay==='cover'){
+    return '<div class="cnw cover">'+badge+'<div class="cnw-covlb">'+osEsc(m.k||'오늘의 카드뉴스')+'</div>'+
+      '<div class="cnw-pad"><div class="cnw-t cv">'+cnHl(m.t,'#FACC15')+'</div>'+(m.s?'<div class="cnw-b cv">'+osEsc(m.s)+'</div>':'')+'</div>'+
+      cnPhotoHtml(idx)+'<div class="cnw-pill">🔖 저장하고 매일 확인하세요!</div></div>';
   }
-  return '<div class="cn2-slide cn2-mag'+cc+'" style="'+bg+'">'+top+body+'</div>';
+  if(lay==='list'){
+    var its=(sl.items||[]).slice(0,5).map(function(z){return '<div class="cnw-li"><span class="ck">✓</span><span>'+osEsc(z)+'</span></div>';}).join('');
+    return '<div class="cnw">'+badge+'<div class="cnw-pad"><div class="cnw-t">'+cnHl(m.t,'#1D4ED8')+'</div><div class="cnw-lis">'+its+'</div></div>'+
+      (m.s?'<div class="cnw-qbox"><div class="cnw-qmk">“</div><div class="cnw-q">'+osEsc(m.s)+'</div></div>':'')+'<div style="height:14px"></div></div>';
+  }
+  if(lay==='quote'){
+    return '<div class="cnw">'+badge+'<div class="cnw-qwrap"><div class="cnw-qbox big"><div class="cnw-qmk">“</div><div class="cnw-q big">'+cnHl(m.t,'#1D4ED8')+'</div>'+(m.s?'<div class="cnw-qs">'+osEsc(m.s)+'</div>':'')+'</div></div></div>';
+  }
+  if(lay==='cta'){
+    return '<div class="cnw">'+badge+'<div class="cnw-pad"><div class="cnw-t">'+cnHl(m.t,'#1D4ED8')+'</div>'+(m.s?'<div class="cnw-b">'+osEsc(m.s)+'</div>':'')+'</div>'+
+      cnPhotoHtml(idx)+'<div class="cnw-disc">본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.</div>'+
+      '<div class="cnw-nav"><div>🔖 저장하기 &nbsp;|&nbsp; ↗ 공유하기 &nbsp;|&nbsp; ♥ 팔로우하기</div><div class="tg">더 유익한 정보를 받아보세요!</div></div></div>';
+  }
+  /* news (point/stat) */
+  return '<div class="cnw">'+badge+'<div class="cnw-pad"><div class="cnw-t">'+cnHl(m.t,'#1D4ED8')+'</div>'+(m.s?'<div class="cnw-b">'+osEsc(m.s)+'</div>':'')+'</div>'+
+    cnPhotoHtml(idx)+
+    (statTx?'<div class="cnw-bar"><span class="ic">◉</span><span>'+cnStatHtml(statTx)+'</span></div>':'<div style="height:14px"></div>')+'</div>';
 }
 /* ── AI 카드뉴스 기획·생성 (인스타 캐러셀 전문 기획자 프롬프트) ── */
 function cnAiSys(){
-  return sys('너는 금융·보험 분야 인스타그램 캐러셀 전문 편집자다. 사용자가 기준 날짜·뉴스 원문·기사 URL·키워드를 주면, 뉴스를 단순 요약하지 말고 고객이 멈춰 읽고 저장하며 자기 금융 상태를 점검하게 만드는 8~10장 캐러셀을 만든다. 각 뉴스가 고객의 월급·생활비·투자금·보험료·치료비·노후자금에 어떤 영향을 줄 수 있는지 쉽게 연결해 설명한다.\n[목적] 수익 보장·특정 상품 가입 유도가 아니다. 고객이 ①돈의 흐름이 어떻게 바뀌는지 ②어떤 금융 위험을 미리 확인해야 하는지 ③내 주식·펀드·변액보험에 어떤 영향인지 ④현재 보험·치료비 준비가 충분한지 ⑤지금 확인·질문할 것이 무엇인지 이해하게 돕는 것.\n[타깃] 기본: 35~55세 직장인·자영업자 중 주식·펀드·변액보험·보험료·치료비·노후에 관심은 있지만 금융용어가 어려운 사람(주식 있으나 흐름 모름, 변액 수익률 오래 안 봄, 보험료는 내는데 보장 모름, 암·뇌·심장 치료비 걱정, 자녀 교육비+부모 의료비 이중부담, 노후 불안). 사용자가 타깃을 주면 그것을 우선.\n[뉴스 선택] 우선순위: 자산·지출에 직접 영향 > 주식·펀드·변액·보험·치료비와 연결 > 숫자 변화가 큼 > 많이 놓치는 제도 변화 > 기한·조건 임박 > 상담에서 자주 나올 질문. 연예·자극 사건·무관 뉴스 제외.\n[사실 원칙] 입력 자료에 있는 숫자·날짜·조건만 사용한다. 날짜·금액·수익률·지수·보험료·치료비·보장 조건을 절대 추측하지 마라. 확인 안 되면 "현재 제공된 자료만으로는 정확한 확인이 어렵습니다"라고 쓴다. URL만 있고 본문이 없으면 내용을 지어내지 말고 일반 원리 중심으로 쓰되 숫자를 만들지 마라. 오래된 정보와 최신 정보를 섞지 말고, 기사 작성일과 사건 발생일이 다르면 구분한다.\n[제목] 주제명만 쓰지 마라("오늘의 경제뉴스" 금지). 독자의 이득/피할 손해/지금 확인할 이유/반전/돈과의 직접 연결 중 최소 하나가 보이게. 22자 이내. "무조건·확실한 수익·지금 안 하면 손해·대박 종목·원금 보장" 금지. 공포 과장 금지.\n[구성] 장수는 입력값(기본 10). 흐름: 1 표지(layout cover: 결과가 보이는 제목+보조문구+기준날짜 라벨) → 2 고객 상황(point: 자신의 이야기라 느낄 질문, 첫 문장에 결론) → 3 핵심뉴스1(stat: 가장 중요한 변화, big에 검증된 숫자) → 4 핵심뉴스2(point: 주식·펀드·변액 연결, 확인할 항목 중심) → 5 핵심뉴스3(point 또는 stat: 보험료·보장·실손·치료비 연결, 실제 부담 비용) → 6 놓치기 쉬운 반전(quote: 흔한 오해, 사실과 해석 구분) → 7 고객별 영향(list: 주식투자자/펀드/변액/실손/암뇌심장/자녀가정/은퇴준비/대출자 중 관련 3개, 각 "무엇을 확인해야 하는지" 한 문장) → 8 오늘 확인할 체크리스트(list: 실행 가능한 3~5개) → 9 한 줄 정리(quote: 불안 대신 방향) → 10 CTA(cta: 목적에 맞는 문구 하나). 8~9장이면 6 또는 9를 합쳐 줄인다. 같은 layout 3연속 금지, 최소 4종 사용 — 장마다 정보량·글자 크기 리듬을 다르게.\n[페이지 문장] 한 장=한 메시지. 결론형 제목 22자 이내, 본문(sub)은 쉬운 입말 1~3문장·70자 이내, 핵심 숫자나 체크포인트 1개 포함. 전문용어는 바로 풀기(예: 비급여는 건강보험이 적용되지 않아 직접 부담하는 비용). "문제는 여기부터입니다 / 많은 분이 이 부분을 놓칩니다 / 주가가 올랐다고 내 계좌도 오른 것은 아닙니다 / 보험이 있다는 것과 치료비가 충분하다는 것은 다릅니다 / 지금 필요한 건 불안이 아니라 확인입니다" 같은 표현을 자연스럽게 활용.\n[안전] 특정 종목 매수·매도 권유 금지, 특정 상품 가입 강요 금지, 수익률·보험금 지급 보장 금지, 과거 수익률이 미래를 보장하지 않음을 표시, 보험금 지급은 약관·가입시기·심사에 따라 다름, 치료비는 환자 상태·병원·급여 여부에 따라 다름, 사실과 의견 분리, 불확실한 전망은 "가능성이 있습니다", 공포심·죄책감 주지 않기.\n[이미지] 각 장의 img에 글자·로고·숫자가 보이지 않는 실사 사진 프롬프트를 1줄로 쓴다. 한국인 고객의 생활 장면, 경제신문·비즈니스 매거진 톤, 네이비·화이트·블루·골드 포인트, 세로 4:5, 텍스트 얹을 여백, 과도한 연출·자극적 표현(환자 고통 등) 금지.\n[출력은 아래 JSON 하나만. 코드블록·설명·머리말 없이 순수 JSON만 출력한다.]\n{"baseDate":"기준 날짜","target":"핵심 타깃","benefit":"독자가 얻는 핵심 이득 한 문장","newsPick":"선정한 주요 뉴스와 선정 이유 1~2문장","titles":["표지 제목 후보 10개 — 이득형2·손실방지형2·질문형2·반전형2·체크리스트형2"],"pickTitle":"가장 추천하는 제목","pickWhy":"추천 이유","caption":"인스타 캡션 2~4문장 + 해시태그 8~12개","sources":"뉴스 출처와 날짜(입력 자료 기준, 지어내지 말 것)","cta":"목적에 맞는 CTA 한 문장","selfcheck":"자체 점검(제목 이득·타깃 구체성·한 장 한 메시지·결론 먼저·돈 연결·숫자 출처·보장 표현 없음·행동 명확성) 후 수정 반영 요약","slides":[{"layout":"cover|stat|quote|point|list|cta","kicker":"짧은 라벨(포인트는 01,02 같은 번호 가능)","title":"결론형 제목(22자 이내)","sub":"본문(쉬운 입말, 70자 이내)","big":"stat일 때 강조 숫자·수치","items":["list일 때 항목 2~5개"],"img":"이 장의 실사 사진 프롬프트 1줄"}]}\n[자체 점검] 점검에서 발견한 문제는 점검으로 끝내지 말고, 고친 최종 문구를 slides에 반영해 출력한다.');
+  return sys('너는 금융·보험 분야 인스타그램 캐러셀 전문 편집자다. 사용자가 기준 날짜·뉴스 원문·기사 URL·키워드를 주면, 뉴스를 단순 요약하지 말고 고객이 멈춰 읽고 저장하며 자기 금융 상태를 점검하게 만드는 8~10장 캐러셀을 만든다. 각 뉴스가 고객의 월급·생활비·투자금·보험료·치료비·노후자금에 어떤 영향을 줄 수 있는지 쉽게 연결해 설명한다.\n[목적] 수익 보장·특정 상품 가입 유도가 아니다. 고객이 ①돈의 흐름이 어떻게 바뀌는지 ②어떤 금융 위험을 미리 확인해야 하는지 ③내 주식·펀드·변액보험에 어떤 영향인지 ④현재 보험·치료비 준비가 충분한지 ⑤지금 확인·질문할 것이 무엇인지 이해하게 돕는 것.\n[타깃] 기본: 35~55세 직장인·자영업자 중 주식·펀드·변액보험·보험료·치료비·노후에 관심은 있지만 금융용어가 어려운 사람(주식 있으나 흐름 모름, 변액 수익률 오래 안 봄, 보험료는 내는데 보장 모름, 암·뇌·심장 치료비 걱정, 자녀 교육비+부모 의료비 이중부담, 노후 불안). 사용자가 타깃을 주면 그것을 우선.\n[뉴스 선택] 우선순위: 자산·지출에 직접 영향 > 주식·펀드·변액·보험·치료비와 연결 > 숫자 변화가 큼 > 많이 놓치는 제도 변화 > 기한·조건 임박 > 상담에서 자주 나올 질문. 연예·자극 사건·무관 뉴스 제외.\n[사실 원칙] 입력 자료에 있는 숫자·날짜·조건만 사용한다. 날짜·금액·수익률·지수·보험료·치료비·보장 조건을 절대 추측하지 마라. 확인 안 되면 "현재 제공된 자료만으로는 정확한 확인이 어렵습니다"라고 쓴다. URL만 있고 본문이 없으면 내용을 지어내지 말고 일반 원리 중심으로 쓰되 숫자를 만들지 마라. 오래된 정보와 최신 정보를 섞지 말고, 기사 작성일과 사건 발생일이 다르면 구분한다.\n[제목] 주제명만 쓰지 마라("오늘의 경제뉴스" 금지). 독자의 이득/피할 손해/지금 확인할 이유/반전/돈과의 직접 연결 중 최소 하나가 보이게. 22자 이내. "무조건·확실한 수익·지금 안 하면 손해·대박 종목·원금 보장" 금지. 공포 과장 금지.\n[구성] 장수는 입력값(기본 10). 흐름: 1 표지(layout cover: 결과가 보이는 제목+보조문구+기준날짜 라벨) → 2 고객 상황(point: 자신의 이야기라 느낄 질문, 첫 문장에 결론) → 3 핵심뉴스1(stat: 가장 중요한 변화, big에 검증된 숫자) → 4 핵심뉴스2(point: 주식·펀드·변액 연결, 확인할 항목 중심) → 5 핵심뉴스3(point 또는 stat: 보험료·보장·실손·치료비 연결, 실제 부담 비용) → 6 놓치기 쉬운 반전(quote: 흔한 오해, 사실과 해석 구분) → 7 고객별 영향(list: 주식투자자/펀드/변액/실손/암뇌심장/자녀가정/은퇴준비/대출자 중 관련 3개, 각 "무엇을 확인해야 하는지" 한 문장) → 8 오늘 확인할 체크리스트(list: 실행 가능한 3~5개) → 9 한 줄 정리(quote: 불안 대신 방향) → 10 CTA(cta: 목적에 맞는 문구 하나). 8~9장이면 6 또는 9를 합쳐 줄인다. 같은 layout 3연속 금지, 최소 4종 사용 — 장마다 정보량·글자 크기 리듬을 다르게.\n[페이지 문장] 한 장=한 메시지. 결론형 제목 22자 이내, 본문(sub)은 쉬운 입말 1~3문장·70자 이내, 핵심 숫자나 체크포인트 1개 포함. 전문용어는 바로 풀기(예: 비급여는 건강보험이 적용되지 않아 직접 부담하는 비용). "문제는 여기부터입니다 / 많은 분이 이 부분을 놓칩니다 / 주가가 올랐다고 내 계좌도 오른 것은 아닙니다 / 보험이 있다는 것과 치료비가 충분하다는 것은 다릅니다 / 지금 필요한 건 불안이 아니라 확인입니다" 같은 표현을 자연스럽게 활용.\n[안전] 특정 종목 매수·매도 권유 금지, 특정 상품 가입 강요 금지, 수익률·보험금 지급 보장 금지, 과거 수익률이 미래를 보장하지 않음을 표시, 보험금 지급은 약관·가입시기·심사에 따라 다름, 치료비는 환자 상태·병원·급여 여부에 따라 다름, 사실과 의견 분리, 불확실한 전망은 "가능성이 있습니다", 공포심·죄책감 주지 않기.\n[이미지] 각 장의 img에 글자·로고·숫자가 보이지 않는 실사 사진 프롬프트를 1줄로 쓴다. 한국인 고객의 생활 장면, 경제신문·비즈니스 매거진 톤, 네이비·화이트·블루·골드 포인트, 세로 4:5, 텍스트 얹을 여백, 과도한 연출·자극적 표현(환자 고통 등) 금지.\n[출력은 아래 JSON 하나만. 코드블록·설명·머리말 없이 순수 JSON만 출력한다.]\n{"baseDate":"기준 날짜","target":"핵심 타깃","benefit":"독자가 얻는 핵심 이득 한 문장","newsPick":"선정한 주요 뉴스와 선정 이유 1~2문장","titles":["표지 제목 후보 10개 — 이득형2·손실방지형2·질문형2·반전형2·체크리스트형2"],"pickTitle":"가장 추천하는 제목","pickWhy":"추천 이유","caption":"인스타 캡션 2~4문장 + 해시태그 8~12개","sources":"뉴스 출처와 날짜(입력 자료 기준, 지어내지 말 것)","cta":"목적에 맞는 CTA 한 문장","selfcheck":"자체 점검(제목 이득·타깃 구체성·한 장 한 메시지·결론 먼저·돈 연결·숫자 출처·보장 표현 없음·행동 명확성) 후 수정 반영 요약","slides":[{"layout":"cover|stat|quote|point|list|cta","kicker":"짧은 라벨(포인트는 01,02 같은 번호 가능)","title":"결론형 제목(22자 이내) — 핵심 단어 1~2개를 **단어** 로 감싸 강조(표지 포함 모든 장)","sub":"본문(쉬운 입말, 70자 이내)","big":"stat일 때 강조 숫자·수치","stat":"뉴스 카드 하단 데이터 바 문구 — 입력 자료에 있는 숫자만, 예: 코스피 2,730.34 ▲34.33 (1.28%). 자료에 숫자가 없으면 빈 문자열","items":["list일 때 항목 2~5개"],"img":"이 장의 실사 사진 프롬프트 1줄"}]}\n[자체 점검] 점검에서 발견한 문제는 점검으로 끝내지 말고, 고친 최종 문구를 slides에 반영해 출력한다.');
 }
 function cnAiParse(txt){try{var t=''+txt,s=t.indexOf('{'),e=t.lastIndexOf('}');if(s<0||e<0)return null;return JSON.parse(t.slice(s,e+1));}catch(x){return null;}}
-function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{};var lay=a.layout||(i===0?'cover':(i===arr.length-1?'cta':'point'));if(i===0)lay='cover';if(i===arr.length-1&&arr.length>1)lay='cta';var tp=(lay==='cover'?'cover':(lay==='cta'?'cta':'point'));out.push({t:tp,layout:lay,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),big:(a.big||''),items:(a.items||[]),img:(a.img||''),n:i});}return out;}
+function cnAiToSlides(arr){var out=[];for(var i=0;i<arr.length;i++){var a=arr[i]||{};var lay=a.layout||(i===0?'cover':(i===arr.length-1?'cta':'point'));if(i===0)lay='cover';if(i===arr.length-1&&arr.length>1)lay='cta';var tp=(lay==='cover'?'cover':(lay==='cta'?'cta':'point'));out.push({t:tp,layout:lay,mk:(a.kicker||''),mt:(a.title||''),ms:(a.sub||''),big:(a.big||''),stat:(a.stat||''),items:(a.items||[]),img:(a.img||''),n:i});}return out;}
 function cnAiGen(){
   var topic=(osVal('cnAiTopic')||'').replace(/^\s+|\s+$/g,'');
   if(!topic){toast('뉴스 원문·키워드를 입력하세요');return;}
@@ -10376,10 +10377,10 @@ function renderTodayCard(){
     '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
     '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
     '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
-  var badge=isAi?(n+'장 · AI 기획 · 매거진'):'5장 · 사진 매거진 스타일';
+  var badge=isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일';
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
-    : '<div class="cn2-intro"><b>사진 매거진 스타일</b> — 각 장에서 <b>이 카드에 이미지</b>를 누르면 그 장에 사진이 꽉 차게 깔립니다(장마다 다른 사진 OK). 사진 없는 장은 색 테마 자동. 저장하면 로고가 함께 들어갑니다.</div>';
+    : '<div class="cn2-intro"><b>뉴스 카드 스타일</b> — 흰 배경 + 번호 뱃지 + <b>파란 키워드 강조</b> + 사진 블록 + 하단 지표 바 구조입니다. 각 장에서 <b>이 카드에 이미지</b>로 사진을 넣으면 카드 속 사진 블록에 들어갑니다(장마다 다른 사진).</div>';
   return '<div class="cn-head">📅 오늘의 카드뉴스 <span class="cn-badge">'+badge+'</span></div>'+
     aiBox+(isAi?cnAiPlanHtml():'')+intro+
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="cnPick()">🖼 이 카드에 이미지</button>'+thisImgBtn+
@@ -10399,67 +10400,64 @@ function cnCoverFit(ctx,img,W,H){var ir=img.width/img.height,cr=W/H,dw,dh,dx,dy;
 function cnDrawSlide(sl,idx,n){
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
-  var th=cnTheme(idx),acc=th.a,im=CN.imgs[idx],m=cnMagText(sl),lay=cnLayout(sl),PAD=96,maxW=W-PAD*2;
-  if(im&&im.img){cnCoverFit(x,im.img,W,H);var g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(8,10,18,.24)');g.addColorStop(0.34,'rgba(8,10,18,.05)');g.addColorStop(1,'rgba(8,10,18,.90)');x.fillStyle=g;x.fillRect(0,0,W,H);}
-  else{var g2=x.createLinearGradient(0,0,W*0.5,H);for(var gi=0;gi<th.cs.length;gi++)g2.addColorStop(th.cs[gi][0],th.cs[gi][1]);x.fillStyle=g2;x.fillRect(0,0,W,H);var ov=x.createLinearGradient(0,0,0,H);ov.addColorStop(0,'rgba(8,10,18,.10)');ov.addColorStop(1,'rgba(8,10,18,.72)');x.fillStyle=ov;x.fillRect(0,0,W,H);}
+  var m=cnMagText(sl),lay=cnLayout(sl),PAD=72,maxW=W-PAD*2,im=CN.imgs[idx];
+  var NAVY='#0B2447',BLUE='#1D4ED8',INK='#0F2547',BODY='#4B5563';
+  function RR(a,b,w,h,r){cnRoundRect(x,a,b,w,h,r);}
+  function parseHl(t){var runs=[],re=/\*\*(.+?)\*\*/g,last=0,mm;t=''+t;while((mm=re.exec(t))){if(mm.index>last)runs.push({tx:t.slice(last,mm.index),hl:false});runs.push({tx:mm[1],hl:true});last=re.lastIndex;}if(last<t.length)runs.push({tx:t.slice(last),hl:false});return runs;}
+  function drawRich(t,font,baseCol,hlCol,sx,sy,lh,mw,maxLines){x.font=font;var lines=[[]],cw=0;var segs=[];parseHl(t).forEach(function(r){(''+r.tx).split('\n').forEach(function(part,pi){if(pi>0)segs.push({br:true});if(part)segs.push({tx:part,hl:r.hl});});});
+    segs.forEach(function(sg){if(sg.br){lines.push([]);cw=0;return;}for(var i=0;i<sg.tx.length;i++){var ch=sg.tx[i],w=x.measureText(ch).width;if(cw+w>mw&&lines[lines.length-1].length){lines.push([]);cw=0;}var L=lines[lines.length-1];var lr=L[L.length-1];if(lr&&lr.hl===sg.hl)lr.tx+=ch;else L.push({tx:ch,hl:sg.hl});cw+=w;}});
+    lines=lines.slice(0,maxLines||99);var yy=sy;lines.forEach(function(L){var xx=sx;L.forEach(function(r){x.fillStyle=r.hl?hlCol:baseCol;x.fillText(r.tx,xx,yy);xx+=x.measureText(r.tx).width;});yy+=lh;});return yy;}
+  function drawPhoto(py,ph){var r=26,pxx=PAD,pw=maxW;if(im&&im.img){x.save();RR(pxx,py,pw,ph,r);x.clip();var ir=im.img.width/im.img.height,cr=pw/ph,dw,dh,dx,dy;if(ir>cr){dh=ph;dw=ph*ir;dx=pxx+(pw-dw)/2;dy=py;}else{dw=pw;dh=pw/ir;dx=pxx;dy=py+(ph-dh)/2;}x.drawImage(im.img,dx,dy,dw,dh);x.restore();}else{x.save();RR(pxx,py,pw,ph,r);x.clip();var g=x.createLinearGradient(pxx,py,pxx+pw,py+ph);g.addColorStop(0,'#123F73');g.addColorStop(1,BLUE);x.fillStyle=g;x.fillRect(pxx,py,pw,ph);drawApexMark(x,pxx+pw/2,py+ph/2-56,120,'rgba(255,255,255,.20)');x.restore();}}
+  function badge(bg){x.fillStyle=bg;RR(PAD,64,88,88,22);x.fill();x.fillStyle='#fff';x.font='900 46px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText(''+(idx+1),PAD+44,110);x.textAlign='left';x.textBaseline='top';}
   x.textBaseline='top';x.textAlign='left';
-  drawApexMark(x,PAD+24,68,54,'rgba(255,255,255,.95)');
-  x.font='800 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.9)';x.fillText('APEX YUN PRO',PAD+66,80);
-  x.font='700 30px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.6)';x.textAlign='right';x.fillText((idx+1)+' / '+n,W-PAD,82);x.textAlign='left';
-  function cnRule(y){x.fillStyle=acc;cnRoundRect(x,PAD,y,56,5,3);x.fill();}
-  function cnKick(y){if(m.k){x.font='800 30px Pretendard'+FF;x.fillStyle=acc;x.fillText(m.k,PAD,y);}}
-  function cnDrawLines(arr,fnt,col,startY,lh){x.font=fnt;x.fillStyle=col;var yy=startY;for(var q=0;q<arr.length;q++){x.fillText(arr[q],PAD,yy);yy+=lh;}return yy;}
-  if(lay==='stat'){
-    var big=(sl.big||m.t)||'';
-    x.font='500 40px Pretendard'+FF;var sll=(m.s?cnWrap(x,m.s,maxW).slice(0,2):[]);
-    x.font='800 56px Pretendard'+FF;var lbl=cnWrap(x,m.t,maxW).slice(0,3);
-    var cy=560;
-    cnKick(cy-64);
-    x.font='900 168px Pretendard'+FF;x.fillStyle=acc;x.fillText(big,PAD,cy);
-    var ly=cnDrawLines(lbl,'800 56px Pretendard'+FF,'#fff',cy+200,66);
-    if(sll.length){cnDrawLines(sll,'500 40px Pretendard'+FF,'rgba(255,255,255,.85)',ly+16,54);}
-  }else if(lay==='quote'){
-    x.fillStyle=acc;x.font='900 150px Pretendard'+FF;x.fillText('“',PAD-8,360);
-    x.font='800 64px Pretendard'+FF;var ql=cnWrap(x,m.t,maxW).slice(0,6);
-    var qy=cnDrawLines(ql,'800 64px Pretendard'+FF,'#fff',520,82);
-    if(m.s){var sq=cnWrap(x,m.s,maxW).slice(0,2);cnDrawLines(sq,'500 40px Pretendard'+FF,'rgba(255,255,255,.85)',qy+18,54);}
-  }else if(lay==='list'){
-    var items=(sl.items||[]).slice(0,4);
-    x.font='600 44px Pretendard'+FF;var wItems=items.map(function(it){return cnWrap(x,it,maxW-56);});
-    var iLines=0;for(var a=0;a<wItems.length;a++)iLines+=wItems[a].length;
-    x.font='900 64px Pretendard'+FF;var tl=cnWrap(x,m.t,maxW).slice(0,3);
-    var itemsH=iLines*58+(items.length-1)*16,blockBottom=H-120;
-    var itemsTop=blockBottom-itemsH,titleTop=itemsTop-42-tl.length*74,kickerY=titleTop-52,ruleY=kickerY-30;
-    cnRule(ruleY);cnKick(kickerY);
-    cnDrawLines(tl,'900 64px Pretendard'+FF,'#fff',titleTop,74);
-    var iy=itemsTop;
-    for(var b=0;b<items.length;b++){x.fillStyle=acc;x.font='800 44px Pretendard'+FF;x.fillText('—',PAD,iy);x.fillStyle='rgba(255,255,255,.92)';x.font='600 44px Pretendard'+FF;for(var w=0;w<wItems[b].length;w++){x.fillText(wItems[b][w],PAD+58,iy);iy+=58;}iy+=16;}
-  }else if(lay==='cta'){
-    x.font='900 78px Pretendard'+FF;var cl=cnWrap(x,m.t,maxW).slice(0,3);
-    var blockBottom=H-330,titleTop=blockBottom-cl.length*90,kickerY=titleTop-52,ruleY=kickerY-30;
-    cnRule(ruleY);cnKick(kickerY);
-    cnDrawLines(cl,'900 78px Pretendard'+FF,'#fff',titleTop,90);
-    var py=blockBottom+34;x.fillStyle='rgba(255,255,255,.18)';cnRoundRect(x,PAD,py,W-PAD*2,120,20);x.fill();
-    x.fillStyle='#fff';x.font='800 42px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText(m.s||'저장 · 프로필 링크 →',W/2,py+60);x.textAlign='left';x.textBaseline='top';
-    x.font='500 24px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.55)';
-    var dl=cnWrap(x,'본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.',maxW).slice(0,2);
-    var dy=H-134;for(var di=0;di<dl.length;di++){x.fillText(dl[di],PAD,dy);dy+=32;}
-  }else if(lay==='cover'){
-    var L=(''+m.t).replace(/\s/g,'').length,ts=L<=9?112:(L<=15?92:(L<=24?76:64)),tLH=Math.round(ts*1.14);
-    x.font='900 '+ts+'px Pretendard'+FF;var tl=cnWrap(x,m.t,maxW).slice(0,5);
-    x.font='500 40px Pretendard'+FF;var sll=(m.s?cnWrap(x,m.s,maxW).slice(0,2):[]);
-    var subH=sll.length*54,blockBottom=H-118,subTop=blockBottom-subH,titleTop=subTop-30-tl.length*tLH,kickerY=titleTop-52,ruleY=kickerY-30;
-    cnRule(ruleY);cnKick(kickerY);
-    cnDrawLines(tl,'900 '+ts+'px Pretendard'+FF,'#fff',titleTop,tLH);
-    if(sll.length)cnDrawLines(sll,'500 40px Pretendard'+FF,'rgba(255,255,255,.88)',subTop,54);
-  }else{ /* point */
-    x.font='900 74px Pretendard'+FF;var tl=cnWrap(x,m.t,maxW).slice(0,3);
-    x.font='500 42px Pretendard'+FF;var sll=cnWrap(x,m.s,maxW).slice(0,4);
-    var titleLH=84,subLH=56,blockBottom=H-118,subH=sll.length*subLH,subTop=blockBottom-subH,titleTop=subTop-30-tl.length*titleLH,kickerY=titleTop-52,ruleY=kickerY-30;
-    cnRule(ruleY);cnKick(kickerY);
-    cnDrawLines(tl,'900 74px Pretendard'+FF,'#fff',titleTop,titleLH);
-    cnDrawLines(sll,'500 42px Pretendard'+FF,'rgba(255,255,255,.88)',subTop,subLH);
+  if(lay==='cover'){
+    x.fillStyle=NAVY;x.fillRect(0,0,W,H);badge(BLUE);
+    x.font='800 34px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.85)';x.fillText(m.k||'오늘의 카드뉴스',PAD+112,92);
+    x.font='900 88px Pretendard'+FF;var ey=drawRich(m.t,'900 88px Pretendard'+FF,'#FFFFFF','#FACC15',PAD,232,104,maxW,4);
+    if(m.s){x.font='500 36px Pretendard'+FF;x.fillStyle='#C7D2E5';var sl2=cnWrap(x,m.s,maxW).slice(0,2);var sy=ey+16;sl2.forEach(function(ln){x.fillText(ln,PAD,sy);sy+=50;});}
+    drawPhoto(700,H-700-186);
+    x.fillStyle='rgba(255,255,255,.12)';RR(PAD,H-150,maxW,96,18);x.fill();
+    x.fillStyle='#fff';x.font='700 34px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('🔖 저장하고 매일 확인하세요!',W/2,H-102);x.textAlign='left';x.textBaseline='top';
+    return c;
   }
+  x.fillStyle='#FFFFFF';x.fillRect(0,0,W,H);badge(NAVY);
+  if(lay==='list'){
+    var ey2=drawRich(m.t,'900 64px Pretendard'+FF,INK,BLUE,PAD,204,80,maxW,3);
+    var items=(sl.items||[]).slice(0,5),iy=ey2+34;
+    items.forEach(function(it){x.fillStyle=BLUE;x.beginPath();x.arc(PAD+26,iy+26,26,0,7);x.fill();x.fillStyle='#fff';x.font='800 30px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('✓',PAD+26,iy+28);x.textAlign='left';x.textBaseline='top';
+      x.font='600 42px Pretendard'+FF;x.fillStyle='#1F2937';var wl=cnWrap(x,it,maxW-84).slice(0,2);var ty=iy+2;wl.forEach(function(ln){x.fillText(ln,PAD+78,ty);ty+=54;});iy=Math.max(iy+64,ty+12);});
+    if(m.s){var qy=H-330;x.fillStyle='#F5F9FF';RR(PAD,qy,maxW,220,24);x.fill();x.strokeStyle='#BFD4FB';x.lineWidth=2;RR(PAD,qy,maxW,220,24);x.stroke();
+      x.fillStyle=BLUE;x.font='900 64px Pretendard'+FF;x.fillText('“',PAD+34,qy+18);
+      x.font='700 40px Pretendard'+FF;x.fillStyle=INK;var ql=cnWrap(x,m.s,maxW-140).slice(0,3);var qty=qy+52;x.textAlign='center';ql.forEach(function(ln){x.fillText(ln,W/2,qty);qty+=52;});x.textAlign='left';}
+    return c;
+  }
+  if(lay==='quote'){
+    var qy2=300;x.fillStyle='#F5F9FF';RR(PAD,qy2,maxW,640,28);x.fill();x.strokeStyle='#DBEAFE';x.lineWidth=2;RR(PAD,qy2,maxW,640,28);x.stroke();
+    x.fillStyle=BLUE;x.font='900 110px Pretendard'+FF;x.fillText('“',PAD+44,qy2+34);
+    drawRich(m.t,'800 62px Pretendard'+FF,INK,BLUE,PAD+60,qy2+190,84,maxW-120,5);
+    if(m.s){x.font='500 34px Pretendard'+FF;x.fillStyle='#64748B';var s3=cnWrap(x,m.s,maxW-120).slice(0,2);var sy3=qy2+560;s3.forEach(function(ln){x.fillText(ln,PAD+60,sy3);sy3+=44;});}
+    return c;
+  }
+  if(lay==='cta'){
+    var ey3=drawRich(m.t,'900 68px Pretendard'+FF,INK,BLUE,PAD,204,84,maxW,3);
+    if(m.s){x.font='500 38px Pretendard'+FF;x.fillStyle=BODY;var b3=cnWrap(x,m.s,maxW).slice(0,2);var by3=ey3+14;b3.forEach(function(ln){x.fillText(ln,PAD,by3);by3+=52;});ey3=by3;}
+    drawPhoto(ey3+30,H-ey3-30-330);
+    x.font='500 24px Pretendard'+FF;x.fillStyle='#94A3B8';var dl=cnWrap(x,'본 콘텐츠는 일반적인 정보 제공 목적이며, 투자·의료·보험의 최종 판단은 개인 상황과 공식 자료 확인 후 결정해야 합니다.',maxW).slice(0,2);var dy=H-282;dl.forEach(function(ln){x.fillText(ln,PAD,dy);dy+=32;});
+    x.fillStyle=NAVY;x.fillRect(0,H-190,W,190);
+    x.fillStyle='#fff';x.font='700 40px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('🔖 저장하기    |    ↗ 공유하기    |    ♥ 팔로우하기',W/2,H-122);
+    x.font='500 28px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.75)';x.fillText('더 유익한 정보를 받아보세요!',W/2,H-58);x.textAlign='left';x.textBaseline='top';
+    return c;
+  }
+  /* news (point/stat) */
+  var ey4=drawRich(m.t,'900 64px Pretendard'+FF,INK,BLUE,PAD,196,80,maxW,3);
+  if(m.s){x.font='500 40px Pretendard'+FF;x.fillStyle=BODY;var b4=cnWrap(x,m.s,maxW).slice(0,3);var by4=ey4+16;b4.forEach(function(ln){x.fillText(ln,PAD,by4);by4+=56;});ey4=by4;}
+  var statTx=sl.stat||sl.big||'';
+  var barH=statTx?118:0;
+  drawPhoto(ey4+30,H-ey4-30-(barH?barH+28:40));
+  if(statTx){x.fillStyle='#EEF2F7';x.fillRect(0,H-barH,W,barH);x.strokeStyle='#E2E8F0';x.beginPath();x.moveTo(0,H-barH);x.lineTo(W,H-barH);x.stroke();
+    x.fillStyle=NAVY;x.beginPath();x.arc(PAD+26,H-barH/2,26,0,7);x.fill();x.fillStyle='#fff';x.font='800 26px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';x.fillText('◉',PAD+26,H-barH/2+1);x.textAlign='left';
+    var runs=(''+statTx).split(/([▲▼][^\s]*)/g);var xx=PAD+72;x.font='800 40px Pretendard'+FF;
+    runs.forEach(function(r){if(!r)return;x.fillStyle=(r[0]==='▲')?'#DC2626':(r[0]==='▼')?'#2563EB':'#0F172A';x.fillText(r,xx,H-barH/2+1);xx+=x.measureText(r).width;});x.textBaseline='top';}
   return c;
 }
 function cnDownload(canvas,name){try{if(canvas.toBlob){canvas.toBlob(function(b){if(!b)return;var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name+'.png';a.click();setTimeout(function(){URL.revokeObjectURL(u);},2000);},'image/png');}else{var a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download=name+'.png';a.click();}}catch(e){toast('이미지 저장 실패');}}
@@ -10530,6 +10528,34 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cn2-disc{font-size:8.5px;color:rgba(255,255,255,.55);line-height:1.55;margin-top:12px}',
    '.cn-ai-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}',
    '.cn-ai-row label{font-size:10.5px;font-weight:700;color:#6D28D9}',
+   '.cnw{position:relative;aspect-ratio:4/5;border-radius:18px;overflow:hidden;background:#fff;color:#0F2547;display:flex;flex-direction:column;box-shadow:0 12px 30px rgba(15,23,42,.16)}',
+   '.cnw-badge{position:absolute;top:14px;left:14px;width:30px;height:30px;border-radius:8px;background:#0B2447;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:2}',
+   '.cnw-badge.cv{background:#1D4ED8}',
+   '.cnw.cover{background:#0B2447;color:#fff}',
+   '.cnw-covlb{position:absolute;top:19px;left:54px;font-size:11px;font-weight:800;color:rgba(255,255,255,.9)}',
+   '.cnw-pad{padding:52px 18px 0}',
+   '.cnw-t{font-size:19.5px;font-weight:900;line-height:1.3;letter-spacing:-.3px}',
+   '.cnw-t.cv{font-size:22px;color:#fff;margin-top:6px}',
+   '.cnw-b{font-size:12px;color:#4B5563;line-height:1.6;margin-top:8px}',
+   '.cnw-b.cv{color:#C7D2E5}',
+   '.cnw-photo{margin:12px 16px 0;border-radius:12px;flex:1;min-height:70px;background-size:cover;background-position:center}',
+   '.cnw-photo.ph{background:linear-gradient(135deg,#123F73,#1D4ED8);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.6);font-size:10.5px;font-weight:700}',
+   '.cnw-pill{margin:12px 16px 14px;background:rgba(255,255,255,.12);border-radius:10px;padding:10px;text-align:center;font-size:12px;font-weight:800;color:#fff}',
+   '.cnw-bar{margin-top:12px;background:#EEF2F7;border-top:1px solid #E2E8F0;padding:10px 14px;font-size:12px;font-weight:800;color:#0F172A;display:flex;gap:8px;align-items:center}',
+   '.cnw-bar .ic{flex:none;width:20px;height:20px;border-radius:50%;background:#0B2447;color:#fff;font-size:10px;display:flex;align-items:center;justify-content:center}',
+   '.cnw-lis{margin-top:12px;display:flex;flex-direction:column;gap:9px}',
+   '.cnw-li{display:flex;gap:9px;align-items:flex-start;font-size:12.5px;font-weight:600;color:#1F2937;line-height:1.45}',
+   '.cnw-li .ck{flex:none;width:18px;height:18px;border-radius:50%;background:#1D4ED8;color:#fff;font-size:10px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+   '.cnw-qwrap{flex:1;display:flex;align-items:center;padding:0 16px}',
+   '.cnw-qbox{margin:14px 16px;background:#F5F9FF;border:1.5px solid #BFD4FB;border-radius:14px;padding:14px 16px;text-align:center}',
+   '.cnw-qbox.big{flex:1;margin:0;display:flex;flex-direction:column;justify-content:center}',
+   '.cnw-qmk{color:#1D4ED8;font-size:26px;font-weight:900;line-height:.8}',
+   '.cnw-q{font-size:13.5px;font-weight:800;color:#0F2547;line-height:1.5;margin-top:4px}',
+   '.cnw-q.big{font-size:17px;line-height:1.5}',
+   '.cnw-qs{font-size:11px;color:#64748B;margin-top:9px}',
+   '.cnw-disc{padding:8px 16px 6px;font-size:8.5px;color:#94A3B8;line-height:1.5}',
+   '.cnw-nav{background:#0B2447;color:#fff;padding:10px;text-align:center;font-size:11.5px;font-weight:800}',
+   '.cnw-nav .tg{font-size:9.5px;font-weight:600;color:rgba(255,255,255,.75);margin-top:3px}',
    '.cn-ai-sel{border:1px solid #E9D5FF;border-radius:8px;padding:5px 9px;font-size:11.5px;font-family:inherit;background:#fff;color:#374151}'
   ].join('');
   document.head.appendChild(s);
