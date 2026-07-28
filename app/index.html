@@ -767,6 +767,16 @@ body.finance-mode #financeScreen{display:block;}
 body.crm-mode .app{display:none;}
 body.crm-mode #crmScreen{display:block;}
 #crmScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 상담자료 전용 화면 (CRM과 동일한 화면전환 패턴) */
+#sangdamScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.sangdam-mode .app{display:none;}
+body.sangdam-mode #sangdamScreen{display:block;}
+#sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 윤시스쿨 전용 화면 (상담자료와 동일 패턴) */
+#yoonsiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.yoonsi-mode .app{display:none;}
+body.yoonsi-mode #yoonsiScreen{display:block;}
+#yoonsiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 
 /* 모바일 */
 .mobile-bar{display:none;}
@@ -873,6 +883,26 @@ body.crm-mode #crmScreen{display:block;}
     <button class="ff-back" onclick="exitCrm()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadCrm()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openCrmNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 상담자료 전용 화면 (고객 상담 프레젠테이션 · CRM과 동일 화면전환) -->
+<div id="sangdamScreen">
+  <iframe id="sangdamFrame" class="fin-frame" title="상담 자료"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 윤시스쿨 전용 화면 -->
+<div id="yoonsiScreen">
+  <iframe id="yoonsiFrame" class="fin-frame" title="윤시스쿨"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitYoonsi()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadYoonsi()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openYoonsiNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -2701,10 +2731,11 @@ var GEN=[
 var TABS=[
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
- {group:'고객',items:[{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
+ {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
@@ -2815,9 +2846,10 @@ function renderNav(){
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
 function go(tab){
+  document.body.classList.remove('yoonsi-mode');
   if(tab==='finance'){
     mountFinance();
-    document.body.classList.remove('crm-mode');
+    document.body.classList.remove('crm-mode','sangdam-mode');
     document.body.classList.add('finance-mode');
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='finance');});
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
@@ -2825,14 +2857,31 @@ function go(tab){
   }
   if(tab==='crm'){
     mountCrm();
-    document.body.classList.remove('finance-mode');
+    document.body.classList.remove('finance-mode','sangdam-mode');
     document.body.classList.add('crm-mode');
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='crm');});
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='yoonsi'){
+    mountYoonsi();
+    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    document.body.classList.add('yoonsi-mode');
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='yoonsi');});
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='sangdam'){
+    mountSangdam();
+    document.body.classList.remove('finance-mode','crm-mode');
+    document.body.classList.add('sangdam-mode');
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='sangdam');});
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   document.body.classList.remove('finance-mode');
   document.body.classList.remove('crm-mode');
+  document.body.classList.remove('sangdam-mode');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});
@@ -2906,10 +2955,24 @@ function openCrmNewTab(){
   if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
 }
 function exitCrm(){go(lastTab||'home');}
+/* ════════ 상담자료 모듈 (앱 폴더에 번들: app/상담자료/메인 상담자료.html) ════════ */
+var SANGDAM_URL='상담자료/메인 상담자료.html';
+function mountSangdam(){var f=$('sangdamFrame');if(!f||f._mounted)return;f.src=SANGDAM_URL;f._mounted=true;}
+function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('상담자료 새로고침');}}
+function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitSangdam(){go(lastTab||'home');}
+/* 윤시스쿨 모듈 (번들: 윤시스쿨/index.html) */
+var YOONSI_URL='윤시스쿨/index.html';
+function mountYoonsi(){var f=$('yoonsiFrame');if(!f||f._mounted)return;f.src=YOONSI_URL;f._mounted=true;}
+function reloadYoonsi(){var f=$('yoonsiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountYoonsi,30);toast('윤시스쿨 새로고침');}}
+function openYoonsiNewTab(){var w=window.open(YOONSI_URL,'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
+function exitYoonsi(){go(lastTab||'home');}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
+  else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
 /* ════════ 출근 현황(네이티브) — 출근 달력 + KPI 한눈에 (CRM과 같은 attendance 데이터, CRM 미접촉) ════════ */

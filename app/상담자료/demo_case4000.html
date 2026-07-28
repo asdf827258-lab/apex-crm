@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>실제 사례 · 말 한마디가 4,000만 원</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Montserrat:wght@800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;font-family:'Noto Sans KR',sans-serif;overflow:hidden;background:#05070f;color:#fff;}
+  #app{position:fixed;inset:0;cursor:pointer;}
+  .orb{position:absolute;border-radius:50%;filter:blur(90px);opacity:.5;transition:background 1s ease;}
+  #orbA{width:60vw;height:60vw;top:-15vw;left:-10vw;background:#1e40af;}
+  #orbB{width:55vw;height:55vw;bottom:-18vw;right:-12vw;background:#7c3aed;}
+  .vignette{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,transparent 28%,rgba(5,7,15,.72) 92%);pointer-events:none;}
+  #prog{position:absolute;top:0;left:0;height:3px;width:0;z-index:30;background:linear-gradient(90deg,#3b82f6,#22c55e);transition:width .5s;}
+
+  #stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:26px;}
+  .slide{position:absolute;width:min(470px,93vw);max-height:90vh;overflow-y:auto;scrollbar-width:none;
+    display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;
+    opacity:0;transform:translateY(34px) scale(.97);filter:blur(6px);pointer-events:none;
+    transition:opacity .55s ease,transform .55s cubic-bezier(.2,.8,.2,1),filter .55s ease;}
+  .slide::-webkit-scrollbar{display:none;}
+  .slide.on{opacity:1;transform:none;filter:none;pointer-events:auto;}
+  .slide.out{opacity:0;transform:translateY(-26px) scale(1.02);filter:blur(6px);}
+
+  .kick{font-size:12px;font-weight:800;letter-spacing:2px;color:#7bb3f4;}
+  .big{font-size:clamp(23px,5.8vw,36px);font-weight:900;line-height:1.32;letter-spacing:-.3px;}
+  .big b{background:linear-gradient(135deg,#34d399,#10b981);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .big b.warn{background:linear-gradient(135deg,#f87171,#fbbf24);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .big b.blue{background:linear-gradient(135deg,#60a5fa,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .sub{font-size:13px;color:#9ca3af;line-height:1.6;max-width:390px;}
+
+  /* 내러티브 박스 (발표자 1인칭 스토리) */
+  .box{width:min(430px,90vw);border-radius:14px;padding:15px 18px;font-size:clamp(14px,3.7vw,16px);line-height:1.85;text-align:left;border:1px solid;}
+  .box.red{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.22);}
+  .box.blue{background:rgba(26,115,232,.08);border-color:rgba(26,115,232,.22);}
+  .box.gold{background:rgba(234,179,8,.07);border-color:rgba(234,179,8,.22);}
+  .box.green{background:rgba(34,197,94,.07);border-color:rgba(34,197,94,.22);}
+  .box .q{color:#cbd5e1;font-style:italic;}
+  .box b.r{color:#fca5a5;} .box b.b{color:#7bb3f4;} .box b.g{color:#86efac;} .box b.y{color:#fcd34d;}
+
+  /* ── 캐릭터 무대 ── */
+  .scene{position:relative;width:min(300px,78vw);height:128px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .scene.tall{height:170px;}
+  .scene .ground{position:absolute;bottom:24px;left:8%;right:8%;height:3px;border-radius:3px;background:rgba(255,255,255,.12);}
+  .char{font-size:62px;line-height:1;filter:drop-shadow(0 10px 24px rgba(0,0,0,.5));}
+  .lottiebox{width:180px;height:160px;display:none;}
+  .lottiebox.show{display:block;}
+
+  .bubble{position:absolute;background:#fff;color:#111;font-size:13px;font-weight:800;padding:7px 12px;border-radius:13px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);white-space:nowrap;opacity:0;z-index:2;}
+  .bubble::after{content:'';position:absolute;bottom:-6px;left:22px;border:6px solid transparent;border-top-color:#fff;border-bottom:0;}
+  .bubble.blue{background:#3b82f6;color:#fff;} .bubble.blue::after{border-top-color:#3b82f6;}
+  .slide.on .bubble{animation:pop .5s cubic-bezier(.2,1.4,.4,1) forwards;}
+  .slide.on .bubble.d2{animation-delay:.9s;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.8);}to{opacity:1;transform:none;}}
+
+  .slide.on .pulse{animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.1);}}
+  .slide.on .floaty{animation:floaty 2.6s ease-in-out infinite;}
+  @keyframes floaty{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+  .slide.on .shakex{animation:shakex .6s ease-in-out 3;}
+  @keyframes shakex{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+  .slide.on .fall{animation:fall 1.5s cubic-bezier(.4,0,.5,1) forwards;}
+  @keyframes fall{0%{transform:translateX(-36px) rotate(0);}45%{transform:translateX(0) rotate(8deg);}70%{transform:translateX(16px) rotate(82deg) translateY(16px);}100%{transform:translateX(24px) rotate(90deg) translateY(28px);}}
+  .impact{position:absolute;left:62%;top:48%;font-size:36px;opacity:0;}
+  .slide.on .impact{animation:impact .5s ease-out .9s forwards;}
+  @keyframes impact{0%{opacity:0;transform:scale(.3);}40%{opacity:1;transform:scale(1.3);}100%{opacity:0;transform:scale(1.6);}}
+  .slide.on .ring{animation:ring 1s ease-in-out infinite;transform-origin:50% 80%;}
+  @keyframes ring{0%,100%{transform:rotate(0);}20%{transform:rotate(-14deg);}40%{transform:rotate(12deg);}60%{transform:rotate(-8deg);}80%{transform:rotate(5deg);}}
+  .coins{display:flex;gap:8px;align-items:flex-end;}
+  .coins .c{font-size:46px;opacity:0;}
+  .slide.on .coins .c{animation:coinpop .6s cubic-bezier(.2,1.5,.4,1) forwards;}
+  .slide.on .coins .c:nth-child(1){animation-delay:.1s;}.slide.on .coins .c:nth-child(2){animation-delay:.35s;}.slide.on .coins .c:nth-child(3){animation-delay:.6s;}
+  @keyframes coinpop{0%{opacity:0;transform:translateY(36px) scale(.5);}60%{opacity:1;transform:translateY(-8px) scale(1.15);}100%{opacity:1;transform:none;}}
+
+  .money{width:min(430px,90vw);display:flex;flex-direction:column;gap:7px;}
+  .mrow{display:flex;justify-content:space-between;align-items:center;background:rgba(34,197,94,.07);border-radius:10px;padding:11px 15px;opacity:0;transform:translateX(-12px);transition:opacity .5s ease,transform .5s cubic-bezier(.2,.8,.2,1);}
+  .slide.on .mrow{opacity:1;transform:none;}
+  .slide.on .mrow:nth-child(1){transition-delay:.15s}.slide.on .mrow:nth-child(2){transition-delay:.35s}.slide.on .mrow:nth-child(3){transition-delay:.55s}
+  .mrow .k{font-size:14px;font-weight:700;} .mrow .v{font-family:'Montserrat',sans-serif;font-size:17px;font-weight:900;color:#34d399;}
+  .mtot{display:flex;justify-content:space-between;align-items:center;background:rgba(34,197,94,.16);border:1.5px solid rgba(34,197,94,.4);border-radius:12px;padding:14px 16px;opacity:0;transition:opacity .6s ease .8s;}
+  .slide.on .mtot{opacity:1;}
+  .mtot .k{font-size:16px;font-weight:900;} .mtot .v{font-family:'Montserrat',sans-serif;font-size:24px;font-weight:900;color:#34d399;}
+
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(430px,90vw);}
+  .cmpc{border-radius:14px;padding:16px 12px;text-align:center;border:1.5px solid;}
+  .cmpc.good{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.3);}
+  .cmpc.bad{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);}
+  .cmpc .em{font-size:36px;} .cmpc .t{font-size:13px;font-weight:800;margin:6px 0;}
+  .cmpc.good .t{color:#86efac;} .cmpc.bad .t{color:#fca5a5;}
+  .cmpc .d{font-size:12px;line-height:1.5;color:#cbd5e1;}
+  .cmpc .n{font-family:'Montserrat',sans-serif;font-weight:900;font-size:23px;display:block;margin-top:5px;}
+  .cmpc.good .n{color:#34d399;} .cmpc.bad .n{color:#f87171;}
+
+  #hud{position:absolute;bottom:18px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:9px;z-index:25;pointer-events:none;}
+  #dots{display:flex;gap:5px;}
+  #dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.24);transition:.35s;}
+  #dots i.on{width:18px;border-radius:3px;background:linear-gradient(90deg,#3b82f6,#22c55e);}
+  #dots i.done{background:rgba(255,255,255,.4);}
+  #tap{font-size:11px;letter-spacing:2px;color:#7e8aa3;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="orb" id="orbA"></div><div class="orb" id="orbB"></div><div class="vignette"></div>
+  <div id="prog"></div>
+  <div id="stage"></div>
+  <div id="hud"><div id="dots"></div><div id="tap">탭 / → 다음</div></div>
+</div>
+<script>
+  const B=['#1e40af','#7c3aed'],G=['#065f46','#0e7490'],R=['#7f1d1d','#854d0e'],Y=['#854d0e','#7c3aed'],P=['#3730a3','#7c3aed'];
+
+  /* ★ Lottie URL 슬롯 — 채우면 그 장면이 진짜 Lottie 로 교체, 비우면 CSS 캐릭터 재생 */
+  const LOTTIE = {0:'',1:'',2:'',3:'',4:'',5:'',6:'',7:'',8:''};
+
+  const SLIDES=[
+    // 0. 후킹
+    {hue:B, scene:`<div class="char pulse">💬</div>`,
+      big:`잠깐, 실제로<br>있었던 일 하나`,
+      box:{cls:'blue', html:`<span class="q">"제가 직접 도와드린 사례예요.<br><b class="b">똑같은 사고·똑같은 보험인데</b>, 한 분은 <b class="g">4,000만 원</b>을, 다른 분은 <b class="r">0원</b>을 받습니다."</span>`},
+      sub:'그 차이가 어디서 갈렸는지 — 순서대로 보여드릴게요'},
+
+    // 1. 사고
+    {hue:R, kick:'STEP 1 · 사고 발생', sceneCls:'tall',
+      scene:`<div class="ground"></div><div class="char fall">🧍</div><div class="impact">💥</div>`,
+      big:`보행 중 낙상<br>→ <b class="warn">골반 골절</b>`,
+      box:{cls:'red', html:`<span class="q">"한 고객분이 길을 걷다 미끄러져 <b class="r">골반이 부러졌어요.</b> 큰 부상이죠.<br>대부분 이 순간 — <b>곧장 병원 응급실로</b> 달려갑니다."</span>`}},
+
+    // 2. 분기점(반전 후킹)
+    {hue:P, kick:'STEP 2 · 갈림길',
+      scene:`<div class="char pulse">🔀</div>`,
+      big:`그런데 이분은<br><b class="blue">달랐습니다</b>`,
+      box:{cls:'blue', html:`<span class="q">"병원보다 <b class="b">먼저, 저(담당자)에게 전화</b>를 주셨어요.<br>바로 이 전화 한 통이 — <b class="g">4,000만 원</b>을 갈랐습니다."</span>`}},
+
+    // 3. 위기 발견
+    {hue:R, kick:'STEP 3 · 숨은 위기',
+      scene:`<div class="bubble" style="top:6px;left:30%;">보험이… 실효 상태?!</div><div class="char ring">📞</div>`,
+      big:`확인해보니<br><b class="warn">보험 실효 상태</b>`,
+      box:{cls:'red', html:`<span class="q">"알고 보니 보험료 미납으로 보험이 <b class="r">'실효'</b> 상태였어요.<br>이 상태에서 사고가 나면 — <b class="r">원칙적으로 한 푼도 못 받습니다.</b>"</span>`}},
+
+    // 4. 조치
+    {hue:B, kick:'STEP 4 · 즉시 조치',
+      scene:`<div class="bubble blue" style="top:6px;left:26%;">병원 가기 전에 부활부터!</div><div class="char floaty">🛟</div>`,
+      big:`병원 가기 전,<br><b class="blue">먼저 부활</b>`,
+      box:{cls:'blue', html:`<span class="q">"그래서 병원에 가시기 <b class="b">전에</b>, 즉시 <b class="b">실효 부활 조치</b>부터 해드렸어요.<br>꺼져 있던 보장을 다시 살린 겁니다."</span>`}},
+
+    // 5. 코칭
+    {hue:Y, kick:'STEP 5 · 진술 코칭',
+      scene:`<div class="bubble" style="top:6px;left:20%;">"이렇게 말씀하세요"</div><div class="char floaty">🧑‍⚕️</div>`,
+      big:`"<b class="warn">아</b>" 다르고<br>"<b class="warn">어</b>" 다릅니다`,
+      box:{cls:'gold', html:`<span class="q">"그리고 의사 선생님께 <b class="y">어떻게 말씀하셔야 하는지</b> 미리 코칭해드렸어요.<br>진단서 문구 하나가 — 수천만 원을 좌우하니까요."</span>`}},
+
+    // 6. 보험금 합산
+    {hue:G, kick:'STEP 6 · 특약별 청구',
+      scene:`<div class="coins"><span class="c">🪙</span><span class="c">💰</span><span class="c">🪙</span></div>`,
+      big:`받을 수 있는 특약을<br><b>빠짐없이</b>`,
+      money:[['🦴 후유장애 3% 특약','2,000만 원'],['🩹 골절 진단 특약','1,000만 원'],['🏥 상해 수술비','1,000만 원']],
+      total:['합계','40000000'],
+      sub:'하나만 챙겼다면 절반도 못 받았을 금액 — 특약을 전부 살폈습니다'},
+
+    // 7. 결과 비교
+    {hue:P, kick:'STEP 7 · 결과 비교',
+      scene:`<div class="cmp">
+        <div class="cmpc good"><div class="em">🙂</div><div class="t">🟢 먼저 연락</div><div class="d">실효 부활 → 코칭<span class="n">4,000만</span></div></div>
+        <div class="cmpc bad"><div class="em">😣</div><div class="t">🔴 바로 병원</div><div class="d">실효 상태 청구 불가<span class="n">0원</span></div></div>
+      </div>`,
+      big:`차이는 단 하나 —<br><b>먼저 연락했는가</b>`,
+      box:{cls:'green', html:`<span class="q">"반대로 바로 병원에 가셨다면? 실효 상태라 <b class="r">한 푼도 못 받으셨을 거예요.</b><br>'아' 다르고 '어' 다르다는 게 — 바로 이겁니다."</span>`}},
+
+    // 8. 교훈
+    {hue:G, scene:`<div class="char pulse">💬</div>`,
+      big:`보험은 가입보다<br><b class="blue">담당자의 실력</b>`,
+      box:{cls:'blue', html:`<span class="q">"좋은 상품보다, <b class="b">사고 순간 곁에 있는 담당자</b>가 결과를 만듭니다.<br>같은 사고, 같은 보험 — 결과는 <b class="g">4,000만 원</b>과 <b class="r">0원</b>으로 갈립니다."</span>`}},
+  ];
+
+  const stage=document.getElementById('stage'),dots=document.getElementById('dots');
+  const orbA=document.getElementById('orbA'),orbB=document.getElementById('orbB'),prog=document.getElementById('prog');
+
+  stage.innerHTML=SLIDES.map((s,n)=>{
+    let mid='';
+    if(s.money){
+      mid=`<div class="money">${s.money.map(r=>`<div class="mrow"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join('')}
+        <div class="mtot"><span class="k">${s.total[0]}</span><span class="v" id="mtot${n}">0원</span></div></div>`;
+    }
+    return `<div class="slide" data-n="${n}">
+      ${s.kick?`<div class="kick">${s.kick}</div>`:''}
+      <div class="scene ${s.sceneCls||''}">${s.scene||''}<div class="lottiebox" data-n="${n}"></div></div>
+      <div class="big">${s.big}</div>
+      ${s.box?`<div class="box ${s.box.cls}">${s.box.html}</div>`:''}
+      ${mid}
+      ${s.sub?`<div class="sub">${s.sub}</div>`:''}
+    </div>`;
+  }).join('');
+  dots.innerHTML=SLIDES.map((_,n)=>`<i data-n="${n}"></i>`).join('');
+
+  const _ll={};
+  function tryLottie(n){
+    const url=LOTTIE[n];
+    if(!url||_ll[n]||typeof lottie==='undefined')return;
+    const box=document.querySelector(`.lottiebox[data-n="${n}"]`);
+    if(!box)return;
+    try{
+      lottie.loadAnimation({container:box,renderer:'svg',loop:true,autoplay:true,path:url});
+      box.classList.add('show');
+      box.parentElement.querySelectorAll('.char,.coins,.bubble,.impact,.ground').forEach(e=>e.style.display='none');
+      _ll[n]=true;
+    }catch(e){}
+  }
+  function countUp(el,to){const t0=performance.now();(function tk(t){const p=Math.min(1,(t-t0)/1100),e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(to*e).toLocaleString()+'원';if(p<1)requestAnimationFrame(tk);})(performance.now());}
+
+  let i=0,busy=false;
+  function show(n){
+    document.querySelectorAll('.slide').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('out',k<n);});
+    document.querySelectorAll('#dots i').forEach(e=>{const k=+e.dataset.n;e.classList.toggle('on',k===n);e.classList.toggle('done',k<n);});
+    const h=SLIDES[n].hue;orbA.style.background=h[0];orbB.style.background=h[1];
+    prog.style.width=((n+1)/SLIDES.length*100)+'%';
+    tryLottie(n);
+    const m=document.getElementById('mtot'+n);
+    if(m){m.textContent='0원';setTimeout(()=>countUp(m,+SLIDES[n].total[1]),700);}
+    const sl=document.querySelector(`.slide[data-n="${n}"]`);if(sl)sl.scrollTop=0;
+  }
+  function next(){if(busy||i>=SLIDES.length-1)return;busy=true;setTimeout(()=>busy=false,340);i++;show(i);}
+  function prev(){if(busy||i<=0)return;busy=true;setTimeout(()=>busy=false,340);i--;show(i);}
+  document.getElementById('app').addEventListener('click',e=>{if(e.clientX<window.innerWidth*0.22)prev();else next();});
+  document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}else if(e.key==='ArrowLeft'){e.preventDefault();prev();}});
+  let tx=0;document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+  document.addEventListener('touchend',e=>{var d=e.changedTouches[0].clientX-tx;if(d<-40)next();else if(d>40)prev();},{passive:true});
+  show(0);
+</script>
+</body>
+</html>
