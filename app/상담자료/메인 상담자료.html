@@ -10212,7 +10212,7 @@ ${JSON.stringify(insurances.map(i => ({
       if (!v) return;
       presenterName = v;
       profileData.name = v;
-      try { localStorage.setItem('s6_profile', JSON.stringify(profileData)); } catch (e) {}
+      try { localStorage.setItem(profileKey(), JSON.stringify(profileData)); } catch (e) {}
       applyProfile();
       closeNameModal();
     }
@@ -10263,6 +10263,22 @@ ${JSON.stringify(insurances.map(i => ({
     document.getElementById('apiModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeApiModal(); });
     updateApiBtnLabel(); // 초기 라벨
 
+    // ── 로그인 사용자 컨텍스트 (APEX OS 안 same-origin iframe이면 부모에서 읽음) ──
+    function osUser() {
+      try {
+        var P = window.parent;
+        if (P && P !== window && P.OS && P.OS.profile && P.OS.profile.id) {
+          return { id: String(P.OS.profile.id), name: String(P.OS.profile.name || '').trim() };
+        }
+      } catch (e) {}
+      return null;
+    }
+    /** 프로필 저장 키 — OS 로그인 시 사용자별 분리(s6_profile_<id>), 단독 실행 시 공용(s6_profile) */
+    function profileKey() {
+      var u = osUser();
+      return u ? ('s6_profile_' + u.id) : 's6_profile';
+    }
+
     // ── Slide 7 담당 컨설턴트 프로필 ──
     let profileData = {
       photos: ['photo1.jpg', null, null],
@@ -10273,7 +10289,13 @@ ${JSON.stringify(insurances.map(i => ({
 
     /** localStorage 에서 프로필 로드 후 카드에 반영 (옛 단일 photo 키도 마이그레이션) */
     function loadProfile() {
-      const saved = localStorage.getItem('s6_profile');
+      const _u = osUser();
+      const saved = localStorage.getItem(profileKey());
+      // OS 안에서 이 사용자가 처음 여는 경우: 로그인 이름으로 기본값 자동 세팅 (공용 이동엽 사진·이름 제거)
+      if (!saved && _u) {
+        if (_u.name) profileData.name = _u.name;
+        profileData.photos = [null, null, null];
+      }
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -10413,7 +10435,7 @@ ${JSON.stringify(insurances.map(i => ({
       profileData.bio = document.getElementById('pBio').value.trim();
       profileData.specialties = document.getElementById('pSpecialties').value.trim();
       try {
-        localStorage.setItem('s6_profile', JSON.stringify(profileData));
+        localStorage.setItem(profileKey(), JSON.stringify(profileData));
       } catch (e) { /* localStorage full or disabled — 무시 */ }
       applyProfile();
       closeProfileModal();
