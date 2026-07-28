@@ -94,6 +94,26 @@
   #view-console .backup button{border:2px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
   #view-console .backup .danger{color:var(--cta);border-color:#ffd2cc}
   #view-console .note{font-size:11px;color:#9a94b0;font-weight:700;line-height:1.6;margin-top:10px}
+  #view-console .ed{opacity:.5;font-size:11px}
+  #view-console .att{display:inline-flex;flex-direction:column;background:#eef4ff;border:1px solid #d6e2fb;border-radius:8px;padding:4px 9px;margin:0 5px 5px 0;font-size:11.5px;font-weight:800;color:#3b62c0}
+  #view-console .att i{font-style:normal;font-weight:600;font-size:10.5px;color:#7a8296}
+  #view-console .atts{margin:8px 0 4px}
+  #view-console .mrec{border-bottom:1px solid #f2eff8;padding:12px 2px}
+  #view-console .mrec textarea{width:100%;border:2px solid var(--line);border-radius:9px;padding:8px;font-size:12.5px;font-family:inherit;margin-top:3px}
+  #view-console .ml{font-size:11px;font-weight:800;color:var(--sub);display:block;margin-top:8px}
+  #view-console .mrow{margin-top:8px;display:flex;gap:8px;align-items:center}
+  #view-console .mrow .msave{border:0;background:var(--b);color:#fff;border-radius:9px;padding:7px 13px;font-weight:800;font-size:12.5px;cursor:pointer;font-family:inherit}
+  #view-console .mrow .mdel{border:2px solid var(--line);background:#fff;color:var(--cta);border-radius:9px;padding:6px 11px;font-weight:800;font-size:12px;cursor:pointer;font-family:inherit}
+  .emodal{position:fixed;inset:0;background:rgba(30,36,48,.5);display:none;align-items:center;justify-content:center;padding:20px;z-index:100}
+  .emodal.on{display:flex}
+  .ebox{background:#fff;border-radius:18px;padding:22px;max-width:360px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.28)}
+  .ebox h3{margin:0 0 12px;font-size:17px;font-weight:900}
+  .ebox label{font-size:11.5px;font-weight:800;color:var(--sub);display:block;margin:9px 0 4px}
+  .ebox input,.ebox select{width:100%;border:2px solid var(--line);border-radius:10px;padding:10px;font-size:14px;font-family:inherit}
+  .ebtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  .ebtns button{border:2px solid var(--line);background:#fff;border-radius:10px;padding:9px 13px;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit}
+  .ebtns .epri{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .ebtns #e_del{color:var(--cta);border-color:#ffd2cc}
 </style>
 
 <div class="appbar">
@@ -131,6 +151,7 @@
       <label>이름</label><input id="h_name" placeholder="예: 김대리">
       <div class="row2"><div><label>부서</label><select id="h_dept"></select></div><div><label>직책</label><select id="h_role"><option value="팀원">팀원</option><option value="팀장">팀장</option></select></div></div>
       <div id="newDeptWrap" style="display:none"><label>새 부서 이름</label><input id="h_newdept" placeholder="예: 유튜브팀"></div>
+      <label>담당(역할)</label><input id="h_duty" placeholder="예: 뉴스 큐레이션">
       <label>코드명 (선택)</label><input id="h_code" placeholder="예: 스나이퍼">
       <button class="go hire" id="hireBtn">＋ 채용하기</button><div class="msg" id="hireMsg"></div>
     </div>
@@ -147,6 +168,15 @@
     <div class="backup"><button id="exportBtn">💾 파일로 내보내기</button><button id="importBtn">📂 파일 불러오기</button><input id="importFile" type="file" accept=".json" style="display:none"><button class="danger" id="resetBtn">🗑️ 채용·회의 초기화</button></div>
     <div class="note">채용·회의 데이터는 <b>이 컴퓨터(브라우저)에 자동 저장</b>. 한 파일 앱이라 <b>탭을 옮겨도 바로 반영</b>돼요. 내보내기로 파일 백업 가능.</div>
   </div>
+</div></div>
+
+<div id="editModal" class="emodal"><div class="ebox">
+  <h3 id="e_title">인물 편집</h3>
+  <label>이름</label><input id="e_name">
+  <label>직책</label><select id="e_role"><option>팀장</option><option>팀원</option><option>실장</option></select>
+  <label>담당(역할)</label><input id="e_duty" placeholder="이 사람이 맡는 일">
+  <label>코드명 (선택)</label><input id="e_code">
+  <div class="ebtns"><button class="epri" id="e_save">💾 저장</button><button id="e_reset" style="display:none">기본값 복원</button><button id="e_del" style="display:none">🗑️ 해고</button><button id="e_close">닫기</button></div>
 </div></div>
 
 <script>
@@ -182,17 +212,18 @@ const BASE=[
  {t:"비서실",c:"#6cb6ff",p:[["유재석","실장","antenna",["전사 현황 취합","대표 브리핑 준비"]],["조세호","팀원","horn",["부서 보고 수집","일정 정리"]]]},
 ];
 const NEWTASKS=["신입 온보딩","업무 익히는 중","선배 따라 배우기"];
-const LS={hires:"yoonsi_hires",meetings:"yoonsi_meetings",extra:"yoonsi_extradepts"};
+const LS={hires:"yoonsi_hires",meetings:"yoonsi_meetings",extra:"yoonsi_extradepts",edits:"yoonsi_edits"};
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const saveLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
-let hires=load(LS.hires,[]), meetings=load(LS.meetings,[]), extradepts=load(LS.extra,{});
+let hires=load(LS.hires,[]), meetings=load(LS.meetings,[]), extradepts=load(LS.extra,{}), edits=load(LS.edits,{});
 const $=id=>document.getElementById(id);
 function deptColor(n){const b=BASE.find(d=>d.t===n);if(b)return b.c;if(extradepts[n])return extradepts[n];const c=NEWCOLORS[Object.keys(extradepts).length%NEWCOLORS.length];extradepts[n]=c;saveLS(LS.extra,extradepts);return c;}
 function ROSTER(){
-  const list=BASE.map(d=>({t:d.t,c:d.c,p:d.p.map(([n,r,e,T,w])=>({n,role:r,ear:e,T:T||[],wait:w||null,base:true}))}));
-  hires.forEach(h=>{let d=list.find(x=>x.t===h.dept);if(!d){d={t:h.dept,c:deptColor(h.dept),p:[]};list.push(d);}d.p.push({n:h.name,role:h.role,ear:h.ear||'ear',T:NEWTASKS,wait:null,base:false,id:h.id});});
+  const list=BASE.map(d=>({t:d.t,c:d.c,p:d.p.map(([n,r,e,T,w])=>applyEdit({n,role:r,ear:e,T:T||[],wait:w||null,base:true,key:'b:'+d.t+':'+n,duty:(T&&T[0])||''}))}));
+  hires.forEach(h=>{let d=list.find(x=>x.t===h.dept);if(!d){d={t:h.dept,c:deptColor(h.dept),p:[]};list.push(d);}d.p.push(applyEdit({n:h.name,role:h.role,ear:h.ear||'ear',T:NEWTASKS,wait:null,base:false,id:h.id,key:'h:'+h.id,duty:h.duty||''}));});
   return list;
 }
+function applyEdit(p){const e=edits[p.key];if(e){if(e.n)p.n=e.n;if(e.role)p.role=e.role;if('duty' in e)p.duty=e.duty;if('codename' in e)p.codename=e.codename;if(e.ear)p.ear=e.ear;}return p;}
 function headcount(){let n=0;ROSTER().forEach(d=>n+=d.p.length);return n;}
 
 // ===== OFFICE =====
@@ -277,26 +308,47 @@ function buildConsole(){
   ROSTER().forEach(d=>{const co={body:d.c,belly:shade(d.c,.55),dark:shade(d.c,-.28),attrC:shade(d.c,-.28)};
     const el=document.createElement("div");el.className="dept";el.innerHTML=`<div class="dh" style="background:${shade(d.c,-.12)}">${d.t} · ${d.p.length}명</div><div class="plist"></div>`;
     const pl=el.querySelector(".plist");
-    d.p.forEach(p=>{const lead=(p.role==='팀장'||p.role==='실장');const e=document.createElement("div");e.className="p";
-      e.innerHTML=`<span class="av">${sprite({...co,ear:p.ear})}</span>${lead?'<span class="star">★</span>':''}${p.n}${!p.base?' <span class="new">NEW</span>':''}`;
-      if(!p.base){const b=document.createElement("button");b.className="del";b.textContent="×";b.onclick=()=>fire(p.id);e.appendChild(b);}pl.appendChild(e);});
+    d.p.forEach(p=>{const lead=(p.role==='팀장'||p.role==='실장');const e=document.createElement("div");e.className="p";e.style.cursor="pointer";e.title="담당: "+(p.duty||'미지정')+" · 클릭해서 편집";
+      e.innerHTML=`<span class="av">${sprite({...co,ear:p.ear})}</span>${lead?'<span class="star">★</span>':''}${p.n}${!p.base?' <span class="new">NEW</span>':''} <span class="ed">✏️</span>`;
+      e.onclick=()=>openEdit(p);pl.appendChild(e);});
     box.appendChild(el);});
   $("rosterCnt").textContent=`· 기본 32 + 채용 ${hires.length}`;$("hc").textContent=headcount()+"명";
   renderMeetings();
 }
-function renderMeetings(){const ul=$("meetLog");if(!meetings.length){ul.innerHTML=`<div class="empty">아직 소집한 회의가 없어요.</div>`;return;}ul.innerHTML=meetings.slice().reverse().map(m=>`<li><div class="tp">${m.type} — ${m.topic}</div><div class="mt">${m.at} · 참석: ${m.dept}</div></li>`).join('');}
+function renderMeetings(){const ul=$("meetLog");if(!meetings.length){ul.innerHTML=`<div class="empty">아직 소집한 회의가 없어요. 위에서 안건을 정해 소집해보세요.</div>`;return;}
+  ul.innerHTML=meetings.slice().reverse().map(m=>{
+    const att=(m.attendees||[]).map(a=>`<span class="att">★${a.n}<i>${a.duty||'담당 미지정'}</i></span>`).join('')||`<span class="att" style="opacity:.6">참석자 정보 없음</span>`;
+    return `<li class="mrec" data-id="${m.id}"><div class="tp">${m.type} — ${m.topic}</div><div class="mt">${m.at} · 참석 팀장 ${(m.attendees||[]).length}명</div><div class="atts">${att}</div><label class="ml">결정사항</label><textarea data-f="decisions" rows="2" placeholder="회의에서 정해진 것">${m.decisions||''}</textarea><label class="ml">액션 아이템</label><textarea data-f="actions" rows="2" placeholder="누가 · 무엇을 · 언제까지">${m.actions||''}</textarea><div class="mrow"><button class="msave">💾 저장</button><button class="mdel">삭제</button></div></li>`;}).join('');
+  ul.querySelectorAll('.msave').forEach(b=>b.onclick=()=>saveMeeting(b.closest('.mrec')));
+  ul.querySelectorAll('.mdel').forEach(b=>b.onclick=()=>{const li=b.closest('.mrec');if(confirm('이 회의 기록을 지울까요?')){meetings=meetings.filter(x=>x.id!==li.dataset.id);saveLS(LS.meetings,meetings);renderMeetings();}});}
+function saveMeeting(li){const m=meetings.find(x=>x.id===li.dataset.id);if(!m)return;li.querySelectorAll('textarea[data-f]').forEach(t=>{m[t.dataset.f]=t.value;});saveLS(LS.meetings,meetings);const s=document.createElement('span');s.textContent=' ✅ 저장됨';s.style.cssText='color:#1f8a4c;font-weight:800;font-size:12px';li.querySelector('.mrow').appendChild(s);setTimeout(()=>s.remove(),1500);}
 function refreshAll(){fillSelects();buildConsole();buildBoard();buildOffice();}
 function msg(el,t,cls){$(el).textContent=t;$(el).className="msg "+cls;}
 $("hireBtn").onclick=()=>{const name=$("h_name").value.trim();let dept=$("h_dept").value;if(dept==="__new"){dept=$("h_newdept").value.trim();if(!dept){msg("hireMsg","부서 이름을 입력해요.","no");return;}}if(!name){msg("hireMsg","이름을 입력해요.","no");return;}
-  deptColor(dept);hires.push({id:"h"+Date.now(),name,dept,role:$("h_role").value,codename:$("h_code").value.trim(),ear:EARLIST[Math.floor(Math.random()*EARLIST.length)]});saveLS(LS.hires,hires);
-  $("h_name").value="";$("h_code").value="";$("h_newdept").value="";$("newDeptWrap").style.display="none";refreshAll();$("h_dept").value=dept;msg("hireMsg",`✅ ${name} 채용! (${dept}) — 오피스·현황판에 바로 떠요.`,"ok");};
+  deptColor(dept);hires.push({id:"h"+Date.now(),name,dept,role:$("h_role").value,duty:$("h_duty").value.trim(),codename:$("h_code").value.trim(),ear:EARLIST[Math.floor(Math.random()*EARLIST.length)]});saveLS(LS.hires,hires);
+  $("h_name").value="";$("h_duty").value="";$("h_code").value="";$("h_newdept").value="";$("newDeptWrap").style.display="none";refreshAll();$("h_dept").value=dept;msg("hireMsg",`✅ ${name} 채용! (${dept}) — 오피스·현황판에 바로 떠요.`,"ok");};
 $("cMeetBtn").onclick=()=>{const topic=$("m_topic").value.trim();if(!topic){msg("meetMsg","회의 주제를 입력해요.","no");return;}
-  meetings.push({id:"m"+Date.now(),topic,type:$("m_type").value,dept:$("m_dept").value,at:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});saveLS(LS.meetings,meetings);$("m_topic").value="";renderMeetings();meetingOn=true;$("meetBtn").classList.add("on");msg("meetMsg",`📣 "${topic}" 소집 — 오피스 탭에서 팀장들이 모여요.`,"ok");};
+  const scope=$("m_dept").value, att=[];ROSTER().forEach(d=>{if(scope==='전체'||d.t===scope)d.p.forEach(p=>{if(p.role==='팀장'||p.role==='실장')att.push({n:p.n,dept:d.t,duty:p.duty||''});});});
+  meetings.push({id:"m"+Date.now(),topic,type:$("m_type").value,scope,attendees:att,decisions:'',actions:'',at:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});saveLS(LS.meetings,meetings);$("m_topic").value="";renderMeetings();meetingOn=true;$("meetBtn").classList.add("on");msg("meetMsg",`📣 "${topic}" 소집 — 팀장 ${att.length}명 참석. 아래 회의록에 결정사항을 적으세요.`,"ok");};
 function fire(id){const h=hires.find(x=>x.id===id);if(!h||!confirm(`${h.name} 님을 내보낼까요?`))return;hires=hires.filter(x=>x.id!==id);saveLS(LS.hires,hires);refreshAll();}
-$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({hires,meetings,extradepts,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="윤시스쿨_회사데이터.json";a.click();};
+$("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({hires,meetings,extradepts,edits,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="윤시스쿨_회사데이터.json";a.click();};
 $("importBtn").onclick=()=>$("importFile").click();
-$("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);hires=d.hires||[];meetings=d.meetings||[];extradepts=d.extradepts||{};saveLS(LS.hires,hires);saveLS(LS.meetings,meetings);saveLS(LS.extra,extradepts);refreshAll();alert("불러왔어요!");}catch(err){alert("읽기 실패: "+err.message);}};r.readAsText(f);};
-$("resetBtn").onclick=()=>{if(!confirm("채용·회의 데이터를 지울까요? (기본 32명 유지)"))return;hires=[];meetings=[];extradepts={};[LS.hires,LS.meetings,LS.extra].forEach(k=>localStorage.removeItem(k));refreshAll();};
+$("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);hires=d.hires||[];meetings=d.meetings||[];extradepts=d.extradepts||{};edits=d.edits||{};saveLS(LS.hires,hires);saveLS(LS.meetings,meetings);saveLS(LS.extra,extradepts);saveLS(LS.edits,edits);refreshAll();alert("불러왔어요!");}catch(err){alert("읽기 실패: "+err.message);}};r.readAsText(f);};
+$("resetBtn").onclick=()=>{if(!confirm("채용·회의·편집 데이터를 지울까요? (기본 32명 유지)"))return;hires=[];meetings=[];extradepts={};edits={};[LS.hires,LS.meetings,LS.extra,LS.edits].forEach(k=>localStorage.removeItem(k));refreshAll();};
+
+// ===== 인물 편집 =====
+let editKey=null, editId=null;
+function openEdit(p){editKey=p.key;editId=p.id||null;
+  $("e_title").textContent=((p.role==='팀장'||p.role==='실장')?'★ ':'')+p.n+' · '+(p.base?'기본 직원':'채용 직원');
+  $("e_name").value=p.n;$("e_role").value=p.role;$("e_duty").value=p.duty||'';$("e_code").value=p.codename||'';
+  $("e_del").style.display=p.base?'none':'inline-block';
+  $("e_reset").style.display=edits[p.key]?'inline-block':'none';
+  $("editModal").classList.add('on');}
+$("e_save").onclick=()=>{if(!editKey)return;const e=edits[editKey]||{};const nm=$("e_name").value.trim();e.n=nm||undefined;e.role=$("e_role").value;e.duty=$("e_duty").value.trim();e.codename=$("e_code").value.trim();edits[editKey]=e;saveLS(LS.edits,edits);$("editModal").classList.remove('on');refreshAll();};
+$("e_reset").onclick=()=>{if(editKey){delete edits[editKey];saveLS(LS.edits,edits);}$("editModal").classList.remove('on');refreshAll();};
+$("e_del").onclick=()=>{if(editId&&confirm('이 직원을 해고할까요?')){hires=hires.filter(x=>x.id!==editId);delete edits['h:'+editId];saveLS(LS.hires,hires);saveLS(LS.edits,edits);$("editModal").classList.remove('on');refreshAll();}};
+$("e_close").onclick=()=>$("editModal").classList.remove('on');
+$("editModal").onclick=e=>{if(e.target.id==='editModal')$("editModal").classList.remove('on');};
 
 // ===== TABS =====
 let curTab='office';
