@@ -1965,7 +1965,7 @@ var TOSS_PLANS=[
 var PRICE_CYCLE='year';
 function setPriceCycle(c){PRICE_CYCLE=c;if(typeof go==='function')go('pricing');}
 function apexWon(n){return (''+n).replace(/\B(?=(\d{3})+(?!\d))/g,',')+'원';}
-function osPricingAfterRender(){var m=$('main');if(m)m.scrollTop=0;if(typeof apexSimCalc==='function'){try{apexSimCalc();}catch(e){}}}
+function osPricingAfterRender(){var m=$('main');if(m)m.scrollTop=0;if(typeof apexSimCalc==='function'){try{apexSimCalc();}catch(e){}}if(typeof osMySubLoad==='function'){try{osMySubLoad();}catch(e){}}}
 function apexPlanCard(p){
   var yr=(PRICE_CYCLE==='year');
   var price=yr?p.year:p.month;
@@ -2055,7 +2055,7 @@ function renderPricing(){
     '<button onclick="setPriceCycle(\'year\')" style="padding:9px 20px;border:none;border-radius:999px;font-size:13px;font-weight:800;cursor:pointer;background:'+(yr?'#fff':'transparent')+';color:'+(yr?'#0F172A':'#64748B')+';box-shadow:'+(yr?'0 2px 6px rgba(15,23,42,.1)':'none')+'">연간 <span style="color:#059669">2개월 무료</span></button>'+
   '</div></div>';
   var plans='<div id="apexPlans" style="max-width:1040px;margin:0 auto;padding:20px"><div style="font-size:22px;font-weight:800;color:#0F172A;text-align:center;margin-bottom:6px">합리적인 요금제</div><div style="font-size:13px;color:#64748B;text-align:center;margin-bottom:8px">규모에 맞게 선택하세요. 부가세 별도.</div>'+toggle+
-    '<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:24px;align-items:stretch">'+TOSS_PLANS.map(apexPlanCard).join('')+'</div>'+
+    (OS.profile?('<div style="max-width:560px;margin:22px auto 0">'+osMySubCardHtml()+'</div>'):'')+'<div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:24px;align-items:stretch">'+TOSS_PLANS.map(apexPlanCard).join('')+'</div>'+
     '<div style="text-align:center;font-size:11.5px;color:#94A3B8;margin-top:16px">모든 플랜: 결제는 토스페이먼츠로 안전하게 · 언제든 해지 · 부가세 별도</div>'+
   '</div>';
   var faqItems=[
@@ -2235,6 +2235,126 @@ function payCfg(){
   try{var s=localStorage.getItem('apex_pay_cfg');if(s){var o=JSON.parse(s);if(o&&typeof o==='object'){d.bank=o.bank||'';d.account=o.account||'';d.holder=o.holder||'';d.naver=o.naver||'';d.kakao=o.kakao||'';}}}catch(e){}
   PAY_CFG=d;return d;
 }
+/* ════════ 토스 자동결제(빌링) — 키만 넣으면 동작 ════════ */
+function osBillCustomerKey(){var id=(OS.profile&&OS.profile.id)||'';return id?('apex_'+(''+id).replace(/-/g,'').slice(0,32)):'';}
+function osBillStart(planId){
+  if(!OS.profile){toast('로그인 후 이용하세요');return;}
+  var plan=osPlanById(planId);if(!plan)return;
+  var ck=getTossKey();
+  if(!ck){toast('토스 클라이언트 키가 아직 연결되지 않았습니다. 대표에게 연결을 요청하세요.');return;}
+  var cust=osBillCustomerKey();if(!cust){toast('회원 정보를 확인할 수 없습니다');return;}
+  try{localStorage.setItem('apex_bill_pending',JSON.stringify({plan:planId,cycle:PRICE_CYCLE}));}catch(e){}
+  if(typeof osPayModalClose==='function')osPayModalClose();
+  osLoadToss(function(ok){
+    if(!ok||typeof TossPayments==='undefined'){toast('결제 모듈을 불러오지 못했습니다.');return;}
+    try{
+      var tp=TossPayments(ck);
+      tp.requestBillingAuth('카드',{
+        customerKey:cust,
+        successUrl:location.origin+location.pathname+'?bill=success',
+        failUrl:location.origin+location.pathname+'?bill=fail',
+        customerName:(OS.profile&&OS.profile.name)||''
+      });
+    }catch(e){toast('자동결제 등록 오류: '+((e&&e.message)||''));}
+  });
+}
+function osBillReturnCheck(){
+  var b=osTossQ('bill');if(!b)return;
+  if(b==='fail'){toast('자동결제 등록이 취소되었습니다.');osTossCleanParams();return;}
+  if(b!=='success')return;
+  var authKey=osTossQ('authKey'),customerKey=osTossQ('customerKey');
+  osTossCleanParams();
+  var pend={};try{pend=JSON.parse(localStorage.getItem('apex_bill_pending')||'{}');}catch(e){}
+  if(!authKey||!customerKey){toast('등록 정보를 확인하지 못했습니다.');return;}
+  toast('자동결제 등록 중… 잠시만 기다려 주세요.');
+  fetch('/api/toss-billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    action:'issue',authKey:authKey,customerKey:customerKey,
+    memberId:(OS.profile&&OS.profile.id)||'',plan:(pend.plan||'basic'),cycle:(pend.cycle||'month'),
+    name:(OS.profile&&OS.profile.name)||'',email:osMyEmail()
+  })}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(x){
+    try{localStorage.removeItem('apex_bill_pending');}catch(e){}
+    if(!x.ok||!x.j||x.j.error){toast('자동결제 등록 실패: '+(((x.j||{}).error)||'서버 오류')+(((x.j||{}).hint)?(' — '+x.j.hint):''));return;}
+    toast('✅ 자동결제가 등록되고 첫 결제가 완료되었습니다.');
+    setTimeout(function(){location.reload();},1200);
+  },function(){toast('자동결제 서버에 연결하지 못했습니다. (토스 키 등록 후 이용 가능)');});
+}
+function osBillCancel(){
+  if(!OS.profile)return;
+  if(!confirm('자동결제를 해지할까요? 남은 이용기간까지는 그대로 사용할 수 있습니다.'))return;
+  fetch('/api/toss-billing',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'cancel',memberId:OS.profile.id})})
+   .then(function(r){return r.json();}).then(function(j){
+     if(j&&j.error){toast('해지 실패: '+j.error);return;}
+     toast('자동결제가 해지되었습니다.');setTimeout(function(){location.reload();},900);
+   },function(){toast('서버에 연결하지 못했습니다.');});
+}
+/* 내 구독 상태 카드 (모든 회원) */
+function osMySubCardHtml(){
+  if(!OS.profile)return '';
+  var t=osTierById(osMyTier())||{label:'무료'};
+  var until=OS.profile.plan_until?(''+OS.profile.plan_until).slice(0,10):'';
+  return '<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">💳</span>내 구독</div>'+
+    '<div class="card-desc">현재 등급과 결제 상태입니다.</div></div><div class="card-body">'+
+    '<div style="font-size:13px;color:var(--ink-2);line-height:1.9">등급: <b>'+osEsc(t.label)+'</b>'+(until?(' · 이용기간: <b>~'+osEsc(until)+'</b>'):'')+'<div id="osMySubBox" style="font-size:12px;color:var(--ink-4);margin-top:4px">구독 정보를 불러오는 중…</div></div>'+
+    '<div class="btn-row" style="margin-top:11px"><button class="btn btn-primary" onclick="go(\'pricing\')">플랜 보기 · 자동결제 등록</button><button class="btn btn-ghost" onclick="osBillCancel()">자동결제 해지</button></div>'+
+  '</div></div>';
+}
+function osMySubLoad(){
+  var box=document.getElementById('osMySubBox');if(!box)return;var sb=osClient();if(!sb||!OS.profile){box.textContent='';return;}
+  sb.from('subscriptions').select('plan,cycle,status,amount,last_paid_at,next_billing_at').eq('member_id',OS.profile.id).then(function(r){
+    if(r.error){box.textContent='자동결제 미등록 (결제 SQL 실행 후 표시)';return;}
+    var row=(r.data&&r.data[0]);
+    if(!row){box.textContent='자동결제 미등록 — 플랜을 선택해 등록하세요.';return;}
+    box.innerHTML='자동결제: <b>'+(row.status==='active'?'<span style="color:#059669">사용 중</span>':osEsc(row.status||''))+'</b>'+
+      (row.amount?(' · '+apexWon(row.amount)+'/'+(row.cycle==='year'?'년':'월')):'')+
+      (row.last_paid_at?(' · 최근 결제 '+(''+row.last_paid_at).slice(0,10)):'')+
+      (row.next_billing_at?(' · <b>다음 결제 '+(''+row.next_billing_at).slice(0,10)+'</b>'):'');
+  },function(){box.textContent='';});
+}
+/* 운영자(대표) 결제 현황 대시보드 */
+function osPayAdminCardHtml(){
+  if(!osIsOwner())return '';
+  return '<div class="card set-card" style="border-color:#BFD4FB"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>팀 결제 현황</div>'+
+    '<div class="card-desc">팀원별 등급·결제 상태·최근 결제일·다음 결제일을 확인합니다.</div></div><div class="card-body">'+
+    '<div id="osPayAdminBox"><div class="loading" style="padding:10px"><div class="spinner"></div>결제 현황 불러오는 중…</div></div></div></div>';
+}
+function osPayAdminLoad(){
+  var host=document.getElementById('osPayAdminBox');if(!host)return;var sb=osClient();if(!sb)return;
+  Promise.all([
+    sb.from('profiles').select('id,name,role,plan,plan_until,active').order('name'),
+    sb.from('subscriptions').select('member_id,plan,cycle,status,amount,last_paid_at,next_billing_at'),
+    sb.from('payments').select('member_id,amount,status,paid_at').order('paid_at',{ascending:false}).limit(300)
+  ]).then(function(res){
+    var profs=(res[0]&&res[0].data)||[];
+    if(res[0]&&res[0].error){host.innerHTML='<div class="notice" style="font-size:11.5px">회원 정보를 불러오지 못했습니다.</div>';return;}
+    var subErr=(res[1]&&res[1].error),subs={},pays={};
+    ((res[1]&&res[1].data)||[]).forEach(function(x){subs[x.member_id]=x;});
+    ((res[2]&&res[2].data)||[]).forEach(function(x){if(!pays[x.member_id])pays[x.member_id]=x;});
+    var paid=0,sum=0;
+    var rows=profs.filter(function(p2){return p2.active!==false;}).map(function(p2){
+      var sub=subs[p2.id],lastPay=pays[p2.id];
+      var tier=osTierById(osPlanToTier(p2.plan))||{label:'무료',color:'#475569',bg:'#F1F5F9'};
+      var expired=p2.plan_until&&(new Date(p2.plan_until).getTime()<Date.now());
+      if(sub&&sub.status==='active'){paid++;sum+=(sub.amount||0);}
+      var st=sub?(sub.status==='active'?'<span class="badge green">자동결제 중</span>':'<span class="badge">'+osEsc(sub.status||'')+'</span>'):'<span class="badge gray">미등록</span>';
+      return '<tr style="border-top:1px solid var(--ink-8)">'+
+        '<td style="padding:7px 6px;font-weight:700">'+osEsc(p2.name||'-')+(p2.role==='owner'?' <span class="badge">대표</span>':'')+'</td>'+
+        '<td style="padding:7px 6px"><span style="font-size:11px;font-weight:800;border-radius:6px;padding:2px 8px;color:'+tier.color+';background:'+tier.bg+'">'+osEsc(tier.label)+'</span>'+(expired?' <span style="font-size:10.5px;color:#DC2626;font-weight:700">만료</span>':'')+'</td>'+
+        '<td style="padding:7px 6px;text-align:center">'+st+'</td>'+
+        '<td style="padding:7px 6px;text-align:right;white-space:nowrap">'+(lastPay?osEsc((''+lastPay.paid_at).slice(0,10)):(sub&&sub.last_paid_at?osEsc((''+sub.last_paid_at).slice(0,10)):'-'))+'</td>'+
+        '<td style="padding:7px 6px;text-align:right;white-space:nowrap;font-weight:700;color:#1A56DB">'+(sub&&sub.next_billing_at?osEsc((''+sub.next_billing_at).slice(0,10)):'-')+'</td>'+
+        '<td style="padding:7px 6px;text-align:right;white-space:nowrap">'+(p2.plan_until?osEsc((''+p2.plan_until).slice(0,10)):'-')+'</td>'+
+      '</tr>';
+    }).join('');
+    host.innerHTML=(subErr?'<div class="notice" style="font-size:11.5px;margin-bottom:9px">결제 테이블이 아직 없습니다 — <b>migration_11_billing.sql</b>을 Supabase에서 1회 실행하면 자동결제·결제일이 표시됩니다.</div>':'')+
+      '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px">'+
+        '<div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid var(--ink-7);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink-5);font-weight:700">자동결제 중</div><div style="font-size:19px;font-weight:900;color:#059669">'+paid+'명</div></div>'+
+        '<div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid var(--ink-7);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink-5);font-weight:700">월 예상 매출</div><div style="font-size:19px;font-weight:900;color:#1A56DB">'+apexWon(sum)+'</div></div>'+
+      '</div>'+
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5);font-size:10.5px">'+
+      '<th style="text-align:left;padding:5px 6px">이름</th><th style="text-align:left;padding:5px 6px">등급</th><th style="text-align:center;padding:5px 6px">결제상태</th><th style="text-align:right;padding:5px 6px">최근 결제일</th><th style="text-align:right;padding:5px 6px">다음 결제일</th><th style="text-align:right;padding:5px 6px">이용기간</th>'+
+      '</tr></thead><tbody>'+(rows||'<tr><td colspan="6" style="padding:14px;text-align:center;color:var(--ink-5)">회원이 없습니다.</td></tr>')+'</tbody></table></div>';
+  },function(){host.innerHTML='';});
+}
 function osPaySync(){
   var sb=osClient();if(!sb)return;
   try{sb.from('app_config').select('k,v').eq('k','pay').then(function(r){
@@ -2260,7 +2380,8 @@ function osPayOpen(planId){
     '<div style="font-size:18px;font-weight:900;color:#0F172A;margin:2px 0 2px">APEX '+osEsc(plan.name)+'</div>'+
     '<div style="font-size:22px;font-weight:900;color:#1A56DB;margin-bottom:14px">'+apexWon(amount)+'</div>'+
     '<div style="font-size:11px;font-weight:800;color:#334155;margin:0 0 9px">결제수단 선택</div>'+
-    osPayMethodCard('💳','카드 결제','토스페이먼츠 · 국내 모든 카드','osPayCard(\''+plan.id+'\')','#1A56DB')+
+    osPayMethodCard('🔁','자동결제 등록(정기결제)','카드 등록 → 매월 자동결제 · 언제든 해지','osBillStart(\''+plan.id+'\')','#7C3AED')+
+    osPayMethodCard('💳','카드 결제(1회)','토스페이먼츠 · 국내 모든 카드','osPayCard(\''+plan.id+'\')','#1A56DB')+
     osPayMethodCard('🏦','계좌이체 · 무통장입금','운영 계좌로 이체 후 확인','osPayBank(\''+plan.id+'\')','#0EA5A5')+
     osPayMethodCard('Ⓝ','네이버페이','네이버페이로 간편결제','osPaySimple(\''+plan.id+'\',\'naver\')','#03C75A')+
     osPayMethodCard('🟡','카카오페이 · 카카오뱅크','카카오페이/카카오뱅크 송금','osPaySimple(\''+plan.id+'\',\'kakao\')','#FEE500')+
@@ -2847,6 +2968,15 @@ function renderNav(){
 var lastTab='dashboard';
 function go(tab){
   document.body.classList.remove('yoonsi-mode');
+  if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
+    if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
+    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    lastTab=tab;
+    var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
+    $('main').scrollTop=0;
+    return;
+  }
   if(tab==='finance'){
     mountFinance();
     document.body.classList.remove('crm-mode','sangdam-mode');
@@ -5722,12 +5852,17 @@ function copyRes(id){var res=$('res_'+id);copyText(res._raw||res.querySelector('
 
 /* ════════ 설정 ════════ */
 function renderSettings(){
+  if(typeof osIsOwner==='function'&&!osIsOwner())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div><div class="page-title">🔒 대표 전용</div><div class="page-desc">설정은 대표 계정만 볼 수 있습니다.</div></div></div>';
   var key=getKey();var masked=key?(key.slice(0,10)+'••••••••••••'+key.slice(-4)):'';
   var model=getModel();var persona=getPersona();var conn=getConn();var proxy=getProxy();
   var apptoken=getAppToken();var atMasked=apptoken?(apptoken.slice(0,3)+'••••••'+apptoken.slice(-2)):'';
   function opt(val,label){return '<option value="'+val+'"'+(model===val?' selected':'')+'>'+label+'</option>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div>'+
     '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. 모든 값은 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</div></div>'+
+
+    osOwnerCardHtml()+
+
+    osPayAdminCardHtml()+
 
     osNoticeCardHtml()+
 
@@ -7428,7 +7563,32 @@ function osClient(){
   return OS.sb;
 }
 function osRoleLabel(r){
-  return r==='admin'?'관리자':(r==='branch_manager'?'본부장':(r==='education_manager'?'교육매니저':(r==='leader'?'지점장':'설계사')));
+  return r==='owner'?'대표':(r==='admin'?'관리자':(r==='branch_manager'?'본부장':(r==='education_manager'?'교육매니저':(r==='leader'?'지점장':'설계사'))));
+}
+/* ── 대표(오너) 판별 — app_config.owner_email 로 지정. 미지정이면 관리자 통과(잠김 방지) ── */
+function osOwnerEmail(){try{return ((typeof osCfgGet==='function'?osCfgGet('owner_email',''):'')||'').toLowerCase().replace(/^\s+|\s+$/g,'');}catch(e){return '';}}
+function osMyEmail(){try{return ((OS.session&&OS.session.user&&OS.session.user.email)||'').toLowerCase();}catch(e){return '';}}
+function osIsOwner(){
+  if(OS.profile&&OS.profile.role==='owner')return true;
+  var oe=osOwnerEmail(),me=osMyEmail();
+  if(oe)return !!me&&me===oe;
+  return osRole()==='admin';
+}
+function osOwnerClaim(){
+  var me=osMyEmail();if(!me){toast('로그인 정보를 확인할 수 없습니다');return;}
+  if(osOwnerEmail()&&!osIsOwner()){toast('이미 대표가 지정되어 있습니다');return;}
+  if(!confirm('이 계정('+me+')을 대표로 지정합니다.\n이후 설정·보고서는 대표만 볼 수 있습니다. 진행할까요?'))return;
+  osCfgSet('owner_email',me,function(){toast('대표로 지정되었습니다.');if(typeof renderNav==='function')renderNav();go('settings');});
+}
+function osOwnerCardHtml(){
+  if(!osIsOwner())return '';
+  var oe=osOwnerEmail(),me=osMyEmail();
+  return '<div class="card set-card" style="border-color:#FDE68A"><div class="card-hd"><div class="card-title"><span class="ci">👑</span>대표 계정 '+(oe?'<span class="badge green">지정됨</span>':'<span class="badge">미지정</span>')+'</div>'+
+    '<div class="card-desc">대표로 지정된 계정만 <b>설정</b>과 <b>보고서</b>를 볼 수 있습니다. 지정 전에는 관리자 권한이면 접근 가능합니다.</div></div><div class="card-body">'+
+    (oe?('<div style="font-size:12.5px;color:var(--ink-2);margin-bottom:10px">현재 대표: <b>'+osEsc(oe)+'</b></div>'):('<div style="font-size:12.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:9px 11px;margin-bottom:10px">아직 대표가 지정되지 않았습니다. 아래 버튼으로 <b>내 계정('+osEsc(me||'-')+')</b>을 대표로 지정하면, 그때부터 다른 관리자도 설정에 들어올 수 없습니다.</div>'))+
+    '<div class="btn-row"><button class="btn btn-primary" onclick="osOwnerClaim()">'+(oe?'대표를 내 계정으로 변경':'내 계정을 대표로 지정')+'</button></div>'+
+    '<div style="font-size:11px;color:var(--ink-5);margin-top:9px;line-height:1.6">※ 되돌리려면 Supabase → app_config 에서 owner_email 행을 삭제하면 됩니다.</div>'+
+  '</div></div>';
 }
 /* 현재 역할(미로그인은 설계사 기준으로 기존 도구 회귀 방지) */
 function osRole(){return (OS.profile&&OS.profile.role)||'member';}
@@ -7461,10 +7621,21 @@ function osPlanToTier(plan){ /* profiles.plan → 카테고리 id */
   if(p.indexOf('vip')>=0)return 'vip';
   return 'free';
 }
-function osMyTier(){var pf=OS.profile;if(!pf)return 'free';if(pf.role==='admin')return 'vip';return osPlanToTier(pf.plan);}
+function osPlanExpired(pf){
+  try{var u=pf&&pf.plan_until;if(!u)return false;var d=new Date(u);if(isNaN(d.getTime()))return false;return d.getTime()<Date.now();}catch(e){return false;}
+}
+function osMyTier(){var pf=OS.profile;if(!pf)return 'free';if(pf.role==='admin'||pf.role==='owner')return 'vip';if(osPlanExpired(pf))return 'free';return osPlanToTier(pf.plan);}
+/* 그룹별 기본 요구 등급 — 운영자가 설정에서 바꾸면 그 값이 우선 */
+var OS_GROUP_TIER_DEFAULT={
+ '성장·교육':'basic','윤시스쿨':'basic','보험 해석':'basic','계약관리':'basic','재무설계':'basic',
+ '콘텐츠·마케팅':'basic','보험 레퍼런스':'basic',
+ '고객':'pro','DB CRM':'pro','8통장 지도':'pro','보장분석':'pro','법인·사업자 컨설팅':'pro',
+ '상담 AI 코치':'pro','청구·사후관리':'pro',
+ '매니저 관리':'team'
+};
 var OS_GROUP_TIER=null; /* {groupKey: tierId} — 그룹별 요구 카테고리(없으면 free=개방) */
 function osAccessKey(g){return g.key||g.group;}
-function osGroupReqTier(g){var k=osAccessKey(g);if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];return 'free';}
+function osGroupReqTier(g){var k=osAccessKey(g);if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];if(OS_GROUP_TIER_DEFAULT&&OS_GROUP_TIER_DEFAULT[k])return OS_GROUP_TIER_DEFAULT[k];return 'free';}
 function osGroupTierOk(g,tierId){return osTierRank(tierId)>=osTierRank(osGroupReqTier(g));}
 function osGroupDefaultRoles(g){
   if(g.role==='hq')return ['branch_manager'];
@@ -7478,11 +7649,33 @@ function osGroupAllowedRoles(g){
   return osGroupDefaultRoles(g);
 }
 /* 역할별 노출 그룹 필터 (관리자=전체, 그 외=관리자 개방 설정 또는 기본값) */
+var OS_OWNER_GROUPS={'시스템 설정':1};
 function visibleTabs(role){
   role=role||osRole();
-  if(role==='admin')return TABS;
-  var myT=osMyTier();
-  return TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0 && osGroupTierOk(g,myT);});
+  var list;
+  if(role==='admin'||role==='owner')list=TABS.slice();
+  else{var myT=osMyTier();list=TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0 && osGroupTierOk(g,myT);});}
+  if(!osIsOwner())list=list.filter(function(g){return !OS_OWNER_GROUPS[osAccessKey(g)];});
+  return list;
+}
+/* 탭 접근 가능 여부 — 직접 이동(go)도 막는다 */
+function osTabAllowed(tab){
+  if(tab==='settings')return osIsOwner();
+  var gs=visibleTabs(),i,j;
+  for(i=0;i<gs.length;i++){var it=gs[i].items||[];for(j=0;j<it.length;j++)if(it[j].id===tab)return true;}
+  for(i=0;i<TABS.length;i++){var it2=TABS[i].items||[];for(j=0;j<it2.length;j++)if(it2[j].id===tab)return false;}
+  return true;
+}
+function osNeedTierFor(tab){
+  for(var i=0;i<TABS.length;i++){var it=TABS[i].items||[];for(var j=0;j<it.length;j++)if(it[j].id===tab)return osGroupReqTier(TABS[i]);}
+  return 'free';
+}
+function osBlockedPageHtml(tab){
+  var need=osNeedTierFor(tab),t=osTierById(need)||{label:need},mine=osTierById(osMyTier())||{label:'무료'};
+  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">UPGRADE</div><div class="page-title">🔒 상위 플랜 기능입니다</div>'+
+    '<div class="page-desc">이 메뉴는 <b>'+osEsc(t.label)+'</b> 이상에서 이용할 수 있습니다. 현재 내 등급: <b>'+osEsc(mine.label)+'</b></div></div>'+
+    '<div class="card"><div class="card-body"><div style="font-size:13px;color:var(--ink-2);line-height:1.75">구독을 시작하면 바로 열립니다. 결제 후에는 자동으로 등급이 부여되고, 매월 같은 날 자동결제됩니다.</div>'+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="go(\'pricing\')">요금제 보기 · 구독하기</button></div></div></div></div>';
 }
 function osLoadAccessLocal(){
   try{var s=localStorage.getItem('apex_tool_access');if(s){var m=JSON.parse(s);if(m&&typeof m==='object'){OS_ACCESS=m;OS_ACCESS_SRC='local';}}}catch(e){}
@@ -7981,7 +8174,8 @@ function osShowLoginGate(){
 }
 function osHideLoginGate(){var o=document.getElementById('osLoginGate');if(o){o.style.display='none';o.innerHTML='';}try{document.body.style.overflow='';}catch(e){}}
 /* ── 관리자: 가입 승인 큐 ── */
-function osSettingsAfterRender(){if(OS.profile&&OS.profile.role==='admin'){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}}
+function osSettingsAfterRender(){if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
+  if(OS.profile&&(OS.profile.role==='admin'||OS.profile.role==='owner')){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
@@ -8285,7 +8479,8 @@ function osRefreshIfClients(){
 }
 function osBootAuth(){
   osRenderPill();
-  if(typeof osTossReturnCheck==='function'){try{osTossReturnCheck();}catch(e){}}
+  if(typeof osTossReturnCheck==='function'){try{osTossReturnCheck();}catch(e){}
+try{osBillReturnCheck();}catch(e){}}
   /* 로그인 전에는 앱을 가린다: 저장된 세션이 없으면 즉시 게이트 표시(콘텐츠 깜빡임 방지) */
   if(!osHasStoredSession())osShowLoginGate();
   var sb=osClient();if(!sb)return;
