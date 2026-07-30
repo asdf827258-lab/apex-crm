@@ -2852,7 +2852,7 @@ var GEN=[
 var TABS=[
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
- {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'report',icon:'📮',title:'보고서',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📈',title:'100점 성장',cnt:''},{id:'academy',icon:'🎓',title:'90일 아카데미',cnt:''}]},
@@ -8490,118 +8490,193 @@ try{osBillReturnCheck();}catch(e){}}
 }
 
 /* ════════ Phase 2 — 고객 보장분석 프로젝트 ════════ */
-/* ════════ 윤시스쿨 보고서 — 팀원이 올리고, 대표만 본다 ════════ */
-var RPT={mine:[],all:[],view:'write',kind:'growth'};
-var RPT_KINDS=[
- {id:'growth',ic:'🌱',t:'성장 보고',d:'보험설계사로서 이번 주 무엇을 배우고 어떻게 성장했는지'},
- {id:'meeting',ic:'🗣️',t:'회의 주제',d:'다음 회의에서 다룰 주제·안건·건의사항'},
- {id:'material',ic:'📚',t:'자료 정리',d:'정리한 학습자료·상품자료·상담자료 요약'},
- {id:'issue',ic:'🚨',t:'현안·요청',d:'막힌 부분, 도움이 필요한 것'}
-];
-function rptKind(id){for(var i=0;i<RPT_KINDS.length;i++)if(RPT_KINDS[i].id===id)return RPT_KINDS[i];return RPT_KINDS[0];}
+/* ════════ 윤시스쿨 · 대표 브리핑 — 매일의 이득·성과·팀 소통을 한 화면에 ════════ */
+var SCH={view:'today',stat:null,team:[],brief:null,busy:false};
+function schToday(){return osAttToday();}
+function schDaysAgo(n){var d=new Date();d.setDate(d.getDate()-n);var p2=function(x){return(x<10?'0':'')+x;};return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());}
+function schAgoLabel(iso){
+  if(!iso)return {t:'기록 없음',d:999};
+  var t=new Date(iso).getTime();if(isNaN(t))return {t:'기록 없음',d:999};
+  var d=Math.floor((Date.now()-t)/86400000);
+  return {t:(d<=0?'오늘':(d===1?'어제':d+'일 전')),d:d};
+}
 function renderReportPage(){
-  if(!OS.profile)return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">REPORT</div><div class="page-title">보고서</div></div><div class="card"><div class="card-body"><div class="notice">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';
-  var owner=osIsOwner();
+  if(!OS.profile)return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">YOONSI SCHOOL</div><div class="page-title">대표 브리핑</div></div><div class="card"><div class="card-body"><div class="notice">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';
+  if(!osIsOwner())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">YOONSI SCHOOL</div><div class="page-title">🔒 대표 전용</div><div class="page-desc">이 브리핑은 대표 계정만 볼 수 있습니다.</div></div></div>';
   var tabs='<div class="clm-tabs" style="margin-bottom:14px">'+
-    '<button class="clm-tab'+(RPT.view==='write'?' on':'')+'" onclick="rptGo(\'write\')">✍️ 보고서 작성</button>'+
-    '<button class="clm-tab'+(RPT.view==='mine'?' on':'')+'" onclick="rptGo(\'mine\')">📄 내가 보낸 보고</button>'+
-    (owner?('<button class="clm-tab'+(RPT.view==='inbox'?' on':'')+'" onclick="rptGo(\'inbox\')">📮 받은 보고 <span class="badge" id="rptCnt"></span></button>'):'')+
-  '</div>';
-  var body;
-  if(RPT.view==='inbox'&&owner)body='<div id="rptInbox"><div class="loading" style="padding:14px"><div class="spinner"></div>보고서를 불러오는 중…</div></div>';
-  else if(RPT.view==='mine')body='<div id="rptMine"><div class="loading" style="padding:14px"><div class="spinner"></div>내 보고서를 불러오는 중…</div></div>';
-  else body=rptWriteHtml();
-  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">YOONSI SCHOOL · REPORT</div>'+
-    '<div class="page-title">보고서</div><div class="page-desc">'+(owner?'팀원이 올린 성장·회의주제·자료정리 보고를 대표만 확인합니다.':'성장·회의주제·자료정리를 정리해 대표에게 보고합니다. <b>대표만 열람</b>하며 다른 팀원에게는 보이지 않습니다.')+'</div></div>'+tabs+body+'</div>';
+    '<button class="clm-tab'+(SCH.view==='today'?' on':'')+'" onclick="schGo(\'today\')">📊 오늘의 브리핑</button>'+
+    '<button class="clm-tab'+(SCH.view==='gain'?' on':'')+'" onclick="schGo(\'gain\')">💡 이득·성과</button>'+
+    '<button class="clm-tab'+(SCH.view==='team'?' on':'')+'" onclick="schGo(\'team\')">💬 팀 소통</button></div>';
+  var body='<div id="schBody"><div class="loading" style="padding:16px"><div class="spinner"></div>윤시스쿨 데이터를 모으는 중…</div></div>';
+  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">YOONSI SCHOOL · DAILY BRIEFING</div>'+
+    '<div class="page-title">대표 브리핑</div><div class="page-desc">윤시스쿨이 오늘 만들어낸 <b>이득과 성과</b>, 그리고 <b>팀원과의 소통 상태</b>를 매일 한 화면에서 보고드립니다.</div></div>'+tabs+body+'</div>';
 }
-function rptWriteHtml(){
-  var chips=RPT_KINDS.map(function(k){return '<button type="button" class="chip-opt'+(RPT.kind===k.id?' on':'')+'" onclick="rptSetKind(\''+k.id+'\')">'+k.ic+' '+osEsc(k.t)+'</button>';}).join('');
-  var k=rptKind(RPT.kind);
-  return '<div class="card"><div class="card-body">'+
-    '<div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin-bottom:7px">보고 종류</div><div class="chips" style="margin-bottom:12px">'+chips+'</div>'+
-    '<div class="frm"><div class="fld span2"><label>제목</label><input id="rptTitle" type="text" placeholder="예: '+osEsc(k.t)+' — 7월 4주차"/></div>'+
-    '<div class="fld span2"><label>내용 <span class="hint">'+osEsc(k.d)+'</span></label>'+
-      '<textarea id="rptBody" style="width:100%;min-height:190px;font-size:13px;line-height:1.7;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box;font-family:inherit" placeholder="'+osEsc(rptPlaceholder(RPT.kind))+'"></textarea></div></div>'+
-    '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" id="rptSendBtn" onclick="rptSend()">📮 대표에게 보고 보내기</button>'+
-    '<button class="btn btn-ghost" onclick="rptAiDraft(this)">🤖 AI로 초안 만들기</button></div>'+
-    '<div style="font-size:11px;color:var(--ink-5);margin-top:10px;line-height:1.6">※ 보고서는 <b>대표와 작성자 본인</b>만 볼 수 있습니다. 고객 실명·주민번호 등 민감정보는 넣지 마세요.</div>'+
-  '</div></div>';
+function schGo(v){SCH.view=v;var b=$('schBody');if(b)b.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div>';schRender();}
+function osRepAfterRender(){if(osIsOwner())schLoad();}
+/* ── 데이터 수집 ── */
+function schLoad(){
+  var sb=osClient();if(!sb){schRender();return;}
+  var t=schToday(),w7=schDaysAgo(6),w30=schDaysAgo(29);
+  Promise.all([
+    sb.from('profiles').select('id,name,role,active').order('name'),
+    sb.from('attendance').select('member_id,att_date,first_seen,last_seen').gte('att_date',w30),
+    sb.from('saved_reports').select('advisor_id,kind,title,created_at').gte('created_at',w30+'T00:00:00'),
+    sb.from('clients').select('id,advisor_id,created_at').gte('created_at',w30+'T00:00:00'),
+    sb.from('ai_usage').select('member_id,usage_date,cnt').gte('usage_date',w30),
+    sb.from('reports').select('id,author_id,author_name,kind,title,created_at,read_at').order('created_at',{ascending:false}).limit(100)
+  ]).then(function(r){
+    var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false;});
+    var att=(r[1]&&r[1].data)||[], docs=(r[2]&&r[2].data)||[], cli=(r[3]&&r[3].data)||[], ai=(r[4]&&r[4].data)||[], reps=(r[5]&&r[5].data)||[];
+    var inRange=function(iso,from){return iso&&(''+iso).slice(0,10)>=from;};
+    var st={
+      today:{att:att.filter(function(x){return x.att_date===t;}).length, docs:docs.filter(function(x){return inRange(x.created_at,t);}).length,
+             cli:cli.filter(function(x){return inRange(x.created_at,t);}).length, ai:ai.filter(function(x){return x.usage_date===t;}).reduce(function(a,b){return a+(b.cnt||0);},0)},
+      week:{att:att.filter(function(x){return x.att_date>=w7;}).length, docs:docs.filter(function(x){return inRange(x.created_at,w7);}).length,
+            cli:cli.filter(function(x){return inRange(x.created_at,w7);}).length, ai:ai.filter(function(x){return x.usage_date>=w7;}).reduce(function(a,b){return a+(b.cnt||0);},0)},
+      month:{docs:docs.length, cli:cli.length, ai:ai.reduce(function(a,b){return a+(b.cnt||0);},0)},
+      members:profs.length, missing:(r[1]&&r[1].error)||(r[2]&&r[2].error)
+    };
+    st.week.rate=(profs.length?Math.round(st.week.att/(profs.length*7)*100):0);
+    /* 팀원별 소통·활동 */
+    var lastAtt={},lastDoc={},lastRep={},aiCnt={},docCnt={};
+    att.forEach(function(x){var k=x.member_id,v=x.last_seen||x.first_seen||(x.att_date+'T09:00:00');if(!lastAtt[k]||v>lastAtt[k])lastAtt[k]=v;});
+    docs.forEach(function(x){var k=x.advisor_id;docCnt[k]=(docCnt[k]||0)+1;if(!lastDoc[k]||x.created_at>lastDoc[k])lastDoc[k]=x.created_at;});
+    reps.forEach(function(x){var k=x.author_id;if(!lastRep[k]||x.created_at>lastRep[k])lastRep[k]=x.created_at;});
+    ai.forEach(function(x){aiCnt[x.member_id]=(aiCnt[x.member_id]||0)+(x.cnt||0);});
+    SCH.team=profs.map(function(pf){
+      var la=schAgoLabel(lastAtt[pf.id]),ld=schAgoLabel(lastDoc[pf.id]),lr=schAgoLabel(lastRep[pf.id]);
+      var touch=Math.min(la.d,ld.d,lr.d);
+      return {id:pf.id,name:pf.name||'-',role:pf.role,att:la,doc:ld,rep:lr,touch:touch,docs:docCnt[pf.id]||0,ai:aiCnt[pf.id]||0};
+    }).sort(function(a,b){return b.touch-a.touch;});
+    SCH.reps=reps;SCH.stat=st;schRender();
+  },function(){SCH.stat={today:{att:0,docs:0,cli:0,ai:0},week:{att:0,docs:0,cli:0,ai:0,rate:0},month:{docs:0,cli:0,ai:0},members:0};schRender();});
 }
-function rptPlaceholder(kind){
-  if(kind==='growth')return '이번 주 배운 것 / 실제로 바뀐 행동 / 숫자(상담·계약·활동) / 다음 주 목표';
-  if(kind==='meeting')return '제안 주제 / 왜 필요한지 / 함께 논의하고 싶은 질문';
-  if(kind==='material')return '정리한 자료 제목 / 핵심 요약 3줄 / 어디에 쓸 수 있는지';
-  return '막힌 상황 / 시도해 본 것 / 필요한 도움';
+function schKpi(lb,v,sub,color){
+  return '<div class="card" style="padding:15px;margin:0"><div style="font-size:11.5px;font-weight:800;color:var(--ink-4)">'+osEsc(lb)+'</div>'+
+    '<div style="font-size:26px;font-weight:900;margin-top:5px;color:'+(color||'var(--ink-1)')+'">'+v+'</div>'+
+    '<div style="font-size:11px;color:var(--ink-5);margin-top:3px">'+osEsc(sub)+'</div></div>';
 }
-function rptSetKind(k){RPT.kind=k;go('report');}
-function rptGo(v){RPT.view=v;go('report');}
-function rptSend(){
-  var sb=osClient();if(!sb||!OS.profile){toast('로그인 후 이용하세요');return;}
-  var t=(osVal('rptTitle')||'').replace(/^\s+|\s+$/g,''),b=(osVal('rptBody')||'').replace(/^\s+|\s+$/g,'');
-  if(!t){toast('제목을 입력하세요');return;}
-  if(!b){toast('내용을 입력하세요');return;}
-  var btn=$('rptSendBtn');if(btn){btn.disabled=true;btn.textContent='보내는 중…';}
-  sb.from('reports').insert({author_id:OS.profile.id,author_name:(OS.profile.name||''),kind:RPT.kind,title:t,body:b}).then(function(r){
-    if(btn){btn.disabled=false;btn.textContent='📮 대표에게 보고 보내기';}
-    if(r.error){var m=r.error.message||'';toast(/reports/i.test(m)?'보고서 테이블이 아직 없습니다 — migration_12_reports.sql 실행 필요':('전송 실패: '+m));return;}
-    toast('📮 대표에게 보고를 보냈습니다.');RPT.view='mine';go('report');
-  },function(){if(btn){btn.disabled=false;btn.textContent='📮 대표에게 보고 보내기';}toast('전송 실패');});
+function schRender(){
+  var host=$('schBody');if(!host)return;var st=SCH.stat;
+  if(!st){host.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div>';return;}
+  if(SCH.view==='gain')host.innerHTML=schGainHtml();
+  else if(SCH.view==='team')host.innerHTML=schTeamHtml();
+  else host.innerHTML=schTodayHtml();
 }
-function rptAiDraft(btn){
+/* ── ① 오늘의 브리핑 ── */
+function schTodayHtml(){
+  var st=SCH.stat,t=st.today;
+  var silent=SCH.team.filter(function(x){return x.touch>=3;});
+  var kpis='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:14px">'+
+    schKpi('오늘 출근',t.att+'/'+st.members+'명','팀 접속 현황',t.att>0?'#059669':'var(--ink-1)')+
+    schKpi('오늘 만든 상담자료',t.docs+'건','보장분석·재무설계 등','#1A56DB')+
+    schKpi('오늘 신규 고객',t.cli+'명','고객 365일 등록','#7C3AED')+
+    schKpi('오늘 AI 활용',t.ai+'회','도구 사용 횟수','#D97706')+'</div>';
+  var alert=silent.length
+    ? '<div class="card" style="border-color:#FDE68A"><div class="card-body" style="background:#FFFBEB;border-radius:14px">'+
+      '<div style="font-size:13px;font-weight:800;color:#92400E;margin-bottom:6px">🔔 오늘 챙기셔야 할 팀원 '+silent.length+'명</div>'+
+      '<div style="font-size:12.5px;color:#92400E;line-height:1.8">'+silent.slice(0,6).map(function(x){return '· <b>'+osEsc(x.name)+'</b> — 마지막 활동 '+osEsc(x.att.t);}).join('<br>')+'</div>'+
+      '<button class="btn btn-ghost" style="margin-top:9px" onclick="schGo(\'team\')">팀 소통 화면 열기 →</button></div></div>'
+    : '<div class="card"><div class="card-body"><div style="font-size:13px;color:#059669;font-weight:700">✅ 3일 이상 소통이 끊긴 팀원이 없습니다.</div></div></div>';
+  var brief=SCH.brief
+    ? '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧠</span>오늘의 대표 브리핑 <span class="badge">AI 비서</span></div>'+
+      '<div class="card-desc">오늘의 팀 데이터를 바탕으로 정리한 성장 포인트·회의 주제·자료입니다.</div></div>'+
+      '<div class="card-body"><div class="rpt-body">'+renderMd(SCH.brief)+'</div>'+
+      '<div class="btn-row" style="margin-top:11px"><button class="btn btn-ghost" onclick="schBrief(true)">🔄 다시 생성</button><button class="btn btn-ghost" onclick="copyText(SCH.brief||\'\')">📋 복사</button></div></div></div>'
+    : '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧠</span>오늘의 대표 브리핑</div>'+
+      '<div class="card-desc">AI 비서가 오늘 팀 데이터를 읽고 <b>대표님이 오늘 성장할 포인트 · 회의에서 다룰 주제 · 정리된 자료</b>를 보고서로 만들어 드립니다.</div></div>'+
+      '<div class="card-body"><button class="btn btn-primary" id="schBriefBtn" onclick="schBrief()">📊 오늘의 브리핑 받기</button>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:9px">하루 한 번만 생성하면 저장되어 다시 열어도 그대로 보입니다.</div></div></div>';
+  return kpis+alert+brief;
+}
+function schBrief(force){
+  if(SCH.busy)return;
+  var key='apex_school_brief_'+schToday();
+  if(!force){try{var c=localStorage.getItem(key);if(c){SCH.brief=c;schRender();return;}}catch(e){}}
   if(!aiReady()){toast('설정에서 AI 연결이 필요합니다');return;}
-  var k=rptKind(RPT.kind),hint=(osVal('rptBody')||'').replace(/^\s+|\s+$/g,'');
-  var old=btn.textContent;btn.disabled=true;btn.textContent='초안 작성 중…';
-  var sys2=sys('너는 보험설계사의 성장을 돕는 코치이자 AI 비서다. 팀원이 대표에게 올릴 보고서 초안을 쓴다. 과장 없이 사실 중심으로, 숫자와 다음 행동이 보이게 간결히 쓴다. 마크다운 소제목과 짧은 불릿을 쓰고, 5~9줄 이내로 정리한다.');
-  var user='보고 종류: '+k.t+' ('+k.d+')\n'+(hint?('작성자 메모: '+hint+'\n'):'')+'\n위 내용으로 대표에게 보낼 보고서 초안을 작성해줘. 제목 한 줄을 맨 위에 [제목] 으로 제시하고, 그 아래 본문을 써줘.';
-  callAI(sys2,user,1400,'report').then(function(txt){
-    btn.disabled=false;btn.textContent=old;
-    var t=''+txt,mt=t.match(/\[제목\]\s*(.+)/);
-    if(mt){var ti=$('rptTitle');if(ti&&!ti.value)ti.value=mt[1].replace(/^\s+|\s+$/g,'');t=t.replace(/\[제목\]\s*.+\n?/,'');}
-    var bd=$('rptBody');if(bd)bd.value=t.replace(/^\s+/,'');
-    toast('초안을 만들었습니다. 확인 후 수정해 보내세요.');
-  },function(e){btn.disabled=false;btn.textContent=old;toast('초안 생성 실패: '+((e&&e.message)||e));});
+  var btn=$('schBriefBtn');if(btn){btn.disabled=true;btn.textContent='브리핑 작성 중… (15~40초)';}
+  SCH.busy=true;
+  var st=SCH.stat||{today:{},week:{},month:{}};
+  var silent=SCH.team.filter(function(x){return x.touch>=3;}).map(function(x){return x.name+'('+x.att.t+')';}).join(', ');
+  var top=SCH.team.slice().sort(function(a,b){return b.docs-a.docs;}).slice(0,3).map(function(x){return x.name+' '+x.docs+'건';}).join(', ');
+  var data='[오늘]\n출근 '+(st.today.att||0)+'/'+(st.members||0)+'명 · 상담자료 '+(st.today.docs||0)+'건 · 신규고객 '+(st.today.cli||0)+'명 · AI '+(st.today.ai||0)+'회\n'+
+    '[최근 7일]\n출근율 '+(st.week.rate||0)+'% · 상담자료 '+(st.week.docs||0)+'건 · 신규고객 '+(st.week.cli||0)+'명 · AI '+(st.week.ai||0)+'회\n'+
+    '[최근 30일]\n상담자료 '+(st.month.docs||0)+'건 · 신규고객 '+(st.month.cli||0)+'명\n'+
+    '[자료 생산 상위]\n'+(top||'없음')+'\n[3일 이상 활동 없는 팀원]\n'+(silent||'없음');
+  var sys2=sys('너는 보험영업 조직을 운영하는 대표의 AI 비서다. 매일 아침 대표에게 짧고 실행 가능한 브리핑을 올린다. 아첨하지 말고 사실과 숫자로 말하되, 숫자는 준 데이터만 쓰고 없는 수치는 만들지 않는다. 데이터가 0이거나 비어 있으면 "아직 기록이 없다"고 솔직히 쓰고 무엇을 시작해야 하는지 제안한다.');
+  var user='아래는 오늘 우리 조직(윤시스쿨) 데이터다.\n\n'+data+'\n\n다음 4개 소제목으로 브리핑을 작성하라(각 3~5줄, 마크다운, 불릿 위주, 총 25줄 이내).\n'+
+    '## 1. 오늘의 성과 한눈에\n숫자를 해석해 무엇이 좋았고 무엇이 부족한지.\n'+
+    '## 2. 대표님이 오늘 성장할 포인트\n보험설계사·조직 리더로서 오늘 하루 실천할 구체적 행동 2~3가지.\n'+
+    '## 3. 오늘 회의에서 다룰 주제\n데이터에 근거한 안건 3개(각 한 줄 이유 포함).\n'+
+    '## 4. 챙길 팀원 · 소통 액션\n누구에게 무슨 말을 걸지 구체적으로.';
+  callAI(sys2,user,1800,'school').then(function(txt){
+    SCH.busy=false;SCH.brief=txt;try{localStorage.setItem(key,txt);}catch(e){}
+    schRender();toast('오늘의 브리핑을 받았습니다.');
+  },function(e){SCH.busy=false;if(btn){btn.disabled=false;btn.textContent='📊 오늘의 브리핑 받기';}toast('브리핑 생성 실패: '+((e&&e.message)||e));});
 }
-function osRepAfterRender(){
-  if(RPT.view==='inbox'&&osIsOwner())rptLoadInbox();
-  if(RPT.view==='mine')rptLoadMine();
+/* ── ② 이득·성과 ── */
+function schGainHtml(){
+  var st=SCH.stat,w=st.week,m=st.month;
+  var minPerDoc=25, minPerAi=6;
+  var savedW=Math.round((w.docs*minPerDoc+w.ai*minPerAi)/60), savedM=Math.round((m.docs*minPerDoc+m.ai*minPerAi)/60);
+  var kpis='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:14px">'+
+    schKpi('이번주 출근율',w.rate+'%','팀 '+st.members+'명 기준',w.rate>=80?'#059669':(w.rate>=60?'#D97706':'#DC2626'))+
+    schKpi('이번주 상담자료',w.docs+'건','30일 누적 '+m.docs+'건','#1A56DB')+
+    schKpi('이번주 신규고객',w.cli+'명','30일 누적 '+m.cli+'명','#7C3AED')+
+    schKpi('이번주 절약 시간',savedW+'시간','30일 '+savedM+'시간','#059669')+'</div>';
+  var bar=function(lb,val,max,color){
+    var pct=max>0?Math.min(100,Math.round(val/max*100)):0;
+    return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--ink-3);font-weight:700">'+osEsc(lb)+'</span><b style="color:'+color+'">'+val+'</b></div>'+
+      '<span style="display:block;height:9px;background:var(--ink-8);border-radius:5px;overflow:hidden"><span style="display:block;width:'+pct+'%;height:100%;background:'+color+'"></span></span></div>';
+  };
+  var maxDoc=Math.max(1,Math.max.apply(null,SCH.team.map(function(x){return x.docs;})));
+  var rank=SCH.team.slice().sort(function(a,b){return b.docs-a.docs;}).slice(0,8)
+    .map(function(x){return bar(x.name,x.docs,maxDoc,'#1A56DB');}).join('')||'<div style="color:var(--ink-5);font-size:12.5px">아직 기록이 없습니다.</div>';
+  return kpis+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💡</span>윤시스쿨이 만들어낸 이득</div>'+
+    '<div class="card-desc">도구로 대체한 업무 시간을 환산한 값입니다(상담자료 1건 '+minPerDoc+'분, AI 1회 '+minPerAi+'분 기준 추정).</div></div><div class="card-body">'+
+    '<div style="font-size:13px;color:var(--ink-2);line-height:1.9">· 이번주 팀 전체가 아낀 시간: <b style="color:#059669;font-size:15px">'+savedW+'시간</b>'+
+    '<br>· 최근 30일 누적: <b style="color:#059669;font-size:15px">'+savedM+'시간</b>'+
+    '<br>· 같은 기간 만든 상담자료 <b>'+m.docs+'건</b>, 새로 등록한 고객 <b>'+m.cli+'명</b></div>'+
+    '<div style="margin-top:11px;font-size:11px;color:var(--ink-5);line-height:1.6">※ 절약 시간은 실제 측정치가 아니라 <b>건수 × 평균 소요시간 가정</b>으로 계산한 추정값입니다. 팀 활동량 추이를 보는 용도로만 사용하세요.</div>'+
+    '</div></div>'+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🏅</span>팀원별 자료 생산 (30일)</div></div><div class="card-body">'+rank+'</div></div>';
 }
-function rptCard(x,owner){
-  var k=rptKind(x.kind);
-  var read=x.read_at?'<span class="badge green">확인함</span>':'<span class="badge">새 보고</span>';
-  return '<div class="card" style="margin-bottom:10px"><div class="card-body">'+
-    '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">'+
-      '<span style="font-size:11px;font-weight:800;color:#6D28D9;background:#F3E8FF;border-radius:999px;padding:2px 9px">'+k.ic+' '+osEsc(k.t)+'</span>'+
-      (owner?('<span style="font-size:12px;font-weight:800;color:#0F172A">'+osEsc(x.author_name||'')+'</span>'):'')+
-      '<span style="font-size:10.5px;color:var(--ink-5)">'+osEsc((''+(x.created_at||'')).slice(0,16).replace('T',' '))+'</span>'+
-      (owner?read:'')+'</div>'+
-    '<div style="font-size:14.5px;font-weight:800;color:#0F172A;margin-bottom:6px">'+osEsc(x.title||'')+'</div>'+
-    '<div style="font-size:12.5px;color:var(--ink-2);line-height:1.75;white-space:pre-wrap">'+osEsc(x.body||'')+'</div>'+
-    (owner?('<div class="btn-row" style="margin-top:10px">'+(x.read_at?'':'<button class="btn btn-primary" onclick="rptMarkRead(\''+x.id+'\')">✓ 확인 처리</button>')+'<button class="btn btn-ghost" onclick="rptDel(\''+x.id+'\')">삭제</button></div>'):'')+
-  '</div></div>';
+/* ── ③ 팀 소통 ── */
+function schTeamHtml(){
+  if(!SCH.team.length)return '<div class="card"><div class="card-body"><div style="color:var(--ink-5);font-size:13px">팀원 정보를 불러오지 못했습니다.</div></div></div>';
+  var dot=function(d){return d<=0?'#059669':(d<=2?'#84CC16':(d<=6?'#D97706':'#DC2626'));};
+  var lbl=function(d){return d<=0?'오늘 소통함':(d<=2?'최근 소통':(d<=6?'며칠째 조용':'소통 끊김'));};
+  var cards=SCH.team.map(function(x){
+    var c=dot(x.touch);
+    return '<div class="card" style="margin:0"><div class="card-body">'+
+      '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'+
+        '<span style="width:10px;height:10px;border-radius:50%;background:'+c+';flex:none"></span>'+
+        '<span style="font-size:14.5px;font-weight:800;color:var(--ink-1);flex:1">'+osEsc(x.name)+'</span>'+
+        '<span style="font-size:10.5px;font-weight:800;color:'+c+'">'+lbl(x.touch)+'</span></div>'+
+      '<div style="font-size:12px;color:var(--ink-3);line-height:1.9">'+
+        '· 마지막 접속: <b>'+osEsc(x.att.t)+'</b><br>'+
+        '· 마지막 상담자료: <b>'+osEsc(x.doc.t)+'</b> (30일 '+x.docs+'건)<br>'+
+        '· 마지막 보고: <b>'+osEsc(x.rep.t)+'</b> · AI '+x.ai+'회</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px" onclick="schTalk(\''+x.id+'\')">💬 소통 메모</button></div>'+
+    '</div></div>';
+  }).join('');
+  var reps=(SCH.reps||[]).slice(0,8).map(function(r){
+    return '<div style="border-top:1px dashed var(--ink-8);padding:9px 0"><div style="font-size:12.5px"><b>'+osEsc(r.author_name||'-')+'</b> <span style="color:var(--ink-5)">'+osEsc((''+(r.created_at||'')).slice(5,16).replace('T',' '))+'</span></div>'+
+      '<div style="font-size:12.5px;color:var(--ink-2);margin-top:2px">'+osEsc(r.title||'')+'</div></div>';
+  }).join('')||'<div style="color:var(--ink-5);font-size:12.5px;padding:8px 0">팀원이 보낸 메시지가 아직 없습니다.</div>';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💬</span>팀원 소통 상태</div>'+
+      '<div class="card-desc">🟢 오늘 · 🟡 최근 · 🟠 며칠째 조용 · 🔴 소통 끊김 — 마지막 접속·자료·보고를 종합한 신호입니다.</div></div>'+
+      '<div class="card-body"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px">'+cards+'</div></div></div>'+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📮</span>팀원이 보낸 메시지</div></div><div class="card-body">'+reps+'</div></div>';
 }
-function rptLoadInbox(){
-  var host=$('rptInbox');if(!host)return;var sb=osClient();if(!sb)return;
-  sb.from('reports').select('*').order('created_at',{ascending:false}).limit(200).then(function(r){
-    if(r.error){host.innerHTML='<div class="notice">보고서 테이블이 아직 없습니다 — <b>migration_12_reports.sql</b>을 Supabase에서 1회 실행하세요.</div>';return;}
-    RPT.all=r.data||[];
-    var unread=RPT.all.filter(function(x){return !x.read_at;}).length;
-    var cnt=$('rptCnt');if(cnt)cnt.textContent=unread?(''+unread):'';
-    host.innerHTML=RPT.all.length?RPT.all.map(function(x){return rptCard(x,true);}).join(''):'<div class="card"><div class="card-body"><div style="color:var(--ink-5);font-size:13px">아직 받은 보고가 없습니다.</div></div></div>';
-  },function(){host.innerHTML='';});
+function schTalk(id){
+  var m=null;SCH.team.forEach(function(x){if(x.id===id)m=x;});if(!m)return;
+  var memo=prompt('['+m.name+'] 오늘 나눈 대화·전달사항을 남겨두세요.\n(대표 기록용 · 이 기기에 저장)','');
+  if(memo===null)return;
+  try{var k='apex_talk_'+id,arr=JSON.parse(localStorage.getItem(k)||'[]');arr.unshift({t:new Date().toISOString(),m:memo});localStorage.setItem(k,JSON.stringify(arr.slice(0,50)));}catch(e){}
+  toast(m.name+' 님과의 소통을 기록했습니다.');
 }
-function rptLoadMine(){
-  var host=$('rptMine');if(!host)return;var sb=osClient();if(!sb||!OS.profile)return;
-  sb.from('reports').select('*').eq('author_id',OS.profile.id).order('created_at',{ascending:false}).then(function(r){
-    if(r.error){host.innerHTML='<div class="notice">보고서 테이블이 아직 없습니다 — 운영자에게 SQL 실행을 요청하세요.</div>';return;}
-    RPT.mine=r.data||[];
-    host.innerHTML=RPT.mine.length?RPT.mine.map(function(x){return rptCard(x,false);}).join(''):'<div class="card"><div class="card-body"><div style="color:var(--ink-5);font-size:13px">아직 보낸 보고가 없습니다.</div></div></div>';
-  },function(){host.innerHTML='';});
-}
-function rptMarkRead(id){var sb=osClient();if(!sb)return;
-  sb.from('reports').update({read_at:new Date().toISOString()}).eq('id',id).then(function(r){
-    if(r.error){toast('처리 실패: '+r.error.message);return;}toast('확인 처리했습니다');rptLoadInbox();});}
-function rptDel(id){if(!confirm('이 보고서를 삭제할까요?'))return;var sb=osClient();if(!sb)return;
-  sb.from('reports')['delete']().eq('id',id).then(function(r){if(r.error)toast('삭제 실패: '+r.error.message);else{toast('삭제했습니다');rptLoadInbox();}});}
 /* ════════ 고객 365일 — 상담자료 저장(로그인 계정 귀속) ════════ */
 function osPickClient(cb){
   var sb=osClient();if(!sb||!OS.profile){toast('로그인 후 이용하세요');return;}
