@@ -2850,7 +2850,7 @@ var GEN=[
 /* ════════ 탭/페이지 정의 ════════ */
 /* 통합 15메뉴 (역할별 노출: group.role='lead'|'hq'|'edu'). 기존 도구 id는 하위에 그대로 보존. */
 var TABS=[
- {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''}]},
+ {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
@@ -3021,6 +3021,7 @@ function go(tab){
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
   else if(tab==='report'){dyn.innerHTML=renderReportPage();if(typeof osRepAfterRender==='function')osRepAfterRender();}
+  else if(tab==='academy_notion'){dyn.innerHTML=renderNotionPage();if(typeof osNotionAfterRender==='function')osNotionAfterRender();}
   else if(tab==='attend'){dyn.innerHTML=renderAttend();if(typeof osAttendLoad==='function')osAttendLoad();}
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderGrowth();if(typeof osGrowthAfterRender==='function')osGrowthAfterRender();}
@@ -7657,11 +7658,20 @@ function visibleTabs(role){
   if(role==='admin'||role==='owner')list=TABS.slice();
   else{var myT=osMyTier();list=TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0 && osGroupTierOk(g,myT);});}
   if(!osIsOwner())list=list.filter(function(g){return !OS_OWNER_GROUPS[osAccessKey(g)];});
+  if(!osNotionAllowed()){
+    list=list.map(function(g){
+      if(!g.items||!g.items.some(function(it){return it.id==='academy_notion';}))return g;
+      var c={};for(var k in g)if(g.hasOwnProperty(k))c[k]=g[k];
+      c.items=g.items.filter(function(it){return it.id!=='academy_notion';});
+      return c;
+    });
+  }
   return list;
 }
 /* 탭 접근 가능 여부 — 직접 이동(go)도 막는다 */
 function osTabAllowed(tab){
   if(tab==='settings')return osIsOwner();
+  if(tab==='academy_notion')return osNotionAllowed();
   var gs=visibleTabs(),i,j;
   for(i=0;i<gs.length;i++){var it=gs[i].items||[];for(j=0;j<it.length;j++)if(it[j].id===tab)return true;}
   for(i=0;i<TABS.length;i++){var it2=TABS[i].items||[];for(j=0;j<it2.length;j++)if(it2[j].id===tab)return false;}
@@ -8490,6 +8500,88 @@ try{osBillReturnCheck();}catch(e){}}
 }
 
 /* ════════ Phase 2 — 고객 보장분석 프로젝트 ════════ */
+/* ════════ APEX ACADEMY · 노션 — 대표가 공개한 사람만 열람 ════════ */
+var NOTION_DEFAULT_URL='https://app.notion.com/p/APEX-ACADEMY-YUN-40220c36b1e382ea8b78015b740c8aa7?source=copy_link';
+function osNotionUrl(){return osCfgGet('notion_url',NOTION_DEFAULT_URL);}
+function osNotionAllowList(){
+  var raw=osCfgGet('notion_allow','');
+  if(!raw)return [];
+  try{var a=JSON.parse(raw);return (a&&a.length)?a:[];}catch(e){return (''+raw).split(',').map(function(x){return x.replace(/^\s+|\s+$/g,'');}).filter(Boolean);}
+}
+function osNotionAllowed(){
+  if(osIsOwner())return true;
+  var me=(OS.profile&&OS.profile.id)||'';
+  if(!me)return false;
+  return osNotionAllowList().indexOf(me)>=0;
+}
+function renderNotionPage(){
+  if(!osNotionAllowed())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX ACADEMY</div><div class="page-title">🔒 비공개 자료</div><div class="page-desc">이 자료는 대표가 공개한 분만 열람할 수 있습니다.</div></div></div>';
+  var url=osNotionUrl();
+  var owner=osIsOwner();
+  var main='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📓</span>APEX ACADEMY · 노션</div>'+
+    '<div class="card-desc">교육·운영 자료 원본을 노션에서 봅니다. 노션 보안 정책상 앱 안에 직접 표시되지 않을 수 있어 <b>새 탭</b>으로 엽니다.</div></div>'+
+    '<div class="card-body">'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="osNotionOpen()">📓 노션에서 열기 ↗</button>'+
+      '<button class="btn btn-ghost" onclick="copyText(osNotionUrl())">🔗 링크 복사</button>'+
+      '<button class="btn btn-ghost" onclick="osNotionEmbed()">🖥 앱 안에서 열어보기</button></div>'+
+      '<div id="notionEmbed" style="display:none;margin-top:12px;border:1px solid var(--ink-7);border-radius:12px;overflow:hidden;background:var(--ink-9)"></div>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:9px;line-height:1.6">노션은 보안상 외부 앱 안에서의 표시를 막는 경우가 많습니다. 앱 안에서 보려면 노션에서 해당 페이지를 <b>공유 → 웹에 게시</b>한 뒤 그 주소를 위에 저장하세요.</div>'+
+    '</div></div>';
+  var admin='';
+  if(owner){
+    admin='<div class="card set-card" style="border-color:#FDE68A"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>열람 권한 관리 <span class="badge">대표 전용</span></div>'+
+      '<div class="card-desc">여기서 체크한 사람만 이 메뉴가 보이고 열람할 수 있습니다. (다른 메뉴 권한과 무관하게 <b>이 노션 자료만</b> 따로 관리됩니다.)</div></div>'+
+      '<div class="card-body">'+
+        '<div class="frm"><div class="fld span2"><label>노션 주소</label><input id="notionUrlIn" type="text" value="'+osEsc(url)+'" placeholder="https://..."/></div></div>'+
+        '<div class="btn-row" style="margin-bottom:12px"><button class="btn btn-ghost" onclick="osNotionSaveUrl()">주소 저장</button></div>'+
+        '<div style="font-size:11.5px;font-weight:800;color:var(--ink-3);margin-bottom:7px">공개할 팀원 선택</div>'+
+        '<div id="notionMembers"><div class="loading" style="padding:10px"><div class="spinner"></div>팀원 목록 불러오는 중…</div></div>'+
+        '<div class="btn-row" style="margin-top:11px"><button class="btn btn-primary" onclick="osNotionSaveAllow()">💾 공개 대상 저장</button></div>'+
+      '</div></div>';
+  }
+  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX ACADEMY</div>'+
+    '<div class="page-title">APEX ACADEMY | 노션</div><div class="page-desc">대표가 공개한 분만 볼 수 있는 비공개 교육 자료입니다.</div></div>'+admin+main+'</div>';
+}
+function osNotionEmbed(){
+  var box=$('notionEmbed');if(!box)return;
+  if(box.style.display!=='none'){box.style.display='none';box.innerHTML='';return;}
+  box.style.display='block';
+  box.innerHTML='<iframe src="'+osEsc(osNotionUrl())+'" style="width:100%;height:60vh;border:0;display:block;background:#fff"></iframe>';
+  toast('노션이 차단하면 화면이 비어 보일 수 있습니다 — 그때는 새 탭으로 여세요.');
+}
+function osNotionOpen(){var w=window.open(osNotionUrl(),'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 허용 후 다시 시도하세요.');}
+function osNotionSaveUrl(){
+  var v=(osVal('notionUrlIn')||'').replace(/^\s+|\s+$/g,'');
+  if(!v){toast('주소를 입력하세요');return;}
+  if(!/^https?:\/\//i.test(v)){toast('http(s)로 시작하는 주소를 입력하세요');return;}
+  osCfgSet('notion_url',v,function(){go('academy_notion');});
+}
+function osNotionAfterRender(){
+  if(!osIsOwner())return;
+  var host=$('notionMembers');if(!host)return;var sb=osClient();if(!sb){host.innerHTML='';return;}
+  var allow=osNotionAllowList();
+  sb.from('profiles').select('id,name,role,active').order('name').then(function(r){
+    if(r.error){host.innerHTML='<div class="notice" style="font-size:11.5px">팀원 목록을 불러오지 못했습니다.</div>';return;}
+    var rows=((r.data)||[]).filter(function(x){return x.active!==false;});
+    host.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px">'+
+      rows.map(function(m){
+        var on=allow.indexOf(m.id)>=0;
+        return '<label style="display:flex;align-items:center;gap:8px;border:1px solid var(--ink-7);border-radius:9px;padding:8px 10px;font-size:12.5px;cursor:pointer;background:#fff">'+
+          '<input type="checkbox" class="notionChk" value="'+m.id+'"'+(on?' checked':'')+' style="margin:0">'+
+          '<span style="font-weight:700;color:var(--ink-1)">'+osEsc(m.name||'-')+'</span>'+
+          '<span style="font-size:10.5px;color:var(--ink-5);margin-left:auto">'+osEsc(osRoleLabel(m.role))+'</span></label>';
+      }).join('')+'</div>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:8px">※ 대표는 항상 열람할 수 있습니다.</div>';
+  },function(){host.innerHTML='';});
+}
+function osNotionSaveAllow(){
+  var ids=[],cbs=document.querySelectorAll('.notionChk');
+  for(var i=0;i<cbs.length;i++)if(cbs[i].checked)ids.push(cbs[i].value);
+  osCfgSet('notion_allow',JSON.stringify(ids),function(){
+    toast('공개 대상 '+ids.length+'명을 저장했습니다.');
+    if(typeof renderNav==='function')renderNav();
+  });
+}
 /* ════════ 윤시스쿨 · 대표 브리핑 — 매일의 이득·성과·팀 소통을 한 화면에 ════════ */
 var SCH={view:'today',stat:null,team:[],brief:null,busy:false};
 function schToday(){return osAttToday();}
