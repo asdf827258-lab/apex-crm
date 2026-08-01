@@ -10043,16 +10043,91 @@ function osMembersCardHtml(){
     '<div class="card-desc">팀원마다 <b>카테고리(등급)</b>를 지정하고, 필요 시 <b>마스터(관리자) 권한</b>을 부여/회수합니다</div></div>'+
     '<div class="card-body">'+
     '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">각 팀원을 <b>결제 카테고리(무료·베이직·프로·팀·VIP)</b>로 분류하면, 위 <b>도구 접근 권한</b>에서 그 등급에 열어둔 도구만 보입니다. 마스터는 전체 자료·가입 승인·권한 관리를 볼 수 있으니 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 바꿀 수 없습니다.</div>'+
+    (typeof osIsOwner==='function'&&osIsOwner()
+      ? '<div style="border:1px solid #C7D2FE;background:#F8FAFF;border-radius:11px;padding:11px 13px;margin-bottom:11px">'+
+        '<div style="font-size:12px;font-weight:800;color:#3730A3;margin-bottom:7px">👑 대표 전용 — 팀(그룹) 만들기</div>'+
+        '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:9px">여기서 만든 팀으로 아래 팀원마다 <b>소속 팀</b>을 지정합니다. 팀 지정은 <b>대표만</b> 할 수 있고, 지정하면 <b>팀 성장 대시보드</b>가 그룹별로 나뉩니다.</div>'+
+        '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">'+
+          '<input id="osMTeamName" placeholder="예: 1팀 · 강남지점" style="flex:1;min-width:150px;border:1px solid var(--ink-7);border-radius:9px;padding:8px 11px;font-size:12.5px;font-family:inherit">'+
+          '<button class="btn btn-primary" style="padding:8px 15px;font-size:12px" onclick="osMTeamAdd()">＋ 팀 만들기</button>'+
+        '</div>'+
+        '<div id="osMTeamChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px"></div>'+
+        '</div>'
+      : '')+
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-ghost" onclick="osLoadMembers()">🔄 팀원 목록 새로고침</button></div>'+
     '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
     '</div></div>';
+}
+var OSMT={teams:[],of:{},missing:false};
+function osMTeamSel(id){
+  if(!(typeof osIsOwner==='function'&&osIsOwner()))return '';
+  if(OSMT.missing)return '';
+  var cur=OSMT.of[id]||'';
+  var opts='<option value="">— 팀 미지정 —</option>'+OSMT.teams.map(function(t){
+    return '<option value="'+t.id+'"'+(cur===t.id?' selected':'')+'>'+osEsc(t.name)+'</option>';}).join('');
+  return '<select onchange="osMTeamSet(\''+id+'\',this.value)" title="소속 팀 지정 (대표 전용)" style="font-size:11px;padding:5px 7px;border:1px solid #C7D2FE;border-radius:8px;background:#F8FAFF;cursor:pointer;font-family:inherit">'+opts+'</select>';
+}
+function osMTeamPill(id){
+  var tid=OSMT.of[id];if(!tid)return '';
+  var t=OSMT.teams.filter(function(x){return x.id===tid;})[0];if(!t)return '';
+  return osPillHtml(t.name,(t.color||'#1A56DB')+'1F',(t.color||'#1A56DB'));
+}
+function osMTeamChips(){
+  var box=document.getElementById('osMTeamChips');if(!box)return;
+  if(OSMT.missing){box.innerHTML='<span style="font-size:11px;color:#B45309">팀 테이블이 아직 없습니다 — Supabase에서 <b>migration_13_teams_ai.sql</b>을 1회 실행하세요.</span>';return;}
+  if(!OSMT.teams.length){box.innerHTML='<span style="font-size:11px;color:var(--ink-5)">아직 만든 팀이 없습니다. 위에서 팀 이름을 넣고 만들어 주세요.</span>';return;}
+  var cnt={};for(var k in OSMT.of)cnt[OSMT.of[k]]=(cnt[OSMT.of[k]]||0)+1;
+  box.innerHTML=OSMT.teams.map(function(t){
+    return '<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800;color:'+(t.color||'#1A56DB')+';background:'+(t.color||'#1A56DB')+'18;border-radius:9px;padding:5px 10px">'+
+      osEsc(t.name)+' <span style="font-weight:700;opacity:.75">'+(cnt[t.id]||0)+'명</span>'+
+      '<button onclick="osMTeamDel(\''+t.id+'\',\''+osEsc(t.name)+'\')" style="border:none;background:none;color:inherit;cursor:pointer;font-size:12px;padding:0 2px;opacity:.6" title="팀 삭제">✕</button></span>';
+  }).join('');
+}
+function osMTeamAdd(){
+  if(!(typeof osIsOwner==='function'&&osIsOwner())){toast('팀 생성은 대표만 할 수 있습니다');return;}
+  var el=document.getElementById('osMTeamName');var nm=(el&&el.value||'').replace(/^\s+|\s+$/g,'');
+  if(!nm){toast('팀 이름을 입력하세요');return;}
+  var pal=['#1A56DB','#7C3AED','#059669','#F59E0B','#DC2626','#0891B2'];
+  osClient().from('teams').insert({name:nm,color:pal[OSMT.teams.length%pal.length]}).then(function(r){
+    if(r.error){toast(/teams/.test(r.error.message||'')?'팀 테이블이 없습니다 — migration_13_teams_ai.sql을 실행하세요':'실패: '+r.error.message);return;}
+    if(el)el.value='';toast('팀을 만들었습니다');osLoadMembers();
+  });
+}
+function osMTeamDel(id,name){
+  if(!(typeof osIsOwner==='function'&&osIsOwner())){toast('대표만 할 수 있습니다');return;}
+  if(!confirm('"'+name+'" 팀을 삭제합니다. 소속 팀원은 미지정으로 바뀝니다.'))return;
+  osClient().from('teams')['delete']().eq('id',id).then(function(r){
+    if(r.error){toast('실패: '+r.error.message);return;}
+    toast('삭제했습니다');osLoadMembers();
+  });
+}
+function osMTeamSet(memberId,teamId){
+  if(!(typeof osIsOwner==='function'&&osIsOwner())){toast('팀 지정은 대표만 할 수 있습니다');return;}
+  var sb=osClient();if(!sb)return;
+  sb.from('team_members')['delete']().eq('member_id',memberId).then(function(){
+    if(!teamId){OSMT.of[memberId]=null;toast('팀 미지정으로 바꿨습니다');osLoadMembers();return;}
+    return sb.from('team_members').insert({team_id:teamId,member_id:memberId}).then(function(r){
+      if(r.error){toast('실패: '+r.error.message);return;}
+      OSMT.of[memberId]=teamId;toast('팀을 지정했습니다');osLoadMembers();
+    });
+  });
 }
 function osPillHtml(txt,bg,fg){return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+bg+';color:'+fg+'">'+osEsc(txt)+'</span>';}
 function osLoadMembers(){
   var box=document.getElementById('osMembersList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   box.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>팀원 목록을 불러오는 중…</div>';
-  sb.from('profiles').select('id,name,role,status,plan').order('role',{ascending:false}).order('name').then(function(r){
+  var _owner=(typeof osIsOwner==='function')&&osIsOwner();
+  Promise.all([
+    sb.from('profiles').select('id,name,role,status,plan').order('role',{ascending:false}).order('name'),
+    _owner?sb.from('teams').select('id,name,color').order('name'):Promise.resolve({data:[]}),
+    _owner?sb.from('team_members').select('team_id,member_id'):Promise.resolve({data:[]})
+  ]).then(function(rr){
+    var r=rr[0];
+    OSMT.teams=(rr[1]&&rr[1].data)||[];
+    OSMT.of={};((rr[2]&&rr[2].data)||[]).forEach(function(m){OSMT.of[m.member_id]=m.team_id;});
+    OSMT.missing=!!(rr[1]&&rr[1].error);
+    osMTeamChips();
     if(r.error){box.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">목록을 불러오지 못했습니다. 위 <b>가입 승인 관리</b>의 "가입 승인 SQL"을 한 번 실행하면 관리자 권한 정책이 켜집니다. <span style="color:var(--ink-4)">('+osEsc(r.error.message||'')+')</span></div>';return;}
     var rows=r.data||[],me=OS.profile&&OS.profile.id;
     if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">팀원이 없습니다.</div>';return;}
@@ -10068,8 +10143,8 @@ function osLoadMembers(){
         :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px" onclick="osSetMaster(\''+p.id+'\',true)">＋ 마스터 지정</button>');
       h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(i?'border-top:1px solid var(--ink-8)':'')+'">'+
         '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
-        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+tierPill+'</div></div>'+
-        '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+(mine?'':tierCtrl)+ctrl+'</div></div>';
+        '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+tierPill+osMTeamPill(p.id)+'</div></div>'+
+        '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+osMTeamSel(p.id)+(mine?'':tierCtrl)+ctrl+'</div></div>';
     });
     h+='</div>';box.innerHTML=h;
   },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
