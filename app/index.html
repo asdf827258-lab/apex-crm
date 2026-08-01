@@ -10568,9 +10568,12 @@ function osDiagRun(){
       function(e){return {kind:'table',name:x.t,why:x.why,fix:x.fix,need:x.need,st:'deny',err:e||null,cnt:null};});
   }).concat([
     sb.from('profiles').select('workspace').limit(1).then(
-      function(r){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_16',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
-      function(e){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_16',need:'feat',st:'none',err:e||null,cnt:null};})
-    ,sb.from('teams').insert({name:'진단용팀삭제예정'}).select('id').single().then(
+      function(r){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
+      function(e){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_18',need:'feat',st:'none',err:e||null,cnt:null};})
+    ,sb.from('teams').select('name,color,leader_id').limit(1).then(
+      function(r){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'초기 버전 teams 테이블에는 color 컬럼이 없어 팀 저장이 실패합니다',fix:'migration_18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
+      function(e){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'teams 컬럼 확인',fix:'migration_18',need:'feat',st:'broken',err:e||null,cnt:null};})
+    ,sb.from('teams').insert({name:'진단용'+Date.now(),color:'#94A3B8'}).select('id').single().then(
       function(r){
         if(r&&r.data&&r.data.id){try{sb.from('teams')['delete']().eq('id',r.data.id).then(function(){},function(){});}catch(e){}}
         if(r&&r.error)return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 에 진짜로 한 줄 써 본 결과입니다',fix:'migration_17',need:'feat',st:'broken',err:r.error,cnt:null};
@@ -10663,10 +10666,20 @@ function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   box.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>가입 신청 목록을 불러오는 중…</div>';
-  sb.from('profiles').select('id,name,role,status,created_at').eq('status','pending').order('created_at',{ascending:true}).then(function(r){
-    if(r.error){box.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">신청 목록을 불러오지 못했습니다: <b>'+osEsc(r.error.message||'')+'</b><br>맨 위 <b>🩺 시스템 자가진단</b>의 복구 SQL을 실행하면 해결됩니다.</div>';return;}
-    var rows=r.data||[];
-    if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">대기 중인 가입 신청이 없습니다. ✅</div>';return;}
+  var apprQ=function(cols,hasWs){
+    sb.from('profiles').select(cols).eq('status','pending').order('created_at',{ascending:true}).then(function(r){
+      if(r.error){
+        if(hasWs&&/workspace/i.test(r.error.message||'')){apprQ('id,name,role,status,created_at',false);return;}
+        box.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">신청 목록을 불러오지 못했습니다: <b>'+osEsc(r.error.message||'')+'</b><br>맨 위 <b>🩺 시스템 자가진단</b>의 복구 SQL을 실행하면 해결됩니다.</div>';return;
+      }
+      osApprRender(box,(r.data||[]),hasWs);
+    },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
+  };
+  apprQ('id,name,role,status,created_at,workspace',true);
+}
+function osApprRender(box,rows,hasWs){
+    if(hasWs)rows=rows.filter(function(p){return p.workspace!=='crm';});
+    if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">대기 중인 <b>APEX 가입 신청</b>이 없습니다. ✅ <span style="font-size:10.5px">(DB CRM 쪽 가입은 여기 표시되지 않습니다)</span></div>';return;}
     var h='<div style="border:1px solid var(--ink-7);border-radius:10px;overflow:hidden">';
     rows.forEach(function(p,i){
       h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(i?'border-top:1px solid var(--ink-8)':'')+'">'+
@@ -10676,7 +10689,6 @@ function osLoadApprovals(){
         '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="osReject(\''+p.id+'\')">거절</button></div></div>';
     });
     h+='</div>';box.innerHTML=h;
-  },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
 }
 function osApprove(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'approved'}).eq('id',id).then(function(r){if(r.error){toast('승인 실패: '+(r.error.message||''));return;}osAudit('approve','profile',id,null);toast('승인했습니다 — 해당 사용자는 다음 로그인부터 입장 가능합니다.');osLoadApprovals();});}
 function osReject(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'rejected'}).eq('id',id).then(function(r){if(r.error){toast('거절 실패: '+(r.error.message||''));return;}osAudit('reject','profile',id,null);toast('가입을 거절했습니다.');osLoadApprovals();});}
@@ -10735,7 +10747,7 @@ function osMembersCardHtml(){
     '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">각 팀원을 <b>결제 카테고리(무료·베이직·프로·팀·VIP)</b>로 분류하면, 위 <b>도구 접근 권한</b>에서 그 등급에 열어둔 도구만 보입니다. 앱 관리자는 이 앱의 전체 자료·가입 승인·권한 관리를 볼 수 있으니 신뢰하는 팀원에게만 부여하세요. 실수 방지를 위해 <b>본인 권한</b>은 바꿀 수 없습니다.</div>'+
     '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:10px 13px;margin-bottom:11px">'+
       '<div style="font-size:12px;font-weight:800;color:#92400E;margin-bottom:5px">🗄️ DB 통합 CRM은 별도 회원으로 운영됩니다</div>'+
-      '<div style="font-size:11.5px;color:#92400E;line-height:1.7">CRM은 기존 사이트·기존 로그인 그대로이며, CRM 담당자·권한(마스터 등)은 <b>CRM 안에서</b> 관리합니다. 이 화면은 <b>APEX 워크스페이스 회원만</b> 다룹니다. 아래에서 각 계정의 <b>소속(APEX/CRM/둘다)</b>을 지정하면 목록이 분리됩니다.</div>'+
+      '<div style="font-size:11.5px;color:#92400E;line-height:1.7">CRM은 기존 사이트·기존 로그인 그대로이며, CRM 담당자·권한(마스터 등)은 <b>CRM 안에서</b> 관리합니다. 이 화면은 <b>APEX 워크스페이스 회원만</b> 다룹니다. 아래에서 각 계정의 <b>소속(APEX/CRM/둘다)</b>을 지정하면 목록이 분리되고, CRM 전용 계정에는 <b>🗄 CRM 전체조회(마스터)</b> 버튼이 생겨 그 담당자가 CRM 안의 모든 화면을 보게 할 수 있습니다.</div>'+
       '<button class="btn btn-ghost" style="margin-top:8px;padding:7px 13px;font-size:11.5px" onclick="go(\'crm\')">DB 통합 CRM 열기 →</button>'+
     '</div>'+
     (osIsAppAdmin()
@@ -10853,10 +10865,32 @@ function osMemberRowHtml(p,me,top){
   var ctrl=mine?'<span style="font-size:11px;color:var(--ink-5)">본인</span>':(isM
     ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetMaster(\''+p.id+'\',false)">앱 관리자 해제</button>'
     :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px" onclick="osSetMaster(\''+p.id+'\',true)">＋ 앱 관리자</button>');
+  /* CRM 전용 계정 — APEX 등급·팀 대신 CRM 전체 조회(마스터) 지정만 */
+  var crmOnly=(!OSWS.missing&&OSWS.of[p.id]==='crm');
+  var masterPill=(p.role==='master')?osPillHtml('CRM 전체조회','#CCFBF1','#0F766E'):'';
+  if(crmOnly&&!mine){
+    ctrl=(p.role==='master')
+      ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetCrmMaster(\''+p.id+'\',false)">CRM 전체조회 해제</button>'
+      :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px;background:#0F766E" onclick="osSetCrmMaster(\''+p.id+'\',true)">🗄 CRM 전체조회 부여</button>';
+  }
   return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(top?'border-top:1px solid var(--ink-8)':'')+'">'+
     '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
-    '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+statPill+tierPill+osMTeamPill(p.id)+'</div></div>'+
-    '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+osWsSel(p.id)+osMTeamSel(p.id)+(mine?'':tierCtrl)+ctrl+'</div></div>';
+    '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+masterPill+statPill+(crmOnly?'':tierPill)+osMTeamPill(p.id)+'</div></div>'+
+    '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+osWsSel(p.id)+(crmOnly?'':osMTeamSel(p.id))+((mine||crmOnly)?'':tierCtrl)+ctrl+'</div></div>';
+}
+/* DB 통합 CRM 전체 조회(마스터) — 화면은 CRM 그대로, 권한 데이터만 같은 DB에서 지정 */
+function osSetCrmMaster(id,on){
+  var sb=osClient();if(!sb)return;
+  if(!osIsAppAdmin()){toast('대표(관리자)만 지정할 수 있습니다');return;}
+  if(!confirm(on
+    ?'이 담당자에게 DB 통합 CRM 전체 조회(마스터) 권한을 줄까요?\nCRM 안의 모든 담당자 DB·통화·기록을 볼 수 있게 됩니다. (APEX 권한과 무관)'
+    :'CRM 전체 조회(마스터) 권한을 회수할까요?\n본인에게 배정된 DB만 보게 됩니다.'))return;
+  sb.from('profiles').update({role:on?'master':'member'}).eq('id',id).then(function(r){
+    if(r.error){toast('변경 실패: '+(r.error.message||''));return;}
+    if(typeof osAudit==='function')osAudit(on?'grant_crm_master':'revoke_crm_master','profile',id,null);
+    toast(on?'✅ CRM 전체 조회(마스터)를 부여했습니다. 해당 담당자는 CRM 재로그인 후 적용됩니다.':'CRM 전체 조회를 회수했습니다.');
+    osLoadMembers();
+  },function(){toast('변경 실패 — 네트워크를 확인하세요');});
 }
 /* 팀을 만들었으면 팀별 구역으로 나눠 보여준다. 팀이 없으면 기존처럼 한 목록. */
 function osMembersHtml(rows,me){
