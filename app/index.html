@@ -3168,7 +3168,7 @@ function osAttendLoad(){
   var uid=OS.profile&&OS.profile.id;
   if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
-  Promise.all([sb.from('profiles').select('id,name,role,active').order('name'),sb.from('attendance').select('member_id,att_date')]).then(function(res){
+  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),sb.from('attendance').select('member_id,att_date')]).then(function(res){
     var pr=res[0],at=res[1];
     if(pr.error){if(cal)cal.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">출근 데이터를 불러오지 못했습니다. attendance 테이블/권한(RLS)을 확인하세요. <span style="color:var(--ink-4)">('+osEsc(pr.error.message||'')+')</span></div>';return;}
     ATTEND.profiles=(pr.data||[]).filter(function(p){return p.active!==false;});
@@ -4252,7 +4252,7 @@ function tdLoad(){
   var sb=osClient();var box=$('tdBody');if(!sb||!box)return;
   var d30=tdAgo(29);
   Promise.all([
-    sb.from('profiles').select('id,name,role,active').order('name'),
+    sb.from('profiles').select('id,name,role,active,status').order('name'),
     sb.from('teams').select('id,name,color,leader_id,goal_note').order('name'),
     sb.from('team_members').select('team_id,member_id'),
     sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
@@ -4266,8 +4266,20 @@ function tdLoad(){
       box.innerHTML='<div class="osrv-warn">팀 테이블이 아직 없습니다. Supabase에서 <b>migration_13_teams_ai.sql</b>을 실행해 주세요.</div>';return;
     }
     var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false;});
-    if(r[7]&&!r[7].error){var _ws={};(r[7].data||[]).forEach(function(w){_ws[w.id]=w.workspace;});
-      profs=profs.filter(function(x){return _ws[x.id]!=='crm';});}
+    /* 가입한 적 없는 사람(공유 DB의 CRM 계정·미승인 계정)이 새지 않도록:
+       구분값을 못 읽으면 아무도 표시하지 않는다(fail-closed). */
+    if(!r[7]||r[7].error){
+      var wsErr=(r[7]&&r[7].error)?((r[7].error.code?'['+r[7].error.code+'] ':'')+(r[7].error.message||'')):'조회 실패';
+      box.innerHTML='<div class="osrv-warn">회원 구분(소속) 정보를 읽지 못해 명단을 표시하지 않습니다 — '+osEsc(wsErr)+'<br>설정 → <b>🩺 시스템 자가진단</b>의 복구 SQL을 실행해 주세요.</div>';return;
+    }
+    var _ws={};(r[7].data||[]).forEach(function(w){_ws[w.id]=w.workspace;});
+    var _me=(OS.session&&OS.session.user&&OS.session.user.id)||null;
+    profs=profs.filter(function(x){
+      if(x.id===_me)return true;
+      var ws=_ws[x.id]||'both';
+      if(ws!=='apex'&&ws!=='both')return false;
+      return x.status==null||x.status==='approved';
+    });
     TD.teams=(r[1]&&r[1].data)||[];
     TD.members=(r[2]&&r[2].data)||[];
     var att=(r[3]&&r[3].data)||[],cli=(r[4]&&r[4].data)||[],rep=(r[5]&&r[5].data)||[],brf=(r[6]&&r[6].data)||[];
@@ -4291,6 +4303,10 @@ function tdGo(v){TD.tab=v;tdRender();}
 function tdRender(){
   var box=$('tdBody');if(!box)return;
   var rows=TD.rows,h='';
+  h+='<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:11px;padding:9px 12px;border:1px solid var(--ink-8);border-radius:10px;background:#F8FAFD;font-size:11.5px;color:var(--ink-4)">'+
+     '<span>👥 여기에는 <b>승인된 APEX 회원</b>만 표시됩니다. 팀 추가·팀원 배정·소속(APEX/CRM)·열람권은 <b>설정 → 팀원 권한 관리</b> 한 곳에서 바꾸면 즉시 반영됩니다.</span>'+
+     ((typeof osIsAppAdmin==='function'&&osIsAppAdmin())?'<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="go(\'settings\')">팀원 권한 관리 열기 →</button>':'')+
+     '</div>';
   var noTeam=rows.filter(function(x){return !x.team;});
   h+='<div class="acad-tabs">'+tdTab('all','전체')+
     TD.teams.map(function(t){return '<button class="acad-tab'+(TD.tab===t.id?' on':'')+'" onclick="tdGo(\''+t.id+'\')">'+osEsc(t.name)+'</button>';}).join('')+
@@ -10839,7 +10855,7 @@ function osMTeamAdd(){
         '<div style="font-size:11px;color:#92400E;margin-top:6px">row-level security 오류라면 <b>migration_17_owner_fix.sql</b>(대표 계정 고정)을 실행하면 해결됩니다. 위 🩺 자가진단의 "팀 만들기 실제 테스트"에서도 같은 원인이 보입니다.</div></div>';
       toast('팀 생성 실패 — 아래 빨간 박스에 원인이 표시됩니다');return;
     }
-    if(el)el.value='';toast('팀을 만들었습니다');osLoadMembers();
+    if(el)el.value='';toast('팀을 만들었습니다 — 아래 카테고리와 팀 성장 대시보드에 바로 반영됩니다');osLoadMembers();
   });
 }
 function osMTeamDel(id,name){
@@ -11313,7 +11329,7 @@ function schLoad(){
   var sb=osClient();if(!sb){schRender();return;}
   var t=schToday(),w7=schDaysAgo(6),w30=schDaysAgo(29);
   Promise.all([
-    sb.from('profiles').select('id,name,role,active').order('name'),
+    sb.from('profiles').select('id,name,role,active,status').order('name'),
     sb.from('attendance').select('member_id,att_date,first_seen,last_seen').gte('att_date',w30),
     sb.from('saved_reports').select('advisor_id,kind,title,created_at').gte('created_at',w30+'T00:00:00'),
     sb.from('clients').select('id,advisor_id,created_at').gte('created_at',w30+'T00:00:00'),
@@ -11327,8 +11343,18 @@ function schLoad(){
     SCH.teamOf={};((r[7]&&r[7].data)||[]).forEach(function(m){SCH.teamOf[m.member_id]=m.team_id;});
     SCH.missing=!!(r[6]&&r[6].error);
     var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false;});
-    if(r[8]&&!r[8].error){var _ws2={};(r[8].data||[]).forEach(function(w){_ws2[w.id]=w.workspace;});
-      profs=profs.filter(function(x){return _ws2[x.id]!=='crm';});}
+    var _me2=(OS.session&&OS.session.user&&OS.session.user.id)||null;
+    if(!r[8]||r[8].error){
+      profs=profs.filter(function(x){return x.id===_me2||x.role==='admin'||x.role==='owner';});
+    }else{
+      var _ws2={};(r[8].data||[]).forEach(function(w){_ws2[w.id]=w.workspace;});
+      profs=profs.filter(function(x){
+        if(x.id===_me2)return true;
+        var ws=_ws2[x.id]||'both';
+        if(ws!=='apex'&&ws!=='both')return false;
+        return x.status==null||x.status==='approved';
+      });
+    }
     /* 범위 필터 — 대표 전사 조회가 아니면 해당 팀 소속만 남긴다 */
     var scope=schScopeTeams();
     SCH.noTeam=false;
