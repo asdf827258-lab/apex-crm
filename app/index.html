@@ -3502,7 +3502,13 @@ function prSys(){
   '6. 문장은 짧게. AI 말투("~인 것 같습니다", "도움이 되길 바랍니다")를 쓰지 않는다. 윤시현의 담백한 상담 어투로 쓴다.\n'+
   '7. 「금융소비자 보호에 관한 법률」의 적합성·설명의무를 전제로, 단정("무조건 나옵니다", "수익 보장")을 쓰지 않는다.\n'+
   '8. 마지막에 반드시 확인 사항(리스크)을 넣는다. 장점만 쓰지 않는다.\n'+
-  '9. 치료비 통장·8통장 프레임을 활용해 설명한다.';
+  '9. 아래 8통장 프레임으로 진단하고, 치료비 통장 이중구조로 설명한다.\n'+
+  '10. 보장에서 끝내지 말고 ⑥은퇴·연금과 ⑤가족보호(종신)까지 반드시 이어서 제안한다. 보험은 사건 대비이고 연금은 시간 대비다.\n'+
+  '11. 준비하지 않았을 때 실제로 벌어지는 상황을 사례로 보여준다. 다만 <b>특정 뉴스 기사·언론사·날짜를 지어내지 않는다.</b> 상담 현장에서 반복적으로 보는 상황으로 쓰고, 통계를 쓸 때는 널리 알려진 것만 쓰되 출처가 불확실하면 "확인 필요"로 표기한다.\n'+
+  '12. 공포 마케팅을 하지 않는다. 불안을 조장하지 말고 <b>사실과 숫자</b>로 보여준다.';
+  if(typeof YUN_PLAYBOOK!=='undefined'){
+    base+='\n\n'+YUN_PLAYBOOK.eightAccounts+'\n'+YUN_PLAYBOOK.chiryo+'\n'+YUN_PLAYBOOK.abc+'\n'+YUN_PLAYBOOK.ages+'\n'+YUN_PLAYBOOK.speech;
+  }
   if(kb)base+='\n\n[윤시현이 축적한 지식·화법 — 최우선 지침으로 삼는다]\n'+kb;
   base+='\n\n[출력 형식] 아래 JSON만 출력한다. 설명·마크다운·코드펜스를 붙이지 않는다.\n'+
   '{\n'+
@@ -3516,6 +3522,11 @@ function prSys(){
   '  "before":{"summary":"현재 상태 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
   '  "after":{"summary":"바꾼 뒤 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
   '  "diff":[{"item":"항목","before":"현재","after":"제안","change":"강화|유지|축소|신규","why":"왜 이렇게 바뀌는지"}],\n'+
+  '  "wallets":[{"no":"①~⑧","name":"통장 이름","purpose":"이 돈의 목적","now":"지금 준비된 것","need":"필요한 것","status":"충분|부족|비어있음"}],\n'+
+  '  "reality":[{"headline":"준비 못 했을 때 벌어지는 일(짧게)","story":"실제로 어떻게 흘러가는지 2~3문장","cost":"그때 드는 돈 또는 잃는 것","imgPrompt":"이 상황을 담은 사진 프롬프트(영문, 사람 얼굴 클로즈업 금지, 다큐멘터리 톤)"}],\n'+
+  '  "benefit":{"summary":"한 줄 결론","prepared":[{"label":"항목","value":"금액·결과","note":"설명"}],"unprepared":[{"label":"항목","value":"금액·결과","note":"설명"}]},\n'+
+  '  "pension":{"needMonthly":"은퇴 후 필요 월 생활비","haveMonthly":"지금 준비된 월 연금(국민+퇴직+개인)","gapMonthly":"부족한 월 금액","planMonthly":"지금부터 넣을 월 금액(추정)","startAge":"수령 시작 나이","why":"왜 지금 시작해야 하는지 2문장","note":"3층 구조 설명"},\n'+
+  '  "wholelife":{"purpose":"사망보장의 목적(가족생활비·대출상환·상속 유동성 중 무엇인지)","amount":"권장 보장액과 근거","gapYears":"남은 가족이 버텨야 하는 기간","liquidity":"상속 시 현금으로 필요한 금액","why":"왜 필요한지 2문장","note":"과도하면 조정한다는 원칙"},\n'+
   '  "options":[{"name":"A안","summary":"한 줄","monthly":"월 보험료","pros":"장점","cons":"함께 봐야 할 점"}],\n'+
   '  "nextSteps":["다음 단계 1","다음 단계 2","다음 단계 3"],\n'+
   '  "risks":["확인 사항 1","확인 사항 2","확인 사항 3","확인 사항 4"],\n'+
@@ -3542,13 +3553,19 @@ function prSlideGuide(mode){
     return '[슬라이드 구성 — 고객용 설명서. 이 순서를 지킨다]\n'+
       '1장 표지: 이 문서가 무엇인지\n'+
       '2장 한눈에 보기: 가입 상품·보험료·기간 요약\n'+
-      '3장 무엇을 보장받나: 담보를 고객 말로 풀어서\n'+
-      '4장 언제 얼마가 나오나: 상황별로 (진단·수술·입원 등)\n'+
-      '5장 잘 준비된 부분: 강점\n'+
-      '6장 비어 있는 부분: 공백·중복 (있으면)\n'+
-      '7장 이럴 때 이렇게 하세요: 청구 방법·연락처\n'+
-      '8장 확인 사항: 면책·감액·갱신 등 꼭 알아야 할 것\n'+
-      '총 7~8장. before에 읽어낸 담보를 정리해 담는다. after·diff는 비워도 된다.';
+      '3장 8통장으로 보면: 고객의 돈을 8개 목적으로 나눠 어디가 채워지고 어디가 비었는지 (wallets 항목과 같은 내용)\n'+
+      '4장 무엇을 보장받나: 담보를 고객의 말로 풀어서. 실손과 정액의 이중구조를 설명\n'+
+      '5장 잘 준비된 부분: 강점을 먼저 인정\n'+
+      '6장 비어 있는 부분: 공백·중복. 특히 ⑥은퇴·연금과 ⑤가족보호가 비었는지 반드시 짚는다\n'+
+      '7장 준비하지 않으면 이런 일이 생깁니다: 실제 상황 2~3가지 (reality 항목과 같은 내용)\n'+
+      '8장 준비하면 이렇게 달라집니다: 숫자로 비교 (benefit 항목과 같은 내용)\n'+
+      '9장 노후는 이렇게 채웁니다: 연금 3층 구조와 부족액, 지금 시작할 금액 (pension 항목)\n'+
+      '10장 남는 가족을 위한 준비: 종신의 목적과 필요 유동성 (wholelife 항목)\n'+
+      '11장 선택안: A/B/C와 각각의 트레이드오프\n'+
+      '12장 확인 사항: 면책·감액·갱신 등 꼭 알아야 할 것\n'+
+      '총 11~12장. before에 읽어낸 담보를 정리해 담는다.\n'+
+      'wallets는 8개를 모두 채운다. reality는 2~3개, benefit의 prepared·unprepared는 각 3~4개 항목.\n'+
+      'pension과 wholelife는 반드시 채운다 — 보장만 설명하고 끝내지 않는다.';
   }
   return '[슬라이드 구성 — 제안서. 이 순서를 지킨다]\n'+
     '1장 표지 / 2장 지금 상황 / 3장 잘 준비된 것 / 4장 비어 있는 것 / 5장 우선순위 /\n'+
@@ -3692,7 +3709,8 @@ function prGen(){
     plan._name=name;plan._date=osTodayStr();plan._mode=mode;
     plan._files=[].concat(PR.files.before,PR.files.after).map(function(f){return f.name;});
     PR.plan=plan;PR.i=0;PR.busy=false;
-    PR.view=(mode==='compare'&&plan.diff&&plan.diff.length)?'diff':'deck';
+    PR.view=(mode==='compare'&&plan.diff&&plan.diff.length)?'diff':((mode==='explain'&&plan.wallets&&plan.wallets.length)?'wallet':'deck');
+    PRIMG={};
     prRefreshForm();prPaint();
     toast('문서 '+plan.slides.length+'장을 만들었습니다');
     var out=$('prOut');if(out&&out.scrollIntoView)out.scrollIntoView({behavior:'smooth',block:'start'});
@@ -3775,6 +3793,10 @@ function prPaint(){
     '<div class="acad-tabs" style="margin:12px 0 0">'+
       '<button class="acad-tab'+(PR.view==='deck'?' on':'')+'" onclick="prView(\'deck\')">📽️ 발표용</button>'+
       (hasDiff?'<button class="acad-tab'+(PR.view==='diff'?' on':'')+'" onclick="prView(\'diff\')">🔄 전후 비교</button>':'')+
+      (p.wallets&&p.wallets.length?'<button class="acad-tab'+(PR.view==='wallet'?' on':'')+'" onclick="prView(\'wallet\')">🗺️ 8통장 진단</button>':'')+
+      (p.reality&&p.reality.length?'<button class="acad-tab'+(PR.view==='reality'?' on':'')+'" onclick="prView(\'reality\')">⚠️ 준비 안 하면</button>':'')+
+      (p.benefit&&((p.benefit.prepared||[]).length||(p.benefit.unprepared||[]).length)?'<button class="acad-tab'+(PR.view==='benefit'?' on':'')+'" onclick="prView(\'benefit\')">💰 준비하면</button>':'')+
+      ((p.pension&&p.pension.needMonthly)||(p.wholelife&&p.wholelife.purpose)?'<button class="acad-tab'+(PR.view==='plan'?' on':'')+'" onclick="prView(\'plan\')">🏦 연금 · 종신</button>':'')+
       '<button class="acad-tab'+(PR.view==='doc'?' on':'')+'" onclick="prView(\'doc\')">📄 문서 전체</button>'+
       (p.options&&p.options.length?'<button class="acad-tab'+(PR.view==='opt'?' on':'')+'" onclick="prView(\'opt\')">🅰️ A/B/C안</button>':'')+
     '</div>'+
@@ -3791,9 +3813,196 @@ function prPaint(){
   if(PR.view==='doc')body=prDocHtml();
   else if(PR.view==='opt')body=prOptHtml();
   else if(PR.view==='diff')body=prDiffHtml();
+  else if(PR.view==='wallet')body=prWalletHtml();
+  else if(PR.view==='reality')body=prRealityHtml();
+  else if(PR.view==='benefit')body=prBenefitHtml();
+  else if(PR.view==='plan')body=prPlanHtml();
   else body=prDeckHtml();
   host.innerHTML=prCss()+head+body;
 }
+/* ── 8통장 진단 · 준비 안 하면 · 준비하면 · 연금/종신 ── */
+var PRIMG={};   /* reality 이미지 캐시 (index → dataUri) */
+
+function prWalletHtml(){
+  var p=PR.plan,W=p.wallets||[];
+  if(!W.length)return '<div class="acad-note">8통장 진단 데이터가 없습니다. 고객용 설명서 모드로 다시 만들어 주세요.</div>';
+  var color=function(st){
+    if(/비어|없음/.test(st||''))return ['#DC2626','#FEF2F2','#FECACA'];
+    if(/부족/.test(st||''))return ['#B45309','#FFFBEB','#FDE68A'];
+    return ['#047857','#F0FDF4','#BBF7D0'];
+  };
+  var empty=W.filter(function(w){return /비어|없음|부족/.test(w.status||'');}).length;
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗺️</span>8통장으로 보면</div>'+
+    '<div class="card-desc">보험 개수가 아니라 <b>돈의 목적</b>으로 나눠 봅니다. 어디가 비어 있는지가 한눈에 보입니다. '+
+    '지금 <b style="color:#DC2626">'+empty+'개</b>가 채워지지 않았습니다.</div></div><div class="card-body">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">'+
+    W.map(function(w){
+      var c=color(w.status);
+      return '<div style="border:1px solid '+c[2]+';background:'+c[1]+';border-radius:13px;padding:13px 15px">'+
+        '<div style="display:flex;align-items:baseline;gap:7px">'+
+          '<span style="font-size:15px;font-weight:900;color:'+c[0]+'">'+osEsc(w.no||'')+'</span>'+
+          '<b style="font-size:13.5px;color:#0B1B34">'+osEsc(w.name||'')+'</b>'+
+          '<span style="margin-left:auto;font-size:10.5px;font-weight:800;color:'+c[0]+'">'+osEsc(w.status||'')+'</span></div>'+
+        '<div style="font-size:11.5px;color:#5B6577;line-height:1.6;margin-top:4px">'+osEsc(w.purpose||'')+'</div>'+
+        '<div style="margin-top:8px;font-size:12px;line-height:1.7">'+
+          '<div><span style="color:#8B96A8">지금</span> <b style="color:#42506A">'+osEsc(w.now||'-')+'</b></div>'+
+          '<div><span style="color:#8B96A8">필요</span> <b style="color:'+c[0]+'">'+osEsc(w.need||'-')+'</b></div>'+
+        '</div></div>';
+    }).join('')+'</div>'+
+    '<div class="acad-note" style="margin-top:11px">보험을 <b>몇 개 들었나</b>가 아니라, <b>어떤 목적의 돈이 준비됐나</b>로 봐야 합니다. '+
+    '빈 칸부터 하나씩 채우면 됩니다. 한 번에 다 하실 필요 없습니다. '+
+    acToolChip2('wallets','🗺️','8통장 진단지도 열기')+'</div>'+
+  '</div></div>';
+}
+function acToolChip2(id,ic,label){
+  return '<button class="acad-mini" onclick="go(\''+id+'\')">'+ic+' '+osEsc(label)+'</button>';
+}
+
+function prRealityHtml(){
+  var p=PR.plan,R=p.reality||[];
+  if(!R.length)return '<div class="acad-note">현실 사례 데이터가 없습니다.</div>';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>준비하지 않으면 이런 일이 생깁니다</div>'+
+    '<div class="card-desc">겁을 주려는 게 아닙니다. 상담 현장에서 <b>반복해서 보는 상황</b>을 그대로 보여 드립니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:12px">'+
+      '<button class="btn btn-ghost" id="prImgAllBtn" onclick="prGenAllImg()">🖼 사진 모두 만들기</button>'+
+      '<span style="font-size:11px;color:#94A3B8">Gemini로 상황 사진을 만듭니다 (AI 생성 일러스트)</span></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">'+
+    R.map(function(x,i){
+      var img=PRIMG[i];
+      return '<div style="border:1px solid #FED7AA;border-radius:14px;overflow:hidden;background:#fff">'+
+        (img
+          ? '<div style="position:relative"><img src="'+img+'" style="width:100%;display:block;aspect-ratio:16/10;object-fit:cover">'+
+            '<span style="position:absolute;left:8px;bottom:8px;font-size:9.5px;font-weight:800;color:#fff;background:rgba(11,27,52,.72);border-radius:6px;padding:3px 8px">AI 생성 일러스트</span></div>'
+          : '<div style="aspect-ratio:16/10;background:linear-gradient(135deg,#FFF7ED,#FEF2F2);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px">'+
+            '<span style="font-size:26px">🖼</span>'+
+            '<button class="acad-mini" onclick="prGenImg('+i+',this)">사진 만들기</button></div>')+
+        '<div style="padding:13px 15px">'+
+          '<div style="font-size:14px;font-weight:900;color:#9A3412;line-height:1.45">'+osEsc(x.headline||'')+'</div>'+
+          '<div style="font-size:12.5px;color:#42506A;line-height:1.75;margin-top:6px">'+osEsc(x.story||'')+'</div>'+
+          (x.cost?'<div style="margin-top:9px;font-size:12.5px;font-weight:800;color:#C2410C;background:#FFF7ED;border-radius:9px;padding:8px 11px">💸 '+osEsc(x.cost)+'</div>':'')+
+        '</div></div>';
+    }).join('')+'</div>'+
+    '<div style="margin-top:12px;font-size:11px;color:#98A2B3;line-height:1.7">※ 위 상황은 상담 현장에서 자주 보는 <b>일반적인 사례</b>이며 특정 사건·개인의 이야기가 아닙니다. 사진은 <b>AI가 만든 일러스트</b>로 실제 사진이 아닙니다. 금액은 상황에 따라 달라집니다.</div>'+
+  '</div></div>';
+}
+function prBenefitHtml(){
+  var p=PR.plan,B=p.benefit||{};
+  var pre=B.prepared||[],un=B.unprepared||[];
+  if(!pre.length&&!un.length)return '<div class="acad-note">비교 데이터가 없습니다.</div>';
+  var col=function(list,title,c,bg,bd,ic){
+    return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:14px;padding:15px 17px">'+
+      '<div style="font-size:14px;font-weight:900;color:'+c+'">'+ic+' '+title+'</div>'+
+      '<div style="margin-top:10px">'+list.map(function(r){
+        return '<div style="padding:9px 0;border-top:1px solid rgba(0,0,0,.05)">'+
+          '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'+
+            '<span style="font-size:12.5px;font-weight:700;color:#42506A">'+osEsc(r.label||'')+'</span>'+
+            '<b style="font-size:15px;color:'+c+';white-space:nowrap;letter-spacing:-.4px">'+osEsc(r.value||'')+'</b></div>'+
+          (r.note?'<div style="font-size:11.5px;color:#7A8698;line-height:1.6;margin-top:3px">'+osEsc(r.note)+'</div>':'')+
+        '</div>';
+      }).join('')+'</div></div>';
+  };
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💰</span>준비하면 이렇게 달라집니다</div>'+
+    '<div class="card-desc">같은 상황이 벌어졌을 때, 준비한 경우와 안 한 경우를 나란히 놓았습니다.</div></div><div class="card-body">'+
+    (B.summary?'<div style="font-size:15px;font-weight:800;color:#0B1B34;line-height:1.7;padding:15px 19px;border-left:5px solid #1D4ED8;background:#F6F9FF;border-radius:0 13px 13px 0;margin-bottom:13px">'+osEsc(B.summary)+'</div>':'')+
+    '<div class="g2">'+
+      col(un,'준비하지 않았다면','#C2410C','#FFF7ED','#FED7AA','⚠️')+
+      col(pre,'준비했다면','#047857','#F0FDF4','#BBF7D0','✅')+
+    '</div>'+
+    '<div class="acad-note" style="margin-top:11px">보험료는 <b>비용</b>이 아니라 <b>이 차이를 사는 값</b>입니다. 위 금액은 입력 정보 기준 추정치이며 실제는 약관·심사에 따라 달라집니다.</div>'+
+  '</div></div>';
+}
+function prPlanHtml(){
+  var p=PR.plan,pen=p.pension||{},wl=p.wholelife||{};
+  var h='';
+  if(pen.needMonthly||pen.gapMonthly){
+    h+='<div class="card" style="margin-bottom:12px;border-left:4px solid #7C3AED"><div class="card-hd">'+
+      '<div class="card-title"><span class="ci">🏦</span>노후는 이렇게 채웁니다 — 연금</div>'+
+      '<div class="card-desc">연금은 수익률이 아니라 <b>순서</b>입니다. 필요한 돈 → 이미 들어올 돈 → 부족분 → 지금 넣을 금액.</div></div><div class="card-body">'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px">'+
+        prStat('필요 월 생활비',pen.needMonthly,'은퇴 후','#42506A')+
+        prStat('준비된 월 연금',pen.haveMonthly,'국민 + 퇴직 + 개인','#2563EB')+
+        prStat('부족한 금액',pen.gapMonthly,'이 칸을 채웁니다','#C2410C')+
+        prStat('지금 넣을 금액',pen.planMonthly,(pen.startAge?pen.startAge+'세부터 수령':'추정'),'#047857')+
+      '</div>'+
+      (pen.why?'<div style="font-size:13.5px;font-weight:800;color:#0B1B34;line-height:1.7;padding:14px 18px;border-left:5px solid #7C3AED;background:#F9F7FF;border-radius:0 13px 13px 0;margin-top:13px">'+osEsc(pen.why)+'</div>':'')+
+      (pen.note?'<div class="acad-note" style="margin-top:10px">'+osEsc(pen.note)+' '+acToolChip2('finance','📊','연금 시뮬레이션 열기')+'</div>':'')+
+    '</div></div>';
+  }
+  if(wl.purpose||wl.amount){
+    h+='<div class="card" style="border-left:4px solid #DC2626"><div class="card-hd">'+
+      '<div class="card-title"><span class="ci">🛡️</span>남는 가족을 위한 준비 — 종신</div>'+
+      '<div class="card-desc">크기가 아니라 <b>목적</b>부터 정합니다. 목적이 없으면 적정액도 나오지 않습니다.</div></div><div class="card-body">'+
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px">'+
+        prStat('보장의 목적',wl.purpose,'무엇을 지키는 돈인가','#DC2626')+
+        prStat('권장 보장액',wl.amount,'근거 기반','#0B1B34')+
+        prStat('버텨야 하는 기간',wl.gapYears,'남은 가족 기준','#42506A')+
+        prStat('상속 시 필요 현금',wl.liquidity,'세금 낼 유동성','#B45309')+
+      '</div>'+
+      (wl.why?'<div style="font-size:13.5px;font-weight:800;color:#0B1B34;line-height:1.7;padding:14px 18px;border-left:5px solid #DC2626;background:#FFF9F9;border-radius:0 13px 13px 0;margin-top:13px">'+osEsc(wl.why)+'</div>':'')+
+      (wl.note?'<div class="acad-note" style="margin-top:10px">'+osEsc(wl.note)+'</div>':'')+
+      '<div class="acad-note" style="margin-top:10px">부동산은 많은데 현금이 없으면 <b>급하게 팔아야</b> 합니다. 그때 손해가 세금보다 큽니다. 종신은 그 현금을 미리 만들어 두는 방법입니다. '+
+      acToolChip2('finance','📊','상속·증여 시뮬레이션')+'</div>'+
+    '</div></div>';
+  }
+  if(!h)return '<div class="acad-note">연금·종신 제안 데이터가 없습니다. 고객용 설명서 모드로 다시 만들어 주세요.</div>';
+  return h;
+}
+function prStat(label,val,sub,c){
+  return '<div style="border:1px solid #EDF1F7;border-radius:13px;padding:13px 15px;background:#fff">'+
+    '<div style="font-size:11px;font-weight:800;color:#94A3B8">'+osEsc(label)+'</div>'+
+    '<div style="font-size:18px;font-weight:900;color:'+c+';margin-top:4px;letter-spacing:-.7px;line-height:1.25">'+osEsc(val||'확인 필요')+'</div>'+
+    '<div style="font-size:11px;color:#8B96A8;margin-top:3px;line-height:1.5">'+osEsc(sub||'')+'</div></div>';
+}
+
+/* ── 현실 사례 이미지 생성 ── */
+function prGenImg(i,btn){
+  var p=PR.plan;if(!p||!p.reality||!p.reality[i])return Promise.reject(new Error('no-data'));
+  if(typeof geminiReady!=='function'||!geminiReady()){toast('설정에서 Gemini 연결을 먼저 구성하세요');go('settings');return Promise.reject(new Error('no-gemini'));}
+  var x=p.reality[i];
+  var prompt='Documentary editorial photograph, muted natural light, Korean setting. '+
+    (x.imgPrompt||x.headline||'a quiet moment of financial worry')+
+    '. No text, no logos, no watermark. No close-up faces. Respectful, calm tone — not sensational. Photorealistic, 16:10.';
+  var old=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='생성 중…';}
+  var models=['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation'];
+  function tryAt(k){
+    if(k>=models.length)return Promise.reject(new Error('이미지 모델을 사용할 수 없습니다'));
+    return cnImgFetch(models[k],prompt)['catch'](function(e){
+      var m=((e&&e.message)||'')+'';
+      if(k+1<models.length&&(/not.?found|unsupported|invalid|permission|404/i.test(m)||e.status===404))return tryAt(k+1);
+      throw e;
+    });
+  }
+  return tryAt(0).then(function(uri){
+    PRIMG[i]=uri;
+    if(PR.view==='reality')prPaint();
+    return true;
+  })['catch'](function(e){
+    var m=((e&&e.message)||e)+'';
+    if(/quota|rate|429|exhausted|exceeded/i.test(m))m='Gemini 이미지 무료 한도 초과 — 잠시 후 다시 시도하세요';
+    toast('사진 생성 실패: '+m.slice(0,110));
+    if(btn){btn.disabled=false;btn.textContent=old||'사진 만들기';}
+    throw e;
+  });
+}
+function prGenAllImg(){
+  var p=PR.plan;if(!p||!p.reality)return;
+  var btn=$('prImgAllBtn');if(btn){btn.disabled=true;btn.textContent='만드는 중…';}
+  var chain=Promise.resolve(),done=0,fail=0;
+  p.reality.forEach(function(x,i){
+    if(PRIMG[i])return;
+    chain=chain.then(function(){
+      return prGenImg(i,null).then(function(){done++;},function(){fail++;});
+    });
+  });
+  chain.then(function(){
+    if(btn){btn.disabled=false;btn.textContent='🖼 사진 모두 만들기';}
+    toast(done?('사진 '+done+'장을 만들었습니다'+(fail?' ('+fail+'장 실패)':'')):'사진을 만들지 못했습니다');
+    if(PR.view==='reality')prPaint();
+  });
+}
+
 function prDiffHtml(){
   var p=PR.plan,D=p.diff||[];
   if(!D.length)return '<div class="acad-note">전후 비교 데이터가 없습니다. 현재 증권과 새 제안서를 함께 올리면 만들어집니다.</div>';
@@ -3886,6 +4095,38 @@ function prDocHtml(){
     });
     if(s.quote)h+='<p style="font-weight:800;color:#0B1B34">"'+osEsc(s.quote)+'"</p>';
   });
+  if(p.wallets&&p.wallets.length){
+    h+='<h4>8통장 진단</h4>';
+    p.wallets.forEach(function(w){
+      h+='<p><b>'+osEsc(w.no||'')+' '+osEsc(w.name||'')+'</b> — '+osEsc(w.purpose||'')+
+        '<br>지금 '+osEsc(w.now||'-')+' / 필요 '+osEsc(w.need||'-')+' <b>['+osEsc(w.status||'')+']</b></p>';
+    });
+  }
+  if(p.reality&&p.reality.length){
+    h+='<h4>준비하지 않으면 생기는 일</h4>';
+    p.reality.forEach(function(x){
+      h+='<p><b>'+osEsc(x.headline||'')+'</b><br>'+osEsc(x.story||'')+(x.cost?'<br><b style="color:#C2410C">'+osEsc(x.cost)+'</b>':'')+'</p>';
+    });
+    h+='<p style="font-size:11px;color:#98A2B3">※ 상담 현장에서 자주 보는 일반적인 상황이며 특정 사건이 아닙니다.</p>';
+  }
+  if(p.benefit&&((p.benefit.prepared||[]).length||(p.benefit.unprepared||[]).length)){
+    h+='<h4>준비하면 이렇게 달라집니다</h4>';
+    if(p.benefit.summary)h+='<p style="font-weight:800;color:#0B1B34">'+osEsc(p.benefit.summary)+'</p>';
+    (p.benefit.unprepared||[]).forEach(function(r){h+='<p style="color:#C2410C">준비 안 함 · '+osEsc(r.label||'')+' — '+osEsc(r.value||'')+(r.note?' ('+osEsc(r.note)+')':'')+'</p>';});
+    (p.benefit.prepared||[]).forEach(function(r){h+='<p style="color:#047857">준비함 · '+osEsc(r.label||'')+' — '+osEsc(r.value||'')+(r.note?' ('+osEsc(r.note)+')':'')+'</p>';});
+  }
+  if(p.pension&&p.pension.needMonthly){
+    var pe=p.pension;
+    h+='<h4>노후 — 연금</h4><p>필요 '+osEsc(pe.needMonthly)+' / 준비 '+osEsc(pe.haveMonthly||'-')+' / 부족 <b>'+osEsc(pe.gapMonthly||'-')+'</b>'+
+      (pe.planMonthly?'<br>지금 넣을 금액 <b>'+osEsc(pe.planMonthly)+'</b>'+(pe.startAge?' · '+osEsc(pe.startAge)+'세부터 수령':''):'')+'</p>'+
+      (pe.why?'<p>'+osEsc(pe.why)+'</p>':'');
+  }
+  if(p.wholelife&&p.wholelife.purpose){
+    var wl2=p.wholelife;
+    h+='<h4>가족 보호 — 종신</h4><p>목적 '+osEsc(wl2.purpose)+' / 권장 <b>'+osEsc(wl2.amount||'-')+'</b>'+
+      (wl2.liquidity?' / 상속 유동성 '+osEsc(wl2.liquidity):'')+'</p>'+
+      (wl2.why?'<p>'+osEsc(wl2.why)+'</p>':'');
+  }
   if(p.diff&&p.diff.length){
     h+='<h4>전후 비교</h4>';
     p.diff.forEach(function(d){
@@ -3930,6 +4171,26 @@ function prPlainText(){
     (s.rows||[]).forEach(function(r){t+='  · '+(r.label||'')+' — '+(r.value||'')+(r.note?' ('+r.note+')':'')+'\n';});
     if(s.quote)t+='  "'+s.quote+'"\n';
   });
+  if(p.wallets&&p.wallets.length){
+    t+='\n[8통장 진단]\n';
+    p.wallets.forEach(function(w){t+='· '+(w.no||'')+' '+(w.name||'')+' — 지금 '+(w.now||'-')+' / 필요 '+(w.need||'-')+' ['+(w.status||'')+']\n';});
+  }
+  if(p.reality&&p.reality.length){
+    t+='\n[준비하지 않으면]\n';
+    p.reality.forEach(function(x){t+='· '+(x.headline||'')+'\n  '+(x.story||'')+(x.cost?'\n  '+x.cost:'')+'\n';});
+  }
+  if(p.benefit){
+    if(p.benefit.summary)t+='\n[준비하면] '+p.benefit.summary+'\n';
+    (p.benefit.unprepared||[]).forEach(function(r){t+='  준비 안 함 · '+(r.label||'')+' — '+(r.value||'')+'\n';});
+    (p.benefit.prepared||[]).forEach(function(r){t+='  준비함 · '+(r.label||'')+' — '+(r.value||'')+'\n';});
+  }
+  if(p.pension&&p.pension.needMonthly){
+    t+='\n[연금] 필요 '+p.pension.needMonthly+' / 준비 '+(p.pension.haveMonthly||'-')+' / 부족 '+(p.pension.gapMonthly||'-')+
+      (p.pension.planMonthly?' → 지금 넣을 금액 '+p.pension.planMonthly:'')+'\n';
+  }
+  if(p.wholelife&&p.wholelife.purpose){
+    t+='\n[종신] 목적 '+p.wholelife.purpose+' / 권장 '+(p.wholelife.amount||'-')+(p.wholelife.liquidity?' / 상속 유동성 '+p.wholelife.liquidity:'')+'\n';
+  }
   if(p.diff&&p.diff.length){
     t+='\n[전후 비교]\n';
     p.diff.forEach(function(d){t+='· '+(d.item||'')+' — 현재 '+(d.before||'-')+' → 제안 '+(d.after||'-')+' ['+(d.change||'유지')+']'+(d.why?'\n  '+d.why:'')+'\n';});
