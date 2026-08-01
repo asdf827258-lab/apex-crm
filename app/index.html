@@ -10570,6 +10570,13 @@ function osDiagRun(){
     sb.from('profiles').select('workspace').limit(1).then(
       function(r){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_16',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
       function(e){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_16',need:'feat',st:'none',err:e||null,cnt:null};})
+    ,sb.from('teams').insert({name:'진단용팀삭제예정'}).select('id').single().then(
+      function(r){
+        if(r&&r.data&&r.data.id){try{sb.from('teams')['delete']().eq('id',r.data.id).then(function(){},function(){});}catch(e){}}
+        if(r&&r.error)return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 에 진짜로 한 줄 써 본 결과입니다',fix:'migration_17',need:'feat',st:'broken',err:r.error,cnt:null};
+        return {kind:'probe',name:'팀 만들기 실제 테스트',why:'진단용 팀을 만들고 바로 지웠습니다 — 쓰기 권한 정상',fix:'',need:'feat',st:'ok',err:null,cnt:null};
+      },
+      function(e){return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 테이블 쓰기',fix:'migration_17',need:'feat',st:'broken',err:e||null,cnt:null};})
   ]).concat(OS_DIAG_FNS.map(function(x){
     return sb.rpc(x.f).then(
       function(r){return {kind:'fn',name:x.f+'()',why:x.why,fix:'복구 SQL',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,val:(r&&r.data)};},
@@ -10805,7 +10812,15 @@ function osMTeamAdd(){
   if(!nm){toast('팀 이름을 입력하세요');return;}
   var pal=['#1A56DB','#7C3AED','#059669','#F59E0B','#DC2626','#0891B2'];
   osClient().from('teams').insert({name:nm,color:pal[OSMT.teams.length%pal.length]}).then(function(r){
-    if(r.error){toast('팀 생성 실패: '+(r.error.message||'')+' — 설정 → 시스템 자가진단에서 원인을 확인하세요');return;}
+    if(r.error){
+      var msg=(r.error.code?'['+r.error.code+'] ':'')+(r.error.message||'');
+      var bx=document.getElementById('osMTeamChips');
+      if(bx)bx.innerHTML='<div style="width:100%;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px">'+
+        '<div style="font-size:12px;font-weight:800;color:#B91C1C">팀 생성 실패 — 서버가 돌려준 오류:</div>'+
+        '<div style="font-size:11.5px;color:#B91C1C;margin-top:4px;word-break:break-all">'+osEsc(msg)+'</div>'+
+        '<div style="font-size:11px;color:#92400E;margin-top:6px">row-level security 오류라면 <b>migration_17_owner_fix.sql</b>(대표 계정 고정)을 실행하면 해결됩니다. 위 🩺 자가진단의 "팀 만들기 실제 테스트"에서도 같은 원인이 보입니다.</div></div>';
+      toast('팀 생성 실패 — 아래 빨간 박스에 원인이 표시됩니다');return;
+    }
     if(el)el.value='';toast('팀을 만들었습니다');osLoadMembers();
   });
 }
