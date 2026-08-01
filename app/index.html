@@ -2504,7 +2504,6 @@ function osPayReq(planId, method){
 }
 /* 관리자: 결제수단 설정 카드 (계좌이체 계좌 + 네이버/카카오 링크) */
 var OS_PAY_SQL=[
- '-- APEX 결제 공유 설정 · 입금확인 요청 (Supabase SQL Editor에서 한 번만 실행)',
  'create table if not exists public.app_config(',
  '  k text primary key,',
  '  v jsonb not null default \'{}\',',
@@ -7669,6 +7668,8 @@ function renderSettings(){
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div>'+
     '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. 모든 값은 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</div></div>'+
 
+    osDiagCardHtml()+
+
     osOwnerCardHtml()+
 
     osPayAdminCardHtml()+
@@ -9381,6 +9382,11 @@ function osRoleLabel(r){
 /* ── 대표(오너) 판별 — app_config.owner_email 로 지정. 미지정이면 관리자 통과(잠김 방지) ── */
 function osOwnerEmail(){try{return ((typeof osCfgGet==='function'?osCfgGet('owner_email',''):'')||'').toLowerCase().replace(/^\s+|\s+$/g,'');}catch(e){return '';}}
 function osMyEmail(){try{return ((OS.session&&OS.session.user&&OS.session.user.email)||'').toLowerCase();}catch(e){return '';}}
+/* 앱 관리자 = role이 admin 이거나 owner 인 사람. 대표 계정도 관리자 카드를 볼 수 있어야 한다. */
+function osIsAppAdmin(){
+  var r=OS.profile&&OS.profile.role;
+  return r==='admin'||r==='owner'||(typeof osIsOwner==='function'&&osIsOwner());
+}
 function osIsOwner(){
   if(OS.profile&&OS.profile.role==='owner')return true;
   var oe=osOwnerEmail(),me=osMyEmail();
@@ -9540,13 +9546,11 @@ function osAccessSave(){
 function osAccessReset(){OS_ACCESS=null;OS_GROUP_TIER=null;OS_ACCESS_SRC='default';try{localStorage.removeItem('apex_tool_access');localStorage.removeItem('apex_group_tier');}catch(e){}if(typeof renderNav==='function')renderNav();toast('기본 노출로 되돌렸습니다');go('settings');}
 function osAccessSqlToggle(){var e=document.getElementById('accSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
 var OS_ACCESS_SQL=[
- '-- APEX 도구 접근권한 팀 공유 테이블 (한 번만 실행)',
  'create table if not exists tool_access(',
  '  group_key text primary key,',
  '  roles text[] not null default \'{}\',',
  '  updated_at timestamptz default now()',
  ');',
- '-- 결제 카테고리(등급) 요구값 컬럼 — 있으면 건너뜀(재실행 안전)',
  'alter table tool_access add column if not exists min_tier text;',
  'alter table tool_access enable row level security;',
  'drop policy if exists tool_access_read on tool_access;',
@@ -9995,9 +9999,397 @@ function osShowLoginGate(){
   try{document.body.style.overflow='hidden';}catch(e){}
 }
 function osHideLoginGate(){var o=document.getElementById('osLoginGate');if(o){o.style.display='none';o.innerHTML='';}try{document.body.style.overflow='';}catch(e){}}
+var OS_REPAIR_SQL=[
+ 'set search_path = public;',
+ '',
+ 'alter table public.profiles add column if not exists status text;',
+ 'alter table public.profiles add column if not exists plan text;',
+ 'alter table public.profiles add column if not exists plan_until timestamptz;',
+ 'alter table public.profiles add column if not exists active boolean default true;',
+ 'update public.profiles set status = \'approved\' where status is null;',
+ 'update public.profiles set active = true where active is null;',
+ '',
+ 'do $rep$',
+ 'declare has_key boolean; has_tbl boolean;',
+ 'begin',
+ '  select exists(select 1 from information_schema.tables',
+ '                 where table_schema=\'public\' and table_name=\'app_config\') into has_tbl;',
+ '  if has_tbl then',
+ '    select exists(select 1 from information_schema.columns',
+ '                   where table_schema=\'public\' and table_name=\'app_config\' and column_name=\'key\') into has_key;',
+ '    if not has_key then',
+ '      execute \'alter table public.app_config rename to app_config_old_backup\';',
+ '      has_tbl := false;',
+ '      raise notice \'app_config had a different shape; renamed to app_config_old_backup\';',
+ '    end if;',
+ '  end if;',
+ '  if not has_tbl then',
+ '    create table public.app_config(',
+ '      key text primary key,',
+ '      value text,',
+ '      updated_at timestamptz default now()',
+ '    );',
+ '    alter table public.app_config enable row level security;',
+ '  end if;',
+ 'end',
+ '$rep$;',
+ '',
+ 'drop policy if exists app_config_select on public.app_config;',
+ 'drop policy if exists app_config_write on public.app_config;',
+ 'create policy app_config_select on public.app_config for select to authenticated using (true);',
+ 'grant select, insert, update, delete on public.app_config to authenticated;',
+ '',
+ 'create or replace function public.is_admin()',
+ 'returns boolean language sql stable security definer set search_path=public as $fn$',
+ '  select exists(',
+ '    select 1 from public.profiles',
+ '     where id = auth.uid() and role in (\'admin\',\'owner\')',
+ '  );',
+ '$fn$;',
+ 'grant execute on function public.is_admin() to authenticated;',
+ '',
+ 'create or replace function public.is_app_admin()',
+ 'returns boolean language sql stable security definer set search_path=public as $fn$',
+ '  select public.is_admin();',
+ '$fn$;',
+ 'grant execute on function public.is_app_admin() to authenticated;',
+ '',
+ 'create or replace function public.is_owner()',
+ 'returns boolean language plpgsql stable security definer set search_path=public as $fn$',
+ 'declare oe text; me text; has_key boolean;',
+ 'begin',
+ '  select exists(select 1 from information_schema.columns',
+ '                 where table_schema=\'public\' and table_name=\'app_config\' and column_name=\'key\')',
+ '    into has_key;',
+ '  if has_key then',
+ '    begin',
+ '      execute \'select value from public.app_config where key = \'\'owner_email\'\' limit 1\' into oe;',
+ '    exception when others then',
+ '      oe := null;',
+ '    end;',
+ '  end if;',
+ '  select email into me from auth.users where id = auth.uid();',
+ '  if oe is null or oe = \'\' then',
+ '    return exists(select 1 from public.profiles',
+ '                   where id = auth.uid() and role in (\'admin\',\'owner\'));',
+ '  end if;',
+ '  return me is not null and lower(me) = lower(oe);',
+ 'end;',
+ '$fn$;',
+ 'grant execute on function public.is_owner() to authenticated;',
+ '',
+ 'create or replace function public.is_leader()',
+ 'returns boolean language sql stable security definer set search_path=public as $fn$',
+ '  select exists(',
+ '    select 1 from public.profiles',
+ '     where id = auth.uid() and coalesce(active,true) = true',
+ '       and role in (\'admin\',\'owner\',\'lead\',\'manager\',\'leader\',\'master\')',
+ '  ) or public.is_owner();',
+ '$fn$;',
+ 'grant execute on function public.is_leader() to authenticated;',
+ '',
+ 'create policy app_config_write on public.app_config for all to authenticated',
+ '  using (public.is_admin()) with check (public.is_admin());',
+ '',
+ 'drop policy if exists profiles_admin_all on public.profiles;',
+ 'create policy profiles_admin_all on public.profiles for all to authenticated',
+ '  using (public.is_admin()) with check (public.is_admin());',
+ '',
+ 'create table if not exists public.teams(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  name text not null,',
+ '  color text default \'#1A56DB\',',
+ '  leader_id uuid references public.profiles(id) on delete set null,',
+ '  goal_note text,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create table if not exists public.team_members(',
+ '  team_id uuid not null references public.teams(id) on delete cascade,',
+ '  member_id uuid not null references public.profiles(id) on delete cascade,',
+ '  joined_at timestamptz not null default now(),',
+ '  primary key (team_id, member_id)',
+ ');',
+ 'create index if not exists team_members_member_idx on public.team_members(member_id);',
+ 'alter table public.teams enable row level security;',
+ 'alter table public.team_members enable row level security;',
+ '',
+ 'drop policy if exists teams_select on public.teams;',
+ 'drop policy if exists teams_write on public.teams;',
+ 'create policy teams_select on public.teams for select to authenticated using (true);',
+ 'create policy teams_insert on public.teams for insert to authenticated with check (public.is_admin());',
+ 'create policy teams_update on public.teams for update to authenticated using (public.is_admin()) with check (public.is_admin());',
+ 'create policy teams_delete on public.teams for delete to authenticated using (public.is_admin());',
+ '',
+ 'drop policy if exists team_members_select on public.team_members;',
+ 'drop policy if exists team_members_write on public.team_members;',
+ 'create policy team_members_select on public.team_members for select to authenticated using (true);',
+ 'create policy team_members_insert on public.team_members for insert to authenticated with check (public.is_admin());',
+ 'create policy team_members_delete on public.team_members for delete to authenticated using (public.is_admin());',
+ '',
+ 'grant select, insert, update, delete on public.teams, public.team_members to authenticated;',
+ '',
+ 'create table if not exists public.ai_dept_reports(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  dept text not null,',
+ '  dept_name text,',
+ '  period text not null default \'daily\',',
+ '  ref_date date not null default current_date,',
+ '  title text not null,',
+ '  body text,',
+ '  metrics jsonb default \'{}\'::jsonb,',
+ '  team_id uuid references public.teams(id) on delete set null,',
+ '  author_id uuid references public.profiles(id) on delete set null,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create unique index if not exists ai_dept_reports_uniq',
+ '  on public.ai_dept_reports(dept, period, ref_date, coalesce(team_id,\'00000000-0000-0000-0000-000000000000\'::uuid));',
+ 'create index if not exists ai_dept_reports_date_idx on public.ai_dept_reports(ref_date desc, period);',
+ 'alter table public.ai_dept_reports enable row level security;',
+ 'drop policy if exists ai_dept_reports_select on public.ai_dept_reports;',
+ 'drop policy if exists ai_dept_reports_write on public.ai_dept_reports;',
+ 'create policy ai_dept_reports_select on public.ai_dept_reports for select to authenticated using (public.is_leader());',
+ 'create policy ai_dept_reports_write  on public.ai_dept_reports for all    to authenticated using (public.is_leader()) with check (public.is_leader());',
+ 'grant select, insert, update, delete on public.ai_dept_reports to authenticated;',
+ '',
+ 'create table if not exists public.ai_ideas(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  dept text not null,',
+ '  dept_name text,',
+ '  title text not null,',
+ '  body text,',
+ '  expected_effect text,',
+ '  status text not null default \'pending\',',
+ '  decided_by uuid references public.profiles(id) on delete set null,',
+ '  decided_at timestamptz,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create index if not exists ai_ideas_status_idx on public.ai_ideas(status, created_at desc);',
+ 'alter table public.ai_ideas enable row level security;',
+ 'drop policy if exists ai_ideas_select on public.ai_ideas;',
+ 'drop policy if exists ai_ideas_write on public.ai_ideas;',
+ 'create policy ai_ideas_select on public.ai_ideas for select to authenticated using (public.is_leader());',
+ 'create policy ai_ideas_write  on public.ai_ideas for all    to authenticated using (public.is_leader()) with check (public.is_leader());',
+ 'grant select, insert, update, delete on public.ai_ideas to authenticated;',
+ '',
+ 'create table if not exists public.backups(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  kind text not null default \'daily\',',
+ '  label text,',
+ '  ref_date date not null default current_date,',
+ '  rows_count int default 0,',
+ '  size_bytes int default 0,',
+ '  payload jsonb,',
+ '  created_by uuid references public.profiles(id) on delete set null,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create unique index if not exists backups_daily_uniq on public.backups(ref_date) where kind = \'daily\';',
+ 'create index if not exists backups_created_idx on public.backups(created_at desc);',
+ 'alter table public.backups enable row level security;',
+ 'drop policy if exists backups_select on public.backups;',
+ 'drop policy if exists backups_insert on public.backups;',
+ 'drop policy if exists backups_delete on public.backups;',
+ 'create policy backups_select on public.backups for select to authenticated using (public.is_admin());',
+ 'create policy backups_insert on public.backups for insert to authenticated with check (public.is_leader());',
+ 'create policy backups_delete on public.backups for delete to authenticated using (public.is_admin());',
+ 'grant select, insert, delete on public.backups to authenticated;',
+ '',
+ 'do $rep2$',
+ 'begin',
+ '  if exists(select 1 from information_schema.tables',
+ '             where table_schema=\'public\' and table_name=\'clients\') then',
+ '    alter table public.clients add column if not exists phone text;',
+ '  end if;',
+ 'end',
+ '$rep2$;',
+ '',
+ 'create table if not exists public.saved_reports(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  advisor_id uuid not null references public.profiles(id) on delete cascade,',
+ '  client_id uuid references public.clients(id) on delete cascade,',
+ '  kind text not null,',
+ '  title text,',
+ '  content jsonb,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create index if not exists saved_reports_client_idx on public.saved_reports(client_id);',
+ 'create index if not exists saved_reports_advisor_idx on public.saved_reports(advisor_id);',
+ 'alter table public.saved_reports enable row level security;',
+ 'drop policy if exists saved_reports_select on public.saved_reports;',
+ 'drop policy if exists saved_reports_insert on public.saved_reports;',
+ 'drop policy if exists saved_reports_update on public.saved_reports;',
+ 'drop policy if exists saved_reports_delete on public.saved_reports;',
+ 'create policy saved_reports_select on public.saved_reports for select to authenticated using (advisor_id = auth.uid() or public.is_admin());',
+ 'create policy saved_reports_insert on public.saved_reports for insert to authenticated with check (advisor_id = auth.uid());',
+ 'create policy saved_reports_update on public.saved_reports for update to authenticated using (advisor_id = auth.uid()) with check (advisor_id = auth.uid());',
+ 'create policy saved_reports_delete on public.saved_reports for delete to authenticated using (advisor_id = auth.uid() or public.is_admin());',
+ 'grant select, insert, update, delete on public.saved_reports to authenticated;',
+ '',
+ 'create table if not exists public.reports(',
+ '  id uuid primary key default gen_random_uuid(),',
+ '  author_id uuid not null references public.profiles(id) on delete cascade,',
+ '  author_name text,',
+ '  kind text not null default \'growth\',',
+ '  title text not null,',
+ '  body text,',
+ '  read_at timestamptz,',
+ '  created_at timestamptz not null default now()',
+ ');',
+ 'create index if not exists reports_created_idx on public.reports(created_at desc);',
+ 'alter table public.reports enable row level security;',
+ 'drop policy if exists reports_select on public.reports;',
+ 'drop policy if exists reports_insert on public.reports;',
+ 'drop policy if exists reports_update on public.reports;',
+ 'drop policy if exists reports_delete on public.reports;',
+ 'create policy reports_select on public.reports for select to authenticated using (author_id = auth.uid() or public.is_leader());',
+ 'create policy reports_insert on public.reports for insert to authenticated with check (author_id = auth.uid());',
+ 'create policy reports_update on public.reports for update to authenticated using (author_id = auth.uid() or public.is_owner()) with check (author_id = auth.uid() or public.is_owner());',
+ 'create policy reports_delete on public.reports for delete to authenticated using (author_id = auth.uid() or public.is_owner());',
+ 'grant select, insert, update, delete on public.reports to authenticated;',
+ '',
+ 'create table if not exists public.ai_usage(',
+ '  member_id uuid not null references public.profiles(id) on delete cascade,',
+ '  usage_date date not null default current_date,',
+ '  cnt int not null default 0,',
+ '  primary key (member_id, usage_date)',
+ ');',
+ 'alter table public.ai_usage enable row level security;',
+ 'drop policy if exists ai_usage_select on public.ai_usage;',
+ 'drop policy if exists ai_usage_write on public.ai_usage;',
+ 'create policy ai_usage_select on public.ai_usage for select to authenticated using (member_id = auth.uid() or public.is_leader());',
+ 'create policy ai_usage_write  on public.ai_usage for all    to authenticated using (member_id = auth.uid()) with check (member_id = auth.uid());',
+ 'grant select, insert, update, delete on public.ai_usage to authenticated;',
+ '',
+ 'insert into public.app_config(key,value) values(\'growth_scope\',\'all\') on conflict (key) do nothing;',
+ '',
+ 'notify pgrst, \'reload schema\';'
+].join('\n');
+/* ════════ 시스템 자가진단 — 무엇이 왜 안 되는지 직접 확인 ════════
+   앱이 실제로 쓰는 테이블·함수를 하나씩 두드려 보고 결과를 그대로 보여준다.
+   추측하지 않고 서버가 돌려준 오류 코드를 그대로 노출한다. */
+var OS_DIAG={rows:[],busy:false,done:false};
+
+/* need: 'core'(없으면 앱이 안 돌아감) | 'feat'(해당 기능만 안 됨) */
+var OS_DIAG_TABLES=[
+  {t:'profiles',        need:'core', why:'로그인 · 권한 · 팀원 목록',        fix:'가입 승인 SQL'},
+  {t:'clients',         need:'core', why:'고객 365일',                       fix:'기본 스키마'},
+  {t:'attendance',      need:'feat', why:'출근 현황 · 성장 점수',            fix:'migration_07'},
+  {t:'app_config',      need:'feat', why:'대표 지정 · 열람권 · 각종 설정',   fix:'복구 SQL'},
+  {t:'saved_reports',   need:'feat', why:'고객 365일 상담자료 저장',         fix:'migration_10'},
+  {t:'subscriptions',   need:'feat', why:'구독 · 결제 관리',                 fix:'migration_11'},
+  {t:'payments',        need:'feat', why:'결제 내역',                        fix:'migration_11'},
+  {t:'reports',         need:'feat', why:'대표 브리핑 보고 채널',            fix:'migration_12'},
+  {t:'teams',           need:'feat', why:'팀 구분 · 팀 성장 대시보드',       fix:'migration_13'},
+  {t:'team_members',    need:'feat', why:'팀원 배정',                        fix:'migration_13'},
+  {t:'ai_dept_reports', need:'feat', why:'AI 부서 보고',                     fix:'migration_13'},
+  {t:'ai_ideas',        need:'feat', why:'AI 아이디어 승인 · 해지',          fix:'migration_13'},
+  {t:'backups',         need:'feat', why:'자동 백업',                        fix:'migration_13'},
+  {t:'os_notices',      need:'feat', why:'공지사항',                         fix:'공지 SQL'},
+  {t:'ai_usage',        need:'feat', why:'AI 사용량 집계',                   fix:'기본 스키마'},
+  {t:'audit_logs',      need:'feat', why:'감사 로그',                        fix:'migration_09'}
+];
+var OS_DIAG_FNS=[
+  {f:'is_admin',  why:'관리자 판별 — 없으면 팀원 목록이 비어 보입니다'},
+  {f:'is_owner',  why:'대표 판별 — 없으면 팀 만들기·백업이 막힙니다'},
+  {f:'is_leader', why:'리더 판별 — 없으면 AI 부서 보고가 막힙니다'}
+];
+
+function osDiagBadge(st){
+  if(st==='ok')   return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:#DCFCE7;color:#15803D">정상</span>';
+  if(st==='none') return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:#FEE2E2;color:#B91C1C">없음</span>';
+  if(st==='deny') return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:#FEF3C7;color:#B45309">권한</span>';
+  if(st==='broken') return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:#FFEDD5;color:#C2410C">구조이상</span>';
+  return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:#F1F5F9;color:#475569">확인중</span>';
+}
+/* 오류를 사람이 읽을 수 있는 원인으로 바꾼다 */
+function osDiagKind(err){
+  if(!err) return 'ok';
+  var c=(err.code||'')+'', m=((err.message||'')+'').toLowerCase();
+  if(c==='42703'||/column .* does not exist|열이 존재하지/.test(m)) return 'broken';
+  if(c==='42883'||/function .* does not exist/.test(m)) return 'none';
+  if(c==='PGRST205'||c==='PGRST202'||c==='42P01'||/relation .* does not exist|schema cache|찾을 수 없/.test(m)) return 'none';
+  if(c==='42501'||c==='PGRST301'||/permission|policy|rls|권한/.test(m)) return 'deny';
+  return 'broken';
+}
+function osDiagRun(){
+  var sb=osClient(), box=document.getElementById('osDiagBody');
+  if(!box)return;
+  if(!sb){box.innerHTML='<div class="notice">서버에 연결되어 있지 않습니다. 로그인 후 다시 눌러 주세요.</div>';return;}
+  if(OS_DIAG.busy)return;
+  OS_DIAG.busy=true;OS_DIAG.rows=[];
+  box.innerHTML='<div class="loading" style="padding:12px"><div class="spinner"></div>'+(OS_DIAG_TABLES.length+OS_DIAG_FNS.length)+'개 항목을 하나씩 확인하는 중…</div>';
+
+  var jobs=OS_DIAG_TABLES.map(function(x){
+    return sb.from(x.t).select('*',{count:'exact',head:true}).limit(1).then(
+      function(r){return {kind:'table',name:x.t,why:x.why,fix:x.fix,need:x.need,st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:(r&&r.count)};},
+      function(e){return {kind:'table',name:x.t,why:x.why,fix:x.fix,need:x.need,st:'deny',err:e||null,cnt:null};});
+  }).concat(OS_DIAG_FNS.map(function(x){
+    return sb.rpc(x.f).then(
+      function(r){return {kind:'fn',name:x.f+'()',why:x.why,fix:'복구 SQL',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,val:(r&&r.data)};},
+      function(e){return {kind:'fn',name:x.f+'()',why:x.why,fix:'복구 SQL',need:'feat',st:'none',err:e||null,val:null};});
+  }));
+
+  Promise.all(jobs).then(function(rows){
+    OS_DIAG.busy=false;OS_DIAG.done=true;OS_DIAG.rows=rows;osDiagRender();
+  },function(){OS_DIAG.busy=false;box.innerHTML='<div class="notice">진단 중 오류가 발생했습니다. 다시 시도해 주세요.</div>';});
+}
+function osDiagRender(){
+  var box=document.getElementById('osDiagBody');if(!box)return;
+  var rows=OS_DIAG.rows;
+  var bad=rows.filter(function(r){return r.st!=='ok';});
+  var head=bad.length
+    ? '<div class="notice" style="background:#FEF2F2;border-color:#FECACA;color:#B91C1C;font-size:12.5px;line-height:1.7">'+
+      '<b>'+bad.length+'개 항목이 아직 준비되지 않았습니다.</b><br>아래 <b>복구 SQL</b>을 Supabase에서 한 번 실행하면 대부분 해결됩니다. 실행 후 이 버튼을 다시 눌러 확인하세요.</div>'
+    : '<div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;color:#15803D;font-size:12.5px">✅ 모든 항목이 정상입니다. 막히는 기능이 있으면 브라우저를 새로고침(Ctrl+Shift+R)해 보세요.</div>';
+
+  var h=head+'<div style="border:1px solid var(--ink-7);border-radius:10px;overflow:hidden;margin-top:11px">';
+  rows.forEach(function(r,i){
+    var em=r.err?((r.err.code?'['+r.err.code+'] ':'')+(r.err.message||'')):'';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 12px;'+(i?'border-top:1px solid var(--ink-8)':'')+
+        (r.st==='ok'?'':'background:#FFFBFB')+'">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12.5px;font-weight:700;color:var(--ink-1)">'+osEsc(r.name)+
+          (r.st==='ok'&&r.kind==='table'&&r.cnt!=null?' <span style="font-size:10.5px;font-weight:600;color:var(--ink-5)">'+r.cnt+'건</span>':'')+
+          (r.st==='ok'&&r.kind==='fn'?' <span style="font-size:10.5px;font-weight:600;color:var(--ink-5)">'+(r.val===true?'나 = 해당됨':(r.val===false?'나 = 아님':''))+'</span>':'')+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:2px">'+osEsc(r.why)+'</div>'+
+        (em?'<div style="font-size:10.5px;color:#B91C1C;margin-top:3px;word-break:break-all">'+osEsc(em)+'</div>':'')+
+      '</div>'+
+      '<div style="white-space:nowrap;display:flex;gap:6px;align-items:center">'+
+        (r.st==='ok'?'':'<span style="font-size:10px;color:var(--ink-5)">'+osEsc(r.fix)+'</span>')+osDiagBadge(r.st)+
+      '</div></div>';
+  });
+  h+='</div>';
+  box.innerHTML=h;
+}
+function osDiagCopySql(){copyText(OS_REPAIR_SQL);toast('복구 SQL을 복사했습니다. Supabase SQL 편집기에 붙여넣고 RUN 하세요.');}
+function osDiagSqlToggle(){var e=document.getElementById('osDiagSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
+
+function osDiagCardHtml(){
+  if(!osIsAppAdmin())return '';
+  return '<div class="card set-card" style="border-color:#FCA5A5"><div class="card-hd" style="background:#FEF2F2">'+
+    '<div class="card-title"><span class="ci">🩺</span>시스템 자가진단 <span class="badge">관리자</span></div>'+
+    '<div class="card-desc">무엇이 왜 안 되는지 직접 확인하고, 필요한 SQL을 한 번에 실행합니다</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">"팀 테이블이 없습니다", "목록이 안 뜹니다" 같은 증상이 보이면 여기서 <b>진단 시작</b>을 누르세요. '+
+      '앱이 쓰는 테이블과 함수를 하나씩 두드려 보고 <b>서버가 돌려준 오류를 그대로</b> 보여드립니다. 추측 없이 원인을 확인할 수 있습니다.</div>'+
+    '<div class="btn-row" style="margin-bottom:10px">'+
+      '<button class="btn btn-primary" onclick="osDiagRun()">🩺 진단 시작</button>'+
+      '<button class="btn btn-ghost" onclick="osDiagCopySql()">📋 복구 SQL 복사</button>'+
+      '<button class="btn btn-ghost" onclick="osDiagSqlToggle()">🛢️ 복구 SQL 보기</button>'+
+      '<a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기 ↗</a>'+
+    '</div>'+
+    '<div id="osDiagBody"><div style="font-size:12px;color:var(--ink-4)">"진단 시작"을 누르면 결과가 여기에 표시됩니다.</div></div>'+
+    '<div id="osDiagSql" style="display:none;margin-top:12px">'+
+      '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">여러 번 실행해도 안전합니다. 기존 데이터는 지우지 않습니다. '+
+        '<b>주석(--)이 한 줄도 없어서</b> 복사·붙여넣기 중에 깨지지 않습니다.</div>'+
+      '<textarea readonly style="width:100%;min-height:200px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_REPAIR_SQL)+'</textarea>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="osDiagCopySql()">SQL 복사</button></div>'+
+    '</div>'+
+    '</div></div>';
+}
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
-  if(OS.profile&&(OS.profile.role==='admin'||OS.profile.role==='owner')){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
+  if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
   if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osTeamLoad==='function')osTeamLoad();if(typeof osBackupLoad==='function')osBackupLoad();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
@@ -10021,23 +10413,18 @@ function osLoadApprovals(){
 function osApprove(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'approved'}).eq('id',id).then(function(r){if(r.error){toast('승인 실패: '+(r.error.message||''));return;}osAudit('approve','profile',id,null);toast('승인했습니다 — 해당 사용자는 다음 로그인부터 입장 가능합니다.');osLoadApprovals();});}
 function osReject(id){var sb=osClient();if(!sb)return;sb.from('profiles').update({status:'rejected'}).eq('id',id).then(function(r){if(r.error){toast('거절 실패: '+(r.error.message||''));return;}osAudit('reject','profile',id,null);toast('가입을 거절했습니다.');osLoadApprovals();});}
 var OS_APPROVAL_SQL=[
- '-- APEX 가입 승인 + 팀원 권한 관리 (Supabase SQL Editor에 붙여넣고 RUN · 여러 번 실행해도 안전)',
- '-- 1) 프로필에 승인상태·구독 컬럼 추가',
  'alter table public.profiles add column if not exists status text;',
  'alter table public.profiles add column if not exists plan text;',
  'alter table public.profiles add column if not exists plan_until timestamptz;',
  "update public.profiles set status='approved' where status is null;",
  "alter table public.profiles alter column status set default 'pending';",
- '-- 2) 관리자 판별 함수 (SECURITY DEFINER = RLS 우회 → 정책 무한재귀 방지: 이게 없으면 목록이 안 뜹니다)',
  'create or replace function public.is_admin() returns boolean',
  '  language sql stable security definer set search_path = public as $$',
- "    select exists(select 1 from public.profiles where id = auth.uid() and role = 'admin');",
+ "    select exists(select 1 from public.profiles where id = auth.uid() and role in ('admin','owner'));",
  '  $$;',
- '-- 3) 관리자는 모든 프로필 조회·수정(승인·권한 부여) 가능 (재귀 없이 is_admin 사용)',
  'drop policy if exists profiles_admin_all on public.profiles;',
  'create policy profiles_admin_all on public.profiles for all to authenticated',
  '  using (public.is_admin()) with check (public.is_admin());',
- '-- 4) 신규 가입 시 프로필 자동 생성(pending)',
  'create or replace function public.handle_new_user() returns trigger',
  '  language plpgsql security definer set search_path = public as $$',
  'begin',
@@ -10053,7 +10440,7 @@ var OS_APPROVAL_SQL=[
 function osApprovalCopySql(){copyText(OS_APPROVAL_SQL);}
 function osApprovalSqlToggle(){var e=document.getElementById('apprSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
 function osApprovalCardHtml(){
-  if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  if(!osIsAppAdmin())return '';
   return '<div class="card set-card" style="border-color:#C7D2FE"><div class="card-hd"><div class="card-title"><span class="ci">🛂</span>가입 승인 관리 <span class="badge">관리자</span></div>'+
     '<div class="card-desc">새로 가입 신청한 사람을 승인해야 입장할 수 있습니다</div></div>'+
     '<div class="card-body">'+
@@ -10073,7 +10460,7 @@ function osApprovalCardHtml(){
    DB 통합 CRM의 '마스터'(CRM 전체 열람)는 여기가 아니라 db-crm.html 팀 관리에서만 지정한다. ════════
    같은 Supabase 프로젝트를 쓰므로 CRM은 전혀 건드리지 않는다. RLS(profiles_admin_all/update)+가드가 관리자 변경을 허용. */
 function osMembersCardHtml(){
-  if(!(OS.profile&&OS.profile.role==='admin'))return '';
+  if(!osIsAppAdmin())return '';
   return '<div class="card set-card" style="border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>팀원 권한 관리 <span class="badge">관리자</span></div>'+
     '<div class="card-desc">팀원마다 <b>카테고리(등급)</b>와 <b>소속 팀</b>을 지정하고, 필요 시 <b>앱 관리자 권한</b>을 부여/회수합니다</div></div>'+
     '<div class="card-body">'+
@@ -10098,7 +10485,7 @@ function osMembersCardHtml(){
     '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
     '</div></div>';
 }
-var OSMT={teams:[],of:{},missing:false};
+var OSMT={teams:[],of:{},missing:false,err:''};
 function osMTeamSel(id){
   if(!(typeof osIsOwner==='function'&&osIsOwner()))return '';
   if(OSMT.missing)return '';
@@ -10114,7 +10501,7 @@ function osMTeamPill(id){
 }
 function osMTeamChips(){
   var box=document.getElementById('osMTeamChips');if(!box)return;
-  if(OSMT.missing){box.innerHTML='<span style="font-size:11px;color:#B45309">팀 테이블이 아직 없습니다 — Supabase에서 <b>migration_13_teams_ai.sql</b>을 1회 실행하세요.</span>';return;}
+  if(OSMT.missing){box.innerHTML='<span style="font-size:11px;color:#B45309">팀 정보를 읽지 못했습니다'+(OSMT.err?' — '+osEsc(OSMT.err):'')+'. 위 <b>🩺 시스템 자가진단</b>에서 원인을 확인하고 <b>복구 SQL</b>을 한 번 실행하세요.</span>';return;}
   if(!OSMT.teams.length){box.innerHTML='<span style="font-size:11px;color:var(--ink-5)">아직 만든 팀이 없습니다. 위에서 팀 이름을 넣고 만들어 주세요.</span>';return;}
   var cnt={};for(var k in OSMT.of)cnt[OSMT.of[k]]=(cnt[OSMT.of[k]]||0)+1;
   box.innerHTML=OSMT.teams.map(function(t){
@@ -10129,7 +10516,7 @@ function osMTeamAdd(){
   if(!nm){toast('팀 이름을 입력하세요');return;}
   var pal=['#1A56DB','#7C3AED','#059669','#F59E0B','#DC2626','#0891B2'];
   osClient().from('teams').insert({name:nm,color:pal[OSMT.teams.length%pal.length]}).then(function(r){
-    if(r.error){toast(/teams/.test(r.error.message||'')?'팀 테이블이 없습니다 — migration_13_teams_ai.sql을 실행하세요':'실패: '+r.error.message);return;}
+    if(r.error){toast('팀 생성 실패: '+(r.error.message||'')+' — 설정 → 시스템 자가진단에서 원인을 확인하세요');return;}
     if(el)el.value='';toast('팀을 만들었습니다');osLoadMembers();
   });
 }
@@ -10167,6 +10554,7 @@ function osLoadMembers(){
     OSMT.teams=(rr[1]&&rr[1].data)||[];
     OSMT.of={};((rr[2]&&rr[2].data)||[]).forEach(function(m){OSMT.of[m.member_id]=m.team_id;});
     OSMT.missing=!!(rr[1]&&rr[1].error);
+    OSMT.err=(rr[1]&&rr[1].error)?((rr[1].error.code?'['+rr[1].error.code+'] ':'')+(rr[1].error.message||'')):'';
     osMTeamChips();
     if(r.error){box.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">목록을 불러오지 못했습니다. 위 <b>가입 승인 관리</b>의 "가입 승인 SQL"을 한 번 실행하면 관리자 권한 정책이 켜집니다. <span style="color:var(--ink-4)">('+osEsc(r.error.message||'')+')</span></div>';return;}
     var rows=r.data||[],me=OS.profile&&OS.profile.id;
@@ -10215,17 +10603,14 @@ function osSetTier(id,tier){
    관리자만 작성, 로그인하지 않은 사람 포함 누구나 열람. */
 var OS_NOTICE=null;var OS_NOTICE_IMG='';
 var OS_NOTICE_SQL=[
- '-- APEX 공지 시스템 (Supabase SQL Editor에서 한 번만 실행)',
  'create table if not exists public.os_notices(',
  '  id uuid primary key default gen_random_uuid(),',
  '  created_at timestamptz default now(),',
  '  text text, img text, active boolean default true, author text',
  ');',
  'alter table public.os_notices enable row level security;',
- '-- 누구나(비로그인 포함) 읽을 수 있게',
  'drop policy if exists os_notices_read on public.os_notices;',
  'create policy os_notices_read on public.os_notices for select using (true);',
- '-- 작성/수정은 관리자만',
  'drop policy if exists os_notices_admin_write on public.os_notices;',
  'create policy os_notices_admin_write on public.os_notices for all to authenticated',
  "  using (exists(select 1 from profiles p where p.id=auth.uid() and p.role='admin'))",
