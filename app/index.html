@@ -11723,14 +11723,17 @@ function osNoticeHomeHtml(n){
   var arr=osNoticeImgsOf(n);
   var img='';
   if(arr.length===1){
-    img='<figure style="margin:0 0 '+(n.text?'12px':'0')+'"><img src="'+osEsc(arr[0].s)+'" alt="공지 이미지" style="width:100%;max-height:440px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block">'+
+    img='<figure style="margin:0 0 '+(n.text?'12px':'0')+'"><div onclick="osLbOpen(0)" title="클릭하면 크게 봅니다" style="position:relative;cursor:zoom-in">'+
+      '<img src="'+osEsc(arr[0].s)+'" alt="공지 이미지" style="width:100%;max-height:440px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block">'+
+      '<span style="position:absolute;right:9px;bottom:9px;background:rgba(15,23,42,.72);color:#fff;font-size:10.5px;font-weight:800;border-radius:7px;padding:3px 8px">🔍 크게 보기</span></div>'+
       (arr[0].c?'<figcaption style="font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.6">'+osEsc(arr[0].c)+'</figcaption>':'')+'</figure>';
   }else if(arr.length>1){
     img='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-bottom:'+(n.text?'12px':'0')+'">'+
       arr.map(function(it,i){
-        return '<figure style="margin:0"><a href="'+osEsc(it.s)+'" target="_blank" rel="noopener" style="display:block;position:relative">'+
+        return '<figure style="margin:0"><div onclick="osLbOpen('+i+')" title="클릭하면 크게 봅니다" style="display:block;position:relative;cursor:zoom-in">'+
           '<img src="'+osEsc(it.s)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:175px;object-fit:cover;border-radius:11px;display:block;border:1px solid var(--ink-8)">'+
-          '<span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span></a>'+
+          '<span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span>'+
+          '<span style="position:absolute;right:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">🔍</span></div>'+
           (it.c?'<figcaption style="font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.55">'+osEsc(it.c)+'</figcaption>':'')+'</figure>';
       }).join('')+'</div>';
   }
@@ -11763,6 +11766,49 @@ function osNoticeImgPick(){var el=document.getElementById('osNoticeImgInput');if
 /* 여러 장 지원 — OS_NOTICE_IMGS 배열에 쌓고, 저장 시 JSON 으로 직렬화(1장이면 기존 형식 유지) */
 var OS_NOTICE_IMGS=[];
 /* 반환: [{s:이미지, c:설명글}] — 옛 형식(문자열/배열)도 그대로 읽는다 */
+/* 공지 이미지 확대 뷰어 — 클릭하면 큰 화면, 좌우 이동·키보드·바깥 클릭 닫기 */
+var OSLB={list:[],i:0};
+function osLbOpen(i){
+  var n=OS_NOTICE||osNoticeLocalGet();
+  OSLB.list=osNoticeImgsOf(n);OSLB.i=Math.max(0,Math.min(OSLB.list.length-1,i|0));
+  if(!OSLB.list.length)return;
+  var o=document.getElementById('osLbOvl');
+  if(!o){
+    o=document.createElement('div');o.id='osLbOvl';document.body.appendChild(o);
+    o.addEventListener('click',function(e){if(e.target&&e.target.id==='osLbOvl')osLbClose();});
+    document.addEventListener('keydown',function(e){
+      var el=document.getElementById('osLbOvl');
+      if(!el||el.style.display!=='flex')return;
+      if(e.key==='Escape')osLbClose();
+      else if(e.key==='ArrowRight')osLbMove(1);
+      else if(e.key==='ArrowLeft')osLbMove(-1);
+    });
+  }
+  o.style.cssText='position:fixed;inset:0;z-index:4200;background:rgba(8,13,24,.94);display:flex;align-items:center;justify-content:center;padding:16px';
+  osLbPaint();
+  try{document.body.style.overflow='hidden';}catch(e){}
+}
+function osLbPaint(){
+  var o=document.getElementById('osLbOvl');if(!o)return;
+  var it=OSLB.list[OSLB.i]||{s:'',c:''},many=OSLB.list.length>1;
+  o.innerHTML=
+    '<button onclick="osLbClose()" title="닫기 (Esc)" style="position:absolute;top:14px;right:16px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:20px;font-weight:800;cursor:pointer;line-height:1">×</button>'+
+    (many?'<button onclick="event.stopPropagation();osLbMove(-1)" title="이전 (←)" style="position:absolute;left:14px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer;line-height:1">‹</button>':'')+
+    (many?'<button onclick="event.stopPropagation();osLbMove(1)" title="다음 (→)" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:none;background:rgba(255,255,255,.14);color:#fff;font-size:22px;cursor:pointer;line-height:1">›</button>':'')+
+    '<figure style="margin:0;max-width:min(1100px,94vw);max-height:92vh;display:flex;flex-direction:column;align-items:center">'+
+      '<img src="'+osEsc(it.s)+'" alt="공지 이미지" style="max-width:100%;max-height:'+(it.c?'76vh':'84vh')+';object-fit:contain;border-radius:12px;display:block;box-shadow:0 24px 60px rgba(0,0,0,.5)">'+
+      (it.c?'<figcaption style="color:#E7EDF6;font-size:13.5px;line-height:1.65;margin-top:14px;text-align:center;max-width:760px">'+osEsc(it.c)+'</figcaption>':'')+
+      (many?'<div style="color:#9FB0C6;font-size:12px;font-weight:800;margin-top:10px">'+(OSLB.i+1)+' / '+OSLB.list.length+'</div>':'')+
+    '</figure>';
+}
+function osLbMove(d){
+  if(!OSLB.list.length)return;
+  OSLB.i=(OSLB.i+d+OSLB.list.length)%OSLB.list.length;osLbPaint();
+}
+function osLbClose(){
+  var o=document.getElementById('osLbOvl');if(o){o.style.display='none';o.innerHTML='';}
+  try{document.body.style.overflow='';}catch(e){}
+}
 function osNoticeImgsOf(n){
   if(!n)return [];
   var v=n.imgs||n.img||'',arr=[];
