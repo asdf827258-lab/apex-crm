@@ -2639,7 +2639,7 @@ function osBackupCardHtml(){
 /* ════════ 캡처 억제(Capture Guard) — 캡처 감지 시 화면 보호 + 전 화면 사용자 워터마크 ════════ */
 function osCapGuardOn(){try{var v=localStorage.getItem('apex_capture_guard');return v===null?false:v==='1';}catch(e){return false;}}
 function osCapGuardBadge(){return osCapGuardOn()?'<span class="badge green">켜짐</span>':'<span class="badge amber">꺼짐</span>';}
-function osCapGuardSet(on){try{localStorage.setItem('apex_capture_guard',on?'1':'0');}catch(e){}osCapWatermark();if(!on)osCapCover(false);var b=document.getElementById('osCapGuardState');if(b)b.innerHTML=osCapGuardBadge();toast(on?'🛡 캡처 억제를 켰습니다.':'캡처 억제를 껐습니다.');}
+function osCapGuardSet(on){try{localStorage.setItem('apex_capture_guard',on?'1':'0');}catch(e){}osCapWatermark();osCapAntiCopyOn();osCapAntiCopySync();if(!on)osCapCover(false);var b=document.getElementById('osCapGuardState');if(b)b.innerHTML=osCapGuardBadge();toast(on?'🛡 캡처 억제를 켰습니다.':'캡처 억제를 껐습니다.');}
 function osCapUser(){try{var nm=(window.OS&&OS.profile&&OS.profile.name)||(window.OS&&OS.session&&OS.session.user&&OS.session.user.email)||'';return nm?('APEX YUN PRO · '+nm):'APEX YUN PRO · 윤시현';}catch(e){return 'APEX YUN PRO · 윤시현';}}
 function osCapEsc(s){return (''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function osCapWatermark(){
@@ -2647,9 +2647,47 @@ function osCapWatermark(){
   if(!osCapGuardOn()){if(wm&&wm.parentNode)wm.parentNode.removeChild(wm);return;}
   if(!document.body)return;
   if(!wm){wm=document.createElement('div');wm.id='osCapWm';wm.style.cssText='position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;pointer-events:none';document.body.appendChild(wm);}
-  var label=osCapUser()+' · '+osStamp().slice(0,8);
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="380" height="210"><text x="18" y="120" transform="rotate(-24 190 105)" fill="#0F172A" fill-opacity="0.055" font-family="Pretendard,sans-serif" font-size="15" font-weight="700">'+osCapEsc(label)+'</text></svg>';
+  /* 캡처 프로그램으로 찍어도 화면에 새겨진 워터마크는 그대로 박힌다.
+     누가·언제 찍었는지 남기는 것이 목적이므로 촘촘하고 또렷하게 반복한다. */
+  var label=osCapUser()+' · '+osStamp();
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150">'+
+    '<text x="10" y="46" transform="rotate(-24 150 75)" fill="#0F172A" fill-opacity="0.10" font-family="Pretendard,sans-serif" font-size="12.5" font-weight="800">'+osCapEsc(label)+'</text>'+
+    '<text x="10" y="112" transform="rotate(-24 150 75)" fill="#1A56DB" fill-opacity="0.085" font-family="Pretendard,sans-serif" font-size="12.5" font-weight="800">APEX YUN PRO · 무단복제 금지</text></svg>';
   wm.style.background='url("data:image/svg+xml;utf8,'+encodeURIComponent(svg)+'") repeat';
+}
+/* AI·크롤러 복사 차단 — 선택·복사·우클릭·드래그 봉쇄 + AI 학습 거부 메타.
+   입력창과 코드/SQL 블록은 업무에 필요하므로 예외로 둔다. */
+function osCapAntiCopyOn(){
+  if(window._apexAntiCopy)return; window._apexAntiCopy=true;
+  var st=document.createElement('style'); st.id='apexAntiCopy';
+  st.textContent='body.apex-nocopy *{-webkit-user-select:none!important;-moz-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}'+
+    'body.apex-nocopy input,body.apex-nocopy textarea,body.apex-nocopy select,body.apex-nocopy [contenteditable="true"],body.apex-nocopy pre,body.apex-nocopy code{-webkit-user-select:text!important;-moz-user-select:text!important;user-select:text!important}'+
+    'body.apex-nocopy img{-webkit-user-drag:none;user-drag:none;pointer-events:auto}';
+  document.head.appendChild(st);
+  var m=document.createElement('meta'); m.name='robots';
+  m.content='noai, noimageai, noarchive, nosnippet, noindex, nofollow';
+  document.head.appendChild(m);
+  var okTag=function(t){return t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||t==='PRE'||t==='CODE';};
+  var guard=function(e){
+    if(!osCapGuardOn())return;
+    var el=e.target||{}; if(okTag(el.tagName)||el.isContentEditable)return;
+    e.preventDefault(); return false;
+  };
+  document.addEventListener('copy',function(e){
+    if(!osCapGuardOn())return;
+    var el=document.activeElement||{}; if(okTag(el.tagName)||el.isContentEditable)return;
+    e.preventDefault();
+    try{e.clipboardData.setData('text/plain','[APEX YUN PRO] 이 자료는 복사할 수 없습니다. 열람자: '+osCapUser()+' · '+osStamp());}catch(x){}
+    osCapFlash('복사가 차단되었습니다 — 이 자료는 무단 복제·AI 학습이 금지됩니다');
+  },true);
+  document.addEventListener('cut',guard,true);
+  document.addEventListener('contextmenu',guard,true);
+  document.addEventListener('dragstart',guard,true);
+  document.addEventListener('selectstart',guard,true);
+  osCapAntiCopySync();
+}
+function osCapAntiCopySync(){
+  try{document.body.classList.toggle('apex-nocopy',osCapGuardOn());}catch(e){}
 }
 function osCapCover(show){
   if(!document.body)return;
@@ -2670,7 +2708,8 @@ function osCapApply(){
   if(window.__osCapWired)return;window.__osCapWired=true;
   function isCapKey(e){var k=e.key||'';if(k==='PrintScreen'||k==='Snapshot')return true;if(e.shiftKey&&(e.metaKey||(e.getModifierState&&e.getModifierState('OS')))){var u=(''+k).toUpperCase();if(u==='S'||u==='3'||u==='4'||u==='5')return true;}return false;}
   document.addEventListener('keyup',function(e){if(osCapGuardOn()&&isCapKey(e))osCapFlash('무단 캡처가 감지되었습니다');},true);
-  document.addEventListener('keydown',function(e){if(osCapGuardOn()&&isCapKey(e))osCapFlash('무단 캡처가 감지되었습니다');},true);
+  document.addEventListener('keydown',function(e){if(osCapGuardOn()&&isCapKey(e))osCapFlash('무단 캡처가 감지되었습니다 — 화면에 열람자 정보가 기록됩니다');},true);
+  try{osCapAntiCopyOn();}catch(e){}
   /* 실사용 우선: 일반 탭 전환에는 화면을 가리지 않는다(멀티태스킹 방해 제거). 캡처키·워터마크 보호는 유지. */
   document.addEventListener('visibilitychange',function(){osCapCover(false);});
   document.addEventListener('contextmenu',function(e){if(!osCapGuardOn())return;var t=e.target;if(t&&t.tagName==='IMG')e.preventDefault();},true);
@@ -2678,7 +2717,9 @@ function osCapApply(){
 }
 function osCapCardHtml(){
   return '<div class="card set-card" id="osCapCard"><div class="card-hd"><div class="card-title"><span class="ci">🛡</span>화면 캡처 억제 <span id="osCapGuardState">'+osCapGuardBadge()+'</span></div>'+
-    '<div class="card-desc">캡처 키(PrintScreen·캡처도구) 감지 시 잠깐 경고하고, 전 화면에 <b>열람자 워터마크</b>를 새겨 무단 유출을 억제·추적합니다. <b>일반 탭 전환·복사 작업은 방해하지 않습니다.</b></div></div>'+
+    '<div class="card-desc">전 화면에 <b>열람자 이름·시각 워터마크</b>를 새기고, <b>복사·우클릭·드래그·AI 학습</b>을 차단합니다. 캡처 프로그램으로 찍어도 <b>워터마크가 그대로 박혀</b> 누가 유출했는지 남습니다.</div></div>'+
+    '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-bottom:11px;line-height:1.7">'+
+      '⚠️ <b>솔직히 알려드립니다</b> — 브라우저 앱은 외부 캡처 프로그램·휴대폰 촬영을 <b>기술적으로 막을 수 없습니다</b>(어떤 웹사이트도 불가능). 그래서 <b>막기</b> 대신 <b>추적·억제</b>로 설계했습니다: 찍힌 이미지에 <b>열람자 이름과 시각</b>이 남아 유출 시 특정할 수 있고, 복사·우클릭·AI 학습은 실제로 차단됩니다. 완전한 차단이 필요한 자료는 화면에 띄우지 않는 것이 유일한 방법입니다.</div>'+
     '<div class="card-body"><div class="btn-row" style="display:flex;gap:9px;flex-wrap:wrap">'+
       '<button class="btn btn-primary" onclick="osCapGuardSet(true)">🛡 캡처 억제 켜기</button>'+
       '<button class="btn btn-ghost" onclick="osCapGuardSet(false)">끄기</button>'+
@@ -2878,10 +2919,10 @@ var GEN=[
 /* ════════ 탭/페이지 정의 ════════ */
 /* 통합 15메뉴 (역할별 노출: group.role='lead'|'hq'|'edu'). 기존 도구 id는 하위에 그대로 보존. */
 var TABS=[
+ {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
- {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_desk',icon:'🤖',title:'AI 부서 보고',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
- {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_meet',icon:'🧠',title:'AI 회의실',cnt:''},{id:'ai_desk',icon:'🤖',title:'AI 부서 보고',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'academy',icon:'🎓',title:'APEX 전문가 과정',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
@@ -3045,7 +3086,9 @@ function go(tab){
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});
   var dyn=$('dynPane');
-  if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();if(typeof osNoticeApply==='function')osNoticeApply();}
+  if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
+    if(typeof osNoticeApply==='function')osNoticeApply();
+    if(typeof osNoticeLoad==='function')osNoticeLoad();}
   else if(tab==='settings'){dyn.innerHTML=renderSettings();if(typeof osSettingsAfterRender==='function')osSettingsAfterRender();}
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
@@ -3055,6 +3098,7 @@ function go(tab){
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
   else if(tab==='ai_desk'){dyn.innerHTML=renderAiDeskPage();if(typeof osAiDeskAfterRender==='function')osAiDeskAfterRender();}
+  else if(tab==='ai_meet'){dyn.innerHTML=renderAiMeet();if(typeof osAiMeetAfterRender==='function')osAiMeetAfterRender();}
   else if(tab==='ai_prop'){dyn.innerHTML=renderAiProposal();if(typeof osAiProposalAfterRender==='function')osAiProposalAfterRender();}
   else if(tab==='interpret')dyn.innerHTML=renderInterpret();
   else if(tab==='wallets')dyn.innerHTML=renderWallets();
@@ -4457,6 +4501,208 @@ function tdStat(ic,l,v,s){
 }
 
 /* ════════ AI 부서 보고 ════════ */
+/* ════════ 윤시스쿨 · AI 회의실 — 매일 회의 자동 정리 · 지시 · 지식 축적(성장형) ════════
+   회의록/지시/지식은 ai_dept_reports 테이블을 재사용한다(dept: meeting|order|knowledge).
+   승인한 아이디어와 회의 결론은 '윤시현의 두뇌' 지식으로 누적되어 앱 전체 답변 품질이 올라간다. */
+var AM={tab:'meet',rows:[],busy:false,loaded:false,sel:{}};
+function amToday(){return osTodayStr();}
+function amCanUse(){return typeof osIsAppAdmin==='function'&&(osIsAppAdmin()||(typeof osIsLead==='function'&&osIsLead()));}
+
+function renderAiMeet(){
+  if(!OS.profile)return osPage('윤시스쿨','AI 회의실','로그인 후 이용할 수 있습니다.',osLoginGate('AI 회의실은 로그인 후 이용할 수 있습니다.'));
+  if(!amCanUse())return osPage('윤시스쿨','🔒 AI 회의실','대표와 리더만 열람할 수 있습니다.','');
+  var tabs='<div class="clm-tabs" style="margin-bottom:14px">'+
+    '<button class="clm-tab'+(AM.tab==='meet'?' on':'')+'" onclick="amGo(\'meet\')">🧠 오늘의 회의록</button>'+
+    '<button class="clm-tab'+(AM.tab==='order'?' on':'')+'" onclick="amGo(\'order\')">📣 지시하기</button>'+
+    '<button class="clm-tab'+(AM.tab==='know'?' on':'')+'" onclick="amGo(\'know\')">📚 축적된 지식</button></div>';
+  return osPage('윤시스쿨 · AI ORG','AI 회의실',
+    'AI 직원 6개 부서가 매일 회의한 내용을 자동으로 정리합니다. 결론에서 실행 과제를 뽑고, 대표가 직접 지시를 내리고, 승인한 내용은 <b>윤시현의 두뇌</b>에 지식으로 쌓여 시스템이 스스로 성장합니다.',
+    tabs+'<div id="amBody"><div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div></div>');
+}
+function amGo(t){AM.tab=t;amRender();}
+function osAiMeetAfterRender(){if(amCanUse())amLoad();}
+
+function amLoad(){
+  var sb=osClient();if(!sb){amRender();return;}
+  sb.from('ai_dept_reports').select('id,dept,dept_name,period,ref_date,title,body,created_at')
+    .in('dept',['meeting','order','knowledge']).order('created_at',{ascending:false}).limit(60)
+    .then(function(r){
+      AM.rows=(r&&!r.error&&r.data)?r.data:[];AM.err=(r&&r.error)?r.error:null;AM.loaded=true;amRender();
+    },function(){AM.loaded=true;amRender();});
+}
+function amOf(kind){return AM.rows.filter(function(x){return x.dept===kind;});}
+
+function amRender(){
+  var b=$('amBody');if(!b)return;
+  if(AM.busy){b.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>AI 부서들이 회의 중입니다… 20~40초 걸립니다.</div>';return;}
+  if(AM.err&&/ai_dept_reports/.test(JSON.stringify(AM.err))){
+    b.innerHTML='<div class="osrv-warn">AI 보고 테이블이 없습니다. 설정 → 🩺 시스템 자가진단의 복구 SQL을 한 번 실행해 주세요.</div>';return;}
+  if(AM.tab==='order')b.innerHTML=amOrderHtml();
+  else if(AM.tab==='know')b.innerHTML=amKnowHtml();
+  else b.innerHTML=amMeetHtml();
+}
+
+/* ── ① 오늘의 회의록 ── */
+function amMeetHtml(){
+  var list=amOf('meeting'), today=list.filter(function(x){return x.ref_date===amToday();})[0];
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧠</span>오늘의 전체 회의 <span class="badge">'+amToday()+'</span></div>'+
+    '<div class="card-desc">6개 부서가 각자 맡은 데이터를 보고 오늘 회의한 내용입니다. 결론 → 실행 과제 → 아이디어 순으로 정리됩니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:11px">'+
+      '<button class="btn btn-primary" onclick="amRunMeeting()">'+(today?'🔄 오늘 회의 다시 열기':'▶ 오늘 회의 시작')+'</button>'+
+      (today?'<button class="btn btn-ghost" onclick="amToKnow(\''+today.id+'\')">📚 이 회의를 지식으로 저장</button>'+
+             '<button class="btn btn-ghost" onclick="copyText(amBodyOf(\''+today.id+'\'))">📋 복사</button>':'')+
+    '</div>'+
+    (today?'<div class="rpt-body">'+renderMd(today.body||'')+'</div>'
+          :'<div style="font-size:12.5px;color:var(--ink-4);padding:8px 2px">아직 오늘 회의록이 없습니다. <b>오늘 회의 시작</b>을 누르면 AI 부서들이 현재 데이터를 읽고 회의록을 만듭니다.</div>')+
+    '</div></div>';
+  var past=list.filter(function(x){return x.ref_date!==amToday();});
+  if(past.length){
+    h+='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂</span>지난 회의록 '+past.length+'건</div></div><div class="card-body">'+
+      past.slice(0,12).map(function(x){
+        return '<details style="border:1px solid var(--ink-8);border-radius:11px;margin-bottom:7px;overflow:hidden">'+
+          '<summary style="cursor:pointer;padding:11px 13px;font-size:12.5px;font-weight:800;color:var(--ink-2);list-style:none">📅 '+osEsc(x.ref_date)+' · '+osEsc(x.title||'전체 회의')+'</summary>'+
+          '<div style="padding:2px 14px 13px"><div class="rpt-body">'+renderMd(x.body||'')+'</div>'+
+          '<button class="btn btn-ghost" style="margin-top:8px;padding:5px 11px;font-size:11px" onclick="amToKnow(\''+x.id+'\')">📚 지식으로 저장</button></div></details>';
+      }).join('')+'</div></div>';
+  }
+  return h;
+}
+function amBodyOf(id){var r=AM.rows.filter(function(x){return x.id===id;})[0];return r?(r.body||''):'';}
+
+function amRunMeeting(){
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  AM.busy=true;amRender();
+  var d30=tdAgo?tdAgo(29):'';
+  Promise.all([
+    sb.from('profiles').select('id,name,role,active,status,workspace'),
+    sb.from('clients').select('id,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
+    sb.from('reports').select('kind,created_at').gte('created_at',d30+'T00:00:00')
+  ]).then(function(r){
+    var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false&&x.workspace!=='crm'&&(x.status==null||x.status==='approved');});
+    var cli=(r[1]&&r[1].data)||[],rep=(r[2]&&r[2].data)||[],att=(r[3]&&r[3].data)||[],brf=(r[4]&&r[4].data)||[];
+    var facts='[최근 30일 실제 데이터]\n'+
+      '· APEX 승인 회원: '+profs.length+'명\n'+
+      '· 신규 고객 등록: '+cli.length+'건\n'+
+      '· 상담자료 생성: '+rep.length+'건\n'+
+      '· 출근 기록: '+att.length+'회 (1인 평균 '+(profs.length?Math.round(att.length/profs.length):0)+'회)\n'+
+      '· 보고서 제출: '+brf.length+'건\n';
+    var kb=(typeof brainKbGet==='function')?brainKbGet():'';
+    var sys='너는 보험 대리점 APEX YUN PRO의 AI 임원 회의 서기다. 6개 부서(영업지원·상담설계·교육·콘텐츠·운영·준법)가 오늘 회의한 것처럼 회의록을 쓴다.\n'+
+      '규칙: ① 주어진 실제 데이터만 근거로 삼고 없는 숫자를 지어내지 마라. ② AI 티 나는 말투 금지("~인 것 같습니다","도움이 되길 바랍니다" 금지). 실무자가 말하듯 단정적이고 짧게. '+
+      '③ 보험 관련 제안에는 금융소비자보호법 준수를 전제로 쓴다. ④ 반드시 아래 형식을 지켜라.\n\n'+
+      '# 형식\n## 1. 오늘의 결론 (3줄)\n## 2. 부서별 보고\n각 부서마다 [현황 1줄] [문제 1줄] [제안 1줄]\n'+
+      '## 3. 실행 과제 (오늘/이번주)\n- [담당부서] 과제 — 왜 필요한지 한 줄\n'+
+      '## 4. 아이디어 제안 3개\n각 줄을 "IDEA | 부서 | 제목 | 기대효과" 형식 한 줄로만.\n'+
+      (kb?'\n[대표의 지식·관점 — 최우선 반영]\n'+kb.slice(0,2500):'');
+    return callAI(sys,facts,2600,'ai_meeting');
+  }).then(function(txt){
+    var sb2=osClient();
+    return sb2.from('ai_dept_reports').upsert({dept:'meeting',dept_name:'전체 회의',period:'daily',
+      ref_date:amToday(),title:amToday()+' 전체 회의록',body:txt},{onConflict:'dept,period,ref_date'});
+  }).then(function(){AM.busy=false;toast('오늘 회의록을 정리했습니다');amLoad();},
+          function(e){AM.busy=false;toast('회의 실패: '+((e&&e.message)||'AI 연결을 확인하세요'));amRender();});
+}
+
+/* ── ② 지시하기 ── */
+function amOrderHtml(){
+  var orders=amOf('order');
+  var deptOpts=AI_DEPTS.map(function(d){return '<option value="'+d.id+'">'+d.ic+' '+d.n+'</option>';}).join('');
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📣</span>AI 부서에 직접 지시하기</div>'+
+    '<div class="card-desc">부서를 고르고 시킬 일을 적으면, 그 부서가 실행 계획과 필요한 자료를 정리해 돌려줍니다. 결과는 지식으로 저장할 수 있습니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="frm" style="display:grid;grid-template-columns:180px 1fr;gap:10px;margin-bottom:10px">'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">담당 부서</label><select id="amDept" style="width:100%">'+deptOpts+'</select></div>'+
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">지시 내용</label><input type="text" id="amOrder" placeholder="예: 이번 주 상담 전환율을 올릴 카톡 문구 5개 만들어" style="width:100%"></div>'+
+    '</div>'+
+    '<button class="btn btn-primary" onclick="amRunOrder()">📣 지시 내리기</button>'+
+    '</div></div>';
+  if(orders.length){
+    h+='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">📥</span>지시 결과 '+orders.length+'건</div></div><div class="card-body">'+
+      orders.slice(0,15).map(function(x){
+        return '<details style="border:1px solid var(--ink-8);border-radius:11px;margin-bottom:7px;overflow:hidden">'+
+          '<summary style="cursor:pointer;padding:11px 13px;font-size:12.5px;font-weight:800;color:var(--ink-2);list-style:none">'+osEsc(x.dept_name||'')+' · '+osEsc(x.title||'')+' <span style="font-weight:600;color:var(--ink-5);font-size:10.5px">'+osEsc((x.created_at||'').slice(0,10))+'</span></summary>'+
+          '<div style="padding:2px 14px 13px"><div class="rpt-body">'+renderMd(x.body||'')+'</div>'+
+          '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="amToKnow(\''+x.id+'\')">📚 지식으로 저장</button>'+
+          '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="copyText(amBodyOf(\''+x.id+'\'))">📋 복사</button></div></div></details>';
+      }).join('')+'</div></div>';
+  }
+  return h;
+}
+function amRunOrder(){
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  var dept=($('amDept')||{value:'sales'}).value, order=(($('amOrder')||{value:''}).value||'').trim();
+  if(!order){toast('지시 내용을 적어주세요');return;}
+  var D=AI_DEPTS.filter(function(x){return x.id===dept;})[0]||AI_DEPTS[0];
+  AM.busy=true;amRender();
+  var kb=(typeof brainKbGet==='function')?brainKbGet():'';
+  var sys='너는 APEX YUN PRO의 '+D.n+' 책임자다. 역할: '+D.role+'.\n'+
+    '대표의 지시를 받고 바로 쓸 수 있는 결과물을 낸다.\n'+
+    '규칙: ① AI 티 나는 말투 금지, 실무자 말투로 짧고 단정하게. ② 추상론 금지 — 오늘 바로 실행 가능한 형태로. '+
+    '③ 보험 문구를 만들면 금융소비자보호법상 확정수익률·지급보장 표현을 쓰지 마라.\n'+
+    '# 형식\n## 이해한 지시\n한 줄\n## 실행 계획\n번호로 3~5단계\n## 결과물\n바로 복사해 쓸 수 있는 내용(문구·표·체크리스트 등)\n## 다음에 필요한 것\n대표에게 요청할 것 1~2개'+
+    (kb?'\n\n[대표의 지식·관점 — 최우선 반영]\n'+kb.slice(0,2500):'');
+  callAI(sys,order,2200,'ai_order').then(function(txt){
+    return sb.from('ai_dept_reports').insert({dept:'order',dept_name:D.ic+' '+D.n,period:'order',
+      ref_date:amToday(),title:order.slice(0,60),body:txt});
+  }).then(function(){AM.busy=false;toast('지시를 처리했습니다');var e=$('amOrder');if(e)e.value='';amLoad();},
+          function(e){AM.busy=false;toast('실패: '+((e&&e.message)||'AI 연결을 확인하세요'));amRender();});
+}
+
+/* ── ③ 축적된 지식 (성장형) ── */
+function amToKnow(id){
+  var r=AM.rows.filter(function(x){return x.id===id;})[0];if(!r)return;
+  var sb=osClient();if(!sb)return;
+  if(!confirm('이 내용을 회사 지식으로 저장할까요?\n저장하면 윤시현의 두뇌에 반영되어, 앞으로 모든 AI 답변이 이 내용을 참고합니다.'))return;
+  sb.from('ai_dept_reports').insert({dept:'knowledge',dept_name:r.dept_name||'회의 결론',period:'knowledge',
+    ref_date:amToday(),title:r.title||'지식',body:r.body||''}).then(function(rr){
+      if(rr&&rr.error){toast('저장 실패: '+(rr.error.message||''));return;}
+      amSyncBrain(r.body||'');toast('📚 지식으로 저장했습니다 — 두뇌에 반영되었습니다');amLoad();
+    });
+}
+/* 두뇌(로컬 지식)에 누적 — 중복 방지 + 길이 상한 */
+function amSyncBrain(body){
+  if(typeof brainKbGet!=='function'||typeof brainKbSet!=='function')return;
+  var cur=brainKbGet()||'';
+  var head='\n\n[회사 축적 지식 · '+amToday()+']\n';
+  var add=(''+body).slice(0,1800);
+  if(cur.indexOf(add.slice(0,80))>=0)return;
+  var next=cur+head+add;
+  if(next.length>60000)next=next.slice(next.length-60000);
+  brainKbSet(next);
+}
+function amKnowHtml(){
+  var kn=amOf('knowledge');
+  var kbLen=(typeof brainKbGet==='function')?(brainKbGet()||'').length:0;
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📚</span>축적된 회사 지식 <span class="badge">'+kn.length+'건</span></div>'+
+    '<div class="card-desc">여기 쌓인 내용은 <b>윤시현의 두뇌</b>에 반영되어 앱 전체의 AI 답변 품질을 끌어올립니다. 쓸수록 똑똑해지는 성장형 구조입니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px">'+
+      '<div class="card" style="padding:14px;margin:0"><div style="font-size:11.5px;font-weight:800;color:var(--ink-4)">저장된 지식</div><div style="font-size:24px;font-weight:900;color:#1A56DB;margin-top:4px">'+kn.length+'건</div></div>'+
+      '<div class="card" style="padding:14px;margin:0"><div style="font-size:11.5px;font-weight:800;color:var(--ink-4)">두뇌 학습량</div><div style="font-size:24px;font-weight:900;color:#059669;margin-top:4px">'+(kbLen>=1000?(Math.round(kbLen/100)/10)+'천자':kbLen+'자')+'</div></div>'+
+      '<div class="card" style="padding:14px;margin:0"><div style="font-size:11.5px;font-weight:800;color:var(--ink-4)">성장 단계</div><div style="font-size:24px;font-weight:900;color:#7C3AED;margin-top:4px">Lv.'+Math.max(1,Math.min(9,Math.floor(kn.length/3)+1))+'</div></div>'+
+    '</div>'+
+    '<div class="btn-row" style="margin-bottom:11px"><button class="btn btn-ghost" onclick="go(\'brain\')">🧠 두뇌에서 확인하기</button>'+
+      '<button class="btn btn-ghost" onclick="amKnowExport()">⬇ 지식 전체 내려받기</button></div>'+
+    (kn.length?kn.map(function(x){
+      return '<details style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:11px;margin-bottom:7px;overflow:hidden">'+
+        '<summary style="cursor:pointer;padding:11px 13px;font-size:12.5px;font-weight:800;color:#14532D;list-style:none">📚 '+osEsc(x.title||'지식')+' <span style="font-weight:600;color:#3F6212;font-size:10.5px">'+osEsc(x.dept_name||'')+' · '+osEsc((x.created_at||'').slice(0,10))+'</span></summary>'+
+        '<div style="padding:2px 14px 13px"><div class="rpt-body">'+renderMd(x.body||'')+'</div></div></details>';
+    }).join(''):'<div style="font-size:12.5px;color:var(--ink-4);padding:8px 2px">아직 저장된 지식이 없습니다. 회의록이나 지시 결과에서 <b>📚 지식으로 저장</b>을 누르면 여기에 쌓입니다.</div>')+
+    '</div></div>';
+  return h;
+}
+function amKnowExport(){
+  var kn=amOf('knowledge');
+  var txt='# APEX YUN PRO 축적 지식 ('+amToday()+')\n\n'+kn.map(function(x){
+    return '## '+(x.title||'지식')+'\n'+(x.dept_name||'')+' · '+((x.created_at||'').slice(0,10))+'\n\n'+(x.body||'')+'\n\n---\n';}).join('\n');
+  var blob=new Blob([txt],{type:'text/markdown;charset=utf-8'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='APEX_축적지식_'+amToday()+'.md';
+  document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},800);
+}
+
 var AI_DEPTS=[
  {id:'sales',   n:'영업지원팀', ic:'📞', role:'DB 배정·통화·약속 전환을 봅니다'},
  {id:'consult', n:'상담설계팀', ic:'📋', role:'상담자료 생산량과 저장 상태를 봅니다'},
@@ -11155,7 +11401,11 @@ function osNoticeHomeHtml(n){
   if(!n||!n.on||(!n.text&&!n.img)){
     return admin?'<div class="notice" style="margin:14px 0 0;background:#F0F5FF;border-color:#C7D2FE">📢 <b>공지</b> — 현재 게시된 공지가 없습니다. <a style="color:var(--primary);font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정 → 공지사항 관리</a>에서 등록하세요.</div>':'';
   }
-  var img=n.img?'<img src="'+osEsc(n.img)+'" alt="공지 이미지" style="width:100%;max-height:360px;object-fit:cover;border-radius:12px;display:block;margin-bottom:'+(n.text?'12px':'0')+'">':'';
+  var arr=osNoticeImgsOf(n);
+  var img='';
+  if(arr.length===1)img='<img src="'+osEsc(arr[0])+'" alt="공지 이미지" style="width:100%;max-height:420px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block;margin-bottom:'+(n.text?'12px':'0')+'">';
+  else if(arr.length>1)img='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px;margin-bottom:'+(n.text?'12px':'0')+'">'+
+    arr.map(function(src,i){return '<a href="'+osEsc(src)+'" target="_blank" rel="noopener" style="display:block;position:relative"><img src="'+osEsc(src)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:170px;object-fit:cover;border-radius:11px;display:block;border:1px solid var(--ink-8)"><span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span></a>';}).join('')+'</div>';
   var txt=n.text?'<div style="font-size:13.5px;line-height:1.75;color:var(--ink-1)">'+renderMd(n.text)+'</div>':'';
   var editBtn=admin?'<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)" onclick="go(\'settings\')">✏️ 공지 관리</button>':'';
   return '<div class="card" style="margin:14px 0 0;border:1px solid #C7D2FE;box-shadow:var(--shadow-blue);overflow:hidden">'+
@@ -11165,8 +11415,10 @@ function osNoticeHomeHtml(n){
 }
 function osNoticeNavHtml(n){
   var admin=osIsAppAdmin();
-  if(n&&n.on&&n.text){
-    var t=(''+n.text).replace(/[#>*`]/g,'').replace(/\s+/g,' ').trim();if(t.length>46)t=t.slice(0,46)+'…';
+  if(n&&n.on&&(n.text||osNoticeImgsOf(n).length)){
+    var t=(''+(n.text||'')).replace(/[#>*`]/g,'').replace(/\s+/g,' ').trim();
+    if(!t)t='📷 이미지 공지 '+osNoticeImgsOf(n).length+'장 — 클릭해서 보기';
+    if(t.length>46)t=t.slice(0,46)+'…';
     return '<div onclick="go(\'home\')" title="공지 — 클릭하면 홈에서 전체 보기" style="cursor:pointer;margin:0 10px 12px;padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,#1A56DB,#38BDF8);color:#fff;box-shadow:0 4px 14px rgba(26,86,219,.35)">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:10px;font-weight:800;letter-spacing:.4px;opacity:.92">📢 공지</span>'+(admin?'<span onclick="event.stopPropagation();go(\'settings\')" style="font-size:9.5px;font-weight:700;opacity:.92;text-decoration:underline">관리</span>':'')+'</div>'+
       '<div style="font-size:11.5px;line-height:1.45;font-weight:600">'+esc(t)+'</div></div>';
@@ -11180,14 +11432,44 @@ function osNoticeNavHtml(n){
   return '';
 }
 function osNoticeImgPick(){var el=document.getElementById('osNoticeImgInput');if(el){el.value='';el.click();}}
-function osNoticeImgFile(input){var f=input&&input.files&&input.files[0];if(!f)return;if(f.size>1200000)toast('이미지가 큽니다 — 팀 전체 공유 시 400KB 이하를 권장합니다.');var rd=new FileReader();rd.onload=function(){OS_NOTICE_IMG=''+rd.result;var p=document.getElementById('osNoticeImgPrev');if(p)p.innerHTML='<img src="'+osEsc(OS_NOTICE_IMG)+'" style="max-width:100%;max-height:170px;border-radius:10px;border:1px solid var(--ink-7)">';toast('이미지 선택됨 — 게시하면 공지에 표시됩니다.');};rd.readAsDataURL(f);}
-function osNoticeImgRemove(){OS_NOTICE_IMG='';var p=document.getElementById('osNoticeImgPrev');if(p)p.innerHTML='<span style="font-size:11.5px;color:var(--ink-4)">이미지 없음</span>';}
+/* 여러 장 지원 — OS_NOTICE_IMGS 배열에 쌓고, 저장 시 JSON 으로 직렬화(1장이면 기존 형식 유지) */
+var OS_NOTICE_IMGS=[];
+function osNoticeImgsOf(n){
+  if(!n)return [];
+  var v=n.imgs||n.img||'';
+  if(Array.isArray(v))return v.filter(Boolean);
+  if(typeof v==='string'&&v.slice(0,1)==='['){try{var a=JSON.parse(v);return Array.isArray(a)?a.filter(Boolean):[];}catch(e){return [];}}
+  return v?[v]:[];
+}
+function osNoticeImgFile(input){
+  var fs=input&&input.files;if(!fs||!fs.length)return;
+  var n=0;
+  for(var i=0;i<fs.length;i++){(function(f){
+    if(f.size>1500000){toast('큰 이미지가 있어 건너뜁니다 — 1.5MB 이하로 올려주세요.');return;}
+    var rd=new FileReader();
+    rd.onload=function(){OS_NOTICE_IMGS.push(''+rd.result);OS_NOTICE_IMG=OS_NOTICE_IMGS[0]||'';osNoticeImgPrev();};
+    rd.readAsDataURL(f);n++;
+  })(fs[i]);}
+  if(n)toast(n+'장 선택됨 — 게시하면 공지에 순서대로 표시됩니다.');
+}
+function osNoticeImgPrev(){
+  var p=document.getElementById('osNoticeImgPrev');if(!p)return;
+  if(!OS_NOTICE_IMGS.length){p.innerHTML='<span style="font-size:11.5px;color:var(--ink-4)">이미지 없음</span>';return;}
+  p.innerHTML='<div style="display:flex;gap:7px;flex-wrap:wrap">'+OS_NOTICE_IMGS.map(function(src,i){
+    return '<div style="position:relative"><img src="'+osEsc(src)+'" style="width:104px;height:78px;object-fit:cover;border-radius:9px;border:1px solid var(--ink-7)">'+
+      '<button onclick="osNoticeImgDel('+i+')" title="삭제" style="position:absolute;top:-6px;right:-6px;width:21px;height:21px;border-radius:50%;border:none;background:#DC2626;color:#fff;font-size:12px;font-weight:800;cursor:pointer;line-height:1">×</button>'+
+      '<span style="position:absolute;left:4px;bottom:4px;background:rgba(15,23,42,.75);color:#fff;font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 5px">'+(i+1)+'</span></div>';
+  }).join('')+'</div>';
+}
+function osNoticeImgDel(i){OS_NOTICE_IMGS.splice(i,1);OS_NOTICE_IMG=OS_NOTICE_IMGS[0]||'';osNoticeImgPrev();}
+function osNoticeImgRemove(){OS_NOTICE_IMGS=[];OS_NOTICE_IMG='';osNoticeImgPrev();}
 function osNoticeSave(){
   if(!(osIsAppAdmin())){toast('관리자만 공지를 등록할 수 있습니다.');return;}
   var ta=document.getElementById('osNoticeText');var text=ta?ta.value.trim():'';
   var on=document.getElementById('osNoticeActive');var active=on?!!on.checked:true;
-  var n={text:text,img:OS_NOTICE_IMG||'',on:active,ts:new Date().toISOString(),by:(OS.profile&&OS.profile.name)||'관리자'};
-  if(!text&&!n.img){toast('공지 내용이나 이미지를 입력하세요.');return;}
+  var imgVal=OS_NOTICE_IMGS.length>1?JSON.stringify(OS_NOTICE_IMGS):(OS_NOTICE_IMGS[0]||OS_NOTICE_IMG||'');
+  var n={text:text,img:imgVal,on:active,ts:new Date().toISOString(),by:(OS.profile&&OS.profile.name)||'관리자'};
+  if(!text&&!imgVal){toast('공지 내용이나 이미지를 입력하세요.');return;}
   OS_NOTICE=n;osNoticeLocalSet(n);osNoticeApply();
   var sb=osClient();
   if(sb){
@@ -11218,7 +11500,7 @@ function osNoticeCardHtml(){
     '<div style="margin-top:10px"><div style="font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px">이미지(선택)</div>'+
     '<div id="osNoticeImgPrev" style="margin-bottom:8px">'+prev+'</div>'+
     '<div class="btn-row"><button class="btn btn-ghost" onclick="osNoticeImgPick()">🖼 이미지 선택</button><button class="btn btn-ghost" onclick="osNoticeImgRemove()">이미지 제거</button>'+
-    '<input type="file" id="osNoticeImgInput" accept="image/*" style="display:none" onchange="osNoticeImgFile(this)"></div></div>'+
+    '<input type="file" id="osNoticeImgInput" accept="image/*" multiple style="display:none" onchange="osNoticeImgFile(this)"></div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="osNoticeActive" '+(n.on!==false?'checked':'')+'> 지금 게시(체크 해제 시 숨김)</label>'+
     '<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="osNoticeSave()">📢 공지 게시 / 저장</button><button class="btn btn-ghost" onclick="osNoticeClear()">공지 숨기기</button><button class="btn btn-ghost" onclick="osNoticeSqlToggle()">🛢️ 공지 SQL(팀 공유)</button></div>'+
     '<div id="osNoticeSqlBox" style="display:none;margin-top:12px">'+
