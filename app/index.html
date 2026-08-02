@@ -936,6 +936,7 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
   <iframe id="yoonsiFrame" class="fin-frame" title="윤시스쿨"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitYoonsi()">← 워크스페이스</button>
+    <button class="ff-back" style="background:#1A56DB;color:#fff;border-color:#1A56DB" onclick="go('ai_org')" title="AI 조직 라이브">🤖 AI 조직 라이브</button>
     <button class="ff-ico" onclick="reloadYoonsi()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openYoonsiNewTab()" title="새 탭에서 열기">↗</button>
   </div>
@@ -4759,9 +4760,10 @@ function aoDeptCards(){
     depts.map(function(d){
       var mine=AO.rows.filter(function(x){return x.dept===d.id;});
       var last=mine[0];
-      var fresh=last&&(last.ref_date===today||aoAgo(last.created_at).indexOf('분')>=0||aoAgo(last.created_at).indexOf('방금')>=0);
+      var todayRep=mine.filter(function(x){return x.ref_date===today;})[0];
+      var fresh=!!todayRep;
       var dot=fresh?'#22C55E':(last?'#F59E0B':'#CBD5E1');
-      var stat=fresh?'오늘 보고 완료':(last?'마지막 '+aoAgo(last.created_at):'대기 중');
+      var stat=fresh?'✅ 오늘 보고 완료':(last?'⚠ 오늘 보고 없음 (마지막 '+aoAgo(last.created_at)+')':'⏳ 아직 보고 없음');
       return '<div class="card" style="margin:0;padding:13px 14px;cursor:pointer" onclick="aoFilter(\''+d.id+'\')">'+
         '<div style="display:flex;align-items:center;gap:7px">'+
           '<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';box-shadow:0 0 0 3px '+dot+'22"></span>'+
@@ -4871,6 +4873,22 @@ function aoIdeasHtml(){
 function aoRender(){
   var b=$('aoBody');if(!b)return;
   if(!AO.loaded){b.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div>';return;}
+  var prog='';
+  if(AO.busy==='depts'&&AO.prog){
+    var pc=Math.round(AO.prog.done/AO.prog.total*100);
+    prog='<div class="card" style="margin-bottom:13px;border-color:#C7D2FE"><div class="card-body" style="padding:14px 16px">'+
+      '<div style="font-size:12.5px;font-weight:800;color:#1A56DB">📋 부서별 보고 진행 중 — '+AO.prog.done+'/'+AO.prog.total+' · 지금 '+osEsc(AO.prog.now||'')+'</div>'+
+      '<div style="height:8px;background:#EEF2F7;border-radius:6px;margin-top:8px;overflow:hidden"><i style="display:block;height:100%;width:'+pc+'%;background:linear-gradient(90deg,#1A56DB,#38BDF8);border-radius:6px;transition:width .4s"></i></div>'+
+      (AO.prog.fail.length?'<div style="font-size:11px;color:#B91C1C;margin-top:7px;line-height:1.6">실패: '+osEsc(AO.prog.fail.join(' · '))+'</div>':'')+
+      '<div style="font-size:10.5px;color:var(--ink-5);margin-top:6px">부서마다 10~20초 걸립니다. 창을 닫지 마세요.</div>'+
+    '</div></div>';
+  }else if(AO.busy==='meet'){
+    prog='<div class="card" style="margin-bottom:13px;border-color:#C7D2FE"><div class="card-body" style="padding:14px 16px">'+
+      '<div class="loading" style="padding:0"><div class="spinner"></div>6개 부서가 회의 중입니다 — 20~40초 걸립니다.</div></div></div>';
+  }else if(AO.busy==='order'){
+    prog='<div class="card" style="margin-bottom:13px;border-color:#C7D2FE"><div class="card-body" style="padding:14px 16px">'+
+      '<div class="loading" style="padding:0"><div class="spinner"></div>지시를 처리하는 중입니다…</div></div></div>';
+  }
   if(AO.err&&/ai_dept_reports|does not exist|schema cache/i.test(JSON.stringify(AO.err))){
     b.innerHTML='<div class="osrv-warn">AI 기록 테이블을 읽지 못했습니다 — 설정 → 🩺 시스템 자가진단의 복구 SQL을 실행해 주세요.<br><span style="font-size:11px">'+osEsc((AO.err.message||''))+'</span></div>';return;}
   var kn=AO.rows.filter(function(x){return x.dept==='knowledge';}).length;
@@ -4880,7 +4898,7 @@ function aoRender(){
     '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">아이디어</div><div style="font-size:22px;font-weight:900;color:#D97706;margin-top:3px">'+AO.ideas.length+'건</div></div>'+
     '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">성장 단계</div><div style="font-size:22px;font-weight:900;color:#7C3AED;margin-top:3px">Lv.'+Math.max(1,Math.min(9,Math.floor(kn/3)+1))+'</div></div>'+
   '</div>';
-  b.innerHTML=head+aoDeptCards()+aoCommandBox()+aoAskBox()+aoTimeline()+aoIdeasHtml();
+  b.innerHTML=head+prog+aoDeptCards()+aoCommandBox()+aoAskBox()+aoTimeline()+aoIdeasHtml();
 }
 
 /* ── 실행 ── */
@@ -4919,13 +4937,42 @@ function aoRunMeeting(){
   }).then(function(){AO.busy='';toast('회의록을 정리했습니다');aoLoad();},
           function(e){AO.busy='';toast('실패: '+((e&&e.message)||'AI 연결 확인'));aoRender();});
 }
+/* 부서별 일일보고 — 다른 화면의 함수에 기대지 않고 여기서 직접 처리한다.
+   6개 부서를 순차로 돌리며 진행률을 보여주고, 실패한 부서를 그대로 표시한다. */
 function aoRunDepts(){
   if(!aoCanCommand()){toast('명령은 대표만 할 수 있습니다');return;}
-  if(typeof adRun==='function'){AO.busy='depts';aoRender();
-    try{adRun();}catch(e){}
-    setTimeout(function(){AO.busy='';aoLoad();},1200);
-    return;}
-  toast('부서 보고 기능을 찾을 수 없습니다');
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  var depts=(typeof AI_DEPTS!=='undefined')?AI_DEPTS:[];
+  if(!depts.length){toast('부서 정의를 찾을 수 없습니다');return;}
+  AO.busy='depts';AO.prog={done:0,total:depts.length,now:depts[0].n,fail:[]};aoRender();
+  var today=aoToday(), kb=aoKb();
+  aoFacts().then(function(facts){
+    var chain=Promise.resolve();
+    depts.forEach(function(d){
+      chain=chain.then(function(){
+        AO.prog.now=d.n;aoRender();
+        var sys='너는 APEX YUN PRO의 '+d.n+' 책임자다. 역할: '+d.role+'\n'+aoTone()+
+          '\n\n형식: 첫 줄에 20자 이내 제목(따옴표 금지), 그다음 줄부터 본문 4~6문장.\n'+
+          '본문 순서 — (1) 오늘 관측된 사실 (2) 문제·병목 (3) 내일 할 일 1가지.'+
+          (kb?'\n\n[대표의 지식·관점]\n'+kb.slice(0,1500):'');
+        return callAI(sys,facts,800,'ai_dept_'+d.id).then(function(txt){
+          var lines=(''+(txt||'')).split('\n').filter(function(x){return x.trim();});
+          var title=(lines.shift()||(d.n+' 일일 보고')).replace(/^[#*\-\s]+/,'').replace(/["\u201c\u201d]/g,'').slice(0,60);
+          return sb.from('ai_dept_reports').upsert({dept:d.id,dept_name:d.n,period:'daily',ref_date:today,
+            title:title,body:lines.join('\n')},{onConflict:'dept,period,ref_date'}).then(function(r){
+              if(r&&r.error)AO.prog.fail.push(d.n+'(저장:'+(r.error.message||'').slice(0,40)+')');
+              AO.prog.done++;aoRender();
+            });
+        },function(e){AO.prog.fail.push(d.n+'(AI:'+((e&&e.message)||'응답없음').slice(0,40)+')');AO.prog.done++;aoRender();});
+      });
+    });
+    return chain;
+  }).then(function(){
+    var f=AO.prog.fail.slice();AO.busy='';AO.prog=null;
+    if(f.length)toast(f.length+'개 부서 실패 — '+f[0]);
+    else toast('6개 부서 보고를 모두 받았습니다');
+    aoLoad();
+  },function(e){AO.busy='';AO.prog=null;toast('보고 실패: '+((e&&e.message)||'AI 연결 확인'));aoLoad();});
 }
 function aoRunOrder(){
   if(!aoCanCommand()){toast('명령은 대표만 할 수 있습니다');return;}
@@ -11289,7 +11336,8 @@ function osDiagCardHtml(){
     '</div></div>';
 }
 /* ── 관리자: 가입 승인 큐 ── */
-function osSettingsAfterRender(){if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
+function osSettingsAfterRender(){
+  try{if(typeof osNoticeImgPrev==='function')setTimeout(osNoticeImgPrev,30);}catch(e){}if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
   if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
   if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osBackupLoad==='function')osBackupLoad();}}
 function osLoadApprovals(){
@@ -11674,9 +11722,18 @@ function osNoticeHomeHtml(n){
   }
   var arr=osNoticeImgsOf(n);
   var img='';
-  if(arr.length===1)img='<img src="'+osEsc(arr[0])+'" alt="공지 이미지" style="width:100%;max-height:420px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block;margin-bottom:'+(n.text?'12px':'0')+'">';
-  else if(arr.length>1)img='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px;margin-bottom:'+(n.text?'12px':'0')+'">'+
-    arr.map(function(src,i){return '<a href="'+osEsc(src)+'" target="_blank" rel="noopener" style="display:block;position:relative"><img src="'+osEsc(src)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:170px;object-fit:cover;border-radius:11px;display:block;border:1px solid var(--ink-8)"><span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span></a>';}).join('')+'</div>';
+  if(arr.length===1){
+    img='<figure style="margin:0 0 '+(n.text?'12px':'0')+'"><img src="'+osEsc(arr[0].s)+'" alt="공지 이미지" style="width:100%;max-height:440px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block">'+
+      (arr[0].c?'<figcaption style="font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.6">'+osEsc(arr[0].c)+'</figcaption>':'')+'</figure>';
+  }else if(arr.length>1){
+    img='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-bottom:'+(n.text?'12px':'0')+'">'+
+      arr.map(function(it,i){
+        return '<figure style="margin:0"><a href="'+osEsc(it.s)+'" target="_blank" rel="noopener" style="display:block;position:relative">'+
+          '<img src="'+osEsc(it.s)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:175px;object-fit:cover;border-radius:11px;display:block;border:1px solid var(--ink-8)">'+
+          '<span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span></a>'+
+          (it.c?'<figcaption style="font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.55">'+osEsc(it.c)+'</figcaption>':'')+'</figure>';
+      }).join('')+'</div>';
+  }
   var txt=n.text?'<div style="font-size:13.5px;line-height:1.75;color:var(--ink-1)">'+renderMd(n.text)+'</div>':'';
   var editBtn=admin?'<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)" onclick="go(\'settings\')">✏️ 공지 관리</button>':'';
   return '<div class="card" style="margin:14px 0 0;border:1px solid #C7D2FE;box-shadow:var(--shadow-blue);overflow:hidden">'+
@@ -11705,50 +11762,87 @@ function osNoticeNavHtml(n){
 function osNoticeImgPick(){var el=document.getElementById('osNoticeImgInput');if(el){el.value='';el.click();}}
 /* 여러 장 지원 — OS_NOTICE_IMGS 배열에 쌓고, 저장 시 JSON 으로 직렬화(1장이면 기존 형식 유지) */
 var OS_NOTICE_IMGS=[];
+/* 반환: [{s:이미지, c:설명글}] — 옛 형식(문자열/배열)도 그대로 읽는다 */
 function osNoticeImgsOf(n){
   if(!n)return [];
-  var v=n.imgs||n.img||'';
-  if(Array.isArray(v))return v.filter(Boolean);
-  if(typeof v==='string'&&v.slice(0,1)==='['){try{var a=JSON.parse(v);return Array.isArray(a)?a.filter(Boolean):[];}catch(e){return [];}}
-  return v?[v]:[];
+  var v=n.imgs||n.img||'',arr=[];
+  if(Array.isArray(v))arr=v;
+  else if(typeof v==='string'&&v.slice(0,1)==='['){try{arr=JSON.parse(v)||[];}catch(e){arr=[];}}
+  else if(v)arr=[v];
+  var out=[];
+  for(var i=0;i<arr.length;i++){
+    var it=arr[i];if(!it)continue;
+    if(typeof it==='string')out.push({s:it,c:''});
+    else if(it.s)out.push({s:it.s,c:it.c||''});
+  }
+  return out;
 }
 function osNoticeImgFile(input){
   var fs=input&&input.files;if(!fs||!fs.length)return;
   var n=0;
   for(var i=0;i<fs.length;i++){(function(f){
-    if(f.size>1500000){toast('큰 이미지가 있어 건너뜁니다 — 1.5MB 이하로 올려주세요.');return;}
+    if(f.size>900000){toast('⚠ '+Math.round(f.size/1024)+'KB — 너무 커서 게시가 실패할 수 있습니다. 300KB 이하 권장');}
+    if(f.size>2500000){toast('❌ '+Math.round(f.size/1024)+'KB 이미지는 건너뜁니다 — 2.5MB 이하로 줄여주세요.');return;}
     var rd=new FileReader();
-    rd.onload=function(){OS_NOTICE_IMGS.push(''+rd.result);OS_NOTICE_IMG=OS_NOTICE_IMGS[0]||'';osNoticeImgPrev();};
+    rd.onload=function(){OS_NOTICE_IMGS.push({s:''+rd.result,c:''});OS_NOTICE_IMG=(OS_NOTICE_IMGS[0]||{}).s||'';osNoticeImgPrev();};
     rd.readAsDataURL(f);n++;
   })(fs[i]);}
   if(n)toast(n+'장 선택됨 — 게시하면 공지에 순서대로 표시됩니다.');
 }
 function osNoticeImgPrev(){
   var p=document.getElementById('osNoticeImgPrev');if(!p)return;
-  if(!OS_NOTICE_IMGS.length){p.innerHTML='<span style="font-size:11.5px;color:var(--ink-4)">이미지 없음</span>';return;}
-  p.innerHTML='<div style="display:flex;gap:7px;flex-wrap:wrap">'+OS_NOTICE_IMGS.map(function(src,i){
-    return '<div style="position:relative"><img src="'+osEsc(src)+'" style="width:104px;height:78px;object-fit:cover;border-radius:9px;border:1px solid var(--ink-7)">'+
-      '<button onclick="osNoticeImgDel('+i+')" title="삭제" style="position:absolute;top:-6px;right:-6px;width:21px;height:21px;border-radius:50%;border:none;background:#DC2626;color:#fff;font-size:12px;font-weight:800;cursor:pointer;line-height:1">×</button>'+
-      '<span style="position:absolute;left:4px;bottom:4px;background:rgba(15,23,42,.75);color:#fff;font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 5px">'+(i+1)+'</span></div>';
-  }).join('')+'</div>';
+  if(!OS_NOTICE_IMGS.length){p.innerHTML='<span style="font-size:11.5px;color:var(--ink-4)">사진 없음 — 글만 올려도 됩니다</span>';return;}
+  p.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px">'+
+    OS_NOTICE_IMGS.map(function(it,i){
+      return '<div style="border:1px solid var(--ink-7);border-radius:11px;padding:7px;background:#fff">'+
+        '<div style="position:relative">'+
+          '<img src="'+osEsc(it.s)+'" style="width:100%;height:86px;object-fit:cover;border-radius:8px;display:block">'+
+          '<button onclick="osNoticeImgDel('+i+')" title="삭제" style="position:absolute;top:-6px;right:-6px;width:21px;height:21px;border-radius:50%;border:none;background:#DC2626;color:#fff;font-size:12px;font-weight:800;cursor:pointer;line-height:1">×</button>'+
+          '<span style="position:absolute;left:5px;bottom:5px;background:rgba(15,23,42,.75);color:#fff;font-size:9.5px;font-weight:800;border-radius:5px;padding:1px 6px">'+(i+1)+'</span>'+
+        '</div>'+
+        '<input type="text" value="'+osEsc(it.c||'')+'" oninput="osNoticeImgCap('+i+',this.value)" placeholder="이 사진 설명(선택)" style="width:100%;margin-top:6px;border:1px solid var(--ink-8);border-radius:7px;padding:6px 8px;font-size:11px;font-family:inherit;box-sizing:border-box">'+
+      '</div>';
+    }).join('')+'</div>'+
+    '<div style="font-size:10.5px;color:var(--ink-5);margin-top:6px">사진은 올린 순서대로 표시됩니다. 각 사진마다 설명글을 따로 달 수 있습니다.</div>';
 }
-function osNoticeImgDel(i){OS_NOTICE_IMGS.splice(i,1);OS_NOTICE_IMG=OS_NOTICE_IMGS[0]||'';osNoticeImgPrev();}
+function osNoticeImgCap(i,v){if(OS_NOTICE_IMGS[i])OS_NOTICE_IMGS[i].c=v||'';}
+function osNoticeImgDel(i){OS_NOTICE_IMGS.splice(i,1);OS_NOTICE_IMG=(OS_NOTICE_IMGS[0]||{}).s||'';osNoticeImgPrev();}
 function osNoticeImgRemove(){OS_NOTICE_IMGS=[];OS_NOTICE_IMG='';osNoticeImgPrev();}
 function osNoticeSave(){
   if(!(osIsAppAdmin())){toast('관리자만 공지를 등록할 수 있습니다.');return;}
   var ta=document.getElementById('osNoticeText');var text=ta?ta.value.trim():'';
   var on=document.getElementById('osNoticeActive');var active=on?!!on.checked:true;
-  var imgVal=OS_NOTICE_IMGS.length>1?JSON.stringify(OS_NOTICE_IMGS):(OS_NOTICE_IMGS[0]||OS_NOTICE_IMG||'');
+  var imgVal=OS_NOTICE_IMGS.length?JSON.stringify(OS_NOTICE_IMGS):'';
   var n={text:text,img:imgVal,on:active,ts:new Date().toISOString(),by:(OS.profile&&OS.profile.name)||'관리자'};
   if(!text&&!imgVal){toast('공지 내용이나 이미지를 입력하세요.');return;}
   OS_NOTICE=n;osNoticeLocalSet(n);osNoticeApply();
+  var kb=Math.round((n.img||'').length/1024);
+  var st=function(html){var e=document.getElementById('osNoticeStatus');if(e)e.innerHTML=html;};
+  st('<div style="font-size:11.5px;color:#1A56DB;font-weight:700">⏳ 서버에 게시하는 중…</div>');
   var sb=osClient();
   if(sb){
     try{sb.from('os_notices').insert({text:n.text,img:n.img,active:n.on,author:n.by}).then(function(r){
-      if(r&&r.error){toast('이 기기에 저장됨 · 팀 전체 공유는 아래 "공지 SQL" 1회 실행이 필요합니다.');}
-      else{toast('✅ 공지를 게시했습니다 — 모든 사용자에게 표시됩니다.');}
-    });}catch(e){toast('이 기기에 저장됨(서버 공유 실패).');}
-  }else{toast('이 기기에 저장됨 · 서버 연결 시 팀 전체에 공유됩니다.');}
+      if(r&&r.error){
+        var m=(r.error.message||'');
+        var big=/payload|too large|value too long|string data/i.test(m)||kb>900;
+        st('<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px">'+
+          '<div style="font-size:12px;font-weight:800;color:#B91C1C">❌ 팀 전체 공유 실패 — 이 기기에만 저장되었습니다</div>'+
+          '<div style="font-size:11px;color:#B91C1C;margin-top:4px;word-break:break-all">'+osEsc(m||'알 수 없는 오류')+'</div>'+
+          (big?'<div style="font-size:11.5px;color:#92400E;margin-top:6px;line-height:1.6">📷 <b>이미지 용량이 원인일 가능성이 큽니다</b>(현재 '+kb+'KB). 사진을 줄여서 다시 올려보세요 — 한 장당 <b>300KB 이하</b>를 권장합니다.</div>'
+                :'<div style="font-size:11.5px;color:#92400E;margin-top:6px">설정 → 🩺 시스템 자가진단의 복구 SQL을 한 번 실행하면 해결됩니다.</div>')+
+          '</div>');
+        toast('공지 게시 실패 — 아래 빨간 박스에 원인이 표시됩니다');
+      }else{
+        st('<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:10px 12px">'+
+          '<div style="font-size:12px;font-weight:800;color:#15803D">✅ 게시 완료 — 모든 사용자에게 표시됩니다</div>'+
+          '<div style="font-size:11px;color:#166534;margin-top:4px">글 '+(n.text?n.text.length+'자':'없음')+' · 이미지 '+OS_NOTICE_IMGS.length+'장'+(kb?' ('+kb+'KB)':'')+' · '+new Date().toLocaleString('ko-KR')+'</div>'+
+          '<button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:11.5px" onclick="go(\'home\')">홈에서 확인하기 →</button></div>');
+        toast('✅ 공지를 게시했습니다');
+        osNoticeLoad();
+      }
+    },function(){st('<div style="font-size:11.5px;color:#B91C1C">❌ 네트워크 오류 — 이 기기에만 저장되었습니다</div>');});}
+    catch(e){st('<div style="font-size:11.5px;color:#B91C1C">❌ 저장 실패 — 이 기기에만 저장되었습니다</div>');}
+  }else{st('<div style="font-size:11.5px;color:#B45309">서버에 연결되어 있지 않아 이 기기에만 저장했습니다.</div>');}
 }
 function osNoticeClear(){
   if(!(osIsAppAdmin()))return;
@@ -11761,19 +11855,27 @@ function osNoticeSqlToggle(){var e=document.getElementById('osNoticeSqlBox');if(
 function osNoticeCopySql(){copyText(OS_NOTICE_SQL);}
 function osNoticeCardHtml(){
   if(!(osIsAppAdmin()))return '';
-  var n=OS_NOTICE||osNoticeLocalGet()||{};OS_NOTICE_IMG=n.img||'';
-  var prev=OS_NOTICE_IMG?'<img src="'+osEsc(OS_NOTICE_IMG)+'" style="max-width:100%;max-height:170px;border-radius:10px;border:1px solid var(--ink-7)">':'<span style="font-size:11.5px;color:var(--ink-4)">이미지 없음</span>';
+  var n=OS_NOTICE||osNoticeLocalGet()||{};
+  OS_NOTICE_IMGS=osNoticeImgsOf(n);OS_NOTICE_IMG=(OS_NOTICE_IMGS[0]||{}).s||'';
+  var prev='<span style="font-size:11.5px;color:var(--ink-4)">사진 없음 — 글만 올려도 됩니다</span>';
+  var cur=(n&&(n.text||OS_NOTICE_IMGS.length))
+    ? '<div style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:11px;padding:11px 13px;margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:800;color:#15803D">📌 현재 게시 중인 공지 '+(n.on===false?'<span style="color:#B45309">(숨김 상태)</span>':'')+'</div>'+
+      '<div style="font-size:11px;color:#166534;margin-top:3px">글 '+((n.text||'').length)+'자 · 사진 '+OS_NOTICE_IMGS.length+'장 · '+osEsc((n.ts||'').slice(0,10))+' '+osEsc(n.by||'')+'</div>'+
+      '<button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:11.5px" onclick="go(\'home\')">홈에서 실제 화면 확인 →</button></div>'
+    : '<div style="border:1px dashed var(--ink-7);border-radius:11px;padding:11px 13px;margin-bottom:12px;font-size:11.5px;color:var(--ink-4)">아직 게시된 공지가 없습니다.</div>';
   return '<div class="card set-card" style="border-color:#C7D2FE"><div class="card-hd"><div class="card-title"><span class="ci">📢</span>공지사항 관리 <span class="badge">관리자</span></div>'+
     '<div class="card-desc">메인 홈 상단 배너와 왼쪽 메뉴 맨 위에 표시됩니다. 로그인하지 않은 사람을 포함해 <b>모두에게 보입니다.</b></div></div>'+
-    '<div class="card-body">'+
-    '<div class="fld"><label style="font-size:11.5px;font-weight:700;color:var(--ink-2);display:block;margin-bottom:5px">공지 내용</label>'+
+    '<div class="card-body">'+cur+
+    '<div class="fld"><label style="font-size:11.5px;font-weight:700;color:var(--ink-2);display:block;margin-bottom:5px">공지 글 <span style="font-weight:600;color:var(--ink-5)">(사진 없이 글만 올려도 됩니다)</span></label>'+
     '<textarea id="osNoticeText" style="width:100%;min-height:110px;font-size:13px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 이번 주 팀 미팅은 목요일 오후 2시입니다. (줄바꿈·마크다운 지원)">'+osEsc(n.text||'')+'</textarea></div>'+
-    '<div style="margin-top:10px"><div style="font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px">이미지(선택)</div>'+
+    '<div style="margin-top:10px"><div style="font-size:11.5px;font-weight:700;color:var(--ink-2);margin-bottom:6px">사진 <span style="font-weight:600;color:var(--ink-5)">(여러 장 선택 가능 · 사진마다 설명글 별도)</span></div>'+
     '<div id="osNoticeImgPrev" style="margin-bottom:8px">'+prev+'</div>'+
-    '<div class="btn-row"><button class="btn btn-ghost" onclick="osNoticeImgPick()">🖼 이미지 선택</button><button class="btn btn-ghost" onclick="osNoticeImgRemove()">이미지 제거</button>'+
+    '<div class="btn-row"><button class="btn btn-ghost" onclick="osNoticeImgPick()">🖼 사진 추가(여러 장)</button><button class="btn btn-ghost" onclick="osNoticeImgRemove()">사진 전부 제거</button>'+
     '<input type="file" id="osNoticeImgInput" accept="image/*" multiple style="display:none" onchange="osNoticeImgFile(this)"></div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="osNoticeActive" '+(n.on!==false?'checked':'')+'> 지금 게시(체크 해제 시 숨김)</label>'+
-    '<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="osNoticeSave()">📢 공지 게시 / 저장</button><button class="btn btn-ghost" onclick="osNoticeClear()">공지 숨기기</button><button class="btn btn-ghost" onclick="osNoticeSqlToggle()">🛢️ 공지 SQL(팀 공유)</button></div>'+
+    '<div id="osNoticeStatus" style="margin-top:12px"></div>'+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="osNoticeSave()">📢 공지 게시 / 저장</button><button class="btn btn-ghost" onclick="osNoticeClear()">공지 숨기기</button><button class="btn btn-ghost" onclick="osNoticeSqlToggle()">🛢️ 공지 SQL(팀 공유)</button></div>'+
     '<div id="osNoticeSqlBox" style="display:none;margin-top:12px">'+
       '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL을 <b>한 번만</b> 실행하면 공지가 <b>모든 기기·모든 사용자</b>에게 공유됩니다. 실행 전에는 이 브라우저에만 저장됩니다.</div>'+
       '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_NOTICE_SQL)+'</textarea>'+
