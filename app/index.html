@@ -3168,10 +3168,20 @@ function osAttendLoad(){
   var uid=OS.profile&&OS.profile.id;
   if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
-  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),sb.from('attendance').select('member_id,att_date')]).then(function(res){
-    var pr=res[0],at=res[1];
+  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),sb.from('attendance').select('member_id,att_date'),sb.from('profiles').select('id,workspace')]).then(function(res){
+    var pr=res[0],at=res[1],ws=res[2];
     if(pr.error){if(cal)cal.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">출근 데이터를 불러오지 못했습니다. attendance 테이블/권한(RLS)을 확인하세요. <span style="color:var(--ink-4)">('+osEsc(pr.error.message||'')+')</span></div>';return;}
-    ATTEND.profiles=(pr.data||[]).filter(function(p){return p.active!==false;});
+    /* CRM 계정이 새지 않도록 — 승인된 APEX 회원만, 구분 못 읽으면 표시 안 함 */
+    if(!ws||ws.error){if(cal)cal.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">회원 구분(소속) 정보를 읽지 못해 출근 명단을 표시하지 않습니다. 설정 → <b>🩺 시스템 자가진단</b>의 복구 SQL을 실행해 주세요.</div>';return;}
+    var _aw={};(ws.data||[]).forEach(function(w){_aw[w.id]=w.workspace||'both';});
+    var _am=(OS.session&&OS.session.user&&OS.session.user.id)||null;
+    ATTEND.profiles=(pr.data||[]).filter(function(p){
+      if(p.active===false)return false;
+      if(p.id===_am)return true;
+      var w=_aw[p.id]||'both';
+      if(w!=='apex'&&w!=='both')return false;
+      return p.status==null||p.status==='approved';
+    });
     ATTEND.att=(at&&!at.error&&at.data)?at.data:[];
     osAttendRender();
   },function(){if(cal)cal.innerHTML='<div class="notice" style="color:var(--ink-4)">불러오기 실패 — 잠시 후 다시 시도하세요.</div>';});
@@ -7702,8 +7712,6 @@ function renderSettings(){
 
     osAccessCardHtml()+
 
-    osTeamCardHtml()+
-
     osAutoBackupCardHtml()+
 
     osBackupCardHtml()+
@@ -10690,7 +10698,7 @@ function osDiagCardHtml(){
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
   if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
-  if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osTeamLoad==='function')osTeamLoad();if(typeof osBackupLoad==='function')osBackupLoad();}}
+  if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osBackupLoad==='function')osBackupLoad();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
