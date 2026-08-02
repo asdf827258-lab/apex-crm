@@ -6,6 +6,7 @@
   <title>APEX DB CRM</title>
   <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
     :root{
       --blue:#3182f6;--blue2:#1b64da;--navy:#191f28;--text:#333d4b;--muted:#6b7684;
@@ -59,6 +60,43 @@
     .toast{position:fixed;right:24px;bottom:24px;background:var(--navy);color:#fff;padding:13px 17px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.22s;z-index:200}.toast.show{opacity:1;transform:none}
     .mobile-menu{display:none}
     @media(max-width:1050px){.kpis{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}}
+    .nav .grp{font-size:10.5px;color:#5f6b7a;font-weight:800;letter-spacing:.5px;padding:13px 9px 4px}
+    .tbadge{display:inline-block;min-width:18px;text-align:center;background:#f04452;color:#fff;border-radius:999px;font-size:10.5px;font-weight:800;padding:2px 6px;margin-left:6px}
+    .tt-card{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:9px}
+    .tt-card.urgent{border-color:#ffc9c9;background:#fff5f5}
+    .tt-ic{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-size:16px;background:#eef4ff}
+    .tt-card.urgent .tt-ic{background:#ffe3e3}
+    .tt-bd{flex:1;min-width:0}.tt-nm{font-weight:800;color:var(--navy);font-size:14px}
+    .tt-why{font-size:12px;color:#e8590c;font-weight:700;margin-top:2px}
+    .tt-say{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:5px;background:var(--bg);border-radius:9px;padding:8px 10px}
+    .kpi-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;margin-bottom:15px}
+    .kpi-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+    .kpi-card .kl{font-size:11.5px;font-weight:800;color:var(--muted)}
+    .kpi-card .kv{font-size:25px;font-weight:900;color:var(--navy);margin-top:5px;letter-spacing:-.5px}
+    .kpi-card .ks{font-size:11px;color:var(--muted);margin-top:3px}
+    .kpi-bar{display:flex;align-items:center;gap:11px;margin:9px 0}
+    .kpi-bar .bl{flex:0 0 92px;font-size:12.5px;font-weight:700;color:var(--text)}
+    .kpi-bar .bt{flex:1;height:20px;background:#eef1f5;border-radius:8px;overflow:hidden}
+    .kpi-bar .bt i{display:block;height:100%;border-radius:8px;background:var(--blue)}
+    .kpi-bar .bv{flex:0 0 56px;text-align:right;font-size:13px;font-weight:900;color:var(--navy)}
+    .ai-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+    .ai-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:16px 17px}
+    .ai-card .an{font-weight:900;color:var(--navy);font-size:14.5px}
+    .ai-card .at{font-size:11px;color:var(--muted);font-weight:700;margin-left:6px}
+    .ai-sec{font-size:11.5px;font-weight:800;margin:11px 0 5px}
+    .ai-good .ai-sec{color:#0b7b57}.ai-fix .ai-sec{color:#c2410c}
+    .ai-li{font-size:12.3px;color:var(--text);line-height:1.65;margin:4px 0;padding-left:14px;position:relative}
+    .ai-li:before{content:'';position:absolute;left:2px;top:8px;width:5px;height:5px;border-radius:50%;background:#cbd5e1}
+    .ai-good .ai-li:before{background:#20c997}.ai-fix .ai-li:before{background:#f59f00}
+    .gd{border:1px solid var(--line);border-radius:13px;margin-bottom:9px;background:#fff;overflow:hidden}
+    .gd summary{cursor:pointer;display:flex;align-items:center;gap:10px;padding:13px 15px;list-style:none;font-weight:800;color:var(--navy);font-size:13.5px}
+    .gd summary::-webkit-details-marker{display:none}
+    .gd .gnum{flex:none;width:25px;height:25px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;font-size:12px;display:grid;place-items:center}
+    .gd .gbody{padding:0 16px 15px}
+    .gd .gbody li{font-size:12.6px;color:var(--text);line-height:1.75;margin:5px 0}
+    .gd img{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:11px}
+    .bulkbar{display:none;align-items:center;gap:9px;background:#eef4ff;border:1px solid #c9ddff;border-radius:11px;padding:9px 13px;margin-bottom:11px;font-size:13px;font-weight:800;color:#245ea8}
+    .bulkbar.on{display:flex}
     @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.mobile-menu{display:inline-flex}.topbar{padding:0 16px}.content{padding:18px}.hero{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.toolbar input,.toolbar select{width:100%}}
     @media(max-width:460px){.kpis{grid-template-columns:1fr}.content{padding:14px}}
   </style>
@@ -86,14 +124,23 @@
 
 <div class="app hidden" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="mark">A</div><div><strong>APEX CRM</strong><small>DB · TA Management</small></div></div>
+    <div class="brand"><div class="mark">A</div><div><strong>APEX <span style="color:#54a3ff">YUN PRO</span></strong><small>재무설계 · DB 통합 워크스페이스</small></div></div>
     <nav class="nav">
-      <button class="active" data-page="dashboard" onclick="goPage('dashboard',this)">대시보드</button>
-      <button data-page="db" onclick="goPage('db',this)">DB 관리</button>
-      <button data-page="absence" onclick="goPage('absence',this)">부재 이력</button>
-      <button data-page="recordings" onclick="goPage('recordings',this)">녹음 전달</button>
-      <button data-page="team" id="teamNav" onclick="goPage('team',this)">팀 관리</button>
-      <button data-page="attendance" onclick="goPage('attendance',this)">출근 현황</button>
+      <div class="grp">시작</div>
+      <button class="active" data-page="dashboard" onclick="goPage('dashboard',this)">📊 통합 대시보드</button>
+      <button data-page="touch" onclick="goPage('touch',this)">🔔 오늘의 알림<span class="tbadge hidden" id="touchBadge"></span></button>
+      <div class="grp">DB 관리</div>
+      <button data-page="db" onclick="goPage('db',this)">📁 DB 관리</button>
+      <button data-page="absence" onclick="goPage('absence',this)">🚫 부재 이력</button>
+      <button data-page="recordings" onclick="goPage('recordings',this)">🎙 녹음 전달</button>
+      <div class="grp">분석 · KPI</div>
+      <button data-page="kpi" onclick="goPage('kpi',this)">📈 KPI·타율 분석</button>
+      <button data-page="stats" onclick="goPage('stats',this)">🏆 담당자·팀 통계</button>
+      <button data-page="ai" onclick="goPage('ai',this)">🤖 AI 피드백</button>
+      <div class="grp">관리</div>
+      <button data-page="team" id="teamNav" onclick="goPage('team',this)">👥 담당자·팀 관리</button>
+      <button data-page="attendance" onclick="goPage('attendance',this)">🗓 출근 현황</button>
+      <button data-page="guide" onclick="goPage('guide',this)">📖 사용 안내</button>
     </nav>
     <div class="user"><small>접속 사용자</small><strong id="userName">-</strong><small id="userRole">-</small><br><button onclick="signOut()">로그아웃</button></div>
   </aside>
@@ -126,7 +173,8 @@
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
           <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
-          <div class="table-wrap"><table><thead><tr><th>배정일</th><th>고객</th><th>담당자</th><th>지역</th><th>결과</th><th>부재</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+          <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
+          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>지역</th><th>결과</th><th>부재</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
       </section>
 
@@ -156,6 +204,32 @@
           <div class="notice" style="margin-bottom:14px">🟢 출근 · ❌ 미접속(지난 날) · · 예정 — 매일 접속만 해도 자동 기록됩니다. (팀 전체 공유)</div>
           <div class="table-wrap"><table id="attTable"><thead id="attHead"></thead><tbody id="attBody"></tbody></table></div>
         </div>
+      </section>
+
+      <section class="page" id="page-touch">
+        <div class="hero"><div><h2>오늘의 알림 — 꾸준히 터치하는 시스템</h2><p><b>7일 이상 손대지 않은 고객</b>, 부재 재시도, 상담 후 안부까지 — 오늘 연락할 고객과 <b>할 말</b>을 매일 자동으로 정리합니다.</p></div></div>
+        <div id="touchBody"></div>
+      </section>
+
+      <section class="page" id="page-kpi">
+        <div class="hero"><div><h2>KPI·타율 분석</h2><p>배정 → 접촉 → 상담 → 약속으로 이어지는 나(팀)의 타율입니다. 개인·팀별로 골라 보세요.</p></div></div>
+        <div class="card section"><div class="toolbar"><select id="kpiTeam" onchange="renderKpi()"></select><select id="kpiOwner" onchange="renderKpi()"></select></div><div id="kpiBody"></div></div>
+      </section>
+
+      <section class="page" id="page-stats">
+        <div class="hero"><div><h2>담당자·팀 통계</h2><p>관리자는 전체, 지점장은 우리 팀 통계를 조회합니다.</p></div></div>
+        <div id="statsBody"></div>
+      </section>
+
+      <section class="page" id="page-ai">
+        <div class="hero"><div><h2>AI 피드백 — 잘한 점과 개선 포인트</h2><p>실적 데이터로 <b>각자 잘한 점 ✅ 과 개선 포인트 ⚠</b> 를 자동 분석합니다. 데이터가 바뀔 때마다 새로 계산되어 <b>매번 반영</b>됩니다. 리더는 팀 전체를 한눈에 보고 코칭에 씁니다.</p></div></div>
+        <div id="aiBody"></div>
+      </section>
+
+      <section class="page" id="page-guide">
+        <div class="hero"><div><h2>사용 안내</h2><p>항목을 누르면 펼쳐집니다. 신입 교육은 1번부터 순서대로 따라 하면 됩니다.</p></div>
+          <div style="display:flex;gap:7px"><button class="btn btn-light" onclick="gdAll(true)">전부 펼치기</button><button class="btn btn-light" onclick="gdAll(false)">전부 접기</button></div></div>
+        <div id="guideBody" style="max-width:900px"></div>
       </section>
     </div>
   </main>
@@ -262,24 +336,30 @@ async function startApp(){
   try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",todayLocal());}catch(e){}
   await loadAll();
 }
+let crmTeams=[],crmTeamOf={};
+function teamName(pid){const t=crmTeams.find(x=>x.id===crmTeamOf[pid]);return t?t.name:""}
 async function loadAll(){
-  const [p,d,c,a]=await Promise.all([
+  const [p,d,c,a,t,tm]=await Promise.all([
     sb.from("profiles").select("id,name,role,active").eq("active",true).order("name"),
     sb.from("dbs").select("*").order("created_at",{ascending:false}),
     sb.from("calls").select("*").order("call_at",{ascending:false}),
-    sb.from("attendance").select("*")
+    sb.from("attendance").select("*"),
+    sb.from("teams").select("id,name,color").order("name"),
+    sb.from("team_members").select("team_id,member_id")
   ]);
   if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
-  profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;fillProfiles();renderAll();
+  profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
+  crmTeams=(t&&!t.error&&t.data)||[];crmTeamOf={};((tm&&!tm.error&&tm.data)||[]).forEach(m=>crmTeamOf[m.member_id]=m.team_id);
+  fillProfiles();renderAll();
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
   $("assignedTo").innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
-function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"대시보드",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",team:"팀 관리",attendance:"출근 현황"}[pg];$("sidebar").classList.remove("open");renderAll()}
+function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
-function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance()}
+function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance();renderTouch();renderKpi();renderStats();renderAiFb();renderGuideOnce()}
 function renderDashboard(){
   const done=dbs.filter(d=>result(d)!=="미진행"),consult=dbs.filter(d=>result(d)==="상담"),pending=dbs.filter(d=>recStatus(d)==="미완료").length+calls.filter(c=>c.result==="부재"&&!c.group_reported).length;
   $("kTotal").textContent=dbs.length;$("kDone").textContent=done.length;$("kConsult").textContent=consult.length;$("kPending").textContent=pending;
@@ -313,13 +393,33 @@ function renderDashAttendance(){
 function renderDb(){
   const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"";
   const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf));
+  $("bulkTh").classList.toggle("hidden",!canManage());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
+    ${canManage()?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:""}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region||"-")}</td>
     <td>${badge(result(d))}</td><td>${absentCount(d)}회</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">TA</button>${isAdmin()?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button><button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="10" class="empty">조회할 DB가 없습니다.</td></tr>`;
+  </tr>`}).join("")||`<tr><td colspan="11" class="empty">조회할 DB가 없습니다.</td></tr>`;
+  bulkBarUpd();
+}
+function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
+function bulkBarUpd(){
+  const n=bulkChecked().length,bar=$("bulkBar");if(!bar)return;
+  bar.classList.toggle("on",canManage()&&n>0);
+  $("bulkCnt").textContent=n+"건 선택";
+  const sel=$("bulkOwner");
+  if(sel&&!sel.options.length){const members=profiles.filter(p=>p.active!==false);sel.innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}${teamName(p.id)?" ("+esc(teamName(p.id))+")":""}</option>`).join("")}
+}
+function bulkClear(){document.querySelectorAll(".dbck:checked").forEach(x=>x.checked=false);bulkBarUpd()}
+async function bulkAssign(){
+  const ids=bulkChecked();if(!ids.length)return;
+  const owner=$("bulkOwner").value;const nm=pname(owner);
+  if(!confirm(ids.length+"건을 "+nm+" 담당으로 일괄 변경할까요?"))return;
+  const {error}=await sb.from("dbs").update({assigned_to:owner}).in("id",ids);
+  if(error){toast("일괄 변경 실패: "+error.message);return}
+  toast(ids.length+"건을 "+nm+" 담당으로 변경했습니다.");await loadAll();
 }
 function absenceText(c,idx){const d=new Date(c.call_at),ap=d.getHours()<12?"오전":"오후",h=d.getHours()%12||12,m=d.getMinutes()?` ${String(d.getMinutes()).padStart(2,"0")}분`:"";return `${d.getMonth()+1}월 ${d.getDate()}일 ${ap} ${h}시${m} ${idx}차 부재`}
 function renderAbsence(){
@@ -413,6 +513,209 @@ async function toggleRecording(id,value){const {error}=await sb.from("calls").up
 function closeModal(id){$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}
 function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast("문구를 복사했습니다.")).catch(()=>prompt("복사하세요.",t))}
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
+/* ═══════════ v2 — 오늘의 알림 · KPI · 통계 · AI 피드백 · 사용 안내 ═══════════ */
+function statsOf(pid){
+  const x=dbs.filter(d=>d.assigned_to===pid);
+  const done=x.filter(d=>result(d)!=="미진행");
+  const consult=x.filter(d=>result(d)==="상담");
+  const absent=x.filter(d=>result(d)==="부재");
+  const reject=x.filter(d=>result(d)==="거절");
+  const appts=consult.filter(d=>{const c=lastCall(d);return c&&c.appointment_at});
+  const pend=x.filter(d=>recStatus(d)==="미완료").length;
+  return {total:x.length,done:done.length,consult:consult.length,absent:absent.length,reject:reject.length,
+    appts:appts.length,pend,
+    contactRate:x.length?Math.round(done.length/x.length*100):0,
+    consultRate:done.length?Math.round(consult.length/done.length*100):0,
+    absentRate:done.length?Math.round(absent.length/done.length*100):0};
+}
+function lastActDays(d){
+  let mx=d.assigned_date||"";
+  calls.filter(c=>c.db_id===d.id).forEach(c=>{const v=(c.call_at||"").slice(0,10);if(v>mx)mx=v});
+  if(!mx)return 999;
+  return Math.max(0,Math.round((Date.now()-new Date(mx+"T00:00:00").getTime())/86400000));
+}
+function touchItems(pid){
+  const out=[];
+  dbs.filter(d=>d.assigned_to===pid&&result(d)!=="거절").forEach(d=>{
+    const days=lastActDays(d),r=result(d),abs=absentCount(d);
+    if(r==="미진행"&&days>=2)out.push({d,days,urgent:days>=7,ic:"📞",why:"아직 첫 통화 전 · "+days+"일 경과",
+      say:"첫 TA — 15초 안에: 소개(누구 소개/어디서) → 목적 한 줄 → \"10분만 시간 괜찮으실까요?\""});
+    else if(r==="부재"&&days>=3)out.push({d,days,urgent:days>=7,ic:"🔁",why:abs+"차 부재 · "+days+"일 경과",
+      say:"시간대를 바꿔 재시도(오전 10~11시 ↔ 오후 7~8시). 문자 먼저: \"○○님, 통화 어려우신 것 같아 문자 남깁니다. 편한 시간 알려주시면 맞춰 전화드릴게요.\""});
+    else if(r==="상담"&&days>=7)out.push({d,days,urgent:days>=10,ic:"💬",why:"상담 후 "+days+"일 무접촉",
+      say:"안부 + 후속 — 지난 상담 핵심 한 줄 요약하고 다음 약속을 제안하세요. \"지난번 말씀하신 ◇◇ 정리해서 보여드리고 싶은데, 이번 주 언제가 편하세요?\""});
+    if(recStatus(d)==="미완료")out.push({d,days,urgent:true,ic:"🎙",why:"상담 녹음 미전달",
+      say:"녹음 파일을 오늘 전달하고 '녹음 전달' 메뉴에서 완료로 바꾸세요."});
+  });
+  out.sort((a,b)=>(b.urgent-a.urgent)||(b.days-a.days));
+  return out;
+}
+function renderTouch(){
+  const body=$("touchBody");if(!body)return;
+  const me=profile?profile.id:null;if(!me)return;
+  const items=touchItems(me);
+  const badge=$("touchBadge");
+  if(badge){badge.textContent=items.length;badge.classList.toggle("hidden",!items.length)}
+  if(!items.length){body.innerHTML='<div class="card section"><div class="empty">🎉 오늘 터치할 고객이 없습니다. 새 DB에 집중하세요!</div></div>';return}
+  body.innerHTML='<div class="notice" style="margin-bottom:13px"><b>'+items.length+'건</b> — 위에서부터 처리하세요. 빨간 카드가 가장 급합니다. 처리하면 목록에서 자동으로 사라집니다.</div>'+
+    items.map(it=>`<div class="tt-card${it.urgent?" urgent":""}">
+      <div class="tt-ic">${it.ic}</div>
+      <div class="tt-bd"><div class="tt-nm">${esc(it.d.customer_name)} <span style="font-weight:600;color:var(--muted);font-size:12px">${esc(it.d.region||"")}</span></div>
+      <div class="tt-why">${it.why}</div><div class="tt-say">💬 ${it.say}</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openCall('${it.d.id}')">접촉</button>
+    </div>`).join("");
+}
+function kpiAgg(list){
+  const a={total:0,done:0,consult:0,appts:0,absent:0};
+  list.forEach(pid=>{const st=statsOf(pid);a.total+=st.total;a.done+=st.done;a.consult+=st.consult;a.appts+=st.appts;a.absent+=st.absent});
+  a.contactRate=a.total?Math.round(a.done/a.total*100):0;
+  a.consultRate=a.done?Math.round(a.consult/a.done*100):0;
+  a.absentRate=a.done?Math.round(a.absent/a.done*100):0;
+  return a;
+}
+function renderKpi(){
+  const body=$("kpiBody");if(!body)return;
+  const me=profile?profile.id:null;if(!me)return;
+  const members=profiles.filter(p=>p.active!==false);
+  const teamSel=$("kpiTeam"),ownSel=$("kpiOwner");
+  if(canViewAll()){
+    const tv=teamSel.value;
+    teamSel.innerHTML='<option value="">전체 팀</option>'+crmTeams.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join("");
+    teamSel.value=tv;teamSel.classList.toggle("hidden",!crmTeams.length);
+    const pool=members.filter(p=>!teamSel.value||crmTeamOf[p.id]===teamSel.value);
+    const ov=ownSel.value;
+    ownSel.innerHTML='<option value="">전체 담당자</option>'+pool.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+    ownSel.value=pool.some(p=>p.id===ov)?ov:"";
+  }else{teamSel.classList.add("hidden");ownSel.classList.add("hidden")}
+  const target=canViewAll()
+    ?(ownSel.value?[ownSel.value]:members.filter(p=>!teamSel.value||crmTeamOf[p.id]===teamSel.value).map(p=>p.id))
+    :[me];
+  const a=kpiAgg(target);
+  const label=canViewAll()?(ownSel.value?pname(ownSel.value):(teamSel.value?(crmTeams.find(t=>t.id===teamSel.value)||{}).name:"전체")):"내";
+  body.innerHTML=
+    '<div class="kpi-cards">'+
+      `<div class="kpi-card"><div class="kl">총 배정</div><div class="kv">${a.total}</div><div class="ks">${esc(label)} 기준</div></div>`+
+      `<div class="kpi-card"><div class="kl">접촉 완료(TA)</div><div class="kv">${a.done}</div><div class="ks">부재·거절·상담 포함</div></div>`+
+      `<div class="kpi-card"><div class="kl">상담 전환</div><div class="kv">${a.consult}</div><div class="ks">결과가 '상담'</div></div>`+
+      `<div class="kpi-card"><div class="kl">상담 약속</div><div class="kv">${a.appts}</div><div class="ks">일시 확정 건</div></div>`+
+    '</div>'+
+    `<div class="kpi-bar"><span class="bl">접촉률</span><span class="bt"><i style="width:${Math.min(100,a.contactRate)}%"></i></span><span class="bv">${a.contactRate}%</span></div>`+
+    `<div class="kpi-bar"><span class="bl">상담 전환율</span><span class="bt"><i style="width:${Math.min(100,a.consultRate)}%;background:var(--green)"></i></span><span class="bv">${a.consultRate}%</span></div>`+
+    `<div class="kpi-bar"><span class="bl">부재율</span><span class="bt"><i style="width:${Math.min(100,a.absentRate)}%;background:var(--yellow)"></i></span><span class="bv">${a.absentRate}%</span></div>`+
+    '<div class="notice" style="margin-top:13px">타율 읽는 법 — <b>접촉률</b>이 낮으면 "전화를 안 한 것", <b>상담 전환율</b>이 낮으면 "멘트를 손볼 것", <b>부재율</b>이 높으면 "시간대를 바꿀 것"부터 점검하세요.</div>';
+}
+function renderStats(){
+  const body=$("statsBody");if(!body)return;
+  if(!canViewAll()){body.innerHTML='<div class="card section"><div class="empty">담당자·팀 통계는 지점장·마스터·운영자만 볼 수 있습니다.</div></div>';return}
+  const members=profiles.filter(p=>p.active!==false);
+  let teamTbl='';
+  if(crmTeams.length){
+    const rows=crmTeams.map(t=>{
+      const ids=members.filter(p=>crmTeamOf[p.id]===t.id).map(p=>p.id);
+      const a=kpiAgg(ids);
+      return `<tr><td class="name" style="color:${t.color||"#3182f6"}">${esc(t.name)}</td><td>${ids.length}명</td><td>${a.total}</td><td>${a.done}</td><td>${a.contactRate}%</td><td>${a.consult}</td><td>${a.consultRate}%</td></tr>`;
+    }).join("");
+    const un=members.filter(p=>!crmTeamOf[p.id]).map(p=>p.id);
+    const ua=kpiAgg(un);
+    teamTbl=`<div class="card section"><div class="section-head"><div><h3>팀별 평균 타율</h3><p>팀 단위로 합산한 접촉·전환 타율</p></div></div>
+      <div class="table-wrap"><table><thead><tr><th>팀</th><th>인원</th><th>총 배정</th><th>TA</th><th>접촉률</th><th>상담</th><th>상담 전환</th></tr></thead>
+      <tbody>${rows}${un.length?`<tr><td class="name">팀 미지정</td><td>${un.length}명</td><td>${ua.total}</td><td>${ua.done}</td><td>${ua.contactRate}%</td><td>${ua.consult}</td><td>${ua.consultRate}%</td></tr>`:""}</tbody></table></div></div>`;
+  }else{
+    teamTbl='<div class="notice" style="margin-bottom:13px">아직 팀이 없습니다 — APEX <b>설정 → 팀원 권한 관리</b>에서 팀을 만들면 팀별 통계가 갈라집니다.</div>';
+  }
+  const rows2=members.map(p=>{const st=statsOf(p.id);
+    return `<tr><td class="name">${esc(p.name)}</td><td>${esc(teamName(p.id)||"-")}</td><td>${st.total}</td><td>${st.done}</td><td>${st.contactRate}%</td><td>${st.absent}</td><td>${st.reject}</td><td>${st.consult}</td><td>${st.consultRate}%</td><td>${st.pend}</td></tr>`}).join("");
+  body.innerHTML=teamTbl+
+    `<div class="card section"><div class="section-head"><div><h3>담당자별 통계</h3><p>담당자별 배정·접촉·전환</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>담당자</th><th>팀</th><th>총 배정</th><th>TA</th><th>접촉률</th><th>부재</th><th>거절</th><th>상담</th><th>상담 전환</th><th>미전달</th></tr></thead><tbody>${rows2}</tbody></table></div></div>`;
+}
+function aiFbOf(pid){
+  const st=statsOf(pid);
+  const touch=touchItems(pid).length;
+  const good=[],fix=[];
+  if(!st.total){fix.push("배정된 DB가 없습니다 — 운영자에게 배정을 요청하세요.");return{st,touch,good,fix}}
+  if(st.contactRate>=80)good.push("배정받은 DB의 "+st.contactRate+"%를 접촉 — 실행 속도가 훌륭합니다.");
+  else if(st.contactRate<50)fix.push("미접촉이 "+(st.total-st.done)+"건. 오늘 3건만 먼저 전화하세요 — 접촉률이 타율의 시작입니다.");
+  if(st.done>=3&&st.consultRate>=30)good.push("상담 전환율 "+st.consultRate+"% — 멘트가 통하고 있습니다. 지금 스크립트를 팀에 공유할 만합니다.");
+  else if(st.done>=3&&st.consultRate<15)fix.push("상담 전환율 "+st.consultRate+"% — 첫 15초 오프닝(소개→목적→시간약속)을 다시 다듬어 보세요.");
+  if(st.done>=3&&st.absentRate>=50)fix.push("부재율 "+st.absentRate+"% — 전화 시간대를 오전 10~11시/오후 7~8시로 나눠 걸고, 문자를 먼저 보내세요.");
+  if(st.appts>0)good.push("상담 약속 "+st.appts+"건 확보 — 약속을 잡는 힘이 있습니다.");
+  if(st.pend>0)fix.push("녹음 미전달 "+st.pend+"건 — 오늘 전달하고 완료 체크하세요.");
+  if(touch>0)fix.push("7일+ 방치 포함 터치 대기 "+touch+"건 — '오늘의 알림'에서 위에서부터 처리하세요.");
+  else good.push("방치된 고객이 없습니다 — 꾸준한 터치가 유지되고 있습니다.");
+  if(!good.length)good.push("이번 주 실행만 채우면 잘한 점이 쌓입니다 — 접촉부터 시작하세요.");
+  return {st,touch,good,fix};
+}
+function aiCardHtml(p){
+  const f=aiFbOf(p.id);
+  return `<div class="ai-card"><div><span class="an">${esc(p.name)}</span><span class="at">${esc(teamName(p.id)||"팀 미지정")} · 배정 ${f.st.total} · 접촉률 ${f.st.contactRate}% · 전환 ${f.st.consultRate}%</span></div>
+    <div class="ai-good"><div class="ai-sec">✅ 잘한 점</div>${f.good.map(x=>`<div class="ai-li">${x}</div>`).join("")}</div>
+    <div class="ai-fix"><div class="ai-sec">⚠ 개선 포인트</div>${f.fix.length?f.fix.map(x=>`<div class="ai-li">${x}</div>`).join(""):'<div class="ai-li">지금 페이스 유지!</div>'}</div></div>`;
+}
+function renderAiFb(){
+  const body=$("aiBody");if(!body)return;
+  const me=profile?profile.id:null;if(!me)return;
+  const members=profiles.filter(p=>p.active!==false);
+  if(canViewAll()){
+    body.innerHTML='<div class="notice" style="margin-bottom:13px">리더 화면 — 팀원 카드를 보고 <b>잘한 점은 단톡에 공개 칭찬</b>, 개선 포인트는 1:1로 코칭하세요. 숫자가 바뀌면 자동으로 다시 계산됩니다.</div>'+
+      '<div class="ai-grid">'+members.map(aiCardHtml).join("")+'</div>';
+  }else{
+    const mine=members.find(p=>p.id===me);
+    body.innerHTML='<div class="notice" style="margin-bottom:13px">내 데이터로 자동 분석한 피드백입니다. 개선 포인트를 하나씩 지워가면 타율이 올라갑니다.</div>'+
+      (mine?aiCardHtml(mine):"");
+  }
+}
+const GUIDE_SECS=[
+ {ic:"🚪",t:"시작하기 — 로그인은 APEX 하나",open:true,imgs:[],steps:[
+  "로그인·가입·결제는 <b>APEX YUN PRO에서 한 번만</b>. 왼쪽 메뉴에서 CRM을 열면 <b>로그인창 없이 자동 연결</b>됩니다.",
+  "기존 CRM을 쓰던 분은 <b>쓰던 이메일·비밀번호 그대로</b> APEX에 로그인하면 됩니다.",
+  "권한 4단계 — <b>담당자</b>: 내 DB만 · <b>지점장</b>: 우리 팀 · <b>마스터</b>: 전체 조회 · <b>운영자</b>: 전체 관리",
+  "마스터 부여·팀 배정은 APEX <b>설정 → 팀원 권한 관리</b>에서 대표가 지정합니다."]},
+ {ic:"📊",t:"통합 대시보드 — 오늘 현황 한눈에",imgs:["guide/g_dashboard.png"],steps:[
+  "전체 배정, TA 완료율, 결과 분포(부재·거절·상담), 오늘 출근을 한 화면에서 봅니다.",
+  "숫자가 안 맞으면 우측 상단 <b>새로고침</b>."]},
+ {ic:"🔔",t:"오늘의 알림 — 꾸준한 터치 시스템",imgs:[],steps:[
+  "<b>7일 이상 손대지 않은 고객</b>, 부재 재시도, 상담 후 안부를 매일 자동으로 뽑아줍니다.",
+  "카드마다 <b>할 말(멘트)</b>이 붙어 있습니다 — 위에서부터 접촉 버튼으로 처리하세요.",
+  "왼쪽 메뉴의 <b>빨간 숫자</b>가 오늘 처리할 건수입니다. 처리하면 자동으로 사라집니다."]},
+ {ic:"➕",t:"DB 등록 — 고객 넣고 담당자 배정 (운영자)",imgs:["guide/g_newdb.png"],steps:[
+  "우측 상단 <b>+ DB 등록</b> → 배정일·고객명·연락처·지역 → 담당자 선택 → 저장.",
+  "등록 즉시 그 담당자 목록에 나타나고, 담당자는 자기 것만 봅니다."]},
+ {ic:"🗂️",t:"DB 관리 — 검색·필터·일괄 배정",imgs:["guide/g_db.png","guide/g_bulk.png"],steps:[
+  "이름·연락처 검색과 담당자/결과 필터로 원하는 DB만 걸러 봅니다.",
+  "운영자는 왼쪽 <b>체크박스</b>로 여러 건 선택 → 담당자 골라 <b>일괄 변경</b>.",
+  "<b>문구 복사</b>를 누르면 단톡 보고용 문장이 복사됩니다."]},
+ {ic:"📞",t:"TA(통화) 기록 — 결과와 상담 약속",imgs:["guide/g_ta.png"],steps:[
+  "각 행 <b>TA</b>(접촉) 버튼 → 결과(부재/거절/상담)와 메모 입력.",
+  "<b>상담</b>이면 약속 일시까지 — 목록 '상담 약속' 칸에 바로 표시됩니다."]},
+ {ic:"🔕",t:"부재 이력 — 차수 자동·단톡 보고",imgs:["guide/g_absence.png"],steps:[
+  "부재로 저장하면 1차·2차·3차 차수가 자동으로 붙습니다.",
+  "<b>단톡 보고문구</b> 복사 → 팀 채팅방 붙여넣기 → 보고 완료 체크."]},
+ {ic:"🎙️",t:"녹음 전달 — 상담 확정 건 공유",imgs:["guide/g_rec.png"],steps:[
+  "결과가 <b>상담</b>이 된 건은 이 목록에 자동으로 올라옵니다.",
+  "전달했으면 <b>완료</b>로 — 미완료는 빨간색으로 남아 놓치지 않습니다."]},
+ {ic:"📈",t:"KPI·타율 분석 — 개인·팀별",imgs:[],steps:[
+  "배정→접촉→상담→약속 타율을 <b>개인·팀 필터</b>로 골라 봅니다.",
+  "접촉률 낮음=전화 부족 · 전환율 낮음=멘트 점검 · 부재율 높음=시간대 변경 — 어디를 고칠지가 바로 보입니다."]},
+ {ic:"🏆",t:"담당자·팀 통계 — 리더의 화면",imgs:["guide/g_team.png"],steps:[
+  "팀별 평균 타율과 담당자별 통계를 비교합니다 (지점장 이상).",
+  "미전달 녹음·접촉률이 처지는 팀원을 찾아 코칭 포인트를 잡습니다."]},
+ {ic:"🤖",t:"AI 피드백 — 잘한 점과 개선 포인트",imgs:[],steps:[
+  "실적 데이터로 <b>✅ 잘한 점 / ⚠ 개선 포인트</b>를 자동 분석 — 숫자가 바뀌면 매번 다시 계산됩니다.",
+  "팀원은 자기 카드로 셀프 피드백, <b>리더는 전원 카드</b>를 보고 칭찬·코칭에 씁니다."]},
+ {ic:"👥",t:"담당자·팀 관리 + 출근 현황",imgs:["guide/g_members.png"],steps:[
+  "담당자마다 권한(담당자·지점장·마스터·운영자)을 지정합니다.",
+  "출근은 <b>로그인만 하면 자동 기록</b> — 출근 현황 달력에서 팀 전체가 공유됩니다."]}
+];
+let _gdBuilt=false;
+function renderGuideOnce(){
+  if(_gdBuilt)return;const body=$("guideBody");if(!body)return;_gdBuilt=true;
+  body.innerHTML=GUIDE_SECS.map((g,i)=>`<details class="gd"${g.open?" open":""}>
+    <summary><span class="gnum">${i+1}</span><span style="font-size:16px">${g.ic}</span>${g.t}<span style="margin-left:auto;font-size:11px;color:#9aa5b1">▼</span></summary>
+    <div class="gbody"><ul>${g.steps.map(x=>`<li>${x}</li>`).join("")}</ul>${g.imgs.map(m=>`<img src="${m}" loading="lazy" alt="">`).join("")}</div>
+  </details>`).join("");
+}
+function gdAll(open){document.querySelectorAll("#guideBody details").forEach(d=>d.open=!!open)}
 init();
 </script>
 </body>
