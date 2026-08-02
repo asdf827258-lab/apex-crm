@@ -4711,7 +4711,8 @@ var AO={rows:[],ideas:[],busy:'',loaded:false,filter:'all',ask:'',asking:false,a
 function aoCanCommand(){return typeof osIsAppAdmin==='function'&&osIsAppAdmin();}
 function aoToday(){return osTodayStr();}
 function aoDeptOf(id){
-  var m={meeting:{ic:'🧠',n:'전체 회의'},order:{ic:'📣',n:'대표 지시'},knowledge:{ic:'📚',n:'축적 지식'},final:{ic:'📌',n:'최종 보고'}};
+  var m={meeting:{ic:'🧠',n:'전체 회의'},order:{ic:'📣',n:'대표 지시'},knowledge:{ic:'📚',n:'축적 지식'},final:{ic:'📌',n:'최종 보고'},
+         briefing:{ic:'☀',n:'아침 브리핑'},autorun:{ic:'🌙',n:'야간 자동 근무'},yoonsi:{ic:'🏫',n:'윤시스쿨 오피스'},yoonsi_meet:{ic:'🏫',n:'윤시스쿨 회의'}};
   if(m[id])return m[id];
   var d=(typeof AI_DEPTS!=='undefined')?AI_DEPTS.filter(function(x){return x.id===id;})[0]:null;
   return d?{ic:d.ic,n:d.n}:{ic:'🤖',n:id||'AI'};
@@ -4799,6 +4800,52 @@ function aoCommandBox(){
 }
 
 /* ── 질문 (누구나) ── */
+/* 사용법 — 화면 안에서 바로 */
+function aoGuideHtml(){
+  var own=aoCanCommand();
+  var secs=[
+   {ic:'🎯',t:'이걸로 무엇을 얻나',open:true,li:[
+     '<b>내가 없어도 회사가 돌아간 기록이 남습니다.</b> 새벽 5시에 서버가 스스로 6개 부서 보고 + 전체 회의록 + 아침 브리핑을 만들어 둡니다.',
+     '<b>아침에 앱을 열면 3분 브리핑이 이미 준비돼 있습니다.</b> 오늘 볼 것 3가지, 오늘 결정할 것 1가지, 단톡에 붙여넣을 한 마디까지.',
+     '<b>팀원 관리 근거가 자동으로 쌓입니다.</b> 출근·고객·상담자료·보고 수치를 AI가 매일 해석해 문제와 병목을 짚어 줍니다.',
+     '<b>회사 지식이 사라지지 않습니다.</b> 좋은 회의·지시 결과를 지식으로 저장하면 두뇌에 누적되어 앞으로 모든 AI 답변이 그걸 참고합니다.'
+   ]},
+   {ic:'🌅',t:'아침 3분 루틴 (이것만 하세요)',li:[
+     '① 이 화면 맨 위 <b>☀ 아침 브리핑</b>을 읽습니다 (3줄 + 결정 1가지).',
+     '② 브리핑 아래 <b>팀에 던질 한 마디</b>를 복사해 단톡에 붙여넣습니다.',
+     '③ 쓸 만한 내용이면 <b>📚 지식으로</b> 눌러 저장합니다. 이게 시스템을 키우는 유일한 행동입니다.'
+   ]},
+   {ic:'📣',t:'지시하는 법 (대표만)',li:[
+     '부서를 고르고 지시를 적은 뒤 <b>＋ 지시 쌓기</b>. 여러 개 연속으로 넣어도 됩니다 — 대기열에 쌓여 순서대로 처리됩니다.',
+     '창을 닫아도 대기열은 남습니다. 실패하면 사유가 표시되고 <b>재시도</b>를 누르면 됩니다.',
+     '좋은 지시 예 — "이번 주 상담 전환율 올릴 카톡 문구 5개", "신입 2주차 교육 체크리스트", "부재 고객 재접촉 스크립트".'
+   ]},
+   {ic:'💬',t:'질문하는 법 (누구나)',li:[
+     '팀원 누구나 <b>지식에 질문하기</b>로 물어볼 수 있습니다. 쌓인 회의·보고·지식만 근거로 답합니다.',
+     '기록에 없으면 <b>"아직 기록에 없습니다"</b>라고 분명히 말합니다 — 지어내지 않습니다.',
+     '답이 부실하면 기록이 부족한 것입니다. 회의를 며칠 돌리면 좋아집니다.'
+   ]},
+   {ic:'🏫',t:'윤시스쿨과의 관계',li:[
+     '윤시스쿨에서 <b>회의를 소집하거나 할일을 등록</b>하면 이 화면 타임라인에 자동으로 올라옵니다(3분마다 + 즉시).',
+     '새벽 회의에서 AI가 그 내용을 <b>안건으로 다루고, 미완료 할일을 실행 과제로</b> 올립니다.',
+     '윤시스쿨 화면 아래 <b>🤖 AI 조직에 지금 보고</b> 버튼으로 즉시 보낼 수도 있습니다.'
+   ]},
+   {ic:'⚙',t:'자동이 안 돌 때',li:[
+     '맨 위 <b>🌙 야간 자동 근무</b>가 "오늘 기록 없음"이면 서버 설정이 빠진 것입니다.',
+     'Netlify → Site settings → Environment variables 에 <code>SUPABASE_SERVICE_ROLE_KEY</code> 를 추가하면 다음 새벽부터 돕니다.',
+     '급하면 이 화면에서 <b>▶ 전체 회의 열기</b>를 눌러 직접 실행해도 결과는 같습니다.'
+   ]}
+  ];
+  return '<div class="card" style="margin-bottom:14px"><div class="card-hd"><div class="card-title"><span class="ci">📖</span>사용법 — 이걸로 뭘 얻고, 뭘 하면 되나</div>'+
+    '<div class="card-desc">항목을 누르면 펼쳐집니다.</div></div><div class="card-body">'+
+    secs.map(function(g,i){
+      return '<details'+(g.open?' open':'')+' style="border:1px solid var(--ink-8);border-radius:11px;margin-bottom:7px;overflow:hidden;background:#fff">'+
+        '<summary style="cursor:pointer;padding:11px 13px;list-style:none;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:800;color:var(--ink-1)">'+
+        '<span style="flex:none;width:23px;height:23px;border-radius:50%;background:#1A56DB;color:#fff;font-size:11.5px;display:grid;place-items:center">'+(i+1)+'</span>'+
+        '<span style="font-size:15px">'+g.ic+'</span>'+g.t+'<span style="margin-left:auto;font-size:11px;color:var(--ink-5)">▼</span></summary>'+
+        '<ul style="margin:2px 0 13px;padding-left:38px">'+g.li.map(function(x){return '<li style="font-size:12.5px;color:var(--ink-2);line-height:1.75;margin:5px 0">'+x+'</li>';}).join('')+'</ul></details>';
+    }).join('')+'</div></div>';
+}
 function aoAskBox(){
   return '<div class="card" style="margin-bottom:14px;border-color:#BBF7D0"><div class="card-hd" style="background:#F0FDF4"><div class="card-title"><span class="ci">💬</span>지식에 질문하기 <span class="badge">누구나</span></div>'+
     '<div class="card-desc">지금까지 쌓인 회의·보고·지식을 근거로 답합니다. 팀원 누구나 물어볼 수 있습니다.</div></div>'+
@@ -4872,6 +4919,40 @@ function aoIdeasHtml(){
     }).join('')+'</div></div>';
 }
 
+/* 야간 자동 근무 상태 — 서버가 새벽에 만들어 둔 것을 그대로 보여준다 */
+function aoNightHtml(){
+  var run=AO.rows.filter(function(x){return x.dept==='autorun';})[0];
+  var brf=AO.rows.filter(function(x){return x.dept==='briefing';})[0];
+  var today=aoToday();
+  var ranToday=run&&run.ref_date===today;
+  var h='<div class="card" style="margin-bottom:14px;border-color:'+(ranToday?'#BBF7D0':'#FDE68A')+'">'+
+    '<div class="card-hd" style="background:'+(ranToday?'#F0FDF4':'#FFFBEB')+'">'+
+      '<div class="card-title"><span class="ci">🌙</span>야간 자동 근무 '+
+      (ranToday?'<span class="badge" style="background:#DCFCE7;color:#15803D">오늘 새벽 완료</span>'
+               :'<span class="badge" style="background:#FEF3C7;color:#B45309">오늘 기록 없음</span>')+'</div>'+
+      '<div class="card-desc">매일 새벽 5시, 앱을 켜두지 않아도 서버에서 AI 부서들이 스스로 회의하고 보고서를 만들어 둡니다.</div></div>'+
+    '<div class="card-body">';
+  if(run){
+    h+='<div style="font-size:11.5px;color:var(--ink-4);line-height:1.7">마지막 실행 — <b>'+osEsc(run.title||'')+'</b></div>'+
+       '<details style="margin-top:7px"><summary style="cursor:pointer;font-size:11px;color:var(--ink-5);list-style:none">실행 로그 보기</summary>'+
+       '<div class="rpt-body" style="margin-top:6px">'+renderMd(run.body||'')+'</div></details>';
+  }else{
+    h+='<div style="font-size:12px;color:#92400E;line-height:1.75">아직 야간 근무 기록이 없습니다.<br>'+
+       '<b>Netlify → Site settings → Environment variables</b> 에 <code>SUPABASE_SERVICE_ROLE_KEY</code> 가 있어야 서버가 스스로 일할 수 있습니다. '+
+       '설정 후 다음 새벽부터 자동으로 쌓입니다.</div>';
+  }
+  h+='</div></div>';
+  if(brf){
+    h+='<div class="card" style="margin-bottom:14px;border-color:#C7D2FE;box-shadow:var(--shadow-blue)">'+
+      '<div class="card-hd" style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;border:none">'+
+      '<div class="card-title" style="color:#fff"><span class="ci">☀</span>'+osEsc(brf.title||'아침 브리핑')+'</div>'+
+      '<div class="card-desc" style="color:#C7D9FF">대표가 자는 동안 정리된 오늘의 핵심입니다.</div></div>'+
+      '<div class="card-body"><div class="rpt-body">'+renderMd(brf.body||'')+'</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="copyText(aoBodyOf(\''+brf.id+'\'))">📋 복사</button>'+
+      '<button class="btn btn-ghost" onclick="aoToKnow(\''+brf.id+'\')">📚 지식으로</button></div></div></div>';
+  }
+  return h;
+}
 function aoRender(){
   var b=$('aoBody');if(!b)return;
   if(!AO.loaded){b.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div>';return;}
@@ -4900,7 +4981,7 @@ function aoRender(){
     '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">아이디어</div><div style="font-size:22px;font-weight:900;color:#D97706;margin-top:3px">'+AO.ideas.length+'건</div></div>'+
     '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">성장 단계</div><div style="font-size:22px;font-weight:900;color:#7C3AED;margin-top:3px">Lv.'+Math.max(1,Math.min(9,Math.floor(kn/3)+1))+'</div></div>'+
   '</div>';
-  b.innerHTML=head+prog+aoDeptCards()+aoCommandBox()+(typeof aqBoxHtml==='function'?aqBoxHtml():'')+aoAskBox()+aoTimeline()+aoIdeasHtml();
+  b.innerHTML=head+aoNightHtml()+aoGuideHtml()+prog+aoDeptCards()+aoCommandBox()+(typeof aqBoxHtml==='function'?aqBoxHtml():'')+aoAskBox()+aoTimeline()+aoIdeasHtml();
 }
 
 /* ── 실행 ── */
