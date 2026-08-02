@@ -208,7 +208,7 @@
   <div class="panel"><h2>👥 현재 인원 <span style="font-size:11px;color:var(--sub)" id="rosterCnt"></span></h2><div id="roster"></div></div>
   <div class="panel"><h2>🗒️ 회의 기록</h2><ul class="log" id="meetLog"></ul></div>
   <div class="panel"><h2>💾 백업 · 내 컴퓨터에 저장</h2>
-    <div class="backup"><button id="exportBtn">💾 파일로 내보내기</button><button id="importBtn">📂 파일 불러오기</button><input id="importFile" type="file" accept=".json" style="display:none"><button class="danger" id="resetBtn">🗑️ 채용·회의 초기화</button></div>
+    <div class="backup"><button id="syncAiBtn" style="background:#1b64da;color:#fff">🤖 AI 조직에 지금 보고</button><button id="exportBtn">💾 파일로 내보내기</button><button id="importBtn">📂 파일 불러오기</button><input id="importFile" type="file" accept=".json" style="display:none"><button class="danger" id="resetBtn">🗑️ 채용·회의 초기화</button></div>
     <div class="note">채용·회의 데이터는 <b>이 컴퓨터(브라우저)에 자동 저장</b>. 한 파일 앱이라 <b>탭을 옮겨도 바로 반영</b>돼요. 내보내기로 파일 백업 가능.</div>
   </div>
 </div></div>
@@ -279,6 +279,26 @@ const BASE=[
 ];
 const NEWTASKS=["신입 온보딩","업무 익히는 중","선배 따라 배우기"];
 const LS={hires:"yoonsi_hires",meetings:"yoonsi_meetings",extra:"yoonsi_extradepts",edits:"yoonsi_edits",customers:"yoonsi_customers",todos:"yoonsi_todos"};
+/* ── AI 조직 라이브 연동 브리지 ──
+   윤시스쿨은 이 브라우저에만 저장한다. 회의·할일이 생기거나 바뀌면 부모 앱에 알려
+   서버(ai_dept_reports)에 누적시킨다. 부모 앱 밖(새 탭)에서는 조용히 무시된다. */
+function yoonsiPush(kind,payload){
+  try{
+    if(window.parent&&window.parent!==window){
+      window.parent.postMessage({type:'yoonsiSync',kind:kind,payload:payload,at:new Date().toISOString()},'*');
+    }
+  }catch(e){}
+}
+function yoonsiSnapshot(){
+  try{
+    var done=todos.filter(function(t){return t.done}).length;
+    return {meetings:meetings.length,todos:todos.length,todosDone:done,
+      hires:hires.length,customers:customers.length,
+      recent:meetings.slice(-5).map(function(m){return {topic:m.topic,type:m.type,at:m.at,attendees:(m.attendees||[]).length,decisions:m.decisions||'',actions:m.actions||''}}),
+      openTodos:todos.filter(function(t){return !t.done}).slice(0,12).map(function(t){return {who:t.who,task:t.task}})};
+  }catch(e){return null;}
+}
+function yoonsiSyncAll(reason){yoonsiPush('snapshot',Object.assign({reason:reason||''},yoonsiSnapshot()||{}));}
 const load=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const saveLS=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 let hires=load(LS.hires,[]), meetings=load(LS.meetings,[]), extradepts=load(LS.extra,{}), edits=load(LS.edits,{}), customers=load(LS.customers,[]), todos=load(LS.todos,[]);
@@ -395,11 +415,17 @@ $("hireBtn").onclick=()=>{const name=$("h_name").value.trim();let dept=$("h_dept
   $("h_name").value="";$("h_duty").value="";$("h_code").value="";$("h_newdept").value="";$("newDeptWrap").style.display="none";refreshAll();$("h_dept").value=dept;msg("hireMsg",`✅ ${name} 채용! (${dept}) — 오피스·현황판에 바로 떠요.`,"ok");};
 $("cMeetBtn").onclick=()=>{const topic=$("m_topic").value.trim();if(!topic){msg("meetMsg","회의 주제를 입력해요.","no");return;}
   const scope=$("m_dept").value, att=[];ROSTER().forEach(d=>{if(scope==='전체'||d.t===scope)d.p.forEach(p=>{if(p.role==='팀장'||p.role==='실장')att.push({n:p.n,dept:d.t,duty:p.duty||''});});});
-  meetings.push({id:"m"+Date.now(),topic,type:$("m_type").value,scope,attendees:att,decisions:'',actions:'',at:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});saveLS(LS.meetings,meetings);$("m_topic").value="";renderMeetings();meetingOn=true;$("meetBtn").classList.add("on");msg("meetMsg",`📣 "${topic}" 소집 — 팀장 ${att.length}명 참석. 아래 회의록에 결정사항을 적으세요.`,"ok");};
+  meetings.push({id:"m"+Date.now(),topic,type:$("m_type").value,scope,attendees:att,decisions:'',actions:'',at:new Date().toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})});saveLS(LS.meetings,meetings);yoonsiPush('meeting',{topic:topic,type:$("m_type").value,scope:scope,attendees:att.length,at:new Date().toISOString()});yoonsiSyncAll('회의 소집');$("m_topic").value="";renderMeetings();meetingOn=true;$("meetBtn").classList.add("on");msg("meetMsg",`📣 "${topic}" 소집 — 팀장 ${att.length}명 참석. 아래 회의록에 결정사항을 적으세요.`,"ok");};
 function fire(id){const h=hires.find(x=>x.id===id);if(!h||!confirm(`${h.name} 님을 내보낼까요?`))return;hires=hires.filter(x=>x.id!==id);saveLS(LS.hires,hires);refreshAll();}
 $("exportBtn").onclick=()=>{const blob=new Blob([JSON.stringify({hires,meetings,extradepts,edits,customers,todos,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="윤시스쿨_회사데이터.json";a.click();};
 $("importBtn").onclick=()=>$("importFile").click();
 $("importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);hires=d.hires||[];meetings=d.meetings||[];extradepts=d.extradepts||{};edits=d.edits||{};customers=d.customers||[];todos=d.todos||[];saveLS(LS.hires,hires);saveLS(LS.meetings,meetings);saveLS(LS.extra,extradepts);saveLS(LS.edits,edits);saveLS(LS.customers,customers);saveLS(LS.todos,todos);refreshAll();alert("불러왔어요!");}catch(err){alert("읽기 실패: "+err.message);}};r.readAsText(f);};
+(function(){
+  var b=document.getElementById('syncAiBtn');
+  if(b)b.onclick=function(){yoonsiSyncAll('수동 보고');alert('AI 조직 라이브로 현재 업무현황을 보냈습니다.\n앱의 윤시스쿨 → AI 조직 라이브에서 확인하세요.');};
+  setTimeout(function(){yoonsiSyncAll('접속');},1500);
+  setInterval(function(){yoonsiSyncAll('주기 동기화');},180000);
+})();
 $("resetBtn").onclick=()=>{if(!confirm("채용·회의·편집·고객·할일 데이터를 지울까요? (기본 32명 유지)"))return;hires=[];meetings=[];extradepts={};edits={};customers=[];todos=[];[LS.hires,LS.meetings,LS.extra,LS.edits,LS.customers,LS.todos].forEach(k=>localStorage.removeItem(k));refreshAll();};
 
 // ===== 인물 편집 =====
@@ -459,9 +485,9 @@ function buildTodos(){const box=$("todoList");box.innerHTML='';
     byWho[who].forEach(t=>{const el=document.createElement('div');el.className='td'+(t.done?' done':'');
       el.innerHTML=`<input type="checkbox" ${t.done?'checked':''}><span class="tt">${esc(t.task)}</span><button class="tx">×</button>`;
       el.querySelector('input').onchange=ev=>{t.done=ev.target.checked;saveLS(LS.todos,todos);buildTodos();};
-      el.querySelector('.tx').onclick=()=>{todos=todos.filter(x=>x.id!==t.id);saveLS(LS.todos,todos);buildTodos();};
+      el.querySelector('.tx').onclick=()=>{yoonsiPush('todoDone',{who:t.who,task:t.task});todos=todos.filter(x=>x.id!==t.id);saveLS(LS.todos,todos);yoonsiSyncAll('할일 완료');buildTodos();};
       g.appendChild(el);});box.appendChild(g);});}
-$("todoAdd").onsubmit=e=>{e.preventDefault();const task=$("todo_task").value.trim();if(!task)return;todos.push({id:'t'+Date.now(),who:$("todo_who").value,task,done:false});saveLS(LS.todos,todos);$("todo_task").value='';buildTodos();};
+$("todoAdd").onsubmit=e=>{e.preventDefault();const task=$("todo_task").value.trim();if(!task)return;todos.push({id:'t'+Date.now(),who:$("todo_who").value,task,done:false});saveLS(LS.todos,todos);yoonsiPush('todo',{who:$("todo_who").value,task:task});yoonsiSyncAll('할일 등록');$("todo_task").value='';buildTodos();};
 function fillTodoWho(){const names=[];ROSTER().forEach(d=>d.p.forEach(p=>names.push(p.n)));$("todo_who").innerHTML=names.map(n=>`<option>${esc(n)}</option>`).join('');}
 
 // ===== TABS =====
