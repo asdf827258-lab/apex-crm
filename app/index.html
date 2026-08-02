@@ -2922,7 +2922,7 @@ var TABS=[
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
- {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_meet',icon:'🧠',title:'AI 회의실',cnt:''},{id:'ai_desk',icon:'🤖',title:'AI 부서 보고',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'academy',icon:'🎓',title:'APEX 전문가 과정',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
@@ -3097,8 +3097,7 @@ function go(tab){
   else if(tab==='attend'){dyn.innerHTML=renderAttend();if(typeof osAttendLoad==='function')osAttendLoad();}
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
-  else if(tab==='ai_desk'){dyn.innerHTML=renderAiDeskPage();if(typeof osAiDeskAfterRender==='function')osAiDeskAfterRender();}
-  else if(tab==='ai_meet'){dyn.innerHTML=renderAiMeet();if(typeof osAiMeetAfterRender==='function')osAiMeetAfterRender();}
+  else if(tab==='ai_org'||tab==='ai_meet'||tab==='ai_desk'){dyn.innerHTML=renderAiOrg();if(typeof osAiOrgAfterRender==='function')osAiOrgAfterRender();}
   else if(tab==='ai_prop'){dyn.innerHTML=renderAiProposal();if(typeof osAiProposalAfterRender==='function')osAiProposalAfterRender();}
   else if(tab==='interpret')dyn.innerHTML=renderInterpret();
   else if(tab==='wallets')dyn.innerHTML=renderWallets();
@@ -4701,6 +4700,278 @@ function amKnowExport(){
   var blob=new Blob([txt],{type:'text/markdown;charset=utf-8'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='APEX_축적지식_'+amToday()+'.md';
   document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},800);
+}
+
+/* ════════ 윤시스쿨 · AI 조직 라이브 — 한 화면, 페이지 전환 없음 ════════
+   열람: 전원 · 명령: 대표만 · 질문: 전원.
+   회의록·부서보고·지시·지식·아이디어를 하나의 타임라인으로 흘려보낸다. */
+var AO={rows:[],ideas:[],busy:'',loaded:false,filter:'all',ask:'',asking:false,answer:'',timer:null};
+
+function aoCanCommand(){return typeof osIsAppAdmin==='function'&&osIsAppAdmin();}
+function aoToday(){return osTodayStr();}
+function aoDeptOf(id){
+  var m={meeting:{ic:'🧠',n:'전체 회의'},order:{ic:'📣',n:'대표 지시'},knowledge:{ic:'📚',n:'축적 지식'},final:{ic:'📌',n:'최종 보고'}};
+  if(m[id])return m[id];
+  var d=(typeof AI_DEPTS!=='undefined')?AI_DEPTS.filter(function(x){return x.id===id;})[0]:null;
+  return d?{ic:d.ic,n:d.n}:{ic:'🤖',n:id||'AI'};
+}
+function aoAgo(iso){
+  if(!iso)return '';
+  var t=new Date(iso).getTime();if(isNaN(t))return '';
+  var m=Math.floor((Date.now()-t)/60000);
+  if(m<1)return '방금';if(m<60)return m+'분 전';
+  var h=Math.floor(m/60);if(h<24)return h+'시간 전';
+  return Math.floor(h/24)+'일 전';
+}
+
+function renderAiOrg(){
+  if(!OS.profile)return osPage('윤시스쿨','AI 조직','로그인 후 이용할 수 있습니다.',osLoginGate('AI 조직 화면은 로그인 후 이용할 수 있습니다.'));
+  return osPage('윤시스쿨 · AI ORG','AI 조직 라이브',
+    'AI 직원 6개 부서가 지금 무엇을 하고 있는지, 무엇이 쌓였는지 한 화면에서 봅니다. 기록은 모두가 열람하고, 지식에 대한 질문도 누구나 할 수 있습니다. 명령은 대표만 내립니다.',
+    '<div id="aoBody"><div class="loading" style="padding:16px"><div class="spinner"></div>AI 조직 상태를 불러오는 중…</div></div>');
+}
+function osAiOrgAfterRender(){aoLoad();aoTick();}
+function aoTick(){
+  if(AO.timer)clearInterval(AO.timer);
+  AO.timer=setInterval(function(){
+    if(!document.getElementById('aoBody')){clearInterval(AO.timer);AO.timer=null;return;}
+    aoLoad(true);
+  },60000);
+}
+function aoLoad(silent){
+  var sb=osClient();if(!sb){AO.loaded=true;aoRender();return;}
+  Promise.all([
+    sb.from('ai_dept_reports').select('id,dept,dept_name,period,ref_date,title,body,created_at').order('created_at',{ascending:false}).limit(80),
+    sb.from('ai_ideas').select('id,dept,dept_name,title,body,expected_effect,status,created_at').order('created_at',{ascending:false}).limit(40)
+  ]).then(function(r){
+    AO.err=(r[0]&&r[0].error)||null;
+    AO.rows=(r[0]&&!r[0].error&&r[0].data)?r[0].data:[];
+    AO.ideas=(r[1]&&!r[1].error&&r[1].data)?r[1].data:[];
+    AO.loaded=true;aoRender();
+  },function(){AO.loaded=true;aoRender();});
+}
+
+/* ── 부서별 마지막 활동 = "지금 일하는 상태" ── */
+function aoDeptCards(){
+  var depts=(typeof AI_DEPTS!=='undefined')?AI_DEPTS:[];
+  var today=aoToday();
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-bottom:15px">'+
+    depts.map(function(d){
+      var mine=AO.rows.filter(function(x){return x.dept===d.id;});
+      var last=mine[0];
+      var fresh=last&&(last.ref_date===today||aoAgo(last.created_at).indexOf('분')>=0||aoAgo(last.created_at).indexOf('방금')>=0);
+      var dot=fresh?'#22C55E':(last?'#F59E0B':'#CBD5E1');
+      var stat=fresh?'오늘 보고 완료':(last?'마지막 '+aoAgo(last.created_at):'대기 중');
+      return '<div class="card" style="margin:0;padding:13px 14px;cursor:pointer" onclick="aoFilter(\''+d.id+'\')">'+
+        '<div style="display:flex;align-items:center;gap:7px">'+
+          '<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';box-shadow:0 0 0 3px '+dot+'22"></span>'+
+          '<span style="font-size:15px">'+d.ic+'</span>'+
+          '<span style="font-size:12.5px;font-weight:800;color:var(--ink-1)">'+osEsc(d.n)+'</span></div>'+
+        '<div style="font-size:10.5px;color:var(--ink-5);margin-top:5px;line-height:1.5">'+osEsc(d.role)+'</div>'+
+        '<div style="font-size:11px;font-weight:700;color:'+(fresh?'#15803D':'var(--ink-4)')+';margin-top:6px">'+osEsc(stat)+'</div>'+
+        '<div style="font-size:10.5px;color:var(--ink-5);margin-top:2px">기록 '+mine.length+'건</div>'+
+      '</div>';
+    }).join('')+'</div>';
+}
+
+/* ── 명령 (대표만) ── */
+function aoCommandBox(){
+  if(!aoCanCommand())
+    return '<div class="notice" style="margin-bottom:14px;font-size:11.5px">🔒 <b>명령은 대표만</b> 내릴 수 있습니다. 아래 기록은 누구나 볼 수 있고, <b>질문</b>은 자유롭게 하실 수 있습니다.</div>';
+  var depts=(typeof AI_DEPTS!=='undefined')?AI_DEPTS:[];
+  return '<div class="card" style="margin-bottom:14px;border-color:#C7D2FE"><div class="card-hd" style="background:#F8FAFF"><div class="card-title"><span class="ci">📣</span>명령 <span class="badge">대표 전용</span></div>'+
+    '<div class="card-desc">회의를 열거나, 부서를 골라 직접 지시합니다. 결과는 아래 타임라인에 바로 쌓입니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:10px">'+
+      '<button class="btn btn-primary" onclick="aoRunMeeting()"'+(AO.busy?' disabled':'')+'>'+(AO.busy==='meet'?'회의 진행 중…':'▶ 전체 회의 열기')+'</button>'+
+      '<button class="btn btn-ghost" onclick="aoRunDepts()"'+(AO.busy?' disabled':'')+'>'+(AO.busy==='depts'?'부서 보고 중…':'📋 부서별 일일보고 받기')+'</button>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:170px 1fr auto;gap:8px;align-items:end">'+
+      '<div class="fld"><label style="font-size:11px;font-weight:700">부서</label><select id="aoDept" style="width:100%">'+
+        depts.map(function(d){return '<option value="'+d.id+'">'+d.ic+' '+d.n+'</option>';}).join('')+'</select></div>'+
+      '<div class="fld"><label style="font-size:11px;font-weight:700">지시 내용</label><input type="text" id="aoOrder" placeholder="예: 이번 주 상담 전환율 올릴 카톡 문구 5개" style="width:100%" onkeydown="if(event.key===\'Enter\')aoRunOrder()"></div>'+
+      '<button class="btn btn-primary" onclick="aoRunOrder()"'+(AO.busy?' disabled':'')+'>'+(AO.busy==='order'?'처리 중…':'지시')+'</button>'+
+    '</div></div></div>';
+}
+
+/* ── 질문 (누구나) ── */
+function aoAskBox(){
+  return '<div class="card" style="margin-bottom:14px;border-color:#BBF7D0"><div class="card-hd" style="background:#F0FDF4"><div class="card-title"><span class="ci">💬</span>지식에 질문하기 <span class="badge">누구나</span></div>'+
+    '<div class="card-desc">지금까지 쌓인 회의·보고·지식을 근거로 답합니다. 팀원 누구나 물어볼 수 있습니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:flex;gap:8px;align-items:flex-end">'+
+      '<div class="fld" style="flex:1"><input type="text" id="aoAsk" placeholder="예: 이번 달 우리 팀에서 가장 시급한 문제가 뭐야?" style="width:100%" onkeydown="if(event.key===\'Enter\')aoRunAsk()"></div>'+
+      '<button class="btn btn-primary" onclick="aoRunAsk()"'+(AO.asking?' disabled':'')+'>'+(AO.asking?'생각 중…':'💬 물어보기')+'</button>'+
+    '</div>'+
+    (AO.answer?'<div class="rpt-body" style="margin-top:12px;background:#F8FAFD;border-radius:11px;padding:13px 15px">'+renderMd(AO.answer)+'</div>':'')+
+    '<div style="font-size:10.5px;color:var(--ink-5);margin-top:8px">기록이 없으면 답이 부실합니다. 회의와 보고가 쌓일수록 정확해집니다.</div>'+
+    '</div></div>';
+}
+
+/* ── 타임라인 (모두 열람) ── */
+function aoFilter(v){AO.filter=(AO.filter===v?'all':v);aoRender();}
+function aoTimeline(){
+  var rows=AO.rows;
+  if(AO.filter!=='all')rows=rows.filter(function(x){return x.dept===AO.filter;});
+  var chips=[['all','전체']].concat(
+    [['meeting','🧠 회의'],['order','📣 지시'],['knowledge','📚 지식'],['final','📌 최종']]
+  ).map(function(c){
+    var on=AO.filter===c[0];
+    return '<button class="clm-tab'+(on?' on':'')+'" onclick="aoFilter(\''+c[0]+'\')">'+c[1]+'</button>';
+  }).join('');
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📜</span>활동 타임라인 <span class="badge">전원 열람</span></div>'+
+    '<div class="card-desc">AI 직원들이 만든 모든 기록이 시간순으로 쌓입니다. 1분마다 자동 갱신됩니다.</div></div>'+
+    '<div class="card-body"><div class="clm-tabs" style="margin-bottom:12px">'+chips+'</div>';
+  if(!rows.length){
+    h+='<div style="font-size:12.5px;color:var(--ink-4);padding:10px 2px">아직 기록이 없습니다.'+
+      (aoCanCommand()?' 위에서 <b>전체 회의 열기</b>를 눌러 시작하세요.':' 대표가 회의를 열면 여기에 쌓입니다.')+'</div>';
+  }else{
+    h+=rows.slice(0,40).map(function(x){
+      var d=aoDeptOf(x.dept);
+      var accent=x.dept==='knowledge'?'#059669':(x.dept==='order'?'#7C3AED':(x.dept==='meeting'?'#1A56DB':'#64748B'));
+      return '<details style="border:1px solid var(--ink-8);border-left:4px solid '+accent+';border-radius:11px;margin-bottom:8px;overflow:hidden;background:#fff">'+
+        '<summary style="cursor:pointer;padding:11px 13px;list-style:none;display:flex;align-items:center;gap:9px">'+
+          '<span style="font-size:15px">'+d.ic+'</span>'+
+          '<span style="flex:1;min-width:0"><span style="display:block;font-size:12.8px;font-weight:800;color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+osEsc(x.title||d.n)+'</span>'+
+          '<span style="font-size:10.5px;color:var(--ink-5)">'+osEsc(x.dept_name||d.n)+' · '+osEsc(aoAgo(x.created_at)||x.ref_date||'')+'</span></span>'+
+          '<span style="font-size:11px;color:var(--ink-5)">▼</span></summary>'+
+        '<div style="padding:2px 15px 14px"><div class="rpt-body">'+renderMd(x.body||'')+'</div>'+
+        '<div class="btn-row" style="margin-top:9px">'+
+          '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="copyText(aoBodyOf(\''+x.id+'\'))">📋 복사</button>'+
+          (aoCanCommand()&&x.dept!=='knowledge'?'<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="aoToKnow(\''+x.id+'\')">📚 지식으로</button>':'')+
+        '</div></div></details>';
+    }).join('');
+  }
+  h+='</div></div>';
+  return h;
+}
+function aoBodyOf(id){var r=AO.rows.filter(function(x){return x.id===id;})[0];return r?(r.body||''):'';}
+
+/* ── 아이디어 (열람 전원 · 승인/해지 대표) ── */
+function aoIdeasHtml(){
+  if(!AO.ideas.length)return '';
+  return '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">💡</span>아이디어 <span class="badge">'+AO.ideas.length+'건</span></div>'+
+    '<div class="card-desc">'+(aoCanCommand()?'승인하면 남고, 해지하면 사라집니다.':'대표가 승인한 아이디어만 남습니다.')+'</div></div><div class="card-body">'+
+    AO.ideas.map(function(x){
+      var ok=x.status==='approved';
+      return '<div style="border:1px solid '+(ok?'#BBF7D0':'var(--ink-8)')+';background:'+(ok?'#F0FDF4':'#fff')+';border-radius:11px;padding:12px 14px;margin-bottom:8px">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+          '<span style="font-size:12.8px;font-weight:800;color:var(--ink-1)">'+osEsc(x.title||'')+'</span>'+
+          '<span style="font-size:10.5px;color:var(--ink-5)">'+osEsc(x.dept_name||'')+'</span>'+
+          (ok?'<span style="font-size:10px;font-weight:800;color:#15803D;background:#DCFCE7;border-radius:999px;padding:2px 8px">승인됨</span>':'')+
+        '</div>'+
+        (x.body?'<div style="font-size:12px;color:var(--ink-3);line-height:1.65;margin-top:5px">'+osEsc(x.body)+'</div>':'')+
+        (x.expected_effect?'<div style="font-size:11.5px;color:#1A56DB;font-weight:700;margin-top:4px">기대효과 — '+osEsc(x.expected_effect)+'</div>':'')+
+        (aoCanCommand()&&!ok?'<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" style="padding:5px 12px;font-size:11px" onclick="adIdea(\''+x.id+'\',true)">승인</button>'+
+          '<button class="btn btn-ghost" style="padding:5px 12px;font-size:11px;color:#B91C1C" onclick="adIdea(\''+x.id+'\',false)">해지</button></div>':'')+
+      '</div>';
+    }).join('')+'</div></div>';
+}
+
+function aoRender(){
+  var b=$('aoBody');if(!b)return;
+  if(!AO.loaded){b.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>불러오는 중…</div>';return;}
+  if(AO.err&&/ai_dept_reports|does not exist|schema cache/i.test(JSON.stringify(AO.err))){
+    b.innerHTML='<div class="osrv-warn">AI 기록 테이블을 읽지 못했습니다 — 설정 → 🩺 시스템 자가진단의 복구 SQL을 실행해 주세요.<br><span style="font-size:11px">'+osEsc((AO.err.message||''))+'</span></div>';return;}
+  var kn=AO.rows.filter(function(x){return x.dept==='knowledge';}).length;
+  var head='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px">'+
+    '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">전체 기록</div><div style="font-size:22px;font-weight:900;color:#1A56DB;margin-top:3px">'+AO.rows.length+'건</div></div>'+
+    '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">축적 지식</div><div style="font-size:22px;font-weight:900;color:#059669;margin-top:3px">'+kn+'건</div></div>'+
+    '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">아이디어</div><div style="font-size:22px;font-weight:900;color:#D97706;margin-top:3px">'+AO.ideas.length+'건</div></div>'+
+    '<div class="card" style="margin:0;padding:13px"><div style="font-size:11px;font-weight:800;color:var(--ink-4)">성장 단계</div><div style="font-size:22px;font-weight:900;color:#7C3AED;margin-top:3px">Lv.'+Math.max(1,Math.min(9,Math.floor(kn/3)+1))+'</div></div>'+
+  '</div>';
+  b.innerHTML=head+aoDeptCards()+aoCommandBox()+aoAskBox()+aoTimeline()+aoIdeasHtml();
+}
+
+/* ── 실행 ── */
+function aoFacts(){
+  var sb=osClient();var d30=(typeof tdAgo==='function')?tdAgo(29):'';
+  return Promise.all([
+    sb.from('profiles').select('id,name,active,status,workspace'),
+    sb.from('clients').select('id,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
+    sb.from('reports').select('kind,created_at').gte('created_at',d30+'T00:00:00')
+  ]).then(function(r){
+    var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false&&x.workspace!=='crm'&&(x.status==null||x.status==='approved');});
+    var cli=(r[1]&&r[1].data)||[],rep=(r[2]&&r[2].data)||[],att=(r[3]&&r[3].data)||[],brf=(r[4]&&r[4].data)||[];
+    return '[최근 30일 실제 데이터]\n· APEX 승인 회원 '+profs.length+'명\n· 신규 고객 '+cli.length+'건\n· 상담자료 '+rep.length+'건\n'+
+      '· 출근 '+att.length+'회(1인 평균 '+(profs.length?Math.round(att.length/profs.length):0)+'회)\n· 보고서 '+brf.length+'건';
+  });
+}
+function aoKb(){return (typeof brainKbGet==='function')?(brainKbGet()||''):'';}
+function aoTone(){
+  return '규칙: ① 주어진 실제 데이터만 근거로 삼고 없는 숫자를 지어내지 마라. ② AI 티 나는 말투 금지("~인 것 같습니다","도움이 되길 바랍니다" 금지) — 실무자처럼 짧고 단정하게. ③ 보험 관련 제안은 금융소비자보호법 준수를 전제로 쓴다.';
+}
+function aoRunMeeting(){
+  if(!aoCanCommand()){toast('명령은 대표만 할 수 있습니다');return;}
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  AO.busy='meet';aoRender();
+  aoFacts().then(function(facts){
+    var kb=aoKb();
+    var sys='너는 APEX YUN PRO의 AI 임원 회의 서기다. 6개 부서(영업지원·상담설계·교육·콘텐츠·운영·준법)가 오늘 회의한 것처럼 회의록을 쓴다.\n'+aoTone()+
+      '\n\n# 형식\n## 1. 오늘의 결론 (3줄)\n## 2. 부서별 보고\n각 부서 [현황][문제][제안] 각 1줄\n## 3. 실행 과제\n- [담당부서] 과제 — 이유 한 줄\n## 4. 아이디어 3개\n"IDEA | 부서 | 제목 | 기대효과" 형식 한 줄씩'+
+      (kb?'\n\n[대표의 지식·관점 — 최우선 반영]\n'+kb.slice(0,2500):'');
+    return callAI(sys,facts,2600,'ai_meeting');
+  }).then(function(txt){
+    return osClient().from('ai_dept_reports').upsert({dept:'meeting',dept_name:'전체 회의',period:'daily',
+      ref_date:aoToday(),title:aoToday()+' 전체 회의록',body:txt},{onConflict:'dept,period,ref_date'});
+  }).then(function(){AO.busy='';toast('회의록을 정리했습니다');aoLoad();},
+          function(e){AO.busy='';toast('실패: '+((e&&e.message)||'AI 연결 확인'));aoRender();});
+}
+function aoRunDepts(){
+  if(!aoCanCommand()){toast('명령은 대표만 할 수 있습니다');return;}
+  if(typeof adRun==='function'){AO.busy='depts';aoRender();
+    try{adRun();}catch(e){}
+    setTimeout(function(){AO.busy='';aoLoad();},1200);
+    return;}
+  toast('부서 보고 기능을 찾을 수 없습니다');
+}
+function aoRunOrder(){
+  if(!aoCanCommand()){toast('명령은 대표만 할 수 있습니다');return;}
+  var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
+  var dept=($('aoDept')||{value:'sales'}).value, order=(($('aoOrder')||{value:''}).value||'').trim();
+  if(!order){toast('지시 내용을 적어주세요');return;}
+  var depts=(typeof AI_DEPTS!=='undefined')?AI_DEPTS:[];
+  var D=depts.filter(function(x){return x.id===dept;})[0]||{ic:'🤖',n:'AI팀',role:''};
+  AO.busy='order';aoRender();
+  var kb=aoKb();
+  var sys='너는 APEX YUN PRO의 '+D.n+' 책임자다. 역할: '+D.role+'.\n대표의 지시를 받고 바로 쓸 수 있는 결과물을 낸다.\n'+aoTone()+
+    '\n\n# 형식\n## 이해한 지시\n한 줄\n## 실행 계획\n3~5단계\n## 결과물\n바로 복사해 쓸 수 있는 내용\n## 대표에게 요청\n1~2개'+
+    (kb?'\n\n[대표의 지식·관점 — 최우선 반영]\n'+kb.slice(0,2500):'');
+  callAI(sys,order,2200,'ai_order').then(function(txt){
+    return sb.from('ai_dept_reports').insert({dept:'order',dept_name:D.ic+' '+D.n,period:'order',
+      ref_date:aoToday(),title:order.slice(0,60),body:txt});
+  }).then(function(){AO.busy='';toast('지시를 처리했습니다');var e=$('aoOrder');if(e)e.value='';aoLoad();},
+          function(e){AO.busy='';toast('실패: '+((e&&e.message)||'AI 연결 확인'));aoRender();});
+}
+function aoRunAsk(){
+  var q=(($('aoAsk')||{value:''}).value||'').trim();
+  if(!q){toast('궁금한 것을 적어주세요');return;}
+  AO.asking=true;AO.ask=q;aoRender();
+  var ctx=AO.rows.slice(0,14).map(function(x){
+    return '['+(x.dept_name||x.dept)+' · '+(x.ref_date||'')+'] '+(x.title||'')+'\n'+(''+(x.body||'')).slice(0,900);
+  }).join('\n\n---\n\n');
+  var kb=aoKb();
+  var sys='너는 APEX YUN PRO의 사내 지식 안내자다. 아래 [축적 기록]에 있는 내용만 근거로 답한다.\n'+aoTone()+
+    '\n④ 기록에 없는 내용은 "아직 기록에 없습니다"라고 분명히 말하고 추측하지 마라. ⑤ 답은 5줄 이내로 짧게, 근거가 된 기록의 부서·날짜를 괄호로 표시하라.'+
+    (kb?'\n\n[대표의 지식·관점]\n'+kb.slice(0,1800):'');
+  callAI(sys,'[축적 기록]\n'+(ctx||'(기록 없음)')+'\n\n[질문]\n'+q,1200,'ai_ask').then(function(txt){
+    AO.asking=false;AO.answer=txt;aoRender();
+    var e=$('aoAsk');if(e)e.value='';
+  },function(e){AO.asking=false;AO.answer='';toast('실패: '+((e&&e.message)||'AI 연결 확인'));aoRender();});
+}
+function aoToKnow(id){
+  if(!aoCanCommand()){toast('지식 저장은 대표만 할 수 있습니다');return;}
+  var r=AO.rows.filter(function(x){return x.id===id;})[0];if(!r)return;
+  var sb=osClient();if(!sb)return;
+  if(!confirm('이 내용을 회사 지식으로 저장할까요?\n저장하면 윤시현의 두뇌에 반영되어 앞으로 모든 AI 답변이 참고합니다.'))return;
+  sb.from('ai_dept_reports').insert({dept:'knowledge',dept_name:r.dept_name||'회의 결론',period:'knowledge',
+    ref_date:aoToday(),title:r.title||'지식',body:r.body||''}).then(function(rr){
+      if(rr&&rr.error){toast('저장 실패: '+(rr.error.message||''));return;}
+      if(typeof amSyncBrain==='function')amSyncBrain(r.body||'');
+      toast('📚 지식으로 저장했습니다');aoLoad();
+    });
 }
 
 var AI_DEPTS=[
