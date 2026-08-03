@@ -8556,6 +8556,8 @@ function renderSettings(){
 
     osDiagCardHtml()+
 
+    osTierPreviewCardHtml()+
+
     osOwnerCardHtml()+
 
     osPayAdminCardHtml()+
@@ -10300,9 +10302,20 @@ function osOwnerCardHtml(){
 }
 /* 현재 역할(미로그인은 설계사 기준으로 기존 도구 회귀 방지) */
 function osRole(){return (OS.profile&&OS.profile.role)||'member';}
-function osIsLead(r){r=r||osRole();return r==='leader'||r==='branch_manager'||r==='admin';}
-function osIsHQ(r){r=r||osRole();return r==='branch_manager'||r==='admin';}
-function osIsEdu(r){r=r||osRole();return r==='education_manager'||r==='admin';}
+/* DB에는 master·manager·lead·owner 등 여러 role 이 들어간다.
+   도구 노출 판정은 내부 4종(member/leader/education_manager/branch_manager)으로만 하므로
+   반드시 정규화한다. 정규화가 없으면 목록에서 통째로 빠져 '권한을 줘도 안 보이는' 사고가 난다. */
+function osRoleNorm(r){
+  r=(''+(r||osRole())).toLowerCase();
+  if(r==='admin'||r==='owner')return 'branch_manager';
+  if(r==='master'||r==='branch_manager'||r==='hq')return 'branch_manager';
+  if(r==='education_manager'||r==='edu')return 'education_manager';
+  if(r==='leader'||r==='lead'||r==='manager')return 'leader';
+  return 'member';
+}
+function osIsLead(r){r=osRoleNorm(r);return r==='leader'||r==='branch_manager';}
+function osIsHQ(r){r=osRoleNorm(r);return r==='branch_manager';}
+function osIsEdu(r){r=osRoleNorm(r);return r==='education_manager'||r==='branch_manager';}
 /* ════════ 도구 접근 권한(구분별 개방) — 관리자 제어 ════════
    기본값은 기존 노출과 100% 동일(폴백). 관리자가 구분(그룹)별로 어떤 직급까지
    열지 지정하면 그 값이 우선한다. 관리자는 항상 전체를 본다.
@@ -10332,7 +10345,19 @@ function osPlanToTier(plan){ /* profiles.plan → 카테고리 id */
 function osPlanExpired(pf){
   try{var u=pf&&pf.plan_until;if(!u)return false;var d=new Date(u);if(isNaN(d.getTime()))return false;return d.getTime()<Date.now();}catch(e){return false;}
 }
-function osMyTier(){var pf=OS.profile;if(!pf)return 'free';if(pf.role==='admin'||pf.role==='owner')return 'vip';if(osPlanExpired(pf))return 'free';return osPlanToTier(pf.plan);}
+/* 기본 등급 — 등급이 지정되지 않은 기존 회원이 아무것도 못 보는 사고를 막는다.
+   대표가 설정에서 바꿀 수 있고, 값이 없으면 '프로'로 연다. */
+function osDefaultTier(){
+  var v=(typeof osCfgGet==='function')?osCfgGet('default_tier','pro'):'pro';
+  return osTierById(v)?v:'pro';
+}
+function osMyTier(){
+  var pf=OS.profile;if(!pf)return 'free';
+  if(pf.role==='admin'||pf.role==='owner'||pf.role==='master')return 'vip';
+  if(osPlanExpired(pf))return 'free';
+  if(!pf.plan)return osDefaultTier();      /* 미지정 = 기본 등급 */
+  return osPlanToTier(pf.plan);
+}
 /* 그룹별 기본 요구 등급 — 운영자가 설정에서 바꾸면 그 값이 우선 */
 var OS_GROUP_TIER_DEFAULT={
  '성장·교육':'basic','윤시스쿨':'basic','보험 해석':'basic','계약관리':'basic','재무설계':'basic',
@@ -10361,8 +10386,11 @@ var OS_OWNER_GROUPS={'시스템 설정':1};
 function visibleTabs(role){
   role=role||osRole();
   var list;
-  if(role==='admin'||role==='owner')list=TABS.slice();
-  else{var myT=osMyTier();list=TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(role)>=0 && osGroupTierOk(g,myT);});}
+  if(role==='admin'||role==='owner'||osIsAppAdmin())list=TABS.slice();
+  else{
+    var myT=osMyTier(), nr=osRoleNorm(role);
+    list=TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(nr)>=0 && osGroupTierOk(g,myT);});
+  }
   if(!osIsOwner())list=list.filter(function(g){return !OS_OWNER_GROUPS[osAccessKey(g)];});
   if(!osNotionAllowed()){
     list=list.map(function(g){
@@ -10591,14 +10619,29 @@ function osAudit(action,entity,entityId,meta){
 function osLoadProfile(){
   var sb=osClient();if(!sb||!OS.session){OS.profile=null;osRenderPill();return;}
   var uid=OS.session.user&&OS.session.user.id;
-  sb.from('profiles').select('id,name,role,active,team_id').eq('id',uid).single().then(function(r){
+  sb.from('profiles').select('id,name,role,active,team_id,plan,plan_until,status,workspace').eq('id',uid).single().then(function(r){
+    if(r&&r.error){
+      /* 새 컬럼이 없는 경우를 대비한 하위호환 재시도 */
+      sb.from('profiles').select('id,name,role,active,team_id').eq('id',uid).single().then(function(r2){osProfileApply(sb,uid,r2);});
+      return;
+    }
+    osProfileApply(sb,uid,r);
+  });
+}
+function osProfileApply(sb,uid,r){
     if(r.error||!r.data){OS.profile=null;osRenderPill();return;}
     if(r.data.active===false){toast('비활성화된 계정입니다. 관리자에게 문의하세요.');sb.auth.signOut();return;}
     var prof=r.data;
     /* 승인 게이트: status 컬럼이 있을 때만 작동(없으면 하위호환으로 통과). 관리자·거절 우회 없음 */
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
-      OS.profile=prof;if(extra){OS.profile.status=extra.status;OS.profile.plan=extra.plan;OS.profile.plan_until=extra.plan_until;}
+      OS.profile=prof;
+      /* 보조 조회 결과는 값이 있을 때만 덮어쓴다(없는 값으로 등급을 지우지 않도록) */
+      if(extra){
+        if(extra.status!=null)OS.profile.status=extra.status;
+        if(extra.plan!=null)OS.profile.plan=extra.plan;
+        if(extra.plan_until!=null)OS.profile.plan_until=extra.plan_until;
+      }
       osCfgLoad(function(){
         osIpGuardCheck(function(ipOk){
           if(!ipOk){OS.profile=null;osRenderPill();osShowIpBlock();return;}
@@ -10606,7 +10649,6 @@ function osLoadProfile(){
         });
       });
     });
-  });
 }
 /* status/plan을 별도 best-effort 조회 — 컬럼이 없으면 조용히 통과(로그인을 절대 깨지 않음) */
 function osCheckApproval(sb,uid,cb){
@@ -11651,6 +11693,53 @@ function osApprovalCardHtml(){
 /* ════════ 팀원 권한 관리 — 등급·팀 지정 + 앱 관리자 권한 부여/회수 ════════
    DB 통합 CRM의 '마스터'(CRM 전체 열람)는 여기가 아니라 db-crm.html 팀 관리에서만 지정한다. ════════
    같은 Supabase 프로젝트를 쓰므로 CRM은 전혀 건드리지 않는다. RLS(profiles_admin_all/update)+가드가 관리자 변경을 허용. */
+/* 등급·역할을 실제로 넣어 보고 무엇이 보이는지 그대로 계산한다 */
+function osTierPreview(tierId,roleId){
+  var bak=OS.profile;
+  OS.profile={id:'preview',role:roleId||'member',plan:tierId,status:'approved',active:true};
+  var out=[];
+  try{out=visibleTabs(roleId||'member').map(function(g){return g.group;});}catch(e){}
+  OS.profile=bak;
+  return out;
+}
+function osTierSetDefault(v){
+  if(typeof osCfgSet!=='function'){toast('서버 연결이 필요합니다');return;}
+  osCfgSet('default_tier',v,function(){toast('등급 미지정 회원의 기본 등급을 "'+((osTierById(v)||{}).label||v)+'"(으)로 정했습니다');go('settings');});
+}
+function osTierPreviewCardHtml(){
+  if(!osIsAppAdmin())return '';
+  var cur=osDefaultTier();
+  var roles=OS_ROLE_COLS;
+  var head='<tr><th style="text-align:left;padding:7px 8px;font-size:11px;color:var(--ink-4)">등급</th>'+
+    roles.map(function(r){return '<th style="text-align:center;padding:7px 8px;font-size:11px;color:var(--ink-4)">'+osEsc(r[1])+'</th>';}).join('')+'</tr>';
+  var body=OS_TIERS.map(function(t){
+    return '<tr style="border-top:1px solid var(--ink-8)">'+
+      '<td style="padding:8px;white-space:nowrap">'+osTierBadge(t.id)+'</td>'+
+      roles.map(function(r){
+        var n=osTierPreview(t.id,r[0]).length;
+        return '<td style="text-align:center;padding:8px;font-size:12.5px;font-weight:800;color:'+(n?'#1A56DB':'#B91C1C')+'">'+n+'개</td>';
+      }).join('')+'</tr>';
+  }).join('');
+  var sample=osTierPreview(cur,'member');
+  return '<div class="card set-card" style="border-color:#FDE68A"><div class="card-hd" style="background:#FFFBEB">'+
+    '<div class="card-title"><span class="ci">🎫</span>등급별 노출 점검 <span class="badge">관리자</span></div>'+
+    '<div class="card-desc">등급·직급 조합마다 <b>실제로 몇 개 메뉴가 보이는지</b> 계산해서 보여줍니다. 0개면 그 조합은 아무것도 못 봅니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="border:1px solid #C7D2FE;background:#F8FAFF;border-radius:11px;padding:11px 13px;margin-bottom:12px">'+
+      '<div style="font-size:12px;font-weight:800;color:#3730A3;margin-bottom:5px">🔑 등급 미지정 회원의 기본 등급</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:9px">등급을 따로 정하지 않은 <b>기존 회원</b>은 이 등급으로 열립니다. 아무도 빈 화면을 보지 않게 하는 안전장치입니다.</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+        OS_TIERS.map(function(t){
+          var on=cur===t.id;
+          return '<button class="btn '+(on?'btn-primary':'btn-ghost')+'" style="padding:7px 13px;font-size:11.5px" onclick="osTierSetDefault(\''+t.id+'\')">'+osEsc(t.label)+(on?' ✓':'')+'</button>';
+        }).join('')+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:8px">지금 기준 — 설계사가 보게 되는 메뉴 <b>'+sample.length+'개</b>'+(sample.length?': '+osEsc(sample.slice(0,8).join(' · '))+(sample.length>8?' 외':''):' <span style="color:#B91C1C">(아무것도 안 보입니다 — 등급을 올리세요)</span>')+'</div>'+
+    '</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+
+    '<div class="notice" style="margin-top:11px;font-size:11px;line-height:1.7">숫자가 <b>0개</b>인 칸은 그 등급·직급 조합이 <b>빈 화면</b>을 본다는 뜻입니다. 위 <b>도구 접근 권한</b>에서 그룹별 요구 등급을 낮추거나, 해당 회원의 등급을 올리세요. 관리자·대표는 항상 전체를 봅니다.</div>'+
+    '</div></div>';
+}
 function osMembersCardHtml(){
   if(!osIsAppAdmin())return '';
   return '<div class="card set-card" style="border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>팀원 권한 관리 <span class="badge">관리자</span></div>'+
@@ -11775,7 +11864,10 @@ function osMemberRowHtml(p,me,top){
   var isM=p.role==='admin',mine=(p.id===me);
   var rolePill=osPillHtml(osRoleLabel(p.role),isM?'#DCFCE7':'#F1F5F9',isM?'#15803D':'#475569');
   var statPill=p.status==='pending'?osPillHtml('승인대기','#FEF3C7','#B45309'):(p.status==='rejected'?osPillHtml('거절됨','#FEE2E2','#B91C1C'):osPillHtml('이용중','#E0F2FE','#0369A1'));
-  var tierPill=osTierBadge(osPlanToTier(p.plan));
+  var effTier=p.plan?osPlanToTier(p.plan):osDefaultTier();
+  var seeN=(p.role==='admin'||p.role==='owner'||p.role==='master')?'전체':osTierPreview(effTier,p.role).length+'개';
+  var tierPill=osTierBadge(effTier)+(p.plan?'':'<span style="font-size:9.5px;color:var(--ink-5);margin-left:3px">기본</span>')+
+    '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;background:'+(seeN==='0개'?'#FEE2E2':'#F1F5F9')+';color:'+(seeN==='0개'?'#B91C1C':'#475569')+';margin-left:4px" title="이 회원이 실제로 보게 되는 메뉴 수">보임 '+seeN+'</span>';
   var tierCtrl=isM?'<span style="font-size:10.5px;color:var(--ink-5)">전체개방</span>':('<select onchange="osSetTier(\''+p.id+'\',this.value)" title="카테고리(등급) 지정" style="font-size:11px;padding:5px 7px;border:1px solid var(--ink-7);border-radius:8px;background:#fff;cursor:pointer">'+OS_TIERS.map(function(t){var cur=osPlanToTier(p.plan)===t.id;return '<option value="'+t.id+'"'+(cur?' selected':'')+'>'+osEsc(t.label)+'</option>';}).join('')+'</select>');
   var ctrl=mine?'<span style="font-size:11px;color:var(--ink-5)">본인</span>':(isM
     ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetMaster(\''+p.id+'\',false)">앱 관리자 해제</button>'
