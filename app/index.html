@@ -1253,8 +1253,8 @@ function _claudeRun(system,messages,cap,forceKey){
   }
   return step();
 }
-function osByokSave(){var v=(osVal('setByok')||'').replace(/^\s+|\s+$/g,'');if(!v){toast('내 API 키를 입력하세요');return;}if(!/^sk-ant-/.test(v)){toast('Claude 키 형식(sk-ant-...)이 맞는지 확인하세요');}setPersonalKeyVal(v);toast('내 백업 API 키를 저장했습니다 — 공용 한도가 차면 자동으로 이 키로 이어집니다.');go('settings');}
-function osByokClear(){setPersonalKeyVal('');toast('내 백업 API 키를 삭제했습니다.');go('settings');}
+function osByokSave(){var v=(osVal('setByok')||'').replace(/^\s+|\s+$/g,'');if(!v){toast('내 API 키를 입력하세요');return;}if(!/^sk-ant-/.test(v)){toast('Claude 키 형식(sk-ant-...)이 맞는지 확인하세요');}setPersonalKeyVal(v);toast('내 백업 API 키를 저장했습니다 — 공용 한도가 차면 자동으로 이 키로 이어집니다.');osSetReload();}
+function osByokClear(){setPersonalKeyVal('');toast('내 백업 API 키를 삭제했습니다.');osSetReload();}
 function osByokCardHtml(){
   if(!OS.profile)return '';
   var has=getPersonalKey();
@@ -1334,8 +1334,8 @@ function osSecurityCardsHtml(){
   return ipCard+limCard;
 }
 function osIpGuardSet(on){
-  if(on){osIpSelfApprove(function(){osCfgSet('ip_guard','on',function(){go('settings');});});}
-  else{osCfgSet('ip_guard','off',function(){go('settings');});}
+  if(on){osIpSelfApprove(function(){osCfgSet('ip_guard','on',function(){osSetReload();});});}
+  else{osCfgSet('ip_guard','off',function(){osSetReload();});}
 }
 function osIpSelfApprove(cb){
   var sb=osClient(),uid=OS.profile&&OS.profile.id;if(!sb||!uid){if(cb)cb();return;}
@@ -1640,7 +1640,7 @@ function brainSaveKb(){var t=$('brainKb');if(!t)return;brainKbSet(t.value);toast
 function brainKbBadge(){var n=brainKbGet().length;return n?('<span class="badge green">저장됨 · '+n.toLocaleString()+'자</span>'):'<span class="badge amber">비어 있음</span>';}
 function brainKbToggle(){var e=$('brainKbBox');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
 function brainSys(){var kb=brainKbGet();var base='너는 "윤시현의 두뇌" — 윤시현 사업단장의 제2의 두뇌다. 보험·재무설계 상담, 세일즈 심리, 반론 처리, 화법, 마케팅, 팀 관리, 자기경영까지 — 어떤 질문이든 윤시현의 관점·전략·화법으로 실전적으로 답한다.\n[답변 원칙]\n- 두괄식으로 핵심 결론을 먼저, 그다음 근거·단계·바로 쓸 수 있는 예시(화법/문구)를 준다.\n- 애매하게 원론만 말하지 말고 구체적으로.\n- 표·번호목록·콜아웃으로 구조화.\n- 보험 관련은 치료비 통장·8통장 프레임 활용.\n- 준법: 확정 수익·지급 보장·과장 표현 금지. 고객 발송/게시용 문구는 "게시 전 준법감시 확인" 덧붙임.\n- 모르는 사실/수치는 지어내지 말고 "확인 필요".';if(kb)base+='\n\n[윤시현이 축적한 지식·프롬프트 — 최우선 지침·지식으로 삼아 답한다]\n'+kb;return sys(base);}
-function brainAsk(q){if(BRAIN.busy)return;var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');go('settings');return;}BRAIN.busy=true;if(ta)ta.value='';BRAIN.hist.push({q:q,a:null});brainRenderThread();var ctx='';var prev=BRAIN.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n';}var user=ctx+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';callAI(brainSys(),user,6000,'brain').then(function(out){var last=BRAIN.hist[BRAIN.hist.length-1];last.a=out;last.eng=engBadge();last.note=engNotice();BRAIN.busy=false;brainRenderThread();}).catch(function(e){BRAIN.hist[BRAIN.hist.length-1].a='__ERR__'+((e&&e.message)||'오류');BRAIN.busy=false;brainRenderThread();});}
+function brainAsk(q){if(BRAIN.busy)return;var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');osSetReload();return;}BRAIN.busy=true;if(ta)ta.value='';BRAIN.hist.push({q:q,a:null});brainRenderThread();var ctx='';var prev=BRAIN.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n';}var user=ctx+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';callAI(brainSys(),user,6000,'brain').then(function(out){var last=BRAIN.hist[BRAIN.hist.length-1];last.a=out;last.eng=engBadge();last.note=engNotice();BRAIN.busy=false;brainRenderThread();}).catch(function(e){BRAIN.hist[BRAIN.hist.length-1].a='__ERR__'+((e&&e.message)||'오류');BRAIN.busy=false;brainRenderThread();});}
 function brainRenderThread(){var el=$('brainThread');if(!el)return;var h='';BRAIN.hist.forEach(function(t,i){h+='<div style="margin:0 0 6px;display:flex;justify-content:flex-end"><div style="max-width:86%;background:#1A56DB;color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:13.5px;line-height:1.6;white-space:pre-wrap">'+esc(t.q)+'</div></div>';if(t.a===null){h+='<div style="margin:0 0 16px"><div class="loading" style="padding:12px"><div class="spinner"></div>두뇌가 생각하는 중…</div></div>';}else if(typeof t.a==='string'&&t.a.indexOf('__ERR__')===0){h+='<div style="margin:0 0 16px"><div class="err-box">⚠️ '+esc(t.a.slice(7))+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.</div></div>';}else{h+='<div style="margin:0 0 16px"><div style="background:#fff;border:1px solid #E5E9F0;border-radius:14px 14px 14px 4px;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#F5F9FF;border-bottom:1px solid #E5E9F0"><span style="font-size:11px;font-weight:800;color:#1A56DB">🧠 윤시현의 두뇌</span><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+(t.eng||'')+'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="copyText((BRAIN.hist['+i+']||{}).a||\'\')">📋 복사</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportWord('+i+')">📄 Word</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportPpt('+i+')">📊 PPT</button></span></div>'+(t.note||'')+'<div class="result-body" style="padding:12px 14px">'+renderMd(t.a)+'</div></div></div>';}});el.innerHTML=h;el.scrollTop=el.scrollHeight;}
 function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none"><div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">제2의 두뇌 · SECOND BRAIN</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🧠 윤시현의 두뇌</div><div style="font-size:12.5px;opacity:.9;margin-top:8px;line-height:1.6">상담·세일즈·화법·마케팅·팀관리·자기경영 — 무엇이든 물어보세요. 윤시현의 관점·전략·화법으로 바로 쓸 수 있게 답합니다. 아래 <b>두뇌에 지식 추가</b>에 평소 쓰던 프롬프트·노하우를 넣을수록 더 당신처럼 답합니다.</div></div>';var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:10.5px;color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:13.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:10.5px;color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';return osPage('상담 AI 코치','윤시현의 두뇌','당신의 관점·전략·화법을 담은 제2의 두뇌입니다. 무엇이든 물어보세요.',hero+renderConsult()+kb+ask);}
 function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread();}
@@ -1655,7 +1655,7 @@ function insSys(){
 function insAsk(q){
   if(INS.busy)return;var ta=$('insQ');q=(q||(ta?ta.value:'')||'').trim();
   if(!q){toast('궁금한 보험 내용을 입력하세요');return;}
-  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 보험 비서가 답합니다.');go('settings');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 보험 비서가 답합니다.');osSetReload();return;}
   INS.busy=true;if(ta)ta.value='';INS.hist.push({q:q,a:null});insRenderThread();
   var ctx='';var prev=INS.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,500));}).join('\n---\n')+'\n\n';}
   var user=ctx+'[질문]\n'+q+'\n\nAPEX 보험 비서로서, 약관·심사가 최종임을 전제로 정확하고 실전적으로 답해줘.';
@@ -1781,7 +1781,7 @@ function factDelete(id){
 }
 function factSys(){var kb=(typeof brainKbGet==='function')?brainKbGet():'';var base='너는 "윤시현의 두뇌" 재무설계 컨설팅 엔진이다. 상담카드(팩트파인딩)를 근거로 고객의 니즈를 분석하고, 보험·연금뿐 아니라 정책자금·세제까지 고려한 우선순위와 상담 설계를 제시한다.\n[원칙]\n- 팩트파인딩의 사실만 근거로. 없는 수치는 지어내지 말고 "확인 필요" 또는 합리적 (가정)으로 표기.\n- 보험료·연금액은 시장 통상범위의 (예상/추정)으로, 정확값은 "설계 필요".\n- 치료비 통장·8통장 프레임 활용. 표·번호목록·콜아웃(>)으로 구조화.\n- 준법: 확정 수익·지급 보장·절세 단정 금지. 정책자금·대출은 조건·심사 전제. 고객 발송용은 "발송 전 준법감시 확인". 적합성 원칙(금융소비자보호법) 준수.';if(kb)base+='\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb;return sys(base);}
 function factAnalyze(){
-  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 니즈분석이 작동합니다.');go('settings');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 니즈분석이 작동합니다.');osSetReload();return;}
   var o=factReadForm();var filled=0;FACT_FIELDS.forEach(function(f){if(o[f.id])filled++;});
   if(filled<2){toast('팩트파인딩을 최소 2개 이상 입력해주세요.');return;}
   if(FACT.busy)return;FACT.busy=true;
@@ -1839,7 +1839,7 @@ function renderConsult(){
 function consultClear(){CONSULT_FIELDS.forEach(function(f){var e=$('cf_'+f.id);if(e)e.value='';});document.querySelectorAll('[data-ccat]').forEach(function(b){b.classList.remove('on');});var r=$('consultRes');if(r){r.innerHTML='';r.classList.remove('on');}}
 function consultSys(){var kb=brainKbGet();var base='너는 "윤시현의 두뇌" 재무설계 컨설팅 엔진이다. 팩트파인딩(고객 정보)을 근거로 보험뿐 아니라 나라 정책자금·은행·세제까지 아우르는 종합 재무 솔루션과 보험 포트폴리오(연금·건강·사망보장)를 섬세하게 설계한다.\n[원칙]\n- 팩트파인딩의 사실만 근거로. 없는 수치는 지어내지 말고 "확인 필요" 또는 합리적 (가정)으로 표기.\n- 보험료·연금액은 시장 통상범위의 (예상/추정)으로 제시하고 정확값은 "설계 필요"로 명시.\n- 치료비 통장·8통장 프레임 활용. 표·번호목록·콜아웃(>)으로 구조화.\n- 준법: 확정 수익·지급 보장·절세 단정 금지. 정책자금·대출은 조건·심사 전제, "신청조건·한도는 연도별 변동, 관계기관 확인" 단서. 고객 발송용은 "게시 전 준법감시 확인".';if(kb)base+='\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb;return sys(base);}
 function consultRun(){
- if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 컨설팅이 작동합니다.');go('settings');return;}
+ if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 컨설팅이 작동합니다.');osSetReload();return;}
  var cats=[];document.querySelectorAll('[data-ccat]').forEach(function(b){if(b.classList.contains('on')){var id=b.getAttribute('data-ccat');var c=CONSULT_CATS.filter(function(x){return x.id===id;})[0];if(c)cats.push(c);}});
  var vals={},filled=0;CONSULT_FIELDS.forEach(function(f){var e=$('cf_'+f.id);var v=e?e.value.replace(/^\s+|\s+$/g,''):'';vals[f.id]=v;if(v)filled++;});
  if(!cats.length){toast('상담 카테고리를 하나 이상 선택하세요');return;}
@@ -2197,9 +2197,9 @@ function osTossReturnCheck(){
 }
 /* ── 운영자: 토스페이먼츠 연결 설정(관리자 전용) ── */
 function osTossGetConfirm(){try{return localStorage.getItem('apex_toss_confirm_url')||'';}catch(e){return '';}}
-function osTossSaveKey(){var v=(osVal('setTossKey')||'').trim();if(!v){toast('클라이언트 키를 입력하세요');return;}setTossKeyVal(v);toast('토스 클라이언트 키를 저장했습니다.');go('settings');}
-function osTossClearKey(){setTossKeyVal('');toast('토스 클라이언트 키를 삭제했습니다.');go('settings');}
-function osTossSaveConfirm(){var v=(osVal('setTossConfirm')||'').trim();try{localStorage.setItem('apex_toss_confirm_url',v);}catch(e){}toast('결제 확인(승인) 주소를 저장했습니다.');go('settings');}
+function osTossSaveKey(){var v=(osVal('setTossKey')||'').trim();if(!v){toast('클라이언트 키를 입력하세요');return;}setTossKeyVal(v);toast('토스 클라이언트 키를 저장했습니다.');osSetReload();}
+function osTossClearKey(){setTossKeyVal('');toast('토스 클라이언트 키를 삭제했습니다.');osSetReload();}
+function osTossSaveConfirm(){var v=(osVal('setTossConfirm')||'').trim();try{localStorage.setItem('apex_toss_confirm_url',v);}catch(e){}toast('결제 확인(승인) 주소를 저장했습니다.');osSetReload();}
 var TOSS_FN_CODE=[
  '// netlify/functions/toss-confirm.js — 토스 결제 최종 승인 + 구독 자동 활성화(서버)',
  '// Netlify 환경변수: TOSS_SECRET_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
@@ -2536,9 +2536,9 @@ function osPayCfgSave(){
       if(r.error){toast('이 브라우저에 저장됨 · 팀 공유 실패: '+(r.error.message||''));}
       else{toast('결제 설정 저장 · 팀에 공유되었습니다.');}
       go('settings');
-    },function(){toast('이 브라우저에 저장되었습니다.');go('settings');});}
-    catch(e){toast('이 브라우저에 저장되었습니다.');go('settings');}
-  }else{toast('저장되었습니다.');go('settings');}
+    },function(){toast('이 브라우저에 저장되었습니다.');osSetReload();});}
+    catch(e){toast('이 브라우저에 저장되었습니다.');osSetReload();}
+  }else{toast('저장되었습니다.');osSetReload();}
 }
 function osPayCfgCardHtml(){
   if(!(osIsAppAdmin()))return '';
@@ -3118,7 +3118,8 @@ function go(tab){
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
-  $('main').scrollTop=0;
+  if(!(tab==='settings'&&typeof osScrollArmed==='function'&&osScrollArmed()))$('main').scrollTop=0;
+  if(tab!=='settings'&&typeof osScrollDisarm==='function')osScrollDisarm();
   try{if(window.history&&history.replaceState)history.replaceState(null,'','#'+tab);}catch(e){}
   if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
 }
@@ -3767,7 +3768,7 @@ function prFormInner(){
 /* ── 생성 ── */
 function prGen(){
   var name=(osVal('prName')||'고객님').replace(/^\s+|\s+$/g,'')||'고객님';
-  if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');osSetReload();return;}
   var mode=PR.mode;
   var nB=PR.files.before.length, nA=PR.files.after.length;
   if(mode==='explain'&&!nB){toast('분석할 증권·제안서를 첨부하세요');return;}
@@ -4082,7 +4083,7 @@ function prStat(label,val,sub,c){
 /* ── 현실 사례 이미지 생성 ── */
 function prGenImg(i,btn){
   var p=PR.plan;if(!p||!p.reality||!p.reality[i])return Promise.reject(new Error('no-data'));
-  if(typeof geminiReady!=='function'||!geminiReady()){toast('설정에서 Gemini 연결을 먼저 구성하세요');go('settings');return Promise.reject(new Error('no-gemini'));}
+  if(typeof geminiReady!=='function'||!geminiReady()){toast('설정에서 Gemini 연결을 먼저 구성하세요');osSetReload();return Promise.reject(new Error('no-gemini'));}
   var x=p.reality[i];
   var prompt='Documentary editorial photograph, muted natural light, Korean setting. '+
     (x.imgPrompt||x.headline||'a quiet moment of financial worry')+
@@ -5647,7 +5648,7 @@ function osTeamLeader(teamId,memberId){
 }
 function osGrowthScopeSet(v){
   if(typeof osCfgSet!=='function'){toast('서버 연결이 필요합니다');return;}
-  osCfgSet('growth_scope',v,function(){go('settings');});
+  osCfgSet('growth_scope',v,function(){osSetReload();});
 }
 function osGrowthScopeSave(v){
   if(typeof osCfgSet==='function')osCfgSet('growth_scope',v);
@@ -5824,7 +5825,7 @@ function osGwSummarize(){
   var missing=[];
   for(var k in GW.skips){if(GW.skips.hasOwnProperty(k)&&!(''+GW.skips[k]).trim())missing.push(parseInt(k,10)+1);}
   if(missing.length){toast('건너뛴 질문 Q'+missing.join(',Q')+'의 사유를 입력하세요.');return;}
-  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');osSetReload();return;}
   GW.busy=true;osGwSet();
   var lines=b.qs.map(function(q,i){
     if(GW.skips[i]!==undefined)return 'Q'+(i+1)+' '+q[0]+' → [건너뜀: '+GW.skips[i]+']';
@@ -8545,6 +8546,118 @@ function showRes(id,html,isErr){
 function copyRes(id){var res=$('res_'+id);copyText(res._raw||res.querySelector('.result-body').innerText||'');}
 
 /* ════════ 설정 ════════ */
+/* ════════ 설정 화면 — 스크롤 고정 + 카드 접기/펴기 ════════
+   등급 변경 등으로 화면을 다시 그려도 보던 위치를 그대로 유지하고,
+   길어진 설정을 카드 단위로 접어 둘 수 있게 한다. 접힘 상태는 이 브라우저에 기억된다. */
+var OS_SC_KEY='apex_set_scroll',OS_SC_ARM='apex_set_scroll_arm';
+function osScrollBox(){return document.querySelector('.main')||document.scrollingElement||document.documentElement;}
+function osScrollSave(){
+  try{var b=osScrollBox();if(b)sessionStorage.setItem(OS_SC_KEY,''+(b.scrollTop||0));}catch(e){}
+}
+/* 무장(arm) — 설정 안에서 값을 바꿔 다시 그리는 경우와 새로고침일 때만 위치를 되살린다.
+   왼쪽 메뉴로 설정에 새로 들어올 때는 무장되지 않으므로 맨 위에서 시작한다. */
+function osScrollArm(){try{sessionStorage.setItem(OS_SC_ARM,'1');}catch(e){}}
+function osScrollDisarm(){try{sessionStorage.removeItem(OS_SC_ARM);}catch(e){}}
+function osScrollArmed(){try{return sessionStorage.getItem(OS_SC_ARM)==='1';}catch(e){return false;}}
+function osScrollRestore(){
+  try{
+    if(!osScrollArmed())return;
+    var v=parseFloat(sessionStorage.getItem(OS_SC_KEY));
+    if(!isFinite(v)||v<=0){osScrollDisarm();return;}
+    var b=osScrollBox();if(!b)return;
+    var tries=0;
+    var tick=function(){
+      b.scrollTop=v;tries++;
+      if(tries<14&&Math.abs((b.scrollTop||0)-v)>2)requestAnimationFrame(tick);
+      else osScrollDisarm();
+    };
+    requestAnimationFrame(tick);
+  }catch(e){}
+}
+/* 설정 화면에 머무는 동안 위치를 계속 기록해 둔다 — 새로고침(F5)에도 살아남게 하기 위함 */
+function osScrollTrack(){
+  var b=osScrollBox();if(!b||b.__osScTrack)return;
+  b.__osScTrack=1;
+  var pend=false;
+  b.addEventListener('scroll',function(){
+    if(pend)return;pend=true;
+    requestAnimationFrame(function(){
+      pend=false;
+      if(lastTab==='settings')osScrollSave();
+    });
+  },{passive:true});
+  window.addEventListener('beforeunload',function(){
+    if(lastTab==='settings'){osScrollSave();osScrollArm();}
+  });
+}
+function osSetReload(){osScrollSave();osScrollArm();go('settings');}
+
+var OS_FOLD_KEY='apex_set_fold';
+function osFoldGet(){try{return JSON.parse(localStorage.getItem(OS_FOLD_KEY))||{};}catch(e){return {};}}
+function osFoldSet(m){try{localStorage.setItem(OS_FOLD_KEY,JSON.stringify(m||{}));}catch(e){}}
+function osFoldToggle(id){
+  var m=osFoldGet();m[id]=m[id]===1?0:1;osFoldSet(m);
+  var card=document.getElementById('fold_'+id);
+  if(card){
+    var on=m[id]===1;
+    card.classList.toggle('os-folded',on);
+    var ar=card.querySelector('.os-fold-ar');if(ar)ar.textContent=on?'▼':'▲';
+  }
+}
+function osFoldAll(fold){
+  var m={},cards=document.querySelectorAll('[data-foldid]');
+  for(var i=0;i<cards.length;i++){
+    var id=cards[i].getAttribute('data-foldid');
+    m[id]=fold?1:0;
+    cards[i].classList.toggle('os-folded',!!fold);
+    var ar=cards[i].querySelector('.os-fold-ar');if(ar)ar.textContent=fold?'▼':'▲';
+  }
+  osFoldSet(m);
+}
+function osFoldStyleOnce(){
+  if(document.getElementById('osFoldStyle'))return;
+  var st=document.createElement('style');st.id='osFoldStyle';
+  st.textContent=
+    '.set-card[data-foldid]>.card-hd{cursor:pointer;position:relative;padding-right:38px}'+
+    '.set-card[data-foldid]>.card-hd:hover{background:var(--ink-9)}'+
+    '.os-fold-ar{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink-5);font-weight:800}'+
+    '.set-card.os-folded>.card-body{display:none!important}'+
+    '.os-fold-bar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:0 0 12px}';
+  document.head.appendChild(st);
+}
+function osFoldApply(){
+  osFoldStyleOnce();
+  var pane=document.getElementById('dynPane');if(!pane)return;
+  var cards=pane.querySelectorAll('.card.set-card');
+  var m=osFoldGet(),seq=0,used={};
+  for(var i=0;i<cards.length;i++){
+    var c=cards[i];if(c.getAttribute('data-foldid'))continue;
+    var hd=c.querySelector('.card-hd');if(!hd)continue;
+    var t=(c.querySelector('.card-title')||{}).textContent||'';
+    /* 제목을 열쇠로 삼는다 — 카드 순서가 바뀌어도 접어둔 상태가 그대로 남는다 */
+    var base='c'+(t.replace(/[^가-힣A-Za-z0-9]/g,'').slice(0,18)||('card'+seq));
+    var id=base,k=2;while(used[id])id=base+'_'+(k++);
+    used[id]=1;seq++;
+    c.setAttribute('data-foldid',id);c.id='fold_'+id;
+    var ar=document.createElement('span');ar.className='os-fold-ar';ar.textContent=m[id]===1?'▼':'▲';
+    hd.appendChild(ar);
+    (function(id){hd.addEventListener('click',function(e){
+      if(e.target.closest('button,a,input,select,textarea'))return;
+      osFoldToggle(id);
+    });})(id);
+    if(m[id]===1)c.classList.add('os-folded');
+  }
+  if(!document.getElementById('osFoldBar')){
+    var first=pane.querySelector('.page-hd');
+    if(first){
+      var bar=document.createElement('div');bar.id='osFoldBar';bar.className='os-fold-bar';
+      bar.innerHTML='<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="osFoldAll(true)">⊟ 전부 접기</button>'+
+        '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="osFoldAll(false)">⊞ 전부 펴기</button>'+
+        '<span style="font-size:11px;color:var(--ink-5)">카드 제목을 눌러도 접힙니다</span>';
+      first.parentNode.insertBefore(bar,first.nextSibling);
+    }
+  }
+}
 function renderSettings(){
   if(typeof osIsOwner==='function'&&!osIsOwner())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div><div class="page-title">🔒 대표 전용</div><div class="page-desc">설정은 대표 계정만 볼 수 있습니다.</div></div></div>';
   var key=getKey();var masked=key?(key.slice(0,10)+'••••••••••••'+key.slice(-4)):'';
@@ -8759,26 +8872,26 @@ function renderSettings(){
   '</div>';
 }
 function setConn(m){LS.set('conn',m);updateKeyPill();go('settings');}
-function saveProxy(){var v=$('setProxy').value.trim();if(!v){toast('프록시 URL을 입력하세요');return;}LS.set('proxy',v);updateKeyPill();toast('프록시 저장됨');go('settings');}
-function clearProxy(){LS.del('proxy');updateKeyPill();toast('프록시 삭제됨');go('settings');}
-function saveAppToken(){var v=$('setAppToken').value.trim();if(!v){toast('토큰 값을 입력하세요');return;}LS.set('apptoken',v);toast('공유 토큰 저장됨');go('settings');}
-function clearAppToken(){LS.del('apptoken');toast('공유 토큰 삭제됨');go('settings');}
+function saveProxy(){var v=$('setProxy').value.trim();if(!v){toast('프록시 URL을 입력하세요');return;}LS.set('proxy',v);updateKeyPill();toast('프록시 저장됨');osSetReload();}
+function clearProxy(){LS.del('proxy');updateKeyPill();toast('프록시 삭제됨');osSetReload();}
+function saveAppToken(){var v=$('setAppToken').value.trim();if(!v){toast('토큰 값을 입력하세요');return;}LS.set('apptoken',v);toast('공유 토큰 저장됨');osSetReload();}
+function clearAppToken(){LS.del('apptoken');toast('공유 토큰 삭제됨');osSetReload();}
 function toggleGuide(){var g=$('keyGuide');if(g)g.style.display=g.style.display==='none'?'block':'none';}
-function saveKey(){var v=$('setKey').value.trim();if(!v){toast('키를 입력하세요');return;}LS.set('apikey',v);updateKeyPill();toast('API 키 저장됨');go('settings');}
-function clearKey(){LS.del('apikey');updateKeyPill();toast('API 키 삭제됨');go('settings');}
-function saveGKey(){var v=$('setGKey').value.trim();if(!v){toast('Gemini 키를 입력하세요');return;}LS.set('gkey',v);updateKeyPill();toast('Gemini 키 저장됨');go('settings');}
-function clearGKey(){LS.del('gkey');updateKeyPill();toast('Gemini 키 삭제됨');go('settings');}
-function saveGProxy(){var v=$('setGProxy').value.trim();if(!v){toast('공용 주소를 입력하세요');return;}LS.set('gproxy',v);updateKeyPill();toast('공용 Gemini 주소 저장됨');go('settings');}
-function clearGProxy(){LS.del('gproxy');updateKeyPill();toast('공용 Gemini 주소 삭제됨');go('settings');}
+function saveKey(){var v=$('setKey').value.trim();if(!v){toast('키를 입력하세요');return;}LS.set('apikey',v);updateKeyPill();toast('API 키 저장됨');osSetReload();}
+function clearKey(){LS.del('apikey');updateKeyPill();toast('API 키 삭제됨');osSetReload();}
+function saveGKey(){var v=$('setGKey').value.trim();if(!v){toast('Gemini 키를 입력하세요');return;}LS.set('gkey',v);updateKeyPill();toast('Gemini 키 저장됨');osSetReload();}
+function clearGKey(){LS.del('gkey');updateKeyPill();toast('Gemini 키 삭제됨');osSetReload();}
+function saveGProxy(){var v=$('setGProxy').value.trim();if(!v){toast('공용 주소를 입력하세요');return;}LS.set('gproxy',v);updateKeyPill();toast('공용 Gemini 주소 저장됨');osSetReload();}
+function clearGProxy(){LS.del('gproxy');updateKeyPill();toast('공용 Gemini 주소 삭제됨');osSetReload();}
 function toggleGGuide(){var g=$('gKeyGuide');if(g)g.style.display=g.style.display==='none'?'block':'none';}
 function toggleGQuota(){var g=$('gQuotaHelp');if(g)g.style.display=g.style.display==='none'?'block':'none';}
 function saveGModel(){LS.set('gmodel',$('setGModel').value);toast('Gemini 모델 변경됨: '+$('setGModel').value);}
 function saveGProModel(){LS.set('gpromodel',$('setGProModel').value);toast('품질 모델 변경됨: '+$('setGProModel').value);}
-function setProvider(p){LS.set('provider',p);toast(p==='gemini'?'콘텐츠 기본: 무료 Gemini':'콘텐츠 기본: Claude');go('settings');}
+function setProvider(p){LS.set('provider',p);toast(p==='gemini'?'콘텐츠 기본: 무료 Gemini':'콘텐츠 기본: Claude');osSetReload();}
 function saveModel(){LS.set('model',$('setModel').value);toast('모델 변경됨: '+$('setModel').value);}
 function savePersona(){LS.set('persona',$('setPersona').value);toast('브랜드 톤 저장됨');}
-function resetPersona(){LS.set('persona',DEFAULT_PERSONA);toast('기본 톤으로 복원됨');go('settings');}
-function resetAll(){if(confirm('저장된 연결·모델·브랜드 톤을 모두 삭제할까요?')){LS.del('apikey');LS.del('model');LS.del('persona');LS.del('conn');LS.del('proxy');LS.del('apptoken');LS.del('gkey');LS.del('gproxy');LS.del('gmodel');LS.del('gpromodel');LS.del('provider');updateKeyPill();toast('초기화 완료');go('settings');}}
+function resetPersona(){LS.set('persona',DEFAULT_PERSONA);toast('기본 톤으로 복원됨');osSetReload();}
+function resetAll(){if(confirm('저장된 연결·모델·브랜드 톤을 모두 삭제할까요?')){LS.del('apikey');LS.del('model');LS.del('persona');LS.del('conn');LS.del('proxy');LS.del('apptoken');LS.del('gkey');LS.del('gproxy');LS.del('gmodel');LS.del('gpromodel');LS.del('provider');updateKeyPill();toast('초기화 완료');osSetReload();}}
 
 /* ════════ 연결 진단: 두 엔진에 실제 테스트 호출 → 정직한 상태 보고 ════════ */
 function diagRow(name,state,detail,color){return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--ink-8)"><div style="font-size:12px;font-weight:800;min-width:64px;color:var(--ink-2)">'+name+'</div><div><span style="font-size:11.5px;font-weight:800;color:'+color+'">'+state+'</span><div style="font-size:10.5px;color:var(--ink-4);line-height:1.6;margin-top:2px">'+detail+'</div></div></div>';}
@@ -9508,7 +9621,7 @@ function osAudioFile(input,tab){
 function osAudioDisclaimer(){return '<div class="notice" style="margin-top:10px;font-size:11px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">녹취 분석은 AI 추정이며 실제 발화와 다를 수 있습니다. 고객 녹취는 <b>사전 동의·법령(통신비밀보호법 등)</b>을 준수해 취득·보관하고, 상담 발송·게시 전 준법감시 확인을 권장합니다.</div>';}
 function osAudioAnalyze(tab){
   var a=OS_AUDIO[tab];if(!a){toast('먼저 녹취 파일을 올리세요.');return;}
-  if(typeof geminiReady==='function'&&!geminiReady()){toast('녹취 분석은 Gemini 연결이 필요합니다(Claude는 오디오 미지원). 설정에서 Gemini 키를 연결하세요.');go('settings');return;}
+  if(typeof geminiReady==='function'&&!geminiReady()){toast('녹취 분석은 Gemini 연결이 필요합니다(Claude는 오디오 미지원). 설정에서 Gemini 키를 연결하세요.');osSetReload();return;}
   var res=$('aur_'+tab),btn=$('aub_'+tab);
   if(btn){btn.disabled=true;btn.textContent='분석 중…';}
   if(res)res.innerHTML='<div class="loading" style="padding:14px"><div class="spinner"></div>녹취를 듣고 윤시현 기준으로 분석하는 중… (길면 1~2분)</div>';
@@ -9591,7 +9704,7 @@ function csaPrepPanel(){
 }
 function csaClearPrep(){['p_name','p_age','p_family','p_income','p_dispo','p_exist','p_support','p_health','p_goal','p_extra'].forEach(function(id){var e=$('csa_'+id);if(e)e.value='';});var r=$('csa_prepRes');if(r){r.innerHTML='';r.classList.remove('on');}}
 function csaPrepRun(){
-  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 어시스턴트가 작동합니다.');go('settings');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 어시스턴트가 작동합니다.');osSetReload();return;}
   var ids=[['p_name','고객명'],['p_age','나이·성별'],['p_family','가구구성·부양가족'],['p_income','직업·월소득'],['p_dispo','월 여윳돈·보험예산'],['p_exist','기존 보험·국민연금'],['p_support','국가지원 단서'],['p_health','건강·가족력'],['p_goal','상담 목표'],['p_extra','추가 메모']];
   var lines=[],filled=0;ids.forEach(function(x){var e=$('csa_'+x[0]);var v=e?e.value.trim():'';if(v){lines.push('- '+x[1]+': '+v);filled++;}});
   if(filled<2){toast('고객 정보를 최소 2개 이상 입력해주세요');return;}
@@ -9631,7 +9744,7 @@ function csaDebriefRun(){
   }
   var tx=($('csa_transcript')&&$('csa_transcript').value.trim())||'';
   if(tx.length<30){toast('상담 녹취 텍스트를 붙여넣어 주세요(30자 이상).');return;}
-  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 복기가 작동합니다.');go('settings');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 복기가 작동합니다.');osSetReload();return;}
   if(btn){btn.disabled=true;btn.textContent='분석 중…';}
   res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>녹취 텍스트를 방법론 관점으로 복기하는 중… (20~50초)</div>';
   var uText='아래 상담 녹취(텍스트)를 윤시현의 「고객이익 통합상담」 어시스턴트로서 복기해줘.'+(note?('\n\n[상담 배경 메모] '+note):'')+'\n\n[상담 녹취]\n'+tx+fmt;
@@ -10288,7 +10401,7 @@ function osOwnerClaim(){
   var me=osMyEmail();if(!me){toast('로그인 정보를 확인할 수 없습니다');return;}
   if(osOwnerEmail()&&!osIsOwner()){toast('이미 대표가 지정되어 있습니다');return;}
   if(!confirm('이 계정('+me+')을 대표로 지정합니다.\n이후 설정·보고서는 대표만 볼 수 있습니다. 진행할까요?'))return;
-  osCfgSet('owner_email',me,function(){toast('대표로 지정되었습니다.');if(typeof renderNav==='function')renderNav();go('settings');});
+  osCfgSet('owner_email',me,function(){toast('대표로 지정되었습니다.');if(typeof renderNav==='function')renderNav();osSetReload();});
 }
 function osOwnerCardHtml(){
   if(!osIsOwner())return '';
@@ -10456,11 +10569,11 @@ function osAccessSave(){
     var rows=[];for(var k in map){if(map.hasOwnProperty(k))rows.push({group_key:k,roles:map[k],min_tier:tmap[k]||null});}
     sb.from('tool_access').upsert(rows,{onConflict:'group_key'}).then(function(r){
       if(r.error){toast('이 브라우저에 저장됨 · 팀 공유(등급 포함)는 아래 SQL 실행 후 활성화');}
-      else{OS_ACCESS_SRC='server';toast('저장 완료 · 팀 전체에 공유되었습니다');go('settings');}
+      else{OS_ACCESS_SRC='server';toast('저장 완료 · 팀 전체에 공유되었습니다');osSetReload();}
     },function(){toast('이 브라우저에 저장되었습니다.');});
-  }else{toast('이 브라우저에 저장되었습니다.');go('settings');}
+  }else{toast('이 브라우저에 저장되었습니다.');osSetReload();}
 }
-function osAccessReset(){OS_ACCESS=null;OS_GROUP_TIER=null;OS_ACCESS_SRC='default';try{localStorage.removeItem('apex_tool_access');localStorage.removeItem('apex_group_tier');}catch(e){}if(typeof renderNav==='function')renderNav();toast('기본 노출로 되돌렸습니다');go('settings');}
+function osAccessReset(){OS_ACCESS=null;OS_GROUP_TIER=null;OS_ACCESS_SRC='default';try{localStorage.removeItem('apex_tool_access');localStorage.removeItem('apex_group_tier');}catch(e){}if(typeof renderNav==='function')renderNav();toast('기본 노출로 되돌렸습니다');osSetReload();}
 function osAccessSqlToggle(){var e=document.getElementById('accSql');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
 var OS_ACCESS_SQL=[
  'create table if not exists tool_access(',
@@ -11599,6 +11712,9 @@ function osDiagCardHtml(){
 }
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){
+  try{osFoldApply();}catch(e){}
+  try{osScrollTrack();}catch(e){}
+  try{osScrollRestore();}catch(e){}
   try{if(typeof osNoticeImgPrev==='function')setTimeout(osNoticeImgPrev,30);}catch(e){}if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
   if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
   if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osBackupLoad==='function')osBackupLoad();}}
@@ -11704,7 +11820,7 @@ function osTierPreview(tierId,roleId){
 }
 function osTierSetDefault(v){
   if(typeof osCfgSet!=='function'){toast('서버 연결이 필요합니다');return;}
-  osCfgSet('default_tier',v,function(){toast('등급 미지정 회원의 기본 등급을 "'+((osTierById(v)||{}).label||v)+'"(으)로 정했습니다');go('settings');});
+  osCfgSet('default_tier',v,function(){toast('등급 미지정 회원의 기본 등급을 "'+((osTierById(v)||{}).label||v)+'"(으)로 정했습니다');osSetReload();});
 }
 function osTierPreviewCardHtml(){
   if(!osIsAppAdmin())return '';
@@ -11783,6 +11899,7 @@ var OSMT={teams:[],of:{},missing:false,err:''};
 var OSWS={of:{},missing:true};
 var OS_WS_OPTS=[['apex','APEX 전용'],['both','둘다'],['crm','CRM 전용']];
 function osSetWorkspace(id,v){
+  osScrollSave();
   var sb=osClient();if(!sb)return;
   if(OS.profile&&id===OS.profile.id&&v==='crm'){toast('본인 계정은 CRM 전용으로 바꿀 수 없습니다(잠금 방지)');osLoadMembers();return;}
   sb.from('profiles').update({workspace:v}).eq('id',id).then(function(r){
@@ -11949,6 +12066,7 @@ function osMemSearchGo(v){
 }
 function osLoadMembers(){
   var box=document.getElementById('osMembersList');if(!box)return;
+  osScrollSave();
   var sb=osClient();if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
   box.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>팀원 목록을 불러오는 중…</div>';
   var _owner=osIsAppAdmin();
@@ -11972,6 +12090,7 @@ function osLoadMembers(){
     OSMT.rows=rows;OSMT.me=me;
     if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">팀원이 없습니다.</div>';return;}
     box.innerHTML=osMembersHtml(rows,me);
+    osScrollRestore();
   },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
 }
 function osSetMaster(id,makeAdmin){
@@ -11986,6 +12105,7 @@ function osSetMaster(id,makeAdmin){
 }
 /* #4 개인 회원별 카테고리(등급) 지정 — profiles.plan에 저장(요금 카테고리=사용조건). CRM 스키마는 그대로. */
 function osSetTier(id,tier){
+  osScrollSave();
   var sb=osClient();if(!sb)return;
   if(OS.profile&&id===OS.profile.id){toast('본인 등급은 여기서 바꿀 수 없습니다.');return;}
   var t=osTierById(tier);
@@ -13161,7 +13281,7 @@ function osNum(v){if(v==null||v==='')return null;var n=parseInt((''+v).replace(/
 /* 추출 파이프라인 실행 */
 function osExtractDoc(docId){
   var sb=osClient();if(!sb){toast('서버 연결이 없습니다.');return;}
-  if(!aiReady()){toast('설정에서 AI 연결(키/프록시)을 먼저 설정하세요.');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결(키/프록시)을 먼저 설정하세요.');osSetReload();return;}
   var d=null;for(var i=0;i<OSC.docs.length;i++){if(OSC.docs[i].id===docId){d=OSC.docs[i];break;}}
   if(!d){toast('문서를 찾을 수 없습니다.');return;}
   d.parse_status='processing';osRenderDocs();
@@ -13418,7 +13538,7 @@ function osReadCtx(){
 function osRunAnalysis(){
   var sb=osClient();if(!sb||!OSC.current)return;
   if(OSA.running)return;
-  if(!aiReady()){toast('설정에서 AI 연결(키/프록시)을 먼저 설정하세요.');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결(키/프록시)을 먼저 설정하세요.');osSetReload();return;}
   OSA.running=true;
   var btn=document.getElementById('oscRunBtn');if(btn){btn.disabled=true;btn.textContent='분석 중…';}
   var ctx=osReadCtx();OSA.ctx=ctx;
@@ -13650,7 +13770,7 @@ function osReportPrompt(type,j,ctx){
 }
 function osGenReport(type){
   var sb=osClient();if(!sb||!OSA.caseData)return;
-  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');osSetReload();return;}
   var j=OSA.caseData.analysis_json;var meta=osReportMeta(type);
   osShowReportModal(meta,'<div class="osc-loading">결과물을 생성하는 중… (10~30초)</div>',null);
   var pr=osReportPrompt(type,j,OSA.ctx||{});
@@ -13767,7 +13887,7 @@ function osRenderRuleQueue(){
 function osFbById(id){for(var i=0;i<OSHQ.feedback.length;i++)if(OSHQ.feedback[i].id===id)return OSHQ.feedback[i];return null;}
 function osDistillRule(fid,btn){
   var sb=osClient();if(!sb)return;
-  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 설정하세요.');osSetReload();return;}
   var f=osFbById(fid);if(!f)return;
   if(btn){btn.disabled=true;btn.textContent='생성 중…';}
   var sysTxt=sys('당신은 보장분석 판단 규칙 정제기다. 설계사(관리자)가 남긴 교정 피드백을 재사용 가능한 규칙 후보로 요약한다.\n'+
@@ -14170,7 +14290,7 @@ function bizAIBlock(section){
 /* ── #1 법인·사업자 상담 진단 슬라이드(PPT) — 대표님께 바로 보여주는 프레젠테이션 ── */
 var BIZ_DECK={slides:[],i:0,title:''};
 function bizDeckGen(){
-  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 슬라이드가 생성됩니다.');go('settings');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 슬라이드가 생성됩니다.');osSetReload();return;}
   var host=$('bizDeckHost');if(host)host.innerHTML='<div class="loading"><div class="spinner"></div>대표님께 보여줄 상담 진단 슬라이드를 만드는 중… (15~40초)</div>';
   var label=(typeof bizClientLabel==='function'?bizClientLabel(bizCur()):'')||'대표님';
   var user='아래 사업자 정보로 대표님께 화면으로 보여줄 <통합 컨설팅 상담 진단 슬라이드>를 만들어줘. 비교가 한눈에 들어오도록 표·막대그래프·핵심수치(KPI)를 적극 활용해.\n\n'+bizProfileText()+'\n\n[형식 — 각 슬라이드를 이 구조로, @@SLIDE 로 시작하고 @@END 로 끝. 8~10장]\n@@SLIDE\nkicker: 상단 작은 라벨(예: 진단 개요)\ntitle: 큰 제목(짧고 강하게)\nicon: 관련 이모지 1개(선택 · 예 💰 🏦 📊 🛡 🧾 ⏱ ✅ 📈)\n- 핵심 불릿(짧게, 최대 3~4개)\nkpi: 5,000만원 | 예상 정책자금 한도\nkpi: 40% | 세부담 절감(예상)\nbar: 현재 세부담 | 2000\nbar: 개선 후 | 1200\ntable: 구분 | 현재 | 개선 후\nrow: 세금(연) | 2,000만 | 1,200만\nrow: 퇴직재원 | 없음 | 확보\nnote: 하단 근거·코멘트 한 줄(선택)\n@@END\n\n[시각화 규칙 — 매우 중요]\n· "현황 vs 개선 후" 또는 "옵션 A/B/C"처럼 비교가 필요한 슬라이드는 반드시 table 또는 bar 로 시각화한다.\n· 핵심 수치가 있는 슬라이드는 kpi 카드(최대 3개)로 크게 보여준다.\n· 한 슬라이드에는 시각요소 1종(표 또는 그래프 또는 KPI)만, 불릿은 짧게.\n· bar 값은 숫자만(콤마 허용). table 은 마지막 열이 "개선 후/추천안"이 되도록 배치(강조됨).\n· 모든 항목은 | 로 구분.\n\n[포함할 슬라이드 순서]\n1) 표지 — "'+label+' 통합 컨설팅 진단"(불릿으로 오늘 다룰 핵심 3가지)\n2) 현황 진단 — 업종·규모·재무 요약(kpi 로 매출·이익·직원수 등)\n3) 핵심 이슈 — 정책자금/세금/보험/퇴직금/인사 중 시급도(bar 로 시급도 비교)\n4) 정책자금 방향 — 적합 자금 한도(kpi) + 신청→지급 흐름\n5) 절세 포인트 — 현재 vs 개선 후 세부담(bar 또는 table 비교)\n6) 보험·퇴직금 재원 — 대표 유고/퇴직금/키맨 재원(table 비교)\n7) 실행 로드맵 — 30·60·90일(table: 기간|할 일|기대효과)\n8) 마무리 — 다음 단계와 함께할 이유\n\n숫자·효과는 (예상)으로, 확정·보장 표현 금지. 정책자금·세제는 조건 전제("연도별 변동, 관계기관·전문가 확인").';
@@ -14866,7 +14986,7 @@ function cnImgFetch(mdl,prompt){
   });});
 }
 function cnGenImage(idx,btn){
-  if(!geminiReady()){toast('설정에서 Gemini 연결(키 또는 프록시)을 먼저 구성하세요');go('settings');return Promise.reject(new Error('no-gemini'));}
+  if(!geminiReady()){toast('설정에서 Gemini 연결(키 또는 프록시)을 먼저 구성하세요');osSetReload();return Promise.reject(new Error('no-gemini'));}
   var slides=cardnewsSlides(),sl=slides[idx]||{};
   var prompt=cnImgPrompt(sl);
   var old=btn?btn.textContent:'';if(btn){btn.disabled=true;btn.textContent='✨ 생성 중… (5~15초)';}
@@ -14898,7 +15018,7 @@ function cnGenAll(){
   var slides=cardnewsSlides(),idxs=[];
   for(var i=0;i<slides.length;i++)if(!CN.imgs[i])idxs.push(i);
   if(!idxs.length){toast('모든 카드에 이미 사진이 있습니다.');return;}
-  if(!geminiReady()){toast('설정에서 Gemini 연결을 먼저 구성하세요');go('settings');return;}
+  if(!geminiReady()){toast('설정에서 Gemini 연결을 먼저 구성하세요');osSetReload();return;}
   var total=idxs.length,done=0,fail=0;
   toast('AI 사진 '+total+'장 생성 시작 — 장당 5~15초 걸립니다.');
   function step(){
@@ -14947,7 +15067,7 @@ function cnAiGen(){
   if(!topic){toast('뉴스 원문·키워드를 입력하세요');return;}
   CN.aiTopic=topic;
   CN.aiPurpose=osVal('cnAiPurpose')||'저장';CN.aiTone=osVal('cnAiTone')||'친근한 전문가';CN.aiCount=osVal('cnAiCount')||'10장';
-  if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');go('settings');return;}
+  if(!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');osSetReload();return;}
   var btn=$('cnAiBtn');if(btn){btn.disabled=true;btn.textContent='편집 중… (20~50초)';}
   var user='[입력값]\n기준 날짜: '+cnDateStr()+'\n뉴스 원문/URL/키워드: '+topic+'\n핵심 타깃: (미입력 — 기본 타깃 적용)\n캐러셀 장수: '+CN.aiCount+'\n콘텐츠 목적: '+CN.aiPurpose+'\n브랜드명: APEX YUN PRO\n말투: '+CN.aiTone+'\n디자인 스타일: 네이비 경제신문(다크 매거진)\n\n위 입력으로 캐러셀을 만들어 JSON으로만 출력해줘.';
   callAI(cnAiSys(),user,6000,'cardnews').then(function(txt){
