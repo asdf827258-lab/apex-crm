@@ -12027,7 +12027,22 @@ function osNoticeLoad(){
     });
   }catch(e){OS_NOTICE=osNoticeLocalGet();osNoticeApply();}
 }
+function osNoticeStyleOnce(){
+  if(document.getElementById('osNoticeStyle'))return;
+  var st=document.createElement('style');st.id='osNoticeStyle';
+  st.textContent=
+    '.os-notice-body h1{font-size:26px;font-weight:900;letter-spacing:-.8px;margin:4px 0 10px;color:var(--ink-1)}'+
+    '.os-notice-body h2{font-size:22px;font-weight:900;letter-spacing:-.6px;margin:16px 0 8px;color:var(--ink-1)}'+
+    '.os-notice-body h3{font-size:23px;font-weight:900;letter-spacing:-.6px;margin:4px 0 10px;color:var(--ink-1)}'+
+    '.os-notice-body b,.os-notice-body strong{font-weight:900;color:#1A56DB}'+
+    '.os-notice-body em{font-style:normal;background:linear-gradient(transparent 58%,#FDE68A 58%);font-weight:800}'+
+    '.os-notice-body li{font-size:16.5px;line-height:1.85;margin:6px 0}'+
+    '.os-notice-body p{margin:8px 0}'+
+    '@media(max-width:760px){.os-notice-body{font-size:15.5px!important}.os-notice-body h1{font-size:22px}.os-notice-body h2{font-size:19px}}';
+  document.head.appendChild(st);
+}
 function osNoticeHomeHtml(n){
+  osNoticeStyleOnce();
   var admin=osIsAppAdmin();
   if(!n||!n.on||(!n.text&&!n.img)){
     return admin?'<div class="notice" style="margin:14px 0 0;background:#F0F5FF;border-color:#C7D2FE">📢 <b>공지</b> — 현재 게시된 공지가 없습니다. <a style="color:var(--primary);font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정 → 공지사항 관리</a>에서 등록하세요.</div>':'';
@@ -12035,26 +12050,28 @@ function osNoticeHomeHtml(n){
   var arr=osNoticeImgsOf(n);
   var img='';
   if(arr.length===1){
-    img='<figure style="margin:0 0 '+(n.text?'12px':'0')+'"><div onclick="osLbOpen(0)" title="클릭하면 크게 봅니다" style="position:relative;cursor:zoom-in">'+
-      '<img src="'+osEsc(arr[0].s)+'" alt="공지 이미지" style="width:100%;max-height:440px;object-fit:contain;background:#F8FAFD;border-radius:12px;display:block">'+
-      '<span style="position:absolute;right:9px;bottom:9px;background:rgba(15,23,42,.72);color:#fff;font-size:10.5px;font-weight:800;border-radius:7px;padding:3px 8px">🔍 크게 보기</span></div>'+
-      (arr[0].c?'<figcaption style="font-size:12px;color:var(--ink-3);margin-top:7px;line-height:1.6">'+osEsc(arr[0].c)+'</figcaption>':'')+'</figure>';
+    img='<figure style="margin:0 0 '+(n.text?'16px':'0')+'"><div onclick="osLbOpen(0)" title="클릭하면 더 크게 봅니다" style="position:relative;cursor:zoom-in">'+
+      '<img src="'+osEsc(arr[0].s)+'" alt="공지 이미지" style="width:100%;max-height:72vh;min-height:280px;object-fit:contain;background:#F8FAFD;border-radius:14px;display:block">'+
+      '<span style="position:absolute;right:11px;bottom:11px;background:rgba(15,23,42,.75);color:#fff;font-size:12px;font-weight:800;border-radius:8px;padding:5px 11px">🔍 크게 보기</span></div>'+
+      (arr[0].c?'<figcaption style="font-size:15px;font-weight:600;color:var(--ink-2);margin-top:10px;line-height:1.7">'+osEsc(arr[0].c)+'</figcaption>':'')+'</figure>';
   }else if(arr.length>1){
-    img='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;margin-bottom:'+(n.text?'12px':'0')+'">'+
+    var col=arr.length===2?'minmax(300px,1fr)':'minmax(280px,1fr)';
+    var ih=arr.length===2?'46vh':'34vh';
+    img='<div style="display:grid;grid-template-columns:repeat(auto-fit,'+col+');gap:14px;margin-bottom:'+(n.text?'16px':'0')+'">'+
       arr.map(function(it,i){
-        return '<figure style="margin:0"><div onclick="osLbOpen('+i+')" title="클릭하면 크게 봅니다" style="display:block;position:relative;cursor:zoom-in">'+
-          '<img src="'+osEsc(it.s)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:175px;object-fit:cover;border-radius:11px;display:block;border:1px solid var(--ink-8)">'+
-          '<span style="position:absolute;left:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">'+(i+1)+'/'+arr.length+'</span>'+
-          '<span style="position:absolute;right:7px;bottom:7px;background:rgba(15,23,42,.72);color:#fff;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px">🔍</span></div>'+
-          (it.c?'<figcaption style="font-size:11.5px;color:var(--ink-3);margin-top:6px;line-height:1.55">'+osEsc(it.c)+'</figcaption>':'')+'</figure>';
+        return '<figure style="margin:0"><div onclick="osLbOpen('+i+')" title="클릭하면 더 크게 봅니다" style="display:block;position:relative;cursor:zoom-in">'+
+          '<img src="'+osEsc(it.s)+'" alt="공지 이미지 '+(i+1)+'" style="width:100%;height:'+ih+';min-height:230px;object-fit:cover;border-radius:13px;display:block;border:1px solid var(--ink-8)">'+
+          '<span style="position:absolute;left:9px;bottom:9px;background:rgba(15,23,42,.75);color:#fff;font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 9px">'+(i+1)+'/'+arr.length+'</span>'+
+          '<span style="position:absolute;right:9px;bottom:9px;background:rgba(15,23,42,.75);color:#fff;font-size:11.5px;font-weight:800;border-radius:7px;padding:3px 9px">🔍</span></div>'+
+          (it.c?'<figcaption style="font-size:14px;font-weight:600;color:var(--ink-2);margin-top:8px;line-height:1.65">'+osEsc(it.c)+'</figcaption>':'')+'</figure>';
       }).join('')+'</div>';
   }
-  var txt=n.text?'<div style="font-size:13.5px;line-height:1.75;color:var(--ink-1)">'+renderMd(n.text)+'</div>':'';
+  var txt=n.text?'<div class="os-notice-body" style="font-size:17px;line-height:1.85;color:var(--ink-1);font-weight:600;letter-spacing:-.2px">'+renderMd(n.text)+'</div>':'';
   var editBtn=admin?'<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.35)" onclick="go(\'settings\')">✏️ 공지 관리</button>':'';
   return '<div class="card" style="margin:14px 0 0;border:1px solid #C7D2FE;box-shadow:var(--shadow-blue);overflow:hidden">'+
-    '<div class="card-hd" style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;border:none;display:flex;justify-content:space-between;align-items:center;padding:12px 16px">'+
-    '<div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13px">📢 공지사항</div>'+editBtn+'</div>'+
-    '<div class="card-body" style="padding:16px">'+img+txt+'</div></div>';
+    '<div class="card-hd" style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;border:none;display:flex;justify-content:space-between;align-items:center;padding:15px 20px">'+
+    '<div style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.3px">📢 공지사항</div>'+editBtn+'</div>'+
+    '<div class="card-body" style="padding:20px">'+img+txt+'</div></div>';
 }
 function osNoticeNavHtml(n){
   var admin=osIsAppAdmin();
