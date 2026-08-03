@@ -3107,7 +3107,7 @@ function go(tab){
   else if(tab==='contracts')dyn.innerHTML=renderContracts();
   else if(tab==='claims')dyn.innerHTML=renderClaims();
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
-  else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();}
+  else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
   else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
@@ -8724,8 +8724,167 @@ function renderManual(){
     '<div id="manBody">'+manBody()+'</div>');
 }
 
-/* ════════ 조직도 (로컬 저장 · 키·로그인 불필요) ════════ */
+/* ════════ 조직도 ════════ */
 var ORG_KEY='apex_org_chart';
+
+/* ════════ 조직도 서버 동기화 ════════
+   지금까지 조직도는 이 기기(localStorage)에만 있어서 다른 컴퓨터에서 넣은 내용이 넘어오지
+   않았다. 서버(org_members)를 정본으로 두되, 기기에 있던 내용을 말없이 덮어쓰지 않는다.
+   · 한 명 추가·수정·삭제 → 그 한 줄만 서버에 반영 (다른 사람 기록을 건드리지 않는다)
+   · 통째로 맞추기(가져오기·올리기) → 대표가 버튼을 눌렀을 때만 */
+var ORGS={pulled:false,busy:'',err:'',srv:null,at:''};
+
+function orgCanWrite(){
+  return !!(OS.profile&&typeof osIsAppAdmin==='function'&&osIsAppAdmin());
+}
+function orgRow(m){
+  return {id:m.id,name:m.name||'',rank:m.rank||'',team:m.team||'',parent:m.parent||'',
+    phone:m.phone||'',insta:m.insta||'',photo:m.photo||'',
+    updated_at:new Date().toISOString(),
+    updated_by:(OS.profile&&OS.profile.id)||null};
+}
+function orgSyncPaint(){
+  var el=document.getElementById('orgSyncBar');
+  if(el)el.outerHTML=orgSyncBarHtml();
+}
+function orgPull(force){
+  var sb=osClient();
+  if(!sb||!OS.profile){ORGS.srv=null;orgSyncPaint();return;}
+  if(ORGS.busy)return;
+  if(ORGS.pulled&&!force){orgSyncPaint();return;}
+  ORGS.busy='pull';orgSyncPaint();
+  sb.from('org_members').select('id,name,rank,team,parent,phone,insta,photo').then(function(r){
+    ORGS.busy='';
+    if(r.error){ORGS.err=r.error.message||'';ORGS.srv=null;orgSyncPaint();return;}
+    ORGS.err='';ORGS.pulled=true;ORGS.srv=r.data||[];
+    ORGS.at=new Date().toLocaleString('ko-KR');
+    orgSyncPaint();
+  },function(e){ORGS.busy='';ORGS.err=(e&&e.message)||'네트워크 오류';ORGS.srv=null;orgSyncPaint();});
+}
+/* 한 줄만 반영 — 편집 중인 기기가 오래된 목록으로 서버를 덮어쓰는 사고를 막는다 */
+function orgPushOne(m){
+  var sb=osClient();
+  if(!sb||!orgCanWrite())return;
+  sb.from('org_members').upsert(orgRow(m),{onConflict:'id'}).then(function(r){
+    if(r&&r.error){toast('서버 저장 실패: '+(r.error.message||''));return;}
+    if(ORGS.srv){
+      var hit=false,i;
+      for(i=0;i<ORGS.srv.length;i++){if(ORGS.srv[i].id===m.id){ORGS.srv[i]=orgRow(m);hit=true;break;}}
+      if(!hit)ORGS.srv.push(orgRow(m));
+    }
+    ORGS.at=new Date().toLocaleString('ko-KR');orgSyncPaint();
+  },function(){toast('서버 저장 실패 — 인터넷 연결을 확인하세요.');});
+}
+function orgPushMany(list){
+  var sb=osClient();
+  if(!sb||!orgCanWrite()||!list.length)return;
+  sb.from('org_members').upsert(list.map(orgRow),{onConflict:'id'}).then(function(){},function(){});
+}
+function orgRemoveOne(id){
+  var sb=osClient();
+  if(!sb||!orgCanWrite())return;
+  sb.from('org_members')['delete']().eq('id',id).then(function(){
+    if(ORGS.srv)ORGS.srv=ORGS.srv.filter(function(x){return x.id!==id;});
+    ORGS.at=new Date().toLocaleString('ko-KR');orgSyncPaint();
+  },function(){});
+}
+/* 서버 내용을 이 기기로 — 대표가 직접 누를 때만 */
+function orgPullApply(){
+  if(!ORGS.srv||!ORGS.srv.length){toast('서버에 조직도가 없습니다.');return;}
+  if(!confirm('서버에 있는 '+ORGS.srv.length+'명으로 이 기기 조직도를 바꿉니다.\n이 기기에만 있던 내용은 사라집니다. 계속할까요?'))return;
+  try{localStorage.setItem(ORG_KEY,JSON.stringify(ORGS.srv));}catch(e){
+    alert('저장 공간이 부족합니다. 사진 용량이 큰 구성원을 정리해 주세요.');return;}
+  toast('✅ 서버 내용을 가져왔습니다 — '+ORGS.srv.length+'명');
+  orgEditId=null;window.__orgPhoto=undefined;go('org');
+}
+/* 이 기기 내용을 서버로 — 서버에만 있던 사람은 지워지므로 반드시 확인을 받는다 */
+function orgPushApply(){
+  var sb=osClient();
+  if(!sb){toast('서버에 연결되어 있지 않습니다.');return;}
+  if(!orgCanWrite()){toast('조직도 서버 저장은 대표·관리자만 할 수 있습니다.');return;}
+  var list=orgLoad();
+  var srvN=ORGS.srv?ORGS.srv.length:0;
+  var msg='이 기기의 '+list.length+'명으로 서버를 맞춥니다.\n';
+  if(srvN)msg+='서버에 있던 '+srvN+'명은 이 목록으로 대체됩니다.\n';
+  msg+='\n계속할까요?';
+  if(!confirm(msg))return;
+  ORGS.busy='push';orgSyncPaint();
+  var ids=list.map(function(m){return m.id;});
+  var del=ids.length
+    ? sb.from('org_members')['delete']().not('id','in','('+ids.join(',')+')')
+    : sb.from('org_members')['delete']().neq('id','__none__');
+  del.then(function(){
+    return sb.from('org_members').upsert(list.map(orgRow),{onConflict:'id'});
+  }).then(function(r){
+    ORGS.busy='';
+    if(r&&r.error){ORGS.err=r.error.message||'';toast('올리기 실패: '+ORGS.err);orgSyncPaint();return;}
+    ORGS.err='';ORGS.srv=list.map(orgRow);ORGS.at=new Date().toLocaleString('ko-KR');
+    if(typeof osAudit==='function')osAudit('org_push','org',null,''+list.length);
+    toast('✅ 서버에 올렸습니다 — '+list.length+'명. 이제 다른 기기에서도 보입니다.');
+    orgSyncPaint();
+  },function(e){ORGS.busy='';toast('올리기 실패: '+((e&&e.message)||''));orgSyncPaint();});
+}
+
+function orgSyncBarHtml(){
+  var local=orgLoad(),ln=local.length;
+  var box=function(bg,bd,fg,inner){
+    return '<div id="orgSyncBar" class="notice" style="margin-bottom:12px;background:'+bg+';border-color:'+bd+';color:'+fg+'">'+inner+'</div>';
+  };
+  if(!OS.profile){
+    return box('#F8FAFD','#E5E9F0','var(--ink-3)',
+      '<b>이 기기에만 저장되어 있습니다.</b> 로그인하면 조직도가 서버에 저장되어 <b>어느 컴퓨터에서나 같은 내용</b>을 보게 됩니다. '+
+      '<span style="color:var(--ink-5)">개인정보가 담기므로 화면 공유·배포 시 주의하세요.</span>');
+  }
+  if(ORGS.busy){
+    return box('#F5F9FF','#BFDBFE','#1D4ED8','<b>'+(ORGS.busy==='push'?'서버에 올리는 중…':'서버에서 불러오는 중…')+'</b>');
+  }
+  if(ORGS.err){
+    var notReady=/org_members|schema cache|does not exist|찾을 수 없|relation/i.test(ORGS.err);
+    return box('#FFFBEB','#FDE68A','#92400E',
+      (notReady
+        ? '<b>조직도 서버 저장이 아직 켜지지 않았습니다.</b><br>'+
+          '<span style="font-size:11.5px;line-height:1.8">지금은 이 기기에만 저장됩니다. <b>migration_23_org.sql</b> 을 Supabase → SQL Editor 에서 한 번 실행하면, 이후로는 어느 컴퓨터에서나 같은 조직도를 보게 됩니다.</span>'
+        : '<b>서버 연결 문제로 이 기기 내용을 보여주고 있습니다.</b><br><span style="font-size:11.5px">'+osEsc(ORGS.err)+'</span>')+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">다시 시도</button></div>');
+  }
+  if(ORGS.srv===null){
+    return box('#F8FAFD','#E5E9F0','var(--ink-3)','서버 상태를 확인하는 중입니다…');
+  }
+  var sn=ORGS.srv.length;
+  var same=(sn===ln)&&(function(){
+    var a=local.map(function(m){return m.id;}).sort().join('|');
+    var b=ORGS.srv.map(function(m){return m.id;}).sort().join('|');
+    return a===b;
+  })();
+  var btns='<div class="btn-row" style="margin-top:9px">'+
+    (sn?'<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPullApply()">⬇ 서버 내용 가져오기 ('+sn+'명)</button>':'')+
+    (orgCanWrite()?'<button class="btn '+(sn?'btn-ghost':'btn-primary')+'" style="padding:6px 12px;font-size:11.5px" onclick="orgPushApply()">⬆ 이 기기 내용 올리기 ('+ln+'명)</button>':'')+
+    '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">↻ 새로고침</button>'+
+    '</div>';
+  if(same){
+    return box('#F0FDF4','#BBF7D0','#065F46',
+      '<b>✅ 서버와 같습니다 — '+sn+'명.</b> 다른 컴퓨터에서도 이 조직도가 그대로 보입니다.'+
+      (ORGS.at?' <span style="font-size:11px;color:#047857">확인 '+osEsc(ORGS.at)+'</span>':'')+
+      (orgCanWrite()?'<div style="font-size:11.5px;line-height:1.75;margin-top:5px">앞으로 추가·수정·삭제하면 <b>그때그때 서버에 함께 저장</b>됩니다.</div>':
+        '<div style="font-size:11.5px;line-height:1.75;margin-top:5px">수정 권한은 대표·관리자에게 있습니다. 이 기기에서 고친 내용은 서버에 올라가지 않습니다.</div>')+btns);
+  }
+  if(!sn){
+    return box('#FFFBEB','#FDE68A','#92400E',
+      '<b>서버에 조직도가 아직 없습니다.</b> 이 기기에는 '+ln+'명이 있습니다.<br>'+
+      '<span style="font-size:11.5px;line-height:1.8">'+(orgCanWrite()
+        ? '아래 <b>⬆ 이 기기 내용 올리기</b>를 누르면 서버에 저장되고, 그때부터 다른 컴퓨터에서도 같은 조직도가 보입니다.'
+        : '대표·관리자가 한 번 올려주면 모든 기기에서 같은 조직도를 보게 됩니다.')+'</span>'+btns);
+  }
+  return box('#FFF7F7','#FECACA','#B91C1C',
+    '<b>이 기기와 서버 내용이 다릅니다.</b> 이 기기 '+ln+'명 · 서버 '+sn+'명<br>'+
+    '<span style="font-size:11.5px;line-height:1.8">다른 컴퓨터에서 저장한 내용이 서버에 있습니다. '+
+    '<b>⬇ 서버 내용 가져오기</b>를 누르면 그 내용이 이 컴퓨터에도 그대로 들어옵니다.'+
+    (orgCanWrite()
+      ? ' 반대로 이 기기 것이 최신이면 <b>⬆ 올리기</b>를 누르세요.'
+      : ' 서버에 올리는 것은 대표·관리자만 할 수 있습니다.')+
+    ' 어느 쪽도 누르기 전까지는 아무것도 바뀌지 않습니다.</span>'+btns);
+}
+
 var orgEditId=null;
 function orgSeed(){return [
   {id:'m_lead',name:'본부장',rank:'본부장',team:'온탑본부',parent:'',phone:'',insta:'',photo:''},
@@ -8780,16 +8939,18 @@ function orgDelete(id){
   var list=orgLoad(),removed=null,i;
   for(i=0;i<list.length;i++){if(list[i].id===id){removed=list[i];break;}}
   var np=removed?removed.parent:'';
-  var out=[];
+  var out=[],moved=[];
   for(i=0;i<list.length;i++){
     if(list[i].id===id)continue;
-    if(list[i].parent===id)list[i].parent=np;
+    if(list[i].parent===id){list[i].parent=np;moved.push(list[i]);}
     out.push(list[i]);
   }
-  orgSave(out);if(orgEditId===id)orgEditId=null;go('org');
+  orgSave(out);
+  try{orgRemoveOne(id);if(moved.length)orgPushMany(moved);}catch(e){}
+  if(orgEditId===id)orgEditId=null;go('org');
 }
 function orgReset(){
-  if(!confirm('조직도를 초기화할까요? 저장된 구성원이 모두 삭제됩니다.'))return;
+  if(!confirm('이 기기의 조직도를 비웁니다.\n서버에 올려 둔 내용은 그대로 남고, 위 "⬇ 서버 내용 가져오기"로 다시 받을 수 있습니다.\n\n계속할까요?'))return;
   try{localStorage.removeItem(ORG_KEY);}catch(e){}
   orgEditId=null;window.__orgPhoto=undefined;go('org');
 }
@@ -8808,9 +8969,13 @@ function orgSubmit(){
   else if(cur)photo=cur.photo||'';
   else photo='';
   if(parent===orgEditId)parent='';
-  if(cur){cur.name=name;cur.rank=rank;cur.team=team;cur.parent=parent;cur.phone=phone;cur.insta=insta;cur.photo=photo;}
-  else{list.push({id:'m_'+Date.now()+'_'+Math.floor(Math.random()*1000),name:name,rank:rank,team:team,parent:parent,phone:phone,insta:insta,photo:photo});}
-  if(orgSave(list)){orgEditId=null;window.__orgPhoto=undefined;go('org');}
+  var saved;
+  if(cur){cur.name=name;cur.rank=rank;cur.team=team;cur.parent=parent;cur.phone=phone;cur.insta=insta;cur.photo=photo;saved=cur;}
+  else{saved={id:'m_'+Date.now()+'_'+Math.floor(Math.random()*1000),name:name,rank:rank,team:team,parent:parent,phone:phone,insta:insta,photo:photo};list.push(saved);}
+  if(orgSave(list)){
+    try{orgPushOne(saved);}catch(e){}
+    orgEditId=null;window.__orgPhoto=undefined;go('org');
+  }
 }
 function orgPhotoTag(m,size,idAttr){
   var s=size||52;
@@ -8895,12 +9060,12 @@ function orgForm(list){
 function renderOrg(){
   var list=orgLoad();
   var body=''
-    + '<div class="notice" style="margin-bottom:12px;color:var(--ink-3)">이 조직도는 <b>이 기기</b>에 저장됩니다(로그인·인터넷·API 키 불필요). 본부→지점→팀→설계사를 계층으로 등록하고 연락처·인스타그램·사진을 관리하세요. <b>개인정보이므로 화면 공유·배포 시 주의</b>하세요.</div>'
+    + orgSyncBarHtml()
     + orgForm(list)
     + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · 구성원 '+list.length+'명 '
       + '<span style="float:right"><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="orgReset()">초기화</button></span></div>'
       + '<div class="card-body">'+orgTree(list)+'</div></div>';
-  return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함(이 기기 저장).',body);
+  return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함. 로그인하면 서버에 저장되어 어느 컴퓨터에서나 같은 조직도를 봅니다.',body);
 }
 
 function renderToolPage(tab){
