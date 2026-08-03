@@ -8732,6 +8732,50 @@ var ORG_KEY='apex_org_chart';
    않았다. 서버(org_members)를 정본으로 두되, 기기에 있던 내용을 말없이 덮어쓰지 않는다.
    · 한 명 추가·수정·삭제 → 그 한 줄만 서버에 반영 (다른 사람 기록을 건드리지 않는다)
    · 통째로 맞추기(가져오기·올리기) → 대표가 버튼을 눌렀을 때만 */
+var ORG_SQL=[
+ "set search_path = public;",
+ "",
+ "create table if not exists public.org_members(",
+ "  id text primary key,",
+ "  name text not null default '',",
+ "  rank text default '설계사',",
+ "  team text default '',",
+ "  parent text default '',",
+ "  phone text default '',",
+ "  insta text default '',",
+ "  photo text default '',",
+ "  updated_at timestamptz default now(),",
+ "  updated_by uuid",
+ ");",
+ "",
+ "alter table public.org_members add column if not exists updated_at timestamptz default now();",
+ "alter table public.org_members add column if not exists updated_by uuid;",
+ "",
+ "alter table public.org_members enable row level security;",
+ "",
+ "drop policy if exists org_members_read on public.org_members;",
+ "create policy org_members_read on public.org_members",
+ "  for select to authenticated using (true);",
+ "",
+ "drop policy if exists org_members_write on public.org_members;",
+ "create policy org_members_write on public.org_members",
+ "  for all to authenticated",
+ "  using (public.is_admin() or public.is_owner())",
+ "  with check (public.is_admin() or public.is_owner());",
+ "",
+ "grant select on public.org_members to authenticated;",
+ "grant insert, update, delete on public.org_members to authenticated;",
+ "",
+ "select count(*) as org_members_rows from public.org_members;",
+ "",
+ "notify pgrst, 'reload schema';"
+];
+function orgCopySql(){
+  var t=ORG_SQL.join('\n');
+  if(typeof copyText==='function')copyText(t);
+  else if(navigator.clipboard)navigator.clipboard.writeText(t);
+  toast('조직도 준비 SQL을 복사했습니다 — Supabase → SQL Editor에 붙여넣고 Run 하세요.');
+}
 var ORGS={pulled:false,busy:'',err:'',srv:null,at:''};
 
 function orgCanWrite(){
@@ -8843,9 +8887,11 @@ function orgSyncBarHtml(){
     return box('#FFFBEB','#FDE68A','#92400E',
       (notReady
         ? '<b>조직도 서버 저장이 아직 켜지지 않았습니다.</b><br>'+
-          '<span style="font-size:11.5px;line-height:1.8">지금은 이 기기에만 저장됩니다. <b>migration_23_org.sql</b> 을 Supabase → SQL Editor 에서 한 번 실행하면, 이후로는 어느 컴퓨터에서나 같은 조직도를 보게 됩니다.</span>'
+          '<span style="font-size:11.5px;line-height:1.8">지금은 이 기기에만 저장됩니다. 아래 <b>준비 SQL 복사</b>를 누르고 Supabase → <b>SQL Editor</b> 에 붙여넣어 <b>Run</b> 한 번만 하면, 이후로는 어느 컴퓨터에서나 같은 조직도를 보게 됩니다.</span>'
         : '<b>서버 연결 문제로 이 기기 내용을 보여주고 있습니다.</b><br><span style="font-size:11.5px">'+osEsc(ORGS.err)+'</span>')+
-      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">다시 시도</button></div>');
+      '<div class="btn-row" style="margin-top:8px">'+
+        (notReady?'<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgCopySql()">📋 준비 SQL 복사</button>':'')+
+        '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">다시 시도</button></div>');
   }
   if(ORGS.srv===null){
     return box('#F8FAFD','#E5E9F0','var(--ink-3)','서버 상태를 확인하는 중입니다…');
