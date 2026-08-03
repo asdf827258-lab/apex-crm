@@ -3569,7 +3569,467 @@ function osScoreGrade(t){t=t||0;if(t>=90)return['APEX PRO','#059669'];if(t>=80)r
    PDF·이미지(증권/제안서)를 올리면 윤시현의 두뇌가 판독해 고객용 설명서를 만든다.
    전(현재 가입) + 후(새 제안)를 같이 올리면 전후 비교 제안서가 나온다.
    결과는 고객 365일로 저장한다. */
-var PR={plan:null,i:0,view:'deck',busy:false,mode:'explain',files:{before:[],after:[]}};
+var PR={plan:null,i:0,view:'deck',busy:false,mode:'explain',files:{before:[],after:[]},refEdit:false};
+
+/* ════════ 제안서 근거 데이터 · 차트 엔진 ════════
+   투자보고서처럼 "숫자 + 출처 + 기준시점"을 함께 보여 준다.
+   AI가 통계를 지어내지 않도록, 인용 가능한 수치를 앱이 먼저 쥐고 프롬프트에 넣어 준다.
+   숫자는 해마다 바뀌므로 대표가 직접 고칠 수 있게 하고, 고친 값은 이 브라우저에 남는다. */
+
+var PR_REF_KEY='apex_pr_ref';
+
+function prRefBase(){
+  return {
+    asof:'2025',
+    /* 국가채무(D1) — 기획재정부 국가재정운용계획·재정동향 (조원) */
+    debt:[
+      {y:'2019',v:723},{y:'2020',v:847},{y:'2021',v:971},
+      {y:'2022',v:1068},{y:'2023',v:1127},{y:'2024',v:1176},{y:'2025',v:1273,est:true}
+    ],
+    debtSrc:'기획재정부 국가채무(D1)',
+    debtNote:'2025년은 예산 기준 전망치입니다.',
+
+    /* 건강보험 보장률 — 국민건강보험공단 건강보험환자 진료비 실태조사 (%) */
+    cover:[
+      {y:'2018',v:63.8},{y:'2019',v:64.2},{y:'2020',v:65.3},
+      {y:'2021',v:64.5},{y:'2022',v:65.7},{y:'2023',v:64.9}
+    ],
+    coverSrc:'국민건강보험공단 건강보험환자 진료비 실태조사',
+    coverNote:'보장률이 65% 안팎에서 더 오르지 않고 있습니다. 나머지는 환자가 냅니다.',
+
+    /* 진료비 구성 — 보장률의 뒷면 (%) */
+    mix:[
+      {k:'건강보험이 내는 돈',v:64.9,c:'#1D4ED8'},
+      {k:'법정 본인부담',v:19.7,c:'#0891B2'},
+      {k:'비급여',v:15.4,c:'#DC2626'}
+    ],
+    mixSrc:'국민건강보험공단 진료비 실태조사(2023) 기준 구성비',
+    mixNote:'비급여는 건강보험이 한 푼도 내지 않습니다. 실손이 없으면 전액 본인 부담입니다.',
+
+    /* 본인부담상한제 — 소득분위별 연간 상한액 (만원) */
+    capLow:87,
+    capHigh:826,
+    capSrc:'국민건강보험공단 본인부담상한제',
+    capNote:'급여 항목에만 적용됩니다. 비급여·선별급여·상급병실료·추나·미용 목적은 상한제에서 빠집니다.',
+    capUncertain:true,
+
+    /* 산정특례 */
+    specCancer:5,
+    specRare:10,
+    specYears:5,
+    specSrc:'국민건강보험 본인일부부담금 산정특례',
+    specNote:'등록하면 급여 본인부담률이 크게 낮아집니다. 다만 이것도 급여 항목에만 해당합니다.',
+
+    /* 고령화 — 진료비를 밀어올리는 힘 */
+    aged:[
+      {k:'65세 이상 인구 비중',v:19.2,c:'#7C3AED'},
+      {k:'65세 이상 진료비 비중',v:43.5,c:'#DC2626'}
+    ],
+    agedSrc:'통계청 장래인구추계 · 건강보험 주요통계(2023)',
+    agedNote:'인구의 5분의 1이 진료비의 절반 가까이를 씁니다. 이 격차가 재정을 압박합니다.',
+
+    /* 비급여 대표 항목 — 병원·환자 상태에 따라 편차가 큽니다 */
+    nonCovered:[
+      {k:'로봇수술',lo:800,hi:1500,u:'만원'},
+      {k:'면역항암제(비급여 시)',lo:3000,hi:10000,u:'만원/년'},
+      {k:'상급병실료 차액',lo:10,hi:50,u:'만원/일'},
+      {k:'간병비(사설)',lo:12,hi:15,u:'만원/일'},
+      {k:'도수·재활치료',lo:5,hi:15,u:'만원/회'}
+    ],
+    ncSrc:'심사평가원 비급여 진료비용 공개 및 현장 상담 사례 범위',
+    ncNote:'같은 치료라도 병원마다 값이 다릅니다. 반드시 범위로 설명하세요.'
+  };
+}
+function prRef(){
+  var b=prRefBase();
+  try{
+    var o=JSON.parse(localStorage.getItem(PR_REF_KEY)||'null');
+    if(o&&typeof o==='object'){
+      if(o.asof)b.asof=o.asof;
+      if(isFinite(o.debtLast)&&o.debtLast>0)b.debt[b.debt.length-1].v=+o.debtLast;
+      if(isFinite(o.coverLast)&&o.coverLast>0){
+        b.cover[b.cover.length-1].v=+o.coverLast;
+        b.mix[0].v=+o.coverLast;
+        b.mix[1].v=Math.max(0,Math.round((100-o.coverLast-b.mix[2].v)*10)/10);
+      }
+      if(isFinite(o.nonCov)&&o.nonCov>0){
+        b.mix[2].v=+o.nonCov;
+        b.mix[1].v=Math.max(0,Math.round((100-b.mix[0].v-o.nonCov)*10)/10);
+      }
+      if(isFinite(o.capLow)&&o.capLow>0)b.capLow=+o.capLow;
+      if(isFinite(o.capHigh)&&o.capHigh>0)b.capHigh=+o.capHigh;
+      if(o.capUncertain===false)b.capUncertain=false;
+      b._edited=true;
+    }
+  }catch(e){}
+  return b;
+}
+function prRefSave(){
+  var g=function(id){var v=parseFloat(osVal(id));return isFinite(v)?v:null;};
+  var o={asof:(osVal('prRefAsof')||'').replace(/^\s+|\s+$/g,''),
+    debtLast:g('prRefDebt'),coverLast:g('prRefCover'),nonCov:g('prRefNonCov'),
+    capLow:g('prRefCapLow'),capHigh:g('prRefCapHigh'),capUncertain:false};
+  try{localStorage.setItem(PR_REF_KEY,JSON.stringify(o));}catch(e){}
+  toast('근거 수치를 최신값으로 저장했습니다.');
+  PR.refEdit=false;prPaint();
+}
+function prRefReset(){
+  try{localStorage.removeItem(PR_REF_KEY);}catch(e){}
+  toast('기본 수치로 되돌렸습니다.');PR.refEdit=false;prPaint();
+}
+function prRefEditToggle(){PR.refEdit=!PR.refEdit;prPaint();}
+
+/* AI 에게 넘길 근거 요약 — 이 표 밖의 통계는 쓰지 못하게 한다 */
+function prRefPromptText(){
+  var r=prRef();
+  var last=function(a){return a[a.length-1];};
+  return '[인용 가능한 공개 근거 — 이 표에 있는 숫자만 쓴다. 여기 없는 통계·기사·연도는 만들지 않는다]\n'+
+    '· 국가채무(D1): '+r.debt.map(function(d){return d.y+'년 '+d.v+'조';}).join(', ')+' ('+r.debtSrc+')\n'+
+    '· 건강보험 보장률: '+r.cover.map(function(d){return d.y+'년 '+d.v+'%';}).join(', ')+' ('+r.coverSrc+')\n'+
+    '· 진료비 구성: 건강보험 '+r.mix[0].v+'% / 법정 본인부담 '+r.mix[1].v+'% / 비급여 '+r.mix[2].v+'% ('+r.mixSrc+')\n'+
+    '· 본인부담상한제: 소득분위에 따라 연 약 '+r.capLow+'만원~'+r.capHigh+'만원. 급여 항목만 적용되고 비급여·상급병실료·선별급여는 제외 ('+r.capSrc+')\n'+
+    '· 산정특례: 암 본인부담 '+r.specCancer+'%, 희귀난치 '+r.specRare+'%, 등록 후 '+r.specYears+'년 ('+r.specSrc+')\n'+
+    '· 고령화: 65세 이상 인구 '+r.aged[0].v+'%, 이들이 쓰는 진료비 '+r.aged[1].v+'% ('+r.agedSrc+')\n'+
+    '· 비급여 항목 범위: '+r.nonCovered.map(function(n){return n.k+' '+n.lo+'~'+n.hi+n.u;}).join(', ')+' ('+r.ncSrc+')\n'+
+    '기준 시점: '+r.asof+'년. 숫자를 인용할 때는 반드시 출처와 연도를 함께 쓴다.';
+}
+
+/* ════════ 차트 — 순수 SVG. 외부 라이브러리 없이 인쇄까지 된다 ════════ */
+function prNum(v){
+  v=+v||0;
+  return (''+v).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+}
+function prWon(v){
+  var t=(''+(v==null?'':v)).replace(/^\s+|\s+$/g,'');
+  if(!t)return '-';
+  if(/^[0-9,]+(\.[0-9]+)?$/.test(t))return prNum(Math.round(parseFloat(t.replace(/,/g,''))))+'만원';
+  return t;
+}
+function prChartLine(pts,o){
+  o=o||{};
+  var W=680,H=o.h||230,L=52,R=16,T=18,B=34;
+  var iw=W-L-R,ih=H-T-B;
+  var vs=pts.map(function(p){return +p.v;});
+  var mx=Math.max.apply(null,vs),mn=Math.min.apply(null,vs);
+  var lo=o.zero?0:Math.max(0,mn-(mx-mn)*0.35),hi=mx+(mx-lo)*0.16;
+  if(hi<=lo)hi=lo+1;
+  var X=function(i){return L+(pts.length<2?iw/2:iw*i/(pts.length-1));};
+  var Y=function(v){return T+ih-(v-lo)/(hi-lo)*ih;};
+  var col=o.color||'#1D4ED8';
+  var g='',i;
+  for(i=0;i<=3;i++){
+    var yy=T+ih*i/3, val=hi-(hi-lo)*i/3;
+    g+='<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+yy.toFixed(1)+'" stroke="#EDF1F7" stroke-width="1"/>'+
+       '<text x="'+(L-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" font-size="10" fill="#9CA3AF">'+Math.round(val)+'</text>';
+  }
+  var d='',a='';
+  pts.forEach(function(p,k){
+    var x=X(k).toFixed(1),y=Y(p.v).toFixed(1);
+    d+=(k?' L':'M')+x+' '+y; a+=(k?' L':'M')+x+' '+y;
+  });
+  a+=' L'+X(pts.length-1).toFixed(1)+' '+(T+ih)+' L'+X(0).toFixed(1)+' '+(T+ih)+' Z';
+  var dots='';
+  pts.forEach(function(p,k){
+    var x=X(k),y=Y(p.v);
+    /* 첫 점은 왼쪽 축 눈금과, 마지막 점은 오른쪽 끝과 겹치므로 정렬을 바꾼다 */
+    var anc=(k===0)?'start':((k===pts.length-1)?'end':'middle');
+    var lx=(k===0)?(x-4):((k===pts.length-1)?(x+4):x);
+    dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(p.est?3.5:4.5)+'" fill="#fff" stroke="'+col+'" stroke-width="2.5"'+(p.est?' stroke-dasharray="2 2"':'')+'/>'+
+      '<text x="'+lx.toFixed(1)+'" y="'+(y-11).toFixed(1)+'" text-anchor="'+anc+'" font-size="10.5" font-weight="800" fill="'+col+'">'+prNum(p.v)+(o.unit||'')+'</text>'+
+      '<text x="'+x.toFixed(1)+'" y="'+(T+ih+19)+'" text-anchor="middle" font-size="10" fill="#9CA3AF">'+osEsc(p.y)+(p.est?'*':'')+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block" role="img">'+
+    '<defs><linearGradient id="prg1" x1="0" y1="0" x2="0" y2="1">'+
+    '<stop offset="0%" stop-color="'+col+'" stop-opacity=".20"/><stop offset="100%" stop-color="'+col+'" stop-opacity="0"/></linearGradient></defs>'+
+    g+'<path d="'+a+'" fill="url(#prg1)"/>'+
+    '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>'+
+    dots+'</svg>';
+}
+function prChartStack(segs,o){
+  o=o||{};
+  var W=680,H=o.h||64,L=0,bw=W;
+  var tot=0;segs.forEach(function(s){tot+=+s.v;});
+  if(tot<=0)tot=1;
+  var x=0,bars='',legend='';
+  segs.forEach(function(s){
+    var w=bw*(+s.v)/tot;
+    bars+='<rect x="'+x.toFixed(1)+'" y="0" width="'+Math.max(0,w-1.5).toFixed(1)+'" height="34" rx="5" fill="'+s.c+'"/>';
+    if(w>62)bars+='<text x="'+(x+w/2).toFixed(1)+'" y="22" text-anchor="middle" font-size="13" font-weight="900" fill="#fff">'+s.v+'%</text>';
+    x+=w;
+  });
+  segs.forEach(function(s){
+    legend+='<span style="display:inline-flex;align-items:center;gap:5px;margin-right:13px;font-size:11.5px;color:#42506A;font-weight:700">'+
+      '<i style="width:10px;height:10px;border-radius:3px;background:'+s.c+';display:inline-block"></i>'+osEsc(s.k)+' <b style="color:'+s.c+'">'+s.v+'%</b></span>';
+  });
+  return '<svg viewBox="0 0 '+W+' 34" style="width:100%;height:auto;display:block">'+bars+'</svg>'+
+    '<div style="margin-top:9px;line-height:1.9">'+legend+'</div>';
+}
+function prChartBarsH(rows,o){
+  o=o||{};
+  var mx=0;rows.forEach(function(r){var t=(r.hi!=null?r.hi:r.v);if(t>mx)mx=t;});
+  if(mx<=0)mx=1;
+  return '<div style="display:grid;gap:9px">'+rows.map(function(r){
+    var isR=(r.hi!=null);
+    var w1=(isR?r.lo:r.v)/mx*100, w2=(isR?r.hi:r.v)/mx*100;
+    var col=r.c||'#1D4ED8';
+    return '<div>'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:12px;margin-bottom:4px">'+
+        '<b style="color:#1C2434;font-weight:800">'+osEsc(r.k)+'</b>'+
+        '<span style="color:'+col+';font-weight:900;font-size:12.5px">'+(isR?prNum(r.lo)+'~'+prNum(r.hi):prNum(r.v))+(r.u||o.unit||'')+'</span></div>'+
+      '<div style="height:13px;border-radius:7px;background:#F1F4F8;position:relative;overflow:hidden">'+
+        (isR
+          ? '<div style="position:absolute;left:'+w1.toFixed(1)+'%;width:'+Math.max(2,(w2-w1)).toFixed(1)+'%;top:0;bottom:0;background:'+col+';opacity:.85;border-radius:7px"></div>'+
+            '<div style="position:absolute;left:0;width:'+w1.toFixed(1)+'%;top:0;bottom:0;background:'+col+';opacity:.22"></div>'
+          : '<div style="position:absolute;left:0;width:'+w2.toFixed(1)+'%;top:0;bottom:0;background:'+col+';border-radius:7px"></div>')+
+      '</div></div>';
+  }).join('')+'</div>';
+}
+function prChartDonut(segs,o){
+  o=o||{};
+  var S=180,r=64,cx=S/2,cy=S/2,C=2*Math.PI*r;
+  var tot=0;segs.forEach(function(s){tot+=+s.v;});
+  if(tot<=0)tot=1;
+  var acc=0,arcs='';
+  segs.forEach(function(s){
+    var len=C*(+s.v)/tot;
+    arcs+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+s.c+'" stroke-width="26" '+
+      'stroke-dasharray="'+len.toFixed(2)+' '+(C-len).toFixed(2)+'" stroke-dashoffset="'+(-acc).toFixed(2)+'" '+
+      'transform="rotate(-90 '+cx+' '+cy+')"/>';
+    acc+=len;
+  });
+  var legend=segs.map(function(s){
+    return '<div style="display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 0">'+
+      '<i style="width:11px;height:11px;border-radius:3px;background:'+s.c+';flex:0 0 auto"></i>'+
+      '<span style="flex:1;color:#42506A;font-weight:700">'+osEsc(s.k)+'</span>'+
+      '<b style="color:'+s.c+';font-weight:900">'+Math.round((+s.v)/tot*100)+'%</b></div>';
+  }).join('');
+  return '<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">'+
+    '<svg viewBox="0 0 '+S+' '+S+'" style="width:170px;height:170px;flex:0 0 auto">'+arcs+
+    '<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="13" font-weight="900" fill="#0B1B34">'+osEsc(o.center||'')+'</text>'+
+    '<text x="'+cx+'" y="'+(cy+14)+'" text-anchor="middle" font-size="10.5" fill="#8B96A8">'+osEsc(o.sub||'')+'</text></svg>'+
+    '<div style="flex:1;min-width:170px">'+legend+'</div></div>';
+}
+function prChartGauge(pct,o){
+  o=o||{};
+  pct=Math.max(0,Math.min(100,+pct||0));
+  var W=300,H=160,cx=150,cy=132,r=104;
+  var ang=Math.PI*(1-pct/100);
+  var ex=cx+r*Math.cos(ang),ey=cy-r*Math.sin(ang);
+  var col=o.color||'#1D4ED8';
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:250px;height:auto;max-width:100%">'+
+    '<path d="M'+(cx-r)+' '+cy+' A'+r+' '+r+' 0 0 1 '+(cx+r)+' '+cy+'" fill="none" stroke="#EDF1F7" stroke-width="20" stroke-linecap="round"/>'+
+    '<path d="M'+(cx-r)+' '+cy+' A'+r+' '+r+' 0 '+(pct>50?1:0)+' 1 '+ex.toFixed(1)+' '+ey.toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="20" stroke-linecap="round"/>'+
+    '<text x="'+cx+'" y="'+(cy-24)+'" text-anchor="middle" font-size="30" font-weight="900" fill="'+col+'">'+(Math.round(pct*10)/10)+'%</text>'+
+    '<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="11" fill="#8B96A8">'+osEsc(o.label||'')+'</text></svg>';
+}
+function prSrc(txt,note,uncertain){
+  return '<div style="font-size:10.5px;color:#9CA3AF;line-height:1.7;margin-top:9px;border-top:1px dashed #EDF1F7;padding-top:7px">'+
+    '<b style="color:#7A8698">출처</b> '+osEsc(txt)+
+    (uncertain?' <span style="color:#B45309;font-weight:800">· 매년 변동 — 발표 전 확인 필요</span>':'')+
+    (note?'<br>'+osEsc(note):'')+'</div>';
+}
+
+/* ════════ 국가혜택 · 급여/비급여 · 근거 ════════ */
+function prRefEditHtml(){
+  var r=prRef();
+  var f=function(id,label,val,ph){
+    return '<div><label style="display:block;font-size:10.5px;font-weight:800;color:#4B5563;margin-bottom:3px">'+label+'</label>'+
+      '<input id="'+id+'" value="'+osEsc(val==null?'':''+val)+'" placeholder="'+osEsc(ph||'')+'" '+
+      'style="width:100%;box-sizing:border-box;border:1px solid #E5E9F0;border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:inherit"></div>';
+  };
+  return '<div style="border:1px solid #C7D2FE;background:#F8FAFF;border-radius:13px;padding:14px 16px;margin-bottom:13px">'+
+    '<div style="font-size:12.5px;font-weight:800;color:#3730A3;margin-bottom:4px">📝 근거 수치 최신화</div>'+
+    '<div style="font-size:11px;color:#4B5A70;line-height:1.7;margin-bottom:10px">공표 기관이 해마다 값을 바꿉니다. 최신 발표를 확인하고 여기서 고쳐 두면 이후 만드는 모든 제안서에 그 값이 쓰입니다. 고친 값은 이 브라우저에만 저장됩니다.</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px">'+
+      f('prRefAsof','기준 연도',r.asof,'2025')+
+      f('prRefDebt','국가채무 최신값(조원)',r.debt[r.debt.length-1].v,'1273')+
+      f('prRefCover','건강보험 보장률(%)',r.cover[r.cover.length-1].v,'64.9')+
+      f('prRefNonCov','비급여 비중(%)',r.mix[2].v,'15.4')+
+      f('prRefCapLow','본인부담상한 최저(만원)',r.capLow,'87')+
+      f('prRefCapHigh','본인부담상한 최고(만원)',r.capHigh,'826')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" style="padding:7px 14px;font-size:12px" onclick="prRefSave()">저장</button>'+
+      '<button class="btn btn-ghost" style="padding:7px 14px;font-size:12px" onclick="prRefReset()">기본값으로</button>'+
+      '<button class="btn btn-ghost" style="padding:7px 14px;font-size:12px" onclick="prRefEditToggle()">닫기</button>'+
+    '</div></div>';
+}
+
+function prEvidenceHtml(){
+  var p=PR.plan||{},r=prRef();
+  var nat=p.national||{},cm=p.costmix||{},inc=p.incomeFit||{};
+  var d0=r.debt[0],d1=r.debt[r.debt.length-1];
+  var grow=d0.v?Math.round((d1.v/d0.v-1)*100):0;
+
+  var head='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📊</span>국가가 내주는 것, 내가 내야 하는 것</div>'+
+    '<div class="card-desc">겁주는 자료가 아닙니다. <b>공표된 숫자와 출처</b>만 놓고, 국가 제도가 어디까지 받쳐주는지와 어디부터 본인 몫인지를 나눠 봅니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
+      '<span style="font-size:11px;font-weight:800;color:#42506A;background:#F1F5F9;border-radius:7px;padding:6px 11px">기준 '+osEsc(r.asof)+'년'+(r._edited?' · 대표 수정본':'')+'</span>'+
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="prRefEditToggle()">📝 근거 수치 최신화</button>'+
+    '</div>'+
+    (PR.refEdit?'<div style="margin-top:11px">'+prRefEditHtml()+'</div>':'')+
+    '</div></div>';
+
+  /* ① 나라 곳간 */
+  var s1='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🏛️</span>1. 나라 곳간은 지금 어떤가</div>'+
+    '<div class="card-desc">국가채무가 '+d0.y+'년 '+prNum(d0.v)+'조에서 '+d1.y+'년 '+prNum(d1.v)+'조로 <b>'+grow+'%</b> 늘었습니다. 국가가 더 내주기 어려워지는 방향입니다.</div></div>'+
+    '<div class="card-body">'+prChartLine(r.debt,{unit:'',color:'#DC2626'})+
+    prSrc(r.debtSrc,r.debtNote+' * 표시는 전망치입니다.')+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:13px">'+
+      '<div style="border:1px solid #FECACA;background:#FEF2F2;border-radius:12px;padding:13px 15px">'+
+        '<div style="font-size:11px;font-weight:800;color:#B91C1C">인구 구조</div>'+
+        '<div style="font-size:12.5px;color:#7F1D1D;line-height:1.75;margin-top:6px">'+osEsc(r.agedNote)+'</div>'+
+        '<div style="margin-top:10px">'+prChartBarsH(r.aged,{unit:'%'})+'</div>'+
+        prSrc(r.agedSrc,'')+'</div>'+
+      '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:13px 15px">'+
+        '<div style="font-size:11px;font-weight:800;color:#B45309">그래서 무슨 뜻인가</div>'+
+        '<div style="font-size:12.5px;color:#78350F;line-height:1.8;margin-top:6px">'+
+        '낼 사람은 줄고 쓸 사람은 늘고 있습니다. 제도가 없어진다는 뜻이 아니라, <b>본인이 부담하는 몫이 늘어나는 방향</b>이라는 뜻입니다. '+
+        '그래서 국가 제도를 먼저 정확히 쓰고, 그 바깥을 사보험으로 메우는 순서가 맞습니다.</div></div>'+
+    '</div></div></div>';
+
+  /* ② 급여 / 비급여 */
+  var s2='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🧾</span>2. 병원비는 이렇게 나뉩니다 — 급여와 비급여</div>'+
+    '<div class="card-desc">건강보험 보장률이 '+r.cover[r.cover.length-1].v+'% 라는 말은, <b>나머지 '+(Math.round((100-r.cover[r.cover.length-1].v)*10)/10)+'%는 환자가 낸다</b>는 뜻입니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:12px;font-weight:800;color:#42506A;margin-bottom:8px">진료비 100원은 이렇게 나뉩니다</div>'+
+    prChartStack(r.mix)+prSrc(r.mixSrc,r.mixNote)+
+    '<div style="margin-top:16px;font-size:12px;font-weight:800;color:#42506A;margin-bottom:6px">보장률은 몇 년째 제자리입니다</div>'+
+    prChartLine(r.cover,{unit:'%',color:'#1D4ED8'})+prSrc(r.coverSrc,r.coverNote)+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:14px">'+
+      '<div style="border:1px solid #BFDBFE;background:#F5F9FF;border-radius:12px;padding:13px 15px">'+
+        '<div style="font-size:12.5px;font-weight:900;color:#1D4ED8">급여 — 건강보험이 함께 내는 항목</div>'+
+        '<div style="font-size:12px;color:#42506A;line-height:1.8;margin-top:6px">'+
+        '진료비의 일부만 본인이 냅니다. <b>본인부담상한제</b>와 <b>산정특례</b>가 여기에 적용되어 부담이 크게 줄어듭니다.</div></div>'+
+      '<div style="border:1px solid #FECACA;background:#FFF7F7;border-radius:12px;padding:13px 15px">'+
+        '<div style="font-size:12.5px;font-weight:900;color:#DC2626">비급여 — 건강보험이 한 푼도 안 내는 항목</div>'+
+        '<div style="font-size:12px;color:#7F1D1D;line-height:1.8;margin-top:6px">'+
+        '상한제도 산정특례도 <b>적용되지 않습니다.</b> 병원마다 값이 다르고, 큰 병일수록 이 칸이 커집니다. '+
+        '실손이 없으면 전액 본인 부담입니다.</div></div>'+
+    '</div>'+
+    '<div style="margin-top:14px;font-size:12px;font-weight:800;color:#42506A;margin-bottom:7px">대표적인 비급여 — 병원별 편차가 큽니다</div>'+
+    prChartBarsH(r.nonCovered.map(function(n){return {k:n.k,lo:n.lo,hi:n.hi,u:n.u,c:'#DC2626'};}))+
+    prSrc(r.ncSrc,r.ncNote)+
+    '</div></div>';
+
+  /* ③ 국가 제도 — 먼저 쓸 것 */
+  var covRows=(nat.covered||[]),gapRows=(nat.gap||[]);
+  var s3='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🛡️</span>3. 먼저 챙길 국가 혜택</div>'+
+    '<div class="card-desc">사보험보다 <b>국가 제도가 먼저</b>입니다. 이걸 다 쓰고 남는 구멍만 보험으로 막는 것이 순서입니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">'+
+      '<div style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:12px;padding:14px 16px">'+
+        '<div style="font-size:13px;font-weight:900;color:#047857;margin-bottom:5px">본인부담상한제</div>'+
+        '<div style="font-size:20px;font-weight:900;color:#047857;letter-spacing:-.6px">연 '+prNum(r.capLow)+'만 ~ '+prNum(r.capHigh)+'만원</div>'+
+        '<div style="font-size:11.5px;color:#065F46;line-height:1.75;margin-top:6px">소득 분위에 따라 이 금액을 넘는 <b>급여</b> 본인부담금은 공단이 돌려줍니다.</div>'+
+        '<div style="font-size:11.5px;color:#B91C1C;font-weight:800;line-height:1.7;margin-top:7px">단, 비급여·상급병실료·선별급여는 제외됩니다.</div>'+
+        prSrc(r.capSrc,r.capNote,r.capUncertain)+'</div>'+
+      '<div style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:12px;padding:14px 16px">'+
+        '<div style="font-size:13px;font-weight:900;color:#047857;margin-bottom:5px">산정특례</div>'+
+        '<div style="font-size:20px;font-weight:900;color:#047857;letter-spacing:-.6px">암 '+r.specCancer+'% · 희귀난치 '+r.specRare+'%</div>'+
+        '<div style="font-size:11.5px;color:#065F46;line-height:1.75;margin-top:6px">등록하면 <b>'+r.specYears+'년간</b> 급여 본인부담률이 이 수준으로 내려갑니다. 진단 후 등록을 놓치지 않는 것이 중요합니다.</div>'+
+        prSrc(r.specSrc,r.specNote)+'</div>'+
+    '</div>'+
+    (covRows.length||gapRows.length
+      ? '<div style="margin-top:14px;overflow-x:auto"><table class="pr-diff" style="min-width:520px">'+
+        '<thead><tr><th>항목</th><th>국가가 내주는 부분</th><th>그래도 내가 내야 하는 부분</th></tr></thead><tbody>'+
+        (covRows.length?covRows:[{item:'—',who:'',amount:'',note:''}]).map(function(c,i){
+          var g=gapRows[i]||{};
+          return '<tr><td class="it">'+osEsc(c.item||'')+'</td>'+
+            '<td class="bf"><b style="color:#047857">'+osEsc(c.amount||c.who||'')+'</b>'+(c.note?'<br><span style="font-size:11px">'+osEsc(c.note)+'</span>':'')+'</td>'+
+            '<td class="af"><b style="color:#DC2626">'+osEsc(g.amount||'')+'</b>'+(g.why?'<br><span style="font-size:11px;font-weight:500;color:#7A8698">'+osEsc(g.why)+'</span>':'')+'</td></tr>';
+        }).join('')+'</tbody></table></div>'
+      : '<div class="acad-note" style="margin-top:12px">이 고객의 국가혜택 대조표는 제안서를 만들면 채워집니다.</div>')+
+    (nat.summary?'<div class="pr-quote" style="margin-top:14px">'+osEsc(nat.summary)+'</div>':'')+
+    '</div></div>';
+
+  /* ④ 치료비 구성 */
+  var items=(cm.items||[]);
+  var byType={};
+  items.forEach(function(it){
+    var t=it.type||'비급여';var v=parseFloat((''+(it.amount||'')).replace(/[^0-9.]/g,''))||0;
+    byType[t]=(byType[t]||0)+v;
+  });
+  var typeColor={'급여':'#1D4ED8','법정본인부담':'#0891B2','비급여':'#DC2626','비의료비':'#D97706'};
+  var donutSegs=Object.keys(byType).map(function(k){return {k:k,v:byType[k],c:typeColor[k]||'#7C3AED'};});
+  var s4='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">💊</span>4. 치료비는 무엇으로 이루어지나</div>'+
+    '<div class="card-desc">'+(cm.caseLabel?osEsc(cm.caseLabel):'실제 치료 과정에서 나가는 돈을 항목으로 갈라 봅니다')+'</div></div>'+
+    '<div class="card-body">'+
+    (donutSegs.length
+      ? prChartDonut(donutSegs,{center:cm.total?osEsc(cm.total):'',sub:'총 치료비'})+
+        '<div style="margin-top:14px;overflow-x:auto"><table class="pr-diff" style="min-width:560px">'+
+        '<thead><tr><th>항목</th><th>구분</th><th>금액</th><th>설명</th></tr></thead><tbody>'+
+        items.map(function(it){
+          var c=typeColor[it.type||'']||'#7C3AED';
+          return '<tr><td class="it">'+osEsc(it.name||'')+'</td>'+
+            '<td><span class="pr-chg" style="color:'+c+';background:'+c+'14">'+osEsc(it.type||'')+'</span></td>'+
+            '<td class="af">'+osEsc(prWon(it.amount))+'</td>'+
+            '<td class="bf" style="font-size:11.5px">'+osEsc(it.note||'')+'</td></tr>';
+        }).join('')+'</tbody></table></div>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:13px">'+
+          '<div style="border:1px solid #BBF7D0;background:#F0FDF4;border-radius:12px;padding:13px 15px">'+
+            '<div style="font-size:11px;font-weight:800;color:#047857">국가·건강보험이 내주는 부분</div>'+
+            '<div style="font-size:19px;font-weight:900;color:#047857;margin-top:4px;letter-spacing:-.6px">'+osEsc(cm.insurerPays||'-')+'</div></div>'+
+          '<div style="border:1px solid #FECACA;background:#FEF2F2;border-radius:12px;padding:13px 15px">'+
+            '<div style="font-size:11px;font-weight:800;color:#B91C1C">그래도 내가 내야 하는 부분</div>'+
+            '<div style="font-size:19px;font-weight:900;color:#B91C1C;margin-top:4px;letter-spacing:-.6px">'+osEsc(cm.selfPays||'-')+'</div></div>'+
+        '</div>'
+      : '<div class="acad-note">치료비 구성표는 제안서를 만들면 채워집니다. 고객의 나이·가족력·직업에 맞는 대표 질병으로 계산됩니다.</div>')+
+    '<div style="font-size:10.5px;color:#9CA3AF;line-height:1.7;margin-top:11px;border-top:1px dashed #EDF1F7;padding-top:7px">'+
+    '치료비는 병원·병기·치료법에 따라 크게 달라집니다. 위 금액은 <b>상담용 추정</b>이며 특정 금액의 지급을 보장하지 않습니다.</div>'+
+    '</div></div>';
+
+  /* ⑤ 소득 대비 */
+  var ratio=parseFloat((''+(inc.ratioNow||'')).replace(/[^0-9.]/g,''));
+  var s5='<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">⚖️</span>5. 이 고객의 소득에 맞는 크기인가</div>'+
+    '<div class="card-desc">보장은 <b>많이</b>가 아니라 <b>계속 낼 수 있는 크기</b>로 잡아야 합니다. 중간에 해지하면 그때까지 낸 돈이 가장 아깝습니다.</div></div>'+
+    '<div class="card-body">'+
+    (inc.monthlyIncome
+      ? '<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:center">'+
+        (isFinite(ratio)?prChartGauge(ratio,{label:'월 소득 대비 보험료',color:(ratio>15?'#DC2626':(ratio<5?'#D97706':'#047857'))}):'')+
+        '<div style="flex:1;min-width:210px;display:grid;gap:8px">'+
+          '<div class="pr-row"><span class="l">월 소득</span><span class="v">'+osEsc(inc.monthlyIncome||'-')+'</span></div>'+
+          '<div class="pr-row"><span class="l">현재 보험료</span><span class="v">'+osEsc(inc.currentPremium||'-')+'</span></div>'+
+          '<div class="pr-row"><span class="l">권장 범위</span><span class="v">'+osEsc(inc.recommendMin||'-')+' ~ '+osEsc(inc.recommendMax||'-')+'</span></div>'+
+          '<div class="pr-row" style="background:'+(/과다/.test(inc.verdict||'')?'#FEF2F2':(/부족/.test(inc.verdict||'')?'#FFFBEB':'#F0FDF4'))+'">'+
+            '<span class="l">판단</span><span class="v">'+osEsc(inc.verdict||'-')+
+            (inc.why?'<small>'+osEsc(inc.why)+'</small>':'')+'</span></div>'+
+        '</div></div>'
+      : '<div class="acad-note">소득 대비 적정성은 제안서를 만들면 계산됩니다. 입력란의 <b>월 소득</b>을 채우면 더 정확해집니다.</div>')+
+    '</div></div>';
+
+  /* ⑥ 인용한 근거 */
+  var ev=(p.evidence||[]);
+  var s6='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📚</span>6. 이 문서가 인용한 근거</div>'+
+    '<div class="card-desc">숫자에는 출처가 붙어야 합니다. 고객이 물으면 그대로 보여 주세요.</div></div><div class="card-body">'+
+    '<div style="overflow-x:auto"><table class="pr-diff" style="min-width:520px"><thead><tr><th>내용</th><th>출처</th><th>기준</th></tr></thead><tbody>'+
+    [{claim:'국가채무 추이',source:r.debtSrc,asof:d1.y+'년'},
+     {claim:'건강보험 보장률',source:r.coverSrc,asof:r.cover[r.cover.length-1].y+'년'},
+     {claim:'진료비 급여·비급여 구성',source:r.mixSrc,asof:r.asof+'년'},
+     {claim:'본인부담상한제',source:r.capSrc,asof:r.asof+'년'},
+     {claim:'산정특례',source:r.specSrc,asof:r.asof+'년'},
+     {claim:'고령 인구·진료비 비중',source:r.agedSrc,asof:r.asof+'년'},
+     {claim:'비급여 항목 비용 범위',source:r.ncSrc,asof:r.asof+'년'}]
+      .concat(ev).map(function(e){
+      return '<tr><td class="it">'+osEsc(e.claim||'')+'</td><td class="bf">'+osEsc(e.source||'')+'</td><td class="bf">'+osEsc(e.asof||'')+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+
+    '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 14px;margin-top:12px;font-size:11.5px;color:#92400E;line-height:1.8">'+
+    '<b>고객 제시 전 확인</b> — 공표 수치는 해마다 바뀝니다. 발표 직전에 최신값을 확인하고, 위 <b>📝 근거 수치 최신화</b>에서 고쳐 두세요. '+
+    '이 문서는 「금융소비자 보호에 관한 법률」상 적합성·설명의무를 전제로 한 <b>상담 보조자료</b>이며, 특정 상품의 가입이나 보험금 지급을 보장하지 않습니다. '+
+    '실제 보장 여부는 반드시 약관으로 확인하십시오.</div>'+
+    '</div></div>';
+
+  return head+s1+s2+s3+s4+s5+s6;
+}
+
 
 /* ── 첨부 관리 ── */
 function prPick(slot){var el=document.getElementById('prFile_'+slot);if(el)el.click();}
@@ -3630,7 +4090,13 @@ function prSys(){
   '9. 아래 8통장 프레임으로 진단하고, 치료비 통장 이중구조로 설명한다.\n'+
   '10. 보장에서 끝내지 말고 ⑥은퇴·연금과 ⑤가족보호(종신)까지 반드시 이어서 제안한다. 보험은 사건 대비이고 연금은 시간 대비다.\n'+
   '11. 준비하지 않았을 때 실제로 벌어지는 상황을 사례로 보여준다. 다만 <b>특정 뉴스 기사·언론사·날짜를 지어내지 않는다.</b> 상담 현장에서 반복적으로 보는 상황으로 쓰고, 통계를 쓸 때는 널리 알려진 것만 쓰되 출처가 불확실하면 "확인 필요"로 표기한다.\n'+
-  '12. 공포 마케팅을 하지 않는다. 불안을 조장하지 말고 <b>사실과 숫자</b>로 보여준다.';
+  '12. 공포 마케팅을 하지 않는다. 불안을 조장하지 말고 <b>사실과 숫자</b>로 보여준다.\n'+
+  '13. 순서를 지킨다 — <b>국가 제도를 먼저 쓰고, 그 바깥만 사보험으로 메운다.</b> 본인부담상한제·산정특례·재난적의료비 같은 국가 혜택을 먼저 정확히 알려준 뒤에 보험을 말한다. 국가 혜택을 축소해서 말하지 않는다.\n'+
+  '14. 병원비를 <b>급여와 비급여로 갈라서</b> 설명한다. 상한제와 산정특례는 급여에만 적용되고 비급여에는 적용되지 않는다는 점을 반드시 짚는다. 여기가 사보험이 필요한 진짜 이유다.\n'+
+  '15. 국가채무와 고령화 추세는 <b>주어진 근거표의 숫자로만</b> 말한다. "나라가 망한다" 같은 표현을 쓰지 않고, "본인 부담이 커지는 방향"이라는 사실만 담담하게 쓴다.\n'+
+  '16. 치료비는 <b>항목으로 갈라서</b> 보여준다(급여 / 법정 본인부담 / 비급여 / 비의료비). 간병비·교통비·소득 중단처럼 병원 영수증에 안 찍히는 돈을 빼먹지 않는다.\n'+
+  '17. 보장 크기는 <b>고객의 소득에 맞춘다.</b> 월 소득 대비 보험료 비중을 계산하고, 계속 낼 수 있는 크기인지 판단해서 말한다. 과하면 과하다고 솔직하게 쓴다.\n'+
+  '18. 숫자를 쓸 때는 <b>출처와 기준연도를 함께</b> 쓴다. 근거표에 없는 통계·기사·연구는 절대 만들지 않는다. 모르면 "확인 필요"라고 쓴다.';
   if(typeof YUN_PLAYBOOK!=='undefined'){
     base+='\n\n'+YUN_PLAYBOOK.eightAccounts+'\n'+YUN_PLAYBOOK.chiryo+'\n'+YUN_PLAYBOOK.abc+'\n'+YUN_PLAYBOOK.ages+'\n'+YUN_PLAYBOOK.speech;
   }
@@ -3655,12 +4121,17 @@ function prSys(){
   '  "options":[{"name":"A안","summary":"한 줄","monthly":"월 보험료","pros":"장점","cons":"함께 봐야 할 점"}],\n'+
   '  "nextSteps":["다음 단계 1","다음 단계 2","다음 단계 3"],\n'+
   '  "risks":["확인 사항 1","확인 사항 2","확인 사항 3","확인 사항 4"],\n'+
+  '  "national":{"summary":"국가 제도로 어디까지 되고 어디부터 본인 몫인지 한 줄","covered":[{"item":"항목","who":"어떤 제도","amount":"국가가 내주는 정도","note":"조건"}],"gap":[{"item":"같은 항목","amount":"그래도 내야 하는 금액","why":"왜 남는지"}],"capNote":"본인부담상한제를 고객 상황에 맞게 한 문단","specialNote":"산정특례를 고객 상황에 맞게 한 문단"},\n'+
+  '  "costmix":{"caseLabel":"어떤 병 어느 기간 기준인지","total":"총 치료비","insurerPays":"국가·건강보험이 내주는 합계","selfPays":"본인이 내야 하는 합계","items":[{"name":"항목","type":"급여|법정본인부담|비급여|비의료비","amount":"숫자만(만원)","note":"설명"}]},\n'+
+  '  "incomeFit":{"monthlyIncome":"월 소득","currentPremium":"현재 월 보험료","recommendMin":"권장 하한","recommendMax":"권장 상한","ratioNow":"소득 대비 %(숫자만)","verdict":"적정|과다|부족","why":"판단 이유 1~2문장"},\n'+
+  '  "evidence":[{"claim":"이 문서에서 인용한 사실","source":"출처 기관","asof":"기준 연도"}],\n'+
   '  "katalk":"상담 후 보낼 카톡 요약(200자 내외, 존댓말)",\n'+
   '  "selfcheck":"자체 점검 — 단정 표현 없음/단점 포함/숫자 근거 확인"\n'+
   '}';
   return sys(base);
 }
 function prSlideGuide(mode){
+  /* 근거표를 함께 실어, 없는 통계를 지어내지 못하게 한다 */
   if(mode==='compare'){
     return '[슬라이드 구성 — 전후 비교. 이 순서를 지킨다]\n'+
       '1장 표지: 무엇을 비교했는지\n'+
@@ -3672,7 +4143,8 @@ function prSlideGuide(mode){
       '7장 보험료와 선택안: A/B/C\n'+
       '8장 다음 단계: 오늘 정할 것과 준비 서류\n'+
       '9장 확인 사항: 리스크와 준법 고지\n'+
-      '총 8~9장. before·after·diff를 반드시 채운다.';
+      '5장과 6장 사이에 국가혜택 장을 넣는다 — 급여와 비급여 구분, 본인부담상한제·산정특례로 되는 부분과 안 되는 부분.\n'+
+      '총 8~11장. before·after·diff를 반드시 채우고, national·costmix·incomeFit·evidence도 채운다.';
   }
   if(mode==='explain'){
     return '[슬라이드 구성 — 고객용 설명서. 이 순서를 지킨다]\n'+
@@ -3684,17 +4156,24 @@ function prSlideGuide(mode){
       '6장 비어 있는 부분: 공백·중복. 특히 ⑥은퇴·연금과 ⑤가족보호가 비었는지 반드시 짚는다\n'+
       '7장 준비하지 않으면 이런 일이 생깁니다: 실제 상황 2~3가지 (reality 항목과 같은 내용)\n'+
       '8장 준비하면 이렇게 달라집니다: 숫자로 비교 (benefit 항목과 같은 내용)\n'+
+      '7-1장 나라 곳간과 내 부담: 국가채무 추이와 고령화로 본인 부담이 커지는 방향 (근거표 숫자만 인용)\n'+
+      '7-2장 병원비는 급여와 비급여로 나뉩니다: 보장률과 비급여 비중을 숫자로 (costmix 항목)\n'+
+      '7-3장 먼저 챙길 국가 혜택: 본인부담상한제·산정특례로 어디까지 되는지 (national 항목)\n'+
+      '7-4장 그래도 남는 몫: 상한제·산정특례가 닿지 않는 비급여와 비의료비 (national.gap 항목)\n'+
       '9장 노후는 이렇게 채웁니다: 연금 3층 구조와 부족액, 지금 시작할 금액 (pension 항목)\n'+
       '10장 남는 가족을 위한 준비: 종신의 목적과 필요 유동성 (wholelife 항목)\n'+
       '11장 선택안: A/B/C와 각각의 트레이드오프\n'+
       '12장 확인 사항: 면책·감액·갱신 등 꼭 알아야 할 것\n'+
       '총 11~12장. before에 읽어낸 담보를 정리해 담는다.\n'+
       'wallets는 8개를 모두 채운다. reality는 2~3개, benefit의 prepared·unprepared는 각 3~4개 항목.\n'+
-      'pension과 wholelife는 반드시 채운다 — 보장만 설명하고 끝내지 않는다.';
+      'pension과 wholelife는 반드시 채운다 — 보장만 설명하고 끝내지 않는다.\n'+
+    'national(국가혜택 대조), costmix(치료비 구성 항목 5~8개), incomeFit(소득 대비 적정성), evidence(인용 근거)도 반드시 채운다.\n'+
+    'costmix.items 의 amount 는 만원 단위 숫자만 쓴다(예: "1200"). 그래야 그래프로 그려진다.';
   }
   return '[슬라이드 구성 — 제안서. 이 순서를 지킨다]\n'+
     '1장 표지 / 2장 지금 상황 / 3장 잘 준비된 것 / 4장 비어 있는 것 / 5장 우선순위 /\n'+
     '6장 제안 A·B·C / 7장 이렇게 하면 달라집니다 / 8장 다음 단계 / 9장 확인 사항\n'+
+    '중간에 국가혜택 장을 넣는다 — 나라 곳간과 내 부담 / 급여와 비급여 / 먼저 챙길 국가 혜택 / 그래도 남는 몫.\n'+
     '총 8~9장. before·after·diff는 아는 범위에서만 채우고 모르면 비운다.';
 }
 function prParse(txt){
@@ -3813,6 +4292,7 @@ function prGen(){
       '[고객 정보]\n이름: '+name+'\n나이: '+v('prAge')+'\n직업: '+v('prJob')+'\n가족: '+v('prFam')+'\n'+
       '월 소득(만원): '+v('prIncome')+'\n걱정: '+v('prWorry')+'\n목표·요청: '+v('prGoal')+'\n\n'+
       '[말투] '+(osVal('prTone')||'담백한 전문가')+'\n[작성일] '+osTodayStr()+'\n[브랜드] APEX YUN PRO\n\n'+
+      prRefPromptText()+'\n\n'+
       prSlideGuide(mode);
     if(textBlock)user+='\n\n[첨부 문서에서 추출한 텍스트]'+textBlock;
     if(!textBlock&&!allImgs.length)user+='\n\n(첨부 문서 없음 — 위 고객 정보만으로 작성한다.)';
@@ -3922,6 +4402,7 @@ function prPaint(){
       (p.reality&&p.reality.length?'<button class="acad-tab'+(PR.view==='reality'?' on':'')+'" onclick="prView(\'reality\')">⚠️ 준비 안 하면</button>':'')+
       (p.benefit&&((p.benefit.prepared||[]).length||(p.benefit.unprepared||[]).length)?'<button class="acad-tab'+(PR.view==='benefit'?' on':'')+'" onclick="prView(\'benefit\')">💰 준비하면</button>':'')+
       ((p.pension&&p.pension.needMonthly)||(p.wholelife&&p.wholelife.purpose)?'<button class="acad-tab'+(PR.view==='plan'?' on':'')+'" onclick="prView(\'plan\')">🏦 연금 · 종신</button>':'')+
+      '<button class="acad-tab'+(PR.view==='evid'?' on':'')+'" onclick="prView(\'evid\')">📊 국가혜택 · 근거</button>'+
       '<button class="acad-tab'+(PR.view==='doc'?' on':'')+'" onclick="prView(\'doc\')">📄 문서 전체</button>'+
       (p.options&&p.options.length?'<button class="acad-tab'+(PR.view==='opt'?' on':'')+'" onclick="prView(\'opt\')">🅰️ A/B/C안</button>':'')+
     '</div>'+
@@ -3942,6 +4423,7 @@ function prPaint(){
   else if(PR.view==='reality')body=prRealityHtml();
   else if(PR.view==='benefit')body=prBenefitHtml();
   else if(PR.view==='plan')body=prPlanHtml();
+  else if(PR.view==='evid')body=prEvidenceHtml();
   else body=prDeckHtml();
   host.innerHTML=prCss()+head+body;
 }
