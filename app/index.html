@@ -12648,14 +12648,6 @@ function osAcTempPw(id,name,email){
     osAcRepaint();
   },function(e){OSAC.busy='';toast('발급 실패: '+((e&&e.message)||'네트워크 오류'));osAcRepaint();});
 }
-function osAcResetMail(email){
-  var sb=osClient();if(!sb)return;
-  if(!confirm(email+' 로 비밀번호 재설정 메일을 보낼까요?'))return;
-  sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}).then(function(r){
-    if(r&&r.error){toast('메일 발송 실패: '+(r.error.message||'')); return;}
-    toast('재설정 메일을 보냈습니다 — 스팸함까지 확인하라고 알려주세요.');
-  },function(e){toast('메일 발송 실패: '+((e&&e.message)||''));});
-}
 function osAcActive(id,v,name){
   var sb=osClient();if(!sb)return;
   if(!confirm(name+'\n\n'+(v?'이 계정의 잠금을 풀까요?':'이 계정을 잠글까요? 로그인할 수 없게 됩니다.')))return;
@@ -12716,8 +12708,7 @@ function osAcRowHtml(p,note){
       ' · 등급 '+osEsc(p.plan||'미지정')+' · 소속 '+osEsc(p.workspace||'both')+
     '</div>'+
     '<div class="btn-row" style="margin-top:7px;gap:5px">'+
-      (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px"'+(busy?' disabled':'')+' onclick="osAcTempPw(\''+p.id+'\',\''+osEsc(p.name||'')+'\',\''+osEsc(p.email||'')+'\')">'+(busy?'발급 중…':'🔑 임시 비밀번호')+'</button>':'')+
-      '<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcResetMail(\''+osEsc(p.email||'')+'\')">✉ 재설정 메일</button>'+
+      (owner&&!isMe?'<button class="btn btn-primary" style="padding:5px 11px;font-size:10.5px"'+(busy?' disabled':'')+' onclick="osAcTempPw(\''+p.id+'\',\''+osEsc(p.name||'')+'\',\''+osEsc(p.email||'')+'\')">'+(busy?'발급 중…':'🔑 임시 비밀번호 발급')+'</button>':'')+
       (!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcActive(\''+p.id+'\','+(p.active===false?'true':'false')+',\''+osEsc(p.name||'')+'\')">'+(p.active===false?'🔓 잠금 해제':'🔒 잠그기')+'</button>':'')+
       (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px;color:#B91C1C" onclick="osAcDelete(\''+p.id+'\',\''+osEsc(p.email||'')+'\',\''+osEsc(p.name||'')+'\')">🗑 계정 삭제</button>':'')+
     '</div>'+
@@ -12789,9 +12780,9 @@ function osAccountsCardHtml(){
     '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 13px;margin-bottom:11px">'+
       '<div style="font-size:12px;font-weight:800;color:#92400E;margin-bottom:5px">🔐 비밀번호는 원문을 볼 수 없습니다 — 저도, 대표님도, 서버 관리자도</div>'+
       '<div style="font-size:11.5px;color:#92400E;line-height:1.75">비밀번호는 <b>되돌릴 수 없는 방식으로 암호화</b>되어 저장됩니다. 그래서 "찾아주기"는 두 가지로 합니다.<br>'+
-      '① <b>아이디(이메일) 알려주기</b> — 아래에서 바로 찾아 복사<br>'+
+      '① <b>아이디(이메일) 알려주기</b> — 아래에서 찾아 <b>아이디 복사</b><br>'+
       '② <b>임시 비밀번호 발급</b> — 새 비밀번호를 만들어 전달하고, 본인이 로그인 후 바꾸게 하기<br>'+
-      '<span style="color:#B45309">재설정 메일은 서버 기본 메일 한도(시간당 소량) 때문에 안 갈 수 있습니다. 확실한 쪽은 ②입니다.</span></div>'+
+      '<span style="color:#B45309">발급하면 기존 비밀번호는 즉시 못 쓰게 되고, 안내 문구가 한 번에 복사됩니다.</span></div>'+
     '</div>'+
     '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:11px">'+
       '<input id="osAcQ" placeholder="이름 또는 이메일로 찾기 — 예: 홍길동" oninput="osAcSearch(this.value)" style="flex:1;min-width:180px;border:1px solid var(--ink-7);border-radius:9px;padding:9px 12px;font-size:12.5px;font-family:inherit">'+
