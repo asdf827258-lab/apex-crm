@@ -1501,9 +1501,128 @@ function engNotice(){
 
 /* ════════ 마크다운 렌더 ════════ */
 function inlineMd(s){s=esc(s);s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');return s;}
+/* ════════ 본문 이미지 자리표시 → 실제 이미지 슬롯 ════════
+   AI 는 본문에 [이미지: 설명 | alt: 대체텍스트 | 캡션: 한 줄] 형태로 자리를 표시한다.
+   지금까지는 이 대괄호가 글 한복판에 글자 그대로 남아 있었다.
+   여기서 그 줄을 눌러서 사진을 넣을 수 있는 슬롯으로 바꾼다.
+   넣은 사진은 이 브라우저 메모리에만 있고 서버로 가지 않는다. */
+var MDIMG={};
+
+function mdImgKey(desc,n){
+  var s=''+(desc||''),h=5381,i;
+  for(i=0;i<s.length;i++){h=((h*33)^s.charCodeAt(i))>>>0;}
+  return 'mi_'+h.toString(36)+'_'+n;
+}
+function mdImgParse(inner){
+  var parts=(''+inner).split('|');
+  var o={desc:(parts[0]||'').replace(/^\s+|\s+$/g,''),alt:'',cap:''};
+  for(var i=1;i<parts.length;i++){
+    var seg=parts[i].replace(/^\s+|\s+$/g,'');
+    var m=seg.match(/^alt\s*[::]\s*(.*)$/i);
+    if(m){o.alt=m[1].replace(/^\s+|\s+$/g,'');continue;}
+    m=seg.match(/^(캡션|caption)\s*[::]\s*(.*)$/i);
+    if(m){o.cap=m[2].replace(/^\s+|\s+$/g,'');continue;}
+    if(!o.alt)o.alt=seg; else if(!o.cap)o.cap=seg;
+  }
+  if(!o.alt)o.alt=o.desc;
+  return o;
+}
+function mdImgSlotHtml(id,o){
+  var url=MDIMG[id];
+  var head='<div class="mdimg-hd"><span class="mdimg-ic">🖼</span><span class="mdimg-desc">'+osEsc(o.desc)+'</span></div>';
+  var btns='<div class="mdimg-btns">'+
+    '<button class="btn btn-ghost mdimg-b" onclick="mdImgPick(\''+id+'\')">'+(url?'사진 바꾸기':'📷 사진 넣기')+'</button>'+
+    '<button class="btn btn-ghost mdimg-b" onclick="mdImgAI(\''+id+'\',this)">✨ AI로 만들기</button>'+
+    (url?'<button class="btn btn-ghost mdimg-b" style="color:#B91C1C" onclick="mdImgClear(\''+id+'\')">빼기</button>':'')+
+    '</div>';
+  var meta='<div class="mdimg-meta">alt <b>'+osEsc(o.alt)+'</b>'+(o.cap?' · 캡션 <b>'+osEsc(o.cap)+'</b>':'')+'</div>';
+  var body=url
+    ? '<figure class="mdimg-fig"><img src="'+url+'" alt="'+osEsc(o.alt)+'">'+(o.cap?'<figcaption>'+osEsc(o.cap)+'</figcaption>':'')+'</figure>'
+    : '<div class="mdimg-empty">여기에 들어갈 사진입니다. 눌러서 넣으세요.</div>';
+  return '<div class="mdimg" id="'+id+'" data-mdimg="1" data-desc="'+osEsc(o.desc)+'" data-alt="'+osEsc(o.alt)+'" data-cap="'+osEsc(o.cap)+'">'+
+    head+body+meta+btns+'</div>';
+}
+function mdImgRepaint(id){
+  var el=document.getElementById(id);if(!el)return;
+  var o={desc:el.getAttribute('data-desc')||'',alt:el.getAttribute('data-alt')||'',cap:el.getAttribute('data-cap')||''};
+  el.outerHTML=mdImgSlotHtml(id,o);
+}
+function mdImgPick(id){
+  var inp=document.getElementById('mdImgFile');
+  if(!inp){
+    inp=document.createElement('input');inp.type='file';inp.accept='image/*';
+    inp.id='mdImgFile';inp.style.display='none';document.body.appendChild(inp);
+  }
+  inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];if(!f)return;
+    if(f.size>15*1024*1024){toast('15MB 이하 이미지를 선택하세요.');return;}
+    var rd=new FileReader();
+    rd.onload=function(e){
+      var im=new Image();
+      im.onload=function(){
+        var max=1280,w=im.width,h=im.height,sc=Math.min(1,max/Math.max(w,h));
+        var cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+        var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+        cv.getContext('2d').drawImage(im,0,0,cw,ch);
+        MDIMG[id]=cv.toDataURL('image/jpeg',0.86);
+        mdImgRepaint(id);
+      };
+      im.onerror=function(){toast('이미지를 읽지 못했습니다.');};
+      im.src=e.target.result;
+    };
+    rd.onerror=function(){toast('이미지를 읽지 못했습니다.');};
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+function mdImgClear(id){delete MDIMG[id];mdImgRepaint(id);}
+function mdImgAI(id,btn){
+  if(typeof geminiReady!=='function'||!geminiReady()){
+    toast('설정에서 Gemini 연결을 먼저 구성하면 사진을 만들어 드립니다.');return;
+  }
+  var el=document.getElementById(id);if(!el)return;
+  var desc=el.getAttribute('data-desc')||'';
+  var prompt=desc+' — photorealistic editorial photography, Korean context, natural light, clean composition with copy space, '+
+    'absolutely no text, no letters, no numbers, no logos, no watermarks.';
+  var old=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='✨ 만드는 중… (5~15초)';}
+  var models=['gemini-2.5-flash-image','gemini-2.0-flash-preview-image-generation'];
+  function tryAt(k){
+    if(k>=models.length)return Promise.reject(new Error('이미지 모델을 쓸 수 없습니다'));
+    return cnImgFetch(models[k],prompt)['catch'](function(){return tryAt(k+1);});
+  }
+  tryAt(0).then(function(url){
+    MDIMG[id]=url;mdImgRepaint(id);
+  },function(e){
+    if(btn){btn.disabled=false;btn.textContent=old;}
+    toast('사진 만들기 실패: '+((e&&e.message)||''));
+  });
+}
+function mdImgCss(){
+  if(document.getElementById('mdImgStyle'))return;
+  var st=document.createElement('style');st.id='mdImgStyle';
+  st.textContent=
+    '.mdimg{border:1px dashed #C7D2FE;background:#F8FAFF;border-radius:13px;padding:12px 14px;margin:14px 0}'+
+    '.mdimg-hd{display:flex;align-items:center;gap:7px;margin-bottom:8px}'+
+    '.mdimg-ic{font-size:14px}'+
+    '.mdimg-desc{font-size:12.5px;font-weight:800;color:#3730A3;line-height:1.5}'+
+    '.mdimg-empty{border:1px solid #DDE3EC;background:#fff;border-radius:10px;padding:26px 14px;text-align:center;font-size:12px;color:#94A3B8}'+
+    '.mdimg-fig{margin:0}'+
+    '.mdimg-fig img{width:100%;height:auto;border-radius:10px;display:block}'+
+    '.mdimg-fig figcaption{font-size:11.5px;color:#64748B;margin-top:6px;text-align:center;line-height:1.6}'+
+    '.mdimg-meta{font-size:10.5px;color:#8B96A8;margin-top:7px;line-height:1.6;word-break:break-all}'+
+    '.mdimg-meta b{color:#42506A}'+
+    '.mdimg-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}'+
+    '.mdimg-b{padding:5px 11px;font-size:11px}'+
+    '@media print{.mdimg{border:none;background:none;padding:0}.mdimg-btns,.mdimg-meta,.mdimg-hd{display:none}}';
+  document.head.appendChild(st);
+}
+
 function renderMd(md){
   var lines=String(md==null?'':md).replace(/\r/g,'').split('\n');
-  var out=[],inList=false,listClass='';
+  var out=[],inList=false,listClass='',imgN=0;
+  try{mdImgCss();}catch(e){}
   function close(){if(inList){out.push('</ul>');inList=false;listClass='';}}
   function isTableSep(s){return /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(s);}
   function cells(s){var x=s.trim().replace(/^\|/,'').replace(/\|$/,'');return x.split('|').map(function(c){return c.trim();});}
@@ -1517,6 +1636,14 @@ function renderMd(md){
     var raw=lines[i],t=raw.trim();
     if(t===''){close();continue;}
     if(/^---+$/.test(t)||/^___+$/.test(t)){close();out.push('<hr>');continue;}
+    /* [이미지: 설명 | alt: … | 캡션: …] → 눌러서 사진 넣는 슬롯 */
+    var im=t.match(/^\[\s*(?:이미지|사진|image|img)\s*[::]\s*([\s\S]+?)\s*\]$/i);
+    if(im){
+      close();
+      var io_=mdImgParse(im[1]);
+      out.push(mdImgSlotHtml(mdImgKey(io_.desc,imgN++),io_));
+      continue;
+    }
     // table
     if(/^\|.*\|/.test(t)&&i+1<lines.length&&isTableSep(lines[i+1].trim())){
       close();var head=cells(t);i+=2;var rows=[];
@@ -10044,7 +10171,7 @@ var PDF_TOOLS=[
   var doc=parts.map(function(p){return '['+p.name+']\n'+p.text;}).join('\n\n');
   var pts=(o.points&&o.points.length)?o.points.join(', '):'(특정 지정 없음 — 전반적으로 진단)';
   return {system:sys('보험 보장분석 리포트를 고객용 1:1 맞춤 상담 리포트로 변환한다. 치료비 통장 프레임으로 관통한다.\n'+REPORT_RULES),
-   user:'아래 보장분석 PDF를 바탕으로, 고객에게 그대로 전달 가능한 투자보고서 수준의 1:1 보장분석 리포트를 작성해줘. 표만 나열하지 말고 각 진단마다 "왜"를 전문가답게 전개할 것.\n\n[설계사 집중 컨설팅 포인트]\n'+pts+'\n'+(o.comment?'[추가 코멘트] '+o.comment+'\n':'')+'\n[PDF 추출 내용]\n'+doc+'\n\n[리포트 형식 — 아래 6개 섹션을 모두, 충실히 채운다. 얕게 끝내면 실패]\n> **핵심 요약** — 현재 보장에서 가장 중요한 진단 3가지를 각 1~2문장으로. 강점 1개를 먼저 인정한 뒤 공백 2개.\n\n## 1. 보장 현황 한눈에\n표: | 보장 영역 | 현재 가입 내용(금액·특약명) | 갱신/만기 | 한 줄 평가 | — 행: 사망/후유장해, 암 진단, 뇌혈관 진단, 심장(허혈성) 진단, 수술/입원, 실손(세대), 운전자/배상, 기타. PDF에 있는 금액을 정확히 인용.\n\n## 2. 기준 대비 충족도 진단\n표: | 핵심 담보 | 권장 기준 | 현재 | 부족액/과잉 | 충족도 | 사유 | — 부족은 반드시 "현재 X만 vs 권장 Y만 → Z만 부족"으로 계산해 적는다. 충족도=충분/부족/과잉/중복.\n\n## 3. 핵심 리스크 심층 진단 (집중 포인트 중심)\n2~4개의 리스크를 각각 ⚠️ 콜아웃 + 그 아래 최소 3~4문장으로. 각 리스크마다: (1)무엇이 부족/위험한가 (2)왜 문제인가(뇌·심장은 보장범위 근거, 갱신형은 향후 부담) (3)그 병이 실제로 오면 병원비 외에 어떤 돈이(간병·소득중단·가족휴직) 나가는지 (4)치료비 통장(정액)이 그 목돈을 어떻게 메우는지. 한 줄 진단 금지.\n\n## 4. 리모델링 로드맵\n표: | 우선순위 | 조치(보강/감액/유지/전환) | 대상 담보 | 근거 | 기대 효과 | — 우선순위는 가계 타격이 큰 순서로.\n\n## 5. 치료비 통장 관점 종합 의견\n> 실손(병원비)과 정액(진단·수술 목돈)의 이중구조 관점에서, 큰 병이 와도 가계가 무너지지 않는 "치료비 통장"이 완성되는지를 3문단 이상으로 종합 진단. "한 번의 수술에 여러 지갑이 열린다"는 관점을 살린다.\n\n## 6. 선택지와 다음 단계\n- 유지형(A)·재배치형(B)·통합형(C) 관점을 2~3문장씩 제시하고 각각 장점과 새로 생기는 단점을 정직하게. 강매·불안조장 금지.\n- 고객이 바로 행동할 수 있는 다음 단계 3가지.\n숫자는 PDF에서 정확히 인용, 불명확하면 "확인 필요". 지급·인수 단정 금지(약관·심사 우선).',max:6000};}
+   user:'아래 보장분석 PDF를 바탕으로, 고객에게 그대로 전달 가능한 투자보고서 수준의 1:1 보장분석 리포트를 작성해줘. 표만 나열하지 말고 각 진단마다 "왜"를 전문가답게 전개할 것.\n\n[설계사 집중 컨설팅 포인트]\n'+pts+'\n'+(o.comment?'[추가 코멘트] '+o.comment+'\n':'')+'\n[PDF 추출 내용]\n'+doc+'\n\n[리포트 형식 — 아래 7개 섹션을 모두, 충실히 채운다. 얕게 끝내면 실패]\n> **핵심 요약** — 현재 보장에서 가장 중요한 진단 3가지를 각 1~2문장으로. 강점 1개를 먼저 인정한 뒤 공백 2개.\n\n## 1. 보장 현황 한눈에\n표: | 보장 영역 | 현재 가입 내용(금액·특약명) | 갱신/만기 | 한 줄 평가 | — 행: 사망/후유장해, 암 진단, 뇌혈관 진단, 심장(허혈성) 진단, 수술/입원, 실손(세대), 운전자/배상, 기타. PDF에 있는 금액을 정확히 인용.\n\n## 2. 기준 대비 충족도 진단\n표: | 핵심 담보 | 권장 기준 | 현재 | 부족액/과잉 | 충족도 | 사유 | — 부족은 반드시 "현재 X만 vs 권장 Y만 → Z만 부족"으로 계산해 적는다. 충족도=충분/부족/과잉/중복.\n\n## 3. 핵심 리스크 심층 진단 (집중 포인트 중심)\n2~4개의 리스크를 각각 ⚠️ 콜아웃 + 그 아래 최소 3~4문장으로. 각 리스크마다: (1)무엇이 부족/위험한가 (2)왜 문제인가(뇌·심장은 보장범위 근거, 갱신형은 향후 부담) (3)그 병이 실제로 오면 병원비 외에 어떤 돈이(간병·소득중단·가족휴직) 나가는지 (4)치료비 통장(정액)이 그 목돈을 어떻게 메우는지. 한 줄 진단 금지.\n\n## 4. 리모델링 로드맵\n표: | 우선순위 | 조치(보강/감액/유지/전환) | 대상 담보 | 근거 | 기대 효과 | — 우선순위는 가계 타격이 큰 순서로.\n\n## 5. 치료비 통장 관점 종합 의견\n> 실손(병원비)과 정액(진단·수술 목돈)의 이중구조 관점에서, 큰 병이 와도 가계가 무너지지 않는 "치료비 통장"이 완성되는지를 3문단 이상으로 종합 진단. "한 번의 수술에 여러 지갑이 열린다"는 관점을 살린다.\n\n## 6. 보험의 방향성 — 무엇부터 채우나\n표: | 순위 | 채울 항목 | 지금 | 권장 | 부족액 | 예상 월 보험료 | 시점 | — 4~6행. 순위는 "그 일이 실제로 생겼을 때 가계가 무너지는 순서"로 매긴다. 이어서 3문단: (1)지금 당장 채워야 하는 것 하나와 그 이유 (2)나중에 해도 되는 것과 미뤄도 되는 이유 (3)월 예산 안에서 어떻게 나눠 담을지 배분안(예산이 주어졌으면 그 안에서, 없으면 소득 대비 8~12% 기준). 한 번에 다 하라고 하지 않는다.\n\n## 7. 선택지와 다음 단계\n- 유지형(A)·재배치형(B)·통합형(C) 관점을 2~3문장씩 제시하고 각각 장점과 새로 생기는 단점을 정직하게. 강매·불안조장 금지.\n- 고객이 바로 행동할 수 있는 다음 단계 3가지.\n숫자는 PDF에서 정확히 인용, 불명확하면 "확인 필요". 지급·인수 단정 금지(약관·심사 우선).',max:6000};}
 },
 {id:'baba',tab:'baba',icon:'🔄',title:'보장분석 비포 & 애프터',cta:'비포 & 애프터 생성',report:true,reportTitle:'보장 리모델링 비포 & 애프터 리포트',
  note:'기존 보장과 신규 제안을 비교해 리모델링 결과를 만듭니다. 아래에서 <b>분석 모드</b>를 먼저 선택하세요.',
@@ -10064,7 +10191,7 @@ var PDF_TOOLS=[
     user:'아래 [기존]과 [신규]를 비교해 <어르신·자녀 설명용 간소화 비포/애프터>를 만들어줘.\n핵심만: 암/뇌/심장 진단비, 입원·수술, 실손, 월 보험료(가격).\n\n[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n[형식 — 표/콜아웃 사용, 쉬운 말]\n> **한 줄 요약** — 이번에 무엇이 가장 좋아지는지 한 문장.\n\n## 핵심만 비교\n표: | 무엇 | 지금(기존) | 바꾸면(신규) | 좋아지는 점 |  — 5줄 내외(핵심담보·치료비·월 보험료)\n\n## 가장 크게 좋아지는 3가지\n- 쉬운 말로 3가지, 각 한두 문장.\n\n## 매달 내는 돈은 이렇게 바뀌어요\n월 보험료 비교를 쉽게(표). 그리고 다 낼 때까지 총액(총납입)도 한 줄로 쉽게 비교. (추정은 추정 표기)\n\n## 자녀분께 보여드릴 한 줄\n> 가족이 봐도 안심되는 한 문장.',max:3800};
   }
   return {system:sys('기존 보장과 신규 제안을 모든 담보 단위로 정밀 비교하는 비포/애프터 리모델링 리포트를 만든다.\n'+REPORT_RULES),
-   user:'아래 [기존]과 [신규]를 전체 담보 기준으로 정밀 비교해 리모델링 리포트를 작성해줘. 표만 나열하지 말고 각 변화의 "왜"를 전문가답게 전개할 것.\n\n[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n[형식 — 아래 5개 섹션 모두 충실히. 얕게 끝내면 실패]\n> **종합 의견** — 이번 리모델링으로 무엇이 어떻게 나아지는지 핵심 가치 3줄. 기존의 강점을 먼저 인정한 뒤 변화의 방향.\n\n## 1. 전체 담보 비교표\n표: | 담보 | 기존(금액) | 신규(금액) | 변화 | 평가 | — 행: 사망/후유장해, 암 진단비, 뇌혈관 진단비, 심장(허혈성) 진단비, 수술비, 입원, 실손(세대), 운전자/배상, 기타 PDF상의 모든 담보. 변화는 ▲증액/▼감액/＝유지/＋신설/－삭제. 금액은 정확히 인용.\n\n## 2. 개선 하이라이트 심층\n핵심 변화 3~5개를 각각 ✅(개선)/⚠️(주의) 콜아웃 + 그 아래 최소 3문장으로. 각 항목: (1)무엇이 어떻게 바뀌는가(숫자 대비) (2)왜 이 변화가 필요했나(부족→보강/중복→정리/과잉→감액/범위확대) (3)그 담보가 실제 필요한 상황(그 병·사고가 왔을 때 병원비 외 목돈)에서 어떤 차이를 만드는지. 특히 뇌·심장은 보장범위(전체 vs 출혈·경색만)가 어떻게 넓어졌는지 짚는다.\n\n## 3. 보험료 비교 (① 월 보험료 · ② 총납입보험료)\n표A(월 보험료): | 구분 | 기존 월보험료 | 신규 월보험료 | 차액 |\n표B(총 납입보험료): | 구분 | 월 보험료 | 납입기간 | 총 납입보험료(월×12×납입년수) | 차액 | — 두 표 모두 기존·신규를 정확히 계산해 채운다. 이어 가성비 2문단: 늘어난(또는 줄어든) 보험료 대비 보장 증가분·범위 확대·갱신부담 변화를 정량적으로 논한다. 단순히 "좋아졌다"가 아니라 "월 N만원으로 어떤 목돈 공백을 메웠는가".\n\n## 4. 리모델링 판단 — 유지 vs 전환\n> 치료비 통장(실손+정액 이중구조) 관점에서 이 전환이 합리적인 이유를 2문단으로. 이어서 "그래도 유지가 나은 경우 / 전환이 나은 경우"를 각각 한 문단씩 정직하게 제시(결론 강요 금지, 새로 생기는 단점도 명시).\n\n## 5. 실행 체크리스트\n- 해지/감액/유지/신규 가입 시 유의사항(면책기간·기존 병력 고지·중복 해소 순서 등)을 구체적으로.\n\n## 6. 고객 설명용 자료 (그대로 보여주는 쉬운 요약)\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 요약을 쓴다. "지금(기존) → 바꾸면(신규) → 좋아지는 점"을 핵심만 담고, 매달 내는 돈·총납입이 어떻게 바뀌는지 한 줄. 마지막에 과장·불안조장 없는 안심 문장 한 줄.\n\n숫자 정확히, 불명확하면 "확인 필요". 지급·인수 단정 금지(약관·심사 우선).',max:6000};}
+   user:'아래 [기존]과 [신규]를 전체 담보 기준으로 정밀 비교해 리모델링 리포트를 작성해줘. 표만 나열하지 말고 각 변화의 "왜"를 전문가답게 전개할 것.\n\n[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n[형식 — 아래 7개 섹션 모두 충실히. 얕게 끝내면 실패]\n> **종합 의견** — 이번 리모델링으로 무엇이 어떻게 나아지는지 핵심 가치 3줄. 기존의 강점을 먼저 인정한 뒤 변화의 방향.\n\n## 1. 전체 담보 비교표\n표: | 담보 | 기존(금액) | 신규(금액) | 변화 | 평가 | — <b>자료에 나오는 담보를 하나도 빼지 말고 전부</b> 행으로 넣는다. 큰 담보만 쓰고 나머지를 "기타"로 뭉뚱그리면 실패다. 반드시 개별 행으로 쓸 것: 사망/후유장해, 암(일반암·유사암·소액암·표적항암·항암방사선약물), 뇌(뇌출혈·뇌경색·뇌혈관질환), 심장(급성심근경색·허혈성심장질환), 수술비(1~5종·질병수술·상해수술·특정수술), 입원(질병입원일당·상해입원일당·중환자실), 진단(2대·3대·특정질환), 골절·화상·깁스, 응급실내원비, 실손(세대·급여/비급여·통원), 치아·치과, 간병·요양(간병인지원·장기요양), 운전자(벌금·변호사선임·형사합의금·교통사고처리지원금), 배상책임(일상생활·화재), 그 밖에 자료에 있는 모든 소액 특약. 한쪽에만 있는 담보도 반드시 행으로 넣고 없는 쪽은 "없음"으로 적는다. 변화는 ▲증액/▼감액/＝유지/＋신설/－삭제. 금액은 정확히 인용, 못 읽었으면 "확인 필요".\n\n## 2. 개선 하이라이트 심층\n핵심 변화 3~5개를 각각 ✅(개선)/⚠️(주의) 콜아웃 + 그 아래 최소 3문장으로. 각 항목: (1)무엇이 어떻게 바뀌는가(숫자 대비) (2)왜 이 변화가 필요했나(부족→보강/중복→정리/과잉→감액/범위확대) (3)그 담보가 실제 필요한 상황(그 병·사고가 왔을 때 병원비 외 목돈)에서 어떤 차이를 만드는지. 특히 뇌·심장은 보장범위(전체 vs 출혈·경색만)가 어떻게 넓어졌는지 짚는다.\n\n## 3. 보험료 비교 (① 월 보험료 · ② 총납입보험료)\n표A(월 보험료): | 구분 | 기존 월보험료 | 신규 월보험료 | 차액 |\n표B(총 납입보험료): | 구분 | 월 보험료 | 납입기간 | 총 납입보험료(월×12×납입년수) | 차액 | — 두 표 모두 기존·신규를 정확히 계산해 채운다. 이어 가성비 2문단: 늘어난(또는 줄어든) 보험료 대비 보장 증가분·범위 확대·갱신부담 변화를 정량적으로 논한다. 단순히 "좋아졌다"가 아니라 "월 N만원으로 어떤 목돈 공백을 메웠는가".\n\n## 4. 리모델링 판단 — 유지 vs 전환\n> 치료비 통장(실손+정액 이중구조) 관점에서 이 전환이 합리적인 이유를 2문단으로. 이어서 "그래도 유지가 나은 경우 / 전환이 나은 경우"를 각각 한 문단씩 정직하게 제시(결론 강요 금지, 새로 생기는 단점도 명시).\n\n## 5. 남은 공백과 방향성 — 이제 무엇을 채우나\n신규로 바꿔도 <b>여전히 비어 있는 것</b>을 정직하게 짚는다. 표: | 우선순위 | 채울 항목 | 왜 필요한가 | 권장 금액 | 예상 월 보험료 | 언제까지 | — 3~5행. 우선순위는 "그 일이 실제로 생겼을 때 가계가 무너지는 순서"로 매긴다. 이어서 2문단: (1)이번에 다 못 채운 이유(예산·건강고지·나이)를 솔직하게 (2)앞으로 6개월·1년·3년 안에 어떤 순서로 채워 가면 되는지 로드맵. 한 번에 다 하라고 하지 않는다.\n\n## 6. 실행 체크리스트\n- 해지/감액/유지/신규 가입 시 유의사항(면책기간·기존 병력 고지·중복 해소 순서 등)을 구체적으로.\n\n## 7. 고객 설명용 자료 (그대로 보여주는 쉬운 요약)\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 요약을 쓴다. "지금(기존) → 바꾸면(신규) → 좋아지는 점"을 핵심만 담고, 매달 내는 돈·총납입이 어떻게 바뀌는지 한 줄. 마지막에 과장·불안조장 없는 안심 문장 한 줄.\n\n숫자 정확히, 불명확하면 "확인 필요". 지급·인수 단정 금지(약관·심사 우선).',max:6000};}
 },
 {id:'compare',tab:'compare',icon:'📊',title:'제안서 비교',cta:'제안서 비교하기',report:true,reportTitle:'보험 제안서 비교분석 리포트',
  note:'여러 보험사 제안서를 올리면 담보·보험료를 한눈에 비교합니다. 아래 <b>비교할 설계안 수</b>를 눌러 2~6개까지 늘릴 수 있고, 한 설계안 칸에 PDF를 2~3개 넣으면 <b>합산설계</b>로 비교됩니다.',
@@ -10101,9 +10228,124 @@ function pdfSlotsFor(p){
   for(i=1;i<=n;i++)out.push({id:'new'+i,label:(p.newLabel||'신규 제안서 ')+i,multi:false});
   return out;
 }
+/* ════════ AI 제안서 결과를 보장분석 도구에 그대로 넘기기 ════════
+   AI 제안서 생성에서 이미 증권을 판독해 놓고도, 보장분석·비포&애프터·제안서 비교에서
+   같은 PDF를 다시 올려야 했다. 판독 결과를 그대로 재료로 넘겨 두 번 일하지 않게 한다. */
+var PRUSE={};
+
+function prPlanReady(){return !!(typeof PR!=='undefined'&&PR.plan&&PR.plan.title);}
+function prUseOn(id){return !!PRUSE[id]&&prPlanReady();}
+function prUseToggle(id){
+  PRUSE[id]=!PRUSE[id];
+  var el=document.getElementById('pruse_'+id);
+  if(el)el.outerHTML=prUseBoxHtml(id);
+}
+function prRowsText(rows){
+  if(!rows||!rows.length)return '';
+  return rows.map(function(r){
+    return '- '+(r.label||'')+': '+(r.value||'')+(r.note?' ('+r.note+')':'');
+  }).join('\n');
+}
+function prPlanBeforeText(p){
+  var t='[AI 제안서 생성에서 판독한 현재 보장]\n';
+  if(p.before&&p.before.summary)t+='요약: '+p.before.summary+'\n';
+  t+=prRowsText(p.before&&p.before.rows)||'(판독된 담보 없음)';
+  if(p.readDocs)t+='\n\n[판독 메모]\n'+p.readDocs;
+  if(p.wallets&&p.wallets.length){
+    t+='\n\n[8통장 진단 — 어디가 비었는지]\n'+p.wallets.map(function(w){
+      return '- '+(w.no||'')+' '+(w.name||'')+' ['+(w.status||'')+'] 지금 '+(w.now||'-')+' / 필요 '+(w.need||'-');
+    }).join('\n');
+  }
+  if(p.national){
+    if(p.national.summary)t+='\n\n[국가 제도로 되는 범위] '+p.national.summary;
+    if(p.national.gap&&p.national.gap.length){
+      t+='\n[국가 제도로도 남는 몫]\n'+p.national.gap.map(function(g){
+        return '- '+(g.item||'')+': '+(g.amount||'')+(g.why?' — '+g.why:'');
+      }).join('\n');
+    }
+  }
+  if(p.costmix&&p.costmix.items&&p.costmix.items.length){
+    t+='\n\n[치료비 구성 추정 '+(p.costmix.caseLabel||'')+']\n'+p.costmix.items.map(function(c){
+      return '- '+(c.name||'')+' ['+(c.type||'')+'] '+(c.amount||'')+'만원'+(c.note?' — '+c.note:'');
+    }).join('\n')+'\n총 '+(p.costmix.total||'-')+' / 국가·건보 '+(p.costmix.insurerPays||'-')+' / 본인 '+(p.costmix.selfPays||'-');
+  }
+  if(p.incomeFit&&p.incomeFit.monthlyIncome){
+    var f=p.incomeFit;
+    t+='\n\n[소득 대비 적정성] 월 소득 '+(f.monthlyIncome||'-')+' / 현재 보험료 '+(f.currentPremium||'-')+
+      ' / 권장 '+(f.recommendMin||'-')+'~'+(f.recommendMax||'-')+' / 비중 '+(f.ratioNow||'-')+'% / 판단 '+(f.verdict||'-');
+    if(f.why)t+=' — '+f.why;
+  }
+  return t;
+}
+function prPlanAfterText(p){
+  var t='[AI 제안서 생성에서 만든 신규 제안]\n';
+  if(p.after&&p.after.summary)t+='요약: '+p.after.summary+'\n';
+  t+=prRowsText(p.after&&p.after.rows)||'(신규 제안 담보가 아직 없음 — 기존 진단과 부족분을 근거로 방향을 제시할 것)';
+  if(p.diff&&p.diff.length){
+    t+='\n\n[항목별 변화]\n'+p.diff.map(function(d){
+      return '- '+(d.item||'')+': '+(d.before||'')+' → '+(d.after||'')+' ['+(d.change||'')+']'+(d.why?' — '+d.why:'');
+    }).join('\n');
+  }
+  if(p.options&&p.options.length){
+    t+='\n\n[선택안]\n'+p.options.map(function(o){
+      return '- '+(o.name||'')+' '+(o.monthly||'')+' : '+(o.summary||'')+(o.pros?' / 장점 '+o.pros:'')+(o.cons?' / 함께 볼 점 '+o.cons:'');
+    }).join('\n');
+  }
+  if(p.pension&&p.pension.needMonthly){
+    t+='\n\n[노후] 필요 월 '+(p.pension.needMonthly||'-')+' / 준비 '+(p.pension.haveMonthly||'-')+
+      ' / 부족 '+(p.pension.gapMonthly||'-')+' / 지금부터 월 '+(p.pension.planMonthly||'-');
+  }
+  if(p.wholelife&&p.wholelife.purpose){
+    t+='\n[가족보호] 목적 '+(p.wholelife.purpose||'')+' / 권장 '+(p.wholelife.amount||'-');
+  }
+  return t;
+}
+/* 도구별로 알맞은 슬롯 이름을 붙여 넘긴다 */
+function prPlanParts(toolId){
+  if(!prPlanReady())return [];
+  var p=PR.plan,ttl=p.title||'AI 제안서';
+  if(toolId==='baba'){
+    return [
+      {slot:'기존 보장 (AI 제안서 판독)',name:ttl,mode:'text',images:[],text:prPlanBeforeText(p)},
+      {slot:'신규 제안 (AI 제안서 판독)',name:ttl,mode:'text',images:[],text:prPlanAfterText(p)}
+    ];
+  }
+  if(toolId==='compare'){
+    return [{slot:'설계안 A (AI 제안서 판독)',name:ttl,mode:'text',images:[],
+      text:prPlanBeforeText(p)+'\n\n'+prPlanAfterText(p)}];
+  }
+  return [{slot:'AI 제안서 판독 결과',name:ttl,mode:'text',images:[],
+    text:prPlanBeforeText(p)+'\n\n'+prPlanAfterText(p)}];
+}
+function prUseBoxHtml(id){
+  if(!prPlanReady()){
+    return '<div id="pruse_'+id+'" style="border:1px dashed #DDE3EC;background:#FBFCFE;border-radius:12px;padding:11px 14px;margin-bottom:13px">'+
+      '<div style="font-size:12px;font-weight:800;color:var(--ink-3)">🧾 AI 제안서 결과 이어쓰기</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-4);line-height:1.75;margin-top:4px">'+
+      '<b>AI 제안서 생성</b>에서 증권을 먼저 판독해 두면, 여기서 <b>PDF를 다시 올리지 않고</b> 그 결과로 바로 만들 수 있습니다.'+
+      '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px;margin-left:7px" onclick="go(\'ai_prop\')">AI 제안서 생성 열기 →</button></div></div>';
+  }
+  var on=prUseOn(id),p=PR.plan;
+  var nB=(p.before&&p.before.rows&&p.before.rows.length)||0;
+  var nA=(p.after&&p.after.rows&&p.after.rows.length)||0;
+  var nD=(p.diff&&p.diff.length)||0;
+  return '<div id="pruse_'+id+'" style="border:1px solid '+(on?'#A7F3D0':'#C7D2FE')+';background:'+(on?'#F0FDF4':'#F8FAFF')+';border-radius:12px;padding:12px 14px;margin-bottom:13px">'+
+    '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'+
+      '<span style="font-size:12.5px;font-weight:800;color:'+(on?'#047857':'#3730A3')+'">🧾 AI 제안서 결과로 만들기</span>'+
+      '<span style="font-size:10.5px;font-weight:700;color:var(--ink-4)">'+osEsc(p.title||'')+' · 현재담보 '+nB+' · 제안담보 '+nA+(nD?' · 변화 '+nD:'')+'</span>'+
+      '<button class="btn '+(on?'btn-primary':'btn-ghost')+'" style="padding:5px 12px;font-size:11px;margin-left:auto" onclick="prUseToggle(\''+id+'\')">'+(on?'✅ 사용 중 — 끄기':'이 결과로 만들기')+'</button>'+
+    '</div>'+
+    '<div style="font-size:11.5px;color:'+(on?'#065F46':'var(--ink-3)')+';line-height:1.75;margin-top:6px">'+
+      (on
+        ? '<b>PDF를 올리지 않아도 됩니다.</b> AI 제안서에서 판독한 담보·금액·8통장 진단·국가혜택·소득 적합성을 그대로 재료로 씁니다. PDF를 함께 올리면 둘 다 반영합니다.'
+        : '이미 판독해 둔 결과가 있습니다. 켜면 같은 증권을 다시 올리지 않아도 됩니다.')+
+    '</div></div>';
+}
+
 function renderPdfTool(p){
   var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">'+p.icon+'</span>'+esc(p.title)+'</div></div><div class="card-body">';
   if(p.note)h+='<div class="notice" style="margin-top:0;margin-bottom:13px">'+p.note+'</div>';
+  if(p.id==='bojang'||p.id==='baba'||p.id==='compare')h+=prUseBoxHtml(p.id);
   if(p.modes){var cur=PDFMODE[p.id]||p.modes[0].id;h+='<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:7px">분석 모드</div><div class="mode-toggle">';
     p.modes.forEach(function(m){h+='<button type="button" class="mode-btn'+(cur===m.id?' on':'')+'" data-pmode="'+p.id+':'+m.id+'" onclick="setPdfMode(\''+p.id+'\',\''+m.id+'\')"><div class="mb-t">'+esc(m.title)+'</div><div class="mb-d">'+esc(m.desc)+'</div></button>';});h+='</div>';}
   if(p.slotCountOptions){var sc=PDFSLOTS[p.id]||p.slotDefault||p.slotCountOptions[Math.floor(p.slotCountOptions.length/2)];h+='<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin-bottom:7px">'+esc(p.slotCountLabel||'신규 제안서 슬롯 수')+'</div><div class="chips" style="margin-bottom:13px">';
@@ -10137,10 +10379,13 @@ function runPdf(id){
     return {slot:s.label,name:f.name,mode:r.mode,images:r.images||[],
       text:isImg?'(이 문서는 텍스트 레이어가 없어 페이지 이미지를 함께 첨부했습니다. 첨부된 이미지를 직접 읽어 담보명·금액·표를 판독하세요.)':(r.text||'').slice(0,18000)};
   }));});});
+  var planParts=(typeof prUseOn==='function'&&prUseOn(id))?prPlanParts(id):[];
+  if(planParts.length){missing=false;hasAny=true;}
   if(missing){toast('필수 PDF를 첨부하세요');return;}
-  if(!hasAny){toast('PDF를 첨부하세요');return;}
+  if(!hasAny){toast('PDF를 첨부하거나, 위에서 "AI 제안서 결과로 만들기"를 켜세요');return;}
   res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>PDF에서 내용 추출 중…</div>';
   Promise.all(jobs).then(function(parts){
+    parts=planParts.concat(parts);
     var allImgs=[],manifest=[],idx=0;
     parts.forEach(function(pt){
       var imgs=pt.images||[];
