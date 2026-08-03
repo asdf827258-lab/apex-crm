@@ -60,6 +60,11 @@
     .toast{position:fixed;right:24px;bottom:24px;background:var(--navy);color:#fff;padding:13px 17px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.22s;z-index:200}.toast.show{opacity:1;transform:none}
     .mobile-menu{display:none}
     @media(max-width:1050px){.kpis{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}}
+    .tdots{display:inline-flex;gap:3px;vertical-align:middle}
+    .tdots .td{width:9px;height:9px;border-radius:50%;background:#e5e8eb;box-shadow:inset 0 0 0 1px #dbe0e6}
+    .tdots .td.on{background:#3182f6;box-shadow:0 0 0 2px rgba(49,130,246,.15)}
+    .tdn{margin-left:6px;font-size:11px;font-weight:800;color:#6b7684}
+    .tdover{margin-left:4px;font-size:10.5px;font-weight:800;color:#f04452}
     .nav .grp{font-size:10.5px;color:#5f6b7a;font-weight:800;letter-spacing:.5px;padding:13px 9px 4px}
     .tbadge{display:inline-block;min-width:18px;text-align:center;background:#f04452;color:#fff;border-radius:999px;font-size:10.5px;font-weight:800;padding:2px 6px;margin-left:6px}
     .tt-card{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 15px;margin-bottom:9px}
@@ -174,7 +179,7 @@
         <div class="card section">
           <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
           <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
-          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>지역</th><th>결과</th><th>부재</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
       </section>
 
@@ -278,6 +283,17 @@ function badge(v){return `<span class="badge ${{상담:"green",거절:"red",부�
 function getCalls(id){return calls.filter(c=>c.db_id===id).sort((a,b)=>new Date(b.call_at)-new Date(a.call_at))}
 function lastCall(d){return getCalls(d.id)[0]} function result(d){return lastCall(d)?.result||"미진행"}
 function absentCount(d){return calls.filter(c=>c.db_id===d.id&&c.result==="부재").length}
+/* 접촉 횟수 — 부재만이 아니라 실제로 건 통화 전부 */
+function touchCount(d){return calls.filter(c=>c.db_id===d.id).length}
+/* 접촉 5번이면 불 5개가 다 채워지는 게이지 */
+function touchDots(d){
+  const n=touchCount(d), max=5, full=Math.min(n,max);
+  let h='<span class="tdots" title="접촉 '+n+'회">';
+  for(let i=0;i<max;i++) h+='<i class="td'+(i<full?' on':'')+'"></i>';
+  h+='</span><small class="tdn">'+n+'/'+max+'</small>';
+  if(n>max) h+='<small class="tdover">+'+(n-max)+'</small>';
+  return h;
+}
 function recNeeded(c){return c&&(c.result==="거절"||c.result==="상담"||c.first_call_issue)}
 function recStatus(d){const x=getCalls(d.id).filter(recNeeded);return !x.length?"해당없음":x.every(c=>c.recording_delivered)?"완료":"미완료"}
 function pname(id){return profiles.find(p=>p.id===id)?.name||"-"} function report(d){return `${d.report_name||"보장분석 3DB"} / ${d.region||"-"} / ${result(d)}`}
@@ -397,10 +413,10 @@ function renderDb(){
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManage()?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:""}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${absentCount(d)}회</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
+    <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">TA</button>${isAdmin()?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button><button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
+    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${isAdmin()?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button><button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="11" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
