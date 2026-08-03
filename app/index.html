@@ -8681,6 +8681,8 @@ function renderSettings(){
 
     osMembersCardHtml()+
 
+    osAccountsCardHtml()+
+
     osTossCardHtml()+
 
     osPayCfgCardHtml()+
@@ -11716,7 +11718,7 @@ function osSettingsAfterRender(){
   try{osScrollTrack();}catch(e){}
   try{osScrollRestore();}catch(e){}
   try{if(typeof osNoticeImgPrev==='function')setTimeout(osNoticeImgPrev,30);}catch(e){}if(typeof osPayAdminLoad==='function'&&typeof osIsOwner==='function'&&osIsOwner())osPayAdminLoad();
-  if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
+  if(osIsAppAdmin()){if(typeof osLoadApprovals==='function')osLoadApprovals();if(typeof osLoadMembers==='function')osLoadMembers();if(typeof osAcLoad==='function'&&document.getElementById('osAcList')){OSAC.loaded=false;OSAC.pw=null;osAcLoad(true);}if(typeof osSecurityAfterRender==='function')osSecurityAfterRender();}
   if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osBackupLoad==='function')osBackupLoad();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
@@ -11856,6 +11858,471 @@ function osTierPreviewCardHtml(){
     '<div class="notice" style="margin-top:11px;font-size:11px;line-height:1.7">숫자가 <b>0개</b>인 칸은 그 등급·직급 조합이 <b>빈 화면</b>을 본다는 뜻입니다. 위 <b>도구 접근 권한</b>에서 그룹별 요구 등급을 낮추거나, 해당 회원의 등급을 올리세요. 관리자·대표는 항상 전체를 봅니다.</div>'+
     '</div></div>';
 }
+var OS_ACCT_SQL=[
+ "set search_path = public;",
+ "",
+ "alter table public.profiles add column if not exists status text;",
+ "alter table public.profiles add column if not exists plan text;",
+ "alter table public.profiles add column if not exists workspace text default 'both';",
+ "alter table public.profiles add column if not exists active boolean default true;",
+ "",
+ "create extension if not exists pgcrypto;",
+ "",
+ "create or replace function public.admin_user_list()",
+ "returns table(",
+ "  id uuid,",
+ "  email text,",
+ "  name text,",
+ "  role text,",
+ "  status text,",
+ "  plan text,",
+ "  workspace text,",
+ "  active boolean,",
+ "  created_at timestamptz,",
+ "  last_sign_in_at timestamptz,",
+ "  confirmed boolean",
+ ")",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 계정 목록을 볼 수 있습니다';",
+ "  end if;",
+ "  return query",
+ "  select u.id,",
+ "         u.email::text,",
+ "         coalesce(nullif(btrim(p.name), ''), split_part(coalesce(u.email, ''), '@', 1))::text,",
+ "         coalesce(p.role, 'member')::text,",
+ "         coalesce(p.status, 'approved')::text,",
+ "         p.plan::text,",
+ "         coalesce(p.workspace, 'both')::text,",
+ "         coalesce(p.active, true),",
+ "         u.created_at,",
+ "         u.last_sign_in_at,",
+ "         (u.email_confirmed_at is not null)",
+ "    from auth.users u",
+ "    left join public.profiles p on p.id = u.id",
+ "   order by u.created_at desc;",
+ "end",
+ "$fn$;",
+ "",
+ "create or replace function public.admin_account_refs(target uuid)",
+ "returns integer",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  t text;",
+ "  c text;",
+ "  n integer;",
+ "  total integer := 0;",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 확인할 수 있습니다';",
+ "  end if;",
+ "  for t, c in",
+ "    select k.table_name, k.column_name",
+ "      from information_schema.columns k",
+ "     where k.table_schema = 'public'",
+ "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
+ "  loop",
+ "    begin",
+ "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
+ "      total := total + coalesce(n, 0);",
+ "    exception when others then",
+ "      null;",
+ "    end;",
+ "  end loop;",
+ "  return total;",
+ "end",
+ "$fn$;",
+ "",
+ "create or replace function public.admin_set_temp_password(target uuid, newpw text)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth, extensions",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "begin",
+ "  if not public.is_owner() then",
+ "    raise exception '대표만 임시 비밀번호를 발급할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 비밀번호는 로그인 화면의 비밀번호 재설정으로 바꾸세요';",
+ "  end if;",
+ "  if length(coalesce(newpw, '')) < 8 then",
+ "    raise exception '임시 비밀번호는 8자 이상이어야 합니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  update auth.users",
+ "     set encrypted_password = crypt(newpw, gen_salt('bf', 10)),",
+ "         email_confirmed_at = coalesce(email_confirmed_at, now()),",
+ "         updated_at = now()",
+ "   where id = target;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "",
+ "create or replace function public.admin_set_active(target uuid, v boolean)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 변경할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 계정은 여기서 잠글 수 없습니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  update public.profiles",
+ "     set active = v,",
+ "         status = case when v then 'approved' else 'blocked' end",
+ "   where id = target;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "",
+ "create or replace function public.admin_delete_account(target uuid, hard boolean default false)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "  oe text;",
+ "  refs integer;",
+ "begin",
+ "  if not public.is_owner() then",
+ "    raise exception '대표만 계정을 삭제할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 계정은 삭제할 수 없습니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  select value into oe from public.app_config where key = 'owner_email' limit 1;",
+ "  if oe is not null and lower(btrim(em)) = lower(btrim(oe)) then",
+ "    raise exception '대표 계정은 삭제할 수 없습니다';",
+ "  end if;",
+ "  refs := public.admin_account_refs(target);",
+ "  if refs > 0 and not hard then",
+ "    raise exception '이 계정에 연결된 기록이 %건 있습니다. 삭제하면 그 기록이 함께 사라집니다', refs;",
+ "  end if;",
+ "  delete from public.profiles where id = target;",
+ "  delete from auth.users where id = target;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "",
+ "revoke execute on function public.admin_user_list() from public;",
+ "revoke execute on function public.admin_account_refs(uuid) from public;",
+ "revoke execute on function public.admin_set_temp_password(uuid, text) from public;",
+ "revoke execute on function public.admin_set_active(uuid, boolean) from public;",
+ "revoke execute on function public.admin_delete_account(uuid, boolean) from public;",
+ "",
+ "grant execute on function public.admin_user_list() to authenticated;",
+ "grant execute on function public.admin_account_refs(uuid) to authenticated;",
+ "grant execute on function public.admin_set_temp_password(uuid, text) to authenticated;",
+ "grant execute on function public.admin_set_active(uuid, boolean) to authenticated;",
+ "grant execute on function public.admin_delete_account(uuid, boolean) to authenticated;",
+ "",
+ "select",
+ "  (select count(*) from auth.users) as auth_users,",
+ "  (select count(*) from public.profiles) as profiles,",
+ "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
+ "",
+ "notify pgrst, 'reload schema';"
+];
+
+/* ════════ 팀원 계정 찾기 · 중복 정리 ════════
+   비밀번호는 서버에 암호화되어 저장되므로 누구도 원문을 되돌려 볼 수 없다.
+   그래서 '찾아주기'는 ① 아이디(이메일) 알려주기 ② 임시 비밀번호 새로 발급 두 가지로 푼다. */
+var OSAC={rows:[],q:'',loaded:false,err:'',pw:null,busy:''};
+
+function osAcSqlText(){return OS_ACCT_SQL.join('\n');}
+function osAcCopySql(){
+  if(typeof copyText==='function')copyText(osAcSqlText());
+  else if(navigator.clipboard)navigator.clipboard.writeText(osAcSqlText());
+  toast('준비 SQL을 복사했습니다 — Supabase → SQL Editor에 붙여넣고 실행하세요.');
+}
+function osAcDate(v){
+  if(!v)return '—';
+  try{var d=new Date(v);if(isNaN(d.getTime()))return '—';
+    return d.getFullYear()+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+('0'+d.getDate()).slice(-2);}
+  catch(e){return '—';}
+}
+function osAcNorm(v){return (''+(v||'')).replace(/\s+/g,'').toLowerCase();}
+
+function osAcLoad(force){
+  var box=document.getElementById('osAcList');if(!box)return;
+  if(OSAC.loaded&&!force){box.innerHTML=osAcListHtml();return;}
+  var sb=osClient();
+  if(!sb){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">서버에 연결되어 있지 않습니다.</div>';return;}
+  box.innerHTML='<div class="loading" style="padding:10px"><div class="spinner"></div>계정 목록을 불러오는 중…</div>';
+  sb.rpc('admin_user_list').then(function(r){
+    if(r.error){OSAC.err=r.error.message||'';box.innerHTML=osAcErrHtml();return;}
+    OSAC.rows=r.data||[];OSAC.loaded=true;OSAC.err='';
+    box.innerHTML=osAcListHtml();
+  },function(e){OSAC.err=(e&&e.message)||'네트워크 오류';box.innerHTML=osAcErrHtml();});
+}
+function osAcErrHtml(){
+  var e=OSAC.err||'';
+  var notReady=/admin_user_list|function|schema cache|does not exist|찾을 수 없/i.test(e);
+  if(notReady){
+    return '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:13px 15px">'+
+      '<div style="font-size:12.5px;font-weight:800;color:#92400E;margin-bottom:6px">준비 SQL을 아직 실행하지 않았습니다</div>'+
+      '<div style="font-size:11.5px;color:#92400E;line-height:1.75">이메일(아이디)은 <b>서버의 로그인 저장소</b>에 따로 들어 있어서, 아래 SQL을 한 번 실행해야 대표님이 볼 수 있습니다. 한 번만 하면 됩니다.</div>'+
+      '<div style="font-size:11px;color:#92400E;line-height:1.8;margin-top:8px">① 아래 <b>SQL 복사</b> → ② Supabase → <b>SQL Editor</b> → ③ 붙여넣고 <b>Run</b> → ④ 이 화면에서 <b>다시 불러오기</b></div>'+
+      '<div class="btn-row" style="margin-top:10px">'+
+        '<button class="btn btn-primary" style="padding:8px 14px;font-size:12px" onclick="osAcCopySql()">📋 준비 SQL 복사</button>'+
+        '<button class="btn btn-ghost" style="padding:8px 14px;font-size:12px" onclick="osAcLoad(true)">다시 불러오기</button>'+
+      '</div>'+
+      '<div style="font-size:10.5px;color:var(--ink-5);margin-top:8px">서버 응답: '+osEsc(e)+'</div></div>';
+  }
+  return '<div class="notice" style="background:#FEF2F2;border-color:#FECACA;color:#B91C1C;font-size:11.5px">계정 목록을 불러오지 못했습니다: <b>'+osEsc(e)+'</b>'+
+    '<div style="margin-top:8px"><button class="btn btn-ghost" style="padding:7px 13px;font-size:11.5px" onclick="osAcLoad(true)">다시 시도</button></div></div>';
+}
+
+/* 중복 의심 묶기 — 이름이 같거나, 이메일 아이디가 사실상 같은 경우(hong / hong2) */
+function osAcDupGroups(){
+  var rows=OSAC.rows||[],by={},out=[],seen={};
+  rows.forEach(function(p){
+    var n=osAcNorm(p.name);
+    if(n.length>=2)(by['n:'+n]=by['n:'+n]||[]).push(p);
+    var lp=osAcNorm((''+(p.email||'')).split('@')[0]).replace(/[0-9]+$/,'');
+    if(lp.length>=3)(by['e:'+lp]=by['e:'+lp]||[]).push(p);
+  });
+  Object.keys(by).forEach(function(k){
+    var g=by[k];if(g.length<2)return;
+    var sig=g.map(function(x){return x.id;}).sort().join(',');
+    if(seen[sig])return;seen[sig]=1;
+    out.push({label:k.charAt(0)==='n'?'이름이 같습니다':'이메일 아이디가 거의 같습니다',rows:g});
+  });
+  return out;
+}
+/* 살릴 계정 추천 — 최근에 로그인한 쪽, 없으면 먼저 만든 쪽 */
+function osAcKeepId(g){
+  var best=null;
+  g.forEach(function(p){
+    if(!best){best=p;return;}
+    var a=p.last_sign_in_at||'',b=best.last_sign_in_at||'';
+    if(a>b){best=p;return;}
+    if(a===b&&(p.created_at||'')<(best.created_at||''))best=p;
+  });
+  return best?best.id:'';
+}
+
+function osAcGenPw(){
+  var lo='abcdefghijkmnpqrstuvwxyz',up='ABCDEFGHJKLMNPQRSTUVWXYZ',nu='23456789';
+  function pick(s,n){var o='';for(var i=0;i<n;i++)o+=s.charAt(Math.floor(Math.random()*s.length));return o;}
+  return pick(lo,4)+pick(up,1)+pick(nu,4)+'!';
+}
+function osAcCopyId(email){
+  if(typeof copyText==='function')copyText(email);
+  else if(navigator.clipboard)navigator.clipboard.writeText(email);
+  toast('아이디를 복사했습니다 — '+email);
+}
+function osAcCopyGuide(){
+  if(!OSAC.pw)return;
+  var t='[APEX YUN PRO] 로그인 안내\n'+
+    '아이디: '+OSAC.pw.email+'\n'+
+    '임시 비밀번호: '+OSAC.pw.pw+'\n\n'+
+    '로그인 후 반드시 본인 비밀번호로 바꿔주세요.\n'+
+    location.origin+location.pathname;
+  if(typeof copyText==='function')copyText(t);
+  else if(navigator.clipboard)navigator.clipboard.writeText(t);
+  toast('안내 문구를 복사했습니다 — 그대로 보내주세요.');
+}
+function osAcTempPw(id,name,email){
+  if(typeof osIsOwner==='function'&&!osIsOwner()){toast('임시 비밀번호는 대표만 발급할 수 있습니다.');return;}
+  var sb=osClient();if(!sb)return;
+  if(!confirm(name+' ('+email+')\n\n임시 비밀번호를 새로 발급할까요?\n기존 비밀번호는 즉시 쓸 수 없게 됩니다.'))return;
+  var pw=osAcGenPw();
+  OSAC.busy=id;osAcRepaint();
+  sb.rpc('admin_set_temp_password',{target:id,newpw:pw}).then(function(r){
+    OSAC.busy='';
+    if(r.error){toast('발급 실패: '+(r.error.message||''));osAcRepaint();return;}
+    OSAC.pw={id:id,name:name,email:email,pw:pw};
+    if(typeof osAudit==='function')osAudit('temp_password','profile',id,null);
+    osAcRepaint();
+  },function(e){OSAC.busy='';toast('발급 실패: '+((e&&e.message)||'네트워크 오류'));osAcRepaint();});
+}
+function osAcResetMail(email){
+  var sb=osClient();if(!sb)return;
+  if(!confirm(email+' 로 비밀번호 재설정 메일을 보낼까요?'))return;
+  sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}).then(function(r){
+    if(r&&r.error){toast('메일 발송 실패: '+(r.error.message||'')); return;}
+    toast('재설정 메일을 보냈습니다 — 스팸함까지 확인하라고 알려주세요.');
+  },function(e){toast('메일 발송 실패: '+((e&&e.message)||''));});
+}
+function osAcActive(id,v,name){
+  var sb=osClient();if(!sb)return;
+  if(!confirm(name+'\n\n'+(v?'이 계정의 잠금을 풀까요?':'이 계정을 잠글까요? 로그인할 수 없게 됩니다.')))return;
+  sb.rpc('admin_set_active',{target:id,v:v}).then(function(r){
+    if(r.error){toast('변경 실패: '+(r.error.message||''));return;}
+    if(typeof osAudit==='function')osAudit(v?'unblock_account':'block_account','profile',id,null);
+    toast(v?'잠금을 해제했습니다.':'계정을 잠갔습니다.');
+    osAcLoad(true);if(typeof osLoadMembers==='function')osLoadMembers();
+  });
+}
+function osAcDelete(id,email,name){
+  if(typeof osIsOwner==='function'&&!osIsOwner()){toast('계정 삭제는 대표만 할 수 있습니다.');return;}
+  var sb=osClient();if(!sb)return;
+  sb.rpc('admin_account_refs',{target:id}).then(function(r){
+    var refs=(r&&!r.error&&typeof r.data==='number')?r.data:0;
+    var msg=name+' ('+email+')\n\n';
+    msg+=refs>0
+      ? '⚠ 이 계정에 연결된 기록이 '+refs+'건 있습니다.\n삭제하면 그 기록도 함께 사라집니다.\n\n기록을 남기고 싶다면 취소하고 "잠금"을 쓰세요.\n\n'
+      : '연결된 기록은 없습니다. 안전하게 지울 수 있습니다.\n\n';
+    msg+='이 작업은 되돌릴 수 없습니다. 계속할까요?';
+    if(!confirm(msg))return;
+    var t=prompt('마지막 확인 — 지울 계정의 이메일을 그대로 입력하세요.\n\n'+email,'');
+    if(osAcNorm(t)!==osAcNorm(email)){toast('입력이 일치하지 않아 취소했습니다.');return;}
+    sb.rpc('admin_delete_account',{target:id,hard:refs>0}).then(function(r2){
+      if(r2.error){toast('삭제 실패: '+(r2.error.message||''));return;}
+      if(typeof osAudit==='function')osAudit('delete_account','profile',id,email);
+      toast('✅ 계정을 삭제했습니다 — '+email);
+      osAcLoad(true);if(typeof osLoadMembers==='function')osLoadMembers();
+    },function(e){toast('삭제 실패: '+((e&&e.message)||''));});
+  },function(){toast('확인 실패 — 준비 SQL이 실행됐는지 확인하세요.');});
+}
+function osAcSearch(v){OSAC.q=v||'';osAcRepaint();}
+function osAcRepaint(){var b=document.getElementById('osAcList');if(b)b.innerHTML=osAcListHtml();}
+
+function osAcRowHtml(p,note){
+  var me=OS.profile&&OS.profile.id;
+  var isMe=me&&p.id===me;
+  var never=!p.last_sign_in_at;
+  var owner=(typeof osIsOwner==='function')&&osIsOwner();
+  var badge=function(t,c,bg){return '<span style="font-size:10px;font-weight:800;color:'+c+';background:'+bg+';border-radius:5px;padding:2px 6px">'+t+'</span>';};
+  var tags='';
+  if(isMe)tags+=badge('나','#1D4ED8','#EFF6FF');
+  if(p.active===false)tags+=' '+badge('잠김','#B91C1C','#FEF2F2');
+  if(never)tags+=' '+badge('로그인 이력 없음','#B45309','#FFFBEB');
+  if(p.role==='admin'||p.role==='owner')tags+=' '+badge('관리자','#6D28D9','#F5F3FF');
+  if(note)tags+=' '+note;
+  var busy=OSAC.busy===p.id;
+  return '<div style="padding:10px 12px;border-top:1px solid var(--ink-8);background:'+(isMe?'#FBFDFF':'#fff')+'">'+
+    '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+      '<span style="font-size:13px;font-weight:800;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+'</span>'+tags+
+    '</div>'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap">'+
+      '<code style="font-size:12px;font-weight:700;color:#1D4ED8;background:#F1F5FF;border-radius:6px;padding:3px 8px;user-select:text">'+osEsc(p.email||'')+'</code>'+
+      '<button class="btn btn-ghost" style="padding:3px 9px;font-size:10.5px" onclick="osAcCopyId(\''+osEsc(p.email||'')+'\')">아이디 복사</button>'+
+    '</div>'+
+    '<div style="font-size:10.5px;color:var(--ink-5);margin-top:5px;line-height:1.7">'+
+      '가입 '+osAcDate(p.created_at)+' · 마지막 로그인 '+(never?'<b style="color:#B45309">없음</b>':osAcDate(p.last_sign_in_at))+
+      ' · 등급 '+osEsc(p.plan||'미지정')+' · 소속 '+osEsc(p.workspace||'both')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:7px;gap:5px">'+
+      (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px"'+(busy?' disabled':'')+' onclick="osAcTempPw(\''+p.id+'\',\''+osEsc(p.name||'')+'\',\''+osEsc(p.email||'')+'\')">'+(busy?'발급 중…':'🔑 임시 비밀번호')+'</button>':'')+
+      '<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcResetMail(\''+osEsc(p.email||'')+'\')">✉ 재설정 메일</button>'+
+      (!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcActive(\''+p.id+'\','+(p.active===false?'true':'false')+',\''+osEsc(p.name||'')+'\')">'+(p.active===false?'🔓 잠금 해제':'🔒 잠그기')+'</button>':'')+
+      (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px;color:#B91C1C" onclick="osAcDelete(\''+p.id+'\',\''+osEsc(p.email||'')+'\',\''+osEsc(p.name||'')+'\')">🗑 계정 삭제</button>':'')+
+    '</div>'+
+    (OSAC.pw&&OSAC.pw.id===p.id
+      ? '<div style="margin-top:9px;border:1px solid #A7F3D0;background:#ECFDF5;border-radius:10px;padding:11px 13px">'+
+        '<div style="font-size:11.5px;font-weight:800;color:#065F46;margin-bottom:6px">✅ 임시 비밀번호가 발급되었습니다</div>'+
+        '<div style="font-size:12px;color:#065F46;line-height:1.9">아이디 <code style="background:#fff;border-radius:5px;padding:2px 7px;user-select:text">'+osEsc(OSAC.pw.email)+'</code><br>'+
+        '임시 비밀번호 <code style="background:#fff;border-radius:5px;padding:2px 7px;font-weight:900;letter-spacing:.5px;user-select:text">'+osEsc(OSAC.pw.pw)+'</code></div>'+
+        '<div class="btn-row" style="margin-top:8px">'+
+          '<button class="btn btn-primary" style="padding:6px 12px;font-size:11px" onclick="osAcCopyGuide()">📋 안내 문구 통째로 복사</button>'+
+          '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="OSAC.pw=null;osAcRepaint()">닫기</button>'+
+        '</div>'+
+        '<div style="font-size:10.5px;color:#065F46;margin-top:7px;line-height:1.6">이 화면을 벗어나면 다시 볼 수 없습니다. 지금 복사해서 전달하고, 본인이 로그인한 뒤 바꾸게 하세요.</div>'+
+        '</div>'
+      : '')+
+  '</div>';
+}
+
+function osAcListHtml(){
+  var rows=OSAC.rows||[];
+  if(!rows.length)return '<div style="font-size:12.5px;color:var(--ink-4);padding:8px 2px">계정이 없습니다.</div>';
+  var never=rows.filter(function(p){return !p.last_sign_in_at;}).length;
+  var dups=osAcDupGroups();
+  var dupN=0;dups.forEach(function(g){dupN+=g.rows.length;});
+  var sum='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">'+
+    '<span style="font-size:11px;font-weight:800;color:var(--ink-2);background:var(--ink-9);border-radius:7px;padding:5px 10px">전체 '+rows.length+'명</span>'+
+    '<span style="font-size:11px;font-weight:800;color:#B45309;background:#FFFBEB;border-radius:7px;padding:5px 10px">로그인 이력 없음 '+never+'명</span>'+
+    (dups.length?'<span style="font-size:11px;font-weight:800;color:#B91C1C;background:#FEF2F2;border-radius:7px;padding:5px 10px">중복 의심 '+dupN+'개</span>':'<span style="font-size:11px;font-weight:800;color:#059669;background:#ECFDF5;border-radius:7px;padding:5px 10px">중복 없음 ✅</span>')+
+    '</div>';
+
+  var dupBlock='';
+  if(dups.length){
+    dupBlock='<div style="border:1px solid #FECACA;background:#FFF7F7;border-radius:12px;padding:12px 14px;margin-bottom:13px">'+
+      '<div style="font-size:12.5px;font-weight:800;color:#B91C1C;margin-bottom:4px">🔁 중복으로 보이는 계정</div>'+
+      '<div style="font-size:11px;color:#B91C1C;line-height:1.7;margin-bottom:9px">최근에 로그인한 계정을 <b>살릴 것</b>으로 추천합니다. 나머지 중 <b>로그인 이력이 없는 계정</b>이 대개 잘못 만든 계정입니다. 기록이 걸려 있으면 삭제 대신 <b>잠그기</b>를 쓰세요.</div>'+
+      dups.map(function(g){
+        var keep=osAcKeepId(g.rows);
+        return '<div style="border:1px solid #FECACA;border-radius:10px;overflow:hidden;background:#fff;margin-bottom:8px">'+
+          '<div style="font-size:11px;font-weight:800;color:#B91C1C;background:#FEF2F2;padding:6px 11px">'+osEsc(g.label)+' · '+g.rows.length+'개</div>'+
+          g.rows.map(function(p){
+            var note=p.id===keep
+              ? '<span style="font-size:10px;font-weight:800;color:#065F46;background:#ECFDF5;border-radius:5px;padding:2px 6px">살릴 것 추천</span>'
+              : (!p.last_sign_in_at?'<span style="font-size:10px;font-weight:800;color:#B91C1C;background:#FEF2F2;border-radius:5px;padding:2px 6px">정리 후보</span>':'');
+            return osAcRowHtml(p,note);
+          }).join('')+
+        '</div>';
+      }).join('')+
+    '</div>';
+  }
+
+  var q=osAcNorm(OSAC.q);
+  var list=q?rows.filter(function(p){
+    return osAcNorm(p.name).indexOf(q)>=0||osAcNorm(p.email).indexOf(q)>=0;
+  }):rows;
+  var listBlock=q&&!list.length
+    ? '<div style="font-size:12.5px;color:var(--ink-5);padding:8px 2px">"'+osEsc(OSAC.q)+'" 와 맞는 계정이 없습니다. 아직 <b>가입 승인 대기</b>일 수도 있습니다.</div>'
+    : '<div style="border:1px solid var(--ink-7);border-radius:11px;overflow:hidden">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--ink-4);background:var(--ink-9);padding:7px 12px">'+(q?'검색 결과 '+list.length+'명':'전체 계정 '+list.length+'명 · 최근 가입순')+'</div>'+
+      list.map(function(p){return osAcRowHtml(p,'');}).join('')+'</div>';
+
+  return sum+dupBlock+listBlock;
+}
+
+function osAccountsCardHtml(){
+  if(!osIsAppAdmin())return '';
+  return '<div class="card set-card" style="border-color:#BFDBFE"><div class="card-hd" style="background:#F5F9FF"><div class="card-title"><span class="ci">🔎</span>팀원 계정 찾기 · 중복 정리 <span class="badge">대표</span></div>'+
+    '<div class="card-desc">팀원의 <b>아이디(이메일)</b>를 찾아주고, 잊어버린 비밀번호는 <b>임시 비밀번호</b>로 다시 열어줍니다. 잘못 만든 <b>중복 계정</b>도 여기서 정리합니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 13px;margin-bottom:11px">'+
+      '<div style="font-size:12px;font-weight:800;color:#92400E;margin-bottom:5px">🔐 비밀번호는 원문을 볼 수 없습니다 — 저도, 대표님도, 서버 관리자도</div>'+
+      '<div style="font-size:11.5px;color:#92400E;line-height:1.75">비밀번호는 <b>되돌릴 수 없는 방식으로 암호화</b>되어 저장됩니다. 그래서 "찾아주기"는 두 가지로 합니다.<br>'+
+      '① <b>아이디(이메일) 알려주기</b> — 아래에서 바로 찾아 복사<br>'+
+      '② <b>임시 비밀번호 발급</b> — 새 비밀번호를 만들어 전달하고, 본인이 로그인 후 바꾸게 하기<br>'+
+      '<span style="color:#B45309">재설정 메일은 서버 기본 메일 한도(시간당 소량) 때문에 안 갈 수 있습니다. 확실한 쪽은 ②입니다.</span></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:11px">'+
+      '<input id="osAcQ" placeholder="이름 또는 이메일로 찾기 — 예: 홍길동" oninput="osAcSearch(this.value)" style="flex:1;min-width:180px;border:1px solid var(--ink-7);border-radius:9px;padding:9px 12px;font-size:12.5px;font-family:inherit">'+
+      '<button class="btn btn-ghost" style="padding:8px 14px;font-size:12px" onclick="osAcLoad(true)">↻ 다시 불러오기</button>'+
+    '</div>'+
+    '<div id="osAcList"></div>'+
+    '<div style="font-size:10.5px;color:var(--ink-5);line-height:1.75;margin-top:11px;border-top:1px dashed var(--ink-8);padding-top:9px">'+
+      '<b>잠그기</b>는 로그인만 막고 기록은 그대로 둡니다(되돌릴 수 있음). <b>계정 삭제</b>는 로그인 계정과 프로필을 완전히 지웁니다(되돌릴 수 없음). '+
+      '기록이 걸린 계정을 지우면 그 기록도 함께 사라지므로, 확실하지 않으면 잠그기를 쓰세요. 모든 작업은 감사 기록에 남습니다.'+
+    '</div>'+
+    '</div></div>';
+}
+
 function osMembersCardHtml(){
   if(!osIsAppAdmin())return '';
   return '<div class="card set-card" style="border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">🔐</span>팀원 권한 관리 <span class="badge">관리자</span></div>'+
