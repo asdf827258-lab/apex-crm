@@ -1205,8 +1205,10 @@ function claudeUserContent(user,images){
   return arr;
 }
 /* max_tokens로 잘리면(stop_reason=max_tokens) 자동으로 이어써서 끝까지 완성한다. */
+var AI_FORCE_MODEL='';   /* 혼잡 시 임시로 갈아탄 모델. 비어 있으면 설정값을 쓴다 */
+function aiModelNow(){return AI_FORCE_MODEL||getModel();}
 function _claudeOnce(system,messages,maxTokens,forceKey){
-  var payload={model:getModel(),max_tokens:maxTokens||2000,system:system,messages:messages};
+  var payload={model:aiModelNow(),max_tokens:maxTokens||2000,system:system,messages:messages};
   var url,headers;
   if(!forceKey&&getConn()==='proxy'){
     var px=getProxy();
@@ -1247,7 +1249,7 @@ function _claudeRun(system,messages,cap,forceKey){
         messages.push({role:'user',content:'방금 응답이 길이 제한으로 중간에 끊겼어. 마지막 글자 바로 다음부터, 인사말·머리말 없이 이어서 끝까지 완성해줘. 이미 쓴 내용은 반복하지 마.'});
         return step();
       }
-      AI_LAST={engine:'claude',model:getModel(),fellback:!!forceKey,note:(forceKey?'공용 한도 → 내 API 키':(rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''))};
+      AI_LAST={engine:'claude',model:aiModelNow(),fellback:!!forceKey,note:(forceKey?'공용 한도 → 내 API 키':(rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''))};
       return acc;
     });
   }
@@ -1475,7 +1477,8 @@ function aiRetryShow(n,max,sec,label){
   AI_RETRY.on=true;AI_RETRY.n=n;AI_RETRY.max=max;AI_RETRY.left=sec;AI_RETRY.label=label||'';
   if(AI_RETRY.timer)clearInterval(AI_RETRY.timer);
   var paint=function(){
-    var txt='서버가 혼잡합니다 — '+AI_RETRY.left+'초 후 자동으로 다시 시도합니다 ('+AI_RETRY.n+'/'+AI_RETRY.max+')';
+    var txt='서버가 혼잡합니다 — '+AI_RETRY.left+'초 후 자동으로 다시 시도합니다 ('+AI_RETRY.n+'/'+AI_RETRY.max+')'+
+      (AI_RETRY.label?' · '+AI_RETRY.label:'');
     var els=document.querySelectorAll('.loading');
     for(var i=0;i<els.length;i++){
       var host=els[i].querySelector('.ai-retry');
@@ -1500,19 +1503,42 @@ function aiRetryHide(){
   var els=document.querySelectorAll('.ai-retry');
   for(var i=0;i<els.length;i++){var e=els[i];if(e.parentNode)e.parentNode.removeChild(e);}
 }
-/* 혼잡이면 1.5초 → 4초 → 9초 → 18초 간격으로 다시 부른다 */
+/* 모델 사다리 — 한 모델이 몰리면 여유 있는 쪽으로 갈아탄다.
+   같은 모델을 계속 두드리는 것보다 이쪽이 훨씬 잘 뚫린다. */
+var AI_LADDER=['claude-sonnet-4-6','claude-haiku-4-5-20251001','claude-opus-4-8'];
+function aiLadderFor(cur){
+  var out=[],i;
+  for(i=0;i<AI_LADDER.length;i++){if(AI_LADDER[i]!==cur)out.push(AI_LADDER[i]);}
+  return out;
+}
+/* 혼잡이면 시간을 늘려가며 다시 부르고, 중간부터는 다른 모델로 갈아탄다 */
 function aiWithRetry(make,label){
-  var DELAY=[1500,4000,9000,18000],tries=0;
+  var DELAY=[1200,3000,6000,10000,16000,24000],tries=0;
+  var base=(label==='Claude')?getModel():'';
+  var alts=base?aiLadderFor(base):[];
   function run(){
-    return make().then(function(v){aiRetryHide();return v;},function(e){
-      if(!aiIsBusy(e)||tries>=DELAY.length){aiRetryHide();throw e;}
+    return make().then(function(v){aiRetryHide();AI_FORCE_MODEL='';return v;},function(e){
+      if(!aiIsBusy(e)||tries>=DELAY.length){aiRetryHide();AI_FORCE_MODEL='';throw e;}
       var d=DELAY[tries]+Math.floor(Math.random()*700);
       tries++;
-      aiRetryShow(tries,DELAY.length,Math.round(d/1000),label);
+      /* 2번째 실패부터 다른 모델로 갈아탄다 */
+      var note=label;
+      if(base&&tries>=2){
+        var pick=alts[(tries-2)%alts.length];
+        if(pick){AI_FORCE_MODEL=pick;note=label+' · '+aiShortModel(pick)+'로 전환';}
+      }
+      aiRetryShow(tries,DELAY.length,Math.round(d/1000),note);
       return aiSleep(d).then(run);
     });
   }
   return run();
+}
+function aiShortModel(m){
+  m=''+(m||'');
+  if(/opus/i.test(m))return 'Opus';
+  if(/haiku/i.test(m))return 'Haiku';
+  if(/sonnet/i.test(m))return 'Sonnet';
+  return m;
 }
 function aiBusyMsg(){
   return 'AI 서버가 몰려 있어 여러 번 다시 시도했지만 응답을 받지 못했습니다.\n'+
