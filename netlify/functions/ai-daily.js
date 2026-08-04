@@ -13,7 +13,7 @@ const GM_KEY = process.env.GEMINI_API_KEY || '';
 const DEPTS = [
   { id: 'sales',   n: '영업지원팀', role: 'DB 배정·통화·약속 전환을 본다' },
   { id: 'consult', n: '상담설계팀', role: '상담자료 생산량과 저장 상태를 본다' },
-  { id: 'edu',     n: '교육팀',     role: '전문가 과정 진도와 지연자를 본다' },
+  { id: 'edu',     n: '교육팀',     role: '본인 점검란 진도와 지연자를 본다' },
   { id: 'content', n: '콘텐츠팀',   role: '콘텐츠 발행과 노출을 본다' },
   { id: 'ops',     n: '운영팀',     role: '출근·활동·시스템 사용을 본다' },
   { id: 'risk',    n: '준법팀',     role: '준법 위험과 점검 항목을 본다' }
