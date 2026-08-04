@@ -11664,6 +11664,145 @@ function osAccessCardHtml(){
 function osEsc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function osVal(id){var el=document.getElementById(id);return el?el.value:'';}
 
+/* ════════ 내 계정 — 본인이 직접 비밀번호 변경 ════════
+   지금까지 왼쪽 아래 계정을 누르면 바로 로그아웃돼서, 팀원이 스스로 할 수 있는 게 없었다.
+   여기서 내 아이디를 확인하고 비밀번호를 직접 바꾼다.
+   지금 비밀번호를 한 번 더 확인받는다 — 자리를 비운 사이 남이 바꾸는 것을 막는다. */
+var OSME={busy:false};
+
+function osMeEmail(){
+  return (OS.session&&OS.session.user&&OS.session.user.email)||'';
+}
+function osMeJoined(){
+  var t=(OS.session&&OS.session.user&&OS.session.user.created_at)||'';
+  if(!t)return '';
+  try{var d=new Date(t);return d.getFullYear()+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+('0'+d.getDate()).slice(-2);}
+  catch(e){return '';}
+}
+function osMeTierLabel(){
+  var t=(typeof osMyTier==='function')?osMyTier():'';
+  var o=(typeof osTierById==='function')?osTierById(t):null;
+  return (o&&o.label)||t||'미지정';
+}
+function osMeRow(k,v){
+  return '<div style="display:flex;gap:10px;align-items:baseline;padding:9px 0;border-bottom:1px solid #EEF1F5">'+
+    '<span style="flex:none;width:74px;font-size:11.5px;font-weight:700;color:#8B94A3">'+osEsc(k)+'</span>'+
+    '<span style="flex:1;font-size:13.5px;font-weight:700;color:#0B1B34;word-break:break-all">'+v+'</span></div>';
+}
+function osMeModalHtml(){
+  var em=osMeEmail(),jn=osMeJoined();
+  return '<div class="os-modal">'+
+    '<button class="os-x" onclick="osCloseModal()">&times;</button>'+
+    '<div class="hd"><h3>내 계정</h3><p>아이디를 확인하고 비밀번호를 직접 바꿉니다.</p></div>'+
+    '<div class="bd">'+
+      '<div style="border:1px solid #E5E9F0;border-radius:11px;padding:4px 14px;margin-bottom:16px;background:#FBFCFE">'+
+        osMeRow('이름',osEsc((OS.profile&&OS.profile.name)||'—'))+
+        osMeRow('아이디','<code style="font-size:13px;color:#1D4ED8;background:#F1F5FF;border-radius:5px;padding:2px 7px">'+osEsc(em)+'</code>'+
+          '<button type="button" class="os-mini" onclick="osMeCopyId()" style="margin-left:6px;border:1px solid #E5E9F0;background:#fff;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:700;color:#42506A;cursor:pointer;font-family:inherit">복사</button>')+
+        osMeRow('직급',osEsc((typeof osRoleLabel==='function')?osRoleLabel(OS.profile&&OS.profile.role):''))+
+        osMeRow('등급',osEsc(osMeTierLabel()))+
+        (jn?osMeRow('가입일',osEsc(jn)):'')+
+      '</div>'+
+
+      '<div style="font-size:13px;font-weight:800;color:#0B1B34;margin-bottom:9px">비밀번호 변경</div>'+
+      '<div class="os-fld"><label>지금 비밀번호</label>'+
+        '<input id="osMeOld" type="password" placeholder="••••••••" autocomplete="current-password"/></div>'+
+      '<div class="os-fld"><label>새 비밀번호 <span style="font-weight:500;color:#8B94A3">8자 이상</span></label>'+
+        '<input id="osMeNew" type="password" placeholder="••••••••" autocomplete="new-password" oninput="osMeCheck()"/></div>'+
+      '<div class="os-fld"><label>새 비밀번호 확인</label>'+
+        '<input id="osMeNew2" type="password" placeholder="••••••••" autocomplete="new-password" oninput="osMeCheck()"/></div>'+
+      '<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:#5B6577;margin:-4px 0 10px;cursor:pointer">'+
+        '<input type="checkbox" id="osMeShow" onchange="osMeShowToggle(this.checked)" style="margin:0"/> 비밀번호 보이기</label>'+
+      '<div id="osMeHint" style="font-size:12px;line-height:1.7;margin-bottom:10px;min-height:18px"></div>'+
+      '<div class="os-err" id="osErr"></div>'+
+      '<button class="os-btn" id="osMeSave" onclick="osMePwSave()">비밀번호 바꾸기</button>'+
+
+      '<div style="margin-top:16px;padding-top:14px;border-top:1px solid #E5E9F0;display:flex;gap:8px;flex-wrap:wrap">'+
+        '<button type="button" onclick="osMeLogout()" style="flex:1;min-width:120px;padding:10px;border:1px solid #E5E9F0;border-radius:9px;background:#fff;color:#B91C1C;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">로그아웃</button>'+
+        '<button type="button" onclick="osCloseModal()" style="flex:1;min-width:120px;padding:10px;border:1px solid #E5E9F0;border-radius:9px;background:#fff;color:#42506A;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">닫기</button>'+
+      '</div>'+
+      '<div style="font-size:11px;color:#94A3B8;line-height:1.7;margin-top:11px">비밀번호를 잊으셨다면 대표에게 <b>임시 비밀번호 발급</b>을 요청하세요. 바꾼 뒤에는 다른 기기에서도 새 비밀번호로 로그인합니다.</div>'+
+    '</div></div>';
+}
+function osMeShowToggle(on){
+  ['osMeOld','osMeNew','osMeNew2'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.type=on?'text':'password';
+  });
+}
+function osMeCopyId(){
+  var em=osMeEmail();
+  if(typeof copyText==='function')copyText(em);
+  else if(navigator.clipboard)navigator.clipboard.writeText(em);
+  toast('아이디를 복사했습니다 — '+em);
+}
+function osMeCheck(){
+  var a=osVal('osMeNew')||'',b=osVal('osMeNew2')||'';
+  var h=document.getElementById('osMeHint');if(!h)return;
+  if(!a){h.innerHTML='';return;}
+  if(a.length<8){h.innerHTML='<span style="color:#B45309">8자 이상으로 만들어 주세요 — 지금 '+a.length+'자</span>';return;}
+  if(b&&a!==b){h.innerHTML='<span style="color:#B91C1C">두 칸이 서로 다릅니다</span>';return;}
+  if(b&&a===b){h.innerHTML='<span style="color:#059669">✓ 확인되었습니다</span>';return;}
+  h.innerHTML='<span style="color:#8B94A3">아래 칸에 한 번 더 입력하세요</span>';
+}
+function osMePwErr(m){
+  m=''+(m||'');
+  if(/Invalid login|invalid_credentials/i.test(m))return '지금 비밀번호가 맞지 않습니다.';
+  if(/should be different|same.*password/i.test(m))return '지금 쓰는 비밀번호와 다르게 만들어 주세요.';
+  if(/at least|too short|minimum/i.test(m))return '비밀번호가 너무 짧습니다. 8자 이상으로 만들어 주세요.';
+  if(/weak|pwned|compromis/i.test(m))return '너무 쉬운 비밀번호입니다. 다른 것으로 만들어 주세요.';
+  return m;
+}
+function osMePwSave(){
+  if(OSME.busy)return;
+  /* 적은 내용부터 짚어준다 — 연결이 끊겨 있어도 무엇이 잘못됐는지는 알 수 있어야 한다 */
+  var oldPw=osVal('osMeOld')||'',a=osVal('osMeNew')||'',b=osVal('osMeNew2')||'';
+  if(!oldPw){osErr('지금 비밀번호를 입력하세요.');return;}
+  if(!a){osErr('새 비밀번호를 입력하세요.');return;}
+  if(a.length<8){osErr('새 비밀번호는 8자 이상이어야 합니다.');return;}
+  if(a!==b){osErr('새 비밀번호 두 칸이 서로 다릅니다.');return;}
+  if(a===oldPw){osErr('지금 쓰는 비밀번호와 다르게 만들어 주세요.');return;}
+  var sb=osClient();
+  if(!sb){osErr('서버에 연결되어 있지 않습니다. 인터넷 연결을 확인하세요.');return;}
+  var em=osMeEmail();
+  if(!em){osErr('로그인 정보를 확인할 수 없습니다. 다시 로그인해 주세요.');return;}
+  osErr('');
+  var btn=document.getElementById('osMeSave');
+  OSME.busy=true;if(btn){btn.disabled=true;btn.textContent='확인 중…';}
+  var done=function(){OSME.busy=false;if(btn){btn.disabled=false;btn.textContent='비밀번호 바꾸기';}};
+  /* ① 지금 비밀번호가 맞는지 먼저 확인한다 */
+  sb.auth.signInWithPassword({email:em,password:oldPw}).then(function(r){
+    if(r.error){done();osErr(osMePwErr(r.error.message));return;}
+    if(btn)btn.textContent='바꾸는 중…';
+    /* ② 맞으면 새 비밀번호로 교체 */
+    return sb.auth.updateUser({password:a}).then(function(r2){
+      done();
+      if(r2.error){osErr(osMePwErr(r2.error.message));return;}
+      if(typeof osAudit==='function')osAudit('change_password','account',null,null);
+      var h=document.getElementById('osMeHint');
+      if(h)h.innerHTML='<span style="color:#059669">✓ 비밀번호를 바꿨습니다</span>';
+      ['osMeOld','osMeNew','osMeNew2'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+      toast('✅ 비밀번호를 바꿨습니다. 다음 로그인부터 새 비밀번호를 쓰세요.');
+      setTimeout(osCloseModal,1200);
+    });
+  },function(e){done();osErr(osMePwErr((e&&e.message)||'네트워크 오류'));});
+}
+function osMeLogout(){
+  if(!confirm('로그아웃할까요?'))return;
+  osCloseModal();
+  if(typeof osLogout==='function')osLogout();
+}
+function osOpenMe(){
+  var ovl=document.getElementById('osOvl');
+  if(!ovl){
+    ovl=document.createElement('div');ovl.id='osOvl';ovl.className='os-ovl';
+    document.body.appendChild(ovl);
+    ovl.addEventListener('click',function(e){if(e.target===ovl)osCloseModal();});
+  }
+  ovl.innerHTML=osMeModalHtml();
+  ovl.classList.add('on');
+  var f=document.getElementById('osMeOld');if(f)f.focus();
+}
+
 function osRenderPill(){
   var foot=document.querySelector('.sb-foot');if(!foot)return;
   var pill=document.getElementById('osAuthPill');
@@ -11672,14 +11811,14 @@ function osRenderPill(){
     var nm=OS.profile.name||(OS.session&&OS.session.user&&OS.session.user.email)||'로그인됨';
     pill.className='os-authpill on';
     pill.innerHTML='<span class="dot"></span><span class="who">'+osEsc(nm)+'</span><span class="role">'+osRoleLabel(OS.profile.role)+'</span>';
-    pill.title='클릭하여 로그아웃';
+    pill.title='내 계정 · 비밀번호 변경';
   }else{
     pill.className='os-authpill';
     pill.innerHTML='<span class="dot"></span><span class="who">로그인 / 계정</span>';
     pill.title='로그인';
   }
 }
-function osPillClick(){if(OS.profile)osLogout();else osOpenModal();}
+function osPillClick(){if(OS.profile)osOpenMe();else osOpenModal();}
 
 var osMode='login';
 function osModalHtml(){
@@ -11701,8 +11840,9 @@ function osModalHtml(){
 }
 function osOpenModal(){
   var ovl=document.getElementById('osOvl');
-  if(!ovl){ovl=document.createElement('div');ovl.id='osOvl';ovl.className='os-ovl';ovl.innerHTML=osModalHtml();document.body.appendChild(ovl);
+  if(!ovl){ovl=document.createElement('div');ovl.id='osOvl';ovl.className='os-ovl';document.body.appendChild(ovl);
     ovl.addEventListener('click',function(e){if(e.target===ovl)osCloseModal();});}
+  ovl.innerHTML=osModalHtml();
   ovl.classList.add('on');osAuthTab('login');
   var em=document.getElementById('osEmail');if(em)em.focus();
 }
