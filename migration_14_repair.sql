@@ -113,6 +113,9 @@ alter table public.team_members enable row level security;
 
 drop policy if exists teams_select on public.teams;
 drop policy if exists teams_write on public.teams;
+drop policy if exists teams_insert on public.teams;
+drop policy if exists teams_update on public.teams;
+drop policy if exists teams_delete on public.teams;
 create policy teams_select on public.teams for select to authenticated using (true);
 create policy teams_insert on public.teams for insert to authenticated with check (public.is_admin());
 create policy teams_update on public.teams for update to authenticated using (public.is_admin()) with check (public.is_admin());
@@ -120,6 +123,8 @@ create policy teams_delete on public.teams for delete to authenticated using (pu
 
 drop policy if exists team_members_select on public.team_members;
 drop policy if exists team_members_write on public.team_members;
+drop policy if exists team_members_insert on public.team_members;
+drop policy if exists team_members_delete on public.team_members;
 create policy team_members_select on public.team_members for select to authenticated using (true);
 create policy team_members_insert on public.team_members for insert to authenticated with check (public.is_admin());
 create policy team_members_delete on public.team_members for delete to authenticated using (public.is_admin());
