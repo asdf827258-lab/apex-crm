@@ -1216,8 +1216,9 @@ function aiModelNow(){return AI_FORCE_MODEL||getModel();}
 var AI_TIMEOUT_TEXT=120000;    /* 글만 보낼 때 2분 */
 var AI_TIMEOUT_VISION=300000;  /* 페이지 이미지를 함께 보낼 때 5분 */
 var AI_BODY_VISION=400000;     /* 이 크기를 넘으면 이미지가 실린 요청으로 본다 */
-var AI_IMG_BUDGET=3600000;     /* 한 요청에 담을 이미지 총량 — 중계 서버가 보통 4~6MB 에서 끊는다 */
-var AI_IMG_MAX=20;             /* 장수 상한 */
+var AI_IMG_BUDGET=4200000;     /* 한 요청에 담을 이미지 총량 — 중계 서버가 보통 4~6MB 에서 끊는다 */
+var AI_IMG_MIN_SCALE=0.62;     /* 이보다 더 줄이면 담보 표의 숫자가 뭉개진다. 화질을 지키고 장수를 줄인다 */
+var AI_IMG_MAX=24;             /* 장수 상한 */
 
 function aiFetch(url,opts,ms){
   if(typeof AbortController==='undefined')return fetch(url,opts);
@@ -1272,18 +1273,23 @@ function aiFitImages(imgs){
   if(!imgs.length)return Promise.resolve({imgs:imgs,note:'',shrunk:false});
   var total=aiImgBytes(imgs);
   if(total<=AI_IMG_BUDGET)return Promise.resolve({imgs:imgs,note:'',shrunk:false});
-  var scale=Math.max(0.42,Math.min(0.95,Math.sqrt(AI_IMG_BUDGET/total)));
+  /* 읽을 수 있는 선(AI_IMG_MIN_SCALE)까지만 줄인다. 그래도 안 담기면 장수를 줄이고 몇 장을 뺐는지 알린다.
+     흐려서 못 읽는 20장보다, 또렷하게 읽히는 12장이 낫다. */
+  var scale=Math.max(AI_IMG_MIN_SCALE,Math.min(0.95,Math.sqrt(AI_IMG_BUDGET/total)));
+  var q=(scale<0.8)?0.74:0.80;
   var chain=Promise.resolve(),out=[];
   imgs.forEach(function(im){chain=chain.then(function(){
-    return aiShrinkOne(im,scale,0.66).then(function(r){out.push(r);});});});
+    return aiShrinkOne(im,scale,q).then(function(r){out.push(r);});});});
   return chain.then(function(){
-    var kept=out.length,dropped=0;
+    var all=out.length,dropped=0;
     while(aiImgBytes(out)>AI_IMG_BUDGET&&out.length>1){out.pop();dropped++;}
-    return {imgs:out,shrunk:true,
+    var pct=Math.round(scale*100);
+    return {imgs:out,shrunk:true,dropped:dropped,
       note:dropped
-        ?('페이지가 많아 앞 '+out.length+'장만 판독했습니다 (뒤 '+dropped+'장 제외).')
-        :('용량을 줄여 '+kept+'장 전부 판독했습니다.')};
-  },function(){return {imgs:imgs.slice(0,8),note:'용량이 커서 앞 8장만 판독했습니다.',shrunk:true};});
+        ?('앞 '+out.length+'장을 판독했습니다 (화질 '+pct+'%). 뒤 '+dropped+'장은 한 번에 보낼 수 있는 양을 넘어 제외했습니다 — 담보 표가 있는 페이지만 올리면 전부 읽습니다.')
+        :('용량에 맞춰 화질 '+pct+'%로 '+all+'장 전부 판독했습니다.')};
+  },function(){return {imgs:imgs.slice(0,10),dropped:Math.max(0,imgs.length-10),
+    note:'용량이 커서 앞 10장만 판독했습니다.',shrunk:true};});
 }
 
 /* ── 멈춘 것처럼 보이지 않게 경과 시간을 띄운다 ── */
@@ -11180,8 +11186,8 @@ function ensurePdfJs(){
 var PDF_MAX_MB=300;      /* 첨부 PDF 1개 최대 용량(MB) — 기존 10 → 100 → 300 */
 var PDF_TEXT_PAGES=250;  /* 텍스트형 PDF 읽는 최대 페이지 — 기존 25 */
 var PDF_IMG_PAGES=20;    /* 이미지(스캔)형 PDF 판독 최대 페이지 — 한 요청에 실을 수 있는 양에 맞춘다 */
-var PDF_IMG_EDGE=1400;   /* 페이지 이미지 긴 변(px) — 1600은 한 장 690KB 라 16장이면 10MB 를 넘겼다 */
-var PDF_IMG_Q=0.72;      /* JPEG 품질 — 표·숫자 판독에는 이 정도면 충분하다 */
+var PDF_IMG_EDGE=1600;   /* 페이지 이미지 긴 변(px) — 담보 표의 작은 숫자까지 읽으려면 이 정도는 필요하다 */
+var PDF_IMG_Q=0.82;      /* JPEG 품질 — 여기서 낮추면 판독이 흐려진다. 용량은 보낼 때만 맞춘다 */
 function extractPdfText(file){
   return ensurePdfJs().then(function(lib){
     return file.arrayBuffer().then(function(buf){
