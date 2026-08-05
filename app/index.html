@@ -10756,19 +10756,34 @@ var HX_SQL={
   "grant execute on function public.is_team_viewer() to authenticated;",
   "",
   "do $blk$",
+  "declare",
+  "  t text;",
+  "  rls boolean;",
   "begin",
-  "  if to_regclass('public.dbs') is not null then",
-  "    execute 'alter table public.dbs enable row level security';",
-  "    execute 'drop policy if exists dbs_team_read on public.dbs';",
-  "    execute 'create policy dbs_team_read on public.dbs for select to authenticated using (public.is_team_viewer())';",
-  "    execute 'grant select on public.dbs to authenticated';",
-  "  end if;",
-  "  if to_regclass('public.calls') is not null then",
-  "    execute 'alter table public.calls enable row level security';",
-  "    execute 'drop policy if exists calls_team_read on public.calls';",
-  "    execute 'create policy calls_team_read on public.calls for select to authenticated using (public.is_team_viewer())';",
-  "    execute 'grant select on public.calls to authenticated';",
-  "  end if;",
+  "  foreach t in array array['dbs','calls'] loop",
+  "    if to_regclass('public.'||t) is null then",
+  "      continue;",
+  "    end if;",
+  "    execute format('grant select on public.%I to authenticated', t);",
+  "    select relrowsecurity into rls from pg_class where oid = ('public.'||t)::regclass;",
+  "    if not rls then",
+  "      continue;",
+  "    end if;",
+  "    execute format('drop policy if exists %I on public.%I', t||'_team_read', t);",
+  "    execute format(",
+  "      'create policy %I on public.%I for select to authenticated using (public.is_team_viewer())',",
+  "      t||'_team_read', t);",
+  "    if not exists(",
+  "      select 1 from pg_policies",
+  "       where schemaname = 'public' and tablename = t",
+  "         and cmd in ('INSERT','UPDATE','DELETE','ALL')",
+  "    ) then",
+  "      execute format('grant insert, update, delete on public.%I to authenticated', t);",
+  "      execute format(",
+  "        'create policy %I on public.%I for all to authenticated using (true) with check (true)',",
+  "        t||'_app_write', t);",
+  "    end if;",
+  "  end loop;",
   "end",
   "$blk$;",
   "",
@@ -10796,6 +10811,67 @@ var HX_SQL={
   "  to_regclass('public.team_overview') is not null                      as 통합조회_준비,",
   "  (select count(*) from pg_policies where tablename = 'dbs'   and policyname = 'dbs_team_read')   as dbs_읽기정책,",
   "  (select count(*) from pg_policies where tablename = 'calls' and policyname = 'calls_team_read') as calls_읽기정책;"
+ ]},
+ '27':{label:"DB CRM 저장이 막혔을 때 복구",need:["dbs 쓰기","calls 쓰기"],repair:true,when:"DB CRM 에서 저장·수정·삭제가 안 될 때만 실행하세요",lines:[
+  "set search_path = public;",
+  "",
+  "do $blk$",
+  "declare",
+  "  t text;",
+  "  rls boolean;",
+  "  n_write integer;",
+  "begin",
+  "  foreach t in array array['dbs','calls'] loop",
+  "    if to_regclass('public.'||t) is null then",
+  "      continue;",
+  "    end if;",
+  "",
+  "    execute format('grant select, insert, update, delete on public.%I to authenticated', t);",
+  "",
+  "    select relrowsecurity into rls from pg_class where oid = ('public.'||t)::regclass;",
+  "    if not rls then",
+  "      continue;",
+  "    end if;",
+  "",
+  "    select count(*) into n_write",
+  "      from pg_policies",
+  "     where schemaname = 'public' and tablename = t",
+  "       and cmd in ('INSERT','UPDATE','DELETE','ALL');",
+  "",
+  "    if n_write = 0 then",
+  "      execute format(",
+  "        'create policy %I on public.%I for all to authenticated using (true) with check (true)',",
+  "        t||'_app_write', t);",
+  "      raise notice 'restored write access on public.% (no write policy existed)', t;",
+  "    end if;",
+  "",
+  "    if not exists(",
+  "      select 1 from pg_policies",
+  "       where schemaname = 'public' and tablename = t and policyname = t||'_team_read'",
+  "    ) then",
+  "      execute format(",
+  "        'create policy %I on public.%I for select to authenticated using (public.is_team_viewer())',",
+  "        t||'_team_read', t);",
+  "    end if;",
+  "  end loop;",
+  "end",
+  "$blk$;",
+  "",
+  "notify pgrst, 'reload schema';",
+  "",
+  "select",
+  "  c.relname                                as 표,",
+  "  c.relrowsecurity                         as 접근제한_켜짐,",
+  "  (select count(*) from pg_policies p",
+  "    where p.schemaname='public' and p.tablename=c.relname",
+  "      and p.cmd in ('INSERT','UPDATE','DELETE','ALL')) as 쓰기정책,",
+  "  (select count(*) from pg_policies p",
+  "    where p.schemaname='public' and p.tablename=c.relname",
+  "      and p.cmd in ('SELECT','ALL'))                   as 읽기정책",
+  "from pg_class c",
+  "join pg_namespace n on n.oid = c.relnamespace",
+  "where n.nspname = 'public' and c.relname in ('dbs','calls')",
+  "order by c.relname;"
  ]}
 };
 
@@ -10814,6 +10890,7 @@ function hxSqlCopyUrl(){if(typeof copyText==='function')copyText(SUPA_SQL_URL);}
 /* 이 표가 이미 서버에 있는지 — 점검에서 모은 결과를 쓴다 */
 function hxSqlDone(k){
   var m=HX_SQL[k];if(!m)return null;
+  if(m.repair)return null;
   var i,row=null,name=m.perm?'읽기 권한':'필요한 표';
   for(i=0;i<HX.rows.length;i++)if(HX.rows[i].name===name)row=HX.rows[i];
   if(!row)return null;
@@ -10825,7 +10902,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['24','25','26'],h='';
+  var ks=['24','25','26','27'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다.</div></div><div class="card-body">'+
@@ -10836,8 +10913,9 @@ function hxSqlCardHtml(){
     var m=HX_SQL[k],done=hxSqlDone(k);
     var badge=done===true?'<span class="hxq-ok">이미 실행됨</span>'
              :(done===false?'<span class="hxq-no">아직 안 함</span>':'');
+    var sub=m.when?osEsc(m.when):(osEsc(m.need.join(' · '))+' · '+m.lines.length+'줄');
     h+='<div class="hxq"><div class="hxq-t"><b>'+osEsc(m.label)+'</b>'+badge+'</div>'+
-      '<div class="hxq-s">'+osEsc(m.need.join(' · '))+' · '+m.lines.length+'줄</div>'+
+      '<div class="hxq-s">'+sub+'</div>'+
       '<div class="btn-row"><button class="btn '+(done===false?'btn-primary':'btn-ghost')+'" '+
         'onclick="hxSqlCopy(\''+k+'\')">📋 이 SQL 복사</button></div></div>';
   });

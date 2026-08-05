@@ -12,19 +12,34 @@ $fn$;
 grant execute on function public.is_team_viewer() to authenticated;
 
 do $blk$
+declare
+  t text;
+  rls boolean;
 begin
-  if to_regclass('public.dbs') is not null then
-    execute 'alter table public.dbs enable row level security';
-    execute 'drop policy if exists dbs_team_read on public.dbs';
-    execute 'create policy dbs_team_read on public.dbs for select to authenticated using (public.is_team_viewer())';
-    execute 'grant select on public.dbs to authenticated';
-  end if;
-  if to_regclass('public.calls') is not null then
-    execute 'alter table public.calls enable row level security';
-    execute 'drop policy if exists calls_team_read on public.calls';
-    execute 'create policy calls_team_read on public.calls for select to authenticated using (public.is_team_viewer())';
-    execute 'grant select on public.calls to authenticated';
-  end if;
+  foreach t in array array['dbs','calls'] loop
+    if to_regclass('public.'||t) is null then
+      continue;
+    end if;
+    execute format('grant select on public.%I to authenticated', t);
+    select relrowsecurity into rls from pg_class where oid = ('public.'||t)::regclass;
+    if not rls then
+      continue;
+    end if;
+    execute format('drop policy if exists %I on public.%I', t||'_team_read', t);
+    execute format(
+      'create policy %I on public.%I for select to authenticated using (public.is_team_viewer())',
+      t||'_team_read', t);
+    if not exists(
+      select 1 from pg_policies
+       where schemaname = 'public' and tablename = t
+         and cmd in ('INSERT','UPDATE','DELETE','ALL')
+    ) then
+      execute format('grant insert, update, delete on public.%I to authenticated', t);
+      execute format(
+        'create policy %I on public.%I for all to authenticated using (true) with check (true)',
+        t||'_app_write', t);
+    end if;
+  end loop;
 end
 $blk$;
 
