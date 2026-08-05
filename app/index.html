@@ -10224,8 +10224,34 @@ function hxToday(){var d=new Date(Date.now()+9*3600*1000);return d.toISOString()
 function hxMyId(){try{return OS.session.user.id;}catch(e){return null;}}
 
 /* 한 항목 = 이름 · 상태 · 지금 어떤지 · 무엇을 하면 되는지 */
-function hxAdd(R,grp,name,st,now,fix,go){
-  R.push({grp:grp,name:name,st:st,now:now||'',fix:fix||'',go:go||''});
+function hxAdd(R,grp,name,st,now,fix,go,act,actLabel){
+  R.push({grp:grp,name:name,st:st,now:now||'',fix:fix||'',go:go||'',act:act||'',actLabel:actLabel||'바로 고치기'});
+}
+/* 눌러서 바로 고쳐지는 것들 — 설정 화면을 찾아 들어가지 않아도 되게 */
+function hxFix(kind){
+  if(kind==='provider_gemini'){
+    if(!confirm('기본 AI 를 Gemini 로 바꿉니다.\n\n결제해 둔 유료 키로 돌아가고, 한 번에 읽는 양이 24장에서 40장으로 늘어납니다.\nClaude 는 백업으로 남아 문제가 생기면 자동으로 받습니다.\n\n바꿀까요?'))return;
+    LS.set('provider','gemini');
+    toast('기본 AI 를 Gemini 로 바꿨습니다 — 유료 키로 돌아갑니다');
+  }else if(kind==='provider_claude'){
+    if(!confirm('기본 AI 를 Claude 로 되돌립니다. 계속할까요?'))return;
+    LS.set('provider','claude');
+    toast('기본 AI 를 Claude 로 되돌렸습니다');
+  }else if(kind==='mark_paid'){
+    if(!confirm('이 Gemini 키를 유료 계정으로 표시합니다.\n\n유료가 맞다면 고객 자료 도구까지 이 키로 보내고 한 번에 40장까지 읽습니다.\n무료 키인데 표시하면 구글이 보낸 내용을 학습에 쓸 수 있습니다.\n\n정말 결제된 계정입니까?'))return;
+    LS.set('gkeypaid','1');
+    toast('유료 키로 표시했습니다');
+  }else if(kind==='sweep'){
+    var n=0;
+    try{
+      var drop=[],i,k;
+      for(i=0;i<localStorage.length;i++){k=localStorage.key(i);
+        if(k&&/^apex_(ck|hx)_/.test(k)&&k.indexOf(hxToday())<0)drop.push(k);}
+      for(i=0;i<drop.length;i++){localStorage.removeItem(drop[i]);n++;}
+    }catch(e){}
+    toast(n?('지난 기록 '+n+'건을 정리했습니다'):'정리할 것이 없습니다');
+  }
+  hxRun(true);
 }
 
 function hxCollect(){
@@ -10254,9 +10280,17 @@ function hxCollect(){
 
   /* 유료 키를 넣어 두고도 기본 공급자가 달라 못 쓰는 경우 — 겉으론 멀쩡해 보인다 */
   if(paid&&has('getProvider')&&getProvider()!=='gemini'){
-    hxAdd(R,'내 연결','유료 키가 쉬고 있습니다','warn',
-      '유료 Gemini 키가 있는데 기본 공급자가 '+osEsc(getProvider())+' 입니다',
-      '설정 → 기본 공급자를 Gemini 로 바꾸면 유료 키로 돌고 한 번에 40장까지 읽습니다','settings');
+    hxAdd(R,'내 연결','유료 키가 쉬고 있습니다','bad',
+      '결제해 둔 Gemini 키가 있는데 기본 AI 가 '+osEsc(getProvider())+' 라서 안 쓰이고 있습니다',
+      '아래 버튼을 누르면 바로 바뀝니다 — 유료 키로 돌고 한 번에 24장에서 <b>40장</b>으로 늘어납니다',
+      '','provider_gemini','지금 Gemini 로 바꾸기');
+  }
+  /* 무료로 표시된 키인데 대표라면, 유료인지 물어볼 수 있게 해 둔다 */
+  if(gk&&!paid&&has('osIsOwner')&&osIsOwner()){
+    hxAdd(R,'내 연결','이 키가 유료인가요','warn',
+      '무료로 보고 있어 콘텐츠 도구에만 쓰고 있습니다',
+      '결제된 계정이면 표시해 주세요. 고객 자료 도구까지 이 키로 가고 40장까지 읽습니다',
+      '','mark_paid','유료 계정으로 표시');
   }
 
   /* ── 판독 용량 ── */
@@ -10280,7 +10314,8 @@ function hxCollect(){
   var used=0;try{for(var k in localStorage)if(localStorage.hasOwnProperty(k))used+=(localStorage[k]||'').length;}catch(e){}
   hxAdd(R,'이 기기','브라우저 저장',lsOk?(used>4000000?'warn':'ok'):'bad',
     lsOk?('약 '+Math.round(used/1024)+'KB 사용'):'차단됨',
-    lsOk?(used>4000000?'저장 공간이 거의 찼습니다. 조직도 사진을 줄이면 여유가 생깁니다':''):'시크릿 모드이거나 브라우저가 저장을 막고 있습니다');
+    lsOk?(used>4000000?'지난 기록을 정리하면 여유가 생깁니다. 그래도 모자라면 조직도 사진을 줄이세요':''):'시크릿 모드이거나 브라우저가 저장을 막고 있습니다',
+    '',(lsOk&&used>4000000)?'sweep':'','지난 기록 정리');
 
   /* ── 오늘 내 체크 ── */
   if(has('ckLoad')&&typeof CK_ITEMS!=='undefined'){
@@ -10416,7 +10451,10 @@ function hxRowHtml(r){
   return '<div class="hx-r">'+hxDot(r.st)+
     '<div class="hx-t"><div class="hx-n">'+osEsc(r.name)+'</div>'+
     (r.now?'<div class="hx-v">'+osEsc(r.now)+'</div>':'')+
-    (r.fix?'<div class="hx-f">→ '+r.fix+'</div>':'')+'</div>'+
+    (r.fix?'<div class="hx-f">→ '+r.fix+'</div>':'')+
+    (r.act?'<div class="btn-row" style="margin-top:7px"><button class="btn btn-primary hx-fix" '+
+      'onclick="hxFix(\''+r.act+'\')">'+osEsc(r.actLabel)+'</button></div>':'')+
+    '</div>'+
     (r.go?'<button class="btn btn-ghost hx-go" onclick="go(\''+r.go+'\')">열기</button>':'')+
   '</div>';
 }
@@ -10631,6 +10669,7 @@ function opsCss(){
     '.hx-v{font-size:11.5px;color:var(--ink-3);line-height:1.65;margin-top:2px;word-break:break-word}'+
     '.hx-f{font-size:11px;color:var(--warn);line-height:1.65;margin-top:3px;font-weight:700}'+
     '.hx-go{flex:none;padding:4px 10px;font-size:11px}'+
+    '.hx-fix{padding:6px 13px;font-size:11.5px}'+
     '.vc-in{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
       'padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink-1);background:#fff;margin-bottom:7px}'+
     '.vc-ta{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
