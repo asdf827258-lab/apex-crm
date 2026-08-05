@@ -1022,6 +1022,10 @@ function getAppToken(){return LS.get('apptoken','');}     /* 프록시 남용방
 /* ── Gemini(무료) 지원 ── */
 function getGeminiKey(){return LS.get('gkey','');}
 function getGeminiProxy(){return LS.get('gproxy','');}   /* Gemini 공용 프록시 URL(서버가 키 보관 → 팀원 키 불필요) */
+/* 이 기기에 넣은 Gemini 키가 '유료 계정' 인지.
+   유료면 보낸 내용이 학습에 쓰이지 않고 품질 모델(2.5 Pro)도 돈다.
+   그래서 고객 자료 도구까지 이 키로 보내도 되고, 중계 서버를 안 거쳐 한 번에 더 많이 보낸다. */
+function gkeyIsPaid(){return LS.get('gkeypaid','')==='1'&&!!getGeminiKey();}
 function getGeminiModel(){var m=LS.get('gmodel','gemini-flash-latest');if(m==='gemini-2.0-flash'||m==='gemini-1.5-flash')m='gemini-flash-latest';return m;}
 function getGeminiProModel(){var m=LS.get('gpromodel','gemini-2.5-pro');return m;}
 /* 콘텐츠·마케팅 도구의 기본 공급자 선택: 'claude' | 'gemini' (고객정보 도구는 항상 Claude 강제) */
@@ -1249,6 +1253,8 @@ function aiSendLimit(genId){
     try{gk=(typeof getGeminiKey==='function')?getGeminiKey():'';}catch(e){}
     try{gpx=(typeof getGeminiProxy==='function')?getGeminiProxy():'';}catch(e){}
     /* 고객 자료가 들어가는 도구는 개인 키가 있어도 회사 키로 간다 */
+    var paid=false;try{paid=(typeof gkeyIsPaid==='function')&&gkeyIsPaid();}catch(e){}
+    if(paid)return {bytes:15000000,imgs:40,direct:true,who:'유료 Gemini 키 — 구글로 바로'};
     if(typeof aiCompanyOnly==='function'&&aiCompanyOnly(genId)&&gpx)
       return {bytes:4200000,imgs:24,direct:false,who:'회사 AI — 고객 자료 도구'};
     if(gk)return {bytes:15000000,imgs:40,direct:true,who:'내 Gemini 키 — 구글로 바로'};
@@ -1604,9 +1610,10 @@ function _geminiOnce(system,contents,maxTokens,mdl,key){
 function callGemini(system,user,maxTokens,images,modelOverride,coOnly){
   var pk=getGeminiKey(),gpx=getGeminiProxy();
   var key=pk;
-  /* 고객 정보 도구는 개인 키를 건너뛰고 회사 키로 — 회사 키가 없으면 그때만 개인 키 */
-  if(coOnly&&gpx)key='';
-  var viaPersonal=!!key;
+  /* 고객 정보 도구는 개인 키를 건너뛰고 회사 키로 — 회사 키가 없으면 그때만 개인 키.
+     단, 이 키가 '유료 계정' 으로 표시돼 있으면 회사 키와 같은 급으로 보고 그대로 쓴다. */
+  if(coOnly&&gpx&&!gkeyIsPaid())key='';
+  var viaPersonal=!!key&&!gkeyIsPaid();
   if(!key && !gpx)return Promise.reject(new Error('NO_KEY'));
   var mdl=modelOverride||getGeminiModel();
   var parts=[{text:user}];
@@ -1636,6 +1643,10 @@ function callGemini(system,user,maxTokens,images,modelOverride,coOnly){
 function callGeminiSmart(system,user,maxTokens,images,genId){
   var wantQ=genId&&QUALITY_GEN[genId],co=aiCompanyOnly(genId);
   var pro=getGeminiProModel(),base=getGeminiModel();
+  /* 개인 무료 키로 갈 요청이면 품질 모델(2.5 Pro)은 결제가 있어야 돌아간다.
+     매번 실패하고 되돌아오느라 시간만 버리므로 처음부터 기본 모델로 간다. */
+  var toFree=(!co||!getGeminiProxy())&&!!getGeminiKey()&&!gkeyIsPaid();
+  if(toFree)pro='';
   if(!wantQ||!pro||pro===base)return callGemini(system,user,maxTokens,images,null,co);
   return callGemini(system,user,maxTokens,images,pro,co).catch(function(e){
     var m=((e&&e.message)||'')+'',st=e&&e.status;
@@ -10822,6 +10833,13 @@ function renderSettings(){
       '<div class="frm"><div class="fld span2"><label>Gemini API 키 '+(gkey?'<span class="badge green">저장됨</span>':'')+'</label>'+
       '<input type="password" id="setGKey" placeholder="'+(gkey?esc(gmasked):'AQ... 또는 AIza...')+'"/>'+
       '<span class="hint" style="font-size:9.5px;color:var(--ink-5)">브라우저 localStorage에만 저장됩니다.</span></div></div>'+
+      '<label style="display:flex;align-items:flex-start;gap:8px;margin:2px 0 10px;cursor:pointer">'+
+        '<input type="checkbox" id="setGKeyPaid"'+(LS.get('gkeypaid','')==='1'?' checked':'')+' style="margin-top:3px"/>'+
+        '<span style="font-size:11.5px;color:var(--ink-3);line-height:1.7">'+
+        '<b>이 키는 결제된 유료 계정입니다</b><br>'+
+        '<span style="font-size:11px;color:var(--ink-5)">유료는 보낸 내용이 학습에 쓰이지 않고 품질 모델(2.5 Pro)도 돕니다. '+
+        '체크하면 <b>증권 판독 같은 고객 자료 도구까지 이 키로</b> 보내고, 중계 서버를 거치지 않아 '+
+        '한 번에 <b>24장 → 40장</b>까지 읽습니다. 무료 키라면 체크하지 마세요.</span></span></label>'+
       '<div class="btn-row"><button class="btn btn-primary" onclick="saveGKey()">Gemini 키 저장</button>'+
       (gkey?'<button class="btn btn-ghost" onclick="clearGKey()">삭제</button>':'')+
       '<button class="btn btn-ghost" onclick="toggleGGuide()">🔑 무료 키 발급 방법</button></div>'+
@@ -10894,7 +10912,16 @@ function clearAppToken(){LS.del('apptoken');toast('공유 토큰 삭제됨');osS
 function toggleGuide(){var g=$('keyGuide');if(g)g.style.display=g.style.display==='none'?'block':'none';}
 function saveKey(){var v=$('setKey').value.trim();if(!v){toast('키를 입력하세요');return;}LS.set('apikey',v);updateKeyPill();toast('API 키 저장됨');osSetReload();}
 function clearKey(){LS.del('apikey');updateKeyPill();toast('API 키 삭제됨');osSetReload();}
-function saveGKey(){var v=$('setGKey').value.trim();if(!v){toast('Gemini 키를 입력하세요');return;}LS.set('gkey',v);updateKeyPill();toast('Gemini 키 저장됨');osSetReload();}
+function saveGKey(){
+  var v=$('setGKey').value.trim();
+  var pd=$('setGKeyPaid'),paid=!!(pd&&pd.checked);
+  if(!v&&!getGeminiKey()){toast('Gemini 키를 입력하세요');return;}
+  if(v)LS.set('gkey',v);
+  LS.set('gkeypaid',paid?'1':'');
+  updateKeyPill();
+  toast(paid?'유료 키로 저장했습니다 — 고객 자료 도구까지 이 키로 갑니다 (한 번에 40장)':'Gemini 키 저장됨');
+  osSetReload();
+}
 function clearGKey(){LS.del('gkey');updateKeyPill();toast('Gemini 키 삭제됨');osSetReload();}
 function saveGProxy(){var v=$('setGProxy').value.trim();if(!v){toast('공용 주소를 입력하세요');return;}LS.set('gproxy',v);updateKeyPill();toast('공용 Gemini 주소 저장됨');osSetReload();}
 function clearGProxy(){LS.del('gproxy');updateKeyPill();toast('공용 Gemini 주소 삭제됨');osSetReload();}
