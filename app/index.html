@@ -2365,6 +2365,8 @@ function osTabProbe(tab){
   if(tab==='academy')return renderAcademy();
   if(tab==='ckboard')return renderCkBoard();
   if(tab==='ckteam')return renderCkTeam();
+  if(tab==='health')return renderHealth();
+  if(tab==='voice')return renderVoice();
   if(tab==='org')return renderOrg();
   if(tab==='branch_coach')return renderBranchCoach();
   if(tab==='hq')return renderHQ();
@@ -3355,6 +3357,7 @@ var TABS=[
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
+ {group:'점검·건의',items:[{id:'health',icon:'🩺',title:'시스템 점검',cnt:''},{id:'voice',icon:'💬',title:'건의함',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
@@ -3541,6 +3544,8 @@ function go(tab){
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
   else if(tab==='ckboard'){dyn.innerHTML=renderCkBoard();if(typeof osCkBoardAfterRender==='function')osCkBoardAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
+  else if(tab==='health'){dyn.innerHTML=renderHealth();if(typeof osHealthAfterRender==='function')osHealthAfterRender();}
+  else if(tab==='voice'){dyn.innerHTML=renderVoice();if(typeof osVoiceAfterRender==='function')osVoiceAfterRender();}
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
   else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
@@ -10208,6 +10213,446 @@ function ckCrmPaint(){
   if(el)el.outerHTML=ckCrmHtml();
 }
 
+/* ════════ 매일 점검 · 건의함 ════════
+   설정의 자가진단은 함수가 있는지만 봤다. 정작 매일 문제가 되는 건
+   AI 가 어디로 가는지, 한 번에 몇 장을 읽는지, 서버 표가 있는지다.
+   그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
+
+var HX={rows:[],at:'',busy:false,live:null,team:null,teamBusy:false};
+
+function hxToday(){var d=new Date(Date.now()+9*3600*1000);return d.toISOString().slice(0,10);}
+function hxMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+
+/* 한 항목 = 이름 · 상태 · 지금 어떤지 · 무엇을 하면 되는지 */
+function hxAdd(R,grp,name,st,now,fix,go){
+  R.push({grp:grp,name:name,st:st,now:now||'',fix:fix||'',go:go||''});
+}
+
+function hxCollect(){
+  var R=[],i;
+  var has=function(f){return typeof window[f]==='function';};
+
+  /* ── 내 연결 ── */
+  var logged=!!(OS&&OS.profile);
+  hxAdd(R,'내 연결','로그인',logged?'ok':'bad',
+    logged?((OS.profile.name||'')+' · '+(has('osRoleLabel')?osRoleLabel(OS.profile.role):'')):'로그인되어 있지 않습니다',
+    logged?'':'우측 위 이름을 눌러 로그인하세요');
+
+  var cOn=has('claudeReady')&&claudeReady(),gOn=has('geminiReady')&&geminiReady();
+  hxAdd(R,'내 연결','AI 연결',(cOn||gOn)?'ok':'bad',
+    (cOn?'Claude ':'')+(gOn?'Gemini ':'')+(cOn&&gOn?'둘 다 연결':(cOn||gOn?'한쪽만 연결':'없음')),
+    (cOn||gOn)?(cOn&&gOn?'':'한쪽이 멈추면 같이 멈춥니다. 나머지 하나도 연결해 두세요'):'AI 키를 연결해야 도구가 돌아갑니다','settings');
+
+  var paid=has('gkeyIsPaid')&&gkeyIsPaid();
+  var gk=has('getGeminiKey')&&getGeminiKey(),gpx=has('getGeminiProxy')&&getGeminiProxy();
+  hxAdd(R,'내 연결','내 Gemini 키',
+    gk?(paid?'ok':'warn'):(gpx?'ok':'warn'),
+    gk?(paid?'유료로 표시됨 — 고객 자료까지 이 키로 갑니다':'무료 키 — 콘텐츠 도구에만 씁니다')
+      :(gpx?'회사 키로 돌고 있습니다':'없음'),
+    gk?(paid?'':'유료 계정이면 설정에서 유료 표시를 켜면 한 번에 40장까지 읽습니다')
+      :'무료 키를 넣으면 콘텐츠 도구가 안 밀립니다','settings');
+
+  /* 유료 키를 넣어 두고도 기본 공급자가 달라 못 쓰는 경우 — 겉으론 멀쩡해 보인다 */
+  if(paid&&has('getProvider')&&getProvider()!=='gemini'){
+    hxAdd(R,'내 연결','유료 키가 쉬고 있습니다','warn',
+      '유료 Gemini 키가 있는데 기본 공급자가 '+osEsc(getProvider())+' 입니다',
+      '설정 → 기본 공급자를 Gemini 로 바꾸면 유료 키로 돌고 한 번에 40장까지 읽습니다','settings');
+  }
+
+  /* ── 판독 용량 ── */
+  if(has('aiSendLimit')){
+    var Lb=aiSendLimit('bojang'),Lc=aiSendLimit('blog_post');
+    hxAdd(R,'판독 용량','고객 자료 도구',Lb.imgs>=40?'ok':'warn',
+      '한 번에 '+Lb.imgs+'장 · '+Lb.who,
+      Lb.imgs>=40?'':'유료 키를 설정에 넣고 유료 표시를 켜면 40장까지 늘어납니다','settings');
+    hxAdd(R,'판독 용량','콘텐츠 도구','ok','한 번에 '+Lc.imgs+'장 · '+Lc.who,'');
+  }
+  if(has('aiCompanyOnly')){
+    var wrong=[],co=['bojang','proposal','baba','compare','katalk','consult_script','contracts','brain'];
+    for(i=0;i<co.length;i++)if(!aiCompanyOnly(co[i]))wrong.push(co[i]);
+    hxAdd(R,'판독 용량','고객 자료 보호',wrong.length?'bad':'ok',
+      wrong.length?('회사 키로 안 가는 도구: '+wrong.join(', ')):'증권·상담·계약은 회사 키로만 갑니다',
+      wrong.length?'개발자에게 알려 주세요':'');
+  }
+
+  /* ── 이 기기 ── */
+  var lsOk=false;try{localStorage.setItem('__hx','1');localStorage.removeItem('__hx');lsOk=true;}catch(e){}
+  var used=0;try{for(var k in localStorage)if(localStorage.hasOwnProperty(k))used+=(localStorage[k]||'').length;}catch(e){}
+  hxAdd(R,'이 기기','브라우저 저장',lsOk?(used>4000000?'warn':'ok'):'bad',
+    lsOk?('약 '+Math.round(used/1024)+'KB 사용'):'차단됨',
+    lsOk?(used>4000000?'저장 공간이 거의 찼습니다. 조직도 사진을 줄이면 여유가 생깁니다':''):'시크릿 모드이거나 브라우저가 저장을 막고 있습니다');
+
+  /* ── 오늘 내 체크 ── */
+  if(has('ckLoad')&&typeof CK_ITEMS!=='undefined'){
+    var m=ckLoad('day'),n=0;
+    for(i=0;i<CK_ITEMS.day.length;i++)if(m[CK_ITEMS.day[i][0]])n++;
+    hxAdd(R,'오늘','실행 체크판',n===0?'warn':'ok',
+      n+' / '+CK_ITEMS.day.length+'개',
+      n===0?'아직 시작하지 않았습니다':'','ckboard');
+  }
+  return R;
+}
+
+/* 서버 쪽 — 표가 있는지, 권한이 되는지, 비어 있는 값이 없는지 */
+function hxServer(cb){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){cb([]);return;}
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  var T=['daily_checks','suggestions','health_checks','org_members','profiles','clients',
+         'saved_reports','attendance','teams','team_members','app_config','dbs','calls'];
+  Promise.all(T.map(function(t){return q(sb.from(t).select('*').limit(1));})).then(function(res){
+    var R=[],miss=[],deny=[],i;
+    for(i=0;i<T.length;i++){
+      var e=res[i]&&res[i].error;
+      if(!e)continue;
+      var m=((e.message)||'')+'';
+      if(/does not exist|찾을 수 없|relation/i.test(m))miss.push(T[i]);
+      else deny.push(T[i]);
+    }
+    hxAdd(R,'서버','필요한 표',miss.length?'bad':'ok',
+      miss.length?('없는 표: '+miss.join(', ')):(T.length+'개 모두 있습니다'),
+      miss.length?('Supabase 에서 아래 SQL 을 1회 실행하세요 — '+hxSqlFor(miss)):'');
+    hxAdd(R,'서버','읽기 권한',deny.length?'warn':'ok',
+      deny.length?('못 읽는 표: '+deny.join(', ')):'전부 읽을 수 있습니다',
+      deny.length?'CRM 표(dbs·calls)면 CRM 팀 관리에서 마스터 권한을 받으면 됩니다':'');
+
+    var pi=T.indexOf('profiles');
+    var prof=(res[pi]&&!res[pi].error)?1:0;
+    if(prof){
+      q(sb.from('profiles').select('id,name,plan,workspace,active,role')).then(function(r){
+        if(r.error){cb(R);return;}
+        var ps=(r.data||[]).filter(function(x){return x.active!==false;});
+        var noTier=ps.filter(function(x){return !x.plan||!(''+x.plan).replace(/\s/g,'');});
+        var noWs=ps.filter(function(x){return !x.workspace;});
+        var owner=ps.filter(function(x){return x.role==='owner'||x.role==='admin';});
+        hxAdd(R,'팀','등급 미설정',noTier.length?'warn':'ok',
+          noTier.length?(noTier.length+'명 — '+noTier.slice(0,4).map(function(x){return x.name||'?';}).join(', ')+(noTier.length>4?' 외':'')):'전원 설정됨',
+          noTier.length?'설정에서 등급을 지정하거나 migration_21 을 실행하세요':'','settings');
+        hxAdd(R,'팀','소속 미설정',noWs.length?'warn':'ok',
+          noWs.length?(noWs.length+'명'):'전원 설정됨',
+          noWs.length?'설정 → 팀원 권한 관리에서 소속을 지정하세요':'','settings');
+        hxAdd(R,'팀','관리자 계정',owner.length?'ok':'warn',
+          owner.length?(owner.length+'명'):'없음',
+          owner.length?'':'설정에서 대표 계정을 지정하세요','settings');
+        cb(R);
+      },function(){cb(R);});
+    }else cb(R);
+  },function(){cb([]);});
+}
+function hxSqlFor(miss){
+  var map={daily_checks:'migration_24_checks.sql',suggestions:'migration_25_ops.sql',
+    health_checks:'migration_25_ops.sql',org_members:'migration_23_org.sql'};
+  var out={},i;
+  for(i=0;i<miss.length;i++){var f=map[miss[i]];if(f)out[f]=1;}
+  var ks=[];for(var k in out)if(out.hasOwnProperty(k))ks.push(k);
+  return ks.length?ks.join(' · '):'migration_ALL.sql';
+}
+
+/* AI 를 실제로 한 번 불러 본다 — 버튼을 눌렀을 때만 (비용이 든다) */
+function hxLive(){
+  if(HX.busy)return;
+  HX.busy=true;HX.live={st:'run',msg:'AI 를 한 번 불러 보는 중…'};hxPaint();
+  var t0=Date.now();
+  callAI('한 단어로만 답한다.','정상이면 OK 라고만 답해.',20,'manual').then(function(txt){
+    var sec=((Date.now()-t0)/1000).toFixed(1);
+    HX.busy=false;
+    HX.live={st:'ok',msg:'정상 · '+sec+'초 · '+((AI_LAST&&AI_LAST.engine==='gemini')?'Gemini':'Claude')+
+      ((AI_LAST&&AI_LAST.model)?(' · '+AI_LAST.model):''),raw:(''+txt).slice(0,40)};
+    hxPaint();
+  },function(e){
+    HX.busy=false;
+    HX.live={st:'bad',msg:((e&&e.message)||'실패').slice(0,140)};
+    hxPaint();
+  });
+}
+
+function hxRun(save){
+  HX.rows=hxCollect();
+  HX.at=new Date().toLocaleString('ko-KR');
+  hxPaint();
+  hxServer(function(more){
+    if(more&&more.length)HX.rows=HX.rows.concat(more);
+    hxPaint();
+    if(save)hxSave();
+  });
+}
+function hxTally(){
+  var t={ok:0,warn:0,bad:0},i;
+  for(i=0;i<HX.rows.length;i++)t[HX.rows[i].st]=(t[HX.rows[i].st]||0)+1;
+  return t;
+}
+function hxSave(){
+  var sb=(typeof osClient==='function')?osClient():null,me=hxMyId();
+  if(!sb||!me)return;
+  var t=hxTally();
+  sb.from('health_checks').upsert({
+    member_id:me,check_date:hxToday(),checked_at:new Date().toISOString(),
+    ok_count:t.ok,warn_count:t.warn,bad_count:t.bad,
+    detail:HX.rows.map(function(r){return {g:r.grp,n:r.name,s:r.st,v:r.now};})
+  },{onConflict:'member_id,check_date'}).then(function(){},function(){});
+}
+/* 하루 한 번, 로그인하고 처음 들어온 날 조용히 돌린다 */
+function hxAuto(){
+  try{
+    if(localStorage.getItem('apex_hx_day')===hxToday())return;
+    localStorage.setItem('apex_hx_day',hxToday());
+  }catch(e){return;}
+  setTimeout(function(){
+    var keep=HX.rows;
+    HX.rows=hxCollect();
+    hxServer(function(more){
+      if(more&&more.length)HX.rows=HX.rows.concat(more);
+      hxSave();
+      if(keep&&keep.length)HX.rows=keep;
+    });
+  },3000);
+}
+
+function hxDot(st){
+  var c=st==='ok'?'var(--pos)':(st==='warn'?'var(--warn)':'var(--neg)');
+  return '<span style="display:inline-block;width:8px;height:8px;border-radius:99px;background:'+c+';flex:none;margin-top:6px"></span>';
+}
+function hxRowHtml(r){
+  return '<div class="hx-r">'+hxDot(r.st)+
+    '<div class="hx-t"><div class="hx-n">'+osEsc(r.name)+'</div>'+
+    (r.now?'<div class="hx-v">'+osEsc(r.now)+'</div>':'')+
+    (r.fix?'<div class="hx-f">→ '+r.fix+'</div>':'')+'</div>'+
+    (r.go?'<button class="btn btn-ghost hx-go" onclick="go(\''+r.go+'\')">열기</button>':'')+
+  '</div>';
+}
+function hxInnerHtml(){
+  var t=hxTally(),grp={},order=[],i;
+  for(i=0;i<HX.rows.length;i++){var r=HX.rows[i];
+    if(!grp[r.grp]){grp[r.grp]=[];order.push(r.grp);}
+    grp[r.grp].push(r);}
+  var h='<div class="ct-sum" style="margin-bottom:12px">'+
+    '<div><div class="k">정상</div><div class="v" style="color:var(--pos)">'+t.ok+'</div></div>'+
+    '<div><div class="k">확인 필요</div><div class="v" style="color:var(--warn)">'+t.warn+'</div></div>'+
+    '<div><div class="k">고쳐야 함</div><div class="v" style="color:var(--neg)">'+t.bad+'</div></div>'+
+  '</div>';
+  h+='<div class="btn-row" style="margin-bottom:12px">'+
+    '<button class="btn btn-primary" onclick="hxRun(true)">다시 점검</button>'+
+    '<button class="btn '+(HX.busy?'btn-ghost':'btn-ghost')+'" onclick="hxLive()"'+(HX.busy?' disabled':'')+'>AI 실제로 불러 보기</button>'+
+    (HX.at?'<span style="font-size:11px;color:var(--ink-5)">'+osEsc(HX.at)+' 기준</span>':'')+
+  '</div>';
+  if(HX.live){
+    var c=HX.live.st==='ok'?'var(--pos-l)':(HX.live.st==='bad'?'var(--neg-l)':'var(--ink-9)');
+    var b=HX.live.st==='ok'?'#A7F3D0':(HX.live.st==='bad'?'#FECACA':'var(--ink-7)');
+    h+='<div style="background:'+c+';border:1px solid '+b+';border-radius:9px;padding:10px 13px;margin-bottom:12px;'+
+      'font-size:12px;line-height:1.7;color:var(--ink-2)"><b>AI 실제 호출</b> — '+osEsc(HX.live.msg)+'</div>';
+  }
+  for(i=0;i<order.length;i++){
+    h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🩺</span>'+osEsc(order[i])+'</div></div>'+
+      '<div class="card-body">'+grp[order[i]].map(hxRowHtml).join('')+'</div></div>';
+  }
+  if(!HX.rows.length)h+='<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">점검 중…</div></div>';
+  return h;
+}
+function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=hxInnerHtml();}
+function renderHealth(){
+  opsCss();
+  if(!OS.profile)return osPage('점검','시스템 점검','로그인 후 이용할 수 있습니다.',osLoginGate('시스템 점검은 로그인 후 이용할 수 있습니다.'));
+  return osPage('점검','시스템 점검',
+    '매일 한 번 자동으로 돌고, 여기서 언제든 다시 볼 수 있습니다. 문제가 있으면 무엇을 하면 되는지 같이 적습니다.',
+    '<div id="hxPane">'+hxInnerHtml()+'</div>');
+}
+function osHealthAfterRender(){hxRun(true);}
+
+/* ════════ 건의함 ════════ */
+var VOICE={list:[],busy:false,err:'',mine:true,kind:'idea',open:{}};
+var VOICE_KIND={bug:'오류',idea:'건의',need:'요청'};
+var VOICE_ST={'new':'접수','doing':'확인 중','done':'반영','hold':'보류'};
+
+function vcCanManage(){
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  var r=(typeof osRole==='function')?osRole():'member';
+  return ['admin','owner','master'].indexOf(r)>=0;
+}
+function vcLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){VOICE.err='서버에 연결되어 있지 않습니다.';vcPaint();return;}
+  VOICE.busy=true;vcPaint();
+  sb.from('suggestions').select('id,member_id,author_name,kind,title,body,status,reply,created_at')
+    .order('created_at',{ascending:false}).limit(200).then(function(r){
+    VOICE.busy=false;
+    if(r.error){
+      VOICE.err=/does not exist|relation/i.test(r.error.message||'')
+        ?'건의함 표가 아직 없습니다. Supabase 에서 <b>migration_25_ops.sql</b> 을 1회 실행해 주세요.'
+        :(r.error.message||'불러오지 못했습니다');
+      vcPaint();return;
+    }
+    VOICE.err='';VOICE.list=r.data||[];vcPaint();
+  },function(e){VOICE.busy=false;VOICE.err=(e&&e.message)||'불러오지 못했습니다';vcPaint();});
+}
+function vcKind(k){VOICE.kind=k;vcPaint();}
+function vcMine(v){VOICE.mine=v;vcPaint();}
+function vcToggle(id){VOICE.open[id]=!VOICE.open[id];vcPaint();}
+
+function vcSubmit(){
+  var sb=(typeof osClient==='function')?osClient():null,me=hxMyId();
+  if(!sb||!me){toast('로그인이 필요합니다');return;}
+  var t=(osVal('vcTitle')||'').replace(/^\s+|\s+$/g,'');
+  var b=(osVal('vcBody')||'').replace(/^\s+|\s+$/g,'');
+  if(!t){toast('한 줄 제목을 적어 주세요');return;}
+  if(b.length<5){toast('내용을 조금만 더 적어 주세요');return;}
+  /* 재현에 필요한 것만 담는다 — 고객 정보는 담지 않는다 */
+  var ctx={};
+  try{
+    ctx.tab=(typeof lastTab!=='undefined')?lastTab:'';
+    ctx.w=window.innerWidth+'x'+window.innerHeight;
+    ctx.ua=(navigator.userAgent||'').slice(0,120);
+    ctx.engine=(typeof AI_LAST!=='undefined'&&AI_LAST)?(AI_LAST.engine+' '+(AI_LAST.model||'')):'';
+    ctx.conn=(typeof getConn==='function')?getConn():'';
+    ctx.gkey=(typeof getGeminiKey==='function'&&getGeminiKey())?(gkeyIsPaid()?'유료':'무료'):'없음';
+  }catch(e){}
+  VOICE.busy=true;vcPaint();
+  sb.from('suggestions').insert({
+    member_id:me,author_name:(OS.profile&&OS.profile.name)||'',
+    kind:VOICE.kind,title:t,body:b,context:ctx,status:'new'
+  }).then(function(r){
+    VOICE.busy=false;
+    if(r.error){toast('보내지 못했습니다: '+(r.error.message||''));vcPaint();return;}
+    toast('보냈습니다 — 확인 후 답을 드리겠습니다');
+    var a=document.getElementById('vcTitle'),c=document.getElementById('vcBody');
+    if(a)a.value='';if(c)c.value='';
+    vcLoad();
+  },function(){VOICE.busy=false;toast('보내지 못했습니다');vcPaint();});
+}
+function vcSetStatus(id,st){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!vcCanManage())return;
+  sb.from('suggestions').update({status:st,updated_at:new Date().toISOString()}).eq('id',id).then(function(r){
+    if(r.error){toast('변경 실패: '+(r.error.message||''));return;}
+    toast(VOICE_ST[st]+'(으)로 바꿨습니다');vcLoad();
+  },function(){toast('변경 실패');});
+}
+function vcReply(id){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!vcCanManage())return;
+  var el=document.getElementById('vcrep_'+id);
+  var v=((el&&el.value)||'').replace(/^\s+|\s+$/g,'');
+  if(!v){toast('답을 적어 주세요');return;}
+  sb.from('suggestions').update({reply:v,replied_by:hxMyId(),replied_at:new Date().toISOString(),
+    status:'doing',updated_at:new Date().toISOString()}).eq('id',id).then(function(r){
+    if(r.error){toast('저장 실패: '+(r.error.message||''));return;}
+    toast('답을 남겼습니다');vcLoad();
+  },function(){toast('저장 실패');});
+}
+
+function vcStBadge(st){
+  var c={'new':'#6B7280','doing':'#1A56DB','done':'#059669','hold':'#D97706'}[st]||'#6B7280';
+  var bg={'new':'#F3F4F6','doing':'#EBF3FF','done':'#ECFDF5','hold':'#FFFBEB'}[st]||'#F3F4F6';
+  return '<span style="font-size:10px;font-weight:800;color:'+c+';background:'+bg+
+    ';border-radius:99px;padding:2px 8px">'+(VOICE_ST[st]||st)+'</span>';
+}
+function vcItemHtml(v){
+  var mine=v.member_id===hxMyId(),can=vcCanManage(),op=!!VOICE.open[v.id];
+  var ico={bug:'🐞',idea:'💡',need:'📌'}[v.kind]||'💡';
+  var h='<div class="vc-i'+(op?' on':'')+'">'+
+    '<button class="vc-h" type="button" onclick="vcToggle(\''+v.id+'\')">'+
+      '<span class="vc-ic">'+ico+'</span>'+
+      '<span class="vc-w"><span class="vc-t">'+osEsc(v.title)+'</span>'+
+        '<span class="vc-m">'+osEsc(v.author_name||'')+' · '+osEsc((''+(v.created_at||'')).slice(5,10))+
+        (v.reply?' · 답변 있음':'')+'</span></span>'+
+      vcStBadge(v.status)+'</button>';
+  if(op){
+    h+='<div class="vc-b"><div class="vc-body">'+osEsc(v.body).replace(/\n/g,'<br>')+'</div>';
+    if(v.reply)h+='<div class="vc-rep"><b>답변</b><br>'+osEsc(v.reply).replace(/\n/g,'<br>')+'</div>';
+    if(can){
+      h+='<div class="btn-row" style="margin-top:10px">'+
+        ['new','doing','done','hold'].map(function(s){
+          return '<button class="btn '+(v.status===s?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" '+
+            'onclick="vcSetStatus(\''+v.id+'\',\''+s+'\')">'+VOICE_ST[s]+'</button>';}).join('')+'</div>'+
+        '<textarea id="vcrep_'+v.id+'" class="vc-ta" rows="2" placeholder="답변을 적으면 올린 사람이 봅니다">'+osEsc(v.reply||'')+'</textarea>'+
+        '<div class="btn-row"><button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="vcReply(\''+v.id+'\')">답변 저장</button></div>';
+    }
+    h+='</div>';
+  }
+  return h+'</div>';
+}
+function vcInnerHtml(){
+  var can=vcCanManage(),me=hxMyId();
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span>무엇이든 적어 주세요</div>'+
+    '<div class="card-desc">안 되는 것 · 있었으면 하는 것 · 바꿨으면 하는 것. 짧아도 됩니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:9px">'+
+      ['bug','idea','need'].map(function(k){
+        return '<button class="btn '+(VOICE.kind===k?'btn-primary':'btn-ghost')+'" style="padding:6px 13px;font-size:11.5px" '+
+          'onclick="vcKind(\''+k+'\')">'+({bug:'🐞 오류',idea:'💡 건의',need:'📌 요청'}[k])+'</button>';}).join('')+
+    '</div>'+
+    '<input id="vcTitle" class="vc-in" placeholder="한 줄로 — 예: 보장분석에서 갱신 담보가 안 보입니다">'+
+    '<textarea id="vcBody" class="vc-ta" rows="4" placeholder="어떤 화면에서, 무엇을 눌렀을 때, 무엇이 나왔는지 적어 주시면 빨리 고칩니다."></textarea>'+
+    '<div class="btn-row"><button class="btn btn-primary" onclick="vcSubmit()"'+(VOICE.busy?' disabled':'')+'>보내기</button>'+
+      '<span style="font-size:11px;color:var(--ink-5)">화면 이름·기기·AI 엔진이 자동으로 함께 갑니다. <b>고객 정보는 담기지 않습니다.</b></span></div>'+
+    '</div></div>';
+
+  if(VOICE.err)return h+'<div class="card"><div class="card-body"><div class="notice">'+VOICE.err+'</div></div></div>';
+
+  var list=VOICE.list.filter(function(v){return (can&&!VOICE.mine)?true:(v.member_id===me);});
+  if(can){
+    h+='<div class="btn-row" style="margin:14px 0 10px">'+
+      '<button class="btn '+(VOICE.mine?'btn-primary':'btn-ghost')+'" style="padding:5px 12px;font-size:11.5px" onclick="vcMine(true)">내가 올린 것</button>'+
+      '<button class="btn '+(!VOICE.mine?'btn-primary':'btn-ghost')+'" style="padding:5px 12px;font-size:11.5px" onclick="vcMine(false)">전체 ('+VOICE.list.length+')</button>'+
+      '<button class="btn btn-ghost" style="padding:5px 12px;font-size:11.5px" onclick="vcLoad()">새로고침</button></div>';
+    if(!VOICE.mine){
+      var nw=VOICE.list.filter(function(v){return v.status==='new';}).length;
+      if(nw)h+='<div class="notice">아직 손대지 않은 건의가 <b>'+nw+'건</b> 있습니다. 답을 남기면 올린 사람이 바로 봅니다.</div>';
+    }
+  }else{
+    h+='<div class="btn-row" style="margin:14px 0 10px">'+
+      '<span style="font-size:12px;font-weight:800;color:var(--ink-2)">내가 올린 것</span>'+
+      '<button class="btn btn-ghost" style="padding:5px 12px;font-size:11.5px" onclick="vcLoad()">새로고침</button></div>';
+  }
+  h+=list.length?list.map(vcItemHtml).join('')
+    :'<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">'+
+      (VOICE.busy?'불러오는 중…':'아직 올린 것이 없습니다.')+'</div></div>';
+  return h;
+}
+function vcPaint(){var el=document.getElementById('vcPane');if(el)el.innerHTML=vcInnerHtml();}
+function renderVoice(){
+  opsCss();
+  if(!OS.profile)return osPage('건의','건의함','로그인 후 이용할 수 있습니다.',osLoginGate('건의함은 로그인 후 이용할 수 있습니다.'));
+  return osPage('건의','건의함',
+    '쓰면서 불편한 것, 있었으면 하는 것을 적어 주세요. 대표가 직접 봅니다. 처리 상태도 여기서 보입니다.',
+    '<div id="vcPane">'+vcInnerHtml()+'</div>');
+}
+function osVoiceAfterRender(){vcLoad();}
+
+function opsCss(){
+  /* 요약 3칸(.ct-sum)은 체크판 쪽 CSS 에 있다 — 이 화면만 먼저 열어도 모양이 나오게 같이 싣는다 */
+  if(typeof ckCss==='function')ckCss();
+  if(document.getElementById('opsStyle'))return;
+  var st=document.createElement('style');st.id='opsStyle';
+  st.textContent=
+    '.hx-r{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.hx-r:last-child{border-bottom:none}'+
+    '.hx-t{flex:1;min-width:0}'+
+    '.hx-n{font-size:12.5px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em}'+
+    '.hx-v{font-size:11.5px;color:var(--ink-3);line-height:1.65;margin-top:2px;word-break:break-word}'+
+    '.hx-f{font-size:11px;color:var(--warn);line-height:1.65;margin-top:3px;font-weight:700}'+
+    '.hx-go{flex:none;padding:4px 10px;font-size:11px}'+
+    '.vc-in{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
+      'padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink-1);background:#fff;margin-bottom:7px}'+
+    '.vc-ta{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
+      'padding:9px 11px;font-size:12.5px;font-family:inherit;line-height:1.7;color:var(--ink-1);'+
+      'background:#fff;margin-bottom:9px;resize:vertical}'+
+    '.vc-in:focus,.vc-ta:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-pale)}'+
+    '.vc-i{background:#fff;border:1px solid var(--ink-7);border-radius:11px;margin-bottom:8px;overflow:hidden}'+
+    '.vc-h{display:flex;align-items:center;gap:9px;padding:11px 13px;width:100%;text-align:left;'+
+      'background:none;border:0;cursor:pointer;font-family:inherit}'+
+    '.vc-h:hover{background:var(--ink-9)}'+
+    '.vc-ic{font-size:14px;flex:none}'+
+    '.vc-w{flex:1;min-width:0}'+
+    '.vc-t{display:block;font-size:12.5px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em;line-height:1.5}'+
+    '.vc-m{display:block;font-size:10.5px;color:var(--ink-5);margin-top:2px}'+
+    '.vc-b{padding:0 13px 13px;border-top:1px solid var(--ink-8)}'+
+    '.vc-body{font-size:12.5px;color:var(--ink-2);line-height:1.8;padding:10px 0;white-space:pre-wrap}'+
+    '.vc-rep{background:var(--primary-pale);border:1px solid #DBE7FF;border-radius:8px;padding:10px 12px;'+
+      'font-size:12.5px;color:var(--ink-2);line-height:1.8}'+
+    '.vc-rep b{color:var(--primary);font-weight:800}';
+  document.head.appendChild(st);
+}
+
 /* ── 팀 체크 현황 ── */
 var CT={tab:'today',sort:'sig',team:'',open:{},loaded:false,err:'',
   people:[],teams:[],teamOf:{},warn:[]};
@@ -15148,6 +15593,7 @@ function osNoticeApply(){
   var home=document.getElementById('osNoticeHome');if(home)home.innerHTML=osNoticeHomeHtml(n);
   var nav=document.getElementById('osNoticeNav');if(nav)nav.innerHTML=osNoticeNavHtml(n);
   if(typeof mykPaint==='function')mykPaint();
+  if(typeof hxAuto==='function')hxAuto();
 }
 function osNoticeLoad(){
   var sb=osClient();
