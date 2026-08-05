@@ -10580,6 +10580,272 @@ function txCss(){
    AI 가 어디로 가는지, 한 번에 몇 장을 읽는지, 서버 표가 있는지다.
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
+var HX_SQL={
+ '24':{label:"실행 체크판 · 팀 체크 현황",need:["daily_checks"],lines:[
+  "set search_path = public;",
+  "",
+  "create table if not exists public.daily_checks(",
+  "  member_id uuid not null,",
+  "  check_date date not null,",
+  "  scope text not null default 'day',",
+  "  items jsonb not null default '{}'::jsonb,",
+  "  updated_at timestamptz default now(),",
+  "  primary key (member_id, check_date, scope)",
+  ");",
+  "",
+  "alter table public.daily_checks add column if not exists items jsonb not null default '{}'::jsonb;",
+  "alter table public.daily_checks add column if not exists updated_at timestamptz default now();",
+  "",
+  "create index if not exists daily_checks_date_idx on public.daily_checks(check_date desc);",
+  "create index if not exists daily_checks_member_idx on public.daily_checks(member_id);",
+  "",
+  "alter table public.daily_checks enable row level security;",
+  "",
+  "drop policy if exists daily_checks_read on public.daily_checks;",
+  "create policy daily_checks_read on public.daily_checks",
+  "  for select to authenticated",
+  "  using (",
+  "    member_id = auth.uid()",
+  "    or public.is_leader()",
+  "    or public.is_admin()",
+  "    or public.is_owner()",
+  "  );",
+  "",
+  "drop policy if exists daily_checks_insert on public.daily_checks;",
+  "create policy daily_checks_insert on public.daily_checks",
+  "  for insert to authenticated",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists daily_checks_update on public.daily_checks;",
+  "create policy daily_checks_update on public.daily_checks",
+  "  for update to authenticated",
+  "  using (member_id = auth.uid())",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists daily_checks_delete on public.daily_checks;",
+  "create policy daily_checks_delete on public.daily_checks",
+  "  for delete to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.daily_checks to authenticated;",
+  "grant insert, update, delete on public.daily_checks to authenticated;",
+  "",
+  "select count(*) as daily_checks_rows from public.daily_checks;",
+  "",
+  "notify pgrst, 'reload schema';"
+ ]},
+ '25':{label:"시스템 점검 · 건의함",need:["health_checks", "suggestions"],lines:[
+  "set search_path = public;",
+  "",
+  "create table if not exists public.health_checks(",
+  "  member_id uuid not null,",
+  "  check_date date not null,",
+  "  checked_at timestamptz default now(),",
+  "  ok_count integer default 0,",
+  "  warn_count integer default 0,",
+  "  bad_count integer default 0,",
+  "  detail jsonb not null default '[]'::jsonb,",
+  "  primary key (member_id, check_date)",
+  ");",
+  "",
+  "alter table public.health_checks add column if not exists checked_at timestamptz default now();",
+  "alter table public.health_checks add column if not exists detail jsonb not null default '[]'::jsonb;",
+  "",
+  "create index if not exists health_checks_date_idx on public.health_checks(check_date desc);",
+  "",
+  "alter table public.health_checks enable row level security;",
+  "",
+  "drop policy if exists health_checks_read on public.health_checks;",
+  "create policy health_checks_read on public.health_checks",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.is_leader() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists health_checks_insert on public.health_checks;",
+  "create policy health_checks_insert on public.health_checks",
+  "  for insert to authenticated with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists health_checks_update on public.health_checks;",
+  "create policy health_checks_update on public.health_checks",
+  "  for update to authenticated",
+  "  using (member_id = auth.uid()) with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists health_checks_delete on public.health_checks;",
+  "create policy health_checks_delete on public.health_checks",
+  "  for delete to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.health_checks to authenticated;",
+  "grant insert, update, delete on public.health_checks to authenticated;",
+  "",
+  "create table if not exists public.suggestions(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  member_id uuid not null,",
+  "  author_name text default '',",
+  "  kind text not null default 'idea',",
+  "  title text not null default '',",
+  "  body text not null default '',",
+  "  context jsonb not null default '{}'::jsonb,",
+  "  status text not null default 'new',",
+  "  reply text default '',",
+  "  replied_by uuid,",
+  "  replied_at timestamptz,",
+  "  created_at timestamptz default now(),",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "alter table public.suggestions add column if not exists author_name text default '';",
+  "alter table public.suggestions add column if not exists context jsonb not null default '{}'::jsonb;",
+  "alter table public.suggestions add column if not exists reply text default '';",
+  "alter table public.suggestions add column if not exists replied_by uuid;",
+  "alter table public.suggestions add column if not exists replied_at timestamptz;",
+  "alter table public.suggestions add column if not exists updated_at timestamptz default now();",
+  "",
+  "create index if not exists suggestions_created_idx on public.suggestions(created_at desc);",
+  "create index if not exists suggestions_member_idx on public.suggestions(member_id);",
+  "create index if not exists suggestions_status_idx on public.suggestions(status);",
+  "",
+  "alter table public.suggestions enable row level security;",
+  "",
+  "drop policy if exists suggestions_read on public.suggestions;",
+  "create policy suggestions_read on public.suggestions",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.is_leader() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists suggestions_insert on public.suggestions;",
+  "create policy suggestions_insert on public.suggestions",
+  "  for insert to authenticated with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists suggestions_update_own on public.suggestions;",
+  "create policy suggestions_update_own on public.suggestions",
+  "  for update to authenticated",
+  "  using (member_id = auth.uid() and status = 'new')",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists suggestions_update_admin on public.suggestions;",
+  "create policy suggestions_update_admin on public.suggestions",
+  "  for update to authenticated",
+  "  using (public.is_admin() or public.is_owner())",
+  "  with check (public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists suggestions_delete on public.suggestions;",
+  "create policy suggestions_delete on public.suggestions",
+  "  for delete to authenticated",
+  "  using ((member_id = auth.uid() and status = 'new') or public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.suggestions to authenticated;",
+  "grant insert, update, delete on public.suggestions to authenticated;",
+  "",
+  "notify pgrst, 'reload schema';",
+  "",
+  "select",
+  "  to_regclass('public.health_checks') is not null as 점검기록표,",
+  "  to_regclass('public.suggestions')   is not null as 건의함표;"
+ ]},
+ '26':{label:"팀원 종합 · 조직도 계정 연결",need:["dbs 읽기","calls 읽기"],perm:true,lines:[
+  "set search_path = public;",
+  "",
+  "alter table public.org_members add column if not exists member_id uuid;",
+  "",
+  "create index if not exists org_members_member_idx on public.org_members(member_id);",
+  "",
+  "create or replace function public.is_team_viewer()",
+  "returns boolean language sql stable security definer set search_path = public as $fn$",
+  "  select public.is_leader() or public.is_admin() or public.is_owner();",
+  "$fn$;",
+  "",
+  "grant execute on function public.is_team_viewer() to authenticated;",
+  "",
+  "do $blk$",
+  "begin",
+  "  if to_regclass('public.dbs') is not null then",
+  "    execute 'alter table public.dbs enable row level security';",
+  "    execute 'drop policy if exists dbs_team_read on public.dbs';",
+  "    execute 'create policy dbs_team_read on public.dbs for select to authenticated using (public.is_team_viewer())';",
+  "    execute 'grant select on public.dbs to authenticated';",
+  "  end if;",
+  "  if to_regclass('public.calls') is not null then",
+  "    execute 'alter table public.calls enable row level security';",
+  "    execute 'drop policy if exists calls_team_read on public.calls';",
+  "    execute 'create policy calls_team_read on public.calls for select to authenticated using (public.is_team_viewer())';",
+  "    execute 'grant select on public.calls to authenticated';",
+  "  end if;",
+  "end",
+  "$blk$;",
+  "",
+  "create or replace view public.team_overview as",
+  "select",
+  "  p.id                                as member_id,",
+  "  coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,",
+  "  coalesce(p.role, 'member')          as role,",
+  "  coalesce(p.plan, '')                as plan,",
+  "  coalesce(p.active, true)            as active,",
+  "  o.id                                as org_id,",
+  "  coalesce(o.rank, '')                as org_rank,",
+  "  coalesce(o.team, '')                as org_team,",
+  "  coalesce(o.parent, '')              as org_parent",
+  "from public.profiles p",
+  "left join public.org_members o on o.member_id = p.id;",
+  "",
+  "grant select on public.team_overview to authenticated;",
+  "",
+  "notify pgrst, 'reload schema';",
+  "",
+  "select",
+  "  (select count(*) from public.org_members where member_id is not null) as 계정연결된_조직원,",
+  "  (select count(*) from public.org_members)                            as 전체_조직원,",
+  "  to_regclass('public.team_overview') is not null                      as 통합조회_준비,",
+  "  (select count(*) from pg_policies where tablename = 'dbs'   and policyname = 'dbs_team_read')   as dbs_읽기정책,",
+  "  (select count(*) from pg_policies where tablename = 'calls' and policyname = 'calls_team_read') as calls_읽기정책;"
+ ]}
+};
+
+var SUPA_SQL_URL='https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new';
+/* 태블릿에서 파일을 열어 전체선택하는 건 번거롭다. 눌러서 바로 복사되게 둔다. */
+function hxSqlCopy(k){
+  var m=HX_SQL[k];if(!m)return;
+  if(typeof copyText==='function')copyText(m.lines.join('\n'));
+  toast(m.label+' SQL 을 복사했습니다 — Supabase 에 붙여넣고 RUN 하세요');
+}
+function hxSqlOpen(){
+  var w=window.open(SUPA_SQL_URL,'_blank','noopener');
+  if(!w)toast('새 창이 막혔습니다. 주소를 복사해 직접 여세요.');
+}
+function hxSqlCopyUrl(){if(typeof copyText==='function')copyText(SUPA_SQL_URL);}
+/* 이 표가 이미 서버에 있는지 — 점검에서 모은 결과를 쓴다 */
+function hxSqlDone(k){
+  var m=HX_SQL[k];if(!m)return null;
+  var i,row=null,name=m.perm?'읽기 권한':'필요한 표';
+  for(i=0;i<HX.rows.length;i++)if(HX.rows[i].name===name)row=HX.rows[i];
+  if(!row)return null;
+  /* 권한을 여는 SQL 은 표가 아니라 '못 읽는 표' 목록으로 판정한다 */
+  if(m.perm)return !/dbs|calls/.test(row.now);
+  var missing=row.now.indexOf('없는 표:')===0
+    ? row.now.replace('없는 표:','').split(',').map(function(x){return x.replace(/\s/g,'');}) : [];
+  for(i=0;i<m.need.length;i++)if(missing.indexOf(m.need[i])>=0)return false;
+  return true;
+}
+function hxSqlCardHtml(){
+  var ks=['24','25','26'],h='';
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
+    '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
+    '몇 번을 다시 실행해도 안전합니다.</div></div><div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:11px">'+
+      '<button class="btn btn-primary" onclick="hxSqlOpen()">Supabase SQL 편집기 열기</button>'+
+      '<button class="btn btn-ghost" onclick="hxSqlCopyUrl()">주소만 복사</button></div>';
+  ks.forEach(function(k){
+    var m=HX_SQL[k],done=hxSqlDone(k);
+    var badge=done===true?'<span class="hxq-ok">이미 실행됨</span>'
+             :(done===false?'<span class="hxq-no">아직 안 함</span>':'');
+    h+='<div class="hxq"><div class="hxq-t"><b>'+osEsc(m.label)+'</b>'+badge+'</div>'+
+      '<div class="hxq-s">'+osEsc(m.need.join(' · '))+' · '+m.lines.length+'줄</div>'+
+      '<div class="btn-row"><button class="btn '+(done===false?'btn-primary':'btn-ghost')+'" '+
+        'onclick="hxSqlCopy(\''+k+'\')">📋 이 SQL 복사</button></div></div>';
+  });
+  h+='<div class="notice">붙여넣을 때 <b>한글은 지우지 마세요.</b> 오류 문구라서 SQL 의 일부입니다. '+
+     '통째로 붙여넣고 RUN 하시면 됩니다.</div>';
+  return h+'</div></div>';
+}
+
 var HX={rows:[],at:'',busy:false,live:null,team:null,teamBusy:false};
 
 function hxToday(){var d=new Date(Date.now()+9*3600*1000);return d.toISOString().slice(0,10);}
@@ -10591,6 +10857,7 @@ function hxAdd(R,grp,name,st,now,fix,go,act,actLabel){
 }
 /* 눌러서 바로 고쳐지는 것들 — 설정 화면을 찾아 들어가지 않아도 되게 */
 function hxFix(kind){
+  if(kind&&kind.indexOf('sql_')===0){hxSqlCopy(kind.slice(4));return;}
   if(kind==='provider_gemini'){
     if(!confirm('기본 AI 를 Gemini 로 바꿉니다.\n\n결제해 둔 유료 키로 돌아가고, 한 번에 읽는 양이 24장에서 40장으로 늘어납니다.\nClaude 는 백업으로 남아 문제가 생기면 자동으로 받습니다.\n\n바꿀까요?'))return;
     LS.set('provider','gemini');
@@ -10706,12 +10973,22 @@ function hxServer(cb){
       if(/does not exist|찾을 수 없|relation/i.test(m))miss.push(T[i]);
       else deny.push(T[i]);
     }
+    var needKey='';
+    if(miss.length){
+      if(miss.indexOf('daily_checks')>=0)needKey='24';
+      else if(miss.indexOf('health_checks')>=0||miss.indexOf('suggestions')>=0)needKey='25';
+      else if(miss.indexOf('org_members')>=0)needKey='26';
+    }
     hxAdd(R,'서버','필요한 표',miss.length?'bad':'ok',
       miss.length?('없는 표: '+miss.join(', ')):(T.length+'개 모두 있습니다'),
-      miss.length?('Supabase 에서 아래 SQL 을 1회 실행하세요 — '+hxSqlFor(miss)):'');
+      miss.length?('아래 <b>필요한 SQL</b> 에서 복사해 Supabase 에 붙여넣으면 됩니다'):'',
+      '',needKey?('sql_'+needKey):'',needKey?(HX_SQL[needKey].label+' SQL 복사'):'');
+    var permSql=deny.filter(function(x){return x==='dbs'||x==='calls';}).length?'sql_26':'';
     hxAdd(R,'서버','읽기 권한',deny.length?'warn':'ok',
       deny.length?('못 읽는 표: '+deny.join(', ')):'전부 읽을 수 있습니다',
-      deny.length?'CRM 표(dbs·calls)면 CRM 팀 관리에서 마스터 권한을 받으면 됩니다':'');
+      deny.length?(permSql?'아래 SQL 을 실행하면 지점장·관리자가 전화·약속을 볼 수 있습니다'
+                          :'CRM 팀 관리에서 권한을 받으면 됩니다'):'',
+      '',permSql,permSql?'권한 여는 SQL 복사':'');
 
     var pi=T.indexOf('profiles');
     var prof=(res[pi]&&!res[pi].error)?1:0;
@@ -10846,6 +11123,7 @@ function hxInnerHtml(){
       '<div class="card-body">'+grp[order[i]].map(hxRowHtml).join('')+'</div></div>';
   }
   if(!HX.rows.length)h+='<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">점검 중…</div></div>';
+  h+=hxSqlCardHtml();
   return h;
 }
 function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=hxInnerHtml();}
@@ -11032,6 +11310,12 @@ function opsCss(){
     '.hx-f{font-size:11px;color:var(--warn);line-height:1.65;margin-top:3px;font-weight:700}'+
     '.hx-go{flex:none;padding:4px 10px;font-size:11px}'+
     '.hx-fix{padding:6px 13px;font-size:11.5px}'+
+    '.hxq{border:1px solid var(--ink-7);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--ink-9)}'+
+    '.hxq-t{font-size:12.5px;color:var(--ink-1);display:flex;align-items:center;gap:7px;flex-wrap:wrap}'+
+    '.hxq-t b{font-weight:800}'+
+    '.hxq-s{font-size:11px;color:var(--ink-5);margin:3px 0 8px}'+
+    '.hxq-ok{font-size:10px;font-weight:800;color:var(--pos);background:var(--pos-l,#ECFDF5);border-radius:99px;padding:2px 8px}'+
+    '.hxq-no{font-size:10px;font-weight:800;color:var(--neg);background:var(--neg-l,#FEF2F2);border-radius:99px;padding:2px 8px}'+
     '.vc-in{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
       'padding:9px 11px;font-size:13px;font-family:inherit;color:var(--ink-1);background:#fff;margin-bottom:7px}'+
     '.vc-ta{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
