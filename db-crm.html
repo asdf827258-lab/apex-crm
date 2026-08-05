@@ -278,7 +278,23 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const today=()=>new Date().toISOString().slice(0,10);
 function dtLocal(d=new Date()){const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
 function fmt(v,time=false){if(!v)return "-";const d=new Date(v);if(isNaN(d))return v;return new Intl.DateTimeFormat("ko-KR",time?{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}:{year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}
-function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1900)}
+function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),ms||1900)}
+/* 저장이 막혔을 때 "permission denied for table dbs" 만 띄우면 무엇을 해야 할지 알 수 없다.
+   무슨 일이 일어났는지와 다음에 할 일을 같이 적는다. */
+function wErr(error,what){
+  const m=((error&&error.message)||"")+"";
+  if(/42501|permission denied|row.level security/i.test(m)){
+    toast(what+"이(가) 서버에서 막혀 있습니다. APEX 앱 → 시스템 점검 → 필요한 SQL 에서 "+
+      "'DB CRM 저장이 막혔을 때 복구' 를 복사해 Supabase 에서 실행하세요.",9000);
+    return true;
+  }
+  if(/does not exist|relation .* does not exist/i.test(m)){
+    toast(what+" 실패 — 서버에 표가 없습니다. APEX 앱 → 시스템 점검 → 필요한 SQL 을 실행하세요.",9000);
+    return true;
+  }
+  toast(what+" 실패: "+m,4000);
+  return true;
+}
 function badge(v){return `<span class="badge ${{상담:"green",거절:"red",부재:"yellow",미진행:"gray"}[v]||"gray"}">${v||"미진행"}</span>`}
 function getCalls(id){return calls.filter(c=>c.db_id===id).sort((a,b)=>new Date(b.call_at)-new Date(a.call_at))}
 function lastCall(d){return getCalls(d.id)[0]} function result(d){return lastCall(d)?.result||"미진행"}
@@ -434,7 +450,7 @@ async function bulkAssign(){
   const owner=$("bulkOwner").value;const nm=pname(owner);
   if(!confirm(ids.length+"건을 "+nm+" 담당으로 일괄 변경할까요?"))return;
   const {error}=await sb.from("dbs").update({assigned_to:owner}).in("id",ids);
-  if(error){toast("일괄 변경 실패: "+error.message);return}
+  if(error){wErr(error,"담당자 일괄 변경");return}
   toast(ids.length+"건을 "+nm+" 담당으로 변경했습니다.");await loadAll();
 }
 function absenceText(c,idx){const d=new Date(c.call_at),ap=d.getHours()<12?"오전":"오후",h=d.getHours()%12||12,m=d.getMinutes()?` ${String(d.getMinutes()).padStart(2,"0")}분`:"";return `${d.getMonth()+1}월 ${d.getDate()}일 ${ap} ${h}시${m} ${idx}차 부재`}
@@ -456,7 +472,7 @@ function renderTeam(){
 async function setMemberRole(id,role){
   if(!canManage())return;
   const {error}=await sb.from("profiles").update({role}).eq("id",id);
-  if(error){toast("권한 변경 실패: "+error.message);}
+  if(error){wErr(error,"권한 변경");}
   else{toast("권한을 "+roleLabel(role)+"(으)로 변경했습니다.");await loadAll();}
 }
 function todayLocal(){const d=new Date(),p=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())}
@@ -513,19 +529,19 @@ function openDb(id=""){
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
-  const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;if(error)toast(error.message);else{closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")}
+  const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;if(error)wErr(error,"DB 저장");else{closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")}
 }
-async function removeDb(id){if(!confirm("DB와 관련 통화기록을 삭제할까요?"))return;const {error}=await sb.from("dbs").delete().eq("id",id);if(error)toast(error.message);else{await loadAll();toast("삭제했습니다.")}}
+async function removeDb(id){if(!confirm("DB와 관련 통화기록을 삭제할까요?"))return;const {error}=await sb.from("dbs").delete().eq("id",id);if(error)wErr(error,"DB 삭제");else{await loadAll();toast("삭제했습니다.")}}
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
 function renderHistory(id){const x=getCalls(id);$("history").innerHTML=x.length?`<div class="section-head"><h3>기존 통화 이력</h3></div><div class="timeline">${x.map(c=>`<div><b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}</b><p>${esc(c.memo||"메모 없음")}</p></div>`).join("")}</div>`:""}
 async function saveCall(){
   const resultV=$("callResult").value,app=$("appointmentAt").value;if(resultV==="상담"&&!app){toast("상담 약속일시를 입력해 주세요.");return}
   const payload={db_id:$("callDbId").value,created_by:profile.id,call_at:new Date($("callAt").value).toISOString(),result:resultV,first_call_issue:$("callIssue").value==="true",appointment_at:app?new Date(app).toISOString():null,memo:$("callMemo").value.trim()};
-  const {error}=await sb.from("calls").insert(payload);if(error)toast(error.message);else{closeModal("callModal");await loadAll();toast(`${profile.name} 이름으로 통화기록을 저장했습니다.`)}
+  const {error}=await sb.from("calls").insert(payload);if(error)wErr(error,"통화기록 저장");else{closeModal("callModal");await loadAll();toast(`${profile.name} 이름으로 통화기록을 저장했습니다.`)}
 }
-async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)toast(error.message);else await loadAll()}
-async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)toast(error.message);else await loadAll()}
+async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
+async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
 function closeModal(id){$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}
 function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast("문구를 복사했습니다.")).catch(()=>prompt("복사하세요.",t))}
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
