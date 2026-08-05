@@ -1288,8 +1288,16 @@ function osCfgSet(k,v,cb){
   },function(){toast('저장 실패');if(cb)cb();});
 }
 /* 개인 AI 하루 한도 */
-function osAiDailyLimit(){var n=parseInt(osCfgGet('ai_daily_limit','0'),10);return isNaN(n)?0:n;}
-function osAiOverLimit(){if(osRole()==='admin')return false;var lim=osAiDailyLimit();if(!lim)return false;return (OS.aiCnt||0)>=lim;}
+function osAiDailyLimit(){var n=parseInt(osCfgGet('ai_daily_limit','0'),10);return (isNaN(n)||n<=0)?0:n;}
+/* 한도는 팀원에게만 건다. 대표·관리자가 자기 한도에 걸려 도구가 멈추는 사고를 막는다. */
+function osAiOverLimit(){
+  var r=(typeof osRole==='function')?osRole():'member';
+  if(r==='admin'||r==='owner'||r==='master')return false;
+  if(typeof osIsAppAdmin==='function'&&osIsAppAdmin())return false;
+  if(typeof osIsOwner==='function'&&osIsOwner())return false;
+  var lim=osAiDailyLimit();if(!lim)return false;
+  return (OS.aiCnt||0)>=lim;
+}
 function osAiLoad(){var sb=osClient(),uid=OS.profile&&OS.profile.id;if(OS.aiCnt==null)OS.aiCnt=0;if(!sb||!uid)return;try{sb.from('ai_usage').select('cnt').eq('member_id',uid).eq('usage_date',osAttToday()).then(function(r){if(r&&r.data&&r.data[0])OS.aiCnt=r.data[0].cnt||0;},function(){});}catch(e){}}
 function osAiTick(){var sb=osClient();OS.aiCnt=(OS.aiCnt||0)+1;if(!sb)return;try{sb.rpc('bump_ai_usage').then(function(r){if(r&&typeof r.data==='number')OS.aiCnt=r.data;},function(){});}catch(e){}}
 /* 접속 IP 승인제 */
@@ -1372,7 +1380,10 @@ function callClaude(system,user,maxTokens,images){
   if(usingProxy&&typeof osAiOverLimit==='function'&&osAiOverLimit()){
     var pkL=getPersonalKey();
     if(pkL){try{toast('오늘 회사 공용 AI 한도 초과 → 내 API 키로 이어갑니다.');}catch(_){}return _claudeRun(system,mk(),cap,pkL);}
-    return Promise.reject(new Error('오늘 회사 공용 AI 사용 한도를 초과했습니다. 설정 → 내 API 키를 등록하면 계속 이용할 수 있어요.'));
+    /* 개인 키가 없어도 여기서 끝내지 않는다 — 무료 Gemini가 있으면 그쪽으로 넘어간다(callAI가 받아 처리) */
+    var eL=new Error('오늘 회사 공용 AI 사용 한도를 초과했습니다. 설정 → 내 API 키를 등록하면 계속 이용할 수 있어요.');
+    eL.overLimit=true;
+    return Promise.reject(eL);
   }
   return _claudeRun(system,mk(),cap,null).then(function(txt){if(usingProxy&&typeof osAiTick==='function')osAiTick();return txt;}).catch(function(e){
     /* 공용 프록시가 한도/크레딧으로 막히고, 회원 개인 백업 키가 있으면 그 키로 이어간다 */
@@ -1465,6 +1476,7 @@ function callGeminiSmart(system,user,maxTokens,images,genId){
 var AI_RETRY={on:false,n:0,max:0,left:0,timer:null,label:''};
 
 function aiIsBusy(e){
+  if(e&&e.overLimit)return false;
   var st=e&&e.status;
   if(st===429||st===500||st===502||st===503||st===504||st===529)return true;
   var m=((e&&e.message)||'')+'';
@@ -1546,6 +1558,10 @@ function aiBusyMsg(){
 }
 
 function callAI(system,user,maxTokens,genId,images){
+  /* 둘 다 연결이 없으면 헛돌지 않고 무엇을 해야 하는지 바로 알려준다 */
+  if(typeof claudeReady==='function'&&typeof geminiReady==='function'&&!claudeReady()&&!geminiReady()){
+    return Promise.reject(new Error('AI가 연결되어 있지 않습니다. 설정 → AI 연결에서 Claude 또는 Gemini 중 하나를 연결해 주세요.'));
+  }
   var prov=providerForGen(genId);
   if(prov==='gemini'){
     /* Gemini 우선 — 무료 한도 초과/차단/오류면 Claude가 준비돼 있을 때 자동 대체(민감도구는 애초에 Claude로 라우팅됨) */
@@ -1562,9 +1578,9 @@ function callAI(system,user,maxTokens,genId,images){
   /* Claude 호출 실패가 '크레딧 부족/인증 오류'면, 무료 Gemini가 준비돼 있을 때 자동 대체 */
   return aiWithRetry(function(){return callClaude(system,user,maxTokens,images);},'Claude').catch(function(e){
     var m=((e&&e.message)||'')+'';
-    var claudeDown=/credit|billing|quota|insufficient|balance|unauthorized|authentication|invalid x-api-key|api key|no_key|not[_ ]?found|does not exist|no such model|overloaded|rate.?limit|too many requests|unavailable|temporarily|failed to fetch|networkerror|load failed/i.test(m)||(e&&(e.status===401||e.status===403||e.status===404||e.status===429||e.status===500||e.status===502||e.status===503||e.status===529));
+    var claudeDown=(e&&e.overLimit)||/credit|billing|quota|insufficient|balance|unauthorized|authentication|invalid x-api-key|api key|no_key|not[_ ]?found|does not exist|no such model|overloaded|rate.?limit|too many requests|unavailable|temporarily|failed to fetch|networkerror|load failed|한도|초과|사용량/i.test(m)||(e&&(e.status===401||e.status===403||e.status===404||e.status===429||e.status===500||e.status===502||e.status===503||e.status===529));
     if(claudeDown&&geminiReady()){
-      var why=/credit|billing|insufficient|balance|too low/i.test(m)?'크레딧 부족(결제 필요)':(((e&&e.status===404)||/not[_ ]?found|does not exist|no such model/i.test(m))?'모델명 오류':(((e&&(e.status===401||e.status===403))||/unauthorized|authentication|api key|invalid x-api-key|no_key/i.test(m))?'키 인증 실패':'호출 실패'));
+      var why=(e&&e.overLimit)?'하루 사용 한도 초과':/credit|billing|insufficient|balance|too low/i.test(m)?'크레딧 부족(결제 필요)':(((e&&e.status===404)||/not[_ ]?found|does not exist|no such model/i.test(m))?'모델명 오류':(((e&&(e.status===401||e.status===403))||/unauthorized|authentication|api key|invalid x-api-key|no_key/i.test(m))?'키 인증 실패':'호출 실패'));
       try{toast('Claude '+why+' → 무료 Gemini로 대체합니다. (Claude를 쓰려면 크레딧/키 확인 필요)');}catch(_){}
       return aiWithRetry(function(){return callGeminiSmart(system,user,maxTokens,images,genId);},'Gemini').then(function(txt){AI_LAST.fellback=true;AI_LAST.note='Claude '+why+' → Gemini 대체';return txt;});
     }
@@ -11256,6 +11272,8 @@ function runPdf(id){
     var mdlErr=st===404||/not[_ ]?found|does not exist|no such model/i.test(m);
     var credErr=/credit|billing|insufficient|balance|too low|quota/i.test(m);
     var netErr=/failed to fetch|networkerror|load failed|timeout|cors/i.test(m);
+    var limErr=(e&&e.overLimit)||/공용 AI 사용 한도|하루 사용 한도/.test(m);
+    var noAiErr=/AI가 연결되어 있지 않습니다/.test(m);
     var lnk=' <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>';
     var ico,tip;
     if(pdfErr){ico='📄';tip='PDF를 읽지 못했습니다. 파일이 손상되지 않았는지·'+PDF_MAX_MB+'MB 이하인지 확인하고 다시 첨부해 주세요. 스캔본(이미지형)은 페이지가 많으면 시간이 더 걸립니다.';}
@@ -11263,6 +11281,11 @@ function runPdf(id){
     else if(mdlErr){ico='🧠';tip='선택한 AI 모델명이 유효하지 않습니다.'+lnk+' → 모델 선택에서 다른 모델로 바꾼 뒤 다시 시도하세요. (무료 Gemini 키를 넣어두면 이런 경우 자동 대체됩니다.)';}
     else if(credErr){ico='💳';tip='Claude 크레딧/결제 문제로 보입니다. 크레딧을 확인하거나'+lnk+'에서 무료 Gemini 키를 넣으면 자동 대체됩니다.';}
     else if(typeof aiIsBusy==='function'&&aiIsBusy(e)){ico='🚦';tip='AI 서버가 몰려 있습니다. <b>자동으로 4번 다시 시도했지만</b> 응답을 받지 못했습니다. 아래 <b>다시 시도</b>를 눌러 주세요 — 보통 1~2분 뒤면 풀립니다.'+lnk+'에서 <b>Gemini 키</b>를 함께 연결해 두면 이런 때 자동으로 넘어갑니다.';}
+    else if(limErr){ico='📊';tip='오늘 <b>회사 공용 AI 사용 한도</b>를 다 썼습니다. 셋 중 하나면 바로 풀립니다 — '+
+      '① 대표가'+lnk+' → <b>개인 AI 하루 사용 한도</b>를 <b>0(무제한)</b>으로 저장, '+
+      '② '+lnk+' → <b>내 API 키</b> 등록, '+
+      '③ '+lnk+' → <b>Gemini 키</b> 연결(무료, 한도 초과 시 자동으로 넘어갑니다).';}
+    else if(noAiErr){ico='🔌';tip='AI가 아직 연결되지 않았습니다.'+lnk+' → <b>AI 연결</b>에서 Claude 또는 Gemini 중 <b>하나만</b> 연결하면 바로 됩니다.';}
     else if(netErr){ico='📡';tip='네트워크 연결이 불안정합니다. 잠시 후 다시 시도해 주세요.';}
     else{ico='⚠️';tip='분석 중 오류가 발생했습니다: '+esc(m||'알 수 없는 오류')+'. 잠시 후 다시 시도하거나'+lnk+' → 연결 진단을 확인해 주세요.';}
     res.innerHTML='<div class="result-body"><div class="err-box">'+ico+' '+tip+'<div style="margin-top:11px"><button class="btn btn-ghost" onclick="runPdf(\''+id+'\')">🔄 다시 시도</button></div></div></div>';
