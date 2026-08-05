@@ -2149,6 +2149,8 @@ function osTabProbe(tab){
   if(tab==='contracts')return renderContracts();
   if(tab==='claims')return renderClaims();
   if(tab==='academy')return renderAcademy();
+  if(tab==='ckboard')return renderCkBoard();
+  if(tab==='ckteam')return renderCkTeam();
   if(tab==='org')return renderOrg();
   if(tab==='branch_coach')return renderBranchCoach();
   if(tab==='hq')return renderHQ();
@@ -3137,11 +3139,11 @@ var GEN=[
 /* 통합 15메뉴 (역할별 노출: group.role='lead'|'hq'|'edu'). 기존 도구 id는 하위에 그대로 보존. */
 var TABS=[
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
- {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
+ {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
- {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''}]},
+ {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
@@ -3323,6 +3325,8 @@ function go(tab){
   else if(tab==='contracts')dyn.innerHTML=renderContracts();
   else if(tab==='claims')dyn.innerHTML=renderClaims();
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
+  else if(tab==='ckboard'){dyn.innerHTML=renderCkBoard();if(typeof osCkBoardAfterRender==='function')osCkBoardAfterRender();}
+  else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
   else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
@@ -9397,6 +9401,576 @@ function orgForm(list){
   + '</div>';
   return '<div class="card" id="orgFormCard"><div class="card-hd">'+(orgEditId?'✏️ 구성원 편집':'➕ 구성원 추가')+'</div><div class="card-body">'+body+'</div></div>';
 }
+/* ════════ 실행 체크판 · 팀 체크 현황 ════════
+   본인이 체크한 것이 그대로 지점장 화면의 근거가 된다.
+   체크는 이 기기(localStorage)에 먼저 남기고, 로그인 상태면 daily_checks 로 올린다.
+   서버가 안 되어도 체크는 되어야 하므로 저장 실패는 조용히 넘기고 표시만 남긴다. */
+
+var CK_ITEMS={
+  day:[
+    ['d1','출근 체크','','출근 현황','attend'],
+    ['d2','오늘의 알림 확인','5명 중 2명은 여기서 뽑습니다','DB 통합 CRM','crm'],
+    ['d3','5명 컨셉 잡기','단서 하나씩 골라 첫 문장','DB 통합 CRM','crm'],
+    ['d4','전화 5통','안 받아도 카톡으로 이어갑니다','DB 통합 CRM','crm'],
+    ['d5','카톡 5건','통화 여부와 상관없이','',''],
+    ['d6','통화 결과 입력','TA완료·부재·거절·상담','DB 통합 CRM','crm'],
+    ['d7','약속 잡힌 사람 고객 카드 만들기','여기서 DB를 떠납니다','고객 365일','clients'],
+    ['d8','만난 사람 팩트파인딩 저장','소득·지출·기존보험·걱정','상담카드','fact_find'],
+    ['d9','내일 상담 자료 준비','증권 받았으면 판독까지','AI 제안서','ai_prop'],
+    ['d10','SNS 1건','주 4회 · 월화목금','',''],
+    ['d11','공부 30분','이번 주 커리큘럼','APEX 본인 점검란','academy']
+  ],
+  week:[
+    ['w1','SNS 4건','','',''],
+    ['w2','공부 5일','소리 내어 말해보기','',''],
+    ['w3','조회에서 시연','3분. 못 하면 다음 주에 다시','',''],
+    ['w4','고객 1명에게 적용','안 써본 건 아직 모르는 겁니다','',''],
+    ['w5','금요일 점검 제출','숫자만','','']
+  ]
+};
+
+var CK_LDR={
+  a:[
+    ['a1','네이버 캘린더 활동 독려','오늘 일정이 빈 사람부터','',''],
+    ['a2','출근 체크','안 찍힌 사람은 바로 연락','출근 현황','attend']
+  ],
+  b:[
+    ['b1','보험 컨셉 준비 상태 확인','오늘 만나는 고객에 맞는 컨셉인지','',''],
+    ['b2','보험 심사 진행 확인','걸린 건은 대신 확인해 줍니다','',''],
+    ['b3','도와줄 것 메모하기','아래 칸에 적습니다','',''],
+    ['b4','적어 둔 것 모두 완료','오늘 안에','','']
+  ],
+  c:[
+    ['c1','DB 통합 CRM 확인','통화 결과가 그날 들어갔는지','DB 통합 CRM','crm'],
+    ['c2','고객 365일 팩트파인딩 확인','만난 사람 기록이 남았는지','고객 365일','clients'],
+    ['c3','팀 체크 현황 — 오늘','팀원별 진행','팀 체크 현황','ckteam'],
+    ['c4','팀 체크 현황 — 이번 주','금요일 전에 한 번','팀 체크 현황','ckteam']
+  ],
+  week:[
+    ['q1','주간 숫자 취합','전화·약속·상담·계약','',''],
+    ['q2','전환율 확인','어느 단계에서 새는지','',''],
+    ['q3','2주 연속 약속 0건인 사람 1:1','30분','',''],
+    ['q4','다음 주 팀 목표 하나','숫자 하나만','','']
+  ],
+  month:[
+    ['m1','성과 면담','듣기 → 숫자 → 한 곳 → 약속 하나','',''],
+    ['m2','잘 된 상담 1건 공유','녹취 분석과 함께','',''],
+    ['m3','다음 달 교육 주제','','','']
+  ]
+};
+
+var CK={tab:'today',sync:'',at:'',err:''};
+var CK_KST=9*3600*1000;
+
+function ckNow(){return new Date(Date.now()+CK_KST);}
+function ckDayK(){return ckNow().toISOString().slice(0,10);}
+function ckWeekK(){var d=ckNow(),w=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-w);return d.toISOString().slice(0,10);}
+function ckMonthK(){return ckNow().toISOString().slice(0,7)+'-01';}
+/* 주기별로 저장 자리를 나눈다 — 날이 바뀌면 그날 것만 새로 시작한다 */
+function ckDateOf(sc){return sc==='week'?ckWeekK():sc==='month'?ckMonthK():ckDayK();}
+function ckKey(sc){return 'apex_ck_'+sc+'_'+ckDateOf(sc);}
+function ckLoad(sc){try{return JSON.parse(localStorage.getItem(ckKey(sc)))||{};}catch(e){return {};}}
+function ckSave(sc,m){try{localStorage.setItem(ckKey(sc),JSON.stringify(m));}catch(e){}ckPush(sc,m);}
+function ckMemoKey(){return 'apex_ck_memo_'+ckDayK();}
+function ckMemoLoad(){try{return JSON.parse(localStorage.getItem(ckMemoKey()))||{};}catch(e){return {};}}
+function ckMemoSave(m){try{localStorage.setItem(ckMemoKey(),JSON.stringify(m));}catch(e){}}
+
+/* 지난 날짜 자리는 지운다 — 브라우저 저장 공간이 계속 늘지 않도록 */
+function ckSweep(){
+  try{
+    var keep=[ckKey('day'),ckKey('week'),ckKey('month'),ckMemoKey(),'apex_ck_tab'],drop=[],i,k;
+    for(i=0;i<localStorage.length;i++){k=localStorage.key(i);
+      if(k&&k.indexOf('apex_ck_')===0&&keep.indexOf(k)<0)drop.push(k);}
+    for(i=0;i<drop.length;i++)localStorage.removeItem(drop[i]);
+  }catch(e){}
+}
+
+function ckMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+
+/* 서버로 올리기 — 한 사람 하루 한 줄. 실패해도 체크 자체는 남는다 */
+function ckPush(sc,m){
+  var sb=(typeof osClient==='function')?osClient():null,me=ckMyId();
+  if(!sb||!me)return;
+  CK.sync='saving';ckSyncPaint();
+  sb.from('daily_checks').upsert({
+    member_id:me,check_date:ckDateOf(sc),scope:sc,items:m,updated_at:new Date().toISOString()
+  },{onConflict:'member_id,check_date,scope'}).then(function(r){
+    if(r&&r.error){CK.sync='err';CK.err=r.error.message||'';ckSyncPaint();return;}
+    CK.sync='ok';CK.err='';CK.at=new Date().toLocaleTimeString('ko-KR');ckSyncPaint();
+  },function(e){CK.sync='err';CK.err=(e&&e.message)||'네트워크 오류';ckSyncPaint();});
+}
+
+/* 다른 기기에서 찍은 체크 가져오기 — 열 때 한 번 */
+function ckPull(){
+  var sb=(typeof osClient==='function')?osClient():null,me=ckMyId();
+  if(!sb||!me)return;
+  sb.from('daily_checks').select('scope,check_date,items')
+    .eq('member_id',me)
+    .in('check_date',[ckDayK(),ckWeekK(),ckMonthK()]).then(function(r){
+    if(r&&r.error){CK.sync='err';CK.err=r.error.message||'';ckSyncPaint();return;}
+    var rows=(r&&r.data)||[],hit=0;
+    rows.forEach(function(row){
+      if(row.check_date!==ckDateOf(row.scope))return;
+      var mine=ckLoad(row.scope),srv=row.items||{},k,merged={},any=false;
+      for(k in srv)if(srv[k])merged[k]=1;
+      for(k in mine)if(mine[k]){if(!merged[k])any=true;merged[k]=1;}
+      try{localStorage.setItem(ckKey(row.scope),JSON.stringify(merged));}catch(e){}
+      hit++;
+      if(any)ckPush(row.scope,merged);
+    });
+    CK.sync='ok';CK.err='';CK.at=new Date().toLocaleTimeString('ko-KR');
+    if(hit)ckPaint();else ckSyncPaint();
+  },function(e){CK.sync='err';CK.err=(e&&e.message)||'네트워크 오류';ckSyncPaint();});
+}
+
+function ckSyncPaint(){
+  var el=document.getElementById('ckSync');if(!el)return;
+  el.innerHTML=ckSyncHtml();
+}
+function ckSyncHtml(){
+  if(!ckMyId())return '<span style="color:var(--ink-5)">이 기기에만 저장됩니다 — 로그인하면 지점장 화면에 함께 보입니다</span>';
+  if(CK.sync==='saving')return '<span style="color:var(--ink-5)">저장 중…</span>';
+  if(CK.sync==='err')return '<span style="color:var(--neg)">서버 저장 실패 — 이 기기에는 남아 있습니다'+
+    (CK.err?' ('+osEsc(CK.err.slice(0,60))+')':'')+'</span>';
+  if(CK.sync==='ok')return '<span style="color:var(--pos)">✓ 저장됨'+(CK.at?' '+osEsc(CK.at):'')+'</span>';
+  return '<span style="color:var(--ink-5)">체크하면 자동 저장됩니다</span>';
+}
+
+function ckCss(){
+  if(document.getElementById('ckStyle'))return;
+  var st=document.createElement('style');st.id='ckStyle';
+  st.textContent=
+    '.ck-tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--ink-7);margin-bottom:14px}'+
+    '.ck-tabs::-webkit-scrollbar{display:none}'+
+    '.ck-tab{appearance:none;border:0;background:none;font-family:inherit;cursor:pointer;white-space:nowrap;'+
+      'font-size:13px;font-weight:700;color:var(--ink-4);padding:9px 12px 10px;border-bottom:2px solid transparent;letter-spacing:-.03em}'+
+    '.ck-tab.on{color:var(--primary);border-bottom-color:var(--primary)}'+
+    '.ck-tab .c{font-family:var(--mono,ui-monospace,monospace);font-size:10.5px;font-weight:800;margin-left:4px;color:var(--ink-5)}'+
+    '.ck-tab.on .c{color:var(--primary)}'+
+    '.ck-it{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--ink-8);cursor:pointer}'+
+    '.ck-it:last-child{border-bottom:none}'+
+    '.ck-bx{flex:none;width:19px;height:19px;margin-top:1px;border:1.5px solid var(--ink-6);border-radius:5px;'+
+      'background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;transition:all .13s}'+
+    '.ck-it.on .ck-bx{background:var(--primary);border-color:var(--primary)}'+
+    '.ck-tx{min-width:0;flex:1}'+
+    '.ck-nm{font-size:13px;font-weight:700;color:var(--ink-1);letter-spacing:-.03em;line-height:1.5}'+
+    '.ck-it.on .ck-nm{color:var(--ink-4);text-decoration:line-through;text-decoration-color:var(--ink-6)}'+
+    '.ck-hint{font-size:11px;color:var(--ink-5);line-height:1.6;margin-top:2px}'+
+    '.ck-go{display:inline-block;font-size:10px;font-weight:700;color:var(--primary);background:var(--primary-pale);'+
+      'border:1px solid #DBE7FF;border-radius:99px;padding:2px 8px;margin-top:5px;cursor:pointer}'+
+    '.ck-go:hover{background:var(--primary-light)}'+
+    '.ck-n{font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;color:var(--ink-5);margin-left:auto}'+
+    '.ck-memo{margin-top:12px;padding:12px 13px;background:var(--ink-9);border:1px solid var(--ink-7);border-radius:9px}'+
+    '.ck-memo b{font-size:11px;font-weight:800;color:var(--ink-3)}'+
+    '.ck-memo input{display:block;width:100%;box-sizing:border-box;margin-top:6px;border:1px solid var(--ink-7);'+
+      'border-radius:6px;padding:8px 10px;font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    '.ck-memo input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-pale)}'+
+    '.ck-flow{display:grid;grid-template-columns:1fr 1fr;gap:14px 0}'+
+    '.ck-st{position:relative;padding-right:16px}'+
+    '.ck-st:nth-child(odd)::after{content:"";position:absolute;right:5px;top:14px;width:6px;height:6px;'+
+      'border-top:1.5px solid var(--ink-6);border-right:1.5px solid var(--ink-6);transform:rotate(45deg)}'+
+    '.ck-st .k{font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;color:var(--primary);'+
+      'letter-spacing:.1em;padding-bottom:6px;border-bottom:2px solid var(--primary);display:block}'+
+    '.ck-st .n{font-size:13px;font-weight:800;color:var(--ink-1);margin:8px 0 3px;letter-spacing:-.03em}'+
+    '.ck-st .g{font-size:11px;color:var(--ink-4);line-height:1.6}'+
+    '@media(min-width:640px){.ck-flow{grid-template-columns:repeat(4,1fr)}'+
+      '.ck-st:nth-child(odd)::after{display:none}.ck-st:not(:last-child)::after{content:"";position:absolute;'+
+      'right:5px;top:14px;width:6px;height:6px;border-top:1.5px solid var(--ink-6);'+
+      'border-right:1.5px solid var(--ink-6);transform:rotate(45deg)}}'+
+    /* 팀 체크 현황 */
+    '.ct-row{background:#fff;border:1px solid var(--ink-7);border-radius:12px;margin-bottom:8px;overflow:hidden}'+
+    '.ct-row.red{border-left:3px solid var(--neg)}'+
+    '.ct-row.amber{border-left:3px solid var(--warn)}'+
+    '.ct-row.ok{border-left:3px solid var(--pos)}'+
+    '.ct-hd{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:none;border:0;'+
+      'width:100%;text-align:left;font-family:inherit}'+
+    '.ct-hd:hover{background:var(--ink-9)}'+
+    '.ct-who{min-width:0;flex:1}'+
+    '.ct-nm{font-size:13.5px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:6px;flex-wrap:wrap}'+
+    '.ct-tag{font-size:10px;font-weight:700;color:var(--ink-5);background:var(--ink-8);border-radius:99px;padding:1px 7px;letter-spacing:0}'+
+    '.ct-jd{display:block;font-size:11.5px;color:var(--ink-4);line-height:1.6;margin-top:3px}'+
+    '.ct-g{flex:none;width:84px}'+
+    '.ct-gn{display:block;font-family:var(--mono,ui-monospace,monospace);font-size:12px;font-weight:800;text-align:right;letter-spacing:-.03em}'+
+    '.ct-gn em{font-style:normal;color:var(--ink-5);font-weight:700;font-size:10.5px}'+
+    '.ct-gb{display:block;height:4px;border-radius:99px;background:var(--ink-7);overflow:hidden;margin-top:5px}'+
+    '.ct-gb i{display:block;height:100%;border-radius:99px;background:var(--primary)}'+
+    '.ct-row.red .ct-gb i{background:var(--neg)}.ct-row.amber .ct-gb i{background:var(--warn)}'+
+    '.ct-row.ok .ct-gb i{background:var(--pos)}'+
+    '.ct-car{flex:none;color:var(--ink-5);font-size:11px}'+
+    '.ct-bd{padding:0 14px 14px;border-top:1px solid var(--ink-8)}'+
+    '.ct-sec{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.06em;text-transform:uppercase;margin:13px 0 7px}'+
+    '.ct-its{display:grid;grid-template-columns:1fr;gap:3px 10px}'+
+    '@media(min-width:520px){.ct-its{grid-template-columns:1fr 1fr}}'+
+    '.ct-it{font-size:11.5px;color:var(--ink-3);display:flex;gap:5px;padding:2px 0;line-height:1.5}'+
+    '.ct-it i{font-style:normal;flex:none;font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;width:12px;color:var(--pos)}'+
+    '.ct-it.no{color:var(--ink-5)}.ct-it.no i{color:var(--ink-6)}'+
+    '.ct-fx{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}'+
+    '.ct-fx div{background:var(--ink-9);border:1px solid var(--ink-7);border-radius:6px;padding:8px 9px}'+
+    '.ct-fx .k{font-size:9.5px;font-weight:700;color:var(--ink-5)}'+
+    '.ct-fx .v{font-family:var(--mono,ui-monospace,monospace);font-size:14px;font-weight:800;margin-top:1px;letter-spacing:-.03em}'+
+    '.ct-fx .v em{font-style:normal;font-size:10px;color:var(--ink-5);font-weight:700}'+
+    '.ct-gap{background:var(--warn-l,#FFFBEB);border:1px solid #FDE68A;border-radius:6px;padding:9px 11px;'+
+      'margin-top:9px;font-size:11.5px;color:#92400E;line-height:1.7}'+
+    '.ct-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}'+
+    '.ct-sum div{background:var(--ink-9);border:1px solid var(--ink-7);border-radius:8px;padding:9px 10px}'+
+    '.ct-sum .k{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.04em}'+
+    '.ct-sum .v{font-family:var(--mono,ui-monospace,monospace);font-size:18px;font-weight:800;margin-top:2px;letter-spacing:-.04em}'+
+    '.ct-sum .v em{font-style:normal;font-size:11px;color:var(--ink-5);font-weight:700}';
+  document.head.appendChild(st);
+}
+
+/* ── 실행 체크판 화면 ── */
+function ckTabs(){
+  return [
+    {id:'today',l:'오늘',sc:'day',items:CK_ITEMS.day},
+    {id:'week',l:'주간',sc:'week',items:CK_ITEMS.week},
+    {id:'route',l:'업무 루트',sc:'',items:null},
+    {id:'leader',l:'지점장',sc:'',items:null}
+  ];
+}
+function ckCount(sc,list){
+  var m=ckLoad(sc),d=0;
+  list.forEach(function(r){if(m[r[0]])d++;});
+  return d;
+}
+function ckTabCount(t){
+  if(t.items)return ckCount(t.sc,t.items)+' / '+t.items.length;
+  if(t.id==='leader'){
+    var d=ckCount('day',CK_LDR.a.concat(CK_LDR.b,CK_LDR.c));
+    return d+' / '+(CK_LDR.a.length+CK_LDR.b.length+CK_LDR.c.length);
+  }
+  return '';
+}
+function ckGo(tab){CK.tab=tab;try{localStorage.setItem('apex_ck_tab',tab);}catch(e){}ckPaint();}
+function ckToggle(sc,id){
+  var m=ckLoad(sc);
+  if(m[id])delete m[id];else m[id]=1;
+  ckSave(sc,m);ckPaint();
+}
+function ckMemoSet(k,v){var m=ckMemoLoad();m[k]=v;ckMemoSave(m);
+  var s=document.getElementById('ckMemoS');if(!s)return;
+  s.textContent='저장됨';
+  if(window.__ckMemoT)clearTimeout(window.__ckMemoT);
+  window.__ckMemoT=setTimeout(function(){s.textContent='';},1200);
+}
+
+function ckItemHtml(sc,r){
+  var m=ckLoad(sc),on=!!m[r[0]];
+  return '<div class="ck-it'+(on?' on':'')+'" onclick="ckToggle(\''+sc+'\',\''+r[0]+'\')">'+
+    '<div class="ck-bx">'+(on?'✓':'')+'</div>'+
+    '<div class="ck-tx"><div class="ck-nm">'+osEsc(r[1])+'</div>'+
+    (r[2]?'<div class="ck-hint">'+osEsc(r[2])+'</div>':'')+
+    (r[3]?'<span class="ck-go" onclick="event.stopPropagation();go(\''+r[4]+'\')">'+osEsc(r[3])+' →</span>':'')+
+    '</div></div>';
+}
+function ckListHtml(sc,list){return list.map(function(r){return ckItemHtml(sc,r);}).join('');}
+function ckCardHtml(icon,title,desc,sc,list,extra){
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">'+icon+'</span>'+osEsc(title)+
+    '<span class="ck-n">'+ckCount(sc,list)+' / '+list.length+'</span></div>'+
+    (desc?'<div class="card-desc">'+osEsc(desc)+'</div>':'')+'</div>'+
+    '<div class="card-body">'+ckListHtml(sc,list)+(extra||'')+'</div></div>';
+}
+
+function ckTodayHtml(){
+  return ckCardHtml('✅','오늘 할 일','팀마다 어느 화면에서 하는지 표시했습니다','day',CK_ITEMS.day,
+    '<div class="notice">못 한 날은 그냥 넘어갑니다. 다음 날 두 배로 하지 않습니다. '+
+    '몰아서 하다가 그만두는 경우가 많습니다.</div>');
+}
+function ckWeekHtml(){
+  return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'');
+}
+function ckRouteHtml(){
+  var st=[['TA','접촉','전화·카톡'],['AP','만나서 듣기','팩트파인딩'],
+          ['PC','설계·클로징','제안·비교'],['CS','계약 후','관리·소개']];
+  return '<div class="card"><div class="card-body"><div class="ck-flow">'+
+    st.map(function(x){return '<div class="ck-st"><span class="k">'+x[0]+'</span>'+
+      '<div class="n">'+osEsc(x[1])+'</div><div class="g">'+osEsc(x[2])+'</div></div>';}).join('')+
+    '</div></div></div>'+
+  '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧭</span>순서를 지키는 이유</div></div>'+
+  '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.8">'+
+  'AP 없이 PC로 넘어가면 <b>"비싸다"</b>가 나옵니다. 소득·증권·걱정·다음 약속 네 가지를 듣기 전에는 설계하지 않습니다.<br>'+
+  'CS를 안 하면 매달 새 고객만 찾게 됩니다. 계약 후 3일·1개월 루틴과 보험금 나온 시점의 소개 요청이 다음 달 DB입니다.'+
+  '</div><div class="notice">기존 보험을 깎아내리지 않습니다. 그때 가장 좋은 걸 고른 겁니다. '+
+  '고객이 직접 고른 것을 부정하면 그다음 말이 안 들립니다.</div></div></div>';
+}
+function ckLeaderHtml(){
+  var mm=ckMemoLoad();
+  var memo='<div class="ck-memo"><b>오늘 도와줄 것</b> <span id="ckMemoS" style="font-size:10px;color:var(--pos);font-weight:700"></span>'+
+    [1,2,3].map(function(i){
+      return '<input value="'+osEsc(mm[i]||'')+'" placeholder="누가 · 무엇을 · 언제까지" '+
+        'oninput="ckMemoSet(\''+i+'\',this.value)">';
+    }).join('')+
+    '<div style="font-size:10.5px;color:var(--ink-4);line-height:1.65;margin-top:6px">'+
+    '쓴 건 오늘 안에 끝냅니다. 내일로 넘기면 다시 씁니다.</div></div>';
+  return ckCardHtml('☀️','독려','출근 시간에','day',CK_LDR.a,'')+
+    ckCardHtml('👤','직접 확인','사람에게 물어서 아는 것','day',CK_LDR.b,memo)+
+    ckCardHtml('🖥️','전산 확인','화면에서 아는 것','day',CK_LDR.c,
+      '<div class="notice">안 되어 있는 게 보이면 <b>그날 안에 끝냅니다.</b> '+
+      '다음 날로 넘기면 그다음 날에도 안 되어 있습니다.</div>')+
+    ckCardHtml('📅','금요일','30분','week',CK_LDR.week,'')+
+    ckCardHtml('🗓️','월 1회','2시간','month',CK_LDR.month,'')+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>하지 않는 것</div></div>'+
+    '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.9">'+
+    '<b>숫자만 보고 다그치기</b> — 활동이 아니라 회피가 늘어납니다<br>'+
+    '<b>대신 상담 나가기</b> — 팀원이 안 큽니다. 동행하되 주도는 팀원이 합니다<br>'+
+    '<b>모두에게 같은 말</b> — 신입과 3년차에게 필요한 말이 다릅니다<br>'+
+    '<b>부진자만 챙기기</b> — 잘하는 사람이 먼저 나갑니다'+
+    '</div></div></div>';
+}
+
+function ckBodyHtml(){
+  if(CK.tab==='week')return ckWeekHtml();
+  if(CK.tab==='route')return ckRouteHtml();
+  if(CK.tab==='leader')return ckLeaderHtml();
+  return ckTodayHtml();
+}
+function ckPaint(){
+  var el=document.getElementById('ckPane');if(!el)return;
+  el.innerHTML=ckInnerHtml();
+}
+function ckInnerHtml(){
+  var ts=ckTabs();
+  return '<div class="ck-tabs">'+ts.map(function(t){
+      return '<button class="ck-tab'+(CK.tab===t.id?' on':'')+'" type="button" onclick="ckGo(\''+t.id+'\')">'+
+        osEsc(t.l)+'<span class="c">'+ckTabCount(t)+'</span></button>';
+    }).join('')+'</div>'+
+    '<div style="font-size:11px;line-height:1.6;margin-bottom:12px" id="ckSync">'+ckSyncHtml()+'</div>'+
+    ckBodyHtml();
+}
+function renderCkBoard(){
+  ckCss();ckSweep();
+  var d=ckNow(),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('체크','실행 체크판',
+    ds+' · 매일 같은 순서로 합니다. 체크한 내용은 지점장 화면에 그대로 보입니다.',
+    '<div id="ckPane">'+ckInnerHtml()+'</div>');
+}
+function osCkBoardAfterRender(){
+  try{var t=localStorage.getItem('apex_ck_tab');if(t)CK.tab=t;}catch(e){}
+  ckPaint();ckPull();
+}
+
+/* ── 팀 체크 현황 ── */
+var CT={tab:'today',sort:'sig',team:'',open:{},loaded:false,err:'',
+  people:[],teams:[],teamOf:{},warn:[]};
+
+function ctCanView(){
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  var r=(typeof osRole==='function')?osRole():'member';
+  return ['admin','owner','lead','manager','leader','master','branch_manager','education_manager'].indexOf(r)>=0;
+}
+function ctDaysAgo(n){var d=ckNow();d.setUTCDate(d.getUTCDate()-n);return d.toISOString().slice(0,10);}
+
+function ctLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){CT.err='서버에 연결되어 있지 않습니다.';CT.loaded=true;ctPaint();return;}
+  var t=ckDayK(),w=ckWeekK(),d3=ctDaysAgo(2),d7=ctDaysAgo(6);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
+    q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d7)),
+    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d7)),
+    q(sb.from('teams').select('id,name,leader_id')),
+    q(sb.from('team_members').select('team_id,member_id')),
+    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00')),
+    q(sb.from('dbs').select('id,assigned_to')),
+    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d7+'T00:00:00')),
+    q(sb.from('saved_reports').select('advisor_id,created_at').gte('created_at',w+'T00:00:00'))
+  ]).then(function(r){
+    CT.warn=[];
+    if(r[0].error){CT.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');CT.loaded=true;ctPaint();return;}
+    if(r[1].error){
+      CT.err='체크 기록 테이블이 아직 없습니다. Supabase에서 <b>migration_24_checks.sql</b>을 1회 실행해 주세요.';
+      CT.loaded=true;ctPaint();return;
+    }
+    var profs=(r[0].data||[]).filter(function(x){
+      return x.active!==false&&(x.workspace==null||x.workspace==='both'||x.workspace==='apex');});
+    CT.teams=r[3].error?[]:(r[3].data||[]);
+    CT.teamOf={};
+    if(!r[4].error)(r[4].data||[]).forEach(function(m){CT.teamOf[m.member_id]=m.team_id;});
+
+    var chk=r[1].data||[],att=r[2].error?[]:(r[2].data||[]);
+    var calls=r[5].error?null:(r[5].data||[]);
+    var dbs=r[6].error?null:(r[6].data||[]);
+    var cli=r[7].error?null:(r[7].data||[]);
+    var rep=r[8].error?null:(r[8].data||[]);
+    if(calls===null)CT.warn.push('통화·약속');
+    if(dbs===null)CT.warn.push('배정 DB');
+    if(cli===null)CT.warn.push('팩트파인딩');
+    if(rep===null)CT.warn.push('제안서');
+
+    var byMember={};
+    chk.forEach(function(row){
+      var k=row.member_id;byMember[k]=byMember[k]||{};
+      byMember[k][row.scope+'|'+row.check_date]=row.items||{};
+    });
+    var dayOf=function(id,date){return (byMember[id]&&byMember[id]['day|'+date])||{};};
+    var cnt=function(o){var n=0,k;for(k in o)if(o[k])n++;return n;};
+    var dayIds={};CK_ITEMS.day.forEach(function(x){dayIds[x[0]]=1;});
+    var cntDay=function(o){var n=0,k;for(k in o)if(o[k]&&dayIds[k])n++;return n;};
+
+    CT.people=profs.map(function(p){
+      var tm=CT.teams.filter(function(x){return x.id===CT.teamOf[p.id];})[0];
+      var todayDay=dayOf(p.id,t);
+      var wk=(byMember[p.id]&&byMember[p.id]['week|'+w])||{};
+      var todayCalls=calls?calls.filter(function(c){
+        return c.created_by===p.id&&(''+(c.call_at||'')).slice(0,10)===t;}):null;
+      return {
+        id:p.id,name:p.name||'(이름 없음)',team:tm?tm.name:'',
+        att:att.filter(function(a){return a.member_id===p.id&&a.att_date===t;}).length>0,
+        day:todayDay,week:wk,
+        nDay:cntDay(todayDay),nWeek:cnt(wk),
+        streak:[ctDaysAgo(0),ctDaysAgo(1),ctDaysAgo(2)].map(function(dt){return cntDay(dayOf(p.id,dt));}),
+        calls:todayCalls?todayCalls.length:null,
+        appt:todayCalls?todayCalls.filter(function(c){return c.result==='상담';}).length:null,
+        cold:(dbs&&calls)?ctCold(p.id,dbs,calls):null,
+        fact:cli?cli.filter(function(c){return c.advisor_id===p.id&&(''+(c.created_at||'')).slice(0,10)===t;}).length:null,
+        prop:rep?rep.filter(function(c){return c.advisor_id===p.id;}).length:null
+      };
+    });
+    CT.err='';CT.loaded=true;ctPaint();
+  },function(e){CT.err=(e&&e.message)||'불러오지 못했습니다.';CT.loaded=true;ctPaint();});
+}
+/* 배정됐는데 최근 통화가 없는 DB 수 — 조회 범위(7일) 안에 기록이 없으면 미접촉으로 본다 */
+function ctCold(uid,dbs,calls){
+  var touched={};
+  calls.forEach(function(c){if(c.db_id)touched[c.db_id]=1;});
+  return dbs.filter(function(d){return d.assigned_to===uid&&!touched[d.id];}).length;
+}
+
+function ctJudge(p){
+  var n=CK_ITEMS.day.length,half=Math.ceil(n/2),gaps=[];
+  if(p.day.d4&&p.calls===0)gaps.push('전화 5통을 체크했는데 CRM 통화 기록이 오늘 0건입니다');
+  if(p.day.d1&&!p.att)gaps.push('출근 체크는 했는데 출근 기록이 없습니다');
+  if(p.day.d8&&p.fact===0)gaps.push('팩트파인딩을 체크했는데 오늘 저장된 고객이 없습니다');
+  var low=p.streak.filter(function(x){return x<half;}).length===3;
+  if(p.nDay===0)return {lv:'red',t:'아직 아무것도 체크하지 않았습니다.'+(p.att?'':' 출근 기록도 없습니다.'),gaps:gaps};
+  if(low)return {lv:'red',t:'사흘 연속 절반을 못 채웠습니다. 최근 '+p.streak.join('·')+'개.',gaps:gaps};
+  if(gaps.length)return {lv:'amber',t:gaps[0],gaps:gaps};
+  if(p.cold!=null&&p.cold>=10)return {lv:'amber',t:'손 안 댄 배정 DB가 '+p.cold+'건 남아 있습니다.',gaps:gaps};
+  if(p.nDay<half)return {lv:'amber',t:'오늘 '+p.nDay+'개. 아직 시간이 있습니다.',gaps:gaps};
+  return {lv:'ok',t:'오늘 '+p.nDay+'개. 이름 한 번 불러 주세요.',gaps:gaps};
+}
+function ctItems(){return CT.tab==='week'?CK_ITEMS.week:CK_ITEMS.day;}
+function ctDone(p){return CT.tab==='week'?p.nWeek:p.nDay;}
+function ctMap(p){return CT.tab==='week'?p.week:p.day;}
+function ctView(){
+  var arr=CT.people.filter(function(p){return !CT.team||p.team===CT.team;});
+  if(CT.sort==='name')arr.sort(function(a,b){return a.name<b.name?-1:1;});
+  else{
+    var w={red:0,amber:1,ok:2};
+    arr.sort(function(a,b){
+      var x=w[ctJudge(a).lv],y=w[ctJudge(b).lv];
+      return x!==y?x-y:ctDone(a)-ctDone(b);});
+  }
+  return arr;
+}
+function ctGo(tab){CT.tab=tab;ctPaint();}
+function ctSort(s){CT.sort=s;ctPaint();}
+function ctTeam(t){CT.team=t;ctPaint();}
+function ctToggle(id){CT.open[id]=!CT.open[id];ctPaint();}
+function ctNum(v,u){return v==null?'<span style="color:var(--ink-6)">—</span>':v+'<em>'+u+'</em>';}
+
+function ctRowHtml(p){
+  var j=ctJudge(p),d=ctDone(p),t=ctItems().length,pct=t?Math.round(d/t*100):0;
+  var h='<div class="ct-row '+j.lv+'">'+
+    '<button class="ct-hd" type="button" onclick="ctToggle(\''+p.id+'\')">'+
+    '<span class="ct-who"><span class="ct-nm">'+osEsc(p.name)+
+      (p.team?'<span class="ct-tag">'+osEsc(p.team)+'</span>':'')+
+      (p.att?'':'<span class="ct-tag" style="background:var(--neg-l,#FEF2F2);color:var(--neg)">미출근</span>')+
+    '</span><span class="ct-jd">'+osEsc(j.t)+'</span></span>'+
+    '<span class="ct-g"><span class="ct-gn">'+d+'<em>/'+t+'</em></span>'+
+      '<span class="ct-gb"><i style="width:'+pct+'%"></i></span></span>'+
+    '<span class="ct-car">'+(CT.open[p.id]?'▾':'▸')+'</span></button>';
+  if(CT.open[p.id]){
+    var m=ctMap(p);
+    h+='<div class="ct-bd"><div class="ct-sec">'+(CT.tab==='week'?'이번 주 체크':'오늘 체크')+'</div><div class="ct-its">'+
+      ctItems().map(function(r){
+        var y=!!m[r[0]];
+        return '<div class="ct-it'+(y?'':' no')+'"><i>'+(y?'✓':'·')+'</i>'+osEsc(r[1])+'</div>';
+      }).join('')+'</div>'+
+      '<div class="ct-sec">서버 기록</div><div class="ct-fx">'+
+        '<div><div class="k">통화</div><div class="v">'+ctNum(p.calls,'건')+'</div></div>'+
+        '<div><div class="k">약속</div><div class="v">'+ctNum(p.appt,'건')+'</div></div>'+
+        '<div><div class="k">미접촉 DB</div><div class="v">'+ctNum(p.cold,'건')+'</div></div>'+
+        '<div><div class="k">팩트파인딩</div><div class="v">'+ctNum(p.fact,'명')+'</div></div>'+
+        '<div><div class="k">제안서</div><div class="v">'+ctNum(p.prop,'건')+'</div></div>'+
+        '<div><div class="k">최근 3일</div><div class="v" style="font-size:12px">'+p.streak.join('·')+'</div></div>'+
+      '</div>';
+    if(j.gaps.length){
+      h+='<div class="ct-gap"><b>체크와 기록이 다릅니다</b><br>'+
+        j.gaps.map(function(g){return osEsc(g);}).join('<br>')+
+        '<br><span style="color:#B45309">기록이 늦은 것일 수 있습니다. 먼저 물어보고 판단합니다.</span></div>';
+    }
+    h+='<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'crm\')">DB 통합 CRM</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'clients\')">고객 365일</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'ckboard\')">내 체크판</button>'+
+    '</div></div>';
+  }
+  return h+'</div>';
+}
+
+function ctInnerHtml(){
+  if(!CT.loaded)return '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">불러오는 중…</div></div>';
+  if(CT.err)return '<div class="card"><div class="card-body"><div class="notice">'+CT.err+'</div></div></div>';
+  var arr=ctView(),all=CT.people.filter(function(p){return !CT.team||p.team===CT.team;});
+  var h='<div class="ct-sum">'+
+    '<div><div class="k">출근</div><div class="v">'+all.filter(function(p){return p.att;}).length+
+      '<em>/'+all.length+'</em></div></div>'+
+    '<div><div class="k">아직 0개</div><div class="v" style="color:var(--neg)">'+
+      all.filter(function(p){return p.nDay===0;}).length+'<em>명</em></div></div>'+
+    '<div><div class="k">봐야 할 사람</div><div class="v" style="color:var(--warn)">'+
+      all.filter(function(p){return ctJudge(p).lv!=='ok';}).length+'<em>명</em></div></div>'+
+  '</div>';
+  h+='<div class="ck-tabs">'+
+    '<button class="ck-tab'+(CT.tab==='today'?' on':'')+'" type="button" onclick="ctGo(\'today\')">오늘</button>'+
+    '<button class="ck-tab'+(CT.tab==='week'?' on':'')+'" type="button" onclick="ctGo(\'week\')">이번 주</button>'+
+  '</div>';
+  h+='<div class="btn-row" style="margin-bottom:12px">'+
+    '<button class="btn '+(CT.sort==='sig'?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" onclick="ctSort(\'sig\')">신호순</button>'+
+    '<button class="btn '+(CT.sort==='name'?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" onclick="ctSort(\'name\')">이름순</button>'+
+    '<button class="btn '+(CT.team===''?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" onclick="ctTeam(\'\')">전체</button>'+
+    CT.teams.map(function(t){
+      return '<button class="btn '+(CT.team===t.name?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" '+
+        'onclick="ctTeam(\''+osEsc(t.name).replace(/'/g,"\\'")+'\')">'+osEsc(t.name)+'</button>';
+    }).join('')+
+  '</div>';
+  if(CT.warn.length)h+='<div class="notice">'+osEsc(CT.warn.join(' · '))+
+    ' 항목은 읽을 권한이 없어 <b>—</b>로 표시됩니다. 체크 기준 판단은 그대로 됩니다.</div>';
+  h+=arr.length?arr.map(ctRowHtml).join(''):
+    '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">해당하는 팀원이 없습니다.</div></div>';
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧭</span>어떻게 판단하나</div>'+
+    '<div class="card-desc">숫자를 평가하지 않습니다. 체크가 비어 있는 곳과, 체크는 됐는데 기록이 없는 곳만 봅니다.</div></div>'+
+    '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.9">'+
+    '<b style="color:var(--neg)">빨강</b> — 오늘 체크가 0개 → 출근 시간에 바로 연락<br>'+
+    '<b style="color:var(--neg)">빨강</b> — 3일 연속 절반 미만 → 1:1로 무엇이 막혔는지<br>'+
+    '<b style="color:var(--warn)">노랑</b> — 체크는 있는데 기록이 없음 → 기록 습관부터. 다그치지 않습니다<br>'+
+    '<b style="color:var(--pos)">초록</b> — 나머지 → 조회에서 이름 부르기'+
+    '</div></div></div>';
+  return h;
+}
+function ctPaint(){var el=document.getElementById('ctPane');if(el)el.innerHTML=ctInnerHtml();}
+function renderCkTeam(){
+  ckCss();
+  if(!ctCanView()){
+    return osPage('팀','팀 체크 현황','이 화면은 지점장·관리자만 볼 수 있습니다.',
+      '<div class="card"><div class="card-body"><div class="notice">'+
+      '팀원의 체크는 <b>본인과 팀장·관리자</b>만 봅니다. 내 체크는 실행 체크판에서 확인하세요.</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="go(\'ckboard\')">실행 체크판 열기</button></div>'+
+      '</div></div>');
+  }
+  var d=ckNow(),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('팀','팀 체크 현황',
+    ds+' 기준 · 본인이 체크한 것으로 봅니다. 활동 기록이므로 고객 정보는 표시하지 않습니다.',
+    '<div id="ctPane">'+ctInnerHtml()+'</div>');
+}
+function osCkTeamAfterRender(){
+  if(!ctCanView())return;
+  CT.loaded=false;CT.err='';ctPaint();ctLoad();
+}
+
 function renderOrg(){
   var list=orgLoad();
   var body=''
