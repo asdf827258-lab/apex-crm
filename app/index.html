@@ -1216,9 +1216,30 @@ function aiModelNow(){return AI_FORCE_MODEL||getModel();}
 var AI_TIMEOUT_TEXT=120000;    /* 글만 보낼 때 2분 */
 var AI_TIMEOUT_VISION=300000;  /* 페이지 이미지를 함께 보낼 때 5분 */
 var AI_BODY_VISION=400000;     /* 이 크기를 넘으면 이미지가 실린 요청으로 본다 */
-var AI_IMG_BUDGET=4200000;     /* 한 요청에 담을 이미지 총량 — 중계 서버가 보통 4~6MB 에서 끊는다 */
 var AI_IMG_MIN_SCALE=0.62;     /* 이보다 더 줄이면 담보 표의 숫자가 뭉개진다. 화질을 지키고 장수를 줄인다 */
-var AI_IMG_MAX=24;             /* 장수 상한 */
+
+/* ── 한 번에 보낼 수 있는 양은 AI 가 아니라 '중간에 누가 있느냐' 가 정한다 ──
+   회사 공용 서버를 거치면 그 서버가 4~6MB 에서 끊는다. 이게 지금의 병목이다.
+   개인 키를 넣으면 그 서버를 거치지 않고 AI 로 바로 가므로 훨씬 많이 보낼 수 있다.
+   무료 Gemini 키만 넣어도 한 번에 읽는 양이 세 배 넘게 늘어난다. */
+function aiSendLimit(genId){
+  var prov='claude';
+  try{if(typeof providerForGen==='function')prov=providerForGen(genId);}catch(e){}
+  if(prov==='gemini'){
+    var gk='';try{gk=(typeof getGeminiKey==='function')?getGeminiKey():'';}catch(e){}
+    if(gk)return {bytes:15000000,imgs:40,direct:true,who:'내 Gemini 키 — 구글로 바로'};
+    return {bytes:4200000,imgs:24,direct:false,who:'회사 공용 서버 경유'};
+  }
+  var own=false;
+  try{own=(typeof getConn==='function'&&getConn()!=='proxy'&&typeof getKey==='function'&&!!getKey());}catch(e){}
+  if(own)return {bytes:18000000,imgs:60,direct:true,who:'내 Claude 키 — 앤트로픽으로 바로'};
+  return {bytes:4200000,imgs:24,direct:false,who:'회사 공용 서버 경유'};
+}
+function aiSendLimitNote(genId){
+  var L=aiSendLimit(genId);
+  return '한 번에 읽는 양 <b>약 '+L.imgs+'장</b> · '+osEsc(L.who)+
+    (L.direct?'':' — 홈 위쪽 <b>내 무료 AI 키</b>를 넣으면 <b>40장</b>까지 늘어납니다');
+}
 
 function aiFetch(url,opts,ms){
   if(typeof AbortController==='undefined')return fetch(url,opts);
@@ -1268,27 +1289,31 @@ function aiShrinkOne(im,scale,q){
 }
 /* 장수를 먼저 자르지 않고 해상도를 낮춰 최대한 다 읽게 한다.
    그래도 넘치면 그때만 뒤에서 덜어내고, 몇 장을 읽었는지 화면에 남긴다. */
-function aiFitImages(imgs){
-  imgs=(imgs||[]).slice(0,AI_IMG_MAX);
-  if(!imgs.length)return Promise.resolve({imgs:imgs,note:'',shrunk:false});
+function aiFitImages(imgs,genId){
+  var L=aiSendLimit(genId),BUD=L.bytes;
+  var all0=(imgs||[]).length;
+  imgs=(imgs||[]).slice(0,L.imgs);
+  if(!imgs.length)return Promise.resolve({imgs:imgs,note:'',shrunk:false,dropped:0});
   var total=aiImgBytes(imgs);
-  if(total<=AI_IMG_BUDGET)return Promise.resolve({imgs:imgs,note:'',shrunk:false});
+  if(total<=BUD)return Promise.resolve({imgs:imgs,shrunk:false,dropped:all0-imgs.length,
+    note:(all0>imgs.length)?('앞 '+imgs.length+'장을 원본 화질로 판독했습니다 (뒤 '+(all0-imgs.length)+'장 제외).'):''});
   /* 읽을 수 있는 선(AI_IMG_MIN_SCALE)까지만 줄인다. 그래도 안 담기면 장수를 줄이고 몇 장을 뺐는지 알린다.
      흐려서 못 읽는 20장보다, 또렷하게 읽히는 12장이 낫다. */
-  var scale=Math.max(AI_IMG_MIN_SCALE,Math.min(0.95,Math.sqrt(AI_IMG_BUDGET/total)));
+  var scale=Math.max(AI_IMG_MIN_SCALE,Math.min(0.95,Math.sqrt(BUD/total)));
   var q=(scale<0.8)?0.74:0.80;
   var chain=Promise.resolve(),out=[];
   imgs.forEach(function(im){chain=chain.then(function(){
     return aiShrinkOne(im,scale,q).then(function(r){out.push(r);});});});
   return chain.then(function(){
-    var all=out.length,dropped=0;
-    while(aiImgBytes(out)>AI_IMG_BUDGET&&out.length>1){out.pop();dropped++;}
+    var all=out.length,dropped=all0-out.length;
+    while(aiImgBytes(out)>BUD&&out.length>1){out.pop();dropped++;}
     var pct=Math.round(scale*100);
     return {imgs:out,shrunk:true,dropped:dropped,
       note:dropped
-        ?('앞 '+out.length+'장을 판독했습니다 (화질 '+pct+'%). 뒤 '+dropped+'장은 한 번에 보낼 수 있는 양을 넘어 제외했습니다 — 담보 표가 있는 페이지만 올리면 전부 읽습니다.')
+        ?('앞 '+out.length+'장을 판독했습니다 (화질 '+pct+'%). 뒤 '+dropped+'장은 한 번에 보낼 수 있는 양을 넘어 제외했습니다.'+
+          (L.direct?' 담보 표가 있는 페이지만 올리면 전부 읽습니다.':' 내 무료 AI 키를 넣으면 한 번에 40장까지 읽습니다.'))
         :('용량에 맞춰 화질 '+pct+'%로 '+all+'장 전부 판독했습니다.')};
-  },function(){return {imgs:imgs.slice(0,10),dropped:Math.max(0,imgs.length-10),
+  },function(){return {imgs:imgs.slice(0,10),dropped:Math.max(0,all0-10),
     note:'용량이 커서 앞 10장만 판독했습니다.',shrunk:true};});
 }
 
@@ -4581,7 +4606,8 @@ function prFormInner(){
         : '<div style="border:1px dashed #D7E0EC;border-radius:13px;padding:16px;background:#FCFDFF;display:flex;align-items:center;justify-content:center">'+
           '<div style="font-size:12px;color:#7A8698;line-height:1.75;text-align:center">전후 비교가 필요하면<br><b>🔄 전후 비교 제안서</b> 탭을 선택하세요</div></div>')+
     '</div>';
-    h+='<div class="acad-note" style="margin-bottom:12px">첨부 '+(nB+nA)+'개 · PDF 1개당 최대 '+PDF_MAX_MB+'MB · 이미지형은 앞 16장까지 판독합니다. '+
+    h+='<div class="acad-note" style="margin-bottom:12px">첨부 '+(nB+nA)+'개 · PDF 1개당 최대 '+PDF_MAX_MB+'MB · '+
+      (typeof aiSendLimitNote==='function'?aiSendLimitNote('proposal'):'')+'. '+
       ((nB+nA)?'<button class="acad-mini" onclick="prClearFiles()">전체 비우기</button>':'')+'</div>';
   }
 
@@ -4661,7 +4687,7 @@ function prGen(){
     user+='\n\n지정한 JSON 형식만 출력한다.';
 
     if(allImgs.length){
-      return aiFitImages(allImgs).then(function(fit){
+      return aiFitImages(allImgs,'proposal').then(function(fit){
         var use=fit.imgs;
         if(btn)btn.textContent='두뇌가 판독 중… ('+use.length+'장)';
         var note='\n\n[첨부 이미지 안내]\n아래 순서로 페이지 이미지가 첨부되어 있습니다. 어느 문서인지 매핑을 참고해 직접 읽고 표·숫자를 판독하세요.\n'+manifest.join('\n');
@@ -11609,7 +11635,8 @@ function runPdf(id){
   if(planParts.length){missing=false;hasAny=true;}
   if(missing){toast('필수 PDF를 첨부하세요');return;}
   if(!hasAny){toast('PDF를 첨부하거나, 위에서 "AI 제안서 결과로 만들기"를 켜세요');return;}
-  res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>PDF에서 내용 추출 중…</div>';
+  res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>PDF에서 내용 추출 중…'+
+    '<div style="margin-top:5px;font-size:11px;color:var(--ink-5);font-weight:600">'+aiSendLimitNote(id)+'</div></div>';
   Promise.all(jobs).then(function(parts){
     parts=planParts.concat(parts);
     var allImgs=[],manifest=[],idx=0;
@@ -11626,7 +11653,7 @@ function runPdf(id){
     var spec=p.build(parts,collectPdfOpts(p));
     if(hasImg){
       res.innerHTML='<div class="loading"><div class="spinner"></div>페이지 이미지 용량을 맞추는 중…</div>';
-      return aiFitImages(allImgs).then(function(fit){
+      return aiFitImages(allImgs,id).then(function(fit){
         var use=fit.imgs;
         res.innerHTML='<div class="loading"><div class="spinner"></div>이미지형 제안서를 AI가 판독·작성 중… ('+use.length+'장)'+
           (fit.note?('<div style="margin-top:5px;font-size:11px;color:var(--ink-5);font-weight:600">'+esc(fit.note)+'</div>'):'')+'</div>';
