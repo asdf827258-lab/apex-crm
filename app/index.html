@@ -2365,6 +2365,7 @@ function osTabProbe(tab){
   if(tab==='academy')return renderAcademy();
   if(tab==='ckboard')return renderCkBoard();
   if(tab==='ckteam')return renderCkTeam();
+  if(tab==='teamx')return renderTeamX();
   if(tab==='health')return renderHealth();
   if(tab==='voice')return renderVoice();
   if(tab==='org')return renderOrg();
@@ -3360,7 +3361,7 @@ var TABS=[
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
- {group:'성장·교육',items:[{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
+ {group:'성장·교육',items:[{id:'teamx',icon:'👥',title:'팀원 종합',cnt:''},{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
@@ -3545,9 +3546,12 @@ function go(tab){
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
   else if(tab==='ckboard'){dyn.innerHTML=renderCkBoard();if(typeof osCkBoardAfterRender==='function')osCkBoardAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
+  else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
   else if(tab==='health'){dyn.innerHTML=renderHealth();if(typeof osHealthAfterRender==='function')osHealthAfterRender();}
   else if(tab==='voice'){dyn.innerHTML=renderVoice();if(typeof osVoiceAfterRender==='function')osVoiceAfterRender();}
-  else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
+  else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();
+    if(typeof orgAccLoad==='function')orgAccLoad(function(){if(orgEditId!==null||true){var c=document.getElementById('orgFormCard');if(c&&typeof orgForm==='function'&&typeof orgLoad==='function')c.outerHTML=orgForm(orgLoad());}});
+    if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
   else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
@@ -9366,7 +9370,7 @@ function orgCanWrite(){
 }
 function orgRow(m){
   return {id:m.id,name:m.name||'',rank:m.rank||'',team:m.team||'',parent:m.parent||'',
-    phone:m.phone||'',insta:m.insta||'',photo:m.photo||'',
+    phone:m.phone||'',insta:m.insta||'',photo:m.photo||'',member_id:m.member_id||null,
     updated_at:new Date().toISOString(),
     updated_by:(OS.profile&&OS.profile.id)||null};
 }
@@ -9380,7 +9384,7 @@ function orgPull(force){
   if(ORGS.busy)return;
   if(ORGS.pulled&&!force){orgSyncPaint();return;}
   ORGS.busy='pull';orgSyncPaint();
-  sb.from('org_members').select('id,name,rank,team,parent,phone,insta,photo').then(function(r){
+  sb.from('org_members').select('id,name,rank,team,parent,phone,insta,photo,member_id').then(function(r){
     ORGS.busy='';
     if(r.error){ORGS.err=r.error.message||'';ORGS.srv=null;orgSyncPaint();return;}
     ORGS.err='';ORGS.pulled=true;ORGS.srv=r.data||[];
@@ -9515,6 +9519,30 @@ function orgSyncBarHtml(){
 }
 
 var orgEditId=null;
+/* 조직도의 사람과 로그인 계정을 잇는다. 이어야 그 사람의 활동·성장을 조직도에서 볼 수 있다. */
+var ORGACC={list:[],loaded:false};
+function orgAccLoad(cb){
+  if(ORGACC.loaded){if(cb)cb();return;}
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ORGACC.loaded=true;if(cb)cb();return;}
+  sb.from('profiles').select('id,name,role,active').order('name').then(function(r){
+    ORGACC.loaded=true;
+    if(!r.error)ORGACC.list=(r.data||[]).filter(function(x){return x.active!==false;});
+    if(cb)cb();
+  },function(){ORGACC.loaded=true;if(cb)cb();});
+}
+function orgAccOpts(cur){
+  var h='<option value="">— 연결 안 함 —</option>';
+  ORGACC.list.forEach(function(x){
+    h+='<option value="'+osEsc(x.id)+'"'+(x.id===cur?' selected':'')+'>'+osEsc(x.name||'이름 없음')+
+       ((typeof osRoleLabel==='function')?(' · '+osRoleLabel(x.role)):'')+'</option>';});
+  return h;
+}
+function orgAccName(id){
+  if(!id)return '';
+  for(var i=0;i<ORGACC.list.length;i++)if(ORGACC.list[i].id===id)return ORGACC.list[i].name||'';
+  return '';
+}
 function orgSeed(){return [
   {id:'m_lead',name:'본부장',rank:'본부장',team:'온탑본부',parent:'',phone:'',insta:'',photo:''},
   {id:'m_hq',name:'윤시현',rank:'사업단장',team:'온탑본부',parent:'m_lead',phone:'',insta:'',photo:''}
@@ -9591,6 +9619,7 @@ function orgSubmit(){
   var parent=orgVal('org_f_parent');
   var phone=orgVal('org_f_phone');
   var insta=orgInsta(orgVal('org_f_insta'));
+  var memberId=orgVal('org_f_member')||'';
   var list=orgLoad(),i,cur=null;
   if(orgEditId){for(i=0;i<list.length;i++){if(list[i].id===orgEditId){cur=list[i];break;}}}
   var photo;
@@ -9599,7 +9628,7 @@ function orgSubmit(){
   else photo='';
   if(parent===orgEditId)parent='';
   var saved;
-  if(cur){cur.name=name;cur.rank=rank;cur.team=team;cur.parent=parent;cur.phone=phone;cur.insta=insta;cur.photo=photo;saved=cur;}
+  if(cur){cur.name=name;cur.rank=rank;cur.team=team;cur.parent=parent;cur.phone=phone;cur.insta=insta;cur.photo=photo;cur.member_id=memberId;saved=cur;}
   else{saved={id:'m_'+Date.now()+'_'+Math.floor(Math.random()*1000),name:name,rank:rank,team:team,parent:parent,phone:phone,insta:insta,photo:photo};list.push(saved);}
   if(orgSave(list)){
     try{orgPushOne(saved);}catch(e){}
@@ -9678,6 +9707,12 @@ function orgForm(list){
       + fld('상위자(소속)','<select id="org_f_parent" style="'+IST+'">'+orgParentOpts(list,m.parent,orgEditId)+'</select>')
       + fld('연락처','<input id="org_f_phone" style="'+IST+'" value="'+osEsc(m.phone)+'" placeholder="010-0000-0000">')
       + fld('인스타 아이디','<input id="org_f_insta" style="'+IST+'" value="'+osEsc(m.insta)+'" placeholder="아이디 (@ 제외)">')
+      + '<div style="grid-column:1/-1">'+fld('로그인 계정 연결',
+          '<select id="org_f_member" style="'+IST+'">'+orgAccOpts(m.member_id||'')+'</select>'
+          +'<div style="font-size:11px;color:var(--ink-5);line-height:1.65;margin-top:4px">'
+          +'계정을 이으면 <b>팀원 종합</b>에서 이 사람의 출근·통화·제안서·성장이 함께 보입니다. '
+          +(ORGACC.list.length?'':'<b style="color:var(--warn)">계정 목록을 아직 못 읽었습니다 — 잠시 뒤 다시 열어 주세요.</b>')
+          +'</div>')+'</div>'
     + '</div>'
   + '</div>'
   + '<div style="margin-top:14px;display:flex;gap:8px">'
@@ -10212,6 +10247,332 @@ function ckCrmHtml(){
 function ckCrmPaint(){
   var el=document.getElementById('ckCrmBox');
   if(el)el.outerHTML=ckCrmHtml();
+}
+
+/* ════════ 팀원 종합 ════════
+   지금까지 팀을 보려면 팀 성장 대시보드·대표 브리핑·AI 조직 라이브·DB CRM 을 돌아야 했다.
+   같은 표를 네 번 읽어 다르게 그린 것뿐이었다.
+   여기서 한 사람의 하루가 왼쪽에서 오른쪽으로 흐른다 —
+   출근 · 전화 · 약속 · 고객 · 제안서 · 체크. 펼치면 그 사람의 성장까지 본다. */
+
+var TXM={rows:[],teams:[],teamOf:{},org:{},sugg:{},loaded:false,busy:false,err:'',warn:[],
+  sort:'sig',team:'',open:{},at:''};
+
+function txDay(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-(n||0));return d.toISOString().slice(0,10);}
+function txCanView(){
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  var r=(typeof osRole==='function')?osRole():'member';
+  return ['admin','owner','lead','manager','leader','master','branch_manager','education_manager'].indexOf(r)>=0;
+}
+function txD(s){return (''+(s||'')).slice(0,10);}
+
+function txLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){TXM.err='서버에 연결되어 있지 않습니다.';TXM.loaded=true;txPaint();return;}
+  TXM.busy=true;TXM.err='';txPaint();
+  var t=txDay(0),d7=txDay(6),d28=txDay(27),d56=txDay(55);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('profiles').select('id,name,role,active,workspace,plan').order('name')),
+    q(sb.from('teams').select('id,name,leader_id')),
+    q(sb.from('team_members').select('team_id,member_id')),
+    q(sb.from('org_members').select('id,name,rank,team,parent,member_id')),
+    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d56)),
+    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d56+'T00:00:00')),
+    q(sb.from('dbs').select('id,assigned_to')),
+    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d56+'T00:00:00')),
+    q(sb.from('saved_reports').select('advisor_id,kind,created_at').gte('created_at',d56+'T00:00:00')),
+    q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d56)),
+    q(sb.from('suggestions').select('id,member_id,title,status,created_at').order('created_at',{ascending:false}).limit(200))
+  ]).then(function(r){
+    TXM.busy=false;TXM.loaded=true;TXM.warn=[];
+    if(r[0].error){TXM.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');txPaint();return;}
+    var profs=(r[0].data||[]).filter(function(x){
+      return x.active!==false&&(x.workspace==null||x.workspace==='both'||x.workspace==='apex');});
+    TXM.teams=r[1].error?[]:(r[1].data||[]);
+    TXM.teamOf={};if(!r[2].error)(r[2].data||[]).forEach(function(m){TXM.teamOf[m.member_id]=m.team_id;});
+    TXM.org={};
+    if(r[3].error)TXM.warn.push('조직도');
+    else (r[3].data||[]).forEach(function(o){if(o.member_id)TXM.org[o.member_id]=o;});
+
+    var att=r[4].error?[]:(r[4].data||[]);
+    var calls=r[5].error?null:(r[5].data||[]);
+    var dbs=r[6].error?null:(r[6].data||[]);
+    var cli=r[7].error?null:(r[7].data||[]);
+    var rep=r[8].error?null:(r[8].data||[]);
+    var chk=r[9].error?null:(r[9].data||[]);
+    var sg=r[10].error?[]:(r[10].data||[]);
+    if(calls===null||dbs===null)TXM.warn.push('전화·약속');
+    if(cli===null)TXM.warn.push('고객');
+    if(rep===null)TXM.warn.push('제안서');
+    if(chk===null)TXM.warn.push('체크판');
+
+    TXM.sugg={};sg.forEach(function(x){(TXM.sugg[x.member_id]=TXM.sugg[x.member_id]||[]).push(x);});
+
+    var touched={};if(calls)calls.forEach(function(c){if(c.db_id)touched[c.db_id]=1;});
+    var dayIds={};if(typeof CK_ITEMS!=='undefined')CK_ITEMS.day.forEach(function(x){dayIds[x[0]]=1;});
+    var cntDay=function(o){var n=0,k;for(k in o)if(o[k]&&dayIds[k])n++;return n;};
+
+    /* 기간을 넣으면 그 기간의 숫자를 낸다 — 이번 4주와 지난 4주를 같은 함수로 잰다 */
+    var span=function(id,from,to){
+      var inR=function(s){var d=txD(s);return d>=from&&d<=to;};
+      var mine=calls?calls.filter(function(c){return c.created_by===id&&inR(c.call_at);}):null;
+      var ck=0;
+      if(chk)chk.forEach(function(row){
+        if(row.member_id!==id||row.scope!=='day')return;
+        if(row.check_date<from||row.check_date>to)return;
+        ck+=cntDay(row.items||{});
+      });
+      return {
+        att:att.filter(function(a){return a.member_id===id&&a.att_date>=from&&a.att_date<=to;}).length,
+        call:mine?mine.length:null,
+        appt:mine?mine.filter(function(c){return c.result==='상담';}).length:null,
+        cli:cli?cli.filter(function(c){return c.advisor_id===id&&inR(c.created_at);}).length:null,
+        rep:rep?rep.filter(function(c){return c.advisor_id===id&&inR(c.created_at);}).length:null,
+        ck:chk?ck:null
+      };
+    };
+
+    TXM.rows=profs.map(function(p){
+      var tm=TXM.teams.filter(function(x){return x.id===TXM.teamOf[p.id];})[0];
+      var today=span(p.id,t,t), week=span(p.id,d7,t);
+      var now4=span(p.id,d28,t), prev4=span(p.id,d56,txDay(28));
+      var todayCk=0;
+      if(chk)chk.forEach(function(row){
+        if(row.member_id===p.id&&row.scope==='day'&&row.check_date===t)todayCk=cntDay(row.items||{});});
+      /* 최근 14일 활동 — 막대로 흐름을 본다 */
+      var spark=[];
+      for(var i=13;i>=0;i--){var d=txDay(i);
+        var n=0;
+        if(calls)n+=calls.filter(function(c){return c.created_by===p.id&&txD(c.call_at)===d;}).length;
+        if(cli)n+=cli.filter(function(c){return c.advisor_id===p.id&&txD(c.created_at)===d;}).length;
+        if(rep)n+=rep.filter(function(c){return c.advisor_id===p.id&&txD(c.created_at)===d;}).length;
+        spark.push(n);
+      }
+      var meId=null;try{meId=OS.session.user.id;}catch(e){}
+      return {
+        id:p.id,name:p.name||'(이름 없음)',role:p.role,plan:p.plan,me:(p.id===meId),
+        team:tm?tm.name:'',org:TXM.org[p.id]||null,
+        attToday:att.filter(function(a){return a.member_id===p.id&&a.att_date===t;}).length>0,
+        today:today,week:week,now4:now4,prev4:prev4,ck:todayCk,
+        cold:(dbs&&calls)?dbs.filter(function(d){return d.assigned_to===p.id&&!touched[d.id];}).length:null,
+        held:dbs?dbs.filter(function(d){return d.assigned_to===p.id;}).length:null,
+        spark:spark,
+        sugg:(TXM.sugg[p.id]||[])
+      };
+    });
+    TXM.at=new Date().toLocaleTimeString('ko-KR');
+    txPaint();
+  },function(e){TXM.busy=false;TXM.loaded=true;TXM.err=(e&&e.message)||'불러오지 못했습니다.';txPaint();});
+}
+
+/* 판단 — 숫자를 평가하지 않고, 비어 있는 곳과 어긋난 곳만 본다 */
+function txJudge(p){
+  /* 나 자신은 관리 대상이 아니다. 매일 빨갛게 떠서 진짜 신호를 가린다 */
+  if(p.me)return {lv:'ok',t:'나'};
+  var n=(typeof CK_ITEMS!=='undefined')?CK_ITEMS.day.length:11,half=Math.ceil(n/2);
+  if(!p.attToday&&p.ck===0&&(p.today.call===0||p.today.call===null))
+    return {lv:'red',t:'오늘 아직 아무 기록이 없습니다.'};
+  if(p.ck===0&&p.today.call===0)return {lv:'red',t:'출근은 했는데 오늘 활동 기록이 없습니다.'};
+  if(p.today.call!==null&&p.ck>=half&&p.today.call===0)
+    return {lv:'amber',t:'체크는 '+p.ck+'개인데 통화 기록이 0건입니다. 안 적은 것일 수 있습니다.'};
+  if(p.cold!=null&&p.cold>=10)return {lv:'amber',t:'손 안 댄 배정 DB가 '+p.cold+'건입니다.'};
+  if(p.ck<half)return {lv:'amber',t:'오늘 체크 '+p.ck+'개. 아직 시간이 있습니다.'};
+  return {lv:'ok',t:'오늘 체크 '+p.ck+'개'+(p.today.call?(' · 통화 '+p.today.call+'건'):'')+'.'};
+}
+/* 최근 4주와 그 앞 4주를 견준다 — 이게 성장이다 */
+function txGrow(p){
+  var keys=[['call','전화'],['appt','약속'],['cli','고객'],['rep','제안서'],['ck','체크'],['att','출근']];
+  var out=[];
+  keys.forEach(function(k){
+    var a=p.now4[k[0]],b=p.prev4[k[0]];
+    if(a===null||b===null)return;
+    var diff=a-b,pct=b?Math.round(diff/b*100):(a?100:0);
+    out.push({k:k[1],now:a,prev:b,diff:diff,pct:pct});
+  });
+  return out;
+}
+function txSort(v){TXM.sort=v;txPaint();}
+function txTeam(v){TXM.team=v;txPaint();}
+function txToggle(id){TXM.open[id]=!TXM.open[id];txPaint();}
+function txNum(v,u){return v==null?'<span style="color:var(--ink-6)">—</span>':(v+(u||''));}
+
+function txSparkHtml(a){
+  var mx=Math.max.apply(null,a.concat([1]));
+  return '<div class="tx-sp">'+a.map(function(v,i){
+    var h=Math.round(v/mx*100);
+    return '<i style="height:'+Math.max(6,h)+'%" title="'+(13-i)+'일 전 · '+v+'건"></i>';
+  }).join('')+'</div>';
+}
+function txGrowHtml(p){
+  var g=txGrow(p);
+  if(!g.length)return '<div style="font-size:11.5px;color:var(--ink-5)">비교할 기록이 아직 없습니다.</div>';
+  return '<div class="tx-gw">'+g.map(function(x){
+    var up=x.diff>0,same=x.diff===0;
+    var col=same?'var(--ink-4)':(up?'var(--pos)':'var(--neg)');
+    var sign=same?'—':(up?'▲':'▼');
+    return '<div class="tx-g1"><div class="k">'+osEsc(x.k)+'</div>'+
+      '<div class="v">'+x.now+'<em> / 지난 4주 '+x.prev+'</em></div>'+
+      '<div class="d" style="color:'+col+'">'+sign+' '+Math.abs(x.diff)+
+      (x.prev?(' ('+(x.pct>0?'+':'')+x.pct+'%)'):'')+'</div></div>';
+  }).join('')+'</div>';
+}
+function txRowHtml(p){
+  var j=txJudge(p),op=!!TXM.open[p.id];
+  var h='<div class="tx-r '+j.lv+'">'+
+    '<button class="tx-h" type="button" onclick="txToggle(\''+p.id+'\')">'+
+    '<span class="tx-who"><span class="tx-nm">'+osEsc(p.name)+
+      (p.me?'<span class="tx-tag" style="background:var(--primary-pale);color:var(--primary)">나</span>':'')+
+      (p.org&&p.org.rank?'<span class="tx-tag">'+osEsc(p.org.rank)+'</span>':'')+
+      (p.team?'<span class="tx-tag">'+osEsc(p.team)+'</span>':'')+
+      (p.attToday?'':'<span class="tx-tag red">미출근</span>')+
+    '</span><span class="tx-jd">'+osEsc(j.t)+'</span></span>'+
+    '<span class="tx-mini">'+
+      '<b>'+txNum(p.today.call)+'</b><em>통화</em>'+
+      '<b>'+txNum(p.today.appt)+'</b><em>약속</em>'+
+      '<b>'+p.ck+'</b><em>체크</em>'+
+    '</span>'+
+    txSparkHtml(p.spark)+
+    '<span class="tx-car">'+(op?'▾':'▸')+'</span></button>';
+  if(op){
+    h+='<div class="tx-b">'+
+      '<div class="tx-sec">오늘</div><div class="tx-fx">'+
+        '<div><div class="k">출근</div><div class="v">'+(p.attToday?'○':'<span style="color:var(--neg)">×</span>')+'</div></div>'+
+        '<div><div class="k">통화</div><div class="v">'+txNum(p.today.call,'건')+'</div></div>'+
+        '<div><div class="k">약속</div><div class="v">'+txNum(p.today.appt,'건')+'</div></div>'+
+        '<div><div class="k">고객 등록</div><div class="v">'+txNum(p.today.cli,'명')+'</div></div>'+
+        '<div><div class="k">제안서</div><div class="v">'+txNum(p.today.rep,'건')+'</div></div>'+
+        '<div><div class="k">체크</div><div class="v">'+p.ck+'</div></div>'+
+      '</div>'+
+      '<div class="tx-sec">이번 주</div><div class="tx-fx">'+
+        '<div><div class="k">출근</div><div class="v">'+p.week.att+'<em>일</em></div></div>'+
+        '<div><div class="k">통화</div><div class="v">'+txNum(p.week.call,'건')+'</div></div>'+
+        '<div><div class="k">약속</div><div class="v">'+txNum(p.week.appt,'건')+'</div></div>'+
+        '<div><div class="k">고객</div><div class="v">'+txNum(p.week.cli,'명')+'</div></div>'+
+        '<div><div class="k">제안서</div><div class="v">'+txNum(p.week.rep,'건')+'</div></div>'+
+        '<div><div class="k">배정 DB</div><div class="v">'+txNum(p.held,'건')+
+          (p.cold!=null&&p.cold?('<em> · 미접촉 '+p.cold+'</em>'):'')+'</div></div>'+
+      '</div>'+
+      '<div class="tx-sec">성장 — 최근 4주 vs 지난 4주</div>'+txGrowHtml(p)+
+      '<div class="tx-sec">조직</div>'+
+      '<div class="tx-org">'+(p.org
+        ? ('조직도 '+osEsc(p.org.rank||'-')+(p.org.team?(' · '+osEsc(p.org.team)):'')+
+           (p.org.parent?(' · 위 '+osEsc(p.org.parent)):''))
+        : '<span style="color:var(--warn)">조직도에 연결되어 있지 않습니다 — 조직도에서 이 사람에 계정을 연결하면 여기에 표시됩니다.</span>')+
+      '</div>';
+    if(p.sugg.length){
+      h+='<div class="tx-sec">올린 건의 '+p.sugg.length+'건</div><div class="tx-sg">'+
+        p.sugg.slice(0,4).map(function(x){
+          return '<div>· '+osEsc(x.title)+' <span style="color:var(--ink-5)">'+
+            osEsc((VOICE_ST&&VOICE_ST[x.status])||x.status)+'</span></div>';}).join('')+'</div>';
+    }
+    h+='<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'crm\')">DB 통합 CRM</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'clients\')">고객 365일</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'org\')">조직도</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11px" onclick="go(\'voice\')">건의함</button>'+
+    '</div></div>';
+  }
+  return h+'</div>';
+}
+function txView(){
+  var arr=TXM.rows.filter(function(p){return !TXM.team||p.team===TXM.team;});
+  if(TXM.sort==='name')arr.sort(function(a,b){return a.name<b.name?-1:1;});
+  else if(TXM.sort==='act')arr.sort(function(a,b){
+    var s=function(x){return (x.today.call||0)+(x.today.rep||0)+x.ck;};return s(b)-s(a);});
+  else{var w={red:0,amber:1,ok:2};
+    arr.sort(function(a,b){var x=w[txJudge(a).lv],y=w[txJudge(b).lv];
+      return x!==y?x-y:(a.ck-b.ck);});}
+  return arr;
+}
+function txInnerHtml(){
+  if(!TXM.loaded)return '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">불러오는 중…</div></div>';
+  if(TXM.err)return '<div class="card"><div class="card-body"><div class="notice">'+osEsc(TXM.err)+'</div></div></div>';
+  var arr=txView(),all=TXM.rows.filter(function(p){return !TXM.team||p.team===TXM.team;});
+  var h='<div class="ct-sum" style="margin-bottom:12px">'+
+    '<div><div class="k">출근</div><div class="v">'+all.filter(function(p){return p.attToday;}).length+
+      '<em>/'+all.length+'</em></div></div>'+
+    '<div><div class="k">오늘 활동 없음</div><div class="v" style="color:var(--neg)">'+
+      all.filter(function(p){return !p.me&&p.ck===0&&!p.today.call;}).length+'<em>명</em></div></div>'+
+    '<div><div class="k">봐야 할 사람</div><div class="v" style="color:var(--warn)">'+
+      all.filter(function(p){return txJudge(p).lv!=='ok';}).length+'<em>명</em></div></div>'+
+  '</div>';
+  h+='<div class="btn-row" style="margin-bottom:12px">'+
+    ['sig|신호순','act|활동순','name|이름순'].map(function(x){var a=x.split('|');
+      return '<button class="btn '+(TXM.sort===a[0]?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" '+
+        'onclick="txSort(\''+a[0]+'\')">'+a[1]+'</button>';}).join('')+
+    '<button class="btn '+(TXM.team===''?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" onclick="txTeam(\'\')">전체</button>'+
+    TXM.teams.map(function(t){
+      return '<button class="btn '+(TXM.team===t.name?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" '+
+        'onclick="txTeam(\''+osEsc(t.name).replace(/'/g,"\\'")+'\')">'+osEsc(t.name)+'</button>';}).join('')+
+    '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="txLoad()">새로고침</button>'+
+    (TXM.at?'<span style="font-size:11px;color:var(--ink-5)">'+osEsc(TXM.at)+'</span>':'')+
+  '</div>';
+  if(TXM.warn.length)h+='<div class="notice">'+osEsc(TXM.warn.join(' · '))+
+    ' 은(는) 읽을 권한이 없어 <b>—</b>로 둡니다. <b>migration_26_team.sql</b> 을 실행하면 채워집니다.</div>';
+  h+=arr.length?arr.map(txRowHtml).join('')
+    :'<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">해당하는 팀원이 없습니다.</div></div>';
+  return h;
+}
+function txPaint(){var el=document.getElementById('txPane');if(el)el.innerHTML=txInnerHtml();}
+function renderTeamX(){
+  txCss();
+  if(!txCanView()){
+    return osPage('팀','팀원 종합','지점장·관리자만 볼 수 있습니다.',
+      '<div class="card"><div class="card-body"><div class="notice">'+
+      '팀원의 활동은 <b>본인과 팀장·관리자</b>만 봅니다. 내 기록은 실행 체크판에서 확인하세요.</div>'+
+      '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="go(\'ckboard\')">실행 체크판 열기</button></div>'+
+      '</div></div>');
+  }
+  var d=new Date(Date.now()+9*3600*1000),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('팀','팀원 종합',
+    ds+' 기준 · 출근부터 제안서까지 한 줄로 봅니다. 이름을 누르면 그 사람의 이번 주와 성장이 펼쳐집니다.',
+    '<div id="txPane">'+txInnerHtml()+'</div>');
+}
+function osTeamXAfterRender(){if(!txCanView())return;TXM.loaded=false;txPaint();txLoad();}
+
+function txCss(){
+  if(typeof ckCss==='function')ckCss();
+  if(document.getElementById('txStyle'))return;
+  var st=document.createElement('style');st.id='txStyle';
+  st.textContent=
+    '.tx-r{background:#fff;border:1px solid var(--ink-7);border-radius:12px;margin-bottom:8px;overflow:hidden}'+
+    '.tx-r.red{border-left:3px solid var(--neg)}.tx-r.amber{border-left:3px solid var(--warn)}'+
+    '.tx-r.ok{border-left:3px solid var(--pos)}'+
+    '.tx-h{display:flex;align-items:center;gap:10px;padding:11px 13px;width:100%;text-align:left;'+
+      'background:none;border:0;cursor:pointer;font-family:inherit}'+
+    '.tx-h:hover{background:var(--ink-9)}'+
+    '.tx-who{flex:1;min-width:0}'+
+    '.tx-nm{display:flex;align-items:center;gap:5px;flex-wrap:wrap;font-size:13.5px;font-weight:800;letter-spacing:-.03em}'+
+    '.tx-tag{font-size:10px;font-weight:700;color:var(--ink-5);background:var(--ink-8);border-radius:99px;padding:1px 7px;letter-spacing:0}'+
+    '.tx-tag.red{background:var(--neg-l,#FEF2F2);color:var(--neg)}'+
+    '.tx-jd{display:block;font-size:11.5px;color:var(--ink-4);line-height:1.6;margin-top:3px}'+
+    '.tx-mini{flex:none;display:flex;gap:9px;align-items:baseline}'+
+    '.tx-mini b{font-family:var(--mono,ui-monospace,monospace);font-size:13px;font-weight:800;color:var(--ink-1)}'+
+    '.tx-mini em{font-style:normal;font-size:9.5px;color:var(--ink-5);font-weight:700;margin-left:-6px}'+
+    '.tx-sp{flex:none;display:flex;align-items:flex-end;gap:1.5px;height:22px;width:64px}'+
+    '.tx-sp i{flex:1;background:var(--primary);opacity:.55;border-radius:1px;min-height:2px}'+
+    '.tx-car{flex:none;color:var(--ink-5);font-size:11px}'+
+    '.tx-b{padding:0 13px 13px;border-top:1px solid var(--ink-8)}'+
+    '.tx-sec{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.06em;text-transform:uppercase;margin:13px 0 7px}'+
+    '.tx-fx{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}'+
+    '@media(min-width:720px){.tx-fx{grid-template-columns:repeat(6,1fr)}}'+
+    '.tx-fx div{background:var(--ink-9);border:1px solid var(--ink-7);border-radius:6px;padding:8px 9px}'+
+    '.tx-fx .k{font-size:9.5px;font-weight:700;color:var(--ink-5)}'+
+    '.tx-fx .v{font-family:var(--mono,ui-monospace,monospace);font-size:14px;font-weight:800;margin-top:1px;letter-spacing:-.03em}'+
+    '.tx-fx .v em{font-style:normal;font-size:10px;color:var(--ink-5);font-weight:700}'+
+    '.tx-gw{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}'+
+    '@media(min-width:720px){.tx-gw{grid-template-columns:repeat(3,1fr)}}'+
+    '.tx-g1{background:#fff;border:1px solid var(--ink-7);border-radius:7px;padding:9px 11px}'+
+    '.tx-g1 .k{font-size:10px;font-weight:700;color:var(--ink-5)}'+
+    '.tx-g1 .v{font-family:var(--mono,ui-monospace,monospace);font-size:15px;font-weight:800;margin-top:2px}'+
+    '.tx-g1 .v em{font-style:normal;font-size:10px;color:var(--ink-5);font-weight:700}'+
+    '.tx-g1 .d{font-size:11px;font-weight:800;margin-top:2px}'+
+    '.tx-org{font-size:12px;color:var(--ink-3);line-height:1.7;background:var(--ink-9);'+
+      'border:1px solid var(--ink-7);border-radius:7px;padding:9px 11px}'+
+    '.tx-sg{font-size:11.5px;color:var(--ink-3);line-height:1.9}';
+  document.head.appendChild(st);
 }
 
 /* ════════ 매일 점검 · 건의함 ════════
