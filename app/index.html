@@ -1036,6 +1036,25 @@ function geminiReady(){return !!getGeminiKey()||!!getGeminiProxy();}   /* 개인
 function aiReady(){return claudeReady()||geminiReady();}
 /* 고객 건강·계약 정보를 다루므로 무료 Gemini로 보내면 안 되는(=Claude 전용) 도구 */
 var CLAUDE_ONLY_GEN={med_silbi:1,med_checkup:1,med_disclosure:1,ref_underwrite:1,cs_feedback:1};
+/* ── 고객 정보가 들어가는 도구 — 개인 키가 있어도 회사 키로 보낸다 ──
+   개인 무료 키는 보낸 내용이 학습에 쓰일 수 있고, 판독 품질도 회사가 통제해야 한다.
+   회사 키가 없거나 실패하면 개인 키로 넘어가되(유연), 그 사실을 화면에 남긴다. */
+var AI_COMPANY_GEN={
+  proposal:1,bojang:1,baba:1,compare:1,katalk:1,
+  os_extract:1,os_analysis:1,os_report:1,
+  med_silbi:1,med_checkup:1,med_disclosure:1,ref_underwrite:1,cs_feedback:1,
+  consult_script:1,cs_assist:1,cs_needs:1,
+  contracts:1,endorse:1,claims:1,biz_deck:1,brain:1
+};
+function aiCompanyOnly(id){return !!(id&&AI_COMPANY_GEN[id]);}
+/* 회사 키로 보낼 도구인지 + 지금 회사 키가 있는지 */
+function aiCompanyReady(){
+  try{
+    if(typeof getGeminiProxy==='function'&&getGeminiProxy())return true;
+    if(typeof getConn==='function'&&getConn()==='proxy'&&typeof getProxy==='function'&&getProxy())return true;
+  }catch(e){}
+  return false;
+}
 /* 도구 id로 실제 사용할 공급자 결정
    - 사용자가 Gemini를 '명시적으로' 선택하고 Gemini가 준비됐으면 그 선택을 존중(민감 도구 포함).
    - 그렇지 않으면 민감 도구(CLAUDE_ONLY_GEN)는 Claude 우선. */
@@ -1226,7 +1245,12 @@ function aiSendLimit(genId){
   var prov='claude';
   try{if(typeof providerForGen==='function')prov=providerForGen(genId);}catch(e){}
   if(prov==='gemini'){
-    var gk='';try{gk=(typeof getGeminiKey==='function')?getGeminiKey():'';}catch(e){}
+    var gk='',gpx='';
+    try{gk=(typeof getGeminiKey==='function')?getGeminiKey():'';}catch(e){}
+    try{gpx=(typeof getGeminiProxy==='function')?getGeminiProxy():'';}catch(e){}
+    /* 고객 자료가 들어가는 도구는 개인 키가 있어도 회사 키로 간다 */
+    if(typeof aiCompanyOnly==='function'&&aiCompanyOnly(genId)&&gpx)
+      return {bytes:4200000,imgs:24,direct:false,who:'회사 AI — 고객 자료 도구'};
     if(gk)return {bytes:15000000,imgs:40,direct:true,who:'내 Gemini 키 — 구글로 바로'};
     return {bytes:4200000,imgs:24,direct:false,who:'회사 공용 서버 경유'};
   }
@@ -1236,9 +1260,10 @@ function aiSendLimit(genId){
   return {bytes:4200000,imgs:24,direct:false,who:'회사 공용 서버 경유'};
 }
 function aiSendLimitNote(genId){
-  var L=aiSendLimit(genId);
+  var L=aiSendLimit(genId),co=(typeof aiCompanyOnly==='function')&&aiCompanyOnly(genId);
   return '한 번에 읽는 양 <b>약 '+L.imgs+'장</b> · '+osEsc(L.who)+
-    (L.direct?'':' — 홈 위쪽 <b>내 무료 AI 키</b>를 넣으면 <b>40장</b>까지 늘어납니다');
+    (co?' (고객 자료가 들어가서 회사 AI로 보냅니다)'
+       :(L.direct?'':' — 홈 위쪽 <b>내 무료 AI 키</b>를 넣으면 <b>40장</b>까지 늘어납니다'));
 }
 
 function aiFetch(url,opts,ms){
@@ -1576,9 +1601,13 @@ function _geminiOnce(system,contents,maxTokens,mdl,key){
     });
   });
 }
-function callGemini(system,user,maxTokens,images,modelOverride){
-  var key=getGeminiKey();
-  if(!key && !getGeminiProxy())return Promise.reject(new Error('NO_KEY'));
+function callGemini(system,user,maxTokens,images,modelOverride,coOnly){
+  var pk=getGeminiKey(),gpx=getGeminiProxy();
+  var key=pk;
+  /* 고객 정보 도구는 개인 키를 건너뛰고 회사 키로 — 회사 키가 없으면 그때만 개인 키 */
+  if(coOnly&&gpx)key='';
+  var viaPersonal=!!key;
+  if(!key && !gpx)return Promise.reject(new Error('NO_KEY'));
   var mdl=modelOverride||getGeminiModel();
   var parts=[{text:user}];
   if(images&&images.length)images.forEach(function(im){parts.push({inlineData:{mimeType:im.mime||'image/jpeg',data:im.data}});});
@@ -1593,7 +1622,10 @@ function callGemini(system,user,maxTokens,images,modelOverride){
         contents.push({role:'user',parts:[{text:'방금 응답이 길이 제한으로 중간에 끊겼어. 마지막 글자 바로 다음부터, 인사말·머리말 없이 이어서 끝까지 완성해줘. 이미 쓴 내용은 반복하지 마.'}]});
         return step();
       }
-      AI_LAST={engine:'gemini',model:mdl,fellback:false,note:rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''};
+      AI_LAST={engine:'gemini',model:mdl,fellback:false,viaPersonal:viaPersonal,
+        note:rounds?('자동 이어쓰기 '+rounds+'회로 완성'):''};
+      if(coOnly&&viaPersonal){AI_LAST.fellback=true;
+        AI_LAST.note='회사 AI를 쓸 수 없어 내 개인 키로 만들었습니다';}
       return acc;
     });
   }
@@ -1602,13 +1634,13 @@ function callGemini(system,user,maxTokens,images,modelOverride){
 
 /* 품질 우선 Gemini 호출: pro 모델 시도 → 없거나 쿼터초과면 기본(flash)로 자동 폴백 */
 function callGeminiSmart(system,user,maxTokens,images,genId){
-  var wantQ=genId&&QUALITY_GEN[genId];
+  var wantQ=genId&&QUALITY_GEN[genId],co=aiCompanyOnly(genId);
   var pro=getGeminiProModel(),base=getGeminiModel();
-  if(!wantQ||!pro||pro===base)return callGemini(system,user,maxTokens,images);
-  return callGemini(system,user,maxTokens,images,pro).catch(function(e){
+  if(!wantQ||!pro||pro===base)return callGemini(system,user,maxTokens,images,null,co);
+  return callGemini(system,user,maxTokens,images,pro,co).catch(function(e){
     var m=((e&&e.message)||'')+'',st=e&&e.status;
     var fb=/not found|not supported|unsupported|404|quota|rate limit|429|exceeded|resource has been exhausted|overloaded|unavailable|503/i.test(m)||st===404||st===429||st===503;
-    if(fb&&base)return callGemini(system,user,maxTokens,images,base);
+    if(fb&&base)return callGemini(system,user,maxTokens,images,base,co);
     throw e;
   });
 }
@@ -1751,6 +1783,11 @@ function engBadge(){
 }
 function engNotice(){
   if(!AI_LAST||!AI_LAST.fellback)return '';
+  if(AI_LAST.viaPersonal){
+    return '<div style="margin:0;padding:9px 14px;background:#FEF3C7;border-bottom:1px solid #FDE68A;font-size:11px;color:#92400E;line-height:1.6">'+
+      '⚠ <b>이 결과는 내 개인 AI 키로 만들었습니다</b> — '+esc(AI_LAST.note||'회사 AI를 쓸 수 없었습니다')+'. '+
+      '고객 자료가 들어간 도구라 <b>원래는 회사 AI로 갑니다.</b> 회사 연결이 돌아오면 자동으로 되돌아갑니다.</div>';
+  }
   return '<div style="margin:0;padding:9px 14px;background:#FEF3C7;border-bottom:1px solid #FDE68A;font-size:11px;color:#92400E;line-height:1.6">⚠ <b>이 결과는 무료 Gemini가 생성</b>했습니다 — '+esc(AI_LAST.note||'Claude 호출 실패로 자동 대체됨')+'. Claude로 받으려면 <a onclick="go(\'settings\')" style="color:#92400E;font-weight:800;text-decoration:underline;cursor:pointer">설정 → 연결 진단</a>에서 원인을 확인하세요.</div>';
 }
 
@@ -15014,7 +15051,8 @@ function mykCardHtml(where){
       '<div class="myk-hd"><span class="myk-ic">✅</span>'+
         '<span class="myk-t">내 AI 키가 연결되어 있습니다</span>'+
         '<button class="btn btn-ghost myk-mini" onclick="mykToggle()">바꾸기</button></div>'+
-      '<div class="myk-d">내 키로 먼저 돌아가고 있어 잘 밀리지 않습니다. 회사 AI 는 백업으로 남아 있습니다.</div>'+
+      '<div class="myk-d">콘텐츠 도구는 내 키로 먼저 돌아가 잘 밀리지 않습니다. '+
+      '<b>고객 자료가 들어가는 도구는 회사 AI로 갑니다.</b></div>'+
     '</div>';
   }
   if(has&&MYK.open){
@@ -15033,6 +15071,8 @@ function mykCardHtml(where){
       '<div class="myk-d">지금은 <b>회사 AI 를 다 같이</b> 쓰고 있습니다. 사람이 몰리는 시간엔 순서를 기다리거나 '+
       '<b>한도 초과</b>로 멈춥니다.<br>구글에서 <b>무료 키</b>를 받아 넣으면 <b>내 것으로 먼저</b> 돌아가서 잘 안 밀립니다. '+
       '<b>3분</b>이면 되고 <b>카드 등록은 없습니다.</b></div>'+
+      '<div class="myk-w">내 키는 <b>블로그·SNS·카드뉴스·화법</b> 같은 콘텐츠 도구에 쓰입니다.<br>'+
+      '<b>증권 판독·보장분석·상담·계약</b>처럼 <b>고객 자료가 들어가는 도구는 회사 AI로 갑니다</b> — 내 키로 보내지 않습니다.</div>'+
     '</div>';
   }
   return '<div class="myk">'+
@@ -15068,6 +15108,9 @@ function mykCss(){
       'font-size:13px;font-family:inherit;color:var(--ink-1);background:#fff}'+
     '.myk-in input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-pale)}'+
     '.myk-in .btn{flex:none;padding:9px 15px;font-size:12px}'+
+    '.myk-w{margin-top:9px;padding:9px 11px;background:#fff;border:1px solid var(--ink-7);'+
+      'border-radius:8px;font-size:11.5px;color:var(--ink-3);line-height:1.75}'+
+    '.myk-w b{font-weight:800;color:var(--ink-1)}'+
     '.myk-f{font-size:11px;color:var(--ink-4);line-height:1.7;margin-top:8px}'+
     '.myk-f b{font-weight:800;color:var(--ink-2)}';
   document.head.appendChild(st);
