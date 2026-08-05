@@ -9593,6 +9593,25 @@ function ckCss(){
       '.ck-st:nth-child(odd)::after{display:none}.ck-st:not(:last-child)::after{content:"";position:absolute;'+
       'right:5px;top:14px;width:6px;height:6px;border-top:1.5px solid var(--ink-6);'+
       'border-right:1.5px solid var(--ink-6);transform:rotate(45deg)}}'+
+    /* 지점장 전산 확인 안의 CRM 상자 */
+    '.ckc{margin-top:12px;padding:12px 13px;background:var(--ink-9);border:1px solid var(--ink-7);border-radius:9px}'+
+    '.ckc-open{padding:7px 13px;font-size:12px}'+
+    '.ckc-hd{display:flex;align-items:center;gap:7px;margin-bottom:10px;flex-wrap:wrap}'+
+    '.ckc-t2{font-size:12.5px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em;margin-right:auto}'+
+    '.ckc-mini{padding:4px 10px;font-size:11px}'+
+    '.ckc-tw{overflow-x:auto}'+
+    '.ckc-t{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--ink-7);border-radius:7px}'+
+    '.ckc-t th{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.05em;text-align:left;'+
+      'padding:7px 9px;border-bottom:1px solid var(--ink-7);white-space:nowrap}'+
+    '.ckc-t td{font-size:12px;padding:7px 9px;border-bottom:1px solid var(--ink-8);color:var(--ink-2);white-space:nowrap}'+
+    '.ckc-t tr:last-child td{border-bottom:none}'+
+    '.ckc-t td:first-child{font-weight:700;color:var(--ink-1)}'+
+    '.ckc-t .n{text-align:right;font-family:var(--mono,ui-monospace,monospace);font-variant-numeric:tabular-nums}'+
+    '.ckc-t tr.z td:first-child{color:var(--neg)}'+
+    '.ckc-t .o{color:var(--neg);font-weight:800}'+
+    '.ckc-frame{margin-top:10px;border:1px solid var(--ink-7);border-radius:10px;overflow:hidden;background:#fff}'+
+    '.ckc-frame iframe{display:block;width:100%;height:620px;border:0}'+
+    '@media(max-width:640px){.ckc-frame iframe{height:460px}}'+
     /* 팀 체크 현황 */
     '.ct-row{background:#fff;border:1px solid var(--ink-7);border-radius:12px;margin-bottom:8px;overflow:hidden}'+
     '.ct-row.red{border-left:3px solid var(--neg)}'+
@@ -9657,11 +9676,33 @@ function ckTabCount(t){
   }
   return '';
 }
-function ckGo(tab){CK.tab=tab;try{localStorage.setItem('apex_ck_tab',tab);}catch(e){}ckPaint();}
+function ckGo(tab){
+  CK.tab=tab;try{localStorage.setItem('apex_ck_tab',tab);}catch(e){}
+  ckPaint();
+  if(tab==='leader'&&CKC.open&&!CKC.loaded&&!CKC.busy)ckCrmLoad();
+}
 function ckToggle(sc,id){
   var m=ckLoad(sc);
   if(m[id])delete m[id];else m[id]=1;
-  ckSave(sc,m);ckPaint();
+  ckSave(sc,m);
+  ckMark(sc,id,!!m[id]);ckCounts();
+}
+/* 누른 줄과 숫자만 고친다 — 전체를 다시 그리면 열어 둔 CRM 화면이 매번 새로 뜬다 */
+function ckMark(sc,id,on){
+  var el=document.getElementById('ckit_'+sc+'_'+id);
+  if(!el)return;
+  el.className='ck-it'+(on?' on':'');
+  var bx=el.querySelector('.ck-bx');if(bx)bx.textContent=on?'✓':'';
+}
+function ckCounts(){
+  (CK.cards||[]).forEach(function(c){
+    var el=document.getElementById('ckn_'+c.key);
+    if(el)el.textContent=ckCount(c.sc,c.list)+' / '+c.list.length;
+  });
+  ckTabs().forEach(function(t){
+    var el=document.getElementById('cktc_'+t.id);
+    if(el)el.textContent=ckTabCount(t);
+  });
 }
 function ckMemoSet(k,v){var m=ckMemoLoad();m[k]=v;ckMemoSave(m);
   var s=document.getElementById('ckMemoS');if(!s)return;
@@ -9672,7 +9713,7 @@ function ckMemoSet(k,v){var m=ckMemoLoad();m[k]=v;ckMemoSave(m);
 
 function ckItemHtml(sc,r){
   var m=ckLoad(sc),on=!!m[r[0]];
-  return '<div class="ck-it'+(on?' on':'')+'" onclick="ckToggle(\''+sc+'\',\''+r[0]+'\')">'+
+  return '<div class="ck-it'+(on?' on':'')+'" id="ckit_'+sc+'_'+r[0]+'" onclick="ckToggle(\''+sc+'\',\''+r[0]+'\')">'+
     '<div class="ck-bx">'+(on?'✓':'')+'</div>'+
     '<div class="ck-tx"><div class="ck-nm">'+osEsc(r[1])+'</div>'+
     (r[2]?'<div class="ck-hint">'+osEsc(r[2])+'</div>':'')+
@@ -9680,20 +9721,21 @@ function ckItemHtml(sc,r){
     '</div></div>';
 }
 function ckListHtml(sc,list){return list.map(function(r){return ckItemHtml(sc,r);}).join('');}
-function ckCardHtml(icon,title,desc,sc,list,extra){
+function ckCardHtml(icon,title,desc,sc,list,extra,key){
+  if(key){CK.cards=CK.cards||[];CK.cards.push({key:key,sc:sc,list:list});}
   return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">'+icon+'</span>'+osEsc(title)+
-    '<span class="ck-n">'+ckCount(sc,list)+' / '+list.length+'</span></div>'+
+    '<span class="ck-n"'+(key?(' id="ckn_'+key+'"'):'')+'>'+ckCount(sc,list)+' / '+list.length+'</span></div>'+
     (desc?'<div class="card-desc">'+osEsc(desc)+'</div>':'')+'</div>'+
     '<div class="card-body">'+ckListHtml(sc,list)+(extra||'')+'</div></div>';
 }
 
 function ckTodayHtml(){
-  return ckCardHtml('✅','오늘 할 일','팀마다 어느 화면에서 하는지 표시했습니다','day',CK_ITEMS.day,
+  return ckCardHtml('✅','오늘 할 일','항목마다 어느 화면에서 하는지 표시했습니다','day',CK_ITEMS.day,
     '<div class="notice">못 한 날은 그냥 넘어갑니다. 다음 날 두 배로 하지 않습니다. '+
-    '몰아서 하다가 그만두는 경우가 많습니다.</div>');
+    '몰아서 하다가 그만두는 경우가 많습니다.</div>','day');
 }
 function ckWeekHtml(){
-  return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'');
+  return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week');
 }
 function ckRouteHtml(){
   var st=[['TA','접촉','전화·카톡'],['AP','만나서 듣기','팩트파인딩'],
@@ -9718,13 +9760,13 @@ function ckLeaderHtml(){
     }).join('')+
     '<div style="font-size:10.5px;color:var(--ink-4);line-height:1.65;margin-top:6px">'+
     '쓴 건 오늘 안에 끝냅니다. 내일로 넘기면 다시 씁니다.</div></div>';
-  return ckCardHtml('☀️','독려','출근 시간에','day',CK_LDR.a,'')+
-    ckCardHtml('👤','직접 확인','사람에게 물어서 아는 것','day',CK_LDR.b,memo)+
+  return ckCardHtml('☀️','독려','출근 시간에','day',CK_LDR.a,'','la')+
+    ckCardHtml('👤','직접 확인','사람에게 물어서 아는 것','day',CK_LDR.b,memo,'lb')+
     ckCardHtml('🖥️','전산 확인','화면에서 아는 것','day',CK_LDR.c,
       '<div class="notice">안 되어 있는 게 보이면 <b>그날 안에 끝냅니다.</b> '+
-      '다음 날로 넘기면 그다음 날에도 안 되어 있습니다.</div>')+
-    ckCardHtml('📅','금요일','30분','week',CK_LDR.week,'')+
-    ckCardHtml('🗓️','월 1회','2시간','month',CK_LDR.month,'')+
+      '다음 날로 넘기면 그다음 날에도 안 되어 있습니다.</div>'+ckCrmHtml(),'lc')+
+    ckCardHtml('📅','금요일','30분','week',CK_LDR.week,'','lw')+
+    ckCardHtml('🗓️','월 1회','2시간','month',CK_LDR.month,'','lm')+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>하지 않는 것</div></div>'+
     '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.9">'+
     '<b>숫자만 보고 다그치기</b> — 활동이 아니라 회피가 늘어납니다<br>'+
@@ -9735,6 +9777,7 @@ function ckLeaderHtml(){
 }
 
 function ckBodyHtml(){
+  CK.cards=[];
   if(CK.tab==='week')return ckWeekHtml();
   if(CK.tab==='route')return ckRouteHtml();
   if(CK.tab==='leader')return ckLeaderHtml();
@@ -9748,7 +9791,7 @@ function ckInnerHtml(){
   var ts=ckTabs();
   return '<div class="ck-tabs">'+ts.map(function(t){
       return '<button class="ck-tab'+(CK.tab===t.id?' on':'')+'" type="button" onclick="ckGo(\''+t.id+'\')">'+
-        osEsc(t.l)+'<span class="c">'+ckTabCount(t)+'</span></button>';
+        osEsc(t.l)+'<span class="c" id="cktc_'+t.id+'">'+ckTabCount(t)+'</span></button>';
     }).join('')+'</div>'+
     '<div style="font-size:11px;line-height:1.6;margin-bottom:12px" id="ckSync">'+ckSyncHtml()+'</div>'+
     ckBodyHtml();
@@ -9764,6 +9807,142 @@ function renderCkBoard(){
 function osCkBoardAfterRender(){
   try{var t=localStorage.getItem('apex_ck_tab');if(t)CK.tab=t;}catch(e){}
   ckPaint();ckPull();
+}
+
+/* ════════ 지점장 전산 확인 — DB 통합 CRM 을 이 자리에서 ════════
+   "통화 결과가 그날 들어갔는지"를 보려고 CRM 으로 넘어갔다 돌아오면 체크판을 다시 찾아야 한다.
+   여기서 오늘 숫자를 바로 보여주고, 더 볼 게 있으면 같은 자리에서 CRM 을 연다. */
+var CKC={open:false,frame:false,busy:false,loaded:false,err:'',rows:[],sum:null,at:'',noPerm:false};
+
+function ckCrmToggle(){
+  CKC.open=!CKC.open;
+  ckCrmPaint();
+  if(CKC.open&&!CKC.loaded&&!CKC.busy)ckCrmLoad();
+}
+function ckCrmFrameToggle(){
+  CKC.frame=!CKC.frame;
+  ckCrmPaint();
+}
+function ckCrmReload(){CKC.loaded=false;ckCrmLoad();}
+
+function ckCrmLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){CKC.err='서버에 연결되어 있지 않습니다.';CKC.loaded=true;ckCrmPaint();return;}
+  CKC.busy=true;CKC.err='';ckCrmPaint();
+  var t=ckDayK(),d7=ctDaysAgo(6);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('profiles').select('id,name,active,workspace').order('name')),
+    q(sb.from('dbs').select('id,assigned_to')),
+    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00'))
+  ]).then(function(r){
+    CKC.busy=false;CKC.loaded=true;
+    if(r[1].error||r[2].error){
+      CKC.noPerm=true;
+      CKC.err=(r[1].error&&r[1].error.message)||(r[2].error&&r[2].error.message)||'';
+      ckCrmPaint();return;
+    }
+    CKC.noPerm=false;
+    var profs=((r[0]&&r[0].data)||[]).filter(function(x){
+      return x.active!==false&&(x.workspace==null||x.workspace!=='crm');});
+    var dbs=r[1].data||[],calls=r[2].data||[];
+    var touched={};calls.forEach(function(c){if(c.db_id)touched[c.db_id]=1;});
+    var rows=profs.map(function(p){
+      var mine=calls.filter(function(c){return c.created_by===p.id;});
+      var today=mine.filter(function(c){return (''+(c.call_at||'')).slice(0,10)===t;});
+      var last=today.length?today.map(function(c){return c.call_at;}).sort().pop():'';
+      return {
+        id:p.id,name:p.name||'(이름 없음)',
+        calls:today.length,
+        appt:today.filter(function(c){return c.result==='상담';}).length,
+        cold:dbs.filter(function(d){return d.assigned_to===p.id&&!touched[d.id];}).length,
+        held:dbs.filter(function(d){return d.assigned_to===p.id;}).length,
+        last:last?ckCrmHm(last):''
+      };
+    }).filter(function(x){return x.held>0||x.calls>0;});
+    rows.sort(function(a,b){return a.calls-b.calls||b.cold-a.cold;});
+    CKC.rows=rows;
+    CKC.sum={
+      calls:rows.reduce(function(a,b){return a+b.calls;},0),
+      appt:rows.reduce(function(a,b){return a+b.appt;},0),
+      cold:rows.reduce(function(a,b){return a+b.cold;},0),
+      zero:rows.filter(function(x){return x.calls===0;}).length,
+      people:rows.length
+    };
+    CKC.at=new Date().toLocaleTimeString('ko-KR');
+    ckCrmPaint();
+  },function(e){
+    CKC.busy=false;CKC.loaded=true;CKC.err=(e&&e.message)||'불러오지 못했습니다.';ckCrmPaint();});
+}
+/* 시각만 — 날짜는 어차피 오늘이다 */
+function ckCrmHm(iso){
+  try{var d=new Date(iso);if(isNaN(d.getTime()))return '';
+    return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}catch(e){return '';}
+}
+
+function ckCrmBodyHtml(){
+  if(CKC.busy)return '<div style="font-size:12px;color:var(--ink-5);padding:10px 2px">CRM 기록을 불러오는 중…</div>';
+  if(CKC.noPerm){
+    return '<div class="notice">이 계정으로는 <b>CRM 기록(배정 DB·통화)</b>을 읽을 수 없습니다. '+
+      'CRM 팀 관리에서 <b>🗄 CRM 전체조회(마스터)</b> 권한을 받으면 여기에 숫자가 채워집니다. '+
+      '지금은 아래 <b>이 자리에서 CRM 열기</b>로 확인하세요.'+
+      (CKC.err?'<div style="margin-top:5px;font-size:10.5px;opacity:.75">'+osEsc(CKC.err.slice(0,80))+'</div>':'')+'</div>';
+  }
+  if(CKC.err)return '<div class="notice">'+osEsc(CKC.err)+'</div>';
+  if(!CKC.rows.length)return '<div style="font-size:12px;color:var(--ink-5);padding:10px 2px">배정된 DB가 없습니다.</div>';
+  var s=CKC.sum;
+  var h='<div class="ct-sum" style="margin-bottom:10px">'+
+    '<div><div class="k">오늘 통화</div><div class="v">'+s.calls+'<em>건</em></div></div>'+
+    '<div><div class="k">상담 약속</div><div class="v" style="color:var(--pos)">'+s.appt+'<em>건</em></div></div>'+
+    '<div><div class="k">오늘 0건</div><div class="v" style="color:'+(s.zero?'var(--neg)':'var(--ink-3)')+'">'+
+      s.zero+'<em>/'+s.people+'명</em></div></div>'+
+  '</div>';
+  h+='<div class="ckc-tw"><table class="ckc-t"><thead><tr>'+
+    '<th>담당자</th><th class="n">통화</th><th class="n">약속</th><th class="n">미접촉</th><th class="n">마지막</th>'+
+    '</tr></thead><tbody>';
+  CKC.rows.forEach(function(r){
+    h+='<tr'+(r.calls===0?' class="z"':'')+'><td>'+osEsc(r.name)+'</td>'+
+      '<td class="n">'+(r.calls||'<span class="o">0</span>')+'</td>'+
+      '<td class="n">'+(r.appt?'<b style="color:var(--pos)">'+r.appt+'</b>':'0')+'</td>'+
+      '<td class="n">'+(r.cold>=10?'<b style="color:var(--warn)">'+r.cold+'</b>':r.cold)+'</td>'+
+      '<td class="n" style="color:var(--ink-5)">'+(r.last||'—')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(s.zero)h+='<div class="notice">오늘 통화 기록이 <b>0건인 사람이 '+s.zero+'명</b>입니다. '+
+    '안 한 것일 수도, 안 적은 것일 수도 있습니다. 숫자로 다그치기 전에 먼저 물어보세요.</div>';
+  h+='<div style="font-size:10.5px;color:var(--ink-5);margin-top:7px">미접촉 = 배정됐는데 최근 7일 안에 통화 기록이 없는 DB'+
+    (CKC.at?' · '+osEsc(CKC.at)+' 기준':'')+'</div>';
+  return h;
+}
+
+function ckCrmHtml(){
+  if(!CKC.open){
+    return '<div class="ckc" id="ckCrmBox"><button class="btn btn-ghost ckc-open" type="button" onclick="ckCrmToggle()">'+
+      '🗄️ DB 통합 CRM 오늘 현황 보기</button>'+
+      '<div style="font-size:11px;color:var(--ink-5);line-height:1.65;margin-top:6px">'+
+      '누가 통화 결과를 아직 안 넣었는지 여기서 바로 봅니다. CRM 으로 넘어가지 않아도 됩니다.</div></div>';
+  }
+  var h='<div class="ckc" id="ckCrmBox">'+
+    '<div class="ckc-hd"><span class="ckc-t2">🗄️ DB 통합 CRM · 오늘</span>'+
+      '<button class="btn btn-ghost ckc-mini" type="button" onclick="ckCrmReload()">새로고침</button>'+
+      '<button class="btn btn-ghost ckc-mini" type="button" onclick="ckCrmToggle()">접기</button></div>'+
+    ckCrmBodyHtml()+
+    '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn '+(CKC.frame?'btn-primary':'btn-ghost')+'" style="padding:6px 12px;font-size:11.5px" '+
+        'onclick="ckCrmFrameToggle()">'+(CKC.frame?'CRM 화면 닫기':'이 자리에서 CRM 열기')+'</button>'+
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="go(\'crm\')">CRM 전체 화면</button>'+
+    '</div>';
+  if(CKC.frame){
+    h+='<div class="ckc-frame"><iframe src="'+CRM_URL+'" title="DB 통합 CRM" loading="lazy"></iframe></div>'+
+      '<div style="font-size:10.5px;color:var(--ink-5);margin-top:5px;line-height:1.6">'+
+      '같은 계정·같은 서버라 따로 로그인하지 않습니다. 좁으면 <b>CRM 전체 화면</b>으로 여세요.</div>';
+  }
+  return h+'</div>';
+}
+/* 체크를 눌러도 이 상자는 다시 그리지 않는다 — CRM 화면이 다시 로딩되면 안 되기 때문 */
+function ckCrmPaint(){
+  var el=document.getElementById('ckCrmBox');
+  if(el)el.outerHTML=ckCrmHtml();
 }
 
 /* ── 팀 체크 현황 ── */
