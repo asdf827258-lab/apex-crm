@@ -264,6 +264,57 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(wide2.cols === 3, '좁은 화면에서는 답 버튼이 3칸씩 두 줄로 접힌다 (' + wide2.cols + '칸)');
   if (SHOT) await page.screenshot({ path: SHOT + '/mbti-test-m.png', fullPage: true });
 
+  /* ── 고객에게 보내는 페이지(app/mbti48.html)도 같이 본다 ─────────────── */
+  console.log('\n고객용 페이지');
+  await page.setViewportSize({ width: 412, height: 900 });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/mbti48.html?agent=%EC%9C%A4%EC%8B%9C%ED%98%84&bank=%EA%B5%AD%EB%AF%BC&acct=123-456', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(700);
+  const cute = await page.evaluate(() => ({
+    n: MBTI_Q.length, types: Object.keys(MBTI_TYPES).length,
+    masc: (document.querySelectorAll('svg.masc') || []).length,
+    agent: /윤시현/.test(document.body.textContent),
+    ext: Array.prototype.some.call(document.querySelectorAll('script,link,img'),
+      e => /^https?:/.test(e.getAttribute('src') || e.getAttribute('href') || ''))
+  }));
+  ok(cute.n === 48 && cute.types === 16, '고객용 페이지도 48문항 · 16유형이다');
+  ok(cute.masc >= 4, '캐릭터 그림이 그 자리에서 그려진다 (' + cute.masc + '개)');
+  ok(cute.agent, '주소에 붙여 보낸 설계사 이름이 화면에 나온다');
+  ok(!cute.ext, '바깥에서 받아오는 그림·글꼴이 없다 — 인터넷이 느려도 그대로 뜬다');
+
+  const flow = await page.evaluate(() => {
+    ST.name = '김하나';
+    const want = { EI: 'E', SN: 'N', TF: 'F', JP: 'P' };
+    MBTI_Q.forEach((q, i) => {
+      const first = q.ax.charAt(0);
+      ST.ans[i] = ((q.k > 0) === (want[q.ax] === first)) ? 3 : -3;
+    });
+    finish();
+    const caps = Array.prototype.map.call(document.querySelectorAll('.cap i'), e => e.textContent);
+    return { code: ST.res.code, cons: ST.res.consistency, step: ST.step, caps: caps,
+      lock: !!document.querySelector('.lock'), price: /9,900원/.test(document.body.textContent) };
+  });
+  ok(flow.step === 'result' && flow.code === 'ENFP' && flow.cons === 100, '48문항을 채우면 앱과 같은 결과가 나온다 (' + flow.code + ')');
+  ok(flow.caps.length === 1 && flow.caps[0] === '표 1' && flow.lock && flow.price,
+     '표 1만 보이고 표 2부터는 잠겨 있다 (보이는 표: ' + flow.caps.join(', ') + ')');
+
+  const un = await page.evaluate(() => {
+    unlock();
+    return { caps: Array.prototype.map.call(document.querySelectorAll('.cap i'), e => e.textContent),
+      lock: !!document.querySelector('.lock'), tables: document.querySelectorAll('table').length, paid: ST.paid };
+  });
+  ok(un.caps.length === 6 && un.tables === 6 && !un.lock && un.paid,
+     '열면 표 1~6 여섯 개가 모두 나온다 (' + un.caps.join(', ') + ')');
+
+  await page.waitForTimeout(300);
+  const cw2 = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+    stacked: getComputedStyle(document.querySelector('.stack thead')).display }));
+  ok(cw2.sw <= cw2.cw + 2, '412px 에서 가로 스크롤 없음 (' + cw2.sw + '/' + cw2.cw + ')');
+  ok(cw2.stacked === 'none', '좁은 화면에서는 표가 한 줄씩 카드로 펼쳐진다');
+
+  const back = await page.evaluate(() => { location.reload(); return true; });
+  await page.waitForTimeout(900);
+  ok(await page.evaluate(() => /표 6/.test(document.body.textContent)), '새로고침해도 결제한 리포트가 그대로 열려 있다');
+
   await browser.close(); srv.close();
   console.log('');
   if (errs.length) { console.log('콘솔 오류 ' + errs.length + '건'); errs.slice(0, 6).forEach(e => console.log('   ' + e.slice(0, 160))); }

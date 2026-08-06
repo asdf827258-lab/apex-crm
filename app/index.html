@@ -24063,6 +24063,7 @@ function mbtiIntroHtml() {
       '<div class="fld" style="margin-top:10px"><label style="font-size:11.5px;font-weight:700">메모 (선택)</label>' +
       '<input type="text" id="mbMemo" value="' + osEsc(MB.subject.memo || '') + '" placeholder="예: 3월 상담 · 소개 고객" style="width:100%"/></div>' +
       '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="mbtiStart()">검사 시작 (48문항)</button>' +
+      '<button class="btn btn-ghost" onclick="mbtiShareLink()">🔗 고객에게 링크 보내기</button>' +
       '<span style="font-size:10.5px;color:var(--ink-5)">개인 성향 자료입니다. 고객 검사는 본인 동의를 받고 진행하세요.</span></div>' +
     '</div></div>';
   return '<div style="max-width:900px">' + resume +
@@ -24106,6 +24107,18 @@ function mbtiListHtml() {
   return '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>지난 검사</div>' +
     '<div class="card-desc">검사한 결과는 저장됩니다. 결제한 리포트는 언제든 다시 열립니다.</div></div>' +
     '<div class="card-body">' + body + (MB.noTable ? '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.6">서버에 저장 칸(mbti_tests)이 아직 없습니다. <b>migration_33_mbti.sql</b> 을 실행하기 전까지는 이 기기에만 저장됩니다.</div>' : '') + '</div></div>';
+}
+/* 고객 휴대폰에서 열어 검사하는 페이지(app/mbti48.html) 주소를 만들어 복사한다.
+   설계사 이름·연락처를 붙여 보내면 그 화면 맨 위에 같이 나온다. */
+function mbtiShareLink() {
+  var base = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'mbti48.html';
+  var nm = (OS.profile && OS.profile.name) || '';
+  var q = [];
+  if (nm) q.push('agent=' + encodeURIComponent(nm));
+  var url = base + (q.length ? ('?' + q.join('&')) : '');
+  if (typeof copyText === 'function') copyText(url); else { try { navigator.clipboard.writeText(url); } catch (e) {} }
+  toast('검사 링크를 복사했습니다. 카톡·문자로 보내면 고객이 바로 검사합니다.');
+  try { window.open(url, '_blank', 'noopener'); } catch (e) {}
 }
 function mbtiKindLabel(k) { return ({ client: '고객', member: '팀원', self: '본인' })[k] || '고객'; }
 
