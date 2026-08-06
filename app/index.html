@@ -2501,12 +2501,322 @@ function pxEnd(s){
     (s.bullets||[]).map(function(b){return pxPara(b,{sz:1300,color:'CBD5E1',bullet:true,spaceAfter:600,lnSpc:'150000'});}).join(''));
   return pxSlideXml(h,'0F172A');
 }
-function pxSlideOf(s){
+/* ── 표 · 그래프 · 비교표 · 숫자판 ───────────────────────────────────
+   글자만 있는 장표는 설명이 안 된다. 숫자는 표로, 흐름은 그래프로,
+   전후는 나란히 놓아야 한눈에 들어온다.
+
+   그래프는 캔버스로 그려 그림으로 넣는다. 파워포인트 차트로 넣으면
+   글꼴·색이 보는 사람 환경에 따라 달라지는데, 그림은 어디서 열어도
+   똑같이 보인다. 표는 진짜 표로 넣어 발표 직전에 고칠 수 있게 한다. */
+
+var PX_PAL=['1A56DB','38BDF8','059669','D97706','7C3AED','DC2626'];
+
+/* base64 → 바이트. 캔버스가 준 그림을 zip 에 그대로 담는다 */
+function pxB64(s){
+  var b=atob(String(s).replace(/^data:[^,]+,/,''));
+  var a=new Uint8Array(b.length),i;
+  for(i=0;i<b.length;i++)a[i]=b.charCodeAt(i);
+  return a;
+}
+function pxHex(h){return '#'+String(h||'1A56DB').replace(/^#/,'');}
+
+/* ── 캔버스 그래프 ───────────────────────────────────────────────── */
+function pxChartPng(c,w,h){
+  w=w||1760;h=h||900;
+  var cv=document.createElement('canvas');
+  cv.width=w;cv.height=h;
+  var x=cv.getContext('2d');
+  x.fillStyle='#FFFFFF';x.fillRect(0,0,w,h);
+  var type=(c&&c.type)||'bar';
+  if(type==='donut')pxDonut(x,c,w,h);
+  else if(type==='line')pxLine(x,c,w,h);
+  else pxBars(x,c,w,h);
+  return cv.toDataURL('image/png');
+}
+function pxNum(v){
+  var n=Number(v);
+  if(!isFinite(n))return 0;
+  return n;
+}
+function pxFmt(v){
+  var n=pxNum(v);
+  return (Math.round(n*10)/10).toLocaleString('ko-KR');
+}
+/* 눈금이 6,726 처럼 나오면 읽히지 않는다. 한 칸이 딱 떨어지게 잡는다 */
+function pxNice(v){
+  if(!(v>0))return 1;
+  var e=Math.pow(10,Math.floor(Math.log(v)/Math.LN10)),m=v/e;
+  var n=(m<=1)?1:(m<=2)?2:(m<=2.5)?2.5:(m<=5)?5:10;
+  return n*e;
+}
+function pxTop(raw){
+  var step=pxNice(raw*1.12/4);
+  return step*4;
+}
+function pxAxis(x,L,R,T,B,max,unit,h){
+  var i,steps=4;
+  x.strokeStyle='#E6ECF5';x.lineWidth=2;
+  x.font='500 26px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  x.fillStyle='#8A98AE';x.textAlign='right';x.textBaseline='middle';
+  for(i=0;i<=steps;i++){
+    var y=B-(B-T)*i/steps;
+    x.beginPath();x.moveTo(L,y);x.lineTo(R,y);x.stroke();
+    x.fillText(pxFmt(max*i/steps),L-14,y);
+  }
+  if(unit){
+    x.textAlign='left';x.fillStyle='#8A98AE';
+    x.font='700 24px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText('단위 '+unit,L,T-30);
+  }
+}
+function pxLegend(x,series,L,y){
+  var cx=L,i;
+  x.textAlign='left';x.textBaseline='middle';
+  x.font='700 26px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  for(i=0;i<series.length;i++){
+    x.fillStyle=pxHex(PX_PAL[i%PX_PAL.length]);
+    x.beginPath();x.arc(cx+9,y,9,0,Math.PI*2);x.fill();
+    x.fillStyle='#4A5A73';
+    var t=series[i].name||('계열'+(i+1));
+    x.fillText(t,cx+26,y);
+    cx+=26+x.measureText(t).width+40;
+  }
+}
+function pxBars(x,c,w,h){
+  var labels=(c.labels||[]).slice(0,8);
+  var series=(c.series||[]).slice(0,3);
+  if(!labels.length||!series.length)return;
+  var L=170,R=w-70,T=110,B=h-140;
+  var max=0;
+  series.forEach(function(s){(s.data||[]).forEach(function(v){max=Math.max(max,pxNum(v));});});
+  max=pxTop(max);
+  pxAxis(x,L,R,T,B,max,c.unit||'',h);
+  var gw=(R-L)/labels.length, bw=Math.min(110,(gw*0.62)/series.length);
+  labels.forEach(function(lb,i){
+    var cx=L+gw*i+gw/2;
+    var tot=series.length*bw+ (series.length-1)*10;
+    series.forEach(function(s,k){
+      var v=pxNum((s.data||[])[i]);
+      var bh=(B-T)*(v/max);
+      var bx=cx-tot/2+k*(bw+10);
+      x.fillStyle=pxHex(PX_PAL[k%PX_PAL.length]);
+      var r=Math.min(10,bw/2);
+      x.beginPath();
+      x.moveTo(bx,B);x.lineTo(bx,B-bh+r);
+      x.quadraticCurveTo(bx,B-bh,bx+r,B-bh);
+      x.lineTo(bx+bw-r,B-bh);
+      x.quadraticCurveTo(bx+bw,B-bh,bx+bw,B-bh+r);
+      x.lineTo(bx+bw,B);x.closePath();x.fill();
+      x.fillStyle='#26344A';x.textAlign='center';x.textBaseline='bottom';
+      x.font='800 28px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+      x.fillText(pxFmt(v),bx+bw/2,B-bh-12);
+    });
+    x.fillStyle='#4A5A73';x.textAlign='center';x.textBaseline='top';
+    x.font='700 28px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText(String(lb).slice(0,12),cx,B+18);
+  });
+  x.strokeStyle='#C9D4E4';x.lineWidth=3;
+  x.beginPath();x.moveTo(L,B);x.lineTo(R,B);x.stroke();
+  if(series.length>1)pxLegend(x,series,L,h-46);
+}
+function pxLine(x,c,w,h){
+  var labels=(c.labels||[]).slice(0,12);
+  var series=(c.series||[]).slice(0,3);
+  if(!labels.length||!series.length)return;
+  var L=170,R=w-70,T=110,B=h-140;
+  var max=0;
+  series.forEach(function(s){(s.data||[]).forEach(function(v){max=Math.max(max,pxNum(v));});});
+  max=pxTop(max);
+  pxAxis(x,L,R,T,B,max,c.unit||'',h);
+  var step=(R-L)/Math.max(1,labels.length-1);
+  series.forEach(function(s,k){
+    var col=pxHex(PX_PAL[k%PX_PAL.length]);
+    x.strokeStyle=col;x.lineWidth=6;x.beginPath();
+    (s.data||[]).slice(0,labels.length).forEach(function(v,i){
+      var px=L+step*i, py=B-(B-T)*(pxNum(v)/max);
+      if(i)x.lineTo(px,py);else x.moveTo(px,py);
+    });
+    x.stroke();
+    (s.data||[]).slice(0,labels.length).forEach(function(v,i){
+      var px=L+step*i, py=B-(B-T)*(pxNum(v)/max);
+      x.fillStyle='#FFFFFF';x.beginPath();x.arc(px,py,11,0,Math.PI*2);x.fill();
+      x.fillStyle=col;x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+    });
+  });
+  labels.forEach(function(lb,i){
+    x.fillStyle='#4A5A73';x.textAlign='center';x.textBaseline='top';
+    x.font='700 26px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText(String(lb).slice(0,10),L+step*i,B+18);
+  });
+  x.strokeStyle='#C9D4E4';x.lineWidth=3;
+  x.beginPath();x.moveTo(L,B);x.lineTo(R,B);x.stroke();
+  if(series.length>1)pxLegend(x,series,L,h-46);
+}
+function pxDonut(x,c,w,h){
+  var labels=(c.labels||[]).slice(0,6);
+  var data=(((c.series||[])[0]||{}).data||[]).slice(0,6);
+  var tot=0;data.forEach(function(v){tot+=pxNum(v);});
+  if(!tot)return;
+  var cx=w*0.32,cy=h*0.52,rr=Math.min(w,h)*0.30,ir=rr*0.58,a=-Math.PI/2;
+  data.forEach(function(v,i){
+    var sw=Math.PI*2*(pxNum(v)/tot);
+    x.fillStyle=pxHex(PX_PAL[i%PX_PAL.length]);
+    x.beginPath();x.arc(cx,cy,rr,a,a+sw);x.arc(cx,cy,ir,a+sw,a,true);x.closePath();x.fill();
+    a+=sw;
+  });
+  var ly=cy-(labels.length*54)/2+18;
+  labels.forEach(function(lb,i){
+    var v=pxNum(data[i]),pc=Math.round(v/tot*100);
+    x.fillStyle=pxHex(PX_PAL[i%PX_PAL.length]);
+    x.beginPath();x.roundRect?x.roundRect(w*0.60,ly-13,26,26,7):x.rect(w*0.60,ly-13,26,26);x.fill();
+    x.fillStyle='#26344A';x.textAlign='left';x.textBaseline='middle';
+    x.font='700 30px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText(String(lb).slice(0,14),w*0.60+42,ly);
+    x.fillStyle='#4A5A73';x.textAlign='right';
+    x.font='800 30px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText(pxFmt(v)+(c.unit?(' '+c.unit):'')+'  ('+pc+'%)',w-70,ly);
+    ly+=54;
+  });
+}
+
+/* ── 그림 넣기 ──────────────────────────────────────────────────── */
+function pxPic(id,rid,x,y,w,h){
+  return '<p:pic><p:nvPicPr><p:cNvPr id="'+id+'" name="p'+id+'"/>'+
+    '<p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr>'+
+    '<p:blipFill><a:blip r:embed="'+rid+'"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>'+
+    '<p:spPr><a:xfrm><a:off x="'+pxIn(x)+'" y="'+pxIn(y)+'"/>'+
+    '<a:ext cx="'+pxIn(w)+'" cy="'+pxIn(h)+'"/></a:xfrm>'+
+    '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr></p:pic>';
+}
+
+/* ── 진짜 표 — 발표 직전에 고칠 수 있게 ─────────────────────────── */
+function pxCell(text,o){
+  o=o||{};
+  var p=pxPara(text,{sz:o.sz||1250,b:!!o.b,color:o.color||'1F2937',
+    algn:o.algn||'l',lnSpc:'115000'});
+  return '<a:tc><a:txBody><a:bodyPr/><a:lstStyle/>'+p+'</a:txBody>'+
+    '<a:tcPr marL="82550" marR="82550" marT="52070" marB="52070" anchor="ctr">'+
+    (o.fill?('<a:solidFill><a:srgbClr val="'+o.fill+'"/></a:solidFill>'):'<a:noFill/>')+
+    '<a:lnB w="12700" cap="flat"><a:solidFill><a:srgbClr val="'+(o.line||'DCE4F0')+'"/></a:solidFill></a:lnB>'+
+    '</a:tcPr></a:tc>';
+}
+function pxTable(id,x,y,w,head,rows,opt){
+  opt=opt||{};
+  var cols=Math.max(1,(head&&head.length)||((rows[0]||[]).length)||1);
+  var cw=w/cols, rh=0.44, n=rows.length+(head?1:0);
+  var grid='';for(var i=0;i<cols;i++)grid+='<a:gridCol w="'+pxIn(cw)+'"/>';
+  var body='';
+  if(head){
+    body+='<a:tr h="'+pxIn(rh)+'">'+head.map(function(t,i){
+      return pxCell(t,{b:true,color:'FFFFFF',fill:opt.headFill||'1A56DB',
+        algn:i?'ctr':'l',sz:1250,line:'1A56DB'});
+    }).join('')+'</a:tr>';
+  }
+  rows.forEach(function(r,ri){
+    body+='<a:tr h="'+pxIn(rh)+'">'+r.map(function(t,ci){
+      var hi=opt.hi&&opt.hi.indexOf(ci)>=0;
+      return pxCell(t,{b:(ci===0||hi),color:hi?'1A56DB':'1F2937',
+        fill:(ri%2?'F6F9FE':''),algn:ci?'ctr':'l',sz:1200});
+    }).join('')+'</a:tr>';
+  });
+  return '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="'+id+'" name="tbl'+id+'"/>'+
+    '<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>'+
+    '<p:xfrm><a:off x="'+pxIn(x)+'" y="'+pxIn(y)+'"/>'+
+    '<a:ext cx="'+pxIn(w)+'" cy="'+pxIn(rh*n)+'"/></p:xfrm>'+
+    '<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table">'+
+    '<a:tbl><a:tblPr firstRow="1" bandRow="1"/><a:tblGrid>'+grid+'</a:tblGrid>'+body+'</a:tbl>'+
+    '</a:graphicData></a:graphic></p:graphicFrame>';
+}
+
+/* ── 장표 종류 ───────────────────────────────────────────────────── */
+function pxHead(id,title,sub){
+  var h=pxRect(id,0,0,13.333,0.92,'1A56DB');
+  h+=pxText(id+1,0.62,0.26,12.1,0.5,pxPara(title||' ',{sz:2000,b:true,color:'FFFFFF'}));
+  if(sub)h+=pxText(id+2,0.62,1.22,12.1,0.6,pxPara(sub,{sz:1600,b:true,color:'0F172A',lnSpc:'135000'}));
+  return h;
+}
+/* 숫자판 — 큰 숫자 두세 개를 나란히 */
+function pxKpi(s){
+  var id=2,h=pxHead(id,s.title,s.lead);id+=3;
+  var ks=(s.kpis||[]).slice(0,4);
+  if(!ks.length)return pxBullets(s);
+  var y=s.lead?2.15:1.6, gap=0.28, w=(12.1-gap*(ks.length-1))/ks.length;
+  ks.forEach(function(k,i){
+    var x=0.62+i*(w+gap);
+    h+=pxRect(id++,x,y,w,2.0,i===0?'1A56DB':'F1F6FE');
+    h+=pxText(id++,x+0.3,y+0.34,w-0.6,0.9,
+      pxPara(k.v||'',{sz:3200,b:true,color:i===0?'FFFFFF':'0F172A'}));
+    h+=pxText(id++,x+0.3,y+1.32,w-0.6,0.5,
+      pxPara(k.k||'',{sz:1300,color:i===0?'CBD5E1':'4A5A73'}));
+  });
+  var bs=(s.bullets||[]).slice(0,4);
+  if(bs.length){
+    h+=pxText(id++,0.7,y+2.35,11.95,1.6,
+      bs.map(function(b){return pxPara(b,{sz:1350,color:'1F2937',bullet:true,spaceAfter:600,lnSpc:'140000'});}).join(''));
+  }
+  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
+  return pxSlideXml(h,'FFFFFF');
+}
+/* 표 */
+function pxTableSlide(s){
+  var id=2,h=pxHead(id,s.title,s.lead);id+=3;
+  var head=(s.head||[]).slice(0,5);
+  var rows=(s.rows||[]).slice(0,9).map(function(r){return (r||[]).slice(0,5).map(function(c){return (''+(c==null?'':c)).slice(0,44);});});
+  if(!rows.length)return pxBullets(s);
+  h+=pxTable(id++,0.62,s.lead?2.15:1.55,12.1,head.length?head:null,rows,{hi:s.hi||[]});
+  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
+  return pxSlideXml(h,'FFFFFF');
+}
+/* 비교표 — 지금 vs 바꾸면 */
+function pxCompare(s){
+  var id=2,h=pxHead(id,s.title,s.lead);id+=3;
+  var L=s.left||{},R=s.right||{};
+  var y=s.lead?2.15:1.6, w=5.85, gap=0.4;
+  var side=function(x,o,col,bg){
+    var g='';
+    g+=pxRect(id++,x,y,w,0.62,col);
+    g+=pxText(id++,x+0.28,y+0.15,w-0.56,0.4,pxPara(o.label||'',{sz:1500,b:true,color:'FFFFFF'}));
+    g+=pxRect(id++,x,y+0.62,w,3.5,bg);
+    var items=(o.items||[]).slice(0,7);
+    g+=pxText(id++,x+0.28,y+0.86,w-0.56,3.1,
+      items.map(function(t){return pxPara(t,{sz:1300,color:'1F2937',bullet:true,spaceAfter:640,lnSpc:'138000'});}).join('')
+      ||pxPara('—',{sz:1300,color:'94A3B8'}));
+    if(o.sum){
+      g+=pxRect(id++,x,y+4.12,w,0.62,col);
+      g+=pxText(id++,x+0.28,y+4.26,w-0.56,0.4,pxPara(o.sum,{sz:1400,b:true,color:'FFFFFF'}));
+    }
+    return g;
+  };
+  h+=side(0.62,L,'64748B','F4F6FA');
+  h+=side(0.62+w+gap,R,'1A56DB','EFF5FE');
+  if(s.note)h+=pxText(id++,0.7,6.86,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
+  return pxSlideXml(h,'FFFFFF');
+}
+/* 그래프 — 캔버스로 그려 그림으로 */
+function pxChartSlide(s,media){
+  var id=2,h=pxHead(id,s.title,s.lead);id+=3;
+  var png=null;
+  try{png=pxChartPng(s.chart||{});}catch(e){png=null;}
+  if(!png)return pxBullets(s);
+  var rid='rId'+(media.length+2);
+  media.push({name:'image'+(media.length+1)+'.png',data:pxB64(png)});
+  var y=s.lead?2.1:1.5;
+  h+=pxPic(id++,rid,0.62,y,12.1,y>2?4.3:4.7);
+  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
+  return pxSlideXml(h,'FFFFFF');
+}
+
+function pxSlideOf(s,media){
   var k=s.kind||'bullets';
+  media=media||[];
   if(k==='cover')return pxCover(s);
   if(k==='section')return pxSection(s);
   if(k==='quote')return pxQuote(s);
   if(k==='end')return pxEnd(s);
+  if(k==='kpi')return pxKpi(s);
+  if(k==='table')return pxTableSlide(s);
+  if(k==='compare')return pxCompare(s);
+  if(k==='chart')return pxChartSlide(s,media);
   return pxBullets(s);
 }
 
@@ -2573,6 +2883,17 @@ function pxBuild(deck){
   if(!slides.length)slides=[{kind:'cover',title:'내용이 없습니다'}];
   if(slides.length>60)slides=slides.slice(0,60);
   var z=pxZip(),i;
+  /* 장표별로 쓴 그림을 모은다 — 슬라이드마다 자기 그림만 연결한다 */
+  var xml=[],mediaOf=[],allMedia=[];
+  for(i=0;i<slides.length;i++){
+    var mine=[];
+    var one;
+    try{one=pxSlideOf(slides[i],mine);}
+    catch(e){one=pxSlideOf({kind:'bullets',title:(slides[i]&&slides[i].title)||'',
+      bullets:['이 장표를 그리지 못했습니다.']},[]);mine=[];}
+    mine.forEach(function(m){m.file='image'+(allMedia.length+1)+'.png';allMedia.push(m);});
+    xml.push(one);mediaOf.push(mine);
+  }
 
   var ct=PX_HD+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'+
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'+
@@ -2580,7 +2901,8 @@ function pxBuild(deck){
     '<Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>'+
     '<Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>'+
     '<Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/>'+
-    '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>';
+    '<Override PartName="/ppt/theme/theme1.xml" ContentType="application/vnd.openxmlformats-officedocument.theme+xml"/>'+
+    (allMedia.length?'<Default Extension="png" ContentType="image/png"/>':'');
   for(i=0;i<slides.length;i++)
     ct+='<Override PartName="/ppt/slides/slide'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>';
   ct+='<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>'+
@@ -2616,10 +2938,14 @@ function pxBuild(deck){
   z.add('ppt/theme/theme1.xml',pxTheme());
 
   for(i=0;i<slides.length;i++){
-    z.add('ppt/slides/slide'+(i+1)+'.xml',pxSlideOf(slides[i]));
-    z.add('ppt/slides/_rels/slide'+(i+1)+'.xml.rels',pxRels([
-      ['rId1',PX_R+'slideLayout','../slideLayouts/slideLayout1.xml']]));
+    z.add('ppt/slides/slide'+(i+1)+'.xml',xml[i]);
+    var rels=[['rId1',PX_R+'slideLayout','../slideLayouts/slideLayout1.xml']];
+    mediaOf[i].forEach(function(m,k){
+      rels.push(['rId'+(k+2),PX_R+'image','../media/'+m.file]);
+    });
+    z.add('ppt/slides/_rels/slide'+(i+1)+'.xml.rels',pxRels(rels));
   }
+  allMedia.forEach(function(m){z.addBin('ppt/media/'+m.file,m.data);});
 
   var ti=pxX((deck&&deck.title)||'APEX YUN PRO');
   z.add('docProps/core.xml',PX_HD+
@@ -2682,10 +3008,8 @@ function bdFromPlan(pl,q){
   var secs=(pl.sections||[]).slice(0,20);
   for(i=0;i<secs.length;i++){
     var s=secs[i]||{};
-    var bs=(s.bullets||[]).slice(0,7).map(function(b){return bdCut(b,150);}).filter(Boolean);
     if(secs.length>=4)out.push({kind:'section',label:('0'+(i+1)).slice(-2),title:bdCut(s.title||'',60)});
-    out.push({kind:'bullets',title:bdCut(s.title||'내용',56),
-      lead:bdCut(s.lead||'',110),bullets:bs,note:bdCut(s.note||'',120)});
+    out.push(bdSection(s));
   }
   var cl=(pl.closing||[]).slice(0,5).map(function(b){return bdCut(b,140);}).filter(Boolean);
   cl.push('본 자료는 참고용이며 보험 상품의 권유·설명 자료가 아닙니다.');
@@ -2694,6 +3018,51 @@ function bdFromPlan(pl,q){
   out.push({kind:'end',title:'확인 사항',bullets:cl});
   return out;
 }
+/* 한 장을 종류에 맞게 다듬는다 — 값이 비면 글 장표로 되돌린다 */
+function bdSection(s){
+  var base={title:bdCut(s.title||'내용',56),lead:bdCut(s.lead||'',110),
+    note:bdCut(s.note||'',120)};
+  var bs=(s.bullets||[]).slice(0,7).map(function(b){return bdCut(b,150);}).filter(Boolean);
+  var k=(s.kind||'bullets');
+
+  if(k==='kpi'){
+    var ks=(s.kpis||[]).slice(0,4).map(function(x){
+      return {v:bdCut(x&&x.v,16),k:bdCut(x&&x.k,22)};}).filter(function(x){return x.v;});
+    if(ks.length)return {kind:'kpi',title:base.title,lead:base.lead,kpis:ks,bullets:bs.slice(0,4),note:base.note};
+  }
+  if(k==='table'){
+    var head=(s.head||[]).slice(0,5).map(function(x){return bdCut(x,20);});
+    var rows=(s.rows||[]).slice(0,9).map(function(r){
+      return (r||[]).slice(0,5).map(function(c){return bdCut(c,44);});
+    }).filter(function(r){return r.length&&r.join('');});
+    if(rows.length)return {kind:'table',title:base.title,lead:base.lead,head:head,rows:rows,note:base.note};
+  }
+  if(k==='compare'){
+    var side=function(o){
+      o=o||{};
+      return {label:bdCut(o.label,18),sum:bdCut(o.sum,26),
+        items:(o.items||[]).slice(0,7).map(function(x){return bdCut(x,60);}).filter(Boolean)};};
+    var L=side(s.left),R=side(s.right);
+    if(L.items.length||R.items.length)
+      return {kind:'compare',title:base.title,lead:base.lead,left:L,right:R,note:base.note};
+  }
+  if(k==='chart'){
+    var c=s.chart||{};
+    var labels=(c.labels||[]).slice(0,12).map(function(x){return bdCut(x,14);});
+    var series=(c.series||[]).slice(0,3).map(function(x){
+      return {name:bdCut(x&&x.name,14),
+        data:((x&&x.data)||[]).slice(0,12).map(function(v){var n=Number(v);return isFinite(n)?n:0;})};
+    }).filter(function(x){return x.data.length;});
+    var any=false;series.forEach(function(x){x.data.forEach(function(v){if(v)any=true;});});
+    if(labels.length&&series.length&&any)
+      return {kind:'chart',title:base.title,lead:base.lead,note:base.note,
+        chart:{type:(['bar','line','donut'].indexOf(c.type)>=0?c.type:'bar'),
+          labels:labels,series:series,unit:bdCut(c.unit,8)}};
+  }
+  return {kind:'bullets',title:base.title,lead:base.lead,
+    bullets:bs.length?bs:['—'],note:base.note};
+}
+
 /* AI 없이 — 글을 제목 단위로 잘라 슬라이드로 */
 function bdFromMd(md,q){
   var lines=(''+md).replace(/\r/g,'').split('\n'),secs=[],cur=null,i;
@@ -2725,15 +3094,31 @@ function bdParse(txt){
 }
 var BD_SYS='너는 보험·재무 설계사의 발표자료를 짜는 편집자다. 받은 글을 슬라이드 구성으로 다시 짠다.\n'+
   '규칙:\n'+
-  '1. 원문에 없는 사실·숫자를 만들지 않는다. 줄이고 나누기만 한다.\n'+
+  '1. 원문에 없는 사실·숫자를 만들지 않는다. 줄이고 나누고 형식만 바꾼다.\n'+
+  '   숫자가 원문에 있으면 반드시 표나 그래프로 옮긴다. 없는 숫자를 지어내지 않는다.\n'+
   '2. 한 슬라이드는 한 가지만 말한다. 불릿은 한 줄 40자 안쪽, 슬라이드당 5개 이하.\n'+
   '3. 확정 수익·지급 보장·원금 보장 같은 표현은 쓰지 않는다.\n'+
   '4. 한국어. 문장은 짧게. 미사여구를 넣지 않는다.\n'+
   '5. JSON 만 출력한다. 설명·코드펜스를 붙이지 않는다.\n'+
+  '\n'+
+  '장표 종류를 섞어 쓴다. 글자만 있는 장표가 이어지면 안 된다.\n'+
+  '  kind:"bullets"  기본. 짧은 목록.\n'+
+  '  kind:"kpi"      큰 숫자 2~4개를 앞세울 때. kpis:[{"v":"3,200만원","k":"연간 자기부담"}]\n'+
+  '  kind:"table"    항목별로 값을 견줄 때. head:["구분","현재","제안"], rows:[["암 진단","3천만","5천만"]]\n'+
+  '  kind:"compare"  전후·둘 중 하나를 나란히 볼 때.\n'+
+  '                  left:{"label":"지금","items":[...],"sum":"월 12만원"}, right:{"label":"바꾸면",...}\n'+
+  '  kind:"chart"    흐름·크기 차이를 눈으로 볼 때.\n'+
+  '                  chart:{"type":"bar|line|donut","labels":["1년차","2년차"],'+
+  '"series":[{"name":"현재","data":[100,120]},{"name":"제안","data":[140,180]}],"unit":"만원"}\n'+
+  '  숫자가 있으면 table 이나 chart 를 쓴다. 항목이 3개 이상이고 값이 있으면 chart 가 낫다.\n'+
+  '  donut 은 구성비에만 쓴다(series 하나).\n'+
+  '\n'+
   '형식:\n'+
   '{"title":"표지 제목 25자 내","subtitle":"한 줄 요약 45자 내",'+
   '"keyline":"이 자료의 핵심 한 문장 50자 내","keysub":"그 문장을 받치는 한 줄",'+
-  '"sections":[{"title":"장 제목 20자 내","lead":"이 장의 요지 한 줄","bullets":["...","..."],"note":""}],'+
+  '"sections":[{"kind":"bullets|kpi|table|compare|chart","title":"장 제목 20자 내",'+
+  '"lead":"이 장의 요지 한 줄","bullets":[],"kpis":[],"head":[],"rows":[],'+
+  '"left":{},"right":{},"chart":{},"note":"근거나 주의"}],'+
   '"closing":["듣는 사람이 오늘 할 일 1~3가지"]}';
 
 function bdMake(src,q,label){
