@@ -135,7 +135,7 @@ window.supabase={createClient:function(){
   ok(t0.fab, '마이크 단추가 화면에 뜬다');
   ok(t0.hear && t0.talk, '듣기·말하기 둘 다 된다고 표시된다');
   ok(t0.voice === 'Yuna', '한국어 목소리를 골랐다 (' + t0.voice + ')');
-  ok(t0.how === 8, '이렇게 말하면 됩니다 ' + t0.how + '줄');
+  ok(t0.how === 11, '이렇게 말하면 됩니다 ' + t0.how + '줄');
   ok(t0.st === 2, '지원 상태 두 칸이 모두 초록');
   ok(t0.warn, '고객 정보를 말로 넣지 말라는 경고가 있다');
 
@@ -298,6 +298,86 @@ window.supabase={createClient:function(){
   await page.waitForTimeout(300);
   const closed = await page.evaluate(() => ({ on: VA.on, panel: !!document.getElementById('osVaPanel') }));
   ok(!closed.panel && !closed.on, '쪽창을 닫으면 마이크가 함께 꺼진다');
+
+  /* ── 10-2. 대화 모드 — 서로 주고받기 ── */
+  await page.evaluate(() => { vaPanel(true); VA.hist = []; vaTalkStart(); });
+  await page.waitForTimeout(700);
+  const tk = await page.evaluate(() => ({
+    talk: VA.talk, on: VA.on, cont: (window.__live || {}).continuous,
+    fab: (document.getElementById('osVaFab') || {}).className,
+    spoke: window.__spoke.join(' '), state: VA.state,
+    txt: (document.getElementById('osVaPanel') || {}).textContent || ''
+  }));
+  ok(tk.talk && tk.on, '대화 모드가 켜진다');
+  ok(tk.cont === true, '대화 중에는 귀를 계속 열어 둔다');
+  ok(tk.fab === 'talk', '단추가 대화 표시로 바뀐다');
+  ok(/듣고 있습니다/.test(tk.spoke), '먼저 인사한다 — "' + tk.spoke.slice(0, 20) + '"');
+  ok(/듣고 있습니다 — 그냥 말씀하세요/.test(tk.txt), '지금 무엇을 하는 중인지 보여 준다');
+
+  /* 이름을 안 불러도 알아듣는지 */
+  await page.evaluate(() => { VA.mute = false; go('home'); });
+  await page.waitForTimeout(200);
+  r = await say('성장판 열어');
+  ok(r.tab === 'growboard', '대화 중에는 이름을 안 불러도 알아듣는다');
+
+  /* 답이 끝나면 스스로 다시 듣는지 */
+  await page.waitForTimeout(600);
+  const again = await page.evaluate(() => ({ on: VA.on, state: VA.state, mute: VA.mute }));
+  ok(again.on && again.state === 'listen', '답을 다 읽으면 스스로 다시 듣는다');
+
+  /* 앞말을 기억하는지 */
+  await page.evaluate(() => { VA.mute = false; });
+  r = await say('고객이 비싸다고 합니다');
+  await page.waitForTimeout(600);
+  await page.evaluate(() => { VA.mute = false; });
+  r = await say('그럼 그건 어떻게 말해요');
+  ok(r.ai === 1, '이어지는 질문도 AI 로 간다');
+  ok(/지금까지 나눈 말/.test(r.aiUser), '앞에 나눈 말을 함께 넘긴다');
+  ok(/비싸다고 합니다/.test(r.aiUser), '앞말이 실제로 들어 있다');
+  const short = await page.evaluate(() => window.__ai.length ? '' : '');
+  const sysHas = await page.evaluate(() => {
+    var a = VA.log; return a.length > 0;
+  });
+  ok(sysHas, '대화 기록이 화면에 쌓인다');
+
+  /* 말하는 중에 끼어들기 */
+  await page.evaluate(() => {
+    VA.mute = true; VA.saying = '상담에서는 먼저 듣고 나중에 말합니다';
+    window.__cancels = 0;
+  });
+  r = await say('아니 그거 말고 체크판 열어');
+  ok(r.tab === 'ckboard', '말하는 중에 끼어들면 새 말을 듣는다');
+  const cut = await page.evaluate(() => window.__cancels);
+  ok(cut >= 1, '끼어들면 읽던 것을 멈춘다');
+
+  /* 제 목소리는 명령으로 안 듣는지 */
+  await page.evaluate(() => { VA.mute = true; VA.saying = '실행 체크판 을 엽니다'; go('home'); });
+  await page.waitForTimeout(200);
+  r = await say('실행 체크판 을 엽니다');
+  ok(r.tab === 'home', '스피커에서 나온 제 목소리는 명령으로 듣지 않는다');
+
+  /* 대화 끝내기 */
+  await page.evaluate(() => { VA.mute = false; VA.saying = ''; window.__spoke = []; });
+  r = await say('고마워');
+  const ended = await page.evaluate(() => ({ talk: VA.talk, on: VA.on, state: VA.state,
+    spoke: window.__spoke.join(' '), fab: (document.getElementById('osVaFab') || {}).className }));
+  ok(!ended.talk && !ended.on, '"고마워" 하면 대화가 끝난다');
+  ok(/마치겠습니다/.test(ended.spoke), '마친다고 말해 준다');
+  ok(ended.fab === '', '단추도 평소 모습으로');
+
+  /* 소리가 꺼져 있어도 대화가 이어지는지 — 입이 막혀도 귀는 열린다 */
+  await page.evaluate(() => { vaSpeakToggle(); VA.hist = []; vaTalkStart(); });
+  await page.waitForTimeout(600);
+  const mute0 = await page.evaluate(() => ({ talk: VA.talk, on: VA.on, spoke: window.__spoke.length }));
+  ok(mute0.talk && mute0.on, '소리를 꺼도 대화 모드는 돌아간다');
+  await page.evaluate(() => { VA.mute = false; go('home'); });
+  r = await say('체크판');
+  ok(r.tab === 'ckboard' && r.spoke === '', '소리 없이도 일은 한다');
+  await page.waitForTimeout(500);
+  const mute1 = await page.evaluate(() => ({ on: VA.on, state: VA.state }));
+  ok(mute1.on && mute1.state === 'listen', '소리가 없어도 다시 듣기로 돌아온다');
+  await page.evaluate(() => { vaTalkStop(false); vaSpeakToggle(); });
+  await page.waitForTimeout(300);
 
   /* ── 11. 연결된 화면이 모두 있는지 ── */
   const bad = await page.evaluate(() => {

@@ -48,4 +48,13 @@ jobs:
       - name: Netlify 배포(프로덕션)
         if: steps.check.outputs.skip != 'true'
         # 사이트 ID는 비밀이 아니라 식별자이므로 여기에 직접 지정(사용자는 토큰 1개만 등록하면 됨).
-        run: npx --yes netlify-cli deploy --prod --site 358d3c54-b3cb-4d48-bfaf-f2eb72d38816
+        # 토큰이 막히면 Forbidden 만 뜨고 왜인지 안 보인다 — 무엇을 해야 하는지 적어 준다.
+        run: |
+          set -o pipefail
+          if npx --yes netlify-cli deploy --prod --site 358d3c54-b3cb-4d48-bfaf-f2eb72d38816 2>&1 | tee /tmp/deploy.log; then
+            exit 0
+          fi
+          if grep -qiE 'forbidden|unauthorized|401|403|invalid token' /tmp/deploy.log; then
+            echo "::error title=Netlify 토큰이 막혔습니다::NETLIFY_AUTH_TOKEN 이 더 이상 통하지 않습니다. Netlify → User settings → Applications → Personal access tokens 에서 새 토큰을 만들고, GitHub 저장소 Settings → Secrets and variables → Actions → NETLIFY_AUTH_TOKEN 을 새 값으로 바꾸세요. 토큰은 어디에도 붙여넣지 말고 그 칸에만 넣으세요."
+          fi
+          exit 1
