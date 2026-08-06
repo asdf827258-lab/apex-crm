@@ -1,9 +1,12 @@
 name: Deploy to Netlify
 
 # main 브랜치에 병합(push)될 때마다 자동으로 라이브 사이트에 배포한다.
+# 단, '자동 점검' 이 통과했을 때만 나간다 — 깨진 코드가 라이브로 가지 않게.
 # 수동 실행도 가능(Actions 탭 → Run workflow).
 on:
-  push:
+  workflow_run:
+    workflows: ["자동 점검"]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
@@ -14,11 +17,17 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # 점검이 빨간불이면 배포하지 않는다. 손으로 돌릴 때는 그대로 나간다.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
     env:
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
     steps:
       - name: 소스 체크아웃
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: 토큰 확인
         id: check

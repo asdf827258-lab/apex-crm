@@ -1,0 +1,45 @@
+name: 자동 점검
+
+# 깨진 코드가 라이브로 나가는 것을 막는다.
+# PR 을 올릴 때와 main 에 들어갈 때 모두 돈다.
+# 여기서 빨간불이 뜨면 배포가 시작되지 않는다.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 화면 파일 문법 검사
+        run: node scripts/check-html.js app/index.html db-crm.html db-crm-teams.html index.html
+
+      - name: SQL 문법 검사
+        run: |
+          python3 -m pip install --quiet pglast
+          python3 scripts/check-sql.py
+
+      - name: 브라우저 설치
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: 주요 화면 열어 보기
+        run: node scripts/smoke.js
