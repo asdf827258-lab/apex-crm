@@ -45,7 +45,7 @@ const TABS = [
   'ins_asst', 'cs_assist', 'cs_needs', 'cs_gso', 'claims', 'med_silbi', 'med_checkup',
   'med_disclosure', 'branch_coach', 'hq', 'audit', 'blog', 'threads', 'insta', 'video',
   'simui', 'calendar', 'ref_jeonsan', 'ref_kcd', 'ref_surgery', 'pricing',
-  'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'growboard'
+  'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'growboard', 'voiceasst'
 ];
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',

@@ -3268,6 +3268,7 @@ function osTabProbe(tab){
   if(tab==='academy')return renderAcademy();
   if(tab==='ckboard')return renderCkBoard();
   if(tab==='growboard')return renderGrowBoard();
+  if(tab==='voiceasst')return renderVoiceAsst();
   if(tab==='fp_talk')return renderFpTalk();
   if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
@@ -4268,7 +4269,7 @@ var TABS=[
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
- {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
+ {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''},{id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'growboard',icon:'📈',title:'성장판',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:''},{id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:''},{id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
@@ -4455,6 +4456,7 @@ function go(tab){
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
   else if(tab==='ckboard'){dyn.innerHTML=renderCkBoard();if(typeof osCkBoardAfterRender==='function')osCkBoardAfterRender();}
   else if(tab==='growboard'){dyn.innerHTML=renderGrowBoard();if(typeof osGrowBoardAfterRender==='function')osGrowBoardAfterRender();}
+  else if(tab==='voiceasst'){dyn.innerHTML=renderVoiceAsst();if(typeof osVoiceAsstAfterRender==='function')osVoiceAsstAfterRender();}
   else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
   else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
@@ -4605,6 +4607,660 @@ function mountSangdam(){var f=$('sangdamFrame');if(!f||f._mounted)return;f.src=S
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* ════════ 음성 비서 — 불러서 시키면 한다 ════════
+   화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
+   이름을 부르고 말로 시키면 되게 한다.
+
+   듣는 것과 말하는 것은 브라우저 기능을 쓴다. 열쇠도 서버도 필요 없다.
+   다만 브라우저마다 되고 안 되는 것이 다르고, 크롬은 소리를 밖으로 보낸다.
+   그래서 화면에 그대로 적어 둔다 — 모르고 쓰면 사고가 난다.
+
+   알아듣는 순서
+     1. 멈춰 · 조용히  — 말하던 것을 끊는다
+     2. 앱이 아는 것    — 오늘 할 일, 놓친 사람, 내 점수. AI 안 부른다
+     3. 화면 이름       — "체크판 열어" → 그 화면으로
+     4. 화법 이름       — "암 화법" → 화법서 그 장으로
+     5. 그 밖           — AI 에게 묻고 답을 읽어 준다                */
+
+var VA={on:false,wake:false,speak:true,mute:false,busy:false,
+  rec:null,partial:'',err:'',log:[],voice:null,rate:1,
+  tries:0,halt:true,open:false,ready:false};
+var VA_WAKE='아펙스';
+var VA_MAXLOG=24;
+
+function vaSR(){return window.SpeechRecognition||window.webkitSpeechRecognition||null;}
+function vaCanHear(){return !!vaSR();}
+function vaCanSpeak(){return !!(window.speechSynthesis&&window.SpeechSynthesisUtterance);}
+function vaWake(){return (vaCfg().wake||VA_WAKE);}
+function vaCfg(){
+  try{return JSON.parse(localStorage.getItem('apex_va'))||{};}catch(e){return {};}
+}
+function vaCfgSet(k,v){
+  var c=vaCfg();c[k]=v;
+  try{localStorage.setItem('apex_va',JSON.stringify(c));}catch(e){}
+}
+function vaBoot(){
+  var c=vaCfg();
+  if(c.speak===0)VA.speak=false;
+  if(c.rate)VA.rate=c.rate;
+  if(vaCanSpeak()){
+    VA.voice=vaPickVoice();
+    try{window.speechSynthesis.onvoiceschanged=function(){VA.voice=vaPickVoice();};}catch(e){}
+  }
+  VA.ready=true;
+}
+function vaPickVoice(){
+  if(!vaCanSpeak())return null;
+  var vs=[],i;
+  try{vs=window.speechSynthesis.getVoices()||[];}catch(e){return null;}
+  for(i=0;i<vs.length;i++)if(/ko[-_]KR/i.test(vs[i].lang||''))return vs[i];
+  for(i=0;i<vs.length;i++)if(/^ko/i.test(vs[i].lang||''))return vs[i];
+  return null;
+}
+
+/* ── 듣기 ── */
+function vaErrMsg(k){
+  if(k==='not-allowed'||k==='service-not-allowed')
+    return '마이크를 쓸 수 없습니다. 주소창 왼쪽 자물쇠를 눌러 마이크를 허용해 주세요.';
+  if(k==='audio-capture')return '마이크를 찾지 못했습니다. 연결돼 있는지 확인해 주세요.';
+  if(k==='network')return '인식 서버에 닿지 못했습니다. 인터넷을 확인해 주세요.';
+  if(k==='language-not-supported')return '이 브라우저에서 한국어 인식을 지원하지 않습니다.';
+  return '음성 인식이 멈췄습니다 ('+k+').';
+}
+function vaListen(wake){
+  var SR=vaSR();
+  if(!SR){
+    VA.err='이 브라우저는 음성 인식을 못 합니다. 크롬이나 사파리에서 열어 주세요.';
+    vaPaint();return;
+  }
+  vaKill();
+  var r=new SR();
+  r.lang='ko-KR';
+  r.continuous=!!wake;
+  r.interimResults=true;
+  r.maxAlternatives=1;
+  r.onstart=function(){VA.on=true;VA.err='';VA.tries=0;vaPaint();};
+  r.onerror=function(e){
+    var k=(e&&e.error)||'';
+    if(k==='no-speech'||k==='aborted')return;
+    VA.err=vaErrMsg(k);
+    if(k==='not-allowed'||k==='service-not-allowed'||k==='audio-capture'){VA.wake=false;VA.halt=true;}
+    vaPaint();
+  };
+  r.onend=function(){
+    VA.on=false;VA.partial='';
+    if(VA.wake&&!VA.halt){
+      VA.tries++;
+      if(VA.tries>25){VA.wake=false;VA.err='계속 끊겨서 상시 대기를 껐습니다. 다시 켜 주세요.';vaPaint();return;}
+      setTimeout(function(){
+        if(VA.wake&&!VA.halt&&VA.rec===r){try{r.start();}catch(e){}}
+      },500);
+      return;
+    }
+    vaPaint();
+  };
+  r.onresult=function(e){
+    var fin='',part='',i;
+    for(i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal)fin+=e.results[i][0].transcript;
+      else part+=e.results[i][0].transcript;
+    }
+    VA.partial=part;
+    if(fin)vaHeard(fin);
+    else vaLive();
+  };
+  VA.rec=r;VA.halt=false;VA.wake=!!wake;
+  try{r.start();}
+  catch(e){VA.err='마이크를 열지 못했습니다 — '+((e&&e.message)||'');VA.halt=true;vaPaint();}
+}
+function vaKill(){
+  var r=VA.rec;VA.rec=null;VA.on=false;VA.partial='';
+  if(r){try{r.onend=null;r.onresult=null;r.onerror=null;}catch(e){}
+    try{r.abort();}catch(e){}try{r.stop();}catch(e){}}
+}
+function vaOff(){VA.halt=true;VA.wake=false;vaKill();vaShush();vaPaint();}
+function vaOnce(){
+  /* 사람이 직접 누른 것이 언제나 이긴다 — 읽던 것을 끊고 귀를 연다 */
+  vaShush();
+  if(VA.on&&!VA.wake){vaOff();return;}
+  vaListen(false);
+}
+function vaWakeToggle(){
+  if(VA.wake){vaOff();return;}
+  vaListen(true);
+  vaSay('네, 듣고 있습니다. '+vaWake()+' 하고 부르세요.');
+}
+
+/* ── 말하기 ── */
+function vaPlain(t){
+  return (''+(t==null?'':t))
+    .replace(/```[\s\S]*?```/g,' ')
+    .replace(/\[(.*?)\]\((.*?)\)/g,'$1')
+    .replace(/[*_#>`~|]/g,' ')
+    .replace(/\s+/g,' ')
+    .replace(/^\s+|\s+$/g,'');
+}
+function vaChunks(t){
+  var out=[],buf='',i,ch;
+  for(i=0;i<t.length;i++){
+    ch=t.charAt(i);buf+=ch;
+    if(buf.length>=150&&(ch==='.'||ch==='!'||ch==='?'||ch==='다'||ch==='요'||ch===',')){out.push(buf);buf='';}
+    else if(buf.length>=240&&ch===' '){out.push(buf);buf='';}
+  }
+  if(buf)out.push(buf);
+  return out;
+}
+function vaShush(){
+  try{window.speechSynthesis.cancel();}catch(e){}
+  VA.mute=false;
+}
+function vaSay(t){
+  if(!VA.speak||!vaCanSpeak())return;
+  var txt=vaPlain(t);
+  if(!txt)return;
+  try{window.speechSynthesis.cancel();}catch(e){}
+  var parts=vaChunks(txt),i,u,last=null;
+  /* 말하는 동안 제 목소리를 다시 듣지 않는다 */
+  VA.mute=true;
+  if(window.__vaMuteT)clearTimeout(window.__vaMuteT);
+  /* 소리가 안 나는 기기에서 onend 가 영영 안 올 수 있다 — 그때도 귀는 다시 열린다 */
+  window.__vaMuteT=setTimeout(function(){VA.mute=false;},Math.min(25000,2000+txt.length*160));
+  for(i=0;i<parts.length;i++){
+    u=new SpeechSynthesisUtterance(parts[i]);
+    u.lang='ko-KR';u.rate=VA.rate;u.pitch=1;u.volume=1;
+    if(VA.voice)try{u.voice=VA.voice;}catch(e){}
+    last=u;
+    try{window.speechSynthesis.speak(u);}catch(e){}
+  }
+  if(last)last.onend=function(){
+    VA.mute=false;
+    if(window.__vaMuteT)clearTimeout(window.__vaMuteT);
+  };
+}
+
+/* ── 알아듣기 ── */
+function vaNorm(s){
+  return (''+(s||'')).replace(/[\s.,!?·・"'`~\-]/g,'').toLowerCase();
+}
+function vaAdd(who,text){
+  VA.log.push({w:who,t:text,at:new Date().toLocaleTimeString('ko-KR')});
+  if(VA.log.length>VA_MAXLOG)VA.log=VA.log.slice(-VA_MAXLOG);
+}
+function vaHeard(text){
+  var t=(''+(text||'')).replace(/^\s+|\s+$/g,'');
+  VA.partial='';
+  if(!t){vaPaint();return;}
+  if(VA.mute){vaPaint();return;}
+  if(VA.wake){
+    var w=vaWake(),n=vaNorm(t),wn=vaNorm(w),i=n.indexOf(wn);
+    if(i<0){vaPaint();return;}
+    /* 이름 뒤에 오는 말만 명령으로 본다 */
+    var raw=t,pos=t.indexOf(w);
+    t=(pos>=0)?t.slice(pos+w.length):raw;
+    t=t.replace(/^[\s,.·아야]+/,'').replace(/^\s+|\s+$/g,'');
+    if(!t){vaAdd('bot','네, 말씀하세요');vaSay('네, 말씀하세요');vaPaint();return;}
+  }
+  vaAdd('me',t);
+  vaRun(t);
+}
+
+function vaRun(t){
+  var s=vaNorm(t);
+  if(/^(그만|멈춰|멈춤|중지|스톱|조용|닥쳐)/.test(s)){
+    vaShush();vaAdd('bot','알겠습니다.');vaPaint();return;
+  }
+  var d=vaAnswer(t,s);
+  if(d){
+    vaAdd('bot',d.say);
+    if(d.go&&typeof go==='function')go(d.go);
+    if(d.ch&&typeof fpTalkOpen==='function')fpTalkOpen(d.ch);
+    vaSay(d.say);vaPaint();return;
+  }
+  var ch=vaFindCh(s);
+  if(ch){
+    var m='화법서 '+ch[1]+' 을 엽니다.';
+    vaAdd('bot',m);
+    if(typeof fpTalkOpen==='function')fpTalkOpen(ch[0]);
+    vaSay(m);vaPaint();return;
+  }
+  var tab=vaIsOpen(s)?vaFindTab(s):'';
+  if(tab){
+    var nm=vaTabName(tab),msg=nm+' 을 엽니다.';
+    vaAdd('bot',msg);
+    if(typeof go==='function')go(tab);
+    vaSay(msg);vaPaint();return;
+  }
+  vaAI(t);
+}
+
+/* 앱이 직접 아는 것 — AI 를 부르지 않는다 */
+function vaAnswer(raw,s){
+  var i;
+  if(/^(안녕|하이|헬로|여보세요|불렀|불러)/.test(s))
+    return {say:'네, 듣고 있습니다. 화면 이름을 부르거나 무엇이든 물어보세요.'};
+  if(/뭐할수있|뭐가능|도움말|무엇을할수있|기능/.test(s))
+    return {say:'화면을 열고, 오늘 할 일을 읽어 드리고, 도와줄 것을 적어 두고, 화법을 찾아 드립니다. 그 밖에는 AI 에게 물어봅니다.'};
+
+  /* 오늘 할 일 — 실행 체크판에서 바로 읽는다 */
+  if(/오늘할일|뭐해야|할일|오늘뭐/.test(s)){
+    if(typeof CK_ITEMS==='undefined'||typeof ckLoad!=='function')
+      return {say:'실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+    var m=ckLoad('day'),left=[],done=0;
+    for(i=0;i<CK_ITEMS.day.length;i++){
+      if(m[CK_ITEMS.day[i][0]])done++;
+      else left.push(CK_ITEMS.day[i][1]);
+    }
+    if(!left.length)return {say:'오늘 할 일을 다 하셨습니다. '+done+'개 전부 끝냈습니다.',go:'ckboard'};
+    return {say:'오늘 '+done+'개 했고 '+left.length+'개 남았습니다. 남은 것은 '+
+      left.slice(0,5).join(', ')+(left.length>5?' 외 '+(left.length-5)+'개':'')+' 입니다.',go:'ckboard'};
+  }
+  /* 몇 개 했나 */
+  if(/몇개했|얼마나했|진행/.test(s)&&typeof ckLoad==='function'&&typeof CK_ITEMS!=='undefined'){
+    var mm=ckLoad('day'),n=0;
+    for(i=0;i<CK_ITEMS.day.length;i++)if(mm[CK_ITEMS.day[i][0]])n++;
+    return {say:'오늘 '+n+'개 중 '+CK_ITEMS.day.length+'개 가운데 '+n+'개 했습니다.',go:'ckboard'};
+  }
+
+  /* 도와줄 것 적어 두기 */
+  var hm=raw.match(/도와줄\s*것[을는]?\s*(적어|추가|저장|메모)?\s*(.*)$/);
+  if(hm){
+    var txt=(hm[2]||'').replace(/^\s+|\s+$/g,'').replace(/[.。]$/,'');
+    if(!txt)return {say:'무엇을 도와줄지 함께 말씀해 주세요. 예를 들어, 도와줄 것 김민수 심사 확인.',go:'ckboard'};
+    var okAdd=vaHelpAdd(txt);
+    return {say:okAdd?('적었습니다. '+txt+'. 오늘까지로 잡았습니다.'):'적지 못했습니다. 실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+  }
+
+  /* 놓치고 있는 사람 */
+  if(/놓친|놓치|누구부터|누굴먼저|누구먼저|위험한사람/.test(s)){
+    if(typeof GB==='undefined'||!GB.loaded){
+      if(typeof gbLoad==='function'&&typeof GB!=='undefined'&&!GB.busy)gbLoad();
+      return {say:'성장판을 여는 중입니다. 잠시 뒤 다시 물어봐 주세요.',go:'growboard'};
+    }
+    var ms=gbMiss(gbScope());
+    if(!ms.length)return {say:'놓치고 있는 사람이 없습니다.',go:'growboard'};
+    var names=[];
+    for(i=0;i<ms.length&&i<3;i++)names.push(ms[i].r.name);
+    return {say:'놓치고 있는 사람 '+ms.length+'명입니다. 먼저 볼 사람은 '+names.join(', ')+
+      ' 입니다. '+ms[0].r.name+'님은 '+ms[0].why[0]+'.',go:'growboard'};
+  }
+  /* 내 점수 */
+  if(/내점수|내성장|나는몇점|몇점/.test(s)){
+    if(typeof GB==='undefined'||!GB.loaded){
+      if(typeof gbLoad==='function'&&typeof GB!=='undefined'&&!GB.busy)gbLoad();
+      return {say:'성장판을 여는 중입니다. 잠시 뒤 다시 물어봐 주세요.',go:'growboard'};
+    }
+    var me=gbMe();
+    if(!me)return {say:'내 기록을 찾지 못했습니다. 조직도에서 계정 연결을 확인해 주세요.',go:'org'};
+    var gaps=gbGapList(me,gbScope());
+    return {say:'지금 '+me.total+'점입니다. 가장 벌어진 곳은 '+gaps[0].ax.n+' 입니다. '+
+      gaps[0].ax.fix,go:'growboard'};
+  }
+  /* 빠뜨린 날 */
+  if(/빠뜨린|빠진날|달력/.test(s))
+    return {say:'실행 체크판의 지점장 탭을 엽니다. 달력에서 빨간 날이 빠뜨린 날입니다.',go:'ckboard'};
+
+  if(/^(뒤로|홈|처음|메인)/.test(s))return {say:'홈으로 갑니다.',go:'home'};
+  return null;
+}
+
+function vaHelpAdd(txt){
+  if(typeof HELP==='undefined'||typeof hpStore!=='function'||typeof hpNewId!=='function')return false;
+  try{
+    if(!HELP.loaded&&typeof hpPull==='function')hpPull();
+    HELP.list.push({id:hpNewId(),who:'',what:(''+txt).slice(0,200),
+      due:(typeof ckDayK==='function'?ckDayK():''),done:0,up:(typeof hpNow==='function'?hpNow():0)});
+    hpStore();
+    if(typeof hpPush==='function')hpPush();
+    if(typeof hpPaint==='function')hpPaint();
+    return true;
+  }catch(e){return false;}
+}
+
+/* 화면 이름으로 찾기 */
+var VA_ALIAS={
+ '체크판':'ckboard','실행체크판':'ckboard','오늘체크':'ckboard',
+ '성장판':'growboard','팀':'growboard','팀원':'growboard','성장':'growboard',
+ '두뇌':'brain','윤시현의두뇌':'brain','뇌':'brain',
+ '화법서':'fp_talk','화법':'fp_talk','실전화법서':'fp_talk',
+ '재무설계상담자료':'fp_deck','재무상담':'fp_deck','생애설계':'fp_deck',
+ '보장분석상담자료':'sangdam','상담자료':'sangdam',
+ '보장분석':'bojang','증권':'bojang','증권분석':'bojang',
+ '고객':'clients','고객365일':'clients','고객카드':'clients','고객삼육오':'clients',
+ '씨알엠':'crm','시알엠':'crm','디비':'crm','디비씨알엠':'crm','crm':'crm',
+ '출근':'attend','출근현황':'attend',
+ '상담카드':'fact_find','팩트파인딩':'fact_find','팩트':'fact_find',
+ '계산기':'finance','재무설계계산기':'finance','재무계산기':'finance','실무계산기':'calc',
+ '제안서':'ai_prop','비포애프터':'baba','비교':'compare','카톡':'katalk',
+ '청구':'claims','사후관리':'claims','실비':'med_silbi','실비계산기':'med_silbi',
+ '건강검진':'med_checkup','알릴의무':'med_disclosure','고지':'med_disclosure',
+ '인수':'ref_underwrite','인수기준':'ref_underwrite','전산':'ref_jeonsan',
+ '코칭':'branch_coach','팀코칭':'branch_coach','내코칭':'mycoach',
+ '조직도':'org','조직':'org','매뉴얼':'manual','업무매뉴얼':'manual',
+ '건의함':'voice','불편한점':'voice','설정':'settings','시스템점검':'health',
+ '비서':'assistant','오늘의ai비서':'assistant','음성비서':'voiceasst',
+ '블로그':'blog','인스타':'insta','인스타그램':'insta','유튜브':'video',
+ '치료비':'treatpay','지급지도':'treatpay','8통장':'wallets','팔통장':'wallets',
+ '홈':'home','대시보드':'home','약관':'terms','요금제':'pricing'
+};
+function vaTabList(){
+  var out=[],i,j;
+  if(typeof TABS==='undefined')return out;
+  for(i=0;i<TABS.length;i++){
+    var it=TABS[i].items||[];
+    for(j=0;j<it.length;j++)out.push({id:it[j].id,title:it[j].title||''});
+  }
+  return out;
+}
+function vaTabName(id){
+  var L=vaTabList(),i;
+  for(i=0;i<L.length;i++)if(L[i].id===id)return L[i].title;
+  return id;
+}
+/* "체크판" 처럼 이름만 부르거나, 열라는 말이 붙었을 때만 화면을 연다.
+   "고객이 비싸다고 하는데" 같은 문장에서 고객 화면이 열리면 안 된다. */
+function vaIsOpen(s){
+  if(/열어|열기|열자|열어줘|보여|띄워|켜줘|켜자|이동|가자|가줘|화면|보자|로가/.test(s))return true;
+  return s.length<=8;
+}
+function vaFindTab(s){
+  var k,best='',bestLen=0;
+  /* 별칭 — 긴 이름이 먼저 이긴다 */
+  for(k in VA_ALIAS){
+    if(s.indexOf(k)>=0&&k.length>bestLen){best=VA_ALIAS[k];bestLen=k.length;}
+  }
+  if(best)return best;
+  var L=vaTabList(),i,n;
+  for(i=0;i<L.length;i++){
+    n=vaNorm(L[i].title);
+    if(n&&n.length>=2&&s.indexOf(n)>=0&&n.length>bestLen){best=L[i].id;bestLen=n.length;}
+  }
+  return best;
+}
+var VA_CHKEY={'거절':'c24','암':'c11','뇌':'c12','심장':'c12','간병':'c14','재가급여':'c13',
+ '연금':'c15','변액':'c16','최저보증':'c17','원금보장':'c17','달러':'c19','퇴직':'c20',
+ '비과세':'c21','절세':'c21','상속':'c22','증여':'c22','클로징':'c23','오프닝':'c5',
+ '비유':'c7','대본':'c27','미지급':'c9','치료비':'c10','소득대체율':'c6'};
+function vaCh(id){
+  var i;
+  for(i=0;i<FP_CH.length;i++)if(FP_CH[i][0]===id)return FP_CH[i];
+  return null;
+}
+function vaFindCh(s){
+  if(typeof FP_CH==='undefined')return null;
+  if(!/화법|대본|멘트|스크립트|뭐라고|어떻게말|어떻게얘기|어떻게설명/.test(s))return null;
+  var i,k,n,best=null,bestLen=0;
+  /* 장 이름을 그대로 말했으면 그것부터 */
+  for(i=0;i<FP_CH.length;i++){
+    n=vaNorm(FP_CH[i][1].split('—')[0]);
+    if(n&&n.length>=2&&s.indexOf(n)>=0&&n.length>bestLen){best=FP_CH[i];bestLen=n.length;}
+  }
+  if(best)return best;
+  /* 아니면 낱말로 */
+  for(k in VA_CHKEY)if(s.indexOf(k)>=0&&k.length>bestLen){best=vaCh(VA_CHKEY[k]);bestLen=k.length;}
+  return best;
+}
+
+/* ── AI 에게 묻기 ── */
+var VA_SYS='당신은 한국의 보험·재무설계 설계사를 돕는 업무 비서입니다. '+
+  '답은 소리로 읽힙니다. 그러니 표·목록 기호·마크다운을 쓰지 말고, 짧은 문장으로 말하듯 답하세요. '+
+  '세 문장에서 다섯 문장 안에 끝내세요. 숫자는 꼭 필요할 때만 말하세요. '+
+  '확정되지 않은 수익률·환급률·보험금 지급 여부를 단정하지 마세요. '+
+  '특정 상품을 권하지 말고, 판단은 설계사가 하도록 근거와 확인할 곳을 알려 주세요. '+
+  '모르면 모른다고 하고 어느 화면에서 확인하면 되는지 말하세요.';
+
+function vaRisky(t){
+  var d=(''+t).replace(/[\s\-.()]/g,'');
+  if(/\d{8,}/.test(d))
+    return '숫자가 길게 들어 있습니다. 고객 전화번호나 주민등록번호는 말로 넣지 마세요. 화면에서 직접 입력해 주세요.';
+  if(/주민등록번호|주민번호|계좌번호|카드번호|비밀번호/.test(t))
+    return '주민등록번호나 계좌번호는 여기서 다루지 않습니다. 화면에서 직접 입력해 주세요.';
+  return '';
+}
+function vaAI(t){
+  var bad=vaRisky(t);
+  if(bad){vaAdd('bot',bad);vaSay(bad);vaPaint();return;}
+  if(typeof callAI!=='function'){
+    var m='AI 가 연결되어 있지 않습니다. 설정에서 연결해 주세요.';
+    vaAdd('bot',m);vaSay(m);vaPaint();return;
+  }
+  VA.busy=true;vaPaint();
+  callAI(VA_SYS,t,700,'voice').then(function(txt){
+    VA.busy=false;
+    var say=vaPlain(txt)||'답이 비어 있습니다.';
+    vaAdd('bot',say);vaSay(say);vaPaint();
+  },function(e){
+    VA.busy=false;
+    var msg=((e&&e.message)||'')+'';
+    var say=/연결되어 있지 않습니다/.test(msg)?msg:('답을 가져오지 못했습니다. '+msg.slice(0,80));
+    vaAdd('bot',say);vaSay(/연결/.test(say)?'AI 가 연결되어 있지 않습니다':'답을 가져오지 못했습니다');
+    vaPaint();
+  });
+}
+
+/* ── 떠 있는 단추와 쪽창 ── */
+function vaFab(){
+  if(document.getElementById('osVaFab'))return;
+  if(!VA.ready)vaBoot();
+  var b=document.createElement('button');
+  b.id='osVaFab';b.type='button';b.title='음성 비서';b.setAttribute('aria-label','음성 비서');
+  b.innerHTML='🎙';
+  b.onclick=function(){vaPanel(!VA.open);};
+  document.body.appendChild(b);
+  vaCss();
+  vaFabPaint();
+}
+function vaFabPaint(){
+  var b=document.getElementById('osVaFab');if(!b)return;
+  b.className=VA.on?(VA.wake?'wake':'on'):'';
+}
+function vaPanel(open){
+  VA.open=!!open;
+  var p=document.getElementById('osVaPanel');
+  if(!VA.open){if(p&&p.parentNode)p.parentNode.removeChild(p);vaOff();return;}
+  if(!p){
+    p=document.createElement('div');p.id='osVaPanel';
+    document.body.appendChild(p);
+  }
+  vaCss();vaPaint();
+}
+function vaLive(){
+  var el=document.getElementById('vaLive');
+  if(el)el.textContent=VA.partial||'';
+  vaFabPaint();
+}
+function vaPaint(){
+  vaFabPaint();
+  var p=document.getElementById('osVaPanel');
+  if(p)p.innerHTML=vaPanelHtml();
+  var pane=document.getElementById('vaPane');
+  if(pane)pane.innerHTML=vaTabHtml();
+  var lg=document.getElementById('vaLogBox');
+  if(lg)lg.scrollTop=lg.scrollHeight;
+}
+function vaLogHtml(){
+  if(!VA.log.length)
+    return '<div class="va-empty">'+(vaCanHear()
+      ? '마이크를 누르고 말해 보세요. 예를 들어 <b>"오늘 할 일"</b>, <b>"체크판 열어"</b>, <b>"암 화법"</b>.'
+      : '이 브라우저는 음성 인식을 못 합니다. 크롬이나 사파리에서 열어 주세요.')+'</div>';
+  var h='',i;
+  for(i=0;i<VA.log.length;i++)
+    h+='<div class="va-m '+(VA.log[i].w==='me'?'me':'bot')+'"><span>'+osEsc(VA.log[i].t)+'</span></div>';
+  if(VA.busy)h+='<div class="va-m bot"><span>생각하는 중…</span></div>';
+  return h;
+}
+function vaPanelHtml(){
+  return '<div class="va-hd"><b>🎙 음성 비서</b>'+
+    '<button type="button" class="va-x" onclick="vaPanel(false)">✕</button></div>'+
+    '<div class="va-log" id="vaLogBox">'+vaLogHtml()+'</div>'+
+    (VA.err?'<div class="va-err">'+osEsc(VA.err)+'</div>':'')+
+    '<div class="va-live" id="vaLive">'+osEsc(VA.partial||'')+'</div>'+
+    '<div class="va-bar">'+
+      '<button type="button" class="va-mic'+(VA.on&&!VA.wake?' on':'')+'" onclick="vaOnce()"'+
+        (vaCanHear()?'':' disabled')+'>'+(VA.on&&!VA.wake?'듣는 중… 누르면 멈춤':'눌러서 말하기')+'</button>'+
+      '<button type="button" class="va-sm'+(VA.wake?' on':'')+'" onclick="vaWakeToggle()"'+
+        (vaCanHear()?'':' disabled')+' title="상시 대기">'+(VA.wake?'대기 중':'상시 대기')+'</button>'+
+      '<button type="button" class="va-sm'+(VA.speak?' on':'')+'" onclick="vaSpeakToggle()" title="소리로 답하기">'+
+        (VA.speak?'🔊':'🔇')+'</button>'+
+      '<button type="button" class="va-sm" onclick="vaPanel(false);go(\'voiceasst\')" title="설정">⚙</button>'+
+    '</div>'+
+    (VA.wake?'<div class="va-note">이름을 부르고 말하세요 — <b>'+osEsc(vaWake())+'</b>, 오늘 할 일</div>':'');
+}
+function vaSpeakToggle(){
+  VA.speak=!VA.speak;
+  vaCfgSet('speak',VA.speak?1:0);
+  if(!VA.speak)vaShush();
+  vaPaint();
+}
+
+/* ── 화면 ── */
+var VA_HOW=[
+ ['화면 열기','체크판 열어 · 성장판 · 디비 씨알엠 · 고객 365일 · 두뇌','말한 화면으로 바로 갑니다'],
+ ['오늘 할 일','오늘 할 일 · 뭐 해야 돼','체크판에서 남은 것을 읽어 줍니다'],
+ ['놓친 사람','놓친 사람 · 누구부터 볼까','성장판에서 먼저 볼 사람을 읽어 줍니다'],
+ ['내 점수','내 점수 · 나는 몇 점','여섯 축 중 가장 벌어진 곳을 알려 줍니다'],
+ ['도와줄 것','도와줄 것 김민수 심사 확인','체크판 도와줄 것에 오늘까지로 적습니다'],
+ ['화법 찾기','암 화법 · 거절 · 연금 화법','화법서 그 장을 엽니다'],
+ ['그 밖','아무 질문','AI 에게 묻고 답을 읽어 줍니다'],
+ ['멈추기','그만 · 조용','읽던 것을 끊습니다']
+];
+function vaTabHtml(){
+  var hear=vaCanHear(),talk=vaCanSpeak();
+  var h='<div class="card"><div class="card-body">'+
+    '<div class="btn-row">'+
+    '<button class="btn btn-primary" onclick="vaPanel(true)">음성 비서 열기</button>'+
+    '<button class="btn btn-ghost" onclick="vaTry()">소리 시험</button>'+
+    '</div>'+
+    '<div class="va-st">'+
+      '<div class="'+(hear?'ok':'no')+'"><b>듣기</b>'+(hear?'됩니다':'이 브라우저는 안 됩니다')+'</div>'+
+      '<div class="'+(talk?'ok':'no')+'"><b>말하기</b>'+(talk?(VA.voice?('됩니다 · '+osEsc(VA.voice.name||'한국어')):'됩니다'):'이 브라우저는 안 됩니다')+'</div>'+
+    '</div>'+
+    (hear?'':'<div class="notice">크롬 · 엣지 · 사파리에서 열면 됩니다. 파이어폭스는 음성 인식을 지원하지 않습니다.</div>')+
+    '</div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>먼저 알아 두실 것</div></div>'+
+    '<div class="card-body"><div class="notice">'+
+    '<b>고객 이름 · 전화번호 · 병력을 말로 넣지 마세요.</b> 음성 인식은 브라우저 기능이라 '+
+    '소리가 인식 서버(크롬은 구글)로 나갑니다. 고객 정보는 화면에서 직접 입력해 주세요. '+
+    '긴 숫자가 들리면 AI 로 보내지 않고 막습니다.'+
+    '</div><div class="notice">'+
+    '상시 대기는 <b>이 창이 열려 있는 동안만</b> 돕습니다. 다른 앱으로 넘어가거나 화면이 꺼지면 멈춥니다. '+
+    '배터리를 계속 씁니다 — 필요할 때만 켜세요.'+
+    '</div></div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗣</span>이렇게 말하면 됩니다</div>'+
+    '<div class="card-desc">그대로 읽어도 알아듣습니다</div></div><div class="card-body">';
+  var i;
+  for(i=0;i<VA_HOW.length;i++)
+    h+='<div class="va-hw"><div class="va-hx"><div class="n">'+osEsc(VA_HOW[i][0])+'</div>'+
+      '<div class="s">'+osEsc(VA_HOW[i][1])+'</div></div>'+
+      '<div class="g">'+osEsc(VA_HOW[i][2])+'</div></div>';
+  h+='</div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚙️</span>설정</div></div>'+
+    '<div class="card-body">'+
+    '<div class="va-set"><label>부르는 이름</label>'+
+      '<input id="vaWakeIn" value="'+osEsc(vaWake())+'" maxlength="12" placeholder="아펙스" '+
+      'onchange="vaWakeSet(this.value)"></div>'+
+    '<div class="va-hint">상시 대기일 때 이 이름으로 시작하는 말만 알아듣습니다. 짧고 또렷한 말이 좋습니다.</div>'+
+    '<div class="va-set"><label>읽는 속도</label>'+
+      '<input id="vaRateIn" type="range" min="0.7" max="1.5" step="0.1" value="'+VA.rate+'" '+
+      'oninput="vaRateSet(this.value)"><span class="va-rv" id="vaRateV">'+VA.rate+'배</span></div>'+
+    '<div class="va-set"><label>소리로 답하기</label>'+
+      '<button type="button" class="va-sm'+(VA.speak?' on':'')+'" onclick="vaSpeakToggle()">'+
+      (VA.speak?'켬':'끔')+'</button></div>'+
+    '</div></div>';
+  return h;
+}
+function vaWakeSet(v){
+  var w=(''+(v||'')).replace(/^\s+|\s+$/g,'').slice(0,12);
+  vaCfgSet('wake',w||VA_WAKE);
+  toast('이제 "'+(w||VA_WAKE)+'" 하고 부르시면 됩니다');
+}
+function vaRateSet(v){
+  VA.rate=parseFloat(v)||1;
+  vaCfgSet('rate',VA.rate);
+  var e=document.getElementById('vaRateV');if(e)e.textContent=VA.rate+'배';
+}
+function vaTry(){
+  if(!vaCanSpeak()){toast('이 브라우저는 소리로 답하지 못합니다',6000);return;}
+  var was=VA.speak;VA.speak=true;
+  vaSay('안녕하세요. 음성 비서입니다. 이 목소리로 답해 드립니다.');
+  VA.speak=was;
+}
+function renderVoiceAsst(){
+  if(!VA.ready)vaBoot();
+  vaCss();
+  return osPage('음성','음성 비서',
+    '이름을 부르고 말로 시키면 됩니다. 손이 바쁠 때 화면을 찾지 않아도 됩니다.',
+    '<div id="vaPane">'+vaTabHtml()+'</div>');
+}
+function osVoiceAsstAfterRender(){vaFab();vaPaint();}
+
+function vaCss(){
+  if(document.getElementById('vaStyle'))return;
+  var st=document.createElement('style');st.id='vaStyle';
+  st.textContent=
+    '#osVaFab{position:fixed;right:18px;bottom:74px;z-index:9991;width:46px;height:46px;border-radius:50%;'+
+      'border:none;background:linear-gradient(135deg,#0F172A,#334155);color:#fff;font-size:20px;cursor:pointer;'+
+      'box-shadow:0 8px 22px rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center}'+
+    '#osVaFab.on{background:linear-gradient(135deg,#DC2626,#F87171);animation:vaPulse 1.2s infinite}'+
+    '#osVaFab.wake{background:linear-gradient(135deg,#059669,#34D399);animation:vaPulse 2s infinite}'+
+    '@keyframes vaPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}70%{box-shadow:0 0 0 12px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}'+
+    '@media(prefers-reduced-motion:reduce){#osVaFab.on,#osVaFab.wake{animation:none}}'+
+    '#osVaPanel{position:fixed;right:14px;bottom:130px;z-index:9992;width:min(360px,calc(100vw - 28px));'+
+      'background:#fff;border:1px solid var(--ink-7);border-radius:16px;box-shadow:0 18px 44px rgba(15,23,42,.22);'+
+      'overflow:hidden;display:flex;flex-direction:column}'+
+    '@media(max-width:520px){#osVaPanel{right:10px;left:10px;width:auto;bottom:124px}}'+
+    '.va-hd{display:flex;align-items:center;padding:11px 14px;border-bottom:1px solid var(--ink-8)}'+
+    '.va-hd b{font-size:13px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em}'+
+    '.va-x{margin-left:auto;appearance:none;border:0;background:none;cursor:pointer;font-family:inherit;'+
+      'color:var(--ink-5);font-size:13px;padding:2px 4px;line-height:1}'+
+    '.va-log{max-height:min(46vh,320px);overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:7px}'+
+    '.va-empty{font-size:12px;color:var(--ink-5);line-height:1.8}'+
+    '.va-m{display:flex}'+
+    '.va-m span{max-width:86%;font-size:12.5px;line-height:1.7;padding:8px 11px;border-radius:12px;'+
+      'word-break:break-word;white-space:pre-wrap}'+
+    '.va-m.me{justify-content:flex-end}'+
+    '.va-m.me span{background:var(--primary);color:#fff;border-bottom-right-radius:4px}'+
+    '.va-m.bot span{background:var(--ink-9);color:var(--ink-2);border:1px solid var(--ink-7);border-bottom-left-radius:4px}'+
+    '.va-err{margin:0 14px 8px;padding:8px 10px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;'+
+      'font-size:11.5px;color:#991B1B;line-height:1.6}'+
+    '.va-live{min-height:16px;padding:0 14px 6px;font-size:12px;color:var(--ink-5);font-style:italic}'+
+    '.va-bar{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--ink-8);align-items:center}'+
+    '.va-mic{flex:1;appearance:none;font-family:inherit;cursor:pointer;font-size:12.5px;font-weight:800;'+
+      'color:#fff;background:var(--primary);border:0;border-radius:99px;padding:10px 14px;letter-spacing:-.03em}'+
+    '.va-mic.on{background:var(--neg)}'+
+    '.va-mic:disabled{background:var(--ink-6);cursor:not-allowed}'+
+    '.va-sm{flex:none;appearance:none;font-family:inherit;cursor:pointer;font-size:11.5px;font-weight:700;'+
+      'color:var(--ink-3);background:var(--ink-9);border:1px solid var(--ink-7);border-radius:99px;padding:8px 11px}'+
+    '.va-sm.on{color:var(--pos);background:#ECFDF5;border-color:#A7F3D0}'+
+    '.va-sm:disabled{opacity:.45;cursor:not-allowed}'+
+    '.va-note{padding:0 14px 12px;font-size:11px;color:var(--ink-5);line-height:1.6}'+
+    '.va-st{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}'+
+    '.va-st>div{border:1px solid var(--ink-7);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--ink-3)}'+
+    '.va-st b{display:block;font-size:9.5px;font-weight:800;letter-spacing:.05em;color:var(--ink-5);margin-bottom:2px}'+
+    '.va-st .ok{background:#ECFDF5;border-color:#A7F3D0;color:var(--pos);font-weight:700}'+
+    '.va-st .ok b{color:var(--pos)}'+
+    '.va-st .no{background:#FEF2F2;border-color:#FECACA;color:var(--neg);font-weight:700}'+
+    '.va-st .no b{color:var(--neg)}'+
+    '.va-hw{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.va-hw:last-child{border-bottom:none}'+
+    '.va-hx{min-width:0;flex:1}'+
+    '.va-hw .n{font-size:12.5px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em}'+
+    '.va-hw .s{font-size:12px;color:var(--primary);line-height:1.65;margin-top:3px}'+
+    '.va-hw .g{flex:none;width:38%;font-size:11px;color:var(--ink-5);line-height:1.6}'+
+    '@media(max-width:520px){.va-hw{flex-direction:column;gap:3px}.va-hw .g{width:auto}}'+
+    '.va-set{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--ink-8);flex-wrap:wrap}'+
+    '.va-set:last-child{border-bottom:none}'+
+    '.va-set label{flex:none;width:96px;font-size:12px;font-weight:700;color:var(--ink-2)}'+
+    '.va-set input[type=text],.va-set input:not([type]){flex:1;min-width:120px;border:1px solid var(--ink-7);'+
+      'border-radius:7px;padding:8px 10px;font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    '.va-set input[type=range]{flex:1;min-width:120px}'+
+    '.va-rv{flex:none;font-family:var(--mono,ui-monospace,monospace);font-size:11.5px;font-weight:800;color:var(--ink-4)}'+
+    '.va-hint{font-size:11px;color:var(--ink-5);line-height:1.65;margin:-4px 0 4px}';
+  document.head.appendChild(st);
+}
+
 /* ════════ 성장판 — 매니저든 팀원이든 한 칸에서 ════════
    팀을 보는 창이 네 개로 흩어져 있었다. 리더는 어디를 봐야 할지 몰랐고,
    팀원은 자기가 어느 정도인지 볼 곳이 아예 없었다.
@@ -21897,7 +22553,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */

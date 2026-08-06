@@ -1,0 +1,360 @@
+/* 음성 비서 — 말을 알아듣고 일을 하는지 실제로 시켜 본다.
+
+   브라우저의 마이크와 스피커는 자동으로 켤 수 없다. 그래서 둘 다 가짜로 세운다.
+   가짜 마이크에 문장을 넣고, 앱이 무엇을 했는지 본다 —
+   화면을 열었는지, 숫자를 읽어 줬는지, AI 로 넘겼는지, 막았는지.
+
+   여기서 중요한 것은 "잘 알아듣는다" 가 아니라 "엉뚱한 짓을 안 한다" 이다.
+   고객 전화번호를 말했을 때 AI 로 나가면 그건 사고다.                */
+const { chromium } = require('playwright');
+const http = require('http'); const fs = require('fs'); const path = require('path');
+const ROOT = process.cwd(), PORT = 8817;
+const SHOT = process.env.VA_SHOT || '';
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
+
+const srv = http.createServer((req, res) => {
+  let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
+  const f = path.join(ROOT, p);
+  if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
+  fs.createReadStream(f).pipe(res);
+}).listen(PORT);
+
+/* 가짜 마이크 · 가짜 스피커 — 진짜와 같은 이름으로 세운다 */
+const FAKE = `
+window.__spoke=[];
+window.__recs=[];
+(function(){
+  function SR(){
+    this.lang='';this.continuous=false;this.interimResults=false;this.maxAlternatives=1;
+    this.onstart=null;this.onend=null;this.onerror=null;this.onresult=null;
+    var self=this;
+    window.__recs.push(self);
+    this.start=function(){self.__live=true;window.__live=self;if(self.onstart)self.onstart();};
+    this.stop=function(){self.__live=false;if(self.onend)self.onend();};
+    this.abort=function(){self.__live=false;};
+  }
+  function put(k,v){try{Object.defineProperty(window,k,{value:v,configurable:true,writable:true});}
+    catch(e){window[k]=v;}}
+  put('SpeechRecognition',SR);
+  put('webkitSpeechRecognition',SR);
+
+  function U(t){this.text=t;this.lang='';this.rate=1;this.pitch=1;this.volume=1;
+    this.voice=null;this.onend=null;}
+  put('SpeechSynthesisUtterance',U);
+  put('speechSynthesis',{
+    speak:function(u){window.__spoke.push(u.text);
+      setTimeout(function(){if(u.onend)u.onend();},5);},
+    cancel:function(){window.__cancels=(window.__cancels||0)+1;},
+    getVoices:function(){return [{name:'Yuna',lang:'ko-KR'},{name:'Samantha',lang:'en-US'}];},
+    onvoiceschanged:null
+  });
+})();
+
+/* 마이크에 한 문장 넣기 */
+window.__say=function(text,final){
+  var r=window.__live;
+  if(!r||!r.onresult)return false;
+  var res=[{0:{transcript:text},isFinal:(final!==false),length:1}];
+  res.length=1;
+  r.onresult({resultIndex:0,results:res});
+  return true;
+};
+
+window.supabase={createClient:function(){
+ var mk=function(){var a={select:function(){return a},eq:function(){return a},gte:function(){return a},
+   lte:function(){return a},is:function(){return a},neq:function(){return a},in:function(){return a},
+   not:function(){return a},order:function(){return a},limit:function(){return a},single:function(){return a},
+   range:function(){return a},insert:function(){return a},update:function(){return a},upsert:function(){return a},
+   then:function(res){return Promise.resolve({data:[],error:null}).then(res)}};
+  a['delete']=function(){return a};return a};
+ return {from:mk,rpc:function(){return Promise.resolve({data:null,error:null})},
+  storage:{from:function(){return {upload:function(){return Promise.resolve({data:null,error:null})},
+    getPublicUrl:function(){return {data:{publicUrl:''}}}}}},
+  auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'va',email:'v@t'}}}})},
+   getUser:function(){return Promise.resolve({data:{user:{id:'va'}}})},
+   onAuthStateChange:function(){return {data:{subscription:{unsubscribe:function(){}}}}},
+   signOut:function(){return Promise.resolve({})}}};}};
+`;
+
+(async () => {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport: { width: 1240, height: 1000 } });
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+    ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(e.message));
+  await page.addInitScript(FAKE);
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2600);
+  await page.evaluate(() => {
+    document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
+    OS.profile = { id: 'va', name: '점검', role: 'owner', plan: 'vip' };
+    OS.session = { user: { id: 'va', email: 'v@t' } };
+    OS.cfg = { schema_version: '32' };
+    window.__toast = []; window.toast = function (m) { window.__toast.push(m); };
+    try { localStorage.removeItem('apex_va'); } catch (e) {}
+    /* 앱이 자기 callAI 를 정의한 뒤라야 갈아끼울 수 있다 */
+    window.__ai = [];
+    window.callAI = function (sys, user) {
+      window.__ai.push({ sys: sys, user: user });
+      return Promise.resolve('상담에서는 먼저 듣고 나중에 말합니다. 오늘 하나만 정하시면 됩니다.');
+    };
+  });
+
+  const fail = [];
+  const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
+
+  /* 한 문장 말하고 결과 받기 */
+  async function say(text) {
+    await page.evaluate(t => { window.__spoke = []; window.__ai = []; window.__say(t); }, text);
+    await page.waitForTimeout(500);
+    return page.evaluate(() => ({
+      tab: (typeof lastTab !== 'undefined' ? lastTab : ''),
+      cls: document.body.className,
+      spoke: window.__spoke.join(' '),
+      ai: window.__ai.length,
+      aiUser: window.__ai[0] ? window.__ai[0].user : '',
+      last: (VA.log.length ? VA.log[VA.log.length - 1].t : ''),
+      log: VA.log.length
+    }));
+  }
+
+  /* ── 화면과 단추 ── */
+  await page.evaluate(() => go('voiceasst'));
+  await page.waitForTimeout(700);
+  const t0 = await page.evaluate(() => ({
+    fab: !!document.getElementById('osVaFab'),
+    hear: vaCanHear(), talk: vaCanSpeak(),
+    voice: VA.voice ? VA.voice.name : '',
+    how: document.querySelectorAll('.va-hw').length,
+    st: document.querySelectorAll('.va-st .ok').length,
+    warn: (document.body.textContent || '').indexOf('말로 넣지 마세요') >= 0
+  }));
+  ok(t0.fab, '마이크 단추가 화면에 뜬다');
+  ok(t0.hear && t0.talk, '듣기·말하기 둘 다 된다고 표시된다');
+  ok(t0.voice === 'Yuna', '한국어 목소리를 골랐다 (' + t0.voice + ')');
+  ok(t0.how === 8, '이렇게 말하면 됩니다 ' + t0.how + '줄');
+  ok(t0.st === 2, '지원 상태 두 칸이 모두 초록');
+  ok(t0.warn, '고객 정보를 말로 넣지 말라는 경고가 있다');
+
+  /* 소리 시험 */
+  await page.evaluate(() => { window.__spoke = []; vaTry(); });
+  await page.waitForTimeout(300);
+  const tried = await page.evaluate(() => window.__spoke.join(' '));
+  ok(/음성 비서입니다/.test(tried), '소리 시험이 실제로 말한다');
+
+  /* ── 쪽창 열고 듣기 시작 ── */
+  await page.evaluate(() => { vaPanel(true); vaOnce(); });
+  await page.waitForTimeout(400);
+  const on = await page.evaluate(() => ({
+    panel: !!document.getElementById('osVaPanel'),
+    on: VA.on, fab: (document.getElementById('osVaFab') || {}).className
+  }));
+  ok(on.panel, '쪽창이 열린다');
+  ok(on.on, '마이크가 켜진다');
+  ok(on.fab === 'on', '단추가 듣는 중 표시로 바뀐다');
+
+  /* ── 1. 화면 열기 ── */
+  let r = await say('체크판 열어');
+  ok(r.tab === 'ckboard', '"체크판 열어" → 실행 체크판으로 간다');
+  ok(/실행 체크판.*엽니다/.test(r.spoke), '무엇을 열었는지 말해 준다');
+  ok(r.ai === 0, 'AI 를 부르지 않는다');
+
+  r = await say('성장판');
+  ok(r.tab === 'growboard', '"성장판" 이름만 불러도 간다');
+
+  r = await say('화법서 보여줘');
+  ok(r.tab === 'fp_talk', '"화법서 보여줘" → 재무설계 실전화법서');
+
+  r = await say('디비 씨알엠');
+  ok(/crm-mode/.test(r.cls) && /DB 통합 CRM.*엽니다/.test(r.spoke),
+    '"디비 씨알엠" 처럼 말한 대로 들려도 찾아간다 (전체화면으로 열리는 화면)');
+  await page.evaluate(() => go('home'));
+  await page.waitForTimeout(300);
+
+  /* ── 2. 엉뚱하게 열지 않는지 ── */
+  await page.evaluate(() => go('home'));
+  await page.waitForTimeout(300);
+  r = await say('고객이 비싸다고 하는데 뭐라고 말해야 할까요');
+  ok(r.tab === 'home', '문장 안에 "고객" 이 있다고 고객 화면을 열지 않는다');
+  ok(r.ai === 1, '이런 질문은 AI 로 넘어간다');
+  ok(/먼저 듣고/.test(r.spoke), 'AI 답을 소리로 읽어 준다');
+
+  /* ── 3. 앱이 직접 아는 것 ── */
+  await page.evaluate(() => {
+    try { localStorage.setItem('apex_ck_day_' + ckDayK(), JSON.stringify({ d1: 1, d2: 1, d3: 1 })); } catch (e) {}
+  });
+  r = await say('오늘 할 일');
+  ok(r.tab === 'ckboard', '"오늘 할 일" → 체크판으로 간다');
+  ok(/3개 했고/.test(r.spoke), '몇 개 했는지 실제 기록으로 읽어 준다');
+  ok(/남은 것은/.test(r.spoke), '남은 항목 이름까지 읽어 준다');
+  ok(r.ai === 0, '이건 AI 없이 앱이 답한다');
+
+  /* ── 4. 도와줄 것 적기 ── */
+  r = await say('도와줄 것 김민수 심사 걸린 거 확인');
+  const help = await page.evaluate(() => ({
+    n: (typeof hpLive === 'function' ? hpLive().length : -1),
+    last: (typeof hpLive === 'function' && hpLive().length ? hpLive()[hpLive().length - 1].what : ''),
+    due: (typeof hpLive === 'function' && hpLive().length ? hpLive()[hpLive().length - 1].due : '')
+  }));
+  ok(help.n === 1, '도와줄 것이 한 건 적혔다');
+  ok(/김민수/.test(help.last), '말한 내용이 그대로 적힌다 — ' + help.last);
+  ok(help.due === (await page.evaluate(() => ckDayK())), '오늘까지로 잡힌다');
+  ok(/적었습니다/.test(r.spoke), '적었다고 말해 준다');
+
+  /* ── 5. 화법 찾기 ── */
+  r = await say('암 화법');
+  const ch1 = await page.evaluate(() => ({ mode: document.body.classList.contains('fptalk-mode'), jump: FPT.jump }));
+  ok(/암 화법.*엽니다/.test(r.spoke), '"암 화법" → 그 장을 연다');
+  ok(ch1.mode, '화법서가 실제로 열린다');
+  await page.evaluate(() => exitFpTalk());
+  await page.waitForTimeout(200);
+
+  r = await say('거절 나오면 뭐라고 하죠');
+  ok(/거절처리.*엽니다/.test(r.spoke), '"거절 나오면 뭐라고" → 거절처리 장으로 (' +
+    r.spoke.replace(/\s+/g, ' ').slice(0, 40) + ')');
+  await page.evaluate(() => exitFpTalk());
+  await page.waitForTimeout(200);
+
+  /* ── 6. 고객 정보를 막는지 — 여기가 가장 중요하다 ── */
+  r = await say('김철수 고객 번호가 공일공 일이삼사 오륙칠팔인데 어떻게 할까요');
+  ok(r.ai === 0 || !/1234/.test(r.aiUser), '한글로 읽은 번호는 그대로는 못 막지만 AI 프롬프트에 남지 않게 확인');
+
+  r = await say('고객 전화번호가 01012345678 인데 이거 어떻게 정리하죠');
+  ok(r.ai === 0, '긴 숫자가 있으면 AI 로 안 보낸다');
+  ok(/말로 넣지 마세요/.test(r.spoke), '왜 막았는지 말해 준다 — ' + r.spoke.slice(0, 46));
+
+  r = await say('주민등록번호를 어디에 넣어요');
+  ok(r.ai === 0, '주민등록번호를 말하면 AI 로 안 보낸다');
+  ok(/다루지 않습니다/.test(r.spoke), '어디에 넣어야 하는지 알려 준다');
+
+  /* ── 7. 멈추기 ── */
+  await page.evaluate(() => { window.__cancels = 0; });
+  r = await say('그만');
+  const stopped = await page.evaluate(() => window.__cancels);
+  ok(stopped >= 1, '"그만" 하면 읽던 것을 끊는다');
+
+  /* ── 8. 상시 대기 · 이름 부르기 ── */
+  await page.evaluate(() => { vaOff(); vaWakeToggle(); });
+  await page.waitForTimeout(400);
+  const w0 = await page.evaluate(() => ({ wake: VA.wake, on: VA.on,
+    fab: (document.getElementById('osVaFab') || {}).className, spoke: window.__spoke.join(' ') }));
+  ok(w0.wake && w0.on, '상시 대기가 켜진다');
+  ok(w0.fab === 'wake', '단추가 대기 표시로 바뀐다');
+
+  await page.evaluate(() => { VA.mute = false; go('home'); });
+  await page.waitForTimeout(300);
+  r = await say('그냥 혼잣말 하는 중입니다');
+  ok(r.tab === 'home' && r.ai === 0, '이름을 안 부르면 흘려듣는다');
+
+  await page.evaluate(() => { VA.mute = false; });
+  r = await say('아펙스 성장판 열어');
+  ok(r.tab === 'growboard', '이름을 부르면 그 뒤를 명령으로 듣는다');
+
+  /* 이름 바꾸기 */
+  await page.evaluate(() => { vaWakeSet('비서야'); VA.mute = false; go('home'); });
+  await page.waitForTimeout(300);
+  r = await say('비서야 체크판');
+  ok(r.tab === 'ckboard', '부르는 이름을 바꾸면 그 이름으로 듣는다');
+  r = await say('아펙스 체크판');
+  ok(r.tab === 'ckboard', '바뀐 뒤 옛 이름은 흘려듣는다 (화면 안 바뀜)');
+
+  /* 제 목소리를 다시 듣지 않는지 */
+  await page.evaluate(() => { VA.mute = true; go('home'); });
+  await page.waitForTimeout(200);
+  r = await say('비서야 성장판 열어');
+  ok(r.tab === 'home', '말하는 동안에는 제 목소리를 명령으로 듣지 않는다');
+
+  /* 끊겨도 다시 듣는지 */
+  await page.evaluate(() => { VA.mute = false; VA.tries = 0; if (window.__live) window.__live.stop(); });
+  await page.waitForTimeout(900);
+  const back = await page.evaluate(() => ({ on: VA.on, wake: VA.wake }));
+  ok(back.wake && back.on, '중간에 끊겨도 다시 듣기 시작한다');
+
+  /* 끄기 */
+  await page.evaluate(() => vaOff());
+  await page.waitForTimeout(300);
+  const offd = await page.evaluate(() => ({ on: VA.on, wake: VA.wake,
+    fab: (document.getElementById('osVaFab') || {}).className }));
+  ok(!offd.on && !offd.wake, '끄면 완전히 멈춘다');
+  ok(offd.fab === '', '단추도 평소 모습으로 돌아온다');
+
+  /* ── 9. 소리로 답하기 끄기 ── */
+  await page.evaluate(() => { vaPanel(true); vaOnce(); if (VA.speak) vaSpeakToggle(); });
+  await page.waitForTimeout(300);
+  r = await say('체크판');
+  ok(r.spoke === '', '소리를 끄면 읽지 않는다');
+  ok(r.tab === 'ckboard', '소리를 꺼도 일은 한다');
+  const kept = await page.evaluate(() => { location.hash = ''; return JSON.parse(localStorage.getItem('apex_va') || '{}'); });
+  ok(kept.speak === 0 && kept.wake === '비서야', '설정이 저장된다 (' + JSON.stringify(kept) + ')');
+  await page.evaluate(() => vaSpeakToggle());
+
+  /* ── 10. 쪽창 닫으면 마이크도 꺼지는지 ── */
+  await page.evaluate(() => { vaOnce(); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => vaPanel(false));
+  await page.waitForTimeout(300);
+  const closed = await page.evaluate(() => ({ on: VA.on, panel: !!document.getElementById('osVaPanel') }));
+  ok(!closed.panel && !closed.on, '쪽창을 닫으면 마이크가 함께 꺼진다');
+
+  /* ── 11. 연결된 화면이 모두 있는지 ── */
+  const bad = await page.evaluate(() => {
+    var ids = {}; TABS.forEach(g => g.items.forEach(i => ids[i.id] = 1));
+    if (typeof OS_TAB_GROUP !== 'undefined') Object.keys(OS_TAB_GROUP).forEach(k => ids[k] = 1);
+    var out = [], k;
+    for (k in VA_ALIAS) if (!ids[VA_ALIAS[k]]) out.push(k + '→' + VA_ALIAS[k]);
+    var chs = {}; FP_CH.forEach(c => chs[c[0]] = 1);
+    for (k in VA_CHKEY) if (!chs[VA_CHKEY[k]]) out.push(k + '→' + VA_CHKEY[k]);
+    return out;
+  });
+  ok(bad.length === 0, '말로 부르는 이름이 모두 실제 화면·장으로 이어진다' +
+    (bad.length ? ' — ' + bad.join(', ') : ' (' + (await page.evaluate(() => Object.keys(VA_ALIAS).length)) + '개)'));
+
+  /* ── 12. 좁은 화면 ── */
+  await page.evaluate(() => { go('voiceasst'); vaPanel(true); });
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.waitForTimeout(500);
+  const w = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
+  ok(w.sw <= w.cw + 2, '390px 가로 스크롤 없음 (' + w.sw + '/' + w.cw + ')');
+  if (SHOT) await page.screenshot({ path: SHOT + '/va-m.png', fullPage: true });
+  await page.setViewportSize({ width: 1240, height: 1000 });
+  await page.waitForTimeout(400);
+  if (SHOT) await page.screenshot({ path: SHOT + '/va.png', fullPage: true });
+
+  /* ── 13. 음성이 안 되는 브라우저에서도 안 깨지는지 ── */
+  const p2 = await ctx.newPage();
+  const e2 = [];
+  p2.on('pageerror', e => e2.push('no-speech: ' + e.message));
+  await p2.addInitScript(FAKE);
+  await p2.addInitScript(`delete window.SpeechRecognition;delete window.webkitSpeechRecognition;
+    delete window.speechSynthesis;delete window.SpeechSynthesisUtterance;`);
+  await p2.goto('http://127.0.0.1:' + PORT + '/app/index.html#voiceasst', { waitUntil: 'domcontentloaded' });
+  await p2.waitForTimeout(2600);
+  await p2.evaluate(() => {
+    document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
+    OS.profile = { id: 'va', name: '점검', role: 'owner', plan: 'vip' };
+    window.toast = function () {};
+    go('voiceasst');
+  });
+  await p2.waitForTimeout(700);
+  const none = await p2.evaluate(() => {
+    vaPanel(true); vaOnce();
+    return { no: document.querySelectorAll('.va-st .no').length,
+      guide: (document.body.textContent || '').indexOf('크롬') >= 0,
+      err: VA.err, dis: !!(document.querySelector('.va-mic') || {}).disabled };
+  });
+  ok(none.no === 2, '음성이 없는 브라우저에서 둘 다 안 된다고 표시한다');
+  ok(none.guide, '어디서 열면 되는지 알려 준다');
+  ok(none.dis, '누를 수 없는 단추로 막아 둔다');
+  ok(/못 합니다/.test(none.err || ''), '눌러도 터지지 않고 이유를 알려 준다');
+  errs.push(...e2);
+
+  await browser.close(); srv.close();
+  console.log('');
+  if (errs.length) { console.log('콘솔 오류 ' + errs.length + '건'); errs.slice(0, 6).forEach(e => console.log('   ' + e.slice(0, 170))); }
+  if (fail.length) { console.log('실패 ' + fail.length + '건'); fail.forEach(f => console.log('  ✗ ' + f)); process.exit(1); }
+  if (errs.length) process.exit(1);
+  console.log('음성 비서 점검 통과');
+})().catch(e => { console.error('오류:', e); process.exit(1); });
