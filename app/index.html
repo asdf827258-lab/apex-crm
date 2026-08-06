@@ -4311,6 +4311,7 @@ function renderHome(){
     '<p>'+sub+'</p>'+
     '<div class="hero-chips"><span>🤖 AI 비서</span><span>🧠 보험해석</span><span>📈 100점 성장</span><span>🗂️ 고객365일</span><span>🎓 교육</span></div>'+
     loginBtn+'</div>'+
+    '<div id="osSetupHome"></div>'+
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     '<div class="page-hd" style="margin-top:18px"><div class="page-tag">'+osEsc(osRoleLabel(role))+' 홈</div><div class="page-title">역할 맞춤 바로가기</div></div>'+
@@ -11907,6 +11908,18 @@ var HX_SQL={
   "",
   "grant select on public.team_overview to authenticated;",
   "",
+  "create table if not exists public.app_config(",
+  "  key text primary key,",
+  "  value text,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "grant select on public.app_config to authenticated;",
+  "",
+  "insert into public.app_config(key, value)",
+  "values ('schema_version', '29')",
+  "on conflict (key) do update set value = excluded.value, updated_at = now();",
+  "",
   "notify pgrst, 'reload schema';",
   "",
   "select",
@@ -12673,14 +12686,115 @@ function hxInnerHtml(){
   return h;
 }
 function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=hxInnerHtml();}
+/* ── 서버 준비 — 한 번 눌러 복사하고, 붙여넣고, RUN ────────────────────
+   지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
+   홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
+   SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
+var SETUP_VER=29;
+var SETUP={busy:false,opened:false,hide:false};
+
+function setupVer(){
+  var v=parseInt((typeof osCfgGet==='function')?osCfgGet('schema_version','0'):'0',10);
+  return isNaN(v)?0:v;
+}
+function setupDone(){return setupVer()>=SETUP_VER;}
+/* SQL 을 돌릴 수 있는 사람에게만 보여준다 — 팀원에게는 할 수 없는 일이다 */
+function setupCanRun(){
+  if(!OS.profile)return false;
+  if(typeof osIsAppAdmin==='function'&&osIsAppAdmin())return true;
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  var r=(typeof osRole==='function')?osRole():'member';
+  return r==='admin'||r==='owner'||r==='master';
+}
+function setupShow(){return setupCanRun()&&!setupDone()&&!SETUP.hide;}
+
+/* 한 번의 클릭 안에서 창을 열고 복사한다 — 순서가 바뀌면 팝업이 막힌다 */
+function setupGo(){
+  var m=HX_SQL['00'];
+  if(!m){toast('SQL 을 찾지 못했습니다.');return;}
+  var w=null;
+  try{w=window.open(SUPA_SQL_URL,'_blank','noopener');}catch(e){}
+  if(typeof copyText==='function')copyText(m.lines.join('\n'));
+  SETUP.opened=true;setupPaint();
+  if(w)toast('SQL 을 복사했습니다. 새로 열린 창에 붙여넣기 하고 RUN 을 누르세요.',9000);
+  else toast('새 창이 막혔습니다. SQL 은 복사됐으니 아래 주소를 눌러 여세요.',9000);
+}
+function setupCheck(){
+  if(SETUP.busy)return;
+  SETUP.busy=true;setupPaint();
+  osCfgLoad(function(){
+    SETUP.busy=false;
+    if(setupDone()){
+      toast('서버 준비가 끝났습니다. 모든 기능이 열렸습니다.',6000);
+      SETUP.opened=false;
+    }else{
+      toast('아직 반영되지 않았습니다. Supabase 에서 RUN 을 눌렀는지 확인해 주세요.',8000);
+    }
+    setupPaint();
+    if(typeof hxRun==='function'&&document.getElementById('hxPane')){try{hxRun(true);}catch(e){}}
+  });
+}
+function setupLater(){
+  SETUP.hide=true;
+  toast('나중에 하시려면 시스템 점검에서 다시 하실 수 있습니다.');
+  setupPaint();
+}
+function setupUrl(){
+  if(typeof copyText==='function')copyText(SUPA_SQL_URL);
+}
+
+function setupBarHtml(){
+  if(!setupShow())return '';
+  var step=SETUP.opened;
+  return '<div class="stp">'+
+    '<div class="stp-hd"><span class="stp-ic">🚀</span>'+
+      '<div><div class="stp-t">서버 준비가 아직 남았습니다</div>'+
+      '<div class="stp-d">'+(step
+        ? '붙여넣기(Ctrl+V) 하고 <b>RUN</b> 을 누른 뒤, 돌아와서 <b>다 됐는지 확인</b>을 눌러 주세요.'
+        : '버튼을 누르면 <b>SQL 복사</b>와 <b>Supabase 열기</b>가 한 번에 됩니다. 붙여넣고 RUN 만 누르면 끝입니다.')+
+      '</div></div></div>'+
+    '<div class="stp-w">이걸 하기 전까지 <b>팀 코칭 기록 저장 · 건의함 함께 보기 · 조직도 계정 연결</b>이 되지 않습니다. '+
+      '몇 번을 다시 실행해도 안전합니다.</div>'+
+    '<div class="btn-row stp-b">'+
+      '<button class="btn '+(step?'btn-ghost':'btn-primary')+'" onclick="setupGo()">'+
+        (step?'다시 복사하고 열기':'📋 복사하고 Supabase 열기')+'</button>'+
+      '<button class="btn '+(step?'btn-primary':'btn-ghost')+'" onclick="setupCheck()"'+(SETUP.busy?' disabled':'')+'>'+
+        (SETUP.busy?'확인 중…':'✅ 다 됐는지 확인')+'</button>'+
+      '<button class="btn btn-ghost" onclick="setupUrl()">주소만 복사</button>'+
+      '<button class="btn btn-ghost" onclick="setupLater()">나중에</button>'+
+    '</div></div>';
+}
+function setupPaint(){
+  var a=document.getElementById('osSetupHome');if(a)a.innerHTML=setupBarHtml();
+  var b=document.getElementById('osSetupHx');if(b)b.innerHTML=setupBarHtml();
+}
+function setupCss(){
+  if(document.getElementById('stpStyle'))return;
+  var st=document.createElement('style');st.id='stpStyle';
+  st.textContent=
+    '.stp{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 100%);color:#fff;border-radius:14px;'+
+      'padding:15px 17px;margin:14px 0 4px}'+
+    '.stp-hd{display:flex;gap:11px;align-items:flex-start}'+
+    '.stp-ic{font-size:22px;line-height:1.1;flex:none}'+
+    '.stp-t{font-size:15px;font-weight:800;letter-spacing:-.03em}'+
+    '.stp-d{font-size:12.5px;line-height:1.65;opacity:.92;margin-top:3px}'+
+    '.stp-w{font-size:11.5px;line-height:1.65;background:rgba(255,255,255,.12);border-radius:9px;'+
+      'padding:9px 11px;margin-top:11px}'+
+    '.stp-b{margin-top:11px}'+
+    '.stp-b .btn{padding:8px 14px;font-size:12.5px}'+
+    '.stp-b .btn-ghost{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}'+
+    '.stp-b .btn-ghost:hover{background:rgba(255,255,255,.22)}';
+  document.head.appendChild(st);
+}
+
 function renderHealth(){
-  opsCss();
+  opsCss();setupCss();
   if(!OS.profile)return osPage('점검','시스템 점검','로그인 후 이용할 수 있습니다.',osLoginGate('시스템 점검은 로그인 후 이용할 수 있습니다.'));
   return osPage('점검','시스템 점검',
     '매일 한 번 자동으로 돌고, 여기서 언제든 다시 볼 수 있습니다. 문제가 있으면 무엇을 하면 되는지 같이 적습니다.',
-    '<div id="hxPane">'+hxInnerHtml()+'</div>');
+    '<div id="osSetupHx"></div><div id="hxPane">'+hxInnerHtml()+'</div>');
 }
-function osHealthAfterRender(){hxRun(true);}
+function osHealthAfterRender(){setupPaint();hxRun(true);}
 
 /* ════════ 건의함 ════════ */
 var VOICE={list:[],busy:false,err:'',mine:false,kind:'idea',open:{}};
@@ -17704,6 +17818,7 @@ function mykMask(){var k=getGeminiKey()||'';return k?(k.slice(0,6)+'••••
 function mykToggle(){MYK.open=!MYK.open;mykPaint();}
 function mykPaint(){
   var a=document.getElementById('osMyKeyHome');if(a)a.innerHTML=mykCardHtml('home');
+  if(typeof setupCss==='function'){setupCss();setupPaint();}
   var b=document.getElementById('osMyKeyMe');if(b)b.innerHTML=mykCardHtml('me');
 }
 function mykSave(where){
