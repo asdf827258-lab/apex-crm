@@ -25,6 +25,9 @@ const TIME_BUDGET_MS = 18000; /* 이 시간을 넘기면 다음 실행으로 넘
 function kstToday() {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 }
+function kstAgo(n) {
+  return new Date(Date.now() + 9 * 3600 * 1000 - n * 86400000).toISOString().slice(0, 10);
+}
 /* 그날 하루(한국 시간)를 UTC 구간으로 바꾼다 */
 function kstDayUtc(dateStr) {
   const s = new Date(dateStr + 'T00:00:00+09:00');
@@ -152,6 +155,100 @@ async function plan(today) {
   return rows.length;
 }
 
+/* ── ①-2 어제 팀이 어디서 막혔는지 모은다 ──────────────────────────
+   여러 사람이 같은 곳에서 막히면 그건 개인 문제가 아니다. 그걸 찾는다.
+   팀원이 말해 주기를 기다리지 않는다 — 대개 말하지 않는다.            */
+async function planBlocked(today) {
+  const y = kstAgo(1);
+  const [hc, sg, fj] = await Promise.all([
+    sb('health_checks?select=member_id,check_date,ok_count,warn_count,bad_count,detail' +
+       '&check_date=gte.' + y + '&limit=200').catch(() => []),
+    sb('suggestions?select=id,author_name,kind,title,body,status,created_at' +
+       '&created_at=gte.' + y + 'T00:00:00&order=created_at.desc&limit=60').catch(() => []),
+    sb('night_jobs?select=kind,ref_id,last_error,tries&status=eq.failed' +
+       '&ref_date=gte.' + kstAgo(3) + '&limit=60').catch(() => [])
+  ]);
+
+  /* 같은 항목에서 막힌 사람을 센다 */
+  const byItem = {};
+  (hc || []).forEach(h => {
+    const seen = {};
+    (h.detail || []).forEach(d => {
+      if (d.s !== 'bad' && d.s !== 'warn') return;
+      const k = ((d.g || '') + ' / ' + (d.n || '')).slice(0, 80);
+      if (seen[k]) return;
+      seen[k] = 1;
+      byItem[k] = byItem[k] || { k: k, bad: 0, warn: 0, n: 0, sample: '' };
+      byItem[k].n++;
+      if (d.s === 'bad') byItem[k].bad++; else byItem[k].warn++;
+      if (!byItem[k].sample && d.v) byItem[k].sample = String(d.v).slice(0, 90);
+    });
+  });
+  const items = Object.keys(byItem).map(k => byItem[k]).sort((a, b) =>
+    (b.bad - a.bad) || (b.n - a.n));
+
+  const news = (sg || []).filter(x => x.status === 'new');
+  const nothing = !items.length && !news.length && !(fj || []).length;
+
+  await sb('night_jobs?on_conflict=kind,ref_date,ref_id', {
+    method: 'POST',
+    headers: {
+      apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=ignore-duplicates,return=minimal'
+    },
+    body: JSON.stringify([{
+      kind: 'blocked_daily', ref_id: 'daily', ref_date: today, status: 'todo',
+      payload: {
+        checked: (hc || []).length,
+        nothing: nothing,
+        items: items.slice(0, 12),
+        news: news.slice(0, 10).map(x => ({
+          who: x.author_name || '', kind: x.kind || '', t: (x.title || '').slice(0, 90),
+          b: (x.body || '').slice(0, 200)
+        })),
+        fails: (fj || []).slice(0, 8).map(x => ({
+          k: x.kind, e: (x.last_error || '').slice(0, 120), n: x.tries
+        }))
+      }
+    }])
+  }).catch(() => null);
+  return 1;
+}
+
+const BLOCK_SYS =
+  '너는 팀의 운영을 보는 사람이다. 어제 팀이 어디서 막혔는지 정리해 대표에게 보고한다.\n' +
+  '규칙:\n' +
+  '1. 주어진 숫자만 쓴다. 없는 사실을 지어내지 않는다.\n' +
+  '2. 사람을 탓하지 않는다. 여러 명이 같은 곳에서 막히면 그것은 개인이 아니라 시스템 문제다.\n' +
+  '3. 한국어. 존댓말. 문장은 짧게. 미사여구를 넣지 않는다.\n' +
+  '형식:\n' +
+  '[한 줄] 어제 가장 크게 막힌 곳 한 문장\n' +
+  '[여러 명이 같이 막힌 것] 최대 3가지. 각 줄에 몇 명인지와 무엇을 하면 되는지.\n' +
+  '[한 사람만 막힌 것] 최대 3가지. 없으면 이 항목을 빼라.\n' +
+  '[팀이 올린 것] 새로 올라온 오류·건의를 한 줄씩. 없으면 이 항목을 빼라.\n' +
+  '[오늘 할 일] 대표가 오늘 처리할 것 1가지.';
+
+function blockUser(p) {
+  const L = [];
+  L.push('[어제 점검한 사람] ' + (p.checked || 0) + '명');
+  if ((p.items || []).length) {
+    L.push('', '[막힌 항목]');
+    p.items.forEach(x => L.push(
+      '· ' + x.k + ' — ' + x.n + '명(심각 ' + x.bad + ' · 주의 ' + x.warn + ')' +
+      (x.sample ? (' / 예: ' + x.sample) : '')));
+  }
+  if ((p.news || []).length) {
+    L.push('', '[팀이 올린 것]');
+    p.news.forEach(x => L.push('· [' + (x.kind || '') + '] ' + x.t + (x.b ? (' — ' + x.b) : '')));
+  }
+  if ((p.fails || []).length) {
+    L.push('', '[밤 작업 실패]');
+    p.fails.forEach(x => L.push('· ' + x.k + ' ' + x.n + '회 시도 — ' + x.e));
+  }
+  return L.join('\n');
+}
+
 /* ── ② 한 건 처리 — 상담 준비 카드 ─────────────────────────────── */
 const PREP_SYS =
   '너는 보험 설계사의 상담 준비를 돕는다. 오늘 만날 고객의 통화 기록을 받고, ' +
@@ -194,9 +291,31 @@ async function work(today, startedAt) {
     if (Date.now() - startedAt > TIME_BUDGET_MS) { left++; continue; }
     const p = j.payload || {};
     try {
-      const txt = await askAI(PREP_SYS, prepUser(p), 1100);
-      if (!txt) throw new Error('빈 응답');
-      const title = (p.name || '고객') + ' · ' + (p.at ? hhmm(p.at) : '시각 미정');
+      let kind, title, body, member = null, meta = {};
+      if (j.kind === 'blocked_daily') {
+        kind = 'blocked';
+        title = kstAgo(1) + ' 막힌 곳';
+        if (p.nothing) {
+          body = '[한 줄]\n어제는 막힌 곳이 없었습니다.\n\n[오늘 할 일]\n평소대로 두어도 됩니다.';
+        } else {
+          body = await askAI(BLOCK_SYS, blockUser(p), 1400);
+          if (!body) throw new Error('빈 응답');
+        }
+        meta = {
+          checked: p.checked || 0,
+          items: (p.items || []).length,
+          news: (p.news || []).length,
+          fails: (p.fails || []).length,
+          top: (p.items || [])[0] ? ((p.items[0].k || '') + ' · ' + p.items[0].n + '명') : ''
+        };
+      } else {
+        kind = 'consult_prep';
+        body = await askAI(PREP_SYS, prepUser(p), 1100);
+        if (!body) throw new Error('빈 응답');
+        title = (p.name || '고객') + ' · ' + (p.at ? hhmm(p.at) : '시각 미정');
+        member = p.advisor_id || null;
+        meta = { at: p.at || null, region: p.region || '', product: p.product || '', calls: (p.history || []).length };
+      }
       await sb('night_briefs?on_conflict=kind,ref_date,ref_id', {
         method: 'POST',
         headers: {
@@ -205,10 +324,8 @@ async function work(today, startedAt) {
           Prefer: 'resolution=merge-duplicates,return=minimal'
         },
         body: JSON.stringify([{
-          kind: 'consult_prep', ref_id: j.ref_id, ref_date: today,
-          member_id: p.advisor_id || null,
-          title: title, body: txt,
-          meta: { at: p.at || null, region: p.region || '', product: p.product || '', calls: (p.history || []).length }
+          kind: kind, ref_id: j.ref_id, ref_date: today,
+          member_id: member, title: title, body: body, meta: meta
         }])
       });
       await sb('night_jobs?id=eq.' + j.id, {
@@ -260,11 +377,17 @@ exports.handler = async function (event) {
   } catch (e) {
     log.push('계획 실패: ' + String(e.message || e).slice(0, 120));
   }
+  try {
+    await planBlocked(today);
+    log.push('어제 막힌 곳 모음 준비');
+  } catch (e) {
+    log.push('막힌 곳 모으기 실패: ' + String(e.message || e).slice(0, 120));
+  }
 
   let r = { done: 0, failed: 0, left: 0 };
   try {
     r = await work(today, startedAt);
-    log.push('만든 준비 카드 ' + r.done + '건' + (r.failed ? (' · 실패 ' + r.failed) : '') +
+    log.push('처리한 일 ' + r.done + '건' + (r.failed ? (' · 실패 ' + r.failed) : '') +
              (r.left ? (' · 남은 일 ' + r.left) : ' · 남은 일 없음'));
   } catch (e) {
     log.push('처리 실패: ' + String(e.message || e).slice(0, 120));
