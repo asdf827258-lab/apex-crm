@@ -339,6 +339,32 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(ins.intro, '소개 부탁하는 방법까지 들어 있다');
   ok(ins.warn, '운을 가입 권유 근거로 쓰지 말라는 경고가 붙어 있다');
 
+  console.log('\n인생 운 — 열 가지 · 시기 · 앞으로 12년');
+  const life = await page.evaluate(() => {
+    goTab('life');
+    const ll = lifeLuck(S.cl), st = lifeStages(S.cl), ah = yearAhead(S.cl, 12), lm = lifeMind(S.cl);
+    const t = document.getElementById('view').textContent;
+    return { n: ll.items.length, keys: ll.items.map(x => x.key),
+      allHave: ll.items.every(x => x.read && x.care && x.bless && x.base && x.level),
+      stages: st.length, stageLabels: st.map(x => x.pil),
+      ahead: ah.length, chung: ah.filter(x => x.rel === '충').map(x => x.year),
+      hap: ah.filter(x => x.rel === '육합' || x.rel === '삼합').length,
+      mind: !!(lm && lm.career && lm.growth && lm.stress),
+      warn: /겁을 주는 상담/.test(t), notFate: /정해진 운명이 아니라/.test(t),
+      med: /병원에서 확인/.test(t), len: t.replace(/\s+/g, '').length };
+  });
+  ok(life.n === 10, '인생 운이 열 가지로 정리된다 (' + life.n + ') — ' + life.keys.join(' · '));
+  ok(life.allHave, '열 가지 모두 근거 · 풀이 · 조심할 것 · 덕담이 채워져 있다');
+  ok(life.stages === 4 && life.stageLabels.join('') === '년주월주일주시주',
+     '근묘화실 — 네 기둥이 초년·청년·중년·말년으로 이어진다');
+  ok(life.ahead === 12, '앞으로 12년 세운이 나온다 (' + life.ahead + '년)');
+  ok(life.chung.indexOf(2030) >= 0 && life.hap >= 2,
+     '경진일주는 2030 경술년에 일지 충으로 잡힌다 (충: ' + life.chung.join(',') + ' · 합 ' + life.hap + '해)');
+  ok(life.mind, '성향으로 보는 인생(적성 · 숙제 · 지칠 때 · 40대 이후)도 함께 나온다');
+  ok(life.med && life.warn && life.notFate,
+     '병은 병원에서 · 겁주지 말 것 · 정해진 운명이 아님 — 세 가지 경고가 모두 붙어 있다');
+  ok(life.len > 2500, '인생 운 한 탭에 ' + life.len + '자가 채워진다');
+
   console.log('\n모드 — 사주 전문 · MBTI 전문');
   const modes = await page.evaluate(() => {
     const out = {};
@@ -353,7 +379,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     S.cl = keep; S.mode = 'both'; draw();
     return { out: out, sajuOk: sajuOk, mbtiOk: mbtiOk };
   });
-  ok(modes.out.both.length === 8 && modes.out.saju.length === 6 && modes.out.mbti.length === 7,
+  ok(modes.out.both.length === 9 && modes.out.saju.length === 7 && modes.out.mbti.length === 8,
      '모드마다 탭이 다르다 — 통합 ' + modes.out.both.length + ' · 사주 ' + modes.out.saju.length + ' · MBTI ' + modes.out.mbti.length);
   ok(modes.sajuOk === true, '유형 없이 사주만으로도 모든 탭이 그려진다' + (modes.sajuOk === true ? '' : ' — ' + modes.sajuOk));
   ok(modes.mbtiOk === true, '사주 없이 유형만으로도 모든 탭이 그려진다' + (modes.mbtiOk === true ? '' : ' — ' + modes.mbtiOk));
