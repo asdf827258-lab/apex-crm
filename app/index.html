@@ -806,6 +806,18 @@ body.crm-mode #crmScreen{display:block;}
 body.sangdam-mode .app{display:none;}
 body.sangdam-mode #sangdamScreen{display:block;}
 #sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
+#fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.fptalk-mode .app{display:none;}
+body.fptalk-mode #fpTalkScreen{display:block;}
+#fpTalkScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+#fpDeckScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.fpdeck-mode .app{display:none;}
+body.fpdeck-mode #fpDeckScreen{display:block;}
+#fpDeckScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
+#fpDeckScreen .fin-float{bottom:88px;}
+@media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
 /* 윤시스쿨 전용 화면 (상담자료와 동일 패턴) */
 #yoonsiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.yoonsi-mode .app{display:none;}
@@ -923,11 +935,33 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
 
 <!-- 상담자료 전용 화면 (고객 상담 프레젠테이션 · CRM과 동일 화면전환) -->
 <div id="sangdamScreen">
-  <iframe id="sangdamFrame" class="fin-frame" title="상담 자료"></iframe>
+  <iframe id="sangdamFrame" class="fin-frame" title="보장분석 상담자료"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 재무설계 실전화법서 -->
+<div id="fpTalkScreen">
+  <iframe id="fpTalkFrame" class="fin-frame" title="재무설계 실전화법서"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitFpTalk()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="fpTalkReload()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="fpTalkNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 재무설계 상담자료 (고객 앞에서 여는 화면) -->
+<div id="fpDeckScreen">
+  <iframe id="fpDeckFrame" class="fin-frame" title="재무설계 상담자료"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitFpDeck()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="fpSaveNow()" title="고객 파일로 저장">💾</button>
+    <button class="ff-ico" onclick="fpNowToCalc()" title="재무설계 계산기로 넘기기">🧮</button>
+    <button class="ff-ico" onclick="fpDeckReload()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="fpDeckNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -3233,6 +3267,8 @@ function osTabProbe(tab){
   if(tab==='claims')return renderClaims();
   if(tab==='academy')return renderAcademy();
   if(tab==='ckboard')return renderCkBoard();
+  if(tab==='fp_talk')return renderFpTalk();
+  if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
   if(tab==='teamx')return renderTeamX();
   if(tab==='health')return renderHealth();
@@ -4233,7 +4269,7 @@ var TABS=[
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'teamx',icon:'👥',title:'팀원 종합',cnt:''},{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
- {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
+ {group:'고객',items:[{id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:''},{id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:''},{id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
@@ -4390,6 +4426,8 @@ function go(tab){
   document.body.classList.remove('finance-mode');
   document.body.classList.remove('crm-mode');
   document.body.classList.remove('sangdam-mode');
+  document.body.classList.remove('fptalk-mode');
+  document.body.classList.remove('fpdeck-mode');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});
@@ -4415,6 +4453,8 @@ function go(tab){
   else if(tab==='claims')dyn.innerHTML=renderClaims();
   else if(tab==='academy')dyn.innerHTML=renderAcademy();
   else if(tab==='ckboard'){dyn.innerHTML=renderCkBoard();if(typeof osCkBoardAfterRender==='function')osCkBoardAfterRender();}
+  else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
+  else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
   else if(tab==='health'){dyn.innerHTML=renderHealth();if(typeof osHealthAfterRender==='function')osHealthAfterRender();}
@@ -4560,9 +4600,427 @@ function crmGuideAll(open){var ds=document.querySelectorAll('#crmGuideOvl detail
 /* ════════ 상담자료 모듈 (앱 폴더에 번들: app/상담자료/메인 상담자료.html) ════════ */
 var SANGDAM_URL='상담자료/메인 상담자료.html';
 function mountSangdam(){var f=$('sangdamFrame');if(!f||f._mounted)return;f.src=SANGDAM_URL;f._mounted=true;}
-function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('상담자료 새로고침');}}
+function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* ════════ 재무설계 라인 — 실전화법서 · 상담자료 ════════
+   두 파일은 통째로 만들어 둔 것이다. 앱은 그것을 열어 주고,
+   상담이 끝나면 입력한 내용을 고객 파일로 남기고, 다시 열 때 되돌려 놓는다.
+   파일 안을 고치지 않는다 — 창 너머로 말만 주고받는다.
+
+   저장 자리는 이미 쓰고 있는 saved_reports 를 그대로 쓴다(kind='fp_deck').
+   새 표를 만들지 않으므로 SQL 을 다시 실행할 필요가 없다.            */
+
+var FP_TALK_URL='재무설계/실전화법서.html';
+var FP_DECK_URL='재무설계/상담자료.html';
+
+/* 화법서 30장 — 화면 이름이 아니라 "이런 상황" 으로 찾아 들어간다 */
+var FP_CH=[
+ ['c0','이 책을 쓰는 이유','시작','처음 한 번만 — 왜 이 순서인지'],
+ ['c1','상담은 이 순서로 흐른다','시작','시작하기 전 — 다섯 단계와 시간 배분'],
+ ['c2','프레젠테이션 사용설명서','시작','상담자료를 처음 켤 때'],
+ ['c3','반드시 외워야 할 숫자','시작','매일 아침 30초 — 숫자는 외워야 입에서 나옵니다'],
+ ['c4','SPIN — 질문 설계','질문·오프닝','질문이 막힐 때 — 고객이 스스로 말하게'],
+ ['c5','오프닝 — 문을 여는 3분','질문·오프닝','만나서 첫 3분'],
+ ['c6','나라는 이렇게 가고 있습니다','질문·오프닝','국가 제도 이야기로 문을 열 때'],
+ ['c7','비유 화법','질문·오프닝','어려운 것을 설명해야 할 때 — 현장 비유 18'],
+ ['c8','연령대별 접근 화법','질문·오프닝','상대 나이를 알았을 때'],
+ ['c9','보상 사례와 미지급 사례','보장','"그거 안 나온다던데" 를 들었을 때'],
+ ['c10','급여·비급여·정액 3층 구조','보장','치료비 이야기를 시작할 때'],
+ ['c11','암 화법','보장','암 이야기가 나왔을 때'],
+ ['c12','뇌·심 화법','보장','뇌·심장 이야기가 나왔을 때'],
+ ['c13','재가급여 화법','보장','부모님 간병 이야기가 나왔을 때'],
+ ['c14','간병인 화법','보장','간병인 비용을 물어볼 때'],
+ ['c15','연금 화법','재무·연금','노후 이야기로 넘어갈 때'],
+ ['c16','변액연금 화법','재무·연금','변액을 설명해야 할 때'],
+ ['c17','최저보증이율 화법','재무·연금','"원금은 보장되나요" 를 들었을 때'],
+ ['c18','최저사망적립금 보증 연금','재무·연금','연금인데 사망보장까지 물을 때'],
+ ['c19','달러보험 화법','재무·연금','달러·분산 이야기가 나왔을 때'],
+ ['c20','퇴직연금 엑시트 플랜','재무·연금','퇴직금·DC·IRP 이야기가 나왔을 때'],
+ ['c21','비과세 안내와 활용','재무·연금','세금 이야기가 나왔을 때'],
+ ['c22','상속보험과 증여 컨설팅','재무·연금','물려줄 것이 있는 고객'],
+ ['c23','완성 화법 — 재무설계 클로징','클로징','마지막 정리 — 오늘 무엇을 정할지'],
+ ['c24','거절처리 20','클로징','거절이 나왔을 때 — 20가지 그대로'],
+ ['c25','매일의 루틴','습관·준법','매일 — 하루·주간·월간에 무엇을 할지'],
+ ['c26','반드시 지켜야 할 것','습관·준법','항상 — 금소법 6대 원칙, 승환계약'],
+ ['c27','60분 완결 상담 대본','실전','실제 상담 60분 — 대본 그대로'],
+ ['c28','뉴스와 자료로 설득하기','실전','자료를 보여 줘야 할 때'],
+ ['c29','상담 전후 체크리스트','실전','상담 전날 / 상담 후 24시간']
+];
+var FP_GRP=['시작','질문·오프닝','보장','재무·연금','클로징','습관·준법','실전'];
+
+var FPT={q:'',jump:'',ready:false};
+var FPD={ready:false,pend:null,reps:[],busy:false,err:'',loaded:false,seq:0,wait:{}};
+
+/* ── 창 너머로 말 걸기 ── */
+function fpFrame(which){return document.getElementById(which==='talk'?'fpTalkFrame':'fpDeckFrame');}
+function fpAsk(which,t,data,cb){
+  var f=fpFrame(which);
+  if(!f||!f.contentWindow||!f._mounted){toast('화면이 아직 열리지 않았습니다 — 먼저 열어 주세요',5000);return;}
+  var id='q'+(++FPD.seq);
+  if(cb)FPD.wait[id]=cb;
+  try{f.contentWindow.postMessage({t:t,id:id,data:data},location.origin);}
+  catch(e){toast('연결에 실패했습니다');return;}
+  if(cb)setTimeout(function(){
+    if(FPD.wait[id]){delete FPD.wait[id];toast('화면이 답하지 않습니다 — 새로고침 후 다시 해 보세요',7000);}
+  },7000);
+}
+window.addEventListener('message',function(ev){
+  if(ev.origin!==location.origin)return;
+  var m=ev.data;
+  if(!m||typeof m!=='object'||!m.t||(''+m.t).indexOf('apex:')!==0)return;
+  var df=fpFrame('deck'),tf=fpFrame('talk');
+  if(m.t==='apex:ready'){
+    if(df&&ev.source===df.contentWindow){
+      FPD.ready=true;
+      if(FPD.pend){var d=FPD.pend;FPD.pend=null;
+        setTimeout(function(){fpAsk('deck','apex:put',d,function(){toast('저장해 둔 상담을 그대로 불러왔습니다',4000);});},200);}
+    }else if(tf&&ev.source===tf.contentWindow){
+      FPT.ready=true;
+      if(FPT.jump){var to=FPT.jump;FPT.jump='';setTimeout(function(){fpJumpNow(to);},250);}
+    }
+    return;
+  }
+  var cb=FPD.wait[m.id];
+  if(cb){delete FPD.wait[m.id];cb(m);}
+});
+function fpJumpNow(to){
+  var f=fpFrame('talk');
+  if(!f||!f.contentWindow)return;
+  try{f.contentWindow.postMessage({t:'apex:jump',to:to},location.origin);}catch(e){}
+}
+
+/* ── 화법서 화면 ── */
+function fpTalkMount(){var f=fpFrame('talk');if(!f||f._mounted)return;f.src=FP_TALK_URL;f._mounted=true;}
+function fpTalkOpen(to){
+  fpTalkMount();
+  document.body.classList.add('fptalk-mode');
+  if(to){ if(FPT.ready)fpJumpNow(to); else FPT.jump=to; }
+}
+function fpTalkReload(){var f=fpFrame('talk');if(f){f._mounted=false;FPT.ready=false;f.src='about:blank';setTimeout(fpTalkMount,40);toast('화법서 새로고침');}}
+function fpTalkNewTab(){var w=window.open(FP_TALK_URL,'_blank','noopener');if(!w)toast('팝업이 막혔습니다. 허용 후 다시 시도하세요.',6000);}
+function exitFpTalk(){document.body.classList.remove('fptalk-mode');}
+
+function fpTalkFind(v){FPT.q=v||'';fpTalkPaint();}
+function fpChHit(r){
+  var q=(FPT.q||'').replace(/^\s+|\s+$/g,'');
+  if(!q)return true;
+  return (r[1]+' '+r[2]+' '+r[3]).indexOf(q)>=0;
+}
+/* 요일마다 한 장씩 — 서른 장을 한 번에 읽으라고 하면 아무도 안 읽는다 */
+function fpToday(){
+  var d=new Date(Date.now()+9*3600*1000);
+  var n=Math.floor(d.getTime()/86400000)%FP_CH.length;
+  return FP_CH[n];
+}
+function fpChRow(r){
+  return '<div class="fp-ch"><div class="fp-cx">'+
+    '<div class="fp-cn">'+osEsc(r[1])+'</div>'+
+    '<div class="fp-cw">'+osEsc(r[3])+'</div></div>'+
+    '<button type="button" class="fp-go" onclick="fpTalkOpen(\''+r[0]+'\')">열기 →</button></div>';
+}
+function fpTalkListHtml(){
+  var h='',i,j,g,rows,any=false;
+  for(i=0;i<FP_GRP.length;i++){
+    g=FP_GRP[i];rows=[];
+    for(j=0;j<FP_CH.length;j++)if(FP_CH[j][2]===g&&fpChHit(FP_CH[j]))rows.push(FP_CH[j]);
+    if(!rows.length)continue;
+    any=true;
+    h+='<div class="fp-gp">'+osEsc(g)+' <em>'+rows.length+'</em></div>';
+    for(j=0;j<rows.length;j++)h+=fpChRow(rows[j]);
+  }
+  if(!any)h='<div class="fp-none">찾는 말이 없습니다. 다른 낱말로 해 보세요 — 예: 암, 거절, 연금, 상속.</div>';
+  return h;
+}
+function fpTalkPaint(){var el=document.getElementById('fpTalkPane');if(el)el.innerHTML=fpTalkListHtml();}
+function renderFpTalk(){
+  fpCss();
+  var t=fpToday();
+  return osPage('화법','재무설계 실전화법서',
+    '상황을 고르면 그 장이 바로 열립니다. 서른 장 전부를 외울 필요는 없습니다.',
+    '<div class="card"><div class="card-body">'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="fpTalkOpen(\'\')">화법서 열기</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'fp_deck\')">재무설계 상담자료</button>'+
+      '<button class="btn btn-ghost" onclick="fpTalkNewTab()">새 탭에서</button></div>'+
+      '<div class="fp-tod"><b>오늘 이 장</b>'+osEsc(t[1])+
+        '<span>'+osEsc(t[3])+'</span>'+
+        '<button type="button" class="fp-go" onclick="fpTalkOpen(\''+t[0]+'\')">열기 →</button></div>'+
+      '<div class="notice">화법은 읽어서 늘지 않습니다. <b>하루 한 장을 소리 내어 읽고 그날 한 명에게 써 보세요.</b> '+
+      '안 써 본 화법은 상담 자리에서 안 나옵니다.</div>'+
+    '</div></div>'+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📖</span>어떤 상황입니까'+
+      '<span class="fp-n">'+FP_CH.length+'장</span></div>'+
+      '<div class="card-desc">상황으로 찾습니다 — 암 · 거절 · 연금 · 상속 처럼 낱말만 넣어도 됩니다</div></div>'+
+      '<div class="card-body">'+
+      '<input class="fp-q" id="fpQ" placeholder="상황이나 낱말로 찾기" value="'+osEsc(FPT.q)+'" oninput="fpTalkFind(this.value)">'+
+      '<div id="fpTalkPane">'+fpTalkListHtml()+'</div>'+
+      '</div></div>'+
+    '<div class="card"><div class="card-body"><div class="notice">'+
+      '이 화법서의 문장은 <b>그대로 읽는 대본이 아니라 순서를 잡아 주는 뼈대</b>입니다. '+
+      '확정되지 않은 수익률·환급률을 단정해서 말하지 않습니다. 기존 계약 해지를 전제로 권유하지 않습니다. '+
+      '(금융소비자보호법상 설명의무·부당권유 금지)</div></div></div>');
+}
+function osFpTalkAfterRender(){}
+
+/* ── 상담자료 화면 ── */
+function fpDeckMount(){var f=fpFrame('deck');if(!f||f._mounted)return;f.src=FP_DECK_URL;f._mounted=true;}
+function fpDeckOpen(){
+  fpDeckMount();
+  document.body.classList.add('fpdeck-mode');
+  if(FPD.ready&&FPD.pend){
+    var d=FPD.pend;FPD.pend=null;
+    setTimeout(function(){fpAsk('deck','apex:put',d,function(){toast('저장해 둔 상담을 그대로 불러왔습니다',4000);});},150);
+  }
+}
+function fpDeckReload(){var f=fpFrame('deck');if(f){f._mounted=false;FPD.ready=false;f.src='about:blank';setTimeout(fpDeckMount,40);toast('재무설계 상담자료 새로고침');}}
+function fpDeckNewTab(){var w=window.open(FP_DECK_URL,'_blank','noopener');if(!w)toast('팝업이 막혔습니다. 허용 후 다시 시도하세요.',6000);}
+function exitFpDeck(){document.body.classList.remove('fpdeck-mode');}
+
+/* 상담이 끝나면 — 입력한 것을 통째로 고객 파일로 */
+function fpSaveNow(){
+  if(!OS.profile){toast('로그인해야 고객 파일로 저장할 수 있습니다',5000);return;}
+  fpAsk('deck','apex:snap',null,function(m){
+    if(!m||!m.data||!m.data.f){toast('상담 내용을 읽지 못했습니다 — 다시 해 보세요',6000);return;}
+    exitFpDeck();
+    var nm=m.data.f.f_name||'';
+    osRepSaveToClient('fp_deck','재무설계 상담'+(nm?' — '+nm:''),{fp:m.data,at:new Date().toISOString()});
+    setTimeout(fpRepLoad,1800);
+  });
+}
+function fpRepLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!OS.profile){FPD.loaded=true;fpDeckPaint();return;}
+  FPD.busy=true;FPD.err='';fpDeckPaint();
+  sb.from('saved_reports').select('id,title,client_id,created_at,content')
+    .eq('advisor_id',OS.profile.id).eq('kind','fp_deck')
+    .order('created_at',{ascending:false}).limit(30).then(function(r){
+    FPD.busy=false;FPD.loaded=true;
+    if(r&&r.error){FPD.err=r.error.message||'';fpDeckPaint();return;}
+    FPD.reps=(r&&r.data)||[];FPD.err='';
+    fpRepNames();
+  },function(e){FPD.busy=false;FPD.loaded=true;FPD.err=(e&&e.message)||'네트워크 오류';fpDeckPaint();});
+}
+function fpRepNames(){
+  var sb=(typeof osClient==='function')?osClient():null,ids=[],i;
+  for(i=0;i<FPD.reps.length;i++){
+    var c=FPD.reps[i].client_id;
+    if(c&&ids.indexOf(c)<0)ids.push(c);
+  }
+  if(!ids.length||!sb){fpDeckPaint();return;}
+  sb.from('clients').select('id,name_masked').in('id',ids).then(function(r){
+    var map={},rows=(r&&r.data)||[],j;
+    for(j=0;j<rows.length;j++)map[rows[j].id]=rows[j].name_masked||'';
+    for(j=0;j<FPD.reps.length;j++)FPD.reps[j]._nm=map[FPD.reps[j].client_id]||'';
+    fpDeckPaint();
+  },function(){fpDeckPaint();});
+}
+function fpRepOpen(i){
+  var x=FPD.reps[i];if(!x)return;
+  var d=(x.content&&x.content.fp)||null;
+  if(!d||!d.f){toast('이 자료에는 상담 입력이 남아 있지 않습니다',6000);return;}
+  FPD.pend=d;fpDeckOpen();
+}
+
+/* ── 계산기로 넘기기 ──
+   상담자료는 그림으로 보여 주는 곳이고, 부족액을 숫자로 못 박는 건 계산기다.
+   같은 숫자를 두 번 치지 않도록 넘겨 준다.                       */
+var FP_MAP=[
+ ['f_name','s_name'],['f_age','s_age'],['f_job','s_job'],['f_ret','s_rage'],
+ ['f_etc','s_other'],['f_sincome','s_spouse'],
+ ['f_house','s_housing'],['f_loan','s_loan'],['f_edu','s_edu'],['f_ins','s_insurance'],
+ ['f_retspend','s_target'],['f_np','s_nps'],['f_pp','s_pension'],
+ ['f_home','s_realty'],['f_debt','s_debt'],['f_dc','s_severance'],
+ ['r_inf','s_inf'],['r_eq','s_ret'],
+ ['c_cancer','ins_cancer_dx'],['c_brain','ins_brain'],['c_heart','ins_heart'],
+ ['c_care','ins_homecare'],['c_death','ins_life'],['f_ins','ins_monthly']
+];
+var FP_HAND=['생활비 — 계산기는 식비·외식·교통으로 나눠 받습니다',
+             '투자 성향 — 상담에서 들은 대로 고르세요',
+             '실손 세대 — 증권을 봐야 압니다'];
+function fpToFin(d){
+  var f=(d&&d.f)||{},o={},i,k;
+  for(i=0;i<FP_MAP.length;i++){
+    k=FP_MAP[i];
+    if(f[k[0]]!==undefined&&f[k[0]]!=='')o[k[1]]=f[k[0]];
+  }
+  if(f.f_gender)o.s_gender=(f.f_gender==='F'?'여성':'남성');
+  if(f.f_income)o.s_gross=String(Math.round((parseFloat(f.f_income)||0)*12));
+  return o;
+}
+function fpPushFin(inputs){
+  var n=0,k;for(k in inputs)n++;
+  if(!n){toast('넘길 숫자가 없습니다');return;}
+  go('finance');
+  toast('재무설계 계산기로 '+n+'칸을 넘기는 중…',3000);
+  var tries=0;
+  (function push(){
+    tries++;
+    var f=document.getElementById('finFrame');
+    if(f&&f.contentWindow&&f._mounted){
+      try{f.contentWindow.postMessage({type:'apexFinLoad',inputs:inputs},'*');}catch(e){}
+      if(tries<3)setTimeout(push,1400);
+      else toast('넘겼습니다 — 생활비와 투자 성향은 직접 채워 주세요',7000);
+    }else if(tries<12)setTimeout(push,600);
+    else toast('계산기가 열리지 않았습니다 — 재무설계 계산기를 먼저 열어 주세요',7000);
+  })();
+}
+function fpRepToCalc(i){
+  var x=FPD.reps[i];if(!x)return;
+  var d=(x.content&&x.content.fp)||null;
+  if(!d){toast('이 자료에는 상담 입력이 없습니다');return;}
+  fpPushFin(fpToFin(d));
+}
+function fpNowToCalc(){
+  fpAsk('deck','apex:snap',null,function(m){
+    if(!m||!m.data){toast('상담 내용을 읽지 못했습니다');return;}
+    exitFpDeck();
+    fpPushFin(fpToFin(m.data));
+  });
+}
+
+function fpRepHtml(){
+  if(!OS.profile)return '<div class="fp-none">로그인하면 저장한 상담이 여기에 쌓입니다.</div>';
+  if(FPD.busy)return '<div class="fp-none">불러오는 중…</div>';
+  if(FPD.err)return '<div class="fp-none" style="color:var(--neg)">불러오지 못했습니다 — '+osEsc(FPD.err.slice(0,70))+'</div>';
+  if(!FPD.reps.length)return '<div class="fp-none">아직 저장한 상담이 없습니다. 상담이 끝나면 화면 왼쪽 아래 <b>저장</b>을 누르세요. '+
+    '고객을 고르면 그 사람 파일로 들어갑니다.</div>';
+  var h='',i;
+  for(i=0;i<FPD.reps.length;i++){
+    var x=FPD.reps[i],dt=(''+(x.created_at||'')).slice(0,10);
+    h+='<div class="fp-rp"><div class="fp-rx">'+
+      '<div class="fp-rn">'+osEsc(x._nm||x.title||'상담')+'</div>'+
+      '<div class="fp-rd">'+osEsc(dt)+(x._nm?' · '+osEsc(x.title||''):'')+'</div></div>'+
+      '<button type="button" class="fp-go" onclick="fpRepOpen('+i+')">이어서 →</button>'+
+      '<button type="button" class="fp-go2" onclick="fpRepToCalc('+i+')">계산기로</button>'+
+      '</div>';
+  }
+  return h;
+}
+function fpDeckPaint(){var el=document.getElementById('fpRepPane');if(el)el.innerHTML=fpRepHtml();}
+
+var FP_FLOW=[
+ ['0~11분','앉자마자 · 소개 · 오늘 어디까지 볼지','고객이 고르게 합니다. 우리가 정하지 않습니다'],
+ ['11~21분','가족 · 연령대 진단 · 가장 궁금한 것','여기서 나온 한 문장이 오늘의 주제입니다'],
+ ['21~33분','세 가지 질문','가장 중요한 구간입니다. 말하지 말고 듣습니다'],
+ ['33~48분','고른 모듈 두세 개','전부 하지 않습니다. 고른 것만 합니다'],
+ ['48~60분','걱정 정리 → 한 장 요약 → 오늘 정할 것 하나','전부가 아니라 첫 한 가지만 정합니다']
+];
+var FP_ROLE=[
+ ['고객 상황을 그림으로 보여 주기','재무설계 상담자료','fp_deck'],
+ ['부족액을 숫자로 못 박기','재무설계 계산기','finance'],
+ ['말을 어떻게 꺼낼지','재무설계 실전화법서','fp_talk'],
+ ['보장에 뚫린 곳 찾기','AI 보장분석','bojang'],
+ ['들은 것을 남기기','상담카드·팩트파인딩','fact_find'],
+ ['고객 파일로 쌓기','고객 365일','clients']
+];
+var FP_CLOSE=[
+ ['고객이 직접 말한 걱정 한 줄을 그 자리에서 적습니다','나중에 이 문장이 계약 사유가 됩니다. 우리가 만든 말은 힘이 없습니다'],
+ ['마지막 요약 화면을 같이 보며 우선순위 세 개만 남깁니다','여섯 개를 남기면 고객은 아무것도 못 고릅니다'],
+ ['계산기로 부족액을 숫자로 확정합니다','"얼마가 비었는지"를 고객이 직접 보게 합니다'],
+ ['오늘 정할 것 하나만 고릅니다','전부 하자고 하면 전부 미룹니다. 첫 한 가지만'],
+ ['헤어지고 24시간 안에 정리 글을 보냅니다','화법서 29장 그대로. 가족에게 보여 줄 때 이 글이 대신 설명합니다']
+];
+function renderFpDeck(){
+  fpCss();
+  var h='<div class="card"><div class="card-body">'+
+    '<div class="btn-row"><button class="btn btn-primary" onclick="fpDeckOpen()">상담 화면 열기</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'fp_talk\')">실전화법서</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'finance\')">재무설계 계산기</button>'+
+    '<button class="btn btn-ghost" onclick="fpDeckNewTab()">새 탭에서</button></div>'+
+    '<div class="notice">고객 앞에서 여는 화면입니다. 열기 전에 <b>설계사 프로필</b>을 한 번만 채워 두면 '+
+    '다음부터 그대로 뜹니다. 상담이 끝나면 화면 왼쪽 아래 <b>저장</b>을 눌러 고객 파일로 남기세요.</div>'+
+    '</div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⏱️</span>60분 흐름</div>'+
+    '<div class="card-desc">모듈을 전부 하지 않습니다. 고객이 고른 것만 합니다</div></div><div class="card-body">';
+  var i;
+  for(i=0;i<FP_FLOW.length;i++)
+    h+='<div class="fp-fl"><span class="t">'+osEsc(FP_FLOW[i][0])+'</span>'+
+      '<div><div class="n">'+osEsc(FP_FLOW[i][1])+'</div>'+
+      '<div class="g">'+osEsc(FP_FLOW[i][2])+'</div></div></div>';
+  h+='<div class="btn-row" style="margin-top:12px">'+
+    '<button class="btn btn-ghost" onclick="fpTalkOpen(\'c27\')">60분 대본 그대로 보기 →</button></div>'+
+    '</div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💾</span>저장한 상담'+
+    '<span class="fp-n">'+(FPD.reps.length||0)+'</span></div>'+
+    '<div class="card-desc">이어서 → 그때 입력한 그대로 다시 열립니다 · 계산기로 → 숫자를 넘겨 부족액을 확정합니다</div></div>'+
+    '<div class="card-body"><div id="fpRepPane">'+fpRepHtml()+'</div></div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🤝</span>계산기와 나눠 쓰기</div>'+
+    '<div class="card-desc">같은 숫자를 두 번 치지 않습니다 — 상담자료의 값이 계산기로 넘어갑니다</div></div>'+
+    '<div class="card-body">';
+  for(i=0;i<FP_ROLE.length;i++)
+    h+='<div class="fp-ch"><div class="fp-cx"><div class="fp-cn">'+osEsc(FP_ROLE[i][0])+'</div></div>'+
+      '<button type="button" class="fp-go" onclick="go(\''+FP_ROLE[i][2]+'\')">'+osEsc(FP_ROLE[i][1])+' →</button></div>';
+  h+='<div class="notice">넘어가지 않는 칸이 있습니다 — '+FP_HAND.map(osEsc).join(' · ')+
+    '. 이 셋은 계산기에서 직접 채우세요.</div></div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span>계약으로 잇는 순서</div>'+
+    '<div class="card-desc">설득하지 않습니다. 고객이 스스로 고르게 놓아둡니다</div></div><div class="card-body">';
+  for(i=0;i<FP_CLOSE.length;i++)
+    h+='<div class="fp-st"><i>'+(i+1)+'</i><div><div class="n">'+osEsc(FP_CLOSE[i][0])+'</div>'+
+      '<div class="g">'+osEsc(FP_CLOSE[i][1])+'</div></div></div>';
+  h+='<div class="btn-row" style="margin-top:12px">'+
+    '<button class="btn btn-ghost" onclick="fpTalkOpen(\'c23\')">완성 화법 →</button>'+
+    '<button class="btn btn-ghost" onclick="fpTalkOpen(\'c24\')">거절처리 20 →</button></div>'+
+    '<div class="notice">고객 정보를 다루기 전에 동의를 받습니다. 화면에 동의 안내가 뜨면 읽어 드리고 확인을 받으세요. '+
+    '확정되지 않은 수익률·환급률을 단정해서 말하지 않습니다. (금융소비자보호법)</div>'+
+    '</div></div>';
+  return osPage('재무','재무설계 상담자료',
+    '고객 앞에서 여는 상담 화면입니다. 끝나면 그대로 고객 파일로 남습니다.',h);
+}
+function osFpDeckAfterRender(){if(!FPD.loaded&&!FPD.busy)fpRepLoad();else fpDeckPaint();}
+
+function fpCss(){
+  if(document.getElementById('fpStyle'))return;
+  var st=document.createElement('style');st.id='fpStyle';
+  st.textContent=
+    '.fp-n{font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;color:var(--ink-5);margin-left:auto}'+
+    '.fp-q{display:block;width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
+      'padding:10px 12px;font-size:13px;font-family:inherit;color:var(--ink-1);background:#fff;margin-bottom:12px}'+
+    '.fp-q:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-pale)}'+
+    '.fp-gp{font-size:9.5px;font-weight:800;color:var(--ink-5);letter-spacing:.06em;margin:16px 0 4px}'+
+    '.fp-gp:first-child{margin-top:0}'+
+    '.fp-gp em{font-style:normal;color:var(--ink-6);margin-left:3px}'+
+    '.fp-ch{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.fp-ch:last-child{border-bottom:none}'+
+    '.fp-cx{min-width:0;flex:1}'+
+    '.fp-cn{font-size:13px;font-weight:700;color:var(--ink-1);letter-spacing:-.03em;line-height:1.5}'+
+    '.fp-cw{font-size:11px;color:var(--ink-5);line-height:1.6;margin-top:2px}'+
+    '.fp-go,.fp-go2{flex:none;appearance:none;font-family:inherit;cursor:pointer;white-space:nowrap;'+
+      'font-size:11px;font-weight:700;border-radius:99px;padding:4px 11px}'+
+    '.fp-go{color:var(--primary);background:var(--primary-pale);border:1px solid #DBE7FF}'+
+    '.fp-go:hover{background:var(--primary-light)}'+
+    '.fp-go2{color:var(--ink-3);background:var(--ink-9);border:1px solid var(--ink-7)}'+
+    '.fp-go2:hover{background:var(--ink-8)}'+
+    '.fp-none{font-size:12px;color:var(--ink-5);line-height:1.75;padding:8px 0}'+
+    '.fp-tod{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:11px 13px;'+
+      'background:var(--ink-9);border:1px solid var(--ink-7);border-radius:9px;font-size:12.5px;'+
+      'font-weight:700;color:var(--ink-1);letter-spacing:-.03em}'+
+    '.fp-tod b{font-size:9.5px;font-weight:800;color:var(--primary);letter-spacing:.06em}'+
+    '.fp-tod span{font-size:11px;font-weight:400;color:var(--ink-5);flex:1;min-width:120px}'+
+    '.fp-rp{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.fp-rp:last-child{border-bottom:none}'+
+    '.fp-rx{min-width:0;flex:1}'+
+    '.fp-rn{font-size:13px;font-weight:800;color:var(--ink-1);letter-spacing:-.03em}'+
+    '.fp-rd{font-family:var(--mono,ui-monospace,monospace);font-size:10.5px;color:var(--ink-5);margin-top:2px}'+
+    '.fp-fl{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.fp-fl:last-of-type{border-bottom:none}'+
+    '.fp-fl .t{flex:none;width:66px;font-family:var(--mono,ui-monospace,monospace);font-size:10.5px;'+
+      'font-weight:800;color:var(--primary);padding-top:2px}'+
+    '.fp-fl .n{font-size:12.5px;font-weight:700;color:var(--ink-1);letter-spacing:-.03em;line-height:1.5}'+
+    '.fp-fl .g{font-size:11px;color:var(--ink-5);line-height:1.6;margin-top:2px}'+
+    '.fp-st{display:flex;gap:11px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.fp-st:last-of-type{border-bottom:none}'+
+    '.fp-st i{flex:none;font-style:normal;width:19px;height:19px;margin-top:2px;border:1px solid var(--ink-6);'+
+      'border-radius:5px;display:flex;align-items:center;justify-content:center;'+
+      'font-family:var(--mono,ui-monospace,monospace);font-size:11px;font-weight:800;color:var(--ink-4)}'+
+    '.fp-st .n{font-size:12.5px;font-weight:700;color:var(--ink-1);letter-spacing:-.03em;line-height:1.5}'+
+    '.fp-st .g{font-size:11px;color:var(--ink-5);line-height:1.6;margin-top:2px}';
+  document.head.appendChild(st);
+}
+
 /* 윤시스쿨 모듈 (번들: 윤시스쿨/index.html) */
 var YOONSI_URL='윤시스쿨/index.html';
 function mountYoonsi(){var f=$('yoonsiFrame');if(!f||f._mounted)return;f.src=YOONSI_URL;f._mounted=true;}
@@ -4574,6 +5032,8 @@ document.addEventListener('keydown',function(e){
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
+  else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
@@ -9448,7 +9908,7 @@ var AC_WEEKS=[
   study:'소득 · 가족 · 보장 · 걱정 · 우선순위 질문',
   out:'상담카드 10건 · 핵심 질문 10개',criterion:'내가 말한 시간보다 고객이 말한 시간이 길다',
   crm:'상담카드·팩트파인딩으로 사실을 구조화해 받아적고, 8통장 진단지도로 돈의 흐름을 함께 봅니다.',
-  tools:[['fact_find','📝','상담카드·팩트파인딩'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','상담자료']],
+  tools:[['fact_find','📝','상담카드·팩트파인딩'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료'],['fp_deck','📊','재무설계 상담자료']],
   todo:['팩트파인딩 10건 작성','고객이 말한 걱정을 고객의 언어 그대로 기록','상담자료를 고객 365일에 저장']},
 
  {n:5,stage:'보장Ⅰ',topic:'치료비 통장 — 암·뇌·심장',
@@ -10956,7 +11416,7 @@ var CK_LDR={
   ],
   d:[
     ['b4','적어 둔 도와줄 것 모두 완료','오늘 안에','',''],
-    ['e1','내일 상담 있는 사람 자료 확인','비어 있으면 지금 알려 줍니다','상담자료','sangdam'],
+    ['e1','내일 상담 있는 사람 자료 확인','비어 있으면 지금 알려 줍니다','보장분석 상담자료','sangdam'],
     ['e2','오늘 아무 기록도 없는 사람 한 명 연락','내일 아침이면 늦습니다','팀 체크 현황','ckteam']
   ],
   week:[
