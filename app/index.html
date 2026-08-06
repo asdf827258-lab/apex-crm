@@ -13603,14 +13603,88 @@ function setupCss(){
   document.head.appendChild(st);
 }
 
+/* ── 어제 막힌 곳 ─────────────────────────────────────────────────────
+   팀원은 막혀도 대개 말하지 않는다. 밤에 서버가 어제 점검 결과와 건의를
+   모아, 여러 명이 같은 곳에서 막혔는지 본다. 여럿이면 개인 문제가 아니다. */
+var BLK={row:null,loaded:false,open:false};
+function blkDay(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-(n||0));return d.toISOString().slice(0,10);}
+function blkLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){BLK.loaded=true;blkPaint();return;}
+  sb.from('night_briefs').select('id,kind,ref_date,title,body,meta')
+    .eq('kind','blocked').order('ref_date',{ascending:false}).limit(3).then(function(r){
+    BLK.loaded=true;
+    BLK.row=(!r.error&&r.data&&r.data.length)?r.data[0]:null;
+    blkPaint();
+  },function(){BLK.loaded=true;blkPaint();});
+}
+function blkToggle(){BLK.open=!BLK.open;blkPaint();}
+function blkBodyHtml(t){
+  var lines=(''+(t||'')).replace(/\r/g,'').split('\n'),h='',i;
+  for(i=0;i<lines.length;i++){
+    var x=lines[i].replace(/^\s+|\s+$/g,'');if(!x)continue;
+    var m=x.match(/^\[(.+?)\]\s*(.*)$/);
+    if(m){h+='<div class="blk-h">'+osEsc(m[1])+'</div>';if(m[2])h+='<div class="blk-l">'+osEsc(m[2])+'</div>';}
+    else h+='<div class="blk-l">'+osEsc(x.replace(/^[-*•]\s*/,'· '))+'</div>';
+  }
+  return h||'<div class="blk-l">내용이 없습니다.</div>';
+}
+function blkCardHtml(){
+  if(!BLK.loaded||!BLK.row)return '';
+  var r=BLK.row,mt=r.meta||{},old=r.ref_date!==blkDay(0);
+  var hot=(mt.items||0)>0||(mt.news||0)>0||(mt.fails||0)>0;
+  return '<div class="card blk'+(hot?' hot':'')+'" style="margin-bottom:12px">'+
+    '<button class="blk-b" type="button" onclick="blkToggle()">'+
+      '<span class="blk-ic">'+(hot?'🚧':'✅')+'</span>'+
+      '<span class="blk-w"><span class="blk-t">'+osEsc(r.title||'막힌 곳')+
+        (old?'<span class="blk-old">'+osEsc(r.ref_date)+' 기준</span>':'')+'</span>'+
+        '<span class="blk-s">'+
+          (mt.checked?('점검 '+mt.checked+'명 · '):'')+
+          (mt.items?('막힌 항목 '+mt.items+'개'):'막힌 항목 없음')+
+          (mt.news?(' · 새 건의 '+mt.news+'건'):'')+
+          (mt.fails?(' · 밤 작업 실패 '+mt.fails+'건'):'')+
+          (mt.top?(' · 가장 많은 곳: '+mt.top):'')+
+        '</span></span>'+
+      '<span class="blk-c">'+(BLK.open?'▾':'▸')+'</span></button>'+
+    (BLK.open?('<div class="blk-d">'+blkBodyHtml(r.body)+
+      '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="go(\'voice\')">건의함 열기</button>'+
+      '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="blkLoad()">새로고침</button>'+
+      '</div></div>'):'')+
+  '</div>';
+}
+function blkPaint(){var el=document.getElementById('osBlocked');if(el)el.innerHTML=blkCardHtml();}
+function blkCss(){
+  if(document.getElementById('blkStyle'))return;
+  var st=document.createElement('style');st.id='blkStyle';
+  st.textContent=
+    '.blk{overflow:hidden}.blk.hot{border-color:#FDE68A}'+
+    '.blk-b{display:flex;align-items:center;gap:11px;width:100%;padding:13px 15px;border:0;'+
+      'background:none;cursor:pointer;text-align:left;font-family:inherit}'+
+    '.blk.hot .blk-b{background:#FFFBEB}'+
+    '.blk-b:hover{filter:brightness(.98)}'+
+    '.blk-ic{flex:none;font-size:19px;line-height:1}'+
+    '.blk-w{flex:1;min-width:0}'+
+    '.blk-t{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;'+
+      'letter-spacing:-.03em;color:var(--ink-1)}'+
+    '.blk-old{font-size:10px;font-weight:700;color:var(--ink-5);background:var(--ink-8);'+
+      'border-radius:99px;padding:1px 7px;letter-spacing:0}'+
+    '.blk-s{display:block;font-size:11.5px;color:var(--ink-4);line-height:1.6;margin-top:3px}'+
+    '.blk-c{flex:none;font-size:11px;color:var(--ink-5)}'+
+    '.blk-d{padding:2px 15px 15px;border-top:1px solid var(--ink-8)}'+
+    '.blk-h{font-size:9.5px;font-weight:800;color:var(--primary);letter-spacing:.05em;margin:12px 0 5px}'+
+    '.blk-l{font-size:12.6px;line-height:1.7;color:var(--ink-2);margin:3px 0}';
+  document.head.appendChild(st);
+}
+
 function renderHealth(){
-  opsCss();setupCss();
+  opsCss();setupCss();blkCss();
   if(!OS.profile)return osPage('점검','시스템 점검','로그인 후 이용할 수 있습니다.',osLoginGate('시스템 점검은 로그인 후 이용할 수 있습니다.'));
   return osPage('점검','시스템 점검',
     '매일 한 번 자동으로 돌고, 여기서 언제든 다시 볼 수 있습니다. 문제가 있으면 무엇을 하면 되는지 같이 적습니다.',
-    '<div id="osSetupHx"></div><div id="hxPane">'+hxInnerHtml()+'</div>');
+    '<div id="osSetupHx"></div><div id="osBlocked"></div><div id="hxPane">'+hxInnerHtml()+'</div>');
 }
-function osHealthAfterRender(){setupPaint();hxRun(true);}
+function osHealthAfterRender(){setupPaint();BLK.loaded=false;blkPaint();blkLoad();hxRun(true);}
 
 /* ════════ 건의함 ════════ */
 var VOICE={list:[],busy:false,err:'',mine:false,kind:'idea',open:{}};
