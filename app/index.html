@@ -9357,16 +9357,41 @@ function orgCopySql(){
   else if(navigator.clipboard)navigator.clipboard.writeText(t);
   toast('조직도 준비 SQL을 복사했습니다 — Supabase → SQL Editor에 붙여넣고 Run 하세요.');
 }
-var ORGS={pulled:false,busy:'',err:'',srv:null,at:''};
+var ORGS={pulled:false,busy:'',err:'',srv:null,at:'',mid:null};
+
+/* 조직도의 '계정 연결' 칸(member_id)은 26번 SQL 로 나중에 생겼다.
+   아직 안 만든 서버에서는 그 칸을 달라고 하면 조회 자체가 실패한다 —
+   권한 문제로 보이지만 사실은 없는 칸이다. 그럴 땐 칸을 빼고 다시 읽어
+   조직도는 그대로 보이게 하고, 연결 기능만 잠근다. */
+function orgMissingMid(e){
+  var m=((e&&e.message)||'')+'';
+  return /member_id/.test(m)&&/does not exist|schema cache|찾을 수 없|없습니다/i.test(m);
+}
+function orgSelect(sb,cols){
+  var base=cols||'id,name,rank,team,parent';
+  return sb.from('org_members').select(base+',member_id').then(function(r){
+    if(r.error&&orgMissingMid(r.error)){
+      ORGS.mid=false;
+      return sb.from('org_members').select(base).then(function(r2){
+        if(!r2.error&&r2.data)r2.data.forEach(function(x){x.member_id=null;});
+        return r2;
+      },function(e){return {error:e||{message:'실패'}};});
+    }
+    if(!r.error)ORGS.mid=true;
+    return r;
+  },function(e){return {error:e||{message:'실패'}};});
+}
 
 function orgCanWrite(){
   return !!(OS.profile&&typeof osIsAppAdmin==='function'&&osIsAppAdmin());
 }
 function orgRow(m){
-  return {id:m.id,name:m.name||'',rank:m.rank||'',team:m.team||'',parent:m.parent||'',
-    phone:m.phone||'',insta:m.insta||'',photo:m.photo||'',member_id:m.member_id||null,
+  var o={id:m.id,name:m.name||'',rank:m.rank||'',team:m.team||'',parent:m.parent||'',
+    phone:m.phone||'',insta:m.insta||'',photo:m.photo||'',
     updated_at:new Date().toISOString(),
     updated_by:(OS.profile&&OS.profile.id)||null};
+  if(ORGS.mid!==false)o.member_id=m.member_id||null;
+  return o;
 }
 function orgSyncPaint(){
   var el=document.getElementById('orgSyncBar');
@@ -9378,7 +9403,7 @@ function orgPull(force){
   if(ORGS.busy)return;
   if(ORGS.pulled&&!force){orgSyncPaint();return;}
   ORGS.busy='pull';orgSyncPaint();
-  sb.from('org_members').select('id,name,rank,team,parent,phone,insta,photo,member_id').then(function(r){
+  orgSelect(sb,'id,name,rank,team,parent,phone,insta,photo').then(function(r){
     ORGS.busy='';
     if(r.error){ORGS.err=r.error.message||'';ORGS.srv=null;orgSyncPaint();return;}
     ORGS.err='';ORGS.pulled=true;ORGS.srv=r.data||[];
@@ -9476,6 +9501,16 @@ function orgSyncBarHtml(){
   }
   if(ORGS.srv===null){
     return box('#F8FAFD','#E5E9F0','var(--ink-3)','서버 상태를 확인하는 중입니다…');
+  }
+  if(ORGS.mid===false){
+    return box('#FFFBEB','#FDE68A','#92400E',
+      '<b>조직도는 서버에 잘 저장되고 있습니다.</b> 다만 <b>계정 연결 칸</b>이 아직 없습니다.<br>'+
+      '<span style="font-size:11.5px;line-height:1.8">조직도의 사람과 앱 계정을 이어 두면 팀원 종합·팀 코칭에서 직급과 소속이 같이 보입니다. '+
+      '시스템 점검 → 필요한 SQL 에서 <b>팀원 종합 · 조직도 계정 연결</b>을 한 번 실행하면 됩니다.</span>'+
+      '<div class="btn-row" style="margin-top:8px">'+
+        '<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="hxSqlCopy(\'26\')">📋 계정 연결 SQL 복사</button>'+
+        '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="go(\'health\')">시스템 점검 열기</button>'+
+      '</div>');
   }
   var sn=ORGS.srv.length;
   var same=(sn===ln)&&(function(){
@@ -10270,7 +10305,7 @@ function txLoad(){
     q(sb.from('profiles').select('id,name,role,active,workspace,plan').order('name')),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('org_members').select('id,name,rank,team,parent,member_id')),
+    q(orgSelect(sb)),
     q(sb.from('attendance').select('member_id,att_date').gte('att_date',d56)),
     q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d56+'T00:00:00')),
     q(sb.from('dbs').select('id,assigned_to')),
@@ -10503,7 +10538,11 @@ function txInnerHtml(){
     (TXM.at?'<span style="font-size:11px;color:var(--ink-5)">'+osEsc(TXM.at)+'</span>':'')+
   '</div>';
   if(TXM.warn.length)h+='<div class="notice">'+osEsc(TXM.warn.join(' · '))+
-    ' 은(는) 읽을 권한이 없어 <b>—</b>로 둡니다. <b>migration_26_team.sql</b> 을 실행하면 채워집니다.</div>';
+    ' 은(는) 지금 읽지 못해 <b>—</b>로 둡니다. <b>시스템 점검 → 필요한 SQL</b> 에서 '+
+    '아직 안 한 것을 실행하면 채워집니다.'+
+    '<div class="btn-row" style="margin-top:8px">'+
+    '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="go(\'health\')">시스템 점검 열기</button>'+
+    '</div></div>';
   h+=arr.length?arr.map(txRowHtml).join('')
     :'<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">해당하는 팀원이 없습니다.</div></div>';
   return h;
@@ -10875,7 +10914,8 @@ function coInnerHtml(){
        '</div></div>';
   }
   if(CO.warn.length)h+='<div class="notice">'+osEsc(CO.warn.join(' · '))+
-    ' 은(는) 읽을 권한이 없어 <b>—</b>로 둡니다. <b>migration_26_team.sql</b> 을 실행하면 채워집니다.</div>';
+    ' 은(는) 지금 읽지 못해 <b>—</b>로 둡니다. <b>시스템 점검 → 필요한 SQL</b> 에서 '+
+    '아직 안 한 것을 실행하면 채워집니다.</div>';
 
   h+='<div class="co-sec">오늘 볼 사람</div>';
   h+=pick.length?pick.map(function(p){return coCardHtml(p,true);}).join('')
@@ -11018,6 +11058,44 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
+ '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
+  "set search_path = public;",
+  "",
+  "create table if not exists public.org_members(",
+  "  id text primary key,",
+  "  name text not null default '',",
+  "  rank text default '설계사',",
+  "  team text default '',",
+  "  parent text default '',",
+  "  phone text default '',",
+  "  insta text default '',",
+  "  photo text default '',",
+  "  updated_at timestamptz default now(),",
+  "  updated_by uuid",
+  ");",
+  "",
+  "alter table public.org_members add column if not exists updated_at timestamptz default now();",
+  "alter table public.org_members add column if not exists updated_by uuid;",
+  "",
+  "alter table public.org_members enable row level security;",
+  "",
+  "drop policy if exists org_members_read on public.org_members;",
+  "create policy org_members_read on public.org_members",
+  "  for select to authenticated using (true);",
+  "",
+  "drop policy if exists org_members_write on public.org_members;",
+  "create policy org_members_write on public.org_members",
+  "  for all to authenticated",
+  "  using (public.is_admin() or public.is_owner())",
+  "  with check (public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.org_members to authenticated;",
+  "grant insert, update, delete on public.org_members to authenticated;",
+  "",
+  "select count(*) as org_members_rows from public.org_members;",
+  "",
+  "notify pgrst, 'reload schema';"
+ ]},
  '24':{label:"실행 체크판 · 팀 체크 현황",need:["daily_checks"],lines:[
   "set search_path = public;",
   "",
@@ -11407,7 +11485,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['24','25','26','27','28'],h='';
+  var ks=['23','24','25','26','27','28'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다.</div></div><div class="card-body">'+
@@ -11560,7 +11638,7 @@ function hxServer(cb){
     if(miss.length){
       if(miss.indexOf('daily_checks')>=0)needKey='24';
       else if(miss.indexOf('health_checks')>=0||miss.indexOf('suggestions')>=0)needKey='25';
-      else if(miss.indexOf('org_members')>=0)needKey='26';
+      else if(miss.indexOf('org_members')>=0)needKey='23';
       else if(miss.indexOf('coach_logs')>=0)needKey='28';
     }
     hxAdd(R,'서버','필요한 표',miss.length?'bad':'ok',
