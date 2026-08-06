@@ -4387,6 +4387,129 @@ function osSoonBox(lines){
 function osTodayStr(){var d=new Date();function p(n){return (n<10?'0':'')+n;}return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
 function osBriefKind(){var h=new Date().getHours();if(h<11)return 'morning';if(h<17)return 'day';return 'evening';}
 function osBriefLabel(k){return ({morning:'아침 브리핑',day:'주간 브리핑',evening:'퇴근 전 브리핑'})[k]||'브리핑';}
+/* ── 밤에 만들어 둔 상담 준비 ────────────────────────────────────────
+   오늘 약속이 잡힌 고객은, 밤사이 서버가 통화 기록을 읽어 준비 카드를
+   만들어 둔다. 아침에 열면 이미 있다. 만드느라 기다릴 일이 없다.
+   고객 이름과 전화번호는 AI 로 보내지 않는다 — 지역·상품·통화 메모만
+   보내고 이름은 서버에서 제목에 붙인다.                              */
+var NB={rows:[],loaded:false,busy:false,err:'',open:{},noTable:false};
+
+function nbToday(){var d=new Date(Date.now()+9*3600*1000);return d.toISOString().slice(0,10);}
+function nbMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+function nbLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){NB.loaded=true;nbPaint();return;}
+  NB.busy=true;
+  sb.from('night_briefs').select('id,kind,ref_id,ref_date,member_id,title,body,meta')
+    .eq('kind','consult_prep').eq('ref_date',nbToday())
+    .order('id',{ascending:true}).limit(60).then(function(r){
+    NB.busy=false;NB.loaded=true;
+    if(r.error){
+      var m=((r.error.message)||'')+'';
+      NB.noTable=/does not exist|relation/i.test(m);
+      NB.err=NB.noTable?'':m;
+      NB.rows=[];nbPaint();return;
+    }
+    NB.err='';NB.noTable=false;
+    var me=nbMyId();
+    var all=r.data||[];
+    /* 내 고객이 먼저, 그 다음 팀 것 — 지점장은 둘 다 본다 */
+    NB.rows=all.filter(function(x){return !me||!x.member_id||x.member_id===me;});
+    if(!NB.rows.length)NB.rows=all;
+    NB.rows.sort(function(a,b){
+      var x=(a.meta&&a.meta.at)||'',y=(b.meta&&b.meta.at)||'';return x<y?-1:1;});
+    nbPaint();
+  },function(e){NB.busy=false;NB.loaded=true;NB.err=(e&&e.message)||'';nbPaint();});
+}
+function nbToggle(id){NB.open[id]=!NB.open[id];nbPaint();}
+function nbTime(iso){
+  if(!iso)return '시각 미정';
+  var d=new Date(new Date(iso).getTime()+9*3600*1000);
+  var h=d.getUTCHours(),m=d.getUTCMinutes();
+  return (h<12?'오전 ':'오후 ')+(h%12||12)+'시'+(m?(' '+('0'+m).slice(-2)+'분'):'');
+}
+/* [제목] 대괄호 줄을 소제목으로 바꿔 읽기 쉽게 */
+function nbBodyHtml(t){
+  var lines=(''+(t||'')).replace(/\r/g,'').split('\n'),h='',i;
+  for(i=0;i<lines.length;i++){
+    var s=lines[i].replace(/^\s+|\s+$/g,'');
+    if(!s)continue;
+    var m=s.match(/^\[(.+?)\]\s*(.*)$/);
+    if(m){
+      h+='<div class="nb-h">'+osEsc(m[1])+'</div>';
+      if(m[2])h+='<div class="nb-l">'+osEsc(m[2])+'</div>';
+    }else{
+      h+='<div class="nb-l">'+osEsc(s.replace(/^[-*•]\s*/,'· '))+'</div>';
+    }
+  }
+  return h||'<div class="nb-l">내용이 없습니다.</div>';
+}
+function nbCardHtml(){
+  if(!NB.loaded||(!NB.rows.length&&!NB.noTable))return '';
+  if(NB.noTable){
+    if(typeof osIsAppAdmin!=='function'||!osIsAppAdmin())return '';
+    return '<div class="card" style="margin-bottom:14px"><div class="card-body">'+
+      '<div class="notice"><b>밤 작업 준비가 아직 안 됐습니다.</b> 홈 맨 위 <b>서버 준비</b>에서 SQL 을 한 번 실행하면, '+
+      '다음 날 아침부터 오늘 만날 고객의 상담 준비가 여기에 먼저 올라옵니다.'+
+      '<div class="btn-row" style="margin-top:8px">'+
+      '<button class="btn btn-primary" style="padding:5px 11px;font-size:11px" onclick="go(\'home\')">서버 준비 열기</button>'+
+      '</div></div></div></div>';
+  }
+  var h='<div class="card nb-c" style="margin-bottom:14px">'+
+    '<div class="card-hd"><div class="card-title"><span class="ci">🌙</span>밤사이 만들어 둔 상담 준비 '+
+      '<span class="nb-n">'+NB.rows.length+'명</span></div>'+
+    '<div class="card-desc">오늘 약속이 잡힌 고객입니다. 지난 통화를 읽어 <b>먼저 확인할 것</b>과 '+
+      '<b>꺼내지 말 것</b>을 미리 정리해 뒀습니다.</div></div><div class="card-body">';
+  NB.rows.forEach(function(x){
+    var op=!!NB.open[x.id],mt=x.meta||{};
+    h+='<div class="nb-i'+(op?' on':'')+'">'+
+      '<button class="nb-b" type="button" onclick="nbToggle(\''+x.id+'\')">'+
+        '<span class="nb-t">'+osEsc(x.title||'고객')+'</span>'+
+        '<span class="nb-s">'+
+          (mt.region?('<i>'+osEsc(mt.region)+'</i>'):'')+
+          (mt.product?('<i>'+osEsc(mt.product)+'</i>'):'')+
+          (mt.calls?('<i>통화 '+mt.calls+'건</i>'):'')+
+        '</span>'+
+        '<span class="nb-c2">'+(op?'▾':'▸')+'</span></button>'+
+      (op?('<div class="nb-d">'+nbBodyHtml(x.body)+
+        '<div class="nb-w">이 준비 카드는 통화 기록만 근거로 만든 <b>참고용</b>입니다. '+
+        '보험 안내는 금융소비자보호법에 따라 상품설명서와 약관을 기준으로 하며, '+
+        '보장 여부는 개별 약관과 보험사 심사 결과에 따릅니다.</div>'+
+        '<div class="btn-row" style="margin-top:9px">'+
+        '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="copyText((function(){var r=null,i;for(i=0;i<NB.rows.length;i++)if(NB.rows[i].id===\''+x.id+'\')r=NB.rows[i];return r?r.body:\'\';})())">복사</button>'+
+        '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="go(\'crm\')">DB 통합 CRM</button>'+
+        '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="go(\'clients\')">고객 365일</button>'+
+        '</div></div>'):'')+
+    '</div>';
+  });
+  return h+'</div></div>';
+}
+function nbPaint(){var el=document.getElementById('osNightBrief');if(el)el.innerHTML=nbCardHtml();}
+function nbCss(){
+  if(document.getElementById('nbStyle'))return;
+  var st=document.createElement('style');st.id='nbStyle';
+  st.textContent=
+    '.nb-c .card-title .nb-n{font-size:11px;font-weight:800;color:#fff;background:var(--primary);'+
+      'border-radius:99px;padding:2px 9px;margin-left:7px}'+
+    '.nb-i{border:1px solid var(--ink-7);border-radius:10px;margin-bottom:7px;overflow:hidden;background:#fff}'+
+    '.nb-i.on{border-color:#BFD4FB}'+
+    '.nb-b{display:flex;align-items:center;gap:9px;width:100%;padding:10px 12px;border:0;'+
+      'background:none;cursor:pointer;text-align:left;font-family:inherit}'+
+    '.nb-b:hover{background:var(--ink-9)}'+
+    '.nb-i.on .nb-b{background:#F5F9FF}'+
+    '.nb-t{flex:none;font-size:13.5px;font-weight:800;letter-spacing:-.03em;color:var(--ink-1)}'+
+    '.nb-s{flex:1;display:flex;gap:5px;flex-wrap:wrap;min-width:0}'+
+    '.nb-s i{font-style:normal;font-size:10px;font-weight:700;color:var(--ink-5);'+
+      'background:var(--ink-8);border-radius:99px;padding:1px 7px}'+
+    '.nb-c2{flex:none;font-size:11px;color:var(--ink-5)}'+
+    '.nb-d{padding:2px 13px 13px;border-top:1px solid var(--ink-8)}'+
+    '.nb-h{font-size:9.5px;font-weight:800;color:var(--primary);letter-spacing:.05em;margin:11px 0 5px}'+
+    '.nb-l{font-size:12.5px;line-height:1.68;color:var(--ink-2);margin:3px 0}'+
+    '.nb-w{font-size:10.5px;line-height:1.6;color:var(--ink-5);background:var(--ink-9);'+
+      'border-radius:8px;padding:8px 10px;margin-top:11px}';
+  document.head.appendChild(st);
+}
+
 function renderAssistant(){
   if(!OS.profile)return osPage('AI 비서','오늘의 AI 비서','로그인 후 역할·시간대별 능동 브리핑이 열립니다.',osLoginGate('오늘의 AI 비서는 로그인 후 이용할 수 있습니다.'));
   var nm=(OS.profile.name)||'';var role=osRole();var k=osBriefKind();
@@ -4396,7 +4519,8 @@ function renderAssistant(){
     '<div style="font-size:12px;opacity:.82;margin-top:6px;line-height:1.5">아래 항목은 <b>AI 없이 실제 데이터 집계</b>로 생성됩니다. 각 항목의 <b>근거</b>를 확인하고 바로 이동하세요.</div>'+
   '</div>';
   return osPage('AI 비서','오늘의 AI 비서','데이터를 먼저 읽어 오늘 처리할 일을 근거와 함께 알려드립니다(무-AI 집계 우선).',
-    hd+'<div id="osAsstBody" style="margin-top:14px"><div class="osc-loading">오늘 업무를 집계하는 중…</div></div>');
+    hd+'<div id="osNightBrief" style="margin-top:14px"></div>'+
+    '<div id="osAsstBody" style="margin-top:14px"><div class="osc-loading">오늘 업무를 집계하는 중…</div></div>');
 }
 /* count 쿼리 — 테이블/컬럼 미존재 시 graceful(skipped).
    head:true는 미존재 테이블에서 오류를 표면화하지 않으므로 일반 select+count 사용. */
@@ -4441,6 +4565,7 @@ function osAsstSpecs(role,uid,today){
 }
 function osAssistantAfterRender(){
   if(!OS.profile)return;
+  nbCss();NB.loaded=false;NB.rows=[];nbPaint();nbLoad();
   var sb=osClient();var box=document.getElementById('osAsstBody');if(!sb||!box)return;
   var uid=OS.session.user.id;var today=osTodayStr();var role=osRole();
   var specs=osAsstSpecs(role,uid,today);
@@ -11610,7 +11735,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -11937,6 +12062,70 @@ var HX_SQL={
   "",
   "grant select on public.team_overview to authenticated;",
   "",
+  "create table if not exists public.night_jobs(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  kind text not null,",
+  "  ref_id text not null,",
+  "  ref_date date not null,",
+  "  payload jsonb not null default '{}'::jsonb,",
+  "  status text not null default 'todo',",
+  "  tries integer not null default 0,",
+  "  last_error text default '',",
+  "  created_at timestamptz default now(),",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "alter table public.night_jobs add column if not exists payload jsonb not null default '{}'::jsonb;",
+  "alter table public.night_jobs add column if not exists tries integer not null default 0;",
+  "alter table public.night_jobs add column if not exists last_error text default '';",
+  "alter table public.night_jobs add column if not exists updated_at timestamptz default now();",
+  "",
+  "create unique index if not exists night_jobs_uniq on public.night_jobs(kind, ref_date, ref_id);",
+  "create index if not exists night_jobs_pick on public.night_jobs(status, ref_date);",
+  "",
+  "alter table public.night_jobs enable row level security;",
+  "",
+  "drop policy if exists night_jobs_read on public.night_jobs;",
+  "create policy night_jobs_read on public.night_jobs",
+  "  for select to authenticated",
+  "  using (public.is_team_viewer());",
+  "",
+  "grant select on public.night_jobs to authenticated;",
+  "",
+  "create table if not exists public.night_briefs(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  kind text not null,",
+  "  ref_id text not null,",
+  "  ref_date date not null,",
+  "  member_id uuid,",
+  "  title text not null default '',",
+  "  body text not null default '',",
+  "  meta jsonb not null default '{}'::jsonb,",
+  "  created_at timestamptz default now()",
+  ");",
+  "",
+  "alter table public.night_briefs add column if not exists member_id uuid;",
+  "alter table public.night_briefs add column if not exists meta jsonb not null default '{}'::jsonb;",
+  "",
+  "create unique index if not exists night_briefs_uniq on public.night_briefs(kind, ref_date, ref_id);",
+  "create index if not exists night_briefs_member_idx on public.night_briefs(member_id, ref_date desc);",
+  "create index if not exists night_briefs_date_idx on public.night_briefs(ref_date desc);",
+  "",
+  "alter table public.night_briefs enable row level security;",
+  "",
+  "drop policy if exists night_briefs_read on public.night_briefs;",
+  "create policy night_briefs_read on public.night_briefs",
+  "  for select to authenticated",
+  "  using (member_id is null or member_id = auth.uid() or public.is_team_viewer());",
+  "",
+  "drop policy if exists night_briefs_delete on public.night_briefs;",
+  "create policy night_briefs_delete on public.night_briefs",
+  "  for delete to authenticated",
+  "  using (public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.night_briefs to authenticated;",
+  "grant delete on public.night_briefs to authenticated;",
+  "",
   "create table if not exists public.app_config(",
   "  key text primary key,",
   "  value text,",
@@ -11946,7 +12135,7 @@ var HX_SQL={
   "grant select on public.app_config to authenticated;",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '29')",
+  "values ('schema_version', '30')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -11971,7 +12160,10 @@ var HX_SQL={
   "  (select count(*) from pg_policies where schemaname='public' and tablename='dbs'",
   "     and cmd in ('INSERT','UPDATE','DELETE','ALL'))",
   "union all select",
-  "  '팀원 종합 뷰', to_regclass('public.team_overview') is not null, 0;"
+  "  '팀원 종합 뷰', to_regclass('public.team_overview') is not null, 0",
+  "union all select",
+  "  '밤 작업', to_regclass('public.night_briefs') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='night_briefs');"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -12550,7 +12742,7 @@ function hxServer(cb){
   if(!sb){cb([]);return;}
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   var T=['daily_checks','suggestions','health_checks','org_members','profiles','clients',
-         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs'];
+         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs','night_briefs'];
   Promise.all(T.map(function(t){return q(sb.from(t).select('*').limit(1));})).then(function(res){
     var R=[],miss=[],deny=[],i;
     for(i=0;i<T.length;i++){
@@ -12719,7 +12911,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=29;
+var SETUP_VER=30;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
