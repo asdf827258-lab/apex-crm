@@ -3473,15 +3473,25 @@ function osTossReturnCheck(){
   /* orderId(APEX-<plan>-<Y|M>-<ts>)에서 구매 플랜·주기 파싱 → 서버가 자동 활성화에 사용 */
   var plan='',cycle='month',mm=(orderId||'').match(/^APEX-([A-Za-z]+)-([YM])-/);
   if(mm){plan=mm[1].toLowerCase();cycle=(mm[2].toUpperCase()==='Y')?'year':'month';}
+  /* 성향검사 48 정밀 리포트는 구독이 아니라 1건 결제다(MBTI-…). 등급은 건드리지 않고
+     그 검사 한 건만 열어 준다 — 서버가 mbti_tests.paid 를 켠다. */
+  var isMbti=(orderId||'').indexOf('MBTI-')===0;
+  var mbtiPend=(isMbti&&typeof mbtiPendGet==='function')?mbtiPendGet():null;
+  if(isMbti){plan='';cycle='';}
   function doConfirm(uid){
     if(!(confirmUrl&&paymentKey&&orderId&&amount)){
       toast('결제창 인증은 완료됐지만, 최종 승인(서버 확인)이 아직 연결되지 않았습니다. 설정 → 토스 결제에서 확인 함수를 연결하면 자동 활성화됩니다.');
       return;
     }
-    toast('결제를 확인하고 구독을 활성화하는 중…');
-    fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount),userId:uid,plan:plan,cycle:cycle})})
+    toast(isMbti?'결제를 확인하고 리포트를 여는 중…':'결제를 확인하고 구독을 활성화하는 중…');
+    fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount),userId:uid,plan:plan,cycle:cycle,product:(isMbti?'mbti':''),resultId:((mbtiPend&&mbtiPend.resultId)||'')})})
       .then(function(r){return r.text().then(function(tx){var j={};try{j=JSON.parse(tx);}catch(e){}return {ok:r.ok,j:j};});})
       .then(function(res){
+        if(isMbti){
+          if(typeof mbtiPayApplied==='function')mbtiPayApplied(res.ok,(res.j&&(res.j.message||res.j.__mbtiError))||'');
+          else toast(res.ok?'✅ 결제가 완료되었습니다.':'결제 승인 확인 실패');
+          return;
+        }
         if(res.ok){
           var act=res.j&&res.j.__activated;
           toast(act===false?'✅ 결제 완료 · 활성화는 잠시 후 반영됩니다(운영자 확인).':'✅ 결제 완료 · 구독이 바로 활성화되었습니다.');
@@ -4233,7 +4243,7 @@ var TABS=[
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
  {group:'성장·교육',items:[{id:'teamx',icon:'👥',title:'팀원 종합',cnt:''},{id:'growth',icon:'📊',title:'팀 성장 대시보드',cnt:''},{id:'ckteam',icon:'🧭',title:'팀 체크 현황',cnt:''}]},
- {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
+ {group:'고객',items:[{id:'sangdam',icon:'📋',title:'상담자료',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''},{id:'mbti',icon:'🧬',title:'성향검사 48',cnt:'48'}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
  {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
@@ -4430,6 +4440,7 @@ function go(tab){
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
   else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
+  else if(tab==='mbti'){dyn.innerHTML=renderMbti();if(typeof osMbtiAfterRender==='function')osMbtiAfterRender();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
   else if(tab==='terms'){dyn.innerHTML=renderTerms();if(typeof osTermsAfterRender==='function')osTermsAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
@@ -23653,6 +23664,906 @@ function renderBizNews(){
    '.biz-news-item .ds{font-size:12px;color:#4B5563;line-height:1.6;margin-bottom:8px}',
    '.biz-news-tag{font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;white-space:nowrap}',
    '.biz-news-tag.r{background:#FEF2F2;color:#B91C1C}.biz-news-tag.a{background:#FFFBEB;color:#B45309}.biz-news-tag.g{background:#F0FDF4;color:#15803D}.biz-news-tag.n{background:#F1F5F9;color:#475569}'
+  ].join('');
+  document.head.appendChild(s);
+})();
+
+
+/* ════════ 성향검사 48 — 48문항 정밀검사 · 표 리포트 · 결제 ════════════════
+   16유형 검사는 대개 재미로 끝난다. 상담에 쓰려면 그 정도로는 부족하다.
+   그래서 지표 하나를 12문항으로 본다(4지표 × 12 = 48). 절반은 뒤집어 물어
+   같은 것을 반대 방향에서 두 번 확인하고, 얼마나 일관되게 답했는지를
+   따로 점수로 낸다. 대충 찍으면 그 표에 그대로 드러난다.
+   중간값(보통이다)은 두지 않았다 — 어느 쪽인지 반드시 고르게 한다.
+   결과는 글이 아니라 표로 나온다. 표 1 이 4지표 요약이고,
+   정밀 리포트(표 2~6)는 결제하면 열린다.                                  */
+
+var MBTI_PRICE = 9900;                 /* 정밀 리포트 1건 */
+var MBTI_PROD  = '성향검사 48 정밀 리포트';
+
+var MBTI_SCALE = [
+  { v: 3,  t: '매우 그렇다',  s: '매우' },
+  { v: 2,  t: '그렇다',       s: '그렇다' },
+  { v: 1,  t: '조금 그렇다',  s: '조금' },
+  { v: -1, t: '조금 아니다',  s: '조금' },
+  { v: -2, t: '아니다',       s: '아니다' },
+  { v: -3, t: '전혀 아니다',  s: '전혀' }
+];
+
+var MBTI_AXIS = [
+  { key: 'EI', a: 'E', b: 'I', an: '외향', bn: '내향', q: '기운을 어디서 얻는가' },
+  { key: 'SN', a: 'S', b: 'N', an: '감각', bn: '직관', q: '무엇을 먼저 보는가' },
+  { key: 'TF', a: 'T', b: 'F', an: '사고', bn: '감정', q: '무엇으로 결정하는가' },
+  { key: 'JP', a: 'J', b: 'P', an: '판단', bn: '인식', q: '어떻게 매듭짓는가' }
+];
+
+/* 48문항 — ax:지표, k:+1이면 그렇다가 앞 글자(E·S·T·J), -1이면 뒷 글자 */
+var MBTI_Q = [
+  { t: '처음 만난 자리에서도 내가 먼저 말을 건다.',              ax: 'EI', k: 1 },
+  { t: '사람을 여럿 만나고 오면 오히려 기운이 난다.',            ax: 'EI', k: 1 },
+  { t: '혼자 있는 시간이 있어야 머릿속이 정리된다.',             ax: 'EI', k: -1 },
+  { t: '전화보다 문자로 정리해서 보내는 편이 편하다.',           ax: 'EI', k: -1 },
+  { t: '모임에서 분위기를 띄우는 쪽에 가깝다.',                  ax: 'EI', k: 1 },
+  { t: '생각이 정리되기 전에는 말을 잘 꺼내지 않는다.',          ax: 'EI', k: -1 },
+  { t: '하루에 약속이 서너 개 있어도 힘들지 않다.',              ax: 'EI', k: 1 },
+  { t: '잘 모르는 사람에게 먼저 연락하는 일이 부담스럽다.',      ax: 'EI', k: -1 },
+  { t: '말을 하면서 생각이 정리되는 편이다.',                    ax: 'EI', k: 1 },
+  { t: '쉬는 날은 집에서 조용히 보내는 것이 좋다.',              ax: 'EI', k: -1 },
+  { t: '새로운 모임에 초대받으면 일단 나가 본다.',               ax: 'EI', k: 1 },
+  { t: '사람 많은 자리에 오래 있으면 지친다.',                   ax: 'EI', k: -1 },
+
+  { t: '설명을 들을 때 구체적인 숫자와 사례가 있어야 이해된다.', ax: 'SN', k: 1 },
+  { t: '새것을 벌이기보다 지금 있는 것을 다듬는 편이 재미있다.', ax: 'SN', k: 1 },
+  { t: '사실보다 그 뒤에 숨은 뜻이 먼저 보인다.',                ax: 'SN', k: -1 },
+  { t: '늘 하던 방식이 지루해서 새로운 시도를 해 본다.',         ax: 'SN', k: -1 },
+  { t: '5년 뒤 그림을 그려 보는 일이 즐겁다.',                   ax: 'SN', k: -1 },
+  { t: '설명서를 순서대로 따라 하는 편이다.',                    ax: 'SN', k: 1 },
+  { t: '남들이 놓치는 가능성을 자주 발견한다.',                  ax: 'SN', k: -1 },
+  { t: '직접 겪어 본 것만 믿는 편이다.',                         ax: 'SN', k: 1 },
+  { t: '이야기하다 보면 주제가 자꾸 옆으로 뻗어 나간다.',        ax: 'SN', k: -1 },
+  { t: '눈에 보이는 것부터 하나씩 확인하고 넘어간다.',           ax: 'SN', k: 1 },
+  { t: '비유나 그림으로 설명하는 것을 좋아한다.',                ax: 'SN', k: -1 },
+  { t: '세부 사항을 빠뜨리지 않고 챙기는 편이다.',               ax: 'SN', k: 1 },
+
+  { t: '결정할 때 느낌보다 근거를 먼저 본다.',                   ax: 'TF', k: 1 },
+  { t: '누가 힘들다고 하면 해결책부터 떠오른다.',                ax: 'TF', k: 1 },
+  { t: '상대가 상처받을 말은 사실이어도 삼킨다.',                ax: 'TF', k: -1 },
+  { t: '잘못된 점은 분명히 짚고 넘어가야 한다.',                 ax: 'TF', k: 1 },
+  { t: '결론보다 분위기가 나빠지는 것이 더 신경 쓰인다.',        ax: 'TF', k: -1 },
+  { t: '칭찬보다 정확한 지적이 나에게 도움이 된다.',             ax: 'TF', k: 1 },
+  { t: '사람마다 사정이 다르니 규칙도 유연해야 한다.',           ax: 'TF', k: -1 },
+  { t: '말다툼이 붙어도 감정이 크게 흔들리지 않는다.',           ax: 'TF', k: 1 },
+  { t: '상대의 표정만 봐도 기분을 알아챈다.',                    ax: 'TF', k: -1 },
+  { t: '공정한 기준이 개인 사정보다 앞선다.',                    ax: 'TF', k: 1 },
+  { t: '결정할 때 그 사람이 어떻게 느낄지부터 생각한다.',        ax: 'TF', k: -1 },
+  { t: '결국 사람 마음을 움직이는 말이 결정을 만든다.',          ax: 'TF', k: -1 },
+
+  { t: '일정을 미리 정해 두어야 마음이 편하다.',                 ax: 'JP', k: 1 },
+  { t: '마감보다 한참 앞서 끝내 놓는 편이다.',                   ax: 'JP', k: 1 },
+  { t: '계획이 바뀌어도 별로 상관없다.',                         ax: 'JP', k: -1 },
+  { t: '할 일을 적어 두고 하나씩 지워 나간다.',                  ax: 'JP', k: 1 },
+  { t: '여행은 정해 두지 않고 그때그때 다니는 것이 좋다.',       ax: 'JP', k: -1 },
+  { t: '정리되지 않은 책상이 신경 쓰인다.',                      ax: 'JP', k: 1 },
+  { t: '여러 가지를 동시에 벌여 놓는 편이다.',                   ax: 'JP', k: -1 },
+  { t: '결정을 빨리 내리고 넘어가는 것이 좋다.',                 ax: 'JP', k: 1 },
+  { t: '급한 일이 생기면 세워 둔 계획은 바로 접어 둔다.',        ax: 'JP', k: -1 },
+  { t: '약속 시간보다 일찍 도착한다.',                           ax: 'JP', k: 1 },
+  { t: '마감이 닥쳐야 집중이 잘 된다.',                          ax: 'JP', k: -1 },
+  { t: '여지를 남겨 두는 편이 마음이 놓인다.',                   ax: 'JP', k: -1 }
+];
+
+/* 같은 것을 반대로 물은 짝 — 답이 서로 반대여야 정상이다(응답 일관성) */
+var MBTI_PAIR = [
+  [0, 7,   '먼저 말을 건다 ↔ 먼저 연락이 부담스럽다'],
+  [1, 11,  '만나면 기운이 난다 ↔ 사람이 많으면 지친다'],
+  [13, 15, '있는 것을 다듬는다 ↔ 새로운 시도를 한다'],
+  [19, 18, '겪은 것만 믿는다 ↔ 가능성을 발견한다'],
+  [24, 34, '근거를 먼저 본다 ↔ 느낌을 먼저 본다'],
+  [27, 26, '분명히 짚는다 ↔ 상처받을 말은 삼킨다'],
+  [37, 46, '미리 끝내 놓는다 ↔ 마감이 닥쳐야 한다'],
+  [36, 40, '일정을 미리 정한다 ↔ 그때그때 다닌다']
+];
+
+/* 지표별 상담 한 줄 — 표 1 의 마지막 칸 */
+var MBTI_TIP = {
+  E: '말로 풀게 두고, 결론은 함께 소리 내어 정리한다.',
+  I: '말을 재촉하지 않는다. 자료를 먼저 보내 생각할 시간을 준다.',
+  S: '숫자·사례·서류부터. 큰 그림은 뒤로 미룬다.',
+  N: '큰 그림과 5년 뒤 이야기 먼저. 세부는 요약해서.',
+  T: '비교표와 손익으로. 감정에 호소하면 오히려 닫힌다.',
+  F: '가족·사람 이야기부터. 숫자는 마음이 열린 뒤에.',
+  J: '일정과 다음 단계를 그 자리에서 못 박아 준다.',
+  P: '선택지를 두세 개 남겨 두고 스스로 고르게 한다.'
+};
+
+var MBTI_TYPES = {
+  ISTJ: { nick: '원칙주의 실무가', line: '한 번 정한 것은 끝까지 지킨다. 검증되지 않은 말에는 움직이지 않는다.',
+    str: ['약속과 절차를 지킨다', '숫자와 서류에 강하다', '한 번 신뢰하면 오래 간다'],
+    care: ['새로운 방식에 저항이 크다', '변화를 손해로 먼저 읽는다', '감정 표현이 적어 차갑게 보인다'],
+    open: '"오늘은 세 가지만 확인하겠습니다"로 범위를 먼저 못 박는다.',
+    doc: '약관 근거·보장 표·실제 지급 사례. 추정치는 넣지 않는다.',
+    pace: '천천히. 자료를 두고 와 다음에 확인받는다.',
+    close: '지금 계약과 무엇이 어떻게 달라지는지 한 장 비교표로 마무리한다.',
+    obj: '"왜 바꿔야 하나"에는 숫자로만 답한다. 근거 없는 권유는 신뢰를 깎는다.',
+    work: '기준과 절차를 먼저 알려 준다. 즉흥적인 지시는 반발을 부른다.',
+    fit: ['ESFP', 'ESTP'], rub: ['ENFP', 'ENTP'] },
+  ISFJ: { nick: '조용한 살림꾼', line: '드러내지 않고 챙긴다. 결정은 가족을 먼저 통과한다.',
+    str: ['성실하고 꼼꼼하다', '사람을 오래 기억한다', '약속을 어기지 않는다'],
+    care: ['거절을 잘 못 해 미룬다', '결정을 혼자 내리지 않는다', '부담을 말로 표현하지 않는다'],
+    open: '가족 이야기부터. 본인보다 가족 걱정이 먼저 나온다.',
+    doc: '보장 공백을 그림 한 장으로. 어려운 용어는 걷어낸다.',
+    pace: '느리게. 배우자와 상의할 시간을 반드시 준다.',
+    close: '"오늘 결정하지 않으셔도 됩니다"라고 먼저 말해 주면 오히려 빨라진다.',
+    obj: '거절이 아니라 미루는 것이다. 다음 약속을 잡아 두면 이어진다.',
+    work: '드러나지 않는 수고를 짚어 칭찬한다. 공개 지적은 오래 남는다.',
+    fit: ['ESFP', 'ESTP'], rub: ['ENTJ', 'ENTP'] },
+  INFJ: { nick: '속 깊은 조언자', line: '말수는 적지만 상대의 진심을 읽고 있다. 의미가 없으면 움직이지 않는다.',
+    str: ['상대의 속마음을 잘 읽는다', '가치와 명분이 분명하다', '한 번 정하면 깊게 간다'],
+    care: ['속내를 늦게 꺼낸다', '상업적 태도에 민감하다', '완벽하지 않으면 시작을 미룬다'],
+    open: '"이 돈이 결국 누구를 위한 것인지"부터 묻는다.',
+    doc: '가족·삶의 그림. 상품 설명은 뒤로.',
+    pace: '3회 이상. 신뢰가 쌓이기 전에는 결정하지 않는다.',
+    close: '설득하지 말고 정리해 준다. 결론은 본인이 낸다.',
+    obj: '반론을 말로 하지 않고 조용히 사라진다. 중간 점검 연락이 필수다.',
+    work: '의미를 먼저 설명한다. 실적 압박은 마음을 닫게 한다.',
+    fit: ['ENFP', 'ENTP'], rub: ['ESTP', 'ESTJ'] },
+  INTJ: { nick: '설계형 전략가', line: '머릿속에 이미 5년치 그림이 있다. 논리가 맞으면 결정이 빠르다.',
+    str: ['핵심을 빨리 짚는다', '스스로 공부해서 온다', '장기 계획을 세운다'],
+    care: ['설명이 길면 지루해한다', '전문성이 의심되면 즉시 닫는다', '감정 표현이 적어 오해받는다'],
+    open: '"결론부터 말씀드리겠습니다"로 시작한다.',
+    doc: '비교표 한 장·수치 근거. 감성 사례는 뺀다.',
+    pace: '두세 번으로 끝낸다. 늘어지면 흥미를 잃는다.',
+    close: '선택지 두 개와 각각의 손익을 주고 스스로 고르게 한다.',
+    obj: '"왜 이것인가"에 논리로 답한다. 얼버무리면 그날로 끝이다.',
+    work: '목표만 주고 방법은 맡긴다. 잦은 확인은 역효과.',
+    fit: ['ENFP', 'ENTP'], rub: ['ESFJ', 'ESFP'] },
+  ISTP: { nick: '손이 빠른 해결사', line: '말보다 실물을 본다. 필요하다고 판단하면 그 자리에서 끝낸다.',
+    str: ['군더더기가 없다', '문제를 바로 손본다', '위기 상황에 침착하다'],
+    care: ['긴 설명을 견디지 못한다', '얽매이는 것을 싫어한다', '연락이 끊기기 쉽다'],
+    open: '용건부터. 인사말은 짧게.',
+    doc: '한 장. 필요한 것과 값만.',
+    pace: '한 번에 끝내는 것이 가장 좋다.',
+    close: '"이대로 진행할까요"로 바로 물어본다.',
+    obj: '설득하려 들면 도망간다. 사실만 두고 선택하게 둔다.',
+    work: '자율을 준다. 회의보다 현장에서 말한다.',
+    fit: ['ESFJ', 'ESTJ'], rub: ['ENFJ', 'INFJ'] },
+  ISFP: { nick: '온화한 실행가', line: '부드럽지만 자기 기준이 분명하다. 강하게 밀면 조용히 멀어진다.',
+    str: ['사람을 편하게 한다', '있는 그대로를 본다', '작은 배려가 몸에 배어 있다'],
+    care: ['압박에 약하다', '거절을 말로 하지 않는다', '먼 미래를 잘 그리지 않는다'],
+    open: '요즘 어떻게 지내는지부터. 상품 이야기는 두 번째 만남에.',
+    doc: '지금 당장 쓸 수 있는 보장 중심으로.',
+    pace: '천천히, 부담 없이.',
+    close: '작게 시작하는 안을 하나 만들어 준다.',
+    obj: '반론 대신 침묵이 온다. 부담을 덜어 주는 말이 먼저다.',
+    work: '지시보다 부탁. 공개 비교는 피한다.',
+    fit: ['ESFJ', 'ESTJ'], rub: ['ENTJ', 'ESTJ'] },
+  INFP: { nick: '가치 중심의 이상가', line: '숫자보다 뜻으로 움직인다. 진심이 아니면 바로 알아챈다.',
+    str: ['사람의 마음을 깊이 본다', '자기 가치가 분명하다', '한 번 믿으면 오래 간다'],
+    care: ['현실 계산이 뒤로 밀린다', '결정이 늦다', '상업적 화법에 민감하다'],
+    open: '무엇을 지키고 싶은지부터 묻는다.',
+    doc: '가족·꿈에 붙은 이야기 한 장. 표는 뒤에.',
+    pace: '느리게. 재촉하면 멀어진다.',
+    close: '"지금 이 선택이 무엇을 지키는지"를 한 문장으로 정리해 준다.',
+    obj: '가격이 아니라 의미에서 막힌다. 의미를 다시 세워 준다.',
+    work: '왜 하는지를 먼저 말한다. 숫자만 주면 힘을 잃는다.',
+    fit: ['ENFJ', 'ENTJ'], rub: ['ESTJ', 'ESTP'] },
+  INTP: { nick: '파고드는 분석가', line: '스스로 검증하기 전에는 믿지 않는다. 질문이 많은 것은 관심이 있다는 뜻이다.',
+    str: ['원리를 끝까지 파고든다', '허점을 잘 찾는다', '편견이 적다'],
+    care: ['결정을 계속 미룬다', '설명이 부정확하면 신뢰를 잃는다', '감정 대화를 어려워한다'],
+    open: '"직접 확인하실 수 있게 근거를 드리겠습니다"로 연다.',
+    doc: '약관 원문·계산 근거·비교 자료. 모르면 모른다고 말한다.',
+    pace: '검토 시간을 충분히 준다. 대신 마감을 정해 준다.',
+    close: '결정을 미루는 이유를 목록으로 만들어 하나씩 지운다.',
+    obj: '반론이 아니라 확인 질문이다. 성실히 답하면 넘어간다.',
+    work: '왜 그런지 설명해 준다. 지시만으로는 움직이지 않는다.',
+    fit: ['ENTJ', 'ENFJ'], rub: ['ESFJ', 'ISFJ'] },
+  ESTP: { nick: '현장형 승부사', line: '지금 눈앞의 이익으로 판단한다. 길면 지루해한다.',
+    str: ['결정이 빠르다', '현장 감각이 좋다', '사람을 끌어당긴다'],
+    care: ['장기 계획을 미룬다', '지루하면 그 자리에서 끝낸다', '약속이 자주 바뀐다'],
+    open: '"3분만 보시면 됩니다"로 시작한다.',
+    doc: '한 장. 큰 숫자와 비교만.',
+    pace: '빠르게. 그 자리에서 결론까지.',
+    close: '지금 하면 무엇이 달라지는지를 숫자로 보여 준다.',
+    obj: '"나중에"가 곧 거절이다. 그 자리에서 다음 행동을 정한다.',
+    work: '목표와 보상을 눈에 보이게 건다. 긴 회의는 독이다.',
+    fit: ['ISFJ', 'ISTJ'], rub: ['INFJ', 'INFP'] },
+  ESFP: { nick: '분위기 메이커', line: '사람과 지금이 먼저다. 어려운 말은 세 문장을 넘기지 못한다.',
+    str: ['분위기를 밝게 만든다', '사람을 잘 소개해 준다', '반응이 빠르다'],
+    care: ['오래 앉아 있지 못한다', '어려운 표를 싫어한다', '충동적으로 결정한다'],
+    open: '가벼운 이야기로 5분. 표부터 꺼내지 않는다.',
+    doc: '그림·색·큰 글씨. 표는 최대 한 개.',
+    pace: '짧고 자주.',
+    close: '"이거 하나만 하시죠"로 좁혀 준다. 선택지가 많으면 못 고른다.',
+    obj: '즉흥 결정 뒤 번복이 잦다. 결정 직후 정리 메시지를 보낸다.',
+    work: '칭찬을 자주, 즉시. 서류 업무는 짝을 붙여 준다.',
+    fit: ['ISTJ', 'ISFJ'], rub: ['INTJ', 'INTP'] },
+  ENFP: { nick: '불꽃 아이디어러', line: '가능성에 반응한다. 시작은 뜨겁고 마무리는 도움이 필요하다.',
+    str: ['사람을 모으는 힘이 있다', '새 아이디어가 끊이지 않는다', '공감이 빠르다'],
+    care: ['일을 여러 개 벌인다', '세부 사항을 흘린다', '관심이 빨리 옮겨간다'],
+    open: '앞으로 하고 싶은 일 이야기부터.',
+    doc: '큰 그림 한 장. 세부는 요약해서 뒤에.',
+    pace: '흥이 식기 전에. 다만 마무리 확인은 반드시.',
+    close: '해야 할 일을 세 개로 줄여 적어 준다.',
+    obj: '거절이 아니라 미룸이다. 다음 행동을 그 자리에서 적어 준다.',
+    work: '방향만 주고 자유를 준다. 마감은 짧게 끊어 준다.',
+    fit: ['INTJ', 'INFJ'], rub: ['ISTJ', 'ESTJ'] },
+  ENTP: { nick: '판을 흔드는 토론가', line: '반대부터 해 보고 판단한다. 반박당하는 것을 즐긴다.',
+    str: ['판을 새로 짠다', '설득에 강하다', '두려움 없이 시도한다'],
+    care: ['말이 앞선다', '마무리가 약하다', '지루함을 못 견딘다'],
+    open: '일부러 반대 의견을 먼저 꺼내 준다.',
+    doc: '비교와 대안 두 가지. 하나만 내밀면 반박이 온다.',
+    pace: '빠르게, 토론하듯이.',
+    close: '"직접 골라 보시죠"로 넘긴다.',
+    obj: '반론은 관심의 표현이다. 맞받아치되 근거를 놓지 않는다.',
+    work: '새로운 시도를 맡긴다. 반복 업무에는 오래 두지 않는다.',
+    fit: ['INFJ', 'INTJ'], rub: ['ISFJ', 'ISTJ'] },
+  ESTJ: { nick: '밀어붙이는 관리자', line: '기준과 결과로 말한다. 시간을 낭비하는 것을 가장 싫어한다.',
+    str: ['추진력이 강하다', '기준이 분명하다', '책임을 진다'],
+    care: ['속도가 느리면 답답해한다', '지적이 직설적이다', '감정을 뒤로 미룬다'],
+    open: '"결론과 근거 순서로 말씀드리겠습니다."',
+    doc: '표·수치·일정. 한 장에 끝낸다.',
+    pace: '빠르게. 다음 일정까지 그 자리에서 정한다.',
+    close: '오늘 결정할 것과 다음 단계를 명확히 나눈다.',
+    obj: '가격 반론이 직설적으로 온다. 손익 비교로 정면 대응한다.',
+    work: '목표와 마감을 숫자로 준다. 애매한 지시는 신뢰를 깎는다.',
+    fit: ['ISFP', 'ISTP'], rub: ['INFP', 'ENFP'] },
+  ESFJ: { nick: '챙기는 살림 대장', line: '사람을 먼저 챙긴다. 주변 평판이 결정에 크게 작용한다.',
+    str: ['관계를 잘 관리한다', '소개를 잘 해 준다', '책임감이 강하다'],
+    care: ['주변 말에 흔들린다', '거절을 어려워한다', '갈등을 피한다'],
+    open: '가족·주변 사람 이야기부터.',
+    doc: '남들은 어떻게 하는지 사례 중심으로.',
+    pace: '보통. 주변과 상의할 시간을 준다.',
+    close: '"같은 상황의 분들이 이렇게 하셨습니다"가 가장 잘 통한다.',
+    obj: '주변 반대가 곧 반론이다. 그 사람까지 설득할 자료를 준다.',
+    work: '팀 안에서 인정받게 한다. 공개 지적은 크게 남는다.',
+    fit: ['ISFP', 'ISTP'], rub: ['INTP', 'INTJ'] },
+  ENFJ: { nick: '이끄는 멘토', line: '사람을 키우는 데서 보람을 얻는다. 명분이 서면 앞장선다.',
+    str: ['사람을 움직인다', '분위기를 만든다', '남의 성장을 돕는다'],
+    care: ['본인 일을 뒤로 미룬다', '거절을 못 한다', '기대가 어긋나면 크게 실망한다'],
+    open: '주변 사람들을 어떻게 챙기고 있는지부터 묻는다.',
+    doc: '가족·조직에 미치는 영향 중심.',
+    pace: '보통. 대화가 길어져도 좋아한다.',
+    close: '"이 선택이 누구에게 도움이 되는지"로 마무리한다.',
+    obj: '자기 것보다 남의 것을 먼저 챙기려 한다. 본인 몫을 짚어 준다.',
+    work: '사람을 맡긴다. 인정과 감사를 자주 표현한다.',
+    fit: ['INFP', 'ISFP'], rub: ['ISTP', 'INTP'] },
+  ENTJ: { nick: '판을 짜는 지휘관', line: '목표부터 세우고 사람을 배치한다. 시간을 가장 비싸게 친다.',
+    str: ['방향을 제시한다', '결정이 빠르다', '큰 판을 본다'],
+    care: ['말이 세게 나간다', '느린 것을 못 참는다', '세부를 남에게 미룬다'],
+    open: '"핵심 세 가지, 5분이면 됩니다."',
+    doc: '전략·손익·일정. 감성 자료는 빼도 된다.',
+    pace: '가장 빠르게.',
+    close: '결정 사항과 담당·기한을 그 자리에서 적는다.',
+    obj: '더 나은 대안을 요구한다. 두 번째 안을 항상 준비한다.',
+    work: '권한을 준다. 결과로 평가받는 것을 선호한다.',
+    fit: ['INFP', 'INTP'], rub: ['ISFP', 'ISFJ'] }
+};
+
+var MB = { step: 'intro', page: 0, ans: {}, subject: { name: '', kind: 'client', memo: '' },
+           result: null, list: [], listErr: '', busy: false, noTable: false };
+var MBTI_PER_PAGE = 6;
+
+function mbtiPages() { return Math.ceil(MBTI_Q.length / MBTI_PER_PAGE); }
+function mbtiAnsCount() { var n = 0, i; for (i = 0; i < MBTI_Q.length; i++) if (MB.ans[i]) n++; return n; }
+
+/* ── 저장(중단해도 이어서) ────────────────────────────────────────── */
+function mbtiDraftSave() {
+  try { localStorage.setItem('apex_mbti_draft', JSON.stringify({ ans: MB.ans, page: MB.page, subject: MB.subject })); } catch (e) {}
+}
+function mbtiDraftLoad() {
+  try {
+    var s = localStorage.getItem('apex_mbti_draft'); if (!s) return null;
+    var o = JSON.parse(s); if (!o || typeof o !== 'object') return null;
+    return { ans: o.ans || {}, page: o.page || 0, subject: o.subject || { name: '', kind: 'client', memo: '' } };
+  } catch (e) { return null; }
+}
+function mbtiDraftClear() { try { localStorage.removeItem('apex_mbti_draft'); } catch (e) {} }
+
+/* 서버가 없을 때(로그인 전·점검) 결과를 이 기기에 둔다 */
+function mbtiLocalAll() { try { return JSON.parse(localStorage.getItem('apex_mbti_rows') || '[]') || []; } catch (e) { return []; } }
+function mbtiLocalPut(row) {
+  var all = mbtiLocalAll().filter(function (r) { return r.id !== row.id; });
+  all.unshift(row); try { localStorage.setItem('apex_mbti_rows', JSON.stringify(all.slice(0, 60))); } catch (e) {}
+}
+function mbtiLocalPaid(id, on) {
+  var all = mbtiLocalAll(), hit = false;
+  all.forEach(function (r) { if (r.id === id) { r.paid = !!on; r.paid_at = new Date().toISOString(); hit = true; } });
+  if (hit) { try { localStorage.setItem('apex_mbti_rows', JSON.stringify(all)); } catch (e) {} }
+  try {
+    var m = JSON.parse(localStorage.getItem('apex_mbti_paid') || '{}');
+    if (on) m[id] = 1; else delete m[id];
+    localStorage.setItem('apex_mbti_paid', JSON.stringify(m));
+  } catch (e) {}
+}
+function mbtiIsPaid(r) {
+  if (!r) return false;
+  if (r.paid) return true;
+  try { var m = JSON.parse(localStorage.getItem('apex_mbti_paid') || '{}'); return !!m[r.id]; } catch (e) { return false; }
+}
+
+/* ── 채점 ─────────────────────────────────────────────────────────── */
+function mbtiClarity(r) {
+  if (r >= 0.60) return { t: '아주 뚜렷', c: '#065F46', bg: '#ECFDF5' };
+  if (r >= 0.36) return { t: '뚜렷',     c: '#1A56DB', bg: '#EFF6FF' };
+  if (r >= 0.19) return { t: '보통',     c: '#92400E', bg: '#FFFBEB' };
+  if (r >= 0.07) return { t: '약함',     c: '#B45309', bg: '#FFF7ED' };
+  return { t: '경계 · 둘 다', c: '#B91C1C', bg: '#FEF2F2' };
+}
+function mbtiScore(ans) {
+  var by = {}, un = [], i;
+  MBTI_AXIS.forEach(function (a) { by[a.key] = { sum: 0, cnt: 0 }; });
+  for (i = 0; i < MBTI_Q.length; i++) {
+    var v = ans[i], q = MBTI_Q[i];
+    if (!v) { un.push(i); continue; }
+    by[q.ax].sum += q.k * v; by[q.ax].cnt++;
+  }
+  var axes = MBTI_AXIS.map(function (a) {
+    var s = by[a.key].sum, max = by[a.key].cnt * 3 || 1;
+    var pa = Math.round(((s + max) / (max * 2)) * 100);
+    if (pa > 100) pa = 100; if (pa < 0) pa = 0;
+    var ratio = Math.abs(s) / max, cl = mbtiClarity(ratio);
+    var letter = s >= 0 ? a.a : a.b, other = s >= 0 ? a.b : a.a;
+    return { key: a.key, a: a.a, b: a.b, an: a.an, bn: a.bn, q: a.q,
+             sum: s, max: max, cnt: by[a.key].cnt, pctA: pa, pctB: 100 - pa,
+             letter: letter, other: other, ratio: ratio,
+             clarity: cl.t, cc: cl.c, cbg: cl.bg, border: cl.t.indexOf('경계') === 0,
+             tip: MBTI_TIP[letter] };
+  });
+  var pairs = MBTI_PAIR.map(function (p) {
+    var va = ans[p[0]], vb = ans[p[1]];
+    if (!va || !vb) return { label: p[2], gap: null, pct: null };
+    var gap = Math.abs(va + vb);
+    return { label: p[2], gap: gap, pct: Math.round((1 - gap / 6) * 100) };
+  });
+  var done = pairs.filter(function (p) { return p.pct !== null; });
+  var cons = done.length ? Math.round(done.reduce(function (s, p) { return s + p.pct; }, 0) / done.length) : 0;
+  var code = axes.map(function (x) { return x.letter; }).join('');
+  var alt = [];
+  axes.forEach(function (x, i) { if (x.border) { var c = code.split(''); c[i] = x.other; alt.push(c.join('')); } });
+  return { axes: axes, code: code, alt: alt, consistency: cons, pairs: pairs, unanswered: un };
+}
+function mbtiConsLabel(n) {
+  if (n >= 90) return { t: '아주 일관됨', c: '#065F46', bg: '#ECFDF5' };
+  if (n >= 75) return { t: '일관됨', c: '#1A56DB', bg: '#EFF6FF' };
+  if (n >= 60) return { t: '보통', c: '#92400E', bg: '#FFFBEB' };
+  return { t: '흔들림 · 다시 권장', c: '#B91C1C', bg: '#FEF2F2' };
+}
+
+/* ── 화면 ─────────────────────────────────────────────────────────── */
+function renderMbti() {
+  if (MB.step === 'test') return osPage('성향검사 48', '🧬 성향검사 48 — 검사 중', '48문항. 중간에 나가도 답한 데까지 저장됩니다.', mbtiTestHtml());
+  if (MB.step === 'result' && MB.result) return osPage('성향검사 48', '🧬 검사 결과 · ' + MB.result.code, mbtiResSub(), mbtiResultHtml(MB.result));
+  return osPage('성향검사 48', '🧬 성향검사 48', '4지표를 각 12문항으로 봅니다. 절반은 뒤집어 물어 대충 답하면 일관성 점수에 드러납니다. 결과는 표로 나오고, 정밀 리포트는 결제 후 열립니다.', mbtiIntroHtml());
+}
+function mbtiResSub() {
+  var r = MB.result, ty = MBTI_TYPES[r.code];
+  return (ty ? ty.nick + ' · ' : '') + (r.subject && r.subject.name ? r.subject.name + ' 님' : '이름 없음') + ' · 일관성 ' + r.consistency + '%';
+}
+function mbtiIntroHtml() {
+  var d = mbtiDraftLoad(), cnt = d ? Object.keys(d.ans || {}).length : 0;
+  var resume = (d && cnt > 0 && cnt < MBTI_Q.length) ?
+    '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:13px 15px;margin-bottom:14px;font-size:12.5px;color:#92400E;line-height:1.7">' +
+      '하다 만 검사가 있습니다 — <b>' + cnt + ' / 48</b> 문항까지 답했습니다. ' +
+      '<button class="btn btn-primary" style="padding:6px 12px;font-size:12px;margin-left:6px" onclick="mbtiResume()">이어서 하기</button> ' +
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:12px" onclick="mbtiDraftClear();go(\'mbti\')">지우고 새로</button></div>' : '';
+  var how = ['<b>48문항</b> — 4지표 × 12문항. 한 지표를 12번 다르게 물어 한두 문항의 기분에 결과가 흔들리지 않게 했습니다.',
+             '<b>절반은 뒤집어</b> 물었습니다. 같은 것을 반대로 물은 8쌍의 답이 서로 맞는지를 <b>일관성 점수</b>로 냅니다.',
+             '<b>중간값 없음</b> — 6단계로 어느 쪽인지 반드시 고르게 합니다.',
+             '<b>경계 표시</b> — 두 성향의 차이가 작으면 한쪽으로 몰아붙이지 않고 둘 다 보여 줍니다.',
+             '걸리는 시간 약 <b>7~10분</b>. 중간에 나가도 이어서 할 수 있습니다.'];
+  var howH = how.map(function (x) { return '<li style="margin:6px 0;line-height:1.7">' + x + '</li>'; }).join('');
+  var form = '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">📝</span>누구를 검사하나요</div>' +
+    '<div class="card-desc">고객·팀원·본인 누구든 됩니다. 이름은 결과 표에만 쓰입니다.</div></div><div class="card-body">' +
+    '<div class="frm" style="display:grid;grid-template-columns:1.2fr 1fr;gap:10px">' +
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">이름</label><input type="text" id="mbName" value="' + osEsc(MB.subject.name) + '" placeholder="예: 김철수" style="width:100%"/></div>' +
+      '<div class="fld"><label style="font-size:11.5px;font-weight:700">구분</label><select id="mbKind" style="width:100%">' +
+        ['client:고객', 'member:팀원', 'self:본인'].map(function (o) { var p = o.split(':');
+          return '<option value="' + p[0] + '"' + (MB.subject.kind === p[0] ? ' selected' : '') + '>' + p[1] + '</option>'; }).join('') +
+      '</select></div></div>' +
+      '<div class="fld" style="margin-top:10px"><label style="font-size:11.5px;font-weight:700">메모 (선택)</label>' +
+      '<input type="text" id="mbMemo" value="' + osEsc(MB.subject.memo || '') + '" placeholder="예: 3월 상담 · 소개 고객" style="width:100%"/></div>' +
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="mbtiStart()">검사 시작 (48문항)</button>' +
+      '<span style="font-size:10.5px;color:var(--ink-5)">개인 성향 자료입니다. 고객 검사는 본인 동의를 받고 진행하세요.</span></div>' +
+    '</div></div>';
+  return '<div style="max-width:900px">' + resume +
+    '<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#4338CA 62%,#8B5CF6 100%);color:#fff;border:none">' +
+      '<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">PERSONALITY 48 · 상담용 성향검사</div>' +
+      '<div style="font-size:19px;font-weight:800;margin-top:6px">48문항으로 꼼꼼하게 봅니다</div>' +
+      '<div style="font-size:12.5px;opacity:.92;margin-top:8px;line-height:1.7">재미로 보는 검사가 아니라 <b>상담에 쓰는 검사</b>입니다. 결과는 표 1(4지표 요약)부터 표 6(궁합)까지 표로 정리되고, 그대로 인쇄해 상담 자료로 쓸 수 있습니다.</div>' +
+    '</div>' +
+    '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🔍</span>무엇이 다른가</div></div>' +
+      '<div class="card-body"><ul style="font-size:12.5px;color:var(--ink-2);padding-left:18px;margin:0">' + howH + '</ul></div></div>' +
+    form + mbtiPriceCard() + '<div id="mbtiListHost">' + mbtiListHtml() + '</div></div>';
+}
+function mbtiPriceCard() {
+  return '<div class="card" style="margin-top:14px;border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">💳</span>결과는 어디까지 무료인가</div>' +
+    '<div class="card-desc">검사와 <b>표 1(4지표 요약)</b>·유형·일관성까지는 무료입니다. 상담에 바로 쓰는 정밀 리포트는 건당 결제입니다.</div></div>' +
+    '<div class="card-body"><div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:78px">구분</th><th>들어 있는 것</th><th style="width:92px">가격</th></tr></thead><tbody>' +
+    '<tr><td><b>무료</b></td><td>48문항 검사 · 표 1 4지표 요약 · 유형 코드와 한 줄 설명 · 응답 일관성</td><td>0원</td></tr>' +
+    '<tr><td><b>정밀</b></td><td>표 2 지표 상세 · 표 3 강점과 조심할 점 · 표 4 상담 5단계 진행표 · 표 5 문항별 응답 48행 · 표 6 유형 궁합 · 인쇄/PDF</td><td><b>' + apexWon(MBTI_PRICE) + '</b></td></tr>' +
+    '</tbody></table></div></div></div>';
+}
+function mbtiListHtml() {
+  var rows = MB.list || [];
+  var body;
+  if (!rows.length) {
+    body = '<div style="font-size:12.5px;color:var(--ink-5);padding:14px 2px">아직 검사 기록이 없습니다.' + (MB.listErr ? ' (' + osEsc(MB.listErr) + ')' : '') + '</div>';
+  } else {
+    body = '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:96px">날짜</th><th>이름</th><th style="width:64px">유형</th><th style="width:70px">일관성</th><th style="width:82px">리포트</th><th style="width:132px"></th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var paid = mbtiIsPaid(r);
+        return '<tr><td>' + osEsc((r.created_at || '').slice(0, 10)) + '</td>' +
+          '<td>' + osEsc(r.subject_name || '이름 없음') + '<span style="color:#94A3B8"> · ' + osEsc(mbtiKindLabel(r.subject_kind)) + '</span></td>' +
+          '<td><b>' + osEsc(r.type_code || '-') + '</b></td>' +
+          '<td>' + (r.consistency || 0) + '%</td>' +
+          '<td>' + (paid ? '<span style="color:#059669;font-weight:800">열림</span>' : '<span style="color:#B45309;font-weight:800">잠김</span>') + '</td>' +
+          '<td><button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px" onclick="mbtiOpenSaved(\'' + r.id + '\')">열기</button>' +
+          (!paid && typeof osIsAppAdmin === 'function' && osIsAppAdmin()
+            ? '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px;color:#0F766E" onclick="mbtiUnlockByAdmin(\'' + r.id + '\')">입금확인·열기</button>' : '') +
+          '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px;color:#DC2626" onclick="mbtiDelete(\'' + r.id + '\')">삭제</button></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  return '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>지난 검사</div>' +
+    '<div class="card-desc">검사한 결과는 저장됩니다. 결제한 리포트는 언제든 다시 열립니다.</div></div>' +
+    '<div class="card-body">' + body + (MB.noTable ? '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.6">서버에 저장 칸(mbti_tests)이 아직 없습니다. <b>migration_33_mbti.sql</b> 을 실행하기 전까지는 이 기기에만 저장됩니다.</div>' : '') + '</div></div>';
+}
+function mbtiKindLabel(k) { return ({ client: '고객', member: '팀원', self: '본인' })[k] || '고객'; }
+
+/* ── 검사 화면 ─────────────────────────────────────────────────────── */
+function mbtiTestHtml() {
+  var from = MB.page * MBTI_PER_PAGE, to = Math.min(from + MBTI_PER_PAGE, MBTI_Q.length);
+  var done = mbtiAnsCount(), pct = Math.round(done / MBTI_Q.length * 100);
+  var qs = '';
+  for (var i = from; i < to; i++) {
+    var cur = MB.ans[i];
+    qs += '<div class="mb-q" id="mbq' + i + '">' +
+      '<div class="mb-qt"><span class="mb-qn">' + (i + 1) + '</span>' + osEsc(MBTI_Q[i].t) + '</div>' +
+      '<div class="mb-opts">' + MBTI_SCALE.map(function (o) {
+        return '<button type="button" class="mb-opt' + (cur === o.v ? ' on' : '') + (o.v > 0 ? ' y' : ' n') + '" onclick="mbtiPick(' + i + ',' + o.v + ')">' + o.t + '</button>';
+      }).join('') + '</div></div>';
+  }
+  var nav = '<div class="mb-nav">' +
+    '<button class="btn btn-ghost" ' + (MB.page === 0 ? 'disabled' : '') + ' onclick="mbtiPage(-1)">← 이전</button>' +
+    '<span style="font-size:12px;color:var(--ink-4);font-weight:700">' + (MB.page + 1) + ' / ' + mbtiPages() + ' 쪽</span>' +
+    (MB.page >= mbtiPages() - 1
+      ? '<button class="btn btn-primary" onclick="mbtiSubmit()">결과 보기</button>'
+      : '<button class="btn btn-primary" onclick="mbtiPage(1)">다음 →</button>') + '</div>';
+  return '<div style="max-width:820px">' +
+    '<div class="mb-prog"><div class="mb-progbar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="mb-proglab"><b>' + done + '</b> / ' + MBTI_Q.length + '문항 · ' + pct + '%</div></div>' +
+    '<div class="card" style="margin-top:12px"><div class="card-body">' + qs + nav + '</div></div>' +
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="mbtiQuit()">나가기 (답한 데까지 저장)</button>' +
+    '<span style="font-size:10.5px;color:var(--ink-5)">정답은 없습니다. 오래 고민하지 말고 먼저 떠오르는 쪽을 고르세요.</span></div></div>';
+}
+function mbtiStart() {
+  MB.subject = { name: (osVal('mbName') || '').replace(/^\s+|\s+$/g, ''), kind: osVal('mbKind') || 'client', memo: (osVal('mbMemo') || '').replace(/^\s+|\s+$/g, '') };
+  if (!MB.subject.name) { toast('검사받는 분의 이름을 입력하세요.'); var e = document.getElementById('mbName'); if (e) e.focus(); return; }
+  MB.ans = {}; MB.page = 0; MB.step = 'test'; MB.result = null;
+  mbtiDraftSave(); go('mbti');
+}
+function mbtiResume() { var d = mbtiDraftLoad(); if (!d) { toast('이어서 할 검사가 없습니다.'); return; } MB.ans = d.ans; MB.page = d.page; MB.subject = d.subject; MB.step = 'test'; go('mbti'); }
+function mbtiQuit() { mbtiDraftSave(); MB.step = 'intro'; go('mbti'); toast('답한 데까지 저장했습니다.'); }
+function mbtiPick(i, v) {
+  MB.ans[i] = v; mbtiDraftSave();
+  var host = document.getElementById('mbq' + i);
+  if (host) {
+    var bs = host.querySelectorAll('.mb-opt');
+    for (var n = 0; n < bs.length; n++) bs[n].classList.toggle('on', MBTI_SCALE[n] && MBTI_SCALE[n].v === v);
+    host.classList.remove('miss');
+  }
+  var done = mbtiAnsCount(), pct = Math.round(done / MBTI_Q.length * 100);
+  var bar = document.querySelector('.mb-progbar > i'); if (bar) bar.style.width = pct + '%';
+  var lab = document.querySelector('.mb-proglab'); if (lab) lab.innerHTML = '<b>' + done + '</b> / ' + MBTI_Q.length + '문항 · ' + pct + '%';
+}
+function mbtiPageMissing() {
+  var from = MB.page * MBTI_PER_PAGE, to = Math.min(from + MBTI_PER_PAGE, MBTI_Q.length), out = [];
+  for (var i = from; i < to; i++) if (!MB.ans[i]) out.push(i);
+  return out;
+}
+function mbtiPage(d) {
+  if (d > 0) {
+    var miss = mbtiPageMissing();
+    if (miss.length) {
+      miss.forEach(function (i) { var e = document.getElementById('mbq' + i); if (e) e.classList.add('miss'); });
+      var f = document.getElementById('mbq' + miss[0]); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'center' });
+      toast('아직 답하지 않은 문항이 ' + miss.length + '개 있습니다.');
+      return;
+    }
+  }
+  MB.page = Math.max(0, Math.min(mbtiPages() - 1, MB.page + d));
+  mbtiDraftSave(); go('mbti');
+  var m = $('main'); if (m) m.scrollTop = 0;
+}
+function mbtiSubmit() {
+  var miss = mbtiPageMissing();
+  if (miss.length) {
+    miss.forEach(function (i) { var e = document.getElementById('mbq' + i); if (e) e.classList.add('miss'); });
+    toast('아직 답하지 않은 문항이 ' + miss.length + '개 있습니다.'); return;
+  }
+  var all = [], i;
+  for (i = 0; i < MBTI_Q.length; i++) if (!MB.ans[i]) all.push(i);
+  if (all.length) { MB.page = Math.floor(all[0] / MBTI_PER_PAGE); go('mbti'); toast('앞쪽에 답하지 않은 문항이 ' + all.length + '개 있습니다.'); return; }
+  var sc = mbtiScore(MB.ans);
+  var row = { id: mbtiUid(), created_at: new Date().toISOString(), subject_name: MB.subject.name,
+    subject_kind: MB.subject.kind, memo: MB.subject.memo || '', answers: MB.ans, scores: sc,
+    type_code: sc.code, consistency: sc.consistency, paid: false };
+  MB.result = { id: row.id, at: row.created_at, subject: MB.subject, ans: MB.ans, axes: sc.axes,
+    code: sc.code, alt: sc.alt, consistency: sc.consistency, pairs: sc.pairs, paid: false };
+  mbtiLocalPut(row);
+  mbtiDraftClear();
+  MB.step = 'result'; go('mbti');
+  mbtiSaveServer(row);
+}
+function mbtiUid() {
+  var s = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+  return s.replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8); return v.toString(16); });
+}
+
+/* ── 결과 리포트 ──────────────────────────────────────────────────── */
+function mbtiBarHtml(ax) {
+  return '<div class="mb-mini"><span class="l">' + ax.a + '</span>' +
+    '<span class="t"><i style="width:' + ax.pctA + '%"></i></span>' +
+    '<span class="r">' + ax.b + '</span></div>';
+}
+function mbtiTable1(r) {
+  return '<div class="mb-cap">표 1. 4지표 요약 <span style="font-weight:600;color:#64748B">— 어느 쪽으로 얼마나 기울었는가</span></div>' +
+    '<div class="mb-scroll"><table class="mb-tb"><thead><tr>' +
+    '<th style="width:120px">지표</th><th style="width:150px">점수</th><th style="width:78px">성향</th><th style="width:96px">분명도</th><th>상담할 때</th>' +
+    '</tr></thead><tbody>' +
+    r.axes.map(function (a) {
+      return '<tr><td><b>' + a.a + ' ' + a.an + ' · ' + a.b + ' ' + a.bn + '</b><div style="font-size:11px;color:#94A3B8;margin-top:2px">' + osEsc(a.q) + '</div></td>' +
+        '<td>' + a.pctA + ' : ' + a.pctB + mbtiBarHtml(a) + '</td>' +
+        '<td><b style="font-size:15px;color:#1A56DB">' + a.letter + '</b> ' + (a.letter === a.a ? a.an : a.bn) + '</td>' +
+        '<td><span class="mb-pill" style="color:' + a.cc + ';background:' + a.cbg + '">' + a.clarity + '</span></td>' +
+        '<td>' + osEsc(a.tip) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function mbtiHeadHtml(r) {
+  var ty = MBTI_TYPES[r.code] || { nick: '', line: '' };
+  var cl = mbtiConsLabel(r.consistency);
+  var borders = r.axes.filter(function (a) { return a.border; });
+  var warn = borders.length ? '<div style="background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:11px;padding:11px 13px;font-size:12px;line-height:1.7;margin-top:10px">' +
+    '<b>경계 지표 ' + borders.length + '개</b> — ' + borders.map(function (a) { return a.a + '/' + a.b; }).join(', ') +
+    ' 는 차이가 거의 없습니다. 한쪽으로 단정하지 말고 두 성향을 모두 염두에 두세요.</div>' : '';
+  var cons = r.consistency < 60 ? '<div style="background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:11px;padding:11px 13px;font-size:12px;line-height:1.7;margin-top:10px">' +
+    '<b>응답 일관성 ' + r.consistency + '%</b> — 같은 것을 반대로 물은 문항의 답이 서로 어긋납니다. 결과를 그대로 믿기 어렵습니다. 다시 검사해 보시길 권합니다.</div>' : '';
+  return '<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#4338CA 64%,#8B5CF6 100%);color:#fff;border:none">' +
+    '<div style="font-size:11.5px;font-weight:800;opacity:.9">' + osEsc(r.subject && r.subject.name ? r.subject.name + ' 님 · ' + mbtiKindLabel(r.subject.kind) : '검사 결과') + '</div>' +
+    '<div style="font-size:34px;font-weight:900;letter-spacing:.06em;margin-top:6px">' + osEsc(r.code) + '</div>' +
+    '<div style="font-size:15px;font-weight:800;margin-top:2px">' + osEsc(ty.nick) + '</div>' +
+    '<div style="font-size:12.5px;opacity:.93;margin-top:8px;line-height:1.7">' + osEsc(ty.line) + '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">' +
+      '<span class="mb-pill" style="background:rgba(255,255,255,.16);color:#fff">48문항 완료</span>' +
+      '<span class="mb-pill" style="background:' + cl.bg + ';color:' + cl.c + '">응답 일관성 ' + r.consistency + '% · ' + cl.t + '</span>' +
+      '<span class="mb-pill" style="background:rgba(255,255,255,.16);color:#fff">' + osEsc((r.at || '').slice(0, 10)) + '</span>' +
+    '</div></div>' + warn + cons;
+}
+function mbtiTable2(r) {
+  return '<div class="mb-cap">표 2. 지표 상세 — 12문항이 어느 쪽으로 쌓였는가</div>' +
+    '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:110px">지표</th><th style="width:72px">문항</th><th style="width:96px">원점수</th><th style="width:88px">치우침</th><th style="width:96px">분명도</th><th>읽는 법</th></tr></thead><tbody>' +
+    r.axes.map(function (a) {
+      var read = a.border ? '두 성향이 거의 같습니다. 상황에 따라 다르게 나옵니다.'
+        : (a.ratio >= 0.6 ? '매우 분명합니다. 반대 방식으로 접근하면 거부감이 큽니다.'
+        : (a.ratio >= 0.36 ? '분명한 편입니다. 이 방향으로 맞추면 편안해합니다.'
+        : '약하게 기울었습니다. 반대 성향도 함께 쓸 수 있습니다.'));
+      return '<tr><td><b>' + a.a + ' · ' + a.b + '</b></td><td>' + a.cnt + '문항</td>' +
+        '<td>' + (a.sum > 0 ? '+' : '') + a.sum + ' / ±' + a.max + '</td>' +
+        '<td>' + Math.round(a.ratio * 100) + '%</td>' +
+        '<td><span class="mb-pill" style="color:' + a.cc + ';background:' + a.cbg + '">' + a.clarity + '</span></td>' +
+        '<td>' + read + '</td></tr>';
+    }).join('') +
+    '<tr><td colspan="6" style="background:#F8FAFF"><b>응답 일관성 ' + r.consistency + '%</b> — 반대로 물은 8쌍의 답이 서로 맞는 정도. ' +
+      r.pairs.map(function (p) { return osEsc(p.label) + ' ' + (p.pct === null ? '-' : p.pct + '%'); }).join(' / ') + '</td></tr>' +
+    '</tbody></table></div>';
+}
+function mbtiTable3(r) {
+  var ty = MBTI_TYPES[r.code]; if (!ty) return '';
+  var n = Math.max(ty.str.length, ty.care.length), rows = '', i;
+  for (i = 0; i < n; i++) {
+    rows += '<tr><td>' + (i + 1) + '</td><td>' + osEsc(ty.str[i] || '') + '</td><td>' + osEsc(ty.care[i] || '') + '</td></tr>';
+  }
+  return '<div class="mb-cap">표 3. 강점과 조심할 점</div>' +
+    '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:42px">#</th><th>강점 — 살려 줄 것</th><th>조심할 점 — 건드리지 말 것</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+}
+function mbtiTable4(r) {
+  var ty = MBTI_TYPES[r.code]; if (!ty) return '';
+  var steps = [
+    ['1 · 첫 만남', ty.open], ['2 · 자료', ty.doc], ['3 · 속도', ty.pace],
+    ['4 · 마무리', ty.close], ['5 · 반론이 올 때', ty.obj]
+  ];
+  return '<div class="mb-cap">표 4. 상담 진행표 — 이 유형에게는 이 순서로</div>' +
+    '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:120px">단계</th><th>이렇게 한다</th></tr></thead><tbody>' +
+    steps.map(function (s) { return '<tr><td><b>' + s[0] + '</b></td><td>' + osEsc(s[1]) + '</td></tr>'; }).join('') +
+    '<tr><td><b>함께 일할 때</b></td><td>' + osEsc(ty.work) + '</td></tr></tbody></table></div>';
+}
+function mbtiTable5(r) {
+  var lab = {}; MBTI_SCALE.forEach(function (o) { lab[o.v] = o.t; });
+  return '<div class="mb-cap">표 5. 문항별 응답 48행 — 어떤 답이 이 결과를 만들었는가</div>' +
+    '<div class="mb-scroll" style="max-height:520px;overflow-y:auto"><table class="mb-tb"><thead><tr><th style="width:38px">#</th><th>문항</th><th style="width:62px">지표</th><th style="width:96px">응답</th><th style="width:62px">점수</th></tr></thead><tbody>' +
+    MBTI_Q.map(function (q, i) {
+      var v = r.ans[i] || 0, pt = q.k * v;
+      var side = pt === 0 ? '-' : (pt > 0 ? q.ax.charAt(0) : q.ax.charAt(1));
+      return '<tr><td>' + (i + 1) + '</td><td>' + osEsc(q.t) + '</td><td>' + q.ax.charAt(0) + '/' + q.ax.charAt(1) + '</td>' +
+        '<td>' + osEsc(lab[v] || '무응답') + '</td>' +
+        '<td><b>' + side + '</b> ' + (pt > 0 ? '+' : '') + pt + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function mbtiTable6(r) {
+  var ty = MBTI_TYPES[r.code]; if (!ty) return '';
+  function cell(list) {
+    return list.map(function (c) { var t = MBTI_TYPES[c]; return '<b>' + c + '</b> ' + (t ? t.nick : ''); }).join('<br>');
+  }
+  return '<div class="mb-cap">표 6. 유형 궁합 — 누구와 편하고 누구와 부딪히는가</div>' +
+    '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:130px">구분</th><th style="width:190px">유형</th><th>어떻게 대할까</th></tr></thead><tbody>' +
+    '<tr><td><b>잘 맞는 편</b></td><td>' + cell(ty.fit) + '</td><td>서로 없는 것을 채워 줍니다. 소개·동행 상담에 함께 붙이면 좋습니다.</td></tr>' +
+    '<tr><td><b>부딪히기 쉬움</b></td><td>' + cell(ty.rub) + '</td><td>속도와 관심사가 다릅니다. 말의 순서를 상대 방식으로 바꿔야 대화가 됩니다.</td></tr>' +
+    '</tbody></table></div>';
+}
+function mbtiLockHtml(r) {
+  var items = ['표 2 지표 상세 — 12문항이 어느 쪽으로 쌓였는지, 일관성 8쌍 전부',
+               '표 3 강점과 조심할 점',
+               '표 4 상담 진행표 — 첫 만남·자료·속도·마무리·반론 5단계',
+               '표 5 문항별 응답 48행',
+               '표 6 유형 궁합 — 잘 맞는 유형·부딪히는 유형',
+               '인쇄 · PDF 저장 (상담 자료로 그대로 사용)'];
+  return '<div class="mb-lock">' +
+    '<div style="font-size:30px">🔒</div>' +
+    '<div style="font-size:16px;font-weight:900;color:#0F172A;margin-top:6px">정밀 리포트는 여기서부터입니다</div>' +
+    '<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:8px">표 1까지는 무료입니다. 아래 다섯 개 표와 인쇄본은 건당 결제 후 열립니다. 한 번 결제하면 이 검사는 언제든 다시 열립니다.</div>' +
+    '<ul style="text-align:left;max-width:520px;margin:14px auto 0;padding-left:18px;font-size:12.5px;color:#334155">' +
+    items.map(function (x) { return '<li style="margin:5px 0;line-height:1.6">' + osEsc(x) + '</li>'; }).join('') + '</ul>' +
+    '<div style="font-size:26px;font-weight:900;color:#4338CA;margin-top:16px">' + apexWon(MBTI_PRICE) + '</div>' +
+    '<div style="font-size:11px;color:#94A3B8;margin-top:2px">1건 · 부가세 포함 · 카드 / 계좌이체 / 네이버 / 카카오</div>' +
+    '<button class="btn btn-primary" style="margin-top:14px;padding:13px 26px;font-size:14px;background:#4338CA" onclick="mbtiPayOpen()">결제하고 정밀 리포트 열기</button>' +
+    '<div style="font-size:11px;color:#94A3B8;margin-top:10px;line-height:1.6">계좌이체·간편결제는 운영자 확인 후 열립니다. 카드 결제는 승인 즉시 열립니다.</div>' +
+  '</div>';
+}
+function mbtiResultHtml(r) {
+  var paid = mbtiIsPaid(r);
+  var head = mbtiHeadHtml(r);
+  var free = mbtiTable1(r);
+  var rest = paid ? (mbtiTable2(r) + mbtiTable3(r) + mbtiTable4(r) + mbtiTable5(r) + mbtiTable6(r) +
+      '<div style="font-size:11px;color:#94A3B8;line-height:1.7;margin-top:16px">이 리포트는 성향을 이해하기 위한 참고 자료입니다. 채용·평가·심사의 기준으로 쓰지 마세요. 고객 검사는 본인 동의를 받아 진행하고, 결과는 상담 목적 외로 사용하지 않습니다.</div>')
+    : mbtiLockHtml(r);
+  var acts = '<div class="btn-row" style="margin-top:16px">' +
+    '<button class="btn btn-ghost" onclick="mbtiBackToIntro()">← 검사 목록</button>' +
+    (paid ? '<button class="btn btn-ghost" onclick="mbtiPrint()">🖨 인쇄 · PDF</button>' : '') +
+    '<button class="btn btn-ghost" onclick="mbtiRetake()">다시 검사</button></div>';
+  return '<div style="max-width:900px"><div id="mbtiReport">' + head + free + rest + '</div>' + acts + '</div>';
+}
+function mbtiBackToIntro() { MB.step = 'intro'; go('mbti'); }
+function mbtiRetake() {
+  MB.ans = {}; MB.page = 0; MB.result = null; MB.step = 'intro'; mbtiDraftClear(); go('mbti');
+}
+function mbtiPrint() {
+  var host = document.getElementById('mbtiReport'); if (!host) return;
+  var root = document.getElementById('printRoot');
+  if (!root) { root = document.createElement('div'); root.id = 'printRoot'; document.body.appendChild(root); }
+  root.innerHTML = host.innerHTML; window.print();
+  setTimeout(function () { root.innerHTML = ''; }, 500);
+}
+
+/* ── 저장·불러오기 ─────────────────────────────────────────────────── */
+function mbtiSaveServer(row) {
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  var uid = (OS.profile && OS.profile.id) || (OS.session && OS.session.user && OS.session.user.id) || '';
+  if (!sb || !uid) return;
+  var rec = { id: row.id, member_id: uid, subject_name: row.subject_name, subject_kind: row.subject_kind,
+    memo: row.memo || '', answers: row.answers, scores: row.scores, type_code: row.type_code, consistency: row.consistency };
+  try {
+    sb.from('mbti_tests').insert(rec).then(function (res) {
+      if (res && res.error) { MB.noTable = true; }
+      mbtiLoadList();
+    }, function () { MB.noTable = true; });
+  } catch (e) { MB.noTable = true; }
+}
+function mbtiLoadList() {
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  var uid = (OS.profile && OS.profile.id) || '';
+  if (!sb || !uid) { MB.list = mbtiLocalAll(); mbtiListRefresh(); return; }
+  try {
+    sb.from('mbti_tests').select('id,created_at,subject_name,subject_kind,type_code,consistency,paid,scores,answers,memo')
+      .eq('member_id', uid).order('created_at', { ascending: false }).limit(40)
+      .then(function (r) {
+        if (r && r.error) { MB.noTable = true; MB.listErr = ''; MB.list = mbtiLocalAll(); }
+        else { MB.noTable = false; MB.list = mbtiMerge((r && r.data) || [], mbtiLocalAll()); }
+        mbtiListRefresh();
+      }, function () { MB.list = mbtiLocalAll(); mbtiListRefresh(); });
+  } catch (e) { MB.list = mbtiLocalAll(); mbtiListRefresh(); }
+}
+function mbtiMerge(server, local) {
+  var seen = {}, out = [];
+  server.forEach(function (r) { seen[r.id] = 1; out.push(r); });
+  local.forEach(function (r) { if (!seen[r.id]) out.push(r); });
+  out.sort(function (a, b) { return (b.created_at || '') < (a.created_at || '') ? -1 : 1; });
+  return out.slice(0, 40);
+}
+/* 목록만 다시 그린다 — go() 를 부르면 다시 불러오기가 되풀이된다 */
+function mbtiListRefresh() { var h = document.getElementById('mbtiListHost'); if (h) h.innerHTML = mbtiListHtml(); }
+function mbtiRowById(id) {
+  var i; for (i = 0; i < (MB.list || []).length; i++) if (MB.list[i].id === id) return MB.list[i];
+  var loc = mbtiLocalAll(); for (i = 0; i < loc.length; i++) if (loc[i].id === id) return loc[i];
+  return null;
+}
+function mbtiOpenSaved(id) {
+  var row = mbtiRowById(id);
+  if (!row) { toast('검사 기록을 찾지 못했습니다.'); return; }
+  var ans = row.answers || {}, sc = (row.scores && row.scores.axes) ? row.scores : mbtiScore(ans);
+  MB.result = { id: row.id, at: row.created_at, subject: { name: row.subject_name, kind: row.subject_kind, memo: row.memo || '' },
+    ans: ans, axes: sc.axes, code: sc.code || row.type_code, alt: sc.alt || [], consistency: sc.consistency || row.consistency || 0,
+    pairs: sc.pairs || [], paid: !!row.paid };
+  MB.step = 'result'; go('mbti');
+}
+function mbtiDelete(id) {
+  if (!confirm('이 검사 기록을 지울까요?')) return;
+  var all = mbtiLocalAll().filter(function (r) { return r.id !== id; });
+  try { localStorage.setItem('apex_mbti_rows', JSON.stringify(all)); } catch (e) {}
+  MB.list = (MB.list || []).filter(function (r) { return r.id !== id; });
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  if (sb) { try { sb.from('mbti_tests').delete().eq('id', id).then(function () {}, function () {}); } catch (e) {} }
+  toast('지웠습니다.'); mbtiListRefresh();
+}
+
+/* ── 결제 ─────────────────────────────────────────────────────────── */
+function mbtiPendSet(o) { try { localStorage.setItem('apex_mbti_pending', JSON.stringify(o)); } catch (e) {} }
+function mbtiPendGet() { try { return JSON.parse(localStorage.getItem('apex_mbti_pending') || 'null'); } catch (e) { return null; } }
+function mbtiPendClear() { try { localStorage.removeItem('apex_mbti_pending'); } catch (e) {} }
+function mbtiPayOpen() {
+  if (!MB.result) { toast('먼저 검사를 마쳐 주세요.'); return; }
+  if (typeof osPayModalClose === 'function') osPayModalClose();
+  var body = '<div style="font-size:11.5px;color:#64748B">1건 결제 · 부가세 포함</div>' +
+    '<div style="font-size:18px;font-weight:900;color:#0F172A;margin:2px 0">' + osEsc(MBTI_PROD) + '</div>' +
+    '<div style="font-size:12px;color:#64748B;margin-bottom:6px">' + osEsc((MB.result.subject && MB.result.subject.name) || '') + ' 님 · ' + osEsc(MB.result.code) + '</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#4338CA;margin-bottom:14px">' + apexWon(MBTI_PRICE) + '</div>' +
+    '<div style="font-size:11px;font-weight:800;color:#334155;margin:0 0 9px">결제수단 선택</div>' +
+    osPayMethodCard('💳', '카드 결제', '토스페이먼츠 · 승인 즉시 리포트가 열립니다', 'mbtiPayCard()', '#1A56DB') +
+    osPayMethodCard('🏦', '계좌이체 · 무통장입금', '운영 계좌로 이체 후 확인 요청', 'mbtiPayBank()', '#0EA5A5') +
+    osPayMethodCard('Ⓝ', '네이버페이', '네이버페이로 결제 후 확인 요청', 'mbtiPaySimple(\'naver\')', '#03C75A') +
+    osPayMethodCard('🟡', '카카오페이 · 카카오뱅크', '카카오로 송금 후 확인 요청', 'mbtiPaySimple(\'kakao\')', '#FEE500') +
+    '<div style="font-size:10.5px;color:#94A3B8;line-height:1.6;margin-top:8px">결제 전 표 1과 유형까지는 계속 무료로 보실 수 있습니다. 환불은 <b>약관·개인정보 → 환불·청약철회</b> 기준을 따릅니다.</div>';
+  osPayShell('정밀 리포트 결제', body);
+}
+function mbtiPayCard() {
+  if (!MB.result) return;
+  var ck = (typeof getTossKey === 'function') ? getTossKey() : '';
+  if (!ck) {
+    toast('카드 결제가 아직 연결되지 않았습니다. 계좌이체를 이용하거나 운영자에게 문의해 주세요.');
+    if (typeof osIsAppAdmin === 'function' && osIsAppAdmin()) { osPayModalClose(); go('settings'); }
+    return;
+  }
+  var orderId = 'MBTI-' + MB.result.code + '-' + Date.now();
+  mbtiPendSet({ orderId: orderId, resultId: MB.result.id, amount: MBTI_PRICE });
+  osPayModalClose();
+  osLoadToss(function (ok) {
+    if (!ok || typeof TossPayments === 'undefined') { toast('결제 모듈을 불러오지 못했습니다. 네트워크 확인 후 다시 시도하세요.'); return; }
+    try {
+      var tp = TossPayments(ck);
+      tp.requestPayment('카드', {
+        amount: MBTI_PRICE, orderId: orderId, orderName: MBTI_PROD,
+        successUrl: location.origin + location.pathname + '?toss=success',
+        failUrl: location.origin + location.pathname + '?toss=fail',
+        customerName: (OS.profile && OS.profile.name) || ''
+      });
+    } catch (e) { toast('결제창 호출 오류: ' + ((e && e.message) || '')); }
+  });
+}
+function mbtiPayBank() {
+  if (typeof osPayModalClose === 'function') osPayModalClose();
+  var c = (typeof payCfg === 'function') ? payCfg() : { account: '' };
+  var nm = (OS.profile && OS.profile.name) || '';
+  var inner;
+  if (!c.account) {
+    inner = '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">아직 <b>입금 계좌</b>가 등록되지 않았습니다.' +
+      ((typeof osIsAppAdmin === 'function' && osIsAppAdmin()) ? ' 관리자 <b>설정 → 결제수단 설정</b>에서 계좌를 등록해 주세요.' : ' 운영자에게 계좌이체 안내를 요청해 주세요.') + '</div>' +
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="mbtiPayOpen()">← 결제수단</button></div>';
+  } else {
+    inner = '<div style="font-size:11.5px;color:#64748B">' + osEsc(MBTI_PROD) + '</div>' +
+      '<div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:13px;padding:15px;margin:10px 0 12px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11.5px;color:#0F766E;font-weight:700">입금 계좌</span>' +
+        '<button type="button" onclick="osPayCopy(\'' + encodeURIComponent(c.bank + ' ' + c.account) + '\')" style="border:1px solid #99F6E4;background:#fff;color:#0F766E;font-size:11px;font-weight:800;border-radius:8px;padding:4px 10px;cursor:pointer">📋 복사</button></div>' +
+        '<div style="font-size:16px;font-weight:900;color:#0F172A">' + osEsc(c.bank) + ' ' + osEsc(c.account) + (c.holder ? ' (' + osEsc(c.holder) + ')' : '') + '</div>' +
+        '<div style="border-top:1px dashed #99F6E4;margin:11px 0;height:1px"></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:#64748B">입금 금액</span><b style="color:#0F172A">' + apexWon(MBTI_PRICE) + '</b></div>' +
+        '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#64748B">입금자명</span><b style="color:#0F172A">' + osEsc(nm || '검사받은 분 성함') + '</b></div>' +
+      '</div>' +
+      '<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;background:#0EA5A5" onclick="mbtiPayReq(\'bank\')">이체 완료 · 확인 요청</button>' +
+      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="mbtiPayOpen()">← 다른 결제수단</button>';
+  }
+  osPayShell('계좌이체 · 무통장입금', inner);
+}
+function mbtiPaySimple(kind) {
+  if (typeof osPayModalClose === 'function') osPayModalClose();
+  var c = (typeof payCfg === 'function') ? payCfg() : {};
+  var url = (kind === 'naver') ? c.naver : c.kakao;
+  var label = (kind === 'naver') ? '네이버페이' : '카카오페이/카카오뱅크';
+  if (!url) {
+    osPayShell(label, '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">' +
+      osEsc(label) + ' 결제 링크가 아직 연결되지 않았습니다. 지금은 <b>카드</b> 또는 <b>계좌이체</b>로 결제해 주세요.</div>' +
+      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="mbtiPayOpen()">← 결제수단</button></div>');
+    return;
+  }
+  try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; }
+  osPayShell(label, '<div style="font-size:12.5px;color:#334155;line-height:1.8;margin-bottom:12px">' + osEsc(label) + ' 결제를 마치셨으면 아래 버튼으로 확인을 요청해 주세요. 운영자 확인 후 리포트가 열립니다.</div>' +
+    '<a class="btn btn-ghost" style="width:100%;box-sizing:border-box;text-align:center;display:block;margin-bottom:8px" href="' + osEsc(url) + '" target="_blank" rel="noopener">↗ ' + osEsc(label) + ' 다시 열기</a>' +
+    '<button class="btn btn-primary" style="width:100%;padding:13px" onclick="mbtiPayReq(\'' + kind + '\')">결제 완료 · 확인 요청</button>' +
+    '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="mbtiPayOpen()">← 다른 결제수단</button>');
+}
+function mbtiPayReq(method) {
+  if (!MB.result) return;
+  var rec = { name: (OS.profile && OS.profile.name) || '', plan: 'mbti48', amount: MBTI_PRICE,
+    cycle: 'once', method: method, status: 'pending' };
+  try { if (OS.profile && OS.profile.id) rec.user_id = OS.profile.id; } catch (e) {}
+  var done = function () {
+    if (typeof osAudit === 'function') { try { osAudit('pay_request', 'mbti48', MB.result.id, { method: method, amount: MBTI_PRICE }); } catch (e) {} }
+    if (typeof osPayModalClose === 'function') osPayModalClose();
+    osPayShell('요청 접수 완료', '<div style="text-align:center;padding:6px 4px 2px"><div style="font-size:40px">✅</div>' +
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin-top:8px">확인 요청이 접수되었습니다</div>' +
+      '<div style="font-size:12.5px;color:#64748B;line-height:1.7;margin-top:8px">운영자가 입금을 확인하면 <b>' + osEsc(MBTI_PROD) + '</b>가 열립니다. 검사 결과는 <b>지난 검사</b> 목록에 저장되어 있습니다.</div>' +
+      '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="osPayModalClose()">확인</button></div>');
+  };
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  if (sb) { try { sb.from('payment_requests').insert(rec).then(done, done); } catch (e) { done(); } }
+  else done();
+}
+/* 카드 승인이 끝난 뒤 — 서버가 열어 주고, 화면도 바로 연다 */
+function mbtiPayApplied(ok, msg) {
+  var p = mbtiPendGet(); mbtiPendClear();
+  if (!p || !p.resultId) { toast(ok ? '✅ 결제가 완료되었습니다.' : '결제 확인 실패 — ' + (msg || '운영자에게 문의')); return; }
+  if (!ok) { toast('결제 승인 확인 실패 — ' + (msg || '운영자에게 문의')); return; }
+  mbtiLocalPaid(p.resultId, true);
+  if (MB.result && MB.result.id === p.resultId) MB.result.paid = true;
+  toast('✅ 결제 완료 · 정밀 리포트가 열렸습니다.');
+  MB.step = 'result';
+  if (!MB.result || MB.result.id !== p.resultId) { mbtiLoadList(); setTimeout(function () { mbtiOpenSaved(p.resultId); }, 300); }
+  else go('mbti');
+}
+/* 관리자: 계좌이체·간편결제 확인 후 열어 주기 */
+function mbtiUnlockByAdmin(id) {
+  var sb = (typeof osClient === 'function') ? osClient() : null;
+  if (!sb) { mbtiLocalPaid(id, true); toast('이 기기에서 열었습니다.'); go('mbti'); return; }
+  try {
+    sb.rpc('mbti_mark_paid', { p_id: id, p_method: 'manual' }).then(function (r) {
+      if (r && r.error) { toast('열기 실패 — ' + (r.error.message || '')); return; }
+      mbtiLocalPaid(id, true); toast('리포트를 열었습니다.'); mbtiLoadList();
+    }, function () { toast('열기 실패 — 서버에 연결하지 못했습니다.'); });
+  } catch (e) { toast('열기 실패'); }
+}
+function osMbtiAfterRender() {
+  if (MB.step === 'intro') mbtiLoadList();
+  var m = $('main'); if (m) m.scrollTop = 0;
+}
+
+/* 검사 화면 전용 스타일 */
+(function () {
+  var s = document.createElement('style');
+  s.textContent = [
+    '.mb-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #E5E9F0;border-radius:12px;background:#fff}',
+    '.mb-tb{width:100%;border-collapse:collapse;font-size:12.5px;min-width:520px}',
+    '.mb-tb th{background:#0F172A;color:#fff;padding:9px 11px;text-align:left;font-size:11.5px;font-weight:800;white-space:nowrap}',
+    '.mb-tb td{padding:9px 11px;border-top:1px solid #E9EDF3;color:#334155;line-height:1.65;vertical-align:top}',
+    '.mb-tb tbody tr:nth-child(even) td{background:#FAFBFD}',
+    '.mb-cap{font-size:13px;font-weight:900;color:#0F172A;margin:20px 0 8px}',
+    '.mb-pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;white-space:nowrap}',
+    '.mb-mini{display:flex;align-items:center;gap:6px;margin-top:5px}',
+    '.mb-mini .l,.mb-mini .r{font-size:10px;font-weight:800;color:#64748B;width:11px;text-align:center}',
+    '.mb-mini .t{flex:1;height:6px;border-radius:999px;background:#E2E8F0;overflow:hidden;min-width:60px}',
+    '.mb-mini .t > i{display:block;height:100%;background:linear-gradient(90deg,#4338CA,#8B5CF6)}',
+    '.mb-prog{background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px 14px}',
+    '.mb-progbar{height:8px;border-radius:999px;background:#EEF2F7;overflow:hidden}',
+    '.mb-progbar > i{display:block;height:100%;background:linear-gradient(90deg,#4338CA,#8B5CF6);transition:width .2s}',
+    '.mb-proglab{font-size:11.5px;color:#64748B;margin-top:7px;font-weight:700}',
+    '.mb-q{padding:14px 2px;border-bottom:1px solid #F1F5F9}',
+    '.mb-q.miss{background:#FEF2F2;border-radius:10px;padding-left:10px;padding-right:10px}',
+    '.mb-qt{font-size:13.5px;font-weight:700;color:#0F172A;line-height:1.6;display:flex;gap:8px;align-items:flex-start}',
+    '.mb-qn{flex:none;width:22px;height:22px;border-radius:7px;background:#EEF2FF;color:#4338CA;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px}',
+    '.mb-opts{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:10px}',
+    '@media(max-width:640px){.mb-opts{grid-template-columns:repeat(3,1fr)}}',
+    '.mb-opt{padding:9px 4px;border:1px solid #E2E8F0;background:#fff;border-radius:9px;font-size:11.5px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit;line-height:1.3}',
+    '.mb-opt.y:hover{border-color:#4338CA;color:#4338CA}',
+    '.mb-opt.n:hover{border-color:#94A3B8;color:#334155}',
+    '.mb-opt.on{background:#4338CA;border-color:#4338CA;color:#fff}',
+    '.mb-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px}',
+    '.mb-lock{margin-top:20px;border:1.5px dashed #C7D2FE;background:linear-gradient(180deg,#F8FAFF,#EEF2FF);border-radius:18px;padding:26px 20px;text-align:center}'
   ].join('');
   document.head.appendChild(s);
 })();
