@@ -248,6 +248,8 @@ window.supabase={createClient:function(){
   const bad = await page.evaluate(() => {
     var ids = {}, out = [];
     TABS.forEach(function (g) { g.items.forEach(function (i) { ids[i.id] = 1; }); });
+    /* 메뉴에는 없지만 다른 화면 안에서 열리는 것도 살아 있는 화면이다 */
+    if (typeof OS_TAB_GROUP !== 'undefined') Object.keys(OS_TAB_GROUP).forEach(function (k) { ids[k] = 1; });
     RT_STEP.forEach(function (s) { s.rows.forEach(function (r) { if (!ids[r.tab]) out.push(r.tab); }); });
     RT_STUCK.forEach(function (r) { if (!ids[r[1]]) out.push(r[1]); });
     var g2 = ['a', 'b', 'c', 'd', 'week', 'month'];
