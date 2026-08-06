@@ -249,6 +249,158 @@ function blockUser(p) {
   return L.join('\n');
 }
 
+/* ── ①-3 설계사마다 오늘 할 것 ────────────────────────────────────
+   AI 가 필요 없다. 규칙만으로 나온다. 그래서 큐를 거치지 않고 바로 쓴다.
+   · 오늘 먼저 걸 곳 — 배정받고 아직 한 번도 못 건 DB 중 오래 묵은 순
+   · 오래 못 본 고객 — 자료를 만든 지 오래된 고객                     */
+const COLD_DAYS = 90;
+
+function dayGap(a, b) {
+  return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+}
+async function planPersonal(today) {
+  const [profs, dbs, calls, cli, reps] = await Promise.all([
+    sb('profiles?select=id,name,active,workspace').catch(() => []),
+    sb('dbs?select=id,customer_name,region,assigned_to,assigned_date&limit=2000').catch(() => []),
+    sb('calls?select=db_id&limit=5000').catch(() => []),
+    sb('clients?select=id,advisor_id,name_masked,created_at&limit=2000').catch(() => []),
+    sb('saved_reports?select=client_id,created_at&order=created_at.desc&limit=3000').catch(() => [])
+  ]);
+  const people = (profs || []).filter(p =>
+    p.active !== false && (p.workspace == null || p.workspace === 'both' || p.workspace === 'apex'));
+  if (!people.length) return 0;
+
+  const touched = {};
+  (calls || []).forEach(c => { if (c.db_id) touched[c.db_id] = 1; });
+  const lastRep = {};
+  (reps || []).forEach(r => {
+    if (!r.client_id) return;
+    const d = String(r.created_at || '').slice(0, 10);
+    if (!lastRep[r.client_id] || lastRep[r.client_id] < d) lastRep[r.client_id] = d;
+  });
+
+  const rows = [];
+  people.forEach(p => {
+    const cold = (dbs || [])
+      .filter(d => d.assigned_to === p.id && !touched[d.id])
+      .sort((a, b) => String(a.assigned_date || '').localeCompare(String(b.assigned_date || '')))
+      .slice(0, 5);
+    const stale = (cli || [])
+      .filter(c => c.advisor_id === p.id)
+      .map(c => ({ c: c, last: lastRep[c.id] || String(c.created_at || '').slice(0, 10) }))
+      .filter(x => x.last && dayGap(x.last, today) >= COLD_DAYS)
+      .sort((a, b) => a.last.localeCompare(b.last))
+      .slice(0, 5);
+    if (!cold.length && !stale.length) return;
+
+    const L = [];
+    if (cold.length) {
+      L.push('[오늘 먼저 걸 곳]');
+      cold.forEach(d => {
+        const g = d.assigned_date ? dayGap(String(d.assigned_date).slice(0, 10), today) : null;
+        L.push('· ' + (d.customer_name || '이름 없음') +
+          (d.region ? (' · ' + d.region) : '') +
+          (g != null ? (' · 배정 ' + g + '일째') : ''));
+      });
+      L.push('', '전부 걸 필요는 없습니다. 위에서부터 몇 건까지 걸지 정하고 시작하세요.');
+    }
+    if (stale.length) {
+      if (L.length) L.push('');
+      L.push('[오래 못 본 고객]');
+      stale.forEach(x => L.push('· ' + (x.c.name_masked || '고객') +
+        ' · 마지막 자료 ' + dayGap(x.last, today) + '일 전'));
+      L.push('', '안부만 물어도 됩니다. 새 자료를 만들 필요는 없습니다.');
+    }
+    rows.push({
+      kind: 'day_plan', ref_id: String(p.id), ref_date: today, member_id: p.id,
+      title: '오늘 할 것 — 걸 곳 ' + cold.length + '건 · 오래 못 본 고객 ' + stale.length + '명',
+      body: L.join('\n'),
+      meta: { db: cold.length, stale: stale.length }
+    });
+  });
+  if (!rows.length) return 0;
+  await sb('night_briefs?on_conflict=kind,ref_date,ref_id', {
+    method: 'POST',
+    headers: {
+      apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal'
+    },
+    body: JSON.stringify(rows)
+  }).catch(() => null);
+  return rows.length;
+}
+
+/* ── ①-4 건의함 묶기 · 콘텐츠 초안 — AI 가 필요하니 줄로 쌓는다 ──── */
+async function planExtras(today) {
+  const jobs = [];
+
+  const sg = await sb('suggestions?select=id,author_name,kind,title,body,status,created_at' +
+    '&created_at=gte.' + kstAgo(60) + 'T00:00:00&order=created_at.desc&limit=120').catch(() => []);
+  const open = (sg || []).filter(x => x.status === 'new' || x.status === 'doing');
+  if (open.length >= 3) {
+    jobs.push({
+      kind: 'sugg_group', ref_id: 'daily', ref_date: today, status: 'todo',
+      payload: {
+        n: open.length,
+        list: open.slice(0, 60).map(x => ({
+          k: x.kind || '', s: x.status || '',
+          t: (x.title || '').slice(0, 90), b: (x.body || '').slice(0, 160)
+        }))
+      }
+    });
+  }
+
+  const reps = await sb('saved_reports?select=kind,created_at&created_at=gte.' +
+    kstAgo(30) + 'T00:00:00&limit=500').catch(() => []);
+  const byKind = {};
+  (reps || []).forEach(r => { byKind[r.kind || '기타'] = (byKind[r.kind || '기타'] || 0) + 1; });
+  const top = Object.keys(byKind).map(k => k + ' ' + byKind[k] + '건')
+    .sort((a, b) => parseInt(b.split(' ')[1], 10) - parseInt(a.split(' ')[1], 10)).slice(0, 5);
+  const d = new Date(Date.now() + 9 * 3600 * 1000);
+  jobs.push({
+    kind: 'content', ref_id: 'daily', ref_date: today, status: 'todo',
+    payload: { month: d.getUTCMonth() + 1, top: top }
+  });
+
+  if (!jobs.length) return 0;
+  await sb('night_jobs?on_conflict=kind,ref_date,ref_id', {
+    method: 'POST',
+    headers: {
+      apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=ignore-duplicates,return=minimal'
+    },
+    body: JSON.stringify(jobs)
+  }).catch(() => null);
+  return jobs.length;
+}
+
+const SUGG_SYS =
+  '너는 팀이 올린 불편·건의를 정리하는 사람이다. 같은 이야기끼리 묶어 대표가 한눈에 보게 만든다.\n' +
+  '규칙:\n' +
+  '1. 주어진 목록에 있는 것만 쓴다. 없는 건의를 만들지 않는다.\n' +
+  '2. 표현이 달라도 같은 문제면 하나로 묶는다. 몇 건인지 숫자를 적는다.\n' +
+  '3. 사람 이름을 쓰지 않는다.\n' +
+  '4. 한국어. 존댓말. 짧게.\n' +
+  '형식:\n' +
+  '[한 줄] 지금 가장 많이 나온 이야기\n' +
+  '[묶은 것] 최대 5개. "N건 · 제목 — 무엇을 하면 되는지" 한 줄씩. 건수가 많은 것부터.\n' +
+  '[혼자 나온 것] 최대 3개. 제목만.\n' +
+  '[먼저 처리할 것] 1가지와 그 이유 한 줄.';
+
+const CONTENT_SYS =
+  '너는 보험 설계사의 콘텐츠 글감을 뽑는 편집자다.\n' +
+  '규칙:\n' +
+  '1. 특정 보험 상품을 권하거나 단정하지 않는다. 확정 수익·지급 보장 표현을 쓰지 않는다.\n' +
+  '2. 고객 사례를 지어내지 않는다. 일반적인 상황으로 쓴다.\n' +
+  '3. 한국어. 존댓말. 제목은 낚시하지 않는다.\n' +
+  '형식: 글감 3개. 각각 아래 네 줄로.\n' +
+  '[제목] 검색해서 들어올 만한 제목 한 줄\n' +
+  '[누구에게] 어떤 상황의 사람이 읽을지\n' +
+  '[첫 문단] 그대로 쓸 수 있는 3문장\n' +
+  '[채널] 블로그 / 인스타 / 스레드 중 하나와 그 이유 한 줄';
+
 /* ── ② 한 건 처리 — 상담 준비 카드 ─────────────────────────────── */
 const PREP_SYS =
   '너는 보험 설계사의 상담 준비를 돕는다. 오늘 만날 고객의 통화 기록을 받고, ' +
@@ -292,7 +444,24 @@ async function work(today, startedAt) {
     const p = j.payload || {};
     try {
       let kind, title, body, member = null, meta = {};
-      if (j.kind === 'blocked_daily') {
+      if (j.kind === 'sugg_group') {
+        kind = 'sugg_group';
+        title = '건의 ' + (p.n || 0) + '건 묶어 보기';
+        body = await askAI(SUGG_SYS,
+          (p.list || []).map(x => '· [' + x.k + '/' + x.s + '] ' + x.t + (x.b ? (' — ' + x.b) : '')).join('\n'),
+          1500);
+        if (!body) throw new Error('빈 응답');
+        meta = { n: p.n || 0 };
+      } else if (j.kind === 'content') {
+        kind = 'content';
+        title = '오늘의 콘텐츠 글감 3개';
+        body = await askAI(CONTENT_SYS,
+          '[이번 달] ' + (p.month || '') + '월\n' +
+          '[팀이 최근 30일 많이 만든 자료] ' + ((p.top || []).join(' · ') || '기록 없음') + '\n\n' +
+          '위를 참고해 지금 시기에 맞는 글감 3개를 뽑아 주세요.', 1600);
+        if (!body) throw new Error('빈 응답');
+        meta = { month: p.month || 0 };
+      } else if (j.kind === 'blocked_daily') {
         kind = 'blocked';
         title = kstAgo(1) + ' 막힌 곳';
         if (p.nothing) {
@@ -382,6 +551,18 @@ exports.handler = async function (event) {
     log.push('어제 막힌 곳 모음 준비');
   } catch (e) {
     log.push('막힌 곳 모으기 실패: ' + String(e.message || e).slice(0, 120));
+  }
+  try {
+    const n = await planPersonal(today);
+    log.push('오늘 할 것 ' + n + '명분');
+  } catch (e) {
+    log.push('오늘 할 것 실패: ' + String(e.message || e).slice(0, 120));
+  }
+  try {
+    const n = await planExtras(today);
+    log.push('건의 묶기·콘텐츠 ' + n + '건 준비');
+  } catch (e) {
+    log.push('건의·콘텐츠 준비 실패: ' + String(e.message || e).slice(0, 120));
   }
 
   let r = { done: 0, failed: 0, left: 0 };
