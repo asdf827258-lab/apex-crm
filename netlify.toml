@@ -6,7 +6,16 @@
   functions = "netlify/functions"
   command = ""
 
+# 함수가 config/*.json (뉴스 소스·시세 설정)을 런타임에 읽을 수 있게 함께 묶는다.
+[functions]
+  included_files = ["config/**"]
+
 # 야간 자동 근무 — 매일 새벽 5시(KST, UTC 20:00) 서버에서 스스로 실행
 # 앱을 켜두지 않아도 AI 부서들이 데이터를 읽고 회의록·보고서를 만들어 둔다.
 [functions."ai-daily"]
   schedule = "0 20 * * *"
+
+# 투자·경제 자동수집 — 평일 장 마감 뒤 오후 4시 10분(KST, UTC 07:10)
+# 보유 종목 종가·경제지표를 쌓고 다음 날 쓸 시황 브리핑을 미리 만들어 둔다.
+[functions."market-daily"]
+  schedule = "10 7 * * 1-5"

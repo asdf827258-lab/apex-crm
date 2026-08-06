@@ -1,0 +1,108 @@
+{
+  "_설명": "투자·경제 데이터 소스 설정. netlify/functions/market.js 가 이 파일을 읽어 동작합니다. 코드·엔드포인트가 바뀌면 이 파일만 고치면 됩니다(함수 코드 수정 불필요).",
+
+  "_토스API_사실정리": {
+    "토스페이먼츠": "결제·빌링 전용 API입니다(이미 /api/toss-confirm, /api/toss-billing 에서 구독 결제에 사용 중). 주식 시세·펀드 기준가·경제지표는 제공하지 않습니다.",
+    "토스증권": "2026-08 기준 외부 개발자용 공개 오픈API가 없습니다. 계좌·시세를 제3자 앱이 REST로 끌어오는 공식 경로가 없습니다.",
+    "결론": "실시간 시세는 개인 발급이 가능한 한국투자증권 KIS Developers, 경제지표는 한국은행 ECOS, 펀드는 data.go.kr(금융위) 를 기본 제공자로 씁니다.",
+    "토스_예약슬롯": "아래 providers.toss 는 비워둔 슬롯입니다. 훗날 토스 계열 오픈API가 열리거나 회사가 별도 계약을 맺으면 base/paths 만 채우고 TOSS_MARKET_KEY 환경변수를 넣으면 코드 수정 없이 1순위 제공자로 동작합니다."
+  },
+
+  "providers": {
+    "kis": {
+      "_이름": "한국투자증권 KIS Developers (실시간 국내·해외 주식/ETF)",
+      "_키발급": "https://apiportal.koreainvestment.com → 앱 등록 → APP KEY / APP SECRET",
+      "_환경변수": ["KIS_APP_KEY", "KIS_APP_SECRET", "KIS_ENV(real|vts, 기본 real)"],
+      "base_real": "https://openapi.koreainvestment.com:9443",
+      "base_vts": "https://openapivts.koreainvestment.com:29443",
+      "token_path": "/oauth2/tokenP",
+      "paths": {
+        "domestic_price": "/uapi/domestic-stock/v1/quotations/inquire-price",
+        "domestic_index": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+        "overseas_price": "/uapi/overseas-price/v1/quotations/price"
+      },
+      "tr_ids": {
+        "domestic_price": "FHKST01010100",
+        "domestic_index": "FHPUP02100000",
+        "overseas_price": "HHDFS00000300"
+      }
+    },
+    "ecos": {
+      "_이름": "한국은행 ECOS 경제통계 OpenAPI (기준금리·환율·물가·금리)",
+      "_키발급": "https://ecos.bok.or.kr/api → 인증키 신청(무료)",
+      "_환경변수": ["ECOS_API_KEY"],
+      "base": "https://ecos.bok.or.kr/api/StatisticSearch"
+    },
+    "fund": {
+      "_이름": "공모펀드 기준가·수익률 (data.go.kr 금융위원회 계열 오픈API)",
+      "_키발급": "https://www.data.go.kr → 금융위원회 펀드 관련 API 활용신청 → 일반 인증키(Decoding)",
+      "_환경변수": ["FUND_API_URL", "FUND_API_KEY"],
+      "_사용법": "활용신청한 오퍼레이션의 요청 URL을 FUND_API_URL 환경변수에 그대로 넣으세요. 기관마다 오퍼레이션명이 달라 코드에 고정하지 않았습니다. 아래 param_map / field_map 으로 파라미터명과 응답 필드명을 맞춥니다.",
+      "param_map": {
+        "code": "fundCd",
+        "date": "basDt",
+        "rows": "numOfRows",
+        "page": "pageNo",
+        "type": "resultType"
+      },
+      "field_map": {
+        "items_path": "response.body.items.item",
+        "name": "fundNm",
+        "price": "stdPrc",
+        "date": "basDt",
+        "return_1m": "rtn1Mn",
+        "return_3m": "rtn3Mn",
+        "return_1y": "rtn1Yr"
+      },
+      "_주의": "미설정이면 앱의 펀드관리 화면은 '수동 기준가 입력' 모드로 그대로 동작합니다. 기능이 막히지 않습니다."
+    },
+    "toss": {
+      "_이름": "토스 계열 시세 API (예약 슬롯 · 현재 공개 API 없음)",
+      "_환경변수": ["TOSS_MARKET_BASE", "TOSS_MARKET_KEY"],
+      "base": "",
+      "paths": { "quote": "", "index": "" },
+      "enabled": false
+    }
+  },
+
+  "_지수": "경제동향 화면 상단 지수 카드. kis 업종지수 코드(FID_INPUT_ISCD) 기준.",
+  "indices": [
+    { "id": "kospi",  "name": "코스피",   "code": "0001", "src": "kis" },
+    { "id": "kosdaq", "name": "코스닥",   "code": "1001", "src": "kis" },
+    { "id": "kospi200", "name": "코스피200", "code": "2001", "src": "kis" }
+  ],
+
+  "_경제지표": "한국은행 ECOS 통계표/항목 코드. cycle=D(일)·M(월)·Q(분기)·A(년). 코드가 바뀌면 ECOS 통계코드검색에서 확인 후 수정하세요.",
+  "econ": [
+    { "id": "base_rate", "name": "한국은행 기준금리", "stat": "722Y001", "item": "0101000", "cycle": "M", "unit": "%",   "hint": "예·적금·대출금리와 변액·연금 수익률 기대치의 출발점" },
+    { "id": "usdkrw",    "name": "원/달러 환율",      "stat": "731Y001", "item": "0000001", "cycle": "D", "unit": "원", "hint": "달러보험·해외펀드 원화 환산 손익에 직결" },
+    { "id": "cd91",      "name": "CD금리(91일)",      "stat": "817Y002", "item": "010502000", "cycle": "D", "unit": "%", "hint": "변동금리 대출·공시이율 연동 지표" },
+    { "id": "ktb3",      "name": "국고채 3년",        "stat": "817Y002", "item": "010200000", "cycle": "D", "unit": "%", "hint": "채권형 펀드·저축성보험 공시이율 방향" },
+    { "id": "cpi",       "name": "소비자물가지수",    "stat": "901Y009", "item": "0",        "cycle": "M", "unit": "지수", "hint": "실질 구매력 — 연금 필요자금 재계산 근거" }
+  ],
+
+  "_관심종목": "경제동향 화면 '오늘의 관심 종목'. 설계사 상담에서 자주 언급되는 대표 종목·ETF 기본값. 앱에서 개인별로 바꿀 수 있습니다.",
+  "watchlist": [
+    { "code": "005930", "name": "삼성전자",         "market": "KRX" },
+    { "code": "000660", "name": "SK하이닉스",       "market": "KRX" },
+    { "code": "069500", "name": "KODEX 200",        "market": "KRX" },
+    { "code": "360750", "name": "TIGER 미국S&P500", "market": "KRX" },
+    { "code": "133690", "name": "TIGER 미국나스닥100", "market": "KRX" }
+  ],
+
+  "_캐시": "종류별 캐시 유지 시간(초). 시세는 짧게, 지표·펀드는 길게 — 무료 API 호출 한도를 아끼기 위함.",
+  "cache_ttl": {
+    "quote": 20,
+    "index": 30,
+    "fund": 21600,
+    "econ": 21600,
+    "news": 900
+  },
+
+  "_뉴스": "경제동향 화면 뉴스. RSS 목록은 config/sources.json 을 그대로 재사용합니다.",
+  "news": {
+    "categories": ["경제", "보험"],
+    "keyword_groups": ["키워드_투자솔루션", "키워드_보험핫이슈"],
+    "max_items": 30
+  }
+}

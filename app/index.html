@@ -3835,6 +3835,11 @@ var TABS=[
    {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:''},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'4'}
  ]},
+ {group:'투자·경제',items:[
+   {id:'inv_stock',icon:'📈',title:'주식관리',cnt:''},
+   {id:'inv_fund',icon:'💠',title:'펀드관리',cnt:''},
+   {id:'inv_econ',icon:'🌡️',title:'경제동향 실시간',cnt:''}
+ ]},
  {group:'법인·사업자 컨설팅',items:[
    {id:'biz_diag',icon:'🧭',title:'사업자 진단',cnt:''},
    {id:'biz_fund',icon:'🏦',title:'정책자금',cnt:''},
@@ -4010,6 +4015,7 @@ function go(tab){
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
   else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
+  else if(tab.indexOf('inv_')===0){dyn.innerHTML=(typeof invRender==='function')?invRender(tab):'';if(typeof invAfterRender==='function')invAfterRender(tab);}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
   if(!(tab==='settings'&&typeof osScrollArmed==='function'&&osScrollArmed()))$('main').scrollTop=0;
@@ -15429,7 +15435,7 @@ function osMyTier(){
 var OS_GROUP_TIER_DEFAULT={
  '성장·교육':'basic','윤시스쿨':'basic','보험 해석':'basic','계약관리':'basic','재무설계':'basic',
  '콘텐츠·마케팅':'basic','보험 레퍼런스':'basic',
- '고객':'pro','DB CRM':'pro','8통장 지도':'pro','보장분석':'pro','법인·사업자 컨설팅':'pro',
+ '고객':'pro','DB CRM':'pro','8통장 지도':'pro','보장분석':'pro','법인·사업자 컨설팅':'pro','투자·경제':'pro',
  '상담 AI 코치':'pro','청구·사후관리':'pro','윤시현의 두뇌':'pro',
  '매니저 관리':'team'
 };
@@ -21096,6 +21102,829 @@ function renderBizNews(){
   document.head.appendChild(s);
 })();
 
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   투자·경제 모듈 — 주식관리 · 펀드관리 · 경제동향 실시간
+   ──────────────────────────────────────────────────────────────────────────
+   ⚠️ 토스 API 에 대한 정리 (대표님 질문에 대한 답)
+     · 토스페이먼츠 API 는 결제·빌링 전용이다. 이 앱도 구독 결제에만 쓰고 있다.
+       (설정 → 결제 · /api/toss-confirm · /api/toss-billing)
+     · 토스증권은 외부 개발자용 공개 오픈API가 없다. 시세·계좌를 제3자 앱이
+       공식적으로 끌어올 경로가 없다.
+     · 그래서 '실시간'은 아래 공식 소스로 만든다 — 서버(/api/market)가 대신 부른다.
+         주식·ETF·지수 → 한국투자증권 KIS Developers
+         경제지표       → 한국은행 ECOS
+         펀드 기준가    → data.go.kr 금융위원회 펀드 API
+         뉴스           → config/sources.json 의 경제·보험 RSS
+     · 훗날 토스 계열 오픈API가 열리면 config/market.json 의 providers.toss 만
+       채우면 이 화면 코드는 그대로 둔 채 데이터 출처가 바뀐다.
+
+   저장 위치: 기본은 이 기기(localStorage). 로그인 상태면 ☁ 버튼으로 서버(Supabase)에
+   올리고 내린다. 서버 표는 migration_30_invest.sql 로 만든다(없어도 화면은 동작).
+   ══════════════════════════════════════════════════════════════════════════ */
+var INV_API='/api/market';
+var INV_LS='apex_invest_v1';
+var INV_DISC='※ 투자성 상품(주식·펀드·ETF·변액보험 등)은 원금손실이 발생할 수 있으며 과거 수익이 미래 수익을 보장하지 않습니다. 이 화면은 정보 제공·상담 준비용이며 특정 종목의 매매 권유가 아닙니다.';
+
+var INV={st:null,live:{},mkt:null,health:null,timer:null,busy:false,lastAt:'',tab:'inv_stock',brief:''};
+
+/* ── 상태 저장/복원 ─────────────────────────────────────────────────────── */
+function invBlank(){
+  return {curId:'',accounts:[],watch:['005930','000660','069500','360750','133690']};
+}
+function invLoad(){
+  if(INV.st)return INV.st;
+  var s=null;
+  try{var raw=localStorage.getItem(INV_LS);if(raw)s=JSON.parse(raw);}catch(e){}
+  if(!s||typeof s!=='object'||!Array.isArray(s.accounts))s=invBlank();
+  if(!s.watch||!s.watch.length)s.watch=invBlank().watch;
+  if(!s.accounts.length){
+    s.accounts=[{id:invId('a'),name:'샘플 계좌 (이름을 바꿔 쓰세요)',kind:'stock',broker:'',client:'',
+      goal:null,target:20,stop:15,memo:'',holdings:[]}];
+    s.curId=s.accounts[0].id;
+  }
+  if(!s.curId||!invAccById(s,s.curId))s.curId=s.accounts[0].id;
+  INV.st=s;return s;
+}
+function invSave(){try{localStorage.setItem(INV_LS,JSON.stringify(INV.st));}catch(e){}}
+function invId(p){return p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function invAccById(s,id){for(var i=0;i<s.accounts.length;i++)if(s.accounts[i].id===id)return s.accounts[i];return null;}
+function invCur(){var s=invLoad();return invAccById(s,s.curId)||s.accounts[0];}
+function invHoldById(hid){
+  var a=invCur();if(!a)return null;
+  for(var i=0;i<(a.holdings||[]).length;i++)if(a.holdings[i].id===hid)return a.holdings[i];
+  return null;
+}
+
+/* ── 숫자 표시 ──────────────────────────────────────────────────────────── */
+function invN(v){var n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isFinite(n)?n:null;}
+function invMoney(n,cur){
+  if(n==null)return '—';
+  var s=Math.round(n).toLocaleString('ko-KR');
+  return (cur==='USD'?'$':'')+s+(cur==='USD'?'':'원');
+}
+function invPct(n){return n==null?'—':((n>0?'+':'')+(Math.round(n*100)/100)+'%');}
+function invCls(n){return n==null?'':(n>0?'up':(n<0?'dn':''));}
+
+/* ── 서버 데이터 호출 ───────────────────────────────────────────────────── */
+function invApi(qs){
+  return fetch(INV_API+'?'+qs,{headers:{'Accept':'application/json'}}).then(function(r){
+    return r.json().catch(function(){throw new Error('서버 응답을 읽지 못했습니다.');});
+  });
+}
+/* 어떤 키가 없는지 한 번만 확인해 두고 안내 카드에 쓴다 */
+function invHealth(cb){
+  if(INV.health){cb&&cb(INV.health);return;}
+  invApi('kind=health').then(function(j){INV.health=j;cb&&cb(j);})
+    .catch(function(){INV.health={ok:false,has:{}};cb&&cb(INV.health);});
+}
+
+/* 보유 종목 코드 모으기 (fund 제외 = 실시간 시세 대상) */
+function invQuoteCodes(){
+  var a=invCur(),out=[];
+  (a&&a.holdings||[]).forEach(function(h){
+    if(h.type==='fund')return;
+    var c=(h.code||'').trim();if(c&&out.indexOf(c)<0)out.push(c);
+  });
+  return out;
+}
+function invFundCodes(){
+  var a=invCur(),out=[];
+  (a&&a.holdings||[]).forEach(function(h){
+    if(h.type!=='fund')return;
+    var c=(h.code||'').trim();if(c&&out.indexOf(c)<0)out.push(c);
+  });
+  return out;
+}
+
+/* 실시간 시세 갱신 — 화면을 다시 그리지 않고 숫자 칸만 바꾼다(입력 중 포커스 유지) */
+function invRefresh(silent){
+  var codes=invQuoteCodes(),funds=invFundCodes();
+  if(!codes.length&&!funds.length){invPaint();return Promise.resolve();}
+  if(INV.busy)return Promise.resolve();
+  INV.busy=true;invStatus('불러오는 중…');
+  var jobs=[];
+  if(codes.length)jobs.push(invApi('kind=quote&codes='+encodeURIComponent(codes.join(','))));
+  else jobs.push(Promise.resolve({quotes:[]}));
+  if(funds.length)jobs.push(invApi('kind=fund&codes='+encodeURIComponent(funds.join(','))));
+  else jobs.push(Promise.resolve({funds:[]}));
+
+  return Promise.all(jobs).then(function(rs){
+    var need=[],errs=[];
+    rs.forEach(function(j){
+      ((j&&j.quotes)||[]).forEach(function(q){INV.live[q.code]=q;});
+      ((j&&j.funds)||[]).forEach(function(q){INV.live[q.code]=q;});
+      ((j&&j.need)||[]).forEach(function(n){if(need.indexOf(n)<0)need.push(n);});
+      ((j&&j.errors)||[]).forEach(function(e){errs.push(e);});
+    });
+    INV.lastAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    INV.busy=false;
+    invPaint();
+    if(need.length)invStatus('키 미설정: '+need.join(', '));
+    else if(errs.length)invStatus('일부 실패 ('+errs.length+'건) · '+INV.lastAt);
+    else invStatus('갱신 '+INV.lastAt);
+    if(!silent&&need.length)invSetupBanner(need);
+  }).catch(function(e){
+    INV.busy=false;invStatus('실패: '+((e&&e.message)||'네트워크 오류'));
+  });
+}
+function invStatus(t){var el=$('invStamp');if(el)el.textContent=t;}
+function invSetupBanner(need){
+  var el=$('invSetup');
+  if(el&&need&&need.length)el.innerHTML=invNeedBox(need);
+}
+
+/* ── 자동 새로고침 (장중 30초 · 장외 5분). 다른 탭으로 나가면 멈춘다 ────── */
+function invStopTimer(){if(INV.timer){clearInterval(INV.timer);INV.timer=null;}}
+function invStartTimer(){
+  invStopTimer();
+  var open=INV.mkt&&INV.mkt.meta?INV.mkt.meta.marketOpen:invLocalOpen();
+  INV.timer=setInterval(function(){
+    if(!document.querySelector('#invRoot')){invStopTimer();return;}
+    invRefresh(true);
+  },open?30000:300000);
+}
+function invLocalOpen(){
+  var d=new Date(Date.now()+ (new Date().getTimezoneOffset()*60000) + 9*3600000);
+  var day=d.getDay();if(day===0||day===6)return false;
+  var m=d.getHours()*60+d.getMinutes();
+  return m>=540&&m<=930;
+}
+
+/* ══════════════ 계좌 관리 ══════════════ */
+function invSwitch(id){var s=invLoad();s.curId=id;invSave();go(INV.tab);}
+function invAddAcc(){
+  var n=prompt('새 계좌 이름 (예: 홍길동 · 연금저축펀드)','');
+  if(n==null)return;n=(n||'').trim();if(!n)return;
+  var s=invLoad();
+  var a={id:invId('a'),name:n,kind:INV.tab==='inv_fund'?'fund':'stock',broker:'',client:'',goal:null,target:20,stop:15,memo:'',holdings:[]};
+  s.accounts.push(a);s.curId=a.id;invSave();go(INV.tab);
+}
+function invRenameAcc(){
+  var a=invCur();if(!a)return;
+  var n=prompt('계좌 이름',a.name);if(n==null)return;
+  a.name=(n||'').trim()||a.name;invSave();go(INV.tab);
+}
+function invDelAcc(){
+  var s=invLoad(),a=invCur();if(!a)return;
+  if(s.accounts.length<=1){toast('계좌가 하나뿐이라 삭제할 수 없습니다.');return;}
+  if(!confirm('"'+a.name+'" 계좌와 보유 내역을 삭제할까요? 되돌릴 수 없습니다.'))return;
+  s.accounts=s.accounts.filter(function(x){return x.id!==a.id;});
+  s.curId=s.accounts[0].id;invSave();go(INV.tab);
+}
+function invSetAcc(field,el){
+  var a=invCur();if(!a)return;
+  var v=el.value;
+  if(field==='goal'||field==='target'||field==='stop')a[field]=invN(v);
+  else a[field]=v;
+  invSave();invPaint();
+}
+
+/* ══════════════ 보유 종목 ══════════════ */
+function invAddHold(type){
+  var a=invCur();if(!a)return;
+  var label=type==='fund'?'펀드 코드 (운용사 펀드코드)':'종목코드 — 국내는 6자리(005930), 해외는 거래소:심볼(NAS:AAPL)';
+  var code=prompt(label,'');if(code==null)return;
+  code=(code||'').trim().toUpperCase();if(!code)return;
+  var name=prompt('이름 (비워두면 시세에서 자동으로 채웁니다)','')||'';
+  var qty=invN(prompt(type==='fund'?'보유 좌수':'보유 수량','0'))||0;
+  var avg=invN(prompt(type==='fund'?'평균 매입 기준가':'평균 매입단가','0'))||0;
+  a.holdings=a.holdings||[];
+  a.holdings.push({id:invId('h'),type:type||'stock',code:code,name:name.trim(),qty:qty,avg:avg,
+    market:code.indexOf(':')>0?code.split(':')[0]:(type==='fund'?'FUND':'KRX'),
+    currency:code.indexOf(':')>0?'USD':'KRW',manual:null,note:''});
+  invSave();go(INV.tab);
+}
+function invDelHold(hid){
+  var a=invCur();if(!a)return;
+  a.holdings=(a.holdings||[]).filter(function(x){return x.id!==hid;});
+  invSave();go(INV.tab);
+}
+function invSetHold(hid,field,el){
+  var h=invHoldById(hid);if(!h)return;
+  if(field==='qty'||field==='avg'||field==='manual')h[field]=invN(el.value);
+  else h[field]=el.value;
+  invSave();invPaint();
+}
+
+/* 한 종목의 현재가 — 실시간이 있으면 그것, 없으면 수동 입력값 */
+function invPrice(h){
+  var q=INV.live[(h.code||'').trim()];
+  if(q&&q.price!=null)return {p:q.price,src:q.src||'api',rate:q.changeRate,name:q.name||h.name};
+  if(h.manual!=null)return {p:h.manual,src:'manual',rate:null,name:h.name};
+  return {p:null,src:'',rate:null,name:h.name};
+}
+function invCalc(a){
+  var cost=0,val=0,known=0,total=0;
+  (a&&a.holdings||[]).forEach(function(h){
+    var qty=invN(h.qty)||0,avg=invN(h.avg)||0,pr=invPrice(h);
+    total++;
+    cost+=qty*avg;
+    if(pr.p!=null){val+=qty*pr.p;known++;}
+    else val+=qty*avg;                       /* 시세 없으면 원가로 잡아 총액이 튀지 않게 */
+  });
+  var pl=val-cost;
+  return {cost:cost,val:val,pl:pl,rate:cost>0?(pl/cost*100):null,known:known,total:total};
+}
+
+/* 숫자 칸만 다시 칠한다 (입력 중인 칸을 건드리지 않는다) */
+function invPaint(){
+  var a=invCur();if(!a)return;
+  (a.holdings||[]).forEach(function(h){
+    var pr=invPrice(h),qty=invN(h.qty)||0,avg=invN(h.avg)||0;
+    var val=pr.p!=null?qty*pr.p:null;
+    var pl=(pr.p!=null&&avg)?(pr.p-avg)*qty:null;
+    var rt=(pr.p!=null&&avg)?((pr.p-avg)/avg*100):null;
+    var e;
+    if(e=$('ivc_'+h.id)){
+      e.innerHTML=pr.p==null?'<span class="muted">—</span>':
+        (invMoney(pr.p,h.currency)+(pr.src==='manual'?' <span class="iv-manual">수동</span>':
+         (pr.rate!=null?' <span class="'+invCls(pr.rate)+'">'+invPct(pr.rate)+'</span>':'')));
+    }
+    if(e=$('ivv_'+h.id))e.textContent=val==null?'—':invMoney(val,h.currency);
+    if(e=$('ivp_'+h.id)){e.textContent=pl==null?'—':invMoney(pl,h.currency);e.className='iv-num '+invCls(pl);}
+    if(e=$('ivr_'+h.id)){e.textContent=invPct(rt);e.className='iv-num '+invCls(rt);}
+    /* 이름을 비워 둔 종목은 시세에서 받아온 정식 명칭으로 한 번 채워준다 */
+    if(!h.name&&pr.name){
+      h.name=pr.name;
+      if(e=$('ivnm_'+h.id))e.value=pr.name;
+      invSave();
+    }
+  });
+  var t=invCalc(a),el;
+  if(el=$('ivSumCost'))el.textContent=invMoney(t.cost);
+  if(el=$('ivSumVal'))el.textContent=invMoney(t.val);
+  if(el=$('ivSumPl')){el.textContent=invMoney(t.pl);el.className='v '+invCls(t.pl);}
+  if(el=$('ivSumRt')){el.textContent=invPct(t.rate);el.className='v '+invCls(t.rate);}
+  if(el=$('ivAlert'))el.innerHTML=invAlertHtml(a,t);
+}
+
+/* 목표 도달 · 손절 이탈을 화면에서도 즉시 알려준다 (서버 야간작업과 같은 기준) */
+function invAlertHtml(a,t){
+  var out=[];
+  var tgt=invN(a.target),stop=invN(a.stop);
+  (a.holdings||[]).forEach(function(h){
+    var pr=invPrice(h),avg=invN(h.avg);
+    if(pr.p==null||!avg)return;
+    var rt=(pr.p-avg)/avg*100;
+    if(tgt!=null&&rt>=tgt)out.push({k:'up',t:(h.name||h.code)+' '+invPct(rt)+' — 목표 '+tgt+'% 도달. 익절·리밸런싱 상담 시점입니다.'});
+    else if(stop!=null&&rt<=-Math.abs(stop))out.push({k:'dn',t:(h.name||h.code)+' '+invPct(rt)+' — 손절 기준 -'+Math.abs(stop)+'% 이탈. 고객에게 먼저 연락하세요.'});
+  });
+  if(t&&t.rate!=null&&tgt!=null&&t.rate>=tgt)out.unshift({k:'up',t:'계좌 전체 수익률 '+invPct(t.rate)+' — 목표 도달'});
+  if(!out.length)return '';
+  return '<div class="iv-alerts">'+out.map(function(x){
+    return '<div class="iv-alert '+x.k+'">'+(x.k==='up'?'🎯':'⚠️')+' '+osEsc(x.t)+'</div>';
+  }).join('')+'</div>';
+}
+
+/* ══════════════ 공통 조각 ══════════════ */
+function invTabsBar(active){
+  var T=[{id:'inv_stock',ic:'📈',t:'주식관리'},{id:'inv_fund',ic:'💠',t:'펀드관리'},{id:'inv_econ',ic:'🌡️',t:'경제동향'}];
+  return '<div class="biz-tabs">'+T.map(function(x){
+    return '<button class="'+(x.id===active?'on':'')+'" onclick="go(\''+x.id+'\')">'+x.ic+' '+osEsc(x.t)+'</button>';
+  }).join('')+'</div>';
+}
+var INV_NEED_GUIDE={
+  'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 주식·ETF·지수 실시간 시세',
+  'KIS_APP_SECRET':'한국투자증권 앱시크릿 (앱키와 한 쌍)',
+  'ECOS_API_KEY':'한국은행 ECOS 인증키 — 기준금리·환율·물가',
+  'FUND_API_URL':'data.go.kr 금융위원회 펀드 API 요청 URL — 공모펀드 기준가',
+  'FUND_API_KEY':'data.go.kr 일반 인증키(Decoding)'
+};
+function invNeedBox(need){
+  var li=(need||[]).map(function(k){
+    return '<li><b>'+osEsc(k)+'</b> — '+osEsc(INV_NEED_GUIDE[k]||'서버 환경변수')+'</li>';
+  }).join('');
+  return '<div class="iv-need"><div class="hd">🔌 실시간 연결이 아직 안 됐습니다</div>'+
+    '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면이 바로 실시간으로 바뀝니다. '+
+    '넣기 전에도 <b>수동 입력</b>으로 계좌·수익률 관리는 그대로 됩니다.</div>'+
+    '<ul>'+li+'</ul>'+
+    '<div class="ft">※ 토스페이먼츠 API는 결제 전용이라 시세를 주지 않고, 토스증권은 외부 공개 API가 없습니다. '+
+    '그래서 시세는 한국투자증권, 지표는 한국은행을 씁니다 — 둘 다 무료 발급입니다.</div></div>';
+}
+function invAccBar(){
+  var s=invLoad(),a=invCur();
+  var opts=s.accounts.map(function(x){
+    return '<option value="'+osEsc(x.id)+'"'+(x.id===s.curId?' selected':'')+'>'+osEsc(x.name)+'</option>';
+  }).join('');
+  var cloud=invServerReady()
+    ? '<button class="btn btn-ghost" onclick="invCloudPush()" title="서버에 저장">☁ 저장</button>'+
+      '<button class="btn btn-ghost" onclick="invCloudPull()" title="서버에서 불러오기">⬇ 불러오기</button>'
+    : '<span class="iv-srv">💾 이 기기 저장</span>';
+  return '<div class="biz-clientbar">'+
+    '<span class="lb">관리 중 계좌</span>'+
+    '<select onchange="invSwitch(this.value)">'+opts+'</select>'+
+    '<button class="btn btn-ghost" onclick="invAddAcc()">＋ 새 계좌</button>'+
+    '<button class="btn btn-ghost" onclick="invRenameAcc()">이름변경</button>'+
+    '<button class="btn btn-ghost" onclick="invDelAcc()">삭제</button>'+
+    cloud+
+    '<span class="iv-stamp" id="invStamp">'+(INV.lastAt?('갱신 '+INV.lastAt):'대기')+'</span>'+
+    '<button class="btn btn-ghost" onclick="invRefresh()">🔄 지금 갱신</button>'+
+    '</div>';
+}
+function invGoalRow(){
+  var a=invCur();if(!a)return '';
+  return '<div class="iv-goal">'+
+    '<label>목표 수익률 <input type="number" step="1" value="'+(a.target==null?'':a.target)+'" onchange="invSetAcc(\'target\',this)"/> %</label>'+
+    '<label>손절 기준 <input type="number" step="1" value="'+(a.stop==null?'':a.stop)+'" onchange="invSetAcc(\'stop\',this)"/> %</label>'+
+    '<label>목표 금액 <input type="number" step="100" value="'+(a.goal==null?'':a.goal)+'" onchange="invSetAcc(\'goal\',this)"/> 원</label>'+
+    '<label class="wide">고객·메모 <input type="text" value="'+osEsc(a.memo||'')+'" placeholder="예: 45세 · 연금 목적 · 위험중립" onchange="invSetAcc(\'memo\',this)"/></label>'+
+    '</div>';
+}
+function invSummary(){
+  var t=invCalc(invCur());
+  return '<div class="iv-sum">'+
+    '<div class="c"><div class="k">매입원가</div><div class="v" id="ivSumCost">'+invMoney(t.cost)+'</div></div>'+
+    '<div class="c"><div class="k">평가금액</div><div class="v" id="ivSumVal">'+invMoney(t.val)+'</div></div>'+
+    '<div class="c"><div class="k">평가손익</div><div class="v '+invCls(t.pl)+'" id="ivSumPl">'+invMoney(t.pl)+'</div></div>'+
+    '<div class="c"><div class="k">수익률</div><div class="v '+invCls(t.rate)+'" id="ivSumRt">'+invPct(t.rate)+'</div></div>'+
+    '</div><div id="ivAlert">'+invAlertHtml(invCur(),t)+'</div>';
+}
+function invTable(kind){
+  var a=invCur(),rows=(a&&a.holdings||[]).filter(function(h){
+    return kind==='fund'?(h.type==='fund'):(h.type!=='fund');
+  });
+  if(!rows.length){
+    return '<div class="iv-empty">'+(kind==='fund'
+      ? '아직 등록된 펀드가 없습니다. <b>＋ 펀드 추가</b>로 펀드코드·좌수·평균 기준가를 넣으면 수익률이 계산됩니다.'
+      : '아직 등록된 종목이 없습니다. <b>＋ 종목 추가</b>로 종목코드·수량·평단을 넣으면 실시간 평가가 시작됩니다.')+'</div>';
+  }
+  var head=kind==='fund'
+    ? ['펀드코드','펀드명','좌수','평균기준가','현재 기준가','평가금액','평가손익','수익률','']
+    : ['종목코드','종목명','수량','평단','현재가','평가금액','평가손익','수익률',''];
+  var body=rows.map(function(h){
+    var pr=invPrice(h);
+    return '<tr>'+
+      '<td class="code">'+osEsc(h.code)+'</td>'+
+      '<td><input type="text" id="ivnm_'+h.id+'" value="'+osEsc(h.name||'')+'" placeholder="시세에서 자동" onchange="invSetHold(\''+h.id+'\',\'name\',this)"/></td>'+
+      '<td><input type="number" step="any" value="'+(h.qty==null?'':h.qty)+'" onchange="invSetHold(\''+h.id+'\',\'qty\',this)"/></td>'+
+      '<td><input type="number" step="any" value="'+(h.avg==null?'':h.avg)+'" onchange="invSetHold(\''+h.id+'\',\'avg\',this)"/></td>'+
+      '<td class="iv-cur" id="ivc_'+h.id+'">—</td>'+
+      '<td class="iv-num" id="ivv_'+h.id+'">—</td>'+
+      '<td class="iv-num" id="ivp_'+h.id+'">—</td>'+
+      '<td class="iv-num" id="ivr_'+h.id+'">—</td>'+
+      '<td><button class="iv-x" onclick="invDelHold(\''+h.id+'\')" title="삭제">✕</button></td>'+
+      '</tr>'+
+      (kind==='fund'
+        ? '<tr class="iv-sub"><td></td><td colspan="8">기준가 수동 입력 <input type="number" step="any" value="'+(h.manual==null?'':h.manual)+'" placeholder="자동 연동 전에는 여기에 입력" onchange="invSetHold(\''+h.id+'\',\'manual\',this)"/> <span class="muted">— data.go.kr 펀드 API를 연결하면 자동으로 채워집니다.</span></td></tr>'
+        : '');
+  }).join('');
+  return '<div class="iv-tbwrap"><table class="iv-tb"><thead><tr>'+
+    head.map(function(h){return '<th>'+osEsc(h)+'</th>';}).join('')+
+    '</tr></thead><tbody>'+body+'</tbody></table></div>';
+}
+
+/* ══════════════ 1) 주식관리 ══════════════ */
+function invRenderStock(){
+  var body=
+    invTabsBar('inv_stock')+
+    '<div id="invRoot">'+
+    invAccBar()+
+    '<div id="invSetup"></div>'+
+    invSummary()+
+    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>보유 종목 · ETF</div>'+
+      '<div class="sub">국내는 6자리 코드(예: 005930), 해외는 <b>거래소:심볼</b>(예: NAS:AAPL, NYS:KO). 수량·평단만 넣으면 현재가·평가손익이 자동 계산됩니다.</div>'+
+      '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="invAddHold(\'stock\')">＋ 종목 추가</button>'+
+      '<button class="btn btn-ghost" onclick="invRefresh()">🔄 실시간 갱신</button></div>'+
+      invTable('stock')+
+      invGoalRow()+
+    '</div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">2</span>상담 스크립트 만들기</div>'+
+      '<div class="sub">지금 이 계좌의 실제 수익률·시장 지표를 근거로, 고객에게 전화·카톡으로 그대로 쓸 문장을 만듭니다.</div>'+
+      '<div class="btn-row">'+
+      '<button class="btn btn-primary" onclick="invAi(\'review\')">🤖 계좌 리뷰 스크립트</button>'+
+      '<button class="btn btn-ghost" onclick="invAi(\'rebalance\')">⚖ 리밸런싱 제안</button>'+
+      '<button class="btn btn-ghost" onclick="invAi(\'katalk\')">💬 고객 발송 카톡문</button>'+
+      '</div><div id="invAiOut" style="margin-top:12px"></div>'+
+    '</div>'+
+    '</div>'+
+    bizDisc(INV_DISC);
+  return osPage('INVEST','주식관리 · 실시간 평가',
+    '고객 계좌의 보유 종목을 넣어두면 장중 30초마다 현재가를 받아 평가손익·수익률을 계산하고, 목표 도달·손절 이탈을 먼저 알려줍니다.',body);
+}
+
+/* ══════════════ 2) 펀드관리 ══════════════ */
+var INV_FUND_TAX=[
+ {ic:'🪺',t:'연금저축펀드',d:'세액공제 연 600만원(IRP 합산 900만원) · 공제율 16.5%/13.2% · 55세 이후 연금소득세 3.3~5.5%. 중도해지 시 기타소득세 16.5%.'},
+ {ic:'🏦',t:'IRP (개인형퇴직연금)',d:'연금저축과 합산 900만원 세액공제 · 위험자산 70% 한도 · 중도인출 제한. 퇴직금 수령 계좌로도 사용.'},
+ {ic:'💼',t:'ISA',d:'순이익 비과세(일반형 200만·서민형 400만) + 초과분 9.9% 분리과세 · 손익통산 · 만기자금 연금계좌 이전 시 추가 공제.'},
+ {ic:'🌍',t:'해외주식형 펀드·ETF',d:'배당소득세 15.4% 원천징수(국내 상장 해외ETF) · 환헤지 여부에 따라 환율 영향이 달라짐 — 달러보험과 함께 환노출을 합쳐서 봐야 함.'}
+];
+function invRenderFund(){
+  var body=
+    invTabsBar('inv_fund')+
+    '<div id="invRoot">'+
+    invAccBar()+
+    '<div id="invSetup"></div>'+
+    invSummary()+
+    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>보유 펀드</div>'+
+      '<div class="sub">공모펀드는 기준가가 하루 1회 확정됩니다. data.go.kr 펀드 API를 연결하면 자동으로 들어오고, 연결 전에는 아래 <b>수동 입력</b> 칸에 기준가만 넣으면 수익률이 계산됩니다.</div>'+
+      '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="invAddHold(\'fund\')">＋ 펀드 추가</button>'+
+      '<button class="btn btn-ghost" onclick="invRefresh()">🔄 기준가 갱신</button></div>'+
+      invTable('fund')+
+      invGoalRow()+
+    '</div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">2</span>ETF로 바로 보는 실시간 대안</div>'+
+      '<div class="sub">같은 시장을 담는 ETF는 <b>실시간</b>으로 보입니다. 펀드 기준가를 기다리는 동안 오늘 흐름을 읽는 용도로 씁니다. 위 <b>주식관리</b>에 ETF 코드를 넣으면 함께 관리됩니다.</div>'+
+      '<div class="iv-chips">'+
+        '<span class="iv-chip">069500 KODEX 200</span><span class="iv-chip">360750 TIGER 미국S&P500</span>'+
+        '<span class="iv-chip">133690 TIGER 미국나스닥100</span><span class="iv-chip">148070 KOSEF 국고채10년</span>'+
+        '<span class="iv-chip">132030 KODEX 골드선물</span>'+
+      '</div>'+
+    '</div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>세제 연결 — 어느 계좌에 담느냐가 수익률을 바꾼다</div>'+
+      '<div class="sub">같은 펀드도 담는 그릇(연금저축·IRP·ISA·일반)에 따라 세후 수익이 달라집니다. 상담에서 바로 꺼내 쓰는 요약입니다.</div>'+
+      INV_FUND_TAX.map(function(x){
+        return '<div class="biz-news-item"><div class="hd"><span class="ti">'+x.ic+' '+osEsc(x.t)+'</span></div><div class="ds">'+osEsc(x.d)+'</div></div>';
+      }).join('')+
+      '<div class="iv-note">※ 한도·공제율은 매년 개정됩니다. 상담·발송 전 당해년도 기준으로 재확인하세요(정책·상품 뉴스 메뉴에서 최신 개정 확인).</div>'+
+    '</div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">4</span>포트폴리오 진단</div>'+
+      '<div class="sub">보유 펀드 구성과 오늘 지표를 근거로 리밸런싱 방향과 고객 설명 문장을 만듭니다.</div>'+
+      '<div class="btn-row">'+
+      '<button class="btn btn-primary" onclick="invAi(\'fund_review\')">🤖 펀드 포트폴리오 진단</button>'+
+      '<button class="btn btn-ghost" onclick="invAi(\'tax\')">🧾 절세 계좌 배치 제안</button>'+
+      '</div><div id="invAiOut" style="margin-top:12px"></div>'+
+    '</div>'+
+    '</div>'+
+    bizDisc(INV_DISC);
+  return osPage('INVEST','펀드관리 · 기준가와 세제를 한 화면에서',
+    '펀드는 기준가가 하루 1회라 흐름이 늦게 보입니다. 실시간 ETF·지표와 함께 놓고, 어느 절세계좌에 담을지까지 한 번에 정리합니다.',body);
+}
+
+/* ══════════════ 3) 경제동향 실시간 ══════════════ */
+function invRenderEcon(){
+  var body=
+    invTabsBar('inv_econ')+
+    '<div id="invRoot">'+
+    '<div class="biz-clientbar"><span class="lb">실시간 시장</span>'+
+      '<span class="iv-stamp" id="invStamp">불러오는 중…</span>'+
+      '<button class="btn btn-ghost" onclick="invEconLoad(true)">🔄 지금 갱신</button>'+
+      '<button class="btn btn-ghost" onclick="invAi(\'brief\')">🤖 오늘 시황 브리핑</button>'+
+    '</div>'+
+    '<div id="invSetup"></div>'+
+    '<div id="invIdx" class="iv-cards"><div class="iv-skel">지수를 불러오는 중…</div></div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>경제지표 — 한국은행 실시간</div>'+
+      '<div class="sub">기준금리·환율·국고채·물가는 연금·변액·달러보험 상담의 근거 숫자입니다. 옆의 한 줄은 "이 숫자가 우리 고객에게 뜻하는 것"입니다.</div>'+
+      '<div id="invEcon"><div class="iv-skel">지표를 불러오는 중…</div></div></div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">2</span>관심 종목 · ETF</div>'+
+      '<div class="sub">상담에서 자주 언급되는 대표 종목·ETF의 오늘 흐름입니다.</div>'+
+      '<div id="invWatch"><div class="iv-skel">시세를 불러오는 중…</div></div></div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>오늘의 시황 브리핑</div>'+
+      '<div class="sub">위 숫자와 뉴스를 근거로 고객 통화·카톡에 그대로 쓸 문장을 만듭니다. 서버 야간작업이 미리 만들어 둔 것이 있으면 그것을 먼저 보여줍니다.</div>'+
+      '<div id="invAiOut"><div class="muted" style="font-size:12.5px">🤖 <b>오늘 시황 브리핑</b> 버튼을 누르면 지금 숫자로 만듭니다.</div></div></div>'+
+    '<div class="rpt-sec"><div class="hd"><span class="n">4</span>경제·보험 뉴스</div>'+
+      '<div class="sub">설계사 관심 키워드(연금·ISA·금리·환율·실손 등)가 걸린 기사를 위로 올려 보여줍니다.</div>'+
+      '<div id="invNews"><div class="iv-skel">뉴스를 모으는 중…</div></div></div>'+
+    '</div>'+
+    bizDisc(INV_DISC);
+  return osPage('MARKET','경제동향 실시간',
+    '코스피·환율·기준금리·물가와 오늘 뉴스를 한 화면에 모읍니다. 상담 전 3분이면 오늘 시장을 고객 언어로 설명할 수 있습니다.',body);
+}
+
+function invEconLoad(force){
+  if(force)INV.mkt=null;
+  invStatus('불러오는 중…');
+  invApi('kind=all').then(function(j){
+    INV.mkt=j;
+    INV.lastAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    invStatus((j.meta&&j.meta.marketOpen?'장중 · ':'장 마감 · ')+'갱신 '+INV.lastAt);
+    invPaintEcon(j);
+    if(j.need&&j.need.length)invSetupBanner(j.need);
+  }).catch(function(e){
+    invStatus('실패: '+((e&&e.message)||'네트워크 오류'));
+    var el=$('invIdx');if(el)el.innerHTML='<div class="err-box">⚠️ 시장 데이터를 불러오지 못했습니다. 배포된 사이트에서만 동작합니다(/api/market).</div>';
+  });
+}
+function invPaintEcon(j){
+  var el;
+  /* 지수 */
+  if(el=$('invIdx')){
+    var idx=j.indices||[];
+    el.innerHTML=idx.length?idx.map(function(i){
+      return '<div class="iv-card"><div class="k">'+osEsc(i.name)+'</div>'+
+        '<div class="v">'+(i.price!=null?i.price.toLocaleString('ko-KR'):'—')+'</div>'+
+        '<div class="d '+invCls(i.changeRate)+'">'+(i.change!=null?((i.change>0?'▲':(i.change<0?'▼':'-'))+Math.abs(i.change)):'')+' '+invPct(i.changeRate)+'</div></div>';
+    }).join(''):'<div class="iv-need-slim">지수는 한국투자증권 키(KIS_APP_KEY)를 넣으면 표시됩니다.</div>';
+  }
+  /* 경제지표 */
+  if(el=$('invEcon')){
+    var ec=j.econ||[];
+    el.innerHTML=ec.length?('<div class="iv-cards wide">'+ec.map(function(x){
+      return '<div class="iv-card lg"><div class="k">'+osEsc(x.name)+'<span class="t">'+osEsc(x.time||'')+'</span></div>'+
+        '<div class="v">'+(x.value!=null?x.value.toLocaleString('ko-KR'):'—')+'<span class="u">'+osEsc(x.unit||'')+'</span></div>'+
+        (x.diff!=null?'<div class="d '+invCls(x.diff)+'">직전 대비 '+(x.diff>0?'+':'')+x.diff+'</div>':'')+
+        invSpark(x.series)+
+        (x.hint?'<div class="h">'+osEsc(x.hint)+'</div>':'')+'</div>';
+    }).join('')+'</div>'):'<div class="iv-need-slim">경제지표는 한국은행 키(ECOS_API_KEY)를 넣으면 표시됩니다.</div>';
+  }
+  /* 관심 종목 */
+  if(el=$('invWatch')){
+    var w=j.watchlist||[],defs=j.watchlistDefs||[];
+    var nameOf=function(c){for(var i=0;i<defs.length;i++)if(defs[i].code===c)return defs[i].name;return c;};
+    el.innerHTML=w.length?('<div class="iv-cards">'+w.map(function(q){
+      return '<div class="iv-card"><div class="k">'+osEsc(q.name||nameOf(q.code))+'<span class="t">'+osEsc(q.code)+'</span></div>'+
+        '<div class="v">'+(q.price!=null?q.price.toLocaleString('ko-KR'):'—')+'</div>'+
+        '<div class="d '+invCls(q.changeRate)+'">'+invPct(q.changeRate)+'</div></div>';
+    }).join('')+'</div>'):'<div class="iv-need-slim">관심 종목 시세는 한국투자증권 키를 넣으면 표시됩니다. 목록은 config/market.json 에서 바꿉니다.</div>';
+  }
+  /* 뉴스 */
+  if(el=$('invNews')){
+    var nw=j.news||[];
+    el.innerHTML=nw.length?nw.slice(0,20).map(function(n){
+      var hits=(n.hits||[]).slice(0,4).map(function(h){return '<span class="iv-kw">'+osEsc(h)+'</span>';}).join('');
+      return '<div class="biz-news-item"><div class="hd"><span class="dt">'+osEsc((n.source||'')+' · '+invDate(n.date))+'</span>'+hits+'</div>'+
+        '<div class="ti"><a href="'+osEsc(n.link)+'" target="_blank" rel="noopener">'+osEsc(n.title)+'</a></div>'+
+        (n.desc?'<div class="ds">'+osEsc(n.desc)+'</div>':'')+'</div>';
+    }).join(''):'<div class="iv-need-slim">뉴스를 불러오지 못했습니다. RSS 목록은 config/sources.json 에서 관리합니다.</div>';
+  }
+}
+function invDate(s){
+  var t=Date.parse(s);if(!t)return (s||'').slice(0,16);
+  var d=new Date(t);
+  return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+/* 12포인트 스파크라인 — 라이브러리 없이 SVG 직접 */
+function invSpark(series){
+  var s=(series||[]).filter(function(x){return x&&x.v!=null;});
+  if(s.length<3)return '';
+  var vs=s.map(function(x){return x.v;}),mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs);
+  var rng=(mx-mn)||1,W=140,H=30;
+  var pts=s.map(function(x,i){
+    return (i/(s.length-1)*W).toFixed(1)+','+(H-((x.v-mn)/rng)*H).toFixed(1);
+  }).join(' ');
+  var up=vs[vs.length-1]>=vs[0];
+  return '<svg class="iv-spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true">'+
+    '<polyline points="'+pts+'" fill="none" stroke="'+(up?'#DC2626':'#1A56DB')+'" stroke-width="1.6"/></svg>';
+}
+
+/* ══════════════ AI — 실제 숫자만 근거로 ══════════════ */
+function invFacts(){
+  var a=invCur(),t=invCalc(a),lines=[];
+  lines.push('[계좌] '+(a?a.name:'')+' / 유형 '+(a?a.kind:'')+(a&&a.memo?(' / 고객메모: '+a.memo):''));
+  lines.push('[집계] 매입원가 '+Math.round(t.cost).toLocaleString()+'원 · 평가금액 '+Math.round(t.val).toLocaleString()+'원 · 평가손익 '+Math.round(t.pl).toLocaleString()+'원 · 수익률 '+(t.rate==null?'—':(Math.round(t.rate*100)/100)+'%'));
+  if(a&&a.target!=null)lines.push('[목표] 목표 수익률 '+a.target+'% / 손절 기준 -'+Math.abs(a.stop||0)+'%');
+  lines.push('[보유]');
+  (a&&a.holdings||[]).forEach(function(h){
+    var pr=invPrice(h),avg=invN(h.avg),rt=(pr.p!=null&&avg)?((pr.p-avg)/avg*100):null;
+    lines.push(' · '+(h.name||h.code)+'('+h.code+', '+(h.type==='fund'?'펀드':'주식/ETF')+') 수량 '+(h.qty||0)+
+      ' 평단 '+(avg||0)+' 현재가 '+(pr.p==null?'미조회':pr.p)+(rt==null?'':(' 수익률 '+(Math.round(rt*100)/100)+'%'))+
+      (pr.src==='manual'?' [수동입력]':''));
+  });
+  var m=INV.mkt;
+  if(m){
+    if((m.indices||[]).length)lines.push('[지수] '+m.indices.map(function(i){return i.name+' '+i.price+' ('+invPct(i.changeRate)+')';}).join(' / '));
+    if((m.econ||[]).length)lines.push('[지표] '+m.econ.map(function(e){return e.name+' '+e.value+(e.unit||'');}).join(' / '));
+    if((m.news||[]).length)lines.push('[오늘 헤드라인]\n'+m.news.slice(0,10).map(function(n,i){return (i+1)+'. '+n.title;}).join('\n'));
+  }
+  return lines.join('\n');
+}
+var INV_AI_SYS=
+ '너는 보험·연금·펀드를 다루는 한국 재무설계사의 투자 상담 보조자다.\n'+
+ '규칙: ① 주어진 실제 숫자만 근거로 쓰고 없는 수치를 지어내지 마라. ② 특정 종목·펀드의 매수/매도를 권유하지 마라(투자권유 아님, 정보 제공·상담 준비용). '+
+ '③ 투자성 상품은 원금손실 가능성을 반드시 함께 적어라. ④ "무조건·확정 수익" 같은 단정 표현 금지. '+
+ '⑤ AI 티 나는 말투 금지 — 실무자처럼 짧고 단정하게. ⑥ 금융소비자보호법·자본시장법 준수를 전제로 쓴다.';
+var INV_AI_TASK={
+ review:{t:'계좌 리뷰 스크립트',max:1600,p:'이 계좌를 고객과 리뷰하는 통화 스크립트를 써라.\n\n# 형식\n## 오늘 한 줄 정리\n## 숫자로 보고 (3줄 — 반드시 위 수치 인용)\n## 고객이 물을 질문 3개와 답변\n## 다음 액션 1가지(날짜 포함 제안)'},
+ rebalance:{t:'리밸런싱 제안',max:1600,p:'현재 구성의 쏠림·위험을 진단하고 리밸런싱 방향을 제시하라. 특정 종목 매수 권유가 아니라 "비중·자산군·계좌(절세) 관점"으로 써라.\n\n# 형식\n## 지금 구성의 문제 (2~3줄)\n## 자산군 관점 조정 방향 (표 형태로 현재 비중 → 제안 비중)\n## 절세계좌 활용 포인트\n## 고객에게 설명할 한 문단'},
+ katalk:{t:'고객 발송 카톡문',max:900,p:'고객에게 그대로 보낼 카톡 메시지를 써라. 5~7줄, 존댓말, 숫자 1~2개만 인용, 마지막 줄에 원금손실 가능 고지. 상품 권유 문장 금지.'},
+ fund_review:{t:'펀드 포트폴리오 진단',max:1600,p:'보유 펀드 구성을 진단하라.\n\n# 형식\n## 구성 요약 (자산군·지역·환노출)\n## 겹치는 위험 (2줄)\n## 연금저축/IRP/ISA 중 어디에 담는 게 유리한지\n## 고객 설명 문단 (5줄)'},
+ tax:{t:'절세 계좌 배치 제안',max:1400,p:'이 보유 자산을 연금저축·IRP·ISA·일반계좌에 어떻게 나눠 담으면 세후 수익이 좋아지는지 정리하라. 한도·공제율은 "당해년도 재확인 필요"를 명시하라.\n\n# 형식\n## 배치 표 (자산 | 추천 계좌 | 이유)\n## 올해 남은 납입 여력 점검 포인트\n## 주의사항 2줄'},
+ brief:{t:'오늘 시황 브리핑',max:1500,p:'오늘 시장을 설계사가 고객에게 설명할 수 있게 정리하라.\n\n# 형식\n## 오늘 시장 한 줄\n## 숫자로 본 오늘 (3줄 — 위 수치 인용)\n## 우리 고객에게 뜻하는 것 (연금·변액·달러보험·ISA 중 연결되는 것만 3줄)\n## 고객에게 보낼 문장 (카톡용 4줄, 마지막 줄에 원금손실 가능 고지)'}
+};
+function invAi(kind){
+  var task=INV_AI_TASK[kind];if(!task)return;
+  var host=$('invAiOut');if(!host)return;
+  if(typeof aiReady==='function'&&!aiReady()){
+    host.innerHTML='<div class="err-box">AI가 연결되어 있지 않습니다. <a style="color:#1A56DB;font-weight:800;cursor:pointer;text-decoration:underline" onclick="go(\'settings\')">설정 → AI 연결</a>에서 Claude 또는 Gemini를 연결해 주세요.</div>';
+    return;
+  }
+  host.innerHTML='<div class="loading"><div class="spinner"></div>'+osEsc(task.t)+'을(를) 만드는 중… (10~30초)</div>';
+  var user=task.p+'\n\n[아래는 실제 데이터다. 이 숫자만 써라]\n'+invFacts();
+  callAI(INV_AI_SYS,user,task.max,'inv_'+kind).then(function(md){
+    INV.brief=md;
+    host.innerHTML='<div class="biz-aiout"><div class="biz-aiout-hd"><span>'+osEsc(task.t)+'</span>'+
+      '<span>'+((typeof engBadge==='function')?engBadge():'')+
+      ' <button class="btn btn-ghost" onclick="invCopyAi()">📋 복사</button></span></div>'+
+      '<div class="rpt-body" id="invAiBody">'+invMd(md)+'</div></div>'+
+      '<div class="iv-note">'+osEsc(INV_DISC)+'</div>';
+  }).catch(function(e){
+    host.innerHTML='<div class="err-box">⚠️ '+osEsc((e&&e.message)||'생성 실패')+'</div>';
+  });
+}
+function invCopyAi(){
+  var t=INV.brief||'';
+  if(!t){toast('복사할 내용이 없습니다.');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(function(){toast('복사했습니다.');},function(){toast('복사 실패');});
+  else toast('이 브라우저에서는 복사가 지원되지 않습니다.');
+}
+/* 아주 가벼운 마크다운 → HTML (표·제목·굵게·목록만) */
+function invMd(md){
+  var lines=String(md||'').split(/\r?\n/),out=[],tb=null;
+  function flush(){if(tb){out.push('<div class="iv-tbwrap"><table class="iv-tb">'+tb+'</table></div>');tb=null;}}
+  lines.forEach(function(ln){
+    var t=ln.replace(/\s+$/,'');
+    if(/^\s*\|.*\|\s*$/.test(t)){
+      var cells=t.replace(/^\s*\|/,'').replace(/\|\s*$/,'').split('|').map(function(c){return c.trim();});
+      if(cells.every(function(c){return /^:?-{2,}:?$/.test(c);}))return;
+      var tag=tb?'td':'th';
+      if(!tb)tb='';
+      tb+='<tr>'+cells.map(function(c){return '<'+tag+'>'+osEsc(c.replace(/\*\*/g,''))+'</'+tag+'>';}).join('')+'</tr>';
+      return;
+    }
+    flush();
+    if(!t.trim()){out.push('');return;}
+    if(/^###\s+/.test(t)){out.push('<h4>'+osEsc(t.replace(/^###\s+/,''))+'</h4>');return;}
+    if(/^##\s+/.test(t)){out.push('<h3>'+osEsc(t.replace(/^##\s+/,''))+'</h3>');return;}
+    if(/^#\s+/.test(t)){out.push('<h3>'+osEsc(t.replace(/^#\s+/,''))+'</h3>');return;}
+    if(/^[-•*]\s+/.test(t)){out.push('<li>'+osEsc(t.replace(/^[-•*]\s+/,'')).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</li>');return;}
+    out.push('<p>'+osEsc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')+'</p>');
+  });
+  flush();
+  return out.join('').replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g,'<ul>$1</ul>');
+}
+
+/* ══════════════ 서버 동기화 (Supabase) ══════════════ */
+function invServerReady(){
+  try{return !!(typeof osClient==='function'&&osClient()&&OS&&OS.session&&OS.session.user);}catch(e){return false;}
+}
+function invMe(){try{return OS.session.user.id;}catch(e){return null;}}
+function invCloudPush(){
+  if(!invServerReady()){toast('로그인 후 서버 저장을 쓸 수 있습니다.');return;}
+  var sb=osClient(),me=invMe(),s=invLoad(),a=invCur();
+  if(!a){return;}
+  toast('서버에 저장하는 중…');
+  var accRow={owner_id:me,name:a.name,kind:a.kind||'stock',broker:a.broker||'',
+    goal_amount:a.goal,target_return:a.target,stop_loss:a.stop,memo:a.memo||'',updated_at:new Date().toISOString()};
+  var p=a.sid
+    ? sb.from('invest_accounts').update(accRow).eq('id',a.sid).select('id')
+    : sb.from('invest_accounts').insert(accRow).select('id');
+  p.then(function(r){
+    if(r.error)throw r.error;
+    var sid=(r.data&&r.data[0]&&r.data[0].id)||a.sid;
+    a.sid=sid;invSave();
+    var rows=(a.holdings||[]).map(function(h){
+      var o={account_id:sid,owner_id:me,asset_type:h.type||'stock',code:h.code,market:h.market||'KRX',
+        name:h.name||'',qty:invN(h.qty)||0,avg_price:invN(h.avg)||0,currency:h.currency||'KRW',
+        note:h.note||'',updated_at:new Date().toISOString()};
+      if(h.sid)o.id=h.sid;
+      return o;
+    });
+    if(!rows.length)return {data:[]};
+    return sb.from('invest_holdings').upsert(rows).select('id,code');
+  }).then(function(r){
+    if(r&&r.error)throw r.error;
+    /* 새로 생긴 서버 id 를 로컬에 붙여 다음 저장부터 갱신으로 동작하게 한다 */
+    var byCode={};((r&&r.data)||[]).forEach(function(x){if(!byCode[x.code])byCode[x.code]=x.id;});
+    (a.holdings||[]).forEach(function(h){if(!h.sid&&byCode[h.code])h.sid=byCode[h.code];});
+    invSave();
+    toast('서버 저장 완료 — 팀·다른 기기에서 불러올 수 있습니다.');
+  }).catch(function(e){
+    var m=(e&&e.message)||'저장 실패';
+    if(/relation|does not exist|schema cache/i.test(m))toast('서버 표가 없습니다. Supabase에서 migration_30_invest.sql 을 먼저 실행하세요.');
+    else toast('저장 실패: '+m);
+  });
+}
+function invCloudPull(){
+  if(!invServerReady()){toast('로그인 후 사용할 수 있습니다.');return;}
+  var sb=osClient();
+  toast('서버에서 불러오는 중…');
+  sb.from('invest_accounts').select('*').order('created_at',{ascending:true}).then(function(r){
+    if(r.error)throw r.error;
+    var accs=r.data||[];
+    if(!accs.length){toast('서버에 저장된 계좌가 없습니다.');return null;}
+    return sb.from('invest_holdings').select('*').then(function(r2){
+      if(r2.error)throw r2.error;
+      var hs=r2.data||[],byAcc={};
+      hs.forEach(function(h){(byAcc[h.account_id]=byAcc[h.account_id]||[]).push(h);});
+      var s=invLoad();
+      s.accounts=accs.map(function(x){
+        return {id:invId('a'),sid:x.id,name:x.name||'(이름 없음)',kind:x.kind||'stock',broker:x.broker||'',
+          client:x.client_id||'',goal:x.goal_amount,target:x.target_return,stop:x.stop_loss,memo:x.memo||'',
+          holdings:(byAcc[x.id]||[]).map(function(h){
+            return {id:invId('h'),sid:h.id,type:h.asset_type||'stock',code:h.code,market:h.market||'KRX',
+              name:h.name||'',qty:h.qty,avg:h.avg_price,currency:h.currency||'KRW',
+              manual:null,note:h.note||''};
+          })};
+      });
+      s.curId=s.accounts[0].id;invSave();
+      toast('서버에서 '+s.accounts.length+'개 계좌를 불러왔습니다.');
+      go(INV.tab);
+      return null;
+    });
+  }).catch(function(e){
+    var m=(e&&e.message)||'불러오기 실패';
+    if(/relation|does not exist|schema cache/i.test(m))toast('서버 표가 없습니다. Supabase에서 migration_30_invest.sql 을 먼저 실행하세요.');
+    else toast('불러오기 실패: '+m);
+  });
+}
+/* 서버 야간작업이 만들어 둔 오늘 시황 브리핑이 있으면 먼저 보여준다 */
+function invLoadServerBrief(){
+  if(!invServerReady())return;
+  var sb=osClient();
+  sb.from('invest_briefs').select('title,body,ref_date').eq('kind','market_daily')
+    .order('ref_date',{ascending:false}).limit(1).then(function(r){
+      if(r.error||!r.data||!r.data.length)return;
+      var b=r.data[0],host=$('invAiOut');
+      if(!host||INV.brief)return;
+      INV.brief=b.body||'';
+      host.innerHTML='<div class="biz-aiout"><div class="biz-aiout-hd"><span>'+osEsc(b.title||'시황 브리핑')+'</span>'+
+        '<span><span class="biz-news-auto">🌙 야간 자동 생성</span> <button class="btn btn-ghost" onclick="invCopyAi()">📋 복사</button></span></div>'+
+        '<div class="rpt-body">'+invMd(b.body||'')+'</div></div>'+
+        '<div class="iv-note">'+osEsc(INV_DISC)+'</div>';
+    }).catch(function(){});
+}
+
+/* ══════════════ 라우터 ══════════════ */
+function invRender(tab){
+  INV.tab=tab;invLoad();
+  if(tab==='inv_fund')return invRenderFund();
+  if(tab==='inv_econ')return invRenderEcon();
+  return invRenderStock();
+}
+function invAfterRender(tab){
+  invStopTimer();
+  if(tab==='inv_econ'){
+    invEconLoad(false);
+    invLoadServerBrief();
+    return;
+  }
+  invRefresh(false);
+  invStartTimer();
+  invHealth(function(h){
+    if(h&&h.has&&!h.has.kis)invSetupBanner(['KIS_APP_KEY','KIS_APP_SECRET']);
+  });
+}
+
+(function invInjectStyle(){
+  if(typeof document==='undefined')return;
+  if(document.getElementById('invStyle'))return;
+  var s=document.createElement('style');s.id='invStyle';
+  s.textContent=[
+   '.iv-srv{font-size:11px;font-weight:700;color:#6B7280;background:#F3F4F6;border-radius:999px;padding:4px 10px}',
+   '.iv-stamp{font-size:11px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:4px 10px;white-space:nowrap}',
+   '.iv-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}',
+   '@media(max-width:700px){.iv-sum{grid-template-columns:repeat(2,1fr)}}',
+   '.iv-sum .c{background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px 14px}',
+   '.iv-sum .k{font-size:11px;font-weight:700;color:#6B7280}',
+   '.iv-sum .v{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:4px;color:#1C2434}',
+   '.iv-sum .v.up,.iv-num.up,.iv-cur .up,.iv-card .d.up{color:#DC2626}',
+   '.iv-sum .v.dn,.iv-num.dn,.iv-cur .dn,.iv-card .d.dn{color:#1D4ED8}',
+   '.iv-alerts{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}',
+   '.iv-alert{font-size:12px;font-weight:700;border-radius:10px;padding:9px 12px;line-height:1.5}',
+   '.iv-alert.up{background:#FEF2F2;color:#B91C1C;border:1px solid #FEE2E2}',
+   '.iv-alert.dn{background:#EFF6FF;color:#1D4ED8;border:1px solid #DBEAFE}',
+   '.iv-tbwrap{overflow-x:auto;border:1px solid #E5E9F0;border-radius:12px}',
+   '.iv-tb{width:100%;border-collapse:collapse;background:#fff;min-width:720px}',
+   '.iv-tb th,.iv-tb td{border-bottom:1px solid #EEF0F3;padding:8px 10px;font-size:12px;text-align:left;white-space:nowrap}',
+   '.iv-tb th{font-size:11px;color:#6B7280;font-weight:700;background:#F9FAFB}',
+   '.iv-tb td.code{font-weight:800;color:#1A56DB;font-variant-numeric:tabular-nums}',
+   '.iv-tb input{border:1px solid #E5E9F0;border-radius:7px;padding:5px 7px;font-size:12px;font-family:inherit;width:110px}',
+   '.iv-tb .iv-num,.iv-tb .iv-cur{font-variant-numeric:tabular-nums;font-weight:700}',
+   '.iv-tb tr.iv-sub td{background:#FAFBFC;font-size:11.5px;color:#6B7280;white-space:normal}',
+   '.iv-tb tr.iv-sub input{width:140px}',
+   '.iv-x{border:none;background:#F3F4F6;color:#9AA2AD;border-radius:7px;width:26px;height:26px;cursor:pointer;font-size:12px}',
+   '.iv-x:hover{background:#FEE2E2;color:#B91C1C}',
+   '.iv-manual{font-size:10px;font-weight:800;color:#B45309;background:#FFFBEB;border-radius:5px;padding:1px 5px}',
+   '.iv-empty{border:1px dashed #D8DEE9;border-radius:12px;padding:26px 18px;text-align:center;font-size:12.5px;color:#6B7280;line-height:1.7}',
+   '.iv-goal{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:12px;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px}',
+   '.iv-goal label{font-size:11.5px;font-weight:700;color:#374151;display:flex;align-items:center;gap:6px}',
+   '.iv-goal label.wide{flex:1;min-width:240px}',
+   '.iv-goal input{border:1px solid #E5E9F0;border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit;width:90px}',
+   '.iv-goal label.wide input{width:100%}',
+   '.iv-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}',
+   '.iv-cards.wide{grid-template-columns:repeat(auto-fill,minmax(220px,1fr));margin-bottom:0}',
+   '.iv-card{background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:12px 14px}',
+   '.iv-card .k{font-size:11px;font-weight:700;color:#6B7280;display:flex;justify-content:space-between;gap:6px}',
+   '.iv-card .k .t{font-size:10px;color:#9AA2AD;font-weight:600}',
+   '.iv-card .v{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-top:4px;color:#1C2434;font-variant-numeric:tabular-nums}',
+   '.iv-card .v .u{font-size:11px;font-weight:700;color:#9AA2AD;margin-left:3px}',
+   '.iv-card .d{font-size:12px;font-weight:800;margin-top:2px}',
+   '.iv-card .h{font-size:11px;color:#6B7280;line-height:1.5;margin-top:7px;padding-top:7px;border-top:1px dashed #EEF0F3}',
+   '.iv-spark{display:block;width:100%;height:30px;margin-top:6px}',
+   '.iv-skel{font-size:12.5px;color:#9AA2AD;padding:18px;text-align:center;background:#F9FAFB;border-radius:10px}',
+   '.iv-need{border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:14px 16px;margin-bottom:14px}',
+   '.iv-need .hd{font-size:13px;font-weight:800;color:#92400E}',
+   '.iv-need .bd{font-size:12px;color:#78350F;line-height:1.65;margin-top:6px}',
+   '.iv-need ul{margin:8px 0 0;padding-left:18px}',
+   '.iv-need li{font-size:11.5px;color:#78350F;line-height:1.7}',
+   '.iv-need .ft{font-size:11px;color:#92400E;margin-top:9px;padding-top:9px;border-top:1px dashed #FDE68A;line-height:1.6}',
+   '.iv-need-slim{font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:11px 13px;line-height:1.6}',
+   '.iv-chips{display:flex;flex-wrap:wrap;gap:7px}',
+   '.iv-chip{font-size:11.5px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:5px 11px}',
+   '.iv-kw{font-size:10px;font-weight:800;color:#15803D;background:#F0FDF4;border:1px solid #DCFCE7;border-radius:5px;padding:1px 6px;margin-left:4px}',
+   '.iv-note{font-size:11px;color:#6B7280;line-height:1.6;margin-top:10px;padding:9px 12px;background:#F9FAFB;border-radius:9px}',
+   '.iv-tb h3,.iv-tb h4{margin:0}',
+   '#invAiOut h3{font-size:13.5px;font-weight:800;color:#1A56DB;margin:14px 0 6px}',
+   '#invAiOut h4{font-size:12.5px;font-weight:800;color:#1C2434;margin:10px 0 4px}',
+   '#invAiOut p{font-size:12.5px;color:#374151;line-height:1.75;margin:4px 0}',
+   '#invAiOut ul{margin:4px 0 4px 18px;padding:0}',
+   '#invAiOut li{font-size:12.5px;color:#374151;line-height:1.7}',
+   '#invRoot .muted{color:#9AA2AD}'
+  ].join('');
+  document.head.appendChild(s);
+})();
 
 /* 새 도구·재배치 반영해 현재 화면 갱신 */
 renderNav();updateKeyPill();
