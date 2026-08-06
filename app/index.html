@@ -961,7 +961,7 @@ var LS={
   set:function(k,v){try{localStorage.setItem('apex_studio_'+k,v);}catch(e){}},
   del:function(k){try{localStorage.removeItem('apex_studio_'+k);}catch(e){}}
 };
-function toast(msg){var t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},1900);}
+function toast(msg,ms){var t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
 function copyText(t){
   function done(){toast('복사되었습니다');}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(function(){fb();});}
@@ -1048,7 +1048,7 @@ var AI_COMPANY_GEN={
   os_extract:1,os_analysis:1,os_report:1,
   med_silbi:1,med_checkup:1,med_disclosure:1,ref_underwrite:1,cs_feedback:1,
   consult_script:1,cs_assist:1,cs_needs:1,
-  contracts:1,endorse:1,claims:1,biz_deck:1,brain:1
+  contracts:1,endorse:1,claims:1,biz_deck:1,brain:1,coach:1
 };
 function aiCompanyOnly(id){return !!(id&&AI_COMPANY_GEN[id]);}
 /* 회사 키로 보낼 도구인지 + 지금 회사 키가 있는지 */
@@ -3552,7 +3552,7 @@ function go(tab){
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();
     if(typeof orgAccLoad==='function')orgAccLoad(function(){if(orgEditId!==null||true){var c=document.getElementById('orgFormCard');if(c&&typeof orgForm==='function'&&typeof orgLoad==='function')c.outerHTML=orgForm(orgLoad());}});
     if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
-  else if(tab==='branch_coach')dyn.innerHTML=renderBranchCoach();
+  else if(tab==='branch_coach'){dyn.innerHTML=renderBranchCoach();if(typeof osBranchCoachAfterRender==='function')osBranchCoachAfterRender();}
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
   else if(tab==='manual')dyn.innerHTML=renderManual();
@@ -8988,12 +8988,6 @@ function acCertView(){
   return h;
 }
 
-function renderBranchCoach(){
-  if(!OS.profile)return osPage('코칭','팀 코칭',null,osLoginGate('팀 코칭은 지점장 이상 계정으로 로그인해야 합니다.'));
-  if(!osIsLead())return osPage('코칭','팀 코칭',null,'<div class="osrv-warn">이 메뉴는 <b>지점장·본부장</b> 권한에서만 열립니다.</div>');
-  return osPage('코칭','지점장 코칭','팀원 점수·강약점과 오늘 코칭 대상 3인을 자동 추천합니다.',
-    osSoonBox(['팀 점수·강약점 대시보드','오늘 코칭 3인 자동추천(점수급락·반복오류·후속지연·준법위험)','코칭 기록(강점/약점/칭찬/재점검일)','신입 정착·교육지연·본부 보고']));
-}
 function renderHQ(){
   if(!OS.profile)return osPage('본부','본부장 관리',null,osLoginGate('본부장 관리는 본부장·관리자 계정으로 로그인해야 합니다.'));
   if(!osIsHQ())return osPage('본부','본부장 관리',null,'<div class="osrv-warn">이 메뉴는 <b>본부장·관리자</b> 권한에서만 열립니다.</div>');
@@ -9951,7 +9945,7 @@ function ckCss(){
     '.ct-gap{background:var(--warn-l,#FFFBEB);border:1px solid #FDE68A;border-radius:6px;padding:9px 11px;'+
       'margin-top:9px;font-size:11.5px;color:#92400E;line-height:1.7}'+
     '.ct-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}'+
-    '.ct-sum div{background:var(--ink-9);border:1px solid var(--ink-7);border-radius:8px;padding:9px 10px}'+
+    '.ct-sum>div{background:var(--ink-9);border:1px solid var(--ink-7);border-radius:8px;padding:9px 10px}'+
     '.ct-sum .k{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.04em}'+
     '.ct-sum .v{font-family:var(--mono,ui-monospace,monospace);font-size:18px;font-weight:800;margin-top:2px;letter-spacing:-.04em}'+
     '.ct-sum .v em{font-style:normal;font-size:11px;color:var(--ink-5);font-weight:700}';
@@ -10532,6 +10526,449 @@ function renderTeamX(){
 }
 function osTeamXAfterRender(){if(!txCanView())return;TXM.loaded=false;txPaint();txLoad();}
 
+/* ── 팀 코칭 ────────────────────────────────────────────────────────────
+   숫자로 등수를 매기지 않는다. 비어 있는 곳과 어긋난 곳만 사실로 적고,
+   오늘 누구를 먼저 볼지와 무엇을 물을지까지 적어 둔다.
+   판단 근거는 팀원이 스스로 남긴 기록(체크판·통화·출근)이다.        */
+var CO={rows:[],logs:[],teams:[],loaded:false,busy:false,err:'',warn:[],noTable:false,
+  open:{},form:{},ai:{},saving:{},hist:{},team:'',showAll:false,at:''};
+
+function coDay(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-(n||0));return d.toISOString().slice(0,10);}
+function coPlus(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()+(n||0));return d.toISOString().slice(0,10);}
+function coD(s){return (''+(s||'')).slice(0,10);}
+function coDiffDays(a,b){return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000);}
+function coCanUse(){
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  if(typeof osIsLead==='function'&&osIsLead())return true;
+  var r=(typeof osRole==='function')?osRole():'member';
+  return ['admin','owner','lead','manager','leader','master','branch_manager','education_manager'].indexOf(r)>=0;
+}
+function coMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+
+function coLoad(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){CO.err='서버에 연결되어 있지 않습니다.';CO.loaded=true;coPaint();return;}
+  CO.busy=true;CO.err='';coPaint();
+  var t=coDay(0),d6=coDay(6),d7=coDay(7),d13=coDay(13);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('profiles').select('id,name,role,active,workspace,plan').order('name')),
+    q(sb.from('teams').select('id,name,leader_id')),
+    q(sb.from('team_members').select('team_id,member_id')),
+    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d13)),
+    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d13+'T00:00:00')),
+    q(sb.from('dbs').select('id,assigned_to')),
+    q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d13)),
+    q(sb.from('coach_logs').select('id,member_id,coach_id,coach_date,strength,weak,todo,recheck_date,note')
+       .order('coach_date',{ascending:false}).limit(300))
+  ]).then(function(r){
+    CO.busy=false;CO.loaded=true;CO.warn=[];
+    if(r[0].error){CO.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');coPaint();return;}
+    var profs=(r[0].data||[]).filter(function(x){
+      return x.active!==false&&(x.workspace==null||x.workspace==='both'||x.workspace==='apex');});
+    var teams=r[1].error?[]:(r[1].data||[]);
+    var teamOf={};if(!r[2].error)(r[2].data||[]).forEach(function(m){teamOf[m.member_id]=m.team_id;});
+    var att=r[3].error?[]:(r[3].data||[]);
+    var calls=r[4].error?null:(r[4].data||[]);
+    var dbs=r[5].error?null:(r[5].data||[]);
+    var chk=r[6].error?null:(r[6].data||[]);
+    if(r[7].error){
+      CO.logs=[];
+      CO.noTable=/does not exist|relation/i.test((r[7].error.message||''));
+    }else{CO.logs=r[7].data||[];CO.noTable=false;}
+    if(calls===null||dbs===null)CO.warn.push('전화·약속');
+    if(chk===null)CO.warn.push('체크판');
+    CO.teams=teams;
+
+    var touched={};if(calls)calls.forEach(function(c){if(c.db_id)touched[c.db_id]=1;});
+    var dayIds={};if(typeof CK_ITEMS!=='undefined')CK_ITEMS.day.forEach(function(x){dayIds[x[0]]=1;});
+    var cntDay=function(o){var n=0,k;for(k in o)if(o[k]&&dayIds[k])n++;return n;};
+
+    /* 한 사람의 한 기간 — 코칭은 오늘 하루가 아니라 주 단위로 본다 */
+    var span=function(id,from,to){
+      var inR=function(s){var d=coD(s);return d>=from&&d<=to;};
+      var mine=calls?calls.filter(function(c){return c.created_by===id&&inR(c.call_at);}):null;
+      var ckDays=0;
+      if(chk)chk.forEach(function(row){
+        if(row.member_id!==id||row.scope!=='day')return;
+        if(row.check_date<from||row.check_date>to)return;
+        if(cntDay(row.items||{})>0)ckDays++;
+      });
+      return {
+        att:att.filter(function(a){return a.member_id===id&&a.att_date>=from&&a.att_date<=to;}).length,
+        call:mine?mine.length:null,
+        appt:mine?mine.filter(function(c){return c.result==='상담';}).length:null,
+        ckDays:chk?ckDays:null
+      };
+    };
+
+    var logBy={};
+    CO.logs.forEach(function(l){(logBy[l.member_id]=logBy[l.member_id]||[]).push(l);});
+
+    var meId=coMyId();
+    CO.rows=profs.filter(function(p){return p.id!==meId;}).map(function(p){
+      var tm=teams.filter(function(x){return x.id===teamOf[p.id];})[0];
+      var mine=logBy[p.id]||[];
+      return {
+        id:p.id,name:p.name||'(이름 없음)',role:p.role,team:tm?tm.name:'',
+        w1:span(p.id,d6,t),w2:span(p.id,d13,d7),
+        held:dbs?dbs.filter(function(d){return d.assigned_to===p.id;}).length:null,
+        cold:(dbs&&calls)?dbs.filter(function(d){return d.assigned_to===p.id&&!touched[d.id];}).length:null,
+        logs:mine,last:mine[0]||null
+      };
+    });
+    CO.at=new Date().toLocaleTimeString('ko-KR');
+    coPaint();
+  },function(e){CO.busy=false;CO.loaded=true;CO.err=(e&&e.message)||'불러오지 못했습니다.';coPaint();});
+}
+
+/* ── 신호 — 사실 한 줄 + 무엇을 물을지 한 줄 ────────────────────────── */
+function coSignals(p){
+  var t=coDay(0),out=[],a=p.w1,b=p.w2;
+  if(p.last&&p.last.recheck_date&&coD(p.last.recheck_date)<=t){
+    var od=coD(p.last.recheck_date),late=coDiffDays(od,t);
+    out.push({k:'recheck',w:4,
+      t:'다시 보기로 한 날이 '+(late>0?(late+'일 지났습니다'):'오늘입니다')+'. 그때 정한 일: '+
+        ((p.last.todo||'').replace(/\s+/g,' ').slice(0,40)||'(적어 두지 않음)'),
+      a:'새 이야기를 꺼내기 전에 지난번 정한 것이 됐는지부터 확인합니다.'});
+  }
+  if(a.call!==null&&b.call!==null&&b.call>=5&&a.call*2<=b.call){
+    out.push({k:'drop',w:3,
+      t:'통화가 지난주 '+b.call+'건에서 이번 주 '+a.call+'건으로 줄었습니다.',
+      a:'숫자를 먼저 꺼내지 않습니다. 지난주에 무슨 일이 있었는지부터 묻습니다.'});
+  }
+  if(a.call!==null&&b.call!==null&&(a.call+b.call)>=15&&(a.appt+b.appt)===0){
+    out.push({k:'noappt',w:3,
+      t:'2주 동안 통화 '+(a.call+b.call)+'건인데 잡힌 약속이 0건입니다.',
+      a:'통화량이 아니라 첫 마디의 문제일 수 있습니다. 실제로 어떻게 여는지 들어 봅니다.'});
+  }
+  if(p.cold!=null&&p.cold>=10){
+    out.push({k:'cold',w:(p.cold>=20?3:2),
+      t:'배정된 DB '+p.cold+'건에 아직 통화 기록이 한 건도 없습니다.',
+      a:'전부가 아니라 오늘 몇 건까지 걸지 같이 정하고, 내일 이 자리에서 확인합니다.'});
+  }
+  if(a.ckDays!==null&&a.ckDays<3){
+    out.push({k:'nocheck',w:2,
+      t:'최근 7일 중 실행 체크판을 쓴 날이 '+a.ckDays+'일입니다.',
+      a:'왜 안 쓰는지 듣습니다. 항목이 실제 일과 안 맞으면 항목을 고칩니다.'});
+  }
+  if(a.att<3){
+    out.push({k:'noatt',w:2,
+      t:'최근 7일 출근 기록이 '+a.att+'일입니다.',
+      a:'출근 체크를 잊은 건지 실제로 못 나온 건지부터 확인합니다.'});
+  }
+  if(!p.last){
+    out.push({k:'never',w:1,t:'코칭 기록이 아직 없습니다.',
+      a:'무엇을 잘하고 무엇이 막히는지 한 번 정리해 둡니다.'});
+  }else{
+    var gap=coDiffDays(coD(p.last.coach_date),t);
+    if(gap>=30)out.push({k:'stale',w:1,t:'마지막 코칭이 '+gap+'일 전입니다.',
+      a:'그 사이 달라진 것이 있는지 확인합니다.'});
+  }
+  out.sort(function(x,y){return y.w-x.w;});
+  return out;
+}
+function coScore(p){var s=0;coSignals(p).forEach(function(x){s+=x.w;});return s;}
+function coRows(){
+  var arr=CO.rows.filter(function(p){return !CO.team||p.team===CO.team;});
+  arr.sort(function(x,y){
+    var a=coScore(x),b=coScore(y);
+    if(a!==b)return b-a;
+    return (x.w1.call||0)-(y.w1.call||0);
+  });
+  return arr;
+}
+function coPick(){return coRows().filter(function(p){return coScore(p)>0;}).slice(0,3);}
+
+/* ── 코칭 기록 ──────────────────────────────────────────────────────── */
+function coOpen(id){
+  CO.open[id]=!CO.open[id];
+  if(CO.open[id]&&!CO.form[id])CO.form[id]={strength:'',weak:'',todo:'',recheck:coPlus(7),note:''};
+  coPaint();
+}
+function coField(id,k,v){CO.form[id]=CO.form[id]||{};CO.form[id][k]=v;}
+function coSave(id){
+  var f=CO.form[id]||{};
+  var body=[(f.strength||''),(f.weak||''),(f.todo||'')].join('').replace(/\s/g,'');
+  if(!body){toast('강점·막힌 곳·정한 일 중 하나는 적어 주세요.');return;}
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버에 연결되어 있지 않습니다.');return;}
+  var me=coMyId();
+  if(!me){toast('로그인이 필요합니다.');return;}
+  if(CO.saving[id])return;
+  CO.saving[id]=true;coPaint();
+  var row={member_id:id,coach_id:me,coach_date:coDay(0),
+    strength:(f.strength||'').slice(0,600),weak:(f.weak||'').slice(0,600),
+    todo:(f.todo||'').slice(0,600),note:(f.note||'').slice(0,900),
+    recheck_date:(f.recheck||null)};
+  sb.from('coach_logs').insert(row).then(function(r){
+    CO.saving[id]=false;
+    if(r&&r.error){
+      var m=((r.error.message)||'')+'';
+      if(/does not exist|relation/i.test(m))
+        toast('코칭 기록 표가 아직 없습니다. 시스템 점검 → 필요한 SQL 에서 팀 코칭 SQL 을 실행하세요.',9000);
+      else if(/42501|permission denied|row.level security/i.test(m))
+        toast('코칭 기록 저장이 서버에서 막혀 있습니다. 시스템 점검 → 필요한 SQL 에서 팀 코칭 SQL 을 실행하세요.',9000);
+      else toast('저장 실패: '+m);
+      coPaint();return;
+    }
+    CO.form[id]=null;CO.open[id]=false;
+    toast('코칭 기록을 남겼습니다.');
+    coLoad();
+  },function(e){CO.saving[id]=false;toast('저장 실패: '+((e&&e.message)||''));coPaint();});
+}
+
+/* ── AI 대화 초안 — 이름은 보내지 않는다 ────────────────────────────── */
+function coAsk(id){
+  var p=null,i;
+  for(i=0;i<CO.rows.length;i++)if(CO.rows[i].id===id)p=CO.rows[i];
+  if(!p)return;
+  if(CO.ai[id]&&CO.ai[id].busy)return;
+  CO.ai[id]={busy:true,text:''};coPaint();
+  var sg=coSignals(p);
+  var facts=[
+    '최근 7일: 출근 '+p.w1.att+'일, 통화 '+(p.w1.call==null?'모름':p.w1.call+'건')+
+      ', 약속 '+(p.w1.appt==null?'모름':p.w1.appt+'건')+', 체크판 쓴 날 '+(p.w1.ckDays==null?'모름':p.w1.ckDays+'일'),
+    '그 전 7일: 출근 '+p.w2.att+'일, 통화 '+(p.w2.call==null?'모름':p.w2.call+'건')+
+      ', 약속 '+(p.w2.appt==null?'모름':p.w2.appt+'건'),
+    '배정 DB '+(p.held==null?'모름':p.held+'건')+' 중 미접촉 '+(p.cold==null?'모름':p.cold+'건')
+  ].concat(sg.map(function(x){return '신호: '+x.t;})).join('\n');
+  var sys='너는 보험 영업 조직의 지점장을 돕는 코칭 보조자다. '+
+    '팀원 한 사람의 활동 기록을 받고, 지점장이 오늘 그 사람과 나눌 대화의 첫 마디를 만들어 준다.\n'+
+    '규칙:\n'+
+    '1. 실적을 추궁하지 않는다. 사실을 확인하고 원인을 같이 찾는 대화로 만든다.\n'+
+    '2. 주어진 기록에 없는 것을 지어내지 않는다. 모르는 것은 질문으로 만든다.\n'+
+    '3. 보험 상품 추천, 수익 보장, 판매 화법은 절대 쓰지 않는다. 이것은 조직 관리 대화다.\n'+
+    '4. 한국어. 존댓말. 문장은 짧게. 미사여구를 넣지 않는다.\n'+
+    '형식:\n'+
+    '[대화 여는 말] 3가지 — 서로 다른 각도로. 각 2문장 이내.\n'+
+    '[확인할 것] 3가지 — 지점장이 반드시 물어야 할 질문.\n'+
+    '[오늘 같이 정할 일] 1가지 — 내일 확인 가능한 크기로.';
+  var usr='설계사 한 명의 최근 2주 기록이다. 이름과 고객 정보는 없다.\n\n'+facts;
+  callAI(sys,usr,1100,'coach').then(function(txt){
+    CO.ai[id]={busy:false,text:(txt||'').replace(/\r/g,'')};coPaint();
+  },function(e){
+    CO.ai[id]={busy:false,text:'',err:((e&&e.message)||'만들지 못했습니다.')};coPaint();
+  });
+}
+function coAiCopy(id){
+  var a=CO.ai[id];
+  if(a&&a.text&&typeof copyText==='function'){copyText(a.text);}
+}
+
+/* ── 화면 ───────────────────────────────────────────────────────────── */
+function coTeam(v){CO.team=v;coPaint();}
+function coAll(){CO.showAll=!CO.showAll;coPaint();}
+function coNum(v,u){return v==null?'<span style="color:var(--ink-6)">—</span>':(v+(u||''));}
+
+function coCardHtml(p,pick){
+  var sg=coSignals(p),op=!!CO.open[p.id],f=CO.form[p.id]||{},ai=CO.ai[p.id];
+  var lv=pick?'pick':(sg.length?'warn':'ok');
+  var h='<div class="co-c '+lv+'">'+
+    '<div class="co-hd">'+
+      '<div class="co-who"><span class="co-nm">'+osEsc(p.name)+'</span>'+
+        (p.team?'<span class="co-tag">'+osEsc(p.team)+'</span>':'')+
+        (p.last?'<span class="co-tag">마지막 코칭 '+osEsc(coD(p.last.coach_date))+'</span>'
+               :'<span class="co-tag warn">코칭 기록 없음</span>')+
+      '</div>'+
+      '<div class="co-mini">'+
+        '<b>'+coNum(p.w1.call)+'</b><em>통화</em>'+
+        '<b>'+coNum(p.w1.appt)+'</b><em>약속</em>'+
+        '<b>'+p.w1.att+'</b><em>출근</em>'+
+        '<b>'+coNum(p.w1.ckDays)+'</b><em>체크</em>'+
+      '</div>'+
+    '</div>';
+  if(sg.length){
+    h+='<div class="co-sg">'+sg.map(function(x){
+      return '<div class="co-s1"><div class="t">'+osEsc(x.t)+'</div>'+
+        '<div class="a">→ '+osEsc(x.a)+'</div></div>';}).join('')+'</div>';
+  }else{
+    h+='<div class="co-ok">최근 2주 기록에서 걸리는 곳이 없습니다. 오늘은 그대로 두어도 됩니다.</div>';
+  }
+  h+='<div class="btn-row co-btn">'+
+    '<button class="btn '+(op?'btn-ghost':'btn-primary')+'" onclick="coOpen(\''+p.id+'\')">'+
+      (op?'접기':'코칭 기록 남기기')+'</button>'+
+    '<button class="btn btn-ghost" onclick="coAsk(\''+p.id+'\')"'+((ai&&ai.busy)?' disabled':'')+'>'+
+      ((ai&&ai.busy)?'만드는 중…':'AI 대화 초안')+'</button>'+
+    (p.logs.length?('<button class="btn btn-ghost" onclick="coHist(\''+p.id+'\')">'+
+      (CO.hist[p.id]?'기록 접기':('지난 기록 '+p.logs.length+'건'))+'</button>'):'')+
+  '</div>';
+  if(CO.hist[p.id]&&p.logs.length){
+    h+='<div class="co-hs">'+p.logs.slice(0,12).map(function(l){
+      var b=[];
+      if(l.strength)b.push('잘하는 것 — '+l.strength);
+      if(l.weak)b.push('막힌 것 — '+l.weak);
+      if(l.todo)b.push('정한 일 — '+l.todo);
+      if(l.recheck_date)b.push('다시 볼 날 — '+coD(l.recheck_date));
+      if(l.note)b.push('메모 — '+l.note);
+      return '<div class="co-h1"><b>'+osEsc(coD(l.coach_date))+'</b>'+
+        b.map(function(x){return '<div>· '+osEsc(x)+'</div>';}).join('')+'</div>';
+    }).join('')+'</div>';
+  }
+  if(ai&&(ai.text||ai.err)){
+    h+='<div class="co-ai">'+
+      (ai.err?('<div class="notice">'+osEsc(ai.err)+'</div>')
+             :('<pre>'+osEsc(ai.text)+'</pre>'+
+               '<div class="btn-row"><button class="btn btn-ghost" onclick="coAiCopy(\''+p.id+'\')">복사</button></div>'))+
+    '</div>';
+  }
+  if(op){
+    h+='<div class="co-f">'+
+      '<label>잘하고 있는 것</label>'+
+      '<textarea rows="2" oninput="coField(\''+p.id+'\',\'strength\',this.value)" '+
+        'placeholder="예: 부재 고객에게 문자를 꼭 남깁니다.">'+osEsc(f.strength||'')+'</textarea>'+
+      '<label>막혀 있는 것</label>'+
+      '<textarea rows="2" oninput="coField(\''+p.id+'\',\'weak\',this.value)" '+
+        'placeholder="예: 첫 통화에서 약속으로 넘어가는 말이 없습니다.">'+osEsc(f.weak||'')+'</textarea>'+
+      '<label>오늘 같이 정한 일</label>'+
+      '<textarea rows="2" oninput="coField(\''+p.id+'\',\'todo\',this.value)" '+
+        'placeholder="예: 내일까지 미접촉 DB 10건에 전화를 겁니다.">'+osEsc(f.todo||'')+'</textarea>'+
+      '<div class="co-row2">'+
+        '<div><label>다시 볼 날</label>'+
+        '<input type="date" value="'+osEsc(f.recheck||coPlus(7))+'" '+
+          'oninput="coField(\''+p.id+'\',\'recheck\',this.value)"></div>'+
+        '<div><label>메모 (선택)</label>'+
+        '<input type="text" value="'+osEsc(f.note||'')+'" '+
+          'oninput="coField(\''+p.id+'\',\'note\',this.value)" placeholder="본인에게는 안 보입니다"></div>'+
+      '</div>'+
+      '<div class="btn-row" style="margin-top:9px">'+
+        '<button class="btn btn-primary" onclick="coSave(\''+p.id+'\')"'+(CO.saving[p.id]?' disabled':'')+'>'+
+          (CO.saving[p.id]?'저장 중…':'기록 저장')+'</button>'+
+        '<button class="btn btn-ghost" onclick="coOpen(\''+p.id+'\')">취소</button>'+
+      '</div>'+
+      '<div class="co-hint">정한 일과 다시 볼 날을 적어 두면, 그날이 되었을 때 이 화면 맨 위로 올라옵니다.</div>'+
+    '</div>';
+  }
+  return h+'</div>';
+}
+function coHist(id){CO.hist[id]=!CO.hist[id];coPaint();}
+
+function coInnerHtml(){
+  if(!CO.loaded)return '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">불러오는 중…</div></div>';
+  if(CO.err)return '<div class="card"><div class="card-body"><div class="notice">'+osEsc(CO.err)+'</div></div></div>';
+  var pick=coPick(),all=coRows(),t=coDay(0);
+  var due=CO.rows.filter(function(p){
+    return p.last&&p.last.recheck_date&&coD(p.last.recheck_date)<=t;}).length;
+  var wk=CO.logs.filter(function(l){return coD(l.coach_date)>=coDay(6);}).length;
+
+  var h='<div class="ct-sum" style="margin-bottom:12px">'+
+    '<div><div class="k">오늘 볼 사람</div><div class="v" style="color:var(--warn)">'+pick.length+'<em>명</em></div></div>'+
+    '<div><div class="k">다시 보기로 한 날</div><div class="v" style="color:'+(due?'var(--neg)':'var(--ink-1)')+'">'+due+'<em>명</em></div></div>'+
+    '<div><div class="k">이번 주 코칭 기록</div><div class="v">'+wk+'<em>건</em></div></div>'+
+  '</div>';
+
+  h+='<div class="btn-row" style="margin-bottom:12px">'+
+    '<button class="btn '+(CO.team===''?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" onclick="coTeam(\'\')">전체</button>'+
+    (CO.teams||[]).map(function(x){
+      return '<button class="btn '+(CO.team===x.name?'btn-primary':'btn-ghost')+'" style="padding:5px 11px;font-size:11px" '+
+        'onclick="coTeam(\''+osEsc(x.name).replace(/'/g,"\\'")+'\')">'+osEsc(x.name)+'</button>';}).join('')+
+    '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="coLoad()">새로고침</button>'+
+    (CO.at?'<span style="font-size:11px;color:var(--ink-5)">'+osEsc(CO.at)+'</span>':'')+
+  '</div>';
+
+  if(CO.noTable){
+    h+='<div class="notice"><b>코칭 기록 표가 아직 서버에 없습니다.</b> 추천과 신호는 지금도 보이지만, '+
+       '기록을 저장하려면 <b>시스템 점검 → 필요한 SQL</b> 에서 <b>팀 코칭</b> SQL 을 실행해야 합니다.'+
+       '<div class="btn-row" style="margin-top:8px">'+
+       '<button class="btn btn-primary" style="padding:5px 11px;font-size:11px" onclick="go(\'health\')">시스템 점검 열기</button>'+
+       '<button class="btn btn-ghost" style="padding:5px 11px;font-size:11px" onclick="hxSqlCopy(\'28\')">팀 코칭 SQL 복사</button>'+
+       '</div></div>';
+  }
+  if(CO.warn.length)h+='<div class="notice">'+osEsc(CO.warn.join(' · '))+
+    ' 은(는) 읽을 권한이 없어 <b>—</b>로 둡니다. <b>migration_26_team.sql</b> 을 실행하면 채워집니다.</div>';
+
+  h+='<div class="co-sec">오늘 볼 사람</div>';
+  h+=pick.length?pick.map(function(p){return coCardHtml(p,true);}).join('')
+    :'<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">'+
+      '최근 2주 기록에서 먼저 볼 사람이 없습니다. 오늘은 평소대로 두어도 됩니다.</div></div>';
+
+  var rest=all.filter(function(p){
+    var inPick=false;pick.forEach(function(x){if(x.id===p.id)inPick=true;});return !inPick;});
+  h+='<div class="co-sec">전체 팀원 '+rest.length+'명'+
+    '<button class="btn btn-ghost" style="padding:3px 10px;font-size:10.5px;margin-left:8px" onclick="coAll()">'+
+    (CO.showAll?'접기':'펼치기')+'</button></div>';
+  if(CO.showAll){
+    h+=rest.length?rest.map(function(p){return coCardHtml(p,false);}).join('')
+      :'<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">다른 팀원이 없습니다.</div></div>';
+  }else{
+    h+='<div class="co-fold">'+rest.map(function(p){
+      var n=coSignals(p).length;
+      return '<span class="co-p'+(n?' on':'')+'">'+osEsc(p.name)+(n?('<i>'+n+'</i>'):'')+'</span>';
+    }).join('')+'</div>';
+  }
+
+  h+='<div class="notice" style="margin-top:14px">이 화면의 신호는 <b>팀원이 직접 남긴 기록</b>(출근·통화·실행 체크판)만으로 만듭니다. '+
+     '계약이나 실적으로 사람을 줄 세우지 않습니다. 코칭 기록은 <b>본인과 기록한 관리자</b>만 봅니다. '+
+     '이 화면은 조직 관리용이며 보험 상품의 권유·설명 자료가 아닙니다. '+
+     '보험 상품 안내는 금융소비자보호법에 따라 상품설명서와 약관을 기준으로 하며, '+
+     '보장 여부는 개별 약관과 보험사 심사 결과에 따릅니다.</div>';
+  return h;
+}
+function coPaint(){var el=document.getElementById('coPane');if(el)el.innerHTML=coInnerHtml();}
+
+function renderBranchCoach(){
+  coCss();
+  if(!OS.profile)return osPage('코칭','팀 코칭',null,osLoginGate('팀 코칭은 지점장 이상 계정으로 로그인해야 합니다.'));
+  if(!coCanUse())return osPage('코칭','팀 코칭',null,
+    '<div class="osrv-warn">이 메뉴는 <b>지점장·본부장</b> 권한에서만 열립니다.</div>');
+  var d=new Date(Date.now()+9*3600*1000),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('코칭','지점장 코칭',
+    ds+' 기준 · 최근 2주 기록에서 오늘 먼저 볼 사람과 무엇을 물을지를 뽑습니다.',
+    '<div id="coPane">'+coInnerHtml()+'</div>');
+}
+function osBranchCoachAfterRender(){if(!coCanUse())return;CO.loaded=false;coPaint();coLoad();}
+
+function coCss(){
+  if(typeof ckCss==='function')ckCss();
+  if(document.getElementById('coStyle'))return;
+  var st=document.createElement('style');st.id='coStyle';
+  st.textContent=
+    '.co-sec{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.06em;text-transform:uppercase;'+
+      'margin:16px 0 8px;display:flex;align-items:center}'+
+    '.co-c{background:#fff;border:1px solid var(--ink-7);border-radius:12px;padding:12px 13px;margin-bottom:8px}'+
+    '.co-c.pick{border-left:3px solid var(--warn)}'+
+    '.co-c.warn{border-left:3px solid var(--ink-6)}'+
+    '.co-c.ok{border-left:3px solid var(--pos)}'+
+    '.co-hd{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap}'+
+    '.co-who{flex:1;min-width:0;display:flex;align-items:center;gap:5px;flex-wrap:wrap}'+
+    '.co-nm{font-size:14px;font-weight:800;letter-spacing:-.03em;color:var(--ink-1)}'+
+    '.co-tag{font-size:10px;font-weight:700;color:var(--ink-5);background:var(--ink-8);border-radius:99px;padding:1px 7px}'+
+    '.co-tag.warn{background:#FEF3C7;color:#92400E}'+
+    '.co-mini{flex:none;display:flex;gap:9px;align-items:baseline}'+
+    '.co-mini b{font-family:var(--mono,ui-monospace,monospace);font-size:13px;font-weight:800;color:var(--ink-1)}'+
+    '.co-mini em{font-style:normal;font-size:9.5px;color:var(--ink-5);font-weight:700;margin-left:-6px}'+
+    '.co-sg{margin-top:10px;display:flex;flex-direction:column;gap:7px}'+
+    '.co-s1{background:var(--ink-9);border-radius:9px;padding:8px 10px}'+
+    '.co-s1 .t{font-size:12.5px;font-weight:700;color:var(--ink-1);line-height:1.5}'+
+    '.co-s1 .a{font-size:11.5px;color:var(--ink-4);line-height:1.55;margin-top:3px}'+
+    '.co-ok{margin-top:9px;font-size:12px;color:var(--ink-4)}'+
+    '.co-btn{margin-top:10px}'+
+    '.co-btn .btn{padding:6px 12px;font-size:11.5px}'+
+    '.co-ai{margin-top:10px;background:var(--ink-9);border-radius:9px;padding:10px 11px}'+
+    '.co-ai pre{white-space:pre-wrap;word-break:break-word;font-family:inherit;font-size:12.5px;'+
+      'line-height:1.65;color:var(--ink-2);margin:0 0 8px}'+
+    '.co-f{margin-top:11px;border-top:1px solid var(--ink-8);padding-top:11px}'+
+    '.co-f label{display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin:8px 0 4px}'+
+    '.co-f textarea,.co-f input{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:8px;'+
+      'padding:8px 10px;font-family:inherit;font-size:12.5px;line-height:1.55;color:var(--ink-1);background:#fff}'+
+    '.co-f textarea:focus,.co-f input:focus{outline:0;border-color:var(--primary)}'+
+    '.co-row2{display:grid;grid-template-columns:1fr;gap:9px}'+
+    '@media(min-width:560px){.co-row2{grid-template-columns:150px 1fr}}'+
+    '.co-hint{font-size:11px;color:var(--ink-5);margin-top:8px;line-height:1.55}'+
+    '.co-fold{display:flex;flex-wrap:wrap;gap:6px}'+
+    '.co-p{font-size:11.5px;font-weight:700;color:var(--ink-4);background:var(--ink-9);'+
+      'border:1px solid var(--ink-7);border-radius:99px;padding:4px 11px}'+
+    '.co-p.on{color:#92400E;background:#FEF3C7;border-color:#FDE68A}'+
+    '.co-p i{font-style:normal;margin-left:5px;font-size:10px;opacity:.75}'+
+    '.co-hs{margin-top:10px;background:var(--ink-9);border-radius:9px;padding:2px 11px}'+
+    '.co-h1{border-bottom:1px solid var(--ink-8);padding:9px 0;font-size:12px;line-height:1.6;color:var(--ink-3)}'+
+    '.co-hs .co-h1:last-child{border-bottom:0}'+
+    '.co-h1 b{display:block;font-size:11px;color:var(--ink-5);margin-bottom:3px}';
+  document.head.appendChild(st);
+}
+
+
 function txCss(){
   if(typeof ckCss==='function')ckCss();
   if(document.getElementById('txStyle'))return;
@@ -10872,6 +11309,74 @@ var HX_SQL={
   "join pg_namespace n on n.oid = c.relnamespace",
   "where n.nspname = 'public' and c.relname in ('dbs','calls')",
   "order by c.relname;"
+ ]},
+ '28':{label:"팀 코칭 기록",need:["coach_logs"],lines:[
+  "set search_path = public;",
+  "",
+  "create table if not exists public.coach_logs(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  member_id uuid not null,",
+  "  coach_id uuid not null,",
+  "  coach_date date not null default current_date,",
+  "  strength text default '',",
+  "  weak text default '',",
+  "  todo text default '',",
+  "  recheck_date date,",
+  "  note text default '',",
+  "  created_at timestamptz default now(),",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "alter table public.coach_logs add column if not exists strength text default '';",
+  "alter table public.coach_logs add column if not exists weak text default '';",
+  "alter table public.coach_logs add column if not exists todo text default '';",
+  "alter table public.coach_logs add column if not exists recheck_date date;",
+  "alter table public.coach_logs add column if not exists note text default '';",
+  "alter table public.coach_logs add column if not exists updated_at timestamptz default now();",
+  "",
+  "create index if not exists coach_logs_member_idx on public.coach_logs(member_id);",
+  "create index if not exists coach_logs_date_idx on public.coach_logs(coach_date desc);",
+  "create index if not exists coach_logs_recheck_idx on public.coach_logs(recheck_date);",
+  "",
+  "alter table public.coach_logs enable row level security;",
+  "",
+  "drop policy if exists coach_logs_read on public.coach_logs;",
+  "create policy coach_logs_read on public.coach_logs",
+  "  for select to authenticated",
+  "  using (",
+  "    member_id = auth.uid()",
+  "    or coach_id = auth.uid()",
+  "    or public.is_leader()",
+  "    or public.is_admin()",
+  "    or public.is_owner()",
+  "  );",
+  "",
+  "drop policy if exists coach_logs_insert on public.coach_logs;",
+  "create policy coach_logs_insert on public.coach_logs",
+  "  for insert to authenticated",
+  "  with check (coach_id = auth.uid());",
+  "",
+  "drop policy if exists coach_logs_update on public.coach_logs;",
+  "create policy coach_logs_update on public.coach_logs",
+  "  for update to authenticated",
+  "  using (coach_id = auth.uid() or public.is_admin() or public.is_owner())",
+  "  with check (coach_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists coach_logs_delete on public.coach_logs;",
+  "create policy coach_logs_delete on public.coach_logs",
+  "  for delete to authenticated",
+  "  using (coach_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.coach_logs to authenticated;",
+  "grant insert, update, delete on public.coach_logs to authenticated;",
+  "",
+  "notify pgrst, 'reload schema';",
+  "",
+  "select",
+  "  to_regclass('public.coach_logs') is not null as 코칭기록표,",
+  "  (select count(*) from public.coach_logs)     as 기록수,",
+  "  (select count(*) from pg_policies",
+  "    where schemaname = 'public' and tablename = 'coach_logs') as 정책수;"
  ]}
 };
 
@@ -10902,7 +11407,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['24','25','26','27'],h='';
+  var ks=['24','25','26','27','28'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다.</div></div><div class="card-body">'+
@@ -11041,7 +11546,7 @@ function hxServer(cb){
   if(!sb){cb([]);return;}
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   var T=['daily_checks','suggestions','health_checks','org_members','profiles','clients',
-         'saved_reports','attendance','teams','team_members','app_config','dbs','calls'];
+         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs'];
   Promise.all(T.map(function(t){return q(sb.from(t).select('*').limit(1));})).then(function(res){
     var R=[],miss=[],deny=[],i;
     for(i=0;i<T.length;i++){
@@ -11056,6 +11561,7 @@ function hxServer(cb){
       if(miss.indexOf('daily_checks')>=0)needKey='24';
       else if(miss.indexOf('health_checks')>=0||miss.indexOf('suggestions')>=0)needKey='25';
       else if(miss.indexOf('org_members')>=0)needKey='26';
+      else if(miss.indexOf('coach_logs')>=0)needKey='28';
     }
     hxAdd(R,'서버','필요한 표',miss.length?'bad':'ok',
       miss.length?('없는 표: '+miss.join(', ')):(T.length+'개 모두 있습니다'),
