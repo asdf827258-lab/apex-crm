@@ -962,11 +962,40 @@ var LS={
   del:function(k){try{localStorage.removeItem('apex_studio_'+k);}catch(e){}}
 };
 function toast(msg,ms){var t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
-function copyText(t){
+/* 복사는 생각보다 자주 실패한다. 특히 태블릿에서, 그리고 새 창이 떠서
+   이 화면이 초점을 잃었을 때. 전에는 실패해도 '복사되었습니다' 라고
+   말해서, 붙여넣으면 엉뚱한 옛날 내용이 나왔다. 이제는 확인하고 말한다. */
+function copyText(t,onFail){
   function done(){toast('복사되었습니다');}
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done).catch(function(){fb();});}
-  else fb();
-  function fb(){try{var ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);done();}catch(e){toast('복사 실패 — 길게 눌러 직접 복사하세요');}}
+  function fail(){
+    if(typeof onFail==='function'){onFail(t);return;}
+    toast('복사가 안 됐습니다 — 화면을 한 번 누른 뒤 다시 시도하세요.',7000);
+  }
+  function fb(){
+    var ta=null;
+    try{
+      ta=document.createElement('textarea');
+      ta.value=t;ta.setAttribute('readonly','');
+      ta.style.position='fixed';ta.style.left='0';ta.style.top='0';
+      ta.style.width='1px';ta.style.height='1px';ta.style.padding='0';
+      ta.style.border='none';ta.style.outline='none';ta.style.boxShadow='none';
+      ta.style.background='transparent';ta.style.opacity='0.01';
+      document.body.appendChild(ta);
+      ta.focus();ta.select();
+      try{ta.setSelectionRange(0,(''+t).length);}catch(e){}
+      var ok=false;
+      try{ok=document.execCommand('copy');}catch(e){ok=false;}
+      document.body.removeChild(ta);ta=null;
+      if(ok)done();else fail();
+    }catch(e){
+      if(ta&&ta.parentNode)try{ta.parentNode.removeChild(ta);}catch(e2){}
+      fail();
+    }
+  }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    try{navigator.clipboard.writeText(t).then(done,function(){fb();});return;}catch(e){}
+  }
+  fb();
 }
 function toggleNav(){$('sidebar').classList.toggle('open');$('scrim').classList.toggle('on');}
 
@@ -12691,7 +12720,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
 var SETUP_VER=29;
-var SETUP={busy:false,opened:false,hide:false};
+var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
   var v=parseInt((typeof osCfgGet==='function')?osCfgGet('schema_version','0'):'0',10);
@@ -12709,15 +12738,36 @@ function setupCanRun(){
 function setupShow(){return setupCanRun()&&!setupDone()&&!SETUP.hide;}
 
 /* 한 번의 클릭 안에서 창을 열고 복사한다 — 순서가 바뀌면 팝업이 막힌다 */
+/* 순서가 중요하다. 새 창을 먼저 열면 이 화면이 초점을 잃어 브라우저가
+   복사를 거부한다 — 그래서 '될 때도 있고 안 될 때도' 있었다.
+   복사를 먼저 걸고, 그 다음에 창을 연다. */
 function setupGo(){
   var m=HX_SQL['00'];
   if(!m){toast('SQL 을 찾지 못했습니다.');return;}
+  var txt=m.lines.join('\n'),failed=false;
+  if(typeof copyText==='function')copyText(txt,function(){failed=true;setupManual(true);});
   var w=null;
   try{w=window.open(SUPA_SQL_URL,'_blank','noopener');}catch(e){}
-  if(typeof copyText==='function')copyText(m.lines.join('\n'));
   SETUP.opened=true;setupPaint();
-  if(w)toast('SQL 을 복사했습니다. 새로 열린 창에 붙여넣기 하고 RUN 을 누르세요.',9000);
-  else toast('새 창이 막혔습니다. SQL 은 복사됐으니 아래 주소를 눌러 여세요.',9000);
+  if(!w){
+    SETUP.blocked=true;setupPaint();
+    toast('새 창이 막혔습니다. 아래 주소를 눌러 직접 여세요.',9000);
+  }
+}
+/* 복사가 끝내 안 되면 글을 그대로 펼쳐 준다 — 길게 눌러 직접 복사하면 된다 */
+function setupManual(on){
+  SETUP.manual=(on!==false);
+  setupPaint();
+  if(SETUP.manual)setTimeout(function(){
+    var t=document.getElementById('stpTa');
+    if(!t)return;
+    t.scrollIntoView({block:'center'});
+    try{t.focus();t.select();t.setSelectionRange(0,t.value.length);}catch(e){}
+  },60);
+}
+function setupCopyOnly(){
+  var m=HX_SQL['00'];if(!m)return;
+  copyText(m.lines.join('\n'),function(){setupManual(true);});
 }
 function setupCheck(){
   if(SETUP.busy)return;
@@ -12760,9 +12810,19 @@ function setupBarHtml(){
         (step?'다시 복사하고 열기':'📋 복사하고 Supabase 열기')+'</button>'+
       '<button class="btn '+(step?'btn-primary':'btn-ghost')+'" onclick="setupCheck()"'+(SETUP.busy?' disabled':'')+'>'+
         (SETUP.busy?'확인 중…':'✅ 다 됐는지 확인')+'</button>'+
+      '<button class="btn btn-ghost" onclick="setupCopyOnly()">복사만</button>'+
       '<button class="btn btn-ghost" onclick="setupUrl()">주소만 복사</button>'+
+      '<button class="btn btn-ghost" onclick="setupManual('+(SETUP.manual?'false':'true')+')">'+
+        (SETUP.manual?'글 접기':'글로 보기')+'</button>'+
       '<button class="btn btn-ghost" onclick="setupLater()">나중에</button>'+
-    '</div></div>';
+    '</div>'+
+    (SETUP.blocked?('<div class="stp-w" style="margin-top:10px">새 창이 막혀 있습니다. '+
+      '<b>'+osEsc(SUPA_SQL_URL)+'</b> 를 주소창에 붙여넣어 여세요.</div>'):'')+
+    (SETUP.manual?('<div class="stp-m">'+
+      '<div class="stp-mt">복사가 안 되면 — 아래 칸을 <b>길게 눌러 전체 선택</b>한 뒤 복사하세요. 이미 전체가 선택되어 있습니다.</div>'+
+      '<textarea id="stpTa" class="stp-ta" readonly onclick="this.select()">'+
+        osEsc(HX_SQL['00']?HX_SQL['00'].lines.join('\n'):'')+'</textarea></div>'):'')+
+    '</div>';
 }
 function setupPaint(){
   var a=document.getElementById('osSetupHome');if(a)a.innerHTML=setupBarHtml();
@@ -12783,7 +12843,12 @@ function setupCss(){
     '.stp-b{margin-top:11px}'+
     '.stp-b .btn{padding:8px 14px;font-size:12.5px}'+
     '.stp-b .btn-ghost{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3);color:#fff}'+
-    '.stp-b .btn-ghost:hover{background:rgba(255,255,255,.22)}';
+    '.stp-b .btn-ghost:hover{background:rgba(255,255,255,.22)}'+
+    '.stp-m{margin-top:11px}'+
+    '.stp-mt{font-size:11.5px;line-height:1.6;margin-bottom:7px;opacity:.95}'+
+    '.stp-ta{width:100%;box-sizing:border-box;height:170px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'+
+      'font-size:11px;line-height:1.5;padding:10px;border-radius:9px;border:1px solid rgba(255,255,255,.3);'+
+      'background:rgba(0,0,0,.35);color:#E2E8F0;resize:vertical}';
   document.head.appendChild(st);
 }
 
