@@ -3473,25 +3473,15 @@ function osTossReturnCheck(){
   /* orderId(APEX-<plan>-<Y|M>-<ts>)에서 구매 플랜·주기 파싱 → 서버가 자동 활성화에 사용 */
   var plan='',cycle='month',mm=(orderId||'').match(/^APEX-([A-Za-z]+)-([YM])-/);
   if(mm){plan=mm[1].toLowerCase();cycle=(mm[2].toUpperCase()==='Y')?'year':'month';}
-  /* 성향검사 48 정밀 리포트는 구독이 아니라 1건 결제다(MBTI-…). 등급은 건드리지 않고
-     그 검사 한 건만 열어 준다 — 서버가 mbti_tests.paid 를 켠다. */
-  var isMbti=(orderId||'').indexOf('MBTI-')===0;
-  var mbtiPend=(isMbti&&typeof mbtiPendGet==='function')?mbtiPendGet():null;
-  if(isMbti){plan='';cycle='';}
   function doConfirm(uid){
     if(!(confirmUrl&&paymentKey&&orderId&&amount)){
       toast('결제창 인증은 완료됐지만, 최종 승인(서버 확인)이 아직 연결되지 않았습니다. 설정 → 토스 결제에서 확인 함수를 연결하면 자동 활성화됩니다.');
       return;
     }
-    toast(isMbti?'결제를 확인하고 리포트를 여는 중…':'결제를 확인하고 구독을 활성화하는 중…');
-    fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount),userId:uid,plan:plan,cycle:cycle,product:(isMbti?'mbti':''),resultId:((mbtiPend&&mbtiPend.resultId)||'')})})
+    toast('결제를 확인하고 구독을 활성화하는 중…');
+    fetch(confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({paymentKey:paymentKey,orderId:orderId,amount:Number(amount),userId:uid,plan:plan,cycle:cycle})})
       .then(function(r){return r.text().then(function(tx){var j={};try{j=JSON.parse(tx);}catch(e){}return {ok:r.ok,j:j};});})
       .then(function(res){
-        if(isMbti){
-          if(typeof mbtiPayApplied==='function')mbtiPayApplied(res.ok,(res.j&&(res.j.message||res.j.__mbtiError))||'');
-          else toast(res.ok?'✅ 결제가 완료되었습니다.':'결제 승인 확인 실패');
-          return;
-        }
         if(res.ok){
           var act=res.j&&res.j.__activated;
           toast(act===false?'✅ 결제 완료 · 활성화는 잠시 후 반영됩니다(운영자 확인).':'✅ 결제 완료 · 구독이 바로 활성화되었습니다.');
@@ -23678,9 +23668,6 @@ function renderBizNews(){
    결과는 글이 아니라 표로 나온다. 표 1 이 4지표 요약이고,
    정밀 리포트(표 2~6)는 결제하면 열린다.                                  */
 
-var MBTI_PRICE = 9900;                 /* 정밀 리포트 1건 */
-var MBTI_PROD  = '성향검사 48 정밀 리포트';
-
 var MBTI_SCALE = [
   { v: 3,  t: '매우 그렇다',  s: '매우' },
   { v: 2,  t: '그렇다',       s: '그렇다' },
@@ -23965,21 +23952,6 @@ function mbtiLocalPut(row) {
   var all = mbtiLocalAll().filter(function (r) { return r.id !== row.id; });
   all.unshift(row); try { localStorage.setItem('apex_mbti_rows', JSON.stringify(all.slice(0, 60))); } catch (e) {}
 }
-function mbtiLocalPaid(id, on) {
-  var all = mbtiLocalAll(), hit = false;
-  all.forEach(function (r) { if (r.id === id) { r.paid = !!on; r.paid_at = new Date().toISOString(); hit = true; } });
-  if (hit) { try { localStorage.setItem('apex_mbti_rows', JSON.stringify(all)); } catch (e) {} }
-  try {
-    var m = JSON.parse(localStorage.getItem('apex_mbti_paid') || '{}');
-    if (on) m[id] = 1; else delete m[id];
-    localStorage.setItem('apex_mbti_paid', JSON.stringify(m));
-  } catch (e) {}
-}
-function mbtiIsPaid(r) {
-  if (!r) return false;
-  if (r.paid) return true;
-  try { var m = JSON.parse(localStorage.getItem('apex_mbti_paid') || '{}'); return !!m[r.id]; } catch (e) { return false; }
-}
 
 /* ── 채점 ─────────────────────────────────────────────────────────── */
 function mbtiClarity(r) {
@@ -24033,7 +24005,7 @@ function mbtiConsLabel(n) {
 function renderMbti() {
   if (MB.step === 'test') return osPage('성향검사 48', '🧬 성향검사 48 — 검사 중', '48문항. 중간에 나가도 답한 데까지 저장됩니다.', mbtiTestHtml());
   if (MB.step === 'result' && MB.result) return osPage('성향검사 48', '🧬 검사 결과 · ' + MB.result.code, mbtiResSub(), mbtiResultHtml(MB.result));
-  return osPage('성향검사 48', '🧬 성향검사 48', '4지표를 각 12문항으로 봅니다. 절반은 뒤집어 물어 대충 답하면 일관성 점수에 드러납니다. 결과는 표로 나오고, 정밀 리포트는 결제 후 열립니다.', mbtiIntroHtml());
+  return osPage('성향검사 48', '🧬 성향검사 48', '4지표를 각 12문항으로 봅니다. 절반은 뒤집어 물어 대충 답하면 일관성 점수에 드러납니다. 결과는 표 여섯 개로 나옵니다.', mbtiIntroHtml());
 }
 function mbtiResSub() {
   var r = MB.result, ty = MBTI_TYPES[r.code];
@@ -24063,7 +24035,7 @@ function mbtiIntroHtml() {
       '<div class="fld" style="margin-top:10px"><label style="font-size:11.5px;font-weight:700">메모 (선택)</label>' +
       '<input type="text" id="mbMemo" value="' + osEsc(MB.subject.memo || '') + '" placeholder="예: 3월 상담 · 소개 고객" style="width:100%"/></div>' +
       '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="mbtiStart()">검사 시작 (48문항)</button>' +
-      '<button class="btn btn-ghost" onclick="mbtiShareLink()">🔗 고객에게 링크 보내기</button>' +
+      '<button class="btn btn-ghost" onclick="mbtiShareLink()">🔗 상담카드 링크 복사</button>' +
       '<span style="font-size:10.5px;color:var(--ink-5)">개인 성향 자료입니다. 고객 검사는 본인 동의를 받고 진행하세요.</span></div>' +
     '</div></div>';
   return '<div style="max-width:900px">' + resume +
@@ -24077,12 +24049,20 @@ function mbtiIntroHtml() {
     form + mbtiPriceCard() + '<div id="mbtiListHost">' + mbtiListHtml() + '</div></div>';
 }
 function mbtiPriceCard() {
-  return '<div class="card" style="margin-top:14px;border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">💳</span>결과는 어디까지 무료인가</div>' +
-    '<div class="card-desc">검사와 <b>표 1(4지표 요약)</b>·유형·일관성까지는 무료입니다. 상담에 바로 쓰는 정밀 리포트는 건당 결제입니다.</div></div>' +
-    '<div class="card-body"><div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:78px">구분</th><th>들어 있는 것</th><th style="width:92px">가격</th></tr></thead><tbody>' +
-    '<tr><td><b>무료</b></td><td>48문항 검사 · 표 1 4지표 요약 · 유형 코드와 한 줄 설명 · 응답 일관성</td><td>0원</td></tr>' +
-    '<tr><td><b>정밀</b></td><td>표 2 지표 상세 · 표 3 강점과 조심할 점 · 표 4 상담 5단계 진행표 · 표 5 문항별 응답 48행 · 표 6 유형 궁합 · 인쇄/PDF</td><td><b>' + apexWon(MBTI_PRICE) + '</b></td></tr>' +
-    '</tbody></table></div></div></div>';
+  return '<div class="card" style="margin-top:14px;border-color:#DDD6FE"><div class="card-hd"><div class="card-title"><span class="ci">📋</span>결과로 나오는 것</div>' +
+    '<div class="card-desc">검사가 끝나면 아래 여섯 개 표가 한 번에 나옵니다. 인쇄하면 그대로 상담 자료가 됩니다.</div></div>' +
+    '<div class="card-body"><div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:64px">표</th><th>들어 있는 것</th></tr></thead><tbody>' +
+    [['표 1','4지표 요약 — 점수 · 성향 · 분명도 · 상담할 때'],
+     ['표 2','지표 상세 — 12문항이 어느 쪽으로 쌓였는지, 일관성 8쌍'],
+     ['표 3','강점과 조심할 점'],
+     ['표 4','상담 진행표 — 첫 만남 · 자료 · 속도 · 마무리 · 반론'],
+     ['표 5','문항별 응답 48행'],
+     ['표 6','유형 궁합']].map(function (r) {
+      return '<tr><td><b>' + r[0] + '</b></td><td>' + r[1] + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-top:10px">생년월일·태어난 시간까지 넣어 <b>사주와 함께</b> 보고 <b>나와의 궁합·상담 전략</b>까지 뽑으려면 <b>사주 × MBTI 상담카드</b>를 여세요.</div>' +
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="mbtiOpenSaju()">🔮 사주 × MBTI 상담카드 열기</button></div>' +
+    '</div></div>';
 }
 function mbtiListHtml() {
   var rows = MB.list || [];
@@ -24090,34 +24070,33 @@ function mbtiListHtml() {
   if (!rows.length) {
     body = '<div style="font-size:12.5px;color:var(--ink-5);padding:14px 2px">아직 검사 기록이 없습니다.' + (MB.listErr ? ' (' + osEsc(MB.listErr) + ')' : '') + '</div>';
   } else {
-    body = '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:96px">날짜</th><th>이름</th><th style="width:64px">유형</th><th style="width:70px">일관성</th><th style="width:82px">리포트</th><th style="width:132px"></th></tr></thead><tbody>' +
+    body = '<div class="mb-scroll"><table class="mb-tb"><thead><tr><th style="width:96px">날짜</th><th>이름</th><th style="width:64px">유형</th><th style="width:70px">일관성</th><th style="width:132px"></th></tr></thead><tbody>' +
       rows.map(function (r) {
-        var paid = mbtiIsPaid(r);
         return '<tr><td>' + osEsc((r.created_at || '').slice(0, 10)) + '</td>' +
           '<td>' + osEsc(r.subject_name || '이름 없음') + '<span style="color:#94A3B8"> · ' + osEsc(mbtiKindLabel(r.subject_kind)) + '</span></td>' +
           '<td><b>' + osEsc(r.type_code || '-') + '</b></td>' +
           '<td>' + (r.consistency || 0) + '%</td>' +
-          '<td>' + (paid ? '<span style="color:#059669;font-weight:800">열림</span>' : '<span style="color:#B45309;font-weight:800">잠김</span>') + '</td>' +
           '<td><button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px" onclick="mbtiOpenSaved(\'' + r.id + '\')">열기</button>' +
-          (!paid && typeof osIsAppAdmin === 'function' && osIsAppAdmin()
-            ? '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px;color:#0F766E" onclick="mbtiUnlockByAdmin(\'' + r.id + '\')">입금확인·열기</button>' : '') +
           '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11.5px;color:#DC2626" onclick="mbtiDelete(\'' + r.id + '\')">삭제</button></td></tr>';
       }).join('') + '</tbody></table></div>';
   }
   return '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>지난 검사</div>' +
-    '<div class="card-desc">검사한 결과는 저장됩니다. 결제한 리포트는 언제든 다시 열립니다.</div></div>' +
+    '<div class="card-desc">검사한 결과는 저장됩니다. 언제든 다시 열립니다.</div></div>' +
     '<div class="card-body">' + body + (MB.noTable ? '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;margin-top:10px;line-height:1.6">서버에 저장 칸(mbti_tests)이 아직 없습니다. <b>migration_33_mbti.sql</b> 을 실행하기 전까지는 이 기기에만 저장됩니다.</div>' : '') + '</div></div>';
 }
-/* 고객 휴대폰에서 열어 검사하는 페이지(app/mbti48.html) 주소를 만들어 복사한다.
-   설계사 이름·연락처를 붙여 보내면 그 화면 맨 위에 같이 나온다. */
-function mbtiShareLink() {
-  var base = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'mbti48.html';
+/* 사주 × MBTI 상담카드(app/saju-mbti.html) 주소를 만든다.
+   생년월일·태어난 시간까지 받아 사주와 궁합·상담 전략을 뽑는 화면이다. */
+function mbtiOpenSaju() { mbtiShareLink(true); }
+function mbtiShareLink(openOnly) {
+  var base = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'saju-mbti.html';
   var nm = (OS.profile && OS.profile.name) || '';
   var q = [];
   if (nm) q.push('agent=' + encodeURIComponent(nm));
   var url = base + (q.length ? ('?' + q.join('&')) : '');
-  if (typeof copyText === 'function') copyText(url); else { try { navigator.clipboard.writeText(url); } catch (e) {} }
-  toast('검사 링크를 복사했습니다. 카톡·문자로 보내면 고객이 바로 검사합니다.');
+  if (!openOnly) {
+    if (typeof copyText === 'function') copyText(url); else { try { navigator.clipboard.writeText(url); } catch (e) {} }
+    toast('상담카드 링크를 복사했습니다.');
+  }
   try { window.open(url, '_blank', 'noopener'); } catch (e) {}
 }
 function mbtiKindLabel(k) { return ({ client: '고객', member: '팀원', self: '본인' })[k] || '고객'; }
@@ -24312,35 +24291,14 @@ function mbtiTable6(r) {
     '<tr><td><b>부딪히기 쉬움</b></td><td>' + cell(ty.rub) + '</td><td>속도와 관심사가 다릅니다. 말의 순서를 상대 방식으로 바꿔야 대화가 됩니다.</td></tr>' +
     '</tbody></table></div>';
 }
-function mbtiLockHtml(r) {
-  var items = ['표 2 지표 상세 — 12문항이 어느 쪽으로 쌓였는지, 일관성 8쌍 전부',
-               '표 3 강점과 조심할 점',
-               '표 4 상담 진행표 — 첫 만남·자료·속도·마무리·반론 5단계',
-               '표 5 문항별 응답 48행',
-               '표 6 유형 궁합 — 잘 맞는 유형·부딪히는 유형',
-               '인쇄 · PDF 저장 (상담 자료로 그대로 사용)'];
-  return '<div class="mb-lock">' +
-    '<div style="font-size:30px">🔒</div>' +
-    '<div style="font-size:16px;font-weight:900;color:#0F172A;margin-top:6px">정밀 리포트는 여기서부터입니다</div>' +
-    '<div style="font-size:12.5px;color:#475569;line-height:1.75;margin-top:8px">표 1까지는 무료입니다. 아래 다섯 개 표와 인쇄본은 건당 결제 후 열립니다. 한 번 결제하면 이 검사는 언제든 다시 열립니다.</div>' +
-    '<ul style="text-align:left;max-width:520px;margin:14px auto 0;padding-left:18px;font-size:12.5px;color:#334155">' +
-    items.map(function (x) { return '<li style="margin:5px 0;line-height:1.6">' + osEsc(x) + '</li>'; }).join('') + '</ul>' +
-    '<div style="font-size:26px;font-weight:900;color:#4338CA;margin-top:16px">' + apexWon(MBTI_PRICE) + '</div>' +
-    '<div style="font-size:11px;color:#94A3B8;margin-top:2px">1건 · 부가세 포함 · 카드 / 계좌이체 / 네이버 / 카카오</div>' +
-    '<button class="btn btn-primary" style="margin-top:14px;padding:13px 26px;font-size:14px;background:#4338CA" onclick="mbtiPayOpen()">결제하고 정밀 리포트 열기</button>' +
-    '<div style="font-size:11px;color:#94A3B8;margin-top:10px;line-height:1.6">계좌이체·간편결제는 운영자 확인 후 열립니다. 카드 결제는 승인 즉시 열립니다.</div>' +
-  '</div>';
-}
 function mbtiResultHtml(r) {
-  var paid = mbtiIsPaid(r);
   var head = mbtiHeadHtml(r);
   var free = mbtiTable1(r);
-  var rest = paid ? (mbtiTable2(r) + mbtiTable3(r) + mbtiTable4(r) + mbtiTable5(r) + mbtiTable6(r) +
-      '<div style="font-size:11px;color:#94A3B8;line-height:1.7;margin-top:16px">이 리포트는 성향을 이해하기 위한 참고 자료입니다. 채용·평가·심사의 기준으로 쓰지 마세요. 고객 검사는 본인 동의를 받아 진행하고, 결과는 상담 목적 외로 사용하지 않습니다.</div>')
-    : mbtiLockHtml(r);
+  var rest = mbtiTable2(r) + mbtiTable3(r) + mbtiTable4(r) + mbtiTable5(r) + mbtiTable6(r) +
+      '<div style="font-size:11px;color:#94A3B8;line-height:1.7;margin-top:16px">이 리포트는 성향을 이해하기 위한 참고 자료입니다. 채용·평가·심사의 기준으로 쓰지 마세요. 고객 검사는 본인 동의를 받아 진행하고, 결과는 상담 목적 외로 사용하지 않습니다.</div>';
   var acts = '<div class="btn-row" style="margin-top:16px">' +
     '<button class="btn btn-ghost" onclick="mbtiBackToIntro()">← 검사 목록</button>' +
-    (paid ? '<button class="btn btn-ghost" onclick="mbtiPrint()">🖨 인쇄 · PDF</button>' : '') +
+    '<button class="btn btn-ghost" onclick="mbtiPrint()">🖨 인쇄 · PDF</button>' +
     '<button class="btn btn-ghost" onclick="mbtiRetake()">다시 검사</button></div>';
   return '<div style="max-width:900px"><div id="mbtiReport">' + head + free + rest + '</div>' + acts + '</div>';
 }
@@ -24417,130 +24375,6 @@ function mbtiDelete(id) {
   toast('지웠습니다.'); mbtiListRefresh();
 }
 
-/* ── 결제 ─────────────────────────────────────────────────────────── */
-function mbtiPendSet(o) { try { localStorage.setItem('apex_mbti_pending', JSON.stringify(o)); } catch (e) {} }
-function mbtiPendGet() { try { return JSON.parse(localStorage.getItem('apex_mbti_pending') || 'null'); } catch (e) { return null; } }
-function mbtiPendClear() { try { localStorage.removeItem('apex_mbti_pending'); } catch (e) {} }
-function mbtiPayOpen() {
-  if (!MB.result) { toast('먼저 검사를 마쳐 주세요.'); return; }
-  if (typeof osPayModalClose === 'function') osPayModalClose();
-  var body = '<div style="font-size:11.5px;color:#64748B">1건 결제 · 부가세 포함</div>' +
-    '<div style="font-size:18px;font-weight:900;color:#0F172A;margin:2px 0">' + osEsc(MBTI_PROD) + '</div>' +
-    '<div style="font-size:12px;color:#64748B;margin-bottom:6px">' + osEsc((MB.result.subject && MB.result.subject.name) || '') + ' 님 · ' + osEsc(MB.result.code) + '</div>' +
-    '<div style="font-size:22px;font-weight:900;color:#4338CA;margin-bottom:14px">' + apexWon(MBTI_PRICE) + '</div>' +
-    '<div style="font-size:11px;font-weight:800;color:#334155;margin:0 0 9px">결제수단 선택</div>' +
-    osPayMethodCard('💳', '카드 결제', '토스페이먼츠 · 승인 즉시 리포트가 열립니다', 'mbtiPayCard()', '#1A56DB') +
-    osPayMethodCard('🏦', '계좌이체 · 무통장입금', '운영 계좌로 이체 후 확인 요청', 'mbtiPayBank()', '#0EA5A5') +
-    osPayMethodCard('Ⓝ', '네이버페이', '네이버페이로 결제 후 확인 요청', 'mbtiPaySimple(\'naver\')', '#03C75A') +
-    osPayMethodCard('🟡', '카카오페이 · 카카오뱅크', '카카오로 송금 후 확인 요청', 'mbtiPaySimple(\'kakao\')', '#FEE500') +
-    '<div style="font-size:10.5px;color:#94A3B8;line-height:1.6;margin-top:8px">결제 전 표 1과 유형까지는 계속 무료로 보실 수 있습니다. 환불은 <b>약관·개인정보 → 환불·청약철회</b> 기준을 따릅니다.</div>';
-  osPayShell('정밀 리포트 결제', body);
-}
-function mbtiPayCard() {
-  if (!MB.result) return;
-  var ck = (typeof getTossKey === 'function') ? getTossKey() : '';
-  if (!ck) {
-    toast('카드 결제가 아직 연결되지 않았습니다. 계좌이체를 이용하거나 운영자에게 문의해 주세요.');
-    if (typeof osIsAppAdmin === 'function' && osIsAppAdmin()) { osPayModalClose(); go('settings'); }
-    return;
-  }
-  var orderId = 'MBTI-' + MB.result.code + '-' + Date.now();
-  mbtiPendSet({ orderId: orderId, resultId: MB.result.id, amount: MBTI_PRICE });
-  osPayModalClose();
-  osLoadToss(function (ok) {
-    if (!ok || typeof TossPayments === 'undefined') { toast('결제 모듈을 불러오지 못했습니다. 네트워크 확인 후 다시 시도하세요.'); return; }
-    try {
-      var tp = TossPayments(ck);
-      tp.requestPayment('카드', {
-        amount: MBTI_PRICE, orderId: orderId, orderName: MBTI_PROD,
-        successUrl: location.origin + location.pathname + '?toss=success',
-        failUrl: location.origin + location.pathname + '?toss=fail',
-        customerName: (OS.profile && OS.profile.name) || ''
-      });
-    } catch (e) { toast('결제창 호출 오류: ' + ((e && e.message) || '')); }
-  });
-}
-function mbtiPayBank() {
-  if (typeof osPayModalClose === 'function') osPayModalClose();
-  var c = (typeof payCfg === 'function') ? payCfg() : { account: '' };
-  var nm = (OS.profile && OS.profile.name) || '';
-  var inner;
-  if (!c.account) {
-    inner = '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">아직 <b>입금 계좌</b>가 등록되지 않았습니다.' +
-      ((typeof osIsAppAdmin === 'function' && osIsAppAdmin()) ? ' 관리자 <b>설정 → 결제수단 설정</b>에서 계좌를 등록해 주세요.' : ' 운영자에게 계좌이체 안내를 요청해 주세요.') + '</div>' +
-      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="mbtiPayOpen()">← 결제수단</button></div>';
-  } else {
-    inner = '<div style="font-size:11.5px;color:#64748B">' + osEsc(MBTI_PROD) + '</div>' +
-      '<div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:13px;padding:15px;margin:10px 0 12px">' +
-        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11.5px;color:#0F766E;font-weight:700">입금 계좌</span>' +
-        '<button type="button" onclick="osPayCopy(\'' + encodeURIComponent(c.bank + ' ' + c.account) + '\')" style="border:1px solid #99F6E4;background:#fff;color:#0F766E;font-size:11px;font-weight:800;border-radius:8px;padding:4px 10px;cursor:pointer">📋 복사</button></div>' +
-        '<div style="font-size:16px;font-weight:900;color:#0F172A">' + osEsc(c.bank) + ' ' + osEsc(c.account) + (c.holder ? ' (' + osEsc(c.holder) + ')' : '') + '</div>' +
-        '<div style="border-top:1px dashed #99F6E4;margin:11px 0;height:1px"></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px"><span style="color:#64748B">입금 금액</span><b style="color:#0F172A">' + apexWon(MBTI_PRICE) + '</b></div>' +
-        '<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#64748B">입금자명</span><b style="color:#0F172A">' + osEsc(nm || '검사받은 분 성함') + '</b></div>' +
-      '</div>' +
-      '<button class="btn btn-primary" style="width:100%;padding:13px;font-size:14px;background:#0EA5A5" onclick="mbtiPayReq(\'bank\')">이체 완료 · 확인 요청</button>' +
-      '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="mbtiPayOpen()">← 다른 결제수단</button>';
-  }
-  osPayShell('계좌이체 · 무통장입금', inner);
-}
-function mbtiPaySimple(kind) {
-  if (typeof osPayModalClose === 'function') osPayModalClose();
-  var c = (typeof payCfg === 'function') ? payCfg() : {};
-  var url = (kind === 'naver') ? c.naver : c.kakao;
-  var label = (kind === 'naver') ? '네이버페이' : '카카오페이/카카오뱅크';
-  if (!url) {
-    osPayShell(label, '<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px;font-size:12.5px;color:#92400E;line-height:1.7">' +
-      osEsc(label) + ' 결제 링크가 아직 연결되지 않았습니다. 지금은 <b>카드</b> 또는 <b>계좌이체</b>로 결제해 주세요.</div>' +
-      '<div class="btn-row" style="margin-top:12px"><button class="btn btn-ghost" onclick="mbtiPayOpen()">← 결제수단</button></div>');
-    return;
-  }
-  try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; }
-  osPayShell(label, '<div style="font-size:12.5px;color:#334155;line-height:1.8;margin-bottom:12px">' + osEsc(label) + ' 결제를 마치셨으면 아래 버튼으로 확인을 요청해 주세요. 운영자 확인 후 리포트가 열립니다.</div>' +
-    '<a class="btn btn-ghost" style="width:100%;box-sizing:border-box;text-align:center;display:block;margin-bottom:8px" href="' + osEsc(url) + '" target="_blank" rel="noopener">↗ ' + osEsc(label) + ' 다시 열기</a>' +
-    '<button class="btn btn-primary" style="width:100%;padding:13px" onclick="mbtiPayReq(\'' + kind + '\')">결제 완료 · 확인 요청</button>' +
-    '<button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="mbtiPayOpen()">← 다른 결제수단</button>');
-}
-function mbtiPayReq(method) {
-  if (!MB.result) return;
-  var rec = { name: (OS.profile && OS.profile.name) || '', plan: 'mbti48', amount: MBTI_PRICE,
-    cycle: 'once', method: method, status: 'pending' };
-  try { if (OS.profile && OS.profile.id) rec.user_id = OS.profile.id; } catch (e) {}
-  var done = function () {
-    if (typeof osAudit === 'function') { try { osAudit('pay_request', 'mbti48', MB.result.id, { method: method, amount: MBTI_PRICE }); } catch (e) {} }
-    if (typeof osPayModalClose === 'function') osPayModalClose();
-    osPayShell('요청 접수 완료', '<div style="text-align:center;padding:6px 4px 2px"><div style="font-size:40px">✅</div>' +
-      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin-top:8px">확인 요청이 접수되었습니다</div>' +
-      '<div style="font-size:12.5px;color:#64748B;line-height:1.7;margin-top:8px">운영자가 입금을 확인하면 <b>' + osEsc(MBTI_PROD) + '</b>가 열립니다. 검사 결과는 <b>지난 검사</b> 목록에 저장되어 있습니다.</div>' +
-      '<button class="btn btn-primary" style="width:100%;margin-top:16px" onclick="osPayModalClose()">확인</button></div>');
-  };
-  var sb = (typeof osClient === 'function') ? osClient() : null;
-  if (sb) { try { sb.from('payment_requests').insert(rec).then(done, done); } catch (e) { done(); } }
-  else done();
-}
-/* 카드 승인이 끝난 뒤 — 서버가 열어 주고, 화면도 바로 연다 */
-function mbtiPayApplied(ok, msg) {
-  var p = mbtiPendGet(); mbtiPendClear();
-  if (!p || !p.resultId) { toast(ok ? '✅ 결제가 완료되었습니다.' : '결제 확인 실패 — ' + (msg || '운영자에게 문의')); return; }
-  if (!ok) { toast('결제 승인 확인 실패 — ' + (msg || '운영자에게 문의')); return; }
-  mbtiLocalPaid(p.resultId, true);
-  if (MB.result && MB.result.id === p.resultId) MB.result.paid = true;
-  toast('✅ 결제 완료 · 정밀 리포트가 열렸습니다.');
-  MB.step = 'result';
-  if (!MB.result || MB.result.id !== p.resultId) { mbtiLoadList(); setTimeout(function () { mbtiOpenSaved(p.resultId); }, 300); }
-  else go('mbti');
-}
-/* 관리자: 계좌이체·간편결제 확인 후 열어 주기 */
-function mbtiUnlockByAdmin(id) {
-  var sb = (typeof osClient === 'function') ? osClient() : null;
-  if (!sb) { mbtiLocalPaid(id, true); toast('이 기기에서 열었습니다.'); go('mbti'); return; }
-  try {
-    sb.rpc('mbti_mark_paid', { p_id: id, p_method: 'manual' }).then(function (r) {
-      if (r && r.error) { toast('열기 실패 — ' + (r.error.message || '')); return; }
-      mbtiLocalPaid(id, true); toast('리포트를 열었습니다.'); mbtiLoadList();
-    }, function () { toast('열기 실패 — 서버에 연결하지 못했습니다.'); });
-  } catch (e) { toast('열기 실패'); }
-}
 function osMbtiAfterRender() {
   if (MB.step === 'intro') mbtiLoadList();
   var m = $('main'); if (m) m.scrollTop = 0;

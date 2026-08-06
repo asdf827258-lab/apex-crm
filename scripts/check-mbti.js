@@ -1,4 +1,4 @@
-/* 성향검사 48 — 실제로 48문항을 눌러 본다.
+/* 성향검사 48 · 사주 × MBTI 상담카드 — 실제로 눌러 본다.
 
    검사는 화면이 그려졌다고 끝이 아니다. 48개를 다 눌러야 결과가 나오는지,
    뒤집어 물은 문항이 제대로 반대로 채점되는지, 결제 전에는 표 1까지만
@@ -173,83 +173,42 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   ok(lazy.cons <= 10, '전부 매우 그렇다로 찍으면 일관성이 바닥이다 (' + lazy.cons + '%)');
   ok(lazy.border === 4, '그때는 4지표 모두 경계로 잡힌다 (' + lazy.border + '개)');
 
-  console.log('\n결과 화면 · 잠금');
-  const locked = await page.evaluate(() => {
+  console.log('\n결과 화면');
+  const rep = await page.evaluate(() => {
     const t = document.getElementById('mbtiReport').textContent;
-    return { cap1: /표 1\. 4지표 요약/.test(t), cap2: /표 2\./.test(t), cap4: /표 4\./.test(t),
-      lock: !!document.querySelector('.mb-lock'), price: /9,900원/.test(t),
+    return { caps: (t.match(/표 \d/g) || []).filter((v, i, a) => a.indexOf(v) === i),
       rows: document.querySelectorAll('.mb-tb tbody tr').length,
-      code: /ENFP/.test(t), print: !!document.querySelector('[onclick="mbtiPrint()"]') };
+      code: /ENFP/.test(t), print: !!document.querySelector('[onclick="mbtiPrint()"]'),
+      pay: /결제|9,900|잠금|토스/.test(document.getElementById('dynPane').textContent) };
   });
-  ok(locked.cap1 && locked.rows === 4, '표 1(4지표 요약) 4줄이 무료로 보인다 (' + locked.rows + '줄)');
-  ok(locked.code, '유형 코드가 결과 맨 위에 나온다');
-  ok(!locked.cap2 && !locked.cap4, '결제 전에는 표 2~6 이 보이지 않는다');
-  ok(locked.lock && locked.price, '잠금 카드와 가격(9,900원)이 나온다');
-  ok(!locked.print, '결제 전에는 인쇄 버튼이 없다');
-  if (SHOT) await page.screenshot({ path: SHOT + '/mbti-locked.png', fullPage: true });
+  ok(rep.caps.length === 6, '표 1~6 이 한 번에 모두 나온다 (' + rep.caps.join(', ') + ')');
+  ok(rep.code, '유형 코드가 결과 맨 위에 나온다');
+  ok(rep.rows > 60, '문항별 응답 48행이 표에 들어간다 (전체 ' + rep.rows + '줄)');
+  ok(rep.print, '인쇄·PDF 버튼이 있다');
+  ok(!rep.pay, '앱 검사 화면에 결제·잠금이 남아 있지 않다');
+  if (SHOT) await page.screenshot({ path: SHOT + '/mbti-report.png', fullPage: true });
 
-  console.log('\n결제');
-  const pay = await page.evaluate(() => {
-    mbtiPayOpen();
-    const t = document.getElementById('osPayOverlay').textContent;
-    return { open: true, card: /카드 결제/.test(t), bank: /계좌이체/.test(t),
-      naver: /네이버페이/.test(t), kakao: /카카오/.test(t), price: /9,900원/.test(t) };
-  });
-  ok(pay.card && pay.bank && pay.naver && pay.kakao, '결제수단 네 가지가 뜬다');
-  ok(pay.price, '결제창에 금액이 나온다');
-
-  const noKey = await page.evaluate(() => { window.__toast = ''; mbtiPayCard(); return window.__toast; });
-  ok(/연결/.test(noKey || ''), '토스 키가 없으면 결제창을 부르지 않고 안내한다');
-
-  const bankReq = await page.evaluate(() => {
-    PAY_CFG = { bank: '국민은행', account: '123456-01-789012', holder: '윤', naver: '', kakao: '' };
-    mbtiPayBank();
-    const shown = /123456-01-789012/.test(document.getElementById('osPayOverlay').textContent);
-    mbtiPayReq('bank');
-    const req = (window.__inserts || []).filter(x => x.tbl === 'payment_requests').pop();
-    return { shown: shown, req: req && req.row };
-  });
-  await page.waitForTimeout(200);
-  ok(bankReq.shown, '계좌이체를 고르면 입금 계좌가 나온다');
-  ok(bankReq.req && bankReq.req.plan === 'mbti48' && bankReq.req.amount === 9900 && bankReq.req.cycle === 'once',
-     '확인 요청이 payment_requests 에 1건 결제로 남는다');
-  ok(await page.evaluate(() => /접수/.test(document.getElementById('osPayOverlay').textContent)), '요청 접수 화면으로 바뀐다');
-
-  /* 카드 승인이 돌아온 뒤 — 리포트가 열리는가 */
-  const opened = await page.evaluate(() => {
-    osPayModalClose();
-    mbtiPendSet({ orderId: 'MBTI-TEST-1', resultId: MB.result.id, amount: 9900 });
-    mbtiPayApplied(true, '');
-    const t = document.getElementById('mbtiReport').textContent;
-    return { cap2: /표 2\./.test(t), cap3: /표 3\./.test(t), cap4: /표 4\./.test(t),
-      cap5: /표 5\./.test(t), cap6: /표 6\./.test(t), lock: !!document.querySelector('.mb-lock'),
-      qrows: document.querySelectorAll('.mb-tb tbody tr').length,
-      print: /인쇄/.test(document.getElementById('dynPane').textContent),
-      pend: !!mbtiPendGet() };
-  });
-  ok(opened.cap2 && opened.cap3 && opened.cap4 && opened.cap5 && opened.cap6, '결제 뒤 표 2~6 이 모두 열린다');
-  ok(!opened.lock, '잠금 카드가 사라진다');
-  ok(opened.qrows > 60, '문항별 응답 48행이 표에 들어간다 (전체 ' + opened.qrows + '줄)');
-  ok(opened.print, '인쇄·PDF 버튼이 생긴다');
-  ok(!opened.pend, '결제 대기 기록이 지워진다');
-  if (SHOT) await page.screenshot({ path: SHOT + '/mbti-paid.png', fullPage: true });
-
-  /* 다시 열어도 계속 열려 있는가 */
+  /* 저장한 것을 다시 열어도 그대로인가 */
   const again = await page.evaluate(() => {
     const id = MB.result.id;
     mbtiBackToIntro(); mbtiLoadList();
     const listed = /ENFP/.test(document.getElementById('mbtiListHost').textContent);
-    const openTxt = /열림/.test(document.getElementById('mbtiListHost').textContent);
     mbtiOpenSaved(id);
-    return { listed: listed, openTxt: openTxt, cap5: /표 5\./.test(document.getElementById('mbtiReport').textContent) };
+    return { listed: listed, cap5: /표 5\./.test(document.getElementById('mbtiReport').textContent) };
   });
-  ok(again.listed && again.openTxt, '지난 검사 목록에 결과와 열림 표시가 남는다');
-  ok(again.cap5, '결제한 리포트는 다시 열어도 그대로 열린다');
+  ok(again.listed, '지난 검사 목록에 결과가 남는다');
+  ok(again.cap5, '저장한 결과를 다시 열어도 표가 그대로 나온다');
 
-  /* 서버 저장이 실제로 시도되는가 */
   const saved = await page.evaluate(() => (window.__inserts || []).filter(x => x.tbl === 'mbti_tests').pop());
-  ok(saved && saved.row && saved.row.member_id === 'mb' && saved.row.type_code === 'ENFP' && !('paid' in saved.row),
-     '검사 결과가 서버에 저장되고, paid 는 앱에서 보내지 않는다');
+  ok(saved && saved.row && saved.row.member_id === 'mb' && saved.row.type_code === 'ENFP',
+     '검사 결과가 서버에 저장된다');
+
+  const link = await page.evaluate(() => {
+    mbtiBackToIntro();
+    return document.getElementById('dynPane').innerHTML.indexOf('mbtiOpenSaju') >= 0
+      || document.getElementById('dynPane').innerHTML.indexOf('mbtiShareLink') >= 0;
+  });
+  ok(link, '사주 상담카드로 가는 버튼이 있다');
 
   /* 좁은 화면 */
   await page.setViewportSize({ width: 390, height: 900 });
@@ -262,58 +221,106 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     cols: getComputedStyle(document.querySelector('.mb-opts')).gridTemplateColumns.split(' ').length }));
   ok(wide2.sw <= wide2.cw + 2, '390px 검사 화면도 가로 스크롤 없음 (' + wide2.sw + '/' + wide2.cw + ')');
   ok(wide2.cols === 3, '좁은 화면에서는 답 버튼이 3칸씩 두 줄로 접힌다 (' + wide2.cols + '칸)');
-  if (SHOT) await page.screenshot({ path: SHOT + '/mbti-test-m.png', fullPage: true });
 
-  /* ── 고객에게 보내는 페이지(app/mbti48.html)도 같이 본다 ─────────────── */
-  console.log('\n고객용 페이지');
-  await page.setViewportSize({ width: 412, height: 900 });
-  await page.goto('http://127.0.0.1:' + PORT + '/app/mbti48.html?agent=%EC%9C%A4%EC%8B%9C%ED%98%84&bank=%EA%B5%AD%EB%AF%BC&acct=123-456', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(700);
-  const cute = await page.evaluate(() => ({
-    n: MBTI_Q.length, types: Object.keys(MBTI_TYPES).length,
-    masc: (document.querySelectorAll('svg.masc') || []).length,
-    agent: /윤시현/.test(document.body.textContent),
-    ext: Array.prototype.some.call(document.querySelectorAll('script,link,img'),
-      e => /^https?:/.test(e.getAttribute('src') || e.getAttribute('href') || ''))
-  }));
-  ok(cute.n === 48 && cute.types === 16, '고객용 페이지도 48문항 · 16유형이다');
-  ok(cute.masc >= 4, '캐릭터 그림이 그 자리에서 그려진다 (' + cute.masc + '개)');
-  ok(cute.agent, '주소에 붙여 보낸 설계사 이름이 화면에 나온다');
-  ok(!cute.ext, '바깥에서 받아오는 그림·글꼴이 없다 — 인터넷이 느려도 그대로 뜬다');
+  /* ── 사주 × MBTI 상담카드(app/saju-mbti.html) ──────────────────────── */
+  console.log('\n사주 상담카드 — 만세력 계산');
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(800);
 
+  /* 만세력이 맞는지부터 본다 — 여기가 틀리면 나머지가 전부 틀린다 */
+  const cal = await page.evaluate(() => {
+    const gz = s => GAN[s.dg] + JI[s.dj];
+    const a = sajuCalc(2000, 1, 1, 12, 0, 0);          // 무오일
+    const b = sajuCalc(1949, 10, 1, 12, 0, 0);         // 갑자일
+    const c = sajuCalc(1990, 5, 15, 9, 30, 0);         // 경오년 신사월 경진일 신사시
+    const d = sajuCalc(2024, 1, 15, 3, 0, 0);          // 입춘 전 → 계묘년
+    const e1 = sajuCalc(1986, 6, 6, 22, 30, 0);        // 야자시 전
+    const e2 = sajuCalc(1986, 6, 6, 23, 30, 0);        // 23시 → 다음날 일진
+    const ip = jdToKst(ipchunJd(2024));
+    return { a: gz(a), b: gz(b),
+      c: [GAN[c.yg] + JI[c.yj], GAN[c.mg] + JI[c.mj], GAN[c.dg] + JI[c.dj], GAN[c.hg] + JI[c.hj]].join(' '),
+      dYear: GAN[d.yg] + JI[d.yj], dSy: d.sajuYear,
+      e1: gz(e1), e2: gz(e2),
+      ip: ip.m + '/' + ip.d + ' ' + ip.H + ':' + ('0' + ip.Mi).slice(-2) };
+  });
+  ok(cal.a === '무오', '2000-01-01 은 무오일 (' + cal.a + ')');
+  ok(cal.b === '갑자', '1949-10-01 은 갑자일 (' + cal.b + ')');
+  ok(cal.c === '경오 신사 경진 신사', '1990-05-15 09:30 = 경오 신사 경진 신사 (' + cal.c + ')');
+  ok(cal.dYear === '계묘' && cal.dSy === 2023, '1월 15일생은 입춘 전이라 지난해 간지 (' + cal.dYear + ')');
+  ok(cal.e1 !== cal.e2, '23시가 넘으면 일진이 다음날로 넘어간다 (' + cal.e1 + ' → ' + cal.e2 + ')');
+  ok(cal.ip.indexOf('2/4') === 0, '2024년 입춘을 2월 4일로 잡는다 (' + cal.ip + ' · 공식 17:27)');
+
+  const sip = await page.evaluate(() => {
+    const s = sajuCalc(1990, 5, 15, 9, 30, 0), t = sipsinTable(s), o = ohCount(s);
+    let sum = 0; for (const k in o) sum += o[k];
+    return { rows: t.rows.length, sum: sum, top: t.top,
+      day: sipsinOf(s.dg, s.dg), oh: o, str: strengthOf(s).level };
+  });
+  ok(sip.rows === 7 && sip.sum === 8, '여덟 글자 · 일간 뺀 일곱 자리 십신 (글자 ' + sip.sum + ' · 십신 ' + sip.rows + ')');
+  ok(sip.day === '비견', '일간을 자기 자신과 비교하면 비견이다');
+  ok(['비겁', '식상', '재성', '관성', '인성'].indexOf(sip.top) >= 0, '십신 우세가 다섯 무리 중 하나로 잡힌다 (' + sip.top + ')');
+
+  console.log('\n성향 · 궁합 · 상담 전략');
   const flow = await page.evaluate(() => {
-    ST.name = '김하나';
-    const want = { EI: 'E', SN: 'N', TF: 'F', JP: 'P' };
-    MBTI_Q.forEach((q, i) => {
-      const first = q.ax.charAt(0);
-      ST.ans[i] = ((q.k > 0) === (want[q.ax] === first)) ? 3 : -3;
+    S.me = { name: '윤시현', gender: 'M', mbti: 'ENFJ', y: '1978', m: '3', d: '12', H: 14, Mi: 0, noTime: false, adj: false, saju: null, res: null };
+    calcPerson(S.me);
+    S.cl = { name: '김하나', gender: 'F', mbti: '', y: '1990', m: '5', d: '15', H: 9, Mi: 30, noTime: false, adj: false, saju: null, res: null };
+    calcPerson(S.cl);
+    const want = { EI: 'I', SN: 'S', TF: 'T', JP: 'J' };
+    S.target = 'client'; S.ans = {};
+    MBTI_Q.forEach((q, i) => { S.ans[i] = ((q.k > 0) === (want[q.ax] === q.ax.charAt(0))) ? 3 : -3; });
+    finishTest();
+    const f = fitCalc(S.me, S.cl), p = talkPlan(S.me, S.cl), c = combine(S.cl);
+    return { step: S.step, code: personCode(S.cl), cons: S.cl.res.consistency,
+      score: f.score, saju: f.sajuScore, mbti: f.mbtiScore,
+      rows: p.rows.map(r => r.label + ':' + r.me + r.you + (r.same ? '=' : '≠')),
+      tf: p.rows[2].fix, combineRows: c.rows.length, opens: p.opens.length, avoid: p.avoid.length, closes: p.closes.length,
+      luck: p.luck.gz };
+  });
+  ok(flow.step === 'board' && flow.code === 'ISTJ' && flow.cons === 100, '48문항을 채우면 결과판으로 넘어간다 (' + flow.code + ')');
+  ok(flow.score > 0 && flow.score <= 100 && flow.saju > 0 && flow.mbti > 0,
+     '궁합이 사주 ' + flow.saju + ' · 성향 ' + flow.mbti + ' → 종합 ' + flow.score + '점으로 나온다');
+  ok(flow.rows.length === 4, '네 축 모두 나 vs 고객으로 비교된다 — ' + flow.rows.join(' / '));
+  ok(/감정 표현을 절반/.test(flow.tf), '나는 F 고객은 T 일 때 "감정 표현을 줄이고 근거부터" 처방이 나온다');
+  ok(flow.combineRows === 4 && flow.opens >= 3 && flow.avoid >= 3 && flow.closes >= 2,
+     '검사×사주 교차 4줄 · 첫마디 ' + flow.opens + ' · 피할 말 ' + flow.avoid + ' · 클로징 ' + flow.closes);
+  ok(/[가-힣]{2}/.test(flow.luck), '올해 세운이 간지로 나온다 (' + flow.luck + ')');
+
+  console.log('\n화면 · 스크롤 칸');
+  const tabs = ['sum', 'trait', 'fit', 'talk', 'saju'];
+  for (const t of tabs) {
+    await page.evaluate(x => goTab(x), t);
+    await page.waitForTimeout(200);
+    const len = await page.evaluate(() => document.getElementById('view').textContent.replace(/\s+/g, '').length);
+    ok(len > 400, t + ' 탭이 내용을 그린다 (' + len + '자)');
+  }
+  const pay = await page.evaluate(() => /결제|9,900|토스|payment|구독/.test(document.body.textContent));
+  ok(!pay, '결제 흔적이 어디에도 없다');
+  const ext = await page.evaluate(() => Array.prototype.some.call(document.querySelectorAll('script,link,img'),
+    e => /^https?:/.test(e.getAttribute('src') || e.getAttribute('href') || '')));
+  ok(!ext, '바깥에서 받아오는 그림·글꼴·스크립트가 없다');
+
+  /* 스크롤 — 여기가 이 화면의 핵심이다 */
+  for (const [w, h] of [[1200, 900], [412, 880], [360, 640], [500, 300]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.waitForTimeout(300);
+    const r = await page.evaluate(() => {
+      const p = document.getElementById('pane');
+      p.scrollTop = 0;
+      const can = p.scrollHeight > p.clientHeight + 4;
+      p.scrollTop = 400;
+      return { can: can, moved: p.scrollTop > 0, flow: document.body.classList.contains('flow'),
+        sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth };
     });
-    finish();
-    const caps = Array.prototype.map.call(document.querySelectorAll('.cap i'), e => e.textContent);
-    return { code: ST.res.code, cons: ST.res.consistency, step: ST.step, caps: caps,
-      lock: !!document.querySelector('.lock'), price: /9,900원/.test(document.body.textContent) };
-  });
-  ok(flow.step === 'result' && flow.code === 'ENFP' && flow.cons === 100, '48문항을 채우면 앱과 같은 결과가 나온다 (' + flow.code + ')');
-  ok(flow.caps.length === 1 && flow.caps[0] === '표 1' && flow.lock && flow.price,
-     '표 1만 보이고 표 2부터는 잠겨 있다 (보이는 표: ' + flow.caps.join(', ') + ')');
-
-  const un = await page.evaluate(() => {
-    unlock();
-    return { caps: Array.prototype.map.call(document.querySelectorAll('.cap i'), e => e.textContent),
-      lock: !!document.querySelector('.lock'), tables: document.querySelectorAll('table').length, paid: ST.paid };
-  });
-  ok(un.caps.length === 6 && un.tables === 6 && !un.lock && un.paid,
-     '열면 표 1~6 여섯 개가 모두 나온다 (' + un.caps.join(', ') + ')');
-
+    ok((r.moved || r.flow) && r.sw <= r.cw + 2,
+       w + '×' + h + ' — 스크롤 칸이 굴러가고 가로 스크롤은 없다' + (r.flow ? ' (문서 스크롤로 되돌림)' : ''));
+  }
+  await page.setViewportSize({ width: 1200, height: 900 });
+  await page.evaluate(() => { const p = document.getElementById('pane'); p.scrollTop = p.scrollHeight; });
   await page.waitForTimeout(300);
-  const cw2 = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
-    stacked: getComputedStyle(document.querySelector('.stack thead')).display }));
-  ok(cw2.sw <= cw2.cw + 2, '412px 에서 가로 스크롤 없음 (' + cw2.sw + '/' + cw2.cw + ')');
-  ok(cw2.stacked === 'none', '좁은 화면에서는 표가 한 줄씩 카드로 펼쳐진다');
-
-  const back = await page.evaluate(() => { location.reload(); return true; });
-  await page.waitForTimeout(900);
-  ok(await page.evaluate(() => /표 6/.test(document.body.textContent)), '새로고침해도 결제한 리포트가 그대로 열려 있다');
+  ok(await page.evaluate(() => document.getElementById('hint').classList.contains('off')),
+     '끝까지 내리면 "아래로 더 있어요" 표시가 사라진다');
 
   await browser.close(); srv.close();
   console.log('');

@@ -3,8 +3,6 @@
  * ─────────────────────────────────────────────────────────────────────────
  * 흐름: 앱에서 카드 결제 성공 → 이 함수가 토스로 결제를 최종 승인(시크릿 키)하고,
  *       승인되면 해당 회원의 등급(profiles.plan)을 자동 부여한다(service_role).
- *       1건 결제(성향검사 48 정밀 리포트)는 product:'mbti' 로 오며, 등급 대신
- *       그 검사 한 건(mbti_tests.paid)만 열어 준다.
  *
  * 이 파일은 저장소에 포함되어 있어 배포 시 자동으로 함께 올라갑니다.
  * 앱은  /api/toss-confirm  (→ 이 함수)로 호출합니다.
@@ -77,43 +75,6 @@ exports.handler = async function (event) {
       } else {
         data.__activated = false;
         data.__activateError = "SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다.";
-      }
-    }
-
-    // 3) 성향검사 48 정밀 리포트(1건 결제) — 등급은 건드리지 않고 그 검사 한 건만 연다
-    if (res.ok && b.product === "mbti" && b.resultId) {
-      const SB_URL = process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
-      const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (SB_URL && SB_KEY) {
-        try {
-          // 남의 검사를 열 수 없게, 결제한 본인 것만 연다
-          const scope = "/rest/v1/mbti_tests?id=eq." + encodeURIComponent(b.resultId) +
-            (b.userId ? "&member_id=eq." + encodeURIComponent(b.userId) : "");
-          const up = await fetch(SB_URL + scope, {
-            method: "PATCH",
-            headers: {
-              apikey: SB_KEY,
-              Authorization: "Bearer " + SB_KEY,
-              "Content-Type": "application/json",
-              Prefer: "return=minimal",
-            },
-            body: JSON.stringify({
-              paid: true,
-              paid_at: new Date().toISOString(),
-              pay_method: "card",
-              order_id: b.orderId || null,
-              amount: Number(b.amount) || null,
-            }),
-          });
-          data.__mbtiOpened = up.ok;
-          if (!up.ok) data.__mbtiError = await up.text();
-        } catch (e) {
-          data.__mbtiOpened = false;
-          data.__mbtiError = String(e && e.message ? e.message : e);
-        }
-      } else {
-        data.__mbtiOpened = false;
-        data.__mbtiError = "SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다.";
       }
     }
 

@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>사주 × MBTI 상담카드 — 고객 성향·궁합·상담전략</title>
+<meta name="description" content="생년월일과 태어난 시간으로 사주를 뽑고, 48문항 성향검사와 합쳐 고객 성향·나와의 궁합·상담 전략까지 한 장으로."/>
+<!--
+  사주 × MBTI 상담카드 — 영업용 상담 준비 도구
+  ─────────────────────────────────────────────────────────────
+  · 생년월일 + 태어난 시간 → 사주 4기둥을 실제로 계산한다.
+    절기는 태양황경으로 구하고(입춘·경칩…), 일주는 율리우스 적일로 뽑는다.
+    검증: 2000-01-01 무오일 · 1949-10-01 갑자일 · 입춘 2024 = 2/4 17:21(공식 17:27)
+  · 48문항 성향검사(MBTI형)와 합쳐 성향을 읽는다.
+  · 내 카드(설계사)와 비교해 궁합과 "상담을 어떻게 할지"를 뽑는다.
+  · 결제 없음. 전부 열려 있다.
+  · 혼자 도는 파일이다 — 서버도, 인터넷에서 받아오는 그림·글꼴도 없다.
+  · 스크롤은 전용 스크롤 칸(.pane)이 맡는다. 어디에 끼워 넣어도 스크롤된다.
+-->
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;padding:0;overflow:hidden}
+body{
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  color:#2F2C40;background:#F6F3FF;
+  background-image:radial-gradient(90% 60% at 8% 0%,#FFEAF4 0%,rgba(255,234,244,0) 55%),
+                   radial-gradient(80% 55% at 95% 4%,#E3F0FF 0%,rgba(227,240,255,0) 58%);
+  -webkit-text-size-adjust:100%;
+}
+/* ── 스크롤 칸 ────────────────────────────────────────────────
+   화면을 머리 / 탭 / 스크롤 칸 세 층으로 나눈다. 스크롤은 가운데
+   칸이 혼자 맡는다. iframe 안이든 앱 안이든 여기서 굴러간다.       */
+.shell{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;max-width:1240px;margin:0 auto;padding:0}
+.pane{flex:1;min-height:0;overflow-y:scroll;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  scrollbar-width:auto;scrollbar-color:#8B7BF0 #E9E3FF;padding:16px 14px 30px;position:relative}
+.pane::-webkit-scrollbar{width:14px}
+.pane::-webkit-scrollbar-track{background:#E9E3FF;border-radius:99px;margin:8px 2px}
+.pane::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#8B7BF0,#B78CF5);border-radius:99px;border:3px solid #E9E3FF;min-height:44px}
+.pane::-webkit-scrollbar-thumb:hover{background:#7C6BE8}
+/* 화면 높이를 못 받는 곳(임베드 등)에서는 문서 스크롤로 되돌린다 */
+body.flow{overflow:auto;height:auto}
+body.flow .shell{height:auto;min-height:100vh}
+body.flow .pane{overflow:visible;flex:none;min-height:0}
+.scrollhint{position:sticky;bottom:-14px;margin:0 -14px -18px;height:44px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(246,243,255,0),rgba(246,243,255,.95));display:flex;align-items:flex-end;justify-content:center;
+  font-size:11px;font-weight:800;color:#9B93BE;padding-bottom:6px;transition:opacity .2s}
+.scrollhint.off{opacity:0}
+/* ── 머리 ─────────────────────────────────────────────────── */
+.top{flex:none;display:flex;align-items:center;gap:11px;padding:12px 16px;background:rgba(255,255,255,.86);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid #EAE4FB}
+.top .logo{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,#8B7BF0,#FF9EC4);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+.top .ti{flex:1;min-width:0}
+.top .ti b{display:block;font-size:15px;font-weight:900;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .ti span{display:block;font-size:11px;color:#8C86A8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mecard{flex:none;display:flex;align-items:center;gap:7px;background:#F4F1FF;border:1px solid #E4DDFF;border-radius:999px;
+  padding:6px 12px;font-size:11.5px;font-weight:800;color:#6F63C4;cursor:pointer;white-space:nowrap}
+.tabs{flex:none;display:flex;gap:4px;padding:8px 12px;background:rgba(255,255,255,.7);border-bottom:1px solid #EFEAFC;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#8C86A8;
+  padding:9px 14px;border-radius:12px;cursor:pointer;white-space:nowrap}
+.tabs button.on{background:#8B7BF0;color:#fff;box-shadow:0 5px 14px rgba(139,123,240,.32)}
+.tabs button:disabled{opacity:.35;cursor:default}
+/* ── 판 ───────────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:100%}
+@media(min-width:1000px){
+  .grid.hd{grid-template-columns:340px 1fr;align-items:start}
+  .grid.hd .sticky{position:sticky;top:0}
+}
+.card{background:#fff;border-radius:22px;padding:20px 18px;box-shadow:0 10px 26px rgba(112,96,190,.11),0 1px 3px rgba(112,96,190,.06)}
+.card + .card{margin-top:13px}
+h1{font-size:23px;font-weight:900;margin:0;letter-spacing:-.5px;line-height:1.35}
+h2{font-size:16px;font-weight:900;margin:0;letter-spacing:-.3px;display:flex;align-items:center;gap:7px}
+h2 .n{background:#8B7BF0;color:#fff;font-size:11px;font-weight:900;border-radius:8px;padding:3px 8px;flex:none}
+p{margin:8px 0 0;font-size:13px;line-height:1.75;color:#615C78}
+.sub{font-size:12px;color:#948FB0;line-height:1.7}
+.hr{height:1px;background:#F0ECFA;margin:14px 0}
+.btn{width:100%;border:none;border-radius:15px;padding:14px;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;
+  background:linear-gradient(135deg,#8B7BF0,#B78CF5);color:#fff;box-shadow:0 7px 16px rgba(139,123,240,.33);transition:transform .12s}
+.btn:active{transform:translateY(2px)}
+.btn.sm{padding:11px;font-size:13.5px}
+.btn.ghost{background:#F4F1FF;color:#6F63C4;box-shadow:none}
+.btn.line{background:#fff;color:#6F63C4;border:2px solid #E4DDFF;box-shadow:none}
+.btn.dark{background:linear-gradient(135deg,#3B3357,#5A4E86);box-shadow:0 7px 16px rgba(59,51,87,.28)}
+.row{display:flex;gap:9px}.row>*{flex:1}
+label{display:block;font-size:11.5px;font-weight:800;color:#8C86A8;margin:0 0 5px 3px}
+.inp,select{width:100%;border:2px solid #EDE8FC;border-radius:13px;padding:12px 13px;font-size:14.5px;font-family:inherit;
+  color:#2F2C40;background:#FCFBFF;outline:none;transition:border-color .15s}
+.inp:focus,select:focus{border-color:#B9AEFF;background:#fff}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:2px solid #EDE8FC;background:#fff;color:#7A748F;border-radius:12px;padding:9px 14px;font-size:13px;
+  font-weight:800;cursor:pointer;font-family:inherit}
+.seg button.on{background:#8B7BF0;border-color:#8B7BF0;color:#fff}
+.mbtigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+@media(max-width:520px){.mbtigrid{grid-template-columns:repeat(4,1fr)}}
+.mbtigrid button{border:2px solid #EDE8FC;background:#fff;color:#6B6584;border-radius:11px;padding:9px 2px;font-size:12.5px;
+  font-weight:900;cursor:pointer;font-family:inherit}
+.mbtigrid button.on{background:#8B7BF0;border-color:#8B7BF0;color:#fff}
+/* 표 */
+.tb{width:100%;border-collapse:collapse;font-size:12.5px}
+.tb th{background:#F5F2FF;color:#6A6296;text-align:left;padding:10px 11px;font-size:11.5px;font-weight:900;white-space:nowrap}
+.tb td{padding:10px 11px;border-top:1px solid #F2EFFA;line-height:1.65;color:#4F4A66;vertical-align:top}
+.tb tbody tr:nth-child(even) td{background:#FDFCFF}
+.tbwrap{border-radius:16px;overflow:hidden;border:1px solid #F0ECFA;margin-top:11px}
+.tbwrap.scrollx{overflow-x:auto}
+.tbwrap.scrollx .tb{min-width:560px}
+@media(max-width:760px){
+  .stack .tb{min-width:0}
+  .stack thead{display:none}
+  .stack tbody tr{display:block;padding:13px 14px;border-top:1px solid #F2EFFA}
+  .stack tbody tr:first-child{border-top:none}
+  .stack tbody tr:nth-child(even) td{background:transparent}
+  .stack td{display:flex;gap:9px;align-items:flex-start;border:none;padding:4px 0;background:transparent}
+  .stack td::before{content:attr(data-l);flex:none;width:58px;font-size:10.5px;font-weight:900;color:#A9A2C6;padding-top:2px}
+  .stack td.head{display:block;font-size:14px;font-weight:900;color:#2F2C40;padding:0 0 7px}
+  .stack td.head::before{content:none}
+  .stack td.full{display:block}
+  .stack td.full::before{display:block;width:auto;margin-bottom:3px}
+  .stack td.plain{display:block}
+  .stack td.plain::before{content:none}
+}
+.pill{display:inline-block;font-size:10.5px;font-weight:900;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.bar{display:flex;align-items:center;gap:7px;margin-top:5px}
+.bar b{font-size:10px;color:#A9A2C6;width:10px;text-align:center}
+.bar .t{flex:1;min-width:50px;height:7px;border-radius:999px;background:#F0ECFA;overflow:hidden}
+.bar .t>i{display:block;height:100%;background:linear-gradient(90deg,#8B7BF0,#FF9EC4)}
+/* 사주 판 */
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.pil{border-radius:16px;padding:11px 6px;text-align:center;background:#FAF8FF;border:1px solid #EFEAFC}
+.pil .lb{font-size:10.5px;font-weight:900;color:#9B93BE}
+.pil .gz{font-size:26px;font-weight:900;line-height:1.15;margin-top:5px;letter-spacing:-1px}
+.pil .kr{font-size:11.5px;font-weight:800;color:#6B6584;margin-top:3px}
+.pil .oh{font-size:10px;font-weight:800;margin-top:5px;border-radius:999px;padding:2px 7px;display:inline-block}
+.pil.day{background:linear-gradient(160deg,#F3EFFF,#FFF0F7);border-color:#DED3FF}
+.ohbars{display:flex;gap:7px;margin-top:12px}
+.ohbar{flex:1;text-align:center}
+.ohbar .t{height:74px;border-radius:11px;background:#F4F1FB;display:flex;align-items:flex-end;overflow:hidden}
+.ohbar .t>i{display:block;width:100%;border-radius:9px;transition:height .4s}
+.ohbar .lb{font-size:11px;font-weight:900;margin-top:6px}
+.ohbar .cn{font-size:10.5px;color:#948FB0;font-weight:800}
+.score{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:6px}
+.ring{width:118px;height:118px;flex:none;position:relative}
+.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .v b{font-size:30px;font-weight:900;line-height:1}
+.ring .v span{font-size:10.5px;color:#948FB0;font-weight:800;margin-top:2px}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px dashed #F0ECFA}
+.kv:last-child{border-bottom:none}
+.kv b{color:#2F2C40;text-align:right}
+.note{border-radius:14px;padding:11px 13px;font-size:12.5px;line-height:1.7;margin-top:11px}
+.note.warn{background:#FFF6E9;color:#9A5B0C}
+.note.bad{background:#FFF0F1;color:#BB3A54}
+.note.ok{background:#EDF9F4;color:#1F7A61}
+.note.info{background:#F1EEFF;color:#5E52A8}
+.q{text-align:center;padding:24px 16px 20px}
+.qno{display:inline-block;background:#FFF0F7;color:#FF7FB0;font-size:11.5px;font-weight:900;padding:5px 12px;border-radius:999px}
+.qtext{font-size:19px;font-weight:800;line-height:1.55;margin:13px 4px 2px;letter-spacing:-.3px;min-height:56px;display:flex;align-items:center;justify-content:center}
+.scale{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
+.dot{border:3px solid #D6CCFF;background:#fff;border-radius:50%;cursor:pointer;padding:0;transition:transform .12s,background .12s}
+.dot:active{transform:scale(.9)}
+.dot.on{background:#8B7BF0;border-color:#8B7BF0}
+.dot.no{border-color:#FFD3B0}.dot.no.on{background:#FFA46B;border-color:#FFA46B}
+.slab{display:flex;justify-content:space-between;margin:10px 4px 0;font-size:11.5px;font-weight:800}
+.slab .y{color:#8B7BF0}.slab .n{color:#FFA46B}
+.track{position:relative;height:9px;border-radius:999px;background:#EEE9FB;margin-top:16px}
+.track>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#8B7BF0,#FF9EC4);transition:width .3s}
+.runner{position:absolute;top:-24px;transform:translateX(-50%);transition:left .3s}
+.masc{display:block;filter:drop-shadow(0 6px 10px rgba(112,96,190,.2))}
+.chiplist{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.chip{background:#F4F1FF;color:#6F63C4;font-size:11.5px;font-weight:800;border-radius:999px;padding:5px 11px}
+.talk{border-left:4px solid #8B7BF0;background:#FAF8FF;border-radius:0 13px 13px 0;padding:11px 13px;margin-top:9px;font-size:13px;line-height:1.75}
+.talk.bad{border-color:#FF8DA1;background:#FFF6F7}
+.talk.good{border-color:#5BC8A8;background:#F2FBF8}
+.foot{text-align:center;font-size:10.5px;color:#A9A2C6;line-height:1.8;margin-top:22px}
+@media print{
+  html,body{height:auto;overflow:visible}
+  .top,.tabs,.scrollhint,.btn{display:none!important}
+  .shell{height:auto}.pane{overflow:visible}
+  .card{box-shadow:none;border:1px solid #eee;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="top">
+    <div class="logo">🔮</div>
+    <div class="ti"><b>사주 × MBTI 상담카드</b><span id="topSub">생년월일과 태어난 시간, 그리고 48문항</span></div>
+    <button class="mecard" id="meBtn" onclick="goStep('me')">내 카드</button>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="pane" id="pane"><div id="view"></div><div class="scrollhint" id="hint">▼ 아래로 더 있어요</div></div>
+</div>
+<div class="toast" id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:#2F2C40;color:#fff;font-size:13px;font-weight:700;padding:11px 17px;border-radius:999px;opacity:0;transition:opacity .2s,transform .2s;z-index:90;pointer-events:none;max-width:88vw;text-align:center"></div>
+<script>
+/* ── 성향검사 48문항 (앱과 같은 문항·같은 채점) ─────────────────── */
+var MBTI_SCALE=[{v:3,t:'매우 그래요'},{v:2,t:'그래요'},{v:1,t:'조금 그래요'},
+  {v:-1,t:'조금 아니에요'},{v:-2,t:'아니에요'},{v:-3,t:'전혀 아니에요'}];
+var MBTI_AXIS=[
+  {key:'EI',a:'E',b:'I',an:'외향',bn:'내향',q:'기운을 어디서 얻나'},
+  {key:'SN',a:'S',b:'N',an:'감각',bn:'직관',q:'무엇을 먼저 보나'},
+  {key:'TF',a:'T',b:'F',an:'사고',bn:'감정',q:'무엇으로 결정하나'},
+  {key:'JP',a:'J',b:'P',an:'판단',bn:'인식',q:'어떻게 매듭짓나'}];
+var MBTI_PAIR=[
+  [0,7,'먼저 말을 건다 ↔ 먼저 연락이 부담스럽다'],
+  [1,11,'만나면 기운이 난다 ↔ 사람이 많으면 지친다'],
+  [13,15,'있는 것을 다듬는다 ↔ 새로운 시도를 한다'],
+  [19,18,'겪은 것만 믿는다 ↔ 가능성을 발견한다'],
+  [24,34,'근거를 먼저 본다 ↔ 느낌을 먼저 본다'],
+  [27,26,'분명히 짚는다 ↔ 상처받을 말은 삼킨다'],
+  [37,46,'미리 끝내 놓는다 ↔ 마감이 닥쳐야 한다'],
+  [36,40,'일정을 미리 정한다 ↔ 그때그때 다닌다']];
+var MBTI_TIP={
+  E:'말로 풀게 두세요. 결론은 함께 소리 내어 정리합니다.',
+  I:'재촉하지 마세요. 자료를 먼저 주고 혼자 볼 시간을 줍니다.',
+  S:'숫자·사례·서류부터. 큰 그림은 뒤로 미룹니다.',
+  N:'큰 그림과 5년 뒤 이야기 먼저. 세부는 요약해서.',
+  T:'비교표와 손익으로. 감정에 호소하면 오히려 닫힙니다.',
+  F:'가족·사람 이야기부터. 숫자는 마음이 열린 뒤에.',
+  J:'일정과 다음 단계를 그 자리에서 정해 줍니다.',
+  P:'선택지를 두세 개 남겨 두고 스스로 고르게 합니다.'};
+
+var MBTI_Q = [
+  { t: '처음 만난 자리에서도 내가 먼저 말을 건다.',              ax: 'EI', k: 1 },
+  { t: '사람을 여럿 만나고 오면 오히려 기운이 난다.',            ax: 'EI', k: 1 },
+  { t: '혼자 있는 시간이 있어야 머릿속이 정리된다.',             ax: 'EI', k: -1 },
+  { t: '전화보다 문자로 정리해서 보내는 편이 편하다.',           ax: 'EI', k: -1 },
+  { t: '모임에서 분위기를 띄우는 쪽에 가깝다.',                  ax: 'EI', k: 1 },
+  { t: '생각이 정리되기 전에는 말을 잘 꺼내지 않는다.',          ax: 'EI', k: -1 },
+  { t: '하루에 약속이 서너 개 있어도 힘들지 않다.',              ax: 'EI', k: 1 },
+  { t: '잘 모르는 사람에게 먼저 연락하는 일이 부담스럽다.',      ax: 'EI', k: -1 },
+  { t: '말을 하면서 생각이 정리되는 편이다.',                    ax: 'EI', k: 1 },
+  { t: '쉬는 날은 집에서 조용히 보내는 것이 좋다.',              ax: 'EI', k: -1 },
+  { t: '새로운 모임에 초대받으면 일단 나가 본다.',               ax: 'EI', k: 1 },
+  { t: '사람 많은 자리에 오래 있으면 지친다.',                   ax: 'EI', k: -1 },
+
+  { t: '설명을 들을 때 구체적인 숫자와 사례가 있어야 이해된다.', ax: 'SN', k: 1 },
+  { t: '새것을 벌이기보다 지금 있는 것을 다듬는 편이 재미있다.', ax: 'SN', k: 1 },
+  { t: '사실보다 그 뒤에 숨은 뜻이 먼저 보인다.',                ax: 'SN', k: -1 },
+  { t: '늘 하던 방식이 지루해서 새로운 시도를 해 본다.',         ax: 'SN', k: -1 },
+  { t: '5년 뒤 그림을 그려 보는 일이 즐겁다.',                   ax: 'SN', k: -1 },
+  { t: '설명서를 순서대로 따라 하는 편이다.',                    ax: 'SN', k: 1 },
+  { t: '남들이 놓치는 가능성을 자주 발견한다.',                  ax: 'SN', k: -1 },
+  { t: '직접 겪어 본 것만 믿는 편이다.',                         ax: 'SN', k: 1 },
+  { t: '이야기하다 보면 주제가 자꾸 옆으로 뻗어 나간다.',        ax: 'SN', k: -1 },
+  { t: '눈에 보이는 것부터 하나씩 확인하고 넘어간다.',           ax: 'SN', k: 1 },
+  { t: '비유나 그림으로 설명하는 것을 좋아한다.',                ax: 'SN', k: -1 },
+  { t: '세부 사항을 빠뜨리지 않고 챙기는 편이다.',               ax: 'SN', k: 1 },
+
+  { t: '결정할 때 느낌보다 근거를 먼저 본다.',                   ax: 'TF', k: 1 },
+  { t: '누가 힘들다고 하면 해결책부터 떠오른다.',                ax: 'TF', k: 1 },
+  { t: '상대가 상처받을 말은 사실이어도 삼킨다.',                ax: 'TF', k: -1 },
+  { t: '잘못된 점은 분명히 짚고 넘어가야 한다.',                 ax: 'TF', k: 1 },
+  { t: '결론보다 분위기가 나빠지는 것이 더 신경 쓰인다.',        ax: 'TF', k: -1 },
+  { t: '칭찬보다 정확한 지적이 나에게 도움이 된다.',             ax: 'TF', k: 1 },
+  { t: '사람마다 사정이 다르니 규칙도 유연해야 한다.',           ax: 'TF', k: -1 },
+  { t: '말다툼이 붙어도 감정이 크게 흔들리지 않는다.',           ax: 'TF', k: 1 },
+  { t: '상대의 표정만 봐도 기분을 알아챈다.',                    ax: 'TF', k: -1 },
+  { t: '공정한 기준이 개인 사정보다 앞선다.',                    ax: 'TF', k: 1 },
+  { t: '결정할 때 그 사람이 어떻게 느낄지부터 생각한다.',        ax: 'TF', k: -1 },
+  { t: '결국 사람 마음을 움직이는 말이 결정을 만든다.',          ax: 'TF', k: -1 },
+
+  { t: '일정을 미리 정해 두어야 마음이 편하다.',                 ax: 'JP', k: 1 },
+  { t: '마감보다 한참 앞서 끝내 놓는 편이다.',                   ax: 'JP', k: 1 },
+  { t: '계획이 바뀌어도 별로 상관없다.',                         ax: 'JP', k: -1 },
+  { t: '할 일을 적어 두고 하나씩 지워 나간다.',                  ax: 'JP', k: 1 },
+  { t: '여행은 정해 두지 않고 그때그때 다니는 것이 좋다.',       ax: 'JP', k: -1 },
+  { t: '정리되지 않은 책상이 신경 쓰인다.',                      ax: 'JP', k: 1 },
+  { t: '여러 가지를 동시에 벌여 놓는 편이다.',                   ax: 'JP', k: -1 },
+  { t: '결정을 빨리 내리고 넘어가는 것이 좋다.',                 ax: 'JP', k: 1 },
+  { t: '급한 일이 생기면 세워 둔 계획은 바로 접어 둔다.',        ax: 'JP', k: -1 },
+  { t: '약속 시간보다 일찍 도착한다.',                           ax: 'JP', k: 1 },
+  { t: '마감이 닥쳐야 집중이 잘 된다.',                          ax: 'JP', k: -1 },
+  { t: '여지를 남겨 두는 편이 마음이 놓인다.',                   ax: 'JP', k: -1 }
+];
+
+var MBTI_TYPES = {
+  ISTJ: { nick: '원칙주의 실무가', line: '한 번 정한 것은 끝까지 지킨다. 검증되지 않은 말에는 움직이지 않는다.',
+    str: ['약속과 절차를 지킨다', '숫자와 서류에 강하다', '한 번 신뢰하면 오래 간다'],
+    care: ['새로운 방식에 저항이 크다', '변화를 손해로 먼저 읽는다', '감정 표현이 적어 차갑게 보인다'],
+    open: '"오늘은 세 가지만 확인하겠습니다"로 범위를 먼저 못 박는다.',
+    doc: '약관 근거·보장 표·실제 지급 사례. 추정치는 넣지 않는다.',
+    pace: '천천히. 자료를 두고 와 다음에 확인받는다.',
+    close: '지금 계약과 무엇이 어떻게 달라지는지 한 장 비교표로 마무리한다.',
+    obj: '"왜 바꿔야 하나"에는 숫자로만 답한다. 근거 없는 권유는 신뢰를 깎는다.',
+    work: '기준과 절차를 먼저 알려 준다. 즉흥적인 지시는 반발을 부른다.',
+    fit: ['ESFP', 'ESTP'], rub: ['ENFP', 'ENTP'] },
+  ISFJ: { nick: '조용한 살림꾼', line: '드러내지 않고 챙긴다. 결정은 가족을 먼저 통과한다.',
+    str: ['성실하고 꼼꼼하다', '사람을 오래 기억한다', '약속을 어기지 않는다'],
+    care: ['거절을 잘 못 해 미룬다', '결정을 혼자 내리지 않는다', '부담을 말로 표현하지 않는다'],
+    open: '가족 이야기부터. 본인보다 가족 걱정이 먼저 나온다.',
+    doc: '보장 공백을 그림 한 장으로. 어려운 용어는 걷어낸다.',
+    pace: '느리게. 배우자와 상의할 시간을 반드시 준다.',
+    close: '"오늘 결정하지 않으셔도 됩니다"라고 먼저 말해 주면 오히려 빨라진다.',
+    obj: '거절이 아니라 미루는 것이다. 다음 약속을 잡아 두면 이어진다.',
+    work: '드러나지 않는 수고를 짚어 칭찬한다. 공개 지적은 오래 남는다.',
+    fit: ['ESFP', 'ESTP'], rub: ['ENTJ', 'ENTP'] },
+  INFJ: { nick: '속 깊은 조언자', line: '말수는 적지만 상대의 진심을 읽고 있다. 의미가 없으면 움직이지 않는다.',
+    str: ['상대의 속마음을 잘 읽는다', '가치와 명분이 분명하다', '한 번 정하면 깊게 간다'],
+    care: ['속내를 늦게 꺼낸다', '상업적 태도에 민감하다', '완벽하지 않으면 시작을 미룬다'],
+    open: '"이 돈이 결국 누구를 위한 것인지"부터 묻는다.',
+    doc: '가족·삶의 그림. 상품 설명은 뒤로.',
+    pace: '3회 이상. 신뢰가 쌓이기 전에는 결정하지 않는다.',
+    close: '설득하지 말고 정리해 준다. 결론은 본인이 낸다.',
+    obj: '반론을 말로 하지 않고 조용히 사라진다. 중간 점검 연락이 필수다.',
+    work: '의미를 먼저 설명한다. 실적 압박은 마음을 닫게 한다.',
+    fit: ['ENFP', 'ENTP'], rub: ['ESTP', 'ESTJ'] },
+  INTJ: { nick: '설계형 전략가', line: '머릿속에 이미 5년치 그림이 있다. 논리가 맞으면 결정이 빠르다.',
+    str: ['핵심을 빨리 짚는다', '스스로 공부해서 온다', '장기 계획을 세운다'],
+    care: ['설명이 길면 지루해한다', '전문성이 의심되면 즉시 닫는다', '감정 표현이 적어 오해받는다'],
+    open: '"결론부터 말씀드리겠습니다"로 시작한다.',
+    doc: '비교표 한 장·수치 근거. 감성 사례는 뺀다.',
+    pace: '두세 번으로 끝낸다. 늘어지면 흥미를 잃는다.',
+    close: '선택지 두 개와 각각의 손익을 주고 스스로 고르게 한다.',
+    obj: '"왜 이것인가"에 논리로 답한다. 얼버무리면 그날로 끝이다.',
+    work: '목표만 주고 방법은 맡긴다. 잦은 확인은 역효과.',
+    fit: ['ENFP', 'ENTP'], rub: ['ESFJ', 'ESFP'] },
+  ISTP: { nick: '손이 빠른 해결사', line: '말보다 실물을 본다. 필요하다고 판단하면 그 자리에서 끝낸다.',
+    str: ['군더더기가 없다', '문제를 바로 손본다', '위기 상황에 침착하다'],
+    care: ['긴 설명을 견디지 못한다', '얽매이는 것을 싫어한다', '연락이 끊기기 쉽다'],
+    open: '용건부터. 인사말은 짧게.',
+    doc: '한 장. 필요한 것과 값만.',
+    pace: '한 번에 끝내는 것이 가장 좋다.',
+    close: '"이대로 진행할까요"로 바로 물어본다.',
+    obj: '설득하려 들면 도망간다. 사실만 두고 선택하게 둔다.',
+    work: '자율을 준다. 회의보다 현장에서 말한다.',
+    fit: ['ESFJ', 'ESTJ'], rub: ['ENFJ', 'INFJ'] },
+  ISFP: { nick: '온화한 실행가', line: '부드럽지만 자기 기준이 분명하다. 강하게 밀면 조용히 멀어진다.',
+    str: ['사람을 편하게 한다', '있는 그대로를 본다', '작은 배려가 몸에 배어 있다'],
+    care: ['압박에 약하다', '거절을 말로 하지 않는다', '먼 미래를 잘 그리지 않는다'],
+    open: '요즘 어떻게 지내는지부터. 상품 이야기는 두 번째 만남에.',
+    doc: '지금 당장 쓸 수 있는 보장 중심으로.',
+    pace: '천천히, 부담 없이.',
+    close: '작게 시작하는 안을 하나 만들어 준다.',
+    obj: '반론 대신 침묵이 온다. 부담을 덜어 주는 말이 먼저다.',
+    work: '지시보다 부탁. 공개 비교는 피한다.',
+    fit: ['ESFJ', 'ESTJ'], rub: ['ENTJ', 'ESTJ'] },
+  INFP: { nick: '가치 중심의 이상가', line: '숫자보다 뜻으로 움직인다. 진심이 아니면 바로 알아챈다.',
+    str: ['사람의 마음을 깊이 본다', '자기 가치가 분명하다', '한 번 믿으면 오래 간다'],
+    care: ['현실 계산이 뒤로 밀린다', '결정이 늦다', '상업적 화법에 민감하다'],
+    open: '무엇을 지키고 싶은지부터 묻는다.',
+    doc: '가족·꿈에 붙은 이야기 한 장. 표는 뒤에.',
+    pace: '느리게. 재촉하면 멀어진다.',
+    close: '"지금 이 선택이 무엇을 지키는지"를 한 문장으로 정리해 준다.',
+    obj: '가격이 아니라 의미에서 막힌다. 의미를 다시 세워 준다.',
+    work: '왜 하는지를 먼저 말한다. 숫자만 주면 힘을 잃는다.',
+    fit: ['ENFJ', 'ENTJ'], rub: ['ESTJ', 'ESTP'] },
+  INTP: { nick: '파고드는 분석가', line: '스스로 검증하기 전에는 믿지 않는다. 질문이 많은 것은 관심이 있다는 뜻이다.',
+    str: ['원리를 끝까지 파고든다', '허점을 잘 찾는다', '편견이 적다'],
+    care: ['결정을 계속 미룬다', '설명이 부정확하면 신뢰를 잃는다', '감정 대화를 어려워한다'],
+    open: '"직접 확인하실 수 있게 근거를 드리겠습니다"로 연다.',
+    doc: '약관 원문·계산 근거·비교 자료. 모르면 모른다고 말한다.',
+    pace: '검토 시간을 충분히 준다. 대신 마감을 정해 준다.',
+    close: '결정을 미루는 이유를 목록으로 만들어 하나씩 지운다.',
+    obj: '반론이 아니라 확인 질문이다. 성실히 답하면 넘어간다.',
+    work: '왜 그런지 설명해 준다. 지시만으로는 움직이지 않는다.',
+    fit: ['ENTJ', 'ENFJ'], rub: ['ESFJ', 'ISFJ'] },
+  ESTP: { nick: '현장형 승부사', line: '지금 눈앞의 이익으로 판단한다. 길면 지루해한다.',
+    str: ['결정이 빠르다', '현장 감각이 좋다', '사람을 끌어당긴다'],
+    care: ['장기 계획을 미룬다', '지루하면 그 자리에서 끝낸다', '약속이 자주 바뀐다'],
+    open: '"3분만 보시면 됩니다"로 시작한다.',
+    doc: '한 장. 큰 숫자와 비교만.',
+    pace: '빠르게. 그 자리에서 결론까지.',
+    close: '지금 하면 무엇이 달라지는지를 숫자로 보여 준다.',
+    obj: '"나중에"가 곧 거절이다. 그 자리에서 다음 행동을 정한다.',
+    work: '목표와 보상을 눈에 보이게 건다. 긴 회의는 독이다.',
+    fit: ['ISFJ', 'ISTJ'], rub: ['INFJ', 'INFP'] },
+  ESFP: { nick: '분위기 메이커', line: '사람과 지금이 먼저다. 어려운 말은 세 문장을 넘기지 못한다.',
+    str: ['분위기를 밝게 만든다', '사람을 잘 소개해 준다', '반응이 빠르다'],
+    care: ['오래 앉아 있지 못한다', '어려운 표를 싫어한다', '충동적으로 결정한다'],
+    open: '가벼운 이야기로 5분. 표부터 꺼내지 않는다.',
+    doc: '그림·색·큰 글씨. 표는 최대 한 개.',
+    pace: '짧고 자주.',
+    close: '"이거 하나만 하시죠"로 좁혀 준다. 선택지가 많으면 못 고른다.',
+    obj: '즉흥 결정 뒤 번복이 잦다. 결정 직후 정리 메시지를 보낸다.',
+    work: '칭찬을 자주, 즉시. 서류 업무는 짝을 붙여 준다.',
+    fit: ['ISTJ', 'ISFJ'], rub: ['INTJ', 'INTP'] },
+  ENFP: { nick: '불꽃 아이디어러', line: '가능성에 반응한다. 시작은 뜨겁고 마무리는 도움이 필요하다.',
+    str: ['사람을 모으는 힘이 있다', '새 아이디어가 끊이지 않는다', '공감이 빠르다'],
+    care: ['일을 여러 개 벌인다', '세부 사항을 흘린다', '관심이 빨리 옮겨간다'],
+    open: '앞으로 하고 싶은 일 이야기부터.',
+    doc: '큰 그림 한 장. 세부는 요약해서 뒤에.',
+    pace: '흥이 식기 전에. 다만 마무리 확인은 반드시.',
+    close: '해야 할 일을 세 개로 줄여 적어 준다.',
+    obj: '거절이 아니라 미룸이다. 다음 행동을 그 자리에서 적어 준다.',
+    work: '방향만 주고 자유를 준다. 마감은 짧게 끊어 준다.',
+    fit: ['INTJ', 'INFJ'], rub: ['ISTJ', 'ESTJ'] },
+  ENTP: { nick: '판을 흔드는 토론가', line: '반대부터 해 보고 판단한다. 반박당하는 것을 즐긴다.',
+    str: ['판을 새로 짠다', '설득에 강하다', '두려움 없이 시도한다'],
+    care: ['말이 앞선다', '마무리가 약하다', '지루함을 못 견딘다'],
+    open: '일부러 반대 의견을 먼저 꺼내 준다.',
+    doc: '비교와 대안 두 가지. 하나만 내밀면 반박이 온다.',
+    pace: '빠르게, 토론하듯이.',
+    close: '"직접 골라 보시죠"로 넘긴다.',
+    obj: '반론은 관심의 표현이다. 맞받아치되 근거를 놓지 않는다.',
+    work: '새로운 시도를 맡긴다. 반복 업무에는 오래 두지 않는다.',
+    fit: ['INFJ', 'INTJ'], rub: ['ISFJ', 'ISTJ'] },
+  ESTJ: { nick: '밀어붙이는 관리자', line: '기준과 결과로 말한다. 시간을 낭비하는 것을 가장 싫어한다.',
+    str: ['추진력이 강하다', '기준이 분명하다', '책임을 진다'],
+    care: ['속도가 느리면 답답해한다', '지적이 직설적이다', '감정을 뒤로 미룬다'],
+    open: '"결론과 근거 순서로 말씀드리겠습니다."',
+    doc: '표·수치·일정. 한 장에 끝낸다.',
+    pace: '빠르게. 다음 일정까지 그 자리에서 정한다.',
+    close: '오늘 결정할 것과 다음 단계를 명확히 나눈다.',
+    obj: '가격 반론이 직설적으로 온다. 손익 비교로 정면 대응한다.',
+    work: '목표와 마감을 숫자로 준다. 애매한 지시는 신뢰를 깎는다.',
+    fit: ['ISFP', 'ISTP'], rub: ['INFP', 'ENFP'] },
+  ESFJ: { nick: '챙기는 살림 대장', line: '사람을 먼저 챙긴다. 주변 평판이 결정에 크게 작용한다.',
+    str: ['관계를 잘 관리한다', '소개를 잘 해 준다', '책임감이 강하다'],
+    care: ['주변 말에 흔들린다', '거절을 어려워한다', '갈등을 피한다'],
+    open: '가족·주변 사람 이야기부터.',
+    doc: '남들은 어떻게 하는지 사례 중심으로.',
+    pace: '보통. 주변과 상의할 시간을 준다.',
+    close: '"같은 상황의 분들이 이렇게 하셨습니다"가 가장 잘 통한다.',
+    obj: '주변 반대가 곧 반론이다. 그 사람까지 설득할 자료를 준다.',
+    work: '팀 안에서 인정받게 한다. 공개 지적은 크게 남는다.',
+    fit: ['ISFP', 'ISTP'], rub: ['INTP', 'INTJ'] },
+  ENFJ: { nick: '이끄는 멘토', line: '사람을 키우는 데서 보람을 얻는다. 명분이 서면 앞장선다.',
+    str: ['사람을 움직인다', '분위기를 만든다', '남의 성장을 돕는다'],
+    care: ['본인 일을 뒤로 미룬다', '거절을 못 한다', '기대가 어긋나면 크게 실망한다'],
+    open: '주변 사람들을 어떻게 챙기고 있는지부터 묻는다.',
+    doc: '가족·조직에 미치는 영향 중심.',
+    pace: '보통. 대화가 길어져도 좋아한다.',
+    close: '"이 선택이 누구에게 도움이 되는지"로 마무리한다.',
+    obj: '자기 것보다 남의 것을 먼저 챙기려 한다. 본인 몫을 짚어 준다.',
+    work: '사람을 맡긴다. 인정과 감사를 자주 표현한다.',
+    fit: ['INFP', 'ISFP'], rub: ['ISTP', 'INTP'] },
+  ENTJ: { nick: '판을 짜는 지휘관', line: '목표부터 세우고 사람을 배치한다. 시간을 가장 비싸게 친다.',
+    str: ['방향을 제시한다', '결정이 빠르다', '큰 판을 본다'],
+    care: ['말이 세게 나간다', '느린 것을 못 참는다', '세부를 남에게 미룬다'],
+    open: '"핵심 세 가지, 5분이면 됩니다."',
+    doc: '전략·손익·일정. 감성 자료는 빼도 된다.',
+    pace: '가장 빠르게.',
+    close: '결정 사항과 담당·기한을 그 자리에서 적는다.',
+    obj: '더 나은 대안을 요구한다. 두 번째 안을 항상 준비한다.',
+    work: '권한을 준다. 결과로 평가받는 것을 선호한다.',
+    fit: ['INFP', 'INTP'], rub: ['ISFP', 'ISFJ'] }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   1. 만세력 — 생년월일시로 사주 4기둥을 계산한다
+   ══════════════════════════════════════════════════════════════════
+   절기는 태양황경으로 구한다. 월지는 황경 315도(입춘)부터 30도마다
+   인·묘·진… 으로 갈리므로 표를 쓰지 않고 그 자리에서 정확히 나온다.
+   일주는 율리우스 적일에서 뽑는다(2000-01-01 무오일, 1949-10-01 갑자일로 확인).
+   23시 이후는 다음날 일진으로 본다(야자시).                            */
+var GAN=['갑','을','병','정','무','기','경','신','임','계'];
+var GANH=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+var JI=['자','축','인','묘','진','사','오','미','신','유','술','해'];
+var JIH=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+var GAN_OH=['목','목','화','화','토','토','금','금','수','수'];
+var JI_OH=['수','토','목','목','토','화','화','토','금','금','토','수'];
+var GAN_YIN=[0,1,0,1,0,1,0,1,0,1];      /* 0 양 · 1 음 */
+var JI_YIN=[0,1,0,1,0,1,0,1,0,1,0,1];
+var JI_HIDE=[9,5,0,1,4,2,3,5,6,7,4,8]; /* 지지 본기(정기) 천간 */
+var JI_ANI=['쥐','소','호랑이','토끼','용','뱀','말','양','원숭이','닭','개','돼지'];
+var OH_META={
+  목:{c:'#4FBF9B',bg:'#EAF9F3',emo:'🌱',key:'뻗어나감',mind:'새로 시작하고 키우는 힘. 답답한 걸 못 견딘다.'},
+  화:{c:'#F0637E',bg:'#FFEFF2',emo:'🔥',key:'드러냄',mind:'표현하고 밝히는 힘. 반응이 빠르고 열이 오른다.'},
+  토:{c:'#C98A3C',bg:'#FFF6E7',emo:'⛰️',key:'중심 잡음',mind:'모으고 버티는 힘. 신중하고 잘 안 흔들린다.'},
+  금:{c:'#6E7EA8',bg:'#EFF3FB',emo:'⚙️',key:'매듭지음',mind:'자르고 정리하는 힘. 원칙과 결단이 분명하다.'},
+  수:{c:'#5B8DEF',bg:'#EAF2FF',emo:'💧',key:'스며듦',mind:'모으고 생각하는 힘. 속을 잘 안 보인다.'}
+};
+var OH_SAENG={목:'화',화:'토',토:'금',금:'수',수:'목'};   /* 생 */
+var OH_GEUK={목:'토',토:'수',수:'화',화:'금',금:'목'};     /* 극 */
+
+function jdnOf(y,m,d){var a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;
+  return d+Math.floor((153*mm+2)/5)+365*yy+Math.floor(yy/4)-Math.floor(yy/100)+Math.floor(yy/400)-32045;}
+function jdKst(y,m,d,H,Mi){return jdnOf(y,m,d)-0.5+((H-9)+(Mi||0)/60)/24;}
+function sunLong(jd){
+  var T=(jd-2451545)/36525;
+  var L0=280.46646+36000.76983*T+0.0003032*T*T;
+  var M=(357.52911+35999.05029*T-0.0001537*T*T)*Math.PI/180;
+  var C=(1.914602-0.004817*T-0.000014*T*T)*Math.sin(M)+(0.019993-0.000101*T)*Math.sin(2*M)+0.000289*Math.sin(3*M);
+  var O=(125.04-1934.136*T)*Math.PI/180;
+  var lam=L0+C-0.00569-0.00478*Math.sin(O);
+  return ((lam%360)+360)%360;
+}
+function ipchunJd(y){var lo=jdKst(y,2,1,0,0),hi=jdKst(y,2,10,0,0),i,mid;
+  for(i=0;i<52;i++){mid=(lo+hi)/2;if(sunLong(mid)<315)lo=mid;else hi=mid;}return (lo+hi)/2;}
+function jdToKst(jd){
+  var z=jd+0.5+9/24,Z=Math.floor(z),f=z-Z,a=Z;
+  if(Z>=2299161){var al=Math.floor((Z-1867216.25)/36524.25);a=Z+1+al-Math.floor(al/4);}
+  var b=a+1524,c=Math.floor((b-122.1)/365.25),d0=Math.floor(365.25*c),e=Math.floor((b-d0)/30.6001);
+  var day=b-d0-Math.floor(30.6001*e),mo=e<14?e-1:e-13,yr=mo>2?c-4716:c-4715;
+  var h=f*24,H=Math.floor(h),Mi=Math.round((h-H)*60);if(Mi===60){Mi=0;H++;}
+  return {y:yr,m:mo,d:day,H:H,Mi:Mi,
+    txt:yr+'년 '+mo+'월 '+day+'일 '+('0'+H).slice(-2)+':'+('0'+Mi).slice(-2)};
+}
+/* 절입 시각 — 지금 달의 시작(절입)과 다음 절입 */
+function termJd(jd,dir){
+  var lam=sunLong(jd), base=Math.floor((((lam-315)%360)+360)%360/30)*30+315;
+  var target=((base%360)+360)%360;
+  if(dir>0)target=(target+30)%360;
+  var lo=jd-(dir>0?0:40), hi=jd+(dir>0?40:0),i,mid;
+  function diff(x){var v=sunLong(x)-target;while(v<-180)v+=360;while(v>180)v-=360;return v;}
+  if(diff(lo)*diff(hi)>0)return null;
+  for(i=0;i<52;i++){mid=(lo+hi)/2;if(diff(lo)*diff(mid)<=0)hi=mid;else lo=mid;}
+  return (lo+hi)/2;
+}
+var TERM_NAME=['입춘','경칩','청명','입하','망종','소서','입추','백로','한로','입동','대설','소한'];
+
+/* 사주 계산 — sunTime: 진태양시 보정(분) */
+function sajuCalc(y,m,d,H,Mi,adjMin){
+  var mm=(Mi||0)+(adjMin||0), hh=H;
+  while(mm<0){mm+=60;hh--;} while(mm>=60){mm-=60;hh++;}
+  var dy=y,dm=m,dd=d;
+  if(hh<0){hh+=24;var pj=jdnOf(y,m,d)-1,pk=jdToKst(pj+0.5-9/24+0.5);dy=pk.y;dm=pk.m;dd=pk.d;}
+  if(hh>=24){hh-=24;var nj=jdnOf(y,m,d)+1,nk=jdToKst(nj+0.5-9/24+0.5);dy=nk.y;dm=nk.m;dd=nk.d;}
+  var jd=jdKst(dy,dm,dd,hh,mm), lam=sunLong(jd);
+  var sy=(jd>=ipchunJd(dy))?dy:dy-1;
+  var yi=((sy-1984)%60+60)%60, yg=yi%10, yj=yi%12;
+  var mj=(Math.floor((((lam-315)%360)+360)%360/30)+2)%12;
+  var mg=((yg%5)*2+2+((mj-2+12)%12))%10;
+  var dayN=jdnOf(dy,dm,dd)+(hh>=23?1:0), di=((dayN+49)%60+60)%60, dg=di%10, dj=di%12;
+  var zi=Math.floor(((hh+1)%24)/2), hg=((dg%5)*2+zi)%10;
+  var prev=termJd(jd,-1), next=termJd(jd,1);
+  var toPrev=prev?(jd-prev):null, toNext=next?(next-jd):null;
+  return {
+    jd:jd,lam:lam,sajuYear:sy,adj:adjMin||0,
+    yg:yg,yj:yj,mg:mg,mj:mj,dg:dg,dj:dj,hg:hg,hj:zi,
+    pillars:[{lb:'년주',g:yg,j:yj},{lb:'월주',g:mg,j:mj},{lb:'일주',g:dg,j:dj,day:true},{lb:'시주',g:hg,j:zi}],
+    term:{prev:prev,next:next,prevName:TERM_NAME[Math.floor((((sunLong(prev||jd)-315)%360)+360)%360/30)]||'',
+          nextName:TERM_NAME[(Math.floor((((lam-315)%360)+360)%360/30)+1)%12]||'',
+          toPrevDays:toPrev,toNextDays:toNext},
+    edge:(toPrev!==null&&toPrev<0.05)||(toNext!==null&&toNext<0.05),
+    hourEdge:(mm%120===0)||(((hh*60+mm)+60)%120<20)||(((hh*60+mm)+60)%120>100)
+  };
+}
+/* 오행 개수 — 천간 4 + 지지 4 */
+function ohCount(s){
+  var o={목:0,화:0,토:0,금:0,수:0};
+  [s.yg,s.mg,s.dg,s.hg].forEach(function(g){o[GAN_OH[g]]++;});
+  [s.yj,s.mj,s.dj,s.hj].forEach(function(j){o[JI_OH[j]]++;});
+  return o;
+}
+/* 십신 — 일간 기준 */
+function sipsinOf(dayG,otherG){
+  var a=GAN_OH[dayG],b=GAN_OH[otherG],same=(GAN_YIN[dayG]===GAN_YIN[otherG]);
+  if(a===b)return same?'비견':'겁재';
+  if(OH_SAENG[a]===b)return same?'식신':'상관';
+  if(OH_GEUK[a]===b)return same?'편재':'정재';
+  if(OH_GEUK[b]===a)return same?'편관':'정관';
+  return same?'편인':'정인';
+}
+var SIP_GROUP={비견:'비겁',겁재:'비겁',식신:'식상',상관:'식상',편재:'재성',정재:'재성',편관:'관성',정관:'관성',편인:'인성',정인:'인성'};
+function sipsinTable(s){
+  var out=[],g;
+  out.push({pos:'년간',name:sipsinOf(s.dg,s.yg),src:GAN[s.yg]});
+  out.push({pos:'월간',name:sipsinOf(s.dg,s.mg),src:GAN[s.mg]});
+  out.push({pos:'시간',name:sipsinOf(s.dg,s.hg),src:GAN[s.hg]});
+  out.push({pos:'년지',name:sipsinOf(s.dg,JI_HIDE[s.yj]),src:JI[s.yj]});
+  out.push({pos:'월지',name:sipsinOf(s.dg,JI_HIDE[s.mj]),src:JI[s.mj]});
+  out.push({pos:'일지',name:sipsinOf(s.dg,JI_HIDE[s.dj]),src:JI[s.dj]});
+  out.push({pos:'시지',name:sipsinOf(s.dg,JI_HIDE[s.hj]),src:JI[s.hj]});
+  var cnt={비겁:0,식상:0,재성:0,관성:0,인성:0};
+  out.forEach(function(x){cnt[SIP_GROUP[x.name]]++;});
+  var top='',mx=-1;
+  for(g in cnt)if(cnt[g]>mx){mx=cnt[g];top=g;}
+  return {rows:out,count:cnt,top:top,topN:mx};
+}
+/* 일간 강약 — 월지·같은 편 개수로 간단 판정 */
+function strengthOf(s){
+  var mine=GAN_OH[s.dg], help=0, i;
+  var gs=[s.yg,s.mg,s.hg], js=[s.yj,s.mj,s.dj,s.hj];
+  for(i=0;i<gs.length;i++){var o=GAN_OH[gs[i]];if(o===mine||OH_SAENG[o]===mine)help++;}
+  for(i=0;i<js.length;i++){var o2=JI_OH[js[i]];if(o2===mine||OH_SAENG[o2]===mine)help+=(i===1?1.5:1);}
+  var monthOk=(JI_OH[s.mj]===mine||OH_SAENG[JI_OH[s.mj]]===mine);
+  var lv= help>=4.5?'신강':(help>=3?'중화':'신약');
+  return {level:lv,help:Math.round(help*10)/10,monthOk:monthOk};
+}
+/* 올해 운(세운) — 오늘 기준 */
+function yearLuck(s,today){
+  var t=today||new Date();
+  var jd=jdKst(t.getFullYear(),t.getMonth()+1,t.getDate(),12,0);
+  var sy=(jd>=ipchunJd(t.getFullYear()))?t.getFullYear():t.getFullYear()-1;
+  var yi=((sy-1984)%60+60)%60,g=yi%10,j=yi%12;
+  return {year:sy,g:g,j:j,gz:GAN[g]+JI[j],han:GANH[g]+JIH[j],
+    sip:sipsinOf(s.dg,g),sipJ:sipsinOf(s.dg,JI_HIDE[j]),
+    group:SIP_GROUP[sipsinOf(s.dg,g)]};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   2. 사주 성향 사전 — 십신·오행이 사람을 어떻게 움직이는가
+   ══════════════════════════════════════════════════════════════════ */
+var SIP_META={
+  비겁:{tag:'주체·자존심',mind:'남이 정해주는 걸 싫어한다. 내 결정으로 하고 싶어한다.',
+    want:'주도권 · 체면 · 내 판단이 존중받는 것',
+    open:'"결정은 사장님이 하십니다. 저는 자료만 정확히 드리겠습니다."',
+    avoid:'밀어붙이기 · 남과 비교하기 · "다들 이렇게 하세요"',
+    close:'선택지를 두 개 놓고 고르게 한다. 고른 순간이 계약이다.'},
+  식상:{tag:'표현·자유',mind:'새롭고 재미있어야 움직인다. 갇히는 걸 못 견딘다.',
+    want:'새로움 · 자유 · 내 이야기를 들어주는 것',
+    open:'"요즘 어떤 걸 준비하고 계세요?" — 먼저 말하게 둔다.',
+    avoid:'긴 약관 설명 · 규정 나열 · 말 끊기',
+    close:'"묶이지 않는 구조"임을 보여준다. 해지·변경 여지를 먼저 말한다.'},
+  재성:{tag:'실리·숫자',mind:'돈으로 환산되지 않으면 관심이 없다. 계산이 빠르다.',
+    want:'수익 · 환급률 · 손해 안 보는 것',
+    open:'"들어가는 돈과 돌아오는 돈부터 보시죠."',
+    avoid:'막연한 감성 호소 · 숫자 없는 설명',
+    close:'표 한 장으로 총액 비교. 숫자로 시작해 숫자로 끝낸다.'},
+  관성:{tag:'명분·책임',mind:'해야 할 일이면 한다. 체면과 안정이 기준이다.',
+    want:'안정 · 명분 · 남 보기에 부끄럽지 않은 선택',
+    open:'"가장이시니 이건 챙기셔야 합니다" — 역할을 먼저 짚는다.',
+    avoid:'편법 · 즉흥 권유 · 규정 어긋난 제안',
+    close:'"이 정도는 갖추셔야 한다"는 기준선을 제시한다.'},
+  인성:{tag:'안전·배움',mind:'이해되지 않으면 안 움직인다. 대신 이해하면 오래 간다.',
+    want:'안전 · 원리 이해 · 믿을 만한 사람',
+    open:'"왜 이 구조인지부터 설명드릴게요."',
+    avoid:'재촉 · 오늘 결정 요구 · 근거 없는 단정',
+    close:'자료를 두고 나온다. 두 번째 만남에서 결정된다.'}
+};
+var SIP10={
+  비견:'나와 같은 힘 — 동료이자 경쟁자. 대등하게 대해야 말이 통한다.',
+  겁재:'같은 힘인데 결이 다름 — 지면 안 된다는 마음이 크다. 비교하면 닫힌다.',
+  식신:'풀어내는 힘 — 여유롭게 즐긴다. 재촉하지 않으면 잘 따라온다.',
+  상관:'튀어나오는 힘 — 틀을 답답해한다. 규정부터 말하면 반발한다.',
+  편재:'크게 굴리는 돈 — 기회와 규모에 반응한다. 잔돈 계산에는 시큰둥하다.',
+  정재:'꼬박꼬박 모으는 돈 — 정확한 숫자와 안정된 환급을 좋아한다.',
+  편관:'몰아치는 책임 — 위기와 최악을 먼저 본다. 보장 이야기가 잘 먹힌다.',
+  정관:'지켜야 할 자리 — 명분과 체면이 기준이다. 편법 제안은 금물.',
+  편인:'삐딱한 배움 — 남들이 안 하는 방식을 좋아한다. 원리를 캐묻는다.',
+  정인:'받아들이는 배움 — 이해되면 오래 간다. 설명을 충분히 해줘야 한다.'
+};
+var GAN_CHAR=[
+  {n:'갑목',t:'큰 나무',line:'곧게 뻗는다. 굽히는 걸 싫어하고 명분에 약하다.'},
+  {n:'을목',t:'덩굴·화초',line:'부드럽게 감고 오른다. 유연하지만 속은 질기다.'},
+  {n:'병화',t:'태양',line:'드러내고 밝힌다. 숨기는 게 없고 뒤끝도 없다.'},
+  {n:'정화',t:'촛불',line:'조용히 오래 밝힌다. 섬세하고 사람을 잘 살핀다.'},
+  {n:'무토',t:'큰 산',line:'잘 안 흔들린다. 믿음직하지만 속을 잘 안 연다.'},
+  {n:'기토',t:'밭흙',line:'품고 기른다. 남 챙기다 자기 것을 놓친다.'},
+  {n:'경금',t:'무쇠',line:'끊고 맺는다. 결단이 빠르고 말이 곧다.'},
+  {n:'신금',t:'보석',line:'예리하고 깔끔하다. 자존심이 세고 티를 잘 낸다.'},
+  {n:'임수',t:'큰 물',line:'넓게 흐른다. 사람을 잘 모으고 속이 깊다.'},
+  {n:'계수',t:'이슬·비',line:'조용히 스민다. 눈치가 빠르고 생각이 많다.'}
+];
+
+/* ══════════════════════════════════════════════════════════════════
+   3. 궁합 — 사주(합·충)와 성향(MBTI)을 같이 본다
+   ══════════════════════════════════════════════════════════════════ */
+var YUKHAP={0:1,1:0,2:11,11:2,3:10,10:3,4:9,9:4,5:8,8:5,6:7,7:6};   /* 육합 */
+var SAMHAP=[[8,0,4],[11,3,7],[2,6,10],[5,9,1]];                       /* 삼합 */
+function jiRel(a,b){
+  if(a===b)return {k:'같음',s:8,txt:'일지가 같다 — 사는 결이 비슷하다. 편하지만 새롭지는 않다.'};
+  if(YUKHAP[a]===b)return {k:'육합',s:30,txt:'일지가 육합이다 — 처음부터 말이 잘 붙는다. 신뢰가 빨리 선다.'};
+  if((a+6)%12===b)return {k:'충',s:-24,txt:'일지가 충이다 — 속도와 방식이 부딪힌다. 말 순서를 바꾸지 않으면 어긋난다.'};
+  var i;for(i=0;i<SAMHAP.length;i++)if(SAMHAP[i].indexOf(a)>=0&&SAMHAP[i].indexOf(b)>=0)
+    return {k:'삼합',s:24,txt:'일지가 삼합이다 — 같은 목표를 보면 손발이 맞는다.'};
+  return {k:'무관',s:0,txt:'일지가 특별히 얽히지 않는다 — 좋지도 나쁘지도 않다. 준비한 만큼 간다.'};
+}
+function ganRel(a,b){
+  if(Math.abs(a-b)===5)return {k:'천간합',s:18,txt:'일간이 합이다 — 서로 끌린다. 첫인상이 좋다.'};
+  if(GAN_OH[a]===GAN_OH[b])return {k:'같은 오행',s:9,txt:'일간이 같은 오행 — 생각의 재료가 비슷하다.'};
+  if(OH_SAENG[GAN_OH[a]]===GAN_OH[b])return {k:'내가 생함',s:11,txt:'내가 상대를 살리는 관계 — 내가 주는 쪽이 편하다.'};
+  if(OH_SAENG[GAN_OH[b]]===GAN_OH[a])return {k:'상대가 생함',s:13,txt:'상대가 나를 살리는 관계 — 상대가 먼저 마음을 연다.'};
+  if(OH_GEUK[GAN_OH[a]]===GAN_OH[b])return {k:'내가 극함',s:-8,txt:'내가 상대를 누르는 관계 — 세게 나가면 상대가 닫는다.'};
+  return {k:'상대가 극함',s:-6,txt:'상대가 나를 누르는 관계 — 끌려가기 쉽다. 기준을 먼저 정해두자.'};
+}
+function ohFill(mine,yours){
+  var lack=[],k;
+  for(k in mine)if(mine[k]===0)lack.push(k);
+  var filled=lack.filter(function(x){return yours[x]>=2;});
+  return {lack:lack,filled:filled};
+}
+var MB_COMPAT={
+  SN:{same:{s:18,txt:'설명하는 언어가 같다 — 예시를 들면 바로 통한다.'},
+      diff:{s:-7,txt:'한쪽은 숫자·사례, 한쪽은 그림·방향으로 말한다. 같은 말을 해도 다르게 들린다.'}},
+  TF:{same:{s:11,txt:'결정 기준이 같다 — 설득 포인트가 어긋나지 않는다.'},
+      diff:{s:-5,txt:'한쪽은 근거로, 한쪽은 마음으로 정한다. 서로 "저 사람 왜 저러지" 하기 쉽다.'}},
+  JP:{same:{s:9,txt:'속도가 맞는다 — 일정 잡기가 쉽다.'},
+      diff:{s:-6,txt:'한쪽은 지금 정하고 싶고 한쪽은 더 보고 싶다. 재촉과 미룸이 반복된다.'}},
+  EI:{same:{s:-2,txt:'같은 쪽이라 대화 리듬이 겹친다. 둘 다 말하거나 둘 다 조용하다.'},
+      diff:{s:7,txt:'한쪽이 말하고 한쪽이 듣는다 — 상담에는 오히려 편한 조합이다.'}}
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   4. 상담 전략 — "나는 이런데 상대는 저렇다, 그래서 이렇게 바꿔라"
+   ══════════════════════════════════════════════════════════════════ */
+var STRATEGY={
+  EI:{label:'말의 양',
+    SS:{me:'E',you:'E',risk:'둘 다 말이 많아 시간이 다 가고 결론이 안 난다.',fix:'말할 시간을 반씩 나눈다. 15분 지나면 "정리해보겠습니다"로 끊는다.'},
+    II:{me:'I',you:'I',risk:'서로 조용해서 침묵이 길어지고 어색해진다.',fix:'질문지를 미리 종이로 준비한다. 말 대신 자료를 가운데 놓고 짚어가며 진행한다.'},
+    ME:{me:'E',you:'I',risk:'내가 계속 말하고 상대는 듣기만 한다. 속마음을 못 듣고 끝난다.',fix:'세 문장 말하면 한 번 멈춘다. "어떻게 생각하세요?" 뒤 5초는 참는다. 답을 기다린다.'},
+    MI:{me:'I',you:'E',risk:'상대가 신나서 말하는데 내가 못 받아주면 김이 샌다.',fix:'맞장구를 크게. 상대 말을 요약해 되돌려준다. 자료 설명은 상대가 다 말한 뒤에.'}},
+  SN:{label:'설명 방식',
+    SS:{me:'S',you:'S',risk:'둘 다 세부에 빠져 큰 방향을 못 잡는다.',fix:'첫 1분에 "오늘 결론은 이겁니다"를 먼저 말하고 세부로 들어간다.'},
+    II:{me:'N',you:'N',risk:'그림만 그리다 숫자 없이 끝난다. 나중에 "그래서 얼마였죠?"가 온다.',fix:'마지막 5분은 반드시 숫자로 못 박는다. 보험료·보장금액·기간 세 개를 종이에 적어준다.'},
+    ME:{me:'N',you:'S',risk:'나는 비전과 방향을 말하는데 상대는 속으로 "그래서 얼마요"를 기다린다. 뜬구름으로 들린다.',fix:'첫 3분에 숫자 세 개(월 보험료·보장금액·기간)를 먼저 말한다. 그림은 마지막 30초에 한 문장으로.'},
+    MI:{me:'S',you:'N',risk:'내가 숫자와 담보를 나열할수록 상대는 지루해하고 딴생각을 한다.',fix:'"이 설계가 만드는 그림"을 한 문장으로 먼저. 표는 요약본 한 장만. 세부는 물어볼 때만.'}},
+  TF:{label:'결정 기준',
+    SS:{me:'T',you:'T',risk:'논리 싸움이 되면 관계가 남지 않는다.',fix:'근거는 자료가 말하게 하고, 나는 정리만 한다. 이길 필요가 없다.'},
+    II:{me:'F',you:'F',risk:'분위기는 좋은데 결정이 안 난다. 미안해서 못 자른다.',fix:'"오늘은 정하지 않으셔도 됩니다"를 먼저 말한 뒤, 결정 기한만 함께 적는다.'},
+    ME:{me:'F',you:'T',risk:'나는 가족 이야기와 마음으로 다가가는데 상대는 근거를 기다린다. 감성이 부담으로 간다.',fix:'감정 표현을 절반으로 줄인다. 비교표·손익 계산부터 꺼내고, 가족 이야기는 근거 뒤에 한 줄만.'},
+    MI:{me:'T',you:'F',risk:'내가 맞는 말을 할수록 상대는 상처받는다. "차갑다"는 인상만 남는다.',fix:'숫자 앞에 사람을 놓는다. "누구를 위한 돈인지"를 먼저 묻고, 표는 그 다음에 편다.'}},
+  JP:{label:'속도',
+    SS:{me:'J',you:'J',risk:'둘 다 계획대로만 가려다 변수가 생기면 크게 흔들린다.',fix:'대안 플랜 B를 미리 한 줄 준비해 둔다.'},
+    II:{me:'P',you:'P',risk:'둘 다 미루다 계약이 흐지부지된다.',fix:'그 자리에서 다음 약속 날짜만은 잡는다. 날짜 없이 헤어지지 않는다.'},
+    ME:{me:'J',you:'P',risk:'내가 일정을 밀어붙이면 상대는 "쫓긴다"고 느끼고 연락을 피한다.',fix:'마감 대신 선택지를 준다. "이번 주 아니면 다음 달 초, 편하신 쪽으로."'},
+    MI:{me:'P',you:'J',risk:'내가 여지를 남길수록 상대는 "준비가 안 된 사람"으로 본다.',fix:'다음 단계를 날짜와 함께 말한다. "금요일까지 두 가지 안을 드리겠습니다."'}}
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   5. 상태 · 도구
+   ══════════════════════════════════════════════════════════════════ */
+var S={step:'me',tab:'sum',target:'client',i:0,ans:{},
+  me:{name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null},
+  cl:{name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null}};
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(m){var t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._t);t._t=setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(-50%) translateY(16px)';},2100);}
+function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab}));}catch(e){}}
+function load(){try{return JSON.parse(localStorage.getItem('sajumbti')||'null');}catch(e){return null;}}
+function val(id){var e=$(id);return e?e.value:'';}
+function num(v){var n=parseInt(v,10);return isNaN(n)?null:n;}
+
+/* 캐릭터 — 유형마다 다르게 그 자리에서 그린다 */
+var PAL={NT:{body:'#C9BCFF',dark:'#8B7BF0',belly:'#EFEAFF',name:'분석가'},
+  NF:{body:'#A9E7D2',dark:'#4FBF9B',belly:'#E6F9F2',name:'외교관'},
+  SJ:{body:'#B7D3FF',dark:'#5B8DEF',belly:'#E8F1FF',name:'관리자'},
+  SP:{body:'#FFD79A',dark:'#F5A623',belly:'#FFF3DF',name:'탐험가'}};
+function grp(c){return c.charAt(1)==='N'?(c.charAt(2)==='T'?'NT':'NF'):(c.charAt(3)==='J'?'SJ':'SP');}
+function mascot(code,size){
+  if(!code||code.length<4)code='ENFP';
+  var g=grp(code),p=PAL[g],E=(code.charAt(0)==='E'),F=(code.charAt(2)==='F'),J=(code.charAt(3)==='J'),s=size||110;
+  var head='';
+  if(g==='NT')head='<path d="M70 24V12" stroke="'+p.dark+'" stroke-width="4" stroke-linecap="round"/><circle cx="70" cy="8" r="6" fill="#FFD36E"/>';
+  if(g==='NF')head='<path d="M70 26c-2-12 6-18 14-19 1 10-4 17-14 19z" fill="#7FD6C0"/>';
+  if(g==='SJ')head='<rect x="48" y="12" width="44" height="9" rx="4" fill="'+p.dark+'"/><rect x="56" y="2" width="28" height="12" rx="5" fill="'+p.dark+'"/>';
+  if(g==='SP')head='<path d="M52 28l-6-16 18 10z" fill="#FFB86B"/><path d="M88 28l6-16-18 10z" fill="#FFB86B"/>';
+  var eyes=E?'<circle cx="55" cy="70" r="8" fill="#3D3A50"/><circle cx="58" cy="67" r="2.8" fill="#fff"/><circle cx="85" cy="70" r="8" fill="#3D3A50"/><circle cx="88" cy="67" r="2.8" fill="#fff"/>'
+    :'<path d="M47 72q8-11 16 0" stroke="#3D3A50" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M77 72q8-11 16 0" stroke="#3D3A50" stroke-width="4.5" fill="none" stroke-linecap="round"/>';
+  var mouth=F?'<path d="M60 88q10 12 20 0" stroke="#3D3A50" stroke-width="4" fill="none" stroke-linecap="round"/>'
+    :'<path d="M62 90h16" stroke="#3D3A50" stroke-width="4" fill="none" stroke-linecap="round"/>';
+  var blush=F?'<ellipse cx="43" cy="83" rx="8" ry="5" fill="#FFB3CE" opacity=".75"/><ellipse cx="97" cy="83" rx="8" ry="5" fill="#FFB3CE" opacity=".75"/>':'';
+  var hands=J?'<circle cx="24" cy="92" r="9" fill="'+p.body+'"/><circle cx="116" cy="92" r="9" fill="'+p.body+'"/>'
+    :'<circle cx="22" cy="78" r="9" fill="'+p.body+'"/><circle cx="118" cy="106" r="9" fill="'+p.body+'"/>';
+  return '<svg class="masc" viewBox="0 0 140 140" width="'+s+'" height="'+s+'" role="img" aria-label="'+code+'">'+
+    '<ellipse cx="70" cy="130" rx="34" ry="6" fill="#3D3A50" opacity=".08"/>'+head+hands+
+    '<path d="M70 26c27 0 46 20 46 47 0 31-20 51-46 51S24 104 24 73c0-27 19-47 46-47z" fill="'+p.body+'"/>'+
+    '<ellipse cx="70" cy="96" rx="26" ry="22" fill="'+p.belly+'"/>'+blush+eyes+mouth+'</svg>';
+}
+var TYPE_LIST=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','ESFP','ENFP','ENTP','ESTJ','ESFJ','ENFJ','ENTJ'];
+
+/* ── 성향검사 채점 ── */
+function clarity(r){
+  if(r>=0.60)return {t:'아주 뚜렷',c:'#1F7A61',bg:'#EAF8F3'};
+  if(r>=0.36)return {t:'뚜렷',c:'#6F63C4',bg:'#F1EEFF'};
+  if(r>=0.19)return {t:'보통',c:'#9A5B0C',bg:'#FFF6E9'};
+  if(r>=0.07)return {t:'약함',c:'#A5670E',bg:'#FFF8EC'};
+  return {t:'경계 · 둘 다',c:'#BB3A54',bg:'#FFF0F1'};
+}
+function scoreAns(ans){
+  var by={},i;
+  for(i=0;i<MBTI_AXIS.length;i++)by[MBTI_AXIS[i].key]={sum:0,cnt:0};
+  for(i=0;i<MBTI_Q.length;i++){var v=ans[i],q=MBTI_Q[i];if(!v)continue;by[q.ax].sum+=q.k*v;by[q.ax].cnt++;}
+  var axes=MBTI_AXIS.map(function(a){
+    var s=by[a.key].sum,max=by[a.key].cnt*3||1,pa=Math.round(((s+max)/(max*2))*100);
+    pa=Math.max(0,Math.min(100,pa));
+    var ratio=Math.abs(s)/max,cl=clarity(ratio),letter=s>=0?a.a:a.b;
+    return {key:a.key,a:a.a,b:a.b,an:a.an,bn:a.bn,q:a.q,sum:s,max:max,cnt:by[a.key].cnt,pctA:pa,pctB:100-pa,
+      letter:letter,other:s>=0?a.b:a.a,ratio:ratio,clarity:cl.t,cc:cl.c,cbg:cl.bg,border:cl.t.indexOf('경계')===0,tip:MBTI_TIP[letter]};
+  });
+  var pairs=MBTI_PAIR.map(function(p){var va=ans[p[0]],vb=ans[p[1]];
+    return {label:p[2],pct:(!va||!vb)?null:Math.round((1-Math.abs(va+vb)/6)*100)};});
+  var done=pairs.filter(function(p){return p.pct!==null;});
+  return {axes:axes,code:axes.map(function(x){return x.letter;}).join(''),
+    consistency:done.length?Math.round(done.reduce(function(s,p){return s+p.pct;},0)/done.length):0,pairs:pairs,mode:'test'};
+}
+/* 유형을 직접 고른 경우 — 표는 같은 모양으로 만들되 "직접 선택"으로 표시 */
+function fakeRes(code){
+  var axes=MBTI_AXIS.map(function(a,i){
+    var letter=code.charAt(i),isA=(letter===a.a);
+    return {key:a.key,a:a.a,b:a.b,an:a.an,bn:a.bn,q:a.q,sum:isA?18:-18,max:36,cnt:12,
+      pctA:isA?75:25,pctB:isA?25:75,letter:letter,other:isA?a.b:a.a,ratio:.5,
+      clarity:'직접 선택',cc:'#6A6296',cbg:'#F2EFFA',border:false,tip:MBTI_TIP[letter]};
+  });
+  return {axes:axes,code:code,consistency:null,pairs:[],mode:'pick'};
+}
+function personCode(p){return (p.res&&p.res.code)||p.mbti||'';}
+function ready(p){return !!(p.name&&p.saju&&personCode(p));}
+
+/* ══════════════════════════════════════════════════════════════════
+   6. 결합 해석 · 궁합 · 상담 전략
+   ══════════════════════════════════════════════════════════════════ */
+/* 검사 결과와 사주가 같은 말을 하는가, 다른 말을 하는가 */
+function combine(p){
+  var s=p.saju,sip=sipsinTable(s),oh=ohCount(s),code=personCode(p),rows=[];
+  var g=sip.count;
+  function ax(i){return p.res?p.res.axes[i]:null;}
+  /* E/I — 비겁·식상이 많으면 밖으로, 인성이 많으면 안으로 */
+  var out=g.비겁+g.식상, inn=g.인성;
+  rows.push({axis:'E · I',test:code.charAt(0)==='E'?'외향(E)':'내향(I)',
+    saju:out>inn?'밖으로 나가는 힘이 강함(비겁·식상 '+out+')':(inn>out?'안으로 모으는 힘이 강함(인성 '+inn+')':'반반'),
+    hit:(code.charAt(0)==='E')===(out>=inn),
+    read:(code.charAt(0)==='E')===(out>=inn)?'검사와 사주가 같은 말을 한다. 보이는 대로 대하면 된다.'
+      :'검사에서는 '+(code.charAt(0)==='E'?'외향':'내향')+'인데 사주는 반대다. 밖에서는 '+(code.charAt(0)==='E'?'활발하지만 속으로는 혼자 정리하는':'조용하지만 마음은 밖을 향하는')+' 사람일 수 있다.'});
+  /* S/N — 재성·관성은 현실, 인성·식상은 관념 */
+  var real=g.재성+g.관성, idea=g.인성+g.식상;
+  rows.push({axis:'S · N',test:code.charAt(1)==='S'?'감각(S)':'직관(N)',
+    saju:real>idea?'현실·실리 쪽이 두껍다(재성·관성 '+real+')':(idea>real?'생각·구상 쪽이 두껍다(인성·식상 '+idea+')':'반반'),
+    hit:(code.charAt(1)==='S')===(real>=idea),
+    read:(code.charAt(1)==='S')===(real>=idea)?'숫자와 사실로 접근하면 그대로 통한다.'
+      :'말은 '+(code.charAt(1)==='S'?'구체적으로 하지만 마음은 그림을 본다':'그림으로 하지만 결국 숫자에서 결정한다')+'. 둘 다 준비해 가야 한다.'});
+  /* T/F — 관성·재성은 기준, 식상·인성은 마음 */
+  var logic=g.관성+g.재성, heart=g.식상+g.인성;
+  rows.push({axis:'T · F',test:code.charAt(2)==='T'?'사고(T)':'감정(F)',
+    saju:logic>heart?'기준·계산이 앞선다(관성·재성 '+logic+')':(heart>logic?'마음·표현이 앞선다(식상·인성 '+heart+')':'반반'),
+    hit:(code.charAt(2)==='T')===(logic>=heart),
+    read:(code.charAt(2)==='T')===(logic>=heart)?'근거로 설득하면 된다. 감정 호소는 아껴라.'
+      :'겉은 '+(code.charAt(2)==='T'?'논리지만 결정 순간에는 사람을 본다':'따뜻하지만 조건이 안 맞으면 냉정해진다')+'.'});
+  /* J/P — 관성·인성은 틀, 식상·비겁은 자유 */
+  var fix=g.관성+g.인성, free=g.식상+g.비겁;
+  rows.push({axis:'J · P',test:code.charAt(3)==='J'?'판단(J)':'인식(P)',
+    saju:fix>free?'틀과 순서를 지키는 힘(관성·인성 '+fix+')':(free>fix?'벌이고 바꾸는 힘(식상·비겁 '+free+')':'반반'),
+    hit:(code.charAt(3)==='J')===(fix>=free),
+    read:(code.charAt(3)==='J')===(fix>=free)?'일정을 정해 주면 그대로 간다.'
+      :'계획은 '+(code.charAt(3)==='J'?'세우지만 마음은 여지를 원한다':'느슨해 보여도 마지막엔 몰아친다')+'.'});
+  var hits=rows.filter(function(r){return r.hit;}).length;
+  return {rows:rows,hits:hits,sip:sip,oh:oh,strength:strengthOf(s)};
+}
+/* 궁합 */
+function fitCalc(me,cl){
+  var a=me.saju,b=cl.saju,mc=personCode(me),cc=personCode(cl),items=[],sj=50,mb=50;
+  var jr=jiRel(a.dj,b.dj); items.push({k:'일지 관계',v:jr.k,s:jr.s,txt:jr.txt}); sj+=jr.s;
+  var gr=ganRel(a.dg,b.dg); items.push({k:'일간 관계',v:gr.k,s:gr.s,txt:gr.txt}); sj+=gr.s;
+  var of1=ohFill(ohCount(a),ohCount(b));
+  var ofS=of1.filled.length?12:(of1.lack.length?-3:0);
+  items.push({k:'오행 보완',v:of1.filled.length?of1.filled.join('·')+' 채워줌':(of1.lack.length?'못 채움':'해당 없음'),s:ofS,
+    txt:of1.filled.length?'내게 없는 '+of1.filled.join('·')+' 기운을 상대가 갖고 있다. 내가 못 하는 이야기를 상대가 편하게 받는다.'
+      :'서로 없는 것을 채워주지는 않는다. 대화의 폭을 내가 넓혀야 한다.'});
+  sj+=ofS;
+  ['SN','TF','JP','EI'].forEach(function(k){
+    var i=({EI:0,SN:1,TF:2,JP:3})[k];
+    var same=mc.charAt(i)===cc.charAt(i), r=same?MB_COMPAT[k].same:MB_COMPAT[k].diff;
+    items.push({k:'성향 '+({EI:'말의 양',SN:'설명 방식',TF:'결정 기준',JP:'속도'})[k],
+      v:mc.charAt(i)+' vs '+cc.charAt(i),s:r.s,txt:r.txt,mb:true});
+    mb+=r.s*1.1;
+  });
+  /* 사주가 좋다고 상담이 되는 게 아니고, 성향이 어긋난다고 안 되는 것도 아니다.
+     두 쪽을 따로 매기고 반반으로 합친다. */
+  sj=Math.max(8,Math.min(98,Math.round(sj)));
+  mb=Math.max(8,Math.min(98,Math.round(mb)));
+  var sc=Math.round((sj+mb)/2);
+  var lv=sc>=80?{t:'아주 잘 맞음',c:'#1F7A61',bg:'#EAF8F3'}:sc>=65?{t:'잘 맞는 편',c:'#6F63C4',bg:'#F1EEFF'}
+    :sc>=50?{t:'보통 — 준비하면 된다',c:'#9A5B0C',bg:'#FFF6E9'}:{t:'어긋나기 쉬움 — 방식을 바꿔야 한다',c:'#BB3A54',bg:'#FFF0F1'};
+  return {score:sc,sajuScore:sj,mbtiScore:mb,level:lv,items:items,jr:jr,gr:gr,fill:of1};
+}
+/* 상담 전략 — 축마다 나 / 상대 / 이대로 하면 / 이렇게 바꿔라 */
+function talkPlan(me,cl){
+  var mc=personCode(me),cc=personCode(cl),rows=[],i;
+  var keys=['EI','SN','TF','JP'];
+  for(i=0;i<4;i++){
+    var k=keys[i],M=mc.charAt(i),Y=cc.charAt(i),ST=STRATEGY[k],box;
+    if(M===Y)box=(M===ST.SS.me)?ST.SS:ST.II;
+    else box=(M===ST.ME.me)?ST.ME:ST.MI;
+    rows.push({label:ST.label,me:M,you:Y,same:M===Y,risk:box.risk,fix:box.fix});
+  }
+  var sip=sipsinTable(cl.saju),top=sip.top,meta=SIP_META[top];
+  var oh=ohCount(cl.saju),lack=[],k2;
+  for(k2 in oh)if(oh[k2]===0)lack.push(k2);
+  var luck=yearLuck(cl.saju);
+  var opens=[meta.open];
+  if(cc.charAt(1)==='S')opens.push('"오늘은 숫자 세 개만 보고 가시죠 — 월 보험료, 보장금액, 기간."');
+  else opens.push('"지금 준비하시는 게 5년 뒤 어떤 그림이 되는지부터 말씀드릴게요."');
+  if(cc.charAt(2)==='F')opens.push('"이 돈이 결국 누구를 지키는 돈인지부터 여쭤볼게요."');
+  else opens.push('"비교표 한 장 준비했습니다. 근거부터 보시죠."');
+  var avoid=[meta.avoid];
+  if(cc.charAt(3)==='P')avoid.push('"오늘 결정하셔야 합니다" — 재촉은 바로 닫히게 만든다.');
+  else avoid.push('"천천히 보시고 연락 주세요" — 이 유형은 기한이 없으면 흘려보낸다.');
+  if(cc.charAt(0)==='I')avoid.push('말 끊기. 5초 침묵을 못 견디고 내가 채우면 상대는 입을 닫는다.');
+  else avoid.push('자료만 내밀고 조용히 있기. 이 유형은 말이 오가야 마음이 열린다.');
+  var closes=[meta.close];
+  if(cc.charAt(3)==='J')closes.push('"다음 주 화요일 오전, 서류 정리해서 다시 뵙겠습니다" — 날짜를 먼저 박는다.');
+  else closes.push('"두 가지 안을 두고 가겠습니다. 편하신 걸로 알려주세요" — 고르게 둔다.');
+  return {rows:rows,sipTop:top,meta:meta,lack:lack,luck:luck,opens:opens,avoid:avoid,closes:closes,
+    sameCount:rows.filter(function(r){return r.same;}).length};
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   7. 화면
+   ══════════════════════════════════════════════════════════════════ */
+var TABS=[['sum','종합'],['trait','성향 파악'],['fit','궁합'],['talk','상담 전략'],['saju','만세력']];
+function draw(){
+  var v=$('view'),tb=$('tabs');
+  if(S.step==='board'&&ready(S.cl)){
+    tb.innerHTML=TABS.map(function(t){return '<button class="'+(S.tab===t[0]?'on':'')+'" onclick="goTab(\''+t[0]+'\')">'+t[1]+'</button>';}).join('')+
+      '<button onclick="newClient()">＋ 새 고객</button>';
+  }else{
+    tb.innerHTML=['me','client','test'].map(function(k,i){
+      var lb=['① 내 카드','② 고객 정보','③ 성향검사'][i];
+      return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+((k==='test'&&!S.cl.y)?' disabled':'')+'>'+lb+'</button>';
+    }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">④ 결과 보기</button>':'');
+  }
+  $('meBtn').innerHTML=S.me.name?('👤 '+esc(S.me.name)+(personCode(S.me)?' · '+personCode(S.me):'')):'내 카드 설정';
+  var sub=$('topSub');
+  sub.textContent=(S.step==='board'&&S.cl.name)?(S.cl.name+' 님 · '+personCode(S.cl)+' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주')
+    :'생년월일과 태어난 시간, 그리고 48문항';
+  if(S.step==='me')v.innerHTML=viewPerson('me');
+  else if(S.step==='client')v.innerHTML=viewPerson('client');
+  else if(S.step==='test')v.innerHTML=viewTest();
+  else v.innerHTML=viewBoard();
+  $('pane').scrollTop=0; hintCheck();
+}
+function gz(g,j){return GAN[g]+JI[j];}
+function gzh(g,j){return GANH[g]+JIH[j];}
+function goStep(k){
+  if(k==='board'&&!ready(S.cl)){toast('고객 정보와 성향을 먼저 채워주세요');return;}
+  S.step=k;save();draw();
+}
+function goTab(t){S.tab=t;save();draw();$('pane').scrollTop=0;}
+function newClient(){
+  S.cl={name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
+  S.ans={};S.i=0;S.step='client';save();draw();
+}
+/* ── 사람 입력 화면(내 카드 · 고객 공용) ── */
+function viewPerson(who){
+  var p=(who==='me')?S.me:S.cl, isMe=(who==='me');
+  var hrs=[];for(var h=0;h<24;h++)hrs.push('<option value="'+h+'"'+(p.H===h?' selected':'')+'>'+('0'+h).slice(-2)+'시</option>');
+  var mins=[];for(var mi=0;mi<60;mi+=10)mins.push('<option value="'+mi+'"'+(p.Mi===mi?' selected':'')+'>'+('0'+mi).slice(-2)+'분</option>');
+  var intro=isMe
+    ? '<div class="card"><h1>먼저 <b style="color:#8B7BF0">내 카드</b>를 만듭니다</h1>'+
+      '<p>궁합과 상담 전략은 <b>나와 고객을 비교</b>해서 나옵니다. 그래서 내 생년월일·시간·성향이 먼저 필요합니다. 한 번만 넣으면 이 기기에 저장됩니다.</p></div>'
+    : '<div class="card"><h1>고객 정보</h1><p>생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.</p></div>';
+  var mbtiPick='<div class="card"><h2><span class="n">성향</span>'+(isMe?'내 유형':'고객 유형')+'</h2>'+
+    '<p class="sub">이미 알고 있으면 고르고, 모르면 48문항 검사를 하세요. 검사 결과가 더 정확합니다.</p>'+
+    '<div class="mbtigrid" style="margin-top:11px">'+TYPE_LIST.map(function(t){
+      return '<button class="'+(p.mbti===t&&!p.res?'on':'')+'" onclick="pickType(\''+who+'\',\''+t+'\')">'+t+'</button>';}).join('')+'</div>'+
+    (p.res?'<div class="note ok" style="margin-top:11px">48문항 검사 결과 <b>'+p.res.code+'</b>'+(p.res.consistency!==null?' · 응답 일관성 '+p.res.consistency+'%':'')+' 를 쓰고 있습니다.</div>':'')+
+    '<button class="btn line sm" style="margin-top:11px" onclick="startTest(\''+who+'\')">📝 48문항 검사하기'+(p.res?' (다시)':'')+'</button></div>';
+  return intro+
+  '<div class="card"><h2><span class="n">기본</span>'+(isMe?'나':'고객')+'</h2>'+
+    '<div style="margin-top:11px"><label>이름</label><input class="inp" id="pName" value="'+esc(p.name)+'" placeholder="'+(isMe?'예: 윤시현':'예: 김하나')+'" maxlength="20"/></div>'+
+    '<div style="margin-top:11px"><label>성별</label><div class="seg">'+
+      '<button class="'+(p.gender==='M'?'on':'')+'" onclick="setG(\''+who+'\',\'M\')">남</button>'+
+      '<button class="'+(p.gender==='F'?'on':'')+'" onclick="setG(\''+who+'\',\'F\')">여</button></div></div>'+
+    '<div class="hr"></div>'+
+    '<label>생년월일 (양력)</label><div class="row">'+
+      '<input class="inp" id="pY" type="number" inputmode="numeric" placeholder="1990" value="'+esc(p.y)+'"/>'+
+      '<input class="inp" id="pM" type="number" inputmode="numeric" placeholder="5" value="'+esc(p.m)+'"/>'+
+      '<input class="inp" id="pD" type="number" inputmode="numeric" placeholder="15" value="'+esc(p.d)+'"/></div>'+
+    '<div class="sub" style="margin-top:5px">음력 생일만 아신다면 달력 앱에서 양력으로 바꿔 넣어주세요.</div>'+
+    '<div style="margin-top:13px"><label>태어난 시간</label><div class="row">'+
+      '<select class="inp" id="pH"'+(p.noTime?' disabled':'')+'><option value="">시</option>'+hrs.join('')+'</select>'+
+      '<select class="inp" id="pMi"'+(p.noTime?' disabled':'')+'>'+mins.join('')+'</select></div>'+
+      '<div class="seg" style="margin-top:9px">'+
+        '<button class="'+(p.noTime?'on':'')+'" onclick="setNoTime(\''+who+'\')">시간을 모릅니다</button>'+
+        '<button class="'+(p.adj?'on':'')+'" onclick="setAdj(\''+who+'\')">진태양시 보정 (−32분)</button></div>'+
+      '<div class="sub" style="margin-top:6px">태어난 시간이 정확할수록 시주와 궁합이 정확합니다. 보정은 서울 기준입니다 — 만세력마다 쓰는 곳과 안 쓰는 곳이 있어 선택으로 두었습니다.</div>'+
+    '</div>'+
+    (p.saju?sajuPreview(p):'')+
+    '<button class="btn" style="margin-top:14px" onclick="savePerson(\''+who+'\')">'+(isMe?'내 카드 저장':'사주 계산하고 다음')+'</button>'+
+  '</div>'+mbtiPick+
+  (isMe?'<div class="foot">내 카드는 이 기기에만 저장됩니다. 고객 정보도 서버로 보내지 않습니다.</div>':'');
+}
+function sajuPreview(p){
+  var s=p.saju;
+  return '<div class="note info" style="margin-top:12px"><b>'+gzh(s.yg,s.yj)+' '+gzh(s.mg,s.mj)+' '+gzh(s.dg,s.dj)+(p.noTime?'':' '+gzh(s.hg,s.hj))+'</b> — '+
+    gz(s.yg,s.yj)+'년 '+gz(s.mg,s.mj)+'월 '+gz(s.dg,s.dj)+'일'+(p.noTime?' (시주 없음)':' '+gz(s.hg,s.hj)+'시')+'</div>';
+}
+function setG(who,g){var p=who==='me'?S.me:S.cl;grab(who);p.gender=g;save();draw();}
+function setNoTime(who){var p=who==='me'?S.me:S.cl;grab(who);p.noTime=!p.noTime;save();draw();}
+function setAdj(who){var p=who==='me'?S.me:S.cl;grab(who);p.adj=!p.adj;if(p.saju)calcPerson(p);save();draw();}
+function pickType(who,t){var p=who==='me'?S.me:S.cl;grab(who);p.mbti=t;p.res=null;save();draw();toast(t+' 로 정했습니다');}
+function grab(who){
+  var p=who==='me'?S.me:S.cl;
+  if($('pName'))p.name=(val('pName')||'').replace(/^\s+|\s+$/g,'');
+  if($('pY'))p.y=val('pY');if($('pM'))p.m=val('pM');if($('pD'))p.d=val('pD');
+  if($('pH')&&val('pH')!=='')p.H=num(val('pH'));
+  if($('pMi'))p.Mi=num(val('pMi'))||0;
+}
+function calcPerson(p){
+  var y=num(p.y),m=num(p.m),d=num(p.d);
+  if(!y||!m||!d)return false;
+  var H=p.noTime?12:(p.H===''||p.H===null||p.H===undefined?12:p.H);
+  p.saju=sajuCalc(y,m,d,H,p.noTime?0:(p.Mi||0),p.adj?-32:0);
+  return true;
+}
+function savePerson(who){
+  var p=who==='me'?S.me:S.cl;
+  grab(who);
+  if(!p.name){toast('이름을 넣어주세요');return;}
+  var y=num(p.y),m=num(p.m),d=num(p.d);
+  if(!y||!m||!d||y<1900||y>2100||m<1||m>12||d<1||d>31){toast('생년월일을 다시 확인해 주세요 (1900~2100)');return;}
+  if(!p.noTime&&(p.H===''||p.H===null||p.H===undefined)){toast('태어난 시간을 고르거나 "시간을 모릅니다"를 눌러주세요');return;}
+  calcPerson(p);save();
+  if(!personCode(p)){toast('사주를 계산했습니다. 이제 유형을 고르거나 검사를 하세요.');draw();
+    setTimeout(function(){var e=document.querySelector('.mbtigrid');if(e&&e.scrollIntoView)e.scrollIntoView({block:'center',behavior:'smooth'});},60);return;}
+  if(who==='me'){toast('내 카드를 저장했습니다');S.step=(S.cl.name?'client':'client');draw();}
+  else{S.step=ready(S.cl)?'board':'client';draw();if(ready(S.cl))toast('결과가 준비됐습니다');}
+}
+/* ── 48문항 ── */
+function startTest(who){
+  S.target=who;S.ans={};S.i=0;S.step='test';save();draw();
+}
+function viewTest(){
+  var i=S.i,q=MBTI_Q[i],cur=S.ans[i],pct=Math.round(i/48*100),sz=[34,27,21,21,27,34];
+  return '<div class="card">'+
+    '<div class="track"><div class="runner" style="left:'+Math.max(4,pct)+'%">'+mascot('ENFP',32)+'</div><i style="width:'+pct+'%"></i></div>'+
+    '<div style="display:flex;justify-content:space-between;margin-top:9px;font-size:12px;font-weight:800;color:#8C86A8">'+
+      '<span>'+(S.target==='me'?'내 검사':'고객 검사')+' · '+(i+1)+' / 48</span><span>'+pct+'%</span></div></div>'+
+    '<div class="card q" id="qcard"><span class="qno">Q'+(i+1)+'</span>'+
+      '<div class="qtext">'+esc(q.t)+'</div>'+
+      '<div class="scale">'+MBTI_SCALE.map(function(o,n){
+        return '<button class="dot'+(o.v<0?' no':'')+(cur===o.v?' on':'')+'" style="width:'+sz[n]+'px;height:'+sz[n]+'px" aria-label="'+o.t+'" onclick="pick('+o.v+')"></button>';}).join('')+'</div>'+
+      '<div class="slab"><span class="y">그래요 👍</span><span class="n">아니에요 👎</span></div>'+
+      '<div class="row" style="margin-top:16px">'+
+        '<button class="btn line sm" onclick="qPrev()"'+(i===0?' disabled style="opacity:.45"':'')+'>← 이전</button>'+
+        '<button class="btn ghost sm" onclick="qQuit()">그만두기</button></div>'+
+    '</div><div class="foot">정답은 없습니다. 오래 고민하지 말고 먼저 떠오르는 쪽을 고르세요.</div>';
+}
+function pick(v){
+  S.ans[S.i]=v;
+  var c=$('qcard');
+  if(c){var bs=c.querySelectorAll('.dot');for(var n=0;n<bs.length;n++)bs[n].classList.toggle('on',MBTI_SCALE[n].v===v);}
+  save();
+  setTimeout(function(){
+    if(S.i>=47){finishTest();return;}
+    S.i++;save();draw();
+  },220);
+}
+function qPrev(){if(S.i>0){S.i--;save();draw();}}
+function qQuit(){S.step=(S.target==='me')?'me':'client';save();draw();}
+function finishTest(){
+  var miss=[],i;for(i=0;i<48;i++)if(!S.ans[i])miss.push(i);
+  if(miss.length){S.i=miss[0];draw();toast('아직 답하지 않은 문항이 '+miss.length+'개 있습니다');return;}
+  var r=scoreAns(S.ans),p=(S.target==='me')?S.me:S.cl;
+  p.res=r;p.mbti=r.code;
+  S.step=(S.target==='me')?'me':(ready(S.cl)?'board':'client');
+  save();draw();toast('검사 완료 — '+r.code);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   8. 결과판 — 종합 · 성향 · 궁합 · 상담전략 · 만세력
+   ══════════════════════════════════════════════════════════════════ */
+function ringSvg(v,color){
+  var r=52,c=2*Math.PI*r,off=c*(1-v/100);
+  return '<svg viewBox="0 0 120 120" width="118" height="118">'+
+    '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="#F0ECFA" stroke-width="12"/>'+
+    '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="12" stroke-linecap="round"'+
+    ' stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/></svg>';
+}
+function pillarsHtml(p,small){
+  var s=p.saju,list=s.pillars.slice(0);
+  if(p.noTime)list=list.slice(0,3);
+  return '<div class="pillars">'+list.map(function(x){
+    var oh1=GAN_OH[x.g],oh2=JI_OH[x.j];
+    return '<div class="pil'+(x.day?' day':'')+'"><div class="lb">'+x.lb+(x.day?' · 나':'')+'</div>'+
+      '<div class="gz">'+GANH[x.g]+'<br>'+JIH[x.j]+'</div>'+
+      '<div class="kr">'+GAN[x.g]+JI[x.j]+'</div>'+
+      '<div class="oh" style="color:'+OH_META[oh1].c+';background:'+OH_META[oh1].bg+'">'+oh1+'·'+oh2+'</div></div>';
+  }).join('')+(p.noTime?'<div class="pil" style="opacity:.5"><div class="lb">시주</div><div class="gz" style="font-size:20px;padding-top:6px">?</div><div class="kr">시간 모름</div></div>':'')+'</div>';
+}
+function ohBars(oh){
+  var mx=Math.max(1,oh.목,oh.화,oh.토,oh.금,oh.수);
+  return '<div class="ohbars">'+['목','화','토','금','수'].map(function(k){
+    var m=OH_META[k],h=Math.round(oh[k]/mx*100);
+    return '<div class="ohbar"><div class="t"><i style="height:'+(oh[k]?Math.max(14,h):0)+'%;background:'+m.c+'"></i></div>'+
+      '<div class="lb" style="color:'+m.c+'">'+m.emo+' '+k+'</div><div class="cn">'+oh[k]+'개</div></div>';
+  }).join('')+'</div>';
+}
+function viewBoard(){
+  var t=S.tab;
+  if(t==='trait')return tabTrait();
+  if(t==='fit')return tabFit();
+  if(t==='talk')return tabTalk();
+  if(t==='saju')return tabSaju();
+  return tabSum();
+}
+function tabSum(){
+  var cl=S.cl,code=personCode(cl),ty=MBTI_TYPES[code]||{},s=cl.saju,cb=combine(cl);
+  var dayC=GAN_CHAR[s.dg],sip=cb.sip,meta=SIP_META[sip.top];
+  var hasMe=ready(S.me),fit=hasMe?fitCalc(S.me,cl):null,plan=hasMe?talkPlan(S.me,cl):null;
+  var left='<div class="card" style="text-align:center">'+
+    '<div style="display:flex;justify-content:center">'+mascot(code,120)+'</div>'+
+    '<div class="sub" style="margin-top:8px">'+esc(cl.name)+' 님 · '+(cl.gender==='F'?'여':'남')+' · '+esc(cl.y)+'.'+esc(cl.m)+'.'+esc(cl.d)+(cl.noTime?'':' '+('0'+cl.H).slice(-2)+':'+('0'+(cl.Mi||0)).slice(-2))+'</div>'+
+    '<div style="font-size:32px;font-weight:900;letter-spacing:.06em;margin-top:4px;background:linear-gradient(120deg,#8B7BF0,#FF9EC4);-webkit-background-clip:text;background-clip:text;color:transparent">'+code+'</div>'+
+    '<div style="font-size:15px;font-weight:900">'+esc(ty.nick||'')+'</div>'+
+    '<div class="chiplist" style="justify-content:center;margin-top:10px">'+
+      '<span class="chip">'+gz(s.dg,s.dj)+'일주</span>'+
+      '<span class="chip" style="background:'+OH_META[GAN_OH[s.dg]].bg+';color:'+OH_META[GAN_OH[s.dg]].c+'">'+OH_META[GAN_OH[s.dg]].emo+' '+dayC.n+'</span>'+
+      '<span class="chip">'+sip.top+' 우세</span>'+
+      '<span class="chip">'+cb.strength.level+'</span>'+
+    '</div>'+
+    pillarsHtml(cl)+
+  '</div>';
+  var right='<div class="card"><h2><span class="n">한 줄</span>이 사람은 이런 사람입니다</h2>'+
+    '<p style="font-size:14px;color:#3B3757"><b>'+esc(ty.line||'')+'</b></p>'+
+    '<p>사주로 보면 '+dayC.n+'('+dayC.t+') 일간입니다. '+esc(dayC.line)+' 여덟 글자 중 <b>'+sip.top+'</b>이(가) 가장 두껍습니다 — '+esc(meta.mind)+'</p>'+
+    '<div class="note '+(cb.hits>=3?'ok':'warn')+'">검사와 사주가 <b>4개 중 '+cb.hits+'개</b>에서 같은 말을 합니다. '+
+      (cb.hits>=3?'읽히는 대로 대하면 됩니다.':'겉으로 보이는 모습과 속이 다른 부분이 있습니다. 성향 파악 탭에서 어디가 다른지 보세요.')+'</div>'+
+  '</div>';
+  if(!hasMe){
+    right+='<div class="card"><h2><span class="n">필요</span>궁합과 상담 전략을 보려면</h2>'+
+      '<p>내 카드(설계사 본인의 생년월일·시간·성향)가 있어야 <b>나와의 궁합</b>과 <b>내가 어떻게 말해야 하는지</b>가 나옵니다.</p>'+
+      '<button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
+  }else{
+    right+='<div class="card"><h2><span class="n">궁합</span>나와 이 고객</h2>'+
+      '<div class="score" style="margin-top:10px">'+ringSvg(fit.score,fit.level.c)+
+        '<div style="flex:1;min-width:0"><div style="font-size:26px;font-weight:900;color:'+fit.level.c+'">'+fit.score+'점</div>'+
+        '<div class="pill" style="color:'+fit.level.c+';background:'+fit.level.bg+';margin-top:4px">'+fit.level.t+'</div>'+
+        '<div class="chiplist"><span class="chip">사주 '+fit.sajuScore+'</span><span class="chip">성향 '+fit.mbtiScore+'</span></div>'+
+        '<p style="font-size:12.5px">'+esc(fit.jr.txt)+'</p></div></div>'+
+      '<div class="hr"></div>'+
+      '<h2 style="font-size:14px">오늘 이 세 가지만 지키세요</h2>'+
+      plan.rows.filter(function(r){return !r.same&&r.label!=='말의 양';}).concat(plan.rows.filter(function(r){return !r.same&&r.label==='말의 양';})).slice(0,2).map(function(r){
+        return '<div class="talk">✅ <b>'+esc(r.label)+'</b> — '+esc(r.fix)+'</div>';}).join('')+
+      '<div class="talk good">🗣 첫마디 — '+esc(plan.opens[0])+'</div>'+
+      '<div class="talk bad">🚫 피할 것 — '+esc(plan.avoid[0])+'</div>'+
+      '<button class="btn ghost sm" style="margin-top:12px" onclick="goTab(\'talk\')">상담 전략 전부 보기 →</button>'+
+    '</div>';
+  }
+  return '<div class="grid hd"><div class="sticky">'+left+'</div><div>'+right+'</div></div>'+footNote();
+}
+function tabTrait(){
+  var cl=S.cl,code=personCode(cl),ty=MBTI_TYPES[code]||{},cb=combine(cl),res=cl.res||fakeRes(code),s=cl.saju;
+  var t1='<div class="card"><h2><span class="n">표 1</span>성향검사 — 네 가지 축</h2>'+
+    (res.mode==='pick'?'<div class="note warn">유형을 직접 고르셨습니다. 48문항 검사를 하면 축마다 얼마나 기울었는지까지 나옵니다.</div>':'')+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">축</th><th style="width:130px">점수</th><th style="width:70px">이 사람</th><th style="width:88px">분명도</th><th>상담할 때</th></tr></thead><tbody>'+
+    res.axes.map(function(a){
+      return '<tr><td class="head"><b>'+a.a+' '+a.an+' · '+a.b+' '+a.bn+'</b><div style="font-size:10.5px;color:#A9A2C6;font-weight:600;margin-top:2px">'+esc(a.q)+'</div></td>'+
+        '<td data-l="점수">'+a.pctA+' : '+a.pctB+'<div class="bar"><b>'+a.a+'</b><span class="t"><i style="width:'+a.pctA+'%"></i></span><b>'+a.b+'</b></div></td>'+
+        '<td data-l="이 사람"><b style="font-size:16px;color:#8B7BF0">'+a.letter+'</b> '+(a.letter===a.a?a.an:a.bn)+'</td>'+
+        '<td data-l="분명도"><span class="pill" style="color:'+a.cc+';background:'+a.cbg+'">'+a.clarity+'</span></td>'+
+        '<td class="full" data-l="상담할 때">'+esc(a.tip)+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    (res.consistency!==null&&res.consistency<60?'<div class="note bad">응답 일관성 '+res.consistency+'% — 반대로 물은 문항의 답이 어긋납니다. 결과를 그대로 믿기 어렵습니다.</div>':'')+
+  '</div>';
+  var sip=cb.sip;
+  var t2='<div class="card"><h2><span class="n">표 2</span>사주 — 무엇이 이 사람을 움직이나</h2>'+
+    ohBars(cb.oh)+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:96px">십신</th><th style="width:64px">개수</th><th style="width:120px">뜻</th><th>상담에서</th></tr></thead><tbody>'+
+    ['비겁','식상','재성','관성','인성'].map(function(k){
+      var m=SIP_META[k],n=sip.count[k];
+      return '<tr'+(k===sip.top?' style="background:#FAF8FF"':'')+'><td class="head"><b>'+k+'</b>'+(k===sip.top?' <span class="pill" style="background:#F1EEFF;color:#6F63C4">가장 두꺼움</span>':'')+'</td>'+
+        '<td data-l="개수">'+n+' / 7</td><td data-l="뜻">'+m.tag+'</td>'+
+        '<td class="full" data-l="상담">'+esc(m.mind)+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    '<div class="note info">일간 <b>'+GAN_CHAR[s.dg].n+'</b> · '+cb.strength.level+' (도와주는 글자 '+cb.strength.help+'개) — '+
+      (cb.strength.level==='신강'?'자기 뜻이 분명합니다. 밀면 더 버팁니다. 선택지를 주고 고르게 하세요.'
+      :cb.strength.level==='신약'?'주변 말에 흔들립니다. 결정을 도와줄 근거와 사람(가족)이 함께 있어야 합니다.'
+      :'상황에 따라 유연합니다. 어느 방식이든 통하지만, 근거는 반드시 남겨주세요.')+'</div>'+
+  '</div>';
+  var t3='<div class="card"><h2><span class="n">표 3</span>검사와 사주를 겹쳐 보면</h2>'+
+    '<p class="sub">검사는 <b>본인이 답한 모습</b>이고 사주는 <b>타고난 결</b>입니다. 둘이 다르면 그 사람은 그 축에서 상황에 따라 다르게 행동합니다 — 거기가 상담이 어긋나는 지점입니다.</p>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:70px">축</th><th style="width:100px">검사</th><th style="width:170px">사주</th><th style="width:64px">일치</th><th>읽는 법</th></tr></thead><tbody>'+
+    cb.rows.map(function(r){
+      return '<tr><td class="head"><b>'+r.axis+'</b></td><td data-l="검사">'+esc(r.test)+'</td><td data-l="사주">'+esc(r.saju)+'</td>'+
+        '<td data-l="일치"><span class="pill" style="'+(r.hit?'color:#1F7A61;background:#EAF8F3':'color:#BB3A54;background:#FFF0F1')+'">'+(r.hit?'같음':'다름')+'</span></td>'+
+        '<td class="full" data-l="읽는 법">'+esc(r.read)+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var t4=ty.str?'<div class="card"><h2><span class="n">표 4</span>강점과 조심할 점</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점 — 살려줄 것</th><th>조심할 점 — 건드리지 말 것</th></tr></thead><tbody>'+
+    ty.str.map(function(x,i){return '<tr><td class="head">'+(i+1)+'</td><td class="full" data-l="강점">'+esc(x)+'</td><td class="full" data-l="조심">'+esc(ty.care[i]||'')+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>':'';
+  return t1+t2+t3+t4+footNote();
+}
+function tabFit(){
+  if(!ready(S.me))return '<div class="card"><h2>내 카드가 없습니다</h2><p>궁합은 나와 고객을 비교해서 나옵니다. 내 생년월일·시간·성향을 먼저 넣어주세요.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
+  var me=S.me,cl=S.cl,fit=fitCalc(me,cl),mc=personCode(me),cc=personCode(cl);
+  var head='<div class="card" style="text-align:center">'+
+    '<div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap">'+
+      '<div>'+mascot(mc,86)+'<div style="font-size:12px;font-weight:900;margin-top:2px">'+esc(me.name)+'<br><span style="color:#8C86A8">'+mc+' · '+gz(me.saju.dg,me.saju.dj)+'</span></div></div>'+
+      '<div style="font-size:24px;color:#C9C2E4;font-weight:900;padding:0 4px">↔</div>'+
+      '<div>'+mascot(cc,86)+'<div style="font-size:12px;font-weight:900;margin-top:2px">'+esc(cl.name)+'<br><span style="color:#8C86A8">'+cc+' · '+gz(cl.saju.dg,cl.saju.dj)+'</span></div></div>'+
+    '</div>'+
+    '<div class="score" style="margin-top:14px">'+ringSvg(fit.score,fit.level.c)+
+      '<div style="flex:1;min-width:0;text-align:left"><div style="font-size:30px;font-weight:900;color:'+fit.level.c+'">'+fit.score+'점</div>'+
+      '<div class="pill" style="color:'+fit.level.c+';background:'+fit.level.bg+';margin-top:4px">'+fit.level.t+'</div>'+
+      '<div class="kv" style="margin-top:9px"><span>🀄 사주 궁합</span><b>'+fit.sajuScore+'점</b></div>'+
+      '<div class="kv"><span>🧩 성향 궁합</span><b>'+fit.mbtiScore+'점</b></div>'+
+      '<p style="font-size:12.5px">두 쪽을 반반으로 합친 점수입니다. 궁합이 낮다고 계약이 안 되는 게 아닙니다. <b>어디서 어긋나는지</b>를 알고 그 지점만 바꾸면 됩니다.</p></div></div>'+
+  '</div>';
+  var tb='<div class="card"><h2><span class="n">표</span>무엇을 보고 매긴 점수인가</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">항목</th><th style="width:120px">결과</th><th style="width:60px">점수</th><th>뜻</th></tr></thead><tbody>'+
+    fit.items.map(function(x){
+      return '<tr><td class="head"><b>'+esc(x.k)+'</b></td><td data-l="결과">'+esc(x.v)+'</td>'+
+        '<td data-l="점수"><b style="color:'+(x.s>0?'#1F7A61':(x.s<0?'#BB3A54':'#8C86A8'))+'">'+(x.s>0?'+':'')+x.s+'</b></td>'+
+        '<td class="full" data-l="뜻">'+esc(x.txt)+'</td></tr>';}).join('')+
+    '<tr><td class="plain" colspan="4" style="background:#FAF8FF"><b>사주 '+fit.sajuScore+'점</b>(일지·일간·오행)과 <b>성향 '+fit.mbtiScore+'점</b>(네 축)을 각각 기본 50점에서 더하고 뺀 뒤, 반반으로 합쳐 <b>'+fit.score+'점</b>이 됐습니다.</td></tr>'+
+    '</tbody></table></div></div>';
+  var gr=fit.gr;
+  var read='<div class="card"><h2><span class="n">읽기</span>이 관계는 이렇게 굴러갑니다</h2>'+
+    '<div class="talk">🀄 <b>사주</b> — '+esc(fit.jr.txt)+' '+esc(gr.txt)+'</div>'+
+    (fit.fill.filled.length?'<div class="talk good">🌿 <b>보완</b> — 내게 없는 '+fit.fill.filled.join('·')+' 기운을 이 고객이 갖고 있습니다. 내가 어려워하는 이야기를 이 사람은 편하게 받습니다.</div>':'')+
+    fit.items.filter(function(x){return x.k.indexOf('성향')===0;}).map(function(x){
+      return '<div class="talk'+(x.s<0?' bad':'')+'">'+(x.s<0?'⚠️':'👍')+' <b>'+esc(x.k)+'</b> ('+esc(x.v)+') — '+esc(x.txt)+'</div>';}).join('')+
+  '</div>';
+  return head+tb+read+footNote();
+}
+function tabTalk(){
+  if(!ready(S.me))return '<div class="card"><h2>내 카드가 없습니다</h2><p>"내가 어떻게 말해야 하는지"는 나와 고객을 비교해야 나옵니다.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
+  var me=S.me,cl=S.cl,plan=talkPlan(me,cl),mc=personCode(me),cc=personCode(cl),luck=plan.luck;
+  var top='<div class="card"><h1>나는 '+mc+', 고객은 '+cc+'</h1>'+
+    '<p>네 축 중 <b>'+plan.sameCount+'개는 같고 '+(4-plan.sameCount)+'개가 다릅니다.</b> 다른 축이 상담이 어긋나는 자리입니다. 아래 표의 <b>이렇게 바꿔라</b>만 지켜도 대화가 달라집니다.</p></div>';
+  var main='<div class="card"><h2><span class="n">핵심</span>나 · 고객 · 그래서 어떻게</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:82px">항목</th><th style="width:56px">나</th><th style="width:60px">고객</th><th style="width:210px">이대로 하면</th><th>이렇게 바꿔라</th></tr></thead><tbody>'+
+    plan.rows.map(function(r){
+      return '<tr'+(r.same?'':' style="background:#FFFBF4"')+'>'+
+        '<td class="head"><b>'+esc(r.label)+'</b>'+(r.same?'':' <span class="pill" style="background:#FFF0F1;color:#BB3A54">다름</span>')+'</td>'+
+        '<td data-l="나"><b>'+r.me+'</b></td><td data-l="고객"><b style="color:#8B7BF0">'+r.you+'</b></td>'+
+        '<td class="full" data-l="이대로 하면">'+esc(r.risk)+'</td>'+
+        '<td class="full" data-l="이렇게"><b>'+esc(r.fix)+'</b></td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var m=plan.meta;
+  var saju='<div class="card"><h2><span class="n">사주</span>이 고객이 원하는 것 — '+plan.sipTop+' 우세</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    [['원하는 것',m.want],['마음의 결',m.mind],['첫마디',m.open],['하면 안 되는 말',m.avoid],['닫는 법',m.close]].map(function(x){
+      return '<tr><td class="head"><b>'+x[0]+'</b></td><td class="plain">'+esc(x[1])+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    (plan.lack.length?'<div class="note warn">사주에 <b>'+plan.lack.join('·')+'</b> 기운이 없습니다 — '+
+      plan.lack.map(function(k){return OH_META[k].emo+' '+k+'('+OH_META[k].key+')';}).join(', ')+
+      ' 쪽 이야기는 잘 와닿지 않습니다. 그 방향으로 설득하지 마세요.</div>':'')+
+    '<div class="note info">올해는 <b>'+luck.gz+'년('+luck.han+')</b>, 이 고객에게는 <b>'+luck.group+'</b> 운입니다 — '+
+      esc(SIP_META[luck.group].want)+' 쪽에 특히 귀가 열려 있는 해입니다.</div>'+
+  '</div>';
+  var script='<div class="card"><h2><span class="n">대본</span>바로 쓰는 문장</h2>'+
+    '<div style="font-size:12.5px;font-weight:900;color:#6F63C4;margin-top:12px">🗣 첫 3분 — 이렇게 여세요</div>'+
+    plan.opens.map(function(x){return '<div class="talk good">'+esc(x)+'</div>';}).join('')+
+    '<div style="font-size:12.5px;font-weight:900;color:#BB3A54;margin-top:16px">🚫 이 말은 하지 마세요</div>'+
+    plan.avoid.map(function(x){return '<div class="talk bad">'+esc(x)+'</div>';}).join('')+
+    '<div style="font-size:12.5px;font-weight:900;color:#1F7A61;margin-top:16px">🤝 마무리 — 이렇게 닫으세요</div>'+
+    plan.closes.map(function(x){return '<div class="talk">'+esc(x)+'</div>';}).join('')+
+    '<button class="btn line sm" style="margin-top:16px" onclick="window.print()">🖨 이 페이지 인쇄 · PDF</button>'+
+  '</div>';
+  return top+main+saju+script+footNote();
+}
+function tabSaju(){
+  var cl=S.cl,s=cl.saju,cb=combine(cl),sip=cb.sip;
+  var head='<div class="card"><h2><span class="n">만세력</span>'+esc(cl.name)+' 님의 네 기둥</h2>'+
+    pillarsHtml(cl)+
+    '<div class="sub" style="margin-top:10px">'+esc(cl.y)+'년 '+esc(cl.m)+'월 '+esc(cl.d)+'일 '+
+      (cl.noTime?'(시간 모름 — 시주 제외)':('0'+cl.H).slice(-2)+'시 '+('0'+(cl.Mi||0)).slice(-2)+'분')+
+      (s.adj?' · 진태양시 '+s.adj+'분 보정':'')+' · 사주 기준 '+s.sajuYear+'년</div>'+
+    (s.edge?'<div class="note bad">절기가 바뀌는 시각과 <b>2시간 이내</b>입니다. 태어난 시각이 몇 분만 달라도 월주가 바뀝니다. 출생 시각을 다시 확인해 주세요.</div>':'')+
+    (cl.noTime?'<div class="note warn">태어난 시간을 모르면 <b>시주</b>를 못 봅니다. 성향의 큰 줄기(년·월·일)는 그대로 유효하지만, 궁합의 정밀도는 떨어집니다.</div>':'')+
+  '</div>';
+  var tb='<div class="card"><h2><span class="n">표</span>여덟 글자와 십신</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:64px">자리</th><th style="width:74px">글자</th><th style="width:64px">오행</th><th style="width:80px">십신</th><th>뜻</th></tr></thead><tbody>'+
+    sip.rows.map(function(r){
+      var oh=(r.pos.indexOf('간')>0)?GAN_OH[GAN.indexOf(r.src)]:JI_OH[JI.indexOf(r.src)];
+      return '<tr><td class="head"><b>'+r.pos+'</b></td><td data-l="글자">'+r.src+'</td>'+
+        '<td data-l="오행"><span class="pill" style="color:'+OH_META[oh].c+';background:'+OH_META[oh].bg+'">'+OH_META[oh].emo+' '+oh+'</span></td>'+
+        '<td data-l="십신"><b>'+r.name+'</b></td>'+
+        '<td class="full" data-l="뜻">'+esc(SIP10[r.name]||'')+'</td></tr>';}).join('')+
+    '<tr><td class="plain" colspan="5" style="background:#FAF8FF"><b>일간 '+GAN[s.dg]+'('+GAN_CHAR[s.dg].n+')</b> 은 이 사람 자신입니다. 나머지 글자는 모두 일간에서 본 관계입니다. 지지의 십신은 그 지지의 본기(정기)로 봤습니다.</td></tr>'+
+    '</tbody></table></div></div>';
+  var oh='<div class="card"><h2><span class="n">오행</span>기운의 분포</h2>'+ohBars(cb.oh)+
+    '<div class="tbwrap stack" style="margin-top:12px"><table class="tb"><tbody>'+
+    ['목','화','토','금','수'].map(function(k){
+      var m=OH_META[k],n=cb.oh[k];
+      return '<tr><td class="head">'+m.emo+' <b>'+k+'</b> '+n+'개'+(n===0?' <span class="pill" style="background:#FFF0F1;color:#BB3A54">없음</span>':(n>=3?' <span class="pill" style="background:#FFF6E9;color:#9A5B0C">많음</span>':''))+'</td>'+
+        '<td class="plain">'+esc(m.mind)+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var how='<div class="card"><h2><span class="n">근거</span>어떻게 계산했나</h2>'+
+    '<div class="kv"><span>절기(월주 기준)</span><b>'+(s.term.prev?jdToKst(s.term.prev).txt+' '+s.term.prevName:'-')+'</b></div>'+
+    '<div class="kv"><span>다음 절기</span><b>'+(s.term.next?jdToKst(s.term.next).txt+' '+s.term.nextName:'-')+'</b></div>'+
+    '<div class="kv"><span>태어난 때 태양황경</span><b>'+s.lam.toFixed(2)+'°</b></div>'+
+    '<div class="kv"><span>입춘 기준 해</span><b>'+s.sajuYear+'년 ('+gz(s.yg,s.yj)+')</b></div>'+
+    '<p class="sub" style="margin-top:10px">월주는 달력의 달이 아니라 <b>절기</b>로 나눕니다(입춘·경칩·청명…). 이 프로그램은 태양의 위치(황경)를 직접 계산해 절기를 잡으므로 표를 쓰지 않습니다. 일주는 율리우스 적일로 뽑았고 23시 이후는 다음날로 봅니다(야자시). 절기 시각의 오차는 ±15분 안쪽입니다.</p>'+
+    '<div class="note info">사주는 사람을 이해하는 <b>참고 자료</b>입니다. 길흉을 점치거나 계약을 권유하는 근거로 쓰지 마세요. 고객에게 보여줄 때도 "성향을 이해하려고 본다"고 말씀하세요.</div>'+
+  '</div>';
+  return head+tb+oh+how+footNote();
+}
+function footNote(){
+  return '<div class="foot">사주 × MBTI 상담카드 · 성향을 이해하기 위한 참고 자료입니다<br>채용·평가·심사의 기준으로 쓰지 마세요 · 고객 검사는 본인 동의를 받고 진행하세요</div>';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   9. 스크롤 칸 관리 · 시작
+   ══════════════════════════════════════════════════════════════════ */
+function hintCheck(){
+  var p=$('pane'),h=$('hint');if(!p||!h)return;
+  var more=(p.scrollHeight-p.clientHeight-p.scrollTop)>40;
+  h.classList.toggle('off',!more);
+}
+(function(){
+  var p=$('pane');
+  if(p)p.addEventListener('scroll',hintCheck,{passive:true});
+  window.addEventListener('resize',function(){fitShell();hintCheck();});
+  document.addEventListener('keydown',function(e){
+    if(!p)return;
+    if(e.key==='PageDown'){p.scrollTop+=p.clientHeight*0.9;e.preventDefault();}
+    if(e.key==='PageUp'){p.scrollTop-=p.clientHeight*0.9;e.preventDefault();}
+    if(e.key==='Home'&&e.ctrlKey){p.scrollTop=0;}
+    if(e.key==='End'&&e.ctrlKey){p.scrollTop=p.scrollHeight;}
+  });
+})();
+/* 화면 높이를 제대로 못 받는 곳(작은 iframe 등)에서는 문서 스크롤로 되돌린다 */
+function fitShell(){
+  var p=$('pane');if(!p)return;
+  var h=p.clientHeight;
+  if(h<220)document.body.classList.add('flow');
+  else document.body.classList.remove('flow');
+}
+(function boot(){
+  var d=load();
+  if(d){
+    if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
+    S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'sum';
+    S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
+  }
+  fitShell();draw();
+  setTimeout(function(){fitShell();hintCheck();},250);
+})();
+
+</script>
+</body>
+</html>
