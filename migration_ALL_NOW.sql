@@ -324,6 +324,18 @@ left join public.org_members o on o.member_id = p.id;
 
 grant select on public.team_overview to authenticated;
 
+create table if not exists public.app_config(
+  key text primary key,
+  value text,
+  updated_at timestamptz default now()
+);
+
+grant select on public.app_config to authenticated;
+
+insert into public.app_config(key, value)
+values ('schema_version', '29')
+on conflict (key) do update set value = excluded.value, updated_at = now();
+
 notify pgrst, 'reload schema';
 
 select
