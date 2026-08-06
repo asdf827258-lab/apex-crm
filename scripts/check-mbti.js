@@ -287,9 +287,79 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
      '검사×사주 교차 4줄 · 첫마디 ' + flow.opens + ' · 피할 말 ' + flow.avoid + ' · 클로징 ' + flow.closes);
   ok(/[가-힣]{2}/.test(flow.luck), '올해 세운이 간지로 나온다 (' + flow.luck + ')');
 
+  console.log('\n사주 정밀 — 12운성 · 공망 · 신살 · 대운');
+  const pro = await page.evaluate(() => {
+    const s = sajuCalc(1990, 5, 15, 9, 30, 0);
+    const di = ((jdnOf(1990, 5, 15) + 49) % 60 + 60) % 60;
+    const du = daeun(s, 'F');
+    return { un: unseong(s.dg, s.dj), unGap: unseong(0, 11), gm: gongmang(di).map(x => JI[x]),
+      sin: sinsalOf(s).map(x => x.name), duStart: du.start, duFwd: du.forward,
+      du1: GAN[du.list[0].g] + JI[du.list[0].j], du2: GAN[du.list[1].g] + JI[du.list[1].j],
+      johu: johu(s).season, len: du.list.length };
+  });
+  ok(pro.un === '양', '경금 일간의 진(辰)은 12운성 양(養) 자리 (' + pro.un + ')');
+  ok(pro.unGap === '장생', '갑목의 해(亥)는 장생 (' + pro.unGap + ')');
+  ok(pro.gm.join('') === '신유', '경진일주(갑술순)의 공망은 신·유 (' + pro.gm.join('·') + ')');
+  ok(pro.sin.indexOf('화개') >= 0, '일지 진(辰)에서 화개를 잡는다 (' + (pro.sin.join('·') || '없음') + ')');
+  ok(!pro.duFwd && pro.duStart === 3, '양년 여자는 역행 · 대운수 3 (역행:' + !pro.duFwd + ' 대운수:' + pro.duStart + ')');
+  ok(pro.du1 === '경진' && pro.du2 === '기묘', '월주 신사에서 역행해 경진 → 기묘 (' + pro.du1 + ' → ' + pro.du2 + ')');
+  ok(pro.len === 8 && pro.johu === '여름', '대운 8개 · 5월생은 여름 (' + pro.len + '개 / ' + pro.johu + ')');
+
+  const cog = await page.evaluate(() => ({
+    istj: funcStack('ISTJ'), enfj: funcStack('ENFJ'), entp: funcStack('ENTP'), isfp: funcStack('ISFP') }));
+  ok(cog.istj.dom === 'Si' && cog.istj.aux === 'Te' && cog.istj.inf === 'Ne', 'ISTJ 인지기능 Si-Te-Fi-Ne');
+  ok(cog.enfj.dom === 'Fe' && cog.enfj.aux === 'Ni' && cog.enfj.inf === 'Ti', 'ENFJ 인지기능 Fe-Ni-Se-Ti');
+  ok(cog.entp.dom === 'Ne' && cog.entp.aux === 'Ti', 'ENTP 인지기능 Ne-Ti-Fe-Si');
+  ok(cog.isfp.dom === 'Fi' && cog.isfp.aux === 'Se', 'ISFP 인지기능 Fi-Se-Ni-Te');
+
+  console.log('\n아이스브레이킹 · 보험 · 덕담');
+  const ice = await page.evaluate(() => {
+    const ib = iceBreak(S.cl);
+    goTab('ice');
+    const t = document.getElementById('view').textContent;
+    const bl = blessing(S.cl);
+    return { bless: bl.length, opens: ib.opens.length, asks: ib.asks.length, nos: ib.nos.length,
+      polite: bl.filter(x => /(니다|세요|시죠)[.!?]?$/.test(x.replace(/\s+$/, ''))).length,
+      hasFlow: /첫 만남 15분/.test(t), noSell: /상품 이야기는 아직/.test(t) };
+  });
+  ok(ice.bless >= 3, '덕담이 사주·유형에서 여러 줄 나온다 (' + ice.bless + '줄)');
+  ok(ice.polite === ice.bless, '덕담이 전부 손님 앞에서 읽을 수 있는 존댓말이다 (' + ice.polite + '/' + ice.bless + ')');
+  ok(ice.opens >= 4, '포문 문장이 4개 이상 나온다 (' + ice.opens + ')');
+  ok(ice.asks >= 5 && ice.nos >= 3, '질문 ' + ice.asks + '개 · 하면 안 되는 말 ' + ice.nos + '개');
+  ok(ice.hasFlow && ice.noSell, '첫 만남 15분 흐름과 "상품 이야기는 아직" 원칙이 들어 있다');
+
+  const ins = await page.evaluate(() => {
+    goTab('ins');
+    const t = document.getElementById('view').textContent;
+    return { tables: document.querySelectorAll('#view table').length,
+      buy: /무엇을 사는가/.test(t), care: /연락 주기/.test(t), intro: /소개 부탁/.test(t),
+      warn: /가입 권유의 근거|절대 하지 않습니다/.test(t) };
+  });
+  ok(ins.tables >= 2 && ins.buy && ins.care, '보험 성향 표와 계약 후 관리 표가 나온다 (' + ins.tables + '개)');
+  ok(ins.intro, '소개 부탁하는 방법까지 들어 있다');
+  ok(ins.warn, '운을 가입 권유 근거로 쓰지 말라는 경고가 붙어 있다');
+
+  console.log('\n모드 — 사주 전문 · MBTI 전문');
+  const modes = await page.evaluate(() => {
+    const out = {};
+    ['both', 'saju', 'mbti'].forEach(m => { out[m] = tabsFor(m); });
+    /* 사주만 있고 유형이 없는 고객 */
+    const keep = JSON.parse(JSON.stringify(S.cl));
+    S.mode = 'saju'; S.cl.mbti = ''; S.cl.res = null;
+    let sajuOk = true; try { tabsFor('saju').forEach(t => { goTab(t); }); } catch (e) { sajuOk = e.message; }
+    /* 유형만 있고 사주가 없는 고객 */
+    S.mode = 'mbti'; S.cl.mbti = 'ISTJ'; S.cl.saju = null;
+    let mbtiOk = true; try { tabsFor('mbti').forEach(t => { goTab(t); }); } catch (e) { mbtiOk = e.message; }
+    S.cl = keep; S.mode = 'both'; draw();
+    return { out: out, sajuOk: sajuOk, mbtiOk: mbtiOk };
+  });
+  ok(modes.out.both.length === 8 && modes.out.saju.length === 6 && modes.out.mbti.length === 7,
+     '모드마다 탭이 다르다 — 통합 ' + modes.out.both.length + ' · 사주 ' + modes.out.saju.length + ' · MBTI ' + modes.out.mbti.length);
+  ok(modes.sajuOk === true, '유형 없이 사주만으로도 모든 탭이 그려진다' + (modes.sajuOk === true ? '' : ' — ' + modes.sajuOk));
+  ok(modes.mbtiOk === true, '사주 없이 유형만으로도 모든 탭이 그려진다' + (modes.mbtiOk === true ? '' : ' — ' + modes.mbtiOk));
+
   console.log('\n화면 · 스크롤 칸');
-  const tabs = ['sum', 'trait', 'fit', 'talk', 'saju'];
-  for (const t of tabs) {
+  for (const t of await page.evaluate(() => tabsFor('both'))) {
     await page.evaluate(x => goTab(x), t);
     await page.waitForTimeout(200);
     const len = await page.evaluate(() => document.getElementById('view').textContent.replace(/\s+/g, '').length);
