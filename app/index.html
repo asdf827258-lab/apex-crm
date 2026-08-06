@@ -2848,6 +2848,7 @@ function osTabProbe(tab){
   if(tab==='health')return renderHealth();
   if(tab==='voice')return renderVoice();
   if(tab==='org')return renderOrg();
+  if(tab==='mycoach')return renderMyCoach();
   if(tab==='branch_coach')return renderBranchCoach();
   if(tab==='hq')return renderHQ();
   if(tab==='audit')return renderAudit();
@@ -3837,7 +3838,7 @@ var TABS=[
  {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
- {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
+ {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''}]},
@@ -4031,6 +4032,7 @@ function go(tab){
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();
     if(typeof orgAccLoad==='function')orgAccLoad(function(){if(orgEditId!==null||true){var c=document.getElementById('orgFormCard');if(c&&typeof orgForm==='function'&&typeof orgLoad==='function')c.outerHTML=orgForm(orgLoad());}});
     if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
+  else if(tab==='mycoach'){dyn.innerHTML=renderMyCoach();if(typeof osMyCoachAfterRender==='function')osMyCoachAfterRender();}
   else if(tab==='branch_coach'){dyn.innerHTML=renderBranchCoach();if(typeof osBranchCoachAfterRender==='function')osBranchCoachAfterRender();}
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
@@ -11246,7 +11248,7 @@ function osTeamXAfterRender(){if(!txCanView())return;TXM.loaded=false;txPaint();
    숫자로 등수를 매기지 않는다. 비어 있는 곳과 어긋난 곳만 사실로 적고,
    오늘 누구를 먼저 볼지와 무엇을 물을지까지 적어 둔다.
    판단 근거는 팀원이 스스로 남긴 기록(체크판·통화·출근)이다.        */
-var CO={rows:[],logs:[],teams:[],loaded:false,busy:false,err:'',warn:[],noTable:false,
+var CO={rows:[],logs:[],notes:[],teams:[],loaded:false,busy:false,err:'',warn:[],noTable:false,
   open:{},form:{},ai:{},saving:{},hist:{},team:'',showAll:false,at:''};
 
 function coDay(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-(n||0));return d.toISOString().slice(0,10);}
@@ -11276,7 +11278,9 @@ function coLoad(){
     q(sb.from('dbs').select('id,assigned_to')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d13)),
     q(sb.from('coach_logs').select('id,member_id,coach_id,coach_date,strength,weak,todo,recheck_date,note')
-       .order('coach_date',{ascending:false}).limit(300))
+       .order('coach_date',{ascending:false}).limit(300)),
+    q(sb.from('coach_notes').select('id,log_id,member_id,body,share,created_at')
+       .eq('share',true).order('created_at',{ascending:false}).limit(200))
   ]).then(function(r){
     CO.busy=false;CO.loaded=true;CO.warn=[];
     if(r[0].error){CO.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');coPaint();return;}
@@ -11292,6 +11296,7 @@ function coLoad(){
       CO.logs=[];
       CO.noTable=/does not exist|relation/i.test((r[7].error.message||''));
     }else{CO.logs=r[7].data||[];CO.noTable=false;}
+    CO.notes=(r[8]&&!r[8].error)?(r[8].data||[]):[];
     if(calls===null||dbs===null)CO.warn.push('전화·약속');
     if(chk===null)CO.warn.push('체크판');
     CO.teams=teams;
@@ -11325,8 +11330,10 @@ function coLoad(){
     CO.rows=profs.filter(function(p){return p.id!==meId;}).map(function(p){
       var tm=teams.filter(function(x){return x.id===teamOf[p.id];})[0];
       var mine=logBy[p.id]||[];
+      var says=CO.notes.filter(function(n){return n.member_id===p.id;});
       return {
         id:p.id,name:p.name||'(이름 없음)',role:p.role,team:tm?tm.name:'',
+        says:says,
         w1:span(p.id,d6,t),w2:span(p.id,d13,d7),
         held:dbs?dbs.filter(function(d){return d.assigned_to===p.id;}).length:null,
         cold:(dbs&&calls)?dbs.filter(function(d){return d.assigned_to===p.id&&!touched[d.id];}).length:null,
@@ -11372,6 +11379,12 @@ function coSignals(p){
     out.push({k:'noatt',w:2,
       t:'최근 7일 출근 기록이 '+a.att+'일입니다.',
       a:'출근 체크를 잊은 건지 실제로 못 나온 건지부터 확인합니다.'});
+  }
+  if(p.says&&p.says.length){
+    var s0=p.says[0];
+    out.push({k:'said',w:5,
+      t:'본인이 직접 남긴 말이 있습니다 — "'+(''+(s0.body||'')).replace(/\s+/g,' ').slice(0,52)+'"',
+      a:'먼저 이것부터 읽고 시작합니다. 스스로 말한 것보다 확실한 신호는 없습니다.'});
   }
   if(!p.last){
     out.push({k:'never',w:1,t:'코칭 기록이 아직 없습니다.',
@@ -11509,6 +11522,13 @@ function coCardHtml(p,pick){
     (p.logs.length?('<button class="btn btn-ghost" onclick="coHist(\''+p.id+'\')">'+
       (CO.hist[p.id]?'기록 접기':('지난 기록 '+p.logs.length+'건'))+'</button>'):'')+
   '</div>';
+  if(p.says&&p.says.length){
+    h+='<div class="co-say"><div class="co-sayh">본인이 남긴 말 '+p.says.length+'건</div>'+
+      p.says.slice(0,4).map(function(n){
+        return '<div class="co-say1"><div class="t">'+osEsc(n.body)+'</div>'+
+          '<div class="d">'+osEsc((''+(n.created_at||'')).slice(0,10))+'</div></div>';
+      }).join('')+'</div>';
+  }
   if(CO.hist[p.id]&&p.logs.length){
     h+='<div class="co-hs">'+p.logs.slice(0,12).map(function(l){
       var b=[];
@@ -11623,6 +11643,276 @@ function coInnerHtml(){
 }
 function coPaint(){var el=document.getElementById('coPane');if(el)el.innerHTML=coInnerHtml();}
 
+/* ── 내 코칭 ──────────────────────────────────────────────────────────
+   팀 코칭은 지점장이 팀을 보는 화면이다. 여기는 그 반대편이다.
+   본인이 자기 것만 본다. 남의 것은 보이지 않는다.
+
+   지점장이 남긴 코칭을 읽고, 그 자리에서 내 생각을 적는다.
+   적을 때 '지점장에게 보이기'를 켜면 넘어가고, 끄면 나만 본다.
+   혼자 정리하고 싶은 날도 있고, 말하고 싶은 날도 있기 때문이다.       */
+var MC={sig:[],logs:[],notes:[],loaded:false,busy:false,err:'',noTable:false,
+  open:{},draft:{},share:{},saving:{},newBody:'',newShare:true};
+
+function mcMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+function mcDay(n){var d=new Date(Date.now()+9*3600*1000);d.setUTCDate(d.getUTCDate()-(n||0));return d.toISOString().slice(0,10);}
+function mcD(s){return (''+(s||'')).slice(0,10);}
+
+function mcLoad(){
+  var sb=(typeof osClient==='function')?osClient():null,me=mcMyId();
+  if(!sb||!me){MC.loaded=true;MC.err='로그인이 필요합니다.';mcPaint();return;}
+  MC.busy=true;mcPaint();
+  var t=mcDay(0),d6=mcDay(6),d13=mcDay(13);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('coach_logs').select('id,member_id,coach_id,coach_date,strength,weak,todo,recheck_date')
+       .eq('member_id',me).order('coach_date',{ascending:false}).limit(30)),
+    q(sb.from('coach_notes').select('id,log_id,member_id,body,share,created_at')
+       .eq('member_id',me).order('created_at',{ascending:false}).limit(60)),
+    q(sb.from('attendance').select('member_id,att_date').eq('member_id',me).gte('att_date',d13)),
+    q(sb.from('calls').select('created_by,call_at,result').eq('created_by',me).gte('call_at',d13+'T00:00:00')),
+    q(sb.from('dbs').select('id,assigned_to').eq('assigned_to',me)),
+    q(sb.from('daily_checks').select('member_id,check_date,scope,items').eq('member_id',me).gte('check_date',d13))
+  ]).then(function(r){
+    MC.busy=false;MC.loaded=true;
+    if(r[0].error){
+      var m=((r[0].error.message)||'')+'';
+      MC.noTable=/does not exist|relation/i.test(m);
+      MC.err=MC.noTable?'':m;MC.logs=[];mcPaint();return;
+    }
+    MC.err='';MC.noTable=false;
+    MC.logs=r[0].data||[];
+    MC.notes=r[1].error?[]:(r[1].data||[]);
+    if(r[1].error&&/does not exist|relation/i.test((r[1].error.message||''))) MC.noTable=true;
+
+    /* 내 지금 — 팀 코칭과 같은 잣대를 쓰되, 문구는 내가 나에게 하는 말로 */
+    var att=r[2].error?[]:(r[2].data||[]);
+    var calls=r[3].error?null:(r[3].data||[]);
+    var dbs=r[4].error?null:(r[4].data||[]);
+    var chk=r[5].error?null:(r[5].data||[]);
+    var dayIds={};if(typeof CK_ITEMS!=='undefined')CK_ITEMS.day.forEach(function(x){dayIds[x[0]]=1;});
+    var cnt=function(o){var n=0,k;for(k in o)if(o[k]&&dayIds[k])n++;return n;};
+    var span=function(from,to){
+      var inR=function(s){var d=mcD(s);return d>=from&&d<=to;};
+      var mine=calls?calls.filter(function(c){return inR(c.call_at);}):null;
+      var days=0;
+      if(chk)chk.forEach(function(row){
+        if(row.scope!=='day'||row.check_date<from||row.check_date>to)return;
+        if(cnt(row.items||{})>0)days++;});
+      return {att:att.filter(function(a){return a.att_date>=from&&a.att_date<=to;}).length,
+        call:mine?mine.length:null,
+        appt:mine?mine.filter(function(c){return c.result==='상담';}).length:null,
+        ckDays:chk?days:null};
+    };
+    var w1=span(d6,t),w2=span(d13,mcDay(7));
+    var cold=(dbs&&calls)?null:null;
+    MC.week=w1;MC.prev=w2;
+    MC.held=dbs?dbs.length:null;
+
+    var sig=[];
+    if(w1.call!==null&&w2.call!==null&&w2.call>=5&&w1.call*2<=w2.call)
+      sig.push({t:'통화가 지난주 '+w2.call+'건에서 이번 주 '+w1.call+'건으로 줄었습니다.',
+        a:'무슨 일이 있었는지 스스로 적어 두면 지점장과 이야기하기 쉬워집니다.'});
+    if(w1.call!==null&&w2.call!==null&&(w1.call+w2.call)>=15&&(w1.appt+w2.appt)===0)
+      sig.push({t:'2주 동안 통화 '+(w1.call+w2.call)+'건인데 약속이 0건입니다.',
+        a:'통화량 문제가 아닐 수 있습니다. 첫 마디를 한 번 적어 보세요.'});
+    if(w1.ckDays!==null&&w1.ckDays<3)
+      sig.push({t:'최근 7일 중 실행 체크판을 쓴 날이 '+w1.ckDays+'일입니다.',
+        a:'항목이 실제 일과 안 맞으면 그것도 적어 주세요. 고칠 수 있습니다.'});
+    if(w1.att<3)
+      sig.push({t:'최근 7일 출근 기록이 '+w1.att+'일입니다.',
+        a:'체크를 잊은 것이면 지금 눌러 두면 됩니다.'});
+    MC.sig=sig;
+    mcPaint();
+  },function(e){MC.busy=false;MC.loaded=true;MC.err=(e&&e.message)||'';mcPaint();});
+}
+
+function mcToggle(id){MC.open[id]=!MC.open[id];mcPaint();}
+function mcDraft(id,v){MC.draft[id]=v;}
+function mcShare(id,v){MC.share[id]=v;mcPaint();}
+function mcNew(v){MC.newBody=v;}
+function mcNewShare(v){MC.newShare=v;mcPaint();}
+
+function mcSave(logId){
+  var key=logId||'_free';
+  var body=((logId?MC.draft[logId]:MC.newBody)||'').replace(/^\s+|\s+$/g,'');
+  if(!body){toast('적을 내용을 입력해 주세요.');return;}
+  var sb=(typeof osClient==='function')?osClient():null,me=mcMyId();
+  if(!sb||!me){toast('로그인이 필요합니다.');return;}
+  if(MC.saving[key])return;
+  var share=logId?(MC.share[logId]!==false):(MC.newShare!==false);
+  MC.saving[key]=true;mcPaint();
+  sb.from('coach_notes').insert({
+    log_id:logId||null,member_id:me,body:body.slice(0,2000),share:!!share
+  }).then(function(r){
+    MC.saving[key]=false;
+    if(r&&r.error){
+      var m=((r.error.message)||'')+'';
+      if(/does not exist|relation/i.test(m))
+        toast('내 코칭 표가 아직 없습니다. 대표님께 서버 준비 SQL 실행을 요청하세요.',9000);
+      else if(/42501|permission denied|row.level security/i.test(m))
+        toast('저장이 서버에서 막혀 있습니다. 대표님께 서버 준비 SQL 실행을 요청하세요.',9000);
+      else toast('저장 실패: '+m);
+      mcPaint();return;
+    }
+    if(logId)MC.draft[logId]='';else MC.newBody='';
+    toast(share?'적었습니다 — 지점장에게 보입니다.':'적었습니다 — 나만 봅니다.',5000);
+    mcLoad();
+  },function(e){MC.saving[key]=false;toast('저장 실패: '+((e&&e.message)||''));mcPaint();});
+}
+function mcDel(id){
+  if(!confirm('이 메모를 지울까요?'))return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb)return;
+  sb.from('coach_notes')['delete']().eq('id',id).then(function(r){
+    if(r&&r.error){toast('지우지 못했습니다: '+(r.error.message||''));return;}
+    toast('지웠습니다.');mcLoad();
+  },function(){toast('지우지 못했습니다.');});
+}
+function mcNotesOf(logId){
+  return MC.notes.filter(function(n){return logId?(n.log_id===logId):!n.log_id;});
+}
+function mcNoteHtml(n){
+  return '<div class="mc-n"><div class="mc-nt">'+osEsc(n.body)+'</div>'+
+    '<div class="mc-nm">'+osEsc(mcD(n.created_at))+' · '+
+      (n.share?'<b style="color:var(--primary)">지점장에게 보임</b>':'나만 봄')+
+      ' <button class="mc-x" onclick="mcDel(\''+n.id+'\')">지우기</button></div></div>';
+}
+function mcWriteHtml(logId){
+  var key=logId||'_free';
+  var val=logId?(MC.draft[logId]||''):(MC.newBody||'');
+  var share=logId?(MC.share[logId]!==false):(MC.newShare!==false);
+  var fn=logId?("mcDraft('"+logId+"',this.value)"):'mcNew(this.value)';
+  var sfn=logId?("mcShare('"+logId+"',this.checked)"):'mcNewShare(this.checked)';
+  return '<textarea class="mc-ta" rows="3" oninput="'+fn+'" '+
+    'placeholder="'+(logId?'이 코칭에 대해 하고 싶은 말, 해보니 어땠는지':'요즘 막히는 것, 혼자 정리하고 싶은 것')+'">'+
+    osEsc(val)+'</textarea>'+
+    '<div class="mc-r"><label class="mc-ck"><input type="checkbox"'+(share?' checked':'')+' onchange="'+sfn+'"> 지점장에게 보이기</label>'+
+    '<button class="btn btn-primary" style="padding:6px 13px;font-size:11.5px" onclick="mcSave('+
+      (logId?("'"+logId+"'"):'')+')"'+(MC.saving[key]?' disabled':'')+'>'+
+      (MC.saving[key]?'저장 중…':'적기')+'</button></div>'+
+    '<div class="mc-hint">'+(share
+      ? '켜져 있으면 지점장이 팀 코칭 화면에서 봅니다. 답을 받을 수 있습니다.'
+      : '꺼져 있으면 <b>나만 봅니다.</b> 아무에게도 가지 않습니다.')+'</div>';
+}
+
+function mcInnerHtml(){
+  if(!MC.loaded)return '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">불러오는 중…</div></div>';
+  if(MC.err)return '<div class="card"><div class="card-body"><div class="notice">'+osEsc(MC.err)+'</div></div></div>';
+  var h='';
+  if(MC.noTable){
+    h+='<div class="notice"><b>내 코칭 준비가 아직 안 됐습니다.</b> 대표님이 서버 준비 SQL 을 한 번 실행하면 열립니다. '+
+       '지금은 아래 <b>내 지금</b>만 보입니다.</div>';
+  }
+
+  h+='<div class="mc-sec">내 지금 — 최근 2주</div>';
+  h+='<div class="ct-sum" style="margin-bottom:12px">'+
+    '<div><div class="k">출근</div><div class="v">'+(MC.week?MC.week.att:0)+'<em>일</em></div></div>'+
+    '<div><div class="k">통화</div><div class="v">'+((MC.week&&MC.week.call!=null)?MC.week.call:'—')+'<em>건</em></div></div>'+
+    '<div><div class="k">약속</div><div class="v">'+((MC.week&&MC.week.appt!=null)?MC.week.appt:'—')+'<em>건</em></div></div>'+
+  '</div>';
+  if(MC.sig.length){
+    h+='<div class="mc-sg">'+MC.sig.map(function(x){
+      return '<div class="mc-s1"><div class="t">'+osEsc(x.t)+'</div><div class="a">→ '+osEsc(x.a)+'</div></div>';
+    }).join('')+'</div>';
+  }else{
+    h+='<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">'+
+      '최근 2주 기록에서 걸리는 곳이 없습니다. 하던 대로 하시면 됩니다.</div></div>';
+  }
+
+  h+='<div class="mc-sec">지점장이 남긴 코칭 '+MC.logs.length+'건</div>';
+  if(!MC.logs.length){
+    h+='<div class="card"><div class="card-body" style="font-size:12.5px;color:var(--ink-4)">'+
+      '아직 받은 코칭 기록이 없습니다. 아래에 혼자 적어 두셔도 됩니다.</div></div>';
+  }else{
+    MC.logs.forEach(function(l){
+      var op=!!MC.open[l.id],ns=mcNotesOf(l.id);
+      var lead=(l.todo||l.weak||l.strength||'').replace(/\s+/g,' ').slice(0,44);
+      h+='<div class="mc-l'+(op?' on':'')+'">'+
+        '<button class="mc-b" type="button" onclick="mcToggle(\''+l.id+'\')">'+
+          '<span class="mc-d">'+osEsc(mcD(l.coach_date))+'</span>'+
+          '<span class="mc-p">'+osEsc(lead||'기록')+'</span>'+
+          (l.recheck_date?('<span class="mc-tag">다시 볼 날 '+osEsc(mcD(l.recheck_date))+'</span>'):'')+
+          (ns.length?('<span class="mc-tag on">내 생각 '+ns.length+'</span>'):'')+
+          '<span class="mc-c">'+(op?'▾':'▸')+'</span></button>';
+      if(op){
+        h+='<div class="mc-body">';
+        if(l.strength)h+='<div class="mc-f"><div class="k">잘하고 있는 것</div><div class="v">'+osEsc(l.strength)+'</div></div>';
+        if(l.weak)h+='<div class="mc-f"><div class="k">막혀 있는 것</div><div class="v">'+osEsc(l.weak)+'</div></div>';
+        if(l.todo)h+='<div class="mc-f"><div class="k">같이 정한 일</div><div class="v">'+osEsc(l.todo)+'</div></div>';
+        if(l.recheck_date)h+='<div class="mc-f"><div class="k">다시 볼 날</div><div class="v">'+osEsc(mcD(l.recheck_date))+'</div></div>';
+        if(ns.length)h+='<div class="mc-sec2">내가 적은 것</div>'+ns.map(mcNoteHtml).join('');
+        if(!MC.noTable)h+='<div class="mc-sec2">여기에 답하기</div>'+mcWriteHtml(l.id);
+        h+='</div>';
+      }
+      h+='</div>';
+    });
+  }
+
+  var free=mcNotesOf(null);
+  h+='<div class="mc-sec">혼자 적어 두기</div>';
+  h+='<div class="card"><div class="card-body">'+
+    '<div style="font-size:12.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">'+
+    '코칭 기록과 상관없이 적어도 됩니다. <b>지점장에게 보이기</b>를 끄면 나만 봅니다.</div>'+
+    (MC.noTable?'<div class="notice">서버 준비가 끝나면 여기에 적을 수 있습니다.</div>':mcWriteHtml(null))+
+    (free.length?('<div class="mc-sec2">지난 기록</div>'+free.map(mcNoteHtml).join('')):'')+
+  '</div></div>';
+
+  h+='<div class="notice" style="margin-top:14px">이 화면은 <b>내 것만</b> 보입니다. 다른 사람의 코칭이나 기록은 보이지 않습니다. '+
+     '내가 적은 것도 <b>지점장에게 보이기</b>를 켠 것만 넘어갑니다. '+
+     '이 화면은 조직 관리용이며 보험 상품의 권유·설명 자료가 아닙니다.</div>';
+  return h;
+}
+function mcPaint(){var el=document.getElementById('mcPane');if(el)el.innerHTML=mcInnerHtml();}
+function renderMyCoach(){
+  mcCss();
+  if(!OS.profile)return osPage('코칭','내 코칭',null,osLoginGate('내 코칭은 로그인 후 이용할 수 있습니다.'));
+  var d=new Date(Date.now()+9*3600*1000),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('코칭','내 코칭',
+    ds+' 기준 · 내 기록만 보입니다. 받은 코칭에 답하거나, 혼자 정리해 두셔도 됩니다.',
+    '<div id="mcPane">'+mcInnerHtml()+'</div>');
+}
+function osMyCoachAfterRender(){MC.loaded=false;mcPaint();mcLoad();}
+
+function mcCss(){
+  if(typeof ckCss==='function')ckCss();
+  if(document.getElementById('mcStyle'))return;
+  var st=document.createElement('style');st.id='mcStyle';
+  st.textContent=
+    '.mc-sec{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.06em;text-transform:uppercase;margin:16px 0 8px}'+
+    '.mc-sec2{font-size:9.5px;font-weight:700;color:var(--ink-5);letter-spacing:.05em;margin:13px 0 6px}'+
+    '.mc-sg{display:flex;flex-direction:column;gap:7px}'+
+    '.mc-s1{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px}'+
+    '.mc-s1 .t{font-size:12.5px;font-weight:700;color:#92400E;line-height:1.55}'+
+    '.mc-s1 .a{font-size:11.5px;color:#B45309;line-height:1.6;margin-top:3px}'+
+    '.mc-l{background:#fff;border:1px solid var(--ink-7);border-radius:11px;margin-bottom:8px;overflow:hidden}'+
+    '.mc-l.on{border-color:#BFD4FB}'+
+    '.mc-b{display:flex;align-items:center;gap:8px;width:100%;padding:11px 13px;border:0;background:none;'+
+      'cursor:pointer;text-align:left;font-family:inherit;flex-wrap:wrap}'+
+    '.mc-b:hover{background:var(--ink-9)}.mc-l.on .mc-b{background:#F5F9FF}'+
+    '.mc-d{flex:none;font-size:12px;font-weight:800;color:var(--ink-1);font-family:var(--mono,ui-monospace,monospace)}'+
+    '.mc-p{flex:1;min-width:0;font-size:12.5px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.mc-tag{flex:none;font-size:10px;font-weight:700;color:var(--ink-5);background:var(--ink-8);border-radius:99px;padding:1px 8px}'+
+    '.mc-tag.on{background:var(--primary-pale,#EBF3FF);color:var(--primary)}'+
+    '.mc-c{flex:none;font-size:11px;color:var(--ink-5)}'+
+    '.mc-body{padding:2px 13px 13px;border-top:1px solid var(--ink-8)}'+
+    '.mc-f{margin:9px 0}'+
+    '.mc-f .k{font-size:10px;font-weight:700;color:var(--ink-5);margin-bottom:2px}'+
+    '.mc-f .v{font-size:12.8px;line-height:1.65;color:var(--ink-1)}'+
+    '.mc-n{background:var(--ink-9);border-radius:9px;padding:9px 11px;margin-bottom:6px}'+
+    '.mc-nt{font-size:12.5px;line-height:1.65;color:var(--ink-2);white-space:pre-wrap}'+
+    '.mc-nm{font-size:10.5px;color:var(--ink-5);margin-top:5px}'+
+    '.mc-x{border:0;background:none;color:var(--ink-5);font-size:10.5px;cursor:pointer;'+
+      'text-decoration:underline;font-family:inherit;padding:0 0 0 6px}'+
+    '.mc-ta{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:9px;padding:9px 11px;'+
+      'font-family:inherit;font-size:12.5px;line-height:1.6;color:var(--ink-1);background:#fff}'+
+    '.mc-ta:focus{outline:0;border-color:var(--primary)}'+
+    '.mc-r{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:8px}'+
+    '.mc-ck{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--ink-3);cursor:pointer}'+
+    '.mc-hint{font-size:11px;color:var(--ink-5);line-height:1.55;margin-top:6px}';
+  document.head.appendChild(st);
+}
+
 function renderBranchCoach(){
   coCss();
   if(!OS.profile)return osPage('코칭','팀 코칭',null,osLoginGate('팀 코칭은 지점장 이상 계정으로 로그인해야 합니다.'));
@@ -11678,6 +11968,12 @@ function coCss(){
       'border:1px solid var(--ink-7);border-radius:99px;padding:4px 11px}'+
     '.co-p.on{color:#92400E;background:#FEF3C7;border-color:#FDE68A}'+
     '.co-p i{font-style:normal;margin-left:5px;font-size:10px;opacity:.75}'+
+    '.co-say{margin-top:10px;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:9px 11px}'+
+    '.co-sayh{font-size:9.5px;font-weight:800;color:var(--primary);letter-spacing:.05em;margin-bottom:6px}'+
+    '.co-say1{padding:5px 0;border-top:1px solid #DBEAFE}'+
+    '.co-say1:first-of-type{border-top:0}'+
+    '.co-say1 .t{font-size:12.5px;line-height:1.62;color:var(--ink-1);white-space:pre-wrap}'+
+    '.co-say1 .d{font-size:10.5px;color:var(--ink-5);margin-top:2px}'+
     '.co-hs{margin-top:10px;background:var(--ink-9);border-radius:9px;padding:2px 11px}'+
     '.co-h1{border-bottom:1px solid var(--ink-8);padding:9px 0;font-size:12px;line-height:1.6;color:var(--ink-3)}'+
     '.co-hs .co-h1:last-child{border-bottom:0}'+
@@ -11735,7 +12031,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -12126,6 +12422,55 @@ var HX_SQL={
   "grant select on public.night_briefs to authenticated;",
   "grant delete on public.night_briefs to authenticated;",
   "",
+  "create table if not exists public.coach_notes(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  log_id uuid,",
+  "  member_id uuid not null,",
+  "  body text not null default '',",
+  "  mood text default '',",
+  "  share boolean not null default false,",
+  "  created_at timestamptz default now(),",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "alter table public.coach_notes add column if not exists log_id uuid;",
+  "alter table public.coach_notes add column if not exists mood text default '';",
+  "alter table public.coach_notes add column if not exists share boolean not null default false;",
+  "alter table public.coach_notes add column if not exists updated_at timestamptz default now();",
+  "",
+  "create index if not exists coach_notes_member_idx on public.coach_notes(member_id, created_at desc);",
+  "create index if not exists coach_notes_log_idx on public.coach_notes(log_id);",
+  "create index if not exists coach_notes_share_idx on public.coach_notes(share, created_at desc);",
+  "",
+  "alter table public.coach_notes enable row level security;",
+  "",
+  "drop policy if exists coach_notes_read on public.coach_notes;",
+  "create policy coach_notes_read on public.coach_notes",
+  "  for select to authenticated",
+  "  using (",
+  "    member_id = auth.uid()",
+  "    or (share = true and public.is_team_viewer())",
+  "  );",
+  "",
+  "drop policy if exists coach_notes_insert on public.coach_notes;",
+  "create policy coach_notes_insert on public.coach_notes",
+  "  for insert to authenticated",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists coach_notes_update on public.coach_notes;",
+  "create policy coach_notes_update on public.coach_notes",
+  "  for update to authenticated",
+  "  using (member_id = auth.uid())",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists coach_notes_delete on public.coach_notes;",
+  "create policy coach_notes_delete on public.coach_notes",
+  "  for delete to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "grant select on public.coach_notes to authenticated;",
+  "grant insert, update, delete on public.coach_notes to authenticated;",
+  "",
   "create table if not exists public.app_config(",
   "  key text primary key,",
   "  value text,",
@@ -12135,7 +12480,7 @@ var HX_SQL={
   "grant select on public.app_config to authenticated;",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '30')",
+  "values ('schema_version', '31')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -12163,7 +12508,10 @@ var HX_SQL={
   "  '팀원 종합 뷰', to_regclass('public.team_overview') is not null, 0",
   "union all select",
   "  '밤 작업', to_regclass('public.night_briefs') is not null,",
-  "  (select count(*) from pg_policies where schemaname='public' and tablename='night_briefs');"
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='night_briefs')",
+  "union all select",
+  "  '내 코칭', to_regclass('public.coach_notes') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='coach_notes');"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -12742,7 +13090,7 @@ function hxServer(cb){
   if(!sb){cb([]);return;}
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   var T=['daily_checks','suggestions','health_checks','org_members','profiles','clients',
-         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs','night_briefs'];
+         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs','night_briefs','coach_notes'];
   Promise.all(T.map(function(t){return q(sb.from(t).select('*').limit(1));})).then(function(res){
     var R=[],miss=[],deny=[],i;
     for(i=0;i<T.length;i++){
@@ -12911,7 +13259,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=30;
+var SETUP_VER=31;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
