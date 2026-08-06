@@ -4622,8 +4622,8 @@ function exitSangdam(){go(lastTab||'home');}
      4. 화법 이름       — "암 화법" → 화법서 그 장으로
      5. 그 밖           — AI 에게 묻고 답을 읽어 준다                */
 
-var VA={on:false,wake:false,speak:true,mute:false,busy:false,
-  rec:null,partial:'',err:'',log:[],voice:null,rate:1,
+var VA={on:false,wake:false,talk:false,speak:true,mute:false,busy:false,
+  rec:null,partial:'',err:'',log:[],hist:[],saying:'',state:'',voice:null,rate:1,
   tries:0,halt:true,open:false,ready:false};
 var VA_WAKE='아펙스';
 var VA_MAXLOG=24;
@@ -4667,7 +4667,8 @@ function vaErrMsg(k){
   if(k==='language-not-supported')return '이 브라우저에서 한국어 인식을 지원하지 않습니다.';
   return '음성 인식이 멈췄습니다 ('+k+').';
 }
-function vaListen(wake){
+function vaListen(mode){
+  var cont=(mode==='wake'||mode==='talk');
   var SR=vaSR();
   if(!SR){
     VA.err='이 브라우저는 음성 인식을 못 합니다. 크롬이나 사파리에서 열어 주세요.';
@@ -4676,7 +4677,7 @@ function vaListen(wake){
   vaKill();
   var r=new SR();
   r.lang='ko-KR';
-  r.continuous=!!wake;
+  r.continuous=cont;
   r.interimResults=true;
   r.maxAlternatives=1;
   r.onstart=function(){VA.on=true;VA.err='';VA.tries=0;vaPaint();};
@@ -4684,17 +4685,21 @@ function vaListen(wake){
     var k=(e&&e.error)||'';
     if(k==='no-speech'||k==='aborted')return;
     VA.err=vaErrMsg(k);
-    if(k==='not-allowed'||k==='service-not-allowed'||k==='audio-capture'){VA.wake=false;VA.halt=true;}
+    if(k==='not-allowed'||k==='service-not-allowed'||k==='audio-capture'){
+      VA.wake=false;VA.talk=false;VA.state='';VA.halt=true;}
     vaPaint();
   };
   r.onend=function(){
     VA.on=false;VA.partial='';
-    if(VA.wake&&!VA.halt){
+    if((VA.wake||VA.talk)&&!VA.halt){
       VA.tries++;
-      if(VA.tries>25){VA.wake=false;VA.err='계속 끊겨서 상시 대기를 껐습니다. 다시 켜 주세요.';vaPaint();return;}
+      if(VA.tries>25){
+        VA.wake=false;VA.talk=false;VA.state='';
+        VA.err='계속 끊겨서 껐습니다. 다시 켜 주세요.';vaPaint();return;
+      }
       setTimeout(function(){
-        if(VA.wake&&!VA.halt&&VA.rec===r){try{r.start();}catch(e){}}
-      },500);
+        if((VA.wake||VA.talk)&&!VA.halt&&VA.rec===r){try{r.start();}catch(e){}}
+      },400);
       return;
     }
     vaPaint();
@@ -4709,7 +4714,8 @@ function vaListen(wake){
     if(fin)vaHeard(fin);
     else vaLive();
   };
-  VA.rec=r;VA.halt=false;VA.wake=!!wake;
+  VA.rec=r;VA.halt=false;VA.wake=(mode==='wake');VA.talk=(mode==='talk');
+  if(VA.talk)VA.state='listen';
   try{r.start();}
   catch(e){VA.err='마이크를 열지 못했습니다 — '+((e&&e.message)||'');VA.halt=true;vaPaint();}
 }
@@ -4718,17 +4724,45 @@ function vaKill(){
   if(r){try{r.onend=null;r.onresult=null;r.onerror=null;}catch(e){}
     try{r.abort();}catch(e){}try{r.stop();}catch(e){}}
 }
-function vaOff(){VA.halt=true;VA.wake=false;vaKill();vaShush();vaPaint();}
+function vaOff(){VA.halt=true;VA.wake=false;VA.talk=false;VA.state='';vaKill();vaShush();vaPaint();}
 function vaOnce(){
   /* 사람이 직접 누른 것이 언제나 이긴다 — 읽던 것을 끊고 귀를 연다 */
   vaShush();
-  if(VA.on&&!VA.wake){vaOff();return;}
-  vaListen(false);
+  if(VA.on&&!VA.wake&&!VA.talk){vaOff();return;}
+  vaListen('once');
 }
 function vaWakeToggle(){
   if(VA.wake){vaOff();return;}
-  vaListen(true);
+  vaListen('wake');
   vaSay('네, 듣고 있습니다. '+vaWake()+' 하고 부르세요.');
+}
+
+/* ── 대화 모드 ── 한 번 켜면 서로 주고받는다. 단추를 다시 누르지 않는다. */
+function vaTalkStart(){
+  if(!vaCanHear()){
+    VA.err='이 브라우저는 음성 인식을 못 합니다. 크롬이나 사파리에서 열어 주세요.';vaPaint();return;
+  }
+  VA.hist=[];
+  vaListen('talk');
+  if(!VA.on)return;
+  VA.state='talk';vaPaint();
+  vaSay('네, 듣고 있습니다. 말씀하세요.',function(){vaAfter();});
+}
+function vaTalkStop(bye){
+  var was=VA.talk;
+  VA.talk=false;VA.state='';
+  vaKill();VA.halt=true;
+  if(was&&bye){vaAdd('bot','대화를 마칩니다.');vaSay('네, 마치겠습니다.');}
+  else vaShush();
+  vaPaint();
+}
+function vaTalkToggle(){if(VA.talk){vaTalkStop(true);return;}vaTalkStart();}
+/* 답을 다 읽고 나면 다시 귀를 연다 — 대화 모드일 때만 */
+function vaAfter(){
+  if(!VA.talk){VA.state='';vaPaint();return;}
+  VA.state='listen';
+  if(!VA.on&&!VA.halt)vaListen('talk');
+  vaPaint();
 }
 
 /* ── 말하기 ── */
@@ -4752,19 +4786,20 @@ function vaChunks(t){
 }
 function vaShush(){
   try{window.speechSynthesis.cancel();}catch(e){}
-  VA.mute=false;
+  VA.mute=false;VA.saying='';
 }
-function vaSay(t){
-  if(!VA.speak||!vaCanSpeak())return;
+function vaSay(t,then){
+  var done=function(){if(typeof then==='function')then();};
+  if(!VA.speak||!vaCanSpeak()){setTimeout(done,60);return;}
   var txt=vaPlain(t);
-  if(!txt)return;
+  if(!txt){setTimeout(done,60);return;}
   try{window.speechSynthesis.cancel();}catch(e){}
   var parts=vaChunks(txt),i,u,last=null;
   /* 말하는 동안 제 목소리를 다시 듣지 않는다 */
-  VA.mute=true;
+  VA.mute=true;VA.saying=txt;
   if(window.__vaMuteT)clearTimeout(window.__vaMuteT);
   /* 소리가 안 나는 기기에서 onend 가 영영 안 올 수 있다 — 그때도 귀는 다시 열린다 */
-  window.__vaMuteT=setTimeout(function(){VA.mute=false;},Math.min(25000,2000+txt.length*160));
+  window.__vaMuteT=setTimeout(function(){VA.mute=false;VA.saying='';done();},Math.min(25000,2000+txt.length*160));
   for(i=0;i<parts.length;i++){
     u=new SpeechSynthesisUtterance(parts[i]);
     u.lang='ko-KR';u.rate=VA.rate;u.pitch=1;u.volume=1;
@@ -4773,9 +4808,21 @@ function vaSay(t){
     try{window.speechSynthesis.speak(u);}catch(e){}
   }
   if(last)last.onend=function(){
-    VA.mute=false;
+    VA.mute=false;VA.saying='';
     if(window.__vaMuteT)clearTimeout(window.__vaMuteT);
+    done();
   };
+  else setTimeout(done,60);
+}
+/* 들린 말이 방금 제가 한 말인가 — 스피커 소리를 명령으로 듣지 않으려고 */
+function vaEcho(t){
+  if(!VA.saying)return false;
+  var a=vaNorm(t),b=vaNorm(VA.saying);
+  if(!a)return true;
+  if(b.indexOf(a)>=0)return true;
+  var hit=0,i,n=0;
+  for(i=0;i+2<=a.length;i+=2){n++;if(b.indexOf(a.substr(i,2))>=0)hit++;}
+  return n?((hit/n)>=0.6):true;
 }
 
 /* ── 알아듣기 ── */
@@ -4790,7 +4837,16 @@ function vaHeard(text){
   var t=(''+(text||'')).replace(/^\s+|\s+$/g,'');
   VA.partial='';
   if(!t){vaPaint();return;}
-  if(VA.mute){vaPaint();return;}
+  if(VA.mute){
+    /* 대화 중이면 끼어들 수 있다. 제 목소리가 아니면 말을 끊고 듣는다 */
+    if(VA.talk&&!vaEcho(t))vaShush();
+    else{vaPaint();return;}
+  }
+  if(VA.talk){
+    if(/^(대화끝|끝내자|끝냅|종료|고마워|고맙|됐어|됐습|수고|안녕히|바이)/.test(vaNorm(t))){
+      vaAdd('me',t);vaTalkStop(true);return;
+    }
+  }
   if(VA.wake){
     var w=vaWake(),n=vaNorm(t),wn=vaNorm(w),i=n.indexOf(wn);
     if(i<0){vaPaint();return;}
@@ -4801,35 +4857,45 @@ function vaHeard(text){
     if(!t){vaAdd('bot','네, 말씀하세요');vaSay('네, 말씀하세요');vaPaint();return;}
   }
   vaAdd('me',t);
+  VA.hist.push({r:'u',t:t});
+  if(VA.hist.length>16)VA.hist=VA.hist.slice(-16);
+  if(VA.talk){VA.state='think';vaPaint();}
   vaRun(t);
+}
+
+/* 답 하나를 내보내는 자리 — 화면에 남기고, 읽어 주고, 대화 중이면 다시 듣는다 */
+function vaReply(say,opt){
+  opt=opt||{};
+  vaAdd('bot',say);
+  VA.hist.push({r:'a',t:say});
+  if(VA.hist.length>16)VA.hist=VA.hist.slice(-16);
+  if(opt.go&&typeof go==='function')go(opt.go);
+  if(opt.ch&&typeof fpTalkOpen==='function')fpTalkOpen(opt.ch);
+  if(VA.talk)VA.state='talk';
+  vaPaint();
+  vaSay(say,function(){vaAfter();});
+}
+/* 지금까지 나눈 말 — 이어서 물어도 알아듣게 */
+function vaCtx(){
+  if(VA.hist.length<2)return '';
+  var o=[],i;
+  for(i=Math.max(0,VA.hist.length-9);i<VA.hist.length-1;i++)
+    o.push((VA.hist[i].r==='u'?'설계사: ':'비서: ')+VA.hist[i].t);
+  if(!o.length)return '';
+  return '지금까지 나눈 말입니다.\n'+o.join('\n')+'\n\n이어서 답하세요. 방금 한 말은 다음과 같습니다.\n';
 }
 
 function vaRun(t){
   var s=vaNorm(t);
   if(/^(그만|멈춰|멈춤|중지|스톱|조용|닥쳐)/.test(s)){
-    vaShush();vaAdd('bot','알겠습니다.');vaPaint();return;
+    vaShush();vaAdd('bot','알겠습니다.');vaAfter();vaPaint();return;
   }
   var d=vaAnswer(t,s);
-  if(d){
-    vaAdd('bot',d.say);
-    if(d.go&&typeof go==='function')go(d.go);
-    if(d.ch&&typeof fpTalkOpen==='function')fpTalkOpen(d.ch);
-    vaSay(d.say);vaPaint();return;
-  }
+  if(d){vaReply(d.say,d);return;}
   var ch=vaFindCh(s);
-  if(ch){
-    var m='화법서 '+ch[1]+' 을 엽니다.';
-    vaAdd('bot',m);
-    if(typeof fpTalkOpen==='function')fpTalkOpen(ch[0]);
-    vaSay(m);vaPaint();return;
-  }
+  if(ch){vaReply('화법서 '+ch[1]+' 을 엽니다.',{ch:ch[0]});return;}
   var tab=vaIsOpen(s)?vaFindTab(s):'';
-  if(tab){
-    var nm=vaTabName(tab),msg=nm+' 을 엽니다.';
-    vaAdd('bot',msg);
-    if(typeof go==='function')go(tab);
-    vaSay(msg);vaPaint();return;
-  }
+  if(tab){vaReply(vaTabName(tab)+' 을 엽니다.',{go:tab});return;}
   vaAI(t);
 }
 
@@ -5018,22 +5084,19 @@ function vaRisky(t){
 }
 function vaAI(t){
   var bad=vaRisky(t);
-  if(bad){vaAdd('bot',bad);vaSay(bad);vaPaint();return;}
-  if(typeof callAI!=='function'){
-    var m='AI 가 연결되어 있지 않습니다. 설정에서 연결해 주세요.';
-    vaAdd('bot',m);vaSay(m);vaPaint();return;
-  }
-  VA.busy=true;vaPaint();
-  callAI(VA_SYS,t,700,'voice').then(function(txt){
+  if(bad){vaReply(bad);return;}
+  if(typeof callAI!=='function'){vaReply('AI 가 연결되어 있지 않습니다. 설정에서 연결해 주세요.');return;}
+  VA.busy=true;
+  if(VA.talk)VA.state='think';
+  vaPaint();
+  var sys=VA_SYS+(VA.talk?' 지금은 말로 주고받는 중입니다. 두세 문장으로 짧게 답하고, 더 알아야 하면 되물어 보세요.':'');
+  callAI(sys,vaCtx()+t,700,'voice').then(function(txt){
     VA.busy=false;
-    var say=vaPlain(txt)||'답이 비어 있습니다.';
-    vaAdd('bot',say);vaSay(say);vaPaint();
+    vaReply(vaPlain(txt)||'답이 비어 있습니다.');
   },function(e){
     VA.busy=false;
     var msg=((e&&e.message)||'')+'';
-    var say=/연결되어 있지 않습니다/.test(msg)?msg:('답을 가져오지 못했습니다. '+msg.slice(0,80));
-    vaAdd('bot',say);vaSay(/연결/.test(say)?'AI 가 연결되어 있지 않습니다':'답을 가져오지 못했습니다');
-    vaPaint();
+    vaReply(/연결되어 있지 않습니다/.test(msg)?msg:('답을 가져오지 못했습니다. '+msg.slice(0,80)));
   });
 }
 
@@ -5051,7 +5114,13 @@ function vaFab(){
 }
 function vaFabPaint(){
   var b=document.getElementById('osVaFab');if(!b)return;
-  b.className=VA.on?(VA.wake?'wake':'on'):'';
+  b.className=VA.talk?'talk':(VA.on?(VA.wake?'wake':'on'):'');
+}
+function vaStateText(){
+  if(!VA.talk)return '';
+  if(VA.state==='think')return '생각하는 중…';
+  if(VA.state==='talk')return '말하는 중 — 끼어들어도 됩니다';
+  return '듣고 있습니다 — 그냥 말씀하세요';
 }
 function vaPanel(open){
   VA.open=!!open;
@@ -5094,16 +5163,22 @@ function vaPanelHtml(){
     '<div class="va-log" id="vaLogBox">'+vaLogHtml()+'</div>'+
     (VA.err?'<div class="va-err">'+osEsc(VA.err)+'</div>':'')+
     '<div class="va-live" id="vaLive">'+osEsc(VA.partial||'')+'</div>'+
+    (VA.talk?'<div class="va-state '+osEsc(VA.state||'listen')+'">'+osEsc(vaStateText())+'</div>':'')+
     '<div class="va-bar">'+
-      '<button type="button" class="va-mic'+(VA.on&&!VA.wake?' on':'')+'" onclick="vaOnce()"'+
-        (vaCanHear()?'':' disabled')+'>'+(VA.on&&!VA.wake?'듣는 중… 누르면 멈춤':'눌러서 말하기')+'</button>'+
+      '<button type="button" class="va-mic'+(VA.talk?' talk':'')+'" onclick="vaTalkToggle()"'+
+        (vaCanHear()?'':' disabled')+'>'+(VA.talk?'대화 끝내기':'대화 시작')+'</button>'+
+    '</div>'+
+    '<div class="va-bar2">'+
+      '<button type="button" class="va-sm'+(VA.on&&!VA.wake&&!VA.talk?' on':'')+'" onclick="vaOnce()"'+
+        (vaCanHear()?'':' disabled')+'>'+(VA.on&&!VA.wake&&!VA.talk?'듣는 중':'한 번만')+'</button>'+
       '<button type="button" class="va-sm'+(VA.wake?' on':'')+'" onclick="vaWakeToggle()"'+
-        (vaCanHear()?'':' disabled')+' title="상시 대기">'+(VA.wake?'대기 중':'상시 대기')+'</button>'+
+        (vaCanHear()?'':' disabled')+'>'+(VA.wake?'대기 중':'이름 부르면')+'</button>'+
       '<button type="button" class="va-sm'+(VA.speak?' on':'')+'" onclick="vaSpeakToggle()" title="소리로 답하기">'+
         (VA.speak?'🔊':'🔇')+'</button>'+
       '<button type="button" class="va-sm" onclick="vaPanel(false);go(\'voiceasst\')" title="설정">⚙</button>'+
     '</div>'+
-    (VA.wake?'<div class="va-note">이름을 부르고 말하세요 — <b>'+osEsc(vaWake())+'</b>, 오늘 할 일</div>':'');
+    (VA.talk?'<div class="va-note">끝낼 때는 <b>고마워</b> 또는 <b>대화 끝</b> 이라고 하시면 됩니다.</div>'
+     :(VA.wake?'<div class="va-note">이름을 부르고 말하세요 — <b>'+osEsc(vaWake())+'</b>, 오늘 할 일</div>':''));
 }
 function vaSpeakToggle(){
   VA.speak=!VA.speak;
@@ -5114,6 +5189,7 @@ function vaSpeakToggle(){
 
 /* ── 화면 ── */
 var VA_HOW=[
+ ['대화하기','대화 시작 → 그냥 말하면 됩니다','단추를 다시 안 눌러도 계속 주고받습니다'],
  ['화면 열기','체크판 열어 · 성장판 · 디비 씨알엠 · 고객 365일 · 두뇌','말한 화면으로 바로 갑니다'],
  ['오늘 할 일','오늘 할 일 · 뭐 해야 돼','체크판에서 남은 것을 읽어 줍니다'],
  ['놓친 사람','놓친 사람 · 누구부터 볼까','성장판에서 먼저 볼 사람을 읽어 줍니다'],
@@ -5121,20 +5197,26 @@ var VA_HOW=[
  ['도와줄 것','도와줄 것 김민수 심사 확인','체크판 도와줄 것에 오늘까지로 적습니다'],
  ['화법 찾기','암 화법 · 거절 · 연금 화법','화법서 그 장을 엽니다'],
  ['그 밖','아무 질문','AI 에게 묻고 답을 읽어 줍니다'],
- ['멈추기','그만 · 조용','읽던 것을 끊습니다']
+ ['끼어들기','말하는 중에 그냥 말하기','읽던 것을 멈추고 새 말을 듣습니다'],
+ ['멈추기','그만 · 조용','읽던 것을 끊습니다'],
+ ['대화 끝','고마워 · 대화 끝','대화 모드를 마칩니다']
 ];
 function vaTabHtml(){
   var hear=vaCanHear(),talk=vaCanSpeak();
   var h='<div class="card"><div class="card-body">'+
     '<div class="btn-row">'+
-    '<button class="btn btn-primary" onclick="vaPanel(true)">음성 비서 열기</button>'+
+    '<button class="btn btn-primary" onclick="vaPanel(true);vaTalkStart()">대화 시작</button>'+
+    '<button class="btn btn-ghost" onclick="vaPanel(true)">쪽창만 열기</button>'+
     '<button class="btn btn-ghost" onclick="vaTry()">소리 시험</button>'+
     '</div>'+
     '<div class="va-st">'+
       '<div class="'+(hear?'ok':'no')+'"><b>듣기</b>'+(hear?'됩니다':'이 브라우저는 안 됩니다')+'</div>'+
       '<div class="'+(talk?'ok':'no')+'"><b>말하기</b>'+(talk?(VA.voice?('됩니다 · '+osEsc(VA.voice.name||'한국어')):'됩니다'):'이 브라우저는 안 됩니다')+'</div>'+
     '</div>'+
-    (hear?'':'<div class="notice">크롬 · 엣지 · 사파리에서 열면 됩니다. 파이어폭스는 음성 인식을 지원하지 않습니다.</div>')+
+    (hear?'<div class="notice"><b>대화 시작</b>을 누르면 단추를 다시 누르지 않아도 계속 주고받습니다. '+
+      '읽어 주는 도중에 말을 걸면 멈추고 듣습니다. 앞에 한 말을 기억하니 <b>"그럼 그건 어떻게 해"</b> 처럼 이어서 물어도 됩니다. '+
+      '끝낼 때는 <b>고마워</b> 라고 하시면 됩니다.</div>'
+     :'<div class="notice">크롬 · 엣지 · 사파리에서 열면 됩니다. 파이어폭스는 음성 인식을 지원하지 않습니다.</div>')+
     '</div></div>';
 
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>먼저 알아 두실 것</div></div>'+
@@ -5205,6 +5287,7 @@ function vaCss(){
       'box-shadow:0 8px 22px rgba(15,23,42,.38);display:flex;align-items:center;justify-content:center}'+
     '#osVaFab.on{background:linear-gradient(135deg,#DC2626,#F87171);animation:vaPulse 1.2s infinite}'+
     '#osVaFab.wake{background:linear-gradient(135deg,#059669,#34D399);animation:vaPulse 2s infinite}'+
+    '#osVaFab.talk{background:linear-gradient(135deg,#1A56DB,#60A5FA);animation:vaPulse 1.6s infinite}'+
     '@keyframes vaPulse{0%{box-shadow:0 0 0 0 rgba(220,38,38,.45)}70%{box-shadow:0 0 0 12px rgba(220,38,38,0)}100%{box-shadow:0 0 0 0 rgba(220,38,38,0)}}'+
     '@media(prefers-reduced-motion:reduce){#osVaFab.on,#osVaFab.wake{animation:none}}'+
     '#osVaPanel{position:fixed;right:14px;bottom:130px;z-index:9992;width:min(360px,calc(100vw - 28px));'+
@@ -5226,7 +5309,13 @@ function vaCss(){
     '.va-err{margin:0 14px 8px;padding:8px 10px;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;'+
       'font-size:11.5px;color:#991B1B;line-height:1.6}'+
     '.va-live{min-height:16px;padding:0 14px 6px;font-size:12px;color:var(--ink-5);font-style:italic}'+
-    '.va-bar{display:flex;gap:6px;padding:10px 12px 12px;border-top:1px solid var(--ink-8);align-items:center}'+
+    '.va-state{padding:0 14px 8px;font-size:11.5px;font-weight:700;letter-spacing:-.02em}'+
+    '.va-state.listen{color:var(--pos)}.va-state.think{color:var(--ink-5)}.va-state.talk{color:var(--primary)}'+
+    '.va-bar{display:flex;gap:6px;padding:10px 12px 4px;border-top:1px solid var(--ink-8);align-items:center}'+
+    '.va-bar2{display:flex;gap:6px;padding:0 12px 12px;align-items:center;flex-wrap:wrap}'+
+    '.va-bar2 .va-sm{flex:1;min-width:64px;text-align:center}'+
+    '.va-bar2 .va-sm:nth-child(3),.va-bar2 .va-sm:nth-child(4){flex:none;min-width:0}'+
+    '.va-mic.talk{background:var(--neg)}'+
     '.va-mic{flex:1;appearance:none;font-family:inherit;cursor:pointer;font-size:12.5px;font-weight:800;'+
       'color:#fff;background:var(--primary);border:0;border-radius:99px;padding:10px 14px;letter-spacing:-.03em}'+
     '.va-mic.on{background:var(--neg)}'+
