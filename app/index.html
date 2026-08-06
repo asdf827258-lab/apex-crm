@@ -1780,6 +1780,11 @@ function aiBusyMsg(){
 }
 
 function callAI(system,user,maxTokens,genId,images){
+  /* 고객의 증권·건강정보가 나가는 도구는 처음 한 번 동의를 받는다.
+     개인정보보호법상 민감정보라 별도 동의가 필요하다. */
+  if(typeof lgGate==='function'&&lgGate(genId)){
+    return Promise.reject(new Error('고객 자료를 AI 로 보내기 전 확인이 필요합니다. 화면의 안내를 읽고 동의해 주세요.'));
+  }
   /* 둘 다 연결이 없으면 헛돌지 않고 무엇을 해야 하는지 바로 알려준다 */
   if(typeof claudeReady==='function'&&typeof geminiReady==='function'&&!claudeReady()&&!geminiReady()){
     return Promise.reject(new Error('AI가 연결되어 있지 않습니다. 설정 → AI 연결에서 Claude 또는 Gemini 중 하나를 연결해 주세요.'));
@@ -3913,7 +3918,7 @@ var TABS=[
    {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:''},
    {id:'ref_hidden',icon:'💰',title:'숨은보험금찾기',cnt:''}
  ]},
- {group:'구독·요금제',items:[{id:'pricing',icon:'💳',title:'요금제·구독',cnt:''}]},
+ {group:'구독·요금제',items:[{id:'pricing',icon:'💳',title:'요금제·구독',cnt:''},{id:'terms',icon:'📜',title:'약관·개인정보',cnt:''}]},
  {group:'시스템 설정',items:[{id:'settings',icon:'⚙️',title:'설정',cnt:''}]},
  {group:'시스템 점검',items:[{id:'health',icon:'🩺',title:'시스템 점검',cnt:''}]}
 ];
@@ -4041,6 +4046,7 @@ function go(tab){
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
   else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
   else if(tab==='pricing'){dyn.innerHTML=renderPricing();if(typeof osPricingAfterRender==='function')osPricingAfterRender();}
+  else if(tab==='terms'){dyn.innerHTML=renderTerms();if(typeof osTermsAfterRender==='function')osTermsAfterRender();}
   else if(tab.indexOf('biz_')===0)dyn.innerHTML=(typeof renderBiz==='function')?renderBiz(tab):'';
   else dyn.innerHTML=renderToolPage(tab);
   if(!(tab==='settings'&&typeof osScrollArmed==='function'&&osScrollArmed()))$('main').scrollTop=0;
@@ -12266,7 +12272,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -12714,8 +12720,59 @@ var HX_SQL={
   "",
   "grant select on public.app_config to authenticated;",
   "",
+  "create table if not exists public.legal_consents(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  member_id uuid not null,",
+  "  kind text not null,",
+  "  version text not null default '1',",
+  "  agreed boolean not null default true,",
+  "  agreed_at timestamptz default now(),",
+  "  meta jsonb not null default '{}'::jsonb",
+  ");",
+  "",
+  "alter table public.legal_consents add column if not exists version text not null default '1';",
+  "alter table public.legal_consents add column if not exists agreed boolean not null default true;",
+  "alter table public.legal_consents add column if not exists meta jsonb not null default '{}'::jsonb;",
+  "",
+  "create unique index if not exists legal_consents_uniq",
+  "  on public.legal_consents(member_id, kind, version);",
+  "create index if not exists legal_consents_member_idx on public.legal_consents(member_id);",
+  "create index if not exists legal_consents_kind_idx on public.legal_consents(kind, agreed_at desc);",
+  "",
+  "alter table public.legal_consents enable row level security;",
+  "",
+  "drop policy if exists legal_consents_read on public.legal_consents;",
+  "create policy legal_consents_read on public.legal_consents",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists legal_consents_insert on public.legal_consents;",
+  "create policy legal_consents_insert on public.legal_consents",
+  "  for insert to authenticated",
+  "  with check (member_id = auth.uid());",
+  "",
+  "drop policy if exists legal_consents_update on public.legal_consents;",
+  "create policy legal_consents_update on public.legal_consents",
+  "  for update to authenticated",
+  "  using (member_id = auth.uid())",
+  "  with check (member_id = auth.uid());",
+  "",
+  "grant select on public.legal_consents to authenticated;",
+  "grant insert, update on public.legal_consents to authenticated;",
+  "",
+  "insert into public.app_config(key, value) values",
+  "  ('biz_name',      ''),",
+  "  ('biz_ceo',       ''),",
+  "  ('biz_no',        ''),",
+  "  ('biz_addr',      ''),",
+  "  ('biz_tel',       ''),",
+  "  ('biz_email',     ''),",
+  "  ('biz_mailorder', ''),",
+  "  ('privacy_officer', '')",
+  "on conflict (key) do nothing;",
+  "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '31')",
+  "values ('schema_version', '32')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -12746,7 +12803,10 @@ var HX_SQL={
   "  (select count(*) from pg_policies where schemaname='public' and tablename='night_briefs')",
   "union all select",
   "  '내 코칭', to_regclass('public.coach_notes') is not null,",
-  "  (select count(*) from pg_policies where schemaname='public' and tablename='coach_notes');"
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='coach_notes')",
+  "union all select",
+  "  '약관 동의 기록', to_regclass('public.legal_consents') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='legal_consents');"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -13325,7 +13385,7 @@ function hxServer(cb){
   if(!sb){cb([]);return;}
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   var T=['daily_checks','suggestions','health_checks','org_members','profiles','clients',
-         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs','night_briefs','coach_notes'];
+         'saved_reports','attendance','teams','team_members','app_config','dbs','calls','coach_logs','night_briefs','coach_notes','legal_consents'];
   Promise.all(T.map(function(t){return q(sb.from(t).select('*').limit(1));})).then(function(res){
     var R=[],miss=[],deny=[],i;
     for(i=0;i<T.length;i++){
@@ -13494,7 +13554,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=31;
+var SETUP_VER=32;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
@@ -14417,14 +14477,59 @@ function osFoldApply(){
     }
   }
 }
+var LG_BIZ=[['biz_name','상호','예: 에이플러스에셋어드바이저 온탑본부'],
+  ['biz_ceo','대표자','예: 윤시현'],
+  ['biz_no','사업자등록번호','000-00-00000'],
+  ['biz_mailorder','통신판매업 신고번호','제0000-지역-0000호'],
+  ['biz_addr','주소','전라남도 순천시 …'],
+  ['biz_tel','연락처','061-000-0000'],
+  ['biz_email','이메일','help@example.com'],
+  ['privacy_officer','개인정보 보호책임자','이름 / 직위 / 연락처'],
+  ['svc_name','서비스명','APEX YUN PRO'],
+  ['terms_date','약관 시행일','2026-01-01'],
+  ['priv_date','방침 시행일','2026-01-01']];
+function lgBizCardHtml(){
+  return '<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🏢</span>사업자 정보</div>'+
+    '<div class="card-desc">여기에 넣으면 <b>이용약관 · 개인정보처리방침 · 환불규정</b> 세 문서에 함께 들어갑니다. '+
+    '유료로 판매하려면 전자상거래법상 표시가 필요합니다.</div></div><div class="card-body">'+
+    LG_BIZ.map(function(x){
+      return '<div class="lg-f"><label>'+osEsc(x[1])+'</label>'+
+        '<input id="lgf_'+x[0]+'" value="'+osEsc(lgCfg(x[0],''))+'" placeholder="'+osEsc(x[2])+'"></div>';
+    }).join('')+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" id="lgBizSave" onclick="lgBizSave()">저장</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'terms\')">문서 확인</button></div>'+
+    '<div class="notice" style="margin-top:11px">저장하면 서버(app_config)에 남아 <b>모든 기기·모든 팀원</b>에게 같은 내용이 보입니다.</div>'+
+  '</div></div>';
+}
+function lgBizSave(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버 연결이 필요합니다.');return;}
+  var b=document.getElementById('lgBizSave');
+  if(b){b.disabled=true;b.textContent='저장 중…';}
+  var rows=LG_BIZ.map(function(x){
+    var el=document.getElementById('lgf_'+x[0]);
+    return {key:x[0],value:((el&&el.value)||'').replace(/^\s+|\s+$/g,''),
+      updated_at:new Date().toISOString()};
+  });
+  sb.from('app_config').upsert(rows,{onConflict:'key'}).then(function(r){
+    if(b){b.disabled=false;b.textContent='저장';}
+    if(r&&r.error){toast('저장 실패: '+(r.error.message||''),7000);return;}
+    OS.cfg=OS.cfg||{};rows.forEach(function(x){OS.cfg[x.key]=x.value;});
+    toast('사업자 정보를 저장했습니다 — 약관 문서에 반영됩니다.',5000);
+  },function(){if(b){b.disabled=false;b.textContent='저장';}toast('저장 실패');});
+}
 function renderSettings(){
+  if(typeof lgCss==='function')lgCss();
   if(typeof osIsOwner==='function'&&!osIsOwner())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div><div class="page-title">🔒 대표 전용</div><div class="page-desc">설정은 대표 계정만 볼 수 있습니다.</div></div></div>';
   var key=getKey();var masked=key?(key.slice(0,10)+'••••••••••••'+key.slice(-4)):'';
   var model=getModel();var persona=getPersona();var conn=getConn();var proxy=getProxy();
   var apptoken=getAppToken();var atMasked=apptoken?(apptoken.slice(0,3)+'••••••'+apptoken.slice(-2)):'';
   function opt(val,label){return '<option value="'+val+'"'+(model===val?' selected':'')+'>'+label+'</option>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div>'+
-    '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. 모든 값은 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</div></div>'+
+    '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. AI 키 등은 이 브라우저에만 저장되며, 사업자 정보는 서버에 저장되어 모두에게 같은 내용이 보입니다.</div></div>'+
+    lgBizCardHtml()+
 
     osDiagCardHtml()+
 
@@ -16818,6 +16923,422 @@ function osRenderPill(){
 function osPillClick(){if(OS.profile)osOpenMe();else osOpenModal();}
 
 var osMode='login';
+/* ── 약관 · 개인정보처리방침 · 동의 ──────────────────────────────────
+   유료로 남에게 팔려면 이게 있어야 한다. 화면에 보이기만 해서는 안 되고,
+   가입할 때 동의를 받고 그 기록이 서버에 남아야 한다.
+   고객의 건강정보는 민감정보라 별도 동의를 따로 받는다.
+
+   사업자 정보는 코드에 박지 않고 설정에서 넣는다. 대표가 한 번 채우면
+   세 문서에 같이 들어간다.                                            */
+var LG_TERMS_VER='1.0';
+var LG_PRIV_VER='1.0';
+var LG_SENS_VER='1.0';
+var LGL={tab:'terms',mine:{},loaded:false,gate:null,busy:false};
+
+function lgCfg(k,d){
+  var v=(typeof osCfgGet==='function')?osCfgGet(k,''):'';
+  v=(''+(v||'')).replace(/^\s+|\s+$/g,'');
+  return v||(d||'');
+}
+function lgBlank(k,label){
+  var v=lgCfg(k,'');
+  return v?osEsc(v):'<span class="lg-blank">'+osEsc(label)+' 미입력</span>';
+}
+function lgSvc(){return lgCfg('svc_name','APEX YUN PRO');}
+function lgMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+
+/* ── 동의 기록 ─────────────────────────────────────────────────── */
+function lgLoad(cb){
+  var sb=(typeof osClient==='function')?osClient():null,me=lgMyId();
+  if(!sb||!me){LGL.loaded=true;if(cb)cb();return;}
+  sb.from('legal_consents').select('kind,version,agreed,agreed_at')
+    .eq('member_id',me).limit(50).then(function(r){
+    LGL.loaded=true;LGL.mine={};
+    if(!r.error)(r.data||[]).forEach(function(x){
+      if(x.agreed!==false)LGL.mine[x.kind+'@'+x.version]=x.agreed_at||'1';});
+    if(cb)cb();lgPaint();
+  },function(){LGL.loaded=true;if(cb)cb();});
+}
+function lgHas(kind,ver){return !!LGL.mine[kind+'@'+ver];}
+function lgSave(kind,ver,meta,cb){
+  var sb=(typeof osClient==='function')?osClient():null,me=lgMyId();
+  if(!sb||!me){if(cb)cb(false);return;}
+  sb.from('legal_consents').upsert({
+    member_id:me,kind:kind,version:ver,agreed:true,
+    agreed_at:new Date().toISOString(),meta:meta||{}
+  },{onConflict:'member_id,kind,version'}).then(function(r){
+    if(r&&r.error){
+      var m=((r.error.message)||'')+'';
+      if(/does not exist|relation/i.test(m))toast('동의 기록 표가 아직 없습니다. 대표님께 서버 준비 SQL 실행을 요청하세요.',9000);
+      else toast('동의를 저장하지 못했습니다: '+m,7000);
+      if(cb)cb(false);return;
+    }
+    LGL.mine[kind+'@'+ver]=new Date().toISOString();
+    if(cb)cb(true);
+  },function(){if(cb)cb(false);});
+}
+
+/* ── 고객 자료가 AI 로 나가는 도구 — 민감정보 동의를 먼저 받는다 ──── */
+var LG_CUSTOMER_GEN={proposal:1,bojang:1,baba:1,compare:1,katalk:1,
+  os_extract:1,os_analysis:1,os_report:1,
+  med_silbi:1,med_checkup:1,med_disclosure:1,ref_underwrite:1,
+  claims:1,contracts:1,endorse:1};
+function lgNeedsSensitive(genId){return !!(genId&&LG_CUSTOMER_GEN[genId]);}
+/* true 를 돌려주면 도구를 멈추고 동의 화면을 띄운 것이다 */
+function lgGate(genId){
+  if(!lgNeedsSensitive(genId))return false;
+  if(!lgMyId())return false;
+  if(lgHas('sensitive',LG_SENS_VER))return false;
+  lgOpenSensitive(genId);
+  return true;
+}
+function lgOpenSensitive(genId){
+  LGL.gate=genId||'';
+  var ovl=document.getElementById('lgOvl');
+  if(!ovl){ovl=document.createElement('div');ovl.id='lgOvl';ovl.className='lg-ovl';
+    document.body.appendChild(ovl);}
+  ovl.innerHTML=lgSensitiveHtml();
+  ovl.classList.add('on');
+}
+function lgCloseSensitive(){var o=document.getElementById('lgOvl');if(o)o.classList.remove('on');}
+function lgAgreeSensitive(){
+  var el=document.getElementById('lgSensCk');
+  if(!el||!el.checked){toast('내용을 확인하고 동의에 체크해 주세요.');return;}
+  var b=document.getElementById('lgSensBtn');if(b){b.disabled=true;b.textContent='저장 중…';}
+  lgSave('sensitive',LG_SENS_VER,{tool:LGL.gate||''},function(ok){
+    if(b){b.disabled=false;b.textContent='동의하고 계속';}
+    if(!ok)return;
+    lgCloseSensitive();
+    toast('동의했습니다. 이제 도구를 사용하실 수 있습니다.',5000);
+  });
+}
+function lgSensitiveHtml(){
+  return '<div class="lg-modal">'+
+    '<div class="lg-hd"><h3>고객 자료를 AI 로 보내기 전에</h3>'+
+      '<p>이 도구는 고객의 증권·건강 관련 내용을 AI 서버로 보내 분석합니다. 처음 한 번만 확인하면 됩니다.</p></div>'+
+    '<div class="lg-bd">'+
+      '<div class="lg-row"><b>어디로 갑니까</b>'+
+        '<span>Anthropic(미국) 또는 Google(미국) 의 AI 서버로 전송됩니다. 회사가 계약한 유료 경로로만 보냅니다.</span></div>'+
+      '<div class="lg-row"><b>무엇이 갑니까</b>'+
+        '<span>업로드한 증권·보장분석 문서의 내용과 입력하신 상담 정보입니다. 여기에는 <b>질병·치료 이력 같은 민감정보</b>가 포함될 수 있습니다.</span></div>'+
+      '<div class="lg-row"><b>왜 필요합니까</b>'+
+        '<span>문서를 읽고 보장 내용을 정리하려면 그 내용을 AI 가 봐야 합니다. 보내지 않으면 이 도구는 동작하지 않습니다.</span></div>'+
+      '<div class="lg-row"><b>보관합니까</b>'+
+        '<span>분석에 필요한 동안만 처리되며, 결과는 회사 서버(Supabase)에 저장됩니다. 원본 문서는 저장하지 않습니다.</span></div>'+
+      '<div class="lg-warn"><b>고객에게 먼저 동의를 받으셔야 합니다.</b> 고객의 민감정보를 처리하려면 '+
+        '개인정보보호법에 따라 <b>고객 본인의 별도 동의</b>가 필요합니다. 이 화면의 동의는 '+
+        '설계사인 회원님이 이 기능의 처리 방식을 확인했다는 뜻이며, 고객 동의를 대신하지 않습니다.</div>'+
+      '<label class="lg-ck"><input type="checkbox" id="lgSensCk"> 위 내용을 확인했고, '+
+        '고객에게 필요한 동의를 받은 자료만 올리겠습니다.</label>'+
+      '<div class="lg-btns">'+
+        '<button class="btn btn-primary" id="lgSensBtn" onclick="lgAgreeSensitive()">동의하고 계속</button>'+
+        '<button class="btn btn-ghost" onclick="lgCloseSensitive()">취소</button>'+
+        '<button class="btn btn-ghost" onclick="lgCloseSensitive();go(\'terms\')">전문 보기</button>'+
+      '</div>'+
+    '</div></div>';
+}
+
+/* ── 문서 ───────────────────────────────────────────────────────── */
+function lgTab(v){LGL.tab=v;lgPaint();}
+
+function lgBizTable(){
+  return '<div class="lg-biz">'+
+    '<div><b>상호</b>'+lgBlank('biz_name','상호')+'</div>'+
+    '<div><b>대표자</b>'+lgBlank('biz_ceo','대표자')+'</div>'+
+    '<div><b>사업자등록번호</b>'+lgBlank('biz_no','사업자등록번호')+'</div>'+
+    '<div><b>통신판매업 신고</b>'+lgBlank('biz_mailorder','신고번호')+'</div>'+
+    '<div><b>주소</b>'+lgBlank('biz_addr','주소')+'</div>'+
+    '<div><b>연락처</b>'+lgBlank('biz_tel','연락처')+'</div>'+
+    '<div><b>이메일</b>'+lgBlank('biz_email','이메일')+'</div>'+
+    '<div><b>개인정보 보호책임자</b>'+lgBlank('privacy_officer','보호책임자')+'</div>'+
+  '</div>';
+}
+function lgArt(no,title,rows){
+  return '<div class="lg-art"><h4>제'+no+'조 ('+osEsc(title)+')</h4>'+
+    rows.map(function(x,i){
+      return '<div class="lg-p"><i>'+(i+1)+'</i><span>'+x+'</span></div>';}).join('')+'</div>';
+}
+function lgTermsDoc(){
+  var S=osEsc(lgSvc());
+  return '<div class="lg-doc">'+
+    '<div class="lg-meta">시행일 '+osEsc(lgCfg('terms_date','서비스 개시일'))+' · 버전 '+LG_TERMS_VER+'</div>'+
+    lgArt(1,'목적',[
+      '이 약관은 '+S+' (이하 "서비스")의 이용 조건과 절차, 회사와 회원의 권리·의무를 정합니다.']) +
+    lgArt(2,'정의',[
+      '"회원"이란 이 약관에 동의하고 계정을 만들어 서비스를 이용하는 자를 말합니다.',
+      '"유료 서비스"란 회원이 요금을 지급하고 이용하는 기능을 말합니다.',
+      '"콘텐츠"란 회원이 서비스에 올리거나 서비스가 생성한 문서·자료를 말합니다.']) +
+    lgArt(3,'약관의 효력과 변경',[
+      '이 약관은 서비스 화면에 게시함으로써 효력이 생깁니다.',
+      '회사는 관련 법령을 위반하지 않는 범위에서 약관을 변경할 수 있습니다.',
+      '변경 시 적용일 <b>7일 전</b>(회원에게 불리한 변경은 <b>30일 전</b>)부터 서비스 화면에 알립니다.',
+      '회원이 변경에 동의하지 않으면 이용계약을 해지할 수 있습니다.']) +
+    lgArt(4,'이용계약의 성립',[
+      '회원이 약관과 개인정보처리방침에 동의하고 가입을 신청하면 회사의 승낙으로 계약이 성립합니다.',
+      '회사는 <b>관리자 승인</b> 절차를 둘 수 있으며, 승인 전에는 기능이 제한됩니다.',
+      '타인의 명의를 도용하거나 허위 정보를 기재한 신청은 승낙하지 않을 수 있습니다.']) +
+    lgArt(5,'서비스의 내용',[
+      '서비스는 보험 설계사의 업무를 돕는 도구를 제공합니다. 상담자료 작성, 문서 분석, 고객·조직 관리, 콘텐츠 작성 보조 등이 포함됩니다.',
+      '<b>서비스가 생성한 내용은 참고용입니다.</b> 보험의 보장 여부와 지급은 개별 약관과 보험사 심사 결과에 따릅니다.',
+      '회사는 서비스가 특정한 영업 성과나 계약 체결을 보장하지 않습니다.',
+      '서비스는 보험의 모집·중개를 대행하지 않으며, 회원의 모집 행위에 대한 책임은 회원에게 있습니다.']) +
+    lgArt(6,'요금과 결제',[
+      '유료 서비스의 요금과 결제 주기는 요금제 화면에 표시합니다.',
+      '정기결제는 회원이 해지하기 전까지 <b>매 주기 자동으로</b> 갱신·청구됩니다.',
+      '회원은 언제든지 다음 주기 갱신을 해지할 수 있으며, 해지해도 이미 결제한 주기의 남은 기간은 이용할 수 있습니다.']) +
+    lgArt(7,'청약철회와 환불',[
+      '회원은 결제일부터 <b>7일 이내</b>에 청약을 철회할 수 있습니다.',
+      '다만 그 기간에 서비스를 이용한 경우 <b>이용한 부분에 해당하는 금액</b>을 뺀 나머지를 환불합니다.',
+      '회사의 귀책으로 서비스를 이용하지 못한 경우 해당 기간에 대해 환불하거나 이용 기간을 연장합니다.',
+      '환불은 신청일부터 <b>3영업일 이내</b>에 결제 수단과 같은 방법으로 처리합니다.',
+      '자세한 내용은 이 화면의 <b>환불·청약철회</b> 갈래에 있습니다.']) +
+    lgArt(8,'회원의 의무',[
+      '회원은 계정과 비밀번호를 직접 관리하며, 타인에게 빌려주거나 공유해서는 안 됩니다.',
+      '회원은 고객의 개인정보를 서비스에 올리기 전에 <b>고객 본인의 동의</b>를 받아야 합니다. 질병·치료 이력 등 민감정보는 별도 동의가 필요합니다.',
+      '회원은 서비스가 만든 자료를 고객에게 전달하기 전에 사실관계와 준법 여부를 직접 확인해야 합니다.',
+      '회원은 금융소비자보호법 등 관련 법령과 소속 회사의 준법감시 절차를 따라야 합니다.']) +
+    lgArt(9,'금지행위',[
+      '서비스를 자동화된 방법으로 대량 조회하거나 부하를 일으키는 행위',
+      '서비스의 자료를 회사의 사전 동의 없이 복제·배포·판매하는 행위',
+      '타인의 개인정보를 권한 없이 수집·이용하는 행위',
+      '확정 수익·지급 보장 등 법령이 금지하는 표현을 서비스로 만들어 사용하는 행위']) +
+    lgArt(10,'이용 제한',[
+      '회사는 회원이 제8조·제9조를 위반한 경우 사전 통지 후 이용을 제한할 수 있습니다.',
+      '다만 긴급하거나 중대한 위반은 먼저 제한하고 사후에 통지할 수 있습니다.']) +
+    lgArt(11,'서비스의 중단',[
+      '회사는 설비 점검·교체, 통신 장애, 천재지변 등의 사유로 서비스를 일시 중단할 수 있습니다.',
+      '정기 점검은 사전에 공지하며, 예측할 수 없는 사유로 중단된 경우 지체 없이 알립니다.']) +
+    lgArt(12,'지식재산권',[
+      '서비스 자체에 대한 권리는 회사에 있습니다.',
+      '<b>회원이 올린 자료와 그 결과물에 대한 권리는 회원에게 있습니다.</b> 회사는 서비스 제공에 필요한 범위에서만 이를 처리합니다.']) +
+    lgArt(13,'책임의 제한',[
+      '회사는 회원이 서비스로 만든 자료를 사용해 발생한 영업상 결과에 대해 책임지지 않습니다.',
+      '회사는 천재지변, 회원의 고의·과실, 제3자 서비스의 장애로 발생한 손해에 대해 책임지지 않습니다.',
+      '이 조항은 회사의 고의 또는 중대한 과실로 인한 손해에는 적용되지 않습니다.']) +
+    lgArt(14,'분쟁 해결',[
+      '서비스 이용과 관련한 분쟁은 회사와 회원이 먼저 협의하여 해결합니다.',
+      '협의가 이루어지지 않으면 관할 법원은 민사소송법에 따릅니다.']) +
+    '<div class="lg-biztitle">사업자 정보</div>'+lgBizTable();
+}
+function lgPrivDoc(){
+  var S=osEsc(lgSvc());
+  return '<div class="lg-doc">'+
+    '<div class="lg-meta">시행일 '+osEsc(lgCfg('priv_date','서비스 개시일'))+' · 버전 '+LG_PRIV_VER+'</div>'+
+    '<p class="lg-lead">'+S+' 는 개인정보보호법에 따라 이용자의 개인정보를 보호하고, 관련 고충을 신속히 처리하기 위해 다음의 처리방침을 둡니다.</p>'+
+    lgArt(1,'수집하는 개인정보 항목',[
+      '<b>회원(설계사)</b> — 이름, 이메일, 비밀번호(암호화 저장), 소속·직급, 접속 기록, 기기 정보',
+      '<b>결제</b> — 결제 수단 식별값, 결제 내역. 카드번호 전체는 결제대행사가 보관하며 회사는 저장하지 않습니다.',
+      '<b>회원이 입력한 고객 정보</b> — 이름(가림 처리), 연락처, 지역, 상담 메모, 업로드한 증권·보장분석 문서의 내용',
+      '<b>민감정보</b> — 위 문서에 포함된 질병·치료 이력 등 건강 관련 정보. <b>별도 동의를 받아 처리합니다.</b>']) +
+    lgArt(2,'처리 목적',[
+      '회원 식별과 로그인, 권한 관리',
+      '상담자료·보장분석 등 서비스 기능 제공',
+      '유료 서비스의 결제와 정산',
+      '서비스 오류 확인과 개선, 고객 문의 대응']) +
+    lgArt(3,'보유 및 이용 기간',[
+      '회원 정보 — <b>탈퇴 시까지</b>. 탈퇴 후에는 지체 없이 파기합니다.',
+      '결제·거래 기록 — 전자상거래법에 따라 <b>5년</b>',
+      '접속 기록 — 통신비밀보호법에 따라 <b>3개월</b>',
+      '회원이 입력한 고객 정보 — 회원이 삭제하거나 탈퇴할 때까지']) +
+    lgArt(4,'제3자 제공',[
+      '회사는 이용자의 개인정보를 제3자에게 제공하지 않습니다.',
+      '다만 법령에 근거가 있거나 수사기관의 적법한 요구가 있는 경우는 예외로 합니다.']) +
+    '<div class="lg-art"><h4>제5조 (처리 위탁)</h4>'+
+      '<p class="lg-p2">회사는 서비스 제공을 위해 아래와 같이 개인정보 처리를 위탁하고 있습니다.</p>'+
+      '<div class="lg-tw"><table><thead><tr><th>수탁자</th><th>위탁 업무</th><th>국가</th></tr></thead><tbody>'+
+      '<tr><td>Supabase Inc.</td><td>데이터 보관·인증</td><td>미국</td></tr>'+
+      '<tr><td>Netlify Inc.</td><td>서비스 호스팅</td><td>미국</td></tr>'+
+      '<tr><td>Anthropic PBC</td><td>문서 분석·문안 생성(AI)</td><td>미국</td></tr>'+
+      '<tr><td>Google LLC</td><td>문서 분석·문안 생성(AI)</td><td>미국</td></tr>'+
+      '<tr><td>토스페이먼츠</td><td>결제 처리</td><td>대한민국</td></tr>'+
+      '</tbody></table></div>'+
+      '<p class="lg-p2">회사는 위탁계약 시 개인정보가 안전하게 관리되도록 필요한 사항을 규정하고 있으며, '+
+      '수탁자가 변경되면 이 방침을 통해 알립니다.</p></div>'+
+    lgArt(6,'국외 이전',[
+      '위 제5조의 수탁자 중 미국 소재 기업에는 개인정보가 <b>국외로 이전</b>됩니다.',
+      '이전 항목 — 회원이 서비스에 입력하거나 업로드한 문서의 내용(민감정보 포함될 수 있음)',
+      '이전 시점과 방법 — 회원이 해당 기능을 실행할 때 암호화된 통신으로 전송',
+      '이용 목적 — 문서 분석과 문안 생성',
+      '보유 기간 — 처리에 필요한 기간 동안. 회사는 학습에 이용되지 않는 유료 경로로만 전송합니다.',
+      '<b>이용자는 국외 이전을 거부할 수 있습니다.</b> 다만 거부하면 해당 기능은 이용할 수 없습니다.']) +
+    lgArt(7,'민감정보의 처리',[
+      '건강에 관한 정보는 개인정보보호법 제23조의 민감정보입니다.',
+      '회사는 보장분석 등 해당 기능을 처음 사용할 때 <b>별도 동의</b>를 받고 처리합니다.',
+      '<b>고객 본인의 동의는 회원(설계사)이 직접 받아야 합니다.</b> 회사의 동의 절차가 이를 대신하지 않습니다.']) +
+    lgArt(8,'정보주체의 권리',[
+      '이용자는 언제든지 자신의 개인정보 열람·정정·삭제·처리정지를 요구할 수 있습니다.',
+      '요구는 아래 개인정보 보호책임자에게 서면·이메일로 하실 수 있으며, 회사는 지체 없이 조치합니다.',
+      '이용자가 오류의 정정을 요구한 경우 정정을 마칠 때까지 해당 정보를 이용하지 않습니다.']) +
+    lgArt(9,'파기',[
+      '보유 기간이 지나거나 처리 목적이 달성되면 지체 없이 파기합니다.',
+      '전자적 파일은 복구할 수 없는 방법으로 삭제하고, 출력물은 분쇄하거나 소각합니다.']) +
+    lgArt(10,'안전성 확보조치',[
+      '접근 권한 관리 — 계정별 권한을 나누고 데이터베이스 수준에서 접근을 제한합니다.',
+      '암호화 — 비밀번호는 일방향 암호화하며, 통신 구간은 전 구간 암호화합니다.',
+      '접속 기록 보관 — 주요 활동 기록을 남기고 위·변조를 방지합니다.',
+      '정기 점검 — 시스템 점검 기능으로 권한·연결 상태를 정기적으로 확인합니다.']) +
+    lgArt(11,'권익침해 구제',[
+      '개인정보 분쟁조정위원회 1833-6972 (kopico.go.kr)',
+      '개인정보침해 신고센터 118 (privacy.kisa.or.kr)',
+      '대검찰청 사이버수사과 1301 · 경찰청 사이버수사국 182']) +
+    lgArt(12,'방침의 변경',[
+      '이 방침이 변경되면 적용일 <b>7일 전</b>부터 서비스 화면에 알립니다.',
+      '중요한 변경은 <b>30일 전</b>에 알리고 필요한 경우 다시 동의를 받습니다.']) +
+    '<div class="lg-biztitle">사업자 정보 · 문의처</div>'+lgBizTable();
+}
+function lgRefundDoc(){
+  return '<div class="lg-doc">'+
+    '<p class="lg-lead">전자상거래 등에서의 소비자보호에 관한 법률에 따른 청약철회·환불 기준입니다.</p>'+
+    lgArt(1,'청약철회',[
+      '결제일부터 <b>7일 이내</b>에 청약을 철회할 수 있습니다.',
+      '철회는 서비스 내 문의 또는 아래 이메일로 신청하실 수 있습니다.']) +
+    lgArt(2,'이용한 경우의 환불',[
+      '철회 기간 안이라도 서비스를 이용하셨다면 <b>이용한 부분에 해당하는 금액</b>을 뺀 나머지를 환불합니다.',
+      '이용한 부분은 결제 주기 중 <b>경과한 일수</b>를 기준으로 계산합니다.',
+      '예 — 월 구독을 결제하고 5일 이용 후 철회하면, 결제금액에서 5일분을 뺀 금액을 환불합니다.']) +
+    lgArt(3,'중도 해지',[
+      '철회 기간이 지난 뒤에는 <b>다음 주기 갱신을 해지</b>하는 방식으로 중단하실 수 있습니다.',
+      '이미 결제한 주기의 남은 기간은 그대로 이용하실 수 있으며, 그 부분은 환불되지 않습니다.']) +
+    lgArt(4,'회사 사유로 이용하지 못한 경우',[
+      '회사의 귀책으로 서비스를 이용하지 못한 기간이 있으면 그 기간만큼 환불하거나 이용 기간을 연장합니다.',
+      '이 경우 청약철회 기간의 제한을 받지 않습니다.']) +
+    lgArt(5,'환불 처리',[
+      '환불은 신청일부터 <b>3영업일 이내</b>에 처리합니다.',
+      '결제하신 수단과 같은 방법으로 환불하며, 카드 취소는 카드사 사정에 따라 며칠 더 걸릴 수 있습니다.']) +
+    '<div class="lg-biztitle">환불 문의</div>'+lgBizTable();
+}
+
+function lgConsentBox(){
+  if(!lgMyId())return '';
+  var t=lgHas('terms',LG_TERMS_VER),p=lgHas('privacy',LG_PRIV_VER),s=lgHas('sensitive',LG_SENS_VER);
+  var row=function(ok,label,when){
+    return '<div class="lg-c1"><span class="lg-cd '+(ok?'on':'')+'">'+(ok?'○':'—')+'</span>'+
+      '<b>'+label+'</b><span>'+(ok?(osEsc((''+when).slice(0,10))+' 동의함'):'아직 동의하지 않음')+'</span></div>';};
+  return '<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">✅</span>내 동의 기록</div>'+
+    '<div class="card-desc">언제 무엇에 동의했는지 서버에 남습니다.</div></div><div class="card-body">'+
+    row(t,'이용약관',LGL.mine['terms@'+LG_TERMS_VER])+
+    row(p,'개인정보처리방침',LGL.mine['privacy@'+LG_PRIV_VER])+
+    row(s,'고객 자료 AI 처리 (민감정보)',LGL.mine['sensitive@'+LG_SENS_VER])+
+    (!s?('<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="lgOpenSensitive(\'\')">지금 확인하기</button></div>'):'')+
+  '</div></div>';
+}
+function lgInnerHtml(){
+  var tab=function(k,t){
+    return '<button class="btn '+(LGL.tab===k?'btn-primary':'btn-ghost')+'" '+
+      'style="padding:7px 14px;font-size:12px" onclick="lgTab(\''+k+'\')">'+t+'</button>';};
+  var need=(typeof osIsAppAdmin==='function'&&osIsAppAdmin())&&!lgCfg('biz_name','');
+  var h='';
+  if(need)h+='<div class="notice"><b>사업자 정보가 비어 있습니다.</b> 설정 → 사업자 정보에서 상호·대표자·사업자등록번호 등을 넣으면 '+
+    '세 문서에 함께 들어갑니다. <b>유료로 판매하기 전에 반드시 채워야 합니다.</b>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" style="padding:5px 11px;font-size:11px" '+
+    'onclick="go(\'settings\')">설정 열기</button></div></div>';
+  h+=lgConsentBox();
+  h+='<div class="btn-row" style="margin-bottom:12px">'+
+    tab('terms','이용약관')+tab('privacy','개인정보처리방침')+tab('refund','환불·청약철회')+'</div>';
+  h+='<div class="card"><div class="card-body">'+
+    (LGL.tab==='privacy'?lgPrivDoc():(LGL.tab==='refund'?lgRefundDoc():lgTermsDoc()))+
+    '</div></div>';
+  h+='<div class="notice" style="margin-top:12px">이 문서는 <b>표준 양식을 바탕으로 만든 초안</b>입니다. '+
+     '유료로 판매하기 전에 <b>변호사 또는 소속 회사 준법감시</b>의 확인을 받으시기 바랍니다. '+
+     '보험 관련 안내는 금융소비자보호법에 따라 상품설명서와 약관을 기준으로 합니다.</div>';
+  return h;
+}
+function lgPaint(){var el=document.getElementById('lgPane');if(el)el.innerHTML=lgInnerHtml();}
+function renderTerms(){
+  lgCss();
+  return osPage('약관','약관 · 개인정보처리방침',
+    '서비스 이용조건과 개인정보를 어떻게 다루는지 적었습니다. 동의 기록도 여기서 확인하실 수 있습니다.',
+    '<div id="lgPane">'+lgInnerHtml()+'</div>');
+}
+function osTermsAfterRender(){LGL.loaded=false;lgPaint();lgLoad();}
+
+/* 가입 화면에서 체크한 동의는 로그인 전이라 서버에 못 남긴다.
+   로그인해 들어온 첫 순간에 남긴다. */
+function lgFlushPending(){
+  var raw=null;
+  try{raw=localStorage.getItem('apex_pending_consent');}catch(e){}
+  if(!raw||!lgMyId())return;
+  var d=null;try{d=JSON.parse(raw);}catch(e){}
+  if(!d)return;
+  lgSave('terms',d.terms||LG_TERMS_VER,{via:'signup'},function(){
+    lgSave('privacy',d.privacy||LG_PRIV_VER,{via:'signup'},function(){
+      try{localStorage.removeItem('apex_pending_consent');}catch(e){}
+    });
+  });
+}
+
+function lgCss(){
+  if(document.getElementById('lgStyle'))return;
+  var st=document.createElement('style');st.id='lgStyle';
+  st.textContent=
+    '.lg-doc{font-size:13px;line-height:1.8;color:var(--ink-2)}'+
+    '.lg-meta{font-size:11px;color:var(--ink-5);font-weight:700;padding-bottom:11px;'+
+      'border-bottom:1px solid var(--ink-8);margin-bottom:14px}'+
+    '.lg-lead{font-size:13px;line-height:1.8;color:var(--ink-3);margin:0 0 16px}'+
+    '.lg-art{margin:0 0 18px}'+
+    '.lg-art h4{font-size:13.5px;font-weight:800;color:var(--ink-1);margin:0 0 7px;letter-spacing:-.02em}'+
+    '.lg-p{display:flex;gap:8px;margin:5px 0}'+
+    '.lg-p i{flex:none;font-style:normal;font-size:11px;font-weight:800;color:var(--ink-5);'+
+      'min-width:15px;padding-top:2px}'+
+    '.lg-p span{flex:1;min-width:0}'+
+    '.lg-p2{font-size:12.8px;line-height:1.78;color:var(--ink-3);margin:6px 0}'+
+    '.lg-tw{overflow-x:auto;border:1px solid var(--ink-7);border-radius:9px;margin:8px 0}'+
+    '.lg-tw table{border-collapse:collapse;width:100%;min-width:360px;font-size:12.3px}'+
+    '.lg-tw th,.lg-tw td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--ink-8)}'+
+    '.lg-tw thead th{font-size:10.5px;font-weight:800;color:var(--ink-5);background:var(--ink-9);'+
+      'letter-spacing:.04em;white-space:nowrap}'+
+    '.lg-tw tbody tr:last-child td{border-bottom:0}'+
+    '.lg-biztitle{font-size:9.5px;font-weight:800;color:var(--ink-5);letter-spacing:.06em;'+
+      'text-transform:uppercase;margin:22px 0 8px;padding-top:14px;border-top:1px solid var(--ink-8)}'+
+    '.lg-biz{display:grid;grid-template-columns:1fr;gap:5px}'+
+    '@media(min-width:560px){.lg-biz{grid-template-columns:1fr 1fr}}'+
+    '.lg-biz div{display:flex;gap:9px;font-size:12.3px;line-height:1.7}'+
+    '.lg-biz b{flex:none;min-width:104px;color:var(--ink-5);font-weight:700}'+
+    '.lg-blank{color:var(--warn);font-weight:700}'+
+    '.lg-c1{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12.8px;'+
+      'border-bottom:1px solid var(--ink-8)}'+
+    '.lg-c1:last-of-type{border-bottom:0}'+
+    '.lg-cd{flex:none;width:19px;height:19px;border-radius:50%;background:var(--ink-8);'+
+      'color:var(--ink-5);font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:800}'+
+    '.lg-cd.on{background:var(--pos);color:#fff}'+
+    '.lg-c1 b{flex:1;min-width:0;font-weight:700;color:var(--ink-1)}'+
+    '.lg-c1 span:last-child{flex:none;font-size:11.5px;color:var(--ink-5)}'+
+    '.lg-ovl{position:fixed;inset:0;background:rgba(13,22,38,.55);z-index:9000;display:none;'+
+      'align-items:center;justify-content:center;padding:18px;overflow-y:auto}'+
+    '.lg-ovl.on{display:flex}'+
+    '.lg-modal{background:#fff;border-radius:16px;max-width:560px;width:100%;overflow:hidden;'+
+      'box-shadow:0 24px 60px rgba(13,22,38,.35);margin:auto}'+
+    '.lg-hd{padding:20px 22px 14px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 100%);color:#fff}'+
+    '.lg-hd h3{margin:0;font-size:17px;font-weight:800;letter-spacing:-.03em}'+
+    '.lg-hd p{margin:6px 0 0;font-size:12.5px;line-height:1.65;opacity:.9}'+
+    '.lg-bd{padding:18px 22px 22px}'+
+    '.lg-row{display:flex;flex-direction:column;gap:2px;padding:9px 0;border-bottom:1px solid var(--ink-8)}'+
+    '.lg-row b{font-size:11.5px;font-weight:800;color:var(--primary)}'+
+    '.lg-row span{font-size:12.6px;line-height:1.7;color:var(--ink-2)}'+
+    '.lg-warn{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;'+
+      'padding:11px 13px;font-size:12.3px;line-height:1.7;margin-top:12px}'+
+    '.lg-ck{display:flex;gap:8px;align-items:flex-start;margin-top:14px;font-size:12.8px;'+
+      'line-height:1.65;color:var(--ink-1);font-weight:700;cursor:pointer}'+
+    '.lg-ck input{margin-top:3px;flex:none}'+
+    '.lg-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}'+
+    '.lg-btns .btn{padding:9px 15px;font-size:12.5px}'+
+    '.lg-f{display:flex;flex-direction:column;gap:4px;margin-bottom:9px}'+
+    '.lg-f label{font-size:11px;font-weight:700;color:var(--ink-4)}'+
+    '.lg-f input{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);border-radius:9px;'+
+      'padding:9px 11px;font-family:inherit;font-size:12.8px;color:var(--ink-1);background:#fff}'+
+    '.lg-f input:focus{outline:0;border-color:var(--primary)}'+
+    '.os-agree{display:none;flex-direction:column;gap:7px;margin:4px 0 10px;padding:11px 12px;'+
+      'background:#F5F9FF;border:1px solid #BFD4FB;border-radius:10px}'+
+    '.os-agree label{display:flex;gap:7px;align-items:flex-start;font-size:12.2px;line-height:1.6;'+
+      'color:#1F2937;cursor:pointer}'+
+    '.os-agree input{margin-top:2px;flex:none}'+
+    '.os-agree b{color:#1A56DB;font-weight:800}'+
+    '.os-agree a{color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer}';
+  document.head.appendChild(st);
+}
+
 function osModalHtml(){
   return '<div class="os-modal">'+
     '<button class="os-x" onclick="osCloseModal()">&times;</button>'+
@@ -16827,6 +17348,12 @@ function osModalHtml(){
       '<div class="os-fld" id="osNameFld" style="display:none"><label>이름</label><input id="osName" placeholder="홍길동"/></div>'+
       '<div class="os-fld"><label>이메일</label><input id="osEmail" type="email" placeholder="you@example.com" autocomplete="username"/></div>'+
       '<div class="os-fld"><label>비밀번호</label><input id="osPw" type="password" placeholder="••••••••" autocomplete="current-password"/></div>'+
+      '<div class="os-agree" id="osAgreeBox" style="display:none">'+
+        '<label><input type="checkbox" id="osAgTerms"> <b>[필수]</b> 이용약관에 동의합니다 '+
+          '<a onclick="osCloseModal();go(\'terms\')">보기</a></label>'+
+        '<label><input type="checkbox" id="osAgPriv"> <b>[필수]</b> 개인정보 수집·이용과 '+
+          '<b>국외 이전</b>에 동의합니다 <a onclick="osCloseModal();go(\'terms\')">보기</a></label>'+
+      '</div>'+
       '<div class="os-err" id="osErr"></div>'+
       '<button class="os-btn" id="osSubmit" onclick="osSubmit()">로그인</button>'+
       '<div style="margin-top:14px;padding-top:14px;border-top:1px solid #E5E9F0;text-align:center">'+
@@ -16836,6 +17363,7 @@ function osModalHtml(){
     '</div></div>';
 }
 function osOpenModal(){
+  if(typeof lgCss==='function')lgCss();
   var ovl=document.getElementById('osOvl');
   if(!ovl){ovl=document.createElement('div');ovl.id='osOvl';ovl.className='os-ovl';document.body.appendChild(ovl);
     ovl.addEventListener('click',function(e){if(e.target===ovl)osCloseModal();});}
@@ -16849,6 +17377,7 @@ function osAuthTab(m){
   var l=document.getElementById('osTabLogin'),s=document.getElementById('osTabSignup');
   if(l)l.className=(m==='login'?'on':'');if(s)s.className=(m==='signup'?'on':'');
   var nf=document.getElementById('osNameFld');if(nf)nf.style.display=(m==='signup'?'block':'none');
+  var ab=document.getElementById('osAgreeBox');if(ab)ab.style.display=(m==='signup'?'flex':'none');
   var b=document.getElementById('osSubmit');if(b)b.textContent=(m==='signup'?'계정 등록':'로그인');
   osErr('');
 }
@@ -16861,9 +17390,15 @@ function osSubmit(){
   var btn=document.getElementById('osSubmit');if(btn){btn.disabled=true;btn.textContent='처리 중…';}
   var done=function(){if(btn){btn.disabled=false;btn.textContent=(osMode==='signup'?'계정 등록':'로그인');}};
   if(osMode==='signup'){
+    var t=document.getElementById('osAgTerms'),pv=document.getElementById('osAgPriv');
+    if(!t||!t.checked||!pv||!pv.checked){
+      done();osErr('이용약관과 개인정보 처리에 동의해야 계정을 만들 수 있습니다.');return;}
     var name=(osVal('osName')||'').trim();
     sb.auth.signUp({email:email,password:pw,options:{data:{name:name,app:'apex'}}}).then(function(r){
       done();if(r.error){osErr(r.error.message);return;}
+      /* 동의 기록 — 로그인 뒤 처음 들어올 때 서버에 남긴다 */
+      try{localStorage.setItem('apex_pending_consent',JSON.stringify(
+        {terms:LG_TERMS_VER,privacy:LG_PRIV_VER,at:new Date().toISOString()}));}catch(e){}
       osErr('');toast('계정이 생성되었습니다. 관리자 승인 후 이용하세요.');osAuthTab('login');
     });
   }else{
@@ -16898,6 +17433,11 @@ function osLoadProfile(){
 }
 function osProfileApply(sb,uid,r){
     if(r.error||!r.data){OS.profile=null;osRenderPill();return;}
+    /* 가입 때 체크한 동의를 이제야 서버에 남길 수 있다 */
+    try{setTimeout(function(){
+      if(typeof lgFlushPending==='function')lgFlushPending();
+      if(typeof lgLoad==='function')lgLoad();
+    },900);}catch(e){}
     if(r.data.active===false){toast('비활성화된 계정입니다. 관리자에게 문의하세요.');sb.auth.signOut();return;}
     var prof=r.data;
     /* 승인 게이트: status 컬럼이 있을 때만 작동(없으면 하위호환으로 통과). 관리자·거절 우회 없음 */
