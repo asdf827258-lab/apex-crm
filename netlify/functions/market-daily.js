@@ -15,6 +15,7 @@
 
    필요한 환경변수:
      SUPABASE_SERVICE_ROLE_KEY (필수)  ·  SUPABASE_URL (선택)
+     TOSS_CLIENT_ID/TOSS_CLIENT_SECRET (시세 1순위 · 토스증권 오픈API)
      KIS_APP_KEY/KIS_APP_SECRET, ECOS_API_KEY  (없으면 해당 단계만 건너뛴다)
      ANTHROPIC_API_KEY 또는 GEMINI_API_KEY     (없으면 브리핑만 건너뛴다)
    ════════════════════════════════════════════════════════════════════════ */

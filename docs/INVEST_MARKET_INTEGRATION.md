@@ -5,31 +5,50 @@ APEX YUN PRO 왼쪽 메뉴 **투자·경제** 그룹(주식관리 / 펀드관리
 
 ---
 
-## 0. 먼저 — "토스 API로 주식·펀드·경제동향"이 되는가
+## 0. 토스는 어디에 어떻게 붙는가
 
-**결론부터: 토스 API로는 안 됩니다.** 다만 하고 싶은 일은 전부 됩니다. 출처만 바꿉니다.
+토스 이름이 붙은 것이 **세 가지**인데 역할이 전부 다릅니다. 이걸 섞으면 헷갈립니다.
 
-| 확인한 것 | 사실 | 이 저장소에서의 위치 |
+| 무엇 | 역할 | 이 CRM에서 |
 |---|---|---|
-| 토스페이먼츠 API | **결제·빌링 전용**입니다. 시세·펀드 기준가·경제지표를 주는 엔드포인트가 없습니다. | 이미 구독 결제에 쓰고 있습니다 — `netlify/functions/toss-confirm.js`, `toss-billing.js` |
-| 토스증권 | 외부 개발자용 **공개 오픈API가 없습니다**(2026-08 기준). 제3자 앱이 계좌·시세를 공식적으로 REST로 가져올 경로가 없습니다. | — |
-| 그래서 무엇으로? | 개인·법인이 **무료로 발급**받을 수 있는 공식 소스로 대체했습니다. | `netlify/functions/market.js` |
+| **토스증권 Open API** | OAuth 2.0 REST. 시세·계좌·주문 | **시세 1순위 제공자.** `providers.toss` 에 설정 |
+| **토스증권 딥링크** | `tossinvest.com/stocks/A005930` — 종목 화면을 바로 여는 주소 | 종목마다 **`토스 ↗`** 버튼. **API 키 없이도 항상 동작** |
+| **토스페이먼츠 API** | 결제·빌링 전용. 시세는 주지 않음 | 지금대로 **구독 결제**만 (`toss-confirm.js`, `toss-billing.js`) |
 
-실제로 쓰는 소스:
+### 토스증권 Open API
+
+- 신청: <https://corp.tossinvest.com/ko/open-api> → 승인되면 PC 웹에서
+  **client_id / client_secret** 발급 + **호출 IP 등록**
+- 문서: <https://developers.tossinvest.com/docs>
+- 인증: OAuth 2.0 client_credentials
+- 종목코드: 국내는 `A005930`(A + 6자리), 해외는 티커
+  → **앱에는 `005930` 으로 입력하면 됩니다.** 호출할 때 자동으로 `A` 를 붙입니다.
+
+> ⚠️ **엔드포인트 경로는 코드에 박아두지 않았습니다.** 승인 계정·버전마다 다를 수 있어
+> 추측한 경로로 부르면 엉뚱한 에러가 납니다. 문서에서 확인한 값을
+> `config/market.json → providers.toss` 의 **base / token_path / paths.quote / field_map**
+> 네 군데에 채워 넣으세요. 채우기 전에는 이 제공자를 **조용히 건너뛰고 KIS 를 씁니다.**
+> 채운 뒤 **`/api/market?kind=toss-probe`** 를 열면 토큰·경로·필드 중 어디서 막히는지
+> 응답 원문 그대로 알려줍니다.
+
+### 나머지 소스
 
 | 데이터 | 제공자 | 성격 |
 |---|---|---|
-| 국내·해외 주식/ETF 현재가, 코스피·코스닥 지수 | **한국투자증권 KIS Developers** | REST, 실시간(장중), 무료 |
-| 기준금리·원/달러·CD·국고채·물가 | **한국은행 ECOS OpenAPI** | 일·월 단위 공식 통계, 무료 |
-| 공모펀드 기준가·수익률 | **data.go.kr 금융위원회 펀드 API** | 일 1회 기준가, 무료(활용신청 필요) |
+| 주식·ETF 현재가 | **토스증권 Open API**(1순위) → 실패 시 **한국투자증권 KIS** | 실시간(장중) |
+| 코스피·코스닥 지수 | **한국투자증권 KIS Developers** | 실시간, 무료 |
+| 기준금리·원/달러·CD·국고채·물가 | **한국은행 ECOS OpenAPI** | 일·월 공식 통계, 무료 |
+| 공모펀드 기준가·수익률 | **data.go.kr 금융위원회 펀드 API** | 일 1회 기준가, 무료(활용신청) |
 | 경제·보험 뉴스 | 저장소에 이미 있던 **`config/sources.json` RSS** | 15분 캐시 |
 
-`config/market.json` 의 `providers.toss` 는 **비어 있는 예약 슬롯**입니다.
-훗날 토스 계열 오픈API가 열리거나 회사가 별도 계약을 맺으면
-`base` / `paths` 를 채우고 `TOSS_MARKET_KEY` 환경변수만 넣으면
-**화면 코드는 그대로 둔 채** 데이터 출처가 바뀝니다.
+> 지수(코스피·코스닥)는 KIS 로만 받습니다. **토스와 KIS 둘 다 넣어두는 것을 권합니다** —
+> 시세는 토스가, 지수는 KIS 가 받고, 한쪽이 죽으면 다른 쪽이 받습니다.
 
-> 토스가 이 CRM에서 계속 담당하는 역할은 **구독 결제**입니다. 그건 잘 맞는 용도이고 이미 붙어 있습니다.
+### 쓰지 않는 것
+
+토스증권 **웹 내부 엔드포인트(WTS)** 를 리버스 엔지니어링해 쓰는 방법이 돌아다니지만
+이 CRM에는 넣지 않았습니다. 예고 없이 바뀌고 이용약관 위반 소지가 있어
+**고객 자산을 다루는 시스템에 둘 성질이 아닙니다.** 공식 Open API 와 공식 딥링크만 씁니다.
 
 ---
 
@@ -40,11 +59,12 @@ APEX YUN PRO 왼쪽 메뉴 **투자·경제** 그룹(주식관리 / 펀드관리
    │  GET /api/market?kind=quote|index|fund|econ|news|all|health
    ▼
 netlify/functions/market.js        ← 유일한 창구. 키는 전부 서버에만 있다.
-   │  · KIS 토큰 24시간 캐시(동시 요청은 발급 1회로 묶음)
+   │  · 시세: 토스증권 1순위 → 실패하면 KIS 자동 폴백
+   │  · OAuth 토큰 캐시(토스·KIS 각각. 동시 요청은 발급 1회로 묶어 호출제한 회피)
    │  · 종류별 TTL 캐시(시세 20초 · 지수 30초 · 지표/펀드 6시간 · 뉴스 15분)
    │  · 한 소스가 죽어도 나머지는 그대로 반환
    ▼
-KIS / ECOS / data.go.kr / RSS
+토스증권 / KIS / ECOS / data.go.kr / RSS
 
 netlify/functions/market-daily.js  ← 평일 16:10 KST 자동 실행 (netlify.toml schedule)
    · 보유 종목·펀드 종가 → invest_prices 스냅샷
@@ -55,7 +75,7 @@ netlify/functions/market-daily.js  ← 평일 16:10 KST 자동 실행 (netlify.t
 ```
 
 키가 **하나도 없어도** `/api/market` 은 500을 내지 않습니다.
-`{ ok:false, need:["KIS_APP_KEY", …] }` 로 무엇이 없는지 알려주고,
+`{ ok:false, need:["TOSS_CLIENT_ID", …] }` 로 무엇이 없는지 알려주고,
 앱은 그 자리에 **설정 안내 카드**를 그립니다. 그 상태에서도 계좌·수량·평단·수동 기준가로
 **수익률 관리는 그대로 됩니다.**
 
@@ -63,7 +83,37 @@ netlify/functions/market-daily.js  ← 평일 16:10 KST 자동 실행 (netlify.t
 
 ## 2. 켜는 순서 (30분)
 
-### ① 한국투자증권 KIS — 주식·ETF·지수 (제일 먼저)
+### ⓪ 토스증권 Open API — 시세 1순위 (신청 완료 상태라면 여기부터)
+
+1. 승인 확인 후 PC 웹에서 **client_id / client_secret** 발급, **호출 IP 등록**
+   (Netlify 아웃바운드 IP. 고정 IP가 필요하면 Netlify 지원 범위를 확인하세요)
+2. Netlify 환경변수에 추가
+
+   ```
+   TOSS_CLIENT_ID     = 발급받은 client_id
+   TOSS_CLIENT_SECRET = 발급받은 client_secret
+   ```
+
+3. <https://developers.tossinvest.com/docs> 에서 **시세 조회** 엔드포인트를 확인해
+   `config/market.json → providers.toss` 에 채웁니다
+
+   ```jsonc
+   "base":       "https://…",          // API 호스트
+   "token_path": "/…",                 // 토큰 발급 경로
+   "token_style": "form",              // form | json | basic — 문서에 맞게
+   "paths": { "quote": "/…/{code}" },  // {code} 자리에 종목코드가 치환됨
+   "field_map": { "root": "data", "price": "close", "name": "name", … }
+   ```
+
+4. `https://<사이트>/api/market?kind=toss-probe&code=005930` 을 엽니다
+   - `step:"config"` → 아직 안 채워진 항목을 알려줍니다
+   - `step:"token"` → `token_path` / `token_style` / IP 등록 확인
+   - `step:"quote"` → `paths.quote` / `field_map` 을 **응답 원문에 맞게** 수정
+   - `ok:true, step:"done"` → 끝. 이제 시세가 토스에서 옵니다
+
+> 이 단계를 건너뛰어도 됩니다. 비어 있으면 아래 KIS 로 자동으로 넘어갑니다.
+
+### ① 한국투자증권 KIS — 시세 폴백 + 지수 (지수는 여기서만 옵니다)
 
 1. <https://apiportal.koreainvestment.com> 가입 → **KIS Developers** 신청
 2. 앱 등록 후 **APP KEY / APP SECRET** 발급
@@ -75,7 +125,8 @@ netlify/functions/market-daily.js  ← 평일 16:10 KST 자동 실행 (netlify.t
    KIS_ENV         = real        (모의투자로 테스트하려면 vts)
    ```
 
-4. 재배포 후 `https://<사이트>/api/market?kind=health` 를 열어 `"kis": true` 확인
+4. 재배포 후 `https://<사이트>/api/market?kind=health` 를 열어 `"kis": true` 와
+   `quoteProvider`(toss / kis / none)를 확인합니다
 
 > 계좌 개설이 필요합니다(무료). 조회 전용이라 **매매 권한 없이** 시세만 씁니다.
 
@@ -135,6 +186,9 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 - **목표 수익률 / 손절 기준**을 넣어두면 도달·이탈 시 화면 상단에 경고가 뜨고,
   야간 자동수집이 같은 기준으로 `invest_alerts` 에 쌓아둡니다
 - 장중에는 30초, 장 마감 후에는 5분마다 자동 갱신됩니다
+- 각 행 오른쪽 **`토스 ↗`** — 토스증권 종목 화면을 새 탭으로 엽니다
+  (`tossinvest.com/stocks/A005930`). **API 키가 하나도 없어도 이건 동작합니다.**
+  고객과 통화하면서 같은 화면을 함께 보는 용도로 씁니다
 
 ### 💠 펀드관리
 
@@ -151,6 +205,8 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 - **🤖 오늘 시황 브리핑** — 지금 화면의 실제 숫자와 오늘 헤드라인만 근거로,
   ①오늘 한 줄 ②숫자 3줄 ③고객에게 뜻하는 것 ④**카톡에 그대로 붙일 문장**을 만듭니다
 - 야간 자동수집이 미리 만들어 둔 브리핑이 있으면 열자마자 먼저 보여줍니다
+- 관심 종목 카드에도 **`토스 ↗`** 가 붙습니다. 시세 키가 없으면 숫자는 `—` 로 뜨지만
+  종목 목록과 토스 바로가기는 그대로 보입니다
 
 ---
 
@@ -178,6 +234,10 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
    야간 자동수집이 만든 시황 브리핑을 열어 카톡 문장만 복사해 보내면
    접촉 빈도가 유지됩니다.
 
+6. **화면을 같이 봅니다.**
+   `토스 ↗` 로 고객이 실제로 쓰는 토스증권 화면을 그대로 열어 설명하면
+   "설계사가 보는 숫자"와 "고객이 보는 숫자"가 어긋나지 않습니다.
+
 ---
 
 ## 5. 준법 (반드시)
@@ -196,7 +256,11 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 
 | 증상 | 확인 |
 |---|---|
-| 전부 `—` 로 나온다 | `/api/market?kind=health` 에서 `has.kis` 확인. false면 환경변수 미설정 |
+| 전부 `—` 로 나온다 | `/api/market?kind=health` 의 `quoteProvider` 확인. `none` 이면 토스·KIS 둘 다 미설정 |
+| 토스가 안 잡힌다 | `/api/market?kind=toss-probe` → `step` 이 config / token / quote 중 어디인지 보고 그 항목만 고칩니다 |
+| 토스 `step:"token"` 401 | client_id/secret 오타, **호출 IP 미등록**, 또는 `token_style` 불일치(form/json/basic) |
+| 토스 `step:"quote"` | `paths.quote` 경로 또는 `field_map`(root/price)이 실제 응답과 다름. probe 응답 원문을 보고 맞춥니다 |
+| 토스는 되는데 지수가 없다 | 정상입니다. 코스피·코스닥 지수는 KIS 로만 받습니다 — KIS 키도 넣으세요 |
 | `KIS 토큰 발급 실패` | 앱키/시크릿 오타, 또는 `KIS_ENV` 가 실계좌/모의계좌와 안 맞음 |
 | 해외 종목만 안 나온다 | 표기가 `NAS:AAPL` 형식인지 확인(거래소 코드 필요) |
 | 펀드가 안 나온다 | `FUND_API_URL` 미설정이면 정상. 수동 입력 칸을 쓰거나 3번 절차 진행 |
@@ -210,7 +274,7 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 
 | 파일 | 역할 |
 |---|---|
-| `config/market.json` | 제공자·지수·지표코드·관심종목·캐시 TTL. **코드 수정 없이 여기만 고치면 됩니다** |
+| `config/market.json` | 제공자(토스·KIS·ECOS·펀드)·지수·지표코드·관심종목·딥링크·캐시 TTL. **코드 수정 없이 여기만 고치면 됩니다** |
 | `config/sources.json` | 뉴스 RSS 목록 (기존 파일 재사용) |
 | `netlify/functions/market.js` | 실시간 데이터 창구 |
 | `netlify/functions/market-daily.js` | 평일 장 마감 후 자동수집 |

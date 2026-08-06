@@ -21107,18 +21107,16 @@ function renderBizNews(){
 /* ══════════════════════════════════════════════════════════════════════════
    투자·경제 모듈 — 주식관리 · 펀드관리 · 경제동향 실시간
    ──────────────────────────────────────────────────────────────────────────
-   ⚠️ 토스 API 에 대한 정리 (대표님 질문에 대한 답)
-     · 토스페이먼츠 API 는 결제·빌링 전용이다. 이 앱도 구독 결제에만 쓰고 있다.
-       (설정 → 결제 · /api/toss-confirm · /api/toss-billing)
-     · 토스증권은 외부 개발자용 공개 오픈API가 없다. 시세·계좌를 제3자 앱이
-       공식적으로 끌어올 경로가 없다.
-     · 그래서 '실시간'은 아래 공식 소스로 만든다 — 서버(/api/market)가 대신 부른다.
-         주식·ETF·지수 → 한국투자증권 KIS Developers
-         경제지표       → 한국은행 ECOS
-         펀드 기준가    → data.go.kr 금융위원회 펀드 API
-         뉴스           → config/sources.json 의 경제·보험 RSS
-     · 훗날 토스 계열 오픈API가 열리면 config/market.json 의 providers.toss 만
-       채우면 이 화면 코드는 그대로 둔 채 데이터 출처가 바뀐다.
+   토스 연결 정리
+     · 시세 1순위 = 토스증권 Open API (corp.tossinvest.com/ko/open-api 신청 →
+       client_id/client_secret + 호출 IP 등록). 엔드포인트는 코드에 박지 않고
+       config/market.json → providers.toss 에서 읽는다.
+     · 실패하거나 미설정이면 한국투자증권 KIS 로 자동 폴백한다.
+     · 토스페이먼츠 API 는 결제·빌링 전용이라 시세를 주지 않는다. 그건 지금대로
+       구독 결제만 담당한다(/api/toss-confirm · /api/toss-billing).
+     · 종목 옆 '토스 ↗' 버튼은 딥링크라서 API 키가 없어도 항상 열린다.
+     · 나머지: 지수 → KIS · 경제지표 → 한국은행 ECOS ·
+               펀드 기준가 → data.go.kr 금융위원회 · 뉴스 → config/sources.json RSS
 
    저장 위치: 기본은 이 기기(localStorage). 로그인 상태면 ☁ 버튼으로 서버(Supabase)에
    올리고 내린다. 서버 표는 migration_30_invest.sql 로 만든다(없어도 화면은 동작).
@@ -21127,7 +21125,30 @@ var INV_API='/api/market';
 var INV_LS='apex_invest_v1';
 var INV_DISC='※ 투자성 상품(주식·펀드·ETF·변액보험 등)은 원금손실이 발생할 수 있으며 과거 수익이 미래 수익을 보장하지 않습니다. 이 화면은 정보 제공·상담 준비용이며 특정 종목의 매매 권유가 아닙니다.';
 
-var INV={st:null,live:{},mkt:null,health:null,timer:null,busy:false,lastAt:'',tab:'inv_stock',brief:''};
+var INV={st:null,live:{},mkt:null,health:null,timer:null,busy:false,lastAt:'',tab:'inv_stock',brief:'',link:null};
+
+/* ── 토스증권 딥링크 ─────────────────────────────────────────────────────
+   대표님이 찾으신 그 주소다. 종목코드를 넣으면 토스증권 종목 화면이 바로 열린다.
+     국내: https://www.tossinvest.com/stocks/A005930   (A + 6자리)
+     해외: ?focusedProductCode= 로 넘긴다 (토스 내부 식별자는 티커로 유추가 안 됨)
+   API 키가 하나도 없어도 이 버튼은 항상 동작한다. 시세는 못 받아도
+   "고객과 통화하면서 토스 화면을 같이 여는" 용도로는 이것만으로 충분하다.
+   서버가 config/market.json 의 값을 내려주면 그걸 우선 쓴다. */
+var INV_TOSS_LINK={krx:'https://www.tossinvest.com/stocks/A{code}',
+                   overseas:'https://www.tossinvest.com/?focusedProductCode={code}'};
+function invTossUrl(code,type){
+  var c=String(code||'').trim().toUpperCase();
+  if(!c||type==='fund')return '';                 /* 공모펀드는 토스증권 종목 화면이 없다 */
+  var tpl=INV.link||INV_TOSS_LINK;
+  if(c.indexOf(':')>0)return (tpl.overseas||'').replace('{code}',encodeURIComponent(c.split(':')[1]));
+  if(/^\d{6}$/.test(c))return (tpl.krx||'').replace('{code}',c);
+  return (tpl.overseas||'').replace('{code}',encodeURIComponent(c));
+}
+function invTossBtn(code,type){
+  var u=invTossUrl(code,type);
+  if(!u)return '';
+  return '<a class="iv-toss" href="'+osEsc(u)+'" target="_blank" rel="noopener" title="토스증권에서 이 종목 열기">토스 ↗</a>';
+}
 
 /* ── 상태 저장/복원 ─────────────────────────────────────────────────────── */
 function invBlank(){
@@ -21176,8 +21197,11 @@ function invApi(qs){
 /* 어떤 키가 없는지 한 번만 확인해 두고 안내 카드에 쓴다 */
 function invHealth(cb){
   if(INV.health){cb&&cb(INV.health);return;}
-  invApi('kind=health').then(function(j){INV.health=j;cb&&cb(j);})
-    .catch(function(){INV.health={ok:false,has:{}};cb&&cb(INV.health);});
+  invApi('kind=health').then(function(j){
+    INV.health=j;
+    if(j&&j.deeplink)INV.link=j.deeplink;
+    cb&&cb(j);
+  }).catch(function(){INV.health={ok:false,has:{}};cb&&cb(INV.health);});
 }
 
 /* 보유 종목 코드 모으기 (fund 제외 = 실시간 시세 대상) */
@@ -21386,7 +21410,9 @@ function invTabsBar(active){
   }).join('')+'</div>';
 }
 var INV_NEED_GUIDE={
-  'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 주식·ETF·지수 실시간 시세',
+  'TOSS_CLIENT_ID':'토스증권 오픈API client_id — 시세 1순위 (corp.tossinvest.com/ko/open-api 신청·승인)',
+  'TOSS_CLIENT_SECRET':'토스증권 오픈API client_secret (client_id와 한 쌍 · 호출 IP 등록 필요)',
+  'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 시세 폴백 + 코스피·코스닥 지수',
   'KIS_APP_SECRET':'한국투자증권 앱시크릿 (앱키와 한 쌍)',
   'ECOS_API_KEY':'한국은행 ECOS 인증키 — 기준금리·환율·물가',
   'FUND_API_URL':'data.go.kr 금융위원회 펀드 API 요청 URL — 공모펀드 기준가',
@@ -21396,12 +21422,16 @@ function invNeedBox(need){
   var li=(need||[]).map(function(k){
     return '<li><b>'+osEsc(k)+'</b> — '+osEsc(INV_NEED_GUIDE[k]||'서버 환경변수')+'</li>';
   }).join('');
+  var pair=(need||[]).indexOf('TOSS_CLIENT_ID')>=0&&(need||[]).indexOf('KIS_APP_KEY')>=0;
   return '<div class="iv-need"><div class="hd">🔌 실시간 연결이 아직 안 됐습니다</div>'+
-    '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면이 바로 실시간으로 바뀝니다. '+
-    '넣기 전에도 <b>수동 입력</b>으로 계좌·수익률 관리는 그대로 됩니다.</div>'+
+    '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면이 바로 실시간으로 바뀝니다.'+
+    (pair?' <b>토스증권 한 쌍</b> 또는 <b>한국투자증권 한 쌍</b> 중 <b>하나만 넣어도 시세는 나옵니다</b>(둘 다 넣으면 한쪽이 죽어도 이어집니다).':'')+
+    ' 넣기 전에도 <b>수동 입력</b>과 종목별 <b>토스 ↗</b> 바로가기는 그대로 됩니다.</div>'+
     '<ul>'+li+'</ul>'+
-    '<div class="ft">※ 토스페이먼츠 API는 결제 전용이라 시세를 주지 않고, 토스증권은 외부 공개 API가 없습니다. '+
-    '그래서 시세는 한국투자증권, 지표는 한국은행을 씁니다 — 둘 다 무료 발급입니다.</div></div>';
+    '<div class="ft">※ 시세는 <b>토스증권 오픈API</b>를 1순위로 쓰고, 실패하면 한국투자증권으로 자동 폴백합니다. '+
+    '지표는 한국은행입니다. (토스<b>페이먼츠</b> API는 결제 전용이라 시세를 주지 않습니다 — 그건 지금대로 구독 결제만 담당합니다.)<br>'+
+    '토스증권 엔드포인트는 <b>config/market.json → providers.toss</b> 에 채우고 '+
+    '<b>/api/market?kind=toss-probe</b> 로 확인하세요.</div></div>';
 }
 function invAccBar(){
   var s=invLoad(),a=invCur();
@@ -21452,7 +21482,7 @@ function invTable(kind){
   }
   var head=kind==='fund'
     ? ['펀드코드','펀드명','좌수','평균기준가','현재 기준가','평가금액','평가손익','수익률','']
-    : ['종목코드','종목명','수량','평단','현재가','평가금액','평가손익','수익률',''];
+    : ['종목코드','종목명','수량','평단','현재가','평가금액','평가손익','수익률','토스',''];
   var body=rows.map(function(h){
     var pr=invPrice(h);
     return '<tr>'+
@@ -21464,6 +21494,7 @@ function invTable(kind){
       '<td class="iv-num" id="ivv_'+h.id+'">—</td>'+
       '<td class="iv-num" id="ivp_'+h.id+'">—</td>'+
       '<td class="iv-num" id="ivr_'+h.id+'">—</td>'+
+      (kind==='fund'?'':'<td>'+invTossBtn(h.code,h.type)+'</td>')+
       '<td><button class="iv-x" onclick="invDelHold(\''+h.id+'\')" title="삭제">✕</button></td>'+
       '</tr>'+
       (kind==='fund'
@@ -21528,9 +21559,12 @@ function invRenderFund(){
     '<div class="rpt-sec"><div class="hd"><span class="n">2</span>ETF로 바로 보는 실시간 대안</div>'+
       '<div class="sub">같은 시장을 담는 ETF는 <b>실시간</b>으로 보입니다. 펀드 기준가를 기다리는 동안 오늘 흐름을 읽는 용도로 씁니다. 위 <b>주식관리</b>에 ETF 코드를 넣으면 함께 관리됩니다.</div>'+
       '<div class="iv-chips">'+
-        '<span class="iv-chip">069500 KODEX 200</span><span class="iv-chip">360750 TIGER 미국S&P500</span>'+
-        '<span class="iv-chip">133690 TIGER 미국나스닥100</span><span class="iv-chip">148070 KOSEF 국고채10년</span>'+
-        '<span class="iv-chip">132030 KODEX 골드선물</span>'+
+        [['069500','KODEX 200'],['360750','TIGER 미국S&P500'],['133690','TIGER 미국나스닥100'],
+         ['148070','KOSEF 국고채10년'],['132030','KODEX 골드선물']].map(function(x){
+          var u=invTossUrl(x[0],'etf');
+          return u?'<a class="iv-chip" href="'+osEsc(u)+'" target="_blank" rel="noopener">'+x[0]+' '+osEsc(x[1])+' ↗</a>'
+                  :'<span class="iv-chip">'+x[0]+' '+osEsc(x[1])+'</span>';
+        }).join('')+
       '</div>'+
     '</div>'+
     '<div class="rpt-sec"><div class="hd"><span class="n">3</span>세제 연결 — 어느 계좌에 담느냐가 수익률을 바꾼다</div>'+
@@ -21588,6 +21622,7 @@ function invEconLoad(force){
   invStatus('불러오는 중…');
   invApi('kind=all').then(function(j){
     INV.mkt=j;
+    if(j.deeplink)INV.link=j.deeplink;
     INV.lastAt=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
     invStatus((j.meta&&j.meta.marketOpen?'장중 · ':'장 마감 · ')+'갱신 '+INV.lastAt);
     invPaintEcon(j);
@@ -21623,11 +21658,15 @@ function invPaintEcon(j){
   if(el=$('invWatch')){
     var w=j.watchlist||[],defs=j.watchlistDefs||[];
     var nameOf=function(c){for(var i=0;i<defs.length;i++)if(defs[i].code===c)return defs[i].name;return c;};
-    el.innerHTML=w.length?('<div class="iv-cards">'+w.map(function(q){
+    /* 시세 키가 없어도 종목 목록과 토스 바로가기는 보여준다 — 이것만으로도 상담에 쓴다 */
+    var cards=w.length?w:defs.map(function(d){return {code:d.code,name:d.name,price:null,changeRate:null};});
+    el.innerHTML=cards.length?('<div class="iv-cards">'+cards.map(function(q){
       return '<div class="iv-card"><div class="k">'+osEsc(q.name||nameOf(q.code))+'<span class="t">'+osEsc(q.code)+'</span></div>'+
         '<div class="v">'+(q.price!=null?q.price.toLocaleString('ko-KR'):'—')+'</div>'+
-        '<div class="d '+invCls(q.changeRate)+'">'+invPct(q.changeRate)+'</div></div>';
-    }).join('')+'</div>'):'<div class="iv-need-slim">관심 종목 시세는 한국투자증권 키를 넣으면 표시됩니다. 목록은 config/market.json 에서 바꿉니다.</div>';
+        '<div class="d '+invCls(q.changeRate)+'">'+invPct(q.changeRate)+'</div>'+
+        '<div class="lk">'+invTossBtn(q.code,'stock')+'</div></div>';
+    }).join('')+'</div>'+(w.length?'':'<div class="iv-need-slim" style="margin-top:8px">시세 숫자는 토스증권 또는 한국투자증권 키를 넣으면 채워집니다. 지금도 <b>토스 ↗</b> 로 종목 화면은 바로 열립니다.</div>'))
+      :'<div class="iv-need-slim">관심 종목 목록은 config/market.json 의 watchlist 에서 바꿉니다.</div>';
   }
   /* 뉴스 */
   if(el=$('invNews')){
@@ -21853,7 +21892,8 @@ function invAfterRender(tab){
   invRefresh(false);
   invStartTimer();
   invHealth(function(h){
-    if(h&&h.has&&!h.has.kis)invSetupBanner(['KIS_APP_KEY','KIS_APP_SECRET']);
+    var has=(h&&h.has)||{};
+    if(!has.toss&&!has.kis)invSetupBanner(['TOSS_CLIENT_ID','TOSS_CLIENT_SECRET','KIS_APP_KEY','KIS_APP_SECRET']);
   });
 }
 
@@ -21912,7 +21952,11 @@ function invAfterRender(tab){
    '.iv-need .ft{font-size:11px;color:#92400E;margin-top:9px;padding-top:9px;border-top:1px dashed #FDE68A;line-height:1.6}',
    '.iv-need-slim{font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:11px 13px;line-height:1.6}',
    '.iv-chips{display:flex;flex-wrap:wrap;gap:7px}',
-   '.iv-chip{font-size:11.5px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:5px 11px}',
+   '.iv-chip{font-size:11.5px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:5px 11px;text-decoration:none;display:inline-block}',
+   'a.iv-chip:hover{background:#DBEAFE}',
+   '.iv-toss{font-size:10.5px;font-weight:800;color:#fff;background:#3182F6;border-radius:6px;padding:3px 8px;text-decoration:none;white-space:nowrap}',
+   '.iv-toss:hover{background:#1B64DA}',
+   '.iv-card .lk{margin-top:7px}',
    '.iv-kw{font-size:10px;font-weight:800;color:#15803D;background:#F0FDF4;border:1px solid #DCFCE7;border-radius:5px;padding:1px 6px;margin-left:4px}',
    '.iv-note{font-size:11px;color:#6B7280;line-height:1.6;margin-top:10px;padding:9px 12px;background:#F9FAFB;border-radius:9px}',
    '.iv-tb h3,.iv-tb h4{margin:0}',

@@ -8,6 +8,17 @@
 -- ════════════════════════════════════════════════════════════════════════
 set search_path = public;
 
+-- ── ⓪ 사전 확인 — 권한 판별 함수가 있어야 RLS 정책을 만들 수 있다 ────────
+--     (없으면 migration_ALL_NOW.sql 을 먼저 실행하세요)
+do $$
+begin
+  if to_regprocedure('public.is_admin()')  is null
+  or to_regprocedure('public.is_owner()')  is null
+  or to_regprocedure('public.is_leader()') is null then
+    raise exception '권한 함수(is_admin/is_owner/is_leader)가 없습니다. migration_ALL_NOW.sql 을 먼저 실행한 뒤 이 SQL을 다시 실행하세요.';
+  end if;
+end $$;
+
 -- ── ① 투자 계좌 (고객 1명이 여러 계좌를 가질 수 있다) ────────────────────
 create table if not exists public.invest_accounts(
   id uuid primary key default gen_random_uuid(),

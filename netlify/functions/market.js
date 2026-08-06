@@ -11,25 +11,29 @@
  *   kind=news&cat=경제       경제·보험 뉴스 (config/sources.json RSS 재사용)
  *   kind=all                 index+econ+news 한 번에 (경제동향 화면 첫 로딩용)
  *
- * ── 토스 API 에 대한 사실 정리 (대표님 질문에 대한 답) ────────────────────
- *   · 토스페이먼츠 API = 결제·빌링 전용. 이 저장소도 구독 결제에만 쓰고 있다
- *     (/api/toss-confirm, /api/toss-billing).  시세·펀드·경제지표는 없다.
- *   · 토스증권은 외부 개발자용 공개 오픈API를 제공하지 않는다(2026-08 기준).
- *   · 그래서 "실시간"은 아래 공식 소스로 만든다 — 전부 개인/법인 무료 발급:
- *       주식·ETF  → 한국투자증권 KIS Developers (REST, 초당 호출제한 있음)
- *       경제지표  → 한국은행 ECOS OpenAPI
- *       펀드      → data.go.kr 금융위원회 펀드 API (엔드포인트는 환경변수)
- *       뉴스      → 이미 저장소에 있는 config/sources.json RSS
- *   · providers.toss 는 '예약 슬롯'이다. 훗날 토스 계열 오픈API가 열리면
- *     config/market.json 의 base/paths 를 채우고 TOSS_MARKET_KEY 만 넣으면
- *     이 코드 수정 없이 1순위 제공자로 붙는다.
+ * ── 토스 API 정리 ─────────────────────────────────────────────────────────
+ *   · 토스페이먼츠 API = 결제·빌링 전용. 시세는 주지 않는다. 이 저장소에서는
+ *     지금처럼 구독 결제만 담당한다(/api/toss-confirm, /api/toss-billing).
+ *   · 토스증권 Open API = 있다. corp.tossinvest.com/ko/open-api 에서 신청하고
+ *     승인되면 client_id / client_secret 을 받아 OAuth 2.0 으로 시세를 부른다.
+ *     문서: developers.tossinvest.com/docs
+ *     → 이 함수의 '1순위' 시세 제공자다. config/market.json 의 providers.toss 에
+ *       문서에 적힌 base / token_path / paths.quote / field_map 을 채우고
+ *       TOSS_CLIENT_ID / TOSS_CLIENT_SECRET 을 넣으면 바로 붙는다.
+ *   · 채우기 전이거나 호출이 실패하면 한국투자증권 KIS 로 자동 폴백한다.
+ *     둘 중 하나만 있어도 화면은 정상 동작한다.
+ *   · 비공식 웹 내부 엔드포인트(WTS)는 쓰지 않는다 — 예고 없이 바뀌고
+ *     약관 위반 소지가 있어, 고객 자산을 다루는 CRM 에 둘 성질이 아니다.
+ *
+ *   나머지 소스: 지수 → KIS · 경제지표 → 한국은행 ECOS ·
+ *                펀드 → data.go.kr 금융위원회 · 뉴스 → config/sources.json RSS
  *
  * ── 환경변수 (Netlify → Site settings → Environment variables) ──────────
- *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿   (주식·지수)
+ *   TOSS_CLIENT_ID / TOSS_CLIENT_SECRET  토스증권 오픈API      (시세 1순위)
+ *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿 (시세 폴백·지수)
  *   KIS_ENV                            real(기본) 또는 vts(모의투자)
  *   ECOS_API_KEY                       한국은행 ECOS 인증키       (경제지표)
  *   FUND_API_URL / FUND_API_KEY        data.go.kr 펀드 API        (펀드)
- *   TOSS_MARKET_BASE / TOSS_MARKET_KEY 토스 예약 슬롯             (선택)
  *   SHARED_TOKEN / ALLOWED_ORIGIN      남용 방지 (다른 함수와 동일 규칙)
  *
  *   키가 하나도 없어도 이 함수는 500 을 내지 않는다.  { ok:false, need:[...] }
@@ -68,6 +72,120 @@ function marketOpen() {
   if (day === 0 || day === 6) return false;
   const m = d.getUTCHours() * 60 + d.getUTCMinutes();
   return m >= 9 * 60 && m <= 15 * 60 + 30;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   0) 토스증권 Open API — 시세 1순위 (OAuth 2.0 client_credentials)
+      엔드포인트를 코드에 박지 않고 config/market.json 에서 읽는다.
+      승인 문서마다 경로·필드명이 다를 수 있어, 값이 비어 있으면 조용히
+      건너뛰고 KIS 로 간다. 추측한 경로로 호출해서 엉뚱한 에러를 내지 않는다.
+   ══════════════════════════════════════════════════════════════════════ */
+function tossCfg() { return P.toss || {}; }
+function tossKeys() { return { id: process.env.TOSS_CLIENT_ID || '', sec: process.env.TOSS_CLIENT_SECRET || '' }; }
+/* 쓸 수 있는 상태인가 = 키 2개 + 설정 3개(base·token_path·paths.quote)가 모두 있어야 한다 */
+function tossReady() {
+  const c = tossCfg(), k = tossKeys();
+  return !!(k.id && k.sec && c.base && c.token_path && (c.paths || {}).quote);
+}
+function tossWhyNot() {
+  const c = tossCfg(), k = tossKeys(), miss = [];
+  if (!k.id) miss.push('환경변수 TOSS_CLIENT_ID');
+  if (!k.sec) miss.push('환경변수 TOSS_CLIENT_SECRET');
+  if (!c.base) miss.push('config/market.json → providers.toss.base');
+  if (!c.token_path) miss.push('config/market.json → providers.toss.token_path');
+  if (!(c.paths || {}).quote) miss.push('config/market.json → providers.toss.paths.quote');
+  return miss;
+}
+
+let tossTok = null;
+let tossTokInflight = null;
+async function tossIssueToken() {
+  const c = tossCfg(), k = tossKeys();
+  const url = String(c.base).replace(/\/+$/, '') + c.token_path;
+  const style = (c.token_style || 'form').toLowerCase();
+
+  let headers = {}, body = '';
+  if (style === 'json') {
+    headers = { 'Content-Type': 'application/json' };
+    body = JSON.stringify({ grant_type: 'client_credentials', client_id: k.id, client_secret: k.sec });
+  } else if (style === 'basic') {
+    headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Authorization: 'Basic ' + Buffer.from(k.id + ':' + k.sec).toString('base64')
+    };
+    body = 'grant_type=client_credentials';
+  } else {
+    headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    body = new URLSearchParams({ grant_type: 'client_credentials', client_id: k.id, client_secret: k.sec }).toString();
+  }
+
+  const r = await fetch(url, { method: 'POST', headers: headers, body: body });
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) { /* 아래에서 원문으로 알려준다 */ }
+  const tok = j.access_token || j.accessToken || (j.data && (j.data.access_token || j.data.accessToken));
+  if (!r.ok || !tok) {
+    throw new Error('토스 토큰 발급 실패 ' + r.status + ' — ' + txt.slice(0, 200));
+  }
+  const exp = num(j.expires_in || j.expiresIn || (j.data && (j.data.expires_in || j.data.expiresIn))) || 3600;
+  tossTok = { tok: tok, exp: Date.now() + (Math.max(exp, 120) - 60) * 1000 };
+  return tok;
+}
+/* KIS 와 같은 이유로 동시 발급을 하나로 묶는다 */
+function tossToken() {
+  if (tossTok && tossTok.exp > Date.now()) return Promise.resolve(tossTok.tok);
+  if (tossTokInflight) return tossTokInflight;
+  tossTokInflight = tossIssueToken().finally(() => { tossTokInflight = null; });
+  return tossTokInflight;
+}
+/* 앱은 005930 으로 입력한다 → 토스가 쓰는 A005930 으로 바꿔 보낸다 */
+function tossCode(raw) {
+  const c = tossCfg(), s = String(raw || '').trim().toUpperCase();
+  if (s.indexOf(':') > 0) return s.split(':')[1];              /* NAS:AAPL → AAPL */
+  if (/^\d{6}$/.test(s)) return ((c.code || {}).krx_prefix || 'A') + s;
+  return s;
+}
+async function tossQuote(raw) {
+  const c = tossCfg();
+  const code = tossCode(raw);
+  const tok = await tossToken();
+  const path = String(c.paths.quote).replace(/\{code\}/g, encodeURIComponent(code));
+  const url = String(c.base).replace(/\/+$/, '') + path;
+
+  const r = await fetch(url, {
+    headers: Object.assign(
+      { Accept: 'application/json', Authorization: 'Bearer ' + tok },
+      c.headers || {}
+    )
+  });
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) { throw new Error('토스 응답이 JSON 이 아닙니다: ' + txt.slice(0, 160)); }
+  if (!r.ok) throw new Error('토스 ' + r.status + ' — ' + txt.slice(0, 160));
+
+  const fm = c.field_map || {};
+  let o = fm.root ? dig(j, fm.root) : j;
+  if (Array.isArray(o)) o = o[0];
+  if (!o || typeof o !== 'object') {
+    throw new Error('토스 응답에서 종목 데이터를 찾지 못했습니다. providers.toss.field_map.root 를 맞춰주세요. 응답: ' + txt.slice(0, 160));
+  }
+  const price = num(dig(o, fm.price || 'close'));
+  if (price == null) {
+    throw new Error('토스 응답에 현재가 필드가 없습니다. providers.toss.field_map.price 를 맞춰주세요. 응답: ' + txt.slice(0, 160));
+  }
+  const isOverseas = String(raw).indexOf(':') > 0;
+  return {
+    code: String(raw).trim().toUpperCase(),
+    market: isOverseas ? String(raw).split(':')[0].toUpperCase() : 'KRX',
+    currency: isOverseas ? 'USD' : 'KRW',
+    name: dig(o, fm.name || 'name') || '',
+    price: price,
+    change: num(dig(o, fm.change || 'change')),
+    changeRate: num(dig(o, fm.change_rate || 'changeRate')),
+    prevClose: num(dig(o, fm.prev_close || 'base')),
+    volume: num(dig(o, fm.volume || 'volume')),
+    src: 'toss', at: new Date().toISOString()
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -160,7 +278,8 @@ async function quoteOverseas(excd, symb) {
   };
 }
 
-/* 코드 표기 규칙: '005930' = 국내, 'NAS:AAPL' = 해외(거래소:심볼) */
+/* 코드 표기 규칙: '005930' = 국내, 'NAS:AAPL' = 해외(거래소:심볼)
+   순서: 토스증권(설정돼 있으면) → 실패하면 KIS → 둘 다 없으면 무엇이 필요한지 알림 */
 async function quoteOne(raw) {
   const s = String(raw || '').trim().toUpperCase();
   if (!s) return null;
@@ -168,9 +287,27 @@ async function quoteOne(raw) {
   const hit = cGet(k);
   if (hit) return hit;
 
+  const kisOk = !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET);
+  let tossErr = '';
+
+  if (tossReady()) {
+    try {
+      return cSet(k, await tossQuote(s), TTL.quote);
+    } catch (e) {
+      tossErr = String(e && e.message || e);
+      if (!kisOk) throw new Error(tossErr);      /* 폴백이 없으면 토스 오류를 그대로 보여준다 */
+    }
+  }
+
+  if (!kisOk) {
+    /* 토스도 KIS도 없다 — 둘 중 '한 세트'만 채우면 된다는 뜻으로 함께 알려준다 */
+    throw new Error('NEED:TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+  }
+
   let out;
   if (s.indexOf(':') > 0) { const p = s.split(':'); out = await quoteOverseas(p[0], p[1]); }
   else out = await quoteDomestic(s);
+  if (tossErr) out.note = '토스 실패 → KIS 사용: ' + tossErr.slice(0, 120);
   return cSet(k, out, TTL.quote);
 }
 
@@ -413,26 +550,70 @@ exports.handler = async function (event) {
     /* ── 진단: 무엇이 꽂혀 있고 무엇이 비었는지 ────────────────────────── */
     if (kind === 'health') {
       const has = {
+        toss: tossReady(),
         kis: !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET),
         ecos: !!process.env.ECOS_API_KEY,
         fund: !!(process.env.FUND_API_URL && process.env.FUND_API_KEY),
-        toss: !!(process.env.TOSS_MARKET_BASE && process.env.TOSS_MARKET_KEY),
         news: !!(SOURCES && SOURCES['경제'])
       };
-      let kisMsg = '';
+      let kisMsg = '', tossMsg = '';
+      if (has.toss) { try { await tossToken(); tossMsg = '토큰 발급 정상'; } catch (e) { tossMsg = e.message; has.toss = false; } }
+      else tossMsg = '미설정 — 필요한 것: ' + tossWhyNot().join(' · ');
       if (has.kis) { try { await kisToken(); kisMsg = '토큰 발급 정상'; } catch (e) { kisMsg = e.message; has.kis = false; } }
       return {
         statusCode: 200, headers: cors,
         body: JSON.stringify({
-          ok: true, meta: meta, has: has, kisEnv: process.env.KIS_ENV || 'real', kisMessage: kisMsg,
+          ok: true, meta: meta, has: has,
+          quoteProvider: has.toss ? 'toss' : (has.kis ? 'kis' : 'none'),
+          tossMessage: tossMsg, kisEnv: process.env.KIS_ENV || 'real', kisMessage: kisMsg,
+          deeplink: (P.toss || {}).deeplink || null,
           guide: {
-            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 주식·ETF·지수 실시간',
+            TOSS_CLIENT_ID: '토스증권 corp.tossinvest.com/ko/open-api 신청·승인 후 발급 — 시세 1순위(호출 IP 등록 필요)',
+            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 시세 폴백 + 지수(코스피·코스닥)',
             ECOS_API_KEY: '한국은행 ecos.bok.or.kr/api 에서 발급 — 기준금리·환율·물가',
-            FUND_API_URL: 'data.go.kr 금융위원회 펀드 API 활용신청 후 요청 URL 그대로 입력 — 공모펀드 기준가',
-            TOSS_MARKET_BASE: '토스 계열 시세 API 예약 슬롯 (현재 공개 API 없음 — 비워두면 됩니다)'
+            FUND_API_URL: 'data.go.kr 금융위원회 펀드 API 활용신청 후 요청 URL 그대로 입력 — 공모펀드 기준가'
           }
         })
       };
+    }
+
+    /* ── 토스증권 연결 진단 — 어디서 막히는지 원문 그대로 보여준다 ────── */
+    if (kind === 'toss-probe') {
+      const miss = tossWhyNot();
+      if (miss.length) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'config',
+            missing: miss,
+            hint: '위 항목을 채운 뒤 다시 호출하세요. base/token_path/paths.quote 는 승인받은 developers.tossinvest.com 문서에 적힌 값을 그대로 넣습니다.'
+          })
+        };
+      }
+      let tok = '';
+      try { tok = await tossToken(); }
+      catch (e) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'token', message: String(e.message || e),
+            hint: 'token_path 와 token_style(form/json/basic) 을 문서에 맞게 고치세요. 호출 IP 등록(Netlify 아웃바운드 IP)도 확인하세요.'
+          })
+        };
+      }
+      const code = q.code || '005930';
+      try {
+        const out = await tossQuote(code);
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, meta: meta, step: 'done', tokenIssued: !!tok, quote: out }) };
+      } catch (e) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'quote', tokenIssued: !!tok, message: String(e.message || e),
+            hint: 'paths.quote 와 field_map(root/price/name…) 을 위 응답 원문에 맞게 고치세요.'
+          })
+        };
+      }
     }
 
     /* ── 현재가 ────────────────────────────────────────────────────────── */
@@ -486,6 +667,7 @@ exports.handler = async function (event) {
           ok: true, meta: meta,
           indices: idx.list, econ: ec.list, news: nw.items, watchlist: wq.list,
           watchlistDefs: CFG.watchlist || [],
+          deeplink: (P.toss || {}).deeplink || null,
           errors: errors, need: needsOf(errors)
         })
       };
