@@ -4748,7 +4748,7 @@ function exitSangdam(){go(lastTab||'home');}
 
 var VA={on:false,wake:false,talk:false,speak:true,mute:false,busy:false,making:false,
   rec:null,partial:'',err:'',log:[],hist:[],saying:'',state:'',voice:null,rate:1,
-  buf:'',hold:null,echo:[],tries:0,halt:true,open:false,ready:false};
+  buf:'',hold:null,echo:[],tries:0,halt:true,open:false,ready:false,pend:null,conf:null};
 var VA_WAKE='아펙스';
 var VA_MAXLOG=24;
 
@@ -5082,12 +5082,17 @@ function vaRun(t){
   if(/^(그만|멈춰|멈춤|중지|스톱|조용|닥쳐)/.test(s)){
     vaShush();vaAdd('bot','알겠습니다.');vaAfter();vaPaint();return;
   }
+  /* 되묻는 중이거나 확인을 기다리는 중이면, 이 말은 그 답이다 */
+  if(vaPend(t,s))return;
   var d=vaAnswer(t,s);
   if(d){vaReply(d.say,d);return;}
   var ch=vaFindCh(s);
   if(ch){vaReply('화법서 '+ch[1]+' 을 엽니다.',{ch:ch[0]});return;}
   var tab=vaIsOpen(s)?vaFindTab(s):'';
   if(tab){vaReply(vaTabName(tab)+' 을 엽니다.',{go:tab});return;}
+  /* 자주 하는 말은 규칙으로 그 자리에서 — AI 를 부르지 않는다 */
+  var hit=vaActHit(t,s);
+  if(hit){vaDo(hit.a,hit.args);return;}
   /* 만들어 달라는 말은 두뇌에게 넘긴다 — 짧은 대답이 아니라 자료가 나와야 한다 */
   if(!VA.making&&s.length>4&&
      /만들어|만들어줘|작성해|작성해줘|써줘|뽑아줘|자료좀|자료만|준비해줘|기획해|초안|스크립트짜/.test(s)){
@@ -5124,6 +5129,14 @@ function vaAnswer(raw,s){
     return {say:'오늘 '+n+'개 중 '+CK_ITEMS.day.length+'개 가운데 '+n+'개 했습니다.',go:'ckboard'};
   }
 
+  /* "도와줄 것 뭐 있어" 는 적으라는 말이 아니라 읽어 달라는 말이다 */
+  if(/도와줄것/.test(s)&&/(뭐|무엇|있어|있나|있는|알려|읽어|목록|몇건|몇개|남았)/.test(s)){
+    var ho=vaHelpOpen(),oo=[],hk;
+    if(!ho.length)return {say:'도와줄 것이 없습니다.',go:'ckboard'};
+    for(hk=0;hk<ho.length&&hk<5;hk++)oo.push(vaCut(vaHelpName(ho[hk]),34));
+    return {say:'도와줄 것 '+ho.length+'건입니다. '+oo.join(', ')+
+      (ho.length>5?(' 외 '+(ho.length-5)+'건'):'')+' 입니다.',go:'ckboard'};
+  }
   /* 도와줄 것 적어 두기 */
   var hm=raw.match(/도와줄\s*것[을는]?\s*(적어|추가|저장|메모)?\s*(.*)$/);
   if(hm){
@@ -5166,18 +5179,516 @@ function vaAnswer(raw,s){
   return null;
 }
 
-function vaHelpAdd(txt){
+function vaHelpAdd(txt,who,due){
   if(typeof HELP==='undefined'||typeof hpStore!=='function'||typeof hpNewId!=='function')return false;
   try{
     if(!HELP.loaded&&typeof hpPull==='function')hpPull();
-    HELP.list.push({id:hpNewId(),who:'',what:(''+txt).slice(0,200),
-      due:(typeof ckDayK==='function'?ckDayK():''),done:0,up:(typeof hpNow==='function'?hpNow():0)});
+    HELP.list.push({id:hpNewId(),who:(''+(who||'')).slice(0,40),what:(''+txt).slice(0,200),
+      due:(''+(due||''))||(typeof ckDayK==='function'?ckDayK():''),
+      done:0,up:(typeof hpNow==='function'?hpNow():0)});
     hpStore();
     if(typeof hpPush==='function')hpPush();
     if(typeof hpPaint==='function')hpPaint();
     return true;
   }catch(e){return false;}
 }
+
+
+/* ════════ 자비스 — 말하면 찾아서 한다 ════════
+
+   지금까지 비서는 화면을 열고, 답하고, 글을 만드는 데까지였다.
+   시킨 일을 실제로 처리하지는 못했다. 여기서 그것을 한다.
+
+   길은 둘이다.
+   하나, 자주 하는 말은 규칙으로 그 자리에서 알아듣는다 (AI 를 부르지 않는다).
+   둘, 규칙에 없는 말은 AI 가 "무엇을 할지" 골라 준다. 그래서 어떻게 말해도 된다.
+
+   시킨 일이 진짜 됐을 때만 됐다고 말한다.
+   값이 모자라면 되묻고, 남이 보게 되는 일은 먼저 확인받는다.                */
+
+/* 말한 것과 목록을 견준다 — 사람은 이름을 정확히 말하지 않는다 */
+function vaScore(a,b){
+  if(!a||!b)return 0;
+  if(a===b)return 1;
+  if(b.indexOf(a)>=0)return 0.92-Math.min(0.2,(b.length-a.length)/60);
+  if(a.indexOf(b)>=0)return 0.86;
+  var hit=0,n=0,i;
+  for(i=0;i+2<=a.length;i++){n++;if(b.indexOf(a.substr(i,2))>=0)hit++;}
+  return n?(hit/n)*0.8:0;
+}
+/* 사람은 영문 약자를 소리 나는 대로 말한다 — "에스엔에스" 와 "SNS" 는 같은 말이다.
+   글자 하나하나를 옮기면 "이"·"오"·"비" 같은 흔한 글자까지 망가지니, 아는 말만 바꾼다. */
+var VA_LAT={'에스엔에스':'sns','에센에스':'sns','에스엔에쓰':'sns',
+ '씨알엠':'crm','시알엠':'crm','씨아르엠':'crm','디비':'db','에이아이':'ai',
+ '피피티':'ppt','티에이':'ta','오티':'ot','케이피아이':'kpi','에스엔알':'snr'};
+function vaLat(s){var k;s=''+(s||'');for(k in VA_LAT)s=s.split(k).join(VA_LAT[k]);return s;}
+function vaPickOf(q,list,f){
+  q=vaLat(vaNorm(q));
+  if(!q||!list||!list.length)return null;
+  var best=null,sc=0,i,v;
+  for(i=0;i<list.length;i++){
+    v=vaScore(q,vaLat(vaNorm(f(list[i]))));
+    if(v>sc){sc=v;best=list[i];}
+  }
+  return sc>=0.34?best:null;
+}
+function vaCut(s,n){s=(''+(s==null?'':s)).replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+  return s.length>n?(s.slice(0,n)+'…'):s;}
+
+/* ── 앱에서 지금 읽어 오는 것들 ── */
+function vaDayLeft(){
+  if(typeof CK_ITEMS==='undefined'||typeof ckLoad!=='function')return null;
+  var m=ckLoad('day'),left=[],done=0,i;
+  for(i=0;i<CK_ITEMS.day.length;i++){
+    if(m[CK_ITEMS.day[i][0]])done++;else left.push(CK_ITEMS.day[i][1]);
+  }
+  return {done:done,left:left,tot:CK_ITEMS.day.length};
+}
+function vaHelpOpen(){
+  if(typeof hpLive!=='function')return [];
+  var o=[],L=hpLive(),i;
+  for(i=0;i<L.length;i++)if(!L[i].done)o.push(L[i]);
+  return o;
+}
+function vaHelpName(r){return (r.who?(r.who+' '):'')+(r.what||'');}
+/* 성장판은 서버에서 받아 와야 답할 수 있다 — 아직이면 열어 두고 다시 묻게 한다 */
+function vaGbWait(){
+  if(typeof GB==='undefined')return '성장판을 한 번 열어 주세요.';
+  if(GB.loaded)return '';
+  if(typeof gbLoad==='function'&&!GB.busy)gbLoad();
+  return {say:'성장판을 여는 중입니다. 잠시 뒤 다시 말씀해 주세요.',go:'growboard'};
+}
+function vaCalMiss(){
+  if(typeof CAL==='undefined'||typeof calScore!=='function')return null;
+  if(!CAL.loaded){if(typeof calLoad==='function'&&!CAL.busy)calLoad();return null;}
+  var ym=calYm(),last=calLast(ym),today=ckDayK(),tot=calIds().length;
+  var miss=[],part=0,i,ds,n;
+  for(i=1;i<=last;i++){
+    ds=ym+'-'+('0'+i).slice(-2);
+    if(ds>=today||calWe(ds))continue;
+    n=calScore(ds);
+    if(n>=tot)continue;
+    if(n>0)part++;else miss.push(ds);
+  }
+  return {miss:miss,part:part,ym:ym};
+}
+function vaDayName(ds){var p=(''+ds).split('-');return p.length===3?(parseInt(p[1],10)+'월 '+parseInt(p[2],10)+'일'):ds;}
+function vaChOf(q){
+  if(typeof FP_CH==='undefined')return null;
+  var c=vaPickOf(q,FP_CH,function(x){return (''+x[1]).split('—')[0];});
+  if(c)return c;
+  var s=vaNorm(q),k,best=null,bl=0;
+  for(k in VA_CHKEY)if(s.indexOf(k)>=0&&k.length>bl){best=vaCh(VA_CHKEY[k]);bl=k.length;}
+  return best;
+}
+
+/* ── 명령 사전 ──
+   여기 있는 것만 실제로 실행된다. AI 도 이 목록 밖으로는 나가지 못한다.
+   k: 키 · n: 이름 · v: 있어야 하는 값 · q: 없을 때 되물을 말
+   w: 저장하는 일 · c: 남이 보게 되니 먼저 확인 · re: 규칙 · cut: 값 뽑기      */
+var VA_ACT=[
+{k:'오늘',n:'오늘 브리핑 — 할 일·도와줄 것·놓친 사람을 한 번에',v:[],
+ ex:'오늘 브리핑해줘',
+ re:/브리핑|오늘어때|오늘상황|오늘정리|보고해줘|보고좀|현황알려|상황알려/,
+ run:function(){
+   var p=[],d=vaDayLeft(),h=vaHelpOpen();
+   if(d)p.push(d.left.length?('할 일은 '+d.done+'개 했고 '+d.left.length+'개 남았습니다. 다음은 '+d.left[0]+' 입니다.')
+                            :'오늘 할 일은 다 하셨습니다.');
+   if(h.length)p.push('도와줄 것이 '+h.length+'건 있습니다. '+vaCut(vaHelpName(h[0]),40)+' 부터입니다.');
+   if(typeof GB!=='undefined'&&GB.loaded&&typeof gbMiss==='function'){
+     var ms=gbMiss(gbScope());
+     if(ms.length)p.push('놓치고 있는 사람이 '+ms.length+'명입니다. '+ms[0].r.name+'님부터 보세요.');
+   }
+   if(!p.length)return '오늘 챙길 것이 없습니다. 새 사람을 만나실 시간입니다.';
+   return {say:p.join(' '),go:'ckboard'};
+ }},
+
+{k:'할일',n:'오늘 남은 할 일',v:[],
+ ex:'뭐 남았어',
+ re:/남은일|남은거|뭐남았|얼마나남|몇개남/,
+ run:function(){
+   var d=vaDayLeft();
+   if(!d)return {say:'실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+   if(!d.left.length)return {say:'오늘 할 일을 다 하셨습니다. '+d.done+'개 전부 끝냈습니다.',go:'ckboard'};
+   return {say:'오늘 '+d.done+'개 했고 '+d.left.length+'개 남았습니다. 남은 것은 '+
+     d.left.slice(0,5).join(', ')+(d.left.length>5?(' 외 '+(d.left.length-5)+'개'):'')+' 입니다.',go:'ckboard'};
+ }},
+
+{k:'체크',n:'오늘 할 일 체크하기',v:['what'],w:1,
+ ex:'전화 5통 체크해줘',
+ q:{what:'어떤 것을 체크할까요?'},
+ re:/체크해|체크했|체크완료|체크처리|체크표시|했다고체크/,
+ cut:[/^(.+?)\s*(?:체크|끝냈다고)\s*(?:해줘|해|했어|완료|처리|표시)?\s*(?:줘|주세요)?\s*$/,
+      /^(?:체크|체크해|체크해줘)\s+(.+?)\s*$/],
+ run:function(a){
+   if(typeof CK_ITEMS==='undefined'||typeof ckLoad!=='function'||typeof ckToggle!=='function')
+     return {say:'실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+   var it=vaPickOf(a.what,CK_ITEMS.day,function(r){return r[1];});
+   if(!it)return {say:'"'+vaCut(a.what,20)+'" 이라는 항목을 찾지 못했습니다. 실행 체크판에서 확인해 주세요.',go:'ckboard'};
+   var m=ckLoad('day');
+   if(m[it[0]])return {say:it[1]+' 은 이미 체크되어 있습니다.',go:'ckboard'};
+   ckToggle('day',it[0]);
+   var d=vaDayLeft();
+   return {say:it[1]+' 체크했습니다.'+(d?(' '+d.left.length+'개 남았습니다.'):''),go:'ckboard'};
+ }},
+
+{k:'체크해제',n:'체크 풀기',v:['what'],w:1,
+ ex:'전화 5통 체크 풀어줘',
+ q:{what:'어떤 것을 풀까요?'},
+ re:/체크풀|체크취소|체크해제|잘못체크|다시안했/,
+ cut:[/^(.+?)\s*체크\s*(?:풀어|취소|해제)\s*(?:줘|주세요)?\s*$/],
+ run:function(a){
+   if(typeof CK_ITEMS==='undefined'||typeof ckLoad!=='function'||typeof ckToggle!=='function')
+     return {say:'실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+   var it=vaPickOf(a.what,CK_ITEMS.day,function(r){return r[1];});
+   if(!it)return {say:'"'+vaCut(a.what,20)+'" 이라는 항목을 찾지 못했습니다.',go:'ckboard'};
+   var m=ckLoad('day');
+   if(!m[it[0]])return {say:it[1]+' 은 체크되어 있지 않습니다.',go:'ckboard'};
+   ckToggle('day',it[0]);
+   return {say:it[1]+' 체크를 풀었습니다.',go:'ckboard'};
+ }},
+
+{k:'도와줄것읽기',n:'도와줄 것 읽어 주기',v:[],
+ ex:'도와줄 것 뭐 있어',
+ re:/도와줄것뭐|도와줄것읽|도와줄것알려|뭐도와|도울것/,
+ run:function(){
+   var h=vaHelpOpen();
+   if(!h.length)return {say:'도와줄 것이 없습니다.',go:'ckboard'};
+   var o=[],i;
+   for(i=0;i<h.length&&i<5;i++)o.push(vaCut(vaHelpName(h[i]),34));
+   return {say:'도와줄 것 '+h.length+'건입니다. '+o.join(', ')+
+     (h.length>5?(' 외 '+(h.length-5)+'건'):'')+' 입니다.',go:'ckboard'};
+ }},
+
+{k:'도와줄것끝',n:'도와줄 것 끝냈다고 표시',v:['what'],w:1,
+ ex:'김민수 심사 처리했어',
+ q:{what:'어떤 것을 끝냈나요?'},
+ re:/도와준거끝|도와줄것끝|처리했어|해결했어|끝냈다고표시/,
+ cut:[/^(.+?)\s*(?:처리했|해결했|끝냈|다했)/,
+      /도와줄\s*것\s*(.+?)\s*(?:끝|완료)/],
+ run:function(a){
+   if(typeof hpDone!=='function')return {say:'실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+   var h=vaHelpOpen();
+   if(!h.length)return {say:'끝낼 것이 없습니다.',go:'ckboard'};
+   var r=vaPickOf(a.what,h,vaHelpName);
+   if(!r)return {say:'"'+vaCut(a.what,20)+'" 에 맞는 것을 찾지 못했습니다.',go:'ckboard'};
+   hpDone(r.id);
+   return {say:vaCut(r.what,34)+' 끝냈다고 표시했습니다.',go:'ckboard'};
+ }},
+
+{k:'도와줄것',n:'도와줄 것 적어 두기',v:['what'],w:1,
+ ex:'도와줄 것 김민수 심사 확인',
+ q:{what:'무엇을 도와줄지 말씀해 주세요.'},
+ re:/도와줄것|도와줘야|챙겨야|잊지말|기억해둬|적어둬|메모해/,
+ cut:[/도와줄\s*것[을는]?\s*(?:적어|추가|저장|메모)?\s*(.+)$/,
+      /^(.+?)\s*(?:적어|메모해|기억해)\s*(?:둬|둬줘|줘|주세요)?\s*$/],
+ run:function(a){
+   var okAdd=vaHelpAdd(a.what,a.who,a.due);
+   return {say:okAdd?('적었습니다. '+vaCut(a.what,40)+'. '+(a.due?('마감은 '+a.due+' 입니다.'):'오늘까지로 잡았습니다.'))
+                    :'적지 못했습니다. 실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
+ }},
+
+{k:'놓친사람',n:'놓치고 있는 팀원',v:[],
+ ex:'누구부터 봐야 돼',
+ re:/놓친|놓치|누구부터|누굴먼저|누구먼저|위험한사람|챙길사람/,
+ run:function(){
+   var w=vaGbWait();if(w)return w;
+   var ms=gbMiss(gbScope()),names=[],i;
+   if(!ms.length)return {say:'놓치고 있는 사람이 없습니다.',go:'growboard'};
+   for(i=0;i<ms.length&&i<3;i++)names.push(ms[i].r.name);
+   return {say:'놓치고 있는 사람 '+ms.length+'명입니다. 먼저 볼 사람은 '+names.join(', ')+
+     ' 입니다. '+ms[0].r.name+'님은 '+ms[0].why[0]+'.',go:'growboard'};
+ }},
+
+{k:'내점수',n:'내 성장 점수와 벌어진 곳',v:[],
+ ex:'나 지금 몇 점이야',
+ re:/내점수|내성장|나는몇점|내수준|나어때/,
+ run:function(){
+   var w=vaGbWait();if(w)return w;
+   var me=gbMe();
+   if(!me)return {say:'내 기록을 찾지 못했습니다. 조직도에서 계정 연결을 확인해 주세요.',go:'org'};
+   var gaps=gbGapList(me,gbScope());
+   return {say:'지금 '+me.total+'점입니다. 가장 벌어진 곳은 '+gaps[0].ax.n+' 입니다. '+gaps[0].ax.fix,go:'growboard'};
+ }},
+
+{k:'피드백',n:'팀원에게 피드백 남기기',v:['who','what'],w:1,c:1,
+ ex:'박서준한테 이번 주 잘했다고 남겨줘',
+ q:{who:'누구에게 남길까요?',what:'뭐라고 남길까요?'},
+ re:/피드백남|피드백좀|칭찬남|한마디남/,
+ run:function(a){
+   var w=vaGbWait();if(w)return w;
+   var r=vaPickOf(a.who,gbScope(),function(x){return x.name;});
+   if(!r)return {say:'"'+vaCut(a.who,12)+'" 이라는 팀원을 찾지 못했습니다.',go:'growboard'};
+   var sb=(typeof osClient==='function')?osClient():null;
+   if(!sb||!OS.profile)return '로그인 후 남길 수 있습니다.';
+   return sb.from('coach_notes').insert({member_id:r.id,body:(''+a.what).slice(0,1000),
+     mood:'칭찬',share:true}).then(function(x){
+       if(x&&x.error)return '남기지 못했습니다. '+(''+(x.error.message||'')).slice(0,50);
+       if(GB.notes)GB.notes.unshift({id:'va'+GB.notes.length,member_id:r.id,body:a.what,
+         mood:'칭찬',share:true,created_at:new Date().toISOString()});
+       if(typeof gbPaint==='function')gbPaint();
+       return {say:r.name+'님에게 남겼습니다. 팀원 화면에도 보입니다.',go:'growboard'};
+     },function(){return '남기지 못했습니다. 잠시 뒤 다시 말씀해 주세요.';});
+ }},
+
+{k:'합격',n:'배운 주제에 합격 도장 찍기',v:['what'],w:1,
+ ex:'암 합격 도장 찍어줘',
+ q:{what:'어떤 주제에 도장을 찍을까요?'},
+ re:/합격|도장찍|통과했|다배웠/,
+ cut:[/^(.+?)\s*합격\s*(?:도장)?\s*(?:찍어|줘|주세요|처리)?\s*(?:줘|주세요)?\s*$/],
+ run:function(a){
+   var w=vaGbWait();if(w)return w;
+   if(typeof GB_CUR==='undefined'||typeof gbStamp!=='function')return {say:'성장판을 한 번 열어 주세요.',go:'growboard'};
+   var c=vaPickOf(a.what,GB_CUR,function(x){return x[1];});
+   if(!c)return {say:'"'+vaCut(a.what,20)+'" 이라는 주제를 찾지 못했습니다.',go:'growboard'};
+   var me=(typeof gbMyId==='function')?gbMyId():'';
+   if(me&&GB.pass&&GB.pass[me]&&GB.pass[me][c[0]])return {say:c[1]+' 은 이미 합격입니다.',go:'growboard'};
+   gbStamp(c[0]);
+   return {say:c[1]+' 합격 도장을 찍었습니다.',go:'growboard'};
+ }},
+
+{k:'빠뜨린날',n:'이번 달 빠뜨린 날',v:[],
+ ex:'이번 달 며칠 빠뜨렸어',
+ re:/빠뜨린|빠진날|며칠빠|달력/,
+ run:function(){
+   var c=vaCalMiss();
+   if(!c)return {say:'달력을 여는 중입니다. 잠시 뒤 다시 말씀해 주세요.',go:'ckboard'};
+   if(!c.miss.length)return {say:'이번 달 빠뜨린 날이 없습니다.'+(c.part?(' 덜 채운 날이 '+c.part+'일 있습니다.'):''),go:'ckboard'};
+   var o=[],i;
+   for(i=0;i<c.miss.length&&i<4;i++)o.push(vaDayName(c.miss[i]));
+   return {say:'빠뜨린 날이 '+c.miss.length+'일입니다. '+o.join(', ')+
+     (c.miss.length>4?(' 외 '+(c.miss.length-4)+'일'):'')+' 입니다.'+
+     (c.part?(' 덜 채운 날도 '+c.part+'일 있습니다.'):''),go:'ckboard'};
+ }},
+
+{k:'배울것',n:'오늘 배울 것',v:[],
+ ex:'오늘 뭐 공부해야 돼',
+ re:/오늘배울|뭐공부|뭘배워|공부뭐|오늘공부/,
+ run:function(){
+   var p=[];
+   if(typeof fpToday==='function'){
+     try{var t=fpToday();if(t)p.push('화법서는 오늘 '+t[1]+' 입니다. '+t[3]+'.');}catch(e){}
+   }
+   if(typeof GB_CUR!=='undefined'&&typeof GB!=='undefined'&&GB.loaded&&typeof gbMyId==='function'){
+     var me=gbMyId(),ps=(GB.pass&&GB.pass[me])||{},i;
+     for(i=0;i<GB_CUR.length;i++)if(!ps[GB_CUR[i][0]]){
+       p.push('아직 합격 못 한 주제는 '+GB_CUR[i][1]+' 입니다. '+GB_CUR[i][3]+'.');break;}
+   }
+   if(!p.length)return {say:'재무설계 실전화법서를 엽니다. 오늘 한 장만 소리 내어 읽어 보세요.',go:'fp_talk'};
+   return {say:p.join(' '),go:'fp_talk'};
+ }},
+
+{k:'어디서',n:'그 일을 어느 화면에서 하는지',v:['what'],
+ ex:'증권 받았는데 어디서 봐',
+ q:{what:'무엇을 하려고 하시나요?'},
+ re:/어디서하|어디서해|어디로가|어느화면|어디에있|어디봐/,
+ run:function(a){
+   var q=vaNorm(a.what),best=null,sc=0,i,j,v,r;
+   if(typeof RT_STUCK!=='undefined')for(i=0;i<RT_STUCK.length;i++){
+     v=vaScore(q,vaNorm(RT_STUCK[i][0]));
+     if(v>sc){sc=v;best={tab:RT_STUCK[i][1],n:RT_STUCK[i][2],d:RT_STUCK[i][3]};}
+   }
+   if(typeof RT_STEP!=='undefined')for(i=0;i<RT_STEP.length;i++)for(j=0;j<RT_STEP[i].rows.length;j++){
+     r=RT_STEP[i].rows[j];v=vaScore(q,vaNorm(r.s));
+     if(v>sc){sc=v;best={tab:r.tab,n:r.tn,d:r.how};}
+   }
+   if(!best||sc<0.3){
+     var tab=(typeof vaFindTab==='function')?vaFindTab(q):'';
+     if(tab)return {say:vaTabName(tab)+' 을 엽니다.',go:tab};
+     return {say:'어디서 하는지 찾지 못했습니다. 실행 체크판의 업무 루트를 열어 확인해 주세요.',go:'ckboard'};
+   }
+   return {say:best.n+' 에서 하시면 됩니다. '+vaCut(best.d,80),go:best.tab};
+ }},
+
+{k:'자료',n:'두뇌에게 글 맡기기',v:['what'],
+ ex:'40대 가장 상담 자료 만들어줘',
+ q:{what:'무엇에 대한 자료로 만들까요?'},
+ run:function(a){if(typeof vaMake!=='function')return '두뇌를 열지 못했습니다.';vaMake(a.what,false);return {quiet:1};}},
+
+{k:'발표자료',n:'발표자료(PPT) 파일까지 만들기',v:['what'],
+ ex:'치료비 통장 발표자료 만들어줘',
+ q:{what:'무엇에 대한 발표자료로 만들까요?'},
+ run:function(a){if(typeof vaMake!=='function')return '두뇌를 열지 못했습니다.';vaMake(a.what,true);return {quiet:1};}},
+
+{k:'열기',n:'화면 열기',v:['what'],
+ ex:'체크판 열어',
+ q:{what:'어떤 화면을 열까요?'},
+ run:function(a){
+   var tab=(typeof vaFindTab==='function')?vaFindTab(vaNorm(a.what)):'';
+   if(!tab)return '"'+vaCut(a.what,16)+'" 이라는 화면을 찾지 못했습니다.';
+   return {say:vaTabName(tab)+' 을 엽니다.',go:tab};
+ }},
+
+{k:'화법',n:'화법서에서 그 장 열기',v:['what'],
+ ex:'거절 나오면 뭐라고 해',
+ q:{what:'어떤 상황의 화법을 찾을까요?'},
+ run:function(a){
+   var c=vaChOf(a.what);
+   if(!c)return '"'+vaCut(a.what,16)+'" 에 맞는 장을 찾지 못했습니다.';
+   return {say:'화법서 '+c[1]+' 을 엽니다.',ch:c[0]};
+ }}
+];
+
+function vaActOf(k){
+  var i;for(i=0;i<VA_ACT.length;i++)if(VA_ACT[i].k===k)return VA_ACT[i];
+  return null;
+}
+/* AI 에게 보여 줄 목록 — 사전이 늘면 여기도 저절로 는다 */
+function vaActList(){
+  var o=[],i,a,j,v;
+  for(i=0;i<VA_ACT.length;i++){
+    a=VA_ACT[i];v='';
+    if(a.v&&a.v.length){
+      v=' {';
+      for(j=0;j<a.v.length;j++)v+=(j?',':'')+'"'+a.v[j]+'":"…"';
+      v+='}';
+    }
+    o.push(a.k+v+' — '+a.n);
+  }
+  return o.join('\n');
+}
+
+/* ── 규칙으로 바로 맞히기 ── */
+function vaActHit(t,s){
+  var i,a,j,m,args,re;
+  for(i=0;i<VA_ACT.length;i++){
+    a=VA_ACT[i];
+    if(!a.re||!a.re.test(s))continue;
+    args={};
+    if(a.cut){
+      re=(a.cut.length!==undefined&&typeof a.cut.test!=='function')?a.cut:[a.cut];
+      for(j=0;j<re.length;j++){
+        m=(''+t).match(re[j]);
+        if(m){
+          var n;
+          for(n=0;n<(a.v||[]).length;n++)
+            if(m[n+1])args[a.v[n]]=(''+m[n+1]).replace(/^\s+|\s+$/g,'').replace(/[.。!?]+$/,'');
+          break;
+        }
+      }
+    }
+    return {a:a,args:args};
+  }
+  return null;
+}
+
+/* ── 되묻기 · 확인 ── */
+var VA_PEND_MS=120000;
+function vaFresh(o){return !!(o&&o.at&&(new Date().getTime()-o.at)<VA_PEND_MS);}
+function vaNeed(a,args){
+  var i,k;
+  for(i=0;i<(a.v||[]).length;i++){
+    k=a.v[i];
+    if(!args[k]||!(''+args[k]).replace(/\s/g,''))return k;
+  }
+  return '';
+}
+function vaConfSay(a,args){
+  var o=[],i,k;
+  for(i=0;i<(a.v||[]).length;i++){k=a.v[i];if(args[k])o.push(vaCut(args[k],40));}
+  return a.n+'. '+(o.length?(o.join(' · ')+'. '):'')+'할까요?';
+}
+/* 되묻는 중이거나 확인을 기다리는 중이면 이 말을 거기에 쓴다 */
+function vaPend(t,s){
+  var c,p;
+  if(VA.conf){
+    c=VA.conf;VA.conf=null;
+    if(!vaFresh(c))return false;
+    if(/^(응|어|네|넵|예|그래|맞아|맞습|해줘|해주|하자|해|좋아|오케|오케이|ok|okay|고|진행|부탁)/.test(s)){
+      var a=vaActOf(c.k);
+      if(!a){vaReply('그 일을 찾지 못했습니다.');return true;}
+      vaFire(a,c.args);return true;
+    }
+    if(/^(아니|아냐|아뇨|노|취소|말아|하지마|그만두|됐어|됐습|나중)/.test(s)){
+      vaReply('취소했습니다.');return true;
+    }
+    return false;   /* 딴 말을 하면 확인은 없던 일로 하고 그 말을 새로 듣는다 */
+  }
+  if(VA.pend){
+    p=VA.pend;VA.pend=null;
+    if(!vaFresh(p))return false;
+    if(/^(아니|아냐|취소|말아|그만|됐어|됐습|나중)/.test(s)){vaReply('취소했습니다.');return true;}
+    var act=vaActOf(p.k);
+    if(!act){vaReply('그 일을 찾지 못했습니다.');return true;}
+    p.args[p.need]=(''+t).replace(/^\s+|\s+$/g,'').replace(/[.。]+$/,'');
+    vaDo(act,p.args);
+    return true;
+  }
+  return false;
+}
+
+/* ── 실행 ──
+   값이 모자라면 되묻고, 남이 보게 되는 일은 확인받고, 그다음에야 진짜 한다 */
+function vaDo(a,args,say){
+  args=args||{};
+  if(!a){vaReply('그 일은 아직 못 합니다.');return;}
+  var need=vaNeed(a,args);
+  if(need){
+    VA.pend={k:a.k,args:args,need:need,at:new Date().getTime()};
+    vaReply((a.q&&a.q[need])||'무엇을 말씀하시는지 한 번만 더 말씀해 주세요.');
+    return;
+  }
+  if(a.w){
+    var bad=vaRisky(JSON.stringify(args));
+    if(bad){vaReply(bad);return;}
+  }
+  if(a.c){
+    VA.conf={k:a.k,args:args,at:new Date().getTime()};
+    vaReply(vaConfSay(a,args));
+    return;
+  }
+  vaFire(a,args,say);
+}
+function vaOut(r,say){
+  if(r&&r.quiet)return;
+  if(typeof r==='string'){vaReply(r||say||'했습니다.');return;}
+  if(r&&r.say){vaReply(r.say,r);return;}
+  vaReply(say||'했습니다.');
+}
+function vaFire(a,args,say){
+  var r;
+  VA.busy=true;if(VA.talk)VA.state='think';vaPaint();
+  try{r=a.run(args||{});}
+  catch(e){VA.busy=false;vaReply('하지 못했습니다. '+(''+((e&&e.message)||'')).slice(0,60));return;}
+  if(r&&typeof r.then==='function'){
+    r.then(function(x){VA.busy=false;vaOut(x,say);},
+           function(e){VA.busy=false;vaReply('하지 못했습니다. '+(''+((e&&e.message)||'')).slice(0,60));});
+    return;
+  }
+  VA.busy=false;
+  vaOut(r,say);
+}
+
+/* ── AI 가 고른 명령 읽기 ──
+   답 첫 줄이 "!실행 키 {값}" 이면 그것은 시킬 일이다. 아니면 그냥 답이다.
+   JSON 으로 통째 감싸지 않는 이유 — 답이 길어 잘리면 통째로 날아가기 때문이다. */
+function vaCmd(txt){
+  var t=(''+(txt||'')).replace(/^[\s`]+/,'');
+  if(t.indexOf('!실행')!==0)return null;
+  var nl=t.indexOf('\n'),line=(nl<0?t:t.slice(0,nl)),rest=(nl<0?'':t.slice(nl+1));
+  var m=line.match(/^!실행\s+([0-9a-zA-Z가-힣._]+)\s*(\{[\s\S]*\})?\s*$/);
+  if(!m)return null;
+  var args={};
+  if(m[2]){try{args=JSON.parse(m[2])||{};}catch(e){args={};}}
+  return {k:m[1],args:args,say:(''+rest).replace(/^\s+|\s+$/g,'')};
+}
+function vaStrip(txt){
+  var t=(''+(txt||''));
+  if(t.replace(/^[\s`]+/,'').indexOf('!실행')!==0)return t;
+  var nl=t.indexOf('\n');
+  return nl<0?'':t.slice(nl+1);
+}
+var VA_DO_RULE='\n\n[일을 시키는 말이면 — 이것이 제일 중요하다]\n'+
+ '아래 목록에 있는 일을 시키는 말이면, 설명하지 말고 첫 줄에 딱 이 한 줄만 쓴다.\n'+
+ '!실행 <키> {"값이름":"값"}\n'+
+ '그 아래 줄에 말로 읽을 짧은 문장 하나를 쓴다.\n'+
+ '- 값은 사람이 말한 그대로 넣는다. 지어내지 않는다.\n'+
+ '- 모르는 값은 넣지 않는다. 앱이 알아서 되묻는다.\n'+
+ '- 키는 아래 목록에 있는 것만 쓴다. 없는 키를 지어내지 않는다.\n'+
+ '- 설명·상담·화법처럼 생각이 필요한 말이면 !실행 을 쓰지 말고 그냥 답한다.\n'+
+ '예) "전화 다섯 통 체크해줘" → !실행 체크 {"what":"전화 5통"}\n'+
+ '예) "치료비 통장 어떻게 설명하지" → !실행 을 쓰지 않고 그냥 답한다.\n\n'+
+ '[할 수 있는 일]\n';
 
 /* 화면 이름으로 찾기 */
 var VA_ALIAS={
@@ -5336,7 +5847,8 @@ function vaSys(){
     '- 세 문장 안에 끝낸다. 더 알아야 하면 되묻는다.\n'+
     '- 앱 안에서 할 수 있는 일이면 어느 화면에서 하는지 함께 말한다.\n'+
     '- 고객을 어떻게 도울지 묻거든 아래 업무 흐름과 화법서를 근거로 답한다.\n\n'+
-    '[이 앱이 무엇을 할 수 있는지]\n'+vaKnow();
+    '[이 앱이 무엇을 할 수 있는지]\n'+vaKnow()+
+    VA_DO_RULE+vaActList();
 }
 
 /* 두뇌에게 자료를 맡긴다. 다 되면 앞머리만 읽어 주고 나머지는 화면에 남긴다 */
@@ -5344,13 +5856,13 @@ function vaSys(){
 function vaWantsPpt(s){
   return /피피티|ppt|파워포인트|발표자료|발표용|슬라이드|장표|프레젠테이션|브리핑자료/i.test(s||'');
 }
-function vaMake(t){
+function vaMake(t,force){
+  var ppt=(force===undefined||force===null)?vaWantsPpt(vaNorm(t)):!!force;
   if(typeof brainAsk!=='function'||typeof BRAIN==='undefined'){
     vaReply('두뇌를 열지 못했습니다. 윤시현의 두뇌 화면에서 직접 물어봐 주세요.',{go:'brain'});return;
   }
   var bad=vaRisky(t);
   if(bad){vaReply(bad);return;}
-  var ppt=vaWantsPpt(vaNorm(t));
   var n=(BRAIN.hist||[]).length;
   VA.making=true;
   vaReply(ppt?'두뇌에게 맡겼습니다. 발표자료 파일까지 만들어 드리겠습니다.'
@@ -5403,7 +5915,16 @@ function vaAI(t){
   vaPaint();
   callAI(vaSys(),vaCtx()+t,700,'voice').then(function(txt){
     VA.busy=false;
-    vaReply(vaPlain(txt)||'답이 비어 있습니다.');
+    /* 첫 줄이 명령이면 말로 끝내지 않고 실제로 한다 */
+    var c=vaCmd(txt);
+    if(c){
+      var a=vaActOf(c.k);
+      if(a){vaDo(a,c.args,c.say);return;}
+      /* AI 가 없는 일을 지어냈다. 앱이 하지 않은 것을 했다고 읽어 주면 안 된다 */
+      vaReply('그건 아직 못 하는 일입니다. 화면에서 직접 해 주세요.');
+      return;
+    }
+    vaReply(vaPlain(vaStrip(txt))||'답이 비어 있습니다.');
   },function(e){
     VA.busy=false;
     var msg=((e&&e.message)||'')+'';
@@ -5503,21 +6024,39 @@ function vaSpeakToggle(){
 }
 
 /* ── 화면 ── */
+/* 말하는 방법 — 무엇을 시킬 수 있는지는 아래 명령 사전에서 저절로 뽑는다.
+   두 군데에 적어 두면 곧 어긋난다. */
 var VA_HOW=[
  ['대화하기','대화 시작 → 그냥 말하면 됩니다','단추를 다시 안 눌러도 계속 주고받습니다'],
- ['화면 열기','체크판 열어 · 성장판 · 디비 씨알엠 · 고객 365일 · 두뇌','말한 화면으로 바로 갑니다'],
- ['오늘 할 일','오늘 할 일 · 뭐 해야 돼','체크판에서 남은 것을 읽어 줍니다'],
- ['놓친 사람','놓친 사람 · 누구부터 볼까','성장판에서 먼저 볼 사람을 읽어 줍니다'],
- ['내 점수','내 점수 · 나는 몇 점','여섯 축 중 가장 벌어진 곳을 알려 줍니다'],
- ['도와줄 것','도와줄 것 김민수 심사 확인','체크판 도와줄 것에 오늘까지로 적습니다'],
- ['화법 찾기','암 화법 · 거절 · 연금 화법','화법서 그 장을 엽니다'],
- ['자료 만들기','40대 가장 상담 자료 만들어줘','두뇌가 만들고, 다 되면 앞머리를 읽어 줍니다'],
- ['어디서 하는지','증권 받았는데 어디서 봐','앱의 화면을 전부 알고 있습니다'],
- ['그 밖','아무 질문','윤시현의 두뇌가 답하고 읽어 줍니다'],
+ ['부르기','아펙스, 체크판 열어','상시 대기일 때는 이름을 먼저 부릅니다'],
+ ['되묻거든','비서가 물으면 그 답만 말하면 됩니다','모자란 것만 채우고 이어서 합니다'],
+ ['확인하거든','…할까요? → 응 · 아니','남이 보게 되는 일은 먼저 확인합니다'],
  ['끼어들기','말하는 중에 그냥 말하기','읽던 것을 멈추고 새 말을 듣습니다'],
  ['멈추기','그만 · 조용','읽던 것을 끊습니다'],
- ['대화 끝','고마워 · 대화 끝','대화 모드를 마칩니다']
+ ['대화 끝','고마워 · 대화 끝','대화 모드를 마칩니다'],
+ ['그 밖','아무 질문','윤시현의 두뇌가 답하고 읽어 줍니다']
 ];
+/* 시킬 수 있는 일 — 사전이 늘면 이 칸도 저절로 는다 */
+function vaActCardHtml(){
+  var h='<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🦾</span>말하면 실제로 합니다 '+
+    '<span class="badge blue">'+VA_ACT.length+'가지</span></div>'+
+    '<div class="card-desc">화면만 열어 주고 끝나지 않습니다. 저장까지 마치고 무엇을 했는지 말해 줍니다. '+
+    '아래는 예시일 뿐, 이대로 말하지 않아도 알아듣습니다.</div></div><div class="card-body">';
+  var i,a,g;
+  for(i=0;i<VA_ACT.length;i++){
+    a=VA_ACT[i];
+    g=a.c?'확인 후 저장':(a.w?'저장합니다':'읽어 줍니다');
+    h+='<div class="va-hw"><div class="va-hx"><div class="n">'+osEsc((''+a.n).split('—')[0])+'</div>'+
+      '<div class="s">"'+osEsc(a.ex||'')+'"</div></div>'+
+      '<div class="g">'+g+'</div></div>';
+  }
+  h+='<div class="notice" style="margin-top:12px">시킨 일이 <b>진짜 됐을 때만</b> 됐다고 말합니다. '+
+    '못 찾았거나 저장이 안 되면 그 이유를 말해 줍니다. '+
+    '값이 모자라면 되묻고, 팀원에게 남기는 것처럼 <b>남이 보게 되는 일</b>은 먼저 확인합니다.</div>'+
+    '</div></div>';
+  return h;
+}
 function vaTabHtml(){
   var hear=vaCanHear(),talk=vaCanSpeak();
   var h='<div class="card"><div class="card-body">'+
@@ -5559,6 +6098,8 @@ function vaTabHtml(){
       '<div class="s">'+osEsc(VA_HOW[i][1])+'</div></div>'+
       '<div class="g">'+osEsc(VA_HOW[i][2])+'</div></div>';
   h+='</div></div>';
+
+  h+=vaActCardHtml();
 
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚙️</span>설정</div></div>'+
     '<div class="card-body">'+
@@ -5618,7 +6159,7 @@ function renderVoiceAsst(){
   if(!VA.ready)vaBoot();
   vaCss();
   return osPage('음성','음성 비서',
-    '이름을 부르고 말로 시키면 됩니다. 손이 바쁠 때 화면을 찾지 않아도 됩니다.',
+    '말하면 찾아서 합니다. 화면을 열어 주는 데서 끝나지 않고 체크·기록·저장까지 마치고 무엇을 했는지 말해 줍니다.',
     '<div id="vaPane">'+vaTabHtml()+'</div>');
 }
 function osVoiceAsstAfterRender(){vaFab();vaPaint();}
