@@ -2840,18 +2840,32 @@ function pxChartSlide(s,media){
   return pxSlideXml(h,'FFFFFF');
 }
 
-function pxSlideOf(s,media){
-  var k=s.kind||'bullets';
+/* 아래 띠 — 근거·가정을 적고 쪽번호를 찍는다.
+   브리핑 자료에서 "이 숫자는 어디서 나왔나"에 답하지 못하면 신뢰를 잃는다. */
+function pxFootXml(s,no,tot){
+  var id=900,h='';
+  h+=pxRect(id++,0.62,6.92,12.1,0.014,'E2E8F0');
+  if(s&&s.note)h+=pxText(id++,0.62,7.0,9.0,0.4,pxPara(s.note,{sz:1000,color:'94A3B8'}));
+  h+=pxText(id++,9.9,7.0,2.82,0.4,pxPara(no+' / '+tot,{sz:1000,color:'94A3B8',algn:'r'}));
+  return h;
+}
+function pxWithFoot(xml,s,no,tot){
+  var f=pxFootXml(s,no,tot),i=xml.lastIndexOf('</p:spTree>');
+  return (i<0)?xml:(xml.slice(0,i)+f+xml.slice(i));
+}
+function pxSlideOf(s,media,no,tot){
+  var k=s.kind||'bullets',out;
   media=media||[];
   if(k==='cover')return pxCover(s);
-  if(k==='section')return pxSection(s);
-  if(k==='quote')return pxQuote(s);
-  if(k==='end')return pxEnd(s);
-  if(k==='kpi')return pxKpi(s);
-  if(k==='table')return pxTableSlide(s);
-  if(k==='compare')return pxCompare(s);
-  if(k==='chart')return pxChartSlide(s,media);
-  return pxBullets(s);
+  if(k==='section')out=pxSection(s);
+  else if(k==='quote')out=pxQuote(s);
+  else if(k==='end')out=pxEnd(s);
+  else if(k==='kpi')out=pxKpi(s);
+  else if(k==='table')out=pxTableSlide(s);
+  else if(k==='compare')out=pxCompare(s);
+  else if(k==='chart')out=pxChartSlide(s,media);
+  else out=pxBullets(s);
+  return (no&&tot)?pxWithFoot(out,s,no,tot):out;
 }
 
 /* ── 껍데기 파트들 ─────────────────────────────────────────────────── */
@@ -2922,9 +2936,9 @@ function pxBuild(deck){
   for(i=0;i<slides.length;i++){
     var mine=[];
     var one;
-    try{one=pxSlideOf(slides[i],mine);}
+    try{one=pxSlideOf(slides[i],mine,i+1,slides.length);}
     catch(e){one=pxSlideOf({kind:'bullets',title:(slides[i]&&slides[i].title)||'',
-      bullets:['이 장표를 그리지 못했습니다.']},[]);mine=[];}
+      bullets:['이 장표를 그리지 못했습니다.']},[],i+1,slides.length);mine=[];}
     mine.forEach(function(m){m.file='image'+(allMedia.length+1)+'.png';allMedia.push(m);});
     xml.push(one);mediaOf.push(mine);
   }
@@ -3042,7 +3056,9 @@ function bdFromPlan(pl,q){
   var secs=(pl.sections||[]).slice(0,20);
   for(i=0;i<secs.length;i++){
     var s=secs[i]||{};
-    if(secs.length>=4)out.push({kind:'section',label:('0'+(i+1)).slice(-2),title:bdCut(s.title||'',60)});
+    /* 장이 많을 때만 간지를 넣는다. 여섯 장짜리 브리핑에 간지 여섯 장이면
+       읽는 사람은 빈 장표를 여섯 번 넘기게 된다. */
+    if(secs.length>=9)out.push({kind:'section',label:('0'+(i+1)).slice(-2),title:bdCut(s.title||'',60)});
     out.push(bdSection(s));
   }
   var cl=(pl.closing||[]).slice(0,5).map(function(b){return bdCut(b,140);}).filter(Boolean);
@@ -3126,34 +3142,63 @@ function bdParse(txt){
   try{return JSON.parse(s.slice(a,b+1).replace(/,\s*([}\]])/g,'$1'));}catch(e){}
   return null;
 }
-var BD_SYS='너는 보험·재무 설계사의 발표자료를 짜는 편집자다. 받은 글을 슬라이드 구성으로 다시 짠다.\n'+
-  '규칙:\n'+
-  '1. 원문에 없는 사실·숫자를 만들지 않는다. 줄이고 나누고 형식만 바꾼다.\n'+
-  '   숫자가 원문에 있으면 반드시 표나 그래프로 옮긴다. 없는 숫자를 지어내지 않는다.\n'+
-  '2. 한 슬라이드는 한 가지만 말한다. 불릿은 한 줄 40자 안쪽, 슬라이드당 5개 이하.\n'+
-  '3. 확정 수익·지급 보장·원금 보장 같은 표현은 쓰지 않는다.\n'+
-  '4. 한국어. 문장은 짧게. 미사여구를 넣지 않는다.\n'+
-  '5. JSON 만 출력한다. 설명·코드펜스를 붙이지 않는다.\n'+
+var BD_SYS='너는 대기업 경영진 브리핑 자료를 짜는 편집자다. 받은 글을 발표 장표로 다시 짠다.\n'+
+  '보고 받는 사람은 바쁘다. 글을 읽히지 말고 숫자와 그림으로 보게 만든다.\n'+
   '\n'+
-  '장표 종류를 섞어 쓴다. 글자만 있는 장표가 이어지면 안 된다.\n'+
-  '  kind:"bullets"  기본. 짧은 목록.\n'+
-  '  kind:"kpi"      큰 숫자 2~4개를 앞세울 때. kpis:[{"v":"3,200만원","k":"연간 자기부담"}]\n'+
-  '  kind:"table"    항목별로 값을 견줄 때. head:["구분","현재","제안"], rows:[["암 진단","3천만","5천만"]]\n'+
-  '  kind:"compare"  전후·둘 중 하나를 나란히 볼 때.\n'+
-  '                  left:{"label":"지금","items":[...],"sum":"월 12만원"}, right:{"label":"바꾸면",...}\n'+
-  '  kind:"chart"    흐름·크기 차이를 눈으로 볼 때.\n'+
-  '                  chart:{"type":"bar|line|donut","labels":["1년차","2년차"],'+
-  '"series":[{"name":"현재","data":[100,120]},{"name":"제안","data":[140,180]}],"unit":"만원"}\n'+
-  '  숫자가 있으면 table 이나 chart 를 쓴다. 항목이 3개 이상이고 값이 있으면 chart 가 낫다.\n'+
-  '  donut 은 구성비에만 쓴다(series 하나).\n'+
+  '[반드시 지키는 골격 — 이 순서로 짠다]\n'+
+  '1) 요약 — kind:"kpi". 이 자료의 핵심 숫자 3~4개. 첫 장은 언제나 이것이다.\n'+
+  '2) 현황 — kind:"table" 또는 "chart". 지금 어떤 상태인지 수치로.\n'+
+  '3) 문제 — kind:"compare". 지금 이대로 vs 바꾸면. 또는 격차를 보이는 chart.\n'+
+  '4) 해법 — kind:"table". 무엇을 어떻게. 항목별로.\n'+
+  '5) 실행 — kind:"table". 무엇을 / 언제까지 / 누가. 세 칸을 반드시 채운다.\n'+
+  '6) 기대 — kind:"chart" 또는 "kpi". 하면 무엇이 달라지는지.\n'+
+  '필요하면 사이에 bullets 를 넣되, 전체 장표의 3분의 1을 넘기지 않는다.\n'+
+  '장표는 6~10장으로 짠다.\n'+
   '\n'+
-  '형식:\n'+
+  '[숫자 규칙 — 가장 중요하다]\n'+
+  '- 원문에 숫자가 있으면 반드시 표나 그래프로 옮긴다. 글로 남기지 않는다.\n'+
+  '- 원문에 숫자가 없으면, 업계에서 통용되는 일반값이나 계산으로 근거 있는 수치를 만든다.\n'+
+  '  그때는 그 장의 note 에 "가정: 무엇을 어떻게 잡았는지" 를 반드시 적는다.\n'+
+  '  근거가 없는 수치는 만들지 않는다. 만들 수 없으면 그 장은 표(항목 비교)로 짠다.\n'+
+  '- 원문에 있던 사실을 바꾸거나 뒤집지 않는다.\n'+
+  '\n'+
+  '[문장 규칙]\n'+
+  '- 한 장표는 한 가지만 말한다. 제목은 결론으로 쓴다("현황"이 아니라 "보장 공백 3,200만원").\n'+
+  '- 불릿은 한 줄 40자 안쪽, 장표당 5개 이하. 명사로 끝낸다.\n'+
+  '- 미사여구·수식어를 넣지 않는다. 확정 수익·지급 보장·원금 보장 표현은 쓰지 않는다.\n'+
+  '- 한국어. JSON 만 출력한다. 설명·코드펜스를 붙이지 않는다.\n'+
+  '\n'+
+  '[장표 종류]\n'+
+  '  kind:"kpi"      큰 숫자 3~4개. kpis:[{"v":"3,200만원","k":"연간 자기부담"}]\n'+
+  '  kind:"table"    항목별 비교·계획. head:["구분","현재","제안"], rows:[["암 진단","3천만","5천만"]]\n'+
+  '                  실행계획은 head:["할 일","언제까지","누가"] 로 짠다.\n'+
+  '  kind:"compare"  둘을 나란히. left:{"label":"지금 이대로","items":[...],"sum":"월 12만원"}, right:{...}\n'+
+  '  kind:"chart"    흐름·크기 차이. chart:{"type":"bar|line|donut","labels":["1년","3년","5년"],\n'+
+  '                  "series":[{"name":"현재","data":[100,120,140]},{"name":"제안","data":[140,190,260]}],"unit":"만원"}\n'+
+  '                  donut 은 구성비에만(series 하나). 항목 3개 이상이면 chart 가 표보다 낫다.\n'+
+  '  kind:"bullets"  위로 표현할 수 없을 때만.\n'+
+  '\n'+
+  '[형식]\n'+
   '{"title":"표지 제목 25자 내","subtitle":"한 줄 요약 45자 내",'+
-  '"keyline":"이 자료의 핵심 한 문장 50자 내","keysub":"그 문장을 받치는 한 줄",'+
-  '"sections":[{"kind":"bullets|kpi|table|compare|chart","title":"장 제목 20자 내",'+
+  '"keyline":"이 자료의 결론 한 문장 50자 내","keysub":"그 문장을 받치는 한 줄",'+
+  '"sections":[{"kind":"kpi|table|compare|chart|bullets","title":"결론형 제목 22자 내",'+
   '"lead":"이 장의 요지 한 줄","bullets":[],"kpis":[],"head":[],"rows":[],'+
-  '"left":{},"right":{},"chart":{},"note":"근거나 주의"}],'+
-  '"closing":["듣는 사람이 오늘 할 일 1~3가지"]}';
+  '"left":{},"right":{},"chart":{},"note":"근거 또는 가정"}],'+
+  '"closing":["듣는 사람이 오늘 결정할 것 1~3가지"]}';
+
+/* 글자만 있는 장표가 몇 장인가 — 브리핑이라면 그림이 절반은 넘어야 한다 */
+function bdThin(pl){
+  var secs=(pl&&pl.sections)||[],rich=0,i,k;
+  for(i=0;i<secs.length;i++){
+    k=(secs[i]||{}).kind||'bullets';
+    if(k==='kpi'||k==='table'||k==='compare'||k==='chart')rich++;
+  }
+  return {n:secs.length,rich:rich};
+}
+var BD_MORE='앞서 만든 구성은 글자 장표가 너무 많다. 다시 짠다.\n'+
+  '요약(kpi) · 현황(table 또는 chart) · 문제(compare) · 해법(table) · 실행(table) · 기대(chart) 를\n'+
+  '반드시 넣는다. 숫자가 원문에 없으면 근거 있는 값을 잡고 note 에 가정을 적는다.\n'+
+  '글자만 있는 장표는 전체의 3분의 1 이하로 줄인다. JSON 만 출력한다.';
 
 function bdMake(src,q,label){
   if(BDECK.busy){toast('만드는 중입니다. 잠시만요.');return;}
@@ -3177,11 +3222,23 @@ function bdMake(src,q,label){
     done(sl,why||'글 그대로 나눔');
   };
   if(typeof aiReady==='function'&&!aiReady()){fallback('AI 미연결');return;}
-  /* AI 가 늦거나 죽어도 기다리게 두지 않는다 — 25초면 글 그대로라도 파일을 낸다 */
-  BDECK.wait=setTimeout(function(){fallback('AI 가 늦어 글 그대로 나눔');},25000);
-  callAI(BD_SYS,'[제목]\n'+(q||'')+'\n\n[본문]\n'+body.slice(0,12000),3500,'brain').then(function(out){
+  /* AI 가 늦거나 죽어도 기다리게 두지 않는다 — 45초면 있는 것으로라도 파일을 낸다 */
+  BDECK.wait=setTimeout(function(){fallback('AI 가 늦어 글 그대로 나눔');},45000);
+  var ask='[제목]\n'+(q||'')+'\n\n[본문]\n'+body.slice(0,12000);
+  callAI(BD_SYS,ask,4000,'brain').then(function(out){
     var pl=bdParse(out);
     if(!pl||!pl.sections||!pl.sections.length){fallback('구성 실패 — 글 그대로 나눔');return;}
+    var t=bdThin(pl);
+    /* 글자 장표가 절반을 넘으면 브리핑이 아니다 — 한 번 더 부탁한다 */
+    if(t.rich*2<t.n){
+      toast('그림이 적어 다시 짜는 중…',4000);
+      callAI(BD_SYS,ask+'\n\n'+BD_MORE,4000,'brain').then(function(o2){
+        var p2=bdParse(o2),t2=p2&&p2.sections?bdThin(p2):null;
+        if(t2&&t2.rich>t.rich){done(bdFromPlan(p2,q),'두뇌가 구성 · 다시 짬');return;}
+        done(bdFromPlan(pl,q),'두뇌가 구성');
+      },function(){done(bdFromPlan(pl,q),'두뇌가 구성');});
+      return;
+    }
     done(bdFromPlan(pl,q),'두뇌가 구성');
   },function(){fallback('AI 응답 없음 — 글 그대로 나눔');});
 }
@@ -3205,11 +3262,27 @@ function bdRun(){
   BDECK.busy=true;bdPaint();
   toast('두뇌가 내용을 쓰는 중… (30초쯤 걸립니다)');
   var sys=(typeof brainSys==='function')?brainSys():'너는 보험 설계사의 조언자다.';
-  var usr='다음 주제로 발표자료의 원고를 쓴다.\n\n[주제]\n'+q+'\n\n'+
-    '조건: 제목(##)으로 장을 나누고, 각 장은 짧은 불릿으로 쓴다. '+
-    '5~7장 분량. 확정 수익·지급 보장 표현은 쓰지 않는다. '+
-    '보험 상품을 단정하지 않고, 판단 근거와 확인할 점을 같이 적는다.';
-  callAI(sys,usr,5000,'brain').then(function(out){
+  /* 원고에 숫자가 없으면 뒤에서 표도 그래프도 만들 수 없다.
+     그래서 원고를 쓸 때부터 브리핑처럼 쓰게 한다. */
+  var usr='다음 주제로 경영진 브리핑 원고를 쓴다.\n\n[주제]\n'+q+'\n\n'+
+    '[반드시 이 순서로]\n'+
+    '## 요약 — 이 자료의 핵심 숫자 3~4개를 "항목: 값" 형태로\n'+
+    '## 현황 — 지금 어떤 상태인지. 표로 쓴다(구분/현재/기준)\n'+
+    '## 문제 — 지금 이대로 두면 무엇이 어떻게 되는지. 숫자로\n'+
+    '## 해법 — 무엇을 어떻게. 항목별로 표\n'+
+    '## 실행 — 할 일 / 언제까지 / 누가 를 표로\n'+
+    '## 기대 — 하면 무엇이 얼마나 달라지는지. 1년·3년·5년 같은 시점별 숫자로\n\n'+
+    '[숫자 규칙]\n'+
+    '- 장마다 숫자를 반드시 넣는다. 금액·비율·기간·건수 무엇이든.\n'+
+    '- 정확한 통계가 없으면 업계 통용값이나 계산으로 잡되, 그 줄 끝에 "(가정: 어떻게 잡았는지)" 를 붙인다.\n'+
+    '- 지어낸 출처나 없는 통계 이름을 쓰지 않는다.\n'+
+    '- 시점별·구간별로 나눌 수 있으면 나눈다. 표와 그래프로 옮기기 좋게.\n\n'+
+    '[문장]\n'+
+    '- 제목은 결론으로 쓴다. "현황"이 아니라 "보장 공백 3,200만원".\n'+
+    '- 짧게. 미사여구를 넣지 않는다.\n'+
+    '- 확정 수익·지급 보장·원금 보장 표현은 쓰지 않는다.\n'+
+    '- 보험 상품을 단정하지 않고, 판단 근거와 확인할 점을 같이 적는다.';
+  callAI(sys,usr,6000,'brain').then(function(out){
     BDECK.busy=false;
     if(!out||!(''+out).trim()){bdPaint();toast('내용을 받지 못했습니다. 다시 시도해 주세요.');return;}
     bdMake(out,q,'주제');
