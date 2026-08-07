@@ -130,13 +130,15 @@ window.supabase={createClient:function(){
     hear: vaCanHear(), talk: vaCanSpeak(),
     voice: VA.voice ? VA.voice.name : '',
     how: document.querySelectorAll('.va-hw').length,
+    ways: VA_HOW.length, acts: VA_ACT.length,
     st: document.querySelectorAll('.va-st .ok').length,
     warn: (document.body.textContent || '').indexOf('말로 넣지 마세요') >= 0
   }));
   ok(t0.fab, '마이크 단추가 화면에 뜬다');
   ok(t0.hear && t0.talk, '듣기·말하기 둘 다 된다고 표시된다');
   ok(t0.voice === 'Yuna', '한국어 목소리를 골랐다 (' + t0.voice + ')');
-  ok(t0.how >= 11, '이렇게 말하면 됩니다 ' + t0.how + '줄');
+  ok(t0.how === t0.ways + t0.acts,
+    '말하는 법 ' + t0.ways + '줄 · 시킬 수 있는 일 ' + t0.acts + '가지가 모두 나온다');
   ok(t0.st === 2, '지원 상태 두 칸이 모두 초록');
   ok(t0.warn, '고객 정보를 말로 넣지 말라는 경고가 있다');
 
