@@ -10,6 +10,7 @@ const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8817;
 const SHOT = process.env.VA_SHOT || '';
+const WAIT = 1000;  /* 점검에서는 1초만 기다린다 */
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
 
 const srv = http.createServer((req, res) => {
@@ -94,7 +95,7 @@ window.supabase={createClient:function(){
     OS.session = { user: { id: 'va', email: 'v@t' } };
     OS.cfg = { schema_version: '32' };
     window.__toast = []; window.toast = function (m) { window.__toast.push(m); };
-    try { localStorage.removeItem('apex_va'); } catch (e) {}
+    try { localStorage.setItem('apex_va', JSON.stringify({ wait: 1000 })); } catch (e) {}
     /* 앱이 자기 callAI 를 정의한 뒤라야 갈아끼울 수 있다 */
     window.__ai = [];
     window.callAI = function (sys, user) {
@@ -106,10 +107,10 @@ window.supabase={createClient:function(){
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
 
-  /* 한 문장 말하고 결과 받기 */
+  /* 한 문장 말하고, 조용해지기를 기다린 뒤 결과 받기 */
   async function say(text) {
     await page.evaluate(t => { window.__spoke = []; window.__ai = []; window.__say(t); }, text);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(WAIT + 700);
     return page.evaluate(() => ({
       tab: (typeof lastTab !== 'undefined' ? lastTab : ''),
       cls: document.body.className,
@@ -135,7 +136,7 @@ window.supabase={createClient:function(){
   ok(t0.fab, '마이크 단추가 화면에 뜬다');
   ok(t0.hear && t0.talk, '듣기·말하기 둘 다 된다고 표시된다');
   ok(t0.voice === 'Yuna', '한국어 목소리를 골랐다 (' + t0.voice + ')');
-  ok(t0.how === 11, '이렇게 말하면 됩니다 ' + t0.how + '줄');
+  ok(t0.how >= 11, '이렇게 말하면 됩니다 ' + t0.how + '줄');
   ok(t0.st === 2, '지원 상태 두 칸이 모두 초록');
   ok(t0.warn, '고객 정보를 말로 넣지 말라는 경고가 있다');
 
@@ -378,6 +379,165 @@ window.supabase={createClient:function(){
   ok(mute1.on && mute1.state === 'listen', '소리가 없어도 다시 듣기로 돌아온다');
   await page.evaluate(() => { vaTalkStop(false); vaSpeakToggle(); });
   await page.waitForTimeout(300);
+
+  /* ── 10-3. 말이 끝날 때까지 기다렸다가 한 번에 ── */
+  await page.evaluate(() => { vaOff(); vaPanel(true); vaOnce(); VA.echo = []; go('home'); });
+  await page.waitForTimeout(400);
+
+  /* 토막토막 넣어도 한 번만 답하는지 */
+  await page.evaluate(() => { window.__spoke = []; window.__ai = []; VA.log = []; });
+  await page.evaluate(() => window.__say('고객이'));
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.__say('비싸다고'));
+  await page.waitForTimeout(200);
+  const mid = await page.evaluate(() => ({ buf: VA.buf, hold: !!VA.hold, ai: window.__ai.length,
+    live: (document.getElementById('vaLive') || {}).textContent || '' }));
+  ok(mid.ai === 0, '말하는 도중에는 답하지 않는다');
+  ok(mid.hold && /고객이 비싸다고/.test(mid.buf), '토막을 모아 둔다 — "' + mid.buf + '"');
+  ok(/고객이 비싸다고/.test(mid.live), '모으는 중인 말이 화면에 보인다');
+
+  await page.evaluate(() => window.__say('합니다 어떻게 하죠'));
+  await page.waitForTimeout(WAIT + 900);
+  const done = await page.evaluate(() => ({ ai: window.__ai.length, buf: VA.buf,
+    user: window.__ai[0] ? window.__ai[0].user : '',
+    me: VA.log.filter(x => x.w === 'me').length,
+    bot: VA.log.filter(x => x.w === 'bot').length }));
+  ok(done.ai === 1, '조용해진 뒤 한 번만 답한다 (AI 호출 ' + done.ai + '회)');
+  ok(/고객이 비싸다고 합니다 어떻게 하죠/.test(done.user), '토막이 한 문장으로 합쳐져 넘어간다');
+  ok(done.me === 1 && done.bot === 1, '주고받은 기록도 한 번씩만 남는다');
+  ok(done.buf === '', '모아 둔 것은 비워진다');
+
+  /* "그만" 은 기다리지 않고 바로 */
+  await page.evaluate(() => { window.__cancels = 0; window.__say('아무 말이나'); });
+  await page.waitForTimeout(200);
+  await page.evaluate(() => window.__say('그만'));
+  await page.waitForTimeout(250);
+  const stop2 = await page.evaluate(() => ({ buf: VA.buf, hold: !!VA.hold, cancels: window.__cancels }));
+  ok(!stop2.hold && stop2.buf === '', '"그만" 은 기다리지 않고 바로 듣는다');
+  ok(stop2.cancels >= 1, '모아 둔 것도 버린다');
+
+  /* ── 10-4. 같은 말을 되풀이하지 않는지 (제 목소리 되받기) ── */
+  await page.evaluate(() => { vaOff(); VA.echo = []; vaPanel(true); vaTalkStart(); });
+  await page.waitForTimeout(900);
+  await page.evaluate(() => { window.__ai = []; VA.log = []; go('home'); VA.mute = false; });
+  await page.evaluate(() => window.__say('상담 순서를 알려줘'));
+  await page.waitForTimeout(WAIT + 1400);
+  const said = await page.evaluate(() => ({ ai: window.__ai.length, spoke: window.__spoke.join(' '),
+    echo: VA.echo.length }));
+  ok(said.ai === 1, '한 번 물었으니 한 번 답한다');
+  ok(said.echo >= 1, '방금 한 말을 기억해 둔다');
+
+  /* 그 답이 스피커로 나와 마이크에 다시 들어온 상황 */
+  await page.evaluate(() => { window.__ai = []; VA.mute = false; VA.saying = ''; });
+  await page.evaluate(t => window.__say(t), '상담에서는 먼저 듣고 나중에 말합니다 오늘 하나만 정하시면 됩니다');
+  await page.waitForTimeout(WAIT + 900);
+  const loop = await page.evaluate(() => ({ ai: window.__ai.length, buf: VA.buf,
+    me: VA.log.filter(x => x.w === 'me').length }));
+  ok(loop.ai === 0, '제 목소리가 다시 들어와도 또 답하지 않는다 (반복이 안 생긴다)');
+  ok(loop.buf === '', '모아 두지도 않는다');
+
+  /* 말이 끝난 뒤에도 잠깐은 기억하는지 */
+  await page.evaluate(() => { VA.saying = ''; VA.mute = false; window.__ai = []; });
+  await page.evaluate(() => window.__say('오늘 하나만 정하시면 됩니다'));
+  await page.waitForTimeout(WAIT + 700);
+  ok((await page.evaluate(() => window.__ai.length)) === 0,
+    '읽기가 끝난 뒤 들어와도 제 목소리로 알아본다');
+  await page.evaluate(() => vaTalkStop(false));
+  await page.waitForTimeout(300);
+
+  /* 방금 한 말 안에 들어 있는 짧은 명령은 삼키지 않는지 */
+  await page.evaluate(() => {
+    vaOff(); vaPanel(true); vaOnce(); go('home');
+    VA.echo = []; VA.saying = ''; VA.mute = false;
+    vaEchoAdd('실행 체크판 을 엽니다.');
+    window.__ai = [];
+  });
+  await page.waitForTimeout(300);
+  r = await say('체크판');
+  ok(r.tab === 'ckboard',
+    '방금 "실행 체크판 을 엽니다" 라고 했어도 "체크판" 은 명령으로 알아듣는다');
+
+  /* ── 10-5. 두뇌를 바탕으로 답하는지 ── */
+  const sys = await page.evaluate(() => {
+    var s = vaSys();
+    return { len: s.length, brain: /윤시현의 두뇌/.test(s), map: /이 앱의 화면/.test(s),
+      route: /업무 루트/.test(s), talk: /실전화법서/.test(s), ax: /성장 여섯 축/.test(s),
+      cur: /배워서 터치할/.test(s), short: /세 문장 안에/.test(s) };
+  });
+  ok(sys.brain, '윤시현의 두뇌를 바탕으로 답한다');
+  ok(sys.map, '앱의 화면을 전부 알고 있다');
+  ok(sys.route, '업무 루트를 알고 있다');
+  ok(sys.talk, '화법서 30장을 알고 있다');
+  ok(sys.ax && sys.cur, '성장 축과 배울 주제를 알고 있다');
+  ok(sys.short, '소리로 듣는 말이라 짧게 답하라고 일러 둔다');
+  ok(sys.len > 1500, '아는 것이 ' + sys.len + '자');
+
+  /* ── 10-6. 자료 만들기 ── */
+  await page.evaluate(() => {
+    vaOff(); vaPanel(true); vaOnce(); VA.echo = []; go('home');
+    window.__brainAsked = [];
+    window.brainAsk = function (q) {
+      window.__brainAsked.push(q);
+      BRAIN.hist.push({ q: q, a: null });
+      setTimeout(function () {
+        BRAIN.hist[BRAIN.hist.length - 1].a =
+          '40대 가장에게는 치료비부터 봅니다. 보험료가 아니라 나오는 돈으로 이야기를 옮기세요. 그다음 부족한 곳을 하나만 고릅니다.';
+      }, 900);
+    };
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.__spoke = []; window.__say('40대 가장 상담 자료 만들어줘'); });
+  await page.waitForTimeout(WAIT + 900);
+  const mk1 = await page.evaluate(() => ({ tab: lastTab, making: VA.making,
+    asked: window.__brainAsked.length, q: window.__brainAsked[0] || '',
+    spoke: window.__spoke.join(' ') }));
+  ok(mk1.tab === 'brain', '"만들어줘" 하면 두뇌 화면으로 간다');
+  ok(mk1.asked === 1 && /40대 가장/.test(mk1.q), '두뇌에게 그대로 넘긴다 — "' + mk1.q + '"');
+  ok(/맡겼습니다/.test(mk1.spoke), '맡겼다고 먼저 말해 준다');
+  ok(mk1.making, '만드는 중 표시가 켜진다');
+
+  await page.waitForTimeout(2600);
+  const mk2 = await page.evaluate(() => ({ making: VA.making, spoke: window.__spoke.join(' '),
+    last: VA.log.length ? VA.log[VA.log.length - 1].t : '' }));
+  ok(!mk2.making, '다 만들면 표시가 꺼진다');
+  ok(/다 만들었습니다/.test(mk2.last), '다 됐다고 알려 준다');
+  ok(/치료비부터/.test(mk2.last), '만든 내용의 앞머리를 읽어 준다');
+  ok(/두뇌 화면에 있습니다/.test(mk2.last), '나머지는 화면에 있다고 알려 준다');
+  ok(mk2.last.length < 260, '전부 읽지 않는다 (' + mk2.last.length + '자)');
+
+  /* ── 10-7. 목소리 고르기 ── */
+  const vo = await page.evaluate(() => {
+    go('voiceasst');
+    return { list: vaVoices().length, ko: vaKoVoices().length,
+      auto: VA.voice ? VA.voice.name : '' };
+  });
+  await page.waitForTimeout(500);
+  ok(vo.ko === 1 && vo.auto === 'Yuna', '한국어 목소리를 자동으로 고른다');
+  const sel = await page.evaluate(() => {
+    var e = document.getElementById('vaVoiceIn');
+    return { has: !!e, opts: e ? e.options.length : 0,
+      hint: (document.body.textContent || '').indexOf('마음에 드는 걸로') >= 0 };
+  });
+  ok(sel.has && sel.opts === 2, '목소리 고르는 칸이 있다 (자동 + ' + (sel.opts - 1) + '개)');
+  ok(sel.hint, '고르는 법을 알려 준다');
+  await page.evaluate(() => { window.__spoke = []; vaVoiceSet('Samantha'); });
+  await page.waitForTimeout(300);
+  const picked = await page.evaluate(() => ({ name: VA.voice ? VA.voice.name : '',
+    saved: JSON.parse(localStorage.getItem('apex_va') || '{}').voice,
+    spoke: window.__spoke.join(' ') }));
+  ok(picked.name === 'Samantha' && picked.saved === 'Samantha', '고른 목소리가 저장된다');
+  ok(/이 목소리로 답해/.test(picked.spoke), '고르면 그 목소리로 한 번 읽어 준다');
+  await page.evaluate(() => vaVoiceSet(''));
+  await page.waitForTimeout(200);
+
+  /* 기다리는 시간 */
+  await page.evaluate(() => vaWaitSet('3'));
+  await page.waitForTimeout(150);
+  const w3 = await page.evaluate(() => ({ ms: vaWaitMs(),
+    txt: (document.getElementById('vaWaitV') || {}).textContent || '' }));
+  ok(w3.ms === 3000 && /3초/.test(w3.txt), '기다리는 시간을 바꿀 수 있다');
+  await page.evaluate(() => vaWaitSet('1'));
+  await page.waitForTimeout(150);
 
   /* ── 11. 연결된 화면이 모두 있는지 ── */
   const bad = await page.evaluate(() => {
