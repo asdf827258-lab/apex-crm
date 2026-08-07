@@ -5388,6 +5388,29 @@ var VA_ACT=[
                     :'적지 못했습니다. 실행 체크판을 한 번 열어 주세요.',go:'ckboard'};
  }},
 
+{k:'오늘고객',n:'오늘 챙길 고객 — 기한 지난 일·이번 주 생일·오래 연락 없는 사람',
+ ex:'오늘 챙길 고객 누구야',v:[],
+ re:/오늘고객|챙길고객|누구연락|연락할사람|고객챙|고객누구/,
+ run:function(){
+   if(typeof OSC==='undefined'||typeof cmTodo!=='function')return '고객 365일을 한 번 열어 주세요.';
+   if(!OSC.list||!OSC.list.length||!CM.loaded){
+     if(typeof osLoadClients==='function')osLoadClients();
+     return {say:'고객 목록을 여는 중입니다. 잠시 뒤 다시 말씀해 주세요.',go:'clients'};
+   }
+   var t=cmTodo(OSC.list),p=[],nm=[],i;
+   if(!t.n)return {say:'오늘 급히 챙길 고객은 없습니다. 오래 못 뵌 분께 먼저 연락해 보세요.',go:'clients'};
+   if(t.due.length){
+     for(i=0;i<t.due.length&&i<3;i++)nm.push(cmName(t.due[i]));
+     p.push('기한이 된 일이 '+t.due.length+'건입니다. '+nm.join(', ')+'.');
+   }
+   if(t.bd.length){
+     nm=[];for(i=0;i<t.bd.length&&i<3;i++)nm.push(cmName(t.bd[i]));
+     p.push('이번 주 생일은 '+nm.join(', ')+' 입니다.');
+   }
+   if(t.cold.length)p.push('예순 날 넘게 연락 없는 분이 '+t.cold.length+'명 있습니다.');
+   return {say:p.join(' '),go:'clients'};
+ }},
+
 {k:'놓친사람',n:'놓치고 있는 팀원',v:[],
  ex:'누구부터 봐야 돼',
  re:/놓친|놓치|누구부터|누굴먼저|누구먼저|위험한사람|챙길사람/,
@@ -23955,7 +23978,7 @@ function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
   });
 }
 function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.current||!host)return;
-  sb.from('saved_reports').select('id,kind,title,created_at,content').eq('client_id',OSC.current.id).order('created_at',{ascending:false}).then(function(r){
+  sb.from('saved_reports').select('id,kind,title,created_at,content').eq('client_id',OSC.current.id).neq('kind',CM_KIND).order('created_at',{ascending:false}).then(function(r){
     if(r.error){host.innerHTML='<div class="osc-empty">저장 자료 테이블이 아직 없습니다 — migration_10_client_saves.sql을 Supabase에서 1회 실행하면 켜집니다.</div>';return;}
     OSC.reps=r.data||[];
     if(!OSC.reps.length){host.innerHTML='<div class="osc-empty">아직 저장된 자료가 없습니다. AI 보장분석·비포&애프터 결과의 <b>💾 고객 365일 저장</b>, 재무설계 계산기의 <b>💾</b> 버튼으로 저장하세요.</div>';return;}
@@ -23988,6 +24011,692 @@ window.addEventListener('message',function(e){
   if(!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
   osRepSaveToClient('finance',(d.title||'재무설계 스냅샷'),(d.md?{html:d.md,inputs:(d.inputs||{})}:{inputs:(d.inputs||{})}));
 });
+
+/* ════════ 고객 365일 — 밀접하게 관리하기 ════════
+
+   고객은 이름을 저장하는 것으로 관리되지 않는다.
+   마지막으로 언제 만났고, 다음에 무엇을 하기로 했는지가 남아야 관리다.
+
+   저장하는 곳 — 새 표를 만들지 않는다.
+   서버: saved_reports(kind='client_meta') 한 고객에 한 줄. 팩트파인딩·가족·다음 할 일·접촉 기록.
+   이 기기: 최근 본 사람, 그리고 실명.
+
+   실명을 서버에 올리지 않는 이유 — 이 앱은 처음부터 고객 이름을 김○○ 로 가려 저장해 왔다.
+   찾기 편하자고 그 약속을 깨지 않는다. 실명은 이 기기 안에만 두고 찾기에만 쓴다.       */
+
+var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{}};
+var CM_KIND='client_meta';
+
+/* ── 이 기기에만 두는 것 ── */
+function cmLS(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function cmLSSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function cmWho(){try{return (OS.profile&&(OS.profile.id||OS.profile.email))||'local';}catch(e){return 'local';}}
+function cmRecent(){var L=cmLS('apex_cli_recent_'+cmWho(),[]);return (L&&L.push)?L:[];}
+function cmRecentAdd(c){
+  if(!c||!c.id)return;
+  var L=cmRecent(),o=[],i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id!==c.id)o.push(L[i]);
+  o.unshift({id:c.id,nm:c.name_masked||'',at:new Date().getTime()});
+  cmLSSet('apex_cli_recent_'+cmWho(),o.slice(0,12));
+}
+function cmSeenAt(id){var L=cmRecent(),i;for(i=0;i<L.length;i++)if(L[i].id===id)return L[i].at||0;return 0;}
+function cmReal(){var o=cmLS('apex_cli_real_'+cmWho(),{});return (o&&typeof o==='object')?o:{};}
+function cmRealOf(id){return cmReal()[id]||'';}
+function cmRealSet(id,v){
+  var o=cmReal();
+  v=(''+(v||'')).replace(/^\s+|\s+$/g,'');
+  if(v)o[id]=v.slice(0,20);else delete o[id];
+  cmLSSet('apex_cli_real_'+cmWho(),o);
+}
+/* 화면에 쓰는 이름 — 실명을 적어 두었으면 그것이 보기 편하다 */
+function cmName(c){
+  if(!c)return '';
+  var r=cmRealOf(c.id);
+  return r||c.name_masked||'(이름 없음)';
+}
+
+/* ── 서버에 두는 것 ── */
+function cmBlank(){return {fp:{},fam:'',rel:'',next:null,touch:[],bd:'',up:0};}
+function cmOf(id){
+  var m=CM.meta[id];
+  if(m)return m;
+  m=cmBlank();CM.meta[id]=m;return m;
+}
+function cmLoadAll(then){
+  var sb=osClient();
+  if(!sb||!OS.profile){if(then)then();return;}
+  sb.from('saved_reports').select('id,client_id,content').eq('kind',CM_KIND)
+    .eq('advisor_id',OS.session.user.id).then(function(r){
+    CM.loaded=true;
+    if(r&&r.error){if(then)then();return;}
+    var rows=(r&&r.data)||[],i,c,m;
+    CM.meta={};
+    for(i=0;i<rows.length;i++){
+      c=rows[i].content||{};
+      m=cmBlank();
+      m.fp=c.fp||{};m.fam=c.fam||'';m.rel=c.rel||'';m.next=c.next||null;
+      m.touch=(c.touch&&c.touch.push)?c.touch:[];m.bd=c.bd||'';m.up=c.up||0;
+      m._rid=rows[i].id;
+      CM.meta[rows[i].client_id]=m;
+    }
+    if(then)then();
+  },function(){CM.loaded=true;if(then)then();});
+}
+function cmSave(id,patch,then){
+  var sb=osClient();
+  if(!sb||!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
+  var m=cmOf(id),k;
+  for(k in patch)m[k]=patch[k];
+  m.up=new Date().getTime();
+  var body={fp:m.fp||{},fam:m.fam||'',rel:m.rel||'',next:m.next||null,
+            touch:(m.touch||[]).slice(0,60),bd:m.bd||'',up:m.up};
+  var bad=function(r){
+    var msg=(r&&r.error&&r.error.message)||'';
+    toast('저장하지 못했습니다'+(msg?(' — '+msg.slice(0,60)):''),6000);
+  };
+  if(m._rid){
+    sb.from('saved_reports').update({content:body}).eq('id',m._rid).then(function(r){
+      if(r&&r.error){bad(r);return;}
+      if(then)then();
+    },bad);
+    return;
+  }
+  sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:id,
+    kind:CM_KIND,title:'고객 관리',content:body}).then(function(r){
+    if(r&&r.error){bad(r);return;}
+    /* 방금 넣은 줄의 번호를 다시 받아 온다 — 다음 저장이 두 줄이 되면 안 된다 */
+    cmLoadAll(then);
+  },bad);
+}
+
+/* ── 찾기 ──
+   사람은 "김철수" 라고 치지 "김○○" 라고 치지 않는다.
+   실명·마스킹 이름·초성·연락처 뒷자리·가족 이름 어느 것으로도 찾히게 한다. */
+var CM_CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function cmCho(s){
+  var o='',i,c;s=''+(s||'');
+  for(i=0;i<s.length;i++){
+    c=s.charCodeAt(i);
+    if(c>=0xAC00&&c<=0xD7A3)o+=CM_CHO[Math.floor((c-0xAC00)/588)];
+    else o+=s.charAt(i);
+  }
+  return o;
+}
+function cmOnlyCho(s){var i;s=''+(s||'');if(!s)return false;
+  for(i=0;i<s.length;i++)if(CM_CHO.indexOf(s.charAt(i))<0)return false;return true;}
+function cmHit(c,q){
+  if(!q)return true;
+  q=(''+q).replace(/\s/g,'');
+  var m=cmOf(c.id),real=cmRealOf(c.id);
+  var pool=[c.name_masked||'',real,m.fam||'',(m.fp&&m.fp.f_job)||''];
+  var i,v;
+  /* 초성만 쳤으면 초성으로 견준다 */
+  if(cmOnlyCho(q)){
+    for(i=0;i<pool.length;i++)if(pool[i]&&cmCho(pool[i]).indexOf(q)>=0)return true;
+    return false;
+  }
+  for(i=0;i<pool.length;i++)if(pool[i]&&(''+pool[i]).replace(/\s/g,'').indexOf(q)>=0)return true;
+  /* 숫자를 쳤으면 연락처 뒷자리 */
+  if(/^\d{2,}$/.test(q)){
+    v=(''+(c.phone||'')).replace(/\D/g,'');
+    if(v&&v.indexOf(q)>=0)return true;
+  }
+  return false;
+}
+
+/* ── 관계 온도 ──
+   마지막으로 만난 지 얼마나 됐는가. 이것 하나면 누구를 놓치고 있는지 보인다. */
+function cmToday(){return new Date().toISOString().slice(0,10);}
+function cmDays(a,b){
+  if(!a)return -1;
+  var x=new Date(a+'T00:00:00Z').getTime(),y=new Date((b||cmToday())+'T00:00:00Z').getTime();
+  if(isNaN(x)||isNaN(y))return -1;
+  return Math.round((y-x)/86400000);
+}
+function cmLastTouch(id){
+  var m=cmOf(id),L=m.touch||[],i,best='';
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].at&&L[i].at>best)best=L[i].at;
+  return best;
+}
+function cmTemp(id){
+  var d=cmDays(cmLastTouch(id));
+  if(d<0)return {k:'cold',e:'❄️',t:'기록 없음',d:-1};
+  if(d<=14)return {k:'hot',e:'🔥',t:d+'일 전',d:d};
+  if(d<=44)return {k:'warm',e:'🌤',t:d+'일 전',d:d};
+  if(d<=89)return {k:'cool',e:'🌥',t:d+'일 전',d:d};
+  return {k:'cold',e:'❄️',t:d+'일 전',d:d};
+}
+/* 생일까지 며칠 — 해가 바뀌어도 맞게 */
+function cmBdIn(md){
+  if(!/^\d{2}-\d{2}$/.test(''+md))return -1;
+  var t=cmToday(),y=parseInt(t.slice(0,4),10),d=cmDays(t,y+'-'+md);
+  if(d<0)d=cmDays(t,(y+1)+'-'+md);
+  return d;
+}
+/* 오늘 챙겨야 할 사람 — 이 목록이 곧 오늘의 고객관리다 */
+function cmTodo(list){
+  var due=[],bd=[],cold=[],i,c,m,d;
+  for(i=0;i<list.length;i++){
+    c=list[i];m=cmOf(c.id);
+    if(m.next&&m.next.what&&m.next.due&&m.next.due<=cmToday())due.push(c);
+    d=cmBdIn(m.bd);
+    if(d>=0&&d<=7)bd.push(c);
+    if(cmTemp(c.id).d>=60||(cmTemp(c.id).d<0&&cmDays((c.created_at||'').slice(0,10))>=60))cold.push(c);
+  }
+  return {due:due,bd:bd,cold:cold,n:due.length+bd.length+cold.length};
+}
+
+/* ── 팩트파인딩 ──
+   재무설계 계산기·상담자료와 같은 칸이다. 여기서 채우면 저 둘로 그대로 넘어간다.
+   따로 만들면 세 군데에 세 번 적게 된다. */
+var CM_FF=[
+ {t:'사람',c:'👤',f:[['f_age','나이','45'],['f_gender','성별','',['','남성','여성']],
+   ['f_job','직업','제조업 대표'],['f_ret','은퇴 희망나이','60']]},
+ {t:'매달 버는 돈 (만원)',c:'💰',f:[['f_income','본인 월소득','500'],
+   ['f_sincome','배우자 월소득','250'],['f_etc','기타 월소득','0']]},
+ {t:'매달 나가는 돈 (만원)',c:'💸',f:[['f_house','주거·관리','80'],['f_loan','대출상환','120'],
+   ['f_edu','교육비','90'],['f_ins','보험료','45']]},
+ {t:'은퇴 준비',c:'🌴',f:[['f_retspend','은퇴 후 희망 생활비(월)','300'],
+   ['f_np','국민연금 예상액(월)','120'],['f_pp','개인연금 월납','30'],['f_dc','퇴직연금 적립액','4000']]},
+ {t:'가진 것 · 갚을 것 (만원)',c:'🏠',f:[['f_home','거주 부동산','60000'],['f_debt','대출 잔액','15000']]},
+ {t:'계산 가정 (%)',c:'📈',f:[['r_inf','물가상승률','2.5'],['r_eq','주식·ETF 기대수익','6']]},
+ {t:'지금 있는 보장 (만원)',c:'🛡',f:[['c_cancer','암 진단금','3000'],['c_brain','뇌혈관 진단금','2000'],
+   ['c_heart','심장 진단금','2000'],['c_care','간병(LTC) 자금','1000'],['c_death','사망보험금','10000']]}
+];
+function cmFfCount(id){
+  var m=cmOf(id),n=0,i,j,g;
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i].f;
+    for(j=0;j<g.length;j++)if(m.fp&&m.fp[g[j][0]]!==undefined&&m.fp[g[j][0]]!=='')n++;}
+  return n;
+}
+function cmFfTotal(){var n=0,i;for(i=0;i<CM_FF.length;i++)n+=CM_FF[i].f.length;return n;}
+function cmFfRead(){
+  var o={},i,j,g,e;
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i].f;
+    for(j=0;j<g.length;j++){e=document.getElementById('cmff_'+g[j][0]);
+      if(e)o[g[j][0]]=(''+e.value).replace(/^\s+|\s+$/g,'');}}
+  return o;
+}
+function cmFfHtml(id){
+  var m=cmOf(id),h='',i,j,g,f,v;
+  for(i=0;i<CM_FF.length;i++){
+    g=CM_FF[i];
+    h+='<div class="cm-fg"><div class="cm-ft">'+g.c+' '+osEsc(g.t)+'</div><div class="cm-fr">';
+    for(j=0;j<g.f.length;j++){
+      f=g.f[j];v=(m.fp&&m.fp[f[0]]!=null)?(''+m.fp[f[0]]):'';
+      h+='<div class="cm-fc"><label>'+osEsc(f[1])+'</label>';
+      if(f[3]){
+        h+='<select id="cmff_'+f[0]+'">';
+        for(var k=0;k<f[3].length;k++)
+          h+='<option value="'+osEsc(f[3][k])+'"'+(v===f[3][k]?' selected':'')+'>'+
+            osEsc(f[3][k]||'선택')+'</option>';
+        h+='</select>';
+      }else{
+        h+='<input id="cmff_'+f[0]+'" type="text" value="'+osEsc(v)+'" placeholder="'+osEsc(f[2])+'">';
+      }
+      h+='</div>';
+    }
+    h+='</div></div>';
+  }
+  return h;
+}
+function cmFfSave(id,quiet){
+  var fp=cmFfRead();
+  cmSave(id,{fp:fp},function(){
+    if(!quiet)toast('팩트파인딩을 저장했습니다 — '+cmFfCount(id)+'/'+cmFfTotal()+'칸');
+    var b=document.getElementById('cmFfN');
+    if(b)b.textContent=cmFfCount(id)+' / '+cmFfTotal()+'칸';
+  });
+}
+/* 계산기로 — 화법서 라인이 쓰는 길을 그대로 쓴다 */
+function cmToCalc(id){
+  cmFfSave(id,true);
+  if(typeof fpToFin!=='function'||typeof fpPushFin!=='function'){toast('재무설계 계산기를 찾지 못했습니다');return;}
+  var fp=cmFfRead(),nm=cmRealOf(id);
+  if(nm)fp.f_name=nm;
+  var o=fpToFin({f:fp});
+  fpPushFin(o);
+}
+/* 상담자료로 — 저장해 둔 상담을 되살릴 때 쓰는 길을 그대로 쓴다 */
+function cmToDeck(id){
+  cmFfSave(id,true);
+  if(typeof fpDeckOpen!=='function'||typeof FPD==='undefined'){toast('재무설계 상담자료를 찾지 못했습니다');return;}
+  var fp=cmFfRead(),nm=cmRealOf(id);
+  if(nm)fp.f_name=nm;
+  FPD.pend={f:fp};
+  fpDeckOpen();
+}
+
+/* ── 다음 할 일 · 접촉 기록 ──
+   이 두 가지가 고객관리의 전부다. 나머지는 이것을 돕는 것뿐이다. */
+function cmNextSave(id){
+  var what=(osVal('cmNextWhat')||'').replace(/^\s+|\s+$/g,'');
+  var due=osVal('cmNextDue')||'';
+  if(!what){toast('다음에 무엇을 할지 한 줄만 적어 주세요');return;}
+  cmSave(id,{next:{what:what.slice(0,120),due:due||cmToday()}},function(){
+    toast('다음 할 일을 잡았습니다 — '+(due||cmToday()));
+    cmDetailPaint(id);
+  });
+}
+function cmNextDone(id){
+  var m=cmOf(id);
+  if(!m.next||!m.next.what){toast('잡아 둔 다음 할 일이 없습니다');return;}
+  var did=m.next.what;
+  var L=(m.touch||[]).slice();
+  L.unshift({at:cmToday(),how:'처리',note:did});
+  cmSave(id,{next:null,touch:L},function(){
+    toast('끝냈다고 표시하고 접촉 기록에 남겼습니다');
+    cmDetailPaint(id);
+  });
+}
+var CM_HOW=['전화','카톡','만남','문자','메일','처리'];
+function cmTouchAdd(id){
+  var how=osVal('cmTouchHow')||'전화';
+  var note=(osVal('cmTouchNote')||'').replace(/^\s+|\s+$/g,'');
+  var at=osVal('cmTouchAt')||cmToday();
+  var m=cmOf(id),L=(m.touch||[]).slice();
+  L.unshift({at:at,how:how,note:note.slice(0,140)});
+  cmSave(id,{touch:L},function(){
+    toast(how+' 기록을 남겼습니다');
+    cmDetailPaint(id);
+  });
+}
+function cmTouchDel(id,i){
+  var m=cmOf(id),L=(m.touch||[]).slice();
+  if(i<0||i>=L.length)return;
+  L.splice(i,1);
+  cmSave(id,{touch:L},function(){cmDetailPaint(id);});
+}
+
+/* ── 가족 ──
+   한 사람만 보면 보험은 늘 모자라 보인다. 가족을 묶어야 무엇이 비었는지 보인다. */
+function cmFamList(){
+  var o=[],seen={},i,c,f;
+  for(i=0;i<OSC.list.length;i++){
+    c=OSC.list[i];f=(cmOf(c.id).fam||'').replace(/^\s+|\s+$/g,'');
+    if(f&&!seen[f]){seen[f]=1;o.push(f);}
+  }
+  o.sort();
+  return o;
+}
+function cmFamOf(fam){
+  var o=[],i;
+  if(!fam)return o;
+  for(i=0;i<OSC.list.length;i++)if((cmOf(OSC.list[i].id).fam||'')===fam)o.push(OSC.list[i]);
+  return o;
+}
+function cmFamSave(id){
+  var fam=(osVal('cmFam')||'').replace(/^\s+|\s+$/g,'').slice(0,30);
+  var rel=(osVal('cmRel')||'').replace(/^\s+|\s+$/g,'').slice(0,12);
+  cmSave(id,{fam:fam,rel:rel},function(){
+    toast(fam?('「'+fam+'」 으로 묶었습니다'):'가족 묶음을 풀었습니다');
+    cmDetailPaint(id);
+  });
+}
+function cmBdSave(id){
+  var bd=(osVal('cmBd')||'').replace(/^\s+|\s+$/g,'');
+  if(bd&&!/^\d{2}-\d{2}$/.test(bd)){toast('생일은 MM-DD 로 적어 주세요. 예) 03-15');return;}
+  cmSave(id,{bd:bd},function(){toast(bd?('생일을 '+bd+' 로 저장했습니다'):'생일을 지웠습니다');cmDetailPaint(id);});
+}
+function cmRealSaveNow(id){
+  cmRealSet(id,osVal('cmReal')||'');
+  toast('실명을 이 기기에만 저장했습니다 — 이제 그 이름으로 찾을 수 있습니다');
+  cmDetailPaint(id);
+}
+
+/* ── 목록 화면 ── */
+function cmSortRows(rows){
+  var s=CM.sort;
+  rows.sort(function(a,b){
+    if(s==='seen')return cmSeenAt(b.id)-cmSeenAt(a.id);
+    if(s==='name')return (''+cmName(a)).localeCompare(''+cmName(b),'ko');
+    if(s==='cold'){
+      var da=cmTemp(a.id),db=cmTemp(b.id);
+      var va=(da.d<0?99999:da.d),vb=(db.d<0?99999:db.d);
+      return vb-va;
+    }
+    return (''+(b.created_at||'')).localeCompare(''+(a.created_at||''));
+  });
+}
+function cmSortSet(v){CM.sort=v;osRenderList();}
+function cmFamToggle(){CM.fam=!CM.fam;osRenderList();}
+function cmGoTop(){var m=document.getElementById('main');if(m)m.scrollTop=0;}
+
+function cmRecentHtml(){
+  var L=cmRecent(),h='',i,c,nm;
+  if(!L.length)return '';
+  for(i=0;i<L.length&&i<8;i++){
+    c=null;
+    for(var j=0;j<OSC.list.length;j++)if(OSC.list[j].id===L[i].id){c=OSC.list[j];break;}
+    if(!c)continue;
+    nm=cmName(c);
+    h+='<button type="button" class="cm-chip" onclick="osOpenClient(\''+c.id+'\')">'+
+      '<span class="e">'+osEsc(cmTemp(c.id).e)+'</span>'+osEsc(nm)+'</button>';
+  }
+  if(!h)return '';
+  return '<div class="cm-sec"><div class="cm-lab">최근 본 고객</div><div class="cm-chips">'+h+'</div></div>';
+}
+function cmTodoHtml(all){
+  var t=cmTodo(all);
+  if(!t.n)return '<div class="cm-todo ok"><b>오늘 급히 챙길 고객은 없습니다.</b> '+
+    '새로 만난 분을 등록하거나, 오래 못 뵌 분께 먼저 연락해 보세요.</div>';
+  var line=function(k,cls,ttl,list){
+    if(!list.length)return '';
+    var nm=[],i;
+    for(i=0;i<list.length&&i<3;i++)nm.push(cmName(list[i]));
+    return '<button type="button" class="cm-td '+cls+'" onclick="cmSortSet(\''+k+'\')">'+
+      '<span class="n">'+list.length+'</span><span class="t">'+ttl+'</span>'+
+      '<span class="w">'+osEsc(nm.join(', '))+(list.length>3?(' 외 '+(list.length-3)+'명'):'')+'</span></button>';
+  };
+  return '<div class="cm-todo"><div class="cm-lab">오늘 챙길 고객 '+t.n+'명</div>'+
+    line('seen','due',(function(){return '다음 할 일 기한이 됐습니다';})(),t.due)+
+    line('seen','bd','이번 주 생일입니다',t.bd)+
+    line('cold','cold','60일 넘게 연락이 없습니다',t.cold)+
+    '</div>';
+}
+function cmBarHtml(){
+  var s=function(k,t){return '<button type="button" class="cm-sb'+(CM.sort===k?' on':'')+'" '+
+    'onclick="cmSortSet(\''+k+'\')">'+t+'</button>';};
+  return '<div class="cm-bar">'+
+    s('seen','최근 본 순')+s('name','이름순')+s('new','등록순')+s('cold','오래된 순')+
+    '<button type="button" class="cm-sb'+(CM.fam?' on':'')+'" style="margin-left:auto" '+
+    'onclick="cmFamToggle()">👨‍👩‍👧 가족으로 묶기</button></div>';
+}
+function cmTopHtml(q,all){
+  if(q)return '';
+  return cmRecentHtml()+cmTodoHtml(all)+cmBarHtml();
+}
+function cmRowHtml(c){
+  var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
+  var sub=[],bd=cmBdIn(m.bd);
+  sub.push(tp.e+' '+tp.t);
+  if(m.rel)sub.push(m.rel);
+  if(bd>=0&&bd<=30)sub.push('🎂 '+(bd===0?'오늘':('D-'+bd)));
+  var nx='';
+  if(m.next&&m.next.what){
+    var d=cmDays(m.next.due);
+    nx='<div class="cm-nx'+(d>=0?' due':'')+'">▶ '+osEsc(vaCut(m.next.what,30))+
+      '<span>'+osEsc(m.next.due||'')+(d>0?(' · '+d+'일 지남'):(d===0?' · 오늘':''))+'</span></div>';
+  }
+  return '<div class="cm-row" onclick="osOpenClient(\''+c.id+'\')">'+
+    '<div class="cm-av '+tp.k+'">'+osEsc((''+nm).charAt(0))+'</div>'+
+    '<div class="cm-mid"><div class="cm-nm">'+osEsc(nm)+
+      (cmRealOf(c.id)?'<em>'+osEsc(c.name_masked||'')+'</em>':'')+'</div>'+
+      '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+'</div>'+
+    '<div class="cm-rt"><span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
+      '<span class="cm-ff">'+cmFfCount(c.id)+'/'+cmFfTotal()+'</span></div>'+
+  '</div>';
+}
+function cmRowsHtml(rows){
+  var h='',i;
+  for(i=0;i<rows.length;i++)h+=cmRowHtml(rows[i]);
+  return h;
+}
+function cmFamGroupHtml(rows){
+  var byFam={},order=[],solo=[],i,f,c;
+  for(i=0;i<rows.length;i++){
+    c=rows[i];f=(cmOf(c.id).fam||'').replace(/^\s+|\s+$/g,'');
+    if(!f){solo.push(c);continue;}
+    if(!byFam[f]){byFam[f]=[];order.push(f);}
+    byFam[f].push(c);
+  }
+  if(!order.length)return cmRowsHtml(rows);
+  var h='',j;
+  for(i=0;i<order.length;i++){
+    f=order[i];
+    h+='<div class="cm-fam"><div class="cm-fh">👨‍👩‍👧 '+osEsc(f)+
+      '<span>'+byFam[f].length+'명</span></div>';
+    for(j=0;j<byFam[f].length;j++)h+=cmRowHtml(byFam[f][j]);
+    h+='</div>';
+  }
+  if(solo.length)h+='<div class="cm-lab" style="margin:14px 0 7px">가족으로 묶지 않은 고객 '+solo.length+'명</div>'+cmRowsHtml(solo);
+  return h;
+}
+
+/* ── 고객 한 사람 화면 ── */
+function cmDetailPaint(id){
+  var el=document.getElementById('cmPanels');
+  if(el)el.innerHTML=cmPanelsHtml(id);
+}
+function cmPanelsHtml(id){
+  return cmRelHtml(id)+cmFamHtml(id)+cmFfPanelHtml(id);
+}
+function cmRelHtml(id){
+  var m=cmOf(id),tp=cmTemp(id),L=m.touch||[],h='',i,r;
+  var nx=m.next&&m.next.what?m.next:null;
+  var d=nx?cmDays(nx.due):-1;
+  h+='<div class="osc-panel" style="margin-bottom:16px">'+
+    '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">관계 <span class="cm-tp '+tp.k+'">'+
+      tp.e+' 마지막 접촉 '+osEsc(tp.t)+'</span></h3>'+
+    '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
+      '고객관리는 <b>다음에 무엇을 할지</b>가 잡혀 있느냐로 갈립니다. 한 줄이면 됩니다.</p>';
+  if(nx){
+    h+='<div class="cm-next'+(d>=0?' due':'')+'"><div class="w">▶ '+osEsc(nx.what)+'</div>'+
+      '<div class="d">'+osEsc(nx.due||'')+(d>0?(' · '+d+'일 지났습니다'):(d===0?' · 오늘입니다':(d<0?(' · '+(-d)+'일 남았습니다'):'')))+'</div>'+
+      '<button class="btn btn-primary" style="padding:5px 11px;font-size:11.5px" onclick="cmNextDone(\''+id+'\')">끝냈습니다</button></div>';
+  }
+  h+='<div class="cm-nrow">'+
+    '<input id="cmNextWhat" type="text" placeholder="다음에 할 일 — 예) 증권 받아서 보장분석 돌리기" value="'+
+      osEsc(nx?nx.what:'')+'">'+
+    '<input id="cmNextDue" type="date" value="'+osEsc(nx&&nx.due?nx.due:cmToday())+'">'+
+    '<button class="btn btn-primary" onclick="cmNextSave(\''+id+'\')">📌 잡아 두기</button></div>';
+
+  h+='<div class="cm-lab" style="margin:16px 0 7px">접촉 기록</div>'+
+    '<div class="cm-nrow">'+
+    '<select id="cmTouchHow">';
+  for(i=0;i<CM_HOW.length;i++)h+='<option>'+CM_HOW[i]+'</option>';
+  h+='</select>'+
+    '<input id="cmTouchAt" type="date" value="'+cmToday()+'">'+
+    '<input id="cmTouchNote" type="text" placeholder="무슨 이야기를 했는지 한 줄">'+
+    '<button class="btn btn-ghost" onclick="cmTouchAdd(\''+id+'\')">＋ 남기기</button></div>';
+  if(!L.length){
+    h+='<div class="cm-none">아직 접촉 기록이 없습니다. 통화 한 번, 카톡 한 번도 남겨 두면 다음에 무슨 말을 할지 알게 됩니다.</div>';
+  }else{
+    h+='<div class="cm-tl">';
+    for(i=0;i<L.length&&i<12;i++){
+      r=L[i]||{};
+      h+='<div class="cm-ti"><span class="d">'+osEsc(r.at||'')+'</span>'+
+        '<span class="h">'+osEsc(r.how||'')+'</span>'+
+        '<span class="n">'+osEsc(r.note||'')+'</span>'+
+        '<button type="button" class="x" onclick="cmTouchDel(\''+id+'\','+i+')">&times;</button></div>';
+    }
+    h+='</div>';
+    if(L.length>12)h+='<div class="cm-none">그 밖에 '+(L.length-12)+'건이 더 있습니다.</div>';
+  }
+  h+='</div>';
+  return h;
+}
+function cmFamHtml(id){
+  var m=cmOf(id),fam=m.fam||'',mem=fam?cmFamOf(fam):[],h='',i,c;
+  h+='<div class="osc-panel" style="margin-bottom:16px">'+
+    '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">가족으로 묶기 · 찾기 편한 이름</h3>'+
+    '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
+      '한 사람만 보면 보장은 늘 모자라 보입니다. <b>가족을 같은 이름으로 묶어야</b> 무엇이 비었는지 보입니다.</p>';
+  if(mem.length>1){
+    h+='<div class="cm-fmem">';
+    for(i=0;i<mem.length;i++){
+      c=mem[i];
+      if(c.id===id)continue;
+      h+='<button type="button" class="cm-chip" onclick="osOpenClient(\''+c.id+'\')">'+
+        '<span class="e">'+cmTemp(c.id).e+'</span>'+osEsc(cmName(c))+
+        (cmOf(c.id).rel?('<em>'+osEsc(cmOf(c.id).rel)+'</em>'):'')+'</button>';
+    }
+    h+='</div>';
+  }
+  h+='<div class="frm cols2">'+
+    '<div class="fld"><label>가족 이름 (묶는 열쇠)</label>'+
+      '<input id="cmFam" type="text" value="'+osEsc(fam)+'" placeholder="예) 김○○ 가족" list="cmFamList"></div>'+
+    '<div class="fld"><label>이 사람의 자리</label>'+
+      '<input id="cmRel" type="text" value="'+osEsc(m.rel||'')+'" placeholder="예) 본인 · 배우자 · 자녀"></div>'+
+    '<div class="fld"><label>생일 (MM-DD)</label>'+
+      '<input id="cmBd" type="text" value="'+osEsc(m.bd||'')+'" placeholder="03-15" maxlength="5"></div>'+
+    '<div class="fld"><label>실명 <span style="color:#D97706">이 기기에만 저장</span></label>'+
+      '<input id="cmReal" type="text" value="'+osEsc(cmRealOf(id))+'" placeholder="예) 김철수" maxlength="20"></div>'+
+    '</div>';
+  var FL=cmFamList();
+  h+='<datalist id="cmFamList">';
+  for(i=0;i<FL.length;i++)h+='<option value="'+osEsc(FL[i])+'"></option>';
+  h+='</datalist>';
+  h+='<div class="btn-row" style="margin-top:10px">'+
+    '<button class="btn btn-primary" onclick="cmFamSave(\''+id+'\')">💾 가족·자리 저장</button>'+
+    '<button class="btn btn-ghost" onclick="cmBdSave(\''+id+'\')">🎂 생일 저장</button>'+
+    '<button class="btn btn-ghost" onclick="cmRealSaveNow(\''+id+'\')">🔎 실명 저장</button></div>'+
+    '<div class="osc-note" style="margin-top:10px">서버에는 지금까지처럼 <b>'+osEsc((OSC.current&&OSC.current.name_masked)||'김○○')+
+      '</b> 형태로만 저장됩니다. 실명은 <b>이 브라우저 안에만</b> 두고 찾기에만 씁니다 — '+
+      '다른 기기에서는 다시 적어야 합니다. 가족 이름과 생일은 서버에 저장되니 실명을 넣지 않는 편이 안전합니다.</div>'+
+    '</div>';
+  return h;
+}
+function cmFfPanelHtml(id){
+  return '<div class="osc-panel" style="margin-bottom:16px">'+
+    '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">팩트파인딩 '+
+      '<span class="cm-cnt" id="cmFfN">'+cmFfCount(id)+' / '+cmFfTotal()+'칸</span></h3>'+
+    '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:12px">'+
+      '<b>재무설계 계산기·상담자료와 같은 칸</b>입니다. 여기서 한 번 채우면 저 둘로 그대로 넘어갑니다. '+
+      '아는 것만 채워도 됩니다.</p>'+
+    cmFfHtml(id)+
+    '<div class="btn-row" style="margin-top:14px;flex-wrap:wrap">'+
+      '<button class="btn btn-primary" onclick="cmFfSave(\''+id+'\')">💾 저장</button>'+
+      '<button class="btn" style="background:#0F172A;color:#fff" onclick="cmToCalc(\''+id+'\')">📊 계산기로 보내기</button>'+
+      '<button class="btn btn-ghost" onclick="cmToDeck(\''+id+'\')">📋 상담자료로 보내기</button>'+
+      '<button class="btn btn-ghost" onclick="cmFfAsk(\''+id+'\')">🧠 이 고객에게 무엇을 도울까</button>'+
+    '</div>'+
+    '<div id="cmFfRes" class="result" style="margin-top:12px"></div>'+
+    '<div class="osc-note" style="margin-top:10px">보험 관련 내용은 참고용입니다. 금융소비자보호법에 따라 '+
+      '상품설명서와 약관을 기준으로 안내해야 하며, 보장 여부는 개별 약관과 보험사 심사 결과에 따릅니다. '+
+      '확정 수익·지급 보장 표현은 쓰지 않습니다.</div>'+
+  '</div>';
+}
+/* 채워 둔 팩트로 무엇을 도울지 — 두뇌에게 묻는다 */
+function cmFfAsk(id){
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 를 연결하면 답합니다.');if(typeof osSetReload==='function')osSetReload();return;}
+  if(CM.busy)return;
+  var fp=cmFfRead(),m=cmOf(id),n=0,i,j,g,f,lines=[];
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i];
+    for(j=0;j<g.f.length;j++){f=g.f[j];
+      if(fp[f[0]]){n++;lines.push('- '+g.t+' / '+f[1]+': '+fp[f[0]]);}}}
+  if(n<4){toast('팩트파인딩을 네 칸 이상 채워 주세요. 지금은 '+n+'칸입니다.');return;}
+  CM.busy=true;
+  var res=document.getElementById('cmFfRes');
+  if(res){res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>이 고객에게 무엇을 도울지 정리하는 중…</div>';}
+  var fam=m.fam?cmFamOf(m.fam):[],famTxt='';
+  if(fam.length>1){
+    var fl=[];
+    for(i=0;i<fam.length;i++)fl.push((cmOf(fam[i].id).rel||'가족')+' — 팩트 '+cmFfCount(fam[i].id)+'칸');
+    famTxt='\n\n[같은 가족으로 묶인 사람]\n'+fl.join('\n');
+  }
+  var last=cmLastTouch(id),tp=cmTemp(id);
+  var user='[이 고객의 팩트파인딩]\n'+lines.join('\n')+famTxt+
+    '\n\n[관계]\n마지막 접촉: '+(last?(last+' ('+tp.t+')'):'기록 없음')+
+    (m.next&&m.next.what?('\n다음 할 일: '+m.next.what+' ('+(m.next.due||'')+')'):'')+
+    '\n\n이 고객에게 지금 무엇을 도울지 정리해 줘. 아래 순서로, 말로 바로 쓸 수 있게.\n\n'+
+    '> **한 줄 진단** — 지금 이 사람에게 가장 시급한 것 하나.\n\n'+
+    '## 1. 숫자로 본 지금\n채워진 값만으로 계산되는 것(소득 대비 지출·보장 공백·은퇴 부족액 등)을 표로. '+
+    '계산 근거를 한 줄씩 붙인다. 없는 값은 "확인 필요"로 두고 지어내지 않는다.\n\n'+
+    '## 2. 비어 있는 칸\n아직 못 들은 것 중 다음 상담에서 꼭 물어야 할 3~5가지와, 그것을 묻는 자연스러운 말.\n\n'+
+    '## 3. 이번에 할 것\n다음 접촉에서 할 일 하나와, 언제까지가 좋은지.\n\n'+
+    '## 4. 가족까지 보면\n가족이 묶여 있으면 가족 단위로 무엇이 비었는지. 없으면 이 항목은 생략.\n\n'+
+    '준법: 확정 수익·지급 보장·과장 표현 금지. 특정 상품을 단정하지 말고 판단 근거와 확인할 곳을 함께 적는다.';
+  var sysF=(typeof factSys==='function')?factSys():((typeof brainSys==='function')?brainSys():'너는 보험 설계사의 조언자다.');
+  callAI(sysF,user,5000,'brain').then(function(out){
+    CM.busy=false;
+    var r=document.getElementById('cmFfRes');
+    if(!r)return;
+    r._raw=out;
+    r.innerHTML=(typeof reportResultBox==='function')
+      ? reportResultBox('cmFfRes','cmFfAsk(\''+id+'\')','이 고객에게 무엇을 도울까',cmName(OSC.current||{id:id}),out)
+      : ('<div class="result-body">'+renderMd(out)+'</div>');
+  },function(e){
+    CM.busy=false;
+    var r=document.getElementById('cmFfRes');
+    if(r)r.innerHTML='<div class="result-body"><div class="err-box">⚠️ '+esc((e&&e.message)||'오류')+'</div></div>';
+  });
+}
+
+function cmCss(){
+  if(document.getElementById('cmStyle'))return;
+  var st=document.createElement('style');st.id='cmStyle';
+  st.textContent=
+    '.cm-lab{font-size:10.5px;font-weight:800;color:var(--ink-3);letter-spacing:.03em}'+
+    '.cm-sec{margin:2px 0 12px}'+
+    '.cm-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}'+
+    '.cm-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--ink-7);background:#fff;'+
+      'border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;color:var(--ink-1);cursor:pointer}'+
+    '.cm-chip:hover{border-color:var(--primary);color:var(--primary)}'+
+    '.cm-chip .e{font-size:11px}'+
+    '.cm-chip em{font-style:normal;font-size:10.5px;color:var(--ink-5);font-weight:600}'+
+    '.cm-todo{border:1px solid var(--ink-7);border-radius:12px;padding:12px 13px;margin:0 0 12px;background:#fff}'+
+    '.cm-todo.ok{font-size:12.5px;color:var(--ink-3);line-height:1.6;background:#F6FBF8;border-color:#CFE9DA}'+
+    '.cm-td{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;'+
+      'padding:7px 2px;cursor:pointer;border-top:1px solid #F1F5F9}'+
+    '.cm-td:first-of-type{border-top:0}'+
+    '.cm-td .n{min-width:26px;font-size:15px;font-weight:800;color:var(--ink-1)}'+
+    '.cm-td .t{font-size:12.5px;font-weight:700;color:var(--ink-2)}'+
+    '.cm-td .w{font-size:11px;color:var(--ink-5);margin-left:auto;text-align:right;flex:1;min-width:60px}'+
+    '.cm-td.due .n{color:var(--neg)}.cm-td.bd .n{color:var(--warn)}.cm-td.cold .n{color:#0EA5E9}'+
+    '.cm-bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}'+
+    '.cm-sb{border:1px solid var(--ink-7);background:#fff;border-radius:999px;padding:5px 11px;'+
+      'font-size:11.5px;font-weight:700;color:var(--ink-4);cursor:pointer}'+
+    '.cm-sb.on{background:var(--primary);border-color:var(--primary);color:#fff}'+
+    '.cm-row{display:flex;align-items:center;gap:11px;border:1px solid #EEF2F7;border-radius:12px;'+
+      'padding:11px 13px;margin-bottom:7px;background:#fff;cursor:pointer}'+
+    '.cm-row:hover{border-color:var(--primary);box-shadow:0 2px 10px rgba(26,86,219,.07)}'+
+    '.cm-av{width:38px;height:38px;flex:none;border-radius:11px;display:flex;align-items:center;'+
+      'justify-content:center;font-size:15px;font-weight:800;color:#fff;background:#94A3B8}'+
+    '.cm-av.hot{background:#DC2626}.cm-av.warm{background:#1A56DB}'+
+    '.cm-av.cool{background:#0EA5E9}.cm-av.cold{background:#94A3B8}'+
+    '.cm-mid{flex:1;min-width:0}'+
+    '.cm-nm{font-size:14px;font-weight:800;color:var(--ink-1);display:flex;align-items:baseline;gap:6px}'+
+    '.cm-nm em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--ink-6)}'+
+    '.cm-sub{font-size:11px;color:var(--ink-5);margin-top:2px}'+
+    '.cm-nx{font-size:11.5px;color:var(--ink-3);margin-top:5px;background:#F5F9FF;border-radius:7px;'+
+      'padding:4px 8px;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}'+
+    '.cm-nx span{font-size:10px;color:var(--ink-5);margin-left:auto}'+
+    '.cm-nx.due{background:#FEF2F2;color:var(--neg)}'+
+    '.cm-nx.due span{color:var(--neg)}'+
+    '.cm-rt{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}'+
+    '.cm-ff{font-size:10px;font-weight:700;color:var(--ink-6)}'+
+    '.cm-fam{border:1px solid #DCE7FA;border-radius:14px;padding:10px;margin-bottom:10px;background:#FAFCFF}'+
+    '.cm-fh{font-size:12px;font-weight:800;color:var(--primary);padding:2px 4px 8px;display:flex;gap:7px;align-items:center}'+
+    '.cm-fh span{font-size:10.5px;font-weight:700;color:var(--ink-5);margin-left:auto}'+
+    '.cm-tp{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;margin-left:6px;'+
+      'background:#F1F5F9;color:var(--ink-4)}'+
+    '.cm-tp.hot{background:#FEF2F2;color:#DC2626}.cm-tp.warm{background:#EFF6FF;color:#1A56DB}'+
+    '.cm-tp.cool{background:#F0F9FF;color:#0369A1}'+
+    '.cm-cnt{font-size:11px;font-weight:700;color:var(--primary);background:#EFF6FF;'+
+      'border-radius:999px;padding:3px 9px;margin-left:6px}'+
+    '.cm-next{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:#F5F9FF;'+
+      'border:1px solid #DCE7FA;border-radius:11px;padding:10px 12px;margin-bottom:10px}'+
+    '.cm-next.due{background:#FEF2F2;border-color:#F5C6C6}'+
+    '.cm-next .w{font-size:13.5px;font-weight:800;color:var(--ink-1);flex:1;min-width:140px}'+
+    '.cm-next .d{font-size:11px;color:var(--ink-5)}'+
+    '.cm-next.due .d{color:var(--neg);font-weight:700}'+
+    '.cm-nrow{display:flex;gap:7px;flex-wrap:wrap;align-items:center}'+
+    '.cm-nrow input,.cm-nrow select{border:1px solid var(--ink-7);border-radius:9px;padding:8px 10px;'+
+      'font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff;box-sizing:border-box}'+
+    '.cm-nrow input[type=text]{flex:1;min-width:150px}'+
+    '.cm-tl{margin-top:10px}'+
+    '.cm-ti{display:flex;gap:9px;align-items:baseline;font-size:12px;padding:6px 2px;'+
+      'border-top:1px solid #F1F5F9}'+
+    '.cm-ti .d{font-family:var(--mono,ui-monospace,monospace);font-size:10.5px;color:var(--ink-5);flex:none}'+
+    '.cm-ti .h{font-size:10.5px;font-weight:800;color:var(--primary);flex:none;min-width:28px}'+
+    '.cm-ti .n{color:var(--ink-2);flex:1;min-width:0}'+
+    '.cm-ti .x{border:0;background:none;color:var(--ink-6);cursor:pointer;font-size:15px;line-height:1;padding:0 2px}'+
+    '.cm-none{font-size:11.5px;color:var(--ink-5);line-height:1.6;padding:9px 2px}'+
+    '.cm-fmem{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}'+
+    '.cm-fg{border-top:1px solid #F1F5F9;padding:11px 0 3px}'+
+    '.cm-fg:first-of-type{border-top:0;padding-top:0}'+
+    '.cm-ft{font-size:11px;font-weight:800;color:var(--ink-3);margin-bottom:8px}'+
+    '.cm-fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(146px,1fr));gap:9px}'+
+    '.cm-fc{display:flex;flex-direction:column;gap:4px;min-width:0}'+
+    '.cm-fc label{font-size:10.5px;font-weight:700;color:var(--ink-4)}'+
+    '.cm-fc input,.cm-fc select{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);'+
+      'border-radius:8px;padding:8px 9px;font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    '@media(max-width:520px){.cm-nrow input[type=text]{min-width:100%}'+
+      '.cm-td .w{display:none}}';
+  document.head.appendChild(st);
+}
+
 var OSC={list:[],view:'list',current:null,q:'',docs:[]};
 var OS_BUCKET='coverage-docs';
 function renderClientsPage(){
@@ -23998,10 +24707,11 @@ function renderClientsPage(){
       '<button class="os-btn" onclick="osOpenModal()">로그인 / 계정</button>'+
     '</div></div>';
   }
+  cmCss();
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
   return '<div class="osc-wrap">'+
     '<div class="osc-bar">'+
-      '<input class="osc-search" id="oscSearch" placeholder="고객 이름 검색…" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
+      '<input class="osc-search" id="oscSearch" placeholder="이름·초성(ㄱㅊㅅ)·연락처 뒷자리·가족 이름으로 찾기" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
       '<button class="os-btn" style="width:auto;padding:9px 16px" onclick="osNewClient()">+ 새 고객</button>'+
     '</div>'+
     '<div id="oscList" class="osc-list"><div class="osc-loading">불러오는 중…</div></div>'+
@@ -24010,29 +24720,44 @@ function renderClientsPage(){
 function osClientsAfterRender(){
   if(!OS.profile)return;
   if(OSC.view==='list'){osLoadClients();return;}
-  if(OSC.view==='detail'&&OSC.current){osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();}
+  if(OSC.view==='detail'&&OSC.current){
+    osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();
+    if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
+  }
 }
 function osLoadClients(){
   var sb=osClient();if(!sb)return;
-  sb.from('clients').select('id,name_masked,consent_status,created_at').order('created_at',{ascending:false}).then(function(r){
-    if(r.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r.error.message)+'</div>');return;}
-    OSC.list=r.data||[];osRenderList();
+  var done=function(rows){
+    OSC.list=rows||[];
+    /* 관리 기록이 와야 온도·다음 할 일이 나온다. 먼저 한 번 그리고, 오면 다시 그린다 */
+    osRenderList();
+    cmLoadAll(function(){osRenderList();});
+  };
+  sb.from('clients').select('id,name_masked,consent_status,created_at,phone')
+    .order('created_at',{ascending:false}).then(function(r){
+    if(!r.error){done(r.data);return;}
+    /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
+    sb.from('clients').select('id,name_masked,consent_status,created_at')
+      .order('created_at',{ascending:false}).then(function(r2){
+      if(r2.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r2.error.message)+'</div>');return;}
+      done(r2.data);
+    });
   });
 }
 function osRenderList(){
-  var q=(OSC.q||'').trim();
-  var rows=OSC.list.filter(function(c){return !q||(''+(c.name_masked||'')).indexOf(q)>=0;});
-  if(!rows.length){osSetList('<div class="osc-empty">'+(q?'검색 결과가 없습니다.':'아직 등록된 고객이 없습니다. 우측 상단 <b>+ 새 고객</b>으로 시작하세요.')+'</div>');return;}
-  var h='';
-  rows.forEach(function(c){
-    var nm=c.name_masked||'(이름 없음)';
-    var cs=c.consent_status||'none';
-    h+='<div class="osc-item" onclick="osOpenClient(\''+c.id+'\')">'+
-        '<div class="osc-av">'+osEsc(nm.charAt(0))+'</div>'+
-        '<div class="osc-meta"><div class="osc-nm">'+osEsc(nm)+'</div><div class="osc-mn">'+osFmtDate(c.created_at)+' 등록</div></div>'+
-        '<span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
-      '</div>';
-  });
+  var q=(OSC.q||'').replace(/^\s+|\s+$/g,'');
+  var all=OSC.list||[],rows=[],i;
+  for(i=0;i<all.length;i++)if(cmHit(all[i],q))rows.push(all[i]);
+  cmSortRows(rows);
+  var h=cmTopHtml(q,all);
+  if(!rows.length){
+    osSetList(h+'<div class="osc-empty">'+(q
+      ?('"'+osEsc(q)+'" 로 찾은 고객이 없습니다. 실명·초성·연락처 뒷자리·가족 이름으로도 찾을 수 있습니다.')
+      :'아직 등록된 고객이 없습니다. 위 <b>+ 새 고객</b>으로 시작하세요.')+'</div>');
+    return;
+  }
+  if(q)h+='<div class="cm-lab" style="margin:0 0 8px">'+rows.length+'명 찾았습니다</div>';
+  h+=(CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows);
   osSetList(h);
 }
 function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
@@ -24076,11 +24801,13 @@ function osCreateClient(){
 }
 function osOpenClient(id){
   var c=null;for(var i=0;i<OSC.list.length;i++){if(OSC.list[i].id===id){c=OSC.list[i];break;}}
-  if(!c)return;OSC.current=c;OSC.view='detail';go('clients');
+  if(!c)return;
+  cmRecentAdd(c);
+  OSC.current=c;OSC.view='detail';go('clients');
 }
 function osBackToList(){OSC.view='list';OSC.current=null;go('clients');}
 function osClientDetailHtml(c){
-  var nm=c.name_masked||'(이름 없음)';var cs=c.consent_status||'none';
+  var nm=cmName(c);var cs=c.consent_status||'none';
   return '<div class="osc-wrap">'+
     '<div class="osc-detail-back" onclick="osBackToList()">← 고객 목록</div>'+
     '<div class="osc-bar"><div><div class="osc-title" style="font-size:20px;font-weight:800">'+osEsc(nm)+'</div>'+
@@ -24097,6 +24824,7 @@ function osClientDetailHtml(c){
       '</div>'+
       '<button class="btn btn-primary" style="margin-top:10px" onclick="osCliInfoSave()">💾 정보 저장</button>'+
     '</div>'+
+    '<div id="cmPanels">'+cmPanelsHtml(c.id)+'</div>'+
     '<div class="osc-panel">'+
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">보장분석 문서</h3>'+
       '<p style="font-size:12.5px;color:#6B7280;line-height:1.6">이 고객의 보장분석 리포트·제안서 PDF를 업로드하면, 담보를 구조화 추출하고 사람이 검수한 뒤 전후비교·상담 리포트로 이어집니다.</p>'+
