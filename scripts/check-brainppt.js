@@ -229,6 +229,64 @@ const PLAN = JSON.stringify({
   ok(old.decks.length === 1, '주제만 적어도 예전처럼 자료가 나온다');
   ok(!old.busy, '끝나면 "만드는 중" 이 풀린다');
 
+  /* ── 두뇌 키우기 ── */
+  const bx = await page.evaluate(() => {
+    try { localStorage.removeItem('apex_brain_bx_bp'); } catch (e) { }
+    BRAIN.hist = [{ q: '거절 처리 어떻게', a: '먼저 듣습니다. 그다음 되묻습니다. 마지막에 하나만 제안합니다.' }];
+    brainStar(0);
+    const saved = bxGet();
+    const p1 = bxPrompt();
+    bxOptSet('know', true); bxOptSet('geminix', true);
+    const sysWith = brainSys();
+    bxOptSet('know', false);
+    const sysWithout = brainSys();
+    return {
+      n: saved.length, q: (saved[0] || {}).q || '',
+      prompt: p1, withLen: sysWith.length, woLen: sysWithout.length,
+      eng: bxEngine(), gem: BX_GEM.length, know: bxKnow().length
+    };
+  });
+  ok(bx.n === 1 && /거절/.test(bx.q), '⭐ 이렇게 를 누르면 모범 답안으로 저장된다');
+  ok(/이렇게 답해 온 예시/.test(bx.prompt) && /먼저 듣습니다/.test(bx.prompt),
+    '저장한 답이 다음 질문의 예시로 붙는다');
+  ok(bx.withLen > bx.woLen + 1000, '회사 지식을 켜면 지시문이 실제로 길어진다 (+' + (bx.withLen - bx.woLen) + '자)');
+  ok(bx.know > 3000, '회사 지식이 ' + bx.know + '자 붙는다');
+  ok(bx.gem > 200, 'Gemini 용 규칙이 준비되어 있다');
+
+  const eng = await page.evaluate(() => {
+    window.getProvider = () => 'gemini'; window.geminiReady = () => true;
+    bxOptSet('geminix', true);
+    const g = brainSys();
+    window.getProvider = () => 'claude'; window.geminiReady = () => false;
+    const c = brainSys();
+    return { g: /반드시 지키는 규칙/.test(g), c: /반드시 지키는 규칙/.test(c) };
+  });
+  ok(eng.g, 'Gemini 로 갈 때만 명령형 규칙이 붙는다');
+  ok(!eng.c, 'Claude 로 갈 때는 안 붙는다');
+
+  /* 두 번 태우기 */
+  await page.evaluate(() => {
+    bxOptSet('polish', true);
+    BRAIN.hist = []; BRAIN.busy = false;
+    window.__n = 0;
+    window.callAI = function (sys, usr) {
+      window.__n++;
+      const first = window.__n === 1;
+      return new Promise(r => setTimeout(() => r(first
+        ? ('초안입니다. '.repeat(30)) : '다듬은 글입니다. 결론이 먼저 옵니다.'), 40));
+    };
+    document.getElementById('brainQ') && (document.getElementById('brainQ').value = '');
+    brainAsk('거절 처리');
+  });
+  await page.waitForTimeout(900);
+  const pol = await page.evaluate(() => ({
+    n: window.__n, a: (BRAIN.hist[0] || {}).a || '', done: (BRAIN.hist[0] || {}).polished, busy: BRAIN.busy
+  }));
+  ok(pol.n === 2, '두 번 태우기를 켜면 AI 를 두 번 쓴다 (' + pol.n + '번)');
+  ok(/다듬은 글입니다/.test(pol.a) && pol.done === 1, '다듬은 글이 최종 답으로 남는다');
+  ok(!pol.busy, '끝나면 "생각 중" 이 풀린다');
+  await page.evaluate(() => { bxOptSet('polish', false); BRAIN.hist = []; });
+
   /* ── 장표 마감 — 보고서로 내놓을 수 있는가 ── */
   const fin = await page.evaluate(() => {
     /* 축은 데이터에 바짝 붙어야 한다 — 460 을 800 까지 그리면 절반이 빈 칸이다 */
