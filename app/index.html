@@ -3429,6 +3429,7 @@ function osTabProbe(tab){
   if(tab==='crm'){if(typeof mountCrm==='function')return 'CRM 모듈 존재';throw new Error('mountCrm 없음');}
   if(tab==='home'||tab==='dashboard')return (typeof renderHome==='function')?renderHome():renderDashboard();
   if(tab==='settings')return renderSettings();
+  if(tab==='ready')return renderReady();
   if(tab==='calc')return renderCalcPage();
   if(tab==='clients')return renderClientsPage();
   if(tab==='assistant')return renderAssistant();
@@ -4438,9 +4439,348 @@ var GEN=[
 
 /* ════════ 탭/페이지 정의 ════════ */
 /* 통합 15메뉴 (역할별 노출: group.role='lead'|'hq'|'edu'). 기존 도구 id는 하위에 그대로 보존. */
+
+/* ════════ 출발 점검 — 무엇이 남았는가 ════════
+
+   만드는 쪽 일은 다 끝났는데 앱이 안 도는 경우가 있다.
+   서버 SQL 을 안 돌렸거나, 키를 안 넣었거나, 조직도에 팀을 안 잡았거나.
+   그건 코드로 못 고친다. 사람이 해야 한다.
+
+   그래서 앱이 스스로 확인할 수 있는 것은 직접 확인해서 보여 주고,
+   사람만 할 수 있는 것은 따로 모아 하나씩 지워 나가게 한다.
+   "다 됐나?" 를 물을 곳이 한 군데는 있어야 한다.                        */
+
+var RD={rows:null,busy:false,err:'',at:''};
+
+/* 사람만 할 수 있는 일 — 앱이 들여다볼 수 없는 바깥일 */
+var RD_MAN=[
+ {k:'nf_token',t:'유출된 Netlify 토큰 폐기',
+  w:'예전에 대화창에 붙여 넣은 배포 토큰(nfp_ 로 시작)은 그 자체로 배포 권한입니다. 지금은 안 쓰고 있어도 살아 있으면 남이 배포할 수 있습니다.',
+  h:'Netlify → User settings → Applications → Personal access tokens 에서 그 토큰을 Revoke.',
+  u:'https://app.netlify.com/user/applications',risk:1},
+ {k:'legal',t:'변호사 · 준법감시 문서 확인',
+  w:'이용약관·개인정보처리방침·환불규정이 앱 안에 들어가 있습니다. 다만 그 내용을 법률가가 본 적은 없습니다.',
+  h:'설정 → 사업자 정보를 채운 뒤 약관 화면을 뽑아 소속사 준법감시와 변호사에게 확인받으세요. 유료 판매 전에는 이것이 마지막 문입니다.',
+  go:'terms',risk:1},
+ {k:'mailorder',t:'통신판매업 신고',
+  w:'돈을 받고 파는 순간 전자상거래법상 신고 대상입니다.',
+  h:'관할 시·군·구청 또는 정부24에서 신고하고, 받은 번호를 설정 → 사업자 정보의 「통신판매업 신고번호」 에 넣으세요.',
+  u:'https://www.gov.kr',risk:1},
+ {k:'nf_env',t:'Netlify 환경변수 확인',
+  w:'AI 키가 브라우저가 아니라 서버에 있어야 팀원들도 씁니다.',
+  h:'Netlify → Site configuration → Environment variables 에 ANTHROPIC_API_KEY 또는 GEMINI_API_KEY 가 있는지 확인.',
+  u:'https://app.netlify.com'},
+ {k:'sb_backup',t:'Supabase 자동 백업 확인',
+  w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽 자동 백업입니다.',
+  h:'Supabase → Project Settings → Database → Backups 에서 켜져 있는지 확인. 무료 요금제는 보관 기간이 짧습니다.',
+  u:'https://supabase.com/dashboard'},
+ {k:'toss',t:'토스페이먼츠 계약 · 키 등록',
+  w:'구독 결제를 받으려면 계약과 비밀키가 필요합니다. 없으면 결제 화면은 있어도 돈이 들어오지 않습니다.',
+  h:'토스페이먼츠 계약 후 Netlify 환경변수에 TOSS_SECRET_KEY 와 SUPABASE_SERVICE_ROLE_KEY 등록. service_role 키는 절대 대화창이나 코드에 붙여 넣지 마세요.',
+  go:'pricing'},
+ {k:'tell_team',t:'팀에 새 화면 안내',
+  w:'실행 체크판·성장판·고객 365일·음성 비서가 새로 생겼습니다. 안 알리면 아무도 안 씁니다.',
+  h:'조회 때 5분만 쓰세요. 업무매뉴얼 화면을 그대로 띄워 놓고 짚어 주면 됩니다.',
+  go:'manual'},
+ {k:'consent_edu',t:'고객 동의 받는 절차 교육',
+  w:'고객 정보를 넣기 전에 동의를 받아야 합니다. 이건 기능이 아니라 습관입니다.',
+  h:'고객 365일에서 고객을 만들 때 동의 상태를 반드시 표시하도록 팀에 정해 주세요.',
+  go:'clients'}
+];
+
+function rdDoneKey(){try{return 'apex_ready_'+((OS.profile&&(OS.profile.id||OS.profile.email))||'local');}catch(e){return 'apex_ready_local';}}
+function rdDone(){try{var v=localStorage.getItem(rdDoneKey());return v?(JSON.parse(v)||{}):{};}catch(e){return {};}}
+function rdMark(k){
+  var o=rdDone();
+  if(o[k])delete o[k];else o[k]=new Date().toISOString().slice(0,10);
+  try{localStorage.setItem(rdDoneKey(),JSON.stringify(o));}catch(e){}
+  rdPaint();
+}
+
+/* ── 앱이 스스로 보는 것 ── */
+function rdLoad(){
+  if(RD.busy)return;
+  RD.busy=true;RD.err='';rdPaint();
+  var sb=(typeof osClient==='function')?osClient():null;
+  var out={};
+  var fin=function(){
+    RD.busy=false;RD.rows=out;RD.at=new Date().toLocaleTimeString('ko-KR');rdPaint();
+  };
+  if(!sb||!OS.profile){RD.busy=false;RD.err='로그인 후 확인할 수 있습니다.';rdPaint();return;}
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('profiles').select('id,name,role,active,workspace')),
+    q(sb.from('clients').select('id,consent_status')),
+    q(sb.from('backups').select('id,ref_date,created_at').order('created_at',{ascending:false}).limit(1))
+  ]).then(function(res){
+    out.prof=res[0];out.cli=res[1];out.bak=res[2];
+    fin();
+  },function(){RD.busy=false;RD.err='서버에서 확인하지 못했습니다.';rdPaint();});
+}
+
+/* 항목 하나 = {k, t, st:'ok|warn|no', now, how, go, act} */
+function rdAuto(){
+  var L=[],r=RD.rows||{};
+  var add=function(o){L.push(o);};
+
+  /* 1. 서버 준비 SQL */
+  var ver=(typeof setupVer==='function')?setupVer():0;
+  var need=(typeof SETUP_VER!=='undefined')?SETUP_VER:0;
+  add({k:'sql',t:'서버 준비 SQL',
+    st:(ver>=need)?'ok':'no',
+    now:(ver>=need)?('실행됨 · 버전 '+ver):('아직입니다 (지금 '+(ver||0)+' · 필요 '+need+')'),
+    how:'홈 맨 위 배너의 SQL 을 복사해 Supabase → SQL Editor 에 붙여 넣고 한 번 실행하세요.',
+    go:'home'});
+
+  /* 2. AI 연결 */
+  var ai=(typeof aiReady==='function')&&aiReady();
+  var which=[];
+  try{if(typeof claudeReady==='function'&&claudeReady())which.push('Claude');}catch(e){}
+  try{if(typeof geminiReady==='function'&&geminiReady())which.push('Gemini');}catch(e){}
+  add({k:'ai',t:'AI 연결',
+    st:ai?'ok':'no',
+    now:ai?(which.join(' · ')+' 연결됨'):'연결 안 됨 — 두뇌·자비스·자료 만들기가 모두 멈춥니다',
+    how:'설정 → AI 연결에서 키를 넣거나, Netlify 환경변수에 키를 넣으세요.',
+    go:'settings'});
+
+  /* 3. 사업자 정보 */
+  var bn=0,bt=0,bmiss=[];
+  if(typeof LG_BIZ!=='undefined'){
+    LG_BIZ.forEach(function(x){
+      bt++;
+      var v=(typeof osCfgGet==='function')?osCfgGet(x[0],''):'';
+      if(v&&(''+v).replace(/\s/g,''))bn++;else bmiss.push(x[1]);
+    });
+  }
+  add({k:'biz',t:'사업자 정보',
+    st:(bt&&bn>=bt)?'ok':(bn>=Math.ceil(bt*0.6)?'warn':'no'),
+    now:bt?(bn+' / '+bt+'칸'+(bmiss.length?(' · 빈 칸: '+bmiss.slice(0,3).join(', ')+(bmiss.length>3?(' 외 '+(bmiss.length-3)):'')):'')):'확인 불가',
+    how:'설정 → 사업자 정보. 여기 넣은 것이 이용약관·개인정보처리방침·환불규정 세 문서에 그대로 들어갑니다.',
+    go:'settings'});
+
+  /* 4~5. 조직도 — 지점장과 팀 */
+  var pr=r.prof;
+  if(!pr||pr.error){
+    add({k:'org',t:'조직도 · 지점장 지정',st:'warn',
+      now:'확인하지 못했습니다'+(pr&&pr.error?(' — '+(''+(pr.error.message||'')).slice(0,40)):''),
+      how:'조직도를 한 번 열어 주세요.',go:'org'});
+  }else{
+    var rows=(pr.data||[]),act=[],lead=0,team=0,i,ro;
+    for(i=0;i<rows.length;i++){
+      if(rows[i].active===false)continue;
+      act.push(rows[i]);
+      ro=(''+(rows[i].role||'')).toLowerCase();
+      if(ro==='lead'||ro==='hq'||ro==='master'||ro==='owner'||ro==='admin')lead++;
+      if(rows[i].workspace)team++;
+    }
+    add({k:'lead',t:'조직도 · 지점장 지정',
+      st:lead?'ok':'no',
+      now:lead?(lead+'명 지정됨 · 활동 회원 '+act.length+'명'):'한 명도 없습니다 — 성장판이 팀을 잡지 못합니다',
+      how:'조직도에서 지점장에게 역할을 주세요.',go:'org'});
+    add({k:'team',t:'팀 소속 지정',
+      st:(act.length&&team>=act.length)?'ok':(team?'warn':'no'),
+      now:act.length?(team+' / '+act.length+'명'):'회원이 없습니다',
+      how:'조직도에서 각자의 소속(팀)을 지정하세요. 비어 있으면 그 사람은 성장판·출근 명단에서 빠집니다.',
+      go:'org'});
+  }
+
+  /* 6. 고객 동의 */
+  var cl=r.cli;
+  if(!cl||cl.error){
+    add({k:'consent',t:'고객 동의 상태',st:'warn',now:'확인하지 못했습니다',
+      how:'고객 365일을 한 번 열어 주세요.',go:'clients'});
+  }else{
+    var cs=(cl.data||[]),g=0,j;
+    for(j=0;j<cs.length;j++)if(cs[j].consent_status==='granted')g++;
+    add({k:'consent',t:'고객 동의 상태',
+      st:cs.length?((g>=cs.length)?'ok':(g?'warn':'no')):'warn',
+      now:cs.length?(g+' / '+cs.length+'명 동의 완료'):'등록된 고객이 없습니다',
+      how:'동의 없이 고객 정보를 넣으면 개인정보보호법 위반입니다. 고객 365일에서 상태를 맞춰 주세요.',
+      go:'clients'});
+  }
+
+  /* 7. 백업 */
+  var bk=r.bak;
+  if(!bk||bk.error){
+    add({k:'backup',t:'앱 백업',st:'warn',now:'확인하지 못했습니다',
+      how:'설정 → 백업에서 한 번 받아 두세요.',go:'settings'});
+  }else{
+    var b0=(bk.data||[])[0];
+    var d=b0?(''+(b0.ref_date||b0.created_at||'')).slice(0,10):'';
+    var ago=d?rdDays(d):-1;
+    add({k:'backup',t:'앱 백업',
+      st:(ago>=0&&ago<=7)?'ok':(ago>=0?'warn':'no'),
+      now:d?(d+' ('+ago+'일 전)'):'받아 둔 백업이 없습니다',
+      how:'설정 → 백업. 이것과 별개로 Supabase 자동 백업도 켜 두세요.',
+      go:'settings'});
+  }
+  return L;
+}
+function rdDays(a){
+  var x=new Date(a+'T00:00:00Z').getTime(),y=new Date(new Date().toISOString().slice(0,10)+'T00:00:00Z').getTime();
+  if(isNaN(x))return -1;
+  return Math.round((y-x)/86400000);
+}
+
+/* ── 화면 ── */
+function rdBadge(st){
+  if(st==='ok')return '<span class="rd-b ok">됨</span>';
+  if(st==='warn')return '<span class="rd-b warn">확인</span>';
+  return '<span class="rd-b no">남음</span>';
+}
+function rdRowHtml(x){
+  var btn='';
+  if(x.go)btn='<button type="button" class="rd-go" onclick="go(\''+x.go+'\')">바로 가기 →</button>';
+  return '<div class="rd-r '+x.st+'">'+
+    '<div class="rd-h">'+rdBadge(x.st)+'<b>'+osEsc(x.t)+'</b>'+
+      '<span class="rd-now">'+osEsc(x.now||'')+'</span></div>'+
+    (x.st==='ok'?'':('<div class="rd-how">'+osEsc(x.how||'')+'</div>'))+
+    (x.st==='ok'?'':btn)+
+  '</div>';
+}
+function rdManHtml(){
+  var D=rdDone(),h='',i,m,on;
+  for(i=0;i<RD_MAN.length;i++){
+    m=RD_MAN[i];on=!!D[m.k];
+    h+='<div class="rd-m'+(on?' on':'')+(m.risk&&!on?' risk':'')+'">'+
+      '<button type="button" class="rd-ck" onclick="rdMark(\''+m.k+'\')" aria-label="끝냈으면 표시">'+
+        (on?'✓':'')+'</button>'+
+      '<div class="rd-mb"><div class="rd-mt">'+osEsc(m.t)+
+        (m.risk&&!on?'<span class="rd-x">먼저</span>':'')+
+        (on?('<span class="rd-d">'+osEsc(D[m.k])+' 완료</span>'):'')+'</div>'+
+      (on?'':('<div class="rd-mw">'+osEsc(m.w)+'</div><div class="rd-mh">'+osEsc(m.h)+'</div>'+
+        (m.u?('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>'):'')+
+        (m.go?('<button type="button" class="rd-go" onclick="go(\''+m.go+'\')">바로 가기 →</button>'):'')))+
+      '</div></div>';
+  }
+  return h;
+}
+function rdPaint(){
+  var el=document.getElementById('rdPane');
+  if(el)el.innerHTML=rdInnerHtml();
+}
+function rdInnerHtml(){
+  if(RD.busy)return '<div class="loading" style="padding:20px"><div class="spinner"></div>서버에서 확인하는 중…</div>';
+  if(RD.err)return '<div class="err-box">'+osEsc(RD.err)+'</div>';
+  if(!RD.rows)return '<div class="rd-none">아직 확인하지 않았습니다. 아래 <b>다시 확인</b> 을 누르세요.</div>';
+  var A=rdAuto(),D=rdDone(),i;
+  var left=0,okn=0;
+  for(i=0;i<A.length;i++){if(A[i].st==='ok')okn++;else left++;}
+  var mLeft=0;
+  for(i=0;i<RD_MAN.length;i++)if(!D[RD_MAN[i].k])mLeft++;
+  var tot=A.length+RD_MAN.length,doneN=okn+(RD_MAN.length-mLeft);
+  var pct=tot?Math.round(doneN/tot*100):0;
+
+  var h='<div class="rd-sum">'+
+    '<div class="rd-p"><div class="rd-pb" style="width:'+pct+'%"></div></div>'+
+    '<div class="rd-pt"><b>'+doneN+' / '+tot+'</b> 끝났습니다'+
+      (left+mLeft?(' · 남은 것 <b style="color:var(--neg)">'+(left+mLeft)+'개</b>'):' · 전부 끝났습니다')+
+      (RD.at?('<span>'+osEsc(RD.at)+' 확인</span>'):'')+'</div></div>';
+
+  h+='<div class="rd-lab">앱이 직접 확인한 것 — 남은 것 '+left+'개</div>';
+  if(!left)h+='<div class="rd-ok">앱 쪽은 전부 준비됐습니다.</div>';
+  for(i=0;i<A.length;i++)if(A[i].st!=='ok')h+=rdRowHtml(A[i]);
+  if(okn){
+    h+='<div class="rd-lab2">끝난 것 '+okn+'개</div>';
+    for(i=0;i<A.length;i++)if(A[i].st==='ok')h+=rdRowHtml(A[i]);
+  }
+
+  h+='<div class="rd-lab" style="margin-top:20px">사장님만 할 수 있는 것 — 남은 것 '+mLeft+'개</div>'+
+    '<div class="rd-note">여기는 앱이 대신 못 합니다. 끝내면 왼쪽 칸을 눌러 지워 나가세요 (이 기기에 저장).</div>'+
+    rdManHtml();
+  return h;
+}
+function renderReady(){
+  rdCss();
+  var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none">'+
+    '<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">READY CHECK</div>'+
+    '<div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🚦 출발 점검</div>'+
+    '<div style="font-size:12.5px;opacity:.92;margin-top:8px;line-height:1.6">'+
+      '만드는 쪽 일은 끝났습니다. 여기서는 <b>아직 안 된 것만</b> 보여 줍니다. '+
+      '앱이 스스로 볼 수 있는 것은 직접 확인하고, 사장님만 할 수 있는 일은 따로 모아 두었습니다.</div></div>';
+  var card='<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🚦</span>지금 무엇이 남았나</div>'+
+    '<div class="card-desc">서버·설정·조직도를 실제로 읽어 확인합니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:12px">'+
+      '<button class="btn btn-primary" onclick="rdLoad()">🔄 다시 확인</button>'+
+      '<button class="btn btn-ghost" onclick="rdCopy()">📋 남은 것 복사</button></div>'+
+    '<div id="rdPane">'+rdInnerHtml()+'</div>'+
+    '</div></div>';
+  return osPage('점검','출발 점검',
+    '아직 안 된 것만 모아서 보여 줍니다. 앱이 확인할 수 있는 것은 직접 확인했습니다.',
+    hero+card);
+}
+function osReadyAfterRender(){if(!RD.rows&&!RD.busy)rdLoad();}
+function rdCopy(){
+  if(!RD.rows){toast('먼저 확인을 눌러 주세요');return;}
+  var A=rdAuto(),D=rdDone(),o=[],i;
+  o.push('APEX YUN PRO · 출발 점검 '+new Date().toLocaleString('ko-KR'));
+  o.push('');
+  o.push('[앱 쪽에서 남은 것]');
+  var n=0;
+  for(i=0;i<A.length;i++)if(A[i].st!=='ok'){n++;o.push('- '+A[i].t+' — '+A[i].now+'\n  → '+A[i].how);}
+  if(!n)o.push('- 없음');
+  o.push('');
+  o.push('[사장님만 할 수 있는 것]');
+  n=0;
+  for(i=0;i<RD_MAN.length;i++)if(!D[RD_MAN[i].k]){n++;o.push('- '+RD_MAN[i].t+'\n  → '+RD_MAN[i].h);}
+  if(!n)o.push('- 없음');
+  if(typeof copyText==='function')copyText(o.join('\n'));
+  else toast('복사하지 못했습니다');
+}
+function rdCss(){
+  if(document.getElementById('rdStyle'))return;
+  var st=document.createElement('style');st.id='rdStyle';
+  st.textContent=
+    '.rd-sum{border:1px solid var(--ink-7);border-radius:12px;padding:13px 14px;margin-bottom:16px;background:#fff}'+
+    '.rd-p{height:8px;border-radius:99px;background:#EEF2F7;overflow:hidden}'+
+    '.rd-pb{height:100%;background:linear-gradient(90deg,#1A56DB,#38BDF8);border-radius:99px}'+
+    '.rd-pt{font-size:12.5px;color:var(--ink-3);margin-top:9px;display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}'+
+    '.rd-pt span{margin-left:auto;font-size:10.5px;color:var(--ink-6)}'+
+    '.rd-lab{font-size:10.5px;font-weight:800;color:var(--ink-3);margin:0 0 8px;letter-spacing:.03em}'+
+    '.rd-lab2{font-size:10.5px;font-weight:800;color:var(--ink-6);margin:16px 0 8px}'+
+    '.rd-note{font-size:11.5px;color:var(--ink-5);line-height:1.6;margin-bottom:10px}'+
+    '.rd-ok{font-size:12.5px;color:#059669;background:#F2FBF6;border:1px solid #CDEBDC;'+
+      'border-radius:10px;padding:11px 13px;line-height:1.6}'+
+    '.rd-none{font-size:12.5px;color:var(--ink-5);padding:14px 2px;line-height:1.6}'+
+    '.rd-r{border:1px solid #EEF2F7;border-radius:12px;padding:11px 13px;margin-bottom:8px;background:#fff}'+
+    '.rd-r.no{border-color:#F5C6C6;background:#FFFBFB}'+
+    '.rd-r.warn{border-color:#F5E2BB;background:#FFFDF7}'+
+    '.rd-r.ok{background:#FAFCFF;border-color:#E7EEF9}'+
+    '.rd-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}'+
+    '.rd-h b{font-size:13.5px;color:var(--ink-1)}'+
+    '.rd-now{font-size:11.5px;color:var(--ink-4);margin-left:auto;text-align:right}'+
+    '.rd-how{font-size:12px;color:var(--ink-3);line-height:1.65;margin-top:7px}'+
+    '.rd-b{font-size:10px;font-weight:800;border-radius:99px;padding:3px 9px;flex:none}'+
+    '.rd-b.ok{background:#E7F6EE;color:#059669}'+
+    '.rd-b.warn{background:#FEF3E2;color:#B45309}'+
+    '.rd-b.no{background:#FDECEC;color:#DC2626}'+
+    '.rd-go{display:inline-block;margin-top:9px;margin-right:7px;border:1px solid var(--primary);'+
+      'background:#fff;color:var(--primary);border-radius:8px;padding:6px 12px;font-size:11.5px;'+
+      'font-weight:800;cursor:pointer;text-decoration:none;font-family:inherit}'+
+    '.rd-m{display:flex;gap:11px;border:1px solid #EEF2F7;border-radius:12px;padding:11px 13px;'+
+      'margin-bottom:8px;background:#fff;align-items:flex-start}'+
+    '.rd-m.risk{border-color:#F5C6C6;background:#FFFBFB}'+
+    '.rd-m.on{background:#FAFCFF;border-color:#E7EEF9}'+
+    '.rd-ck{flex:none;width:24px;height:24px;border-radius:7px;border:2px solid var(--ink-7);'+
+      'background:#fff;color:#fff;font-size:13px;font-weight:900;cursor:pointer;line-height:1;padding:0}'+
+    '.rd-m.on .rd-ck{background:#059669;border-color:#059669}'+
+    '.rd-mb{flex:1;min-width:0}'+
+    '.rd-mt{font-size:13.5px;font-weight:800;color:var(--ink-1);display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}'+
+    '.rd-m.on .rd-mt{color:var(--ink-5);text-decoration:line-through}'+
+    '.rd-x{font-size:9.5px;font-weight:800;background:#FDECEC;color:#DC2626;border-radius:99px;padding:2px 8px}'+
+    '.rd-d{font-size:10px;font-weight:700;color:#059669;margin-left:auto;text-decoration:none}'+
+    '.rd-mw{font-size:12px;color:var(--ink-3);line-height:1.65;margin-top:6px}'+
+    '.rd-mh{font-size:12px;color:var(--ink-2);line-height:1.65;margin-top:6px;background:#F5F9FF;'+
+      'border-radius:8px;padding:8px 10px}'+
+    '@media(max-width:520px){.rd-now{margin-left:0;text-align:left;width:100%}}';
+  document.head.appendChild(st);
+}
+
 var TABS=[
  {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
- {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''}]},
+ {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
@@ -4562,6 +4902,7 @@ function go(tab){
   document.body.classList.remove('yoonsi-mode');
   if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
     if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
+    if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
     document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
     lastTab=tab;
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
@@ -4613,6 +4954,7 @@ function go(tab){
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
     if(typeof osNoticeApply==='function')osNoticeApply();
     if(typeof osNoticeLoad==='function')osNoticeLoad();}
+  else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
   else if(tab==='settings'){dyn.innerHTML=renderSettings();if(typeof osSettingsAfterRender==='function')osSettingsAfterRender();}
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
@@ -20516,6 +20858,7 @@ function visibleTabs(role){
 var OS_TAB_GROUP={'teamx':'성장·교육','growth':'성장·교육','ckteam':'성장·교육'};
 function osTabAllowed(tab){
   if(tab==='settings')return osIsOwner();
+  if(tab==='ready')return osIsOwner();
   if(tab==='academy_notion')return osNotionAllowed();
   var gs=visibleTabs(),i,j;
   for(i=0;i<gs.length;i++){var it=gs[i].items||[];for(j=0;j<it.length;j++)if(it[j].id===tab)return true;}
