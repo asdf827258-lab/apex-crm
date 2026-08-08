@@ -2520,7 +2520,6 @@ function pxBullets(s){
   for(i=0;i<bs.length;i++)ps+=pxPara(bs[i],{sz:1450,color:'1F2937',bullet:true,spaceAfter:700,lnSpc:'140000'});
   if(!bs.length)ps=pxPara('—',{sz:1450,color:'94A3B8'});
   h+=pxText(id++,0.7,y,11.95,7.1-y-0.5,ps);
-  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
   return pxSlideXml(h,'FFFFFF');
 }
 function pxQuote(s){
@@ -2585,12 +2584,29 @@ function pxNice(v){
   var n=(m<=1)?1:(m<=2)?2:(m<=2.5)?2.5:(m<=5)?5:10;
   return n*e;
 }
+/* 축 상한 — 데이터에 바짝 붙인다.
+   460 을 800 까지 그리면 장표의 절반이 빈 칸이 된다.
+   눈금 수와 눈금 크기를 함께 고르면 훨씬 촘촘하게 맞출 수 있다. */
+var PX_STEP=[1,2,2.5,5];
 function pxTop(raw){
-  var step=pxNice(raw*1.12/4);
-  return step*4;
+  if(!(raw>0))return {max:1,steps:4};
+  var need=raw*1.06,best=null,e0=Math.floor(Math.log(need/6)/Math.LN10)-1,i,j,k,st,top;
+  for(k=4;k<=6;k++){
+    for(i=e0;i<=e0+4;i++){
+      for(j=0;j<PX_STEP.length;j++){
+        st=PX_STEP[j]*Math.pow(10,i);
+        top=st*k;
+        if(top<need)continue;
+        if(!best||top<best.max-1e-9||(Math.abs(top-best.max)<1e-9&&k<best.steps))
+          best={max:top,steps:k};
+      }
+    }
+  }
+  return best||{max:pxNice(need),steps:4};
 }
-function pxAxis(x,L,R,T,B,max,unit,h){
-  var i,steps=4;
+function pxAxis(x,L,R,T,B,max,unit,h,steps){
+  var i;
+  steps=steps||4;
   x.strokeStyle='#E6ECF5';x.lineWidth=2;
   x.font='500 26px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
   x.fillStyle='#8A98AE';x.textAlign='right';x.textBaseline='middle';
@@ -2625,8 +2641,8 @@ function pxBars(x,c,w,h){
   var L=170,R=w-70,T=110,B=h-140;
   var max=0;
   series.forEach(function(s){(s.data||[]).forEach(function(v){max=Math.max(max,pxNum(v));});});
-  max=pxTop(max);
-  pxAxis(x,L,R,T,B,max,c.unit||'',h);
+  var tp=pxTop(max);max=tp.max;
+  pxAxis(x,L,R,T,B,max,c.unit||'',h,tp.steps);
   var gw=(R-L)/labels.length, bw=Math.min(110,(gw*0.62)/series.length);
   labels.forEach(function(lb,i){
     var cx=L+gw*i+gw/2;
@@ -2662,8 +2678,8 @@ function pxLine(x,c,w,h){
   var L=170,R=w-70,T=110,B=h-140;
   var max=0;
   series.forEach(function(s){(s.data||[]).forEach(function(v){max=Math.max(max,pxNum(v));});});
-  max=pxTop(max);
-  pxAxis(x,L,R,T,B,max,c.unit||'',h);
+  var tp=pxTop(max);max=tp.max;
+  pxAxis(x,L,R,T,B,max,c.unit||'',h,tp.steps);
   var step=(R-L)/Math.max(1,labels.length-1);
   series.forEach(function(s,k){
     var col=pxHex(PX_PAL[k%PX_PAL.length]);
@@ -2677,6 +2693,14 @@ function pxLine(x,c,w,h){
       var px=L+step*i, py=B-(B-T)*(pxNum(v)/max);
       x.fillStyle='#FFFFFF';x.beginPath();x.arc(px,py,11,0,Math.PI*2);x.fill();
       x.fillStyle=col;x.beginPath();x.arc(px,py,7,0,Math.PI*2);x.fill();
+      /* 값은 적어 준다. 눈으로 재게 하면 발표 중에 질문이 나온다 */
+      if(labels.length<=8){
+        x.fillStyle=col;
+        x.textAlign=(i===0)?'left':((i===labels.length-1)?'right':'center');
+        x.textBaseline=(k===0)?'bottom':'top';
+        x.font='800 27px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+        x.fillText(pxFmt(pxNum(v)),px,py+((k===0)?-22:26));
+      }
     });
   });
   labels.forEach(function(lb,i){
@@ -2700,6 +2724,15 @@ function pxDonut(x,c,w,h){
     x.beginPath();x.arc(cx,cy,rr,a,a+sw);x.arc(cx,cy,ir,a+sw,a,true);x.closePath();x.fill();
     a+=sw;
   });
+  /* 가운데가 비면 그림이 아니라 구멍이다 — 합계를 넣는다 */
+  x.fillStyle='#0F172A';x.textAlign='center';x.textBaseline='alphabetic';
+  x.font='800 40px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+  x.fillText(pxFmt(tot),cx,cy+4);
+  if(c.unit){
+    x.fillStyle='#8A98AE';x.textBaseline='top';
+    x.font='600 24px -apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
+    x.fillText(String(c.unit).slice(0,8),cx,cy+14);
+  }
   var ly=cy-(labels.length*54)/2+18;
   labels.forEach(function(lb,i){
     var v=pxNum(data[i]),pc=Math.round(v/tot*100);
@@ -2726,6 +2759,19 @@ function pxPic(id,rid,x,y,w,h){
 }
 
 /* ── 진짜 표 — 발표 직전에 고칠 수 있게 ─────────────────────────── */
+/* 늘었나 줄었나 — 색이 있어야 표가 한눈에 읽힌다 */
+function pxDelta(t){
+  t=(''+(t==null?'':t)).replace(/\s/g,'');
+  if(!t)return '';
+  if(/^[+▲△↑]\d/.test(t)||/^\+/.test(t))return '059669';
+  if(/^[-−▼▽↓]\d/.test(t))return 'DC2626';
+  return '';
+}
+/* 마지막에 오는 합계 줄은 본문과 달라야 한다 */
+function pxSumRow(first){
+  var t=(''+(first==null?'':first)).replace(/\s/g,'');
+  return /^(합계|총계|계|소계|전체|합|누계)$/.test(t);
+}
 function pxCell(text,o){
   o=o||{};
   var p=pxPara(text,{sz:o.sz||1250,b:!!o.b,color:o.color||'1F2937',
@@ -2748,11 +2794,17 @@ function pxTable(id,x,y,w,head,rows,opt){
         algn:i?'ctr':'l',sz:1250,line:'1A56DB'});
     }).join('')+'</a:tr>';
   }
+  /* 금융 보고서는 증감과 합계를 눈으로 먼저 읽는다.
+     +3% 와 -3% 가 같은 검정으로 있으면 표가 아니라 글자 덩어리다. */
   rows.forEach(function(r,ri){
+    var sum=pxSumRow(r[0]);
     body+='<a:tr h="'+pxIn(rh)+'">'+r.map(function(t,ci){
       var hi=opt.hi&&opt.hi.indexOf(ci)>=0;
-      return pxCell(t,{b:(ci===0||hi),color:hi?'1A56DB':'1F2937',
-        fill:(ri%2?'F6F9FE':''),algn:ci?'ctr':'l',sz:1200});
+      var d=(ci?pxDelta(t):'');
+      return pxCell(t,{b:(ci===0||hi||sum||!!d),
+        color:d||(hi?'1A56DB':(sum?'0F172A':'1F2937')),
+        fill:sum?'E8F0FE':(ri%2?'F6F9FE':''),
+        algn:ci?'ctr':'l',sz:sum?1250:1200,line:sum?'BBD0F0':(opt.line||'DCE4F0')});
     }).join('')+'</a:tr>';
   });
   return '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="'+id+'" name="tbl'+id+'"/>'+
@@ -2790,7 +2842,6 @@ function pxKpi(s){
     h+=pxText(id++,0.7,y+2.35,11.95,1.6,
       bs.map(function(b){return pxPara(b,{sz:1350,color:'1F2937',bullet:true,spaceAfter:600,lnSpc:'140000'});}).join(''));
   }
-  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
   return pxSlideXml(h,'FFFFFF');
 }
 /* 표 */
@@ -2800,7 +2851,6 @@ function pxTableSlide(s){
   var rows=(s.rows||[]).slice(0,9).map(function(r){return (r||[]).slice(0,5).map(function(c){return (''+(c==null?'':c)).slice(0,44);});});
   if(!rows.length)return pxBullets(s);
   h+=pxTable(id++,0.62,s.lead?2.15:1.55,12.1,head.length?head:null,rows,{hi:s.hi||[]});
-  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
   return pxSlideXml(h,'FFFFFF');
 }
 /* 비교표 — 지금 vs 바꾸면 */
@@ -2825,7 +2875,6 @@ function pxCompare(s){
   };
   h+=side(0.62,L,'64748B','F4F6FA');
   h+=side(0.62+w+gap,R,'1A56DB','EFF5FE');
-  if(s.note)h+=pxText(id++,0.7,6.86,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
   return pxSlideXml(h,'FFFFFF');
 }
 /* 그래프 — 캔버스로 그려 그림으로 */
@@ -2838,7 +2887,6 @@ function pxChartSlide(s,media){
   media.push({name:'image'+(media.length+1)+'.png',data:pxB64(png)});
   var y=s.lead?2.1:1.5;
   h+=pxPic(id++,rid,0.62,y,12.1,y>2?4.3:4.7);
-  if(s.note)h+=pxText(id++,0.7,6.72,11.95,0.42,pxPara(s.note,{sz:1050,color:'64748B'}));
   return pxSlideXml(h,'FFFFFF');
 }
 
@@ -2847,7 +2895,7 @@ function pxChartSlide(s,media){
 function pxFootXml(s,no,tot){
   var id=900,h='';
   h+=pxRect(id++,0.62,6.92,12.1,0.014,'E2E8F0');
-  if(s&&s.note)h+=pxText(id++,0.62,7.0,9.0,0.4,pxPara(s.note,{sz:1000,color:'94A3B8'}));
+  if(s&&s.note)h+=pxText(id++,0.62,6.99,9.2,0.42,pxPara(s.note,{sz:1050,color:'7E8CA3'}));
   h+=pxText(id++,9.9,7.0,2.82,0.4,pxPara(no+' / '+tot,{sz:1000,color:'94A3B8',algn:'r'}));
   return h;
 }
@@ -3041,10 +3089,14 @@ function brainExportWord(i){
    AI 가 안 되면 글을 나눠서라도 반드시 파일이 나오게 한다.          */
 var BDECK={busy:false,topic:'',wait:null};
 
+function bdDate(){
+  var d=new Date();
+  return d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일';
+}
 function bdFoot(){
   var who='';
   try{who=(OS.profile&&OS.profile.name)?(OS.profile.name+' · '):'';}catch(e){}
-  return who+'에이플러스에셋 온탑본부 · '+osStamp();
+  return who+'에이플러스에셋 온탑본부 · '+bdDate();
 }
 function bdCut(s,n){s=(''+(s==null?'':s)).replace(/\s+/g,' ').trim();return s.length>n?s.slice(0,n):s;}
 
