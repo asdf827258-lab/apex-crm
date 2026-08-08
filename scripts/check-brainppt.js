@@ -229,6 +229,41 @@ const PLAN = JSON.stringify({
   ok(old.decks.length === 1, '주제만 적어도 예전처럼 자료가 나온다');
   ok(!old.busy, '끝나면 "만드는 중" 이 풀린다');
 
+  /* ── 장표 마감 — 보고서로 내놓을 수 있는가 ── */
+  const fin = await page.evaluate(() => {
+    /* 축은 데이터에 바짝 붙어야 한다 — 460 을 800 까지 그리면 절반이 빈 칸이다 */
+    const t = [460, 212, 97, 1350, 3, 6.4].map(v => {
+      const r = pxTop(v);
+      return { v: v, max: r.max, steps: r.steps, waste: r.max / v };
+    });
+    /* 가정 문구가 한 장에 두 번 찍히면 안 된다 */
+    const s = {
+      kind: 'table', title: '현황', lead: '요지', note: '가정: 이렇게 잡았다',
+      head: ['구분', '상반기', '증감'],
+      rows: [['신규', '2.9억', '-29%'], ['기존', '2.6억', '+53%'], ['합계', '6.4억', '-3%']]
+    };
+    const xml = pxSlideOf(s, [], 3, 9);
+    const notes = (xml.match(/가정: 이렇게 잡았다/g) || []).length;
+    return {
+      tops: t, notes: notes,
+      neg: /DC2626/.test(xml), pos: /059669/.test(xml), sum: /E8F0FE/.test(xml),
+      foot: bdFoot(), delta: [pxDelta('+53%'), pxDelta('-29%'), pxDelta('2.9억')],
+      sumRow: [pxSumRow('합계'), pxSumRow('총계'), pxSumRow('신규 계약')]
+    };
+  });
+  ok(fin.tops.every(t => t.max >= t.v), '축 상한이 데이터보다 낮아지지 않는다');
+  ok(fin.tops.every(t => t.waste <= 1.45),
+    '축이 데이터에 바짝 붙는다 (최대 낭비 ' + Math.round(Math.max(...fin.tops.map(t => t.waste)) * 100) + '%)');
+  ok(fin.tops.every(t => t.steps >= 4 && t.steps <= 6), '눈금은 4~6칸 사이로 잡힌다');
+  ok(fin.notes === 1, '가정 문구는 한 장에 한 번만 찍힌다 (' + fin.notes + '번)');
+  ok(fin.neg && fin.pos, '표에서 늘어난 값과 줄어든 값에 색이 다르게 들어간다');
+  ok(fin.sum, '합계 줄은 본문과 다르게 칠해진다');
+  ok(fin.delta[0] === '059669' && fin.delta[1] === 'DC2626' && fin.delta[2] === '',
+    '+ 는 초록, - 는 빨강, 그냥 숫자는 그대로');
+  ok(fin.sumRow[0] && fin.sumRow[1] && !fin.sumRow[2], '합계 줄만 합계로 본다');
+  ok(/\d{4}년 \d{1,2}월 \d{1,2}일/.test(fin.foot) && !/_\d{4}/.test(fin.foot),
+    '표지 날짜가 사람이 읽는 형식이다 — ' + fin.foot);
+
   /* ── 말로 시켜도 파일까지 ── */
   const word = await page.evaluate(() => ({
     yes: ['피피티 만들어줘', 'PPT 로 만들어줘', '발표자료 하나 만들어줘', '슬라이드 만들어줘', '파워포인트 만들어줘']
