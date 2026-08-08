@@ -3586,6 +3586,7 @@ function osTabProbe(tab){
   if(tab==='home'||tab==='dashboard')return (typeof renderHome==='function')?renderHome():renderDashboard();
   if(tab==='settings')return renderSettings();
   if(tab==='ready')return renderReady();
+  if(tab==='airep')return renderAiRep();
   if(tab==='calc')return renderCalcPage();
   if(tab==='clients')return renderClientsPage();
   if(tab==='assistant')return renderAssistant();
@@ -4934,9 +4935,865 @@ function rdCss(){
   document.head.appendChild(st);
 }
 
+/* ════════ AI 보고 — 한 칸에서 전부 받는다 ════════
+   팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
+   숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
+   저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
+var AR={face:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',
+        rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
+var AR_KIND='ai_report';
+var AR_SEC=[
+ ['act', '활동 보고',  '📋','최근 30일 무엇을 했는지 — 숫자로'],
+ ['good','활동 격려',  '👏','잘하고 있는 것 · 이어 갈 것'],
+ ['stu', '공부할 부분','📚','이번 주에 채울 것'],
+ ['con', '상담 컨셉',  '🎯','다음 상담에서 그대로 쓸 말'],
+ ['next','다음 7일',   '🗓️','숫자로 정한 목표']
+];
+var AR_NAME=['활동 보고','활동 격려','공부할 부분','상담 컨셉','다음 7일'];
+var AR_KEY=['act','good','stu','con','next'];
+
+function arMyId(){try{return OS.session.user.id;}catch(e){return null;}}
+function arIsLead(){return (typeof gbIsLead==='function')?gbIsLead():false;}
+function arFace(){return AR.face||(arIsLead()?'team':'me');}
+function arGoFace(v){AR.face=v;AR.open='';arPaint();}
+function arOpen(id){AR.open=(AR.open===id)?'':id;arPaint();}
+function arDaysAgo(d){
+  if(!d)return 9999;
+  var t=new Date(),a=new Date(d+'T00:00:00Z');
+  return Math.round((Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),t.getUTCDate())-a.getTime())/86400000);
+}
+function arRoleKo(r){
+  var m={owner:'대표',admin:'앱 관리자',branch_manager:'본부장',education_manager:'교육매니저',
+         leader:'지점장',lead:'지점장',manager:'지점장',master:'마스터',member:'설계사'};
+  return m[r]||'설계사';
+}
+function arRowOf(id){
+  var i,rs=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[];
+  for(i=0;i<rs.length;i++)if(rs[i].id===id)return rs[i];
+  return null;
+}
+function arNameOf(id){var r=arRowOf(id);return r?r.name:'팀원';}
+function arScope(){
+  var rs=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[],out=[],i;
+  for(i=0;i<rs.length;i++){
+    if(AR.team&&rs[i].team!==AR.team)continue;
+    out.push(rs[i]);
+  }
+  return out;
+}
+/* 리더 화면에 세울 사람들 — 점수가 낮은 사람이 위로 온다 */
+function arList(){
+  var l=arScope().slice(),f=AR.f||'all',out=[],i,r,cl;
+  l.sort(function(a,b){return (a.total||0)-(b.total||0);});
+  if(f==='all')return l;
+  for(i=0;i<l.length;i++){
+    r=l[i];
+    if(f==='norep'){if(!AR.rep[r.id])out.push(r);}
+    else if(f==='stop'){if(!r.last||arDaysAgo(r.last)>=3)out.push(r);}
+    else if(f==='due'){cl=(AR.cli||{})[r.id];if(cl&&cl.due)out.push(r);}
+  }
+  return out;
+}
+function arRank(r){
+  var l=arScope().slice().sort(function(a,b){return (b.total||0)-(a.total||0);}),i;
+  for(i=0;i<l.length;i++)if(l[i].id===r.id)return i+1;
+  return l.length;
+}
+
+/* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
+function arLoad(force){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){AR.err='서버에 연결되어 있지 않습니다.';AR.loaded=true;arPaint();return;}
+  if(AR.loaded&&!force)return;
+  if(AR.busy==='load')return;
+  AR.busy='load';AR.err='';arPaint();
+  /* 여섯 축은 성장판이 이미 계산한다 — 같은 계산을 두 번 하지 않는다 */
+  if(typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function')gbLoad();
+  var d30=(typeof gbDay==='function')?gbDay(29):new Date(Date.now()-29*86400000).toISOString().slice(0,10);
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  Promise.all([
+    q(sb.from('dbs').select('id,assigned_to')),
+    q(sb.from('calls').select('created_by,call_at,result').gte('call_at',d30+'T00:00:00')),
+    q(sb.from('clients').select('id,advisor_id,created_at')),
+    q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')),
+    q(sb.from('saved_reports').select('id,title,content,created_at').eq('kind',AR_KIND)
+       .order('created_at',{ascending:false}).limit(300))
+  ]).then(function(r){
+    AR.busy='';AR.loaded=true;AR.at=new Date().toLocaleTimeString('ko-KR');
+    AR.crm=arCrmCalc(r[0].error?[]:(r[0].data||[]),r[1].error?[]:(r[1].data||[]));
+    AR.cli=arCliCalc(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
+    var rows=r[4].error?[]:(r[4].data||[]),i,c;
+    /* 같은 사람 것이 여러 줄이면 가장 최근 것만 쓴다 */
+    for(i=0;i<rows.length;i++){
+      c=rows[i].content||{};
+      if(!c.mid)continue;
+      if(!AR.rep[c.mid]){c._rid=rows[i].id;AR.rep[c.mid]=c;}
+    }
+    arPaint();
+  },function(e){
+    AR.busy='';AR.loaded=true;AR.err=(e&&e.message)||'네트워크 오류';arPaint();
+  });
+}
+function arCrmCalc(dbs,calls){
+  var out={},i,c,touched={};
+  for(i=0;i<calls.length;i++)if(calls[i].db_id)touched[calls[i].db_id]=1;
+  for(i=0;i<dbs.length;i++){
+    var a=dbs[i].assigned_to;if(!a)continue;
+    var o=out[a]||(out[a]={held:0,calls:0,appt:0,cold:0});
+    o.held++;
+    if(!touched[dbs[i].id])o.cold++;
+  }
+  for(i=0;i<calls.length;i++){
+    c=calls[i];if(!c.created_by)continue;
+    var o2=out[c.created_by]||(out[c.created_by]={held:0,calls:0,appt:0,cold:0});
+    o2.calls++;
+    if(c.result==='상담')o2.appt++;
+  }
+  return out;
+}
+function arCliCalc(clients,metas){
+  var byId={},out={},i,c,m,lt,j,tc;
+  for(i=0;i<metas.length;i++)byId[metas[i].client_id]=metas[i].content||{};
+  var today=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10);
+  for(i=0;i<clients.length;i++){
+    c=clients[i];if(!c.advisor_id)continue;
+    m=byId[c.id]||{};
+    var o=out[c.advisor_id]||(out[c.advisor_id]={n:0,plan:0,due:0,cold:0});
+    o.n++;
+    if(m.next&&m.next.what){
+      o.plan++;
+      if(m.next.due&&m.next.due<=today)o.due++;
+    }
+    lt='';tc=m.touch||[];
+    for(j=0;j<tc.length;j++){var d=(''+(tc[j].d||'')).slice(0,10);if(d>lt)lt=d;}
+    if(!lt)lt=(''+(c.created_at||'')).slice(0,10);
+    if(arDaysAgo(lt)>=90)o.cold++;
+  }
+  return out;
+}
+
+/* ── AI 에게 넘길 사실 — 지어낼 수 없게 숫자만 준다 ── */
+function arFacts(r){
+  var i,j,a,s='',list=arScope(),n=list.length||1,avg={},t;
+  for(i=0;i<GB_AX.length;i++){
+    a=GB_AX[i];t=0;
+    for(j=0;j<list.length;j++)t+=(list[j].sc[a.k]||0);
+    avg[a.k]=Math.round(t/n);
+  }
+  s+='[사람] '+r.name+' ('+arRoleKo(r.role)+')\n[기간] 최근 30일\n[여섯 축]\n';
+  for(i=0;i<GB_AX.length;i++){
+    a=GB_AX[i];
+    s+='- '+a.n+'('+a.w+'): '+(r.raw[a.k]||0)+a.u+' / 목표 '+a.t+a.u+
+       ' = '+(r.sc[a.k]||0)+'점 (팀 평균 '+avg[a.k]+'점)\n';
+  }
+  s+='[종합] '+(r.total||0)+'점 · 팀 안에서 '+arRank(r)+'번째 / '+list.length+'명\n';
+  s+='[마지막 활동] '+(r.last||'기록 없음')+' · [마지막 출근] '+(r.lastAtt||'기록 없음')+'\n';
+  var pm=(typeof GB!=='undefined'&&GB.pass)?(GB.pass[r.id]||{}):{},ok=[],no=[];
+  for(i=0;i<GB_CUR.length;i++)(pm[GB_CUR[i][0]]?ok:no).push(GB_CUR[i][1]);
+  s+='[공부] 합격 '+ok.length+'/'+GB_CUR.length+(ok.length?(' — '+ok.join(', ')):'')+'\n';
+  s+='[아직 안 한 공부] '+(no.length?no.slice(0,6).join(', '):'없음')+'\n';
+  var cr=(AR.crm||{})[r.id];
+  s+=cr?('[DB 통합 CRM] 배정 DB '+cr.held+'건 · 최근 30일 통화 '+cr.calls+'통 · 상담 전환 '+cr.appt+
+        '건 · 한 번도 안 돌린 DB '+cr.cold+'건\n'):'[DB 통합 CRM] 기록 없음\n';
+  var cl=(AR.cli||{})[r.id];
+  s+=cl?('[고객 365일] 담당 '+cl.n+'명 · 다음 할 일 적힌 사람 '+cl.plan+'명 · 기한 지난 할 일 '+cl.due+
+        '건 · 90일 넘게 못 만난 고객 '+cl.cold+'명\n'):'[고객 365일] 기록 없음\n';
+  var notes=[];
+  try{
+    notes=(GB.notes||[]).filter(function(x){return x.member_id===r.id;}).slice(0,3);
+  }catch(e){}
+  if(notes.length){
+    s+='[최근 리더 메모]\n';
+    for(i=0;i<notes.length;i++)s+='- '+(''+(notes[i].body||'')).replace(/\s+/g,' ').slice(0,140)+'\n';
+  }
+  s+='\n위에 적힌 숫자만 가지고 보고서를 씁니다. 없는 숫자는 만들지 않습니다.';
+  return s;
+}
+function arSys(){
+  var base='당신은 에이플러스에셋 온탑본부의 지점장입니다. 팀원 한 사람의 최근 30일 기록을 보고 보고서를 씁니다.\n'+
+   '숫자를 지어내지 않습니다. 주어진 숫자만 씁니다. 주어지지 않은 것은 「기록 없음」이라고 씁니다.\n'+
+   '말투는 담백한 존댓말입니다. 다그치지 않습니다. 잘한 것을 먼저 말하고, 고칠 것은 하나만 고릅니다.\n'+
+   '보험 관련 내용은 단정적으로 말하지 않습니다. 보장 여부와 지급은 약관과 심사에 따릅니다.\n'+
+   '고객 실명·전화번호·병력은 쓰지 않습니다.\n'+
+   '반드시 아래 다섯 제목을 그대로, 이 순서로 씁니다. 다른 제목을 만들지 않습니다.\n'+
+   '## 활동 보고\n## 활동 격려\n## 공부할 부분\n## 상담 컨셉\n## 다음 7일\n'+
+   '각 항목은 3~6줄입니다. 「상담 컨셉」은 상담에서 그대로 읽을 수 있는 문장으로 씁니다. '+
+   '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.';
+  try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 참고]\n'+k;}}catch(e){}
+  try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
+  return base;
+}
+function arParse(md){
+  var lines=(''+(md||'')).split(/\r?\n/),out={},cur='',i,j,raw,t,hit;
+  for(j=0;j<lines.length;j++){
+    raw=lines[j];hit=-1;
+    if(/^\s*(#{1,4}\s*|\*\*|\[|【)?\s*(활동\s*보고|활동\s*격려|공부할\s*부분|상담\s*컨셉|다음\s*7일)/.test(raw)){
+      t=raw.replace(/[#*\[\]【】:\s]/g,'');
+      for(i=0;i<AR_NAME.length;i++)if(t.indexOf(AR_NAME[i].replace(/\s/g,''))===0){hit=i;break;}
+    }
+    if(hit>=0){cur=AR_KEY[hit];out[cur]='';continue;}
+    if(cur)out[cur]+=raw+'\n';
+  }
+  for(i=0;i<AR_KEY.length;i++)out[AR_KEY[i]]=(out[AR_KEY[i]]||'').replace(/^\s+|\s+$/g,'');
+  /* 제목을 못 지켰으면 통째로 첫 칸에 넣는다 — 답을 버리지 않는다 */
+  if(!out.act&&!out.good&&!out.stu&&!out.con&&!out.next)out.act=(''+(md||'')).replace(/^\s+|\s+$/g,'');
+  return out;
+}
+function arGen(mid,then){
+  var r=arRowOf(mid);
+  if(!r){toast('그 사람의 기록을 찾지 못했습니다. 성장판을 한 번 열어 주세요.');if(then)then();return;}
+  if(typeof callAI!=='function'){toast('AI가 연결되어 있지 않습니다');if(then)then();return;}
+  var q=(AR.busy==='all');
+  if(!q)AR.busy=mid;
+  AR.err='';arPaint();
+  callAI(arSys(),arFacts(r),2800,'brain').then(function(out){
+    var o=arParse(out);
+    o.mid=mid;o.name=r.name;o.total=r.total||0;o.at=new Date().toISOString();
+    o.by=arMyId();
+    var old=AR.rep[mid];
+    if(old&&old._rid)o._rid=old._rid;
+    AR.rep[mid]=o;
+    if(!q){AR.busy='';AR.open=mid;}
+    arSaveRow(mid,o);
+    arPaint();
+    if(then)then();
+  },function(e){
+    if(!q)AR.busy='';
+    AR.err=(e&&e.message)||'AI 호출에 실패했습니다.';
+    arPaint();
+    if(then)then();
+  });
+}
+/* 저장은 항상 내 이름으로 남는다 — 남의 줄에 쓰는 것은 서버가 막는다 */
+function arSaveRow(mid,o){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!OS.profile)return;
+  var body={mid:mid,name:o.name,total:o.total,at:o.at,by:o.by,
+            act:o.act||'',good:o.good||'',stu:o.stu||'',con:o.con||'',next:o.next||''};
+  var bad=function(){};
+  if(o._rid){
+    sb.from('saved_reports').update({content:body}).eq('id',o._rid).then(function(){},bad);
+    return;
+  }
+  sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:null,
+    kind:AR_KIND,title:'AI 보고 · '+(o.name||''),content:body}).then(function(r){
+    if(r&&!r.error&&AR.rep[mid])arLoadRid(mid);
+  },bad);
+}
+function arLoadRid(mid){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb)return;
+  sb.from('saved_reports').select('id,content').eq('kind',AR_KIND)
+    .order('created_at',{ascending:false}).limit(50).then(function(r){
+      if(!r||r.error)return;
+      var rows=r.data||[],i;
+      for(i=0;i<rows.length;i++){
+        var c=rows[i].content||{};
+        if(c.mid===mid&&AR.rep[mid]){AR.rep[mid]._rid=rows[i].id;return;}
+      }
+    },function(){});
+}
+function arGenAll(){
+  var l=arList(),ids=[],i;
+  for(i=0;i<l.length;i++)ids.push(l[i].id);
+  if(!ids.length){toast('팀원이 없습니다');return;}
+  AR.qt=ids.length;AR.qn=0;AR.busy='all';AR.err='';
+  var step=function(){
+    if(!ids.length){AR.busy='';AR.qmsg='';arPaint();toast('팀 전원 보고가 준비됐습니다');return;}
+    var id=ids.shift();AR.qn++;
+    AR.qmsg=AR.qn+' / '+AR.qt+' · '+arNameOf(id);
+    arPaint();
+    arGen(id,function(){setTimeout(step,400);});
+  };
+  step();
+}
+
+/* ── 글자 다듬기 — 표 없이 읽히게 ── */
+function arMd(s){
+  var t=(typeof osEsc==='function')?osEsc(''+(s||'')):(''+(s||''));
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  t=t.split(/\n/).map(function(l){
+    var x=l.replace(/^\s*[-•*]\s+/,'');
+    if(x!==l)return '<div class="ar-li">'+x+'</div>';
+    if(/^\s*\d+[.)]\s+/.test(l))return '<div class="ar-li">'+l.replace(/^\s*/,'')+'</div>';
+    if(!l.replace(/\s/g,''))return '';
+    return '<div class="ar-p">'+l+'</div>';
+  }).join('');
+  return t||'<div class="ar-p" style="color:#94A3B8">아직 없습니다.</div>';
+}
+function arWhen(at){
+  if(!at)return '';
+  var d=new Date(at);
+  if(isNaN(d.getTime()))return '';
+  return (d.getMonth()+1)+'월 '+d.getDate()+'일 '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+/* 다섯 칸을 읽히게 — 활동 보고는 넓게, 격려와 공부는 나란히, 컨셉은 소리 내어 읽게 */
+function arSecHtml(o){
+  var h='',i,s,k;
+  for(i=0;i<AR_SEC.length;i++){
+    s=AR_SEC[i];k=s[0];
+    h+='<div class="ar-sec s-'+k+'"><div class="ar-sh"><span class="e">'+s[2]+'</span>'+
+       '<span class="n">'+osEsc(s[1])+'</span><span class="d">'+osEsc(s[3])+'</span></div>'+
+       '<div class="ar-sb">'+(k==='next'?arSteps(o[k]):arMd(o[k]))+'</div></div>';
+  }
+  return '<div class="ar-secs">'+h+'</div>';
+}
+/* 다음 7일은 할 일이다 — 문장이 아니라 줄로 세운다 */
+function arSteps(s){
+  var lines=(''+(s||'')).split(/\n/),out=[],i,t;
+  for(i=0;i<lines.length;i++){
+    t=lines[i].replace(/^\s*(\d+[.)]|[-•*])\s*/,'').replace(/^\s+|\s+$/g,'');
+    if(t)out.push(t);
+  }
+  if(!out.length)return '<div class="ar-p" style="color:#94A3B8">아직 없습니다.</div>';
+  return out.map(function(t,i){
+    return '<div class="ar-do"><span class="n">'+(i+1)+'</span><span class="t">'+
+      ((typeof osEsc==='function')?osEsc(t):t)+'</span></div>';
+  }).join('');
+}
+/* 한 줄 요약 — 펼치지 않고도 무슨 상태인지 알게 */
+function arOneLine(o){
+  var t=(''+((o&&o.act)||'')).replace(/\s+/g,' ').replace(/^\s+/,'');
+  if(!t)return '';
+  var m=t.match(/^[^.!?]{4,90}[.!?]?/);
+  return m?m[0]:t.slice(0,90);
+}
+function arStat(list){
+  var i,r,st={n:list.length,move:0,stop:0,due:0,rep:0,cold:0,call:0,appt:0};
+  for(i=0;i<list.length;i++){
+    r=list[i];
+    if(AR.rep[r.id])st.rep++;
+    var d=r.last?arDaysAgo(r.last):9999;
+    if(d<=1)st.move++;
+    if(d>=3)st.stop++;
+    var cl=(AR.cli||{})[r.id];if(cl){st.due+=cl.due;st.cold+=cl.cold;}
+    var cr=(AR.crm||{})[r.id];if(cr){st.call+=cr.calls;st.appt+=cr.appt;}
+  }
+  return st;
+}
+function arTopHtml(){
+  var st=arStat(arScope());
+  var tile=function(k,v,u,warn){
+    return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+
+      (u?('<span>'+u+'</span>'):'')+'</div><div class="k">'+k+'</div></div>';
+  };
+  return '<div class="ar-top">'+
+    tile('팀 인원',st.n,'명',0)+
+    tile('오늘 움직인 사람',st.move,'명',0)+
+    tile('사흘째 멈춘 사람',st.stop,'명',st.stop>0)+
+    tile('밀린 고객 할 일',st.due,'건',st.due>0)+
+    tile('보고 준비',st.rep+' / '+st.n,'',st.rep<st.n)+
+    '</div>';
+}
+var AR_F=[['all','전체'],['norep','보고 없음'],['stop','멈춘 사람'],['due','밀린 할 일']];
+function arFilterSet(k){AR.f=k;AR.open='';arPaint();}
+function arFilterHtml(){
+  var i,h='',cur=AR.f||'all',c={},l=arScope(),j;
+  for(j=0;j<l.length;j++){
+    if(!AR.rep[l[j].id])c.norep=(c.norep||0)+1;
+    if(!l[j].last||arDaysAgo(l[j].last)>=3)c.stop=(c.stop||0)+1;
+    var cl=(AR.cli||{})[l[j].id];if(cl&&cl.due)c.due=(c.due||0)+1;
+  }
+  c.all=l.length;
+  for(i=0;i<AR_F.length;i++)
+    h+='<button type="button" class="ar-fc'+(cur===AR_F[i][0]?' on':'')+'" onclick="arFilterSet(\''+
+      AR_F[i][0]+'\')">'+osEsc(AR_F[i][1])+'<span>'+(c[AR_F[i][0]]||0)+'</span></button>';
+  return '<div class="ar-fs">'+h+'</div>';
+}
+/* 여섯 축 막대 — 숫자를 세지 않고도 어디가 비었는지 보이게 */
+function arNumsHtml(r){
+  var h='<div class="ar-nums">',i,a,v;
+  for(i=0;i<GB_AX.length;i++){
+    a=GB_AX[i];v=r.sc[a.k]||0;
+    h+='<div class="ar-nm"><span class="k">'+osEsc(a.n)+'</span>'+
+       '<span class="b"><i style="width:'+Math.min(100,v)+'%;background:'+
+       (v>=100?'#059669':(v>=60?'#1A56DB':'#DC2626'))+'"></i></span>'+
+       '<span class="v">'+(r.raw[a.k]||0)+'/'+a.t+a.u+'</span></div>';
+  }
+  var cr=(AR.crm||{})[r.id],cl=(AR.cli||{})[r.id];
+  h+='</div><div class="ar-tags">'+
+    '<span class="ar-tag">종합 '+(r.total||0)+'점</span>'+
+    (cr?('<span class="ar-tag">통화 '+cr.calls+'통</span><span class="ar-tag">상담 '+cr.appt+'건</span>'+
+         (cr.cold?('<span class="ar-tag warn">안 돌린 DB '+cr.cold+'건</span>'):'')):'')+
+    (cl?('<span class="ar-tag">고객 '+cl.n+'명</span>'+
+         (cl.due?('<span class="ar-tag warn">기한 지난 할 일 '+cl.due+'건</span>'):'')+
+         (cl.cold?('<span class="ar-tag warn">90일+ 못 만난 '+cl.cold+'명</span>'):'')):'')+
+    '</div>';
+  return h;
+}
+function arStateHtml(r){
+  var d=r.last?arDaysAgo(r.last):-1;
+  if(d<0)return '<span class="ar-bg red">기록 없음</span>';
+  if(d>=3)return '<span class="ar-bg red">'+d+'일째 멈춤</span>';
+  if(d>=1)return '<span class="ar-bg amb">어제 활동</span>';
+  return '<span class="ar-bg grn">오늘 활동</span>';
+}
+function arDotsHtml(r){
+  var j,t='';
+  for(j=0;j<GB_AX.length;j++)
+    t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
+      'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
+  return '<span class="ar-dots">'+t+'</span>';
+}
+
+function arMeHtml(){
+  var me=arMyId(),r=arRowOf(me),o=AR.rep[me];
+  if(typeof GB==='undefined'||!GB.loaded)
+    return '<div class="card"><div class="card-body"><div class="ar-none">기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
+  if(!r)
+    return '<div class="card"><div class="card-body"><div class="ar-none">내 기록을 찾지 못했습니다.<br>'+
+      '설정 → 팀원 권한 관리에서 계정이 연결돼 있는지 확인해 주세요.</div></div></div>';
+  var busy=(AR.busy===me),one=o?arOneLine(o):'';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧾</span>'+
+    osEsc(r.name)+' 님의 보고'+(o&&o.at?('<span class="ar-n">'+osEsc(arWhen(o.at))+'</span>'):'')+'</div>'+
+    '<div class="card-desc">체크판 · 성장판 · DB 통합 CRM · 고객 365일에 남은 기록을 AI 가 한 번에 읽었습니다</div></div>'+
+    '<div class="card-body">'+
+    (one?('<div class="ar-one">'+osEsc(one)+'</div>'):'')+
+    arNumsHtml(r)+
+    '<div class="btn-row" style="margin-top:13px">'+
+    '<button class="btn btn-primary" '+(busy?'disabled':'')+' onclick="arGen(\''+me+'\')">'+
+      (busy?'읽는 중…':(o?'다시 받기':'AI 보고 받기'))+'</button>'+
+    (o?'<button class="btn btn-ghost" onclick="arPrint(\''+me+'\')">인쇄 · PDF</button>':'')+
+    (o?'<button class="btn btn-ghost" onclick="arCopy(\''+me+'\')">글 복사</button>':'')+
+    '<button class="btn btn-ghost" onclick="go(\'ckboard\')">체크판</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'clients\')">고객 365일</button>'+
+    '</div>'+
+    (AR.err?('<div class="ar-err">'+osEsc(AR.err)+'</div>'):'')+
+    (o?arSecHtml(o):'<div class="ar-none" style="margin-top:14px">아직 보고가 없습니다. '+
+      '<b>AI 보고 받기</b> 를 누르면 30초 안에 다섯 칸이 채워집니다.</div>')+
+    '</div></div>';
+}
+function arTeamHtml(){
+  if(typeof GB==='undefined'||!GB.loaded)
+    return '<div class="card"><div class="card-body"><div class="ar-none">팀 기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
+  var all=arScope();
+  if(!all.length)
+    return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
+      '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
+  var l=arList(),i,r,o,h='',me=arMyId(),done=0;
+  for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
+  for(i=0;i<l.length;i++){
+    r=l[i];o=AR.rep[r.id];
+    var open=(AR.open===r.id),busy=(AR.busy===r.id),one=o?arOneLine(o):'';
+    h+='<div class="ar-row'+(open?' open':'')+'">'+
+      '<div class="ar-rh" onclick="arOpen(\''+r.id+'\')">'+
+        '<span class="ar-ar">'+(open?'▾':'▸')+'</span>'+
+        '<span class="ar-nmx">'+osEsc(r.name)+(r.id===me?' (나)':'')+'</span>'+
+        '<span class="ar-sc '+((r.total||0)>=70?'ok':((r.total||0)>=40?'mid':'low'))+'">'+(r.total||0)+'점</span>'+
+        arStateHtml(r)+arDotsHtml(r)+
+        '<span class="ar-st">'+(o?('보고 있음 · '+osEsc(arWhen(o.at))):'<b class="ar-no">보고 없음</b>')+'</span>'+
+      '</div>'+
+      (one&&!open?('<div class="ar-pk">'+osEsc(one)+'</div>'):'');
+    if(open){
+      h+='<div class="ar-rb">'+
+        (one?('<div class="ar-one">'+osEsc(one)+'</div>'):'')+
+        arNumsHtml(r)+
+        '<div class="btn-row" style="margin-top:12px">'+
+        '<button class="btn btn-primary" '+(busy?'disabled':'')+' onclick="arGen(\''+r.id+'\')">'+
+          (busy?'읽는 중…':(o?'다시 받기':'이 사람 보고 받기'))+'</button>'+
+        (o?('<button class="btn btn-ghost" onclick="arPrint(\''+r.id+'\')">인쇄 · PDF</button>'):'')+
+        (o?('<button class="btn btn-ghost" onclick="arCopy(\''+r.id+'\')">글 복사</button>'):'')+
+        '<button class="btn btn-ghost" onclick="go(\'growboard\')">성장판</button>'+
+        '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">코칭 메모</button>'+
+        '</div>'+
+        (o?arSecHtml(o):'<div class="ar-none" style="margin-top:12px">아직 보고가 없습니다.</div>')+
+        '</div>';
+    }
+    h+='</div>';
+  }
+  if(!l.length)h='<div class="ar-none">고른 조건에 맞는 사람이 없습니다.</div>';
+  return arTopHtml()+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
+    '<span class="ar-n">'+done+' / '+all.length+'명</span></div>'+
+    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:12px">'+
+    '<button class="btn btn-primary" '+(AR.busy==='all'?'disabled':'')+' onclick="arGenAll()">'+
+      (AR.busy==='all'?('만드는 중 '+osEsc(AR.qmsg)):'전원 보고 한 번에 받기')+'</button>'+
+    '<button class="btn btn-ghost" onclick="arPrint(\'team\')">팀 전체 인쇄 · PDF</button>'+
+    '<button class="btn btn-ghost" onclick="arLoad(true)">새로 읽기</button>'+
+    '</div>'+
+    arFilterHtml()+
+    (AR.err?('<div class="ar-err">'+osEsc(AR.err)+'</div>'):'')+
+    '<div class="ar-list">'+h+'</div>'+
+    '</div></div>'+arSumHtml(all);
+}
+/* 리더가 먼저 볼 네 줄 — 오늘 누구에게 전화할지만 정하면 된다 */
+function arSumHtml(l){
+  var i,r,noRep=[],cold=[],due=0,idle=[];
+  for(i=0;i<l.length;i++){
+    r=l[i];
+    if(!AR.rep[r.id])noRep.push(r.name);
+    var cl=(AR.cli||{})[r.id];if(cl){due+=cl.due;if(cl.cold>=5)cold.push(r.name+'('+cl.cold+'명)');}
+    if(r.last&&arDaysAgo(r.last)>=3)idle.push(r.name+'('+arDaysAgo(r.last)+'일)');
+    else if(!r.last)idle.push(r.name+'(기록 없음)');
+  }
+  var row=function(e,t,v,warn){
+    return '<div class="ar-sm'+(warn?' warn':'')+'"><span class="e">'+e+'</span>'+
+      '<span class="t">'+osEsc(t)+'</span><span class="v">'+osEsc(v)+'</span></div>';
+  };
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔎</span>지금 손대야 할 것</div>'+
+    '<div class="card-desc">이 네 줄만 보고 오늘 누구에게 전화할지 정하시면 됩니다</div></div>'+
+    '<div class="card-body">'+
+    row('🧾','보고가 아직 없는 사람',noRep.length?noRep.join(', '):'없음',noRep.length>0)+
+    row('💤','사흘 넘게 기록이 없는 사람',idle.length?idle.join(', '):'없음',idle.length>0)+
+    row('❄️','식은 고객이 다섯 명 넘는 사람',cold.length?cold.join(', '):'없음',cold.length>0)+
+    row('⏰','팀 전체 기한 지난 할 일',due?(due+'건'):'없음',due>0)+
+    '<div class="notice" style="margin-top:11px">숫자만 보고 다그치지 않습니다. '+
+    '한 사람에게 한 가지만 말합니다. 오늘 고를 사람은 <b>한 명</b>이면 충분합니다.</div>'+
+    '</div></div>';
+}
+/* 종이로 내는 길 — 회의 자리에 그대로 들고 간다 */
+function arPrint(which){
+  var ids=[],i;
+  if(which==='team'){var l=arList();for(i=0;i<l.length;i++)if(AR.rep[l[i].id])ids.push(l[i].id);}
+  else if(AR.rep[which])ids.push(which);
+  if(!ids.length){toast('인쇄할 보고가 아직 없습니다');return;}
+  var esc=function(t){return (typeof osEsc==='function')?osEsc(''+(t||'')):(''+(t||''));};
+  var body='',j,o,r;
+  for(i=0;i<ids.length;i++){
+    o=AR.rep[ids[i]];r=arRowOf(ids[i]);
+    body+='<section><h2>'+esc(o.name||'')+'<em>'+(r?(r.total||0):(o.total||0))+'점 · '+
+      esc(arWhen(o.at))+'</em></h2>';
+    for(j=0;j<AR_SEC.length;j++)
+      body+='<h3>'+AR_SEC[j][2]+' '+esc(AR_SEC[j][1])+'</h3><p>'+
+        esc(o[AR_SEC[j][0]]||'').split('\n').join('<br>')+'</p>';
+    body+='</section>';
+  }
+  var css='body{font-family:-apple-system,"Malgun Gothic",sans-serif;color:#111827;max-width:800px;'+
+    'margin:0 auto;padding:26px 22px;word-break:keep-all;line-height:1.8}'+
+    'h1{font-size:22px;margin:0 0 4px}.sub{color:#64748B;font-size:12px;margin-bottom:20px}'+
+    'section{page-break-inside:avoid;border-top:2px solid #0F172A;padding-top:14px;margin-top:22px}'+
+    'h2{font-size:19px;margin:0 0 12px;display:flex;justify-content:space-between;align-items:baseline}'+
+    'h2 em{font-style:normal;font-size:12px;color:#64748B;font-weight:600}'+
+    'h3{font-size:13px;margin:14px 0 5px;color:#1A56DB}'+
+    'p{margin:0;font-size:13.5px;color:#1F2937}'+
+    '@page{size:A4;margin:16mm}';
+  var w=window.open('','_blank');
+  if(!w){toast('창을 열지 못했습니다. 브라우저의 팝업 차단을 풀어 주세요.',6000);return;}
+  w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8">'+
+    '<title>AI 보고</title><style>'+css+'</style></head><body>'+
+    '<h1>AI 보고</h1><div class="sub">에이플러스에셋 온탑본부 · '+
+    esc(new Date().toLocaleDateString('ko-KR'))+'</div>'+body+
+    '<div class="sub" style="margin-top:24px">앱에 남은 기록만 보고 쓴 참고 자료입니다. '+
+    '보험 보장과 지급은 약관과 심사에 따릅니다.</div></body></html>');
+  w.document.close();
+  setTimeout(function(){try{w.print();}catch(e){}},400);
+}
+function arCopy(mid){
+  var o=AR.rep[mid];if(!o)return;
+  var i,s='['+(o.name||'')+' · AI 보고]\n';
+  for(i=0;i<AR_SEC.length;i++)s+='\n■ '+AR_SEC[i][1]+'\n'+(o[AR_SEC[i][0]]||'')+'\n';
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(s);toast('복사했습니다');return;
+    }
+  }catch(e){}
+  try{
+    var ta=document.createElement('textarea');ta.value=s;document.body.appendChild(ta);
+    ta.select();document.execCommand('copy');document.body.removeChild(ta);toast('복사했습니다');
+  }catch(e2){toast('복사하지 못했습니다');}
+}
+
+/* ── 체크판 안에 넣는 작은 칸 — 여기서 다 보이고, 더 보려면 한 번만 누른다 ── */
+function arMiniHtml(face){
+  if(typeof AR==='undefined')return '';
+  var lead=(face==='team'),me=arMyId(),body='',foot='';
+  if(lead){
+    var l=arList(),i,done=0,no=[],due=0,cold=0,cal=0;
+    for(i=0;i<l.length;i++){
+      if(AR.rep[l[i].id])done++;else no.push(l[i].name);
+      var c1=(AR.cli||{})[l[i].id];if(c1){due+=c1.due;cold+=c1.cold;}
+      var c2=(AR.crm||{})[l[i].id];if(c2)cal+=c2.calls;
+    }
+    body=l.length?('<div class="ar-mi"><b>'+done+' / '+l.length+'명</b> 보고가 준비돼 있습니다.'+
+      (no.length?('<br>아직 없는 사람 — '+osEsc(no.slice(0,6).join(', '))):'')+'</div>')
+      :'<div class="ar-mi">팀원이 없습니다. 설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div>';
+    foot='<div class="ar-tags" style="margin-top:10px">'+
+      '<span class="ar-tag">팀 통화 '+cal+'통 / 30일</span>'+
+      (due?('<span class="ar-tag warn">기한 지난 할 일 '+due+'건</span>'):'<span class="ar-tag">밀린 할 일 없음</span>')+
+      (cold?('<span class="ar-tag warn">90일+ 못 만난 고객 '+cold+'명</span>'):'')+
+      '</div>';
+  }else{
+    var o=AR.rep[me],cl=(AR.cli||{})[me],cr=(AR.crm||{})[me];
+    body=o?('<div class="ar-mi"><b>'+osEsc(arWhen(o.at))+'</b> 에 받은 보고가 있습니다.<br>'+
+      osEsc((''+(o.next||o.act||'')).replace(/\s+/g,' ').slice(0,90))+'…</div>')
+      :'<div class="ar-mi">아직 보고가 없습니다. 한 번 누르면 다섯 칸이 채워집니다.</div>';
+    foot='<div class="ar-tags" style="margin-top:10px">'+
+      (cr?('<span class="ar-tag">통화 '+cr.calls+'통 / 30일</span><span class="ar-tag">상담 '+cr.appt+'건</span>'):'')+
+      (cl?('<span class="ar-tag">고객 '+cl.n+'명</span>'+
+        (cl.due?('<span class="ar-tag warn">오늘 넘긴 할 일 '+cl.due+'건</span>'):'<span class="ar-tag">밀린 할 일 없음</span>')+
+        (cl.cold?('<span class="ar-tag warn">90일+ 못 만난 '+cl.cold+'명</span>'):'')):'')+
+      '</div>';
+  }
+  return '<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🧾</span>AI 보고</div>'+
+    '<div class="card-desc">'+(lead?'팀원 전원의 활동보고 · 격려 · 공부할 부분 · 상담 컨셉을 한 칸에서':
+      '활동보고 · 격려 · 공부할 부분 · 상담 컨셉 · 다음 7일')+'</div></div>'+
+    '<div class="card-body">'+body+foot+
+    '<div class="btn-row" style="margin-top:11px">'+
+    '<button class="btn btn-primary" onclick="go(\'airep\')">AI 보고 열기</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'clients\')">고객 365일</button>'+
+    '<button class="btn btn-ghost" onclick="osHelpOpen(\'airep\')">❓ 사용법</button>'+
+    '</div></div></div>';
+}
+function ckArMiniBox(face){
+  if(typeof arMiniHtml!=='function')return '';
+  return '<div id="ckArMini" data-face="'+face+'">'+arMiniHtml(face)+'</div>';
+}
+
+function arCss(){
+  if(document.getElementById('arCss'))return;
+  var s=document.createElement('style');s.id='arCss';
+  s.textContent=
+   '.ar-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}'+
+   '.ar-tab{border:1.5px solid var(--line,#E2E8F0);background:#fff;border-radius:11px;padding:9px 15px;'+
+     'font-size:13px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.ar-tab.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.ar-n{margin-left:9px;font-size:11.5px;font-weight:800;color:#1A56DB;background:#EFF6FF;'+
+     'border-radius:20px;padding:2px 9px}'+
+   '.ar-none{font-size:13px;color:#64748B;line-height:1.8;padding:14px;background:#F8FAFC;border-radius:10px}'+
+   '.ar-err{font-size:12.5px;color:#991B1B;background:#FEF2F2;border-radius:10px;padding:11px 13px;margin-top:11px;line-height:1.7}'+
+   '.ar-nums{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}'+
+   '@media(max-width:760px){.ar-nums{grid-template-columns:1fr}}'+
+   '.ar-nm{display:flex;align-items:center;gap:8px}'+
+   '.ar-nm .k{flex:none;width:34px;font-size:12px;font-weight:800;color:#334155}'+
+   '.ar-nm .b{flex:1;height:7px;background:#EEF2F7;border-radius:5px;overflow:hidden}'+
+   '.ar-nm .b i{display:block;height:100%;border-radius:5px}'+
+   '.ar-nm .v{flex:none;font-size:11.5px;font-weight:800;color:#64748B;min-width:66px;text-align:right}'+
+   '.ar-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}'+
+   '.ar-tag{font-size:11.5px;font-weight:800;color:#334155;background:#F1F5F9;border-radius:20px;padding:4px 11px}'+
+   '.ar-tag.warn{background:#FEF2F2;color:#B91C1C}'+
+   '.ar-sec{margin-top:15px;border:1.5px solid #EDF1F6;border-radius:13px;overflow:hidden}'+
+   '.ar-sh{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#F8FAFC;border-bottom:1px solid #EDF1F6}'+
+   '.ar-sh .e{font-size:16px}'+
+   '.ar-sh .n{font-size:14px;font-weight:900;color:#0F172A}'+
+   '.ar-sh .d{font-size:11.5px;color:#94A3B8;font-weight:700;margin-left:auto}'+
+   '.ar-sb{padding:14px 16px}'+
+   '.ar-top{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}'+
+   '.ar-tl{border:1.5px solid #EDF1F6;border-radius:13px;padding:13px 14px;background:#fff}'+
+   '.ar-tl .v{font-size:23px;font-weight:900;color:#0F172A;letter-spacing:-.02em;line-height:1.2}'+
+   '.ar-tl .v span{font-size:12px;font-weight:800;color:#94A3B8;margin-left:2px}'+
+   '.ar-tl .k{font-size:11.5px;font-weight:700;color:#64748B;margin-top:3px;line-height:1.4}'+
+   '.ar-tl.warn{border-color:#FECACA;background:#FEF2F2}'+
+   '.ar-tl.warn .v{color:#B91C1C}'+
+   '@media(max-width:900px){.ar-top{grid-template-columns:1fr 1fr 1fr}}'+
+   '@media(max-width:520px){.ar-top{grid-template-columns:1fr 1fr}}'+
+   '.ar-fs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}'+
+   '.ar-fc{border:1.5px solid #E2E8F0;background:#fff;border-radius:99px;padding:7px 13px;'+
+     'font-size:12.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.ar-fc span{margin-left:6px;font-size:11px;color:#94A3B8}'+
+   '.ar-fc.on{background:#EFF6FF;border-color:#1A56DB;color:#1A56DB}'+
+   '.ar-fc.on span{color:#1A56DB}'+
+   '.ar-one{font-size:14px;font-weight:800;color:#0F172A;background:#F1F5FF;border-left:4px solid #1A56DB;'+
+     'border-radius:0 10px 10px 0;padding:11px 14px;line-height:1.65;margin-bottom:13px}'+
+   '.ar-pk{font-size:12px;color:#64748B;line-height:1.6;padding:0 14px 11px 34px;font-weight:600}'+
+   '.ar-bg{font-size:11px;font-weight:800;border-radius:20px;padding:3px 9px;white-space:nowrap}'+
+   '.ar-bg.grn{background:#ECFDF5;color:#047857}'+
+   '.ar-bg.amb{background:#FFFBEB;color:#B45309}'+
+   '.ar-bg.red{background:#FEF2F2;color:#B91C1C}'+
+   '.ar-dots{display:flex;gap:3px}'+
+   '.ar-dots .d{width:8px;height:8px;border-radius:50%;background:#E2E8F0}'+
+   '.ar-dots .d.ok{background:#059669}.ar-dots .d.half{background:#1A56DB}.ar-dots .d.no{background:#FCA5A5}'+
+   '.ar-secs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}'+
+   '.ar-secs .s-act,.ar-secs .s-con,.ar-secs .s-next{grid-column:1/-1}'+
+   '@media(max-width:820px){.ar-secs{grid-template-columns:1fr}}'+
+   '.ar-sec.s-con .ar-sb{background:#0F172A}'+
+   '.ar-sec.s-con .ar-p,.ar-sec.s-con .ar-li{color:#F8FAFC;font-size:15.5px;font-weight:700;line-height:1.8}'+
+   '.ar-do{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px dashed #EDF1F6}'+
+   '.ar-do:last-child{border:0}'+
+   '.ar-do .n{flex:none;width:21px;height:21px;border-radius:7px;background:#1A56DB;color:#fff;'+
+     'font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px}'+
+   '.ar-do .t{font-size:13.5px;line-height:1.7;color:#1E293B;font-weight:600}'+
+   '.ar-p{font-size:14px;line-height:1.9;color:#1E293B;margin:4px 0}'+
+   '.ar-li{font-size:14px;line-height:1.9;color:#1E293B;margin:5px 0 5px 15px;position:relative}'+
+   '.ar-li:before{content:"·";position:absolute;left:-13px;font-weight:900;color:#1A56DB}'+
+   '.ar-list{display:flex;flex-direction:column;gap:9px}'+
+   '.ar-row{border:1.5px solid #EDF1F6;border-radius:13px;overflow:hidden}'+
+   '.ar-row.open{border-color:#1A56DB;box-shadow:0 3px 14px rgba(26,86,219,.10)}'+
+   '.ar-rh{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;background:#fff;flex-wrap:wrap}'+
+   '.ar-rh:hover{background:#F8FAFC}'+
+   '.ar-ar{color:#94A3B8;font-size:12px;font-weight:900}'+
+   '.ar-nmx{font-size:14px;font-weight:900;color:#0F172A;min-width:78px}'+
+   '.ar-sc{font-size:12px;font-weight:900;border-radius:20px;padding:3px 10px}'+
+   '.ar-sc.ok{background:#ECFDF5;color:#047857}.ar-sc.mid{background:#EFF6FF;color:#1D4ED8}'+
+   '.ar-sc.low{background:#FEF2F2;color:#B91C1C}'+
+   '.ar-st{font-size:11.5px;color:#94A3B8;font-weight:700;margin-left:auto;text-align:right}'+
+   '.ar-no{color:#DC2626}'+
+   '.ar-rb{padding:14px;border-top:1px solid #EDF1F6;background:#FCFDFE}'+
+   '.ar-sm{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9}'+
+   '.ar-sm .e{font-size:15px}'+
+   '.ar-sm .t{font-size:13px;font-weight:800;color:#1E293B}'+
+   '.ar-sm .v{margin-left:auto;font-size:12.5px;font-weight:800;color:#64748B;text-align:right}'+
+   '.ar-sm.warn .v{color:#B91C1C}'+
+   '.ar-mi{font-size:13px;line-height:1.8;color:#334155;background:#F8FAFC;border-radius:10px;padding:12px 14px}';
+  document.head.appendChild(s);
+}
+function arInnerHtml(){
+  var lead=arIsLead(),f=arFace(),h='';
+  if(lead){
+    h+='<div class="ar-tabs">'+
+      '<button type="button" class="ar-tab'+(f==='me'?' on':'')+'" onclick="arGoFace(\'me\')">🧾 내 보고</button>'+
+      '<button type="button" class="ar-tab'+(f==='team'?' on':'')+'" onclick="arGoFace(\'team\')">👥 팀 전체 보고</button>'+
+      '<button type="button" class="ar-tab" onclick="osHelpOpen(\'airep\')">❓ 사용법</button>'+
+      '</div>';
+  }else{
+    h+='<div class="ar-tabs"><button type="button" class="ar-tab on">🧾 내 보고</button>'+
+      '<button type="button" class="ar-tab" onclick="osHelpOpen(\'airep\')">❓ 사용법</button></div>';
+  }
+  if(AR.busy==='load')h+='<div class="ar-none" style="margin-bottom:12px">기록을 모으는 중입니다…</div>';
+  h+=(lead&&f==='team')?arTeamHtml():arMeHtml();
+  h+='<div class="notice" style="margin-top:14px">이 보고는 앱에 남은 기록만 보고 씁니다. '+
+     '고객 실명·전화번호·병력은 AI 로 넘어가지 않습니다. '+
+     '보험 관련 문구는 참고용이며 보장 여부와 지급은 약관과 심사에 따릅니다.</div>';
+  return h;
+}
+function arPaint(){
+  var el=document.getElementById('arPane');
+  if(el)el.innerHTML=arInnerHtml();
+  var m=document.getElementById('ckArMini');
+  if(m)m.innerHTML=arMiniHtml(m.getAttribute('data-face')||'me');
+}
+function renderAiRep(){
+  arCss();
+  return osPage('보고','AI 보고',
+    '체크판 · 성장판 · DB 통합 CRM · 고객 365일에 남은 기록을 AI 가 한 번에 읽고 '+
+    '활동보고 · 격려 · 공부할 부분 · 상담 컨셉 · 다음 7일 다섯 칸으로 정리합니다.',
+    '<div id="arPane">'+arInnerHtml()+'</div>');
+}
+function osAiRepAfterRender(){
+  arCss();
+  if(typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function')gbLoad();
+  arLoad();
+  setTimeout(arPaint,1800);
+  setTimeout(arPaint,4200);
+}
+
+/* ═══════ 이 화면 사용법 — 누르면 바로 뜬다 ═══════
+   화면마다 「무엇을 하는 곳인지 · 어떤 순서로 누르는지 · 막히면 어디를 보는지」 셋만 적는다.
+   외울 것을 만들지 않는 것이 목적이다. */
+var OS_HELP={
+ airep:['🧾','AI 보고','한 칸에서 전부 받습니다',[
+   ['①','「AI 보고 받기」를 누릅니다','체크판·성장판·DB 통합 CRM·고객 365일에 남은 최근 30일 기록을 AI 가 한 번에 읽습니다. 30초쯤 걸립니다.'],
+   ['②','다섯 칸이 채워집니다','활동 보고 · 활동 격려 · 공부할 부분 · 상담 컨셉 · 다음 7일 순서입니다.'],
+   ['③','「상담 컨셉」은 그대로 읽으셔도 됩니다','상담에서 쓸 문장으로 나옵니다. 「다음 7일」은 숫자가 들어간 실행 세 개입니다.'],
+   ['④','지점장은 「팀 전체 보고」로 넘어갑니다','점수가 낮은 사람이 위에 옵니다. 이름을 누르면 그 사람 보고가 펼쳐집니다.'],
+   ['⑤','「전원 보고 한 번에 받기」','팀원 수만큼 순서대로 만듭니다. 다 될 때까지 창을 닫지 마세요.']
+ ],[
+   '숫자가 0 으로만 나오면 → 성장판을 한 번 열어 기록을 불러온 뒤 다시 누르세요.',
+   '「보고 없음」이 많으면 → 그 사람이 체크판을 안 쓰고 있다는 뜻입니다. 숫자보다 그것부터 봅니다.',
+   '고객 실명·전화번호·병력은 AI 로 넘어가지 않습니다.'
+ ]],
+ ckboard:['📋','실행 체크판','하루를 여기서 시작하고 여기서 닫습니다',[
+   ['①','아침에 「팀원 · 내 하루」를 엽니다','위에서부터 순서대로입니다. 어제 못 한 것부터 지웁니다.'],
+   ['②','움직일 때마다 그 칸을 누릅니다','몰아서 찍으면 숫자가 맞지 않습니다.'],
+   ['③','같은 칸에서 내 여섯 축과 AI 보고를 봅니다','다른 화면으로 넘어갈 필요가 없습니다.'],
+   ['④','지점장은 「지점장 · 팀 관리」 한 칸에서','팀 현황 · 달력 · 도와줄 것 · CRM 숫자 · 팀 AI 보고가 모두 여기 있습니다.']
+ ],[
+   '못 한 날은 그냥 넘어갑니다. 다음 날 두 배로 하지 않습니다.',
+   '팀원 화면이 안 보이면 → 설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.'
+ ]],
+ growboard:['📈','성장판','누가 어디서 새는지 봅니다',[
+   ['①','여섯 축을 봅니다','출근 · 실행 · 활동 · 고객 · 자료 · 공부 순서입니다.'],
+   ['②','가장 낮은 축 하나만 고릅니다','여섯 개를 한꺼번에 올리려 하면 아무것도 안 올라갑니다.'],
+   ['③','「배워서 터치할 것」 열두 개를 하나씩','끝내고 스스로 합격을 줍니다.']
+ ],['축이 전부 0 이면 → 아직 기록이 없는 것입니다. 체크판부터 며칠 써 보세요.']],
+ clients:['🗂️','고객 365일','다음에 뭘 할지 적어 두는 곳입니다',[
+   ['①','고객을 누르면 그 사람의 전부가 나옵니다','관계 · 가족 · 팩트파인딩 24칸.'],
+   ['②','「다음에 할 일」 한 줄과 날짜를 적습니다','날짜가 지나면 목록에서 붉게 뜹니다.'],
+   ['③','만나고 나서 한 줄 적습니다','전화 · 카톡 · 만남 중에 고르고 한 줄. 다음 전화의 첫 마디가 됩니다.'],
+   ['④','팩트파인딩은 계산기·상담자료로 그대로 넘어갑니다','세 군데에 세 번 적지 않습니다.']
+ ],[
+   '서버에는 김○○ 로 저장됩니다 — 개인정보라서 그렇습니다. 실명을 한 번 적어 두면 이 기기에서는 그 이름으로 찾힙니다.',
+   '초성(ㄱㅊㅅ) 이나 전화 뒷자리로도 찾힙니다.'
+ ]],
+ voiceasst:['🎙️','음성 비서','화면 이름을 몰라도 됩니다',[
+   ['①','누르고 말하거나, 아래 칸에 글로 씁니다','"오늘 체크 열어" · "김철수 증권받기 적어" 처럼 평소 말로.'],
+   ['②','한 일은 화면에 그대로 남습니다','했다고 말만 하고 안 하는 일은 없습니다.'],
+   ['③','지울 일이나 보낼 일은 「네」라고 답해야 실행됩니다','실수로 지워지지 않습니다.']
+ ],[
+   '고객 이름·전화번호·병력은 소리 내어 말하지 마세요. 음성인식은 바깥 서버를 거칩니다.',
+   '숫자 8자리 이상은 앱이 자동으로 막습니다.'
+ ]],
+ assistant:['🧠','윤시현의 두뇌','막히면 여기서 묻습니다',[
+   ['①','평소 말하듯 적습니다','"40대 자영업자 종신 어떻게 풀까"'],
+   ['②','마음에 드는 답에 ⭐ 이렇게 를 누릅니다','다음부터 그 말투로 답합니다. 다섯 개까지 기억합니다.'],
+   ['③','📊 PPT 를 누르면 그대로 발표자료가 됩니다','글을 다시 칠 필요가 없습니다.']
+ ],[
+   '답이 안 나오면 → 홈 → 🚦 출발 점검에서 AI 열쇠가 들어갔는지 보세요.',
+   '설정 → 두뇌 키우기에서 회사 지식 넣기 · 지시문 · 두 번 다듬기를 켤 수 있습니다.'
+ ]],
+ ready:['🚦','출발 점검','아직 안 된 것만 보여 줍니다',[
+   ['①','초록은 끝난 것입니다','손댈 것 없습니다.'],
+   ['②','노랑은 앱이 대신 못 하는 것입니다','사장님이 직접 하셔야 합니다.'],
+   ['③','빨강은 지금 바로 하셔야 하는 것입니다','미루면 위험합니다.']
+ ],['열쇠는 채팅창에 적지 마세요. Netlify 설정 화면에 직접 넣으셔야 합니다.']],
+ home:['🏠','홈','여기서 시작합니다',[
+   ['①','📋 실행 체크판 — 하루를 열고 닫는 곳','아침에 열고 저녁에 저장합니다.'],
+   ['②','🧾 AI 보고 — 활동보고·격려·공부·컨셉','한 칸에서 전부 받습니다.'],
+   ['③','🗂️ 고객 365일 — 다음에 할 일을 적는 곳','만나고 나면 한 줄.'],
+   ['④','🧠 윤시현의 두뇌 — 막히면 묻는 곳','답이 그대로 PPT 가 됩니다.']
+ ],['하루에 다섯 번 손대면 됩니다. 나머지는 앱이 모아 둡니다.']]
+};
+function osHelpFor(tab){return OS_HELP[tab]||null;}
+function osHelpStepRows(arr){
+  return arr.map(function(s){
+    return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9">'+
+      '<span style="flex:none;width:24px;height:24px;border-radius:50%;background:#1A56DB;color:#fff;'+
+      'font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;margin-top:1px">'+
+      osEsc(s[0])+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A;line-height:1.45">'+
+      osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.65;margin-top:3px">'+
+      osEsc(s[2])+'</div></div></div>';
+  }).join('');
+}
+function osHelpOpen(key){
+  var h=osHelpFor(key);
+  if(!h){if(typeof osGuideOpen==='function')osGuideOpen();return;}
+  osHelpClose();
+  var ov=document.createElement('div');ov.id='osHelpOvl';
+  ov.style.cssText='position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,.55);'+
+    'display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.onclick=function(e){if(e.target===ov)osHelpClose();};
+  var tips=(h[4]||[]).map(function(t){
+    return '<div style="font-size:12.5px;color:#92400E;line-height:1.65;margin-top:6px">· '+osEsc(t)+'</div>';
+  }).join('');
+  ov.innerHTML='<div style="background:#fff;width:100%;max-width:480px;max-height:88vh;border-radius:18px;'+
+    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)">'+
+    '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:18px 20px;'+
+      'display:flex;justify-content:space-between;align-items:center">'+
+      '<div><div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">이 화면 사용법</div>'+
+      '<div style="font-size:18px;font-weight:800;margin-top:2px">'+osEsc(h[0])+' '+osEsc(h[1])+'</div>'+
+      '<div style="font-size:12px;color:#BFDBFE;margin-top:3px">'+osEsc(h[2])+'</div></div>'+
+      '<button onclick="osHelpClose()" style="border:none;background:rgba(255,255,255,.16);color:#fff;'+
+      'width:31px;height:31px;border-radius:50%;font-size:16px;cursor:pointer;flex:none">✕</button></div>'+
+    '<div style="padding:14px 20px;overflow-y:auto">'+osHelpStepRows(h[3]||[])+
+      (tips?('<div style="background:#FFFBEB;border-radius:12px;padding:12px 14px;margin-top:14px">'+
+        '<div style="font-size:12px;font-weight:900;color:#B45309">막히면 여기를 보세요</div>'+tips+'</div>'):'')+
+    '</div>'+
+    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between">'+
+      '<button onclick="osHelpClose();osGuideOpen()" style="border:1.5px solid #E2E8F0;background:#fff;'+
+      'color:#475569;font-size:12.5px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">전체 가이드</button>'+
+      '<button onclick="osHelpClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;'+
+      'font-weight:800;padding:9px 22px;border-radius:10px;cursor:pointer">알겠습니다</button></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+function osHelpClose(){var o=document.getElementById('osHelpOvl');if(o&&o.parentNode)o.parentNode.removeChild(o);}
+/* 떠 있는 ? 는 지금 보고 있는 화면 설명을 먼저 연다 */
+function osHelpHere(){
+  var t='home';
+  try{if(typeof currentTab==='function')t=currentTab();}catch(e){}
+  if(osHelpFor(t))osHelpOpen(t);
+  else if(typeof osGuideOpen==='function')osGuideOpen();
+}
+function osHelpBtn(key,label){
+  return '<button type="button" class="btn btn-ghost" onclick="osHelpOpen(\''+key+'\')">❓ '+
+    osEsc(label||'사용법')+'</button>';
+}
+
 var TABS=[
  {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
- {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
+ {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'airep',icon:'🧾',title:'AI 보고',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
@@ -5111,6 +5968,7 @@ function go(tab){
     if(typeof osNoticeApply==='function')osNoticeApply();
     if(typeof osNoticeLoad==='function')osNoticeLoad();}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
+  else if(tab==='airep'){dyn.innerHTML=renderAiRep();if(typeof osAiRepAfterRender==='function')osAiRepAfterRender();}
   else if(tab==='settings'){dyn.innerHTML=renderSettings();if(typeof osSettingsAfterRender==='function')osSettingsAfterRender();}
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
@@ -5297,7 +6155,7 @@ function exitSangdam(){go(lastTab||'home');}
      5. 그 밖           — AI 에게 묻고 답을 읽어 준다                */
 
 var VA={on:false,wake:false,talk:false,speak:true,mute:false,busy:false,making:false,
-  rec:null,partial:'',err:'',log:[],hist:[],saying:'',state:'',voice:null,rate:1,
+  rec:null,partial:'',err:'',log:[],hist:[],saying:'',state:'',voice:null,rate:1,pitch:1,tone:'',zi:0,
   buf:'',hold:null,echo:[],tries:0,halt:true,open:false,ready:false,pend:null,conf:null};
 var VA_WAKE='아펙스';
 var VA_MAXLOG=24;
@@ -5316,7 +6174,13 @@ function vaCfgSet(k,v){
 function vaBoot(){
   var c=vaCfg();
   if(c.speak===0)VA.speak=false;
-  if(c.rate)VA.rate=c.rate;
+  /* 말투를 한 번도 안 고른 사람은 새 기본값(자유분방)으로 시작한다 */
+  VA.tone=(typeof VA_TONE!=='undefined'&&VA_TONE[c.tone])?c.tone:'fun';
+  var tn=(typeof VA_TONE!=='undefined')?VA_TONE[VA.tone]:null;
+  if(tn){
+    if(c.tone){VA.rate=c.rate||tn.rate;VA.pitch=c.pitch||tn.pitch;}
+    else{VA.rate=tn.rate;VA.pitch=tn.pitch;}
+  }else if(c.rate)VA.rate=c.rate;
   if(vaCanSpeak()){
     VA.voice=vaPickVoice();
     try{window.speechSynthesis.onvoiceschanged=function(){VA.voice=vaPickVoice();};}catch(e){}
@@ -5333,10 +6197,16 @@ function vaKoVoices(){
   return o;
 }
 /* 골라 둔 목소리가 있으면 그것, 없으면 한국어 중 첫 번째 */
+var VA_VPREF=['Google 한국의','Google 한국어','Google Korean','Yuna','유나','SunHi','선히',
+  'Heami','혜미','InJoon','인준','Microsoft'];
 function vaPickVoice(){
-  var want=vaCfg().voice,v=vaVoices(),ko,i;
+  var want=vaCfg().voice,v=vaVoices(),ko,i,j;
   if(want)for(i=0;i<v.length;i++)if(v[i].name===want)return v[i];
   ko=vaKoVoices();
+  /* 같은 한국어라도 또렷하고 밝은 목소리가 먼저다 — 안 들리면 다 소용없다 */
+  for(j=0;j<VA_VPREF.length;j++)
+    for(i=0;i<ko.length;i++)
+      if((ko[i].name||'').indexOf(VA_VPREF[j])>=0)return ko[i];
   for(i=0;i<ko.length;i++)if(/ko[-_]KR/i.test(ko[i].lang||''))return ko[i];
   return ko.length?ko[0]:null;
 }
@@ -5503,7 +6373,7 @@ function vaSay(t,then){
   window.__vaMuteT=setTimeout(function(){VA.mute=false;VA.saying='';done();},Math.min(25000,2000+txt.length*160));
   for(i=0;i<parts.length;i++){
     u=new SpeechSynthesisUtterance(parts[i]);
-    u.lang='ko-KR';u.rate=VA.rate;u.pitch=1;u.volume=1;
+    u.lang='ko-KR';u.rate=VA.rate;u.pitch=VA.pitch||1;u.volume=1;
     if(VA.voice)try{u.voice=VA.voice;}catch(e){}
     last=u;
     try{window.speechSynthesis.speak(u);}catch(e){}
@@ -6214,9 +7084,10 @@ function vaDo(a,args,say){
 }
 function vaOut(r,say){
   if(r&&r.quiet)return;
-  if(typeof r==='string'){vaReply(r||say||'했습니다.');return;}
-  if(r&&r.say){vaReply(r.say,r);return;}
-  vaReply(say||'했습니다.');
+  var z=(typeof vaZing==='function')?vaZing():'';
+  if(typeof r==='string'){vaReply(z+(r||say||'했습니다.'));return;}
+  if(r&&r.say){vaReply(z+r.say,r);return;}
+  vaReply(z+(say||'했습니다.'));
 }
 function vaFire(a,args,say){
   var r;
@@ -6410,6 +7281,50 @@ var VA_SYS='당신은 한국의 보험·재무설계 설계사를 돕는 업무 
   '확정되지 않은 수익률·환급률·보험금 지급 여부를 단정하지 마세요. '+
   '특정 상품을 권하지 말고, 판단은 설계사가 하도록 근거와 확인할 곳을 알려 주세요. '+
   '모르면 모른다고 하고 어느 화면에서 확인하면 되는지 말하세요.';
+
+/* ── 말투 ──
+   같은 말이라도 빠르고 재밌게 하면 듣게 되고, 늘어지면 끄게 된다.
+   기본은 「자유분방」이다. 대신 돈·고객·보장 이야기에서는 장난치지 않는다. */
+var VA_TONE={
+ fun:{n:'자유분방',e:'🤪',rate:1.3,pitch:1.14,d:'빠르고 재밌게 · 농담 한 스푼',
+  s:'좋습니다. 이제 이렇게 빠르게 갑니다. 뭐부터 할까요.',
+  p:'\n\n[말투 — 자유분방]\n'+
+    '- 짧고 리듬 있게 말한다. 한 문장은 되도록 스무 자 안쪽.\n'+
+    '- 첫 마디는 반응부터. "오케이", "좋습니다", "그거 좋네요" 처럼 받고 시작한다.\n'+
+    '- 가벼운 농담을 한 번만 섞는다. 두 번은 안 한다. 재미보다 일이 먼저다.\n'+
+    '- 존댓말은 지킨다. 사장님과 팀원이 같이 듣는다.\n'+
+    '- 비꼬거나 깎아내리지 않는다. 웃기되 늘 같은 편이다.\n'+
+    '- 고객·실적·돈 이야기가 나오면 장난을 멈추고 바로 본론으로 간다.\n'+
+    '- 보험 보장과 지급은 단정하지 않는다. 약관과 심사에 따른다고 말한다.\n'},
+ pro:{n:'담백하게',e:'🎯',rate:1.05,pitch:1,d:'짧고 반듯하게',
+  s:'네. 담백하게 답해 드리겠습니다.',
+  p:'\n\n[말투 — 담백하게]\n- 군더더기 없이 결론부터. 감탄사와 농담은 쓰지 않는다.\n'+
+    '- 보험 보장과 지급은 단정하지 않는다. 약관과 심사에 따른다고 말한다.\n'},
+ warm:{n:'다정하게',e:'🫶',rate:1.05,pitch:1.06,d:'천천히 응원하듯',
+  s:'네. 천천히 같이 해 보시죠.',
+  p:'\n\n[말투 — 다정하게]\n- 먼저 알아주고 그다음에 방법을 말한다. 다그치지 않는다.\n'+
+    '- 보험 보장과 지급은 단정하지 않는다. 약관과 심사에 따른다고 말한다.\n'}
+};
+function vaToneKey(){var c=vaCfg();return VA_TONE[c.tone]?c.tone:(VA_TONE[VA.tone]?VA.tone:'fun');}
+function vaTone(){return VA_TONE[vaToneKey()];}
+function vaToneSet(k){
+  if(!VA_TONE[k])return;
+  var t=VA_TONE[k];
+  VA.tone=k;VA.rate=t.rate;VA.pitch=t.pitch;
+  vaCfgSet('tone',k);vaCfgSet('rate',t.rate);vaCfgSet('pitch',t.pitch);
+  vaPaint();
+  var was=VA.speak;VA.speak=true;
+  vaSay(t.s);
+  VA.speak=was;
+}
+/* 시킨 일을 해냈을 때 앞에 붙는 한 마디 — 자유분방일 때만 */
+var VA_ZING=['오케이. ','좋습니다. ','바로 했습니다. ','됐습니다. ','넵. '];
+function vaZing(){
+  if(vaToneKey()!=='fun')return '';
+  VA.zi=((VA.zi||0)+1)%VA_ZING.length;
+  return VA_ZING[VA.zi];
+}
+
 function vaSys(){
   var base='';
   try{if(typeof brainSys==='function')base=brainSys();}catch(e){base='';}
@@ -6421,7 +7336,8 @@ function vaSys(){
     '- 앱 안에서 할 수 있는 일이면 어느 화면에서 하는지 함께 말한다.\n'+
     '- 고객을 어떻게 도울지 묻거든 아래 업무 흐름과 화법서를 근거로 답한다.\n\n'+
     '[이 앱이 무엇을 할 수 있는지]\n'+vaKnow()+
-    VA_DO_RULE+vaActList();
+    VA_DO_RULE+vaActList()+
+    ((typeof vaTone==='function')?vaTone().p:'');
 }
 
 /* 두뇌에게 자료를 맡긴다. 다 되면 앞머리만 읽어 주고 나머지는 화면에 남긴다 */
@@ -6708,6 +7624,9 @@ function vaTabHtml(){
       '<input id="vaWakeIn" value="'+osEsc(vaWake())+'" maxlength="12" placeholder="아펙스" '+
       'onchange="vaWakeSet(this.value)"></div>'+
     '<div class="va-hint">상시 대기일 때 이 이름으로 시작하는 말만 알아듣습니다. 짧고 또렷한 말이 좋습니다.</div>'+
+    '<div class="va-set"><label>말투</label><span class="va-tn">'+vaToneBtns()+'</span></div>'+
+    '<div class="va-hint">'+osEsc(vaTone().d)+' — 고르면 그 말투로 한 번 말해 드립니다. '+
+      '고객·실적·돈 이야기에서는 어떤 말투든 장난치지 않습니다.</div>'+
     '<div class="va-set"><label>목소리</label>'+vaVoiceSelHtml()+'</div>'+
     '<div class="va-hint">'+vaVoiceHint()+'</div>'+
     '<div class="va-set"><label>말 끝나고</label>'+
@@ -6715,12 +7634,19 @@ function vaTabHtml(){
       'oninput="vaWaitSet(this.value)"><span class="va-rv" id="vaWaitV">'+(vaWaitMs()/1000)+'초</span></div>'+
     '<div class="va-hint">이만큼 조용해지면 그때 한 번에 답합니다. 천천히 말씀하시면 길게, 짧게 시키시면 짧게.</div>'+
     '<div class="va-set"><label>읽는 속도</label>'+
-      '<input id="vaRateIn" type="range" min="0.7" max="1.5" step="0.1" value="'+VA.rate+'" '+
+      '<input id="vaRateIn" type="range" min="0.7" max="1.8" step="0.05" value="'+VA.rate+'" '+
       'oninput="vaRateSet(this.value)"><span class="va-rv" id="vaRateV">'+VA.rate+'배</span></div>'+
     '<div class="va-set"><label>소리로 답하기</label>'+
       '<button type="button" class="va-sm'+(VA.speak?' on':'')+'" onclick="vaSpeakToggle()">'+
       (VA.speak?'켬':'끔')+'</button></div>'+
     '</div></div>';
+  return h;
+}
+function vaToneBtns(){
+  var k,cur=vaToneKey(),h='';
+  for(k in VA_TONE)
+    h+='<button type="button" class="va-sm'+(cur===k?' on':'')+'" onclick="vaToneSet(\''+k+'\')">'+
+      VA_TONE[k].e+' '+osEsc(VA_TONE[k].n)+'</button>';
   return h;
 }
 function vaVoiceSelHtml(){
@@ -6746,7 +7672,7 @@ function vaWakeSet(v){
   toast('이제 "'+(w||VA_WAKE)+'" 하고 부르시면 됩니다');
 }
 function vaRateSet(v){
-  VA.rate=parseFloat(v)||1;
+  VA.rate=Math.round((parseFloat(v)||1)*100)/100;
   vaCfgSet('rate',VA.rate);
   var e=document.getElementById('vaRateV');if(e)e.textContent=VA.rate+'배';
 }
@@ -6812,6 +7738,7 @@ function vaCss(){
       'color:var(--ink-3);background:var(--ink-9);border:1px solid var(--ink-7);border-radius:99px;padding:8px 11px}'+
     '.va-sm.on{color:var(--pos);background:#ECFDF5;border-color:#A7F3D0}'+
     '.va-sm:disabled{opacity:.45;cursor:not-allowed}'+
+    '.va-tn{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}'+
     '.va-note{padding:0 14px 12px;font-size:11px;color:var(--ink-5);line-height:1.6}'+
     '.va-st{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}'+
     '.va-st>div{border:1px solid var(--ink-7);border-radius:8px;padding:9px 11px;font-size:12px;color:var(--ink-3)}'+
@@ -6945,7 +7872,7 @@ function gbLoad(){
     q(sb.from('attendance').select('member_id,att_date').gte('att_date',d30)),
     q(sb.from('calls').select('created_by,call_at').gte('call_at',d30+'T00:00:00')),
     q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d30+'T00:00:00')),
-    q(sb.from('saved_reports').select('advisor_id,created_at').gte('created_at',d30+'T00:00:00')),
+    q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
     q(sb.from('coach_notes').select('id,member_id,body,mood,share,created_at')
@@ -9926,7 +10853,7 @@ function tdLoad(){
     sb.from('team_members').select('team_id,member_id'),
     sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
     sb.from('clients').select('id,advisor_id,created_at').gte('created_at',d30+'T00:00:00'),
-    sb.from('saved_reports').select('advisor_id,kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('reports').select('author_id,created_at').gte('created_at',d30+'T00:00:00'),
     sb.from('profiles').select('id,workspace')
   ]).then(function(r){
@@ -10116,7 +11043,7 @@ function amRunMeeting(){
   Promise.all([
     sb.from('profiles').select('id,name,role,active,status,workspace'),
     sb.from('clients').select('id,created_at').gte('created_at',d30+'T00:00:00'),
-    sb.from('saved_reports').select('kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
     sb.from('reports').select('kind,created_at').gte('created_at',d30+'T00:00:00')
   ]).then(function(r){
@@ -10529,7 +11456,7 @@ function aoFacts(){
   return Promise.all([
     sb.from('profiles').select('id,name,active,status,workspace'),
     sb.from('clients').select('id,created_at').gte('created_at',d30+'T00:00:00'),
-    sb.from('saved_reports').select('kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
     sb.from('reports').select('kind,created_at').gte('created_at',d30+'T00:00:00')
   ]).then(function(r){
@@ -10808,7 +11735,7 @@ function adLoad(){
     sb.from('profiles').select('id,name,active'),
     sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
     sb.from('clients').select('id,advisor_id,created_at').gte('created_at',d30+'T00:00:00'),
-    sb.from('saved_reports').select('advisor_id,kind,created_at').gte('created_at',d30+'T00:00:00'),
+    sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('reports').select('author_id,created_at').gte('created_at',d30+'T00:00:00')
   ]).then(function(r){
     if(r[0]&&r[0].error){box.innerHTML='<div class="osrv-warn">AI 부서 테이블이 아직 없습니다. Supabase에서 <b>migration_13_teams_ai.sql</b>을 실행해 주세요.</div>';return;}
@@ -15293,7 +16220,7 @@ function ckTodayHtml(){
       '몰아서 하다가 그만두는 경우가 많습니다.</div>','day')+
     '<div>'+ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week')+
       ckMyHtml()+'</div>'+
-  '</div>';
+  '</div>'+ckArMiniBox('me');
 }
 /* 내 하루 탭 하나에서 내 것을 전부 본다 — 여섯 축까지 여기서 */
 function ckMyHtml(){
@@ -15383,7 +16310,7 @@ function ckLeaderLoad(){
 }
 function ckLeaderHtml(){
   /* 아침·오전 / 오후·마감 / 주간·월간 을 좌우로 — 하루 열다섯 칸이 한 화면에 들어와야 한다 */
-  return ckTeamHtml()+calCardHtml()+hpCardHtml()+
+  return ckTeamHtml()+ckArMiniBox('team')+calCardHtml()+hpCardHtml()+
     '<div class="ck-2">'+
     ckCardHtml('☀️','아침 · 출근 시간','20분','day',CK_LDR.a,'','la')+
     ckCardHtml('👤','오전 · 사람에게 물어서','전화나 얼굴 보고 아는 것','day',CK_LDR.b,
@@ -15427,7 +16354,9 @@ function ckInnerHtml(){
   return '<div class="ck-tabs">'+ts.map(function(t){
       return '<button class="ck-tab'+(CK.tab===t.id?' on':'')+'" type="button" onclick="ckGo(\''+t.id+'\')">'+
         osEsc(t.l)+'<span class="c" id="cktc_'+t.id+'">'+ckTabCount(t)+'</span></button>';
-    }).join('')+'</div>'+
+    }).join('')+
+      '<button class="ck-tab" type="button" onclick="osHelpOpen(\'ckboard\')">❓ 사용법</button>'+
+      '</div>'+
     '<div style="font-size:11px;line-height:1.6;margin-bottom:12px" id="ckSync">'+ckSyncHtml()+'</div>'+
     ckBodyHtml();
 }
@@ -15442,6 +16371,8 @@ function renderCkBoard(){
 function osCkBoardAfterRender(){
   try{var t=localStorage.getItem('apex_ck_tab');if(t)CK.tab=t;}catch(e){}
   ckPaint();ckPull();
+  /* 체크판 안의 AI 보고 칸도 같은 숫자를 봐야 한다 */
+  if(typeof arLoad==='function'){arLoad();setTimeout(function(){if(typeof arPaint==='function')arPaint();},2200);}
   if(CK.tab==='leader')ckLeaderLoad();
   else if(CK.tab==='today'&&typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function'){
     gbLoad();
@@ -15618,7 +16549,7 @@ function txLoad(){
     q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d56+'T00:00:00')),
     q(sb.from('dbs').select('id,assigned_to')),
     q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d56+'T00:00:00')),
-    q(sb.from('saved_reports').select('advisor_id,kind,created_at').gte('created_at',d56+'T00:00:00')),
+    q(sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d56+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d56)),
     q(sb.from('suggestions').select('id,member_id,title,status,created_at').order('created_at',{ascending:false}).limit(200))
   ]).then(function(r){
@@ -18564,7 +19495,7 @@ function ctLoad(){
     q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00')),
     q(sb.from('dbs').select('id,assigned_to')),
     q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d7+'T00:00:00')),
-    q(sb.from('saved_reports').select('advisor_id,created_at').gte('created_at',w+'T00:00:00'))
+    q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',w+'T00:00:00'))
   ]).then(function(r){
     CT.warn=[];
     if(r[0].error){CT.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');CT.loaded=true;ctPaint();return;}
@@ -24336,7 +25267,7 @@ function osGuideClose(){var o=document.getElementById('osGuideOvl');if(o&&o.pare
 function osGuideFab(){
   if(document.getElementById('osGuideFab'))return;
   var b=document.createElement('button');b.id='osGuideFab';b.title='빠른 시작 가이드';b.setAttribute('aria-label','빠른 시작 가이드');
-  b.onclick=function(){osGuideOpen();};b.textContent='?';
+  b.onclick=function(){if(typeof osHelpHere==='function')osHelpHere();else osGuideOpen();};b.textContent='?';
   b.style.cssText='position:fixed;right:18px;bottom:18px;z-index:9990;width:46px;height:46px;border-radius:50%;border:none;background:linear-gradient(135deg,#1A56DB,#38BDF8);color:#fff;font-size:22px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(26,86,219,.42)';
   document.body.appendChild(b);
 }
@@ -24519,7 +25450,7 @@ function schLoad(){
   Promise.all([
     sb.from('profiles').select('id,name,role,active,status').order('name'),
     sb.from('attendance').select('member_id,att_date,first_seen,last_seen').gte('att_date',w30),
-    sb.from('saved_reports').select('advisor_id,kind,title,created_at').gte('created_at',w30+'T00:00:00'),
+    sb.from('saved_reports').select('advisor_id,kind,title,created_at').neq('kind','ai_report').gte('created_at',w30+'T00:00:00'),
     sb.from('clients').select('id,advisor_id,created_at').gte('created_at',w30+'T00:00:00'),
     sb.from('ai_usage').select('member_id,usage_date,cnt').gte('usage_date',w30),
     sb.from('reports').select('id,author_id,author_name,kind,title,created_at,read_at').order('created_at',{ascending:false}).limit(100),
