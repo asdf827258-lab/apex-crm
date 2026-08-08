@@ -223,6 +223,41 @@ window.supabase={createClient:function(){
   if (SHOT) await page.screenshot({ path: SHOT + '/leader.png', fullPage: true });
 
   /* ── 업무 루트 ── */
+  /* ── 좌우 2단 · 한 칸에서 다 되는가 ── */
+  await page.evaluate(() => ckGo('today'));
+  await page.waitForTimeout(500);
+  const two = await page.evaluate(() => ({
+    grid: document.querySelectorAll('#ckPane .ck-2').length,
+    cols: document.querySelectorAll('#ckPane .ck-cols').length,
+    cards: document.querySelectorAll('#ckPane .card').length,
+    my: !!document.querySelector('#ckPane .ck-ax, #ckPane .ck-none'),
+    txt: (document.getElementById('ckPane') || {}).textContent || ''
+  }));
+  ok(two.grid >= 1, '팀원 탭이 좌우 두 칸으로 나뉜다');
+  ok(two.cols >= 1, '항목이 많은 카드는 항목까지 좌우로 흐른다');
+  ok(/오늘 할 일/.test(two.txt) && /이번 주/.test(two.txt),
+    '오늘과 이번 주가 한 화면에 같이 있다');
+  ok(two.my && /내 성장/.test(two.txt), '내 성장 여섯 축도 같은 칸에 있다');
+
+  await page.evaluate(() => ckGo('leader'));
+  await page.waitForTimeout(600);
+  const ld = await page.evaluate(() => ({
+    grid: document.querySelectorAll('#ckPane .ck-2').length,
+    team: !!document.querySelector('#ckPane .ck-tl, #ckPane .ck-none'),
+    txt: (document.getElementById('ckPane') || {}).textContent || ''
+  }));
+  ok(ld.grid >= 2, '지점장 탭도 시간대가 좌우로 나뉜다 (' + ld.grid + '묶음)');
+  ok(/우리 팀 오늘/.test(ld.txt), '지점장 탭 맨 위에 팀 현황이 있다');
+  ok(ld.team, '팀원 줄이 그려진다 (또는 불러오는 중이라고 알려 준다)');
+  ok(/아침/.test(ld.txt) && /마감/.test(ld.txt), '아침부터 마감까지 한 칸에 있다');
+
+  /* 탭 이름이 누구 것인지 말해 주는가 */
+  const names = await page.evaluate(() =>
+    Array.prototype.map.call(document.querySelectorAll('#ckPane .ck-tab'),
+      e => (e.firstChild && e.firstChild.textContent || '').trim()));
+  ok(names.some(n => /팀원/.test(n)), '탭 이름에 "팀원" 이 보인다');
+  ok(names.some(n => /지점장/.test(n)), '탭 이름에 "지점장" 이 보인다');
+
   await page.evaluate(() => ckGo('route'));
   await page.waitForTimeout(500);
   const steps = await page.evaluate(() => RT_STEP.map(x => x.k));
