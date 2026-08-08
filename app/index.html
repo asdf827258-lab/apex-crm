@@ -4570,7 +4570,7 @@ function rdAuto(){
       if(rows[i].active===false)continue;
       act.push(rows[i]);
       ro=(''+(rows[i].role||'')).toLowerCase();
-      if(ro==='lead'||ro==='hq'||ro==='master'||ro==='owner'||ro==='admin')lead++;
+      if(['lead','leader','manager','hq','master','owner','admin','branch_manager','education_manager'].indexOf(ro)>=0)lead++;
       if(rows[i].workspace)team++;
     }
     add({k:'lead',t:'조직도 · 지점장 지정',
@@ -6417,6 +6417,12 @@ function vaPanelHtml(){
     ((VA.talk||VA.hold||VA.making)?'<div class="va-state '+
       osEsc(VA.making?'think':(VA.hold?'hold':(VA.state||'listen')))+'">'+
       osEsc(vaStateText())+'</div>':'')+
+    /* 조용한 자리·시끄러운 자리에서는 말을 못 한다. 글로도 똑같이 시킬 수 있어야 한다 */
+    '<div class="va-type">'+
+      '<input id="vaText" type="text" placeholder="여기에 적어도 됩니다 — 예) 전화 5통 체크해줘" '+
+        'onkeydown="if(event.key===\'Enter\')vaSend()" autocomplete="off">'+
+      '<button type="button" onclick="vaSend()">보내기</button>'+
+    '</div>'+
     '<div class="va-bar">'+
       '<button type="button" class="va-mic'+(VA.talk?' talk':'')+'" onclick="vaTalkToggle()"'+
         (vaCanHear()?'':' disabled')+'>'+(VA.talk?'대화 끝내기':'대화 시작')+'</button>'+
@@ -6432,6 +6438,19 @@ function vaPanelHtml(){
     '</div>'+
     (VA.talk?'<div class="va-note">끝낼 때는 <b>고마워</b> 또는 <b>대화 끝</b> 이라고 하시면 됩니다.</div>'
      :(VA.wake?'<div class="va-note">이름을 부르고 말하세요 — <b>'+osEsc(vaWake())+'</b>, 오늘 할 일</div>':''));
+}
+/* 글로 시키기 — 마이크가 없어도, 소리를 못 내는 자리에서도 똑같이 돕니다.
+   말로 한 것과 완전히 같은 길(vaGo)을 타므로 답도 실행도 그대로 됩니다. */
+function vaSend(id){
+  var el=document.getElementById(id||'vaText');
+  if(!el)el=document.getElementById('vaText2');
+  if(!el)return;
+  var t=(''+el.value).replace(/^\s+|\s+$/g,'');
+  if(!t){toast('무엇을 시킬지 적어 주세요');return;}
+  el.value='';
+  vaShush();
+  if(!VA.open&&typeof vaPanel==='function')vaPanel(true);
+  vaGo(t);
 }
 function vaSpeakToggle(){
   VA.speak=!VA.speak;
@@ -6506,6 +6525,15 @@ function vaTabHtml(){
     '상시 대기는 <b>이 창이 열려 있는 동안만</b> 돕습니다. 다른 앱으로 넘어가거나 화면이 꺼지면 멈춥니다. '+
     '배터리를 계속 씁니다 — 필요할 때만 켜세요.'+
     '</div></div></div>';
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⌨️</span>글로 시키기</div>'+
+    '<div class="card-desc">말을 못 하는 자리에서는 여기에 적으세요. 말로 시킨 것과 똑같이 답하고 실행합니다.</div></div>'+
+    '<div class="card-body"><div class="va-type" style="margin:0">'+
+      '<input id="vaText2" type="text" placeholder="예) 오늘 브리핑해줘 · 전화 5통 체크해줘 · 치료비 통장 발표자료 만들어줘" '+
+        'onkeydown="if(event.key===\'Enter\')vaSend(\'vaText2\')" autocomplete="off">'+
+      '<button type="button" onclick="vaSend(\'vaText2\')">보내기</button></div>'+
+    '<div class="notice" style="margin-top:10px">마이크가 없는 컴퓨터에서도 됩니다. '+
+      '답은 화면 오른쪽 아래 쪽창에 쌓입니다.</div></div></div>';
 
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗣</span>이렇게 말하면 됩니다</div>'+
     '<div class="card-desc">그대로 읽어도 알아듣습니다</div></div><div class="card-body">';
@@ -6636,6 +6664,11 @@ function vaCss(){
     '.va-st .ok b{color:var(--pos)}'+
     '.va-st .no{background:#FEF2F2;border-color:#FECACA;color:var(--neg);font-weight:700}'+
     '.va-st .no b{color:var(--neg)}'+
+    '.va-type{display:flex;gap:6px;margin:0 12px 8px}'+
+    '.va-type input{flex:1;min-width:0;border:1px solid var(--ink-7);border-radius:9px;padding:9px 11px;'+
+      'font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    '.va-type button{border:0;border-radius:9px;padding:9px 14px;font-size:12px;font-weight:800;'+
+      'background:var(--primary);color:#fff;cursor:pointer;font-family:inherit;flex:none}'+
     '.va-hw{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--ink-8)}'+
     '.va-hw:last-child{border-bottom:none}'+
     '.va-hx{min-width:0;flex:1}'+
@@ -14319,6 +14352,34 @@ function ckCss(){
     '.ck-tab.on{color:var(--primary);border-bottom-color:var(--primary)}'+
     '.ck-tab .c{font-family:var(--mono,ui-monospace,monospace);font-size:10.5px;font-weight:800;margin-left:4px;color:var(--ink-5)}'+
     '.ck-tab.on .c{color:var(--primary)}'+
+    /* 세로로만 늘어놓으면 열한 칸이 화면 밖으로 나간다. 넓은 화면에서는 좌우로 나눈다 */
+    '.ck-none{font-size:12px;color:var(--ink-5);line-height:1.7;padding:10px 2px}'+
+    '.ck-ax{display:flex;flex-direction:column;gap:7px}'+
+    '.ck-axr{display:flex;gap:9px;align-items:center;font-size:11.5px}'+
+    '.ck-axr .n{width:34px;font-weight:800;color:var(--ink-2);flex:none}'+
+    '.ck-axr .b{flex:1;height:8px;border-radius:99px;background:#EEF2F7;overflow:hidden}'+
+    '.ck-axr .b i{display:block;height:100%;border-radius:99px}'+
+    '.ck-axr .v{width:66px;text-align:right;color:var(--ink-5);flex:none;font-size:10.5px}'+
+    '.ck-tot{font-size:12.5px;color:var(--ink-2);margin-top:10px;padding-top:9px;border-top:1px solid var(--ink-8)}'+
+    '.ck-tl{display:flex;flex-direction:column}'+
+    '.ck-tr{display:flex;gap:9px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--ink-8);font-size:12px}'+
+    '.ck-tr:last-child{border-bottom:0}'+
+    '.ck-tr.bad{background:#FFFBFB}'+
+    '.ck-tr .nm{font-weight:800;color:var(--ink-1);width:74px;flex:none}'+
+    '.ck-tr .dots{display:flex;gap:3px;flex:none}'+
+    '.ck-tr .dots .d{width:9px;height:9px;border-radius:2px;background:#E2E8F0}'+
+    '.ck-tr .dots .d.ok{background:#059669}.ck-tr .dots .d.half{background:#93C5FD}'+
+    '.ck-tr .dots .d.no{background:#FCA5A5}'+
+    '.ck-tr .sc{width:44px;text-align:right;font-weight:800;color:var(--ink-3);flex:none;font-size:11px}'+
+    '.ck-tr .wy{flex:1;min-width:0;font-size:10.5px;color:var(--neg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.ck-tr .go{border:1px solid var(--ink-7);background:#fff;border-radius:7px;padding:4px 9px;'+
+      'font-size:10.5px;font-weight:800;color:var(--primary);cursor:pointer;flex:none;font-family:inherit}'+
+    '@media(max-width:640px){.ck-tr .wy{display:none}}'+
+    '.ck-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}'+
+    '.ck-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}'+
+    '.ck-cols .ck-it:nth-child(odd){border-right:0}'+
+    '@media(max-width:1080px){.ck-2{grid-template-columns:1fr}}'+
+    '@media(max-width:820px){.ck-cols{grid-template-columns:1fr}}'+
     '.ck-it{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--ink-8);cursor:pointer}'+
     '.ck-it:last-child{border-bottom:none}'+
     '.ck-bx{flex:none;width:19px;height:19px;margin-top:1px;border:1.5px solid var(--ink-6);border-radius:5px;'+
@@ -14991,10 +15052,10 @@ function ckRouteHtml(){
 /* ── 실행 체크판 화면 ── */
 function ckTabs(){
   return [
-    {id:'today',l:'오늘',sc:'day',items:CK_ITEMS.day},
-    {id:'week',l:'주간',sc:'week',items:CK_ITEMS.week},
-    {id:'route',l:'업무 루트',sc:'',items:null},
-    {id:'leader',l:'지점장',sc:'',items:null}
+    {id:'today',l:'👤 팀원 · 내 하루',sc:'day',items:CK_ITEMS.day},
+    {id:'week',l:'📆 이번 주',sc:'week',items:CK_ITEMS.week},
+    {id:'route',l:'🧭 업무 루트',sc:'',items:null},
+    {id:'leader',l:'🧑\u200d🏫 지점장 · 팀 관리',sc:'',items:null}
   ];
 }
 function ckCount(sc,list){
@@ -15055,7 +15116,11 @@ function ckItemHtml(sc,r){
     (r[3]?'<span class="ck-go" onclick="event.stopPropagation();go(\''+r[4]+'\')">'+osEsc(r[3])+' →</span>':'')+
     '</div></div>';
 }
-function ckListHtml(sc,list){return list.map(function(r){return ckItemHtml(sc,r);}).join('');}
+function ckListHtml(sc,list){
+  var h=list.map(function(r){return ckItemHtml(sc,r);}).join('');
+  /* 여섯 개가 넘으면 좌우로 흘린다 — 스크롤을 내리지 않고 한눈에 보게 */
+  return (list.length>=6)?('<div class="ck-cols">'+h+'</div>'):h;
+}
 function ckCardHtml(icon,title,desc,sc,list,extra,key){
   if(key){CK.cards=CK.cards||[];CK.cards.push({key:key,sc:sc,list:list});}
   return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">'+icon+'</span>'+osEsc(title)+
@@ -15065,32 +15130,122 @@ function ckCardHtml(icon,title,desc,sc,list,extra,key){
 }
 
 function ckTodayHtml(){
-  return ckCardHtml('✅','오늘 할 일','항목마다 어느 화면에서 하는지 표시했습니다','day',CK_ITEMS.day,
-    '<div class="notice">못 한 날은 그냥 넘어갑니다. 다음 날 두 배로 하지 않습니다. '+
-    '몰아서 하다가 그만두는 경우가 많습니다.</div>','day');
+  /* 오늘과 이번 주를 나란히 — 두 번 눌러 오가지 않게 */
+  return '<div class="ck-2">'+
+    ckCardHtml('✅','오늘 할 일','항목마다 어느 화면에서 하는지 표시했습니다','day',CK_ITEMS.day,
+      '<div class="notice">못 한 날은 그냥 넘어갑니다. 다음 날 두 배로 하지 않습니다. '+
+      '몰아서 하다가 그만두는 경우가 많습니다.</div>','day')+
+    '<div>'+ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week')+
+      ckMyHtml()+'</div>'+
+  '</div>';
+}
+/* 내 하루 탭 하나에서 내 것을 전부 본다 — 여섯 축까지 여기서 */
+function ckMyHtml(){
+  var body='';
+  if(typeof GB==='undefined'||!GB.loaded){
+    body='<div class="ck-none">여섯 축 점수를 불러오는 중입니다.</div>';
+  }else{
+    var me=(typeof gbMe==='function')?gbMe():null;
+    if(!me)body='<div class="ck-none">내 기록을 찾지 못했습니다. 조직도에서 계정 연결을 확인해 주세요.</div>';
+    else{
+      var i,a,v,raw,gaps=(typeof gbGapList==='function')?gbGapList(me,gbScope()):[];
+      body='<div class="ck-ax">';
+      for(i=0;i<GB_AX.length;i++){
+        a=GB_AX[i];v=me.sc[a.k]||0;raw=me.raw[a.k]||0;
+        body+='<div class="ck-axr"><span class="n">'+osEsc(a.n)+'</span>'+
+          '<span class="b"><i style="width:'+Math.min(100,v)+'%;background:'+
+            (v>=100?'#059669':(v>=60?'#1A56DB':'#DC2626'))+'"></i></span>'+
+          '<span class="v">'+raw+' / '+a.t+a.u+'</span></div>';
+      }
+      body+='</div>';
+      body+='<div class="ck-tot">지금 <b>'+me.total+'점</b>'+
+        (gaps.length?(' · 가장 벌어진 곳은 <b>'+osEsc(gaps[0].ax.n)+'</b> 입니다'):'')+'</div>';
+      if(gaps.length)body+='<div class="notice" style="margin-top:9px">'+osEsc(gaps[0].ax.fix)+'</div>';
+    }
+  }
+  return '<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🌱</span>내 성장 · 여섯 축</div>'+
+    '<div class="card-desc">이번 달 기록입니다. 자세한 비교는 성장판에서</div></div>'+
+    '<div class="card-body">'+body+
+    '<div class="btn-row" style="margin-top:11px">'+
+    '<button class="btn btn-primary" onclick="go(\'growboard\')">성장판 열기</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'clients\')">고객 365일</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'crm\')">DB 통합 CRM</button>'+
+    '</div></div></div>';
+}
+/* 지점장 — 팀원 전원을 이 칸에서 보고 바로 손댄다 */
+function ckTeamHtml(){
+  if(typeof GB==='undefined'||!GB.loaded)
+    return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>우리 팀 오늘</div></div>'+
+      '<div class="card-body"><div class="ck-none">팀 기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
+  var list=(typeof gbScope==='function')?gbScope():[],me=(typeof gbMyId==='function')?gbMyId():'';
+  var miss=(typeof gbMiss==='function')?gbMiss(list):[],why={},i,j,r,t;
+  for(i=0;i<miss.length;i++)why[miss[i].r.id]=(miss[i].why||[])[0]||'';
+  if(!list.length)
+    return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>우리 팀 오늘</div></div>'+
+      '<div class="card-body"><div class="ck-none">팀원이 없습니다. 설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
+  var rows='';
+  var srt=list.slice().sort(function(a,b){return (a.total||0)-(b.total||0);});
+  for(i=0;i<srt.length;i++){
+    r=srt[i];
+    if(r.id===me)continue;
+    t='';
+    for(j=0;j<GB_AX.length;j++)
+      t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
+        'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
+    rows+='<div class="ck-tr'+(why[r.id]?' bad':'')+'">'+
+      '<span class="nm">'+osEsc(r.name||'(이름 없음)')+'</span>'+
+      '<span class="dots">'+t+'</span>'+
+      '<span class="sc">'+(r.total||0)+'점</span>'+
+      '<span class="wy">'+osEsc(why[r.id]||'')+'</span>'+
+      '<button type="button" class="go" onclick="go(\'growboard\')">보기</button></div>';
+  }
+  return '<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">👥</span>우리 팀 오늘'+
+      '<span class="ck-n">'+(miss.length?('놓침 '+miss.length):'전원 정상')+'</span></div>'+
+    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 점 여섯 개는 출근·실행·활동·고객·자료·공부 순서입니다</div></div>'+
+    '<div class="card-body"><div class="ck-tl">'+rows+'</div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+    '<button class="btn btn-primary" onclick="go(\'growboard\')">성장판에서 자세히</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">팀 코칭</button>'+
+    '</div></div></div>';
 }
 function ckWeekHtml(){
   return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week');
 }
 function ckLeaderLoad(){
+  /* 팀 현황을 이 칸에서 보여 주려면 성장 기록이 있어야 한다 */
+  if(typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function'){
+    gbLoad();
+    setTimeout(function(){if(CK.tab==='leader')ckPaint();},1600);
+    setTimeout(function(){if(CK.tab==='leader')ckPaint();},4200);
+  }
   if(CKC.open&&!CKC.loaded&&!CKC.busy)ckCrmLoad();
   hpPull();
   if(!CAL.loaded&&!CAL.busy)calLoad();
   else{CAL.rows[ckDayK()]=ckLoad('day');calPaint();}
 }
 function ckLeaderHtml(){
-  return calCardHtml()+hpCardHtml()+
+  /* 아침·오전 / 오후·마감 / 주간·월간 을 좌우로 — 하루 열다섯 칸이 한 화면에 들어와야 한다 */
+  return ckTeamHtml()+calCardHtml()+hpCardHtml()+
+    '<div class="ck-2">'+
     ckCardHtml('☀️','아침 · 출근 시간','20분','day',CK_LDR.a,'','la')+
     ckCardHtml('👤','오전 · 사람에게 물어서','전화나 얼굴 보고 아는 것','day',CK_LDR.b,
       '<div class="notice">도와주기로 한 것은 위 <b>오늘 도와줄 것</b> 칸에 바로 적습니다. '+
       '날짜를 넣으면 달력에 표시되고, 지나면 빨갛게 남습니다.</div>','lb')+
+    '</div>'+
+    '<div class="ck-2" style="margin-top:14px">'+
     ckCardHtml('🖥️','오후 · 화면에서','기록이 남았는지','day',CK_LDR.c,
       '<div class="notice">안 되어 있는 게 보이면 <b>그날 안에 끝냅니다.</b> '+
-      '다음 날로 넘기면 그다음 날에도 안 되어 있습니다.</div>'+ckCrmHtml(),'lc')+
+      '다음 날로 넘기면 그다음 날에도 안 되어 있습니다.</div>','lc')+
     ckCardHtml('🌙','마감 · 퇴근 전','10분','day',CK_LDR.d,
       '<div class="notice">여기까지 하면 오늘 달력이 초록색이 됩니다. 하나라도 남으면 노란색입니다.</div>','ld')+
+    '</div>'+
+    ckCrmHtml()+
+    '<div class="ck-2" style="margin-top:14px">'+
     ckCardHtml('📅','금요일','30분','week',CK_LDR.week,'','lw')+
     ckCardHtml('🗓️','월 1회','2시간','month',CK_LDR.month,'','lm')+
+    '</div>'+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>하지 않는 것</div></div>'+
     '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.9">'+
     '<b>숫자만 보고 다그치기</b> — 활동이 아니라 회피가 늘어납니다<br>'+
@@ -15132,6 +15287,11 @@ function osCkBoardAfterRender(){
   try{var t=localStorage.getItem('apex_ck_tab');if(t)CK.tab=t;}catch(e){}
   ckPaint();ckPull();
   if(CK.tab==='leader')ckLeaderLoad();
+  else if(CK.tab==='today'&&typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function'){
+    gbLoad();
+    setTimeout(function(){if(CK.tab==='today')ckPaint();},1600);
+    setTimeout(function(){if(CK.tab==='today')ckPaint();},4200);
+  }
 }
 
 /* ════════ 지점장 전산 확인 — DB 통합 CRM 을 이 자리에서 ════════
@@ -18749,6 +18909,12 @@ function renderSettings(){
   function opt(val,label){return '<option value="'+val+'"'+(model===val?' selected':'')+'>'+label+'</option>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div>'+
     '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. AI 키 등은 이 브라우저에만 저장되며, 사업자 정보는 서버에 저장되어 모두에게 같은 내용이 보입니다.</div></div>'+
+    osApprovalCardHtml()+
+
+    osMembersCardHtml()+
+
+    osAccountsCardHtml()+
+
     lgBizCardHtml()+
 
     osDiagCardHtml()+
@@ -18760,12 +18926,6 @@ function renderSettings(){
     osPayAdminCardHtml()+
 
     osNoticeCardHtml()+
-
-    osApprovalCardHtml()+
-
-    osMembersCardHtml()+
-
-    osAccountsCardHtml()+
 
     osTossCardHtml()+
 
@@ -18943,13 +19103,52 @@ function renderSettings(){
       '</div></div></div>';
     })()+
 
-    '<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🧠</span>모델 선택</div>'+
-    '<div class="card-desc">속도·품질·비용에 맞게 선택하세요.</div></div>'+
-    '<div class="card-body"><div class="fld"><select id="setModel" onchange="saveModel()">'+
-    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 균형(추천)')+
-    opt('claude-opus-4-8','Claude Opus 4.8 — 최고 품질')+
+    /* 모델 선택 — Claude 것만 보여 주면 "제미나이는 어디서 고르지?" 가 된다.
+       어느 엔진을 쓸지와 각 엔진의 모델을 한 칸에서 고르게 한다.
+       위 Gemini 칸의 변수는 그 안에만 있으니 여기서 다시 읽는다. */
+    (function(){
+    var prov=getProvider(),gm=getGeminiModel(),gpm=getGeminiProModel();
+    function gopt(v,l){return '<option value="'+v+'"'+(gm===v?' selected':'')+'>'+l+'</option>';}
+    function gpopt(v,l){return '<option value="'+v+'"'+(gpm===v?' selected':'')+'>'+l+'</option>';}
+    return '<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🧠</span>모델 선택</div>'+
+    '<div class="card-desc">어느 AI 를 쓸지와, 그 AI 의 어떤 모델을 쓸지를 여기서 함께 고릅니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:12px;font-weight:800;color:var(--ink-1);margin-bottom:7px">① 콘텐츠 도구가 쓸 AI</div>'+
+    '<div class="chips" style="margin-bottom:5px">'+
+      '<button type="button" class="chip-opt'+(prov==='claude'?' on':'')+'" onclick="setProvider(\'claude\')">Claude 사용</button>'+
+      '<button type="button" class="chip-opt'+(prov==='gemini'?' on':'')+'" onclick="setProvider(\'gemini\')">Gemini 사용</button>'+
+    '</div>'+
+    '<span class="hint" style="font-size:10px;color:var(--ink-5);display:block;margin-bottom:14px">'+
+      '블로그·SNS 같은 콘텐츠 도구에 적용됩니다. <b>고객 정보가 들어가는 도구(보장분석·제안서 판독)는 이 설정과 무관하게 항상 Claude</b> 로 갑니다.</span>'+
+
+    '<div style="font-size:12px;font-weight:800;color:var(--ink-1);margin-bottom:7px">② Claude 모델</div>'+
+    '<div class="fld"><select id="setModel" onchange="saveModel()">'+
+    opt('claude-opus-4-8','Claude Opus 4.8 — 최고 품질 (보고서·제안서)')+
+    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 균형 (평소 추천)')+
     opt('claude-haiku-4-5-20251001','Claude Haiku 4.5 — 초고속·저비용')+
-    '</select></div><span class="hint" style="font-size:10px;color:var(--ink-5);display:block;margin-top:7px">모델명은 추후 변경될 수 있습니다. 오류 시 다른 모델로 바꿔보세요.</span></div></div>'+
+    '</select></div>'+
+
+    '<div style="font-size:12px;font-weight:800;color:var(--ink-1);margin:16px 0 7px">③ Gemini 모델</div>'+
+    '<div class="fld"><label style="font-size:11px">일반·빠름</label><select id="setGModel2" onchange="saveGModel2()">'+
+    gopt('gemini-flash-latest','Gemini Flash (최신) — 추천')+
+    gopt('gemini-flash-lite-latest','Gemini Flash Lite — 가장 빠름')+
+    '</select></div>'+
+    '<div class="fld" style="margin-top:9px"><label style="font-size:11px">품질 (리포트·보장분석)</label>'+
+    '<select id="setGProModel2" onchange="saveGProModel2()">'+
+    gpopt('gemini-2.5-pro','Gemini 2.5 Pro — 최고 품질 (유료 연결 필요)')+
+    gpopt('gemini-2.5-flash','Gemini 2.5 Flash — 무료로 쓸 때 권장')+
+    gpopt('gemini-flash-latest','일반 모델과 동일 (품질 강화 끄기)')+
+    '</select></div>'+
+
+    '<div class="notice" style="margin-top:14px">'+
+    '<b>지금 무엇이 쓰이나</b> — 콘텐츠 도구는 <b>'+(prov==='gemini'?'Gemini':'Claude')+'</b>, '+
+    '고객 자료 도구는 <b>Claude</b>, 두뇌·음성 비서는 <b>연결된 키</b> 를 씁니다. '+
+    '한쪽이 한도를 넘기면 자동으로 다른 쪽으로 넘어갑니다.</div>'+
+    '<span class="hint" style="font-size:10px;color:var(--ink-5);display:block;margin-top:7px">'+
+    '모델명은 바뀔 수 있습니다. 오류가 나면 다른 모델로 바꿔 보세요. '+
+    'Gemini 키는 위 <b>Gemini 연결</b> 칸에서 넣습니다.</span>'+
+    '</div></div>';
+    })()+
 
     '<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">✒️</span>브랜드 톤 (페르소나)</div>'+
     '<div class="card-desc">모든 콘텐츠에 자동 반영되는 APEX-YUNPRO 페르소나입니다. 자유롭게 수정하세요.</div></div>'+
@@ -18987,6 +19186,11 @@ function saveGProxy(){var v=$('setGProxy').value.trim();if(!v){toast('공용 주
 function clearGProxy(){LS.del('gproxy');updateKeyPill();toast('공용 Gemini 주소 삭제됨');osSetReload();}
 function toggleGGuide(){var g=$('gKeyGuide');if(g)g.style.display=g.style.display==='none'?'block':'none';}
 function toggleGQuota(){var g=$('gQuotaHelp');if(g)g.style.display=g.style.display==='none'?'block':'none';}
+/* 모델 선택 칸과 Gemini 연결 칸 어느 쪽을 눌러도 같은 값이 저장돼야 한다 */
+function saveGModel2(){var e=$('setGModel2');if(!e)return;LS.set('gmodel',e.value);
+  var o=$('setGModel');if(o)o.value=e.value;toast('Gemini 일반 모델을 저장했습니다');}
+function saveGProModel2(){var e=$('setGProModel2');if(!e)return;LS.set('gpromodel',e.value);
+  var o=$('setGProModel');if(o)o.value=e.value;toast('Gemini 품질 모델을 저장했습니다');}
 function saveGModel(){LS.set('gmodel',$('setGModel').value);toast('Gemini 모델 변경됨: '+$('setGModel').value);}
 function saveGProModel(){LS.set('gpromodel',$('setGProModel').value);toast('품질 모델 변경됨: '+$('setGProModel').value);}
 function setProvider(p){LS.set('provider',p);toast(p==='gemini'?'콘텐츠 기본: 무료 Gemini':'콘텐츠 기본: Claude');osSetReload();}
@@ -23364,6 +23568,42 @@ function osMTeamSet(memberId,teamId){
     });
   });
 }
+/* 역할을 줄 수 있어야 팀 관리 화면이 열린다.
+   지금까지는 "앱 관리자" 단추 하나뿐이라, 지점장을 지정할 방법이 없었다. */
+var OS_ROLE_OPTS=[
+ ['member','설계사 — 자기 기록만'],
+ ['leader','지점장 — 자기 팀 전체 + 다른 팀 열람'],
+ ['branch_manager','본부장 — 전 팀'],
+ ['education_manager','교육매니저 — 전 팀 교육'],
+ ['admin','앱 관리자 — 설정까지 전부']
+];
+function osRoleSel(p,mine){
+  if(mine)return '<span style="font-size:11px;color:var(--ink-5)">본인</span>';
+  var cur=(''+(p.role||'member'));
+  var known=false,i;
+  for(i=0;i<OS_ROLE_OPTS.length;i++)if(OS_ROLE_OPTS[i][0]===cur)known=true;
+  return '<select onchange="osSetRole(\''+p.id+'\',this.value)" title="역할 지정" '+
+    'style="font-size:11px;padding:5px 7px;border:1px solid var(--ink-7);border-radius:8px;background:#fff;cursor:pointer">'+
+    (known?'':'<option value="'+osEsc(cur)+'" selected>'+osEsc(osRoleLabel(cur))+' (현재)</option>')+
+    OS_ROLE_OPTS.map(function(o){
+      return '<option value="'+o[0]+'"'+(cur===o[0]?' selected':'')+'>'+osEsc(o[1])+'</option>';
+    }).join('')+'</select>';
+}
+function osSetRole(id,role){
+  var sb=osClient();if(!sb)return;
+  if(OS.profile&&id===OS.profile.id){toast('본인 역할은 바꿀 수 없습니다 (잠금 방지)');osLoadMembers();return;}
+  var lab='',i;
+  for(i=0;i<OS_ROLE_OPTS.length;i++)if(OS_ROLE_OPTS[i][0]===role)lab=OS_ROLE_OPTS[i][1];
+  if(role==='admin'&&!confirm('앱 관리자 권한을 줄까요?\n설정·가입 승인·권한 관리까지 전부 보게 됩니다.'))
+    {osLoadMembers();return;}
+  if(typeof osScrollSave==='function')osScrollSave();
+  sb.from('profiles').update({role:role}).eq('id',id).then(function(r){
+    if(r.error){toast('역할 변경 실패: '+(r.error.message||''));osLoadMembers();return;}
+    if(typeof osAudit==='function')osAudit('set_role','profile',id,role);
+    toast('역할을 바꿨습니다 — '+(lab||role));
+    osLoadMembers();
+  },function(){toast('역할 변경 실패 — 네트워크를 확인하세요');});
+}
 function osPillHtml(txt,bg,fg){return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+bg+';color:'+fg+'">'+osEsc(txt)+'</span>';}
 function osMemberRowHtml(p,me,top){
   var isM=p.role==='admin',mine=(p.id===me);
@@ -23374,9 +23614,7 @@ function osMemberRowHtml(p,me,top){
   var tierPill=osTierBadge(effTier)+(p.plan?'':'<span style="font-size:9.5px;color:var(--ink-5);margin-left:3px">기본</span>')+
     '<span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:999px;background:'+(seeN==='0개'?'#FEE2E2':'#F1F5F9')+';color:'+(seeN==='0개'?'#B91C1C':'#475569')+';margin-left:4px" title="이 회원이 실제로 보게 되는 메뉴 수">보임 '+seeN+'</span>';
   var tierCtrl=isM?'<span style="font-size:10.5px;color:var(--ink-5)">전체개방</span>':('<select onchange="osSetTier(\''+p.id+'\',this.value)" title="카테고리(등급) 지정" style="font-size:11px;padding:5px 7px;border:1px solid var(--ink-7);border-radius:8px;background:#fff;cursor:pointer">'+OS_TIERS.map(function(t){var cur=osPlanToTier(p.plan)===t.id;return '<option value="'+t.id+'"'+(cur?' selected':'')+'>'+osEsc(t.label)+'</option>';}).join('')+'</select>');
-  var ctrl=mine?'<span style="font-size:11px;color:var(--ink-5)">본인</span>':(isM
-    ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetMaster(\''+p.id+'\',false)">앱 관리자 해제</button>'
-    :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px" onclick="osSetMaster(\''+p.id+'\',true)">＋ 앱 관리자</button>');
+  var ctrl=osRoleSel(p,mine);
   /* CRM 전용 계정 — APEX 등급·팀 대신 CRM 전체 조회(마스터) 지정만 */
   var crmOnly=(!OSWS.missing&&OSWS.of[p.id]==='crm');
   var masterPill=(p.role==='master')?osPillHtml('CRM 전체조회','#CCFBF1','#0F766E'):'';

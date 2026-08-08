@@ -302,6 +302,52 @@ window.supabase={createClient:function(){
   const closed = await page.evaluate(() => ({ on: VA.on, panel: !!document.getElementById('osVaPanel') }));
   ok(!closed.panel && !closed.on, '쪽창을 닫으면 마이크가 함께 꺼진다');
 
+  /* ── 글로도 시킬 수 있는가 ── */
+  await page.evaluate(() => { go('voiceasst'); });
+  await page.waitForTimeout(600);
+  const typed = await page.evaluate(() => ({
+    box: !!document.getElementById('vaText2'), fn: typeof vaSend === 'function'
+  }));
+  ok(typed.box, '음성 비서 화면에 글로 시키는 칸이 있다');
+  ok(typed.fn, '보내기가 붙어 있다');
+
+  await page.evaluate(() => {
+    window.__spoke = []; window.__toast = [];
+    window.toast = m => window.__toast.push('' + m);
+    vaPanel(true);
+    var e = document.getElementById('vaText');
+    if (e) { e.value = '체크판 열어'; vaSend(); }
+  });
+  await page.waitForTimeout(500);
+  let vt = await page.evaluate(() => ({
+    tab: (typeof lastTab !== 'undefined') ? lastTab : '',
+    spoke: (window.__spoke || []).join(' '),
+    left: (document.getElementById('vaText') || {}).value
+  }));
+  ok(vt.tab === 'ckboard', '글로 "체크판 열어" 를 보내면 화면이 열린다');
+  ok(/엽니다/.test(vt.spoke), '말로 한 것과 똑같이 답한다');
+  ok(vt.left === '', '보낸 뒤 칸이 비워진다');
+
+  await page.evaluate(() => {
+    window.__toast = []; window.toast = m => window.__toast.push('' + m);
+    var e = document.getElementById('vaText');
+    if (e) { e.value = '   '; vaSend(); }
+  });
+  await page.waitForTimeout(200);
+  const emptyMsg = await page.evaluate(() => (window.__toast || []).join(' '));
+  ok(/적어 주세요/.test(emptyMsg), '빈 칸으로 보내면 안내만 나온다');
+
+  await page.evaluate(() => {
+    window.__spoke = [];
+    var m = ckLoad('day'); delete m.d4; ckSave('day', m);
+    var e = document.getElementById('vaText');
+    if (e) { e.value = '전화 5통 체크해줘'; vaSend(); }
+  });
+  await page.waitForTimeout(500);
+  vt = await page.evaluate(() => ({ m: ckLoad('day'), spoke: (window.__spoke || []).join(' ') }));
+  ok(vt.m.d4 === 1, '글로 시켜도 실제로 체크된다 — 말과 같은 길을 탄다');
+  ok(/체크했습니다/.test(vt.spoke), '무엇을 했는지 답한다');
+
   /* ── 10-2. 대화 모드 — 서로 주고받기 ── */
   await page.evaluate(() => { vaPanel(true); VA.hist = []; vaTalkStart(); });
   await page.waitForTimeout(700);
