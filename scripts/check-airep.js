@@ -190,8 +190,8 @@ const AI_OK = `## 활동 보고
   /* ── 왼쪽 카테고리 한 줄 ── */
   const cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 9, '왼쪽에 카테고리 아홉 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|부재·거절 재관리|기고객 재관리|리더 할 일|팀원 관리',
+  ok(cats.length === 8, '왼쪽에 카테고리 여덟 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|오늘 터치할 사람|리더 할 일|팀원 관리',
     '순서가 요청대로다 — ' + cats.join(' · '));
   const heads = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-shd'), e => e.textContent.trim()));
@@ -380,7 +380,7 @@ const AI_OK = `## 활동 보고
   await page.evaluate(() => { window.__ins = []; arGen('p2'); });
   await page.waitForTimeout(700);
   txt = await pane();
-  const secs = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sec').length);
+  const secs = await page.evaluate(() => document.querySelectorAll('#arPane .ar-secs .ar-sec').length);
   ok(secs === 5, '다섯 칸이 화면에 그려진다 (' + secs + ')');
   const wide = await page.evaluate(() => {
     const g = document.querySelector('#arPane .ar-secs');
@@ -419,27 +419,62 @@ const AI_OK = `## 활동 보고
   ok(/AI 보고 받기/.test(txt), '스스로 받을 수 있는 단추가 있다');
   await page.evaluate(() => arGen('p2'));
   await page.waitForTimeout(700);
-  const secs2 = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sec').length);
+  const secs2 = await page.evaluate(() => document.querySelectorAll('#arPane .ar-secs .ar-sec').length);
   ok(secs2 === 5, '설계사도 혼자서 다섯 칸을 받는다 (' + secs2 + ')');
 
-  /* ── 부재·거절 재관리 ── */
-  await open('cold');
+  /* ── 오늘 터치할 사람 — 한 칸으로 ── */
+  await open('touch');
   txt = await pane();
-  ok(/부재 · 거절 재관리/.test(txt), '부재·거절 칸이 열린다');
-  const bands = await page.evaluate(() => Array.prototype.map.call(
-    document.querySelectorAll('#arPane .ar-tl .k'), e => e.textContent.trim()));
-  ok(bands.join('|') === '1주 넘음|2주 넘음|한 달 넘음', '1주·2주·한 달로 나눠 센다 — ' + bands.join(' · '));
-  const coldN = await page.evaluate(() => ({ a: arCold(arMyId(), 7).length, b: arCold(arMyId(), 14).length, c: arCold(arMyId(), 30).length }));
-  ok(coldN.a > coldN.b && coldN.b >= coldN.c, '오래된 것일수록 적게 잡힌다 (' + coldN.a + '/' + coldN.b + '/' + coldN.c + ')');
-  const noAppt = await page.evaluate(() => arCold('p2', 7).filter(x => x.res === '상담').length);
-  ok(noAppt === 0, '상담까지 간 사람은 다시 걸 목록에 없다');
-  const coldRows = await page.evaluate(() => document.querySelectorAll('#arPane .ar-ln').length);
-  ok(coldRows >= 5, '다시 걸 사람이 줄로 선다 (' + coldRows + '명)');
-  ok(coldN.c >= 2, '한 달 넘게 손 안 댄 것도 놓치지 않는다 (' + coldN.c + '건)');
-  const never = await page.evaluate(() => arCold('p2', 7).filter(x => x.n === 0).length);
-  ok(never >= 1, '한 번도 안 돌린 DB 도 다시 걸 목록에 들어간다 (' + never + '건)');
+  ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
+  const tk = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(tk.length === 7, '전체·부재·거절·진행중·미진행·기고객·생일 일곱 (' + tk.length + ')');
+  const cnt = await page.evaluate(() => arTkCount('p2'));
+  ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
+  ok(cnt.no >= 1, '부재를 따로 센다 (' + cnt.no + ')');
+  ok(cnt.rej >= 1, '거절을 따로 센다 (' + cnt.rej + ')');
+  ok(cnt.run >= 1, '상담까지 간 사람은 「진행중」으로 따로 센다 (' + cnt.run + ')');
+  ok(cnt['new'] >= 1, '한 번도 안 돌린 DB 도 잡힌다 (' + cnt['new'] + ')');
+  ok(cnt.old >= 1, '식은 고객도 같은 칸에 들어온다 (' + cnt.old + ')');
+
+  /* 무엇을 해야 하는지가 줄마다 적혀 있는가 */
+  const tkDo = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-tk .do'), e => e.textContent.trim()));
+  ok(tkDo.length >= 5, '줄마다 할 일이 적힌다 (' + tkDo.length + '줄)');
+  ok(tkDo.every(d => d.length > 4), '빈 줄이 없다');
+  const todos = await page.evaluate(() => {
+    const l = arTouch('p2'), m = {};
+    l.forEach(x => { m[x.k] = m[x.k] || x.todo; });
+    return m;
+  });
+  ok(/다시 겁니다|문자 먼저|마지막으로/.test(todos.no || ''), '부재 — 며칠 됐는지에 따라 다른 말 — ' + todos.no);
+  ok(/팔지 않습니다/.test(todos.rej || ''), '거절 — 다시 팔지 말라고 한다 — ' + todos.rej);
+  ok(/결론을 물어봅니다|자료를 준비/.test(todos.run || ''), '진행중 — 붙으라고 한다 — ' + todos.run);
+  ok(/첫 통화/.test(todos['new'] || ''), '미진행 — 오늘 첫 통화 — ' + todos['new']);
+  ok(/안부|적어 둔 일/.test(todos.old || ''), '기고객 — 안부 — ' + todos.old);
+
+  /* 걸러 보기 */
+  await page.evaluate(() => arTkSet('no'));
+  await page.waitForTimeout(300);
+  const onlyNo = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-tk .ar-bg'), e => e.textContent.trim()));
+  ok(onlyNo.length > 0 && onlyNo.every(t => t === '부재'), '「부재」만 걸러진다 (' + onlyNo.length + '줄)');
+  await page.evaluate(() => arTkSet('all'));
+  await page.waitForTimeout(300);
+
+  /* ── 주차별 활동량 ── */
+  await open('score');
+  const wk = await page.evaluate(() => ({
+    bars: document.querySelectorAll('#arPane .ar-wk').length,
+    txt: (document.getElementById('arPane') || {}).textContent || '',
+    w: arWeeks('p2', 6).map(x => x.call)
+  }));
+  ok(wk.bars === 6, '최근 여섯 주가 막대로 선다 (' + wk.bars + ')');
+  ok(/주차별 활동량/.test(wk.txt), '주차별 활동량 칸이 있다');
+  ok(wk.w.reduce((a, b) => a + b, 0) > 0, '주마다 통화 수를 실제로 센다 (' + wk.w.join('/') + ')');
 
   /* AI 에게 물어볼 때 이름이 안 넘어가는가 */
+  await open('touch');
   await page.evaluate(() => { window.__aiCalls = []; window.__AI_OUT = '## 이렇게 여세요\n안녕하세요\n## 전할 만한 소식\n연말정산\n## 이 순서로\n세 명만'; arTalk('cold'); });
   await page.waitForTimeout(700);
   const talkCall = await page.evaluate(() => window.__aiCalls[window.__aiCalls.length - 1] || null);
@@ -450,11 +485,6 @@ const AI_OK = `## 활동 보고
   txt = await pane();
   ok(/이렇게 여세요/.test(txt), 'AI 가 준 첫 마디가 화면에 남는다');
 
-  /* ── 기고객 재관리 ── */
-  await open('old');
-  txt = await pane();
-  ok(/기고객 재관리/.test(txt), '기고객 칸이 열린다');
-  ok(/다음 할 일이 안 적혀 있습니다|일 전|기록 없음/.test(txt), '언제 마지막으로 손댔는지 보인다');
 
   /* ── 스케줄 ── */
   await open('sched');

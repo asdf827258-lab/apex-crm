@@ -4940,7 +4940,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',db:null,cliRows:null,talk:null,calls:null,
+var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -5347,8 +5347,7 @@ var AR_CAT=[
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
  ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
- ['cold', '☎️','부재·거절 재관리','손 놓은 DB 를 다시 잡는다',       'me'],
- ['old',  '👥','기고객 재관리',  '식은 고객·생일·다음 할 일 없음',    'me'],
+ ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
  ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all']
 ];
@@ -5440,8 +5439,7 @@ function arCatN(k){
   if(k==='skill')return arStudyLeft().length;
   if(k==='todo')return arTodoList().length;
   if(k==='score')return 0;
-  if(k==='cold')return arColdN(me);
-  if(k==='old')return arOld(me).length;
+  if(k==='touch')return arTouch(me).length;
   if(k==='lead')return (typeof CK_LDR!=='undefined'&&arIsLead())
     ? arUndone('day',CK_LDR.a.concat(CK_LDR.b,CK_LDR.c,CK_LDR.d)).length : 0;
   if(k==='team'){var l=arScope(),i,n=0;for(i=0;i<l.length;i++)if(!AR.rep[l[i].id])n++;return n;}
@@ -5460,12 +5458,15 @@ function arTodoList(){
     for(i=0;i<u.length;i++)
       out.push({k:'ck',e:'📋',t:u[i][1],s:'오늘 체크판',go:'ckboard',bad:false,d:0,ck:u[i][0]});
   }
-  var c=arCold(me,14);
-  if(c.length)out.push({k:'cold',e:'☎️',t:'2주 넘게 손 안 댄 DB '+c.length+'건',
-    s:'부재·거절 재관리에서',go:'',bad:true,d:0,cat:'cold'});
-  var o=arOld(me);
-  if(o.length)out.push({k:'old',e:'👥',t:'식은 고객 '+o.length+'명',
-    s:'기고객 재관리에서',go:'',bad:false,d:0,cat:'old'});
+  var tk=arTkCount(me);
+  if(tk.run)out.push({k:'run',e:'🔥',t:'진행중인 사람 '+tk.run+'명',
+    s:'지금 붙어야 하는 사람들',go:'',bad:true,d:0,cat:'touch'});
+  if(tk.no)out.push({k:'cold',e:'☎️',t:'다시 걸 사람 '+tk.no+'명',
+    s:'오늘 터치할 사람에서',go:'',bad:true,d:0,cat:'touch'});
+  if(tk.old)out.push({k:'old',e:'❄️',t:'식은 고객 '+tk.old+'명',
+    s:'오늘 터치할 사람에서',go:'',bad:false,d:0,cat:'touch'});
+  if(tk.bd)out.push({k:'bd',e:'🎂',t:'이번 주 생일 '+tk.bd+'명',
+    s:'축하 문자 먼저',go:'',bad:false,d:0,cat:'touch'});
   var st=arStudyLeft();
   if(st.length)out.push({k:'stu',e:'🎓',t:'오늘 공부 — '+st[0][1],s:st[0][3],go:'',bad:false,d:0,cat:'skill'});
   out.sort(function(a,b){return (b.bad?1:0)-(a.bad?1:0)||b.d-a.d;});
@@ -5684,6 +5685,209 @@ function arTalk(kind){
   });
 }
 
+/* ── 터치할 사람 한 칸 ──
+   부재·거절 재관리와 기고객 재관리를 따로 두었더니 두 군데를 오가야 했다.
+   오늘 연락할 사람은 어차피 한 줄로 세워야 한다. 무엇을 해야 하는지까지 옆에 적는다.
+   「부재 6건」 이 아니라 「고객12 · 12일째 · 문자 먼저 남기고 걸기」 여야 손이 움직인다. */
+var AR_TK=[
+ ['all','🗂','전체'],['no','📵','부재'],['rej','🚫','거절'],
+ ['run','🔥','진행중'],['new','🆕','미진행'],['old','❄️','기고객'],['bd','🎂','생일']
+];
+function arTkSet(k){AR.tk=k;arPaint();}
+function arTk(){return AR.tk||'all';}
+/* 오늘 이 사람에게 무엇을 해야 하는가 — 한 줄로 */
+function arTodoOf(x){
+  if(x.k==='no')return (x.d>=30)?'마지막으로 한 번 — 안 되면 정리합니다'
+    :(x.d>=14?'문자 먼저 남기고 그다음에 겁니다':'다른 시간대로 다시 겁니다');
+  if(x.k==='rej')return '팔지 않습니다. 소식 하나만 문자로 보냅니다';
+  if(x.k==='run')return x.ap?('약속 전날 자료를 준비합니다 — '+x.ap)
+    :('상담하고 '+x.d+'일 지났습니다. 결론을 물어봅니다');
+  if(x.k==='new')return '아직 한 번도 안 걸었습니다. 오늘 첫 통화';
+  if(x.k==='old')return x.plan?('적어 둔 일부터 — '+x.plan)
+    :(x.d>=9000?'기록이 없습니다. 안부 전화로 다시 엽니다'
+      :(x.d+'일 만입니다. 소식 하나 들고 안부 전화'));
+  if(x.k==='bd')return '생일 D-'+x.d+' — 축하 문자 먼저';
+  return '';
+}
+function arBdIn(md){
+  if(!/^\d{2}-\d{2}$/.test(''+md))return -1;
+  var t=arToday(),y=parseInt(t.slice(0,4),10);
+  var d=Math.round((new Date((y)+'-'+md+'T00:00:00Z')-new Date(t+'T00:00:00Z'))/86400000);
+  if(d<0)d=Math.round((new Date((y+1)+'-'+md+'T00:00:00Z')-new Date(t+'T00:00:00Z'))/86400000);
+  return d;
+}
+/* 오늘 손대야 할 사람 전부 — DB 와 고객을 한 줄로 섞는다 */
+function arTouch(who){
+  var out=[],i,r,c,t=arToday();
+  var db=AR.db||[];
+  for(i=0;i<db.length;i++){
+    r=db[i];
+    if(who&&r.who!==who)continue;
+    if(r.res==='상담'){
+      var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)?((''+r.appt).slice(0,10)+' '+(''+r.appt).slice(11,16)):'';
+      if(ap||r.days<=45)
+        out.push({k:'run',id:r.id,nm:r.name,sub:r.region,d:r.days,ap:ap,who:r.who,go:'crm',
+                  ord:ap?0:1});
+      continue;
+    }
+    if(r.n===0){
+      if(r.days>=3)out.push({k:'new',id:r.id,nm:r.name,sub:r.region,d:r.days,who:r.who,go:'crm',ord:2});
+      continue;
+    }
+    if(r.res==='거절'){
+      if(r.days>=14)out.push({k:'rej',id:r.id,nm:r.name,sub:r.region,d:r.days,who:r.who,go:'crm',ord:5});
+      continue;
+    }
+    if(r.days>=7)out.push({k:'no',id:r.id,nm:r.name,sub:r.region,d:r.days,who:r.who,go:'crm',ord:3});
+  }
+  var cl=AR.cliRows||[];
+  for(i=0;i<cl.length;i++){
+    c=cl[i];
+    if(who&&c.who!==who)continue;
+    var bd=arBdIn(c.bd);
+    if(bd>=0&&bd<=7){
+      out.push({k:'bd',id:c.id,nm:c.name,sub:'',d:bd,who:c.who,go:'clients',ord:0});
+      continue;
+    }
+    if(c.days>=90||!c.plan)
+      out.push({k:'old',id:c.id,nm:c.name,sub:'',d:c.days,plan:c.plan,who:c.who,go:'clients',ord:4});
+  }
+  out.sort(function(a,b){return a.ord-b.ord||b.d-a.d;});
+  for(i=0;i<out.length;i++)out[i].todo=arTodoOf(out[i]);
+  return out;
+}
+function arTkCount(who){
+  var l=arTouch(who),i,c={all:l.length,no:0,rej:0,run:0,'new':0,old:0,bd:0};
+  for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
+  return c;
+}
+function arTouchHtml(){
+  var me=arMyId(),l=arTouch(me),c=arTkCount(me),k=arTk(),i,rows=[];
+  var lab={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
+  var col={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+  for(i=0;i<l.length;i++){
+    var x=l[i];
+    if(k!=='all'&&x.k!==k)continue;
+    if(rows.length>=80)break;
+    rows.push('<div class="ar-tk'+((x.k==='no'&&x.d>=14)||x.k==='old'&&x.d>=90?' warn':'')+'" '+
+      'onclick="go(\''+x.go+'\')">'+
+      '<span class="ar-bg '+col[x.k]+'">'+lab[x.k]+'</span>'+
+      '<span class="nm">'+osEsc(x.nm)+(x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
+      '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
+      '<span class="do">'+osEsc(x.todo)+'</span></div>');
+  }
+  var chips='<div class="ar-fs">';
+  for(i=0;i<AR_TK.length;i++){
+    var t=AR_TK[i];
+    chips+='<button type="button" class="ar-fc'+(k===t[0]?' on':'')+'" onclick="arTkSet(\''+t[0]+'\')">'+
+      t[1]+' '+osEsc(t[2])+'<span>'+(c[t[0]]||0)+'</span></button>';
+  }
+  chips+='</div>';
+  var tile=function(v,u,kk,warn){
+    return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
+      '<div class="k">'+kk+'</div></div>';
+  };
+  return arCard('☎️','오늘 터치할 사람',
+      '부재 · 거절 · 진행중 · 기고객을 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
+      '<div class="ar-top" style="grid-template-columns:repeat(4,1fr)">'+
+        tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
+        tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
+        tile(c.old||0,'명','기고객 — 식었음',c.old>0)+
+        tile(c.bd||0,'명','생일 — 이번 주',0)+
+      '</div>'+chips+
+      (rows.length?('<div class="ar-tks">'+rows.join('')+'</div>')
+        :'<div class="ar-none">이 조건에 맞는 사람이 없습니다. 잘 돌리고 계십니다.</div>'),
+      '<div class="btn-row" style="margin-top:12px">'+
+      '<button class="btn btn-primary" '+(AR.busy==='talk'?'disabled':'')+' onclick="arTalk(\'cold\')">'+
+        (AR.busy==='talk'?'생각 중…':'무슨 말로 열까 — AI 에게')+'</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'crm\')">DB 통합 CRM</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'clients\')">고객 365일</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'biz_news\')">전할 소식 찾기</button></div>'+
+      arTalkHtml('cold'));
+}
+
+/* ── 주차별 활동량 ── */
+function arWeeks(who,n){
+  n=n||6;
+  var out=[],i,j,l=AR.calls||[],cl=AR.cliRows||[];
+  var mon=new Date(Date.now()+9*3600*1000);
+  mon.setUTCDate(mon.getUTCDate()-((mon.getUTCDay()+6)%7));
+  for(i=n-1;i>=0;i--){
+    var s=new Date(mon.getTime()-i*7*86400000),e=new Date(s.getTime()+6*86400000);
+    var sd=s.toISOString().slice(0,10),ed=e.toISOString().slice(0,10);
+    var w={s:sd,e:ed,lb:(s.getUTCMonth()+1)+'/'+s.getUTCDate(),call:0,ok:0,no:0,rej:0,days:{}};
+    for(j=0;j<l.length;j++){
+      if(l[j].w!==who)continue;
+      if(l[j].d<sd||l[j].d>ed)continue;
+      w.call++;w.days[l[j].d]=1;
+      if(l[j].r==='상담')w.ok++;else if(l[j].r==='거절')w.rej++;else w.no++;
+    }
+    w.dayN=0;for(var kk in w.days)w.dayN++;
+    out.push(w);
+  }
+  return out;
+}
+function arWeekHtml(){
+  var me=arMyId(),ws=arWeeks(me,6),i,mx=1;
+  for(i=0;i<ws.length;i++)if(ws[i].call>mx)mx=ws[i].call;
+  var bars='';
+  for(i=0;i<ws.length;i++){
+    var w=ws[i],h=Math.round(w.call/mx*100),last=(i===ws.length-1);
+    bars+='<div class="ar-wk'+(last?' on':'')+'">'+
+      '<div class="bar"><i style="height:'+Math.max(3,h)+'%"></i>'+
+        (w.ok?('<b style="height:'+Math.max(3,Math.round(w.ok/mx*100))+'%"></b>'):'')+'</div>'+
+      '<div class="n">'+w.call+'</div>'+
+      '<div class="l">'+w.lb+'</div></div>';
+  }
+  var cur=ws[ws.length-1]||{call:0,ok:0,dayN:0},prev=ws[ws.length-2]||{call:0,ok:0};
+  var diff=cur.call-prev.call;
+  return arCard('📅','주차별 활동량',
+    '최근 여섯 주 통화량입니다. 진한 칸이 상담으로 넘어간 건수입니다',
+    '<div class="ar-wks">'+bars+'</div>'+
+    '<div class="ar-one" style="margin-top:12px">이번 주 <b>'+cur.call+'통</b> · 상담 <b>'+cur.ok+'건</b> · '+
+      '전화한 날 <b>'+cur.dayN+'일</b>'+
+      (prev.call?(' · 지난주보다 <b>'+(diff>=0?'+':'')+diff+'통</b>'):'')+'</div>'+
+    (cur.dayN&&cur.dayN<3?('<div class="notice" style="margin-top:9px">이번 주 전화한 날이 '+cur.dayN+
+      '일입니다. 몰아서 걸면 다음 주가 비어 버립니다. <b>매일 같은 시간에</b> 30분만 잡으세요.</div>'):''));
+}
+
+/* 팀원 한 사람을 펼쳤을 때 — 그 사람의 CRM 을 숫자로 그대로 보여 준다.
+   AI 보고 안에만 들어 있으면 보고를 만들기 전에는 아무것도 안 보인다. */
+function arCrmMiniHtml(who){
+  var o=arCrmDeep(who),c=arTkCount(who);
+  var chip=function(k,v,warn){return '<span class="ar-tag'+(warn?' warn':'')+'">'+osEsc(k)+' '+osEsc(v)+'</span>';};
+  var h='<div class="ar-sec" style="margin-top:12px"><div class="ar-sh"><span class="e">☎️</span>'+
+    '<span class="n">DB 통합 CRM</span><span class="d">최근 30일 전화 습관</span></div><div class="ar-sb">';
+  if(!o)h+='<div class="ar-p" style="color:#94A3B8">최근 30일 통화 기록이 없습니다.</div>';
+  else h+='<div class="ar-tags">'+chip('통화',o.n+'통')+chip('전화한 날',o.dayN+'일')+
+      chip('하루 평균',o.perDay+'통')+chip('상담',o.ok+'건')+chip('전환',o.conv+'%',o.conv<5)+
+      chip('부재',o.no+'건')+chip('거절',o.rej+'건')+chip('한 건당',o.per+'번')+
+      chip('다시 건 비율',o.again+'%',o.again<40)+
+      (o.gapAvg?chip('재통화 간격',o.gapAvg+'일'):'')+
+      (o.topH?chip('주로',o.topH):'')+(o.topW?chip('요일',o.topW+'요일'):'')+
+      chip('최근 7일',o.last7+'통',o.last7<o.prev7)+'</div>';
+  h+='<div class="ar-tags" style="margin-top:8px">'+
+    chip('진행중',(c.run||0)+'명',c.run>0)+chip('부재',(c.no||0)+'명',c.no>0)+
+    chip('거절',(c.rej||0)+'명',0)+chip('미진행',(c['new']||0)+'명',c['new']>0)+
+    chip('기고객',(c.old||0)+'명',c.old>0)+chip('생일',(c.bd||0)+'명',0)+'</div>'+
+    arWeekStrip(who)+'</div></div>';
+  return h;
+}
+/* 주차별 막대 — 좁은 자리에 여섯 주만 */
+function arWeekStrip(who){
+  var ws=arWeeks(who,6),i,mx=1,h='';
+  for(i=0;i<ws.length;i++)if(ws[i].call>mx)mx=ws[i].call;
+  if(mx<=1)return '';
+  for(i=0;i<ws.length;i++){
+    var w=ws[i];
+    h+='<div class="ar-wk'+(i===ws.length-1?' on':'')+'">'+
+      '<div class="bar"><i style="height:'+Math.max(3,Math.round(w.call/mx*100))+'%"></i>'+
+      (w.ok?('<b style="height:'+Math.max(3,Math.round(w.ok/mx*100))+'%"></b>'):'')+'</div>'+
+      '<div class="n">'+w.call+'</div><div class="l">'+w.lb+'</div></div>';
+  }
+  return '<div class="ar-wks" style="height:104px;margin-top:11px">'+h+'</div>'+
+    '<div style="font-size:11px;color:#94A3B8;font-weight:700;margin-top:5px">주차별 통화 — 진한 칸이 상담</div>';
+}
 /* 🧑‍🏫 리더 할 일 — 누구나 봅니다, 지점장이 체크합니다 */
 function arLeadHtml(){
   var can=arIsLead(),g,i,h='';
@@ -6069,13 +6273,16 @@ function arTeamHtml(){
         '<span class="ar-nmx">'+osEsc(r.name)+(r.id===me?' (나)':'')+'</span>'+
         '<span class="ar-sc '+((r.total||0)>=70?'ok':((r.total||0)>=40?'mid':'low'))+'">'+(r.total||0)+'점</span>'+
         arStateHtml(r)+arDotsHtml(r)+
+        (function(){var tc=arTkCount(r.id);
+          return (tc.run||tc.no)?('<span class="ar-tkm">'+
+            (tc.run?('🔥'+tc.run):'')+(tc.run&&tc.no?' ':'')+(tc.no?('📵'+tc.no):'')+'</span>'):'';})()+
         '<span class="ar-st">'+(o?('보고 있음 · '+osEsc(arWhen(o.at))):'<b class="ar-no">보고 없음</b>')+'</span>'+
       '</div>'+
       (one&&!open?('<div class="ar-pk">'+osEsc(one)+'</div>'):'');
     if(open){
       h+='<div class="ar-rb">'+
         (one?('<div class="ar-one">'+osEsc(one)+'</div>'):'')+
-        arNumsHtml(r)+
+        arNumsHtml(r)+arCrmMiniHtml(r.id)+
         '<div class="btn-row" style="margin-top:12px">'+
         (arIsLead()?('<button class="btn btn-primary" '+(busy?'disabled':'')+' onclick="arGen(\''+r.id+'\')">'+
           (busy?'읽는 중…':(o?'다시 받기':'이 사람 보고 받기'))+'</button>'):'')+
@@ -6375,6 +6582,30 @@ function arCss(){
    '.ar-tg{font-size:11.5px;font-weight:900;color:#1A56DB;letter-spacing:.04em;margin:14px 0 6px;'+
      'padding-bottom:6px;border-bottom:1.5px solid #E2E8F0;display:flex;justify-content:space-between}'+
    '.ar-tg:first-child{margin-top:2px}'+
+   '.ar-tks{display:flex;flex-direction:column;margin-top:4px}'+
+   '.ar-tk{display:grid;grid-template-columns:56px minmax(96px,1.1fr) 58px minmax(0,2fr);'+
+     'gap:0 10px;align-items:center;padding:8px 4px;border-bottom:1px solid #F1F5F9;cursor:pointer}'+
+   '.ar-tk:hover{background:#F8FAFC}'+
+   '.ar-tk:last-child{border:0}'+
+   '.ar-tk .nm{font-size:13px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;'+
+     'text-overflow:ellipsis}'+
+   '.ar-tk .nm em{font-style:normal;font-weight:600;color:#94A3B8;font-size:11px;margin-left:4px}'+
+   '.ar-tk .dy{font-size:11.5px;font-weight:800;color:#64748B;text-align:right}'+
+   '.ar-tk .do{font-size:12.5px;color:#334155;font-weight:600;line-height:1.5}'+
+   '.ar-tk.warn .dy{color:#B91C1C}'+
+   '.ar-tk .ar-bg{justify-self:start}'+
+   '@media(max-width:760px){.ar-tk{grid-template-columns:56px minmax(0,1fr) 58px}'+
+     '.ar-tk .do{grid-column:2/-1;margin-top:2px}}'+
+   '.ar-wks{display:flex;gap:8px;align-items:flex-end;height:132px;margin-top:4px}'+
+   '.ar-wk{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}'+
+   '.ar-wk .bar{position:relative;width:100%;flex:1;background:#F1F5F9;border-radius:6px;'+
+     'display:flex;align-items:flex-end;overflow:hidden}'+
+   '.ar-wk .bar i{display:block;width:100%;background:#BFD4FB;border-radius:6px 6px 0 0}'+
+   '.ar-wk .bar b{position:absolute;left:0;bottom:0;width:100%;background:#1A56DB;border-radius:6px 6px 0 0}'+
+   '.ar-wk.on .bar i{background:#93C5FD}'+
+   '.ar-wk .n{font-size:11.5px;font-weight:900;color:#334155}'+
+   '.ar-wk .l{font-size:10px;color:#94A3B8;font-weight:700}'+
+   '.ar-wk.on .l{color:#1A56DB}'+
    '.ar-tg span{color:#94A3B8;font-weight:800}'+
    '.ar-p{font-size:14px;line-height:1.9;color:#1E293B;margin:4px 0}'+
    '.ar-li{font-size:14px;line-height:1.9;color:#1E293B;margin:5px 0 5px 15px;position:relative}'+
@@ -6391,6 +6622,7 @@ function arCss(){
    '.ar-sc.low{background:#FEF2F2;color:#B91C1C}'+
    '.ar-st{font-size:11.5px;color:#94A3B8;font-weight:700;margin-left:auto;text-align:right}'+
    '.ar-no{color:#DC2626}'+
+   '.ar-tkm{font-size:11px;font-weight:900;color:#B45309;background:#FFFBEB;border-radius:20px;padding:2px 8px;white-space:nowrap}'+
    '.ar-rb{padding:14px;border-top:1px solid #EDF1F6;background:#FCFDFE}'+
    '.ar-sm{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #F1F5F9}'+
    '.ar-sm .e{font-size:15px}'+
@@ -6406,9 +6638,9 @@ function arBodyHtml(cat){
   if(cat==='sched')return arSchedHtml();
   if(cat==='skill')return arSkillHtml();
   if(cat==='todo')return arTodoHtml();
-  if(cat==='score')return arScoreHtml();
-  if(cat==='cold')return arColdHtml();
-  if(cat==='old')return arOldHtml();
+  if(cat==='score')return arScoreHtml()+arWeekHtml();
+  if(cat==='touch')return arTouchHtml();
+  if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
   if(cat==='team')return arTeamHtml();
   return arMeHtml();
@@ -6472,7 +6704,7 @@ var OS_HELP={
    ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
    ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리. 붉은 숫자는 남은 건수입니다.'],
    ['③','「해야 할 일」부터 지웁니다','밀린 것이 맨 위에 옵니다. 체크판 항목은 여기서 바로 눌러도 됩니다.'],
-   ['④','「부재·거절 재관리」에서 다시 겁니다','1주 · 2주 · 한 달로 나눠 보여 줍니다. 「무슨 말로 다시 걸까」를 누르면 첫 마디와 전할 소식을 AI 가 만들어 줍니다.'],
+   ['④','「오늘 터치할 사람」에서 오늘 연락할 사람을 봅니다','부재 · 거절 · 진행중 · 미진행 · 기고객 · 생일이 한 줄로 섭니다. 오른쪽에 <b>무엇을 해야 하는지</b> 적혀 있습니다. 「무슨 말로 열까」를 누르면 첫 마디와 전할 소식을 AI 가 만들어 줍니다.'],
    ['⑤','「피드백」에서 AI 보고를 받습니다','활동 보고 · 활동 격려 · 공부할 부분 · 상담 컨셉 · 다음 7일 다섯 칸입니다.'],
    ['⑥','지점장은 「리더 할 일」과 「팀원 관리」까지','리더 할 일은 누구나 볼 수 있고 체크는 지점장만 합니다. 팀원 관리에서 「전원 보고 한 번에 받기」를 누르면 팀 전체가 만들어집니다.']
  ],[
