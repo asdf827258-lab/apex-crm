@@ -10,6 +10,9 @@
  *   kind=econ                기준금리·환율·CD·국고채·물가 (한국은행 ECOS)
  *   kind=news&cat=경제       경제·보험 뉴스 (config/sources.json RSS 재사용)
  *   kind=all                 index+econ+news 한 번에 (경제동향 화면 첫 로딩용)
+ *   kind=toss-probe          토스 설정이 맞는지 진단
+ *   kind=toss-discover       키는 있는데 경로를 모를 때 토스 도메인 안에서 자동 탐색
+ *   kind=krx-probe           공공데이터포털 연결 진단
  *
  * ── 토스 API 정리 ─────────────────────────────────────────────────────────
  *   · 토스페이먼츠 API = 결제·빌링 전용. 시세는 주지 않는다. 이 저장소에서는
@@ -20,8 +23,11 @@
  *     → 이 함수의 '1순위' 시세 제공자다. config/market.json 의 providers.toss 에
  *       문서에 적힌 base / token_path / paths.quote / field_map 을 채우고
  *       TOSS_CLIENT_ID / TOSS_CLIENT_SECRET 을 넣으면 바로 붙는다.
- *   · 채우기 전이거나 호출이 실패하면 한국투자증권 KIS 로 자동 폴백한다.
- *     둘 중 하나만 있어도 화면은 정상 동작한다.
+ *   · 채우기 전이거나 호출이 실패하면 다음 제공자로 자동 폴백한다:
+ *       ① 토스증권(실시간) → ② 한국투자증권(실시간) → ③ 공공데이터포털(전일 종가)
+ *     셋 중 하나만 있어도 화면은 정상 동작한다.
+ *   · 토스 승인을 기다리는 중이라면 ③ 이 가장 빠르다 — data.go.kr 금융위원회
+ *     주식·지수 시세정보는 자동승인이고 증권 계좌도 필요 없다(대신 T+1 종가).
  *   · 비공식 웹 내부 엔드포인트(WTS)는 쓰지 않는다 — 예고 없이 바뀌고
  *     약관 위반 소지가 있어, 고객 자산을 다루는 CRM 에 둘 성질이 아니다.
  *
@@ -29,8 +35,9 @@
  *                펀드 → data.go.kr 금융위원회 · 뉴스 → config/sources.json RSS
  *
  * ── 환경변수 (Netlify → Site settings → Environment variables) ──────────
- *   TOSS_CLIENT_ID / TOSS_CLIENT_SECRET  토스증권 오픈API      (시세 1순위)
- *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿 (시세 폴백·지수)
+ *   TOSS_CLIENT_ID / TOSS_CLIENT_SECRET  토스증권 오픈API      (시세 1순위·실시간)
+ *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿 (2순위·실시간·지수)
+ *   DATA_GO_KR_KEY                    공공데이터포털 인증키      (3순위·전일 종가)
  *   KIS_ENV                            real(기본) 또는 vts(모의투자)
  *   ECOS_API_KEY                       한국은행 ECOS 인증키       (경제지표)
  *   FUND_API_URL / FUND_API_KEY        data.go.kr 펀드 API        (펀드)
@@ -279,7 +286,10 @@ async function quoteOverseas(excd, symb) {
 }
 
 /* 코드 표기 규칙: '005930' = 국내, 'NAS:AAPL' = 해외(거래소:심볼)
-   순서: 토스증권(설정돼 있으면) → 실패하면 KIS → 둘 다 없으면 무엇이 필요한지 알림 */
+
+   순서: ① 토스증권(실시간) → ② 한국투자증권(실시간) → ③ 공공데이터포털(전일 종가)
+   앞의 것이 없거나 실패하면 다음으로 넘어간다. 셋 다 없으면 무엇을 넣으면 되는지 알려준다.
+   가장 빨리 켤 수 있는 것이 ③ 이라 안내에서 맨 앞에 둔다(자동승인·계좌 불필요). */
 async function quoteOne(raw) {
   const s = String(raw || '').trim().toUpperCase();
   if (!s) return null;
@@ -288,46 +298,154 @@ async function quoteOne(raw) {
   if (hit) return hit;
 
   const kisOk = !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET);
-  let tossErr = '';
+  const krxOk = krxReady();
+  const notes = [];
 
   if (tossReady()) {
-    try {
-      return cSet(k, await tossQuote(s), TTL.quote);
-    } catch (e) {
-      tossErr = String(e && e.message || e);
-      if (!kisOk) throw new Error(tossErr);      /* 폴백이 없으면 토스 오류를 그대로 보여준다 */
+    try { return cSet(k, await tossQuote(s), TTL.quote); }
+    catch (e) {
+      notes.push('토스 실패: ' + String(e && e.message || e).slice(0, 110));
+      if (!kisOk && !krxOk) throw new Error(notes[0]);   /* 뒤가 없으면 원인을 그대로 */
     }
   }
 
-  if (!kisOk) {
-    /* 토스도 KIS도 없다 — 둘 중 '한 세트'만 채우면 된다는 뜻으로 함께 알려준다 */
-    throw new Error('NEED:TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+  if (kisOk) {
+    try {
+      const out = s.indexOf(':') > 0
+        ? await quoteOverseas(s.split(':')[0], s.split(':')[1])
+        : await quoteDomestic(s);
+      if (notes.length) out.note = notes.join(' / ') + ' → KIS 사용';
+      return cSet(k, out, TTL.quote);
+    } catch (e) {
+      notes.push('KIS 실패: ' + String(e && e.message || e).slice(0, 110));
+      if (!krxOk) throw new Error(notes.join(' / '));
+    }
   }
 
-  let out;
-  if (s.indexOf(':') > 0) { const p = s.split(':'); out = await quoteOverseas(p[0], p[1]); }
-  else out = await quoteDomestic(s);
-  if (tossErr) out.note = '토스 실패 → KIS 사용: ' + tossErr.slice(0, 120);
-  return cSet(k, out, TTL.quote);
+  if (krxOk) {
+    try {
+      const out = await krxQuote(s);
+      out.note = (notes.length ? notes.join(' / ') + ' → ' : '')
+        + '공공데이터 전일 종가(' + (out.asOf || '') + ')';
+      return cSet(k, out, TTL.quote);
+    } catch (e) {
+      notes.push('공공데이터 실패: ' + String(e && e.message || e).slice(0, 110));
+      throw new Error(notes.join(' / '));
+    }
+  }
+
+  /* 아무것도 없다 — 셋 중 '한 세트'만 채우면 된다 */
+  throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
 }
 
-/* ── 지수 ─────────────────────────────────────────────────────────────── */
+/* ── 지수 — KIS(실시간) 우선, 없으면 공공데이터(전일 종가) ──────────────── */
 async function indexOne(def) {
   const k = 'i:' + def.code;
   const hit = cGet(k);
   if (hit) return hit;
+
+  if (!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET)) {
+    if (krxReady()) return cSet(k, await krxIndex(def), TTL.index);
+    throw new Error('NEED:DATA_GO_KR_KEY,KIS_APP_KEY,KIS_APP_SECRET');
+  }
+  try {
+    return cSet(k, await kisIndexOne(def), TTL.index);
+  } catch (e) {
+    if (krxReady()) return cSet(k, await krxIndex(def), TTL.index);
+    throw e;
+  }
+}
+async function kisIndexOne(def) {
   const j = await kisGet((P.kis.paths || {}).domestic_index, {
     FID_COND_MRKT_DIV_CODE: 'U', FID_INPUT_ISCD: def.code
   }, (P.kis.tr_ids || {}).domestic_index);
   const o = j.output || {};
-  return cSet(k, {
+  return {
     id: def.id, name: def.name, code: def.code,
     price: num(o.bstp_nmix_prpr),
     change: num(o.bstp_nmix_prdy_vrss),
     changeRate: num(o.prdy_ctrt),
     volume: num(o.acml_vol),
     src: 'kis', at: new Date().toISOString()
-  }, TTL.index);
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   1.5) 공공데이터포털 금융위원회 — 전일 종가 (승인 대기 없는 즉시 대안)
+        토스 코드가 아직 안 나왔고 증권 계좌도 없을 때 오늘 바로 쓸 수 있는 길.
+        실시간이 아니라 T+1 종가지만, 평가금액·수익률·목표/손절 판단에는 충분하다.
+        토스나 KIS 가 붙으면 그쪽이 먼저 쓰이고 이건 뒤로 물러난다.
+   ══════════════════════════════════════════════════════════════════════ */
+function krxCfg() { return P.krx || {}; }
+function krxReady() {
+  const c = krxCfg();
+  return !!(process.env.DATA_GO_KR_KEY && c.base && (c.paths || {}).quote);
+}
+/* 주말·공휴일에는 당일 데이터가 없다. 며칠 거슬러 올라가 가장 최근 영업일을 집는다. */
+function krxRange() {
+  const d = kstNow(), back = num(krxCfg().lookback_days) || 14;
+  return [ymd(new Date(d.getTime() - back * 86400000)), ymd(d)];
+}
+async function krxGet(path, params) {
+  const c = krxCfg();
+  const q = new URLSearchParams(Object.assign({
+    serviceKey: process.env.DATA_GO_KR_KEY,
+    resultType: 'json', numOfRows: '30', pageNo: '1'
+  }, params));
+  const r = await fetch(c.base.replace(/\/+$/, '') + path + '?' + q.toString());
+  const txt = await r.text();
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) { throw new Error('공공데이터 응답이 JSON 이 아닙니다: ' + txt.slice(0, 160)); }
+
+  /* 키 오류·한도 초과는 별도 봉투로 온다 — 사유를 그대로 올려준다 */
+  const hdr = (j.OpenAPI_ServiceResponse || {}).cmmMsgHeader;
+  if (hdr) throw new Error('공공데이터 ' + (hdr.errMsg || '') + ' / ' + (hdr.returnAuthMsg || ''));
+  const rh = ((j.response || {}).header) || {};
+  if (rh.resultCode && rh.resultCode !== '00') throw new Error('공공데이터 ' + rh.resultCode + ' ' + (rh.resultMsg || ''));
+
+  let items = dig(j, (c.field_map || {}).items_path || 'response.body.items.item');
+  if (!items) return [];
+  return Array.isArray(items) ? items : [items];
+}
+/* 여러 날짜가 오면 가장 최근 것 하나 */
+function krxLatest(rows, fm, pick) {
+  const use = rows.filter(pick || (() => true));
+  if (!use.length) return null;
+  return use.sort((a, b) => String(a[fm.date]).localeCompare(String(b[fm.date])))[use.length - 1];
+}
+async function krxQuote(raw) {
+  const s = String(raw || '').trim().toUpperCase();
+  if (s.indexOf(':') > 0) throw new Error('공공데이터 시세는 국내 종목만 지원합니다 (' + s + ' 는 해외)');
+  const c = krxCfg(), fm = c.field_map || {}, rg = krxRange();
+  const rows = await krxGet(c.paths.quote, { likeSrtnCd: s, beginBasDt: rg[0], endBasDt: rg[1] });
+  /* likeSrtnCd 는 앞자리 일치라 다른 종목이 섞일 수 있다 — 정확히 같은 코드만 남긴다 */
+  const it = krxLatest(rows, fm, r => String(r[fm.code]).trim() === s);
+  if (!it) throw new Error('공공데이터에 최근 ' + (c.lookback_days || 14) + '일 내 ' + s + ' 종가가 없습니다');
+  return {
+    code: s, market: 'KRX', currency: 'KRW',
+    name: it[fm.name] || '',
+    price: num(it[fm.price]),
+    change: num(it[fm.change]),
+    changeRate: num(it[fm.change_rate]),
+    open: num(it[fm.open]), high: num(it[fm.high]), low: num(it[fm.low]),
+    volume: num(it[fm.volume]), cap: num(it[fm.cap]),
+    delayed: true, asOf: it[fm.date] || '',
+    src: 'krx', at: new Date().toISOString()
+  };
+}
+async function krxIndex(def) {
+  const c = krxCfg(), fm = c.field_map || {}, rg = krxRange();
+  const nm = def.krx_name || def.name;
+  const rows = await krxGet(c.paths.index, { idxNm: nm, beginBasDt: rg[0], endBasDt: rg[1] });
+  const it = krxLatest(rows, fm, r => String(r[fm.index_name]).trim() === nm);
+  if (!it) throw new Error('공공데이터에 지수 "' + nm + '" 가 없습니다 (config 의 krx_name 을 확인하세요)');
+  return {
+    id: def.id, name: def.name, code: def.code,
+    price: num(it[fm.price]), change: num(it[fm.change]), changeRate: num(it[fm.change_rate]),
+    volume: num(it[fm.volume]),
+    delayed: true, asOf: it[fm.date] || '',
+    src: 'krx', at: new Date().toISOString()
+  };
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -552,6 +670,7 @@ exports.handler = async function (event) {
       const has = {
         toss: tossReady(),
         kis: !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET),
+        krx: krxReady(),
         ecos: !!process.env.ECOS_API_KEY,
         fund: !!(process.env.FUND_API_URL && process.env.FUND_API_KEY),
         news: !!(SOURCES && SOURCES['경제'])
@@ -560,17 +679,20 @@ exports.handler = async function (event) {
       if (has.toss) { try { await tossToken(); tossMsg = '토큰 발급 정상'; } catch (e) { tossMsg = e.message; has.toss = false; } }
       else tossMsg = '미설정 — 필요한 것: ' + tossWhyNot().join(' · ');
       if (has.kis) { try { await kisToken(); kisMsg = '토큰 발급 정상'; } catch (e) { kisMsg = e.message; has.kis = false; } }
+      const provider = has.toss ? 'toss' : (has.kis ? 'kis' : (has.krx ? 'krx' : 'none'));
       return {
         statusCode: 200, headers: cors,
         body: JSON.stringify({
           ok: true, meta: meta, has: has,
-          quoteProvider: has.toss ? 'toss' : (has.kis ? 'kis' : 'none'),
+          quoteProvider: provider,
+          realtime: provider === 'toss' || provider === 'kis',
           tossMessage: tossMsg, kisEnv: process.env.KIS_ENV || 'real', kisMessage: kisMsg,
           deeplink: (P.toss || {}).deeplink || null,
           guide: {
-            TOSS_CLIENT_ID: '토스증권 corp.tossinvest.com/ko/open-api 신청·승인 후 발급 — 시세 1순위(호출 IP 등록 필요)',
-            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 시세 폴백 + 지수(코스피·코스닥)',
-            ECOS_API_KEY: '한국은행 ecos.bok.or.kr/api 에서 발급 — 기준금리·환율·물가',
+            DATA_GO_KR_KEY: '공공데이터포털 data.go.kr — 금융위원회 주식·지수 시세정보 활용신청(자동승인, 계좌 불필요). 전일 종가라 실시간은 아니지만 오늘 바로 켤 수 있는 길',
+            TOSS_CLIENT_ID: '토스증권 corp.tossinvest.com/ko/open-api 신청·승인 후 발급 — 시세 1순위(실시간, 호출 IP 등록 필요)',
+            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 실시간 시세 + 지수(계좌 개설 필요)',
+            ECOS_API_KEY: '한국은행 ecos.bok.or.kr/api 에서 발급(즉시) — 기준금리·환율·물가',
             FUND_API_URL: 'data.go.kr 금융위원회 펀드 API 활용신청 후 요청 URL 그대로 입력 — 공모펀드 기준가'
           }
         })
@@ -614,6 +736,135 @@ exports.handler = async function (event) {
           })
         };
       }
+    }
+
+    /* ── 토스 엔드포인트 자동 탐색 ─────────────────────────────────────
+       키는 받았는데 문서의 정확한 경로를 아직 모를 때 쓴다.
+       발급받은 client_id/secret 으로 토스 도메인 안에서만 후보를 몇 개
+       두들겨 보고, 토큰이 나오는 조합을 찾아 config 에 붙여넣을 JSON 을 만들어 준다.
+       ⚠️ 안전장치: 요청은 *.tossinvest.com 으로만 나간다. 조회(GET/POST 토큰)뿐이고
+          주문 같은 건 건드리지 않는다. 문서에 적힌 값을 아는 순간 이건 필요 없다. */
+    if (kind === 'toss-discover') {
+      const k = tossKeys();
+      if (!k.id || !k.sec) {
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, meta: meta, step: 'key', hint: 'TOSS_CLIENT_ID / TOSS_CLIENT_SECRET 환경변수를 먼저 넣으세요.' }) };
+      }
+      const hosts = (q.base ? [q.base] : [
+        'https://openapi.tossinvest.com', 'https://api.tossinvest.com', 'https://open-api.tossinvest.com'
+      ]).filter(h => /^https:\/\/[a-z0-9.-]*tossinvest\.com$/i.test(String(h).replace(/\/+$/, '')));
+      if (!hosts.length) {
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, meta: meta, step: 'base', message: 'base 는 tossinvest.com 도메인만 허용합니다.' }) };
+      }
+      const tokenPaths = q.token_path ? [q.token_path]
+        : ['/oauth2/token', '/api/v1/oauth2/token', '/v1/oauth2/token', '/oauth/token', '/auth/token'];
+      const styles = q.token_style ? [q.token_style] : ['form', 'basic', 'json'];
+
+      const tried = [];
+      let found = null;
+      /* 탐색은 설정을 잠시 바꿔가며 두들기는 것이라, 끝나면 반드시 원래대로 돌려놓는다
+         (같은 컨테이너에서 다음 요청이 엉뚱한 설정으로 돌지 않게) */
+      const savedQuote = (tossCfg().paths || {}).quote;
+      const saved = { base: tossCfg().base, token_path: tossCfg().token_path, token_style: tossCfg().token_style };
+      const restore = () => { Object.assign(tossCfg(), saved); tossCfg().paths.quote = savedQuote; tossTok = null; tossTokInflight = null; };
+      for (const h of hosts) {
+        for (const tp of tokenPaths) {
+          for (const st of styles) {
+            tossCfg().base = h; tossCfg().token_path = tp; tossCfg().token_style = st;
+            tossTok = null; tossTokInflight = null;
+            try {
+              await tossIssueToken();
+              found = { base: h, token_path: tp, token_style: st };
+            } catch (e) {
+              tried.push({ base: h, token_path: tp, token_style: st, error: String(e.message || e).slice(0, 120) });
+            }
+            if (found) break;
+          }
+          if (found) break;
+        }
+        if (found) break;
+      }
+      if (!found) {
+        restore();
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'token', tried: tried.slice(0, 12),
+            hint: '후보 중에 맞는 게 없습니다. 문서의 토큰 발급 주소를 알면 ?base=https://…&token_path=/… 로 직접 지정해 다시 부르세요. 401 만 나온다면 호출 IP 등록을 확인하세요.'
+          })
+        };
+      }
+
+      /* 토큰이 나왔다 — 이제 시세 경로를 찾는다 */
+      const code = q.code || '005930';
+      const quotePaths = q.quote_path ? [q.quote_path] : [
+        '/v1/quotes/{code}', '/api/v1/quotes/{code}', '/v1/stocks/{code}/quote',
+        '/api/v1/stocks/{code}/price', '/v1/market/quotes/{code}', '/v1/prices/{code}'
+      ];
+      const qTried = [];
+      let quoteOk = null;
+      for (const qp of quotePaths) {
+        tossCfg().paths.quote = qp;
+        try {
+          const out = await tossQuote(code);
+          quoteOk = { path: qp, sample: out };
+          break;
+        } catch (e) {
+          const msg = String(e.message || e);
+          qTried.push({ path: qp, error: msg.slice(0, 160) });
+          /* 경로는 맞는데 필드 매핑만 틀린 경우를 구분해 준다 */
+          if (/현재가 필드가 없습니다|종목 데이터를 찾지 못했습니다/.test(msg)) {
+            quoteOk = { path: qp, needsFieldMap: true, raw: msg.slice(0, 400) };
+            break;
+          }
+        }
+      }
+
+      const suggest = {
+        base: found.base, token_path: found.token_path, token_style: found.token_style,
+        paths: { quote: quoteOk ? quoteOk.path : '(문서에서 확인 필요)' }
+      };
+      restore();
+      return {
+        statusCode: 200, headers: cors,
+        body: JSON.stringify({
+          ok: !!(quoteOk && !quoteOk.needsFieldMap), meta: meta,
+          step: quoteOk ? (quoteOk.needsFieldMap ? 'field_map' : 'done') : 'quote',
+          token: found, quote: quoteOk, quoteTried: quoteOk ? undefined : qTried.slice(0, 8),
+          suggestConfig: suggest,
+          hint: quoteOk && !quoteOk.needsFieldMap
+            ? '위 suggestConfig 값을 config/market.json 의 providers.toss 에 그대로 넣으면 됩니다.'
+            : (quoteOk ? '경로는 맞는데 응답 필드명이 다릅니다. raw 를 보고 field_map(root/price/name)을 맞추세요.'
+              : '토큰은 나왔지만 시세 경로를 못 찾았습니다. 문서의 경로를 ?quote_path=/… 로 지정해 다시 부르세요.')
+        })
+      };
+    }
+
+    /* ── 공공데이터포털 연결 진단 (토스·KIS 없이 오늘 바로 켤 때 쓰는 길) ─── */
+    if (kind === 'krx-probe') {
+      if (!process.env.DATA_GO_KR_KEY) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'key',
+            hint: 'data.go.kr 에서 "금융위원회_주식시세정보"(15094808)와 "금융위원회_지수시세정보"(15094807) 를 활용신청(자동승인)한 뒤, 일반 인증키(Decoding) 를 DATA_GO_KR_KEY 환경변수에 넣으세요.'
+          })
+        };
+      }
+      const code = q.code || '005930';
+      const out = { ok: true, meta: meta, step: 'done' };
+      try { out.quote = await krxQuote(code); }
+      catch (e) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'quote', message: String(e.message || e),
+            hint: '"등록되지 않은 서비스키" 면 주식시세정보 활용신청이 아직 승인 전이거나 키를 잘못 넣은 것입니다. Encoding 키가 아니라 Decoding 키를 쓰세요.'
+          })
+        };
+      }
+      try { out.index = await krxIndex((CFG.indices || [])[0] || { id: 'kospi', name: '코스피', krx_name: '코스피' }); }
+      catch (e) { out.indexError = String(e.message || e); out.indexHint = '지수시세정보는 별도 활용신청입니다. 주식만 신청했으면 여기서만 실패합니다.'; }
+      return { statusCode: 200, headers: cors, body: JSON.stringify(out) };
     }
 
     /* ── 현재가 ────────────────────────────────────────────────────────── */

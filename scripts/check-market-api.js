@@ -52,7 +52,8 @@ const R = (json, opts) => Promise.resolve({
 
   r = await call(m, { kind: 'quote', codes: '005930' });
   ok(r.status === 200 && r.body.ok === false, '시세 요청도 200 (앱이 안내 카드를 그릴 수 있다)');
-  ok(r.body.need.length === 4, '토스 한 쌍 + KIS 한 쌍을 함께 알려 준다 (' + r.body.need.join(',') + ')');
+  ok(r.body.need.length === 5 && r.body.need[0] === 'DATA_GO_KR_KEY',
+    '켤 수 있는 길 세 가지를 함께 알려 주고, 가장 빨리 되는 것을 앞에 둔다 (' + r.body.need.join(',') + ')');
 
   r = await call(m, { kind: 'toss-probe' });
   ok(r.body.step === 'config' && r.body.missing.length === 5, '토스 진단이 못 채운 항목 5개를 짚어 준다');
@@ -188,6 +189,111 @@ const R = (json, opts) => Promise.resolve({
   m = freshModule();
   r = await call(m, { kind: 'news' });
   ok(r.body.news.length >= 1, '피드 절반이 죽어도 나머지는 나온다');
+
+  /* ══ 5.5) 공공데이터포털 — 승인 대기 없이 오늘 켜는 길 ═════════════ */
+  console.log('\n[5.5] 공공데이터포털 전일 종가');
+  clearKeys(); resetTossCfg();
+  process.env.DATA_GO_KR_KEY = 'dk';
+  const row = (d, code, nm, clpr, rt) => ({ basDt: d, srtnCd: code, itmsNm: nm, clpr: String(clpr), vs: '1', fltRt: String(rt), mkp: '1', hipr: '2', lopr: '3', trqu: '4', mrktTotAmt: '5' });
+  let krxHeader = null;
+  global.fetch = (u) => {
+    const s = String(u);
+    const wrap = items => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(
+      krxHeader || { response: { header: { resultCode: '00' }, body: { items: { item: items } } } })) });
+    if (s.indexOf('getStockPriceInfo') >= 0) return wrap([
+      row('20260804', '005930', '삼성전자', 82000, -0.6),
+      row('20260806', '005930', '삼성전자', 84000, 1.2),
+      row('20260806', '0059301', '엉뚱한종목', 9999, 0),   /* likeSrtnCd 앞자리 일치로 섞여 들어오는 것 */
+      row('20260805', '005930', '삼성전자', 83000, 0.6)]);
+    if (s.indexOf('getStockMarketIndex') >= 0) return wrap([
+      { basDt: '20260806', idxNm: '코스피', clpr: '2765.43', vs: '12.1', fltRt: '0.44', trqu: '9' },
+      { basDt: '20260805', idxNm: '코스피', clpr: '2753.33', vs: '-3', fltRt: '-0.1', trqu: '8' },
+      { basDt: '20260806', idxNm: '코스피 200', clpr: '370.1', vs: '1', fltRt: '0.3', trqu: '7' }]);
+    return R({}, { ok: false, status: 404 });
+  };
+  m = freshModule();
+
+  r = await call(m, { kind: 'quote', codes: '005930' });
+  let qq = r.body.quotes[0];
+  ok(qq && qq.src === 'krx', '토스·KIS 가 없으면 공공데이터가 받는다');
+  ok(qq && qq.price === 84000 && qq.asOf === '20260806', '주말·공휴일을 건너뛰고 가장 최근 영업일을 집는다 (' + (qq && qq.asOf) + ')');
+  ok(qq && qq.delayed === true, '실시간이 아니라는 표시(delayed)를 달아 보낸다');
+  ok(qq && qq.name === '삼성전자', '앞자리만 같은 다른 종목(0059301)을 걸러낸다');
+
+  r = await call(m, { kind: 'index' });
+  const k200 = (r.body.indices || []).filter(x => x.id === 'kospi200')[0];
+  ok(k200 && k200.price === 370.1, '지수명을 정확히 맞춰 고른다 ("코스피" 와 "코스피 200" 을 안 섞는다)');
+
+  r = await call(m, { kind: 'health' });
+  ok(r.body.quoteProvider === 'krx' && r.body.realtime === false,
+    'health 가 "공공데이터 · 실시간 아님" 으로 정확히 보고한다');
+
+  r = await call(m, { kind: 'krx-probe', code: '005930' });
+  ok(r.body.ok === true && r.body.step === 'done', '공공데이터 진단이 통과한다');
+
+  /* 키 오류 봉투를 사유 그대로 올리는가 */
+  krxHeader = { OpenAPI_ServiceResponse: { cmmMsgHeader: { errMsg: 'SERVICE_KEY_IS_NOT_REGISTERED_ERROR', returnAuthMsg: '등록되지 않은 서비스키' } } };
+  m = freshModule();
+  r = await call(m, { kind: 'krx-probe' });
+  ok(r.body.step === 'quote' && /등록되지 않은 서비스키/.test(r.body.message), '키 오류 사유를 그대로 알려 준다');
+  krxHeader = null;
+
+  /* ══ 5.6) 제공자 우선순위 — 실시간이 있으면 실시간이 먼저 ══════════ */
+  console.log('\n[5.6] 제공자 우선순위');
+  process.env.KIS_APP_KEY = 'kk'; process.env.KIS_APP_SECRET = 'ks';
+  const base = global.fetch;
+  global.fetch = (u, o) => {
+    const s = String(u);
+    if (s.indexOf('tokenP') >= 0) return R({ access_token: 'K', expires_in: 86400 });
+    if (s.indexOf('inquire-price') >= 0) return R({ rt_cd: '0', output: { hts_kor_isnm: '삼성전자', stck_prpr: '84500', prdy_ctrt: '1.8' } });
+    return base(u, o);
+  };
+  m = freshModule();
+  r = await call(m, { kind: 'quote', codes: '005930' });
+  ok(r.body.quotes[0].src === 'kis', 'KIS 가 있으면 공공데이터보다 KIS 를 먼저 쓴다');
+
+  /* KIS 가 죽으면 공공데이터로 내려간다 */
+  global.fetch = (u, o) => {
+    const s = String(u);
+    if (s.indexOf('tokenP') >= 0) return R({ access_token: 'K', expires_in: 86400 });
+    if (s.indexOf('inquire-price') >= 0) return R({ rt_cd: '1', msg_cd: 'X', msg1: '조회 실패' });
+    return base(u, o);
+  };
+  m = freshModule();
+  r = await call(m, { kind: 'quote', codes: '005930' });
+  qq = r.body.quotes[0];
+  ok(qq && qq.src === 'krx', 'KIS 가 죽으면 공공데이터가 이어받는다');
+  ok(qq && /KIS 실패/.test(qq.note || ''), '무슨 일이 있었는지 기록을 남긴다');
+
+  /* ══ 5.7) 토스 엔드포인트 자동 탐색 ════════════════════════════════ */
+  console.log('\n[5.7] 토스 엔드포인트 자동 탐색');
+  clearKeys(); resetTossCfg();
+  process.env.TOSS_CLIENT_ID = 'cid'; process.env.TOSS_CLIENT_SECRET = 'csec';
+  const urls = [];
+  global.fetch = (u, o) => {
+    const s = String(u); urls.push(s);
+    if (s === 'https://api.tossinvest.com/v1/oauth2/token' && (o.headers.Authorization || '').indexOf('Basic') === 0)
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ access_token: 'TT', expires_in: 3600 })) });
+    if (s === 'https://api.tossinvest.com/api/v1/stocks/A005930/price')
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ data: { name: '삼성전자', close: 84000, changeRate: 1.2 } })) });
+    return Promise.resolve({ ok: false, status: 401, text: () => Promise.resolve('{"error":"invalid_client"}') });
+  };
+  const tcfg = require(CFG).providers.toss;
+  tcfg.field_map = { root: 'data', name: 'name', price: 'close', change_rate: 'changeRate' };
+  m = freshModule();
+  r = await call(m, { kind: 'toss-discover' });
+  ok(r.body.ok === true && r.body.step === 'done', '맞는 조합을 찾아낸다');
+  ok(r.body.suggestConfig.token_path === '/v1/oauth2/token' && r.body.suggestConfig.token_style === 'basic',
+    '토큰 경로·인증방식을 정확히 집는다 (' + r.body.suggestConfig.token_path + ' / ' + r.body.suggestConfig.token_style + ')');
+  ok(r.body.suggestConfig.paths.quote === '/api/v1/stocks/{code}/price',
+    '시세 경로를 찾아 {code} 자리까지 만들어 준다');
+  ok(urls.every(u => /^https:\/\/[a-z0-9.-]*tossinvest\.com\//.test(u)),
+    '탐색 요청이 토스 도메인 밖으로 절대 나가지 않는다 (' + urls.length + '회 전부)');
+  ok(tcfg.base === '' && tcfg.paths.quote === '',
+    '탐색이 끝나면 설정을 원래대로 되돌린다 (다음 요청이 엉뚱한 설정으로 돌지 않게)');
+
+  r = await call(m, { kind: 'toss-discover', base: 'https://evil.example.com' });
+  ok(r.body.ok === false && r.body.step === 'base', '토스가 아닌 도메인을 넘기면 거절한다');
 
   /* ══ 6) 남용 방지 ══════════════════════════════════════════════════ */
   console.log('\n[6] 남용 방지');

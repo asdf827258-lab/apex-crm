@@ -31742,9 +31742,15 @@ function invSetHold(hid,field,el){
 /* 한 종목의 현재가 — 실시간이 있으면 그것, 없으면 수동 입력값 */
 function invPrice(h){
   var q=INV.live[(h.code||'').trim()];
-  if(q&&q.price!=null)return {p:q.price,src:q.src||'api',rate:q.changeRate,name:q.name||h.name};
-  if(h.manual!=null)return {p:h.manual,src:'manual',rate:null,name:h.name};
-  return {p:null,src:'',rate:null,name:h.name};
+  if(q&&q.price!=null)return {p:q.price,src:q.src||'api',rate:q.changeRate,name:q.name||h.name,
+                              delayed:!!q.delayed,asOf:q.asOf||''};
+  if(h.manual!=null)return {p:h.manual,src:'manual',rate:null,name:h.name,delayed:false,asOf:''};
+  return {p:null,src:'',rate:null,name:h.name,delayed:false,asOf:''};
+}
+/* 'YYYYMMDD' → 'M/D' */
+function invAsOf(s){
+  var t=String(s||'');
+  return /^\d{8}$/.test(t)?(+t.slice(4,6)+'/'+ +t.slice(6,8)):t;
 }
 function invCalc(a){
   var cost=0,val=0,known=0,total=0;
@@ -31769,9 +31775,12 @@ function invPaint(){
     var rt=(pr.p!=null&&avg)?((pr.p-avg)/avg*100):null;
     var e;
     if(e=$('ivc_'+h.id)){
-      e.innerHTML=pr.p==null?'<span class="muted">—</span>':
-        (invMoney(pr.p,h.currency)+(pr.src==='manual'?' <span class="iv-manual">수동</span>':
-         (pr.rate!=null?' <span class="'+invCls(pr.rate)+'">'+invPct(pr.rate)+'</span>':'')));
+      var tag='';
+      if(pr.src==='manual')tag=' <span class="iv-manual">수동</span>';
+      else if(pr.delayed)tag=(pr.rate!=null?' <span class="'+invCls(pr.rate)+'">'+invPct(pr.rate)+'</span>':'')+
+                             ' <span class="iv-delay" title="공공데이터포털 전일 종가입니다. 장중 실시간이 아닙니다.">종가 '+osEsc(invAsOf(pr.asOf))+'</span>';
+      else if(pr.rate!=null)tag=' <span class="'+invCls(pr.rate)+'">'+invPct(pr.rate)+'</span>';
+      e.innerHTML=pr.p==null?'<span class="muted">—</span>':(invMoney(pr.p,h.currency)+tag);
     }
     if(e=$('ivv_'+h.id))e.textContent=val==null?'—':invMoney(val,h.currency);
     if(e=$('ivp_'+h.id)){e.textContent=pl==null?'—':invMoney(pl,h.currency);e.className='iv-num '+invCls(pl);}
@@ -31817,6 +31826,7 @@ function invTabsBar(active){
   }).join('')+'</div>';
 }
 var INV_NEED_GUIDE={
+  'DATA_GO_KR_KEY':'공공데이터포털 인증키 — 승인 대기 없이 오늘 바로 켜는 길(전일 종가). data.go.kr 에서 "금융위원회_주식시세정보"·"지수시세정보" 활용신청(자동승인)',
   'TOSS_CLIENT_ID':'토스증권 오픈API client_id — 시세 1순위 (corp.tossinvest.com/ko/open-api 신청·승인)',
   'TOSS_CLIENT_SECRET':'토스증권 오픈API client_secret (client_id와 한 쌍 · 호출 IP 등록 필요)',
   'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 시세 폴백 + 코스피·코스닥 지수',
@@ -31829,10 +31839,10 @@ function invNeedBox(need){
   var li=(need||[]).map(function(k){
     return '<li><b>'+osEsc(k)+'</b> — '+osEsc(INV_NEED_GUIDE[k]||'서버 환경변수')+'</li>';
   }).join('');
-  var pair=(need||[]).indexOf('TOSS_CLIENT_ID')>=0&&(need||[]).indexOf('KIS_APP_KEY')>=0;
-  return '<div class="iv-need"><div class="hd">🔌 실시간 연결이 아직 안 됐습니다</div>'+
-    '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면이 바로 실시간으로 바뀝니다.'+
-    (pair?' <b>토스증권 한 쌍</b> 또는 <b>한국투자증권 한 쌍</b> 중 <b>하나만 넣어도 시세는 나옵니다</b>(둘 다 넣으면 한쪽이 죽어도 이어집니다).':'')+
+  var many=(need||[]).length>2;
+  return '<div class="iv-need"><div class="hd">🔌 시세 연결이 아직 안 됐습니다</div>'+
+    '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면에 숫자가 채워집니다.'+
+    (many?' <b>한 세트만 넣으면 됩니다</b> — 가장 빨리 켜지는 건 <b>공공데이터포털</b>(자동승인·계좌 불필요·전일 종가)이고, 실시간이 필요하면 토스증권이나 한국투자증권을 넣으세요. 여러 개 넣으면 앞의 것이 죽어도 뒤가 받습니다.':'')+
     ' 넣기 전에도 <b>수동 입력</b>과 종목별 <b>토스 ↗</b> 바로가기는 그대로 됩니다.</div>'+
     '<ul>'+li+'</ul>'+
     '<div class="ft">※ 시세는 <b>토스증권 오픈API</b>를 1순위로 쓰고, 실패하면 한국투자증권으로 자동 폴백합니다. '+
@@ -32334,6 +32344,7 @@ function invAfterRender(tab){
    '.iv-x{border:none;background:#F3F4F6;color:#9AA2AD;border-radius:7px;width:26px;height:26px;cursor:pointer;font-size:12px}',
    '.iv-x:hover{background:#FEE2E2;color:#B91C1C}',
    '.iv-manual{font-size:10px;font-weight:800;color:#B45309;background:#FFFBEB;border-radius:5px;padding:1px 5px}',
+   '.iv-delay{font-size:10px;font-weight:800;color:#475569;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:5px;padding:1px 5px}',
    '.iv-empty{border:1px dashed #D8DEE9;border-radius:12px;padding:26px 18px;text-align:center;font-size:12.5px;color:#6B7280;line-height:1.7}',
    '.iv-goal{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:12px;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px}',
    '.iv-goal label{font-size:11.5px;font-weight:700;color:#374151;display:flex;align-items:center;gap:6px}',

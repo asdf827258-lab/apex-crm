@@ -274,7 +274,8 @@ window.supabase={createClient:function(){
       json: () => Promise.resolve({
         ok: false, meta: { kind: 'all' }, indices: [], econ: [], news: [], watchlist: [],
         watchlistDefs: [{ code: '005930', name: '삼성전자' }],
-        deeplink: null, errors: [], need: ['TOSS_CLIENT_ID', 'TOSS_CLIENT_SECRET', 'KIS_APP_KEY', 'KIS_APP_SECRET']
+        deeplink: null, errors: [],
+        need: ['DATA_GO_KR_KEY', 'TOSS_CLIENT_ID', 'TOSS_CLIENT_SECRET', 'KIS_APP_KEY', 'KIS_APP_SECRET']
       })
     });
     go('inv_econ');
@@ -288,8 +289,9 @@ window.supabase={createClient:function(){
     slim: document.querySelectorAll('.iv-need-slim').length
   }));
   ok(nokey.need, '키가 없으면 설정 안내 카드가 뜬다');
-  ok(/하나만 넣어도/.test(nokey.txt) && /토스증권/.test(nokey.txt) && /한국투자증권/.test(nokey.txt),
-    '"토스 한 쌍 또는 한국투자증권 한 쌍 중 하나만 넣어도 된다"고 알려 준다');
+  ok(/한 세트만 넣으면/.test(nokey.txt) && /공공데이터포털/.test(nokey.txt),
+    '"한 세트만 넣으면 되고, 가장 빨리 켜지는 건 공공데이터포털" 이라고 알려 준다');
+  ok(/자동승인|계좌 불필요/.test(nokey.txt), '승인 대기 없이 켤 수 있다는 점을 짚어 준다');
   ok(nokey.watch === 1 && nokey.wtoss === 1, '시세가 없어도 관심 종목과 토스 바로가기는 남는다');
   ok(nokey.slim >= 1, '비어 있는 칸마다 왜 비었는지 알려 준다');
   await page.evaluate(() => { window.fetch = window.__origFetch; });

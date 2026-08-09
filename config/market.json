@@ -28,6 +28,34 @@
         "overseas_price": "HHDFS00000300"
       }
     },
+    "krx": {
+      "_이름": "공공데이터포털 금융위원회 주식·지수 시세 (전일 종가 · 승인 대기 없음)",
+      "_키발급": "https://www.data.go.kr 회원가입 → '금융위원회_주식시세정보'(15094808)와 '금융위원회_지수시세정보'(15094807) 활용신청 → 자동승인이라 몇 분 안에 인증키가 나옵니다",
+      "_환경변수": ["DATA_GO_KR_KEY"],
+      "_성격": "실시간이 아니라 '전일 종가'입니다(T+1). 장중 등락은 안 보이지만 평가금액·수익률·목표/손절 판단에는 충분합니다. 토스나 KIS 가 붙으면 자동으로 그쪽이 우선합니다.",
+      "_주의": "포털에서 받은 인증키 두 가지 중 '일반 인증키(Decoding)' 를 넣으세요. Encoding 키를 넣으면 서명이 두 번 인코딩되어 실패합니다.",
+      "base": "https://apis.data.go.kr/1160100/service",
+      "paths": {
+        "quote": "/GetStockSecuritiesInfoService/getStockPriceInfo",
+        "index": "/GetMarketIndexInfoService/getStockMarketIndex"
+      },
+      "lookback_days": 14,
+      "field_map": {
+        "items_path": "response.body.items.item",
+        "date": "basDt",
+        "code": "srtnCd",
+        "name": "itmsNm",
+        "price": "clpr",
+        "change": "vs",
+        "change_rate": "fltRt",
+        "open": "mkp",
+        "high": "hipr",
+        "low": "lopr",
+        "volume": "trqu",
+        "cap": "mrktTotAmt",
+        "index_name": "idxNm"
+      }
+    },
     "ecos": {
       "_이름": "한국은행 ECOS 경제통계 OpenAPI (기준금리·환율·물가·금리)",
       "_키발급": "https://ecos.bok.or.kr/api → 인증키 신청(무료)",
@@ -98,11 +126,11 @@
     }
   },
 
-  "_지수": "경제동향 화면 상단 지수 카드. kis 업종지수 코드(FID_INPUT_ISCD) 기준.",
+  "_지수": "경제동향 화면 상단 지수 카드. code 는 KIS 업종지수 코드(FID_INPUT_ISCD), krx_name 은 공공데이터포털이 쓰는 지수명입니다(띄어쓰기까지 정확해야 합니다).",
   "indices": [
-    { "id": "kospi",  "name": "코스피",   "code": "0001", "src": "kis" },
-    { "id": "kosdaq", "name": "코스닥",   "code": "1001", "src": "kis" },
-    { "id": "kospi200", "name": "코스피200", "code": "2001", "src": "kis" }
+    { "id": "kospi",    "name": "코스피",    "code": "0001", "krx_name": "코스피" },
+    { "id": "kosdaq",   "name": "코스닥",    "code": "1001", "krx_name": "코스닥" },
+    { "id": "kospi200", "name": "코스피200", "code": "2001", "krx_name": "코스피 200" }
   ],
 
   "_경제지표": "한국은행 ECOS 통계표/항목 코드. cycle=D(일)·M(월)·Q(분기)·A(년). 코드가 바뀌면 ECOS 통계코드검색에서 확인 후 수정하세요.",
