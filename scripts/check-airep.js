@@ -670,6 +670,31 @@ const AI_OK = `## 활동 보고
   ok(over.sw <= over.cw + 2, '390px 에서 가로 스크롤 없음 (' + over.sw + '/' + over.cw + ')');
   await page.setViewportSize({ width: 1240, height: 1400 });
 
+  /* ── 한 사람 칸에 코칭과 팀 평균까지 다 있는가 ──
+     팀 코칭 화면을 따로 열지 않아도 여기서 다 보여야 한다. 흩어지면 아무도 안 본다. */
+  await open('team');
+  await page.waitForTimeout(2600);
+  await page.evaluate(() => { GB.team = ''; arPaint(); arOpen('p2'); });
+  await page.waitForTimeout(900);
+  const merged = await page.evaluate(() => {
+    const host = document.getElementById('arPane');
+    if (!host) return null;
+    return {
+      secs: Array.prototype.map.call(host.querySelectorAll('.ar-rb .ar-sh .n'), e => e.textContent.trim()),
+      vsRows: host.querySelectorAll('.ar-vr').length,
+      selfOut: /본인은 평균에서 뺐습니다/.test(host.textContent),
+      coach: /오늘 이 사람을 어떻게 챙길까/.test(host.textContent)
+    };
+  });
+  ok(!!merged, '팀원 관리 칸이 그려진다');
+  if (merged) {
+    ok(merged.secs.indexOf('DB 통합 CRM') >= 0, '펼친 칸에 DB 통합 CRM 이 있다');
+    ok(merged.coach, '펼친 칸에 코칭(어떻게 챙길까)이 있다 — 팀 코칭을 따로 안 열어도 된다');
+    ok(merged.vsRows === 6, '팀 평균 비교가 여섯 축 모두 선다 (' + merged.vsRows + ')');
+    ok(merged.selfOut, '팀 평균에서 본인을 뺀다고 적는다 — 안 빼면 차이가 절반으로 희석된다');
+    ok(/평균과 견주면/.test(merged.secs.join('|')), '팀 평균 비교 칸이 있다 — ' + merged.secs.join(' · '));
+  }
+
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
   await browser.close(); srv.close();
