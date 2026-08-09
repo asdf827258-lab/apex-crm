@@ -49,7 +49,8 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 | #148 | 두뇌 키우기 — 모범답안 · 엔진별 지시문 · 회사지식 · 두 번 태우기 |
 | #149 | AI 보고 한 칸 · 화면별 사용법 · 음성 비서 말투 |
 | #150 | AI 관리판 아홉 칸 · 아침 비서 · 부재거절/기고객 재관리 |
-| 이번 | TEAM 총괄 관리 한 칸 · 설정 여섯 칸 |
+| #151 | TEAM 총괄 관리 한 칸 · 설정 여섯 칸 |
+| 이번 | 팀별 나눠 보기 · 뉴스 최신화 · 아침 팀 보고 · 사진 전체 캐러셀 |
 
 ## 화면별 담당 코드
 
@@ -83,6 +84,13 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 - 배정 DB 한 건 한 건은 `AR.db` (`arDbCalc`), 고객 한 사람 한 사람은 `AR.cliRows` (`arCliRows`).
 - 통화는 30일이 아니라 **최근 4000건**을 읽습니다. 마지막 통화가 40일 전이어도 알아야 다시 겁니다.
 - 아침 비서는 `arBriefMaybe()` — `osOnLogin` 에서 하루 한 번. 끄기는 `apex_ar_brief_off`.
+- **오전 8시 자동 보고**는 `arAutoArm()` → 10분마다 `arAutoRun()`. `AR_H=8` 이 기준 시각.
+  리더면 팀원 전원(`arNeedToday`), 팀원이면 자기 것 하나. 하루 한 번(`apex_ar_team_<날짜>`).
+  끄기는 `apex_ar_auto_off`. **브라우저 안에서만 도는 앱이라 아무도 안 켜면 서버가 대신 눌러
+  주지 못합니다** — 다만 지점장이 열면 팀원 전원 것을 대신 만들어 둡니다.
+- 전화 습관은 `arCrmDeep(who)` / `arCrmDeepText(who)`. `AR.calls` 에 담아 둔 통화 기록에서
+  결과 분포 · 시간대 · 요일 · 재시도 간격 · 주간 추이를 계산합니다.
+  **고객 이름·전화·메모는 담지 않습니다** — 숫자와 패턴만 AI 로 넘어갑니다.
 - 주기 알림은 `arNudgeStart()` — 95분마다, 하루 세 번까지.
 - 「무슨 말로 다시 걸까」는 `arTalk(kind)` — **건수만** AI 로 넘깁니다. 고객 이름은 넘기지 않습니다.
 
@@ -105,6 +113,20 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 나눴습니다. 고른 칸은 `apex_set_sec` 에 남습니다.
 카드 접기는 원래 있던 `osFoldApply()` 를 그대로 씁니다 — 처음 오는 사람에게는 칸마다
 맨 위 한 장만 펼쳐 두고 나머지는 접습니다(그 기본값을 `apex_fold` 에 적어 둡니다).
+
+## 정책·상품 뉴스가 왜 안 바뀌었나
+
+`BIZ_NEWS` 블록에 「매월 자동 점검 Routine 이 최신화합니다」라고 **주석만** 있었고
+그런 Routine 은 어디에도 없었습니다. 그래서 `asOf` 가 계속 과거에 머물렀습니다.
+
+- 실제 Routine 을 만들었습니다 — 매월 1일 23:00 UTC(한국 2일 아침 8시), 새 세션에서
+  1차 출처를 확인해 `@auto-update:BIZ_NEWS` 블록을 갱신하고 **PR 을 엽니다.**
+  자동 병합하지 않습니다 — 숫자는 사람이 확인하고 병합합니다.
+  끄려면 claude.ai 의 Routines 에서 「정책·상품 뉴스 매월 자동 점검」을 끄면 됩니다.
+- 앱에서도 바로 올릴 수 있게 했습니다 — 대표 계정에 「＋ 새 소식 올리기」.
+  `app_config` 의 `biz_news_extra`(JSON 배열) · `biz_news_asof` 두 칸에 남고
+  모든 팀원 화면에 즉시 보입니다. 새 표를 만들지 않았습니다.
+- 표가 몇 달 지났는지 화면 맨 위에 적습니다. 3개월이 넘으면 붉게 경고합니다.
 
 ## 남은 일
 

@@ -4940,7 +4940,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',db:null,cliRows:null,talk:null,
+var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -4974,13 +4974,20 @@ function arRowOf(id){
   return null;
 }
 function arNameOf(id){var r=arRowOf(id);return r?r.name:'팀원';}
+/* 고른 팀은 성장판·체크판과 같은 것을 본다 — GB.team 하나뿐이다 */
 function arScope(){
+  if(typeof gbScope==='function'&&typeof GB!=='undefined'&&GB.rows)return gbScope();
   var rs=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[],out=[],i;
   for(i=0;i<rs.length;i++){
     if(AR.team&&rs[i].team!==AR.team)continue;
     out.push(rs[i]);
   }
   return out;
+}
+function arTeam(id){
+  if(typeof GB==='undefined')return;
+  GB.team=id;AR.open='';
+  arPaint();
 }
 /* 리더 화면에 세울 사람들 — 점수가 낮은 사람이 위로 온다 */
 function arList(){
@@ -5028,6 +5035,13 @@ function arLoad(force){
     for(ci=0;ci<calls.length;ci++)if((''+(calls[ci].call_at||''))>=d30s)c30.push(calls[ci]);
     AR.crm=arCrmCalc(dbs,c30);
     AR.db=arDbCalc(dbs,calls);
+    /* 전화 습관을 보려면 건수만으로는 모자라다. 언제·어떻게 걸었는지가 필요하다.
+       고객 이름과 메모는 담지 않는다 — AI 로 넘어갈 수 있는 것은 숫자뿐이다 */
+    AR.calls=[];
+    for(ci=0;ci<calls.length;ci++)
+      AR.calls.push({w:calls[ci].created_by,d:(''+(calls[ci].call_at||'')).slice(0,10),
+                     h:parseInt((''+(calls[ci].call_at||'')).slice(11,13),10)||0,
+                     r:calls[ci].result||'',b:calls[ci].db_id||''});
     AR.cli=arCliCalc(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
     AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
     var rows=r[4].error?[]:(r[4].data||[]),i,c;
@@ -5101,6 +5115,70 @@ function arCliRows(clients,metas){
   return out;
 }
 
+/* ── DB 통합 CRM 을 깊이 읽는다 ──
+   「통화 62통」만으로는 코칭이 안 된다. 언제 거는지, 부재 뒤에 다시 거는지,
+   한 사람에게 몇 번이나 붙는지가 보여야 무엇을 고칠지 말할 수 있다.
+   고객 이름·전화·메모는 여기에 담지 않는다. */
+var AR_WD=['일','월','화','수','목','금','토'];
+function arCrmDeep(who){
+  var l=(AR.calls||[]),i,c,o={n:0,no:0,rej:0,ok:0,byH:{},byW:{},byDb:{},days:{},
+        retry:0,retryOf:0,gap:[],last7:0,prev7:0};
+  var t7=arToday(),i7=0;
+  for(i=0;i<l.length;i++){
+    c=l[i];if(c.w!==who)continue;
+    o.n++;
+    if(c.r==='부재')o.no++;else if(c.r==='거절')o.rej++;else if(c.r==='상담')o.ok++;
+    var band=(c.h<10)?'9시 전':(c.h<12)?'오전 10~12시':(c.h<14)?'점심 12~2시':(c.h<17)?'오후 2~5시':(c.h<19)?'저녁 5~7시':'7시 이후';
+    o.byH[band]=(o.byH[band]||0)+1;
+    var wd=AR_WD[(new Date(c.d+'T00:00:00Z')).getUTCDay()]||'';
+    if(wd)o.byW[wd]=(o.byW[wd]||0)+1;
+    if(c.b)(o.byDb[c.b]=o.byDb[c.b]||[]).push(c.d);
+    o.days[c.d]=1;
+    var ago=arDaysAgo(c.d);
+    if(ago<7)o.last7++;else if(ago<14)o.prev7++;
+  }
+  if(!o.n)return null;
+  /* 부재로 끝난 뒤 다시 걸었는가 */
+  var k,arr,j;
+  for(k in o.byDb){
+    arr=o.byDb[k].slice().sort();
+    if(arr.length>1){
+      o.retryOf++;o.retry++;
+      for(j=1;j<arr.length;j++){
+        var g=Math.round((new Date(arr[j]+'T00:00:00Z')-new Date(arr[j-1]+'T00:00:00Z'))/86400000);
+        if(g>0&&g<120)o.gap.push(g);
+      }
+    }else o.retryOf++;
+  }
+  o.dbN=0;for(k in o.byDb)o.dbN++;
+  o.dayN=0;for(k in o.days)o.dayN++;
+  o.per=o.dbN?Math.round(o.n/o.dbN*10)/10:0;
+  o.perDay=o.dayN?Math.round(o.n/o.dayN*10)/10:0;
+  o.again=o.dbN?Math.round(o.retry/o.dbN*100):0;
+  o.gapAvg=o.gap.length?Math.round(o.gap.reduce(function(a,b){return a+b;},0)/o.gap.length):0;
+  o.conv=o.n?Math.round(o.ok/o.n*1000)/10:0;
+  var top=function(m){var b='',bv=-1,kk;for(kk in m)if(m[kk]>bv){bv=m[kk];b=kk;}return b?(b+' '+bv+'통'):'';};
+  o.topH=top(o.byH);o.topW=top(o.byW);
+  return o;
+}
+function arCrmDeepText(who){
+  var o=arCrmDeep(who);
+  if(!o)return '[전화 습관] 최근 30일 통화 기록이 없습니다.\n';
+  var s='[전화 습관 — DB 통합 CRM 최근 30일]\n';
+  s+='- 모두 '+o.n+'통 · 전화한 날 '+o.dayN+'일 · 전화한 날 하루 평균 '+o.perDay+'통\n';
+  s+='- 결과: 부재 '+o.no+' · 거절 '+o.rej+' · 상담 '+o.ok+' (상담 전환 '+o.conv+'%)\n';
+  s+='- 손댄 DB '+o.dbN+'건 · 한 건당 평균 '+o.per+'번\n';
+  s+='- 한 번 걸고 끝낸 DB 가 아니라 다시 건 DB 비율 '+o.again+'% · 다시 걸기까지 평균 '+
+     (o.gapAvg||'-')+'일\n';
+  if(o.topH)s+='- 가장 많이 거는 시간대: '+o.topH+'\n';
+  if(o.topW)s+='- 가장 많이 거는 요일: '+o.topW+'요일\n';
+  s+='- 최근 7일 '+o.last7+'통 · 그 앞 7일 '+o.prev7+'통 ('+
+     (o.prev7?((o.last7>=o.prev7?'늘었음':'줄었음')):'비교 없음')+')\n';
+  var cold=arCold(who,7),c14=arCold(who,14).length,c30=arCold(who,30).length;
+  s+='- 손 놓은 DB: 1주 넘음 '+cold.length+'건 · 2주 넘음 '+c14+'건 · 한 달 넘음 '+c30+'건\n';
+  return s;
+}
+
 /* ── AI 에게 넘길 사실 — 지어낼 수 없게 숫자만 준다 ── */
 function arFacts(r){
   var i,j,a,s='',list=arScope(),n=list.length||1,avg={},t;
@@ -5124,6 +5202,7 @@ function arFacts(r){
   var cr=(AR.crm||{})[r.id];
   s+=cr?('[DB 통합 CRM] 배정 DB '+cr.held+'건 · 최근 30일 통화 '+cr.calls+'통 · 상담 전환 '+cr.appt+
         '건 · 한 번도 안 돌린 DB '+cr.cold+'건\n'):'[DB 통합 CRM] 기록 없음\n';
+  try{s+=arCrmDeepText(r.id);}catch(e){}
   var cl=(AR.cli||{})[r.id];
   s+=cl?('[고객 365일] 담당 '+cl.n+'명 · 다음 할 일 적힌 사람 '+cl.plan+'명 · 기한 지난 할 일 '+cl.due+
         '건 · 90일 넘게 못 만난 고객 '+cl.cold+'명\n'):'[고객 365일] 기록 없음\n';
@@ -5147,7 +5226,10 @@ function arSys(){
    '반드시 아래 다섯 제목을 그대로, 이 순서로 씁니다. 다른 제목을 만들지 않습니다.\n'+
    '## 활동 보고\n## 활동 격려\n## 공부할 부분\n## 상담 컨셉\n## 다음 7일\n'+
    '각 항목은 3~6줄입니다. 「상담 컨셉」은 상담에서 그대로 읽을 수 있는 문장으로 씁니다. '+
-   '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.';
+   '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.\n'+
+   '「활동 보고」에는 전화 습관을 반드시 한 줄 넣습니다 — 언제 거는지, 부재 뒤에 다시 거는지, '+
+   '한 건에 몇 번이나 붙는지 중 가장 눈에 띄는 것 하나. '+
+   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.';
   try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 참고]\n'+k;}}catch(e){}
   try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
   return base;
@@ -5696,9 +5778,14 @@ function arBriefOpen(){
     '</div>'+
     '<div style="padding:13px 22px;border-top:1px solid #F1F5F9;display:flex;gap:8px;'+
       'justify-content:space-between;align-items:center">'+
+      '<div style="display:flex;flex-direction:column;gap:4px">'+
       '<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arBriefOff(this)"'+(arBriefIsOff()?' checked':'')+
       '/> 아침에 안 띄우기</label>'+
+      ('<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+      '<input type="checkbox" onchange="arAutoToggle(this)"'+(arAutoOff()?'':' checked')+
+      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>')+
+      '</div>'+
       '<div style="display:flex;gap:8px">'+
       '<button onclick="arBriefClose()" style="border:1.5px solid #E2E8F0;background:#fff;color:#475569;'+
       'font-size:12.5px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">나중에</button>'+
@@ -5718,10 +5805,82 @@ function arBriefMaybe(){
   var tries=0;
   var wait=function(){
     tries++;
-    if(AR.loaded&&typeof GB!=='undefined'&&GB.loaded){arBriefOpen();return;}
+    if(AR.loaded&&typeof GB!=='undefined'&&GB.loaded){
+      arBriefOpen();
+      /* 리더면 팀 보고까지 미리 만들어 둔다 */
+      setTimeout(function(){try{arMorningTeam();}catch(e){}},1200);
+      return;
+    }
     if(tries<14)setTimeout(wait,900);
   };
   setTimeout(wait,1800);
+}
+/* ── 아침에 팀 보고를 미리 만들어 둔다 ──
+   리더가 출근해서 「전원 보고 받기」를 누르고 30초를 기다리면 그때부터 하루가 밀린다.
+   들어오기 전에 이미 준비돼 있어야 아침 회의에 그대로 들고 갈 수 있다.
+   하루 한 번만 돈다. 이미 오늘 것이 있는 사람은 건너뛴다. */
+function arAutoKey(){return 'apex_ar_team_'+arToday();}
+function arAutoOff(){try{return localStorage.getItem('apex_ar_auto_off')==='1';}catch(e){return false;}}
+function arAutoToggle(cb){try{localStorage.setItem('apex_ar_auto_off',cb.checked?'0':'1');}catch(e){}}
+function arNeedToday(){
+  var l=arScope(),i,out=[],o;
+  for(i=0;i<l.length;i++){
+    o=AR.rep[l[i].id];
+    if(!o||(''+(o.at||'')).slice(0,10)!==arToday())out.push(l[i].id);
+  }
+  return out;
+}
+var AR_H=8;                                   /* 오전 몇 시부터 만들까 */
+function arNowH(){return (new Date(Date.now()+9*3600*1000)).getUTCHours();}
+function arDue(){return arNowH()>=AR_H;}
+/* 리더면 팀 전원, 팀원이면 자기 것. 하루 한 번. 오늘 것이 이미 있으면 건너뛴다 */
+function arAutoNeed(){
+  if(arIsLead())return arNeedToday();
+  var me=arMyId(),o=AR.rep[me];
+  if(!me||!arRowOf(me))return [];
+  return (!o||(''+(o.at||'')).slice(0,10)!==arToday())?[me]:[];
+}
+function arAutoRun(){
+  if(arAutoOff()||AR.busy||!OS.profile)return;
+  /* 사람이 쓰고 있는 중이면 비켜 준다 */
+  try{if(typeof VA!=='undefined'&&(VA.busy||VA.making))return;}catch(e){}
+  try{if(typeof BR!=='undefined'&&BR.busy)return;}catch(e){}
+  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
+  if(typeof callAI!=='function')return;
+  if(!arDue())return;                         /* 아직 오전 8시 전 — 그때 다시 본다 */
+  try{if(localStorage.getItem(arAutoKey())==='1')return;}catch(e){}
+  var need=arAutoNeed(),lead=arIsLead();
+  if(!need.length){try{localStorage.setItem(arAutoKey(),'1');}catch(e){}return;}
+  try{localStorage.setItem(arAutoKey(),'1');}catch(e){}
+  AR.qt=need.length;AR.qn=0;AR.busy='all';AR.auto=true;
+  if(typeof toast==='function')
+    toast('🌅 오늘 보고를 만들고 있습니다 — '+(lead?(need.length+'명'):'내 보고'),6000);
+  var step=function(){
+    if(!need.length){
+      AR.busy='';AR.qmsg='';AR.auto=false;arPaint();
+      if(typeof toast==='function')
+        toast(lead?'팀 보고가 준비됐습니다. AI 관리판 → 팀원 관리에서 보세요.'
+                  :'오늘 보고가 준비됐습니다. AI 관리판 → 피드백에서 보세요.',8000);
+      return;
+    }
+    var id=need.shift();AR.qn++;
+    AR.qmsg=AR.qn+' / '+AR.qt+' · '+arNameOf(id);
+    arPaint();
+    arGen(id,function(){setTimeout(step,500);});
+  };
+  step();
+}
+function arMorningTeam(){arAutoRun();}
+/* 앱을 6시에 켜 두었어도 8시가 되면 알아서 돈다.
+   앱이 꺼져 있었으면 그날 처음 켤 때 — 8시를 지났으면 그때 만든다.
+   브라우저 안에서만 도는 앱이라 서버가 대신 눌러 줄 수는 없다. */
+function arAutoArm(){
+  if(window.__arAutoT)return;
+  var tick=function(){try{arAutoRun();}catch(e){}};
+  window.__arAutoT=setInterval(tick,10*60*1000);
+  /* 들어오자마자 AI 를 여러 번 부르면 두뇌·음성비서를 쓰려는 사람과 부딪힌다.
+     한숨 돌리고 시작한다. 그동안 무언가를 시켰으면 그것이 끝난 뒤로 미룬다. */
+  setTimeout(tick,45000);
 }
 /* 하루에 세 번까지 — 손 놓은 사람이 있으면 조용히 알려 준다 */
 function arNudgeKey(){return 'apex_ar_nudge_'+arToday();}
@@ -5888,10 +6047,21 @@ function arTeamHtml(){
   if(!all.length)
     return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
       '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
-  var l=arList(),i,r,o,h='',me=arMyId(),done=0;
+  var l=arList(),i,r,o,h='',me=arMyId(),done=0,gi,g,cur='';
   for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
-  for(i=0;i<l.length;i++){
-    r=l[i];o=AR.rep[r.id];
+  /* 팀별로 줄을 나눈다 — 누가 누구 팀인지 보이지 않으면 팀 관리가 안 된다 */
+  g=(typeof gbByTeam==='function')?gbByTeam(l):[{id:'',name:'',rows:l}];
+  var flat=[];
+  for(gi=0;gi<g.length;gi++){
+    g[gi].rows.sort(function(a,b){return (a.total||0)-(b.total||0);});
+    for(i=0;i<g[gi].rows.length;i++)flat.push({t:g[gi].name,n:g[gi].rows.length,r:g[gi].rows[i]});
+  }
+  for(i=0;i<flat.length;i++){
+    r=flat[i].r;o=AR.rep[r.id];
+    if(flat[i].t!==cur){
+      cur=flat[i].t;
+      h+='<div class="ar-tg">'+osEsc(cur)+'<span>'+flat[i].n+'명</span></div>';
+    }
     var open=(AR.open===r.id),busy=(AR.busy===r.id),one=o?arOneLine(o):'';
     h+='<div class="ar-row'+(open?' open':'')+'">'+
       '<div class="ar-rh" onclick="arOpen(\''+r.id+'\')">'+
@@ -5923,8 +6093,10 @@ function arTeamHtml(){
   return arTopHtml()+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
     '<span class="ar-n">'+done+' / '+all.length+'명</span></div>'+
-    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
+    '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
+    '이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
     '<div class="card-body">'+
+    ((typeof gbTeamBarHtml==='function')?gbTeamBarHtml('arTeam'):'')+
     '<div class="btn-row" style="margin-bottom:12px">'+
     (arIsLead()?('<button class="btn btn-primary" '+(AR.busy==='all'?'disabled':'')+' onclick="arGenAll()">'+
       (AR.busy==='all'?('만드는 중 '+osEsc(AR.qmsg)):'전원 보고 한 번에 받기')+'</button>'):'')+
@@ -6200,6 +6372,10 @@ function arCss(){
    '.ar-bt.warn{border-color:#FECACA;background:#FEF2F2}.ar-bt.warn .v{color:#B91C1C}'+
    '.ar-bl{display:flex;gap:9px;align-items:flex-start;padding:7px 0;font-size:13px;line-height:1.6}'+
    '.ar-bl b{font-weight:800;color:#1E293B}'+
+   '.ar-tg{font-size:11.5px;font-weight:900;color:#1A56DB;letter-spacing:.04em;margin:14px 0 6px;'+
+     'padding-bottom:6px;border-bottom:1.5px solid #E2E8F0;display:flex;justify-content:space-between}'+
+   '.ar-tg:first-child{margin-top:2px}'+
+   '.ar-tg span{color:#94A3B8;font-weight:800}'+
    '.ar-p{font-size:14px;line-height:1.9;color:#1E293B;margin:4px 0}'+
    '.ar-li{font-size:14px;line-height:1.9;color:#1E293B;margin:5px 0 5px 15px;position:relative}'+
    '.ar-li:before{content:"·";position:absolute;left:-13px;font-weight:900;color:#1A56DB}'+
@@ -6293,6 +6469,7 @@ function osAiRepAfterRender(){
 var OS_HELP={
  airep:['🧭','AI 관리판','왼쪽에서 고르면 이 자리에서 다 봅니다',[
    ['①','아침에 들어오면 창이 하나 뜹니다','오늘 약속 · 밀린 것 · 다시 걸 DB · 식은 고객 · 오늘 공부. 「오늘 할 일 열기」를 누르면 여기로 옵니다.'],
+   ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
    ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리. 붉은 숫자는 남은 건수입니다.'],
    ['③','「해야 할 일」부터 지웁니다','밀린 것이 맨 위에 옵니다. 체크판 항목은 여기서 바로 눌러도 됩니다.'],
    ['④','「부재·거절 재관리」에서 다시 겁니다','1주 · 2주 · 한 달로 나눠 보여 줍니다. 「무슨 말로 다시 걸까」를 누르면 첫 마디와 전할 소식을 AI 가 만들어 줍니다.'],
@@ -8766,9 +8943,10 @@ function gbScore(r){
 
 /* ── 고르기 ── */
 function gbScope(){
-  var out=[],i;
+  var out=[],i,t=GB.team;
   for(i=0;i<GB.rows.length;i++){
-    if(GB.team&&GB.rows[i].team!==GB.team)continue;
+    if(t==='__none'){if(GB.rows[i].team)continue;}
+    else if(t&&GB.rows[i].team!==t)continue;
     out.push(GB.rows[i]);
   }
   return out;
@@ -8801,6 +8979,51 @@ function gbLastNote(id){var n=gbNoteOf(id);return n.length?gbD(n[0].created_at):
 function gbTeamName(id){
   var i;for(i=0;i<GB.teams.length;i++)if(GB.teams[i].id===id)return GB.teams[i].name||'';
   return '';
+}
+/* ── 팀 고르개 ──
+   고른 팀은 GB.team 한 곳에만 남는다. 성장판에서 고르면 체크판·AI 관리판도 같은 팀을 본다.
+   화면마다 따로 기억하면 "왜 여기랑 저기랑 다르지" 가 된다. */
+function gbTeamCounts(){
+  var c={},i,t;
+  for(i=0;i<GB.rows.length;i++){t=GB.rows[i].team||'';c[t]=(c[t]||0)+1;}
+  return c;
+}
+function gbTeamBarHtml(fn){
+  var c=gbTeamCounts(),i,h='',none=c['']||0;
+  if(!GB.teams.length&&!none)return '';
+  h='<div class="gb-tsel">'+
+    '<button type="button" class="gb-tb'+(GB.team?'':' on')+'" onclick="'+fn+'(\'\')">전체 <b>'+
+    GB.rows.length+'</b></button>';
+  for(i=0;i<GB.teams.length;i++)
+    h+='<button type="button" class="gb-tb'+(GB.team===GB.teams[i].id?' on':'')+'" '+
+      'onclick="'+fn+'(\''+GB.teams[i].id+'\')">'+osEsc(GB.teams[i].name||'팀')+' <b>'+
+      (c[GB.teams[i].id]||0)+'</b></button>';
+  if(none)
+    h+='<button type="button" class="gb-tb'+(GB.team==='__none'?' on':'')+'" '+
+      'onclick="'+fn+'(\'__none\')">소속 없음 <b>'+none+'</b></button>';
+  h+='</div>';
+  if(!GB.teams.length)
+    h+='<div class="notice" style="margin:0 0 11px">아직 팀이 하나도 없습니다. '+
+       '설정 → <b>팀원 권한 관리</b>에서 팀을 만들고 소속을 지정하면 팀별로 나눠 볼 수 있습니다.</div>';
+  else if(none)
+    h+='<div class="notice" style="margin:0 0 11px">소속이 없는 사람이 <b>'+none+'명</b> 있습니다. '+
+       '설정 → <b>팀원 권한 관리</b>에서 팀을 지정해 주세요.</div>';
+  return h;
+}
+/* 전체를 볼 때는 팀별로 묶는다 — 한 줄로 쭉 세우면 누가 누구 팀인지 안 보인다 */
+function gbByTeam(list){
+  var g=[],map={},i,r,k;
+  for(i=0;i<GB.teams.length;i++)map[GB.teams[i].id]={id:GB.teams[i].id,name:GB.teams[i].name||'팀',rows:[]};
+  map['']={id:'',name:'소속 없음',rows:[]};
+  for(i=0;i<list.length;i++){
+    r=list[i];k=r.team||'';
+    if(!map[k])map[k]={id:k,name:gbTeamName(k)||'팀',rows:[]};
+    map[k].rows.push(r);
+  }
+  for(i=0;i<GB.teams.length;i++)if(map[GB.teams[i].id].rows.length)g.push(map[GB.teams[i].id]);
+  for(k in map)if(k&&!gbTeamName(k)&&map[k].rows.length)g.push(map[k]);
+  if(map[''].rows.length)g.push(map['']);
+  return g;
 }
 
 /* ── 놓치고 있는 사람 ── */
@@ -16256,6 +16479,16 @@ function ckCss(){
     '@media(max-width:640px){.ck-tr .wy{display:none}}'+
     '.ck-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}'+'.ck-h1{font-size:13px;font-weight:900;color:#1A56DB;letter-spacing:.02em;margin:20px 0 10px;padding-bottom:7px;border-bottom:2px solid #E2E8F0}'+'.ck-h1:first-child{margin-top:2px}'+
     '.ck-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}'+
+    '.gb-tsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}'+
+    '.gb-tsel .gb-tb{border:1.5px solid var(--line,#E2E8F0);background:#fff;border-radius:99px;'+
+      'padding:6px 13px;font-size:12px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+    '.gb-tsel .gb-tb b{color:#94A3B8;font-weight:900;margin-left:3px}'+
+    '.gb-tsel .gb-tb.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+    '.gb-tsel .gb-tb.on b{color:#93C5FD}'+
+    '.ck-tg{font-size:11.5px;font-weight:900;color:#1A56DB;letter-spacing:.04em;margin:13px 0 5px;'+
+      'padding-bottom:5px;border-bottom:1.5px solid var(--line,#E2E8F0);display:flex;justify-content:space-between}'+
+    '.ck-tg:first-child{margin-top:0}'+
+    '.ck-tg span{color:#94A3B8;font-weight:800}'+
     '.ck-cols .ck-it:nth-child(odd){border-right:0}'+
     '@media(max-width:1080px){.ck-2{grid-template-columns:1fr}}'+
     '@media(max-width:820px){.ck-cols{grid-template-columns:1fr}}'+
@@ -17063,31 +17296,44 @@ function ckTeamHtml(){
   if(!list.length)
     return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>우리 팀 오늘</div></div>'+
       '<div class="card-body"><div class="ck-none">팀원이 없습니다. 설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
-  var rows='';
-  var srt=list.slice().sort(function(a,b){return (a.total||0)-(b.total||0);});
-  for(i=0;i<srt.length;i++){
-    r=srt[i];
-    if(r.id===me)continue;
-    t='';
-    for(j=0;j<GB_AX.length;j++)
-      t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
-        'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
-    rows+='<div class="ck-tr'+(why[r.id]?' bad':'')+'">'+
-      '<span class="nm">'+osEsc(r.name||'(이름 없음)')+'</span>'+
-      '<span class="dots">'+t+'</span>'+
-      '<span class="sc">'+(r.total||0)+'점</span>'+
-      '<span class="wy">'+osEsc(why[r.id]||'')+'</span>'+
-      '<button type="button" class="go" onclick="go(\'growboard\')">보기</button></div>';
+  var rows='',g=gbByTeam(list),gi,gr,k;
+  for(gi=0;gi<g.length;gi++){
+    gr=g[gi].rows.slice().sort(function(a,b){return (a.total||0)-(b.total||0);});
+    k='';
+    for(i=0;i<gr.length;i++){
+      r=gr[i];
+      if(r.id===me)continue;
+      t='';
+      for(j=0;j<GB_AX.length;j++)
+        t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
+          'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
+      k+='<div class="ck-tr'+(why[r.id]?' bad':'')+'">'+
+        '<span class="nm">'+osEsc(r.name||'(이름 없음)')+'</span>'+
+        '<span class="dots">'+t+'</span>'+
+        '<span class="sc">'+(r.total||0)+'점</span>'+
+        '<span class="wy">'+osEsc(why[r.id]||'')+'</span>'+
+        '<button type="button" class="go" onclick="go(\'growboard\')">보기</button></div>';
+    }
+    if(!k)continue;
+    rows+='<div class="ck-tg">'+osEsc(g[gi].name)+'<span>'+g[gi].rows.length+'명</span></div>'+k;
   }
+  if(!rows)rows='<div class="ck-none">이 팀에는 나 말고 다른 사람이 없습니다.</div>';
   return '<div class="card"><div class="card-hd">'+
     '<div class="card-title"><span class="ci">👥</span>우리 팀 오늘'+
       '<span class="ck-n">'+(miss.length?('놓침 '+miss.length):'전원 정상')+'</span></div>'+
-    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 점 여섯 개는 출근·실행·활동·고객·자료·공부 순서입니다</div></div>'+
-    '<div class="card-body"><div class="ck-tl">'+rows+'</div>'+
+    '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
+    '점 여섯 개는 출근·실행·활동·고객·자료·공부 순서입니다</div></div>'+
+    '<div class="card-body">'+gbTeamBarHtml('ckTeam')+'<div class="ck-tl">'+rows+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
     '<button class="btn btn-primary" onclick="go(\'growboard\')">성장판에서 자세히</button>'+
     '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">팀 코칭</button>'+
     '</div></div></div>';
+}
+function ckTeam(id){
+  if(typeof GB==='undefined')return;
+  GB.team=id;GB.open='';
+  if(typeof ckPaint==='function')ckPaint();
+  if(typeof arPaint==='function')arPaint();
 }
 function ckWeekHtml(){
   return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week');
@@ -25472,7 +25718,7 @@ function osMembersCardHtml(){
     '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
     '</div></div>';
 }
-var OSMT={teams:[],of:{},missing:false,err:''};
+var OSMT={teams:[],of:{},missing:false,err:'',view:''};
 var OSWS={of:{},missing:true};
 var OS_WS_OPTS=[['apex','APEX 전용'],['both','둘다'],['crm','CRM 전용']];
 function osSetWorkspace(id,v){
@@ -25608,10 +25854,40 @@ function osMemberRowHtml(p,me,top){
       ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetCrmMaster(\''+p.id+'\',false)">CRM 전체조회 해제</button>'
       :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px;background:#0F766E" onclick="osSetCrmMaster(\''+p.id+'\',true)">🗄 CRM 전체조회 부여</button>';
   }
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(top?'border-top:1px solid var(--ink-8)':'')+'">'+
-    '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
-    '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+masterPill+statPill+(crmOnly?'':tierPill)+osMTeamPill(p.id)+'</div></div>'+
-    '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+osWsSel(p.id)+(crmOnly?'':osMTeamSel(p.id))+((mine||crmOnly)?'':tierCtrl)+ctrl+'</div></div>';
+  /* 한 줄에 담는다 — 이름과 뱃지는 왼쪽, 고치는 것은 오른쪽.
+     한 사람이 두 줄을 잡아먹으면 스무 명만 되어도 화면을 넘어간다. */
+  return '<div class="os-mrow'+(top?' t':'')+'">'+
+    '<div class="os-mnm">'+osEsc(p.name||'(이름 없음)')+
+      (mine?'<span class="me">(나)</span>':'')+'</div>'+
+    '<div class="os-mpi">'+rolePill+masterPill+statPill+(crmOnly?'':tierPill)+osMTeamPill(p.id)+'</div>'+
+    '<div class="os-mct">'+osWsSel(p.id)+(crmOnly?'':osMTeamSel(p.id))+((mine||crmOnly)?'':tierCtrl)+ctrl+'</div>'+
+  '</div>';
+}
+function osMemCss(){
+  if(document.getElementById('osMemCss'))return;
+  var st=document.createElement('style');st.id='osMemCss';
+  st.textContent=
+   '.os-mrow{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr) auto;'+
+     'gap:4px 10px;align-items:center;padding:6px 10px}'+
+   '.os-mrow.t{border-top:1px solid var(--ink-8)}'+
+   '.os-mrow:nth-child(even){background:#FCFDFE}'+
+   '.os-mnm{font-size:12.5px;font-weight:800;color:var(--ink-1);white-space:nowrap;'+
+     'overflow:hidden;text-overflow:ellipsis}'+
+   '.os-mnm .me{font-size:9.5px;color:var(--ink-5);margin-left:3px;font-weight:700}'+
+   '.os-mpi{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}'+
+   '.os-mpi>span{font-size:9.5px!important;padding:1px 6px!important}'+
+   '.os-mct{display:flex;gap:5px;align-items:center;justify-content:flex-end;white-space:nowrap}'+
+   '.os-mct select{font-size:10.5px!important;padding:3px 5px!important;border-radius:7px!important}'+
+   '.os-mct .btn{padding:4px 9px!important;font-size:10.5px!important}'+
+   '@media(max-width:900px){.os-mrow{grid-template-columns:1fr auto}'+
+     '.os-mpi{grid-column:1/-1}.os-mct{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}}'+
+   '.os-mtf{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 9px}'+
+   '.os-mtb{border:1.5px solid var(--ink-7);background:#fff;border-radius:99px;padding:5px 12px;'+
+     'font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.os-mtb b{color:#94A3B8;font-weight:900;margin-left:3px}'+
+   '.os-mtb.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.os-mtb.on b{color:#93C5FD}';
+  document.head.appendChild(st);
 }
 /* DB 통합 CRM 전체 조회(마스터) — 화면은 CRM 그대로, 권한 데이터만 같은 DB에서 지정 */
 function osSetCrmMaster(id,on){
@@ -25629,6 +25905,7 @@ function osSetCrmMaster(id,on){
 }
 /* 팀을 만들었으면 팀별 구역으로 나눠 보여준다. 팀이 없으면 기존처럼 한 목록. */
 function osMembersHtml(rows,me){
+  if(typeof osMemCss==='function')osMemCss();
   function wrap(inner){return '<div style="border:1px solid var(--ink-7);border-radius:10px;overflow:hidden">'+inner+'</div>';}
   function mk(list){return list.map(function(p,i){return osMemberRowHtml(p,me,i>0);}).join('');}
   /* 검색 중이면 그룹 없이 전체(보관 구역 포함)에서 이름으로 찾는다 */
@@ -25660,15 +25937,41 @@ function osMembersHtml(rows,me){
       '<span style="font-size:12px;font-weight:900;color:var(--ink-2)">'+osEsc(name)+'</span>'+
       '<span style="font-size:10.5px;font-weight:700;color:var(--ink-5)">'+n+'명</span></div>';
   }
-  var h='';
+  /* 팀을 하나씩 골라 본다 — 전부 세로로 쌓으면 스무 명만 넘어도 안 보인다 */
+  var view=OSMT.view||'',h='';
+  h+='<div class="os-mtf"><button type="button" class="os-mtb'+(view?'':' on')+'" '+
+    'onclick="osMemTeamView(\'\')">전체 <b>'+rows.length+'</b></button>';
   OSMT.teams.forEach(function(t){
-    var list=byTeam[t.id];
-    h+=head(t.color||'#1A56DB',t.name,list.length)+
-       (list.length?wrap(mk(list)):'<div style="font-size:11px;color:var(--ink-5);padding:0 2px">아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.</div>');
+    h+='<button type="button" class="os-mtb'+(view===t.id?' on':'')+'" '+
+      'onclick="osMemTeamView(\''+t.id+'\')">'+osEsc(t.name)+' <b>'+byTeam[t.id].length+'</b></button>';
   });
-  h+=head('#CBD5E1','팀 미지정',un.length)+
-     (un.length?wrap(mk(un)):'<div style="font-size:11px;color:#059669;padding:0 2px">모든 팀원이 팀에 배정되었습니다. ✅</div>');
+  h+='<button type="button" class="os-mtb'+(view==='__un'?' on':'')+'" '+
+    'onclick="osMemTeamView(\'__un\')">팀 미지정 <b>'+un.length+'</b></button></div>';
+  var none=function(msg,col){return '<div style="font-size:11.5px;color:'+col+';padding:9px 4px">'+msg+'</div>';};
+  if(view==='__un')
+    h+=head('#CBD5E1','팀 미지정',un.length)+
+       (un.length?wrap(mk(un)):none('모든 팀원이 팀에 배정되었습니다. ✅','#059669'));
+  else if(view){
+    var t2=null,i2;
+    for(i2=0;i2<OSMT.teams.length;i2++)if(OSMT.teams[i2].id===view)t2=OSMT.teams[i2];
+    var l2=byTeam[view]||[];
+    h+=head((t2&&t2.color)||'#1A56DB',(t2&&t2.name)||'팀',l2.length)+
+       (l2.length?wrap(mk(l2)):none('아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.','var(--ink-5)'));
+  }else{
+    OSMT.teams.forEach(function(t){
+      var list=byTeam[t.id];
+      h+=head(t.color||'#1A56DB',t.name,list.length)+
+         (list.length?wrap(mk(list)):none('아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.','var(--ink-5)'));
+    });
+    h+=head('#CBD5E1','팀 미지정',un.length)+
+       (un.length?wrap(mk(un)):none('모든 팀원이 팀에 배정되었습니다. ✅','#059669'));
+  }
   return h+crmBlock;
+}
+function osMemTeamView(id){
+  OSMT.view=id;
+  var box=document.getElementById('osMembersList');
+  if(box&&OSMT.rows)box.innerHTML=osMembersHtml(OSMT.rows,OSMT.me);
 }
 function osMemSearchGo(v){
   OSMT.q=v||'';
@@ -26170,7 +26473,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();if(typeof arAutoArm==='function')arAutoArm();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
@@ -29241,6 +29544,119 @@ var BIZ_NEWS={
   ]
 };
 /* @auto-update:BIZ_NEWS end */
+/* ── 이 표가 언제 것인지 ──
+   「매월 자동 점검」이라고만 적혀 있고 실제로 갈아 끼우는 것이 없었다.
+   몇 달 지났는지 화면에 그대로 보여 주고, 새 소식은 앱에서 바로 올릴 수 있게 한다.
+   올린 것은 app_config 에 남아 모든 팀원에게 같이 보인다 — 새 표를 만들지 않는다. */
+function bnCfg(k,d){try{return (OS.cfg&&OS.cfg[k])||d||'';}catch(e){return d||'';}}
+function bizNewsAsOf(){return bnCfg('biz_news_asof',BIZ_NEWS.asOf);}
+function bizNewsAgeMo(){
+  var a=(''+bizNewsAsOf()).match(/^(\d{4})-(\d{2})$/);
+  if(!a)return 0;
+  var now=new Date(Date.now()+9*3600*1000);
+  return (now.getUTCFullYear()-parseInt(a[1],10))*12+(now.getUTCMonth()+1-parseInt(a[2],10));
+}
+function bizNewsExtra(){
+  try{var v=JSON.parse(bnCfg('biz_news_extra','[]'));return (v&&v.push)?v:[];}catch(e){return [];}
+}
+function bizNewsCanEdit(){return (typeof osIsOwner==='function')?osIsOwner():false;}
+function bizNewsHeadHtml(){
+  var age=bizNewsAgeMo(),old=age>=3,ex=bizNewsExtra();
+  return '<div class="biz-news-top'+(old?' old':'')+'">'+
+    '<span>🗓 표 기준: <b>'+osEsc(bizNewsAsOf())+'</b>'+
+      (age>0?(' · <b>'+age+'개월</b> 지났습니다'):' · 이번 달')+'</span>'+
+    (ex.length?('<span class="biz-news-auto">직접 올린 소식 '+ex.length+'건</span>'):'')+
+    (bizNewsCanEdit()?('<button type="button" class="btn btn-primary" style="padding:5px 12px;font-size:11.5px" '+
+      'onclick="bizNewsAddOpen()">＋ 새 소식 올리기</button>'):'')+
+    '</div>'+
+    (old?('<div class="notice" style="margin:0 0 12px;background:#FEF2F2;border-color:#FECACA;color:#991B1B">'+
+      '아래 표는 <b>'+osEsc(bizNewsAsOf())+'</b> 기준입니다. '+age+'개월이 지났으니 그대로 상담에 쓰지 마세요. '+
+      (bizNewsCanEdit()?'바뀐 것은 <b>＋ 새 소식 올리기</b>로 바로 올려 두시면 팀 전체에 보입니다.'
+                       :'대표님께 최신화를 요청해 주세요.')+'</div>'):'');
+}
+function bizNewsExtraHtml(){
+  var ex=bizNewsExtra(),i,h='';
+  if(!ex.length)return '';
+  for(i=0;i<ex.length;i++){
+    var it=ex[i];
+    h+='<div class="biz-news-item"><div class="hd">'+
+      '<span class="biz-news-tag '+bizNewsTag(it.tag)+'">'+osEsc(it.tag||'새소식')+'</span>'+
+      '<span class="dt">'+osEsc(it.date||'')+'</span><span class="ti">'+osEsc(it.title||'')+'</span></div>'+
+      '<div class="ds">'+osEsc(it.desc||'')+'</div>'+
+      (it.url?('<a class="btn btn-ghost" href="'+osEsc(it.url)+'" target="_blank" rel="noopener">출처·자세히 ↗</a>'):'')+
+      (bizNewsCanEdit()?('<button type="button" class="btn btn-ghost" onclick="bizNewsDel('+i+')">지우기</button>'):'')+
+      '</div>';
+  }
+  return '<div class="rpt-sec"><div class="hd"><span class="n">📌</span>직접 올린 소식 '+
+    '<span style="font-size:11px;color:#94A3B8;font-weight:700;margin-left:8px">가장 최근 것이 위에</span></div>'+h+'</div>';
+}
+function bizNewsAddOpen(){
+  if(!bizNewsCanEdit()){toast('대표만 올릴 수 있습니다');return;}
+  bizNewsAddClose();
+  var t=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7);
+  var ov=document.createElement('div');ov.id='bnAddOvl';
+  ov.style.cssText='position:fixed;inset:0;z-index:9997;background:rgba(15,23,42,.55);'+
+    'display:flex;align-items:center;justify-content:center;padding:16px';
+  ov.onclick=function(e){if(e.target===ov)bizNewsAddClose();};
+  var cats=BIZ_NEWS_CATS.filter(function(c){return c.id!=='all';}).map(function(c){
+    return '<option value="'+c.id+'">'+osEsc(c.t)+'</option>';}).join('');
+  ov.innerHTML='<div style="background:#fff;width:100%;max-width:520px;max-height:90vh;border-radius:18px;'+
+    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)">'+
+    '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:17px 20px">'+
+      '<div style="font-size:11px;font-weight:800;color:#93C5FD">정책 · 상품 뉴스</div>'+
+      '<div style="font-size:18px;font-weight:800;margin-top:2px">새 소식 올리기</div>'+
+      '<div style="font-size:11.5px;color:#BFDBFE;margin-top:3px">올리면 모든 팀원 화면에 바로 보입니다</div></div>'+
+    '<div style="padding:15px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px">'+
+      '<label class="lg-f"><span>어느 칸에</span><select id="bnCat">'+cats+'</select></label>'+
+      '<label class="lg-f"><span>표시</span><select id="bnTag">'+
+        '<option>새소식</option><option>개정예정</option><option>개편</option><option>종료</option><option>유지</option></select></label>'+
+      '<label class="lg-f"><span>시점</span><input id="bnDate" value="'+osEsc(t)+'" placeholder="2026-08"></label>'+
+      '<label class="lg-f"><span>제목</span><input id="bnTitle" placeholder="예: ISA 납입한도 확대 시행"></label>'+
+      '<label class="lg-f"><span>내용</span><textarea id="bnDesc" style="min-height:90px" '+
+        'placeholder="무엇이 어떻게 바뀌는지 두세 줄로"></textarea></label>'+
+      '<label class="lg-f"><span>출처 주소</span><input id="bnUrl" placeholder="https://"></label>'+
+      '<div class="notice" style="margin:0">숫자와 시행일은 <b>반드시 원문에서 확인</b>하고 올려 주세요. '+
+      '보장·지급은 약관과 심사에 따릅니다.</div>'+
+    '</div>'+
+    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:flex-end">'+
+      '<button class="btn btn-ghost" onclick="bizNewsAddClose()">그만두기</button>'+
+      '<button class="btn btn-primary" id="bnSave" onclick="bizNewsAdd()">올리기</button></div>'+
+  '</div>';
+  document.body.appendChild(ov);
+}
+function bizNewsAddClose(){var o=document.getElementById('bnAddOvl');if(o&&o.parentNode)o.parentNode.removeChild(o);}
+function bizNewsSaveAll(list,then){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버 연결이 필요합니다');return;}
+  var now=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7);
+  sb.from('app_config').upsert([
+    {key:'biz_news_extra',value:JSON.stringify(list),updated_at:new Date().toISOString()},
+    {key:'biz_news_asof',value:now,updated_at:new Date().toISOString()}
+  ],{onConflict:'key'}).then(function(r){
+    if(r&&r.error){toast('저장 실패: '+(r.error.message||''),7000);return;}
+    OS.cfg=OS.cfg||{};OS.cfg.biz_news_extra=JSON.stringify(list);OS.cfg.biz_news_asof=now;
+    if(then)then();
+  },function(){toast('저장 실패');});
+}
+function bizNewsAdd(){
+  var g=function(id){var e=document.getElementById(id);return e?(''+e.value).replace(/^\s+|\s+$/g,''):'';};
+  var it={cat:g('bnCat'),tag:g('bnTag'),date:g('bnDate'),title:g('bnTitle'),desc:g('bnDesc'),url:g('bnUrl')};
+  if(!it.title){toast('제목을 적어 주세요');return;}
+  var b=document.getElementById('bnSave');if(b){b.disabled=true;b.textContent='올리는 중…';}
+  var list=bizNewsExtra();list.unshift(it);
+  bizNewsSaveAll(list,function(){
+    bizNewsAddClose();
+    toast('올렸습니다. 팀 전체 화면에 바로 보입니다.',5000);
+    if(typeof go==='function')go('biz_news');
+  });
+}
+function bizNewsDel(i){
+  if(!bizNewsCanEdit())return;
+  var list=bizNewsExtra();
+  if(i<0||i>=list.length)return;
+  list.splice(i,1);
+  bizNewsSaveAll(list,function(){toast('지웠습니다');if(typeof go==='function')go('biz_news');});
+}
 function bizNewsTag(t){ var m={'종료':'r','개정예정':'a','개편':'a','유지':'g'}; return m[t]||'n'; }
 /* 정책·상품 뉴스 — 카테고리 총괄 (BIZ_NEWS[월간자동] + MONEY_INFO[확장]) */
 var BIZ_NEWS_CATS=[
@@ -29376,7 +29792,7 @@ var CARD_NEWS_POOL=[
    {k:'압류 보호',d:'압류·양도·담보가 금지돼 수급권이 보호됩니다.'}],cta:'중소기업중앙회에서 가입',src:'중소기업중앙회'}
 ];
 var CN_OFF=0;
-var CN={i:0,imgs:{},ai:null,aiPlan:null};
+var CN={i:0,imgs:{},ai:null,aiPlan:null,style:'news'};
 /* 카드별 테마(색) — 각 장이 서로 다른 톤. 이미지 없을 때 배경, 있을 때는 강조색(accent)만 사용 */
 var CN_THEMES=[
  {g:'linear-gradient(150deg,#0F172A,#1E3A8A 58%,#2563EB)', cs:[[0,'#0F172A'],[0.58,'#1E3A8A'],[1,'#2563EB']], a:'#93C5FD'},
@@ -29479,7 +29895,23 @@ function cnGenAll(){
   }
   step();
 }
+function cnFullPreview(sl,idx,n){
+  var m=cnMagText(sl),im=CN.imgs[idx];
+  var bg=(im&&im.url)?('background-image:url('+im.url+')')
+    :'background-image:linear-gradient(140deg,#0B2447,#1D4ED8)';
+  return '<div class="cnw full" style="'+bg+'">'+
+    '<div class="cnw-fg"></div>'+
+    '<span class="cnw-fnum">'+(idx+1)+'</span>'+
+    (m.k?('<span class="cnw-fk">'+osEsc((''+m.k).slice(0,28))+'</span>'):'')+
+    '<div class="cnw-fbody">'+
+      '<div class="cnw-ft">'+osEsc((''+(m.t||'')).replace(/\*\*/g,'')).replace(/\n/g,'<br>')+'</div>'+
+      (m.s?('<div class="cnw-fs">'+osEsc(m.s)+'</div>'):'')+
+    '</div>'+
+    '<div class="cnw-ffoot"><b>APEX YUN PRO</b><span>'+(idx+1)+' / '+n+' · 넘겨보기 →</span></div>'+
+  '</div>';
+}
 function cnSlidePreview(sl,idx,n){
+  if(CN.style==='full')return cnFullPreview(sl,idx,n);
   var m=cnMagText(sl),lay=cnLayout(sl);
   var badge='<span class="cnw-badge'+(lay==='cover'?' cv':'')+'">'+(idx+1)+'</span>';
   var statTx=sl.stat||sl.big||'';
@@ -29561,7 +29993,7 @@ function renderTodayCard(){
     '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
     '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
     '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
-  var badge=isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일';
+  var badge=(CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일');
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
     : '<div class="cn2-intro"><b>뉴스 카드 스타일</b> — 흰 배경 + 번호 뱃지 + <b>파란 키워드 강조</b> + 사진 블록 + 하단 지표 바 구조입니다. <b>✨ AI 사진 생성</b>을 누르면 각 장에 어울리는 실사 사진을 자동으로 만들어 넣고(전체 생성 가능), <b>🖼 직접 업로드</b>로 내 사진도 넣을 수 있습니다.</div>';
@@ -29570,6 +30002,10 @@ function renderTodayCard(){
     '<div class="btn-row" style="margin-bottom:10px"><button class="btn" style="background:linear-gradient(135deg,#0B2447,#1D4ED8);color:#fff;border:none" onclick="cnGenImage(CN.i,this)">✨ AI 사진 생성</button>'+
     '<button class="btn btn-ghost" id="cnImgAllBtn" onclick="cnGenAll()">✨ 전체 사진 생성('+(n-cnt)+')</button>'+
     '<button class="btn btn-ghost" onclick="cnPick()">🖼 직접 업로드</button>'+thisImgBtn+
+    '<span class="cn-sty"><button type="button" class="cn-styb'+(CN.style==='news'?' on':'')+'" '+
+      'onclick="cnStyleSet(\'news\')">📰 뉴스 카드</button>'+
+      '<button type="button" class="cn-styb'+(CN.style==='full'?' on':'')+'" '+
+      'onclick="cnStyleSet(\'full\')">🖼 사진 전체</button></span>'+
     (isAi?'':'<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>')+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
     '<div class="cn2-stage"><button class="cn2-arrow l" onclick="cnNav(-1)" aria-label="이전">‹</button>'+
@@ -29583,7 +30019,78 @@ function renderTodayCard(){
 function cardnewsCopy(){var it=cardnewsPick();var t='['+it.kicker+'] '+(''+it.hook).replace(/\n/g,' ')+'\n\n'+(it.cards||[]).map(function(c,i){return (i+1)+'. '+c.k+' — '+c.d;}).join('\n')+'\n\n👉 '+it.cta+'\n참고: '+it.src+' (조건·수치는 관계기관 확인, 참고용)';copyText(t);}
 /* ── 저장(캔버스 1080×1350 세로) ── */
 function cnCoverFit(ctx,img,W,H){var ir=img.width/img.height,cr=W/H,dw,dh,dx,dy;if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}ctx.drawImage(img,dx,dy,dw,dh);}
+/* ── 사진 전체 · 그라데이션 · 글자만 ──
+   흰 배경에 사진 블록을 넣는 뉴스 스타일과 달리, 사진을 화면 가득 깔고
+   아래로 갈수록 어두워지는 막을 덮은 뒤 그 위에 글자만 얹는다.
+   인스타에서 손가락으로 넘길 때 가장 눈에 걸리는 모양이다. */
+function cnStyleSet(v){CN.style=v;var h=$('cnHost');if(h)h.innerHTML=renderTodayCard();}
+function cnDrawFull(sl,idx,n){
+  var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
+  var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
+  var m=cnMagText(sl),PAD=84,maxW=W-PAD*2,im=CN.imgs[idx];
+  x.textBaseline='top';x.textAlign='left';
+  /* 1) 사진을 화면 가득 */
+  if(im&&im.img){
+    var ir=im.img.width/im.img.height,cr=W/H,dw,dh,dx,dy;
+    if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+    x.drawImage(im.img,dx,dy,dw,dh);
+  }else{
+    var g0=x.createLinearGradient(0,0,W,H);
+    g0.addColorStop(0,'#0B2447');g0.addColorStop(1,'#1D4ED8');
+    x.fillStyle=g0;x.fillRect(0,0,W,H);
+    drawApexMark(x,W/2,H/2-140,200,'rgba(255,255,255,.13)');
+  }
+  /* 2) 그라데이션 막 — 글자가 사진 위에서도 읽히게 */
+  var g=x.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(5,12,28,.60)');
+  g.addColorStop(0.32,'rgba(5,12,28,.10)');
+  g.addColorStop(0.60,'rgba(5,12,28,.56)');
+  g.addColorStop(1,'rgba(5,12,28,.95)');
+  x.fillStyle=g;x.fillRect(0,0,W,H);
+  /* 3) 글자만 */
+  x.fillStyle='rgba(255,255,255,.16)';cnRoundRect(x,PAD,74,92,92,24);x.fill();
+  x.fillStyle='#fff';x.font='900 46px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';
+  x.fillText(''+(idx+1),PAD+46,122);
+  x.textAlign='left';x.textBaseline='top';
+  if(m.k){
+    x.font='800 32px Pretendard'+FF;x.fillStyle='#9EC5FF';
+    x.fillText((''+m.k).slice(0,28),PAD+116,106);
+  }
+  var isCover=(cnLayout(sl)==='cover');
+  var hf=isCover?96:80, hl=isCover?112:96;
+  x.font='900 '+hf+'px Pretendard'+FF;
+  var head=cnWrap(x,(''+(m.t||'')).replace(/\*\*/g,''),maxW).slice(0,4);
+  x.font='500 38px Pretendard'+FF;
+  var sub=m.s?cnWrap(x,''+m.s,maxW).slice(0,3):[];
+  var subH=sub.length?(sub.length*52+22):0;
+  var botH=118;
+  var baseY=H-botH-56-subH-head.length*hl;
+  /* 제목 왼쪽에 굵은 선 하나 — 사진 위에서 글 시작점을 잡아 준다 */
+  x.fillStyle='#38BDF8';cnRoundRect(x,PAD,baseY+10,8,head.length*hl-18,4);x.fill();
+  x.font='900 '+hf+'px Pretendard'+FF;x.fillStyle='#FFFFFF';
+  x.shadowColor='rgba(0,0,0,.45)';x.shadowBlur=18;x.shadowOffsetY=3;
+  var yy=baseY;
+  head.forEach(function(ln){x.fillText(ln,PAD+30,yy);yy+=hl;});
+  x.shadowBlur=0;x.shadowOffsetY=0;
+  if(sub.length){
+    x.font='500 38px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.90)';
+    x.shadowColor='rgba(0,0,0,.40)';x.shadowBlur=12;
+    yy+=22;
+    sub.forEach(function(ln){x.fillText(ln,PAD+30,yy);yy+=52;});
+    x.shadowBlur=0;
+  }
+  x.fillStyle='rgba(255,255,255,.14)';x.fillRect(PAD,H-botH,maxW,2);
+  drawApexMark(x,PAD+22,H-botH+34,44,'rgba(255,255,255,.85)');
+  x.font='800 28px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.88)';
+  x.fillText('APEX YUN PRO',PAD+58,H-botH+40);
+  x.font='600 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.62)';
+  x.textAlign='right';
+  x.fillText((idx+1)+' / '+n+'   ·   넘겨보기 →',W-PAD,H-botH+42);
+  x.textAlign='left';
+  return c;
+}
 function cnDrawSlide(sl,idx,n){
+  if(CN.style==='full')return cnDrawFull(sl,idx,n);
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
   var m=cnMagText(sl),lay=cnLayout(sl),PAD=72,maxW=W-PAD*2,im=CN.imgs[idx];
@@ -29715,6 +30222,18 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cn-ai-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:8px}',
    '.cn-ai-row label{font-size:10.5px;font-weight:700;color:#6D28D9}',
    '.cnw{position:relative;aspect-ratio:4/5;border-radius:18px;overflow:hidden;background:#fff;color:#0F2547;display:flex;flex-direction:column;box-shadow:0 12px 30px rgba(15,23,42,.16)}',
+   '.cnw.full{position:relative;background-size:cover;background-position:center;padding:0;overflow:hidden}',
+   '.cnw-fg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,12,28,.60) 0%,rgba(5,12,28,.10) 32%,rgba(5,12,28,.56) 60%,rgba(5,12,28,.95) 100%)}',
+   '.cnw-fnum{position:absolute;left:7.7%;top:5.4%;width:29px;height:29px;border-radius:8px;background:rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:2}',
+   '.cnw-fk{position:absolute;left:20%;top:7.6%;color:#9EC5FF;font-size:10px;font-weight:800;z-index:2}',
+   '.cnw-fbody{position:absolute;left:7.7%;right:7.7%;bottom:14%;z-index:2;border-left:4px solid #38BDF8;padding-left:3%}',
+   '.cnw-ft{color:#fff;font-size:25px;font-weight:900;line-height:1.2;letter-spacing:-.5px;text-shadow:0 3px 14px rgba(0,0,0,.45)}',
+   '.cnw-fs{color:rgba(255,255,255,.9);font-size:11.5px;font-weight:500;line-height:1.5;margin-top:8px;text-shadow:0 2px 10px rgba(0,0,0,.4)}',
+   '.cnw-ffoot{position:absolute;left:7.7%;right:7.7%;bottom:4.6%;z-index:2;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.14);padding-top:9px;color:rgba(255,255,255,.62);font-size:9.5px;font-weight:600}',
+   '.cnw-ffoot b{color:rgba(255,255,255,.88);font-weight:800}',
+   '.cn-sty{display:inline-flex;gap:4px;margin-left:6px}',
+   '.cn-styb{border:1.5px solid #E2E8F0;background:#fff;border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}',
+   '.cn-styb.on{background:#0F172A;border-color:#0F172A;color:#fff}',
    '.cnw-badge{position:absolute;top:14px;left:14px;width:30px;height:30px;border-radius:8px;background:#0B2447;color:#fff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:2}',
    '.cnw-badge.cv{background:#1D4ED8}',
    '.cnw.cover{background:#0B2447;color:#fff}',
@@ -29764,10 +30283,10 @@ function renderBizNews(){
     return '<div class="rpt-sec"><div class="hd"><span class="n">'+tp.ic+'</span>'+osEsc(tp.title)+'</div>'+
       '<div class="biz-news-ovwrap">'+ov+'</div>'+items+'</div>';
   }).join('')||'<div class="rpt-sec" style="text-align:center;color:#94a3b8;padding:24px">이 카테고리 항목은 준비 중입니다.</div>';
-  var head='<div class="biz-news-top"><span>🗓 최종 점검: <b>'+osEsc(BIZ_NEWS.asOf)+'</b></span><span class="biz-news-auto">🔄 매월 자동 점검</span></div>';
+  var head=bizNewsHeadHtml();
   var catbar='<div style="font-size:10.5px;font-weight:700;color:#64748B;margin:2px 0 7px">💡 카테고리별 총괄 — 돈이 되는 정보</div><div class="chips" style="margin-bottom:14px">'+chips+'</div>';
-  return osPage('제도·상품','정책·상품 뉴스 · 돈이 되는 정보','법인·개인사업자·청년·다자녀·중위소득↓·기초수급·국민연금·건강보험·절세·금융·카드까지, 돈에 관한 정보를 카테고리별로 총괄합니다. 매월 자동 점검으로 갱신되며, 개정 진행 중 항목은 확정 전 공식 공고를 확인하세요.',
-    bizTabsBar('biz_news')+'<div id="cnHost" style="margin-bottom:16px">'+renderTodayCard()+'</div>'+catbar+head+body+
+  return osPage('제도·상품','정책·상품 뉴스 · 돈이 되는 정보','법인·개인사업자·청년·다자녀·중위소득↓·기초수급·국민연금·건강보험·절세·금융·카드까지, 돈에 관한 정보를 카테고리별로 총괄합니다. 아래 표가 언제 것인지 맨 위에 적어 두었습니다. 바뀐 것이 있으면 대표가 「＋ 새 소식 올리기」로 바로 올릴 수 있고, 올린 것은 팀 전체에 즉시 보입니다.',
+    bizTabsBar('biz_news')+'<div id="cnHost" style="margin-bottom:16px">'+renderTodayCard()+'</div>'+catbar+head+bizNewsExtraHtml()+body+
     bizDisc('본 내용은 참고용 요약이며 특정 상품 가입 권유가 아닙니다. 정책자금·복지·세제·금융·카드 혜택의 조건·한도·금리·선정기준은 연도·개인 상황에 따라 달라지고 수시로 변동되므로, 신청 전 관계기관(중소벤처기업부·소상공인시장진흥공단·보건복지부·국세청·금융위원회 등) 공식 공고와 세무·금융 전문가 확인이 필요합니다.'));
 }
 
@@ -29842,6 +30361,10 @@ function renderBizNews(){
    '.biz-aiout-hd>span:first-child{font-size:12px;font-weight:800;color:#1A56DB}',
    '.biz-aiout .rpt-body{padding:14px 16px}',
    '.biz-news-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;background:#F5F9FF;border:1px solid #E5E9F0;border-radius:10px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#374151}',
+   '.biz-news-top.old{background:#FEF2F2;border-color:#FECACA;color:#991B1B}',
+   '.lg-f{display:flex;flex-direction:column;gap:4px}',
+   '.lg-f>span{font-size:11.5px;font-weight:800;color:#475569}',
+   '.lg-f input,.lg-f select,.lg-f textarea{width:100%;box-sizing:border-box;border:1.5px solid #E2E8F0;border-radius:9px;padding:8px 10px;font-size:12.5px;font-family:inherit}',
    '.biz-news-auto{font-size:11px;font-weight:800;color:#15803D;background:#F0FDF4;border:1px solid #DCFCE7;border-radius:999px;padding:3px 10px}',
    '.biz-news-ovwrap{background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px;padding:4px 6px;margin-bottom:10px}',
    '.biz-news-ov{margin:0;padding:8px 8px 8px 24px}.biz-news-ov li{font-size:12px;color:#374151;line-height:1.6;margin:2px 0}',

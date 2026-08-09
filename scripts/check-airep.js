@@ -28,9 +28,9 @@ window.__profiles=[
  {id:'p3',name:'최민아',role:'member',active:true,workspace:null},
  {id:'p4',name:'이지훈',role:'member',active:true,workspace:null}
 ];
-window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'}];
+window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'},{id:'t2',name:'온탑2팀',leader_id:'p3'}];
 window.__team_members=[{team_id:'t1',member_id:'p1'},{team_id:'t1',member_id:'p2'},
- {team_id:'t1',member_id:'p3'},{team_id:'t1',member_id:'p4'}];
+ {team_id:'t2',member_id:'p3'}];
 window.__attendance=(function(){var a=[],i;
  for(i=0;i<18;i++)a.push({member_id:'p2',att_date:window.__T(i)});
  for(i=0;i<9;i++)a.push({member_id:'p3',att_date:window.__T(i)});
@@ -205,11 +205,62 @@ const AI_OK = `## 활동 보고
   txt = await pane();
   ok(/팀 전체 보고/.test(txt), '팀원 관리 칸으로 넘어간다');
 
+  /* 지점장은 자기 팀이 먼저 열린다 — 기록을 다 읽은 뒤에 본다 */
+  await page.waitForFunction(() => typeof GB !== 'undefined' && GB.loaded && GB.rows.length, { timeout: 9000 });
+  await page.evaluate(() => arPaint());
+  await page.waitForTimeout(300);
+  const mine = await page.evaluate(() => ({ team: GB.team,
+    rows: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()) }));
+  ok(mine.team === 't1', '지점장은 자기 팀이 먼저 열린다 — ' + mine.team);
+  ok(mine.rows.length === 2, '자기 팀 두 명만 보인다 (' + mine.rows.length + ')');
+
+
+  /* ── 팀별로 나뉘는가 ── */
+  const chipsT = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .gb-tsel .gb-tb'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(chipsT.length === 4, '전체 · 온탑1팀 · 온탑2팀 · 소속 없음 네 개 (' + chipsT.length + ')');
+  ok(/^전체/.test(chipsT[0]) && /온탑1팀 2/.test(chipsT[1]) && /온탑2팀 1/.test(chipsT[2])
+    && /소속 없음 1/.test(chipsT[3]), '팀마다 몇 명인지 붙는다 — ' + chipsT.join(' / '));
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
+  const grp = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-tg'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(grp.length === 3, '팀별로 묶여서 나온다 (' + grp.length + '묶음)');
+  ok(/온탑1팀/.test(grp[0]) && /소속 없음/.test(grp[grp.length - 1]),
+    '소속 없는 사람은 맨 아래로 — ' + grp.join(' / '));
+  ok(/소속이 없는 사람이/.test(txt), '소속 없는 사람이 있으면 지정하라고 알려 준다');
+
+  /* 팀 하나만 고르면 그 팀만 */
+  await page.evaluate(() => arTeam('t1'));
+  await page.waitForTimeout(400);
+  const only = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#arPane .ar-row').length,
+    grp: document.querySelectorAll('#arPane .ar-tg').length,
+    txt: (document.getElementById('arPane') || {}).textContent || ''
+  }));
+  ok(only.rows === 2, '온탑1팀만 두 명 (' + only.rows + ')');
+  ok(only.grp === 1, '묶음도 하나만 (' + only.grp + ')');
+  ok(/온탑1팀/.test(only.txt) && !/최민아/.test(only.txt), '다른 팀 사람은 안 보인다');
+
+  /* 소속 없는 사람만 따로 */
+  await page.evaluate(() => arTeam('__none'));
+  await page.waitForTimeout(400);
+  const none = await page.evaluate(() => document.querySelectorAll('#arPane .ar-row').length);
+  ok(none === 1, '소속 없는 사람만 따로 볼 수 있다 (' + none + ')');
+
+  /* 고른 팀은 화면끼리 같이 간다 */
+  const shared = await page.evaluate(() => GB.team);
+  ok(shared === '__none', '고른 팀은 GB.team 한 곳에만 남는다 — ' + shared);
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
+
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
   const rows = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()));
-  ok(rows.length === 4, '팀원 네 명이 모두 줄로 선다 (' + rows.length + ')');
-  ok(/이지훈/.test(rows[0]), '점수가 가장 낮은 사람이 맨 위에 온다 — ' + rows[0]);
-  ok(/박서준/.test(rows[3]), '가장 잘하는 사람이 맨 아래에 온다 — ' + rows[3]);
+  ok(rows.length === 4, '전체를 고르면 네 명이 다 나온다 (' + rows.length + ')');
+  ok(/윤시현/.test(rows[0]) && /박서준/.test(rows[1]),
+    '팀 안에서 점수가 낮은 사람이 위에 온다 — ' + rows.slice(0, 2).join(' → '));
 
   /* ── 맨 위 다섯 숫자 · 거르기 ── */
   const tiles = await page.evaluate(() => Array.prototype.map.call(
@@ -260,6 +311,48 @@ const AI_OK = `## 활동 보고
   ok(/합격 3\/12/.test(facts), '공부 합격 3개를 센다');
   ok(/아직 안 한 공부/.test(facts), '안 한 공부를 이름으로 알려 준다');
   ok(/팀 평균/.test(facts), '팀 평균과 나란히 놓는다');
+
+  /* ── DB 통합 CRM 을 깊이 읽는가 ── */
+  ok(/전화 습관 — DB 통합 CRM 최근 30일/.test(facts), '전화 습관을 따로 정리해 넘긴다');
+  ok(/전화한 날 \d+일/.test(facts), '며칠 걸었는지 센다');
+  ok(/부재 \d+ · 거절 \d+ · 상담 \d+/.test(facts), '결과가 어떻게 갈렸는지 넘긴다');
+  ok(/상담 전환 [\d.]+%/.test(facts), '상담 전환율을 계산한다');
+  ok(/한 건당 평균 [\d.]+번/.test(facts), '한 사람에게 몇 번 붙는지 센다');
+  ok(/다시 건 DB 비율 \d+%/.test(facts), '부재 뒤에 다시 거는지 본다');
+  ok(/가장 많이 거는 시간대/.test(facts), '언제 거는지 짚어 준다');
+  ok(/가장 많이 거는 요일/.test(facts), '무슨 요일에 거는지 짚어 준다');
+  ok(/최근 7일 \d+통 · 그 앞 7일 \d+통/.test(facts), '늘었는지 줄었는지 비교한다');
+  ok(/손 놓은 DB: 1주 넘음/.test(facts), '손 놓은 DB 를 보고에도 넣는다');
+  ok(!/고객1|고객90|customer_name/.test(facts), '고객 이름은 여전히 안 넘어간다');
+  const deep = await page.evaluate(() => arCrmDeep('p2'));
+  ok(deep && deep.n > 60 && deep.dbN > 0, '통화·DB 수를 실제로 센다 (' + (deep ? deep.n + '통/' + deep.dbN + '건' : '없음') + ')');
+  ok(deep && deep.conv > 0 && deep.conv < 100, '전환율이 0~100 사이 (' + (deep ? deep.conv : '') + '%)');
+  const noCall = await page.evaluate(() => arCrmDeep('p4'));
+  ok(noCall === null, '통화가 없는 사람은 없다고 한다');
+
+  const sysT = await page.evaluate(() => arSys());
+  ok(/전화 습관을 반드시 한 줄 넣습니다/.test(sysT), '보고에 습관을 꼭 넣으라고 시킨다');
+
+  /* ── 오전 8시 자동 ── */
+  const auto = await page.evaluate(() => ({
+    h: AR_H, due: typeof arDue === 'function', arm: typeof arAutoArm === 'function',
+    lead: arAutoNeed().length, off: arAutoOff()
+  }));
+  ok(auto.h === 8, '오전 8시 기준 (' + auto.h + ')');
+  ok(auto.due && auto.arm, '8시가 되면 알아서 도는 장치가 있다');
+  ok(auto.lead >= 1, '지점장은 팀원 것을 만들 목록을 잡는다 (' + auto.lead + '명)');
+  const asMember = await page.evaluate(() => {
+    const keep = OS.profile.role, mine = AR.rep[arMyId()];
+    OS.profile.role = 'member'; delete AR.rep[arMyId()];
+    const n = arAutoNeed().length;
+    OS.profile.role = keep; if (mine) AR.rep[arMyId()] = mine;
+    return n;
+  });
+  ok(asMember === 1, '설계사는 자기 것 하나만 만든다 (' + asMember + ')');
+  await page.evaluate(() => { try { localStorage.setItem('apex_ar_auto_off', '1'); } catch (e) { } });
+  const offNow = await page.evaluate(() => arAutoOff());
+  ok(offNow, '끌 수 있다');
+  await page.evaluate(() => { try { localStorage.removeItem('apex_ar_auto_off'); } catch (e) { } });
   ok(/없는 숫자는 만들지 않습니다/.test(facts), '지어내지 말라고 못을 박는다');
 
   const sys = await page.evaluate(() => arSys());
@@ -284,7 +377,7 @@ const AI_OK = `## 활동 보고
   ok(/제목 없이/.test(p3.act), '제목을 안 지킨 답도 버리지 않는다');
 
   /* ── 한 사람 만들기 ── */
-  await page.evaluate(() => arGen('p2'));
+  await page.evaluate(() => { window.__ins = []; arGen('p2'); });
   await page.waitForTimeout(700);
   txt = await pane();
   const secs = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sec').length);
