@@ -4940,7 +4940,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',db:null,cliRows:null,talk:null,calls:null,
+var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -5761,20 +5761,36 @@ function arTkCount(who){
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
 }
+var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
+var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+function arTkRow(x,own){
+  return '<div class="ar-tk'+(((x.k==='no'&&x.d>=14)||(x.k==='old'&&x.d>=90))?' warn':'')+'" '+
+    'onclick="go(\''+x.go+'\')">'+
+    '<span class="ar-bg '+AR_TKC[x.k]+'">'+AR_TKL[x.k]+'</span>'+
+    '<span class="nm">'+(own?('<b class="own">'+osEsc(arNameOf(x.who))+'</b>'):'')+
+      osEsc(x.nm)+(x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
+    '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
+    '<span class="do">'+osEsc(x.todo)+'</span></div>';
+}
+/* 팀원 한 사람을 펼쳤을 때 그 사람이 오늘 터치할 사람들 */
+function arTouchMini(who,n){
+  var l=arTouch(who),i,h='';
+  if(!l.length)return '';
+  for(i=0;i<l.length&&i<(n||10);i++)h+=arTkRow(l[i],false);
+  return '<div class="ar-sec" style="margin-top:12px"><div class="ar-sh"><span class="e">☎️</span>'+
+    '<span class="n">오늘 터치할 사람</span><span class="d">'+l.length+'명 · 위에서 '+
+    Math.min(l.length,(n||10))+'명</span></div>'+
+    '<div class="ar-sb" style="padding:6px 14px 12px"><div class="ar-tks">'+h+'</div></div></div>';
+}
+function arTkWho(){return (AR.tkAll&&arIsLead())?'':arMyId();}
+function arTkAllSet(v){AR.tkAll=v;arPaint();}
 function arTouchHtml(){
-  var me=arMyId(),l=arTouch(me),c=arTkCount(me),k=arTk(),i,rows=[];
-  var lab={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
-  var col={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+  var who=arTkWho(),lead=arIsLead(),l=arTouch(who),c=arTkCount(who),k=arTk(),i,rows=[];
   for(i=0;i<l.length;i++){
     var x=l[i];
     if(k!=='all'&&x.k!==k)continue;
     if(rows.length>=80)break;
-    rows.push('<div class="ar-tk'+((x.k==='no'&&x.d>=14)||x.k==='old'&&x.d>=90?' warn':'')+'" '+
-      'onclick="go(\''+x.go+'\')">'+
-      '<span class="ar-bg '+col[x.k]+'">'+lab[x.k]+'</span>'+
-      '<span class="nm">'+osEsc(x.nm)+(x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
-      '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
-      '<span class="do">'+osEsc(x.todo)+'</span></div>');
+    rows.push(arTkRow(x,!who));
   }
   var chips='<div class="ar-fs">';
   for(i=0;i<AR_TK.length;i++){
@@ -5787,8 +5803,14 @@ function arTouchHtml(){
     return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
       '<div class="k">'+kk+'</div></div>';
   };
+  var scope=lead?('<div class="ar-fs" style="margin-bottom:10px">'+
+    '<button type="button" class="ar-fc'+(who?' on':'')+'" onclick="arTkAllSet(false)">🙋 내 것</button>'+
+    '<button type="button" class="ar-fc'+(who?'':' on')+'" onclick="arTkAllSet(true)">👥 팀 전체'+
+      '<span>'+arTouch('').length+'</span></button></div>'):'';
   return arCard('☎️','오늘 터치할 사람',
+      (who?'':'팀 전체입니다. 담당자 이름이 앞에 붙습니다. ')+
       '부재 · 거절 · 진행중 · 기고객을 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
+      scope+
       '<div class="ar-top" style="grid-template-columns:repeat(4,1fr)">'+
         tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
         tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
@@ -5870,7 +5892,7 @@ function arCrmMiniHtml(who){
     chip('진행중',(c.run||0)+'명',c.run>0)+chip('부재',(c.no||0)+'명',c.no>0)+
     chip('거절',(c.rej||0)+'명',0)+chip('미진행',(c['new']||0)+'명',c['new']>0)+
     chip('기고객',(c.old||0)+'명',c.old>0)+chip('생일',(c.bd||0)+'명',0)+'</div>'+
-    arWeekStrip(who)+'</div></div>';
+    arWeekStrip(who)+'</div></div>'+arTouchMini(who,10);
   return h;
 }
 /* 주차별 막대 — 좁은 자리에 여섯 주만 */
@@ -6590,6 +6612,7 @@ function arCss(){
    '.ar-tk .nm{font-size:13px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;'+
      'text-overflow:ellipsis}'+
    '.ar-tk .nm em{font-style:normal;font-weight:600;color:#94A3B8;font-size:11px;margin-left:4px}'+
+   '.ar-tk .nm .own{color:#1A56DB;font-weight:900;margin-right:6px}'+
    '.ar-tk .dy{font-size:11.5px;font-weight:800;color:#64748B;text-align:right}'+
    '.ar-tk .do{font-size:12.5px;color:#334155;font-weight:600;line-height:1.5}'+
    '.ar-tk.warn .dy{color:#B91C1C}'+

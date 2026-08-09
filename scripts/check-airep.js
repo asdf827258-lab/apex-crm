@@ -262,6 +262,23 @@ const AI_OK = `## 활동 보고
   ok(/윤시현/.test(rows[0]) && /박서준/.test(rows[1]),
     '팀 안에서 점수가 낮은 사람이 위에 온다 — ' + rows.slice(0, 2).join(' → '));
 
+  /* ── 팀원 한 사람을 펼치면 그 사람의 모든 것이 한 화면에 ── */
+  await page.evaluate(() => { arTeam(''); arOpen('p2'); });
+  await page.waitForTimeout(700);
+  const one2 = await page.evaluate(() => {
+    const bx = document.querySelector('#arPane .ar-row.open .ar-rb');
+    return bx ? { txt: bx.textContent, axes: bx.querySelectorAll('.ar-nm').length,
+                  wk: bx.querySelectorAll('.ar-wk').length, tk: bx.querySelectorAll('.ar-tk').length } : null;
+  });
+  ok(one2 && one2.axes === 6, '여섯 축이 그 자리에 있다 (' + (one2 ? one2.axes : 0) + ')');
+  ok(one2 && /DB 통합 CRM/.test(one2.txt), '보고를 만들기 전에도 CRM 전화 습관이 보인다');
+  ok(one2 && /전화한 날/.test(one2.txt) && /다시 건 비율/.test(one2.txt), '습관 숫자가 실제로 찍힌다');
+  ok(one2 && /진행중/.test(one2.txt) && /기고객/.test(one2.txt), '진행중·기고객 인원까지 같이');
+  ok(one2 && one2.wk === 6, '주차별 막대가 그 자리에 있다 (' + (one2 ? one2.wk : 0) + ')');
+  ok(one2 && one2.tk >= 3, '그 사람이 오늘 터치할 사람이 같이 나온다 (' + (one2 ? one2.tk : 0) + '명)');
+  await page.evaluate(() => arOpen('p2'));
+  await page.waitForTimeout(200);
+
   /* ── 맨 위 다섯 숫자 · 거르기 ── */
   const tiles = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-tl'), e => e.textContent.trim()));
@@ -452,6 +469,29 @@ const AI_OK = `## 활동 보고
   ok(/결론을 물어봅니다|자료를 준비/.test(todos.run || ''), '진행중 — 붙으라고 한다 — ' + todos.run);
   ok(/첫 통화/.test(todos['new'] || ''), '미진행 — 오늘 첫 통화 — ' + todos['new']);
   ok(/안부|적어 둔 일/.test(todos.old || ''), '기고객 — 안부 — ' + todos.old);
+
+  /* ── 지점장은 팀 전체를 한 화면에서 ── */
+  const solo = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tk').length);
+  await page.evaluate(() => { OS.profile.role = 'owner'; arTkAllSet(true); });
+  await page.waitForTimeout(400);
+  const team = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#arPane .ar-tk').length,
+    own: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-tk .own'), e => e.textContent.trim()),
+    txt: (document.getElementById('arPane') || {}).textContent || ''
+  }));
+  ok(team.rows > solo, '팀 전체로 놓으면 더 많이 나온다 (' + solo + ' → ' + team.rows + ')');
+  ok(team.own.length === team.rows, '줄마다 담당자 이름이 앞에 붙는다 (' + team.own.length + ')');
+  ok(team.own.filter((v, i, a) => a.indexOf(v) === i).length >= 2, '두 사람 이상 섞여 나온다 — ' +
+    team.own.filter((v, i, a) => a.indexOf(v) === i).join(', '));
+  ok(/팀 전체입니다/.test(team.txt), '팀 전체를 보고 있다고 알려 준다');
+  await page.evaluate(() => arTkAllSet(false));
+  await page.waitForTimeout(400);
+  const backSolo = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tk .own').length);
+  ok(backSolo === 0, '내 것으로 돌아오면 담당자 이름은 사라진다');
+  await page.evaluate(() => { OS.profile.role = 'member'; arPaint(); });
+  await page.waitForTimeout(300);
+  const noScope = await page.evaluate(() => /팀 전체/.test((document.getElementById('arPane')||{}).textContent||''));
+  ok(!noScope, '설계사에게는 팀 전체 단추가 안 뜬다');
 
   /* 걸러 보기 */
   await page.evaluate(() => arTkSet('no'));
