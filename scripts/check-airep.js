@@ -41,16 +41,32 @@ window.__calls=(function(){var a=[],i;
  for(i=0;i<62;i++)a.push({db_id:'d'+(i%20),created_by:'p2',call_at:window.__T(i%25)+'T10:00:00',result:i%7===0?'상담':'부재'});
  for(i=0;i<20;i++)a.push({db_id:'d'+(i%12),created_by:'p3',call_at:window.__T(i%25)+'T10:00:00',result:i%10===0?'상담':'부재'});
  for(i=0;i<34;i++)a.push({db_id:'d'+(i%9),created_by:'p1',call_at:window.__T(i%25)+'T10:00:00',result:i%8===0?'상담':'부재'});
+ /* 손 놓은 지 오래된 것들 — 이게 다시 걸 사람이다 */
+ a.push({db_id:'d15',created_by:'p2',call_at:window.__T(9)+'T10:00:00',result:'부재'});
+ a.push({db_id:'d16',created_by:'p2',call_at:window.__T(20)+'T10:00:00',result:'거절'});
+ a.push({db_id:'d17',created_by:'p2',call_at:window.__T(45)+'T10:00:00',result:'부재'});
+ a.push({db_id:'d18',created_by:'p2',call_at:window.__T(2)+'T10:00:00',result:'상담',
+   appointment_at:window.__T(-1)+'T14:00:00'});
+ a.push({db_id:'d90',created_by:'p2',call_at:window.__T(40)+'T10:00:00',result:'부재'});
+ a.push({db_id:'d92',created_by:'p2',call_at:window.__T(16)+'T10:00:00',result:'거절'});
+ a.push({db_id:'d93',created_by:'p2',call_at:window.__T(8)+'T10:00:00',result:'부재'});
  return a;})();
 window.__dbs=(function(){var a=[],i;
- for(i=0;i<30;i++)a.push({id:'d'+i,assigned_to:i<20?'p2':'p3'});
- for(i=30;i<38;i++)a.push({id:'d'+i,assigned_to:'p4'});
+ for(i=0;i<30;i++)a.push({id:'d'+i,assigned_to:i<20?'p2':'p3',customer_name:'고객'+i,
+   region:'서울',assigned_date:window.__T(40+i)});
+ for(i=30;i<38;i++)a.push({id:'d'+i,assigned_to:'p4',customer_name:'고객'+i,
+   region:'경기',assigned_date:window.__T(60)});
+ /* 손 놓은 지 오래된 것 — 다시 걸어야 할 사람들 */
+ a.push({id:'d90',assigned_to:'p2',customer_name:'고객90',region:'서울',assigned_date:window.__T(60)});
+ a.push({id:'d91',assigned_to:'p2',customer_name:'고객91',region:'서울',assigned_date:window.__T(50)});
+ a.push({id:'d92',assigned_to:'p2',customer_name:'고객92',region:'인천',assigned_date:window.__T(30)});
+ a.push({id:'d93',assigned_to:'p2',customer_name:'고객93',region:'경기',assigned_date:window.__T(20)});
  return a;})();
 window.__clients=[
- {id:'c1',advisor_id:'p2',created_at:window.__T(5)+'T00:00:00Z'},
- {id:'c2',advisor_id:'p2',created_at:window.__T(200)+'T00:00:00Z'},
- {id:'c3',advisor_id:'p3',created_at:window.__T(120)+'T00:00:00Z'},
- {id:'c4',advisor_id:'p4',created_at:window.__T(300)+'T00:00:00Z'}
+ {id:'c1',advisor_id:'p2',name_masked:'김○○',created_at:window.__T(5)+'T00:00:00Z'},
+ {id:'c2',advisor_id:'p2',name_masked:'박○○',created_at:window.__T(200)+'T00:00:00Z'},
+ {id:'c3',advisor_id:'p3',name_masked:'이○○',created_at:window.__T(120)+'T00:00:00Z'},
+ {id:'c4',advisor_id:'p4',name_masked:'최○○',created_at:window.__T(300)+'T00:00:00Z'}
 ];
 window.__meta=[
  {id:'m1',client_id:'c1',content:{next:{what:'증권 받기',due:window.__T(3)},touch:[{d:window.__T(4),k:'만남'}]}},
@@ -154,7 +170,10 @@ const AI_OK = `## 활동 보고
 
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
-  const open = async () => { await page.evaluate(() => go('airep')); await page.waitForTimeout(2200); };
+  const open = async (cat) => {
+    await page.evaluate(() => go('airep')); await page.waitForTimeout(2200);
+    if (cat) { await page.evaluate(c => arGoCat(c), cat); await page.waitForTimeout(400); }
+  };
   const pane = () => page.evaluate(() => (document.getElementById('arPane') || {}).textContent || '');
 
   /* ── 메뉴 ── */
@@ -163,14 +182,28 @@ const AI_OK = `## 활동 보고
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id + '|' + i.title)));
     return t;
   });
-  ok(menu.indexOf('홈|airep|AI 보고') >= 0, '메뉴 「홈」 밑에 AI 보고가 있다');
+  ok(menu.indexOf('홈|airep|AI 관리판') >= 0, '메뉴 「홈」 밑에 AI 관리판이 있다');
 
   /* ── 지점장으로 열기 ── */
   await open();
   let txt = await pane();
-  ok(/내 보고/.test(txt) && /팀 전체 보고/.test(txt), '지점장에게는 두 칸이 보인다');
-  const tabs = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tab').length);
-  ok(tabs === 3, '내 보고 · 팀 전체 보고 · 사용법 세 단추 (' + tabs + ')');
+  /* ── 왼쪽 카테고리 한 줄 ── */
+  const cats = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
+  ok(cats.length === 9, '왼쪽에 카테고리 아홉 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|부재·거절 재관리|기고객 재관리|리더 할 일|팀원 관리',
+    '순서가 요청대로다 — ' + cats.join(' · '));
+  const heads = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-shd'), e => e.textContent.trim()));
+  ok(heads.join('|') === '내 관리|팀 관리', '내 관리 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
+  const badges = await page.evaluate(() => document.querySelectorAll('#arPane .ar-cat .n').length);
+  ok(badges >= 3, '남은 건수가 붉은 숫자로 붙는다 (' + badges + '곳)');
+  ok(/박서준 님의 보고|윤시현 님의 보고/.test(txt), '처음 열면 피드백 칸이 보인다');
+
+  await page.evaluate(() => arGoCat('team'));
+  await page.waitForTimeout(400);
+  txt = await pane();
+  ok(/팀 전체 보고/.test(txt), '팀원 관리 칸으로 넘어간다');
 
   const rows = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()));
@@ -189,7 +222,7 @@ const AI_OK = `## 활동 보고
   ok(warnTiles >= 1, '손대야 할 숫자는 붉게 뜬다 (' + warnTiles + ')');
 
   const chips = await page.evaluate(() => Array.prototype.map.call(
-    document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.trim()));
+    document.querySelectorAll('#arPane .ar-main .ar-fc'), e => e.textContent.trim()));
   ok(chips.length === 4, '거르기 단추 네 개 (' + chips.length + ')');
   await page.evaluate(() => arFilterSet('stop'));
   await page.waitForTimeout(300);
@@ -215,8 +248,11 @@ const AI_OK = `## 활동 보고
   await page.waitForTimeout(300);
   const facts = await page.evaluate(() => arFacts(arRowOf('p2')));
   ok(/출근.*18일/.test(facts), '출근 18일이 그대로 넘어간다');
-  ok(/통화 62통/.test(facts), 'DB 통합 CRM 통화 62통이 넘어간다');
-  ok(/상담 전환 9건/.test(facts), '상담 전환 9건이 넘어간다');
+  const crm = await page.evaluate(() => (AR.crm || {})['p2'] || null);
+  ok(crm && crm.calls > 60 && facts.indexOf('통화 ' + crm.calls + '통') >= 0,
+    'DB 통합 CRM 통화 수가 그대로 넘어간다 (' + (crm ? crm.calls : 0) + '통)');
+  ok(crm && crm.appt >= 9 && facts.indexOf('상담 전환 ' + crm.appt + '건') >= 0,
+    '상담 전환 수가 그대로 넘어간다 (' + (crm ? crm.appt : 0) + '건)');
   ok(/한 번도 안 돌린 DB/.test(facts), '한 번도 안 돌린 DB 를 짚어 준다');
   ok(/고객 365일. 담당 2명/.test(facts), '담당 고객 2명을 정확히 센다');
   ok(/기한 지난 할 일 2건/.test(facts), '기한 지난 할 일 2건을 정확히 센다');
@@ -282,17 +318,137 @@ const AI_OK = `## 활동 보고
   const busy = await page.evaluate(() => AR.busy);
   ok(busy === '', '다 끝나면 버튼이 다시 살아난다');
 
-  /* ── 설계사로 열면 내 것만 ── */
+  /* ── 설계사로 열기 ── */
   await seat('member');
-  await open();
+  await open('feed');
   txt = await pane();
-  ok(!/팀 전체 보고/.test(txt), '설계사에게는 팀 전체 칸이 안 보인다');
   ok(/박서준 님의 보고/.test(txt), '자기 이름으로 자기 칸이 열린다');
   ok(/AI 보고 받기/.test(txt), '스스로 받을 수 있는 단추가 있다');
   await page.evaluate(() => arGen('p2'));
   await page.waitForTimeout(700);
   const secs2 = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sec').length);
   ok(secs2 === 5, '설계사도 혼자서 다섯 칸을 받는다 (' + secs2 + ')');
+
+  /* ── 부재·거절 재관리 ── */
+  await open('cold');
+  txt = await pane();
+  ok(/부재 · 거절 재관리/.test(txt), '부재·거절 칸이 열린다');
+  const bands = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-tl .k'), e => e.textContent.trim()));
+  ok(bands.join('|') === '1주 넘음|2주 넘음|한 달 넘음', '1주·2주·한 달로 나눠 센다 — ' + bands.join(' · '));
+  const coldN = await page.evaluate(() => ({ a: arCold(arMyId(), 7).length, b: arCold(arMyId(), 14).length, c: arCold(arMyId(), 30).length }));
+  ok(coldN.a > coldN.b && coldN.b >= coldN.c, '오래된 것일수록 적게 잡힌다 (' + coldN.a + '/' + coldN.b + '/' + coldN.c + ')');
+  const noAppt = await page.evaluate(() => arCold('p2', 7).filter(x => x.res === '상담').length);
+  ok(noAppt === 0, '상담까지 간 사람은 다시 걸 목록에 없다');
+  const coldRows = await page.evaluate(() => document.querySelectorAll('#arPane .ar-ln').length);
+  ok(coldRows >= 5, '다시 걸 사람이 줄로 선다 (' + coldRows + '명)');
+  ok(coldN.c >= 2, '한 달 넘게 손 안 댄 것도 놓치지 않는다 (' + coldN.c + '건)');
+  const never = await page.evaluate(() => arCold('p2', 7).filter(x => x.n === 0).length);
+  ok(never >= 1, '한 번도 안 돌린 DB 도 다시 걸 목록에 들어간다 (' + never + '건)');
+
+  /* AI 에게 물어볼 때 이름이 안 넘어가는가 */
+  await page.evaluate(() => { window.__aiCalls = []; window.__AI_OUT = '## 이렇게 여세요\n안녕하세요\n## 전할 만한 소식\n연말정산\n## 이 순서로\n세 명만'; arTalk('cold'); });
+  await page.waitForTimeout(700);
+  const talkCall = await page.evaluate(() => window.__aiCalls[window.__aiCalls.length - 1] || null);
+  ok(talkCall && /다시 걸어야 할 DB/.test(talkCall.user), '건수만 넘어간다');
+  ok(talkCall && !/고객1|고객2|고객15/.test(talkCall.user + talkCall.sys), '고객 이름은 AI 로 넘어가지 않는다');
+  ok(talkCall && /약관과 심사에 따릅니다/.test(talkCall.sys), '준법 안내가 지시문에 들어간다');
+  ok(talkCall && /다시 팔지 않습니다/.test(talkCall.sys), '거절한 사람에게 다시 팔지 말라고 못 박는다');
+  txt = await pane();
+  ok(/이렇게 여세요/.test(txt), 'AI 가 준 첫 마디가 화면에 남는다');
+
+  /* ── 기고객 재관리 ── */
+  await open('old');
+  txt = await pane();
+  ok(/기고객 재관리/.test(txt), '기고객 칸이 열린다');
+  ok(/다음 할 일이 안 적혀 있습니다|일 전|기록 없음/.test(txt), '언제 마지막으로 손댔는지 보인다');
+
+  /* ── 스케줄 ── */
+  await open('sched');
+  txt = await pane();
+  ok(/오늘 · 앞으로 잡힌 약속/.test(txt), '스케줄 칸이 열린다');
+  ok(/다음에 할 일 — 날짜순/.test(txt), '고객 365일의 할 일이 날짜순으로 온다');
+  ok(/이번 주에 남은 것/.test(txt), '이번 주 체크판이 같이 온다');
+
+  /* ── 해야 할 일 ── */
+  await open('todo');
+  txt = await pane();
+  ok(/해야 할 일/.test(txt), '해야 할 일 칸이 열린다');
+  const todoOrder = await page.evaluate(() => arTodoList().map(x => (x.bad ? 1 : 0)));
+  ok(todoOrder.length === 0 || todoOrder[0] >= todoOrder[todoOrder.length - 1], '밀린 것이 위에 온다');
+
+  /* ── 본인 점수판 · 역량 체크 ── */
+  await open('score');
+  const axes = await page.evaluate(() => document.querySelectorAll('#arPane .ar-ax').length);
+  ok(axes === 6, '여섯 축이 막대로 선다 (' + axes + ')');
+  txt = await pane();
+  ok(/팀 평균/.test(txt), '팀 평균과 나란히 놓는다');
+
+  await open('skill');
+  const skills = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sk').length);
+  ok(skills === 12, '배워서 터치할 것 열두 개가 모두 나온다 (' + skills + ')');
+  const before = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sk.on').length);
+  await page.evaluate(() => arStamp('s5'));
+  await page.waitForTimeout(400);
+  const after = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sk.on').length);
+  ok(after === before + 1, '누르면 합격이 찍힌다 (' + before + '→' + after + ')');
+
+  /* ── 리더 할 일 — 팀원은 보기만 ── */
+  await open('lead');
+  txt = await pane();
+  ok(/리더 할 일/.test(txt), '팀원도 리더 할 일을 볼 수 있다');
+  const ro = await page.evaluate(() => ({
+    all: document.querySelectorAll('#arPane .ar-lk').length,
+    ro: document.querySelectorAll('#arPane .ar-lk.ro').length
+  }));
+  ok(ro.all > 0 && ro.ro === ro.all, '팀원에게는 전부 잠겨 있다 (' + ro.ro + '/' + ro.all + ')');
+  ok(/체크는 지점장이 합니다/.test(txt), '왜 잠겼는지 알려 준다');
+  await page.evaluate(() => { window.__toast = []; arLeadTog('day', 'la1'); });
+  const blocked = await page.evaluate(() => (window.__toast || []).join('|'));
+  ok(/지점장만 체크할 수 있습니다/.test(blocked), '팀원이 눌러도 안 바뀐다');
+
+  /* ── 팀원 관리 — 팀원은 만들기 없음 ── */
+  await open('team');
+  txt = await pane();
+  ok(/보기만 됩니다/.test(txt), '팀원에게는 보고 만들기가 없다');
+  const genBtns = await page.evaluate(() =>
+    Array.prototype.filter.call(document.querySelectorAll('#arPane .btn-primary'),
+      e => /보고 받기|한 번에/.test(e.textContent)).length);
+  ok(genBtns === 0, '팀원 화면에는 보고 만드는 단추가 안 뜬다 (' + genBtns + ')');
+
+  /* ── 아침 비서 ── */
+  await page.evaluate(() => { try { localStorage.removeItem('apex_ar_brief_off'); } catch (e) { } arBriefOpen(); });
+  await page.waitForTimeout(400);
+  const brief = await page.evaluate(() => {
+    const o = document.getElementById('arBriefOvl');
+    return o ? { txt: o.textContent, tiles: o.querySelectorAll('.ar-bt').length } : null;
+  });
+  ok(brief && brief.tiles === 4, '아침 창에 숫자 네 칸이 뜬다 (' + (brief ? brief.tiles : 0) + ')');
+  ok(brief && /오늘 약속/.test(brief.txt) && /밀린 것/.test(brief.txt)
+    && /다시 걸 DB/.test(brief.txt) && /식은 고객/.test(brief.txt), '오늘 볼 네 가지가 다 있다');
+  ok(brief && /오늘 이것만/.test(brief.txt), '오늘 이것만 세 줄을 골라 준다');
+  ok(brief && /아침에 안 띄우기/.test(brief.txt), '끌 수 있다');
+  const seenOnce = await page.evaluate(() => arBriefSeen());
+  ok(seenOnce, '한 번 뜨면 그날은 다시 안 뜬다');
+  await page.evaluate(() => arBriefClose());
+  ok(await page.evaluate(() => !document.getElementById('arBriefOvl')), '닫으면 사라진다');
+
+  /* 알림은 하루 세 번까지 */
+  await page.evaluate(() => { try { localStorage.removeItem('apex_ar_nudge_' + arToday()); } catch (e) { } window.__toast = []; arNudge(); arNudge(); arNudge(); arNudge(); });
+  const nudges = await page.evaluate(() => (window.__toast || []).filter(t => /🔔/.test(t)).length);
+  ok(nudges <= 3, '알림은 하루 세 번을 넘지 않는다 (' + nudges + ')');
+  ok(nudges >= 1, '손 놓은 사람이 있으면 알려 준다');
+
+  /* ── 지점장은 리더 할 일을 체크할 수 있다 ── */
+  await seat('owner');
+  await open('lead');
+  const roLead = await page.evaluate(() => document.querySelectorAll('#arPane .ar-lk.ro').length);
+  ok(roLead === 0, '지점장에게는 잠금이 없다');
+  const b4 = await page.evaluate(() => document.querySelectorAll('#arPane .ar-lk.on').length);
+  await page.evaluate(() => { const e = document.querySelector('#arPane .ar-lk'); if (e) e.click(); });
+  await page.waitForTimeout(400);
+  const a4 = await page.evaluate(() => document.querySelectorAll('#arPane .ar-lk.on').length);
+  ok(a4 !== b4, '지점장이 누르면 체크가 바뀐다 (' + b4 + '→' + a4 + ')');
 
   /* ── 체크판 한 칸에서 같이 보이는가 ── */
   await page.evaluate(() => { CK.tab = 'today'; go('ckboard'); });
@@ -308,6 +464,15 @@ const AI_OK = `## 활동 보고
   ckTxt = await page.evaluate(() => (document.getElementById('ckPane') || {}).textContent || '');
   ok(/AI 보고/.test(ckTxt), '지점장 칸에서도 AI 보고가 같이 보인다');
   ok(/명\s*보고가 준비돼 있습니다/.test(ckTxt), '몇 명 준비됐는지 지점장 칸에서 바로 보인다');
+  const h1 = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#ckPane .ck-h1'), e => e.textContent.trim()));
+  ok(h1.join('|') === '① 오늘 내가 할 일|② 팀을 봅니다', '해야 할 일이 먼저, 팀 관리가 나중 — ' + h1.join(' · '));
+  const order = await page.evaluate(() => {
+    const p = document.getElementById('ckPane');
+    const a = p.textContent.indexOf('아침 · 출근 시간'), b = p.textContent.indexOf('우리 팀 오늘');
+    return { a: a, b: b };
+  });
+  ok(order.a >= 0 && order.b > order.a, '「우리 팀 오늘」이 더 이상 맨 위가 아니다');
 
   /* ── 사용법 ── */
   await page.evaluate(() => osHelpOpen('airep'));
@@ -316,7 +481,8 @@ const AI_OK = `## 활동 보고
     const o = document.getElementById('osHelpOvl');
     return o ? { txt: o.textContent, steps: o.querySelectorAll('div > div > div').length } : null;
   });
-  ok(help && /AI 보고 받기/.test(help.txt), '사용법이 열리고 첫 단계가 보인다');
+  ok(help && /왼쪽에서 볼 것을 고릅니다/.test(help.txt), '사용법이 열리고 쓰는 순서가 보인다');
+  ok(help && /리더 할 일은 누구나 볼 수 있고 체크는 지점장만/.test(help.txt), '누가 무엇을 할 수 있는지 적혀 있다');
   ok(help && /막히면 여기를 보세요/.test(help.txt), '막혔을 때 볼 것이 같이 나온다');
   await page.evaluate(() => osHelpClose());
   const gone = await page.evaluate(() => !document.getElementById('osHelpOvl'));
