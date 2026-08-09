@@ -27,9 +27,9 @@ window.__profiles=[
  {id:'p3',name:'최민아',role:'member',active:true,workspace:null},
  {id:'p4',name:'이지훈',role:'member',active:true,workspace:null}
 ];
-window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'}];
+window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'},{id:'t2',name:'온탑2팀',leader_id:'p3'}];
 window.__team_members=[{team_id:'t1',member_id:'p1'},{team_id:'t1',member_id:'p2'},
- {team_id:'t1',member_id:'p3'},{team_id:'t1',member_id:'p4'}];
+ {team_id:'t2',member_id:'p3'}];
 window.__attendance=(function(){var a=[],i;
  for(i=0;i<18;i++)a.push({member_id:'p2',att_date:window.__T(i)});
  for(i=0;i<9;i++)a.push({member_id:'p3',att_date:window.__T(i)});
@@ -207,6 +207,32 @@ window.supabase={createClient:function(){
   v = await paneOf();
   ok(/오늘 내가 할 일/.test(v.txt), '지점장 칸 — 내가 할 일이 먼저 온다');
   ok(/팀을 봅니다/.test(v.txt), '팀 보기가 그 아래 온다');
+
+  /* ── 우리 팀 오늘 — 팀별로 ── */
+  const tchip = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#thPane .gb-tsel .gb-tb'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(tchip.length === 4, '팀 고르개가 붙는다 (' + tchip.length + ') — ' + tchip.join(' / '));
+  const own = await page.evaluate(() => ({ team: GB.team,
+    grp: Array.prototype.map.call(document.querySelectorAll('#thPane .ck-tg'), e => e.textContent.replace(/\s+/g, ' ').trim()) }));
+  ok(own.team === 't1', '지점장은 자기 팀이 먼저 열린다 — ' + own.team);
+  ok(own.grp.length === 1 && /온탑1팀/.test(own.grp[0]), '처음엔 자기 팀만 — ' + own.grp.join(' / '));
+
+  await page.evaluate(() => ckTeam(''));
+  await page.waitForTimeout(700);
+  const tgrp = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#thPane .ck-tg'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(tgrp.length >= 2, '「전체」로 놓으면 팀별로 묶인다 (' + tgrp.length + '묶음) — ' + tgrp.join(' / '));
+  ok(/소속 없음/.test(tgrp[tgrp.length - 1]), '소속 없는 사람은 맨 아래 묶음으로');
+  await page.evaluate(() => ckTeam('t2'));
+  await page.waitForTimeout(700);
+  const t2 = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#thPane .ck-tr').length,
+    txt: (document.getElementById('thPane') || {}).textContent || ''
+  }));
+  ok(/온탑2팀/.test(t2.txt), '온탑2팀만 골라 볼 수 있다');
+  ok(!/이지훈/.test(t2.txt.split('우리 팀 오늘')[1] || ''), '다른 팀 사람은 안 섞인다');
+  await page.evaluate(() => ckTeam(''));
+  await page.waitForTimeout(600);
 
   await page.evaluate(() => thGo('grow')); await page.waitForTimeout(1600);
   v = await paneOf();

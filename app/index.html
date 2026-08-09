@@ -4974,13 +4974,20 @@ function arRowOf(id){
   return null;
 }
 function arNameOf(id){var r=arRowOf(id);return r?r.name:'팀원';}
+/* 고른 팀은 성장판·체크판과 같은 것을 본다 — GB.team 하나뿐이다 */
 function arScope(){
+  if(typeof gbScope==='function'&&typeof GB!=='undefined'&&GB.rows)return gbScope();
   var rs=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[],out=[],i;
   for(i=0;i<rs.length;i++){
     if(AR.team&&rs[i].team!==AR.team)continue;
     out.push(rs[i]);
   }
   return out;
+}
+function arTeam(id){
+  if(typeof GB==='undefined')return;
+  GB.team=id;AR.open='';
+  arPaint();
 }
 /* 리더 화면에 세울 사람들 — 점수가 낮은 사람이 위로 온다 */
 function arList(){
@@ -5888,10 +5895,21 @@ function arTeamHtml(){
   if(!all.length)
     return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
       '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
-  var l=arList(),i,r,o,h='',me=arMyId(),done=0;
+  var l=arList(),i,r,o,h='',me=arMyId(),done=0,gi,g,cur='';
   for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
-  for(i=0;i<l.length;i++){
-    r=l[i];o=AR.rep[r.id];
+  /* 팀별로 줄을 나눈다 — 누가 누구 팀인지 보이지 않으면 팀 관리가 안 된다 */
+  g=(typeof gbByTeam==='function')?gbByTeam(l):[{id:'',name:'',rows:l}];
+  var flat=[];
+  for(gi=0;gi<g.length;gi++){
+    g[gi].rows.sort(function(a,b){return (a.total||0)-(b.total||0);});
+    for(i=0;i<g[gi].rows.length;i++)flat.push({t:g[gi].name,n:g[gi].rows.length,r:g[gi].rows[i]});
+  }
+  for(i=0;i<flat.length;i++){
+    r=flat[i].r;o=AR.rep[r.id];
+    if(flat[i].t!==cur){
+      cur=flat[i].t;
+      h+='<div class="ar-tg">'+osEsc(cur)+'<span>'+flat[i].n+'명</span></div>';
+    }
     var open=(AR.open===r.id),busy=(AR.busy===r.id),one=o?arOneLine(o):'';
     h+='<div class="ar-row'+(open?' open':'')+'">'+
       '<div class="ar-rh" onclick="arOpen(\''+r.id+'\')">'+
@@ -5923,8 +5941,10 @@ function arTeamHtml(){
   return arTopHtml()+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
     '<span class="ar-n">'+done+' / '+all.length+'명</span></div>'+
-    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
+    '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
+    '이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
     '<div class="card-body">'+
+    ((typeof gbTeamBarHtml==='function')?gbTeamBarHtml('arTeam'):'')+
     '<div class="btn-row" style="margin-bottom:12px">'+
     (arIsLead()?('<button class="btn btn-primary" '+(AR.busy==='all'?'disabled':'')+' onclick="arGenAll()">'+
       (AR.busy==='all'?('만드는 중 '+osEsc(AR.qmsg)):'전원 보고 한 번에 받기')+'</button>'):'')+
@@ -6200,6 +6220,10 @@ function arCss(){
    '.ar-bt.warn{border-color:#FECACA;background:#FEF2F2}.ar-bt.warn .v{color:#B91C1C}'+
    '.ar-bl{display:flex;gap:9px;align-items:flex-start;padding:7px 0;font-size:13px;line-height:1.6}'+
    '.ar-bl b{font-weight:800;color:#1E293B}'+
+   '.ar-tg{font-size:11.5px;font-weight:900;color:#1A56DB;letter-spacing:.04em;margin:14px 0 6px;'+
+     'padding-bottom:6px;border-bottom:1.5px solid #E2E8F0;display:flex;justify-content:space-between}'+
+   '.ar-tg:first-child{margin-top:2px}'+
+   '.ar-tg span{color:#94A3B8;font-weight:800}'+
    '.ar-p{font-size:14px;line-height:1.9;color:#1E293B;margin:4px 0}'+
    '.ar-li{font-size:14px;line-height:1.9;color:#1E293B;margin:5px 0 5px 15px;position:relative}'+
    '.ar-li:before{content:"·";position:absolute;left:-13px;font-weight:900;color:#1A56DB}'+
@@ -8766,9 +8790,10 @@ function gbScore(r){
 
 /* ── 고르기 ── */
 function gbScope(){
-  var out=[],i;
+  var out=[],i,t=GB.team;
   for(i=0;i<GB.rows.length;i++){
-    if(GB.team&&GB.rows[i].team!==GB.team)continue;
+    if(t==='__none'){if(GB.rows[i].team)continue;}
+    else if(t&&GB.rows[i].team!==t)continue;
     out.push(GB.rows[i]);
   }
   return out;
@@ -8801,6 +8826,51 @@ function gbLastNote(id){var n=gbNoteOf(id);return n.length?gbD(n[0].created_at):
 function gbTeamName(id){
   var i;for(i=0;i<GB.teams.length;i++)if(GB.teams[i].id===id)return GB.teams[i].name||'';
   return '';
+}
+/* ── 팀 고르개 ──
+   고른 팀은 GB.team 한 곳에만 남는다. 성장판에서 고르면 체크판·AI 관리판도 같은 팀을 본다.
+   화면마다 따로 기억하면 "왜 여기랑 저기랑 다르지" 가 된다. */
+function gbTeamCounts(){
+  var c={},i,t;
+  for(i=0;i<GB.rows.length;i++){t=GB.rows[i].team||'';c[t]=(c[t]||0)+1;}
+  return c;
+}
+function gbTeamBarHtml(fn){
+  var c=gbTeamCounts(),i,h='',none=c['']||0;
+  if(!GB.teams.length&&!none)return '';
+  h='<div class="gb-tsel">'+
+    '<button type="button" class="gb-tb'+(GB.team?'':' on')+'" onclick="'+fn+'(\'\')">전체 <b>'+
+    GB.rows.length+'</b></button>';
+  for(i=0;i<GB.teams.length;i++)
+    h+='<button type="button" class="gb-tb'+(GB.team===GB.teams[i].id?' on':'')+'" '+
+      'onclick="'+fn+'(\''+GB.teams[i].id+'\')">'+osEsc(GB.teams[i].name||'팀')+' <b>'+
+      (c[GB.teams[i].id]||0)+'</b></button>';
+  if(none)
+    h+='<button type="button" class="gb-tb'+(GB.team==='__none'?' on':'')+'" '+
+      'onclick="'+fn+'(\'__none\')">소속 없음 <b>'+none+'</b></button>';
+  h+='</div>';
+  if(!GB.teams.length)
+    h+='<div class="notice" style="margin:0 0 11px">아직 팀이 하나도 없습니다. '+
+       '설정 → <b>팀원 권한 관리</b>에서 팀을 만들고 소속을 지정하면 팀별로 나눠 볼 수 있습니다.</div>';
+  else if(none)
+    h+='<div class="notice" style="margin:0 0 11px">소속이 없는 사람이 <b>'+none+'명</b> 있습니다. '+
+       '설정 → <b>팀원 권한 관리</b>에서 팀을 지정해 주세요.</div>';
+  return h;
+}
+/* 전체를 볼 때는 팀별로 묶는다 — 한 줄로 쭉 세우면 누가 누구 팀인지 안 보인다 */
+function gbByTeam(list){
+  var g=[],map={},i,r,k;
+  for(i=0;i<GB.teams.length;i++)map[GB.teams[i].id]={id:GB.teams[i].id,name:GB.teams[i].name||'팀',rows:[]};
+  map['']={id:'',name:'소속 없음',rows:[]};
+  for(i=0;i<list.length;i++){
+    r=list[i];k=r.team||'';
+    if(!map[k])map[k]={id:k,name:gbTeamName(k)||'팀',rows:[]};
+    map[k].rows.push(r);
+  }
+  for(i=0;i<GB.teams.length;i++)if(map[GB.teams[i].id].rows.length)g.push(map[GB.teams[i].id]);
+  for(k in map)if(k&&!gbTeamName(k)&&map[k].rows.length)g.push(map[k]);
+  if(map[''].rows.length)g.push(map['']);
+  return g;
 }
 
 /* ── 놓치고 있는 사람 ── */
@@ -16256,6 +16326,16 @@ function ckCss(){
     '@media(max-width:640px){.ck-tr .wy{display:none}}'+
     '.ck-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}'+'.ck-h1{font-size:13px;font-weight:900;color:#1A56DB;letter-spacing:.02em;margin:20px 0 10px;padding-bottom:7px;border-bottom:2px solid #E2E8F0}'+'.ck-h1:first-child{margin-top:2px}'+
     '.ck-cols{display:grid;grid-template-columns:1fr 1fr;gap:0 20px}'+
+    '.gb-tsel{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px}'+
+    '.gb-tsel .gb-tb{border:1.5px solid var(--line,#E2E8F0);background:#fff;border-radius:99px;'+
+      'padding:6px 13px;font-size:12px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+    '.gb-tsel .gb-tb b{color:#94A3B8;font-weight:900;margin-left:3px}'+
+    '.gb-tsel .gb-tb.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+    '.gb-tsel .gb-tb.on b{color:#93C5FD}'+
+    '.ck-tg{font-size:11.5px;font-weight:900;color:#1A56DB;letter-spacing:.04em;margin:13px 0 5px;'+
+      'padding-bottom:5px;border-bottom:1.5px solid var(--line,#E2E8F0);display:flex;justify-content:space-between}'+
+    '.ck-tg:first-child{margin-top:0}'+
+    '.ck-tg span{color:#94A3B8;font-weight:800}'+
     '.ck-cols .ck-it:nth-child(odd){border-right:0}'+
     '@media(max-width:1080px){.ck-2{grid-template-columns:1fr}}'+
     '@media(max-width:820px){.ck-cols{grid-template-columns:1fr}}'+
@@ -17063,31 +17143,44 @@ function ckTeamHtml(){
   if(!list.length)
     return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>우리 팀 오늘</div></div>'+
       '<div class="card-body"><div class="ck-none">팀원이 없습니다. 설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
-  var rows='';
-  var srt=list.slice().sort(function(a,b){return (a.total||0)-(b.total||0);});
-  for(i=0;i<srt.length;i++){
-    r=srt[i];
-    if(r.id===me)continue;
-    t='';
-    for(j=0;j<GB_AX.length;j++)
-      t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
-        'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
-    rows+='<div class="ck-tr'+(why[r.id]?' bad':'')+'">'+
-      '<span class="nm">'+osEsc(r.name||'(이름 없음)')+'</span>'+
-      '<span class="dots">'+t+'</span>'+
-      '<span class="sc">'+(r.total||0)+'점</span>'+
-      '<span class="wy">'+osEsc(why[r.id]||'')+'</span>'+
-      '<button type="button" class="go" onclick="go(\'growboard\')">보기</button></div>';
+  var rows='',g=gbByTeam(list),gi,gr,k;
+  for(gi=0;gi<g.length;gi++){
+    gr=g[gi].rows.slice().sort(function(a,b){return (a.total||0)-(b.total||0);});
+    k='';
+    for(i=0;i<gr.length;i++){
+      r=gr[i];
+      if(r.id===me)continue;
+      t='';
+      for(j=0;j<GB_AX.length;j++)
+        t+='<span class="d '+((r.sc[GB_AX[j].k]||0)>=100?'ok':((r.sc[GB_AX[j].k]||0)>=60?'half':'no'))+'" '+
+          'title="'+osEsc(GB_AX[j].n)+' '+(r.raw[GB_AX[j].k]||0)+'/'+GB_AX[j].t+GB_AX[j].u+'"></span>';
+      k+='<div class="ck-tr'+(why[r.id]?' bad':'')+'">'+
+        '<span class="nm">'+osEsc(r.name||'(이름 없음)')+'</span>'+
+        '<span class="dots">'+t+'</span>'+
+        '<span class="sc">'+(r.total||0)+'점</span>'+
+        '<span class="wy">'+osEsc(why[r.id]||'')+'</span>'+
+        '<button type="button" class="go" onclick="go(\'growboard\')">보기</button></div>';
+    }
+    if(!k)continue;
+    rows+='<div class="ck-tg">'+osEsc(g[gi].name)+'<span>'+g[gi].rows.length+'명</span></div>'+k;
   }
+  if(!rows)rows='<div class="ck-none">이 팀에는 나 말고 다른 사람이 없습니다.</div>';
   return '<div class="card"><div class="card-hd">'+
     '<div class="card-title"><span class="ci">👥</span>우리 팀 오늘'+
       '<span class="ck-n">'+(miss.length?('놓침 '+miss.length):'전원 정상')+'</span></div>'+
-    '<div class="card-desc">점수가 낮은 사람이 위에 옵니다. 점 여섯 개는 출근·실행·활동·고객·자료·공부 순서입니다</div></div>'+
-    '<div class="card-body"><div class="ck-tl">'+rows+'</div>'+
+    '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
+    '점 여섯 개는 출근·실행·활동·고객·자료·공부 순서입니다</div></div>'+
+    '<div class="card-body">'+gbTeamBarHtml('ckTeam')+'<div class="ck-tl">'+rows+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
     '<button class="btn btn-primary" onclick="go(\'growboard\')">성장판에서 자세히</button>'+
     '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">팀 코칭</button>'+
     '</div></div></div>';
+}
+function ckTeam(id){
+  if(typeof GB==='undefined')return;
+  GB.team=id;GB.open='';
+  if(typeof ckPaint==='function')ckPaint();
+  if(typeof arPaint==='function')arPaint();
 }
 function ckWeekHtml(){
   return ckCardHtml('📆','이번 주','월요일에 새로 시작합니다','week',CK_ITEMS.week,'','week');

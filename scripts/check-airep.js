@@ -28,9 +28,9 @@ window.__profiles=[
  {id:'p3',name:'최민아',role:'member',active:true,workspace:null},
  {id:'p4',name:'이지훈',role:'member',active:true,workspace:null}
 ];
-window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'}];
+window.__teams=[{id:'t1',name:'온탑1팀',leader_id:'p1'},{id:'t2',name:'온탑2팀',leader_id:'p3'}];
 window.__team_members=[{team_id:'t1',member_id:'p1'},{team_id:'t1',member_id:'p2'},
- {team_id:'t1',member_id:'p3'},{team_id:'t1',member_id:'p4'}];
+ {team_id:'t2',member_id:'p3'}];
 window.__attendance=(function(){var a=[],i;
  for(i=0;i<18;i++)a.push({member_id:'p2',att_date:window.__T(i)});
  for(i=0;i<9;i++)a.push({member_id:'p3',att_date:window.__T(i)});
@@ -205,11 +205,62 @@ const AI_OK = `## 활동 보고
   txt = await pane();
   ok(/팀 전체 보고/.test(txt), '팀원 관리 칸으로 넘어간다');
 
+  /* 지점장은 자기 팀이 먼저 열린다 — 기록을 다 읽은 뒤에 본다 */
+  await page.waitForFunction(() => typeof GB !== 'undefined' && GB.loaded && GB.rows.length, { timeout: 9000 });
+  await page.evaluate(() => arPaint());
+  await page.waitForTimeout(300);
+  const mine = await page.evaluate(() => ({ team: GB.team,
+    rows: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()) }));
+  ok(mine.team === 't1', '지점장은 자기 팀이 먼저 열린다 — ' + mine.team);
+  ok(mine.rows.length === 2, '자기 팀 두 명만 보인다 (' + mine.rows.length + ')');
+
+
+  /* ── 팀별로 나뉘는가 ── */
+  const chipsT = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .gb-tsel .gb-tb'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(chipsT.length === 4, '전체 · 온탑1팀 · 온탑2팀 · 소속 없음 네 개 (' + chipsT.length + ')');
+  ok(/^전체/.test(chipsT[0]) && /온탑1팀 2/.test(chipsT[1]) && /온탑2팀 1/.test(chipsT[2])
+    && /소속 없음 1/.test(chipsT[3]), '팀마다 몇 명인지 붙는다 — ' + chipsT.join(' / '));
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
+  const grp = await page.evaluate(() => Array.prototype.map.call(
+    document.querySelectorAll('#arPane .ar-tg'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  ok(grp.length === 3, '팀별로 묶여서 나온다 (' + grp.length + '묶음)');
+  ok(/온탑1팀/.test(grp[0]) && /소속 없음/.test(grp[grp.length - 1]),
+    '소속 없는 사람은 맨 아래로 — ' + grp.join(' / '));
+  ok(/소속이 없는 사람이/.test(txt), '소속 없는 사람이 있으면 지정하라고 알려 준다');
+
+  /* 팀 하나만 고르면 그 팀만 */
+  await page.evaluate(() => arTeam('t1'));
+  await page.waitForTimeout(400);
+  const only = await page.evaluate(() => ({
+    rows: document.querySelectorAll('#arPane .ar-row').length,
+    grp: document.querySelectorAll('#arPane .ar-tg').length,
+    txt: (document.getElementById('arPane') || {}).textContent || ''
+  }));
+  ok(only.rows === 2, '온탑1팀만 두 명 (' + only.rows + ')');
+  ok(only.grp === 1, '묶음도 하나만 (' + only.grp + ')');
+  ok(/온탑1팀/.test(only.txt) && !/최민아/.test(only.txt), '다른 팀 사람은 안 보인다');
+
+  /* 소속 없는 사람만 따로 */
+  await page.evaluate(() => arTeam('__none'));
+  await page.waitForTimeout(400);
+  const none = await page.evaluate(() => document.querySelectorAll('#arPane .ar-row').length);
+  ok(none === 1, '소속 없는 사람만 따로 볼 수 있다 (' + none + ')');
+
+  /* 고른 팀은 화면끼리 같이 간다 */
+  const shared = await page.evaluate(() => GB.team);
+  ok(shared === '__none', '고른 팀은 GB.team 한 곳에만 남는다 — ' + shared);
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
+
+  await page.evaluate(() => arTeam(''));
+  await page.waitForTimeout(400);
   const rows = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-row .ar-nmx'), e => e.textContent.trim()));
-  ok(rows.length === 4, '팀원 네 명이 모두 줄로 선다 (' + rows.length + ')');
-  ok(/이지훈/.test(rows[0]), '점수가 가장 낮은 사람이 맨 위에 온다 — ' + rows[0]);
-  ok(/박서준/.test(rows[3]), '가장 잘하는 사람이 맨 아래에 온다 — ' + rows[3]);
+  ok(rows.length === 4, '전체를 고르면 네 명이 다 나온다 (' + rows.length + ')');
+  ok(/윤시현/.test(rows[0]) && /박서준/.test(rows[1]),
+    '팀 안에서 점수가 낮은 사람이 위에 온다 — ' + rows.slice(0, 2).join(' → '));
 
   /* ── 맨 위 다섯 숫자 · 거르기 ── */
   const tiles = await page.evaluate(() => Array.prototype.map.call(
