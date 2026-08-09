@@ -128,6 +128,24 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
   모든 팀원 화면에 즉시 보입니다. 새 표를 만들지 않았습니다.
 - 표가 몇 달 지났는지 화면 맨 위에 적습니다. 3개월이 넘으면 붉게 경고합니다.
 
+## 윤시스쿨은 왜 고쳐도 안 바뀌나
+
+`yoonsi` 탭은 **이 앱의 화면이 아닙니다.** `#yoonsiFrame` 이라는 iframe 으로
+바깥 페이지를 띄우는 것뿐입니다(`mountYoonsi()`). 그래서 `app/index.html` 을
+아무리 고쳐도 그 화면은 그대로입니다. 바꾸려면 그 바깥 페이지를 고쳐야 합니다.
+
+그래서 「매일 모아 주는 것」은 앱 안에 따로 만들었습니다 — `daily` 탭, 윤시스쿨 묶음 아래.
+
+| | |
+|---|---|
+| 상태 | `var DG=` · `renderDaily()` · `osDailyAfterRender()` |
+| 저장 | `saved_reports(kind='daily_digest')` — 하루 한 줄, `content.date` 로 찾습니다 |
+| 숫자 | `dgNums()` — **고른 팀이 아니라 `GB.rows` 전원**을 봅니다 |
+| 소식 | `dgNews()` — 대표가 올린 것이 먼저, 없으면 `BIZ_NEWS` 에서 날짜로 하나 |
+| AI | `dgGen()` → 오늘 볼 것 / 팀에 전할 말 / 이번 주 방향 세 칸 |
+| 자동 | `dgAuto()` — 오전 8시 이후 하루 한 번(`apex_dg_<날짜>`), `arAutoOff()` 를 같이 따릅니다 |
+| 이어짐 | 「내가 정한 것」(`memo`)과 지난번 방향이 **다음 날 프롬프트에 들어갑니다** |
+
 ## 남은 일
 
 ### 사장님이 직접 하셔야 하는 것 (앱에서 홈 → 🚦 출발 점검)

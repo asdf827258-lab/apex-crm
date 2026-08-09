@@ -46,7 +46,7 @@ const TABS = [
   'med_disclosure', 'branch_coach', 'hq', 'audit', 'blog', 'threads', 'insta', 'video',
   'simui', 'calendar', 'ref_jeonsan', 'ref_kcd', 'ref_surgery', 'pricing',
   'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'growboard', 'voiceasst',
-  'ready', 'airep', 'teamhub'
+  'ready', 'airep', 'teamhub', 'daily'
 ];
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
