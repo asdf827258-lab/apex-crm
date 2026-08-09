@@ -4632,10 +4632,10 @@ var RD_MAN=[
   w:'돈을 받고 파는 순간 전자상거래법상 신고 대상입니다.',
   h:'관할 시·군·구청 또는 정부24에서 신고하고, 받은 번호를 설정 → 사업자 정보의 「통신판매업 신고번호」 에 넣으세요.',
   u:'https://www.gov.kr',risk:1},
- {k:'nf_env',t:'Netlify 환경변수 확인',
-  w:'AI 키가 브라우저가 아니라 서버에 있어야 팀원들도 씁니다.',
-  h:'Netlify → Site configuration → Environment variables 에 ANTHROPIC_API_KEY 또는 GEMINI_API_KEY 가 있는지 확인.',
-  u:'https://app.netlify.com'},
+ {k:'nf_env',t:'Netlify 환경변수 — 서버가 매일 새벽 일하게 하는 열쇠',
+  w:'이게 없으면 매일 새벽 5시 서버 보고가 아무것도 안 만들어집니다. 지금 그 상태입니다.',
+  h:'ANTHROPIC_API_KEY 와 SUPABASE_SERVICE_ROLE_KEY 두 개를 넣으세요. 넣은 뒤 윤시스쿨 → 매일 취합에서 「🌙 서버 야간 근무 점검」 을 누르면 바로 확인됩니다. 열쇠는 대화창에 붙이지 말고 그 화면에서 직접 넣으세요.',
+  u:'__NF_ENV__'},
  {k:'sb_backup',t:'Supabase 자동 백업 확인',
   w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽 자동 백업입니다.',
   h:'Supabase → Project Settings → Database → Backups 에서 켜져 있는지 확인. 무료 요금제는 보관 기간이 짧습니다.',
@@ -4815,7 +4815,9 @@ function rdManHtml(){
         (m.risk&&!on?'<span class="rd-x">먼저</span>':'')+
         (on?('<span class="rd-d">'+osEsc(D[m.k])+' 완료</span>'):'')+'</div>'+
       (on?'':('<div class="rd-mw">'+osEsc(m.w)+'</div><div class="rd-mh">'+osEsc(m.h)+'</div>'+
-        (m.u?('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>'):'')+
+        (m.u?(m.u==='__NF_ENV__'
+              ?('<a class="rd-go" href="'+osEsc(nfEnvUrl())+'" target="_blank" rel="noopener">환경변수 화면 열기 ↗</a>')
+              :('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>')):'')+
         (m.go?('<button type="button" class="rd-go" onclick="go(\''+m.go+'\')">바로 가기 →</button>'):'')))+
       '</div></div>';
   }
@@ -7101,6 +7103,11 @@ function nwRun(){
       dgPaint();
     });
 }
+function nfCopyNames(){
+  var t='SUPABASE_SERVICE_ROLE_KEY\nANTHROPIC_API_KEY';
+  try{if(typeof copyText==='function'){copyText(t);toast('환경변수 이름 두 개를 복사했습니다');return;}}catch(e){}
+  try{toast(t);}catch(e){}
+}
 function nwBoxHtml(){
   if(NW.ok===null)return '';
   if(NW.ok)
@@ -7109,10 +7116,16 @@ function nwBoxHtml(){
   var key=/환경변수|SERVICE_ROLE|KEY/i.test(NW.msg);
   return '<div class="notice" style="margin:0 0 12px;background:#FEF2F2;border-color:#FECACA;color:#991B1B">'+
     '<b>매일 새벽 보고가 안 만들어지고 있습니다.</b><br>'+osEsc(NW.msg)+
-    (key?('<br><br><b>Netlify → Site settings → Environment variables</b> 에 아래 둘을 넣으시면 그날부터 새벽 5시에 저절로 돕니다.'+
+    (key?('<br><br>아래 둘을 넣으시면 그날부터 새벽 5시에 저절로 돕니다.'+
       '<br>· <code>SUPABASE_SERVICE_ROLE_KEY</code><br>· <code>ANTHROPIC_API_KEY</code>'+
-      '<br><br>이 열쇠들은 <b>채팅창에 붙이지 마시고</b> Netlify 화면에서 직접 넣으셔야 합니다.'):'')+
-    ' <span style="color:#B91C1C">('+osEsc(NW.at)+' 확인)</span></div>';
+      '<div class="btn-row" style="margin-top:10px">'+
+        '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+        '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
+        '<button type="button" class="btn btn-ghost" onclick="nwRun()">넣었습니다 · 다시 점검</button>'+
+      '</div>'+
+      '<div style="margin-top:8px;font-size:11.5px">이 열쇠들은 <b>채팅창에 붙이지 마시고</b> 그 화면에서 직접 넣으셔야 합니다. '+
+      '<code>service_role</code> 은 DB 전체를 마음대로 할 수 있는 최고 권한입니다.</div>'):'')+
+    '<div style="margin-top:6px;font-size:11px;color:#B91C1C">'+osEsc(NW.at)+' 확인</div></div>';
 }
 function dgInnerHtml(){
   if(DG.busy==='load'&&!DG.loaded)return '<div class="ar-none">모아 둔 것을 불러오는 중입니다…</div>';
@@ -7622,8 +7635,32 @@ function openFinanceNewTab(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-09 16:40';
-var APP_BUILD_NOTE='윤시스쿨 실제 연동 · 뉴스 2026-08 · 권한관리 한 줄';
+var APP_BUILD='2026-08-09 17:20';
+var APP_BUILD_NOTE='환경변수 바로가기 · 판 도장 · CRM AI 피드백';
+
+/* ── Netlify 설정 화면 바로가기 ────────────────────────────────
+   「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
+   사이트 이름은 배포 주소에서 알아낸다 — apex-os-yunpro.netlify.app → apex-os-yunpro.
+   못 알아내면 Netlify 첫 화면으로 보낸다(거기서 사이트를 고르면 된다). */
+var NF_SITE_FALLBACK='apex-os-yunpro';
+function nfSite(){
+  try{
+    var h=location.hostname||'';
+    var m=h.match(/^([a-z0-9-]+)\.netlify\.app$/i);
+    if(m&&m[1])return m[1].replace(/^deploy-preview-\d+--/,'');
+  }catch(e){}
+  return NF_SITE_FALLBACK;
+}
+function nfEnvUrl(){return 'https://app.netlify.com/projects/'+nfSite()+'/configuration/env';}
+function nfOpenEnv(){
+  var u=nfEnvUrl();
+  try{
+    var w=window.open(u,'_blank','noopener');
+    if(w){try{toast('Netlify 환경변수 화면을 열었습니다');}catch(e){}return;}
+  }catch(e){}
+  try{if(typeof copyText==='function'){copyText(u);toast('팝업이 막혀 주소를 복사했습니다 — 붙여넣어 여세요');return;}}catch(e){}
+  try{location.href=u;}catch(e){}
+}
 function osVerText(){return '판 '+APP_BUILD;}
 function osVerPaint(){
   var el=document.getElementById('verPillTxt');
