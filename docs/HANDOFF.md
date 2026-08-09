@@ -47,19 +47,42 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 | #146 | 출발 점검 — 무엇이 남았는지 앱이 직접 본다 |
 | #147 | 체크판 좌우 2단 · 역할 지정 · 모델 선택 · 글로 시키기 |
 | #148 | 두뇌 키우기 — 모범답안 · 엔진별 지시문 · 회사지식 · 두 번 태우기 |
-| 이번 | AI 보고 한 칸 · 화면별 사용법 · 음성 비서 말투 |
+| #149 | AI 보고 한 칸 · 화면별 사용법 · 음성 비서 말투 |
+| 이번 | AI 관리판 아홉 칸 · 아침 비서 · 부재거절/기고객 재관리 |
 
 ## 화면별 담당 코드
 
 | 화면 | 여는 말 | 붙은 검사 |
 |---|---|---|
-| AI 보고 `airep` | `var AR=` … `renderAiRep()` | `scripts/check-airep.js` |
+| AI 관리판 `airep` | `var AR=` … `renderAiRep()` | `scripts/check-airep.js` |
 | 실행 체크판 `ckboard` | `function ckTabs()` … `renderCkBoard()` | `check-ckboard.js` |
 | 성장판 `growboard` | `var GB=` … `renderGrowBoard()` | `check-growboard.js` |
 | 고객 365일 `clients` | `var CM=` … `renderClientsPage()` | `check-clients.js` |
 | 음성 비서 `voiceasst` | `var VA=` … `renderVoiceAsst()` | `check-voice.js` · `check-jarvis.js` |
 | 출발 점검 `ready` | `var RD=` … `renderReady()` | `check-ready.js` |
 | 화면별 사용법 | `var OS_HELP=` … `osHelpOpen(키)` | `check-airep.js` 안에서 함께 |
+
+## AI 관리판이 어떻게 생겼나
+
+왼쪽 카테고리 아홉 개 → 오른쪽에 그 칸만. `AR_CAT` 이 목록이고 `arBodyHtml(cat)` 이 분기입니다.
+
+| 칸 | 그리는 함수 | 무엇을 보나 |
+|---|---|---|
+| 피드백 | `arMeHtml` | AI 보고 다섯 칸 |
+| 스케줄 관리 | `arSchedHtml` | 잡힌 약속 · 고객 할 일 날짜순 · 이번 주 체크판 |
+| 본인 역량 체크 | `arSkillHtml` | `GB_CUR` 열두 개, 누르면 `gbStamp` |
+| 해야 할 일 | `arTodoHtml` | `arTodoList()` — 밀린 것부터 |
+| 본인 점수판 | `arScoreHtml` | 여섯 축 + 팀 평균 + `gbGapList` 처방 |
+| 부재·거절 재관리 | `arColdHtml` | `arCold(who,일수)` — 1주·2주·한 달 |
+| 기고객 재관리 | `arOldHtml` | `arOld(who)` — 90일+ 또는 다음 할 일 없음 |
+| 리더 할 일 | `arLeadHtml` | `CK_LDR` — 누구나 열람, `arIsLead()` 면 체크 |
+| 팀원 관리 | `arTeamHtml` | 팀원 전원 + 각자 보고 |
+
+- 배정 DB 한 건 한 건은 `AR.db` (`arDbCalc`), 고객 한 사람 한 사람은 `AR.cliRows` (`arCliRows`).
+- 통화는 30일이 아니라 **최근 4000건**을 읽습니다. 마지막 통화가 40일 전이어도 알아야 다시 겁니다.
+- 아침 비서는 `arBriefMaybe()` — `osOnLogin` 에서 하루 한 번. 끄기는 `apex_ar_brief_off`.
+- 주기 알림은 `arNudgeStart()` — 95분마다, 하루 세 번까지.
+- 「무슨 말로 다시 걸까」는 `arTalk(kind)` — **건수만** AI 로 넘깁니다. 고객 이름은 넘기지 않습니다.
 
 ## 남은 일
 
@@ -78,6 +101,8 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 ### 코드로 남은 일
 
 - 서버(RLS)에서도 지점장이 자기 팀만 보도록 범위 제한 — 지금은 화면에서만 걸러집니다
+- 리더 할 일의 체크 상태는 각자의 `daily_checks` 에 남습니다. 팀원이 지점장의 체크 상태까지
+  보려면 `is_team_viewer()` 가 열려 있어야 합니다 — 안 열려 있으면 빈 목록으로 보입니다
 - PPT 글꼴 임베딩 · 그래프를 편집 가능한 OOXML 차트로
 - 오래된 PR #6 · #57 · #60 은 지워진 파일을 건드립니다 — 닫으면 됩니다
 
