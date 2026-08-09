@@ -311,6 +311,48 @@ const AI_OK = `## 활동 보고
   ok(/합격 3\/12/.test(facts), '공부 합격 3개를 센다');
   ok(/아직 안 한 공부/.test(facts), '안 한 공부를 이름으로 알려 준다');
   ok(/팀 평균/.test(facts), '팀 평균과 나란히 놓는다');
+
+  /* ── DB 통합 CRM 을 깊이 읽는가 ── */
+  ok(/전화 습관 — DB 통합 CRM 최근 30일/.test(facts), '전화 습관을 따로 정리해 넘긴다');
+  ok(/전화한 날 \d+일/.test(facts), '며칠 걸었는지 센다');
+  ok(/부재 \d+ · 거절 \d+ · 상담 \d+/.test(facts), '결과가 어떻게 갈렸는지 넘긴다');
+  ok(/상담 전환 [\d.]+%/.test(facts), '상담 전환율을 계산한다');
+  ok(/한 건당 평균 [\d.]+번/.test(facts), '한 사람에게 몇 번 붙는지 센다');
+  ok(/다시 건 DB 비율 \d+%/.test(facts), '부재 뒤에 다시 거는지 본다');
+  ok(/가장 많이 거는 시간대/.test(facts), '언제 거는지 짚어 준다');
+  ok(/가장 많이 거는 요일/.test(facts), '무슨 요일에 거는지 짚어 준다');
+  ok(/최근 7일 \d+통 · 그 앞 7일 \d+통/.test(facts), '늘었는지 줄었는지 비교한다');
+  ok(/손 놓은 DB: 1주 넘음/.test(facts), '손 놓은 DB 를 보고에도 넣는다');
+  ok(!/고객1|고객90|customer_name/.test(facts), '고객 이름은 여전히 안 넘어간다');
+  const deep = await page.evaluate(() => arCrmDeep('p2'));
+  ok(deep && deep.n > 60 && deep.dbN > 0, '통화·DB 수를 실제로 센다 (' + (deep ? deep.n + '통/' + deep.dbN + '건' : '없음') + ')');
+  ok(deep && deep.conv > 0 && deep.conv < 100, '전환율이 0~100 사이 (' + (deep ? deep.conv : '') + '%)');
+  const noCall = await page.evaluate(() => arCrmDeep('p4'));
+  ok(noCall === null, '통화가 없는 사람은 없다고 한다');
+
+  const sysT = await page.evaluate(() => arSys());
+  ok(/전화 습관을 반드시 한 줄 넣습니다/.test(sysT), '보고에 습관을 꼭 넣으라고 시킨다');
+
+  /* ── 오전 8시 자동 ── */
+  const auto = await page.evaluate(() => ({
+    h: AR_H, due: typeof arDue === 'function', arm: typeof arAutoArm === 'function',
+    lead: arAutoNeed().length, off: arAutoOff()
+  }));
+  ok(auto.h === 8, '오전 8시 기준 (' + auto.h + ')');
+  ok(auto.due && auto.arm, '8시가 되면 알아서 도는 장치가 있다');
+  ok(auto.lead >= 1, '지점장은 팀원 것을 만들 목록을 잡는다 (' + auto.lead + '명)');
+  const asMember = await page.evaluate(() => {
+    const keep = OS.profile.role, mine = AR.rep[arMyId()];
+    OS.profile.role = 'member'; delete AR.rep[arMyId()];
+    const n = arAutoNeed().length;
+    OS.profile.role = keep; if (mine) AR.rep[arMyId()] = mine;
+    return n;
+  });
+  ok(asMember === 1, '설계사는 자기 것 하나만 만든다 (' + asMember + ')');
+  await page.evaluate(() => { try { localStorage.setItem('apex_ar_auto_off', '1'); } catch (e) { } });
+  const offNow = await page.evaluate(() => arAutoOff());
+  ok(offNow, '끌 수 있다');
+  await page.evaluate(() => { try { localStorage.removeItem('apex_ar_auto_off'); } catch (e) { } });
   ok(/없는 숫자는 만들지 않습니다/.test(facts), '지어내지 말라고 못을 박는다');
 
   const sys = await page.evaluate(() => arSys());

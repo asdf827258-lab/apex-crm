@@ -84,6 +84,13 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 - 배정 DB 한 건 한 건은 `AR.db` (`arDbCalc`), 고객 한 사람 한 사람은 `AR.cliRows` (`arCliRows`).
 - 통화는 30일이 아니라 **최근 4000건**을 읽습니다. 마지막 통화가 40일 전이어도 알아야 다시 겁니다.
 - 아침 비서는 `arBriefMaybe()` — `osOnLogin` 에서 하루 한 번. 끄기는 `apex_ar_brief_off`.
+- **오전 8시 자동 보고**는 `arAutoArm()` → 10분마다 `arAutoRun()`. `AR_H=8` 이 기준 시각.
+  리더면 팀원 전원(`arNeedToday`), 팀원이면 자기 것 하나. 하루 한 번(`apex_ar_team_<날짜>`).
+  끄기는 `apex_ar_auto_off`. **브라우저 안에서만 도는 앱이라 아무도 안 켜면 서버가 대신 눌러
+  주지 못합니다** — 다만 지점장이 열면 팀원 전원 것을 대신 만들어 둡니다.
+- 전화 습관은 `arCrmDeep(who)` / `arCrmDeepText(who)`. `AR.calls` 에 담아 둔 통화 기록에서
+  결과 분포 · 시간대 · 요일 · 재시도 간격 · 주간 추이를 계산합니다.
+  **고객 이름·전화·메모는 담지 않습니다** — 숫자와 패턴만 AI 로 넘어갑니다.
 - 주기 알림은 `arNudgeStart()` — 95분마다, 하루 세 번까지.
 - 「무슨 말로 다시 걸까」는 `arTalk(kind)` — **건수만** AI 로 넘깁니다. 고객 이름은 넘기지 않습니다.
 

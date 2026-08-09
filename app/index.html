@@ -4940,7 +4940,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',db:null,cliRows:null,talk:null,
+var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -5035,6 +5035,13 @@ function arLoad(force){
     for(ci=0;ci<calls.length;ci++)if((''+(calls[ci].call_at||''))>=d30s)c30.push(calls[ci]);
     AR.crm=arCrmCalc(dbs,c30);
     AR.db=arDbCalc(dbs,calls);
+    /* 전화 습관을 보려면 건수만으로는 모자라다. 언제·어떻게 걸었는지가 필요하다.
+       고객 이름과 메모는 담지 않는다 — AI 로 넘어갈 수 있는 것은 숫자뿐이다 */
+    AR.calls=[];
+    for(ci=0;ci<calls.length;ci++)
+      AR.calls.push({w:calls[ci].created_by,d:(''+(calls[ci].call_at||'')).slice(0,10),
+                     h:parseInt((''+(calls[ci].call_at||'')).slice(11,13),10)||0,
+                     r:calls[ci].result||'',b:calls[ci].db_id||''});
     AR.cli=arCliCalc(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
     AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
     var rows=r[4].error?[]:(r[4].data||[]),i,c;
@@ -5108,6 +5115,70 @@ function arCliRows(clients,metas){
   return out;
 }
 
+/* ── DB 통합 CRM 을 깊이 읽는다 ──
+   「통화 62통」만으로는 코칭이 안 된다. 언제 거는지, 부재 뒤에 다시 거는지,
+   한 사람에게 몇 번이나 붙는지가 보여야 무엇을 고칠지 말할 수 있다.
+   고객 이름·전화·메모는 여기에 담지 않는다. */
+var AR_WD=['일','월','화','수','목','금','토'];
+function arCrmDeep(who){
+  var l=(AR.calls||[]),i,c,o={n:0,no:0,rej:0,ok:0,byH:{},byW:{},byDb:{},days:{},
+        retry:0,retryOf:0,gap:[],last7:0,prev7:0};
+  var t7=arToday(),i7=0;
+  for(i=0;i<l.length;i++){
+    c=l[i];if(c.w!==who)continue;
+    o.n++;
+    if(c.r==='부재')o.no++;else if(c.r==='거절')o.rej++;else if(c.r==='상담')o.ok++;
+    var band=(c.h<10)?'9시 전':(c.h<12)?'오전 10~12시':(c.h<14)?'점심 12~2시':(c.h<17)?'오후 2~5시':(c.h<19)?'저녁 5~7시':'7시 이후';
+    o.byH[band]=(o.byH[band]||0)+1;
+    var wd=AR_WD[(new Date(c.d+'T00:00:00Z')).getUTCDay()]||'';
+    if(wd)o.byW[wd]=(o.byW[wd]||0)+1;
+    if(c.b)(o.byDb[c.b]=o.byDb[c.b]||[]).push(c.d);
+    o.days[c.d]=1;
+    var ago=arDaysAgo(c.d);
+    if(ago<7)o.last7++;else if(ago<14)o.prev7++;
+  }
+  if(!o.n)return null;
+  /* 부재로 끝난 뒤 다시 걸었는가 */
+  var k,arr,j;
+  for(k in o.byDb){
+    arr=o.byDb[k].slice().sort();
+    if(arr.length>1){
+      o.retryOf++;o.retry++;
+      for(j=1;j<arr.length;j++){
+        var g=Math.round((new Date(arr[j]+'T00:00:00Z')-new Date(arr[j-1]+'T00:00:00Z'))/86400000);
+        if(g>0&&g<120)o.gap.push(g);
+      }
+    }else o.retryOf++;
+  }
+  o.dbN=0;for(k in o.byDb)o.dbN++;
+  o.dayN=0;for(k in o.days)o.dayN++;
+  o.per=o.dbN?Math.round(o.n/o.dbN*10)/10:0;
+  o.perDay=o.dayN?Math.round(o.n/o.dayN*10)/10:0;
+  o.again=o.dbN?Math.round(o.retry/o.dbN*100):0;
+  o.gapAvg=o.gap.length?Math.round(o.gap.reduce(function(a,b){return a+b;},0)/o.gap.length):0;
+  o.conv=o.n?Math.round(o.ok/o.n*1000)/10:0;
+  var top=function(m){var b='',bv=-1,kk;for(kk in m)if(m[kk]>bv){bv=m[kk];b=kk;}return b?(b+' '+bv+'통'):'';};
+  o.topH=top(o.byH);o.topW=top(o.byW);
+  return o;
+}
+function arCrmDeepText(who){
+  var o=arCrmDeep(who);
+  if(!o)return '[전화 습관] 최근 30일 통화 기록이 없습니다.\n';
+  var s='[전화 습관 — DB 통합 CRM 최근 30일]\n';
+  s+='- 모두 '+o.n+'통 · 전화한 날 '+o.dayN+'일 · 전화한 날 하루 평균 '+o.perDay+'통\n';
+  s+='- 결과: 부재 '+o.no+' · 거절 '+o.rej+' · 상담 '+o.ok+' (상담 전환 '+o.conv+'%)\n';
+  s+='- 손댄 DB '+o.dbN+'건 · 한 건당 평균 '+o.per+'번\n';
+  s+='- 한 번 걸고 끝낸 DB 가 아니라 다시 건 DB 비율 '+o.again+'% · 다시 걸기까지 평균 '+
+     (o.gapAvg||'-')+'일\n';
+  if(o.topH)s+='- 가장 많이 거는 시간대: '+o.topH+'\n';
+  if(o.topW)s+='- 가장 많이 거는 요일: '+o.topW+'요일\n';
+  s+='- 최근 7일 '+o.last7+'통 · 그 앞 7일 '+o.prev7+'통 ('+
+     (o.prev7?((o.last7>=o.prev7?'늘었음':'줄었음')):'비교 없음')+')\n';
+  var cold=arCold(who,7),c14=arCold(who,14).length,c30=arCold(who,30).length;
+  s+='- 손 놓은 DB: 1주 넘음 '+cold.length+'건 · 2주 넘음 '+c14+'건 · 한 달 넘음 '+c30+'건\n';
+  return s;
+}
+
 /* ── AI 에게 넘길 사실 — 지어낼 수 없게 숫자만 준다 ── */
 function arFacts(r){
   var i,j,a,s='',list=arScope(),n=list.length||1,avg={},t;
@@ -5131,6 +5202,7 @@ function arFacts(r){
   var cr=(AR.crm||{})[r.id];
   s+=cr?('[DB 통합 CRM] 배정 DB '+cr.held+'건 · 최근 30일 통화 '+cr.calls+'통 · 상담 전환 '+cr.appt+
         '건 · 한 번도 안 돌린 DB '+cr.cold+'건\n'):'[DB 통합 CRM] 기록 없음\n';
+  try{s+=arCrmDeepText(r.id);}catch(e){}
   var cl=(AR.cli||{})[r.id];
   s+=cl?('[고객 365일] 담당 '+cl.n+'명 · 다음 할 일 적힌 사람 '+cl.plan+'명 · 기한 지난 할 일 '+cl.due+
         '건 · 90일 넘게 못 만난 고객 '+cl.cold+'명\n'):'[고객 365일] 기록 없음\n';
@@ -5154,7 +5226,10 @@ function arSys(){
    '반드시 아래 다섯 제목을 그대로, 이 순서로 씁니다. 다른 제목을 만들지 않습니다.\n'+
    '## 활동 보고\n## 활동 격려\n## 공부할 부분\n## 상담 컨셉\n## 다음 7일\n'+
    '각 항목은 3~6줄입니다. 「상담 컨셉」은 상담에서 그대로 읽을 수 있는 문장으로 씁니다. '+
-   '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.';
+   '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.\n'+
+   '「활동 보고」에는 전화 습관을 반드시 한 줄 넣습니다 — 언제 거는지, 부재 뒤에 다시 거는지, '+
+   '한 건에 몇 번이나 붙는지 중 가장 눈에 띄는 것 하나. '+
+   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.';
   try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 참고]\n'+k;}}catch(e){}
   try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
   return base;
@@ -5707,9 +5782,9 @@ function arBriefOpen(){
       '<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arBriefOff(this)"'+(arBriefIsOff()?' checked':'')+
       '/> 아침에 안 띄우기</label>'+
-      (arIsLead()?('<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+      ('<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arAutoToggle(this)"'+(arAutoOff()?'':' checked')+
-      '/> 아침에 팀 보고 미리 만들기</label>'):'')+
+      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>')+
       '</div>'+
       '<div style="display:flex;gap:8px">'+
       '<button onclick="arBriefClose()" style="border:1.5px solid #E2E8F0;background:#fff;color:#475569;'+
@@ -5755,20 +5830,34 @@ function arNeedToday(){
   }
   return out;
 }
-function arMorningTeam(){
-  if(!arIsLead()||arAutoOff()||AR.busy)return;
-  try{if(localStorage.getItem(arAutoKey())==='1')return;}catch(e){}
+var AR_H=8;                                   /* 오전 몇 시부터 만들까 */
+function arNowH(){return (new Date(Date.now()+9*3600*1000)).getUTCHours();}
+function arDue(){return arNowH()>=AR_H;}
+/* 리더면 팀 전원, 팀원이면 자기 것. 하루 한 번. 오늘 것이 이미 있으면 건너뛴다 */
+function arAutoNeed(){
+  if(arIsLead())return arNeedToday();
+  var me=arMyId(),o=AR.rep[me];
+  if(!me||!arRowOf(me))return [];
+  return (!o||(''+(o.at||'')).slice(0,10)!==arToday())?[me]:[];
+}
+function arAutoRun(){
+  if(arAutoOff()||AR.busy||!OS.profile)return;
   if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
-  var need=arNeedToday();
-  if(!need.length){try{localStorage.setItem(arAutoKey(),'1');}catch(e){}return;}
   if(typeof callAI!=='function')return;
+  if(!arDue())return;                         /* 아직 오전 8시 전 — 그때 다시 본다 */
+  try{if(localStorage.getItem(arAutoKey())==='1')return;}catch(e){}
+  var need=arAutoNeed(),lead=arIsLead();
+  if(!need.length){try{localStorage.setItem(arAutoKey(),'1');}catch(e){}return;}
   try{localStorage.setItem(arAutoKey(),'1');}catch(e){}
   AR.qt=need.length;AR.qn=0;AR.busy='all';AR.auto=true;
-  if(typeof toast==='function')toast('🌅 오늘 팀 보고를 미리 만들고 있습니다 — '+need.length+'명',6000);
+  if(typeof toast==='function')
+    toast('🌅 오늘 보고를 만들고 있습니다 — '+(lead?(need.length+'명'):'내 보고'),6000);
   var step=function(){
     if(!need.length){
       AR.busy='';AR.qmsg='';AR.auto=false;arPaint();
-      if(typeof toast==='function')toast('팀 보고가 준비됐습니다. AI 관리판 → 팀원 관리에서 보세요.',8000);
+      if(typeof toast==='function')
+        toast(lead?'팀 보고가 준비됐습니다. AI 관리판 → 팀원 관리에서 보세요.'
+                  :'오늘 보고가 준비됐습니다. AI 관리판 → 피드백에서 보세요.',8000);
       return;
     }
     var id=need.shift();AR.qn++;
@@ -5777,6 +5866,16 @@ function arMorningTeam(){
     arGen(id,function(){setTimeout(step,500);});
   };
   step();
+}
+function arMorningTeam(){arAutoRun();}
+/* 앱을 6시에 켜 두었어도 8시가 되면 알아서 돈다.
+   앱이 꺼져 있었으면 그날 처음 켤 때 — 8시를 지났으면 그때 만든다.
+   브라우저 안에서만 도는 앱이라 서버가 대신 눌러 줄 수는 없다. */
+function arAutoArm(){
+  if(window.__arAutoT)return;
+  var tick=function(){try{arAutoRun();}catch(e){}};
+  window.__arAutoT=setInterval(tick,10*60*1000);
+  setTimeout(tick,4000);
 }
 /* 하루에 세 번까지 — 손 놓은 사람이 있으면 조용히 알려 준다 */
 function arNudgeKey(){return 'apex_ar_nudge_'+arToday();}
@@ -6365,6 +6464,7 @@ function osAiRepAfterRender(){
 var OS_HELP={
  airep:['🧭','AI 관리판','왼쪽에서 고르면 이 자리에서 다 봅니다',[
    ['①','아침에 들어오면 창이 하나 뜹니다','오늘 약속 · 밀린 것 · 다시 걸 DB · 식은 고객 · 오늘 공부. 「오늘 할 일 열기」를 누르면 여기로 옵니다.'],
+   ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
    ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리. 붉은 숫자는 남은 건수입니다.'],
    ['③','「해야 할 일」부터 지웁니다','밀린 것이 맨 위에 옵니다. 체크판 항목은 여기서 바로 눌러도 됩니다.'],
    ['④','「부재·거절 재관리」에서 다시 겁니다','1주 · 2주 · 한 달로 나눠 보여 줍니다. 「무슨 말로 다시 걸까」를 누르면 첫 마디와 전할 소식을 AI 가 만들어 줍니다.'],
@@ -26311,7 +26411,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();}
+function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();if(typeof arAutoArm==='function')arAutoArm();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
