@@ -48,13 +48,15 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 | #147 | 체크판 좌우 2단 · 역할 지정 · 모델 선택 · 글로 시키기 |
 | #148 | 두뇌 키우기 — 모범답안 · 엔진별 지시문 · 회사지식 · 두 번 태우기 |
 | #149 | AI 보고 한 칸 · 화면별 사용법 · 음성 비서 말투 |
-| 이번 | AI 관리판 아홉 칸 · 아침 비서 · 부재거절/기고객 재관리 |
+| #150 | AI 관리판 아홉 칸 · 아침 비서 · 부재거절/기고객 재관리 |
+| 이번 | TEAM 총괄 관리 한 칸 · 설정 여섯 칸 |
 
 ## 화면별 담당 코드
 
 | 화면 | 여는 말 | 붙은 검사 |
 |---|---|---|
 | AI 관리판 `airep` | `var AR=` … `renderAiRep()` | `scripts/check-airep.js` |
+| TEAM 총괄 `teamhub` | `var TH=` … `renderTeamHub()` | `scripts/check-teamhub.js` |
 | 실행 체크판 `ckboard` | `function ckTabs()` … `renderCkBoard()` | `check-ckboard.js` |
 | 성장판 `growboard` | `var GB=` … `renderGrowBoard()` | `check-growboard.js` |
 | 고객 365일 `clients` | `var CM=` … `renderClientsPage()` | `check-clients.js` |
@@ -83,6 +85,26 @@ NODE_PATH=/opt/node22/lib/node_modules node scripts/smoke.js
 - 아침 비서는 `arBriefMaybe()` — `osOnLogin` 에서 하루 한 번. 끄기는 `apex_ar_brief_off`.
 - 주기 알림은 `arNudgeStart()` — 95분마다, 하루 세 번까지.
 - 「무슨 말로 다시 걸까」는 `arTalk(kind)` — **건수만** AI 로 넘깁니다. 고객 이름은 넘기지 않습니다.
+
+## TEAM 총괄 관리 · 설정이 어떻게 생겼나
+
+**TEAM 총괄 관리** — 실행 체크판 · 성장판 · 내 코칭 · 본인 점검란을 한 칸에 모았습니다.
+`TH_CAT` 이 목록, `thBody(cat)` 이 분기입니다. **화면을 두 벌로 만들지 않았습니다** —
+원래 화면이 쓰던 그리기 함수를 그대로 부르고, 원래 쓰던 칸 이름(`#ckPane` `#gbPane`
+`#mcPane` `#acadBody`)을 그대로 둡니다. 그래서 `ckPaint()` `gbPaint()` 같은 기존 코드가
+그대로 돕니다.
+
+- 체크판을 허브 안에서 열 때는 `CK.hub=true` 로 위 탭 줄을 접습니다 (왼쪽이 그 일을 합니다).
+- 옛 메뉴 네 개는 **지우지 않았습니다.** `hide:true` 를 붙여 사이드바에만 안 그립니다.
+  `osTabAllowed()` · 요금제 판정 · 음성 명령(`go('ckboard')`)이 이 목록을 보고 돌기 때문입니다.
+  `renderNav()` 이 `g.hide` 를 건너뜁니다.
+- 성장판 칸은 `osTabAllowed('growboard')` 로 요금제를 다시 확인합니다.
+
+**설정** — `SET_SEC` 여섯 칸(팀·권한 / 사업자·법무 / AI 연결 / 결제·구독 / 데이터·백업 /
+점검·진단). 카드 사이사이에 `'</div><div class="set-sec" data-sec="…">'` 을 끼워 넣어
+나눴습니다. 고른 칸은 `apex_set_sec` 에 남습니다.
+카드 접기는 원래 있던 `osFoldApply()` 를 그대로 씁니다 — 처음 오는 사람에게는 칸마다
+맨 위 한 장만 펼쳐 두고 나머지는 접습니다(그 기본값을 `apex_fold` 에 적어 둡니다).
 
 ## 남은 일
 

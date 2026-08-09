@@ -3587,6 +3587,7 @@ function osTabProbe(tab){
   if(tab==='settings')return renderSettings();
   if(tab==='ready')return renderReady();
   if(tab==='airep')return renderAiRep();
+  if(tab==='teamhub')return renderTeamHub();
   if(tab==='calc')return renderCalcPage();
   if(tab==='clients')return renderClientsPage();
   if(tab==='assistant')return renderAssistant();
@@ -6346,6 +6347,24 @@ var OS_HELP={
    ['②','노랑은 앱이 대신 못 하는 것입니다','사장님이 직접 하셔야 합니다.'],
    ['③','빨강은 지금 바로 하셔야 하는 것입니다','미루면 위험합니다.']
  ],['열쇠는 채팅창에 적지 마세요. Netlify 설정 화면에 직접 넣으셔야 합니다.']],
+ teamhub:['🏆','TEAM 총괄 관리','네 화면을 한 칸에 모았습니다',[
+   ['①','왼쪽에서 볼 것을 고릅니다','오늘 체크 · 이번 주 · 업무 루트 · 성장판 · 내 코칭 · 본인 점검란. 지점장은 맨 아래에 「지점장 · 팀 관리」가 하나 더 있습니다.'],
+   ['②','오늘 체크부터 지웁니다','위에서부터 순서대로입니다. 옆 숫자가 오늘 몇 개 했는지입니다.'],
+   ['③','성장판에서 가장 낮은 축 하나만 고릅니다','여섯 개를 한꺼번에 올리려 하면 아무것도 안 올라갑니다.'],
+   ['④','내 코칭에서 받은 말에 답합니다','혼자 정리해 두셔도 됩니다.'],
+   ['⑤','본인 점검란은 주차별로','내가 지금 어디까지 와 있는지 스스로 확인합니다.']
+ ],[
+   '옛 메뉴(실행 체크판·내 코칭·본인 점검란·성장판)는 없어진 게 아닙니다. 여기 안에 다 있습니다.',
+   '음성으로 "오늘 체크 열어" 라고 하시면 그대로 열립니다.'
+ ]],
+ settings:['⚙️','설정','여섯 칸으로 나눠 두었습니다',[
+   ['①','위에서 볼 것을 고릅니다','팀·권한 / 사업자·법무 / AI 연결 / 결제·구독 / 데이터·백업 / 점검·진단.'],
+   ['②','카드 제목을 누르면 펼쳐집니다','칸마다 맨 위 하나만 열려 있습니다. 필요한 것만 여세요.'],
+   ['③','자주 쓰는 것은 「팀 · 권한」','가입 승인 · 팀원 권한 관리 · 계정 찾기 · 도구 접근 권한이 여기 있습니다.']
+ ],[
+   '열쇠(API 키·토큰)는 채팅창에 적지 마세요. 이 화면이나 Netlify 설정에 직접 넣으셔야 합니다.',
+   '무엇이 안 되는지 모를 때는 「점검 · 진단」 칸에서 자가진단을 눌러 보세요.'
+ ]],
  home:['🏠','홈','여기서 시작합니다',[
    ['①','📋 실행 체크판 — 하루를 열고 닫는 곳','아침에 열고 저녁에 저장합니다.'],
    ['②','🧾 AI 보고 — 활동보고·격려·공부·컨셉','한 칸에서 전부 받습니다.'],
@@ -6409,15 +6428,172 @@ function osHelpBtn(key,label){
     osEsc(label||'사용법')+'</button>';
 }
 
+/* ════════ TEAM 총괄 관리 — 네 화면을 한 칸으로 ════════
+   실행 체크판 · 성장판 · 내 코칭 · APEX 본인 점검란은 결국 같은 것을 본다.
+   「오늘 뭘 했나 · 어디가 비었나 · 무엇을 배웠나」.
+   네 군데를 오가면 아무도 안 본다. 왼쪽에서 고르면 이 자리에서 그대로 열린다.
+   각 칸은 원래 화면이 쓰던 그리기 함수를 그대로 부른다 — 두 벌로 만들지 않는다. */
+var TH={cat:''};
+var TH_CAT=[
+ ['ck_today','📋','오늘 체크',   '하루 열한 칸 · 순서대로',    'me'],
+ ['ck_week', '📆','이번 주',     '월요일에 새로 시작',        'me'],
+ ['ck_route','🧭','업무 루트',   'AP → PT → PC → CS',       'me'],
+ ['grow',    '📈','성장판',      '여섯 축 · 팀과 비교',       'me'],
+ ['coach',   '🌱','내 코칭',     '받은 코칭과 내 답',         'me'],
+ ['acad',    '✅','본인 점검란', '주차별로 스스로 확인',       'me'],
+ ['ck_lead', '🧑‍🏫','지점장 · 팀 관리','내가 할 일 + 팀 전체','lead']
+];
+var TH_CKMAP={ck_today:'today',ck_week:'week',ck_route:'route',ck_lead:'leader'};
+function thIsLead(){return (typeof gbIsLead==='function')?gbIsLead():false;}
+function thCat(){
+  if(TH.cat)return TH.cat;
+  var c='';
+  try{c=localStorage.getItem('apex_th_cat')||'';}catch(e){}
+  if(c&&TH_CKMAP[c]===undefined&&['grow','coach','acad'].indexOf(c)<0)c='';
+  if(c==='ck_lead'&&!thIsLead())c='';
+  return c||(thIsLead()?'ck_lead':'ck_today');
+}
+function thGo(k){
+  TH.cat=k;
+  try{localStorage.setItem('apex_th_cat',k);}catch(e){}
+  var el=document.getElementById('thPane');
+  if(el)el.innerHTML=thInnerHtml();
+  thAfter();
+}
+function thCount(k){
+  try{
+    if(TH_CKMAP[k]&&typeof ckCount==='function'){
+      if(k==='ck_lead')return ckCount('day',CK_LDR.a.concat(CK_LDR.b,CK_LDR.c,CK_LDR.d))+
+        ' / '+(CK_LDR.a.length+CK_LDR.b.length+CK_LDR.c.length+CK_LDR.d.length);
+      if(k==='ck_today')return ckCount('day',CK_ITEMS.day)+' / '+CK_ITEMS.day.length;
+      if(k==='ck_week')return ckCount('week',CK_ITEMS.week)+' / '+CK_ITEMS.week.length;
+      return '';
+    }
+    if(k==='grow'){var r=(typeof gbMe==='function')?gbMe():null;return r?(r.total+'점'):'';}
+    if(k==='acad'&&typeof gbMyId==='function'&&typeof GB!=='undefined'){
+      var m=(GB.pass||{})[gbMyId()]||{},n=0,x;
+      for(x in m)if(m[x])n++;
+      return n?(n+' / '+GB_CUR.length):'';
+    }
+  }catch(e){}
+  return '';
+}
+function thBlocked(tab){
+  return '<div class="card"><div class="card-body"><div class="ar-none">'+
+    '이 칸은 상위 요금제에서 열립니다.<div class="btn-row" style="margin-top:11px">'+
+    '<button class="btn btn-primary" onclick="go(\'pricing\')">요금제 보기</button></div></div></div></div>';
+}
+function thBody(cat){
+  if(TH_CKMAP[cat]){
+    if(typeof CK==='undefined')return '<div class="ar-none">체크판을 불러오지 못했습니다.</div>';
+    CK.tab=TH_CKMAP[cat];CK.hub=true;
+    try{localStorage.setItem('apex_ck_tab',CK.tab);}catch(e){}
+    if(typeof ckSweep==='function')ckSweep();
+    return '<div id="ckPane">'+ckInnerHtml()+'</div>';
+  }
+  if(cat==='grow'){
+    if(typeof osTabAllowed==='function'&&!osTabAllowed('growboard'))return thBlocked('growboard');
+    return '<div id="gbPane">'+gbInnerHtml()+'</div>';
+  }
+  if(cat==='coach'){
+    if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+    return '<div id="mcPane">'+mcInnerHtml()+'</div>';
+  }
+  if(cat==='acad')return '<div id="acadBody">'+acBody()+'</div>';
+  return '';
+}
+function thInnerHtml(){
+  var cat=thCat(),i,c,n,h='';
+  h+='<div class="ar-bar">'+
+    '<button type="button" class="ar-bb" onclick="go(\'airep\')">🧭 AI 관리판</button>'+
+    '<button type="button" class="ar-bb" onclick="thReload()">↻ 새로 읽기</button>'+
+    '<button type="button" class="ar-bb" onclick="osHelpOpen(\'teamhub\')">❓ 사용법</button>'+
+    '</div>';
+  h+='<div class="ar-wrap"><div class="ar-side">';
+  h+='<div class="ar-shd">내 실행</div>';
+  for(i=0;i<TH_CAT.length;i++){
+    c=TH_CAT[i];
+    if(c[4]==='lead'){
+      if(!thIsLead())continue;
+      h+='<div class="ar-shd">팀 관리</div>';
+    }
+    n=thCount(c[0]);
+    h+='<button type="button" class="ar-cat'+(cat===c[0]?' on':'')+'" onclick="thGo(\''+c[0]+'\')">'+
+      '<span class="e">'+c[1]+'</span><span class="m"><b>'+osEsc(c[2])+'</b>'+
+      '<em>'+osEsc(c[3])+'</em></span>'+
+      (n?('<span class="n cnt">'+osEsc(n)+'</span>'):'')+'</button>';
+  }
+  h+='</div><div class="ar-main">'+thBody(cat)+'</div></div>';
+  return h;
+}
+function thReload(){
+  if(typeof GB!=='undefined'){GB.loaded=false;if(typeof gbLoad==='function')gbLoad();}
+  if(typeof MC!=='undefined'){MC.loaded=false;if(typeof mcLoad==='function')mcLoad();}
+  if(typeof AC!=='undefined'){AC.data=null;if(typeof acCrmLoad==='function')acCrmLoad();}
+  thGo(thCat());
+}
+/* 칸을 연 다음에 그 칸이 쓰는 기록을 불러온다 — 안 여는 칸은 안 읽는다 */
+function thAfter(){
+  var cat=thCat();
+  if(TH_CKMAP[cat]){
+    if(typeof ckPull==='function')ckPull();
+    if(cat==='ck_lead'&&typeof ckLeaderLoad==='function')ckLeaderLoad();
+    else if(typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function'){
+      gbLoad();
+      setTimeout(function(){if(TH_CKMAP[thCat()]&&typeof ckPaint==='function')ckPaint();},1800);
+    }
+    if(typeof arLoad==='function'){
+      arLoad();
+      setTimeout(function(){if(typeof arPaint==='function')arPaint();},2200);
+    }
+    return;
+  }
+  if(cat==='grow'){
+    if(typeof GB!=='undefined'){
+      if(!GB.loaded&&!GB.busy&&typeof gbLoad==='function')gbLoad();
+      else if(typeof gbPaint==='function')gbPaint();
+    }
+    return;
+  }
+  if(cat==='coach'&&typeof mcLoad==='function'){MC.loaded=false;mcPaint();mcLoad();return;}
+  if(cat==='acad'&&typeof acCrmLoad==='function'&&!AC.data&&!AC.loading)setTimeout(acCrmLoad,60);
+}
+function renderTeamHub(){
+  if(typeof fpCss==='function')fpCss();
+  if(typeof ckCss==='function')ckCss();
+  if(typeof gbCss==='function')gbCss();
+  if(typeof mcCss==='function')mcCss();
+  if(typeof arCss==='function')arCss();
+  thCss();
+  var d=new Date(Date.now()+9*3600*1000),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
+  var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
+  return osPage('총괄','TEAM 총괄 관리',
+    ds+' · 실행 체크판 · 성장판 · 내 코칭 · 본인 점검란을 한 칸에 모았습니다. '+
+    '왼쪽에서 고르면 이 자리에서 그대로 열립니다.',
+    '<div id="thPane">'+thInnerHtml()+'</div>');
+}
+function osTeamHubAfterRender(){thAfter();}
+function thCss(){
+  if(document.getElementById('thCss'))return;
+  var s=document.createElement('style');s.id='thCss';
+  s.textContent='.ar-cat .n.cnt{background:#EFF6FF;color:#1A56DB;font-size:10.5px;padding:2px 8px}'+
+    '.ar-cat.on .n.cnt{background:rgba(255,255,255,.16);color:#BFDBFE}';
+  document.head.appendChild(s);
+}
+
 var TABS=[
  {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
  {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'airep',icon:'🧭',title:'AI 관리판',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
- {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
+ {group:'TEAM 총괄',key:'업무매뉴얼',items:[{id:'teamhub',icon:'🏆',title:'TEAM 총괄 관리',cnt:''}]},
+ {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
+ /* 아래 두 묶음은 메뉴에 세우지 않는다 — TEAM 총괄 관리 안에서 연다.
+    지우지 않는 이유: 권한·요금제 판정과 음성 명령이 이 목록을 보고 돈다. */
+ {group:'업무매뉴얼 도구',key:'업무매뉴얼',hide:true,items:[{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
  {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''},{id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:''}]},
- {group:'성장·교육',items:[{id:'growboard',icon:'📈',title:'성장판',cnt:''}]},
+ {group:'성장·교육',hide:true,items:[{id:'growboard',icon:'📈',title:'성장판',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:''},{id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:''},{id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
  {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
  {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
@@ -6516,6 +6692,7 @@ function renderNav(){
   var h='<div id="osNoticeNav"></div>';
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
   groups.forEach(function(g){
+    if(g.hide)return;                       /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
     h+='<div class="nav-group-label">'+esc(g.group)+'</div>';
     g.items.forEach(function(it){
       h+='<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
@@ -6587,6 +6764,7 @@ function go(tab){
     if(typeof osNoticeLoad==='function')osNoticeLoad();}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
   else if(tab==='airep'){dyn.innerHTML=renderAiRep();if(typeof osAiRepAfterRender==='function')osAiRepAfterRender();}
+  else if(tab==='teamhub'){dyn.innerHTML=renderTeamHub();if(typeof osTeamHubAfterRender==='function')osTeamHubAfterRender();}
   else if(tab==='settings'){dyn.innerHTML=renderSettings();if(typeof osSettingsAfterRender==='function')osSettingsAfterRender();}
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
@@ -16971,6 +17149,7 @@ function ckPaint(){
 }
 function ckInnerHtml(){
   var ts=ckTabs();
+  if(CK.hub)return ckBodyHtml();
   return '<div class="ck-tabs">'+ts.map(function(t){
       return '<button class="ck-tab'+(CK.tab===t.id?' on':'')+'" type="button" onclick="ckGo(\''+t.id+'\')">'+
         osEsc(t.l)+'<span class="c" id="cktc_'+t.id+'">'+ckTabCount(t)+'</span></button>';
@@ -16989,6 +17168,7 @@ function renderCkBoard(){
     '<div id="ckPane">'+ckInnerHtml()+'</div>');
 }
 function osCkBoardAfterRender(){
+  CK.hub=false;
   try{var t=localStorage.getItem('apex_ck_tab');if(t)CK.tab=t;}catch(e){}
   ckPaint();ckPull();
   /* 체크판 안의 AI 보고 칸도 같은 숫자를 봐야 한다 */
@@ -20535,7 +20715,7 @@ function osFoldApply(){
   osFoldStyleOnce();
   var pane=document.getElementById('dynPane');if(!pane)return;
   var cards=pane.querySelectorAll('.card.set-card');
-  var m=osFoldGet(),seq=0,used={};
+  var m=osFoldGet(),seq=0,used={},firstIn={},dirty=0;
   for(var i=0;i<cards.length;i++){
     var c=cards[i];if(c.getAttribute('data-foldid'))continue;
     var hd=c.querySelector('.card-hd');if(!hd)continue;
@@ -20545,14 +20725,22 @@ function osFoldApply(){
     var id=base,k=2;while(used[id])id=base+'_'+(k++);
     used[id]=1;seq++;
     c.setAttribute('data-foldid',id);c.id='fold_'+id;
-    var ar=document.createElement('span');ar.className='os-fold-ar';ar.textContent=m[id]===1?'▼':'▲';
+    /* 처음 오는 사람에게는 접어 둔다 — 스물여섯 장이 펼쳐져 있으면 아무것도 안 읽힌다.
+       칸마다 맨 위 한 장만 열어 두어 무엇을 보는 곳인지 알게 한다. */
+    var sec=(c.parentNode&&c.parentNode.getAttribute)?(c.parentNode.getAttribute('data-sec')||'_'):'_';
+    var def=(m[id]===undefined)?(firstIn[sec]?1:0):m[id];
+    /* 정한 기본값을 그대로 적어 둔다 — 안 적으면 첫 클릭이 헛돈다 */
+    if(m[id]===undefined){m[id]=def;dirty=1;}
+    firstIn[sec]=1;
+    var ar=document.createElement('span');ar.className='os-fold-ar';ar.textContent=def===1?'▼':'▲';
     hd.appendChild(ar);
     (function(id){hd.addEventListener('click',function(e){
       if(e.target.closest('button,a,input,select,textarea'))return;
       osFoldToggle(id);
     });})(id);
-    if(m[id]===1)c.classList.add('os-folded');
+    if(def===1)c.classList.add('os-folded');
   }
+  if(dirty)osFoldSet(m);
   if(!document.getElementById('osFoldBar')){
     var first=pane.querySelector('.page-hd');
     if(first){
@@ -20607,6 +20795,63 @@ function lgBizSave(){
     toast('사업자 정보를 저장했습니다 — 약관 문서에 반영됩니다.',5000);
   },function(){if(b){b.disabled=false;b.textContent='저장';}toast('저장 실패');});
 }
+/* ── 설정을 여섯 칸으로 ──
+   한 화면에 스물다섯 장이 세로로 쌓여 있으면 아무것도 안 읽힌다.
+   묶어서 접어 둔다. 제목만 보이고, 누른 것만 펼쳐진다. */
+var SET_SEC=[['team','👥','팀 · 권한'],['biz','🏢','사업자 · 법무'],['ai','🤖','AI 연결'],
+ ['pay','💳','결제 · 구독'],['data','🗂️','데이터 · 백업'],['check','🩺','점검 · 진단']];
+function osSetSec(){
+  var k='';try{k=localStorage.getItem('apex_set_sec')||'';}catch(e){}
+  for(var i=0;i<SET_SEC.length;i++)if(SET_SEC[i][0]===k)return k;
+  return 'team';
+}
+function osSetGoSec(k){
+  try{localStorage.setItem('apex_set_sec',k);}catch(e){}
+  osSetSecApply();
+  var m=document.getElementById('main');if(m)m.scrollTop=0;
+}
+function osSetSecBar(){
+  var cur=osSetSec(),i,h='<div class="set-bar">';
+  for(i=0;i<SET_SEC.length;i++)
+    h+='<button type="button" class="set-tb'+(cur===SET_SEC[i][0]?' on':'')+'" '+
+      'data-sec="'+SET_SEC[i][0]+'" onclick="osSetGoSec(\''+SET_SEC[i][0]+'\')">'+
+      SET_SEC[i][1]+' '+osEsc(SET_SEC[i][2])+'<span class="n"></span></button>';
+  return h+'</div>';
+}
+function osSetSecApply(){
+  var cur=osSetSec(),secs=document.querySelectorAll('.set-sec'),i,n={};
+  for(i=0;i<secs.length;i++){
+    var k=secs[i].getAttribute('data-sec');
+    var on=(k===cur);
+    secs[i].className='set-sec'+(on?' on':'');
+    n[k]=(n[k]||0)+secs[i].querySelectorAll('.card').length;
+  }
+  var tb=document.querySelectorAll('.set-tb');
+  for(i=0;i<tb.length;i++){
+    var kk=tb[i].getAttribute('data-sec');
+    tb[i].className='set-tb'+(kk===cur?' on':'');
+    var c=tb[i].querySelector('.n');
+    if(c)c.textContent=n[kk]||0;
+  }
+  if(typeof osFoldApply==='function')osFoldApply();
+}
+function osSetCss(){
+  if(document.getElementById('osSetCss'))return;
+  var st=document.createElement('style');st.id='osSetCss';
+  st.textContent=
+   '.set-bar{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}'+
+   '.set-tb{border:1.5px solid var(--line,#E2E8F0);background:#fff;border-radius:99px;padding:8px 15px;'+
+     'font-size:12.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.set-tb:hover{background:#F8FAFC}'+
+   '.set-tb.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.set-tb .n{margin-left:7px;font-size:10.5px;color:#94A3B8;font-weight:800}'+
+   '.set-tb.on .n{color:#93C5FD}'+
+   '.set-sec{display:none}'+
+   '.set-sec.on{display:block}'+
+   '.set-sec .card{margin-bottom:9px}'+
+   '.set-secs .card.os-folded{background:#FCFDFE}';
+  document.head.appendChild(st);
+}
 function renderSettings(){
   if(typeof lgCss==='function')lgCss();
   if(typeof osIsOwner==='function'&&!osIsOwner())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div><div class="page-title">🔒 대표 전용</div><div class="page-desc">설정은 대표 계정만 볼 수 있습니다.</div></div></div>';
@@ -20615,39 +20860,61 @@ function renderSettings(){
   var apptoken=getAppToken();var atMasked=apptoken?(apptoken.slice(0,3)+'••••••'+apptoken.slice(-2)):'';
   function opt(val,label){return '<option value="'+val+'"'+(model===val?' selected':'')+'>'+label+'</option>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">SETTINGS</div>'+
-    '<div class="page-title">설정</div><div class="page-desc">연결과 브랜드 톤을 설정합니다. AI 키 등은 이 브라우저에만 저장되며, 사업자 정보는 서버에 저장되어 모두에게 같은 내용이 보입니다.</div></div>'+
+    '<div class="page-title">설정</div><div class="page-desc">여섯 칸으로 나눠 두었습니다. 위에서 볼 것을 고르고, 카드 제목을 누르면 펼쳐집니다.</div></div>'+
+    osSetSecBar()+
+    '<div class="set-secs"><div class="set-sec on" data-sec="team">'+
     osApprovalCardHtml()+
 
     osMembersCardHtml()+
 
     osAccountsCardHtml()+
 
+    '</div><div class="set-sec" data-sec="biz">'+
+
     lgBizCardHtml()+
 
+    '</div><div class="set-sec" data-sec="check">'+
+
     osDiagCardHtml()+
+
+    '</div><div class="set-sec" data-sec="team">'+
 
     osTierPreviewCardHtml()+
 
     osOwnerCardHtml()+
 
+    '</div><div class="set-sec" data-sec="pay">'+
+
     osPayAdminCardHtml()+
 
+    '</div><div class="set-sec" data-sec="check">'+
+
     osNoticeCardHtml()+
+
+    '</div><div class="set-sec" data-sec="pay">'+
 
     osTossCardHtml()+
 
     osPayCfgCardHtml()+
 
+    '</div><div class="set-sec" data-sec="team">'+
+
     osAccessCardHtml()+
+
+    '</div><div class="set-sec" data-sec="data">'+
 
     osAutoBackupCardHtml()+
 
     osBackupCardHtml()+
 
+    '</div><div class="set-sec" data-sec="ai">'+
+
     osByokCardHtml()+
     osSecurityCardsHtml()+
 
     osCapCardHtml()+
+
+    '</div><div class="set-sec" data-sec="pay">'+
 
     /* ★ 팀 무제한 운영 — 비용 구조 3분 정리 (구독≠API / 공용지갑 / 상한 / 보안) */
     '<div class="card set-card" style="border-color:#1A56DB"><div class="card-hd" style="background:var(--primary-pale)"><div class="card-title"><span class="ci">💳</span>팀 전체가 부담 없이 쓰는 법 — 비용 구조 3분 정리</div><div class="card-desc">"모두가 · 몇 번을 쓰든" 을 안전하게 만드는 핵심</div></div>'+
@@ -20671,6 +20938,8 @@ function renderSettings(){
       '<div style="font-size:11px;color:var(--ink-4);line-height:1.7;margin-top:10px">👉 실제 응답 엔진이 지금 무엇인지, 지갑이 살아 있는지는 아래 <b>"연결 진단"</b> 버튼으로 즉시 확인하세요. ChatGPT에 입력하셨던 전문 프롬프트는 <b>Gemini도 그대로 이해</b>하니 그대로 쓰셔도 됩니다.</div>'+
     '</div></div>'+
 
+    '</div><div class="set-sec" data-sec="ai">'+
+
     (isAutoConnected()?
     '<div class="card set-card" style="border-color:#A7F3D0;background:#ECFDF5"><div class="card-body" style="padding:16px 20px">'+
     '<div style="font-size:13px;font-weight:800;color:#065F46;margin-bottom:5px">✅ 자동 연결됨 — 키 입력이 필요 없습니다</div>'+
@@ -20691,11 +20960,15 @@ function renderSettings(){
     '<button class="btn btn-primary" onclick="aiDiagnose()">🔌 지금 연결 진단 실행</button>'+
     '<div id="diagBox" style="margin-top:12px"></div></div></div>'+
 
+'</div><div class="set-sec" data-sec="check">'+
+
     /* 전체 메뉴 자가진단 — 백업 복구·큰 수정 후 전체 정상 확인 */
     '<div class="card set-card" style="border-color:#C7D2FE"><div class="card-hd"><div class="card-title"><span class="ci">🩺</span>전체 메뉴 자가진단</div><div class="card-desc">모든 메뉴·기능·AI 연결·저장소를 한 번에 점검</div></div>'+
     '<div class="card-body"><div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:10px">모든 사이드바 메뉴가 정상적으로 열리는지, 핵심 기능·AI 연결·저장소가 살아 있는지 자동으로 점검합니다. <b>백업 복구나 큰 수정 뒤 여기서 한 번 눌러 전체가 정상인지</b> 확인하세요. 결과는 복사해 보관할 수 있습니다.</div>'+
     '<button class="btn btn-primary" onclick="runSelfCheck()">🩺 지금 전체 자가진단 실행</button>'+
     '<div id="selfCheckBox" style="margin-top:12px"></div></div></div>'+
+
+'</div><div class="set-sec" data-sec="ai">'+
 
     /* AI 크레딧 부족 대안 — 5가지 전략 */
     '<div class="card set-card" style="border-color:#FDE68A"><div class="card-hd"><div class="card-title"><span class="ci">🛟</span>Claude가 자꾸 부족할 때 — 대안 5가지</div><div class="card-desc">API 크레딧이 떨어져도 앱이 멈추지 않게 하는 방법</div></div>'+
@@ -20863,10 +21136,13 @@ function renderSettings(){
     '<div class="btn-row"><button class="btn btn-primary" onclick="savePersona()">톤 저장</button>'+
     '<button class="btn btn-ghost" onclick="resetPersona()">기본값 복원</button></div></div></div>'+
 
+'</div><div class="set-sec" data-sec="data">'+
+
     '<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>데이터</div>'+
     '<div class="card-desc">이 브라우저에 저장된 설정을 초기화합니다.</div></div>'+
     '<div class="card-body"><button class="btn btn-ghost" onclick="resetAll()">전체 초기화</button></div></div>'+
 
+    '</div></div>'+
     '<div class="notice">생성된 콘텐츠는 <b>게시 전 소속사 준법감시(광고 심의)</b> 확인을 권장합니다. AI 결과물은 사실 확인 후 사용하세요.</div>'+
   '</div>';
 }
@@ -24555,6 +24831,8 @@ function osDiagCardHtml(){
 }
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){
+  if(typeof osSetCss==='function')osSetCss();
+  if(typeof osSetSecApply==='function')setTimeout(osSetSecApply,0);
   try{osFoldApply();}catch(e){}
   try{osScrollTrack();}catch(e){}
   try{osScrollRestore();}catch(e){}
