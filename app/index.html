@@ -598,6 +598,8 @@ a{color:inherit;text-decoration:none;}
 .tab-btn .tc{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.3);}
 .sb-foot{flex-shrink:0;padding:12px;border-top:1px solid rgba(255,255,255,.06);}
 .key-pill{display:flex;align-items:center;gap:7px;font-size:10px;padding:8px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:rgba(255,255,255,.55);cursor:pointer;transition:all var(--dur);}
+.ver-pill{margin-top:5px;font-size:9.5px;letter-spacing:.02em;padding:5px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);color:rgba(255,255,255,.38);cursor:pointer;font-variant-numeric:tabular-nums;text-align:center}
+.ver-pill:hover{color:rgba(255,255,255,.72);background:rgba(255,255,255,.07)}
 .key-pill:hover{background:rgba(255,255,255,.07);}
 .key-pill .dot{width:7px;height:7px;border-radius:50%;background:#F59E0B;flex-shrink:0;}
 .key-pill.ok .dot{background:#34D399;}
@@ -902,6 +904,10 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
       <div class="key-pill" id="keyPill" onclick="go('settings')">
         <span class="dot"></span><span id="keyPillTxt">API 키 미설정 — 클릭</span>
       </div>
+      <div class="ver-pill" id="verPill" onclick="osVerCopy()"
+           title="지금 열려 있는 판입니다. 화면이 안 바뀌었으면 이 날짜부터 확인하세요">
+        <span id="verPillTxt">판 —</span>
+      </div>
     </div>
   </aside>
 
@@ -927,6 +933,7 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
   <iframe id="crmFrame" class="fin-frame" title="APEX DB CRM"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitCrm()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="crmFeedOpen()" title="내 전화 습관 AI 피드백">🧠</button>
     <button class="ff-ico" onclick="crmGuideOpen()" title="사용 안내">📖</button>
     <button class="ff-ico" onclick="reloadCrm()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openCrmNewTab()" title="새 탭에서 열기">↗</button>
@@ -4625,10 +4632,10 @@ var RD_MAN=[
   w:'돈을 받고 파는 순간 전자상거래법상 신고 대상입니다.',
   h:'관할 시·군·구청 또는 정부24에서 신고하고, 받은 번호를 설정 → 사업자 정보의 「통신판매업 신고번호」 에 넣으세요.',
   u:'https://www.gov.kr',risk:1},
- {k:'nf_env',t:'Netlify 환경변수 확인',
-  w:'AI 키가 브라우저가 아니라 서버에 있어야 팀원들도 씁니다.',
-  h:'Netlify → Site configuration → Environment variables 에 ANTHROPIC_API_KEY 또는 GEMINI_API_KEY 가 있는지 확인.',
-  u:'https://app.netlify.com'},
+ {k:'nf_env',t:'Netlify 환경변수 — 서버가 매일 새벽 일하게 하는 열쇠',
+  w:'이게 없으면 매일 새벽 5시 서버 보고가 아무것도 안 만들어집니다. 지금 그 상태입니다.',
+  h:'ANTHROPIC_API_KEY 와 SUPABASE_SERVICE_ROLE_KEY 두 개를 넣으세요. 넣은 뒤 윤시스쿨 → 매일 취합에서 「🌙 서버 야간 근무 점검」 을 누르면 바로 확인됩니다. 열쇠는 대화창에 붙이지 말고 그 화면에서 직접 넣으세요.',
+  u:'__NF_ENV__'},
  {k:'sb_backup',t:'Supabase 자동 백업 확인',
   w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽 자동 백업입니다.',
   h:'Supabase → Project Settings → Database → Backups 에서 켜져 있는지 확인. 무료 요금제는 보관 기간이 짧습니다.',
@@ -4808,7 +4815,9 @@ function rdManHtml(){
         (m.risk&&!on?'<span class="rd-x">먼저</span>':'')+
         (on?('<span class="rd-d">'+osEsc(D[m.k])+' 완료</span>'):'')+'</div>'+
       (on?'':('<div class="rd-mw">'+osEsc(m.w)+'</div><div class="rd-mh">'+osEsc(m.h)+'</div>'+
-        (m.u?('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>'):'')+
+        (m.u?(m.u==='__NF_ENV__'
+              ?('<a class="rd-go" href="'+osEsc(nfEnvUrl())+'" target="_blank" rel="noopener">환경변수 화면 열기 ↗</a>')
+              :('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>')):'')+
         (m.go?('<button type="button" class="rd-go" onclick="go(\''+m.go+'\')">바로 가기 →</button>'):'')))+
       '</div></div>';
   }
@@ -7068,15 +7077,76 @@ function dgDayLabel(d){
   var x=new Date(d+'T00:00:00Z'),w=['일','월','화','수','목','금','토'][x.getUTCDay()];
   return (x.getUTCMonth()+1)+'월 '+x.getUTCDate()+'일 ('+w+')';
 }
+/* ── 서버 야간 근무가 실제로 도는지 ─────────────────────────────
+   netlify.toml 에 매일 새벽 5시(한국) 실행이 걸려 있다. 그런데 열쇠가
+   없으면 함수가 「환경변수가 없습니다」 한 줄만 돌려주고 끝난다.
+   그 상태로는 아무 보고도 안 쌓이는데 화면에는 아무 표시가 없었다.
+   그래서 여기서 직접 눌러 물어본다 — 열쇠가 없으면 없다고 하고,
+   있으면 그 자리에서 오늘 것을 만들어 준다. */
+var NW={busy:false,ok:null,msg:'',at:''};
+/* AI 조직 라이브에서 누르면 그 화면을 다시 그린다 */
+function aoNightRun(){nwRun(function(){if(typeof aoRender==='function')aoRender();});}
+function nwRun(then){
+  if(NW.busy)return;
+  NW.busy=true;NW.msg='';try{dgPaint();}catch(e){}
+  if(typeof then==='function')then();
+  fetch('/.netlify/functions/ai-daily',{method:'POST'})
+    .then(function(r){return r.json().catch(function(){return {ok:false,reason:'HTTP '+r.status};});})
+    .then(function(j){
+      NW.busy=false;
+      NW.ok=!!(j&&j.ok);
+      NW.msg=(j&&(j.reason||j.message))||(NW.ok?'서버가 오늘 것을 만들었습니다.':'서버가 답을 주지 않았습니다.');
+      NW.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      try{dgPaint();}catch(e){}
+      if(typeof then==='function')then();
+      if(NW.ok){
+        setTimeout(function(){try{dgLoad(true);}catch(e){}
+          try{if(typeof aoLoad==='function')aoLoad(true);}catch(e){}},900);
+      }
+    },function(){
+      NW.busy=false;NW.ok=false;
+      NW.msg='서버를 부르지 못했습니다. 배포된 주소에서만 됩니다(로컬 파일에서는 안 됩니다).';
+      NW.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      try{dgPaint();}catch(e){}
+      if(typeof then==='function')then();
+    });
+}
+function nfCopyNames(){
+  var t='SUPABASE_SERVICE_ROLE_KEY\nANTHROPIC_API_KEY';
+  try{if(typeof copyText==='function'){copyText(t);toast('환경변수 이름 두 개를 복사했습니다');return;}}catch(e){}
+  try{toast(t);}catch(e){}
+}
+function nwBoxHtml(){
+  if(NW.ok===null)return '';
+  if(NW.ok)
+    return '<div class="notice" style="margin:0 0 12px;background:#ECFDF5;border-color:#A7F3D0;color:#065F46">'+
+      '<b>서버 야간 근무가 돕니다.</b> '+osEsc(NW.msg)+' ('+osEsc(NW.at)+' 확인)</div>';
+  var key=/환경변수|SERVICE_ROLE|KEY/i.test(NW.msg);
+  return '<div class="notice" style="margin:0 0 12px;background:#FEF2F2;border-color:#FECACA;color:#991B1B">'+
+    '<b>매일 새벽 보고가 안 만들어지고 있습니다.</b><br>'+osEsc(NW.msg)+
+    (key?('<br><br>아래 둘을 넣으시면 그날부터 새벽 5시에 저절로 돕니다.'+
+      '<br>· <code>SUPABASE_SERVICE_ROLE_KEY</code><br>· <code>ANTHROPIC_API_KEY</code>'+
+      '<div class="btn-row" style="margin-top:10px">'+
+        '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+        '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
+        '<button type="button" class="btn btn-ghost" onclick="nwRun()">넣었습니다 · 다시 점검</button>'+
+      '</div>'+
+      '<div style="margin-top:8px;font-size:11.5px">이 열쇠들은 <b>채팅창에 붙이지 마시고</b> 그 화면에서 직접 넣으셔야 합니다. '+
+      '<code>service_role</code> 은 DB 전체를 마음대로 할 수 있는 최고 권한입니다.</div>'):'')+
+    '<div style="margin-top:6px;font-size:11px;color:#B91C1C">'+osEsc(NW.at)+' 확인</div></div>';
+}
 function dgInnerHtml(){
   if(DG.busy==='load'&&!DG.loaded)return '<div class="ar-none">모아 둔 것을 불러오는 중입니다…</div>';
   var d=DG.open||dgToday(),o=dgOf(d),today=dgToday(),i,h='';
+  h+=nwBoxHtml();
   h+='<div class="ar-bar">'+
     '<button type="button" class="ar-bb" '+(DG.busy==='gen'?'disabled':'')+' onclick="dgGen()">'+
       (DG.busy==='gen'?'모으는 중…':'📒 오늘 다시 모으기')+'</button>'+
     '<button type="button" class="ar-bb" onclick="dgLoad(true)">↻ 새로 읽기</button>'+
     '<button type="button" class="ar-bb" onclick="go(\'airep\')">🧭 AI 관리판</button>'+
     '<button type="button" class="ar-bb" onclick="go(\'biz_news\')">📰 정책·상품 뉴스</button>'+
+    '<button type="button" class="ar-bb" '+(NW.busy?'disabled':'')+' onclick="nwRun()">'+
+      (NW.busy?'서버에 물어보는 중…':'🌙 서버 야간 근무 점검')+'</button>'+
     '</div>';
   if(DG.err)h+='<div class="ar-err" style="margin-bottom:12px">'+osEsc(DG.err)+'</div>';
   /* 날짜 줄 — 지나간 날을 훑는다 */
@@ -7569,12 +7639,359 @@ function openFinanceNewTab(){
    같은 도메인 + 같은 Supabase = APEX 로그인 세션이 CRM에 자동 전달되어
    로그인창 없이 바로 열린다. 가입·결제 정문은 APEX 하나다.
    (외부 apex-crm-a500b6 사이트는 은퇴 — 다시 쓰려면 이 한 줄만 되돌리면 됨) */
+
+/* ══════════ 내가 할 일 — 대표 손이 필요한 것만 ══════════
+   앱이 할 수 있는 것은 앱이 다 했다. 남은 것은 사람이 밖에 나가서
+   눌러야 하는 일들이다 — 열쇠 넣기, 폐기하기, 신고하기.
+   그런데 그것들이 여러 화면에 흩어져 있어 무엇이 남았는지 아무도 몰랐다.
+   여기 한 창에 모으고, 줄마다 바로 가는 단추를 붙인다.
+   앱이 스스로 알 수 있는 것은 스스로 판정하고, 못 하는 것만 손으로 체크한다. */
+var OW={open:false,checking:false};
+var OW_KEY='apex_owner_todo';
+function owMarks(){
+  try{var v=osCfgGet(OW_KEY,'');if(v)return JSON.parse(v)||{};}catch(e){}
+  try{var l=localStorage.getItem(OW_KEY);if(l)return JSON.parse(l)||{};}catch(e){}
+  return {};
+}
+function owMark(k,on){
+  var m=owMarks();if(on)m[k]=new Date().toISOString().slice(0,10);else delete m[k];
+  var j=JSON.stringify(m);
+  try{localStorage.setItem(OW_KEY,j);}catch(e){}
+  try{if(typeof osCfgSet==='function')osCfgSet(OW_KEY,j);}catch(e){}
+  owPaint();
+}
+/* 앱이 스스로 아는 것 — 팀 소속과 지점장 */
+function owTeamGap(){
+  var noTeam=0,lead=0,n=0;
+  try{
+    var rows=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[];
+    n=rows.length;
+    for(var i=0;i<rows.length;i++){
+      if(!rows[i].team)noTeam++;
+      if(rows[i].role==='manager'||rows[i].role==='admin'||rows[i].role==='owner')lead++;
+    }
+  }catch(e){}
+  return {n:n,noTeam:noTeam,lead:lead};
+}
+var OW_ITEMS=[
+ {k:'nf_token',ic:'🔑',t:'배포 열쇠 폐기',
+  w:'대화창에 한 번 붙었던 Netlify 개인 열쇠입니다. 남의 손에 들어가면 사이트를 통째로 바꿔치기할 수 있습니다.',
+  h:'그 화면에서 예전 토큰을 지우고, 필요하면 새로 만드십시오.',
+  u:'https://app.netlify.com/user/applications',ub:'열쇠 관리 열기',
+  urgent:true},
+ {k:'nf_env',ic:'🌙',t:'서버 열쇠 두 개 넣기',
+  w:'이게 없어서 매일 새벽 5시 서버 보고가 하나도 안 만들어지고 있습니다. AI 조직 라이브가 비어 있는 것도 이 때문입니다.',
+  h:'SUPABASE_SERVICE_ROLE_KEY · ANTHROPIC_API_KEY — 값은 대화창에 붙이지 말고 그 화면에서 직접 넣으십시오.',
+  fn:'nfOpenEnv',ub:'환경변수 화면 열기',
+  auto:function(){return (typeof NW!=='undefined'&&NW.ok===true)?'done':((typeof NW!=='undefined'&&NW.ok===false)?'no':'');},
+  extra:'nw',urgent:true},
+ {k:'team',ic:'👥',t:'팀 소속 · 지점장 지정',
+  w:'이걸 해야 AI 관리판과 윤시스쿨이 팀별로 나뉘어 보입니다.',
+  h:'설정 → 팀원 권한 관리에서 사람마다 팀을 고르고, 팀장에게 지점장 역할을 주십시오.',
+  go:'settings',ub:'설정 열기',
+  auto:function(){var g=owTeamGap();if(!g.n)return '';return (g.noTeam===0&&g.lead>0)?'done':'no';},
+  note:function(){var g=owTeamGap();if(!g.n)return '';
+    return '지금 '+g.n+'명 중 소속 없는 사람 '+g.noTeam+'명 · 지점장 '+g.lead+'명';}},
+ {k:'net',ic:'🌐',t:'클로드 Network access 열기',
+  w:'지금 정부 사이트가 막혀서 뉴스 자동 점검이 원문을 못 읽습니다. 언론 기사로만 확인하고 있습니다.',
+  h:'claude.ai/code → Environments → 이 환경 Edit → Network access 를 Full 로. (또는 Custom 에 *.go.kr 추가)',
+  u:'https://claude.ai/code',ub:'클로드 열기'},
+ {k:'sb_backup',ic:'💾',t:'Supabase 자동 백업 켜기',
+  w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽입니다.',
+  h:'Project Settings → Database → Backups 에서 켜져 있는지 확인하십시오.',
+  u:'https://supabase.com/dashboard',ub:'Supabase 열기'},
+ {k:'legal',ic:'📄',t:'약관·개인정보 변호사 확인 · 통신판매업 신고',
+  w:'고객 정보를 다루는 앱입니다. 문서가 확인되지 않으면 나중에 크게 걸립니다.',
+  h:'변호사·준법감시 확인을 받고, 통신판매업은 정부24 또는 관할 구청에 신고하십시오.',
+  u:'https://www.gov.kr',ub:'정부24 열기'},
+ {k:'toss',ic:'💳',t:'토스 계약 · TOSS_SECRET_KEY',
+  w:'구독 결제를 받으시려면 필요합니다. 지금 당장은 안 급합니다.',
+  h:'토스페이먼츠 계약 후 Netlify 환경변수에 TOSS_SECRET_KEY 를 넣으십시오.',
+  fn:'nfOpenEnv',ub:'환경변수 화면 열기'}
+];
+function owState(it){
+  var m=owMarks();
+  if(m[it.k])return 'done';
+  if(it.auto){try{var a=it.auto();if(a)return a;}catch(e){}}
+  return '';
+}
+function owLeft(){
+  var n=0,i;for(i=0;i<OW_ITEMS.length;i++)if(owState(OW_ITEMS[i])!=='done')n++;
+  return n;
+}
+function owOpen(){OW.open=true;owPaint();}
+function owClose(){OW.open=false;var el=document.getElementById('owOvl');if(el)el.remove();}
+function owGoTab(t){owClose();try{go(t);}catch(e){}}
+function owCall(fn){try{if(typeof window[fn]==='function')window[fn]();}catch(e){}}
+function owRowHtml(it){
+  var st=owState(it),done=(st==='done');
+  var m=owMarks(),by=m[it.k]?(' · '+m[it.k]+' 확인'):'';
+  var note=it.note?(function(){try{return it.note();}catch(e){return '';}})():'';
+  var btn='';
+  if(it.fn)btn='<button type="button" class="ow-b p" onclick="owCall(\''+it.fn+'\')">'+osEsc(it.ub)+' ↗</button>';
+  else if(it.go)btn='<button type="button" class="ow-b p" onclick="owGoTab(\''+it.go+'\')">'+osEsc(it.ub)+'</button>';
+  else if(it.u)btn='<a class="ow-b p" href="'+osEsc(it.u)+'" target="_blank" rel="noopener">'+osEsc(it.ub)+' ↗</a>';
+  var extra='';
+  if(it.extra==='nw')
+    extra='<button type="button" class="ow-b" '+(NW.busy?'disabled':'')+' onclick="owNwCheck()">'+
+      (NW.busy?'물어보는 중…':'서버에 물어보기')+'</button>'+
+      '<button type="button" class="ow-b" onclick="nfCopyNames()">이름 복사</button>';
+  return '<div class="ow-row'+(done?' done':'')+(it.urgent&&!done?' urgent':'')+'">'+
+    '<button type="button" class="ow-ck'+(done?' on':'')+'" onclick="owMark(\''+it.k+'\','+(done?'false':'true')+')" '+
+      'title="'+(done?'다시 할 일로':'다 했다고 표시')+'">'+(done?'✓':'')+'</button>'+
+    '<div class="ow-bd">'+
+      '<div class="ow-t"><span class="e">'+it.ic+'</span>'+osEsc(it.t)+
+        (it.urgent&&!done?'<span class="ow-u">급함</span>':'')+
+        (done?('<span class="ow-d">완료'+osEsc(by)+'</span>'):'')+'</div>'+
+      (done?'':('<div class="ow-w">'+osEsc(it.w)+'</div><div class="ow-h">'+osEsc(it.h)+'</div>'))+
+      (note?('<div class="ow-n">'+osEsc(note)+'</div>'):'')+
+      (done?'':('<div class="ow-bs">'+btn+extra+'</div>'))+
+    '</div></div>';
+}
+function owNwCheck(){if(typeof nwRun==='function')nwRun(function(){owPaint();});}
+function owPaint(){
+  if(!OW.open)return;
+  var el=document.getElementById('owOvl');
+  if(!el){el=document.createElement('div');el.id='owOvl';document.body.appendChild(el);owCss();}
+  var left=owLeft(),i,rows='';
+  for(i=0;i<OW_ITEMS.length;i++)rows+=owRowHtml(OW_ITEMS[i]);
+  el.innerHTML='<div class="ow-mask" onclick="owClose()"></div><div class="ow-win" role="dialog" aria-modal="true">'+
+    '<div class="ow-hd"><div><div class="ow-h1">내가 할 일</div>'+
+      '<div class="ow-h2">'+(left?('앱 밖에서 사장님이 직접 하셔야 하는 것 <b>'+left+'가지</b>입니다. 나머지는 앱이 다 했습니다.')
+        :'다 하셨습니다. 앱 밖에서 하실 것이 남아 있지 않습니다.')+'</div></div>'+
+      '<button type="button" class="ow-x" onclick="owClose()" aria-label="닫기">✕</button></div>'+
+    '<div class="ow-bdy">'+rows+'</div>'+
+    '<div class="ow-ft">'+
+      '<button type="button" class="ow-b" onclick="owSnooze()">오늘은 그만 보기</button>'+
+      '<button type="button" class="ow-b" onclick="owGoTab(\'ready\')">🚦 출발 점검 자세히</button>'+
+      '<span class="ow-v">'+osEsc(typeof osVerText==='function'?osVerText():'')+'</span>'+
+    '</div></div>';
+}
+function owSnooze(){
+  try{localStorage.setItem('apex_ow_snooze',new Date(Date.now()+9*3600*1000).toISOString().slice(0,10));}catch(e){}
+  owClose();
+}
+/* 로그인하면 하루 한 번, 남은 것이 있을 때만 뜬다 */
+function owMaybe(){
+  try{
+    if(!(typeof osIsOwner==='function'&&osIsOwner()))return;
+    var t=new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+    if(localStorage.getItem('apex_ow_snooze')===t)return;
+    setTimeout(function(){
+      if(!owLeft())return;
+      if(document.getElementById('owOvl'))return;
+      owOpen();
+    },3200);
+  }catch(e){}
+}
+function owCss(){
+  if(document.getElementById('owCss'))return;
+  var st=document.createElement('style');st.id='owCss';
+  st.textContent='#owOvl{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px}'+
+   '.ow-mask{position:absolute;inset:0;background:rgba(11,24,44,.52);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}'+
+   '.ow-win{position:relative;background:#fff;border-radius:18px;width:100%;max-width:600px;max-height:86vh;'+
+     'display:flex;flex-direction:column;overflow:hidden;box-shadow:0 26px 64px -18px rgba(11,36,71,.44)}'+
+   '.ow-hd{display:flex;gap:12px;align-items:flex-start;padding:18px 20px 15px;border-bottom:1px solid #EEF2F7;background:#F8FAFC}'+
+   '.ow-h1{font-size:17px;font-weight:900;color:#0B2447;letter-spacing:-.01em}'+
+   '.ow-h2{font-size:12.5px;color:#5C6E84;line-height:1.65;margin-top:3px}'+
+   '.ow-h2 b{color:#B45309;font-weight:900}'+
+   '.ow-x{margin-left:auto;border:0;background:transparent;font-size:15px;color:#94A3B8;cursor:pointer;padding:2px 4px;line-height:1}'+
+   '.ow-bdy{overflow:auto;padding:6px 20px 4px}'+
+   '.ow-row{display:grid;grid-template-columns:22px minmax(0,1fr);gap:11px;padding:13px 0;border-bottom:1px solid #F1F5F9}'+
+   '.ow-row:last-child{border-bottom:0}'+
+   '.ow-row.done{opacity:.5}'+
+   '.ow-ck{width:22px;height:22px;border-radius:7px;border:1.5px solid #CBD5E1;background:#fff;cursor:pointer;'+
+     'font-size:12px;font-weight:900;color:#fff;line-height:1;padding:0;margin-top:1px}'+
+   '.ow-ck.on{background:#16A34A;border-color:#16A34A}'+
+   '.ow-t{font-size:14px;font-weight:800;color:#0B2447;display:flex;align-items:center;gap:7px;flex-wrap:wrap;line-height:1.45}'+
+   '.ow-t .e{font-size:15px}'+
+   '.ow-u{font-size:9.5px;font-weight:900;color:#B91C1C;background:#FEE2E2;border-radius:999px;padding:2px 8px}'+
+   '.ow-d{font-size:10px;font-weight:800;color:#15803D;background:#DCFCE7;border-radius:999px;padding:2px 8px}'+
+   '.ow-w{font-size:12.5px;color:#475569;line-height:1.7;margin-top:5px}'+
+   '.ow-h{font-size:11.5px;color:#8494A8;line-height:1.7;margin-top:3px}'+
+   '.ow-n{font-size:11.5px;color:#1D4ED8;font-weight:700;margin-top:4px}'+
+   '.ow-row.urgent .ow-w{color:#991B1B}'+
+   '.ow-bs{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}'+
+   '.ow-b{display:inline-block;border:1px solid #E2E8F0;background:#fff;border-radius:9px;padding:6px 12px;'+
+     'font-size:11.5px;font-weight:800;color:#0B2447;cursor:pointer;font-family:inherit;text-decoration:none}'+
+   '.ow-b.p{background:#1D4ED8;border-color:#1D4ED8;color:#fff}'+
+   '.ow-b[disabled]{opacity:.55;cursor:default}'+
+   '.ow-ft{display:flex;gap:6px;align-items:center;padding:12px 20px;border-top:1px solid #EEF2F7;background:#FBFCFE;flex-wrap:wrap}'+
+   '.ow-v{margin-left:auto;font-size:10px;color:#94A3B8;font-variant-numeric:tabular-nums}'+
+   '@media(max-width:560px){.ow-win{max-height:92vh}.ow-bdy{padding:4px 15px}.ow-hd,.ow-ft{padding-left:15px;padding-right:15px}}';
+  document.head.appendChild(st);
+}
+
+/* ── 지금 열려 있는 판 ──────────────────────────────────────────
+   화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
+   정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
+   PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
+var APP_BUILD='2026-08-09 18:05';
+var APP_BUILD_NOTE='내가 할 일 창 · 환경변수 바로가기 · 판 도장';
+
+/* ── Netlify 설정 화면 바로가기 ────────────────────────────────
+   「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
+   사이트 이름은 배포 주소에서 알아낸다 — apex-os-yunpro.netlify.app → apex-os-yunpro.
+   못 알아내면 Netlify 첫 화면으로 보낸다(거기서 사이트를 고르면 된다). */
+var NF_SITE_FALLBACK='apex-os-yunpro';
+function nfSite(){
+  try{
+    var h=location.hostname||'';
+    var m=h.match(/^([a-z0-9-]+)\.netlify\.app$/i);
+    if(m&&m[1])return m[1].replace(/^deploy-preview-\d+--/,'');
+  }catch(e){}
+  return NF_SITE_FALLBACK;
+}
+function nfEnvUrl(){return 'https://app.netlify.com/projects/'+nfSite()+'/configuration/env';}
+function nfOpenEnv(){
+  var u=nfEnvUrl();
+  try{
+    var w=window.open(u,'_blank','noopener');
+    if(w){try{toast('Netlify 환경변수 화면을 열었습니다');}catch(e){}return;}
+  }catch(e){}
+  try{if(typeof copyText==='function'){copyText(u);toast('팝업이 막혀 주소를 복사했습니다 — 붙여넣어 여세요');return;}}catch(e){}
+  try{location.href=u;}catch(e){}
+}
+function osVerText(){return '판 '+APP_BUILD;}
+function osVerPaint(){
+  var el=document.getElementById('verPillTxt');
+  if(el)el.textContent=osVerText();
+}
+function osVerCopy(){
+  var t=osVerText()+' — '+APP_BUILD_NOTE;
+  try{if(typeof copyText==='function'){copyText(t);return;}}catch(e){}
+  try{toast(t);}catch(e){}
+}
 var CRM_URL='/db-crm.html';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
   f.src=CRM_URL;f._mounted=true;
 }
 function reloadCrm(){var f=$('crmFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCrm,30);toast('DB CRM 새로고침');}}
+
+/* ── DB 통합 CRM 안에서 바로 받는 AI 피드백 ────────────────────────
+   통화를 남기고 나서 그 자리에서 「내가 지금 어떻게 걸고 있나」를 봐야
+   다음 통화가 달라진다. AI 관리판까지 나갔다 오면 아무도 안 본다.
+   숫자는 arCrmDeep 이 이미 계산해 둔 것을 그대로 쓰고, 여기서 새로 읽으면
+   팀원 관리에서 리더가 보는 숫자도 같이 새로워진다 — 한 곳에서 읽기 때문이다. */
+var CF={open:false,busy:false,txt:'',at:'',err:''};
+function crmFeedOpen(){
+  CF.open=true;crmFeedPaint();
+  if(typeof AR!=='undefined'&&!AR.loaded&&typeof arLoad==='function'){
+    arLoad();setTimeout(function(){if(CF.open)crmFeedPaint();},2200);
+  }
+}
+function crmFeedClose(){CF.open=false;var el=document.getElementById('crmFeedWrap');if(el)el.remove();}
+function crmFeedReload(){
+  if(typeof AR!=='undefined'){AR.loaded=false;}
+  if(typeof arLoad==='function')arLoad();
+  CF.txt='';CF.err='';crmFeedPaint();
+  setTimeout(function(){if(CF.open)crmFeedPaint();},2400);
+  toast('CRM 기록을 다시 읽습니다');
+}
+function crmFeedNums(){
+  try{
+    if(typeof arCrmDeep!=='function'||typeof arMyId!=='function')return null;
+    return arCrmDeep(arMyId());
+  }catch(e){return null;}
+}
+function crmFeedAsk(){
+  if(CF.busy)return;
+  if(typeof callAI!=='function'){toast('AI 연결이 필요합니다');return;}
+  var o=crmFeedNums();
+  if(!o){toast('아직 통화 기록을 읽지 못했습니다');return;}
+  CF.busy=true;CF.err='';crmFeedPaint();
+  var body=arCrmDeepText(arMyId());
+  var tk='';
+  try{
+    var c=arTkCount(arMyId());
+    tk='\n[오늘 손댈 사람] 진행중 '+c.run+' · 부재 '+c.no+' · 거절 '+c.rej+
+       ' · 미진행 '+c['new']+' · 기고객 '+c.old+' · 생일 '+c.bd+'\n';
+  }catch(e){}
+  var sys='당신은 보험 대리점의 영업 코치입니다. 아래는 설계사 한 사람의 최근 30일 전화 기록 요약입니다. '+
+    '주어진 숫자만 쓰고 없는 숫자를 지어내지 마세요. 고객 이름은 주어지지 않았으니 특정 고객을 지목하지 마세요. '+
+    '세 덩이로만 답하세요 — "## 지금 습관"(무엇이 보이는지 두 줄), '+
+    '"## 오늘 바꿀 것 하나"(한 가지만, 구체적인 행동으로), '+
+    '"## 이번 주 목표"(숫자 하나). 짧고 단정하게, 실무자 말투로. '+
+    '보험 권유 문구는 쓰지 마세요.';
+  callAI(sys,body+tk,900,'crm_feed').then(function(out){
+    CF.busy=false;CF.txt=(''+(out||'')).trim();
+    CF.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    crmFeedPaint();
+  },function(e){CF.busy=false;CF.err=(e&&e.message)||'AI 를 부르지 못했습니다';crmFeedPaint();});
+}
+function crmFeedChips(o){
+  if(!o)return '<div class="cf-none">아직 통화 기록을 읽지 못했습니다. 「↻ 다시 읽기」를 눌러 보세요.</div>';
+  var c=[['통화',o.n+'통'],['전화한 날',o.dayN+'일'],['하루 평균',o.perDay+'통'],
+         ['상담',o.ok+'건'],['전환',o.conv+'%'],['부재',o.no+'건'],['거절',o.rej+'건'],
+         ['한 건당',o.per+'번'],['다시 건 비율',o.again+'%'],['재통화 간격',o.gapAvg+'일']];
+  var h='<div class="cf-chips">',i;
+  for(i=0;i<c.length;i++)h+='<span class="cf-c"><b>'+osEsc(''+c[i][1])+'</b>'+osEsc(c[i][0])+'</span>';
+  h+='</div>';
+  if(o.topH||o.topW)
+    h+='<div class="cf-line">주로 <b>'+osEsc(o.topH||'—')+'</b> · <b>'+osEsc(o.topW||'—')+'</b>'+
+       ((typeof o.last7==='number')?(' · 최근 7일 <b>'+o.last7+'통</b>'+
+         ((typeof o.prev7==='number')?(' (이전 7일 '+o.prev7+'통)'):'')):'')+'</div>';
+  return h;
+}
+function crmFeedPaint(){
+  if(!CF.open)return;
+  var el=document.getElementById('crmFeedWrap');
+  if(!el){
+    el=document.createElement('div');el.id='crmFeedWrap';
+    (document.getElementById('crmScreen')||document.body).appendChild(el);
+    crmFeedCss();
+  }
+  var o=crmFeedNums();
+  var body='';
+  if(CF.busy)body='<div class="cf-none">AI 가 읽는 중입니다…</div>';
+  else if(CF.err)body='<div class="cf-none bad">'+osEsc(CF.err)+'</div>';
+  else if(CF.txt)body='<div class="cf-out">'+(typeof mdToHtml==='function'?mdToHtml(CF.txt):osEsc(CF.txt).replace(/\n/g,'<br>'))+'</div>';
+  else body='<div class="cf-none">아래 단추를 누르면 이 숫자를 놓고 무엇을 바꿀지 한 가지만 짚어 줍니다.</div>';
+  el.innerHTML=
+    '<div class="cf-pan">'+
+      '<div class="cf-hd">🧠 내 전화 습관'+
+        '<span class="cf-at">'+(CF.at?('AI '+osEsc(CF.at)+' 기준'):'최근 30일')+'</span>'+
+        '<button type="button" class="cf-x" onclick="crmFeedClose()" aria-label="닫기">✕</button></div>'+
+      '<div class="cf-bd">'+crmFeedChips(o)+body+'</div>'+
+      '<div class="cf-ft">'+
+        '<button type="button" class="cf-b p"'+(CF.busy?' disabled':'')+' onclick="crmFeedAsk()">'+
+          (CF.busy?'생각 중…':(CF.txt?'다시 물어보기':'AI 에게 물어보기'))+'</button>'+
+        '<button type="button" class="cf-b" onclick="crmFeedReload()">↻ 다시 읽기</button>'+
+        '<button type="button" class="cf-b" onclick="exitCrm();go(\'airep\')">AI 관리판</button>'+
+      '</div>'+
+    '</div>';
+}
+function crmFeedCss(){
+  if(document.getElementById('crmFeedCss'))return;
+  var st=document.createElement('style');st.id='crmFeedCss';
+  st.textContent='#crmFeedWrap{position:absolute;right:14px;bottom:64px;z-index:340;max-width:min(430px,calc(100vw - 28px))}'+
+   '.cf-pan{background:#fff;border:1px solid #E2E8F0;border-radius:15px;overflow:hidden;'+
+     'box-shadow:0 18px 44px -14px rgba(11,36,71,.34);display:flex;flex-direction:column;max-height:min(74vh,620px)}'+
+   '.cf-hd{display:flex;align-items:center;gap:8px;padding:11px 14px;font-size:13px;font-weight:900;'+
+     'color:#0B2447;background:#F8FAFC;border-bottom:1px solid #EEF2F7}'+
+   '.cf-at{margin-left:auto;font-size:10.5px;font-weight:700;color:#94A3B8}'+
+   '.cf-x{border:0;background:transparent;font-size:14px;color:#94A3B8;cursor:pointer;padding:0 2px;line-height:1}'+
+   '.cf-bd{padding:12px 14px;overflow:auto}'+
+   '.cf-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}'+
+   '.cf-c{font-size:10.5px;color:#64748B;background:#F1F5F9;border-radius:999px;padding:3px 9px;line-height:1.6}'+
+   '.cf-c b{color:#0B2447;font-weight:900;margin-right:4px;font-variant-numeric:tabular-nums}'+
+   '.cf-line{font-size:11.5px;color:#64748B;margin-bottom:10px;line-height:1.7}'+
+   '.cf-line b{color:#1D4ED8;font-weight:800}'+
+   '.cf-none{font-size:12px;color:#94A3B8;line-height:1.7;padding:4px 0}'+
+   '.cf-none.bad{color:#B91C1C}'+
+   '.cf-out{font-size:12.5px;color:#334155;line-height:1.8}'+
+   '.cf-out h2{font-size:12.5px;font-weight:900;color:#0B2447;margin:11px 0 4px}'+
+   '.cf-out h2:first-child{margin-top:0}'+
+   '.cf-out p{margin:0 0 7px}'+
+   '.cf-ft{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #EEF2F7;background:#FBFCFE;flex-wrap:wrap}'+
+   '.cf-b{border:1px solid #E2E8F0;background:#fff;border-radius:9px;padding:6px 12px;font-size:11.5px;'+
+     'font-weight:800;color:#0B2447;cursor:pointer;font-family:inherit}'+
+   '.cf-b.p{background:#1D4ED8;border-color:#1D4ED8;color:#fff}'+
+   '.cf-b[disabled]{opacity:.55;cursor:default}'+
+   '@media(max-width:560px){#crmFeedWrap{left:14px;right:14px;max-width:none;bottom:58px}}';
+  document.head.appendChild(st);
+}
 function openCrmNewTab(){
   var w=window.open(CRM_URL,'_blank','noopener');
   if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
@@ -10677,6 +11094,13 @@ function renderHome(){
     '<div id="osSetupHome"></div>'+
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
+    (osIsOwner()&&typeof owLeft==='function'&&owLeft()
+      ?('<div class="notice" style="margin:14px 0 0;background:#FFF7ED;border-color:#FED7AA;color:#9A3412;'+
+        'display:flex;gap:11px;align-items:center;flex-wrap:wrap">'+
+        '<b style="font-size:13px">앱 밖에서 사장님이 하실 일이 '+owLeft()+'가지 남았습니다.</b>'+
+        '<button type="button" class="btn btn-primary" style="padding:6px 13px;font-size:12px;margin-left:auto" '+
+        'onclick="owOpen()">내가 할 일 열기</button></div>')
+      :'')+
     '<div class="page-hd" style="margin-top:18px"><div class="page-tag">'+osEsc(osRoleLabel(role))+' 홈</div><div class="page-title">역할 맞춤 바로가기</div></div>'+
     '<div class="quick-grid">'+cards+'</div>'+
     '<div class="page-hd" style="margin-top:22px"><div class="page-tag">WORKSPACE</div><div class="page-title">전체 도구</div></div>'+
@@ -12970,9 +13394,22 @@ function aoNightHtml(){
        '<details style="margin-top:7px"><summary style="cursor:pointer;font-size:11px;color:var(--ink-5);list-style:none">실행 로그 보기</summary>'+
        '<div class="rpt-body" style="margin-top:6px">'+renderMd(run.body||'')+'</div></details>';
   }else{
-    h+='<div style="font-size:12px;color:#92400E;line-height:1.75">아직 야간 근무 기록이 없습니다.<br>'+
-       '<b>Netlify → Site settings → Environment variables</b> 에 <code>SUPABASE_SERVICE_ROLE_KEY</code> 가 있어야 서버가 스스로 일할 수 있습니다. '+
-       '설정 후 다음 새벽부터 자동으로 쌓입니다.</div>';
+    /* 글로만 「환경변수에 넣으세요」 라고 적어 두면 어디로 가야 하는지 찾다가 만다.
+       여기가 그 사실을 가장 먼저 보게 되는 자리라, 여는 단추를 바로 붙인다. */
+    h+='<div style="font-size:12px;color:#92400E;line-height:1.75">아직 야간 근무 기록이 없습니다. '+
+       '열쇠 두 개가 있어야 서버가 스스로 일합니다 — 넣으시면 <b>다음 새벽부터</b> 저절로 쌓입니다.'+
+       '<div style="margin:8px 0 2px;font-family:ui-monospace,monospace;font-size:11.5px;color:#7C2D12">'+
+         '· SUPABASE_SERVICE_ROLE_KEY<br>· ANTHROPIC_API_KEY</div>'+
+       '<div class="btn-row" style="margin-top:10px">'+
+         '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+         '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
+         '<button type="button" class="btn btn-ghost" '+(NW.busy?'disabled':'')+' onclick="aoNightRun()">'+
+           (NW.busy?'물어보는 중…':'🌙 지금 돌려보기')+'</button>'+
+       '</div>'+
+       (NW.msg?('<div style="margin-top:9px;font-size:11.5px;color:'+(NW.ok?'#065F46':'#B91C1C')+'">'+
+         osEsc(NW.msg)+' <span style="color:#92400E">('+osEsc(NW.at)+' 확인)</span></div>'):'')+
+       '<div style="margin-top:8px;font-size:11px;color:#92400E">열쇠 값은 <b>채팅창에 붙이지 마시고</b> 그 화면에서 직접 넣으세요. '+
+       '<code>service_role</code> 은 DB 전체를 마음대로 할 수 있는 최고 권한입니다.</div></div>';
   }
   h+='</div></div>';
   if(brf){
@@ -22289,6 +22726,7 @@ function calcInherit(){
 applyEmbeddedConfig();
 renderNav();
 updateKeyPill();
+osVerPaint();
 go('home');
 try{osCapApply();}catch(e){}
 </script>
@@ -27049,7 +27487,7 @@ function osGuideFab(){
   document.body.appendChild(b);
 }
 function osGuideMaybeAuto(){if(!osGuideSeen()){try{setTimeout(function(){if(OS.profile)osGuideOpen();},800);}catch(e){}}}
-function osOnLogin(){osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();if(typeof arAutoArm==='function')arAutoArm();}
+function osOnLogin(){if(typeof osVerPaint==='function')osVerPaint();osAudit('login','session',null,{role:OS.profile.role});toast('로그인됨 · '+osRoleLabel(OS.profile.role));if(typeof osAttendMark==='function')osAttendMark();if(typeof osAiLoad==='function')osAiLoad();if(typeof osSyncAccess==='function')osSyncAccess();if(typeof osPaySync==='function')osPaySync();osRefreshIfClients();if(typeof osNoticeLoad==='function')osNoticeLoad();if(typeof osGuideFab==='function')osGuideFab();if(typeof vaFab==='function')vaFab();if(typeof osGuideMaybeAuto==='function')osGuideMaybeAuto();if(typeof arBriefMaybe==='function')arBriefMaybe();if(typeof arNudgeStart==='function')arNudgeStart();if(typeof arAutoArm==='function')arAutoArm();if(typeof owMaybe==='function')owMaybe();}
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
