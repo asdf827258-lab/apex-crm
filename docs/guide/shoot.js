@@ -160,6 +160,16 @@ const AI_TALK = `부재 6건 · 거절 2건이면 이렇게 여십시오.
   await page.evaluate(() => { window.__aiMode = 'rep'; });
   await shot('14-daily', '매일 취합 — 오늘 볼 것 · 팀에 전할 말 · 이번 주 방향');
 
+  /* ── 윤시스쿨 — 앱 안에서 열어야 실제 팀이 뜬다 ── */
+  await go('yoonsi', 6000);
+  await shot('14b-yoonsi-office', '윤시스쿨 오피스 — 실제 팀원이 자리에 앉는다');
+  const ysFrame = page.frames().find(f => f.url().indexOf('index.html') >= 0 && f !== page.mainFrame());
+  if (ysFrame) {
+    await ysFrame.evaluate(() => { const el = document.querySelector('[data-tab="tracker"]'); if (el) el.click(); });
+    await page.waitForTimeout(1400);
+  }
+  await shot('14c-yoonsi-track', '윤시스쿨 진행판 — 우리 DB 를 단계로');
+
   /* ── 15~17. 고객·DB ── */
   await go('crm', 2800); await shot('15-crm', 'DB 통합 CRM');
   await go('clients', 2800); await shot('16-clients', '고객 365일');
