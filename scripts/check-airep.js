@@ -335,7 +335,7 @@ const AI_OK = `## 활동 보고
   ok(/제목 없이/.test(p3.act), '제목을 안 지킨 답도 버리지 않는다');
 
   /* ── 한 사람 만들기 ── */
-  await page.evaluate(() => arGen('p2'));
+  await page.evaluate(() => { window.__ins = []; arGen('p2'); });
   await page.waitForTimeout(700);
   txt = await pane();
   const secs = await page.evaluate(() => document.querySelectorAll('#arPane .ar-sec').length);
