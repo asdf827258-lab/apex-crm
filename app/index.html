@@ -30484,7 +30484,25 @@ function cnFullPreview(sl,idx,n){
     '<div class="cnw-ffoot"><b>APEX YUN PRO</b><span>'+(idx+1)+' / '+n+' · 넘겨보기 →</span></div>'+
   '</div>';
 }
+function cnFrostPreview(sl,idx,n){
+  var m=cnMagText(sl),im=CN.imgs[idx];
+  var bg=(im&&im.url)?('background-image:url('+im.url+')')
+    :'background-image:linear-gradient(140deg,#0B2447,#1D4ED8)';
+  return '<div class="cnw frost" style="'+bg+'">'+
+    '<span class="cnw-fnum dk">'+(idx+1)+'</span>'+
+    (m.k?('<span class="cnw-fk dk">'+osEsc((''+m.k).slice(0,24))+'</span>'):'')+
+    '<div class="cnw-pan" style="'+bg+'"><div class="cnw-pang"></div>'+
+      '<div class="cnw-fbody" style="position:static;border-left:4px solid #38BDF8">'+
+        '<div class="cnw-ft">'+osEsc((''+(m.t||'')).replace(/\*\*/g,'')).replace(/\n/g,'<br>')+'</div>'+
+        (m.s?('<div class="cnw-fs">'+osEsc(m.s)+'</div>'):'')+
+      '</div>'+
+      '<div class="cnw-ffoot" style="position:static;margin-top:auto"><b>APEX YUN PRO</b>'+
+        '<span>'+(idx+1)+' / '+n+' · 넘겨보기 →</span></div>'+
+    '</div>'+
+  '</div>';
+}
 function cnSlidePreview(sl,idx,n){
+  if(CN.style==='frost')return cnFrostPreview(sl,idx,n);
   if(CN.style==='full')return cnFullPreview(sl,idx,n);
   var m=cnMagText(sl),lay=cnLayout(sl);
   var badge='<span class="cnw-badge'+(lay==='cover'?' cv':'')+'">'+(idx+1)+'</span>';
@@ -30567,7 +30585,7 @@ function renderTodayCard(){
     '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
     '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
     '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
-  var badge=(CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일');
+  var badge=(CN.style==='frost')?(n+'장 · 흐린 칸 · 사진은 그대로'):((CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일'));
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
     : '<div class="cn2-intro"><b>뉴스 카드 스타일</b> — 흰 배경 + 번호 뱃지 + <b>파란 키워드 강조</b> + 사진 블록 + 하단 지표 바 구조입니다. <b>✨ AI 사진 생성</b>을 누르면 각 장에 어울리는 실사 사진을 자동으로 만들어 넣고(전체 생성 가능), <b>🖼 직접 업로드</b>로 내 사진도 넣을 수 있습니다.</div>';
@@ -30579,7 +30597,9 @@ function renderTodayCard(){
     '<span class="cn-sty"><button type="button" class="cn-styb'+(CN.style==='news'?' on':'')+'" '+
       'onclick="cnStyleSet(\'news\')">📰 뉴스 카드</button>'+
       '<button type="button" class="cn-styb'+(CN.style==='full'?' on':'')+'" '+
-      'onclick="cnStyleSet(\'full\')">🖼 사진 전체</button></span>'+
+      'onclick="cnStyleSet(\'full\')">🖼 사진 전체</button>'+
+      '<button type="button" class="cn-styb'+(CN.style==='frost'?' on':'')+'" '+
+      'onclick="cnStyleSet(\'frost\')">🌫 흐린 칸</button></span>'+
     (isAi?'':'<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>')+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
     '<div class="cn2-stage"><button class="cn2-arrow l" onclick="cnNav(-1)" aria-label="이전">‹</button>'+
@@ -30663,7 +30683,83 @@ function cnDrawFull(sl,idx,n){
   x.textAlign='left';
   return c;
 }
+/* ── 프로스트 ──
+   사진은 그대로 두고, 글자가 앉을 자리만 흐리게 만든 뒤 그 위에 글을 얹는다.
+   사진을 통째로 어둡게 덮는 것과 다르다 — 사진은 살고 글은 읽힌다. */
+function cnDrawFrost(sl,idx,n){
+  var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
+  var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
+  var m=cnMagText(sl),PAD=80,maxW=W-PAD*2,im=CN.imgs[idx];
+  x.textBaseline='top';x.textAlign='left';
+  var drawPhoto=function(ctx){
+    if(im&&im.img){
+      var ir=im.img.width/im.img.height,cr=W/H,dw,dh,dx,dy;
+      if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+      /* 사진을 살짝 위로 — 아래 흐린 칸에 얼굴이 묻히지 않게 */
+      ctx.drawImage(im.img,dx,dy-H*0.06,dw,dh);
+    }else{
+      var g0=ctx.createLinearGradient(0,0,W,H);
+      g0.addColorStop(0,'#0B2447');g0.addColorStop(1,'#1D4ED8');
+      ctx.fillStyle=g0;ctx.fillRect(0,0,W,H);
+      drawApexMark(ctx,W/2,H*0.28,190,'rgba(255,255,255,.14)');
+    }
+  };
+  drawPhoto(x);
+  var isCover=(cnLayout(sl)==='cover');
+  x.font='900 '+(isCover?86:74)+'px Pretendard'+FF;
+  var head=cnWrap(x,(''+(m.t||'')).replace(/\*\*/g,''),maxW-56).slice(0,4);
+  x.font='500 36px Pretendard'+FF;
+  var sub=m.s?cnWrap(x,''+m.s,maxW-56).slice(0,3):[];
+  var lh=isCover?100:88;
+  var panH=Math.min(H*0.62,head.length*lh+(sub.length?sub.length*50+26:0)+230);
+  var panY=H-panH;
+  /* 흐린 칸 — 사진을 작게 줄였다 키워서 뿌옇게 만든다 */
+  x.save();
+  x.beginPath();x.rect(0,panY,W,panH);x.clip();
+  try{x.filter='blur(26px)';}catch(e){}
+  drawPhoto(x);
+  try{x.filter='none';}catch(e){}
+  var g=x.createLinearGradient(0,panY,0,H);
+  g.addColorStop(0,'rgba(10,18,38,.42)');
+  g.addColorStop(0.45,'rgba(10,18,38,.72)');
+  g.addColorStop(1,'rgba(10,18,38,.90)');
+  x.fillStyle=g;x.fillRect(0,panY,W,panH);
+  x.restore();
+  /* 흐린 칸 윗선 */
+  x.fillStyle='rgba(255,255,255,.18)';x.fillRect(0,panY,W,2);
+  /* 번호와 라벨은 사진 위쪽에 */
+  x.fillStyle='rgba(10,18,38,.55)';cnRoundRect(x,PAD,72,92,92,24);x.fill();
+  x.fillStyle='#fff';x.font='900 46px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';
+  x.fillText(''+(idx+1),PAD+46,120);
+  x.textAlign='left';x.textBaseline='top';
+  if(m.k){
+    x.fillStyle='rgba(10,18,38,.55)';
+    x.font='800 32px Pretendard'+FF;
+    var kw=x.measureText((''+m.k).slice(0,24)).width;
+    cnRoundRect(x,PAD+108,84,kw+40,68,20);x.fill();
+    x.fillStyle='#BFDBFE';x.fillText((''+m.k).slice(0,24),PAD+128,104);
+  }
+  /* 글자 */
+  var ty=panY+52;
+  x.fillStyle='#38BDF8';cnRoundRect(x,PAD,ty+8,8,head.length*lh-16,4);x.fill();
+  x.font='900 '+(isCover?86:74)+'px Pretendard'+FF;x.fillStyle='#FFFFFF';
+  head.forEach(function(ln){x.fillText(ln,PAD+30,ty);ty+=lh;});
+  if(sub.length){
+    ty+=20;
+    x.font='500 36px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.88)';
+    sub.forEach(function(ln){x.fillText(ln,PAD+30,ty);ty+=50;});
+  }
+  x.fillStyle='rgba(255,255,255,.16)';x.fillRect(PAD,H-112,maxW,2);
+  drawApexMark(x,PAD+22,H-72,44,'rgba(255,255,255,.85)');
+  x.font='800 28px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.88)';
+  x.fillText('APEX YUN PRO',PAD+58,H-66);
+  x.font='600 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.62)';
+  x.textAlign='right';x.fillText((idx+1)+' / '+n+'   ·   넘겨보기 →',W-PAD,H-64);
+  x.textAlign='left';
+  return c;
+}
 function cnDrawSlide(sl,idx,n){
+  if(CN.style==='frost')return cnDrawFrost(sl,idx,n);
   if(CN.style==='full')return cnDrawFull(sl,idx,n);
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
@@ -30805,6 +30901,13 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cnw-fs{color:rgba(255,255,255,.9);font-size:11.5px;font-weight:500;line-height:1.5;margin-top:8px;text-shadow:0 2px 10px rgba(0,0,0,.4)}',
    '.cnw-ffoot{position:absolute;left:7.7%;right:7.7%;bottom:4.6%;z-index:2;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.14);padding-top:9px;color:rgba(255,255,255,.62);font-size:9.5px;font-weight:600}',
    '.cnw-ffoot b{color:rgba(255,255,255,.88);font-weight:800}',
+   '.cnw.frost{position:relative;background-size:cover;background-position:center 42%;padding:0;overflow:hidden;display:block}',
+   '.cnw-pan{position:absolute;left:0;right:0;bottom:0;min-height:46%;max-height:64%;background-size:cover;background-position:center 42%;display:flex;flex-direction:column;padding:16px 7.7% 14px;overflow:hidden}',
+   '.cnw-pan>*{position:relative;z-index:2}',
+   '.cnw-pang{position:absolute;inset:0;z-index:1;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);background:linear-gradient(180deg,rgba(10,18,38,.42),rgba(10,18,38,.74) 45%,rgba(10,18,38,.9))}',
+   '.cnw-pan .cnw-fbody{padding-left:3.4%}',
+   '.cnw-fnum.dk,.cnw-fk.dk{background:rgba(10,18,38,.55);border-radius:8px}',
+   '.cnw-fk.dk{padding:2px 8px;top:6.4%}',
    '.cn-sty{display:inline-flex;gap:4px;margin-left:6px}',
    '.cn-styb{border:1.5px solid #E2E8F0;background:#fff;border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}',
    '.cn-styb.on{background:#0F172A;border-color:#0F172A;color:#fff}',
