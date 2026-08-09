@@ -86,6 +86,10 @@ window.supabase={createClient:function(){
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
+  await page.addInitScript(() => {
+    /* 아침 자동 보고·매일 취합은 AI 를 부른다 — AI 호출을 세는 검사에서는 꺼 둔다 */
+    try { localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1'); } catch (e) { }
+  });
   await page.addInitScript(FAKE);
   await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2600);
@@ -615,6 +619,9 @@ window.supabase={createClient:function(){
   const p2 = await ctx.newPage();
   const e2 = [];
   p2.on('pageerror', e => e2.push('no-speech: ' + e.message));
+  await p2.addInitScript(() => {
+    try { localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1'); } catch (e) { }
+  });
   await p2.addInitScript(FAKE);
   await p2.addInitScript(`delete window.SpeechRecognition;delete window.webkitSpeechRecognition;
     delete window.speechSynthesis;delete window.SpeechSynthesisUtterance;`);

@@ -3588,6 +3588,7 @@ function osTabProbe(tab){
   if(tab==='ready')return renderReady();
   if(tab==='airep')return renderAiRep();
   if(tab==='teamhub')return renderTeamHub();
+  if(tab==='daily')return renderDaily();
   if(tab==='calc')return renderCalcPage();
   if(tab==='clients')return renderClientsPage();
   if(tab==='assistant')return renderAssistant();
@@ -4940,7 +4941,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',db:null,cliRows:null,talk:null,calls:null,
+var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -5761,20 +5762,36 @@ function arTkCount(who){
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
 }
+var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
+var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+function arTkRow(x,own){
+  return '<div class="ar-tk'+(((x.k==='no'&&x.d>=14)||(x.k==='old'&&x.d>=90))?' warn':'')+'" '+
+    'onclick="go(\''+x.go+'\')">'+
+    '<span class="ar-bg '+AR_TKC[x.k]+'">'+AR_TKL[x.k]+'</span>'+
+    '<span class="nm">'+(own?('<b class="own">'+osEsc(arNameOf(x.who))+'</b>'):'')+
+      osEsc(x.nm)+(x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
+    '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
+    '<span class="do">'+osEsc(x.todo)+'</span></div>';
+}
+/* 팀원 한 사람을 펼쳤을 때 그 사람이 오늘 터치할 사람들 */
+function arTouchMini(who,n){
+  var l=arTouch(who),i,h='';
+  if(!l.length)return '';
+  for(i=0;i<l.length&&i<(n||10);i++)h+=arTkRow(l[i],false);
+  return '<div class="ar-sec" style="margin-top:12px"><div class="ar-sh"><span class="e">☎️</span>'+
+    '<span class="n">오늘 터치할 사람</span><span class="d">'+l.length+'명 · 위에서 '+
+    Math.min(l.length,(n||10))+'명</span></div>'+
+    '<div class="ar-sb" style="padding:6px 14px 12px"><div class="ar-tks">'+h+'</div></div></div>';
+}
+function arTkWho(){return (AR.tkAll&&arIsLead())?'':arMyId();}
+function arTkAllSet(v){AR.tkAll=v;arPaint();}
 function arTouchHtml(){
-  var me=arMyId(),l=arTouch(me),c=arTkCount(me),k=arTk(),i,rows=[];
-  var lab={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
-  var col={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+  var who=arTkWho(),lead=arIsLead(),l=arTouch(who),c=arTkCount(who),k=arTk(),i,rows=[];
   for(i=0;i<l.length;i++){
     var x=l[i];
     if(k!=='all'&&x.k!==k)continue;
     if(rows.length>=80)break;
-    rows.push('<div class="ar-tk'+((x.k==='no'&&x.d>=14)||x.k==='old'&&x.d>=90?' warn':'')+'" '+
-      'onclick="go(\''+x.go+'\')">'+
-      '<span class="ar-bg '+col[x.k]+'">'+lab[x.k]+'</span>'+
-      '<span class="nm">'+osEsc(x.nm)+(x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
-      '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
-      '<span class="do">'+osEsc(x.todo)+'</span></div>');
+    rows.push(arTkRow(x,!who));
   }
   var chips='<div class="ar-fs">';
   for(i=0;i<AR_TK.length;i++){
@@ -5787,8 +5804,14 @@ function arTouchHtml(){
     return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
       '<div class="k">'+kk+'</div></div>';
   };
+  var scope=lead?('<div class="ar-fs" style="margin-bottom:10px">'+
+    '<button type="button" class="ar-fc'+(who?' on':'')+'" onclick="arTkAllSet(false)">🙋 내 것</button>'+
+    '<button type="button" class="ar-fc'+(who?'':' on')+'" onclick="arTkAllSet(true)">👥 팀 전체'+
+      '<span>'+arTouch('').length+'</span></button></div>'):'';
   return arCard('☎️','오늘 터치할 사람',
+      (who?'':'팀 전체입니다. 담당자 이름이 앞에 붙습니다. ')+
       '부재 · 거절 · 진행중 · 기고객을 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
+      scope+
       '<div class="ar-top" style="grid-template-columns:repeat(4,1fr)">'+
         tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
         tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
@@ -5870,7 +5893,7 @@ function arCrmMiniHtml(who){
     chip('진행중',(c.run||0)+'명',c.run>0)+chip('부재',(c.no||0)+'명',c.no>0)+
     chip('거절',(c.rej||0)+'명',0)+chip('미진행',(c['new']||0)+'명',c['new']>0)+
     chip('기고객',(c.old||0)+'명',c.old>0)+chip('생일',(c.bd||0)+'명',0)+'</div>'+
-    arWeekStrip(who)+'</div></div>';
+    arWeekStrip(who)+'</div></div>'+arTouchMini(who,10);
   return h;
 }
 /* 주차별 막대 — 좁은 자리에 여섯 주만 */
@@ -6074,7 +6097,7 @@ function arAutoRun(){
   };
   step();
 }
-function arMorningTeam(){arAutoRun();}
+function arMorningTeam(){arAutoRun();try{if(typeof dgLoad==='function'&&!DG.loaded)dgLoad();}catch(e){}}
 /* 앱을 6시에 켜 두었어도 8시가 되면 알아서 돈다.
    앱이 꺼져 있었으면 그날 처음 켤 때 — 8시를 지났으면 그때 만든다.
    브라우저 안에서만 도는 앱이라 서버가 대신 눌러 줄 수는 없다. */
@@ -6590,6 +6613,7 @@ function arCss(){
    '.ar-tk .nm{font-size:13px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;'+
      'text-overflow:ellipsis}'+
    '.ar-tk .nm em{font-style:normal;font-weight:600;color:#94A3B8;font-size:11px;margin-left:4px}'+
+   '.ar-tk .nm .own{color:#1A56DB;font-weight:900;margin-right:6px}'+
    '.ar-tk .dy{font-size:11.5px;font-weight:800;color:#64748B;text-align:right}'+
    '.ar-tk .do{font-size:12.5px;color:#334155;font-weight:600;line-height:1.5}'+
    '.ar-tk.warn .dy{color:#B91C1C}'+
@@ -6766,6 +6790,15 @@ var OS_HELP={
    '옛 메뉴(실행 체크판·내 코칭·본인 점검란·성장판)는 없어진 게 아닙니다. 여기 안에 다 있습니다.',
    '음성으로 "오늘 체크 열어" 라고 하시면 그대로 열립니다.'
  ]],
+ daily:['📒','매일 취합','하루 한 번 모아서 쌓아 둡니다',[
+   ['①','오전 8시가 지나면 저절로 모입니다','앱에 쌓인 숫자와 정책·상품 뉴스에서 오늘 꺼낼 것을 하나 골라 한 장으로 만듭니다.'],
+   ['②','세 칸으로 나옵니다','오늘 볼 것 · 팀에 전할 말 · 이번 주 방향. 「팀에 전할 말」은 아침 회의에서 그대로 읽으셔도 됩니다.'],
+   ['③','날짜를 누르면 지난 날이 열립니다','흐름이 보입니다. 지난주에 무엇을 정했는지도 같이 남습니다.'],
+   ['④','「내가 정한 것」에 한 줄 적어 두세요','다음 날 그것을 참고해서 씁니다. 방향이 쌓입니다.']
+ ],[
+   '숫자가 0 으로만 나오면 → AI 관리판을 한 번 열어 기록을 불러온 뒤 다시 오세요.',
+   '윤시스쿨 화면은 바깥 페이지라 이 앱이 고쳐도 그대로입니다. 매일 모으는 것은 여기서 합니다.'
+ ]],
  settings:['⚙️','설정','여섯 칸으로 나눠 두었습니다',[
    ['①','위에서 볼 것을 고릅니다','팀·권한 / 사업자·법무 / AI 연결 / 결제·구독 / 데이터·백업 / 점검·진단.'],
    ['②','카드 제목을 누르면 펼쳐집니다','칸마다 맨 위 하나만 열려 있습니다. 필요한 것만 여세요.'],
@@ -6835,6 +6868,286 @@ function osHelpHere(){
 function osHelpBtn(key,label){
   return '<button type="button" class="btn btn-ghost" onclick="osHelpOpen(\''+key+'\')">❓ '+
     osEsc(label||'사용법')+'</button>';
+}
+
+/* ════════ 매일 취합 ════════
+   윤시스쿨은 바깥 페이지를 창에 띄우는 것이라 이 앱이 고쳐도 그 화면은 그대로다.
+   그래서 「매일 모아 주는 것」을 앱 안에 따로 만든다.
+   오늘 앱에 쌓인 숫자와 바깥 소식을 하루 한 번 모아, 날짜별로 남긴다.
+   지나간 날을 훑으면 흐름이 보이고, 거기에 방향을 적어 두면 그게 쌓인다.
+   저장은 쓰던 saved_reports(kind='daily_digest') 를 그대로 쓴다 — 새 표 없음. */
+var DG={loaded:false,busy:'',err:'',rows:[],open:'',memo:''};
+var DG_KIND='daily_digest';
+var DG_SEC=[['see','🔎','오늘 볼 것','대표가 오늘 확인할 세 가지'],
+            ['say','📣','팀에 전할 말','아침 회의에서 그대로 읽는 세 줄'],
+            ['way','🧭','이번 주 방향','숫자 하나로 정한 이번 주 목표']];
+function dgToday(){return (new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10);}
+function dgMy(){try{return OS.session.user.id;}catch(e){return null;}}
+function dgOf(d){var i;for(i=0;i<DG.rows.length;i++)if(DG.rows[i].date===d)return DG.rows[i];return null;}
+
+function dgLoad(force){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){DG.err='서버에 연결되어 있지 않습니다.';DG.loaded=true;dgPaint();return;}
+  if(DG.loaded&&!force)return;
+  if(DG.busy==='load')return;
+  DG.busy='load';DG.err='';dgPaint();
+  if(typeof arLoad==='function')arLoad();
+  sb.from('saved_reports').select('id,title,content,created_at').eq('kind',DG_KIND)
+    .order('created_at',{ascending:false}).limit(120).then(function(r){
+      DG.busy='';DG.loaded=true;
+      var rows=(r&&!r.error)?(r.data||[]):[],out=[],seen={},i,c;
+      for(i=0;i<rows.length;i++){
+        c=rows[i].content||{};
+        if(!c.date||seen[c.date])continue;
+        seen[c.date]=1;c._rid=rows[i].id;out.push(c);
+      }
+      out.sort(function(a,b){return a.date<b.date?1:-1;});
+      DG.rows=out;
+      if(!DG.open&&out.length)DG.open=out[0].date;
+      dgPaint();
+      setTimeout(function(){try{dgAuto();}catch(e){}},1500);
+    },function(e){DG.busy='';DG.loaded=true;DG.err=(e&&e.message)||'네트워크 오류';dgPaint();});
+}
+
+/* 오늘 앱에 쌓인 것 — 숫자만 모은다 */
+function dgNums(){
+  var n={call:0,ok:0,cli:0,chk:0,att:0,people:0,stop:[],rep:0,
+         run:0,no:0,rej:0,old:0,bd:0,due:0,touch:0};
+  try{
+    /* 취합은 고른 팀이 아니라 전원을 본다 — 대표가 아침에 보는 한 장이다 */
+    var l=(typeof GB!=='undefined'&&GB.rows)?GB.rows:[],i,r;
+    n.people=l.length;
+    for(i=0;i<l.length;i++){
+      r=l[i];
+      n.call+=(r.raw&&r.raw.call)||0;n.cli+=(r.raw&&r.raw.cli)||0;
+      n.att+=(r.raw&&r.raw.att)||0;n.rep+=(r.raw&&r.raw.rep)||0;
+      n.chk+=(r.raw&&r.raw.run)||0;
+      if(!r.last||arDaysAgo(r.last)>=3)n.stop.push(r.name);
+    }
+    n.chk=l.length?Math.round(n.chk/l.length*10)/10:0;
+    var c=(typeof arTkCount==='function')?arTkCount(''):{};
+    n.touch=c.all||0;n.run=c.run||0;n.no=c.no||0;n.rej=c.rej||0;n.old=c.old||0;n.bd=c.bd||0;
+    var cr=AR.crm||{},k;
+    n.ok=0;for(k in cr)n.ok+=cr[k].appt||0;
+    var cl=AR.cli||{};
+    for(k in cl)n.due+=cl[k].due||0;
+  }catch(e){}
+  return n;
+}
+/* 오늘 꺼낼 바깥 소식 하나 — 대표가 올린 것이 먼저 */
+function dgNews(){
+  try{
+    var ex=(typeof bizNewsExtra==='function')?bizNewsExtra():[];
+    if(ex.length)return {t:ex[0].title||'',d:ex[0].desc||'',w:'직접 올린 소식'};
+    var tp=(typeof BIZ_NEWS!=='undefined'&&BIZ_NEWS.topics)?BIZ_NEWS.topics:[];
+    if(!tp.length)return null;
+    var d=parseInt(dgToday().slice(8,10),10)||1;
+    var t=tp[d%tp.length],it=(t.items&&t.items[0])||null;
+    if(!it)return null;
+    return {t:it.title||'',d:it.desc||'',w:t.title||''};
+  }catch(e){return null;}
+}
+function dgFacts(){
+  var n=dgNums(),nw=dgNews(),s='';
+  s+='[오늘] '+dgToday()+'\n';
+  s+='[팀] '+n.people+'명 · 최근 30일 통화 '+n.call+'통 · 상담 '+n.ok+'건 · 새 고객 '+n.cli+
+     '명 · 만든 자료 '+n.rep+'건 · 출근 '+n.att+'일\n';
+  s+='[체크판] 팀 하루 평균 '+n.chk+'개\n';
+  s+='[오늘 손대야 할 사람] 모두 '+n.touch+'명 — 진행중 '+n.run+' · 부재 '+n.no+
+     ' · 거절 '+n.rej+' · 기고객 '+n.old+' · 생일 '+n.bd+'\n';
+  s+='[기한 지난 고객 할 일] '+n.due+'건\n';
+  s+='[사흘 넘게 기록 없는 사람] '+(n.stop.length?n.stop.join(', '):'없음')+'\n';
+  if(nw)s+='[오늘 꺼낼 소식] '+nw.w+' — '+nw.t+'\n  '+(''+nw.d).slice(0,180)+'\n';
+  var prev=DG.rows&&DG.rows.length?DG.rows[0]:null;
+  if(prev&&prev.date!==dgToday()&&prev.way)
+    s+='[지난번에 정한 방향] '+(''+prev.way).replace(/\s+/g,' ').slice(0,160)+'\n';
+  if(prev&&prev.memo)s+='[대표가 적어 둔 것] '+(''+prev.memo).replace(/\s+/g,' ').slice(0,160)+'\n';
+  s+='\n위 숫자만 가지고 씁니다. 없는 숫자는 만들지 않습니다.';
+  return s;
+}
+function dgSys(){
+  var base='당신은 에이플러스에셋 온탑본부 대표의 참모입니다. 오늘 아침에 대표가 볼 것을 한 장으로 정리합니다.\n'+
+   '숫자를 지어내지 않습니다. 주어진 숫자만 씁니다.\n'+
+   '「오늘 볼 것」은 오늘 대표가 확인할 세 가지입니다. 사람 이름과 숫자를 넣습니다.\n'+
+   '「팀에 전할 말」은 아침 회의에서 그대로 읽을 수 있는 세 줄입니다. 다그치지 않습니다.\n'+
+   '「이번 주 방향」은 숫자 하나로 정한 목표 한 가지와 그 이유입니다. 두 가지를 정하지 않습니다.\n'+
+   '보험 관련 내용은 단정하지 않습니다. 보장과 지급은 약관과 심사에 따릅니다.\n'+
+   '고객 실명·전화번호·병력은 쓰지 않습니다.\n'+
+   '반드시 아래 세 제목을 그대로, 이 순서로 씁니다.\n'+
+   '## 오늘 볼 것\n## 팀에 전할 말\n## 이번 주 방향';
+  try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식]\n'+k;}}catch(e){}
+  try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
+  return base;
+}
+function dgParse(md){
+  var lines=(''+(md||'')).split(/\r?\n/),nm=['오늘 볼 것','팀에 전할 말','이번 주 방향'],
+      ky=['see','say','way'],out={},cur='',i,j,t,hit;
+  for(j=0;j<lines.length;j++){
+    hit=-1;t=lines[j].replace(/[#*\[\]【】:\s]/g,'');
+    if(/^\s*(#{1,4}|\*\*|\[|【)?\s*(오늘\s*볼|팀에\s*전할|이번\s*주\s*방향)/.test(lines[j]))
+      for(i=0;i<nm.length;i++)if(t.indexOf(nm[i].replace(/\s/g,''))===0){hit=i;break;}
+    if(hit>=0){cur=ky[hit];out[cur]='';continue;}
+    if(cur)out[cur]+=lines[j]+'\n';
+  }
+  for(i=0;i<ky.length;i++)out[ky[i]]=(out[ky[i]]||'').replace(/^\s+|\s+$/g,'');
+  if(!out.see&&!out.say&&!out.way)out.see=(''+(md||'')).replace(/^\s+|\s+$/g,'');
+  return out;
+}
+function dgGen(){
+  if(typeof callAI!=='function'){toast('AI 가 연결되어 있지 않습니다');return;}
+  if(DG.busy)return;
+  DG.busy='gen';DG.err='';dgPaint();
+  var d=dgToday(),n=dgNums(),nw=dgNews();
+  callAI(dgSys(),dgFacts(),2200,'brain').then(function(out){
+    var o=dgParse(out);
+    var old=dgOf(d);
+    o.date=d;o.at=new Date().toISOString();o.n=n;o.news=nw;
+    o.memo=(old&&old.memo)||'';
+    if(old&&old._rid)o._rid=old._rid;
+    DG.rows=DG.rows.filter(function(x){return x.date!==d;});
+    DG.rows.unshift(o);DG.open=d;DG.busy='';
+    dgSave(o);dgPaint();
+  },function(e){DG.busy='';DG.err=(e&&e.message)||'AI 호출에 실패했습니다.';dgPaint();});
+}
+function dgSave(o){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!OS.profile)return;
+  var body={date:o.date,at:o.at,see:o.see||'',say:o.say||'',way:o.way||'',
+            memo:o.memo||'',n:o.n||null,news:o.news||null};
+  if(o._rid){sb.from('saved_reports').update({content:body}).eq('id',o._rid).then(function(){},function(){});return;}
+  sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:null,
+    kind:DG_KIND,title:'매일 취합 · '+o.date,content:body}).then(function(r){
+      if(r&&r.error)return;
+      /* 방금 넣은 줄의 번호를 다시 받아 온다 — 다음에 또 만들면 두 줄이 된다 */
+      sb.from('saved_reports').select('id,content').eq('kind',DG_KIND)
+        .order('created_at',{ascending:false}).limit(20).then(function(q){
+          if(!q||q.error)return;
+          var rows=q.data||[],i,cur=dgOf(o.date);
+          for(i=0;i<rows.length;i++)
+            if(rows[i].content&&rows[i].content.date===o.date){if(cur)cur._rid=rows[i].id;return;}
+        },function(){});
+    },function(){});
+}
+/* 하루 한 번 — 오늘 것이 없으면 알아서 모은다 */
+function dgAutoKey(){return 'apex_dg_'+dgToday();}
+function dgAuto(){
+  if(!OS.profile||DG.busy)return;
+  if(typeof arAutoOff==='function'&&arAutoOff())return;
+  if(typeof arDue==='function'&&!arDue())return;
+  try{if(localStorage.getItem(dgAutoKey())==='1')return;}catch(e){}
+  if(dgOf(dgToday())){try{localStorage.setItem(dgAutoKey(),'1');}catch(e){}return;}
+  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
+  if(typeof callAI!=='function')return;
+  try{localStorage.setItem(dgAutoKey(),'1');}catch(e){}
+  dgGen();
+}
+function dgMemoSet(v){
+  var d=DG.open||dgToday(),o=dgOf(d);
+  if(!o){o={date:d,at:new Date().toISOString(),see:'',say:'',way:'',memo:''};DG.rows.unshift(o);}
+  o.memo=(''+(v||'')).slice(0,600);
+  dgSave(o);
+  var e=document.getElementById('dgMemoS');
+  if(e){e.textContent='저장됨';setTimeout(function(){e.textContent='';},1300);}
+}
+function dgGoDay(d){DG.open=d;dgPaint();}
+
+function dgMd(s){
+  var t=(typeof osEsc==='function')?osEsc(''+(s||'')):(''+(s||''));
+  t=t.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  return t.split(/\n/).map(function(l){
+    var x=l.replace(/^\s*[-•*]\s+/,'');
+    if(x!==l)return '<div class="ar-li">'+x+'</div>';
+    if(/^\s*\d+[.)]\s+/.test(l))return '<div class="ar-li">'+l.replace(/^\s*/,'')+'</div>';
+    if(!l.replace(/\s/g,''))return '';
+    return '<div class="ar-p">'+l+'</div>';
+  }).join('')||'<div class="ar-p" style="color:#94A3B8">아직 없습니다.</div>';
+}
+function dgDayLabel(d){
+  var x=new Date(d+'T00:00:00Z'),w=['일','월','화','수','목','금','토'][x.getUTCDay()];
+  return (x.getUTCMonth()+1)+'월 '+x.getUTCDate()+'일 ('+w+')';
+}
+function dgInnerHtml(){
+  if(DG.busy==='load'&&!DG.loaded)return '<div class="ar-none">모아 둔 것을 불러오는 중입니다…</div>';
+  var d=DG.open||dgToday(),o=dgOf(d),today=dgToday(),i,h='';
+  h+='<div class="ar-bar">'+
+    '<button type="button" class="ar-bb" '+(DG.busy==='gen'?'disabled':'')+' onclick="dgGen()">'+
+      (DG.busy==='gen'?'모으는 중…':'📒 오늘 다시 모으기')+'</button>'+
+    '<button type="button" class="ar-bb" onclick="dgLoad(true)">↻ 새로 읽기</button>'+
+    '<button type="button" class="ar-bb" onclick="go(\'airep\')">🧭 AI 관리판</button>'+
+    '<button type="button" class="ar-bb" onclick="go(\'biz_news\')">📰 정책·상품 뉴스</button>'+
+    '</div>';
+  if(DG.err)h+='<div class="ar-err" style="margin-bottom:12px">'+osEsc(DG.err)+'</div>';
+  /* 날짜 줄 — 지나간 날을 훑는다 */
+  if(DG.rows.length){
+    h+='<div class="ar-fs">';
+    for(i=0;i<DG.rows.length&&i<21;i++)
+      h+='<button type="button" class="ar-fc'+(DG.rows[i].date===d?' on':'')+'" '+
+        'onclick="dgGoDay(\''+DG.rows[i].date+'\')">'+osEsc(dgDayLabel(DG.rows[i].date))+
+        (DG.rows[i].date===today?'<span>오늘</span>':'')+'</button>';
+    h+='</div>';
+  }
+  var n=(o&&o.n)||dgNums();
+  var tile=function(v,u,k,warn){
+    return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
+      '<div class="k">'+k+'</div></div>';
+  };
+  h+='<div class="ar-top" style="grid-template-columns:repeat(5,1fr)">'+
+    tile(n.people||0,'명','팀 인원',0)+
+    tile(n.call||0,'통','30일 통화',0)+
+    tile(n.ok||0,'건','상담',0)+
+    tile(n.touch||0,'명','오늘 손댈 사람',(n.touch||0)>0)+
+    tile((n.stop&&n.stop.length)||0,'명','멈춘 사람',(n.stop&&n.stop.length)>0)+
+    '</div>';
+  if(o&&o.news)
+    h+='<div class="ar-sec"><div class="ar-sh"><span class="e">📰</span>'+
+      '<span class="n">오늘 꺼낼 소식</span><span class="d">'+osEsc(o.news.w||'')+'</span></div>'+
+      '<div class="ar-sb"><div class="ar-one" style="margin:0 0 8px">'+osEsc(o.news.t||'')+'</div>'+
+      '<div class="ar-p">'+osEsc((''+(o.news.d||'')).slice(0,300))+'</div></div></div>';
+  if(o){
+    h+='<div class="ar-secs" style="grid-template-columns:1fr">';
+    for(i=0;i<DG_SEC.length;i++){
+      var sc=DG_SEC[i];
+      h+='<div class="ar-sec"><div class="ar-sh"><span class="e">'+sc[1]+'</span>'+
+        '<span class="n">'+osEsc(sc[2])+'</span><span class="d">'+osEsc(sc[3])+'</span></div>'+
+        '<div class="ar-sb">'+dgMd(o[sc[0]])+'</div></div>';
+    }
+    h+='</div>';
+  }else{
+    h+='<div class="ar-none" style="margin-top:14px">이 날은 모아 둔 것이 없습니다. '+
+       '<b>📒 오늘 다시 모으기</b> 를 누르면 지금 숫자로 한 장 만듭니다.</div>';
+  }
+  h+='<div class="ar-sec" style="margin-top:14px"><div class="ar-sh"><span class="e">✍️</span>'+
+    '<span class="n">내가 정한 것</span><span class="d">여기 적어 두면 다음 날 참고해서 씁니다 '+
+    '<em id="dgMemoS" style="color:#059669;font-style:normal"></em></span></div>'+
+    '<div class="ar-sb"><textarea id="dgMemo" class="dg-memo" placeholder="예) 이번 주는 부재 재통화만 본다. 신규는 다음 주부터." '+
+    'onchange="dgMemoSet(this.value)">'+osEsc((o&&o.memo)||'')+'</textarea></div></div>';
+  h+='<div class="notice" style="margin-top:14px">앱에 남은 기록과 정책·상품 뉴스 표만 보고 씁니다. '+
+     '고객 실명·전화번호·병력은 AI 로 넘어가지 않습니다. '+
+     '보험 관련 문구는 참고용이며 보장과 지급은 약관과 심사에 따릅니다.</div>';
+  return h;
+}
+function dgPaint(){var el=document.getElementById('dgPane');if(el)el.innerHTML=dgInnerHtml();}
+function renderDaily(){
+  if(typeof arCss==='function')arCss();
+  dgCss();
+  return osPage('취합','매일 취합',
+    '오늘 앱에 쌓인 숫자와 바깥 소식을 하루 한 번 모아 날짜별로 남깁니다. '+
+    '지나간 날을 눌러 흐름을 보고, 내가 정한 것을 적어 두면 다음 날 그것을 참고해서 씁니다.',
+    '<div id="dgPane">'+dgInnerHtml()+'</div>');
+}
+function osDailyAfterRender(){
+  if(typeof arLoad==='function')arLoad();
+  dgLoad();
+  setTimeout(dgPaint,1800);
+  setTimeout(function(){dgPaint();try{dgAuto();}catch(e){}},4200);
+}
+function dgCss(){
+  if(document.getElementById('dgCss'))return;
+  var s=document.createElement('style');s.id='dgCss';
+  s.textContent='.dg-memo{width:100%;box-sizing:border-box;min-height:96px;border:1.5px solid #E2E8F0;'+
+    'border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.7;font-family:inherit;resize:vertical}'+
+    '.ar-fc>span{margin-left:6px;font-size:10px;color:#1A56DB;font-weight:900}';
+  document.head.appendChild(s);
 }
 
 /* ════════ TEAM 총괄 관리 — 네 화면을 한 칸으로 ════════
@@ -7000,7 +7313,7 @@ var TABS=[
     지우지 않는 이유: 권한·요금제 판정과 음성 명령이 이 목록을 보고 돈다. */
  {group:'업무매뉴얼 도구',key:'업무매뉴얼',hide:true,items:[{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''}]},
  {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
- {group:'윤시스쿨',items:[{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
+ {group:'윤시스쿨',items:[{id:'daily',icon:'📒',title:'매일 취합',cnt:''},{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
  {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''},{id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:''}]},
  {group:'성장·교육',hide:true,items:[{id:'growboard',icon:'📈',title:'성장판',cnt:''}]},
  {group:'고객',items:[{id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:''},{id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:''},{id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
@@ -7174,6 +7487,7 @@ function go(tab){
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
   else if(tab==='airep'){dyn.innerHTML=renderAiRep();if(typeof osAiRepAfterRender==='function')osAiRepAfterRender();}
   else if(tab==='teamhub'){dyn.innerHTML=renderTeamHub();if(typeof osTeamHubAfterRender==='function')osTeamHubAfterRender();}
+  else if(tab==='daily'){dyn.innerHTML=renderDaily();if(typeof osDailyAfterRender==='function')osDailyAfterRender();}
   else if(tab==='settings'){dyn.innerHTML=renderSettings();if(typeof osSettingsAfterRender==='function')osSettingsAfterRender();}
   else if(tab==='calc')dyn.innerHTML=renderCalcPage();
   else if(tab==='clients'){dyn.innerHTML=renderClientsPage();osClientsAfterRender();}
@@ -30170,7 +30484,25 @@ function cnFullPreview(sl,idx,n){
     '<div class="cnw-ffoot"><b>APEX YUN PRO</b><span>'+(idx+1)+' / '+n+' · 넘겨보기 →</span></div>'+
   '</div>';
 }
+function cnFrostPreview(sl,idx,n){
+  var m=cnMagText(sl),im=CN.imgs[idx];
+  var bg=(im&&im.url)?('background-image:url('+im.url+')')
+    :'background-image:linear-gradient(140deg,#0B2447,#1D4ED8)';
+  return '<div class="cnw frost" style="'+bg+'">'+
+    '<span class="cnw-fnum dk">'+(idx+1)+'</span>'+
+    (m.k?('<span class="cnw-fk dk">'+osEsc((''+m.k).slice(0,24))+'</span>'):'')+
+    '<div class="cnw-pan" style="'+bg+'"><div class="cnw-pang"></div>'+
+      '<div class="cnw-fbody" style="position:static;border-left:4px solid #38BDF8">'+
+        '<div class="cnw-ft">'+osEsc((''+(m.t||'')).replace(/\*\*/g,'')).replace(/\n/g,'<br>')+'</div>'+
+        (m.s?('<div class="cnw-fs">'+osEsc(m.s)+'</div>'):'')+
+      '</div>'+
+      '<div class="cnw-ffoot" style="position:static;margin-top:auto"><b>APEX YUN PRO</b>'+
+        '<span>'+(idx+1)+' / '+n+' · 넘겨보기 →</span></div>'+
+    '</div>'+
+  '</div>';
+}
 function cnSlidePreview(sl,idx,n){
+  if(CN.style==='frost')return cnFrostPreview(sl,idx,n);
   if(CN.style==='full')return cnFullPreview(sl,idx,n);
   var m=cnMagText(sl),lay=cnLayout(sl);
   var badge='<span class="cnw-badge'+(lay==='cover'?' cv':'')+'">'+(idx+1)+'</span>';
@@ -30253,7 +30585,7 @@ function renderTodayCard(){
     '<label>말투</label>'+cnSel('cnAiTone',['친근한 전문가','차분한 뉴스','공감형 상담가'],CN.aiTone||'친근한 전문가')+
     '<label>장수</label>'+cnSel('cnAiCount',['10장','9장','8장'],CN.aiCount||'10장')+'</div>'+
     '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" id="cnAiBtn" onclick="cnAiGen()">🤖 AI로 캐러셀 만들기</button>'+(isAi?'<button class="btn btn-ghost" onclick="cnAiClear()">기본 주제로</button>':'')+'</div></div>';
-  var badge=(CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일');
+  var badge=(CN.style==='frost')?(n+'장 · 흐린 칸 · 사진은 그대로'):((CN.style==='full')?(n+'장 · 사진 전체 · 그라데이션'):(isAi?(n+'장 · AI 기획 · 매거진'):'뉴스 카드 스타일'));
   var intro=isAi
     ? '<div class="cn2-intro"><b>AI가 만든 캐러셀</b>입니다. 아래 기획안을 확인하고, 각 장에 <b>이 카드에 이미지</b>로 사진을 넣은 뒤 저장하세요. 문구를 바꾸려면 주제를 다듬어 다시 생성하면 됩니다.</div>'
     : '<div class="cn2-intro"><b>뉴스 카드 스타일</b> — 흰 배경 + 번호 뱃지 + <b>파란 키워드 강조</b> + 사진 블록 + 하단 지표 바 구조입니다. <b>✨ AI 사진 생성</b>을 누르면 각 장에 어울리는 실사 사진을 자동으로 만들어 넣고(전체 생성 가능), <b>🖼 직접 업로드</b>로 내 사진도 넣을 수 있습니다.</div>';
@@ -30265,7 +30597,9 @@ function renderTodayCard(){
     '<span class="cn-sty"><button type="button" class="cn-styb'+(CN.style==='news'?' on':'')+'" '+
       'onclick="cnStyleSet(\'news\')">📰 뉴스 카드</button>'+
       '<button type="button" class="cn-styb'+(CN.style==='full'?' on':'')+'" '+
-      'onclick="cnStyleSet(\'full\')">🖼 사진 전체</button></span>'+
+      'onclick="cnStyleSet(\'full\')">🖼 사진 전체</button>'+
+      '<button type="button" class="cn-styb'+(CN.style==='frost'?' on':'')+'" '+
+      'onclick="cnStyleSet(\'frost\')">🌫 흐린 칸</button></span>'+
     (isAi?'':'<button class="btn btn-ghost" onclick="cardnewsShuffle()">🔀 다른 주제</button>')+clearAllBtn+
     '<input type="file" id="cnFile" accept="image/*" style="display:none" onchange="cnUpload(this)"></div>'+
     '<div class="cn2-stage"><button class="cn2-arrow l" onclick="cnNav(-1)" aria-label="이전">‹</button>'+
@@ -30349,7 +30683,83 @@ function cnDrawFull(sl,idx,n){
   x.textAlign='left';
   return c;
 }
+/* ── 프로스트 ──
+   사진은 그대로 두고, 글자가 앉을 자리만 흐리게 만든 뒤 그 위에 글을 얹는다.
+   사진을 통째로 어둡게 덮는 것과 다르다 — 사진은 살고 글은 읽힌다. */
+function cnDrawFrost(sl,idx,n){
+  var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
+  var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
+  var m=cnMagText(sl),PAD=80,maxW=W-PAD*2,im=CN.imgs[idx];
+  x.textBaseline='top';x.textAlign='left';
+  var drawPhoto=function(ctx){
+    if(im&&im.img){
+      var ir=im.img.width/im.img.height,cr=W/H,dw,dh,dx,dy;
+      if(ir>cr){dh=H;dw=H*ir;dx=(W-dw)/2;dy=0;}else{dw=W;dh=W/ir;dx=0;dy=(H-dh)/2;}
+      /* 사진을 살짝 위로 — 아래 흐린 칸에 얼굴이 묻히지 않게 */
+      ctx.drawImage(im.img,dx,dy-H*0.06,dw,dh);
+    }else{
+      var g0=ctx.createLinearGradient(0,0,W,H);
+      g0.addColorStop(0,'#0B2447');g0.addColorStop(1,'#1D4ED8');
+      ctx.fillStyle=g0;ctx.fillRect(0,0,W,H);
+      drawApexMark(ctx,W/2,H*0.28,190,'rgba(255,255,255,.14)');
+    }
+  };
+  drawPhoto(x);
+  var isCover=(cnLayout(sl)==='cover');
+  x.font='900 '+(isCover?86:74)+'px Pretendard'+FF;
+  var head=cnWrap(x,(''+(m.t||'')).replace(/\*\*/g,''),maxW-56).slice(0,4);
+  x.font='500 36px Pretendard'+FF;
+  var sub=m.s?cnWrap(x,''+m.s,maxW-56).slice(0,3):[];
+  var lh=isCover?100:88;
+  var panH=Math.min(H*0.62,head.length*lh+(sub.length?sub.length*50+26:0)+230);
+  var panY=H-panH;
+  /* 흐린 칸 — 사진을 작게 줄였다 키워서 뿌옇게 만든다 */
+  x.save();
+  x.beginPath();x.rect(0,panY,W,panH);x.clip();
+  try{x.filter='blur(26px)';}catch(e){}
+  drawPhoto(x);
+  try{x.filter='none';}catch(e){}
+  var g=x.createLinearGradient(0,panY,0,H);
+  g.addColorStop(0,'rgba(10,18,38,.42)');
+  g.addColorStop(0.45,'rgba(10,18,38,.72)');
+  g.addColorStop(1,'rgba(10,18,38,.90)');
+  x.fillStyle=g;x.fillRect(0,panY,W,panH);
+  x.restore();
+  /* 흐린 칸 윗선 */
+  x.fillStyle='rgba(255,255,255,.18)';x.fillRect(0,panY,W,2);
+  /* 번호와 라벨은 사진 위쪽에 */
+  x.fillStyle='rgba(10,18,38,.55)';cnRoundRect(x,PAD,72,92,92,24);x.fill();
+  x.fillStyle='#fff';x.font='900 46px Pretendard'+FF;x.textAlign='center';x.textBaseline='middle';
+  x.fillText(''+(idx+1),PAD+46,120);
+  x.textAlign='left';x.textBaseline='top';
+  if(m.k){
+    x.fillStyle='rgba(10,18,38,.55)';
+    x.font='800 32px Pretendard'+FF;
+    var kw=x.measureText((''+m.k).slice(0,24)).width;
+    cnRoundRect(x,PAD+108,84,kw+40,68,20);x.fill();
+    x.fillStyle='#BFDBFE';x.fillText((''+m.k).slice(0,24),PAD+128,104);
+  }
+  /* 글자 */
+  var ty=panY+52;
+  x.fillStyle='#38BDF8';cnRoundRect(x,PAD,ty+8,8,head.length*lh-16,4);x.fill();
+  x.font='900 '+(isCover?86:74)+'px Pretendard'+FF;x.fillStyle='#FFFFFF';
+  head.forEach(function(ln){x.fillText(ln,PAD+30,ty);ty+=lh;});
+  if(sub.length){
+    ty+=20;
+    x.font='500 36px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.88)';
+    sub.forEach(function(ln){x.fillText(ln,PAD+30,ty);ty+=50;});
+  }
+  x.fillStyle='rgba(255,255,255,.16)';x.fillRect(PAD,H-112,maxW,2);
+  drawApexMark(x,PAD+22,H-72,44,'rgba(255,255,255,.85)');
+  x.font='800 28px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.88)';
+  x.fillText('APEX YUN PRO',PAD+58,H-66);
+  x.font='600 26px Pretendard'+FF;x.fillStyle='rgba(255,255,255,.62)';
+  x.textAlign='right';x.fillText((idx+1)+' / '+n+'   ·   넘겨보기 →',W-PAD,H-64);
+  x.textAlign='left';
+  return c;
+}
 function cnDrawSlide(sl,idx,n){
+  if(CN.style==='frost')return cnDrawFrost(sl,idx,n);
   if(CN.style==='full')return cnDrawFull(sl,idx,n);
   var W=1080,H=1350,c=document.createElement('canvas');c.width=W;c.height=H;var x=c.getContext('2d');
   var FF=', "Noto Sans KR","Malgun Gothic",sans-serif';
@@ -30491,6 +30901,13 @@ function cardnewsSaveAll(){var slides=cardnewsSlides();toast('5장을 저장합�
    '.cnw-fs{color:rgba(255,255,255,.9);font-size:11.5px;font-weight:500;line-height:1.5;margin-top:8px;text-shadow:0 2px 10px rgba(0,0,0,.4)}',
    '.cnw-ffoot{position:absolute;left:7.7%;right:7.7%;bottom:4.6%;z-index:2;display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,.14);padding-top:9px;color:rgba(255,255,255,.62);font-size:9.5px;font-weight:600}',
    '.cnw-ffoot b{color:rgba(255,255,255,.88);font-weight:800}',
+   '.cnw.frost{position:relative;background-size:cover;background-position:center 42%;padding:0;overflow:hidden;display:block}',
+   '.cnw-pan{position:absolute;left:0;right:0;bottom:0;min-height:46%;max-height:64%;background-size:cover;background-position:center 42%;display:flex;flex-direction:column;padding:16px 7.7% 14px;overflow:hidden}',
+   '.cnw-pan>*{position:relative;z-index:2}',
+   '.cnw-pang{position:absolute;inset:0;z-index:1;backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);background:linear-gradient(180deg,rgba(10,18,38,.42),rgba(10,18,38,.74) 45%,rgba(10,18,38,.9))}',
+   '.cnw-pan .cnw-fbody{padding-left:3.4%}',
+   '.cnw-fnum.dk,.cnw-fk.dk{background:rgba(10,18,38,.55);border-radius:8px}',
+   '.cnw-fk.dk{padding:2px 8px;top:6.4%}',
    '.cn-sty{display:inline-flex;gap:4px;margin-left:6px}',
    '.cn-styb{border:1.5px solid #E2E8F0;background:#fff;border-radius:99px;padding:6px 12px;font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}',
    '.cn-styb.on{background:#0F172A;border-color:#0F172A;color:#fff}',
