@@ -154,7 +154,7 @@ netlify/functions/market-daily.js  ← 평일 16:10 KST 자동 실행 (netlify.t
 
 ### ④ 서버 저장 켜기 (선택, 권장)
 
-Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
+Supabase → SQL Editor 에서 **`migration_33_invest.sql`** 실행.
 실행하면:
 
 - 계좌·보유가 팀·다른 기기에서 공유됩니다(계좌바의 `☁ 저장` / `⬇ 불러오기`)
@@ -265,7 +265,7 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 | 해외 종목만 안 나온다 | 표기가 `NAS:AAPL` 형식인지 확인(거래소 코드 필요) |
 | 펀드가 안 나온다 | `FUND_API_URL` 미설정이면 정상. 수동 입력 칸을 쓰거나 3번 절차 진행 |
 | 뉴스가 비어 있다 | 죽은 RSS는 자동으로 건너뜁니다. `config/sources.json` 에서 피드 교체 |
-| `☁ 저장` 이 실패한다 | `migration_30_invest.sql` 미실행. Supabase에서 실행 후 재시도 |
+| `☁ 저장` 이 실패한다 | `migration_33_invest.sql` 미실행. Supabase에서 실행 후 재시도 |
 | 지표 코드가 바뀌었다 | `config/market.json` 의 `econ[].stat/item` 을 ECOS 통계코드검색에서 확인 후 수정 |
 
 ---
@@ -278,5 +278,10 @@ Supabase → SQL Editor 에서 **`migration_30_invest.sql`** 실행.
 | `config/sources.json` | 뉴스 RSS 목록 (기존 파일 재사용) |
 | `netlify/functions/market.js` | 실시간 데이터 창구 |
 | `netlify/functions/market-daily.js` | 평일 장 마감 후 자동수집 |
-| `migration_30_invest.sql` | 서버 저장용 표·RLS |
+| `migration_33_invest.sql` | 서버 저장용 표·RLS (실행 전 `migration_ALL_NOW.sql` 이 먼저 돌아 있어야 합니다 — 안 돌았으면 아무것도 안 만들고 멈춥니다) |
+| `scripts/check-invest.js` | 화면 자동 점검 — 수익률 계산·목표/손절 경고·토스 주소·좁은 화면 |
+| `scripts/check-market-api.js` | 시세 서버 자동 점검 — 토스 1순위·KIS 폴백·키 없을 때 동작 |
+
+두 점검은 `.github/workflows/check.yml` 에 걸려 있어 **PR 마다 자동으로 돕니다.**
+여기서 빨간불이 뜨면 배포가 시작되지 않습니다.
 | `app/index.html` | 화면 (`invRender` / `invAfterRender` 이하 투자·경제 모듈) |

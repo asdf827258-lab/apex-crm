@@ -104,7 +104,8 @@
     .bulkbar.on{display:flex}
     @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.mobile-menu{display:inline-flex}.topbar{padding:0 16px}.content{padding:18px}.hero{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.toolbar input,.toolbar select{width:100%}}
     @media(max-width:460px){.kpis{grid-template-columns:1fr}.content{padding:14px}}
-  </style>
+  .notice-line{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.6;margin-bottom:12px;font-weight:600}
+</style>
 </head>
 <body>
 <section class="auth" id="configScreen">
@@ -195,7 +196,7 @@
 
       <section class="page" id="page-team">
         <div class="hero"><div><h2>팀 관리 · 권한</h2><p>운영자는 팀원 권한(담당자·지점장·마스터·운영자)을 지정하고 전체 통계를 조회합니다. 마스터는 전체 조회, 운영자는 전체 권한입니다.</p></div></div>
-        <div class="card section"><div class="table-wrap"><table><thead><tr><th>담당자</th><th>권한</th><th>총 배정</th><th>TA 완료</th><th>완료율</th><th>부재</th><th>거절</th><th>상담</th><th>상담률</th><th>미전달</th></tr></thead><tbody id="teamBody"></tbody></table></div></div>
+        <div id="teamScopeNote"></div><div class="card section"><div class="table-wrap"><table><thead><tr><th>담당자</th><th>권한</th><th>총 배정</th><th>TA 완료</th><th>완료율</th><th>부재</th><th>거절</th><th>상담</th><th>상담률</th><th>미전달</th></tr></thead><tbody id="teamBody"></tbody></table></div></div>
       </section>
 
       <section class="page" id="page-attendance">
@@ -278,6 +279,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const today=()=>new Date().toISOString().slice(0,10);
 function dtLocal(d=new Date()){const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
 function fmt(v,time=false){if(!v)return "-";const d=new Date(v);if(isNaN(d))return v;return new Intl.DateTimeFormat("ko-KR",time?{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}:{year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}
+/* 지점장이 자기 범위를 화면에서 바로 알 수 있게 */
 function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),ms||1900)}
 /* 저장이 막혔을 때 "permission denied for table dbs" 만 띄우면 무엇을 해야 할지 알 수 없다.
    무슨 일이 일어났는지와 다음에 할 일을 같이 적는다. */
@@ -317,7 +319,37 @@ function roleOf(){return profile?.role||"member"}
 function canManage(){const r=roleOf();return r==="admin"||r==="operator"}
 function canViewAll(){const r=roleOf();return r==="admin"||r==="operator"||r==="master"||r==="leader"}
 function roleLabel(r){return ({member:"담당자",leader:"지점장",master:"마스터",admin:"운영자",operator:"운영자"})[r]||"담당자"}
-function isAdmin(){return canManage()}
+/* 지점장은 지금까지 보기만 됐다. 자기 팀은 직접 굴릴 수 있어야 한다.
+   대신 범위는 자기 팀 안으로 묶는다 — 남의 팀 DB 는 손대지 못한다.
+   권한 변경과 삭제는 그대로 운영자만 한다. */
+function isLeader(){const r=roleOf();return r==="leader"||r==="master"}
+function canManageTeam(){return canManage()||isLeader()}
+function myTeamId(){return profile?(crmTeamOf[profile.id]||null):null}
+/* 이 사람이 내가 손댈 수 있는 범위 안에 있나 */
+function inMyScope(pid){
+  if(canManage())return true;
+  if(!isLeader()||!pid)return false;
+  if(pid===profile?.id)return true;
+  const t=myTeamId();
+  return !!t&&crmTeamOf[pid]===t;
+}
+/* 내가 배정할 수 있는 사람들 */
+function scopeMembers(){
+  return profiles.filter(p=>(p.workspace!=="apex")&&inMyScope(p.id));
+}
+function canEditDb(d){
+  if(canManage())return true;
+  if(!isLeader())return false;
+  return inMyScope(d?.assigned_to);
+}
+function scopeNote(){
+  if(canManage())return "";
+  if(!isLeader())return "";
+  const t=crmTeams.find(x=>x.id===myTeamId());
+  return t?("지점장 권한 · "+t.name+" 범위에서 등록·수정·배정할 수 있습니다.")
+          :"지점장 권한 · 팀이 지정되지 않아 본인 담당 DB 만 수정할 수 있습니다. 운영자에게 팀 지정을 요청하세요.";
+}
+function isAdmin(){return canManageTeam()}
 
 /* APEX YUN PRO 앱과 동일한 Supabase 프로젝트(공개 anon 키) — 같은 계정으로 로그인되도록 통일.
    별도 설정을 하지 않아도 앱과 CRM이 같은 auth·profiles를 공유합니다. (필요 시 아래 설정에서 덮어쓰기 가능) */
@@ -360,7 +392,7 @@ async function startApp(){
   if(error||!p){toast("프로필을 불러오지 못했습니다.");return}
   profile=p;if(!profile.active){await sb.auth.signOut();toast("비활성화된 계정입니다.");return}
   $("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("userName").textContent=profile.name;$("userRole").textContent=roleLabel(roleOf());
-  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.toggle("hidden",!canManage());$("ownerFilter").classList.toggle("hidden",!canViewAll());
+  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.toggle("hidden",!canManageTeam());$("ownerFilter").classList.toggle("hidden",!canViewAll());
   $("dashboardTitle").textContent=canViewAll()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=canViewAll()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
@@ -386,7 +418,9 @@ async function loadAll(){
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
-  $("assignedTo").innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  /* 배정 대상은 내가 손댈 수 있는 범위만 — 지점장은 자기 팀 */
+  const pick=members.filter(p=>inMyScope(p.id));
+  $("assignedTo").innerHTML=(pick.length?pick:members).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
 function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
@@ -425,29 +459,33 @@ function renderDashAttendance(){
 function renderDb(){
   const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"";
   const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf));
-  $("bulkTh").classList.toggle("hidden",!canManage());
+  $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
-    ${canManage()?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:""}
+    ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region||"-")}</td>
     <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${isAdmin()?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button><button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
+    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canManage()?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="11" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
 function bulkBarUpd(){
   const n=bulkChecked().length,bar=$("bulkBar");if(!bar)return;
-  bar.classList.toggle("on",canManage()&&n>0);
+  bar.classList.toggle("on",canManageTeam()&&n>0);
   $("bulkCnt").textContent=n+"건 선택";
   const sel=$("bulkOwner");
-  if(sel&&!sel.options.length){const members=profiles.filter(p=>p.active!==false);sel.innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}${teamName(p.id)?" ("+esc(teamName(p.id))+")":""}</option>`).join("")}
+  if(sel){const members=profiles.filter(p=>p.active!==false&&inMyScope(p.id));const keep=sel.value;sel.innerHTML=members.map(p=>`<option value="${p.id}">${esc(p.name)}${teamName(p.id)?" ("+esc(teamName(p.id))+")":""}</option>`).join("");if(keep)sel.value=keep;}
 }
 function bulkClear(){document.querySelectorAll(".dbck:checked").forEach(x=>x.checked=false);bulkBarUpd()}
 async function bulkAssign(){
   const ids=bulkChecked();if(!ids.length)return;
   const owner=$("bulkOwner").value;const nm=pname(owner);
+  if(!owner){toast("바꿀 담당자를 고르세요.");return}
+  if(!inMyScope(owner)){toast("내 팀 밖의 담당자로는 넘길 수 없습니다.");return}
+  const out=ids.filter(id=>!canEditDb(dbs.find(x=>x.id===id)));
+  if(out.length){toast("다른 팀의 DB 가 "+out.length+"건 섞여 있습니다. 선택을 다시 해주세요.",6000);return}
   if(!confirm(ids.length+"건을 "+nm+" 담당으로 일괄 변경할까요?"))return;
   const {error}=await sb.from("dbs").update({assigned_to:owner}).in("id",ids);
   if(error){wErr(error,"담당자 일괄 변경");return}
@@ -467,7 +505,11 @@ function renderTeam(){
     if(canManage())return `<select onchange="setMemberRole('${p.id}',this.value)" style="border:1px solid #e5e9f0;border-radius:6px;padding:3px 6px;font-size:12px;font-family:inherit">${["member","leader","master","admin"].map(r=>`<option value="${r}"${(p.role||"member")===r?" selected":""}>${roleLabel(r)}</option>`).join("")}</select>`;
     return `<span class="badge ${p.role==="admin"?"blue":p.role==="master"?"green":"gray"}">${roleLabel(p.role||"member")}</span>`;
   };
-  $("teamBody").innerHTML=profiles.map(p=>{const x=dbs.filter(d=>d.assigned_to===p.id),done=x.filter(d=>result(d)!=="미진행"),consult=x.filter(d=>result(d)==="상담"),pending=x.filter(d=>recStatus(d)==="미완료").length;return `<tr><td class="name">${esc(p.name)}</td><td>${roleCell(p)}</td><td>${x.length}</td><td>${done.length}</td><td>${x.length?Math.round(done.length/x.length*100):0}%</td><td>${x.filter(d=>result(d)==="부재").length}</td><td>${x.filter(d=>result(d)==="거절").length}</td><td>${consult.length}</td><td>${done.length?Math.round(consult.length/done.length*100):0}%</td><td>${pending}</td></tr>`}).join("");
+  const scope=profiles.filter(p=>inMyScope(p.id));
+  const note=scopeNote();
+  const nEl=$("teamScopeNote");
+  if(nEl)nEl.innerHTML=note?`<div class="notice-line">${esc(note)}</div>`:"";
+  $("teamBody").innerHTML=(canManage()?profiles:scope).map(p=>{const x=dbs.filter(d=>d.assigned_to===p.id),done=x.filter(d=>result(d)!=="미진행"),consult=x.filter(d=>result(d)==="상담"),pending=x.filter(d=>recStatus(d)==="미완료").length;return `<tr><td class="name">${esc(p.name)}</td><td>${roleCell(p)}</td><td>${x.length}</td><td>${done.length}</td><td>${x.length?Math.round(done.length/x.length*100):0}%</td><td>${x.filter(d=>result(d)==="부재").length}</td><td>${x.filter(d=>result(d)==="거절").length}</td><td>${consult.length}</td><td>${done.length?Math.round(consult.length/done.length*100):0}%</td><td>${pending}</td></tr>`}).join("");
 }
 async function setMemberRole(id,role){
   if(!canManage())return;
@@ -524,11 +566,16 @@ function renderAttendance(){
   }).join("")||`<tr><td colspan="${days+3}" class="empty">등록된 팀원이 없습니다.</td></tr>`;
 }
 function openDb(id=""){
-  if(!isAdmin())return;const d=dbs.find(x=>x.id===id);$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  if(!canManageTeam())return;
+  const d=dbs.find(x=>x.id===id);
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
 }
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
+  if(!canManageTeam()){toast("등록·수정 권한이 없습니다.");return}
+  if(!inMyScope(payload.assigned_to)){toast("내 팀 밖의 담당자로는 배정할 수 없습니다.");return}
+  if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}
   const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;if(error)wErr(error,"DB 저장");else{closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")}
 }
 async function removeDb(id){if(!confirm("DB와 관련 통화기록을 삭제할까요?"))return;const {error}=await sb.from("dbs").delete().eq("id",id);if(error)wErr(error,"DB 삭제");else{await loadAll();toast("삭제했습니다.")}}

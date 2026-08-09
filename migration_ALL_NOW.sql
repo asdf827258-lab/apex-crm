@@ -324,6 +324,182 @@ left join public.org_members o on o.member_id = p.id;
 
 grant select on public.team_overview to authenticated;
 
+create table if not exists public.night_jobs(
+  id uuid primary key default gen_random_uuid(),
+  kind text not null,
+  ref_id text not null,
+  ref_date date not null,
+  payload jsonb not null default '{}'::jsonb,
+  status text not null default 'todo',
+  tries integer not null default 0,
+  last_error text default '',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.night_jobs add column if not exists payload jsonb not null default '{}'::jsonb;
+alter table public.night_jobs add column if not exists tries integer not null default 0;
+alter table public.night_jobs add column if not exists last_error text default '';
+alter table public.night_jobs add column if not exists updated_at timestamptz default now();
+
+create unique index if not exists night_jobs_uniq on public.night_jobs(kind, ref_date, ref_id);
+create index if not exists night_jobs_pick on public.night_jobs(status, ref_date);
+
+alter table public.night_jobs enable row level security;
+
+drop policy if exists night_jobs_read on public.night_jobs;
+create policy night_jobs_read on public.night_jobs
+  for select to authenticated
+  using (public.is_team_viewer());
+
+grant select on public.night_jobs to authenticated;
+
+create table if not exists public.night_briefs(
+  id uuid primary key default gen_random_uuid(),
+  kind text not null,
+  ref_id text not null,
+  ref_date date not null,
+  member_id uuid,
+  title text not null default '',
+  body text not null default '',
+  meta jsonb not null default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+
+alter table public.night_briefs add column if not exists member_id uuid;
+alter table public.night_briefs add column if not exists meta jsonb not null default '{}'::jsonb;
+
+create unique index if not exists night_briefs_uniq on public.night_briefs(kind, ref_date, ref_id);
+create index if not exists night_briefs_member_idx on public.night_briefs(member_id, ref_date desc);
+create index if not exists night_briefs_date_idx on public.night_briefs(ref_date desc);
+
+alter table public.night_briefs enable row level security;
+
+drop policy if exists night_briefs_read on public.night_briefs;
+create policy night_briefs_read on public.night_briefs
+  for select to authenticated
+  using (member_id is null or member_id = auth.uid() or public.is_team_viewer());
+
+drop policy if exists night_briefs_delete on public.night_briefs;
+create policy night_briefs_delete on public.night_briefs
+  for delete to authenticated
+  using (public.is_admin() or public.is_owner());
+
+grant select on public.night_briefs to authenticated;
+grant delete on public.night_briefs to authenticated;
+
+create table if not exists public.coach_notes(
+  id uuid primary key default gen_random_uuid(),
+  log_id uuid,
+  member_id uuid not null,
+  body text not null default '',
+  mood text default '',
+  share boolean not null default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table public.coach_notes add column if not exists log_id uuid;
+alter table public.coach_notes add column if not exists mood text default '';
+alter table public.coach_notes add column if not exists share boolean not null default false;
+alter table public.coach_notes add column if not exists updated_at timestamptz default now();
+
+create index if not exists coach_notes_member_idx on public.coach_notes(member_id, created_at desc);
+create index if not exists coach_notes_log_idx on public.coach_notes(log_id);
+create index if not exists coach_notes_share_idx on public.coach_notes(share, created_at desc);
+
+alter table public.coach_notes enable row level security;
+
+drop policy if exists coach_notes_read on public.coach_notes;
+create policy coach_notes_read on public.coach_notes
+  for select to authenticated
+  using (
+    member_id = auth.uid()
+    or (share = true and public.is_team_viewer())
+  );
+
+drop policy if exists coach_notes_insert on public.coach_notes;
+create policy coach_notes_insert on public.coach_notes
+  for insert to authenticated
+  with check (member_id = auth.uid());
+
+drop policy if exists coach_notes_update on public.coach_notes;
+create policy coach_notes_update on public.coach_notes
+  for update to authenticated
+  using (member_id = auth.uid())
+  with check (member_id = auth.uid());
+
+drop policy if exists coach_notes_delete on public.coach_notes;
+create policy coach_notes_delete on public.coach_notes
+  for delete to authenticated
+  using (member_id = auth.uid() or public.is_admin() or public.is_owner());
+
+grant select on public.coach_notes to authenticated;
+grant insert, update, delete on public.coach_notes to authenticated;
+
+create table if not exists public.app_config(
+  key text primary key,
+  value text,
+  updated_at timestamptz default now()
+);
+
+grant select on public.app_config to authenticated;
+
+create table if not exists public.legal_consents(
+  id uuid primary key default gen_random_uuid(),
+  member_id uuid not null,
+  kind text not null,
+  version text not null default '1',
+  agreed boolean not null default true,
+  agreed_at timestamptz default now(),
+  meta jsonb not null default '{}'::jsonb
+);
+
+alter table public.legal_consents add column if not exists version text not null default '1';
+alter table public.legal_consents add column if not exists agreed boolean not null default true;
+alter table public.legal_consents add column if not exists meta jsonb not null default '{}'::jsonb;
+
+create unique index if not exists legal_consents_uniq
+  on public.legal_consents(member_id, kind, version);
+create index if not exists legal_consents_member_idx on public.legal_consents(member_id);
+create index if not exists legal_consents_kind_idx on public.legal_consents(kind, agreed_at desc);
+
+alter table public.legal_consents enable row level security;
+
+drop policy if exists legal_consents_read on public.legal_consents;
+create policy legal_consents_read on public.legal_consents
+  for select to authenticated
+  using (member_id = auth.uid() or public.is_admin() or public.is_owner());
+
+drop policy if exists legal_consents_insert on public.legal_consents;
+create policy legal_consents_insert on public.legal_consents
+  for insert to authenticated
+  with check (member_id = auth.uid());
+
+drop policy if exists legal_consents_update on public.legal_consents;
+create policy legal_consents_update on public.legal_consents
+  for update to authenticated
+  using (member_id = auth.uid())
+  with check (member_id = auth.uid());
+
+grant select on public.legal_consents to authenticated;
+grant insert, update on public.legal_consents to authenticated;
+
+insert into public.app_config(key, value) values
+  ('biz_name',      ''),
+  ('biz_ceo',       ''),
+  ('biz_no',        ''),
+  ('biz_addr',      ''),
+  ('biz_tel',       ''),
+  ('biz_email',     ''),
+  ('biz_mailorder', ''),
+  ('privacy_officer', '')
+on conflict (key) do nothing;
+
+insert into public.app_config(key, value)
+values ('schema_version', '32')
+on conflict (key) do update set value = excluded.value, updated_at = now();
+
 notify pgrst, 'reload schema';
 
 select
@@ -346,4 +522,13 @@ union all select
   (select count(*) from pg_policies where schemaname='public' and tablename='dbs'
      and cmd in ('INSERT','UPDATE','DELETE','ALL'))
 union all select
-  '팀원 종합 뷰', to_regclass('public.team_overview') is not null, 0;
+  '팀원 종합 뷰', to_regclass('public.team_overview') is not null, 0
+union all select
+  '밤 작업', to_regclass('public.night_briefs') is not null,
+  (select count(*) from pg_policies where schemaname='public' and tablename='night_briefs')
+union all select
+  '내 코칭', to_regclass('public.coach_notes') is not null,
+  (select count(*) from pg_policies where schemaname='public' and tablename='coach_notes')
+union all select
+  '약관 동의 기록', to_regclass('public.legal_consents') is not null,
+  (select count(*) from pg_policies where schemaname='public' and tablename='legal_consents');

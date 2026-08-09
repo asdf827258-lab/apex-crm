@@ -154,6 +154,45 @@
   #view-tracker .td .tt{flex:1;font-weight:600}
   #view-tracker .td .tx{border:0;background:none;color:#c9c2d8;cursor:pointer;font-weight:900;font-size:15px}
   #view-tracker .empty2{color:#b3adc9;font-size:12.5px;font-weight:700;padding:10px 4px}
+
+/* ── 실제 업무와 이어 붙인 부분 ── */
+#pipe.ys{display:block!important;grid-template-columns:none!important;gap:0!important}
+#ysBar{padding:10px 18px 0}
+.ys-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 10px;padding:9px 13px;
+  border-radius:11px;font-size:12.5px;font-weight:700;line-height:1.6}
+.ys-bar.live{background:#E9F7EF;color:#146c43;border:1px solid #b7e4c7}
+.ys-bar.demo{background:#FFF4E5;color:#8a5300;border:1px solid #ffd9a0}
+.ys-bar .dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:0 0 auto}
+.ys-bar b{font-weight:900}
+.ys-bar button{margin-left:auto;border:1px solid currentColor;background:transparent;color:inherit;
+  border-radius:8px;padding:4px 10px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}
+.ys-fun{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:9px;margin-bottom:11px}
+.ys-fb{border:1px solid #e3e6ef;background:#fff;border-radius:12px;padding:12px 13px;text-align:left;
+  cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:2px;transition:border-color .15s}
+.ys-fb:hover{border-color:#7c5cff}
+.ys-fb.on{border-color:#ffb0b0;background:#fff7f7}
+.ys-fb b{font-size:23px;font-weight:900;color:#2e2740;line-height:1.2}
+.ys-fb.on b{color:#d1434b}
+.ys-fb span{font-size:12.5px;font-weight:800;color:#2e2740}
+.ys-fb em{font-size:11px;font-style:normal;color:#8b90a6}
+.ys-sum{font-size:12.5px;color:#5b6076;line-height:1.7;padding:9px 12px;background:#f6f7fb;border-radius:10px}
+.ys-sum b{color:#2e2740;font-weight:900}
+.ys-sum b.bad,.ys-duty em.bad{color:#d1434b}
+.ys-btns{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.ys-btns button{border:1px solid #e3e6ef;background:#fff;border-radius:9px;padding:7px 13px;
+  font-size:12px;font-weight:800;color:#2e2740;cursor:pointer;font-family:inherit}
+.ys-btns button:hover{border-color:#7c5cff;color:#7c5cff}
+.ys-dhd{font-size:13px;font-weight:900;color:#2e2740;margin:2px 0 8px}
+.ys-dhd span{font-weight:600;font-size:11px;color:#8b90a6;margin-left:6px}
+.ys-duties{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.ys-duty{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;padding:8px 12px;border-radius:9px;
+  background:#f6f7fb;font-size:12.5px;line-height:1.6}
+.ys-duty.idle{background:#fff7f7}
+.ys-duty b{font-weight:900;color:#2e2740;min-width:58px}
+.ys-duty .tm{font-size:11px;color:#8b90a6}
+.ys-duty .dz{color:#5b6076;flex:1 1 200px}
+.ys-duty em{font-style:normal;font-size:11px;font-weight:800}
+.ys-none{font-size:12.5px;color:#8b90a6;padding:14px 4px}
 </style>
 
 <div class="appbar">
@@ -168,6 +207,8 @@
   <select id="modeSel" class="modesel" title="권한 모드"><option value="admin">👑 대표</option><option value="member">👤 팀원</option></select>
   <span class="hc" id="hc">32명</span>
 </div>
+
+<div id="ysBar"></div>
 
 <div id="view-office" class="view on"><div class="wrap">
   <div class="bar">
@@ -215,13 +256,14 @@
 
 <div id="view-tracker" class="view"><div class="wrap">
   <div class="trk">
-    <div class="trk-hd">📋 상담 파이프라인 <span>고객을 단계별로 · 카드의 ◀▶로 이동</span></div>
+    <div class="trk-hd">📋 상담 파이프라인 <span id="pipeSub">고객을 단계별로 · 카드의 ◀▶로 이동</span></div>
     <form class="trk-add" id="custAdd"><input id="cust_name" placeholder="새 고객 이름"><input id="cust_memo" placeholder="메모(선택)"><button type="submit">＋ 유입 추가</button></form>
     <div class="pipe" id="pipe"></div>
     <div class="conv" id="convStat"></div>
   </div>
   <div class="trk">
-    <div class="trk-hd">✅ 사람별 할일 <span>담당자에게 실제 할일 배정</span></div>
+    <div class="trk-hd">✅ 사람별 할일 <span id="todoSub">담당자에게 실제 할일 배정</span></div>
+    <div id="ysDuty"></div>
     <form class="trk-add" id="todoAdd"><select id="todo_who"></select><input id="todo_task" placeholder="할일 (예: 뉴스카드 5장 발행)"><button type="submit">＋ 배정</button></form>
     <div id="todoList"></div>
   </div>
@@ -278,6 +320,123 @@ const BASE=[
  {t:"비서실",c:"#6cb6ff",p:[["유재석","실장","antenna",["전사 현황 취합","대표 브리핑 준비"]],["조세호","팀원","horn",["부서 보고 수집","일정 정리"]]]},
 ];
 const NEWTASKS=["신입 온보딩","업무 익히는 중","선배 따라 배우기"];
+
+/* ── 실제 업무와 잇는 다리 ─────────────────────────────────────────
+   윤시스쿨은 오래도록 혼자 돌았다. 오피스의 32명은 지어낸 이름이었고
+   진행판은 늘 0 이었고 할일은 그 이름들에게 배정됐다. 그래서 아무 도움이
+   안 됐다. 이 창은 앱 안(같은 출처 iframe)에서 열리므로, 부모 앱이 이미
+   읽어 둔 실제 기록을 그대로 가져다 쓴다. 새로 읽지 않는다 — 앱이 읽은 것을 본다.
+   앱 밖(새 탭)에서 열면 예전 데모가 그대로 뜨고, 데모라고 위에 적는다. */
+var YS={on:false,at:'',teams:[],db:null,nums:null,me:null,tries:0,quiet:0};
+var YS_COL=["#2fc4b2","#ff9dc6","#ffcf2e","#7c5cff","#ff8f5e","#5ec8ff","#5ee0a8","#c58fff"];
+function ysP(){try{return (window.parent&&window.parent!==window)?window.parent:null;}catch(e){return null;}}
+function ysNum(v){return (typeof v==='number'&&isFinite(v))?v:0;}
+function ysToday(){
+  var p=ysP();
+  try{if(p&&typeof p.arToday==='function')return p.arToday();}catch(e){}
+  return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+}
+/* 마지막으로 무언가 한 날로부터 며칠 지났나. 기록이 아예 없으면 -1 */
+function ysSince(last){
+  if(!last)return -1;
+  var a=new Date(ysToday()+'T00:00:00Z'),b=new Date(last+'T00:00:00Z');
+  var d=Math.round((a-b)/86400000);
+  return (isFinite(d)&&d>=0)?d:-1;
+}
+function ysTeamName(id){
+  if(!id)return '소속 없음';
+  var p=ysP();
+  try{if(p&&typeof p.gbTeamName==='function'){var n=p.gbTeamName(id);if(n)return n;}}catch(e){}
+  return id;
+}
+function ysAsk(p){ /* 앱이 아직 안 읽었으면 읽어 달라고 한다 */
+  try{if(p.GB&&!p.GB.loaded&&!p.GB.busy&&typeof p.gbLoad==='function')p.gbLoad();}catch(e){}
+  try{if(p.AR&&!p.AR.loaded&&typeof p.arLoad==='function')p.arLoad();}catch(e){}
+}
+function ysPull(){
+  var p=ysP();
+  YS.on=false;YS.teams=[];YS.db=null;YS.nums=null;YS.me=null;
+  if(!p)return false;
+  try{if(!p.OS||!p.OS.profile)return false;}catch(e){return false;}
+  YS.me=p.OS.profile;
+  ysAsk(p);
+  var rows=[];try{rows=(p.GB&&p.GB.rows)?p.GB.rows:[];}catch(e){rows=[];}
+  if(!rows.length)return false;
+
+  var tk=null;try{if(typeof p.arTkCount==='function')tk=p.arTkCount('');}catch(e){tk=null;}
+  var byTeam={},order=[],i,r;
+  for(i=0;i<rows.length;i++){
+    r=rows[i];
+    var tn=ysTeamName(r.team);
+    if(!byTeam[tn]){byTeam[tn]=[];order.push(tn);}
+    var mine=null;try{if(typeof p.arTkCount==='function')mine=p.arTkCount(r.id);}catch(e){mine=null;}
+    var raw=r.raw||{};
+    byTeam[tn].push({
+      id:r.id,name:r.name||'이름 없음',lead:(r.role==='owner'||r.role==='admin'||r.role==='manager'),
+      total:ysNum(r.total),calls:ysNum(raw.call),cli:ysNum(raw.cli),att:ysNum(raw.att),
+      ckDays:ysNum(r.days),since:ysSince(r.last),last:r.last||'',any:!!r.any,tk:mine
+    });
+  }
+  /* 소속 없음은 맨 아래로 */
+  order.sort(function(a,b){return (a==='소속 없음'?1:0)-(b==='소속 없음'?1:0);});
+  for(i=0;i<order.length;i++)YS.teams.push({name:order[i],members:byTeam[order[i]]});
+
+  YS.db=tk||{all:0,no:0,rej:0,run:0,'new':0,old:0,bd:0};
+  var call=0,cli=0,move=0,stop=0,quiet=0;
+  for(i=0;i<rows.length;i++){
+    var q=rows[i].raw||{},sc=ysSince(rows[i].last);
+    call+=ysNum(q.call);cli+=ysNum(q.cli);
+    if(sc===0)move++;
+    else if(sc<0)quiet++;
+    else if(sc>=3)stop++;
+  }
+  YS.quiet=quiet;
+  YS.nums={people:rows.length,call:call,cli:cli,move:move,stop:stop,quiet:quiet};
+  YS.on=true;YS.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  return true;
+}
+/* 이 사람이 지금 무슨 상태인가 — 말풍선에 그대로 뜬다 */
+function ysLines(m){
+  var out=[];
+  if(m.since===0)out.push('오늘 움직임');
+  else if(m.since===1)out.push('어제까지');
+  else if(m.since>0)out.push(m.since+'일 전이 마지막');
+  if(m.calls)out.push('30일 '+m.calls+'통');
+  if(m.tk){
+    if(m.tk.run)out.push('진행중 '+m.tk.run+'명');
+    if(m.tk.no)out.push('다시 걸 '+m.tk.no+'명');
+    if(m.tk.old)out.push('식은 고객 '+m.tk.old+'명');
+    if(m.tk.bd)out.push('생일 '+m.tk.bd+'명');
+  }
+  if(m.cli)out.push('고객 '+m.cli+'명');
+  if(!out.length)out.push('아직 기록이 없습니다');
+  return out;
+}
+/* 말풍선 대신 자리를 비우는 표시로 쓴다 — 사흘 넘게 아무것도 안 한 사람만 */
+function ysIdle(m){
+  if(m.since<0)return '기록 없음';
+  if(m.since>=3)return m.since+'일째 멈춤';
+  return null;
+}
+/* 실제 팀을 오피스 구역으로 — 한 구역에 세 명까지라 넘치면 ②③ 으로 나눈다 */
+function ysRoster(){
+  if(!YS.on||!YS.teams.length)return null;
+  var out=[],ci=0,i,j,k;
+  var mark=['','②','③','④','⑤'];
+  for(i=0;i<YS.teams.length;i++){
+    var t=YS.teams[i],col=YS_COL[ci++%YS_COL.length];
+    for(j=0;j<t.members.length;j+=3){
+      var chunk=t.members.slice(j,j+3),ppl=[];
+      for(k=0;k<chunk.length;k++){
+        var m=chunk[k];
+        ppl.push({n:m.name,role:m.lead?'팀장':'팀원',ear:EARLIST[(m.name.length+k)%EARLIST.length],
+          T:ysLines(m),wait:ysIdle(m),base:true,key:'r:'+m.id,duty:'',real:true,mid:m.id});
+      }
+      out.push({t:t.name+(j?(' '+mark[Math.floor(j/3)]):''),c:col,p:ppl});
+    }
+  }
+  return out;
+}
 const LS={hires:"yoonsi_hires",meetings:"yoonsi_meetings",extra:"yoonsi_extradepts",edits:"yoonsi_edits",customers:"yoonsi_customers",todos:"yoonsi_todos"};
 /* ── AI 조직 라이브 연동 브리지 ──
    윤시스쿨은 이 브라우저에만 저장한다. 회의·할일이 생기거나 바뀌면 부모 앱에 알려
@@ -305,6 +464,7 @@ let hires=load(LS.hires,[]), meetings=load(LS.meetings,[]), extradepts=load(LS.e
 const $=id=>document.getElementById(id);
 function deptColor(n){const b=BASE.find(d=>d.t===n);if(b)return b.c;if(extradepts[n])return extradepts[n];const c=NEWCOLORS[Object.keys(extradepts).length%NEWCOLORS.length];extradepts[n]=c;saveLS(LS.extra,extradepts);return c;}
 function ROSTER(){
+  const real=ysRoster();if(real)return real;
   const list=BASE.map(d=>({t:d.t,c:d.c,p:d.p.map(([n,r,e,T,w])=>applyEdit({n,role:r,ear:e,T:T||[],wait:w||null,base:true,key:'b:'+d.t+':'+n,duty:(T&&T[0])||''}))}));
   hires.forEach(h=>{let d=list.find(x=>x.t===h.dept);if(!d){d={t:h.dept,c:deptColor(h.dept),p:[]};list.push(d);}d.p.push(applyEdit({n:h.name,role:h.role,ear:h.ear||'ear',T:NEWTASKS,wait:null,base:false,id:h.id,key:'h:'+h.id,duty:h.duty||''}));});
   return list;
@@ -327,7 +487,7 @@ function buildOffice(){
       const el=document.createElement("div");el.className="ch"+(pp.wait?" sleepy":"");
       el.innerHTML=`<div class="bub"></div><div class="face"><div class="body">${sprite({...co,ear:pp.ear})}</div></div><div class="tag${lead?' lead':''}">${lead?'★':''}${pp.n}</div>`;
       stage.appendChild(el);
-      const c={mn:pp.n,lead,wait:!!pp.wait,el,faceEl:el.querySelector(".face"),bub:el.querySelector(".bub"),lines:pp.wait?["연동 대기 💤"]:[pp.T[0]||"일하는 중…","일하는 중…"],
+      const c={mn:pp.n,lead,wait:!!pp.wait,el,faceEl:el.querySelector(".face"),bub:el.querySelector(".bub"),lines:pp.wait?[(typeof pp.wait==='string'?pp.wait:"연동 대기 💤")]:(pp.T&&pp.T.length?pp.T:["일하는 중…"]),
         _:{x:home[0],y:home[1],tx:home[0],ty:home[1],home,phase:"work",dwell:400+Math.random()*2600,face:1,walking:false,li:0}};
       chars.push(c);if(lead)leads.push(c);});
   });
@@ -408,7 +568,36 @@ function renderMeetings(){const ul=$("meetLog");if(!meetings.length){ul.innerHTM
   ul.querySelectorAll('.msave').forEach(b=>b.onclick=()=>saveMeeting(b.closest('.mrec')));
   ul.querySelectorAll('.mdel').forEach(b=>b.onclick=()=>{const li=b.closest('.mrec');if(confirm('이 회의 기록을 지울까요?')){meetings=meetings.filter(x=>x.id!==li.dataset.id);saveLS(LS.meetings,meetings);renderMeetings();}});}
 function saveMeeting(li){const m=meetings.find(x=>x.id===li.dataset.id);if(!m)return;li.querySelectorAll('textarea[data-f]').forEach(t=>{m[t.dataset.f]=t.value;});saveLS(LS.meetings,meetings);const s=document.createElement('span');s.textContent=' ✅ 저장됨';s.style.cssText='color:#1f8a4c;font-weight:800;font-size:12px';li.querySelector('.mrow').appendChild(s);setTimeout(()=>s.remove(),1500);}
-function refreshAll(){fillSelects();fillTodoWho();buildConsole();buildBoard();buildOffice();buildTracker();}
+function ysBarHtml(){
+  if(YS.on){
+    var n=YS.nums||{};
+    return '<div class="ys-bar live"><span class="dot"></span>'+
+      '<span>실제 업무와 연결됨 — 팀 <b>'+ysNum(n.people)+'명</b> · 오늘 움직인 사람 <b>'+ysNum(n.move)+'명</b>'+
+      (ysNum(n.stop)?(' · 사흘 넘게 멈춘 사람 <b>'+ysNum(n.stop)+'명</b>'):'')+
+      (ysNum(n.quiet)?(' · 기록 없는 사람 <b>'+ysNum(n.quiet)+'명</b>'):'')+
+      ' · '+esc(YS.at)+' 기준</span>'+
+      '<button type="button" onclick="ysReload()">↻ 새로 읽기</button></div>';
+  }
+  return '<div class="ys-bar demo"><span class="dot"></span>'+
+    '<span><b>데모 화면입니다.</b> 아래 사람들은 실제 팀원이 아닙니다. '+
+    '앱 안에서 로그인한 뒤 열면 우리 팀과 우리 DB 로 바뀝니다.</span>'+
+    '<button type="button" onclick="ysReload()">↻ 다시 시도</button></div>';
+}
+function ysPaintBar(){
+  var host=document.getElementById('ysBar');
+  if(host)host.innerHTML=ysBarHtml();
+  ysRelabel();
+}
+/* 연결되면 칸 제목 옆 설명도 바뀐다 — 예전 설명은 손으로 적는 화면 이야기였다 */
+function ysRelabel(){
+  var m={pipeSub:['고객을 단계별로 · 카드의 ◀▶로 이동','우리 DB 를 단계로 세웠습니다 · 누르면 그 화면으로'],
+         todoSub:['담당자에게 실제 할일 배정','위는 실제 기록에서 나온 것 · 아래는 따로 적어 두는 것']};
+  for(var id in m){
+    var el=document.getElementById(id);
+    if(el)el.textContent=YS.on?m[id][1]:m[id][0];
+  }
+}
+function refreshAll(){ysPaintBar();fillSelects();fillTodoWho();buildConsole();buildBoard();buildOffice();buildTracker();}
 function msg(el,t,cls){$(el).textContent=t;$(el).className="msg "+cls;}
 $("hireBtn").onclick=()=>{const name=$("h_name").value.trim();let dept=$("h_dept").value;if(dept==="__new"){dept=$("h_newdept").value.trim();if(!dept){msg("hireMsg","부서 이름을 입력해요.","no");return;}}if(!name){msg("hireMsg","이름을 입력해요.","no");return;}
   deptColor(dept);hires.push({id:"h"+Date.now(),name,dept,role:$("h_role").value,duty:$("h_duty").value.trim(),codename:$("h_code").value.trim(),ear:EARLIST[Math.floor(Math.random()*EARLIST.length)]});saveLS(LS.hires,hires);
@@ -445,12 +634,35 @@ $("editModal").onclick=e=>{if(e.target.id==='editModal')$("editModal").classList
 // ===== AI 영업비서 + 권한 모드 =====
 function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 const ASST_SYS="당신은 대한민국 보험 대리점의 '영업 개인비서'입니다. 설계사(팀원)의 실무 질문에 간결하고 실행가능하게 도와주세요. 원칙: 특정 상품 가입 강요·수익/지급 보장·과장 표현 금지, 근거·출처를 밝히고, 준법(광고심의)을 의식. '고객이익 통합상담' 관점(받을 돈 찾기·새는 돈 줄이기·남은 위험만 채우기)으로 답하고, 세제·한도 수치는 당해년도 확인이 필요하다고 덧붙이세요.";
+/* 물어보면 우리 팀 숫자로 답하게 한다. 사람 이름은 넘기되 고객 이름·전화·메모는
+   넘기지 않는다 — 숫자와 상태만 넘어간다. */
+function ysCtx(){
+  if(!YS.on)return '';
+  var n=YS.nums||{},d=YS.db||{},L=[],i,j,t,m;
+  L.push('');
+  L.push('[우리 조직의 지금 숫자 — 이 값만 쓰고 다른 숫자는 지어내지 마세요]');
+  L.push('팀 인원 '+ysNum(n.people)+'명, 오늘 움직인 사람 '+ysNum(n.move)+'명, 사흘 넘게 멈춘 사람 '+
+         ysNum(n.stop)+'명, 기록이 아예 없는 사람 '+ysNum(n.quiet)+'명');
+  L.push('최근 30일 통화 '+ysNum(n.call)+'통, 고객 '+ysNum(n.cli)+'명');
+  L.push('오늘 손댈 것 — 미진행 '+ysNum(d['new'])+' · 부재 '+ysNum(d.no)+' · 거절 '+ysNum(d.rej)+
+         ' · 진행중 '+ysNum(d.run)+' · 기고객 '+ysNum(d.old)+' · 생일 '+ysNum(d.bd));
+  for(i=0;i<YS.teams.length;i++){
+    t=YS.teams[i];
+    for(j=0;j<t.members.length;j++){
+      m=t.members[j];
+      L.push('- '+m.name+'('+t.name+') 30일 '+m.calls+'통 · 고객 '+m.cli+'명 · 종합 '+m.total+'점 · '+
+             (m.since<0?'기록 없음':(m.since===0?'오늘 움직임':m.since+'일째 멈춤')));
+    }
+  }
+  L.push('고객 이름·전화번호·메모는 넘기지 않았습니다. 특정 고객을 지목해 답하지 마세요.');
+  return L.join('\n');
+}
 let asstBusy=false;
 async function askAssistant(){const q=$("asstQ").value.trim();if(!q||asstBusy)return;asstBusy=true;
   const th=$("asstThread");const emp=th.querySelector('.asst-empty');if(emp)th.innerHTML='';
   th.insertAdjacentHTML('beforeend',`<div class="am you">${esc(q)}</div><div class="am ai" id="am_pending">…생각 중</div>`);th.scrollTop=th.scrollHeight;$("asstQ").value='';
   try{let out;
-    if(window.parent&&window.parent!==window&&typeof window.parent.callAI==='function'){out=await window.parent.callAI(ASST_SYS,q,1500,'yoonsi_asst');}
+    if(window.parent&&window.parent!==window&&typeof window.parent.callAI==='function'){out=await window.parent.callAI(ASST_SYS+ysCtx(),q,1500,'yoonsi_asst');}
     else{const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system:ASST_SYS,user:q})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.message||('HTTP '+r.status));out=j.text;}
     $("am_pending").outerHTML=`<div class="am ai">${esc(out||'(빈 응답)').replace(/\n/g,'<br>')}</div>`;
   }catch(e){$("am_pending").outerHTML=`<div class="am ai err">⚠️ ${esc(String(e.message||e))}<br>APEX 사이트 안에서 AI 연결(설정)이 돼 있어야 답해요.</div>`;}
@@ -465,7 +677,39 @@ $("modeSel").onchange=()=>{localStorage.setItem('yoonsi_mode',$("modeSel").value
 // ===== 진행판 (상담 파이프라인 + 사람별 할일) =====
 const STAGES=['유입','진단','상담','계약','관리'];
 function buildTracker(){buildPipe();buildTodos();}
-function buildPipe(){const box=$("pipe");box.innerHTML='';
+/* 실제 DB 를 단계로 세운다. 숫자를 누르면 진짜 화면으로 넘어간다.
+   예전에는 여기에 손으로 적은 고객이 쌓였는데, 아무도 두 군데에 적지 않는다. */
+function ysPipeHtml(){
+  var d=YS.db||{},n=YS.nums||{};
+  var col=[['new','🆕','미진행','한 번도 안 걸린 DB'],['no','📵','부재','다시 걸어야'],
+           ['rej','🚫','거절','소식만 보냅니다'],['run','🔥','진행중','지금 붙어야'],
+           ['old','❄️','기고객','식었습니다'],['bd','🎂','생일','이번 주']];
+  var h='<div class="ys-fun">',i,c,v;
+  for(i=0;i<col.length;i++){
+    c=col[i];v=ysNum(d[c[0]]);
+    h+='<button type="button" class="ys-fb'+(v?' on':'')+'" onclick="ysGo(\''+(c[0]==='old'?'clients':'crm')+'\')">'+
+       '<b>'+v+'</b><span>'+c[1]+' '+c[2]+'</span><em>'+c[3]+'</em></button>';
+  }
+  h+='</div>';
+  h+='<div class="ys-sum">팀 '+ysNum(n.people)+'명 · 최근 30일 통화 <b>'+ysNum(n.call)+'통</b> · '+
+     '고객 <b>'+ysNum(n.cli)+'명</b> · 오늘 움직인 사람 <b>'+ysNum(n.move)+'명</b>'+
+     (ysNum(n.stop)?(' · <b class="bad">사흘 넘게 멈춘 사람 '+ysNum(n.stop)+'명</b>'):'')+
+     (ysNum(n.quiet)?(' · <b class="bad">기록 없는 사람 '+ysNum(n.quiet)+'명</b>'):'')+'</div>';
+  h+='<div class="ys-btns"><button type="button" onclick="ysGo(\'crm\')">DB 통합 CRM 열기</button>'+
+     '<button type="button" onclick="ysGo(\'airep\')">AI 관리판에서 누구를 볼지 보기</button>'+
+     '<button type="button" onclick="ysReload()">↻ 새로 읽기</button></div>';
+  return h;
+}
+function ysGo(tab){var p=ysP();try{if(p&&typeof p.go==='function'){p.go(tab);return;}}catch(e){}
+  alert('앱 안에서 열었을 때만 넘어갑니다.');}
+function ysReload(){var p=ysP();try{if(p){if(p.GB)p.GB.loaded=false;if(p.AR)p.AR.loaded=false;ysAsk(p);}}catch(e){}
+  setTimeout(function(){ysPull();refreshAll();},1600);}
+function buildPipe(){const box=$("pipe");
+  if(YS.on){box.classList.add('ys');box.innerHTML=ysPipeHtml();
+    const f=$("custAdd");if(f)f.style.display='none';return;}
+  box.classList.remove('ys');
+  const f2=$("custAdd");if(f2)f2.style.display='';
+  box.innerHTML='';
   STAGES.forEach((st,si)=>{const col=document.createElement('div');col.className='col';
     const cs=customers.filter(c=>c.stage===st);
     col.innerHTML=`<div class="col-h"><span>${st}</span><span class="n">${cs.length}</span></div>`;
@@ -478,7 +722,35 @@ function buildPipe(){const box=$("pipe");box.innerHTML='';
   const contract=customers.filter(c=>c.stage==='계약'||c.stage==='관리').length,total=customers.length;
   $("convStat").textContent=`총 ${total}명 · 계약+ ${contract}명 · 전환율 ${total?Math.round(contract/total*100):0}%`;}
 $("custAdd").onsubmit=e=>{e.preventDefault();const n=$("cust_name").value.trim();if(!n)return;customers.push({id:'c'+Date.now(),name:n,memo:$("cust_memo").value.trim(),stage:'유입'});saveLS(LS.customers,customers);$("cust_name").value='';$("cust_memo").value='';buildPipe();};
+/* 앱이 이미 계산해 둔 「오늘 터치할 사람」 을 사람별로 한 줄씩 올린다.
+   여기서 적는 할일은 이 브라우저에만 남지만, 이 목록은 실제 기록에서 나온다. */
+function ysDutyHtml(){
+  if(!YS.on)return '';
+  var out=[],i,j,t,m,a;
+  for(i=0;i<YS.teams.length;i++){
+    t=YS.teams[i];
+    for(j=0;j<t.members.length;j++){
+      m=t.members[j];a=[];
+      if(m.tk){
+        if(m.tk.run)a.push('진행중 '+m.tk.run+'명 결론 묻기');
+        if(m.tk.no)a.push('부재 '+m.tk.no+'명 다시 걸기');
+        if(m.tk['new'])a.push('첫 통화 '+m.tk['new']+'건');
+        if(m.tk.old)a.push('기고객 '+m.tk.old+'명 안부');
+        if(m.tk.bd)a.push('생일 '+m.tk.bd+'명');
+      }
+      if(!a.length)continue;
+      out.push('<li class="ys-duty'+(m.since===0?'':' idle')+'"><b>'+esc(m.name)+'</b>'+
+        '<span class="tm">'+esc(t.name)+'</span>'+
+        '<span class="dz">'+esc(a.join(' · '))+'</span>'+
+        (m.since===0?'':'<em class="bad">'+(m.since<0?'기록 없음':m.since+'일째 멈춤')+'</em>')+'</li>');
+    }
+  }
+  if(!out.length)return '<div class="ys-none">오늘 손댈 것이 없습니다. 잘 돌리고 계십니다.</div>';
+  return '<div class="ys-dhd">☎️ 오늘 팀이 해야 할 것 <span>DB 통합 CRM 과 고객 365일에서 그대로 가져왔습니다</span></div>'+
+         '<ul class="ys-duties">'+out.join('')+'</ul>';
+}
 function buildTodos(){const box=$("todoList");box.innerHTML='';
+  const duty=$("ysDuty");if(duty)duty.innerHTML=ysDutyHtml();
   if(!todos.length){box.innerHTML='<div class="empty2">아직 배정된 할일이 없어요.</div>';return;}
   const byWho={};todos.forEach(t=>{(byWho[t.who]=byWho[t.who]||[]).push(t);});
   Object.keys(byWho).forEach(who=>{const g=document.createElement('div');g.className='tdgroup';g.innerHTML=`<div class="tgh">${esc(who)}</div>`;
@@ -488,7 +760,9 @@ function buildTodos(){const box=$("todoList");box.innerHTML='';
       el.querySelector('.tx').onclick=()=>{yoonsiPush('todoDone',{who:t.who,task:t.task});todos=todos.filter(x=>x.id!==t.id);saveLS(LS.todos,todos);yoonsiSyncAll('할일 완료');buildTodos();};
       g.appendChild(el);});box.appendChild(g);});}
 $("todoAdd").onsubmit=e=>{e.preventDefault();const task=$("todo_task").value.trim();if(!task)return;todos.push({id:'t'+Date.now(),who:$("todo_who").value,task,done:false});saveLS(LS.todos,todos);yoonsiPush('todo',{who:$("todo_who").value,task:task});yoonsiSyncAll('할일 등록');$("todo_task").value='';buildTodos();};
-function fillTodoWho(){const names=[];ROSTER().forEach(d=>d.p.forEach(p=>names.push(p.n)));$("todo_who").innerHTML=names.map(n=>`<option>${esc(n)}</option>`).join('');}
+function fillTodoWho(){const names=[];const seen={};
+  ROSTER().forEach(d=>d.p.forEach(p=>{if(!seen[p.n]){seen[p.n]=1;names.push(p.n);}}));
+  $("todo_who").innerHTML=names.map(n=>`<option>${esc(n)}</option>`).join('');}
 
 // ===== TABS =====
 let curTab='office';
@@ -498,5 +772,17 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
 });
 
 // init
-fillSelects();fillTodoWho();buildOffice();buildBoard();buildConsole();buildTracker();applyMode();
+/* 부모 앱이 기록을 다 읽기 전에 이 창이 먼저 뜰 수 있다.
+   한 번 당겨 보고, 아직이면 몇 초 간격으로 여덟 번까지 다시 본다. */
+ysPull();
+fillSelects();fillTodoWho();buildOffice();buildBoard();buildConsole();buildTracker();applyMode();ysPaintBar();
+(function ysWatch(){
+  if(YS.on||YS.tries>=8)return;
+  YS.tries++;
+  setTimeout(function(){
+    var was=YS.on;
+    if(ysPull()&&!was)refreshAll();
+    ysWatch();
+  },YS.tries<3?1200:3000);
+})();
 </script>

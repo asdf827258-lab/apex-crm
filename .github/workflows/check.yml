@@ -1,0 +1,84 @@
+name: 자동 점검
+
+# 깨진 코드가 라이브로 나가는 것을 막는다.
+# PR 을 올릴 때와 main 에 들어갈 때 모두 돈다.
+# 여기서 빨간불이 뜨면 배포가 시작되지 않는다.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Python 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 화면 파일 문법 검사
+        run: node scripts/check-html.js app/index.html db-crm.html db-crm-teams.html index.html "app/재무설계/실전화법서.html" "app/재무설계/상담자료.html"
+
+      - name: SQL 문법 검사
+        run: |
+          python3 -m pip install --quiet pglast
+          python3 scripts/check-sql.py
+
+      - name: 브라우저 설치
+        run: |
+          npm install --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+
+      - name: 주요 화면 열어 보기
+        run: node scripts/smoke.js
+
+      - name: 실행 체크판 눌러 보기
+        run: node scripts/check-ckboard.js
+
+      - name: 재무설계 라인 눌러 보기
+        run: node scripts/check-fp.js
+
+      - name: 성장판 눌러 보기
+        run: node scripts/check-growboard.js
+
+      - name: 음성 비서 시켜 보기
+        run: node scripts/check-voice.js
+
+      - name: 두뇌 발표자료 만들어 보기
+        run: node scripts/check-brainppt.js
+
+      - name: 말로 시켜 보기 (자비스)
+        run: node scripts/check-jarvis.js
+
+      - name: 고객 365일 눌러 보기
+        run: node scripts/check-clients.js
+
+      - name: 출발 점검 눌러 보기
+        run: node scripts/check-ready.js
+
+      - name: AI 보고 받아 보기
+        run: node scripts/check-airep.js
+
+      - name: TEAM 총괄 · 설정 눌러 보기
+        run: node scripts/check-teamhub.js
+
+      - name: 윤시스쿨 — 진짜 우리 팀·우리 DB 를 보는가
+        run: node scripts/check-yoonsi.js
+
+      - name: 투자·경제 — 수익률·경고·토스 바로가기가 맞는가
+        run: node scripts/check-invest.js
+
+      - name: 시세 서버 — 키가 없어도 안 죽는가
+        run: node scripts/check-market-api.js
