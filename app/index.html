@@ -5842,6 +5842,9 @@ function arAutoNeed(){
 }
 function arAutoRun(){
   if(arAutoOff()||AR.busy||!OS.profile)return;
+  /* 사람이 쓰고 있는 중이면 비켜 준다 */
+  try{if(typeof VA!=='undefined'&&(VA.busy||VA.making))return;}catch(e){}
+  try{if(typeof BR!=='undefined'&&BR.busy)return;}catch(e){}
   if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
   if(typeof callAI!=='function')return;
   if(!arDue())return;                         /* 아직 오전 8시 전 — 그때 다시 본다 */
@@ -5875,7 +5878,9 @@ function arAutoArm(){
   if(window.__arAutoT)return;
   var tick=function(){try{arAutoRun();}catch(e){}};
   window.__arAutoT=setInterval(tick,10*60*1000);
-  setTimeout(tick,4000);
+  /* 들어오자마자 AI 를 여러 번 부르면 두뇌·음성비서를 쓰려는 사람과 부딪힌다.
+     한숨 돌리고 시작한다. 그동안 무언가를 시켰으면 그것이 끝난 뒤로 미룬다. */
+  setTimeout(tick,45000);
 }
 /* 하루에 세 번까지 — 손 놓은 사람이 있으면 조용히 알려 준다 */
 function arNudgeKey(){return 'apex_ar_nudge_'+arToday();}

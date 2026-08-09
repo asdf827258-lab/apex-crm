@@ -82,6 +82,10 @@ const PLAN = JSON.stringify({
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
+  /* 아침 자동 보고는 AI 를 여러 번 부른다 — AI 호출 수를 세는 검사에서는 꺼 둔다 */
+  await page.addInitScript(() => {
+    try { localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1'); } catch (e) { }
+  });
   await page.addInitScript(STUB);
   await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2600);
