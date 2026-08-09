@@ -25713,7 +25713,7 @@ function osMembersCardHtml(){
     '<div id="osMembersList"><div style="font-size:12px;color:var(--ink-4)">로그인 후 "새로고침"을 누르면 표시됩니다.</div></div>'+
     '</div></div>';
 }
-var OSMT={teams:[],of:{},missing:false,err:''};
+var OSMT={teams:[],of:{},missing:false,err:'',view:''};
 var OSWS={of:{},missing:true};
 var OS_WS_OPTS=[['apex','APEX 전용'],['both','둘다'],['crm','CRM 전용']];
 function osSetWorkspace(id,v){
@@ -25849,10 +25849,40 @@ function osMemberRowHtml(p,me,top){
       ?'<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px;color:#B91C1C" onclick="osSetCrmMaster(\''+p.id+'\',false)">CRM 전체조회 해제</button>'
       :'<button class="btn btn-primary" style="padding:6px 11px;font-size:11.5px;background:#0F766E" onclick="osSetCrmMaster(\''+p.id+'\',true)">🗄 CRM 전체조회 부여</button>';
   }
-  return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;'+(top?'border-top:1px solid var(--ink-8)':'')+'">'+
-    '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;color:var(--ink-1)">'+osEsc(p.name||'(이름 없음)')+(mine?' <span style="font-size:10px;color:var(--ink-5)">(나)</span>':'')+'</div>'+
-    '<div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:3px">'+rolePill+masterPill+statPill+(crmOnly?'':tierPill)+osMTeamPill(p.id)+'</div></div>'+
-    '<div style="display:flex;gap:7px;align-items:center;white-space:nowrap;flex-wrap:wrap;justify-content:flex-end">'+osWsSel(p.id)+(crmOnly?'':osMTeamSel(p.id))+((mine||crmOnly)?'':tierCtrl)+ctrl+'</div></div>';
+  /* 한 줄에 담는다 — 이름과 뱃지는 왼쪽, 고치는 것은 오른쪽.
+     한 사람이 두 줄을 잡아먹으면 스무 명만 되어도 화면을 넘어간다. */
+  return '<div class="os-mrow'+(top?' t':'')+'">'+
+    '<div class="os-mnm">'+osEsc(p.name||'(이름 없음)')+
+      (mine?'<span class="me">(나)</span>':'')+'</div>'+
+    '<div class="os-mpi">'+rolePill+masterPill+statPill+(crmOnly?'':tierPill)+osMTeamPill(p.id)+'</div>'+
+    '<div class="os-mct">'+osWsSel(p.id)+(crmOnly?'':osMTeamSel(p.id))+((mine||crmOnly)?'':tierCtrl)+ctrl+'</div>'+
+  '</div>';
+}
+function osMemCss(){
+  if(document.getElementById('osMemCss'))return;
+  var st=document.createElement('style');st.id='osMemCss';
+  st.textContent=
+   '.os-mrow{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr) auto;'+
+     'gap:4px 10px;align-items:center;padding:6px 10px}'+
+   '.os-mrow.t{border-top:1px solid var(--ink-8)}'+
+   '.os-mrow:nth-child(even){background:#FCFDFE}'+
+   '.os-mnm{font-size:12.5px;font-weight:800;color:var(--ink-1);white-space:nowrap;'+
+     'overflow:hidden;text-overflow:ellipsis}'+
+   '.os-mnm .me{font-size:9.5px;color:var(--ink-5);margin-left:3px;font-weight:700}'+
+   '.os-mpi{display:flex;gap:4px;align-items:center;flex-wrap:wrap;min-width:0}'+
+   '.os-mpi>span{font-size:9.5px!important;padding:1px 6px!important}'+
+   '.os-mct{display:flex;gap:5px;align-items:center;justify-content:flex-end;white-space:nowrap}'+
+   '.os-mct select{font-size:10.5px!important;padding:3px 5px!important;border-radius:7px!important}'+
+   '.os-mct .btn{padding:4px 9px!important;font-size:10.5px!important}'+
+   '@media(max-width:900px){.os-mrow{grid-template-columns:1fr auto}'+
+     '.os-mpi{grid-column:1/-1}.os-mct{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}}'+
+   '.os-mtf{display:flex;gap:5px;flex-wrap:wrap;margin:0 0 9px}'+
+   '.os-mtb{border:1.5px solid var(--ink-7);background:#fff;border-radius:99px;padding:5px 12px;'+
+     'font-size:11.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.os-mtb b{color:#94A3B8;font-weight:900;margin-left:3px}'+
+   '.os-mtb.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.os-mtb.on b{color:#93C5FD}';
+  document.head.appendChild(st);
 }
 /* DB 통합 CRM 전체 조회(마스터) — 화면은 CRM 그대로, 권한 데이터만 같은 DB에서 지정 */
 function osSetCrmMaster(id,on){
@@ -25870,6 +25900,7 @@ function osSetCrmMaster(id,on){
 }
 /* 팀을 만들었으면 팀별 구역으로 나눠 보여준다. 팀이 없으면 기존처럼 한 목록. */
 function osMembersHtml(rows,me){
+  if(typeof osMemCss==='function')osMemCss();
   function wrap(inner){return '<div style="border:1px solid var(--ink-7);border-radius:10px;overflow:hidden">'+inner+'</div>';}
   function mk(list){return list.map(function(p,i){return osMemberRowHtml(p,me,i>0);}).join('');}
   /* 검색 중이면 그룹 없이 전체(보관 구역 포함)에서 이름으로 찾는다 */
@@ -25901,15 +25932,41 @@ function osMembersHtml(rows,me){
       '<span style="font-size:12px;font-weight:900;color:var(--ink-2)">'+osEsc(name)+'</span>'+
       '<span style="font-size:10.5px;font-weight:700;color:var(--ink-5)">'+n+'명</span></div>';
   }
-  var h='';
+  /* 팀을 하나씩 골라 본다 — 전부 세로로 쌓으면 스무 명만 넘어도 안 보인다 */
+  var view=OSMT.view||'',h='';
+  h+='<div class="os-mtf"><button type="button" class="os-mtb'+(view?'':' on')+'" '+
+    'onclick="osMemTeamView(\'\')">전체 <b>'+rows.length+'</b></button>';
   OSMT.teams.forEach(function(t){
-    var list=byTeam[t.id];
-    h+=head(t.color||'#1A56DB',t.name,list.length)+
-       (list.length?wrap(mk(list)):'<div style="font-size:11px;color:var(--ink-5);padding:0 2px">아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.</div>');
+    h+='<button type="button" class="os-mtb'+(view===t.id?' on':'')+'" '+
+      'onclick="osMemTeamView(\''+t.id+'\')">'+osEsc(t.name)+' <b>'+byTeam[t.id].length+'</b></button>';
   });
-  h+=head('#CBD5E1','팀 미지정',un.length)+
-     (un.length?wrap(mk(un)):'<div style="font-size:11px;color:#059669;padding:0 2px">모든 팀원이 팀에 배정되었습니다. ✅</div>');
+  h+='<button type="button" class="os-mtb'+(view==='__un'?' on':'')+'" '+
+    'onclick="osMemTeamView(\'__un\')">팀 미지정 <b>'+un.length+'</b></button></div>';
+  var none=function(msg,col){return '<div style="font-size:11.5px;color:'+col+';padding:9px 4px">'+msg+'</div>';};
+  if(view==='__un')
+    h+=head('#CBD5E1','팀 미지정',un.length)+
+       (un.length?wrap(mk(un)):none('모든 팀원이 팀에 배정되었습니다. ✅','#059669'));
+  else if(view){
+    var t2=null,i2;
+    for(i2=0;i2<OSMT.teams.length;i2++)if(OSMT.teams[i2].id===view)t2=OSMT.teams[i2];
+    var l2=byTeam[view]||[];
+    h+=head((t2&&t2.color)||'#1A56DB',(t2&&t2.name)||'팀',l2.length)+
+       (l2.length?wrap(mk(l2)):none('아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.','var(--ink-5)'));
+  }else{
+    OSMT.teams.forEach(function(t){
+      var list=byTeam[t.id];
+      h+=head(t.color||'#1A56DB',t.name,list.length)+
+         (list.length?wrap(mk(list)):none('아직 배정된 팀원이 없습니다. 오른쪽 팀 선택으로 배정하세요.','var(--ink-5)'));
+    });
+    h+=head('#CBD5E1','팀 미지정',un.length)+
+       (un.length?wrap(mk(un)):none('모든 팀원이 팀에 배정되었습니다. ✅','#059669'));
+  }
   return h+crmBlock;
+}
+function osMemTeamView(id){
+  OSMT.view=id;
+  var box=document.getElementById('osMembersList');
+  if(box&&OSMT.rows)box.innerHTML=osMembersHtml(OSMT.rows,OSMT.me);
 }
 function osMemSearchGo(v){
   OSMT.q=v||'';
