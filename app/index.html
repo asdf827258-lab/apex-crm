@@ -4950,7 +4950,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
+var AR={memo:'',face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -5357,13 +5357,24 @@ var AR_CAT=[
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
  ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
+ ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
+ ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
  ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all']
 ];
 function arCat(){return AR.cat||'feed';}
 function arGoCat(k){
-  AR.cat=k;AR.open='';try{localStorage.setItem('apex_ar_cat',k);}catch(e){}
+  AR.cat=k;AR.open='';AR.memo='';try{localStorage.setItem('apex_ar_cat',k);}catch(e){}
+  /* 안 여는 칸은 안 읽는다 — 열 때 그 칸이 쓰는 기록만 가져온다 */
+  if(k==='coach'){
+    try{if(typeof MC!=='undefined'&&typeof mcLoad==='function'){MC.loaded=false;mcLoad();
+      setTimeout(function(){if(AR.cat==='coach'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
+  }
+  if(k==='acad'){
+    try{if(typeof AC!=='undefined'&&!AC.data&&!AC.loading&&typeof acCrmLoad==='function'){acCrmLoad();
+      setTimeout(function(){if(AR.cat==='acad'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
+  }
   /* 팀원 관리를 열 때 코칭 기록도 같이 읽어 둔다 — 펼쳤을 때 이미 있어야 본다 */
   if(k==='team'){
     try{
@@ -5991,10 +6002,50 @@ function arCoachHtml(who){
   if(p.last&&p.last.coach_date)
     h+='<div class="ar-vk" style="margin-top:7px">지난 코칭 '+osEsc(p.last.coach_date)+
        (p.last.todo?(' · 그때 정한 일: '+osEsc((''+p.last.todo).replace(/\s+/g,' ').slice(0,44))):'')+'</div>';
-  h+='<div class="btn-row" style="margin-top:9px">'+
-     '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">코칭 메모 남기기</button></div>';
+  /* 메모를 남기려고 다른 화면으로 나가면 지금 보던 숫자를 잃는다.
+     여기서 바로 적고 저장한다 — 저장은 팀 코칭과 같은 coSave 를 그대로 쓴다. */
+  h+=arMemoHtml(who);
   h+='</div></div>';
   return h;
+}
+/* 이 사람에게 남기는 코칭 메모 — 팀 코칭 화면과 같은 곳에 쌓인다 */
+function arMemoOpen(who){AR.memo=(AR.memo===who)?'':who;arPaint();}
+function arMemoSet(who,k,v){
+  if(typeof CO==='undefined')return;
+  CO.form[who]=CO.form[who]||{};CO.form[who][k]=v;
+}
+function arMemoSave(who){
+  if(typeof coSave!=='function'){toast('코칭 저장을 불러오지 못했습니다');return;}
+  coSave(who);
+  setTimeout(function(){
+    try{if(typeof CO!=='undefined'&&!CO.saving[who]){AR.memo='';if(typeof arPaint==='function')arPaint();}}catch(e){}
+  },1400);
+}
+function arMemoHtml(who){
+  if(typeof CO==='undefined'||typeof coSave!=='function')return '';
+  if(typeof coCanUse==='function'&&!coCanUse())return '';
+  var open=(AR.memo===who),f=(CO.form&&CO.form[who])||{},busy=!!(CO.saving&&CO.saving[who]);
+  if(!open)
+    return '<div class="btn-row" style="margin-top:9px">'+
+      '<button class="btn btn-ghost" onclick="arMemoOpen(\''+who+'\')">✏️ 코칭 메모 남기기</button></div>';
+  var ta=function(k,lb,ph){
+    return '<label class="ar-ml">'+osEsc(lb)+
+      '<textarea class="ar-mt" rows="2" placeholder="'+osEsc(ph)+'" '+
+      'oninput="arMemoSet(\''+who+'\',\''+k+'\',this.value)">'+osEsc(f[k]||'')+'</textarea></label>';
+  };
+  return '<div class="ar-memo">'+
+    ta('strength','잘하고 있는 것','전화를 매일 거는 습관이 잡혔습니다')+
+    ta('weak','막힌 곳','약속으로 넘어가는 첫 마디가 약합니다')+
+    ta('todo','오늘 같이 정한 일','내일까지 부재 6명에게 문자 먼저')+
+    '<label class="ar-ml">다시 볼 날'+
+      '<input type="date" class="ar-md" value="'+osEsc(f.recheck||'')+'" '+
+      'onchange="arMemoSet(\''+who+'\',\'recheck\',this.value)"></label>'+
+    '<div class="btn-row" style="margin-top:9px">'+
+      '<button class="btn btn-primary" '+(busy?'disabled':'')+' onclick="arMemoSave(\''+who+'\')">'+
+        (busy?'저장 중…':'저장')+'</button>'+
+      '<button class="btn btn-ghost" onclick="arMemoOpen(\''+who+'\')">접기</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">지난 기록 전부</button>'+
+    '</div></div>';
 }
 function arCoachLoad(){
   try{
@@ -6041,6 +6092,32 @@ function arWeekStrip(who){
     '<div style="font-size:11px;color:#94A3B8;font-weight:700;margin-top:5px">주차별 통화 — 진한 칸이 상담</div>';
 }
 /* 🧑‍🏫 리더 할 일 — 누구나 봅니다, 지점장이 체크합니다 */
+/* 항목마다 어느 화면에서 하는 일인지 — CK_LDR 에 안 적힌 것은 여기서 잇는다 */
+var AR_LEAD_TAB={
+  a1:'attend',a2:'attend',a3:'ckboard',
+  b1:'crm',b2:'crm',b3:'airep',b4:'clients',
+  c1:'crm',c2:'growboard',c3:'clients',c4:'airep',
+  d1:'daily',d2:'airep',d3:'ckboard',d4:'report'
+};
+function arLeadTab(k){return AR_LEAD_TAB[k]||'';}
+function arLeadTabName(t){
+  if(!t)return '';
+  var g,i,j;
+  try{
+    for(i=0;i<TABS.length;i++){
+      g=TABS[i].items||[];
+      for(j=0;j<g.length;j++)if(g[j].id===t)return g[j].title||t;
+    }
+  }catch(e){}
+  return t;
+}
+function arLeadGo(t){
+  if(!t)return;
+  try{
+    if(typeof osTabAllowed==='function'&&!osTabAllowed(t)){toast('이 화면은 상위 요금제에서 열립니다');return;}
+    go(t);
+  }catch(e){}
+}
 function arLeadHtml(){
   var can=arIsLead(),g,i,h='';
   if(typeof CK_LDR==='undefined')
@@ -6049,10 +6126,19 @@ function arLeadHtml(){
     var m=(typeof ckLoad==='function')?ckLoad('day'):{},rows='',j,r,on;
     for(j=0;j<list.length;j++){
       r=list[j];on=!!m[r[0]];
+      /* 체크만 하고 끝나면 아무 일도 안 일어난다. 그 일을 하는 화면으로
+         바로 넘어갈 수 있어야 체크가 실제 행동이 된다.
+         왼쪽 네모는 체크, 오른쪽 화살표는 그 화면으로 — 따로 눌린다. */
+      var go4=r[4]||arLeadTab(r[0]),go3=r[3]||arLeadTabName(go4);
+      /* 줄 아무 데나 누르면 체크. 오른쪽 단추만 따로 — 눌러도 체크는 안 바뀐다. */
       rows+='<div class="ar-lk'+(on?' on':'')+(can?'':' ro')+'"'+
         (can?(' onclick="arLeadTog(\'day\',\''+r[0]+'\')"'):'')+'>'+
         '<span class="bx">'+(on?'✓':'')+'</span>'+
-        '<span class="tx"><b>'+osEsc(r[1])+'</b>'+(r[2]?('<em>'+osEsc(r[2])+'</em>'):'')+'</span></div>';
+        '<span class="tx"><b>'+osEsc(r[1])+'</b>'+(r[2]?('<em>'+osEsc(r[2])+'</em>'):'')+'</span>'+
+        (go4?('<button type="button" class="ar-lkg" '+
+          'onclick="event.stopPropagation();arLeadGo(\''+go4+'\')" '+
+          'title="'+osEsc(go3)+' 열기">'+osEsc(go3)+' ↗</button>'):'')+
+        '</div>';
     }
     return '<div class="ar-lg"><div class="hd">'+icon+' '+osEsc(title)+
       '<span>'+osEsc(when)+'</span></div>'+rows+'</div>';
@@ -6064,7 +6150,7 @@ function arLeadHtml(){
     box('🌙','마감 · 퇴근 전','10분',CK_LDR.d)+
     '</div>';
   return arCard('🧑‍🏫','리더 할 일',
-    can?'누르면 지워집니다. 여기까지 하면 오늘 달력이 초록색이 됩니다'
+    can?'왼쪽을 누르면 체크됩니다. 오른쪽 단추를 누르면 그 일을 하는 화면으로 바로 넘어갑니다'
        :'지점장이 챙기는 목록입니다. 무엇을 보고 계신지 아시라고 열어 두었습니다',
     h,
     (can?'':'<div class="notice" style="margin-top:12px">이 칸은 <b>보기만</b> 됩니다. '+
@@ -6610,11 +6696,23 @@ function arCoachCss(){
    '.ar-cg{display:flex;flex-direction:column;gap:7px}'+
    '.ar-cq{background:#F8FAFC;border-left:3px solid #F59E0B;border-radius:8px;padding:9px 11px}'+
    '.ar-cq .t{font-size:12.5px;font-weight:800;color:#0B2447;line-height:1.6}'+
-   '.ar-cq .a{font-size:11.5px;color:#5C6E84;line-height:1.65;margin-top:3px}';
+   '.ar-cq .a{font-size:11.5px;color:#5C6E84;line-height:1.65;margin-top:3px}'+
+   '.ar-memo{margin-top:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:11px 12px;'+
+     'display:flex;flex-direction:column;gap:8px}'+
+   '.ar-ml{display:block;font-size:11px;font-weight:800;color:#5C6E84}'+
+   '.ar-mt,.ar-md{width:100%;box-sizing:border-box;margin-top:4px;border:1px solid #E2E8F0;border-radius:8px;'+
+     'padding:7px 9px;font-family:inherit;font-size:12.5px;line-height:1.6;color:#0B2447;background:#fff;resize:vertical}'+
+   '.ar-md{max-width:180px}'+
+   '.ar-lk{position:relative}'+
+   '.ar-lkg{margin-left:auto;flex:none;border:1px solid #E2E8F0;background:#fff;border-radius:7px;'+
+     'padding:3px 9px;font-size:10.5px;font-weight:800;color:#1D4ED8;cursor:pointer;font-family:inherit;white-space:nowrap}'+
+   '.ar-lkg:hover{border-color:#1D4ED8;background:#EFF6FF}';
   document.head.appendChild(st);
 }
 function arCss(){
   arCoachCss();
+  try{if(typeof mcCss==='function')mcCss();}catch(e){}
+  try{if(typeof acCss==='function')acCss();}catch(e){}
   if(document.getElementById('arCss'))return;
   var s=document.createElement('style');s.id='arCss';
   s.textContent=
@@ -6813,6 +6911,17 @@ function arBodyHtml(cat){
   if(cat==='skill')return arSkillHtml();
   if(cat==='todo')return arTodoHtml();
   if(cat==='score')return arScoreHtml()+arWeekHtml();
+  /* 내 코칭·본인 점검란은 원래 화면이 쓰던 그리기 함수를 그대로 부른다.
+     칸 이름(#mcPane · #acadBody)도 그대로 둔다 — 기존 코드가 그 이름으로 다시 그린다. */
+  if(cat==='coach'){
+    if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+    if(typeof mcInnerHtml!=='function')return '<div class="ar-none">내 코칭을 불러오지 못했습니다.</div>';
+    return '<div id="mcPane">'+mcInnerHtml()+'</div>';
+  }
+  if(cat==='acad'){
+    if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
+    return '<div id="acadBody">'+acBody()+'</div>';
+  }
   if(cat==='touch')return arTouchHtml();
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
@@ -6856,7 +6965,7 @@ function arPaint(){
 }
 function renderAiRep(){
   arCss();
-  return osPage('관리','AI 관리판',
+  return osPage('관리','TFA 업무관리',
     '피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리를 '+
     '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서.',
     '<div id="arPane">'+arInnerHtml()+'</div>');
@@ -6873,7 +6982,7 @@ function osAiRepAfterRender(){
    화면마다 「무엇을 하는 곳인지 · 어떤 순서로 누르는지 · 막히면 어디를 보는지」 셋만 적는다.
    외울 것을 만들지 않는 것이 목적이다. */
 var OS_HELP={
- airep:['🧭','AI 관리판','왼쪽에서 고르면 이 자리에서 다 봅니다',[
+ airep:['🧭','TFA 업무관리','왼쪽에서 고르면 이 자리에서 다 봅니다',[
    ['①','아침에 들어오면 창이 하나 뜹니다','오늘 약속 · 밀린 것 · 다시 걸 DB · 식은 고객 · 오늘 공부. 「오늘 할 일 열기」를 누르면 여기로 옵니다.'],
    ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
    ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리. 붉은 숫자는 남은 건수입니다.'],
@@ -7367,13 +7476,13 @@ function dgCss(){
    네 군데를 오가면 아무도 안 본다. 왼쪽에서 고르면 이 자리에서 그대로 열린다.
    각 칸은 원래 화면이 쓰던 그리기 함수를 그대로 부른다 — 두 벌로 만들지 않는다. */
 var TH={cat:''};
+/* 성장판·내 코칭·본인 점검란은 TFA 업무관리로 옮겼다.
+   같은 것을 두 군데에 두면 어느 쪽을 봐야 하는지 몰라 둘 다 안 보게 된다.
+   여기는 「체크판」 하나만 한다 — 오늘·이번 주·업무 루트·지점장 몫. */
 var TH_CAT=[
  ['ck_today','📋','오늘 체크',   '하루 열한 칸 · 순서대로',    'me'],
  ['ck_week', '📆','이번 주',     '월요일에 새로 시작',        'me'],
  ['ck_route','🧭','업무 루트',   'AP → PT → PC → CS',       'me'],
- ['grow',    '📈','성장판',      '여섯 축 · 팀과 비교',       'me'],
- ['coach',   '🌱','내 코칭',     '받은 코칭과 내 답',         'me'],
- ['acad',    '✅','본인 점검란', '주차별로 스스로 확인',       'me'],
  ['ck_lead', '🧑‍🏫','지점장 · 팀 관리','내가 할 일 + 팀 전체','lead']
 ];
 var TH_CKMAP={ck_today:'today',ck_week:'week',ck_route:'route',ck_lead:'leader'};
@@ -7438,12 +7547,12 @@ function thBody(cat){
 function thInnerHtml(){
   var cat=thCat(),i,c,n,h='';
   h+='<div class="ar-bar">'+
-    '<button type="button" class="ar-bb" onclick="go(\'airep\')">🧭 AI 관리판</button>'+
+    '<button type="button" class="ar-bb" onclick="go(\'airep\')">🧭 TFA 업무관리</button>'+
     '<button type="button" class="ar-bb" onclick="thReload()">↻ 새로 읽기</button>'+
     '<button type="button" class="ar-bb" onclick="osHelpOpen(\'teamhub\')">❓ 사용법</button>'+
     '</div>';
   h+='<div class="ar-wrap"><div class="ar-side">';
-  h+='<div class="ar-shd">내 실행</div>';
+  h+='<div class="ar-shd">오늘 체크</div>';
   for(i=0;i<TH_CAT.length;i++){
     c=TH_CAT[i];
     if(c[4]==='lead'){
@@ -7500,9 +7609,9 @@ function renderTeamHub(){
   thCss();
   var d=new Date(Date.now()+9*3600*1000),wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
   var ds=d.getUTCFullYear()+'.'+('0'+(d.getUTCMonth()+1)).slice(-2)+'.'+('0'+d.getUTCDate()).slice(-2)+' ('+wd+')';
-  return osPage('총괄','TEAM 총괄 관리',
-    ds+' · 실행 체크판 · 성장판 · 내 코칭 · 본인 점검란을 한 칸에 모았습니다. '+
-    '왼쪽에서 고르면 이 자리에서 그대로 열립니다.',
+  return osPage('총괄','실행 체크판',
+    ds+' · 오늘 · 이번 주 · 업무 루트를 순서대로 체크합니다. '+
+    '점수 · 코칭 · 팀원 관리는 <b>TFA 업무관리</b>에서 봅니다.',
     '<div id="thPane">'+thInnerHtml()+'</div>');
 }
 function osTeamHubAfterRender(){thAfter();}
@@ -7516,9 +7625,9 @@ function thCss(){
 
 var TABS=[
  {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
- {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'airep',icon:'🧭',title:'AI 관리판',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
+ {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
  {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
- {group:'TEAM 총괄',key:'업무매뉴얼',items:[{id:'teamhub',icon:'🏆',title:'TEAM 총괄 관리',cnt:''}]},
+ {group:'TEAM 총괄',key:'업무매뉴얼',items:[{id:'teamhub',icon:'📋',title:'실행 체크판',cnt:''}]},
  {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
  /* 아래 두 묶음은 메뉴에 세우지 않는다 — TEAM 총괄 관리 안에서 연다.
     지우지 않는 이유: 권한·요금제 판정과 음성 명령이 이 목록을 보고 돈다. */
@@ -7965,8 +8074,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 00:20';
-var APP_BUILD_NOTE='팀 코칭·팀 평균을 팀원 관리 한 칸으로';
+var APP_BUILD='2026-08-10 02:10';
+var APP_BUILD_NOTE='TFA 업무관리 하나로 · 본부장/교육매니저 권한 수정';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -26954,11 +27063,74 @@ function osSetRole(id,role){
     {osLoadMembers();return;}
   if(typeof osScrollSave==='function')osScrollSave();
   sb.from('profiles').update({role:role}).eq('id',id).then(function(r){
-    if(r.error){toast('역할 변경 실패: '+(r.error.message||''));osLoadMembers();return;}
+    if(r.error){
+      /* 본부장·교육매니저는 서버 제약에 빠져 있어 저장이 막힌다.
+         「실패」 한 줄만 띄우면 무엇을 해야 하는지 알 수가 없다.
+         무엇이 막았는지와 어떻게 푸는지를 그 자리에서 알려 준다. */
+      var m=(r.error.message||'');
+      if(/profiles_role_check|violates check constraint/i.test(m)){
+        osRoleFixOpen(role);
+      }else toast('역할 변경 실패: '+m);
+      osLoadMembers();return;
+    }
     if(typeof osAudit==='function')osAudit('set_role','profile',id,role);
     toast('역할을 바꿨습니다 — '+(lab||role));
     osLoadMembers();
   },function(){toast('역할 변경 실패 — 네트워크를 확인하세요');});
+}
+/* 서버가 이 역할을 아직 모를 때 — 무엇을 어디에 붙여넣으면 되는지 그대로 보여 준다 */
+var OS_ROLE_FIX_SQL=
+ "alter table public.profiles drop constraint if exists profiles_role_check;\n"+
+ "alter table public.profiles add constraint profiles_role_check\n"+
+ "  check (role in (\n"+
+ "    'admin','owner','master','manager','lead','leader','member',\n"+
+ "    'branch_manager','education_manager'\n"+
+ "  ));";
+function osRoleFixOpen(role){
+  var nm=(role==='branch_manager')?'본부장':(role==='education_manager'?'교육매니저':role);
+  var el=document.getElementById('osRoleFix');
+  if(!el){el=document.createElement('div');el.id='osRoleFix';document.body.appendChild(el);osRoleFixCss();}
+  el.innerHTML='<div class="rf-mask" onclick="osRoleFixClose()"></div><div class="rf-win">'+
+    '<div class="rf-hd"><b>「'+osEsc(nm)+'」 은(는) 서버가 아직 모르는 역할입니다</b>'+
+      '<button type="button" class="rf-x" onclick="osRoleFixClose()">✕</button></div>'+
+    '<div class="rf-bd">'+
+      '<p>화면에는 있는데 데이터베이스가 받아 주지 않아서 저장이 실패했습니다. '+
+      '아래 문장을 <b>한 번만</b> 실행하면 그 뒤로는 됩니다. 몇 번을 다시 실행해도 안전합니다.</p>'+
+      '<pre class="rf-sql">'+osEsc(OS_ROLE_FIX_SQL)+'</pre>'+
+      '<div class="rf-bs">'+
+        '<button type="button" class="rf-b p" onclick="osRoleFixCopy()">📋 문장 복사</button>'+
+        '<a class="rf-b" href="'+osEsc(typeof SUPA_SQL_URL!=="undefined"?SUPA_SQL_URL:"https://supabase.com/dashboard")+'" '+
+          'target="_blank" rel="noopener">Supabase SQL 창 열기 ↗</a>'+
+      '</div>'+
+      '<p class="rf-k">복사 → 그 창에 붙여넣기 → <b>RUN</b> → 이 화면에서 역할을 다시 고르시면 됩니다.</p>'+
+    '</div></div>';
+}
+function osRoleFixClose(){var el=document.getElementById('osRoleFix');if(el)el.remove();}
+function osRoleFixCopy(){
+  try{if(typeof copyText==='function'){copyText(OS_ROLE_FIX_SQL);return;}}catch(e){}
+  try{toast('복사하지 못했습니다 — 화면의 글을 직접 선택해 복사하세요');}catch(e){}
+}
+function osRoleFixCss(){
+  if(document.getElementById('osRoleFixCss'))return;
+  var st=document.createElement('style');st.id='osRoleFixCss';
+  st.textContent='#osRoleFix{position:fixed;inset:0;z-index:10001;display:flex;align-items:center;justify-content:center;padding:20px}'+
+   '.rf-mask{position:absolute;inset:0;background:rgba(11,24,44,.55)}'+
+   '.rf-win{position:relative;background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:84vh;'+
+     'display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px -18px rgba(11,36,71,.42)}'+
+   '.rf-hd{display:flex;gap:10px;align-items:center;padding:15px 18px;border-bottom:1px solid #EEF2F7;'+
+     'background:#FFF7ED;font-size:14px;color:#9A3412}'+
+   '.rf-x{margin-left:auto;border:0;background:transparent;font-size:15px;color:#B45309;cursor:pointer;padding:0 2px}'+
+   '.rf-bd{padding:15px 18px;overflow:auto;font-size:13px;color:#334155;line-height:1.75}'+
+   '.rf-bd p{margin:0 0 10px}'+
+   '.rf-sql{background:#0B1B2E;color:#D8E5FF;border-radius:10px;padding:12px 14px;font-size:11.5px;'+
+     'line-height:1.7;overflow-x:auto;white-space:pre;margin:0 0 12px;'+
+     'font-family:ui-monospace,"SF Mono",Consolas,monospace}'+
+   '.rf-bs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}'+
+   '.rf-b{display:inline-block;border:1px solid #E2E8F0;background:#fff;border-radius:9px;padding:7px 13px;'+
+     'font-size:12px;font-weight:800;color:#0B2447;cursor:pointer;font-family:inherit;text-decoration:none}'+
+   '.rf-b.p{background:#1D4ED8;border-color:#1D4ED8;color:#fff}'+
+   '.rf-k{font-size:12px;color:#64748B;margin:0}';
+  document.head.appendChild(st);
 }
 function osPillHtml(txt,bg,fg){return '<span style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;background:'+bg+';color:'+fg+'">'+osEsc(txt)+'</span>';}
 function osMemberRowHtml(p,me,top){
