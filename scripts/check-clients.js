@@ -25,10 +25,10 @@ const STUB = `
 window.__saved=[];
 window.__seq=0;
 window.__clients=[
- {id:'c1',name_masked:'김○○',consent_status:'granted',created_at:'2025-01-10T00:00:00Z',phone:'010-1234-5678'},
- {id:'c2',name_masked:'김○○',consent_status:'none',created_at:'2025-02-11T00:00:00Z',phone:'010-2222-3333'},
- {id:'c3',name_masked:'박○○',consent_status:'granted',created_at:'2025-03-12T00:00:00Z',phone:''},
- {id:'c4',name_masked:'최○○',consent_status:'none',created_at:'2024-01-05T00:00:00Z',phone:''}
+ {id:'c1',advisor_id:'cl',name_masked:'김○○',consent_status:'granted',created_at:'2025-01-10T00:00:00Z',phone:'010-1234-5678'},
+ {id:'c2',advisor_id:'cl',name_masked:'김○○',consent_status:'none',created_at:'2025-02-11T00:00:00Z',phone:'010-2222-3333'},
+ {id:'c3',advisor_id:'p2',name_masked:'박○○',consent_status:'granted',created_at:'2025-03-12T00:00:00Z',phone:''},
+ {id:'c4',advisor_id:'p3',name_masked:'최○○',consent_status:'none',created_at:'2024-01-05T00:00:00Z',phone:''}
 ];
 window.supabase={createClient:function(){
  var mk=function(tbl){
@@ -65,7 +65,9 @@ window.supabase={createClient:function(){
        out=window.__clients.filter(function(x){for(var k in f)if((''+x[k])!==(''+f[k]))return false;return true;});
        if(f.id&&out.length)out=[out[0]];
      }
-     else if(tbl==='profiles')out=[{id:'cl',name:'점검',role:'owner',active:true,plan:'vip'}];
+     else if(tbl==='profiles')out=[{id:'cl',name:'점검',role:'owner',active:true,plan:'vip'},
+      {id:'p2',name:'박서준',role:'member',active:true},
+      {id:'p3',name:'최민아',role:'member',active:true}];
      else if(tbl==='documents')out=[];
      return Promise.resolve({data:out,error:null}).then(res)}};
   a['delete']=function(){return a};return a};
@@ -345,6 +347,88 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   ok(!/고객 관리/.test(reps), '관리 기록은 "저장된 상담 자료" 목록에 끼지 않는다');
 
   /* ── 실명은 서버로 나가지 않는다 ── */
+  /* ── 누가 맡은 고객인가 ──
+     지점장·대표 화면에서는 팀 전체 고객이 한 덩어리로 온다. 그러면 누구를 챙길지 모른다.
+     담당자 이름이 붙고, 담당자로 걸러 보고 묶어 볼 수 있어야 한다. */
+  await open();   /* 앞 검사가 상세로 들어가 있다 — 목록으로 돌아온다 */
+  await page.evaluate(() => { CM.pick = ''; CM.byWho = false; CM.fam = false; OSC.q = ''; osRenderList(); });
+  await page.waitForTimeout(300);
+  const w1 = await page.evaluate(() => ({
+    chips: Array.prototype.map.call(document.querySelectorAll('.cm-whos .cm-sb'),
+      e => e.textContent.replace(/\s+/g, ' ').trim()),
+    tags: Array.prototype.map.call(document.querySelectorAll('.cm-row .cm-wt'), e => e.textContent.trim()),
+    rows: document.querySelectorAll('.cm-row').length,
+    me: !!document.querySelector('.cm-whos .cm-sb.me')
+  }));
+  ok(w1.chips.length >= 4, '담당자 고르는 단추가 뜬다 — ' + w1.chips.join(' · '));
+  ok(/전체 ?4/.test(w1.chips[0] || ''), '맨 앞은 전체 4명 — ' + w1.chips[0]);
+  ok(w1.me, '내 것이 맨 앞에 따로 표시된다');
+  ok(w1.chips.join(' ').indexOf('박서준') >= 0 && w1.chips.join(' ').indexOf('최민아') >= 0,
+    '팀원 이름이 그대로 나온다');
+  ok(w1.tags.length === 2 && w1.tags.indexOf('박서준') >= 0 && w1.tags.indexOf('최민아') >= 0,
+    '남이 맡은 고객 줄에만 담당자 딱지가 붙는다 (' + w1.tags.length + '개) — ' + w1.tags.join(','));
+
+  /* 담당자를 하나 고르면 그 사람 것만 */
+  const w2 = await page.evaluate(() => {
+    cmWhoSet('p2');
+    const rows = document.querySelectorAll('.cm-row').length;
+    const txt = (document.getElementById('oscList') || {}).textContent || '';
+    const on = document.querySelectorAll('.cm-whos .cm-sb.on').length;
+    cmWhoSet('p2');   /* 한 번 더 누르면 풀린다 */
+    return { rows, txt, on, back: document.querySelectorAll('.cm-row').length };
+  });
+  ok(w2.rows === 1, '박서준을 고르면 그 사람 고객 한 명만 남는다 (' + w2.rows + '명)');
+  ok(/박서준<\/b> 담당 1명|박서준 담당 1명/.test(w2.txt.replace(/\s+/g, ' ')) || /박서준/.test(w2.txt),
+    '누구 것을 보고 있는지 적어 준다');
+  ok(w2.on === 1, '고른 단추 하나만 켜진다');
+  ok(w2.back === 4, '다시 누르면 전체로 돌아온다 (' + w2.back + '명)');
+
+  /* 담당자로 묶어 보기 */
+  const w3 = await page.evaluate(() => {
+    cmWhoToggle();
+    const heads = Array.prototype.map.call(document.querySelectorAll('.cm-fh'),
+      e => e.textContent.replace(/\s+/g, ' ').trim());
+    const mine = !!document.querySelector('.cm-mytag');
+    const fam = CM.fam;
+    cmWhoToggle();
+    return { heads, mine, fam };
+  });
+  ok(w3.heads.length === 3, '담당자마다 한 덩어리씩 나온다 (' + w3.heads.length + '덩어리)');
+  ok(/점검/.test(w3.heads[0] || ''), '내 고객 덩어리가 맨 위 — ' + w3.heads[0]);
+  ok(w3.mine, '내 덩어리에 「내 고객」 이라고 적힌다');
+  ok(w3.fam === false, '담당자로 묶으면 가족 묶기는 꺼진다 — 두 가지가 겹치지 않는다');
+
+  /* ── 이름으로 바로 찾기 ── */
+  const f1 = await page.evaluate(() => {
+    const r = {};
+    ['박', '김', 'ㅂ', 'ㅊ', '5678', '박서준'].forEach(q => {
+      OSC.q = q; osRenderList();
+      r[q] = {
+        n: document.querySelectorAll('.cm-row').length,
+        txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 60)
+      };
+    });
+    OSC.q = ''; osRenderList();
+    return r;
+  });
+  ok(f1['박'].n === 1, '「박」 한 글자로 바로 찾는다 (' + f1['박'].n + '명)');
+  ok(f1['김'].n === 2, '「김」 이면 두 명 다 나온다 (' + f1['김'].n + '명)');
+  ok(f1['ㅂ'].n === 1, '초성 「ㅂ」 으로도 찾는다 — 박○○ (' + f1['ㅂ'].n + '명)');
+  /* 「ㅊ」 은 최○○ 말고 가족명 「김철수 가족」 에도 걸린다. 그게 맞는 동작이다 —
+     사람은 고객 이름이 기억 안 나면 가족 이름으로 찾는다. */
+  ok(f1['ㅊ'].n === 3, '초성은 고객 이름·가족 이름 둘 다에 걸린다 — 「ㅊ」 이면 최○○ 와 김철수 가족 둘 (' + f1['ㅊ'].n + '명)');
+  ok(f1['5678'].n === 1, '연락처 뒷자리로도 찾는다 (' + f1['5678'].n + '명)');
+  ok(f1['박서준'].n === 1, '담당자 이름으로 치면 그 사람이 맡은 고객이 나온다 (' + f1['박서준'].n + '명)');
+
+  /* 없는 이름을 치면 무엇으로 찾을 수 있는지 알려 준다 */
+  const f2 = await page.evaluate(() => {
+    OSC.q = '없는사람'; osRenderList();
+    const t = ((document.getElementById('oscList') || {}).textContent || '');
+    OSC.q = ''; osRenderList();
+    return t;
+  });
+  ok(/담당자 이름으로도/.test(f2), '못 찾으면 담당자 이름으로도 된다고 알려 준다');
+
   const leak = await page.evaluate(() => JSON.stringify(window.__saved) + JSON.stringify(window.__clients));
   ok(leak.indexOf('김철수 가족') >= 0, '가족 이름은 서버에 저장된다');
   ok(!/"김철수"/.test(leak), '실명 자체는 서버로 나가지 않는다 — 이 기기 안에만 남는다');
