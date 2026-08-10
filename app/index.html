@@ -1860,7 +1860,9 @@ function callAI(system,user,maxTokens,genId,images){
   /* 고객의 증권·건강정보가 나가는 도구는 처음 한 번 동의를 받는다.
      개인정보보호법상 민감정보라 별도 동의가 필요하다. */
   if(typeof lgGate==='function'&&lgGate(genId)){
-    return Promise.reject(new Error('고객 자료를 AI 로 보내기 전 확인이 필요합니다. 화면의 안내를 읽고 동의해 주세요.'));
+    /* 동의 창을 띄웠다. 사람이 동의하면 하던 일을 그대로 이어서 한다.
+       여기서 끊으면 「눌렀는데 아무것도 안 나온다」 가 된다. */
+    return lgWait().then(function(){return callAI(system,user,maxTokens,genId,images);});
   }
   /* 둘 다 연결이 없으면 헛돌지 않고 무엇을 해야 하는지 바로 알려준다 */
   if(typeof claudeReady==='function'&&typeof geminiReady==='function'&&!claudeReady()&&!geminiReady()){
@@ -8167,8 +8169,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 16:30';
-var APP_BUILD_NOTE='켜면 내 고객부터 · CRM 에서 고객 365일로 넘기기';
+var APP_BUILD='2026-08-10 17:20';
+var APP_BUILD_NOTE='보장분석 — 동의하면 그 자리에서 결과물까지 (도구 15개 같이 풀림)';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -24955,7 +24957,12 @@ function lgLoad(cb){
     if(cb)cb();lgPaint();
   },function(){LGL.loaded=true;if(cb)cb();});
 }
-function lgHas(kind,ver){return !!LGL.mine[kind+'@'+ver];}
+/* 동의를 이 기기에도 남긴다.
+   서버 표가 없거나 잠깐 안 닿아도, 이미 동의한 사람에게 매번 다시 묻지 않는다. */
+function lgLK(kind,ver){return 'apex_lg_'+kind+'_'+ver+'_'+(lgMyId()||'me');}
+function lgLocalHas(kind,ver){try{return !!localStorage.getItem(lgLK(kind,ver));}catch(e){return false;}}
+function lgLocalSet(kind,ver){try{localStorage.setItem(lgLK(kind,ver),new Date().toISOString());}catch(e){}}
+function lgHas(kind,ver){return !!LGL.mine[kind+'@'+ver]||lgLocalHas(kind,ver);}
 function lgSave(kind,ver,meta,cb){
   var sb=(typeof osClient==='function')?osClient():null,me=lgMyId();
   if(!sb||!me){if(cb)cb(false);return;}
@@ -24988,6 +24995,19 @@ function lgGate(genId){
   lgOpenSensitive(genId);
   return true;
 }
+/* 동의 창을 띄우고 '사람이 답할 때까지' 기다리는 약속을 돌려준다.
+   여기서 그냥 끊어 버리면 눌러도 아무 결과물이 안 나온다 — 그게 지금까지의 문제였다. */
+function lgWait(){
+  LGL.waiters=LGL.waiters||[];
+  return new Promise(function(res,rej){LGL.waiters.push({res:res,rej:rej});});
+}
+function lgWakeUp(ok){
+  var L=LGL.waiters||[],i;LGL.waiters=[];
+  for(i=0;i<L.length;i++){
+    if(ok)L[i].res(true);
+    else L[i].rej(new Error('고객 자료를 AI 로 보내려면 확인이 필요합니다. 다시 눌러 주세요.'));
+  }
+}
 function lgOpenSensitive(genId){
   LGL.gate=genId||'';
   var ovl=document.getElementById('lgOvl');
@@ -24996,16 +25016,23 @@ function lgOpenSensitive(genId){
   ovl.innerHTML=lgSensitiveHtml();
   ovl.classList.add('on');
 }
-function lgCloseSensitive(){var o=document.getElementById('lgOvl');if(o)o.classList.remove('on');}
+function lgCloseSensitive(agreed){
+  var o=document.getElementById('lgOvl');if(o)o.classList.remove('on');
+  lgWakeUp(agreed===true);
+}
 function lgAgreeSensitive(){
   var el=document.getElementById('lgSensCk');
   if(!el||!el.checked){toast('내용을 확인하고 동의에 체크해 주세요.');return;}
   var b=document.getElementById('lgSensBtn');if(b){b.disabled=true;b.textContent='저장 중…';}
+  /* 사람은 방금 실제로 동의했다. 서버에 기록을 못 남기는 것은 서버 문제이지
+     그 사람의 일을 막을 이유가 아니다. 이 기기에 남기고 그대로 진행한다. */
+  lgLocalSet('sensitive',LG_SENS_VER);
+  LGL.mine['sensitive@'+LG_SENS_VER]=new Date().toISOString();
   lgSave('sensitive',LG_SENS_VER,{tool:LGL.gate||''},function(ok){
     if(b){b.disabled=false;b.textContent='동의하고 계속';}
-    if(!ok)return;
-    lgCloseSensitive();
-    toast('동의했습니다. 이제 도구를 사용하실 수 있습니다.',5000);
+    lgCloseSensitive(true);
+    if(ok)toast('동의했습니다. 하던 작업을 이어서 진행합니다.',5000);
+    else toast('동의했습니다. 하던 작업은 그대로 진행합니다. (서버 기록은 남기지 못했습니다 — migration_32_legal.sql 을 한 번 실행하세요)',9000);
   });
 }
 function lgSensitiveHtml(){
@@ -25028,8 +25055,8 @@ function lgSensitiveHtml(){
         '고객에게 필요한 동의를 받은 자료만 올리겠습니다.</label>'+
       '<div class="lg-btns">'+
         '<button class="btn btn-primary" id="lgSensBtn" onclick="lgAgreeSensitive()">동의하고 계속</button>'+
-        '<button class="btn btn-ghost" onclick="lgCloseSensitive()">취소</button>'+
-        '<button class="btn btn-ghost" onclick="lgCloseSensitive();go(\'terms\')">전문 보기</button>'+
+        '<button class="btn btn-ghost" onclick="lgCloseSensitive(false)">취소</button>'+
+        '<button class="btn btn-ghost" onclick="lgCloseSensitive(false);go(\'terms\')">전문 보기</button>'+
       '</div>'+
     '</div></div>';
 }
