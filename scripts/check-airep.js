@@ -182,7 +182,7 @@ const AI_OK = `## 활동 보고
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id + '|' + i.title)));
     return t;
   });
-  ok(menu.indexOf('홈|airep|AI 관리판') >= 0, '메뉴 「홈」 밑에 AI 관리판이 있다');
+  ok(menu.indexOf('홈|airep|TFA 업무관리') >= 0, '메뉴 「홈」 밑에 TFA 업무관리가 있다');
 
   /* ── 지점장으로 열기 ── */
   await open();
@@ -190,9 +190,11 @@ const AI_OK = `## 활동 보고
   /* ── 왼쪽 카테고리 한 줄 ── */
   const cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 8, '왼쪽에 카테고리 여덟 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|오늘 터치할 사람|리더 할 일|팀원 관리',
+  ok(cats.length === 10, '왼쪽에 카테고리 열 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('내 코칭') >= 0 && cats.indexOf('본인 점검란') >= 0,
+    '내 코칭·본인 점검란이 여기로 들어왔다 — 실행 체크판에서 안 찾아도 된다');
   const heads = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-shd'), e => e.textContent.trim()));
   ok(heads.join('|') === '내 관리|팀 관리', '내 관리 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
@@ -693,6 +695,57 @@ const AI_OK = `## 활동 보고
     ok(merged.vsRows === 6, '팀 평균 비교가 여섯 축 모두 선다 (' + merged.vsRows + ')');
     ok(merged.selfOut, '팀 평균에서 본인을 뺀다고 적는다 — 안 빼면 차이가 절반으로 희석된다');
     ok(/평균과 견주면/.test(merged.secs.join('|')), '팀 평균 비교 칸이 있다 — ' + merged.secs.join(' · '));
+  }
+
+  /* ── 하나의 업무관리 툴 — 흩어진 것이 여기로 다 들어왔는가 ── */
+  await open('lead');
+  const ldg = await page.evaluate(() => ({
+    n: document.querySelectorAll('#arPane .ar-lkg').length,
+    stop: /stopPropagation/.test((document.querySelector('#arPane .ar-lkg') || {}).getAttribute
+      ? (document.querySelector('#arPane .ar-lkg').getAttribute('onclick') || '') : '')
+  }));
+  ok(ldg.n >= 10, '리더 할 일 줄마다 그 화면으로 가는 단추가 붙는다 (' + ldg.n + '개)');
+  ok(ldg.stop, '그 단추를 눌러도 체크는 안 바뀐다 (stopPropagation)');
+
+  for (const [cat, sel, nm] of [['coach', '#mcPane', '내 코칭'], ['acad', '#acadBody', '본인 점검란']]) {
+    await open(cat);
+    await page.waitForTimeout(2400);
+    const got = await page.evaluate(s2 => {
+      const p = document.getElementById('arPane');
+      return { pane: !!p.querySelector(s2), len: (p.textContent || '').trim().length };
+    }, sel);
+    ok(got.pane, nm + ' 이 여기서 열린다 (' + sel + ')');
+    ok(got.len > 200, nm + ' 에 내용이 찬다 (' + got.len + '자)');
+  }
+
+  await open('team');
+  await page.waitForTimeout(2400);
+  await page.evaluate(() => { GB.team = ''; arPaint(); arOpen('p2'); });
+  await page.waitForTimeout(700);
+  ok(await page.evaluate(() => /코칭 메모 남기기/.test(document.getElementById('arPane').textContent)),
+    '펼친 칸에 코칭 메모 단추가 있다');
+  await page.evaluate(() => arMemoOpen('p2'));
+  await page.waitForTimeout(400);
+  const memo = await page.evaluate(() => {
+    const p = document.getElementById('arPane');
+    return {
+      box: !!p.querySelector('.ar-memo'),
+      ta: p.querySelectorAll('.ar-memo .ar-mt').length,
+      date: p.querySelectorAll('.ar-memo .ar-md').length,
+      stay: /평균과 견주면/.test(p.textContent)
+    };
+  });
+  ok(memo.box && memo.ta === 3 && memo.date === 1,
+    '메모 칸이 그 자리에서 열린다 — 글칸 ' + memo.ta + ' · 날짜 ' + memo.date);
+  ok(memo.stay, '메모를 열어도 보던 숫자가 그대로 있다 — 화면을 안 벗어난다');
+
+  const dup = await page.evaluate(() => {
+    if (typeof TH_CAT === 'undefined') return null;
+    return TH_CAT.map(c => c[0]);
+  });
+  if (dup) {
+    ok(dup.indexOf('grow') < 0 && dup.indexOf('coach') < 0 && dup.indexOf('acad') < 0,
+      '실행 체크판에서 겹치던 셋(성장판·내 코칭·본인 점검란)이 빠졌다 — ' + dup.join(' · '));
   }
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
