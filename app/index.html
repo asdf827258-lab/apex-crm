@@ -8167,8 +8167,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 14:40';
-var APP_BUILD_NOTE='DB 종류 그 자리에서 추가·삭제 · 내 고객·내 개척 DB 는 내가';
+var APP_BUILD='2026-08-10 15:25';
+var APP_BUILD_NOTE='고객 365일 — 담당자별로 갈라 보고 이름으로 바로 찾기';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28367,7 +28367,10 @@ window.addEventListener('message',function(e){
    실명을 서버에 올리지 않는 이유 — 이 앱은 처음부터 고객 이름을 김○○ 로 가려 저장해 왔다.
    찾기 편하자고 그 약속을 깨지 않는다. 실명은 이 기기 안에만 두고 찾기에만 쓴다.       */
 
-var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{}};
+var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{},
+        who:{},   /* 담당자 번호 → 이름 */
+        pick:'',  /* 지금 고른 담당자 (빈 값이면 전원) */
+        byWho:false};
 var CM_KIND='client_meta';
 
 /* ── 이 기기에만 두는 것 ── */
@@ -28471,7 +28474,9 @@ function cmHit(c,q){
   if(!q)return true;
   q=(''+q).replace(/\s/g,'');
   var m=cmOf(c.id),real=cmRealOf(c.id);
-  var pool=[c.name_masked||'',real,m.fam||'',(m.fp&&m.fp.f_job)||''];
+  /* 담당자 이름으로도 찾힌다 — "박서준" 이라고 치면 그 사람이 맡은 고객이 나온다 */
+  var pool=[c.name_masked||'',real,m.fam||'',(m.fp&&m.fp.f_job)||'',
+            (typeof cmWhoName==='function'?cmWhoName(c):'')];
   var i,v;
   /* 초성만 쳤으면 초성으로 견준다 */
   if(cmOnlyCho(q)){
@@ -28702,7 +28707,7 @@ function cmSortRows(rows){
   });
 }
 function cmSortSet(v){CM.sort=v;osRenderList();}
-function cmFamToggle(){CM.fam=!CM.fam;osRenderList();}
+function cmFamToggle(){CM.fam=!CM.fam;if(CM.fam)CM.byWho=false;osRenderList();}
 function cmGoTop(){var m=document.getElementById('main');if(m)m.scrollTop=0;}
 
 function cmRecentHtml(){
@@ -28737,17 +28742,80 @@ function cmTodoHtml(all){
     line('cold','cold','60일 넘게 연락이 없습니다',t.cold)+
     '</div>';
 }
+/* ── 누가 맡은 고객인가 ──
+   지점장·대표는 팀 전체 고객이 한 덩어리로 보인다. 그러면 누구를 챙겨야 할지 모른다.
+   담당자 이름을 줄마다 붙이고, 담당자로 걸러 보거나 묶어 볼 수 있게 한다. */
+function cmWhoName(c){
+  var id=c&&c.advisor_id;
+  if(!id)return '';
+  if(OS.profile&&id===OS.profile.id)return (CM.who[id]||OS.profile.name||'나');
+  return CM.who[id]||'';
+}
+function cmIsMine(c){return !!(OS.profile&&c&&c.advisor_id===OS.profile.id);}
+/* 담당자별 사람 수 — 많이 맡은 사람이 앞으로 */
+function cmWhoCount(rows){
+  var c={},i,k,out=[];
+  for(i=0;i<rows.length;i++){k=(rows[i].advisor_id)||'';c[k]=(c[k]||0)+1;}
+  for(k in c)if(c.hasOwnProperty(k))out.push({id:k,n:c[k],nm:(k?(CM.who[k]||'이름 모름'):'담당자 없음')});
+  out.sort(function(a,b){
+    /* 내 것이 언제나 맨 앞 */
+    var am=(OS.profile&&a.id===OS.profile.id)?1:0,bm=(OS.profile&&b.id===OS.profile.id)?1:0;
+    return bm-am||b.n-a.n||(''+a.nm).localeCompare(''+b.nm,'ko');
+  });
+  return out;
+}
+function cmWhoSet(v){CM.pick=(CM.pick===v)?'':v;osRenderList();}
+function cmWhoToggle(){CM.byWho=!CM.byWho;if(CM.byWho)CM.fam=false;osRenderList();}
+function cmWhoChipsHtml(all){
+  var list=cmWhoCount(all);
+  if(list.length<2)return '';   /* 나 혼자면 고를 것이 없다 */
+  var h='<div class="cm-bar cm-whos"><span class="cm-wl">담당자</span>'+
+    '<button type="button" class="cm-sb'+(CM.pick?'':' on')+'" onclick="cmWhoSet(\'\')">전체 '+
+      '<span>'+all.length+'</span></button>',i,x;
+  for(i=0;i<list.length&&i<14;i++){
+    x=list[i];
+    h+='<button type="button" class="cm-sb'+(CM.pick===x.id?' on':'')+
+      ((OS.profile&&x.id===OS.profile.id)?' me':'')+'" onclick="cmWhoSet(\''+x.id+'\')">'+
+      osEsc(x.nm)+'<span>'+x.n+'</span></button>';
+  }
+  return h+'</div>';
+}
+function cmWhoGroupHtml(rows){
+  var by={},order=[],i,k,c;
+  for(i=0;i<rows.length;i++){
+    c=rows[i];k=c.advisor_id||'';
+    if(!by[k]){by[k]=[];order.push(k);}
+    by[k].push(c);
+  }
+  order.sort(function(a,b){
+    var am=(OS.profile&&a===OS.profile.id)?1:0,bm=(OS.profile&&b===OS.profile.id)?1:0;
+    return bm-am||by[b].length-by[a].length;
+  });
+  var h='',j;
+  for(i=0;i<order.length;i++){
+    k=order[i];
+    h+='<div class="cm-fam"><div class="cm-fh">👤 '+
+      osEsc(k?(CM.who[k]||'이름 모름'):'담당자 없음')+
+      ((OS.profile&&k===OS.profile.id)?' <b class="cm-mytag">내 고객</b>':'')+
+      '<span>'+by[k].length+'명</span></div>';
+    for(j=0;j<by[k].length;j++)h+=cmRowHtml(by[k][j]);
+    h+='</div>';
+  }
+  return h;
+}
 function cmBarHtml(){
   var s=function(k,t){return '<button type="button" class="cm-sb'+(CM.sort===k?' on':'')+'" '+
     'onclick="cmSortSet(\''+k+'\')">'+t+'</button>';};
   return '<div class="cm-bar">'+
     s('seen','최근 본 순')+s('name','이름순')+s('new','등록순')+s('cold','오래된 순')+
-    '<button type="button" class="cm-sb'+(CM.fam?' on':'')+'" style="margin-left:auto" '+
+    '<button type="button" class="cm-sb'+(CM.byWho?' on':'')+'" style="margin-left:auto" '+
+    'onclick="cmWhoToggle()">👤 담당자로 묶기</button>'+
+    '<button type="button" class="cm-sb'+(CM.fam?' on':'')+'" '+
     'onclick="cmFamToggle()">👨‍👩‍👧 가족으로 묶기</button></div>';
 }
 function cmTopHtml(q,all){
-  if(q)return '';
-  return cmRecentHtml()+cmTodoHtml(all)+cmBarHtml();
+  if(q)return cmWhoChipsHtml(all);
+  return cmRecentHtml()+cmTodoHtml(all)+cmWhoChipsHtml(all)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -28761,9 +28829,15 @@ function cmRowHtml(c){
     nx='<div class="cm-nx'+(d>=0?' due':'')+'">▶ '+osEsc(vaCut(m.next.what,30))+
       '<span>'+osEsc(m.next.due||'')+(d>0?(' · '+d+'일 지남'):(d===0?' · 오늘':''))+'</span></div>';
   }
+  /* 남이 맡은 고객이면 누구 것인지 앞에 붙인다. 내 것에는 안 붙인다 — 전부 내 것이면 시끄럽다 */
+  var wtag='';
+  if(!CM.byWho&&!cmIsMine(c)){
+    var wn=cmWhoName(c);
+    if(wn)wtag='<i class="cm-wt">'+osEsc(wn)+'</i>';
+  }
   return '<div class="cm-row" onclick="osOpenClient(\''+c.id+'\')">'+
     '<div class="cm-av '+tp.k+'">'+osEsc((''+nm).charAt(0))+'</div>'+
-    '<div class="cm-mid"><div class="cm-nm">'+osEsc(nm)+
+    '<div class="cm-mid"><div class="cm-nm">'+wtag+osEsc(nm)+
       (cmRealOf(c.id)?'<em>'+osEsc(c.name_masked||'')+'</em>':'')+'</div>'+
       '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+'</div>'+
     '<div class="cm-rt"><span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
@@ -28991,6 +29065,16 @@ function cmCss(){
     '.cm-mid{flex:1;min-width:0}'+
     '.cm-nm{font-size:14px;font-weight:800;color:var(--ink-1);display:flex;align-items:baseline;gap:6px}'+
     '.cm-nm em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--ink-6)}'+
+    /* 남이 맡은 고객 앞에 붙는 담당자 딱지 */
+    '.cm-nm .cm-wt{font-style:normal;font-size:10px;font-weight:800;padding:1.5px 6px;border-radius:999px;'+
+      'background:#EEF2FF;color:#4F46E5;flex:none}'+
+    '.cm-whos{margin:0 0 12px;padding-bottom:11px;border-bottom:1px solid var(--ink-8)}'+
+    '.cm-whos .cm-wl{font-size:11px;font-weight:800;color:var(--ink-5);margin-right:2px}'+
+    '.cm-sb.me{border-color:#C7D2FE;background:#EEF2FF;color:#4F46E5}'+
+    '.cm-sb.me.on{background:#4F46E5;color:#fff;border-color:#4F46E5}'+
+    '.cm-sb span{margin-left:5px;font-size:10.5px;font-weight:800;opacity:.75}'+
+    '.cm-mytag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;'+
+      'background:#EEF2FF;color:#4F46E5}'+
     '.cm-sub{font-size:11px;color:var(--ink-5);margin-top:2px}'+
     '.cm-nx{font-size:11.5px;color:var(--ink-3);margin-top:5px;background:#F5F9FF;border-radius:7px;'+
       'padding:4px 8px;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}'+
@@ -29076,11 +29160,19 @@ function osLoadClients(){
     osRenderList();
     cmLoadAll(function(){osRenderList();});
   };
-  sb.from('clients').select('id,name_masked,consent_status,created_at,phone')
+  /* 누가 맡은 고객인지 이름으로 보여주려면 담당자 표를 같이 읽어야 한다.
+     못 읽어도 목록은 그대로 뜬다 — 담당자 이름만 안 보일 뿐이다. */
+  sb.from('profiles').select('id,name').then(function(r){
+    CM.who={};
+    var rows=(r&&r.data)||[],i;
+    for(i=0;i<rows.length;i++)CM.who[rows[i].id]=rows[i].name||'';
+    if(OSC.list&&OSC.list.length)osRenderList();
+  },function(){});
+  sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at,phone')
     .order('created_at',{ascending:false}).then(function(r){
     if(!r.error){done(r.data);return;}
     /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
-    sb.from('clients').select('id,name_masked,consent_status,created_at')
+    sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at')
       .order('created_at',{ascending:false}).then(function(r2){
       if(r2.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r2.error.message)+'</div>');return;}
       done(r2.data);
@@ -29090,17 +29182,24 @@ function osLoadClients(){
 function osRenderList(){
   var q=(OSC.q||'').replace(/^\s+|\s+$/g,'');
   var all=OSC.list||[],rows=[],i;
-  for(i=0;i<all.length;i++)if(cmHit(all[i],q))rows.push(all[i]);
+  for(i=0;i<all.length;i++){
+    if(CM.pick&&(all[i].advisor_id||'')!==CM.pick)continue;
+    if(cmHit(all[i],q))rows.push(all[i]);
+  }
   cmSortRows(rows);
   var h=cmTopHtml(q,all);
+  var who=CM.pick?(CM.who[CM.pick]||'이 담당자'):'';
   if(!rows.length){
     osSetList(h+'<div class="osc-empty">'+(q
-      ?('"'+osEsc(q)+'" 로 찾은 고객이 없습니다. 실명·초성·연락처 뒷자리·가족 이름으로도 찾을 수 있습니다.')
-      :'아직 등록된 고객이 없습니다. 위 <b>+ 새 고객</b>으로 시작하세요.')+'</div>');
+      ?('"'+osEsc(q)+'" 로 찾은 고객이 '+(who?('<b>'+osEsc(who)+'</b> 담당 중에는 '):'')+'없습니다. 실명·초성·연락처 뒷자리·가족 이름·담당자 이름으로도 찾을 수 있습니다.')
+      :(who?('<b>'+osEsc(who)+'</b> 이(가) 맡은 고객이 없습니다.')
+          :'아직 등록된 고객이 없습니다. 위 <b>+ 새 고객</b>으로 시작하세요.'))+'</div>');
     return;
   }
-  if(q)h+='<div class="cm-lab" style="margin:0 0 8px">'+rows.length+'명 찾았습니다</div>';
-  h+=(CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows);
+  if(q||who)h+='<div class="cm-lab" style="margin:0 0 8px">'+
+    (who?('<b>'+osEsc(who)+'</b> 담당 '):'')+rows.length+'명'+(q?' 찾았습니다':'')+'</div>';
+  h+=(CM.byWho&&!q)?cmWhoGroupHtml(rows)
+    :((CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows));
   osSetList(h);
 }
 function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
