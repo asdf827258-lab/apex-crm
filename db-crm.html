@@ -337,6 +337,16 @@ function inMyScope(pid){
 function scopeMembers(){
   return profiles.filter(p=>(p.workspace!=="apex")&&inMyScope(p.id));
 }
+/* 삭제는 여태 운영자만 할 수 있었다. 그런데 잘못 배정된 DB, 중복으로 들어온 DB 를
+   정리하는 사람은 그걸 실제로 돌리는 본인이다. 매번 운영자에게 부탁하면 안 지운다.
+   본인에게 배정된 것은 본인이 지운다. 남의 것은 여전히 못 지운다. */
+function canDeleteDb(d){
+  if(canManage())return true;
+  const me=profile&&profile.id;
+  if(me&&d&&d.assigned_to===me)return true;
+  if(isLeader())return inMyScope(d?.assigned_to);
+  return false;
+}
 function canEditDb(d){
   if(canManage())return true;
   if(!isLeader())return false;
@@ -466,7 +476,7 @@ function renderDb(){
     <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canManage()?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
+    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="11" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
@@ -578,7 +588,21 @@ async function saveDb(){
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}
   const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;if(error)wErr(error,"DB 저장");else{closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")}
 }
-async function removeDb(id){if(!confirm("DB와 관련 통화기록을 삭제할까요?"))return;const {error}=await sb.from("dbs").delete().eq("id",id);if(error)wErr(error,"DB 삭제");else{await loadAll();toast("삭제했습니다.")}}
+async function removeDb(id){
+  const d=(dbs||[]).find(x=>x.id===id);
+  const nm=d?(d.customer_name||"이름 없음"):"이 DB";
+  const cnt=(calls||[]).filter(c=>c.db_id===id).length;
+  if(!confirm(`${nm} 을(를) 지울까요?\n\n통화 기록 ${cnt}건도 같이 지워집니다. 되돌릴 수 없습니다.`))return;
+  const {error}=await sb.from("dbs").delete().eq("id",id);
+  if(error){
+    const m=(error.message||"")+"";
+    if(/42501|permission denied|row.level security|violates/i.test(m))
+      wErr(error,"DB 삭제 — 서버에서 막혀 있습니다. migration_35_db_delete.sql 을 한 번 실행하세요");
+    else wErr(error,"DB 삭제");
+    return;
+  }
+  await loadAll();toast(`${nm} 을(를) 지웠습니다.`);
+}
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
 function renderHistory(id){const x=getCalls(id);$("history").innerHTML=x.length?`<div class="section-head"><h3>기존 통화 이력</h3></div><div class="timeline">${x.map(c=>`<div><b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}</b><p>${esc(c.memo||"메모 없음")}</p></div>`).join("")}</div>`:""}

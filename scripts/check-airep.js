@@ -748,6 +748,28 @@ const AI_OK = `## 활동 보고
       '실행 체크판에서 겹치던 셋(성장판·내 코칭·본인 점검란)이 빠졌다 — ' + dup.join(' · '));
   }
 
+  /* ── 팀원이 스스로 비밀번호를 바꿀 수 있는가 ──
+     기능은 있었는데 「눌러 보라」는 말이 어디에도 없어 아무도 못 찾았다. */
+  await seat('member');
+  await page.evaluate(() => osRenderPill());
+  await page.waitForTimeout(300);
+  const pill = await page.evaluate(() => {
+    const p = document.getElementById('osAuthPill');
+    return p ? { pw: !!p.querySelector('.pw'), txt: (p.textContent || '').trim(), title: p.title || '' } : null;
+  });
+  ok(!!pill && pill.pw, '계정 칸에 「🔑 비밀번호」 가 보인다 — ' + (pill ? pill.txt : '칸 없음'));
+  ok(!!pill && /비밀번호/.test(pill.title), '설명에도 비밀번호 변경이라고 적힌다');
+  await page.evaluate(() => osOpenMe());
+  await page.waitForTimeout(600);
+  const meBox = await page.evaluate(() => ({
+    pw: /비밀번호 변경/.test(document.body.textContent),
+    inputs: document.querySelectorAll('input[type=password]').length
+  }));
+  ok(meBox.pw && meBox.inputs >= 2,
+    '눌러 보면 비밀번호 변경 칸이 열린다 (비밀번호 칸 ' + meBox.inputs + '개)');
+  await page.evaluate(() => { document.querySelectorAll('#osOvl,.os-ovl').forEach(x => x.remove()); });
+  await seat('owner');
+
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
   await browser.close(); srv.close();

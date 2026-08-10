@@ -23,6 +23,9 @@ window.APEX_SB = window.APEX_SB || {
 .os-authpill{display:flex;align-items:center;gap:8px;font-size:11px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,.04);color:rgba(255,255,255,.6);cursor:pointer;transition:all .18s;margin-bottom:8px;}
 .os-authpill:hover{background:rgba(255,255,255,.08);color:#fff;}
 .os-authpill .dot{width:7px;height:7px;border-radius:50%;background:#9CA3AF;flex-shrink:0;}
+.os-authpill .pw{margin-left:auto;flex:none;font-size:9.5px;font-weight:800;letter-spacing:-.01em;
+  padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.10);color:rgba(255,255,255,.72);white-space:nowrap;}
+.os-authpill:hover .pw{background:rgba(255,255,255,.20);color:#fff;}
 .os-authpill.on .dot{background:#34D399;box-shadow:0 0 0 3px rgba(52,211,153,.18);}
 .os-authpill .who{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .os-authpill .role{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.4);letter-spacing:.04em;}
@@ -8074,8 +8077,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 02:10';
-var APP_BUILD_NOTE='TFA 업무관리 하나로 · 본부장/교육매니저 권한 수정';
+var APP_BUILD='2026-08-10 10:20';
+var APP_BUILD_NOTE='비밀번호 변경 칸 찾기 쉽게 · 내 DB 는 내가 삭제';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -24811,8 +24814,12 @@ function osRenderPill(){
   if(OS.profile){
     var nm=OS.profile.name||(OS.session&&OS.session.user&&OS.session.user.email)||'로그인됨';
     pill.className='os-authpill on';
-    pill.innerHTML='<span class="dot"></span><span class="who">'+osEsc(nm)+'</span><span class="role">'+osRoleLabel(OS.profile.role)+'</span>';
-    pill.title='내 계정 · 비밀번호 변경';
+    /* 눌러야 비밀번호를 바꿀 수 있는데 누르라는 말이 어디에도 없었다.
+       칸 이름만 있으면 아무도 안 누른다 — 무엇이 열리는지 적는다. */
+    pill.innerHTML='<span class="dot"></span><span class="who">'+osEsc(nm)+'</span>'+
+      '<span class="role">'+osRoleLabel(OS.profile.role)+'</span>'+
+      '<span class="pw">🔑 비밀번호</span>';
+    pill.title='눌러서 비밀번호 변경 · 로그아웃';
   }else{
     pill.className='os-authpill';
     pill.innerHTML='<span class="dot"></span><span class="who">로그인 / 계정</span>';
