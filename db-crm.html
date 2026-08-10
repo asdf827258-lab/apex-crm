@@ -285,6 +285,9 @@ const CONFIG_KEY="apexSupabaseConfigV1";
 let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[], attErr=null;
 /* DB 종류 목록 — 대표가 정하고 모두가 같은 것을 본다 (app_config.db_sources) */
 let dbSources=[];
+/* 고객 365일로 이미 넘긴 사람 — "담당자|마스킹이름" 으로 기억한다.
+   두 번 넘기지 않게 하고, 줄에서 바로 「365 ✓」 로 보여 준다. */
+let cliKeys={};
 let attMonth=null;
 
 const $=id=>document.getElementById(id);
@@ -432,20 +435,22 @@ async function startApp(){
 let crmTeams=[],crmTeamOf={};
 function teamName(pid){const t=crmTeams.find(x=>x.id===crmTeamOf[pid]);return t?t.name:""}
 async function loadAll(){
-  const [p,d,c,a,t,tm,cf]=await Promise.all([
+  const [p,d,c,a,t,tm,cf,cl]=await Promise.all([
     sb.from("profiles").select("id,name,role,active").eq("active",true).order("name"),
     sb.from("dbs").select("*").order("created_at",{ascending:false}),
     sb.from("calls").select("*").order("call_at",{ascending:false}),
     sb.from("attendance").select("*"),
     sb.from("teams").select("id,name,color").order("name"),
     sb.from("team_members").select("team_id,member_id"),
-    sb.from("app_config").select("key,value").eq("key","db_sources")
+    sb.from("app_config").select("key,value").eq("key","db_sources"),
+    sb.from("clients").select("advisor_id,name_masked")
   ]);
   if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
   profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
   crmTeams=(t&&!t.error&&t.data)||[];crmTeamOf={};((tm&&!tm.error&&tm.data)||[]).forEach(m=>crmTeamOf[m.member_id]=m.team_id);
   const sv=(cf&&!cf.error&&cf.data&&cf.data[0])?(cf.data[0].value||""):"";
   dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
+  cliKeys={};((cl&&!cl.error&&cl.data)||[]).forEach(x=>{cliKeys[(x.advisor_id||"")+"|"+(x.name_masked||"")]=1});
   fillProfiles();fillSources();renderAll();
 }
 function fillProfiles(){
@@ -473,6 +478,8 @@ function srcList(){
 function srcOf(d){return (d&&d.source||"").trim()||"일반"}
 /* 「＋ DB 종류 추가」 같은 속값이 그대로 저장되면 안 된다 */
 function srcSafe(v){v=(v||"").trim();return (!v||v===SRC_ADD)?(srcList()[0]||"일반"):v}
+/* 이 DB 가 이미 고객 365일에 있나 */
+function inClients(d){return !!cliKeys[(d.assigned_to||"")+"|"+crmMask((d.customer_name||"").trim())]}
 const SRC_ADD="__add__";
 function fillSources(){
   const list=srcList();
@@ -590,7 +597,9 @@ function renderDb(){
     <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`:""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
+    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
+      ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
+      :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="12" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
@@ -790,6 +799,8 @@ async function toClient(id){
     .order("created_at",{ascending:false}).limit(1);
   let local=false;
   if(got&&!got.error&&got.data&&got.data.length)local=crmPutReal(got.data[0].id,real,d.assigned_to);
+  cliKeys[(d.assigned_to||"")+"|"+masked]=1;
+  renderDb();
   toast(`${real} 님을 고객 365일로 넘겼습니다.`+(local?" 앱 → 고객 365일에서 실명 그대로 보입니다.":" 앱 → 고객 365일에서 확인하세요."));
 }
 async function removeDb(id){

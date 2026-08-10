@@ -8169,8 +8169,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 17:20';
-var APP_BUILD_NOTE='보장분석 — 동의하면 그 자리에서 결과물까지 (도구 15개 같이 풀림)';
+var APP_BUILD='2026-08-10 18:40';
+var APP_BUILD_NOTE='조직도 전체 반영 · 가로 조직도 · CRM↔고객 365일 양방향';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17566,6 +17566,118 @@ function orgCard(m){
       + '<button class="btn btn-ghost" style="padding:5px 10px;font-size:12px;color:var(--neg)" onclick="orgDelete(\''+m.id+'\')">삭제</button>'
     + '</div></div>';
 }
+/* ════════ 가로 조직도 ════════
+   세로로 들여쓴 목록은 사람이 스무 명만 넘어도 스크롤을 한참 내려야 한다.
+   그러면 「우리 조직이 이렇게 생겼다」 를 한눈에 못 본다.
+   위에서 아래로 층을 쌓고, 같은 층은 가로로 늘어놓는다 — 회사 조직도 그대로. */
+var ORGV_KEY='apex_org_view';
+function orgView(){try{return localStorage.getItem(ORGV_KEY)||'wide';}catch(e){return 'wide';}}
+function orgViewSet(v){try{localStorage.setItem(ORGV_KEY,v);}catch(e){}go('org');}
+function orgZoom(){var z=0;try{z=parseInt(localStorage.getItem(ORGV_KEY+'_z')||'100',10);}catch(e){}return z||100;}
+function orgZoomSet(d){
+  var z=Math.max(50,Math.min(140,orgZoom()+d));
+  try{localStorage.setItem(ORGV_KEY+'_z',''+z);}catch(e){}
+  var el=document.getElementById('orgWideInner');
+  if(el)el.style.zoom=(z/100);
+  var lb=document.getElementById('orgZoomLbl');if(lb)lb.textContent=z+'%';
+}
+function orgMini(m){
+  var c=orgRankColor(m.rank);
+  return '<div class="ogv-c" onclick="orgEdit(\''+m.id+'\')" title="눌러서 편집">'+
+    '<span class="ogv-b" style="background:'+c+'"></span>'+
+    orgPhotoTag(m,34)+
+    '<div class="ogv-t">'+
+      '<b>'+osEsc(m.name||'이름없음')+'</b>'+
+      '<span class="ogv-r" style="color:'+c+'">'+osEsc(m.rank||'')+'</span>'+
+      (m.team?'<span class="ogv-m">'+osEsc(m.team)+'</span>':'')+
+    '</div></div>';
+}
+function orgWide(list){
+  if(!list.length)return '<div class="notice" style="color:var(--ink-4)">아직 등록된 구성원이 없습니다. 위 폼에서 추가하세요.</div>';
+  var byParent={},ids={},i;
+  for(i=0;i<list.length;i++)ids[list[i].id]=list[i];
+  for(i=0;i<list.length;i++){var m=list[i];var p=(m.parent&&ids[m.parent])?m.parent:'__root';(byParent[p]=byParent[p]||[]).push(m);}
+  var depth=0;
+  function node(m,d){
+    if(d>depth)depth=d;
+    var kids=byParent[m.id]||[];
+    var h='<li>'+orgMini(m);
+    if(kids.length){
+      h+='<ul>';
+      for(var j=0;j<kids.length;j++)h+=node(kids[j],d+1);
+      h+='</ul>';
+    }
+    return h+'</li>';
+  }
+  var roots=byParent['__root']||[],out='';
+  for(i=0;i<roots.length;i++)out+=node(roots[i],0);
+  var z=orgZoom();
+  orgWideCss();
+  return '<div class="ogv-bar">'+
+      '<span class="ogv-n">'+list.length+'명 · '+(depth+1)+'층</span>'+
+      '<button type="button" class="ogv-z" onclick="orgZoomSet(-10)">－</button>'+
+      '<span class="ogv-z lbl" id="orgZoomLbl">'+z+'%</span>'+
+      '<button type="button" class="ogv-z" onclick="orgZoomSet(10)">＋</button>'+
+      '<span class="ogv-hint">이름을 누르면 편집합니다 · 좌우로 밀어 보세요</span>'+
+    '</div>'+
+    '<div class="ogv-scroll"><div id="orgWideInner" class="ogv" style="zoom:'+(z/100)+'"><ul>'+out+'</ul></div></div>';
+}
+/* 층을 쌓고 선으로 잇는다 — 종이에 그린 조직도와 같은 모양 */
+function orgWideCss(){
+  if(document.getElementById('orgWideCss'))return;
+  var st=document.createElement('style');st.id='orgWideCss';
+  st.textContent=
+   '.ogv-scroll{overflow:auto;padding:6px 2px 14px;-webkit-overflow-scrolling:touch}'+
+   '.ogv{display:inline-block;min-width:100%}'+
+   '.ogv ul{display:flex;justify-content:center;list-style:none;margin:0;padding:22px 0 0;position:relative}'+
+   '.ogv>ul{padding-top:0}'+
+   '.ogv li{position:relative;padding:22px 8px 0;text-align:center;list-style:none}'+
+   '.ogv>ul>li{padding-top:0}'+
+   /* 자식으로 내려가는 세로선 */
+   '.ogv li::before,.ogv li::after{content:"";position:absolute;top:0;right:50%;'+
+     'border-top:2px solid #D7DEEA;width:50%;height:22px}'+
+   '.ogv li::after{right:auto;left:50%;border-left:2px solid #D7DEEA}'+
+   '.ogv li:only-child::before,.ogv li:only-child::after{display:none}'+
+   '.ogv li:only-child{padding-top:22px}'+
+   '.ogv li:first-child::before,.ogv li:last-child::after{border:0 none}'+
+   '.ogv li:last-child::before{border-right:2px solid #D7DEEA;border-radius:0 6px 0 0}'+
+   '.ogv li:first-child::after{border-radius:6px 0 0 0}'+
+   '.ogv>ul>li::before,.ogv>ul>li::after{display:none}'+
+   '.ogv ul ul::before{content:"";position:absolute;top:0;left:50%;'+
+     'border-left:2px solid #D7DEEA;width:0;height:22px}'+
+   /* 사람 칸 */
+   '.ogv-c{display:inline-flex;align-items:center;gap:8px;position:relative;'+
+     'background:#fff;border:1px solid #E5E9F0;border-radius:12px;padding:8px 12px 8px 14px;'+
+     'box-shadow:0 1px 3px rgba(16,24,40,.06);cursor:pointer;text-align:left;'+
+     'min-width:132px;max-width:200px;transition:box-shadow .12s,transform .12s}'+
+   '.ogv-c:hover{box-shadow:0 4px 14px rgba(16,24,40,.13);transform:translateY(-1px)}'+
+   '.ogv-b{position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:4px}'+
+   '.ogv-c img,.ogv-c .org-ph{flex:none;border-radius:50%}'+
+   '.ogv-t{min-width:0;line-height:1.35}'+
+   '.ogv-t b{display:block;font-size:13px;font-weight:800;color:#1C2434;white-space:nowrap;'+
+     'overflow:hidden;text-overflow:ellipsis}'+
+   '.ogv-r{display:inline-block;font-size:10.5px;font-weight:800;margin-right:5px}'+
+   '.ogv-m{display:inline-block;font-size:10.5px;color:#94A3B8;font-weight:700}'+
+   /* 위 띠 */
+   '.ogv-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}'+
+   '.ogv-n{font-size:11.5px;font-weight:800;color:#1C2434;background:#EEF2FF;'+
+     'border-radius:999px;padding:4px 11px}'+
+   '.ogv-z{font-size:12px;font-weight:800;color:#475569;background:#fff;'+
+     'border:1px solid #E5E9F0;border-radius:8px;padding:3px 10px;cursor:pointer;font-family:inherit}'+
+   '.ogv-z.lbl{cursor:default;min-width:46px;text-align:center}'+
+   '.ogv-hint{font-size:11px;color:#94A3B8;margin-left:auto}'+
+   '@media(max-width:760px){.ogv-c{min-width:112px;padding:7px 9px 7px 12px}'+
+     '.ogv-t b{font-size:12px}.ogv-hint{display:none}}'+
+   '@media print{.ogv-bar{display:none}.ogv-scroll{overflow:visible}}';
+  document.head.appendChild(st);
+}
+function orgViewBarHtml(){
+  var v=orgView();
+  return '<div class="btn-row" style="margin:0 0 10px">'+
+    '<button class="btn '+(v==='wide'?'btn-primary':'btn-ghost')+'" style="padding:6px 13px;font-size:12px" onclick="orgViewSet(\'wide\')">🗺 가로 조직도</button>'+
+    '<button class="btn '+(v==='list'?'btn-primary':'btn-ghost')+'" style="padding:6px 13px;font-size:12px" onclick="orgViewSet(\'list\')">📋 목록으로</button>'+
+    '</div>';
+}
 function orgTree(list){
   var byParent={},ids={},i;
   for(i=0;i<list.length;i++)ids[list[i].id]=list[i];
@@ -22065,14 +22177,181 @@ function osCkTeamAfterRender(){
   CT.loaded=false;CT.err='';ctPaint();ctLoad();
 }
 
+/* ════════ 조직도 전체 반영 ════════
+   조직도(org_members)는 그림만 그리는 표였다. 앱의 나머지 — 성장판·출근·TFA 업무관리·
+   고객 365일·팀 코칭 — 는 teams / team_members / profiles.role 을 읽는다.
+   그래서 조직도를 아무리 잘 그려도 「전체 반영」 이 안 됐다.
+
+   여기서 조직도를 그 세 곳으로 밀어 넣는다. 다만 권한은 사람을 잠글 수 있으므로
+   무엇이 바뀌는지 먼저 보여 주고, 대표·운영자는 절대 낮추지 않는다. */
+var ORG_RANK_ROLE={'본부장':'branch_manager','지점장':'leader','팀장':'leader',
+                   '설계사':'member','신입':'member'};
+var ORGA={busy:false,plan:null,err:''};
+
+function orgApplyPlan(then){
+  var sb=osClient();
+  if(!sb||!OS.profile){toast('로그인 후 사용할 수 있습니다');return;}
+  ORGA.busy=true;ORGA.err='';orgPaintApply();
+  var list=orgLoad();
+  Promise.all([
+    sb.from('teams').select('id,name,leader_id'),
+    sb.from('team_members').select('team_id,member_id'),
+    sb.from('profiles').select('id,name,role,active')
+  ]).then(function(r){
+    ORGA.busy=false;
+    if(r[0]&&r[0].error){ORGA.err='팀 표를 읽지 못했습니다: '+(r[0].error.message||'');orgPaintApply();return;}
+    var teams=(r[0]&&r[0].data)||[],mem=(r[1]&&r[1].data)||[],profs=(r[2]&&r[2].data)||[];
+    var teamByName={},i,nm;
+    for(i=0;i<teams.length;i++)teamByName[(''+(teams[i].name||'')).replace(/\s/g,'')]=teams[i];
+    var teamOf={};for(i=0;i<mem.length;i++)teamOf[mem[i].member_id]=mem[i].team_id;
+    var profOf={};for(i=0;i<profs.length;i++)profOf[profs[i].id]=profs[i];
+
+    var newTeams=[],assign=[],roles=[],leaders=[],skip=[];
+    var seenTeam={};
+    for(i=0;i<list.length;i++){
+      var m=list[i],t=(''+(m.team||'')).replace(/^\s+|\s+$/g,'');
+      /* 팀 이름이 있으면 팀부터 만든다 — 계정 연결과 상관없이 */
+      if(t){
+        nm=t.replace(/\s/g,'');
+        if(!teamByName[nm]&&!seenTeam[nm]){seenTeam[nm]=1;newTeams.push(t);}
+      }
+      if(!m.member_id){
+        if(m.name)skip.push(m.name+(t?(' · '+t):''));
+        continue;
+      }
+      var pf=profOf[m.member_id];
+      if(!pf){skip.push((m.name||'이름없음')+' · 앱 계정을 못 찾음');continue;}
+      /* 소속 */
+      if(t){
+        var tid=teamByName[t.replace(/\s/g,'')];
+        if(!tid||teamOf[m.member_id]!==tid.id)
+          assign.push({who:m.member_id,nm:pf.name||m.name,team:t,now:tid?teamOf[m.member_id]:'',was:tidName(teams,teamOf[m.member_id])});
+      }
+      /* 권한 — 대표·운영자는 절대 낮추지 않는다 */
+      var want=ORG_RANK_ROLE[m.rank||''];
+      var cur=pf.role||'member';
+      if(want&&want!==cur&&cur!=='owner'&&cur!=='admin'&&cur!=='master'&&m.member_id!==OS.profile.id)
+        roles.push({who:m.member_id,nm:pf.name||m.name,from:cur,to:want,rank:m.rank});
+      /* 지점장이면 그 팀의 리더로 */
+      if(t&&(m.rank==='지점장'||m.rank==='팀장')){
+        var tt=teamByName[t.replace(/\s/g,'')];
+        if(!tt||tt.leader_id!==m.member_id)leaders.push({who:m.member_id,nm:pf.name||m.name,team:t});
+      }
+    }
+    ORGA.plan={teams:newTeams,assign:assign,roles:roles,leaders:leaders,skip:skip,
+               total:newTeams.length+assign.length+roles.length+leaders.length};
+    orgPaintApply();
+    if(then)then();
+  },function(e){ORGA.busy=false;ORGA.err=(e&&e.message)||'읽지 못했습니다';orgPaintApply();});
+}
+function tidName(teams,id){var i;for(i=0;i<teams.length;i++)if(teams[i].id===id)return teams[i].name||'';return '';}
+
+function orgApplyRun(){
+  var sb=osClient(),P=ORGA.plan;
+  if(!sb||!P){toast('먼저 무엇이 바뀌는지 확인해 주세요');return;}
+  if(!P.total){toast('이미 조직도대로 되어 있습니다');return;}
+  if(!confirm('조직도를 앱 전체에 반영합니다.\n\n'+
+    '팀 '+P.teams.length+'개 새로 만들기\n'+
+    '소속 '+P.assign.length+'명 배정\n'+
+    '권한 '+P.roles.length+'명 변경\n'+
+    '리더 '+P.leaders.length+'명 지정\n\n'+
+    '성장판·출근·TFA 업무관리·고객 365일이 모두 이 조직을 따라갑니다.\n'+
+    '대표·운영자 권한은 건드리지 않습니다.'))return;
+  ORGA.busy=true;orgPaintApply();
+  var pal=['#1A56DB','#7C3AED','#059669','#F59E0B','#DC2626','#0891B2'];
+  var mk=P.teams.map(function(nm,i){return {name:nm,color:pal[i%pal.length]};});
+  var step1=mk.length?sb.from('teams').insert(mk):Promise.resolve({error:null});
+  step1.then(function(r1){
+    if(r1&&r1.error)throw new Error('팀 만들기: '+r1.error.message);
+    return sb.from('teams').select('id,name');
+  }).then(function(r2){
+    if(r2&&r2.error)throw new Error('팀 다시 읽기: '+r2.error.message);
+    var byName={},rows=(r2&&r2.data)||[],i;
+    for(i=0;i<rows.length;i++)byName[(''+(rows[i].name||'')).replace(/\s/g,'')]=rows[i].id;
+    var jobs=[];
+    /* 소속 — 한 사람은 한 팀 */
+    P.assign.forEach(function(a){
+      var tid=byName[a.team.replace(/\s/g,'')];
+      if(!tid)return;
+      jobs.push(sb.from('team_members')['delete']().eq('member_id',a.who).then(function(){
+        return sb.from('team_members').insert({team_id:tid,member_id:a.who});
+      }));
+    });
+    /* 권한 */
+    P.roles.forEach(function(x){
+      jobs.push(sb.from('profiles').update({role:x.to}).eq('id',x.who));
+    });
+    /* 리더 */
+    P.leaders.forEach(function(x){
+      var tid=byName[x.team.replace(/\s/g,'')];
+      if(tid)jobs.push(sb.from('teams').update({leader_id:x.who}).eq('id',tid));
+    });
+    return Promise.all(jobs);
+  }).then(function(res){
+    ORGA.busy=false;
+    var bad=[],i;
+    for(i=0;i<(res||[]).length;i++)if(res[i]&&res[i].error)bad.push(res[i].error.message||'실패');
+    if(bad.length){
+      ORGA.err=bad.length+'건이 실패했습니다: '+bad[0].slice(0,80);
+      orgPaintApply();
+      toast('일부만 반영됐습니다 — '+bad[0].slice(0,60),9000);
+      return;
+    }
+    toast('조직도를 앱 전체에 반영했습니다. 성장판·출근·TFA·고객 365일이 이 조직을 따라갑니다.',7000);
+    /* 이미 읽어 둔 것들을 새로 읽게 한다 */
+    try{if(typeof GB!=='undefined')GB.loaded=false;
+        if(typeof AR!=='undefined')AR.loaded=false;
+        if(typeof CM!=='undefined'){CM.picked=false;CM.who={};}
+    }catch(e){}
+    orgApplyPlan();
+  }).catch(function(e){
+    ORGA.busy=false;ORGA.err=(e&&e.message)||'반영하지 못했습니다';orgPaintApply();
+    toast('반영하지 못했습니다: '+ORGA.err.slice(0,70),9000);
+  });
+}
+function orgPaintApply(){
+  var el=document.getElementById('orgApplyBox');
+  if(el)el.innerHTML=orgApplyInner();
+}
+function orgApplyInner(){
+  if(!OS.profile)return '<span style="color:var(--ink-5)">로그인하면 조직도를 앱 전체에 반영할 수 있습니다.</span>';
+  if(ORGA.busy)return '<b>확인하는 중…</b>';
+  if(ORGA.err)return '<b style="color:#B91C1C">'+osEsc(ORGA.err)+'</b>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgApplyPlan()">다시 확인</button></div>';
+  var P=ORGA.plan;
+  if(!P)return '<b>조직도를 앱 전체에 반영합니다.</b> 성장판 · 출근 · TFA 업무관리 · 고객 365일이 모두 이 조직을 따라가게 만듭니다.'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgApplyPlan()">무엇이 바뀌는지 보기</button></div>';
+  var li=function(n,t){return n?('<li>'+t.replace('N',n)+'</li>'):'';};
+  var h='';
+  if(!P.total)h='<b>이미 조직도대로 되어 있습니다.</b> 팀 · 소속 · 권한이 모두 맞습니다.';
+  else h='<b>이렇게 바뀝니다.</b><ul style="margin:7px 0 0 16px;padding:0;font-size:11.8px;line-height:1.9">'+
+    li(P.teams.length,'팀 <b>N개</b> 새로 만들기 — '+osEsc(P.teams.slice(0,4).join(', '))+(P.teams.length>4?' 외':''))+
+    li(P.assign.length,'소속 <b>N명</b> 배정 — '+osEsc(P.assign.slice(0,4).map(function(a){return a.nm+'→'+a.team;}).join(', '))+(P.assign.length>4?' 외':''))+
+    li(P.roles.length,'권한 <b>N명</b> 변경 — '+osEsc(P.roles.slice(0,4).map(function(x){return x.nm+' '+x.rank;}).join(', '))+(P.roles.length>4?' 외':''))+
+    li(P.leaders.length,'리더 <b>N명</b> 지정 — '+osEsc(P.leaders.slice(0,4).map(function(x){return x.nm+'('+x.team+')';}).join(', '))+(P.leaders.length>4?' 외':''))+
+    '</ul>';
+  if(P.skip.length)h+='<div style="margin-top:8px;font-size:11.3px;color:#92400E">'+
+    '<b>'+P.skip.length+'명은 건너뜁니다</b> — 앱 계정이 연결되지 않았습니다. 조직도에서 그 사람을 눌러 <b>계정 연결</b>을 지정하면 다음 반영 때 같이 들어갑니다.<br>'+
+    '<span style="color:#A16207">'+osEsc(P.skip.slice(0,6).join(' · '))+(P.skip.length>6?' 외':'')+'</span></div>';
+  h+='<div class="btn-row" style="margin-top:9px">'+
+    (P.total?'<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgApplyRun()">전체 반영하기</button>':'')+
+    '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgApplyPlan()">다시 확인</button></div>';
+  return h;
+}
+function orgApplyBoxHtml(){
+  return '<div id="orgApplyBox" class="notice" style="margin-bottom:12px;background:#F5F9FF;border-color:#BFDBFE;color:#1D4ED8">'+
+    orgApplyInner()+'</div>';
+}
 function renderOrg(){
   var list=orgLoad();
   var body=''
     + orgSyncBarHtml()
+    + orgApplyBoxHtml()
     + orgForm(list)
     + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · 구성원 '+list.length+'명 '
       + '<span style="float:right"><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="orgReset()">초기화</button></span></div>'
-      + '<div class="card-body">'+orgTree(list)+'</div></div>';
+      + '<div class="card-body">'+orgViewBarHtml()
+      + (orgView()==='wide'?orgWide(list):orgTree(list))+'</div></div>';
   return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함. 로그인하면 서버에 저장되어 어느 컴퓨터에서나 같은 조직도를 봅니다.',body);
 }
 
@@ -29100,6 +29379,15 @@ function cmCss(){
     /* 남이 맡은 고객 앞에 붙는 담당자 딱지 */
     '.cm-nm .cm-wt{font-style:normal;font-size:10px;font-weight:800;padding:1.5px 6px;border-radius:999px;'+
       'background:#EEF2FF;color:#4F46E5;flex:none}'+
+    '.cm-wt{display:inline-block;font-size:10px;font-weight:800;padding:1.5px 7px;border-radius:999px;'+
+      'background:#EEF2FF;color:#4F46E5}'+
+    '.cm-call{display:grid;grid-template-columns:78px 52px minmax(0,1fr);gap:9px;align-items:center;'+
+      'padding:8px 2px;border-bottom:1px solid #F1F4F8}'+
+    '.cm-call:last-child{border:0}'+
+    '.cm-call .d{font-size:11.5px;font-weight:800;color:#64748B}'+
+    '.cm-call .r{font-size:10.5px;font-weight:800;color:#fff;text-align:center;border-radius:999px;padding:2px 0}'+
+    '.cm-call .m{font-size:12.3px;color:#334155;line-height:1.5;min-width:0}'+
+    '@media(max-width:520px){.cm-call{grid-template-columns:66px 46px minmax(0,1fr);gap:7px}}'+
     '.cm-whos{margin:0 0 12px;padding-bottom:11px;border-bottom:1px solid var(--ink-8)}'+
     '.cm-whos .cm-wl{font-size:11px;font-weight:800;color:var(--ink-5);margin-right:2px}'+
     '.cm-sb.me{border-color:#C7D2FE;background:#EEF2FF;color:#4F46E5}'+
@@ -29180,7 +29468,7 @@ function osClientsAfterRender(){
   if(!OS.profile)return;
   if(OSC.view==='list'){osLoadClients();return;}
   if(OSC.view==='detail'&&OSC.current){
-    osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();
+    osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();osCallsLoad();
     if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
   }
 }
@@ -29329,7 +29617,71 @@ function osClientDetailHtml(c){
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">저장된 상담 자료 <span style="font-size:11px;font-weight:600;color:#9CA3AF">AI 보장분석 · 비포&애프터 · 재무설계</span></h3>'+
       '<div id="oscReps"><div class="osc-loading">저장 자료를 불러오는 중…</div></div>'+
     '</div>'+
+    '<div class="osc-panel" style="margin-top:16px">'+
+      '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">DB 통합 CRM 통화 이력 '+
+        '<span style="font-size:11px;font-weight:600;color:#9CA3AF">이 고객에게 언제 어떻게 걸었나</span></h3>'+
+      '<div id="oscCalls"><div class="osc-loading">통화 기록을 찾는 중…</div></div>'+
+    '</div>'+
   '</div>';
+}
+
+/* ── 고객 365일 ↔ DB 통합 CRM ──
+   같은 사람인데 두 화면에 따로 있으면 상담 전에 양쪽을 다 열어 봐야 한다.
+   CRM 에는 마스킹 이름이 없으므로 담당자 + 이름으로 맞춘다 —
+   그 사람의 실명은 이 기기에만 있으니 서버로는 아무것도 안 나간다. */
+function osCallsLoad(){
+  var sb=osClient(),host=document.getElementById('oscCalls'),c=OSC.current;
+  if(!sb||!host||!c)return;
+  var real=cmRealOf(c.id);
+  sb.from('dbs').select('id,customer_name,region,source,assigned_date,assigned_to')
+    .eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'').then(function(r){
+    if(r&&r.error){host.innerHTML='<div class="osc-empty">통화 기록을 불러오지 못했습니다.</div>';return;}
+    var rows=(r&&r.data)||[],hit=[],i,nm;
+    for(i=0;i<rows.length;i++){
+      nm=(''+(rows[i].customer_name||'')).replace(/\s/g,'');
+      if(!nm)continue;
+      /* 실명을 알면 실명으로, 모르면 마스킹의 성·끝 글자로 견준다 */
+      if(real){ if(nm===real.replace(/\s/g,''))hit.push(rows[i]); }
+      else if(osMaskName(nm)===(c.name_masked||''))hit.push(rows[i]);
+    }
+    if(!hit.length){
+      host.innerHTML='<div class="osc-empty">이 고객은 DB 통합 CRM 에 없습니다. '+
+        'CRM 에서 <b>365</b> 단추로 넘긴 고객이면 여기에 통화 이력이 같이 보입니다.</div>';
+      return;
+    }
+    var ids=hit.map(function(x){return x.id;});
+    sb.from('calls').select('db_id,call_at,result,memo,appointment_at')
+      .in('db_id',ids).order('call_at',{ascending:false}).limit(60).then(function(r2){
+      var cs=(r2&&!r2.error&&r2.data)||[];
+      osCallsPaint(host,hit,cs);
+    },function(){osCallsPaint(host,hit,[]);});
+  },function(){host.innerHTML='<div class="osc-empty">통화 기록을 불러오지 못했습니다.</div>';});
+}
+function osCallsPaint(host,dbs,calls){
+  var BG={'상담':'#059669','거절':'#DC2626','부재':'#D97706'};
+  var head=dbs.map(function(d){
+    return '<span class="cm-wt" style="margin:0 6px 0 0">'+osEsc((d.source||'일반'))+'</span>'+
+      '<span style="font-size:11.5px;color:#94A3B8">'+osEsc(d.region||'')+' · '+osFmtDate(d.assigned_date)+' 배정</span>';
+  }).join('<br>');
+  if(!calls.length){
+    host.innerHTML='<div style="margin-bottom:8px">'+head+'</div>'+
+      '<div class="osc-empty">아직 통화 기록이 없습니다. CRM 에서 접촉을 남기면 여기에 쌓입니다.</div>';
+    return;
+  }
+  var h='<div style="margin-bottom:9px">'+head+'</div>'+
+    '<div class="cm-lab" style="margin:0 0 7px">통화 '+calls.length+'건 · 가장 최근이 위</div><div class="ar-tks">';
+  var i,x,ap;
+  for(i=0;i<calls.length&&i<30;i++){
+    x=calls[i];
+    ap=x.appointment_at?(' · 약속 '+(''+x.appointment_at).slice(0,10)):'';
+    h+='<div class="cm-call"><span class="d">'+osEsc((''+(x.call_at||'')).slice(0,10))+'</span>'+
+      '<span class="r" style="background:'+(BG[x.result]||'#64748B')+'">'+osEsc(x.result||'-')+'</span>'+
+      '<span class="m">'+osEsc(vaCut(x.memo||'메모 없음',60))+osEsc(ap)+'</span></div>';
+  }
+  h+='</div>';
+  if(calls.length>30)h+='<div class="cm-lab" style="margin-top:7px">가장 최근 30건만 보여 줍니다</div>';
+  h+='<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="go(\'crm\')">DB 통합 CRM 에서 보기</button></div>';
+  host.innerHTML=h;
 }
 
 /* ── Phase 2b: 문서 업로드 ─────────────────────────────────────────────── */
