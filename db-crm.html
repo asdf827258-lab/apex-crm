@@ -421,7 +421,7 @@ async function startApp(){
   if(error||!p){toast("프로필을 불러오지 못했습니다.");return}
   profile=p;if(!profile.active){await sb.auth.signOut();toast("비활성화된 계정입니다.");return}
   $("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("userName").textContent=profile.name;$("userRole").textContent=roleLabel(roleOf());
-  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.toggle("hidden",!canManageTeam());$("ownerFilter").classList.toggle("hidden",!canViewAll());
+  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.remove("hidden");$("ownerFilter").classList.toggle("hidden",!canViewAll());
   $("dashboardTitle").textContent=canViewAll()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=canViewAll()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
@@ -450,9 +450,11 @@ async function loadAll(){
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
-  /* 배정 대상은 내가 손댈 수 있는 범위만 — 지점장은 자기 팀 */
+  /* 배정 대상은 내가 손댈 수 있는 범위만 — 지점장은 자기 팀, 설계사는 본인.
+     비어 있다고 전원을 열면 안 된다 — 그건 남에게 배정하는 문이 된다. */
   const pick=members.filter(p=>inMyScope(p.id));
-  $("assignedTo").innerHTML=(pick.length?pick:members).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const opts=pick.length?pick:(canManage()?members:[]);
+  $("assignedTo").innerHTML=opts.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
 function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
@@ -689,15 +691,13 @@ function renderAttendance(){
 }
 function openDb(id=""){
   const d=dbs.find(x=>x.id===id);
-  /* 새로 등록하는 것은 지금처럼 지점장 이상. 이미 배정된 내 고객은 본인이 연다. */
-  if(!id&&!canManageTeam())return;
+  /* 개척 DB 는 본인이 직접 넣는다. 이미 배정된 것도 내 것이면 본인이 연다. */
   if(id&&!canEditDb(d)){toast("내 고객이 아니면 수정할 수 없습니다.");return}
-  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
 }
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
-  if(!id&&!canManageTeam()){toast("새 DB 등록은 지점장 이상만 할 수 있습니다.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
   const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);

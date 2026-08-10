@@ -309,6 +309,51 @@ window.supabase={createClient:function(){
   ok(t7c.opened === false, '남의 고객은 수정 창이 아예 안 열린다');
   ok(/내 고객이 아니면/.test(t7c.msg), '왜 안 되는지 말해 준다 — ' + t7c.msg.slice(0, 40));
 
+  /* ── 팀원이 개척 DB 를 직접 넣는다 ── */
+  const t7d = await B.page.evaluate(async () => {
+    window.__wrote = []; window.__toast = [];
+    const old = window.toast; window.toast = m => { window.__toast.push(m); };
+    const btn = document.getElementById('newDbBtn');
+    openDb();
+    const opened = document.getElementById('dbModal').classList.contains('open');
+    const who = Array.from(document.getElementById('assignedTo').options).map(o => o.value);
+    const pick = document.getElementById('assignedTo').value;
+    document.getElementById('customerName').value = '개척고객';
+    document.getElementById('phone').value = '010-0000-0000';
+    await saveDb();
+    window.toast = old;
+    const w = window.__wrote.filter(x => x.t === 'dbs');
+    return {
+      shown: !!btn && !btn.classList.contains('hidden'),
+      opened, who, pick, wrote: w.length ? w[0].v : null, msg: window.__toast.join(' ')
+    };
+  });
+  ok(t7d.shown, '팀원 화면에도 「+ DB 등록」 단추가 보인다');
+  ok(t7d.opened, '팀원이 새 DB 등록 창을 연다');
+  ok(t7d.who.length === 1 && t7d.who[0] === 'me',
+    '담당자 칸에는 본인만 뜬다 — 남에게 배정하는 문이 안 열린다 (' + t7d.who.join(',') + ')');
+  ok(t7d.pick === 'me', '새로 만들면 본인에게 배정된 채로 열린다');
+  ok(t7d.wrote && t7d.wrote.assigned_to === 'me' && t7d.wrote.customer_name === '개척고객',
+    '팀원이 넣은 개척 DB 가 본인 앞으로 저장된다');
+  ok(!/권한이 없습니다|지점장 이상/.test(t7d.msg), '막혔다는 말이 안 나온다 — ' + (t7d.msg || '조용히 저장됨').slice(0, 40));
+
+  /* 남에게 배정하려 하면 여전히 막힌다 */
+  const t7e = await B.page.evaluate(async () => {
+    window.__wrote = []; window.__toast = [];
+    const old = window.toast; window.toast = m => { window.__toast.push(m); };
+    openDb();
+    const sel = document.getElementById('assignedTo');
+    sel.innerHTML = '<option value="you">동료</option>';   /* 화면을 억지로 뜯어고쳐 본다 */
+    sel.value = 'you';
+    document.getElementById('customerName').value = '남에게넘기기';
+    await saveDb();
+    window.toast = old;
+    return { wrote: window.__wrote.filter(x => x.t === 'dbs').length, msg: window.__toast.join(' ') };
+  });
+  ok(t7e.wrote === 0, '화면을 뜯어고쳐 남에게 배정해도 저장되지 않는다');
+  ok(/맡을 수 없는 담당자/.test(t7e.msg), '왜 안 되는지 말해 준다 — ' + t7e.msg.slice(0, 40));
+  await B.page.evaluate(() => { closeModal('dbModal'); fillProfiles(); });
+
   /* ── 팀원이 종류를 직접 넣는다 ── */
   const t8 = await B.page.evaluate(async () => {
     window.__wrote = []; window.__toast = [];
