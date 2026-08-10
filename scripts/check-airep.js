@@ -53,13 +53,14 @@ window.__calls=(function(){var a=[],i;
  return a;})();
 window.__dbs=(function(){var a=[],i;
  for(i=0;i<30;i++)a.push({id:'d'+i,assigned_to:i<20?'p2':'p3',customer_name:'고객'+i,
-   region:'서울',assigned_date:window.__T(40+i)});
+   source:(i%2?'방송':'보장분석'),region:'서울',assigned_date:window.__T(40+i)});
  for(i=30;i<38;i++)a.push({id:'d'+i,assigned_to:'p4',customer_name:'고객'+i,
-   region:'경기',assigned_date:window.__T(60)});
+   source:'농협',region:'경기',assigned_date:window.__T(60)});
  /* 손 놓은 지 오래된 것 — 다시 걸어야 할 사람들 */
- a.push({id:'d90',assigned_to:'p2',customer_name:'고객90',region:'서울',assigned_date:window.__T(60)});
- a.push({id:'d91',assigned_to:'p2',customer_name:'고객91',region:'서울',assigned_date:window.__T(50)});
- a.push({id:'d92',assigned_to:'p2',customer_name:'고객92',region:'인천',assigned_date:window.__T(30)});
+ a.push({id:'d90',assigned_to:'p2',customer_name:'고객90',source:'방송',region:'서울',assigned_date:window.__T(60)});
+ a.push({id:'d91',assigned_to:'p2',customer_name:'고객91',source:'농협',region:'서울',assigned_date:window.__T(50)});
+ a.push({id:'d92',assigned_to:'p2',customer_name:'고객92',source:'보장분석',region:'인천',assigned_date:window.__T(30)});
+ /* 종류를 안 적어 둔 옛날 DB — '일반' 으로 읽혀야 한다 */
  a.push({id:'d93',assigned_to:'p2',customer_name:'고객93',region:'경기',assigned_date:window.__T(20)});
  return a;})();
 window.__clients=[
@@ -446,7 +447,7 @@ const AI_OK = `## 활동 보고
   txt = await pane();
   ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
   const tk = await page.evaluate(() => Array.prototype.map.call(
-    document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+    document.querySelectorAll('#arPane .ar-fs:not(.ar-fsrc) .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
   ok(tk.length === 7, '전체·부재·거절·진행중·미진행·기고객·생일 일곱 (' + tk.length + ')');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
@@ -471,6 +472,37 @@ const AI_OK = `## 활동 보고
   ok(/결론을 물어봅니다|자료를 준비/.test(todos.run || ''), '진행중 — 붙으라고 한다 — ' + todos.run);
   ok(/첫 통화/.test(todos['new'] || ''), '미진행 — 오늘 첫 통화 — ' + todos['new']);
   ok(/안부|적어 둔 일/.test(todos.old || ''), '기고객 — 안부 — ' + todos.old);
+
+  /* ── DB 종류가 CRM 에서 여기까지 그대로 따라오는가 ── */
+  const src = await page.evaluate(() => {
+    const l = arTouch('p2');
+    const c = {}; l.forEach(x => { if (x.go === 'crm') c[x.src || '(없음)'] = (c[x.src || '(없음)'] || 0) + 1; });
+    return {
+      cnt: c,
+      chips: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()),
+      tags: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-tk .src'), e => e.textContent.trim())
+    };
+  });
+  ok(Object.keys(src.cnt).length >= 2, 'DB 종류가 여러 개 살아서 넘어온다 — ' + JSON.stringify(src.cnt));
+  ok(!src.cnt['(없음)'], '종류가 빈 줄이 없다 — 안 적힌 옛 DB 는 「일반」 으로 읽는다');
+  ok((src.cnt['일반'] || 0) >= 1, '종류를 안 적어 둔 옛 DB 도 「일반」 으로 세어진다');
+  ok(src.tags.length >= 3, '줄마다 종류 딱지가 붙는다 (' + src.tags.length + '개)');
+  ok(src.chips.filter(t => /방송|보장분석|일반|종류 전체/.test(t)).length >= 3,
+    '종류로 좁혀 볼 수 있는 단추가 생긴다 — ' + src.chips.filter(t => /방송|보장분석|일반|종류 전체/.test(t)).join(' · '));
+
+  /* 종류를 하나 고르면 그 종류만 남는가 */
+  const srcPick = await page.evaluate(() => {
+    const before = document.querySelectorAll('#arPane .ar-tk').length;
+    arTkSrcSet('방송');
+    const rows = Array.prototype.map.call(document.querySelectorAll('#arPane .ar-tk .src'), e => e.textContent.trim());
+    const n = document.querySelectorAll('#arPane .ar-tk').length;
+    arTkSrcSet('');
+    return { before, n, rows, back: document.querySelectorAll('#arPane .ar-tk').length };
+  });
+  ok(srcPick.n > 0 && srcPick.n < srcPick.before,
+    '「방송」 만 고르면 줄이 줄어든다 (' + srcPick.before + ' → ' + srcPick.n + ')');
+  ok(srcPick.rows.every(t => t === '방송'), '남은 줄은 전부 방송이다 — ' + srcPick.rows.join(','));
+  ok(srcPick.back === srcPick.before, '되돌리면 원래대로 (' + srcPick.back + ')');
 
   /* ── 지점장은 팀 전체를 한 화면에서 ── */
   const solo = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tk').length);
@@ -747,6 +779,28 @@ const AI_OK = `## 활동 보고
     ok(dup.indexOf('grow') < 0 && dup.indexOf('coach') < 0 && dup.indexOf('acad') < 0,
       '실행 체크판에서 겹치던 셋(성장판·내 코칭·본인 점검란)이 빠졌다 — ' + dup.join(' · '));
   }
+
+  /* ── 팀원이 스스로 비밀번호를 바꿀 수 있는가 ──
+     기능은 있었는데 「눌러 보라」는 말이 어디에도 없어 아무도 못 찾았다. */
+  await seat('member');
+  await page.evaluate(() => osRenderPill());
+  await page.waitForTimeout(300);
+  const pill = await page.evaluate(() => {
+    const p = document.getElementById('osAuthPill');
+    return p ? { pw: !!p.querySelector('.pw'), txt: (p.textContent || '').trim(), title: p.title || '' } : null;
+  });
+  ok(!!pill && pill.pw, '계정 칸에 「🔑 비밀번호」 가 보인다 — ' + (pill ? pill.txt : '칸 없음'));
+  ok(!!pill && /비밀번호/.test(pill.title), '설명에도 비밀번호 변경이라고 적힌다');
+  await page.evaluate(() => osOpenMe());
+  await page.waitForTimeout(600);
+  const meBox = await page.evaluate(() => ({
+    pw: /비밀번호 변경/.test(document.body.textContent),
+    inputs: document.querySelectorAll('input[type=password]').length
+  }));
+  ok(meBox.pw && meBox.inputs >= 2,
+    '눌러 보면 비밀번호 변경 칸이 열린다 (비밀번호 칸 ' + meBox.inputs + '개)');
+  await page.evaluate(() => { document.querySelectorAll('#osOvl,.os-ovl').forEach(x => x.remove()); });
+  await seat('owner');
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 

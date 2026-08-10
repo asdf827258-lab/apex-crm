@@ -178,9 +178,15 @@
       <section class="page" id="page-db">
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
-          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
+          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
           <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
-          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+        </div>
+        <div class="card section hidden" id="srcAdminCard">
+          <div class="section-head"><div><h3>DB 종류 목록</h3><p>여기 적은 것만 팀원 화면의 종류 칸에 뜹니다. 한 줄에 하나씩 적으세요. 고칠 수 있는 사람은 대표·운영자뿐입니다.</p></div></div>
+          <textarea id="srcList" rows="8" style="width:100%;font-size:13px;line-height:1.7"></textarea>
+          <div class="actions" style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveSources()">종류 목록 저장</button><button class="btn btn-light btn-sm" onclick="fillSrcAdmin()">되돌리기</button></div>
+          <div class="notice" style="margin-top:11px">이미 쓰고 있는 종류는 목록에서 지워도 그 DB 에는 그대로 남습니다. 지운 뒤에는 새로 고를 수만 없게 됩니다.</div>
         </div>
       </section>
 
@@ -248,6 +254,7 @@
     <div class="field"><label>담당자</label><select id="assignedTo"></select></div>
     <div class="field"><label>고객명/식별명</label><input id="customerName"></div>
     <div class="field"><label>연락처</label><input id="phone"></div>
+    <div class="field"><label>DB 종류</label><select id="dbSource"></select></div>
     <div class="field"><label>지역</label><input id="region" placeholder="순천"></div>
     <div class="field"><label>DB 보고명</label><input id="reportName" value="보장분석 3DB"></div>
     <div class="field full"><label>비고</label><textarea id="dbMemo"></textarea></div>
@@ -272,6 +279,8 @@
 <script>
 const CONFIG_KEY="apexSupabaseConfigV1";
 let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[], attErr=null;
+/* DB 종류 목록 — 대표가 정하고 모두가 같은 것을 본다 (app_config.db_sources) */
+let dbSources=[];
 let attMonth=null;
 
 const $=id=>document.getElementById(id);
@@ -336,6 +345,16 @@ function inMyScope(pid){
 /* 내가 배정할 수 있는 사람들 */
 function scopeMembers(){
   return profiles.filter(p=>(p.workspace!=="apex")&&inMyScope(p.id));
+}
+/* 삭제는 여태 운영자만 할 수 있었다. 그런데 잘못 배정된 DB, 중복으로 들어온 DB 를
+   정리하는 사람은 그걸 실제로 돌리는 본인이다. 매번 운영자에게 부탁하면 안 지운다.
+   본인에게 배정된 것은 본인이 지운다. 남의 것은 여전히 못 지운다. */
+function canDeleteDb(d){
+  if(canManage())return true;
+  const me=profile&&profile.id;
+  if(me&&d&&d.assigned_to===me)return true;
+  if(isLeader())return inMyScope(d?.assigned_to);
+  return false;
 }
 function canEditDb(d){
   if(canManage())return true;
@@ -403,18 +422,21 @@ async function startApp(){
 let crmTeams=[],crmTeamOf={};
 function teamName(pid){const t=crmTeams.find(x=>x.id===crmTeamOf[pid]);return t?t.name:""}
 async function loadAll(){
-  const [p,d,c,a,t,tm]=await Promise.all([
+  const [p,d,c,a,t,tm,cf]=await Promise.all([
     sb.from("profiles").select("id,name,role,active").eq("active",true).order("name"),
     sb.from("dbs").select("*").order("created_at",{ascending:false}),
     sb.from("calls").select("*").order("call_at",{ascending:false}),
     sb.from("attendance").select("*"),
     sb.from("teams").select("id,name,color").order("name"),
-    sb.from("team_members").select("team_id,member_id")
+    sb.from("team_members").select("team_id,member_id"),
+    sb.from("app_config").select("key,value").eq("key","db_sources")
   ]);
   if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
   profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
   crmTeams=(t&&!t.error&&t.data)||[];crmTeamOf={};((tm&&!tm.error&&tm.data)||[]).forEach(m=>crmTeamOf[m.member_id]=m.team_id);
-  fillProfiles();renderAll();
+  const sv=(cf&&!cf.error&&cf.data&&cf.data[0])?(cf.data[0].value||""):"";
+  dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
+  fillProfiles();fillSources();renderAll();
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
@@ -425,6 +447,54 @@ function fillProfiles(){
 }
 function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
+/* ── DB 종류(카테고리) ──
+   목록은 서버 app_config 의 db_sources 한 줄에 있다. 대표가 고치면 모두에게 반영된다.
+   팀원은 고르기만 한다 — 목록을 고치는 쓰기 권한이 서버에서 막혀 있다. */
+const SRC_FALLBACK=["일반","방송","보장분석","농협","소개","지인","개척"];
+function srcList(){
+  const set=[],seen={};
+  (dbSources.length?dbSources:SRC_FALLBACK).forEach(x=>{const v=(x||"").trim();if(v&&!seen[v]){seen[v]=1;set.push(v)}});
+  /* 목록에서 지운 종류라도 이미 그걸로 저장된 DB 가 있으면 걸러 볼 수는 있어야 한다 */
+  (dbs||[]).forEach(d=>{const v=(d.source||"").trim();if(v&&!seen[v]){seen[v]=1;set.push(v)}});
+  return set;
+}
+function srcOf(d){return (d&&d.source||"").trim()||"일반"}
+function fillSources(){
+  const list=srcList();
+  const sel=$("dbSource");
+  if(sel){const v=sel.value;sel.innerHTML=list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");sel.value=v}
+  const f=$("srcFilter");
+  if(f){const v=f.value;f.innerHTML='<option value="">전체 종류</option>'+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");f.value=list.indexOf(v)>=0?v:""}
+  const card=$("srcAdminCard");
+  if(card){card.classList.toggle("hidden",!canManage());if(canManage()&&!card.dataset.filled)fillSrcAdmin()}
+}
+function fillSrcAdmin(){
+  const t=$("srcList");if(!t)return;
+  t.value=(dbSources.length?dbSources:SRC_FALLBACK).join("\n");
+  const card=$("srcAdminCard");if(card)card.dataset.filled="1";
+}
+async function saveSources(){
+  if(!canManage()){toast("종류 목록은 대표·운영자만 고칠 수 있습니다.");return}
+  const t=$("srcList");if(!t)return;
+  const list=[],seen={};
+  t.value.split(/[\n,]/).forEach(x=>{const v=x.trim();if(v&&!seen[v]){seen[v]=1;list.push(v)}});
+  if(!list.length){toast("종류를 하나 이상 적어 주세요.");return}
+  if(list.some(v=>v.length>40)){toast("종류 이름은 40자 안으로 적어 주세요.");return}
+  const {error}=await sb.from("app_config").upsert({key:"db_sources",value:list.join(",")},{onConflict:"key"});
+  if(error){
+    const m=(error.message||"")+"";
+    if(/42501|permission denied|row.level security/i.test(m))
+      wErr(error,"종류 목록 저장 — 대표 계정으로 로그인했는지 확인하세요");
+    else if(/relation|does not exist|42P01/i.test(m))
+      wErr(error,"종류 목록 저장 — migration_36_db_source.sql 을 한 번 실행하세요");
+    else wErr(error,"종류 목록 저장");
+    return;
+  }
+  dbSources=list;
+  const card=$("srcAdminCard");if(card)delete card.dataset.filled;
+  fillSources();renderDb();renderKpi();
+  toast("종류 "+list.length+"개를 저장했습니다. 팀원 화면에도 같이 반영됩니다.");
+}
 function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance();renderTouch();renderKpi();renderStats();renderAiFb();renderGuideOnce()}
 function renderDashboard(){
   const done=dbs.filter(d=>result(d)!=="미진행"),consult=dbs.filter(d=>result(d)==="상담"),pending=dbs.filter(d=>recStatus(d)==="미완료").length+calls.filter(c=>c.result==="부재"&&!c.group_reported).length;
@@ -457,17 +527,17 @@ function renderDashAttendance(){
   if(sub)sub.textContent=`오늘 ${present}/${mem.length}명 접속 · 로그인 시각 자동 기록`;
 }
 function renderDb(){
-  const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"";
-  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf));
+  const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
+  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf));
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
-    <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region||"-")}</td>
+    <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
     <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canManage()?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="11" class="empty">조회할 DB가 없습니다.</td></tr>`;
+    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
+  </tr>`}).join("")||`<tr><td colspan="12" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
@@ -568,17 +638,40 @@ function renderAttendance(){
 function openDb(id=""){
   if(!canManageTeam())return;
   const d=dbs.find(x=>x.id===id);
-  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value)$("dbSource").selectedIndex=0;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
 }
 async function saveDb(){
-  const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
+  const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:($("dbSource").value||"일반").trim(),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
   if(!canManageTeam()){toast("등록·수정 권한이 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내 팀 밖의 담당자로는 배정할 수 없습니다.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}
-  const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;if(error)wErr(error,"DB 저장");else{closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")}
+  const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;
+  if(error){
+    const m=(error.message||"")+"";
+    /* 종류 제약이 아직 네 개로 묶여 있으면 새 종류가 거절된다 — 무엇을 해야 하는지 그 자리에서 말한다 */
+    if(/dbs_source_check|violates check constraint/i.test(m))
+      wErr(error,"DB 저장 — 종류 「"+payload.source+"」 를 서버가 아직 모릅니다. migration_36_db_source.sql 을 한 번 실행하세요");
+    else wErr(error,"DB 저장");
+    return;
+  }
+  closeModal("dbModal");await loadAll();toast("DB를 저장했습니다.")
 }
-async function removeDb(id){if(!confirm("DB와 관련 통화기록을 삭제할까요?"))return;const {error}=await sb.from("dbs").delete().eq("id",id);if(error)wErr(error,"DB 삭제");else{await loadAll();toast("삭제했습니다.")}}
+async function removeDb(id){
+  const d=(dbs||[]).find(x=>x.id===id);
+  const nm=d?(d.customer_name||"이름 없음"):"이 DB";
+  const cnt=(calls||[]).filter(c=>c.db_id===id).length;
+  if(!confirm(`${nm} 을(를) 지울까요?\n\n통화 기록 ${cnt}건도 같이 지워집니다. 되돌릴 수 없습니다.`))return;
+  const {error}=await sb.from("dbs").delete().eq("id",id);
+  if(error){
+    const m=(error.message||"")+"";
+    if(/42501|permission denied|row.level security|violates/i.test(m))
+      wErr(error,"DB 삭제 — 서버에서 막혀 있습니다. migration_35_db_delete.sql 을 한 번 실행하세요");
+    else wErr(error,"DB 삭제");
+    return;
+  }
+  await loadAll();toast(`${nm} 을(를) 지웠습니다.`);
+}
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
 function renderHistory(id){const x=getCalls(id);$("history").innerHTML=x.length?`<div class="section-head"><h3>기존 통화 이력</h3></div><div class="timeline">${x.map(c=>`<div><b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}</b><p>${esc(c.memo||"메모 없음")}</p></div>`).join("")}</div>`:""}
@@ -652,6 +745,48 @@ function kpiAgg(list){
   a.absentRate=a.done?Math.round(a.absent/a.done*100):0;
   return a;
 }
+/* 종류별 타율 — 어느 경로로 들어온 DB 가 실제로 돈이 되는지.
+   같은 100건이라도 방송이 잘 붙고 보장분석12 가 안 붙으면 그쪽에 시간을 더 써야 한다. */
+function srcAgg(list){
+  const mine={};list.forEach(id=>mine[id]=1);
+  const by={};
+  dbs.filter(d=>mine[d.assigned_to]).forEach(d=>{
+    const k=srcOf(d);
+    const a=by[k]||(by[k]={src:k,total:0,done:0,consult:0,absent:0,reject:0,appts:0});
+    a.total++;
+    const r=result(d);
+    if(r!=="미진행")a.done++;
+    if(r==="상담"){a.consult++;const c=lastCall(d);if(c&&c.appointment_at)a.appts++}
+    if(r==="부재")a.absent++;
+    if(r==="거절")a.reject++;
+  });
+  const out=Object.keys(by).map(k=>{
+    const a=by[k];
+    a.contactRate=a.total?Math.round(a.done/a.total*100):0;
+    a.consultRate=a.done?Math.round(a.consult/a.done*100):0;
+    a.apptRate=a.total?Math.round(a.appts/a.total*100):0;
+    return a;
+  });
+  /* 많이 들어온 순으로. 같으면 상담 전환이 높은 쪽이 위 */
+  out.sort((x,y)=>y.total-x.total||y.consultRate-x.consultRate);
+  return out;
+}
+function srcTblHtml(list){
+  const rows=srcAgg(list);
+  if(!rows.length)return '';
+  /* 30건 넘게 돌린 종류 중 상담 전환이 가장 좋은 것 — 작은 표본으로 1등을 뽑으면 거짓말이 된다 */
+  const solid=rows.filter(r=>r.total>=30);
+  let tip='';
+  if(solid.length>=2){
+    const best=solid.slice().sort((a,b)=>b.consultRate-a.consultRate)[0];
+    const worst=solid.slice().sort((a,b)=>a.consultRate-b.consultRate)[0];
+    if(best.src!==worst.src&&best.consultRate-worst.consultRate>=10)
+      tip=`<div class="notice" style="margin-top:11px"><b>${esc(best.src)}</b> 가 상담 전환 ${best.consultRate}% 로 가장 좋고 <b>${esc(worst.src)}</b> 가 ${worst.consultRate}% 로 가장 낮습니다 (각각 30건 이상 돌린 종류만 비교). 같은 시간이면 위쪽부터 거세요.</div>`;
+  }
+  return `<div class="card section" style="margin-top:13px"><div class="section-head"><div><h3>DB 종류별 타율</h3><p>들어온 경로마다 붙는 정도가 다릅니다. 30건 미만은 아직 판단하기 이른 표본입니다.</p></div></div>
+    <div class="table-wrap"><table><thead><tr><th>종류</th><th>배정</th><th>접촉</th><th>접촉률</th><th>상담</th><th>상담 전환</th><th>약속</th><th>약속률</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr><td class="name">${esc(r.src)}${r.total<30?' <small style="color:var(--ink-5)">표본 적음</small>':''}</td><td>${r.total}</td><td>${r.done}</td><td>${r.contactRate}%</td><td>${r.consult}</td><td>${r.consultRate}%</td><td>${r.appts}</td><td>${r.apptRate}%</td></tr>`).join("")}</tbody></table></div>${tip}</div>`;
+}
 function renderKpi(){
   const body=$("kpiBody");if(!body)return;
   const me=profile?profile.id:null;if(!me)return;
@@ -681,7 +816,8 @@ function renderKpi(){
     `<div class="kpi-bar"><span class="bl">접촉률</span><span class="bt"><i style="width:${Math.min(100,a.contactRate)}%"></i></span><span class="bv">${a.contactRate}%</span></div>`+
     `<div class="kpi-bar"><span class="bl">상담 전환율</span><span class="bt"><i style="width:${Math.min(100,a.consultRate)}%;background:var(--green)"></i></span><span class="bv">${a.consultRate}%</span></div>`+
     `<div class="kpi-bar"><span class="bl">부재율</span><span class="bt"><i style="width:${Math.min(100,a.absentRate)}%;background:var(--yellow)"></i></span><span class="bv">${a.absentRate}%</span></div>`+
-    '<div class="notice" style="margin-top:13px">타율 읽는 법 — <b>접촉률</b>이 낮으면 "전화를 안 한 것", <b>상담 전환율</b>이 낮으면 "멘트를 손볼 것", <b>부재율</b>이 높으면 "시간대를 바꿀 것"부터 점검하세요.</div>';
+    '<div class="notice" style="margin-top:13px">타율 읽는 법 — <b>접촉률</b>이 낮으면 "전화를 안 한 것", <b>상담 전환율</b>이 낮으면 "멘트를 손볼 것", <b>부재율</b>이 높으면 "시간대를 바꿀 것"부터 점검하세요.</div>'+
+    srcTblHtml(target);
 }
 function renderStats(){
   const body=$("statsBody");if(!body)return;
