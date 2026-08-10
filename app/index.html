@@ -8169,8 +8169,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 18:40';
-var APP_BUILD_NOTE='조직도 전체 반영 · 가로 조직도 · CRM↔고객 365일 양방향';
+var APP_BUILD='2026-08-10 19:30';
+var APP_BUILD_NOTE='조직도 — 불러오면 바로 보인다 · 한 명도 안 빠뜨린다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17286,6 +17286,14 @@ function orgPull(force){
     if(r.error){ORGS.err=r.error.message||'';ORGS.srv=null;orgSyncPaint();return;}
     ORGS.err='';ORGS.pulled=true;ORGS.srv=r.data||[];
     ORGS.at=new Date().toLocaleString('ko-KR');
+    /* 여기까지 오면 서버 내용을 받은 것이다. 그런데 화면에 그리는 것은
+       이 기기(localStorage) 목록이라, 여태 「불러왔는데 안 보인다」 가 됐다.
+       이 기기에 아무것도 없거나 처음 심어 둔 예시 둘뿐이면 서버 것으로 바로 채운다 —
+       잃을 것이 없으니 물어볼 이유도 없다. */
+    if(ORGS.srv.length&&orgDeviceEmpty()){
+      try{localStorage.setItem(ORG_KEY,JSON.stringify(ORGS.srv));}catch(e){}
+      if(typeof lastTab!=='undefined'&&lastTab==='org'){go('org');return;}
+    }
     orgSyncPaint();
   },function(e){ORGS.busy='';ORGS.err=(e&&e.message)||'네트워크 오류';ORGS.srv=null;orgSyncPaint();});
 }
@@ -17465,6 +17473,18 @@ function orgLoad(){
   try{var raw=localStorage.getItem(ORG_KEY);if(raw){var a=JSON.parse(raw);if(a&&a.length)return orgMigrate(a);}}catch(e){}
   return orgSeed();
 }
+/* 이 기기에 진짜 내용이 있나. 처음 심어 둔 예시 둘뿐이면 없는 것으로 본다 */
+function orgDeviceEmpty(){
+  var raw='';
+  try{raw=localStorage.getItem(ORG_KEY)||'';}catch(e){}
+  if(!raw)return true;
+  var a=null;try{a=JSON.parse(raw);}catch(e){}
+  if(!a||!a.length)return true;
+  if(a.length>2)return false;
+  var seedIds={m_lead:1,m_hq:1},i;
+  for(i=0;i<a.length;i++)if(!seedIds[a[i].id])return false;
+  return true;   /* 예시만 있다 */
+}
 function orgSave(list){
   try{localStorage.setItem(ORG_KEY,JSON.stringify(list));return true;}
   catch(e){alert('저장 공간이 부족합니다. 사진 용량이 큰 구성원의 사진을 제거하거나 다시 선택해 주세요.');return false;}
@@ -17609,12 +17629,24 @@ function orgWide(list){
     }
     return h+'</li>';
   }
-  var roots=byParent['__root']||[],out='';
+  var roots=byParent['__root']||[],out='',seen={};
+  /* 상하관계가 서로 물려 있으면(고리) 최상위가 없어 아무도 안 그려진다.
+     그러면 「불러왔는데 안 보인다」 가 된다 — 그런 일이 없게 한 명도 안 빠뜨린다. */
+  function walk(m,d){seen[m.id]=1;var k=byParent[m.id]||[],j;for(j=0;j<k.length;j++)if(!seen[k[j].id])walk(k[j],d+1);}
+  for(i=0;i<roots.length;i++)walk(roots[i],0);
+  var lost=[];
+  for(i=0;i<list.length;i++)if(!seen[list[i].id])lost.push(list[i]);
   for(i=0;i<roots.length;i++)out+=node(roots[i],0);
+  if(lost.length){
+    /* 남은 사람은 각자 한 칸씩만 세운다. 자식까지 따라 그리면 고리 안에서
+       같은 사람이 두 번 나온다 — 아래로는 안 내려간다. */
+    for(i=0;i<lost.length;i++)out+='<li>'+orgMini(lost[i])+'</li>';
+  }
   var z=orgZoom();
   orgWideCss();
   return '<div class="ogv-bar">'+
       '<span class="ogv-n">'+list.length+'명 · '+(depth+1)+'층</span>'+
+      (lost.length?'<span class="ogv-n" style="background:#FEF3C7;color:#92400E">윗사람 미지정 '+lost.length+'명</span>':'')+
       '<button type="button" class="ogv-z" onclick="orgZoomSet(-10)">－</button>'+
       '<span class="ogv-z lbl" id="orgZoomLbl">'+z+'%</span>'+
       '<button type="button" class="ogv-z" onclick="orgZoomSet(10)">＋</button>'+
@@ -17691,8 +17723,18 @@ function orgTree(list){
     }
     return h;
   }
-  var roots=byParent['__root']||[],out='';
+  var roots=byParent['__root']||[],out='',seen={};
+  function walk(m){seen[m.id]=1;var k=byParent[m.id]||[],j;for(j=0;j<k.length;j++)if(!seen[k[j].id])walk(k[j]);}
+  for(i=0;i<roots.length;i++)walk(roots[i]);
   for(i=0;i<roots.length;i++)out+=node(roots[i],0);
+  /* 최상위에서 못 닿는 사람도 반드시 보여 준다 */
+  var lost=[];
+  for(i=0;i<list.length;i++)if(!seen[list[i].id])lost.push(list[i]);
+  if(lost.length){
+    out+='<div class="notice" style="margin:12px 0 6px;color:#92400E;background:#FFFBEB;border-color:#FDE68A">'+
+      '<b>윗사람이 지정되지 않은 '+lost.length+'명</b> — 편집에서 「윗사람」 을 골라 주면 위 조직도에 들어갑니다.</div>';
+    for(i=0;i<lost.length;i++)out+=orgCard(lost[i]);
+  }
   return out||'<div class="notice" style="color:var(--ink-4)">아직 등록된 구성원이 없습니다. 위 폼에서 추가하세요.</div>';
 }
 function orgRankOpts(sel){
