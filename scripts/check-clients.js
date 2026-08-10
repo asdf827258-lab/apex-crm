@@ -105,7 +105,8 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
 
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
-  const open = async () => { await page.evaluate(() => { OSC.view = 'list'; OSC.q = ''; go('clients'); }); await page.waitForTimeout(500); };
+  /* 켜면 「내 고객」 으로 맞춰지는 것은 따로 확인한다(w0). 나머지 검사는 전원을 봐야 하므로 풀어 둔다. */
+  const open = async () => { await page.evaluate(() => { OSC.view = 'list'; OSC.q = ''; CM.picked = true; CM.pick = ''; go('clients'); }); await page.waitForTimeout(500); };
   const list = () => page.evaluate(() => ({
     n: document.querySelectorAll('#oscList .cm-row').length,
     names: Array.prototype.map.call(document.querySelectorAll('#oscList .cm-nm'),
@@ -351,6 +352,23 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
      지점장·대표 화면에서는 팀 전체 고객이 한 덩어리로 온다. 그러면 누구를 챙길지 모른다.
      담당자 이름이 붙고, 담당자로 걸러 보고 묶어 볼 수 있어야 한다. */
   await open();   /* 앞 검사가 상세로 들어가 있다 — 목록으로 돌아온다 */
+
+  /* ── 켜면 내 고객부터 보인다 ──
+     팀 전체가 한 덩어리로 마주치면 내 것이 어디 있는지부터 못 찾는다. */
+  const w0 = await page.evaluate(async () => {
+    CM.picked = false; CM.pick = ''; CM.byWho = false; CM.fam = false; OSC.q = '';
+    osLoadClients();
+    await new Promise(r => setTimeout(r, 900));
+    return {
+      pick: CM.pick,
+      rows: document.querySelectorAll('.cm-row').length,
+      txt: ((document.getElementById('oscList') || {}).textContent || '').slice(0, 80)
+    };
+  });
+  ok(w0.pick === 'cl', '켜면 담당자가 「나」 로 맞춰져 있다 (' + (w0.pick || '전체') + ')');
+  ok(w0.rows === 2, '처음 보이는 것은 내 고객 둘뿐이다 (' + w0.rows + '명)');
+  ok(!/최○○|박○○/.test(w0.txt), '남의 고객은 처음부터 안 섞인다');
+
   await page.evaluate(() => { CM.pick = ''; CM.byWho = false; CM.fam = false; OSC.q = ''; osRenderList(); });
   await page.waitForTimeout(300);
   const w1 = await page.evaluate(() => ({

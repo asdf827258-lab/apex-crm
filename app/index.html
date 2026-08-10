@@ -8167,8 +8167,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 15:25';
-var APP_BUILD_NOTE='고객 365일 — 담당자별로 갈라 보고 이름으로 바로 찾기';
+var APP_BUILD='2026-08-10 16:30';
+var APP_BUILD_NOTE='켜면 내 고객부터 · CRM 에서 고객 365일로 넘기기';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28368,8 +28368,9 @@ window.addEventListener('message',function(e){
    찾기 편하자고 그 약속을 깨지 않는다. 실명은 이 기기 안에만 두고 찾기에만 쓴다.       */
 
 var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{},
-        who:{},   /* 담당자 번호 → 이름 */
-        pick:'',  /* 지금 고른 담당자 (빈 값이면 전원) */
+        who:{},     /* 담당자 번호 → 이름 */
+        pick:'',    /* 지금 고른 담당자 (빈 값이면 전원) */
+        picked:false, /* 처음 한 번 '내 것' 으로 맞췄나 */
         byWho:false};
 var CM_KIND='client_meta';
 
@@ -28815,7 +28816,11 @@ function cmBarHtml(){
 }
 function cmTopHtml(q,all){
   if(q)return cmWhoChipsHtml(all);
-  return cmRecentHtml()+cmTodoHtml(all)+cmWhoChipsHtml(all)+cmBarHtml();
+  /* 「오늘 챙길 고객」 은 지금 고른 담당자 것만 센다.
+     내 것만 보는 중인데 남의 고객이 위에 뜨면 그게 내 일인 줄 안다. */
+  var mine=all,i;
+  if(CM.pick){mine=[];for(i=0;i<all.length;i++)if(all[i].advisor_id===CM.pick)mine.push(all[i]);}
+  return cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -29156,6 +29161,14 @@ function osLoadClients(){
   var sb=osClient();if(!sb)return;
   var done=function(rows){
     OSC.list=rows||[];
+    /* 켜면 언제나 내 고객부터 보인다. 팀 전체는 위 담당자 줄에서 「전체」 를 눌러야 나온다.
+       지점장·대표가 팀 전체를 한 덩어리로 마주하면 내 것이 어디 있는지부터 못 찾는다. */
+    if(!CM.picked&&OS.profile&&OS.profile.id){
+      var mine=0,mi;
+      for(mi=0;mi<OSC.list.length;mi++)if(OSC.list[mi].advisor_id===OS.profile.id)mine++;
+      if(mine)CM.pick=OS.profile.id;
+      CM.picked=true;
+    }
     /* 관리 기록이 와야 온도·다음 할 일이 나온다. 먼저 한 번 그리고, 오면 다시 그린다 */
     osRenderList();
     cmLoadAll(function(){osRenderList();});

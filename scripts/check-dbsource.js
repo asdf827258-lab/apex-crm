@@ -31,6 +31,7 @@ window.__wrote=[];
 window.__seed={
   role:'admin',
   sources:'일반,방송,보장분석,농협',
+  clients:[],
   dbs:(function(){
     var out=[],i;
     /* 방송 40건 — 잘 붙는다 */
@@ -74,6 +75,12 @@ window.supabase={createClient:function(){
       if(f.key&&f.key!=='db_sources')return [];
       return S.sources?[{key:'db_sources',value:S.sources}]:[];
     }
+    if(tbl==='clients'){
+      return (S.clients||[]).filter(function(c){
+        for(var k in f)if(k.charAt(0)!=='_'&&(''+c[k])!==(''+f[k]))return false;
+        return true;
+      });
+    }
     return [];
   }
   function q(tbl){
@@ -85,6 +92,8 @@ window.supabase={createClient:function(){
       eq:function(k,v){f[k]=v;return a},
       single:function(){single=true;return a},
       insert:function(v){window.__wrote.push({t:tbl,op:'insert',v:v});
+        if(tbl==='clients'&&v)window.__seed.clients.push({id:'cli'+window.__seed.clients.length,
+          advisor_id:v.advisor_id,name_masked:v.name_masked,created_at:'2026-08-10T00:00:00Z'});
         if(window.__noSrcCol&&tbl==='dbs'&&v&&'source' in v)f._err={code:'42703',
           message:"Could not find the 'source' column of 'dbs' in the schema cache"};
         return a},
@@ -248,6 +257,44 @@ window.supabase={createClient:function(){
   ok(t5c.tries === 2, '종류 칸이 없으면 종류만 빼고 한 번 더 저장한다 (' + t5c.tries + '번)');
   ok(t5c.last && !('source' in t5c.last), '두 번째에는 종류를 빼고 보낸다 — 저장 자체는 성공한다');
   ok(/migration_36/.test(t5c.msg), '무엇을 실행해야 하는지 알려 준다 — ' + t5c.msg.slice(0, 60));
+
+  /* ── DB 통합 CRM → 고객 365일 로 넘기기 ── */
+  const c1 = await page.evaluate(async () => {
+    window.__wrote = []; window.__toast = [];
+    const old = window.toast; window.toast = m => { window.__toast.push(m); };
+    let asked = ''; window.confirm = m => { asked = m; return true; };
+    /* 앱 안에서 열린 척 — 실명이 이 기기에만 남는지 본다 */
+    window.__real = null;
+    const P = { OS: { profile: { id: 'me' } }, cmRealSet: (id, v) => { window.__real = { id, v }; }, osRenderList: () => {} };
+    Object.defineProperty(window, 'parent', { value: P, configurable: true });
+    await toClient('b0');
+    window.toast = old;
+    const w = window.__wrote.filter(x => x.t === 'clients');
+    return { asked, wrote: w.length ? w[0].v : null, real: window.__real, msg: window.__toast.join(' ') };
+  });
+  ok(c1.wrote, 'DB 줄에서 고객 365일로 넘어간다');
+  ok(c1.wrote && c1.wrote.name_masked === '방*0',
+    '서버에는 마스킹만 올라간다 — 실명이 아니다 (' + (c1.wrote ? c1.wrote.name_masked : '?') + ')');
+  ok(c1.wrote && !('customer_name' in c1.wrote) && JSON.stringify(c1.wrote).indexOf('방송0') < 0,
+    '실명 「방송0」 이 서버 쪽 값에 한 글자도 안 섞인다');
+  ok(c1.real && c1.real.v === '방송0', '실명은 이 기기(고객 365일 이름 메모)에만 적힌다');
+  ok(c1.wrote && c1.wrote.advisor_id === 'me', '담당자가 그대로 따라간다');
+  ok(/서버에는 방\*0 로만 저장되고 실명은 이 기기에만/.test(c1.asked),
+    '넘기기 전에 무엇이 어디에 저장되는지 먼저 말한다');
+  ok(/DB 관리에서는 그대로 남습니다/.test(c1.asked), 'CRM 에서 사라지지 않는다고 알려 준다');
+  ok(/넘겼습니다/.test(c1.msg), '끝나면 알려 준다 — ' + c1.msg.slice(0, 46));
+
+  /* 두 번 넘기면 같은 사람이 둘이 되면 안 된다 */
+  const c2 = await page.evaluate(async () => {
+    window.__wrote = []; window.__toast = [];
+    const old = window.toast; window.toast = m => { window.__toast.push(m); };
+    window.confirm = () => true;
+    await toClient('b0');
+    window.toast = old;
+    return { wrote: window.__wrote.filter(x => x.t === 'clients').length, msg: window.__toast.join(' ') };
+  });
+  ok(c2.wrote === 0, '두 번 눌러도 같은 사람이 둘로 안 생긴다');
+  ok(/이미 고객 365일에 있습니다/.test(c2.msg), '이미 있다고 말해 준다 — ' + c2.msg.slice(0, 40));
 
   ok(A.errs.length === 0, '대표 화면에서 자바스크립트 오류 없음' + (A.errs.length ? ' — ' + A.errs[0] : ''));
   await A.ctx.close();
