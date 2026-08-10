@@ -300,6 +300,84 @@ window.supabase={createClient:function(){
   ok(/윗사람 미지정/.test(cyc.wide.warn), '자리를 못 잡은 사람이 몇 명인지 알려 준다 — ' + cyc.wide.warn);
   ok(/윗사람이 지정되지 않은/.test(cyc.list.txt), '목록 보기에서도 빠뜨리지 않고 이유를 적어 준다');
 
+  /* ── 조직도에 나 혼자 있을 때 — 앱 명단에서 통째로 채운다 ──
+     조직도는 손으로 한 명씩 넣는 표다. 그런데 앱에는 계정과 팀이 이미 다 있다.
+     스무 명을 다시 손으로 넣으라는 것은 말이 안 된다. */
+  const solo = await page.evaluate(async () => {
+    /* 나 혼자만 있는 조직도 */
+    localStorage.setItem('apex_org_chart', JSON.stringify([
+      { id: 'p_u1', name: '윤시현', rank: '사업단장', team: '온탑본부', parent: '', member_id: 'u1' }
+    ]));
+    /* 서버 조직도도 나 혼자 — 불러와도 혼자다 */
+    window.__db.org = [{ id: 'p_u1', name: '윤시현', rank: '사업단장', team: '온탑본부', parent: '', member_id: 'u1' }];
+    /* 팀은 앱에 이미 잡혀 있다 */
+    window.__db.teams = [{ id: 't1', name: '온탑1팀', leader_id: 'u2' }, { id: 't2', name: '온탑2팀', leader_id: 'u3' }];
+    window.__db.team_members = [
+      { team_id: 't1', member_id: 'u2' }, { team_id: 't1', member_id: 'u4' }, { team_id: 't1', member_id: 'u5' },
+      { team_id: 't2', member_id: 'u3' }, { team_id: 't2', member_id: 'u6' }
+    ];
+    window.__db.profiles = [
+      { id: 'u1', name: '윤시현', role: 'owner', active: true },
+      { id: 'u2', name: '김지점', role: 'leader', active: true },
+      { id: 'u3', name: '이지점', role: 'leader', active: true },
+      { id: 'u4', name: '박서준', role: 'member', active: true },
+      { id: 'u5', name: '최민아', role: 'member', active: true },
+      { id: 'u6', name: '정하늘', role: 'member', active: true },
+      { id: 'u7', name: '퇴사자', role: 'member', active: false }
+    ];
+    ORGS.pulled = false; ORGS.srv = null; ORGF.plan = null;
+    go('org');
+    await new Promise(r => setTimeout(r, 500));
+    const before = document.querySelectorAll('.ogv-c').length;
+    orgFromAppPlan();
+    await new Promise(r => setTimeout(r, 800));
+    return { before, plan: ORGF.plan, txt: (document.getElementById('orgFromBox') || {}).textContent || '' };
+  });
+  ok(solo.before === 1, '조직도에 나 혼자 있는 상태에서 시작한다 (' + solo.before + '명)');
+  ok(solo.plan && solo.plan.add.length === 5,
+    '앱에 있는 팀원 5명을 넣겠다고 한다 (' + (solo.plan ? solo.plan.add.length : 0) + '명)');
+  ok(solo.plan && solo.plan.already.length === 1, '이미 있는 나는 그대로 둔다');
+  ok(solo.plan && !solo.plan.add.some(x => x.name === '퇴사자'), '그만둔 사람은 안 넣는다');
+  ok(/김지점\(지점장/.test(solo.txt) && /박서준\(설계사/.test(solo.txt),
+    '직급은 지금 권한에서 가져온다 — ' + solo.txt.slice(0, 90));
+  ok(/온탑1팀/.test(solo.txt) && /온탑2팀/.test(solo.txt), '소속은 지금 팀에서 가져온다');
+
+  const filled = await page.evaluate(async () => {
+    window.confirm = () => true;
+    window.__toast = [];
+    orgFromAppRun();
+    await new Promise(r => setTimeout(r, 900));
+    const L = JSON.parse(localStorage.getItem('apex_org_chart') || '[]');
+    const byId = {}; L.forEach(x => byId[x.id] = x);
+    return {
+      n: L.length,
+      cards: document.querySelectorAll('.ogv-c').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      parents: L.map(x => (x.name || '') + '→' + ((byId[x.parent] || {}).name || '최상위')),
+      msg: window.__toast.join(' | '),
+      pushed: window.__wrote.filter(w => w.t === 'org_members').length
+    };
+  });
+  ok(filled.n === 6, '조직도가 6명이 됐다 (' + filled.n + '명)');
+  ok(filled.cards === 6, '가로 도표에 6명이 다 뜬다 (' + filled.cards + '명)');
+  ok(filled.names.indexOf('박서준') >= 0 && filled.names.indexOf('정하늘') >= 0,
+    '팀원이 실제로 보인다 — ' + filled.names.join(' · '));
+  ok(filled.parents.indexOf('박서준→김지점') >= 0 && filled.parents.indexOf('정하늘→이지점') >= 0,
+    '팀원이 그 팀 리더 밑으로 들어간다 — ' + filled.parents.join(', '));
+  ok(filled.parents.indexOf('김지점→윤시현') >= 0, '리더는 맨 위 사람 밑으로 들어간다');
+  ok(filled.parents.filter(x => /최상위$/.test(x)).length === 1, '떠도는 사람 없이 하나로 이어진다');
+  ok(filled.pushed > 0, '서버에도 같이 올라간다 — 다른 컴퓨터에서도 보인다');
+  ok(/조직도에 넣고 서버에도 올렸습니다/.test(filled.msg), '무엇이 됐는지 말해 준다 — ' + filled.msg.slice(0, 50));
+
+  /* 두 번 눌러도 안 늘어난다 */
+  const twice = await page.evaluate(async () => {
+    ORGF.plan = null; orgFromAppPlan();
+    await new Promise(r => setTimeout(r, 800));
+    return { add: ORGF.plan ? ORGF.plan.add.length : -1, txt: (document.getElementById('orgFromBox') || {}).textContent || '' };
+  });
+  ok(twice.add === 0, '두 번 눌러도 같은 사람이 또 안 들어온다 (' + twice.add + '명)');
+  ok(/모두 조직도에 들어와 있습니다/.test(twice.txt), '다 들어와 있다고 말해 준다');
+
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
