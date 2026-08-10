@@ -5083,8 +5083,21 @@ function arLoad(force){
   if(typeof GB!=='undefined'&&!GB.loaded&&!GB.busy&&typeof gbLoad==='function')gbLoad();
   var d30=(typeof gbDay==='function')?gbDay(29):new Date(Date.now()-29*86400000).toISOString().slice(0,10);
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  /* DB 종류(source) 칸이 아직 없는 서버가 있다. 그 칸을 이름으로 집어서 부르면
+     서버가 통째로 거절해서 「오늘 터치할 사람」 화면 전부가 안 뜬다.
+     한 번 거절당하면 종류를 빼고 다시 부른다 — 종류만 못 볼 뿐 나머지는 다 돈다. */
+  var qDbs=function(){
+    var cols='id,assigned_to,customer_name,region,assigned_date';
+    return q(sb.from('dbs').select(cols+',source')).then(function(r){
+      if(!r||!r.error)return r;
+      var m=((r.error&&r.error.message)||'')+'';
+      if(!/source|column|42703|does not exist/i.test(m))return r;
+      AR.noSrc=true;
+      return q(sb.from('dbs').select(cols));
+    });
+  };
   Promise.all([
-    q(sb.from('dbs').select('id,assigned_to,customer_name,region,assigned_date,source')),
+    qDbs(),
     /* 마지막 통화가 30일보다 오래됐어도 알아야 한다 — 그게 다시 걸 사람이다 */
     q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
        .order('call_at',{ascending:false}).limit(4000)),
@@ -8154,8 +8167,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 11:40';
-var APP_BUILD_NOTE='DB 종류별 타율 부활 · AI 키 오류 자동 대체 · 비밀번호 · 내 DB 삭제';
+var APP_BUILD='2026-08-10 12:35';
+var APP_BUILD_NOTE='종류 칸이 없는 서버에서도 안 죽게 — 오늘 터치할 사람·DB 저장 살리기';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

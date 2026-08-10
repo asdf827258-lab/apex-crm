@@ -646,11 +646,23 @@ async function saveDb(){
   if(!canManageTeam()){toast("등록·수정 권한이 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내 팀 밖의 담당자로는 배정할 수 없습니다.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}
-  const q=id?sb.from("dbs").update(payload).eq("id",id):sb.from("dbs").insert(payload);const {error}=await q;
+  const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);
+  let {error}=await put(payload);
   if(error){
     const m=(error.message||"")+"";
+    /* 종류 칸 자체가 없는 서버 — 종류만 빼고 저장해서 일을 막지 않는다 */
+    if(/source/i.test(m)&&/column|42703|does not exist|schema cache/i.test(m)){
+      const {source,...rest}=payload;
+      const r2=await put(rest);
+      if(!r2.error){
+        closeModal("dbModal");await loadAll();
+        toast("DB를 저장했습니다. 종류는 아직 서버에 칸이 없어 빼고 저장했습니다 — migration_36_db_source.sql 을 한 번 실행하세요.");
+        return;
+      }
+      error=r2.error;
+    }
     /* 종류 제약이 아직 네 개로 묶여 있으면 새 종류가 거절된다 — 무엇을 해야 하는지 그 자리에서 말한다 */
-    if(/dbs_source_check|violates check constraint/i.test(m))
+    if(/dbs_source_check|violates check constraint/i.test((error.message||"")+""))
       wErr(error,"DB 저장 — 종류 「"+payload.source+"」 를 서버가 아직 모릅니다. migration_36_db_source.sql 을 한 번 실행하세요");
     else wErr(error,"DB 저장");
     return;
