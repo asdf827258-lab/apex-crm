@@ -8169,8 +8169,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 19:30';
-var APP_BUILD_NOTE='조직도 — 불러오면 바로 보인다 · 한 명도 안 빠뜨린다';
+var APP_BUILD='2026-08-10 20:15';
+var APP_BUILD_NOTE='조직도를 앱 팀원 명단에서 한 번에 채운다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -22230,6 +22230,124 @@ var ORG_RANK_ROLE={'본부장':'branch_manager','지점장':'leader','팀장':'l
                    '설계사':'member','신입':'member'};
 var ORGA={busy:false,plan:null,err:''};
 
+/* ════════ 앱 명단에서 조직도 만들기 ════════
+   조직도는 손으로 한 명씩 넣는 표다. 그런데 앱에는 이미 팀원 계정과 팀이 다 있다.
+   그걸 두고 다시 손으로 스무 명을 넣으라는 것은 말이 안 된다.
+
+   여기서 반대 방향으로 한 번에 채운다 —
+   profiles(계정) + teams/team_members(소속) → 조직도.
+   이미 조직도에 있는 사람은 건드리지 않고, 빠진 사람만 넣는다. */
+var ORG_ROLE_RANK={owner:'사업단장',admin:'본부장',branch_manager:'본부장',
+                   master:'지점장',leader:'지점장',manager:'지점장',
+                   education_manager:'팀장',member:'설계사'};
+var ORGF={busy:false,plan:null,err:''};
+
+function orgFromAppPlan(){
+  var sb=osClient();
+  if(!sb||!OS.profile){toast('로그인 후 사용할 수 있습니다');return;}
+  ORGF.busy=true;ORGF.err='';orgFromPaint();
+  Promise.all([
+    sb.from('profiles').select('id,name,role,active').order('name'),
+    sb.from('teams').select('id,name,leader_id'),
+    sb.from('team_members').select('team_id,member_id')
+  ]).then(function(r){
+    ORGF.busy=false;
+    if(r[0]&&r[0].error){ORGF.err='팀원 명단을 읽지 못했습니다: '+(r[0].error.message||'');orgFromPaint();return;}
+    var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false;});
+    var teams=(r[1]&&r[1].data)||[],mem=(r[2]&&r[2].data)||[],i;
+    var teamById={};for(i=0;i<teams.length;i++)teamById[teams[i].id]=teams[i];
+    var teamOf={};for(i=0;i<mem.length;i++)teamOf[mem[i].member_id]=teamById[mem[i].team_id];
+    var have={},cur=orgLoad();
+    for(i=0;i<cur.length;i++)if(cur[i].member_id)have[cur[i].member_id]=cur[i];
+    var add=[],already=[];
+    for(i=0;i<profs.length;i++){
+      var p=profs[i];
+      var t=teamOf[p.id];
+      var row={id:'p_'+p.id,name:p.name||'이름없음',member_id:p.id,
+               rank:ORG_ROLE_RANK[p.role||'member']||'설계사',
+               team:(t&&t.name)||'',parent:'',phone:'',insta:'',photo:''};
+      if(have[p.id])already.push(p.name||'');
+      else add.push(row);
+    }
+    ORGF.plan={add:add,already:already,teams:teams,teamOf:teamOf,profs:profs,cur:cur};
+    orgFromPaint();
+  },function(e){ORGF.busy=false;ORGF.err=(e&&e.message)||'읽지 못했습니다';orgFromPaint();});
+}
+function orgFromAppRun(){
+  var P=ORGF.plan;
+  if(!P){toast('먼저 무엇이 들어오는지 확인해 주세요');return;}
+  if(!P.add.length){toast('앱 계정이 모두 조직도에 들어와 있습니다');return;}
+  if(!confirm('앱 팀원 명단에서 '+P.add.length+'명을 조직도에 넣습니다.\n\n'+
+    '이미 조직도에 있는 사람은 그대로 둡니다.\n'+
+    '직급은 지금 권한에서, 소속은 지금 팀에서 가져옵니다 — 넣은 뒤 고치실 수 있습니다.'))return;
+
+  var list=orgLoad().slice(),i,j;
+  for(i=0;i<P.add.length;i++)list.push(P.add[i]);
+
+  /* 윗사람을 이어 준다 — 팀원은 그 팀 리더 밑으로, 리더는 맨 위 사람 밑으로 */
+  var byMember={};for(i=0;i<list.length;i++)if(list[i].member_id)byMember[list[i].member_id]=list[i];
+  var top=null;
+  for(i=0;i<list.length;i++)if(list[i].rank==='사업단장'||list[i].rank==='본부장'){top=list[i];break;}
+  if(!top&&list.length)top=list[0];
+  for(i=0;i<P.teams.length;i++){
+    var t=P.teams[i],lead=t.leader_id?byMember[t.leader_id]:null;
+    if(!lead)continue;
+    if(top&&lead.id!==top.id&&!lead.parent)lead.parent=top.id;
+    for(j=0;j<list.length;j++){
+      var m=list[j];
+      if(m.id===lead.id||m.parent)continue;
+      if(m.member_id&&P.teamOf[m.member_id]&&P.teamOf[m.member_id].id===t.id)m.parent=lead.id;
+    }
+  }
+  /* 아직 윗사람이 없는 사람은 맨 위 밑으로 — 화면에서 떠도는 사람이 없게 */
+  for(i=0;i<list.length;i++)if(top&&list[i].id!==top.id&&!list[i].parent)list[i].parent=top.id;
+
+  if(!orgSave(list))return;
+  var n=P.add.length;
+  ORGF.plan=null;
+  if(orgCanWrite()&&typeof orgPushMany==='function'){
+    orgPushMany(list);
+    toast('팀원 '+n+'명을 조직도에 넣고 서버에도 올렸습니다. 다른 컴퓨터에서도 보입니다.',7000);
+  }else{
+    toast('팀원 '+n+'명을 조직도에 넣었습니다.',6000);
+  }
+  orgEditId=null;window.__orgPhoto=undefined;go('org');
+}
+function orgFromPaint(){
+  var el=document.getElementById('orgFromBox');
+  if(el)el.innerHTML=orgFromInner();
+}
+function orgFromInner(){
+  if(!OS.profile)return '<span style="color:var(--ink-5)">로그인하면 앱 팀원 명단에서 조직도를 한 번에 채울 수 있습니다.</span>';
+  if(ORGF.busy)return '<b>팀원 명단을 읽는 중…</b>';
+  if(ORGF.err)return '<b style="color:#B91C1C">'+osEsc(ORGF.err)+'</b>'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgFromAppPlan()">다시 확인</button></div>';
+  var P=ORGF.plan;
+  if(!P)return '<b>조직도가 비어 있나요? 손으로 한 명씩 넣지 마세요.</b> 앱에 이미 있는 팀원 계정과 팀을 그대로 가져와 조직도를 채웁니다.'+
+    '<div class="btn-row" style="margin-top:8px"><button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgFromAppPlan()">👥 팀원 명단에서 불러오기</button></div>';
+  var h;
+  if(!P.add.length)h='<b>앱 계정 '+P.profs.length+'명이 모두 조직도에 들어와 있습니다.</b>';
+  else{
+    h='<b>팀원 '+P.add.length+'명을 넣습니다.</b>'+
+      '<div style="margin-top:6px;font-size:11.8px;line-height:1.85">'+
+      osEsc(P.add.slice(0,10).map(function(x){return x.name+'('+x.rank+(x.team?(' · '+x.team):' · 팀 없음')+')';}).join(', '))+
+      (P.add.length>10?(' 외 '+(P.add.length-10)+'명'):'')+'</div>';
+    if(P.already.length)h+='<div style="margin-top:6px;font-size:11.3px;color:var(--ink-5)">'+
+      '이미 들어와 있는 '+P.already.length+'명은 그대로 둡니다.</div>';
+    var noTeam=0,i;
+    for(i=0;i<P.add.length;i++)if(!P.add[i].team)noTeam++;
+    if(noTeam)h+='<div style="margin-top:6px;font-size:11.3px;color:#92400E">'+
+      noTeam+'명은 팀이 없습니다 — 넣은 뒤 조직도에서 팀과 윗사람을 고쳐 주세요.</div>';
+  }
+  h+='<div class="btn-row" style="margin-top:9px">'+
+    (P.add.length?'<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgFromAppRun()">조직도에 넣기</button>':'')+
+    '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgFromAppPlan()">다시 확인</button></div>';
+  return h;
+}
+function orgFromBoxHtml(){
+  return '<div id="orgFromBox" class="notice" style="margin-bottom:12px;background:#F5F3FF;border-color:#DDD6FE;color:#5B21B6">'+
+    orgFromInner()+'</div>';
+}
 function orgApplyPlan(then){
   var sb=osClient();
   if(!sb||!OS.profile){toast('로그인 후 사용할 수 있습니다');return;}
@@ -22388,6 +22506,7 @@ function renderOrg(){
   var list=orgLoad();
   var body=''
     + orgSyncBarHtml()
+    + orgFromBoxHtml()
     + orgApplyBoxHtml()
     + orgForm(list)
     + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · 구성원 '+list.length+'명 '
