@@ -81,11 +81,18 @@ window.supabase={createClient:function(){
       neq:function(){return a},in:function(){return a},not:function(){return a},range:function(){return a},
       eq:function(k,v){f[k]=v;return a},
       single:function(){single=true;return a},
-      insert:function(v){window.__wrote.push({t:tbl,op:'insert',v:v});return a},
-      update:function(v){window.__wrote.push({t:tbl,op:'update',v:v});return a},
+      insert:function(v){window.__wrote.push({t:tbl,op:'insert',v:v});
+        if(window.__noSrcCol&&tbl==='dbs'&&v&&'source' in v)f._err={code:'42703',
+          message:"Could not find the 'source' column of 'dbs' in the schema cache"};
+        return a},
+      update:function(v){window.__wrote.push({t:tbl,op:'update',v:v});
+        if(window.__noSrcCol&&tbl==='dbs'&&v&&'source' in v)f._err={code:'42703',
+          message:"Could not find the 'source' column of 'dbs' in the schema cache"};
+        return a},
       upsert:function(v){window.__wrote.push({t:tbl,op:'upsert',v:v});
         if(tbl==='app_config'&&v&&v.key==='db_sources')window.__seed.sources=v.value;return a},
       then:function(res,rej){
+        if(f._err)return Promise.resolve({data:null,error:f._err}).then(res,rej);
         var d=rows(tbl,f);
         return Promise.resolve({data:single?(d[0]||null):d,error:null}).then(res,rej);
       }
@@ -222,6 +229,21 @@ window.supabase={createClient:function(){
     '종류 목록이 서버 app_config 한 줄로 저장된다 — 모두가 같은 목록을 본다');
   ok(t5b.wrote && t5b.wrote.value.indexOf('제휴') >= 0, '새로 적은 종류가 그 줄에 들어간다');
   ok(t5b.opts.indexOf('제휴') >= 0, '저장하자마자 거르개에도 바로 나타난다');
+
+  /* ── 종류 칸이 아직 없는 서버에서도 저장이 막히지 않는가 ── */
+  const t5c = await page.evaluate(async () => {
+    window.__noSrcCol = true; window.__wrote = []; window.__toast = [];
+    const old = window.toast; window.toast = m => { window.__toast.push(m); };
+    openDb('b0');
+    document.getElementById('dbSource').value = '방송';
+    await saveDb();
+    window.toast = old; window.__noSrcCol = false;
+    const w = window.__wrote.filter(x => x.t === 'dbs');
+    return { tries: w.length, last: w.length ? w[w.length - 1].v : null, msg: window.__toast.join(' ') };
+  });
+  ok(t5c.tries === 2, '종류 칸이 없으면 종류만 빼고 한 번 더 저장한다 (' + t5c.tries + '번)');
+  ok(t5c.last && !('source' in t5c.last), '두 번째에는 종류를 빼고 보낸다 — 저장 자체는 성공한다');
+  ok(/migration_36/.test(t5c.msg), '무엇을 실행해야 하는지 알려 준다 — ' + t5c.msg.slice(0, 60));
 
   ok(A.errs.length === 0, '대표 화면에서 자바스크립트 오류 없음' + (A.errs.length ? ' — ' + A.errs[0] : ''));
   await A.ctx.close();

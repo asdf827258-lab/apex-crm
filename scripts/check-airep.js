@@ -86,7 +86,7 @@ window.supabase={createClient:function(){
  var mk=function(tbl){
   var f={};
   var a={
-   select:function(){return a},gte:function(){return a},lte:function(){return a},is:function(){return a},
+   select:function(c){f._cols=c||'';return a},gte:function(){return a},lte:function(){return a},is:function(){return a},
    in:function(){return a},not:function(){return a},order:function(){return a},
    neq:function(k,v){window.__neq.push(tbl+':'+k+'='+v);f['neq_'+k]=v;return a},
    limit:function(){return a},single:function(){return a},range:function(){return a},
@@ -96,6 +96,16 @@ window.supabase={createClient:function(){
    then:function(res){
      var out=[];
      if(f._ins||f._upd)return Promise.resolve({data:null,error:null}).then(res);
+     /* 종류 칸이 없는 서버 흉내 — 그 칸을 이름으로 부르면 통째로 거절하고,
+        안 부르면 종류가 빠진 줄을 돌려준다 */
+     if(window.__noSrcCol&&tbl==='dbs'){
+       if(/source/.test(f._cols||''))
+         return Promise.resolve({data:null,error:{code:'42703',
+           message:'column dbs.source does not exist'}}).then(res);
+       out=window.__dbs.map(function(x){var y={},k;
+         for(k in x)if(k!=='source')y[k]=x[k];return y;});
+       return Promise.resolve({data:out,error:null}).then(res);
+     }
      if(tbl==='profiles')out=window.__profiles;
      else if(tbl==='teams')out=window.__teams;
      else if(tbl==='team_members')out=window.__team_members;
@@ -503,6 +513,36 @@ const AI_OK = `## 활동 보고
     '「방송」 만 고르면 줄이 줄어든다 (' + srcPick.before + ' → ' + srcPick.n + ')');
   ok(srcPick.rows.every(t => t === '방송'), '남은 줄은 전부 방송이다 — ' + srcPick.rows.join(','));
   ok(srcPick.back === srcPick.before, '되돌리면 원래대로 (' + srcPick.back + ')');
+
+  /* ── 종류 칸이 아직 없는 서버에서도 화면이 죽지 않는가 ──
+     칸 이름을 콕 집어 부르면 서버가 통째로 거절한다. 그러면 종류만 못 볼 뿐
+     「오늘 터치할 사람」 자체가 안 뜬다 — 전에는 잘 돌던 화면이 죽는 것이다. */
+  const noSrc = await page.evaluate(async () => {
+    window.__noSrcCol = true;
+    AR.loaded = false; AR.noSrc = false;
+    arLoad(true);
+    await new Promise(r => setTimeout(r, 1600));
+    return {
+      err: AR.err || '',
+      rows: (AR.db || []).length,
+      touch: arTouch('p2').length,
+      srcs: (AR.db || []).map(x => x.src).filter((v, i, a) => a.indexOf(v) === i),
+      flag: !!AR.noSrc
+    };
+  });
+  ok(!noSrc.err, '종류 칸이 없는 서버에서도 오류로 끝나지 않는다 — ' + (noSrc.err || '오류 없음'));
+  ok(noSrc.rows > 0, 'DB 를 그대로 다 읽어 온다 (' + noSrc.rows + '건)');
+  ok(noSrc.touch > 0, '오늘 터치할 사람이 그대로 뜬다 (' + noSrc.touch + '명)');
+  ok(noSrc.flag === true, '종류를 못 받았다는 것을 스스로 알고 있다');
+  ok(noSrc.srcs.length === 1 && noSrc.srcs[0] === '일반',
+    '종류는 전부 「일반」 으로 읽는다 — 빈칸으로 두지 않는다 (' + noSrc.srcs.join(',') + ')');
+
+  /* 원래대로 돌려놓고 이어서 검사한다 */
+  await page.evaluate(async () => {
+    window.__noSrcCol = false; AR.loaded = false; AR.noSrc = false;
+    arLoad(true);
+    await new Promise(r => setTimeout(r, 1600));
+  });
 
   /* ── 지점장은 팀 전체를 한 화면에서 ── */
   const solo = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tk').length);

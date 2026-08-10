@@ -21,6 +21,10 @@
    이 파일은 몇 번을 다시 실행해도 안전하다.
    ════════════════════════════════════════════════════════════════ */
 
+/* 종류 칸 자체가 없는 서버도 있다. 있으면 그대로 두고, 없으면 만든다.
+   이 줄이 없으면 아래가 전부 「column source does not exist」 로 멈춘다. */
+alter table public.dbs add column if not exists source text not null default '일반';
+
 alter table public.dbs drop constraint if exists dbs_source_check;
 
 alter table public.dbs alter column source set default '일반';
