@@ -183,10 +183,10 @@
           <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
         <div class="card section hidden" id="srcAdminCard">
-          <div class="section-head"><div><h3>DB 종류 목록</h3><p>여기 적은 것만 팀원 화면의 종류 칸에 뜹니다. 한 줄에 하나씩 적으세요. 고칠 수 있는 사람은 대표·운영자뿐입니다.</p></div></div>
+          <div class="section-head"><div><h3>DB 종류 목록</h3><p>여기 적은 것만 종류 칸에 뜹니다. 한 줄에 하나씩 적으세요. <b>목록은 팀이 같이 씁니다</b> — 여기서 고치면 모든 팀원 화면이 같이 바뀝니다. DB 등록 창에서 「＋ DB 종류 추가」 로 한 개씩 넣을 수도 있습니다.</p></div></div>
           <textarea id="srcList" rows="8" style="width:100%;font-size:13px;line-height:1.7"></textarea>
           <div class="actions" style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="saveSources()">종류 목록 저장</button><button class="btn btn-light btn-sm" onclick="fillSrcAdmin()">되돌리기</button></div>
-          <div class="notice" style="margin-top:11px">이미 쓰고 있는 종류는 목록에서 지워도 그 DB 에는 그대로 남습니다. 지운 뒤에는 새로 고를 수만 없게 됩니다.</div>
+          <div class="notice" style="margin-top:11px">이미 쓰고 있는 종류를 목록에서 지워도 <b>그 고객 자료는 그대로 남습니다.</b> 앞으로 새로 고를 수만 없게 됩니다.</div>
         </div>
       </section>
 
@@ -254,7 +254,11 @@
     <div class="field"><label>담당자</label><select id="assignedTo"></select></div>
     <div class="field"><label>고객명/식별명</label><input id="customerName"></div>
     <div class="field"><label>연락처</label><input id="phone"></div>
-    <div class="field"><label>DB 종류</label><select id="dbSource"></select></div>
+    <div class="field"><label>DB 종류</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="dbSource" onchange="srcPick()" style="flex:1;min-width:0"></select>
+        <button type="button" class="btn btn-light btn-sm" onclick="srcDel()" title="지금 고른 종류를 목록에서 뺍니다">종류 삭제</button>
+      </div></div>
     <div class="field"><label>지역</label><input id="region" placeholder="순천"></div>
     <div class="field"><label>DB 보고명</label><input id="reportName" value="보장분석 3DB"></div>
     <div class="field full"><label>비고</label><textarea id="dbMemo"></textarea></div>
@@ -337,8 +341,10 @@ function myTeamId(){return profile?(crmTeamOf[profile.id]||null):null}
 /* 이 사람이 내가 손댈 수 있는 범위 안에 있나 */
 function inMyScope(pid){
   if(canManage())return true;
-  if(!isLeader()||!pid)return false;
+  if(!pid)return false;
+  /* 본인은 언제나 본인 범위 안이다 — 지점장이 아니어도 자기 고객은 자기가 굴린다 */
   if(pid===profile?.id)return true;
+  if(!isLeader())return false;
   const t=myTeamId();
   return !!t&&crmTeamOf[pid]===t;
 }
@@ -356,8 +362,12 @@ function canDeleteDb(d){
   if(isLeader())return inMyScope(d?.assigned_to);
   return false;
 }
+/* 배정받은 고객은 본인이 다 고친다. 남에게 부탁하느라 안 고치면 자료가 썩는다.
+   남의 고객은 여전히 못 고친다 — 지점장은 자기 팀까지. */
 function canEditDb(d){
   if(canManage())return true;
+  const me=profile&&profile.id;
+  if(me&&d&&d.assigned_to===me)return true;
   if(!isLeader())return false;
   return inMyScope(d?.assigned_to);
 }
@@ -411,7 +421,7 @@ async function startApp(){
   if(error||!p){toast("프로필을 불러오지 못했습니다.");return}
   profile=p;if(!profile.active){await sb.auth.signOut();toast("비활성화된 계정입니다.");return}
   $("authScreen").classList.add("hidden");$("app").classList.remove("hidden");$("userName").textContent=profile.name;$("userRole").textContent=roleLabel(roleOf());
-  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.toggle("hidden",!canManageTeam());$("ownerFilter").classList.toggle("hidden",!canViewAll());
+  $("teamNav").classList.toggle("hidden",!canViewAll());$("newDbBtn").classList.remove("hidden");$("ownerFilter").classList.toggle("hidden",!canViewAll());
   $("dashboardTitle").textContent=canViewAll()?"전체 배정 DB 현황":`${profile.name} 담당 DB 현황`;
   $("dbScopeText").textContent=canViewAll()?"전체 담당자의 배정·TA 현황입니다.":"본인에게 배정된 DB만 조회됩니다.";
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
@@ -440,9 +450,11 @@ async function loadAll(){
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
-  /* 배정 대상은 내가 손댈 수 있는 범위만 — 지점장은 자기 팀 */
+  /* 배정 대상은 내가 손댈 수 있는 범위만 — 지점장은 자기 팀, 설계사는 본인.
+     비어 있다고 전원을 열면 안 된다 — 그건 남에게 배정하는 문이 된다. */
   const pick=members.filter(p=>inMyScope(p.id));
-  $("assignedTo").innerHTML=(pick.length?pick:members).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const opts=pick.length?pick:(canManage()?members:[]);
+  $("assignedTo").innerHTML=opts.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
 function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
@@ -459,41 +471,83 @@ function srcList(){
   return set;
 }
 function srcOf(d){return (d&&d.source||"").trim()||"일반"}
+/* 「＋ DB 종류 추가」 같은 속값이 그대로 저장되면 안 된다 */
+function srcSafe(v){v=(v||"").trim();return (!v||v===SRC_ADD)?(srcList()[0]||"일반"):v}
+const SRC_ADD="__add__";
 function fillSources(){
   const list=srcList();
   const sel=$("dbSource");
-  if(sel){const v=sel.value;sel.innerHTML=list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");sel.value=v}
+  if(sel){const v=sel.value;
+    sel.innerHTML=list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")+
+      `<option value="${SRC_ADD}">＋ DB 종류 추가</option>`;
+    sel.value=(v&&v!==SRC_ADD&&list.indexOf(v)>=0)?v:(list[0]||"")}
   const f=$("srcFilter");
   if(f){const v=f.value;f.innerHTML='<option value="">전체 종류</option>'+list.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");f.value=list.indexOf(v)>=0?v:""}
   const card=$("srcAdminCard");
-  if(card){card.classList.toggle("hidden",!canManage());if(canManage()&&!card.dataset.filled)fillSrcAdmin()}
+  if(card){card.classList.remove("hidden");if(!card.dataset.filled)fillSrcAdmin()}
 }
 function fillSrcAdmin(){
   const t=$("srcList");if(!t)return;
   t.value=(dbSources.length?dbSources:SRC_FALLBACK).join("\n");
   const card=$("srcAdminCard");if(card)card.dataset.filled="1";
 }
-async function saveSources(){
-  if(!canManage()){toast("종류 목록은 대표·운영자만 고칠 수 있습니다.");return}
-  const t=$("srcList");if(!t)return;
-  const list=[],seen={};
-  t.value.split(/[\n,]/).forEach(x=>{const v=x.trim();if(v&&!seen[v]){seen[v]=1;list.push(v)}});
-  if(!list.length){toast("종류를 하나 이상 적어 주세요.");return}
-  if(list.some(v=>v.length>40)){toast("종류 이름은 40자 안으로 적어 주세요.");return}
-  const {error}=await sb.from("app_config").upsert({key:"db_sources",value:list.join(",")},{onConflict:"key"});
+/* 등록하다가 새 종류를 만나면 이 자리에서 만든다. 화면을 나갔다 오면 쓰던 내용이 날아간다. */
+function srcPick(){
+  const sel=$("dbSource");if(!sel)return;
+  if(sel.value!==SRC_ADD){SRC_LAST=sel.value;return}
+  const nm=(prompt("새 DB 종류 이름을 적으세요.\n예) 방송 · 보장분석18 · 농협 · 지인소개")||"").trim();
+  sel.value=SRC_LAST||srcList()[0]||"";
+  if(!nm)return;
+  if(nm.length>40){toast("종류 이름은 40자 안으로 적어 주세요.");return}
+  if(srcList().indexOf(nm)>=0){sel.value=nm;SRC_LAST=nm;toast("이미 있는 종류입니다.");return}
+  putSources(dbSources.concat([nm]),"「"+nm+"」 를 종류 목록에 넣었습니다.",nm);
+}
+let SRC_LAST="";
+/* 지워도 이미 그 종류로 저장된 고객 자료는 그대로 남는다. 목록에서만 빠진다.
+   다만 목록은 팀이 같이 쓰므로 지우면 모두의 화면에서 사라진다 — 그래서 몇 건이 걸렸는지 먼저 말한다. */
+function srcDel(){
+  const sel=$("dbSource");if(!sel)return;
+  const nm=sel.value;
+  if(!nm||nm===SRC_ADD){toast("지울 종류를 먼저 고르세요.");return}
+  if(dbSources.indexOf(nm)<0){toast("「"+nm+"」 는 목록에 없습니다. 옛 자료에만 남아 있는 종류입니다.");return}
+  if(dbSources.length<=1){toast("종류가 하나뿐이라 지울 수 없습니다.");return}
+  const used=(dbs||[]).filter(d=>srcOf(d)===nm).length;
+  if(!confirm("「"+nm+"」 를 종류 목록에서 뺄까요?\n\n"+
+    (used?("이 종류로 저장된 고객 "+used+"명은 그대로 남습니다. 앞으로 새로 고를 수만 없게 됩니다.\n\n"):"")+
+    "목록은 팀이 같이 씁니다 — 빼면 모든 팀원 화면에서 같이 사라집니다."))return;
+  putSources(dbSources.filter(x=>x!==nm),"「"+nm+"」 를 목록에서 뺐습니다.","");
+}
+/* 목록을 서버에 올리고 화면을 다시 그린다 — 추가·삭제·일괄편집이 모두 여기를 지난다 */
+async function putSources(list,msg,pick){
+  const clean=[],seen={};
+  list.forEach(x=>{const v=(x||"").trim();if(v&&!seen[v]){seen[v]=1;clean.push(v)}});
+  if(!clean.length){toast("종류를 하나 이상 남겨 주세요.");return false}
+  const {error}=await sb.from("app_config").upsert({key:"db_sources",value:clean.join(",")},{onConflict:"key"});
   if(error){
     const m=(error.message||"")+"";
     if(/42501|permission denied|row.level security/i.test(m))
-      wErr(error,"종류 목록 저장 — 대표 계정으로 로그인했는지 확인하세요");
+      wErr(error,"종류 목록 저장 — migration_37_db_source_open.sql 을 한 번 실행하세요");
     else if(/relation|does not exist|42P01/i.test(m))
       wErr(error,"종류 목록 저장 — migration_36_db_source.sql 을 한 번 실행하세요");
     else wErr(error,"종류 목록 저장");
-    return;
+    return false;
   }
-  dbSources=list;
+  dbSources=clean;
   const card=$("srcAdminCard");if(card)delete card.dataset.filled;
-  fillSources();renderDb();renderKpi();
-  toast("종류 "+list.length+"개를 저장했습니다. 팀원 화면에도 같이 반영됩니다.");
+  fillSources();
+  if(pick&&$("dbSource")){$("dbSource").value=pick;SRC_LAST=pick;}
+  renderDb();renderKpi();
+  if(msg)toast(msg);
+  return true;
+}
+async function saveSources(){
+  const t=$("srcList");if(!t)return;
+  const list=[];
+  t.value.split(/[\n,]/).forEach(x=>{const v=x.trim();if(v)list.push(v)});
+  if(!list.length){toast("종류를 하나 이상 적어 주세요.");return}
+  if(list.some(v=>v.length>40)){toast("종류 이름은 40자 안으로 적어 주세요.");return}
+  if(await putSources(list,"",""))
+    toast("종류 "+dbSources.length+"개를 저장했습니다. 모든 팀원 화면에 같이 반영됩니다.");
 }
 function renderAll(){renderDashboard();renderDb();renderAbsence();renderRecordings();renderTeam();renderAttendance();renderTouch();renderKpi();renderStats();renderAiFb();renderGuideOnce()}
 function renderDashboard(){
@@ -636,16 +690,16 @@ function renderAttendance(){
   }).join("")||`<tr><td colspan="${days+3}" class="empty">등록된 팀원이 없습니다.</td></tr>`;
 }
 function openDb(id=""){
-  if(!canManageTeam())return;
   const d=dbs.find(x=>x.id===id);
-  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||profiles[0]?.id||"";$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value)$("dbSource").selectedIndex=0;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  /* 개척 DB 는 본인이 직접 넣는다. 이미 배정된 것도 내 것이면 본인이 연다. */
+  if(id&&!canEditDb(d)){toast("내 고객이 아니면 수정할 수 없습니다.");return}
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
 }
 async function saveDb(){
-  const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:($("dbSource").value||"일반").trim(),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
+  const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
-  if(!canManageTeam()){toast("등록·수정 권한이 없습니다.");return}
-  if(!inMyScope(payload.assigned_to)){toast("내 팀 밖의 담당자로는 배정할 수 없습니다.");return}
-  if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}
+  if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
+  if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
   const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);
   let {error}=await put(payload);
   if(error){
