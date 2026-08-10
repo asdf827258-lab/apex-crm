@@ -225,6 +225,81 @@ window.supabase={createClient:function(){
   ok(again.total === 0, '두 번 눌러도 같은 일을 또 하지 않는다 (' + again.total + '건)');
   ok(/이미 조직도대로/.test(again.txt), '이미 맞다고 말해 준다');
 
+  /* ── 서버에서 불러왔는데 화면에 안 보이던 문제 ──
+     orgPull 은 ORGS.srv 에만 담고 화면은 이 기기(localStorage) 것을 그렸다.
+     그래서 「다 불러왔는데 안 보인다」 가 됐다. */
+  const pulled = await page.evaluate(async () => {
+    localStorage.removeItem('apex_org_chart');   /* 새 컴퓨터에서 처음 여는 상황 */
+    ORGS.pulled = false; ORGS.srv = null; ORGS.err = '';
+    go('org');
+    await new Promise(r => setTimeout(r, 300));
+    const before = document.querySelectorAll('.ogv-c').length;
+    orgPull(true);
+    await new Promise(r => setTimeout(r, 900));
+    return {
+      before,
+      after: document.querySelectorAll('.ogv-c').length,
+      saved: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim())
+    };
+  });
+  /* 조직도 화면을 열면 스스로 불러온다 — 「불러오기」 를 안 눌러도 된다 */
+  ok(pulled.before === 7, '조직도를 열면 서버 것을 스스로 가져와 바로 보여 준다 (' + pulled.before + '명)');
+  ok(pulled.after === 7, '「↻ 새로고침」 을 눌러도 그대로 7명 (' + pulled.after + '명)');
+  ok(pulled.saved === 7, '이 기기에도 저장돼 다음에 열면 그대로 있다');
+  ok(pulled.names.indexOf('박서준') >= 0, '서버에 있던 사람이 실제로 보인다 — ' + pulled.names.join(' · '));
+
+  /* ── 이 기기에 내 것이 있으면 말없이 덮어쓰지 않는다 ── */
+  const keep = await page.evaluate(async () => {
+    localStorage.setItem('apex_org_chart', JSON.stringify([
+      { id: 'x1', name: '내가적은사람', rank: '설계사', team: '내팀', parent: '' },
+      { id: 'x2', name: '둘째', rank: '설계사', team: '내팀', parent: 'x1' },
+      { id: 'x3', name: '셋째', rank: '설계사', team: '내팀', parent: 'x1' }
+    ]));
+    ORGS.pulled = false; ORGS.srv = null;
+    go('org');
+    await new Promise(r => setTimeout(r, 200));
+    orgPull(true);
+    await new Promise(r => setTimeout(r, 900));
+    return {
+      saved: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      bar: (document.getElementById('orgSyncBar') || {}).textContent || ''
+    };
+  });
+  ok(keep.saved === 3 && keep.names.indexOf('내가적은사람') >= 0,
+    '이 기기에 적어 둔 것은 말없이 안 덮어쓴다 — ' + keep.names.join(' · '));
+  ok(/다릅니다/.test(keep.bar) && /가져오기/.test(keep.bar),
+    '대신 다르다고 알리고 가져올 방법을 준다');
+
+  /* ── 상하관계가 꼬여도 사람은 반드시 보인다 ── */
+  const cyc = await page.evaluate(async () => {
+    /* 서로가 서로의 윗사람 — 최상위가 없다. 여태 이러면 화면이 통째로 비었다 */
+    localStorage.setItem('apex_org_chart', JSON.stringify([
+      { id: 'c1', name: '가', rank: '설계사', team: 'T', parent: 'c2' },
+      { id: 'c2', name: '나', rank: '설계사', team: 'T', parent: 'c1' },
+      { id: 'c3', name: '다', rank: '설계사', team: 'T', parent: 'c1' }
+    ]));
+    go('org');
+    await new Promise(r => setTimeout(r, 300));
+    const wide = {
+      cards: document.querySelectorAll('.ogv-c').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      warn: (document.querySelector('.ogv-bar') || {}).textContent || ''
+    };
+    orgViewSet('list');
+    await new Promise(r => setTimeout(r, 300));
+    const list = { txt: (document.body.textContent || '') };
+    orgViewSet('wide');
+    await new Promise(r => setTimeout(r, 300));
+    return { wide, list };
+  });
+  ok(cyc.wide.cards === 3, '상하관계가 서로 물려 있어도 세 명이 다 보인다 (' + cyc.wide.cards + '명)');
+  ok(cyc.wide.names.indexOf('가') >= 0 && cyc.wide.names.indexOf('나') >= 0 && cyc.wide.names.indexOf('다') >= 0,
+    '한 명도 안 사라진다 — ' + cyc.wide.names.join(' · '));
+  ok(/윗사람 미지정/.test(cyc.wide.warn), '자리를 못 잡은 사람이 몇 명인지 알려 준다 — ' + cyc.wide.warn);
+  ok(/윗사람이 지정되지 않은/.test(cyc.list.txt), '목록 보기에서도 빠뜨리지 않고 이유를 적어 준다');
+
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
