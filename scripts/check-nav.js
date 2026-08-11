@@ -105,7 +105,7 @@ async function boot(page) {
           name: t ? t.textContent : '',
           badge: n ? n.textContent : '',
           icon: ic ? ic.textContent : '',
-          hue: el.style.getPropertyValue('--gh'),
+          tint: el.style.getPropertyValue('--gc'),
           items: el.querySelectorAll('.tab-btn').length,
           collapsed: el.classList.contains('collapsed')
         };
@@ -133,16 +133,10 @@ async function boot(page) {
   is(lost.length === 0, '메뉴가 한 개도 안 빠졌다' + (lost.length ? ' — 빠진 것: ' + lost.slice(0, 6).join(', ') : ''));
 
   /* ── 2) 색 ── */
-  console.log('\n[2] 칸마다 색이 다른가');
-  const hues = groups.got.map(g => +(g.hue || '').trim()).filter(h => !isNaN(h));
-  is(hues.length === groups.got.length, '칸마다 색상값(--gh)이 들어 있다');
-  is(new Set(hues).size === hues.length, '색이 서로 겹치지 않는다 (' + new Set(hues).size + '가지)');
-  let tooClose = 0;
-  for (let i = 1; i < hues.length; i++) {
-    const d = Math.abs(hues[i] - hues[i - 1]);
-    if (Math.min(d, 360 - d) < 25) tooClose++;
-  }
-  is(tooClose === 0, '이웃한 칸끼리 비슷한 색이 아니다' + (tooClose ? ' (' + tooClose + '쌍 붙음)' : ''));
+  console.log('\n[2] 위에서 아래로 한 줄기로 흐르는가');
+  const tints = groups.got.map(g => (g.tint || '').trim()).filter(Boolean);
+  is(tints.length === groups.got.length, '칸마다 색이 들어 있다 (--gc)');
+  is(new Set(tints).size === tints.length, '스물네 칸이 다 다른 색이다 (' + new Set(tints).size + '가지)');
 
   const paint = await page.evaluate(() => {
     var out = [], els = [].slice.call(document.querySelectorAll('#navHost .nav-group-label'));
@@ -183,12 +177,27 @@ async function boot(page) {
         worstB = Math.min(worstB, ratio(over(px(cs.color), cbg), cbg)); }
       tints.push(ratio(bg, page));
     });
+    /* 「아래에서 위로 갈수록 진해진다」 — 눈이 아니라 숫자로 확인한다.
+       펼쳐 둔 칸은 일부러 한 톤 더 진하니 흐름 판정에서 뺀다. */
+    var depth = [];
+    [].slice.call(document.querySelectorAll('#navHost .nav-group')).forEach(function (g) {
+      if (!g.classList.contains('collapsed')) return;
+      depth.push(lum(over(px(getComputedStyle(g.querySelector('.nav-group-label')).backgroundColor), page)));
+    });
+    var back = 0, i;
+    for (i = 1; i < depth.length; i++) if (depth[i] > depth[i - 1] + 0.0002) back++;
     return { t: +worstT.toFixed(2), badge: +worstB.toFixed(2), name: worstName,
-      tintMin: +Math.min.apply(null, tints).toFixed(3) };
+      tintMin: +Math.min.apply(null, tints).toFixed(3),
+      back: back, span: depth.length ? +(depth[0] / depth[depth.length - 1]).toFixed(2) : 0,
+      steps: depth.length };
   });
   is(contrast.t >= 4.5, '가장 흐린 칸도 글씨가 읽힌다 — 「' + contrast.name + '」 명암비 ' + contrast.t + ' (4.5 이상)');
   is(contrast.badge >= 3, '개수 표시도 읽힌다 (명암비 ' + contrast.badge + ')');
   is(contrast.tintMin >= 1.15, '배경이 사이드바와 구분된다 (차이 ' + contrast.tintMin + ')');
+  is(contrast.back === 0,
+    '아래로 갈수록 옅어진다 — 거꾸로 간 칸 ' + contrast.back + '개 / ' + contrast.steps + '칸');
+  is(contrast.span >= 1.8,
+    '맨 위와 맨 아래가 뚜렷이 다르다 (' + contrast.span + '배)');
 
   /* ── 3) 접힌 칸은 정말 안 보이는가 ── */
   console.log('\n[3] 접고 펴기');

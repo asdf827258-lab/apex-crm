@@ -582,21 +582,27 @@ a{color:inherit;text-decoration:none;}
 .sb-scroll::-webkit-scrollbar{width:3px;}
 .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px;}
 /* 메뉴 카테고리 — 화면이 예순 개가 넘는다. 크게 묶어 접어 두고,
-   칸마다 다른 파스텔 색을 입혀 접힌 채로도 무엇인지 한눈에 보이게 한다.
-   --gh 는 renderNav 가 칸마다 넣어 주는 색상값(0~359)이다. */
-.nav-group{margin-bottom:6px;border-radius:12px;overflow:hidden;background:hsl(var(--gh,210) 60% 68% / .07);}
+   색을 입혀 접힌 채로도 무엇인지 한눈에 보이게 한다.
+
+   색은 흩뿌리지 않는다. 맨 위가 가장 짙고 아래로 내려갈수록 옅어지는
+   한 줄기로 흐른다 — 보라에서 남색·청록·초록을 지나 금빛까지.
+   renderNav 가 칸마다 넣어 준다:
+     --gc 바탕색  --ge 왼쪽 띠 색  --gt 글씨색  --ga 짙기  --gb 띠 짙기 */
+.nav-group{margin-bottom:6px;border-radius:12px;overflow:hidden;
+ background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .32));}
 .nav-group-label{display:flex;align-items:center;gap:8px;width:100%;border:none;cursor:pointer;text-align:left;font-family:inherit;
  font-size:13.5px;font-weight:800;letter-spacing:-.01em;line-height:1.25;padding:11px 12px;
- color:hsl(var(--gh,210) 92% 87%);background:hsl(var(--gh,210) 74% 72% / .26);
- border-left:4px solid hsl(var(--gh,210) 82% 70% / .85);
- transition:background .18s var(--ease),color .18s var(--ease);}
-.nav-group-label:hover{background:hsl(var(--gh,210) 74% 72% / .36);color:hsl(var(--gh,210) 96% 93%);}
-.nav-group.collapsed .nav-group-label{background:hsl(var(--gh,210) 74% 72% / .18);}
+ color:rgb(var(--gt,190 210 245));
+ background:rgb(var(--gc,90 120 200) / var(--ga,.26));
+ border-left:4px solid rgb(var(--ge,150 180 240) / var(--gb,.8));
+ transition:background .18s var(--ease),filter .18s var(--ease);}
+.nav-group-label:hover{background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * 1.6));filter:brightness(1.16);}
+.nav-group:not(.collapsed) .nav-group-label{background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * 1.34));}
 .ngl-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
 .ngl-ic{font-size:17px;line-height:1;flex:none;filter:saturate(1.2);}
 .ngl-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .ngl-n{flex:none;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;font-variant-numeric:tabular-nums;
- color:hsl(var(--gh,210) 92% 90%);background:hsl(var(--gh,210) 70% 58% / .32);}
+ color:rgb(var(--gt,190 210 245));background:rgb(var(--gc,90 120 200) / .62);}
 .ngl-caret{flex:none;font-size:10px;opacity:.75;transition:transform .22s var(--ease);}
 .nav-group.collapsed .ngl-caret{transform:rotate(-90deg);}
 .nav-group-items{overflow:hidden;transition:max-height .26s var(--ease),padding .26s var(--ease);max-height:1600px;padding:5px 6px 6px;}
@@ -7848,8 +7854,39 @@ var NAVG_ICON={'건의함':'💬','홈':'🏠','윤시현의 두뇌':'🧠','TEA
  '보험 해석':'🔎','8통장 지도':'🗺','계약관리':'📁','보장분석':'📑','재무설계':'💰',
  '법인·사업자 컨설팅':'🏭','상담 AI 코치':'🎯','청구·사후관리':'🧾','매니저 관리':'👥',
  '콘텐츠·마케팅':'✍️','보험 레퍼런스':'📕','구독·요금제':'💳','시스템 설정':'⚙️','시스템 점검':'🩺'};
-/* 이웃한 칸이 비슷한 색이 되지 않게 색상환을 크게 건너뛴다(황금각) */
-function navHue(i){return Math.round((i*137.5)%360);}
+/* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
+   맨 위가 가장 짙은 보라, 내려가며 남색·청록·초록을 지나
+   맨 아래는 옅은 금빛.
+
+   그냥 색상만 돌리면 그라데이션이 안 된다. 보라는 원래 어둡고
+   청록·노랑은 원래 밝아서, 가운데가 혼자 환해지며 흐름이 끊긴다.
+   그래서 색마다 밝기를 맞춰 같은 무게로 만들고, 위아래 차이는
+   오직 「짙기」 하나로만 낸다. 그래야 한 줄기로 흐른다. */
+function navSrgb(v){v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);}
+function navLum(c){return 0.2126*navSrgb(c[0])+0.7152*navSrgb(c[1])+0.0722*navSrgb(c[2]);}
+function navHsl(h,s,l){
+  h=((h%360)+360)%360;
+  var c=(1-Math.abs(2*l-1))*s,x=c*(1-Math.abs((h/60)%2-1)),m=l-c/2,k=Math.floor(h/60)%6,r,g,b;
+  if(k===0){r=c;g=x;b=0;}else if(k===1){r=x;g=c;b=0;}else if(k===2){r=0;g=c;b=x;}
+  else if(k===3){r=0;g=x;b=c;}else if(k===4){r=x;g=0;b=c;}else{r=c;g=0;b=x;}
+  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];
+}
+/* 이 색상·선명도로 「이만큼의 밝기」 가 되는 색을 찾아 준다 */
+function navTone(h,s,y){
+  var lo=0,hi=1,i,mid,rgb;
+  for(i=0;i<18;i++){mid=(lo+hi)/2;rgb=navHsl(h,s,mid);
+    if(navLum(rgb)<y)lo=mid;else hi=mid;}
+  return navHsl(h,s,(lo+hi)/2);
+}
+function navRamp(i,n){
+  var t=(n>1)?(i/(n-1)):0;                        /* 0 = 맨 위, 1 = 맨 아래 */
+  var h=266-212*t,s=0.82-0.36*t;                  /* 보라 → 남색 → 청록 → 초록 → 금빛 */
+  return {c:navTone(h,s,0.22).join(' '),          /* 칸 바탕색 — 밝기는 다 같게 */
+          e:navTone(h,Math.min(1,s+0.14),0.44).join(' '),  /* 왼쪽 색 띠 — 한 톤 밝게 */
+          w:navTone(h,s*0.55,0.66-0.10*t).join(' '),       /* 글씨 — 바탕 위에서 또렷하게 */
+          a:(0.44-0.32*t).toFixed(3),             /* 짙기 — 위가 진하고 아래로 옅어진다 */
+          b:(0.94-0.62*t).toFixed(3)};            /* 색 띠도 같이 옅어진다 */
+}
 function navOpen(){
   try{var v=JSON.parse(localStorage.getItem(NAVG_KEY)||'{}');return (v&&typeof v==='object')?v:{};}
   catch(e){return {};}
@@ -7886,13 +7923,13 @@ function renderNav(){
     '<div class="nav-allbtns"><button type="button" onclick="navAllSet(true)">모두 펴기</button>'+
     '<button type="button" onclick="navAllSet(false)">모두 접기</button></div>';
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
-  var open=navOpen(),n=0;
-  groups.forEach(function(g){
-    if(g.hide)return;                       /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
-    var hue=navHue(n++),name=g.group;
+  var open=navOpen(),vis=[];
+  groups.forEach(function(g){if(!g.hide)vis.push(g);});   /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
+  vis.forEach(function(g,i){
+    var c=navRamp(i,vis.length),name=g.group;
     var on=!!open[name];
     var ic=NAVG_ICON[name]||'•';
-    h+='<div class="nav-group'+(on?'':' collapsed')+'" style="--gh:'+hue+'">'+
+    h+='<div class="nav-group'+(on?'':' collapsed')+'" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
        '<button type="button" class="nav-group-label" onclick="navToggle(\''+name.replace(/'/g,"\\'")+'\')" '+
          'aria-expanded="'+(on?'true':'false')+'">'+
          '<span class="ngl-left"><span class="ngl-ic">'+ic+'</span>'+
@@ -8242,8 +8279,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-11 09:20';
-var APP_BUILD_NOTE='메뉴는 크게 접어 두고 — 칸마다 다른 파스텔 색, 누르면 그 칸만 펼쳐집니다';
+var APP_BUILD='2026-08-11 11:40';
+var APP_BUILD_NOTE='메뉴 색이 위에서 아래로 한 줄기로 흐릅니다 — 위가 짙고 아래로 옅어집니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
