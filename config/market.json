@@ -1,0 +1,176 @@
+{
+  "_설명": "투자·경제 데이터 소스 설정. netlify/functions/market.js 가 이 파일을 읽어 동작합니다. 코드·엔드포인트가 바뀌면 이 파일만 고치면 됩니다(함수 코드 수정 불필요).",
+
+  "_토스API_정리": {
+    "토스페이먼츠": "결제·빌링 전용 API입니다(이미 /api/toss-confirm, /api/toss-billing 에서 구독 결제에 사용 중). 시세·펀드·경제지표는 제공하지 않습니다. 이건 지금대로 결제만 담당합니다.",
+    "토스증권_오픈API": "있습니다. corp.tossinvest.com/ko/open-api 에서 신청 → 승인 후 PC 웹에서 client_id/client_secret 발급 + 호출 IP 등록. OAuth 2.0 방식이며 시세·계좌·주문을 제공합니다. 문서: developers.tossinvest.com/docs",
+    "설정방법": "승인 문서에서 확인한 호스트·엔드포인트를 아래 providers.toss 의 base / token_path / paths.quote / field_map 에 채우고, Netlify 환경변수에 TOSS_CLIENT_ID·TOSS_CLIENT_SECRET 을 넣으면 시세 1순위 제공자가 토스증권으로 바뀝니다. 앱 코드는 건드릴 필요가 없습니다.",
+    "폴백": "토스 설정이 비어 있거나 호출이 실패하면 한국투자증권 KIS 로 자동 폴백합니다. 둘 중 하나만 있어도 화면은 정상 동작합니다.",
+    "주의": "비공식 웹 내부 엔드포인트(WTS)는 쓰지 않습니다. 예고 없이 바뀌고 이용약관 위반 소지가 있어, 고객 자산을 다루는 이 CRM에는 공식 Open API 와 공식 딥링크만 씁니다."
+  },
+
+  "providers": {
+    "kis": {
+      "_이름": "한국투자증권 KIS Developers (실시간 국내·해외 주식/ETF)",
+      "_키발급": "https://apiportal.koreainvestment.com → 앱 등록 → APP KEY / APP SECRET",
+      "_환경변수": ["KIS_APP_KEY", "KIS_APP_SECRET", "KIS_ENV(real|vts, 기본 real)"],
+      "base_real": "https://openapi.koreainvestment.com:9443",
+      "base_vts": "https://openapivts.koreainvestment.com:29443",
+      "token_path": "/oauth2/tokenP",
+      "paths": {
+        "domestic_price": "/uapi/domestic-stock/v1/quotations/inquire-price",
+        "domestic_index": "/uapi/domestic-stock/v1/quotations/inquire-index-price",
+        "overseas_price": "/uapi/overseas-price/v1/quotations/price"
+      },
+      "tr_ids": {
+        "domestic_price": "FHKST01010100",
+        "domestic_index": "FHPUP02100000",
+        "overseas_price": "HHDFS00000300"
+      }
+    },
+    "krx": {
+      "_이름": "공공데이터포털 금융위원회 주식·지수 시세 (전일 종가 · 승인 대기 없음)",
+      "_키발급": "https://www.data.go.kr 회원가입 → '금융위원회_주식시세정보'(15094808)와 '금융위원회_지수시세정보'(15094807) 활용신청 → 자동승인이라 몇 분 안에 인증키가 나옵니다",
+      "_환경변수": ["DATA_GO_KR_KEY"],
+      "_성격": "실시간이 아니라 '전일 종가'입니다(T+1). 장중 등락은 안 보이지만 평가금액·수익률·목표/손절 판단에는 충분합니다. 토스나 KIS 가 붙으면 자동으로 그쪽이 우선합니다.",
+      "_주의": "포털에서 받은 인증키 두 가지 중 '일반 인증키(Decoding)' 를 넣으세요. Encoding 키를 넣으면 서명이 두 번 인코딩되어 실패합니다.",
+      "base": "https://apis.data.go.kr/1160100/service",
+      "paths": {
+        "quote": "/GetStockSecuritiesInfoService/getStockPriceInfo",
+        "index": "/GetMarketIndexInfoService/getStockMarketIndex"
+      },
+      "lookback_days": 14,
+      "field_map": {
+        "items_path": "response.body.items.item",
+        "date": "basDt",
+        "code": "srtnCd",
+        "name": "itmsNm",
+        "price": "clpr",
+        "change": "vs",
+        "change_rate": "fltRt",
+        "open": "mkp",
+        "high": "hipr",
+        "low": "lopr",
+        "volume": "trqu",
+        "cap": "mrktTotAmt",
+        "index_name": "idxNm"
+      }
+    },
+    "ecos": {
+      "_이름": "한국은행 ECOS 경제통계 OpenAPI (기준금리·환율·물가·금리)",
+      "_키발급": "https://ecos.bok.or.kr/api → 인증키 신청(무료)",
+      "_환경변수": ["ECOS_API_KEY"],
+      "base": "https://ecos.bok.or.kr/api/StatisticSearch"
+    },
+    "fund": {
+      "_이름": "공모펀드 기준가·수익률 (data.go.kr 금융위원회 계열 오픈API)",
+      "_키발급": "https://www.data.go.kr → 금융위원회 펀드 관련 API 활용신청 → 일반 인증키(Decoding)",
+      "_환경변수": ["FUND_API_URL", "FUND_API_KEY"],
+      "_사용법": "활용신청한 오퍼레이션의 요청 URL을 FUND_API_URL 환경변수에 그대로 넣으세요. 기관마다 오퍼레이션명이 달라 코드에 고정하지 않았습니다. 아래 param_map / field_map 으로 파라미터명과 응답 필드명을 맞춥니다.",
+      "param_map": {
+        "code": "fundCd",
+        "date": "basDt",
+        "rows": "numOfRows",
+        "page": "pageNo",
+        "type": "resultType"
+      },
+      "field_map": {
+        "items_path": "response.body.items.item",
+        "name": "fundNm",
+        "price": "stdPrc",
+        "date": "basDt",
+        "return_1m": "rtn1Mn",
+        "return_3m": "rtn3Mn",
+        "return_1y": "rtn1Yr"
+      },
+      "_주의": "미설정이면 앱의 펀드관리 화면은 '수동 기준가 입력' 모드로 그대로 동작합니다. 기능이 막히지 않습니다."
+    },
+    "toss": {
+      "_이름": "토스증권 Open API (OAuth 2.0 · 시세 1순위 제공자)",
+      "_신청": "https://corp.tossinvest.com/ko/open-api → 승인 후 PC 웹에서 client_id / client_secret 발급 + 호출 IP 등록(Netlify 아웃바운드 IP)",
+      "_문서": "https://developers.tossinvest.com/docs",
+      "_환경변수": ["TOSS_CLIENT_ID", "TOSS_CLIENT_SECRET"],
+
+      "_채우는법": "아래 base / token_path / paths.quote / field_map 네 가지를 승인받은 문서에 적힌 값 그대로 채우세요. 값이 비어 있으면 이 제공자는 자동으로 건너뛰고 KIS 를 씁니다. 채운 뒤 /api/market?kind=toss-probe 를 열면 어디서 막히는지 그대로 알려줍니다.",
+
+      "base": "",
+      "token_path": "",
+      "token_style": "form",
+      "_token_style설명": "form = application/x-www-form-urlencoded 로 grant_type/client_id/client_secret 전송(OAuth 표준·기본값) · json = JSON 바디 · basic = Authorization: Basic base64(id:secret) + grant_type 만 전송. 문서에 맞는 것을 고르세요.",
+
+      "paths": { "quote": "" },
+      "_paths설명": "quote 예시 형태: /v1/quotes/{code} 또는 /api/v1/stocks/{code}/price — {code} 자리에 종목코드가 치환됩니다. 코드가 쿼리스트링이면 /v1/quotes?code={code} 처럼 그대로 쓰면 됩니다.",
+
+      "headers": {},
+      "_headers설명": "문서가 요구하는 추가 헤더가 있으면 여기에 넣으세요. 계좌·주문 API는 X-Tossinvest-Account 가 필요하지만, 시세만 쓰는 이 화면에는 보통 필요 없습니다.",
+
+      "code": { "krx_prefix": "A", "overseas_as_ticker": true },
+      "_code설명": "토스는 국내 종목을 A005930 처럼 A + 6자리로 씁니다. 앱에는 005930 으로 입력해도 호출할 때 자동으로 A 를 붙입니다. 해외는 티커(AAPL) 그대로 보냅니다.",
+
+      "field_map": {
+        "root": "",
+        "name": "name",
+        "price": "close",
+        "change": "change",
+        "change_rate": "changeRate",
+        "prev_close": "base",
+        "volume": "volume"
+      },
+      "_field_map설명": "응답 JSON 에서 값을 꺼내는 경로입니다. root 는 종목 객체까지의 경로(예: data 또는 result.quote, 최상위면 빈 문자열). 나머지는 root 기준 필드명이며 점(.)으로 깊이 지정이 됩니다. 실제 응답을 /api/market?kind=toss-probe 로 확인한 뒤 맞추세요.",
+
+      "deeplink": {
+        "krx": "https://www.tossinvest.com/stocks/A{code}",
+        "overseas": "https://www.tossinvest.com/?focusedProductCode={code}"
+      },
+      "_deeplink설명": "앱의 종목 옆 '토스' 버튼이 여는 주소. API 키가 없어도 이건 항상 동작합니다."
+    }
+  },
+
+  "_지수": "경제동향 화면 상단 지수 카드. code 는 KIS 업종지수 코드(FID_INPUT_ISCD), krx_name 은 공공데이터포털이 쓰는 지수명입니다(띄어쓰기까지 정확해야 합니다).",
+  "indices": [
+    { "id": "kospi",    "name": "코스피",    "code": "0001", "krx_name": "코스피" },
+    { "id": "kosdaq",   "name": "코스닥",    "code": "1001", "krx_name": "코스닥" },
+    { "id": "kospi200", "name": "코스피200", "code": "2001", "krx_name": "코스피 200" }
+  ],
+
+  "_경제지표": "한국은행 ECOS 통계표/항목 코드. cycle=D(일)·M(월)·Q(분기)·A(년). 코드가 바뀌면 ECOS 통계코드검색에서 확인 후 수정하세요.",
+  "econ": [
+    { "id": "base_rate", "name": "한국은행 기준금리", "stat": "722Y001", "item": "0101000", "cycle": "M", "unit": "%",   "hint": "예·적금·대출금리와 변액·연금 수익률 기대치의 출발점" },
+    { "id": "usdkrw",    "name": "원/달러 환율",      "stat": "731Y001", "item": "0000001", "cycle": "D", "unit": "원", "hint": "달러보험·해외펀드 원화 환산 손익에 직결" },
+    { "id": "cd91",      "name": "CD금리(91일)",      "stat": "817Y002", "item": "010502000", "cycle": "D", "unit": "%", "hint": "변동금리 대출·공시이율 연동 지표" },
+    { "id": "ktb3",      "name": "국고채 3년",        "stat": "817Y002", "item": "010200000", "cycle": "D", "unit": "%", "hint": "채권형 펀드·저축성보험 공시이율 방향" },
+    { "id": "cpi",       "name": "소비자물가지수",    "stat": "901Y009", "item": "0",        "cycle": "M", "unit": "지수", "hint": "실질 구매력 — 연금 필요자금 재계산 근거" }
+  ],
+
+  "_지수대체": "지수 전용 소스(KIS·공공데이터)가 없을 때, 지수를 따라가는 ETF 시세로 대신 보여줍니다. 토스증권 키 하나만 있어도 경제동향 화면이 비지 않게 하려는 장치입니다. 지수 그 자체가 아니라 ETF 가격이라 화면에 'ETF 기준' 이라고 밝힙니다.",
+  "index_proxy": [
+    { "id": "kospi200_etf",  "name": "코스피200", "code": "069500", "note": "KODEX 200 ETF 기준" },
+    { "id": "kosdaq150_etf", "name": "코스닥150", "code": "229200", "note": "KODEX 코스닥150 ETF 기준" },
+    { "id": "sp500_etf",     "name": "미국 S&P500", "code": "360750", "note": "TIGER 미국S&P500 ETF 기준" }
+  ],
+
+  "_관심종목": "경제동향 화면 '오늘의 관심 종목'. 설계사 상담에서 자주 언급되는 대표 종목·ETF 기본값. 앱에서 개인별로 바꿀 수 있습니다.",
+  "watchlist": [
+    { "code": "005930", "name": "삼성전자",         "market": "KRX" },
+    { "code": "000660", "name": "SK하이닉스",       "market": "KRX" },
+    { "code": "069500", "name": "KODEX 200",        "market": "KRX" },
+    { "code": "360750", "name": "TIGER 미국S&P500", "market": "KRX" },
+    { "code": "133690", "name": "TIGER 미국나스닥100", "market": "KRX" }
+  ],
+
+  "_캐시": "종류별 캐시 유지 시간(초). 시세는 짧게, 지표·펀드는 길게 — 무료 API 호출 한도를 아끼기 위함.",
+  "cache_ttl": {
+    "quote": 20,
+    "index": 30,
+    "fund": 21600,
+    "econ": 21600,
+    "news": 900
+  },
+
+  "_뉴스": "경제동향 화면 뉴스. RSS 목록은 config/sources.json 을 그대로 재사용합니다.",
+  "news": {
+    "categories": ["경제", "보험"],
+    "keyword_groups": ["키워드_투자솔루션", "키워드_보험핫이슈"],
+    "max_items": 30
+  }
+}
