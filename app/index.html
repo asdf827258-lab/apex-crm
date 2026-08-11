@@ -8425,8 +8425,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 08:10';
-var APP_BUILD_NOTE='AI 제안서가 그림으로 나옵니다 · 8통장 막대·생애지도, 연금 3층, 상속세 법정계산 · 상담자료가 제안서 안에서 열립니다';
+var APP_BUILD='2026-08-12 10:30';
+var APP_BUILD_NOTE='몇 살에 시작했느냐가 얼마를 넣었느냐보다 큽니다 · 국가혜택 근거는 입력칸 없이 바로 · 상담자료에 고객님 분석이 얹혀 나옵니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12053,11 +12053,11 @@ function prRefBase(){
 
     /* 고령화 — 진료비를 밀어올리는 힘 */
     aged:[
-      {k:'65세 이상 인구 비중',v:19.2,c:'#7C3AED'},
-      {k:'65세 이상 진료비 비중',v:43.5,c:'#DC2626'}
+      {k:'65세 이상 인구 비중 (2024.12)',v:20.0,c:'#7C3AED'},
+      {k:'65세 이상 진료비 비중 (2023)',v:43.5,c:'#DC2626'}
     ],
-    agedSrc:'통계청 장래인구추계 · 건강보험 주요통계(2023)',
-    agedNote:'인구의 5분의 1이 진료비의 절반 가까이를 씁니다. 이 격차가 재정을 압박합니다.',
+    agedSrc:'행정안전부 주민등록 인구통계(2024.12) · 건강보험 주요통계(2023)',
+    agedNote:'2024년 12월 65세 이상 인구가 20%를 넘어 <b>초고령사회</b>에 들어섰습니다. 인구의 5분의 1이 진료비의 절반 가까이를 씁니다.',
 
     /* 비급여 대표 항목 — 병원·환자 상태에 따라 편차가 큽니다 */
     nonCovered:[
@@ -12072,43 +12072,13 @@ function prRefBase(){
   };
 }
 function prRef(){
-  var b=prRefBase();
-  try{
-    var o=JSON.parse(localStorage.getItem(PR_REF_KEY)||'null');
-    if(o&&typeof o==='object'){
-      if(o.asof)b.asof=o.asof;
-      if(isFinite(o.debtLast)&&o.debtLast>0)b.debt[b.debt.length-1].v=+o.debtLast;
-      if(isFinite(o.coverLast)&&o.coverLast>0){
-        b.cover[b.cover.length-1].v=+o.coverLast;
-        b.mix[0].v=+o.coverLast;
-        b.mix[1].v=Math.max(0,Math.round((100-o.coverLast-b.mix[2].v)*10)/10);
-      }
-      if(isFinite(o.nonCov)&&o.nonCov>0){
-        b.mix[2].v=+o.nonCov;
-        b.mix[1].v=Math.max(0,Math.round((100-b.mix[0].v-o.nonCov)*10)/10);
-      }
-      if(isFinite(o.capLow)&&o.capLow>0)b.capLow=+o.capLow;
-      if(isFinite(o.capHigh)&&o.capHigh>0)b.capHigh=+o.capHigh;
-      if(o.capUncertain===false)b.capUncertain=false;
-      b._edited=true;
-    }
-  }catch(e){}
-  return b;
-}
-function prRefSave(){
-  var g=function(id){var v=parseFloat(osVal(id));return isFinite(v)?v:null;};
-  var o={asof:(osVal('prRefAsof')||'').replace(/^\s+|\s+$/g,''),
-    debtLast:g('prRefDebt'),coverLast:g('prRefCover'),nonCov:g('prRefNonCov'),
-    capLow:g('prRefCapLow'),capHigh:g('prRefCapHigh'),capUncertain:false};
-  try{localStorage.setItem(PR_REF_KEY,JSON.stringify(o));}catch(e){}
-  toast('근거 수치를 최신값으로 저장했습니다.');
-  PR.refEdit=false;prPaint();
-}
-function prRefReset(){
+  /* 손으로 고쳐 저장하던 기능을 없앴으므로, 예전에 저장해 둔 값도 지운다.
+     안 지우면 잘못 넣은 숫자가 그 기기에 영원히 남는데 고칠 길이 없다.
+     이제 근거 수치는 오직 prRefBase 한 곳에서만 온다. */
   try{localStorage.removeItem(PR_REF_KEY);}catch(e){}
-  toast('기본 수치로 되돌렸습니다.');PR.refEdit=false;prPaint();
+  return prRefBase();
 }
-function prRefEditToggle(){PR.refEdit=!PR.refEdit;prPaint();}
+/* 근거 입력칸을 없앴으므로 여는 스위치도 필요 없다 */
 
 /* AI 에게 넘길 근거 요약 — 이 표 밖의 통계는 쓰지 못하게 한다 */
 function prRefPromptText(){
@@ -12261,31 +12231,45 @@ function prSrc(txt,note,uncertain){
 }
 
 /* ════════ 국가혜택 · 급여/비급여 · 근거 ════════ */
-function prRefEditHtml(){
-  var r=prRef();
-  var f=function(id,label,val,ph){
-    return '<div><label style="display:block;font-size:10.5px;font-weight:800;color:#4B5563;margin-bottom:3px">'+label+'</label>'+
-      '<input id="'+id+'" value="'+osEsc(val==null?'':''+val)+'" placeholder="'+osEsc(ph||'')+'" '+
-      'style="width:100%;box-sizing:border-box;border:1px solid #E5E9F0;border-radius:8px;padding:7px 10px;font-size:12.5px;font-family:inherit"></div>';
+/* ── 근거 수치를 손으로 입력하던 칸은 없앴다 ──
+   여섯 칸을 사람이 채워 넣게 해 두니, 정작 아무도 안 채우고 화면만 복잡했다.
+   숫자는 앱이 들고 있고, 화면에는 <b>지금 흐름이 어떤지</b> 를 바로 보여 준다.
+   공표 기관이 값을 바꾸면 여기(prRefBase)만 고치면 모든 제안서가 함께 바뀐다. */
+/* ── 화면을 열면 바로 보이는 세 줄 ──
+   숫자를 채워 넣으라고 하지 않는다. 지금 흐름이 어떤지 결론부터 말하고,
+   기준연도와 출처를 그 자리에 붙인다. 자세한 그래프는 아래에 이어진다. */
+function prTrendHtml(r){
+  var d0=r.debt[0],d1=r.debt[r.debt.length-1];
+  var grow=d0.v?Math.round((d1.v/d0.v-1)*100):0;
+  var cov=r.cover[r.cover.length-1],cov0=r.cover[0];
+  var nonc=r.mix[2].v;
+  var line=function(ic,tit,big,c,body,src){
+    return '<div style="border:1px solid #EDF1F7;border-radius:13px;padding:14px 16px;background:#fff">'+
+      '<div style="font-size:11px;font-weight:800;color:#94A3B8">'+ic+' '+tit+'</div>'+
+      '<div style="font-size:19px;font-weight:900;color:'+c+';letter-spacing:-.7px;margin-top:4px;line-height:1.25">'+big+'</div>'+
+      '<div style="font-size:12px;color:#42506A;line-height:1.75;margin-top:6px">'+body+'</div>'+
+      '<div style="font-size:10.5px;color:#94A3B8;margin-top:7px">'+osEsc(src)+'</div></div>';
   };
-  return '<div style="border:1px solid #C7D2FE;background:#F8FAFF;border-radius:13px;padding:14px 16px;margin-bottom:13px">'+
-    '<div style="font-size:12.5px;font-weight:800;color:#3730A3;margin-bottom:4px">📝 근거 수치 최신화</div>'+
-    '<div style="font-size:11px;color:#4B5A70;line-height:1.7;margin-bottom:10px">공표 기관이 해마다 값을 바꿉니다. 최신 발표를 확인하고 여기서 고쳐 두면 이후 만드는 모든 제안서에 그 값이 쓰입니다. 고친 값은 이 브라우저에만 저장됩니다.</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px">'+
-      f('prRefAsof','기준 연도',r.asof,'2025')+
-      f('prRefDebt','국가채무 최신값(조원)',r.debt[r.debt.length-1].v,'1273')+
-      f('prRefCover','건강보험 보장률(%)',r.cover[r.cover.length-1].v,'64.9')+
-      f('prRefNonCov','비급여 비중(%)',r.mix[2].v,'15.4')+
-      f('prRefCapLow','본인부담상한 최저(만원)',r.capLow,'87')+
-      f('prRefCapHigh','본인부담상한 최고(만원)',r.capHigh,'826')+
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px">'+
+    line('🏛️','나라 곳간','+'+grow+'%','#DC2626',
+      '국가채무가 '+d0.y+'년 <b>'+prNum(d0.v)+'조</b>에서 '+d1.y+'년 <b>'+prNum(d1.v)+'조</b>로 늘었습니다.',
+      r.debtSrc+' · '+d1.y+'년은 전망치')+
+    line('🧾','병원비 보장률',cov.v+'%','#1D4ED8',
+      cov0.y+'년 '+cov0.v+'% → '+cov.y+'년 '+cov.v+'%. <b>몇 년째 제자리</b>입니다. '+
+      '그중 <b style="color:#DC2626">비급여 '+nonc+'%</b>는 건강보험이 한 푼도 내지 않습니다.',
+      r.coverSrc+' · '+cov.y+'년 기준')+
+    line('👵','인구 구조','초고령사회','#7C3AED',
+      '<b>2024년 12월</b> 65세 이상 인구가 <b>20%</b>를 넘었습니다. 인구의 5분의 1이 진료비의 <b>'+r.aged[1].v+'%</b>를 씁니다.',
+      r.agedSrc)+
     '</div>'+
-    '<div class="btn-row" style="margin-top:11px">'+
-      '<button class="btn btn-primary" style="padding:7px 14px;font-size:12px" onclick="prRefSave()">저장</button>'+
-      '<button class="btn btn-ghost" style="padding:7px 14px;font-size:12px" onclick="prRefReset()">기본값으로</button>'+
-      '<button class="btn btn-ghost" style="padding:7px 14px;font-size:12px" onclick="prRefEditToggle()">닫기</button>'+
-    '</div></div>';
+    '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#78350F;background:#FFFBEB;'+
+    'border:1px solid #FDE68A;border-radius:12px;padding:13px 16px;line-height:1.8">'+
+    '📌 제도가 없어진다는 뜻이 아닙니다. <b>본인이 내야 하는 몫이 커지는 방향</b>이라는 뜻입니다. '+
+    '그래서 국가 제도를 먼저 정확히 쓰고, 그 바깥만 사보험으로 메우는 순서가 맞습니다.</div>'+
+    '<div style="margin-top:9px;font-size:10.5px;color:#94A3B8;line-height:1.7">'+
+    '위 숫자는 공표 통계를 앱이 들고 있는 값입니다(기준 '+osEsc(r.asof)+'년). '+
+    '상담 전에 최신 발표를 한 번 확인하시고, 바뀌었으면 알려 주시면 앱에서 함께 고칩니다.</div>';
 }
-
 function prEvidenceHtml(){
   var p=PR.plan||{},r=prRef();
   var nat=p.national||{},cm=p.costmix||{},inc=p.incomeFit||{};
@@ -12296,11 +12280,7 @@ function prEvidenceHtml(){
     '<div class="card-title"><span class="ci">📊</span>국가가 내주는 것, 내가 내야 하는 것</div>'+
     '<div class="card-desc">겁주는 자료가 아닙니다. <b>공표된 숫자와 출처</b>만 놓고, 국가 제도가 어디까지 받쳐주는지와 어디부터 본인 몫인지를 나눠 봅니다.</div></div>'+
     '<div class="card-body">'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+
-      '<span style="font-size:11px;font-weight:800;color:#42506A;background:#F1F5F9;border-radius:7px;padding:6px 11px">기준 '+osEsc(r.asof)+'년'+(r._edited?' · 대표 수정본':'')+'</span>'+
-      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="prRefEditToggle()">📝 근거 수치 최신화</button>'+
-    '</div>'+
-    (PR.refEdit?'<div style="margin-top:11px">'+prRefEditHtml()+'</div>':'')+
+    prTrendHtml(r)+
     '</div></div>';
 
   /* ① 나라 곳간 */
@@ -12453,7 +12433,7 @@ function prEvidenceHtml(){
       return '<tr><td class="it">'+osEsc(e.claim||'')+'</td><td class="bf">'+osEsc(e.source||'')+'</td><td class="bf">'+osEsc(e.asof||'')+'</td></tr>';
     }).join('')+'</tbody></table></div>'+
     '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 14px;margin-top:12px;font-size:11.5px;color:#92400E;line-height:1.8">'+
-    '<b>고객 제시 전 확인</b> — 공표 수치는 해마다 바뀝니다. 발표 직전에 최신값을 확인하고, 위 <b>📝 근거 수치 최신화</b>에서 고쳐 두세요. '+
+    '<b>고객 제시 전 확인</b> — 공표 수치는 해마다 바뀝니다. 발표 직전에 <b>최신 발표를 한 번 확인</b>하시고, 값이 바뀌었으면 알려 주시면 앱에서 함께 고칩니다. '+
     '이 문서는 「금융소비자 보호에 관한 법률」상 적합성·설명의무를 전제로 한 <b>상담 보조자료</b>이며, 특정 상품의 가입이나 보험금 지급을 보장하지 않습니다. '+
     '실제 보장 여부는 반드시 약관으로 확인하십시오.</div>'+
     '</div></div>';
@@ -13526,13 +13506,22 @@ function prPenLayers(txt){
   return {gk:gk,tj:tj,gi:gi,parsed:!!(gk||tj||gi)};
 }
 /* 화면에서 바로 고쳐 보는 값 — AI 를 다시 부르지 않는다 */
-var PRC={estate:0,spouse:true,mon:0,yrs:0,init:false};
+var PRC={estate:0,spouse:true,mon:0,yrs:0,rate:0.04,pay:25,init:false};
 function prCalcSet(k,v){
-  if(k==='spouse')PRC.spouse=!!v;
-  else{var n=parseFloat((''+v).replace(/[^\d.]/g,''));PRC[k]=isFinite(n)?n:0;}
+  if(k==='spouse'){PRC.spouse=!!v;}
+  else{
+    var n=parseFloat((''+v).replace(/[^\d.]/g,''));
+    if(!isFinite(n))n=0;
+    /* 수익률은 사람이 「4」 로 적는다. 안쪽에서는 0.04 로 쓴다. */
+    if(k==='rate')PRC.rate=Math.max(0,Math.min(0.20,n/100));
+    else if(k==='pay')PRC.pay=Math.max(1,Math.min(50,Math.round(n)));
+    else PRC[k]=n;
+  }
   prPaint();
 }
-function prNum(k,label,val,unit){
+/* 입력칸을 만드는 함수. 이름이 prNum 이면 원래 있던 「숫자 서식」 함수를 덮어써서
+   근거 화면의 숫자 자리마다 입력칸이 생긴다. 이름을 따로 둔다. */
+function prNumIn(k,label,val,unit){
   return '<div><label style="font-size:11px;font-weight:800;color:#6B7280;display:block;margin-bottom:4px">'+label+'</label>'+
     '<div style="display:flex;align-items:center;gap:5px">'+
     '<input type="number" min="0" step="1" value="'+(val>0?val:'')+'" placeholder="0" '+
@@ -13540,6 +13529,108 @@ function prNum(k,label,val,unit){
     'style="width:100%;border:1px solid #E5E9F0;border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit">'+
     '<span style="font-size:11px;color:#94A3B8;white-space:nowrap">'+unit+'</span></div></div>';
 }
+/* ── 연금을 목돈으로 바꿔 매달 받을 때의 월 수령액 ──
+   적립금을 은퇴 후 N년 동안 나눠 받되, 받는 동안에도 이자가 붙는다고 본다. */
+function prPMT(pv,rate,years){
+  var m=rate/12,n=Math.max(1,Math.round(years*12));
+  if(m<=0)return pv/n;
+  return pv*m/(1-Math.pow(1+m,-n));
+}
+/* 같은 적립금을 만들려면 매달 얼마를 넣어야 하나 — 늦게 시작한 사람의 몫 */
+function prNeedMon(targetFV,years,rate){
+  var m=rate/12,n=Math.max(1,Math.round(years*12));
+  if(m<=0)return targetFV/n;
+  return targetFV*m/(Math.pow(1+m,n)-1);
+}
+var PR_START_AGES=[25,30,35,40,45,50,55];
+/* ── 언제 시작했느냐가 얼마를 넣었느냐보다 크다 ──
+   같은 금액을 같은 은퇴 나이까지 넣는데, 시작 나이만 다르게 놓고 본다.
+   돈이 아니라 <b>시간</b>이 결과를 만든다는 것을 표로 보여 준다. */
+function prStartTable(mon,ret,rate,nowAge,payYears){
+  var rows=PR_START_AGES.filter(function(a){return a<ret;}).map(function(a){
+    var yrs=ret-a, paid=mon*yrs*12, fv=prFV(mon,yrs,rate);
+    return {age:a,yrs:yrs,paid:paid,fv:fv,pm:prPMT(fv,rate,payYears),mult:paid?fv/paid:0};
+  });
+  /* 이 고객이 지금 시작하면 어느 줄인가 — 가장 가까운 줄을 짚어 준다 */
+  var mine=null,i,best=1e9;
+  for(i=0;i<rows.length;i++){var d=Math.abs(rows[i].age-nowAge);if(d<best){best=d;mine=i;}}
+  return {rows:rows,mine:mine};
+}
+function prStartSection(pen,now,ret){
+  var mon=PRC.mon||prMoney(pen.planMonthly)||30;
+  var rate=(PRC.rate!=null?PRC.rate:0.04);
+  var pay=PRC.pay||25;
+  var T=prStartTable(mon,ret,rate,now,pay);
+  var rows=T.rows,mine=T.mine;
+  if(!rows.length)return '';
+  var maxFV=0;rows.forEach(function(r){if(r.fv>maxFV)maxFV=r.fv;});
+
+  /* 10년 일찍 시작한 줄과 견줘 본다 — 이야기의 핵심이다 */
+  var me=rows[mine],early=null,j;
+  for(j=0;j<rows.length;j++)if(rows[j].age<=me.age-10)early=rows[j];
+  if(!early)early=rows[0];
+  var need=(early&&early.age<me.age)?prNeedMon(early.fv,me.yrs,rate):0;
+
+  var barRows=rows.map(function(r,i){
+    return {label:r.age+'세 시작',value:r.fv,
+      color:(i===mine)?'#DC2626':(r.age<me.age?'#059669':'#94A3B8'),
+      valLabel:vizWon(Math.round(r.fv))};
+  });
+
+  var h='<div class="rpt-sec"><div class="hd"><span class="n">03</span>몇 살에 시작했느냐가 얼마를 넣었느냐보다 큽니다</div>'+
+    '<div class="sub">같은 금액(월 <b>'+fmt(mon)+'만원</b>)을 <b>'+ret+'세까지</b> 넣습니다. 시작 나이만 다릅니다. '+
+    '돈을 더 넣은 게 아니라 <b>시간을 더 준</b> 것뿐인데 결과가 이렇게 갈립니다.</div>'+
+    '<div class="rpt-fin" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:11px">'+
+      prNumIn('mon','월 납입액',mon,'만원')+
+      prNumIn('rate','가정 수익률',Math.round(rate*1000)/10,'%')+
+      prNumIn('pay','받는 기간',pay,'년')+'</div>'+
+    '<div class="viz-wrap">'+vizBarH(barRows,{width:580,max:maxFV,valW:104,labelW:88})+'</div>'+
+    '<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px">'+
+    '<tr style="background:#F8FAFD">'+
+      '<th style="text-align:left;padding:7px 9px;font-weight:800;color:#42506A">시작 나이</th>'+
+      '<th style="text-align:right;padding:7px 9px;font-weight:800;color:#42506A">넣는 기간</th>'+
+      '<th style="text-align:right;padding:7px 9px;font-weight:800;color:#42506A">낸 돈(원금)</th>'+
+      '<th style="text-align:right;padding:7px 9px;font-weight:800;color:#42506A">'+ret+'세 적립금</th>'+
+      '<th style="text-align:right;padding:7px 9px;font-weight:800;color:#42506A">월 수령액</th>'+
+      '<th style="text-align:right;padding:7px 9px;font-weight:800;color:#42506A">원금의 몇 배</th></tr>'+
+    rows.map(function(r,i){
+      var on=(i===mine);
+      return '<tr style="border-top:1px solid #EDF1F7'+(on?';background:#FEF2F2':'')+'">'+
+        '<td style="padding:7px 9px'+(on?';font-weight:900;color:#DC2626':';font-weight:700;color:#42506A')+'">'+
+          r.age+'세'+(on?' ← 지금':'')+'</td>'+
+        '<td style="padding:7px 9px;text-align:right;color:#42506A">'+r.yrs+'년</td>'+
+        '<td style="padding:7px 9px;text-align:right;color:#7A8698">'+vizWon(Math.round(r.paid))+'</td>'+
+        '<td style="padding:7px 9px;text-align:right;font-weight:800'+(on?';color:#DC2626':';color:#0B1B34')+'">'+vizWon(Math.round(r.fv))+'</td>'+
+        '<td style="padding:7px 9px;text-align:right;font-weight:800;color:#1D4ED8">'+fmt(Math.round(r.pm))+'만원</td>'+
+        '<td style="padding:7px 9px;text-align:right;color:#047857;font-weight:800">'+(Math.round(r.mult*100)/100)+'배</td></tr>';
+    }).join('')+'</table></div>';
+
+  if(early&&early.age<me.age){
+    var moreYears=me.age-early.age;
+    var morePaid=early.paid-me.paid;      /* 일찍 시작한 사람이 더 낸 원금 */
+    var moreFV=early.fv-me.fv;
+    h+='<div style="margin-top:12px;font-size:13px;font-weight:800;line-height:1.85;color:#7F1D1D;'+
+      'background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:14px 17px">'+
+      '⏳ <b>'+early.age+'세</b>에 시작한 사람과 <b>'+me.age+'세</b>에 시작한 사람의 차이입니다.<br>'+
+      '· 낸 돈은 <b>'+vizWon(Math.round(morePaid))+'</b> 더 많을 뿐인데<br>'+
+      '· '+ret+'세 적립금은 <b style="color:#DC2626">'+vizWon(Math.round(moreFV))+'</b> 더 많습니다 '+
+      '(월 수령액 '+fmt(Math.round(early.pm))+'만원 vs '+fmt(Math.round(me.pm))+'만원)<br>'+
+      '· <b>'+moreYears+'년의 시간</b>이 만든 차이입니다.</div>';
+    if(need>0){
+      h+='<div style="margin-top:9px;font-size:13px;font-weight:800;line-height:1.85;color:#92400E;'+
+        'background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:14px 17px">'+
+        '💡 지금 시작해서 <b>'+early.age+'세에 시작한 사람과 같은 적립금</b>을 만들려면 '+
+        '월 <b style="color:#B45309">'+fmt(Math.round(need))+'만원</b>을 넣어야 합니다 '+
+        '(지금 '+fmt(mon)+'만원의 <b>'+(Math.round(need/mon*10)/10)+'배</b>).<br>'+
+        '늦게 시작할수록 <b>돈으로 시간을 사야</b> 하고, 그 값이 매년 비싸집니다.</div>';
+    }
+  }
+  h+='<div class="acad-note" style="margin-top:10px">위 계산은 <b>가정 수익률로 매달 복리</b>가 붙는다고 본 개략치입니다. '+
+    '세금·수수료·물가를 반영하지 않았고, 실제 연금의 적립·수령액은 상품 구조와 공시이율·투자성과에 따라 달라지며 <b>보장되지 않습니다</b>. '+
+    '위 칸의 숫자를 바꾸면 표가 바로 다시 계산됩니다.</div></div>';
+  return h;
+}
+
 function prPlanHtml(){
   var p=PR.plan,pen=p.pension||{},wl=p.wholelife||{};
   var now=prAgeNow(),ret=prAgeRet();
@@ -13600,13 +13691,14 @@ function prPlanHtml(){
     '<div class="sub">「예전 연금이 좋았다」 는 말은 감이 아니라 <b>산수</b>입니다. 같은 금액을 같은 기간 넣어도 이율에 따라 이만큼 갈립니다. '+
     '<b>확정금리 시절에 넣어 둔 연금은 지금 다시 만들 수 없습니다</b> — 그래서 있으면 지키고, 없으면 시간을 사야 합니다.</div>'+
     '<div class="rpt-fin" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:11px">'+
-      prNum('mon','월 납입액',mon,'만원')+prNum('yrs','납입 기간',yrs,'년')+'</div>'+
+      prNumIn('mon','월 납입액',mon,'만원')+prNumIn('yrs','납입 기간',yrs,'년')+'</div>'+
     '<div class="viz-wrap">'+vizBarH(fvRows,{width:580,max:prFV(mon,yrs,0.08),valW:96})+'</div>'+
     '<div class="rpt-legend"><span>낸 돈 합계 <b>'+vizWon(paid)+'</b></span>'+
     '<span>계산식: 매달 넣고 매달 복리 · 세금·수수료·물가 미반영</span></div>'+
     '<div class="acad-note" style="margin-top:9px">이 그림은 <b>특정 상품의 수익률이 아니라 복리라는 계산</b>을 보여 줍니다. '+
     '실제 연금의 적립·수령액은 상품 구조와 공시이율·투자성과에 따라 달라지며 <b>보장되지 않습니다</b>.</div></div>';
 
+  h+=prStartSection(pen,now,ret);
   h+=(pen.why?'<div style="font-size:13.5px;font-weight:800;color:#0B1B34;line-height:1.7;padding:14px 18px;border-left:5px solid #7C3AED;background:#F9F7FF;border-radius:0 13px 13px 0;margin-top:13px">'+osEsc(pen.why)+'</div>':'')+
     (pen.note?'<div class="acad-note" style="margin-top:10px">'+osEsc(pen.note)+' '+acToolChip2('finance','📊','연금 시뮬레이션 열기')+'</div>':'')+
     '</div></div>';
@@ -13624,11 +13716,11 @@ function prPlanHtml(){
       prStat('상속 시 필요 현금',wl.liquidity,'세금 낼 유동성','#B45309')+
     '</div>';
 
-  h+='<div class="rpt-sec" style="margin-top:13px"><div class="hd"><span class="n">03</span>상속세는 얼마고, 사망보험금으로 낼 수 있나</div>'+
+  h+='<div class="rpt-sec" style="margin-top:13px"><div class="hd"><span class="n">04</span>상속세는 얼마고, 사망보험금으로 낼 수 있나</div>'+
     '<div class="sub">부동산은 많은데 현금이 없으면 <b>급하게 팔아야</b> 합니다. 그때 손해가 세금보다 큽니다. '+
     '아래 칸에 재산을 넣으면 법정 세율로 바로 계산합니다.</div>'+
     '<div class="rpt-fin" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:11px">'+
-      prNum('estate','상속재산 (총액)',PRC.estate,'만원')+
+      prNumIn('estate','상속재산 (총액)',PRC.estate,'만원')+
       '<div><label style="font-size:11px;font-weight:800;color:#6B7280;display:block;margin-bottom:4px">배우자 있음</label>'+
       '<select onchange="prCalcSet(\'spouse\',this.value===\'1\')" style="width:100%;border:1px solid #E5E9F0;border-radius:9px;padding:8px 10px;font-size:13px;font-family:inherit">'+
       '<option value="1"'+(PRC.spouse?' selected':'')+'>있음 (배우자공제 5억)</option>'+
@@ -13702,7 +13794,7 @@ function prSdSync(){
     wrap.innerHTML='<div class="card" style="margin-top:12px"><div class="card-hd">'+
       '<div class="card-title"><span class="ci">📋</span>보장분석 상담자료 — 이야기의 뼈대</div>'+
       '<div class="card-desc">여기서 시작해 <b>8통장 → 준비 안 하면 → 준비하면 → 연금·종신 → 근거</b> 순서로 넘어갑니다. '+
-      '아래 자료는 화면 안에서 그대로 넘길 수 있습니다.</div></div>'+
+      '자료를 넘긴 뒤 <b>바로 위 합본 브리핑</b>으로 이어 가면 고객님 숫자로 자연스럽게 넘어갑니다.</div></div>'+
       '<div class="card-body" style="padding:0">'+
       '<iframe id="prSdFrame" title="보장분석 상담자료" '+
       'style="width:100%;height:76vh;border:0;display:block;background:#fff;border-radius:0 0 16px 16px"></iframe>'+
@@ -13713,6 +13805,107 @@ function prSdSync(){
   }
   wrap.style.display='';
 }
+/* ════════ 상담자료 + 이 고객 = 하나의 상담 ════════
+   상담자료는 <b>모든 고객에게 같은</b> 이야기다. 왜 봐야 하는지를 세운다.
+   그런데 거기서 끝나면 「좋은 말」 로 남는다.
+   그래서 상담자료의 각 장 바로 밑에 <b>이 고객의 실제 숫자</b>를 붙인다.
+   설계사가 화면을 옮겨 다니지 않고, 이 한 칸에서 상담을 끝낼 수 있게 한다.  */
+function prBriefChapters(){
+  var p=PR.plan||{},sc=PR.scan||null;
+  var W=p.wallets||[],R=p.reality||[],B=p.benefit||{},pen=p.pension||{},wl=p.wholelife||{};
+  var lv=function(w){return prLv(w.status);};
+  var low=W.filter(function(w){return lv(w).k==='low';});
+  var mid=W.filter(function(w){return lv(w).k==='mid';});
+  var noGaps=sc&&sc.gaps?sc.gaps.filter(function(g){return !g.has;}):[];
+  var out=[];
+
+  /* 1장 — 왜 보험금을 못 받나 → 이 고객이 지금 못 받고 있는 것 */
+  var c1=[];
+  if(sc&&sc.total.lapsedN)
+    c1.push({k:'이미 끊긴 계약',v:sc.total.lapsedN+'건',
+      n:'월 '+prWon(sc.total.lapsedFee)+'원어치가 실효·해지되었습니다. 낸 돈은 돌아오지 않습니다.'});
+  if(noGaps.length)
+    c1.push({k:'없는 담보',v:noGaps.length+'개',
+      n:noGaps.slice(0,4).map(function(g){return g.name;}).join(' · ')+(noGaps.length>4?' 외':'')+' — 요즘 실지급을 가르는 계열입니다.'});
+  if(sc&&sc.short&&sc.short.length)
+    c1.push({k:'기준에 못 미치는 담보',v:sc.short.length+'개',n:'진단 결과 부족·미가입으로 나온 항목입니다.'});
+  if(!c1.length)c1.push({k:'분석 결과',v:'준비 중',n:'증권을 넣고 제안서를 만들면 이 자리에 이 고객의 숫자가 들어갑니다.'});
+  out.push({no:'01',tag:'CHAPTER 1',t:'국민이 못 받는 보험금',
+    say:'「몰라서 못 받는 돈」 이야기를 먼저 합니다. 남의 얘기가 아니라는 걸 바로 이어서 보여 줍니다.',
+    mine:'그래서 고객님 증권을 봤더니', rows:c1, go:'', goT:''});
+
+  /* 2장 — 내 보험 상태 → 8통장 진단 */
+  var c2=[];
+  if(sc){
+    c2.push({k:'유효 계약',v:sc.total.n+'건',n:'월 '+prWon(sc.total.fee)+'원'+(sc.total.unknown?(' · 보험료 미제공 '+sc.total.unknown+'건'):'')});
+    if(sc.byCo&&sc.byCo.length)
+      c2.push({k:'가장 많이 내는 곳',v:sc.byCo[0].co,n:prWon(sc.byCo[0].fee)+'원 · 전체의 '+sc.byCo[0].pct+'%'+(sc.byCo.length>1?(' (총 '+sc.byCo.length+'개 회사)'):'')});
+    c2.push({k:'특약',v:sc.riderN+'개',n:'계약 '+((sc.riders||[]).length)+'건에 들어 있습니다.'});
+  }
+  if(W.length)c2.push({k:'8통장 진단',v:'비어있음 '+low.length+' · 부족 '+mid.length,
+    n:(low.length?('가장 급한 것은 '+low.map(function(w){return w.name;}).slice(0,3).join(' · ')+'입니다.'):'큰 공백은 없습니다.')});
+  if(!c2.length)c2.push({k:'분석 결과',v:'준비 중',n:'제안서를 만들면 채워집니다.'});
+  out.push({no:'02',tag:'CHAPTER 2',t:'내 보험 상태, AI 가 3분 안에',
+    say:'보험을 몇 개 들었나가 아니라 <b>어떤 목적의 돈이 준비됐나</b>로 봐야 한다고 말합니다.',
+    mine:'고객님의 8통장은 이렇습니다', rows:c2, go:'wallet', goT:'8통장 그래프 열기'});
+
+  /* 3장 — 80세까지 지켜줄까 → 준비 안 하면 */
+  var c3=R.map(function(x){return {k:x.headline||'',v:x.cost||'확인 필요',n:(''+(x.story||'')).slice(0,80)};});
+  if(!c3.length)c3.push({k:'현실 사례',v:'준비 중',n:'제안서를 만들면 네 가지 상황이 들어갑니다.'});
+  out.push({no:'03',tag:'CHAPTER 3',t:'지금 가입한 보험, 80세까지 지켜줄까',
+    say:'갱신·만기·소멸 구조를 짚고, 준비 안 했을 때 실제로 벌어지는 일로 넘어갑니다.',
+    mine:'고객님께 벌어질 수 있는 일과 그때 드는 돈', rows:c3, go:'reality', goT:'상황별 금액 그래프 열기'});
+
+  /* 4장 — 그래서 어떻게 → 우선순위 · 연금 · 종신 */
+  var c4=[];
+  if(low.length||mid.length){
+    var order=low.concat(mid).slice(0,3);
+    c4.push({k:'채우는 순서',v:order.length+'가지',
+      n:order.map(function(w,i){return (i+1)+'. '+w.name;}).join('  ')+' — 한 번에 다 하실 필요 없습니다.'});
+  }
+  if(pen.gapMonthly||pen.needMonthly)
+    c4.push({k:'노후 부족액',v:pen.gapMonthly||'확인 필요',
+      n:'필요 '+(pen.needMonthly||'—')+' · 준비 '+(pen.haveMonthly||'—')+'. 시작이 늦을수록 매달 넣을 돈이 커집니다.'});
+  if(wl.amount||wl.liquidity)
+    c4.push({k:'남는 가족 · 상속',v:wl.amount||'확인 필요',
+      n:(wl.purpose?(wl.purpose+' — '):'')+'상속재산 '+(wl.liquidity||'확인 필요')+' 기준으로 필요한 현금을 계산합니다.'});
+  if(B.summary)c4.push({k:'준비하면',v:'',n:B.summary});
+  if(!c4.length)c4.push({k:'다음 단계',v:'준비 중',n:'제안서를 만들면 채워집니다.'});
+  out.push({no:'04',tag:'CHAPTER 4',t:'그래서, 어떻게 해야 하나',
+    say:'세 가지 기준(왜 보험을 드는가)을 정리하고, 고객님 순서로 넘어갑니다.',
+    mine:'고객님은 이 순서로 채웁니다', rows:c4, go:'plan', goT:'연금 · 종신 근거 열기'});
+  return out;
+}
+function prBriefHtml(){
+  var CH=prBriefChapters();
+  return '<div class="card" style="margin-top:12px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🧩</span>상담자료 + 고객님 분석 — 합본 브리핑</div>'+
+    '<div class="card-desc">위 상담자료의 각 장에서 <b>무슨 이야기를 하고</b>, 바로 이어서 <b>고객님의 어떤 숫자를</b> 보여줄지 짝지어 두었습니다. '+
+    '이 칸만 보고도 상담을 끝까지 끌고 갈 수 있습니다.</div></div><div class="card-body">'+
+    CH.map(function(c){
+      return '<div class="rpt-sec"><div class="hd"><span class="n">'+c.no+'</span>'+osEsc(c.t)+
+        ' <span style="font-size:10px;font-weight:800;color:#94A3B8;letter-spacing:1px">'+c.tag+'</span></div>'+
+        '<div class="sub">📖 상담자료에서 — '+c.say+'</div>'+
+        '<div style="border-left:4px solid #1D4ED8;background:#F6F9FF;border-radius:0 12px 12px 0;padding:12px 15px">'+
+        '<div style="font-size:12.5px;font-weight:900;color:#1D4ED8;margin-bottom:8px">👤 '+osEsc(c.mine)+'</div>'+
+        c.rows.map(function(r){
+          return '<div style="padding:7px 0;border-top:1px solid rgba(29,78,216,.09)">'+
+            '<div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline">'+
+              '<span style="font-size:12.5px;font-weight:700;color:#42506A">'+osEsc(r.k)+'</span>'+
+              (r.v?'<b style="font-size:14px;color:#0B1B34;white-space:nowrap;letter-spacing:-.3px">'+osEsc(r.v)+'</b>':'')+'</div>'+
+            (r.n?'<div style="font-size:11.5px;color:#5B6577;line-height:1.7;margin-top:3px">'+osEsc(r.n)+'</div>':'')+
+          '</div>';
+        }).join('')+
+        (c.go?('<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" '+
+          'onclick="prView(\''+c.go+'\')">📊 '+osEsc(c.goT)+'</button></div>'):'')+
+        '</div></div>';
+    }).join('')+
+    '<div class="acad-note">이 브리핑은 <b>상담자료의 흐름</b>과 <b>고객님 증권 분석</b>을 짝지어 만든 것입니다. '+
+    '숫자는 증권에서 읽어낸 것과 AI 가 정리한 것이며, 읽어내지 못한 것은 「확인 필요」 로 두었습니다. '+
+    '실제 보장은 약관이 정하고, 「금융소비자 보호에 관한 법률」에 따른 적합성 확인과 설명의무 이행 뒤에 청약이 진행됩니다.</div>'+
+  '</div></div>';
+}
+
 function prSangdamHtml(){
   var p=PR.plan||{};
   var n=(p.wallets||[]).length,r=(p.reality||[]).length;
@@ -13734,7 +13927,8 @@ function prSangdamHtml(){
     '</div>'+
     '<div class="acad-note" style="margin-top:10px">상담자료는 <b>모든 고객에게 같은</b> 이야기이고, 8통장부터는 <b>이 고객에게만</b> 해당하는 숫자입니다. '+
     '순서를 지키면 「왜 이 얘기를 듣고 있는지」 가 흔들리지 않습니다.</div>'+
-  '</div></div>';
+  '</div></div>'+
+  prBriefHtml();
 }
 
 function acToolChip2(id,ic,label){
