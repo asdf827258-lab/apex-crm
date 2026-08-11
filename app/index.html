@@ -7931,7 +7931,8 @@ function go(tab){
   else if(tab==='voice'){dyn.innerHTML=renderVoice();if(typeof osVoiceAfterRender==='function')osVoiceAfterRender();}
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();
     if(typeof orgAccLoad==='function')orgAccLoad(function(){if(orgEditId!==null||true){var c=document.getElementById('orgFormCard');if(c&&typeof orgForm==='function'&&typeof orgLoad==='function')c.outerHTML=orgForm(orgLoad());}});
-    if(typeof orgPull==='function')setTimeout(function(){orgPull(false);},20);}
+    /* 조직도를 열 때마다 서버를 다시 본다 — 다른 컴퓨터에서 고친 것이 바로 넘어온다 */
+    if(typeof orgPull==='function')setTimeout(function(){orgPull(true);},20);}
   else if(tab==='mycoach'){dyn.innerHTML=renderMyCoach();if(typeof osMyCoachAfterRender==='function')osMyCoachAfterRender();}
   else if(tab==='branch_coach'){dyn.innerHTML=renderBranchCoach();if(typeof osBranchCoachAfterRender==='function')osBranchCoachAfterRender();}
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
@@ -8169,8 +8170,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 20:15';
-var APP_BUILD_NOTE='조직도를 앱 팀원 명단에서 한 번에 채운다';
+var APP_BUILD='2026-08-10 21:10';
+var APP_BUILD_NOTE='조직도는 서버가 정본 — 어느 컴퓨터에서나 같은 것을, 한 명도 안 잃고';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17290,8 +17291,10 @@ function orgPull(force){
        이 기기(localStorage) 목록이라, 여태 「불러왔는데 안 보인다」 가 됐다.
        이 기기에 아무것도 없거나 처음 심어 둔 예시 둘뿐이면 서버 것으로 바로 채운다 —
        잃을 것이 없으니 물어볼 이유도 없다. */
-    if(ORGS.srv.length&&orgDeviceEmpty()){
-      try{localStorage.setItem(ORG_KEY,JSON.stringify(ORGS.srv));}catch(e){}
+    /* 받아온 것을 기기에도 남긴다 — 다음에 열 때 인터넷이 끊겨도 바로 보인다.
+       이 기기에만 있던 사람까지 합쳐서 남기므로 아무도 안 사라진다. */
+    if(ORGS.srv.length){
+      try{localStorage.setItem(ORG_KEY,JSON.stringify(orgLoad()));}catch(e){}
       if(typeof lastTab!=='undefined'&&lastTab==='org'){go('org');return;}
     }
     orgSyncPaint();
@@ -17309,12 +17312,32 @@ function orgPushOne(m){
       if(!hit)ORGS.srv.push(orgRow(m));
     }
     ORGS.at=new Date().toLocaleString('ko-KR');orgSyncPaint();
-  },function(){toast('서버 저장 실패 — 인터넷 연결을 확인하세요.');});
+  },function(){toast('서버 저장 실패 — 인터넷 연결을 확인하세요.');orgReSync();});
 }
 function orgPushMany(list){
   var sb=osClient();
   if(!sb||!orgCanWrite()||!list.length)return;
-  sb.from('org_members').upsert(list.map(orgRow),{onConflict:'id'}).then(function(){},function(){});
+  sb.from('org_members').upsert(list.map(orgRow),{onConflict:'id'}).then(function(r){
+    if(r&&r.error){toast('서버 저장 실패: '+(r.error.message||''));orgReSync();return;}
+    if(ORGS.srv){
+      var by={},i;
+      for(i=0;i<ORGS.srv.length;i++)by[ORGS.srv[i].id]=i;
+      list.forEach(function(m){
+        var row=orgRow(m);
+        if(by[m.id]!==undefined)ORGS.srv[by[m.id]]=row;else ORGS.srv.push(row);
+      });
+    }
+    ORGS.at=new Date().toLocaleString('ko-KR');orgSyncPaint();
+  },function(){toast('서버 저장 실패 — 인터넷 연결을 확인하세요.');orgReSync();});
+}
+/* 서버 쓰기가 실패했다. 화면에 있는 것은 서버에 없는 값이므로 진짜 값으로 되돌린다 —
+   「저장된 줄 알았는데 아니었다」 가 제일 위험하다. */
+function orgReSync(){
+  ORGS.pulled=false;
+  setTimeout(function(){
+    orgPull(true);
+    setTimeout(function(){if(typeof lastTab!=='undefined'&&lastTab==='org')go('org');},900);
+  },400);
 }
 function orgRemoveOne(id){
   var sb=osClient();
@@ -17378,9 +17401,9 @@ function orgSyncBarHtml(){
     var notReady=/org_members|schema cache|does not exist|찾을 수 없|relation/i.test(ORGS.err);
     return box('#FFFBEB','#FDE68A','#92400E',
       (notReady
-        ? '<b>조직도 서버 저장이 아직 켜지지 않았습니다.</b><br>'+
+        ? '<b>조직도 서버 저장이 아직 켜지지 않았습니다.</b> 지금 화면은 <b>이 기기에 있는 것</b>이라 다른 컴퓨터에서는 안 보입니다.<br>'+
           '<span style="font-size:11.5px;line-height:1.8">지금은 이 기기에만 저장됩니다. 아래 <b>준비 SQL 복사</b>를 누르고 Supabase → <b>SQL Editor</b> 에 붙여넣어 <b>Run</b> 한 번만 하면, 이후로는 어느 컴퓨터에서나 같은 조직도를 보게 됩니다.</span>'
-        : '<b>서버 연결 문제로 이 기기 내용을 보여주고 있습니다.</b><br><span style="font-size:11.5px">'+osEsc(ORGS.err)+'</span>')+
+        : '<b>서버에 못 닿아 마지막으로 받아 둔 내용을 보여주고 있습니다.</b> 고쳐도 다른 컴퓨터에 안 갑니다 — 연결된 뒤에 다시 해 주세요.<br><span style="font-size:11.5px">'+osEsc(ORGS.err)+'</span>')+
       '<div class="btn-row" style="margin-top:8px">'+
         (notReady?'<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="orgCopySql()">📋 준비 SQL 복사</button>':'')+
         '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">다시 시도</button></div>');
@@ -17409,9 +17432,21 @@ function orgSyncBarHtml(){
     (orgCanWrite()?'<button class="btn '+(sn?'btn-ghost':'btn-primary')+'" style="padding:6px 12px;font-size:11.5px" onclick="orgPushApply()">⬆ 이 기기 내용 올리기 ('+ln+'명)</button>':'')+
     '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="orgPull(true)">↻ 새로고침</button>'+
     '</div>';
+  var only=orgOnlyHere();
+  if(only.length){
+    /* 이 기기에만 있는 사람이 있다. 화면에는 이미 같이 보이고 있지만,
+       올리지 않으면 다른 컴퓨터에서는 안 보인다 — 그걸 분명히 말한다. */
+    return box('#FFFBEB','#FDE68A','#92400E',
+      '<b>이 기기에만 있는 '+only.length+'명이 있습니다.</b> 화면에는 같이 보이지만 <b>다른 컴퓨터에서는 안 보입니다.</b><br>'+
+      '<span style="font-size:11.5px;line-height:1.8">'+osEsc(only.slice(0,6).map(function(m){return m.name||'이름없음';}).join(', '))+
+      (only.length>6?(' 외 '+(only.length-6)+'명'):'')+' — '+
+      (orgCanWrite()
+        ? '아래 <b>⬆ 이 기기 내용 올리기</b>를 누르면 서버에 올라가 모두가 보게 됩니다.'
+        : '대표·관리자에게 올려 달라고 하세요.')+'</span>'+btns);
+  }
   if(same){
     return box('#F0FDF4','#BBF7D0','#065F46',
-      '<b>✅ 서버와 같습니다 — '+sn+'명.</b> 다른 컴퓨터에서도 이 조직도가 그대로 보입니다.'+
+      '<b>✅ 서버에 저장돼 있습니다 — '+sn+'명.</b> 어느 컴퓨터에서 열어도 이 조직도가 그대로 보이고, 고치면 모두에게 바로 반영됩니다.'+
       (ORGS.at?' <span style="font-size:11px;color:#047857">확인 '+osEsc(ORGS.at)+'</span>':'')+
       (orgCanWrite()?'<div style="font-size:11.5px;line-height:1.75;margin-top:5px">앞으로 추가·수정·삭제하면 <b>그때그때 서버에 함께 저장</b>됩니다.</div>':
         '<div style="font-size:11.5px;line-height:1.75;margin-top:5px">수정 권한은 대표·관리자에게 있습니다. 이 기기에서 고친 내용은 서버에 올라가지 않습니다.</div>')+btns);
@@ -17469,9 +17504,40 @@ function orgMigrate(a){
   if(changed){try{localStorage.setItem(ORG_KEY,JSON.stringify(a));}catch(e){}}
   return a;
 }
+/* ── 조직도는 서버가 정본이다 ──
+   이 기기(localStorage)를 정본으로 쓰면 그 컴퓨터가 곧 「메인 서버」 가 된다.
+   다른 사람은 못 보고, 그 컴퓨터를 잃으면 조직도도 사라진다.
+
+   그래서 서버에서 받은 것이 있으면 그것을 그린다. 기기에 남긴 것은
+   '마지막으로 본 것' 일 뿐이다 — 서버가 아직 안 왔거나 인터넷이 끊겼을 때
+   빈 화면 대신 그것을 그린다. 조직도가 안 보이는 순간은 만들지 않는다. */
+function orgDev(){
+  try{var raw=localStorage.getItem(ORG_KEY);if(raw){var a=JSON.parse(raw);if(a&&a.length)return a;}}catch(e){}
+  return [];
+}
 function orgLoad(){
-  try{var raw=localStorage.getItem(ORG_KEY);if(raw){var a=JSON.parse(raw);if(a&&a.length)return orgMigrate(a);}}catch(e){}
+  var dev=orgDev();
+  if(ORGS.srv&&ORGS.srv.length){
+    /* 서버가 정본이다. 다만 이 기기에만 있고 서버엔 없는 사람을 말없이 지우면
+       사장님이 적어 둔 사람이 눈앞에서 사라진다 — 그건 절대 안 된다.
+       둘을 합쳐서 보여 주고, 서버에 없는 사람은 따로 표시해 올릴 수 있게 한다. */
+    var out=orgMigrate(ORGS.srv.slice()),have={},i;
+    for(i=0;i<out.length;i++)have[out[i].id]=1;
+    for(i=0;i<dev.length;i++)if(dev[i]&&dev[i].id&&!have[dev[i].id]){
+      var m=dev[i];m._onlyHere=true;out.push(m);
+    }
+    return out;
+  }
+  if(dev.length)return orgMigrate(dev);
   return orgSeed();
+}
+/* 지금 보고 있는 것이 서버 것인가, 기기에 남은 마지막 것인가 */
+function orgFromServer(){return !!(ORGS.srv&&ORGS.srv.length);}
+/* 이 기기에만 있고 서버엔 없는 사람 */
+function orgOnlyHere(){
+  var L=orgLoad(),out=[],i;
+  for(i=0;i<L.length;i++)if(L[i]._onlyHere)out.push(L[i]);
+  return out;
 }
 /* 이 기기에 진짜 내용이 있나. 처음 심어 둔 예시 둘뿐이면 없는 것으로 본다 */
 function orgDeviceEmpty(){
@@ -17486,8 +17552,13 @@ function orgDeviceEmpty(){
   return true;   /* 예시만 있다 */
 }
 function orgSave(list){
-  try{localStorage.setItem(ORG_KEY,JSON.stringify(list));return true;}
+  try{localStorage.setItem(ORG_KEY,JSON.stringify(list));}
   catch(e){alert('저장 공간이 부족합니다. 사진 용량이 큰 구성원의 사진을 제거하거나 다시 선택해 주세요.');return false;}
+  /* 서버를 보고 있는 중이면 화면 기준도 같이 옮겨 둔다 —
+     안 그러면 방금 고친 것이 화면에서 되돌아간 것처럼 보인다.
+     서버 쓰기가 실패하면 아래 orgPushOne/orgPushMany 가 다시 받아 와 바로잡는다. */
+  if(ORGS.pulled)ORGS.srv=list.map(orgRow);
+  return true;
 }
 function orgVal(id){var e=document.getElementById(id);return e?(''+e.value).replace(/^\s+|\s+$/g,''):'';}
 function orgInsta(v){return (''+v).replace(/^@/,'').replace(/https?:\/\/(www\.)?instagram\.com\//i,'').replace(/[\/?#].*$/,'').replace(/^\s+|\s+$/g,'');}
@@ -17603,7 +17674,9 @@ function orgZoomSet(d){
 }
 function orgMini(m){
   var c=orgRankColor(m.rank);
-  return '<div class="ogv-c" onclick="orgEdit(\''+m.id+'\')" title="눌러서 편집">'+
+  return '<div class="ogv-c'+(m._onlyHere?' only':'')+'" onclick="orgEdit(\''+m.id+'\')" '+
+    'title="'+(m._onlyHere?'이 기기에만 있습니다 — 올려야 다른 컴퓨터에서 보입니다':'눌러서 편집')+'">'+
+    (m._onlyHere?'<span class="ogv-only">이 기기</span>':'')+
     '<span class="ogv-b" style="background:'+c+'"></span>'+
     orgPhotoTag(m,34)+
     '<div class="ogv-t">'+
@@ -17690,6 +17763,9 @@ function orgWideCss(){
      'overflow:hidden;text-overflow:ellipsis}'+
    '.ogv-r{display:inline-block;font-size:10.5px;font-weight:800;margin-right:5px}'+
    '.ogv-m{display:inline-block;font-size:10.5px;color:#94A3B8;font-weight:700}'+
+   '.ogv-c.only{border-color:#FDE68A;background:#FFFBEB}'+
+   '.ogv-only{position:absolute;top:-8px;right:8px;font-size:9px;font-weight:800;'+
+     'background:#F59E0B;color:#fff;border-radius:999px;padding:1px 7px;white-space:nowrap}'+
    /* 위 띠 */
    '.ogv-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}'+
    '.ogv-n{font-size:11.5px;font-weight:800;color:#1C2434;background:#EEF2FF;'+
