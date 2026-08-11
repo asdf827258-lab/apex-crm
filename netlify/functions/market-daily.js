@@ -213,6 +213,46 @@ exports.handler = async function () {
     } else log.push('알림 없음');
   } catch (e) { log.push('알림 실패: ' + e.message.slice(0, 90)); }
 
+  /* ── ③-2 일별 평가액(NAV) 기록 — TWR 계산의 재료 ────────────────────────
+     매일 한 줄씩 쌓여야 "운용 성과(TWR)"를 낼 수 있다. 오늘 들어오고 나간 돈
+     (flow)도 함께 적어 둬야 입출금 영향을 걷어낼 수 있다. */
+  try {
+    const byAcc = {};
+    holdings.forEach(h => {
+      const q = priceMap[String(h.code || '').trim()];
+      const px = q ? n2(q.price) : null;
+      const v = (px != null ? px : n2(h.avg_price)) * (n2(h.qty) || 0);
+      if (!isFinite(v)) return;
+      if (!byAcc[h.account_id]) byAcc[h.account_id] = { owner: h.owner_id, value: 0 };
+      byAcc[h.account_id].value += v;
+    });
+
+    const accIds = Object.keys(byAcc);
+    if (accIds.length) {
+      /* 오늘 발생한 순유입 — 계좌 기준(들어오면 +) */
+      let todayTxns = [];
+      try {
+        todayTxns = (await sb('invest_txns?txn_date=eq.' + today + '&select=account_id,kind,amount')) || [];
+      } catch (e) { /* 34번 미적용이면 거래내역이 없다 — 흐름 0 으로 둔다 */ }
+      const flowBy = {};
+      todayTxns.forEach(t => {
+        const a = Math.abs(n2(t.amount) || 0);
+        if (!a) return;
+        /* 계좌로 돈이 들어오는 것 = 납입. 나가는 것 = 출금.
+           매수·매도는 계좌 안에서 현금↔주식이 바뀔 뿐이라 순유입이 아니다. */
+        if (t.kind === 'deposit') flowBy[t.account_id] = (flowBy[t.account_id] || 0) + a;
+        else if (t.kind === 'withdraw') flowBy[t.account_id] = (flowBy[t.account_id] || 0) - a;
+      });
+
+      const navRows = accIds.map(id => ({
+        account_id: id, owner_id: byAcc[id].owner, nav_date: today,
+        value: r2(byAcc[id].value), flow: r2(flowBy[id] || 0), src: 'auto'
+      }));
+      await sb('invest_nav?on_conflict=account_id,nav_date', { method: 'POST', body: JSON.stringify(navRows) });
+      log.push('일별 평가액 ' + navRows.length + '계좌');
+    }
+  } catch (e) { log.push('평가액 기록 건너뜀(마이그레이션 34번 미적용?): ' + e.message.slice(0, 80)); }
+
   /* ── ④ 경제지표 저장 ────────────────────────────────────────────────── */
   let econ = [];
   try {

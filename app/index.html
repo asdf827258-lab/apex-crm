@@ -7413,6 +7413,7 @@ var TABS=[
  {group:'투자·경제',items:[
    {id:'inv_stock',icon:'📈',title:'주식관리',cnt:''},
    {id:'inv_fund',icon:'💠',title:'펀드관리',cnt:''},
+   {id:'inv_perf',icon:'📐',title:'성과·자산배분',cnt:''},
    {id:'inv_econ',icon:'🌡️',title:'경제동향 실시간',cnt:''}
  ]},
  {group:'법인·사업자 컨설팅',items:[
@@ -32077,7 +32078,8 @@ function invAlertHtml(a,t){
 
 /* ══════════════ 공통 조각 ══════════════ */
 function invTabsBar(active){
-  var T=[{id:'inv_stock',ic:'📈',t:'주식관리'},{id:'inv_fund',ic:'💠',t:'펀드관리'},{id:'inv_econ',ic:'🌡️',t:'경제동향'}];
+  var T=[{id:'inv_stock',ic:'📈',t:'주식관리'},{id:'inv_fund',ic:'💠',t:'펀드관리'},
+         {id:'inv_perf',ic:'📐',t:'성과·자산배분'},{id:'inv_econ',ic:'🌡️',t:'경제동향'}];
   return '<div class="biz-tabs">'+T.map(function(x){
     return '<button class="'+(x.id===active?'on':'')+'" onclick="go(\''+x.id+'\')">'+x.ic+' '+osEsc(x.t)+'</button>';
   }).join('')+'</div>';
@@ -32409,6 +32411,7 @@ var INV_AI_TASK={
  katalk:{t:'고객 발송 카톡문',max:900,p:'고객에게 그대로 보낼 카톡 메시지를 써라. 5~7줄, 존댓말, 숫자 1~2개만 인용, 마지막 줄에 원금손실 가능 고지. 상품 권유 문장 금지.'},
  fund_review:{t:'펀드 포트폴리오 진단',max:1600,p:'보유 펀드 구성을 진단하라.\n\n# 형식\n## 구성 요약 (자산군·지역·환노출)\n## 겹치는 위험 (2줄)\n## 연금저축/IRP/ISA 중 어디에 담는 게 유리한지\n## 고객 설명 문단 (5줄)'},
  tax:{t:'절세 계좌 배치 제안',max:1400,p:'이 보유 자산을 연금저축·IRP·ISA·일반계좌에 어떻게 나눠 담으면 세후 수익이 좋아지는지 정리하라. 한도·공제율은 "당해년도 재확인 필요"를 명시하라.\n\n# 형식\n## 배치 표 (자산 | 추천 계좌 | 이유)\n## 올해 남은 납입 여력 점검 포인트\n## 주의사항 2줄'},
+ perf:{t:'성과 설명 스크립트',max:1600,p:'이 계좌의 성과를 고객에게 설명하는 스크립트를 써라. XIRR 는 "실제로 번 돈", TWR 는 "굴린 솜씨" 라는 취지로 쉬운 말로 풀어라. 두 값이 다르면 왜 다른지 한 문장으로 설명하라.\n\n# 형식\n## 한 줄 요약\n## 숫자 (위 수치만 인용)\n## 두 수익률이 다른 이유 (해당될 때만)\n## 지금 점검할 것 1~2가지\n## 고객에게 보낼 문장 (4줄, 마지막 줄에 원금손실 가능 고지)'},
  brief:{t:'오늘 시황 브리핑',max:1500,p:'오늘 시장을 설계사가 고객에게 설명할 수 있게 정리하라.\n\n# 형식\n## 오늘 시장 한 줄\n## 숫자로 본 오늘 (3줄 — 위 수치 인용)\n## 우리 고객에게 뜻하는 것 (연금·변액·달러보험·ISA 중 연결되는 것만 3줄)\n## 고객에게 보낼 문장 (카톡용 4줄, 마지막 줄에 원금손실 가능 고지)'}
 };
 function invAi(kind){
@@ -32554,11 +32557,322 @@ function invLoadServerBrief(){
     }).catch(function(){});
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   성과·자산배분 (inv_perf) — 수익률 관리 총괄
+   ──────────────────────────────────────────────────────────────────────────
+   ⚠️ 이 화면은 주문을 넣지 않는다. 기록·분석·제안까지만 한다.
+      전략 신호도 '모의' 다 — 실제 매매는 사람이 토스 앱에서 직접 한다.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 자산군 — 리밸런싱의 단위 */
+var IV_CLASSES = ['국내주식', '해외주식', '채권', '현금', '기타'];
+
+/* 종목만 보고 자산군을 짐작한다 (사용자가 바꿀 수 있다) */
+function invGuessClass(h) {
+  if (h.cls) return h.cls;
+  if (h.type === 'fund') return '기타';
+  var c = String(h.code || '').toUpperCase();
+  if (c.indexOf(':') > 0) return '해외주식';
+  if (/^(148070|152380|114260|136340|239660)$/.test(c)) return '채권';
+  if (/^(360750|133690|143850|195930|251350|381180|379800)$/.test(c)) return '해외주식';
+  return '국내주식';
+}
+
+/* ── 거래내역 ────────────────────────────────────────────────────────────── */
+var IV_TXN_KINDS = [
+  { k: 'deposit', t: '입금(납입)' }, { k: 'buy', t: '매수' }, { k: 'sell', t: '매도' },
+  { k: 'dividend', t: '배당·분배금' }, { k: 'withdraw', t: '출금' }, { k: 'fee', t: '수수료·세금' }
+];
+function invTxnLabel(k) {
+  for (var i = 0; i < IV_TXN_KINDS.length; i++) if (IV_TXN_KINDS[i].k === k) return IV_TXN_KINDS[i].t;
+  return k;
+}
+function invTxns() { var a = invCur(); if (!a) return []; a.txns = a.txns || []; return a.txns; }
+
+function invAddTxn() {
+  var a = invCur(); if (!a) return;
+  var today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  var d = prompt('날짜 (YYYY-MM-DD)', today); if (d == null) return;
+  d = (d || '').trim(); if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { toast('날짜 형식이 YYYY-MM-DD 가 아닙니다.'); return; }
+  var kindList = IV_TXN_KINDS.map(function (x, i) { return (i + 1) + '. ' + x.t; }).join('\n');
+  var pick = prompt('종류를 번호로 고르세요\n' + kindList, '1'); if (pick == null) return;
+  var idx = parseInt(pick, 10) - 1;
+  if (!(idx >= 0 && idx < IV_TXN_KINDS.length)) { toast('1~' + IV_TXN_KINDS.length + ' 중에서 골라주세요.'); return; }
+  var kind = IV_TXN_KINDS[idx].k;
+  var amt = invN(prompt('금액 (원, 양수로)', ''));
+  if (amt == null || amt <= 0) { toast('금액을 양수로 넣어주세요.'); return; }
+  var code = '';
+  if (kind === 'buy' || kind === 'sell' || kind === 'dividend') code = (prompt('종목코드 (선택)', '') || '').trim().toUpperCase();
+  a.txns = a.txns || [];
+  a.txns.push({ id: invId('t'), date: d, kind: kind, amount: amt, code: code, memo: '' });
+  a.txns.sort(function (x, y) { return x.date < y.date ? -1 : 1; });
+  invSave(); go('inv_perf');
+}
+function invDelTxn(id) {
+  var a = invCur(); if (!a) return;
+  a.txns = (a.txns || []).filter(function (x) { return x.id !== id; });
+  invSave(); go('inv_perf');
+}
+function invSetTxn(id, field, el) {
+  var a = invCur(); if (!a) return;
+  (a.txns || []).forEach(function (t) {
+    if (t.id !== id) return;
+    if (field === 'amount') t.amount = invN(el.value);
+    else t[field] = el.value;
+  });
+  invSave(); go('inv_perf');
+}
+
+/* ── 성과 계산 ───────────────────────────────────────────────────────────── */
+function invPerf() {
+  var a = invCur();
+  var val = invCalc(a).val;
+  var txns = invTxns();
+  var today = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+
+  var out = { value: val, txnCount: txns.length, net: null, xirr: null, twr: null, simple: null };
+  if (!txns.length) return out;
+
+  out.net = ivNetInvested(txns);
+  out.xirr = ivXirr(ivTxnFlows(txns, val, today));
+  if (out.net > 0) out.simple = (val - out.net) / out.net;
+
+  /* TWR 은 일별 평가액이 쌓여야 정확하다. 서버(야간 자동수집)가 채워 주기 전에는
+     거래일 기준으로 근사한다 — 근사라는 것을 화면에 밝힌다. */
+  var navs = (a && a.navs) || [];
+  if (navs.length >= 2) out.twr = ivTwr(navs);
+  return out;
+}
+
+/* ── 자산배분 ────────────────────────────────────────────────────────────── */
+function invAllocNow() {
+  var a = invCur();
+  var rows = (a && a.holdings || []).map(function (h) {
+    var pr = invPrice(h), qty = invN(h.qty) || 0, avg = invN(h.avg) || 0;
+    var v = (pr.p != null ? pr.p : avg) * qty;
+    /* 해외 종목은 원화로 환산해야 비중이 맞다. 환율이 없으면 환산하지 않고 표시한다. */
+    return { code: h.code, assetClass: invGuessClass(h), value: v, currency: h.currency || 'KRW' };
+  });
+  return { alloc: ivAlloc(rows), hasFx: rows.some(function (r) { return r.currency !== 'KRW'; }) };
+}
+function invTargets() {
+  var a = invCur(); if (!a) return [];
+  if (!a.targets) a.targets = [];
+  return a.targets;
+}
+function invSetTarget(cls, el) {
+  var a = invCur(); if (!a) return;
+  a.targets = a.targets || [];
+  var v = invN(el.value);
+  var found = false;
+  a.targets.forEach(function (t) { if (t.cls === cls) { t.target = v == null ? 0 : v; found = true; } });
+  if (!found) a.targets.push({ cls: cls, target: v == null ? 0 : v, band: a.band == null ? 5 : a.band });
+  invSave(); invPaintPerf();
+}
+function invSetBand(el) {
+  var a = invCur(); if (!a) return;
+  a.band = invN(el.value);
+  (a.targets || []).forEach(function (t) { t.band = a.band; });
+  invSave(); invPaintPerf();
+}
+function invSetHoldClass(hid, el) {
+  var h = invHoldById(hid); if (!h) return;
+  h.cls = el.value; invSave(); invPaintPerf();
+}
+
+/* ── 전략 신호 (모의 전용) ───────────────────────────────────────────────── */
+/* 규칙은 단순하고 설명 가능한 것만 넣는다 — 고객에게 근거를 말할 수 있어야 한다 */
+function invSignals() {
+  var a = invCur(); if (!a) return [];
+  var out = [];
+  var tgt = invN(a.target), stop = invN(a.stop);
+
+  (a.holdings || []).forEach(function (h) {
+    var pr = invPrice(h), avg = invN(h.avg);
+    if (pr.p == null || !avg) return;
+    var rt = (pr.p - avg) / avg * 100;
+    if (tgt != null && rt >= tgt) {
+      out.push({ side: 'sell', code: h.code, name: h.name || h.code, strategy: '목표도달',
+        reason: '수익률 ' + invPct(rt) + ' — 목표 ' + tgt + '% 를 넘었습니다. 일부 익절로 비중을 줄일 시점입니다.',
+        strength: Math.min(100, Math.round(rt / Math.max(tgt, 1) * 60)) });
+    } else if (stop != null && rt <= -Math.abs(stop)) {
+      out.push({ side: 'sell', code: h.code, name: h.name || h.code, strategy: '손절선',
+        reason: '수익률 ' + invPct(rt) + ' — 손절 기준 -' + Math.abs(stop) + '% 를 벗어났습니다. 고객과 먼저 상의하세요.',
+        strength: Math.min(100, Math.round(Math.abs(rt) / Math.max(Math.abs(stop), 1) * 60)) });
+    }
+    /* 52주 고가 대비 낙폭 — 실시간 제공자가 52주 값을 줄 때만 */
+    var q = INV.live[(h.code || '').trim()];
+    if (q && q.high52 && pr.p) {
+      var dd = (pr.p - q.high52) / q.high52 * 100;
+      if (dd <= -25) out.push({ side: 'buy', code: h.code, name: h.name || h.code, strategy: '낙폭과대',
+        reason: '52주 고가 대비 ' + invPct(dd) + '. 분할 매수로 평단을 낮추는 것을 검토할 수 있습니다.',
+        strength: Math.min(100, Math.round(Math.abs(dd))) });
+    }
+  });
+
+  /* 리밸런싱 신호 */
+  var rb = ivRebal(invAllocNow().alloc, invTargets(), { band: a.band == null ? 5 : a.band });
+  rb.rows.forEach(function (r) {
+    if (!r.off || r.amount <= 0) return;
+    out.push({ side: r.action, code: '', name: r.cls, strategy: '리밸런싱',
+      reason: r.cls + ' 비중 ' + r.current + '% (목표 ' + r.target + '%). ' +
+              (r.action === 'buy' ? '약 ' + invMoney(r.amount) + ' 추가' : '약 ' + invMoney(r.amount) + ' 축소') + '하면 목표에 맞습니다.',
+      strength: Math.min(100, Math.round(Math.abs(r.diff) * 3)) });
+  });
+
+  return out.sort(function (x, y) { return y.strength - x.strength; });
+}
+
+/* ── 화면 ────────────────────────────────────────────────────────────────── */
+function invRenderPerf() {
+  var a = invCur();
+  var body =
+    invTabsBar('inv_perf') +
+    '<div id="invRoot">' +
+    invAccBar() +
+    '<div id="invSetup"></div>' +
+    '<div id="invPerfPane">' + invPerfPaneHtml() + '</div>' +
+    '<div class="rpt-sec"><div class="hd"><span class="n">4</span>상담 자료 만들기</div>' +
+      '<div class="sub">위 숫자를 근거로 고객에게 설명할 문장을 만듭니다. 특정 종목 매매 권유는 하지 않습니다.</div>' +
+      '<div class="btn-row">' +
+      '<button class="btn btn-primary" onclick="invAi(\'perf\')">🤖 성과 설명 스크립트</button>' +
+      '<button class="btn btn-ghost" onclick="invAi(\'rebalance\')">⚖ 리밸런싱 제안</button>' +
+      '</div><div id="invAiOut" style="margin-top:12px"></div>' +
+    '</div>' +
+    '</div>' +
+    bizDisc(INV_DISC);
+  return osPage('PERFORMANCE', '성과·자산배분',
+    '입출금이 섞여 있어도 정확한 수익률(XIRR·TWR)을 내고, 자산배분이 목표에서 얼마나 벗어났는지 봅니다. 이 화면은 주문을 넣지 않습니다.', body);
+}
+
+function invPerfPaneHtml() {
+  var a = invCur();
+  var p = invPerf();
+  var an = invAllocNow(), alloc = an.alloc;
+  var band = a && a.band == null ? 5 : invN(a.band);
+  var rb = ivRebal(alloc, invTargets(), { band: band });
+  var sig = invSignals();
+
+  /* ① 성과 요약 */
+  var perfCards =
+    '<div class="iv-sum">' +
+      '<div class="c"><div class="k">평가금액</div><div class="v">' + invMoney(p.value) + '</div></div>' +
+      '<div class="c"><div class="k">순납입 원금</div><div class="v">' + (p.net == null ? '—' : invMoney(p.net)) + '</div></div>' +
+      '<div class="c"><div class="k">실제 수익률 <span class="iv-hint" title="XIRR — 언제 얼마를 넣고 뺐는지까지 반영한 연환산 수익률. 고객에게 말할 숫자입니다.">XIRR</span></div>' +
+        '<div class="v ' + invCls(p.xirr) + '">' + (p.xirr == null ? '—' : invPct(p.xirr * 100)) + '</div></div>' +
+      '<div class="c"><div class="k">운용 성과 <span class="iv-hint" title="TWR — 입출금 타이밍 영향을 걷어낸 수익률. 벤치마크와 비교할 때 씁니다.">TWR</span></div>' +
+        '<div class="v ' + invCls(p.twr && p.twr.total) + '">' + (p.twr ? invPct(p.twr.total * 100) : '—') + '</div></div>' +
+    '</div>';
+
+  var note = '';
+  if (!p.txnCount) {
+    note = '<div class="iv-need-slim">아직 거래내역이 없습니다. 아래 <b>＋ 거래 추가</b>로 <b>납입·매수·매도</b>를 넣으면 ' +
+           '정확한 수익률(XIRR)이 계산됩니다. 단순 (평가액−원금)/원금 은 추가납입이 있으면 틀립니다.</div>';
+  } else if (p.simple != null && p.xirr != null && Math.abs(p.simple - p.xirr) > 0.02) {
+    note = '<div class="iv-note">참고 — 단순 계산으로는 <b>' + invPct(p.simple * 100) + '</b> 이지만, ' +
+           '납입 시점까지 반영한 실제 수익률은 <b>' + invPct(p.xirr * 100) + '</b> 입니다. ' +
+           '고객에게는 뒤쪽 숫자를 쓰세요.</div>';
+  }
+  if (!p.twr) {
+    note += '<div class="iv-note">운용 성과(TWR)는 <b>일별 평가액</b>이 쌓여야 나옵니다. ' +
+            '서버 야간 자동수집이 매일 기록하므로 며칠 지나면 채워집니다.</div>';
+  }
+
+  /* ② 거래내역 */
+  var txns = invTxns();
+  var txnRows = txns.length ? txns.map(function (t) {
+    return '<tr><td><input type="date" value="' + osEsc(t.date) + '" onchange="invSetTxn(\'' + t.id + '\',\'date\',this)"/></td>' +
+      '<td>' + osEsc(invTxnLabel(t.kind)) + '</td>' +
+      '<td class="code">' + osEsc(t.code || '—') + '</td>' +
+      '<td><input type="number" step="any" value="' + (t.amount == null ? '' : t.amount) + '" onchange="invSetTxn(\'' + t.id + '\',\'amount\',this)"/></td>' +
+      '<td class="iv-num">' + (('buy deposit fee').indexOf(t.kind) >= 0 ? '내 돈 나감' : '내 돈 들어옴') + '</td>' +
+      '<td><button class="iv-x" onclick="invDelTxn(\'' + t.id + '\')">✕</button></td></tr>';
+  }).join('') : '';
+  var txnTable = txns.length
+    ? '<div class="iv-tbwrap"><table class="iv-tb"><thead><tr><th>날짜</th><th>종류</th><th>종목</th><th>금액</th><th>방향</th><th></th></tr></thead><tbody>' + txnRows + '</tbody></table></div>'
+    : '<div class="iv-empty">거래내역이 없습니다. <b>＋ 거래 추가</b>로 납입·매수부터 넣어보세요.</div>';
+
+  /* ③ 자산배분 */
+  var tmap = {};
+  invTargets().forEach(function (t) { tmap[t.cls] = t.target; });
+  var allocRows = IV_CLASSES.map(function (cls) {
+    var cur = (alloc.list.filter(function (x) { return x.cls === cls; })[0]) || { value: 0, pct: 0 };
+    var row = (rb.rows.filter(function (r) { return r.cls === cls; })[0]) || { action: 'hold', amount: 0, off: false, diff: cur.pct };
+    var barW = Math.max(0, Math.min(100, cur.pct));
+    var tgtW = Math.max(0, Math.min(100, tmap[cls] == null ? 0 : tmap[cls]));
+    return '<tr' + (row.off ? ' class="iv-off"' : '') + '>' +
+      '<td><b>' + osEsc(cls) + '</b></td>' +
+      '<td class="iv-num">' + invMoney(cur.value) + '</td>' +
+      '<td style="min-width:150px"><div class="iv-bar"><span style="width:' + barW + '%"></span>' +
+        '<i style="left:' + tgtW + '%" title="목표 ' + tgtW + '%"></i></div>' +
+        '<div class="iv-barlab">' + (Math.round(cur.pct * 10) / 10) + '%</div></td>' +
+      '<td><input type="number" step="1" style="width:70px" value="' + (tmap[cls] == null ? '' : tmap[cls]) + '" placeholder="0" onchange="invSetTarget(\'' + cls + '\',this)"/> %</td>' +
+      '<td class="iv-num ' + (row.action === 'buy' ? 'dn' : (row.action === 'sell' ? 'up' : '')) + '">' +
+        (row.action === 'hold' ? '유지' : (row.action === 'buy' ? '＋' : '－') + invMoney(row.amount)) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var sumWarn = '';
+  if (rb.targetSum > 0 && Math.abs(rb.targetSum - 100) > 0.5) {
+    sumWarn = '<div class="iv-need-slim" style="margin-top:8px">목표 비중 합이 <b>' + rb.targetSum + '%</b> 입니다. 100% 로 맞춰야 제안 금액이 정확해집니다.</div>';
+  }
+  var fxWarn = an.hasFx
+    ? '<div class="iv-note">해외 종목이 있습니다. 환율 환산 없이 표시 통화 그대로 더했으므로 비중이 실제와 다를 수 있습니다.</div>' : '';
+
+  /* 보유 종목 자산군 지정 */
+  var clsRows = (a && a.holdings || []).map(function (h) {
+    var opts = IV_CLASSES.map(function (c) {
+      return '<option value="' + c + '"' + (invGuessClass(h) === c ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    return '<tr><td class="code">' + osEsc(h.code) + '</td><td>' + osEsc(h.name || '') + '</td>' +
+      '<td><select onchange="invSetHoldClass(\'' + h.id + '\',this)">' + opts + '</select></td></tr>';
+  }).join('');
+
+  /* ④ 신호 */
+  var sigHtml = sig.length ? sig.map(function (s) {
+    return '<div class="iv-sig ' + (s.side === 'buy' ? 'b' : 's') + '">' +
+      '<div class="hd"><span class="tag">' + (s.side === 'buy' ? '매수 검토' : '매도 검토') + '</span>' +
+      '<span class="st">' + osEsc(s.strategy) + '</span>' +
+      '<b>' + osEsc(s.name || s.code) + '</b>' +
+      '<span class="pw" title="신호 강도">' + s.strength + '</span></div>' +
+      '<div class="rs">' + osEsc(s.reason) + '</div></div>';
+  }).join('') : '<div class="iv-empty">지금은 조건에 걸린 신호가 없습니다. 목표·손절 기준과 목표 비중을 넣어두면 여기에 뜹니다.</div>';
+
+  return perfCards + note +
+    '<div class="rpt-sec"><div class="hd"><span class="n">1</span>거래내역 <span class="iv-badge">수익률의 근거</span></div>' +
+      '<div class="sub">납입·매수·매도·배당을 넣을수록 수익률이 정확해집니다. 금액은 <b>양수</b>로 넣고, 방향은 종류가 결정합니다.</div>' +
+      '<div class="btn-row" style="margin-bottom:10px"><button class="btn btn-primary" onclick="invAddTxn()">＋ 거래 추가</button></div>' +
+      txnTable +
+    '</div>' +
+    '<div class="rpt-sec"><div class="hd"><span class="n">2</span>자산배분과 리밸런싱</div>' +
+      '<div class="sub">목표 비중을 넣으면 지금 얼마나 벗어났는지, 맞추려면 얼마를 사고팔지 계산합니다. ' +
+      '밴드 안이면 건드리지 않습니다 — 잦은 매매는 비용만 늘립니다.</div>' +
+      '<div class="iv-goal" style="margin-top:0;margin-bottom:10px">' +
+        '<label>허용 밴드 ±<input type="number" step="1" value="' + (band == null ? 5 : band) + '" onchange="invSetBand(this)"/> %</label>' +
+        '<span class="iv-badge">' + (rb.needsRebalance ? '조정 필요 ' + rb.offCount + '건' : '목표 범위 안') + '</span>' +
+      '</div>' +
+      '<div class="iv-tbwrap"><table class="iv-tb"><thead><tr><th>자산군</th><th>평가금액</th><th>현재 비중 / 목표</th><th>목표</th><th>조정</th></tr></thead>' +
+      '<tbody>' + allocRows + '</tbody></table></div>' + sumWarn + fxWarn +
+      (clsRows ? '<div class="sub" style="margin-top:14px">종목별 자산군 — 자동으로 짐작한 값입니다. 다르면 바꿔주세요.</div>' +
+        '<div class="iv-tbwrap"><table class="iv-tb"><thead><tr><th>종목코드</th><th>이름</th><th>자산군</th></tr></thead><tbody>' + clsRows + '</tbody></table></div>' : '') +
+    '</div>' +
+    '<div class="rpt-sec"><div class="hd"><span class="n">3</span>오늘의 신호 <span class="iv-badge paper">모의 · 주문 안 나감</span></div>' +
+      '<div class="sub">규칙에 걸린 것만 근거와 함께 보여줍니다. <b>실제 매매는 토스 앱에서 직접</b> 하세요. ' +
+      '이 시스템은 주문을 넣지 않습니다.</div>' + sigHtml +
+    '</div>';
+}
+function invPaintPerf() {
+  var el = $('invPerfPane');
+  if (el) el.innerHTML = invPerfPaneHtml();
+}
+
 /* ══════════════ 라우터 ══════════════ */
 function invRender(tab){
   INV.tab=tab;invLoad();
   if(tab==='inv_fund')return invRenderFund();
   if(tab==='inv_econ')return invRenderEcon();
+  if(tab==='inv_perf')return invRenderPerf();
   return invRenderStock();
 }
 function invAfterRender(tab){
@@ -32568,7 +32882,7 @@ function invAfterRender(tab){
     invLoadServerBrief();
     return;
   }
-  invRefresh(false);
+  invRefresh(false).then(function(){ if(INV.tab==='inv_perf')invPaintPerf(); });
   invStartTimer();
   invHealth(function(h){
     var has=(h&&h.has)||{};
@@ -32607,6 +32921,22 @@ function invAfterRender(tab){
    '.iv-x:hover{background:#FEE2E2;color:#B91C1C}',
    '.iv-manual{font-size:10px;font-weight:800;color:#B45309;background:#FFFBEB;border-radius:5px;padding:1px 5px}',
    '.iv-delay{font-size:10px;font-weight:800;color:#475569;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:5px;padding:1px 5px}',
+   '.iv-badge{font-size:10px;font-weight:800;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:2px 9px;margin-left:6px}',
+   '.iv-badge.paper{color:#B45309;background:#FFFBEB;border:1px solid #FDE68A}',
+   '.iv-hint{font-size:9.5px;font-weight:800;color:#6B7280;background:#F3F4F6;border-radius:4px;padding:1px 4px;margin-left:3px;cursor:help}',
+   '.iv-bar{position:relative;height:9px;border-radius:5px;background:#EEF0F3;overflow:visible}',
+   '.iv-bar span{display:block;height:100%;border-radius:5px;background:#1A56DB}',
+   '.iv-bar i{position:absolute;top:-3px;width:2px;height:15px;background:#DC2626;border-radius:1px}',
+   '.iv-barlab{font-size:10.5px;color:#6B7280;margin-top:3px;font-weight:700}',
+   '.iv-tb tr.iv-off td{background:#FFFBEB}',
+   '.iv-sig{border:1px solid #E5E9F0;border-left-width:3px;border-radius:10px;padding:10px 13px;margin-bottom:7px;background:#fff}',
+   '.iv-sig.b{border-left-color:#1D4ED8}.iv-sig.s{border-left-color:#DC2626}',
+   '.iv-sig .hd{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px}',
+   '.iv-sig .tag{font-size:10px;font-weight:800;border-radius:5px;padding:2px 7px}',
+   '.iv-sig.b .tag{background:#EFF6FF;color:#1D4ED8}.iv-sig.s .tag{background:#FEF2F2;color:#B91C1C}',
+   '.iv-sig .st{font-size:10.5px;font-weight:700;color:#6B7280;background:#F3F4F6;border-radius:5px;padding:2px 7px}',
+   '.iv-sig .pw{margin-left:auto;font-size:10px;font-weight:800;color:#6B7280}',
+   '.iv-sig .rs{font-size:12px;color:#374151;line-height:1.6}',
    '.iv-empty{border:1px dashed #D8DEE9;border-radius:12px;padding:26px 18px;text-align:center;font-size:12.5px;color:#6B7280;line-height:1.7}',
    '.iv-goal{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:12px;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:10px}',
    '.iv-goal label{font-size:11.5px;font-weight:700;color:#374151;display:flex;align-items:center;gap:6px}',

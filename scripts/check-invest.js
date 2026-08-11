@@ -128,7 +128,7 @@ window.supabase={createClient:function(){
     const g = TABS.filter(x => x.group === '투자·경제')[0];
     return { has: !!g, ids: g ? g.items.map(i => i.id) : [], vis: visibleTabs().some(x => x.group === '투자·경제') };
   });
-  ok(nav.has && nav.ids.length === 3, '메뉴에 투자·경제 3개가 있다 (' + nav.ids.join(', ') + ')');
+  ok(nav.has && nav.ids.length === 4, '메뉴에 투자·경제 4개가 있다 (' + nav.ids.join(', ') + ')');
   ok(nav.vis, '대표 계정에 메뉴가 보인다');
 
   /* ── ① 주식관리 ─────────────────────────────────────────────────── */
@@ -142,7 +142,7 @@ window.supabase={createClient:function(){
   }));
   ok(s0.root, '주식관리 화면이 열린다');
   ok(s0.sum === 4, '요약 카드 4개 (매입원가·평가금액·평가손익·수익률)');
-  ok(s0.tabs === 3, '위쪽 탭 3개');
+  ok(s0.tabs === 4, '위쪽 탭 4개');
   ok(/원금손실/.test(s0.txt), '준법 고지(원금손실)가 화면에 있다');
 
   /* 종목을 실제 입력 흐름으로 넣는다 (prompt 를 가로챈다) */
@@ -246,6 +246,70 @@ window.supabase={createClient:function(){
   ok(f1.etf >= 5, 'ETF 대안 칩이 토스 링크로 걸려 있다 (' + f1.etf + '개)');
   ok(f1.tax, '세제 연결(연금저축·IRP·ISA) 안내가 있다');
 
+  /* ── ②-2 성과·자산배분 ──────────────────────────────────────────── */
+  await page.evaluate(() => {
+    const a = invCur();
+    a.txns = [
+      { id: 't1', date: '2025-01-02', kind: 'deposit', amount: 10000000 },
+      { id: 't2', date: '2025-07-01', kind: 'buy', amount: 5000000 }
+    ];
+    a.targets = [{ cls: '국내주식', target: 50, band: 5 }, { cls: '해외주식', target: 30, band: 5 }, { cls: '채권', target: 20, band: 5 }];
+    a.band = 5;
+    invSave(); go('inv_perf');
+  });
+  await page.waitForTimeout(1200);
+
+  const pf = await page.evaluate(() => {
+    const p = invPerf();
+    return {
+      cards: document.querySelectorAll('#invPerfPane .iv-sum .c').length,
+      txnRows: document.querySelectorAll('#invPerfPane .iv-tb tbody tr').length,
+      xirr: p.xirr, net: p.net, value: p.value,
+      txt: (document.getElementById('invPerfPane') || {}).textContent || '',
+      bars: document.querySelectorAll('.iv-bar').length,
+      sigs: document.querySelectorAll('.iv-sig').length,
+      paperBadge: !!document.querySelector('.iv-badge.paper')
+    };
+  });
+  ok(pf.cards === 4, '성과 카드 4개 (평가금액·순납입·XIRR·TWR)');
+  ok(pf.net === 15000000, '순납입 1,500만원으로 집계 (' + pf.net.toLocaleString() + ')');
+  ok(pf.xirr !== null, 'XIRR 이 계산된다 (' + Math.round(pf.xirr * 1000) / 10 + '%)');
+  ok(pf.txnRows >= 2, '거래내역이 표에 그려진다');
+  ok(pf.bars >= 5, '자산군별 비중 막대가 그려진다 (' + pf.bars + '개)');
+  ok(/XIRR/.test(pf.txt) && /TWR/.test(pf.txt), '두 수익률을 구분해 보여준다');
+  ok(pf.paperBadge && /주문 안 나감/.test(pf.txt), '"모의 · 주문 안 나감" 을 화면에 명시한다');
+  ok(/일별 평가액/.test(pf.txt), 'TWR 이 아직 없으면 왜 없는지 알려 준다');
+
+  /* 목표 비중을 바꾸면 조정 금액이 다시 계산되는가 */
+  const rbBefore = await page.evaluate(() =>
+    ivRebal(invAllocNow().alloc, invTargets(), { band: 5 }).rows.filter(r => r.cls === '국내주식')[0].amount);
+  await page.evaluate(() => { invSetTarget('국내주식', { value: '80' }); });
+  await page.waitForTimeout(300);
+  const rbAfter = await page.evaluate(() =>
+    ivRebal(invAllocNow().alloc, invTargets(), { band: 5 }).rows.filter(r => r.cls === '국내주식')[0].amount);
+  ok(rbBefore !== rbAfter, '목표 비중을 바꾸면 조정 금액이 다시 계산된다 (' +
+    rbBefore.toLocaleString() + ' → ' + rbAfter.toLocaleString() + ')');
+
+  /* 이 화면이 주문을 넣을 수단을 아예 갖고 있지 않은지 */
+  /* 이 모듈이 증권 주문을 낼 수단을 아예 갖고 있지 않은지.
+     앱에는 amRunOrder(=AI 부서에 '지시'하기) 처럼 이름만 order 인 함수가 따로 있으므로
+     투자 모듈 이름공간(inv·iv 로 시작하는 것)만 본다. */
+  const noOrder = await page.evaluate(() => {
+    const names = Object.keys(window).filter(k =>
+      /^(inv|iv)[A-Z_]/.test(k) && typeof window[k] === 'function' &&
+      /(order|buyNow|sellNow|execute|체결|주문)/i.test(k));
+    return { fns: names, html: (document.getElementById('invRoot') || {}).innerHTML || '' };
+  });
+  ok(noOrder.fns.length === 0, '투자 모듈에 주문을 넣는 함수가 없다' + (noOrder.fns.length ? ' — ' + noOrder.fns.join(',') : ''));
+  ok(!/매수하기|주문하기|체결하기/.test(noOrder.html), '주문 버튼이 화면에 없다');
+  /* 시세 서버에도 주문 경로가 없어야 한다.
+     주석에는 "주문은 넣지 않는다" 같은 설명이 있으므로 주석을 걷어내고 실행 코드만 본다. */
+  const fnCode = fs.readFileSync('netlify/functions/market.js', 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  ok(!/order|주문|체결|placeOrder/i.test(fnCode), '시세 서버 실행 코드에 주문 경로가 없다');
+  const posts = (fnCode.match(/method:\s*'POST'/g) || []).length;
+  ok(posts === 2, '서버가 보내는 POST 는 토큰 발급 2건뿐이다 (토스·KIS) — 현재 ' + posts + '건');
+
   /* ── ③ 경제동향 ─────────────────────────────────────────────────── */
   await page.evaluate(() => go('inv_econ'));
   await page.waitForTimeout(1600);
@@ -301,7 +365,7 @@ window.supabase={createClient:function(){
     + (outside.length ? ' — ' + outside.slice(0, 2).join(', ') : ''));
 
   /* ── 좁은 화면 ──────────────────────────────────────────────────── */
-  for (const tab of ['inv_stock', 'inv_fund', 'inv_econ']) {
+  for (const tab of ['inv_stock', 'inv_fund', 'inv_perf', 'inv_econ']) {
     await page.evaluate(t => go(t), tab);
     await page.waitForTimeout(700);
     await page.setViewportSize({ width: 390, height: 900 });
