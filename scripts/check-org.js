@@ -267,14 +267,21 @@ window.supabase={createClient:function(){
       bar: (document.getElementById('orgSyncBar') || {}).textContent || ''
     };
   });
-  ok(keep.saved === 3 && keep.names.indexOf('내가적은사람') >= 0,
-    '이 기기에 적어 둔 것은 말없이 안 덮어쓴다 — ' + keep.names.join(' · '));
-  ok(/다릅니다/.test(keep.bar) && /가져오기/.test(keep.bar),
-    '대신 다르다고 알리고 가져올 방법을 준다');
+  /* 서버가 정본이 된 뒤로는 「둘 중 하나를 고르는」 것이 아니라 둘을 합쳐 보여 준다.
+     이 기기에만 있는 사람이 서버 것에 덮여 사라지는 일이 없어야 한다. */
+  ok(keep.names.indexOf('내가적은사람') >= 0,
+    '이 기기에 적어 둔 사람이 서버 것에 덮여 사라지지 않는다 — ' + keep.names.join(' · '));
+  ok(keep.names.indexOf('박서준') >= 0, '서버에 있던 사람도 같이 보인다');
+  ok(keep.saved === 10, '기기 예비본에 합쳐서 남는다 (' + keep.saved + '명)');
+  ok(/이 기기에만 있는/.test(keep.bar) && /다른 컴퓨터에서는 안 보입니다/.test(keep.bar),
+    '올려야 남들이 본다고 알려 준다 — ' + keep.bar.slice(0, 50));
 
   /* ── 상하관계가 꼬여도 사람은 반드시 보인다 ── */
   const cyc = await page.evaluate(async () => {
-    /* 서로가 서로의 윗사람 — 최상위가 없다. 여태 이러면 화면이 통째로 비었다 */
+    /* 서로가 서로의 윗사람 — 최상위가 없다. 여태 이러면 화면이 통째로 비었다.
+       서버 것이 섞이지 않게 비워 두고 이 기기 것만으로 본다 */
+    window.__db.org = [];              /* 서버는 비어 있고 */
+    ORGS.srv = null; ORGS.pulled = false; ORGS.err = '';
     localStorage.setItem('apex_org_chart', JSON.stringify([
       { id: 'c1', name: '가', rank: '설계사', team: 'T', parent: 'c2' },
       { id: 'c2', name: '나', rank: '설계사', team: 'T', parent: 'c1' },
@@ -377,6 +384,94 @@ window.supabase={createClient:function(){
   });
   ok(twice.add === 0, '두 번 눌러도 같은 사람이 또 안 들어온다 (' + twice.add + '명)');
   ok(/모두 조직도에 들어와 있습니다/.test(twice.txt), '다 들어와 있다고 말해 준다');
+
+  /* ══ 서버가 정본 — 다른 컴퓨터에서도 같은 것을 보고 고친다 ══ */
+  console.log('── 서버가 정본인가 ──');
+
+  /* ① 다른 컴퓨터에서 고친 것이 내 화면에 온다 */
+  const other = await page.evaluate(async () => {
+    localStorage.setItem('apex_org_chart', JSON.stringify([
+      { id: 'p_u1', name: '윤시현', rank: '사업단장', team: '온탑본부', parent: '', member_id: 'u1' }
+    ]));
+    /* 다른 컴퓨터에서 두 명을 더 넣었다고 치자 */
+    window.__db.org = [
+      { id: 'p_u1', name: '윤시현', rank: '사업단장', team: '온탑본부', parent: '', member_id: 'u1' },
+      { id: 'p_u2', name: '김지점', rank: '지점장', team: '온탑1팀', parent: 'p_u1', member_id: 'u2' },
+      { id: 'p_u4', name: '박서준', rank: '설계사', team: '온탑1팀', parent: 'p_u2', member_id: 'u4' }
+    ];
+    ORGS.pulled = false; ORGS.srv = null; ORGF.plan = null;
+    go('org');
+    await new Promise(r => setTimeout(r, 1000));
+    return {
+      cards: document.querySelectorAll('.ogv-c').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      dev: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
+      bar: (document.getElementById('orgSyncBar') || {}).textContent || ''
+    };
+  });
+  ok(other.cards === 3, '다른 컴퓨터에서 고친 것이 열자마자 넘어온다 (' + other.cards + '명)');
+  ok(other.names.indexOf('박서준') >= 0, '그 사람이 실제로 보인다 — ' + other.names.join(' · '));
+  ok(other.dev === 3, '받은 것을 이 기기에도 남긴다 — 다음에 인터넷이 끊겨도 보인다');
+  ok(/서버에 저장돼 있습니다/.test(other.bar), '서버에 있다고 분명히 적는다 — ' + other.bar.slice(0, 46));
+
+  /* ② 인터넷이 끊겨도 마지막으로 본 것이 그대로 보인다 */
+  const off = await page.evaluate(async () => {
+    ORGS.srv = null; ORGS.pulled = false; ORGS.err = '네트워크 오류';
+    go('org');
+    await new Promise(r => setTimeout(r, 400));
+    return {
+      cards: document.querySelectorAll('.ogv-c').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim())
+    };
+  });
+  ok(off.cards === 3, '서버가 안 닿아도 빈 화면이 아니라 마지막 것이 그대로 뜬다 (' + off.cards + '명)');
+  ok(off.names.indexOf('박서준') >= 0, '한 명도 안 사라진다 — ' + off.names.join(' · '));
+
+  /* ③ 이 기기에만 있는 사람을 서버 것으로 덮어 지우지 않는다 — 제일 위험한 자리 */
+  const mine = await page.evaluate(async () => {
+    /* 이 기기에서 한 명을 더 적었는데 아직 서버엔 없다 */
+    const dev = JSON.parse(localStorage.getItem('apex_org_chart') || '[]');
+    dev.push({ id: 'm_local1', name: '내가적은사람', rank: '설계사', team: '온탑1팀', parent: 'p_u2' });
+    localStorage.setItem('apex_org_chart', JSON.stringify(dev));
+    ORGS.pulled = false; ORGS.srv = null; ORGS.err = '';
+    go('org');
+    await new Promise(r => setTimeout(r, 1000));
+    return {
+      cards: document.querySelectorAll('.ogv-c').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      only: document.querySelectorAll('.ogv-c.only').length,
+      tag: (document.querySelector('.ogv-only') || {}).textContent || '',
+      bar: (document.getElementById('orgSyncBar') || {}).textContent || '',
+      dev: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length
+    };
+  });
+  ok(mine.cards === 4, '서버 3명 + 이 기기 1명 = 4명이 다 보인다 (' + mine.cards + '명)');
+  ok(mine.names.indexOf('내가적은사람') >= 0,
+    '이 기기에만 적은 사람이 서버 것에 덮여 사라지지 않는다 — ' + mine.names.join(' · '));
+  ok(mine.only === 1 && /이 기기/.test(mine.tag), '그 사람에게 「이 기기」 표시가 붙는다');
+  ok(/이 기기에만 있는 1명/.test(mine.bar) && /다른 컴퓨터에서는 안 보입니다/.test(mine.bar),
+    '올려야 남들이 본다고 분명히 말한다 — ' + mine.bar.slice(0, 60));
+  ok(mine.dev === 4, '기기 예비본에도 합쳐서 남는다 — 다시 열어도 안 사라진다');
+
+  /* ④ 고치면 서버로 나가고 화면도 그대로 유지된다 */
+  const edit = await page.evaluate(async () => {
+    window.__wrote = [];
+    ORGS.pulled = true;
+    orgEditId = 'p_u4';
+    go('org');
+    await new Promise(r => setTimeout(r, 400));
+    document.getElementById('org_f_name').value = '박서준2';
+    orgSubmit();
+    await new Promise(r => setTimeout(r, 700));
+    return {
+      pushed: window.__wrote.filter(w => w.t === 'org_members').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      srv: (ORGS.srv || []).map(x => x.name)
+    };
+  });
+  ok(edit.pushed > 0, '고치면 곧바로 서버로 나간다 — 다른 컴퓨터에서도 보인다');
+  ok(edit.names.indexOf('박서준2') >= 0, '고친 이름이 화면에 그대로 남는다 — ' + edit.names.join(' · '));
+  ok(edit.srv.indexOf('박서준2') >= 0, '서버 기준값도 같이 움직인다 — 되돌아가 보이지 않는다');
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs[0] : ''));
 
