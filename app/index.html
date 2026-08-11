@@ -32055,10 +32055,15 @@ function invPaintEcon(j){
   if(el=$('invIdx')){
     var idx=j.indices||[];
     el.innerHTML=idx.length?idx.map(function(i){
-      return '<div class="iv-card"><div class="k">'+osEsc(i.name)+'</div>'+
+      /* 지수 전용 소스가 없어 ETF 로 대신 보여줄 때는 반드시 그렇다고 밝힌다 */
+      var tail=i.proxy?'<div class="h">'+osEsc(i.note||'ETF 기준')+'</div>':
+               (i.delayed?'<div class="h">종가 '+osEsc(invAsOf(i.asOf))+' 기준</div>':'');
+      return '<div class="iv-card"><div class="k">'+osEsc(i.name)+
+        (i.proxy?'<span class="t">ETF</span>':'')+'</div>'+
         '<div class="v">'+(i.price!=null?i.price.toLocaleString('ko-KR'):'—')+'</div>'+
-        '<div class="d '+invCls(i.changeRate)+'">'+(i.change!=null?((i.change>0?'▲':(i.change<0?'▼':'-'))+Math.abs(i.change)):'')+' '+invPct(i.changeRate)+'</div></div>';
-    }).join(''):'<div class="iv-need-slim">지수는 한국투자증권 키(KIS_APP_KEY)를 넣으면 표시됩니다.</div>';
+        '<div class="d '+invCls(i.changeRate)+'">'+(i.change!=null?((i.change>0?'▲':(i.change<0?'▼':'-'))+Math.abs(i.change)):'')+' '+invPct(i.changeRate)+'</div>'+
+        tail+'</div>';
+    }).join(''):'<div class="iv-need-slim">지수는 시세 키(토스증권·한국투자증권·공공데이터 중 하나)를 넣으면 표시됩니다.</div>';
   }
   /* 경제지표 */
   if(el=$('invEcon')){

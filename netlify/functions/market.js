@@ -338,6 +338,28 @@ async function quoteOne(raw) {
   throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
 }
 
+/* ── 지수를 살 수 있는 소스가 있는가 (KIS 또는 공공데이터) ────────────── */
+function hasIndexSource() {
+  return !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET) || krxReady();
+}
+/* 지수 전용 소스가 없을 때 — 지수를 따라가는 ETF 시세로 대신한다.
+   토스증권 키 하나만 있어도 경제동향 화면이 비지 않게 하는 장치.
+   지수 그 자체가 아니므로 proxy 표시를 달아 앱이 'ETF 기준' 이라고 밝히게 한다. */
+async function indexProxyList() {
+  const defs = CFG.index_proxy || [];
+  const r = await settle(defs, async (d) => {
+    const q = await quoteOne(d.code);
+    return {
+      id: d.id, name: d.name, code: d.code,
+      price: q.price, change: q.change, changeRate: q.changeRate, volume: q.volume,
+      proxy: true, note: d.note || 'ETF 기준',
+      delayed: !!q.delayed, asOf: q.asOf || '',
+      src: q.src, at: q.at
+    };
+  });
+  return r;
+}
+
 /* ── 지수 — KIS(실시간) 우선, 없으면 공공데이터(전일 종가) ──────────────── */
 async function indexOne(def) {
   const k = 'i:' + def.code;
@@ -878,8 +900,15 @@ exports.handler = async function (event) {
 
     /* ── 지수 ──────────────────────────────────────────────────────────── */
     if (kind === 'index') {
-      const r = await settle(CFG.indices || [], indexOne);
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: r.list.length > 0, meta: meta, indices: r.list, errors: r.errors, need: needsOf(r.errors) }) };
+      const r = hasIndexSource() ? await settle(CFG.indices || [], indexOne) : await indexProxyList();
+      return {
+        statusCode: 200, headers: cors,
+        body: JSON.stringify({
+          ok: r.list.length > 0, meta: meta, indices: r.list,
+          proxy: !hasIndexSource(),
+          errors: r.errors, need: needsOf(r.errors)
+        })
+      };
     }
 
     /* ── 펀드 ──────────────────────────────────────────────────────────── */
@@ -906,7 +935,7 @@ exports.handler = async function (event) {
     if (kind === 'all') {
       const wl = (CFG.watchlist || []).map(w => w.code);
       const [idx, ec, nw, wq] = await Promise.all([
-        settle(CFG.indices || [], indexOne),
+        hasIndexSource() ? settle(CFG.indices || [], indexOne) : indexProxyList(),
         settle(CFG.econ || [], econOne),
         news(q.cat || '').catch(() => ({ items: [], keywords: [] })),
         settle(wl, quoteOne)
@@ -918,6 +947,7 @@ exports.handler = async function (event) {
           ok: true, meta: meta,
           indices: idx.list, econ: ec.list, news: nw.items, watchlist: wq.list,
           watchlistDefs: CFG.watchlist || [],
+          indexProxy: !hasIndexSource(),
           deeplink: (P.toss || {}).deeplink || null,
           errors: errors, need: needsOf(errors)
         })

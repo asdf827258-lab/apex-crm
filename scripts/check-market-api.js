@@ -22,8 +22,11 @@ function call(m, params, headers) {
     .then(r => ({ status: r.statusCode, body: JSON.parse(r.body || '{}') }));
 }
 function clearKeys() {
+  /* ⚠️ 새 환경변수를 추가하면 여기에도 넣어야 한다. 안 넣으면 앞 시나리오의 키가
+     다음 시나리오까지 살아남아 엉뚱한 제공자가 붙고, 테스트가 거짓 통과한다. */
   ['TOSS_CLIENT_ID', 'TOSS_CLIENT_SECRET', 'KIS_APP_KEY', 'KIS_APP_SECRET',
-    'ECOS_API_KEY', 'FUND_API_URL', 'FUND_API_KEY', 'SHARED_TOKEN'].forEach(k => delete process.env[k]);
+    'DATA_GO_KR_KEY', 'ECOS_API_KEY', 'FUND_API_URL', 'FUND_API_KEY',
+    'SHARED_TOKEN'].forEach(k => delete process.env[k]);
 }
 function resetTossCfg() {
   const c = require(CFG).providers.toss;
@@ -294,6 +297,59 @@ const R = (json, opts) => Promise.resolve({
 
   r = await call(m, { kind: 'toss-discover', base: 'https://evil.example.com' });
   ok(r.body.ok === false && r.body.step === 'base', '토스가 아닌 도메인을 넘기면 거절한다');
+
+  /* ══ 5.8) 토스 키 하나만 있을 때 — 화면이 비지 않는가 ═══════════════ */
+  console.log('\n[5.8] 토스 단독 (KIS·공공데이터·ECOS 없음)');
+  clearKeys(); resetTossCfg();
+  process.env.TOSS_CLIENT_ID = 'cid'; process.env.TOSS_CLIENT_SECRET = 'csec';
+  const tc = require(CFG).providers.toss;
+  tc.base = 'https://api.tossinvest.com'; tc.token_path = '/v1/oauth2/token'; tc.token_style = 'basic';
+  tc.paths.quote = '/api/v1/stocks/{code}/price';
+  tc.field_map = { root: 'data', name: 'name', price: 'close', change_rate: 'changeRate' };
+  const PX = {
+    A069500: ['KODEX 200', 38500, 1.1], A229200: ['KODEX 코스닥150', 12100, -0.7],
+    A360750: ['TIGER 미국S&P500', 19800, 0.5], A005930: ['삼성전자', 84000, 1.2],
+    A000660: ['SK하이닉스', 195000, 2.1], A133690: ['TIGER 미국나스닥100', 102000, 0.8]
+  };
+  global.fetch = (u) => {
+    const s = String(u);
+    if (s.indexOf('/v1/oauth2/token') >= 0)
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ access_token: 'TT', expires_in: 3600 })) });
+    const mm = s.match(/stocks\/(A\d+)\/price/);
+    if (mm && PX[mm[1]]) {
+      const p = PX[mm[1]];
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ data: { name: p[0], close: p[1], changeRate: p[2] } })) });
+    }
+    return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('nf'), json: () => Promise.resolve({}) });
+  };
+  m = freshModule();
+
+  r = await call(m, { kind: 'index' });
+  ok(r.body.proxy === true && r.body.indices.length === 3,
+    '지수 전용 소스가 없으면 지수 ETF 로 대신 채운다 (' + r.body.indices.length + '개)');
+  ok(r.body.indices.every(x => x.proxy === true && x.note),
+    '지수 그 자체가 아니라는 표시(proxy + "ETF 기준")를 반드시 단다');
+  ok((r.body.indices[0] || {}).src === 'toss', '그 값도 토스에서 가져온다');
+
+  r = await call(m, { kind: 'all' });
+  ok(r.body.indices.length === 3 && r.body.watchlist.length >= 4,
+    '토스 키 하나로 경제동향 화면의 지수·관심종목이 채워진다');
+  ok(r.body.econ.length === 0 && r.body.need.indexOf('ECOS_API_KEY') >= 0,
+    '기준금리·환율은 토스가 줄 수 없어 한국은행 키를 요청한다 (정직하게 비운다)');
+
+  /* 지수 전용 소스가 생기면 대체를 그만두는가 */
+  process.env.DATA_GO_KR_KEY = 'dk';
+  const tossFetch = global.fetch;
+  global.fetch = (u, o) => {
+    const s = String(u);
+    if (s.indexOf('getStockMarketIndex') >= 0) return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(
+      { response: { header: { resultCode: '00' }, body: { items: { item: [{ basDt: '20260806', idxNm: '코스피', clpr: '2765.43', vs: '1', fltRt: '0.4' }] } } } })) });
+    return tossFetch(u, o);
+  };
+  m = freshModule();
+  r = await call(m, { kind: 'index' });
+  ok(r.body.proxy !== true && (r.body.indices[0] || {}).name === '코스피',
+    '진짜 지수 소스가 생기면 ETF 대체를 그만두고 실제 지수를 쓴다');
 
   /* ══ 6) 남용 방지 ══════════════════════════════════════════════════ */
   console.log('\n[6] 남용 방지');
