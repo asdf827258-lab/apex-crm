@@ -292,14 +292,13 @@ const is = (c, m) => c ? ok(m) : no(m);
     p._local = true; p._why = '시간초과'; p._mode = 'explain';
     PR.plan = p; PR.view = 'wallet'; prPaint();
     var local = host.innerHTML;
-    /* 「확인 필요」 칸이 초록(충분)으로 칠해지면 준비된 것처럼 보인다.
-       칸을 실제로 찾아 그 칸의 바탕색을 읽는다. */
-    var cards = [].slice.call(host.querySelectorAll('div[style*="border-radius:13px"]'));
-    var unsureCards = cards.filter(function (d) { return /확인 필요/.test(d.textContent || ''); });
-    var fullCards = cards.filter(function (d) { return /충분/.test(d.textContent || ''); });
-    var bg = function (d) { return getComputedStyle(d).backgroundColor; };
-    var grey = unsureCards.length >= 3 && fullCards.length >= 1 &&
-      unsureCards.every(function (d) { return bg(d) !== bg(fullCards[0]); });
+    /* 8통장은 이제 막대 그래프로 그린다. 「확인 필요」 막대가 충분(초록)과
+       같은 색이면 준비된 것처럼 보인다 — 실제 막대의 색을 읽어 확인한다.
+       초록 #059669 는 충분, 회색 #CBD5E1 은 확인 필요다. */
+    var svgTxt = [].slice.call(host.querySelectorAll('svg')).map(function (s) { return s.outerHTML; }).join('');
+    var grey = /#CBD5E1/i.test(svgTxt) && /#059669/i.test(svgTxt) &&
+      /확인 필요/.test(host.textContent || '') &&
+      /fill="#CBD5E1"/i.test(svgTxt);   /* 확인 필요 막대가 회색으로 칠해져 있다 */
     var p2 = prLocalFill({ title: 'ㄱ', slides: [{ title: 'ㄴ' }] }, sc, 'explain');
     p2._local = false; p2._fails = ['연금 · 종신 (시간초과)']; p2._mode = 'explain';
     PR.plan = p2; PR.view = 'wallet'; prPaint();
@@ -317,7 +316,7 @@ const is = (c, m) => c ? ok(m) : no(m);
       cleanQuiet: !/AI 응답을 받지 못했습니다/.test(noteHtml),
       noteShown: /월 47만원이 나가는데/.test(noteHtml),
       unsureGrey: grey,
-      unsureCount: /증권만으로는 알 수 없어/.test(local)
+      unsureCount: /확인 필요/.test(local) && /증권만으론 모름|증권만으로는 알 수 없/.test(local)
     };
   }, DOC);
   is(V.localSaid, 'AI 가 다 죽었을 때 그렇다고 화면에 밝힌다');
