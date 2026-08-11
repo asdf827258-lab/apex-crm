@@ -4571,6 +4571,24 @@ $('show').addEventListener('touchend',function(e){
     if(ev.origin!==ORG)return;
     var m=ev.data,el,fine;
     if(!m||typeof m!=='object'||!m.t)return;
+    /* 앱이 보내 주는 「내 소개」 — 로그인한 사람마다 다르다.
+       상담자 소개를 사람이 두 번 적을 이유가 없다. */
+    if(m.t==='apex:intro'){
+      var o=m.data||{};
+      try{
+        var set=function(id,v){var e=$(id);if(e&&v!=null&&v!=='')e.value=v;};
+        set('a_name',o.name);set('a_title',o.title);set('a_org',o.org);set('a_years',o.years);
+        set('a_phone',o.phone);set('a_contact2',o.email);set('a_motto',o.motto);set('a_tags',o.tags);
+        if(o.bio&&$('a_bio'))$('a_bio').value=o.bio;
+        if(o.photo)PHOTO=o.photo;
+        localStorage.setItem('apex_profile',JSON.stringify({
+          name:o.name||'',title:o.title||'',org:o.org||'',years:o.years||'',
+          phone:o.phone||'',c2:o.email||'',motto:o.motto||'',tags:o.tags||'',
+          bio:o.bio||'',photo:o.photo||''}));
+        if(typeof loadProfile==='function')loadProfile();
+      }catch(x){}
+      return;
+    }
     if(m.t==='apex:snap')reply(ev.source,ev.origin,{t:'apex:snap:ok',id:m.id,data:snap()});
     else if(m.t==='apex:put'){
       fine=true;

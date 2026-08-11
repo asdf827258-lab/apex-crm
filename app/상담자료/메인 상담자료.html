@@ -4334,7 +4334,11 @@
           </a>
 
           <!-- 우: 진료기록 + 보험증권 통합 업로드 + AI 교차 분석 -->
-          <div id="s9-medical-card"
+          <!-- ② 증권 업로드 칸은 없앴다. APEX 앱의 AI 제안서가 이미 증권을 읽었기 때문에
+     여기서 다시 올릴 이유가 없다. 아래는 그 결과가 들어왔는지 보여 주는 칸이다.
+     원래 카드는 안쪽 코드가 참조하므로 지우지 않고 숨겨 둔다. -->
+<div id="apexLinkCard" class="animate-up opacity-0 delay-3" style="margin-bottom:12px;padding:16px 18px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(26,115,232,.08));border:1.5px solid rgba(124,58,237,.35);"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#1a73e8);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🤖</div><div style="flex:1;min-width:220px;"><div style="font-size:14px;font-weight:800;color:var(--text);">② 보장분석표 — APEX AI 제안서에서 자동으로</div><div id="apexLinkMsg" style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.7;">APEX 앱의 <strong>AI 제안서 생성</strong>에서 증권을 넣으면, 읽어낸 계약이 여기 보장분석표로 그대로 들어옵니다. 여기서 따로 올리실 필요가 없습니다.</div></div><span id="apexLinkBadge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:14px;background:rgba(148,163,184,.18);color:var(--muted);flex-shrink:0;">대기 중</span></div></div>
+<div style="display:none"><div id="s9-medical-card"
                style="padding:12px 14px;background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(26,115,232,.06));border:1.5px solid rgba(168,85,247,.35);border-radius:12px;transition:.2s;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
               <div style="display:flex;align-items:center;gap:14px;">
@@ -4356,7 +4360,7 @@
             <div id="s9-medical-actions" style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;"></div>
             <div id="s9-file-list" style="margin-top:8px;"></div>
             <div style="margin-top:6px;font-size:10px;color:var(--muted);text-align:right;opacity:.8;">💡 용량 제한 없음 · 대용량 파일·긴 PDF는 자동으로 페이지 분할·최적화 처리 · 압축 불필요 · 여러 장 누적 업로드 가능</div>
-          </div>
+          </div</div>>
         </div>
 
         <!-- 🎓 분석 대기 시간 활용 — 보험 교육 슬라이드 -->
@@ -14372,6 +14376,64 @@ ${JSON.stringify(insurances.map(i => ({
   function openBizDemo(k){var o=document.getElementById("bizDemoOverlay"),f=document.getElementById("bizDemoFrame");if(!BIZ_DEMO_B64[k]){return;}f.src="data:text/html;charset=utf-8;base64,"+BIZ_DEMO_B64[k];o.style.display="block";document.body.style.overflow="hidden";}
   function closeBizDemo(){var o=document.getElementById("bizDemoOverlay"),f=document.getElementById("bizDemoFrame");f.src="about:blank";o.style.display="none";document.body.style.overflow="";}
   document.addEventListener("keydown",function(e){if(e.key==="Escape"){var o=document.getElementById("bizDemoOverlay");if(o&&o.style.display==="block")closeBizDemo();}});
+</script>
+
+<script>
+/* ════════ APEX 앱과의 창구 ════════
+   이 자료는 앱(index.html) 안의 틀에서 열린다. 같은 집에서 열리므로
+   앱이 보내 주는 값을 그대로 받아 쓴다.
+     apex:intro       — 상담자 소개 (로그인한 사람마다 다르다)
+     apex:insurances  — AI 제안서가 증권에서 읽어낸 계약들
+   보내는 곳이 같은 주소일 때만 받는다. 남이 끼워 넣지 못하게 한다. */
+(function () {
+  function apply(o) {
+    if (!o || typeof o !== 'object') return;
+    try {
+      var p = {};
+      try { p = JSON.parse(localStorage.getItem('s6_profile') || 'null') || {}; } catch (e) { p = {}; }
+      if (o.name) p.name = o.name;
+      if (o.title || o.org) p.title = [o.title, o.org].filter(Boolean).join(' · ');
+      if (o.phone) p.phone = o.phone;
+      if (o.email) p.email = o.email;
+      if (o.motto) p.intro = o.motto;
+      if (o.bio) p.bio = o.bio;
+      if (o.tags) p.specialties = o.tags;
+      if (o.photo) { p.photos = p.photos || [null, null, null]; p.photos[0] = o.photo; }
+      localStorage.setItem('s6_profile', JSON.stringify(p));
+      if (typeof profileData === 'object' && profileData) {
+        for (var k in p) if (Object.prototype.hasOwnProperty.call(p, k)) profileData[k] = p[k];
+      }
+      if (typeof presenterName !== 'undefined' && p.name) presenterName = p.name;
+      if (typeof applyProfile === 'function') applyProfile();
+    } catch (e) { /* 소개가 안 들어와도 자료는 열려야 한다 */ }
+  }
+  function badge(txt, ok) {
+    var b = document.getElementById('apexLinkBadge'), m = document.getElementById('apexLinkMsg');
+    if (b) {
+      b.textContent = txt;
+      b.style.background = ok ? 'rgba(34,197,94,.18)' : 'rgba(148,163,184,.18)';
+      b.style.color = ok ? '#16a34a' : 'var(--muted)';
+    }
+    if (m && ok) m.innerHTML = 'APEX AI 제안서가 읽어낸 계약이 <strong>보장분석표에 들어왔습니다.</strong> ' +
+      '아래 <strong>보장분석표 AI 자동 생성</strong> 장에서 확인하세요.';
+  }
+  window.addEventListener('message', function (ev) {
+    if (ev.origin !== location.origin) return;
+    var m = ev.data;
+    if (!m || typeof m !== 'object') return;
+    if (m.t === 'apex:intro') { apply(m.data); }
+    else if (m.t === 'apex:insurances') {
+      var rows = m.rows || [];
+      if (!rows.length) { badge('대기 중', false); return; }
+      if (typeof window.s10ImportInsurances === 'function') {
+        var n = window.s10ImportInsurances(rows, { replace: true }) || rows.length;
+        badge(n + '건 들어옴', true);
+      }
+    }
+  });
+  /* 다 뜬 뒤에 「나 준비됐다」 고 알린다 — 앱이 그때 다시 보내 준다 */
+  try { if (window.parent && window.parent !== window) window.parent.postMessage({ t: 'apex:ready' }, location.origin); } catch (e) {}
+})();
 </script>
 </body>
 
