@@ -244,6 +244,69 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(junk.card && junk.brief, '못 읽었을 때 카드·표가 빈 문자열이다');
   is(junk.unknownCo, '모르는 회사 이름은 계약으로 안 센다');
 
+  /* ── 8 ── */
+  console.log('\n[8] 큰 틀(영역)로 묶는가');
+  const area = await page.evaluate(d => {
+    var s = insScan(d);
+    return { list: s.areas.map(function (a) { return a.area + ':' + a.rows.length + ':' + a.short; }),
+      n: s.areas.length, total: s.areas.reduce(function (t, a) { return t + a.rows.length; }, 0),
+      diagN: s.diags.length, noArea: s.diags.filter(function (x) { return !x.area; }).length,
+      etc: (s.areas.filter(function (a) { return a.area === '그 밖'; })[0] || { rows: [] }).rows.length };
+  }, DOC);
+  is(area.n >= 5, '영역 ' + area.n + '개로 묶인다 — ' + area.list.join(' · '));
+  is(area.total === area.diagN, '담보가 하나도 안 빠지고 영역에 들어간다 (' + area.total + '/' + area.diagN + ')');
+  is(area.noArea === 0, '영역이 안 붙은 담보가 없다');
+  is(area.etc === 0, '「그 밖」 으로 밀려난 담보가 없다 (' + area.etc + '개)');
+  is(area.list.join(' ').indexOf('뇌·심장') >= 0 && area.list.join(' ').indexOf('치매·간병') >= 0,
+    '뇌·심장 / 치매·간병 영역이 제대로 잡힌다');
+
+  /* ── 9 ── */
+  console.log('\n[9] AI 가 없어도 큰 틀 표가 나오는가');
+  const deck = await page.evaluate(d => {
+    var s = insScan(d);
+    var k = bjLocalDeck([{ name: 'a.pdf', text: d }], {}, 'AI 미연결', s);
+    var txt = bjDeckHtml(k).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    return { n: k.slides.length, types: k.slides.map(function (x) { return x.type; }).join(','), txt: txt };
+  }, DOC);
+  is(deck.n >= 10, 'AI 없이 ' + deck.n + '장이 나온다');
+  is(/table/.test(deck.types) && /cards/.test(deck.types) && /breakdown/.test(deck.types),
+    '회사별 막대 · 큰 틀 카드 · 영역별 표가 다 들어간다');
+  is(/472,797/.test(deck.txt), '월 보험료 합계가 들어간다');
+  is(/뇌혈관질환/.test(deck.txt) && /1,600만/.test(deck.txt), '담보명과 실제 금액이 들어간다');
+  is(!/자료에서 못 찾음/.test(deck.txt), '「자료에서 못 찾음」 이 안 나온다');
+  is(/신규 계약 승낙을 확인한 뒤/.test(deck.txt), '준법 고지가 붙는다');
+
+  /* 양식이 다른 자료 — 담보 이름만이라도 긁어 큰 틀로 */
+  const loose = await page.evaluate(() => {
+    var t = '고객 보장 요약입니다. 일반암 진단비 5,000만원 가입되어 있고 뇌혈관질환 3,000만원, ' +
+      '허혈성심장질환 2,000만원, 실손의료비 가입, 간병인사용일당 없음, 질병수술비 300만원 있습니다.';
+    var s = insScan(t), l = insLoose(t);
+    var k = bjLocalDeck([{ name: 'x.pdf', text: t }], {}, '양식이 다름');
+    var txt = bjDeckHtml(k).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    return { strict: !!s, loose: !!l, areas: l ? l.areas.length : 0,
+      slides: k.slides.length, txt: txt };
+  });
+  is(loose.strict === false, '아는 양식이 아니면 정확 파서는 조용히 넘어간다');
+  is(loose.loose === true && loose.areas >= 3, '그래도 담보를 긁어 영역 ' + loose.areas + '개로 묶는다');
+  is(/일반암/.test(loose.txt) && /5,000만/.test(loose.txt), '양식이 달라도 담보와 금액이 나온다');
+  is(!/충분|부족합니다/.test(loose.txt), '느슨하게 읽은 것에는 판정을 안 붙인다');
+  is(/판정이 아닙니다|증권으로 확인/.test(loose.txt), '증권으로 확인하라고 적는다');
+
+  /* ── 10 ── */
+  console.log('\n[10] 오래 걸릴 때');
+  const wait = await page.evaluate(() => {
+    var html = '<HTML><HEAD><TITLE>Inactivity Timeout</TITLE></HEAD><BODY>Description: Too much time has passed without sending any data for document.</BODY></HTML>';
+    return { html: aiWhy(html), busy: aiWhy('overloaded'), to: aiWhy('AI 응답이 120초 안에 오지 않아 중단했습니다.'),
+      eta1: aiEta(1200), eta2: aiEta(6000), eta3: aiEta(14000),
+      clock: typeof aiClockStart === 'function' };
+  });
+  is(!/<\s*HTML|TITLE|BODY/i.test(wait.html), 'HTML 오류 쪽지를 화면에 그대로 안 띄운다');
+  is(/너무 오래 걸린다|끊었습니다/.test(wait.html), '왜 끊겼는지 사람 말로 알려 준다 — ' + wait.html.replace(/<[^>]*>/g, '').slice(0, 40));
+  is(/몰려/.test(wait.busy) && /시간/.test(wait.to), '혼잡·시간초과도 사람 말로 바꾼다');
+  is(wait.eta1 !== wait.eta3, '만들 글 양에 따라 예상 시간이 달라진다 (' + wait.eta1 + ' / ' + wait.eta2 + ' / ' + wait.eta3 + ')');
+  is(/분/.test(wait.eta3), '오래 걸리는 것은 「분」 으로 정직하게 적는다 (' + wait.eta3 + ')');
+  is(wait.clock, '기다리는 동안 경과 시간을 보여 주는 시계가 있다');
+
   /* 다섯 도구에 붙어 있는가 */
   const wired = await page.evaluate(() => {
     var on = [];
