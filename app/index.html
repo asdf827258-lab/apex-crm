@@ -581,17 +581,30 @@ a{color:inherit;text-decoration:none;}
 .sb-scroll{flex:1;overflow-y:auto;padding:12px 12px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent;}
 .sb-scroll::-webkit-scrollbar{width:3px;}
 .sb-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:99px;}
-.nav-group-label{font-size:9px;font-weight:700;letter-spacing:.09em;color:rgba(255,255,255,.4);text-transform:none;padding:14px 10px 5px;}
-.nav-group-label:hover{color:#cbddff;}.ngl-left{display:flex;align-items:center;gap:7px;min-width:0;}.ngl-ic{font-size:15px;line-height:1;flex:none;filter:saturate(1.15);}.ngl-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.ngl-caret{font-size:9px;opacity:.5;transition:transform .22s var(--ease);}
+/* 메뉴 카테고리 — 화면이 예순 개가 넘는다. 크게 묶어 접어 두고,
+   칸마다 다른 파스텔 색을 입혀 접힌 채로도 무엇인지 한눈에 보이게 한다.
+   --gh 는 renderNav 가 칸마다 넣어 주는 색상값(0~359)이다. */
+.nav-group{margin-bottom:6px;border-radius:12px;overflow:hidden;background:hsl(var(--gh,210) 60% 68% / .07);}
+.nav-group-label{display:flex;align-items:center;gap:8px;width:100%;border:none;cursor:pointer;text-align:left;font-family:inherit;
+ font-size:13.5px;font-weight:800;letter-spacing:-.01em;line-height:1.25;padding:11px 12px;
+ color:hsl(var(--gh,210) 92% 87%);background:hsl(var(--gh,210) 74% 72% / .26);
+ border-left:4px solid hsl(var(--gh,210) 82% 70% / .85);
+ transition:background .18s var(--ease),color .18s var(--ease);}
+.nav-group-label:hover{background:hsl(var(--gh,210) 74% 72% / .36);color:hsl(var(--gh,210) 96% 93%);}
+.nav-group.collapsed .nav-group-label{background:hsl(var(--gh,210) 74% 72% / .18);}
+.ngl-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1;}
+.ngl-ic{font-size:17px;line-height:1;flex:none;filter:saturate(1.2);}
+.ngl-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ngl-n{flex:none;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;font-variant-numeric:tabular-nums;
+ color:hsl(var(--gh,210) 92% 90%);background:hsl(var(--gh,210) 70% 58% / .32);}
+.ngl-caret{flex:none;font-size:10px;opacity:.75;transition:transform .22s var(--ease);}
 .nav-group.collapsed .ngl-caret{transform:rotate(-90deg);}
-.nav-group-items{overflow:hidden;transition:max-height .26s var(--ease);max-height:1400px;}
-.nav-group.collapsed .nav-group-items{max-height:0;}
-.nav-allbtns{display:flex;gap:6px;padding:8px 10px 2px;}
-.nav-allbtns button{flex:1;font-size:9.5px;font-weight:700;color:rgba(255,255,255,.4);background:rgba(255,255,255,.05);border:none;border-radius:6px;padding:5px;cursor:pointer;transition:all .15s;}
-.nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);}
-.nav-group-label:first-child{padding-top:2px;}
-.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:600;color:rgba(255,255,255,.84);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
+.nav-group-items{overflow:hidden;transition:max-height .26s var(--ease),padding .26s var(--ease);max-height:1600px;padding:5px 6px 6px;}
+.nav-group.collapsed .nav-group-items{max-height:0;padding-top:0;padding-bottom:0;}
+.nav-allbtns{display:flex;gap:6px;padding:2px 2px 10px;}
+.nav-allbtns button{flex:1;font-family:inherit;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:rgba(255,255,255,.05);border:none;border-radius:8px;padding:7px 5px;cursor:pointer;transition:all .15s;}
+.nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);}
+.tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-sm);font-size:12.5px;font-weight:600;color:rgba(255,255,255,.84);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
 .tab-btn:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);}
 .tab-btn.on{background:rgba(96,165,250,.12);color:#93C5FD;font-weight:700;}
 .tab-btn.on::before{content:'';position:absolute;left:0;width:3px;height:22px;background:#60A5FA;border-radius:0 4px 4px 0;}
@@ -7825,19 +7838,78 @@ var TAB_META={
 };
 
 /* ════════ 네비 렌더 ════════ */
+/* ════════ 메뉴 — 크게 접었다 폈다 ════════
+   화면이 예순 개가 넘는다. 다 펼쳐 두면 스크롤만 한참 내리다 길을 잃는다.
+   카테고리로 크게 묶고 평소엔 접어 둔다. 대신 접힌 채로도 무엇인지 한눈에
+   보여야 하므로, 카테고리 글씨를 키우고 칸마다 다른 파스텔 색을 입힌다. */
+var NAVG_KEY='apex_nav_open';
+var NAVG_ICON={'건의함':'💬','홈':'🏠','윤시현의 두뇌':'🧠','TEAM 총괄':'📋','업무매뉴얼':'📚',
+ '조직':'🏢','윤시스쿨':'🏫','오늘의 AI 비서':'🤖','고객':'🗂','DB CRM':'🗄',
+ '보험 해석':'🔎','8통장 지도':'🗺','계약관리':'📁','보장분석':'📑','재무설계':'💰',
+ '법인·사업자 컨설팅':'🏭','상담 AI 코치':'🎯','청구·사후관리':'🧾','매니저 관리':'👥',
+ '콘텐츠·마케팅':'✍️','보험 레퍼런스':'📕','구독·요금제':'💳','시스템 설정':'⚙️','시스템 점검':'🩺'};
+/* 이웃한 칸이 비슷한 색이 되지 않게 색상환을 크게 건너뛴다(황금각) */
+function navHue(i){return Math.round((i*137.5)%360);}
+function navOpen(){
+  try{var v=JSON.parse(localStorage.getItem(NAVG_KEY)||'{}');return (v&&typeof v==='object')?v:{};}
+  catch(e){return {};}
+}
+function navOpenSet(o){try{localStorage.setItem(NAVG_KEY,JSON.stringify(o));}catch(e){}}
+function navToggle(name){
+  var o=navOpen();
+  if(o[name])delete o[name];else o[name]=1;
+  navOpenSet(o);renderNav();
+}
+/* 스물네 칸을 하나하나 누르게 두지 않는다 */
+var NAVG_SHUT=false;   /* 「모두 접기」 를 방금 눌렀다는 표시 */
+function navAllSet(on){
+  var o={},groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
+  if(on)groups.forEach(function(g){if(!g.hide)o[g.group]=1;});
+  NAVG_SHUT=!on;navOpenSet(o);renderNav();
+}
+/* 다른 데서 go() 로 건너뛴 화면이 접힌 칸 안에 있으면 그 칸을 펴 준다 —
+   안 그러면 눌린 표시가 접힌 안쪽에 숨어 내가 어디 있는지 모른다 */
+function navReveal(tab){
+  var b=document.querySelector('.tab-btn[data-tab="'+tab+'"]');
+  if(!b)return;
+  var g=b.parentElement;
+  while(g&&!(g.classList&&g.classList.contains('nav-group')))g=g.parentElement;
+  if(g)g.classList.remove('collapsed');
+}
+function navMark(tab){
+  var i,L=document.querySelectorAll('.tab-btn');
+  for(i=0;i<L.length;i++)L[i].classList.toggle('on',L[i].getAttribute('data-tab')===tab);
+  navReveal(tab);
+}
 function renderNav(){
-  var h='<div id="osNoticeNav"></div>';
+  var h='<div id="osNoticeNav"></div>'+
+    '<div class="nav-allbtns"><button type="button" onclick="navAllSet(true)">모두 펴기</button>'+
+    '<button type="button" onclick="navAllSet(false)">모두 접기</button></div>';
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
+  var open=navOpen(),n=0;
   groups.forEach(function(g){
     if(g.hide)return;                       /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
-    h+='<div class="nav-group-label">'+esc(g.group)+'</div>';
+    var hue=navHue(n++),name=g.group;
+    var on=!!open[name];
+    var ic=NAVG_ICON[name]||'•';
+    h+='<div class="nav-group'+(on?'':' collapsed')+'" style="--gh:'+hue+'">'+
+       '<button type="button" class="nav-group-label" onclick="navToggle(\''+name.replace(/'/g,"\\'")+'\')" '+
+         'aria-expanded="'+(on?'true':'false')+'">'+
+         '<span class="ngl-left"><span class="ngl-ic">'+ic+'</span>'+
+         '<span class="ngl-t">'+esc(name)+'</span></span>'+
+         '<span class="ngl-n">'+g.items.length+'</span>'+
+         '<span class="ngl-caret">▾</span></button>'+
+       '<div class="nav-group-items">';
     g.items.forEach(function(it){
       h+='<button class="tab-btn" data-tab="'+it.id+'" onclick="go(\''+it.id+'\')">'+
          '<span class="ti">'+it.icon+'</span><span class="tt">'+esc(it.title)+'</span>'+
          (it.cnt?'<span class="tc">'+it.cnt+'</span>':'')+'</button>';
     });
+    h+='</div></div>';
   });
   $('navHost').innerHTML=h;
+  if(!NAVG_SHUT&&typeof lastTab!=='undefined')navReveal(lastTab);
+  NAVG_SHUT=false;
   if(typeof osNoticeApply==='function')osNoticeApply();
 }
 
@@ -7859,7 +7931,7 @@ function go(tab){
     mountFinance();
     document.body.classList.remove('crm-mode','sangdam-mode');
     document.body.classList.add('finance-mode');
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='finance');});
+    navMark('finance');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -7867,7 +7939,7 @@ function go(tab){
     mountCrm();
     document.body.classList.remove('finance-mode','sangdam-mode');
     document.body.classList.add('crm-mode');
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='crm');});
+    navMark('crm');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -7875,7 +7947,7 @@ function go(tab){
     mountYoonsi();
     document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
     document.body.classList.add('yoonsi-mode');
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='yoonsi');});
+    navMark('yoonsi');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -7883,7 +7955,7 @@ function go(tab){
     mountSangdam();
     document.body.classList.remove('finance-mode','crm-mode');
     document.body.classList.add('sangdam-mode');
-    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')==='sangdam');});
+    navMark('sangdam');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -7894,7 +7966,7 @@ function go(tab){
   document.body.classList.remove('fpdeck-mode');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
-  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===tab);});
+  navMark(tab);
   var dyn=$('dynPane');
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
     if(typeof osNoticeApply==='function')osNoticeApply();
@@ -8170,8 +8242,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-10 21:10';
-var APP_BUILD_NOTE='조직도는 서버가 정본 — 어느 컴퓨터에서나 같은 것을, 한 명도 안 잃고';
+var APP_BUILD='2026-08-11 09:20';
+var APP_BUILD_NOTE='메뉴는 크게 접어 두고 — 칸마다 다른 파스텔 색, 누르면 그 칸만 펼쳐집니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28447,7 +28519,7 @@ function osRefreshIfClients(){
   var refresh={home:1,dashboard:1,assistant:1,growth:1,clients:1,branch_coach:1,hq:1,audit:1,interpret:1,contracts:1,claims:1,academy:1,manual:1,wallets:1};
   if(refresh[t]&&typeof go==='function'){go(t);return;}
   /* 역할 비민감 탭(도구·계산기 등): 작성 중 내용은 보존하고 사이드바 강조만 복원 */
-  try{document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-tab')===t);});}catch(e){}
+  try{navMark(t);}catch(e){}
 }
 function osBootAuth(){
   osRenderPill();
