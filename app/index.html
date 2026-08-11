@@ -1814,6 +1814,43 @@ function aiIsBusy(e){
 }
 function aiSleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
+/* 「멈춘 것 같다」 는 말이 나오지 않게, 지금 몇 초 지났는지 보여 준다.
+   기다리는 시간을 줄일 수 없을 때 할 수 있는 가장 정직한 일이다. */
+var AI_CLOCK={t:null,at:0};
+function aiClockStart(){
+  aiClockStop();
+  AI_CLOCK.at=+new Date();
+  var paint=function(){
+    var s=Math.round((+new Date()-AI_CLOCK.at)/1000);
+    var txt=(s<60)?(s+'초 지났습니다'):(Math.floor(s/60)+'분 '+(s%60)+'초 지났습니다');
+    if(s>=75)txt+=' · 자료가 많으면 2~3분까지 걸립니다';
+    var els=document.querySelectorAll('.loading');
+    for(var i=0;i<els.length;i++){
+      var h=els[i].querySelector('.ai-clock');
+      if(!h){h=document.createElement('div');h.className='ai-clock';
+        h.style.cssText='margin-top:6px;font-size:11px;color:#9AA2AD;font-weight:600;font-variant-numeric:tabular-nums';
+        els[i].appendChild(h);}
+      h.textContent='⏱ '+txt;
+    }
+  };
+  paint();AI_CLOCK.t=setInterval(paint,1000);
+}
+function aiClockStop(){
+  if(AI_CLOCK.t){clearInterval(AI_CLOCK.t);AI_CLOCK.t=null;}
+  var els=document.querySelectorAll('.ai-clock');
+  for(var i=0;i<els.length;i++){var e=els[i];if(e.parentNode)e.parentNode.removeChild(e);}
+}
+/* 얼마나 걸릴지 정직하게 — 만들 글 양(maxTokens)에서 뽑는다.
+   「10~30초」 라고 써 놓고 2분이 걸리면 그게 고장으로 보인다. */
+function aiEta(maxTokens){
+  var m=+maxTokens||2000;
+  if(m<=1500)return '10~20초';
+  if(m<=3000)return '20~40초';
+  if(m<=6000)return '40초~1분 30초';
+  if(m<=10000)return '1~2분';
+  return '1분 30초~3분';
+}
+
 /* 기다리는 동안 화면에 남은 시간을 보여준다 — 멈춘 것처럼 보이지 않게 */
 function aiRetryShow(n,max,sec,label){
   AI_RETRY.on=true;AI_RETRY.n=n;AI_RETRY.max=max;AI_RETRY.left=sec;AI_RETRY.label=label||'';
@@ -1855,22 +1892,25 @@ function aiLadderFor(cur){
 }
 /* 혼잡이면 시간을 늘려가며 다시 부르고, 중간부터는 다른 모델로 갈아탄다 */
 function aiWithRetry(make,label){
-  var DELAY=[1200,3000,6000,10000,16000,24000],tries=0,slow=0;
+  /* 예전엔 여섯 번을 1.2→24초까지 늘려 가며 기다려 잠자는 시간만 60초였고,
+     그 뒤 다른 엔진으로 넘어가면 그 60초를 또 기다렸다. 2분 30초가 그냥 갔다.
+     혼잡은 대개 몇 초면 풀리거나 아예 안 풀린다 — 네 번, 17초로 줄인다. */
+  var DELAY=[1000,2500,5000,8500],tries=0,slow=0;
   var base=(label==='Claude')?getModel():'';
   var alts=base?aiLadderFor(base):[];
   function run(){
-    aiTickStart();
-    return make().then(function(v){aiTickStop();aiRetryHide();AI_FORCE_MODEL='';return v;},function(e){
+    aiTickStart();aiClockStart();
+    return make().then(function(v){aiTickStop();aiClockStop();aiRetryHide();AI_FORCE_MODEL='';return v;},function(e){
       aiTickStop();
       /* 시간 초과는 한 번만 더 해본다 — 5분짜리를 여섯 번 돌리면 30분이 된다 */
-      if(e&&e.timedOut){slow++;if(slow>1){aiRetryHide();AI_FORCE_MODEL='';throw e;}}
-      if(!aiIsBusy(e)||tries>=DELAY.length){aiRetryHide();AI_FORCE_MODEL='';throw e;}
+      if(e&&e.timedOut){slow++;if(slow>1){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}}
+      if(!aiIsBusy(e)||tries>=DELAY.length){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}
       var d=DELAY[tries]+Math.floor(Math.random()*700);
       tries++;
-      /* 2번째 실패부터 다른 모델로 갈아탄다 */
+      /* 첫 실패부터 바로 다른 모델로 갈아탄다 — 같은 모델을 두드리는 것보다 빠르다 */
       var note=label;
-      if(base&&tries>=2){
-        var pick=alts[(tries-2)%alts.length];
+      if(base&&tries>=1){
+        var pick=alts[(tries-1)%alts.length];
         if(pick){AI_FORCE_MODEL=pick;note=label+' · '+aiShortModel(pick)+'로 전환';}
       }
       aiRetryShow(tries,DELAY.length,Math.round(d/1000),note);
@@ -1885,6 +1925,23 @@ function aiShortModel(m){
   if(/haiku/i.test(m))return 'Haiku';
   if(/sonnet/i.test(m))return 'Sonnet';
   return m;
+}
+/* 중간 서버(회사 프록시·게이트웨이)가 오래 걸린다고 끊으면 HTML 오류 쪽지를
+   그대로 돌려준다. 그게 화면에 <HTML><TITLE>Inactivity Timeout ... 으로 뜬다.
+   사람이 읽을 말로 바꿔 준다. */
+function aiWhy(m){
+  m=(''+(m||''));
+  if(/inactivity\s*timeout|too much time has passed/i.test(m))
+    return '중간 서버가 <b>「너무 오래 걸린다」</b> 며 연결을 끊었습니다. 자료가 많아 AI 가 답을 만드는 데 시간이 걸렸기 때문입니다. 페이지 수를 줄이거나, 설정에서 <b>내 AI 키</b>를 넣으면 중간 서버를 안 거쳐 훨씬 여유가 생깁니다.';
+  if(/<\s*html|<\s*head|<\s*title|<\s*body/i.test(m))
+    return '중간 서버가 오류 쪽지를 대신 보냈습니다. 잠시 뒤 다시 시도해 주세요.';
+  if(/timed?\s*out|응답이 .*오지 않아/i.test(m))
+    return 'AI 가 제한 시간 안에 답을 주지 않았습니다. 자료가 많을수록 오래 걸립니다.';
+  if(/overload|high demand|혼잡|529|too many requests|rate.?limit/i.test(m))
+    return 'AI 서버가 몰려 있습니다. 잠시 뒤 다시 눌러 주세요.';
+  /* HTML 조각이 섞여 있으면 태그는 지우고 앞부분만 */
+  var clean=m.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+  return clean.slice(0,160)||'AI 응답을 받지 못했습니다.';
 }
 function aiBusyMsg(){
   return 'AI 서버가 몰려 있어 여러 번 다시 시도했지만 응답을 받지 못했습니다.\n'+
@@ -8336,8 +8393,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-11 18:10';
-var APP_BUILD_NOTE='업무매뉴얼을 지금 앱에 맞춰 다시 짜고 「APEX 사용가이드」 로 왼쪽 맨 위에 올렸습니다';
+var APP_BUILD='2026-08-11 21:40';
+var APP_BUILD_NOTE='AI 가 안 되어도 담보를 큰 틀 일곱 영역으로 정리해 드립니다 — 기다리는 시간도 줄였습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -23939,6 +23996,40 @@ var INS_SECS = ['전체 보장현황','전체 계약리스트','상품별 가입
   '담보별 가입 현황','실효/해지계약현황','자동차 보험 조회','전체 담보 진단 현황',
   '상품별 진단현황','담보별 진단현황'];
 var INS_CAT = ['사망/장해','치매/간병','암 진단','뇌/심장 진단','실손의료비','수술/입원','운전자/기타'];
+/* 담보를 큰 틀로 묶는다. 문서가 대분류를 적어 주면 그것을 쓰고,
+   안 적혀 있으면 담보 이름으로 판단한다 — 다른 양식에서도 큰 틀은 잡힌다. */
+var INS_AREA = [
+  { k: '사망·장해',  pat: '사망\\s*\\/\\s*장해',        re: /(사망|후유장해|고도장해)/ },
+  { k: '암',        pat: '암\\s*진단',                  re: /(일반암|유사암|소액암|고액암|특정암|전이암|재진단암|암진단|암\s*진단)/ },
+  { k: '암 치료비',  pat: '암\\s*치료',                  re: /(항암|표적|면역|중입자|양성자|주요치료비|특정치료|전액본인부담)/ },
+  { k: '뇌·심장',    pat: '뇌\\s*\\/\\s*심장\\s*진단', re: /(뇌출혈|뇌졸중|뇌경색|뇌혈관|급성심근경색|허혈성심장|심장질환)/ },
+  { k: '순환계 치료', pat: '순환계',                        re: /(혈전용해|혈전제거|스텐트|중재술|2대질병)/ },
+  { k: '실손',       pat: '실손\\s*의료비',               re: /(실손|실비|통원의료비|입원의료비|비급여실손)/ },
+  { k: '수술·입원',  pat: '수술\\s*\\/\\s*입원',       re: /(수술비|종수술|입원일당|입원비|중환자실|요양병원)/ },
+  { k: '치매·간병',  pat: '치매\\s*\\/\\s*간병',       re: /(간병|장기요양|치매|간호간병)/ },
+  { k: '운전자·기타', pat: '운전자\\s*\\/\\s*기타',     re: /(벌금|교통사고|변호사|자동차사고|골절|보철|배상|화재)/ }
+];
+/* 담보 이름만으로도 큰 틀을 정한다 */
+function insAreaOf(name, cat) {
+  var i;
+  if (cat) for (i = 0; i < INS_AREA.length; i++) {
+    if (new RegExp(INS_AREA[i].pat.replace(/\\\\/g, '\\')).test(cat)) return INS_AREA[i].k;
+  }
+  for (i = 0; i < INS_AREA.length; i++) if (INS_AREA[i].re.test(name || '')) return INS_AREA[i].k;
+  return '그 밖';
+}
+/* 영역별로 묶어 준다 — 몇 개 중 몇 개가 비어 있는지 */
+function insByArea(diags) {
+  var map = {}, order = [], i;
+  for (i = 0; i < INS_AREA.length; i++) { map[INS_AREA[i].k] = { area: INS_AREA[i].k, rows: [], short: 0 }; order.push(map[INS_AREA[i].k]); }
+  map['그 밖'] = { area: '그 밖', rows: [], short: 0 }; order.push(map['그 밖']);
+  (diags || []).forEach(function (d) {
+    var a = map[d.area] || map['그 밖'];
+    a.rows.push(d);
+    if (d.verdict === '부족' || d.verdict === '미가입') a.short++;
+  });
+  return order.filter(function (a) { return a.rows.length; });
+}
 
 function insNum(v) {
   var n = parseFloat(('' + (v == null ? '' : v)).replace(/[^\d.]/g, ''));
@@ -24051,21 +24142,22 @@ function insDiags(seg) {
   var out = [], seen = {};
   /* 금액은 「1억 6,000만」 처럼 띄어 쓰기도 한다 — 한 덩어리로 읽는다 */
   var A = '(?:[\\d,]+\\s*[억만천]?\\s*)+';
-  var re = new RegExp('([가-힣A-Za-z0-9()\\/·%~\\-]{2,30})\\s*권장\\s*(' + A + ')\\s*가입\\s*(' + A +
+  var CATS = '(?:' + INS_CAT.map(function (c) { return c.split('').map(function (ch) {
+    return /\s/.test(ch) ? '\\s*' : insEsc(ch); }).join('\\s*'); }).join('|') + ')';
+  var re = new RegExp('(' + CATS + ')?\\s*([가-힣A-Za-z0-9()\\/·%~\\-]{2,30})\\s*권장\\s*(' + A + ')\\s*가입\\s*(' + A +
     ')\\s*(충분|부족|미가입|과다)\\s*([+\\-]\\s*' + A + '|-)', 'g'), m;
+  var tidy = function (v) { return ('' + v).replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); };
   while ((m = re.exec(seg))) {
-    var nm = m[1];
-    /* 앞에 붙은 대분류·머리글 찌꺼기를 떼어 낸다 */
-    var cat = '';
-    INS_CAT.forEach(function (c) { var c2 = c.replace(/\s+/g, ''); if (nm.indexOf(c2) === 0) { cat = c; nm = nm.slice(c2.length); } });
-    nm = nm.replace(/^[\d\s형()개준표]+/, '').replace(/^기본|^표준$/, '');
+    var cat = tidy(m[1] || ''), nm = m[2];
+    /* 대분류가 담보명에 붙어 나오면 떼어 낸다 */
+    INS_CAT.forEach(function (c) { var c2 = c.replace(/\s+/g, ''); if (!cat && nm.indexOf(c2) === 0) { cat = c; nm = nm.slice(c2.length); } });
+    nm = nm.replace(/^[\d\s형()개준표]+/, '').replace(/^기본$|^표준$/, '');
     if (nm.length < 2) continue;
-    var k = nm + '|' + ('' + m[2]).replace(/\s+/g, '') + '|' + ('' + m[3]).replace(/\s+/g, '');
+    var k = nm + '|' + ('' + m[3]).replace(/\s+/g, '') + '|' + ('' + m[4]).replace(/\s+/g, '');
     if (seen[k]) continue;
     seen[k] = 1;
-    var tidy = function (v) { return ('' + v).replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); };
-    out.push({ cat: cat, name: nm, want: tidy(m[2]), have: tidy(m[3]),
-      verdict: m[4], gap: m[5] === '-' ? '' : tidy(m[5]).replace(/([+\-])\s+/, '$1') });
+    out.push({ cat: cat, area: insAreaOf(nm, cat), name: nm, want: tidy(m[3]), have: tidy(m[4]),
+      verdict: m[5], gap: m[6] === '-' ? '' : tidy(m[6]).replace(/([+\-])\s+/, '$1') });
   }
   return out;
 }
@@ -24104,12 +24196,53 @@ function insScan(text) {
   var head = insHead(S['전체 계약리스트'] || '');
 
   return { who: insWho(T), plans: live, lapsed: lapsed, cars: cars,
-    byCo: insByCo(live), diags: diags,
+    byCo: insByCo(live), diags: diags, areas: insByArea(diags),
     total: { n: live.length, fee: fee, unknown: unknown,
       lapsedN: lapsed.length, lapsedFee: lfee,
       /* 문서 머리글이 말하는 값과 우리가 센 값이 다르면 알려 준다 */
       saidN: head ? head.n : 0, saidFee: head ? head.fee : 0 },
     short: diags.filter(function (d) { return d.verdict === '부족' || d.verdict === '미가입'; }) };
+}
+
+/* ── 양식이 다를 때의 2차 스캐너 ────────────────────────────────
+   위 파서는 「전체 계약리스트 · 담보별 진단현황」 형식을 정확히 읽는다.
+   다른 보험사·다른 양식이면 그 구조가 없다. 그렇다고 빈 화면을 줄 수는
+   없으니, 담보 이름과 그 뒤에 붙은 금액만이라도 긁어 큰 틀로 묶는다.
+
+   예전 스캐너는 줄 단위로 읽으면서 160자가 넘으면 건너뛰었다. 실제 PDF 는
+   한 쪽이 통째로 한 줄이라 전부 건너뛰어 「자료에서 못 찾음」 만 나왔다.
+   그래서 줄이 아니라 글 전체를 훑는다. */
+var INS_AMT = /([\d][\d,]*)\s*(억|천만|백만|만)\s*원?/;
+function insLoose(text) {
+  var T = ('' + (text || '')).replace(/\s+/g, ' ');
+  if (T.length < 40) return null;
+  var out = [], seen = {}, i, j;
+  for (i = 0; i < INS_AREA.length; i++) {
+    var A = INS_AREA[i], re = new RegExp(A.re.source, 'g'), m, rows = [];
+    while ((m = re.exec(T)) && rows.length < 8) {
+      /* 담보 이름은 찾은 낱말이 든 한 덩어리로 잡는다 */
+      var st = T.lastIndexOf(' ', Math.max(0, m.index - 1)) + 1;
+      var en = T.indexOf(' ', m.index + m[0].length);
+      if (en < 0) en = T.length;
+      var name = T.slice(st, en).replace(/^[^가-힣A-Za-z0-9(]+|[^가-힣A-Za-z0-9)]+$/g, '');
+      if (name.length < 2 || name.length > 28) name = m[0];
+      var near = T.slice(m.index + m[0].length, m.index + m[0].length + 44);
+      var a = near.match(INS_AMT);
+      var k = A.k + '|' + name;
+      if (seen[k]) continue;
+      seen[k] = 1;
+      rows.push({ area: A.k, name: name, want: '', have: a ? (a[1] + a[2]) : '확인필요',
+        verdict: a ? '확인 필요' : '미확인', gap: '' });
+    }
+    if (rows.length) out.push({ area: A.k, rows: rows, short: 0 });
+  }
+  if (!out.length) return null;
+  var all = [];
+  out.forEach(function (a) { for (j = 0; j < a.rows.length; j++) all.push(a.rows[j]); });
+  return { who: insWho(T), plans: [], lapsed: [], cars: [], byCo: [],
+    diags: all, areas: out, loose: true,
+    total: { n: 0, fee: 0, unknown: 0, lapsedN: 0, lapsedFee: 0, saidN: 0, saidFee: 0 },
+    short: [] };
 }
 
 /* ── AI 에게 넘길 표 (프롬프트 맨 앞에 붙는다) ──────────────────── */
@@ -24382,7 +24515,7 @@ var REPORT_RULES='[리포트 작성 규칙 — 반드시 지킬 것]\n'+
 /* ── PDF 분석 도구 정의 ── */
 var PDF_TOOLS=[
 {id:'bojang',tab:'bojang',icon:'📑',scan:true,title:'AI 1:1 보장분석',cta:'AI 보장분석 리포트 생성',deck:true,reportTitle:'1:1 맞춤 보장분석 리포트',
- note:'보험사 <b>보장분석 리포트 PDF</b>를 올리면 <b>19~21장짜리 심층 리포트</b>로 만듭니다. AI 는 내용만 만들고 <b>디자인은 고정 템플릿</b>이 그리므로 매번 같은 품질로 나옵니다. (파일당 약 20~50초)',
+ note:'보험사 <b>보장분석 리포트 PDF</b>를 올리면 <b>19~21장짜리 심층 리포트</b>로 만듭니다. AI 는 내용만 만들고 <b>디자인은 고정 템플릿</b>이 그리므로 매번 같은 품질로 나옵니다. <b>1분 30초~3분</b> 걸립니다 — 스무 장 넘는 글을 쓰기 때문입니다. AI 가 안 되면 증권에서 읽어 낸 표만이라도 나옵니다.',
  slots:[{id:'rep',label:'보장분석 리포트 PDF',req:true,multi:true}],
  chipsets:[
   {label:'과잉/중복 보장',items:['불필요한 사망/장해 특약 과다','비싼 입원일당 특약','중복 가입된 실손/정액 진단비','활용도 낮은 수술비 특약 중복']},
@@ -24712,7 +24845,9 @@ function runPdf(id){
       }
     });
     var hasImg=allImgs.length>0;
-    res.innerHTML='<div class="loading"><div class="spinner"></div>'+(hasImg?'이미지형 제안서를 AI가 판독·작성 중… (20~40초)':'AI가 분석·작성 중… (10~30초)')+'</div>';
+    var eta=aiEta(spec&&spec.max);
+    res.innerHTML='<div class="loading"><div class="spinner"></div>'+
+      (hasImg?('이미지형 제안서를 AI가 판독·작성 중… ('+eta+')'):('AI가 분석·작성 중… ('+eta+')'))+'</div>';
     var opts=collectPdfOpts(p);
     /* 자료가 많으면 말없이 버리지 않고, 어디를 얼마나 줄였는지 남긴다 */
     var trim=pdfTrimParts(parts);parts=trim.parts;
@@ -24729,7 +24864,7 @@ function runPdf(id){
     if(p.deck){
       if(typeof bjCssMount==='function')bjCssMount();
       if(!aiReady()){
-        bjPaint(id,bjLocalDeck(parts,opts,'AI 가 아직 연결되지 않았습니다.'),
+        bjPaint(id,bjLocalDeck(parts,opts,'AI 가 아직 연결되지 않았습니다.',scan),
           bjBanner('','🔌 AI 가 연결되지 않아 <b>자료에서 읽어 낸 것만으로</b> 정리했습니다. '+
             '<a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a> 에서 AI 를 연결하면 심층 분석이 함께 나옵니다.'));
         return null;
@@ -24791,7 +24926,7 @@ function runPdf(id){
     if(p.deck&&typeof bjLocalDeck==='function'&&res._parts){
       /* 결과를 못 냈다고 빈 화면을 주지 않는다 — 읽어 낸 것만이라도 세워 둔다 */
       if(typeof bjCssMount==='function')bjCssMount();
-      bjPaint(id,bjLocalDeck(res._parts,res._opts||{},m||'AI 응답을 받지 못했습니다.'),
+      bjPaint(id,bjLocalDeck(res._parts,res._opts||{},aiWhy(m),res._scan),
         bjBanner('',ico+' '+tip+' <b>그동안 자료에서 읽어 낸 것만으로</b> 아래에 정리해 두었습니다.'));
       return;
     }
@@ -25474,88 +25609,138 @@ function bjBuild(parts, o) {
 
 /* ── AI 없이도 나오는 리포트 ───────────────────────────────────── */
 
-var BJ_AREAS = [
-  { k: '암', re: /(일반암|유사암|소액암|고액암|특정암|전이암|재진단암|암\s*진단)/ },
-  { k: '뇌', re: /(뇌출혈|뇌졸중|뇌경색|뇌혈관)/ },
-  { k: '심장', re: /(급성심근경색|허혈성심장|심장질환)/ },
-  { k: '암치료비', re: /(항암|표적|면역|중입자|양성자|주요치료비|특정치료|본인부담)/ },
-  { k: '순환계치료', re: /(혈전용해|혈전제거|스텐트|중재술|순환계|2대질병)/ },
-  { k: '수술', re: /(수술비|수술담보|종수술|질병수술|상해수술)/ },
-  { k: '입원', re: /(입원일당|입원비|중환자실|요양병원)/ },
-  { k: '실손', re: /(실손|실비|통원의료비|입원의료비)/ },
-  { k: '간병', re: /(간병|장기요양|치매|간호간병)/ },
-  { k: '사망·장해', re: /(사망|후유장해|고도장해)/ }
-];
-var BJ_MONEY = /([0-9][0-9,\.]*)\s*(억|천만|백만|만)\s*(원)?/;
+/* ── AI 없이도 나오는 리포트 ─────────────────────────────────────
+   예전에는 여기서 자체 스캐너로 담보를 찾았는데, 줄이 160자를 넘으면
+   건너뛰게 되어 있었다. 실제 PDF 는 한 쪽이 통째로 한 줄로 나와서
+   <b>전부 「자료에서 못 찾음」</b> 이 됐다. 그 스캐너를 버리고, 증권을
+   제대로 읽는 insScan 을 그대로 쓴다. 이제 AI 가 없어도 계약·회사별
+   보험료·담보 영역별 표가 그대로 나온다. */
 
-function bjScan(text) {
-  var lines = ('' + (text || '')).split(/[\n\r]+/), hit = {}, i, j;
-  for (i = 0; i < lines.length; i++) {
-    var L = lines[i].replace(/\s+/g, ' ').trim();
-    if (L.length < 3 || L.length > 160) continue;
-    for (j = 0; j < BJ_AREAS.length; j++) {
-      if (!BJ_AREAS[j].re.test(L)) continue;
-      var m = L.match(BJ_MONEY);
-      var key = BJ_AREAS[j].k;
-      if (!hit[key]) hit[key] = [];
-      if (hit[key].length < 6) hit[key].push({ line: L.slice(0, 90), amt: m ? (m[1] + m[2]) : '확인필요' });
-      break;
-    }
-  }
-  return hit;
-}
+function bjMoney(v) { return (v == null || v === '') ? '확인필요' : ('' + v); }
 
 /* AI 가 없거나 터졌을 때 — 읽어 낸 것만으로 구조를 갖춘 리포트를 만든다.
    추정하지 않는다. 자료에 있는 것만 옮기고, 나머지는 확인 목록으로 남긴다. */
-function bjLocalDeck(parts, o, why) {
+function bjLocalDeck(parts, o, why, scan) {
   var text = (parts || []).map(function (p) { return p.text || ''; }).join('\n');
-  var hit = bjScan(text);
-  var rows = [], k, i;
-  for (i = 0; i < BJ_AREAS.length; i++) {
-    k = BJ_AREAS[i].k;
-    var got = hit[k];
-    rows.push({
-      cells: [k,
-        got ? got.map(function (x) { return x.amt; }).join(' / ') : '자료에서 못 찾음',
-        got ? got[0].line : '확인필요',
-        got ? '확인 필요' : '미확인'],
-      tone: got ? '' : 'hi'
+  var sc = scan || null;
+  if (!sc) { try { sc = insScan(text); } catch (e) { sc = null; } }
+  /* 양식이 달라 정확히 못 읽었으면, 담보 이름만이라도 긁어 큰 틀로 묶는다 */
+  if (!sc) { try { sc = insLoose(text); } catch (e) { sc = null; } }
+  var slides = [], today = new Date().toISOString().slice(0, 10);
+  var t = sc ? sc.total : { n: 0, fee: 0, unknown: 0, lapsedN: 0, lapsedFee: 0 };
+
+  slides.push({ type: 'cover', kicker: '보장분석', title: '보장 현황 정리',
+    lead: sc ? ('증권에서 읽어 낸 계약과 담보를 <b>큰 틀로</b> 정리했습니다.')
+             : ('제출하신 자료에서 담보를 읽지 못했습니다.'),
+    meta: '자료 ' + (parts || []).length + '건 · ' + today });
+
+  slides.push({ type: 'twobox', eyebrow: '먼저 알려드립니다', eyebrowWarn: true,
+    title: 'AI 심층 분석이 <em>붙지 않은</em> 상태입니다',
+    sub: '그래도 화면을 비워 두지 않고, 자료에서 읽어 낸 것을 그대로 정리해 드립니다.',
+    left: { title: '지금 보시는 것',
+      text: '증권에서 <b>담보명과 금액을 그대로 옮긴 것</b>입니다. 숫자는 앱이 규칙으로 읽어 정확하지만, <b>판정과 처방은 하지 않았습니다.</b>' },
+    right: { tone: 'red', title: '아직 없는 것',
+      text: bjHtml(why || 'AI 연결이 필요합니다.') + '<br>연결되면 60세 절벽 · 치료비 정밀 진단 · A/B/C 3안이 함께 나옵니다.' } });
+
+  if (sc && sc.plans.length) {
+    slides.push({ type: 'breakdown', eyebrow: '계약 현황',
+      title: '보험회사별로 <em>매달 얼마</em>를 내고 계신가',
+      sub: '유효 계약 ' + t.n + '건 · 월 합계 ' + insWon(t.fee) + '원' + (t.unknown ? ' (보험료 미제공 ' + t.unknown + '건 제외)' : ''),
+      items: sc.byCo.map(function (c, i) {
+        return { name: c.co + ' (' + c.n + '건)', value: c.fee > 0 ? (insWon(c.fee) + '원') : '미제공',
+          pct: c.pct, color: BJ_PIE[i % BJ_PIE.length] };
+      }),
+      note: t.lapsedN ? { tone: 'amber', title: '실효·해지 ' + t.lapsedN + '건은 따로 셉니다',
+        text: '당시 월 ' + insWon(t.lapsedFee) + '원짜리였지만 <b>지금은 보장이 없습니다.</b> 유효 계약과 합쳐 세지 않았습니다.' } : null });
+
+    slides.push({ type: 'table', eyebrow: '계약 현황', title: '가입하신 계약',
+      sub: '증권에 적힌 그대로입니다',
+      head: ['보험사', '상품', '가입일', '납입', '만기', '월 보험료'],
+      rows: sc.plans.map(function (p) {
+        return { cells: [p.co, p.name, p.from, (p.pay || '-') + (p.years ? ' ' + p.years + '년' : ''),
+          p.till || '-', p.fee > 0 ? insWon(p.fee) + '원' : '미제공'] };
+      }).concat([{ cells: ['합계', t.n + '건', '', '', '', insWon(t.fee) + '원'], tone: 'ok' }]),
+      foot: t.saidN && t.saidN !== t.n ? ('※ 문서 머리글은 ' + t.saidN + '건이라고 적혀 있습니다 — 원본을 확인해 주세요.') : '' });
+  }
+
+  /* 큰 틀 — 영역별로 무엇이 있고 무엇이 비었는지 */
+  if (sc && sc.areas && sc.areas.length) {
+    slides.push({ type: 'cards', eyebrow: sc.loose ? '보장 현황' : '보장 진단',
+      title: sc.loose ? '읽어 낸 담보를 <em>큰 틀로</em> 모았습니다' : '큰 틀로 보면 이렇습니다',
+      sub: sc.loose ? '자료에서 읽어 낸 담보를 영역별로 모았습니다 — 판정은 하지 않았습니다'
+                    : '영역별로 담보 몇 개 중 몇 개가 부족·미가입인지', cols: 3,
+      cards: sc.areas.map(function (a) {
+        return { tone: sc.loose ? '' : (a.short ? (a.short >= a.rows.length ? 'red' : 'amber') : 'green'),
+          /* 느슨하게 읽은 것에는 「충분」 같은 판정을 붙이지 않는다 — 지어내는 것이 된다 */
+          label: sc.loose ? (a.rows.length + '개 읽음') : (a.short ? (a.short + ' / ' + a.rows.length + ' 부족') : (a.rows.length + '개 확보')),
+          title: a.area,
+          text: a.rows.slice(0, 4).map(function (d) { return d.name + ' ' + bjMoney(d.have); }).join('<br>') +
+            (a.rows.length > 4 ? '<br>외 ' + (a.rows.length - 4) + '개' : '') };
+      }),
+      note: sc.loose
+        ? { tone: 'amber', title: '이 표는 판정이 아닙니다',
+            text: '이 자료는 앱이 아는 보장분석 양식이 아니라, <b>담보 이름과 그 뒤 금액만 옮긴 것</b>입니다. 어느 것이 실제 가입 금액인지는 증권으로 확인해야 합니다.' }
+        : { tone: '', title: '이 표는 원본의 판정입니다',
+            text: '보장분석표가 매긴 권장금액 기준입니다. <b>고객의 사정에 맞는 판단은 설계사가</b> 합니다.' } });
+
+    sc.areas.forEach(function (a) {
+      slides.push({ type: 'table', eyebrow: '보장 진단 · ' + a.area,
+        title: a.area + ' — 담보 ' + a.rows.length + '개' +
+          (sc.loose ? '' : (a.short ? (' 중 <em>' + a.short + '개가 부족</em>') : ' 모두 충분')),
+        head: sc.loose ? ['담보', '자료에 적힌 금액', '', '판정', ''] : ['담보', '권장', '가입', '판정', '과부족'],
+        rows: a.rows.map(function (d) {
+          return { cells: [d.name, bjMoney(d.want), bjMoney(d.have), d.verdict, d.gap || '-'],
+            tone: (d.verdict === '부족' || d.verdict === '미가입') ? 'hi' : (d.verdict === '충분' ? '' : 'dim') };
+        }) });
     });
   }
-  var found = 0;
-  for (k in hit) if (hit.hasOwnProperty(k)) found++;
+
+  if (sc && sc.short && sc.short.length) {
+    var half = Math.ceil(sc.short.length / 2);
+    var mk = function (arr) {
+      return arr.map(function (d) {
+        return { ic: d.verdict === '미가입' ? 'r' : 'a', mark: d.verdict === '미가입' ? '✕' : '△',
+          title: d.name + ' ' + (d.gap || ''),
+          text: '권장 ' + bjMoney(d.want) + ' · 지금 ' + bjMoney(d.have) };
+      });
+    };
+    slides.push({ type: 'list', eyebrow: '처방', eyebrowWarn: true,
+      title: '비어 있는 담보 <em>' + sc.short.length + '개</em>',
+      sub: '원본 보장분석표가 부족·미가입으로 본 것입니다',
+      left: mk(sc.short.slice(0, half)), right: mk(sc.short.slice(half)),
+      note: { tone: 'amber', title: '한 번에 다 채우지 않습니다',
+        text: '가계가 무너지는 순서로 우선순위를 정합니다. AI 를 연결하면 A/B/C 3안으로 나눠 드립니다.' } });
+  }
+
+  if (!sc) {
+    slides.push({ type: 'table', eyebrow: '보장 현황', title: '자료에서 담보를 읽지 못했습니다',
+      sub: '아래를 확인해 주세요',
+      head: ['확인할 것', '어떻게'],
+      rows: [
+        { cells: ['글자가 없는 스캔본인가', '텍스트가 없는 이미지 PDF 면 페이지 이미지로 읽습니다. 페이지가 많으면 담보 표가 있는 쪽만 잘라 올려 주세요.'], tone: 'hi' },
+        { cells: ['다른 양식인가', '이 앱은 「전체 계약리스트 · 담보별 진단현황」 형식을 읽습니다. 다른 양식이면 그 PDF 를 알려 주세요.'] },
+        { cells: ['암호가 걸려 있는가', '보호된 PDF 는 열지 못합니다. 암호를 풀고 다시 올려 주세요.'] }
+      ] });
+  }
+
+  slides.push({ type: 'list', eyebrow: '다음 단계', title: '사람이 반드시 확인할 것',
+    sub: 'AI 가 판단하면 안 되는 영역입니다',
+    left: [
+      { ic: 'r', mark: '1', title: '증권 원본 vs 신정원 조회', text: '특약 누락이 자주 있습니다. 「기타 인보험(정액)담보」 로 뭉뚱그려진 항목은 증권으로 확인합니다.' },
+      { ic: 'a', mark: '2', title: '해지·이전의 세금', text: '연금저축 해지 시 기타소득세 16.5% 등이 발생할 수 있습니다.' }
+    ],
+    right: [
+      { ic: 'a', mark: '3', title: '건강 상태와 신규 인수 가능성', text: '고지 대상 이력에 따라 부담보·할증·거절이 달라집니다.' },
+      { ic: 'r', mark: '4', title: '신규 승낙 전 기존 해지 금지', text: '반드시 신규 계약 승낙을 확인한 뒤 기존 계약을 정리합니다.' }
+    ] });
+
+  slides.push({ type: 'cover', kicker: '마무리', title: 'AI 를 연결하면 <em>여기서 더</em> 나갑니다',
+    lead: '60세 절벽 · 치료비 정밀 진단 · 리모델링 A/B/C 3안이 함께 나옵니다.' });
+
   return {
-    client: { analysisDate: new Date().toISOString().slice(0, 10) },
+    client: { name: sc && sc.who.name ? sc.who.name : '', age: sc && sc.who.age ? sc.who.age : 0, analysisDate: today },
     advisor: { name: (typeof OS !== 'undefined' && OS.profile) ? (OS.profile.name || '') : '' },
-    slides: [
-      { type: 'cover', kicker: '보장분석', title: '보장 현황 정리',
-        lead: '제출하신 자료에서 읽어 낸 담보를 영역별로 모았습니다.',
-        meta: '자료 ' + (parts || []).length + '건 · ' + new Date().toISOString().slice(0, 10) },
-      { type: 'twobox', eyebrow: '먼저 알려드립니다', eyebrowWarn: true,
-        title: 'AI 심층 분석이 <em>붙지 않은</em> 상태입니다',
-        sub: '그래도 화면을 비워 두지 않고, 자료에서 읽어 낸 것만이라도 정리해 드립니다.',
-        left: { title: '지금 보시는 것', text: '제출 자료에서 <b>담보명과 금액을 그대로 옮긴 것</b>입니다. 계산이나 판정은 하지 않았습니다.' },
-        right: { tone: 'red', title: '아직 없는 것', text: bjHtml(why || 'AI 연결이 필요합니다.') + '<br>연결되면 60세 절벽·치료비 정밀 진단·A/B/C 3안이 함께 나옵니다.' } },
-      { type: 'table', eyebrow: '보장 현황', title: '영역별로 읽어 낸 담보',
-        sub: '자료에 적힌 문구를 그대로 옮겼습니다 — 판정은 하지 않았습니다',
-        head: ['영역', '읽어 낸 금액', '자료 문구', '판정'],
-        rows: rows,
-        boxes: [{ tone: 'amber', title: '이 표는 판정이 아닙니다',
-          text: '금액이 여러 개인 것은 자료에 여러 줄로 나와 있다는 뜻입니다. 어느 것이 실제 가입 금액인지는 <b>증권으로 확인</b>해야 합니다.' }],
-        foot: found ? ('' + found + '개 영역에서 담보 문구를 찾았습니다.') : '자료에서 담보 문구를 찾지 못했습니다. 텍스트가 없는 스캔본일 수 있습니다.' },
-      { type: 'list', eyebrow: '다음 단계', title: '사람이 반드시 확인할 것',
-        sub: 'AI 가 판단하면 안 되는 영역입니다',
-        left: [
-          { ic: 'r', mark: '1', title: '증권 원본 vs 신정원 조회', text: '특약 누락이 자주 있습니다. 신정원에서 「기타 인보험(정액)담보」 로 뭉뚱그려진 항목은 증권으로 확인합니다.' },
-          { ic: 'a', mark: '2', title: '해지·이전의 세금', text: '연금저축 해지 시 기타소득세 16.5% 등 세금이 발생할 수 있습니다.' }
-        ],
-        right: [
-          { ic: 'a', mark: '3', title: '건강 상태와 신규 인수 가능성', text: '고지 대상 이력에 따라 부담보·할증·거절이 달라집니다.' },
-          { ic: 'r', mark: '4', title: '신규 승낙 전 기존 해지 금지', text: '반드시 신규 계약 승낙을 확인한 뒤 기존 계약을 정리합니다.' }
-        ] },
-      { type: 'cover', kicker: '마무리', title: '자료를 더 주시면 더 정확해집니다',
-        lead: '담보 표가 있는 페이지를 함께 올려 주시면 영역별 금액을 더 정확히 읽습니다.' }
-    ]
+    slides: slides
   };
 }
 
@@ -25673,7 +25858,7 @@ function bjShow(id, out, p, spec, parts, opts, retried) {
       spec.max, id).then(function (out2) {
         return bjShow(id, out2, p, spec, parts, opts, true);
       }).catch(function (e) {
-        bjPaint(id, bjLocalDeck(parts, opts, (e && e.message) || 'AI 응답을 받지 못했습니다.'),
+        bjPaint(id, bjLocalDeck(parts, opts, aiWhy((e && e.message) || ''), ($('pres_' + id) || {})._scan),
           bjBanner('', '⚠️ AI 가 형식을 두 번 어겨, <b>자료에서 읽어 낸 것만으로</b> 정리했습니다. 다시 시도하면 대개 정상으로 나옵니다.'));
         return false;
       });
@@ -25683,7 +25868,7 @@ function bjShow(id, out, p, spec, parts, opts, retried) {
     bjPaint(id, bjNorm(deck, opts),
       bjBanner('', '⚠️ AI 답의 일부가 깨져 <b>' + bjArr(deck.slides).length + '장만</b> 살렸습니다. 재생성을 누르면 전체가 나옵니다.'));
   } else {
-    bjPaint(id, bjLocalDeck(parts, opts, 'AI 가 JSON 형식을 지키지 않았습니다.'),
+    bjPaint(id, bjLocalDeck(parts, opts, 'AI 가 JSON 형식을 지키지 않았습니다.', ($('pres_' + id) || {})._scan),
       bjBanner('', '⚠️ AI 답을 읽지 못해 <b>자료에서 읽어 낸 것만으로</b> 정리했습니다. 재생성을 눌러 주세요.'));
   }
   return false;
