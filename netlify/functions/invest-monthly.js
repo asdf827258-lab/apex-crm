@@ -100,7 +100,7 @@ exports.handler = async function (event) {
   try {
     accounts = (await sb('invest_accounts?select=id,owner_id,name,kind,memo,target_return,stop_loss')) || [];
   } catch (e) {
-    return { statusCode: 200, body: JSON.stringify({ ok: false, reason: '계좌 조회 실패(마이그레이션 33/34 미적용?): ' + e.message }) };
+    return { statusCode: 200, body: JSON.stringify({ ok: false, reason: '계좌 조회 실패(마이그레이션 33/39 미적용?): ' + e.message }) };
   }
   log.push('계좌 ' + accounts.length + '개');
 

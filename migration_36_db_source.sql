@@ -1,0 +1,39 @@
+/* ════════════════════════════════════════════════════════════════
+   DB 종류(카테고리)를 대표가 직접 정한다
+
+   dbs.source 칸은 처음부터 있었다. 그런데 값이 네 개로 묶여 있었다.
+     check (source in ('소개','지인','개척','일반'))
+
+   실제로 쓰는 종류는 이게 아니다. 방송, 보장분석 1~17, 농협,
+   NS홈쇼핑 화재보험처럼 들어오는 경로마다 이름이 다르고 계속 늘어난다.
+   제약이 네 개로 묶여 있으니 새 종류를 넣을 수 없었고,
+   그래서 화면에서도 종류 칸이 통째로 빠져 있었다.
+
+   바뀌는 것:
+     - 종류 이름을 자유롭게 쓴다 (제약 해제)
+     - 목록은 app_config 의 db_sources 한 줄에 둔다
+     - 그 줄을 고칠 수 있는 사람은 대표·운영자뿐 (기존 app_config 정책 그대로)
+     - 팀원은 그 목록에서 고르기만 한다
+     - 종류별로 타율을 끊어 볼 수 있게 색인을 하나 만든다
+
+   기존 자료는 손대지 않는다. 지금 '일반' 로 들어가 있는 줄은 그대로 '일반'.
+
+   이 파일은 몇 번을 다시 실행해도 안전하다.
+   ════════════════════════════════════════════════════════════════ */
+
+/* 종류 칸 자체가 없는 서버도 있다. 있으면 그대로 두고, 없으면 만든다.
+   이 줄이 없으면 아래가 전부 「column source does not exist」 로 멈춘다. */
+alter table public.dbs add column if not exists source text not null default '일반';
+
+alter table public.dbs drop constraint if exists dbs_source_check;
+
+alter table public.dbs alter column source set default '일반';
+
+create index if not exists dbs_source_idx on public.dbs(source);
+
+/* 목록의 첫 값. 대표가 화면에서 고치면 이 줄이 바뀐다.
+   이미 값이 있으면 건드리지 않는다 — 고쳐 둔 것을 되돌리면 안 된다. */
+insert into public.app_config(key, value) values(
+  'db_sources',
+  '일반,방송,보장분석,보장분석3,보장분석4,보장분석5,보장분석6,보장분석7,보장분석8,보장분석9,보장분석10,보장분석11,보장분석12,보장분석14,보장분석15,보장분석16,보장분석17,농협,NS홈쇼핑 화재보험,소개,지인,개척'
+) on conflict (key) do nothing;

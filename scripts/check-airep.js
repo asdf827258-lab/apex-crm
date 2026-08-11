@@ -53,13 +53,14 @@ window.__calls=(function(){var a=[],i;
  return a;})();
 window.__dbs=(function(){var a=[],i;
  for(i=0;i<30;i++)a.push({id:'d'+i,assigned_to:i<20?'p2':'p3',customer_name:'고객'+i,
-   region:'서울',assigned_date:window.__T(40+i)});
+   source:(i%2?'방송':'보장분석'),region:'서울',assigned_date:window.__T(40+i)});
  for(i=30;i<38;i++)a.push({id:'d'+i,assigned_to:'p4',customer_name:'고객'+i,
-   region:'경기',assigned_date:window.__T(60)});
+   source:'농협',region:'경기',assigned_date:window.__T(60)});
  /* 손 놓은 지 오래된 것 — 다시 걸어야 할 사람들 */
- a.push({id:'d90',assigned_to:'p2',customer_name:'고객90',region:'서울',assigned_date:window.__T(60)});
- a.push({id:'d91',assigned_to:'p2',customer_name:'고객91',region:'서울',assigned_date:window.__T(50)});
- a.push({id:'d92',assigned_to:'p2',customer_name:'고객92',region:'인천',assigned_date:window.__T(30)});
+ a.push({id:'d90',assigned_to:'p2',customer_name:'고객90',source:'방송',region:'서울',assigned_date:window.__T(60)});
+ a.push({id:'d91',assigned_to:'p2',customer_name:'고객91',source:'농협',region:'서울',assigned_date:window.__T(50)});
+ a.push({id:'d92',assigned_to:'p2',customer_name:'고객92',source:'보장분석',region:'인천',assigned_date:window.__T(30)});
+ /* 종류를 안 적어 둔 옛날 DB — '일반' 으로 읽혀야 한다 */
  a.push({id:'d93',assigned_to:'p2',customer_name:'고객93',region:'경기',assigned_date:window.__T(20)});
  return a;})();
 window.__clients=[
@@ -85,7 +86,7 @@ window.supabase={createClient:function(){
  var mk=function(tbl){
   var f={};
   var a={
-   select:function(){return a},gte:function(){return a},lte:function(){return a},is:function(){return a},
+   select:function(c){f._cols=c||'';return a},gte:function(){return a},lte:function(){return a},is:function(){return a},
    in:function(){return a},not:function(){return a},order:function(){return a},
    neq:function(k,v){window.__neq.push(tbl+':'+k+'='+v);f['neq_'+k]=v;return a},
    limit:function(){return a},single:function(){return a},range:function(){return a},
@@ -95,6 +96,16 @@ window.supabase={createClient:function(){
    then:function(res){
      var out=[];
      if(f._ins||f._upd)return Promise.resolve({data:null,error:null}).then(res);
+     /* 종류 칸이 없는 서버 흉내 — 그 칸을 이름으로 부르면 통째로 거절하고,
+        안 부르면 종류가 빠진 줄을 돌려준다 */
+     if(window.__noSrcCol&&tbl==='dbs'){
+       if(/source/.test(f._cols||''))
+         return Promise.resolve({data:null,error:{code:'42703',
+           message:'column dbs.source does not exist'}}).then(res);
+       out=window.__dbs.map(function(x){var y={},k;
+         for(k in x)if(k!=='source')y[k]=x[k];return y;});
+       return Promise.resolve({data:out,error:null}).then(res);
+     }
      if(tbl==='profiles')out=window.__profiles;
      else if(tbl==='teams')out=window.__teams;
      else if(tbl==='team_members')out=window.__team_members;
@@ -182,7 +193,7 @@ const AI_OK = `## 활동 보고
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id + '|' + i.title)));
     return t;
   });
-  ok(menu.indexOf('홈|airep|AI 관리판') >= 0, '메뉴 「홈」 밑에 AI 관리판이 있다');
+  ok(menu.indexOf('하루 시작|airep|TFA 업무관리') >= 0, '메뉴 「하루 시작」 밑에 TFA 업무관리가 있다');
 
   /* ── 지점장으로 열기 ── */
   await open();
@@ -190,9 +201,11 @@ const AI_OK = `## 활동 보고
   /* ── 왼쪽 카테고리 한 줄 ── */
   const cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 8, '왼쪽에 카테고리 여덟 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|오늘 터치할 사람|리더 할 일|팀원 관리',
+  ok(cats.length === 10, '왼쪽에 카테고리 열 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('내 코칭') >= 0 && cats.indexOf('본인 점검란') >= 0,
+    '내 코칭·본인 점검란이 여기로 들어왔다 — 실행 체크판에서 안 찾아도 된다');
   const heads = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-shd'), e => e.textContent.trim()));
   ok(heads.join('|') === '내 관리|팀 관리', '내 관리 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
@@ -444,7 +457,7 @@ const AI_OK = `## 활동 보고
   txt = await pane();
   ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
   const tk = await page.evaluate(() => Array.prototype.map.call(
-    document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+    document.querySelectorAll('#arPane .ar-fs:not(.ar-fsrc) .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
   ok(tk.length === 7, '전체·부재·거절·진행중·미진행·기고객·생일 일곱 (' + tk.length + ')');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
@@ -469,6 +482,67 @@ const AI_OK = `## 활동 보고
   ok(/결론을 물어봅니다|자료를 준비/.test(todos.run || ''), '진행중 — 붙으라고 한다 — ' + todos.run);
   ok(/첫 통화/.test(todos['new'] || ''), '미진행 — 오늘 첫 통화 — ' + todos['new']);
   ok(/안부|적어 둔 일/.test(todos.old || ''), '기고객 — 안부 — ' + todos.old);
+
+  /* ── DB 종류가 CRM 에서 여기까지 그대로 따라오는가 ── */
+  const src = await page.evaluate(() => {
+    const l = arTouch('p2');
+    const c = {}; l.forEach(x => { if (x.go === 'crm') c[x.src || '(없음)'] = (c[x.src || '(없음)'] || 0) + 1; });
+    return {
+      cnt: c,
+      chips: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()),
+      tags: Array.prototype.map.call(document.querySelectorAll('#arPane .ar-tk .src'), e => e.textContent.trim())
+    };
+  });
+  ok(Object.keys(src.cnt).length >= 2, 'DB 종류가 여러 개 살아서 넘어온다 — ' + JSON.stringify(src.cnt));
+  ok(!src.cnt['(없음)'], '종류가 빈 줄이 없다 — 안 적힌 옛 DB 는 「일반」 으로 읽는다');
+  ok((src.cnt['일반'] || 0) >= 1, '종류를 안 적어 둔 옛 DB 도 「일반」 으로 세어진다');
+  ok(src.tags.length >= 3, '줄마다 종류 딱지가 붙는다 (' + src.tags.length + '개)');
+  ok(src.chips.filter(t => /방송|보장분석|일반|종류 전체/.test(t)).length >= 3,
+    '종류로 좁혀 볼 수 있는 단추가 생긴다 — ' + src.chips.filter(t => /방송|보장분석|일반|종류 전체/.test(t)).join(' · '));
+
+  /* 종류를 하나 고르면 그 종류만 남는가 */
+  const srcPick = await page.evaluate(() => {
+    const before = document.querySelectorAll('#arPane .ar-tk').length;
+    arTkSrcSet('방송');
+    const rows = Array.prototype.map.call(document.querySelectorAll('#arPane .ar-tk .src'), e => e.textContent.trim());
+    const n = document.querySelectorAll('#arPane .ar-tk').length;
+    arTkSrcSet('');
+    return { before, n, rows, back: document.querySelectorAll('#arPane .ar-tk').length };
+  });
+  ok(srcPick.n > 0 && srcPick.n < srcPick.before,
+    '「방송」 만 고르면 줄이 줄어든다 (' + srcPick.before + ' → ' + srcPick.n + ')');
+  ok(srcPick.rows.every(t => t === '방송'), '남은 줄은 전부 방송이다 — ' + srcPick.rows.join(','));
+  ok(srcPick.back === srcPick.before, '되돌리면 원래대로 (' + srcPick.back + ')');
+
+  /* ── 종류 칸이 아직 없는 서버에서도 화면이 죽지 않는가 ──
+     칸 이름을 콕 집어 부르면 서버가 통째로 거절한다. 그러면 종류만 못 볼 뿐
+     「오늘 터치할 사람」 자체가 안 뜬다 — 전에는 잘 돌던 화면이 죽는 것이다. */
+  const noSrc = await page.evaluate(async () => {
+    window.__noSrcCol = true;
+    AR.loaded = false; AR.noSrc = false;
+    arLoad(true);
+    await new Promise(r => setTimeout(r, 1600));
+    return {
+      err: AR.err || '',
+      rows: (AR.db || []).length,
+      touch: arTouch('p2').length,
+      srcs: (AR.db || []).map(x => x.src).filter((v, i, a) => a.indexOf(v) === i),
+      flag: !!AR.noSrc
+    };
+  });
+  ok(!noSrc.err, '종류 칸이 없는 서버에서도 오류로 끝나지 않는다 — ' + (noSrc.err || '오류 없음'));
+  ok(noSrc.rows > 0, 'DB 를 그대로 다 읽어 온다 (' + noSrc.rows + '건)');
+  ok(noSrc.touch > 0, '오늘 터치할 사람이 그대로 뜬다 (' + noSrc.touch + '명)');
+  ok(noSrc.flag === true, '종류를 못 받았다는 것을 스스로 알고 있다');
+  ok(noSrc.srcs.length === 1 && noSrc.srcs[0] === '일반',
+    '종류는 전부 「일반」 으로 읽는다 — 빈칸으로 두지 않는다 (' + noSrc.srcs.join(',') + ')');
+
+  /* 원래대로 돌려놓고 이어서 검사한다 */
+  await page.evaluate(async () => {
+    window.__noSrcCol = false; AR.loaded = false; AR.noSrc = false;
+    arLoad(true);
+    await new Promise(r => setTimeout(r, 1600));
+  });
 
   /* ── 지점장은 팀 전체를 한 화면에서 ── */
   const solo = await page.evaluate(() => document.querySelectorAll('#arPane .ar-tk').length);
@@ -669,6 +743,104 @@ const AI_OK = `## 활동 보고
   });
   ok(over.sw <= over.cw + 2, '390px 에서 가로 스크롤 없음 (' + over.sw + '/' + over.cw + ')');
   await page.setViewportSize({ width: 1240, height: 1400 });
+
+  /* ── 한 사람 칸에 코칭과 팀 평균까지 다 있는가 ──
+     팀 코칭 화면을 따로 열지 않아도 여기서 다 보여야 한다. 흩어지면 아무도 안 본다. */
+  await open('team');
+  await page.waitForTimeout(2600);
+  await page.evaluate(() => { GB.team = ''; arPaint(); arOpen('p2'); });
+  await page.waitForTimeout(900);
+  const merged = await page.evaluate(() => {
+    const host = document.getElementById('arPane');
+    if (!host) return null;
+    return {
+      secs: Array.prototype.map.call(host.querySelectorAll('.ar-rb .ar-sh .n'), e => e.textContent.trim()),
+      vsRows: host.querySelectorAll('.ar-vr').length,
+      selfOut: /본인은 평균에서 뺐습니다/.test(host.textContent),
+      coach: /오늘 이 사람을 어떻게 챙길까/.test(host.textContent)
+    };
+  });
+  ok(!!merged, '팀원 관리 칸이 그려진다');
+  if (merged) {
+    ok(merged.secs.indexOf('DB 통합 CRM') >= 0, '펼친 칸에 DB 통합 CRM 이 있다');
+    ok(merged.coach, '펼친 칸에 코칭(어떻게 챙길까)이 있다 — 팀 코칭을 따로 안 열어도 된다');
+    ok(merged.vsRows === 6, '팀 평균 비교가 여섯 축 모두 선다 (' + merged.vsRows + ')');
+    ok(merged.selfOut, '팀 평균에서 본인을 뺀다고 적는다 — 안 빼면 차이가 절반으로 희석된다');
+    ok(/평균과 견주면/.test(merged.secs.join('|')), '팀 평균 비교 칸이 있다 — ' + merged.secs.join(' · '));
+  }
+
+  /* ── 하나의 업무관리 툴 — 흩어진 것이 여기로 다 들어왔는가 ── */
+  await open('lead');
+  const ldg = await page.evaluate(() => ({
+    n: document.querySelectorAll('#arPane .ar-lkg').length,
+    stop: /stopPropagation/.test((document.querySelector('#arPane .ar-lkg') || {}).getAttribute
+      ? (document.querySelector('#arPane .ar-lkg').getAttribute('onclick') || '') : '')
+  }));
+  ok(ldg.n >= 10, '리더 할 일 줄마다 그 화면으로 가는 단추가 붙는다 (' + ldg.n + '개)');
+  ok(ldg.stop, '그 단추를 눌러도 체크는 안 바뀐다 (stopPropagation)');
+
+  for (const [cat, sel, nm] of [['coach', '#mcPane', '내 코칭'], ['acad', '#acadBody', '본인 점검란']]) {
+    await open(cat);
+    await page.waitForTimeout(2400);
+    const got = await page.evaluate(s2 => {
+      const p = document.getElementById('arPane');
+      return { pane: !!p.querySelector(s2), len: (p.textContent || '').trim().length };
+    }, sel);
+    ok(got.pane, nm + ' 이 여기서 열린다 (' + sel + ')');
+    ok(got.len > 200, nm + ' 에 내용이 찬다 (' + got.len + '자)');
+  }
+
+  await open('team');
+  await page.waitForTimeout(2400);
+  await page.evaluate(() => { GB.team = ''; arPaint(); arOpen('p2'); });
+  await page.waitForTimeout(700);
+  ok(await page.evaluate(() => /코칭 메모 남기기/.test(document.getElementById('arPane').textContent)),
+    '펼친 칸에 코칭 메모 단추가 있다');
+  await page.evaluate(() => arMemoOpen('p2'));
+  await page.waitForTimeout(400);
+  const memo = await page.evaluate(() => {
+    const p = document.getElementById('arPane');
+    return {
+      box: !!p.querySelector('.ar-memo'),
+      ta: p.querySelectorAll('.ar-memo .ar-mt').length,
+      date: p.querySelectorAll('.ar-memo .ar-md').length,
+      stay: /평균과 견주면/.test(p.textContent)
+    };
+  });
+  ok(memo.box && memo.ta === 3 && memo.date === 1,
+    '메모 칸이 그 자리에서 열린다 — 글칸 ' + memo.ta + ' · 날짜 ' + memo.date);
+  ok(memo.stay, '메모를 열어도 보던 숫자가 그대로 있다 — 화면을 안 벗어난다');
+
+  const dup = await page.evaluate(() => {
+    if (typeof TH_CAT === 'undefined') return null;
+    return TH_CAT.map(c => c[0]);
+  });
+  if (dup) {
+    ok(dup.indexOf('grow') < 0 && dup.indexOf('coach') < 0 && dup.indexOf('acad') < 0,
+      '실행 체크판에서 겹치던 셋(성장판·내 코칭·본인 점검란)이 빠졌다 — ' + dup.join(' · '));
+  }
+
+  /* ── 팀원이 스스로 비밀번호를 바꿀 수 있는가 ──
+     기능은 있었는데 「눌러 보라」는 말이 어디에도 없어 아무도 못 찾았다. */
+  await seat('member');
+  await page.evaluate(() => osRenderPill());
+  await page.waitForTimeout(300);
+  const pill = await page.evaluate(() => {
+    const p = document.getElementById('osAuthPill');
+    return p ? { pw: !!p.querySelector('.pw'), txt: (p.textContent || '').trim(), title: p.title || '' } : null;
+  });
+  ok(!!pill && pill.pw, '계정 칸에 「🔑 비밀번호」 가 보인다 — ' + (pill ? pill.txt : '칸 없음'));
+  ok(!!pill && /비밀번호/.test(pill.title), '설명에도 비밀번호 변경이라고 적힌다');
+  await page.evaluate(() => osOpenMe());
+  await page.waitForTimeout(600);
+  const meBox = await page.evaluate(() => ({
+    pw: /비밀번호 변경/.test(document.body.textContent),
+    inputs: document.querySelectorAll('input[type=password]').length
+  }));
+  ok(meBox.pw && meBox.inputs >= 2,
+    '눌러 보면 비밀번호 변경 칸이 열린다 (비밀번호 칸 ' + meBox.inputs + '개)');
+  await page.evaluate(() => { document.querySelectorAll('#osOvl,.os-ovl').forEach(x => x.remove()); });
+  await seat('owner');
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 

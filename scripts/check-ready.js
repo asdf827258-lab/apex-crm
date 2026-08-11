@@ -91,7 +91,7 @@ window.supabase={createClient:function(){
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id + '|' + i.title)));
     return t;
   });
-  ok(menu.indexOf('홈|ready|출발 점검') >= 0, '메뉴 「홈」 밑에 출발 점검이 있다');
+  ok(menu.indexOf('시스템|ready|출발 점검') >= 0, '메뉴 「시스템」 밑에 출발 점검이 있다');
 
   await open();
   let v = await view();

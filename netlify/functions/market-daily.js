@@ -251,7 +251,7 @@ exports.handler = async function () {
       await sb('invest_nav?on_conflict=account_id,nav_date', { method: 'POST', body: JSON.stringify(navRows) });
       log.push('일별 평가액 ' + navRows.length + '계좌');
     }
-  } catch (e) { log.push('평가액 기록 건너뜀(마이그레이션 34번 미적용?): ' + e.message.slice(0, 80)); }
+  } catch (e) { log.push('평가액 기록 건너뜀(마이그레이션 39번 미적용?): ' + e.message.slice(0, 80)); }
 
   /* ── ④ 경제지표 저장 ────────────────────────────────────────────────── */
   let econ = [];

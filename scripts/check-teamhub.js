@@ -164,7 +164,7 @@ window.supabase={createClient:function(){
     renderNav();
     return Array.prototype.map.call(document.querySelectorAll('#navHost .tab-btn'), e => e.getAttribute('data-tab'));
   });
-  ok(menu.indexOf('TEAM 총괄|teamhub') >= 0, '메뉴에 TEAM 총괄 관리가 있다');
+  ok(menu.indexOf('조직 관리|teamhub') >= 0, '메뉴 「조직 관리」 밑에 실행 체크판이 있다');
   ok(nav.indexOf('teamhub') >= 0, '사이드바에 실제로 그려진다');
   ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(t =>
     ok(nav.indexOf(t) < 0, '사이드바에서 ' + t + ' 이 사라졌다'));
@@ -183,12 +183,12 @@ window.supabase={createClient:function(){
   await hub();
   let cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#thPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 7, '지점장에게는 일곱 칸 (' + cats.length + ')');
-  ok(cats.join('|') === '오늘 체크|이번 주|업무 루트|성장판|내 코칭|본인 점검란|지점장 · 팀 관리',
+  ok(cats.length === 4, '지점장에게는 네 칸 (' + cats.length + ')');
+  ok(cats.join('|') === '오늘 체크|이번 주|업무 루트|지점장 · 팀 관리',
     '순서가 맞다 — ' + cats.join(' · '));
   const heads = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#thPane .ar-shd'), e => e.textContent.trim()));
-  ok(heads.join('|') === '내 실행|팀 관리', '내 실행 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
+  ok(heads.join('|') === '오늘 체크|팀 관리', '오늘 체크 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
 
   /* ── 칸마다 원래 화면이 그대로 열리는가 ── */
   const paneOf = () => page.evaluate(() => ({
@@ -260,7 +260,7 @@ window.supabase={createClient:function(){
   await hub();
   cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#thPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 6, '설계사에게는 여섯 칸 (' + cats.length + ')');
+  ok(cats.length === 3, '설계사에게는 세 칸 (' + cats.length + ')');
   ok(cats.indexOf('지점장 · 팀 관리') < 0, '설계사에게 지점장 칸은 안 보인다');
 
   /* ── 설정 여섯 칸 ── */
