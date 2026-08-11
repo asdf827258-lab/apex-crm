@@ -193,7 +193,7 @@ const AI_OK = `## 활동 보고
     var t = []; TABS.forEach(g => (g.items || []).forEach(i => t.push(g.group + '|' + i.id + '|' + i.title)));
     return t;
   });
-  ok(menu.indexOf('홈|airep|TFA 업무관리') >= 0, '메뉴 「홈」 밑에 TFA 업무관리가 있다');
+  ok(menu.indexOf('하루 시작|airep|TFA 업무관리') >= 0, '메뉴 「하루 시작」 밑에 TFA 업무관리가 있다');
 
   /* ── 지점장으로 열기 ── */
   await open();

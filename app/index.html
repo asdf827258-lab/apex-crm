@@ -620,6 +620,10 @@ a{color:inherit;text-decoration:none;}
 .tab-btn .tc{font-size:8.5px;font-weight:700;color:rgba(255,255,255,.3);}
 .sb-foot{flex-shrink:0;padding:12px;border-top:1px solid rgba(255,255,255,.06);}
 .key-pill{display:flex;align-items:center;gap:7px;font-size:10px;padding:8px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.04);color:rgba(255,255,255,.55);cursor:pointer;transition:all var(--dur);}
+.sb-say{width:100%;margin-top:5px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:inherit;
+ font-size:11px;font-weight:700;padding:8px 10px;border:none;border-radius:var(--r-sm);cursor:pointer;
+ background:rgba(255,255,255,.05);color:rgba(255,255,255,.55);transition:all .15s var(--ease);}
+.sb-say:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.88);}
 .ver-pill{margin-top:5px;font-size:9.5px;letter-spacing:.02em;padding:5px 10px;border-radius:var(--r-sm);background:rgba(255,255,255,.03);color:rgba(255,255,255,.38);cursor:pointer;font-variant-numeric:tabular-nums;text-align:center}
 .ver-pill:hover{color:rgba(255,255,255,.72);background:rgba(255,255,255,.07)}
 .key-pill:hover{background:rgba(255,255,255,.07);}
@@ -926,6 +930,9 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
       <div class="key-pill" id="keyPill" onclick="go('settings')">
         <span class="dot"></span><span id="keyPillTxt">API 키 미설정 — 클릭</span>
       </div>
+      <button type="button" class="sb-say" onclick="go('voice')">
+        <span>💬</span>건의함 · 불편한 점
+      </button>
       <div class="ver-pill" id="verPill" onclick="osVerCopy()"
            title="지금 열려 있는 판입니다. 화면이 안 바뀌었으면 이 날짜부터 확인하세요">
         <span id="verPillTxt">판 —</span>
@@ -7737,92 +7744,132 @@ function thCss(){
   document.head.appendChild(s);
 }
 
+/* 메뉴 — 하루 동선대로 열두 칸.
+
+   화면이 예순 개가 넘는다. 예전에는 스물네 칸으로 나눠 두었는데,
+   한 개짜리 칸이 여덟이나 되고 콘텐츠 칸 하나에 열다섯이 몰려 있어
+   접어 두어도 스물네 줄을 훑어야 했다.
+
+   아침에 켜서 여는 것부터, 거의 안 보는 것까지 순서대로 열두 칸으로
+   묶었다. 메뉴는 하나도 없애지 않았다.
+
+   ── ak 가 무엇인가 ─────────────────────────────────────────
+   요금제·직급 문은 원래 「그룹 이름」 을 열쇠로 걸려 있었다. 그래서
+   묶음을 바꾸면 유료 문이 같이 움직인다 — 돈 내고 쓰던 것이 공짜가
+   되거나, 공짜였던 것이 잠긴다.
+
+   그래서 메뉴마다 ak(원래 속해 있던 칸 이름)를 붙였다. 문은 여전히
+   ak 로 판정한다. 보이는 자리만 바뀌고 열려 있던 문은 그대로다.
+   대표가 설정에서 저장해 둔 접근 설정(tool_access)도 그대로 산다.  */
 var TABS=[
- {group:'건의함',items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:''}]},
- {group:'홈',items:[{id:'home',icon:'🏠',title:'홈',cnt:''},{id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:''},{id:'ready',icon:'🚦',title:'출발 점검',cnt:''}]},
- {group:'윤시현의 두뇌',items:[{id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:''}]},
- {group:'TEAM 총괄',key:'업무매뉴얼',items:[{id:'teamhub',icon:'📋',title:'실행 체크판',cnt:''}]},
- {group:'업무매뉴얼',items:[{id:'manual',icon:'📚',title:'업무매뉴얼',cnt:''},{id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:''}]},
- /* 아래 두 묶음은 메뉴에 세우지 않는다 — TEAM 총괄 관리 안에서 연다.
+ {group:'하루 시작',items:[
+   {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
+   {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
+   {id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:'',ak:'오늘의 AI 비서'},
+   {id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:'',ak:'오늘의 AI 비서'},
+   {id:'brain',icon:'🧠',title:'윤시현의 두뇌',cnt:'',ak:'윤시현의 두뇌'}
+ ]},
+ {group:'내 고객',items:[
+   {id:'clients',icon:'🗂️',title:'고객 365일',cnt:'',ak:'고객'},
+   {id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:'',ak:'고객'},
+   {id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:'',ak:'DB CRM'}
+ ]},
+ {group:'증권 분석',items:[
+   {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
+   {id:'baba',icon:'🔄',title:'비포&애프터',cnt:'',ak:'보장분석'},
+   {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
+   {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
+   {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:'',ak:'보장분석'},
+   {id:'interpret',icon:'🧠',title:'보험 해석',cnt:'',ak:'보험 해석'},
+   {id:'treatpay',icon:'💉',title:'치료비 지급지도',cnt:'',ak:'보장분석'},
+   {id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8',ak:'8통장 지도'},
+   {id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:'',ak:'고객'}
+ ]},
+ {group:'상담 도구',items:[
+   {id:'cs_assist',icon:'💬',title:'AI 상담 어시스턴트',cnt:'',ak:'상담 AI 코치'},
+   {id:'cs_needs',icon:'⚡',title:'니즈 시뮬레이터',cnt:'',ak:'상담 AI 코치'},
+   {id:'ins_asst',icon:'🩺',title:'보험 비서',cnt:'',ak:'상담 AI 코치'},
+   {id:'cs_gso',icon:'🤖',title:'금소법 AI',cnt:'',ak:'상담 AI 코치'},
+   {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
+   {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
+   {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
+   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'4',ak:'재무설계'}
+ ]},
+ {group:'계약·청구',items:[
+   {id:'contracts',icon:'📜',title:'계약관리 판단',cnt:'17',ak:'계약관리'},
+   {id:'endorse',icon:'✍️',title:'배서 안내서',cnt:'',ak:'계약관리'},
+   {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리'},
+   {id:'med_silbi',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리'},
+   {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:'',ak:'청구·사후관리'},
+   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'}
+ ]},
+ {group:'자료 조회',items:[
+   {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
+   {id:'ref_underwrite',icon:'⚠️',title:'예외질환 인수확인',cnt:'',ak:'보험 레퍼런스'},
+   {id:'ref_kcd',icon:'📕',title:'질병코드·특약',cnt:'',ak:'계약관리'},
+   {id:'ref_surgery',icon:'🔪',title:'수술명 검색',cnt:'',ak:'계약관리'},
+   {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:'',ak:'보험 레퍼런스'},
+   {id:'ref_hidden',icon:'💰',title:'숨은보험금찾기',cnt:'',ak:'보험 레퍼런스'}
+ ]},
+ {group:'법인 컨설팅',items:[
+   {id:'biz_diag',icon:'🧭',title:'사업자 진단',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_fund',icon:'🏦',title:'정책자금',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_tax',icon:'🧾',title:'세금컨설팅',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_ins',icon:'☂️',title:'보험 솔루션',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_retire',icon:'🪙',title:'퇴직금 관리',cnt:'',ak:'법인·사업자 컨설팅'},
+   {id:'biz_staff',icon:'👥',title:'직원관리',cnt:'',ak:'법인·사업자 컨설팅'}
+ ]},
+ {group:'콘텐츠 제작',items:[
+   {id:'biz_news',icon:'📰',title:'정책·상품 뉴스',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'blog',icon:'📝',title:'블로그',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'threads',icon:'🧵',title:'Threads',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'insta',icon:'📸',title:'인스타그램',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'video',icon:'🎬',title:'유튜브&릴스',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'calendar',icon:'🗓️',title:'콘텐츠 캘린더',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'simui',icon:'🛡️',title:'외부글 심의필터',cnt:'',ak:'콘텐츠·마케팅'}
+ ]},
+ {group:'광고·유입',items:[
+   {id:'mkt_meta',icon:'📣',title:'메타 광고 가이드',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'mkt_volume',icon:'📊',title:'키워드 검색량',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'mkt_combine',icon:'🔑',title:'키워드 조합기',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'mkt_landing',icon:'🎯',title:'리드 랜딩페이지',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'mkt_card',icon:'💼',title:'디지털 명함',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'ext_reply',icon:'✳️',title:'소상공인 AI 답글',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'ext_thread',icon:'📤',title:'스레드 반자동발행',cnt:'',ak:'콘텐츠·마케팅'},
+   {id:'ext_naver',icon:'📈',title:'네이버 광고 대량등록기',cnt:'',ak:'콘텐츠·마케팅'}
+ ]},
+ {group:'조직 관리',items:[
+   {id:'org',icon:'🏢',title:'조직도',cnt:'',ak:'조직'},
+   {id:'teamhub',icon:'📋',title:'실행 체크판',cnt:'',ak:'업무매뉴얼'},
+   {id:'attend',icon:'🗓️',title:'출근 현황',cnt:'',ak:'DB CRM'},
+   {id:'daily',icon:'📒',title:'매일 취합',cnt:'',ak:'윤시스쿨'},
+   {id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:'',ak:'윤시스쿨'},
+   {id:'report',icon:'📊',title:'대표 브리핑',cnt:'',ak:'윤시스쿨'},
+   {id:'branch_coach',icon:'🧑‍🏫',title:'팀 코칭',cnt:'',ak:'매니저 관리'},
+   {id:'hq',icon:'🏛️',title:'승인·규칙',cnt:'',ak:'매니저 관리'},
+   {id:'audit',icon:'🛡️',title:'감사로그',cnt:'',ak:'매니저 관리'}
+ ]},
+ {group:'교육 자료',items:[
+   {id:'manual',icon:'📚',title:'업무매뉴얼',cnt:'',ak:'업무매뉴얼'},
+   {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
+   {id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:'',ak:'윤시스쿨'}
+ ]},
+ {group:'시스템',items:[
+   {id:'settings',icon:'⚙️',title:'설정',cnt:'',ak:'시스템 설정'},
+   {id:'pricing',icon:'💳',title:'요금제·구독',cnt:'',ak:'구독·요금제'},
+   {id:'terms',icon:'📜',title:'약관·개인정보',cnt:'',ak:'구독·요금제'},
+   {id:'ready',icon:'🚦',title:'출발 점검',cnt:'',ak:'홈'},
+   {id:'health',icon:'🩺',title:'시스템 점검',cnt:'',ak:'시스템 점검'}
+ ]},
+ /* 아래 셋은 메뉴에 세우지 않는다 — 다른 화면 안에서 열린다.
     지우지 않는 이유: 권한·요금제 판정과 음성 명령이 이 목록을 보고 돈다. */
- {group:'업무매뉴얼 도구',key:'업무매뉴얼',hide:true,items:[{id:'ckboard',icon:'📋',title:'실행 체크판',cnt:''},{id:'mycoach',icon:'🌱',title:'내 코칭',cnt:''},{id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:''}]},
- {group:'조직',items:[{id:'org',icon:'🏢',title:'조직도',cnt:''}]},
- {group:'윤시스쿨',items:[{id:'daily',icon:'📒',title:'매일 취합',cnt:''},{id:'yoonsi',icon:'🏫',title:'윤시스쿨',cnt:''},{id:'ai_org',icon:'🤖',title:'AI 조직 라이브',cnt:''},{id:'report',icon:'📊',title:'대표 브리핑',cnt:''}]},
- {group:'오늘의 AI 비서',items:[{id:'assistant',icon:'🤖',title:'오늘의 AI 비서',cnt:''},{id:'voiceasst',icon:'🎙️',title:'음성 비서',cnt:''}]},
- {group:'성장·교육',hide:true,items:[{id:'growboard',icon:'📈',title:'성장판',cnt:''}]},
- {group:'고객',items:[{id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:''},{id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:''},{id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:''},{id:'clients',icon:'🗂️',title:'고객 365일',cnt:''},{id:'fact_find',icon:'📝',title:'상담카드·팩트파인딩',cnt:''}]},
- {group:'DB CRM',items:[{id:'crm',icon:'🗄️',title:'DB 통합 CRM',cnt:''},{id:'attend',icon:'🗓️',title:'출근 현황',cnt:''}]},
- {group:'보험 해석',items:[{id:'interpret',icon:'🧠',title:'보험 해석',cnt:''}]},
- {group:'8통장 지도',items:[{id:'wallets',icon:'🗺️',title:'8통장 진단지도',cnt:'8'}]},
- {group:'계약관리',items:[
-   {id:'contracts',icon:'📜',title:'계약관리 판단',cnt:'17'},
-   {id:'endorse',icon:'✍️',title:'배서 안내서',cnt:''},
-   {id:'ref_kcd',icon:'📕',title:'질병코드·특약',cnt:''},
-   {id:'ref_surgery',icon:'🔪',title:'수술명 검색',cnt:''}
+ {group:'건의함',hide:true,items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:'',ak:'건의함'}]},
+ {group:'업무매뉴얼 도구',key:'업무매뉴얼',hide:true,items:[
+   {id:'ckboard',icon:'📋',title:'실행 체크판',cnt:'',ak:'업무매뉴얼'},
+   {id:'mycoach',icon:'🌱',title:'내 코칭',cnt:'',ak:'업무매뉴얼'},
+   {id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:'',ak:'업무매뉴얼'}
  ]},
- {group:'보장분석',items:[
-   {id:'treatpay',icon:'💉',title:'치료비 지급지도',cnt:''},
-   {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:''},
-   {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:''},
-   {id:'baba',icon:'🔄',title:'비포&애프터',cnt:''},
-   {id:'compare',icon:'📊',title:'제안서 비교',cnt:''},
-   {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:''}
- ]},
- {group:'재무설계',items:[
-   {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:''},
-   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'4'}
- ]},
- {group:'법인·사업자 컨설팅',items:[
-   {id:'biz_diag',icon:'🧭',title:'사업자 진단',cnt:''},
-   {id:'biz_fund',icon:'🏦',title:'정책자금',cnt:''},
-   {id:'biz_tax',icon:'🧾',title:'세금컨설팅',cnt:''},
-   {id:'biz_ins',icon:'☂️',title:'보험 솔루션',cnt:''},
-   {id:'biz_retire',icon:'🪙',title:'퇴직금 관리',cnt:''},
-   {id:'biz_staff',icon:'👥',title:'직원관리',cnt:''}
- ]},
- {group:'상담 AI 코치',items:[
-   {id:'ins_asst',icon:'🩺',title:'보험 비서',cnt:''},
-   {id:'cs_assist',icon:'💬',title:'AI 상담 어시스턴트',cnt:''},
-   {id:'cs_needs',icon:'⚡',title:'니즈 시뮬레이터',cnt:''},
-   {id:'cs_gso',icon:'🤖',title:'금소법 AI',cnt:''}
- ]},
- {group:'청구·사후관리',items:[
-   {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:''},
-   {id:'med_silbi',icon:'🧮',title:'AI 실비계산기',cnt:''},
-   {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:''},
-   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:''}
- ]},
- {group:'매니저 관리',role:'lead',items:[
-   {id:'branch_coach',icon:'🧑‍🏫',title:'팀 코칭',cnt:''},
-   {id:'hq',icon:'🏛️',title:'승인·규칙',cnt:''},
-   {id:'audit',icon:'🛡️',title:'감사로그',cnt:''}
- ]},
- {group:'콘텐츠·마케팅',items:[
-   {id:'biz_news',icon:'📰',title:'정책·상품 뉴스',cnt:''},
-   {id:'blog',icon:'📝',title:'블로그',cnt:''},
-   {id:'threads',icon:'🧵',title:'Threads',cnt:''},
-   {id:'insta',icon:'📸',title:'인스타그램',cnt:''},
-   {id:'video',icon:'🎬',title:'유튜브&릴스',cnt:''},
-   {id:'simui',icon:'🛡️',title:'외부글 심의필터',cnt:''},
-   {id:'calendar',icon:'🗓️',title:'콘텐츠 캘린더',cnt:''},
-   {id:'mkt_meta',icon:'📣',title:'메타 광고 가이드',cnt:''},
-   {id:'mkt_volume',icon:'📊',title:'키워드 검색량',cnt:''},
-   {id:'mkt_combine',icon:'🔑',title:'키워드 조합기',cnt:''},
-   {id:'mkt_landing',icon:'🎯',title:'리드 랜딩페이지',cnt:''},
-   {id:'mkt_card',icon:'💼',title:'디지털 명함',cnt:''},
-   {id:'ext_reply',icon:'✳️',title:'소상공인 AI 답글',cnt:''},
-   {id:'ext_thread',icon:'📤',title:'스레드 반자동발행',cnt:''},
-   {id:'ext_naver',icon:'📈',title:'네이버 광고 대량등록기',cnt:''}
- ]},
- {group:'보험 레퍼런스',items:[
-   {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:''},
-   {id:'ref_underwrite',icon:'⚠️',title:'예외질환 인수확인',cnt:''},
-   {id:'ref_hira',icon:'🔗',title:'건강보험심사평가원',cnt:''},
-   {id:'ref_hidden',icon:'💰',title:'숨은보험금찾기',cnt:''}
- ]},
- {group:'구독·요금제',items:[{id:'pricing',icon:'💳',title:'요금제·구독',cnt:''},{id:'terms',icon:'📜',title:'약관·개인정보',cnt:''}]},
- {group:'시스템 설정',items:[{id:'settings',icon:'⚙️',title:'설정',cnt:''}]},
- {group:'시스템 점검',items:[{id:'health',icon:'🩺',title:'시스템 점검',cnt:''}]}
+ {group:'성장·교육',hide:true,items:[{id:'growboard',icon:'📈',title:'성장판',cnt:'',ak:'성장·교육'}]}
 ];
 var TAB_META={
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
@@ -7849,11 +7896,9 @@ var TAB_META={
    카테고리로 크게 묶고 평소엔 접어 둔다. 대신 접힌 채로도 무엇인지 한눈에
    보여야 하므로, 카테고리 글씨를 키우고 칸마다 다른 파스텔 색을 입힌다. */
 var NAVG_KEY='apex_nav_open';
-var NAVG_ICON={'건의함':'💬','홈':'🏠','윤시현의 두뇌':'🧠','TEAM 총괄':'📋','업무매뉴얼':'📚',
- '조직':'🏢','윤시스쿨':'🏫','오늘의 AI 비서':'🤖','고객':'🗂','DB CRM':'🗄',
- '보험 해석':'🔎','8통장 지도':'🗺','계약관리':'📁','보장분석':'📑','재무설계':'💰',
- '법인·사업자 컨설팅':'🏭','상담 AI 코치':'🎯','청구·사후관리':'🧾','매니저 관리':'👥',
- '콘텐츠·마케팅':'✍️','보험 레퍼런스':'📕','구독·요금제':'💳','시스템 설정':'⚙️','시스템 점검':'🩺'};
+var NAVG_ICON={'하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
+ '계약·청구':'📁','자료 조회':'🔎','법인 컨설팅':'🏭','콘텐츠 제작':'✍️',
+ '광고·유입':'📣','조직 관리':'🏢','교육 자료':'🎓','시스템':'⚙️'};
 /* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
    맨 위가 가장 짙은 보라, 내려가며 남색·청록·초록을 지나
    맨 아래는 옅은 금빛.
@@ -8279,8 +8324,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-11 14:05';
-var APP_BUILD_NOTE='보장분석이 19~21장 심층 리포트로 나옵니다 — 디자인 고정, 어떤 일이 있어도 결과가 나옵니다';
+var APP_BUILD='2026-08-11 16:30';
+var APP_BUILD_NOTE='메뉴를 하루 동선대로 열두 칸으로 — 메뉴는 하나도 안 없앴고 열려 있던 문도 그대로입니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -26138,8 +26183,18 @@ var OS_GROUP_TIER_DEFAULT={
 };
 var OS_GROUP_TIER=null; /* {groupKey: tierId} — 그룹별 요구 카테고리(없으면 free=개방) */
 function osAccessKey(g){return g.key||g.group;}
+/* 문은 메뉴 한 개마다 자기 ak(원래 속해 있던 칸)로 판정한다.
+   메뉴를 다른 칸으로 옮겨도 열려 있던 문이 따라 움직이지 않는다. */
+function osItemKey(g,it){return (it&&it.ak)||osAccessKey(g);}
 function osGroupReqTier(g){var k=osAccessKey(g);if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];if(OS_GROUP_TIER_DEFAULT&&OS_GROUP_TIER_DEFAULT[k])return OS_GROUP_TIER_DEFAULT[k];return 'free';}
 function osGroupTierOk(g,tierId){return osTierRank(tierId)>=osTierRank(osGroupReqTier(g));}
+function osKeyReqTier(k){
+  if(OS_GROUP_TIER&&OS_GROUP_TIER[k])return OS_GROUP_TIER[k];
+  if(OS_GROUP_TIER_DEFAULT&&OS_GROUP_TIER_DEFAULT[k])return OS_GROUP_TIER_DEFAULT[k];
+  return 'free';
+}
+function osItemReqTier(g,it){return osKeyReqTier(osItemKey(g,it));}
+function osItemTierOk(g,it,tierId){return osTierRank(tierId)>=osTierRank(osItemReqTier(g,it));}
 function osGroupDefaultRoles(g){
   if(g.role==='hq')return ['branch_manager'];
   if(g.role==='edu')return ['education_manager','branch_manager'];
@@ -26151,6 +26206,32 @@ function osGroupAllowedRoles(g){
   if(OS_ACCESS&&OS_ACCESS[k])return OS_ACCESS[k];
   return osGroupDefaultRoles(g);
 }
+/* ak 마다 기본 직급이 다르다 — 매니저 관리는 리더부터, 나머지는 전원 */
+var OS_KEY_ROLE={'매니저 관리':'lead'};
+/* 설정 표에 세울 열쇠 목록 — 메뉴에 붙은 ak 를 나온 순서대로 모은다.
+   대표가 예전에 저장해 둔 설정(tool_access)이 이 열쇠로 걸려 있으므로,
+   메뉴를 어떻게 다시 묶든 이 목록과 저장된 값은 그대로 이어진다. */
+function osAccessKeys(){
+  var seen={},out=[];
+  TABS.forEach(function(g){
+    (g.items||[]).forEach(function(it){
+      var k=osItemKey(g,it);
+      if(seen[k]){seen[k].where[g.group]=1;seen[k].n++;return;}
+      var w={};w[g.group]=1;
+      seen[k]={key:k,n:1,where:w};out.push(seen[k]);
+    });
+  });
+  out.forEach(function(r){
+    var ws=[];for(var k in r.where)if(r.where.hasOwnProperty(k))ws.push(k);
+    r.at=ws.join(' · ');
+  });
+  return out;
+}
+function osKeyAllowedRoles(k){
+  if(OS_ACCESS&&OS_ACCESS[k])return OS_ACCESS[k];
+  return osGroupDefaultRoles({role:OS_KEY_ROLE[k]});
+}
+function osItemAllowedRoles(g,it){return osKeyAllowedRoles(osItemKey(g,it));}
 /* 역할별 노출 그룹 필터 (관리자=전체, 그 외=관리자 개방 설정 또는 기본값) */
 var OS_OWNER_GROUPS={'시스템 설정':1};
 function visibleTabs(role){
@@ -26159,9 +26240,25 @@ function visibleTabs(role){
   if(role==='admin'||role==='owner'||osIsAppAdmin())list=TABS.slice();
   else{
     var myT=osMyTier(), nr=osRoleNorm(role);
-    list=TABS.filter(function(g){return osGroupAllowedRoles(g).indexOf(nr)>=0 && osGroupTierOk(g,myT);});
+    list=[];
+    TABS.forEach(function(g){
+      var keep=g.items.filter(function(it){
+        return osItemAllowedRoles(g,it).indexOf(nr)>=0 && osItemTierOk(g,it,myT);
+      });
+      if(!keep.length)return;                 /* 하나도 안 남으면 칸째로 뺀다 */
+      if(keep.length===g.items.length){list.push(g);return;}
+      var c={};for(var k in g)if(g.hasOwnProperty(k))c[k]=g[k];
+      c.items=keep;list.push(c);
+    });
   }
-  if(!osIsOwner())list=list.filter(function(g){return !OS_OWNER_GROUPS[osAccessKey(g)];});
+  if(!osIsOwner()){
+    list=list.map(function(g){
+      var keep=g.items.filter(function(it){return !OS_OWNER_GROUPS[osItemKey(g,it)];});
+      if(keep.length===g.items.length)return g;
+      var c={};for(var k in g)if(g.hasOwnProperty(k))c[k]=g[k];
+      c.items=keep;return c;
+    }).filter(function(g){return g.items.length;});
+  }
   if(!osNotionAllowed()){
     list=list.map(function(g){
       if(!g.items||!g.items.some(function(it){return it.id==='academy_notion';}))return g;
@@ -26192,9 +26289,10 @@ function osTabAllowed(tab){
 }
 function osNeedTierFor(tab){
   var i,j;
-  for(i=0;i<TABS.length;i++){var it=TABS[i].items||[];for(j=0;j<it.length;j++)if(it[j].id===tab)return osGroupReqTier(TABS[i]);}
+  for(i=0;i<TABS.length;i++){var it=TABS[i].items||[];
+    for(j=0;j<it.length;j++)if(it[j].id===tab)return osItemReqTier(TABS[i],it[j]);}
   var g=OS_TAB_GROUP[tab];
-  if(g)for(i=0;i<TABS.length;i++)if(osAccessKey(TABS[i])===g)return osGroupReqTier(TABS[i]);
+  if(g)return osKeyReqTier(g);
   return 'free';
 }
 function osBlockedPageHtml(tab){
@@ -26224,8 +26322,8 @@ function osSyncAccess(){
 /* 관리자 접근 매트릭스 저장: 로컬 즉시 + 서버 upsert(테이블 있으면 팀 공유) */
 function osAccessSave(){
   var map={},tmap={};
-  TABS.forEach(function(g,i){
-    var k=osAccessKey(g),arr=[];
+  osAccessKeys().forEach(function(r,i){
+    var k=r.key,arr=[];
     OS_ROLE_COLS.forEach(function(rc){var cb=document.getElementById('acc_'+i+'_'+rc[0]);if(cb&&cb.checked)arr.push(rc[0]);});
     map[k]=arr;
     var ts=document.getElementById('acctier_'+i);if(ts&&ts.value&&ts.value!=='free')tmap[k]=ts.value;
@@ -26287,16 +26385,20 @@ function osAccessCardHtml(){
   var srcLabel=OS_ACCESS_SRC==='server'?'<span class="badge green">팀 공유중</span>':(OS_ACCESS_SRC==='local'?'<span class="badge amber">이 브라우저</span>':'<span class="badge">기본값</span>');
   var h='<div class="card set-card"><div class="card-hd"><div class="card-title"><span class="ci">🔓</span>도구 접근 권한 — 카테고리(등급)별 개방</div>'+
     '<div class="card-desc">각 도구 구분을 <b>어떤 결제 카테고리(등급)부터</b> 열지 정합니다. 등급은 팀원마다 아래 <b>팀원 권한 관리</b>에서 개별 지정합니다. '+srcLabel+'</div></div>'+
+    '<div class="card-body" style="padding-bottom:0"><div style="font-size:11.5px;color:var(--ink-3);background:#F7FAFF;border:1px solid #DCE7FB;border-radius:10px;padding:10px 12px;line-height:1.65">'+
+    '메뉴를 열두 칸으로 다시 묶었지만 <b>이 표의 구분은 그대로</b>입니다. 도구마다 원래 구분을 그대로 달고 다니므로, 지금 열려 있는 문은 자리를 옮겨도 움직이지 않습니다. 회색 글씨는 그 구분의 도구들이 <b>지금 어느 칸에 있는지</b>입니다.</div></div>'+
     '<div class="card-body">'+
     '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">회원이 지정된 카테고리 이상이면 해당 도구가 보입니다. 카테고리는 결제 금액으로 사용조건을 나눈 것입니다(아래). <b>무료</b>로 두면 전원 공개(기본), 상위 등급으로 올리면 그 등급부터 사용됩니다. 관리자(대표)는 항상 전체를 봅니다.</div>'+
     osTierLegendHtml()+
     '<div style="overflow-x:auto"><table class="uw-table" style="min-width:640px;margin-top:2px"><thead><tr><th style="text-align:left">구분</th><th style="text-align:center;background:#EEF4FF">필요 카테고리(등급)</th>';
   OS_ROLE_COLS.forEach(function(rc){h+='<th>'+rc[1]+'</th>';});
   h+='</tr></thead><tbody>';
-  TABS.forEach(function(g,i){
-    var allowed=osGroupAllowedRoles(g);
-    h+='<tr><td style="text-align:left;font-weight:700">'+osEsc(g.group)+'</td>';
-    h+='<td style="text-align:center;background:#F7FAFF">'+osTierSelectHtml('acctier_'+i,osGroupReqTier(g))+'</td>';
+  osAccessKeys().forEach(function(r,i){
+    var allowed=osKeyAllowedRoles(r.key);
+    h+='<tr><td style="text-align:left;font-weight:700">'+osEsc(r.key)+
+       '<div style="font-size:10px;color:var(--ink-5);font-weight:600;margin-top:2px">'+
+       osEsc(r.at)+' 칸 · '+r.n+'개</div></td>';
+    h+='<td style="text-align:center;background:#F7FAFF">'+osTierSelectHtml('acctier_'+i,osKeyReqTier(r.key))+'</td>';
     OS_ROLE_COLS.forEach(function(rc){
       var on=allowed.indexOf(rc[0])>=0;
       h+='<td style="text-align:center"><input type="checkbox" id="acc_'+i+'_'+rc[0]+'"'+(on?' checked':'')+' style="width:17px;height:17px;cursor:pointer"/></td>';

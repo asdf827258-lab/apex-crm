@@ -1,19 +1,20 @@
-/* 메뉴 — 크게 접어 두고, 칸마다 다른 파스텔 색.
+/* 메뉴 — 하루 동선대로 열두 칸, 접어 두고 눌러서 편다.
 
    화면이 예순 개가 넘는다. 다 펼쳐 두면 스크롤만 한참 내리다 길을 잃는다.
    그래서 카테고리로 크게 묶어 평소엔 접어 두기로 했다.
 
-   접는 것은 위험한 변경이다. 잘못 접으면 화면이 아예 안 보이게 된다.
+   접는 것도, 다시 묶는 것도 위험한 변경이다. 잘못하면 화면이 아예 안
+   보이거나 — 더 나쁘게는 — 요금제 문이 조용히 따라 움직인다.
    그래서 여기서 직접 눌러 보고 확인한다.
 
-     · 스물네 칸이 다 나오는가
+     · 칸이 다 나오는가, 메뉴가 한 개도 안 빠졌는가
+     · 메뉴마다 원래 구분(ak)을 달고 다니는가 — 이게 없으면 유료 문이 움직인다
      · 접힌 칸의 메뉴는 정말 안 보이는가
      · 눌러서 펴면 보이는가, 다시 누르면 접히는가
      · 새로고침해도 펴 둔 칸이 그대로인가
-     · 칸마다 색이 다른가 (이웃끼리 안 겹치는가)
-     · 글씨가 실제로 커졌는가
+     · 위에서 아래로 색이 한 줄기로 옅어지는가, 글씨가 배경에 안 묻는가
      · 접힌 칸 안에 있는 화면으로 건너뛰면 그 칸이 자동으로 펴지는가
-     · 접었다 폈다 하는 사이에 사라진 메뉴는 없는가                     */
+     · 좁은 화면에서 이름이 안 잘리고 옆으로 안 밀리는가                 */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8829;
@@ -132,11 +133,46 @@ async function boot(page) {
   });
   is(lost.length === 0, '메뉴가 한 개도 안 빠졌다' + (lost.length ? ' — 빠진 것: ' + lost.slice(0, 6).join(', ') : ''));
 
+  /* 메뉴를 다른 칸으로 옮길 때 ak 를 안 달고 가면 요금제 문이 조용히 따라 움직인다.
+     화면으로는 절대 안 보이는 사고라, 여기서 못을 박아 둔다. */
+  const gate = await page.evaluate(() => {
+    var known = {}, noAk = [], badAk = [], mixed = [];
+    /* 문 열쇠로 쓸 수 있는 이름 = 등급표·직급표에 등록돼 있거나 무료(기본) */
+    TABS.forEach(function (g) {
+      (g.items || []).forEach(function (it) {
+        if (!it.ak) { noAk.push(it.id); return; }
+        if (!known[it.ak]) known[it.ak] = [];
+        known[it.ak].push(it.id);
+      });
+    });
+    /* 같은 열쇠를 단 것들은 등급 판정이 반드시 같아야 한다 */
+    var k;
+    for (k in known) {
+      if (!known.hasOwnProperty(k)) continue;
+      var t = null, i;
+      for (i = 0; i < known[k].length; i++) {
+        var cur = osNeedTierFor(known[k][i]);
+        if (t === null) t = cur; else if (t !== cur) { mixed.push(k); break; }
+      }
+    }
+    /* 설정 표가 그 열쇠들을 하나도 안 빠뜨리고 세우는가 */
+    var rows = osAccessKeys().map(function (r) { return r.key; });
+    for (k in known) if (known.hasOwnProperty(k) && rows.indexOf(k) < 0) badAk.push(k);
+    return { noAk: noAk, badAk: badAk, mixed: mixed, keys: rows.length,
+      items: rows.length ? Object.keys(known).length : 0 };
+  });
+  is(gate.noAk.length === 0,
+    '메뉴마다 원래 구분(ak)이 붙어 있다' + (gate.noAk.length ? ' — 없는 것: ' + gate.noAk.slice(0, 6).join(', ') : ''));
+  is(gate.mixed.length === 0,
+    '같은 구분끼리는 등급 판정이 같다' + (gate.mixed.length ? ' — 어긋남: ' + gate.mixed.join(', ') : ''));
+  is(gate.badAk.length === 0,
+    '설정 표가 구분을 하나도 안 빠뜨린다 (' + gate.keys + '개)' + (gate.badAk.length ? ' — 빠짐: ' + gate.badAk.join(', ') : ''));
+
   /* ── 2) 색 ── */
   console.log('\n[2] 위에서 아래로 한 줄기로 흐르는가');
   const tints = groups.got.map(g => (g.tint || '').trim()).filter(Boolean);
   is(tints.length === groups.got.length, '칸마다 색이 들어 있다 (--gc)');
-  is(new Set(tints).size === tints.length, '스물네 칸이 다 다른 색이다 (' + new Set(tints).size + '가지)');
+  is(new Set(tints).size === tints.length, groups.got.length + '칸이 다 다른 색이다 (' + new Set(tints).size + '가지)');
 
   const paint = await page.evaluate(() => {
     var out = [], els = [].slice.call(document.querySelectorAll('#navHost .nav-group-label'));

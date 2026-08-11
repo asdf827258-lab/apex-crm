@@ -164,7 +164,7 @@ window.supabase={createClient:function(){
     renderNav();
     return Array.prototype.map.call(document.querySelectorAll('#navHost .tab-btn'), e => e.getAttribute('data-tab'));
   });
-  ok(menu.indexOf('TEAM 총괄|teamhub') >= 0, '메뉴에 TEAM 총괄 관리가 있다');
+  ok(menu.indexOf('조직 관리|teamhub') >= 0, '메뉴 「조직 관리」 밑에 실행 체크판이 있다');
   ok(nav.indexOf('teamhub') >= 0, '사이드바에 실제로 그려진다');
   ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(t =>
     ok(nav.indexOf(t) < 0, '사이드바에서 ' + t + ' 이 사라졌다'));
