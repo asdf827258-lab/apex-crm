@@ -44,9 +44,16 @@ exports.handler = async function (event) {
     let body = {};
     try { body = JSON.parse(event.body || "{}"); } catch (e) { body = {}; }
 
+    /* 한 번에 써 줄 수 있는 최대 분량.
+       예전엔 8000 으로 말없이 깎았다. 앱이 13000 을 달라고 해도 8000 에서
+       잘렸고, 잘렸다는 사실조차 앱에 알려주지 않아(아래 stop_reason 참고)
+       앱은 토막난 JSON 을 완성된 것으로 알고 읽다가 실패했다.
+       이제는 깎았으면 깎았다고 말해 준다. */
+    const ASK = Number(body.max_tokens) || 2000;
+    const CAP = 16000;
     const payload = {
       model: body.model || "claude-sonnet-4-6",
-      max_tokens: Math.min(body.max_tokens || 2000, 8000),
+      max_tokens: Math.min(ASK, CAP),
       system: typeof body.system === "string" ? body.system : "",
       messages: Array.isArray(body.messages)
         ? body.messages
@@ -76,10 +83,22 @@ exports.handler = async function (event) {
       .map((b) => b.text)
       .join("\n");
 
+    /* stop_reason 을 반드시 함께 돌려준다.
+       이게 빠져 있으면 앱은 "길이 제한에 걸려 잘렸다" 는 것을 알 수 없어
+       이어쓰기를 못 한다. 회사 공용 서버를 쓰는 사람에게만 글이 토막나
+       "AI 가 제대로 인식을 못 한다" 로 나타났던 원인이 바로 이것이다. */
     return {
       statusCode: 200,
       headers: Object.assign({ "Content-Type": "application/json" }, cors),
-      body: JSON.stringify({ text: out }),
+      body: JSON.stringify({
+        text: out,
+        stop_reason: data.stop_reason || "",
+        model: data.model || payload.model,
+        usage: data.usage || null,
+        asked: ASK,
+        max_tokens: payload.max_tokens,
+        clamped: ASK > CAP,
+      }),
     };
   } catch (e) {
     return {

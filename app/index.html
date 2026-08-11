@@ -1417,7 +1417,26 @@ function aiFetch(url,opts,ms){
     });
   });
 }
-function aiTimeoutFor(body){return ((''+body).length>AI_BODY_VISION)?AI_TIMEOUT_VISION:AI_TIMEOUT_TEXT;}
+/* ── 제한시간은 '보낸 양' 이 아니라 'AI 가 써야 할 양' 이 정한다 ──
+   여기가 오래 틀려 있었다. 예전엔 보낸 자료 크기만 보고 2분/5분을 골랐다.
+   그런데 AI 가 걸리는 시간은 <b>답을 얼마나 길게 쓰느냐</b> 로 정해진다.
+   8000자를 쓰려면 3분이 걸리는데 제한시간이 2분이면 100% 끊긴다.
+   끊긴 것을 앱은 '혼잡' 으로 읽어 「서버가 혼잡합니다」 를 띄웠다.
+   혼잡이 아니라 처음부터 시간 안에 끝날 수 없는 주문이었다. */
+var AI_WRITE_TPS=42;         /* AI 가 1초에 쓰는 분량 — 느린 쪽에 맞춰 잡는다 */
+var AI_TIMEOUT_MAX=420000;   /* 그래도 7분을 넘겨 붙잡고 있지는 않는다 */
+function aiOutAsk(body){
+  var s=''+body,m=s.match(/"max_tokens"\s*:\s*(\d+)/);
+  if(m)return +m[1];
+  m=s.match(/"maxOutputTokens"\s*:\s*(\d+)/);
+  return m?+m[1]:0;
+}
+function aiTimeoutFor(body){
+  var s=''+body;
+  var base=(s.length>AI_BODY_VISION)?AI_TIMEOUT_VISION:AI_TIMEOUT_TEXT;
+  var write=Math.round((aiOutAsk(s)/AI_WRITE_TPS)*1000)+35000;   /* 쓰는 시간 + 여유 */
+  return Math.min(Math.max(base,write),AI_TIMEOUT_MAX);
+}
 
 /* ── 보내기 전에 이미지 용량 맞추기 ── */
 function aiImgBytes(imgs){
@@ -8393,8 +8412,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 01:20';
-var APP_BUILD_NOTE='보던 화면에서 안 튕깁니다 · 쓰던 글도 안 날아갑니다 · AI 제안서는 8통장으로 풀어 씁니다';
+var APP_BUILD='2026-08-12 03:05';
+var APP_BUILD_NOTE='AI 제안서가 「서버가 몰려 있습니다」 로 끝나지 않습니다 · 네 조각으로 나눠 쓰고, AI 가 다 죽어도 앱이 읽은 내용으로 문서를 세웁니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12473,7 +12492,7 @@ function prSlotBox(slot,title,desc,color){
 }
 
 /* ── 프롬프트 ── */
-function prSys(){
+function prSys(part){
   var kb=(typeof brainKbGet==='function')?brainKbGet():'';
   var base='너는 "윤시현의 두뇌" — 윤시현 사업단장의 제2의 두뇌다. 지금은 고객에게 건넬 '+
   '보험 설명서·제안서를 직접 쓴다. 상품 나열이 아니라 고객이 "내 얘기구나" 하고 끝까지 읽는 문서를 만든다.\n\n'+
@@ -12501,32 +12520,7 @@ function prSys(){
   }
   if(kb)base+='\n\n[윤시현이 축적한 지식·화법 — 최우선 지침으로 삼는다]\n'+kb;
   base+='\n\n[출력 형식] 아래 JSON만 출력한다. 설명·마크다운·코드펜스를 붙이지 않는다.\n'+
-  '{\n'+
-  '  "title":"문서 제목(25자 이내)",\n'+
-  '  "clientLine":"고객을 한 줄로 요약",\n'+
-  '  "coreBenefit":"이 문서로 고객이 얻는 것 한 줄",\n'+
-  '  "readDocs":"첨부에서 읽어낸 문서 요약(무엇을 읽었는지 · 못 읽은 부분)",\n'+
-  '  "slides":[{"kicker":"라벨(8자)","title":"장 제목(20자)","lead":"한 줄 설명",\n'+
-  '    "rows":[{"label":"항목","value":"값","note":"보조설명"}],\n'+
-  '    "quote":"강조 문장(선택)","talk":"설계사가 이 장에서 말할 화법 1~2문장"}],\n'+
-  '  "before":{"summary":"현재 상태 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
-  '  "after":{"summary":"바꾼 뒤 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
-  '  "diff":[{"item":"항목","before":"현재","after":"제안","change":"강화|유지|축소|신규","why":"왜 이렇게 바뀌는지"}],\n'+
-  '  "wallets":[{"no":"①~⑧","name":"통장 이름","purpose":"이 돈의 목적","now":"지금 준비된 것","need":"필요한 것","status":"충분|부족|비어있음"}],\n'+
-  '  "reality":[{"headline":"준비 못 했을 때 벌어지는 일(짧게)","story":"실제로 어떻게 흘러가는지 2~3문장","cost":"그때 드는 돈 또는 잃는 것","imgPrompt":"이 상황을 담은 사진 프롬프트(영문, 사람 얼굴 클로즈업 금지, 다큐멘터리 톤)"}],\n'+
-  '  "benefit":{"summary":"한 줄 결론","prepared":[{"label":"항목","value":"금액·결과","note":"설명"}],"unprepared":[{"label":"항목","value":"금액·결과","note":"설명"}]},\n'+
-  '  "pension":{"needMonthly":"은퇴 후 필요 월 생활비","haveMonthly":"지금 준비된 월 연금(국민+퇴직+개인)","gapMonthly":"부족한 월 금액","planMonthly":"지금부터 넣을 월 금액(추정)","startAge":"수령 시작 나이","why":"왜 지금 시작해야 하는지 2문장","note":"3층 구조 설명"},\n'+
-  '  "wholelife":{"purpose":"사망보장의 목적(가족생활비·대출상환·상속 유동성 중 무엇인지)","amount":"권장 보장액과 근거","gapYears":"남은 가족이 버텨야 하는 기간","liquidity":"상속 시 현금으로 필요한 금액","why":"왜 필요한지 2문장","note":"과도하면 조정한다는 원칙"},\n'+
-  '  "options":[{"name":"A안","summary":"한 줄","monthly":"월 보험료","pros":"장점","cons":"함께 봐야 할 점"}],\n'+
-  '  "nextSteps":["다음 단계 1","다음 단계 2","다음 단계 3"],\n'+
-  '  "risks":["확인 사항 1","확인 사항 2","확인 사항 3","확인 사항 4"],\n'+
-  '  "national":{"summary":"국가 제도로 어디까지 되고 어디부터 본인 몫인지 한 줄","covered":[{"item":"항목","who":"어떤 제도","amount":"국가가 내주는 정도","note":"조건"}],"gap":[{"item":"같은 항목","amount":"그래도 내야 하는 금액","why":"왜 남는지"}],"capNote":"본인부담상한제를 고객 상황에 맞게 한 문단","specialNote":"산정특례를 고객 상황에 맞게 한 문단"},\n'+
-  '  "costmix":{"caseLabel":"어떤 병 어느 기간 기준인지","total":"총 치료비","insurerPays":"국가·건강보험이 내주는 합계","selfPays":"본인이 내야 하는 합계","items":[{"name":"항목","type":"급여|법정본인부담|비급여|비의료비","amount":"숫자만(만원)","note":"설명"}]},\n'+
-  '  "incomeFit":{"monthlyIncome":"월 소득","currentPremium":"현재 월 보험료","recommendMin":"권장 하한","recommendMax":"권장 상한","ratioNow":"소득 대비 %(숫자만)","verdict":"적정|과다|부족","why":"판단 이유 1~2문장"},\n'+
-  '  "evidence":[{"claim":"이 문서에서 인용한 사실","source":"출처 기관","asof":"기준 연도"}],\n'+
-  '  "katalk":"상담 후 보낼 카톡 요약(200자 내외, 존댓말)",\n'+
-  '  "selfcheck":"자체 점검 — 단정 표현 없음/단점 포함/숫자 근거 확인"\n'+
-  '}';
+    '이번 요청에서는 아래 JSON 에 있는 항목만 쓴다. 없는 항목은 만들지 않는다.\n'+prSchema(part);
   return sys(base);
 }
 function prSlideGuide(mode){
@@ -12594,9 +12588,273 @@ function prSlideGuide(mode){
     'wallets 8개, reality 4개, pension·wholelife 는 파일이 없어도 <b>고객 정보만으로 반드시 채운다.</b>\n'+
     'reality 네 개는 큰 병 / 사고·뇌심 / 소득 단절 / 오래 사는 위험 으로 나눠 각각 3~5문장으로 쓴다.';
 }
-function prParse(txt){
-  try{var t=''+txt,s=t.indexOf('{'),e=t.lastIndexOf('}');if(s<0||e<0)return null;return JSON.parse(t.slice(s,e+1));}catch(x){return null;}
+/* ══════════ 제안서를 네 조각으로 나눠 만든다 ══════════
+   예전엔 위 JSON 을 통째로, 한 번에 13000자까지 써 달라고 시켰다.
+   그런데 실제로는 이런 일이 벌어졌다.
+
+     1. 회사 공용 서버가 한 번에 8000자까지만 내주고 말없이 깎았다.
+     2. 잘렸다는 표시(stop_reason)조차 앱에 안 넘겨줘서, 앱은 토막난
+        JSON 을 완성된 것으로 알고 읽다가 실패했다. → 「인식을 못 한다」
+     3. 8000자를 쓰는 데만 3분이 걸리는데 제한시간은 2분이었다.
+        끊긴 것을 앱은 '혼잡' 으로 읽었다. → 「서버가 몰려 있습니다」
+
+   혼잡한 게 아니라 처음부터 시간 안에 끝날 수 없는 주문이었다.
+   한 조각을 4000자 안쪽으로 줄이면 1분 반이면 끝난다.
+   네 조각을 동시에 시키고, 하나가 실패해도 나머지 셋은 그대로 쓴다.   */
+var PR_PART=[
+  {k:'doc', label:'문서 뼈대',   tok:4200},
+  {k:'diag',label:'8통장 · 현실', tok:4200},
+  {k:'plan',label:'연금 · 종신',  tok:3600},
+  {k:'fact',label:'담보 · 근거',  tok:4200}
+];
+function prSchema(part){
+  var S={};
+  S.doc='{\n'+
+  '  "title":"문서 제목(25자 이내)",\n'+
+  '  "clientLine":"고객을 한 줄로 요약",\n'+
+  '  "coreBenefit":"이 문서로 고객이 얻는 것 한 줄",\n'+
+  '  "readDocs":"첨부에서 읽어낸 문서 요약(무엇을 읽었는지 · 못 읽은 부분)",\n'+
+  '  "slides":[{"kicker":"라벨(8자)","title":"장 제목(20자)","lead":"한 줄 설명",\n'+
+  '    "rows":[{"label":"항목","value":"값","note":"보조설명"}],\n'+
+  '    "quote":"강조 문장(선택)","talk":"설계사가 이 장에서 말할 화법 1~2문장"}],\n'+
+  '  "katalk":"상담 후 보낼 카톡 요약(200자 내외, 존댓말)",\n'+
+  '  "selfcheck":"자체 점검 — 단정 표현 없음/단점 포함/숫자 근거 확인"\n'+
+  '}';
+  S.diag='{\n'+
+  '  "wallets":[{"no":"①~⑧","name":"통장 이름","purpose":"이 돈의 목적","now":"지금 준비된 것","need":"필요한 것","status":"충분|부족|비어있음","note":"고객의 숫자를 넣어 두 문장 이상으로 풀어 쓴다"}],\n'+
+  '  "reality":[{"headline":"준비 못 했을 때 벌어지는 일(짧게)","story":"실제로 어떻게 흘러가는지 3~5문장","cost":"그때 드는 돈 또는 잃는 것","imgPrompt":"이 상황을 담은 사진 프롬프트(영문, 사람 얼굴 클로즈업 금지, 다큐멘터리 톤)"}],\n'+
+  '  "benefit":{"summary":"한 줄 결론","prepared":[{"label":"항목","value":"금액·결과","note":"설명"}],"unprepared":[{"label":"항목","value":"금액·결과","note":"설명"}]}\n'+
+  '}';
+  S.plan='{\n'+
+  '  "pension":{"needMonthly":"은퇴 후 필요 월 생활비","haveMonthly":"지금 준비된 월 연금(국민+퇴직+개인)","gapMonthly":"부족한 월 금액","planMonthly":"지금부터 넣을 월 금액(추정)","startAge":"수령 시작 나이","why":"왜 지금 시작해야 하는지 2문장","note":"3층 구조 설명 — 나이별 시작금액까지"},\n'+
+  '  "wholelife":{"purpose":"사망보장의 목적(가족생활비·대출상환·상속 유동성 중 무엇인지)","amount":"권장 보장액과 근거","gapYears":"남은 가족이 버텨야 하는 기간","liquidity":"상속 시 현금으로 필요한 금액","why":"왜 필요한지 2문장","note":"과도하면 조정한다는 원칙"},\n'+
+  '  "options":[{"name":"A안","summary":"한 줄","monthly":"월 보험료","pros":"장점","cons":"함께 봐야 할 점"}],\n'+
+  '  "nextSteps":["다음 단계 1","다음 단계 2","다음 단계 3"],\n'+
+  '  "risks":["확인 사항 1","확인 사항 2","확인 사항 3","확인 사항 4"]\n'+
+  '}';
+  S.fact='{\n'+
+  '  "before":{"summary":"현재 상태 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
+  '  "after":{"summary":"바꾼 뒤 한 줄","rows":[{"label":"담보","value":"가입금액","note":"메모"}]},\n'+
+  '  "diff":[{"item":"항목","before":"현재","after":"제안","change":"강화|유지|축소|신규","why":"왜 이렇게 바뀌는지"}],\n'+
+  '  "national":{"summary":"국가 제도로 어디까지 되고 어디부터 본인 몫인지 한 줄","covered":[{"item":"항목","who":"어떤 제도","amount":"국가가 내주는 정도","note":"조건"}],"gap":[{"item":"같은 항목","amount":"그래도 내야 하는 금액","why":"왜 남는지"}],"capNote":"본인부담상한제를 고객 상황에 맞게 한 문단","specialNote":"산정특례를 고객 상황에 맞게 한 문단"},\n'+
+  '  "costmix":{"caseLabel":"어떤 병 어느 기간 기준인지","total":"총 치료비","insurerPays":"국가·건강보험이 내주는 합계","selfPays":"본인이 내야 하는 합계","items":[{"name":"항목","type":"급여|법정본인부담|비급여|비의료비","amount":"숫자만(만원)","note":"설명"}]},\n'+
+  '  "incomeFit":{"monthlyIncome":"월 소득","currentPremium":"현재 월 보험료","recommendMin":"권장 하한","recommendMax":"권장 상한","ratioNow":"소득 대비 %(숫자만)","verdict":"적정|과다|부족","why":"판단 이유 1~2문장"},\n'+
+  '  "evidence":[{"claim":"이 문서에서 인용한 사실","source":"출처 기관","asof":"기준 연도"}]\n'+
+  '}';
+  return S[part]||(S.doc+'\n'+S.diag+'\n'+S.plan+'\n'+S.fact);
 }
+
+/* 사진은 한 번만 보낸다.
+   네 조각마다 페이지 사진 스무 장을 다시 실어 보내면 용량도 시간도 네 배가 된다.
+   먼저 사진을 글로 받아 적고, 그 글로 네 조각을 쓴다. */
+function prReadImgs(user,imgs,btn){
+  if(btn)btn.textContent='두뇌가 판독 중… ('+imgs.length+'장)';
+  var s=sys('너는 보험 증권·제안서를 읽어 옮겨 적는 사람이다. 첨부된 페이지 이미지를 보고 '+
+    '보이는 대로만 적는다. 해석·평가·제안을 하지 않는다.\n'+
+    '회사명 · 상품명 · 계약일 · 납입기간 · 만기 · 월보험료 · 담보명 · 가입금액을 표로 적는다.\n'+
+    '안 보이는 칸은 "확인 필요" 라고 적는다. 숫자를 지어내지 않는다.');
+  return callAIVision(s,user+'\n\n[이 단계에서 할 일] 위 이미지에 보이는 내용을 표로 옮겨 적는다. 제안서를 쓰지 않는다.',
+    imgs,4200,'proposal');
+}
+
+function prShortErr(e){
+  if(e&&e.timedOut)return '시간초과';
+  if(e&&e.overLimit)return '한도';
+  if(e&&e.status)return '오류 '+e.status;
+  var m=((e&&e.message)||'')+'';
+  if(/overload|혼잡|529|rate.?limit|too many/i.test(m))return '혼잡';
+  if(/api key|unauthorized|not valid/i.test(m))return '키 오류';
+  return m.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').slice(0,16)||'실패';
+}
+
+/* 네 조각을 동시에 시킨다. 하나가 실패해도 나머지는 그대로 쓴다.
+   넷 다 실패했을 때만 오류로 넘긴다. */
+function prAskAll(user,btn){
+  var total=PR_PART.length,done=0,raw=[],fails=[],firstErr=null;
+  var tick=function(){done++;if(btn)btn.textContent='작성 중… ('+done+'/'+total+')';};
+  var jobs=PR_PART.map(function(P){
+    return callAI(prSys(P.k),user,P.tok,'proposal').then(function(t){
+      tick();raw.push('───── '+P.label+' ─────\n'+t);
+      var o=prJson(t);
+      if(!o)fails.push(P.label+' (형식)');
+      return o;
+    },function(e){
+      tick();if(!firstErr)firstErr=e;
+      fails.push(P.label+' ('+prShortErr(e)+')');
+      return null;
+    });
+  });
+  return Promise.all(jobs).then(function(objs){
+    var got=0,i;
+    for(i=0;i<objs.length;i++)if(objs[i])got++;
+    if(!got){
+      var e=firstErr||new Error('AI 응답을 읽지 못했습니다.');
+      e.prAllFailed=true;throw e;
+    }
+    return {plan:prMerge(objs),raw:raw.join('\n\n'),fails:fails,got:got,total:total};
+  });
+}
+function prMerge(objs){
+  var out={},i,k,o;
+  for(i=0;i<objs.length;i++){
+    o=objs[i];if(!o)continue;
+    for(k in o){
+      if(!Object.prototype.hasOwnProperty.call(o,k))continue;
+      if(o[k]==null||o[k]==='')continue;
+      out[k]=o[k];
+    }
+  }
+  return out;
+}
+
+/* ── AI 가 못 준 조각은 앱이 채운다 ──
+   넷 다 실패해도 화면을 비워 두지 않는다. 다만 <b>증권에서 읽어낸 사실만</b>
+   쓴다. 없는 숫자를 지어내면 그건 도움이 아니라 사고다.
+   못 읽은 것은 「확인 필요」 로 남긴다. */
+var PR_W8=[
+  {no:'①',name:'생활 통장',        purpose:'매달 쓰는 돈',                        area:''},
+  {no:'②',name:'병원비 통장(실손)', purpose:'실제 낸 병원비를 돌려받는 돈',        area:'실손'},
+  {no:'③',name:'치료비 통장(정액)', purpose:'진단받으면 목돈으로 — 쉬는 동안의 생활비', area:'암'},
+  {no:'④',name:'소득공백 통장',     purpose:'일을 못 하는 동안의 생활비',          area:'수술·입원'},
+  {no:'⑤',name:'가족보호 통장',     purpose:'내가 없을 때 가족이 쓸 돈',           area:'사망·장해'},
+  {no:'⑥',name:'은퇴·연금 통장',    purpose:'일을 놓은 뒤 매달 들어올 돈',         area:''},
+  {no:'⑦',name:'간병·장기요양 통장',purpose:'오래 아플 때 드는 돈',                area:'치매·간병'},
+  {no:'⑧',name:'자산이전 통장',     purpose:'다음 세대로 넘길 돈',                 area:''}
+];
+function prWon(n){return (''+Math.round(+n||0)).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+function prAreaRows(sc,k){
+  var pick=function(list){
+    var i;for(i=0;i<(list||[]).length;i++)if(list[i].area===k)return list[i];
+    return null;
+  };
+  var a=pick(sc.areas),b=pick(sc.riderAreas);
+  var n=((a&&a.rows.length)||0)+((b&&b.rows.length)||0);
+  var short=((a&&a.short)||0);
+  return {n:n,short:short};
+}
+function prLocalWallets(sc){
+  return PR_W8.map(function(W){
+    var st='확인 필요',now='확인 필요',need='상담에서 확인합니다';
+    if(W.area){
+      var r=prAreaRows(sc,W.area);
+      if(!r.n){st='비어있음';now='읽어낸 담보 없음';need='이 목적의 돈이 아직 없습니다';}
+      else if(r.short){st='부족';now='담보 '+r.n+'개';need='그중 '+r.short+'개가 기준에 못 미칩니다';}
+      else{st='충분';now='담보 '+r.n+'개';need='정기 점검만 하면 됩니다';}
+    }else{
+      /* 증권만으로는 알 수 없는 통장이다. 모른다고 말한다. */
+      st='확인 필요';now='증권으로는 알 수 없습니다';need='상담에서 함께 확인합니다';
+    }
+    return {no:W.no,name:W.name,purpose:W.purpose,now:now,need:need,status:st,note:''};
+  });
+}
+function prLocalSlides(sc){
+  var S=[],rows,i;
+  S.push({kicker:'표지',title:'내 보험 한눈에 보기',
+    lead:'앱이 증권에서 직접 읽어낸 내용입니다.',
+    rows:[],quote:'',talk:'오늘은 새로 권하는 자리가 아니라, 지금 가지고 계신 것을 정확히 보는 자리입니다.'});
+  if(sc){
+    rows=[{label:'유효 계약',value:sc.total.n+'건',note:'월 '+prWon(sc.total.fee)+'원'+(sc.total.unknown?(' · 보험료 미제공 '+sc.total.unknown+'건'):'')}];
+    if(sc.total.lapsedN)rows.push({label:'실효·해지',value:sc.total.lapsedN+'건',note:'월 '+prWon(sc.total.lapsedFee)+'원어치가 이미 끊겼습니다'});
+    if(sc.cars&&sc.cars.length)rows.push({label:'자동차',value:sc.cars.length+'건',note:''});
+    rows.push({label:'특약',value:sc.riderN+'개',note:'계약 '+((sc.riders||[]).length)+'건에 들어 있습니다'});
+    S.push({kicker:'한눈에',title:'지금 가입하신 것',lead:'사실만 옮겼습니다.',rows:rows,
+      quote:'',talk:'먼저 지금 상태를 사실 그대로 보시겠습니다.'});
+    if(sc.byCo&&sc.byCo.length){
+      S.push({kicker:'회사별',title:'어느 회사에 얼마씩',lead:'보험료가 어디로 나가고 있는지 봅니다.',
+        rows:sc.byCo.map(function(c){
+          return {label:c.co,value:prWon(c.fee)+'원',note:c.n+'건 · '+c.pct+'%'+(c.unknown?(' · 보험료 미제공 '+c.unknown+'건'):'')};
+        }),quote:'',talk:'한 회사에 몰려 있으면 그 회사 상품의 약점을 그대로 안게 됩니다.'});
+    }
+    if(sc.gaps&&sc.gaps.length){
+      var no=sc.gaps.filter(function(g){return !g.has;});
+      if(no.length)S.push({kicker:'비어 있음',title:'없는 담보',lead:'요즘 실지급을 가르는 계열 중 없는 것입니다.',
+        rows:no.map(function(g){return {label:g.name,value:'없음',note:''};}),
+        quote:'',talk:'없다는 것을 아셔야 채울지 말지 정하실 수 있습니다.'});
+    }
+    if(sc.short&&sc.short.length){
+      S.push({kicker:'부족',title:'기준에 못 미치는 담보',lead:'진단 결과 부족·미가입으로 나온 것입니다.',
+        rows:sc.short.slice(0,14).map(function(d){
+          return {label:d.name,value:d.verdict,note:'권장 '+(d.want||'-')+' / 가입 '+(d.have||'-')};}),
+        quote:'',talk:'한 번에 다 채우실 필요 없습니다. 순서만 정하면 됩니다.'});
+    }
+  }
+  S.push({kicker:'확인',title:'꼭 확인하실 것',lead:'',
+    rows:[{label:'약관 우선',value:'실제 보장은 약관이 정합니다',note:'이 문서는 증권에서 읽은 내용을 정리한 것입니다'},
+          {label:'면책·감액',value:'기간을 원본에서 확인',note:''},
+          {label:'해지 주의',value:'기존 계약 해지 후 재가입은 손해가 날 수 있습니다',note:'해지 전 반드시 비교하십시오'}],
+    quote:'',talk:'좋은 점만 말씀드리지 않겠습니다.'});
+  return S;
+}
+function prLocalFill(plan,sc,mode){
+  var p=plan||{};
+  if(!p.title)p.title=(mode==='compare')?'보험 전후 비교':'내 보험 한눈에 보기';
+  if(!p.clientLine){
+    /* insWho 는 {name,age,sex} 를 준다 — 통째로 붙이면 [object Object] 가 된다 */
+    var W=(sc&&sc.who)||null;
+    var nm=(W&&W.name)||(osVal('prName')||'').replace(/^\s+|\s+$/g,'')||'고객';
+    p.clientLine=nm+'님'+((W&&W.age)?(' ('+W.age+'세'+(W.sex?(' · '+W.sex):'')+')'):'')+'의 보험 현황';
+  }
+  if(!p.coreBenefit)p.coreBenefit='지금 무엇이 준비돼 있고 무엇이 비었는지 사실대로 봅니다.';
+  if(!p.readDocs)p.readDocs=sc
+    ?('앱이 직접 읽었습니다 — 유효 계약 '+sc.total.n+'건 · 월 '+prWon(sc.total.fee)+'원 · 특약 '+sc.riderN+'개.')
+    :'첨부에서 읽어낸 내용이 없습니다. 고객 정보만으로 정리했습니다.';
+  if(!(p.wallets&&p.wallets.length)&&sc)p.wallets=prLocalWallets(sc);
+  if(!(p.slides&&p.slides.length))p.slides=prLocalSlides(sc);
+  if(!(p.risks&&p.risks.length))p.risks=[
+    '이 문서는 첨부한 증권에서 읽어낸 내용을 정리한 것입니다. 실제 보장 여부와 금액은 약관이 정합니다.',
+    '면책기간·감액기간·갱신 여부는 증권 원본과 약관에서 반드시 확인하십시오.',
+    '「금융소비자 보호에 관한 법률」에 따른 적합성 확인과 설명의무 이행 뒤에 청약이 진행됩니다.',
+    '기존 계약을 해지하고 새로 가입하면 손해가 발생할 수 있습니다. 해지 전 반드시 비교하십시오.'];
+  if(!(p.nextSteps&&p.nextSteps.length))p.nextSteps=[
+    '비어 있는 담보를 함께 확인합니다.','채울 순서를 정합니다.','보험료 한도 안에서 안을 만듭니다.'];
+  return p;
+}
+
+/* ── 토막난 JSON 도 살려 낸다 ──
+   예전엔 처음 '{' 부터 마지막 '}' 까지를 통째로 잘라 읽었다.
+   길이 제한에 걸려 뒤가 잘려 오거나, 이어쓰기로 두 조각이 붙어 오면
+   그 방식은 반드시 실패한다. 실패하면 화면에 아무것도 안 나온다.
+   그래서 괄호를 세어 <b>처음으로 온전히 닫힌 덩어리</b> 를 찾고,
+   끝내 안 닫혔으면 <b>열린 괄호를 닫아서라도</b> 읽어 낸다.
+   반쯤 읽어 낸 것이 아무것도 없는 것보다 낫다. */
+function prJson(txt){
+  var t=''+(txt||'');
+  t=t.replace(/```[a-zA-Z]*\s*/g,'').replace(/```/g,'');   /* 코드펜스를 붙여 오면 떼어 낸다 */
+  var s=t.indexOf('{');
+  if(s<0)return null;
+  var i,c,depth=0,inq=false,esc=false,end=-1;
+  for(i=s;i<t.length;i++){
+    c=t.charAt(i);
+    if(esc){esc=false;continue;}
+    if(c==='\\'){esc=true;continue;}
+    if(c==='"'){inq=!inq;continue;}
+    if(inq)continue;
+    if(c==='{')depth++;
+    else if(c==='}'){depth--;if(depth===0){end=i;break;}}
+  }
+  if(end>=0){try{return JSON.parse(t.slice(s,end+1));}catch(e){}}
+  /* 끝까지 안 닫혔다 = 잘린 것이다. 닫아서 살려 본다. */
+  var f=t.slice(s);
+  if(inq)f+='"';
+  f=f.replace(/[,\s]+$/,'');
+  /* 마지막 항목이 "키": 만 있고 값이 없으면 그 줄을 버린다 */
+  f=f.replace(/,?\s*"[^"]*"\s*:\s*$/,'');
+  var stack=[];inq=false;esc=false;
+  for(i=0;i<f.length;i++){
+    c=f.charAt(i);
+    if(esc){esc=false;continue;}
+    if(c==='\\'){esc=true;continue;}
+    if(c==='"'){inq=!inq;continue;}
+    if(inq)continue;
+    if(c==='{')stack.push('}');
+    else if(c==='[')stack.push(']');
+    else if(c==='}'||c===']')stack.pop();
+  }
+  while(stack.length)f+=stack.pop();
+  try{return JSON.parse(f);}catch(e){}
+  return null;
+}
+function prParse(txt){return prJson(txt);}
 
 /* ── 화면 ── */
 function renderAiProposal(){
@@ -12728,12 +12986,18 @@ function prGen(){
         if(btn)btn.textContent='두뇌가 판독 중… ('+use.length+'장)';
         var note='\n\n[첨부 이미지 안내]\n아래 순서로 페이지 이미지가 첨부되어 있습니다. 어느 문서인지 매핑을 참고해 직접 읽고 표·숫자를 판독하세요.\n'+manifest.join('\n');
         if(use.length<allImgs.length)note+='\n(페이지가 많아 앞 '+use.length+'장만 첨부되었습니다. 나머지는 "확인 필요"로 표기하세요.)';
-        return callAIVision(prSys(),user+note,use,13000,'proposal');
+        /* 사진은 여기서 한 번만 보낸다. 표를 글로 받아 적고, 그 글로 네 조각을 쓴다.
+           네 조각마다 사진을 다시 실으면 용량도 시간도 네 배가 된다. */
+        return prReadImgs(user+note,use,btn).then(function(read){
+          return prAskAll(user+'\n\n[첨부한 페이지 이미지에서 읽어낸 내용 — 이것을 사실로 삼는다]\n'+read,btn);
+        });
       });
     }
-    return callAI(prSys(),user,13000,'proposal');
-  }).then(function(txt){
-    var plan=prParse(txt);
+    return prAskAll(user,btn);
+  }).then(function(got){
+    /* AI 가 못 준 조각은 앱이 증권에서 읽은 사실로 채운다 */
+    var plan=prLocalFill(got.plan,PR.scan,mode);
+    PR.fails=got.fails||[];
     if(!plan||!plan.slides||!plan.slides.length){
       /* 형식이 깨져도 AI 가 쓴 내용은 살려 둔다 — 다시 돌리면 시간과 비용이 또 든다 */
       var box=$('prOut');
@@ -12744,15 +13008,16 @@ function prGen(){
         '<span class="ci">📄</span>AI 가 쓴 내용 (형식 정리 전)</div>'+
         '<div class="card-desc">버리지 않고 그대로 둡니다. 필요한 부분은 여기서 복사해 쓰세요.</div></div>'+
         '<div class="card-body"><div style="font-size:12.5px;line-height:1.8;white-space:pre-wrap;'+
-        'max-height:420px;overflow:auto;color:var(--ink-2)">'+osEsc((''+txt).slice(0,12000))+'</div>'+
+        'max-height:420px;overflow:auto;color:var(--ink-2)">'+osEsc((''+(got.raw||'')).slice(0,12000))+'</div>'+
         '<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" '+
         'onclick="copyText(PR._raw||\'\')">📋 전체 복사</button></div></div></div>';
-      PR._raw=''+txt;
+      PR._raw=''+(got.raw||'');
       toast('형식 정리에 실패했습니다 — 아래에 원문을 남겨 뒀습니다');
       PR.busy=false;prRefreshForm();return;
     }
     plan._name=name;plan._date=osTodayStr();plan._mode=mode;
     plan._files=[].concat(PR.files.before,PR.files.after).map(function(f){return f.name;});
+    plan._local=false;plan._fails=PR.fails;
     PR.plan=plan;PR.i=0;PR.busy=false;
     /* 발표용은 없앴다. 8통장 진단이 첫 화면이다 — 보장분석 상담자료와 같은 틀로 시작한다. */
     PR.view=(mode==='compare'&&plan.diff&&plan.diff.length)?'diff'
@@ -12760,7 +13025,8 @@ function prGen(){
       :((plan.reality&&plan.reality.length)?'reality':'doc'));
     PRIMG={};
     prRefreshForm();prPaint();
-    toast('문서 '+plan.slides.length+'장을 만들었습니다');
+    toast('문서 '+plan.slides.length+'장을 만들었습니다'+
+      ((PR.fails&&PR.fails.length)?(' · '+PR.fails.length+'조각은 앱이 채웠습니다'):''));
     var out=$('prOut');if(out&&out.scrollIntoView)out.scrollIntoView({behavior:'smooth',block:'start'});
   })['catch'](function(e){
     var m=((e&&e.message)||e||'')+'';
@@ -12779,6 +13045,21 @@ function prGen(){
       ico='🚦';tip='AI 서버가 몰려 있습니다. 여러 번 다시 시도했지만 응답을 받지 못했습니다. 1~2분 뒤 다시 눌러 주세요.';
     }else{
       tip='만들지 못했습니다: '+osEsc(m||'알 수 없는 오류');
+    }
+    /* AI 가 넷 다 실패해도 빈 화면을 주지 않는다.
+       앱이 증권에서 읽어낸 사실만으로 문서를 세운다. 없는 숫자는 안 만든다. */
+    var lp=null;
+    try{if(PR.scan)lp=prLocalFill({},PR.scan,mode);}catch(_e){lp=null;}
+    if(lp&&lp.slides&&lp.slides.length){
+      lp._name=name;lp._date=osTodayStr();lp._mode=mode;
+      lp._files=[].concat(PR.files.before,PR.files.after).map(function(f){return f.name;});
+      lp._local=true;lp._why=tip;
+      PR.plan=lp;PR.i=0;PR.busy=false;
+      PR.view=(lp.wallets&&lp.wallets.length)?'wallet':'doc';
+      PRIMG={};prRefreshForm();prPaint();
+      toast(ico+' AI 응답을 못 받아 앱이 읽은 내용으로 만들었습니다');
+      var o2=$('prOut');if(o2&&o2.scrollIntoView)o2.scrollIntoView({behavior:'smooth',block:'start'});
+      return;
     }
     var box=$('prOut');
     if(box)box.innerHTML='<div class="err-box" style="margin-top:12px">'+ico+' '+tip+
@@ -12876,6 +13157,17 @@ function prPaint(){
   var host=$('prOut');var p=PR.plan;if(!host)return;
   if(!p){host.innerHTML='';return;}
   var hasDiff=p.diff&&p.diff.length;
+  /* 어디까지가 AI 가 쓴 것이고 어디부터 앱이 채운 것인지 숨기지 않는다 */
+  var note='';
+  if(p._local)note='<div style="font-size:12px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;'+
+    'border-radius:11px;padding:10px 13px;line-height:1.7;margin-top:8px">📄 <b>AI 응답을 받지 못했습니다.</b> '+
+    '아래는 앱이 증권에서 직접 읽어낸 내용만으로 만든 문서입니다. 없는 숫자는 넣지 않았습니다.'+
+    (p._why?('<br><span style="font-size:11px;color:#B45309">'+p._why+'</span>'):'')+
+    '<br><button class="btn btn-ghost" style="margin-top:8px" onclick="prGen()">🔄 AI 로 다시 시도</button></div>';
+  else if(p._fails&&p._fails.length)note='<div style="font-size:12px;color:#92400E;background:#FFFBEB;'+
+    'border:1px solid #FDE68A;border-radius:11px;padding:10px 13px;line-height:1.7;margin-top:8px">⚠️ '+
+    osEsc(p._fails.join(' · '))+' 조각은 AI 가 못 써서 <b>앱이 읽은 내용으로 채웠습니다.</b> '+
+    '<button class="btn btn-ghost" style="margin-left:6px" onclick="prGen()">🔄 다시 시도</button></div>';
   var head='<div class="card" style="margin-bottom:12px"><div class="card-body">'+
     '<div style="font-size:11px;font-weight:800;color:#94A3B8;letter-spacing:1px">'+
       (p._mode==='compare'?'BEFORE / AFTER':(p._mode==='explain'?'CLIENT GUIDE':'PROPOSAL'))+'</div>'+
@@ -12884,6 +13176,7 @@ function prPaint(){
     (p._files&&p._files.length?'<div style="font-size:11px;color:#9CA3AF;margin-top:5px">📎 '+osEsc(p._files.join(' · '))+'</div>':'')+
     (p.coreBenefit?'<div style="font-size:13px;font-weight:700;color:#065F46;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:11px;padding:11px 14px;line-height:1.65;margin-top:10px">🎯 '+osEsc(p.coreBenefit)+'</div>':'')+
     (p.readDocs?'<div style="font-size:12px;color:#4B5A70;background:#F8FAFD;border:1px solid #EDF1F7;border-radius:11px;padding:10px 13px;line-height:1.7;margin-top:8px"><b style="color:#1D4ED8">🧠 두뇌가 읽은 내용</b><br>'+osEsc(p.readDocs)+'</div>':'')+
+    note+
     '<div class="acad-tabs" style="margin:12px 0 0">'+
       (hasDiff?'<button class="acad-tab'+(PR.view==='diff'?' on':'')+'" onclick="prView(\'diff\')">🔄 전후 비교</button>':'')+
       (p.wallets&&p.wallets.length?'<button class="acad-tab'+(PR.view==='wallet'?' on':'')+'" onclick="prView(\'wallet\')">🗺️ 8통장 진단</button>':'')+
@@ -12925,12 +13218,19 @@ function prWalletHtml(){
   var color=function(st){
     if(/비어|없음/.test(st||''))return ['#DC2626','#FEF2F2','#FECACA'];
     if(/부족/.test(st||''))return ['#B45309','#FFFBEB','#FDE68A'];
+    /* 「확인 필요」 를 초록으로 칠하면 준비된 것처럼 보인다.
+       모르는 것은 모르는 색으로 둔다 — 이게 고객에게 거짓말을 안 하는 길이다. */
+    if(/확인|모름|미확인/.test(st||''))return ['#64748B','#F8FAFC','#E2E8F0'];
     return ['#047857','#F0FDF4','#BBF7D0'];
   };
   var empty=W.filter(function(w){return /비어|없음|부족/.test(w.status||'');}).length;
+  var unsure=W.filter(function(w){return /확인|모름|미확인/.test(w.status||'');}).length;
   return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗺️</span>8통장으로 보면</div>'+
     '<div class="card-desc">보험 개수가 아니라 <b>돈의 목적</b>으로 나눠 봅니다. 어디가 비어 있는지가 한눈에 보입니다. '+
-    '지금 <b style="color:#DC2626">'+empty+'개</b>가 채워지지 않았습니다.</div></div><div class="card-body">'+
+    '지금 <b style="color:#DC2626">'+empty+'개</b>가 채워지지 않았습니다.'+
+    /* 모르는 칸을 「없다」 로도 「있다」 로도 세지 않는다. 따로 말한다. */
+    (unsure?(' <b style="color:#64748B">'+unsure+'개</b>는 증권만으로는 알 수 없어 상담에서 확인해야 합니다.'):'')+
+    '</div></div><div class="card-body">'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px">'+
     W.map(function(w){
       var c=color(w.status);
@@ -12943,7 +13243,11 @@ function prWalletHtml(){
         '<div style="margin-top:8px;font-size:12px;line-height:1.7">'+
           '<div><span style="color:#8B96A8">지금</span> <b style="color:#42506A">'+osEsc(w.now||'-')+'</b></div>'+
           '<div><span style="color:#8B96A8">필요</span> <b style="color:'+c[0]+'">'+osEsc(w.need||'-')+'</b></div>'+
-        '</div></div>';
+        '</div>'+
+        /* 두 문장 이상 풀어 쓴 설명 — 예전엔 AI 에게 쓰라고만 하고 화면에 안 띄웠다 */
+        (w.note?('<div style="font-size:11.5px;color:#42506A;line-height:1.75;margin-top:8px;'+
+          'padding-top:8px;border-top:1px dashed '+c[2]+'">'+osEsc(w.note)+'</div>'):'')+
+      '</div>';
     }).join('')+'</div>'+
     '<div class="acad-note" style="margin-top:11px">보험을 <b>몇 개 들었나</b>가 아니라, <b>어떤 목적의 돈이 준비됐나</b>로 봐야 합니다. '+
     '빈 칸부터 하나씩 채우면 됩니다. 한 번에 다 하실 필요 없습니다. '+
