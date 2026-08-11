@@ -8179,7 +8179,12 @@ function go(tab){
   else if(tab==='health'){dyn.innerHTML=renderHealth();if(typeof osHealthAfterRender==='function')osHealthAfterRender();}
   else if(tab==='voice'){dyn.innerHTML=renderVoice();if(typeof osVoiceAfterRender==='function')osVoiceAfterRender();}
   else if(tab==='org'){window.__orgPhoto=undefined;dyn.innerHTML=renderOrg();
-    if(typeof orgAccLoad==='function')orgAccLoad(function(){if(orgEditId!==null||true){var c=document.getElementById('orgFormCard');if(c&&typeof orgForm==='function'&&typeof orgLoad==='function')c.outerHTML=orgForm(orgLoad());}});
+    if(typeof orgAccLoad==='function')orgAccLoad(function(){
+      var c=document.getElementById('orgFormCard');
+      if(!c||typeof orgForm!=='function'||typeof orgLoad!=='function')return;
+      var h=orgForm(orgLoad());
+      if(c.outerHTML!==h)c.outerHTML=h;   /* 같으면 안 갈아끼운다 */
+    });
     /* 조직도를 열 때마다 서버를 다시 본다 — 다른 컴퓨터에서 고친 것이 바로 넘어온다 */
     if(typeof orgPull==='function')setTimeout(function(){orgPull(true);},20);}
   else if(tab==='mycoach'){dyn.innerHTML=renderMyCoach();if(typeof osMyCoachAfterRender==='function')osMyCoachAfterRender();}
@@ -8420,8 +8425,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 03:05';
-var APP_BUILD_NOTE='AI 제안서가 「서버가 몰려 있습니다」 로 끝나지 않습니다 · 네 조각으로 나눠 쓰고, AI 가 다 죽어도 앱이 읽은 내용으로 문서를 세웁니다';
+var APP_BUILD='2026-08-12 05:40';
+var APP_BUILD_NOTE='가로 조직도는 리더만 세우고 팀원은 그 밑에 모읍니다 · 조직도 화면이 더 이상 깜빡이지 않습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17972,14 +17977,20 @@ function orgRow(m){
 }
 function orgSyncPaint(){
   var el=document.getElementById('orgSyncBar');
-  if(el)el.outerHTML=orgSyncBarHtml();
+  if(!el)return;
+  var h=orgSyncBarHtml();
+  if(el.outerHTML===h)return;   /* 같은 글이면 안 바꾼다 — 이것도 깜빡임이었다 */
+  el.outerHTML=h;
 }
 function orgPull(force){
   var sb=osClient();
   if(!sb||!OS.profile){ORGS.srv=null;orgSyncPaint();return;}
   if(ORGS.busy)return;
   if(ORGS.pulled&&!force){orgSyncPaint();return;}
-  ORGS.busy='pull';orgSyncPaint();
+  /* 이미 보여줄 것이 있으면 「불러오는 중」 으로 갈아끼우지 않는다.
+     조용히 뒤에서 받아 와서 바뀐 것만 고친다 — 이게 눈에 편하다. */
+  ORGS.busy='pull';
+  if(!ORGS.pulled)orgSyncPaint();
   orgSelect(sb,'id,name,rank,team,parent,phone,insta,photo').then(function(r){
     ORGS.busy='';
     if(r.error){ORGS.err=r.error.message||'';ORGS.srv=null;orgSyncPaint();return;}
@@ -17993,9 +18004,11 @@ function orgPull(force){
        이 기기에만 있던 사람까지 합쳐서 남기므로 아무도 안 사라진다. */
     if(ORGS.srv.length){
       try{localStorage.setItem(ORG_KEY,JSON.stringify(orgLoad()));}catch(e){}
-      if(typeof lastTab!=='undefined'&&lastTab==='org'){go('org');return;}
     }
+    /* 예전엔 여기서 go('org') 를 불렀다. 그러면 그 go 가 다시 이 함수를 불러
+       끝없이 돌면서 화면이 깜빡였다. 이제는 바뀐 칸만 고쳐 그린다. */
     orgSyncPaint();
+    if(typeof lastTab!=='undefined'&&lastTab==='org')orgPaintChart();
   },function(e){ORGS.busy='';ORGS.err=(e&&e.message)||'네트워크 오류';ORGS.srv=null;orgSyncPaint();});
 }
 /* 한 줄만 반영 — 편집 중인 기기가 오래된 목록으로 서버를 덮어쓰는 사고를 막는다 */
@@ -18032,10 +18045,7 @@ function orgPushMany(list){
    「저장된 줄 알았는데 아니었다」 가 제일 위험하다. */
 function orgReSync(){
   ORGS.pulled=false;
-  setTimeout(function(){
-    orgPull(true);
-    setTimeout(function(){if(typeof lastTab!=='undefined'&&lastTab==='org')go('org');},900);
-  },400);
+  setTimeout(function(){orgPull(true);},400);   /* orgPull 이 알아서 바뀐 칸만 고친다 */
 }
 function orgRemoveOne(id){
   var sb=osClient();
@@ -18361,7 +18371,11 @@ function orgCard(m){
    위에서 아래로 층을 쌓고, 같은 층은 가로로 늘어놓는다 — 회사 조직도 그대로. */
 var ORGV_KEY='apex_org_view';
 function orgView(){try{return localStorage.getItem(ORGV_KEY)||'wide';}catch(e){return 'wide';}}
-function orgViewSet(v){try{localStorage.setItem(ORGV_KEY,v);}catch(e){}go('org');}
+function orgViewSet(v){
+  try{localStorage.setItem(ORGV_KEY,v);}catch(e){}
+  /* 보기만 바꾸는데 화면을 통째로 다시 그릴 이유가 없다 */
+  if(document.getElementById('orgChartBox'))orgPaintChart();else go('org');
+}
 function orgZoom(){var z=0;try{z=parseInt(localStorage.getItem(ORGV_KEY+'_z')||'100',10);}catch(e){}return z||100;}
 function orgZoomSet(d){
   var z=Math.max(50,Math.min(140,orgZoom()+d));
@@ -18383,47 +18397,96 @@ function orgMini(m){
       (m.team?'<span class="ogv-m">'+osEsc(m.team)+'</span>':'')+
     '</div></div>';
 }
+/* ── 누가 리더인가 ──
+   「…장」 직급이면 리더다. 직급이 그렇지 않아도 <b>밑에 사람이 있으면</b> 리더다.
+   조직이 바뀌어도 이 규칙이 알아서 따라간다. */
+var ORG_LEAD_RANK={'본부장':1,'사업단장':1,'지점장':1,'팀장':1};
+var ORG_RANK_ORD={'본부장':0,'사업단장':1,'지점장':2,'팀장':3,'설계사':4,'신입':5,'기타':6};
+function orgRankOrd(r){var v=ORG_RANK_ORD[r];return (v===undefined)?9:v;}
+function orgSortPeople(a,b){
+  var d=orgRankOrd(a&&a.rank)-orgRankOrd(b&&b.rank);
+  if(d)return d;
+  return (''+((a&&a.name)||'')).localeCompare(''+((b&&b.name)||''),'ko');
+}
+function orgIsLeader(m,byParent){
+  if(ORG_LEAD_RANK[(m&&m.rank)||''])return true;
+  var k=byParent&&byParent[m.id];
+  return !!(k&&k.length);
+}
+function orgMateChip(p,tip){
+  var c=orgRankColor(p.rank);
+  return '<div class="ogv-mate'+(p._onlyHere?' only':'')+'" onclick="orgEdit(\''+p.id+'\')" '+
+    'title="'+(tip||'눌러서 편집')+'">'+
+    '<span class="ogv-dot" style="background:'+c+'"></span>'+
+    '<b>'+osEsc(p.name||'이름없음')+'</b>'+
+    '<span class="ogv-mr" style="color:'+c+'">'+osEsc(p.rank||'')+'</span>'+
+    (p._onlyHere?'<span class="ogv-mo">이 기기</span>':'')+'</div>';
+}
+/* 리더 밑에 붙는 팀원 명단 — 도표를 옆으로 늘리지 않고 한 덩어리로 모은다 */
+function orgMatesHtml(list){
+  if(!list.length)return '';
+  return '<div class="ogv-mates">'+
+    '<div class="ogv-mh">팀원 '+list.length+'명</div>'+
+    '<div class="ogv-mbody">'+list.map(function(p){return orgMateChip(p);}).join('')+'</div></div>';
+}
+/* ── 가로 조직도 ──
+   예전엔 스무 명이 넘으면 모든 사람이 옆으로 늘어서서 도표가 화면 몇 개 너비가 됐다.
+   그래서 <b>리더만 도표로 세우고, 팀원은 자기 리더 밑에 명단으로 모은다.</b>
+   리더 열 명이면 칸도 열 개다 — 팀원이 몇 명이든 도표 너비는 그대로다. */
 function orgWide(list){
   if(!list.length)return '<div class="notice" style="color:var(--ink-4)">아직 등록된 구성원이 없습니다. 위 폼에서 추가하세요.</div>';
-  var byParent={},ids={},i;
+  var byParent={},ids={},i,k;
   for(i=0;i<list.length;i++)ids[list[i].id]=list[i];
   for(i=0;i<list.length;i++){var m=list[i];var p=(m.parent&&ids[m.parent])?m.parent:'__root';(byParent[p]=byParent[p]||[]).push(m);}
-  var depth=0;
+  for(k in byParent)if(Object.prototype.hasOwnProperty.call(byParent,k))byParent[k].sort(orgSortPeople);
+
+  var depth=0,nLead=0,nMate=0;
+  var split=function(kids){
+    var L=[],M=[],j;
+    for(j=0;j<(kids||[]).length;j++)(orgIsLeader(kids[j],byParent)?L:M).push(kids[j]);
+    return {lead:L,mate:M};
+  };
   function node(m,d){
     if(d>depth)depth=d;
-    var kids=byParent[m.id]||[];
-    var h='<li>'+orgMini(m);
-    if(kids.length){
+    nLead++;
+    var sp=split(byParent[m.id]||[]),j;
+    nMate+=sp.mate.length;
+    var h='<li><div class="ogv-node">'+orgMini(m)+orgMatesHtml(sp.mate)+'</div>';
+    if(sp.lead.length){
       h+='<ul>';
-      for(var j=0;j<kids.length;j++)h+=node(kids[j],d+1);
+      for(j=0;j<sp.lead.length;j++)h+=node(sp.lead[j],d+1);
       h+='</ul>';
     }
     return h+'</li>';
   }
-  var roots=byParent['__root']||[],out='',seen={};
   /* 상하관계가 서로 물려 있으면(고리) 최상위가 없어 아무도 안 그려진다.
-     그러면 「불러왔는데 안 보인다」 가 된다 — 그런 일이 없게 한 명도 안 빠뜨린다. */
-  function walk(m,d){seen[m.id]=1;var k=byParent[m.id]||[],j;for(j=0;j<k.length;j++)if(!seen[k[j].id])walk(k[j],d+1);}
-  for(i=0;i<roots.length;i++)walk(roots[i],0);
+     그러면 「불러왔는데 안 보인다」 가 된다 — 한 명도 안 빠뜨린다. */
+  var roots=byParent['__root']||[],seen={},out='';
+  function walk(m){seen[m.id]=1;var kk=byParent[m.id]||[],j;for(j=0;j<kk.length;j++)if(!seen[kk[j].id])walk(kk[j]);}
+  for(i=0;i<roots.length;i++)walk(roots[i]);
   var lost=[];
   for(i=0;i<list.length;i++)if(!seen[list[i].id])lost.push(list[i]);
-  for(i=0;i<roots.length;i++)out+=node(roots[i],0);
-  if(lost.length){
-    /* 남은 사람은 각자 한 칸씩만 세운다. 자식까지 따라 그리면 고리 안에서
-       같은 사람이 두 번 나온다 — 아래로는 안 내려간다. */
-    for(i=0;i<lost.length;i++)out+='<li>'+orgMini(lost[i])+'</li>';
-  }
+
+  var rs=split(roots);
+  for(i=0;i<rs.lead.length;i++)out+=node(rs.lead[i],0);
+  var loose=rs.mate.concat(lost);
+  loose.sort(orgSortPeople);
+  nMate+=loose.length;
+
   var z=orgZoom();
   orgWideCss();
   return '<div class="ogv-bar">'+
-      '<span class="ogv-n">'+list.length+'명 · '+(depth+1)+'층</span>'+
-      (lost.length?'<span class="ogv-n" style="background:#FEF3C7;color:#92400E">윗사람 미지정 '+lost.length+'명</span>':'')+
+      '<span class="ogv-n">리더 '+nLead+'명 · 팀원 '+nMate+'명</span>'+
+      (out?'<span class="ogv-n" style="background:#F1F5F9;color:#475569">'+(depth+1)+'단계</span>':'')+
       '<button type="button" class="ogv-z" onclick="orgZoomSet(-10)">－</button>'+
       '<span class="ogv-z lbl" id="orgZoomLbl">'+z+'%</span>'+
       '<button type="button" class="ogv-z" onclick="orgZoomSet(10)">＋</button>'+
-      '<span class="ogv-hint">이름을 누르면 편집합니다 · 좌우로 밀어 보세요</span>'+
+      '<span class="ogv-hint">리더만 도표로 세우고 팀원은 그 밑에 모았습니다 · 이름을 누르면 편집</span>'+
     '</div>'+
-    '<div class="ogv-scroll"><div id="orgWideInner" class="ogv" style="zoom:'+(z/100)+'"><ul>'+out+'</ul></div></div>';
+    (out?('<div class="ogv-scroll"><div id="orgWideInner" class="ogv" style="zoom:'+(z/100)+'"><ul>'+out+'</ul></div></div>'):'')+
+    (loose.length?('<div class="ogv-loose"><div class="ogv-lh">윗사람이 지정되지 않은 '+loose.length+'명</div>'+
+      '<div class="ogv-lbody">'+loose.map(function(p){return orgMateChip(p,'눌러서 윗사람을 지정하세요');}).join('')+'</div>'+
+      '<div class="ogv-lnote">이 사람들은 도표에 자리가 없습니다. 이름을 눌러 <b>윗사람</b>을 지정하면 제자리에 들어갑니다.</div></div>'):'');
 }
 /* 층을 쌓고 선으로 잇는다 — 종이에 그린 조직도와 같은 모양 */
 function orgWideCss(){
@@ -18462,6 +18525,31 @@ function orgWideCss(){
    '.ogv-r{display:inline-block;font-size:10.5px;font-weight:800;margin-right:5px}'+
    '.ogv-m{display:inline-block;font-size:10.5px;color:#94A3B8;font-weight:700}'+
    '.ogv-c.only{border-color:#FDE68A;background:#FFFBEB}'+
+   /* 리더 칸 + 그 밑 팀원 명단을 한 덩어리로 묶는다 */
+   '.ogv-node{display:inline-block;text-align:center;max-width:250px}'+
+   '.ogv-mates{position:relative;margin:9px auto 0;background:#F8FAFD;border:1px solid #E9EEF6;'+
+     'border-radius:11px;padding:7px 7px 6px;text-align:left;min-width:150px}'+
+   /* 리더 칸과 팀원 명단을 짧은 선으로 잇는다 — 누구의 팀원인지 헷갈리지 않게 */
+   '.ogv-mates::before{content:"";position:absolute;top:-9px;left:50%;width:0;height:9px;'+
+     'border-left:2px solid #D7DEEA}'+
+   '.ogv-mh{font-size:9.5px;font-weight:800;color:#8B96A8;letter-spacing:.4px;margin:0 4px 5px}'+
+   '.ogv-mbody{max-height:216px;overflow:auto}'+
+   '.ogv-mate{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:7px;'+
+     'cursor:pointer;white-space:nowrap;line-height:1.3}'+
+   '.ogv-mate:hover{background:#EEF2FF}'+
+   '.ogv-mate b{font-size:12px;font-weight:700;color:#1C2434}'+
+   '.ogv-mr{font-size:10px;font-weight:800}'+
+   '.ogv-dot{width:6px;height:6px;border-radius:50%;flex:none}'+
+   '.ogv-mate.only{background:#FFFBEB}'+
+   '.ogv-mo{font-size:8.5px;font-weight:800;background:#F59E0B;color:#fff;'+
+     'border-radius:999px;padding:1px 6px;margin-left:auto}'+
+   /* 자리를 못 찾은 사람 — 숨기지 않고 아래에 따로 모은다 */
+   '.ogv-loose{margin-top:14px;background:#FFFBEB;border:1px solid #FDE68A;'+
+     'border-radius:12px;padding:10px 12px}'+
+   '.ogv-lh{font-size:11.5px;font-weight:800;color:#92400E;margin-bottom:7px}'+
+   '.ogv-lbody{display:flex;flex-wrap:wrap;gap:2px}'+
+   '.ogv-lbody .ogv-mate{background:#fff;border:1px solid #FDE68A}'+
+   '.ogv-lnote{font-size:11px;color:#A16207;line-height:1.7;margin-top:8px}'+
    '.ogv-only{position:absolute;top:-8px;right:8px;font-size:9px;font-weight:800;'+
      'background:#F59E0B;color:#fff;border-radius:999px;padding:1px 7px;white-space:nowrap}'+
    /* 위 띠 */
@@ -18473,8 +18561,10 @@ function orgWideCss(){
    '.ogv-z.lbl{cursor:default;min-width:46px;text-align:center}'+
    '.ogv-hint{font-size:11px;color:#94A3B8;margin-left:auto}'+
    '@media(max-width:760px){.ogv-c{min-width:112px;padding:7px 9px 7px 12px}'+
-     '.ogv-t b{font-size:12px}.ogv-hint{display:none}}'+
-   '@media print{.ogv-bar{display:none}.ogv-scroll{overflow:visible}}';
+     '.ogv-t b{font-size:12px}.ogv-hint{display:none}'+
+     '.ogv-node{max-width:200px}.ogv-mbody{max-height:170px}}'+
+   '@media print{.ogv-bar{display:none}.ogv-scroll{overflow:visible}'+
+     '.ogv-mbody{max-height:none;overflow:visible}}';
   document.head.appendChild(st);
 }
 function orgViewBarHtml(){
@@ -23739,6 +23829,24 @@ function orgApplyBoxHtml(){
   return '<div id="orgApplyBox" class="notice" style="margin-bottom:12px;background:#F5F9FF;border-color:#BFDBFE;color:#1D4ED8">'+
     orgApplyInner()+'</div>';
 }
+/* ── 깜빡임을 없앤 자리 ──
+   예전엔 서버에서 조직도를 받아오면 go('org') 로 <b>화면을 통째로</b> 다시 그렸다.
+   그런데 go('org') 는 또 orgPull 을 부른다. 받아오면 또 다시 그리고, 또 부르고 —
+   끝없이 돌았다. 그래서 화면이 계속 깜빡였다.
+   이제는 <b>바뀐 칸만</b> 고쳐 그리고, 내용이 같으면 아예 안 건드린다. */
+function orgChartInner(){
+  var list=orgLoad();
+  return orgViewBarHtml()+(orgView()==='wide'?orgWide(list):orgTree(list));
+}
+function orgPaintChart(){
+  var el=document.getElementById('orgChartBox');
+  if(!el)return;
+  var h=orgChartInner();
+  if(el.innerHTML===h)return;   /* 안 바뀌었으면 안 건드린다 */
+  el.innerHTML=h;
+  var c=document.getElementById('orgCount');
+  if(c)c.textContent='구성원 '+orgLoad().length+'명';
+}
 function renderOrg(){
   var list=orgLoad();
   var body=''
@@ -23746,10 +23854,9 @@ function renderOrg(){
     + orgFromBoxHtml()
     + orgApplyBoxHtml()
     + orgForm(list)
-    + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · 구성원 '+list.length+'명 '
+    + '<div class="card" style="margin-top:12px"><div class="card-hd">조직도 · <span id="orgCount">구성원 '+list.length+'명</span> '
       + '<span style="float:right"><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="orgReset()">초기화</button></span></div>'
-      + '<div class="card-body">'+orgViewBarHtml()
-      + (orgView()==='wide'?orgWide(list):orgTree(list))+'</div></div>';
+      + '<div class="card-body"><div id="orgChartBox">'+orgChartInner()+'</div></div></div>';
   return osPage('조직','조직도','본부·지점·팀 구성원을 계층으로 한눈에. 연락처·인스타그램·사진 포함. 로그인하면 서버에 저장되어 어느 컴퓨터에서나 같은 조직도를 봅니다.',body);
 }
 
