@@ -132,18 +132,29 @@ window.supabase={createClient:function(){
   /* ── ① 가로 조직도 ── */
   const v = await page.evaluate(() => ({
     wide: !!document.querySelector('.ogv'),
-    cards: document.querySelectorAll('.ogv-c').length,
+    cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
     levels: document.querySelectorAll('.ogv ul').length,
-    names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+    leaders: document.querySelectorAll('.ogv-c').length,
+    mates: document.querySelectorAll('.ogv-mate').length,
+    matePanels: document.querySelectorAll('.ogv-mates').length,
+    chips: (document.querySelector('.ogv-bar') || {}).textContent || '',
+    names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
     bar: (document.querySelector('.ogv-n') || {}).textContent || '',
     css: !!document.getElementById('orgWideCss'),
     scrollX: (() => { const s = document.querySelector('.ogv-scroll'); return s ? s.scrollWidth >= s.clientWidth : false; })()
   }));
   ok(v.wide, '가로 조직도가 기본으로 열린다');
   ok(v.cards === 7, '구성원 7명이 모두 칸으로 나온다 (' + v.cards + '명)');
-  ok(v.levels >= 3, '층이 쌓여 있다 — 본부 → 지점 → 팀원 (' + v.levels + '단)');
+  /* 리더만 도표로 세운다 — 사업단장 → 지점장 둘. 설계사·신입은 지점장 밑 명단으로 간다.
+     이렇게 해야 사람이 늘어도 도표가 옆으로 안 벌어진다. */
+  ok(v.leaders === 3, '도표에는 리더만 선다 — 사업단장 1 · 지점장 2 (' + v.leaders + '칸)');
+  ok(v.mates === 4, '팀원은 도표 칸이 아니라 리더 밑 명단으로 간다 (' + v.mates + '명)');
+  ok(v.matePanels === 2, '지점장마다 자기 팀원 명단을 하나씩 달고 있다 (' + v.matePanels + '개)');
+  ok(v.levels >= 2, '리더가 층으로 쌓인다 — 사업단장 → 지점장 (' + v.levels + '단)');
   ok(v.names[0] === '윤시현', '맨 위가 최상위다 — ' + v.names.slice(0, 3).join(' · '));
-  ok(/7명/.test(v.bar) && /3층/.test(v.bar), '몇 명 · 몇 층인지 위에 적힌다 — ' + v.bar);
+  ok(/리더 3명/.test(v.chips) && /팀원 4명/.test(v.chips),
+    '리더 몇 명 · 팀원 몇 명인지 위에 적힌다 — ' + v.bar);
+  ok(/2단계/.test(v.chips), '몇 단계인지도 적힌다');
   ok(v.css, '조직도 모양(선·칸)이 붙는다');
 
   /* 크게·작게 */
@@ -233,14 +244,14 @@ window.supabase={createClient:function(){
     ORGS.pulled = false; ORGS.srv = null; ORGS.err = '';
     go('org');
     await new Promise(r => setTimeout(r, 300));
-    const before = document.querySelectorAll('.ogv-c').length;
+    const before = document.querySelectorAll('.ogv-c,.ogv-mate').length;
     orgPull(true);
     await new Promise(r => setTimeout(r, 900));
     return {
       before,
-      after: document.querySelectorAll('.ogv-c').length,
+      after: document.querySelectorAll('.ogv-c,.ogv-mate').length,
       saved: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim())
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim())
     };
   });
   /* 조직도 화면을 열면 스스로 불러온다 — 「불러오기」 를 안 눌러도 된다 */
@@ -263,7 +274,7 @@ window.supabase={createClient:function(){
     await new Promise(r => setTimeout(r, 900));
     return {
       saved: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
       bar: (document.getElementById('orgSyncBar') || {}).textContent || ''
     };
   });
@@ -290,9 +301,10 @@ window.supabase={createClient:function(){
     go('org');
     await new Promise(r => setTimeout(r, 300));
     const wide = {
-      cards: document.querySelectorAll('.ogv-c').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
-      warn: (document.querySelector('.ogv-bar') || {}).textContent || ''
+      cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
+      warn: ((document.querySelector('.ogv-lh') || {}).textContent || '') +
+            ((document.querySelector('.ogv-bar') || {}).textContent || '')
     };
     orgViewSet('list');
     await new Promise(r => setTimeout(r, 300));
@@ -304,7 +316,8 @@ window.supabase={createClient:function(){
   ok(cyc.wide.cards === 3, '상하관계가 서로 물려 있어도 세 명이 다 보인다 (' + cyc.wide.cards + '명)');
   ok(cyc.wide.names.indexOf('가') >= 0 && cyc.wide.names.indexOf('나') >= 0 && cyc.wide.names.indexOf('다') >= 0,
     '한 명도 안 사라진다 — ' + cyc.wide.names.join(' · '));
-  ok(/윗사람 미지정/.test(cyc.wide.warn), '자리를 못 잡은 사람이 몇 명인지 알려 준다 — ' + cyc.wide.warn);
+  ok(/윗사람이 지정되지 않은\s*3명/.test(cyc.wide.warn),
+    '자리를 못 잡은 사람이 몇 명인지 알려 준다 — ' + cyc.wide.warn.slice(0, 24));
   ok(/윗사람이 지정되지 않은/.test(cyc.list.txt), '목록 보기에서도 빠뜨리지 않고 이유를 적어 준다');
 
   /* ── 조직도에 나 혼자 있을 때 — 앱 명단에서 통째로 채운다 ──
@@ -335,7 +348,7 @@ window.supabase={createClient:function(){
     ORGS.pulled = false; ORGS.srv = null; ORGF.plan = null;
     go('org');
     await new Promise(r => setTimeout(r, 500));
-    const before = document.querySelectorAll('.ogv-c').length;
+    const before = document.querySelectorAll('.ogv-c,.ogv-mate').length;
     orgFromAppPlan();
     await new Promise(r => setTimeout(r, 800));
     return { before, plan: ORGF.plan, txt: (document.getElementById('orgFromBox') || {}).textContent || '' };
@@ -358,8 +371,8 @@ window.supabase={createClient:function(){
     const byId = {}; L.forEach(x => byId[x.id] = x);
     return {
       n: L.length,
-      cards: document.querySelectorAll('.ogv-c').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
       parents: L.map(x => (x.name || '') + '→' + ((byId[x.parent] || {}).name || '최상위')),
       msg: window.__toast.join(' | '),
       pushed: window.__wrote.filter(w => w.t === 'org_members').length
@@ -403,8 +416,8 @@ window.supabase={createClient:function(){
     go('org');
     await new Promise(r => setTimeout(r, 1000));
     return {
-      cards: document.querySelectorAll('.ogv-c').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
       dev: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length,
       bar: (document.getElementById('orgSyncBar') || {}).textContent || ''
     };
@@ -420,8 +433,8 @@ window.supabase={createClient:function(){
     go('org');
     await new Promise(r => setTimeout(r, 400));
     return {
-      cards: document.querySelectorAll('.ogv-c').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim())
+      cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim())
     };
   });
   ok(off.cards === 3, '서버가 안 닿아도 빈 화면이 아니라 마지막 것이 그대로 뜬다 (' + off.cards + '명)');
@@ -437,10 +450,10 @@ window.supabase={createClient:function(){
     go('org');
     await new Promise(r => setTimeout(r, 1000));
     return {
-      cards: document.querySelectorAll('.ogv-c').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
-      only: document.querySelectorAll('.ogv-c.only').length,
-      tag: (document.querySelector('.ogv-only') || {}).textContent || '',
+      cards: document.querySelectorAll('.ogv-c,.ogv-mate').length,
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
+      only: document.querySelectorAll('.ogv-c.only,.ogv-mate.only').length,
+      tag: ((document.querySelector('.ogv-only')||document.querySelector('.ogv-mo')) || {}).textContent || '',
       bar: (document.getElementById('orgSyncBar') || {}).textContent || '',
       dev: JSON.parse(localStorage.getItem('apex_org_chart') || '[]').length
     };
@@ -465,7 +478,7 @@ window.supabase={createClient:function(){
     await new Promise(r => setTimeout(r, 700));
     return {
       pushed: window.__wrote.filter(w => w.t === 'org_members').length,
-      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b'), e => e.textContent.trim()),
+      names: Array.prototype.map.call(document.querySelectorAll('.ogv-c b,.ogv-mate b'), e => e.textContent.trim()),
       srv: (ORGS.srv || []).map(x => x.name)
     };
   });
