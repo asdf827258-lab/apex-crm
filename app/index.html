@@ -1577,6 +1577,165 @@ function _claudeRun(system,messages,cap,forceKey){
 }
 function osByokSave(){var v=(osVal('setByok')||'').replace(/^\s+|\s+$/g,'');if(!v){toast('내 API 키를 입력하세요');return;}if(!/^sk-ant-/.test(v)){toast('Claude 키 형식(sk-ant-...)이 맞는지 확인하세요');}setPersonalKeyVal(v);toast('내 백업 API 키를 저장했습니다 — 공용 한도가 차면 자동으로 이 키로 이어집니다.');osSetReload();}
 function osByokClear(){setPersonalKeyVal('');toast('내 백업 API 키를 삭제했습니다.');osSetReload();}
+/* ════════ 내 소개 — 상담자료 맨 앞에 붙는 고정값 ════════
+   팀원마다 로그인이 다르다. 그런데 상담자료는 이 기기의 저장칸 하나만 봤다.
+   그래서 한 컴퓨터를 같이 쓰면 뒷사람이 앞사람 소개를 덮어썼다.
+   이제 <b>로그인한 사람마다 따로</b> 저장한다 — 남의 값에 안 덮인다.       */
+var ADV_FIELDS=[
+  {k:'name',  t:'이름',       ph:'윤시현'},
+  {k:'title', t:'직함',       ph:'사업단장'},
+  {k:'org',   t:'소속',       ph:'에이플러스에셋 온탑본부'},
+  {k:'years', t:'경력(년)',   ph:'12'},
+  {k:'phone', t:'연락처',     ph:'010-0000-0000'},
+  {k:'email', t:'이메일·카톡ID',ph:'선택'},
+  {k:'motto', t:'한 줄 소개',  ph:'보험을 파는 설계사가 아닌, 삶을 설계하는 설계사', span:true},
+  {k:'tags',  t:'전문 분야',   ph:'보장분석, 은퇴·연금설계, 상속·증여', span:true},
+  {k:'bio',   t:'경력·자격 (줄바꿈으로 여러 줄)', ph:'MDRT 3년 연속\nAFPK 보유', span:true, area:true}
+];
+function advKey(){
+  var u=(OS.profile&&OS.profile.id)||'guest';
+  return 'apex_intro_'+u;   /* 로그인한 사람마다 다른 칸 */
+}
+function advGet(){
+  var o={};
+  try{o=JSON.parse(localStorage.getItem(advKey())||'null')||{};}catch(e){o={};}
+  if(!o.name&&OS.profile&&OS.profile.name)o.name=OS.profile.name;
+  return o;
+}
+function advSet(o){
+  try{localStorage.setItem(advKey(),JSON.stringify(o||{}));}catch(e){}
+}
+function advSave(){
+  var o=advGet(),i,f;
+  for(i=0;i<ADV_FIELDS.length;i++){
+    f=ADV_FIELDS[i];
+    o[f.k]=(osVal('adv_'+f.k)||'').replace(/^\s+|\s+$/g,'');
+  }
+  if(window.__advPhoto!==undefined)o.photo=window.__advPhoto;
+  advSet(o);
+  advPush();
+  toast('내 소개를 저장했습니다 — 상담자료 맨 앞에 이대로 나옵니다');
+  if(typeof lastTab!=='undefined'&&lastTab==='settings')go('settings');
+}
+function advPhotoPick(input){
+  var f=input&&input.files&&input.files[0];
+  if(!f)return;
+  if(f.size>8*1024*1024){toast('8MB 이하 사진을 골라 주세요');return;}
+  var rd=new FileReader();
+  rd.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      /* 큰 사진을 그대로 넣으면 저장칸이 넘친다 — 줄여서 담는다 */
+      var max=280,w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
+      var cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+      var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+      cv.getContext('2d').drawImage(img,0,0,cw,ch);
+      window.__advPhoto=cv.toDataURL('image/jpeg',0.82);
+      var box=document.getElementById('advPhotoPrev');
+      if(box)box.innerHTML='<img src="'+window.__advPhoto+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">';
+      toast('사진을 올렸습니다 — 저장을 눌러 주세요');
+    };
+    img.src=''+e.target.result;
+  };
+  rd.readAsDataURL(f);
+}
+function advPhotoClear(){
+  window.__advPhoto='';
+  var box=document.getElementById('advPhotoPrev');
+  if(box)box.innerHTML='<span style="font-size:11px;color:#94A3B8">사진 없음</span>';
+  toast('사진을 지웠습니다 — 저장을 눌러 주세요');
+}
+function advCardHtml(){
+  if(!OS.profile)return '';
+  var o=advGet(),who=(OS.profile.name||'')||'나';
+  var fld=function(f){
+    var v=o[f.k]||'';
+    return '<div class="fld'+(f.span?' span2':'')+'"><label>'+osEsc(f.t)+'</label>'+
+      (f.area
+        ? '<textarea id="adv_'+f.k+'" rows="3" placeholder="'+osEsc(f.ph)+'">'+osEsc(v)+'</textarea>'
+        : '<input type="text" id="adv_'+f.k+'" value="'+osEsc(v)+'" placeholder="'+osEsc(f.ph)+'"/>')+
+      '</div>';
+  };
+  return '<div class="card set-card" style="border-color:#BFDBFE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🪪</span>내 소개 — 상담자료 맨 앞에 나옵니다'+
+    (o.name?'<span class="badge green">저장됨</span>':'<span class="badge">아직 없음</span>')+'</div>'+
+    '<div class="card-desc"><b>보장분석 상담자료</b>와 <b>재무설계 상담자료</b>의 첫 장에 이 내용이 들어갑니다. '+
+    '<b>'+osEsc(who)+'</b>님 계정에만 저장되므로, 같은 컴퓨터를 다른 팀원이 써도 서로 덮어쓰지 않습니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
+      '<div id="advPhotoPrev">'+(o.photo
+        ? '<img src="'+o.photo+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">'
+        : '<span style="font-size:11px;color:#94A3B8">사진 없음</span>')+'</div>'+
+      '<div><input type="file" id="advPhotoFile" accept="image/*" style="display:none" onchange="advPhotoPick(this)">'+
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="document.getElementById(\'advPhotoFile\').click()">📷 사진 올리기</button> '+
+      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="advPhotoClear()">지우기</button></div>'+
+    '</div>'+
+    '<div class="frm">'+ADV_FIELDS.map(fld).join('')+'</div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" onclick="advSave()">저장</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'sangdam\')">📋 보장분석 상담자료에서 보기</button>'+
+    '</div>'+
+    '<div class="acad-note" style="margin-top:10px">이 값은 <b>이 기기의 내 계정 칸</b>에 저장됩니다. '+
+    '다른 컴퓨터에서 처음 열면 한 번 더 채워 주셔야 합니다.</div>'+
+  '</div></div>';
+}
+
+/* ── 상담자료 두 곳에 밀어 넣기 ──
+   상담자료는 각자 다른 화면(iframe)이다. 사람이 옮겨 적을 일이 아니라
+   앱이 열릴 때 알아서 넣어 준다. */
+function advFrames(){
+  var out=[],ids=['sangdamFrame','prSdFrame','finFrame','fpFrame'];
+  ids.forEach(function(id){
+    var f=document.getElementById(id);
+    if(f&&f.contentWindow)out.push(f);
+  });
+  /* 화면에 떠 있는 다른 상담자료 틀도 챙긴다 */
+  var all=document.querySelectorAll('iframe');
+  for(var i=0;i<all.length;i++){
+    if(out.indexOf(all[i])<0&&/상담자료|화법서/.test(all[i].src||''))out.push(all[i]);
+  }
+  return out;
+}
+function advPush(){
+  var o=advGet();
+  var msg={t:'apex:intro',data:o};
+  advFrames().forEach(function(f){
+    try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
+  });
+}
+/* 상담자료가 다 뜬 뒤에 보내야 받는다 — 뜨자마자 한 번, 조금 뒤 한 번 더 */
+function advPushSoon(){
+  advPush();
+  setTimeout(advPush,900);
+  setTimeout(advPush,2500);
+}
+
+/* ── AI 제안서에서 읽은 계약을 상담자료 보장분석표로 ──
+   상담자료 안에서 증권을 다시 올릴 이유가 없다. 앱이 이미 읽었다. */
+function sdPlanRows(){
+  var sc=(typeof PR!=='undefined'&&PR.scan)?PR.scan:null;
+  if(!sc||!sc.plans||!sc.plans.length)return [];
+  var yr=function(d){var m=(''+(d||'')).match(/(\d{4})/);return m?+m[1]:0;};
+  return sc.plans.map(function(p){
+    return {company:p.co||'',name:p.name||'',
+      monthlyPayment:Math.round((p.fee||0)),
+      startYear:yr(p.from)||0};
+  }).filter(function(r){return r.company||r.name;});
+}
+function sdPushPlan(){
+  var rows=sdPlanRows();
+  var msg={t:'apex:insurances',rows:rows};
+  advFrames().forEach(function(f){
+    try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
+  });
+  return rows.length;
+}
+function sdPushSoon(){
+  sdPushPlan();
+  setTimeout(sdPushPlan,900);
+  setTimeout(sdPushPlan,2500);
+}
+
 function osByokCardHtml(){
   if(!OS.profile)return '';
   var has=getPersonalKey();
@@ -8425,8 +8584,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 10:30';
-var APP_BUILD_NOTE='몇 살에 시작했느냐가 얼마를 넣었느냐보다 큽니다 · 국가혜택 근거는 입력칸 없이 바로 · 상담자료에 고객님 분석이 얹혀 나옵니다';
+var APP_BUILD='2026-08-12 13:05';
+var APP_BUILD_NOTE='상담자료에서 증권을 다시 안 올려도 됩니다 · AI 제안서가 읽은 계약이 보장분석표로 바로 들어갑니다 · 내 소개는 로그인한 사람마다 따로 남습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -8672,7 +8831,12 @@ function crmGuideClose(){var o=document.getElementById('crmGuideOvl');if(o){o.st
 function crmGuideAll(open){var ds=document.querySelectorAll('#crmGuideOvl details');for(var i=0;i<ds.length;i++)ds[i].open=!!open;}
 /* ════════ 상담자료 모듈 (앱 폴더에 번들: app/상담자료/메인 상담자료.html) ════════ */
 var SANGDAM_URL='상담자료/메인 상담자료.html';
-function mountSangdam(){var f=$('sangdamFrame');if(!f||f._mounted)return;f.src=SANGDAM_URL;f._mounted=true;}
+function mountSangdam(){
+  var f=$('sangdamFrame');if(!f||f._mounted)return;
+  f.src=SANGDAM_URL;f._mounted=true;
+  /* 다 뜨면 내 소개와 읽어 둔 계약을 넣어 준다 — 사람이 다시 올릴 일이 없다 */
+  f.onload=function(){advPushSoon();sdPushSoon();};
+}
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
@@ -13011,6 +13175,7 @@ function prGen(){
     plan._name=name;plan._date=osTodayStr();plan._mode=mode;
     plan._files=[].concat(PR.files.before,PR.files.after).map(function(f){return f.name;});
     plan._local=false;plan._fails=PR.fails;
+    setTimeout(sdPushPlan,60);   /* 상담자료 보장분석표에도 바로 옮긴다 */
     PR.plan=plan;PR.i=0;PR.busy=false;
     /* 발표용은 없앴다. 8통장 진단이 첫 화면이다 — 보장분석 상담자료와 같은 틀로 시작한다. */
     /* 발표는 상담자료에서 시작한다 — 왜 봐야 하는지를 먼저 세운다 */
@@ -13801,7 +13966,7 @@ function prSdSync(){
       '</div></div>';
     out.parentNode.insertBefore(wrap,out.nextSibling);
     var f=wrap.querySelector('#prSdFrame');
-    if(f)f.src=SANGDAM_URL;
+    if(f){f.onload=function(){advPushSoon();sdPushSoon();};f.src=SANGDAM_URL;}
   }
   wrap.style.display='';
 }
@@ -24851,6 +25016,7 @@ function renderSettings(){
 
     '</div><div class="set-sec" data-sec="ai">'+
 
+    advCardHtml()+
     osByokCardHtml()+
     osSecurityCardsHtml()+
 
