@@ -12605,7 +12605,7 @@ function prGen(){
       if(/\.pdf$/i.test(f.name)){
         jobs.push(extractPdfSmart(f).then(function(r){
           return {slot:slot,name:f.name,mode:r.mode,images:r.images||[],
-            text:(r.mode==='image')?'(텍스트 레이어가 없어 페이지 이미지를 첨부했습니다. 이미지를 직접 읽어 담보명·금액·표를 판독하세요.)':(r.text||'').slice(0,18000)};
+            text:(r.mode==='image')?'(텍스트 레이어가 없어 페이지 이미지를 첨부했습니다. 이미지를 직접 읽어 담보명·금액·표를 판독하세요.)':(r.text||'').slice(0,PDF_TEXT_MAX)};
         })['catch'](function(){return {slot:slot,name:f.name,mode:'text',images:[],text:'(읽기 실패)'};}));
       } else {
         jobs.push(prImgToB64(f).then(function(b64){
@@ -12637,6 +12637,11 @@ function prGen(){
       '[말투] '+(osVal('prTone')||'담백한 전문가')+'\n[작성일] '+osTodayStr()+'\n[브랜드] APEX YUN PRO\n\n'+
       prRefPromptText()+'\n\n'+
       prSlideGuide(mode);
+    /* AI 에 넘기기 전에 앱이 먼저 정확히 읽는다 — 계약 건수·회사별 보험료·담보 진단 */
+    var scan=null;
+    try{scan=insScan(parts.map(function(x){return x.text||'';}).join('\n'));}catch(e){scan=null;}
+    PR.scan=scan;
+    if(scan)user+='\n\n'+insBrief(scan);
     if(textBlock)user+='\n\n[첨부 문서에서 추출한 텍스트]'+textBlock;
     if(!textBlock&&!allImgs.length)user+='\n\n(첨부 문서 없음 — 위 고객 정보만으로 작성한다.)';
     user+='\n\n지정한 JSON 형식만 출력한다.';
@@ -23895,6 +23900,346 @@ try{osCapApply();}catch(e){}
    커스텀 도구 / 신규 AI 도구 / 리치 콘텐츠 폼   (모두 Claude 엔진)
 ════════════════════════════════════════════════ */
 
+/* ════════════════════════════════════════════════════════════════════
+   증권에서 「무엇이 몇 건, 어느 회사에 얼마」 를 먼저 뽑아 낸다.
+
+   보장분석 PDF 는 스물여덟 쪽이 넘는다. 그대로 AI 에 던지면 두 가지가
+   생긴다 — 앞부분만 보내다 진단 절반이 잘려 나가고, 다 보내도 AI 가
+   숫자를 옮겨 적다 틀린다.
+
+   그래서 AI 에게 넘기기 전에 앱이 먼저 정확히 읽는다.
+
+   ── 구간을 나눠 읽는 것이 핵심이다 ─────────────────────────────
+   이 문서에는 계약 목록이 <b>세 개</b> 들어 있다.
+     · 전체 계약리스트      — 지금 살아 있는 계약
+     · 실효/해지계약현황    — 이미 없어진 계약
+     · 자동차 보험 조회     — 자동차보험
+   구간을 안 나누고 날짜만 보고 긁으면 이 셋이 한 덩어리로 섞이고,
+   담보 한 줄 한 줄까지 계약으로 세어 「계약 123건」 같은 것이 나온다.
+   그래서 먼저 제목으로 구간을 자르고, 구간 안에서만 읽는다.
+
+   이건 AI 가 아니라 규칙이 읽는 것이라 틀리지 않는다.
+   이 표를 프롬프트 맨 앞에 붙여 주고, 화면에도 그대로 보여 준다.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* 이름이 칸에 걸려 「메리츠화 재」 처럼 갈라져 나오는 일이 잦다 — 공백을 무시하고 찾는다 */
+var INS_CO = [
+  '메리츠화재','삼성화재','현대해상','KB손해보험','KB손보','DB손해보험','DB손보','한화손해보험','한화손보',
+  '롯데손해보험','롯데손보','흥국화재','NH농협손해보험','농협손보','MG손해보험','MG손보','예별손해보험',
+  'AXA손해보험','AXA손보','하나손해보험','하나손보','캐롯손해보험','캐롯손보','AIG손해보험','AIG손보',
+  '라이나손해보험','라이나손보','더케이손해보험','더케이손보','에이스손해보험','서울보증보험',
+  '삼성생명','한화생명','교보생명','신한라이프','신한생명','오렌지라이프','NH농협생명','농협생명',
+  '미래에셋생명','동양생명','흥국생명','KB라이프','KB생명','메트라이프','푸본현대생명','현대라이프',
+  'DB생명','iM라이프','DGB생명','AIA생명','라이나생명','처브라이프','ABL생명','알리안츠생명',
+  'KDB생명','하나생명','BNP파리바카디프','카디프생명','IBK연금보험','교보라이프플래닛','푸르덴셜생명',
+  '우체국보험','수협공제','신협공제','새마을금고공제'
+];
+/* 이 문서가 쓰는 제목들 — 구간을 자르는 기준 */
+var INS_SECS = ['전체 보장현황','전체 계약리스트','상품별 가입현황','상품별 가입담보상세',
+  '담보별 가입 현황','실효/해지계약현황','자동차 보험 조회','전체 담보 진단 현황',
+  '상품별 진단현황','담보별 진단현황'];
+var INS_CAT = ['사망/장해','치매/간병','암 진단','뇌/심장 진단','실손의료비','수술/입원','운전자/기타'];
+
+function insNum(v) {
+  var n = parseFloat(('' + (v == null ? '' : v)).replace(/[^\d.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+function insWon(n) {
+  n = Math.round(insNum(n));
+  return n ? n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '0';
+}
+function insEsc(s) { return ('' + s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+var _insRe = null;
+function insCoRe() {
+  if (_insRe) return _insRe;
+  var names = INS_CO.slice().sort(function (a, b) { return b.length - a.length; });
+  _insRe = names.map(function (n) {
+    return { name: n, re: new RegExp(n.split('').map(insEsc).join('\\s*')) };
+  });
+  return _insRe;
+}
+/* 문자열 맨 앞쪽에서 회사 이름을 찾는다 — 계약 줄은 「보험사 상품명」 순서다 */
+function insFindCo(s) {
+  var L = insCoRe(), best = null, i, m;
+  for (i = 0; i < L.length; i++) {
+    m = L[i].re.exec(s);
+    if (!m) continue;
+    if (!best || m.index < best.at || (m.index === best.at && m[0].length > best.len))
+      best = { name: L[i].name, at: m.index, end: m.index + m[0].length, len: m[0].length };
+  }
+  return best;
+}
+
+/* ── 제목으로 구간 자르기 ──────────────────────────────────────── */
+function insSections(T) {
+  var marks = [], i, m;
+  for (i = 0; i < INS_SECS.length; i++) {
+    var re = new RegExp('님의\\s*' + INS_SECS[i].split('').map(function (c) {
+      return /\s/.test(c) ? '\\s*' : insEsc(c);
+    }).join('\\s*'), 'g');
+    while ((m = re.exec(T))) marks.push({ at: m.index, end: m.index + m[0].length, name: INS_SECS[i] });
+  }
+  marks.sort(function (a, b) { return a.at - b.at || b.end - a.end; });
+  /* 같은 자리에 겹쳐 잡힌 것은 긴 제목만 남긴다 */
+  var keep = [], last = -1;
+  for (i = 0; i < marks.length; i++) { if (marks[i].at === last) continue; keep.push(marks[i]); last = marks[i].at; }
+  var out = {};
+  for (i = 0; i < keep.length; i++) {
+    var to = (i + 1 < keep.length) ? keep[i + 1].at : T.length;
+    out[keep[i].name] = (out[keep[i].name] || '') + ' ' + T.slice(keep[i].end, to);
+  }
+  return out;
+}
+
+/* ── 계약 줄 ──────────────────────────────────────────────────────
+   번호 [해지*] 보험사 상품명 가입일 [납입] N년 (N세|종신) 보험료
+   유효·실효 둘 다 이 모양이다. 자동차보험은 모양이 달라 따로 읽는다. */
+function insRows(seg, state) {
+  if (!seg) return [];
+  var out = [], seen = {};
+  var re = /(\d{1,3})\s+(?:(해지|실효|만기|정상|失效)\s*\*?\s+)?(.{2,70}?)\s(\d{4})-(\d{2})-(\d{2})\s+(?:(월납|연납|3개월납|6개월납|일시납|전기납)\s+)?(\d{1,2})\s*년\s+(종신|\d{2,3}\s*세)\s+(보험료\s*미제공|[\d,]{3,}\s*원)/g, m;
+  while ((m = re.exec(seg))) {
+    var body = m[3], co = insFindCo(body);
+    if (!co) continue;
+    var name = body.slice(co.end).replace(/^[\s\-·]+|[\s\-·]+$/g, '').replace(/\s{2,}/g, ' ');
+    var from = m[4] + '-' + m[5] + '-' + m[6];
+    var fee = /미제공/.test(m[10]) ? -1 : insNum(m[10]);
+    var k = co.name + '|' + from + '|' + name.replace(/\s+/g, '').slice(0, 20);
+    if (seen[k]) continue;
+    seen[k] = 1;
+    out.push({ co: co.name, name: name || '(상품명 확인필요)', from: from,
+      pay: m[7] || '', years: m[8] || '', till: (m[9] || '').replace(/\s+/g, ''),
+      fee: fee, state: m[2] || state || '' });
+  }
+  return out;
+}
+
+/* ── 자동차보험 ────────────────────────────────────────────────── */
+function insCars(seg) {
+  if (!seg) return [];
+  var out = [], seen = {};
+  var re = /(.{2,90}?)\s(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})\s+([\d,]+\s*(?:억|만)?)/g, m;
+  while ((m = re.exec(seg))) {
+    var co = insFindCo(m[1]);
+    if (!co) continue;
+    var rest = m[1].slice(co.end).replace(/^[\s\-·]+|[\s\-·]+$/g, '').replace(/\s{2,}/g, ' ');
+    var k = co.name + '|' + rest.replace(/\s+/g, '').slice(0, 70) + '|' + m[2];
+    if (seen[k]) continue;
+    seen[k] = 1;
+    out.push({ co: co.name, what: rest, from: m[2], to: m[3], amount: m[4].replace(/\s+/g, '') });
+  }
+  return out;
+}
+
+/* ── 회사별 집계 ───────────────────────────────────────────────── */
+function insByCo(plans) {
+  var map = {}, order = [], total = 0;
+  plans.forEach(function (p) {
+    if (!map[p.co]) { map[p.co] = { co: p.co, n: 0, fee: 0, unknown: 0 }; order.push(map[p.co]); }
+    map[p.co].n++;
+    if (p.fee > 0) { map[p.co].fee += p.fee; total += p.fee; } else map[p.co].unknown++;
+  });
+  order.forEach(function (c) { c.pct = total ? Math.round(c.fee / total * 1000) / 10 : 0; });
+  order.sort(function (a, b) { return b.fee - a.fee || b.n - a.n; });
+  return order;
+}
+
+/* ── 담보별 진단 (권장 / 가입 / 충분·부족) ──────────────────────── */
+function insDiags(seg) {
+  if (!seg) return [];
+  var out = [], seen = {};
+  /* 금액은 「1억 6,000만」 처럼 띄어 쓰기도 한다 — 한 덩어리로 읽는다 */
+  var A = '(?:[\\d,]+\\s*[억만천]?\\s*)+';
+  var re = new RegExp('([가-힣A-Za-z0-9()\\/·%~\\-]{2,30})\\s*권장\\s*(' + A + ')\\s*가입\\s*(' + A +
+    ')\\s*(충분|부족|미가입|과다)\\s*([+\\-]\\s*' + A + '|-)', 'g'), m;
+  while ((m = re.exec(seg))) {
+    var nm = m[1];
+    /* 앞에 붙은 대분류·머리글 찌꺼기를 떼어 낸다 */
+    var cat = '';
+    INS_CAT.forEach(function (c) { var c2 = c.replace(/\s+/g, ''); if (nm.indexOf(c2) === 0) { cat = c; nm = nm.slice(c2.length); } });
+    nm = nm.replace(/^[\d\s형()개준표]+/, '').replace(/^기본|^표준$/, '');
+    if (nm.length < 2) continue;
+    var k = nm + '|' + ('' + m[2]).replace(/\s+/g, '') + '|' + ('' + m[3]).replace(/\s+/g, '');
+    if (seen[k]) continue;
+    seen[k] = 1;
+    var tidy = function (v) { return ('' + v).replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); };
+    out.push({ cat: cat, name: nm, want: tidy(m[2]), have: tidy(m[3]),
+      verdict: m[4], gap: m[5] === '-' ? '' : tidy(m[5]).replace(/([+\-])\s+/, '$1') });
+  }
+  return out;
+}
+
+/* ── 머리글의 합계 (계약 N건 · 월 보험료 합계) ─────────────────── */
+function insHead(seg) {
+  if (!seg) return null;
+  var m = seg.match(/^\s*(\d{1,3})(?:\s+\d{1,3}){1,6}\s/);
+  var f = seg.slice(0, 300).match(/([\d]{1,3}(?:,\d{3})+)\s/);
+  return { n: m ? +m[1] : 0, fee: f ? insNum(f[1]) : 0 };
+}
+
+function insWho(T) {
+  var m = T.match(/([가-힣]{2,4})\s*\(\s*(\d{1,3})\s*세\s*,?\s*(남자|여자|남|여)\s*\)/);
+  if (m) return { name: m[1], age: +m[2], sex: /남/.test(m[3]) ? '남' : '여' };
+  var n = T.match(/([가-힣]{2,4})\s*님/);
+  return { name: n ? n[1] : '', age: 0, sex: '' };
+}
+
+/* ── 한 번에 ───────────────────────────────────────────────────── */
+function insScan(text) {
+  var T = ('' + (text || '')).replace(/\s+/g, ' ');
+  if (T.length < 50) return null;
+  var S = insSections(T);
+  var live = insRows(S['전체 계약리스트'] || '', '');
+  if (!live.length) live = insRows(S['상품별 가입현황'] || '', '');
+  var lapsed = insRows(S['실효/해지계약현황'] || '', '해지');
+  var cars = insCars(S['자동차 보험 조회'] || '');
+  var diags = insDiags((S['담보별 진단현황'] || '') + ' ' + (S['전체 담보 진단 현황'] || ''));
+  if (!live.length && !lapsed.length && !diags.length) return null;
+
+  var fee = 0, unknown = 0;
+  live.forEach(function (p) { if (p.fee > 0) fee += p.fee; else unknown++; });
+  var lfee = 0;
+  lapsed.forEach(function (p) { if (p.fee > 0) lfee += p.fee; });
+  var head = insHead(S['전체 계약리스트'] || '');
+
+  return { who: insWho(T), plans: live, lapsed: lapsed, cars: cars,
+    byCo: insByCo(live), diags: diags,
+    total: { n: live.length, fee: fee, unknown: unknown,
+      lapsedN: lapsed.length, lapsedFee: lfee,
+      /* 문서 머리글이 말하는 값과 우리가 센 값이 다르면 알려 준다 */
+      saidN: head ? head.n : 0, saidFee: head ? head.fee : 0 },
+    short: diags.filter(function (d) { return d.verdict === '부족' || d.verdict === '미가입'; }) };
+}
+
+/* ── AI 에게 넘길 표 (프롬프트 맨 앞에 붙는다) ──────────────────── */
+function insBrief(sc) {
+  if (!sc) return '';
+  var L = [], t = sc.total;
+  L.push('[앱이 증권에서 그대로 읽어 낸 표 — 이 숫자를 그대로 쓴다. 다시 세거나 바꾸지 않는다]');
+  if (sc.who.name) L.push('고객: ' + sc.who.name + (sc.who.age ? ' ' + sc.who.age + '세' : '') + (sc.who.sex ? ' ' + sc.who.sex : ''));
+  L.push('유효 계약 ' + t.n + '건 · 월 보험료 합계 ' + insWon(t.fee) + '원' +
+    (t.unknown ? (' (보험료 미제공 ' + t.unknown + '건 제외)') : ''));
+  if (t.lapsedN) L.push('실효·해지 계약 ' + t.lapsedN + '건 · 당시 월 ' + insWon(t.lapsedFee) + '원 — 지금은 보장이 없다. 유효 계약과 절대 합치지 않는다.');
+  if (sc.cars.length) L.push('자동차보험 ' + sc.cars.length + '건 (별도)');
+  if (sc.byCo.length) {
+    L.push('');
+    L.push('■ 보험회사별 (유효 계약만)');
+    sc.byCo.forEach(function (c) {
+      L.push('  · ' + c.co + ' — ' + c.n + '건 · 월 ' + insWon(c.fee) + '원 (' + c.pct + '%)' +
+        (c.unknown ? ' · 보험료 미제공 ' + c.unknown + '건' : ''));
+    });
+  }
+  if (sc.plans.length) {
+    L.push('');
+    L.push('■ 유효 계약 (보험사 | 상품명 | 가입일 | 납입 | 만기 | 월 보험료)');
+    sc.plans.forEach(function (p, i) {
+      L.push('  ' + (i + 1) + '. ' + p.co + ' | ' + p.name + ' | ' + p.from + ' | ' +
+        (p.pay || '?') + (p.years ? ' ' + p.years + '년납' : '') + ' | ' + (p.till || '?') + ' | ' +
+        (p.fee > 0 ? insWon(p.fee) + '원' : '미제공'));
+    });
+  }
+  if (sc.lapsed.length) {
+    L.push('');
+    L.push('■ 실효·해지 계약 (이미 없어진 것 — 보장으로 세지 않는다)');
+    sc.lapsed.forEach(function (p, i) {
+      L.push('  ' + (i + 1) + '. ' + p.co + ' | ' + p.name + ' | ' + p.from + ' | ' +
+        (p.fee > 0 ? insWon(p.fee) + '원' : '미제공'));
+    });
+  }
+  if (sc.cars.length) {
+    L.push('');
+    L.push('■ 자동차보험');
+    sc.cars.forEach(function (c) { L.push('  · ' + c.co + ' | ' + c.what + ' | ' + c.from + '~' + c.to + ' | ' + c.amount); });
+  }
+  if (sc.diags.length) {
+    L.push('');
+    L.push('■ 담보별 진단 (담보 | 권장 | 가입 | 원본 판정 | 과부족)');
+    L.push('  ※ 이것은 원본 보장분석표의 판정이다. 그대로 베끼지 말고 직접 계산해 검증할 것.');
+    sc.diags.forEach(function (d) {
+      L.push('  · ' + (d.cat ? d.cat + ' ' : '') + d.name + ' | 권장 ' + d.want + ' | 가입 ' + d.have + ' | ' + d.verdict + (d.gap ? ' | ' + d.gap : ''));
+    });
+  }
+  L.push('');
+  L.push('위 표는 앱이 규칙으로 읽은 것이라 정확하다. 아래 원문에서 같은 숫자를 다시 세지 말고 이 표를 쓴다.');
+  return L.join('\n');
+}
+
+/* ── 화면에 보여 줄 카드 — 설계사가 눈으로 검산할 수 있게 ──────── */
+function insCardHtml(sc) {
+  if (!sc) return '';
+  var t = sc.total;
+  var h = '<div class="ins-read"><div class="ir-hd">📄 증권에서 읽어 낸 것' +
+    '<span class="ir-sub">AI 가 아니라 앱이 규칙으로 읽었습니다 — 숫자가 틀리지 않습니다</span></div>';
+  h += '<div class="ir-sum"><b>' + (sc.who.name ? esc(sc.who.name) + (sc.who.age ? ' · ' + sc.who.age + '세' : '') + ' · ' : '') +
+    '유효 ' + t.n + '건</b> · 월 보험료 합계 <b>' + insWon(t.fee) + '원</b>' +
+    (t.unknown ? ' <span class="ir-dim">(미제공 ' + t.unknown + '건 제외)</span>' : '') +
+    (t.lapsedN ? ' <span class="ir-dim">· 실효·해지 ' + t.lapsedN + '건 (당시 월 ' + insWon(t.lapsedFee) + '원)</span>' : '') +
+    (sc.cars.length ? ' <span class="ir-dim">· 자동차 ' + sc.cars.length + '건</span>' : '') + '</div>';
+  if (t.saidN && t.saidN !== t.n) {
+    h += '<div class="ir-warn">문서 머리글은 ' + t.saidN + '건이라고 적혀 있는데 ' + t.n + '건을 읽었습니다 — 원본을 한 번 확인해 주세요.</div>';
+  }
+  if (sc.byCo.length) {
+    h += '<div class="ir-co">';
+    sc.byCo.forEach(function (c) {
+      h += '<div class="ir-cor"><div class="ir-con">' + esc(c.co) + '<i>' + c.n + '건</i></div>' +
+        '<div class="ir-cob"><span style="width:' + Math.max(2, c.pct) + '%"></span></div>' +
+        '<div class="ir-cov">' + insWon(c.fee) + '<em>' + c.pct + '%</em></div></div>';
+    });
+    h += '</div>';
+  }
+  if (sc.plans.length) {
+    h += '<div class="ir-tw"><table class="ir-tb"><thead><tr><th>보험사</th><th>상품</th><th>가입일</th><th>납입</th><th>만기</th><th>월 보험료</th></tr></thead><tbody>';
+    sc.plans.forEach(function (p) {
+      h += '<tr><td>' + esc(p.co) + '</td><td>' + esc(p.name) + '</td><td>' + esc(p.from) + '</td>' +
+        '<td>' + esc((p.pay || '') + (p.years ? ' ' + p.years + '년' : '')) + '</td>' +
+        '<td>' + esc(p.till || '-') + '</td><td class="r">' + (p.fee > 0 ? insWon(p.fee) + '원' : '<span class="ir-dim">미제공</span>') + '</td></tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  if (sc.lapsed.length) {
+    h += '<div class="ir-lap"><b>실효·해지 ' + sc.lapsed.length + '건</b> — ' +
+      sc.lapsed.map(function (p) { return esc(p.co) + ' ' + (p.fee > 0 ? insWon(p.fee) + '원' : ''); }).join(' · ') +
+      '<div class="ir-lapn">지금은 보장이 없습니다. 유효 계약과 합쳐 세지 않습니다.</div></div>';
+  }
+  if (sc.short.length) {
+    h += '<div class="ir-short"><b>원본이 부족·미가입으로 본 담보 ' + sc.short.length + '개</b> — ' +
+      sc.short.slice(0, 14).map(function (d) { return esc(d.name) + (d.gap ? ' ' + esc(d.gap) : ''); }).join(' · ') +
+      (sc.short.length > 14 ? ' 외 ' + (sc.short.length - 14) + '개' : '') + '</div>';
+  }
+  return h + '</div>';
+}
+
+function insCardCss() {
+  return '.ins-read{border:1px solid #DCE7FB;background:#F7FAFF;border-radius:14px;padding:14px 16px;margin:0 0 12px;font-size:12.5px;color:#1F2937;line-height:1.6;}' +
+    '.ir-hd{font-weight:800;color:#1B3A6B;font-size:13px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;}' +
+    '.ir-sub{font-size:11px;font-weight:600;color:#7A8CA6;}' +
+    '.ir-sum{font-size:13px;margin-bottom:10px;line-height:1.7;}.ir-dim{color:#9AA2AD;font-weight:600;}' +
+    '.ir-warn{background:#FEF9EE;border:1px solid #F6E0B4;color:#7A5310;border-radius:9px;padding:8px 11px;font-size:11.8px;margin-bottom:10px;}' +
+    '.ir-co{display:flex;flex-direction:column;gap:5px;margin-bottom:11px;}' +
+    '.ir-cor{display:flex;align-items:center;gap:9px;}' +
+    '.ir-con{width:132px;flex:none;font-weight:700;font-size:12px;display:flex;justify-content:space-between;gap:6px;}' +
+    '.ir-con i{font-style:normal;color:#8B95A1;font-weight:600;}' +
+    '.ir-cob{flex:1;height:9px;background:#E6EDF7;border-radius:99px;overflow:hidden;}' +
+    '.ir-cob span{display:block;height:100%;background:linear-gradient(90deg,#3182F6,#60A5FA);border-radius:99px;}' +
+    '.ir-cov{width:112px;flex:none;text-align:right;font-weight:800;font-size:12px;font-variant-numeric:tabular-nums;}' +
+    '.ir-cov em{font-style:normal;color:#8B95A1;font-weight:600;margin-left:6px;font-size:11px;}' +
+    '.ir-tw{overflow-x:auto;}.ir-tb{width:100%;border-collapse:collapse;font-size:11.8px;min-width:520px;}' +
+    '.ir-tb th{background:#E9F0FB;color:#1B3A6B;padding:7px 9px;text-align:left;font-weight:700;white-space:nowrap;}' +
+    '.ir-tb td{padding:7px 9px;border-top:1px solid #E6EDF7;vertical-align:top;}' +
+    '.ir-tb td.r{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;}' +
+    '.ir-lap{margin-top:10px;padding:9px 11px;background:#F4F5F7;border-radius:9px;font-size:11.8px;color:#4E5968;line-height:1.6;}' +
+    '.ir-lapn{color:#9AA2AD;margin-top:2px;}' +
+    '.ir-short{margin-top:10px;padding-top:9px;border-top:1px solid #E6EDF7;font-size:11.8px;color:#7A1F1A;line-height:1.65;}' +
+    '@media(max-width:720px){.ir-con{width:96px;font-size:11px}.ir-cov{width:88px;font-size:11px}}';
+}
+function insCssMount() {
+  if (document.getElementById('insReadCss')) return;
+  var s = document.createElement('style');
+  s.id = 'insReadCss'; s.textContent = insCardCss();
+  document.head.appendChild(s);
+}
+
 /* ── pdf.js 지연 로드 ── */
 var _pdfReady=null;
 function ensurePdfJs(){
@@ -23911,6 +24256,26 @@ function ensurePdfJs(){
 }
 /* ── 첨부 PDF 용량·페이지 한도 (보장분석 5개 도구 공용 · 필요시 이 값만 조절) ── */
 var PDF_MAX_MB=300;      /* 첨부 PDF 1개 최대 용량(MB) — 기존 10 → 100 → 300 */
+/* AI 로 보낼 글자 수. 예전엔 파일 하나당 18,000자에서 잘랐는데,
+   스물여덟 쪽짜리 보장분석이 27,000자라 <b>진단 절반이 통째로 버려졌다.</b>
+   이제 파일 하나 6만자, 전체 15만자까지 보낸다. 그래도 넘치면 어디를
+   얼마나 줄였는지 화면에 적어 준다 — 말없이 버리지 않는다. */
+var PDF_TEXT_MAX=60000;      /* 파일 하나당 */
+var PDF_TEXT_TOTAL=150000;   /* 여러 개를 합쳐서 */
+/* 여러 파일을 합쳐 한도를 넘으면 큰 것부터 고르게 줄인다 */
+function pdfTrimParts(parts){
+  var tot=0,i,cut=[];
+  for(i=0;i<parts.length;i++)tot+=(parts[i].text||'').length;
+  if(tot<=PDF_TEXT_TOTAL)return {parts:parts,note:''};
+  var room=PDF_TEXT_TOTAL,n=parts.length;
+  var order=parts.slice().sort(function(a,b){return (a.text||'').length-(b.text||'').length;});
+  for(i=0;i<order.length;i++){
+    var share=Math.floor(room/(n-i)),t=order[i].text||'';
+    if(t.length>share){cut.push(order[i].name+' '+(t.length-share)+'자');order[i].text=t.slice(0,share);room-=share;}
+    else room-=t.length;
+  }
+  return {parts:parts,note:cut.length?('자료가 많아 '+cut.join(' · ')+'를 줄여 보냈습니다.'):''};
+}
 var PDF_TEXT_PAGES=250;  /* 텍스트형 PDF 읽는 최대 페이지 — 기존 25 */
 var PDF_IMG_PAGES=20;    /* 이미지(스캔)형 PDF 판독 최대 페이지 — 한 요청에 실을 수 있는 양에 맞춘다 */
 var PDF_IMG_EDGE=1600;   /* 페이지 이미지 긴 변(px) — 담보 표의 작은 숫자까지 읽으려면 이 정도는 필요하다 */
@@ -24016,7 +24381,7 @@ var REPORT_RULES='[리포트 작성 규칙 — 반드시 지킬 것]\n'+
 
 /* ── PDF 분석 도구 정의 ── */
 var PDF_TOOLS=[
-{id:'bojang',tab:'bojang',icon:'📑',title:'AI 1:1 보장분석',cta:'AI 보장분석 리포트 생성',deck:true,reportTitle:'1:1 맞춤 보장분석 리포트',
+{id:'bojang',tab:'bojang',icon:'📑',scan:true,title:'AI 1:1 보장분석',cta:'AI 보장분석 리포트 생성',deck:true,reportTitle:'1:1 맞춤 보장분석 리포트',
  note:'보험사 <b>보장분석 리포트 PDF</b>를 올리면 <b>19~21장짜리 심층 리포트</b>로 만듭니다. AI 는 내용만 만들고 <b>디자인은 고정 템플릿</b>이 그리므로 매번 같은 품질로 나옵니다. (파일당 약 20~50초)',
  slots:[{id:'rep',label:'보장분석 리포트 PDF',req:true,multi:true}],
  chipsets:[
@@ -24028,7 +24393,7 @@ var PDF_TOOLS=[
  ],
  build:function(parts,o){return bjBuild(parts,o);}
 },
-{id:'baba',tab:'baba',icon:'🔄',title:'보장분석 비포 & 애프터',cta:'비포 & 애프터 생성',report:true,reportTitle:'보장 리모델링 비포 & 애프터 리포트',
+{id:'baba',tab:'baba',icon:'🔄',scan:true,title:'보장분석 비포 & 애프터',cta:'비포 & 애프터 생성',report:true,reportTitle:'보장 리모델링 비포 & 애프터 리포트',
  note:'기존 보장과 신규 제안을 비교해 리모델링 결과를 만듭니다. 아래에서 <b>분석 모드</b>를 먼저 선택하세요.',
  modes:[
   {id:'full',title:'① 전체 담보 비교',desc:'모든 보험 담보를 정밀 비교 — 설계사·꼼꼼한 고객용'},
@@ -24048,7 +24413,7 @@ var PDF_TOOLS=[
   return {system:sys('기존 보장과 신규 제안을 모든 담보 단위로 정밀 비교하는 비포/애프터 리모델링 리포트를 만든다.\n'+REPORT_RULES),
    user:'아래 [기존]과 [신규]를 전체 담보 기준으로 정밀 비교해 리모델링 리포트를 작성해줘. 표만 나열하지 말고 각 변화의 "왜"를 전문가답게 전개할 것.\n\n[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n[형식 — 아래 7개 섹션 모두 충실히. 얕게 끝내면 실패]\n> **종합 의견** — 이번 리모델링으로 무엇이 어떻게 나아지는지 핵심 가치 3줄. 기존의 강점을 먼저 인정한 뒤 변화의 방향.\n\n## 1. 전체 담보 비교표\n표: | 담보 | 기존(금액) | 신규(금액) | 변화 | 평가 | — <b>자료에 나오는 담보를 하나도 빼지 말고 전부</b> 행으로 넣는다. 큰 담보만 쓰고 나머지를 "기타"로 뭉뚱그리면 실패다. 반드시 개별 행으로 쓸 것: 사망/후유장해, 암(일반암·유사암·소액암·표적항암·항암방사선약물), 뇌(뇌출혈·뇌경색·뇌혈관질환), 심장(급성심근경색·허혈성심장질환), 수술비(1~5종·질병수술·상해수술·특정수술), 입원(질병입원일당·상해입원일당·중환자실), 진단(2대·3대·특정질환), 골절·화상·깁스, 응급실내원비, 실손(세대·급여/비급여·통원), 치아·치과, 간병·요양(간병인지원·장기요양), 운전자(벌금·변호사선임·형사합의금·교통사고처리지원금), 배상책임(일상생활·화재), 그 밖에 자료에 있는 모든 소액 특약. 한쪽에만 있는 담보도 반드시 행으로 넣고 없는 쪽은 "없음"으로 적는다. 변화는 ▲증액/▼감액/＝유지/＋신설/－삭제. 금액은 정확히 인용, 못 읽었으면 "확인 필요".\n\n## 2. 개선 하이라이트 심층\n핵심 변화 3~5개를 각각 ✅(개선)/⚠️(주의) 콜아웃 + 그 아래 최소 3문장으로. 각 항목: (1)무엇이 어떻게 바뀌는가(숫자 대비) (2)왜 이 변화가 필요했나(부족→보강/중복→정리/과잉→감액/범위확대) (3)그 담보가 실제 필요한 상황(그 병·사고가 왔을 때 병원비 외 목돈)에서 어떤 차이를 만드는지. 특히 뇌·심장은 보장범위(전체 vs 출혈·경색만)가 어떻게 넓어졌는지 짚는다.\n\n## 3. 보험료 비교 (① 월 보험료 · ② 총납입보험료)\n표A(월 보험료): | 구분 | 기존 월보험료 | 신규 월보험료 | 차액 |\n표B(총 납입보험료): | 구분 | 월 보험료 | 납입기간 | 총 납입보험료(월×12×납입년수) | 차액 | — 두 표 모두 기존·신규를 정확히 계산해 채운다. 이어 가성비 2문단: 늘어난(또는 줄어든) 보험료 대비 보장 증가분·범위 확대·갱신부담 변화를 정량적으로 논한다. 단순히 "좋아졌다"가 아니라 "월 N만원으로 어떤 목돈 공백을 메웠는가".\n\n## 4. 리모델링 판단 — 유지 vs 전환\n> 치료비 통장(실손+정액 이중구조) 관점에서 이 전환이 합리적인 이유를 2문단으로. 이어서 "그래도 유지가 나은 경우 / 전환이 나은 경우"를 각각 한 문단씩 정직하게 제시(결론 강요 금지, 새로 생기는 단점도 명시).\n\n## 5. 남은 공백과 방향성 — 이제 무엇을 채우나\n신규로 바꿔도 <b>여전히 비어 있는 것</b>을 정직하게 짚는다. 표: | 우선순위 | 채울 항목 | 왜 필요한가 | 권장 금액 | 예상 월 보험료 | 언제까지 | — 3~5행. 우선순위는 "그 일이 실제로 생겼을 때 가계가 무너지는 순서"로 매긴다. 이어서 2문단: (1)이번에 다 못 채운 이유(예산·건강고지·나이)를 솔직하게 (2)앞으로 6개월·1년·3년 안에 어떤 순서로 채워 가면 되는지 로드맵. 한 번에 다 하라고 하지 않는다.\n\n## 6. 실행 체크리스트\n- 해지/감액/유지/신규 가입 시 유의사항(면책기간·기존 병력 고지·중복 해소 순서 등)을 구체적으로.\n\n## 7. 고객 설명용 자료 (그대로 보여주는 쉬운 요약)\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 요약을 쓴다. "지금(기존) → 바꾸면(신규) → 좋아지는 점"을 핵심만 담고, 매달 내는 돈·총납입이 어떻게 바뀌는지 한 줄. 마지막에 과장·불안조장 없는 안심 문장 한 줄.\n\n숫자 정확히, 불명확하면 "확인 필요". 지급·인수 단정 금지(약관·심사 우선).',max:6000};}
 },
-{id:'compare',tab:'compare',icon:'📊',title:'제안서 비교',cta:'제안서 비교하기',report:true,reportTitle:'보험 제안서 비교분석 리포트',
+{id:'compare',tab:'compare',icon:'📊',scan:true,title:'제안서 비교',cta:'제안서 비교하기',report:true,reportTitle:'보험 제안서 비교분석 리포트',
  note:'여러 보험사 제안서를 올리면 담보·보험료를 한눈에 비교합니다. 아래 <b>비교할 설계안 수</b>를 눌러 2~6개까지 늘릴 수 있고, 한 설계안 칸에 PDF를 2~3개 넣으면 <b>합산설계</b>로 비교됩니다.',
  slots:[{id:'p1',label:'설계안 1',req:true,multi:true},{id:'p2',label:'설계안 2',multi:true},{id:'p3',label:'설계안 3',multi:true}],
  slotCountOptions:[2,3,4,5,6],slotDefault:3,slotKind:'compare',slotCountLabel:'비교할 설계안 수',
@@ -24057,7 +24422,7 @@ var PDF_TOOLS=[
   return {system:sys('여러 보험사 제안서를 담보·보험료 기준으로 객관 비교하는 비교분석 리포트를 만든다. 특정사 비방 없이 사실 기반. 한 설계안에 여러 PDF면 합산해 비교.\n'+REPORT_RULES),
    user:'아래 제안서들을 객관적 비교분석 리포트로 만들어줘. 표만 나열하지 말고 각 설계안의 실제 값어치를 전문가답게 해설할 것.\n\n'+doc+'\n\n[형식 — 아래 5개 섹션 모두 충실히. 얕게 끝내면 실패]\n> **비교 결론** — 어떤 설계안이 어떤 고객에게 왜 최적인지 3줄. 특정사 우위 단정 금지, 고객 상황 전제.\n\n## 1. 종합 비교표\n표: | 담보 | 설계안1 | 설계안2 | … | — 행: 암/뇌혈관/심장 진단비, 수술비, 입원, 실손(세대), 사망/후유장해, 운전자/배상, 기타 핵심담보 + 마지막 행 "월 보험료". 금액 정확히 인용, 없으면 "확인 필요".\n\n## 2. 핵심 담보 충족도\n표: | 핵심 담보 | 권장 기준 | 설계안1 | 설계안2 | … | — 각 칸에 충분/부족/과잉 + 부족액. 뇌·심장은 보장범위(전체 vs 출혈·경색만)까지 표기.\n\n## 3. 설계안별 강점·약점 심층\n각 설계안마다 ✅ 강점 / ⚠️ 약점 콜아웃 + 그 아래 최소 3문장 해설. 무엇이 강하고 무엇이 비어 있는지, 그 공백이 실제 질병·사고 시 가계에 어떤 목돈 부담으로 돌아오는지(치료비 통장 관점)까지.\n\n## 4. 보험료 대비 가성비\n표: | 설계안 | 월 보험료 | 보장 총량 평가 | 가성비 | — + 2문단 해설: "싼 게 아니라 필요한 담보를 채운 값인가"를 논한다. 보험료가 높으면 그 값을 하는지, 낮으면 어떤 핵심담보를 포기했는지.\n\n## 5. 고객 유형별 추천\n- 누구에게(예: 자녀 둔 40대 가장 / 갱신부담 싫은 50대 / 저예산 우선) 어떤 안이 왜 적합한지 3가지 시나리오를 각 2~3문장으로.\n특정사 비방·우위 단정 금지. 숫자는 정확히, 불명확하면 "확인 필요". 지급·인수 단정 금지.',max:6000};}
 },
-{id:'katalk',tab:'katalk',icon:'💬',title:'제안서 카톡 설명',cta:'카톡 설명 메시지 생성',
+{id:'katalk',tab:'katalk',scan:true,icon:'💬',title:'제안서 카톡 설명',cta:'카톡 설명 메시지 생성',
  note:'제안서 PDF를 올리면 고객에게 <b>바로 보낼 수 있는 카톡 설명 메시지</b>를 만듭니다. 여러 개면 각각 만들어 드립니다.',
  slots:[{id:'pdfs',label:'제안서 PDF (최대 5개)',req:true,multi:true}],
  sample:{label:'나만의 대화체(어조) 샘플 — 평소 카톡 말투를 2~3줄',ph:'예: 고객님~ 이번에 준비한 설계안 간단히 정리해서 보내드려요! 궁금하신 점 있으시면 편하게 말씀 주세요~'},
@@ -24327,7 +24692,7 @@ function runPdf(id){
   slots.forEach(function(s){var key=id+':'+s.id;var arr=PDFSTORE[key]||[];if(s.req&&arr.length===0)missing=true;if(arr.length)hasAny=true;arr.forEach(function(f){jobs.push(extractPdfSmart(f).then(function(r){
     var isImg=r.mode==='image';
     return {slot:s.label,name:f.name,mode:r.mode,images:r.images||[],
-      text:isImg?'(이 문서는 텍스트 레이어가 없어 페이지 이미지를 함께 첨부했습니다. 첨부된 이미지를 직접 읽어 담보명·금액·표를 판독하세요.)':(r.text||'').slice(0,18000)};
+      text:isImg?'(이 문서는 텍스트 레이어가 없어 페이지 이미지를 함께 첨부했습니다. 첨부된 이미지를 직접 읽어 담보명·금액·표를 판독하세요.)':(r.text||'').slice(0,PDF_TEXT_MAX)};
   }));});});
   var planParts=(typeof prUseOn==='function'&&prUseOn(id))?prPlanParts(id):[];
   if(planParts.length){missing=false;hasAny=true;}
@@ -24349,7 +24714,17 @@ function runPdf(id){
     var hasImg=allImgs.length>0;
     res.innerHTML='<div class="loading"><div class="spinner"></div>'+(hasImg?'이미지형 제안서를 AI가 판독·작성 중… (20~40초)':'AI가 분석·작성 중… (10~30초)')+'</div>';
     var opts=collectPdfOpts(p);
+    /* 자료가 많으면 말없이 버리지 않고, 어디를 얼마나 줄였는지 남긴다 */
+    var trim=pdfTrimParts(parts);parts=trim.parts;
+    /* AI 에 넘기기 전에 앱이 먼저 정확히 읽는다 — 계약 건수·회사별 보험료·담보 진단 */
+    var scan=null;
+    if(p.scan){try{scan=insScan(parts.map(function(x){return x.text||'';}).join('\n'));}catch(e){scan=null;}}
+    res._scan=scan;res._trim=trim.note;
     var spec=p.build(parts,opts);
+    if(scan){
+      if(typeof insCssMount==='function')insCssMount();
+      spec={system:spec.system,user:insBrief(scan)+'\n\n'+spec.user,max:spec.max};
+    }
     res._parts=parts;res._opts=opts;res._spec=spec;
     if(p.deck){
       if(typeof bjCssMount==='function')bjCssMount();
@@ -24377,7 +24752,9 @@ function runPdf(id){
     res._raw=out;
     if(p.deck){bjShow(id,out,p,res._spec,res._parts,res._opts,false);return;}
     if(p.report){
-      res.innerHTML=reportResultBox('pres_'+id,"runPdf('"+id+"')",p.reportTitle||p.title,'',out);
+      var rd=(res._scan&&typeof insCardHtml==='function')?('<div class="no-print">'+insCardHtml(res._scan)+'</div>'):'';
+      if(res._trim)rd='<div class="bj-warn no-print">📄 '+esc(res._trim)+'</div>'+rd;
+      res.innerHTML=rd+reportResultBox('pres_'+id,"runPdf('"+id+"')",p.reportTitle||p.title,'',out);
     }else{
       res.innerHTML='<div class="result-hd"><span class="rl">결과 · '+esc(p.title)+'</span><div class="btn-row">'+engBadge()+'<button class="btn btn-ghost" onclick="copyText(($(\'pres_'+id+'\')._raw)||\'\')">📋 복사</button><button class="btn btn-ghost" onclick="runPdf(\''+id+'\')">🔄 재생성</button></div></div>'+engNotice()+'<div class="result-body">'+renderMd(out)+'</div>';
     }
@@ -25265,7 +25642,9 @@ function bjPaint(id, deck, banner) {
   var res = $('pres_' + id); if (!res) return;
   res._deck = deck;
   BJ.last = deck;
-  res.innerHTML = bjActions(id) + (banner || '') +
+  var read = (res._scan && typeof insCardHtml === 'function') ? insCardHtml(res._scan) : '';
+  var trim = res._trim ? '<div class="bj-warn no-print">📄 ' + esc(res._trim) + '</div>' : '';
+  res.innerHTML = bjActions(id) + (banner || '') + trim + '<div class="no-print">' + read + '</div>' +
     '<div class="report-doc-host" id="doc_pres_' + id + '">' + bjDeckHtml(deck) + '</div>';
 }
 
