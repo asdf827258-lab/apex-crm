@@ -171,6 +171,36 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(F.zero === F.paid, '이율 0% 면 낸 돈 그대로다 (' + F.zero + '만원)');
   is(F.got > F.paid * 1.5, '복리가 실제로 불어난다 — 낸 돈 ' + F.paid + '만 → ' + Math.round(F.got) + '만');
 
+  /* ═══ 3-2. 시작 나이가 결과를 가르는가 ═══ */
+  console.log('\n[3-2] 「돈보다 기간」 이 숫자로 증명되는가');
+  const S = await page.evaluate(() => {
+    /* 같은 월 30만원을 65세까지. 35세 시작(30년) vs 45세 시작(20년), 연 4% */
+    var T = prStartTable(30, 65, 0.04, 45, 25);
+    var by = {}; T.rows.forEach(function (r) { by[r.age] = r; });
+    var a35 = by[35], a45 = by[45];
+    return {
+      mineIs45: T.rows[T.mine] && T.rows[T.mine].age === 45,
+      paid35: a35.paid, paid45: a45.paid,
+      fv35: Math.round(a35.fv), fv45: Math.round(a45.fv),
+      /* 원금은 1.5배인데 결과는 그보다 더 크게 벌어져야 복리다 */
+      paidRatio: a35.paid / a45.paid, fvRatio: a35.fv / a45.fv,
+      /* 45세가 35세와 같은 적립금을 만들려면 월 얼마 */
+      need: Math.round(prNeedMon(a35.fv, 20, 0.04)),
+      /* 월 수령액: 적립금을 25년 나눠 받되 이자가 붙는다 */
+      pmt: Math.round(prPMT(a45.fv, 0.04, 25)),
+      pmtHand: (function () { var m = 0.04 / 12, n = 300; return Math.round(a45.fv * m / (1 - Math.pow(1 + m, -n))); })(),
+      zero: prPMT(1200, 0, 10)
+    };
+  });
+  is(S.mineIs45, '45세 고객이면 45세 줄을 「지금」 으로 짚는다');
+  is(S.paid35 === 10800 && S.paid45 === 7200, '낸 돈은 30년 1억800만 · 20년 7,200만 (' + S.paid35 + ' / ' + S.paid45 + ')');
+  is(S.fvRatio > S.paidRatio, '원금은 ' + (Math.round(S.paidRatio * 100) / 100) + '배인데 결과는 ' +
+    (Math.round(S.fvRatio * 100) / 100) + '배 — 돈이 아니라 기간이 만든 차이다');
+  is(S.need > 30, '늦게 시작하면 따라잡는 데 월 ' + S.need + '만원이 든다 (지금 30만원의 ' +
+    (Math.round(S.need / 30 * 10) / 10) + '배)');
+  is(S.pmt === S.pmtHand, '월 수령액이 손계산과 일치 (' + S.pmt + '만원)');
+  is(S.zero === 10, '이율 0% 면 그냥 나눠 받는다 — 1,200만원을 10년(120개월)이면 월 10만원 (' + S.zero + ')');
+
   /* ═══ 4~7. 화면 ═══ */
   const V = await page.evaluate(plan => {
     var host = document.createElement('div'); host.id = 'prOut'; document.body.appendChild(host);
@@ -214,12 +244,33 @@ const is = (c, m) => c ? ok(m) : no(m);
         return t.join(' ') || '못 읽음';
       })()
     };
+    out.plan.startTbl = /몇 살에 시작했느냐/.test(pl);
+    out.plan.startRows = (pl.match(/세 시작/g) || []).length;
+    out.plan.catchUp = /같은 적립금.{0,40}만들려면/.test(pl);
+    out.plan.startWarn = /보장되지 않습니다/.test(pl);
+
+    var ev = grab('evid');
+    out.ev = {
+      noInputs: !/prRefAsof|prRefDebt|prRefCapLow|근거 수치 최신화/.test(ev),
+      trend: /나라 곳간/.test(ev) && /병원비 보장률/.test(ev) && /인구 구조/.test(ev),
+      aged: /초고령사회/.test(ev),
+      conclusion: /본인이 내야 하는 몫이 커지는 방향/.test(ev),
+      src: /기획재정부|국민건강보험공단|행정안전부/.test(ev),
+      inputs: (ev.match(/<input/g) || []).length
+    };
+
     var sd = grab('sangdam');
     out.sd = {
       order: /발표 순서/.test(sd),
       steps: (sd.match(/<li>/g) || []).length,
       frames: document.querySelectorAll('#prSdFrame').length,
-      wrapShown: (function () { var x = document.getElementById('prSdWrap'); return x ? x.style.display !== 'none' : false; })()
+      wrapShown: (function () { var x = document.getElementById('prSdWrap'); return x ? x.style.display !== 'none' : false; })(),
+      brief: /합본 브리핑/.test(sd),
+      chapters: (sd.match(/CHAPTER \d/g) || []).length,
+      says: (sd.match(/상담자료에서 —/g) || []).length,
+      mine: (sd.match(/고객님/g) || []).length,
+      jump: (sd.match(/onclick="prView\('(wallet|reality|plan)'\)"/g) || []).length,
+      law: /금융소비자 보호에 관한 법률/.test(sd)
     };
     /* 다른 칸으로 갔다가 돌아와도 자료를 두 번 불러오지 않는다 */
     grab('wallet');
@@ -254,12 +305,31 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(V.plan.verdict, '사망보험금으로 낼 수 있는지 없는지 결론을 낸다');
   is(V.plan.svg >= 2, '그림이 그려진다 (' + V.plan.svg + '개)');
   is(V.plan.warn, '단정하지 않는다 — 「보장되지 않습니다」 · 「세무 전문가와 함께」 를 적는다');
+  is(V.plan.startTbl && V.plan.startRows >= 5,
+    '몇 살에 시작했느냐 비교표가 나온다 (' + V.plan.startRows + '줄)');
+  is(V.plan.catchUp, '늦게 시작하면 따라잡는 데 월 얼마가 드는지 말해 준다');
+
+  console.log('\n[6-2] 국가혜택 · 근거가 입력칸 없이 바로 보이는가');
+  is(V.ev.noInputs, '근거 수치를 손으로 넣는 칸이 없어졌다');
+  is(V.ev.inputs === 0, '이 화면에 입력칸이 하나도 없다 (' + V.ev.inputs + '개)');
+  is(V.ev.trend, '나라 곳간 · 병원비 보장률 · 인구 구조를 열자마자 보여 준다');
+  is(V.ev.aged, '초고령사회 진입까지 반영한 최신 흐름이다');
+  is(V.ev.conclusion, '결론을 먼저 말한다 — 본인 부담이 커지는 방향');
+  is(V.ev.src, '출처를 그 자리에 붙인다');
 
   console.log('\n[7] 상담자료가 제안서 안에서 열리는가');
   is(V.sd.order && V.sd.steps >= 7, '발표 순서가 일곱 단계로 안내된다 (' + V.sd.steps + '단계)');
   is(V.sd.frames === 1 && V.sd.wrapShown, '상담자료가 제안서 안에 뜬다');
   is(V.sd.hidesWhenAway, '다른 칸으로 가면 숨는다');
   is(V.sd.frames2 === 1, '돌아와도 자료를 다시 안 불러온다 (틀 ' + V.sd.frames2 + '개) — 1.7MB 를 두 번 받지 않는다');
+
+  console.log('\n[7-2] 상담자료에 이 고객 분석이 얹혀 있는가');
+  is(V.sd.brief, '상담자료 칸에 합본 브리핑이 붙는다');
+  is(V.sd.chapters === 4, '상담자료의 네 챕터를 그대로 따라간다 (' + V.sd.chapters + '장)');
+  is(V.sd.says === 4, '각 장에서 무슨 이야기를 할지 적어 준다 (' + V.sd.says + '개)');
+  is(V.sd.mine >= 4, '각 장마다 이 고객의 숫자로 이어진다');
+  is(V.sd.jump >= 3, '자세히 볼 그래프로 바로 넘어갈 수 있다 (' + V.sd.jump + '개)');
+  is(V.sd.law, '준법 고지가 브리핑에도 들어간다');
 
   /* 첫 화면이 상담자료인가 */
   const first = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
