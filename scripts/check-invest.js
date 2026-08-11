@@ -51,10 +51,14 @@ function marketReply(url) {
   return { ok: false, meta, message: 'unknown kind' };
 }
 
+let tokenSeen = [];
 const srv = http.createServer((req, res) => {
   const raw = req.url;
   let p = decodeURIComponent(raw.split('?')[0]);
   if (p === '/api/market') {
+    /* 배포 사이트에는 SHARED_TOKEN 이 걸려 있다. 앱이 X-App-Token 을 붙이지 않으면
+       실제 서버는 401 을 준다 — 그 사고가 다시 나지 않게 여기서 확인한다. */
+    tokenSeen.push(req.headers['x-app-token'] || null);
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify(marketReply(raw)));
     return;
@@ -122,6 +126,18 @@ window.supabase={createClient:function(){
 
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
+
+  /* ── 공유 토큰을 붙여 보내는가 (SHARED_TOKEN 걸린 사이트에서 필수) ── */
+  const want = await page.evaluate(() => {
+    if (window.INV) { INV.health = null; INV.mkt = null; }
+    return (typeof getAppToken === 'function') ? getAppToken() : '';
+  });
+  ok(!!want, '앱이 공유 토큰을 갖고 있다');
+  tokenSeen = [];
+  await page.evaluate(() => invApi('kind=health'));
+  await page.waitForTimeout(700);
+  ok(tokenSeen.length > 0 && tokenSeen.every(t => t === want),
+    '시세 API 를 부를 때 앱과 같은 X-App-Token 을 함께 보낸다 (보낸 값 ' + tokenSeen.length + '건 일치)');
 
   /* ── 메뉴에 붙어 있는가 ─────────────────────────────────────────── */
   const nav = await page.evaluate(() => {
@@ -329,6 +345,21 @@ window.supabase={createClient:function(){
   ok(e1.watch === 1 && e1.wtoss === 1, '관심 종목 카드에도 토스 바로가기가 있다');
   ok(e1.news === 1, '뉴스가 그려진다');
   ok(/갱신|장/.test(e1.stamp), '갱신 시각이 표시된다 (' + e1.stamp.trim() + ')');
+
+  /* ── 연결 진단 패널 — 주소창 없이 앱에서 확인할 수 있는가 ────────── */
+  const diagBtns = await page.evaluate(() => document.querySelectorAll('#invDiagOut') .length
+    + '/' + [].slice.call(document.querySelectorAll('button')).filter(b => /연결 상태|토스 경로 찾기|공공데이터 진단/.test(b.textContent)).length);
+  ok(diagBtns === '1/3', '경제동향 화면에 진단 버튼 3개와 결과칸이 있다 (' + diagBtns + ')');
+  await page.evaluate(() => invDiag('health'));
+  await page.waitForTimeout(900);
+  const diag = await page.evaluate(() => ({
+    sum: (document.querySelector('.iv-diag-sum') || {}).textContent || '',
+    raw: (document.querySelector('.iv-diag-raw') || {}).textContent || '',
+    copy: !!document.querySelector('#invDiagOut .btn-primary')
+  }));
+  ok(/시세 제공자/.test(diag.sum), '진단 결과를 사람 말로 요약해 준다 (' + diag.sum.trim().slice(0, 40) + ')');
+  ok(diag.raw.indexOf('quoteProvider') > 0, '원문 JSON 도 함께 보여준다');
+  ok(diag.copy, '결과 복사 버튼이 있다');
 
   /* ── 키가 하나도 없을 때도 안 죽는가 ────────────────────────────── */
   await page.evaluate(() => {

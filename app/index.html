@@ -35516,7 +35516,15 @@ function invCls(n){return n==null?'':(n>0?'up':(n<0?'dn':''));}
 
 /* ── 서버 데이터 호출 ───────────────────────────────────────────────────── */
 function invApi(qs){
-  return fetch(INV_API+'?'+qs,{headers:{'Accept':'application/json'}}).then(function(r){
+  /* 서버에 SHARED_TOKEN 이 걸려 있으면 이 헤더가 없는 요청은 401 로 막힌다.
+     AI 프록시(/api/generate·/api/gemini)와 같은 규칙이다. 이걸 빠뜨리면
+     투자 화면 전체가 "토큰이 올바르지 않습니다" 로 죽는다. */
+  var h={'Accept':'application/json'};
+  try{ var t=(typeof getAppToken==='function')?getAppToken():''; if(t)h['X-App-Token']=t; }catch(e){}
+  return fetch(INV_API+'?'+qs,{headers:h}).then(function(r){
+    if(r.status===401){
+      throw new Error('공유 토큰이 맞지 않습니다 — 설정 → AI 연결 → 공유 토큰 칸에 서버 SHARED_TOKEN 과 같은 값을 넣어주세요.');
+    }
     return r.json().catch(function(){throw new Error('서버 응답을 읽지 못했습니다.');});
   });
 }
@@ -35948,6 +35956,7 @@ function invRenderEcon(){
     '<div class="rpt-sec"><div class="hd"><span class="n">4</span>경제·보험 뉴스</div>'+
       '<div class="sub">설계사 관심 키워드(연금·ISA·금리·환율·실손 등)가 걸린 기사를 위로 올려 보여줍니다.</div>'+
       '<div id="invNews"><div class="iv-skel">뉴스를 모으는 중…</div></div></div>'+
+    invDiagHtml()+
     '</div>'+
     bizDisc(INV_DISC);
   return osPage('MARKET','경제동향 실시간',
@@ -36528,6 +36537,74 @@ function invPaintPerf() {
   if (el) el.innerHTML = invPerfPaneHtml();
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   연결 진단 — 주소창에 URL 을 치지 않고 앱 안에서 눌러 확인한다.
+   서버에 SHARED_TOKEN 이 걸려 있으면 브라우저로 직접 열면 401 이 난다.
+   여기서는 앱이 토큰을 붙여 부르므로 그냥 눌러서 보면 된다.
+   ══════════════════════════════════════════════════════════════════════════ */
+var INV_DIAG=[
+  {k:'health',       t:'① 연결 상태',       d:'어떤 시세 제공자가 붙어 있는지'},
+  {k:'toss-discover',t:'② 토스 경로 찾기',  d:'토스 키로 엔드포인트를 자동 탐색'},
+  {k:'krx-probe',    t:'③ 공공데이터 진단',  d:'전일 종가 경로가 되는지'}
+];
+function invDiagHtml(){
+  return '<div class="rpt-sec"><div class="hd"><span class="n">🔌</span>연결 진단</div>'+
+    '<div class="sub">주소창에 주소를 치지 않아도 됩니다. 눌러서 결과를 보고, <b>결과 복사</b>로 그대로 전달하세요.</div>'+
+    '<div class="btn-row">'+
+      INV_DIAG.map(function(x){
+        return '<button class="btn btn-ghost" onclick="invDiag(\''+x.k+'\')" title="'+osEsc(x.d)+'">'+osEsc(x.t)+'</button>';
+      }).join('')+
+    '</div><div id="invDiagOut" style="margin-top:10px"></div></div>';
+}
+function invDiag(kind){
+  var host=$('invDiagOut'); if(!host)return;
+  host.innerHTML='<div class="loading"><div class="spinner"></div>확인하는 중…</div>';
+  invApi('kind='+encodeURIComponent(kind)).then(function(j){
+    INV.diagText=JSON.stringify(j,null,2);
+    var sum=invDiagSummary(kind,j);
+    host.innerHTML='<div class="iv-diag">'+sum+
+      '<pre class="iv-diag-raw">'+osEsc(INV.diagText)+'</pre>'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="invDiagCopy()">📋 결과 복사</button></div></div>';
+  }).catch(function(e){
+    INV.diagText=String((e&&e.message)||e);
+    host.innerHTML='<div class="err-box">⚠️ '+osEsc(INV.diagText)+'</div>'+
+      '<div class="btn-row"><button class="btn btn-ghost" onclick="invDiagCopy()">📋 오류 복사</button></div>';
+  });
+}
+function invDiagCopy(){
+  var t=INV.diagText||'';
+  if(!t){toast('복사할 내용이 없습니다.');return;}
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(function(){toast('복사했습니다 — 그대로 붙여넣어 전달하세요.');},function(){toast('복사 실패');});
+  else toast('이 브라우저에서는 복사가 지원되지 않습니다.');
+}
+/* 개발자가 아니어도 무슨 뜻인지 알 수 있게 한 줄로 풀어 준다 */
+function invDiagSummary(kind,j){
+  if(kind==='health'){
+    var p=j.quoteProvider, nm={toss:'토스증권(실시간)',kis:'한국투자증권(실시간)',krx:'공공데이터(전일 종가)',none:'없음'}[p]||p;
+    var cls=(p==='none')?'bad':'good';
+    return '<div class="iv-diag-sum '+cls+'">시세 제공자: <b>'+osEsc(nm)+'</b>'+
+      (p==='none'?' — 아직 아무 키도 안 잡혔습니다.':' — 정상입니다.')+'</div>'+
+      (j.tossMessage?'<div class="iv-diag-line">토스: '+osEsc(j.tossMessage)+'</div>':'')+
+      (j.kisMessage?'<div class="iv-diag-line">한국투자증권: '+osEsc(j.kisMessage)+'</div>':'');
+  }
+  if(kind==='toss-discover'){
+    if(j.ok)return '<div class="iv-diag-sum good">토스 경로를 찾았습니다. 아래 <b>suggestConfig</b> 를 그대로 전달해 주세요.</div>';
+    var step={key:'키가 아직 안 들어갔습니다 (TOSS_CLIENT_ID / TOSS_CLIENT_SECRET)',
+              base:'주소가 토스 도메인이 아닙니다',
+              token:'토큰 발급에서 막혔습니다 — 키 오타나 호출 IP 등록을 확인하세요',
+              quote:'토큰은 됐는데 시세 경로를 못 찾았습니다',
+              field_map:'경로는 맞는데 응답 필드명이 다릅니다'}[j.step]||'확인이 필요합니다';
+    return '<div class="iv-diag-sum bad">'+osEsc(step)+'</div>'+
+      (j.hint?'<div class="iv-diag-line">'+osEsc(j.hint)+'</div>':'');
+  }
+  if(kind==='krx-probe'){
+    return j.ok?'<div class="iv-diag-sum good">공공데이터 전일 종가가 정상입니다.</div>'
+               :'<div class="iv-diag-sum bad">'+osEsc(j.hint||j.message||'설정이 필요합니다')+'</div>';
+  }
+  return '';
+}
+
 /* ══════════════ 라우터 ══════════════ */
 function invRender(tab){
   INV.tab=tab;invLoad();
@@ -36582,6 +36659,12 @@ function invAfterRender(tab){
    '.iv-x:hover{background:#FEE2E2;color:#B91C1C}',
    '.iv-manual{font-size:10px;font-weight:800;color:#B45309;background:#FFFBEB;border-radius:5px;padding:1px 5px}',
    '.iv-delay{font-size:10px;font-weight:800;color:#475569;background:#F1F5F9;border:1px solid #E2E8F0;border-radius:5px;padding:1px 5px}',
+   '.iv-diag{border:1px solid #E5E9F0;border-radius:11px;padding:12px 14px;background:#fff}',
+   '.iv-diag-sum{font-size:13px;font-weight:800;border-radius:8px;padding:9px 12px;margin-bottom:8px;line-height:1.5}',
+   '.iv-diag-sum.good{background:#F0FDF4;color:#15803D;border:1px solid #DCFCE7}',
+   '.iv-diag-sum.bad{background:#FFFBEB;color:#92400E;border:1px solid #FDE68A}',
+   '.iv-diag-line{font-size:11.5px;color:#4B5563;line-height:1.6;margin-bottom:3px}',
+   '.iv-diag-raw{font-size:10.5px;line-height:1.5;color:#374151;background:#F9FAFB;border:1px solid #EEF0F3;border-radius:8px;padding:10px;margin:8px 0;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all}',
    '.iv-badge{font-size:10px;font-weight:800;color:#1A56DB;background:#EBF3FF;border-radius:999px;padding:2px 9px;margin-left:6px}',
    '.iv-badge.paper{color:#B45309;background:#FFFBEB;border:1px solid #FDE68A}',
    '.iv-hint{font-size:9.5px;font-weight:800;color:#6B7280;background:#F3F4F6;border-radius:4px;padding:1px 4px;margin-left:3px;cursor:help}',
