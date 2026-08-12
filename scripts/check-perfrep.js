@@ -247,6 +247,48 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(/migration_40_perf\.sql/.test(crm), 'SQL 을 안 돌렸을 때 무엇을 해야 하는지 알려 준다');
   is(/TFA 업무관리/.test(crm), '값이 없으면 어디서 넣는지 알려 준다');
 
+  /* ═══ 8. 아침 보고 — 크게, 줄마다 제 칸으로 ═══
+     전에는 상자가 작았고 단추 하나로 뭉뚱그려 보냈다. 어디로 가는지
+     모르면 사람은 안 누른다. */
+  console.log('\n[8] 아침 보고가 크고, 눌러서 그 칸으로 가는가');
+  const B = await page.evaluate(async () => {
+    /* 이달 제출을 지워 「아직 안 냈다」 가 뜨게 한다 */
+    const m = window.__db.monthly_perf.find(x => x.owner_id === 'u1' && x.period === pfYm());
+    if (m) delete m.submitted_at;
+    PF.loaded = false; pfLoad();
+    await new Promise(r => setTimeout(r, 700));
+    arBriefOpen();
+    await new Promise(r => setTimeout(r, 300));
+    const ov = document.getElementById('arBriefOvl');
+    const box = ov ? ov.firstElementChild : null;
+    const btns = ov ? [].slice.call(ov.querySelectorAll('button[onclick^="arBriefGo"]')) : [];
+    return {
+      open: !!ov,
+      width: box ? Math.round(box.getBoundingClientRect().width) : 0,
+      rows: btns.length,
+      first: btns[0] ? btns[0].innerText.replace(/\n+/g, ' ') : '',
+      text: ov ? ov.innerText : '',
+      jump: !!(window.AR && AR._brief && AR._brief.length)
+    };
+  });
+  is(B.open, '아침 보고가 뜬다');
+  is(B.width >= 700, '상자가 커졌다 (' + B.width + 'px · 전에는 500px)');
+  is(B.rows >= 1, '할 일이 줄마다 눌리는 단추로 나온다 (' + B.rows + '줄)');
+  is(/바로 가기/.test(B.text), '줄마다 「바로 가기」 가 붙는다');
+  is(/월간보고를 아직 안 냈습니다/.test(B.text), '월간보고를 안 냈으면 맨 위에 세운다');
+  is(/밀렸습니다/.test(B.text), '밀린 것이 있으면 제목에서부터 알린다');
+
+  /* 눌렀을 때 정말 그 칸으로 가는가 */
+  const J = await page.evaluate(async () => {
+    const i = (AR._brief || []).findIndex(x => x.cat === 'perf');
+    if (i < 0) return { moved: false, cat: '' };
+    arBriefGo(i);
+    await new Promise(r => setTimeout(r, 700));
+    return { moved: !document.getElementById('arBriefOvl'), cat: AR.cat, tab: (typeof lastTab !== 'undefined' ? lastTab : '') };
+  });
+  is(J.moved, '누르면 창이 닫힌다');
+  is(J.cat === 'perf', '누른 줄의 <b>그 칸</b>으로 간다 (' + J.cat + ')');
+
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError|html2canvas/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 120) : ''));
 

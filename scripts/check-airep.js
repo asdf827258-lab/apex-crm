@@ -666,7 +666,9 @@ const AI_OK = `## 활동 보고
   ok(brief && brief.tiles === 4, '아침 창에 숫자 네 칸이 뜬다 (' + (brief ? brief.tiles : 0) + ')');
   ok(brief && /오늘 약속/.test(brief.txt) && /밀린 것/.test(brief.txt)
     && /다시 걸 DB/.test(brief.txt) && /식은 고객/.test(brief.txt), '오늘 볼 네 가지가 다 있다');
-  ok(brief && /오늘 이것만/.test(brief.txt), '오늘 이것만 세 줄을 골라 준다');
+  ok(brief && /오늘 이것부터/.test(brief.txt), '오늘 이것부터 골라 준다');
+  /* 이제 줄마다 갈 곳이 달려 있다 — 어디로 가는지 모르면 사람은 안 누른다 */
+  ok(brief && /바로 가기/.test(brief.txt), '줄마다 「바로 가기」 가 붙는다');
   ok(brief && /아침에 안 띄우기/.test(brief.txt), '끌 수 있다');
   const seenOnce = await page.evaluate(() => arBriefSeen());
   ok(seenOnce, '한 번 뜨면 그날은 다시 안 뜬다');

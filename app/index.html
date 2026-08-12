@@ -6594,55 +6594,111 @@ function arBriefData(){
   return {todo:todo.length,bad:bad,ap:apToday,cold:cold.length,old:old.length,
           stu:st.length?st[0][1]:'',score:r?(r.total||0):0,name:r?r.name:'',list:todo.slice(0,3)};
 }
+/* ── 오늘 아침 보고 — 크게, 그리고 <b>줄마다 제 칸으로</b> ────────
+   전에는 상자가 작았고 단추가 하나뿐이라 「오늘 할 일 열기」 를 눌러도
+   어디로 가는지 몰랐다. 사람은 목록을 보고 <b>그 줄을 눌러</b> 간다.
+   그래서 줄마다 갈 곳을 달고, 밀린 것은 눈에 띄게 키운다.
+   리더에게는 팀에서 아직 안 낸 사람이 함께 뜬다.              */
+function arBriefRows(){
+  var out=arTodoList().slice(0,8),i;
+  /* 이달 월간보고를 아직 안 냈으면 맨 위에 세운다 */
+  try{
+    if(typeof PF!=='undefined'&&PF.loaded&&!(PF.mine&&PF.mine.submitted_at))
+      out.unshift({k:'perf',e:'💰',t:'이달 월간보고를 아직 안 냈습니다',
+        s:'목표·실적을 적고 제출',go:'airep',cat:'perf',bad:true,d:0});
+  }catch(e){}
+  /* 리더에게만 — 팀에서 아직 안 낸 사람 */
+  try{
+    if(typeof PF!=='undefined'&&PF.loaded&&typeof pfIsLead==='function'&&pfIsLead()){
+      var mates=(typeof pfTeamMates==='function')?pfTeamMates():[],n=0,j;
+      for(j=0;j<mates.length;j++){
+        var hit=null,k2;
+        for(k2=0;k2<PF.rows.length;k2++)if(PF.rows[k2].owner_id===mates[j].id)hit=PF.rows[k2];
+        if(!hit||!hit.submitted_at)n++;
+      }
+      if(n)out.unshift({k:'lead',e:'🏢',t:'월간보고를 아직 안 낸 팀원 '+n+'명',
+        s:'팀원 관리에서 확인',go:'airep',cat:'team',bad:true,d:0});
+    }
+  }catch(e2){}
+  return out;
+}
+function arBriefGo(i){
+  var r=(AR._brief||[])[i];
+  arBriefClose();
+  if(!r)return;
+  if(r.cat){AR.cat=r.cat;try{localStorage.setItem('apex_ar_cat',r.cat);}catch(e){}}
+  go(r.go||'airep');
+}
 function arBriefOpen(){
   arBriefClose();
-  var d=arBriefData();
+  var d=arBriefData(),rows=arBriefRows();
+  AR._brief=rows;
+  var bad=0,i;for(i=0;i<rows.length;i++)if(rows[i].bad)bad++;
+
+  /* 경고 칸 — 밀린 것이 있으면 크게, 붉게 */
   var tile=function(v,u,k,warn){
-    return '<div class="ar-bt'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
-      '<div class="k">'+k+'</div></div>';
+    return '<div class="ar-bt'+(warn?' warn':'')+'" style="flex:1;min-width:132px;border-radius:16px;padding:16px 15px;text-align:center;'+
+      'background:'+(warn?'#FEF2F2':'#F8FAFC')+';border:2px solid '+(warn?'#FCA5A5':'#E9EEF5')+'">'+
+      '<div style="font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1.05;color:'+
+        (warn?'#DC2626':'#0F172A')+'">'+v+
+        '<span style="font-size:15px;font-weight:800;margin-left:2px">'+u+'</span></div>'+
+      '<div style="font-size:13px;font-weight:800;margin-top:6px;color:'+(warn?'#B91C1C':'#64748B')+'">'+k+'</div></div>';
   };
-  var li=d.list.map(function(x){
-    return '<div class="ar-bl"><span>'+x.e+'</span><b>'+osEsc(x.t)+'</b></div>';
-  }).join('')||'<div class="ar-bl" style="color:#94A3B8">남은 것이 없습니다. 좋습니다.</div>';
+  var li=rows.map(function(x,n){
+    return '<button type="button" onclick="arBriefGo('+n+')" style="display:flex;align-items:center;gap:12px;'+
+      'width:100%;text-align:left;border:2px solid '+(x.bad?'#FECACA':'#E9EEF5')+';'+
+      'background:'+(x.bad?'#FFF7F7':'#fff')+';border-radius:14px;padding:14px 16px;margin-bottom:9px;'+
+      'cursor:pointer;font-family:inherit">'+
+      '<span style="font-size:24px;flex:0 0 auto">'+x.e+'</span>'+
+      '<span style="flex:1;min-width:0">'+
+        '<span style="display:block;font-size:15.5px;font-weight:900;color:'+(x.bad?'#991B1B':'#0F172A')+
+        ';line-height:1.45">'+osEsc(x.t)+'</span>'+
+        (x.s?('<span style="display:block;font-size:12.5px;color:#64748B;margin-top:2px">'+osEsc(x.s)+'</span>'):'')+
+      '</span>'+
+      '<span style="flex:0 0 auto;font-size:13px;font-weight:900;color:#1A56DB;white-space:nowrap">바로 가기 →</span>'+
+      '</button>';
+  }).join('')||'<div style="padding:26px;text-align:center;font-size:15px;font-weight:800;color:#059669;'+
+    'background:#F0FDF4;border:2px solid #BBF7D0;border-radius:14px">✅ 남은 것이 없습니다. 좋습니다.</div>';
+
   var ov=document.createElement('div');ov.id='arBriefOvl';
-  ov.style.cssText='position:fixed;inset:0;z-index:9996;background:rgba(15,23,42,.58);'+
+  ov.style.cssText='position:fixed;inset:0;z-index:9996;background:rgba(15,23,42,.66);'+
     'display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)arBriefClose();};
-  ov.innerHTML='<div style="background:#fff;width:100%;max-width:500px;max-height:90vh;border-radius:20px;'+
-    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.32)">'+
-    '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:20px 22px">'+
-      '<div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">오늘 아침 보고</div>'+
-      '<div style="font-size:20px;font-weight:800;margin-top:3px">'+
-        osEsc(d.name||'')+' 님, 오늘은 이렇게 시작합니다</div>'+
-      '<div style="font-size:12px;color:#BFDBFE;margin-top:4px">'+osEsc(arToday())+
+  ov.innerHTML='<div style="background:#fff;width:100%;max-width:760px;max-height:92vh;border-radius:24px;'+
+    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.40)">'+
+    '<div style="background:linear-gradient(135deg,'+(bad?'#7F1D1D,#B91C1C':'#0F172A,#1A56DB')+');color:#fff;padding:26px 28px">'+
+      '<div style="font-size:12px;font-weight:900;color:'+(bad?'#FECACA':'#93C5FD')+';letter-spacing:.5px">오늘 아침 보고</div>'+
+      '<div style="font-size:27px;font-weight:900;margin-top:5px;letter-spacing:-.03em">'+
+        osEsc(d.name||'')+' 님, '+(bad?('오늘 <b>'+bad+'가지</b>가 밀렸습니다'):'오늘은 이렇게 시작합니다')+'</div>'+
+      '<div style="font-size:13px;color:'+(bad?'#FCA5A5':'#BFDBFE')+';margin-top:6px">'+osEsc(arToday())+
         ' · 지금 '+d.score+'점</div></div>'+
-    '<div style="padding:16px 22px;overflow-y:auto">'+
-      '<div class="ar-bts">'+
+    '<div style="padding:20px 28px;overflow-y:auto">'+
+      '<div style="display:flex;gap:11px;flex-wrap:wrap">'+
         tile(d.ap,'건','오늘 약속',0)+
         tile(d.bad,'건','밀린 것',d.bad>0)+
         tile(d.cold,'건','다시 걸 DB',d.cold>0)+
         tile(d.old,'명','식은 고객',d.old>0)+
       '</div>'+
-      '<div style="font-size:13px;font-weight:900;color:#0F172A;margin:16px 0 6px">오늘 이것만</div>'+li+
-      (d.stu?('<div style="font-size:13px;font-weight:900;color:#0F172A;margin:16px 0 6px">오늘 공부</div>'+
-        '<div class="ar-bl"><span>🎓</span><b>'+osEsc(d.stu)+'</b></div>'):'')+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin:22px 0 10px">'+
+      '오늘 이것부터 <span style="font-size:12.5px;font-weight:700;color:#94A3B8">— 누르면 그 칸으로 바로 갑니다</span></div>'+
+      li+
     '</div>'+
-    '<div style="padding:13px 22px;border-top:1px solid #F1F5F9;display:flex;gap:8px;'+
-      'justify-content:space-between;align-items:center">'+
-      '<div style="display:flex;flex-direction:column;gap:4px">'+
-      '<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+    '<div style="padding:15px 28px;border-top:1px solid #F1F5F9;display:flex;gap:10px;'+
+      'justify-content:space-between;align-items:center;flex-wrap:wrap">'+
+      '<div style="display:flex;flex-direction:column;gap:5px">'+
+      '<label style="font-size:12px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arBriefOff(this)"'+(arBriefIsOff()?' checked':'')+
       '/> 아침에 안 띄우기</label>'+
-      ('<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+      '<label style="font-size:12px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arAutoToggle(this)"'+(arAutoOff()?'':' checked')+
-      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>')+
+      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>'+
       '</div>'+
-      '<div style="display:flex;gap:8px">'+
-      '<button onclick="arBriefClose()" style="border:1.5px solid #E2E8F0;background:#fff;color:#475569;'+
-      'font-size:12.5px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">나중에</button>'+
+      '<div style="display:flex;gap:9px">'+
+      '<button onclick="arBriefClose()" style="border:2px solid #E2E8F0;background:#fff;color:#475569;'+
+      'font-size:13.5px;font-weight:800;padding:12px 20px;border-radius:12px;cursor:pointer">나중에</button>'+
       '<button onclick="arBriefClose();go(\'airep\')" style="border:none;background:#1A56DB;color:#fff;'+
-      'font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">'+
-      '오늘 할 일 열기</button></div></div>'+
+      'font-size:14.5px;font-weight:900;padding:12px 26px;border-radius:12px;cursor:pointer">'+
+      'TFA 업무관리 열기</button></div></div>'+
   '</div>';
   document.body.appendChild(ov);
   arBriefMark();
@@ -9142,8 +9198,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 08:10';
-var APP_BUILD_NOTE='TFA 업무관리에 「내 업적 · 월간보고」 가 생겼습니다 — 월초보험료 목표·실적을 적고 흐름을 보고 제출하면 리더가 받습니다 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 팀원 목표에 적용합니다 · 「매월 영업보고서」 는 이미지로 구워 카톡에 바로 붙입니다';
+var APP_BUILD='2026-08-13 09:05';
+var APP_BUILD_NOTE='아침 보고가 커졌습니다 — 밀린 것이 있으면 붉게, 줄을 누르면 그 칸으로 바로 갑니다 · TFA 업무관리에 「내 업적 · 월간보고」 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 적용 · 「매월 영업보고서」 는 이미지로 구워 카톡에 붙입니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
