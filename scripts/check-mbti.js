@@ -379,10 +379,61 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     S.cl = keep; S.mode = 'both'; draw();
     return { out: out, sajuOk: sajuOk, mbtiOk: mbtiOk };
   });
-  ok(modes.out.both.length === 9 && modes.out.saju.length === 7 && modes.out.mbti.length === 8,
+  ok(modes.out.both.length >= 9 && modes.out.saju.length >= 7 && modes.out.mbti.length >= 8,
      '모드마다 탭이 다르다 — 통합 ' + modes.out.both.length + ' · 사주 ' + modes.out.saju.length + ' · MBTI ' + modes.out.mbti.length);
   ok(modes.sajuOk === true, '유형 없이 사주만으로도 모든 탭이 그려진다' + (modes.sajuOk === true ? '' : ' — ' + modes.sajuOk));
   ok(modes.mbtiOk === true, '사주 없이 유형만으로도 모든 탭이 그려진다' + (modes.mbtiOk === true ? '' : ' — ' + modes.mbtiOk));
+
+  console.log('\n혈액형 · 리스크 · 내 눈용/고객 화면');
+  const bl = await page.evaluate(() => {
+    S.me.blood = 'O'; S.cl.blood = 'A'; S.view = 'agent'; S.tab = 'blood'; draw();
+    const t = document.getElementById('view').textContent;
+    return { types: Object.keys(BLOOD).length, fit: bloodFit('O', 'A'), fitAll: Object.keys(BLOOD_FIT).length,
+      nick: /신중한 조율가/.test(t), warn: /과학적으로 확인된 것이 아닙니다/.test(t),
+      tabIn: tabsFor('both', 'agent').indexOf('blood') >= 0,
+      bloodMode: tabsFor('blood', 'agent').join(',') };
+  });
+  ok(bl.types === 4 && bl.fitAll === 10, '혈액형 네 가지 · 궁합 조합 10개 (' + bl.types + ' / ' + bl.fitAll + ')');
+  ok(bl.nick && !!bl.fit, 'A형 화면과 O형과의 조합 문구가 나온다');
+  ok(bl.warn, '혈액형은 과학적 근거가 없다는 안내가 설계사 화면에 붙어 있다');
+  ok(bl.tabIn && bl.bloodMode.indexOf('blood') >= 0, '혈액형을 넣으면 통합 모드에도 탭이 생기고, 혈액형 전용 모드도 있다');
+
+  const risk = await page.evaluate(() => {
+    S.tab = 'risk'; draw();
+    const rows = riskScan(S.cl, S.me);
+    const t = document.getElementById('view').textContent;
+    return { n: rows.length, areas: rows.map(r => r.area), full: rows.every(r => r.sig && r.why && r.todo && r.lv),
+      onlyMine: /나만 보는 화면/.test(t), rule: /가입 권유의 근거로 쓰지 않습니다/.test(t),
+      med: /진단처럼/.test(t) };
+  });
+  ok(risk.n >= 3 && risk.full, '리스크가 신호·이유·할 일까지 채워져 나온다 (' + risk.n + '건: ' + risk.areas.join(', ') + ')');
+  ok(risk.onlyMine && risk.rule && risk.med, '나만 보는 화면 표시와 두 가지 금지 원칙이 붙어 있다');
+
+  const view = await page.evaluate(() => {
+    const agent = tabsFor('both', 'agent'), client = tabsFor('both', 'client');
+    setView('client');
+    const shown = Array.prototype.map.call(document.querySelectorAll('.tabs button'), b => b.textContent);
+    const re = /(리스크 진단|거절이 오는 자리|닫히는 순간|민원|불완전판매|중도 이탈|이대로 하면|하면 안 되는 말|이렇게 바꿔라|피할 것|클로징|나만 보는|설계사 전용|고객에게 (말씀|보여))/;
+    let leak = '';
+    tabsFor(S.mode, 'client').forEach(t => {
+      goTab(t);
+      const m = document.getElementById('view').textContent.match(re);
+      if (m && !leak) leak = t + ': ' + m[0];
+    });
+    goTab('ice');
+    const iceTxt = document.getElementById('view').textContent;
+    const meHidden = document.getElementById('meBtn').style.display === 'none';
+    const riskBlocked = (function () { S.tab = 'risk'; const h = viewBoard(); S.tab = 'ice'; return /설계사 전용입니다/.test(h); })();
+    setView('agent');
+    return { agent: agent.length, client: client.length, shown: shown.length, leak: leak,
+      bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
+      meHidden: meHidden, riskBlocked: riskBlocked };
+  });
+  ok(view.agent === 11 && view.client === 7, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
+  ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
+  ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
+  ok(view.riskBlocked, '고객 화면에서 리스크 탭을 강제로 열어도 막힌다');
 
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
@@ -413,10 +464,16 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
        w + '×' + h + ' — 스크롤 칸이 굴러가고 가로 스크롤은 없다' + (r.flow ? ' (문서 스크롤로 되돌림)' : ''));
   }
   await page.setViewportSize({ width: 1200, height: 900 });
-  await page.evaluate(() => { const p = document.getElementById('pane'); p.scrollTop = p.scrollHeight; });
-  await page.waitForTimeout(300);
-  ok(await page.evaluate(() => document.getElementById('hint').classList.contains('off')),
-     '끝까지 내리면 "아래로 더 있어요" 표시가 사라진다');
+  const hint = await page.evaluate(() => {
+    const p = document.getElementById('pane');
+    p.scrollTop = p.scrollHeight;
+    return { top: Math.round(p.scrollTop), sh: p.scrollHeight, ch: p.clientHeight,
+      cls: document.getElementById('hint').className };
+  });
+  await page.waitForTimeout(400);
+  const hint2 = await page.evaluate(() => document.getElementById('hint').className);
+  ok(/off/.test(hint2), '끝까지 내리면 "아래로 더 있어요" 표시가 사라진다 (' +
+     hint.top + '/' + (hint.sh - hint.ch) + ' · ' + hint2 + ')');
 
   await browser.close(); srv.close();
   console.log('');

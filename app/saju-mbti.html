@@ -54,7 +54,8 @@ body.flow .pane{overflow:visible;flex:none;min-height:0}
 .top .ti b{display:block;font-size:15px;font-weight:900;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .ti span{display:block;font-size:11px;color:#8C86A8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mecard{flex:none;display:flex;align-items:center;gap:7px;background:#F4F1FF;border:1px solid #E4DDFF;border-radius:999px;
-  padding:6px 12px;font-size:11.5px;font-weight:800;color:#6F63C4;cursor:pointer;white-space:nowrap}
+  padding:6px 12px;font-size:11.5px;font-weight:800;color:#6F63C4;cursor:pointer;white-space:nowrap;font-family:inherit}
+.mecard.cl{background:#EAF8F3;border-color:#BFE9DA;color:#1F7A61}
 .tabs{flex:none;display:flex;gap:4px;padding:8px 12px;background:rgba(255,255,255,.7);border-bottom:1px solid #EFEAFC;overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tabs button{flex:none;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#8C86A8;
@@ -184,6 +185,7 @@ label{display:block;font-size:11.5px;font-weight:800;color:#8C86A8;margin:0 0 5p
   <div class="top">
     <div class="logo">🔮</div>
     <div class="ti"><b>사주 × MBTI 상담카드</b><span id="topSub">생년월일과 태어난 시간, 그리고 48문항</span></div>
+    <button class="mecard" id="viewBtn" onclick="setView(S.view==='agent'?'client':'agent')" style="display:none">🔒 내 눈용</button>
     <button class="mecard" id="meBtn" onclick="goStep('me')">내 카드</button>
   </div>
   <div class="tabs" id="tabs"></div>
@@ -700,14 +702,19 @@ var STRATEGY={
 /* ══════════════════════════════════════════════════════════════════
    5. 상태 · 도구
    ══════════════════════════════════════════════════════════════════ */
-var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',
-  me:{name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null},
-  cl:{name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null}};
+var BLANK={name:'',gender:'M',mbti:'',blood:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
+function blank(){var o={},k;for(k in BLANK)o[k]=BLANK[k];return o;}
+var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',me:blank(),cl:blank()};
+/* 보기 모드 — 내 눈용(agent)에는 리스크와 화법까지, 고객 화면(client)에는
+   좋은 이야기와 덕담만 남긴다. 설계사 전용 블록은 아예 그리지 않는다. */
+function agentOnly(html){return S.view==='agent'?html:'';}
+function setView(v){S.view=v;var list=tabsFor(S.mode,v);if(list.indexOf(S.tab)<0)S.tab=list[0];save();draw();
+  toast(v==='agent'?'내 눈용으로 바꿨습니다 — 리스크와 화법이 보입니다':'고객 화면입니다 — 이대로 보여드리세요');}
 function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){var t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(t._t);t._t=setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(-50%) translateY(16px)';},2100);}
-function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode}));}catch(e){}}
+function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode,view:S.view}));}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem('sajumbti')||'null');}catch(e){return null;}}
 function val(id){var e=$(id);return e?e.value:'';}
 function num(v){var n=parseInt(v,10);return isNaN(n)?null:n;}
@@ -781,14 +788,16 @@ function personCode(p){return (p.res&&p.res.code)||p.mbti||'';}
 function ready(p,mode){
   mode=mode||S.mode;
   if(!p.name)return false;
+  if(mode==='blood')return !!p.blood;
   if(mode==='saju')return !!p.saju;
   if(mode==='mbti')return !!personCode(p);
   return !!(p.saju&&personCode(p));
 }
 var MODES=[
-  {k:'both',n:'통합',emo:'🔮',d:'사주 + 성향검사를 겹쳐 봅니다. 가장 많이 나옵니다.'},
+  {k:'both',n:'통합',emo:'🔮',d:'사주 + 성향검사(+혈액형)를 겹쳐 봅니다. 가장 많이 나옵니다.'},
   {k:'saju',n:'사주 전문',emo:'🀄',d:'생년월일·시간만으로 봅니다. 일간·십신·대운·신살까지.'},
-  {k:'mbti',n:'MBTI 전문',emo:'🧩',d:'48문항 성향검사만 봅니다. 인지기능까지 짚습니다.'}
+  {k:'mbti',n:'MBTI 전문',emo:'🧩',d:'48문항 성향검사만 봅니다. 인지기능까지 짚습니다.'},
+  {k:'blood',n:'혈액형',emo:'🩸',d:'혈액형 하나로 가볍게 엽니다. 첫 만남 아이스브레이킹용입니다.'}
 ];
 function setMode(k){S.mode=k;save();draw();}
 
@@ -899,20 +908,37 @@ function talkPlan(me,cl){
 /* ══════════════════════════════════════════════════════════════════
    7. 화면
    ══════════════════════════════════════════════════════════════════ */
+var AXIS_SELF={
+  E:'사람과 상황 속에서 기운을 얻으십니다. 혼자 오래 두면 오히려 지치십니다.',
+  I:'혼자 있는 시간에 기운을 채우십니다. 사람이 싫은 게 아니라 회복 방식이 다르신 겁니다.',
+  S:'직접 보고 겪은 것을 믿으십니다. 숫자·사례·서류가 곧 근거이십니다.',
+  N:'아직 없는 것을 그리십니다. 세부보다 방향과 의미를 먼저 보십니다.',
+  T:'맞고 틀림으로 정리하십니다. 감정을 무시하는 게 아니라 순서가 뒤일 뿐입니다.',
+  F:'사람과 관계를 먼저 보십니다. 옳아도 상처 주는 방식은 택하지 않으십니다.',
+  J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
+  P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
+};
 var TAB_NAME={ice:'아이스브레이킹',sum:'종합',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
-  deep:'사주 풀이',fit:'궁합',talk:'상담 전략',ins:'보험·관리',saju:'만세력'};
-function tabsFor(mode){
-  if(mode==='saju')return ['ice','sum','life','deep','fit','ins','saju'];
-  if(mode==='mbti')return ['ice','sum','life','trait','mind','fit','talk','ins'];
-  return ['ice','sum','life','trait','deep','fit','talk','ins','saju'];
+  deep:'사주 풀이',blood:'혈액형',fit:'궁합',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력'};
+var AGENT_TABS={fit:1,talk:1,ins:1,risk:1};   /* 고객 화면에서는 감춘다 */
+function tabsFor(mode,view){
+  view=view||S.view;
+  var list;
+  if(mode==='saju')list=['ice','sum','life','deep','fit','ins','risk','saju'];
+  else if(mode==='mbti')list=['ice','sum','life','trait','mind','fit','talk','ins','risk'];
+  else if(mode==='blood')list=['ice','blood','fit','ins','risk'];
+  else list=['ice','sum','life','trait','deep','fit','talk','ins','risk','saju'];
+  if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
+  if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
+  return list;
 }
 function draw(){
   var v=$('view'),tb=$('tabs');
   if(S.step==='board'&&ready(S.cl)){
-    var list=tabsFor(S.mode);
+    var list=tabsFor(S.mode,S.view);
     if(list.indexOf(S.tab)<0)S.tab=list[0];
     tb.innerHTML=list.map(function(k){return '<button class="'+(S.tab===k?'on':'')+'" onclick="goTab(\''+k+'\')">'+TAB_NAME[k]+'</button>';}).join('')+
-      '<button onclick="newClient()">＋ 새 고객</button>';
+      (S.view==='agent'?'<button onclick="newClient()">＋ 새 고객</button>':'');
   }else{
     tb.innerHTML=['me','client','test'].map(function(k,i){
       var lb=['① 내 카드','② 고객 정보','③ 성향검사'][i];
@@ -920,11 +946,20 @@ function draw(){
       return '<button class="'+(S.step===k?'on':'')+'" onclick="goStep(\''+k+'\')"'+(off?' disabled':'')+'>'+lb+'</button>';
     }).join('')+(ready(S.cl)?'<button onclick="goStep(\'board\')">④ 결과 보기</button>':'');
   }
+  var vb=$('viewBtn');
+  if(vb){
+    vb.style.display=(S.step==='board')?'':'none';
+    vb.className='mecard'+(S.view==='client'?' cl':'');
+    vb.innerHTML=(S.view==='agent'?'🔒 내 눈용':'👀 고객 화면');
+    vb.title=(S.view==='agent'?'누르면 고객에게 보여줄 화면으로 바뀝니다':'누르면 리스크·화법까지 보이는 내 화면으로 돌아갑니다');
+  }
+  $('meBtn').style.display=(S.step==='board'&&S.view==='client')?'none':'';
   $('meBtn').innerHTML=S.me.name?('👤 '+esc(S.me.name)+(personCode(S.me)?' · '+personCode(S.me):'')):'내 카드 설정';
   var sub=$('topSub');
   var mm=(MODES.filter(function(x){return x.k===S.mode;})[0]||MODES[0]);
   sub.textContent=(S.step==='board'&&S.cl.name)
-    ?(S.cl.name+' 님'+(personCode(S.cl)?' · '+personCode(S.cl):'')+(S.cl.saju?' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주':'')+' · '+mm.n)
+    ?(S.cl.name+' 님'+(personCode(S.cl)?' · '+personCode(S.cl):'')+(S.cl.blood?' · '+S.cl.blood+'형':'')+
+      (S.cl.saju?' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주':'')+' · '+mm.n+(S.view==='client'?' · 고객 화면':''))
     :(mm.emo+' '+mm.n+' — 생년월일과 태어난 시간, 그리고 48문항');
   if(S.step==='me')v.innerHTML=viewPerson('me');
   else if(S.step==='client')v.innerHTML=viewPerson('client');
@@ -940,8 +975,7 @@ function goStep(k){
 }
 function goTab(t){S.tab=t;save();draw();$('pane').scrollTop=0;}
 function newClient(){
-  S.cl={name:'',gender:'M',mbti:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
-  S.ans={};S.i=0;S.step='client';S.tab='ice';save();draw();
+  S.cl=blank();S.ans={};S.i=0;S.step='client';S.tab='ice';S.view='agent';save();draw();
 }
 /* ── 사람 입력 화면(내 카드 · 고객 공용) ── */
 function viewPerson(who){
@@ -966,6 +1000,9 @@ function viewPerson(who){
   return intro+
   '<div class="card"><h2><span class="n">기본</span>'+(isMe?'나':'고객')+'</h2>'+
     '<div style="margin-top:11px"><label>이름</label><input class="inp" id="pName" value="'+esc(p.name)+'" placeholder="'+(isMe?'예: 윤시현':'예: 김하나')+'" maxlength="20"/></div>'+
+    '<div style="margin-top:11px"><label>혈액형 (선택)</label><div class="seg">'+
+      ['A','B','O','AB'].map(function(x){return '<button class="'+(p.blood===x?'on':'')+'" onclick="setBlood(\''+who+'\',\''+x+'\')">'+BLOOD[x].emo+' '+x+'형</button>';}).join('')+
+      '<button class="'+(!p.blood?'on':'')+'" onclick="setBlood(\''+who+'\',\'\')">모름</button></div></div>'+
     '<div style="margin-top:11px"><label>성별</label><div class="seg">'+
       '<button class="'+(p.gender==='M'?'on':'')+'" onclick="setG(\''+who+'\',\'M\')">남</button>'+
       '<button class="'+(p.gender==='F'?'on':'')+'" onclick="setG(\''+who+'\',\'F\')">여</button></div></div>'+
@@ -994,6 +1031,7 @@ function sajuPreview(p){
     gz(s.yg,s.yj)+'년 '+gz(s.mg,s.mj)+'월 '+gz(s.dg,s.dj)+'일'+(p.noTime?' (시주 없음)':' '+gz(s.hg,s.hj)+'시')+'</div>';
 }
 function setG(who,g){var p=who==='me'?S.me:S.cl;grab(who);p.gender=g;save();draw();}
+function setBlood(who,b){var p=who==='me'?S.me:S.cl;grab(who);p.blood=b;save();draw();}
 function setNoTime(who){var p=who==='me'?S.me:S.cl;grab(who);p.noTime=!p.noTime;save();draw();}
 function setAdj(who){var p=who==='me'?S.me:S.cl;grab(who);p.adj=!p.adj;if(p.saju)calcPerson(p);save();draw();}
 function pickType(who,t){var p=who==='me'?S.me:S.cl;grab(who);p.mbti=t;p.res=null;save();draw();toast(t+' 로 정했습니다');}
@@ -1022,6 +1060,10 @@ function savePerson(who){
   }
   if(!y||!m||!d||y<1900||y>2100||m<1||m>12||d<1||d>31){toast('생년월일을 다시 확인해 주세요 (1900~2100)');return;}
   if(!p.noTime&&(p.H===''||p.H===null||p.H===undefined)){toast('태어난 시간을 고르거나 "시간을 모릅니다"를 눌러주세요');return;}
+  if(who!=='me'&&S.mode==='blood'){
+    if(!p.blood){toast('혈액형을 골라주세요');return;}
+    save();S.step='board';S.tab='ice';draw();return;
+  }
   if(who!=='me'&&S.mode==='saju'){calcPerson(p);save();S.step='board';S.tab='ice';draw();toast('사주 풀이가 준비됐습니다');return;}
   calcPerson(p);save();
   if(!personCode(p)){toast('사주를 계산했습니다. 이제 유형을 고르거나 검사를 하세요.');draw();
@@ -1103,6 +1145,8 @@ function viewBoard(){
   var t=S.tab;
   if(t==='ice')return tabIce();
   if(t==='life')return tabLife();
+  if(t==='blood')return tabBlood();
+  if(t==='risk')return tabRisk();
   if(t==='ins')return tabIns();
   if(t==='deep')return tabDeep();
   if(t==='mind')return tabMind();
@@ -1135,15 +1179,17 @@ function tabSum(){
   var bl=blessing(cl).slice(0,2);
   var right='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>만나면 먼저 이 말부터</h2>'+
     bl.map(function(x){return '<div class="talk good">🌾 '+esc(x)+'</div>';}).join('')+
-    '<div class="row" style="margin-top:11px"><button class="btn ghost sm" onclick="goTab(\'ice\')">아이스브레이킹 →</button>'+
+    '<div class="row" style="margin-top:11px"><button class="btn ghost sm" onclick="goTab(\'ice\')">덕담 더 보기 →</button>'+
     '<button class="btn ghost sm" onclick="goTab(\'life\')">인생 열 가지 운 →</button></div></div>'+
   '<div class="card"><h2><span class="n">한 줄</span>이 사람은 이런 사람입니다</h2>'+
     (code?'<p style="font-size:14px;color:#3B3757"><b>'+esc(ty.line||'')+'</b></p>':'')+
     (s?'<p>사주로 보면 '+dayC.n+' 일간입니다. '+esc(dayC.ice)+' '+esc(dayC.work)+' 여덟 글자 중 <b>'+sip.top+'</b>이(가) 가장 두껍습니다 — '+esc(meta.mind)+'</p>':'')+
     (cb.none?'':'<div class="note '+(cb.hits>=3?'ok':'warn')+'">검사와 사주가 <b>4개 중 '+cb.hits+'개</b>에서 같은 말을 합니다. '+
-      (cb.hits>=3?'읽히는 대로 대하면 됩니다.':'겉으로 보이는 모습과 속이 다른 부분이 있습니다. 성향 파악 탭에서 어디가 다른지 보세요.')+'</div>')+
+      (cb.hits>=3?(S.view==='agent'?'읽히는 대로 대하면 됩니다.':'보이는 모습과 속이 같은, 한결같은 분이십니다.')
+        :'겉으로 보이는 모습과 속이 다른 부분이 있습니다. '+(S.view==='agent'?'성향 파악 탭에서 어디가 다른지 보세요.':'상황에 따라 다른 얼굴을 쓰실 수 있다는 뜻입니다.'))+'</div>')+
   '</div>';
-  if(!hasMe){
+  if(S.view==='client'){ /* 고객 화면에는 궁합·화법을 띄우지 않는다 */ }
+  else if(!hasMe){
     right+='<div class="card"><h2><span class="n">필요</span>궁합과 상담 전략을 보려면</h2>'+
       '<p>내 카드(설계사 본인의 생년월일·시간·성향)가 있어야 <b>나와의 궁합</b>과 <b>내가 어떻게 말해야 하는지</b>가 나옵니다.</p>'+
       '<button class="btn" style="margin-top:12px" onclick="goStep(\'me\')">내 카드 만들기</button></div>';
@@ -1160,7 +1206,8 @@ function tabSum(){
           return '<div class="talk">✅ <b>'+esc(r.label)+'</b> — '+esc(r.fix)+'</div>';}).join('')+
         (plan.opens.length?'<div class="talk good">🗣 첫마디 — '+esc(plan.opens[0])+'</div>':'')+
         (plan.avoid.length?'<div class="talk bad">🚫 피할 것 — '+esc(plan.avoid[0])+'</div>':'')+
-        '<button class="btn ghost sm" style="margin-top:12px" onclick="goTab(\'talk\')">상담 전략 전부 보기 →</button>'):'')+
+        '<div class="row" style="margin-top:12px"><button class="btn ghost sm" onclick="goTab(\'talk\')">상담 전략 →</button>'+
+        '<button class="btn ghost sm" style="color:#BB3A54" onclick="goTab(\'risk\')">🔒 리스크 진단 →</button></div>'):'')+
     '</div>';
   }
   return '<div class="grid hd"><div class="sticky">'+left+'</div><div>'+right+'</div></div>'+footNote();
@@ -1169,13 +1216,13 @@ function tabTrait(){
   var cl=S.cl,code=personCode(cl),ty=MBTI_TYPES[code]||{},cb=combine(cl),res=cl.res||fakeRes(code),s=cl.saju;
   var t1='<div class="card"><h2><span class="n">표 1</span>성향검사 — 네 가지 축</h2>'+
     (res.mode==='pick'?'<div class="note warn">유형을 직접 고르셨습니다. 48문항 검사를 하면 축마다 얼마나 기울었는지까지 나옵니다.</div>':'')+
-    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">축</th><th style="width:130px">점수</th><th style="width:70px">이 사람</th><th style="width:88px">분명도</th><th>상담할 때</th></tr></thead><tbody>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">축</th><th style="width:130px">점수</th><th style="width:70px">이 사람</th><th style="width:88px">분명도</th><th>'+(S.view==='agent'?'상담할 때':'이런 분입니다')+'</th></tr></thead><tbody>'+
     res.axes.map(function(a){
       return '<tr><td class="head"><b>'+a.a+' '+a.an+' · '+a.b+' '+a.bn+'</b><div style="font-size:10.5px;color:#A9A2C6;font-weight:600;margin-top:2px">'+esc(a.q)+'</div></td>'+
         '<td data-l="점수">'+a.pctA+' : '+a.pctB+'<div class="bar"><b>'+a.a+'</b><span class="t"><i style="width:'+a.pctA+'%"></i></span><b>'+a.b+'</b></div></td>'+
         '<td data-l="이 사람"><b style="font-size:16px;color:#8B7BF0">'+a.letter+'</b> '+(a.letter===a.a?a.an:a.bn)+'</td>'+
         '<td data-l="분명도"><span class="pill" style="color:'+a.cc+';background:'+a.cbg+'">'+a.clarity+'</span></td>'+
-        '<td class="full" data-l="상담할 때">'+esc(a.tip)+'</td></tr>';}).join('')+
+        '<td class="full" data-l="'+(S.view==='agent'?'상담할 때':'이런 분입니다')+'">'+esc(S.view==='agent'?a.tip:(AXIS_SELF[a.letter]||''))+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
     (res.consistency!==null&&res.consistency<60?'<div class="note bad">응답 일관성 '+res.consistency+'% — 반대로 물은 문항의 답이 어긋납니다. 결과를 그대로 믿기 어렵습니다.</div>':'')+
   '</div>';
@@ -1203,7 +1250,7 @@ function tabTrait(){
         '<td class="full" data-l="읽는 법">'+esc(r.read)+'</td></tr>';}).join('')+
     '</tbody></table></div></div>';
   var t4=ty.str?'<div class="card"><h2><span class="n">표 4</span>강점과 조심할 점</h2>'+
-    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점 — 살려줄 것</th><th>조심할 점 — 건드리지 말 것</th></tr></thead><tbody>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점 — 살려줄 것</th><th>'+(S.view==='agent'?'조심할 점 — 건드리지 말 것':'조금만 더 하시면 좋은 것')+'</th></tr></thead><tbody>'+
     ty.str.map(function(x,i){return '<tr><td class="head">'+(i+1)+'</td><td class="full" data-l="강점">'+esc(x)+'</td><td class="full" data-l="조심">'+esc(ty.care[i]||'')+'</td></tr>';}).join('')+
     '</tbody></table></div></div>':'';
   return t1+t2+t3+t4+footNote();
@@ -1322,7 +1369,9 @@ function tabSaju(){
     '<div class="kv"><span>태어난 때 태양황경</span><b>'+s.lam.toFixed(2)+'°</b></div>'+
     '<div class="kv"><span>입춘 기준 해</span><b>'+s.sajuYear+'년 ('+gz(s.yg,s.yj)+')</b></div>'+
     '<p class="sub" style="margin-top:10px">월주는 달력의 달이 아니라 <b>절기</b>로 나눕니다(입춘·경칩·청명…). 이 프로그램은 태양의 위치(황경)를 직접 계산해 절기를 잡으므로 표를 쓰지 않습니다. 일주는 율리우스 적일로 뽑았고 23시 이후는 다음날로 봅니다(야자시). 절기 시각의 오차는 ±15분 안쪽입니다.</p>'+
-    '<div class="note info">사주는 사람을 이해하는 <b>참고 자료</b>입니다. 길흉을 점치거나 계약을 권유하는 근거로 쓰지 마세요. 고객에게 보여줄 때도 "성향을 이해하려고 본다"고 말씀하세요.</div>'+
+    (S.view==='agent'
+      ?'<div class="note info">사주는 사람을 이해하는 <b>참고 자료</b>입니다. 길흉을 점치거나 계약을 권유하는 근거로 쓰지 마세요. 고객에게 보여줄 때도 "성향을 이해하려고 본다"고 말씀하세요.</div>'
+      :'<div class="note info">사주는 사람을 이해하는 <b>참고 자료</b>입니다. 좋고 나쁨을 점치는 것이 아니라, 타고난 결을 알아보는 용도로만 보시면 됩니다.</div>')+
   '</div>';
   return head+tb+oh+how+footNote();
 }
@@ -1643,6 +1692,11 @@ function iceBreak(p){
   if(code){
     opens.push('"성향검사로는 '+code+' — '+(ty.nick||'')+' 이십니다. 말씀 나눠보니 정말 그러시네요."');
   }
+  if(p.blood&&BLOOD[p.blood]){
+    var B=BLOOD[p.blood];
+    opens.push('"'+p.blood+'형이시죠? '+B.line+' 맞으세요?"');
+    opens.push('"'+B.str[0]+' — 주변에서 그런 말 자주 들으시죠?"');
+  }
   asks=[
     '"요즘 제일 신경 쓰이는 일이 뭐세요?" — 답을 끊지 말고 끝까지 들으세요.',
     '"지금 하시는 일, 어떻게 시작하게 되셨어요?" — 자기 이야기를 하게 만드는 질문입니다.',
@@ -1669,10 +1723,14 @@ function iceBreak(p){
 }
 function tabIce(){
   var cl=S.cl,ib=iceBreak(cl),code=personCode(cl);
-  var head='<div class="card"><h1>첫 3분, 이렇게 여세요</h1>'+
-    '<p>상품 이야기는 아직입니다. 사람 이야기부터 하고, 그 사람이 스스로 말하게 만드는 것이 이 화면의 목적입니다. 아래 문장은 <b>'+esc(cl.name)+'</b> 님의 사주와 성향에서 뽑은 것이라 다른 고객에게는 다른 문장이 나옵니다.</p></div>';
-  var bless='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>먼저 좋은 말부터</h2>'+
-    '<p class="sub">아래 문장을 그대로 읽어드리세요. 사람은 자기를 알아봐 주는 사람에게 마음을 엽니다.</p>'+
+  var head=(S.view==='agent')
+    ? '<div class="card"><h1>첫 3분, 이렇게 여세요</h1>'+
+      '<p>상품 이야기는 아직입니다. 사람 이야기부터 하고, 그 사람이 스스로 말하게 만드는 것이 이 화면의 목적입니다. 아래 문장은 <b>'+esc(cl.name)+'</b> 님의 사주와 성향에서 뽑은 것이라 다른 고객에게는 다른 문장이 나옵니다.</p></div>'
+    : '<div class="card" style="text-align:center"><h1>'+esc(cl.name)+' 님, 반갑습니다</h1>'+
+      '<p>생년월일과 태어난 시간, 그리고 답해주신 문항으로 정리했습니다. 좋은 이야기부터 보시죠.</p></div>';
+  var bless='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>'+
+      (S.view==='agent'?'먼저 좋은 말부터':esc(cl.name)+' 님께 드리는 말씀')+'</h2>'+
+    (S.view==='agent'?'<p class="sub">아래 문장을 그대로 읽어드리세요. 사람은 자기를 알아봐 주는 사람에게 마음을 엽니다.</p>':'')+
     ib.bless.map(function(x){return '<div class="talk good">🌾 '+esc(x)+'</div>';}).join('')+
   '</div>';
   var open='<div class="card"><h2><span class="n">포문</span>이 말로 시작하세요</h2>'+
@@ -1692,7 +1750,7 @@ function tabIce(){
       return '<tr><td class="head"><b>'+r[0]+'</b></td><td data-l="무엇을">'+r[1]+'</td><td class="full" data-l="어떻게">'+r[2]+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
     '<div class="note warn">첫 만남에서 상품을 꺼내지 않는 것이 이 순서의 핵심입니다. 두 번째 만남의 성사율이 달라집니다.</div></div>';
-  return head+bless+open+ask+no+flow+footNote();
+  return head+bless+agentOnly(open)+agentOnly(ask)+agentOnly(no)+agentOnly(flow)+footNote();
 }
 /* ══════════════════════════════════════════════════════════════════
    15. 보험 · 관리 성향
@@ -1766,9 +1824,9 @@ function tabDeep(){
   var t1='<div class="card"><h2><span class="n">1</span>일간의 힘 — 신강·신약</h2>'+
     '<div class="note '+(st.level==='신강'?'ok':(st.level==='신약'?'warn':'info'))+'"><b>'+st.level+'</b> · 도와주는 글자 '+st.help+'개'+
       (st.monthOk?' · 월지가 나를 돕습니다(득령)':' · 월지가 나를 돕지 않습니다(실령)')+'</div>'+
-    '<p>'+(st.level==='신강'?'자기 뜻이 분명하고 밀어붙이는 힘이 있습니다. 남이 정해주면 반발하니, 선택지를 드리고 고르게 하는 편이 훨씬 빠릅니다. 재물과 일은 스스로 벌어 쓰는 구조입니다.'
-      :st.level==='신약'?'주변 상황과 사람에 영향을 많이 받습니다. 대신 사람 덕이 크고, 도와주는 이가 붙으면 크게 풀립니다. 결정할 때 근거와 가족의 동의가 함께 있어야 마음이 놓입니다.'
-      :'치우치지 않아 어느 상황에나 유연하게 맞춥니다. 어떤 방식으로 다가가도 통하지만, 근거를 남겨드려야 나중에 흔들리지 않습니다.')+'</p>'+
+    '<p>'+(st.level==='신강'?'자기 뜻이 분명하고 밀고 나가는 힘이 있으십니다. 남이 대신 정해주는 걸 답답해하시니, 스스로 고르실 때 가장 좋은 결정이 나옵니다. 재물과 일은 스스로 벌어 쓰는 구조이십니다.'
+      :st.level==='신약'?'주변 상황과 사람에 영향을 많이 받으십니다. 대신 사람 덕이 크셔서, 도와주는 분이 붙으면 크게 풀리십니다. 결정하실 때 근거와 가족의 동의가 함께 있으면 마음이 놓이십니다.'
+      :'치우치지 않아 어느 상황에나 유연하게 맞추십니다. 어떤 방식이든 통하지만, 근거를 남겨두시면 나중에 흔들리지 않으십니다.')+'</p>'+
     '<div class="note info"><b>조후</b> — '+esc(jh.txt)+' 필요한 기운은 <b>'+jh.need+'</b>('+OH_META[jh.need].key+') 입니다.</div>'+
   '</div>';
   var t2='<div class="card"><h2><span class="n">2</span>십신 — 무엇이 이 사람을 움직이나</h2>'+ohBars(ohCount(s))+
@@ -1799,7 +1857,9 @@ function tabDeep(){
         '<td data-l="12운성">'+x.un+'</td>'+
         '<td class="full" data-l="이 10년">'+esc(SIP_META[g].want)+' 쪽으로 관심이 쏠리는 시기입니다. '+esc(UNSEONG_META[x.un].line)+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
-    '<div class="note warn">대운은 <b>흐름</b>이지 정해진 운명이 아닙니다. 고객에게 말씀하실 때도 "이 시기에는 이런 쪽에 마음이 갑니다" 정도로만 쓰세요. 길흉 판단이나 가입 권유의 근거로 쓰면 안 됩니다.</div>'+
+    (S.view==='agent'
+      ?'<div class="note warn">대운은 <b>흐름</b>이지 정해진 운명이 아닙니다. 고객에게 말씀하실 때도 "이 시기에는 이런 쪽에 마음이 갑니다" 정도로만 쓰세요. 길흉 판단이나 가입 권유의 근거로 쓰면 안 됩니다.</div>'
+      :'<div class="note info">대운은 <b>흐름</b>이지 정해진 운명이 아닙니다. "이 시기에는 이런 쪽으로 마음이 간다" 정도로 보시면 됩니다.</div>')+
   '</div>';
   return head+t1+t2+t3+t4+footNote();
 }
@@ -1820,14 +1880,7 @@ function tabMind(){
   var t1='<div class="card"><h2><span class="n">1</span>네 축을 자세히</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:112px">축</th><th style="width:126px">점수</th><th style="width:84px">분명도</th><th>이 사람은</th></tr></thead><tbody>'+
     res.axes.map(function(a){
-      var deep=({E:'사람과 상황 속에서 기운을 얻습니다. 혼자 오래 두면 오히려 지칩니다.',
-        I:'혼자 있는 시간에 기운을 채웁니다. 사람이 싫은 게 아니라 회복 방식이 다릅니다.',
-        S:'직접 보고 겪은 것을 믿습니다. 숫자·사례·서류가 곧 근거입니다.',
-        N:'아직 없는 것을 그립니다. 세부보다 방향과 의미를 먼저 봅니다.',
-        T:'맞고 틀림으로 정리합니다. 감정을 무시하는 게 아니라 순서가 뒤일 뿐입니다.',
-        F:'사람과 관계를 먼저 봅니다. 옳아도 상처 주는 방식은 택하지 않습니다.',
-        J:'정해두고 지키는 데서 안정을 얻습니다. 갑작스러운 변경에 스트레스를 받습니다.',
-        P:'열어두는 데서 편안함을 얻습니다. 정해지면 답답해합니다.'})[a.letter];
+      var deep=AXIS_SELF[a.letter]||'';
       return '<tr><td class="head"><b>'+a.a+' '+a.an+' · '+a.b+' '+a.bn+'</b></td>'+
         '<td data-l="점수">'+a.pctA+' : '+a.pctB+'<div class="bar"><b>'+a.a+'</b><span class="t"><i style="width:'+a.pctA+'%"></i></span><b>'+a.b+'</b></div></td>'+
         '<td data-l="분명도"><span class="pill" style="color:'+a.cc+';background:'+a.cbg+'">'+a.clarity+'</span></td>'+
@@ -1850,7 +1903,7 @@ function tabMind(){
     '<div class="note warn"><b>스트레스를 받으면</b> — '+esc(STRESS[fs.inf])+' 이럴 때는 설득하지 말고 시간을 드리는 편이 낫습니다.</div>'+
   '</div>';
   var t3=ty.str?'<div class="card"><h2><span class="n">3</span>강점 · 조심할 점 · 궁합</h2>'+
-    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점</th><th>조심할 점</th></tr></thead><tbody>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점</th><th>'+(S.view==='agent'?'조심할 점':'조금만 더 하시면 좋은 것')+'</th></tr></thead><tbody>'+
     ty.str.map(function(x,i){return '<tr><td class="head">'+(i+1)+'</td><td class="full" data-l="강점">'+esc(x)+'</td><td class="full" data-l="조심">'+esc(ty.care[i]||'')+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
     '<div class="talk good">💚 잘 맞는 유형 — '+ty.fit.map(function(c){return c+'('+(MBTI_TYPES[c]||{}).nick+')';}).join(' · ')+'</div>'+
@@ -2066,7 +2119,7 @@ function tabLife(){
           '<td data-l="근거">'+esc(x.base)+'</td>'+
           '<td data-l="결"><span class="pill" style="color:'+x.level.c+';background:'+x.level.bg+'">'+x.level.t+'</span></td>'+
           '<td class="full" data-l="풀이">'+x.read+
-            '<div style="margin-top:7px;color:#9A5B0C">⚠️ '+x.care+'</div>'+
+            '<div style="margin-top:7px;color:#9A5B0C">'+(S.view==='agent'?'⚠️ ':'💡 이렇게 하시면 더 좋습니다 — ')+x.care+'</div>'+
             '<div style="margin-top:5px;color:#1F7A61">🌾 '+esc(x.bless)+'</div></td></tr>';
       }).join('')+'</tbody></table></div></div>';
   }
@@ -2123,10 +2176,217 @@ function tabLife(){
      ['🌿','무엇보다 — 사주와 성향은 <b>정해진 운명이 아니라 나를 아는 도구</b>입니다. 아는 만큼 준비할 수 있고, 준비한 만큼 달라집니다.']
     ].filter(Boolean).map(function(x){return '<li><span class="ic">'+x[0]+'</span><span>'+x[1]+'</span></li>';}).join('')+
     '</ul>'+
-    '<div class="note info">고객에게 보여드릴 때는 <b>좋은 쪽을 먼저, 조심할 것은 준비 방법과 함께</b> 말씀하세요. 겁을 주는 상담은 그 자리에서는 통해도 오래 가지 않습니다.</div>'+
+    (S.view==='agent'
+      ?'<div class="note info">고객에게 보여드릴 때는 <b>좋은 쪽을 먼저, 조심할 것은 준비 방법과 함께</b> 말씀하세요. 겁을 주는 상담은 그 자리에서는 통해도 오래 가지 않습니다.</div>'
+      :'<div class="note info">비어 있는 자리는 <b>부족</b>이 아니라 <b>다른 방식</b>이라는 뜻입니다. 아는 만큼 준비할 수 있고, 준비한 만큼 달라집니다.</div>')+
     '<button class="btn line sm" style="margin-top:12px" onclick="window.print()">🖨 인생 운 인쇄 · PDF</button>'+
   '</div>';
   return head+ten+stage+ah+mind+check+footNote();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   19. 혈액형 — 가볍게 여는 용도
+   ══════════════════════════════════════════════════════════════════
+   혈액형 성격론은 과학적으로 확인된 것이 아니다. 그래서 이 화면은
+   "맞히는" 용도가 아니라 첫 자리에서 말문을 여는 용도로만 쓴다.
+   그 사실을 설계사 화면에 분명히 적어 둔다.                          */
+var BLOOD={
+  A:{nick:'신중한 조율가',emo:'🅰️',color:'#5B8DEF',
+    line:'남에게 폐 끼치는 걸 제일 싫어하십니다. 결정 전에 여러 번 확인하시는 편입니다.',
+    str:['꼼꼼하고 실수가 적습니다','상대를 먼저 배려하십니다','한 번 맡으면 끝까지 하십니다'],
+    care:['걱정이 앞서 결정이 늦습니다','거절을 잘 못 하십니다','속마음을 늦게 꺼내십니다'],
+    open:'"급하게 정하지 않으셔도 됩니다"를 먼저 말해주면 오히려 빨라집니다.',
+    doc:'빠짐없이 정리된 자료. 애매한 칸이 있으면 그 칸에서 멈추십니다.',
+    pace:'천천히. 두 번 만나 결정하는 흐름이 편하십니다.',
+    close:'"오늘은 설명만 드리고 가겠습니다"가 가장 잘 통합니다.',
+    ins:'빠진 보장을 채우는 리모델링, 보장 공백표에 반응하십니다.',
+    manage:'약속한 날짜를 꼭 지키세요. 작은 어김도 오래 기억하십니다.',
+    bless:'꼼꼼히 챙겨오신 덕에 주변이 편했을 겁니다. 그 세심함이 큰 복입니다.'},
+  B:{nick:'자유로운 추진가',emo:'🅱️',color:'#F5A623',
+    line:'하고 싶은 게 생기면 바로 하십니다. 틀에 갇히는 걸 답답해하십니다.',
+    str:['한 가지에 깊게 몰입하십니다','솔직하고 뒤끝이 없습니다','새로운 걸 두려워하지 않으십니다'],
+    care:['관심이 빨리 옮겨갑니다','규정 설명을 지루해하십니다','마무리가 느슨해질 수 있습니다'],
+    open:'요즘 빠져 계신 것부터 물어보세요. 신나게 말씀하십니다.',
+    doc:'한 장, 큰 글씨, 핵심만. 약관 낭독은 금물입니다.',
+    pace:'빠르게. 흥이 식기 전에 결론까지 가는 편이 좋습니다.',
+    close:'"묶이지 않는 구조"임을 보여주면 마음이 열립니다.',
+    ins:'조정 가능한 구조, 중도 인출·변경 여지를 먼저 설명하세요.',
+    manage:'짧게 자주. 긴 안내문은 안 읽으십니다.',
+    bless:'하고 싶은 걸 해오신 힘이 있으십니다. 그 추진력이 여기까지 오게 했습니다.'},
+  O:{nick:'시원한 해결사',emo:'🅾️',color:'#F0637E',
+    line:'목표가 서면 밀고 가십니다. 사람을 이끄는 자리에 자주 서십니다.',
+    str:['결단이 빠르십니다','사람을 끌어당기십니다','위기에서 침착하십니다'],
+    care:['한번 정하면 잘 안 바꾸십니다','지는 걸 싫어하십니다','세부를 남에게 미루십니다'],
+    open:'"결론부터 말씀드리겠습니다"로 시작하세요.',
+    doc:'비교표 한 장. 결론과 근거 순서로.',
+    pace:'빠르게. 그 자리에서 다음 일정까지 정하십니다.',
+    close:'선택지 두 개를 놓고 고르게 하면 그 자리에서 정하십니다.',
+    ins:'굵은 보장 하나. 잔가지보다 핵심을 크게 가십니다.',
+    manage:'용건 중심으로. 결과를 숫자로 보고드리면 신뢰하십니다.',
+    bless:'앞장서서 끌어오신 자리입니다. 그 책임감이 사람을 모읍니다.'},
+  AB:{nick:'냉정한 관찰자',emo:'🆎',color:'#8B7BF0',
+    line:'한 발 떨어져서 보십니다. 감정에 휩쓸리지 않고 객관적으로 판단하십니다.',
+    str:['상황을 냉정하게 보십니다','머리 회전이 빠르십니다','불필요한 갈등을 만들지 않으십니다'],
+    care:['속을 잘 안 보이십니다','관심 없는 일에는 냉담하십니다','결정을 계속 미루실 수 있습니다'],
+    open:'가벼운 잡담보다 본론이 편하십니다. 다만 밀어붙이면 닫히십니다.',
+    doc:'근거와 대안 두 가지. 하나만 내밀면 되물으십니다.',
+    pace:'보통. 혼자 검토할 시간을 반드시 드리세요.',
+    close:'"두 가지 안을 두고 가겠습니다"가 가장 잘 통합니다.',
+    ins:'구조가 합리적인지를 보십니다. 같은 돈으로 최적인지를 물으십니다.',
+    manage:'필요할 때만. 의미 없는 연락은 오히려 감점입니다.',
+    bless:'한 발 떨어져 보는 눈을 가지셨습니다. 그 균형 감각이 큰 자산입니다.'}
+};
+var BLOOD_FIT={
+  'A|A':'서로 조심스러워 편안하지만, 둘 다 먼저 말을 못 꺼내 진도가 느립니다. 제가 먼저 결론을 정리해 드려야 합니다.',
+  'A|B':'속도가 가장 다른 조합입니다. 제가 서두르면 상대가 부담을 느끼거나, 상대가 훅 들어와 제가 밀립니다. 속도를 맞추는 게 전부입니다.',
+  'A|O':'상대가 끌고 제가 챙기는 그림이 자연스럽습니다. 결론은 상대에게 맡기고 저는 근거를 채우면 됩니다.',
+  'A|AB':'둘 다 조심스러워 갈등이 적습니다. 대신 결정이 늦으니 기한을 함께 적어야 합니다.',
+  'B|B':'대화는 즐거운데 마무리가 샙니다. 헤어지기 전에 다음 약속만은 반드시 잡으세요.',
+  'B|O':'추진력이 만나 속도가 붙습니다. 다만 세부를 서로 미루니 문서는 제가 챙겨야 합니다.',
+  'B|AB':'말이 잘 통합니다. 새로운 이야기로 열면 오래 앉아 있게 됩니다.',
+  'O|O':'주도권이 부딪히기 쉽습니다. 이기려 들지 말고 선택지를 드려 고르게 하세요.',
+  'O|AB':'제가 밀고 상대가 정리하는 조합입니다. 결론을 상대가 말하게 두면 매끄럽습니다.',
+  'AB|AB':'이해는 빠르지만 둘 다 결정을 미룹니다. 날짜를 못 박는 사람이 있어야 끝납니다.'
+};
+function bloodFit(a,b){
+  if(!a||!b)return '';
+  var k=[a,b].sort().join('|');
+  return BLOOD_FIT[k]||'';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   20. 리스크 진단 — 설계사만 보는 화면
+   ══════════════════════════════════════════════════════════════════
+   좋은 말만 하면 상담은 편하지만 계약은 오래 못 간다. 어디서 깨질지,
+   어디서 민원이 날지, 어디서 해지가 나올지를 미리 짚는다.
+   이 화면은 고객에게 보여주지 않는다.                                */
+function riskScan(cl,me){
+  var out=[],code=personCode(cl),s=cl.saju;
+  var sip=s?sipsinTable(s):null,st=s?strengthOf(s):null,oh=s?ohCount(s):null;
+  var cnt=sip?sip.count:{비겁:0,식상:0,재성:0,관성:0,인성:0};
+  var lack=[],many=[],k;
+  if(oh)for(k in oh){if(oh[k]===0)lack.push(k);if(oh[k]>=3)many.push(k);}
+  function add(lv,area,sig,why,todo){out.push({lv:lv,area:area,sig:sig,why:why,todo:todo});}
+  var HI={t:'높음',c:'#BB3A54',bg:'#FFF0F1'},MID={t:'보통',c:'#9A5B0C',bg:'#FFF6E9'},LO={t:'낮음',c:'#1F7A61',bg:'#EAF8F3'};
+
+  /* 유지(실효·해지) 리스크 */
+  if(st&&st.level==='신약'&&cnt.재성>=3)
+    add(HI,'유지','재성이 많은데 일간이 약합니다(재다신약)','벌 기회는 많은데 몸과 현금흐름이 못 따라가는 구조라, 납입이 길어지면 부담이 먼저 옵니다.',
+      '월 납입을 소득의 8~10% 안쪽으로 잡고, 감액·납입유예 방법을 계약 전에 미리 설명해 두세요.');
+  if(code&&code.charAt(3)==='P')
+    add(MID,'유지','P 성향 — 마음이 바뀔 여지를 늘 남겨둡니다','즉흥적으로 정한 뒤 며칠 지나 번복하거나 청약철회로 이어지기 쉽습니다.',
+      '계약 당일 저녁에 결정 사항을 문자로 정리해 보내세요. 번복률이 눈에 띄게 줄어듭니다.');
+  if(cnt.식상>=3)
+    add(MID,'유지','식상이 두터워 묶이는 걸 답답해합니다','장기 납입 상품에서 중도 이탈 가능성이 있습니다.',
+      '해지 대신 감액·유지 방법을 먼저 알려두고, 2년차·5년차에 먼저 연락해 확인하세요.');
+
+  /* 결정 리스크 */
+  if(cnt.인성>=3||(st&&st.level==='신약'))
+    add(MID,'결정','이해가 안 되면 움직이지 않고, 주변 의견에 흔들립니다','상담 자리에서는 좋았다가 집에 가서 뒤집히는 전형적인 자리입니다.',
+      '결정에 영향 주는 사람(배우자·부모)을 처음부터 같이 앉히거나, 그분께 드릴 자료를 따로 준비하세요.');
+  if(cnt.비겁>=3)
+    add(MID,'결정','비겁이 많아 남이 정해주는 걸 싫어합니다','밀어붙이면 그 자리에서 닫히고, 비교당하면 자존심이 상합니다.',
+      '"결정은 사장님이 하십니다"를 먼저 말하고, 선택지 두 개만 놓으세요.');
+  if(code&&code.charAt(2)==='T'&&me&&personCode(me).charAt(2)==='F')
+    add(MID,'결정','고객은 T, 나는 F — 설득 언어가 어긋납니다','감성으로 다가갈수록 "근거가 없다"고 느낍니다.',
+      '비교표·손익부터 꺼내고 가족 이야기는 근거 뒤에 한 줄만 붙이세요.');
+
+  /* 민원·불완전판매 리스크 */
+  if(code&&(code.charAt(1)==='S'&&code.charAt(2)==='T'))
+    add(HI,'민원','사실 관계를 그대로 기억하고 대조합니다','설명과 약관이 한 글자라도 다르면 나중에 문제 제기로 이어집니다.',
+      '모르는 건 모른다고 답하고, 확인 후 문서로 회신하세요. 구두 약속을 남기지 마세요.');
+  if(sip&&sip.rows.some(function(r){return r.name==='정관';}))
+    add(MID,'민원','정관 — 절차와 명분을 중요하게 봅니다','절차가 어긋나면 상품이 좋아도 문제를 삼습니다.',
+      '서명·설명 확인 절차를 빠짐없이 밟고, 안내문을 반드시 남기세요.');
+
+  /* 건강 고지 리스크 */
+  if(lack.length||many.length){
+    var w=(lack.length?lack:many);
+    add(MID,'고지','오행이 '+(lack.length?'비어':'몰려')+' 있는 쪽 — '+w.join('·'),
+      w.map(function(x){return x+'('+OH_BODY[x]+')';}).join(', ')+' 쪽이 먼저 지치기 쉬운 결입니다. 그 계통 진료 이력이 있을 가능성을 염두에 두세요.',
+      '알릴의무 질문을 그 부위 중심으로 한 번 더 짚어 확인하세요. 사주로 병을 단정하는 것이 아니라, 빠뜨리지 않으려는 확인입니다.');
+  }
+
+  /* 변화 시기 리스크 */
+  if(s){
+    var ah=yearAhead(cl,10).filter(function(x){return x.rel==='충';});
+    if(ah.length)add(MID,'변화',ah.map(function(x){return x.year+'년';}).join(', ')+' 은 일지와 충하는 해입니다',
+      '이사·이직·사업 변동이 몰리기 쉬운 시기라 주소·직장·계좌 변경이 자주 생깁니다.',
+      '그 해에는 연락처·주소 갱신을 먼저 확인하세요. 실효의 절반은 연락 두절에서 납니다.');
+  }
+
+  /* 관계 리스크 */
+  if(me&&ready(me)){
+    var f=fitCalc(me,cl);
+    if(f.hasS&&f.jr&&f.jr.k==='충')
+      add(MID,'관계','일지가 충하는 조합입니다','같은 말을 해도 부딪히기 쉬운 자리라 사소한 일에서 감정이 상할 수 있습니다.',
+        '설명 순서를 상대 방식으로 바꾸고, 중요한 안내는 문서로 남기세요.');
+    if(f.mbtiScore!==null&&f.mbtiScore<45)
+      add(MID,'관계','성향 궁합이 '+f.mbtiScore+'점입니다','대화 언어가 달라 오해가 쌓이기 쉽습니다.',
+        '상담 전략 탭의 "이렇게 바꿔라"를 그대로 지키면 대부분 해소됩니다.');
+  }
+  if(!out.length)add(LO,'전반','두드러지는 위험 신호가 없습니다','성향과 사주 어느 쪽에서도 크게 걸리는 자리가 보이지 않습니다.',
+    '기본만 지키면 됩니다 — 설명은 문서로, 약속은 날짜로, 연락은 주기대로.');
+  return out;
+}
+function tabRisk(){
+  if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
+  var cl=S.cl,rows=riskScan(cl,S.me);
+  var hi=rows.filter(function(r){return r.lv.t==='높음';}).length;
+  var head='<div class="card" style="border:2px solid #FFD9DF"><h1>🔒 리스크 진단 <span class="pill" style="background:#FFF0F1;color:#BB3A54">나만 보는 화면</span></h1>'+
+    '<p>좋은 말만 하면 상담은 편하지만 계약은 오래 못 갑니다. <b>어디서 깨지고, 어디서 민원이 나고, 어디서 해지가 나올지</b>를 미리 짚었습니다. '+
+    '이 화면은 <b>고객 화면으로 바꾸면 사라집니다.</b></p>'+
+    '<div class="chiplist">'+rows.map(function(r){return '<span class="chip" style="background:'+r.lv.bg+';color:'+r.lv.c+'">'+r.area+' '+r.lv.t+'</span>';}).join('')+'</div>'+
+    (hi?'<div class="note bad"><b>높음 '+hi+'건</b> — 계약 전에 반드시 처리하고 들어가세요.</div>':'')+
+  '</div>';
+  var tb='<div class="card"><h2><span class="n">표</span>신호 · 왜 · 미리 할 일</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:70px">구분</th><th style="width:64px">위험</th><th style="width:200px">신호</th><th style="width:230px">왜 위험한가</th><th>계약 전에 이렇게</th></tr></thead><tbody>'+
+    rows.map(function(r){
+      return '<tr'+(r.lv.t==='높음'?' style="background:#FFF8F8"':'')+'><td class="head"><b>'+r.area+'</b></td>'+
+        '<td data-l="위험"><span class="pill" style="color:'+r.lv.c+';background:'+r.lv.bg+'">'+r.lv.t+'</span></td>'+
+        '<td class="full" data-l="신호">'+esc(r.sig)+'</td>'+
+        '<td class="full" data-l="왜">'+esc(r.why)+'</td>'+
+        '<td class="full" data-l="이렇게"><b>'+esc(r.todo)+'</b></td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var rule='<div class="card"><h2><span class="n">원칙</span>이것만은 지키기</h2>'+
+    '<div class="talk bad">🚫 사주·성향을 <b>가입 권유의 근거</b>로 쓰지 않습니다. "운이 좋으니 지금 드세요"는 그 자리에서 통해도 나중에 민원이 됩니다.</div>'+
+    '<div class="talk bad">🚫 건강 이야기를 <b>진단처럼</b> 하지 않습니다. "간이 안 좋으시겠네요"가 아니라 "그 계통 검사받으신 적 있으신지"로 묻습니다.</div>'+
+    '<div class="talk">✅ 설명은 문서로, 약속은 날짜로, 연락은 주기대로 — 이 셋만 지켜도 민원의 대부분이 사라집니다.</div>'+
+    '<div class="talk">✅ 이 리포트는 <b>고객 개인정보</b>입니다. 화면을 그대로 보여주지 말고, 고객 화면으로 바꿔서 보여주세요.</div>'+
+  '</div>';
+  return head+tb+rule+footNote();
+}
+/* ── 혈액형 화면 ── */
+function tabBlood(){
+  var cl=S.cl,b=cl.blood,B=BLOOD[b];
+  if(!B)return '<div class="card"><h2>혈액형이 아직 없습니다</h2><p>고객 정보에서 혈액형을 골라주세요.</p><button class="btn" style="margin-top:12px" onclick="goStep(\'client\')">혈액형 넣기</button></div>';
+  var mb=S.me&&S.me.blood?S.me.blood:'';
+  var fit=mb?bloodFit(mb,b):'';
+  var head='<div class="card" style="text-align:center">'+
+    '<div style="font-size:52px">'+B.emo+'</div>'+
+    '<div style="font-size:26px;font-weight:900;color:'+B.color+';margin-top:2px">'+b+'형</div>'+
+    '<div style="font-size:15px;font-weight:900">'+esc(B.nick)+'</div>'+
+    '<p>'+esc(B.line)+'</p>'+
+    '<div class="talk good" style="text-align:left">🌾 '+esc(B.bless)+'</div>'+
+  '</div>';
+  var t1='<div class="card"><h2><span class="n">표</span>강점과 조심할 점</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점</th><th>'+(S.view==='agent'?'조심할 점':'조금만 더 하시면 좋은 것')+'</th></tr></thead><tbody>'+
+    B.str.map(function(x,i){return '<tr><td class="head">'+(i+1)+'</td><td class="full" data-l="강점">'+esc(x)+'</td><td class="full" data-l="조심">'+esc(B.care[i]||'')+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var t2=agentOnly('<div class="card"><h2><span class="n">상담</span>이 혈액형에게는 이렇게</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    [['첫마디',B.open],['자료',B.doc],['속도',B.pace],['마무리',B.close],['보험 성향',B.ins],['계약 후 관리',B.manage]].map(function(r){
+      return '<tr><td class="head"><b>'+r[0]+'</b></td><td class="plain">'+esc(r[1])+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    (fit?'<div class="note info"><b>나('+mb+'형)와의 조합</b> — '+esc(fit)+'</div>':'')+
+  '</div>');
+  var warn=agentOnly('<div class="card"><div class="note warn"><b>알고 쓰세요</b> — 혈액형과 성격의 관계는 <b>과학적으로 확인된 것이 아닙니다</b>. 이 화면은 맞히는 용도가 아니라 <b>첫 자리에서 말문을 여는 용도</b>입니다. 고객 앞에서도 "재미로 보는 것"이라고 말씀하시고, 이것으로 사람을 단정하지 마세요.</div></div>');
+  var ice='<div class="card"><h2><span class="n">여는 말</span>이렇게 시작해보세요</h2>'+
+    '<div class="talk">"혈액형이 '+b+'형이시죠? '+esc(B.line)+' 맞으세요?"</div>'+
+    '<div class="talk">"'+esc(B.str[0])+' — 주변에서 그런 말 자주 들으시죠?"</div>'+
+    '<div class="sub" style="margin-top:8px">맞다고 하시면 그 이야기로, 아니라고 하시면 "그럼 어떤 쪽이세요?"로 이어가면 됩니다. 어느 쪽이든 대화가 열립니다.</div>'+
+  '</div>';
+  return head+agentOnly(ice)+t1+t2+warn+footNote();
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2160,7 +2420,7 @@ function fitShell(){
   var d=load();
   if(d){
     if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
-    S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';
+    S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';
     S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
   }
   fitShell();draw();
