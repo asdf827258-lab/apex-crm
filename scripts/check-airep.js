@@ -201,9 +201,12 @@ const AI_OK = `## 활동 보고
   /* ── 왼쪽 카테고리 한 줄 ── */
   const cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
-  ok(cats.length === 10, '왼쪽에 카테고리 열 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
+  /* 「내 업적 · 월간보고」 가 「해야 할 일」 다음에 들어왔다.
+     점수판 앞에 두는 이유 — 점수는 활동이고 업적은 결과다. 결과를 먼저 본다. */
+  ok(cats.length === 11, '왼쪽에 카테고리 열한 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|본인 점수판|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('내 업적 · 월간보고') === 4, '업적 칸이 점수판 바로 앞에 있다');
   ok(cats.indexOf('내 코칭') >= 0 && cats.indexOf('본인 점검란') >= 0,
     '내 코칭·본인 점검란이 여기로 들어왔다 — 실행 체크판에서 안 찾아도 된다');
   const heads = await page.evaluate(() => Array.prototype.map.call(
@@ -663,7 +666,9 @@ const AI_OK = `## 활동 보고
   ok(brief && brief.tiles === 4, '아침 창에 숫자 네 칸이 뜬다 (' + (brief ? brief.tiles : 0) + ')');
   ok(brief && /오늘 약속/.test(brief.txt) && /밀린 것/.test(brief.txt)
     && /다시 걸 DB/.test(brief.txt) && /식은 고객/.test(brief.txt), '오늘 볼 네 가지가 다 있다');
-  ok(brief && /오늘 이것만/.test(brief.txt), '오늘 이것만 세 줄을 골라 준다');
+  ok(brief && /오늘 이것부터/.test(brief.txt), '오늘 이것부터 골라 준다');
+  /* 이제 줄마다 갈 곳이 달려 있다 — 어디로 가는지 모르면 사람은 안 누른다 */
+  ok(brief && /바로 가기/.test(brief.txt), '줄마다 「바로 가기」 가 붙는다');
   ok(brief && /아침에 안 띄우기/.test(brief.txt), '끌 수 있다');
   const seenOnce = await page.evaluate(() => arBriefSeen());
   ok(seenOnce, '한 번 뜨면 그날은 다시 안 뜬다');

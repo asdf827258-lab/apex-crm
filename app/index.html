@@ -1588,9 +1588,22 @@ var ADV_FIELDS=[
   {k:'years', t:'경력(년)',   ph:'12'},
   {k:'phone', t:'연락처',     ph:'010-0000-0000'},
   {k:'email', t:'이메일·카톡ID',ph:'선택'},
-  {k:'motto', t:'한 줄 소개',  ph:'보험을 파는 설계사가 아닌, 삶을 설계하는 설계사', span:true},
-  {k:'tags',  t:'전문 분야',   ph:'보장분석, 은퇴·연금설계, 상속·증여', span:true},
-  {k:'bio',   t:'경력·자격 (줄바꿈으로 여러 줄)', ph:'MDRT 3년 연속\nAFPK 보유', span:true, area:true}
+  {k:'motto', t:'한 줄 소개 (표지 따옴표 안에 들어갑니다)', ph:'한 사람의 인생에 꼭 맞는 보장을 설계합니다', span:true},
+  {k:'tags',  t:'전문 분야 (쉼표로 나눔 · 표지 알약)', ph:'운전자보험, 종신·정기보험, 보장분석, 은퇴·연금설계', span:true},
+  {k:'bio',   t:'경력·자격 (줄바꿈으로 여러 줄)', ph:'MDRT 3년 연속\nAFPK 보유', span:true, area:true},
+  /* ── 여기부터는 표지(STARRING) 에만 쓰입니다 ── */
+  {k:'nameEn',  t:'이름 영문 (표지 큰 이름 아래)', ph:'YOON SI HYEON', cover:true},
+  {k:'issue',   t:'표지 번호',      ph:'No.07 / 08', cover:true},
+  {k:'license', t:'보유 자격 (LICENSE)', ph:'생명·손해·변액', cover:true},
+  {k:'career',  t:'경력 한 줄 (CAREER)', ph:'상담 1,200+ · 8년', cover:true},
+  {k:'onair',   t:'방송 출연 (ON AIR · 줄바꿈으로 여러 줄)', ph:'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」', span:true, area:true, cover:true},
+  {k:'team',    t:'팀 이름 (표지 왼쪽 아래)', ph:'TEAM ONTOP · INSURANCE PROFESSIONALS', span:true, cover:true}
+];
+/* 표지에 쓰는 사진 세 장 — 본인 사진 하나와 방송 화면 둘 */
+var ADV_PHOTOS=[
+  {k:'photo',  t:'표지 인물 사진', d:'왼쪽 전체를 채웁니다. 세로로 긴 사진이 좋습니다.'},
+  {k:'photo2', t:'방송 화면 ①',   d:'표지 오른쪽 아래 ON AIR 첫 칸'},
+  {k:'photo3', t:'방송 화면 ②',   d:'표지 오른쪽 아래 ON AIR 둘째 칸'}
 ];
 function advKey(){
   var u=(OS.profile&&OS.profile.id)||'guest';
@@ -1611,38 +1624,51 @@ function advSave(){
     f=ADV_FIELDS[i];
     o[f.k]=(osVal('adv_'+f.k)||'').replace(/^\s+|\s+$/g,'');
   }
-  if(window.__advPhoto!==undefined)o.photo=window.__advPhoto;
+  for(i=0;i<ADV_PHOTOS.length;i++){
+    var pk=ADV_PHOTOS[i].k;
+    if(window.__advPhoto&&window.__advPhoto[pk]!==undefined)o[pk]=window.__advPhoto[pk];
+  }
   advSet(o);
   advPush();
   toast('내 소개를 저장했습니다 — 상담자료 맨 앞에 이대로 나옵니다');
   if(typeof lastTab!=='undefined'&&lastTab==='settings')go('settings');
 }
-function advPhotoPick(input){
+function advPhotoPick(input,k){
   var f=input&&input.files&&input.files[0];
   if(!f)return;
-  if(f.size>8*1024*1024){toast('8MB 이하 사진을 골라 주세요');return;}
+  if(f.size>10*1024*1024){toast('10MB 이하 사진을 골라 주세요');return;}
   var rd=new FileReader();
   rd.onload=function(e){
     var img=new Image();
     img.onload=function(){
-      /* 큰 사진을 그대로 넣으면 저장칸이 넘친다 — 줄여서 담는다 */
-      var max=280,w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
+      /* 큰 사진을 그대로 넣으면 저장칸이 넘친다 — 줄여서 담는다.
+         표지 인물 사진은 화면 절반을 채우므로 더 크게 남긴다. */
+      var max=(k==='photo')?900:520;
+      var w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
       var cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
       var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
       cv.getContext('2d').drawImage(img,0,0,cw,ch);
-      window.__advPhoto=cv.toDataURL('image/jpeg',0.82);
-      var box=document.getElementById('advPhotoPrev');
-      if(box)box.innerHTML='<img src="'+window.__advPhoto+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">';
+      window.__advPhoto=window.__advPhoto||{};
+      window.__advPhoto[k]=cv.toDataURL('image/jpeg',0.84);
+      advPhotoPaint(k,window.__advPhoto[k]);
       toast('사진을 올렸습니다 — 저장을 눌러 주세요');
     };
     img.src=''+e.target.result;
   };
   rd.readAsDataURL(f);
 }
-function advPhotoClear(){
-  window.__advPhoto='';
-  var box=document.getElementById('advPhotoPrev');
-  if(box)box.innerHTML='<span style="font-size:11px;color:#94A3B8">사진 없음</span>';
+function advPhotoPaint(k,src){
+  var box=document.getElementById('advPhotoPrev_'+k);
+  if(!box)return;
+  box.innerHTML=src
+    ?'<img src="'+src+'" style="width:100%;height:88px;border-radius:9px;object-fit:cover;border:1px solid #E5E9F0;display:block">'
+    :'<div style="height:88px;border:1px dashed #CBD5E1;border-radius:9px;display:flex;align-items:center;'+
+     'justify-content:center;font-size:11px;color:#94A3B8">아직 없음</div>';
+}
+function advPhotoClear(k){
+  window.__advPhoto=window.__advPhoto||{};
+  window.__advPhoto[k]='';
+  advPhotoPaint(k,'');
   toast('사진을 지웠습니다 — 저장을 눌러 주세요');
 }
 function advCardHtml(){
@@ -1662,21 +1688,37 @@ function advCardHtml(){
     '<div class="card-desc"><b>보장분석 상담자료</b>와 <b>재무설계 상담자료</b>의 첫 장에 이 내용이 들어갑니다. '+
     '<b>'+osEsc(who)+'</b>님 계정에만 저장되므로, 같은 컴퓨터를 다른 팀원이 써도 서로 덮어쓰지 않습니다.</div></div>'+
     '<div class="card-body">'+
-    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
-      '<div id="advPhotoPrev">'+(o.photo
-        ? '<img src="'+o.photo+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">'
-        : '<span style="font-size:11px;color:#94A3B8">사진 없음</span>')+'</div>'+
-      '<div><input type="file" id="advPhotoFile" accept="image/*" style="display:none" onchange="advPhotoPick(this)">'+
-      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="document.getElementById(\'advPhotoFile\').click()">📷 사진 올리기</button> '+
-      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="advPhotoClear()">지우기</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:14px">'+
+      ADV_PHOTOS.map(function(P){
+        var src=o[P.k]||'';
+        return '<div>'+
+          '<div style="font-size:11.5px;font-weight:800;color:#334155;margin-bottom:5px">'+osEsc(P.t)+'</div>'+
+          '<div id="advPhotoPrev_'+P.k+'">'+(src
+            ? '<img src="'+src+'" style="width:100%;height:88px;border-radius:9px;object-fit:cover;border:1px solid #E5E9F0;display:block">'
+            : '<div style="height:88px;border:1px dashed #CBD5E1;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#94A3B8">아직 없음</div>')+'</div>'+
+          '<input type="file" id="advPhotoFile_'+P.k+'" accept="image/*" style="display:none" onchange="advPhotoPick(this,\''+P.k+'\')">'+
+          '<div class="btn-row" style="margin-top:6px">'+
+            '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="document.getElementById(\'advPhotoFile_'+P.k+'\').click()">📷 올리기</button>'+
+            '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="advPhotoClear(\''+P.k+'\')">지우기</button>'+
+          '</div>'+
+          '<div style="font-size:10.5px;color:#94A3B8;margin-top:4px;line-height:1.5">'+osEsc(P.d)+'</div>'+
+        '</div>';
+      }).join('')+
     '</div>'+
-    '<div class="frm">'+ADV_FIELDS.map(fld).join('')+'</div>'+
+    '<div class="frm">'+ADV_FIELDS.filter(function(f){return !f.cover;}).map(fld).join('')+'</div>'+
+    '<div style="margin:15px 0 8px;padding-top:13px;border-top:1px solid #E5E9F0">'+
+      '<div style="font-size:12.5px;font-weight:900;color:#0B1B34">🎬 표지에만 나오는 것</div>'+
+      '<div style="font-size:11.5px;color:#64748B;line-height:1.65;margin-top:3px">'+
+      '비워 두시면 그 줄은 표지에서 <b>안 나옵니다.</b> 이름을 채우셔야 새 표지가 뜹니다.</div>'+
+    '</div>'+
+    '<div class="frm">'+ADV_FIELDS.filter(function(f){return f.cover;}).map(fld).join('')+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
       '<button class="btn btn-primary" onclick="advSave()">저장</button>'+
       '<button class="btn btn-ghost" onclick="go(\'sangdam\')">📋 보장분석 상담자료에서 보기</button>'+
     '</div>'+
     '<div class="acad-note" style="margin-top:10px">이 값은 <b>이 기기의 내 계정 칸</b>에 저장됩니다. '+
-    '다른 컴퓨터에서 처음 열면 한 번 더 채워 주셔야 합니다.</div>'+
+    '다른 컴퓨터에서 처음 열면 한 번 더 채워 주셔야 합니다. '+
+    '고객 실명·전화는 여기 넣지 마십시오 — 이 칸은 <b>설계사 소개용</b>입니다.</div>'+
   '</div></div>';
 }
 
@@ -1684,7 +1726,7 @@ function advCardHtml(){
    상담자료는 각자 다른 화면(iframe)이다. 사람이 옮겨 적을 일이 아니라
    앱이 열릴 때 알아서 넣어 준다. */
 function advFrames(){
-  var out=[],ids=['sangdamFrame','prSdFrame','finFrame','fpFrame'];
+  var out=[],ids=['sangdamFrame','prSdFrame','prStoryFrame','finFrame','fpFrame'];
   ids.forEach(function(id){
     var f=document.getElementById(id);
     if(f&&f.contentWindow)out.push(f);
@@ -3927,6 +3969,9 @@ function osTabProbe(tab){
   if(tab==='assistant')return renderAssistant();
   if(tab==='growth')return renderTeamDash();
   if(tab==='ai_desk')return renderAiDeskPage();
+  if(tab==='fin_usd')return renderFinUsd();
+  if(tab==='fin_gift')return renderFinGift();
+  if(tab==='fin_ins')return renderFinIns();
   if(tab==='ai_prop')return renderAiProposal();
   if(tab==='interpret')return renderInterpret();
   if(tab==='wallets')return renderWallets();
@@ -5695,6 +5740,7 @@ var AR_CAT=[
  ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me'],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
+ ['perf', '💰','내 업적 · 월간보고','목표와 실적, 그리고 흐름',        'me'],
  ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
  ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
  ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
@@ -6548,55 +6594,111 @@ function arBriefData(){
   return {todo:todo.length,bad:bad,ap:apToday,cold:cold.length,old:old.length,
           stu:st.length?st[0][1]:'',score:r?(r.total||0):0,name:r?r.name:'',list:todo.slice(0,3)};
 }
+/* ── 오늘 아침 보고 — 크게, 그리고 <b>줄마다 제 칸으로</b> ────────
+   전에는 상자가 작았고 단추가 하나뿐이라 「오늘 할 일 열기」 를 눌러도
+   어디로 가는지 몰랐다. 사람은 목록을 보고 <b>그 줄을 눌러</b> 간다.
+   그래서 줄마다 갈 곳을 달고, 밀린 것은 눈에 띄게 키운다.
+   리더에게는 팀에서 아직 안 낸 사람이 함께 뜬다.              */
+function arBriefRows(){
+  var out=arTodoList().slice(0,8),i;
+  /* 이달 월간보고를 아직 안 냈으면 맨 위에 세운다 */
+  try{
+    if(typeof PF!=='undefined'&&PF.loaded&&!(PF.mine&&PF.mine.submitted_at))
+      out.unshift({k:'perf',e:'💰',t:'이달 월간보고를 아직 안 냈습니다',
+        s:'목표·실적을 적고 제출',go:'airep',cat:'perf',bad:true,d:0});
+  }catch(e){}
+  /* 리더에게만 — 팀에서 아직 안 낸 사람 */
+  try{
+    if(typeof PF!=='undefined'&&PF.loaded&&typeof pfIsLead==='function'&&pfIsLead()){
+      var mates=(typeof pfTeamMates==='function')?pfTeamMates():[],n=0,j;
+      for(j=0;j<mates.length;j++){
+        var hit=null,k2;
+        for(k2=0;k2<PF.rows.length;k2++)if(PF.rows[k2].owner_id===mates[j].id)hit=PF.rows[k2];
+        if(!hit||!hit.submitted_at)n++;
+      }
+      if(n)out.unshift({k:'lead',e:'🏢',t:'월간보고를 아직 안 낸 팀원 '+n+'명',
+        s:'팀원 관리에서 확인',go:'airep',cat:'team',bad:true,d:0});
+    }
+  }catch(e2){}
+  return out;
+}
+function arBriefGo(i){
+  var r=(AR._brief||[])[i];
+  arBriefClose();
+  if(!r)return;
+  if(r.cat){AR.cat=r.cat;try{localStorage.setItem('apex_ar_cat',r.cat);}catch(e){}}
+  go(r.go||'airep');
+}
 function arBriefOpen(){
   arBriefClose();
-  var d=arBriefData();
+  var d=arBriefData(),rows=arBriefRows();
+  AR._brief=rows;
+  var bad=0,i;for(i=0;i<rows.length;i++)if(rows[i].bad)bad++;
+
+  /* 경고 칸 — 밀린 것이 있으면 크게, 붉게 */
   var tile=function(v,u,k,warn){
-    return '<div class="ar-bt'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
-      '<div class="k">'+k+'</div></div>';
+    return '<div class="ar-bt'+(warn?' warn':'')+'" style="flex:1;min-width:132px;border-radius:16px;padding:16px 15px;text-align:center;'+
+      'background:'+(warn?'#FEF2F2':'#F8FAFC')+';border:2px solid '+(warn?'#FCA5A5':'#E9EEF5')+'">'+
+      '<div style="font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1.05;color:'+
+        (warn?'#DC2626':'#0F172A')+'">'+v+
+        '<span style="font-size:15px;font-weight:800;margin-left:2px">'+u+'</span></div>'+
+      '<div style="font-size:13px;font-weight:800;margin-top:6px;color:'+(warn?'#B91C1C':'#64748B')+'">'+k+'</div></div>';
   };
-  var li=d.list.map(function(x){
-    return '<div class="ar-bl"><span>'+x.e+'</span><b>'+osEsc(x.t)+'</b></div>';
-  }).join('')||'<div class="ar-bl" style="color:#94A3B8">남은 것이 없습니다. 좋습니다.</div>';
+  var li=rows.map(function(x,n){
+    return '<button type="button" onclick="arBriefGo('+n+')" style="display:flex;align-items:center;gap:12px;'+
+      'width:100%;text-align:left;border:2px solid '+(x.bad?'#FECACA':'#E9EEF5')+';'+
+      'background:'+(x.bad?'#FFF7F7':'#fff')+';border-radius:14px;padding:14px 16px;margin-bottom:9px;'+
+      'cursor:pointer;font-family:inherit">'+
+      '<span style="font-size:24px;flex:0 0 auto">'+x.e+'</span>'+
+      '<span style="flex:1;min-width:0">'+
+        '<span style="display:block;font-size:15.5px;font-weight:900;color:'+(x.bad?'#991B1B':'#0F172A')+
+        ';line-height:1.45">'+osEsc(x.t)+'</span>'+
+        (x.s?('<span style="display:block;font-size:12.5px;color:#64748B;margin-top:2px">'+osEsc(x.s)+'</span>'):'')+
+      '</span>'+
+      '<span style="flex:0 0 auto;font-size:13px;font-weight:900;color:#1A56DB;white-space:nowrap">바로 가기 →</span>'+
+      '</button>';
+  }).join('')||'<div style="padding:26px;text-align:center;font-size:15px;font-weight:800;color:#059669;'+
+    'background:#F0FDF4;border:2px solid #BBF7D0;border-radius:14px">✅ 남은 것이 없습니다. 좋습니다.</div>';
+
   var ov=document.createElement('div');ov.id='arBriefOvl';
-  ov.style.cssText='position:fixed;inset:0;z-index:9996;background:rgba(15,23,42,.58);'+
+  ov.style.cssText='position:fixed;inset:0;z-index:9996;background:rgba(15,23,42,.66);'+
     'display:flex;align-items:center;justify-content:center;padding:16px';
   ov.onclick=function(e){if(e.target===ov)arBriefClose();};
-  ov.innerHTML='<div style="background:#fff;width:100%;max-width:500px;max-height:90vh;border-radius:20px;'+
-    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.32)">'+
-    '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:20px 22px">'+
-      '<div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">오늘 아침 보고</div>'+
-      '<div style="font-size:20px;font-weight:800;margin-top:3px">'+
-        osEsc(d.name||'')+' 님, 오늘은 이렇게 시작합니다</div>'+
-      '<div style="font-size:12px;color:#BFDBFE;margin-top:4px">'+osEsc(arToday())+
+  ov.innerHTML='<div style="background:#fff;width:100%;max-width:760px;max-height:92vh;border-radius:24px;'+
+    'overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.40)">'+
+    '<div style="background:linear-gradient(135deg,'+(bad?'#7F1D1D,#B91C1C':'#0F172A,#1A56DB')+');color:#fff;padding:26px 28px">'+
+      '<div style="font-size:12px;font-weight:900;color:'+(bad?'#FECACA':'#93C5FD')+';letter-spacing:.5px">오늘 아침 보고</div>'+
+      '<div style="font-size:27px;font-weight:900;margin-top:5px;letter-spacing:-.03em">'+
+        osEsc(d.name||'')+' 님, '+(bad?('오늘 <b>'+bad+'가지</b>가 밀렸습니다'):'오늘은 이렇게 시작합니다')+'</div>'+
+      '<div style="font-size:13px;color:'+(bad?'#FCA5A5':'#BFDBFE')+';margin-top:6px">'+osEsc(arToday())+
         ' · 지금 '+d.score+'점</div></div>'+
-    '<div style="padding:16px 22px;overflow-y:auto">'+
-      '<div class="ar-bts">'+
+    '<div style="padding:20px 28px;overflow-y:auto">'+
+      '<div style="display:flex;gap:11px;flex-wrap:wrap">'+
         tile(d.ap,'건','오늘 약속',0)+
         tile(d.bad,'건','밀린 것',d.bad>0)+
         tile(d.cold,'건','다시 걸 DB',d.cold>0)+
         tile(d.old,'명','식은 고객',d.old>0)+
       '</div>'+
-      '<div style="font-size:13px;font-weight:900;color:#0F172A;margin:16px 0 6px">오늘 이것만</div>'+li+
-      (d.stu?('<div style="font-size:13px;font-weight:900;color:#0F172A;margin:16px 0 6px">오늘 공부</div>'+
-        '<div class="ar-bl"><span>🎓</span><b>'+osEsc(d.stu)+'</b></div>'):'')+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin:22px 0 10px">'+
+      '오늘 이것부터 <span style="font-size:12.5px;font-weight:700;color:#94A3B8">— 누르면 그 칸으로 바로 갑니다</span></div>'+
+      li+
     '</div>'+
-    '<div style="padding:13px 22px;border-top:1px solid #F1F5F9;display:flex;gap:8px;'+
-      'justify-content:space-between;align-items:center">'+
-      '<div style="display:flex;flex-direction:column;gap:4px">'+
-      '<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+    '<div style="padding:15px 28px;border-top:1px solid #F1F5F9;display:flex;gap:10px;'+
+      'justify-content:space-between;align-items:center;flex-wrap:wrap">'+
+      '<div style="display:flex;flex-direction:column;gap:5px">'+
+      '<label style="font-size:12px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arBriefOff(this)"'+(arBriefIsOff()?' checked':'')+
       '/> 아침에 안 띄우기</label>'+
-      ('<label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
+      '<label style="font-size:12px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer">'+
       '<input type="checkbox" onchange="arAutoToggle(this)"'+(arAutoOff()?'':' checked')+
-      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>')+
+      '/> 오전 '+AR_H+'시에 '+(arIsLead()?'팀 보고':'내 보고')+' 자동으로 만들기</label>'+
       '</div>'+
-      '<div style="display:flex;gap:8px">'+
-      '<button onclick="arBriefClose()" style="border:1.5px solid #E2E8F0;background:#fff;color:#475569;'+
-      'font-size:12.5px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">나중에</button>'+
+      '<div style="display:flex;gap:9px">'+
+      '<button onclick="arBriefClose()" style="border:2px solid #E2E8F0;background:#fff;color:#475569;'+
+      'font-size:13.5px;font-weight:800;padding:12px 20px;border-radius:12px;cursor:pointer">나중에</button>'+
       '<button onclick="arBriefClose();go(\'airep\')" style="border:none;background:#1A56DB;color:#fff;'+
-      'font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">'+
-      '오늘 할 일 열기</button></div></div>'+
+      'font-size:14.5px;font-weight:900;padding:12px 26px;border-radius:12px;cursor:pointer">'+
+      'TFA 업무관리 열기</button></div></div>'+
   '</div>';
   document.body.appendChild(ov);
   arBriefMark();
@@ -7269,6 +7371,503 @@ function arCss(){
    '.ar-mi{font-size:13px;line-height:1.8;color:#334155;background:#F8FAFC;border-radius:10px;padding:12px 14px}';
   document.head.appendChild(s);
 }
+/* ════════════════ 월간 영업보고서 ════════════════
+   이 앱에는 <b>업적을 담는 자리가 없었다.</b> 통화 습관과 활동 점수는
+   있는데 정작 월초보험료가 얼마인지 적을 칸이 없었다. 그래서 리더는
+   따로 엑셀을 돌리고, 팀원은 매달 카톡으로 숫자를 보냈다.
+
+   여기서 한 칸에 모은다.
+     목표를 적고 → 실적을 적고 → 흐름을 보고 → 제출하면
+     리더가 받아 보고, 부족한 것과 다음 달 할 일이 정리돼 내려온다.
+
+   업적은 <b>월초보험료</b> 하나로 센다. 여러 지표를 섞으면 무엇을
+   올려야 하는지가 흐려진다.
+   ★ 열람은 DB 가 막는다 (migration_40_perf.sql) — 리더는 자기 팀만.  */
+var PF={ym:'',mine:null,rows:[],plan:null,loading:false,loaded:false,busy:''};
+
+function pfYm(){return PF.ym||(typeof ckDayK==='function'?ckDayK().slice(0,7):new Date().toISOString().slice(0,7));}
+function pfYmLabel(ym){var a=(''+ym).split('-');return a[0]+'년 '+(+a[1])+'월';}
+function pfShift(n){
+  var a=pfYm().split('-'),d=new Date(+a[0],+a[1]-1+n,1);
+  PF.ym=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+  PF.loaded=false;pfLoad();
+}
+function pfMyId(){return (OS.profile&&OS.profile.id)||'';}
+function pfIsLead(){return (typeof gbIsLead==='function')?gbIsLead():false;}
+/* 대표는 전체, 리더는 자기 팀. 화면에서도 같은 규칙을 쓴다 —
+   DB 가 막아 주지만 화면이 딴소리를 하면 사람이 헷갈린다. */
+function pfCanAll(){
+  try{return (typeof osIsHQ==='function'&&osIsHQ())||(typeof osIsOwner==='function'&&osIsOwner());}catch(e){return false;}
+}
+
+/* ── 읽기 ─────────────────────────────────────────────────────
+   내 열두 달과, 볼 수 있는 사람들의 이번 달을 한 번에 가져온다. */
+function pfLoad(){
+  if(PF.loading)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!pfMyId()){PF.loaded=true;pfPaint();return;}
+  PF.loading=true;
+  var ym=pfYm(),a=ym.split('-');
+  var d=new Date(+a[0],+a[1]-1-11,1);
+  var from=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+  var jobs=[
+    sb.from('monthly_perf').select('*').gte('period',from).lte('period',ym).order('period'),
+    sb.from('team_plans').select('*').eq('period',ym)
+  ];
+  Promise.all(jobs).then(function(r){
+    var all=(r[0]&&r[0].data)||[],plans=(r[1]&&r[1].data)||[];
+    PF.all=all;
+    PF.rows=all.filter(function(x){return x.period===ym;});
+    PF.mine=null;
+    var me=pfMyId(),i;
+    for(i=0;i<PF.rows.length;i++)if(PF.rows[i].owner_id===me)PF.mine=PF.rows[i];
+    PF.mineYear=all.filter(function(x){return x.owner_id===me;});
+    /* 내가 이끄는 팀의 계획서 (없으면 내가 속한 팀 것) */
+    PF.plan=plans[0]||null;
+    PF.err=(r[0]&&r[0].error)?(r[0].error.message||''):'';
+    PF.loading=false;PF.loaded=true;pfPaint();
+  },function(e){
+    PF.loading=false;PF.loaded=true;
+    PF.err=(e&&e.message)||'읽지 못했습니다';
+    pfPaint();
+  });
+}
+function pfPaint(){
+  if(typeof AR!=='undefined'&&AR.cat==='perf'&&typeof arPaint==='function')arPaint();
+  else if(typeof AR!=='undefined'&&AR.cat==='team'&&typeof arPaint==='function')arPaint();
+}
+/* ── 쓰기 ───────────────────────────────────────────────────── */
+function pfSave(patch,quiet){
+  var sb=(typeof osClient==='function')?osClient():null,me=pfMyId();
+  if(!sb||!me){toast('로그인 후 저장할 수 있습니다');return Promise.resolve();}
+  var row=Object.assign({owner_id:me,period:pfYm()},patch||{});
+  return sb.from('monthly_perf').upsert(row,{onConflict:'owner_id,period'}).then(function(r){
+    if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+    if(!quiet)toast('저장했습니다');
+    PF.loaded=false;pfLoad();
+  });
+}
+function pfSaveMine(){
+  pfSave({
+    goal_prem:+finV('pf_goal',0),act_prem:+finV('pf_act',0),
+    goal_case:Math.round(+finV('pf_gcase',0)),act_case:Math.round(+finV('pf_acase',0)),
+    plan:(osVal('pf_plan')||''),note:(osVal('pf_note')||'')
+  });
+}
+
+/* ── 숫자 몇 개 ─────────────────────────────────────────────── */
+function pfPct(a,b){return b>0?Math.round(a/b*100):0;}
+function pfOf(r){r=r||{};return {g:+r.goal_prem||0,a:+r.act_prem||0,gc:+r.goal_case||0,ac:+r.act_case||0};}
+function pfName(id){
+  try{var i,R=(typeof GB!=='undefined'&&GB.rows)||[];
+    for(i=0;i<R.length;i++)if(R[i].id===id)return R[i].name;}catch(e){}
+  return id===pfMyId()?((OS.profile&&OS.profile.name)||'나'):'팀원';
+}
+
+/* ── 내 업적 ───────────────────────────────────────────────── */
+function pfMeHtml(){
+  if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+  if(!PF.loaded)return '<div class="ar-none">업적을 불러오는 중입니다. 잠시만요.</div>';
+  var m=PF.mine||{},v=pfOf(m),h='';
+  var done=!!m.submitted_at;
+
+  h+='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎯</span>'+pfYmLabel(pfYm())+' 목표와 실적'+
+    (done?' <span class="badge green">제출함</span>':' <span class="badge">아직 안 냄</span>')+'</div>'+
+    '<div class="card-desc">업적은 <b>월초보험료</b>로 셉니다. 만원 단위로 적어 주세요.'+
+    (m.from_team?' <b style="color:#1D4ED8">목표는 팀 사업계획서에서 내려온 값입니다.</b>':'')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:11px">'+
+      '<button class="btn btn-ghost" onclick="pfShift(-1)">← 지난달</button>'+
+      '<button class="btn btn-ghost" onclick="pfShift(1)">다음달 →</button>'+
+    '</div>'+
+    '<div class="frm cols2">'+
+      finNum('pf_goal','목표 월초보험료',v.g||'','만원')+
+      finNum('pf_act','실제 올린 월초보험료',v.a||'','만원')+
+      finNum('pf_gcase','목표 건수',v.gc||'','건')+
+      finNum('pf_acase','실제 건수',v.ac||'','건')+
+    '</div>'+
+    '<div class="fld" style="margin-top:9px"><label>이달 사업계획 — 무엇을 어떻게 하겠는가</label>'+
+    '<textarea id="pf_plan" rows="3" placeholder="예: 기존 고객 30명 보장분석 재점검 · 소개 요청 주 3건">'+
+    osEsc(m.plan||'')+'</textarea></div>'+
+    '<div class="fld"><label>이달 소회 — 잘된 것과 막힌 것</label>'+
+    '<textarea id="pf_note" rows="3" placeholder="예: 약속은 늘었는데 청약까지 못 갔다. 클로징 멘트가 약하다.">'+
+    osEsc(m.note||'')+'</textarea></div>'+
+    '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-primary" onclick="pfSaveMine()">저장</button>'+
+      '<button class="btn '+(done?'btn-ghost':'btn-primary')+'" onclick="pfSubmit()">'+
+        (done?'다시 제출':'📤 월간 보고서 제출')+'</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardOpen()">🖼️ 매월 영업보고서</button>'+
+    '</div>'+
+    (PF.err?('<div class="notice" style="margin-top:9px">읽기·저장이 막혔습니다 — <b>'+osEsc(PF.err.slice(0,90))+'</b><br>'+
+      'Supabase 에서 <b>migration_40_perf.sql</b> 을 한 번 실행하셔야 합니다.</div>'):'')+
+    '</div></div>';
+
+  h+=pfChartHtml();
+  if(m.feedback||m.ai_draft)h+=pfFeedbackHtml(m);
+  return h;
+}
+
+/* ── 그래프 — 내 흐름과 목표 대비 ─────────────────────────── */
+function pfChartHtml(){
+  var year=(PF.mineYear||[]).slice(),h='';
+  var v=pfOf(PF.mine);
+  var rate=pfPct(v.a,v.g);
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>목표 대비</div>'+
+    '<div class="card-desc">막대가 <b>목표선</b>에 닿으면 100% 입니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    (v.g>0||v.a>0
+      ? vizBarH([
+          {label:'목표',value:v.g,valLabel:prNum(v.g)+'만',color:'#94A3B8',},
+          {label:'실적',value:v.a,valLabel:prNum(v.a)+'만',color:(rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626'))},
+          {label:'목표 건수',value:v.gc,valLabel:v.gc+'건',color:'#CBD5E1'},
+          {label:'실제 건수',value:v.ac,valLabel:v.ac+'건',color:'#1D4ED8'}
+        ],{max:Math.max(v.g,v.a,v.gc,v.ac,1),width:600,labelW:88,valW:78})
+      : '<div class="ar-none">아직 적은 값이 없습니다.</div>')+
+    (v.g>0?('<div style="margin-top:10px;font-size:14px;font-weight:900;color:'+
+      (rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626'))+'">달성률 '+rate+'% '+
+      '<span style="font-size:12px;font-weight:700;color:#64748B">— '+
+      (rate>=100?('목표를 '+prNum(v.a-v.g)+'만원 넘겼습니다')
+                :('목표까지 '+prNum(v.g-v.a)+'만원 남았습니다'))+'</span></div>'):'')+
+    '</div></div>';
+
+  /* 열두 달 흐름 — 두 점 이상일 때만 그린다 */
+  var pts=year.filter(function(x){return (+x.act_prem||0)>0;})
+              .map(function(x){return {t:(+x.period.split('-')[1])+'월',v:+x.act_prem||0};});
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📈</span>내 업적 흐름</div>'+
+    '<div class="card-desc">최근 열두 달 실제 월초보험료입니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    (pts.length>=2
+      ? prChartLine(pts,{unit:'만원',color:'#1D4ED8',zero:1})
+      : '<div class="ar-none">달이 두 개는 쌓여야 흐름이 보입니다. 지금 '+pts.length+'달치가 있습니다.</div>')+
+    '</div></div>';
+  return h;
+}
+
+/* ── 제출 → AI 가 초안을 쓰고, 리더가 고친다 ────────────────── */
+function pfSubmit(){
+  var v=pfOf(PF.mine||{});
+  if(!v.a&&!v.g){toast('목표나 실적을 먼저 적어 주세요');return;}
+  PF.busy='submit';pfPaint();
+  pfSave({submitted_at:new Date().toISOString()},true).then(function(){
+    return pfAiDraft();
+  }).then(function(){
+    PF.busy='';toast('제출했습니다 — 리더가 확인합니다');pfPaint();
+  },function(){PF.busy='';pfPaint();});
+}
+function pfAiDraft(){
+  if(typeof callAI!=='function')return Promise.resolve();
+  var m=PF.mine||{},v=pfOf(m);
+  var year=(PF.mineYear||[]).map(function(x){
+    return x.period+' 목표 '+(+x.goal_prem||0)+' 실적 '+(+x.act_prem||0);
+  }).join(' / ');
+  var sys='너는 보험 영업 리더다. 팀원의 월간 실적을 보고 <b>무엇이 부족했는지</b>와 '+
+    '<b>다음 달에 무엇을 다르게 할지</b>를 쓴다. 규칙: '+
+    '① 숫자를 지어내지 않는다 ② 주어진 값만 근거로 쓴다 ③ 다섯 문장 이내 '+
+    '④ 「열심히」 같은 말 대신 셀 수 있는 행동으로 쓴다 ⑤ 사람을 깎아내리지 않는다. '+
+    'JSON 없이 줄글로만 답한다.';
+  var user='이번 달('+pfYm()+') 목표 '+v.g+'만원 / 실적 '+v.a+'만원 (달성률 '+pfPct(v.a,v.g)+'%)\n'+
+    '건수 목표 '+v.gc+' / 실제 '+v.ac+'\n'+
+    '본인 계획: '+(m.plan||'(없음)')+'\n본인 소회: '+(m.note||'(없음)')+'\n'+
+    '최근 흐름: '+(year||'(없음)');
+  return callAI(sys,user,700,'perf').then(function(t){
+    return pfSave({ai_draft:(''+t).slice(0,1600)},true);
+  },function(){return null;});
+}
+function pfFeedbackHtml(m){
+  var lead=pfIsLead(),mine=m.owner_id===pfMyId();
+  return '<div class="card" style="border-color:#BFDBFE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">💬</span>월간 피드백'+
+    (m.feedback?' <span class="badge green">리더 확정</span>':' <span class="badge">AI 초안</span>')+'</div>'+
+    '<div class="card-desc">'+(m.feedback
+      ? '리더가 확인하고 확정한 글입니다.'
+      : 'AI 가 숫자를 보고 쓴 초안입니다. <b>리더가 고쳐야 확정됩니다.</b>')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:13.5px;line-height:1.85;color:#1F2937;white-space:pre-wrap">'+
+    osEsc(m.feedback||m.ai_draft||'')+'</div>'+
+    (lead&&!mine?('<div class="fld" style="margin-top:11px"><label>리더 확정 — 고쳐서 저장하면 팀원에게 이대로 보입니다</label>'+
+      '<textarea id="pf_fb_'+m.owner_id+'" rows="4">'+osEsc(m.feedback||m.ai_draft||'')+'</textarea></div>'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="pfFeedbackSave(\''+m.owner_id+'\')">확정해서 보내기</button></div>'):'')+
+    '</div></div>';
+}
+function pfFeedbackSave(oid){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var t=osVal('pf_fb_'+oid)||'';
+  if(!sb||!t){toast('내용을 적어 주세요');return;}
+  sb.from('monthly_perf').update({feedback:t,feedback_by:pfMyId(),feedback_at:new Date().toISOString()})
+    .eq('owner_id',oid).eq('period',pfYm()).then(function(r){
+      if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+      toast('확정했습니다 — 팀원에게 이대로 보입니다');
+      PF.loaded=false;pfLoad();
+    });
+}
+
+/* ── 리더의 사업계획서 — 팀원 관리 맨 위에 붙는다 ─────────────
+   리더가 세운 계획과 팀원이 보는 목표가 갈라지면 아무 소용이 없다.
+   그래서 여기서 쓴 목표를 <b>「적용」 한 번으로</b> 팀원 목표칸에 내려보낸다.
+   다만 팀원이 스스로 적은 값이 있으면 화면에 그렇다고 밝힌다 —
+   소리 없이 덮으면 팀원은 자기가 적은 게 사라졌다고 느낀다.            */
+function pfTeamPlanHtml(){
+  if(!pfIsLead())return '';
+  var p=PF.plan||{},mates=pfTeamMates();
+  var tot=+p.goal_prem||0;
+  var sum=0,i;
+  for(i=0;i<mates.length;i++)sum+=+((p.share||{})[mates[i].id]||0);
+
+  return '<div class="card" style="border-color:#FDE68A;background:#FFFDF5"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📋</span>'+pfYmLabel(pfYm())+' 사업계획서 '+
+    '<span class="badge">리더만</span>'+
+    (p.applied_at?' <span class="badge green">적용됨</span>':'')+'</div>'+
+    '<div class="card-desc">여기 적은 목표를 <b>「적용」</b> 하면 팀원 각자의 목표칸에 그대로 내려갑니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="fld"><label>이달 팀 사업계획 — 무엇에 집중하는가</label>'+
+    '<textarea id="pf_tplan" rows="4" placeholder="예: 기존 고객 보장분석 재점검 집중 · 소개 확보 주 3건 · 신입 2명 동행 상담 주 2회">'+
+    osEsc(p.plan||'')+'</textarea></div>'+
+    '<div class="frm cols2" style="margin-top:8px">'+
+      finNum('pf_tgoal','팀 전체 목표',tot||'','만원')+
+    '</div>'+
+    (mates.length?('<div style="margin-top:12px"><div style="font-size:12.5px;font-weight:900;color:#0B1B34;margin-bottom:7px">'+
+      '팀원별로 나누기 <span style="font-weight:600;color:#94A3B8">— 합계 '+prNum(sum)+'만 / 팀 목표 '+prNum(tot)+'만</span></div>'+
+      '<div class="frm cols2">'+mates.map(function(x){
+        return finNum('pf_sh_'+x.id,x.name,(p.share||{})[x.id]||'','만원');
+      }).join('')+'</div></div>'):
+      '<div class="notice" style="margin-top:9px">팀원 명단을 아직 못 읽었습니다. 「↻ 새로 읽기」 를 눌러 주세요.</div>')+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-ghost" onclick="pfPlanSave(0)">저장만</button>'+
+      '<button class="btn btn-primary" onclick="pfPlanSave(1)">📥 저장하고 팀원에게 적용</button>'+
+    '</div>'+
+    '<div class="acad-note" style="margin-top:9px">적용하면 팀원 화면의 목표칸이 이 값으로 바뀌고, '+
+    '「팀 사업계획서에서 내려온 값」 이라고 표시됩니다. 팀원이 그 위에 다시 적을 수도 있습니다.</div>'+
+    '</div></div>';
+}
+function pfTeamMates(){
+  var out=[];
+  try{
+    var R=(typeof gbScope==='function')?gbScope():((typeof GB!=='undefined'&&GB.rows)||[]);
+    var me=pfMyId(),i;
+    for(i=0;i<R.length;i++)if(R[i].id&&R[i].id!==me)out.push({id:R[i].id,name:R[i].name});
+  }catch(e){}
+  return out;
+}
+function pfTeamId(){
+  try{
+    if(typeof GB!=='undefined'&&GB.team)return GB.team;
+    var me=pfMyId();
+    if(typeof GB!=='undefined'&&GB.teamOf&&GB.teamOf[me])return GB.teamOf[me];
+  }catch(e){}
+  return '';
+}
+function pfPlanSave(apply){
+  var sb=(typeof osClient==='function')?osClient():null,tid=pfTeamId();
+  if(!sb){toast('로그인 후 저장할 수 있습니다');return;}
+  if(!tid){toast('팀을 먼저 골라 주세요');return;}
+  var mates=pfTeamMates(),share={},i;
+  for(i=0;i<mates.length;i++){
+    var v=+finV('pf_sh_'+mates[i].id,0);
+    if(v>0)share[mates[i].id]=v;
+  }
+  var row={team_id:tid,period:pfYm(),plan:(osVal('pf_tplan')||''),
+    goal_prem:+finV('pf_tgoal',0),share:share,updated_by:pfMyId()};
+  if(apply)row.applied_at=new Date().toISOString();
+  sb.from('team_plans').upsert(row,{onConflict:'team_id,period'}).then(function(r){
+    if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+    if(!apply){toast('사업계획서를 저장했습니다');PF.loaded=false;pfLoad();return;}
+    /* 팀원 목표칸에 내려보낸다 — 목표만 건드리고 실적은 손대지 않는다 */
+    var keys=Object.keys(share);
+    if(!keys.length){toast('저장했습니다 — 나눌 목표가 없어 적용은 건너뜁니다');PF.loaded=false;pfLoad();return;}
+    Promise.all(keys.map(function(oid){
+      return sb.from('monthly_perf').upsert(
+        {owner_id:oid,period:pfYm(),goal_prem:share[oid],from_team:true},
+        {onConflict:'owner_id,period'});
+    })).then(function(res){
+      var bad=res.filter(function(x){return x&&x.error;}).length;
+      toast(bad?('일부 적용 실패 — '+bad+'명'):(keys.length+'명에게 목표를 내려보냈습니다'));
+      PF.loaded=false;pfLoad();
+    });
+  });
+}
+
+/* ── 지점 총괄 — 리더는 자기 팀, 대표는 전체 ────────────────── */
+function pfTeamBoardHtml(){
+  if(!pfIsLead())return '';
+  if(!PF.loaded)return '<div class="ar-none">업적을 불러오는 중입니다.</div>';
+  var mates=pfTeamMates(),byId={},i;
+  for(i=0;i<PF.rows.length;i++)byId[PF.rows[i].owner_id]=PF.rows[i];
+  var me=pfMyId();
+  var list=[{id:me,name:pfName(me)}].concat(mates);
+  var tg=0,ta=0,sub=0;
+  var rows=list.map(function(x){
+    var r=byId[x.id],v=pfOf(r);
+    tg+=v.g;ta+=v.a;if(r&&r.submitted_at)sub++;
+    return {x:x,r:r,v:v,pct:pfPct(v.a,v.g)};
+  }).sort(function(a,b){return b.pct-a.pct||b.v.a-a.v.a;});
+
+  var h='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🏢</span>'+pfYmLabel(pfYm())+' 지점 총괄 '+
+    '<span class="badge">'+(pfCanAll()?'전체':'내 팀')+'</span></div>'+
+    '<div class="card-desc">제출 '+sub+' / '+list.length+'명 · 팀 목표 '+prNum(tg)+'만 · 실적 '+prNum(ta)+'만 '+
+    '<b style="color:'+(pfPct(ta,tg)>=100?'#059669':'#D97706')+'">('+pfPct(ta,tg)+'%)</b></div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">이름</th><th style="padding:8px;text-align:right">목표</th>'+
+    '<th style="padding:8px;text-align:right">실적</th><th style="padding:8px;text-align:right">달성률</th>'+
+    '<th style="padding:8px;text-align:center">제출</th><th style="padding:8px"></th></tr></thead><tbody>';
+  rows.forEach(function(o){
+    var c=o.pct>=100?'#059669':(o.pct>=70?'#D97706':'#DC2626');
+    h+='<tr style="border-top:1px solid #EEF1F5">'+
+      '<td style="padding:8px;font-weight:800">'+osEsc(o.x.name)+'</td>'+
+      '<td style="padding:8px;text-align:right">'+prNum(o.v.g)+'만</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:800">'+prNum(o.v.a)+'만</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:900;color:'+c+'">'+(o.v.g?o.pct+'%':'-')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+((o.r&&o.r.submitted_at)?'✅':'—')+'</td>'+
+      '<td style="padding:8px;text-align:right">'+
+        ((o.r&&o.r.submitted_at)
+          ? '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="pfOpen(\''+o.x.id+'\')">보기</button>'
+          : '')+'</td></tr>';
+    if(PF.open===o.x.id&&o.r)h+='<tr><td colspan="6" style="padding:0 8px 12px">'+
+      '<div style="font-size:12.5px;line-height:1.8;color:#42506A;background:#F8FAFC;border-radius:11px;padding:11px 13px">'+
+      '<b>계획</b> '+osEsc(o.r.plan||'(없음)')+'<br><b>소회</b> '+osEsc(o.r.note||'(없음)')+'</div>'+
+      pfFeedbackHtml(o.r)+'</td></tr>';
+  });
+  h+='</tbody></table>'+
+    (rows.length<=1?'<div class="notice" style="margin-top:10px">팀원 실적이 안 보이면 Supabase 에서 '+
+      '<b>migration_40_perf.sql</b> 을 실행하셨는지 확인해 주세요. 열람 권한은 DB 가 막습니다.</div>':'')+
+    '</div></div>';
+  return h;
+}
+function pfOpen(id){PF.open=(PF.open===id)?'':id;pfPaint();}
+
+/* ── 매월 영업보고서 — 이미지로 굽고 카톡에 붙인다 ─────────────
+   숫자를 말로 옮겨 적으면 틀린다. 한 장으로 구워서 카톡에 그대로
+   붙일 수 있게 한다. 화면을 그리는 코드는 인스타 카드 내보내기가
+   이미 쓰고 있는 것(html2canvas)을 그대로 쓴다.                    */
+function pfCardHtml(who){
+  var m=who||PF.mine||{},v=pfOf(m),rate=pfPct(v.a,v.g);
+  var name=pfName(m.owner_id||pfMyId());
+  var org='';
+  try{var A=(typeof advGet==='function')?advGet():{};org=[A.org,A.title].filter(Boolean).join(' · ');}catch(e){}
+  var c=rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626');
+  var bar=Math.max(0,Math.min(100,rate));
+  var year=(PF.mineYear||[]).filter(function(x){return (+x.act_prem||0)>0;}).slice(-6);
+  var mx=1;year.forEach(function(x){mx=Math.max(mx,+x.act_prem||0);});
+
+  return '<div id="pfCard" style="width:820px;background:#0B1020;color:#E8EEF8;padding:38px 42px 32px;'+
+    'font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif;box-sizing:border-box">'+
+    '<div style="display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid rgba(255,255,255,.14);padding-bottom:16px">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;letter-spacing:.28em;color:#7DA2E8;font-weight:800">MONTHLY REPORT</div>'+
+        '<div style="font-size:30px;font-weight:900;letter-spacing:-.03em;margin-top:5px">'+osEsc(name)+
+        ' <span style="font-size:16px;font-weight:700;color:#93A6C4">'+osEsc(org)+'</span></div>'+
+      '</div>'+
+      '<div style="text-align:right"><div style="font-size:13px;color:#93A6C4;font-weight:700">'+pfYmLabel(pfYm())+'</div>'+
+      '<div style="font-size:11px;color:#6B7F9E;margin-top:2px">월초보험료 기준</div></div>'+
+    '</div>'+
+
+    '<div style="display:flex;gap:14px;margin-top:22px">'+
+      pfKpi('목표',prNum(v.g)+'만원','#93A6C4')+
+      pfKpi('실적',prNum(v.a)+'만원',c)+
+      pfKpi('달성률',rate+'%',c)+
+      pfKpi('건수',v.ac+' / '+v.gc+'건','#E8EEF8')+
+    '</div>'+
+
+    '<div style="margin-top:20px">'+
+      '<div style="height:22px;background:rgba(255,255,255,.08);border-radius:11px;overflow:hidden">'+
+      '<div style="height:100%;width:'+bar+'%;background:'+c+';border-radius:11px"></div></div>'+
+      '<div style="font-size:12px;color:#93A6C4;margin-top:7px;font-weight:700">'+
+      (v.g?(rate>=100?('목표를 '+prNum(v.a-v.g)+'만원 넘겼습니다'):('목표까지 '+prNum(v.g-v.a)+'만원')):'목표가 아직 없습니다')+
+      '</div></div>'+
+
+    (year.length>=2?('<div style="margin-top:22px">'+
+      '<div style="font-size:12px;font-weight:800;color:#7DA2E8;letter-spacing:.1em;margin-bottom:9px">최근 흐름</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:9px;height:92px">'+
+      year.map(function(x){
+        var hh=Math.max(6,Math.round((+x.act_prem||0)/mx*84));
+        return '<div style="flex:1;text-align:center">'+
+          '<div style="font-size:10.5px;color:#93A6C4;margin-bottom:4px;font-weight:700">'+prNum(+x.act_prem||0)+'</div>'+
+          '<div style="height:'+hh+'px;background:linear-gradient(180deg,#3B82F6,#1D4ED8);border-radius:5px 5px 0 0"></div>'+
+          '<div style="font-size:10.5px;color:#6B7F9E;margin-top:5px">'+(+x.period.split('-')[1])+'월</div></div>';
+      }).join('')+'</div></div>'):'')+
+
+    ((m.feedback||m.plan)?('<div style="margin-top:22px;background:rgba(255,255,255,.06);border-radius:13px;padding:15px 17px">'+
+      '<div style="font-size:11.5px;font-weight:800;color:#7DA2E8;letter-spacing:.1em">'+
+      (m.feedback?'리더 피드백':'이달 계획')+'</div>'+
+      '<div style="font-size:13px;line-height:1.75;color:#D6DFEC;margin-top:6px;white-space:pre-wrap">'+
+      osEsc((m.feedback||m.plan||'').slice(0,320))+'</div></div>'):'')+
+
+    '<div style="margin-top:20px;padding-top:13px;border-top:1px solid rgba(255,255,255,.10);'+
+    'font-size:10.5px;color:#6B7F9E;line-height:1.7">'+
+    'APEX YUN PRO · 이 자료는 내부 영업 관리용입니다. 고객 정보는 담겨 있지 않습니다.</div>'+
+  '</div>';
+}
+function pfKpi(t,v,c){
+  return '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:13px;padding:14px 15px">'+
+    '<div style="font-size:11.5px;color:#93A6C4;font-weight:700">'+t+'</div>'+
+    '<div style="font-size:21px;font-weight:900;color:'+c+';margin-top:4px;letter-spacing:-.02em">'+v+'</div></div>';
+}
+function pfCardOpen(who){
+  var w=document.getElementById('pfCardWrap');
+  if(!w){
+    w=document.createElement('div');w.id='pfCardWrap';
+    w.style.cssText='position:fixed;inset:0;z-index:9700;background:rgba(8,10,18,.88);'+
+      'display:none;flex-direction:column;align-items:center;overflow:auto;padding:22px 12px';
+    w.innerHTML='<div class="btn-row" style="margin-bottom:13px">'+
+      '<button class="btn btn-primary" onclick="pfCardCopy()">📋 이미지 복사 (카톡에 붙여넣기)</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardDown()">⬇️ 이미지 저장</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardClose()">✕ 닫기</button>'+
+      '</div><div id="pfCardHost"></div>';
+    document.body.appendChild(w);
+  }
+  document.getElementById('pfCardHost').innerHTML=pfCardHtml(who);
+  w.style.display='flex';document.body.style.overflow='hidden';
+}
+function pfCardClose(){
+  var w=document.getElementById('pfCardWrap');
+  if(w)w.style.display='none';document.body.style.overflow='';
+}
+function pfCardCanvas(){
+  if(typeof ensureHtml2Canvas!=='function')return Promise.reject(new Error('이미지 기능을 못 불러왔습니다'));
+  return ensureHtml2Canvas().then(function(h2c){
+    var el=document.getElementById('pfCard');
+    if(!el)throw new Error('보고서를 찾을 수 없습니다');
+    return h2c(el,{scale:2,backgroundColor:'#0B1020',logging:false,useCORS:true});
+  });
+}
+/* 카톡에 바로 붙이려면 <b>이미지 자체</b>가 클립보드에 있어야 한다.
+   글자만 복사하면 카톡에 파일 이름만 붙는다. */
+function pfCardCopy(){
+  toast('이미지를 만드는 중입니다…');
+  pfCardCanvas().then(function(cv){
+    if(!cv.toBlob||!window.ClipboardItem||!navigator.clipboard||!navigator.clipboard.write){
+      pfCardDown();toast('이 브라우저는 이미지 복사를 못 합니다 — 파일로 내려받았습니다');return;
+    }
+    cv.toBlob(function(blob){
+      if(!blob){pfCardDown();return;}
+      navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){
+        toast('복사했습니다 — 카톡에서 붙여넣기(Ctrl+V) 하세요');
+      },function(){
+        pfCardDown();toast('복사가 막혀 파일로 내려받았습니다');
+      });
+    },'image/png');
+  },function(e){toast('이미지 실패 — '+((e&&e.message)||''));});
+}
+function pfCardDown(){
+  pfCardCanvas().then(function(cv){
+    var name='영업보고서_'+pfYm()+'.png';
+    if(cv.toBlob){
+      cv.toBlob(function(b){
+        var u=URL.createObjectURL(b),a=document.createElement('a');
+        a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(function(){URL.revokeObjectURL(u);},1500);
+      },'image/png');
+    }else{
+      var a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=name;
+      document.body.appendChild(a);a.click();a.remove();
+    }
+  },function(e){toast('이미지 실패 — '+((e&&e.message)||''));});
+}
+
 function arBodyHtml(cat){
   if(typeof GB==='undefined'||!GB.loaded)
     return '<div class="ar-none">기록을 불러오는 중입니다. 잠시만요.</div>';
@@ -7287,10 +7886,19 @@ function arBodyHtml(cat){
     if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
     return '<div id="acadBody">'+acBody()+'</div>';
   }
+  if(cat==='perf'){
+    if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
+    return pfMeHtml();
+  }
   if(cat==='touch')return arTouchHtml();
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
-  if(cat==='team')return arTeamHtml();
+  if(cat==='team'){
+    /* 리더의 사업계획서와 지점 총괄이 팀원 목록보다 <b>위</b>에 온다.
+       계획을 세우고 나서 사람을 보는 순서다. */
+    if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
+    return pfTeamPlanHtml()+pfTeamBoardHtml()+arTeamHtml();
+  }
   return arMeHtml();
 }
 function arInnerHtml(){
@@ -8037,7 +8645,10 @@ var TABS=[
    {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
    {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
-   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'4',ak:'재무설계'}
+   {id:'fin_usd',icon:'💵',title:'달러 플랜',cnt:'',ak:'재무설계'},
+   {id:'fin_gift',icon:'🎁',title:'증여 · 상속 플랜',cnt:'',ak:'재무설계'},
+   {id:'fin_ins',icon:'🛡️',title:'보험으로 푸는 플랜',cnt:'',ak:'재무설계'},
+   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
  ]},
  {group:'투자·경제',items:[
    {id:'inv_stock',icon:'📈',title:'주식관리',cnt:'',ak:'투자·경제'},
@@ -8320,6 +8931,9 @@ function go(tab){
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
   else if(tab==='ai_org'||tab==='ai_meet'||tab==='ai_desk'){dyn.innerHTML=renderAiOrg();if(typeof osAiOrgAfterRender==='function')osAiOrgAfterRender();}
+  else if(tab==='fin_usd'){dyn.innerHTML=renderFinUsd();setTimeout(function(){try{finUsdCalc();}catch(e){}},60);}
+  else if(tab==='fin_gift'){dyn.innerHTML=renderFinGift();setTimeout(function(){try{finGiftCalc();}catch(e){}},60);}
+  else if(tab==='fin_ins'){dyn.innerHTML=renderFinIns();setTimeout(function(){try{finInsCalc();}catch(e){}},60);}
   else if(tab==='ai_prop'){dyn.innerHTML=renderAiProposal();if(typeof osAiProposalAfterRender==='function')osAiProposalAfterRender();}
   else if(tab==='interpret')dyn.innerHTML=renderInterpret();
   else if(tab==='wallets')dyn.innerHTML=renderWallets();
@@ -8584,8 +9198,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 21:10';
-var APP_BUILD_NOTE='보장분석 상담자료 16장이 다 뜹니다 (10장부터 안 뜨던 것 고침) · 제안서는 「한 장으로」 이어 봅니다 — 8통장부터 국가혜택·근거까지';
+var APP_BUILD='2026-08-13 09:05';
+var APP_BUILD_NOTE='아침 보고가 커졌습니다 — 밀린 것이 있으면 붉게, 줄을 누르면 그 칸으로 바로 갑니다 · TFA 업무관리에 「내 업적 · 월간보고」 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 적용 · 「매월 영업보고서」 는 이미지로 구워 카톡에 붙입니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12264,7 +12878,11 @@ function prNum(v){
   v=+v||0;
   return (''+v).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 }
-function prWon(v){
+/* AI 가 적어 주는 금액은 「1,200」 일 때도 「약 500만원」 일 때도 있다.
+   숫자면 만원을 붙이고, 글이면 그대로 둔다.
+   ── 이 함수는 한동안 prWon 이라는 같은 이름의 다른 함수에 가려져 있었다.
+      그쪽은 쉼표만 찍는 함수라 「1,200」 이 0 으로 찍혔다. 이름을 갈랐다. */
+function prAmt(v){
   var t=(''+(v==null?'':v)).replace(/^\s+|\s+$/g,'');
   if(!t)return '-';
   if(/^[0-9,]+(\.[0-9]+)?$/.test(t))return prNum(Math.round(parseFloat(t.replace(/,/g,''))))+'만원';
@@ -12544,7 +13162,7 @@ function prEvidenceHtml(){
           var c=typeColor[it.type||'']||'#7C3AED';
           return '<tr><td class="it">'+osEsc(it.name||'')+'</td>'+
             '<td><span class="pr-chg" style="color:'+c+';background:'+c+'14">'+osEsc(it.type||'')+'</span></td>'+
-            '<td class="af">'+osEsc(prWon(it.amount))+'</td>'+
+            '<td class="af">'+osEsc(prAmt(it.amount))+'</td>'+
             '<td class="bf" style="font-size:11.5px">'+osEsc(it.note||'')+'</td></tr>';
         }).join('')+'</tbody></table></div>'+
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:13px">'+
@@ -13405,6 +14023,7 @@ function prPaint(){
       /* 상담자료가 먼저다 — 이야기의 뼈대를 세우고 이 고객의 숫자로 넘어간다 */
       '<button class="acad-tab'+(PR.view==='sangdam'?' on':'')+'" onclick="prView(\'sangdam\')">📋 상담자료</button>'+
       '<button class="acad-tab'+(PR.view==='all'?' on':'')+'" onclick="prView(\'all\')">📖 한 장으로</button>'+
+      '<button class="acad-tab'+(PR.view==='story'?' on':'')+'" onclick="prView(\'story\')">🎬 상담 이야기</button>'+
       (hasDiff?'<button class="acad-tab'+(PR.view==='diff'?' on':'')+'" onclick="prView(\'diff\')">🔄 전후 비교</button>':'')+
       (p.wallets&&p.wallets.length?'<button class="acad-tab'+(PR.view==='wallet'?' on':'')+'" onclick="prView(\'wallet\')">🗺️ 8통장 진단</button>':'')+
       (p.reality&&p.reality.length?'<button class="acad-tab'+(PR.view==='reality'?' on':'')+'" onclick="prView(\'reality\')">⚠️ 준비 안 하면</button>':'')+
@@ -13426,6 +14045,7 @@ function prPaint(){
   var body;
   if(PR.view==='sangdam')body=prSangdamHtml();
   else if(PR.view==='all')body=prAllHtml();
+  else if(PR.view==='story')body=prStoryHtml();
   else if(PR.view==='doc')body=prDocHtml();
   else if(PR.view==='opt')body=prOptHtml();
   else if(PR.view==='diff')body=prDiffHtml();
@@ -14148,7 +14768,269 @@ function prBriefHtml(){
    상담 중에 흰 화면이 뜨면 그 자리에서 말이 끊긴다.
    그래서 8통장부터 국가혜택·근거까지 <b>한 장에 이어</b> 붙인다.
    내용이 없는 자리는 비워 두지 않고 <b>왜 없는지</b> 를 적는다.       */
+/* ════════ 상담 이야기 — 보장분석 자료를 이 고객에게 맞춰 펼친다 ════════
+   보장분석 상담자료는 메인 한 장만 있는 게 아니다. 그 뒤에 이야기 덱이
+   열 장 더 있다 (암 · 뇌혈관 · 심장 · 간병 · 실손 · 갱신형 · 자산곡선 ·
+   실제 지급 사례 두 장 · 마무리). 각각 한 주제를 처음부터 끝까지 끌고 간다.
+
+   전부 펼치면 두 시간이 걸린다. 하나도 안 펼치면 숫자만 남는다.
+   그래서 <b>이 고객의 증권에서 비어 있는 곳</b>을 보고 필요한 이야기만
+   골라 순서대로 세운다. 「AI 제안서 만들기」 한 번이면 이 순서가 나온다.  */
+var PR_STORY_DIR='상담자료/';
+var PR_STORY=[
+  {f:'demo_curve.html',t:'인생 자산 곡선',ic:'📉',
+   lead:'왜 보험을 드는가 — 큰 병에 목돈이 빠져 노후자금이 무너지지 않게',
+   need:function(){return {on:1,why:'모든 상담의 출발점입니다. 여기서 기준을 세우고 나머지를 봅니다.'};}},
+
+  {f:'demo_premium.html',t:'갱신형 보험료',ic:'💸',
+   lead:'35세 월 5만원이 80세엔 월 35만원이 되는 구조',
+   need:function(sc){
+     var n=prStoryWord(sc,/갱신/);
+     if(n)return {on:1,why:'가지고 계신 계약·특약에서 「갱신」 을 '+n+'군데 찾았습니다'};
+     /* 읽어낸 계약이 아예 없으면 끄면 안 된다. 처음 드는 분일수록
+        비갱신으로 잡아 드려야 나중에 보험료 때문에 해약하지 않는다. */
+     if(!sc||!(sc.plans||[]).length)
+       return {on:1,why:'읽어낸 계약이 없습니다 — 처음부터 비갱신으로 잡는 이야기입니다'};
+     return {on:0,why:'증권에서 갱신형이 눈에 띄지 않습니다'};}},
+
+  {f:'demo_cancer.html',t:'암 · 큰 우산 3종',ic:'🎗️',
+   lead:'생활비 · 치료비 · 비급여 — 우산 세 개로 나눠 봅니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['암주요치료비 (급여)','비급여 암주요치료비','하이클래스·프리미엄형',
+       '전액본인부담 암치료비','표적항암약물허가치료비','중입자·양성자','면역항암치료비','재진단암·전이암']);
+     return m.length?{on:1,why:'암 계열에서 '+m.length+'가지가 비어 있습니다 — '+m.slice(0,3).join(' · ')}
+                    :{on:0,why:'암 계열은 기준 담보가 대체로 들어 있습니다'};}},
+
+  {f:'demo_brain.html',t:'뇌혈관 · 평생 갱신되는 구독료',ic:'🧠',
+   lead:'한 번 막힌 혈관은 재발합니다 — 산정특례가 못 막는 자리',
+   need:function(sc){
+     var m=prStoryMiss(sc,['뇌혈관질환 (전체)','혈전용해·혈전제거','순환계치료비·2대질병치료비']);
+     return m.length?{on:1,why:'뇌혈관 계열에서 '+m.join(' · ')+' 이(가) 없습니다'}
+                    :{on:0,why:'뇌혈관 계열은 들어 있습니다'};}},
+
+  {f:'demo_heart.html',t:'심장',ic:'❤️',
+   lead:'허혈성은 진단명 하나로 갈립니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['허혈성심장질환 (전체)','순환계치료비·2대질병치료비']);
+     return m.length?{on:1,why:'심장 계열에서 '+m.join(' · ')+' 이(가) 없습니다'}
+                    :{on:0,why:'심장 계열은 들어 있습니다'};}},
+
+  {f:'demo_care.html',t:'간병 · 에어백',ic:'🦽',
+   lead:'차체는 진단비, 엔진은 치료비, 에어백이 간병입니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['간병인사용일당','장기요양·치매']);
+     return m.length?{on:1,why:m.join(' · ')+' 이(가) 비어 있습니다'}
+                    :{on:0,why:'간병 계열은 들어 있습니다'};}},
+
+  {f:'demo_silbi.html',t:'실손',ic:'🏥',
+   lead:'비급여를 실제로 막아 주는 자리',
+   need:function(sc){
+     var n=prStoryWord(sc,/(실손|실비|의료비)/);
+     return n?{on:0,why:'실손으로 보이는 계약이 '+n+'건 있습니다 — 세대만 확인하시면 됩니다'}
+             :{on:1,why:'증권에서 실손으로 보이는 계약을 못 찾았습니다'};}},
+
+  {f:'demo_case4000.html',t:'말 한마디가 4,000만원',ic:'💎',
+   lead:'같은 계약인데 말 한마디로 지급액이 갈린 실제 건',
+   need:function(){return {on:1,why:'숫자 뒤에 증거를 놓습니다 — 신뢰는 여기서 생깁니다'};}},
+
+  {f:'demo_casegallery.html',t:'지급 사례 모음',ic:'🧾',
+   lead:'회사별 · 담보별 실제 지급 내역',
+   need:function(){return {on:1,why:'「그래서 진짜 나오나요」 에 대한 답입니다'};}},
+
+  {f:'demo_closing.html',t:'마무리',ic:'🤝',
+   lead:'오늘 정한 것과 다음에 할 것',
+   need:function(){return {on:1,why:'다음 약속까지 잡고 끝냅니다'};}}
+];
+
+/* 증권 글자 안에서 낱말을 센다 — 계약 이름과 특약 이름을 모두 본다 */
+function prStoryWord(sc,re){
+  if(!sc)return 0;
+  var n=0,i,j,P=sc.plans||[],R=sc.riders||[],rows;
+  for(i=0;i<P.length;i++)if(re.test(''+(P[i].name||'')))n++;
+  for(i=0;i<R.length;i++){
+    if(re.test(''+(R[i].name||'')))n++;
+    rows=R[i].rows||[];
+    for(j=0;j<rows.length;j++)if(re.test(''+(rows[j].name||'')))n++;
+  }
+  return n;
+}
+/* 「없는 담보」 목록에서 이 이야기와 맞물리는 것만 추린다 */
+function prStoryMiss(sc,names){
+  var out=[],i,j,G=(sc&&sc.gaps)||[];
+  for(i=0;i<G.length;i++){
+    if(G[i].has)continue;
+    for(j=0;j<names.length;j++)
+      if(G[i].name===names[j]){out.push(G[i].name);break;}
+  }
+  return out;
+}
+/* 이 고객에게 펼칠 순서를 정한다 — 필요한 것이 앞으로 온다 */
+function prStoryPick(){
+  var sc=(typeof PR!=='undefined'&&PR.scan)?PR.scan:null,out=[],i,v;
+  for(i=0;i<PR_STORY.length;i++){
+    v=null;
+    try{v=PR_STORY[i].need(sc);}catch(e){v=null;}
+    if(!v)v={on:0,why:'증권을 읽지 못해 판단하지 못했습니다'};
+    out.push({d:PR_STORY[i],on:!!v.on,why:v.why||''});
+  }
+  return out;
+}
+function prStoryOn(){
+  return prStoryPick().filter(function(x){return x.on;});
+}
+
+function prStoryHtml(){
+  var list=prStoryPick(),on=0,i,x,h='',no=0;
+  for(i=0;i<list.length;i++)if(list[i].on)on++;
+  no=list.length-on;
+
+  h+='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎬</span>이 고객에게 펼칠 순서 '+
+    '<span class="badge green">'+on+'장</span></div>'+
+    '<div class="card-desc">증권에서 <b>비어 있는 곳</b>을 보고 필요한 이야기만 골랐습니다. '+
+    '누르면 그 자리에서 펼쳐지고, 한 장이 끝나면 <b>다음 이야기</b>로 이어집니다.'+
+    (no?(' 나머지 '+no+'장도 아래에서 언제든 여실 수 있습니다.'):'')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin:0 0 12px">'+
+      '<button class="btn btn-primary" onclick="prStoryStart()">▶ 순서대로 시작</button>'+
+      '<button class="btn btn-ghost" onclick="prView(\'sangdam\')">📋 메인 상담자료로</button>'+
+    '</div>';
+
+  for(i=0;i<list.length;i++){
+    x=list[i];
+    h+='<div style="display:flex;gap:11px;align-items:flex-start;padding:11px 12px;margin-bottom:8px;'+
+      'border:1px solid '+(x.on?'#BFDBFE':'#E5E9F0')+';border-radius:13px;'+
+      'background:'+(x.on?'#F5F9FF':'#FBFCFD')+';'+(x.on?'':'opacity:.72')+'">'+
+      '<div style="font-size:19px;line-height:1.2">'+x.d.ic+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13.5px;font-weight:900;color:#0B1B34">'+osEsc(x.d.t)+
+          (x.on?' <span class="badge green" style="vertical-align:2px">필요</span>':
+                ' <span class="badge" style="vertical-align:2px">참고</span>')+'</div>'+
+        '<div style="font-size:11.5px;color:#64748B;margin-top:2px;line-height:1.65">'+osEsc(x.d.lead)+'</div>'+
+        '<div style="font-size:11.5px;font-weight:700;margin-top:5px;line-height:1.65;color:'+
+          (x.on?'#1D4ED8':'#94A3B8')+'">'+osEsc(x.why)+'</div>'+
+      '</div>'+
+      '<button class="btn '+(x.on?'btn-primary':'btn-ghost')+'" style="padding:6px 12px;font-size:11.5px;white-space:nowrap" '+
+        'onclick="prStoryOpen(\''+x.d.f+'\')">펼치기</button>'+
+    '</div>';
+  }
+  h+='<div class="notice" style="margin-top:4px">이 이야기들은 상품 설명이 아니라 <b>보장 구조를 이해하기 위한 참고 자료</b>입니다. '+
+    '실제 보장은 약관이 정하며, 기존 계약을 해지하고 새로 드시면 보장이 줄거나 면책 기간이 다시 시작될 수 있습니다.</div>'+
+    '</div></div>';
+  return h;
+}
+
+/* ── 펼치기 — 앱 위에 덮어씌운다 ────────────────────────────
+   덱은 전체 화면을 쓰는 자료라 작은 칸에 넣으면 글자가 깨진다.
+   그래서 화면 전체를 덮고, 위쪽에 제목과 「다음 이야기」 만 남긴다.   */
+function prStoryAt(f){
+  var i;for(i=0;i<PR_STORY.length;i++)if(PR_STORY[i].f===f)return PR_STORY[i];
+  return null;
+}
+function prStoryNext(f){
+  var L=prStoryOn(),i;
+  for(i=0;i<L.length;i++)if(L[i].d.f===f)return (i+1<L.length)?L[i+1].d:null;
+  return null;
+}
+function prStoryStart(){
+  var L=prStoryOn();
+  if(!L.length){toast('펼칠 이야기가 없습니다');return;}
+  prStoryOpen(L[0].d.f);
+}
+function prStoryOpen(f){
+  var D=prStoryAt(f);
+  if(!D){toast('그 이야기를 못 찾았습니다');return;}
+  var w=document.getElementById('prStoryWrap');
+  if(!w){
+    w=document.createElement('div');
+    w.id='prStoryWrap';
+    w.style.cssText='position:fixed;inset:0;z-index:9600;background:#0B1020;display:none;flex-direction:column';
+    w.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:#0B1020;'+
+        'border-bottom:1px solid rgba(255,255,255,.10);color:#E6EDF7;flex:0 0 auto">'+
+        '<div id="prStoryTitle" style="flex:1;min-width:0;font-size:13.5px;font-weight:900;'+
+          'overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>'+
+        '<button id="prStoryNextBtn" style="display:none;padding:6px 13px;border:0;border-radius:9px;'+
+          'background:#1D4ED8;color:#fff;font-size:12px;font-weight:800;cursor:pointer"></button>'+
+        '<button style="padding:6px 12px;border:1px solid rgba(255,255,255,.22);border-radius:9px;'+
+          'background:transparent;color:#E6EDF7;font-size:12px;font-weight:800;cursor:pointer" '+
+          'onclick="prStoryClose()">✕ 닫기</button>'+
+      '</div>'+
+      '<iframe id="prStoryFrame" title="상담 이야기" style="flex:1;width:100%;border:0;display:block;background:#0B1020"></iframe>';
+    document.body.appendChild(w);
+  }
+  var t=document.getElementById('prStoryTitle'),
+      nb=document.getElementById('prStoryNextBtn'),
+      fr=document.getElementById('prStoryFrame');
+  if(t)t.innerHTML=D.ic+' '+osEsc(D.t)+' <span style="font-weight:600;opacity:.62;font-size:11.5px">'+osEsc(D.lead)+'</span>';
+  if(nb){
+    var N=prStoryNext(f);
+    nb.style.display='none';
+    nb.textContent=N?('다음 — '+N.t+' ▶'):'';
+    nb.onclick=N?function(){prStoryOpen(N.f);}:null;
+    nb._for=f;
+  }
+  if(fr){fr.onload=function(){advPushSoon();};fr.src=PR_STORY_DIR+D.f;}
+  w.style.display='flex';
+  document.body.style.overflow='hidden';
+  PR._story=f;
+}
+function prStoryClose(){
+  var w=document.getElementById('prStoryWrap'),fr=document.getElementById('prStoryFrame');
+  if(fr)fr.removeAttribute('src');
+  if(w)w.style.display='none';
+  document.body.style.overflow='';
+  PR._story=null;
+}
+/* 덱이 마지막 장에 닿으면 「다음 이야기」 단추를 띄운다 */
+window.addEventListener('message',function(ev){
+  if(ev.origin!==location.origin)return;
+  var m=ev.data;
+  if(!m||typeof m!=='object')return;
+  if(m.t==='apex:ready'){advPushSoon();return;}
+  if(m.t==='apex:deckdone'){
+    var nb=document.getElementById('prStoryNextBtn');
+    if(nb&&nb.textContent)nb.style.display='';
+    return;
+  }
+  /* 상담자료의 「결과 보고서」 를 누르면 상담자료가 알려 준다.
+     보고서에서 끝내지 않고 이 고객의 숫자로 넘어가시라고 길을 놓는다. */
+  if(m.t==='apex:next'){prFromSangdam(m.k);return;}
+  /* 표지의 「내 소개 고치기」 — 값을 넣는 곳은 설정 한 곳뿐이다 */
+  if(m.t==='apex:editintro'){
+    go('settings');
+    setTimeout(function(){
+      var el=document.getElementById('adv_name');
+      if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});
+      toast('여기서 고치시면 상담자료 표지에 바로 들어갑니다');
+    },420);
+    return;
+  }
+},false);
+/* 상담자료 → 제안서로 넘어간다.
+   「한 장으로」 는 8통장부터 근거까지 한 줄로 이어져 있으므로,
+   거기로 옮긴 뒤 부르는 자리까지 내려 준다. */
+function prFromSangdam(k){
+  if(!PR.plan){
+    toast('먼저 「AI 제안서 만들기」 로 이 고객의 숫자를 만들어 주세요');
+    PR.view='sangdam';prPaint();return;
+  }
+  var key=(k==='story')?'story':'all';
+  PR.view=key;prPaint();
+  var out=$('prOut');
+  if(out&&out.scrollIntoView)out.scrollIntoView({behavior:'smooth',block:'start'});
+  if(key==='all'&&k&&k!=='all')setTimeout(function(){prJumpTo(k);},380);
+  var nm={wallet:'8통장 진단',reality:'준비하지 않으면',story:'상담 이야기'}[k]||'제안서';
+  toast('상담자료 → '+nm+' 로 넘어왔습니다');
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var w=document.getElementById('prStoryWrap');
+  if(w&&w.style.display==='flex')prStoryClose();
+},false);
+
 var PR_ALL=[
+  {k:'story',  t:'상담 이야기',       ic:'🎬', has:function(){return 1;},                             fn:function(){return prStoryHtml();}},
   {k:'wallet', t:'8통장 진단',        ic:'🗺️', has:function(p){return (p.wallets||[]).length;},      fn:function(){return prWalletHtml();}},
   {k:'reality',t:'준비하지 않으면',   ic:'⚠️', has:function(p){return (p.reality||[]).length;},      fn:function(){return prRealityHtml();}},
   {k:'benefit',t:'준비하면',          ic:'💰', has:function(p){var b=p.benefit||{};return (b.prepared||[]).length||(b.unprepared||[]).length;}, fn:function(){return prBenefitHtml();}},
@@ -25482,6 +26364,464 @@ function addMonths(d,n){var x=new Date(d.getTime());x.setMonth(x.getMonth()+n);r
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
 function ymd(d){var m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);return d.getFullYear()+'.'+m+'.'+day;}
 
+/* ════════════════ 재무 계산 한 줄기 ════════════════
+   같은 계산이 여기저기 흩어져 있었다. 복리 함수만 여덟 벌이었고,
+   그중 하나는 이율을 0.04 로, 나머지는 4 로 받아 <b>백 배</b>가 틀렸다.
+   상속세는 세 벌이었고 공제가 다 달라서 같은 재산에 다른 세액이 나왔다.
+   달러는 한 탭에서 수익률 0%, 옆 탭에서 3.5% 복리로 계산했다.
+
+   고객 앞에서 화면을 넘기다 숫자가 달라지면 그 자리에서 상담이 끝난다.
+   그래서 <b>가정값과 계산식을 여기 한 곳</b>에 둔다. 새로 만드는 화면은
+   반드시 이것을 쓴다.                                                   */
+var FIN_ASSUME={
+  inf:2.3,        /* 물가상승률 %/년 — 한국은행 중기 목표 2% 언저리 */
+  ret:5.0,        /* 일반 적립 기대수익률 %/년 */
+  retPen:4.0,     /* 개인연금 %/년 */
+  retRet:3.5,     /* 퇴직연금(DC·IRP) %/년 */
+  retUsd:3.5,     /* 달러 상품 %/년 */
+  retVa:6.0,      /* 변액 %/년 */
+  retDep:2.8,     /* 은행 예금 %/년 */
+  usdNow:1380,    /* 지금 환율 원/$ */
+  usdEnd:1450,    /* 만기 가정 환율 원/$ */
+  taxInt:15.4,    /* 이자·배당 소득세 % */
+  taxFreeYr:10,   /* 저축성보험 비과세 요건 연수 */
+  drawRate:4.0,   /* 은퇴 자산 인출률 %/년 */
+  law:'가정값은 상담용 참고치입니다. 실제 수익률·환율은 보장되지 않습니다.'
+};
+/* 한 화면에서 가정을 바꾸면 그 화면만 바뀐다 — 전체를 덮지 않는다 */
+function finA(k,over){
+  if(over&&over[k]!=null&&over[k]!=='')return +over[k];
+  return FIN_ASSUME[k];
+}
+
+/* ── 돈 계산 (이율은 <b>퍼센트</b>로 받는다. 0.04 가 아니라 4) ──
+   prFV 만 소수를 받아 백 배 사고가 났다. 여기서는 규약을 하나로 못 박는다. */
+function finFV(monthly,years,ratePct){
+  var m=+monthly||0,n=Math.round((+years||0)*12),r=(+ratePct||0)/100/12;
+  if(n<=0)return 0;
+  if(!r)return m*n;
+  return m*((Math.pow(1+r,n)-1)/r);
+}
+/* 목돈을 몇 년에 걸쳐 나눠 받을 때의 월 수령액 (수령 중에도 이자가 붙는다) */
+function finPMT(pv,years,ratePct){
+  var P=+pv||0,n=Math.round((+years||0)*12),r=(+ratePct||0)/100/12;
+  if(n<=0)return 0;
+  if(!r)return P/n;
+  return P*r/(1-Math.pow(1+r,-n));
+}
+/* 목표 목돈을 만들려면 매달 얼마 */
+function finNeed(target,years,ratePct){
+  var f=finFV(1,years,ratePct);
+  return f>0?(+target||0)/f:0;
+}
+/* 물가를 반영한 실질 수익률 — 30년짜리 계산에서 이걸 빼면 숫자가 거짓말이 된다 */
+function finReal(ratePct,infPct){
+  var r=(+ratePct||0)/100,i=(+infPct||0)/100;
+  return ((1+r)/(1+i)-1)*100;
+}
+/* 오늘의 100만원이 n년 뒤에는 얼마의 값어치인가 */
+function finToday(amount,years,infPct){
+  return (+amount||0)/Math.pow(1+(+infPct||0)/100,+years||0);
+}
+
+/* ── 상속·증여세 (상속세 및 증여세법) ──
+   세율표는 세 곳에 흩어져 있었다. 여기 하나만 둔다. */
+var FIN_TAX={
+  law:'상속세 및 증여세법 §26 세율 · §18~24 상속공제 · §53 증여재산공제 · §69 신고세액공제',
+  bands:[{upto:10000,rate:0.10,cut:0,t:'1억 이하'},
+         {upto:50000,rate:0.20,cut:1000,t:'1억~5억'},
+         {upto:100000,rate:0.30,cut:6000,t:'5억~10억'},
+         {upto:300000,rate:0.40,cut:16000,t:'10억~30억'},
+         {upto:Infinity,rate:0.50,cut:46000,t:'30억 초과'}],
+  lump:50000,        /* 일괄공제 5억 (§21) */
+  baseDed:20000,     /* 기초공제 2억 (§18) */
+  childDed:5000,     /* 자녀 1인 5천만 (§20) */
+  spouseMin:50000,   /* 배우자 최소 5억 (§19) */
+  spouseMax:300000,  /* 배우자 최대 30억 */
+  finRate:0.20,      /* 금융재산상속공제 20% (§22) */
+  finMax:20000,      /* 그 한도 2억 */
+  fileCut:0.03,      /* 신고세액공제 3% (§69) */
+  skipAdd:0.30,      /* 세대생략 할증 30% (§27) */
+  /* 증여재산공제 (§53) — 10년 합산 기준, 만원 */
+  gift:{spouse:60000,adult:5000,minor:2000,lineal:5000,kin:1000,wed:10000},
+  giftYears:10       /* 같은 사람에게 10년 안에 준 것은 합산한다 */
+};
+function finBand(base){
+  var b=FIN_TAX.bands,i;
+  for(i=0;i<b.length;i++)if(base<=b[i].upto)return b[i];
+  return b[b.length-1];
+}
+/* 과세표준(만원) → 산출세액(만원) */
+function finTaxOf(base){
+  var v=Math.max(0,+base||0),b=finBand(v);
+  return Math.max(0,Math.round(v*b.rate-b.cut));
+}
+/* 상속세 — 재산·부채·가족을 넣으면 공제까지 계산한다 (만원 단위)
+   o={estate,debt,fin,spouse,children,skip} */
+function finInherit(o){
+  o=o||{};
+  var estate=Math.max(0,+o.estate||0), debt=Math.max(0,+o.debt||0);
+  var net=Math.max(0,estate-debt);
+  var kids=Math.max(0,Math.round(+o.children||0));
+  /* 일괄공제 5억 과 (기초 2억 + 자녀 5천만×명) 중 <b>큰 쪽</b>을 쓴다 */
+  var personal=FIN_TAX.baseDed+kids*FIN_TAX.childDed;
+  var lump=Math.max(FIN_TAX.lump,personal);
+  var spouse=0;
+  if(o.spouse){
+    /* 법정상속분 한도 안에서 최소 5억, 최대 30억 */
+    var share=net*(1.5/(1.5+kids));
+    spouse=Math.min(FIN_TAX.spouseMax,Math.max(FIN_TAX.spouseMin,Math.round(share)));
+  }
+  var finDed=Math.min(FIN_TAX.finMax,Math.round(Math.max(0,+o.fin||0)*FIN_TAX.finRate));
+  var ded=lump+spouse+finDed;
+  var base=Math.max(0,net-ded);
+  var calc=finTaxOf(base);
+  if(o.skip)calc=Math.round(calc*(1+FIN_TAX.skipAdd));
+  var cut=Math.round(calc*FIN_TAX.fileCut);
+  return {net:net,lumpDed:lump,spouseDed:spouse,finDed:finDed,ded:ded,
+    base:base,calc:calc,fileCut:cut,tax:Math.max(0,calc-cut),
+    rate:finBand(base).rate,bandT:finBand(base).t};
+}
+/* 증여세 — 한 사람에게 한 번 줄 때 (만원 단위)
+   who: spouse|adult|minor|lineal|kin, wed:혼인·출산공제 사용 여부 */
+function finGiftTax(amount,who,wed,skip){
+  var amt=Math.max(0,+amount||0);
+  var ded=FIN_TAX.gift[who]||0;
+  if(wed&&(who==='adult'||who==='minor'))ded+=FIN_TAX.gift.wed;
+  var base=Math.max(0,amt-ded);
+  var calc=finTaxOf(base);
+  if(skip)calc=Math.round(calc*(1+FIN_TAX.skipAdd));
+  var cut=Math.round(calc*FIN_TAX.fileCut);
+  return {amount:amt,ded:ded,base:base,calc:calc,fileCut:cut,
+    tax:Math.max(0,calc-cut),rate:finBand(base).rate};
+}
+
+/* ════════════════ 부족액에서 바로 상담으로 ════════════════
+   계산기는 「월 OO만원 부족합니다」 까지만 말하고 끝났다. 고객은 거기서
+   「그래서 어떻게 하라고요」 를 묻는데 화면이 없었다. 그래서 부족액을
+   들고 갈 수 있는 세 갈래를 만든다 — 달러 · 증여상속 · 보험.        */
+var FIN_GAP={need:0,years:20,from:''};
+function finGapSet(needMan,years,from){
+  FIN_GAP={need:Math.max(0,Math.round(+needMan||0)),years:+years||20,from:from||''};
+  try{LS.set('apex_fin_gap',JSON.stringify(FIN_GAP));}catch(e){}
+}
+function finGapGet(){
+  try{var o=JSON.parse(LS.get('apex_fin_gap')||'null');if(o&&o.need)FIN_GAP=o;}catch(e){}
+  return FIN_GAP;
+}
+function finGapBar(){
+  var g=finGapGet();
+  if(!g.need)return '';
+  return '<div class="card" style="border-color:#FCA5A5;background:#FEF2F2"><div class="card-body">'+
+    '<div style="font-size:12.5px;font-weight:900;color:#991B1B">📌 이어서 상담 중 — '+
+    (g.from?osEsc(g.from)+'에서 넘어온 ':'')+'부족액 <b>월 '+prNum(g.need)+'만원</b>'+
+    (g.years?(' · '+g.years+'년'):'')+'</div>'+
+    '<div style="font-size:11.5px;color:#B91C1C;margin-top:3px;line-height:1.65">'+
+    '아래 계산에 이 금액이 미리 들어가 있습니다.</div></div></div>';
+}
+function finGapGo(tab){go(tab);}
+
+/* 화면 세 개가 같이 쓰는 조각들 */
+function finNum(id,label,val,unit,ph){
+  return '<div class="fld"><label>'+osEsc(label)+(unit?(' <span style="color:#94A3B8;font-weight:600">('+unit+')</span>'):'')+'</label>'+
+    '<input type="number" id="'+id+'" inputmode="decimal" value="'+(val===''||val==null?'':val)+'"'+
+    (ph?(' placeholder="'+osEsc(ph)+'"'):'')+'></div>';
+}
+function finV(id,def){
+  var e=document.getElementById(id);
+  if(!e)return def;
+  var v=(''+e.value).replace(/,/g,'').replace(/^\s+|\s+$/g,'');
+  return v===''?def:(+v||0);
+}
+/* 만원 단위를 사람이 읽는 말로 — 20억을 「200,000만원」 이라고 쓰면 아무도 못 읽는다 */
+function finWon(man){
+  var v=Math.round(+man||0),neg=v<0;v=Math.abs(v);
+  var out;
+  if(v>=10000){
+    var eok=Math.floor(v/10000),rest=v%10000;
+    out=prNum(eok)+'억'+(rest?(' '+prNum(rest)+'만'):'')+'원';
+  }else out=prNum(v)+'만원';
+  return (neg?'−':'')+out;
+}
+function finRow(l,v,note,strong){
+  return '<div style="display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid #EEF1F5">'+
+    '<div style="flex:1;min-width:0;font-size:13px;color:#42506A'+(strong?';font-weight:800;color:#0B1B34':'')+'">'+l+'</div>'+
+    '<div style="font-size:'+(strong?'16px;font-weight:900;color:#1D4ED8':'14px;font-weight:700;color:#0B1B34')+'">'+v+'</div>'+
+    (note?'<div style="font-size:11px;color:#94A3B8;white-space:nowrap">'+note+'</div>':'')+'</div>';
+}
+function finLaw(extra){
+  return '<div class="notice" style="margin-top:11px;line-height:1.75">⚖️ '+
+    (extra||'')+' 세액은 <b>개산치</b>입니다. 실제 신고·납부는 세무 전문가 확인이 필요합니다. '+
+    '보험은 상품 설명이 아닌 구조 이해를 위한 자료이며, 실제 보장은 약관이 정합니다. '+
+    '기존 계약을 해지하고 새로 드시면 보장이 줄거나 면책 기간이 다시 시작될 수 있습니다.</div>';
+}
+
+/* ════════════════ 💵 달러 플랜 ════════════════
+   기존 계산기의 달러 탭은 같은 입력에 두 개의 답을 냈다. 「계산·근거」 는
+   수익률 0%, 「발표 슬라이드」 는 연 3.5% 복리를 박아 두었다.
+   여기서는 <b>가정을 화면에 드러내고</b> 한 벌로만 계산한다.           */
+function renderFinUsd(){
+  if(!OS.profile)return osPage('플랜','달러 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  var g=finGapGet();
+  return osPage('플랜','💵 달러 플랜',
+    '원화로 내고 달러로 쌓습니다. 환율이 오르면 이득, 내리면 손해 — 그 폭까지 같이 봅니다.',
+    finGapBar()+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💵</span>얼마를 얼마나</div>'+
+    '<div class="card-desc">가정은 아래에 드러내 두었습니다. 바꾸면 결과가 바로 따라옵니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fu_pay','월 납입',g.need||100,'만원')+
+      finNum('fu_yrs','납입 기간',10,'년')+
+      finNum('fu_wait','납입 후 거치',10,'년')+
+      finNum('fu_rate','달러 상품 수익률',FIN_ASSUME.retUsd,'%/년')+
+      finNum('fu_now','지금 환율',FIN_ASSUME.usdNow,'원/$')+
+      finNum('fu_end','찾을 때 환율',FIN_ASSUME.usdEnd,'원/$')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finUsdCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_ins\')">🛡️ 보험 플랜으로</button></div>'+
+    '</div></div><div id="fuOut"></div>');
+}
+function finUsdCalc(){
+  var pay=finV('fu_pay',100),yrs=finV('fu_yrs',10),wait=finV('fu_wait',10);
+  var rate=finV('fu_rate',FIN_ASSUME.retUsd);
+  var now=finV('fu_now',FIN_ASSUME.usdNow),end=finV('fu_end',FIN_ASSUME.usdEnd);
+  var box=document.getElementById('fuOut');if(!box)return;
+  if(now<=0){box.innerHTML='<div class="notice">환율을 0 보다 크게 넣어 주세요.</div>';return;}
+
+  var paidMan=pay*yrs*12;                        /* 원화 총납입 (만원) */
+  var usdMon=(pay*10000)/now;                    /* 매달 사는 달러 */
+  var usdEnd=finFV(usdMon,yrs,rate)*Math.pow(1+rate/100,wait);
+  var wonMan=Math.round(usdEnd*end/10000);       /* 만기 원화 (만원) */
+  var gain=wonMan-paidMan;
+  /* 10년 이상이면 저축성보험 비과세 요건을 본다 (상품·한도 요건은 따로 확인) */
+  var tot=yrs+wait, free=tot>=FIN_ASSUME.taxFreeYr;
+  var tax=free?0:Math.round(Math.max(0,gain)*FIN_ASSUME.taxInt/100);
+
+  /* 환율만 바꿔 본다 — 이게 달러의 전부다 */
+  var scen=[{t:'많이 내리면',r:Math.round(now*0.88)},{t:'지금 그대로',r:now},
+            {t:'지금 수준 유지+',r:end},{t:'많이 오르면',r:Math.round(now*1.22)}];
+  var rows=scen.map(function(s){
+    var w=Math.round(usdEnd*s.r/10000);
+    var d=w-paidMan;
+    return '<tr><td style="padding:7px 8px;font-weight:700">'+s.t+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+prNum(s.r)+'원</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800">'+prNum(w)+'만원</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800;color:'+(d>=0?'#059669':'#DC2626')+'">'+
+      (d>=0?'+':'')+prNum(d)+'만원</td></tr>';
+  }).join('');
+
+  /* 같은 돈을 은행·변액에 넣으면 — 세후로 견준다 */
+  var cmp=[{t:'은행 예금',r:FIN_ASSUME.retDep,fx:0},{t:'변액',r:FIN_ASSUME.retVa,fx:0},
+           {t:'달러',r:rate,fx:1}];
+  var cmpRows=cmp.map(function(c){
+    var fv=finFV(pay,yrs,c.r)*Math.pow(1+c.r/100,wait);
+    if(c.fx)fv=wonMan;
+    var gn=fv-paidMan;
+    var t=(tot>=FIN_ASSUME.taxFreeYr)?0:Math.max(0,gn)*FIN_ASSUME.taxInt/100;
+    return '<tr><td style="padding:7px 8px;font-weight:700">'+c.t+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+c.r+'%</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800">'+prNum(Math.round(fv-t))+'만원</td></tr>';
+  }).join('');
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>결과</div></div>'+
+    '<div class="card-body">'+
+    finRow('원화로 낸 돈',prNum(paidMan)+'만원',(yrs*12)+'회')+
+    finRow('사 모은 달러','$'+prNum(Math.round(usdEnd)),'매달 $'+usdMon.toFixed(0))+
+    finRow('찾을 때 원화',prNum(wonMan)+'만원',prNum(end)+'원 기준',1)+
+    finRow('늘어난 돈',(gain>=0?'+':'')+prNum(gain)+'만원',
+      free?'10년 넘겨 세금 없음':'세금 '+prNum(tax)+'만원')+
+    finRow('오늘 돈 값어치로',prNum(Math.round(finToday(wonMan,tot,FIN_ASSUME.inf)))+'만원',
+      '물가 '+FIN_ASSUME.inf+'% 반영')+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💱</span>환율이 이렇게 바뀌면</div>'+
+    '<div class="card-desc">달러의 결과는 <b>환율이 거의 다 정합니다.</b> 좋은 쪽만 보여 드리지 않겠습니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:420px">'+
+    '<thead><tr style="background:#F8FAFC"><th style="padding:8px;text-align:left">그때 환율이</th>'+
+    '<th style="padding:8px;text-align:right">원/$</th><th style="padding:8px;text-align:right">받는 돈</th>'+
+    '<th style="padding:8px;text-align:right">손익</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚖️</span>같은 돈을 다른 데 넣으면 (세후)</div></div>'+
+    '<div class="card-body" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:360px">'+
+    '<thead><tr style="background:#F8FAFC"><th style="padding:8px;text-align:left">어디에</th>'+
+    '<th style="padding:8px;text-align:right">가정 수익률</th><th style="padding:8px;text-align:right">'+tot+'년 뒤</th>'+
+    '</tr></thead><tbody>'+cmpRows+'</tbody></table>'+
+    finLaw('환율과 수익률은 <b>아무도 보장하지 못합니다.</b> 위 숫자는 넣으신 가정에 따른 계산일 뿐입니다.')+
+    '</div></div>';
+}
+
+/* ════════════════ 🎁 증여·상속 플랜 ════════════════
+   상속세는 <b>현금으로, 6개월 안에</b> 내야 한다. 재산이 부동산이면
+   그 자리에서 팔아야 하고, 급매는 제값을 못 받는다.
+   그래서 「지금 그대로 두면 얼마」 와 「나눠서 미리 주면 얼마」 를 견준다. */
+var FIN_WHO=[{k:'adult',t:'성년 자녀',d:'5,000만원'},{k:'minor',t:'미성년 자녀',d:'2,000만원'},
+             {k:'spouse',t:'배우자',d:'6억원'},{k:'lineal',t:'부모(직계존속)',d:'5,000만원'},
+             {k:'kin',t:'그 밖 친족',d:'1,000만원'}];
+function renderFinGift(){
+  if(!OS.profile)return osPage('플랜','증여·상속 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  return osPage('플랜','🎁 증여 · 상속 플랜',
+    '지금 그대로 물려주면 세금이 얼마인지, 10년 단위로 나눠 미리 주면 얼마나 줄어드는지 견줍니다.',
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🏠</span>재산과 가족</div>'+
+    '<div class="card-desc">억 단위로 넣으셔도 됩니다 — <b>만원</b> 기준으로 계산합니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fg_est','총 재산',20,'억원')+
+      finNum('fg_debt','빚 · 장례비',2,'억원')+
+      finNum('fg_fin','그중 금융재산',5,'억원')+
+      finNum('fg_kid','자녀 수','2','명')+
+      '<div class="fld"><label>배우자</label><select id="fg_sp"><option value="1">있음</option><option value="0">없음</option></select></div>'+
+      finNum('fg_yrs','앞으로 남은 기간','20','년')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finGiftCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_ins\')">🛡️ 낼 돈은 어떻게 — 보험 플랜</button></div>'+
+    '</div></div><div id="fgOut"></div>');
+}
+function finGiftCalc(){
+  var est=finV('fg_est',20)*10000, debt=finV('fg_debt',0)*10000, fin=finV('fg_fin',0)*10000;
+  var kid=Math.max(0,Math.round(finV('fg_kid',2)));
+  var sp=(document.getElementById('fg_sp')||{value:'1'}).value==='1';
+  var yrs=Math.max(0,finV('fg_yrs',20));
+  var box=document.getElementById('fgOut');if(!box)return;
+
+  var A=finInherit({estate:est,debt:debt,fin:fin,spouse:sp,children:kid});
+
+  /* 10년마다 자녀에게 공제 한도만큼 미리 준다 — 공제 안이라 증여세 0 */
+  var rounds=Math.max(0,Math.floor(yrs/FIN_TAX.giftYears));
+  var perKid=FIN_TAX.gift.adult;                      /* 성년 자녀 5,000만 */
+  var moved=rounds*kid*perKid;
+  var B=finInherit({estate:Math.max(0,est-moved),debt:debt,
+    fin:Math.max(0,fin-moved),spouse:sp,children:kid});
+  var saved=A.tax-B.tax;
+
+  /* 공제를 넘겨 더 크게 주면 — 증여세를 내더라도 이득인가 */
+  var big=Math.max(0,Math.round((est-debt)*0.15));    /* 순재산의 15% 를 한 번에 */
+  var G=finGiftTax(big,'adult',false,false);
+  var C=finInherit({estate:Math.max(0,est-big),debt:debt,fin:fin,spouse:sp,children:kid});
+  var netC=C.tax+G.tax;
+
+  var wonRow=function(l,v,n,s){return finRow(l,finWon(v),n,s);};
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📜</span>지금 그대로 물려주면</div>'+
+    '<div class="card-desc">'+FIN_TAX.law+'</div></div><div class="card-body">'+
+    wonRow('순 재산 (재산 − 빚)',A.net)+
+    wonRow('일괄공제',A.lumpDed,'기초 2억+자녀 5천만 과 5억 중 큰 쪽')+
+    (A.spouseDed?wonRow('배우자상속공제',A.spouseDed,'법정상속분 한도 · 5억~30억'):'')+
+    (A.finDed?wonRow('금융재산상속공제',A.finDed,'금융재산의 20% · 최대 2억'):'')+
+    wonRow('과세표준',A.base,A.bandT+' → '+Math.round(A.rate*100)+'%')+
+    wonRow('신고세액공제',-A.fileCut,'3%')+
+    finRow('<b>낼 상속세</b>','<b>'+finWon(A.tax)+'</b>','',1)+
+    '<div class="notice" style="margin-top:10px">이 돈은 <b>상속 개시일이 속한 달의 말일부터 6개월 안에 현금으로</b> 내야 합니다. '+
+    '재산이 부동산뿐이면 그 자리에서 팔아야 하고, 급하게 팔면 제값을 못 받습니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card" style="border-color:#BBF7D0"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎁</span>10년마다 나눠 미리 주면 '+
+    (saved>0?'<span class="badge green">'+finWon(saved)+' 덜 냄</span>':'')+'</div>'+
+    '<div class="card-desc">성년 자녀 1인당 <b>10년에 5,000만원</b>까지는 증여세가 없습니다 (상증세법 §53). '+
+    '남은 '+yrs+'년이면 <b>'+rounds+'번</b> 줄 수 있습니다.</div></div><div class="card-body">'+
+    finRow('미리 옮기는 재산',finWon(moved),rounds+'회 × 자녀 '+kid+'명 × 5,000만')+
+    finRow('그때 낼 증여세','0원','공제 안이라')+
+    finRow('줄어든 상속세',finWon(A.tax)+' → '+finWon(B.tax),'')+
+    finRow('<b>덜 내는 세금</b>','<b>'+finWon(Math.max(0,saved))+'</b>','',1)+
+    (rounds===0?'<div class="notice" style="margin-top:9px">남은 기간이 10년이 안 되면 이 방법은 못 씁니다. '+
+      '아래 「한 번에 크게」 나 보험 플랜을 보십시오.</div>':'')+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚖️</span>한 번에 크게 주면 (증여세를 내더라도)</div>'+
+    '<div class="card-desc">순재산의 15% 인 <b>'+finWon(big)+'</b>을 성년 자녀에게 한 번에 준 경우입니다.</div></div>'+
+    '<div class="card-body">'+
+    finRow('증여세',finWon(G.tax),'공제 '+prNum(G.ded)+'만 뺀 뒤 '+Math.round(G.rate*100)+'%')+
+    finRow('남은 재산의 상속세',finWon(C.tax),'')+
+    finRow('<b>합계</b>','<b>'+finWon(netC)+'</b>',
+      (netC<A.tax?('그대로 두는 것보다 '+finWon(A.tax-netC)+' 적음'):'그대로 두는 편이 낫습니다'),1)+
+    '<div class="notice" style="margin-top:10px">⚠️ <b>상속인에게 준 재산은 10년, 상속인이 아닌 사람에게 준 것은 5년</b> 안에 '+
+    '상속이 일어나면 상속재산에 다시 더해집니다 (상증세법 §13). 그래서 <b>일찍 시작할수록</b> 유리합니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📋</span>누구에게 얼마까지 세금 없이 (10년 기준)</div></div>'+
+    '<div class="card-body">'+
+    FIN_WHO.map(function(w){return finRow(w.t,w.d,'');}).join('')+
+    finRow('혼인 · 출산 때 더','1억원','자녀 혼인신고 전후 2년·출산 2년 안 (§53의2)')+
+    finLaw('세대를 건너뛰어 손자녀에게 주면 <b>30% 가 더 붙습니다</b> (§27).')+
+    '</div></div>';
+}
+
+/* ════════════════ 🛡️ 보험 플랜 ════════════════
+   상속세는 현금으로 낸다. 그런데 자산가의 재산은 대개 부동산이다.
+   사망보험금은 <b>그 자리에서 현금으로</b> 나온다. 그래서 세금 낼 돈이 된다.
+   계약을 어떻게 짜느냐에 따라 그 보험금이 상속재산에 들어가기도, 안 들어가기도 한다. */
+function renderFinIns(){
+  if(!OS.profile)return osPage('플랜','보험 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  return osPage('플랜','🛡️ 보험으로 푸는 플랜',
+    '상속세 낼 돈을 어떻게 만드는지, 계약을 어떻게 짜야 그 돈이 세금에 안 물리는지 봅니다.',
+    finGapBar()+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧮</span>얼마가 필요한가</div>'+
+    '<div class="card-desc">증여·상속 플랜에서 나온 세액을 그대로 넣으시면 됩니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fi_tax','낼 상속세',7344,'만원')+
+      finNum('fi_age','지금 나이','55','세')+
+      finNum('fi_pay','낼 수 있는 월 보험료',80,'만원')+
+      finNum('fi_rate','적립 수익률',FIN_ASSUME.retPen,'%/년')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finInsCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_gift\')">🎁 증여·상속 플랜으로</button></div>'+
+    '</div></div><div id="fiOut"></div>');
+}
+function finInsCalc(){
+  var tax=finV('fi_tax',7344),age=finV('fi_age',55);
+  var pay=finV('fi_pay',80),rate=finV('fi_rate',FIN_ASSUME.retPen);
+  var box=document.getElementById('fiOut');if(!box)return;
+  var yrs=Math.max(1,Math.round(85-age));          /* 기대여명까지 대략 */
+
+  /* 저축·투자로 같은 돈을 만들려면 매달 얼마 */
+  var needSave=finNeed(tax,yrs,rate);
+  /* 연부연납 — 세금을 나눠 내는 길 (상증세법 §71). 이자가 붙는다 */
+  var yr5=Math.round(tax/6), yr10=Math.round(tax/11);
+  var int5=Math.round(tax*0.032*2.5), int10=Math.round(tax*0.032*5);
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💰</span>세금 낼 돈을 만드는 세 갈래</div></div>'+
+    '<div class="card-body">'+
+    finRow('① 지금부터 모아서',prNum(Math.round(needSave))+'만원/월',
+      yrs+'년간 · '+rate+'% 가정 · 총 '+prNum(Math.round(needSave*yrs*12))+'만원')+
+    finRow('② 종신보험으로',prNum(Math.round(pay))+'만원/월',
+      '사망보험금 '+prNum(tax)+'만원 목표 — 실제 보험료는 나이·건강·회사마다 다릅니다')+
+    finRow('③ 그때 부동산을 판다','제값 못 받음','6개월 안에 현금이 필요해 급매가 됩니다')+
+    '<div class="notice" style="margin-top:10px">①은 <b>다 모으기 전에 돌아가시면 그만큼만</b> 남습니다. '+
+    '②는 <b>첫 달에 돌아가셔도 전액</b>이 나옵니다. 그 차이가 보험을 쓰는 이유입니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card" style="border-color:#BFDBFE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📐</span>계약을 어떻게 짜느냐로 갈립니다</div>'+
+    '<div class="card-desc">같은 보험금인데 <b>세금이 붙기도 하고 안 붙기도 합니다.</b></div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">계약자 (돈 내는 사람)</th><th style="padding:8px;text-align:left">피보험자</th>'+
+    '<th style="padding:8px;text-align:left">수익자</th><th style="padding:8px;text-align:left">보험금에 붙는 세금</th></tr></thead><tbody>'+
+    '<tr><td style="padding:8px">아버지</td><td style="padding:8px">아버지</td><td style="padding:8px">자녀</td>'+
+    '<td style="padding:8px;color:#DC2626;font-weight:800">상속세 ○ — 상속재산에 들어갑니다</td></tr>'+
+    '<tr style="background:#F0FDF4"><td style="padding:8px"><b>자녀</b></td><td style="padding:8px">아버지</td><td style="padding:8px"><b>자녀</b></td>'+
+    '<td style="padding:8px;color:#059669;font-weight:800">상속세 × — 자녀 돈으로 낸 보험이므로</td></tr>'+
+    '<tr><td style="padding:8px">자녀 (아버지가 대신 냄)</td><td style="padding:8px">아버지</td><td style="padding:8px">자녀</td>'+
+    '<td style="padding:8px;color:#D97706;font-weight:800">낸 보험료 비율만큼 상속세 ○</td></tr>'+
+    '</tbody></table>'+
+    '<div class="notice" style="margin-top:11px">두 번째 줄이 되려면 <b>자녀에게 실제 소득이 있고, 그 돈으로 냈다는 증빙</b>이 있어야 합니다 '+
+    '(상증세법 §8, 통장 이체 기록·소득 자료). 아버지가 보험료를 대신 내주면 그 보험료 자체가 증여가 됩니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗓️</span>그래도 목돈이 없다면 — 나눠 내기 (연부연납)</div>'+
+    '<div class="card-desc">상속세가 2,000만원을 넘으면 나눠 낼 수 있습니다 (상증세법 §71). 담보를 맡겨야 합니다.</div></div>'+
+    '<div class="card-body">'+
+    finRow('한 번에',prNum(tax)+'만원','6개월 안에 현금')+
+    finRow('5년에 걸쳐',prNum(yr5)+'만원/년','이자 대략 '+prNum(int5)+'만원')+
+    finRow('10년에 걸쳐',prNum(yr10)+'만원/년','이자 대략 '+prNum(int10)+'만원')+
+    '<div class="notice" style="margin-top:10px">나눠 내면 <b>이자가 붙습니다.</b> 가산금 이율은 해마다 바뀌므로 '+
+    '위 이자는 대략치입니다. 담보 제공도 필요합니다.</div>'+
+    finLaw('')+
+    '</div></div>';
+}
+
 function renderCalcPage(){
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">TOOLS</div>'+
     '<div class="page-title">실무 계산기</div><div class="page-desc">상담 현장에서 바로 쓰는 계산기입니다. API 키 없이 즉시 동작합니다.</div></div>'+
@@ -32706,8 +34046,19 @@ function osFinOpen(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;var inputs=(x.con
 function osFinAskSave(){var f=$('finFrame');if(!f||!f.contentWindow){toast('계산기가 아직 로드되지 않았습니다');return;}try{f.contentWindow.postMessage({type:'apexFinCollect'},'*');}catch(e){toast('저장 요청 실패');}}
 window.addEventListener('message',function(e){
   var d=e&&e.data;if(!d||d.type!=='apexFinSave')return;
+  /* 계산기는 srcdoc 이라 주소로 가리기 어렵다. 대신 <b>우리가 띄운 그 틀에서 온 것</b>만 받는다.
+     예전에는 아무 창이나 이 쪽지를 보내면 고객 파일에 글이 저장됐다. */
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
   if(!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
   osRepSaveToClient('finance',(d.title||'재무설계 스냅샷'),(d.md?{html:d.md,inputs:(d.inputs||{})}:{inputs:(d.inputs||{})}));
+  /* 계산기가 말한 부족액을 들고 세 플랜으로 넘어갈 수 있게 적어 둔다.
+     계산기의 정의를 그대로 쓴다 — 목표 월 생활비 − 받게 될 연금. */
+  try{
+    var I=d.inputs||{};
+    var want=+I.s_target||0, have=+I.s_pension||0;
+    if(want>0&&want>have)finGapSet(want-have,(+I.s_rage||65)-(+I.s_age||40),'재무설계 계산기');
+  }catch(_e){}
 });
 
 /* ════════ 고객 365일 — 밀접하게 관리하기 ════════

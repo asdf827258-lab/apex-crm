@@ -19,6 +19,21 @@ for (const file of files) {
     continue;
   }
   const html = fs.readFileSync(file, 'utf8');
+
+  /* 통짜 자바스크립트 파일은 <script> 태그가 없다. 그냥 통째로 본다.
+     이걸 안 하면 「스크립트 0개 정상」 이라고 나와서 검사한 척이 된다. */
+  if (/\.[cm]?js$/i.test(file)) {
+    try {
+      new vm.Script(html, { filename: file });
+      console.log('✓ ' + file + ' — 자바스크립트 파일 정상');
+    } catch (e) {
+      failed++;
+      console.log('✗ ' + file + ' — 자바스크립트 파일');
+      console.log('    ' + e.message);
+    }
+    continue;
+  }
+
   const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
   let m, n = 0, bad = 0, skipped = 0;
 
@@ -42,8 +57,31 @@ for (const file of files) {
     }
   }
 
+  /* ── 같은 이름의 함수를 두 번 만들지 않았는가 ──────────────────
+     이 파일은 통짜라 이름이 겹쳐도 아무 말 없이 넘어간다.
+     자바스크립트는 <b>나중에 쓴 것이 이긴다.</b> 그래서 화면은 뜨는데
+     엉뚱한 것이 그려진다. 문법 검사로는 절대 안 잡힌다.
+
+     실제로 이렇게 당했다.
+       prNum      — 숫자에 쉼표 찍는 함수 위에 입력칸 만드는 함수를 얹어
+                    「국가혜택·근거」 화면에 입력칸 31개가 튀어나왔다
+       prWon      — 「1,200만원」 을 만드는 함수가 쉼표만 찍는 함수에 가려져
+                    치료비 표 금액이 전부 0 으로 찍혔다
+       prDeckHtml — 상담 이야기 목록이 제안서 슬라이드에 가려져 안 나왔다   */
+  const names = [];
+  html.replace(/^function\s+([A-Za-z_$][\w$]*)\s*\(/gm, (m, k) => { names.push(k); return m; });
+  const seen = {}, dup = [];
+  names.forEach(k => { seen[k] = (seen[k] || 0) + 1; });
+  Object.keys(seen).forEach(k => { if (seen[k] > 1) dup.push(k + ' ×' + seen[k]); });
+  if (dup.length) {
+    bad++;
+    console.log('✗ ' + file + ' — 같은 이름의 함수가 두 번 있습니다: ' + dup.join(', '));
+    console.log('    나중에 쓴 것이 이깁니다. 앞의 것을 부르던 자리가 조용히 망가집니다.');
+  }
+
   if (bad) { failed++; }
-  else console.log('✓ ' + file + ' — 실행되는 스크립트 ' + n + '개 모두 정상 (' + skipped + '개는 데이터/외부라 건너뜀)');
+  else console.log('✓ ' + file + ' — 실행되는 스크립트 ' + n + '개 모두 정상 (' + skipped +
+    '개는 데이터/외부라 건너뜀) · 함수 ' + names.length + '개 이름 안 겹침');
 }
 
 if (failed) {
