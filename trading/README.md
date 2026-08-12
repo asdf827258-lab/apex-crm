@@ -4,9 +4,13 @@
 
 | 주소 | 파일 | 무엇 |
 |---|---|---|
+| **`/trading/todo`** | `trading/todo.html` | **할 일 10개 — 버튼 누르고 명령어 복사만 하면 되는 체크리스트** |
 | `/trading/` | `trading/index.html` | 트레이딩 데스크 — 시세 화면 + 자동매매 콘솔 |
 | `/trading/bot` | `trading/bot.html` | 봇이 어떻게 만들어졌는지 둘러보는 설명 화면 |
 | — | `paper-trading-bot/` | 실제로 도는 파이썬 봇 (검사 101개) |
+
+> 아래 내용을 클릭만으로 따라갈 수 있게 만든 것이 **`/trading/todo`** 입니다.
+> 체크가 저장되니 중간에 닫아도 됩니다.
 
 ---
 
