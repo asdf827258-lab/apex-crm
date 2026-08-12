@@ -175,6 +175,23 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(/목표를 120만원 넘겼습니다/.test(R.text), '얼마나 넘겼는지 말로도 알려 준다');
   is(R.svg >= 2, '목표 대비 막대와 열두 달 흐름이 그려진다 (svg ' + R.svg + '개)');
 
+  /* 한 판에 다 모였는가 — 결과 → 과정 → 습관 → 총평 */
+  const ONE = await page.evaluate(() => {
+    const h = document.getElementById('arPane') || document.body;
+    const t = h.innerText || '';
+    return {
+      rate: t.indexOf('월별 타율') >= 0,
+      score: t.indexOf('여섯 축') >= 0 || t.indexOf('점수') >= 0,
+      full: t.indexOf('내 보고서 한눈에') >= 0,
+      order: [t.indexOf('목표 대비'), t.indexOf('월별 타율'), t.indexOf('내 보고서 한눈에')]
+    };
+  });
+  is(ONE.rate, '월별 타율이 같은 판에 붙는다');
+  is(ONE.score, '본인 점수판이 같은 판에 붙는다');
+  is(ONE.full, '리더가 보는 그 보고서가 내 화면에도 붙는다');
+  is(ONE.order[0] < ONE.order[1] && ONE.order[1] < ONE.order[2],
+    '결과 → 과정 → 총평 순으로 이어진다');
+
   console.log('\n[4] 리더의 사업계획서가 팀원 관리 맨 위에 오는가');
   const L = await page.evaluate(async () => {
     arGoCat('team'); await new Promise(r => setTimeout(r, 900));

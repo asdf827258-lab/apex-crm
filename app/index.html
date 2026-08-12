@@ -5740,8 +5740,7 @@ var AR_CAT=[
  ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me'],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
- ['perf', '💰','내 업적 · 월간보고','목표와 실적, 그리고 흐름',        'me'],
- ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
+ ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
  ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
  ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
@@ -7552,10 +7551,88 @@ function pfMeHtml(){
 
   h+=pfChartHtml();
   if(m.feedback||m.ai_draft)h+=pfFeedbackHtml(m);
+  /* 업적(결과) → 타율(과정) → 점수판(습관) → 보고서(총평) 순으로 한 판에 잇는다.
+     예전에는 이 넷이 서로 다른 칸에 흩어져 있어 아무도 이어서 안 봤다. */
+  h+=pfRateHtml();
+  try{if(typeof arScoreHtml==='function')h+=arScoreHtml();}catch(e1){}
+  try{if(typeof arWeekHtml==='function')h+=arWeekHtml();}catch(e2){}
+  h+=pfMineFullHtml();
   return h;
 }
 
 /* ── 그래프 — 내 흐름과 목표 대비 ─────────────────────────── */
+/* ── 월별 타율 ────────────────────────────────────────────────
+   업적은 결과고 타율은 과정이다. 결과만 보면 왜 그랬는지를 모른다.
+   달마다 몇 통 걸어 몇 건이 상담이 됐는지를 업적 바로 밑에 붙인다. */
+function pfRateRows(){
+  var me=pfMyId(),L=(typeof AR!=='undefined'&&AR.calls)||[],by={},i,c,k;
+  for(i=0;i<L.length;i++){
+    c=L[i];
+    if(c.w!==me||!c.d)continue;
+    k=c.d.slice(0,7);
+    if(!by[k])by[k]={ym:k,call:0,con:0,no:0,rej:0};
+    by[k].call++;
+    if(c.r==='상담')by[k].con++;else if(c.r==='부재')by[k].no++;else if(c.r==='거절')by[k].rej++;
+  }
+  return Object.keys(by).sort().reverse().slice(0,6).map(function(x){
+    var v=by[x];
+    v.rate=v.call?Math.round(v.con/v.call*100):0;
+    v.noRate=v.call?Math.round(v.no/v.call*100):0;
+    return v;
+  });
+}
+function pfRateHtml(){
+  var rows=pfRateRows();
+  if(!rows.length)
+    return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📞</span>월별 타율</div></div>'+
+      '<div class="card-body"><div class="ar-none">아직 통화 기록이 없습니다. '+
+      'DB 통합 CRM 에서 통화를 남기면 여기 쌓입니다.</div></div></div>';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📞</span>월별 타율</div>'+
+    '<div class="card-desc">업적은 결과이고 타율은 과정입니다. <b>왜 그 결과가 나왔는지</b>가 여기 있습니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:480px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">달</th><th style="padding:8px;text-align:right">통화</th>'+
+    '<th style="padding:8px;text-align:right">상담</th><th style="padding:8px;text-align:right">부재</th>'+
+    '<th style="padding:8px;text-align:right">거절</th><th style="padding:8px;text-align:right">상담 전환율</th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(v){
+      var c=v.rate>=25?'#059669':(v.rate>=15?'#D97706':'#DC2626');
+      return '<tr style="border-top:1px solid #EEF1F5"'+(v.ym===pfYm()?' style="background:#F5F9FF"':'')+'>'+
+        '<td style="padding:8px;font-weight:800">'+(+v.ym.split('-')[1])+'월</td>'+
+        '<td style="padding:8px;text-align:right">'+v.call+'</td>'+
+        '<td style="padding:8px;text-align:right;font-weight:800;color:#059669">'+v.con+'</td>'+
+        '<td style="padding:8px;text-align:right;color:#D97706">'+v.no+'</td>'+
+        '<td style="padding:8px;text-align:right;color:#DC2626">'+v.rej+'</td>'+
+        '<td style="padding:8px;text-align:right;font-weight:900;color:'+c+'">'+v.rate+'%</td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div class="notice" style="margin-top:10px">전환율이 낮으면 <b>멘트</b>를, 부재가 많으면 <b>거는 시간대</b>를 먼저 보십시오.</div>'+
+    '</div></div>';
+}
+
+/* ── 보고서 한눈에 ───────────────────────────────────────────
+   팀원 관리에서 이름을 누르면 나오던 그 판을 <b>내 화면에도</b> 그대로 놓는다.
+   리더만 보고 본인은 못 보면, 정작 고쳐야 할 사람이 못 본다. */
+function pfMineFullHtml(){
+  var me=pfMyId(),r=null,o=null;
+  try{r=(typeof arRowOf==='function')?arRowOf(me):null;}catch(e){}
+  try{o=(typeof AR!=='undefined'&&AR.rep)?AR.rep[me]:null;}catch(e2){}
+  if(!r)return '';
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🪞</span>내 보고서 한눈에</div>'+
+    '<div class="card-desc">리더가 보는 것과 <b>똑같은 판</b>입니다. 숨기지 않습니다.</div></div>'+
+    '<div class="card-body">';
+  try{h+=arNumsHtml(r);}catch(e3){}
+  try{if(typeof arVsTeamHtml==='function')h+=arVsTeamHtml(me);}catch(e4){}
+  try{if(typeof arCrmMiniHtml==='function')h+=arCrmMiniHtml(me);}catch(e5){}
+  try{if(typeof arCoachHtml==='function')h+=arCoachHtml(me);}catch(e6){}
+  try{
+    if(o&&typeof arSecHtml==='function')h+=arSecHtml(o);
+    else h+='<div class="ar-none" style="margin-top:12px">아직 AI 보고가 없습니다. '+
+      '리더가 「보고 받기」 를 누르면 여기 채워집니다.</div>';
+  }catch(e7){}
+  return h+'</div></div>';
+}
+
 function pfChartHtml(){
   var year=(PF.mineYear||[]).slice(),h='';
   var v=pfOf(PF.mine);
@@ -9245,8 +9322,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 10:20';
-var APP_BUILD_NOTE='아침 보고에 어제 총합이 먼저 뜹니다 (통화·상담·부재·거절·전환율) · 그 아래 오늘 할 일은 줄을 누르면 그 칸으로 바로 갑니다 · 리더는 팀 전체 어제 총합을 봅니다';
+var APP_BUILD='2026-08-13 12:00';
+var APP_BUILD_NOTE='「내 업적 · 월간보고」 한 판에 다 모았습니다 — 목표·실적 → 월별 타율 → 본인 점수판 → 리더가 보는 그 보고서까지. 본인 점수판 칸은 여기로 합쳐졌습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
