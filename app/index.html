@@ -8584,8 +8584,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 01:40';
-var APP_BUILD_NOTE='AI 제안서를 만들면 이 고객에게 필요한 상담 이야기 10장이 순서대로 펼쳐집니다 · 상담자료 11장의 이름·소속·준법 문구를 「내 소개」 로 통일했습니다';
+var APP_BUILD='2026-08-13 03:05';
+var APP_BUILD_NOTE='상담자료 보험 내용을 크고 진하게 고쳤습니다 (10~13px → 13~15px · 「글씨 크게」 한 단계 더) · 표지 사진과 이름을 키웠습니다 · 「결과 보고서」 에서 8통장 진단으로 바로 넘어갑니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14377,8 +14377,28 @@ window.addEventListener('message',function(ev){
   if(m.t==='apex:deckdone'){
     var nb=document.getElementById('prStoryNextBtn');
     if(nb&&nb.textContent)nb.style.display='';
+    return;
   }
+  /* 상담자료의 「결과 보고서」 를 누르면 상담자료가 알려 준다.
+     보고서에서 끝내지 않고 이 고객의 숫자로 넘어가시라고 길을 놓는다. */
+  if(m.t==='apex:next'){prFromSangdam(m.k);return;}
 },false);
+/* 상담자료 → 제안서로 넘어간다.
+   「한 장으로」 는 8통장부터 근거까지 한 줄로 이어져 있으므로,
+   거기로 옮긴 뒤 부르는 자리까지 내려 준다. */
+function prFromSangdam(k){
+  if(!PR.plan){
+    toast('먼저 「AI 제안서 만들기」 로 이 고객의 숫자를 만들어 주세요');
+    PR.view='sangdam';prPaint();return;
+  }
+  var key=(k==='story')?'story':'all';
+  PR.view=key;prPaint();
+  var out=$('prOut');
+  if(out&&out.scrollIntoView)out.scrollIntoView({behavior:'smooth',block:'start'});
+  if(key==='all'&&k&&k!=='all')setTimeout(function(){prJumpTo(k);},380);
+  var nm={wallet:'8통장 진단',reality:'준비하지 않으면',story:'상담 이야기'}[k]||'제안서';
+  toast('상담자료 → '+nm+' 로 넘어왔습니다');
+}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   var w=document.getElementById('prStoryWrap');

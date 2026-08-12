@@ -156,6 +156,9 @@
       '#apexDeckBar .apex-deck-me{font-weight:800;color:#F1F5F9;white-space:nowrap}' +
       '#apexDeckBar .apex-deck-tip{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.9}' +
       '#apexDeckBar .apex-deck-cx{opacity:.65;font-size:9.5px;white-space:nowrap}' +
+      '#apexDeckBar .apex-deck-big{font-size:10px;font-weight:800;white-space:nowrap;cursor:pointer;' +
+      'padding:2px 9px;border-radius:999px;border:1px solid rgba(255,255,255,.26);color:#E8EEF8}' +
+      '#apexDeckBar .apex-deck-big:hover{background:rgba(255,255,255,.13)}' +
       '#apexDeckBar .apex-deck-full{display:none;max-height:44vh;overflow:auto;padding:4px 14px 13px;' +
       'border-top:1px solid rgba(255,255,255,.08)}' +
       '#apexDeckBar.on .apex-deck-full{display:block}' +
@@ -170,12 +173,18 @@
     el.innerHTML =
       '<div class="apex-deck-row"><span class="apex-deck-me" data-apex-me></span>' +
       '<span class="apex-deck-tip">' + LAW_SHORT + '</span>' +
+      '<span class="apex-deck-big" id="apexBigBtn">글씨 크게</span>' +
       '<span class="apex-deck-cx">준법 안내 ▾</span></div>' +
       '<ul class="apex-deck-full">' +
       LAW_FULL.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
     el.querySelector('.apex-deck-row').onclick = function () {
       el.className = el.className ? '' : 'on';
       el.querySelector('.apex-deck-cx').textContent = el.className ? '닫기 ▴' : '준법 안내 ▾';
+    };
+    /* 나이 드신 고객과 볼 때는 한 단계 더 키운다. 고른 값은 남는다. */
+    el.querySelector('.apex-deck-big').onclick = function (ev) {
+      ev.stopPropagation();
+      bigSet(!document.body.classList.contains('apex-big'));
     };
     document.body.appendChild(el);
     return el;
@@ -214,6 +223,193 @@
     return decodeURIComponent(p[p.length - 1] || '');
   }
 
+  /* ── 4) 가독성 ────────────────────────────────────────────────
+     상담자료를 재 보니 제목은 60px 인데 <b>정작 읽어야 할 보험 내용이
+     10~13px</b> 이었다. 회색(#6B7684)까지 얹혀서 대비도 낮다.
+     상담은 고객과 화면을 <b>같이 보는</b> 자리다. 설계사는 외워서 말하지만
+     고객은 그 자리에서 처음 읽는다. 작으면 안 읽고, 안 읽으면 안 믿는다.
+
+     크기를 일괄로 올리면 표가 깨진다. 그래서 <b>재서, 작은 것만</b> 올린다.
+     원래 크기의 순서는 지킨다 — 9px 짜리와 13px 짜리를 같은 크기로 만들면
+     무엇이 중요한지가 사라진다.                                        */
+  var RD_BUCKET = [
+    { max: 10.6, cls: 'apex-rd-xs' },   /* 9~10px  → 13px */
+    { max: 12.1, cls: 'apex-rd-s' },    /* 11~12px → 14px */
+    { max: 13.6, cls: 'apex-rd-m' }     /* 13px    → 15px */
+  ];
+  var RD_DIM = { 'rgb(107, 118, 132)': 1, 'rgb(155, 165, 178)': 1, 'rgb(156, 163, 175)': 1 };
+  var rdOn = false;
+
+  function rdCss() {
+    if (document.getElementById('apexRdCss')) return;
+    var st = document.createElement('style');
+    st.id = 'apexRdCss';
+    st.textContent =
+      '.apex-rd-xs{font-size:13px !important;line-height:1.68 !important}' +
+      '.apex-rd-s{font-size:14px !important;line-height:1.72 !important}' +
+      '.apex-rd-m{font-size:15px !important;line-height:1.74 !important}' +
+      /* 흐린 회색은 흰 바탕에서 대비가 모자란다. 한 단계만 진하게. */
+      '.apex-rd-dim{color:#55606E !important}' +
+      /* 배경이 흰색에 가까워 경계가 안 보이던 칸에 선을 준다 */
+      '.apex-rd-box{border:1px solid rgba(15,23,42,.10) !important;' +
+      'box-shadow:0 1px 3px rgba(15,23,42,.045) !important}' +
+      /* 「크게」 를 고르면 한 단계 더 */
+      'body.apex-big .apex-rd-xs{font-size:15px !important}' +
+      'body.apex-big .apex-rd-s{font-size:16px !important}' +
+      'body.apex-big .apex-rd-m{font-size:17px !important}' +
+      'body.apex-big .apex-rd-dim{color:#404A57 !important}';
+    document.head.appendChild(st);
+  }
+
+  function rdApply() {
+    rdCss();
+    var host = document.querySelectorAll('.slide');
+    if (!host.length) host = [document.body];
+    var i, j, list, e, cs, fs, k, b;
+    for (i = 0; i < host.length; i++) {
+      list = host[i].querySelectorAll('*');
+      for (j = 0; j < list.length; j++) {
+        e = list[j];
+        if (e.id === 'apexDeckBar' || e.closest('#apexDeckBar,#apexNextBar')) continue;
+        if (e._apexRd) continue;
+        /* 글자만 든 마지막 칸만 본다 — 부모를 건드리면 자식까지 딸려 커진다 */
+        if (e.children.length) { rdBox(e); continue; }
+        if (!(e.textContent || '').replace(/\s/g, '').length) continue;
+        cs = getComputedStyle(e);
+        fs = parseFloat(cs.fontSize);
+        if (!(fs > 0)) continue;
+        for (k = 0; k < RD_BUCKET.length; k++) {
+          if (fs < RD_BUCKET[k].max) { e.classList.add(RD_BUCKET[k].cls); break; }
+        }
+        if (RD_DIM[cs.color]) e.classList.add('apex-rd-dim');
+        e._apexRd = 1;
+      }
+    }
+    rdOn = true;
+  }
+  /* 흰 바탕에 흰 칸이라 경계가 안 보이던 카드에만 선을 준다.
+     아무 칸에나 선을 그으면 화면이 표처럼 갑갑해진다. */
+  function rdBox(e) {
+    if (e._apexBox) return;
+    e._apexBox = 1;
+    var cs = getComputedStyle(e);
+    if (parseFloat(cs.borderTopWidth) > 0) return;
+    if (parseFloat(cs.borderRadius) < 8) return;
+    var m = (cs.backgroundColor || '').match(/^rgba?\((\d+), (\d+), (\d+)/);
+    if (!m) return;
+    var r = +m[1], g = +m[2], b = +m[3];
+    if (r < 238 || g < 238 || b < 238) return;          /* 옅은 칸만 */
+    if (r === 255 && g === 255 && b === 255) return;    /* 순백은 원래 그런 것 */
+    var box = e.getBoundingClientRect();
+    if (box.width * box.height < 8000) return;          /* 작은 알약은 놔둔다 */
+    e.classList.add('apex-rd-box');
+  }
+
+  function bigKey() { return 'apex_big_' + ((INTRO && INTRO.name) || 'me'); }
+  function bigGet() { try { return localStorage.getItem(bigKey()) === '1'; } catch (e) { return false; } }
+  function bigSet(v) {
+    try { localStorage.setItem(bigKey(), v ? '1' : '0'); } catch (e) {}
+    document.body.classList.toggle('apex-big', !!v);
+    var t = document.getElementById('apexBigBtn');
+    if (t) t.textContent = v ? '글씨 크게 ✓' : '글씨 크게';
+  }
+
+  /* ── 5) 결과 보고서 다음으로 ─────────────────────────────────
+     상담자료의 「📄 결과 보고서」 는 이 자료 안에서 끝난다. 그런데 상담은
+     거기서 안 끝난다. 보고서를 덮고 <b>8통장 진단</b>부터 이 고객의 숫자로
+     넘어가야 한다. 그 다리를 여기서 놓는다.
+     앱 안에서 열렸을 때만 띄운다 — 혼자 열면 넘어갈 곳이 없다.        */
+  function inApp() {
+    try { return !!(window.parent && window.parent !== window); } catch (e) { return false; }
+  }
+  function tell(msg) {
+    try { if (inApp()) window.parent.postMessage(msg, location.origin); } catch (e) {}
+  }
+  var NEXTS = [
+    { k: 'wallet', t: '🗺️ 8통장 진단', d: '이 고객의 돈을 8개 목적으로 나눠 어디가 비었는지' },
+    { k: 'reality', t: '⚠️ 준비하지 않으면', d: '' },
+    { k: 'story', t: '🎬 상담 이야기', d: '' }
+  ];
+  function nextBar(on) {
+    var el = document.getElementById('apexNextBar');
+    if (!on) { if (el) el.style.display = 'none'; return; }
+    if (!inApp()) return;
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'apexNextBar';
+      el.style.cssText = 'position:fixed;left:0;right:0;bottom:28px;z-index:2147482900;' +
+        'display:flex;align-items:center;gap:9px;padding:9px 14px;' +
+        'background:linear-gradient(90deg,#1D4ED8,#4F46E5);color:#fff;' +
+        'font-family:"Noto Sans KR","Malgun Gothic",sans-serif;' +
+        'box-shadow:0 -6px 20px rgba(15,23,42,.20)';
+      el.innerHTML =
+        '<span style="font-size:12px;font-weight:800;opacity:.86;white-space:nowrap">보고서 다음은</span>' +
+        '<span id="apexNextWrap" style="display:flex;gap:7px;flex:1;min-width:0;overflow:auto"></span>' +
+        '<span style="font-size:11px;opacity:.7;white-space:nowrap;cursor:pointer" ' +
+        'onclick="this.parentNode.style.display=\'none\'">닫기 ✕</span>';
+      document.body.appendChild(el);
+      var wrap = el.querySelector('#apexNextWrap');
+      NEXTS.forEach(function (N) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.style.cssText = 'padding:6px 13px;border:0;border-radius:9px;background:rgba(255,255,255,.16);' +
+          'color:#fff;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit';
+        b.textContent = N.t + ' ▶';
+        b.title = N.d;
+        b.onclick = function () { tell({ t: 'apex:next', k: N.k }); };
+        wrap.appendChild(b);
+      });
+    }
+    el.style.display = 'flex';
+  }
+  /* 「결과 보고서」 를 누르는 순간을 잡는다. 자료의 코드는 안 건드린다. */
+  function watchReport() {
+    if (typeof window.switchSection !== 'function') return;
+    var orig = window.switchSection;
+    window.switchSection = function (n) {
+      var r = orig.apply(this, arguments);
+      try {
+        if (+n === 2) { tell({ t: 'apex:report' }); nextBar(true); }
+        else nextBar(false);
+      } catch (e) {}
+      return r;
+    };
+  }
+
+  /* ── 6) 표지 ─────────────────────────────────────────────────
+     첫 장은 상담사를 처음 보는 자리다. 사진 106px 에 이름 30px 이면
+     화면 절반이 비고 사람이 안 남는다. 사진과 이름을 키우고,
+     테두리·그림자·자간을 다듬어 한 장으로 세운다.                     */
+  function coverCss() {
+    if (document.getElementById('apexCoverCss')) return;
+    var st = document.createElement('style');
+    st.id = 'apexCoverCss';
+    st.textContent =
+      '#s1 .s1-hero{gap:0 !important;margin-top:6px !important}' +
+      '#s1 .s1-hero-photo{width:190px !important;height:190px !important;' +
+      'border:5px solid #fff !important;' +
+      'box-shadow:0 26px 60px rgba(29,78,216,.24),0 0 0 1px rgba(15,23,42,.07),' +
+      '0 0 0 11px rgba(49,130,246,.055) !important;' +
+      'transition:transform .5s cubic-bezier(.2,.8,.2,1) !important}' +
+      '#s1 .s1-hero-photo:hover{transform:translateY(-4px) scale(1.02) !important}' +
+      '#s1 .s1-hero-photo img{width:100% !important;height:100% !important;object-fit:cover !important}' +
+      '#s1 .s1-hero-ph{font-size:78px !important}' +
+      '#s1 .s1-hero-name{font-size:clamp(38px,5.2vw,58px) !important;font-weight:900 !important;' +
+      'letter-spacing:-.045em !important;line-height:1.1 !important;margin-top:22px !important}' +
+      '#s1 .s1-hero-title{font-size:clamp(14px,1.35vw,17px) !important;font-weight:700 !important;' +
+      'letter-spacing:.01em !important;margin-top:9px !important;color:#5B6577 !important}' +
+      /* 이름 아래에 가는 금색 선 하나 — 표지에만 쓰는 마감 */
+      '#s1 .s1-hero-title::after{content:"";display:block;width:52px;height:2px;margin:15px auto 0;' +
+      'background:linear-gradient(90deg,#C8A25B,#E8D5A8,#C8A25B);border-radius:2px;opacity:.85}' +
+      '#s1 .s1-hero-edit{margin-top:17px !important;opacity:.62;transition:opacity .25s}' +
+      '#s1 .s1-hero-edit:hover{opacity:1}' +
+      '#s1 .apex-brand{transform:scale(1.12);transform-origin:center}' +
+      '#s1 .slide-title{margin-top:30px !important;letter-spacing:-.035em !important}' +
+      '@media (max-width:820px){#s1 .s1-hero-photo{width:136px !important;height:136px !important;' +
+      'border-width:4px !important}#s1 .s1-hero-ph{font-size:56px !important}}';
+    document.head.appendChild(st);
+  }
+
   /* 어디까지 봤는지 알린다 — 앱이 「다 보셨습니다」 를 표시할 수 있게 */
   function watch() {
     /* 덱마다 STEPS 또는 SLIDES 로 이름이 다르고, const 로 선언돼 window 에 붙지 않는다.
@@ -242,9 +438,13 @@
   function boot() {
     setIntro(readLocal());
     fixText(); fixSlots(); paintBar();
-    watch(); hello();
-    /* 덱이 스스로 글자를 다시 그리는 경우가 있어 한 번 더 맞춘다 */
-    setTimeout(function () { nodes = null; fixText(); fixSlots(); }, 900);
+    coverCss(); rdApply(); bigSet(bigGet());
+    watch(); watchReport(); hello();
+    /* 덱이 스스로 글자를 다시 그리는 경우가 있어 한 번 더 맞춘다.
+       탭을 눌러 나중에 나타나는 칸도 있어서 그때 다시 잰다. */
+    setTimeout(function () { nodes = null; fixText(); fixSlots(); rdApply(); }, 900);
+    setTimeout(rdApply, 2600);
+    document.addEventListener('click', function () { setTimeout(rdApply, 260); }, true);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, false);

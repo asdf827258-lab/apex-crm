@@ -17,8 +17,19 @@ const http = require('http'); const fs = require('fs'); const path = require('pa
 const ROOT = process.cwd(), PORT = 8861;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
 
+/* 상담자료를 <b>틀 안에</b> 넣었을 때만 나오는 것이 있다 (보고서 다음 단추).
+   앱을 통째로 띄우지 않고 이 작은 집 한 채로 그 상황을 만든다. */
+const HOST = `<!doctype html><meta charset="utf-8"><body style="margin:0">
+<iframe id="f" style="width:100%;height:96vh;border:0"
+ src="/app/${encodeURIComponent('상담자료')}/${encodeURIComponent('메인 상담자료.html')}"></iframe>
+<script>window.__got=[];addEventListener('message',function(e){
+  if(e.origin!==location.origin)return; if(e.data&&e.data.t)window.__got.push(e.data);},false);</script>`;
+
 const srv = http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]); if (p === '/') p = '/index.html';
+  if (p === '/__host.html') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); res.end(HOST); return;
+  }
   const f = path.join(ROOT, p);
   if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
   res.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
@@ -220,6 +231,88 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   const uniq = S.heights.filter((v, i, a) => a.indexOf(v) === i);
   is(uniq.length === 1, '열여섯 장이 모두 같은 크기로 선다 (' + uniq.join(' / ') + ')');
   is(S.bar, '메인 상담자료에도 준법 띠가 붙는다');
+
+  /* ═══ 8. 보험 내용이 읽히는가 ═══
+     재 보니 제목은 60px 인데 정작 읽어야 할 보험 내용이 10~13px 이었다.
+     상담은 고객과 화면을 같이 보는 자리다. 작으면 안 읽고, 안 읽으면 안 믿는다. */
+  console.log('\n[8] 상담자료의 보험 내용이 읽히는 크기인가');
+  const host2 = await ctx.newPage();
+  host2.on('pageerror', e => errs.push(e.message));
+  await host2.goto('http://127.0.0.1:' + PORT + '/__host.html', { waitUntil: 'domcontentloaded' });
+  await host2.waitForTimeout(4600);
+  const fr = host2.frames().find(f => { try { return /상담자료/.test(decodeURIComponent(f.url())); } catch (e) { return false; } });
+  is(!!fr, '상담자료가 틀 안에서 뜬다');
+  if (!fr) { await browser.close(); srv.close(); process.exit(1); }
+
+  const RD = await fr.evaluate(() => {
+    let tiny = 0, all = 0;
+    document.querySelectorAll('.slide *').forEach(e => {
+      if (e.children.length) return;
+      if ((e.textContent || '').trim().length < 4) return;
+      all++;
+      if (parseFloat(getComputedStyle(e).fontSize) < 13) tiny++;
+    });
+    const c = s => document.querySelectorAll(s).length;
+    return { tiny: tiny, all: all, up: c('.apex-rd-xs') + c('.apex-rd-s') + c('.apex-rd-m'), dim: c('.apex-rd-dim') };
+  });
+  is(RD.up > 300, '작던 칸 ' + RD.up + '개를 키웠다');
+  is(RD.tiny <= 3, '13px 보다 작은 글이 ' + RD.tiny + '개만 남았다 (전체 ' + RD.all + '칸)');
+  is(RD.dim > 50, '흐리던 회색 ' + RD.dim + '칸을 진하게 했다');
+
+  /* 「글씨 크게」 는 한 단계 더 — 나이 드신 고객과 볼 때 쓴다 */
+  const BIG = await fr.evaluate(() => {
+    const pick = () => {
+      const e = document.querySelector('.slide .apex-rd-s');
+      return e ? parseFloat(getComputedStyle(e).fontSize) : 0;
+    };
+    const before = pick();
+    document.getElementById('apexBigBtn').click();
+    const after = pick();
+    document.getElementById('apexBigBtn').click();
+    return { before: before, after: after, back: pick() };
+  });
+  is(BIG.after > BIG.before, '「글씨 크게」 를 누르면 커진다 (' + BIG.before + ' → ' + BIG.after + 'px)');
+  is(BIG.back === BIG.before, '다시 누르면 돌아온다');
+
+  /* ═══ 9. 표지 ═══ */
+  console.log('\n[9] 표지 — 사진과 이름이 사람으로 보이는가');
+  const CV = await fr.evaluate(() => {
+    window.postMessage({ t: 'apex:intro', data: { name: '홍보험', title: '지점장', org: '온탑2지점' } }, location.origin);
+    return new Promise(r => setTimeout(() => {
+      const p = document.querySelector('#s1 .s1-hero-photo'), n = document.querySelector('#s1 .s1-hero-name');
+      r({
+        photo: p ? Math.round(p.getBoundingClientRect().width) : 0,
+        name: n ? Math.round(parseFloat(getComputedStyle(n).fontSize)) : 0,
+        who: n ? n.textContent.trim() : '',
+        title: (document.querySelector('#s1 .s1-hero-title') || {}).textContent || ''
+      });
+    }, 420));
+  });
+  is(CV.photo >= 170, '사진이 ' + CV.photo + 'px 로 커졌다 (원래 106px)');
+  is(CV.name >= 38, '이름이 ' + CV.name + 'px 로 커졌다 (원래 30px)');
+  is(CV.who === '홍보험', '표지 이름이 「내 소개」 를 따른다 (' + CV.who + ')');
+  is(/지점장/.test(CV.title) && /온탑2지점/.test(CV.title), '직함·소속도 따라 바뀐다 — ' + CV.title.trim());
+
+  /* ═══ 10. 결과 보고서 다음으로 ═══
+     보고서에서 끝내지 않고 이 고객의 숫자(8통장)로 넘어가야 상담이 이어진다. */
+  console.log('\n[10] 「결과 보고서」 를 누르면 8통장으로 넘어갈 길이 열리는가');
+  const NX = await fr.evaluate(() => {
+    switchSection(2);
+    return new Promise(r => setTimeout(() => {
+      const b = document.getElementById('apexNextBar');
+      const btns = b ? [].slice.call(b.querySelectorAll('button')) : [];
+      if (btns[0]) btns[0].click();
+      r({ bar: !!b, show: b ? getComputedStyle(b).display : '-', labels: btns.map(x => x.textContent) });
+    }, 500));
+  });
+  is(NX.bar && NX.show === 'flex', '보고서를 열면 「보고서 다음은」 띠가 뜬다');
+  is(/8통장/.test((NX.labels || []).join(' ')), '첫 단추가 8통장 진단이다 — ' + (NX.labels || []).join(' / '));
+  const GOT = await host2.evaluate(() => new Promise(r => setTimeout(() => r(window.__got || []), 300)));
+  is(GOT.some(m => m.t === 'apex:report'), '보고서를 연 것을 앱에 알린다');
+  is(GOT.some(m => m.t === 'apex:next' && m.k === 'wallet'), '단추를 누르면 앱에 「8통장으로」 를 보낸다');
+  is(/function prFromSangdam/.test(app) && /apex:next/.test(app), '앱에 그 신호를 받는 자리가 있다');
+  is(/prJumpTo\(k\)/.test(app), '앱이 8통장 자리까지 내려 준다');
+  await host2.close();
 
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 120) : ''));
