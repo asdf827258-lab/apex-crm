@@ -57,11 +57,23 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* ═══ 4. 소스 검사 — 업로드 칸이 없어졌는가 ═══ */
   console.log('\n[4] 상담자료 안의 증권 업로드 칸이 없어졌는가');
   const doc = fs.readFileSync(path.join(ROOT, 'app/상담자료/메인 상담자료.html'), 'utf8');
-  is(/id="apexLinkCard"/.test(doc), '그 자리에 APEX 연동 칸이 들어갔다');
-  is(/AI 제안서 생성<\/strong>에서 증권을 넣으면/.test(doc), '어디서 넣으면 되는지 안내한다');
-  const card = doc.slice(doc.indexOf('id="apexLinkCard"'));
-  is(/<div style="display:none">[\s\S]{0,400}id="s9-medical-card"/.test(card),
-    '원래 업로드 카드는 지우지 않고 숨겼다 — 안쪽 코드가 참조하기 때문');
+  /* ── 상담자료의 생김새는 건드리지 않는다 ──
+     HTML 을 한 번 손댔다가 10번째 장부터가 9번째 장 <b>안으로 말려 들어가</b>
+     안 보이게 됐다. 그래서 이제 이 파일에는 <b>스크립트만</b> 붙인다. */
+  is(!/id="apexLinkCard"/.test(doc), '상담자료 화면을 건드리지 않는다 — 스크립트만 붙인다');
+  is(!/id="s9-medical-card"[\s\S]{0,80}display:\s*none/.test(doc) &&
+     !/display:\s*none[^>]*>\s*<div[^>]*id="s9-medical-card"/.test(doc),
+    '증권 업로드 칸이 원래대로 살아 있다');
+  /* ── 다시는 남의 자료를 지우지 않는다 ──
+     한때 { replace: true } 로 넣어서 상담자료에 쌓아 둔 보장분석표를
+     통째로 지웠다. 사람이 만든 것을 앱이 지우는 것은 최악이다. */
+  is(!/s10ImportInsurances\([^)]*replace\s*:\s*true/.test(doc),
+    '앱이 보낸 계약으로 기존 표를 덮어쓰지 않는다 — 사람이 만든 것을 지우지 않는다');
+  /* 열여섯 장이 <b>서로 안에 들어가지 않고</b> 나란히 있는가 —
+     이것이 「10페이지부터 안 뜬다」 의 정체였다. */
+  const slideIdx = [];
+  doc.replace(/id="(s\d{1,2})"/g, (m, id) => { slideIdx.push(id); return m; });
+  is(slideIdx.length >= 16, '슬라이드가 16장 이상 그대로 있다 (' + slideIdx.length + '장)');
   is(/apex:insurances/.test(doc) && /s10ImportInsurances/.test(doc), '보장분석표로 넣는 길이 이어져 있다');
   is(/ev\.origin !== location\.origin/.test(doc), '같은 주소에서 온 쪽지만 받는다');
   const fin = fs.readFileSync(path.join(ROOT, 'app/재무설계/상담자료.html'), 'utf8');
@@ -88,6 +100,37 @@ const is = (c, m) => c ? ok(m) : no(m);
     errs.slice(0, 4).forEach(m => console.log('    ' + m));
     await browser.close(); srv.close(); process.exit(1);
   }
+
+  /* ═══ 0. 상담자료 열여섯 장이 다 뜨는가 ═══
+     글자만 세는 검사로는 이 사고를 못 잡았다. div 개수는 맞는데
+     브라우저가 읽으면 10번째 장부터가 9번째 장 <b>안에</b> 들어가 있었다.
+     그래서 실제로 띄워서 <b>자리를 차지하는지</b> 잰다. */
+  console.log('\n[0] 상담자료 열여섯 장이 각자 제자리에 뜨는가');
+  const sd = await ctx.newPage();
+  await sd.goto('http://127.0.0.1:' + PORT + '/app/상담자료/메인 상담자료.html',
+    { waitUntil: 'domcontentloaded' });
+  await sd.waitForTimeout(3200);
+  const SL = await sd.evaluate(() => {
+    var sl = [].slice.call(document.querySelectorAll('.slide'));
+    return {
+      n: sl.length,
+      ids: sl.map(function (s) { return s.id; }),
+      /* 다른 장 안에 들어간 장 — 이러면 그 장부터 안 보인다 */
+      nested: sl.filter(function (s) {
+        return s.parentElement && s.parentElement.closest('.slide');
+      }).map(function (s) { return s.id; }),
+      /* 높이가 제각각이면 어딘가에 갇힌 것이다 */
+      heights: sl.map(function (s) { return Math.round(s.getBoundingClientRect().height); })
+    };
+  });
+  await sd.close();
+  is(SL.n >= 16, '슬라이드가 ' + SL.n + '장 있다');
+  is(SL.nested.length === 0,
+    '어느 장도 다른 장 안에 말려 들어가지 않았다' +
+    (SL.nested.length ? ' — 갇힌 장: ' + SL.nested.join(' ') : ''));
+  const uniq = SL.heights.filter((v, i, a) => a.indexOf(v) === i);
+  is(uniq.length === 1,
+    '열여섯 장이 모두 같은 크기로 선다 (' + uniq.join(' / ') + ') — 크기가 갈리면 어딘가 갇힌 것이다');
 
   /* ═══ 1. 사람마다 따로 저장되는가 ═══ */
   console.log('\n[1] 소개가 로그인한 사람마다 따로 저장되는가');
@@ -185,7 +228,9 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(B.phone === '010-1111-2222' && /삶을 설계/.test(B.intro || ''), '연락처와 한 줄 소개도 들어간다');
   is(/보장분석/.test(B.spec || ''), '전문 분야도 들어간다');
   is(B.n === 1 && B.co === '교보생명', '증권에서 읽은 계약이 보장분석표에 들어간다 (' + B.n + '건 · ' + B.co + ')');
-  is(/1건 들어옴|들어옴/.test(B.badge), '들어왔다고 화면에 표시한다 — ' + B.badge);
+  /* 배지는 없앴다 — 상담자료 화면을 건드리지 않기로 했기 때문이다.
+     들어왔는지는 <b>표에 실제로 있는지</b> 로 확인한다. */
+  is(B.n >= 1 && B.co === '교보생명', '표시가 아니라 표에 실제로 들어갔는지로 확인한다');
 
   console.log('\n[5] 남이 보낸 쪽지는 안 받는가');
   is(B.safeAfter === B.safeBefore, '다른 주소에서 온 쪽지는 무시한다 (' + B.safeAfter + ')');

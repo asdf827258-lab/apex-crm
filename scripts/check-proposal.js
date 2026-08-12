@@ -160,7 +160,9 @@ const is = (c, m) => c ? ok(m) : no(m);
     keys: PR_PART.map(x => prSchema(x.k)),
     fitAll: PR_PART.map(x => aiTimeoutFor('{"max_tokens":' + x.tok + '}') >= (x.tok / AI_WRITE_TPS) * 1000)
   }));
-  is(P.n === 4, '네 조각으로 나눈다 (' + P.labels.join(' · ') + ')');
+  /* 문서가 앞뒤로 갈라져 다섯 조각이 됐다 — 슬라이드 열두 장을 한 번에 쓰게 하면
+     길이에 걸려 뒷장이 잘렸기 때문이다. 중요한 건 개수가 아니라 「한 조각이 작은가」 다. */
+  is(P.n === 6, '여섯 조각으로 나눈다 (' + P.labels.join(' · ') + ')');
   is(Math.max.apply(null, P.toks) <= 8000, '가장 큰 조각도 회사 서버 한도(8000) 안이다 — 최대 ' + Math.max.apply(null, P.toks));
   is(Math.max.apply(null, P.toks) <= 4500, '한 조각이 4500 을 넘지 않는다 (' + P.toks.join(', ') + ')');
   is(P.fitAll.every(Boolean), '모든 조각이 제한시간 안에 끝날 수 있다');
@@ -170,9 +172,13 @@ const is = (c, m) => c ? ok(m) : no(m);
   const top = ['title', 'slides', 'wallets', 'reality', 'benefit', 'pension', 'wholelife', 'options', 'nextSteps', 'risks', 'evidence', 'national', 'costmix', 'incomeFit', 'diff', 'before', 'after', 'katalk'];
   const missing = top.filter(k => flat.indexOf(k) < 0);
   is(missing.length === 0, '화면이 쓰는 항목이 하나도 안 빠졌다' + (missing.length ? ' — 빠짐: ' + missing.join(', ') : ''));
-  const dup = ['slides', 'wallets', 'reality', 'pension', 'diff'].filter(k =>
+  /* slides 는 앞뒤 조각이 <b>나눠서</b> 쓴다 — 같은 것을 두 번 쓰는 게 아니라
+     1~6장 / 7~12장으로 갈라 쓰고 앱이 이어 붙인다. 그래서 여기서 뺀다. */
+  const dup = ['wallets', 'reality', 'pension', 'diff'].filter(k =>
     allKeys.filter(a => a.indexOf(k) >= 0).length > 1);
   is(dup.length === 0, '같은 항목을 두 조각이 겹쳐 쓰지 않는다' + (dup.length ? ' — 겹침: ' + dup.join(', ') : ''));
+  const slideParts = allKeys.filter(a => a.indexOf('slides') >= 0).length;
+  is(slideParts === 2, '슬라이드는 앞뒤 두 조각이 나눠 쓴다 (' + slideParts + '조각)');
 
   /* ═══ 3 ═══ */
   console.log('\n[3] 토막나거나 붙어 온 JSON 도 살려 내는가');
@@ -221,11 +227,11 @@ const is = (c, m) => c ? ok(m) : no(m);
       reality: (got.plan.reality || []).length, evid: (got.plan.evidence || []).length,
       pension: !!got.plan.pension };
   });
-  is(A.calls.length === 4, '네 번 나눠 부른다 (' + A.calls.length + '번)');
+  is(A.calls.length === 6, '여섯 번 나눠 부른다 (' + A.calls.length + '번)');
   is(A.calls.every(c => c.tok <= 4500), '한 번도 4500자를 넘겨 부탁하지 않는다 — ' + A.calls.map(c => c.tok).join(', '));
   is(A.calls.every(c => c.gen === 'proposal'), '고객 자료 도구로 라우팅된다 (회사 AI 로 감)');
   is(new Set(A.calls.map(c => c.which)).size === 4, '네 조각이 서로 다른 것을 맡는다');
-  is(A.got === 3 && A.fails.length === 1, '하나가 죽어도 셋은 살린다 (' + A.fails.join(', ') + ')');
+  is(A.got === 5 && A.fails.length === 1, '하나가 죽어도 다섯은 살린다 (' + A.fails.join(', ') + ')');
   is(A.title === '내 보험' && A.wallets >= 1 && A.evid >= 1, '살아남은 조각이 하나로 합쳐진다');
   is(A.pension === false, '죽은 조각은 없는 채로 둔다 — 지어내지 않는다');
 
