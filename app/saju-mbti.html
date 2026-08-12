@@ -171,6 +171,20 @@ label{display:block;font-size:11.5px;font-weight:800;color:#8C86A8;margin:0 0 5p
 .talk{border-left:4px solid #8B7BF0;background:#FAF8FF;border-radius:0 13px 13px 0;padding:11px 13px;margin-top:9px;font-size:13px;line-height:1.75}
 .talk.bad{border-color:#FF8DA1;background:#FFF6F7}
 .talk.good{border-color:#5BC8A8;background:#F2FBF8}
+.sheet{position:fixed;inset:0;background:rgba(47,44,64,.5);display:none;align-items:flex-end;justify-content:center;z-index:60}
+.sheet.on{display:flex}
+.sheet > div{background:#fff;width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px 24px;max-height:88vh;overflow:auto}
+.sheethd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sheethd b{font-size:16px;font-weight:900}
+.x{border:none;background:#F4F1FF;color:#6F63C4;width:32px;height:32px;border-radius:50%;font-size:17px;cursor:pointer;font-family:inherit}
+.pay{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;border:2px solid #F0ECFA;border-radius:16px;
+  padding:12px 14px;margin-top:8px;cursor:pointer;font-family:inherit}
+.pay .em{flex:none;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.pay .tx{flex:1;min-width:0}
+.pay .tx b{display:block;font-size:14px;font-weight:900;color:#2F2C40}
+.pay .tx span{display:block;font-size:11.5px;color:#948FB0;margin-top:2px}
+.pay .ar{color:#C9C2E4;font-size:19px;font-weight:900}
+textarea.inp{line-height:1.6;font-size:14px}
 .foot{text-align:center;font-size:10.5px;color:#A9A2C6;line-height:1.8;margin-top:22px}
 @media print{
   html,body{height:auto;overflow:visible}
@@ -191,6 +205,7 @@ label{display:block;font-size:11.5px;font-weight:800;color:#8C86A8;margin:0 0 5p
   <div class="tabs" id="tabs"></div>
   <div class="pane" id="pane"><div id="view"></div><div class="scrollhint" id="hint">▼ 아래로 더 있어요</div></div>
 </div>
+<div class="sheet" id="sheet" onclick="if(event.target===this)sheetClose()"><div id="sheetBody"></div></div>
 <div class="toast" id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:#2F2C40;color:#fff;font-size:13px;font-weight:700;padding:11px 17px;border-radius:999px;opacity:0;transition:opacity .2s,transform .2s;z-index:90;pointer-events:none;max-width:88vw;text-align:center"></div>
 <script>
 /* ── 성향검사 48문항 (앱과 같은 문항·같은 채점) ─────────────────── */
@@ -704,7 +719,7 @@ var STRATEGY={
    ══════════════════════════════════════════════════════════════════ */
 var BLANK={name:'',gender:'M',mbti:'',blood:'',y:'',m:'',d:'',H:'',Mi:0,noTime:false,adj:false,saju:null,res:null};
 function blank(){var o={},k;for(k in BLANK)o[k]=BLANK[k];return o;}
-var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',me:blank(),cl:blank()};
+var S={step:'me',tab:'ice',target:'client',i:0,ans:{},mode:'both',view:'agent',worry:{},me:blank(),cl:blank()};
 /* 보기 모드 — 내 눈용(agent)에는 리스크와 화법까지, 고객 화면(client)에는
    좋은 이야기와 덕담만 남긴다. 설계사 전용 블록은 아예 그리지 않는다. */
 function agentOnly(html){return S.view==='agent'?html:'';}
@@ -714,7 +729,7 @@ function $(id){return document.getElementById(id);}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){var t=$('toast');t.textContent=m;t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(t._t);t._t=setTimeout(function(){t.style.opacity='0';t.style.transform='translateX(-50%) translateY(16px)';},2100);}
-function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode,view:S.view}));}catch(e){}}
+function save(){try{localStorage.setItem('sajumbti',JSON.stringify({me:S.me,cl:S.cl,ans:S.ans,i:S.i,step:S.step,tab:S.tab,mode:S.mode,view:S.view,worry:S.worry}));}catch(e){}}
 function load(){try{return JSON.parse(localStorage.getItem('sajumbti')||'null');}catch(e){return null;}}
 function val(id){var e=$(id);return e?e.value:'';}
 function num(v){var n=parseInt(v,10);return isNaN(n)?null:n;}
@@ -918,16 +933,16 @@ var AXIS_SELF={
   J:'정해두고 지키는 데서 안정을 얻으십니다. 갑작스러운 변경에 스트레스를 받으십니다.',
   P:'열어두는 데서 편안함을 얻으십니다. 정해지면 답답해하십니다.'
 };
-var TAB_NAME={ice:'아이스브레이킹',sum:'종합',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
+var TAB_NAME={ice:'아이스브레이킹',sum:'종합',worry:'고민 상담',life:'인생 운',trait:'성향 파악',mind:'MBTI 정밀',
   deep:'사주 풀이',blood:'혈액형',fit:'궁합',talk:'상담 전략',ins:'보험·관리',risk:'🔒 리스크',saju:'만세력'};
 var AGENT_TABS={fit:1,talk:1,ins:1,risk:1};   /* 고객 화면에서는 감춘다 */
 function tabsFor(mode,view){
   view=view||S.view;
   var list;
-  if(mode==='saju')list=['ice','sum','life','deep','fit','ins','risk','saju'];
-  else if(mode==='mbti')list=['ice','sum','life','trait','mind','fit','talk','ins','risk'];
+  if(mode==='saju')list=['ice','sum','worry','life','deep','fit','ins','risk','saju'];
+  else if(mode==='mbti')list=['ice','sum','worry','life','trait','mind','fit','talk','ins','risk'];
   else if(mode==='blood')list=['ice','blood','fit','ins','risk'];
-  else list=['ice','sum','life','trait','deep','fit','talk','ins','risk','saju'];
+  else list=['ice','sum','worry','life','trait','deep','fit','talk','ins','risk','saju'];
   if(mode!=='blood'&&S.cl&&S.cl.blood)list.splice(list.indexOf('life')>=0?list.indexOf('life')+1:1,0,'blood');
   if(view==='client')list=list.filter(function(k){return !AGENT_TABS[k];});
   return list;
@@ -975,7 +990,7 @@ function goStep(k){
 }
 function goTab(t){S.tab=t;save();draw();$('pane').scrollTop=0;}
 function newClient(){
-  S.cl=blank();S.ans={};S.i=0;S.step='client';S.tab='ice';S.view='agent';save();draw();
+  S.cl=blank();S.ans={};S.i=0;S.step='client';S.tab='ice';S.view='agent';S.worry={};save();draw();
 }
 /* ── 사람 입력 화면(내 카드 · 고객 공용) ── */
 function viewPerson(who){
@@ -1146,6 +1161,7 @@ function viewBoard(){
   if(t==='ice')return tabIce();
   if(t==='life')return tabLife();
   if(t==='blood')return tabBlood();
+  if(t==='worry')return tabWorry();
   if(t==='risk')return tabRisk();
   if(t==='ins')return tabIns();
   if(t==='deep')return tabDeep();
@@ -1180,7 +1196,8 @@ function tabSum(){
   var right='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>만나면 먼저 이 말부터</h2>'+
     bl.map(function(x){return '<div class="talk good">🌾 '+esc(x)+'</div>';}).join('')+
     '<div class="row" style="margin-top:11px"><button class="btn ghost sm" onclick="goTab(\'ice\')">덕담 더 보기 →</button>'+
-    '<button class="btn ghost sm" onclick="goTab(\'life\')">인생 열 가지 운 →</button></div></div>'+
+    '<button class="btn ghost sm" onclick="goTab(\'life\')">인생 열 가지 운 →</button></div>'+
+    '<button class="btn ghost sm" style="margin-top:8px" onclick="goTab(\'worry\')">💬 지금 걸리는 고민 하나 풀어보기 →</button></div>'+
   '<div class="card"><h2><span class="n">한 줄</span>이 사람은 이런 사람입니다</h2>'+
     (code?'<p style="font-size:14px;color:#3B3757"><b>'+esc(ty.line||'')+'</b></p>':'')+
     (s?'<p>사주로 보면 '+dayC.n+' 일간입니다. '+esc(dayC.ice)+' '+esc(dayC.work)+' 여덟 글자 중 <b>'+sip.top+'</b>이(가) 가장 두껍습니다 — '+esc(meta.mind)+'</p>':'')+
@@ -2390,6 +2407,385 @@ function tabBlood(){
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   21. 고민 상담 — 지금 걸린 것 하나를 사주와 성향으로 풀어준다
+   ══════════════════════════════════════════════════════════════════
+   점을 쳐 주는 것이 아니다. 지금 이 고민이 왜 생겼는지를 타고난 결과
+   성향에서 찾아 주고, 이번 달에 할 것 세 가지와 하지 말 것을 준다.
+   시기는 세운의 합·충으로만 잡고, 좋고 나쁨을 단정하지 않는다.       */
+var WORRY_CATS=[
+  {k:'money',n:'돈 · 재물',emo:'💰',ex:'모아지지가 않아요 / 큰 지출이 겁나요 / 투자를 해야 할까요'},
+  {k:'job',n:'일 · 직장',emo:'💼',ex:'지금 자리가 맞는지 모르겠어요 / 인정을 못 받아요'},
+  {k:'move',n:'이직 · 사업',emo:'🚪',ex:'옮겨야 할까요 / 창업을 해도 될까요'},
+  {k:'health',n:'건강',emo:'🩺',ex:'늘 피곤해요 / 어디가 자꾸 아파요'},
+  {k:'spouse',n:'배우자 · 연애',emo:'💞',ex:'대화가 안 통해요 / 인연이 없어요'},
+  {k:'child',n:'자녀',emo:'🧒',ex:'아이와 부딪혀요 / 진로가 걱정이에요'},
+  {k:'family',n:'부모 · 가족',emo:'🏠',ex:'가족 일로 마음이 무거워요'},
+  {k:'people',n:'사람 관계',emo:'👥',ex:'사람 때문에 지쳐요 / 거절을 못 해요'},
+  {k:'mind',n:'마음 · 불안',emo:'🌙',ex:'이유 없이 불안해요 / 의욕이 안 나요'},
+  {k:'path',n:'진로 · 공부',emo:'🧭',ex:'뭘 해야 할지 모르겠어요 / 다시 배워도 될까요'}
+];
+var WORRY_KEY={money:['돈','빚','대출','저축','투자','수입','생활비','재테크','목돈'],
+  job:['직장','회사','상사','업무','승진','인정','월급','부서'],
+  move:['이직','퇴사','창업','사업','옮기','independent','자영'],
+  health:['건강','피곤','아프','병원','수술','통증','잠','체력'],
+  spouse:['남편','아내','배우자','연애','결혼','이혼','부부','애인'],
+  child:['아이','자녀','아들','딸','육아','학교','진학'],
+  family:['부모','어머니','아버지','시댁','처가','형제','가족'],
+  people:['사람','친구','동료','관계','상처','거절','뒷말'],
+  mind:['불안','우울','의욕','공허','외로','스트레스','마음'],
+  path:['진로','공부','자격','전공','배우','시험','미래']};
+function worryGuess(txt){
+  var t=(txt||''),best='',n=0,k;
+  for(k in WORRY_KEY){
+    var c=0;WORRY_KEY[k].forEach(function(w){if(t.indexOf(w)>=0)c++;});
+    if(c>n){n=c;best=k;}
+  }
+  return best;
+}
+/* 고민마다 어디를 보는가 */
+function worrySolve(p,cat,txt){
+  var s=p.saju,code=personCode(p),ty=MBTI_TYPES[code]||{};
+  var sip=s?sipsinTable(s):null,cnt=sip?sip.count:{비겁:0,식상:0,재성:0,관성:0,인성:0};
+  var st=s?strengthOf(s):null,oh=s?ohCount(s):null,sn=s?sinsalOf(s):[];
+  var has={};sn.forEach(function(x){has[x.name]=1;});
+  var lack=[],many=[],k;
+  if(oh)for(k in oh){if(oh[k]===0)lack.push(k);if(oh[k]>=3)many.push(k);}
+  var ahead=s?yearAhead(p,6):[];
+  var good=ahead.filter(function(x){return x.rel==='육합'||x.rel==='삼합';});
+  var bad=ahead.filter(function(x){return x.rel==='충';});
+  var fs=code?funcStack(code):null;
+  var C=WORRY_CATS.filter(function(x){return x.k===cat;})[0]||WORRY_CATS[0];
+  var o={cat:C,now:'',sajuWhy:'',mindWhy:'',dos:[],donts:[],when:'',bless:'',one:''};
+
+  function mindTail(){
+    if(!code)return '';
+    return '성향으로는 '+code+' 이십니다. '+(ty.line||'');
+  }
+  if(cat==='money'){
+    o.one='돈은 <b>버는 힘</b>보다 <b>지키는 구조</b>에서 갈립니다.';
+    o.now=(cnt.재성===0?'재물을 담는 자리(재성)가 사주에 없습니다. 못 번다는 뜻이 아니라, <b>월급처럼 규칙적으로 들어오는 형태</b>가 맞고 한 번에 크게 굴리는 방식은 잘 안 맞는다는 뜻입니다.'
+      :(cnt.재성>=3&&st&&st.level==='신약'?'재물 기회는 많은데 그것을 감당할 힘(일간)이 약합니다. 기회가 올 때마다 다 잡으려다 <b>몸과 현금이 먼저 마르는</b> 구조입니다.'
+      :'벌고 지키는 힘이 함께 있는 편입니다. 지금 고민은 능력이 아니라 <b>새는 곳</b>에서 오고 있을 가능성이 큽니다.'));
+    o.sajuWhy='재성 '+cnt.재성+'개 · 비겁 '+cnt.비겁+'개'+(st?' · '+st.level:'');
+    o.mindWhy=(code?(code.charAt(1)==='S'?'숫자를 직접 확인해야 마음이 놓이는 분입니다.':'큰 그림은 보시지만 세부 지출은 흘리기 쉬운 분입니다.'):'');
+    o.dos=[(cnt.비겁>=3?'동업·보증·빌려준 돈부터 정리하세요. 이 사주에서 돈이 새는 첫 번째 구멍입니다.':'통장을 목적별로 셋으로 나누세요 — 생활 · 비상금 · 목표.'),
+      '한 달만 모든 지출을 적어보세요. 이 결의 분들은 <b>새는 곳을 눈으로 보면</b> 바로 고칩니다.',
+      (cnt.재성===0?'큰 수익을 좇지 말고 <b>고정 수입 하나를 더</b> 만드는 쪽으로 방향을 잡으세요.':'목돈이 생기면 최소 한 달은 묵혔다가 결정하세요.')];
+    o.donts=['남의 말만 듣고 큰돈을 한 곳에 넣는 것','자존심 때문에 손해를 인정하지 않고 버티는 것'];
+  }else if(cat==='job'){
+    o.one='지금 자리가 맞는지는 <b>일의 종류</b>가 아니라 <b>일하는 방식</b>에서 갈립니다.';
+    o.now=(cnt.관성>cnt.식상?'조직과 직책이 맞는 결입니다. 기준이 분명한 곳에서 힘이 나는 분이라, 지금 힘든 이유는 일 자체보다 <b>기준이 흔들리는 환경</b>일 가능성이 큽니다.'
+      :(cnt.식상>cnt.관성?'내 이름으로 하는 일이 맞는 결입니다. 시키는 대로만 하는 자리에서는 오래 못 버티는 분이라, <b>재량이 없는 상태</b>가 지금 답답함의 원인일 수 있습니다.'
+      :'조직과 자기 일 양쪽 다 되는 결입니다. 지금은 <b>사람</b> 때문에 힘든 것이지 일 때문이 아닐 가능성이 큽니다.'));
+    o.sajuWhy='관성 '+cnt.관성+'개 · 식상 '+cnt.식상+'개'+(has['화개']?' · 화개':'');
+    o.mindWhy=(fs?'주기능이 '+fs.dom+'('+FUNC_META[fs.dom].n+') 이라 '+FUNC_META[fs.dom].line:'');
+    o.dos=['지금 자리에서 <b>내가 정할 수 있는 것</b>을 하나만 늘려보세요. 그것만으로 답답함이 절반은 줄어듭니다.',
+      '평가받고 싶은 것을 상사에게 <b>말로 한 번</b> 꺼내보세요. 이 결의 분들은 참다가 한 번에 터집니다.',
+      (cnt.관성>=3?'맡은 것을 하나만 내려놓으세요. 책임을 다 지려다 지치는 자리입니다.':'3개월 안에 끝낼 작은 성과 하나를 정하세요.')];
+    o.donts=['감정이 올라온 날 사표를 쓰는 것','비교로 결정하는 것 — 남의 자리는 내 결과 다릅니다'];
+  }else if(cat==='move'){
+    o.one='옮길지 말지는 <b>지금 힘든가</b>가 아니라 <b>옮겨서 무엇이 달라지는가</b>로 정합니다.';
+    o.now=(has['역마']?'사주에 역마가 있습니다. 한자리에 오래 머물기보다 <b>움직여야 풀리는</b> 결이라 이직·이동이 나쁘게만 작용하지 않습니다.'
+      :'한자리에서 뿌리내릴 때 힘이 붙는 결입니다. 자주 옮기면 쌓이던 것이 흩어지니 <b>옮긴다면 크게 한 번</b>이 맞습니다.')+
+      (cnt.비겁>=3?' 다만 비겁이 두터워 <b>동업 제안</b>은 특히 신중하셔야 합니다.':'');
+    o.sajuWhy=(has['역마']?'역마 있음 · ':'')+'비겁 '+cnt.비겁+'개 · 식상 '+cnt.식상+'개';
+    o.mindWhy=(code&&code.charAt(3)==='P'?'결정을 열어두는 성향이라 "일단 나가고 보자"가 되기 쉽습니다.':'한번 정하면 되돌리기 어려운 성향이라 결정 전에 충분히 재보셔야 합니다.');
+    o.dos=['옮긴 뒤 <b>1년 뒤 하루</b>를 구체적으로 적어보세요. 안 그려지면 아직 때가 아닙니다.',
+      '지금 자리에서 못 배운 것을 하나 배우고 나가세요. 그게 다음 자리의 값입니다.',
+      '현금 6개월치를 먼저 확보하세요. 이 준비 하나가 선택의 자유를 만듭니다.'];
+    o.donts=['홧김에 결정하는 것','수입이 끊긴 상태에서 새 일을 시작하는 것'];
+  }else if(cat==='health'){
+    o.one='타고난 결에서 <b>먼저 지치는 자리</b>가 있습니다. 그곳만 미리 챙기면 됩니다.';
+    o.now=(lack.length?'<b>'+lack.join('·')+'</b> 기운이 비어 있습니다 — '+lack.map(function(x){return x+'은 '+OH_BODY[x];}).join(', ')+' 쪽입니다. 이 계통이 먼저 신호를 보내는 결입니다.'
+      :(many.length?'<b>'+many.join('·')+'</b> 기운이 몰려 있습니다. 한쪽으로 쏠린 자리가 과로에 약합니다.'
+      :'오행이 고른 편이라 크게 치우치는 곳이 없습니다. 지금 습관만 지켜도 좋습니다.'));
+    o.sajuWhy='오행 — 목'+(oh?oh.목:0)+' 화'+(oh?oh.화:0)+' 토'+(oh?oh.토:0)+' 금'+(oh?oh.금:0)+' 수'+(oh?oh.수:0);
+    o.mindWhy=(fs?'지치면 '+STRESS[fs.inf]:'');
+    o.dos=[(lack.length?lack[0]+' 계통('+OH_BODY[lack[0]]+') 검진을 올해 안에 한 번 받아보세요.':'1년에 한 번 종합검진 날짜를 미리 잡아두세요.'),
+      '잠 시간을 30분 앞당기세요. 이 결에서 회복은 대부분 수면에서 옵니다.',
+      (many.indexOf('화')>=0?'열이 오르는 결이라 카페인과 늦은 시간 자극을 줄이세요.':'가벼운 걷기 20분을 주 4회. 강한 운동보다 꾸준함이 맞습니다.')];
+    o.donts=['참고 미루는 것 — 이 결은 신호를 늦게 알아챕니다','사주로 병을 단정하는 것 — 증상은 반드시 병원에서 확인하세요'];
+  }else if(cat==='spouse'){
+    var ilji=s?sipsinOf(s.dg,JI_HIDE[s.dj]):'';
+    o.one='부부 문제의 대부분은 <b>맞고 틀림</b>이 아니라 <b>순서와 속도</b>의 문제입니다.';
+    o.now='배우자 자리는 일지'+(s?'('+JI[s.dj]+')':'')+'입니다. '+(ilji?esc2(SIP10[ilji])+' 이런 결을 가진 사람과 부딪히기 쉽고, 나 또한 그 결을 배우자에게 요구하기 쉽습니다.':'');
+    o.sajuWhy='일지 '+(s?JI[s.dj]+'('+ilji+')':'-')+' · '+spouseStar(p.gender)+' '+(cnt[spouseStar(p.gender)]||0)+'개';
+    o.mindWhy=(code?(code.charAt(2)==='T'?'옳은 말을 먼저 하는 성향이라 상대가 "내 편이 아니다"로 받기 쉽습니다.':'마음을 먼저 보는 성향이라 상대의 무심한 말에 오래 남습니다.'):'');
+    o.dos=['상대 말을 <b>끊지 않고 3분</b>만 들어보세요. 대부분 그 안에 답이 있습니다.',
+      '고칠 것을 말하기 전에 <b>고마운 것 하나</b>를 먼저 말하세요. 순서만 바꿔도 대화가 남습니다.',
+      '둘 다 지친 날에는 중요한 이야기를 꺼내지 마세요. 같은 말도 그날은 상처가 됩니다.'];
+    o.donts=['과거 일을 다시 꺼내는 것','제3자(가족·친구)를 대화에 끌어들이는 것'];
+  }else if(cat==='child'){
+    o.one='아이는 <b>내 결</b>이 아니라 <b>아이의 결</b>로 봐야 부딪히지 않습니다.';
+    o.now='자녀 자리는 시주'+(s&&!p.noTime?'('+GAN[s.hg]+JI[s.hj]+')':'')+'입니다. '+(p.noTime?'태어난 시간을 모르면 이 자리를 정확히 못 봅니다.':'')+
+      (cnt[childStar(p.gender)]>=2?' 자녀성이 두터워 아이에게 마음을 많이 쓰시는 결입니다 — 그만큼 기대도 크게 실릴 수 있습니다.':' 담백하게 지켜보는 편이 서로 편한 결입니다.');
+    o.sajuWhy='시주 '+(s&&!p.noTime?GAN[s.hg]+JI[s.hj]:'시간 모름')+' · '+childStar(p.gender)+' '+(cnt[childStar(p.gender)]||0)+'개';
+    o.mindWhy=(code&&code.charAt(3)==='J'?'계획대로 가길 바라는 성향이라 아이의 속도가 답답하게 느껴지실 수 있습니다.':'열어두는 성향이라 아이에게 기준을 세워주는 일이 어렵게 느껴지실 수 있습니다.');
+    o.dos=['아이의 성향검사를 한 번 같이 해보세요. 부딪히는 지점이 눈에 보입니다.',
+      '지시 대신 <b>선택지 두 개</b>를 주세요. 스스로 고른 것은 지킵니다.',
+      '하루 10분, 공부 이야기 없이 대화하는 시간을 정하세요.'];
+    o.donts=['다른 집 아이와 비교하는 것','내가 못 이룬 것을 아이에게 얹는 것'];
+  }else if(cat==='family'){
+    o.one='가족 일은 <b>잘잘못</b>을 가리기 시작하면 끝이 없습니다.';
+    o.now='년주·월주는 부모·집안 자리입니다. 인성이 '+cnt.인성+'개로 '+
+      (cnt.인성>=2?'받은 것이 많은 결입니다. 그만큼 도리에 대한 부담도 크게 느끼십니다.'
+      :(cnt.인성===0?'스스로 일어선 결입니다. 기댈 곳 없이 해오신 만큼 서운함이 쌓여 있을 수 있습니다.'
+      :'무난한 편입니다. 필요할 때 도움이 오가는 정도입니다.'));
+    o.sajuWhy='년주 '+(s?GAN[s.yg]+JI[s.yj]:'-')+' · 월주 '+(s?GAN[s.mg]+JI[s.mj]:'-')+' · 인성 '+cnt.인성+'개';
+    o.mindWhy=(code&&code.charAt(2)==='F'?'마음이 먼저 움직이는 성향이라 거절을 못 하고 떠안기 쉽습니다.':'기준으로 판단하는 성향이라 가족에게 차갑다는 말을 들을 수 있습니다.');
+    o.dos=['돈이 오가는 일은 <b>반드시 문서</b>로 남기세요. 가족일수록 그래야 관계가 남습니다.',
+      '내가 할 수 있는 선을 숫자로 정해두세요 — 금액과 횟수.',
+      '형제와는 <b>각자 형편</b>을 먼저 말하고 시작하세요.'];
+    o.donts=['혼자 다 떠안는 것','서운함을 쌓아두었다가 한 번에 터뜨리는 것'];
+  }else if(cat==='people'){
+    o.one='사람에게 지치는 건 <b>사람이 많아서</b>가 아니라 <b>거절을 못 해서</b>인 경우가 많습니다.';
+    o.now=(cnt.비겁>=3?'비겁이 두터워 사람 속에서 힘이 나지만, 그만큼 <b>나눠야 할 몫</b>도 늘어나는 결입니다.'
+      :(cnt.비겁<=1?'혼자 결정하고 혼자 책임지는 결입니다. 도와달라는 말을 잘 못 하십니다.'
+      :'무난한 편입니다.'))+(has['도화']?' 도화가 있어 사람이 잘 모이는 자리이기도 합니다.':'');
+    o.sajuWhy='비겁 '+cnt.비겁+'개'+(has['도화']?' · 도화':'')+(has['천을귀인']?' · 천을귀인':'');
+    o.mindWhy=(code?(code.charAt(0)==='I'?'혼자 회복하는 성향이라 사람이 많은 날 뒤에는 반드시 빈 시간이 필요합니다.':'사람에게서 기운을 얻는 성향이지만, 얕은 관계가 많아지면 오히려 지칩니다.'):'');
+    o.dos=['거절 문장 하나를 미리 만들어 두세요 — "이번엔 어렵고, 다음에 꼭 도울게요."',
+      '한 달에 만나는 사람을 <b>세 명만</b> 정해 깊게 가세요.',
+      (has['천을귀인']?'먼저 베푼 자리에서 귀인이 나타나는 사주입니다. 받은 사람보다 준 사람을 기억하세요.':'도와준 사람 명단을 적어보세요. 생각보다 많습니다.')];
+    o.donts=['모두에게 좋은 사람이 되려는 것','뒷말이 오가는 자리에 오래 앉아 있는 것'];
+  }else if(cat==='mind'){
+    o.one='이유 없는 불안은 대개 <b>이유가 있는데 이름을 못 붙인</b> 상태입니다.';
+    o.now=(st&&st.level==='신약'?'일간이 약한 편이라 주변 상황에 마음이 크게 흔들리는 결입니다. 약해서가 아니라 <b>많이 느끼기 때문</b>입니다.'
+      :(cnt.인성>=3?'생각이 많은 결입니다. 결정을 미루는 동안 마음이 먼저 지칩니다.'
+      :'평소에는 잘 버티시다가 한 번에 무너지는 결입니다. 미리 덜어내는 습관이 필요합니다.'));
+    o.sajuWhy=(st?st.level+' · ':'')+'인성 '+cnt.인성+'개'+(lack.length?' · '+lack.join('·')+' 없음':'');
+    o.mindWhy=(fs?'지칠 때는 '+STRESS[fs.inf]+' 이건 이상한 게 아니라 이 유형의 정해진 반응입니다.':'');
+    o.dos=['고민을 <b>종이에 세 줄</b>로 적어보세요. 이름이 붙는 순간 크기가 줄어듭니다.',
+      '아침 햇빛 15분 · 잠 시간 고정 — 마음은 몸에서 먼저 무너집니다.',
+      '2주 넘게 이어지면 전문가 상담을 받아보세요. 참는 게 미덕이 아닙니다.'];
+    o.donts=['혼자 견디는 것','밤에 큰 결정을 내리는 것'];
+  }else{
+    o.one='진로는 <b>좋아하는 것</b>보다 <b>지치지 않는 것</b>에서 찾는 편이 오래 갑니다.';
+    o.now=(cnt.인성>=2?'배우는 힘이 좋은 결입니다. 자격·전문성으로 승부하는 쪽이 잘 맞습니다.'
+      :'몸으로 익히는 쪽이 빠른 결입니다. 현장에서 배우는 방식이 맞습니다.')+
+      (has['화개']?' 화개가 있어 깊게 파고드는 분야에서 힘이 납니다.':'');
+    o.sajuWhy='인성 '+cnt.인성+'개 · 식상 '+cnt.식상+'개'+(has['화개']?' · 화개':'');
+    o.mindWhy=(code?'성향으로는 '+(({NT:'구조를 설계하는 일',NF:'사람을 키우는 일',SJ:'기준을 지키고 운영하는 일',SP:'현장에서 몸으로 푸는 일'})[grp(code)])+'이 편안하십니다.':'');
+    o.dos=['후보를 <b>두 개</b>로 줄이고 각각 한 달만 체험해보세요.',
+      '이미 그 일을 하는 사람 두 명을 만나 하루를 물어보세요.',
+      '3년 뒤 이력서에 한 줄로 뭐라 쓸지 적어보세요. 그 문장이 방향입니다.'];
+    o.donts=['남이 좋다는 것으로 정하는 것','준비 없이 판을 크게 벌이는 것'];
+  }
+  /* 시기 — 세운의 합·충으로만 */
+  if(ahead.length){
+    o.when=(good.length?'<b>'+good.map(function(x){return x.year+'년';}).join(', ')+'</b> 은 일지와 합하는 해라 사람과 일이 잘 붙습니다. 미뤄둔 일을 꺼내기 좋습니다. ':'')+
+      (bad.length?'<b>'+bad.map(function(x){return x.year+'년';}).join(', ')+'</b> 은 충하는 해라 변화가 큽니다 — 나쁜 해가 아니라 <b>서두르지 않아야 하는 해</b>입니다. ':'')+
+      '올해('+ahead[0].year+' '+ahead[0].gz+')는 '+SIP_META[ahead[0].grp].want+' 쪽에 마음이 가는 해입니다.';
+  }
+  o.bless=(s?GAN_DEEP[s.dg].bless+' ':'')+(code&&TYPE_BLESS[code]?TYPE_BLESS[code]:'');
+  o.mindTail=mindTail();
+  return o;
+}
+/* ══════════════════════════════════════════════════════════════════
+   22. 유료 — 고민 상담 리포트만 결제한다
+   ══════════════════════════════════════════════════════════════════
+   상담카드(성향·궁합·화법)는 설계사 도구라 계속 무료다.
+   고객에게 보내는 고민 상담 리포트만 건당 결제로 연다.
+   설계사 화면(내 눈용)에서는 결제 없이 전부 보인다.                  */
+var PAY={price:9900,tossKey:'',confirmUrl:'/api/toss-confirm',
+  bank:'',account:'',holder:'',naver:'',kakao:'',code:'APEX48',agent:'',tel:''};
+(function(){
+  var q=(location.search||'').replace(/^\?/,'').split('&'),i;
+  for(i=0;i<q.length;i++){
+    var kv=q[i].split('='); if(kv.length<2)continue;
+    var k=decodeURIComponent(kv[0]),v=decodeURIComponent(kv[1].replace(/\+/g,' '));
+    if(k==='key')PAY.tossKey=v; if(k==='price'&&+v>0)PAY.price=+v;
+    if(k==='bank')PAY.bank=v; if(k==='acct')PAY.account=v; if(k==='holder')PAY.holder=v;
+    if(k==='naver')PAY.naver=v; if(k==='kakao')PAY.kakao=v; if(k==='code')PAY.code=v;
+    if(k==='agent')PAY.agent=v; if(k==='tel')PAY.tel=v;
+  }
+})();
+function won(n){return (''+n).replace(/\B(?=(\d{3})+(?!\d))/g,',')+'원';}
+function paidKey(){var c=S.cl;return 'W-'+(c.name||'')+'-'+(c.y||'')+(c.m||'')+(c.d||'')+'-'+(S.worry&&S.worry.cat||'');}
+function isPaid(){
+  if(S.view==='agent')return true;              /* 내 도구는 무료 */
+  try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');return !!m[paidKey()];}catch(e){return false;}
+}
+function setPaid(){
+  try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');m[paidKey()]=Date.now();
+    localStorage.setItem('worry_paid',JSON.stringify(m));}catch(e){}
+}
+function payOpen(){
+  var rows='';
+  if(PAY.tossKey)rows+=payRow('💳','#F1EEFF','카드 결제','토스페이먼츠 · 승인되면 바로 열립니다','payCard()');
+  if(PAY.account)rows+=payRow('🏦','#EAF8F3','계좌이체 · 무통장입금','이체 후 확인되면 열립니다','payBank()');
+  if(PAY.naver)rows+=payRow('Ⓝ','#EAF8F3','네이버페이','네이버페이로 결제','paySimple(\'naver\')');
+  if(PAY.kakao)rows+=payRow('🟡','#FFF6E9','카카오페이','카카오로 송금','paySimple(\'kakao\')');
+  if(!rows)rows='<div class="note warn">아직 결제수단이 연결되지 않았습니다. '+(PAY.agent?esc(PAY.agent)+' 설계사':'담당 설계사')+'에게 문의해 주세요.</div>';
+  sheet('고민 상담 리포트 결제',
+    '<div class="sub">'+esc(S.cl.name||'')+' 님 · '+esc((S.worry&&S.worry.catName)||'')+'</div>'+
+    '<div style="font-size:24px;font-weight:900;color:#8B7BF0;margin:4px 0 14px">'+won(PAY.price)+'</div>'+
+    rows+
+    '<div style="font-size:11px;color:#A9A2C6;line-height:1.7;margin-top:12px">결제 전에도 <b>요약</b>과 성향·사주 화면은 계속 무료로 보실 수 있습니다. 환불은 관련 법령과 약관을 따릅니다.</div>'+
+    '<button class="btn ghost sm" style="margin-top:12px" onclick="unlockAsk()">확인 코드로 열기</button>');
+}
+function payRow(em,bg,t,d,fn){
+  return '<button class="pay" onclick="'+fn+'"><span class="em" style="background:'+bg+'">'+em+'</span>'+
+    '<span class="tx"><b>'+esc(t)+'</b><span>'+esc(d)+'</span></span><span class="ar">›</span></button>';
+}
+function payCard(){
+  if(!PAY.tossKey){toast('카드 결제가 아직 연결되지 않았습니다');return;}
+  var orderId='WORRY-'+Date.now();
+  try{localStorage.setItem('worry_order',JSON.stringify({orderId:orderId,key:paidKey()}));}catch(e){}
+  sheetClose();toast('결제창을 여는 중입니다…');
+  var sc=document.createElement('script');
+  sc.src='https://js.tosspayments.com/v1/payment';
+  sc.onerror=function(){toast('결제 모듈을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');};
+  sc.onload=function(){
+    try{
+      var tp=TossPayments(PAY.tossKey);
+      tp.requestPayment('카드',{amount:PAY.price,orderId:orderId,orderName:'고민 상담 리포트',
+        successUrl:location.origin+location.pathname+'?toss=success',
+        failUrl:location.origin+location.pathname+'?toss=fail',
+        customerName:S.cl.name||''});
+    }catch(e){toast('결제창을 열지 못했습니다');}
+  };
+  document.head.appendChild(sc);
+}
+function payBank(){
+  var line=PAY.bank+' '+PAY.account+(PAY.holder?' ('+PAY.holder+')':'');
+  var msg='[고민 상담] '+(S.cl.name||'')+' 님 · '+won(PAY.price)+' 입금했습니다.';
+  sheet('계좌이체 · 무통장입금',
+    '<div class="note ok"><div class="sub" style="color:#1F7A61;font-weight:800">입금 계좌</div>'+
+      '<div style="font-size:17px;font-weight:900;color:#1F7A61;margin-top:5px">'+esc(line)+'</div>'+
+      '<div class="kv" style="margin-top:8px"><span>입금 금액</span><b>'+won(PAY.price)+'</b></div>'+
+      '<div class="kv"><span>입금자명</span><b>'+esc(S.cl.name||'검사하신 분 성함')+'</b></div></div>'+
+    (PAY.tel?'<a class="btn sm" style="margin-top:10px;display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:linear-gradient(135deg,#5BC8A8,#7FD6C0)" href="sms:'+esc(PAY.tel)+'?body='+encodeURIComponent(msg)+'">💬 입금 알리기</a>':'')+
+    '<div style="font-size:11.5px;color:#948FB0;line-height:1.7;margin-top:12px">입금이 확인되면 <b>확인 코드</b>를 받으실 수 있습니다.</div>'+
+    '<button class="btn ghost sm" style="margin-top:10px" onclick="payOpen()">← 다른 결제수단</button>');
+}
+function paySimple(kind){
+  var url=(kind==='naver')?PAY.naver:PAY.kakao,label=(kind==='naver')?'네이버페이':'카카오페이';
+  if(!url){toast(label+' 링크가 연결되지 않았습니다');return;}
+  try{window.open(url,'_blank','noopener');}catch(e){location.href=url;}
+  sheet(label,'<p>'+esc(label)+' 결제를 마치셨으면 담당자에게 알려주세요. 확인되면 코드를 드립니다.</p>'+
+    '<button class="btn ghost sm" style="margin-top:10px" onclick="payOpen()">← 다른 결제수단</button>');
+}
+function unlockAsk(){
+  sheet('확인 코드','<p>입금이 확인되면 알려드리는 코드를 넣어주세요.</p>'+
+    '<input class="inp" id="ucode" placeholder="확인 코드" style="margin-top:12px" autocomplete="off"/>'+
+    '<button class="btn" style="margin-top:10px" onclick="unlockGo()">리포트 열기</button>');
+}
+function unlockGo(){
+  var v=(val('ucode')||'').replace(/\s/g,'').toUpperCase();
+  if(!v){toast('코드를 입력해 주세요');return;}
+  if(v!==String(PAY.code).toUpperCase()){toast('코드가 맞지 않습니다');return;}
+  setPaid();sheetClose();draw();toast('🎉 리포트가 열렸습니다');
+}
+function tossReturn(){
+  var q=location.search||'';
+  function get(n){var m=q.match(new RegExp('[?&]'+n+'=([^&]*)'));return m?decodeURIComponent(m[1]):'';}
+  var t=get('toss');if(!t)return;
+  try{if(window.history&&history.replaceState)history.replaceState(null,'',location.pathname);}catch(e){}
+  if(t!=='success'){toast('결제가 취소되었습니다');return;}
+  var pk=get('paymentKey'),oid=get('orderId'),amt=get('amount');
+  if(!(pk&&oid&&amt)){toast('결제 정보를 확인하지 못했습니다');return;}
+  var pend=null;try{pend=JSON.parse(localStorage.getItem('worry_order')||'null');}catch(e){}
+  toast('결제를 확인하는 중입니다…');
+  fetch(PAY.confirmUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({paymentKey:pk,orderId:oid,amount:Number(amt),product:'worry',
+      name:(S.cl&&S.cl.name)||'',agent:PAY.agent||''})})
+    .then(function(r){return r.ok;})
+    .then(function(ok2){
+      if(!ok2){toast('결제 승인을 확인하지 못했습니다. 담당자에게 문의해 주세요.');return;}
+      if(pend&&pend.key){try{var m=JSON.parse(localStorage.getItem('worry_paid')||'{}');m[pend.key]=Date.now();
+        localStorage.setItem('worry_paid',JSON.stringify(m));}catch(e){}}
+      else setPaid();
+      try{localStorage.removeItem('worry_order');}catch(e){}
+      S.step='board';S.tab='worry';draw();toast('🎉 결제 완료 · 리포트가 열렸습니다');
+    })
+    .catch(function(){toast('결제 확인 서버에 연결하지 못했습니다. 담당자에게 문의해 주세요.');});
+}
+/* 시트(모달) */
+function sheetClose(){var o=$('sheet');if(o)o.classList.remove('on');}
+function sheet(title,inner){
+  $('sheetBody').innerHTML='<div class="sheethd"><b>'+esc(title)+'</b><button class="x" onclick="sheetClose()">✕</button></div>'+inner;
+  $('sheet').classList.add('on');
+}
+/* ── 고민 상담 화면 ── */
+function setWorryCat(k){
+  S.worry=S.worry||{};S.worry.cat=k;
+  var c=WORRY_CATS.filter(function(x){return x.k===k;})[0];
+  S.worry.catName=c?c.n:'';save();draw();
+}
+function worryStart(){
+  var txt=(val('worryTxt')||'').replace(/^\s+|\s+$/g,'');
+  S.worry=S.worry||{};S.worry.txt=txt;
+  if(!S.worry.cat){
+    var g=worryGuess(txt);
+    if(g)setWorryCat(g);
+    else{toast('고민 종류를 골라주세요');return;}
+  }
+  S.worry.done=true;save();draw();
+  var m=$('pane');if(m)m.scrollTop=0;
+}
+function worryReset(){S.worry={};save();draw();}
+function tabWorry(){
+  var cl=S.cl,w=S.worry||{};
+  if(!w.done){
+    var cats='<div class="seg" style="margin-top:10px">'+WORRY_CATS.map(function(c){
+      return '<button class="'+(w.cat===c.k?'on':'')+'" onclick="setWorryCat(\''+c.k+'\')">'+c.emo+' '+c.n+'</button>';}).join('')+'</div>';
+    var ex=w.cat?('<div class="sub" style="margin-top:7px">예) '+esc((WORRY_CATS.filter(function(c){return c.k===w.cat;})[0]||{}).ex||'')+'</div>'):'';
+    return '<div class="card"><h1>지금 가장 걸리는 것 하나</h1>'+
+      '<p>점을 쳐 드리는 것이 아닙니다. 이 고민이 <b>왜 생겼는지</b>를 '+esc(cl.name||'')+' 님의 타고난 결과 성향에서 찾아드리고, <b>이번 달에 할 것 세 가지</b>와 <b>하지 말 것</b>을 정리해 드립니다.</p>'+
+      cats+ex+
+      '<div style="margin-top:14px"><label>고민을 편하게 적어주세요 (선택)</label>'+
+      '<textarea class="inp" id="worryTxt" rows="4" placeholder="예) 지금 회사를 계속 다녀야 할지 모르겠습니다. 3년째인데 인정받는 느낌이 없어요." style="resize:vertical">'+esc(w.txt||'')+'</textarea>'+
+      '<div class="sub" style="margin-top:6px">적지 않으셔도 됩니다. 적어주시면 종류를 자동으로 골라드립니다. 이 내용은 이 기기에만 저장됩니다.</div></div>'+
+      '<button class="btn" style="margin-top:14px" onclick="worryStart()">고민 풀어보기</button>'+
+    '</div>'+
+    (S.view==='client'?'<div class="card"><div class="note info">요약까지는 무료입니다. 자세한 풀이(원인 · 할 것 · 하지 말 것 · 시기)는 <b>'+won(PAY.price)+'</b>입니다.</div></div>':'')+
+    footNote();
+  }
+  var o=worrySolve(cl,w.cat,w.txt||''),paid=isPaid();
+  var head='<div class="card"><div class="sub">'+o.cat.emo+' '+esc(o.cat.n)+'</div>'+
+    '<h1 style="margin-top:4px">'+o.one+'</h1>'+
+    (w.txt?'<div class="talk" style="margin-top:10px">"'+esc(w.txt)+'"</div>':'')+
+    '<p>'+o.now+'</p>'+
+    '<div class="talk good">🌾 '+esc(o.bless)+'</div>'+
+    '<div class="row" style="margin-top:12px"><button class="btn ghost sm" onclick="worryReset()">다른 고민 물어보기</button>'+
+    (paid?'<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button>':'')+'</div>'+
+  '</div>';
+  if(!paid){
+    return head+'<div class="card" style="text-align:center;border:2px dashed #DDD5FF;background:linear-gradient(170deg,#FFFFFF,#F6F2FF)">'+
+      '<div style="font-size:34px">🔒</div>'+
+      '<h2 style="justify-content:center;margin-top:8px">자세한 풀이는 여기서부터입니다</h2>'+
+      '<ul class="list" style="text-align:left;max-width:520px;margin:12px auto 0">'+
+      ['왜 이 고민이 생겼는지 — 사주 근거와 성향 근거','이번 달에 할 것 세 가지 (구체적으로)','하지 말 것 두 가지',
+       '언제 움직이면 좋은지 — 앞으로 6년의 합·충','인쇄해서 두고 볼 수 있는 리포트'].map(function(x){
+        return '<li><span class="ic">🔒</span><span>'+esc(x)+'</span></li>';}).join('')+'</ul>'+
+      '<div style="font-size:28px;font-weight:900;color:#8B7BF0;margin-top:14px">'+won(PAY.price)+'</div>'+
+      '<div class="sub">1건 · 한 번 열면 이 기기에서 계속 보실 수 있습니다</div>'+
+      '<button class="btn" style="margin-top:14px" onclick="payOpen()">결제하고 전부 보기</button>'+
+    '</div>'+footNote();
+  }
+  var why='<div class="card"><h2><span class="n">원인</span>왜 이 고민이 생겼나</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><tbody>'+
+    [['사주에서 보면',o.sajuWhy+(o.sajuWhy?' — ':'')+o.now.replace(/<[^>]+>/g,'')],
+     ['성향에서 보면',(o.mindWhy||'')+' '+(o.mindTail||'')]].map(function(r){
+      return '<tr><td class="head"><b>'+r[0]+'</b></td><td class="plain">'+esc(r[1])+'</td></tr>';}).join('')+
+    '</tbody></table></div></div>';
+  var act='<div class="card"><h2><span class="n">할 것</span>이번 달에 이 세 가지만</h2>'+
+    o.dos.map(function(x,i){return '<div class="talk good">'+(i+1)+'. '+x+'</div>';}).join('')+
+    '<h2 style="font-size:14px;margin-top:16px">하지 마세요</h2>'+
+    o.donts.map(function(x){return '<div class="talk bad">🚫 '+esc(x)+'</div>';}).join('')+
+  '</div>';
+  var when=o.when?('<div class="card"><h2><span class="n">시기</span>언제 움직이면 좋은가</h2><p>'+o.when+'</p>'+
+    '<div class="note info">시기는 <b>속도를 조절하는 기준</b>일 뿐입니다. 좋은 해에 저절로 되는 것도, 나쁜 해에 못 하는 것도 없습니다.</div></div>'):'';
+  var close='<div class="card"><h2><span class="n">맺음</span>드리고 싶은 말</h2>'+
+    '<div class="talk good">🌾 '+esc(o.bless)+'</div>'+
+    '<p class="sub">이 리포트는 사주와 성향으로 정리한 <b>참고 자료</b>입니다. 의료·법률·투자의 판단을 대신하지 않습니다. 몸이 아프면 병원에, 돈이 걸린 결정은 전문가와 함께 확인하세요.</p>'+
+    (PAY.agent?'<div class="note info">더 이야기 나누고 싶으시면 <b>'+esc(PAY.agent)+'</b> 설계사에게 편하게 연락 주세요.'+(PAY.tel?' <a href="tel:'+esc(PAY.tel)+'">📞 '+esc(PAY.tel)+'</a>':'')+'</div>':'')+
+  '</div>';
+  return head+why+act+when+close+footNote();
+}
+
+/* ══════════════════════════════════════════════════════════════════
    9. 스크롤 칸 관리 · 시작
    ══════════════════════════════════════════════════════════════════ */
 function hintCheck(){
@@ -2420,10 +2816,11 @@ function fitShell(){
   var d=load();
   if(d){
     if(d.me)S.me=d.me; if(d.cl)S.cl=d.cl;
-    S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';
+    S.ans=d.ans||{};S.i=d.i||0;S.tab=d.tab||'ice';S.mode=d.mode||'both';S.view=d.view||'agent';S.worry=d.worry||{};
     S.step=ready(S.cl)?'board':(S.me.name?'client':'me');
   }
   fitShell();draw();
+  try{tossReturn();}catch(e){}
   setTimeout(function(){fitShell();hintCheck();},250);
 })();
 

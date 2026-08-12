@@ -225,7 +225,8 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   /* ── 사주 × MBTI 상담카드(app/saju-mbti.html) ──────────────────────── */
   console.log('\n사주 상담카드 — 만세력 계산');
   await page.setViewportSize({ width: 1200, height: 900 });
-  await page.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/saju-mbti.html' +
+    '?agent=%EC%9C%A4%EC%8B%9C%ED%98%84&tel=01012345678&bank=%EA%B5%AD%EB%AF%BC&acct=123-456', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(800);
 
   /* 만세력이 맞는지부터 본다 — 여기가 틀리면 나머지가 전부 틀린다 */
@@ -429,11 +430,69 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
       meHidden: meHidden, riskBlocked: riskBlocked };
   });
-  ok(view.agent === 11 && view.client === 7, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.agent === 12 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
   ok(view.riskBlocked, '고객 화면에서 리스크 탭을 강제로 열어도 막힌다');
+
+  console.log('\n고민 상담 · 유료화');
+  const wr = await page.evaluate(() => {
+    S.view = 'agent'; S.worry = {}; S.tab = 'worry'; draw();
+    const guess = worryGuess('지금 회사를 계속 다녀야 할지 모르겠습니다. 인정받는 느낌이 없어요.');
+    const bad = [];
+    WORRY_CATS.forEach(c => {
+      const o = worrySolve(S.cl, c.k, '');
+      if (!o.one || !o.now || !o.sajuWhy || o.dos.length < 3 || o.donts.length < 2 || !o.bless) bad.push(c.k);
+    });
+    return { cats: WORRY_CATS.length, guess: guess, bad: bad };
+  });
+  ok(wr.cats === 10, '고민 종류가 열 가지다 (' + wr.cats + ')');
+  ok(wr.guess === 'job', '적어주신 글에서 고민 종류를 알아서 고른다 (' + wr.guess + ')');
+  ok(wr.bad.length === 0, '열 가지 모두 진단 · 근거 · 할 것 3 · 하지 말 것 2 · 덕담이 채워진다' +
+     (wr.bad.length ? ' — 빈 곳: ' + wr.bad.join(',') : ''));
+
+  const wAgent = await page.evaluate(() => {
+    setWorryCat('job'); S.worry.txt = '3년째 인정받는 느낌이 없어요'; worryStart();
+    const t = document.getElementById('view').textContent;
+    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), lock: /결제하고 전부 보기/.test(t) };
+  });
+  ok(wAgent.paid && wAgent.full && !wAgent.lock, '내 눈용에서는 결제 없이 전부 열린다 (설계사 도구는 무료)');
+
+  const wClient = await page.evaluate(() => {
+    setView('client'); goTab('worry');
+    const t = document.getElementById('view').textContent;
+    payOpen();
+    const sh = document.getElementById('sheetBody').textContent;
+    sheetClose();
+    return { lock: /결제하고 전부 보기/.test(t), price: /9,900원/.test(t),
+      preview: /🌾/.test(t), full: /이번 달에 이 세 가지만/.test(t),
+      bank: /계좌이체/.test(sh), code: /확인 코드/.test(sh) };
+  });
+  ok(wClient.lock && wClient.price && !wClient.full, '고객 화면에서는 요약까지만 보이고 나머지는 잠긴다');
+  ok(wClient.preview, '잠겨 있어도 덕담과 진단 한 줄은 무료로 보인다');
+  ok(wClient.bank && wClient.code, '결제창에 연결된 수단과 확인 코드 열기가 나온다');
+
+  const wOpen = await page.evaluate(() => {
+    unlockAsk(); document.getElementById('ucode').value = 'apex48'; unlockGo();
+    const t = document.getElementById('view').textContent;
+    const wrong = (function () {
+      try { localStorage.removeItem('worry_paid'); } catch (e) {}
+      unlockAsk(); document.getElementById('ucode').value = 'zzz'; unlockGo();
+      const bad = isPaid();
+      unlockAsk(); document.getElementById('ucode').value = 'APEX48'; unlockGo();
+      return bad;
+    })();
+    return { paid: isPaid(), full: /이번 달에 이 세 가지만/.test(t), when: /언제 움직이면/.test(t), wrong: wrong };
+  });
+  ok(wOpen.paid && wOpen.full && wOpen.when, '확인 코드를 넣으면 전부 열린다');
+  ok(wOpen.wrong === false, '틀린 코드로는 열리지 않는다');
+  await page.evaluate(() => { setView('agent'); });
+
+  const payCfg = await page.evaluate(() => ({ agent: PAY.agent, price: PAY.price, bank: PAY.bank, url: PAY.confirmUrl }));
+  ok(payCfg.agent === '윤시현' && payCfg.bank === '국민' && payCfg.price === 9900,
+     '주소 뒤에 붙인 설계사·계좌·금액이 결제에 그대로 들어간다');
+  ok(payCfg.url === '/api/toss-confirm', '카드 승인은 같은 사이트의 서버 함수로 간다');
 
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
@@ -442,8 +501,16 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     const len = await page.evaluate(() => document.getElementById('view').textContent.replace(/\s+/g, '').length);
     ok(len > 400, t + ' 탭이 내용을 그린다 (' + len + '자)');
   }
-  const pay = await page.evaluate(() => /결제|9,900|토스|payment|구독/.test(document.body.textContent));
-  ok(!pay, '결제 흔적이 어디에도 없다');
+  const pay = await page.evaluate(() => {
+    const hit = [];
+    tabsFor('both', 'agent').forEach(t => {
+      goTab(t);
+      if (/결제|9,900원|구독/.test(document.getElementById('view').textContent) && t !== 'worry') hit.push(t);
+    });
+    goTab('worry');
+    return hit;
+  });
+  ok(pay.length === 0, '결제는 고민 상담에만 있고 다른 탭에는 없다' + (pay.length ? ' — ' + pay.join(',') : ''));
   const ext = await page.evaluate(() => Array.prototype.some.call(document.querySelectorAll('script,link,img'),
     e => /^https?:/.test(e.getAttribute('src') || e.getAttribute('href') || '')));
   ok(!ext, '바깥에서 받아오는 그림·글꼴·스크립트가 없다');
