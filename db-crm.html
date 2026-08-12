@@ -963,7 +963,57 @@ function renderKpi(){
     `<div class="kpi-bar"><span class="bl">상담 전환율</span><span class="bt"><i style="width:${Math.min(100,a.consultRate)}%;background:var(--green)"></i></span><span class="bv">${a.consultRate}%</span></div>`+
     `<div class="kpi-bar"><span class="bl">부재율</span><span class="bt"><i style="width:${Math.min(100,a.absentRate)}%;background:var(--yellow)"></i></span><span class="bv">${a.absentRate}%</span></div>`+
     '<div class="notice" style="margin-top:13px">타율 읽는 법 — <b>접촉률</b>이 낮으면 "전화를 안 한 것", <b>상담 전환율</b>이 낮으면 "멘트를 손볼 것", <b>부재율</b>이 높으면 "시간대를 바꿀 것"부터 점검하세요.</div>'+
-    srcTblHtml(target);
+    srcTblHtml(target)+
+    '<div id="perfBody"></div>';
+  renderPerf(target);
+}
+
+/* ── 월간 업적 — 타율 밑에 이어 붙인다 ────────────────────────────
+   타율은 「얼마나 움직였나」 이고 업적은 「얼마를 올렸나」 다.
+   따로 두면 둘을 이어서 볼 수 없다. 그래서 한 화면에 이어 붙인다.
+   숫자는 앱(TFA 업무관리)에서 넣은 것을 그대로 읽어 온다.            */
+let perfCache = null;
+function perfYm(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);}
+async function renderPerf(target){
+  const box=$("perfBody");if(!box)return;
+  const ym=perfYm();
+  if(!perfCache){
+    box.innerHTML='<div class="notice" style="margin-top:13px">월간 업적을 읽는 중입니다…</div>';
+    try{
+      const r=await sb.from('monthly_perf').select('*').eq('period',ym);
+      perfCache=(r&&r.data)||[];
+      if(r&&r.error)perfCache='ERR:'+(r.error.message||'');
+    }catch(e){perfCache='ERR:'+((e&&e.message)||'');}
+  }
+  if(typeof perfCache==='string'){
+    box.innerHTML='<div class="notice" style="margin-top:13px">월간 업적을 아직 못 읽습니다. '+
+      'Supabase 에서 <b>migration_40_perf.sql</b> 을 한 번 실행해 주세요.</div>';
+    return;
+  }
+  const rows=perfCache.filter(x=>target.indexOf(x.owner_id)>=0);
+  if(!rows.length){
+    box.innerHTML='<div class="notice" style="margin-top:13px">'+ym+' 에 적힌 업적이 없습니다. '+
+      'APEX 앱 → <b>TFA 업무관리 → 내 업적</b> 에서 목표와 실적을 넣어 주세요.</div>';
+    return;
+  }
+  const nm=id=>{const p=profiles.find(x=>x.id===id);return p?p.name:'담당자';};
+  const won=v=>Number(v||0).toLocaleString();
+  let tg=0,ta=0;
+  const list=rows.map(r=>{
+    const g=Number(r.goal_prem||0),a=Number(r.act_prem||0);
+    tg+=g;ta+=a;
+    return {name:nm(r.owner_id),g,a,pct:g>0?Math.round(a/g*100):0,sub:!!r.submitted_at};
+  }).sort((x,y)=>y.pct-x.pct||y.a-x.a);
+  const tot=tg>0?Math.round(ta/tg*100):0;
+  box.innerHTML='<div class="card section" style="margin-top:14px">'+
+    '<h3 style="margin:0 0 4px">💰 '+ym+' 월간 업적 <span style="font-size:13px;font-weight:600;color:var(--muted)">— 월초보험료 기준</span></h3>'+
+    '<p style="margin:0 0 12px;color:var(--muted);font-size:13px">목표 '+won(tg)+'만 · 실적 '+won(ta)+'만 · 달성률 <b>'+tot+'%</b></p>'+
+    list.map(o=>
+      '<div class="kpi-bar"><span class="bl">'+esc(o.name)+(o.sub?' ✅':'')+'</span>'+
+      '<span class="bt"><i style="width:'+Math.min(100,o.pct)+'%;background:'+
+      (o.pct>=100?'var(--green)':(o.pct>=70?'var(--yellow)':'var(--red)'))+'"></i></span>'+
+      '<span class="bv">'+won(o.a)+'만 / '+o.pct+'%</span></div>').join('')+
+    '</div>';
 }
 function renderStats(){
   const body=$("statsBody");if(!body)return;

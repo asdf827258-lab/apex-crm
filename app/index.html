@@ -5740,6 +5740,7 @@ var AR_CAT=[
  ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me'],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
+ ['perf', '💰','내 업적 · 월간보고','목표와 실적, 그리고 흐름',        'me'],
  ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
  ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
  ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
@@ -7314,6 +7315,503 @@ function arCss(){
    '.ar-mi{font-size:13px;line-height:1.8;color:#334155;background:#F8FAFC;border-radius:10px;padding:12px 14px}';
   document.head.appendChild(s);
 }
+/* ════════════════ 월간 영업보고서 ════════════════
+   이 앱에는 <b>업적을 담는 자리가 없었다.</b> 통화 습관과 활동 점수는
+   있는데 정작 월초보험료가 얼마인지 적을 칸이 없었다. 그래서 리더는
+   따로 엑셀을 돌리고, 팀원은 매달 카톡으로 숫자를 보냈다.
+
+   여기서 한 칸에 모은다.
+     목표를 적고 → 실적을 적고 → 흐름을 보고 → 제출하면
+     리더가 받아 보고, 부족한 것과 다음 달 할 일이 정리돼 내려온다.
+
+   업적은 <b>월초보험료</b> 하나로 센다. 여러 지표를 섞으면 무엇을
+   올려야 하는지가 흐려진다.
+   ★ 열람은 DB 가 막는다 (migration_40_perf.sql) — 리더는 자기 팀만.  */
+var PF={ym:'',mine:null,rows:[],plan:null,loading:false,loaded:false,busy:''};
+
+function pfYm(){return PF.ym||(typeof ckDayK==='function'?ckDayK().slice(0,7):new Date().toISOString().slice(0,7));}
+function pfYmLabel(ym){var a=(''+ym).split('-');return a[0]+'년 '+(+a[1])+'월';}
+function pfShift(n){
+  var a=pfYm().split('-'),d=new Date(+a[0],+a[1]-1+n,1);
+  PF.ym=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+  PF.loaded=false;pfLoad();
+}
+function pfMyId(){return (OS.profile&&OS.profile.id)||'';}
+function pfIsLead(){return (typeof gbIsLead==='function')?gbIsLead():false;}
+/* 대표는 전체, 리더는 자기 팀. 화면에서도 같은 규칙을 쓴다 —
+   DB 가 막아 주지만 화면이 딴소리를 하면 사람이 헷갈린다. */
+function pfCanAll(){
+  try{return (typeof osIsHQ==='function'&&osIsHQ())||(typeof osIsOwner==='function'&&osIsOwner());}catch(e){return false;}
+}
+
+/* ── 읽기 ─────────────────────────────────────────────────────
+   내 열두 달과, 볼 수 있는 사람들의 이번 달을 한 번에 가져온다. */
+function pfLoad(){
+  if(PF.loading)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!pfMyId()){PF.loaded=true;pfPaint();return;}
+  PF.loading=true;
+  var ym=pfYm(),a=ym.split('-');
+  var d=new Date(+a[0],+a[1]-1-11,1);
+  var from=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+  var jobs=[
+    sb.from('monthly_perf').select('*').gte('period',from).lte('period',ym).order('period'),
+    sb.from('team_plans').select('*').eq('period',ym)
+  ];
+  Promise.all(jobs).then(function(r){
+    var all=(r[0]&&r[0].data)||[],plans=(r[1]&&r[1].data)||[];
+    PF.all=all;
+    PF.rows=all.filter(function(x){return x.period===ym;});
+    PF.mine=null;
+    var me=pfMyId(),i;
+    for(i=0;i<PF.rows.length;i++)if(PF.rows[i].owner_id===me)PF.mine=PF.rows[i];
+    PF.mineYear=all.filter(function(x){return x.owner_id===me;});
+    /* 내가 이끄는 팀의 계획서 (없으면 내가 속한 팀 것) */
+    PF.plan=plans[0]||null;
+    PF.err=(r[0]&&r[0].error)?(r[0].error.message||''):'';
+    PF.loading=false;PF.loaded=true;pfPaint();
+  },function(e){
+    PF.loading=false;PF.loaded=true;
+    PF.err=(e&&e.message)||'읽지 못했습니다';
+    pfPaint();
+  });
+}
+function pfPaint(){
+  if(typeof AR!=='undefined'&&AR.cat==='perf'&&typeof arPaint==='function')arPaint();
+  else if(typeof AR!=='undefined'&&AR.cat==='team'&&typeof arPaint==='function')arPaint();
+}
+/* ── 쓰기 ───────────────────────────────────────────────────── */
+function pfSave(patch,quiet){
+  var sb=(typeof osClient==='function')?osClient():null,me=pfMyId();
+  if(!sb||!me){toast('로그인 후 저장할 수 있습니다');return Promise.resolve();}
+  var row=Object.assign({owner_id:me,period:pfYm()},patch||{});
+  return sb.from('monthly_perf').upsert(row,{onConflict:'owner_id,period'}).then(function(r){
+    if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+    if(!quiet)toast('저장했습니다');
+    PF.loaded=false;pfLoad();
+  });
+}
+function pfSaveMine(){
+  pfSave({
+    goal_prem:+finV('pf_goal',0),act_prem:+finV('pf_act',0),
+    goal_case:Math.round(+finV('pf_gcase',0)),act_case:Math.round(+finV('pf_acase',0)),
+    plan:(osVal('pf_plan')||''),note:(osVal('pf_note')||'')
+  });
+}
+
+/* ── 숫자 몇 개 ─────────────────────────────────────────────── */
+function pfPct(a,b){return b>0?Math.round(a/b*100):0;}
+function pfOf(r){r=r||{};return {g:+r.goal_prem||0,a:+r.act_prem||0,gc:+r.goal_case||0,ac:+r.act_case||0};}
+function pfName(id){
+  try{var i,R=(typeof GB!=='undefined'&&GB.rows)||[];
+    for(i=0;i<R.length;i++)if(R[i].id===id)return R[i].name;}catch(e){}
+  return id===pfMyId()?((OS.profile&&OS.profile.name)||'나'):'팀원';
+}
+
+/* ── 내 업적 ───────────────────────────────────────────────── */
+function pfMeHtml(){
+  if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+  if(!PF.loaded)return '<div class="ar-none">업적을 불러오는 중입니다. 잠시만요.</div>';
+  var m=PF.mine||{},v=pfOf(m),h='';
+  var done=!!m.submitted_at;
+
+  h+='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎯</span>'+pfYmLabel(pfYm())+' 목표와 실적'+
+    (done?' <span class="badge green">제출함</span>':' <span class="badge">아직 안 냄</span>')+'</div>'+
+    '<div class="card-desc">업적은 <b>월초보험료</b>로 셉니다. 만원 단위로 적어 주세요.'+
+    (m.from_team?' <b style="color:#1D4ED8">목표는 팀 사업계획서에서 내려온 값입니다.</b>':'')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin-bottom:11px">'+
+      '<button class="btn btn-ghost" onclick="pfShift(-1)">← 지난달</button>'+
+      '<button class="btn btn-ghost" onclick="pfShift(1)">다음달 →</button>'+
+    '</div>'+
+    '<div class="frm cols2">'+
+      finNum('pf_goal','목표 월초보험료',v.g||'','만원')+
+      finNum('pf_act','실제 올린 월초보험료',v.a||'','만원')+
+      finNum('pf_gcase','목표 건수',v.gc||'','건')+
+      finNum('pf_acase','실제 건수',v.ac||'','건')+
+    '</div>'+
+    '<div class="fld" style="margin-top:9px"><label>이달 사업계획 — 무엇을 어떻게 하겠는가</label>'+
+    '<textarea id="pf_plan" rows="3" placeholder="예: 기존 고객 30명 보장분석 재점검 · 소개 요청 주 3건">'+
+    osEsc(m.plan||'')+'</textarea></div>'+
+    '<div class="fld"><label>이달 소회 — 잘된 것과 막힌 것</label>'+
+    '<textarea id="pf_note" rows="3" placeholder="예: 약속은 늘었는데 청약까지 못 갔다. 클로징 멘트가 약하다.">'+
+    osEsc(m.note||'')+'</textarea></div>'+
+    '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-primary" onclick="pfSaveMine()">저장</button>'+
+      '<button class="btn '+(done?'btn-ghost':'btn-primary')+'" onclick="pfSubmit()">'+
+        (done?'다시 제출':'📤 월간 보고서 제출')+'</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardOpen()">🖼️ 매월 영업보고서</button>'+
+    '</div>'+
+    (PF.err?('<div class="notice" style="margin-top:9px">읽기·저장이 막혔습니다 — <b>'+osEsc(PF.err.slice(0,90))+'</b><br>'+
+      'Supabase 에서 <b>migration_40_perf.sql</b> 을 한 번 실행하셔야 합니다.</div>'):'')+
+    '</div></div>';
+
+  h+=pfChartHtml();
+  if(m.feedback||m.ai_draft)h+=pfFeedbackHtml(m);
+  return h;
+}
+
+/* ── 그래프 — 내 흐름과 목표 대비 ─────────────────────────── */
+function pfChartHtml(){
+  var year=(PF.mineYear||[]).slice(),h='';
+  var v=pfOf(PF.mine);
+  var rate=pfPct(v.a,v.g);
+
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>목표 대비</div>'+
+    '<div class="card-desc">막대가 <b>목표선</b>에 닿으면 100% 입니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    (v.g>0||v.a>0
+      ? vizBarH([
+          {label:'목표',value:v.g,valLabel:prNum(v.g)+'만',color:'#94A3B8',},
+          {label:'실적',value:v.a,valLabel:prNum(v.a)+'만',color:(rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626'))},
+          {label:'목표 건수',value:v.gc,valLabel:v.gc+'건',color:'#CBD5E1'},
+          {label:'실제 건수',value:v.ac,valLabel:v.ac+'건',color:'#1D4ED8'}
+        ],{max:Math.max(v.g,v.a,v.gc,v.ac,1),width:600,labelW:88,valW:78})
+      : '<div class="ar-none">아직 적은 값이 없습니다.</div>')+
+    (v.g>0?('<div style="margin-top:10px;font-size:14px;font-weight:900;color:'+
+      (rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626'))+'">달성률 '+rate+'% '+
+      '<span style="font-size:12px;font-weight:700;color:#64748B">— '+
+      (rate>=100?('목표를 '+prNum(v.a-v.g)+'만원 넘겼습니다')
+                :('목표까지 '+prNum(v.g-v.a)+'만원 남았습니다'))+'</span></div>'):'')+
+    '</div></div>';
+
+  /* 열두 달 흐름 — 두 점 이상일 때만 그린다 */
+  var pts=year.filter(function(x){return (+x.act_prem||0)>0;})
+              .map(function(x){return {t:(+x.period.split('-')[1])+'월',v:+x.act_prem||0};});
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📈</span>내 업적 흐름</div>'+
+    '<div class="card-desc">최근 열두 달 실제 월초보험료입니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    (pts.length>=2
+      ? prChartLine(pts,{unit:'만원',color:'#1D4ED8',zero:1})
+      : '<div class="ar-none">달이 두 개는 쌓여야 흐름이 보입니다. 지금 '+pts.length+'달치가 있습니다.</div>')+
+    '</div></div>';
+  return h;
+}
+
+/* ── 제출 → AI 가 초안을 쓰고, 리더가 고친다 ────────────────── */
+function pfSubmit(){
+  var v=pfOf(PF.mine||{});
+  if(!v.a&&!v.g){toast('목표나 실적을 먼저 적어 주세요');return;}
+  PF.busy='submit';pfPaint();
+  pfSave({submitted_at:new Date().toISOString()},true).then(function(){
+    return pfAiDraft();
+  }).then(function(){
+    PF.busy='';toast('제출했습니다 — 리더가 확인합니다');pfPaint();
+  },function(){PF.busy='';pfPaint();});
+}
+function pfAiDraft(){
+  if(typeof callAI!=='function')return Promise.resolve();
+  var m=PF.mine||{},v=pfOf(m);
+  var year=(PF.mineYear||[]).map(function(x){
+    return x.period+' 목표 '+(+x.goal_prem||0)+' 실적 '+(+x.act_prem||0);
+  }).join(' / ');
+  var sys='너는 보험 영업 리더다. 팀원의 월간 실적을 보고 <b>무엇이 부족했는지</b>와 '+
+    '<b>다음 달에 무엇을 다르게 할지</b>를 쓴다. 규칙: '+
+    '① 숫자를 지어내지 않는다 ② 주어진 값만 근거로 쓴다 ③ 다섯 문장 이내 '+
+    '④ 「열심히」 같은 말 대신 셀 수 있는 행동으로 쓴다 ⑤ 사람을 깎아내리지 않는다. '+
+    'JSON 없이 줄글로만 답한다.';
+  var user='이번 달('+pfYm()+') 목표 '+v.g+'만원 / 실적 '+v.a+'만원 (달성률 '+pfPct(v.a,v.g)+'%)\n'+
+    '건수 목표 '+v.gc+' / 실제 '+v.ac+'\n'+
+    '본인 계획: '+(m.plan||'(없음)')+'\n본인 소회: '+(m.note||'(없음)')+'\n'+
+    '최근 흐름: '+(year||'(없음)');
+  return callAI(sys,user,700,'perf').then(function(t){
+    return pfSave({ai_draft:(''+t).slice(0,1600)},true);
+  },function(){return null;});
+}
+function pfFeedbackHtml(m){
+  var lead=pfIsLead(),mine=m.owner_id===pfMyId();
+  return '<div class="card" style="border-color:#BFDBFE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">💬</span>월간 피드백'+
+    (m.feedback?' <span class="badge green">리더 확정</span>':' <span class="badge">AI 초안</span>')+'</div>'+
+    '<div class="card-desc">'+(m.feedback
+      ? '리더가 확인하고 확정한 글입니다.'
+      : 'AI 가 숫자를 보고 쓴 초안입니다. <b>리더가 고쳐야 확정됩니다.</b>')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div style="font-size:13.5px;line-height:1.85;color:#1F2937;white-space:pre-wrap">'+
+    osEsc(m.feedback||m.ai_draft||'')+'</div>'+
+    (lead&&!mine?('<div class="fld" style="margin-top:11px"><label>리더 확정 — 고쳐서 저장하면 팀원에게 이대로 보입니다</label>'+
+      '<textarea id="pf_fb_'+m.owner_id+'" rows="4">'+osEsc(m.feedback||m.ai_draft||'')+'</textarea></div>'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="pfFeedbackSave(\''+m.owner_id+'\')">확정해서 보내기</button></div>'):'')+
+    '</div></div>';
+}
+function pfFeedbackSave(oid){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var t=osVal('pf_fb_'+oid)||'';
+  if(!sb||!t){toast('내용을 적어 주세요');return;}
+  sb.from('monthly_perf').update({feedback:t,feedback_by:pfMyId(),feedback_at:new Date().toISOString()})
+    .eq('owner_id',oid).eq('period',pfYm()).then(function(r){
+      if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+      toast('확정했습니다 — 팀원에게 이대로 보입니다');
+      PF.loaded=false;pfLoad();
+    });
+}
+
+/* ── 리더의 사업계획서 — 팀원 관리 맨 위에 붙는다 ─────────────
+   리더가 세운 계획과 팀원이 보는 목표가 갈라지면 아무 소용이 없다.
+   그래서 여기서 쓴 목표를 <b>「적용」 한 번으로</b> 팀원 목표칸에 내려보낸다.
+   다만 팀원이 스스로 적은 값이 있으면 화면에 그렇다고 밝힌다 —
+   소리 없이 덮으면 팀원은 자기가 적은 게 사라졌다고 느낀다.            */
+function pfTeamPlanHtml(){
+  if(!pfIsLead())return '';
+  var p=PF.plan||{},mates=pfTeamMates();
+  var tot=+p.goal_prem||0;
+  var sum=0,i;
+  for(i=0;i<mates.length;i++)sum+=+((p.share||{})[mates[i].id]||0);
+
+  return '<div class="card" style="border-color:#FDE68A;background:#FFFDF5"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📋</span>'+pfYmLabel(pfYm())+' 사업계획서 '+
+    '<span class="badge">리더만</span>'+
+    (p.applied_at?' <span class="badge green">적용됨</span>':'')+'</div>'+
+    '<div class="card-desc">여기 적은 목표를 <b>「적용」</b> 하면 팀원 각자의 목표칸에 그대로 내려갑니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div class="fld"><label>이달 팀 사업계획 — 무엇에 집중하는가</label>'+
+    '<textarea id="pf_tplan" rows="4" placeholder="예: 기존 고객 보장분석 재점검 집중 · 소개 확보 주 3건 · 신입 2명 동행 상담 주 2회">'+
+    osEsc(p.plan||'')+'</textarea></div>'+
+    '<div class="frm cols2" style="margin-top:8px">'+
+      finNum('pf_tgoal','팀 전체 목표',tot||'','만원')+
+    '</div>'+
+    (mates.length?('<div style="margin-top:12px"><div style="font-size:12.5px;font-weight:900;color:#0B1B34;margin-bottom:7px">'+
+      '팀원별로 나누기 <span style="font-weight:600;color:#94A3B8">— 합계 '+prNum(sum)+'만 / 팀 목표 '+prNum(tot)+'만</span></div>'+
+      '<div class="frm cols2">'+mates.map(function(x){
+        return finNum('pf_sh_'+x.id,x.name,(p.share||{})[x.id]||'','만원');
+      }).join('')+'</div></div>'):
+      '<div class="notice" style="margin-top:9px">팀원 명단을 아직 못 읽었습니다. 「↻ 새로 읽기」 를 눌러 주세요.</div>')+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-ghost" onclick="pfPlanSave(0)">저장만</button>'+
+      '<button class="btn btn-primary" onclick="pfPlanSave(1)">📥 저장하고 팀원에게 적용</button>'+
+    '</div>'+
+    '<div class="acad-note" style="margin-top:9px">적용하면 팀원 화면의 목표칸이 이 값으로 바뀌고, '+
+    '「팀 사업계획서에서 내려온 값」 이라고 표시됩니다. 팀원이 그 위에 다시 적을 수도 있습니다.</div>'+
+    '</div></div>';
+}
+function pfTeamMates(){
+  var out=[];
+  try{
+    var R=(typeof gbScope==='function')?gbScope():((typeof GB!=='undefined'&&GB.rows)||[]);
+    var me=pfMyId(),i;
+    for(i=0;i<R.length;i++)if(R[i].id&&R[i].id!==me)out.push({id:R[i].id,name:R[i].name});
+  }catch(e){}
+  return out;
+}
+function pfTeamId(){
+  try{
+    if(typeof GB!=='undefined'&&GB.team)return GB.team;
+    var me=pfMyId();
+    if(typeof GB!=='undefined'&&GB.teamOf&&GB.teamOf[me])return GB.teamOf[me];
+  }catch(e){}
+  return '';
+}
+function pfPlanSave(apply){
+  var sb=(typeof osClient==='function')?osClient():null,tid=pfTeamId();
+  if(!sb){toast('로그인 후 저장할 수 있습니다');return;}
+  if(!tid){toast('팀을 먼저 골라 주세요');return;}
+  var mates=pfTeamMates(),share={},i;
+  for(i=0;i<mates.length;i++){
+    var v=+finV('pf_sh_'+mates[i].id,0);
+    if(v>0)share[mates[i].id]=v;
+  }
+  var row={team_id:tid,period:pfYm(),plan:(osVal('pf_tplan')||''),
+    goal_prem:+finV('pf_tgoal',0),share:share,updated_by:pfMyId()};
+  if(apply)row.applied_at=new Date().toISOString();
+  sb.from('team_plans').upsert(row,{onConflict:'team_id,period'}).then(function(r){
+    if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+    if(!apply){toast('사업계획서를 저장했습니다');PF.loaded=false;pfLoad();return;}
+    /* 팀원 목표칸에 내려보낸다 — 목표만 건드리고 실적은 손대지 않는다 */
+    var keys=Object.keys(share);
+    if(!keys.length){toast('저장했습니다 — 나눌 목표가 없어 적용은 건너뜁니다');PF.loaded=false;pfLoad();return;}
+    Promise.all(keys.map(function(oid){
+      return sb.from('monthly_perf').upsert(
+        {owner_id:oid,period:pfYm(),goal_prem:share[oid],from_team:true},
+        {onConflict:'owner_id,period'});
+    })).then(function(res){
+      var bad=res.filter(function(x){return x&&x.error;}).length;
+      toast(bad?('일부 적용 실패 — '+bad+'명'):(keys.length+'명에게 목표를 내려보냈습니다'));
+      PF.loaded=false;pfLoad();
+    });
+  });
+}
+
+/* ── 지점 총괄 — 리더는 자기 팀, 대표는 전체 ────────────────── */
+function pfTeamBoardHtml(){
+  if(!pfIsLead())return '';
+  if(!PF.loaded)return '<div class="ar-none">업적을 불러오는 중입니다.</div>';
+  var mates=pfTeamMates(),byId={},i;
+  for(i=0;i<PF.rows.length;i++)byId[PF.rows[i].owner_id]=PF.rows[i];
+  var me=pfMyId();
+  var list=[{id:me,name:pfName(me)}].concat(mates);
+  var tg=0,ta=0,sub=0;
+  var rows=list.map(function(x){
+    var r=byId[x.id],v=pfOf(r);
+    tg+=v.g;ta+=v.a;if(r&&r.submitted_at)sub++;
+    return {x:x,r:r,v:v,pct:pfPct(v.a,v.g)};
+  }).sort(function(a,b){return b.pct-a.pct||b.v.a-a.v.a;});
+
+  var h='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🏢</span>'+pfYmLabel(pfYm())+' 지점 총괄 '+
+    '<span class="badge">'+(pfCanAll()?'전체':'내 팀')+'</span></div>'+
+    '<div class="card-desc">제출 '+sub+' / '+list.length+'명 · 팀 목표 '+prNum(tg)+'만 · 실적 '+prNum(ta)+'만 '+
+    '<b style="color:'+(pfPct(ta,tg)>=100?'#059669':'#D97706')+'">('+pfPct(ta,tg)+'%)</b></div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">이름</th><th style="padding:8px;text-align:right">목표</th>'+
+    '<th style="padding:8px;text-align:right">실적</th><th style="padding:8px;text-align:right">달성률</th>'+
+    '<th style="padding:8px;text-align:center">제출</th><th style="padding:8px"></th></tr></thead><tbody>';
+  rows.forEach(function(o){
+    var c=o.pct>=100?'#059669':(o.pct>=70?'#D97706':'#DC2626');
+    h+='<tr style="border-top:1px solid #EEF1F5">'+
+      '<td style="padding:8px;font-weight:800">'+osEsc(o.x.name)+'</td>'+
+      '<td style="padding:8px;text-align:right">'+prNum(o.v.g)+'만</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:800">'+prNum(o.v.a)+'만</td>'+
+      '<td style="padding:8px;text-align:right;font-weight:900;color:'+c+'">'+(o.v.g?o.pct+'%':'-')+'</td>'+
+      '<td style="padding:8px;text-align:center">'+((o.r&&o.r.submitted_at)?'✅':'—')+'</td>'+
+      '<td style="padding:8px;text-align:right">'+
+        ((o.r&&o.r.submitted_at)
+          ? '<button class="btn btn-ghost" style="padding:4px 10px;font-size:11px" onclick="pfOpen(\''+o.x.id+'\')">보기</button>'
+          : '')+'</td></tr>';
+    if(PF.open===o.x.id&&o.r)h+='<tr><td colspan="6" style="padding:0 8px 12px">'+
+      '<div style="font-size:12.5px;line-height:1.8;color:#42506A;background:#F8FAFC;border-radius:11px;padding:11px 13px">'+
+      '<b>계획</b> '+osEsc(o.r.plan||'(없음)')+'<br><b>소회</b> '+osEsc(o.r.note||'(없음)')+'</div>'+
+      pfFeedbackHtml(o.r)+'</td></tr>';
+  });
+  h+='</tbody></table>'+
+    (rows.length<=1?'<div class="notice" style="margin-top:10px">팀원 실적이 안 보이면 Supabase 에서 '+
+      '<b>migration_40_perf.sql</b> 을 실행하셨는지 확인해 주세요. 열람 권한은 DB 가 막습니다.</div>':'')+
+    '</div></div>';
+  return h;
+}
+function pfOpen(id){PF.open=(PF.open===id)?'':id;pfPaint();}
+
+/* ── 매월 영업보고서 — 이미지로 굽고 카톡에 붙인다 ─────────────
+   숫자를 말로 옮겨 적으면 틀린다. 한 장으로 구워서 카톡에 그대로
+   붙일 수 있게 한다. 화면을 그리는 코드는 인스타 카드 내보내기가
+   이미 쓰고 있는 것(html2canvas)을 그대로 쓴다.                    */
+function pfCardHtml(who){
+  var m=who||PF.mine||{},v=pfOf(m),rate=pfPct(v.a,v.g);
+  var name=pfName(m.owner_id||pfMyId());
+  var org='';
+  try{var A=(typeof advGet==='function')?advGet():{};org=[A.org,A.title].filter(Boolean).join(' · ');}catch(e){}
+  var c=rate>=100?'#059669':(rate>=70?'#D97706':'#DC2626');
+  var bar=Math.max(0,Math.min(100,rate));
+  var year=(PF.mineYear||[]).filter(function(x){return (+x.act_prem||0)>0;}).slice(-6);
+  var mx=1;year.forEach(function(x){mx=Math.max(mx,+x.act_prem||0);});
+
+  return '<div id="pfCard" style="width:820px;background:#0B1020;color:#E8EEF8;padding:38px 42px 32px;'+
+    'font-family:\'Noto Sans KR\',\'Malgun Gothic\',sans-serif;box-sizing:border-box">'+
+    '<div style="display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid rgba(255,255,255,.14);padding-bottom:16px">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:12px;letter-spacing:.28em;color:#7DA2E8;font-weight:800">MONTHLY REPORT</div>'+
+        '<div style="font-size:30px;font-weight:900;letter-spacing:-.03em;margin-top:5px">'+osEsc(name)+
+        ' <span style="font-size:16px;font-weight:700;color:#93A6C4">'+osEsc(org)+'</span></div>'+
+      '</div>'+
+      '<div style="text-align:right"><div style="font-size:13px;color:#93A6C4;font-weight:700">'+pfYmLabel(pfYm())+'</div>'+
+      '<div style="font-size:11px;color:#6B7F9E;margin-top:2px">월초보험료 기준</div></div>'+
+    '</div>'+
+
+    '<div style="display:flex;gap:14px;margin-top:22px">'+
+      pfKpi('목표',prNum(v.g)+'만원','#93A6C4')+
+      pfKpi('실적',prNum(v.a)+'만원',c)+
+      pfKpi('달성률',rate+'%',c)+
+      pfKpi('건수',v.ac+' / '+v.gc+'건','#E8EEF8')+
+    '</div>'+
+
+    '<div style="margin-top:20px">'+
+      '<div style="height:22px;background:rgba(255,255,255,.08);border-radius:11px;overflow:hidden">'+
+      '<div style="height:100%;width:'+bar+'%;background:'+c+';border-radius:11px"></div></div>'+
+      '<div style="font-size:12px;color:#93A6C4;margin-top:7px;font-weight:700">'+
+      (v.g?(rate>=100?('목표를 '+prNum(v.a-v.g)+'만원 넘겼습니다'):('목표까지 '+prNum(v.g-v.a)+'만원')):'목표가 아직 없습니다')+
+      '</div></div>'+
+
+    (year.length>=2?('<div style="margin-top:22px">'+
+      '<div style="font-size:12px;font-weight:800;color:#7DA2E8;letter-spacing:.1em;margin-bottom:9px">최근 흐름</div>'+
+      '<div style="display:flex;align-items:flex-end;gap:9px;height:92px">'+
+      year.map(function(x){
+        var hh=Math.max(6,Math.round((+x.act_prem||0)/mx*84));
+        return '<div style="flex:1;text-align:center">'+
+          '<div style="font-size:10.5px;color:#93A6C4;margin-bottom:4px;font-weight:700">'+prNum(+x.act_prem||0)+'</div>'+
+          '<div style="height:'+hh+'px;background:linear-gradient(180deg,#3B82F6,#1D4ED8);border-radius:5px 5px 0 0"></div>'+
+          '<div style="font-size:10.5px;color:#6B7F9E;margin-top:5px">'+(+x.period.split('-')[1])+'월</div></div>';
+      }).join('')+'</div></div>'):'')+
+
+    ((m.feedback||m.plan)?('<div style="margin-top:22px;background:rgba(255,255,255,.06);border-radius:13px;padding:15px 17px">'+
+      '<div style="font-size:11.5px;font-weight:800;color:#7DA2E8;letter-spacing:.1em">'+
+      (m.feedback?'리더 피드백':'이달 계획')+'</div>'+
+      '<div style="font-size:13px;line-height:1.75;color:#D6DFEC;margin-top:6px;white-space:pre-wrap">'+
+      osEsc((m.feedback||m.plan||'').slice(0,320))+'</div></div>'):'')+
+
+    '<div style="margin-top:20px;padding-top:13px;border-top:1px solid rgba(255,255,255,.10);'+
+    'font-size:10.5px;color:#6B7F9E;line-height:1.7">'+
+    'APEX YUN PRO · 이 자료는 내부 영업 관리용입니다. 고객 정보는 담겨 있지 않습니다.</div>'+
+  '</div>';
+}
+function pfKpi(t,v,c){
+  return '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:13px;padding:14px 15px">'+
+    '<div style="font-size:11.5px;color:#93A6C4;font-weight:700">'+t+'</div>'+
+    '<div style="font-size:21px;font-weight:900;color:'+c+';margin-top:4px;letter-spacing:-.02em">'+v+'</div></div>';
+}
+function pfCardOpen(who){
+  var w=document.getElementById('pfCardWrap');
+  if(!w){
+    w=document.createElement('div');w.id='pfCardWrap';
+    w.style.cssText='position:fixed;inset:0;z-index:9700;background:rgba(8,10,18,.88);'+
+      'display:none;flex-direction:column;align-items:center;overflow:auto;padding:22px 12px';
+    w.innerHTML='<div class="btn-row" style="margin-bottom:13px">'+
+      '<button class="btn btn-primary" onclick="pfCardCopy()">📋 이미지 복사 (카톡에 붙여넣기)</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardDown()">⬇️ 이미지 저장</button>'+
+      '<button class="btn btn-ghost" onclick="pfCardClose()">✕ 닫기</button>'+
+      '</div><div id="pfCardHost"></div>';
+    document.body.appendChild(w);
+  }
+  document.getElementById('pfCardHost').innerHTML=pfCardHtml(who);
+  w.style.display='flex';document.body.style.overflow='hidden';
+}
+function pfCardClose(){
+  var w=document.getElementById('pfCardWrap');
+  if(w)w.style.display='none';document.body.style.overflow='';
+}
+function pfCardCanvas(){
+  if(typeof ensureHtml2Canvas!=='function')return Promise.reject(new Error('이미지 기능을 못 불러왔습니다'));
+  return ensureHtml2Canvas().then(function(h2c){
+    var el=document.getElementById('pfCard');
+    if(!el)throw new Error('보고서를 찾을 수 없습니다');
+    return h2c(el,{scale:2,backgroundColor:'#0B1020',logging:false,useCORS:true});
+  });
+}
+/* 카톡에 바로 붙이려면 <b>이미지 자체</b>가 클립보드에 있어야 한다.
+   글자만 복사하면 카톡에 파일 이름만 붙는다. */
+function pfCardCopy(){
+  toast('이미지를 만드는 중입니다…');
+  pfCardCanvas().then(function(cv){
+    if(!cv.toBlob||!window.ClipboardItem||!navigator.clipboard||!navigator.clipboard.write){
+      pfCardDown();toast('이 브라우저는 이미지 복사를 못 합니다 — 파일로 내려받았습니다');return;
+    }
+    cv.toBlob(function(blob){
+      if(!blob){pfCardDown();return;}
+      navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(function(){
+        toast('복사했습니다 — 카톡에서 붙여넣기(Ctrl+V) 하세요');
+      },function(){
+        pfCardDown();toast('복사가 막혀 파일로 내려받았습니다');
+      });
+    },'image/png');
+  },function(e){toast('이미지 실패 — '+((e&&e.message)||''));});
+}
+function pfCardDown(){
+  pfCardCanvas().then(function(cv){
+    var name='영업보고서_'+pfYm()+'.png';
+    if(cv.toBlob){
+      cv.toBlob(function(b){
+        var u=URL.createObjectURL(b),a=document.createElement('a');
+        a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(function(){URL.revokeObjectURL(u);},1500);
+      },'image/png');
+    }else{
+      var a=document.createElement('a');a.href=cv.toDataURL('image/png');a.download=name;
+      document.body.appendChild(a);a.click();a.remove();
+    }
+  },function(e){toast('이미지 실패 — '+((e&&e.message)||''));});
+}
+
 function arBodyHtml(cat){
   if(typeof GB==='undefined'||!GB.loaded)
     return '<div class="ar-none">기록을 불러오는 중입니다. 잠시만요.</div>';
@@ -7332,10 +7830,19 @@ function arBodyHtml(cat){
     if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
     return '<div id="acadBody">'+acBody()+'</div>';
   }
+  if(cat==='perf'){
+    if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
+    return pfMeHtml();
+  }
   if(cat==='touch')return arTouchHtml();
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
-  if(cat==='team')return arTeamHtml();
+  if(cat==='team'){
+    /* 리더의 사업계획서와 지점 총괄이 팀원 목록보다 <b>위</b>에 온다.
+       계획을 세우고 나서 사람을 보는 순서다. */
+    if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
+    return pfTeamPlanHtml()+pfTeamBoardHtml()+arTeamHtml();
+  }
   return arMeHtml();
 }
 function arInnerHtml(){
@@ -8635,8 +9142,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 06:00';
-var APP_BUILD_NOTE='달러 · 증여상속 · 보험 플랜 세 칸이 생겼습니다 — 부족액을 그대로 들고 넘어갑니다 · 물가·수익률·세율 가정을 한 곳으로 모아 화면마다 숫자가 달라지던 것을 없앴습니다 · 상담자료 표지는 STARRING 판';
+var APP_BUILD='2026-08-13 08:10';
+var APP_BUILD_NOTE='TFA 업무관리에 「내 업적 · 월간보고」 가 생겼습니다 — 월초보험료 목표·실적을 적고 흐름을 보고 제출하면 리더가 받습니다 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 팀원 목표에 적용합니다 · 「매월 영업보고서」 는 이미지로 구워 카톡에 바로 붙입니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
