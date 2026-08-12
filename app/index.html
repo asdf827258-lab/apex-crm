@@ -6599,6 +6599,51 @@ function arBriefData(){
    어디로 가는지 몰랐다. 사람은 목록을 보고 <b>그 줄을 눌러</b> 간다.
    그래서 줄마다 갈 곳을 달고, 밀린 것은 눈에 띄게 키운다.
    리더에게는 팀에서 아직 안 낸 사람이 함께 뜬다.              */
+/* 어제 총합 — 오늘 할 일 앞에 어제 한 일을 먼저 놓는다.
+   「어제 몇 통 걸었고 몇 건 상담이 됐나」 를 보고 오늘을 시작해야
+   숫자가 몸에 붙는다. 리더는 팀 전체를 함께 본다. */
+function arYestKey(){
+  var d=new Date(Date.now()+9*3600*1000-86400000);
+  return d.toISOString().slice(0,10);
+}
+function arYest(){
+  var y=arYestKey(),me=arMyId(),L=AR.calls||[],i,c;
+  var mine={call:0,con:0,no:0,rej:0},team={call:0,con:0,no:0,rej:0},who={};
+  for(i=0;i<L.length;i++){
+    c=L[i];
+    if(c.d!==y)continue;
+    var t=(c.w===me)?mine:null;
+    team.call++;
+    if(c.r==='상담')team.con++;else if(c.r==='부재')team.no++;else if(c.r==='거절')team.rej++;
+    if(c.w)who[c.w]=(who[c.w]||0)+1;
+    if(!t)continue;
+    t.call++;
+    if(c.r==='상담')t.con++;else if(c.r==='부재')t.no++;else if(c.r==='거절')t.rej++;
+  }
+  return {ymd:y,mine:mine,team:team,people:Object.keys(who).length};
+}
+function arYestHtml(){
+  var y=arYest(),lead=arIsLead();
+  var v=lead?y.team:y.mine;
+  var rate=v.call>0?Math.round(v.con/v.call*100):0;
+  var cell=function(n,k,c){
+    return '<div style="flex:1;min-width:88px;text-align:center">'+
+      '<div style="font-size:25px;font-weight:900;color:'+(c||'#0F172A')+';line-height:1.1">'+n+'</div>'+
+      '<div style="font-size:11.5px;font-weight:800;color:#64748B;margin-top:3px">'+k+'</div></div>';
+  };
+  return '<div style="background:#F8FAFC;border:2px solid #E9EEF5;border-radius:16px;padding:15px 16px;margin-bottom:16px">'+
+    '<div style="font-size:12.5px;font-weight:900;color:#475569;margin-bottom:10px">'+
+    '📒 어제 총합 <span style="font-weight:700;color:#94A3B8">'+y.ymd+
+    (lead?(' · 팀 전체 '+y.people+'명 움직임'):' · 나')+'</span></div>'+
+    '<div style="display:flex;gap:8px">'+
+      cell(v.call,'통화')+cell(v.con,'상담','#059669')+
+      cell(v.no,'부재',v.no?'#D97706':'#0F172A')+
+      cell(v.rej,'거절',v.rej?'#DC2626':'#0F172A')+
+      cell(rate+'%','상담 전환','#1D4ED8')+
+    '</div>'+
+    (v.call===0?'<div style="font-size:12px;color:#94A3B8;margin-top:9px;text-align:center">어제 기록이 없습니다.</div>':'')+
+  '</div>';
+}
 function arBriefRows(){
   var out=arTodoList().slice(0,8),i;
   /* 이달 월간보고를 아직 안 냈으면 맨 위에 세운다 */
@@ -6673,6 +6718,8 @@ function arBriefOpen(){
       '<div style="font-size:13px;color:'+(bad?'#FCA5A5':'#BFDBFE')+';margin-top:6px">'+osEsc(arToday())+
         ' · 지금 '+d.score+'점</div></div>'+
     '<div style="padding:20px 28px;overflow-y:auto">'+
+      arYestHtml()+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin:0 0 10px">📌 오늘</div>'+
       '<div style="display:flex;gap:11px;flex-wrap:wrap">'+
         tile(d.ap,'건','오늘 약속',0)+
         tile(d.bad,'건','밀린 것',d.bad>0)+
@@ -9198,8 +9245,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 09:05';
-var APP_BUILD_NOTE='아침 보고가 커졌습니다 — 밀린 것이 있으면 붉게, 줄을 누르면 그 칸으로 바로 갑니다 · TFA 업무관리에 「내 업적 · 월간보고」 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 적용 · 「매월 영업보고서」 는 이미지로 구워 카톡에 붙입니다';
+var APP_BUILD='2026-08-13 10:20';
+var APP_BUILD_NOTE='아침 보고에 어제 총합이 먼저 뜹니다 (통화·상담·부재·거절·전환율) · 그 아래 오늘 할 일은 줄을 누르면 그 칸으로 바로 갑니다 · 리더는 팀 전체 어제 총합을 봅니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
