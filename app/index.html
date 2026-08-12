@@ -1684,7 +1684,7 @@ function advCardHtml(){
    상담자료는 각자 다른 화면(iframe)이다. 사람이 옮겨 적을 일이 아니라
    앱이 열릴 때 알아서 넣어 준다. */
 function advFrames(){
-  var out=[],ids=['sangdamFrame','prSdFrame','finFrame','fpFrame'];
+  var out=[],ids=['sangdamFrame','prSdFrame','prStoryFrame','finFrame','fpFrame'];
   ids.forEach(function(id){
     var f=document.getElementById(id);
     if(f&&f.contentWindow)out.push(f);
@@ -8584,8 +8584,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-12 21:10';
-var APP_BUILD_NOTE='보장분석 상담자료 16장이 다 뜹니다 (10장부터 안 뜨던 것 고침) · 제안서는 「한 장으로」 이어 봅니다 — 8통장부터 국가혜택·근거까지';
+var APP_BUILD='2026-08-13 01:40';
+var APP_BUILD_NOTE='AI 제안서를 만들면 이 고객에게 필요한 상담 이야기 10장이 순서대로 펼쳐집니다 · 상담자료 11장의 이름·소속·준법 문구를 「내 소개」 로 통일했습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12264,7 +12264,11 @@ function prNum(v){
   v=+v||0;
   return (''+v).replace(/\B(?=(\d{3})+(?!\d))/g,',');
 }
-function prWon(v){
+/* AI 가 적어 주는 금액은 「1,200」 일 때도 「약 500만원」 일 때도 있다.
+   숫자면 만원을 붙이고, 글이면 그대로 둔다.
+   ── 이 함수는 한동안 prWon 이라는 같은 이름의 다른 함수에 가려져 있었다.
+      그쪽은 쉼표만 찍는 함수라 「1,200」 이 0 으로 찍혔다. 이름을 갈랐다. */
+function prAmt(v){
   var t=(''+(v==null?'':v)).replace(/^\s+|\s+$/g,'');
   if(!t)return '-';
   if(/^[0-9,]+(\.[0-9]+)?$/.test(t))return prNum(Math.round(parseFloat(t.replace(/,/g,''))))+'만원';
@@ -12544,7 +12548,7 @@ function prEvidenceHtml(){
           var c=typeColor[it.type||'']||'#7C3AED';
           return '<tr><td class="it">'+osEsc(it.name||'')+'</td>'+
             '<td><span class="pr-chg" style="color:'+c+';background:'+c+'14">'+osEsc(it.type||'')+'</span></td>'+
-            '<td class="af">'+osEsc(prWon(it.amount))+'</td>'+
+            '<td class="af">'+osEsc(prAmt(it.amount))+'</td>'+
             '<td class="bf" style="font-size:11.5px">'+osEsc(it.note||'')+'</td></tr>';
         }).join('')+'</tbody></table></div>'+
         '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:13px">'+
@@ -13405,6 +13409,7 @@ function prPaint(){
       /* 상담자료가 먼저다 — 이야기의 뼈대를 세우고 이 고객의 숫자로 넘어간다 */
       '<button class="acad-tab'+(PR.view==='sangdam'?' on':'')+'" onclick="prView(\'sangdam\')">📋 상담자료</button>'+
       '<button class="acad-tab'+(PR.view==='all'?' on':'')+'" onclick="prView(\'all\')">📖 한 장으로</button>'+
+      '<button class="acad-tab'+(PR.view==='story'?' on':'')+'" onclick="prView(\'story\')">🎬 상담 이야기</button>'+
       (hasDiff?'<button class="acad-tab'+(PR.view==='diff'?' on':'')+'" onclick="prView(\'diff\')">🔄 전후 비교</button>':'')+
       (p.wallets&&p.wallets.length?'<button class="acad-tab'+(PR.view==='wallet'?' on':'')+'" onclick="prView(\'wallet\')">🗺️ 8통장 진단</button>':'')+
       (p.reality&&p.reality.length?'<button class="acad-tab'+(PR.view==='reality'?' on':'')+'" onclick="prView(\'reality\')">⚠️ 준비 안 하면</button>':'')+
@@ -13426,6 +13431,7 @@ function prPaint(){
   var body;
   if(PR.view==='sangdam')body=prSangdamHtml();
   else if(PR.view==='all')body=prAllHtml();
+  else if(PR.view==='story')body=prStoryHtml();
   else if(PR.view==='doc')body=prDocHtml();
   else if(PR.view==='opt')body=prOptHtml();
   else if(PR.view==='diff')body=prDiffHtml();
@@ -14148,7 +14154,239 @@ function prBriefHtml(){
    상담 중에 흰 화면이 뜨면 그 자리에서 말이 끊긴다.
    그래서 8통장부터 국가혜택·근거까지 <b>한 장에 이어</b> 붙인다.
    내용이 없는 자리는 비워 두지 않고 <b>왜 없는지</b> 를 적는다.       */
+/* ════════ 상담 이야기 — 보장분석 자료를 이 고객에게 맞춰 펼친다 ════════
+   보장분석 상담자료는 메인 한 장만 있는 게 아니다. 그 뒤에 이야기 덱이
+   열 장 더 있다 (암 · 뇌혈관 · 심장 · 간병 · 실손 · 갱신형 · 자산곡선 ·
+   실제 지급 사례 두 장 · 마무리). 각각 한 주제를 처음부터 끝까지 끌고 간다.
+
+   전부 펼치면 두 시간이 걸린다. 하나도 안 펼치면 숫자만 남는다.
+   그래서 <b>이 고객의 증권에서 비어 있는 곳</b>을 보고 필요한 이야기만
+   골라 순서대로 세운다. 「AI 제안서 만들기」 한 번이면 이 순서가 나온다.  */
+var PR_STORY_DIR='상담자료/';
+var PR_STORY=[
+  {f:'demo_curve.html',t:'인생 자산 곡선',ic:'📉',
+   lead:'왜 보험을 드는가 — 큰 병에 목돈이 빠져 노후자금이 무너지지 않게',
+   need:function(){return {on:1,why:'모든 상담의 출발점입니다. 여기서 기준을 세우고 나머지를 봅니다.'};}},
+
+  {f:'demo_premium.html',t:'갱신형 보험료',ic:'💸',
+   lead:'35세 월 5만원이 80세엔 월 35만원이 되는 구조',
+   need:function(sc){
+     var n=prStoryWord(sc,/갱신/);
+     if(n)return {on:1,why:'가지고 계신 계약·특약에서 「갱신」 을 '+n+'군데 찾았습니다'};
+     /* 읽어낸 계약이 아예 없으면 끄면 안 된다. 처음 드는 분일수록
+        비갱신으로 잡아 드려야 나중에 보험료 때문에 해약하지 않는다. */
+     if(!sc||!(sc.plans||[]).length)
+       return {on:1,why:'읽어낸 계약이 없습니다 — 처음부터 비갱신으로 잡는 이야기입니다'};
+     return {on:0,why:'증권에서 갱신형이 눈에 띄지 않습니다'};}},
+
+  {f:'demo_cancer.html',t:'암 · 큰 우산 3종',ic:'🎗️',
+   lead:'생활비 · 치료비 · 비급여 — 우산 세 개로 나눠 봅니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['암주요치료비 (급여)','비급여 암주요치료비','하이클래스·프리미엄형',
+       '전액본인부담 암치료비','표적항암약물허가치료비','중입자·양성자','면역항암치료비','재진단암·전이암']);
+     return m.length?{on:1,why:'암 계열에서 '+m.length+'가지가 비어 있습니다 — '+m.slice(0,3).join(' · ')}
+                    :{on:0,why:'암 계열은 기준 담보가 대체로 들어 있습니다'};}},
+
+  {f:'demo_brain.html',t:'뇌혈관 · 평생 갱신되는 구독료',ic:'🧠',
+   lead:'한 번 막힌 혈관은 재발합니다 — 산정특례가 못 막는 자리',
+   need:function(sc){
+     var m=prStoryMiss(sc,['뇌혈관질환 (전체)','혈전용해·혈전제거','순환계치료비·2대질병치료비']);
+     return m.length?{on:1,why:'뇌혈관 계열에서 '+m.join(' · ')+' 이(가) 없습니다'}
+                    :{on:0,why:'뇌혈관 계열은 들어 있습니다'};}},
+
+  {f:'demo_heart.html',t:'심장',ic:'❤️',
+   lead:'허혈성은 진단명 하나로 갈립니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['허혈성심장질환 (전체)','순환계치료비·2대질병치료비']);
+     return m.length?{on:1,why:'심장 계열에서 '+m.join(' · ')+' 이(가) 없습니다'}
+                    :{on:0,why:'심장 계열은 들어 있습니다'};}},
+
+  {f:'demo_care.html',t:'간병 · 에어백',ic:'🦽',
+   lead:'차체는 진단비, 엔진은 치료비, 에어백이 간병입니다',
+   need:function(sc){
+     var m=prStoryMiss(sc,['간병인사용일당','장기요양·치매']);
+     return m.length?{on:1,why:m.join(' · ')+' 이(가) 비어 있습니다'}
+                    :{on:0,why:'간병 계열은 들어 있습니다'};}},
+
+  {f:'demo_silbi.html',t:'실손',ic:'🏥',
+   lead:'비급여를 실제로 막아 주는 자리',
+   need:function(sc){
+     var n=prStoryWord(sc,/(실손|실비|의료비)/);
+     return n?{on:0,why:'실손으로 보이는 계약이 '+n+'건 있습니다 — 세대만 확인하시면 됩니다'}
+             :{on:1,why:'증권에서 실손으로 보이는 계약을 못 찾았습니다'};}},
+
+  {f:'demo_case4000.html',t:'말 한마디가 4,000만원',ic:'💎',
+   lead:'같은 계약인데 말 한마디로 지급액이 갈린 실제 건',
+   need:function(){return {on:1,why:'숫자 뒤에 증거를 놓습니다 — 신뢰는 여기서 생깁니다'};}},
+
+  {f:'demo_casegallery.html',t:'지급 사례 모음',ic:'🧾',
+   lead:'회사별 · 담보별 실제 지급 내역',
+   need:function(){return {on:1,why:'「그래서 진짜 나오나요」 에 대한 답입니다'};}},
+
+  {f:'demo_closing.html',t:'마무리',ic:'🤝',
+   lead:'오늘 정한 것과 다음에 할 것',
+   need:function(){return {on:1,why:'다음 약속까지 잡고 끝냅니다'};}}
+];
+
+/* 증권 글자 안에서 낱말을 센다 — 계약 이름과 특약 이름을 모두 본다 */
+function prStoryWord(sc,re){
+  if(!sc)return 0;
+  var n=0,i,j,P=sc.plans||[],R=sc.riders||[],rows;
+  for(i=0;i<P.length;i++)if(re.test(''+(P[i].name||'')))n++;
+  for(i=0;i<R.length;i++){
+    if(re.test(''+(R[i].name||'')))n++;
+    rows=R[i].rows||[];
+    for(j=0;j<rows.length;j++)if(re.test(''+(rows[j].name||'')))n++;
+  }
+  return n;
+}
+/* 「없는 담보」 목록에서 이 이야기와 맞물리는 것만 추린다 */
+function prStoryMiss(sc,names){
+  var out=[],i,j,G=(sc&&sc.gaps)||[];
+  for(i=0;i<G.length;i++){
+    if(G[i].has)continue;
+    for(j=0;j<names.length;j++)
+      if(G[i].name===names[j]){out.push(G[i].name);break;}
+  }
+  return out;
+}
+/* 이 고객에게 펼칠 순서를 정한다 — 필요한 것이 앞으로 온다 */
+function prStoryPick(){
+  var sc=(typeof PR!=='undefined'&&PR.scan)?PR.scan:null,out=[],i,v;
+  for(i=0;i<PR_STORY.length;i++){
+    v=null;
+    try{v=PR_STORY[i].need(sc);}catch(e){v=null;}
+    if(!v)v={on:0,why:'증권을 읽지 못해 판단하지 못했습니다'};
+    out.push({d:PR_STORY[i],on:!!v.on,why:v.why||''});
+  }
+  return out;
+}
+function prStoryOn(){
+  return prStoryPick().filter(function(x){return x.on;});
+}
+
+function prStoryHtml(){
+  var list=prStoryPick(),on=0,i,x,h='',no=0;
+  for(i=0;i<list.length;i++)if(list[i].on)on++;
+  no=list.length-on;
+
+  h+='<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎬</span>이 고객에게 펼칠 순서 '+
+    '<span class="badge green">'+on+'장</span></div>'+
+    '<div class="card-desc">증권에서 <b>비어 있는 곳</b>을 보고 필요한 이야기만 골랐습니다. '+
+    '누르면 그 자리에서 펼쳐지고, 한 장이 끝나면 <b>다음 이야기</b>로 이어집니다.'+
+    (no?(' 나머지 '+no+'장도 아래에서 언제든 여실 수 있습니다.'):'')+'</div></div>'+
+    '<div class="card-body">'+
+    '<div class="btn-row" style="margin:0 0 12px">'+
+      '<button class="btn btn-primary" onclick="prStoryStart()">▶ 순서대로 시작</button>'+
+      '<button class="btn btn-ghost" onclick="prView(\'sangdam\')">📋 메인 상담자료로</button>'+
+    '</div>';
+
+  for(i=0;i<list.length;i++){
+    x=list[i];
+    h+='<div style="display:flex;gap:11px;align-items:flex-start;padding:11px 12px;margin-bottom:8px;'+
+      'border:1px solid '+(x.on?'#BFDBFE':'#E5E9F0')+';border-radius:13px;'+
+      'background:'+(x.on?'#F5F9FF':'#FBFCFD')+';'+(x.on?'':'opacity:.72')+'">'+
+      '<div style="font-size:19px;line-height:1.2">'+x.d.ic+'</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13.5px;font-weight:900;color:#0B1B34">'+osEsc(x.d.t)+
+          (x.on?' <span class="badge green" style="vertical-align:2px">필요</span>':
+                ' <span class="badge" style="vertical-align:2px">참고</span>')+'</div>'+
+        '<div style="font-size:11.5px;color:#64748B;margin-top:2px;line-height:1.65">'+osEsc(x.d.lead)+'</div>'+
+        '<div style="font-size:11.5px;font-weight:700;margin-top:5px;line-height:1.65;color:'+
+          (x.on?'#1D4ED8':'#94A3B8')+'">'+osEsc(x.why)+'</div>'+
+      '</div>'+
+      '<button class="btn '+(x.on?'btn-primary':'btn-ghost')+'" style="padding:6px 12px;font-size:11.5px;white-space:nowrap" '+
+        'onclick="prStoryOpen(\''+x.d.f+'\')">펼치기</button>'+
+    '</div>';
+  }
+  h+='<div class="notice" style="margin-top:4px">이 이야기들은 상품 설명이 아니라 <b>보장 구조를 이해하기 위한 참고 자료</b>입니다. '+
+    '실제 보장은 약관이 정하며, 기존 계약을 해지하고 새로 드시면 보장이 줄거나 면책 기간이 다시 시작될 수 있습니다.</div>'+
+    '</div></div>';
+  return h;
+}
+
+/* ── 펼치기 — 앱 위에 덮어씌운다 ────────────────────────────
+   덱은 전체 화면을 쓰는 자료라 작은 칸에 넣으면 글자가 깨진다.
+   그래서 화면 전체를 덮고, 위쪽에 제목과 「다음 이야기」 만 남긴다.   */
+function prStoryAt(f){
+  var i;for(i=0;i<PR_STORY.length;i++)if(PR_STORY[i].f===f)return PR_STORY[i];
+  return null;
+}
+function prStoryNext(f){
+  var L=prStoryOn(),i;
+  for(i=0;i<L.length;i++)if(L[i].d.f===f)return (i+1<L.length)?L[i+1].d:null;
+  return null;
+}
+function prStoryStart(){
+  var L=prStoryOn();
+  if(!L.length){toast('펼칠 이야기가 없습니다');return;}
+  prStoryOpen(L[0].d.f);
+}
+function prStoryOpen(f){
+  var D=prStoryAt(f);
+  if(!D){toast('그 이야기를 못 찾았습니다');return;}
+  var w=document.getElementById('prStoryWrap');
+  if(!w){
+    w=document.createElement('div');
+    w.id='prStoryWrap';
+    w.style.cssText='position:fixed;inset:0;z-index:9600;background:#0B1020;display:none;flex-direction:column';
+    w.innerHTML=
+      '<div style="display:flex;align-items:center;gap:10px;padding:9px 13px;background:#0B1020;'+
+        'border-bottom:1px solid rgba(255,255,255,.10);color:#E6EDF7;flex:0 0 auto">'+
+        '<div id="prStoryTitle" style="flex:1;min-width:0;font-size:13.5px;font-weight:900;'+
+          'overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>'+
+        '<button id="prStoryNextBtn" style="display:none;padding:6px 13px;border:0;border-radius:9px;'+
+          'background:#1D4ED8;color:#fff;font-size:12px;font-weight:800;cursor:pointer"></button>'+
+        '<button style="padding:6px 12px;border:1px solid rgba(255,255,255,.22);border-radius:9px;'+
+          'background:transparent;color:#E6EDF7;font-size:12px;font-weight:800;cursor:pointer" '+
+          'onclick="prStoryClose()">✕ 닫기</button>'+
+      '</div>'+
+      '<iframe id="prStoryFrame" title="상담 이야기" style="flex:1;width:100%;border:0;display:block;background:#0B1020"></iframe>';
+    document.body.appendChild(w);
+  }
+  var t=document.getElementById('prStoryTitle'),
+      nb=document.getElementById('prStoryNextBtn'),
+      fr=document.getElementById('prStoryFrame');
+  if(t)t.innerHTML=D.ic+' '+osEsc(D.t)+' <span style="font-weight:600;opacity:.62;font-size:11.5px">'+osEsc(D.lead)+'</span>';
+  if(nb){
+    var N=prStoryNext(f);
+    nb.style.display='none';
+    nb.textContent=N?('다음 — '+N.t+' ▶'):'';
+    nb.onclick=N?function(){prStoryOpen(N.f);}:null;
+    nb._for=f;
+  }
+  if(fr){fr.onload=function(){advPushSoon();};fr.src=PR_STORY_DIR+D.f;}
+  w.style.display='flex';
+  document.body.style.overflow='hidden';
+  PR._story=f;
+}
+function prStoryClose(){
+  var w=document.getElementById('prStoryWrap'),fr=document.getElementById('prStoryFrame');
+  if(fr)fr.removeAttribute('src');
+  if(w)w.style.display='none';
+  document.body.style.overflow='';
+  PR._story=null;
+}
+/* 덱이 마지막 장에 닿으면 「다음 이야기」 단추를 띄운다 */
+window.addEventListener('message',function(ev){
+  if(ev.origin!==location.origin)return;
+  var m=ev.data;
+  if(!m||typeof m!=='object')return;
+  if(m.t==='apex:ready'){advPushSoon();return;}
+  if(m.t==='apex:deckdone'){
+    var nb=document.getElementById('prStoryNextBtn');
+    if(nb&&nb.textContent)nb.style.display='';
+  }
+},false);
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape')return;
+  var w=document.getElementById('prStoryWrap');
+  if(w&&w.style.display==='flex')prStoryClose();
+},false);
+
 var PR_ALL=[
+  {k:'story',  t:'상담 이야기',       ic:'🎬', has:function(){return 1;},                             fn:function(){return prStoryHtml();}},
   {k:'wallet', t:'8통장 진단',        ic:'🗺️', has:function(p){return (p.wallets||[]).length;},      fn:function(){return prWalletHtml();}},
   {k:'reality',t:'준비하지 않으면',   ic:'⚠️', has:function(p){return (p.reality||[]).length;},      fn:function(){return prRealityHtml();}},
   {k:'benefit',t:'준비하면',          ic:'💰', has:function(p){var b=p.benefit||{};return (b.prepared||[]).length||(b.unprepared||[]).length;}, fn:function(){return prBenefitHtml();}},
