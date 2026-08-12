@@ -3969,6 +3969,9 @@ function osTabProbe(tab){
   if(tab==='assistant')return renderAssistant();
   if(tab==='growth')return renderTeamDash();
   if(tab==='ai_desk')return renderAiDeskPage();
+  if(tab==='fin_usd')return renderFinUsd();
+  if(tab==='fin_gift')return renderFinGift();
+  if(tab==='fin_ins')return renderFinIns();
   if(tab==='ai_prop')return renderAiProposal();
   if(tab==='interpret')return renderInterpret();
   if(tab==='wallets')return renderWallets();
@@ -8079,7 +8082,10 @@ var TABS=[
    {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
    {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
-   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'4',ak:'재무설계'}
+   {id:'fin_usd',icon:'💵',title:'달러 플랜',cnt:'',ak:'재무설계'},
+   {id:'fin_gift',icon:'🎁',title:'증여 · 상속 플랜',cnt:'',ak:'재무설계'},
+   {id:'fin_ins',icon:'🛡️',title:'보험으로 푸는 플랜',cnt:'',ak:'재무설계'},
+   {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
  ]},
  {group:'투자·경제',items:[
    {id:'inv_stock',icon:'📈',title:'주식관리',cnt:'',ak:'투자·경제'},
@@ -8362,6 +8368,9 @@ function go(tab){
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
   else if(tab==='ai_org'||tab==='ai_meet'||tab==='ai_desk'){dyn.innerHTML=renderAiOrg();if(typeof osAiOrgAfterRender==='function')osAiOrgAfterRender();}
+  else if(tab==='fin_usd'){dyn.innerHTML=renderFinUsd();setTimeout(function(){try{finUsdCalc();}catch(e){}},60);}
+  else if(tab==='fin_gift'){dyn.innerHTML=renderFinGift();setTimeout(function(){try{finGiftCalc();}catch(e){}},60);}
+  else if(tab==='fin_ins'){dyn.innerHTML=renderFinIns();setTimeout(function(){try{finInsCalc();}catch(e){}},60);}
   else if(tab==='ai_prop'){dyn.innerHTML=renderAiProposal();if(typeof osAiProposalAfterRender==='function')osAiProposalAfterRender();}
   else if(tab==='interpret')dyn.innerHTML=renderInterpret();
   else if(tab==='wallets')dyn.innerHTML=renderWallets();
@@ -8626,8 +8635,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 04:20';
-var APP_BUILD_NOTE='상담자료 표지를 STARRING 판으로 새로 지었습니다 — 설정 → 내 소개에 사진 3장과 자격·방송·경력을 넣으면 그대로 들어갑니다 · 보험 내용은 크고 진하게 · 「결과 보고서」 에서 8통장으로 바로';
+var APP_BUILD='2026-08-13 06:00';
+var APP_BUILD_NOTE='달러 · 증여상속 · 보험 플랜 세 칸이 생겼습니다 — 부족액을 그대로 들고 넘어갑니다 · 물가·수익률·세율 가정을 한 곳으로 모아 화면마다 숫자가 달라지던 것을 없앴습니다 · 상담자료 표지는 STARRING 판';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -25792,6 +25801,464 @@ function addMonths(d,n){var x=new Date(d.getTime());x.setMonth(x.getMonth()+n);r
 function daysBetween(a,b){return Math.round((b-a)/86400000);}
 function ymd(d){var m=('0'+(d.getMonth()+1)).slice(-2),day=('0'+d.getDate()).slice(-2);return d.getFullYear()+'.'+m+'.'+day;}
 
+/* ════════════════ 재무 계산 한 줄기 ════════════════
+   같은 계산이 여기저기 흩어져 있었다. 복리 함수만 여덟 벌이었고,
+   그중 하나는 이율을 0.04 로, 나머지는 4 로 받아 <b>백 배</b>가 틀렸다.
+   상속세는 세 벌이었고 공제가 다 달라서 같은 재산에 다른 세액이 나왔다.
+   달러는 한 탭에서 수익률 0%, 옆 탭에서 3.5% 복리로 계산했다.
+
+   고객 앞에서 화면을 넘기다 숫자가 달라지면 그 자리에서 상담이 끝난다.
+   그래서 <b>가정값과 계산식을 여기 한 곳</b>에 둔다. 새로 만드는 화면은
+   반드시 이것을 쓴다.                                                   */
+var FIN_ASSUME={
+  inf:2.3,        /* 물가상승률 %/년 — 한국은행 중기 목표 2% 언저리 */
+  ret:5.0,        /* 일반 적립 기대수익률 %/년 */
+  retPen:4.0,     /* 개인연금 %/년 */
+  retRet:3.5,     /* 퇴직연금(DC·IRP) %/년 */
+  retUsd:3.5,     /* 달러 상품 %/년 */
+  retVa:6.0,      /* 변액 %/년 */
+  retDep:2.8,     /* 은행 예금 %/년 */
+  usdNow:1380,    /* 지금 환율 원/$ */
+  usdEnd:1450,    /* 만기 가정 환율 원/$ */
+  taxInt:15.4,    /* 이자·배당 소득세 % */
+  taxFreeYr:10,   /* 저축성보험 비과세 요건 연수 */
+  drawRate:4.0,   /* 은퇴 자산 인출률 %/년 */
+  law:'가정값은 상담용 참고치입니다. 실제 수익률·환율은 보장되지 않습니다.'
+};
+/* 한 화면에서 가정을 바꾸면 그 화면만 바뀐다 — 전체를 덮지 않는다 */
+function finA(k,over){
+  if(over&&over[k]!=null&&over[k]!=='')return +over[k];
+  return FIN_ASSUME[k];
+}
+
+/* ── 돈 계산 (이율은 <b>퍼센트</b>로 받는다. 0.04 가 아니라 4) ──
+   prFV 만 소수를 받아 백 배 사고가 났다. 여기서는 규약을 하나로 못 박는다. */
+function finFV(monthly,years,ratePct){
+  var m=+monthly||0,n=Math.round((+years||0)*12),r=(+ratePct||0)/100/12;
+  if(n<=0)return 0;
+  if(!r)return m*n;
+  return m*((Math.pow(1+r,n)-1)/r);
+}
+/* 목돈을 몇 년에 걸쳐 나눠 받을 때의 월 수령액 (수령 중에도 이자가 붙는다) */
+function finPMT(pv,years,ratePct){
+  var P=+pv||0,n=Math.round((+years||0)*12),r=(+ratePct||0)/100/12;
+  if(n<=0)return 0;
+  if(!r)return P/n;
+  return P*r/(1-Math.pow(1+r,-n));
+}
+/* 목표 목돈을 만들려면 매달 얼마 */
+function finNeed(target,years,ratePct){
+  var f=finFV(1,years,ratePct);
+  return f>0?(+target||0)/f:0;
+}
+/* 물가를 반영한 실질 수익률 — 30년짜리 계산에서 이걸 빼면 숫자가 거짓말이 된다 */
+function finReal(ratePct,infPct){
+  var r=(+ratePct||0)/100,i=(+infPct||0)/100;
+  return ((1+r)/(1+i)-1)*100;
+}
+/* 오늘의 100만원이 n년 뒤에는 얼마의 값어치인가 */
+function finToday(amount,years,infPct){
+  return (+amount||0)/Math.pow(1+(+infPct||0)/100,+years||0);
+}
+
+/* ── 상속·증여세 (상속세 및 증여세법) ──
+   세율표는 세 곳에 흩어져 있었다. 여기 하나만 둔다. */
+var FIN_TAX={
+  law:'상속세 및 증여세법 §26 세율 · §18~24 상속공제 · §53 증여재산공제 · §69 신고세액공제',
+  bands:[{upto:10000,rate:0.10,cut:0,t:'1억 이하'},
+         {upto:50000,rate:0.20,cut:1000,t:'1억~5억'},
+         {upto:100000,rate:0.30,cut:6000,t:'5억~10억'},
+         {upto:300000,rate:0.40,cut:16000,t:'10억~30억'},
+         {upto:Infinity,rate:0.50,cut:46000,t:'30억 초과'}],
+  lump:50000,        /* 일괄공제 5억 (§21) */
+  baseDed:20000,     /* 기초공제 2억 (§18) */
+  childDed:5000,     /* 자녀 1인 5천만 (§20) */
+  spouseMin:50000,   /* 배우자 최소 5억 (§19) */
+  spouseMax:300000,  /* 배우자 최대 30억 */
+  finRate:0.20,      /* 금융재산상속공제 20% (§22) */
+  finMax:20000,      /* 그 한도 2억 */
+  fileCut:0.03,      /* 신고세액공제 3% (§69) */
+  skipAdd:0.30,      /* 세대생략 할증 30% (§27) */
+  /* 증여재산공제 (§53) — 10년 합산 기준, 만원 */
+  gift:{spouse:60000,adult:5000,minor:2000,lineal:5000,kin:1000,wed:10000},
+  giftYears:10       /* 같은 사람에게 10년 안에 준 것은 합산한다 */
+};
+function finBand(base){
+  var b=FIN_TAX.bands,i;
+  for(i=0;i<b.length;i++)if(base<=b[i].upto)return b[i];
+  return b[b.length-1];
+}
+/* 과세표준(만원) → 산출세액(만원) */
+function finTaxOf(base){
+  var v=Math.max(0,+base||0),b=finBand(v);
+  return Math.max(0,Math.round(v*b.rate-b.cut));
+}
+/* 상속세 — 재산·부채·가족을 넣으면 공제까지 계산한다 (만원 단위)
+   o={estate,debt,fin,spouse,children,skip} */
+function finInherit(o){
+  o=o||{};
+  var estate=Math.max(0,+o.estate||0), debt=Math.max(0,+o.debt||0);
+  var net=Math.max(0,estate-debt);
+  var kids=Math.max(0,Math.round(+o.children||0));
+  /* 일괄공제 5억 과 (기초 2억 + 자녀 5천만×명) 중 <b>큰 쪽</b>을 쓴다 */
+  var personal=FIN_TAX.baseDed+kids*FIN_TAX.childDed;
+  var lump=Math.max(FIN_TAX.lump,personal);
+  var spouse=0;
+  if(o.spouse){
+    /* 법정상속분 한도 안에서 최소 5억, 최대 30억 */
+    var share=net*(1.5/(1.5+kids));
+    spouse=Math.min(FIN_TAX.spouseMax,Math.max(FIN_TAX.spouseMin,Math.round(share)));
+  }
+  var finDed=Math.min(FIN_TAX.finMax,Math.round(Math.max(0,+o.fin||0)*FIN_TAX.finRate));
+  var ded=lump+spouse+finDed;
+  var base=Math.max(0,net-ded);
+  var calc=finTaxOf(base);
+  if(o.skip)calc=Math.round(calc*(1+FIN_TAX.skipAdd));
+  var cut=Math.round(calc*FIN_TAX.fileCut);
+  return {net:net,lumpDed:lump,spouseDed:spouse,finDed:finDed,ded:ded,
+    base:base,calc:calc,fileCut:cut,tax:Math.max(0,calc-cut),
+    rate:finBand(base).rate,bandT:finBand(base).t};
+}
+/* 증여세 — 한 사람에게 한 번 줄 때 (만원 단위)
+   who: spouse|adult|minor|lineal|kin, wed:혼인·출산공제 사용 여부 */
+function finGiftTax(amount,who,wed,skip){
+  var amt=Math.max(0,+amount||0);
+  var ded=FIN_TAX.gift[who]||0;
+  if(wed&&(who==='adult'||who==='minor'))ded+=FIN_TAX.gift.wed;
+  var base=Math.max(0,amt-ded);
+  var calc=finTaxOf(base);
+  if(skip)calc=Math.round(calc*(1+FIN_TAX.skipAdd));
+  var cut=Math.round(calc*FIN_TAX.fileCut);
+  return {amount:amt,ded:ded,base:base,calc:calc,fileCut:cut,
+    tax:Math.max(0,calc-cut),rate:finBand(base).rate};
+}
+
+/* ════════════════ 부족액에서 바로 상담으로 ════════════════
+   계산기는 「월 OO만원 부족합니다」 까지만 말하고 끝났다. 고객은 거기서
+   「그래서 어떻게 하라고요」 를 묻는데 화면이 없었다. 그래서 부족액을
+   들고 갈 수 있는 세 갈래를 만든다 — 달러 · 증여상속 · 보험.        */
+var FIN_GAP={need:0,years:20,from:''};
+function finGapSet(needMan,years,from){
+  FIN_GAP={need:Math.max(0,Math.round(+needMan||0)),years:+years||20,from:from||''};
+  try{LS.set('apex_fin_gap',JSON.stringify(FIN_GAP));}catch(e){}
+}
+function finGapGet(){
+  try{var o=JSON.parse(LS.get('apex_fin_gap')||'null');if(o&&o.need)FIN_GAP=o;}catch(e){}
+  return FIN_GAP;
+}
+function finGapBar(){
+  var g=finGapGet();
+  if(!g.need)return '';
+  return '<div class="card" style="border-color:#FCA5A5;background:#FEF2F2"><div class="card-body">'+
+    '<div style="font-size:12.5px;font-weight:900;color:#991B1B">📌 이어서 상담 중 — '+
+    (g.from?osEsc(g.from)+'에서 넘어온 ':'')+'부족액 <b>월 '+prNum(g.need)+'만원</b>'+
+    (g.years?(' · '+g.years+'년'):'')+'</div>'+
+    '<div style="font-size:11.5px;color:#B91C1C;margin-top:3px;line-height:1.65">'+
+    '아래 계산에 이 금액이 미리 들어가 있습니다.</div></div></div>';
+}
+function finGapGo(tab){go(tab);}
+
+/* 화면 세 개가 같이 쓰는 조각들 */
+function finNum(id,label,val,unit,ph){
+  return '<div class="fld"><label>'+osEsc(label)+(unit?(' <span style="color:#94A3B8;font-weight:600">('+unit+')</span>'):'')+'</label>'+
+    '<input type="number" id="'+id+'" inputmode="decimal" value="'+(val===''||val==null?'':val)+'"'+
+    (ph?(' placeholder="'+osEsc(ph)+'"'):'')+'></div>';
+}
+function finV(id,def){
+  var e=document.getElementById(id);
+  if(!e)return def;
+  var v=(''+e.value).replace(/,/g,'').replace(/^\s+|\s+$/g,'');
+  return v===''?def:(+v||0);
+}
+/* 만원 단위를 사람이 읽는 말로 — 20억을 「200,000만원」 이라고 쓰면 아무도 못 읽는다 */
+function finWon(man){
+  var v=Math.round(+man||0),neg=v<0;v=Math.abs(v);
+  var out;
+  if(v>=10000){
+    var eok=Math.floor(v/10000),rest=v%10000;
+    out=prNum(eok)+'억'+(rest?(' '+prNum(rest)+'만'):'')+'원';
+  }else out=prNum(v)+'만원';
+  return (neg?'−':'')+out;
+}
+function finRow(l,v,note,strong){
+  return '<div style="display:flex;align-items:baseline;gap:10px;padding:8px 0;border-bottom:1px solid #EEF1F5">'+
+    '<div style="flex:1;min-width:0;font-size:13px;color:#42506A'+(strong?';font-weight:800;color:#0B1B34':'')+'">'+l+'</div>'+
+    '<div style="font-size:'+(strong?'16px;font-weight:900;color:#1D4ED8':'14px;font-weight:700;color:#0B1B34')+'">'+v+'</div>'+
+    (note?'<div style="font-size:11px;color:#94A3B8;white-space:nowrap">'+note+'</div>':'')+'</div>';
+}
+function finLaw(extra){
+  return '<div class="notice" style="margin-top:11px;line-height:1.75">⚖️ '+
+    (extra||'')+' 세액은 <b>개산치</b>입니다. 실제 신고·납부는 세무 전문가 확인이 필요합니다. '+
+    '보험은 상품 설명이 아닌 구조 이해를 위한 자료이며, 실제 보장은 약관이 정합니다. '+
+    '기존 계약을 해지하고 새로 드시면 보장이 줄거나 면책 기간이 다시 시작될 수 있습니다.</div>';
+}
+
+/* ════════════════ 💵 달러 플랜 ════════════════
+   기존 계산기의 달러 탭은 같은 입력에 두 개의 답을 냈다. 「계산·근거」 는
+   수익률 0%, 「발표 슬라이드」 는 연 3.5% 복리를 박아 두었다.
+   여기서는 <b>가정을 화면에 드러내고</b> 한 벌로만 계산한다.           */
+function renderFinUsd(){
+  if(!OS.profile)return osPage('플랜','달러 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  var g=finGapGet();
+  return osPage('플랜','💵 달러 플랜',
+    '원화로 내고 달러로 쌓습니다. 환율이 오르면 이득, 내리면 손해 — 그 폭까지 같이 봅니다.',
+    finGapBar()+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💵</span>얼마를 얼마나</div>'+
+    '<div class="card-desc">가정은 아래에 드러내 두었습니다. 바꾸면 결과가 바로 따라옵니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fu_pay','월 납입',g.need||100,'만원')+
+      finNum('fu_yrs','납입 기간',10,'년')+
+      finNum('fu_wait','납입 후 거치',10,'년')+
+      finNum('fu_rate','달러 상품 수익률',FIN_ASSUME.retUsd,'%/년')+
+      finNum('fu_now','지금 환율',FIN_ASSUME.usdNow,'원/$')+
+      finNum('fu_end','찾을 때 환율',FIN_ASSUME.usdEnd,'원/$')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finUsdCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_ins\')">🛡️ 보험 플랜으로</button></div>'+
+    '</div></div><div id="fuOut"></div>');
+}
+function finUsdCalc(){
+  var pay=finV('fu_pay',100),yrs=finV('fu_yrs',10),wait=finV('fu_wait',10);
+  var rate=finV('fu_rate',FIN_ASSUME.retUsd);
+  var now=finV('fu_now',FIN_ASSUME.usdNow),end=finV('fu_end',FIN_ASSUME.usdEnd);
+  var box=document.getElementById('fuOut');if(!box)return;
+  if(now<=0){box.innerHTML='<div class="notice">환율을 0 보다 크게 넣어 주세요.</div>';return;}
+
+  var paidMan=pay*yrs*12;                        /* 원화 총납입 (만원) */
+  var usdMon=(pay*10000)/now;                    /* 매달 사는 달러 */
+  var usdEnd=finFV(usdMon,yrs,rate)*Math.pow(1+rate/100,wait);
+  var wonMan=Math.round(usdEnd*end/10000);       /* 만기 원화 (만원) */
+  var gain=wonMan-paidMan;
+  /* 10년 이상이면 저축성보험 비과세 요건을 본다 (상품·한도 요건은 따로 확인) */
+  var tot=yrs+wait, free=tot>=FIN_ASSUME.taxFreeYr;
+  var tax=free?0:Math.round(Math.max(0,gain)*FIN_ASSUME.taxInt/100);
+
+  /* 환율만 바꿔 본다 — 이게 달러의 전부다 */
+  var scen=[{t:'많이 내리면',r:Math.round(now*0.88)},{t:'지금 그대로',r:now},
+            {t:'지금 수준 유지+',r:end},{t:'많이 오르면',r:Math.round(now*1.22)}];
+  var rows=scen.map(function(s){
+    var w=Math.round(usdEnd*s.r/10000);
+    var d=w-paidMan;
+    return '<tr><td style="padding:7px 8px;font-weight:700">'+s.t+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+prNum(s.r)+'원</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800">'+prNum(w)+'만원</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800;color:'+(d>=0?'#059669':'#DC2626')+'">'+
+      (d>=0?'+':'')+prNum(d)+'만원</td></tr>';
+  }).join('');
+
+  /* 같은 돈을 은행·변액에 넣으면 — 세후로 견준다 */
+  var cmp=[{t:'은행 예금',r:FIN_ASSUME.retDep,fx:0},{t:'변액',r:FIN_ASSUME.retVa,fx:0},
+           {t:'달러',r:rate,fx:1}];
+  var cmpRows=cmp.map(function(c){
+    var fv=finFV(pay,yrs,c.r)*Math.pow(1+c.r/100,wait);
+    if(c.fx)fv=wonMan;
+    var gn=fv-paidMan;
+    var t=(tot>=FIN_ASSUME.taxFreeYr)?0:Math.max(0,gn)*FIN_ASSUME.taxInt/100;
+    return '<tr><td style="padding:7px 8px;font-weight:700">'+c.t+'</td>'+
+      '<td style="padding:7px 8px;text-align:right">'+c.r+'%</td>'+
+      '<td style="padding:7px 8px;text-align:right;font-weight:800">'+prNum(Math.round(fv-t))+'만원</td></tr>';
+  }).join('');
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📊</span>결과</div></div>'+
+    '<div class="card-body">'+
+    finRow('원화로 낸 돈',prNum(paidMan)+'만원',(yrs*12)+'회')+
+    finRow('사 모은 달러','$'+prNum(Math.round(usdEnd)),'매달 $'+usdMon.toFixed(0))+
+    finRow('찾을 때 원화',prNum(wonMan)+'만원',prNum(end)+'원 기준',1)+
+    finRow('늘어난 돈',(gain>=0?'+':'')+prNum(gain)+'만원',
+      free?'10년 넘겨 세금 없음':'세금 '+prNum(tax)+'만원')+
+    finRow('오늘 돈 값어치로',prNum(Math.round(finToday(wonMan,tot,FIN_ASSUME.inf)))+'만원',
+      '물가 '+FIN_ASSUME.inf+'% 반영')+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💱</span>환율이 이렇게 바뀌면</div>'+
+    '<div class="card-desc">달러의 결과는 <b>환율이 거의 다 정합니다.</b> 좋은 쪽만 보여 드리지 않겠습니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:420px">'+
+    '<thead><tr style="background:#F8FAFC"><th style="padding:8px;text-align:left">그때 환율이</th>'+
+    '<th style="padding:8px;text-align:right">원/$</th><th style="padding:8px;text-align:right">받는 돈</th>'+
+    '<th style="padding:8px;text-align:right">손익</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚖️</span>같은 돈을 다른 데 넣으면 (세후)</div></div>'+
+    '<div class="card-body" style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;min-width:360px">'+
+    '<thead><tr style="background:#F8FAFC"><th style="padding:8px;text-align:left">어디에</th>'+
+    '<th style="padding:8px;text-align:right">가정 수익률</th><th style="padding:8px;text-align:right">'+tot+'년 뒤</th>'+
+    '</tr></thead><tbody>'+cmpRows+'</tbody></table>'+
+    finLaw('환율과 수익률은 <b>아무도 보장하지 못합니다.</b> 위 숫자는 넣으신 가정에 따른 계산일 뿐입니다.')+
+    '</div></div>';
+}
+
+/* ════════════════ 🎁 증여·상속 플랜 ════════════════
+   상속세는 <b>현금으로, 6개월 안에</b> 내야 한다. 재산이 부동산이면
+   그 자리에서 팔아야 하고, 급매는 제값을 못 받는다.
+   그래서 「지금 그대로 두면 얼마」 와 「나눠서 미리 주면 얼마」 를 견준다. */
+var FIN_WHO=[{k:'adult',t:'성년 자녀',d:'5,000만원'},{k:'minor',t:'미성년 자녀',d:'2,000만원'},
+             {k:'spouse',t:'배우자',d:'6억원'},{k:'lineal',t:'부모(직계존속)',d:'5,000만원'},
+             {k:'kin',t:'그 밖 친족',d:'1,000만원'}];
+function renderFinGift(){
+  if(!OS.profile)return osPage('플랜','증여·상속 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  return osPage('플랜','🎁 증여 · 상속 플랜',
+    '지금 그대로 물려주면 세금이 얼마인지, 10년 단위로 나눠 미리 주면 얼마나 줄어드는지 견줍니다.',
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🏠</span>재산과 가족</div>'+
+    '<div class="card-desc">억 단위로 넣으셔도 됩니다 — <b>만원</b> 기준으로 계산합니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fg_est','총 재산',20,'억원')+
+      finNum('fg_debt','빚 · 장례비',2,'억원')+
+      finNum('fg_fin','그중 금융재산',5,'억원')+
+      finNum('fg_kid','자녀 수','2','명')+
+      '<div class="fld"><label>배우자</label><select id="fg_sp"><option value="1">있음</option><option value="0">없음</option></select></div>'+
+      finNum('fg_yrs','앞으로 남은 기간','20','년')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finGiftCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_ins\')">🛡️ 낼 돈은 어떻게 — 보험 플랜</button></div>'+
+    '</div></div><div id="fgOut"></div>');
+}
+function finGiftCalc(){
+  var est=finV('fg_est',20)*10000, debt=finV('fg_debt',0)*10000, fin=finV('fg_fin',0)*10000;
+  var kid=Math.max(0,Math.round(finV('fg_kid',2)));
+  var sp=(document.getElementById('fg_sp')||{value:'1'}).value==='1';
+  var yrs=Math.max(0,finV('fg_yrs',20));
+  var box=document.getElementById('fgOut');if(!box)return;
+
+  var A=finInherit({estate:est,debt:debt,fin:fin,spouse:sp,children:kid});
+
+  /* 10년마다 자녀에게 공제 한도만큼 미리 준다 — 공제 안이라 증여세 0 */
+  var rounds=Math.max(0,Math.floor(yrs/FIN_TAX.giftYears));
+  var perKid=FIN_TAX.gift.adult;                      /* 성년 자녀 5,000만 */
+  var moved=rounds*kid*perKid;
+  var B=finInherit({estate:Math.max(0,est-moved),debt:debt,
+    fin:Math.max(0,fin-moved),spouse:sp,children:kid});
+  var saved=A.tax-B.tax;
+
+  /* 공제를 넘겨 더 크게 주면 — 증여세를 내더라도 이득인가 */
+  var big=Math.max(0,Math.round((est-debt)*0.15));    /* 순재산의 15% 를 한 번에 */
+  var G=finGiftTax(big,'adult',false,false);
+  var C=finInherit({estate:Math.max(0,est-big),debt:debt,fin:fin,spouse:sp,children:kid});
+  var netC=C.tax+G.tax;
+
+  var wonRow=function(l,v,n,s){return finRow(l,finWon(v),n,s);};
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📜</span>지금 그대로 물려주면</div>'+
+    '<div class="card-desc">'+FIN_TAX.law+'</div></div><div class="card-body">'+
+    wonRow('순 재산 (재산 − 빚)',A.net)+
+    wonRow('일괄공제',A.lumpDed,'기초 2억+자녀 5천만 과 5억 중 큰 쪽')+
+    (A.spouseDed?wonRow('배우자상속공제',A.spouseDed,'법정상속분 한도 · 5억~30억'):'')+
+    (A.finDed?wonRow('금융재산상속공제',A.finDed,'금융재산의 20% · 최대 2억'):'')+
+    wonRow('과세표준',A.base,A.bandT+' → '+Math.round(A.rate*100)+'%')+
+    wonRow('신고세액공제',-A.fileCut,'3%')+
+    finRow('<b>낼 상속세</b>','<b>'+finWon(A.tax)+'</b>','',1)+
+    '<div class="notice" style="margin-top:10px">이 돈은 <b>상속 개시일이 속한 달의 말일부터 6개월 안에 현금으로</b> 내야 합니다. '+
+    '재산이 부동산뿐이면 그 자리에서 팔아야 하고, 급하게 팔면 제값을 못 받습니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card" style="border-color:#BBF7D0"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🎁</span>10년마다 나눠 미리 주면 '+
+    (saved>0?'<span class="badge green">'+finWon(saved)+' 덜 냄</span>':'')+'</div>'+
+    '<div class="card-desc">성년 자녀 1인당 <b>10년에 5,000만원</b>까지는 증여세가 없습니다 (상증세법 §53). '+
+    '남은 '+yrs+'년이면 <b>'+rounds+'번</b> 줄 수 있습니다.</div></div><div class="card-body">'+
+    finRow('미리 옮기는 재산',finWon(moved),rounds+'회 × 자녀 '+kid+'명 × 5,000만')+
+    finRow('그때 낼 증여세','0원','공제 안이라')+
+    finRow('줄어든 상속세',finWon(A.tax)+' → '+finWon(B.tax),'')+
+    finRow('<b>덜 내는 세금</b>','<b>'+finWon(Math.max(0,saved))+'</b>','',1)+
+    (rounds===0?'<div class="notice" style="margin-top:9px">남은 기간이 10년이 안 되면 이 방법은 못 씁니다. '+
+      '아래 「한 번에 크게」 나 보험 플랜을 보십시오.</div>':'')+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚖️</span>한 번에 크게 주면 (증여세를 내더라도)</div>'+
+    '<div class="card-desc">순재산의 15% 인 <b>'+finWon(big)+'</b>을 성년 자녀에게 한 번에 준 경우입니다.</div></div>'+
+    '<div class="card-body">'+
+    finRow('증여세',finWon(G.tax),'공제 '+prNum(G.ded)+'만 뺀 뒤 '+Math.round(G.rate*100)+'%')+
+    finRow('남은 재산의 상속세',finWon(C.tax),'')+
+    finRow('<b>합계</b>','<b>'+finWon(netC)+'</b>',
+      (netC<A.tax?('그대로 두는 것보다 '+finWon(A.tax-netC)+' 적음'):'그대로 두는 편이 낫습니다'),1)+
+    '<div class="notice" style="margin-top:10px">⚠️ <b>상속인에게 준 재산은 10년, 상속인이 아닌 사람에게 준 것은 5년</b> 안에 '+
+    '상속이 일어나면 상속재산에 다시 더해집니다 (상증세법 §13). 그래서 <b>일찍 시작할수록</b> 유리합니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📋</span>누구에게 얼마까지 세금 없이 (10년 기준)</div></div>'+
+    '<div class="card-body">'+
+    FIN_WHO.map(function(w){return finRow(w.t,w.d,'');}).join('')+
+    finRow('혼인 · 출산 때 더','1억원','자녀 혼인신고 전후 2년·출산 2년 안 (§53의2)')+
+    finLaw('세대를 건너뛰어 손자녀에게 주면 <b>30% 가 더 붙습니다</b> (§27).')+
+    '</div></div>';
+}
+
+/* ════════════════ 🛡️ 보험 플랜 ════════════════
+   상속세는 현금으로 낸다. 그런데 자산가의 재산은 대개 부동산이다.
+   사망보험금은 <b>그 자리에서 현금으로</b> 나온다. 그래서 세금 낼 돈이 된다.
+   계약을 어떻게 짜느냐에 따라 그 보험금이 상속재산에 들어가기도, 안 들어가기도 한다. */
+function renderFinIns(){
+  if(!OS.profile)return osPage('플랜','보험 플랜','',osLoginGate('로그인 후 이용할 수 있습니다.'));
+  return osPage('플랜','🛡️ 보험으로 푸는 플랜',
+    '상속세 낼 돈을 어떻게 만드는지, 계약을 어떻게 짜야 그 돈이 세금에 안 물리는지 봅니다.',
+    finGapBar()+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🧮</span>얼마가 필요한가</div>'+
+    '<div class="card-desc">증여·상속 플랜에서 나온 세액을 그대로 넣으시면 됩니다.</div></div>'+
+    '<div class="card-body"><div class="frm cols2">'+
+      finNum('fi_tax','낼 상속세',7344,'만원')+
+      finNum('fi_age','지금 나이','55','세')+
+      finNum('fi_pay','낼 수 있는 월 보험료',80,'만원')+
+      finNum('fi_rate','적립 수익률',FIN_ASSUME.retPen,'%/년')+
+    '</div>'+
+    '<div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="finInsCalc()">계산</button>'+
+    '<button class="btn btn-ghost" onclick="finGapGo(\'fin_gift\')">🎁 증여·상속 플랜으로</button></div>'+
+    '</div></div><div id="fiOut"></div>');
+}
+function finInsCalc(){
+  var tax=finV('fi_tax',7344),age=finV('fi_age',55);
+  var pay=finV('fi_pay',80),rate=finV('fi_rate',FIN_ASSUME.retPen);
+  var box=document.getElementById('fiOut');if(!box)return;
+  var yrs=Math.max(1,Math.round(85-age));          /* 기대여명까지 대략 */
+
+  /* 저축·투자로 같은 돈을 만들려면 매달 얼마 */
+  var needSave=finNeed(tax,yrs,rate);
+  /* 연부연납 — 세금을 나눠 내는 길 (상증세법 §71). 이자가 붙는다 */
+  var yr5=Math.round(tax/6), yr10=Math.round(tax/11);
+  var int5=Math.round(tax*0.032*2.5), int10=Math.round(tax*0.032*5);
+
+  box.innerHTML=
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💰</span>세금 낼 돈을 만드는 세 갈래</div></div>'+
+    '<div class="card-body">'+
+    finRow('① 지금부터 모아서',prNum(Math.round(needSave))+'만원/월',
+      yrs+'년간 · '+rate+'% 가정 · 총 '+prNum(Math.round(needSave*yrs*12))+'만원')+
+    finRow('② 종신보험으로',prNum(Math.round(pay))+'만원/월',
+      '사망보험금 '+prNum(tax)+'만원 목표 — 실제 보험료는 나이·건강·회사마다 다릅니다')+
+    finRow('③ 그때 부동산을 판다','제값 못 받음','6개월 안에 현금이 필요해 급매가 됩니다')+
+    '<div class="notice" style="margin-top:10px">①은 <b>다 모으기 전에 돌아가시면 그만큼만</b> 남습니다. '+
+    '②는 <b>첫 달에 돌아가셔도 전액</b>이 나옵니다. 그 차이가 보험을 쓰는 이유입니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card" style="border-color:#BFDBFE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📐</span>계약을 어떻게 짜느냐로 갈립니다</div>'+
+    '<div class="card-desc">같은 보험금인데 <b>세금이 붙기도 하고 안 붙기도 합니다.</b></div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">계약자 (돈 내는 사람)</th><th style="padding:8px;text-align:left">피보험자</th>'+
+    '<th style="padding:8px;text-align:left">수익자</th><th style="padding:8px;text-align:left">보험금에 붙는 세금</th></tr></thead><tbody>'+
+    '<tr><td style="padding:8px">아버지</td><td style="padding:8px">아버지</td><td style="padding:8px">자녀</td>'+
+    '<td style="padding:8px;color:#DC2626;font-weight:800">상속세 ○ — 상속재산에 들어갑니다</td></tr>'+
+    '<tr style="background:#F0FDF4"><td style="padding:8px"><b>자녀</b></td><td style="padding:8px">아버지</td><td style="padding:8px"><b>자녀</b></td>'+
+    '<td style="padding:8px;color:#059669;font-weight:800">상속세 × — 자녀 돈으로 낸 보험이므로</td></tr>'+
+    '<tr><td style="padding:8px">자녀 (아버지가 대신 냄)</td><td style="padding:8px">아버지</td><td style="padding:8px">자녀</td>'+
+    '<td style="padding:8px;color:#D97706;font-weight:800">낸 보험료 비율만큼 상속세 ○</td></tr>'+
+    '</tbody></table>'+
+    '<div class="notice" style="margin-top:11px">두 번째 줄이 되려면 <b>자녀에게 실제 소득이 있고, 그 돈으로 냈다는 증빙</b>이 있어야 합니다 '+
+    '(상증세법 §8, 통장 이체 기록·소득 자료). 아버지가 보험료를 대신 내주면 그 보험료 자체가 증여가 됩니다.</div>'+
+    '</div></div>'+
+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗓️</span>그래도 목돈이 없다면 — 나눠 내기 (연부연납)</div>'+
+    '<div class="card-desc">상속세가 2,000만원을 넘으면 나눠 낼 수 있습니다 (상증세법 §71). 담보를 맡겨야 합니다.</div></div>'+
+    '<div class="card-body">'+
+    finRow('한 번에',prNum(tax)+'만원','6개월 안에 현금')+
+    finRow('5년에 걸쳐',prNum(yr5)+'만원/년','이자 대략 '+prNum(int5)+'만원')+
+    finRow('10년에 걸쳐',prNum(yr10)+'만원/년','이자 대략 '+prNum(int10)+'만원')+
+    '<div class="notice" style="margin-top:10px">나눠 내면 <b>이자가 붙습니다.</b> 가산금 이율은 해마다 바뀌므로 '+
+    '위 이자는 대략치입니다. 담보 제공도 필요합니다.</div>'+
+    finLaw('')+
+    '</div></div>';
+}
+
 function renderCalcPage(){
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">TOOLS</div>'+
     '<div class="page-title">실무 계산기</div><div class="page-desc">상담 현장에서 바로 쓰는 계산기입니다. API 키 없이 즉시 동작합니다.</div></div>'+
@@ -33016,8 +33483,19 @@ function osFinOpen(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;var inputs=(x.con
 function osFinAskSave(){var f=$('finFrame');if(!f||!f.contentWindow){toast('계산기가 아직 로드되지 않았습니다');return;}try{f.contentWindow.postMessage({type:'apexFinCollect'},'*');}catch(e){toast('저장 요청 실패');}}
 window.addEventListener('message',function(e){
   var d=e&&e.data;if(!d||d.type!=='apexFinSave')return;
+  /* 계산기는 srcdoc 이라 주소로 가리기 어렵다. 대신 <b>우리가 띄운 그 틀에서 온 것</b>만 받는다.
+     예전에는 아무 창이나 이 쪽지를 보내면 고객 파일에 글이 저장됐다. */
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
   if(!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
   osRepSaveToClient('finance',(d.title||'재무설계 스냅샷'),(d.md?{html:d.md,inputs:(d.inputs||{})}:{inputs:(d.inputs||{})}));
+  /* 계산기가 말한 부족액을 들고 세 플랜으로 넘어갈 수 있게 적어 둔다.
+     계산기의 정의를 그대로 쓴다 — 목표 월 생활비 − 받게 될 연금. */
+  try{
+    var I=d.inputs||{};
+    var want=+I.s_target||0, have=+I.s_pension||0;
+    if(want>0&&want>have)finGapSet(want-have,(+I.s_rage||65)-(+I.s_age||40),'재무설계 계산기');
+  }catch(_e){}
 });
 
 /* ════════ 고객 365일 — 밀접하게 관리하기 ════════
