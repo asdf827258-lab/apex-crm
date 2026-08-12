@@ -1588,9 +1588,22 @@ var ADV_FIELDS=[
   {k:'years', t:'경력(년)',   ph:'12'},
   {k:'phone', t:'연락처',     ph:'010-0000-0000'},
   {k:'email', t:'이메일·카톡ID',ph:'선택'},
-  {k:'motto', t:'한 줄 소개',  ph:'보험을 파는 설계사가 아닌, 삶을 설계하는 설계사', span:true},
-  {k:'tags',  t:'전문 분야',   ph:'보장분석, 은퇴·연금설계, 상속·증여', span:true},
-  {k:'bio',   t:'경력·자격 (줄바꿈으로 여러 줄)', ph:'MDRT 3년 연속\nAFPK 보유', span:true, area:true}
+  {k:'motto', t:'한 줄 소개 (표지 따옴표 안에 들어갑니다)', ph:'한 사람의 인생에 꼭 맞는 보장을 설계합니다', span:true},
+  {k:'tags',  t:'전문 분야 (쉼표로 나눔 · 표지 알약)', ph:'운전자보험, 종신·정기보험, 보장분석, 은퇴·연금설계', span:true},
+  {k:'bio',   t:'경력·자격 (줄바꿈으로 여러 줄)', ph:'MDRT 3년 연속\nAFPK 보유', span:true, area:true},
+  /* ── 여기부터는 표지(STARRING) 에만 쓰입니다 ── */
+  {k:'nameEn',  t:'이름 영문 (표지 큰 이름 아래)', ph:'YOON SI HYEON', cover:true},
+  {k:'issue',   t:'표지 번호',      ph:'No.07 / 08', cover:true},
+  {k:'license', t:'보유 자격 (LICENSE)', ph:'생명·손해·변액', cover:true},
+  {k:'career',  t:'경력 한 줄 (CAREER)', ph:'상담 1,200+ · 8년', cover:true},
+  {k:'onair',   t:'방송 출연 (ON AIR · 줄바꿈으로 여러 줄)', ph:'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」', span:true, area:true, cover:true},
+  {k:'team',    t:'팀 이름 (표지 왼쪽 아래)', ph:'TEAM ONTOP · INSURANCE PROFESSIONALS', span:true, cover:true}
+];
+/* 표지에 쓰는 사진 세 장 — 본인 사진 하나와 방송 화면 둘 */
+var ADV_PHOTOS=[
+  {k:'photo',  t:'표지 인물 사진', d:'왼쪽 전체를 채웁니다. 세로로 긴 사진이 좋습니다.'},
+  {k:'photo2', t:'방송 화면 ①',   d:'표지 오른쪽 아래 ON AIR 첫 칸'},
+  {k:'photo3', t:'방송 화면 ②',   d:'표지 오른쪽 아래 ON AIR 둘째 칸'}
 ];
 function advKey(){
   var u=(OS.profile&&OS.profile.id)||'guest';
@@ -1611,38 +1624,51 @@ function advSave(){
     f=ADV_FIELDS[i];
     o[f.k]=(osVal('adv_'+f.k)||'').replace(/^\s+|\s+$/g,'');
   }
-  if(window.__advPhoto!==undefined)o.photo=window.__advPhoto;
+  for(i=0;i<ADV_PHOTOS.length;i++){
+    var pk=ADV_PHOTOS[i].k;
+    if(window.__advPhoto&&window.__advPhoto[pk]!==undefined)o[pk]=window.__advPhoto[pk];
+  }
   advSet(o);
   advPush();
   toast('내 소개를 저장했습니다 — 상담자료 맨 앞에 이대로 나옵니다');
   if(typeof lastTab!=='undefined'&&lastTab==='settings')go('settings');
 }
-function advPhotoPick(input){
+function advPhotoPick(input,k){
   var f=input&&input.files&&input.files[0];
   if(!f)return;
-  if(f.size>8*1024*1024){toast('8MB 이하 사진을 골라 주세요');return;}
+  if(f.size>10*1024*1024){toast('10MB 이하 사진을 골라 주세요');return;}
   var rd=new FileReader();
   rd.onload=function(e){
     var img=new Image();
     img.onload=function(){
-      /* 큰 사진을 그대로 넣으면 저장칸이 넘친다 — 줄여서 담는다 */
-      var max=280,w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
+      /* 큰 사진을 그대로 넣으면 저장칸이 넘친다 — 줄여서 담는다.
+         표지 인물 사진은 화면 절반을 채우므로 더 크게 남긴다. */
+      var max=(k==='photo')?900:520;
+      var w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
       var cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
       var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
       cv.getContext('2d').drawImage(img,0,0,cw,ch);
-      window.__advPhoto=cv.toDataURL('image/jpeg',0.82);
-      var box=document.getElementById('advPhotoPrev');
-      if(box)box.innerHTML='<img src="'+window.__advPhoto+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">';
+      window.__advPhoto=window.__advPhoto||{};
+      window.__advPhoto[k]=cv.toDataURL('image/jpeg',0.84);
+      advPhotoPaint(k,window.__advPhoto[k]);
       toast('사진을 올렸습니다 — 저장을 눌러 주세요');
     };
     img.src=''+e.target.result;
   };
   rd.readAsDataURL(f);
 }
-function advPhotoClear(){
-  window.__advPhoto='';
-  var box=document.getElementById('advPhotoPrev');
-  if(box)box.innerHTML='<span style="font-size:11px;color:#94A3B8">사진 없음</span>';
+function advPhotoPaint(k,src){
+  var box=document.getElementById('advPhotoPrev_'+k);
+  if(!box)return;
+  box.innerHTML=src
+    ?'<img src="'+src+'" style="width:100%;height:88px;border-radius:9px;object-fit:cover;border:1px solid #E5E9F0;display:block">'
+    :'<div style="height:88px;border:1px dashed #CBD5E1;border-radius:9px;display:flex;align-items:center;'+
+     'justify-content:center;font-size:11px;color:#94A3B8">아직 없음</div>';
+}
+function advPhotoClear(k){
+  window.__advPhoto=window.__advPhoto||{};
+  window.__advPhoto[k]='';
+  advPhotoPaint(k,'');
   toast('사진을 지웠습니다 — 저장을 눌러 주세요');
 }
 function advCardHtml(){
@@ -1662,21 +1688,37 @@ function advCardHtml(){
     '<div class="card-desc"><b>보장분석 상담자료</b>와 <b>재무설계 상담자료</b>의 첫 장에 이 내용이 들어갑니다. '+
     '<b>'+osEsc(who)+'</b>님 계정에만 저장되므로, 같은 컴퓨터를 다른 팀원이 써도 서로 덮어쓰지 않습니다.</div></div>'+
     '<div class="card-body">'+
-    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">'+
-      '<div id="advPhotoPrev">'+(o.photo
-        ? '<img src="'+o.photo+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #E5E9F0">'
-        : '<span style="font-size:11px;color:#94A3B8">사진 없음</span>')+'</div>'+
-      '<div><input type="file" id="advPhotoFile" accept="image/*" style="display:none" onchange="advPhotoPick(this)">'+
-      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="document.getElementById(\'advPhotoFile\').click()">📷 사진 올리기</button> '+
-      '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="advPhotoClear()">지우기</button></div>'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px;margin-bottom:14px">'+
+      ADV_PHOTOS.map(function(P){
+        var src=o[P.k]||'';
+        return '<div>'+
+          '<div style="font-size:11.5px;font-weight:800;color:#334155;margin-bottom:5px">'+osEsc(P.t)+'</div>'+
+          '<div id="advPhotoPrev_'+P.k+'">'+(src
+            ? '<img src="'+src+'" style="width:100%;height:88px;border-radius:9px;object-fit:cover;border:1px solid #E5E9F0;display:block">'
+            : '<div style="height:88px;border:1px dashed #CBD5E1;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#94A3B8">아직 없음</div>')+'</div>'+
+          '<input type="file" id="advPhotoFile_'+P.k+'" accept="image/*" style="display:none" onchange="advPhotoPick(this,\''+P.k+'\')">'+
+          '<div class="btn-row" style="margin-top:6px">'+
+            '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="document.getElementById(\'advPhotoFile_'+P.k+'\').click()">📷 올리기</button>'+
+            '<button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="advPhotoClear(\''+P.k+'\')">지우기</button>'+
+          '</div>'+
+          '<div style="font-size:10.5px;color:#94A3B8;margin-top:4px;line-height:1.5">'+osEsc(P.d)+'</div>'+
+        '</div>';
+      }).join('')+
     '</div>'+
-    '<div class="frm">'+ADV_FIELDS.map(fld).join('')+'</div>'+
+    '<div class="frm">'+ADV_FIELDS.filter(function(f){return !f.cover;}).map(fld).join('')+'</div>'+
+    '<div style="margin:15px 0 8px;padding-top:13px;border-top:1px solid #E5E9F0">'+
+      '<div style="font-size:12.5px;font-weight:900;color:#0B1B34">🎬 표지에만 나오는 것</div>'+
+      '<div style="font-size:11.5px;color:#64748B;line-height:1.65;margin-top:3px">'+
+      '비워 두시면 그 줄은 표지에서 <b>안 나옵니다.</b> 이름을 채우셔야 새 표지가 뜹니다.</div>'+
+    '</div>'+
+    '<div class="frm">'+ADV_FIELDS.filter(function(f){return f.cover;}).map(fld).join('')+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
       '<button class="btn btn-primary" onclick="advSave()">저장</button>'+
       '<button class="btn btn-ghost" onclick="go(\'sangdam\')">📋 보장분석 상담자료에서 보기</button>'+
     '</div>'+
     '<div class="acad-note" style="margin-top:10px">이 값은 <b>이 기기의 내 계정 칸</b>에 저장됩니다. '+
-    '다른 컴퓨터에서 처음 열면 한 번 더 채워 주셔야 합니다.</div>'+
+    '다른 컴퓨터에서 처음 열면 한 번 더 채워 주셔야 합니다. '+
+    '고객 실명·전화는 여기 넣지 마십시오 — 이 칸은 <b>설계사 소개용</b>입니다.</div>'+
   '</div></div>';
 }
 
@@ -8584,8 +8626,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 03:05';
-var APP_BUILD_NOTE='상담자료 보험 내용을 크고 진하게 고쳤습니다 (10~13px → 13~15px · 「글씨 크게」 한 단계 더) · 표지 사진과 이름을 키웠습니다 · 「결과 보고서」 에서 8통장 진단으로 바로 넘어갑니다';
+var APP_BUILD='2026-08-13 04:20';
+var APP_BUILD_NOTE='상담자료 표지를 STARRING 판으로 새로 지었습니다 — 설정 → 내 소개에 사진 3장과 자격·방송·경력을 넣으면 그대로 들어갑니다 · 보험 내용은 크고 진하게 · 「결과 보고서」 에서 8통장으로 바로';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14382,6 +14424,16 @@ window.addEventListener('message',function(ev){
   /* 상담자료의 「결과 보고서」 를 누르면 상담자료가 알려 준다.
      보고서에서 끝내지 않고 이 고객의 숫자로 넘어가시라고 길을 놓는다. */
   if(m.t==='apex:next'){prFromSangdam(m.k);return;}
+  /* 표지의 「내 소개 고치기」 — 값을 넣는 곳은 설정 한 곳뿐이다 */
+  if(m.t==='apex:editintro'){
+    go('settings');
+    setTimeout(function(){
+      var el=document.getElementById('adv_name');
+      if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});
+      toast('여기서 고치시면 상담자료 표지에 바로 들어갑니다');
+    },420);
+    return;
+  }
 },false);
 /* 상담자료 → 제안서로 넘어간다.
    「한 장으로」 는 8통장부터 근거까지 한 줄로 이어져 있으므로,

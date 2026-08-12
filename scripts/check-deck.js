@@ -274,24 +274,73 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   is(BIG.after > BIG.before, '「글씨 크게」 를 누르면 커진다 (' + BIG.before + ' → ' + BIG.after + 'px)');
   is(BIG.back === BIG.before, '다시 누르면 돌아온다');
 
-  /* ═══ 9. 표지 ═══ */
-  console.log('\n[9] 표지 — 사진과 이름이 사람으로 보이는가');
+  /* ═══ 9. 표지 (STARRING) ═══
+     원래 표지는 흰 바탕에 작은 동그란 사진 하나였다. 처음 만나는 자리에서
+     사람이 안 남는다. 왼쪽 인물 사진 · 오른쪽 이름과 이력의 검은 표지를
+     그 자리에 새로 짓는다. 값은 전부 「내 소개」 에서 온다. */
+  console.log('\n[9] 표지 — 넣은 값이 그대로 표지가 되는가');
   const CV = await fr.evaluate(() => {
-    window.postMessage({ t: 'apex:intro', data: { name: '홍보험', title: '지점장', org: '온탑2지점' } }, location.origin);
+    window.postMessage({ t: 'apex:intro', data: {
+      name: '홍보험', nameEn: 'HONG BO HEOM', title: '보장분석 전문가',
+      org: '온탑2지점', issue: 'No.03 / 08',
+      motto: '한 사람의 인생에 꼭 맞는 보장을 설계합니다.',
+      license: '생명·손해·변액', career: '상담 900+ · 7년',
+      onair: 'NBN 「보험 불만제로」\nMBC 「경제 한 조각」',
+      tags: '운전자보험, 종신·정기보험, 보장분석',
+      team: 'TEAM ONTOP · INSURANCE PROFESSIONALS'
+    } }, location.origin);
     return new Promise(r => setTimeout(() => {
-      const p = document.querySelector('#s1 .s1-hero-photo'), n = document.querySelector('#s1 .s1-hero-name');
+      const g = s => { const e = document.querySelector(s); return e ? e.textContent.trim() : ''; };
+      const nm = document.querySelector('.as-name');
+      const hero = document.querySelector('#s1 .s1-hero');
       r({
-        photo: p ? Math.round(p.getBoundingClientRect().width) : 0,
-        name: n ? Math.round(parseFloat(getComputedStyle(n).fontSize)) : 0,
-        who: n ? n.textContent.trim() : '',
-        title: (document.querySelector('#s1 .s1-hero-title') || {}).textContent || ''
+        built: !!document.querySelector('.apex-star-wrap'),
+        name: g('.as-name'), size: nm ? Math.round(parseFloat(getComputedStyle(nm).fontSize)) : 0,
+        en: g('.as-en'), role: g('.as-role'), issue: g('.as-issue'), quote: g('.as-quote'),
+        facts: [].slice.call(document.querySelectorAll('.as-fact'))
+          .map(e => e.querySelector('.as-fl').textContent),
+        onair: (document.querySelector('.as-fact:nth-child(2) .as-fv') || {}).innerHTML || '',
+        chips: document.querySelectorAll('.as-chip').length,
+        shots: document.querySelectorAll('.as-shot').length,
+        vert: g('.as-vert'), team: g('.as-team'),
+        /* 원래 표지가 가려졌는가 — 두 개가 겹쳐 보이면 안 된다 */
+        heroHidden: hero ? (hero.offsetParent === null) : true,
+        photoW: Math.round((document.querySelector('.as-photo') || { getBoundingClientRect: () => ({ width: 0 }) })
+          .getBoundingClientRect().width)
       });
-    }, 420));
+    }, 520));
   });
-  is(CV.photo >= 170, '사진이 ' + CV.photo + 'px 로 커졌다 (원래 106px)');
-  is(CV.name >= 38, '이름이 ' + CV.name + 'px 로 커졌다 (원래 30px)');
-  is(CV.who === '홍보험', '표지 이름이 「내 소개」 를 따른다 (' + CV.who + ')');
-  is(/지점장/.test(CV.title) && /온탑2지점/.test(CV.title), '직함·소속도 따라 바뀐다 — ' + CV.title.trim());
+  is(CV.built, 'STARRING 표지가 지어진다');
+  is(CV.name === '홍보험' && CV.size >= 50, '이름이 ' + CV.size + 'px 로 크게 선다 (' + CV.name + ')');
+  is(CV.en === 'HONG BO HEOM', '영문 이름이 들어간다');
+  is(/보장분석 전문가/.test(CV.role), '직함이 들어간다');
+  is(/No\.03/.test(CV.issue), '표지 번호가 들어간다');
+  is(/인생에 꼭 맞는/.test(CV.quote), '한 줄 소개가 따옴표 안에 들어간다');
+  is(CV.facts.join(',') === 'LICENSE,ON AIR,CAREER',
+    '자격 · 방송 · 경력 세 칸이 선다 (' + CV.facts.join(' / ') + ')');
+  is(/보험 불만제로/.test(CV.onair) && /경제 한 조각/.test(CV.onair), '방송이 줄마다 나뉜다');
+  is(CV.chips === 3, '전문 분야가 알약 ' + CV.chips + '개로 나뉜다');
+  is(CV.shots === 2, '방송 화면 ' + CV.shots + '컷이 붙는다');
+  is(/NBN/.test(CV.vert) && /MBC/.test(CV.vert), '왼쪽 세로에 방송사가 뽑힌다 — ' + CV.vert);
+  is(/TEAM ONTOP/.test(CV.team), '팀 이름이 왼쪽 아래에 놓인다');
+  is(CV.heroHidden, '원래 표지는 가려진다 — 두 개가 겹쳐 보이지 않는다');
+  is(CV.photoW > 300, '인물 사진이 왼쪽 ' + CV.photoW + 'px 를 채운다');
+
+  /* 이름이 없으면 새 표지를 짓지 않는다 — 빈 표지보다 원래 것이 낫다 */
+  const CV0 = await fr.evaluate(() => {
+    window.postMessage({ t: 'apex:intro', data: { name: '' } }, location.origin);
+    return new Promise(r => setTimeout(() => r({
+      built: !!document.querySelector('.apex-star-wrap'),
+      star: document.getElementById('s1').classList.contains('apex-star')
+    }), 420));
+  });
+  is(CV0.built && CV0.star, '이름을 지워도 앞서 넣은 값이 남아 표지는 유지된다');
+
+  /* 앱에 그 값을 넣는 자리가 있는가 */
+  ['nameEn', 'license', 'onair', 'career', 'issue', 'team']
+    .forEach(k => is(new RegExp("k:'" + k + "'").test(app), '설정에 ' + k + ' 칸이 있다'));
+  is(/ADV_PHOTOS/.test(app) && /photo3/.test(app), '사진 세 칸(본인 · 방송 ①②)을 올릴 수 있다');
+  is(/apex:editintro/.test(app), '표지의 「내 소개 고치기」 가 설정으로 데려간다');
 
   /* ═══ 10. 결과 보고서 다음으로 ═══
      보고서에서 끝내지 않고 이 고객의 숫자(8통장)로 넘어가야 상담이 이어진다. */

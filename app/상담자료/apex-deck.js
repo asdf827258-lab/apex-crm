@@ -26,7 +26,12 @@
        ② s6_profile     — 메인 상담자료가 예전부터 쓰던 칸
        ③ apex_profile   — 재무설계 상담자료가 쓰던 칸
      ②③ 은 이 파일이 iframe 밖에서 혼자 열렸을 때를 위한 대비다. */
-  var INTRO = { name: '', title: '', org: '', years: '', phone: '', email: '', motto: '', tags: '', bio: '' };
+  var INTRO = {
+    name: '', title: '', org: '', years: '', phone: '', email: '', motto: '', tags: '', bio: '',
+    /* 표지(STARRING)에만 쓰는 값들 */
+    nameEn: '', license: '', onair: '', career: '', issue: '', team: '',
+    photo: '', photo2: '', photo3: ''
+  };
 
   function readLocal() {
     var got = {}, i, k, raw, o;
@@ -201,7 +206,7 @@
      앱이 「내 소개」를 보내면 받아서 다시 칠한다. 어디서 왔는지 반드시 확인한다. */
   function apply(src) {
     setIntro(src);
-    fixText(); fixSlots(); paintBar();
+    fixText(); fixSlots(); paintBar(); coverBuild();
   }
 
   window.addEventListener('message', function (ev) {
@@ -410,6 +415,179 @@
     document.head.appendChild(st);
   }
 
+  /* ── 7) 표지를 다시 짓는다 (STARRING) ────────────────────────
+     원래 표지는 흰 바탕에 작은 동그란 사진 하나였다. 처음 만나는 자리에서
+     사람이 안 남는다. 그래서 <b>왼쪽은 인물 사진, 오른쪽은 이름과 이력</b>
+     으로 된 검은 표지를 그 자리에 새로 짓는다.
+
+     ★ 파일의 HTML 은 손대지 않는다. 원래 내용은 <b>숨기고</b>,
+       새 표지를 자식으로 <b>덧붙인다.</b> 값이 없으면 원래 표지가 그대로 나온다. */
+  var COVER_FALLBACK = { photo: 'photo1.jpg', photo2: 'photo2.png', photo3: 'photo3.jpg' };
+
+  function esc(s) {
+    return ('' + (s == null ? '' : s)).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  /* 「NBN 「보험 불만제로」」 처럼 방송사와 프로그램이 붙은 줄을 나눈다 */
+  function lines(v) {
+    return ('' + (v || '')).split(/\n|,(?![^「]*」)/).map(function (t) {
+      return t.replace(/^\s+|\s+$/g, '');
+    }).filter(Boolean);
+  }
+  function station(t) { return ('' + t).split(/[「\s]/)[0] || ''; }
+  /* 이름을 못 받았으면 로마자를 억지로 만들지 않는다 — 틀린 이름은 안 쓰는 게 낫다 */
+  function coverPhotos() {
+    return {
+      main: INTRO.photo || COVER_FALLBACK.photo,
+      a: INTRO.photo2 || COVER_FALLBACK.photo2,
+      b: INTRO.photo3 || COVER_FALLBACK.photo3
+    };
+  }
+
+  function coverBuildCss() {
+    if (document.getElementById('apexStarCss')) return;
+    var st = document.createElement('style');
+    st.id = 'apexStarCss';
+    st.textContent = [
+      '#s1.apex-star>*:not(.apex-star-wrap){display:none !important}',
+      '#s1.apex-star{padding:0 !important;background:#08080A !important;overflow:hidden}',
+      '.apex-star-wrap{position:absolute;inset:0;display:flex;background:#08080A;color:#F3EEE3;',
+      'font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;overflow:hidden}',
+      /* 왼쪽 — 인물 */
+      '.as-photo{position:relative;flex:0 0 47%;min-width:0;background:#0C0C0E;overflow:hidden}',
+      '.as-photo img{width:100%;height:100%;object-fit:cover;object-position:center 12%;',
+      'filter:contrast(1.04) saturate(.96)}',
+      '.as-photo::after{content:"";position:absolute;inset:0;',
+      'background:linear-gradient(90deg,rgba(8,8,10,.55) 0%,rgba(8,8,10,0) 26%,rgba(8,8,10,0) 62%,rgba(8,8,10,.98) 100%)}',
+      /* 스튜디오 배경이 밝은 사진이 많다. 가장자리를 어둡게 깔아 검은 판과 이어 붙인다. */
+      '.as-photo::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;',
+      'background:radial-gradient(115% 78% at 46% 34%,transparent 34%,rgba(8,8,10,.30) 68%,rgba(8,8,10,.86) 100%)}',
+      '.as-vert{position:absolute;left:16px;top:50%;transform:translateY(-50%) rotate(180deg);',
+      'writing-mode:vertical-rl;font-size:10.5px;letter-spacing:.42em;color:rgba(212,185,120,.78);',
+      'z-index:3;font-family:"Noto Sans KR",sans-serif;font-weight:600}',
+      '.as-team{position:absolute;left:26px;bottom:52px;z-index:3;font-size:10.5px;letter-spacing:.30em;',
+      'color:rgba(212,185,120,.72);font-family:"Noto Sans KR",sans-serif;font-weight:700}',
+      /* 오른쪽 — 이름과 이력 */
+      '.as-info{flex:1;min-width:0;position:relative;padding:44px 52px 62px 26px;',
+      'display:flex;flex-direction:column;justify-content:center;text-align:right}',
+      '.as-info::before{content:"";position:absolute;inset:0;pointer-events:none;',
+      'background:radial-gradient(120% 80% at 78% 30%,rgba(212,185,120,.075),transparent 62%)}',
+      '.as-issue{font-size:12.5px;letter-spacing:.16em;color:#D4B978;font-family:"Noto Sans KR",sans-serif;font-weight:700}',
+      '.as-star{font-size:11px;letter-spacing:.46em;color:rgba(212,185,120,.86);margin-top:3px;',
+      'font-family:"Noto Sans KR",sans-serif;font-weight:700}',
+      '.as-star::before{content:"";display:inline-block;width:54px;height:1px;vertical-align:4px;margin-right:11px;',
+      'background:linear-gradient(90deg,transparent,#C8A25B)}',
+      '.as-name{font-size:clamp(52px,7.1vw,104px);line-height:1.02;font-weight:700;letter-spacing:.02em;',
+      'margin-top:14px;color:#F0E3C4;text-shadow:0 0 42px rgba(212,185,120,.30)}',
+      '.as-en{font-size:clamp(13px,1.32vw,20px);letter-spacing:.42em;color:rgba(226,208,163,.78);',
+      'margin-top:8px;font-family:"Noto Sans KR",sans-serif;font-weight:500}',
+      '.as-role{margin-top:22px;font-size:clamp(17px,1.7vw,25px);font-weight:800;color:#FFFDF7;',
+      'font-family:"Noto Sans KR",sans-serif;letter-spacing:-.01em;display:flex;align-items:center;',
+      'justify-content:flex-end;gap:13px}',
+      '.as-role::before{content:"";width:34px;height:2px;background:linear-gradient(90deg,transparent,#C8A25B)}',
+      '.as-quote{margin-top:13px;font-size:clamp(14px,1.32vw,19px);font-style:italic;color:#DCD3C0;line-height:1.6}',
+      '.as-rule{margin:22px 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,185,120,.55),rgba(212,185,120,.18))}',
+      '.as-facts{display:flex;justify-content:flex-end;gap:clamp(20px,3.2vw,56px);margin-top:17px;text-align:right}',
+      '.as-fact{min-width:0}',
+      '.as-fl{font-size:10px;letter-spacing:.28em;color:rgba(212,185,120,.80);font-family:"Noto Sans KR",sans-serif;font-weight:700}',
+      '.as-fv{margin-top:6px;font-size:clamp(13px,1.15vw,16.5px);color:#F1ECE1;line-height:1.62;',
+      'font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap}',
+      '.as-chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:19px}',
+      '.as-chip{padding:6px 15px;border:1px solid rgba(212,185,120,.42);border-radius:999px;',
+      'font-size:12.5px;color:#EBDFC4;font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap}',
+      '.as-shots{display:flex;justify-content:flex-end;gap:12px;margin-top:20px}',
+      '.as-shot{width:clamp(120px,15vw,196px)}',
+      '.as-shot img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:3px;',
+      'border:1px solid rgba(212,185,120,.26);display:block}',
+      '.as-cap{margin-top:6px;font-size:10.5px;color:rgba(226,214,190,.80);text-align:left;',
+      'font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '.as-cap i{color:#EF4444;font-style:normal;margin-right:4px}',
+      '.as-edit{position:absolute;right:18px;bottom:52px;z-index:4;padding:5px 13px;border-radius:999px;',
+      'border:1px solid rgba(212,185,120,.36);background:rgba(255,255,255,.05);color:#E8DCC0;',
+      'font-size:11.5px;font-weight:700;cursor:pointer;font-family:"Noto Sans KR",sans-serif;opacity:.55;transition:opacity .25s}',
+      '.as-edit:hover{opacity:1}',
+      /* 화면이 좁으면 위아래로 쌓는다 — 태블릿 세로에서도 상담한다 */
+      '@media (max-width:900px){.apex-star-wrap{flex-direction:column}',
+      '.as-photo{flex:0 0 42%}.as-photo::after{background:linear-gradient(180deg,rgba(8,8,10,0) 52%,rgba(8,8,10,.98) 100%)}',
+      '.as-vert{display:none}.as-info{padding:16px 22px 26px;justify-content:flex-start;text-align:center}',
+      '.as-facts,.as-chips,.as-shots,.as-role{justify-content:center}.as-role::before{display:none}',
+      '.as-info::before{display:none}}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  function coverHtml() {
+    var P = coverPhotos();
+    var on = lines(INTRO.onair), tg = lines(INTRO.tags);
+    var facts = [];
+    if (INTRO.license) facts.push({ l: 'LICENSE', v: lines(INTRO.license).join('<br>') });
+    if (on.length) facts.push({ l: 'ON AIR', v: on.map(esc).join('<br>') });
+    if (INTRO.career) facts.push({ l: 'CAREER', v: esc(INTRO.career) });
+    else if (INTRO.years) facts.push({ l: 'CAREER', v: esc(INTRO.years) + '년' });
+
+    var shots = [];
+    if (P.a) shots.push({ src: P.a, cap: on[0] || '' });
+    if (P.b) shots.push({ src: P.b, cap: on[1] || '' });
+
+    var vert = on.map(station).filter(Boolean).join(' · ');
+
+    return '<div class="apex-star-wrap">' +
+      '<div class="as-photo">' +
+        '<img src="' + esc(P.main) + '" alt="" onerror="this.style.display=\'none\'">' +
+        (vert ? '<div class="as-vert">' + esc(vert) + '</div>' : '') +
+        (INTRO.team ? '<div class="as-team">' + esc(INTRO.team) + '</div>' : '') +
+      '</div>' +
+      '<div class="as-info">' +
+        '<button type="button" class="as-edit" data-apex-edit>✏️ 내 소개 고치기</button>' +
+        (INTRO.issue ? '<div class="as-issue">' + esc(INTRO.issue) + '</div>' : '') +
+        '<div class="as-star">STARRING</div>' +
+        '<div class="as-name">' + esc(INTRO.name) + '</div>' +
+        (INTRO.nameEn ? '<div class="as-en">' + esc(INTRO.nameEn) + '</div>' : '') +
+        (INTRO.title ? '<div class="as-role">' + esc(INTRO.title) + '</div>' : '') +
+        (INTRO.motto ? '<div class="as-quote">“' + esc(INTRO.motto) + '”</div>' : '') +
+        (facts.length ? '<div class="as-rule"></div><div class="as-facts">' +
+          facts.map(function (f) {
+            return '<div class="as-fact"><div class="as-fl">' + f.l + '</div>' +
+              '<div class="as-fv">' + f.v + '</div></div>';
+          }).join('') + '</div>' : '') +
+        (tg.length ? '<div class="as-chips">' +
+          tg.map(function (t) { return '<span class="as-chip">' + esc(t) + '</span>'; }).join('') +
+          '</div>' : '') +
+        (shots.length ? '<div class="as-shots">' +
+          shots.map(function (s) {
+            return '<div class="as-shot"><img src="' + esc(s.src) + '" alt="" ' +
+              'onerror="this.parentElement.style.display=\'none\'">' +
+              (s.cap ? '<div class="as-cap"><i>●</i>ON AIR · ' + esc(s.cap) + '</div>' : '') + '</div>';
+          }).join('') + '</div>' : '') +
+      '</div></div>';
+  }
+
+  /* 이름조차 없으면 새 표지를 짓지 않는다 — 빈 표지보다 원래 것이 낫다 */
+  function coverBuild() {
+    var s1 = document.getElementById('s1');
+    if (!s1) return;
+    if (!INTRO.name) {
+      s1.classList.remove('apex-star');
+      var old = s1.querySelector('.apex-star-wrap');
+      if (old) old.parentNode.removeChild(old);
+      return;
+    }
+    coverBuildCss();
+    var wrap = s1.querySelector('.apex-star-wrap');
+    if (!wrap) {
+      wrap = document.createElement('div');
+      s1.appendChild(wrap);
+    }
+    wrap.outerHTML = coverHtml();
+    s1.classList.add('apex-star');
+    var b = s1.querySelector('[data-apex-edit]');
+    if (b) b.onclick = function () {
+      if (inApp()) { tell({ t: 'apex:editintro' }); return; }
+      var e = document.querySelector('#s1 .s1-hero-edit');
+      if (e && e.click) { s1.classList.remove('apex-star'); e.click(); }
+    };
+  }
+
   /* 어디까지 봤는지 알린다 — 앱이 「다 보셨습니다」 를 표시할 수 있게 */
   function watch() {
     /* 덱마다 STEPS 또는 SLIDES 로 이름이 다르고, const 로 선언돼 window 에 붙지 않는다.
@@ -438,7 +616,7 @@
   function boot() {
     setIntro(readLocal());
     fixText(); fixSlots(); paintBar();
-    coverCss(); rdApply(); bigSet(bigGet());
+    coverCss(); coverBuild(); rdApply(); bigSet(bigGet());
     watch(); watchReport(); hello();
     /* 덱이 스스로 글자를 다시 그리는 경우가 있어 한 번 더 맞춘다.
        탭을 눌러 나중에 나타나는 칸도 있어서 그때 다시 잰다. */
