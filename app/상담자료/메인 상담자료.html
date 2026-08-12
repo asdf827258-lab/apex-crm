@@ -4334,11 +4334,11 @@
           </a>
 
           <!-- 우: 진료기록 + 보험증권 통합 업로드 + AI 교차 분석 -->
-          <!-- ② 증권 업로드 칸은 없앴다. APEX 앱의 AI 제안서가 이미 증권을 읽었기 때문에
-     여기서 다시 올릴 이유가 없다. 아래는 그 결과가 들어왔는지 보여 주는 칸이다.
-     원래 카드는 안쪽 코드가 참조하므로 지우지 않고 숨겨 둔다. -->
-<div id="apexLinkCard" class="animate-up opacity-0 delay-3" style="margin-bottom:12px;padding:16px 18px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(26,115,232,.08));border:1.5px solid rgba(124,58,237,.35);"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#1a73e8);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🤖</div><div style="flex:1;min-width:220px;"><div style="font-size:14px;font-weight:800;color:var(--text);">② 보장분석표 — APEX AI 제안서에서 자동으로</div><div id="apexLinkMsg" style="font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.7;">APEX 앱의 <strong>AI 제안서 생성</strong>에서 증권을 넣으면, 읽어낸 계약이 여기 보장분석표로 그대로 들어옵니다. 여기서 따로 올리실 필요가 없습니다.</div></div><span id="apexLinkBadge" style="font-size:11px;font-weight:800;padding:5px 12px;border-radius:14px;background:rgba(148,163,184,.18);color:var(--muted);flex-shrink:0;">대기 중</span></div></div>
-<div style="display:none"><div id="s9-medical-card"
+          <!-- ② 상담자료는 <b>제 파일을 스스로 읽는다.</b> 그 능력을 뺏으면 안 된다.
+     APEX 앱의 AI 제안서와 <b>같이</b> 쓴다 — 여기서 읽고, 앱에서도 읽는다.
+     앱이 읽은 것을 여기에 <b>덮어쓰지 않는다.</b> 덮어쓰면 여기 쌓아 둔 것이 사라진다. -->
+<div id="apexLinkCard" style="margin-bottom:10px;padding:11px 14px;border-radius:10px;background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.25);display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="font-size:16px;">🤖</span><div id="apexLinkMsg" style="flex:1;min-width:220px;font-size:11.5px;color:var(--muted);line-height:1.7;">APEX 앱의 <strong>AI 제안서 생성</strong>에서도 같은 증권을 읽고 있습니다. 여기서 올린 자료와 <strong>따로</strong> 관리되며, 여기 내용을 덮어쓰지 않습니다.</div><span id="apexLinkBadge" style="font-size:11px;font-weight:800;padding:4px 11px;border-radius:14px;background:rgba(148,163,184,.18);color:var(--muted);">대기 중</span></div>
+<div><div id="s9-medical-card"
                style="padding:12px 14px;background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(26,115,232,.06));border:1.5px solid rgba(168,85,247,.35);border-radius:12px;transition:.2s;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;">
               <div style="display:flex;align-items:center;gap:14px;">
@@ -14414,7 +14414,7 @@ ${JSON.stringify(insurances.map(i => ({
       b.style.background = ok ? 'rgba(34,197,94,.18)' : 'rgba(148,163,184,.18)';
       b.style.color = ok ? '#16a34a' : 'var(--muted)';
     }
-    if (m && ok) m.innerHTML = 'APEX AI 제안서가 읽어낸 계약이 <strong>보장분석표에 들어왔습니다.</strong> ' +
+    if (m && ok) m.innerHTML = 'APEX AI 제안서가 읽어낸 계약을 <strong>보장분석표에 더했습니다</strong>(덮어쓰지 않음). ' +
       '아래 <strong>보장분석표 AI 자동 생성</strong> 장에서 확인하세요.';
   }
   window.addEventListener('message', function (ev) {
@@ -14425,9 +14425,13 @@ ${JSON.stringify(insurances.map(i => ({
     else if (m.t === 'apex:insurances') {
       var rows = m.rows || [];
       if (!rows.length) { badge('대기 중', false); return; }
+      /* replace 를 쓰지 않는다. 예전엔 { replace: true } 라서 여기 쌓아 둔
+         보장분석표를 <b>통째로 지우고</b> 앱이 읽은 계약 목록으로 덮어썼다.
+         그래서 「기존 보장분석 내용이 다 사라졌다」 가 됐다.
+         이제는 <b>없는 것만 더한다.</b> 사람이 여기서 만든 것은 건드리지 않는다. */
       if (typeof window.s10ImportInsurances === 'function') {
-        var n = window.s10ImportInsurances(rows, { replace: true }) || rows.length;
-        badge(n + '건 들어옴', true);
+        var n = window.s10ImportInsurances(rows) || 0;
+        badge(n ? (n + '건 더함') : '이미 있음', true);
       }
     }
   });

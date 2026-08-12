@@ -58,10 +58,16 @@ const is = (c, m) => c ? ok(m) : no(m);
   console.log('\n[4] 상담자료 안의 증권 업로드 칸이 없어졌는가');
   const doc = fs.readFileSync(path.join(ROOT, 'app/상담자료/메인 상담자료.html'), 'utf8');
   is(/id="apexLinkCard"/.test(doc), '그 자리에 APEX 연동 칸이 들어갔다');
-  is(/AI 제안서 생성<\/strong>에서 증권을 넣으면/.test(doc), '어디서 넣으면 되는지 안내한다');
-  const card = doc.slice(doc.indexOf('id="apexLinkCard"'));
-  is(/<div style="display:none">[\s\S]{0,400}id="s9-medical-card"/.test(card),
-    '원래 업로드 카드는 지우지 않고 숨겼다 — 안쪽 코드가 참조하기 때문');
+  is(/여기서 올린 자료와 <strong>따로<\/strong> 관리되며/.test(doc),
+    '앱과 따로 관리된다고 분명히 적는다');
+  /* ── 다시는 남의 자료를 지우지 않는다 ──
+     한때 { replace: true } 로 넣어서 상담자료에 쌓아 둔 보장분석표를
+     통째로 지웠다. 사람이 만든 것을 앱이 지우는 것은 최악이다. */
+  is(!/s10ImportInsurances\([^)]*replace\s*:\s*true/.test(doc),
+    '앱이 보낸 계약으로 기존 표를 덮어쓰지 않는다 — 사람이 만든 것을 지우지 않는다');
+  const card = doc.slice(doc.indexOf('id="apexLinkCard"'), doc.indexOf('id="apexLinkCard"') + 3000);
+  is(!/display:\s*none[\s\S]{0,300}id="s9-medical-card"/.test(card),
+    '상담자료가 제 파일을 읽는 업로드 칸이 그대로 살아 있다');
   is(/apex:insurances/.test(doc) && /s10ImportInsurances/.test(doc), '보장분석표로 넣는 길이 이어져 있다');
   is(/ev\.origin !== location\.origin/.test(doc), '같은 주소에서 온 쪽지만 받는다');
   const fin = fs.readFileSync(path.join(ROOT, 'app/재무설계/상담자료.html'), 'utf8');
@@ -185,7 +191,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(B.phone === '010-1111-2222' && /삶을 설계/.test(B.intro || ''), '연락처와 한 줄 소개도 들어간다');
   is(/보장분석/.test(B.spec || ''), '전문 분야도 들어간다');
   is(B.n === 1 && B.co === '교보생명', '증권에서 읽은 계약이 보장분석표에 들어간다 (' + B.n + '건 · ' + B.co + ')');
-  is(/1건 들어옴|들어옴/.test(B.badge), '들어왔다고 화면에 표시한다 — ' + B.badge);
+  is(/더함|이미 있음/.test(B.badge), '더했는지 이미 있는지 화면에 표시한다 — ' + B.badge);
 
   console.log('\n[5] 남이 보낸 쪽지는 안 받는가');
   is(B.safeAfter === B.safeBefore, '다른 주소에서 온 쪽지는 무시한다 (' + B.safeAfter + ')');
