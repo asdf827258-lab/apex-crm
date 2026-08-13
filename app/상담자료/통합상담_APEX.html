@@ -1296,7 +1296,20 @@ h2 em.e{color:var(--edu-d)}
 
     <div class="card rv" style="margin-top:20px">
       <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">언제 떠나든, 남는 돈이 있습니다</div>
-      <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 18px" id="legacySub"></div>
+      <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 14px" id="legacySub"></div>
+
+      <div style="background:#faf8f2;border:1px solid #ece3cf;border-radius:14px;padding:14px 16px;margin-bottom:18px">
+        <label style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13.5px;font-weight:700">
+          <input type="checkbox" id="gPremOn" style="width:17px;height:17px;accent-color:#b8912f;cursor:pointer">
+          은퇴(연금개시) 전 <b>월납입보험료 &times;</b>
+          <input type="number" id="gPremX" value="200" min="1" max="500" step="10"
+                 style="width:78px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;
+                        font-size:13.5px;font-weight:800;font-family:inherit;text-align:right">
+          <b>배</b> 보증을 함께 봅니다
+        </label>
+        <div class="hint" id="gPremEcho" style="margin-top:9px"></div>
+      </div>
+
       <div class="mile-wrap"><table class="mile" id="legacyTable"></table></div>
       <p class="hint" id="legacyNote" style="margin-top:14px;line-height:1.75"></p>
     </div>
@@ -2881,11 +2894,27 @@ function rollAt(t, inp, rule){
   return acc;
 }
 /* 사망 시 최저보증액 (연금개시 전) */
-function deathAt(t, r){
-  const d = r.p.dth.pre, principal = r.principal;
+/* 은퇴(연금개시) 전 '월납입보험료 × N배' 보증.
+   이런 보증을 붙인 계약이 있어 상담에서 켜고 끈다. 상품마다 다르므로
+   특정 상품에 못 박지 않고, 설계사가 상품설명서를 보고 배수를 넣는다. */
+function gmdbPremX(){
+  const on = document.getElementById('gPremOn');
+  if(!on || !on.checked) return 0;
+  const x = parseFloat((document.getElementById('gPremX')||{}).value);
+  return (isFinite(x) && x > 0) ? x : 0;
+}
+/* 상품 자체의 보증만 (배수 보증을 섞기 전) */
+function deathAtRaw(t, r){
+  const d = r.p.dth.pre;
   if(d.type === 'principal')  return r.inp.monthly * 12 * Math.min(t, r.inp.pay);
   if(d.type === 'principalX') return r.inp.monthly * 12 * Math.min(t, r.inp.pay) * d.x;
+  if(d.type === 'premX')      return r.inp.monthly * d.x;
   return rollAt(t, r.inp, d);
+}
+function deathAt(t, r){
+  /* GMDB 는 여러 보증 중 '큰 쪽'을 지급한다. 배수 보증이 켜져 있으면 같이 비교한다. */
+  const v = deathAtRaw(t, r), x = gmdbPremX();
+  return x ? Math.max(v, r.inp.monthly * x) : v;
 }
 /* 사망 시 최저보증액 (연금개시 후) */
 function deathAfter(r){
@@ -3401,6 +3430,33 @@ function renderLegacy(r){
     `${r.p.co} ${r.p.name} · ${r.inp.age}세 가입 · ${r.inp.pay}년납 · ${start}세 개시 기준 ·
      <b>최저보증 금액</b>으로 계산했습니다`;
 
+  /* 월납입보험료 배수 보증 — 켜져 있으면 어느 쪽이 실제로 나가는지 보여준다 */
+  const px = gmdbPremX(), pxAmt = px ? r.inp.monthly * px : 0;
+  const echo = document.getElementById('gPremEcho');
+  if(echo){
+    if(!px){
+      echo.innerHTML = `이 보증이 붙은 계약이면 켜십시오. 월납입보험료 &times; 배수와
+        상품 기본 보증(적립액·원금 등) 중 <b>큰 쪽</b>이 사망보험금으로 나갑니다.
+        배수는 상품마다 다르니 <b>상품설명서에서 확인</b>한 값을 넣으십시오.`;
+    }else{
+      /* 언제까지 배수 보증이 더 큰지 — 개시 직전까지 훑어 경계 연도를 찾는다 */
+      let cross = null;
+      for(let t=1; t<=T; t++){
+        const base = deathAtRaw(t, r);
+        if(base >= pxAmt){ cross = t; break; }
+      }
+      echo.innerHTML =
+        `월납입보험료 <b>${man(r.inp.monthly)}</b> &times; <b>${px}배</b> =
+         <b style="color:var(--gold-d)">${man(pxAmt)}</b> &mdash; 은퇴 전에는 이 금액이 바닥입니다.<br>` +
+        (cross === null
+          ? `개시 직전(${age+T}세)까지 <b>계속 배수 보증이 더 큽니다.</b> 적립액이 여기에 못 미쳐도 이 금액은 나갑니다.`
+          : cross === 1
+            ? `가입 1년째부터는 <b>상품 기본 보증이 더 커서</b> 그쪽이 나갑니다.`
+            : `가입 <b>${cross}년째(${age+cross}세)</b>부터 상품 기본 보증이 이 금액을 넘어섭니다 &mdash;
+               그 전까지는 <b>배수 보증이 유가족을 지킵니다.</b>`);
+    }
+  }
+
   const rows=[];
   // 개시 전 — 납입 중 · 납입완료 · 개시 직전
   [1,3,Math.min(r.inp.pay,T),Math.round((r.inp.pay+T)/2),T].filter((v,i,a)=>v>0&&a.indexOf(v)===i)
@@ -3570,6 +3626,10 @@ function segBind(sel, key, cast){
 /* 공무원연금 목표 역산 입력 */
 $('#iGoal').oninput = e=>{ GOAL.target=Math.max(0,(+e.target.value||0))*10000; render(); };
 $('#iNps').oninput  = e=>{ GOAL.nps   =Math.max(0,(+e.target.value||0))*10000; render(); };
+
+/* 은퇴 전 월납입보험료 배수 보증 */
+$('#gPremOn').onchange = () => render();
+$('#gPremX').oninput   = () => { if($('#gPremOn').checked) render(); };
 
 /* 변액 시뮬레이터 입력 */
 $('#iRet').oninput = e=>{ ASSUM.r = (+e.target.value||0)/100;
