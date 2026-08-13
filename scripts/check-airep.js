@@ -464,7 +464,10 @@ const AI_OK = `## 활동 보고
   ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
   const tk = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-fs:not(.ar-fsrc) .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
-  ok(tk.length === 7, '전체·부재·거절·진행중·미진행·기고객·생일 일곱 (' + tk.length + ')');
+  /* 계약 뒤에도 할 일이 남는다 — 증권 미전달·계약 직후가 뒤에 붙어 아홉이다 */
+  ok(tk.length === 9, '전체·부재·거절·진행중·미진행·기고객·생일·증권 미전달·계약 직후 아홉 (' + tk.length + ')');
+  ok(/증권 미전달/.test(tk.join(' ')) && /계약 직후/.test(tk.join(' ')),
+    '계약 뒤 할 일도 여기서 잡힌다 — 증권을 안 보내면 민원이 된다');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
   ok(cnt.no >= 1, '부재를 따로 센다 (' + cnt.no + ')');

@@ -330,7 +330,10 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(/620/.test(C.text) && /124%/.test(C.text), '보고서에 이달 숫자가 들어간다');
   is(/MONTHLY REPORT/.test(C.text), '한 장짜리 보고서 꼴이다');
   is(C.buttons.some(b => /이미지 복사/.test(b)), '「이미지 복사」 단추가 있다');
-  is(/고객 정보는 담겨 있지 않습니다/.test(C.text), '고객 정보가 안 들어간다고 못 박는다');
+  /* 이제 다음 달 손댈 사람이 그림에 붙는다. 이름은 가려서 들어가고
+     연락처·금액은 여전히 안 들어간다 — 그 약속을 그대로 밝히는지 본다 */
+  is(/고객 이름은 .*김○○.* 로만 들어 있고 연락처·금액은 담겨 있지 않습니다/.test(C.text),
+    '실명 대신 김○○ 만 들어간다고 못 박는다');
   is(/ClipboardItem/.test(app) && /image\/png/.test(app), '이미지 자체를 클립보드에 넣는다 (글자만 넣으면 카톡에 안 붙는다)');
   is(/ensureHtml2Canvas/.test(app.slice(app.indexOf('function pfCardCanvas'), app.indexOf('function pfCardCanvas') + 400)),
     '이미 쓰던 그림 굽는 도구를 그대로 쓴다');
