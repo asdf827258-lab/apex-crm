@@ -430,7 +430,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bless: /덕담|🌾/.test(iceTxt), noScript: !/포문|하면 안 되는 말/.test(iceTxt),
       meHidden: meHidden, riskBlocked: riskBlocked };
   });
-  ok(view.agent === 12 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
+  ok(view.agent === 13 && view.client === 8, '내 눈용 ' + view.agent + '탭 · 고객 화면 ' + view.client + '탭으로 갈린다');
   ok(view.leak === '', '고객 화면에 설계사용 문구가 하나도 새어 나가지 않는다' + (view.leak ? ' — ' + view.leak : ''));
   ok(view.bless && view.noScript, '고객 화면 아이스브레이킹에는 덕담만 남고 화법 대본은 빠진다');
   ok(view.meHidden, '고객 화면에서는 내 카드 버튼도 감춘다');
@@ -465,7 +465,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     payOpen();
     const sh = document.getElementById('sheetBody').textContent;
     sheetClose();
-    return { lock: /결제하고 전부 보기/.test(t), price: /9,900원/.test(t),
+    return { lock: /결제하고 전부 보기/.test(t), price: /1,900원/.test(t),
       preview: /🌾/.test(t), full: /이번 달에 이 세 가지만/.test(t),
       bank: /계좌이체/.test(sh), code: /확인 코드/.test(sh) };
   });
@@ -490,9 +490,52 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   await page.evaluate(() => { setView('agent'); });
 
   const payCfg = await page.evaluate(() => ({ agent: PAY.agent, price: PAY.price, bank: PAY.bank, url: PAY.confirmUrl }));
-  ok(payCfg.agent === '윤시현' && payCfg.bank === '국민' && payCfg.price === 9900,
-     '주소 뒤에 붙인 설계사·계좌·금액이 결제에 그대로 들어간다');
+  ok(payCfg.agent === '윤시현' && payCfg.bank === '국민' && payCfg.price === 1900,
+     '주소 뒤에 붙인 설계사·계좌가 결제에 들어가고, 값은 기본 1,900원이다');
   ok(payCfg.url === '/api/toss-confirm', '카드 승인은 같은 사이트의 서버 함수로 간다');
+
+  console.log('\n관계 · 매니지먼트');
+  const rel = await page.evaluate(() => {
+    S.view = 'agent'; S.tab = 'rel'; draw();
+    const out = {};
+    ROLES.forEach(r => {
+      S.cl.rel = r.k;
+      const p = relPlan(S.me, S.cl, r.k);
+      goTab('rel');
+      const t = document.getElementById('view').textContent;
+      out[r.k] = { rows: p.rows.length, table: p.table.filter(x => x[1]).length,
+        tip: p.rows.every(x => !!x.tip), saju: !!p.saju,
+        learn: /이분에게서 무엇을 배울까/.test(t), grow: /이 팀원을 키우려면/.test(t) };
+    });
+    S.cl.rel = 'client'; draw();
+    return { roles: ROLES.length, out: out };
+  });
+  ok(rel.roles === 5, '관계가 다섯 가지다 — 고객 · 리더 · 상사 · 팀원 · 동료 (' + rel.roles + ')');
+  ok(Object.keys(rel.out).every(k => rel.out[k].rows === 4 && rel.out[k].table >= 4 && rel.out[k].tip),
+     '관계마다 네 축 대응과 실전 표가 모두 채워진다');
+  ok(rel.out.leader.learn && rel.out.boss.learn && !rel.out.staff.learn,
+     '윗사람일 때만 "무엇을 배울까"가 붙는다');
+  ok(rel.out.staff.grow && !rel.out.leader.grow,
+     '아랫사람일 때만 "키우는 법 · 맡길 것"이 붙는다');
+  ok(Object.keys(rel.out).every(k => rel.out[k].saju), '관계마다 사주 일간 관계 해석이 붙는다');
+
+  const relPick = await page.evaluate(() => {
+    S.step = 'client'; draw();
+    const has = /이분은 누구신가요/.test(document.getElementById('view').textContent);
+    S.step = 'board'; draw();
+    return has;
+  });
+  ok(relPick, '고객 정보 화면에서 관계를 고를 수 있다');
+
+  const price = await page.evaluate(() => {
+    S.view = 'client'; S.worry = { cat: 'money', catName: '돈', done: true }; S.tab = 'worry';
+    try { localStorage.removeItem('worry_paid'); } catch (e) {}
+    draw();
+    const t = document.getElementById('view').textContent;
+    S.view = 'agent'; draw();
+    return { price: PAY.price, shown: /1,900원/.test(t), old: /9,900원/.test(t) };
+  });
+  ok(price.price === 1900 && price.shown && !price.old, '고민 상담 값이 1,900원으로 나온다 (' + price.price + ')');
 
   console.log('\n화면 · 스크롤 칸');
   for (const t of await page.evaluate(() => tabsFor('both'))) {
@@ -505,7 +548,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
     const hit = [];
     tabsFor('both', 'agent').forEach(t => {
       goTab(t);
-      if (/결제|9,900원|구독/.test(document.getElementById('view').textContent) && t !== 'worry') hit.push(t);
+      if (/결제하고|1,900원|구독/.test(document.getElementById('view').textContent) && t !== 'worry') hit.push(t);
     });
     goTab('worry');
     return hit;
