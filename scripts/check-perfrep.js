@@ -225,6 +225,48 @@ const is = (c, m) => c ? ok(m) : no(m);
   });
   is(W.n === 1, '팀원을 고르면 <b>그 사람</b> KPI 로 바뀐다 (배정 ' + W.n + '건)');
   is(W.who, '남을 볼 때는 이름을 밝힌다 — 내 것으로 착각하면 안 된다');
+
+  /* ═══ 팀 고르기 · 안 볼 팀 ═══
+     상용화하면 한 화면에 여러 지점이 섞인다. 안 맡는 팀까지 보이면
+     정작 볼 것을 못 본다. */
+  console.log('\n[3-2] 팀을 골라 보고, 안 볼 팀은 안 보이는가');
+  const T = await page.evaluate(async () => {
+    GB.teams = [{ id: 't1', name: '온탑2지점' }, { id: 't2', name: '상승지점' }];
+    GB.rows.push({ id: 'u9', name: '박다른팀', role: 'member', team: 't2',
+      raw: { att: 5, run: 3, call: 9, cli: 1, rep: 0, stu: 0 },
+      sc: { att: 40, run: 30, call: 35, cli: 20, rep: 10, stu: 5 }, total: 23, any: true });
+    GB.teamOf.u9 = 't2';
+    try { localStorage.removeItem(pfHideKey()); } catch (e) {}
+    PF.team = ''; PF.who = ''; arPaint();
+    await new Promise(r => setTimeout(r, 500));
+    const all = pfTeamMates().map(x => x.name);
+    /* 팀을 고르면 그 팀만 */
+    pfPickTeam('t1'); await new Promise(r => setTimeout(r, 400));
+    const one = pfTeamMates().map(x => x.name);
+    const plan1 = pfTeamId();
+    pfPickTeam('t2'); await new Promise(r => setTimeout(r, 400));
+    const two = pfTeamMates().map(x => x.name);
+    const plan2 = pfTeamId();
+    /* 안 볼 팀으로 지정하면 사라진다 */
+    pfPickTeam('t2'); pfHideToggle('t2');
+    await new Promise(r => setTimeout(r, 500));
+    const afterHide = pfTeamMates().map(x => x.name);
+    const teams = pfTeams().map(x => x.name);
+    const hidden = pfIsHidden('t2');
+    pfHideToggle('t2'); PF.team = ''; PF.who = '';
+    return { all, one, two, plan1, plan2, afterHide, teams, hidden };
+  });
+  is(T.all.length >= 3, '전체를 고르면 모든 팀원이 나온다 (' + T.all.join(' · ') + ')');
+  is(T.one.indexOf('박다른팀') < 0, '팀을 고르면 <b>그 팀만</b> 나온다 (' + T.one.join(' · ') + ')');
+  is(T.two.length === 1 && T.two[0] === '박다른팀', '다른 팀을 고르면 그 팀 사람만 (' + T.two.join(' · ') + ')');
+  is(T.plan1 === 't1' && T.plan2 === 't2', '사업계획서도 고른 팀을 따른다');
+  is(T.hidden === true, '안 볼 팀으로 지정된다');
+  is(T.teams.indexOf('상승지점') < 0, '숨긴 팀은 팀 고르기에서 아예 안 나온다 (' + T.teams.join(' · ') + ')');
+  is(T.afterHide.indexOf('박다른팀') < 0, '숨긴 팀 사람도 안 나온다 — 「전체」 로 봐도');
+  is(/function pfHideCardHtml/.test(app) && /advCardHtml\(\)\+pfHideCardHtml\(\)/.test(app),
+    '설정에서 안 볼 팀을 고를 수 있다');
+  is(/apex_hide_teams_/.test(app), '이 설정은 <b>보는 사람마다</b> 따로 남는다');
+  is(/기록이 지워지지는 않습니다/.test(app), '숨겨도 기록은 안 지워진다고 밝힌다');
   is(ONE.score, '본인 점수판이 같은 판에 붙는다');
   is(ONE.full, '리더가 보는 그 보고서가 내 화면에도 붙는다');
   is(ONE.order[0] < ONE.order[1] && ONE.order[1] < ONE.order[2],
