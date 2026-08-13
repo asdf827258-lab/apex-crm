@@ -986,14 +986,28 @@ async function renderPerf(target){
     }catch(e){perfCache='ERR:'+((e&&e.message)||'');}
   }
   if(typeof perfCache==='string'){
-    box.innerHTML='<div class="notice" style="margin-top:13px">월간 업적을 아직 못 읽습니다. '+
-      'Supabase 에서 <b>migration_40_perf.sql</b> 을 한 번 실행해 주세요.</div>';
+    /* 실패를 기억해 두면 SQL 을 나중에 돌려도 새로고침 전까지 안 뜬다.
+       그래서 <b>다시 읽기</b> 를 준다. */
+    box.innerHTML='<div class="card section" style="margin-top:14px;border:2px solid #FCA5A5;background:#FEF2F2">'+
+      '<h3 style="margin:0 0 6px;color:#991B1B">💰 월간 업적 — 아직 못 읽습니다</h3>'+
+      '<p style="margin:0 0 10px;font-size:13px;color:#B91C1C;line-height:1.7">'+
+      'Supabase → SQL Editor 에서 <b>migration_40_perf.sql</b> 을 한 번 실행하셔야 합니다.<br>'+
+      '<span style="font-size:12px;opacity:.8">'+esc(perfCache.slice(4,120))+'</span></p>'+
+      '<button class="btn" onclick="perfCache=null;renderKpi()" '+
+      'style="padding:9px 16px;border-radius:10px;border:0;background:#DC2626;color:#fff;font-weight:800;cursor:pointer">'+
+      '↻ SQL 실행했습니다 · 다시 읽기</button></div>';
     return;
   }
   const rows=perfCache.filter(x=>target.indexOf(x.owner_id)>=0);
   if(!rows.length){
-    box.innerHTML='<div class="notice" style="margin-top:13px">'+ym+' 에 적힌 업적이 없습니다. '+
-      'APEX 앱 → <b>TFA 업무관리 → 내 업적</b> 에서 목표와 실적을 넣어 주세요.</div>';
+    box.innerHTML='<div class="card section" style="margin-top:14px">'+
+      '<h3 style="margin:0 0 6px">💰 '+ym+' 월간 업적</h3>'+
+      '<p style="margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.7">'+
+      '이 달에 적힌 업적이 아직 없습니다.<br>'+
+      'APEX 앱 → <b>TFA 업무관리 → 💰 내 업적 · 월간보고</b> 에서 목표와 실적을 넣으면 여기에 뜹니다.</p>'+
+      '<button class="btn" onclick="perfCache=null;renderKpi()" '+
+      'style="padding:8px 15px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer">'+
+      '↻ 다시 읽기</button></div>';
     return;
   }
   const nm=id=>{const p=profiles.find(x=>x.id===id);return p?p.name:'담당자';};

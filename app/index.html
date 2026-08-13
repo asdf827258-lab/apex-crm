@@ -5740,8 +5740,7 @@ var AR_CAT=[
  ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me'],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
- ['perf', '💰','내 업적 · 월간보고','목표와 실적, 그리고 흐름',        'me'],
- ['score','📊','본인 점수판',   '여섯 축과 팀 안 순위',            'me'],
+ ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
  ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
  ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
@@ -6599,6 +6598,51 @@ function arBriefData(){
    어디로 가는지 몰랐다. 사람은 목록을 보고 <b>그 줄을 눌러</b> 간다.
    그래서 줄마다 갈 곳을 달고, 밀린 것은 눈에 띄게 키운다.
    리더에게는 팀에서 아직 안 낸 사람이 함께 뜬다.              */
+/* 어제 총합 — 오늘 할 일 앞에 어제 한 일을 먼저 놓는다.
+   「어제 몇 통 걸었고 몇 건 상담이 됐나」 를 보고 오늘을 시작해야
+   숫자가 몸에 붙는다. 리더는 팀 전체를 함께 본다. */
+function arYestKey(){
+  var d=new Date(Date.now()+9*3600*1000-86400000);
+  return d.toISOString().slice(0,10);
+}
+function arYest(){
+  var y=arYestKey(),me=arMyId(),L=AR.calls||[],i,c;
+  var mine={call:0,con:0,no:0,rej:0},team={call:0,con:0,no:0,rej:0},who={};
+  for(i=0;i<L.length;i++){
+    c=L[i];
+    if(c.d!==y)continue;
+    var t=(c.w===me)?mine:null;
+    team.call++;
+    if(c.r==='상담')team.con++;else if(c.r==='부재')team.no++;else if(c.r==='거절')team.rej++;
+    if(c.w)who[c.w]=(who[c.w]||0)+1;
+    if(!t)continue;
+    t.call++;
+    if(c.r==='상담')t.con++;else if(c.r==='부재')t.no++;else if(c.r==='거절')t.rej++;
+  }
+  return {ymd:y,mine:mine,team:team,people:Object.keys(who).length};
+}
+function arYestHtml(){
+  var y=arYest(),lead=arIsLead();
+  var v=lead?y.team:y.mine;
+  var rate=v.call>0?Math.round(v.con/v.call*100):0;
+  var cell=function(n,k,c){
+    return '<div style="flex:1;min-width:88px;text-align:center">'+
+      '<div style="font-size:25px;font-weight:900;color:'+(c||'#0F172A')+';line-height:1.1">'+n+'</div>'+
+      '<div style="font-size:11.5px;font-weight:800;color:#64748B;margin-top:3px">'+k+'</div></div>';
+  };
+  return '<div style="background:#F8FAFC;border:2px solid #E9EEF5;border-radius:16px;padding:15px 16px;margin-bottom:16px">'+
+    '<div style="font-size:12.5px;font-weight:900;color:#475569;margin-bottom:10px">'+
+    '📒 어제 총합 <span style="font-weight:700;color:#94A3B8">'+y.ymd+
+    (lead?(' · 팀 전체 '+y.people+'명 움직임'):' · 나')+'</span></div>'+
+    '<div style="display:flex;gap:8px">'+
+      cell(v.call,'통화')+cell(v.con,'상담','#059669')+
+      cell(v.no,'부재',v.no?'#D97706':'#0F172A')+
+      cell(v.rej,'거절',v.rej?'#DC2626':'#0F172A')+
+      cell(rate+'%','상담 전환','#1D4ED8')+
+    '</div>'+
+    (v.call===0?'<div style="font-size:12px;color:#94A3B8;margin-top:9px;text-align:center">어제 기록이 없습니다.</div>':'')+
+  '</div>';
+}
 function arBriefRows(){
   var out=arTodoList().slice(0,8),i;
   /* 이달 월간보고를 아직 안 냈으면 맨 위에 세운다 */
@@ -6673,6 +6717,8 @@ function arBriefOpen(){
       '<div style="font-size:13px;color:'+(bad?'#FCA5A5':'#BFDBFE')+';margin-top:6px">'+osEsc(arToday())+
         ' · 지금 '+d.score+'점</div></div>'+
     '<div style="padding:20px 28px;overflow-y:auto">'+
+      arYestHtml()+
+      '<div style="font-size:15px;font-weight:900;color:#0F172A;margin:0 0 10px">📌 오늘</div>'+
       '<div style="display:flex;gap:11px;flex-wrap:wrap">'+
         tile(d.ap,'건','오늘 약속',0)+
         tile(d.bad,'건','밀린 것',d.bad>0)+
@@ -7505,10 +7551,192 @@ function pfMeHtml(){
 
   h+=pfChartHtml();
   if(m.feedback||m.ai_draft)h+=pfFeedbackHtml(m);
+  /* 업적(결과) → 타율(과정) → 점수판(습관) → 보고서(총평) 순으로 한 판에 잇는다.
+     예전에는 이 넷이 서로 다른 칸에 흩어져 있어 아무도 이어서 안 봤다. */
+  h+=pfWhoBarHtml();
+  h+=pfKpiHtml();
+  h+=pfRateHtml();
+  try{if(pfWho()===pfMyId()&&typeof arScoreHtml==='function')h+=arScoreHtml();}catch(e1){}
+  try{if(pfWho()===pfMyId()&&typeof arWeekHtml==='function')h+=arWeekHtml();}catch(e2){}
+  h+=pfMineFullHtml();
   return h;
 }
 
 /* ── 그래프 — 내 흐름과 목표 대비 ─────────────────────────── */
+/* ── 누구를 볼 것인가 ────────────────────────────────────────
+   리더는 팀원 관리에서 이름을 눌러야 그 사람을 봤다. 그런데 업적과
+   타율은 여기 있으니 화면을 오가야 했다. 그래서 <b>여기서</b> 사람을 고른다. */
+function pfWho(){return PF.who||pfMyId();}
+function pfPickWho(id){PF.who=(id===pfMyId())?'':id;pfPaint();}
+function pfWhoBarHtml(){
+  if(!pfIsLead())return '';
+  var mates=pfTeamMates(),me=pfMyId(),cur=pfWho();
+  if(!mates.length)return '';
+  var btn=function(id,nm){
+    var on=(cur===id)||(!PF.who&&id===me);
+    return '<button type="button" class="acad-tab'+(on?' on':'')+'" onclick="pfPickWho(\''+id+'\')">'+
+      osEsc(nm)+'</button>';
+  };
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>누구를 볼까요</div>'+
+    '<div class="card-desc">팀원을 고르면 <b>그 사람의</b> KPI·점수·보고서가 아래에 그대로 뜹니다. '+
+    '업적 목표·실적은 본인만 고칠 수 있습니다.</div></div>'+
+    '<div class="card-body"><div class="acad-tabs" style="margin:0">'+
+    btn(me,'나 ('+pfName(me)+')')+mates.map(function(x){return btn(x.id,x.name);}).join('')+
+    '</div></div></div>';
+}
+
+/* ── KPI · 타율 — 이 달치만 ──────────────────────────────────
+   DB 통합 CRM 의 KPI 는 <b>전체 기간</b>을 한 덩어리로 본다. 그러면
+   사업계획서가 힘을 못 쓴다. 이달 계획을 세웠으면 이달 것만 봐야 한다.
+   그래서 <b>배정일 기준으로 그 달만</b> 잘라서 센다.               */
+function pfKpi(who,ym){
+  var L=(typeof AR!=='undefined'&&AR.db)||[],i,r;
+  var a={all:0,done:0,con:0,appt:0,no:0,rej:0,src:{}};
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(r.who!==who)continue;
+    if(ym&&(''+(r.got||'')).slice(0,7)!==ym)continue;
+    a.all++;
+    var S=a.src[r.src||'일반']||(a.src[r.src||'일반']={all:0,done:0,con:0});
+    S.all++;
+    if(r.res&&r.res!=='미진행'){a.done++;S.done++;}
+    if(r.res==='상담'){a.con++;S.con++;if(r.appt)a.appt++;}
+    else if(r.res==='부재')a.no++;
+    else if(r.res==='거절')a.rej++;
+  }
+  a.contact=a.all?Math.round(a.done/a.all*100):0;
+  a.convert=a.done?Math.round(a.con/a.done*100):0;
+  a.absent=a.done?Math.round(a.no/a.done*100):0;
+  return a;
+}
+function pfKpiHtml(){
+  var who=pfWho(),ym=pfYm(),k=pfKpi(who,ym),all=pfKpi(who,'');
+  var kpi=function(v,t,sub,c){
+    return '<div style="flex:1;min-width:118px;border:1px solid #E9EEF5;border-radius:14px;padding:14px 15px">'+
+      '<div style="font-size:11.5px;font-weight:800;color:#64748B">'+t+'</div>'+
+      '<div style="font-size:27px;font-weight:900;color:'+(c||'#0F172A')+';margin-top:3px;line-height:1.1">'+v+'</div>'+
+      '<div style="font-size:10.5px;color:#94A3B8;margin-top:3px">'+sub+'</div></div>';
+  };
+  var bar=function(t,v,c){
+    return '<div style="display:flex;align-items:center;gap:10px;margin-top:9px">'+
+      '<span style="flex:0 0 84px;font-size:12.5px;font-weight:800;color:#42506A">'+t+'</span>'+
+      '<span style="flex:1;height:13px;background:#F1F5F9;border-radius:7px;overflow:hidden">'+
+      '<i style="display:block;height:100%;width:'+Math.min(100,v)+'%;background:'+c+';border-radius:7px"></i></span>'+
+      '<span style="flex:0 0 44px;text-align:right;font-size:13px;font-weight:900;color:'+c+'">'+v+'%</span></div>';
+  };
+  var srcKeys=Object.keys(k.src);
+  return '<div class="card"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">📈</span>KPI · 타율 '+
+    '<span class="badge">'+pfYmLabel(ym)+' 배정분</span></div>'+
+    '<div class="card-desc">이 달에 <b>배정받은 DB</b> 만 셉니다. 달을 나눠야 사업계획서가 힘을 씁니다. '+
+    '전체 기간으로는 배정 '+all.all+'건 · 접촉률 '+all.contact+'% 입니다.</div></div>'+
+    '<div class="card-body">'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+      kpi(k.all,'총 배정','이 달 배정')+
+      kpi(k.done,'접촉 완료(TA)','부재·거절·상담 포함')+
+      kpi(k.con,'상담 전환','결과가 상담','#059669')+
+      kpi(k.appt,'상담 약속','일시 확정','#1D4ED8')+
+    '</div>'+
+    bar('접촉률',k.contact,'#1A56DB')+
+    bar('상담 전환율',k.convert,'#059669')+
+    bar('부재율',k.absent,k.absent>40?'#DC2626':'#D97706')+
+    (srcKeys.length?('<div style="margin-top:16px;overflow-x:auto">'+
+      '<div style="font-size:12.5px;font-weight:900;color:#0B1B34;margin-bottom:7px">DB 종류별</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:380px">'+
+      '<thead><tr style="background:#F8FAFC"><th style="padding:7px;text-align:left">종류</th>'+
+      '<th style="padding:7px;text-align:right">배정</th><th style="padding:7px;text-align:right">접촉</th>'+
+      '<th style="padding:7px;text-align:right">상담</th><th style="padding:7px;text-align:right">전환율</th>'+
+      '</tr></thead><tbody>'+
+      srcKeys.map(function(x){
+        var S=k.src[x],rt=S.done?Math.round(S.con/S.done*100):0;
+        return '<tr style="border-top:1px solid #EEF1F5"><td style="padding:7px;font-weight:700">'+osEsc(x)+'</td>'+
+          '<td style="padding:7px;text-align:right">'+S.all+'</td>'+
+          '<td style="padding:7px;text-align:right">'+S.done+'</td>'+
+          '<td style="padding:7px;text-align:right;color:#059669;font-weight:800">'+S.con+'</td>'+
+          '<td style="padding:7px;text-align:right;font-weight:900;color:'+(rt>=25?'#059669':'#D97706')+'">'+rt+'%</td></tr>';
+      }).join('')+'</tbody></table></div>'):
+      '<div class="ar-none" style="margin-top:12px">이 달에 배정받은 DB 가 없습니다.</div>')+
+    '<div class="notice" style="margin-top:11px">'+
+    '<b>접촉률</b>이 낮으면 전화를 안 한 것, <b>상담 전환율</b>이 낮으면 멘트를 손볼 것, '+
+    '<b>부재율</b>이 높으면 거는 시간대를 바꿀 것부터 보십시오.</div>'+
+    '</div></div>';
+}
+
+/* ── 월별 타율 ────────────────────────────────────────────────
+   업적은 결과고 타율은 과정이다. 결과만 보면 왜 그랬는지를 모른다.
+   달마다 몇 통 걸어 몇 건이 상담이 됐는지를 업적 바로 밑에 붙인다. */
+function pfRateRows(){
+  var me=pfWho(),L=(typeof AR!=='undefined'&&AR.calls)||[],by={},i,c,k;
+  for(i=0;i<L.length;i++){
+    c=L[i];
+    if(c.w!==me||!c.d)continue;
+    k=c.d.slice(0,7);
+    if(!by[k])by[k]={ym:k,call:0,con:0,no:0,rej:0};
+    by[k].call++;
+    if(c.r==='상담')by[k].con++;else if(c.r==='부재')by[k].no++;else if(c.r==='거절')by[k].rej++;
+  }
+  return Object.keys(by).sort().reverse().slice(0,6).map(function(x){
+    var v=by[x];
+    v.rate=v.call?Math.round(v.con/v.call*100):0;
+    v.noRate=v.call?Math.round(v.no/v.call*100):0;
+    return v;
+  });
+}
+function pfRateHtml(){
+  var rows=pfRateRows();
+  if(!rows.length)
+    return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📞</span>월별 타율</div></div>'+
+      '<div class="card-body"><div class="ar-none">아직 통화 기록이 없습니다. '+
+      'DB 통합 CRM 에서 통화를 남기면 여기 쌓입니다.</div></div></div>';
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📞</span>월별 타율</div>'+
+    '<div class="card-desc">업적은 결과이고 타율은 과정입니다. <b>왜 그 결과가 나왔는지</b>가 여기 있습니다.</div></div>'+
+    '<div class="card-body" style="overflow-x:auto">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;min-width:480px">'+
+    '<thead><tr style="background:#F8FAFC">'+
+    '<th style="padding:8px;text-align:left">달</th><th style="padding:8px;text-align:right">통화</th>'+
+    '<th style="padding:8px;text-align:right">상담</th><th style="padding:8px;text-align:right">부재</th>'+
+    '<th style="padding:8px;text-align:right">거절</th><th style="padding:8px;text-align:right">상담 전환율</th>'+
+    '</tr></thead><tbody>'+
+    rows.map(function(v){
+      var c=v.rate>=25?'#059669':(v.rate>=15?'#D97706':'#DC2626');
+      return '<tr style="border-top:1px solid #EEF1F5"'+(v.ym===pfYm()?' style="background:#F5F9FF"':'')+'>'+
+        '<td style="padding:8px;font-weight:800">'+(+v.ym.split('-')[1])+'월</td>'+
+        '<td style="padding:8px;text-align:right">'+v.call+'</td>'+
+        '<td style="padding:8px;text-align:right;font-weight:800;color:#059669">'+v.con+'</td>'+
+        '<td style="padding:8px;text-align:right;color:#D97706">'+v.no+'</td>'+
+        '<td style="padding:8px;text-align:right;color:#DC2626">'+v.rej+'</td>'+
+        '<td style="padding:8px;text-align:right;font-weight:900;color:'+c+'">'+v.rate+'%</td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div class="notice" style="margin-top:10px">전환율이 낮으면 <b>멘트</b>를, 부재가 많으면 <b>거는 시간대</b>를 먼저 보십시오.</div>'+
+    '</div></div>';
+}
+
+/* ── 보고서 한눈에 ───────────────────────────────────────────
+   팀원 관리에서 이름을 누르면 나오던 그 판을 <b>내 화면에도</b> 그대로 놓는다.
+   리더만 보고 본인은 못 보면, 정작 고쳐야 할 사람이 못 본다. */
+function pfMineFullHtml(){
+  var me=pfWho(),r=null,o=null;
+  try{r=(typeof arRowOf==='function')?arRowOf(me):null;}catch(e){}
+  try{o=(typeof AR!=='undefined'&&AR.rep)?AR.rep[me]:null;}catch(e2){}
+  if(!r)return '';
+  var mine=(me===pfMyId());
+  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🪞</span>'+
+    (mine?'내 보고서 한눈에':(osEsc(pfName(me))+' 님 보고서 한눈에'))+'</div>'+
+    '<div class="card-desc">'+(mine?'리더가 보는 것과 <b>똑같은 판</b>입니다. 숨기지 않습니다.'
+      :'팀원 관리에서 이름을 눌렀을 때와 <b>같은 판</b>입니다.')+'</div></div>'+
+    '<div class="card-body">';
+  try{h+=arNumsHtml(r);}catch(e3){}
+  try{if(typeof arVsTeamHtml==='function')h+=arVsTeamHtml(me);}catch(e4){}
+  try{if(typeof arCrmMiniHtml==='function')h+=arCrmMiniHtml(me);}catch(e5){}
+  try{if(typeof arCoachHtml==='function')h+=arCoachHtml(me);}catch(e6){}
+  try{
+    if(o&&typeof arSecHtml==='function')h+=arSecHtml(o);
+    else h+='<div class="ar-none" style="margin-top:12px">아직 AI 보고가 없습니다. '+
+      '리더가 「보고 받기」 를 누르면 여기 채워집니다.</div>';
+  }catch(e7){}
+  return h+'</div></div>';
+}
+
 function pfChartHtml(){
   var year=(PF.mineYear||[]).slice(),h='';
   var v=pfOf(PF.mine);
@@ -7766,10 +7994,10 @@ function pfCardHtml(who){
     '</div>'+
 
     '<div style="display:flex;gap:14px;margin-top:22px">'+
-      pfKpi('목표',prNum(v.g)+'만원','#93A6C4')+
-      pfKpi('실적',prNum(v.a)+'만원',c)+
-      pfKpi('달성률',rate+'%',c)+
-      pfKpi('건수',v.ac+' / '+v.gc+'건','#E8EEF8')+
+      pfCardKpi('목표',prNum(v.g)+'만원','#93A6C4')+
+      pfCardKpi('실적',prNum(v.a)+'만원',c)+
+      pfCardKpi('달성률',rate+'%',c)+
+      pfCardKpi('건수',v.ac+' / '+v.gc+'건','#E8EEF8')+
     '</div>'+
 
     '<div style="margin-top:20px">'+
@@ -7801,7 +8029,7 @@ function pfCardHtml(who){
     'APEX YUN PRO · 이 자료는 내부 영업 관리용입니다. 고객 정보는 담겨 있지 않습니다.</div>'+
   '</div>';
 }
-function pfKpi(t,v,c){
+function pfCardKpi(t,v,c){
   return '<div style="flex:1;background:rgba(255,255,255,.06);border-radius:13px;padding:14px 15px">'+
     '<div style="font-size:11.5px;color:#93A6C4;font-weight:700">'+t+'</div>'+
     '<div style="font-size:21px;font-weight:900;color:'+c+';margin-top:4px;letter-spacing:-.02em">'+v+'</div></div>';
@@ -9198,8 +9426,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 09:05';
-var APP_BUILD_NOTE='아침 보고가 커졌습니다 — 밀린 것이 있으면 붉게, 줄을 누르면 그 칸으로 바로 갑니다 · TFA 업무관리에 「내 업적 · 월간보고」 · 리더는 팀원관리 맨 위에서 사업계획서를 쓰고 적용 · 「매월 영업보고서」 는 이미지로 구워 카톡에 붙입니다';
+var APP_BUILD='2026-08-13 13:30';
+var APP_BUILD_NOTE='「내 업적 · 월간보고」 에 CRM 의 KPI·타율을 그대로 가져왔습니다 — 그 달 배정분만 세어 사업계획서가 힘을 쓰게 했습니다 · 리더는 여기서 팀원을 골라 그 사람 KPI·점수·보고서를 그대로 봅니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
