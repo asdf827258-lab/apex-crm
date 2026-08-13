@@ -246,6 +246,21 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(R.cntPol === 1 && R.cntWon === 1, '칸마다 숫자가 맞는다');
   is(!R.nxtNames.includes('남의고객'), '남의 담당 고객은 내 화면에 안 나온다');
 
+  console.log('\n[4-2] AI 도 단계를 보고 말하는가');
+  is(/function arStageText\(/.test(app), 'AI 에게 넘기는 사실에 단계 분포가 들어간다');
+  is(/s\+=arStageText\(who\);/.test(app), '전화 습관 옆에 붙여 함께 넘긴다');
+  is(/어느 단계에서 막혔는지/.test(app), '어느 단계에서 막혔는지 짚으라고 시킨다');
+  is(/TA 는 많은데 AP 가 적으면/.test(app) && /AP 는 있는데 PC·CS 가 없으면/.test(app),
+    '단계별로 무엇이 문제인지 알려 준다 — 뭉뚱그려 「더 열심히」 라고 못 하게');
+  is(/민원으로 이어진다고 짚습니다/.test(app), '증권이 밀리면 민원이 된다고 짚게 한다');
+  const ST = await page.evaluate(() => arStageText('u1'));
+  is(/맡은 DB 5건/.test(ST), '내 DB 만 세어 넘긴다 — 남의 것이 안 섞인다 (' + (ST.split('\n')[0] || '') + ')');
+  is(/계약완료 1건/.test(ST) && /증권전달 1건/.test(ST), '단계별 건수를 그대로 넘긴다');
+  is(/계약률 40%/.test(ST), '계약률을 손으로 푼 답과 맞춘다 (2/5 = 40%)');
+  is(/증권을 아직 못 보낸 사람 1명/.test(ST), '증권 미전달을 따로 알린다');
+  is(/상담 약속 1건/.test(ST), '앞으로 잡힌 약속 수도 넘긴다');
+  is(!/홍길동|임꺽정|성춘향/.test(ST), 'AI 에게 고객 실명은 넘기지 않는다');
+
   console.log('\n[5] 단계마다 다른 말을 하는가');
   is(/증권을 못 보냈습니다/.test(R.todo.d1 || ''), '증권 미전달 — 며칠째인지 짚어 준다 (' + (R.todo.d1 || '').slice(0, 40) + ')');
   is(/소개/.test(R.todo.d2 || ''), '증권 전달 직후 — 소개를 여쭙게 한다');

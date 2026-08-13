@@ -5577,6 +5577,32 @@ function arCrmDeepText(who){
      (o.prev7?((o.last7>=o.prev7?'늘었음':'줄었음')):'비교 없음')+')\n';
   var cold=arCold(who,7),c14=arCold(who,14).length,c30=arCold(who,30).length;
   s+='- 손 놓은 DB: 1주 넘음 '+cold.length+'건 · 2주 넘음 '+c14+'건 · 한 달 넘음 '+c30+'건\n';
+  s+=arStageText(who);
+  return s;
+}
+/* 어느 단계에서 막히는가 — 통화 수만 보면 알 수 없다.
+   TA 는 많은데 AP 가 안 나오는 사람과, AP 까지는 가는데 CS 에서
+   무너지는 사람은 <b>고쳐야 할 것이 완전히 다르다.</b> AI 가 그것을
+   보고 말하게 단계별로 나눠서 넘긴다. */
+function arStageText(who){
+  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,appt=0;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    tot++;
+    c[r.stage||'미접촉']=(c[r.stage||'미접촉']||0)+1;
+    if(r.stage==='계약완료')pol++;
+    if(r.stage==='증권전달')intro++;
+    if(r.appt)appt++;
+  }
+  if(!tot)return '[단계] 맡은 DB 가 없습니다.\n';
+  var s='[단계별 분포 — 맡은 DB '+tot+'건]\n',parts=[];
+  for(i=0;i<order.length;i++)if(c[order[i]])parts.push(order[i]+' '+c[order[i]]+'건');
+  s+='- '+(parts.join(' · ')||'기록 없음')+'\n';
+  s+='- 계약까지 간 사람 '+(pol+intro)+'명 (계약률 '+Math.round((pol+intro)/tot*100)+'%)\n';
+  if(pol)s+='- 계약은 됐는데 증권을 아직 못 보낸 사람 '+pol+'명 — 밀리면 민원이 됩니다\n';
+  if(intro)s+='- 증권을 전달한 사람 '+intro+'명 — 소개를 받을 수 있는 자리입니다\n';
+  s+='- 앞으로 잡혀 있는 상담 약속 '+appt+'건\n';
   return s;
 }
 
@@ -5630,7 +5656,14 @@ function arSys(){
    '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.\n'+
    '「활동 보고」에는 전화 습관을 반드시 한 줄 넣습니다 — 언제 거는지, 부재 뒤에 다시 거는지, '+
    '한 건에 몇 번이나 붙는지 중 가장 눈에 띄는 것 하나. '+
-   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.';
+   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.\n'+
+   /* 단계마다 막히는 곳이 다르다. 뭉뚱그려 「더 열심히」 라고 하면 아무 도움이 안 된다 */
+   '[단계별 분포]를 보고 <b>어느 단계에서 막혔는지</b>를 짚습니다. '+
+   'TA 는 많은데 AP 가 적으면 전화에서 만남으로 넘기는 말이 문제입니다. '+
+   'AP 는 있는데 PC·CS 가 없으면 제안과 클로징이 문제입니다. '+
+   '계약은 되는데 증권 전달이 밀려 있으면 사후관리가 문제입니다 — 민원으로 이어진다고 짚습니다. '+
+   '증권을 전달한 사람이 있으면 소개를 여쭈라고 「다음 7일」에 넣습니다. '+
+   '앞으로 잡힌 약속이 있으면 그 준비를 「다음 7일」 맨 앞에 둡니다.';
   try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 참고]\n'+k;}}catch(e){}
   try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
   return base;
