@@ -241,8 +241,19 @@ body.form-mode{background:#fff}
    여기서 적는 숫자가 뒤의 스물다섯 장을 전부 만듭니다. 그런데 지금까지
    여느 입력 폼과 똑같이 생겨서, 고객 앞에서 열기가 민망했습니다.
    표지와 같은 금색을 얇게 두르고, 칸을 종이 서식처럼 밑줄로 바꿉니다.  */
+/* 두 번째 장은 <b>가로로 넓게</b> 편다. 고객 상황은 한눈에 들어와야
+   하는데, 720px 안에 두 칸씩 세로로 쌓이면 스무 번을 내려야 끝이 났다.
+   화면이 넓으면 넓은 만큼 쓴다 — 좁으면 예전처럼 접힌다. */
 #form-view #sec1{position:relative;background:#fff;border:1px solid #E8E1D2;
-  border-radius:20px;padding:30px 26px 26px;overflow:hidden}
+  border-radius:20px;padding:30px 30px 26px;overflow:hidden;
+  margin-left:calc(-1 * clamp(0px,(100vw - 760px)/2,240px));
+  margin-right:calc(-1 * clamp(0px,(100vw - 760px)/2,240px))}
+#sec1 .grid.g2{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+#sec1 .grid.g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+#sec1 .sec1-sum{margin-left:auto;font-size:11.5px;font-weight:700;color:#8C8271;
+  text-align:right;line-height:1.6;white-space:nowrap}
+@media(max-width:700px){#sec1 .sec1-sum{display:none}}
+#sec1 .sec1-who{flex-wrap:wrap}
 #sec1::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
   background:linear-gradient(90deg,#C8A25B,rgba(212,185,120,.30),transparent)}
 #sec1 .sec1-eyebrow{font-size:10px;font-weight:800;letter-spacing:.36em;color:#B08D45}
@@ -425,6 +436,23 @@ body.form-mode{background:#fff}
 .cover-h .rt .k{font-size:10.5px;font-weight:800;opacity:.5;letter-spacing:.05em}
 .cover-h .rt .v{font-size:15px;font-weight:800;margin:4px 0 14px;letter-spacing:-.02em}
 .cover-h .rt .v:last-child{margin-bottom:0}
+
+/* ===== 첫 장 표지 — 보장분석 상담자료와 <b>글자 그대로 같은</b> 판 =====
+   아래 .as-* 규칙은 app/상담자료/apex-deck.js 의 표지에서 그대로
+   옮겨 왔습니다. 한 글자도 고치지 않았습니다 — 고치면 두 자료가
+   달라 보이고, 그 순간 「같은 사람의 자료」라는 느낌이 깨집니다.
+   맨 위 세 줄(컨테이너)만 이 파일의 슬라이드 틀에 맞췄습니다.
+   점검판이 .as-* 가 양쪽에서 같은지 매번 대조합니다.               */
+.slide.apex-star{padding:0 !important;background:#08080A !important;overflow:hidden;max-width:none}
+.slide.apex-star>*:not(.apex-star-wrap){display:none !important}
+.apex-star-wrap{position:relative;min-height:520px;display:flex;background:#08080A;color:#F3EEE3;font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;overflow:hidden}
+/* 발표(가로) 모드에서는 16:9 판을 꽉 채운다 — 보장분석 표지와 똑같이 */
+#show.wide .slide.apex-star{position:relative;height:100%}
+#show.wide .slide.apex-star .apex-star-wrap{position:absolute;inset:0;min-height:0}
+/* 사진을 아직 안 올렸으면 왼쪽 칸을 비우지 않고 접는다 — 검은 네모만 남으면 허전하다 */
+.apex-star-wrap.nophoto .as-photo{display:none}
+.apex-star-wrap.nophoto .as-info{padding:44px 56px 56px}
+.as-photo{position:relative;flex:0 0 47%;min-width:0;background:#0C0C0E;overflow:hidden}.as-photo img{width:100%;height:100%;object-fit:cover;object-position:center 12%;filter:contrast(1.04) saturate(.96)}.as-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,8,10,.55) 0%,rgba(8,8,10,0) 26%,rgba(8,8,10,0) 62%,rgba(8,8,10,.98) 100%)}.as-photo::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(115% 78% at 46% 34%,transparent 34%,rgba(8,8,10,.30) 68%,rgba(8,8,10,.86) 100%)}.as-vert{position:absolute;left:16px;top:50%;transform:translateY(-50%) rotate(180deg);writing-mode:vertical-rl;font-size:10.5px;letter-spacing:.42em;color:rgba(212,185,120,.78);z-index:3;font-family:"Noto Sans KR",sans-serif;font-weight:600}.as-team{position:absolute;left:26px;bottom:52px;z-index:3;font-size:10.5px;letter-spacing:.30em;color:rgba(212,185,120,.72);font-family:"Noto Sans KR",sans-serif;font-weight:700}.as-info{flex:1;min-width:0;position:relative;padding:44px 52px 62px 26px;display:flex;flex-direction:column;justify-content:center;text-align:right}.as-info::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 80% at 78% 30%,rgba(212,185,120,.075),transparent 62%)}.as-issue{font-size:12.5px;letter-spacing:.16em;color:#D4B978;font-family:"Noto Sans KR",sans-serif;font-weight:700}.as-star{font-size:11px;letter-spacing:.46em;color:rgba(212,185,120,.86);margin-top:3px;font-family:"Noto Sans KR",sans-serif;font-weight:700}.as-star::before{content:"";display:inline-block;width:54px;height:1px;vertical-align:4px;margin-right:11px;background:linear-gradient(90deg,transparent,#C8A25B)}.as-name{font-size:clamp(52px,7.1vw,104px);line-height:1.02;font-weight:700;letter-spacing:.02em;margin-top:14px;color:#F0E3C4;text-shadow:0 0 42px rgba(212,185,120,.30)}.as-en{font-size:clamp(13px,1.32vw,20px);letter-spacing:.42em;color:rgba(226,208,163,.78);margin-top:8px;font-family:"Noto Sans KR",sans-serif;font-weight:500}.as-role{margin-top:22px;font-size:clamp(17px,1.7vw,25px);font-weight:800;color:#FFFDF7;font-family:"Noto Sans KR",sans-serif;letter-spacing:-.01em;display:flex;align-items:center;justify-content:flex-end;gap:13px}.as-role::before{content:"";width:34px;height:2px;background:linear-gradient(90deg,transparent,#C8A25B)}.as-quote{margin-top:13px;font-size:clamp(14px,1.32vw,19px);font-style:italic;color:#DCD3C0;line-height:1.6}.as-rule{margin:22px 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,185,120,.55),rgba(212,185,120,.18))}.as-facts{display:flex;justify-content:flex-end;gap:clamp(20px,3.2vw,56px);margin-top:17px;text-align:right}.as-fact{min-width:0}.as-fl{font-size:10px;letter-spacing:.28em;color:rgba(212,185,120,.80);font-family:"Noto Sans KR",sans-serif;font-weight:700}.as-fv{margin-top:6px;font-size:clamp(13px,1.15vw,16.5px);color:#F1ECE1;line-height:1.62;font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap}.as-chips{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;margin-top:19px}.as-chip{padding:6px 15px;border:1px solid rgba(212,185,120,.42);border-radius:999px;font-size:12.5px;color:#EBDFC4;font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap}.as-shots{display:flex;justify-content:flex-end;gap:12px;margin-top:20px}.as-shot{width:clamp(120px,15vw,196px)}.as-shot img{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:3px;border:1px solid rgba(212,185,120,.26);display:block}.as-cap{margin-top:6px;font-size:10.5px;color:rgba(226,214,190,.80);text-align:left;font-family:"Noto Sans KR",sans-serif;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.as-cap i{color:#EF4444;font-style:normal;margin-right:4px}.as-edit{position:absolute;right:18px;bottom:52px;z-index:4;padding:5px 13px;border-radius:999px;border:1px solid rgba(212,185,120,.36);background:rgba(255,255,255,.05);color:#E8DCC0;font-size:11.5px;font-weight:700;cursor:pointer;font-family:"Noto Sans KR",sans-serif;opacity:.55;transition:opacity .25s}.as-edit:hover{opacity:1}@media (max-width:900px){.apex-star-wrap{flex-direction:column}.as-photo{flex:0 0 42%}.as-photo::after{background:linear-gradient(180deg,rgba(8,8,10,0) 52%,rgba(8,8,10,.98) 100%)}.as-vert{display:none}.as-info{padding:16px 22px 26px;justify-content:flex-start;text-align:center}.as-facts,.as-chips,.as-shots,.as-role{justify-content:center}.as-role::before{display:none}.as-info::before{display:none}}
 
 /* 목차 가로 타일 */
 .agenda{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -949,42 +977,11 @@ svg{display:block;width:100%;height:auto;overflow:visible}
 <div id="form-view">
 
 
-  <div class="card me" id="sec8">
-    <div class="me-head">
-      <div class="me-av" id="mePrevAv">윤시</div>
-      <div class="me-info">
-        <div class="me-nm" id="mePrevNm">윤시현 <span>본부장</span></div>
-        <div class="me-org" id="mePrevOrg">에이플러스에셋 온탑본부</div>
-      </div>
-    </div>
-    <div class="me-motto" id="mePrevMotto">"보험을 파는 설계사가 아닌, 삶을 설계하는 설계사"</div>
-    <p class="sub" style="margin:18px 0 16px">첫 장 소개 슬라이드에 그대로 들어갑니다. 한 번 적어두면 계속 씁니다</p>
-    <div class="grid g2">
-      <div class="field"><label>이름</label><input id="a_name" value="윤시현"></div>
-      <div class="field"><label>직함</label><input id="a_title" value="본부장"></div>
-      <div class="field"><label>소속</label><input id="a_org" value="에이플러스에셋 온탑본부"></div>
-      <div class="field"><label>경력</label><div class="inwrap"><input id="a_years" class="has-unit" type="number" value="12"><span class="unit">년</span></div></div>
-      <div class="field"><label>연락처</label><input id="a_phone" placeholder="010-0000-0000"></div>
-      <div class="field"><label>이메일·카톡ID</label><input id="a_contact2" placeholder="선택"></div>
-    </div>
-    <div class="field" style="margin-top:12px"><label>한 줄 철학</label>
-      <input id="a_motto" value="보험을 파는 설계사가 아닌, 삶을 설계하는 설계사"></div>
-    <div class="field" style="margin-top:12px"><label>전문 분야 (쉼표로 구분)</label>
-      <input id="a_tags" value="생애 재무설계, 보장 밸런싱, 은퇴·연금 설계, 상속·증여"></div>
-    <div class="field" style="margin-top:12px"><label>약력 · 이력 (한 줄에 하나씩)</label>
-      <textarea id="a_bio" rows="4" placeholder="MDRT 3년 연속 달성&#10;AFPK 자격 보유&#10;누적 상담 1,200가구"></textarea></div>
-    <div class="me-actions">
-      <label class="me-btn" for="a_photo">📷 사진 등록</label>
-      <input type="file" id="a_photo" accept="image/*" hidden>
-      <button class="me-btn" id="a_clear">사진 삭제</button>
-      <button class="me-btn save" id="a_save">이 프로필 저장</button>
-    </div>
-  </div>
-
   <div class="card" id="sec1">
-    <div class="sec1-eyebrow">CLIENT PROFILE</div>
-    <h2><span class="step-no">1</span>오늘 만나는 분</h2>
-    <div class="sec1-who"><span class="lb">FOR</span><span class="nm empty" id="sec1Who">아래에 고객명을 적으시면 여기 섭니다</span></div>
+    <div class="sec1-eyebrow">CLIENT SITUATION · 두 번째 장</div>
+    <h2><span class="step-no">1</span>고객의 상황을 정리합니다</h2>
+    <div class="sec1-who"><span class="lb">FOR</span><span class="nm empty" id="sec1Who">아래에 고객명을 적으시면 여기 섭니다</span>
+      <span class="sec1-sum" id="sec1Sum"></span></div>
     <p class="sub">여기 적는 숫자가 뒤의 스물다섯 장을 전부 만듭니다. 모르는 칸은 비워 두셔도 됩니다</p>
     <div class="grid g2">
       <div class="field"><label>고객명</label><input id="f_name" placeholder="홍길동" value=""></div>
@@ -1280,7 +1277,7 @@ $('addparent').onclick=function(){addParent('본가',72);};
 addParent('본가',72);
 
 /* ---------- 섹션 네비 · 진행률 ---------- */
-var SECS=[{id:'sec8',n:'내 소개'},{id:'sec1',n:'기본정보'},{id:'sec2',n:'소득·지출'},{id:'sec3',n:'자산'},
+var SECS=[{id:'sec1',n:'고객 상황'},{id:'sec2',n:'소득·지출'},{id:'sec3',n:'자산'},
           {id:'sec4',n:'연금'},{id:'sec5',n:'보장'},{id:'sec6',n:'목표'},
           {id:'sec7',n:'걱정'},{id:'sec9',n:'뉴스·자료'}];
 var touched={};
@@ -1309,56 +1306,88 @@ function updateProgress(){
   }
 }
 var PHOTO='';
-function saveProfile(){
+/* 내 소개는 여기서 안 적는다 — 보장분석 상담자료의 「내 소개」 한 곳에서
+   적고 두 자료가 함께 읽는다. 두 번 적으면 반드시 어긋난다. */
+function saveProfile(){ toast('내 소개는 보장분석 상담자료 표지에서 고치시면 여기도 같이 바뀝니다'); }
+/* ── 내 소개 — 보장분석 상담자료와 <b>같은 칸</b>을 본다 ────────
+   전에는 이 화면 안에 「내 소개」 입력 카드가 따로 있었다. 그래서 같은
+   설계사가 두 자료에 이름을 두 번 적어야 했고, 한쪽만 고치면 두 자료가
+   서로 다른 이름을 말했다.
+
+   이제 안 적는다. 보장분석 상담자료의 「내 소개」를 그대로 읽는다.
+   값이 오는 곳도 그쪽과 똑같다 — 앞에 있는 것이 이긴다.
+     ① apex_intro_<로그인아이디>   ② s6_profile   ③ apex_profile
+   ───────────────────────────────────────────────────────── */
+var ADV={name:'',title:'',org:'',years:'',phone:'',email:'',motto:'',tags:'',bio:'',
+         nameEn:'',license:'',onair:'',career:'',issue:'',team:'',
+         photo:'',photo2:'',photo3:''};
+/* 재무설계 쪽 칸 이름이 a_name·a_org … 로 달라서 같은 말로 맞춘다 */
+var ADV_ALIAS={a_name:'name',a_title:'title',a_org:'org',a_years:'years',
+  a_phone:'phone',a_contact2:'email',a_motto:'motto',a_tags:'tags',a_bio:'bio',
+  c2:'email',region:'org',intro:'motto',specialties:'tags'};
+function advLoad(){
+  var keys=['s6_profile','apex_profile'],i,k,raw,o,f,tgt;
   try{
-    localStorage.setItem('apex_profile', JSON.stringify({
-      name:t('a_name'),title:t('a_title'),org:t('a_org'),years:n('a_years'),
-      phone:t('a_phone'),c2:t('a_contact2'),motto:t('a_motto'),tags:t('a_tags'),
-      bio:($('a_bio')?$('a_bio').value:''),photo:PHOTO}));
-    toast('프로필을 저장했어요. 다음에도 그대로 열립니다');
-  }catch(e){ toast('이 브라우저에서는 저장할 수 없어요'); }
-}
-function loadProfile(){
-  try{
-    var raw=localStorage.getItem('apex_profile'); if(!raw) return;
-    var o=JSON.parse(raw);
-    if(o.name) $('a_name').value=o.name;
-    if(o.title) $('a_title').value=o.title;
-    if(o.org) $('a_org').value=o.org;
-    if(o.years) $('a_years').value=o.years;
-    if(o.phone) $('a_phone').value=o.phone;
-    if(o.c2) $('a_contact2').value=o.c2;
-    if(o.motto) $('a_motto').value=o.motto;
-    if(o.tags) $('a_tags').value=o.tags;
-    if(o.bio&&$('a_bio')) $('a_bio').value=o.bio;
-    if(o.photo) PHOTO=o.photo;
+    for(i=0;i<localStorage.length;i++){
+      k=localStorage.key(i);
+      if(k&&k.indexOf('apex_intro_')===0) keys.unshift(k);
+    }
   }catch(e){}
+  for(i=0;i<keys.length;i++){
+    try{
+      raw=localStorage.getItem(keys[i]); if(!raw) continue;
+      o=JSON.parse(raw); if(!o||typeof o!=='object') continue;
+      for(f in o){
+        if(!o.hasOwnProperty(f)) continue;
+        tgt=ADV_ALIAS[f]||f;
+        if(!ADV.hasOwnProperty(tgt)) continue;
+        if(ADV[tgt]==='' && o[f]!=null && o[f]!=='') ADV[tgt]=''+o[f];
+      }
+    }catch(e2){}
+  }
+  if(ADV.photo) PHOTO=ADV.photo;
+  return ADV;
 }
-function mePreview(){
-  var nm=t('a_name')||'이름', ti=t('a_title')||'', og=t('a_org')||'', mo=t('a_motto')||'';
-  var av=$('mePrevAv');
-  if(PHOTO){ av.className='me-av has'; av.innerHTML='<img src="'+PHOTO+'" alt="">'; }
-  else { av.className='me-av'; av.textContent=nm.replace(/\s/g,'').slice(-2)||'FP'; }
-  $('mePrevNm').innerHTML=nm+(ti?' <span>'+ti+'</span>':'');
-  $('mePrevOrg').textContent=og;
-  $('mePrevMotto').textContent=mo?'"'+mo+'"':'';
-  heroPaint(nm,ti,og,mo);
+/* 앱이 보내 주는 값을 ADV 에 얹는다. 받는 곳은 아래 한 군데뿐이다 */
+function advTake(o){
+  var f,tgt;
+  if(!o) return;
+  for(f in o){
+    if(!o.hasOwnProperty(f)) continue;
+    tgt=ADV_ALIAS[f]||f;
+    if(ADV.hasOwnProperty(tgt)&&o[f]!=null&&o[f]!=='') ADV[tgt]=''+o[f];
+  }
+  if(ADV.photo) PHOTO=ADV.photo;
+  try{ heroPaint(); }catch(e){}
 }
+function loadProfile(){ advLoad(); }
+/* 내 소개 카드를 없앴으므로 미리보기도 없다. 첫 화면만 다시 그린다 */
+function mePreview(){ heroPaint(); }
 /* 첫 화면(표지)도 같은 값을 씁니다. 내 소개를 고치면 바로 위에서 바뀝니다 —
    두 자료가 서로 다른 이름을 말하는 일이 없어야 합니다. */
-function heroPaint(nm,ti,og,mo){
+function heroPaint(){
+  var nm=ADV.name||'이름', ti=ADV.title||'', og=ADV.org||'', mo=ADV.motto||'';
   var n=$('ffName'); if(!n) return;
-  n.textContent=nm||'이름';
+  n.textContent=nm;
   var r=$('ffRole');
-  if(r) r.innerHTML=(ti||'')+(og?'<small>'+og.replace(/[<>&]/g,'')+'</small>':'');
+  if(r) r.innerHTML=esc(ti)+(og?'<small>'+esc(og)+'</small>':'');
   var q=$('ffQuote');
   if(q){ q.textContent=mo?('\u201C'+mo+'\u201D'):''; q.style.display=mo?'':'none'; }
+  var ph=PHOTO||ADV.photo;
   var f=$('ffFace'), im=$('ffFaceImg');
   if(f&&im){
-    if(PHOTO){ im.src=PHOTO; f.classList.remove('off'); }
+    if(ph){ im.src=ph; f.classList.remove('off'); }
     else { im.removeAttribute('src'); f.classList.add('off'); }
   }
+  var hint=$('ffHint');
+  if(hint) hint.style.display=ADV.name?'none':'';
 }
+/* 표지에 들어가는 값은 <b>고객에게 그대로 보인다.</b> 꺾쇠 하나가
+   섞여도 판이 깨지므로 반드시 막고 넣는다. */
+function esc(v){return (''+(v==null?'':v)).replace(/[&<>"']/g,function(c){
+  return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+function lines(v){return (''+(v||'')).split(/[\n,·]/).map(function(x){return x.trim();})
+  .filter(function(x){return x;});}
 /* 고객명을 적으면 두 번째 장 머리에 그대로 섭니다 — 지금 누구를 위한
    자료를 만들고 있는지 화면에서 잃지 않게 */
 function sec1Paint(){
@@ -1366,6 +1395,18 @@ function sec1Paint(){
   var v=t('f_name');
   if(v){ el.className='nm'; el.textContent=v+' 님'; }
   else { el.className='nm empty'; el.textContent='아래에 고객명을 적으시면 여기 섭니다'; }
+  /* 적은 것을 한 줄로 되짚어 준다 — 스물다섯 장이 이 값으로 만들어지므로
+     여기서 틀리면 뒤가 전부 틀린다. 눈으로 바로 확인할 수 있게. */
+  var sm=$('sec1Sum'); if(!sm) return;
+  var age=n('f_age'), job=t('f_job'), sp=(sel&&sel.spouse), out=[];
+  if(age) out.push(age+'세');
+  if(job) out.push(job);
+  out.push(sp?'배우자 있음':'싱글');
+  var kn=document.querySelectorAll('#kids .kid-row').length;
+  var pn=document.querySelectorAll('#parents .kid-row').length;
+  if(kn) out.push('자녀 '+kn+'명');
+  if(pn) out.push('부모 '+pn+'분');
+  sm.textContent=out.join(' · ');
 }
 document.addEventListener('input',function(e){
   markSection(e.target);
@@ -1492,15 +1533,6 @@ $('demo').onclick=function(){
   toast('예시 고객으로 프레젠테이션을 엽니다');
   setTimeout(function(){ $('start').click(); },700);
 };
-$('a_photo').addEventListener('change',function(e){
-  var f=e.target.files&&e.target.files[0]; if(!f) return;
-  if(f.size>3*1024*1024){ toast('3MB 이하 이미지를 올려주세요'); return; }
-  var fr=new FileReader();
-  fr.onload=function(ev){ PHOTO=ev.target.result; mePreview(); toast('사진을 등록했어요'); };
-  fr.readAsDataURL(f);
-});
-$('a_clear').onclick=function(){ PHOTO=''; $('a_photo').value=''; mePreview(); };
-$('a_save').onclick=saveProfile;
 loadProfile();
 mePreview();
 sec1Paint();
@@ -1524,12 +1556,12 @@ function collect(){
                   age:parseFloat(prow[q].querySelector('.p-age').value)||0});
   }
   var d={
-    adv:{name:t('a_name')||'담당 설계사', title:t('a_title')||'', org:t('a_org')||'',
-         years:n('a_years'), phone:t('a_phone'), c2:t('a_contact2'),
-         motto:t('a_motto')||'삶을 설계하는 설계사',
-         tags:(t('a_tags')||'').split(',').map(function(x){return x.trim();}).filter(function(x){return x;}),
-         bio:(($('a_bio')&&$('a_bio').value)||'').split('\n').map(function(x){return x.trim();}).filter(function(x){return x;}),
-         photo:PHOTO},
+    adv:{name:ADV.name||'담당 설계사', title:ADV.title||'', org:ADV.org||'',
+         years:parseFloat(ADV.years)||0, phone:ADV.phone, c2:ADV.email,
+         motto:ADV.motto||'삶을 설계하는 설계사',
+         tags:(ADV.tags||'').split(/[,\n]/).map(function(x){return x.trim();}).filter(function(x){return x;}),
+         bio:(ADV.bio||'').split('\n').map(function(x){return x.trim();}).filter(function(x){return x;}),
+         photo:PHOTO||ADV.photo},
     parents:parents, preg:sel.preg,
     name:t('f_name')||'고객', age:n('f_age')||40, gender:t('f_gender'), job:t('f_job')||'회사원',
     spouse:sel.spouse, sname:t('f_sname')||'배우자', sage:n('f_sage'), sincome:n('f_sincome'),
@@ -3135,21 +3167,54 @@ function rateTag(rate){
   return '<span class="tag r">시급</span>';
 }
 
+/* ── STARRING 표지 ──
+   app/상담자료/apex-deck.js 의 coverHtml() 과 <b>같은 뼈대</b>다.
+   클래스 이름(.as-*)도 그대로라서 CSS 도 그대로 먹는다.
+   점검판이 두 파일을 매번 대조한다 — 한쪽만 바뀌면 빨간불이 뜬다. */
+function starCoverHtml(){
+  var on=lines(ADV.onair), tg=lines(ADV.tags);
+  var main=ADV.photo||PHOTO||'', pa=ADV.photo2||'', pb=ADV.photo3||'';
+  var facts=[];
+  if(ADV.license) facts.push({l:'LICENSE',v:lines(ADV.license).map(esc).join('<br>')});
+  if(on.length)   facts.push({l:'ON AIR', v:on.map(esc).join('<br>')});
+  if(ADV.career)  facts.push({l:'CAREER', v:esc(ADV.career)});
+  else if(ADV.years) facts.push({l:'CAREER', v:esc(ADV.years)+'년'});
+
+  var shots=[];
+  if(pa) shots.push({src:pa,cap:on[0]||''});
+  if(pb) shots.push({src:pb,cap:on[1]||''});
+
+  return '<div class="apex-star-wrap'+(main?'':' nophoto')+'">'+
+    '<div class="as-photo">'+
+      (main?'<img src="'+esc(main)+'" alt="" onerror="this.style.display=\'none\'">':'')+
+      (ADV.team?'<div class="as-team">'+esc(ADV.team)+'</div>':'')+
+    '</div>'+
+    '<div class="as-info">'+
+      (ADV.issue?'<div class="as-issue">'+esc(ADV.issue)+'</div>':'')+
+      '<div class="as-star">STARRING</div>'+
+      '<div class="as-name">'+esc(ADV.name||'이름')+'</div>'+
+      (ADV.nameEn?'<div class="as-en">'+esc(ADV.nameEn)+'</div>':'')+
+      (ADV.title?'<div class="as-role">'+esc(ADV.title)+'</div>':'')+
+      (ADV.motto?'<div class="as-quote">\u201C'+esc(ADV.motto)+'\u201D</div>':'')+
+      (facts.length?('<div class="as-rule"></div><div class="as-facts">'+
+        facts.map(function(f){return '<div class="as-fact"><div class="as-fl">'+f.l+'</div>'+
+          '<div class="as-fv">'+f.v+'</div></div>';}).join('')+'</div>'):'')+
+      (tg.length?('<div class="as-chips">'+
+        tg.map(function(x){return '<span class="as-chip">'+esc(x)+'</span>';}).join('')+'</div>'):'')+
+      (shots.length?('<div class="as-shots">'+
+        shots.map(function(x){return '<div class="as-shot"><img src="'+esc(x.src)+'" alt="" '+
+          'onerror="this.parentElement.style.display=\'none\'">'+
+          (x.cap?'<div class="as-cap"><i>●</i>ON AIR · '+esc(x.cap)+'</div>':'')+'</div>';}).join('')+'</div>'):'')+
+    '</div></div>';
+}
 function buildSlides(r){
   var d=r.d, S=[];
 
-  /* 1. 표지 */
-  var TD=new Date();
-  S.push('<!--nostep--><div class="cover-h">'+
-    '<div><div class="brandline"><div class="sq">A</div><span>A P E X · Y U N P R O</span></div>'+
-    '<h1>'+d.name+'님의<br><em>생애 재무설계 리포트</em></h1></div>'+
-    '<div class="rt">'+
-      '<div class="k">CLIENT</div><div class="v">'+d.age+'세 · '+d.job+'</div>'+
-      '<div class="k">FAMILY</div><div class="v">'+(d.spouse?'배우자 1인':'싱글')+(d.kids.length?' · 자녀 '+d.kids.length+'명':'')+(d.parents.length?' · 부모 '+d.parents.length+'분':'')+'</div>'+
-      '<div class="k">PLANNER</div><div class="v">'+d.adv.name+' '+d.adv.title+'</div>'+
-      '<div class="k">DATE</div><div class="v">'+TD.getFullYear()+'. '+(TD.getMonth()+1)+'. '+TD.getDate()+'</div>'+
-    '</div></div>'+
-    '<div class="panel tint" style="margin-top:12px"><div class="quote">'+d.adv.motto+'</div></div>');
+  /* 1. 표지 — 보장분석 상담자료의 STARRING 표지와 <b>같은 판</b>.
+     apex-deck.js 의 coverHtml() 을 그대로 옮겨 왔다. 두 자료를 이어서
+     넘길 때 첫 장이 달라 보이면 「같은 사람의 자료」라는 느낌이 깨진다.
+     값도 같은 곳(내 소개)에서 온다 — 여기서 따로 적지 않는다. */
+  S.push('<!--nostep-->'+starCoverHtml());
 
   /* 1-1. 설계사 소개 */
   var AD=d.adv, ini=AD.name.replace(/\s/g,'').slice(-2) || 'FP';
@@ -4421,6 +4486,8 @@ function render(list){
     var el=document.createElement('div');
     var ns=list[i].indexOf('<!--nostep-->')===0;
     el.className='slide'; el.innerHTML=list[i];
+    /* 표지는 판 전체를 검게 덮는다 — 여백·흰 바탕이 남으면 안 된다 */
+    if(el.querySelector('.apex-star-wrap')) el.classList.add('apex-star');
     var ebm=list[i].match(/class="s-eyebrow">([^<]*)</);
     if(ebm){ var mk=modOf(ebm[1].trim()); if(mk) el.dataset.mod=mk; }
     stepify(el, ns);
@@ -4688,11 +4755,7 @@ $('show').addEventListener('touchend',function(e){
     if(m.t==='apex:intro'){
       var o=m.data||{};
       try{
-        var set=function(id,v){var e=$(id);if(e&&v!=null&&v!=='')e.value=v;};
-        set('a_name',o.name);set('a_title',o.title);set('a_org',o.org);set('a_years',o.years);
-        set('a_phone',o.phone);set('a_contact2',o.email);set('a_motto',o.motto);set('a_tags',o.tags);
-        if(o.bio&&$('a_bio'))$('a_bio').value=o.bio;
-        if(o.photo)PHOTO=o.photo;
+        advTake(o);
         localStorage.setItem('apex_profile',JSON.stringify({
           name:o.name||'',title:o.title||'',org:o.org||'',years:o.years||'',
           phone:o.phone||'',c2:o.email||'',motto:o.motto||'',tags:o.tags||'',

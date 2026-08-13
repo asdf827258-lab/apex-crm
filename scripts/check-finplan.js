@@ -183,6 +183,44 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   is(!/id="finB64">[A-Za-z0-9+/]{100}/.test(app),
     'index.html 에 base64 가 다시 박히지 않았다 — 첫 로딩이 무거워진다');
 
+  /* ═══ 4-2. 달러보험 — 공시 환급률로 판단하는가 ═══
+     전에는 적립이율·관리비용·체결비용·부과기간·연차감 다섯 칸을 짐작으로
+     채웠다. 그 짐작이 그대로 고객에게 나갔다. 이제 설계사가 손에 들고
+     있는 것(공시 환급률) 하나만 받는다. */
+  console.log('\n[4-2] 달러보험이 공시 환급률로 판단하는가');
+  is(!/VC\.drate|VC\.dfee|VC\.defee|VC\.deyrs|VC\.darate/.test(dec),
+    '짐작으로 채우던 다섯 칸이 <b>하나도</b> 안 남았다');
+  is(/dret:\d/.test(dec) && /dyrs:\d/.test(dec) && /dtot:\d/.test(dec),
+    '환급률 · 납입기간 · 총 거치기간 세 개로 받는다');
+  is(/function vcUsdImplied\(/.test(dec), '세 값에서 실질 연 이율을 거꾸로 푼다');
+  is(/상품 공시 예시에서 그대로/.test(dec), '어디서 옮겨 적는지 화면에 적는다');
+
+  /* 계산기는 별도 파일이라 따로 연다 — 앱 안에서는 iframe 이라 손이 안 닿는다 */
+  const page2 = await ctx.newPage();
+  await page2.goto('http://127.0.0.1:' + PORT + '/app/finance.html',
+    { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await page2.waitForTimeout(1800);
+  const U = await page2.evaluate(() => {
+    VC.dpay = 35; VC.dyrs = 10; VC.dtot = 20; VC.dret = 118; VC.usd = 1380; VC.usdt = 1380;
+    const r = {
+      paid: VC.dpay * 12 * VC.dyrs,
+      atTot: vcUsdAccum(35, 20, 1380, 1380),
+      imp: +(vcUsdImplied() * 100).toFixed(3),
+      fx: vcUsdAccum(35, 20, 1380, 1518),
+      zero: vcUsdAccum(0, 20, 1380, 1380),
+      warn: (function () { VC.dtot = 5; const w = /총 거치기간이 납입기간보다 짧습니다/.test(vcUsdNoteHtml()); VC.dtot = 20; return w; })()
+    };
+    VC.dret = 100; r.imp100 = +(vcUsdImplied() * 100).toFixed(3); VC.dret = 118;
+    return r;
+  });
+  is(U.paid === 4200, '월 35만 × 10년 = 4,200만 (' + U.paid + ')');
+  is(U.atTot === 4956, '20년째 환급률 118% → 4,956만 — <b>공시 그대로</b> (' + U.atTot + ')');
+  is(Math.abs(U.imp - 1.109) < 0.01, '실질 연 이율을 되푼다 — ' + U.imp + '% (손으로 푼 답 1.109%)');
+  is(U.imp100 === 0, '환급률 100% 면 실질 0% 다 (원금 그대로) — ' + U.imp100 + '%');
+  is(Math.abs(U.fx - 4956 * 1.1) < 1, '환율이 10% 오르면 그만큼 는다 (' + Math.round(U.fx) + ')');
+  is(U.zero === 0, '안 넣으면 0 이다');
+  is(U.warn, '총 거치기간이 납입기간보다 짧으면 알려 준다');
+
   /* 다리는 우리 틀에서 온 것만 받는가 */
   is(/e\.source!==fr\.contentWindow/.test(app.replace(/\s/g, '')),
     '계산기가 보낸 쪽지는 <b>우리가 띄운 그 틀</b>에서 온 것만 받는다');

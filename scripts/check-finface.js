@@ -39,8 +39,46 @@ const FIN = 'app/재무설계/상담자료.html';
   const fin = fs.readFileSync(path.join(ROOT, FIN), 'utf8');
   const deck = fs.readFileSync(path.join(ROOT, 'app/상담자료/apex-deck.js'), 'utf8');
 
-  /* ═══ 1. 같은 얼굴인가 ═══ */
-  console.log('\n[1] 첫 화면이 보장분석 표지와 같은 언어를 쓰는가');
+  /* ═══ 0. 첫 「장」이 보장분석 표지와 글자 그대로 같은가 ═══
+     .as-* 규칙을 양쪽에서 뽑아 하나하나 대조한다. 한쪽만 손대면 걸린다. */
+  console.log('\n[0] 첫 장이 보장분석 STARRING 표지 그대로인가');
+  const pick = src => {
+    const out = {};
+    /* 규칙이 <b>시작</b>하는 자리만 본다. 그냥 `.as-x{` 로 찾으면
+       `.wrap.nophoto .as-photo{...}` 같은 덧칠까지 잡혀서, 멀쩡한데도
+       다르다고 나온다. */
+    const re = /(?:^|\}|,|\{)\s*(\.as-[a-z-]+(?:::?[a-z-]+)?)\s*\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(src))) if (!out[m[1]]) out[m[1]] = m[2];
+    return out;
+  };
+  /* 덱 쪽은 자바스크립트 배열 조각이라 이어 붙여야 진짜 CSS 가 된다 */
+  const deckCss = (deck.slice(deck.indexOf('function coverBuildCss()'), deck.indexOf('function coverHtml()'))
+    .match(/^\s*'((?:[^'\\]|\\.)*)',?\s*$/gm) || [])
+    .map(x => x.trim().replace(/,$/, '').slice(1, -1).replace(/\\'/g, "'")).join('');
+  const A = pick(deckCss), B = pick(fin);
+  const keys = Object.keys(A);
+  is(keys.length >= 15, '표지 규칙을 ' + keys.length + '개 읽어 냈다 — 대조할 거리가 있다');
+  const diff = keys.filter(k => A[k] !== B[k]);
+  is(diff.length === 0, '.as-* 규칙 ' + keys.length + '개가 <b>한 글자도</b> 안 다르다' +
+    (diff.length ? ' — 어긋난 곳: ' + diff.slice(0, 3).join(', ') : ''));
+  is(/function starCoverHtml\(/.test(fin), '표지를 짓는 길이 있다');
+  ['as-star', 'as-name', 'as-role', 'as-quote', 'as-facts', 'as-chips', 'as-photo', 'as-info']
+    .forEach(c => is(fin.indexOf('class="' + c + '"') >= 0 || fin.indexOf("'" + c + "'") >= 0 ||
+      new RegExp('class="apex-star-wrap').test(fin), c + ' 를 그대로 쓴다'));
+  is(!/class="cover-h"/.test(fin), '파란 옛 표지는 안 쓴다');
+
+  /* ═══ 1. 내 소개는 한 곳에서만 적는다 ═══ */
+  console.log('\n[1] 내 소개를 두 번 적지 않는가');
+  is(!/id="sec8"/.test(fin), '재무설계 쪽 「내 소개」 입력 카드를 없앴다');
+  is(!/id="a_name"/.test(fin), '설계사 입력칸이 남아 있지 않다');
+  is(/var ADV *= *\{/.test(fin) && /function advLoad\(/.test(fin), '공용 저장소에서 읽는다');
+  is(/apex_intro_/.test(fin) && /s6_profile/.test(fin) && /apex_profile/.test(fin),
+    '보장분석 표지와 <b>같은 세 칸</b>을 본다');
+  is(/보장분석 상담자료 표지에서 고치시면/.test(fin), '어디서 고치는지 알려 준다');
+
+  /* ═══ 1-2. 팩트파인딩 첫 화면도 같은 언어 ═══ */
+  console.log('\n[1-2] 팩트파인딩 첫 화면도 같은 언어를 쓰는가');
   /* 표지가 쓰는 값을 소스에서 직접 뽑아 와 견준다 — 한쪽만 바뀌면 여기서 걸린다 */
   const deckBg = /#s1\.apex-star\{[^']*background:(#[0-9A-Fa-f]{6})/.exec(deck);
   const BG = deckBg ? deckBg[1] : '#08080A';
@@ -73,50 +111,63 @@ const FIN = 'app/재무설계/상담자료.html';
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(1500);
 
-  console.log('\n[2] 내 소개를 고치면 첫 화면이 따라오는가');
+  console.log('\n[2] 내 소개가 두 화면에 함께 흐르는가');
   const R = await page.evaluate(() => {
-    const set = (id, v) => { const e = document.getElementById(id); e.value = v; e.dispatchEvent(new Event('input', { bubbles: true })); };
-    set('a_name', '홍길동');
-    set('a_title', '지점장');
-    set('a_org', '온탑3지점');
-    set('a_motto', '숫자로 말합니다');
-    const face0 = document.getElementById('ffFace').classList.contains('off');
-    /* 사진을 넣으면 사진 칸이 열려야 한다 */
-    const px = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    window.PHOTO = px;
-    /* PHOTO 는 스크립트 안의 지역 변수라 밖에서 못 바꾼다. 사진 등록 경로를 그대로 탄다 */
+    /* 보장분석 표지가 쓰는 그 칸에 적어 둔다 */
+    localStorage.setItem('apex_intro_u1', JSON.stringify({
+      name: '홍길동', title: '지점장', org: '온탑3지점', motto: '숫자로 말합니다',
+      tags: '생애 재무설계, 은퇴 설계', license: 'AFPK', years: '12'
+    }));
+    ADV.name = ''; ADV.title = ''; ADV.org = ''; ADV.motto = '';
+    ADV.tags = ''; ADV.license = ''; ADV.years = '';
+    advLoad(); heroPaint();
+    const cov = starCoverHtml();
     return {
       name: document.getElementById('ffName').textContent,
       role: document.getElementById('ffRole').textContent,
       quote: document.getElementById('ffQuote').textContent,
-      faceOffNoPhoto: face0,
       heroBg: getComputedStyle(document.querySelector('.ff-hero')).backgroundColor,
-      nameColor: getComputedStyle(document.getElementById('ffName')).color
+      nameColor: getComputedStyle(document.getElementById('ffName')).color,
+      covName: (cov.match(/class="as-name">([^<]*)</) || [])[1],
+      covRole: (cov.match(/class="as-role">([^<]*)</) || [])[1],
+      covChips: (cov.match(/class="as-chip"/g) || []).length,
+      covLicense: /AFPK/.test(cov),
+      nophoto: /apex-star-wrap nophoto/.test(cov)
     };
   });
-  is(R.name === '홍길동', '이름이 바로 바뀐다 (' + R.name + ')');
+  is(R.name === '홍길동', '팩트파인딩 첫 화면 이름이 따라온다 (' + R.name + ')');
   is(/지점장/.test(R.role) && /온탑3지점/.test(R.role), '직함과 소속이 따라온다');
   is(/숫자로 말합니다/.test(R.quote), '한 줄 철학이 따라온다');
   is(R.heroBg === 'rgb(8, 8, 10)', '실제로 그려진 바탕이 검정이다 (' + R.heroBg + ')');
   is(R.nameColor === 'rgb(240, 227, 196)', '실제로 그려진 이름이 금빛이다 (' + R.nameColor + ')');
+  is(R.covName === '홍길동', '<b>첫 장 표지</b>에도 같은 이름이 선다 (' + R.covName + ')');
+  is(R.covRole === '지점장', '표지 직함도 같다');
+  is(R.covChips === 2, '전문 분야가 칩으로 선다 (' + R.covChips + '개)');
+  is(R.covLicense, 'LICENSE 도 표지에 오른다');
+  is(R.nophoto, '사진이 없으면 사진 칸을 접는다 — 검은 네모만 남지 않는다');
 
-  console.log('\n[3] 사진이 없으면 사진 칸이 숨는가');
-  is(R.faceOffNoPhoto, '사진이 없으면 사진 칸이 통째로 숨는다 — 빈 네모가 안 남는다');
-  const withPhoto = await page.evaluate(() => {
-    const px = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    const dt = new DataTransfer();
-    dt.items.add(new File([Uint8Array.from(atob(px.split(',')[1]), c => c.charCodeAt(0))], 'a.gif', { type: 'image/gif' }));
-    const inp = document.getElementById('a_photo');
-    inp.files = dt.files;
-    inp.dispatchEvent(new Event('change', { bubbles: true }));
-    return new Promise(r => setTimeout(() => r({
-      off: document.getElementById('ffFace').classList.contains('off'),
-      src: (document.getElementById('ffFaceImg').getAttribute('src') || '').slice(0, 10)
-    }), 400));
+  console.log('\n[3] 첫 장이 실제로 표지로 그려지는가');
+  const D = await page.evaluate(() => {
+    try {
+      const S = buildSlides(analyze(collect()));
+      render(S);
+      const s1 = document.getElementById('slides').children[0];
+      return {
+        n: S.length, star: s1.classList.contains('apex-star'),
+        wrap: !!s1.querySelector('.apex-star-wrap'),
+        bg: getComputedStyle(s1).backgroundColor,
+        old: /cover-h/.test(S[0] || ''),
+        adv: (collect().adv || {}).name
+      };
+    } catch (e) { return { err: e.message }; }
   });
-  is(!withPhoto.off && withPhoto.src === 'data:image', '사진을 등록하면 첫 화면에 바로 걸린다');
+  is(!D.err, '슬라이드가 터지지 않고 만들어진다' + (D.err ? ' — ' + D.err : ''));
+  is(D.star && D.wrap, '첫 장에 표지가 붙는다');
+  is(D.bg === 'rgb(8, 8, 10)', '첫 장 바탕이 표지와 같은 검정이다 (' + D.bg + ')');
+  is(!D.old, '파란 옛 표지가 안 나온다');
+  is(D.adv === '홍길동', '설계사 이름을 공용 저장소에서 받아 쓴다 (' + D.adv + ')');
 
-  console.log('\n[4] 두 번째 장에 고객이 서는가');
+  console.log('\n[4] 두 번째 장 — 고객의 상황을 정리합니다');
   const S = await page.evaluate(() => {
     const e = document.getElementById('f_name');
     const before = document.getElementById('sec1Who').textContent;
@@ -132,14 +183,19 @@ const FIN = 'app/재무설계/상담자료.html';
       title: (s1.querySelector('h2') || {}).textContent,
       stepNo: getComputedStyle(s1.querySelector('.step-no')).display,
       inpBorder: getComputedStyle(inp).borderTopWidth + '/' + getComputedStyle(inp).borderBottomWidth,
-      inpRadius: getComputedStyle(inp).borderTopLeftRadius
+      inpRadius: getComputedStyle(inp).borderTopLeftRadius,
+      wide: Math.round(s1.getBoundingClientRect().width),
+      sum: (document.getElementById('sec1Sum') || {}).textContent || ''
     };
   });
   is(/적으시면 여기 섭니다/.test(S.before) && /empty/.test(S.beforeCls),
     '비어 있을 때는 어디에 적으면 되는지 말한다');
   is(S.after === '성춘향 님' && !/empty/.test(S.afterCls), '이름을 적으면 그대로 선다 (' + S.after + ')');
-  is(S.eyebrow === 'CLIENT PROFILE', '금색 라벨이 붙는다');
-  is(/오늘 만나는 분/.test(S.title), '제목이 사람 얘기로 바뀌었다');
+  is(/CLIENT SITUATION/.test(S.eyebrow || ''), '금색 라벨이 붙는다 (' + S.eyebrow + ')');
+  is(/고객의 상황을 정리합니다/.test(S.title), '제목이 「고객의 상황을 정리합니다」 다');
+  is(S.wide > 760, '가로로 넓어졌다 — ' + S.wide + 'px (전에는 720px 안에 갇혔다)');
+  is(/42세/.test(S.sum) && /배우자/.test(S.sum),
+    '적은 것이 한 줄로 되짚어진다 (' + S.sum + ')');
   is(S.stepNo === 'none', '번호 딱지를 뗐다 — 서식이 아니라 자료로 보이게');
   is(S.inpBorder === '0px/1px', '입력칸이 네모 상자가 아니라 밑줄이다 (' + S.inpBorder + ')');
   is(S.inpRadius === '0px', '밑줄이라 모서리가 없다');
@@ -165,19 +221,35 @@ const FIN = 'app/재무설계/상담자료.html';
       id + ' 은 예전 그대로다 (번호 딱지 ' + (v.stepNo || '?') + ' · 입력칸 모서리 ' + (v.inpRadius || '?') + ')');
   });
 
-  console.log('\n[6] 슬라이드는 예전 그대로 만들어지는가');
-  const D = await page.evaluate(() => {
-    try {
-      /* 앱이 실제로 부르는 순서 그대로: collect · analyze · buildSlides */
-      const S = buildSlides(analyze(collect()));
-      render(S);
-      return { n: S.length, first: (S[0] || '').slice(0, 60), boxN: document.getElementById('slides').children.length };
-    } catch (e) { return { err: (e && e.message) || 'fail' }; }
+  console.log('\n[6] 고객 365일로 저장되는 길이 살아 있는가');
+  /* 저장은 앱(index.html)이 한다. 이 화면은 apex:snap 으로 값을 넘긴다.
+     자기 소개 카드를 지운 뒤에도 <b>고객 값이 그대로 넘어가는지</b>가 핵심이다. */
+  const app = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  is(/function fpSaveNow\(/.test(app), '앱에 「고객 파일로 저장」 이 있다');
+  is(/fpAsk\('deck','apex:snap'/.test(app), '저장할 때 이 화면에서 값을 받아 간다');
+  is(/osRepSaveToClient\('fp_deck'/.test(app), '받은 값을 고객 파일로 넣는다');
+  is(/client_id:cid/.test(app.replace(/\s/g, '')), '어느 고객 것인지 붙여서 넣는다');
+  is(/function snap\(/.test(fin), '이 화면이 값을 넘길 줄 안다');
+  const SNAP = await page.evaluate(() => {
+    const send = t => new Promise(res => {
+      const h = ev => { if (ev.data && ev.data.t === 'apex:snap:ok') { window.removeEventListener('message', h); res(ev.data); } };
+      window.addEventListener('message', h);
+      window.postMessage({ t: t, id: 1 }, location.origin);
+      setTimeout(() => res(null), 900);
+    });
+    return send('apex:snap');
   });
-  is(!D.err, '슬라이드가 터지지 않고 만들어진다' + (D.err ? ' — ' + D.err : ''));
-  is(D.n >= 20, '스물 장 넘게 나온다 (' + D.n + '장)');
-  is(D.boxN === D.n, '만든 만큼 화면에 붙는다');
-  is(/cover-h/.test(D.first || ''), '슬라이드 1번 표지는 예전 그대로다 — 여기는 안 건드렸다');
+  is(!!SNAP && !!SNAP.data, '실제로 물어보면 값을 돌려준다');
+  if (SNAP && SNAP.data) {
+    const f = SNAP.data.f || {};
+    is(f.f_name === '성춘향', '고객명이 그대로 넘어간다 (' + f.f_name + ')');
+    is(f.f_age && f.f_job, '나이·직업도 넘어간다 (' + f.f_age + '세 · ' + f.f_job + ')');
+    is((SNAP.data.kids || []).length >= 1, '자녀 줄도 넘어간다 (' + (SNAP.data.kids || []).length + '명)');
+    is((SNAP.data.parents || []).length >= 1, '부모 줄도 넘어간다');
+    is(Object.keys(f).filter(k => k.indexOf('a_') === 0).length === 0,
+      '설계사 칸은 안 넘어간다 — 없앴으니 당연하고, 고객 파일에 섞이지도 않는다');
+    is(Object.keys(f).length >= 20, '고객 칸을 통째로 넘긴다 (' + Object.keys(f).length + '칸)');
+  }
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
