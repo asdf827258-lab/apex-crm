@@ -165,17 +165,23 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   is(/세무 전문가|개산/.test(LAW), '개산치임을 밝힌다');
   is(/10년|5년/.test(LAW), '증여 합산 기간을 알린다');
 
-  /* ═══ 4. base64 안 계산기 — 여태 아무도 안 봤다 ═══ */
-  console.log('\n[4] base64 안에 든 계산기도 들여다본다');
-  const b64 = (app.match(/<script type="text\/plain" id="finB64">([\s\S]*?)<\/script>/) || [])[1] || '';
-  is(b64.length > 100000, 'finB64 가 있다 (' + Math.round(b64.length / 1024) + 'KB)');
-  let dec = '';
-  try { dec = Buffer.from(b64.trim(), 'base64').toString('utf8'); } catch (e) {}
-  is(dec.length > 100000, '풀어 읽을 수 있다 (' + Math.round(dec.length / 1024) + 'KB)');
+  /* ═══ 4. 계산기 본체 ═══
+     예전에는 index.html 안에 base64 로 박혀 있어 grep 도 안 됐다.
+     이제 app/finance.html 로 빠져나왔다 — 파일을 그대로 읽는다.
+     (base64 를 계속 찾으면 파일이 멀쩡한데도 「손상」으로 뜬다) */
+  console.log('\n[4] 계산기 본체가 온전한가');
+  const finPath = path.join(ROOT, 'app/finance.html');
+  is(fs.existsSync(finPath), '계산기가 app/finance.html 로 있다');
+  const dec = fs.existsSync(finPath) ? fs.readFileSync(finPath, 'utf8') : '';
+  is(dec.length > 100000, '내용이 들어 있다 (' + Math.round(dec.length / 1024) + 'KB)');
   is(/<\/html>/.test(dec), '끝까지 온전하다 — 잘리면 계산기가 빈 화면이 된다');
   const tabs = (dec.match(/id="tab-([a-z]+)"/g) || []).length;
   is(tabs >= 10, '탭이 ' + tabs + '개 들어 있다');
   is(/function apxPen\(/.test(dec), '연금 엔진(apxPen)이 그대로 있다');
+  /* 앱이 그 파일을 실제로 물고 있는지 — 파일만 있고 안 부르면 소용없다 */
+  is(/var FIN_URL *= *'finance\.html'/.test(app), '앱이 그 파일을 물고 있다');
+  is(!/id="finB64">[A-Za-z0-9+/]{100}/.test(app),
+    'index.html 에 base64 가 다시 박히지 않았다 — 첫 로딩이 무거워진다');
 
   /* 다리는 우리 틀에서 온 것만 받는가 */
   is(/e\.source!==fr\.contentWindow/.test(app.replace(/\s/g, '')),
