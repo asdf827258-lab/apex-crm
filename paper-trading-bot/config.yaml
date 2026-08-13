@@ -1,0 +1,65 @@
+# ════════════════════════════════════════════════════════════════════════
+# 자동매매 봇 설정 — 숫자를 바꾸고 싶으면 코드가 아니라 여기를 고칩니다.
+#
+# ⚠️ 여기 값을 바꾸면 백테스트부터 다시 돌리세요. 검증하지 않은 설정으로
+#    실계좌를 돌리는 것이 이 프로젝트에서 가장 위험한 일입니다.
+# ════════════════════════════════════════════════════════════════════════
+
+# ── 위험 관리 — 양보하지 않는 부분 ──────────────────────────────────────
+risk:
+  per_trade_pct: 1.0        # 한 번 매매에 거는 위험 = 잔고의 1%
+  max_drawdown_pct: 10.0    # 고점 대비 이만큼 빠지면 전량 정리하고 정지
+  atr_period: 14            # 사이징에 쓰는 변동성 자
+  correlation_filter: true  # SPY·QQQ 둘 다 롱이면 BTC 신규 롱 금지
+
+# ── 비용 가정 — 0 으로 두면 백테스트가 실제보다 좋게 나옵니다 ────────────
+costs:
+  commission_bps: 0.0       # Alpaca 는 수수료 무료
+  slippage_bps: 5.0         # 거래당 0.05% (--slippage-bps 로 덮어쓸 수 있음)
+
+# ── 거래 대상 ───────────────────────────────────────────────────────────
+# GLD·USO 는 원자재 선물이 아니라 ETF 대리 자산입니다 (README 참고)
+assets:
+  - symbol: SPY
+    strategy: mean_reversion
+    timeframe: 15Min
+    session: us_equity
+    params: { lookback: 20, entry_std: 1.5 }
+
+  - symbol: QQQ
+    strategy: mean_reversion
+    timeframe: 15Min
+    session: us_equity
+    params: { lookback: 20, entry_std: 1.8 }   # 변동성이 커서 기준을 넓게
+
+  - symbol: BTC/USD
+    strategy: breakout
+    timeframe: 1Hour
+    session: crypto_24h
+    params: { lookback: 20, volume_mult: 1.5, atr_stop_mult: 2.0 }
+
+  - symbol: GLD
+    strategy: trend_following
+    timeframe: 4Hour
+    session: us_equity
+    params: { fast_ema: 50, slow_ema: 200, atr_stop_mult: 3.0 }
+
+  - symbol: USO
+    strategy: trend_following
+    timeframe: 4Hour
+    session: us_equity
+    params: { fast_ema: 50, slow_ema: 200, atr_stop_mult: 3.0 }
+
+# ── 실행 ────────────────────────────────────────────────────────────────
+run:
+  loop_seconds: 60          # 연속 루프의 확인 주기
+  state_file: state.json    # 잔고 최고점·정지 상태를 여기에 보존
+  trades_csv: trades.csv
+  daily_pnl_csv: daily_pnl.csv
+  log_file: bot.log
+
+# ── 리포트 ──────────────────────────────────────────────────────────────
+report:
+  morning_hour: 7
+  evening_hour: 21
+  max_words: 200
