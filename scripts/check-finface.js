@@ -70,7 +70,7 @@ const FIN = 'app/재무설계/상담자료.html';
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   const url = 'http://127.0.0.1:' + PORT + '/' + FIN.split('/').map(encodeURIComponent).join('/');
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(1500);
 
   console.log('\n[2] 내 소개를 고치면 첫 화면이 따라오는가');

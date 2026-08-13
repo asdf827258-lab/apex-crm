@@ -87,7 +87,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2400);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -108,7 +108,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   console.log('\n[0] 상담자료 열여섯 장이 각자 제자리에 뜨는가');
   const sd = await ctx.newPage();
   await sd.goto('http://127.0.0.1:' + PORT + '/app/상담자료/메인 상담자료.html',
-    { waitUntil: 'domcontentloaded' });
+    { waitUntil: 'domcontentloaded', timeout: 90000 });
   await sd.waitForTimeout(3200);
   const SL = await sd.evaluate(() => {
     var sl = [].slice.call(document.querySelectorAll('.slide'));

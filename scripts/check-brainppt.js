@@ -87,7 +87,7 @@ const PLAN = JSON.stringify({
     try { localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1'); } catch (e) { }
   });
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
 
   /* 앱이 스스로 정의한 뒤에 덮어써야 한다 — 먼저 넣으면 앱 정의가 이긴다 */

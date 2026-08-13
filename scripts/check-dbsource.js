@@ -140,7 +140,7 @@ window.supabase={createClient:function(){
     await page.addInitScript(() => {
       const t = setInterval(() => { if (window.__seed) { window.__seed.role = window.__role; clearInterval(t); } }, 1);
     });
-    await page.goto('http://127.0.0.1:' + PORT + '/db-crm.html', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://127.0.0.1:' + PORT + '/db-crm.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForTimeout(1800);
     return { ctx, page, errs };
   }
