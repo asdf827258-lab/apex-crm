@@ -91,7 +91,7 @@ window.supabase={createClient:function(){
     try { localStorage.setItem('apex_ar_auto_off', '1'); localStorage.setItem('apex_ar_brief_off', '1'); } catch (e) { }
   });
   await page.addInitScript(FAKE);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -625,7 +625,7 @@ window.supabase={createClient:function(){
   await p2.addInitScript(FAKE);
   await p2.addInitScript(`delete window.SpeechRecognition;delete window.webkitSpeechRecognition;
     delete window.speechSynthesis;delete window.SpeechSynthesisUtterance;`);
-  await p2.goto('http://127.0.0.1:' + PORT + '/app/index.html#voiceasst', { waitUntil: 'domcontentloaded' });
+  await p2.goto('http://127.0.0.1:' + PORT + '/app/index.html#voiceasst', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await p2.waitForTimeout(2600);
   await p2.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());

@@ -101,7 +101,7 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   /* 앱 전체를 띄우지 않고, 고르는 규칙만 떼어 내 돌린다 —
      빠르고, 다른 화면이 터져도 이 검사는 영향받지 않는다. */
   const lab = await ctx.newPage();
-  await lab.goto('http://127.0.0.1:' + PORT + '/app/상담자료/demo_closing.html', { waitUntil: 'domcontentloaded' });
+  await lab.goto('http://127.0.0.1:' + PORT + '/app/상담자료/demo_closing.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   const rules = app.slice(app.indexOf('var PR_STORY_DIR='), app.indexOf('function prStoryHtml('));
   const pick = await lab.evaluate(([code]) => {
     window.PR = { scan: null };
@@ -159,7 +159,7 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   const errs = [];
   const deck = await ctx.newPage();
   deck.on('pageerror', e => errs.push(e.message));
-  await deck.goto('http://127.0.0.1:' + PORT + '/app/상담자료/demo_cancer.html', { waitUntil: 'domcontentloaded' });
+  await deck.goto('http://127.0.0.1:' + PORT + '/app/상담자료/demo_cancer.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await deck.waitForTimeout(1600);
   const D = await deck.evaluate(() => {
     const b = document.getElementById('apexDeckBar');
@@ -213,7 +213,7 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   console.log('\n[7] 메인 상담자료 열여섯 장이 그대로인가');
   const sd = await ctx.newPage();
   sd.on('pageerror', e => errs.push(e.message));
-  await sd.goto('http://127.0.0.1:' + PORT + '/app/상담자료/메인 상담자료.html', { waitUntil: 'domcontentloaded' });
+  await sd.goto('http://127.0.0.1:' + PORT + '/app/상담자료/메인 상담자료.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await sd.waitForTimeout(3200);
   const S = await sd.evaluate(() => {
     const sl = [].slice.call(document.querySelectorAll('.slide'));
@@ -238,7 +238,7 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   console.log('\n[8] 상담자료의 보험 내용이 읽히는 크기인가');
   const host2 = await ctx.newPage();
   host2.on('pageerror', e => errs.push(e.message));
-  await host2.goto('http://127.0.0.1:' + PORT + '/__host.html', { waitUntil: 'domcontentloaded' });
+  await host2.goto('http://127.0.0.1:' + PORT + '/__host.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await host2.waitForTimeout(4600);
   const fr = host2.frames().find(f => { try { return /상담자료/.test(decodeURIComponent(f.url())); } catch (e) { return false; } });
   is(!!fr, '상담자료가 틀 안에서 뜬다');

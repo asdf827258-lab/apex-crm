@@ -92,7 +92,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -171,7 +171,7 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
   ok(r3.length === 2 && /김철수/.test(r3[0]), '가장 최근에 본 사람이 맨 앞에 온다');
 
   /* 새로고침해도 남아 있는가 */
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());

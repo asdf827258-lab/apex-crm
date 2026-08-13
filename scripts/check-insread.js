@@ -130,7 +130,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2300);
 
   const ready = await page.evaluate(() => typeof insScan === 'function' && typeof insBrief === 'function');

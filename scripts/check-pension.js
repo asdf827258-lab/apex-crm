@@ -62,7 +62,7 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
-  await page.goto('http://127.0.0.1:' + PORT + '/app/finance.html', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/finance.html', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2000);
 
   const R = await page.evaluate(() => ({

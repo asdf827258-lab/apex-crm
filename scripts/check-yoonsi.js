@@ -42,7 +42,7 @@ const YS = '/app/%EC%9C%A4%EC%8B%9C%EC%8A%A4%EC%BF%A8/index.html';
     try { localStorage.setItem('apex_ar_brief_off', '1'); localStorage.setItem('apex_ar_auto_off', '1'); } catch (e) { }
   });
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osHelpOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -130,7 +130,7 @@ const YS = '/app/%EC%9C%A4%EC%8B%9C%EC%8A%A4%EC%BF%A8/index.html';
   const p2 = await ctx2.newPage();
   const e2 = [];
   p2.on('pageerror', e => e2.push('단독: ' + e.message));
-  await p2.goto('http://127.0.0.1:' + PORT + YS, { waitUntil: 'load' });
+  await p2.goto('http://127.0.0.1:' + PORT + YS, { waitUntil: 'load', timeout: 90000 });
   await p2.waitForTimeout(2500);
 
   const alone = await p2.evaluate(() => ({

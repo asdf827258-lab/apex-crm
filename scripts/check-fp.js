@@ -59,7 +59,7 @@ window.supabase={createClient:function(){
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -114,7 +114,14 @@ window.supabase={createClient:function(){
 
   /* 실제로 열어 본다 — 24장(거절처리)으로 */
   await page.evaluate(() => fpTalkOpen('c24'));
-  await page.waitForTimeout(3200);
+  /* 3.2초를 그냥 기다리면 안 된다. 화법서는 355KB 라 늦게 뜰 때가 있고,
+     재무설계앱을 파일로 뺀 뒤로는 첫 화면이 받아 오는 것이 더 늘었다.
+     실제로 여섯 번에 두 번꼴로 여기서 헛되이 빨간불이 떴다.
+     기다리는 대신 <b>연결됐다는 신호</b>를 기다린다 — 진짜로 안 오면
+     그때는 제대로 실패한다. */
+  try {
+    await page.waitForFunction(() => window.FPT && FPT.ready, { timeout: 20000 });
+  } catch (e) { /* 안 오면 아래 ok() 가 잡는다 */ }
   const tOpen = await page.evaluate(() => ({
     mode: document.body.classList.contains('fptalk-mode'),
     src: (document.getElementById('fpTalkFrame') || {}).src || '',

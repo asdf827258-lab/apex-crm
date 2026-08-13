@@ -77,7 +77,7 @@ window.supabase={createClient:function(){
     });
     await page.addInitScript(STUB);
     await page.addInitScript(t => { window.__wantTable = t; }, consentTable);
-    await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+    await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.waitForTimeout(2600);
     await page.evaluate(() => {
       document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());

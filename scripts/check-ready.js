@@ -60,7 +60,7 @@ window.supabase={createClient:function(){
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -133,7 +133,7 @@ window.supabase={createClient:function(){
   ok(v.manOn === 1, '누르면 지워진다');
   ok(/\d{4}-\d{2}-\d{2} 완료/.test(v.txt), '언제 끝냈는지 날짜가 남는다');
 
-  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
