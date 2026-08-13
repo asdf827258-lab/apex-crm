@@ -187,6 +187,44 @@ const is = (c, m) => c ? ok(m) : no(m);
     };
   });
   is(ONE.rate, '월별 타율이 같은 판에 붙는다');
+  /* CRM 의 KPI 를 여기로 가져왔는가 — 그것도 <b>그 달치만</b> */
+  const K = await page.evaluate(async () => {
+    /* 이 달 배정 3건 · 지난달 배정 5건 을 심는다 */
+    const ym = pfYm(), a = ym.split('-');
+    const prev = new Date(+a[0], +a[1] - 2, 1);
+    const pym = prev.getFullYear() + '-' + ('0' + (prev.getMonth() + 1)).slice(-2);
+    AR.db = [
+      { who:'u1', got: ym+'-03', res:'상담', appt:'x', src:'소개' },
+      { who:'u1', got: ym+'-05', res:'부재', appt:'',  src:'소개' },
+      { who:'u1', got: ym+'-08', res:'미진행', appt:'', src:'DB' },
+      { who:'u1', got: pym+'-02', res:'상담', appt:'x', src:'DB' },
+      { who:'u1', got: pym+'-04', res:'거절', appt:'', src:'DB' },
+      { who:'u2', got: ym+'-06', res:'상담', appt:'x', src:'소개' }
+    ];
+    arPaint(); await new Promise(r => setTimeout(r, 600));
+    const t = (document.getElementById('arPane') || document.body).innerText;
+    return { text: t, kpi: pfKpi('u1', ym), all: pfKpi('u1', '') };
+  });
+  is(/KPI · 타율/.test(K.text), 'CRM 의 KPI 를 내 업적으로 가져왔다');
+  is(K.kpi.all === 3, '<b>이 달 배정분만</b> 센다 (3건 · 전체는 ' + K.all.all + '건)');
+  is(K.kpi.done === 2 && K.kpi.con === 1, '접촉 2 · 상담 1 로 맞다');
+  is(K.kpi.contact === 67, '접촉률 = 2/3 = ' + K.kpi.contact + '%');
+  is(K.kpi.convert === 50, '상담 전환율 = 1/2 = ' + K.kpi.convert + '%');
+  is(K.kpi.absent === 50, '부재율 = 1/2 = ' + K.kpi.absent + '%');
+  is(K.kpi.appt === 1, '상담 약속 1건');
+  is(/DB 종류별/.test(K.text), 'DB 종류별 타율도 함께 온다');
+  is(/배정분/.test(K.text), '어느 달 것인지 화면에 밝힌다');
+
+  /* 리더는 여기서 팀원을 골라 그 사람 것을 본다 */
+  const W = await page.evaluate(async () => {
+    pfPickWho('u2'); await new Promise(r => setTimeout(r, 600));
+    const t = (document.getElementById('arPane') || document.body).innerText;
+    const k = pfKpi(pfWho(), pfYm());
+    pfPickWho('u1');
+    return { who: t.indexOf('홍보험 님 보고서 한눈에') >= 0, n: k.all };
+  });
+  is(W.n === 1, '팀원을 고르면 <b>그 사람</b> KPI 로 바뀐다 (배정 ' + W.n + '건)');
+  is(W.who, '남을 볼 때는 이름을 밝힌다 — 내 것으로 착각하면 안 된다');
   is(ONE.score, '본인 점수판이 같은 판에 붙는다');
   is(ONE.full, '리더가 보는 그 보고서가 내 화면에도 붙는다');
   is(ONE.order[0] < ONE.order[1] && ONE.order[1] < ONE.order[2],
