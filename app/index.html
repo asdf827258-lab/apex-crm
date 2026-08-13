@@ -5482,12 +5482,19 @@ function arLoad(force){
      한 번 거절당하면 종류를 빼고 다시 부른다 — 종류만 못 볼 뿐 나머지는 다 돈다. */
   var qDbs=function(){
     var cols='id,assigned_to,customer_name,region,assigned_date';
-    return q(sb.from('dbs').select(cols+',source')).then(function(r){
+    /* 단계 칸은 migration_41 을 돌린 서버에만 있다. 없으면 한 칸씩 내려가며
+       다시 부른다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 된다 */
+    var down=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
+    return q(sb.from('dbs').select(cols+',source,stage,next_appt,contracted_at,policy_sent_at')).then(function(r){
       if(!r||!r.error)return r;
-      var m=((r.error&&r.error.message)||'')+'';
-      if(!/source|column|42703|does not exist/i.test(m))return r;
-      AR.noSrc=true;
-      return q(sb.from('dbs').select(cols));
+      if(!down((r.error||{}).message))return r;
+      AR.noStage=true;
+      return q(sb.from('dbs').select(cols+',source')).then(function(r2){
+        if(!r2||!r2.error)return r2;
+        if(!down((r2.error||{}).message))return r2;
+        AR.noSrc=true;
+        return q(sb.from('dbs').select(cols));
+      });
     });
   };
   Promise.all([
@@ -5647,6 +5654,32 @@ function arCrmDeepText(who){
      (o.prev7?((o.last7>=o.prev7?'늘었음':'줄었음')):'비교 없음')+')\n';
   var cold=arCold(who,7),c14=arCold(who,14).length,c30=arCold(who,30).length;
   s+='- 손 놓은 DB: 1주 넘음 '+cold.length+'건 · 2주 넘음 '+c14+'건 · 한 달 넘음 '+c30+'건\n';
+  s+=arStageText(who);
+  return s;
+}
+/* 어느 단계에서 막히는가 — 통화 수만 보면 알 수 없다.
+   TA 는 많은데 AP 가 안 나오는 사람과, AP 까지는 가는데 CS 에서
+   무너지는 사람은 <b>고쳐야 할 것이 완전히 다르다.</b> AI 가 그것을
+   보고 말하게 단계별로 나눠서 넘긴다. */
+function arStageText(who){
+  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,appt=0;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    tot++;
+    c[r.stage||'미접촉']=(c[r.stage||'미접촉']||0)+1;
+    if(r.stage==='계약완료')pol++;
+    if(r.stage==='증권전달')intro++;
+    if(r.appt)appt++;
+  }
+  if(!tot)return '[단계] 맡은 DB 가 없습니다.\n';
+  var s='[단계별 분포 — 맡은 DB '+tot+'건]\n',parts=[];
+  for(i=0;i<order.length;i++)if(c[order[i]])parts.push(order[i]+' '+c[order[i]]+'건');
+  s+='- '+(parts.join(' · ')||'기록 없음')+'\n';
+  s+='- 계약까지 간 사람 '+(pol+intro)+'명 (계약률 '+Math.round((pol+intro)/tot*100)+'%)\n';
+  if(pol)s+='- 계약은 됐는데 증권을 아직 못 보낸 사람 '+pol+'명 — 밀리면 민원이 됩니다\n';
+  if(intro)s+='- 증권을 전달한 사람 '+intro+'명 — 소개를 받을 수 있는 자리입니다\n';
+  s+='- 앞으로 잡혀 있는 상담 약속 '+appt+'건\n';
   return s;
 }
 
@@ -5700,7 +5733,14 @@ function arSys(){
    '「다음 7일」은 숫자가 들어간 실행 문장 세 개만 씁니다.\n'+
    '「활동 보고」에는 전화 습관을 반드시 한 줄 넣습니다 — 언제 거는지, 부재 뒤에 다시 거는지, '+
    '한 건에 몇 번이나 붙는지 중 가장 눈에 띄는 것 하나. '+
-   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.';
+   '「공부할 부분」이나 「다음 7일」에는 그 습관을 어떻게 바꿀지 한 가지를 넣습니다.\n'+
+   /* 단계마다 막히는 곳이 다르다. 뭉뚱그려 「더 열심히」 라고 하면 아무 도움이 안 된다 */
+   '[단계별 분포]를 보고 <b>어느 단계에서 막혔는지</b>를 짚습니다. '+
+   'TA 는 많은데 AP 가 적으면 전화에서 만남으로 넘기는 말이 문제입니다. '+
+   'AP 는 있는데 PC·CS 가 없으면 제안과 클로징이 문제입니다. '+
+   '계약은 되는데 증권 전달이 밀려 있으면 사후관리가 문제입니다 — 민원으로 이어진다고 짚습니다. '+
+   '증권을 전달한 사람이 있으면 소개를 여쭈라고 「다음 7일」에 넣습니다. '+
+   '앞으로 잡힌 약속이 있으면 그 준비를 「다음 7일」 맨 앞에 둡니다.';
   try{if(typeof vaKnow==='function'){var k=vaKnow();if(k)base+='\n\n[이 앱과 우리 회사가 굴러가는 방식 — 참고]\n'+k;}}catch(e){}
   try{if(typeof bxPrompt==='function')base+=bxPrompt();}catch(e){}
   return base;
@@ -5863,13 +5903,31 @@ function arDbCalc(dbs,calls){
   for(i=0;i<dbs.length;i++){
     var x=dbs[i],a=byDb[x.id]||{n:0,last:'',res:'',appt:'',memo:''};
     var base=a.last||(''+(x.assigned_date||'')).slice(0,10);
+    /* 약속은 dbs.next_appt 를 먼저 본다. 통화 기록만 보면, 약속을 잡은 뒤
+       부재 통화가 한 번 더 들어가는 순간 약속이 화면에서 사라졌다 */
+    var ap=(''+(x.next_appt||''));
+    if(a.appt>ap)ap=a.appt;
     out.push({id:x.id,who:x.assigned_to,name:x.customer_name||'(이름 없음)',region:x.region||'',
       src:(''+(x.source||'')).trim()||'일반',
+      stage:arStageOf(x,a.res),
+      cAt:(''+(x.contracted_at||'')).slice(0,10),
+      pAt:(''+(x.policy_sent_at||'')).slice(0,10),
       got:(''+(x.assigned_date||'')).slice(0,10),n:a.n,last:a.last,res:a.res||'미진행',
-      appt:a.appt,memo:a.memo,days:base?arDaysAgo(base):9999});
+      appt:ap,memo:a.memo,days:base?arDaysAgo(base):9999});
   }
   return out;
 }
+/* CRM 이 정한 단계. 손으로 정한 적이 없으면 통화 결과에서 짐작한다 —
+   db-crm.html 의 stageOf() 와 같은 규칙이다. 두 화면이 달라 보이면 안 된다 */
+var AR_STAGES=['미접촉','TA','AP','PC','CS','계약완료','증권전달'];
+function arStageOf(x,res){
+  var s=(''+((x&&x.stage)||'')).trim();
+  if(AR_STAGES.indexOf(s)>=0)return s;
+  if(res==='상담')return 'AP';
+  if(res==='부재')return 'TA';
+  return '미접촉';
+}
+function arWon(r){return r&&(r.stage==='계약완료'||r.stage==='증권전달');}
 /* 다시 걸어야 할 사람 — 부재·거절·한 번도 안 돌린 것 중 일주일이 지난 것 */
 function arCold(who,minDays){
   var l=AR.db||[],out=[],i,r;
@@ -6186,7 +6244,9 @@ function arTalk(kind){
    「부재 6건」 이 아니라 「고객12 · 12일째 · 문자 먼저 남기고 걸기」 여야 손이 움직인다. */
 var AR_TK=[
  ['all','🗂','전체'],['no','📵','부재'],['rej','🚫','거절'],
- ['run','🔥','진행중'],['new','🆕','미진행'],['old','❄️','기고객'],['bd','🎂','생일']
+ ['run','🔥','진행중'],['new','🆕','미진행'],['old','❄️','기고객'],['bd','🎂','생일'],
+ /* 계약 뒤에도 할 일이 남는다. 여기서 끊기면 증권이 안 나가고 소개도 안 나온다 */
+ ['pol','📜','증권 미전달'],['won','🏆','계약 직후']
 ];
 function arTkSet(k){AR.tk=k;arPaint();}
 function arTk(){return AR.tk||'all';}
@@ -6200,13 +6260,27 @@ function arSrcCount(who){
 }
 /* 오늘 이 사람에게 무엇을 해야 하는가 — 한 줄로 */
 function arTodoOf(x){
+  /* 계약 뒤 — 여기서 손을 놓으면 증권이 안 나가고 소개도 안 나온다 */
+  if(x.k==='pol')return (x.d>=14)
+    ? ('계약하고 '+x.d+'일째 증권을 못 보냈습니다. 오늘 안에 전달하고 단계를 올립니다')
+    : (x.d>=7?'계약한 지 일주일입니다. 증권을 챙겨 전달일을 잡습니다'
+             :'증권이 나오면 직접 전달합니다. 그 자리가 소개받는 자리입니다');
+  if(x.k==='won')return (x.d<=3)
+    ? '증권을 막 전달했습니다. 지금 소개를 여쭙는 것이 가장 자연스럽습니다'
+    : (x.d<=14?'전달한 지 '+x.d+'일. 잘 받으셨는지 확인하고 소개를 여쭙습니다'
+              :'한 달 안입니다. 청구 방법을 한 번 더 알려 드리고 가족 보장을 엽니다');
   if(x.k==='no')return (x.d>=30)?'마지막으로 한 번 — 안 되면 정리합니다'
     :(x.d>=14?'문자 먼저 남기고 그다음에 겁니다':'다른 시간대로 다시 겁니다');
   if(x.k==='rej')return '팔지 않습니다. 소식 하나만 문자로 보냅니다';
-  if(x.k==='run')return x.ap?('약속 전날 자료를 준비합니다 — '+x.ap)
-    :(x.d<=0?'오늘 상담했습니다. 기억이 살아 있을 때 다음 약속을 잡습니다'
+  if(x.k==='run'){
+    /* 단계까지 정해 뒀으면 그 단계에 맞는 말을 한다 */
+    if(x.ap)return '약속 전날 자료를 준비합니다 — '+x.ap;
+    if(x.st==='PC')return '제안서를 냈습니다. 오늘 결론을 물어봅니다';
+    if(x.st==='CS')return '마무리 단계입니다. 청약 서류와 날짜를 잡습니다';
+    return x.d<=0?'오늘 상담했습니다. 기억이 살아 있을 때 다음 약속을 잡습니다'
       :(x.d===1?'어제 상담했습니다. 오늘 한 번 더 짚어 줍니다'
-        :('상담하고 '+x.d+'일 지났습니다. 결론을 물어봅니다')));
+        :('상담하고 '+x.d+'일 지났습니다. 결론을 물어봅니다'));
+  }
   if(x.k==='new')return '아직 한 번도 안 걸었습니다. 오늘 첫 통화';
   if(x.k==='old')return x.plan?('적어 둔 일부터 — '+x.plan)
     :(x.d>=9000?'기록이 없습니다. 안부 전화로 다시 엽니다'
@@ -6228,11 +6302,24 @@ function arTouch(who){
   for(i=0;i<db.length;i++){
     r=db[i];
     if(who&&r.who!==who)continue;
+    /* 단계를 먼저 본다 — 계약이 된 사람을 「진행중」에 섞으면 할 일이 흐려진다 */
+    if(r.stage==='계약완료'){
+      out.push({k:'pol',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:0,
+                d:r.cAt?arDaysAgo(r.cAt):r.days,st:r.stage});
+      continue;
+    }
+    if(r.stage==='증권전달'){
+      /* 증권을 보낸 지 얼마 안 된 사람만. 이때가 소개를 받을 수 있는 유일한 때다 */
+      var pd=r.pAt?arDaysAgo(r.pAt):9999;
+      if(pd<=30)out.push({k:'won',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:1,
+                          d:pd,st:r.stage});
+      continue;
+    }
     if(r.res==='상담'){
       var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)?((''+r.appt).slice(0,10)+' '+(''+r.appt).slice(11,16)):'';
       if(ap||r.days<=45)
         out.push({k:'run',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,ap:ap,who:r.who,go:'crm',
-                  ord:ap?0:1});
+                  st:r.stage,ord:ap?0:1});
       continue;
     }
     if(r.n===0){
@@ -6262,12 +6349,12 @@ function arTouch(who){
   return out;
 }
 function arTkCount(who){
-  var l=arTouch(who),i,c={all:l.length,no:0,rej:0,run:0,'new':0,old:0,bd:0};
+  var l=arTouch(who),i,c={all:l.length,no:0,rej:0,run:0,'new':0,old:0,bd:0,pol:0,won:0};
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
 }
-var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일'};
-var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb'};
+var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일',pol:'증권',won:'계약'};
+var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb',pol:'red',won:'grn'};
 function arTkRow(x,own){
   return '<div class="ar-tk'+(((x.k==='no'&&x.d>=14)||(x.k==='old'&&x.d>=90))?' warn':'')+'" '+
     'onclick="go(\''+x.go+'\')">'+
@@ -6329,10 +6416,11 @@ function arTouchHtml(){
       '<span>'+arTouch('').length+'</span></button></div>'):'';
   return arCard('☎️','오늘 터치할 사람',
       (who?'':'팀 전체입니다. 담당자 이름이 앞에 붙습니다. ')+
-      '부재 · 거절 · 진행중 · 기고객을 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
+      '부재 · 거절 · 진행중 · 기고객 · 계약 뒤까지 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
       scope+
-      '<div class="ar-top" style="grid-template-columns:repeat(4,1fr)">'+
+      '<div class="ar-top" style="grid-template-columns:repeat(5,1fr)">'+
         tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
+        tile(c.pol||0,'명','증권 미전달 — 급함',c.pol>0)+
         tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
         tile(c.old||0,'명','기고객 — 식었음',c.old>0)+
         tile(c.bd||0,'명','생일 — 이번 주',0)+
@@ -6720,8 +6808,43 @@ function arYestHtml(){
     (v.call===0?'<div style="font-size:12px;color:#94A3B8;margin-top:9px;text-align:center">어제 기록이 없습니다.</div>':'')+
   '</div>';
 }
+/* 오늘·내일 잡혀 있는 상담 약속 — 시각까지 그대로.
+   약속을 놓치는 것이 가장 비싼 실수다. 아침에 제일 먼저 보여 준다. */
+function arAppts(who,days){
+  var l=AR.db||[],out=[],i,r,t=arToday(),end=arDayAdd(t,days==null?1:days);
+  for(i=0;i<l.length;i++){
+    r=l[i];
+    if(who&&r.who!==who)continue;
+    if(!r.appt)continue;
+    var d=(''+r.appt).slice(0,10);
+    if(d<t||d>end)continue;
+    out.push({id:r.id,nm:r.name,who:r.who,day:d,hm:(''+r.appt).slice(11,16),
+              today:d===t,stage:r.stage,src:r.src});
+  }
+  out.sort(function(a,b){return (a.day+a.hm)<(b.day+b.hm)?-1:1;});
+  return out;
+}
+function arDayAdd(ymd,n){
+  var p=(''+ymd).split('-');
+  var d=new Date(+p[0],(+p[1])-1,+p[2]);
+  d.setDate(d.getDate()+(n||0));
+  var pad=function(v){return (v<10?'0':'')+v;};
+  return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+}
 function arBriefRows(){
   var out=arTodoList().slice(0,8),i;
+  /* 약속은 무엇보다 먼저다 — 시각까지 적어서 맨 위에 세운다 */
+  try{
+    /* 아침 보고는 내 약속만 세운다. 리더라도 남의 약속까지 오지 않는다 */
+    var me=arMyId(),ap=me?arAppts(me,1):[],ai;
+    for(ai=ap.length-1;ai>=0;ai--){
+      var a=ap[ai];
+      out.unshift({k:'appt',e:'📅',
+        t:(a.today?'오늘':'내일')+' '+a.hm+' — '+a.nm+' 님 상담 약속',
+        s:(a.today?'오늘입니다. 자료와 이동 시간을 지금 확인하세요':'내일입니다. 오늘 안에 자료를 준비하세요'),
+        go:'airep',cat:'sched',bad:a.today,d:0});
+    }
+  }catch(e0){}
   /* 이달 월간보고를 아직 안 냈으면 맨 위에 세운다 */
   try{
     if(typeof PF!=='undefined'&&PF.loaded&&!(PF.mine&&PF.mine.submitted_at))
@@ -7635,8 +7758,157 @@ function pfMeHtml(){
   h+=pfRateHtml();
   try{if(pfWho()===pfMyId()&&typeof arScoreHtml==='function')h+=arScoreHtml();}catch(e1){}
   try{if(pfWho()===pfMyId()&&typeof arWeekHtml==='function')h+=arWeekHtml();}catch(e2){}
+  h+=pfNextHtml();
   h+=pfMineFullHtml();
   return h;
+}
+
+/* ── 다음 달에 손댈 사람 ──────────────────────────────────────
+   이번 달을 닫는 것으로 끝나면 다음 달이 또 맨바닥에서 시작한다.
+   이달 기록에서 <b>다음 달에 손댈 사람</b>을 뽑아 미리 세워 둔다.
+
+   위에서부터 급한 순서다 — 약속 잡힌 사람, 증권 못 보낸 사람,
+   상담해 놓고 결론이 안 난 사람, 식은 사람 순.                     */
+var PF_NEXT=[
+ ['appt','📅','약속 잡힘',   '#1D4ED8'],
+ ['pol', '📜','증권 미전달', '#DC2626'],
+ ['intro','🏆','소개 받을 때','#059669'],
+ ['warm','🔥','결론 대기',   '#D97706'],
+ ['no',  '📵','부재 — 재시도','#7C3AED'],
+ ['cold','❄️','식은 기고객', '#64748B']
+];
+function pfNextList(who){
+  var L=(typeof AR!=='undefined'&&AR.db)||[],out=[],i,r;
+  var t=(typeof arToday==='function')?arToday():new Date().toISOString().slice(0,10);
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    if(who&&r.who!==who)continue;
+    var day=(''+(r.appt||'')).slice(0,10);
+    /* 오늘 뒤로 잡혀 있는 약속은 무조건 맨 위 */
+    if(day>t){out.push({k:'appt',nm:r.name,who:r.who,src:r.src,when:day+' '+(''+r.appt).slice(11,16),
+                        why:'약속을 지킵니다'});continue;}
+    if(r.stage==='계약완료'){out.push({k:'pol',nm:r.name,who:r.who,src:r.src,when:r.cAt||'',
+                        why:'증권을 전달하고 단계를 올립니다'});continue;}
+    if(r.stage==='증권전달'){
+      var pd=r.pAt?arDaysAgo(r.pAt):9999;
+      if(pd<=45)out.push({k:'intro',nm:r.name,who:r.who,src:r.src,when:r.pAt||'',
+                        why:'소개를 여쭙고 가족 보장을 엽니다'});
+      continue;
+    }
+    if(r.res==='상담'){out.push({k:'warm',nm:r.name,who:r.who,src:r.src,when:r.last||'',
+                        why:'상담하고 '+r.days+'일 — 결론을 물어봅니다'});continue;}
+    if(r.res==='부재'&&r.days>=7){out.push({k:'no',nm:r.name,who:r.who,src:r.src,when:r.last||'',
+                        why:r.days+'일째 안 닿습니다. 시간대를 바꿔 겁니다'});continue;}
+    if(r.n>0&&r.days>=90)out.push({k:'cold',nm:r.name,who:r.who,src:r.src,when:r.last||'',
+                        why:r.days+'일 만입니다. 안부부터 엽니다'});
+  }
+  var ord={};PF_NEXT.forEach(function(x,ix){ord[x[0]]=ix;});
+  out.sort(function(a,b){
+    if(ord[a.k]!==ord[b.k])return ord[a.k]-ord[b.k];
+    return (a.when||'')<(b.when||'')?-1:1;
+  });
+  return out;
+}
+/* pfShift() 는 보고 있는 달 자체를 바꾸고 다시 읽는다. 여기서는 그러면
+   안 된다 — 이름표 하나 만들려고 화면을 옮길 수는 없다. 값만 계산한다. */
+function pfYmAdd(ym,n){
+  var a=(''+ym).split('-'),d=new Date(+a[0],(+a[1])-1+(n||0),1);
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);
+}
+function pfNextCount(who){
+  var l=pfNextList(who),c={all:l.length},i;
+  PF_NEXT.forEach(function(x){c[x[0]]=0;});
+  for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
+  return c;
+}
+function pfNextLabel(k){var i;for(i=0;i<PF_NEXT.length;i++)if(PF_NEXT[i][0]===k)return PF_NEXT[i];return ['','','',''];}
+function pfNextHtml(){
+  var who=pfWho(),l=pfNextList(who),c=pfNextCount(who),i;
+  var mine=(who===pfMyId());
+  var nm=pfYmAdd(pfYm(),1);
+  if(!l.length)return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📌</span>'+
+    osEsc(pfYmLabel(nm))+' 에 손댈 사람</div>'+
+    '<div class="card-desc">아직 뽑을 것이 없습니다. DB 가 붙고 통화가 쌓이면 여기 섭니다.</div></div></div>';
+
+  var chips='';
+  for(i=0;i<PF_NEXT.length;i++){
+    var t=PF_NEXT[i];
+    if(!c[t[0]])continue;
+    chips+='<span style="display:inline-flex;align-items:center;gap:5px;border:1px solid #E9EEF5;'+
+      'border-radius:999px;padding:6px 12px;margin:0 6px 6px 0;font-size:12.5px;font-weight:800;color:'+t[3]+'">'+
+      t[1]+' '+osEsc(t[2])+'<b style="color:#0F172A">'+c[t[0]]+'</b></span>';
+  }
+  var rows='';
+  for(i=0;i<l.length&&i<60;i++){
+    var x=l[i],lb=pfNextLabel(x.k);
+    rows+='<div style="display:flex;align-items:center;gap:9px;padding:9px 2px;border-top:1px solid #F1F5F9">'+
+      '<span style="flex:0 0 92px;font-size:11.5px;font-weight:800;color:'+lb[3]+'">'+lb[1]+' '+osEsc(lb[2])+'</span>'+
+      '<span style="flex:0 0 118px;font-size:13.5px;font-weight:800;color:#0F172A;overflow:hidden;'+
+        'text-overflow:ellipsis;white-space:nowrap">'+(mine?'':('<b style="color:#64748B;font-weight:700">'+osEsc(pfName(x.who))+'</b> '))+
+        osEsc(x.nm)+'</span>'+
+      '<span style="flex:0 0 108px;font-size:11.5px;color:#94A3B8;font-weight:700">'+osEsc(x.when||'-')+'</span>'+
+      '<span style="flex:1;min-width:0;font-size:12.5px;color:#42506A">'+osEsc(x.why)+'</span></div>';
+  }
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📌</span>'+
+    osEsc(pfYmLabel(nm))+' 에 손댈 사람 '+l.length+'명</div>'+
+    '<div class="card-desc">이번 달 기록에서 <b>다음 달에 손댈 사람</b>을 뽑았습니다. 위에서부터 급합니다.'+
+    (l.length>60?(' 아래 '+(l.length-60)+'명은 화면에서 줄였습니다 — 「글로 복사」 하면 전부 나옵니다.'):'')+'</div></div>'+
+    '<div class="card-body"><div style="margin-bottom:8px">'+chips+'</div>'+rows+
+    '<div class="btn-row" style="margin-top:12px">'+
+      '<button class="btn btn-ghost" onclick="pfNextCopy()">📋 글로 복사</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'crm\')">🗂 DB 통합 CRM 열기</button>'+
+    '</div>'+
+    '<div class="ar-fine" style="margin-top:9px">고객 이름은 이 화면에만 있습니다. '+
+    '영업보고서 이미지에는 <b>김○○</b> 로만 들어갑니다.</div>'+
+    '</div></div>';
+}
+/* 영업보고서 이미지에 들어갈 다음 달 칸.
+   이 이미지는 카카오톡으로 밖에 나간다. 그래서 <b>이름을 가린다</b> —
+   화면에서는 실명 그대로 보지만, 나가는 그림에는 김○○ 로만 넣는다.
+   금액·연락처는 아예 안 넣는다. */
+function pfCardNextHtml(who){
+  var l=pfNextList(who),c=pfNextCount(who),i;
+  if(!l.length)return '';
+  var mask=function(n){
+    try{return (typeof osMaskName==='function')?osMaskName(n):n;}catch(e){return n;}
+  };
+  var chips='';
+  for(i=0;i<PF_NEXT.length;i++){
+    var t=PF_NEXT[i];
+    if(!c[t[0]])continue;
+    chips+='<span style="display:inline-block;background:rgba(255,255,255,.09);border-radius:999px;'+
+      'padding:5px 12px;margin:0 6px 6px 0;font-size:12px;font-weight:800;color:#D6DFEC">'+
+      t[1]+' '+osEsc(t[2])+' '+c[t[0]]+'</span>';
+  }
+  /* 급한 위쪽 여섯 명만. 그림이 길어지면 카톡에서 잘린다 */
+  var rows='';
+  for(i=0;i<l.length&&i<6;i++){
+    var x=l[i],lb=pfNextLabel(x.k);
+    rows+='<div style="display:flex;gap:10px;font-size:12.5px;color:#D6DFEC;padding:5px 0;'+
+      'border-top:1px solid rgba(255,255,255,.07)">'+
+      '<span style="flex:0 0 86px;color:#7DA2E8;font-weight:800">'+lb[1]+' '+osEsc(lb[2])+'</span>'+
+      '<span style="flex:0 0 78px;font-weight:800">'+osEsc(mask(x.nm))+'</span>'+
+      '<span style="flex:0 0 96px;color:#93A6C4">'+osEsc(x.when||'-')+'</span>'+
+      '<span style="flex:1;min-width:0;color:#93A6C4">'+osEsc(x.why)+'</span></div>';
+  }
+  return '<div style="margin-top:22px;background:rgba(255,255,255,.06);border-radius:13px;padding:15px 17px">'+
+    '<div style="font-size:11.5px;font-weight:800;color:#7DA2E8;letter-spacing:.1em">'+
+    osEsc(pfYmLabel(pfYmAdd(pfYm(),1)))+' 에 손댈 사람 '+l.length+'명</div>'+
+    '<div style="margin-top:9px">'+chips+'</div>'+rows+
+    (l.length>6?('<div style="font-size:11px;color:#6B7F9E;margin-top:7px">'+
+      '나머지 '+(l.length-6)+'명은 앱 → 내 업적 · 월간보고에 있습니다</div>'):'')+
+    '</div>';
+}
+function pfNextCopy(){
+  var who=pfWho(),l=pfNextList(who),i,x,lb;
+  var s=pfYmLabel(pfYmAdd(pfYm(),1))+' 에 손댈 사람 '+l.length+'명\n';
+  s+=(who===pfMyId()?pfName(pfMyId()):pfName(who))+'\n\n';
+  for(i=0;i<l.length;i++){
+    x=l[i];lb=pfNextLabel(x.k);
+    s+=(i+1)+'. ['+lb[2]+'] '+x.nm+(x.when?(' · '+x.when):'')+' — '+x.why+'\n';
+  }
+  s+='\nAPEX YUN PRO · 내부 영업 관리용입니다. 고객 정보를 외부로 보내지 마십시오.';
+  copyText(s);
 }
 
 /* ── 그래프 — 내 흐름과 목표 대비 ─────────────────────────── */
@@ -8204,9 +8476,12 @@ function pfCardHtml(who){
       '<div style="font-size:13px;line-height:1.75;color:#D6DFEC;margin-top:6px;white-space:pre-wrap">'+
       osEsc((m.feedback||m.plan||'').slice(0,320))+'</div></div>'):'')+
 
+    pfCardNextHtml(m.owner_id||pfMyId())+
+
     '<div style="margin-top:20px;padding-top:13px;border-top:1px solid rgba(255,255,255,.10);'+
     'font-size:10.5px;color:#6B7F9E;line-height:1.7">'+
-    'APEX YUN PRO · 이 자료는 내부 영업 관리용입니다. 고객 정보는 담겨 있지 않습니다.</div>'+
+    'APEX YUN PRO · 이 자료는 내부 영업 관리용입니다. '+
+    '고객 이름은 <b>김○○</b> 로만 들어 있고 연락처·금액은 담겨 있지 않습니다.</div>'+
   '</div>';
 }
 function pfCardKpi(t,v,c){
@@ -9606,8 +9881,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-13 17:40';
-var APP_BUILD_NOTE='접촉 기록을 본인이 고치고 지울 수 있습니다 (중복 한 번에 정리) · 내 업적에서 팀을 골라 보고, 설정에서 안 볼 팀을 정하면 TFA 업무관리가 그 뜻을 따릅니다 · 사업계획서도 팀별로';
+var APP_BUILD='2026-08-13 19:05';
+var APP_BUILD_NOTE='DB 단계에 계약완료 · 증권전달이 생겼습니다 · 상담 약속이 고객 365일까지 따라갑니다 · 아침 보고가 오늘·내일 약속을 시각까지 알려 줍니다 · TFA 가 단계마다 다른 할 일을 냅니다 · 월간보고에 다음 달 손댈 사람 목록이 붙습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

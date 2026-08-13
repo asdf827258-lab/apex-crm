@@ -178,9 +178,9 @@
       <section class="page" id="page-db">
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
-          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
+          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option><option value="__nopol__">증권 미전달만</option></select></div>
           <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
-          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
         <div class="card section hidden" id="srcAdminCard">
           <div class="section-head"><div><h3>DB 종류 목록</h3><p>여기 적은 것만 종류 칸에 뜹니다. 한 줄에 하나씩 적으세요. <b>목록은 팀이 같이 씁니다</b> — 여기서 고치면 모든 팀원 화면이 같이 바뀝니다. DB 등록 창에서 「＋ DB 종류 추가」 로 한 개씩 넣을 수도 있습니다.</p></div></div>
@@ -261,6 +261,10 @@
       </div></div>
     <div class="field"><label>지역</label><input id="region" placeholder="순천"></div>
     <div class="field"><label>DB 보고명</label><input id="reportName" value="보장분석 3DB"></div>
+    <div class="field"><label>단계</label><select id="dbStage" onchange="stagePick()"><option value="">자동 (통화 결과로 짐작)</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option></select></div>
+    <div class="field hidden" id="wonField"><label>계약일</label><input type="date" id="contractedAt"></div>
+    <div class="field hidden" id="polField"><label>증권 전달일</label><input type="date" id="policySentAt"></div>
+    <div class="field hidden" id="polNoField"><label>증권번호</label><input id="policyNo" placeholder="증권에 적힌 번호"></div>
     <div class="field full"><label>비고</label><textarea id="dbMemo"></textarea></div>
   </div></div>
   <div class="modal-foot"><button class="btn btn-light" onclick="closeModal('dbModal')">취소</button><button class="btn btn-primary" onclick="saveDb()">저장</button></div>
@@ -316,6 +320,47 @@ function wErr(error,what){
 function badge(v){return `<span class="badge ${{상담:"green",거절:"red",부재:"yellow",미진행:"gray"}[v]||"gray"}">${v||"미진행"}</span>`}
 function getCalls(id){return calls.filter(c=>c.db_id===id).sort((a,b)=>new Date(b.call_at)-new Date(a.call_at))}
 function lastCall(d){return getCalls(d.id)[0]} function result(d){return lastCall(d)?.result||"미진행"}
+/* ── 단계 ──
+   지금까지 이 화면은 단계를 쓰지 않고 마지막 통화 결과에서 짐작했다.
+   그래서 계약이 되어도 「상담」에서 멈췄고, 증권을 보냈는지는 아무 데도
+   안 남았다. 이제 stage 칸을 쓴다.
+
+   손으로 정한 적이 없는 DB 는 예전처럼 결과에서 짐작한다 — 그래야
+   지금까지 쌓인 것이 빈칸으로 보이지 않는다. */
+const STAGES=["미접촉","TA","AP","PC","CS","계약완료","증권전달"];
+const STAGE_C={미접촉:"gray",TA:"yellow",AP:"blue",PC:"blue",CS:"blue",계약완료:"green",증권전달:"green"};
+function stageAuto(d){
+  const r=result(d);
+  if(r==="상담")return "AP";
+  if(r==="거절")return "미접촉";
+  if(r==="부재")return "TA";
+  return "미접촉";
+}
+function stageOf(d){
+  if(!d)return "미접촉";
+  const s=(d.stage||"").trim();
+  return STAGES.indexOf(s)>=0?s:stageAuto(d);
+}
+/* 손으로 정한 단계인가 — 짐작한 것과 구분해서 보여 준다 */
+function stageSet(d){return STAGES.indexOf((d&&d.stage||"").trim())>=0}
+function stageBadge(d){
+  const s=stageOf(d);
+  return `<span class="badge ${STAGE_C[s]||"gray"}"${stageSet(d)?"":' title="아직 손으로 정하지 않아 통화 결과에서 짐작한 값입니다"'}>${s}${stageSet(d)?"":"?"}</span>`;
+}
+/* 계약까지 갔나 — 업적·보고서가 이 기준을 함께 쓴다 */
+function isWon(d){const s=stageOf(d);return s==="계약완료"||s==="증권전달"}
+/* 계약은 됐는데 증권을 아직 안 보낸 사람 — 놓치면 민원이 된다 */
+function needPolicy(d){return stageOf(d)==="계약완료"}
+/* 다음 약속 — dbs.next_appt 를 먼저 본다.
+   마지막 통화에만 기대면, 약속을 잡은 뒤 부재 통화가 한 번 더 들어가는
+   순간 화면에서 약속이 사라졌다. next_appt 는 가장 늦은 약속을 들고 있다. */
+function nextAppt(d){
+  if(!d)return "";
+  const a=d.next_appt||"";
+  let b="";
+  getCalls(d.id).forEach(c=>{if(c.appointment_at&&c.appointment_at>b)b=c.appointment_at});
+  return (a&&b)?(a>b?a:b):(a||b);
+}
 function absentCount(d){return calls.filter(c=>c.db_id===d.id&&c.result==="부재").length}
 /* 접촉 횟수 — 부재만이 아니라 실제로 건 통화 전부 */
 function touchCount(d){return calls.filter(c=>c.db_id===d.id).length}
@@ -589,18 +634,19 @@ function renderDashAttendance(){
 }
 function renderDb(){
   const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
-  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf));
+  const gf=$("stageFilter")?.value||"";
+  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf)&&(!gf||(gf==="__nopol__"?needPolicy(d):stageOf(d)===gf)));
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
+    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="12" class="empty">조회할 DB가 없습니다.</td></tr>`;
+  </tr>`}).join("")||`<tr><td colspan="13" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
@@ -702,15 +748,53 @@ function openDb(id=""){
   const d=dbs.find(x=>x.id===id);
   /* 개척 DB 는 본인이 직접 넣는다. 이미 배정된 것도 내 것이면 본인이 연다. */
   if(id&&!canEditDb(d)){toast("내 고객이 아니면 수정할 수 없습니다.");return}
-  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";
+  $("dbStage").value=STAGES.indexOf((d?.stage||"").trim())>=0?d.stage:"";
+  $("contractedAt").value=(d?.contracted_at||"").slice(0,10);
+  $("policySentAt").value=(d?.policy_sent_at||"").slice(0,10);
+  $("policyNo").value=d?.policy_no||"";
+  stagePick();
+  $("dbModal").classList.add("open")
+}
+/* 계약까지 갔을 때만 날짜·증권번호를 묻는다 — 안 그러면 칸만 늘어난다 */
+function stagePick(){
+  const s=$("dbStage")?.value||"";
+  const won=(s==="계약완료"||s==="증권전달"),pol=(s==="증권전달");
+  $("wonField")?.classList.toggle("hidden",!won);
+  $("polField")?.classList.toggle("hidden",!pol);
+  $("polNoField")?.classList.toggle("hidden",!won);
+  /* 오늘 계약이라고 고르면 날짜를 미리 채워 준다. 손이 한 번 덜 간다 */
+  if(won&&$("contractedAt")&&!$("contractedAt").value)$("contractedAt").value=today();
+  if(pol&&$("policySentAt")&&!$("policySentAt").value)$("policySentAt").value=today();
 }
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
+  /* 단계는 고른 것만 보낸다. 「자동」이면 null 로 지워서 예전처럼 짐작하게 둔다 */
+  const stg=$("dbStage")?.value||"";
+  payload.stage=STAGES.indexOf(stg)>=0?stg:null;
+  payload.contracted_at=(payload.stage==="계약완료"||payload.stage==="증권전달")?($("contractedAt")?.value||null):null;
+  payload.policy_sent_at=(payload.stage==="증권전달")?($("policySentAt")?.value||null):null;
+  payload.policy_no=(payload.stage==="계약완료"||payload.stage==="증권전달")?(($("policyNo")?.value||"").trim()||null):null;
+  if(payload.stage==="증권전달"&&!payload.contracted_at){toast("증권전달이면 계약일도 적어 주세요.");return}
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
   const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);
   let {error}=await put(payload);
+  /* 단계 칸이 아직 없는 서버 — 단계만 빼고 저장해서 일을 막지 않는다.
+     migration_41 을 안 돌렸을 뿐인데 DB 저장 자체가 막히면 안 된다. */
+  if(error&&/stage|contracted_at|policy_sent_at|policy_no/i.test((error.message||"")+"")&&
+     /column|42703|does not exist|schema cache|constraint/i.test((error.message||"")+"")){
+    const p3=Object.assign({},payload);
+    delete p3.stage;delete p3.contracted_at;delete p3.policy_sent_at;delete p3.policy_no;
+    const r3=await put(p3);
+    if(!r3.error){
+      closeModal("dbModal");await loadAll();
+      toast("DB를 저장했습니다. 단계는 아직 서버에 칸이 없어 빼고 저장했습니다 — migration_41_calls.sql 을 한 번 실행하세요.");
+      return;
+    }
+    error=r3.error;
+  }
   if(error){
     const m=(error.message||"")+"";
     /* 종류 칸 자체가 없는 서버 — 종류만 빼고 저장해서 일을 막지 않는다 */
@@ -774,15 +858,24 @@ async function toClient(id){
     return;
   }
 
-  const r=result(d), c=lastCall(d);
+  const r=result(d), c=lastCall(d), ap=nextAppt(d);
   if(!confirm(`${real} 님을 고객 365일로 넘길까요?\n\n`+
-    `담당 ${pname(d.assigned_to)} · 종류 ${srcOf(d)} · 지금 ${r}\n\n`+
+    `담당 ${pname(d.assigned_to)} · 종류 ${srcOf(d)} · 지금 ${r} · 단계 ${stageOf(d)}\n`+
+    (ap?`잡혀 있는 약속 ${fmt(ap,true)} — 함께 넘어갑니다\n`:"")+`\n`+
     `DB 관리에서는 그대로 남습니다. 고객 365일에서 생일·가족·팩트파인딩 같은 장기 관리가 붙습니다.\n`+
     `서버에는 ${masked} 로만 저장되고 실명은 이 기기에만 남습니다.`))return;
 
   const payload={advisor_id:d.assigned_to,name_masked:masked,consent_status:"none"};
   if(d.phone)payload.phone=d.phone;
+  /* 약속을 같이 들고 간다. 여기서 안 넘기면 넘긴 순간 약속이 사라진다 */
+  if(ap)payload.next_appt=ap;
   let {error}=await sb.from("clients").insert(payload);
+  /* 약속 칸이 아직 없는 서버 — 약속만 빼고 넘긴다. 넘기기 자체를 막지 않는다 */
+  if(error&&/next_appt/i.test((error.message||"")+"")){
+    delete payload.next_appt;
+    ({error}=await sb.from("clients").insert(payload));
+    if(!error)toast("약속 시각은 아직 서버에 칸이 없어 못 넘겼습니다 — migration_42_appt.sql 을 한 번 실행하세요.",3200);
+  }
   if(error&&/phone/i.test((error.message||"")+"")){
     delete payload.phone;
     ({error}=await sb.from("clients").insert(payload));
