@@ -820,11 +820,116 @@ async function removeDb(id){
 }
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
-function renderHistory(id){const x=getCalls(id);$("history").innerHTML=x.length?`<div class="section-head"><h3>기존 통화 이력</h3></div><div class="timeline">${x.map(c=>`<div><b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}</b><p>${esc(c.memo||"메모 없음")}</p></div>`).join("")}</div>`:""}
+/* ── 통화 이력 — 고칠 수 있어야 한다 ────────────────────────────
+   지금까지 한 번 남긴 기록은 손댈 수 없었다. 그런데 저장이 오류로
+   두세 번 들어가는 일이 있고, 결과를 잘못 고른 일도 있다.
+   그 기록이 그대로 남으면 타율이 통째로 틀어진다.
+   그래서 <b>본인이 남긴 것</b>은 본인이 고치고 지울 수 있게 한다.  */
+function canEditCall(c){
+  if(!c||!profile)return false;
+  return c.created_by===profile.id||canManage()||isLeader();
+}
+/* 같은 DB 에 같은 결과가 5분 안에 또 들어갔으면 중복으로 본다 */
+function dupCalls(list){
+  const out={},i=[];
+  list.forEach(c=>{
+    const k=c.result+'|'+Math.floor(new Date(c.call_at).getTime()/300000);
+    if(out[k])i.push(c.id); else out[k]=c.id;
+  });
+  return i;
+}
+function renderHistory(id){
+  const x=getCalls(id),box=$("history");
+  if(!box)return;
+  if(!x.length){box.innerHTML="";return}
+  const dups=dupCalls(x.slice().reverse());
+  box.innerHTML=`<div class="section-head"><h3>기존 통화 이력 <span style="font-weight:600;color:var(--muted);font-size:13px">${x.length}건</span></h3>`+
+    (dups.length?`<button class="btn" onclick="cleanDup('${id}')" style="padding:6px 12px;border-radius:9px;border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;font-weight:800;font-size:12px;cursor:pointer">🧹 중복 ${dups.length}건 지우기</button>`:'')+
+    `</div><div class="timeline">${x.map(c=>{
+      const dup=dups.indexOf(c.id)>=0;
+      return `<div${dup?' style="background:#FEF2F2;border-radius:9px;padding:7px 9px;margin:-2px 0"':''}>`+
+        `<b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}`+
+        (dup?' <span class="badge red">중복으로 보임</span>':'')+
+        (c.appointment_at?` <span class="badge green">약속 ${fmt(c.appointment_at,true)}</span>`:'')+
+        `</b><p>${esc(c.memo||"메모 없음")}</p>`+
+        (canEditCall(c)?`<div style="display:flex;gap:6px;margin-top:5px">`+
+          `<button onclick="editCall('${c.id}')" style="padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ 고치기</button>`+
+          `<button onclick="delCall('${c.id}')" style="padding:4px 10px;border:1px solid #FCA5A5;background:#fff;color:#B91C1C;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">🗑 지우기</button>`+
+          `</div>`:'')+
+        `</div>`;
+    }).join("")}</div>`;
+}
+/* 지우기 — 무엇을 지우는지 보여 주고 묻는다. 되돌릴 수 없다. */
+async function delCall(id){
+  const c=calls.find(x=>x.id===id);
+  if(!c)return;
+  if(!canEditCall(c)){toast("본인이 남긴 기록만 지울 수 있습니다.");return}
+  if(!confirm(`이 통화 기록을 지웁니다.\n\n${c.result} · ${fmt(c.call_at,true)}\n${(c.memo||"메모 없음").slice(0,60)}\n\n되돌릴 수 없습니다. 지울까요?`))return;
+  const {error}=await sb.from("calls").delete().eq("id",id);
+  if(error){wErr(error,"통화기록 삭제");return}
+  await loadAll();
+  const dbId=$("callDbId")?.value||c.db_id;
+  renderHistory(dbId);
+  toast("통화 기록을 지웠습니다.");
+}
+/* 고치기 — 새로 만들지 않고 그 줄을 고친다 */
+let editCallId=null;
+function editCall(id){
+  const c=calls.find(x=>x.id===id);
+  if(!c)return;
+  if(!canEditCall(c)){toast("본인이 남긴 기록만 고칠 수 있습니다.");return}
+  editCallId=id;
+  $("callDbId").value=c.db_id;
+  $("callAt").value=(c.call_at||"").slice(0,16);
+  $("callResult").value=c.result||"부재";
+  $("callIssue").value=c.first_call_issue?"true":"false";
+  $("appointmentAt").value=c.appointment_at?(""+c.appointment_at).slice(0,16):"";
+  $("callMemo").value=c.memo||"";
+  const t=document.querySelector("#callModal h3");
+  if(t)t.textContent="통화 기록 고치기";
+  $("callModal").classList.add("open");
+  renderHistory(c.db_id);
+}
+/* 같은 결과가 5분 안에 겹쳐 들어간 것만 지운다 — 가장 처음 것은 남긴다 */
+async function cleanDup(dbId){
+  const x=getCalls(dbId),ids=dupCalls(x.slice().reverse());
+  if(!ids.length){toast("중복이 없습니다.");return}
+  if(!confirm(`같은 결과가 5분 안에 겹쳐 들어간 ${ids.length}건을 지웁니다.\n가장 먼저 남긴 것은 그대로 둡니다.\n\n되돌릴 수 없습니다. 지울까요?`))return;
+  const {error}=await sb.from("calls").delete().in("id",ids);
+  if(error){wErr(error,"중복 정리");return}
+  await loadAll();renderHistory(dbId);
+  toast(`중복 ${ids.length}건을 지웠습니다.`);
+}
+let savingCall=false;
 async function saveCall(){
-  const resultV=$("callResult").value,app=$("appointmentAt").value;if(resultV==="상담"&&!app){toast("상담 약속일시를 입력해 주세요.");return}
-  const payload={db_id:$("callDbId").value,created_by:profile.id,call_at:new Date($("callAt").value).toISOString(),result:resultV,first_call_issue:$("callIssue").value==="true",appointment_at:app?new Date(app).toISOString():null,memo:$("callMemo").value.trim()};
-  const {error}=await sb.from("calls").insert(payload);if(error)wErr(error,"통화기록 저장");else{closeModal("callModal");await loadAll();toast(`${profile.name} 이름으로 통화기록을 저장했습니다.`)}
+  /* 두 번 눌러 두 줄이 들어가던 것을 막는다 — 중복의 가장 큰 원인이었다 */
+  if(savingCall){toast("저장 중입니다.");return}
+  const resultV=$("callResult").value,app=$("appointmentAt").value;
+  if(resultV==="상담"&&!app){toast("상담 약속일시를 입력해 주세요.");return}
+  if(!$("callAt").value){toast("통화 일시를 넣어 주세요.");return}
+  const payload={db_id:$("callDbId").value,created_by:profile.id,
+    call_at:new Date($("callAt").value).toISOString(),result:resultV,
+    first_call_issue:$("callIssue").value==="true",
+    appointment_at:app?new Date(app).toISOString():null,
+    memo:$("callMemo").value.trim()};
+  savingCall=true;
+  const btn=document.querySelector('#callModal button[onclick*="saveCall"]');
+  if(btn){btn.disabled=true;btn.dataset.t=btn.textContent;btn.textContent="저장 중…"}
+  let error;
+  if(editCallId){
+    /* 고치는 중이면 새로 만들지 않고 그 줄을 고친다 */
+    delete payload.created_by;
+    ({error}=await sb.from("calls").update(payload).eq("id",editCallId));
+  }else{
+    ({error}=await sb.from("calls").insert(payload));
+  }
+  savingCall=false;
+  if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||"저장"}
+  if(error){wErr(error,editCallId?"통화기록 수정":"통화기록 저장");return}
+  const was=editCallId;editCallId=null;
+  const t=document.querySelector("#callModal h3");if(t)t.textContent="통화 기록";
+  closeModal("callModal");await loadAll();
+  toast(was?"통화 기록을 고쳤습니다.":`${profile.name} 이름으로 통화기록을 저장했습니다.`);
 }
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
