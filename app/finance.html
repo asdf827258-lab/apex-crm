@@ -1167,6 +1167,7 @@ a { color: inherit; text-decoration: none; }
 .print-fallback-note{font-size:10px;color:var(--ink-4);line-height:1.5;margin-top:6px}
 @media print{.report-action-row,.report-safe-btn,.print-fallback-note{display:none!important}}
 
+.fx-krw{color:var(--ink-3,#7A8493);font-weight:700;font-size:.86em;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1481,7 +1482,7 @@ a { color: inherit; text-decoration: none; }
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
       <button class="report-tab" onclick="switchTab('cashflow',this)"><div class="rt-ico">💰</div><div class="rt-title">현금흐름 분석</div><div class="rt-sub">소득·지출</div></button>
       <button class="report-tab" onclick="switchTab('pension',this)"><div class="rt-ico">🏦</div><div class="rt-title">연금 시뮬레이션</div><div class="rt-sub">건보료·국민연금</div></button>
-      <button class="report-tab" onclick="switchTab('dollar',this)"><div class="rt-ico">💵</div><div class="rt-title">달러 시뮬레이션</div><div class="rt-sub">환율·비과세</div></button>
+      <button class="report-tab" onclick="goConsult(this)"><div class="rt-ico">🧭</div><div class="rt-title">투자 컨설팅</div><div class="rt-sub">급여별 포트폴리오</div></button>
       <button class="report-tab" onclick="switchTab('invest',this)"><div class="rt-ico">📈</div><div class="rt-title">투자 포트폴리오</div><div class="rt-sub">ETF·변액</div></button>
       <button class="report-tab" onclick="switchTab('insurance',this)"><div class="rt-ico">🛡️</div><div class="rt-title">보험 대시보드</div><div class="rt-sub">암·뇌·심·간병</div></button>
       <button class="report-tab" onclick="switchTab('factcheck',this)"><div class="rt-ico">✅</div><div class="rt-title">팩트체크</div><div class="rt-sub">3대 점검</div></button>
@@ -1598,6 +1599,8 @@ a { color: inherit; text-decoration: none; }
   <div class="tab-pane" id="tab-pension">
     <div class="sec-hd">
       <div><div class="sec-tag">PENSION SIMULATION</div><div class="sec-title">연금 포트폴리오 & 수령액 시뮬레이션</div></div>
+      <button type="button" class="report-safe-btn dark" onclick="apexPresent('w')"
+        title="이 화면의 고객 값을 그대로 넘겨 연금 발표자료를 엽니다">▶ 연금 발표자료</button>
     </div>
 
     <!-- 연금 종합 -->
@@ -1626,30 +1629,9 @@ a { color: inherit; text-decoration: none; }
   </div>
 
   <!-- 4. 달러 시뮬레이션 -->
-  <div class="tab-pane" id="tab-dollar">
-    <div class="sec-hd">
-      <div><div class="sec-tag">DOLLAR SIMULATION</div><div class="sec-title">달러 자산 시뮬레이션</div></div>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--ink-7);padding-bottom:0">
-      <button class="sub-tab on" id="dtab-calc" onclick="dollarView('calc',this)">🧮 계산 · 근거</button>
-      <button class="sub-tab" id="dtab-deck" onclick="dollarView('deck',this)">📽️ 발표 슬라이드</button>
-    </div>
-    <div id="deck-dollar" style="display:none"></div>
-    <div id="dollar-calc-wrap">
+  <!-- 달러 시뮬레이션 탭은 없앴다. 달러는 투자 컨설팅 안에서 원화와
+       나란히 설명한다 — 따로 떼어 놓으니 아무도 안 열었다. -->
 
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-hd"><div class="card-tag">DOLLAR ASSET GROWTH</div><div class="card-title">달러 자산 성장 예측</div></div>
-      <div class="card-body" id="dollar-result"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd"><div class="card-tag">WHY DOLLAR ASSET</div><div class="card-title">달러 자산이 필요한 이유</div></div>
-      <div class="card-body" id="dollar-why"></div>
-    </div>
-    </div><!-- /dollar-calc-wrap -->
-  </div>
-
-  <!-- 5. 투자 포트폴리오 -->
   <div class="tab-pane" id="tab-invest">
     <div class="sec-hd">
       <div><div class="sec-tag">INVESTMENT PORTFOLIO</div><div class="sec-title">투자 성향별 포트폴리오 추천</div></div>
@@ -1664,7 +1646,6 @@ a { color: inherit; text-decoration: none; }
       <button class="sub-tab" onclick="switchSubTab('cardif',this)" id="stab-cardif">🏦 카디프 변액연금</button>
       <button class="sub-tab" onclick="switchSubTab('balance',this)" id="stab-balance">🧭 투자 컨설팅</button>
       <button class="sub-tab" onclick="switchSubTab('varc',this)" id="stab-varc">🧩 변액 컨설팅</button>
-      <button class="sub-tab" onclick="switchSubTab('deck',this)" id="stab-deck">📽️ 투자 프레젠테이션</button>
     </div>
 
     <!-- ETF 탭 -->
@@ -2879,6 +2860,11 @@ function render() {
       <div class="card" style="margin-top:12px;margin-bottom:0;border:1px solid var(--ink-7);box-shadow:none">
         <div class="card-hd"><div class="card-tag">HEALTH INSURANCE · NPS GAP</div><div class="card-title">재산 반영 건강보험료 & 국민연금 감소 리스크</div></div>
         <div class="card-body">
+          <div class="hb orange" style="margin-top:0;margin-bottom:10px">
+            ⚠️ <b>아래 건보료 숫자는 「예시」입니다.</b> 공단 산식이 아니라 상담용으로 단순화한 어림값이고,
+            요율도 해마다 바뀝니다. <b>고객에게 금액으로 말씀하지 마시고</b> 「이런 방향으로 늘어날 수 있다」
+            까지만 쓰십시오. 실제 금액은 건강보험공단 모의계산으로 확인해야 합니다.
+          </div>
           <div class="mg m4" style="margin-bottom:10px">
             <div class="mb ${healthIncreaseMan>20?'red':healthIncreaseMan>5?'gold':'green'}"><div class="ml">은퇴 후 지역건보 추정</div><div class="mv ${healthIncreaseMan>20?'r':healthIncreaseMan>5?'o':'g'}">${fmt(localHealthMan)}<small>만/월</small></div><div class="mu">재산·연금소득 반영</div></div>
             <div class="mb"><div class="ml">재산 보험료분</div><div class="mv">${fmt(propertyHealthMan)}<small>만/월</small></div><div class="mu">순재산 ${fmt(netPropertyForHealth)}만원 기준</div></div>
@@ -2886,10 +2872,10 @@ function render() {
             <div class="mb blue"><div class="ml">연금권 방어 납입</div><div class="mv b">${fmt(npsPreserveCost)}<small>만/월</small></div><div class="mu">기준소득월액 ${fmt(npsPayBase)}만원</div></div>
           </div>
           <div class="g2">
-            <div class="hb ${healthIncreaseMan>0?'orange':'green'}" style="margin-top:0">🏥 <b>건보료 솔루션:</b> 은퇴 후 직장가입자에서 지역가입자로 바뀌면 재산·연금소득이 보험료에 반영될 수 있습니다. 부동산 순재산이 큰 경우 <b>배우자 직장가입 피부양자 가능성, 임대소득 발생 여부, 주택연금 전환, 금융소득 분산</b>을 먼저 검토하세요. 현재 근로자 부담 추정 ${fmt(employeeHealthNowMan)}만원 대비 상승분은 ${fmt(healthIncreaseMan)}만원/월입니다.</div>
+            <div class="hb ${healthIncreaseMan>0?'orange':'green'}" style="margin-top:0">🏥 <b>건보료 솔루션 (예시):</b> 은퇴 후 직장가입자에서 지역가입자로 바뀌면 재산·연금소득이 보험료에 반영될 수 있습니다. 부동산 순재산이 큰 경우 <b>배우자 직장가입 피부양자 가능성, 임대소득 발생 여부, 주택연금 전환, 금융소득 분산</b>을 먼저 검토하세요. 현재 근로자 부담 추정 ${fmt(employeeHealthNowMan)}만원 대비 상승분은 ${fmt(healthIncreaseMan)}만원/월입니다.</div>
             <div class="hb ${npsMonthlyLoss>0?'blue':'green'}" style="margin-top:0">🏦 <b>국민연금 솔루션:</b> 소득 공백으로 납부예외가 길어지면 가입기간이 줄어 예상연금이 낮아질 수 있습니다. ${npsRemainYears>0?`현재부터 만 60세 전까지 <b>${npsRemainYears}년</b>은 임의가입·추납·임의계속가입 전략으로 월 ${fmt(npsMonthlyLoss)}만원 감소분을 방어하는 구간입니다.`:'현재 나이 기준 납부 공백 위험은 낮지만, 과거 납부예외·체납 기간이 있으면 추납 가능성을 확인하세요.'}</div>
           </div>
-          <div style="font-size:10px;color:var(--ink-5);line-height:1.6;margin-top:8px">※ 건강보험료는 실제 공단 산식·피부양자 요건·소득 종류·재산 과표·장기요양보험료에 따라 달라집니다. 본 화면은 상담 전 리스크를 드러내기 위한 추정치입니다.</div>
+          <div style="font-size:10px;color:var(--ink-5);line-height:1.6;margin-top:8px">※ 이 화면의 건강보험료는 <b>예시</b>입니다. 소득 7.09%·재산 단순 비례로 어림잡고 장기요양보험료를 얹은 값이라, 공단이 쓰는 <b>재산 구간 점수표·피부양자 요건·재산공제·소득 종류별 반영률</b>과 다릅니다. 요율과 공제액도 해마다 바뀝니다. 상담에서는 금액이 아니라 <b>방향</b>만 말씀하시고, 실제 금액은 건강보험공단 모의계산으로 확인하십시오.</div>
         </div>
       </div>
     `;
@@ -4789,7 +4775,11 @@ function dkDollarCalc(){
 }
 function dkDollarSlides(){
   var c=dkDollarCalc();
-  var usd=function(v){return '$'+Math.round(v).toLocaleString();};
+  /* 달러만 적으면 고객이 크기를 못 가늠한다 — 원화를 나란히 적는다 */
+  var usd=function(v){
+    var u=Math.round(v||0), r=(typeof fxRate==='function')?fxRate():1380;
+    return '$'+u.toLocaleString()+' (₩'+Math.round(u*r/10000).toLocaleString()+'만)';
+  };
   var rows='',i,ds=[-100,0,100,200,300];
   for(i=0;i<ds.length;i++){
     var d=ds[i], r=c.now+d, v=c.usdAsset*r/10000, g=v-c.atNow;
@@ -5553,8 +5543,225 @@ function filterFunds(listId, cat) {
   });
 }
 
-function renderMlife()  { renderInsurancePage(MLIFE_INFO, MLIFE_FUNDS, MLIFE_STRATEGY_BY_RISK, 'mlife-overview', 'mlife-strategy', 'mlife-funds'); }
-function renderCardif() { renderInsurancePage(CARDIF_INFO, CARDIF_FUNDS, CARDIF_STRATEGY_BY_RISK, 'cardif-overview', 'cardif-strategy', 'cardif-funds'); }
+/* ── 어느 펀드에 담을까 · 선거절 ─────────────────────────────
+   상담에서 제일 자주 막히는 곳이 「그래서 뭘 사요」 와 「초반에 손해라던데」
+   둘이다. 앞엣것은 그 자리에서 적게 하고, 뒤엣것은 <b>고객이 말하기 전에
+   내가 먼저 꺼낸다.</b> 먼저 꺼낸 반론은 반론이 아니라 설명이 된다. */
+function pickGet(){ try{return JSON.parse(localStorage.getItem('apex_fund_pick')||'{}');}catch(e){return {};} }
+function pickSet(k,v){ var o=pickGet(); o[k]=v; try{localStorage.setItem('apex_fund_pick',JSON.stringify(o));}catch(e){} }
+function pickBoxHtml(){
+  var o=pickGet();
+  var f=function(k,ph){return '<input value="'+String(o[k]||'').replace(/"/g,'&quot;')+'" placeholder="'+ph+'" '+
+    'oninput="pickSet(\''+k+'\',this.value)" style="width:100%;padding:8px 10px;border:1px solid #E3E7EC;'+
+    'border-radius:9px;font-size:13.5px;font-weight:700">';};
+  var Q=[
+    ['"초반엔 손해라던데요?"',
+     '맞습니다. 처음 몇 년은 낸 돈보다 적습니다. 사업비를 앞에서 떼기 때문입니다. '+
+     '제가 그걸 숨기면 나중에 해지하십니다. 대신 <b>몇 년째에 본전을 넘는지</b>를 지금 같이 보시죠. '+
+     '그 해를 넘길 자신이 없으면 이 상품은 안 하시는 게 맞습니다.'],
+    ['"중간에 돈이 필요하면요?"',
+     '그래서 <b>전부를 넣지 않습니다.</b> 비상금은 따로 두고, 여기는 안 건드릴 돈만 넣습니다. '+
+     '그리고 중도인출과 납입유예가 있어 해지까지 안 가는 길이 있습니다 — 조건은 약관으로 확인해 드립니다.'],
+    ['"펀드 수익률이 나쁘면요?"',
+     '연 12회까지 무료로 갈아탈 수 있습니다. 예금은 못 바꾸지만 이건 바꿉니다. '+
+     '다만 수익률은 <b>가정치</b>고 원금손실이 가능합니다. 그래서 기간을 길게 잡는 겁니다.'],
+    ['"그냥 예금이 낫지 않나요?"',
+     '기간이 짧으면 예금이 낫습니다. 10년 넘게 둘 돈이라면 이야기가 달라집니다 — '+
+     '예금 이자에는 15.4%가 붙지만 여기는 10년을 넘기면 <b>이자에 세금이 없습니다.</b>']
+  ];
+  return '<div class="card" style="margin-top:14px"><div class="card-hd">'+
+    '<div class="card-tag">WHAT TO BUY · PRE-HANDLING</div>'+
+    '<div class="card-title">어디에 담을까 · 나오기 전에 먼저 꺼낼 말</div></div><div class="card-body">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">'+
+      '<div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#94A3B8;margin-bottom:4px">담을 펀드 ①</label>'+f('f1','예: 글로벌인덱스증권')+'</div>'+
+      '<div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#94A3B8;margin-bottom:4px">담을 펀드 ②</label>'+f('f2','예: 미국채권')+'</div>'+
+      '<div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#94A3B8;margin-bottom:4px">담을 펀드 ③</label>'+f('f3','선택')+'</div>'+
+      '<div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#94A3B8;margin-bottom:4px">비중 (예 60/30/10)</label>'+f('w','60 / 30 / 10')+'</div>'+
+    '</div>'+
+    '<div style="margin-top:9px;font-size:11.5px;color:#7A8493;line-height:1.7">'+
+      '고른 펀드는 이 기기에 남습니다. 전체 라인업을 다 보여 주지 마시고 '+
+      '<b>고객 성향에 맞는 두세 개</b>만 꺼내십시오. 투자 권유가 아니라 계좌 위치·기간·위험수용도를 맞추는 자리입니다.</div>'+
+    '<div style="margin-top:14px;font-size:12px;font-weight:800;letter-spacing:.12em;color:#B45309">'+
+      '선거절 — 고객이 말하기 전에 내가 먼저</div>'+
+    Q.map(function(q){
+      return '<div style="margin-top:9px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:12px 14px">'+
+        '<div style="font-size:13px;font-weight:800;color:#92400E">'+q[0]+'</div>'+
+        '<div style="font-size:12.5px;color:#78350F;line-height:1.85;margin-top:5px">'+q[1]+'</div></div>';
+    }).join('')+
+    '<div style="margin-top:11px;font-size:11px;color:#7A8493;line-height:1.7">'+
+      '※ 금융소비자보호법에 따라 원금손실 가능성·사업비·해지 시 불이익을 <b>먼저</b> 설명해야 합니다. '+
+      '위 문장은 그 설명을 미루지 말라는 뜻이지, 불리한 내용을 가리라는 뜻이 아닙니다. '+
+      '보장 여부와 지급은 약관과 심사에 따릅니다.</div>'+
+    '</div></div>';
+}
+
+/* ══════════════ 가상투자 — 눈으로 겪어 본다 ══════════════
+   변액은 말로만 설명하면 아무도 안 믿는다. 「초반에 손해다」 는 말은
+   들리고, 「나중에 좋다」 는 말은 안 들린다. 그래서 <b>해마다 얼마가
+   되는지</b>를 표로 놓고, 지금 깨면 얼마를 잃는지까지 같이 보여 준다.
+
+   여기서 숨기지 않는 것이 핵심이다. 초반 마이너스를 먼저 내놓고,
+   그것을 이겨낸 다음에 무엇이 오는지를 말한다.
+   ══════════════════════════════════════════════════════ */
+var VI={pay:50,yrs:20,rate:6,keep:30};
+function viNum(k,v){ VI[k]=parseFloat(v)||0; viPaint(); }
+/* 해지공제 — 초기에 낸 돈을 다 못 돌려받는 그 부분.
+   계약체결비용을 앞에서 떼기 때문에 생긴다. 이 계산기가 이미 쓰는
+   가정(VC.efee·VC.eyrs)을 그대로 쓴다 — 화면마다 다르면 안 된다. */
+function viRow(y){
+  var m=Math.max(0,VI.pay), paid=m*Math.round(y*12);
+  var fv=vcVaAccum(m,0,y,VI.rate);
+  /* 해지하면 적립금에서 미상각 체결비용만큼 더 뗀다. 남은 부과기간에
+     비례해 줄어든다 — 부과기간을 넘기면 공제가 없다. */
+  var ey=Math.max(0,VC.eyrs), left=Math.max(0,ey-y);
+  var cut=ey>0?(left/ey):0;
+  var pen=fv*cut*(Math.max(0,VC.efee)/100);
+  var back=Math.max(0,fv-pen);
+  return {y:y,paid:paid,fv:fv,back:back,pen:pen,
+          rate:paid>0?(back/paid*100):0, diff:back-paid};
+}
+function viBreakEven(){
+  var y;
+  for(y=1;y<=40;y++){ if(viRow(y).diff>=0) return y; }
+  return 0;
+}
+function viPaint(){
+  var host=document.getElementById('viBox'); if(!host)return;
+  var marks=[3,5,7,10,15,20,25,30],i,rows='';
+  var be=viBreakEven();
+  for(i=0;i<marks.length;i++){
+    var r=viRow(marks[i]), win=r.diff>=0;
+    rows+='<tr style="border-top:1px solid #EEF0F3'+(marks[i]===be?';background:#F0FDF4':'')+'">'+
+      '<td style="padding:8px 8px;font-weight:800;color:#0F172A">'+r.y+'년'+
+        (marks[i]===be?'<div style="font-size:10px;color:#059669;font-weight:800">본전 넘는 해</div>':'')+'</td>'+
+      '<td style="padding:8px 8px;text-align:right;color:#64748B">'+icMan(r.paid)+'</td>'+
+      '<td style="padding:8px 8px;text-align:right;font-weight:800">'+icMan(r.fv)+'</td>'+
+      '<td style="padding:8px 8px;text-align:right;color:#B91C1C">'+(r.pen>=1?('-'+icMan(r.pen)):'없음')+'</td>'+
+      '<td style="padding:8px 8px;text-align:right;font-weight:900;color:'+(win?'#059669':'#B91C1C')+'">'+
+        icMan(r.back)+'<div style="font-size:10.5px;font-weight:700">'+icP1(r.rate)+'%</div></td>'+
+      '<td style="padding:8px 8px;text-align:right;font-weight:800;color:'+(win?'#059669':'#B91C1C')+'">'+
+        (win?'+':'')+icMan(r.diff)+'</td></tr>';
+  }
+  var K=viRow(Math.max(1,VI.keep));
+  /* 10년 넘게 들고 가면 보험차익이 비과세다. 같은 이자를 예금에서
+     받았다면 냈을 세금이 그대로 남는 셈이다. */
+  var gain=Math.max(0,K.fv-K.paid);
+  var tax=(VI.keep>=10)?gain*0.154:0;
+  var mon=Math.round(K.fv*0.04/12);
+  host.innerHTML=
+   '<div class="card" style="margin-top:14px"><div class="card-hd">'+
+     '<div class="card-tag">VIRTUAL INVESTMENT</div>'+
+     '<div class="card-title">가상투자 — 이 돈이 해마다 어떻게 되는가</div></div><div class="card-body">'+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:9px;margin-bottom:12px">'+
+     ['pay|월 납입(만원)|'+VI.pay,'yrs|납입 기간(년)|'+VI.yrs,'rate|예상 수익률(%)|'+VI.rate,'keep|끝까지 두면(년)|'+VI.keep]
+     .map(function(x){var a=x.split('|');
+       return '<div><label style="display:block;font-size:10px;font-weight:800;letter-spacing:.14em;color:#94A3B8;margin-bottom:3px">'+a[1]+'</label>'+
+       '<input type="number" step="0.1" value="'+a[2]+'" oninput="viNum(\''+a[0]+'\',this.value)" '+
+       'style="width:100%;padding:7px 9px;border:1px solid #E3E7EC;border-radius:9px;font-size:14px;font-weight:800"></div>';}).join('')+
+   '</div>'+
+   '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px;font-size:12.5px">'+
+     '<thead><tr style="color:#94A3B8;font-size:10.5px">'+
+       '<th style="text-align:left;padding:6px 8px">지난 해</th>'+
+       '<th style="text-align:right;padding:6px 8px">낸 돈</th>'+
+       '<th style="text-align:right;padding:6px 8px">쌓인 돈</th>'+
+       '<th style="text-align:right;padding:6px 8px">지금 깨면 떼는 돈</th>'+
+       '<th style="text-align:right;padding:6px 8px">손에 쥐는 돈</th>'+
+       '<th style="text-align:right;padding:6px 8px">낸 돈 대비</th></tr></thead>'+
+     '<tbody>'+rows+'</tbody></table></div>'+
+   (be?('<div style="margin-top:12px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:11px;padding:13px 15px;'+
+     'font-size:13px;color:#065F46;line-height:1.8">'+
+     '🏁 <b>'+be+'년째에 본전을 넘습니다.</b> 그 전에 깨면 손해입니다 — 숨기지 않고 먼저 말씀드립니다.<br>'+
+     '<b>바꿔 말하면, '+be+'년만 이겨내면 이만한 저축이 없습니다.</b> 그때부터는 사업비를 다 뗀 뒤에도 '+
+     '복리가 붙고, 10년을 넘기면 이자에 세금이 없습니다.</div>')
+    :'<div style="margin-top:12px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:11px;padding:13px 15px;font-size:13px;color:#991B1B">'+
+     '이 조건으로는 30년 안에 본전을 못 넘습니다. 수익률·기간·사업비를 다시 보셔야 합니다.</div>')+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px">'+
+     icStat(VI.keep+'년 뒤 쌓인 돈',icMan(K.fv),'낸 돈 '+icMan(K.paid),'#1D4ED8')+
+     icStat('불어난 돈',icMan(gain),VI.keep+'년 · 연 '+icP1(VI.rate)+'% 가정','#059669')+
+     icStat(VI.keep>=10?'안 낸 세금':'세금 (10년 미만)',
+            VI.keep>=10?icMan(tax):'과세 대상',
+            VI.keep>=10?'보험차익 비과세 · 예금이면 15.4%':'10년을 넘겨야 비과세','#7C3AED')+
+     icStat('연금으로 받으면',icMan(mon)+'/월','쌓인 돈의 연 4% 기준','#D97706')+
+   '</div>'+
+   '<div style="margin-top:11px;font-size:11px;color:#7A8493;line-height:1.7">'+
+     '※ 사업비는 이 계산기의 변액 가정(계약체결 '+icP1(VC.efee)+'%·'+VC.eyrs+'년, 계약관리 '+icP1(VC.fee)+'%, '+
+     '적립금 연 '+icP1(VC.arate)+'%)을 그대로 썼습니다. 「지금 깨면 떼는 돈」 은 남은 체결비용 부과기간에 비례해 잡은 '+
+     '<b>추정</b>이며, 실제 해지환급금은 상품·경과기간에 따라 다릅니다. 수익률은 <b>가정치</b>이고 변액은 '+
+     '<b>원금손실이 가능</b>합니다. 반드시 해당 상품 공시 예시와 약관으로 확인하고, 보장 여부와 지급은 '+
+     '약관과 심사에 따릅니다.</div>'+
+   '</div></div>';
+}
+
+/* ── 펀드 라인업 정보수집 ──────────────────────────────────────
+   펀드는 해마다 들어오고 빠진다. 코드에 박아 둔 목록으로 상담하면
+   없어진 펀드를 권하게 된다. AI 로 지금 라인업을 모으고, 대표님이
+   확인해 저장한 것을 목록에 얹는다 — 원래 목록을 지우지는 않는다. */
+function fundKey(co){ return 'fund_'+co; }
+function fundExtra(co){
+  var o=infoGet(fundKey(co));
+  if(!o||!o.rows)return [];
+  return o.rows.map(function(r){
+    return {name:(r.name||'').trim(), category:(r.category||'수집').trim()||'수집',
+            type:'collected', rec:['안정형','안정추구형','중립형','적극투자형','공격투자형'],
+            ret1:r.ret1||'-', ret3:r.ret3||'-', risk:r.risk||'-',
+            desc:(r.desc||'수집한 값입니다. 공시로 확인하세요')};
+  }).filter(function(f){return f.name;});
+}
+function fundBarHtml(co,label){
+  var o=infoGet(fundKey(co));
+  return '<div style="margin:0 0 12px;background:#F8FAFC;border:1px solid #E3E7EC;border-radius:12px;padding:12px 14px">'+
+    '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#42506A">'+label+' 라인업</span>'+
+      '<button type="button" id="fundBtn-'+co+'" onclick="fundCollect(\''+co+'\')" '+
+        'style="padding:7px 14px;border-radius:9px;border:none;cursor:pointer;background:#1D4ED8;color:#fff;font-size:12.5px;font-weight:800">🔎 정보수집</button>'+
+      (o&&o.rows&&o.rows.length?('<button type="button" onclick="fundReset(\''+co+'\')" '+
+        'style="padding:7px 12px;border-radius:9px;cursor:pointer;border:1px solid #E3E7EC;background:#fff;color:#6B7280;font-size:12px;font-weight:700">수집분 지우기</button>'+
+        '<span style="font-size:12px;font-weight:700;color:#166534">수집 '+o.rows.length+'개가 목록에 얹혀 있습니다</span>'):'')+
+      '<span id="fundMsg-'+co+'" style="font-size:12px;font-weight:700;color:#6B7280"></span>'+
+    '</div>'+ infoStampHtml(fundKey(co),label+' 펀드 라인업')+'</div>';
+}
+function fundCollect(co){
+  var name=(co==='mlife')?'메트라이프생명 변액연금':'카디프생명 변액연금';
+  var btn=document.getElementById('fundBtn-'+co), msg=document.getElementById('fundMsg-'+co);
+  if(btn){btn.disabled=true;btn.textContent='찾는 중…';}
+  if(msg)msg.textContent='';
+  var sys='당신은 국내 변액보험 펀드 라인업을 정리하는 조사원입니다. '+
+    '확실히 아는 것만 적고 모르면 그 줄을 빼십시오. 지어내지 마십시오. '+
+    'JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. '+
+    '각 원소는 {"name":"펀드명","category":"주식형/채권형/혼합형/글로벌 등","ret1":"1년 수익률","ret3":"3년 수익률","risk":"위험등급","desc":"한 줄 설명"} 입니다. 최대 12개.';
+  infoAI(sys, name+'의 현재 펀드 라인업을 정리해 주세요.', 2600).then(function(txt){
+    var rows=infoRows(txt);
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(!rows){if(msg){msg.style.color='#B91C1C';msg.textContent='표를 못 읽었습니다 — 다시 시도해 주세요';}return;}
+    infoSet(fundKey(co),rows,name);
+    if(co==='mlife')renderMlife(); else renderCardif();
+  },function(err){
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(msg){msg.style.color='#B91C1C';msg.textContent=(err&&err.message)||'가져오지 못했습니다';}
+  });
+}
+function fundReset(co){
+  try{localStorage.removeItem('apex_info_'+fundKey(co));}catch(e){}
+  if(co==='mlife')renderMlife(); else renderCardif();
+}
+function renderMlife()  {
+  renderInsurancePage(MLIFE_INFO, MLIFE_FUNDS.concat(fundExtra('mlife')), MLIFE_STRATEGY_BY_RISK, 'mlife-overview', 'mlife-strategy', 'mlife-funds');
+  var h=document.getElementById('mlife-funds');
+  if(h){
+    h.insertAdjacentHTML('afterbegin', fundBarHtml('mlife','메트라이프'));
+    h.insertAdjacentHTML('beforeend', pickBoxHtml()+'<div id="viBox"></div>');
+    viPaint();
+  }
+}
+function renderCardif() {
+  renderInsurancePage(CARDIF_INFO, CARDIF_FUNDS.concat(fundExtra('cardif')), CARDIF_STRATEGY_BY_RISK, 'cardif-overview', 'cardif-strategy', 'cardif-funds');
+  var h=document.getElementById('cardif-funds');
+  if(h){
+    h.insertAdjacentHTML('afterbegin', fundBarHtml('cardif','카디프'));
+    h.insertAdjacentHTML('beforeend', pickBoxHtml()+'<div id="viBox"></div>');
+    viPaint();
+  }
+}
 
 
 /* ═══════════════════════════════════════════
@@ -5668,9 +5875,9 @@ function renderDollarUpgrade() {
       <div class="db-title">💵 달러 자산 종합 시뮬레이션</div>
       <div class="g4" style="margin-bottom:12px">
         ${[
-          {l:'월 납입', v:fmt(dPay)+'만원', s:'≈ $'+usdMonthly.toLocaleString()+' · '+dPayY+'년'},
-          {l:'납입 원금', v:fmt(dPrincipal)+'만원', s:'≈ $'+usdPrincipal.toLocaleString()},
-          {l:'예상 자산', v:fmt(dCapital)+'만원', s:'≈ $'+usdAsset.toLocaleString()+' · 거치 '+dWaitY+'년'},
+          {l:'월 납입', v:fmt(dPay)+'만원', s:'≈ '+usdKrw(usdMonthly,'short')+' · '+dPayY+'년'},
+          {l:'납입 원금', v:fmt(dPrincipal)+'만원', s:'≈ '+usdKrw(usdPrincipal,'short')},
+          {l:'예상 자산', v:fmt(dCapital)+'만원', s:'≈ '+usdKrw(usdAsset,'short')+' · 거치 '+dWaitY+'년'},
           {l:'환차익 반영', v:fmt(totalWithEx)+'만원', s:'환율 '+rateNow+'→'+rateTgt+'원'},
         ].map(m=>`<div style="background:rgba(255,255,255,.07);border-radius:var(--r-sm);padding:12px;text-align:center">
           <div style="font-size:9px;color:rgba(255,255,255,.45);margin-bottom:4px">${m.l}</div>
@@ -5693,7 +5900,7 @@ function renderDollarUpgrade() {
               {l:'목표 환율', v:rateTgt.toLocaleString()+'원/$', c:'var(--primary)'},
               {l:'예상 환차익률', v:'+'+exGainPct+'%', c:'var(--pos)'},
               {l:'환차익 금액', v:fmt(exGainAmt)+'만원', c:'var(--pos)'},
-              {l:'달러 환산 자산', v:'$'+usdAsset.toLocaleString(), c:'var(--warn)'},
+              {l:'달러 환산 자산', v:usdKrw(usdAsset,'short'), c:'var(--warn)'},
             ].map(r=>`<div class="cmp-row">
               <span class="cmp-lbl">${r.l}</span>
               <span style="font-weight:700;color:${r.c}">${r.v}</span>
@@ -6491,7 +6698,7 @@ function renderFinalReport(){
   const actions = [
     `<b>1. 현금흐름:</b> 월 잉여금 ${fmtM(d.surplus)} 기준으로 보험료·대출·저축의 우선순위를 다시 배치합니다.`,
     `<b>2. 연금:</b> 은퇴 목표 월 ${fmtM(d.futureTarget)} 대비 예상 월 ${fmtM(d.totalPension)}입니다. 부족액 ${fmtM(d.pensionGap)}은 개인연금/IRP/연금저축으로 보완합니다.`,
-    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다.`,
+    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다. <b>(두 값 모두 예시 — 공단·공단 모의계산으로 확인)</b>`,
     `<b>4. 부동산·대출:</b> DSR ${d.dsr}%, LTV ${d.ltv}%입니다. 상환액이 부담되면 금리·기간·정책대출 가능성을 먼저 봅니다.`,
     `<b>5. 상속·증여:</b> 예상 상속세 ${fmtM(d.inheritTax)}, 납부재원 부족 ${fmtM(d.inheritCashGap)}입니다. 사전증여와 종신보험 납부재원을 분리합니다.`,
     `<b>6. 다음 미팅:</b> 증권/보험/대출 자료를 확인해 실제 수치로 다시 계산한 뒤 실행안 A/B/C로 결정합니다.`
@@ -6511,7 +6718,7 @@ function renderFinalReport(){
     <div class="feedback-summary"><div class="fs-title">종합 평가</div><div class="fs-text">${headline}</div></div>
     <div class="final-section-title">고객 상황 평가</div>
     ${finalEvalCard('① 현금흐름 평가', cashLevel==='good'?'양호':cashLevel==='warn'?'점검':'주의', cashLevel, `월 소득 ${fmtM(d.totalIncome)} 중 필수지출 ${fmtM(d.essential)}, 선택지출 ${fmtM(d.choice)}, 저축·투자 ${fmtM(d.saving)}입니다. 현재 월 잉여금은 ${fmtM(d.surplus)}이며, 고객님의 계약 가능성은 “남는 돈”보다 “재배치 가능한 돈”을 찾는 데 있습니다.`)}
-    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다.`)}
+    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다. <b>이 두 금액은 상담용 예시</b>이며 실제 값은 건강보험공단·국민연금공단 모의계산으로 확인해야 합니다.`)}
     ${finalEvalCard('③ 부동산·대출 평가', debtLevel==='good'?'안정':debtLevel==='warn'?'관리':'부담', debtLevel, `주택가치 ${fmtM(d.houseVal)}, 대출잔액 ${fmtM(d.mortgage)}, 순주택자산 ${fmtM(d.equity)}입니다. 추정 LTV는 ${d.ltv}%, DSR은 ${d.dsr}%이며 월 원리금은 약 ${fmtM(d.mortgagePay)}입니다. 대출은 가능 여부보다 “소득이 흔들려도 버틸 수 있는가”를 기준으로 판단해야 합니다.`)}
     ${finalEvalCard('④ 상속·증여 평가', inheritLevel==='good'?'낮음':inheritLevel==='warn'?'준비':'필요', inheritLevel, `예상 상속재산은 ${fmtM(d.totalEstate)}이며, 상담용 추정 상속세는 ${fmtM(d.inheritTax)}입니다. 종신보험 사망보험금 등을 반영해도 납부재원 부족액이 ${fmtM(d.inheritCashGap)}으로 계산됩니다. 사전증여 예정액 ${fmtM(d.inhGift)}은 10년 합산 규칙을 고려해 나눠서 설계하는 것이 좋습니다.`)}
     <div class="final-section-title">${d.riskType} 성향 기준 추천 펀드/ETF 라인업 2~3개</div>
@@ -9073,14 +9280,170 @@ window.addEventListener('message',function(e){
 <script>
 
 /* 🎓 교육자금 탭 — 나라가 주는 돈으로 유학자금을 만든다 (정밀 계산은 통합상담 e트랙) */
+/* ── 교육자금 · 우리 지역 지원금 ────────────────────────────── */
+function eduRegion(){
+  var e=document.getElementById('eduRegion');
+  if(e&&e.value.trim())return e.value.trim();
+  var o=infoGet('edu');
+  if(o&&o.note)return o.note;
+  var r=document.getElementById('s_region');
+  return (r&&r.value.trim())||'전국';
+}
+function eduInfoBarHtml(){
+  var o=infoGet('edu'), reg=eduRegion();
+  return '<div style="margin:0 0 14px;background:#F8F5FF;border:1px solid #E6E0F2;border-radius:14px;padding:14px 16px">'+
+    '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#5B34AD">우리 지역 지원금</span>'+
+      '<input id="eduRegion" placeholder="순천시" value="'+String(reg).replace(/"/g,'&quot;')+'" '+
+        'style="flex:0 1 180px;min-width:120px;padding:7px 10px;border:1px solid #E6E0F2;border-radius:9px;font-size:13px;font-weight:700">'+
+      '<button type="button" id="eduInfoBtn" onclick="eduCollect()" '+
+        'style="padding:8px 15px;border-radius:9px;border:none;cursor:pointer;background:#5B34AD;color:#fff;font-size:13px;font-weight:800">🔎 정보수집</button>'+
+      (o&&o.rows&&o.rows.length?('<button type="button" onclick="eduReset()" '+
+        'style="padding:8px 13px;border-radius:9px;cursor:pointer;border:1px solid #E6E0F2;background:#fff;color:#6B7280;font-size:12.5px;font-weight:700">기본값으로</button>'):'')+
+      '<span id="eduInfoMsg" style="font-size:12px;font-weight:700;color:#6B7280"></span>'+
+    '</div>'+
+    '<div id="eduInfoEdit"></div>'+
+    infoStampHtml('edu','지역·국가 지원금')+
+  '</div>';
+}
+function eduCollect(){
+  var reg=eduRegion(), btn=document.getElementById('eduInfoBtn'), msg=document.getElementById('eduInfoMsg');
+  if(btn){btn.disabled=true;btn.textContent='찾는 중…';}
+  if(msg)msg.textContent='';
+  var sys='당신은 대한민국 출산·양육 지원금을 정리하는 조사원입니다. '+
+    '아는 것만 적고 모르면 그 줄을 빼십시오. 지어내지 마십시오. '+
+    '반드시 JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. '+
+    '각 원소는 {"name":"제도 이름","amount":"총액 또는 월액","note":"조건 한 줄"} 입니다. '+
+    '전국 공통 제도를 먼저, 그다음 해당 지역 제도를 적습니다. 최대 8개.';
+  var usr='지역: '+reg+'\n이 지역에 사는 가정이 아이 한 명을 낳아 만 8세가 될 때까지 '+
+    '받을 수 있는 국가·지자체 지원금을 정리해 주세요. 금액은 "1,800만원" 처럼 적습니다.';
+  infoAI(sys,usr,2200).then(function(txt){
+    var rows=infoRows(txt);
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(!rows){if(msg){msg.style.color='#B91C1C';msg.textContent='표를 못 읽었습니다 — 다시 시도해 주세요';}return;}
+    infoSet('edu',rows,reg);
+    if(msg){msg.style.color='#166534';msg.textContent=rows.length+'개를 담았습니다 — 아래에서 확인·수정하세요';}
+    renderEduFund();
+    setTimeout(eduEdit,60);
+  },function(err){
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(msg){msg.style.color='#B91C1C';msg.textContent=(err&&err.message)||'가져오지 못했습니다';}
+  });
+}
+/* 저장한 값을 그 자리에서 고친다 — AI 가 틀린 것을 그대로 쓰면 안 된다 */
+function eduEdit(){
+  var host=document.getElementById('eduInfoEdit'); if(!host)return;
+  var o=infoGet('edu'); if(!o||!o.rows||!o.rows.length){host.innerHTML='';return;}
+  host.innerHTML='<div style="margin-top:11px;background:#fff;border:1px solid #E6E0F2;border-radius:11px;padding:10px 12px">'+
+    o.rows.map(function(r,i){
+      var f=function(k,ph,w){return '<input data-ei="'+i+'" data-ek="'+k+'" placeholder="'+ph+'" '+
+        'value="'+String(r[k]||'').replace(/"/g,'&quot;')+'" style="flex:'+w+';min-width:0;padding:6px 8px;'+
+        'border:none;border-bottom:1px solid #EDE9F6;font-size:12.5px;font-weight:700">';};
+      return '<div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">'+
+        f('name','제도 이름','0 0 150px')+f('amount','금액','0 0 110px')+f('note','조건','1')+
+        '<button type="button" onclick="eduDel('+i+')" style="flex:none;width:26px;height:26px;border-radius:7px;'+
+        'border:1px solid #EDE9F6;background:#fff;color:#9AA2AD;cursor:pointer">−</button></div>';
+    }).join('')+
+    '<button type="button" onclick="eduSave()" style="margin-top:6px;padding:7px 14px;border-radius:8px;border:none;'+
+    'cursor:pointer;background:#0F172A;color:#fff;font-size:12.5px;font-weight:800">고친 대로 저장</button></div>';
+}
+function eduSave(){
+  var o=infoGet('edu'); if(!o)return;
+  var L=document.querySelectorAll('#eduInfoEdit input'),i,e;
+  for(i=0;i<L.length;i++){
+    e=L[i];
+    var ix=+e.getAttribute('data-ei'), k=e.getAttribute('data-ek');
+    if(o.rows[ix])o.rows[ix][k]=e.value;
+  }
+  infoSet('edu',o.rows,eduRegion());
+  renderEduFund();
+  var m=document.getElementById('eduInfoMsg');
+  if(m){m.style.color='#166534';m.textContent='저장했습니다';}
+}
+function eduDel(i){
+  var o=infoGet('edu'); if(!o)return;
+  o.rows.splice(i,1); infoSet('edu',o.rows,eduRegion());
+  renderEduFund(); setTimeout(eduEdit,50);
+}
+function eduReset(){
+  try{localStorage.removeItem('apex_info_edu');}catch(e){}
+  renderEduFund();
+}
+
+/* ══════════════ 정보수집 ══════════════
+   지역 지원금도 펀드 라인업도 해마다 바뀐다. 코드에 박아 두면 이듬해엔
+   틀린 값을 고객에게 말하게 된다. 그렇다고 손으로 다 적기엔 품이 크다.
+
+   그래서 AI 가 초안을 뽑고 <b>대표님이 보고 고쳐서 저장</b>한다.
+   저장한 값은 이 기기에 남고, 화면에는 <b>언제 수집한 값인지</b>와
+   「확인 후 쓰세요」를 함께 적는다 — AI 가 틀릴 수 있기 때문이다.
+   ══════════════════════════════════════ */
+var INFO_ASK={};
+/* 계산기는 창 안이라 AI 키에 손이 안 닿는다. 앱에 대신 물어본다. */
+function infoAI(system,user,max){
+  return new Promise(function(res,rej){
+    if(!window.parent||window.parent===window){rej(new Error('앱 안에서 열어 주세요'));return;}
+    var id='ia'+Date.now()+Math.floor(Math.random()*1e6);
+    INFO_ASK[id]={res:res,rej:rej};
+    var t=setTimeout(function(){
+      if(INFO_ASK[id]){delete INFO_ASK[id];rej(new Error('시간이 초과됐습니다 — 다시 시도해 주세요'));}
+    },70000);
+    INFO_ASK[id].t=t;
+    try{window.parent.postMessage({type:'apexFinAI',id:id,system:system,user:user,max:max},location.origin);}
+    catch(e){delete INFO_ASK[id];clearTimeout(t);rej(e);}
+  });
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinAI:ok')return;
+  if(e.origin!==location.origin)return;
+  var a=INFO_ASK[d.id]; if(!a)return;
+  delete INFO_ASK[d.id]; clearTimeout(a.t);
+  if(d.err)a.rej(new Error(d.err)); else a.res(d.text||'');
+},false);
+
+/* AI 가 돌려준 글에서 표(JSON)만 꺼낸다. 앞뒤로 말이 붙어 와도 견딘다 */
+function infoRows(txt){
+  var t=''+(txt||'');
+  var i=t.indexOf('['), j=t.lastIndexOf(']');
+  if(i<0||j<i)return null;
+  try{
+    var a=JSON.parse(t.slice(i,j+1));
+    return (a&&a.length)?a:null;
+  }catch(e){return null;}
+}
+function infoGet(key){
+  try{var raw=localStorage.getItem('apex_info_'+key);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function infoSet(key,rows,note){
+  try{
+    localStorage.setItem('apex_info_'+key,JSON.stringify({
+      rows:rows,note:note||'',at:new Date().toISOString().slice(0,16).replace('T',' ')}));
+    return true;
+  }catch(e){return false;}
+}
+/* 「언제 수집했고 확인은 대표님 몫」 — 숫자 옆에 반드시 붙인다 */
+function infoStampHtml(key,what){
+  var o=infoGet(key);
+  return '<div style="margin-top:9px;font-size:11px;color:#7A8493;line-height:1.7">'+
+    (o&&o.at?('※ '+what+' — <b>'+o.at+'</b> 에 수집한 값입니다. ')
+            :('※ '+what+' — 아직 수집 전이라 <b>기본값</b>입니다. '))+
+    'AI 가 모은 초안이라 <b>틀릴 수 있습니다.</b> 고객에게 말씀하시기 전에 '+
+    '해당 기관 공고로 확인하시고, 다르면 표에서 고쳐 저장하세요.</div>';
+}
+
 function renderEduFund(){
   var box = document.getElementById('tab-edufund');
   if(!box) return;
   function v(id,d){ var e=document.getElementById(id); return e&&e.value!==''?e.value:d; }
   var nm = v('s_name','고객님');
-  var C = [['첫만남이용권','200~300만원','출생 시 1회 (첫째 200 / 둘째↑ 300)'],
-           ['부모급여','1,800만원','0세 월 100만 + 1세 월 50만'],
-           ['아동수당','1,080만원~','만 9세 미만 월 10만 (지역별 우대 有)']];
+  /* 수집해 둔 값이 있으면 그것을 쓴다. 없으면 아래 기본값 */
+  var SAVED=infoGet('edu');
+  var C = (SAVED&&SAVED.rows&&SAVED.rows.length)
+    ? SAVED.rows.map(function(r){return [r.name||'',r.amount||'',r.note||''];})
+    : [['첫만남이용권','200~300만원','출생 시 1회 (첫째 200 / 둘째↑ 300)'],
+       ['부모급여','1,800만원','0세 월 100만 + 1세 월 50만'],
+       ['아동수당','1,080만원~','만 9세 미만 월 10만 (지역별 우대 有)']];
   var cards = C.map(function(c){
     return '<div style="background:#F5F3FA;border:1px solid #E6E0F2;border-radius:14px;padding:18px 18px 16px">'+
       '<div style="font-size:11.5px;font-weight:800;color:#5B34AD;letter-spacing:.02em">'+c[0]+'</div>'+
@@ -9096,6 +9459,7 @@ function renderEduFund(){
    '아이 한 명이 만 8세가 될 때까지 국가에서 받는 돈은 <b style="color:#0D1117">첫째·수도권 기준 3,080만원</b>입니다. '+
    '이미 통장에 들어오는 돈이라 <b style="color:#0D1117">새로 나가는 보험료가 없습니다.</b> '+
    '문제는 이 돈이 생활비에 섞여 대부분 그대로 사라진다는 것입니다.</p>'+
+   eduInfoBarHtml()+
    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">'+cards+
    '<div style="background:linear-gradient(135deg,#2e1c56,#140d28);border-radius:14px;padding:18px 18px 16px;color:#fff">'+
    '<div style="font-size:11.5px;font-weight:800;color:#C9B3F5;letter-spacing:.02em">첫째·수도권 합계</div>'+
@@ -9126,9 +9490,43 @@ function renderEduFund(){
    ═══════════════════════════════════════════════════════════ */
 /* finFrame 은 srcdoc 이라 상대경로는 부모(app/index.html) 기준으로 풀린다 */
 var APEX_DECK_URL = '상담자료/통합상담_APEX.html';
-var APEX_TRACK_OF = { dollar:'d', invest:'t', edufund:'e' };   /* 나머지는 전부 ₩연금 트랙 */
+var APEX_TRACK_OF = { invest:'t', edufund:'e', pension:'w' };   /* 나머지는 전부 ₩연금 트랙 */
 var APEX_TRACK_NAME = {w:'₩ 연금', d:'$ 달러', t:'📈 투자·세금', e:'🎓 교육자금'};
 
+/* 위 칸의 「투자 컨설팅」 — 투자 포트폴리오 안 컨설팅으로 바로 들어간다.
+   전에는 달러 시뮬레이션이 있던 자리다. 달러만 따로 떼어 놓으니
+   아무도 안 열었고, 정작 상담에서 쓰는 건 급여별 포트폴리오였다. */
+/* ── 달러는 언제나 원화와 나란히 ──────────────────────────────
+   고객은 달러 금액만 보면 크기를 못 가늠한다. \$120,000 이 얼마인지
+   머릿속에서 환산하는 사이 설명이 지나간다. 그래서 달러를 쓰는 자리마다
+   원화를 함께 적는다. 환율은 계산기가 쓰는 값(VC.usd) 을 그대로 쓴다. */
+function fxRate(){
+  try{ if(window.VC && +VC.usd>0) return +VC.usd; }catch(e){}
+  var e=document.getElementById('s_usd');
+  var v=e?parseFloat(e.value):0;
+  return v>0?v:1380;
+}
+/* 달러 금액(달러 단위) → "\$120,000 (약 1억 6,560만원)" */
+function usdKrw(usdAmt,opt){
+  var u=Math.round(+usdAmt||0), r=fxRate();
+  var man=Math.round(u*r/10000);
+  var head='$'+u.toLocaleString();
+  if(opt==='short') return head+' (₩'+man.toLocaleString()+'만)';
+  return head+' <span class="fx-krw">≈ '+icMan(man)+'원</span>';
+}
+/* 원화(만원) → "1억 6,560만원 (\$120,000)" — 원화가 주인 자리에서 */
+function krwUsd(manAmt){
+  var m=Math.round(+manAmt||0), r=fxRate();
+  var u=r>0?Math.round(m*10000/r):0;
+  return icMan(m)+'원 <span class="fx-krw">≈ $'+u.toLocaleString()+'</span>';
+}
+function goConsult(btn){
+  switchTab('invest', btn);
+  try{
+    var t=document.getElementById('stab-balance');
+    if(t) switchSubTab('balance', t);
+  }catch(e){}
+}
 function apexCurrentTab(){
   var on = document.querySelector('.tab-pane.on');
   return on ? String(on.id||'').replace(/^tab-/,'') : 'dashboard';
@@ -9144,14 +9542,73 @@ function apexDeckUrl(track){
   q.set('start', v('s_rage','65'));
   var pen = parseFloat(v('s_pension','0'));          /* 연금저축/월 (만원) */
   if(pen > 0) q.set('prem', String(Math.round(pen)));
+  /* 물가상승률은 발표에서 따로 잡는다. 계산 탭 값(s_inf)을 기본으로 하되,
+     발표용 칸(apex_inf)에 적어 두면 그것이 이긴다 — 고객 앞에서는 보수적으로
+     잡고 싶을 때가 있고, 그때 계산 탭을 건드리면 뒤 숫자가 전부 흔들린다. */
+  q.set('inf', String(apexInf()));
   q.set('track', track || apexTrack());
   q.set('cid', 'fin-' + Date.now());
   return APEX_DECK_URL + '?' + q.toString();
 }
+/* 발표에 쓸 물가상승률 — 적어 두면 이 기기에 남는다 */
+function apexInf(){
+  var e=document.getElementById('apexInf');
+  var v=e?parseFloat(e.value):NaN;
+  if(!isFinite(v)){
+    try{ v=parseFloat(localStorage.getItem('apex_present_inf')); }catch(x){}
+  }
+  if(!isFinite(v)){
+    var t=document.getElementById('s_inf');
+    v=t?parseFloat(t.value):3;
+  }
+  return isFinite(v)?v:3;
+}
+function apexInfSave(){
+  var e=document.getElementById('apexInf'); if(!e)return;
+  try{ localStorage.setItem('apex_present_inf', e.value); }catch(x){}
+  apexPaintBtn();
+}
+
+/* ── 통합상담을 <b>앱 안 창</b>으로 ────────────────────────────
+   전에는 새 탭으로 튀어 나갔다. 상담 중에 화면이 바뀌면 흐름이 끊기고,
+   태블릿에서는 돌아오는 길을 못 찾는 분이 있었다. 이제 이 화면 위에
+   덮어서 연다. 「새 창으로」 도 함께 둔다 — 두 화면으로 쓰실 때가 있다. */
 function apexPresent(track, presentMode){
   var url = apexDeckUrl(track);
   if(presentMode !== false) url += '&present=1';
-  window.open(url, 'apexDeck');
+  apexOpenModal(url);
+}
+function apexOpenModal(url){
+  apexCloseModal();
+  var w=document.createElement('div');
+  w.id='apexDeckModal';
+  w.style.cssText='position:fixed;inset:0;z-index:9000;background:#08080A;display:flex;flex-direction:column';
+  w.innerHTML=
+    '<div style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 14px;'+
+      'background:#0C0C0E;border-bottom:1px solid rgba(212,185,120,.24)">'+
+      '<span style="font-size:11px;letter-spacing:.28em;color:rgba(212,185,120,.85);font-weight:800">APEX 통합상담</span>'+
+      '<span style="flex:1"></span>'+
+      '<button type="button" id="apexDeckNew" style="padding:6px 13px;border-radius:999px;cursor:pointer;'+
+        'border:1px solid rgba(212,185,120,.42);background:transparent;color:#EBDFC4;font-size:12px;font-weight:700">새 창으로</button>'+
+      '<button type="button" id="apexDeckX" style="padding:6px 15px;border-radius:999px;cursor:pointer;'+
+        'border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#F3EEE3;font-size:12px;font-weight:800">닫기 ✕</button>'+
+    '</div>'+
+    '<iframe id="apexDeckFrame" src="'+url.replace(/"/g,'&quot;')+'" '+
+      'style="flex:1;width:100%;border:0;background:#fff" '+
+      'allow="clipboard-write; fullscreen"></iframe>';
+  document.body.appendChild(w);
+  document.body.style.overflow='hidden';
+  var x=document.getElementById('apexDeckX'); if(x) x.onclick=apexCloseModal;
+  var nw=document.getElementById('apexDeckNew');
+  if(nw) nw.onclick=function(){ window.open(url,'apexDeck'); };
+  document.addEventListener('keydown', apexEsc);
+}
+function apexEsc(e){ if(e && e.key==='Escape') apexCloseModal(); }
+function apexCloseModal(){
+  var w=document.getElementById('apexDeckModal');
+  if(w && w.parentNode) w.parentNode.removeChild(w);
+  document.body.style.overflow='';
+  document.removeEventListener('keydown', apexEsc);
 }
 function apexPaintBtn(){
   var b = document.getElementById('apexPresentBtn');
@@ -9190,8 +9647,15 @@ function apexWrapSwitchTab(){
       '#apexPresentBtn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(26,86,219,.5)}'+
       '#apexPresentBtn .apx-i{font-size:16px;line-height:1}'+
       '#apexPresentBtn .apx-s{display:block;font-size:10.5px;font-weight:600;opacity:.78;margin-top:2px}'+
-      '@media print{#apexPresentBtn{display:none!important}}'+
-      '@media(max-width:640px){#apexPresentBtn{right:12px;bottom:12px;padding:11px 15px;font-size:13.5px}}';
+      '#apexInfBox{position:fixed;right:22px;bottom:76px;z-index:8998;display:flex;align-items:center;gap:6px;'+
+        'background:#fff;border:1px solid #E3E7EC;border-radius:999px;padding:6px 12px;'+
+        'box-shadow:0 6px 18px rgba(15,23,42,.12);font-size:11.5px;font-weight:700;color:#42506A}'+
+      '#apexInfBox input{width:46px;border:none;border-bottom:1px solid #C8A25B;background:transparent;'+
+        'font-size:13px;font-weight:800;text-align:right;color:#0F172A;padding:1px 2px}'+
+      '#apexInfBox input:focus{outline:none;border-bottom-width:2px}'+
+      '@media print{#apexPresentBtn,#apexInfBox{display:none!important}}'+
+      '@media(max-width:640px){#apexPresentBtn{right:12px;bottom:12px;padding:11px 15px;font-size:13.5px}'+
+        '#apexInfBox{right:12px;bottom:66px;padding:5px 10px;font-size:10.5px}}';
     document.head.appendChild(css);
     var b = document.createElement('button');
     b.id = 'apexPresentBtn';
@@ -9201,6 +9665,23 @@ function apexWrapSwitchTab(){
                   '<span class="apx-s">고객 데이터 그대로 전달</span></span>';
     b.onclick = function(){ apexPresent(); };
     document.body.appendChild(b);
+
+    /* 발표에 쓸 물가상승률 — 단추 위에 붙인다. 고객 앞에서는 보수적으로
+       잡고 싶을 때가 있는데, 계산 탭을 건드리면 뒤 숫자가 전부 흔들린다. */
+    var inf=document.createElement('div');
+    inf.id='apexInfBox';
+    inf.innerHTML='<label for="apexInf">발표 물가상승률</label>'+
+      '<input id="apexInf" type="number" step="0.1" min="0" max="15">'+
+      '<span>%</span>';
+    document.body.appendChild(inf);
+    var ii=document.getElementById('apexInf');
+    if(ii){
+      var saved=null;
+      try{ saved=localStorage.getItem('apex_present_inf'); }catch(x){}
+      var base=document.getElementById('s_inf');
+      ii.value=(saved!=null&&saved!=='')?saved:((base&&base.value)||'3');
+      ii.oninput=apexInfSave;
+    }
     apexPaintBtn();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);

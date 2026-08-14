@@ -77,27 +77,21 @@ const FIN = 'app/재무설계/상담자료.html';
     '보장분석 표지와 <b>같은 세 칸</b>을 본다');
   is(/보장분석 상담자료 표지에서 고치시면/.test(fin), '어디서 고치는지 알려 준다');
 
-  /* ═══ 1-2. 팩트파인딩 첫 화면도 같은 언어 ═══ */
-  console.log('\n[1-2] 팩트파인딩 첫 화면도 같은 언어를 쓰는가');
-  /* 표지가 쓰는 값을 소스에서 직접 뽑아 와 견준다 — 한쪽만 바뀌면 여기서 걸린다 */
-  const deckBg = /#s1\.apex-star\{[^']*background:(#[0-9A-Fa-f]{6})/.exec(deck);
-  const BG = deckBg ? deckBg[1] : '#08080A';
-  is(new RegExp('\\.ff-hero\\{[^}]*background:' + BG).test(fin.replace(/\s+/g, ' ')),
-    '바탕이 표지와 같은 검정이다 (' + BG + ')');
-  is(/\.as-name\{[\s\S]{0,320}color:#F0E3C4/.test(deck) && /\.ff-name\{[\s\S]{0,320}color:#F0E3C4/.test(fin),
-    '이름 색이 표지와 같다 (#F0E3C4)');
-  is(/#D4B978/.test(fin) && /#C8A25B/.test(fin), '금색 두 가지를 표지와 똑같이 쓴다');
-  is(/class="ff-star">STARRING</.test(fin), 'STARRING 라벨이 있다');
-  is(/\.ff-star::before\{[\s\S]{0,200}linear-gradient\(90deg,transparent,#C8A25B\)/.test(fin),
-    'STARRING 앞 금색 가로선까지 같은 방식이다');
-
-  /* 글꼴 스택은 글자 그대로 같아야 한다. 한쪽만 다르면 같은 기기에서
-     서로 다른 글꼴로 떨어져 두 자료가 남남으로 보인다. */
-  const stack = '"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif';
-  is(deck.indexOf(stack) >= 0, '표지의 글꼴 스택을 읽어 낼 수 있다');
-  is(fin.indexOf(stack) >= 0, '첫 화면이 <b>글자 그대로 같은</b> 글꼴 스택을 쓴다');
-  is(!/font-family:"Noto Serif KR","Nanum Myeongjo",serif/.test(fin),
-    '스택을 줄여 쓴 곳이 없다 — 줄이면 엉뚱한 글꼴로 떨어진다');
+  /* ═══ 1-2. 첫 화면이 표지 <b>그 자체</b>인가 ═══
+     전에는 이름만 가운데 놓은 좁은 띠였다. 두 자료를 나란히 열면 한쪽은
+     사진이 화면 절반을 채우고 한쪽은 검은 줄 하나라 남남으로 보였다. */
+  console.log('\n[1-2] 첫 화면이 표지 한 장인가');
+  is(/\.ff-hero\{[^}]*min-height:100vh/.test(fin.replace(/\s+/g, ' ')),
+    '첫 화면이 <b>화면 한 장</b>을 차지한다');
+  is(/\.ff-hero\{[^}]*background:#08080A/.test(fin.replace(/\s+/g, ' ')),
+    '바탕이 표지와 같은 검정이다');
+  is(/\.ff-hero \.apex-star-wrap\{position:absolute;inset:0/.test(fin),
+    '표지가 그 판을 꽉 채운다');
+  is(/starCoverHtml\(\)/.test(fin.slice(fin.indexOf('function heroPaint'), fin.indexOf('function heroPaint') + 700)),
+    '첫 화면과 발표 첫 장이 <b>같은 함수</b>로 그려진다 — 갈라질 수 없다');
+  is(!/class="ff-name"/.test(fin) && !/class="ff-star"/.test(fin),
+    '이름만 놓던 옛 띠가 사라졌다');
+  is(/「내 소개」 가 아직 비어 있습니다/.test(fin), '내 소개가 비면 어디서 채우는지 알려 준다');
 
   /* ═══ 2~5. 실제로 열어 본다 ═══ */
   const browser = await chromium.launch();
@@ -123,11 +117,11 @@ const FIN = 'app/재무설계/상담자료.html';
     advLoad(); heroPaint();
     const cov = starCoverHtml();
     return {
-      name: document.getElementById('ffName').textContent,
-      role: document.getElementById('ffRole').textContent,
-      quote: document.getElementById('ffQuote').textContent,
+      heroName: (document.querySelector('#ffHero .as-name') || {}).textContent || '',
+      heroRole: (document.querySelector('#ffHero .as-role') || {}).textContent || '',
       heroBg: getComputedStyle(document.querySelector('.ff-hero')).backgroundColor,
-      nameColor: getComputedStyle(document.getElementById('ffName')).color,
+      heroH: Math.round(document.getElementById('ffHero').getBoundingClientRect().height),
+      nameColor: getComputedStyle(document.querySelector('#ffHero .as-name') || document.body).color,
       covName: (cov.match(/class="as-name">([^<]*)</) || [])[1],
       covRole: (cov.match(/class="as-role">([^<]*)</) || [])[1],
       covChips: (cov.match(/class="as-chip"/g) || []).length,
@@ -135,10 +129,12 @@ const FIN = 'app/재무설계/상담자료.html';
       nophoto: /apex-star-wrap nophoto/.test(cov)
     };
   });
-  is(R.name === '홍길동', '팩트파인딩 첫 화면 이름이 따라온다 (' + R.name + ')');
-  is(/지점장/.test(R.role) && /온탑3지점/.test(R.role), '직함과 소속이 따라온다');
-  is(/숫자로 말합니다/.test(R.quote), '한 줄 철학이 따라온다');
+  is(R.heroName === '홍길동', '첫 화면 이름이 따라온다 (' + R.heroName + ')');
+  is(R.heroRole === '지점장', '직함이 따라온다');
   is(R.heroBg === 'rgb(8, 8, 10)', '실제로 그려진 바탕이 검정이다 (' + R.heroBg + ')');
+  /* 창이 좁으면(900px) 82vh 로 낮춘다 — 태블릿 세로에서 아래가 살짝 보여야
+     더 있다는 걸 안다. 넓으면 100vh 로 꽉 채운다. */
+  is(R.heroH >= 1200 * 0.8, '첫 화면이 화면 한 장을 채운다 (' + R.heroH + 'px · 창 1200px)');
   is(R.nameColor === 'rgb(240, 227, 196)', '실제로 그려진 이름이 금빛이다 (' + R.nameColor + ')');
   is(R.covName === '홍길동', '<b>첫 장 표지</b>에도 같은 이름이 선다 (' + R.covName + ')');
   is(R.covRole === '지점장', '표지 직함도 같다');
@@ -185,7 +181,10 @@ const FIN = 'app/재무설계/상담자료.html';
       inpBorder: getComputedStyle(inp).borderTopWidth + '/' + getComputedStyle(inp).borderBottomWidth,
       inpRadius: getComputedStyle(inp).borderTopLeftRadius,
       wide: Math.round(s1.getBoundingClientRect().width),
-      sum: (document.getElementById('sec1Sum') || {}).textContent || ''
+      sum: (document.getElementById('sec1Sum') || {}).textContent || '',
+      hasSec2: !!document.getElementById('sec2'),
+      cash: (document.getElementById('sec1Cash') || {}).textContent || '',
+      cols: s1.querySelectorAll('.sec1-col').length
     };
   });
   is(/적으시면 여기 섭니다/.test(S.before) && /empty/.test(S.beforeCls),
@@ -194,6 +193,9 @@ const FIN = 'app/재무설계/상담자료.html';
   is(/CLIENT SITUATION/.test(S.eyebrow || ''), '금색 라벨이 붙는다 (' + S.eyebrow + ')');
   is(/고객의 상황을 정리합니다/.test(S.title), '제목이 「고객의 상황을 정리합니다」 다');
   is(S.wide > 760, '가로로 넓어졌다 — ' + S.wide + 'px (전에는 720px 안에 갇혔다)');
+  is(!S.hasSec2 && S.cash.indexOf('월 소득') === 0,
+    '소득·지출이 <b>같은 장</b>에 들어왔다 — ' + S.cash.slice(0, 46));
+  is(S.cols === 2, '가족과 돈을 좌우 두 칸으로 나눠 한 화면에 담는다');
   is(/42세/.test(S.sum) && /배우자/.test(S.sum),
     '적은 것이 한 줄로 되짚어진다 (' + S.sum + ')');
   is(S.stepNo === 'none', '번호 딱지를 뗐다 — 서식이 아니라 자료로 보이게');
@@ -203,7 +205,7 @@ const FIN = 'app/재무설계/상담자료.html';
   console.log('\n[5] 나머지 장은 손대지 않았는가');
   const O = await page.evaluate(() => {
     const out = {};
-    ['sec2', 'sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
+    ['sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
       const el = document.getElementById(id);
       if (!el) { out[id] = 'MISSING'; return; }
       const inp = el.querySelector('.field input');
@@ -215,7 +217,7 @@ const FIN = 'app/재무설계/상담자료.html';
     });
     return out;
   });
-  ['sec2', 'sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
+  ['sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
     const v = O[id];
     is(v !== 'MISSING' && v.stepNo !== 'none' && v.inpRadius !== '0px',
       id + ' 은 예전 그대로다 (번호 딱지 ' + (v.stepNo || '?') + ' · 입력칸 모서리 ' + (v.inpRadius || '?') + ')');
