@@ -86,10 +86,17 @@ cp .env.example .env
 
 | 변수 | 무엇 | 받는 곳 |
 |---|---|---|
-| `ALPACA_API_KEY`<br>`ALPACA_SECRET_KEY` | 모의계좌 (**무료 · 신분증·입금 불필요**) | [alpaca.markets](https://alpaca.markets) → 우측 상단 **Paper** 전환 후 발급 |
+| `ALPACA_API_KEY`<br>`ALPACA_SECRET_KEY` | **미국** 모의계좌 (**무료 · 신분증·입금 불필요**) | [alpaca.markets](https://alpaca.markets) → 우측 상단 **Paper** 전환 후 발급 |
 | `ALPACA_PAPER` | `true`(기본·모의) / `false`(실계좌) | — |
 | `ALPACA_LIVE_CONFIRM` | 실계좌 2번째 열쇠 | 아래 참고 |
+| `KIS_APP_KEY`<br>`KIS_APP_SECRET` | **국내** 주문 (한국투자증권) | [apiportal.koreainvestment.com](https://apiportal.koreainvestment.com) · **IP 등록 없음** |
+| `KIS_ACCOUNT` | 계좌번호 `12345678-01` (8자리+2자리) | 위와 같은 곳 |
+| `KIS_PAPER` | `true`(기본·모의) / `false`(실계좌) | — |
+| `KIS_LIVE_CONFIRM` | 실계좌 2번째 열쇠 | 아래 참고 |
 | `REPORT_WEBHOOK_URL` | 브리핑 보낼 슬랙·디스코드 주소 | 비우면 파일로만 남김 |
+
+> **국내와 미국은 계좌도 열쇠도 따로입니다.** 한쪽을 실계좌로 열어도 다른 쪽은 그대로 모의입니다.
+> 한국투자증권은 **모의투자 계좌**를 따로 만들 수 있어, 실계좌 없이도 끝까지 연습됩니다.
 
 > Alpaca Secret 은 **발급 순간 한 번만** 보입니다. 그때 복사하세요.
 > 웹훅 주소 자체가 비밀입니다 — 아는 사람은 누구나 그 채널에 글을 쓸 수 있습니다.
@@ -98,13 +105,34 @@ cp .env.example .env
 
 셋이 **동시에** 있어야 열립니다. 하나라도 없으면 조용히 실패하지 않고 **모의로 내려간 뒤 무엇이 빠졌는지 알려줍니다.**
 
+**미국 (Alpaca)**
 ```
 .env   ALPACA_PAPER=false
 .env   ALPACA_LIVE_CONFIRM=I_UNDERSTAND_REAL_MONEY
 명령줄  --live
 ```
 
-여덟 조합(2×2×2)을 전부 도는 테스트가 있고, **정확히 한 줄만 실계좌**인지 셉니다 (`tests/test_live_requires_triple_confirm.py`).
+**국내 (한국투자증권)** — 같은 규칙에 **문턱이 하나 더** 있습니다
+```
+.env   KIS_PAPER=false
+.env   KIS_LIVE_CONFIRM=I_UNDERSTAND_REAL_MONEY
+명령줄  --live
+명령줄  --send      ← 이게 없으면 무엇을 하든 주문이 나가지 않습니다
+```
+
+여덟 조합(2×2×2)을 전부 도는 테스트가 양쪽에 있고, **정확히 한 줄만 실계좌**인지 셉니다
+(`tests/test_live_requires_triple_confirm.py` · `tests/test_kis_safety.py`).
+
+### 국내 주문 명령어
+
+```bash
+python main.py kis status                          # 계좌·잔고 (키가 없으면 뭐가 빠졌는지)
+python main.py kis order --code 005930 --qty 10    # 계획만. 주문 안 나감
+python main.py kis fills                           # 오늘 체결
+```
+
+주문을 **실제로** 내려면 `--send` 를 붙입니다. 그것만으로는 **모의투자 계좌**로 갑니다.
+실계좌로 가려면 위 3중 잠금까지 전부 있어야 합니다.
 
 ---
 
@@ -115,10 +143,26 @@ cp .env.example .env
 | 데스크 화면에서 **내 포트폴리오 보기** | **없음** | — |
 | 뉴스 | **없음** | — |
 | 화면에 **실제 시세** | 시세 키 하나 (`DATA_GO_KR_KEY` 가 제일 빠름) | Netlify |
-| **토스증권 실시간** | `TOSS_CLIENT_ID`+`SECRET` **＋ 설정 3개** | Netlify + `config/market.json` |
-| **자동매매 봇** | `ALPACA_API_KEY`+`SECRET` | 봇 `.env` (**Netlify 아님**) |
+| **미국 자동매매** | `ALPACA_API_KEY`+`SECRET` | 봇 `.env` (**Netlify 아님**) |
+| **국내 주문** | `KIS_APP_KEY`+`SECRET`+`KIS_ACCOUNT` | 봇 `.env` (**Netlify 아님**) |
 | **AI 리포트 문장** | `ANTHROPIC_API_KEY` 또는 `GEMINI_API_KEY` | Netlify |
 | 아침·월간 리포트 자체 | `SUPABASE_SERVICE_ROLE_KEY` | Netlify |
+
+### 토스증권은 보류입니다
+
+`TOSS_CLIENT_ID` / `TOSS_CLIENT_SECRET` 는 설정이 그대로 남아 있지만 **쓰지 않습니다.**
+
+키도 주소도 맞았고 **토큰 발급까지 성공**했습니다(`tokenIssued: true` 확인). 막힌 건 **허용 IP** 하나입니다 — 토스는 호출 IP 를 미리 등록하라 하고, Netlify 는 배포마다 나가는 IP 가 바뀝니다:
+
+```
+등록한 3.144.168.102       → 토큰 발급 성공
+배포 한 번 뒤 18.222.65.41 → 403 IP address not allowed
+```
+
+한 배포 안에서는 고정이지만(5회 표본 동일) 배포하면 바뀌어 등록으로는 쫓아갈 수 없습니다.
+**토스 허용 IP 목록을 비울 수 있게 되면** `config/market.json` 의 `providers.toss.paths.quote` 만 채우면 되살아납니다.
+
+**종목 옆 '토스' 버튼(딥링크)은 키 없이 계속 됩니다.**
 
 ---
 

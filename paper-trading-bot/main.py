@@ -321,6 +321,75 @@ def cmd_status(args, cfg) -> int:
     return 0
 
 
+def cmd_kis(args, cfg) -> int:
+    """국내 주식(한국투자증권). 미국 쪽과 같은 3중 잠금을 쓴다.
+
+    주문은 기본이 dry-run 이다. 실제로 내려면 --send 를 붙여야 하고,
+    실계좌로 가려면 거기에 세 열쇠가 더 필요하다.
+    """
+    import kis_broker as kb
+
+    decision = kb.decide_mode(live_flag=getattr(args, "live_flag", False))
+    if decision.demoted:
+        print("⚠️  실계좌로 가지 않고 모의로 내려서 실행합니다. 빠진 것:")
+        for r in decision.reasons:
+            print(f"    · {r}")
+        print()
+
+    dry = not getattr(args, "send", False)
+    broker = kb.KisBroker(paper=decision.paper, dry_run=dry)
+
+    if args.kis_cmd == "status":
+        print("=" * 60)
+        for line in broker.status_lines():
+            print(line)
+        miss = broker.missing()
+        print(f"  빠진 것     : {', '.join(miss) if miss else '없음'}")
+        print("=" * 60)
+        if miss:
+            print("  .env 에 위 값을 넣으면 조회·주문을 쓸 수 있습니다.")
+            return 0
+        try:
+            b = broker.balance()
+            print(f"  예수금 {b['cash']:,.0f}원 · 평가 {b['value']:,.0f}원 · 손익 {b['pl']:+,.0f}원")
+            if not b["holdings"]:
+                print("  보유 종목 없음")
+            for h in b["holdings"]:
+                print(f"   · {h['code']} {h['name'][:12]:<12} {h['qty']:>6,}주 "
+                      f"평단 {h['avg']:>10,.0f} 현재 {h['price']:>10,.0f} 손익 {h['pl']:+,.0f}")
+        except Exception as e:
+            print(f"  계좌 조회 실패: {str(e)[:140]}")
+        return 0
+
+    if args.kis_cmd == "order":
+        if not args.code or not args.qty:
+            print("종목코드(--code)와 수량(--qty)이 필요합니다.")
+            return 1
+        plan = broker.submit(code=args.code, side=args.side, qty=args.qty,
+                             price=args.price or 0, reason="수동 주문")
+        if plan.get("error"):
+            print(f"  보내지 않았습니다 — {plan['error']}")
+            return 1
+        if not plan["submitted"]:
+            print("  계획만 출력했습니다 (주문 0건). 실제로 내려면 --send 를 붙이세요.")
+        return 0
+
+    if args.kis_cmd == "fills":
+        try:
+            rows = broker.fills()
+            if not rows:
+                print("오늘 체결 없음")
+            for r in rows:
+                print(f"  {r['code']} {r['name'][:12]:<12} {r['side']:<4} "
+                      f"{r['qty']:>6,}주 @ {r['price']:>10,.0f}  주문번호 {r['order_no']}")
+        except Exception as e:
+            print(f"체결 조회 실패: {str(e)[:140]}")
+            return 1
+        return 0
+
+    return 1
+
+
 def cmd_report(args, cfg) -> int:
     import report as rp
 
@@ -408,6 +477,22 @@ def build_parser() -> argparse.ArgumentParser:
     st.add_argument("--dry-run", action="store_true")
     r = sub.add_parser("resume", help="재개")
     common(r)
+
+    # ── 국내 주식 (한국투자증권) ─────────────────────────────────────
+    # 미국 쪽과 같은 3중 잠금. 여기에 --send 라는 문턱이 하나 더 있다:
+    # --send 없이는 무엇을 하든 주문이 나가지 않는다.
+    k = sub.add_parser("kis", help="국내 주식 — 조회·주문 (한국투자증권)")
+    common(k)
+    k.add_argument("kis_cmd", choices=["status", "order", "fills"],
+                   help="status=계좌·잔고 · order=주문 · fills=오늘 체결")
+    k.add_argument("--code", help="종목코드 (예: 005930)")
+    k.add_argument("--side", default="buy", choices=["buy", "sell"])
+    k.add_argument("--qty", type=int, help="수량(주)")
+    k.add_argument("--price", type=int, default=0, help="지정가. 없으면 시장가")
+    k.add_argument("--send", action="store_true",
+                   help="실제로 주문을 보냅니다. 없으면 계획만 출력합니다")
+    k.add_argument("--live", dest="live_flag", action="store_true",
+                   help="실계좌. KIS_PAPER=false 와 KIS_LIVE_CONFIRM 이 함께 있어야 열립니다")
     return p
 
 
@@ -433,6 +518,8 @@ def main(argv=None) -> int:
     if args.cmd == "resume":
         args.live_flag = False
         return cmd_resume(args, cfg)
+    if args.cmd == "kis":
+        return cmd_kis(args, cfg)
     return 1
 
 
