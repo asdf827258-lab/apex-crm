@@ -722,6 +722,48 @@ exports.handler = async function (event) {
     }
 
     /* ── 토스증권 연결 진단 — 어디서 막히는지 원문 그대로 보여준다 ────── */
+    /* ── 토스 API 명세 받아오기 ────────────────────────────────────────
+       경로를 하나씩 두들겨 찾는 건 시간이 오래 걸리고 헛다리를 짚는다.
+       토스는 /api/v1/ 아래 전부를 401 로 돌려주기 때문에, 토큰 없이는
+       경로가 있는지 없는지도 구분되지 않는다. 명세 문서를 토큰으로 받아
+       경로 목록을 통째로 읽는 편이 확실하다. 읽기만 한다. */
+    if (kind === 'toss-spec') {
+      const c = tossCfg();
+      let tok = '';
+      try { tok = await tossToken(); }
+      catch (e) {
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, meta: meta, step: 'token', message: String(e.message || e) }) };
+      }
+      const base = String(c.base).replace(/\/+$/, '');
+      const cands = ['/api/v1/openapi.json', '/openapi.json', '/api/v1/v3/api-docs', '/api/v1/api-docs', '/api/v1/swagger.json'];
+      const tried = [];
+      for (const p of cands) {
+        try {
+          const r = await fetch(base + p, {
+            headers: { Authorization: 'Bearer ' + tok, Accept: 'application/json' },
+            signal: AbortSignal.timeout(12000)
+          });
+          const txt = await r.text();
+          if (r.ok) {
+            let j = null; try { j = JSON.parse(txt); } catch (_) { /* JSON 이 아니면 아래로 */ }
+            if (j && j.paths) {
+              return {
+                statusCode: 200, headers: cors,
+                body: JSON.stringify({
+                  ok: true, meta: meta, specPath: p,
+                  title: (j.info || {}).title || '', version: (j.info || {}).version || '',
+                  servers: (j.servers || []).map(s => s.url),
+                  paths: Object.keys(j.paths).slice(0, 300)
+                })
+              };
+            }
+          }
+          tried.push({ path: p, status: r.status, head: txt.slice(0, 180) });
+        } catch (e) { tried.push({ path: p, error: String(e.message || e).slice(0, 140) }); }
+      }
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: false, meta: meta, step: 'spec', tokenIssued: !!tok, tried: tried }) };
+    }
+
     if (kind === 'toss-probe') {
       /* 순서가 거꾸로였다. 전에는 paths.quote 까지 다 채워야 토큰을 시도했는데,
          시세 경로는 토큰이 나온 뒤에야 확인할 수 있다. 그래서 키 발급이 제대로
