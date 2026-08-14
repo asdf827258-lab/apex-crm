@@ -1167,6 +1167,7 @@ a { color: inherit; text-decoration: none; }
 .print-fallback-note{font-size:10px;color:var(--ink-4);line-height:1.5;margin-top:6px}
 @media print{.report-action-row,.report-safe-btn,.print-fallback-note{display:none!important}}
 
+.fx-krw{color:var(--ink-3,#7A8493);font-weight:700;font-size:.86em;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1481,7 +1482,7 @@ a { color: inherit; text-decoration: none; }
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
       <button class="report-tab" onclick="switchTab('cashflow',this)"><div class="rt-ico">💰</div><div class="rt-title">현금흐름 분석</div><div class="rt-sub">소득·지출</div></button>
       <button class="report-tab" onclick="switchTab('pension',this)"><div class="rt-ico">🏦</div><div class="rt-title">연금 시뮬레이션</div><div class="rt-sub">건보료·국민연금</div></button>
-      <button class="report-tab" onclick="switchTab('dollar',this)"><div class="rt-ico">💵</div><div class="rt-title">달러 시뮬레이션</div><div class="rt-sub">환율·비과세</div></button>
+      <button class="report-tab" onclick="goConsult(this)"><div class="rt-ico">🧭</div><div class="rt-title">투자 컨설팅</div><div class="rt-sub">급여별 포트폴리오</div></button>
       <button class="report-tab" onclick="switchTab('invest',this)"><div class="rt-ico">📈</div><div class="rt-title">투자 포트폴리오</div><div class="rt-sub">ETF·변액</div></button>
       <button class="report-tab" onclick="switchTab('insurance',this)"><div class="rt-ico">🛡️</div><div class="rt-title">보험 대시보드</div><div class="rt-sub">암·뇌·심·간병</div></button>
       <button class="report-tab" onclick="switchTab('factcheck',this)"><div class="rt-ico">✅</div><div class="rt-title">팩트체크</div><div class="rt-sub">3대 점검</div></button>
@@ -1626,30 +1627,9 @@ a { color: inherit; text-decoration: none; }
   </div>
 
   <!-- 4. 달러 시뮬레이션 -->
-  <div class="tab-pane" id="tab-dollar">
-    <div class="sec-hd">
-      <div><div class="sec-tag">DOLLAR SIMULATION</div><div class="sec-title">달러 자산 시뮬레이션</div></div>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--ink-7);padding-bottom:0">
-      <button class="sub-tab on" id="dtab-calc" onclick="dollarView('calc',this)">🧮 계산 · 근거</button>
-      <button class="sub-tab" id="dtab-deck" onclick="dollarView('deck',this)">📽️ 발표 슬라이드</button>
-    </div>
-    <div id="deck-dollar" style="display:none"></div>
-    <div id="dollar-calc-wrap">
+  <!-- 달러 시뮬레이션 탭은 없앴다. 달러는 투자 컨설팅 안에서 원화와
+       나란히 설명한다 — 따로 떼어 놓으니 아무도 안 열었다. -->
 
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-hd"><div class="card-tag">DOLLAR ASSET GROWTH</div><div class="card-title">달러 자산 성장 예측</div></div>
-      <div class="card-body" id="dollar-result"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-hd"><div class="card-tag">WHY DOLLAR ASSET</div><div class="card-title">달러 자산이 필요한 이유</div></div>
-      <div class="card-body" id="dollar-why"></div>
-    </div>
-    </div><!-- /dollar-calc-wrap -->
-  </div>
-
-  <!-- 5. 투자 포트폴리오 -->
   <div class="tab-pane" id="tab-invest">
     <div class="sec-hd">
       <div><div class="sec-tag">INVESTMENT PORTFOLIO</div><div class="sec-title">투자 성향별 포트폴리오 추천</div></div>
@@ -1664,7 +1644,6 @@ a { color: inherit; text-decoration: none; }
       <button class="sub-tab" onclick="switchSubTab('cardif',this)" id="stab-cardif">🏦 카디프 변액연금</button>
       <button class="sub-tab" onclick="switchSubTab('balance',this)" id="stab-balance">🧭 투자 컨설팅</button>
       <button class="sub-tab" onclick="switchSubTab('varc',this)" id="stab-varc">🧩 변액 컨설팅</button>
-      <button class="sub-tab" onclick="switchSubTab('deck',this)" id="stab-deck">📽️ 투자 프레젠테이션</button>
     </div>
 
     <!-- ETF 탭 -->
@@ -4789,7 +4768,11 @@ function dkDollarCalc(){
 }
 function dkDollarSlides(){
   var c=dkDollarCalc();
-  var usd=function(v){return '$'+Math.round(v).toLocaleString();};
+  /* 달러만 적으면 고객이 크기를 못 가늠한다 — 원화를 나란히 적는다 */
+  var usd=function(v){
+    var u=Math.round(v||0), r=(typeof fxRate==='function')?fxRate():1380;
+    return '$'+u.toLocaleString()+' (₩'+Math.round(u*r/10000).toLocaleString()+'만)';
+  };
   var rows='',i,ds=[-100,0,100,200,300];
   for(i=0;i<ds.length;i++){
     var d=ds[i], r=c.now+d, v=c.usdAsset*r/10000, g=v-c.atNow;
@@ -5668,9 +5651,9 @@ function renderDollarUpgrade() {
       <div class="db-title">💵 달러 자산 종합 시뮬레이션</div>
       <div class="g4" style="margin-bottom:12px">
         ${[
-          {l:'월 납입', v:fmt(dPay)+'만원', s:'≈ $'+usdMonthly.toLocaleString()+' · '+dPayY+'년'},
-          {l:'납입 원금', v:fmt(dPrincipal)+'만원', s:'≈ $'+usdPrincipal.toLocaleString()},
-          {l:'예상 자산', v:fmt(dCapital)+'만원', s:'≈ $'+usdAsset.toLocaleString()+' · 거치 '+dWaitY+'년'},
+          {l:'월 납입', v:fmt(dPay)+'만원', s:'≈ '+usdKrw(usdMonthly,'short')+' · '+dPayY+'년'},
+          {l:'납입 원금', v:fmt(dPrincipal)+'만원', s:'≈ '+usdKrw(usdPrincipal,'short')},
+          {l:'예상 자산', v:fmt(dCapital)+'만원', s:'≈ '+usdKrw(usdAsset,'short')+' · 거치 '+dWaitY+'년'},
           {l:'환차익 반영', v:fmt(totalWithEx)+'만원', s:'환율 '+rateNow+'→'+rateTgt+'원'},
         ].map(m=>`<div style="background:rgba(255,255,255,.07);border-radius:var(--r-sm);padding:12px;text-align:center">
           <div style="font-size:9px;color:rgba(255,255,255,.45);margin-bottom:4px">${m.l}</div>
@@ -5693,7 +5676,7 @@ function renderDollarUpgrade() {
               {l:'목표 환율', v:rateTgt.toLocaleString()+'원/$', c:'var(--primary)'},
               {l:'예상 환차익률', v:'+'+exGainPct+'%', c:'var(--pos)'},
               {l:'환차익 금액', v:fmt(exGainAmt)+'만원', c:'var(--pos)'},
-              {l:'달러 환산 자산', v:'$'+usdAsset.toLocaleString(), c:'var(--warn)'},
+              {l:'달러 환산 자산', v:usdKrw(usdAsset,'short'), c:'var(--warn)'},
             ].map(r=>`<div class="cmp-row">
               <span class="cmp-lbl">${r.l}</span>
               <span style="font-weight:700;color:${r.c}">${r.v}</span>
@@ -9126,9 +9109,43 @@ function renderEduFund(){
    ═══════════════════════════════════════════════════════════ */
 /* finFrame 은 srcdoc 이라 상대경로는 부모(app/index.html) 기준으로 풀린다 */
 var APEX_DECK_URL = '상담자료/통합상담_APEX.html';
-var APEX_TRACK_OF = { dollar:'d', invest:'t', edufund:'e' };   /* 나머지는 전부 ₩연금 트랙 */
+var APEX_TRACK_OF = { invest:'t', edufund:'e', pension:'w' };   /* 나머지는 전부 ₩연금 트랙 */
 var APEX_TRACK_NAME = {w:'₩ 연금', d:'$ 달러', t:'📈 투자·세금', e:'🎓 교육자금'};
 
+/* 위 칸의 「투자 컨설팅」 — 투자 포트폴리오 안 컨설팅으로 바로 들어간다.
+   전에는 달러 시뮬레이션이 있던 자리다. 달러만 따로 떼어 놓으니
+   아무도 안 열었고, 정작 상담에서 쓰는 건 급여별 포트폴리오였다. */
+/* ── 달러는 언제나 원화와 나란히 ──────────────────────────────
+   고객은 달러 금액만 보면 크기를 못 가늠한다. \$120,000 이 얼마인지
+   머릿속에서 환산하는 사이 설명이 지나간다. 그래서 달러를 쓰는 자리마다
+   원화를 함께 적는다. 환율은 계산기가 쓰는 값(VC.usd) 을 그대로 쓴다. */
+function fxRate(){
+  try{ if(window.VC && +VC.usd>0) return +VC.usd; }catch(e){}
+  var e=document.getElementById('s_usd');
+  var v=e?parseFloat(e.value):0;
+  return v>0?v:1380;
+}
+/* 달러 금액(달러 단위) → "\$120,000 (약 1억 6,560만원)" */
+function usdKrw(usdAmt,opt){
+  var u=Math.round(+usdAmt||0), r=fxRate();
+  var man=Math.round(u*r/10000);
+  var head='$'+u.toLocaleString();
+  if(opt==='short') return head+' (₩'+man.toLocaleString()+'만)';
+  return head+' <span class="fx-krw">≈ '+icMan(man)+'원</span>';
+}
+/* 원화(만원) → "1억 6,560만원 (\$120,000)" — 원화가 주인 자리에서 */
+function krwUsd(manAmt){
+  var m=Math.round(+manAmt||0), r=fxRate();
+  var u=r>0?Math.round(m*10000/r):0;
+  return icMan(m)+'원 <span class="fx-krw">≈ $'+u.toLocaleString()+'</span>';
+}
+function goConsult(btn){
+  switchTab('invest', btn);
+  try{
+    var t=document.getElementById('stab-balance');
+    if(t) switchSubTab('balance', t);
+  }catch(e){}
+}
 function apexCurrentTab(){
   var on = document.querySelector('.tab-pane.on');
   return on ? String(on.id||'').replace(/^tab-/,'') : 'dashboard';
