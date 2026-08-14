@@ -67,12 +67,29 @@ for (const file of files) {
                     「국가혜택·근거」 화면에 입력칸 31개가 튀어나왔다
        prWon      — 「1,200만원」 을 만드는 함수가 쉼표만 찍는 함수에 가려져
                     치료비 표 금액이 전부 0 으로 찍혔다
-       prDeckHtml — 상담 이야기 목록이 제안서 슬라이드에 가려져 안 나왔다   */
-  const names = [];
-  html.replace(/^function\s+([A-Za-z_$][\w$]*)\s*\(/gm, (m, k) => { names.push(k); return m; });
+       prDeckHtml — 상담 이야기 목록이 제안서 슬라이드에 가려져 안 나왔다
+
+     다만 <b>서로 다른 우리(IIFE)</b> 안에 같은 이름이 있는 것은 충돌이
+     아니다. 파일 전체를 한 덩어리로 보면 멀쩡한 것을 두고 「깨졌다」고
+     말하게 되고, 그런 헛경고가 몇 번 뜨면 사람이 이 검사를 안 믿는다.
+     그래서 우리 단위로 나눠서 센다.                                */
   const seen = {}, dup = [];
-  names.forEach(k => { seen[k] = (seen[k] || 0) + 1; });
-  Object.keys(seen).forEach(k => { if (seen[k] > 1) dup.push(k + ' ×' + seen[k]); });
+  let scope = 0, depth = 0;
+  html.split('\n').forEach(line => {
+    /* 이 저장소는 IIFE 를 줄 맨 앞에서 열고 닫는다 — 그 모양만 센다 */
+    if (/^\(\s*(function|\(\s*\)\s*=>)/.test(line)) { depth++; scope++; return; }
+    if (/^\}\s*\)\s*\(\s*\)\s*;?\s*$/.test(line) || /^\}\s*\(\s*\)\s*\)\s*;?\s*$/.test(line)) {
+      if (depth > 0) depth--;
+      return;
+    }
+    const m = /^function\s+([A-Za-z_$][\w$]*)\s*\(/.exec(line);
+    if (!m) return;
+    const key = (depth > 0 ? 's' + scope + ':' : '') + m[1];
+    seen[key] = (seen[key] || 0) + 1;
+  });
+  Object.keys(seen).forEach(k => {
+    if (seen[k] > 1) dup.push(k.replace(/^s\d+:/, '') + ' ×' + seen[k]);
+  });
   if (dup.length) {
     bad++;
     console.log('✗ ' + file + ' — 같은 이름의 함수가 두 번 있습니다: ' + dup.join(', '));
@@ -81,7 +98,7 @@ for (const file of files) {
 
   if (bad) { failed++; }
   else console.log('✓ ' + file + ' — 실행되는 스크립트 ' + n + '개 모두 정상 (' + skipped +
-    '개는 데이터/외부라 건너뜀) · 함수 ' + names.length + '개 이름 안 겹침');
+    '개는 데이터/외부라 건너뜀) · 함수 ' + Object.keys(seen).length + '개 이름 안 겹침');
 }
 
 if (failed) {
