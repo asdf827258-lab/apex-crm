@@ -82,7 +82,7 @@ window.supabase={createClient:function(){
   page.on('pageerror', e => errs.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#ckboard', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#ckboard', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());

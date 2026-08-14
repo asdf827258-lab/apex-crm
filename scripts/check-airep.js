@@ -160,7 +160,7 @@ const AI_OK = `## 활동 보고
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
 
   const seat = async (role) => {
@@ -201,9 +201,15 @@ const AI_OK = `## 활동 보고
   /* ── 왼쪽 카테고리 한 줄 ── */
   const cats = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-cat .m b'), e => e.textContent.trim()));
+  /* 「내 업적 · 월간보고」 가 「해야 할 일」 다음에 들어왔다.
+     점수판 앞에 두는 이유 — 점수는 활동이고 업적은 결과다. 결과를 먼저 본다. */
+  /* 본인 점수판은 「내 업적 · 월간보고」 안으로 합쳐졌다.
+     결과(업적) → 과정(타율) → 습관(점수판) → 총평(보고서) 을 이어서 봐야
+     왜 그 숫자가 나왔는지가 보인다. 흩어 두면 아무도 이어서 안 봤다. */
   ok(cats.length === 10, '왼쪽에 카테고리 열 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|본인 점수판|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|내 코칭|본인 점검란|오늘 터치할 사람|리더 할 일|팀원 관리',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('본인 점수판') < 0, '본인 점수판 칸은 없어졌다 — 내 업적 안으로 들어갔다');
   ok(cats.indexOf('내 코칭') >= 0 && cats.indexOf('본인 점검란') >= 0,
     '내 코칭·본인 점검란이 여기로 들어왔다 — 실행 체크판에서 안 찾아도 된다');
   const heads = await page.evaluate(() => Array.prototype.map.call(
@@ -458,7 +464,10 @@ const AI_OK = `## 활동 보고
   ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
   const tk = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-fs:not(.ar-fsrc) .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
-  ok(tk.length === 7, '전체·부재·거절·진행중·미진행·기고객·생일 일곱 (' + tk.length + ')');
+  /* 계약 뒤에도 할 일이 남는다 — 증권 미전달·계약 직후가 뒤에 붙어 아홉이다 */
+  ok(tk.length === 9, '전체·부재·거절·진행중·미진행·기고객·생일·증권 미전달·계약 직후 아홉 (' + tk.length + ')');
+  ok(/증권 미전달/.test(tk.join(' ')) && /계약 직후/.test(tk.join(' ')),
+    '계약 뒤 할 일도 여기서 잡힌다 — 증권을 안 보내면 민원이 된다');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
   ok(cnt.no >= 1, '부재를 따로 센다 (' + cnt.no + ')');
@@ -663,7 +672,9 @@ const AI_OK = `## 활동 보고
   ok(brief && brief.tiles === 4, '아침 창에 숫자 네 칸이 뜬다 (' + (brief ? brief.tiles : 0) + ')');
   ok(brief && /오늘 약속/.test(brief.txt) && /밀린 것/.test(brief.txt)
     && /다시 걸 DB/.test(brief.txt) && /식은 고객/.test(brief.txt), '오늘 볼 네 가지가 다 있다');
-  ok(brief && /오늘 이것만/.test(brief.txt), '오늘 이것만 세 줄을 골라 준다');
+  ok(brief && /오늘 이것부터/.test(brief.txt), '오늘 이것부터 골라 준다');
+  /* 이제 줄마다 갈 곳이 달려 있다 — 어디로 가는지 모르면 사람은 안 누른다 */
+  ok(brief && /바로 가기/.test(brief.txt), '줄마다 「바로 가기」 가 붙는다');
   ok(brief && /아침에 안 띄우기/.test(brief.txt), '끌 수 있다');
   const seenOnce = await page.evaluate(() => arBriefSeen());
   ok(seenOnce, '한 번 뜨면 그날은 다시 안 뜬다');

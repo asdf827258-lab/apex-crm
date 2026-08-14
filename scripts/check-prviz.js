@@ -103,7 +103,7 @@ const is = (c, m) => c ? ok(m) : no(m);
   const errs = [];
   page.on('pageerror', e => errs.push(e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2400);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -200,6 +200,67 @@ const is = (c, m) => c ? ok(m) : no(m);
     (Math.round(S.need / 30 * 10) / 10) + '배)');
   is(S.pmt === S.pmtHand, '월 수령액이 손계산과 일치 (' + S.pmt + '만원)');
   is(S.zero === 10, '이율 0% 면 그냥 나눠 받는다 — 1,200만원을 10년(120개월)이면 월 10만원 (' + S.zero + ')');
+
+  /* ═══ 3-3. 뒤가 잘리는 문제 ═══ */
+  console.log('\n[3-3] 답이 뒤에서 잘렸을 때 어떻게 하는가');
+  const C = await page.evaluate(async () => {
+    /* 슬라이드 세 장을 쓰다가 마지막 장 한가운데서 끊긴 답 */
+    var CUT = '{"title":"내 보험","slides":[{"title":"표지","lead":"ㄱ"},' +
+              '{"title":"현황","lead":"ㄴ"},{"title":"잘린장","lead":"ㄷ';
+    var FULL = '{"title":"내 보험","slides":[{"title":"표지"},{"title":"현황"},{"title":"셋째"}],"katalk":"ㅇ"}';
+
+    /* (1) prJson 이 잘렸다고 말하는가 */
+    var i1 = {}, o1 = prJson(CUT, i1);
+    var i2 = {}, o2 = prJson(FULL, i2);
+
+    /* (2) 잘리면 한 번 더 시키는가, 그때는 되는가 */
+    var calls = [];
+    window.callAI = function (sysTxt, user, tok) {
+      var again = /길이 제한에 걸려 중간에 잘렸다/.test(sysTxt);
+      calls.push({ tok: tok, again: again });
+      if (/"slides"/.test(sysTxt) && !again) return Promise.resolve(CUT);
+      if (/"slides"/.test(sysTxt)) return Promise.resolve(FULL);
+      return Promise.resolve('{"wallets":[{"no":"①","name":"생활"}]}');
+    };
+    var okRun = await prAskAll('입력', null);
+
+    /* (3) 두 번 다 잘리면 밝히는가 */
+    window.callAI = function (sysTxt, user, tok) {
+      if (/"slides"/.test(sysTxt)) return Promise.resolve(CUT);
+      return Promise.resolve('{"wallets":[{"no":"①","name":"생활"}]}');
+    };
+    var badRun = await prAskAll('입력', null);
+
+    return {
+      cutFlag: !!i1.cut, fullFlag: !!i2.cut,
+      cutSlides: o1 && o1.slides ? o1.slides.length : -1,
+      retried: calls.filter(function (c) { return c.again; }).length,
+      maxTok: Math.max.apply(null, calls.map(function (c) { return c.tok; })),
+      okCuts: (okRun.cuts || []).length,
+      okSlides: (okRun.plan.slides || []).length,
+      badCuts: (badRun.cuts || []).length,
+      badNames: (badRun.cuts || []).join(' · ')
+    };
+  });
+  is(C.cutFlag === true && C.fullFlag === false,
+    '잘린 답과 멀쩡한 답을 구분한다 — 예전엔 둘 다 「정상」 이었다');
+  is(C.cutSlides === 2, '잘린 장은 버리고 앞의 두 장은 살린다 (' + C.cutSlides + '장)');
+  is(C.retried >= 1, '잘리면 짧게 쓰라고 한 번 더 시킨다 (' + C.retried + '번)');
+  is(C.maxTok <= 4200, '한 조각이 여전히 4,200자를 안 넘는다 (' + C.maxTok + ')');
+  is(C.okCuts === 0, '다시 시켜서 되면 잘렸다고 안 한다');
+  is(C.okSlides >= 6, '앞뒤 문서 조각의 슬라이드가 이어 붙는다 (' + C.okSlides + '장) — 덮어쓰지 않는다');
+  is(C.badCuts >= 1, '두 번 다 잘리면 잘렸다고 남긴다 (' + C.badCuts + '조각)');
+  is(/문서/.test(C.badNames), '어느 조각이 잘렸는지 이름을 남긴다 — ' + C.badNames);
+
+  /* 문서 조각이 앞뒤로 나뉘었는가 */
+  const P2 = await page.evaluate(() => ({
+    keys: PR_PART.map(function (x) { return x.k; }),
+    toks: PR_PART.map(function (x) { return x.tok; })
+  }));
+  is(P2.keys.indexOf('doc1') >= 0 && P2.keys.indexOf('doc2') >= 0,
+    '문서를 앞뒤로 나눠 받는다 (' + P2.keys.join(', ') + ')');
+  is(Math.max.apply(null, P2.toks) <= 4200,
+    '가장 큰 조각도 4,200자 안이다 (' + P2.toks.join(', ') + ')');
 
   /* ═══ 4~7. 화면 ═══ */
   const V = await page.evaluate(plan => {

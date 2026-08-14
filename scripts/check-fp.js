@@ -59,7 +59,7 @@ window.supabase={createClient:function(){
   const errs = [];
   page.on('pageerror', e => errs.push('main: ' + e.message));
   await page.addInitScript(STUB);
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#home', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2600);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
@@ -114,7 +114,14 @@ window.supabase={createClient:function(){
 
   /* 실제로 열어 본다 — 24장(거절처리)으로 */
   await page.evaluate(() => fpTalkOpen('c24'));
-  await page.waitForTimeout(3200);
+  /* 3.2초를 그냥 기다리면 안 된다. 화법서는 355KB 라 늦게 뜰 때가 있고,
+     재무설계앱을 파일로 뺀 뒤로는 첫 화면이 받아 오는 것이 더 늘었다.
+     실제로 여섯 번에 두 번꼴로 여기서 헛되이 빨간불이 떴다.
+     기다리는 대신 <b>연결됐다는 신호</b>를 기다린다 — 진짜로 안 오면
+     그때는 제대로 실패한다. */
+  try {
+    await page.waitForFunction(() => window.FPT && FPT.ready, { timeout: 20000 });
+  } catch (e) { /* 안 오면 아래 ok() 가 잡는다 */ }
   const tOpen = await page.evaluate(() => ({
     mode: document.body.classList.contains('fptalk-mode'),
     src: (document.getElementById('fpTalkFrame') || {}).src || '',
@@ -194,14 +201,18 @@ window.supabase={createClient:function(){
     return { n: window.__saved.length, kind: r.kind, title: r.title, cid: r.client_id,
       name: f.f_name, age: f.f_age, income: f.f_income, cancer: f.c_cancer,
       kids: ((r.content && r.content.fp && r.content.fp.kids) || []).length,
-      keys: Object.keys(f).length };
+      keys: Object.keys(f).length,
+      hasAdv: Object.keys(f).some(k => k.indexOf('a_') === 0) };
   });
   ok(saved.n === 1 && saved.kind === 'fp_deck', '고객 파일로 한 건 저장됐다');
   ok(saved.cid === 'cl1', '고른 고객에게 붙었다');
   ok(saved.name === '박정우' && saved.age === '47', '입력한 이름·나이가 그대로 담겼다');
   ok(saved.income === '620' && saved.cancer === '5000', '소득·진단금까지 담겼다');
   ok(saved.kids === 2, '자녀 ' + saved.kids + '명도 담겼다');
-  ok(saved.keys >= 40, '입력칸 ' + saved.keys + '개가 통째로 담겼다');
+  /* 설계사 칸(a_name·a_org…)을 없앤 뒤로 아홉 개가 줄었다. 줄어든 게 맞다 —
+     설계사 소개는 「내 소개」 한 곳에서 관리하고, 고객 파일에는 안 섞인다. */
+  ok(saved.keys >= 35, '고객 입력칸 ' + saved.keys + '개가 통째로 담겼다');
+  ok(!saved.hasAdv, '설계사 칸은 고객 파일에 안 섞인다');
   ok(/박정우/.test(saved.title || ''), '제목에 고객 이름이 들어간다 — ' + saved.title);
 
   /* 목록에 뜨는지 */

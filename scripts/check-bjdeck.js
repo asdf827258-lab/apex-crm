@@ -153,7 +153,7 @@ const no = m => { fail++; console.log('  ✗ ' + m); };
 const is = (c, m) => c ? ok(m) : no(m);
 
 async function boot(page) {
-  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#bojang', { waitUntil: 'domcontentloaded' });
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html#bojang', { waitUntil: 'domcontentloaded', timeout: 90000 });
   await page.waitForTimeout(2300);
   await page.evaluate(() => {
     document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());

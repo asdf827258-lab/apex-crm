@@ -178,9 +178,9 @@
       <section class="page" id="page-db">
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
-          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select></div>
+          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option><option value="__nopol__">증권 미전달만</option></select></div>
           <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
-          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
         <div class="card section hidden" id="srcAdminCard">
           <div class="section-head"><div><h3>DB 종류 목록</h3><p>여기 적은 것만 종류 칸에 뜹니다. 한 줄에 하나씩 적으세요. <b>목록은 팀이 같이 씁니다</b> — 여기서 고치면 모든 팀원 화면이 같이 바뀝니다. DB 등록 창에서 「＋ DB 종류 추가」 로 한 개씩 넣을 수도 있습니다.</p></div></div>
@@ -261,6 +261,10 @@
       </div></div>
     <div class="field"><label>지역</label><input id="region" placeholder="순천"></div>
     <div class="field"><label>DB 보고명</label><input id="reportName" value="보장분석 3DB"></div>
+    <div class="field"><label>단계</label><select id="dbStage" onchange="stagePick()"><option value="">자동 (통화 결과로 짐작)</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option></select></div>
+    <div class="field hidden" id="wonField"><label>계약일</label><input type="date" id="contractedAt"></div>
+    <div class="field hidden" id="polField"><label>증권 전달일</label><input type="date" id="policySentAt"></div>
+    <div class="field hidden" id="polNoField"><label>증권번호</label><input id="policyNo" placeholder="증권에 적힌 번호"></div>
     <div class="field full"><label>비고</label><textarea id="dbMemo"></textarea></div>
   </div></div>
   <div class="modal-foot"><button class="btn btn-light" onclick="closeModal('dbModal')">취소</button><button class="btn btn-primary" onclick="saveDb()">저장</button></div>
@@ -316,6 +320,47 @@ function wErr(error,what){
 function badge(v){return `<span class="badge ${{상담:"green",거절:"red",부재:"yellow",미진행:"gray"}[v]||"gray"}">${v||"미진행"}</span>`}
 function getCalls(id){return calls.filter(c=>c.db_id===id).sort((a,b)=>new Date(b.call_at)-new Date(a.call_at))}
 function lastCall(d){return getCalls(d.id)[0]} function result(d){return lastCall(d)?.result||"미진행"}
+/* ── 단계 ──
+   지금까지 이 화면은 단계를 쓰지 않고 마지막 통화 결과에서 짐작했다.
+   그래서 계약이 되어도 「상담」에서 멈췄고, 증권을 보냈는지는 아무 데도
+   안 남았다. 이제 stage 칸을 쓴다.
+
+   손으로 정한 적이 없는 DB 는 예전처럼 결과에서 짐작한다 — 그래야
+   지금까지 쌓인 것이 빈칸으로 보이지 않는다. */
+const STAGES=["미접촉","TA","AP","PC","CS","계약완료","증권전달"];
+const STAGE_C={미접촉:"gray",TA:"yellow",AP:"blue",PC:"blue",CS:"blue",계약완료:"green",증권전달:"green"};
+function stageAuto(d){
+  const r=result(d);
+  if(r==="상담")return "AP";
+  if(r==="거절")return "미접촉";
+  if(r==="부재")return "TA";
+  return "미접촉";
+}
+function stageOf(d){
+  if(!d)return "미접촉";
+  const s=(d.stage||"").trim();
+  return STAGES.indexOf(s)>=0?s:stageAuto(d);
+}
+/* 손으로 정한 단계인가 — 짐작한 것과 구분해서 보여 준다 */
+function stageSet(d){return STAGES.indexOf((d&&d.stage||"").trim())>=0}
+function stageBadge(d){
+  const s=stageOf(d);
+  return `<span class="badge ${STAGE_C[s]||"gray"}"${stageSet(d)?"":' title="아직 손으로 정하지 않아 통화 결과에서 짐작한 값입니다"'}>${s}${stageSet(d)?"":"?"}</span>`;
+}
+/* 계약까지 갔나 — 업적·보고서가 이 기준을 함께 쓴다 */
+function isWon(d){const s=stageOf(d);return s==="계약완료"||s==="증권전달"}
+/* 계약은 됐는데 증권을 아직 안 보낸 사람 — 놓치면 민원이 된다 */
+function needPolicy(d){return stageOf(d)==="계약완료"}
+/* 다음 약속 — dbs.next_appt 를 먼저 본다.
+   마지막 통화에만 기대면, 약속을 잡은 뒤 부재 통화가 한 번 더 들어가는
+   순간 화면에서 약속이 사라졌다. next_appt 는 가장 늦은 약속을 들고 있다. */
+function nextAppt(d){
+  if(!d)return "";
+  const a=d.next_appt||"";
+  let b="";
+  getCalls(d.id).forEach(c=>{if(c.appointment_at&&c.appointment_at>b)b=c.appointment_at});
+  return (a&&b)?(a>b?a:b):(a||b);
+}
 function absentCount(d){return calls.filter(c=>c.db_id===d.id&&c.result==="부재").length}
 /* 접촉 횟수 — 부재만이 아니라 실제로 건 통화 전부 */
 function touchCount(d){return calls.filter(c=>c.db_id===d.id).length}
@@ -589,18 +634,19 @@ function renderDashAttendance(){
 }
 function renderDb(){
   const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
-  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf));
+  const gf=$("stageFilter")?.value||"";
+  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf)&&(!gf||(gf==="__nopol__"?needPolicy(d):stageOf(d)===gf)));
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${touchDots(d)}</td><td>${c?.appointment_at?fmt(c.appointment_at,true):"-"}</td>
+    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="12" class="empty">조회할 DB가 없습니다.</td></tr>`;
+  </tr>`}).join("")||`<tr><td colspan="13" class="empty">조회할 DB가 없습니다.</td></tr>`;
   bulkBarUpd();
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
@@ -702,15 +748,53 @@ function openDb(id=""){
   const d=dbs.find(x=>x.id===id);
   /* 개척 DB 는 본인이 직접 넣는다. 이미 배정된 것도 내 것이면 본인이 연다. */
   if(id&&!canEditDb(d)){toast("내 고객이 아니면 수정할 수 없습니다.");return}
-  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";$("dbModal").classList.add("open")
+  if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";
+  $("dbStage").value=STAGES.indexOf((d?.stage||"").trim())>=0?d.stage:"";
+  $("contractedAt").value=(d?.contracted_at||"").slice(0,10);
+  $("policySentAt").value=(d?.policy_sent_at||"").slice(0,10);
+  $("policyNo").value=d?.policy_no||"";
+  stagePick();
+  $("dbModal").classList.add("open")
+}
+/* 계약까지 갔을 때만 날짜·증권번호를 묻는다 — 안 그러면 칸만 늘어난다 */
+function stagePick(){
+  const s=$("dbStage")?.value||"";
+  const won=(s==="계약완료"||s==="증권전달"),pol=(s==="증권전달");
+  $("wonField")?.classList.toggle("hidden",!won);
+  $("polField")?.classList.toggle("hidden",!pol);
+  $("polNoField")?.classList.toggle("hidden",!won);
+  /* 오늘 계약이라고 고르면 날짜를 미리 채워 준다. 손이 한 번 덜 간다 */
+  if(won&&$("contractedAt")&&!$("contractedAt").value)$("contractedAt").value=today();
+  if(pol&&$("policySentAt")&&!$("policySentAt").value)$("policySentAt").value=today();
 }
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
+  /* 단계는 고른 것만 보낸다. 「자동」이면 null 로 지워서 예전처럼 짐작하게 둔다 */
+  const stg=$("dbStage")?.value||"";
+  payload.stage=STAGES.indexOf(stg)>=0?stg:null;
+  payload.contracted_at=(payload.stage==="계약완료"||payload.stage==="증권전달")?($("contractedAt")?.value||null):null;
+  payload.policy_sent_at=(payload.stage==="증권전달")?($("policySentAt")?.value||null):null;
+  payload.policy_no=(payload.stage==="계약완료"||payload.stage==="증권전달")?(($("policyNo")?.value||"").trim()||null):null;
+  if(payload.stage==="증권전달"&&!payload.contracted_at){toast("증권전달이면 계약일도 적어 주세요.");return}
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
   const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);
   let {error}=await put(payload);
+  /* 단계 칸이 아직 없는 서버 — 단계만 빼고 저장해서 일을 막지 않는다.
+     migration_41 을 안 돌렸을 뿐인데 DB 저장 자체가 막히면 안 된다. */
+  if(error&&/stage|contracted_at|policy_sent_at|policy_no/i.test((error.message||"")+"")&&
+     /column|42703|does not exist|schema cache|constraint/i.test((error.message||"")+"")){
+    const p3=Object.assign({},payload);
+    delete p3.stage;delete p3.contracted_at;delete p3.policy_sent_at;delete p3.policy_no;
+    const r3=await put(p3);
+    if(!r3.error){
+      closeModal("dbModal");await loadAll();
+      toast("DB를 저장했습니다. 단계는 아직 서버에 칸이 없어 빼고 저장했습니다 — migration_41_calls.sql 을 한 번 실행하세요.");
+      return;
+    }
+    error=r3.error;
+  }
   if(error){
     const m=(error.message||"")+"";
     /* 종류 칸 자체가 없는 서버 — 종류만 빼고 저장해서 일을 막지 않는다 */
@@ -774,15 +858,24 @@ async function toClient(id){
     return;
   }
 
-  const r=result(d), c=lastCall(d);
+  const r=result(d), c=lastCall(d), ap=nextAppt(d);
   if(!confirm(`${real} 님을 고객 365일로 넘길까요?\n\n`+
-    `담당 ${pname(d.assigned_to)} · 종류 ${srcOf(d)} · 지금 ${r}\n\n`+
+    `담당 ${pname(d.assigned_to)} · 종류 ${srcOf(d)} · 지금 ${r} · 단계 ${stageOf(d)}\n`+
+    (ap?`잡혀 있는 약속 ${fmt(ap,true)} — 함께 넘어갑니다\n`:"")+`\n`+
     `DB 관리에서는 그대로 남습니다. 고객 365일에서 생일·가족·팩트파인딩 같은 장기 관리가 붙습니다.\n`+
     `서버에는 ${masked} 로만 저장되고 실명은 이 기기에만 남습니다.`))return;
 
   const payload={advisor_id:d.assigned_to,name_masked:masked,consent_status:"none"};
   if(d.phone)payload.phone=d.phone;
+  /* 약속을 같이 들고 간다. 여기서 안 넘기면 넘긴 순간 약속이 사라진다 */
+  if(ap)payload.next_appt=ap;
   let {error}=await sb.from("clients").insert(payload);
+  /* 약속 칸이 아직 없는 서버 — 약속만 빼고 넘긴다. 넘기기 자체를 막지 않는다 */
+  if(error&&/next_appt/i.test((error.message||"")+"")){
+    delete payload.next_appt;
+    ({error}=await sb.from("clients").insert(payload));
+    if(!error)toast("약속 시각은 아직 서버에 칸이 없어 못 넘겼습니다 — migration_42_appt.sql 을 한 번 실행하세요.",3200);
+  }
   if(error&&/phone/i.test((error.message||"")+"")){
     delete payload.phone;
     ({error}=await sb.from("clients").insert(payload));
@@ -820,11 +913,116 @@ async function removeDb(id){
 }
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
-function renderHistory(id){const x=getCalls(id);$("history").innerHTML=x.length?`<div class="section-head"><h3>기존 통화 이력</h3></div><div class="timeline">${x.map(c=>`<div><b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}</b><p>${esc(c.memo||"메모 없음")}</p></div>`).join("")}</div>`:""}
+/* ── 통화 이력 — 고칠 수 있어야 한다 ────────────────────────────
+   지금까지 한 번 남긴 기록은 손댈 수 없었다. 그런데 저장이 오류로
+   두세 번 들어가는 일이 있고, 결과를 잘못 고른 일도 있다.
+   그 기록이 그대로 남으면 타율이 통째로 틀어진다.
+   그래서 <b>본인이 남긴 것</b>은 본인이 고치고 지울 수 있게 한다.  */
+function canEditCall(c){
+  if(!c||!profile)return false;
+  return c.created_by===profile.id||canManage()||isLeader();
+}
+/* 같은 DB 에 같은 결과가 5분 안에 또 들어갔으면 중복으로 본다 */
+function dupCalls(list){
+  const out={},i=[];
+  list.forEach(c=>{
+    const k=c.result+'|'+Math.floor(new Date(c.call_at).getTime()/300000);
+    if(out[k])i.push(c.id); else out[k]=c.id;
+  });
+  return i;
+}
+function renderHistory(id){
+  const x=getCalls(id),box=$("history");
+  if(!box)return;
+  if(!x.length){box.innerHTML="";return}
+  const dups=dupCalls(x.slice().reverse());
+  box.innerHTML=`<div class="section-head"><h3>기존 통화 이력 <span style="font-weight:600;color:var(--muted);font-size:13px">${x.length}건</span></h3>`+
+    (dups.length?`<button class="btn" onclick="cleanDup('${id}')" style="padding:6px 12px;border-radius:9px;border:1px solid #FCA5A5;background:#FEF2F2;color:#B91C1C;font-weight:800;font-size:12px;cursor:pointer">🧹 중복 ${dups.length}건 지우기</button>`:'')+
+    `</div><div class="timeline">${x.map(c=>{
+      const dup=dups.indexOf(c.id)>=0;
+      return `<div${dup?' style="background:#FEF2F2;border-radius:9px;padding:7px 9px;margin:-2px 0"':''}>`+
+        `<b>${badge(c.result)} ${fmt(c.call_at,true)} · ${esc(pname(c.created_by))}`+
+        (dup?' <span class="badge red">중복으로 보임</span>':'')+
+        (c.appointment_at?` <span class="badge green">약속 ${fmt(c.appointment_at,true)}</span>`:'')+
+        `</b><p>${esc(c.memo||"메모 없음")}</p>`+
+        (canEditCall(c)?`<div style="display:flex;gap:6px;margin-top:5px">`+
+          `<button onclick="editCall('${c.id}')" style="padding:4px 10px;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">✏️ 고치기</button>`+
+          `<button onclick="delCall('${c.id}')" style="padding:4px 10px;border:1px solid #FCA5A5;background:#fff;color:#B91C1C;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer">🗑 지우기</button>`+
+          `</div>`:'')+
+        `</div>`;
+    }).join("")}</div>`;
+}
+/* 지우기 — 무엇을 지우는지 보여 주고 묻는다. 되돌릴 수 없다. */
+async function delCall(id){
+  const c=calls.find(x=>x.id===id);
+  if(!c)return;
+  if(!canEditCall(c)){toast("본인이 남긴 기록만 지울 수 있습니다.");return}
+  if(!confirm(`이 통화 기록을 지웁니다.\n\n${c.result} · ${fmt(c.call_at,true)}\n${(c.memo||"메모 없음").slice(0,60)}\n\n되돌릴 수 없습니다. 지울까요?`))return;
+  const {error}=await sb.from("calls").delete().eq("id",id);
+  if(error){wErr(error,"통화기록 삭제");return}
+  await loadAll();
+  const dbId=$("callDbId")?.value||c.db_id;
+  renderHistory(dbId);
+  toast("통화 기록을 지웠습니다.");
+}
+/* 고치기 — 새로 만들지 않고 그 줄을 고친다 */
+let editCallId=null;
+function editCall(id){
+  const c=calls.find(x=>x.id===id);
+  if(!c)return;
+  if(!canEditCall(c)){toast("본인이 남긴 기록만 고칠 수 있습니다.");return}
+  editCallId=id;
+  $("callDbId").value=c.db_id;
+  $("callAt").value=(c.call_at||"").slice(0,16);
+  $("callResult").value=c.result||"부재";
+  $("callIssue").value=c.first_call_issue?"true":"false";
+  $("appointmentAt").value=c.appointment_at?(""+c.appointment_at).slice(0,16):"";
+  $("callMemo").value=c.memo||"";
+  const t=document.querySelector("#callModal h3");
+  if(t)t.textContent="통화 기록 고치기";
+  $("callModal").classList.add("open");
+  renderHistory(c.db_id);
+}
+/* 같은 결과가 5분 안에 겹쳐 들어간 것만 지운다 — 가장 처음 것은 남긴다 */
+async function cleanDup(dbId){
+  const x=getCalls(dbId),ids=dupCalls(x.slice().reverse());
+  if(!ids.length){toast("중복이 없습니다.");return}
+  if(!confirm(`같은 결과가 5분 안에 겹쳐 들어간 ${ids.length}건을 지웁니다.\n가장 먼저 남긴 것은 그대로 둡니다.\n\n되돌릴 수 없습니다. 지울까요?`))return;
+  const {error}=await sb.from("calls").delete().in("id",ids);
+  if(error){wErr(error,"중복 정리");return}
+  await loadAll();renderHistory(dbId);
+  toast(`중복 ${ids.length}건을 지웠습니다.`);
+}
+let savingCall=false;
 async function saveCall(){
-  const resultV=$("callResult").value,app=$("appointmentAt").value;if(resultV==="상담"&&!app){toast("상담 약속일시를 입력해 주세요.");return}
-  const payload={db_id:$("callDbId").value,created_by:profile.id,call_at:new Date($("callAt").value).toISOString(),result:resultV,first_call_issue:$("callIssue").value==="true",appointment_at:app?new Date(app).toISOString():null,memo:$("callMemo").value.trim()};
-  const {error}=await sb.from("calls").insert(payload);if(error)wErr(error,"통화기록 저장");else{closeModal("callModal");await loadAll();toast(`${profile.name} 이름으로 통화기록을 저장했습니다.`)}
+  /* 두 번 눌러 두 줄이 들어가던 것을 막는다 — 중복의 가장 큰 원인이었다 */
+  if(savingCall){toast("저장 중입니다.");return}
+  const resultV=$("callResult").value,app=$("appointmentAt").value;
+  if(resultV==="상담"&&!app){toast("상담 약속일시를 입력해 주세요.");return}
+  if(!$("callAt").value){toast("통화 일시를 넣어 주세요.");return}
+  const payload={db_id:$("callDbId").value,created_by:profile.id,
+    call_at:new Date($("callAt").value).toISOString(),result:resultV,
+    first_call_issue:$("callIssue").value==="true",
+    appointment_at:app?new Date(app).toISOString():null,
+    memo:$("callMemo").value.trim()};
+  savingCall=true;
+  const btn=document.querySelector('#callModal button[onclick*="saveCall"]');
+  if(btn){btn.disabled=true;btn.dataset.t=btn.textContent;btn.textContent="저장 중…"}
+  let error;
+  if(editCallId){
+    /* 고치는 중이면 새로 만들지 않고 그 줄을 고친다 */
+    delete payload.created_by;
+    ({error}=await sb.from("calls").update(payload).eq("id",editCallId));
+  }else{
+    ({error}=await sb.from("calls").insert(payload));
+  }
+  savingCall=false;
+  if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||"저장"}
+  if(error){wErr(error,editCallId?"통화기록 수정":"통화기록 저장");return}
+  const was=editCallId;editCallId=null;
+  const t=document.querySelector("#callModal h3");if(t)t.textContent="통화 기록";
+  closeModal("callModal");await loadAll();
+  toast(was?"통화 기록을 고쳤습니다.":`${profile.name} 이름으로 통화기록을 저장했습니다.`);
 }
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
@@ -963,7 +1161,71 @@ function renderKpi(){
     `<div class="kpi-bar"><span class="bl">상담 전환율</span><span class="bt"><i style="width:${Math.min(100,a.consultRate)}%;background:var(--green)"></i></span><span class="bv">${a.consultRate}%</span></div>`+
     `<div class="kpi-bar"><span class="bl">부재율</span><span class="bt"><i style="width:${Math.min(100,a.absentRate)}%;background:var(--yellow)"></i></span><span class="bv">${a.absentRate}%</span></div>`+
     '<div class="notice" style="margin-top:13px">타율 읽는 법 — <b>접촉률</b>이 낮으면 "전화를 안 한 것", <b>상담 전환율</b>이 낮으면 "멘트를 손볼 것", <b>부재율</b>이 높으면 "시간대를 바꿀 것"부터 점검하세요.</div>'+
-    srcTblHtml(target);
+    srcTblHtml(target)+
+    '<div id="perfBody"></div>';
+  renderPerf(target);
+}
+
+/* ── 월간 업적 — 타율 밑에 이어 붙인다 ────────────────────────────
+   타율은 「얼마나 움직였나」 이고 업적은 「얼마를 올렸나」 다.
+   따로 두면 둘을 이어서 볼 수 없다. 그래서 한 화면에 이어 붙인다.
+   숫자는 앱(TFA 업무관리)에서 넣은 것을 그대로 읽어 온다.            */
+let perfCache = null;
+function perfYm(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2);}
+async function renderPerf(target){
+  const box=$("perfBody");if(!box)return;
+  const ym=perfYm();
+  if(!perfCache){
+    box.innerHTML='<div class="notice" style="margin-top:13px">월간 업적을 읽는 중입니다…</div>';
+    try{
+      const r=await sb.from('monthly_perf').select('*').eq('period',ym);
+      perfCache=(r&&r.data)||[];
+      if(r&&r.error)perfCache='ERR:'+(r.error.message||'');
+    }catch(e){perfCache='ERR:'+((e&&e.message)||'');}
+  }
+  if(typeof perfCache==='string'){
+    /* 실패를 기억해 두면 SQL 을 나중에 돌려도 새로고침 전까지 안 뜬다.
+       그래서 <b>다시 읽기</b> 를 준다. */
+    box.innerHTML='<div class="card section" style="margin-top:14px;border:2px solid #FCA5A5;background:#FEF2F2">'+
+      '<h3 style="margin:0 0 6px;color:#991B1B">💰 월간 업적 — 아직 못 읽습니다</h3>'+
+      '<p style="margin:0 0 10px;font-size:13px;color:#B91C1C;line-height:1.7">'+
+      'Supabase → SQL Editor 에서 <b>migration_40_perf.sql</b> 을 한 번 실행하셔야 합니다.<br>'+
+      '<span style="font-size:12px;opacity:.8">'+esc(perfCache.slice(4,120))+'</span></p>'+
+      '<button class="btn" onclick="perfCache=null;renderKpi()" '+
+      'style="padding:9px 16px;border-radius:10px;border:0;background:#DC2626;color:#fff;font-weight:800;cursor:pointer">'+
+      '↻ SQL 실행했습니다 · 다시 읽기</button></div>';
+    return;
+  }
+  const rows=perfCache.filter(x=>target.indexOf(x.owner_id)>=0);
+  if(!rows.length){
+    box.innerHTML='<div class="card section" style="margin-top:14px">'+
+      '<h3 style="margin:0 0 6px">💰 '+ym+' 월간 업적</h3>'+
+      '<p style="margin:0 0 10px;color:var(--muted);font-size:13px;line-height:1.7">'+
+      '이 달에 적힌 업적이 아직 없습니다.<br>'+
+      'APEX 앱 → <b>TFA 업무관리 → 💰 내 업적 · 월간보고</b> 에서 목표와 실적을 넣으면 여기에 뜹니다.</p>'+
+      '<button class="btn" onclick="perfCache=null;renderKpi()" '+
+      'style="padding:8px 15px;border-radius:10px;border:1px solid var(--line);background:#fff;font-weight:700;cursor:pointer">'+
+      '↻ 다시 읽기</button></div>';
+    return;
+  }
+  const nm=id=>{const p=profiles.find(x=>x.id===id);return p?p.name:'담당자';};
+  const won=v=>Number(v||0).toLocaleString();
+  let tg=0,ta=0;
+  const list=rows.map(r=>{
+    const g=Number(r.goal_prem||0),a=Number(r.act_prem||0);
+    tg+=g;ta+=a;
+    return {name:nm(r.owner_id),g,a,pct:g>0?Math.round(a/g*100):0,sub:!!r.submitted_at};
+  }).sort((x,y)=>y.pct-x.pct||y.a-x.a);
+  const tot=tg>0?Math.round(ta/tg*100):0;
+  box.innerHTML='<div class="card section" style="margin-top:14px">'+
+    '<h3 style="margin:0 0 4px">💰 '+ym+' 월간 업적 <span style="font-size:13px;font-weight:600;color:var(--muted)">— 월초보험료 기준</span></h3>'+
+    '<p style="margin:0 0 12px;color:var(--muted);font-size:13px">목표 '+won(tg)+'만 · 실적 '+won(ta)+'만 · 달성률 <b>'+tot+'%</b></p>'+
+    list.map(o=>
+      '<div class="kpi-bar"><span class="bl">'+esc(o.name)+(o.sub?' ✅':'')+'</span>'+
+      '<span class="bt"><i style="width:'+Math.min(100,o.pct)+'%;background:'+
+      (o.pct>=100?'var(--green)':(o.pct>=70?'var(--yellow)':'var(--red)'))+'"></i></span>'+
+      '<span class="bv">'+won(o.a)+'만 / '+o.pct+'%</span></div>').join('')+
+    '</div>';
 }
 function renderStats(){
   const body=$("statsBody");if(!body)return;
