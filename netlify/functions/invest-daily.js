@@ -12,6 +12,11 @@
    월간과 다른 점은 기간뿐이다: 월간은 period='2026-07', 일간은 '2026-07-31'.
    같은 표에 들어가지만 형식이 달라 서로 덮어쓰지 않는다.
 
+   ⚠️ 이 함수는 주소로 열 수 없다. netlify.toml 에 schedule 이 걸린 함수는
+      Netlify 가 HTTP 호출을 403 으로 막는다. 아래 manual 분기는 그래서 실제로는
+      타지 않는다 — 로컬(netlify dev)에서 돌려 볼 때만 쓰인다.
+      손으로 한 번 돌려 봐야 하면 Netlify 대시보드 → Functions → invest-daily → Run.
+
    필요한 환경변수
      SUPABASE_SERVICE_ROLE_KEY (필수) · SUPABASE_URL (선택)
      ANTHROPIC_API_KEY 또는 GEMINI_API_KEY (없으면 숫자만 담긴 리포트가 만들어진다)
