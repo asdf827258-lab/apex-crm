@@ -2860,6 +2860,11 @@ function render() {
       <div class="card" style="margin-top:12px;margin-bottom:0;border:1px solid var(--ink-7);box-shadow:none">
         <div class="card-hd"><div class="card-tag">HEALTH INSURANCE · NPS GAP</div><div class="card-title">재산 반영 건강보험료 & 국민연금 감소 리스크</div></div>
         <div class="card-body">
+          <div class="hb orange" style="margin-top:0;margin-bottom:10px">
+            ⚠️ <b>아래 건보료 숫자는 「예시」입니다.</b> 공단 산식이 아니라 상담용으로 단순화한 어림값이고,
+            요율도 해마다 바뀝니다. <b>고객에게 금액으로 말씀하지 마시고</b> 「이런 방향으로 늘어날 수 있다」
+            까지만 쓰십시오. 실제 금액은 건강보험공단 모의계산으로 확인해야 합니다.
+          </div>
           <div class="mg m4" style="margin-bottom:10px">
             <div class="mb ${healthIncreaseMan>20?'red':healthIncreaseMan>5?'gold':'green'}"><div class="ml">은퇴 후 지역건보 추정</div><div class="mv ${healthIncreaseMan>20?'r':healthIncreaseMan>5?'o':'g'}">${fmt(localHealthMan)}<small>만/월</small></div><div class="mu">재산·연금소득 반영</div></div>
             <div class="mb"><div class="ml">재산 보험료분</div><div class="mv">${fmt(propertyHealthMan)}<small>만/월</small></div><div class="mu">순재산 ${fmt(netPropertyForHealth)}만원 기준</div></div>
@@ -2867,10 +2872,10 @@ function render() {
             <div class="mb blue"><div class="ml">연금권 방어 납입</div><div class="mv b">${fmt(npsPreserveCost)}<small>만/월</small></div><div class="mu">기준소득월액 ${fmt(npsPayBase)}만원</div></div>
           </div>
           <div class="g2">
-            <div class="hb ${healthIncreaseMan>0?'orange':'green'}" style="margin-top:0">🏥 <b>건보료 솔루션:</b> 은퇴 후 직장가입자에서 지역가입자로 바뀌면 재산·연금소득이 보험료에 반영될 수 있습니다. 부동산 순재산이 큰 경우 <b>배우자 직장가입 피부양자 가능성, 임대소득 발생 여부, 주택연금 전환, 금융소득 분산</b>을 먼저 검토하세요. 현재 근로자 부담 추정 ${fmt(employeeHealthNowMan)}만원 대비 상승분은 ${fmt(healthIncreaseMan)}만원/월입니다.</div>
+            <div class="hb ${healthIncreaseMan>0?'orange':'green'}" style="margin-top:0">🏥 <b>건보료 솔루션 (예시):</b> 은퇴 후 직장가입자에서 지역가입자로 바뀌면 재산·연금소득이 보험료에 반영될 수 있습니다. 부동산 순재산이 큰 경우 <b>배우자 직장가입 피부양자 가능성, 임대소득 발생 여부, 주택연금 전환, 금융소득 분산</b>을 먼저 검토하세요. 현재 근로자 부담 추정 ${fmt(employeeHealthNowMan)}만원 대비 상승분은 ${fmt(healthIncreaseMan)}만원/월입니다.</div>
             <div class="hb ${npsMonthlyLoss>0?'blue':'green'}" style="margin-top:0">🏦 <b>국민연금 솔루션:</b> 소득 공백으로 납부예외가 길어지면 가입기간이 줄어 예상연금이 낮아질 수 있습니다. ${npsRemainYears>0?`현재부터 만 60세 전까지 <b>${npsRemainYears}년</b>은 임의가입·추납·임의계속가입 전략으로 월 ${fmt(npsMonthlyLoss)}만원 감소분을 방어하는 구간입니다.`:'현재 나이 기준 납부 공백 위험은 낮지만, 과거 납부예외·체납 기간이 있으면 추납 가능성을 확인하세요.'}</div>
           </div>
-          <div style="font-size:10px;color:var(--ink-5);line-height:1.6;margin-top:8px">※ 건강보험료는 실제 공단 산식·피부양자 요건·소득 종류·재산 과표·장기요양보험료에 따라 달라집니다. 본 화면은 상담 전 리스크를 드러내기 위한 추정치입니다.</div>
+          <div style="font-size:10px;color:var(--ink-5);line-height:1.6;margin-top:8px">※ 이 화면의 건강보험료는 <b>예시</b>입니다. 소득 7.09%·재산 단순 비례로 어림잡고 장기요양보험료를 얹은 값이라, 공단이 쓰는 <b>재산 구간 점수표·피부양자 요건·재산공제·소득 종류별 반영률</b>과 다릅니다. 요율과 공제액도 해마다 바뀝니다. 상담에서는 금액이 아니라 <b>방향</b>만 말씀하시고, 실제 금액은 건강보험공단 모의계산으로 확인하십시오.</div>
         </div>
       </div>
     `;
@@ -6693,7 +6698,7 @@ function renderFinalReport(){
   const actions = [
     `<b>1. 현금흐름:</b> 월 잉여금 ${fmtM(d.surplus)} 기준으로 보험료·대출·저축의 우선순위를 다시 배치합니다.`,
     `<b>2. 연금:</b> 은퇴 목표 월 ${fmtM(d.futureTarget)} 대비 예상 월 ${fmtM(d.totalPension)}입니다. 부족액 ${fmtM(d.pensionGap)}은 개인연금/IRP/연금저축으로 보완합니다.`,
-    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다.`,
+    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다. <b>(두 값 모두 예시 — 공단·공단 모의계산으로 확인)</b>`,
     `<b>4. 부동산·대출:</b> DSR ${d.dsr}%, LTV ${d.ltv}%입니다. 상환액이 부담되면 금리·기간·정책대출 가능성을 먼저 봅니다.`,
     `<b>5. 상속·증여:</b> 예상 상속세 ${fmtM(d.inheritTax)}, 납부재원 부족 ${fmtM(d.inheritCashGap)}입니다. 사전증여와 종신보험 납부재원을 분리합니다.`,
     `<b>6. 다음 미팅:</b> 증권/보험/대출 자료를 확인해 실제 수치로 다시 계산한 뒤 실행안 A/B/C로 결정합니다.`
@@ -6713,7 +6718,7 @@ function renderFinalReport(){
     <div class="feedback-summary"><div class="fs-title">종합 평가</div><div class="fs-text">${headline}</div></div>
     <div class="final-section-title">고객 상황 평가</div>
     ${finalEvalCard('① 현금흐름 평가', cashLevel==='good'?'양호':cashLevel==='warn'?'점검':'주의', cashLevel, `월 소득 ${fmtM(d.totalIncome)} 중 필수지출 ${fmtM(d.essential)}, 선택지출 ${fmtM(d.choice)}, 저축·투자 ${fmtM(d.saving)}입니다. 현재 월 잉여금은 ${fmtM(d.surplus)}이며, 고객님의 계약 가능성은 “남는 돈”보다 “재배치 가능한 돈”을 찾는 데 있습니다.`)}
-    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다.`)}
+    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다. <b>이 두 금액은 상담용 예시</b>이며 실제 값은 건강보험공단·국민연금공단 모의계산으로 확인해야 합니다.`)}
     ${finalEvalCard('③ 부동산·대출 평가', debtLevel==='good'?'안정':debtLevel==='warn'?'관리':'부담', debtLevel, `주택가치 ${fmtM(d.houseVal)}, 대출잔액 ${fmtM(d.mortgage)}, 순주택자산 ${fmtM(d.equity)}입니다. 추정 LTV는 ${d.ltv}%, DSR은 ${d.dsr}%이며 월 원리금은 약 ${fmtM(d.mortgagePay)}입니다. 대출은 가능 여부보다 “소득이 흔들려도 버틸 수 있는가”를 기준으로 판단해야 합니다.`)}
     ${finalEvalCard('④ 상속·증여 평가', inheritLevel==='good'?'낮음':inheritLevel==='warn'?'준비':'필요', inheritLevel, `예상 상속재산은 ${fmtM(d.totalEstate)}이며, 상담용 추정 상속세는 ${fmtM(d.inheritTax)}입니다. 종신보험 사망보험금 등을 반영해도 납부재원 부족액이 ${fmtM(d.inheritCashGap)}으로 계산됩니다. 사전증여 예정액 ${fmtM(d.inhGift)}은 10년 합산 규칙을 고려해 나눠서 설계하는 것이 좋습니다.`)}
     <div class="final-section-title">${d.riskType} 성향 기준 추천 펀드/ETF 라인업 2~3개</div>
