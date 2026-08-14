@@ -745,11 +745,27 @@ exports.handler = async function (event) {
       let tok = '';
       try { tok = await tossToken(); }
       catch (e) {
+        const msg = String(e.message || e);
+        /* "IP 가 허용 목록에 없다" 는 답이 오면, 정작 그 IP 가 뭔지를 알려주지 않는다.
+           등록해야 할 값을 모르면 손을 쓸 수가 없어서 여기서 직접 물어본다.
+           Netlify 함수는 나가는 IP 가 고정이 아닐 수 있으니 여러 번 불러 보고
+           같은 값이면 등록, 매번 달라지면 등록으로는 못 푼다는 판단이 선다. */
+        let outbound = null;
+        if (/IP|ip address|access_denied|403/i.test(msg)) {
+          try {
+            const r = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(6000) });
+            if (r.ok) outbound = (await r.json()).ip || null;
+          } catch (_) { /* 못 알아내도 진단은 계속한다 */ }
+        }
         return {
           statusCode: 200, headers: cors,
           body: JSON.stringify({
-            ok: false, meta: meta, step: 'token', message: String(e.message || e),
-            hint: 'token_path 와 token_style(form/json/basic) 을 문서에 맞게 고치세요. 호출 IP 등록(Netlify 아웃바운드 IP)도 확인하세요.'
+            ok: false, meta: meta, step: 'token', message: msg,
+            outboundIp: outbound,
+            hint: outbound
+              ? ('이 서버가 나갈 때 쓰는 IP 는 ' + outbound + ' 입니다. 토스 허용 IP 에 넣어 보세요. '
+                 + '이 진단을 몇 번 더 불러 IP 가 매번 같은지 확인하세요 — 매번 다르면 등록으로는 풀리지 않습니다.')
+              : 'token_path 와 token_style(form/json/basic) 을 문서에 맞게 고치세요. 호출 IP 등록도 확인하세요.'
           })
         };
       }
