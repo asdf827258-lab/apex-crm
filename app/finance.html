@@ -1599,6 +1599,8 @@ a { color: inherit; text-decoration: none; }
   <div class="tab-pane" id="tab-pension">
     <div class="sec-hd">
       <div><div class="sec-tag">PENSION SIMULATION</div><div class="sec-title">연금 포트폴리오 & 수령액 시뮬레이션</div></div>
+      <button type="button" class="report-safe-btn dark" onclick="apexPresent('w')"
+        title="이 화면의 고객 값을 그대로 넘겨 연금 발표자료를 엽니다">▶ 연금 발표자료</button>
     </div>
 
     <!-- 연금 종합 -->
@@ -9161,14 +9163,73 @@ function apexDeckUrl(track){
   q.set('start', v('s_rage','65'));
   var pen = parseFloat(v('s_pension','0'));          /* 연금저축/월 (만원) */
   if(pen > 0) q.set('prem', String(Math.round(pen)));
+  /* 물가상승률은 발표에서 따로 잡는다. 계산 탭 값(s_inf)을 기본으로 하되,
+     발표용 칸(apex_inf)에 적어 두면 그것이 이긴다 — 고객 앞에서는 보수적으로
+     잡고 싶을 때가 있고, 그때 계산 탭을 건드리면 뒤 숫자가 전부 흔들린다. */
+  q.set('inf', String(apexInf()));
   q.set('track', track || apexTrack());
   q.set('cid', 'fin-' + Date.now());
   return APEX_DECK_URL + '?' + q.toString();
 }
+/* 발표에 쓸 물가상승률 — 적어 두면 이 기기에 남는다 */
+function apexInf(){
+  var e=document.getElementById('apexInf');
+  var v=e?parseFloat(e.value):NaN;
+  if(!isFinite(v)){
+    try{ v=parseFloat(localStorage.getItem('apex_present_inf')); }catch(x){}
+  }
+  if(!isFinite(v)){
+    var t=document.getElementById('s_inf');
+    v=t?parseFloat(t.value):3;
+  }
+  return isFinite(v)?v:3;
+}
+function apexInfSave(){
+  var e=document.getElementById('apexInf'); if(!e)return;
+  try{ localStorage.setItem('apex_present_inf', e.value); }catch(x){}
+  apexPaintBtn();
+}
+
+/* ── 통합상담을 <b>앱 안 창</b>으로 ────────────────────────────
+   전에는 새 탭으로 튀어 나갔다. 상담 중에 화면이 바뀌면 흐름이 끊기고,
+   태블릿에서는 돌아오는 길을 못 찾는 분이 있었다. 이제 이 화면 위에
+   덮어서 연다. 「새 창으로」 도 함께 둔다 — 두 화면으로 쓰실 때가 있다. */
 function apexPresent(track, presentMode){
   var url = apexDeckUrl(track);
   if(presentMode !== false) url += '&present=1';
-  window.open(url, 'apexDeck');
+  apexOpenModal(url);
+}
+function apexOpenModal(url){
+  apexCloseModal();
+  var w=document.createElement('div');
+  w.id='apexDeckModal';
+  w.style.cssText='position:fixed;inset:0;z-index:9000;background:#08080A;display:flex;flex-direction:column';
+  w.innerHTML=
+    '<div style="flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 14px;'+
+      'background:#0C0C0E;border-bottom:1px solid rgba(212,185,120,.24)">'+
+      '<span style="font-size:11px;letter-spacing:.28em;color:rgba(212,185,120,.85);font-weight:800">APEX 통합상담</span>'+
+      '<span style="flex:1"></span>'+
+      '<button type="button" id="apexDeckNew" style="padding:6px 13px;border-radius:999px;cursor:pointer;'+
+        'border:1px solid rgba(212,185,120,.42);background:transparent;color:#EBDFC4;font-size:12px;font-weight:700">새 창으로</button>'+
+      '<button type="button" id="apexDeckX" style="padding:6px 15px;border-radius:999px;cursor:pointer;'+
+        'border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#F3EEE3;font-size:12px;font-weight:800">닫기 ✕</button>'+
+    '</div>'+
+    '<iframe id="apexDeckFrame" src="'+url.replace(/"/g,'&quot;')+'" '+
+      'style="flex:1;width:100%;border:0;background:#fff" '+
+      'allow="clipboard-write; fullscreen"></iframe>';
+  document.body.appendChild(w);
+  document.body.style.overflow='hidden';
+  var x=document.getElementById('apexDeckX'); if(x) x.onclick=apexCloseModal;
+  var nw=document.getElementById('apexDeckNew');
+  if(nw) nw.onclick=function(){ window.open(url,'apexDeck'); };
+  document.addEventListener('keydown', apexEsc);
+}
+function apexEsc(e){ if(e && e.key==='Escape') apexCloseModal(); }
+function apexCloseModal(){
+  var w=document.getElementById('apexDeckModal');
+  if(w && w.parentNode) w.parentNode.removeChild(w);
+  document.body.style.overflow='';
+  document.removeEventListener('keydown', apexEsc);
 }
 function apexPaintBtn(){
   var b = document.getElementById('apexPresentBtn');
@@ -9207,8 +9268,15 @@ function apexWrapSwitchTab(){
       '#apexPresentBtn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(26,86,219,.5)}'+
       '#apexPresentBtn .apx-i{font-size:16px;line-height:1}'+
       '#apexPresentBtn .apx-s{display:block;font-size:10.5px;font-weight:600;opacity:.78;margin-top:2px}'+
-      '@media print{#apexPresentBtn{display:none!important}}'+
-      '@media(max-width:640px){#apexPresentBtn{right:12px;bottom:12px;padding:11px 15px;font-size:13.5px}}';
+      '#apexInfBox{position:fixed;right:22px;bottom:76px;z-index:8998;display:flex;align-items:center;gap:6px;'+
+        'background:#fff;border:1px solid #E3E7EC;border-radius:999px;padding:6px 12px;'+
+        'box-shadow:0 6px 18px rgba(15,23,42,.12);font-size:11.5px;font-weight:700;color:#42506A}'+
+      '#apexInfBox input{width:46px;border:none;border-bottom:1px solid #C8A25B;background:transparent;'+
+        'font-size:13px;font-weight:800;text-align:right;color:#0F172A;padding:1px 2px}'+
+      '#apexInfBox input:focus{outline:none;border-bottom-width:2px}'+
+      '@media print{#apexPresentBtn,#apexInfBox{display:none!important}}'+
+      '@media(max-width:640px){#apexPresentBtn{right:12px;bottom:12px;padding:11px 15px;font-size:13.5px}'+
+        '#apexInfBox{right:12px;bottom:66px;padding:5px 10px;font-size:10.5px}}';
     document.head.appendChild(css);
     var b = document.createElement('button');
     b.id = 'apexPresentBtn';
@@ -9218,6 +9286,23 @@ function apexWrapSwitchTab(){
                   '<span class="apx-s">고객 데이터 그대로 전달</span></span>';
     b.onclick = function(){ apexPresent(); };
     document.body.appendChild(b);
+
+    /* 발표에 쓸 물가상승률 — 단추 위에 붙인다. 고객 앞에서는 보수적으로
+       잡고 싶을 때가 있는데, 계산 탭을 건드리면 뒤 숫자가 전부 흔들린다. */
+    var inf=document.createElement('div');
+    inf.id='apexInfBox';
+    inf.innerHTML='<label for="apexInf">발표 물가상승률</label>'+
+      '<input id="apexInf" type="number" step="0.1" min="0" max="15">'+
+      '<span>%</span>';
+    document.body.appendChild(inf);
+    var ii=document.getElementById('apexInf');
+    if(ii){
+      var saved=null;
+      try{ saved=localStorage.getItem('apex_present_inf'); }catch(x){}
+      var base=document.getElementById('s_inf');
+      ii.value=(saved!=null&&saved!=='')?saved:((base&&base.value)||'3');
+      ii.oninput=apexInfSave;
+    }
     apexPaintBtn();
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
