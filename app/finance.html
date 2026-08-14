@@ -3687,7 +3687,7 @@ var IC_ASSUME={etf:7,va:6,usd:3.5,dep:2.5,tax:15.4,
   usdEarly:7,usdEarlyY:5,usdDrag:0.3}; /* 달러보험: 동일 개념 */
 var IC={pay:400,age:38,fam:1,years:20,risk:'중립형',job:'직장가입자',goal:'노후자금',cash:0,save:0,fee:5};
 var VC={pay:50,add:0,years:20,rate:6,fee:5,efee:12,eyrs:7,addfee:2,arate:0.7,
-        dpay:35,drate:3.5,dfee:3,defee:7,deyrs:5,darate:0.3,usd:1380,usdt:1500,move:10};
+        dpay:35,dyrs:10,dtot:20,dret:118,usd:1380,usdt:1500,move:10};
 var IC_VIEW='bal', VC_VIEW='sim';
 
 /* ── 공통 유틸 ── */
@@ -4135,11 +4135,55 @@ function vcVaAccum(base,add,years,rate){
   return bal;
 }
 /* 달러보험 — 원화 납입 → 달러 적립 → 만기 환율로 원화 환산 */
+/* ── 달러보험 — 공시 환급률로 판단한다 ────────────────────────
+   전에는 적립이율 · 계약관리비용 · 계약체결비용 · 부과기간 · 적립금
+   연차감 다섯 칸을 받아 사업비를 안에서 흉내 냈다. 그런데 설계사가
+   손에 들고 있는 것은 그 다섯 개가 아니라 <b>상품 공시 예시의
+   환급률</b> 한 줄이다. 다섯 칸을 짐작으로 채우면 그 짐작이 그대로
+   고객에게 나가는데, 공시 환급률은 회사가 낸 숫자다.
+
+   그래서 세 개만 받는다 — 환급률 · 납입기간 · 총 거치기간.
+
+   다만 환급률 하나로는 <b>다른 기간과 견줄 수가 없다.</b> 변액과
+   나란히 놓으려면 같은 잣대가 필요하다. 그래서 세 값에서 실질 연
+   수익률을 거꾸로 풀어 두고, 비교는 그 이율로 한다.
+   ───────────────────────────────────────────────────────── */
+
+/* 월 m 씩 py년 넣고 ty년째에 찾을 때 환급률이 R% 가 되려면 연 몇 %인가.
+   FV = m·[((1+i)^n1 −1)/i]·(1+i)^n2 = m·12·py·(R/100) 을 푼다.
+   식으로는 안 풀려서 반씩 좁혀 간다 (이분법). 월 납입액과는 무관하다. */
+function vcUsdImplied(){
+  var py=Math.max(0.5,+VC.dyrs||0), ty=Math.max(py,+VC.dtot||0), R=Math.max(0,+VC.dret||0);
+  if(!R)return -0.95;
+  var n1=Math.round(py*12), n2=Math.round((ty-py)*12), tgt=n1*(R/100);
+  var fv=function(a){
+    var i=Math.pow(1+a,1/12)-1;
+    if(Math.abs(i)<1e-12)return n1;
+    return ((Math.pow(1+i,n1)-1)/i)*Math.pow(1+i,n2);
+  };
+  var lo=-0.95, hi=0.60, k, mid;
+  if(fv(lo)>tgt)return lo;
+  if(fv(hi)<tgt)return hi;
+  for(k=0;k<80;k++){ mid=(lo+hi)/2; if(fv(mid)<tgt)lo=mid; else hi=mid; }
+  return (lo+hi)/2;
+}
+/* 달러보험 적립 — 원화로 넣고 원화로 돌려받는다.
+   years 가 총 거치기간과 같으면 <b>공시 환급률 그대로</b> 나온다. */
 function vcUsdAccum(mKrw,years,rateNow,rateTgt){
   if(mKrw<=0||rateNow<=0)return 0;
-  var mUsd=mKrw*10000/rateNow;
-  var fvUsd=icAccum(mUsd,years,VC.drate,Math.max(0,VC.dfee),Math.max(0,VC.defee),Math.max(0,VC.deyrs),Math.max(0,VC.darate));
-  return fvUsd*rateTgt/10000;
+  var py=Math.max(0.5,+VC.dyrs||0), ty=Math.max(py,+VC.dtot||0);
+  var yy=Math.max(0,Math.min(60,years||0));
+  /* 견주는 기간이 이 상품의 총 거치기간과 같으면 환급률을 그대로 쓴다.
+     굳이 이율로 되돌리면 반올림 때문에 공시와 한두 푼 어긋나 보인다. */
+  if(Math.abs(yy-ty)<0.01){
+    var paid=mKrw*Math.round(py*12);
+    return paid*(Math.max(0,+VC.dret||0)/100)*(rateTgt/rateNow);
+  }
+  var a=vcUsdImplied(), i=Math.pow(1+a,1/12)-1;
+  var n1=Math.min(Math.round(py*12),Math.round(yy*12));
+  var n2=Math.max(0,Math.round(yy*12)-n1);
+  var f=(Math.abs(i)<1e-12)?n1:((Math.pow(1+i,n1)-1)/i)*Math.pow(1+i,n2);
+  return mKrw*f*(rateTgt/rateNow);
 }
 function vcBox(title,tag,color,fields){
   return '<div class="card" style="margin-bottom:12px;border-left:4px solid '+color+'"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+'</div></div><div class="card-body">'+
@@ -4159,15 +4203,30 @@ function vcInputsHtml(){
       icNumF('arate','적립금 연 차감(%)',VC.arate,'최저보증·운용보수',"vcIn"))+
     vcBox('💵 달러보험 — 이 칸만 채우세요','DOLLAR INSURANCE','#059669',
       icNumF('dpay','월 납입(만원)',VC.dpay,'원화 기준',"vcIn")+
-      icNumF('drate','달러 적립이율(%)',VC.drate,'공시이율 가정',"vcIn")+
-      icNumF('dfee','계약관리비용(%)',VC.dfee,'전 납입기간',"vcIn")+
-      icNumF('defee','계약체결비용(%)',VC.defee,'초기에만',"vcIn")+
-      icNumF('deyrs','체결비용 부과기간(년)',VC.deyrs,'통상 5~7년',"vcIn")+
-      icNumF('darate','적립금 연 차감(%)',VC.darate,'',"vcIn")+
+      icNumF('dret','환급률(%)',VC.dret,'상품 공시 예시에서 그대로',"vcIn")+
+      icNumF('dyrs','납입기간(년)',VC.dyrs,'몇 년 넣는가',"vcIn")+
+      icNumF('dtot','총 거치기간(년)',VC.dtot,'가입~수령 · 납입기간 포함',"vcIn")+
       icNumF('usd','현재 원/달러',VC.usd,'',"vcIn")+
       icNumF('usdt','만기 예상 환율',VC.usdt,'',"vcIn")+
       icNumF('move','환율 변동 폭(±%)',VC.move,'시나리오용',"vcIn"))+
-  '</div>';
+  '</div>'+vcUsdNoteHtml();
+}
+/* 세 칸으로 무엇이 정해지는지 한 줄로 밝힌다 — 짐작이 아니라 공시 값이라는 것도 */
+function vcUsdNoteHtml(){
+  var py=Math.max(0.5,+VC.dyrs||0), ty=Math.max(py,+VC.dtot||0);
+  var paid=Math.max(0,+VC.dpay||0)*Math.round(py*12);
+  var back=paid*(Math.max(0,+VC.dret||0)/100);
+  var a=vcUsdImplied()*100;
+  var warn=((+VC.dtot||0)<(+VC.dyrs||0));
+  return '<div style="margin-top:-4px;margin-bottom:12px;background:#F0FDF4;border:1px solid #BBF7D0;'+
+    'border-radius:11px;padding:12px 14px;font-size:11.5px;color:#166534;line-height:1.8">'+
+    '💵 <b>달러보험은 공시 환급률로 판단합니다.</b> 사업비를 짐작으로 넣지 않습니다 — '+
+    '상품 공시 예시에 적힌 환급률을 그대로 옮겨 적으시면 됩니다.<br>'+
+    '월 '+icMan(Math.max(0,+VC.dpay||0))+' × '+icP1(py)+'년 = <b>'+icMan(paid)+'</b> 넣고, '+
+    ty+'년째 환급률 '+icP1(+VC.dret||0)+'% → <b>'+icMan(back)+'</b> (환율 변동 전)<br>'+
+    '이 조건은 <b>실질 연 '+icP1(a)+'%</b> 짜리입니다. 변액과 나란히 견줄 때 이 이율을 씁니다.'+
+    (warn?'<br><b style="color:#B45309">⚠️ 총 거치기간이 납입기간보다 짧습니다.</b> 총 거치기간은 가입부터 수령까지이며 납입기간을 포함합니다.':'')+
+    '</div>';
 }
 
 /* ── ① 변액 시뮬레이션 (사업비 · 손익분기) ── */
@@ -4302,7 +4361,7 @@ function vcMix(){
   }
   h+='<div class="card"><div class="card-hd"><div class="card-tag">ROLE SPLIT</div><div class="card-title">역할을 나눠 담는다</div></div><div class="card-body">'+
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px">'+rh+'</div>'+
-    '<div style="margin-top:10px;font-size:11px;color:#7A8493;line-height:1.7">※ 시나리오의 펀드 수익률·환율 변동 폭은 <b>입력한 가정치</b>이며 실제 시장과 다를 수 있습니다. 두 상품 모두 <b>사업비를 반영</b>해 계산했고(변액: 체결 '+icP1(VC.efee)+'%·'+VC.eyrs+'년 + 관리 '+icP1(VC.fee)+'%, 달러: 체결 '+icP1(VC.defee)+'%·'+VC.deyrs+'년 + 관리 '+icP1(VC.dfee)+'%), 달러보험 적립이율은 연 '+icP1(VC.drate)+'%로 가정했습니다. 환율은 예측 대상이 아니라 <b>분산 대상</b>이라는 점을 함께 설명하세요.</div>'+
+    '<div style="margin-top:10px;font-size:11px;color:#7A8493;line-height:1.7">※ 시나리오의 펀드 수익률·환율 변동 폭은 <b>입력한 가정치</b>이며 실제 시장과 다를 수 있습니다. 변액은 <b>사업비를 반영</b>해 계산했고(체결 '+icP1(VC.efee)+'%·'+VC.eyrs+'년 + 관리 '+icP1(VC.fee)+'%), 달러보험은 <b>상품 공시 환급률</b>('+icP1(VC.dret)+'% · '+VC.dyrs+'년 납 · '+VC.dtot+'년 거치, 실질 연 '+icP1(vcUsdImplied()*100)+'%)로 계산했습니다. 환율은 예측 대상이 아니라 <b>분산 대상</b>이라는 점을 함께 설명하세요.</div>'+
   '</div></div>';
   host.innerHTML=h;
 }
@@ -8288,7 +8347,10 @@ function apxVD(m, years, opt){
   var D={rate:3.5, fee:3, efee:7, eyrs:5, drag:0.3, usd:1380, usdt:1500}; /* 달러 */
   var bankRate = opt.bank!=null ? opt.bank : 2.8;
   try{ if(window.VC){ V.rate=VC.rate; V.fee=VC.fee; V.efee=VC.efee; V.eyrs=VC.eyrs; V.drag=VC.arate;
-                      D.rate=VC.drate; D.fee=VC.dfee; D.efee=VC.defee; D.eyrs=VC.deyrs; D.drag=VC.darate;
+                      /* 달러는 이제 공시 환급률에서 되푼 실질 이율을 쓴다.
+                         사업비는 그 안에 이미 들어 있으므로 여기서 또 빼면 두 번 빼는 셈이다. */
+                      D.rate=(typeof vcUsdImplied==='function')?(vcUsdImplied()*100):D.rate;
+                      D.fee=0; D.efee=0; D.eyrs=0; D.drag=0;
                       D.usd=VC.usd; D.usdt=VC.usdt; } }catch(e){}
 
   var paid = m*Math.round(years*12);
