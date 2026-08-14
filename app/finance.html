@@ -5538,8 +5538,68 @@ function filterFunds(listId, cat) {
   });
 }
 
-function renderMlife()  { renderInsurancePage(MLIFE_INFO, MLIFE_FUNDS, MLIFE_STRATEGY_BY_RISK, 'mlife-overview', 'mlife-strategy', 'mlife-funds'); }
-function renderCardif() { renderInsurancePage(CARDIF_INFO, CARDIF_FUNDS, CARDIF_STRATEGY_BY_RISK, 'cardif-overview', 'cardif-strategy', 'cardif-funds'); }
+/* ── 펀드 라인업 정보수집 ──────────────────────────────────────
+   펀드는 해마다 들어오고 빠진다. 코드에 박아 둔 목록으로 상담하면
+   없어진 펀드를 권하게 된다. AI 로 지금 라인업을 모으고, 대표님이
+   확인해 저장한 것을 목록에 얹는다 — 원래 목록을 지우지는 않는다. */
+function fundKey(co){ return 'fund_'+co; }
+function fundExtra(co){
+  var o=infoGet(fundKey(co));
+  if(!o||!o.rows)return [];
+  return o.rows.map(function(r){
+    return {name:(r.name||'').trim(), category:(r.category||'수집').trim()||'수집',
+            type:'collected', rec:['안정형','안정추구형','중립형','적극투자형','공격투자형'],
+            ret1:r.ret1||'-', ret3:r.ret3||'-', risk:r.risk||'-',
+            desc:(r.desc||'수집한 값입니다. 공시로 확인하세요')};
+  }).filter(function(f){return f.name;});
+}
+function fundBarHtml(co,label){
+  var o=infoGet(fundKey(co));
+  return '<div style="margin:0 0 12px;background:#F8FAFC;border:1px solid #E3E7EC;border-radius:12px;padding:12px 14px">'+
+    '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#42506A">'+label+' 라인업</span>'+
+      '<button type="button" id="fundBtn-'+co+'" onclick="fundCollect(\''+co+'\')" '+
+        'style="padding:7px 14px;border-radius:9px;border:none;cursor:pointer;background:#1D4ED8;color:#fff;font-size:12.5px;font-weight:800">🔎 정보수집</button>'+
+      (o&&o.rows&&o.rows.length?('<button type="button" onclick="fundReset(\''+co+'\')" '+
+        'style="padding:7px 12px;border-radius:9px;cursor:pointer;border:1px solid #E3E7EC;background:#fff;color:#6B7280;font-size:12px;font-weight:700">수집분 지우기</button>'+
+        '<span style="font-size:12px;font-weight:700;color:#166534">수집 '+o.rows.length+'개가 목록에 얹혀 있습니다</span>'):'')+
+      '<span id="fundMsg-'+co+'" style="font-size:12px;font-weight:700;color:#6B7280"></span>'+
+    '</div>'+ infoStampHtml(fundKey(co),label+' 펀드 라인업')+'</div>';
+}
+function fundCollect(co){
+  var name=(co==='mlife')?'메트라이프생명 변액연금':'카디프생명 변액연금';
+  var btn=document.getElementById('fundBtn-'+co), msg=document.getElementById('fundMsg-'+co);
+  if(btn){btn.disabled=true;btn.textContent='찾는 중…';}
+  if(msg)msg.textContent='';
+  var sys='당신은 국내 변액보험 펀드 라인업을 정리하는 조사원입니다. '+
+    '확실히 아는 것만 적고 모르면 그 줄을 빼십시오. 지어내지 마십시오. '+
+    'JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. '+
+    '각 원소는 {"name":"펀드명","category":"주식형/채권형/혼합형/글로벌 등","ret1":"1년 수익률","ret3":"3년 수익률","risk":"위험등급","desc":"한 줄 설명"} 입니다. 최대 12개.';
+  infoAI(sys, name+'의 현재 펀드 라인업을 정리해 주세요.', 2600).then(function(txt){
+    var rows=infoRows(txt);
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(!rows){if(msg){msg.style.color='#B91C1C';msg.textContent='표를 못 읽었습니다 — 다시 시도해 주세요';}return;}
+    infoSet(fundKey(co),rows,name);
+    if(co==='mlife')renderMlife(); else renderCardif();
+  },function(err){
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(msg){msg.style.color='#B91C1C';msg.textContent=(err&&err.message)||'가져오지 못했습니다';}
+  });
+}
+function fundReset(co){
+  try{localStorage.removeItem('apex_info_'+fundKey(co));}catch(e){}
+  if(co==='mlife')renderMlife(); else renderCardif();
+}
+function renderMlife()  {
+  renderInsurancePage(MLIFE_INFO, MLIFE_FUNDS.concat(fundExtra('mlife')), MLIFE_STRATEGY_BY_RISK, 'mlife-overview', 'mlife-strategy', 'mlife-funds');
+  var h=document.getElementById('mlife-funds');
+  if(h) h.insertAdjacentHTML('afterbegin', fundBarHtml('mlife','메트라이프'));
+}
+function renderCardif() {
+  renderInsurancePage(CARDIF_INFO, CARDIF_FUNDS.concat(fundExtra('cardif')), CARDIF_STRATEGY_BY_RISK, 'cardif-overview', 'cardif-strategy', 'cardif-funds');
+  var h=document.getElementById('cardif-funds');
+  if(h) h.insertAdjacentHTML('afterbegin', fundBarHtml('cardif','카디프'));
+}
 
 
 /* ═══════════════════════════════════════════
@@ -9058,14 +9118,170 @@ window.addEventListener('message',function(e){
 <script>
 
 /* 🎓 교육자금 탭 — 나라가 주는 돈으로 유학자금을 만든다 (정밀 계산은 통합상담 e트랙) */
+/* ── 교육자금 · 우리 지역 지원금 ────────────────────────────── */
+function eduRegion(){
+  var e=document.getElementById('eduRegion');
+  if(e&&e.value.trim())return e.value.trim();
+  var o=infoGet('edu');
+  if(o&&o.note)return o.note;
+  var r=document.getElementById('s_region');
+  return (r&&r.value.trim())||'전국';
+}
+function eduInfoBarHtml(){
+  var o=infoGet('edu'), reg=eduRegion();
+  return '<div style="margin:0 0 14px;background:#F8F5FF;border:1px solid #E6E0F2;border-radius:14px;padding:14px 16px">'+
+    '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">'+
+      '<span style="font-size:11px;font-weight:800;letter-spacing:.14em;color:#5B34AD">우리 지역 지원금</span>'+
+      '<input id="eduRegion" placeholder="순천시" value="'+String(reg).replace(/"/g,'&quot;')+'" '+
+        'style="flex:0 1 180px;min-width:120px;padding:7px 10px;border:1px solid #E6E0F2;border-radius:9px;font-size:13px;font-weight:700">'+
+      '<button type="button" id="eduInfoBtn" onclick="eduCollect()" '+
+        'style="padding:8px 15px;border-radius:9px;border:none;cursor:pointer;background:#5B34AD;color:#fff;font-size:13px;font-weight:800">🔎 정보수집</button>'+
+      (o&&o.rows&&o.rows.length?('<button type="button" onclick="eduReset()" '+
+        'style="padding:8px 13px;border-radius:9px;cursor:pointer;border:1px solid #E6E0F2;background:#fff;color:#6B7280;font-size:12.5px;font-weight:700">기본값으로</button>'):'')+
+      '<span id="eduInfoMsg" style="font-size:12px;font-weight:700;color:#6B7280"></span>'+
+    '</div>'+
+    '<div id="eduInfoEdit"></div>'+
+    infoStampHtml('edu','지역·국가 지원금')+
+  '</div>';
+}
+function eduCollect(){
+  var reg=eduRegion(), btn=document.getElementById('eduInfoBtn'), msg=document.getElementById('eduInfoMsg');
+  if(btn){btn.disabled=true;btn.textContent='찾는 중…';}
+  if(msg)msg.textContent='';
+  var sys='당신은 대한민국 출산·양육 지원금을 정리하는 조사원입니다. '+
+    '아는 것만 적고 모르면 그 줄을 빼십시오. 지어내지 마십시오. '+
+    '반드시 JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. '+
+    '각 원소는 {"name":"제도 이름","amount":"총액 또는 월액","note":"조건 한 줄"} 입니다. '+
+    '전국 공통 제도를 먼저, 그다음 해당 지역 제도를 적습니다. 최대 8개.';
+  var usr='지역: '+reg+'\n이 지역에 사는 가정이 아이 한 명을 낳아 만 8세가 될 때까지 '+
+    '받을 수 있는 국가·지자체 지원금을 정리해 주세요. 금액은 "1,800만원" 처럼 적습니다.';
+  infoAI(sys,usr,2200).then(function(txt){
+    var rows=infoRows(txt);
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(!rows){if(msg){msg.style.color='#B91C1C';msg.textContent='표를 못 읽었습니다 — 다시 시도해 주세요';}return;}
+    infoSet('edu',rows,reg);
+    if(msg){msg.style.color='#166534';msg.textContent=rows.length+'개를 담았습니다 — 아래에서 확인·수정하세요';}
+    renderEduFund();
+    setTimeout(eduEdit,60);
+  },function(err){
+    if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
+    if(msg){msg.style.color='#B91C1C';msg.textContent=(err&&err.message)||'가져오지 못했습니다';}
+  });
+}
+/* 저장한 값을 그 자리에서 고친다 — AI 가 틀린 것을 그대로 쓰면 안 된다 */
+function eduEdit(){
+  var host=document.getElementById('eduInfoEdit'); if(!host)return;
+  var o=infoGet('edu'); if(!o||!o.rows||!o.rows.length){host.innerHTML='';return;}
+  host.innerHTML='<div style="margin-top:11px;background:#fff;border:1px solid #E6E0F2;border-radius:11px;padding:10px 12px">'+
+    o.rows.map(function(r,i){
+      var f=function(k,ph,w){return '<input data-ei="'+i+'" data-ek="'+k+'" placeholder="'+ph+'" '+
+        'value="'+String(r[k]||'').replace(/"/g,'&quot;')+'" style="flex:'+w+';min-width:0;padding:6px 8px;'+
+        'border:none;border-bottom:1px solid #EDE9F6;font-size:12.5px;font-weight:700">';};
+      return '<div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">'+
+        f('name','제도 이름','0 0 150px')+f('amount','금액','0 0 110px')+f('note','조건','1')+
+        '<button type="button" onclick="eduDel('+i+')" style="flex:none;width:26px;height:26px;border-radius:7px;'+
+        'border:1px solid #EDE9F6;background:#fff;color:#9AA2AD;cursor:pointer">−</button></div>';
+    }).join('')+
+    '<button type="button" onclick="eduSave()" style="margin-top:6px;padding:7px 14px;border-radius:8px;border:none;'+
+    'cursor:pointer;background:#0F172A;color:#fff;font-size:12.5px;font-weight:800">고친 대로 저장</button></div>';
+}
+function eduSave(){
+  var o=infoGet('edu'); if(!o)return;
+  var L=document.querySelectorAll('#eduInfoEdit input'),i,e;
+  for(i=0;i<L.length;i++){
+    e=L[i];
+    var ix=+e.getAttribute('data-ei'), k=e.getAttribute('data-ek');
+    if(o.rows[ix])o.rows[ix][k]=e.value;
+  }
+  infoSet('edu',o.rows,eduRegion());
+  renderEduFund();
+  var m=document.getElementById('eduInfoMsg');
+  if(m){m.style.color='#166534';m.textContent='저장했습니다';}
+}
+function eduDel(i){
+  var o=infoGet('edu'); if(!o)return;
+  o.rows.splice(i,1); infoSet('edu',o.rows,eduRegion());
+  renderEduFund(); setTimeout(eduEdit,50);
+}
+function eduReset(){
+  try{localStorage.removeItem('apex_info_edu');}catch(e){}
+  renderEduFund();
+}
+
+/* ══════════════ 정보수집 ══════════════
+   지역 지원금도 펀드 라인업도 해마다 바뀐다. 코드에 박아 두면 이듬해엔
+   틀린 값을 고객에게 말하게 된다. 그렇다고 손으로 다 적기엔 품이 크다.
+
+   그래서 AI 가 초안을 뽑고 <b>대표님이 보고 고쳐서 저장</b>한다.
+   저장한 값은 이 기기에 남고, 화면에는 <b>언제 수집한 값인지</b>와
+   「확인 후 쓰세요」를 함께 적는다 — AI 가 틀릴 수 있기 때문이다.
+   ══════════════════════════════════════ */
+var INFO_ASK={};
+/* 계산기는 창 안이라 AI 키에 손이 안 닿는다. 앱에 대신 물어본다. */
+function infoAI(system,user,max){
+  return new Promise(function(res,rej){
+    if(!window.parent||window.parent===window){rej(new Error('앱 안에서 열어 주세요'));return;}
+    var id='ia'+Date.now()+Math.floor(Math.random()*1e6);
+    INFO_ASK[id]={res:res,rej:rej};
+    var t=setTimeout(function(){
+      if(INFO_ASK[id]){delete INFO_ASK[id];rej(new Error('시간이 초과됐습니다 — 다시 시도해 주세요'));}
+    },70000);
+    INFO_ASK[id].t=t;
+    try{window.parent.postMessage({type:'apexFinAI',id:id,system:system,user:user,max:max},location.origin);}
+    catch(e){delete INFO_ASK[id];clearTimeout(t);rej(e);}
+  });
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinAI:ok')return;
+  if(e.origin!==location.origin)return;
+  var a=INFO_ASK[d.id]; if(!a)return;
+  delete INFO_ASK[d.id]; clearTimeout(a.t);
+  if(d.err)a.rej(new Error(d.err)); else a.res(d.text||'');
+},false);
+
+/* AI 가 돌려준 글에서 표(JSON)만 꺼낸다. 앞뒤로 말이 붙어 와도 견딘다 */
+function infoRows(txt){
+  var t=''+(txt||'');
+  var i=t.indexOf('['), j=t.lastIndexOf(']');
+  if(i<0||j<i)return null;
+  try{
+    var a=JSON.parse(t.slice(i,j+1));
+    return (a&&a.length)?a:null;
+  }catch(e){return null;}
+}
+function infoGet(key){
+  try{var raw=localStorage.getItem('apex_info_'+key);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function infoSet(key,rows,note){
+  try{
+    localStorage.setItem('apex_info_'+key,JSON.stringify({
+      rows:rows,note:note||'',at:new Date().toISOString().slice(0,16).replace('T',' ')}));
+    return true;
+  }catch(e){return false;}
+}
+/* 「언제 수집했고 확인은 대표님 몫」 — 숫자 옆에 반드시 붙인다 */
+function infoStampHtml(key,what){
+  var o=infoGet(key);
+  return '<div style="margin-top:9px;font-size:11px;color:#7A8493;line-height:1.7">'+
+    (o&&o.at?('※ '+what+' — <b>'+o.at+'</b> 에 수집한 값입니다. ')
+            :('※ '+what+' — 아직 수집 전이라 <b>기본값</b>입니다. '))+
+    'AI 가 모은 초안이라 <b>틀릴 수 있습니다.</b> 고객에게 말씀하시기 전에 '+
+    '해당 기관 공고로 확인하시고, 다르면 표에서 고쳐 저장하세요.</div>';
+}
+
 function renderEduFund(){
   var box = document.getElementById('tab-edufund');
   if(!box) return;
   function v(id,d){ var e=document.getElementById(id); return e&&e.value!==''?e.value:d; }
   var nm = v('s_name','고객님');
-  var C = [['첫만남이용권','200~300만원','출생 시 1회 (첫째 200 / 둘째↑ 300)'],
-           ['부모급여','1,800만원','0세 월 100만 + 1세 월 50만'],
-           ['아동수당','1,080만원~','만 9세 미만 월 10만 (지역별 우대 有)']];
+  /* 수집해 둔 값이 있으면 그것을 쓴다. 없으면 아래 기본값 */
+  var SAVED=infoGet('edu');
+  var C = (SAVED&&SAVED.rows&&SAVED.rows.length)
+    ? SAVED.rows.map(function(r){return [r.name||'',r.amount||'',r.note||''];})
+    : [['첫만남이용권','200~300만원','출생 시 1회 (첫째 200 / 둘째↑ 300)'],
+       ['부모급여','1,800만원','0세 월 100만 + 1세 월 50만'],
+       ['아동수당','1,080만원~','만 9세 미만 월 10만 (지역별 우대 有)']];
   var cards = C.map(function(c){
     return '<div style="background:#F5F3FA;border:1px solid #E6E0F2;border-radius:14px;padding:18px 18px 16px">'+
       '<div style="font-size:11.5px;font-weight:800;color:#5B34AD;letter-spacing:.02em">'+c[0]+'</div>'+
@@ -9081,6 +9297,7 @@ function renderEduFund(){
    '아이 한 명이 만 8세가 될 때까지 국가에서 받는 돈은 <b style="color:#0D1117">첫째·수도권 기준 3,080만원</b>입니다. '+
    '이미 통장에 들어오는 돈이라 <b style="color:#0D1117">새로 나가는 보험료가 없습니다.</b> '+
    '문제는 이 돈이 생활비에 섞여 대부분 그대로 사라진다는 것입니다.</p>'+
+   eduInfoBarHtml()+
    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">'+cards+
    '<div style="background:linear-gradient(135deg,#2e1c56,#140d28);border-radius:14px;padding:18px 18px 16px;color:#fff">'+
    '<div style="font-size:11.5px;font-weight:800;color:#C9B3F5;letter-spacing:.02em">첫째·수도권 합계</div>'+

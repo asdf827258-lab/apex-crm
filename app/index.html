@@ -34856,6 +34856,28 @@ function osFinOpen(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;var inputs=(x.con
     else if(tries<10)setTimeout(push,600);})();
 }
 function osFinAskSave(){var f=$('finFrame');if(!f||!f.contentWindow){toast('계산기가 아직 로드되지 않았습니다');return;}try{f.contentWindow.postMessage({type:'apexFinCollect'},'*');}catch(e){toast('저장 요청 실패');}}
+/* ── 계산기가 AI 를 쓰게 해 주는 다리 ────────────────────────────
+   계산기(app/finance.html)는 창 안에서 돌아서 AI 키에 손이 안 닿는다.
+   그래서 「정보수집」 같은 일은 이 앱에 대신 물어본다.
+
+   ★ 우리가 띄운 그 틀에서 온 쪽지만 받는다. 예전에 아무 창이나 보낸
+     쪽지로 고객 파일에 글이 저장된 적이 있다. 같은 실수를 안 한다. */
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinAI')return;
+  if(e.origin!==location.origin)return;
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
+  var reply=function(o){
+    try{fr.contentWindow.postMessage(Object.assign({type:'apexFinAI:ok',id:d.id},o),location.origin);}catch(x){}
+  };
+  if(typeof callAI!=='function'){reply({err:'AI 를 쓸 수 없습니다'});return;}
+  if(typeof aiReady==='function'&&!aiReady()){reply({err:'설정에서 AI 키를 먼저 연결하세요'});return;}
+  callAI((''+(d.system||'')).slice(0,4000),(''+(d.user||'')).slice(0,8000),
+         Math.min(4000,+d.max||2500),'brain')
+    .then(function(out){reply({text:''+(out||'')});},
+          function(err){reply({err:(err&&err.message)||'AI 오류'});});
+});
 window.addEventListener('message',function(e){
   var d=e&&e.data;if(!d||d.type!=='apexFinSave')return;
   /* 계산기는 srcdoc 이라 주소로 가리기 어렵다. 대신 <b>우리가 띄운 그 틀에서 온 것</b>만 받는다.
