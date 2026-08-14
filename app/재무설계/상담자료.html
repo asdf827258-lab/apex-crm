@@ -240,6 +240,15 @@ body.form-mode{background:#fff}
 #sec1 .sec1-cash{margin-top:14px;padding:13px 16px;border-radius:3px;background:#FBF8F1;
   border:1px solid #EFE6D2;font-size:13px;font-weight:700;color:#6B6252;line-height:1.75}
 #sec1 .sec1-cash b{color:#171512}
+/* 계산기로 넘어가는 자리 — 질문(여기)에서 진단(팩트체크)으로 끊기지 않게 */
+#sec1 .tofin-row{margin-top:12px}
+#sec1 .tofin{display:block;width:100%;text-align:left;cursor:pointer;font-family:inherit;
+  padding:13px 16px;border-radius:3px;border:1px solid #D6CDB8;background:#fff;
+  transition:border-color .15s,background .15s}
+#sec1 .tofin:hover{border-color:#A38F63;background:#FDFBF6}
+#sec1 .tofin-t{display:block;font-size:13.5px;font-weight:800;color:#7A6740;letter-spacing:-.02em}
+#sec1 .tofin-s{display:block;font-size:11.5px;font-weight:600;color:#8B8574;margin-top:3px;line-height:1.5}
+@media print{#sec1 .tofin-row{display:none}}
 /* 좌우 두 칸 — 가족은 왼쪽, 돈은 오른쪽. 한 화면에 같이 들어온다.
    좁으면 예전처럼 한 칸으로 쌓인다. */
 #sec1 .sec1-cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
@@ -1010,6 +1019,12 @@ svg{display:block;width:100%;height:auto;overflow:visible}
       <div class="field"><label>대출 잔여</label><div class="inwrap"><input id="f_loanyr" class="has-unit" type="number" value="15"><span class="unit">년</span></div></div>
     </div>
     <div class="sec1-cash" id="sec1Cash"></div>
+    <div class="tofin-row">
+      <button type="button" class="tofin" onclick="apexToFin()">
+        <span class="tofin-t">계산기에서 이어서 보기 →</span>
+        <span class="tofin-s">여기 적은 것을 그대로 들고 넘어가 팩트체크부터 시작합니다</span>
+      </button>
+    </div>
     <div class="divider"></div>
     <p class="mini-title">임신·출산 계획</p>
     <div class="chips">
@@ -4774,6 +4789,34 @@ $('show').addEventListener('touchend',function(e){
       if(el){try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(x){el.scrollIntoView();}}
     }
   });
+  /* sec1 의 「계산기에서 이어서 보기」.
+     여기(질문)에서 팩트체크(진단)로 갈 때 메뉴로 돌아 나갔다 들어와야 했다.
+     상담 중에 메뉴를 헤매는 그 10초가 고객에게는 준비 부족으로 보인다.
+     적은 것을 통째로 들고 넘긴다 — 계산기에서 다시 입력하지 않는다. */
+  /* 계산기의 상담 순서 4단계(아픈 곳)를 여기서 정해 준다.
+     「가장 먼저 듣고 싶은 것」을 이미 골랐는데 계산기에서 또 고르게 하지 않는다. */
+  var FOCUS2PAIN={'노후·연금':'pension','보장·의료':'insurance','자녀 교육·결혼':'edufund',
+                  '저축·투자':'invest','세금·절세':'inherit','상속·증여':'inherit'};
+  var WORRY2PAIN={'대출 상환 부담':'realestate','자녀 교육비 부담':'edufund',
+                  '아프면 치료비 감당이 안 될까봐':'insurance',
+                  '노후 생활비가 부족할까봐':'pension'};
+  function painGuess(){
+    var s=null,i;
+    try{ s=window.sel; }catch(x){}
+    if(s&&s.focus) for(i=0;i<s.focus.length;i++) if(FOCUS2PAIN[s.focus[i]]) return FOCUS2PAIN[s.focus[i]];
+    if(s&&s.worries) for(i=0;i<s.worries.length;i++) if(WORRY2PAIN[s.worries[i]]) return WORRY2PAIN[s.worries[i]];
+    return 'pension';
+  }
+
+  window.apexToFin=function(){
+    if(!(window.parent&&window.parent!==window)){
+      alert('앱 안에서 열었을 때만 계산기로 이어집니다.\n\n메뉴 → 상담 도구 → 재무설계 상담자료 로 열어 주세요.');
+      return;
+    }
+    try{ window.parent.postMessage({t:'apex:tofin',data:snap(),pain:painGuess()},ORG); }
+    catch(x){ alert('계산기로 넘기지 못했습니다. 새로고침 후 다시 시도해 주세요.'); }
+  };
+
   function hello(){
     try{if(window.parent&&window.parent!==window)window.parent.postMessage({t:'apex:ready'},ORG);}catch(x){}
   }
