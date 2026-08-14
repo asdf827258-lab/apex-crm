@@ -723,14 +723,22 @@ exports.handler = async function (event) {
 
     /* ── 토스증권 연결 진단 — 어디서 막히는지 원문 그대로 보여준다 ────── */
     if (kind === 'toss-probe') {
-      const miss = tossWhyNot();
-      if (miss.length) {
+      /* 순서가 거꾸로였다. 전에는 paths.quote 까지 다 채워야 토큰을 시도했는데,
+         시세 경로는 토큰이 나온 뒤에야 확인할 수 있다. 그래서 키 발급이 제대로
+         됐는지조차 알 수 없었다. 토큰에 필요한 것만 먼저 막고, 시세 경로는
+         토큰이 나온 다음에 따진다. */
+      const cfgT = tossCfg(), keyT = tossKeys(), blockers = [];
+      if (!keyT.id)  blockers.push('환경변수 TOSS_CLIENT_ID');
+      if (!keyT.sec) blockers.push('환경변수 TOSS_CLIENT_SECRET');
+      if (!cfgT.base)       blockers.push('config/market.json → providers.toss.base');
+      if (!cfgT.token_path) blockers.push('config/market.json → providers.toss.token_path');
+      if (blockers.length) {
         return {
           statusCode: 200, headers: cors,
           body: JSON.stringify({
             ok: false, meta: meta, step: 'config',
-            missing: miss,
-            hint: '위 항목을 채운 뒤 다시 호출하세요. base/token_path/paths.quote 는 승인받은 developers.tossinvest.com 문서에 적힌 값을 그대로 넣습니다.'
+            missing: blockers,
+            hint: '토큰 발급에 필요한 것부터 채우세요. 시세 경로(paths.quote)는 토큰이 나온 뒤에 확인합니다.'
           })
         };
       }
@@ -742,6 +750,18 @@ exports.handler = async function (event) {
           body: JSON.stringify({
             ok: false, meta: meta, step: 'token', message: String(e.message || e),
             hint: 'token_path 와 token_style(form/json/basic) 을 문서에 맞게 고치세요. 호출 IP 등록(Netlify 아웃바운드 IP)도 확인하세요.'
+          })
+        };
+      }
+      /* 여기까지 왔으면 키는 맞다. 남은 건 시세 경로뿐이라고 분명히 말해 준다. */
+      if (!(cfgT.paths || {}).quote) {
+        return {
+          statusCode: 200, headers: cors,
+          body: JSON.stringify({
+            ok: false, meta: meta, step: 'quote-config', tokenIssued: true,
+            message: '토큰 발급 성공 — 키는 제대로 꽂혔습니다.',
+            missing: ['config/market.json → providers.toss.paths.quote'],
+            hint: '이제 시세 경로만 채우면 끝입니다. kind=toss-discover 를 부르면 후보를 두들겨 찾아 줍니다.'
           })
         };
       }
