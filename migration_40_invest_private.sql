@@ -200,14 +200,26 @@ end $$;
 
 notify pgrst, 'reload schema';
 
-/* ── ⑦ 확인 ──────────────────────────────────────────────────────────── */
+/* ── ⑦ 확인 ────────────────────────────────────────────────────────────
+   컬럼 이름을 따옴표로 감싼다. 브라우저 자동번역이 한글 별칭을 건드려
+   "독서판정함수" 같은 엉뚱한 머리글이 나오는 걸 줄인다.
+
+   ⚠️ to_regproc 을 쓰면 안 된다. 그건 인자 목록을 못 읽어서
+      to_regproc('f(uuid,uuid)') 가 함수가 멀쩡히 있어도 null 을 돌려준다.
+      실제로 이 자리에서 한 번 틀렸다. 시그니처로 찾을 때는 to_regprocedure 다. */
 select
   exists(select 1 from information_schema.columns
           where table_schema='public' and table_name='invest_accounts'
-            and column_name='private')                        as 개인계좌칸,
-  to_regproc('public.invest_can_read(uuid,uuid)')  is not null as 읽기판정함수,
-  to_regproc('public.invest_can_write(uuid,uuid)') is not null as 쓰기판정함수,
-  to_regproc('public.invest_brief_can_read(uuid)') is not null as 브리핑판정함수,
+            and column_name='private')                              as "개인계좌칸(t면정상)",
+  (select count(*) from pg_proc p
+     join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname='public'
+      and p.proname in ('invest_can_read','invest_can_write','invest_brief_can_read')
+  )                                                                 as "판정함수(3이면정상)",
   (select count(*) from pg_policies
-    where schemaname='public' and tablename like 'invest_%'
-      and cmd='SELECT')                                        as 읽기정책수;
+    where schemaname='public' and qual like '%invest_can_read%')    as "새정책적용(6이상)",
+  (select coalesce(bool_and(coalesce(private,false) = false), true)
+     from public.invest_accounts)                                   as "기존계좌_공개유지(t)",
+  (select qual from pg_policies
+    where schemaname='public' and tablename='invest_briefs'
+      and cmd='SELECT')                                             as "브리핑정책";
