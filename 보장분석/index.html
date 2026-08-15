@@ -18,8 +18,11 @@
        · 광고심의필 번호와 유효기간
        · 개인정보 보유기간 일수 (동의 문구 안)
        · 개인정보처리방침 링크 · 카카오톡 주소 → 아래 SITE
-       · 상담 사례 두 건의 실제 내용과 산정 근거
+       · 상담 사례 두 건의 실제 수치와 산정 근거 (막대 그래프의 data-w 도 함께)
      채울 자리 전체 목록은 docs/광고/보장분석_심의제출.md 에 있습니다.
+
+     화면에 나오는 통계는 전부 공공 출처이며 그래프 아래에 출처와 기준시점을
+     적어 두었습니다. 숫자를 고치면 출처 줄도 함께 고쳐야 합니다.
 
      신청은 config.js 의 Supabase 설정이 있으면 신청함(web_leads)으로 들어갑니다.
      설정이 없으면 다른 연락 방법을 안내합니다 — 신청이 조용히 사라지지 않습니다.
@@ -28,7 +31,7 @@
 <script>document.documentElement.className+=' js';</script>
 <style>
 :root{
-  --paper:#F1F3F6; --surface:#FFFFFF; --surface-2:#F6F8FA; --surface-3:#ECEFF3;
+  --paper:#F1F3F6; --surface:#FFFFFF; --surface-2:#F6F8FA; --surface-3:#EAEEF3;
   --ink:#0F1720; --ink-2:#4A5665; --ink-3:#7B8797;
   --hair:#E5E9EE; --line:#D6DCE4; --line-2:#BEC7D2;
   --navy:#0B1D33; --navy-2:#173B63; --navy-ink:#F4F7FB;
@@ -36,6 +39,7 @@
   --teal:#17705C; --teal-soft:rgba(23,112,92,.10);
   --clay:#A93F33; --clay-soft:rgba(169,63,51,.09);
   --accent:#0B1D33; --accent-fg:#FFFFFF; --link:#173B63;
+  --c1:#17325C; --c2:#4A7BB0; --c3:#A97C33; --c4:#17705C;
   --sh-1:0 1px 2px rgba(15,23,32,.05);
   --sh-2:0 2px 4px rgba(15,23,32,.04), 0 12px 28px -16px rgba(15,23,32,.28);
   --sh-3:0 4px 8px rgba(15,23,32,.06), 0 26px 50px -22px rgba(15,23,32,.40);
@@ -53,6 +57,7 @@
     --teal:#4CBB9B; --teal-soft:rgba(76,187,155,.13);
     --clay:#E0776A; --clay-soft:rgba(224,119,106,.13);
     --accent:#D2A257; --accent-fg:#12181F; --link:#D2A257;
+    --c1:#9BBBE0; --c2:#5E8DC4; --c3:#D2A257; --c4:#4CBB9B;
     --sh-1:0 1px 2px rgba(0,0,0,.5);
     --sh-2:0 2px 4px rgba(0,0,0,.4), 0 14px 30px -18px rgba(0,0,0,.9);
     --sh-3:0 6px 12px rgba(0,0,0,.5), 0 30px 60px -24px rgba(0,0,0,1);
@@ -67,6 +72,7 @@
   --teal:#4CBB9B; --teal-soft:rgba(76,187,155,.13);
   --clay:#E0776A; --clay-soft:rgba(224,119,106,.13);
   --accent:#D2A257; --accent-fg:#12181F; --link:#D2A257;
+  --c1:#9BBBE0; --c2:#5E8DC4; --c3:#D2A257; --c4:#4CBB9B;
   --sh-1:0 1px 2px rgba(0,0,0,.5);
   --sh-2:0 2px 4px rgba(0,0,0,.4), 0 14px 30px -18px rgba(0,0,0,.9);
   --sh-3:0 6px 12px rgba(0,0,0,.5), 0 30px 60px -24px rgba(0,0,0,1);
@@ -77,11 +83,11 @@ html{-webkit-text-size-adjust:100%; scroll-behavior:smooth}
 body{
   margin:0; background:var(--paper); color:var(--ink);
   font-family:var(--sans); font-size:16px; line-height:1.75; letter-spacing:-.008em;
-  word-break:keep-all; -webkit-font-smoothing:antialiased;
+  word-break:keep-all; -webkit-font-smoothing:antialiased; overflow-x:hidden;
   padding-bottom:calc(84px + env(safe-area-inset-bottom));
 }
 .wrap{max-width:640px; margin:0 auto; padding:0 20px}
-section{padding:56px 0}
+section{padding:58px 0}
 
 h1,h2,h3{margin:0; letter-spacing:-.035em; text-wrap:balance; font-weight:800; line-height:1.3}
 h1{font-size:clamp(27px,7.2vw,36px); line-height:1.28}
@@ -91,8 +97,10 @@ p{margin:0 0 14px}
 p:last-child{margin-bottom:0}
 .lede{color:var(--ink-2); font-size:16.5px; line-height:1.78}
 .fine{font-size:12.5px; color:var(--ink-3); line-height:1.8}
+.src{font-family:var(--mono); font-size:11px; color:var(--ink-3); line-height:1.7}
 a{color:var(--link)}
 :focus-visible{outline:2px solid var(--brass); outline-offset:3px; border-radius:6px}
+.num{font-variant-numeric:tabular-nums; letter-spacing:-.04em}
 
 .eyebrow{display:inline-flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px;
   letter-spacing:.2em; text-transform:uppercase; color:var(--brass); font-weight:700; margin-bottom:14px}
@@ -101,21 +109,29 @@ mark.fill{background:var(--clay-soft); color:var(--clay); font-family:var(--mono
   padding:1px 6px; border-radius:4px; font-weight:700; white-space:nowrap}
 
 /* ───────── 표지 ───────── */
-.hero{background:var(--navy); color:var(--navy-ink); padding:38px 0 44px; position:relative; overflow:hidden}
+.hero{background:var(--navy); color:var(--navy-ink); padding:40px 0 46px; position:relative; overflow:hidden; isolation:isolate}
+.hero .glow{position:absolute; z-index:-1; border-radius:50%; filter:blur(70px); pointer-events:none}
+.hero .g1{width:300px; height:300px; top:-90px; right:-90px; background:#1E4E86; opacity:.34; animation:drift1 17s ease-in-out infinite alternate}
+.hero .g2{width:250px; height:250px; bottom:-70px; left:-80px; background:#A97C33; opacity:.20; animation:drift2 21s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(-26px,34px) scale(1.13)}}
+@keyframes drift2{to{transform:translate(30px,-24px) scale(1.10)}}
 .hero::after{content:""; position:absolute; inset:auto 0 0 0; height:1px;
   background:linear-gradient(90deg,transparent,var(--brass),transparent); opacity:.55}
 .hero .eyebrow{color:var(--brass)}
 .hero h1{color:#fff}
-.hero h1 em{font-style:normal; color:var(--brass); }
-.hero .lede{color:rgba(244,247,251,.72); margin-top:16px; font-size:16px}
-.hero .fine{color:rgba(244,247,251,.45); margin-top:14px}
+.hero h1 em{font-style:normal; color:var(--brass)}
+.hero .lede{color:rgba(244,247,251,.74); margin-top:16px; font-size:16px}
+.hero .fine{color:rgba(244,247,251,.44); margin-top:15px}
+.up{opacity:0; transform:translateY(16px); animation:up .8s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes up{to{opacity:1; transform:none}}
 
 /* 점검표 그림 */
-.book{margin:26px auto 0; width:100%; max-width:340px; filter:drop-shadow(0 22px 40px rgba(0,0,0,.45))}
+.book{margin:26px auto 0; width:100%; max-width:340px; filter:drop-shadow(0 24px 44px rgba(0,0,0,.5));
+  animation:float 7s ease-in-out infinite alternate}
+@keyframes float{to{transform:translateY(-7px)}}
 .book svg{display:block; width:100%; height:auto}
-.book .ck{opacity:0; animation:rowIn .5s ease forwards}
-@keyframes rowIn{from{opacity:0; transform:translateX(-6px)} to{opacity:1; transform:translateX(0)}}
-@media (prefers-reduced-motion:reduce){ .book .ck{animation:none; opacity:1} }
+.book .ck{opacity:0; animation:rowIn .55s ease forwards}
+@keyframes rowIn{from{opacity:0; transform:translateX(-7px)} to{opacity:1; transform:translateX(0)}}
 
 /* 약속 */
 .pledge{list-style:none; margin:26px 0 0; padding:0; display:flex; flex-direction:column; gap:9px}
@@ -127,27 +143,66 @@ mark.fill{background:var(--clay-soft); color:var(--clay); font-family:var(--mono
 
 /* ───────── 카드 ───────── */
 .card{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r); box-shadow:var(--sh-2)}
-.card-hd{padding:18px 20px 0}
-.card-bd{padding:20px}
 
-/* 진행 표시 */
+/* ───────── 숫자 ───────── */
+.gauges{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-top:22px}
+.gauge{background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:16px 14px 15px;
+  box-shadow:var(--sh-1); text-align:center}
+.gauge svg{display:block; margin:0 auto}
+.gauge .arc-bg{fill:none; stroke:var(--surface-3); stroke-width:9; stroke-linecap:round}
+.gauge .arc-fg{fill:none; stroke:var(--c3); stroke-width:9; stroke-linecap:round;
+  transition:stroke-dashoffset 1.5s cubic-bezier(.2,.7,.3,1)}
+.gauge.f .arc-fg{stroke:var(--c2)}
+.gauge .val{font-size:23px; font-weight:800; margin-top:-26px}
+.gauge .who{font-size:13.5px; color:var(--ink-2); font-weight:700; margin-top:14px}
+.gauge .cap{font-size:11.5px; color:var(--ink-3); margin-top:1px}
+
+.stats{display:grid; grid-template-columns:1fr 1fr; gap:11px; margin-top:11px}
+.stat{background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:15px 16px; box-shadow:var(--sh-1)}
+.stat b{display:block; font-size:25px; font-weight:800; color:var(--c4)}
+.stat.alt b{color:var(--c1)}
+.stat span{display:block; font-size:12.5px; color:var(--ink-3); line-height:1.55; margin-top:3px}
+
+.pull{margin:20px 0 0; padding:17px 18px; border-radius:14px; background:var(--surface);
+  border:1px solid var(--hair); border-left:3px solid var(--brass); box-shadow:var(--sh-1);
+  font-size:16px; line-height:1.72; font-weight:600; letter-spacing:-.02em}
+.pull b{color:var(--brass)}
+
+/* ───────── 실손 세대 막대 ───────── */
+.segwrap{margin-top:22px; background:var(--surface); border:1px solid var(--hair); border-radius:14px;
+  padding:18px; box-shadow:var(--sh-1)}
+.segwrap .cap{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:12px}
+.segwrap .cap b{font-size:14.5px; font-weight:700; letter-spacing:-.02em}
+.segwrap .cap span{font-family:var(--mono); font-size:11.5px; color:var(--ink-3)}
+.seg{display:flex; height:34px; border-radius:8px; overflow:hidden; background:var(--surface-3)}
+.seg i{display:block; width:0; transition:width 1.3s cubic-bezier(.2,.7,.3,1)}
+.seg i:nth-child(1){background:var(--c1)} .seg i:nth-child(2){background:var(--c2)}
+.seg i:nth-child(3){background:var(--c3)} .seg i:nth-child(4){background:var(--c4)}
+.seg i:nth-child(5){background:var(--line-2)}
+.legend{display:grid; grid-template-columns:1fr 1fr; gap:7px 16px; margin-top:14px}
+.legend div{display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-2)}
+.legend em{flex:0 0 auto; width:9px; height:9px; border-radius:3px; font-style:normal}
+.legend b{margin-left:auto; font-weight:700; color:var(--ink); font-size:13px; font-variant-numeric:tabular-nums}
+.legend div:nth-child(1) em{background:var(--c1)} .legend div:nth-child(2) em{background:var(--c2)}
+.legend div:nth-child(3) em{background:var(--c3)} .legend div:nth-child(4) em{background:var(--c4)}
+.legend div:nth-child(5) em{background:var(--line-2)}
+
+/* ───────── 점검표 ───────── */
 .meter{display:flex; align-items:center; gap:14px; padding:16px 20px; border-bottom:1px solid var(--hair)}
 .ring{flex:0 0 auto; width:46px; height:46px; position:relative}
 .ring svg{transform:rotate(-90deg); display:block}
 .ring circle{fill:none; stroke-width:4; stroke-linecap:round}
 .ring .bg{stroke:var(--surface-3)}
-.ring .fg{stroke:var(--brass); stroke-dasharray:126; stroke-dashoffset:126; transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1)}
+.ring .fg{stroke:var(--brass); stroke-dashoffset:126; transition:stroke-dashoffset .5s cubic-bezier(.4,0,.2,1)}
 .ring b{position:absolute; inset:0; display:grid; place-content:center; font-size:12.5px; font-weight:800;
   font-variant-numeric:tabular-nums; letter-spacing:-.03em}
 .meter .txt{flex:1; min-width:0}
 .meter .txt b{display:block; font-size:15px; font-weight:700; letter-spacing:-.02em}
 .meter .txt span{display:block; font-size:13px; color:var(--ink-3); line-height:1.5}
 
-/* 점검 항목 */
 .checks{padding:4px 0}
 .chk{display:flex; gap:13px; align-items:flex-start; width:100%; text-align:left; font:inherit; color:var(--ink);
-  background:none; border:0; border-top:1px solid var(--hair); padding:15px 20px; cursor:pointer;
-  transition:background .22s ease}
+  background:none; border:0; border-top:1px solid var(--hair); padding:15px 20px; cursor:pointer; transition:background .22s ease}
 .chk:first-child{border-top:0}
 .chk .box{flex:0 0 auto; width:23px; height:23px; border-radius:7px; border:1.8px solid var(--line-2);
   background:var(--surface); display:grid; place-content:center; margin-top:1px;
@@ -158,16 +213,13 @@ mark.fill{background:var(--clay-soft); color:var(--clay); font-family:var(--mono
 .chk[aria-pressed="true"]{background:var(--brass-soft)}
 .chk[aria-pressed="true"] .box{background:var(--brass); border-color:var(--brass)}
 .chk[aria-pressed="true"] .box svg{opacity:1; transform:scale(1)}
-.chk[aria-pressed="true"] .tx{color:var(--ink)}
 .chk.pulse .box{transform:scale(1.12)}
-@media (prefers-reduced-motion:reduce){ .chk,.chk .box,.chk .box svg,.ring .fg{transition:none} .chk.pulse .box{transform:none} }
-
 .result{margin:0 20px 20px; padding:15px 16px; border-radius:12px; background:var(--surface-2);
   border:1px solid var(--hair); border-left:3px solid var(--clay); font-size:14.5px; line-height:1.7}
 .result b{color:var(--clay)}
 .result.hide{display:none}
 
-/* 목록 */
+/* ───────── 분석 항목 ───────── */
 .does{display:grid; grid-template-columns:1fr; gap:11px; margin-top:22px}
 @media(min-width:560px){ .does{grid-template-columns:1fr 1fr} }
 .does .it{background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:18px; box-shadow:var(--sh-1)}
@@ -175,22 +227,30 @@ mark.fill{background:var(--clay-soft); color:var(--clay); font-family:var(--mono
   display:grid; place-content:center; margin-bottom:11px}
 .does p{margin:5px 0 0; font-size:14.5px; color:var(--ink-2); line-height:1.7}
 
+/* ───────── 전후 비교 ───────── */
+.cmp{background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:17px 18px; box-shadow:var(--sh-1)}
+.cmp+.cmp{margin-top:10px}
+.cmp .who{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--brass); font-weight:700}
+.bars{margin-top:14px; display:flex; flex-direction:column; gap:12px}
+.bar .t{display:flex; justify-content:space-between; align-items:baseline; gap:10px; font-size:13px; color:var(--ink-2); margin-bottom:6px}
+.bar .t b{font-size:14px; color:var(--ink); font-weight:700}
+.bar .track{height:12px; border-radius:6px; background:var(--surface-3); overflow:hidden}
+.bar .fillbar{display:block; height:100%; width:0; border-radius:6px; transition:width 1.2s cubic-bezier(.2,.7,.3,1)}
+.bar.before .fillbar{background:var(--line-2)}
+.bar.after .fillbar{background:var(--c4)}
+
+/* ───────── 진행 ───────── */
 ol.steps{list-style:none; margin:22px 0 0; padding:0; position:relative}
 ol.steps::before{content:""; position:absolute; left:15px; top:14px; bottom:14px; width:1.5px; background:var(--hair)}
-ol.steps li{counter-increment:s; position:relative; display:grid; grid-template-columns:32px 1fr; gap:14px; padding:0 0 20px}
+ol.steps li{position:relative; display:grid; grid-template-columns:32px 1fr; gap:14px; padding:0 0 20px}
 ol.steps li:last-child{padding-bottom:0}
-ol.steps li .n{position:relative; z-index:1; width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--accent-fg);
-  display:grid; place-content:center; font-family:var(--mono); font-size:12px; font-weight:700}
+ol.steps li .n{position:relative; z-index:1; width:32px; height:32px; border-radius:50%;
+  background:var(--accent); color:var(--accent-fg); display:grid; place-content:center;
+  font-family:var(--mono); font-size:12px; font-weight:700}
 ol.steps b{display:block; font-size:16px; letter-spacing:-.02em; padding-top:4px}
 ol.steps span{display:block; font-size:14.5px; color:var(--ink-2); line-height:1.7; margin-top:2px}
 
-/* 사례 */
-.case{background:var(--surface); border:1px solid var(--hair); border-radius:14px; padding:17px 18px; box-shadow:var(--sh-1)}
-.case+.case{margin-top:10px}
-.case .lab{font-family:var(--mono); font-size:11px; letter-spacing:.1em; color:var(--brass); font-weight:700}
-.case p{margin:8px 0 0; font-size:14.5px; color:var(--ink-2); line-height:1.7}
-
-/* 문답 */
+/* ───────── 문답 ───────── */
 details{background:var(--surface); border:1px solid var(--hair); border-radius:13px; box-shadow:var(--sh-1)}
 details+details{margin-top:8px}
 summary{cursor:pointer; padding:15px 18px; font-weight:700; font-size:15.5px; letter-spacing:-.02em;
@@ -201,17 +261,18 @@ summary::after{content:""; flex:0 0 auto; width:9px; height:9px; border-right:1.
 details[open] summary::after{transform:rotate(225deg) translateY(-2px)}
 details .ans{padding:0 18px 16px; font-size:14.5px; color:var(--ink-2); line-height:1.75}
 
-/* 신청서 */
+/* ───────── 신청서 ───────── */
 form{background:var(--surface); border:1px solid var(--hair); border-radius:var(--r); box-shadow:var(--sh-3); overflow:hidden}
 .form-hd{background:var(--navy); color:#fff; padding:18px 20px}
 .form-hd b{display:block; font-size:17px; font-weight:800; letter-spacing:-.025em}
 .form-hd span{display:block; font-size:13px; color:rgba(244,247,251,.62); margin-top:2px}
 .fld{padding:15px 20px 0}
-.fld label.k{display:block; font-size:13px; font-weight:700; color:var(--ink-2); margin-bottom:7px; letter-spacing:-.01em}
+.fld label.k{display:block; font-size:13px; font-weight:700; color:var(--ink-2); margin-bottom:7px}
 .fld label.k .req{color:var(--clay); margin-left:5px; font-size:11.5px}
 .fld input[type=text],.fld input[type=tel],.fld textarea{
   width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); background:var(--surface-2);
-  border:1px solid var(--line); border-radius:11px; padding:13px 14px; line-height:1.5; transition:border-color .18s, box-shadow .18s}
+  border:1px solid var(--line); border-radius:11px; padding:13px 14px; line-height:1.5;
+  transition:border-color .18s, box-shadow .18s}
 .fld input:focus,.fld textarea:focus{outline:none; border-color:var(--brass); box-shadow:0 0 0 3px var(--brass-soft)}
 .fld textarea{resize:vertical; min-height:78px}
 .fld .hint{font-size:12.5px; color:var(--ink-3); margin-top:7px; line-height:1.6}
@@ -237,20 +298,20 @@ button.submit:disabled{opacity:.55; cursor:progress; transform:none}
   font-size:16px; font-weight:800; letter-spacing:.14em; opacity:.9}
 .formmsg.err .seal{display:none}
 
-/* 하단 고정 */
+/* ───────── 하단 고정 ───────── */
 .bar{position:fixed; left:0; right:0; bottom:0; z-index:30;
   background:color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter:blur(14px);
   border-top:1px solid var(--hair); box-shadow:0 -8px 24px -18px rgba(15,23,32,.5);
   padding:11px 20px calc(11px + env(safe-area-inset-bottom))}
 .bar .inner{max-width:640px; margin:0 auto; display:flex; gap:8px; align-items:center}
-.bar .st{flex:0 0 auto; font-size:12px; color:var(--ink-3); line-height:1.35; font-weight:600; letter-spacing:-.01em}
+.bar .st{flex:0 0 auto; font-size:12px; color:var(--ink-3); line-height:1.35; font-weight:600}
 .bar .st b{display:block; color:var(--clay); font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
 .bar a.go{flex:1; text-align:center; text-decoration:none; font-weight:800; font-size:16px; letter-spacing:-.02em;
   padding:14px 12px; border-radius:12px; background:var(--accent); color:var(--accent-fg); box-shadow:var(--sh-2)}
 .bar a.kakao{flex:0 0 auto; text-decoration:none; font-weight:700; font-size:14.5px; padding:14px 16px;
   border-radius:12px; background:var(--surface-2); color:var(--ink); border:1px solid var(--line)}
 
-/* 푸터 */
+/* ───────── 푸터 ───────── */
 footer{background:var(--navy); color:rgba(244,247,251,.55); padding:30px 0 40px; font-size:12px; line-height:1.9}
 footer .biz{font-family:var(--mono); font-size:11.5px; color:rgba(244,247,251,.78); line-height:2; margin-bottom:14px;
   padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,.11)}
@@ -258,21 +319,31 @@ footer p{margin:0 0 9px}
 footer a{color:rgba(244,247,251,.85)}
 footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
 
-/* 등장 — 스크립트가 살아 있을 때만 감춘다.
-   .js 가 안 붙는 상황(스크립트 차단·오류)에서는 처음부터 다 보인다. */
+/* ───────── 등장 ───────── */
 .js .rv{opacity:0; transform:translateY(14px); transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.3,1)}
 .js .rv.in{opacity:1; transform:none}
-@media (prefers-reduced-motion:reduce){ .js .rv{opacity:1; transform:none; transition:none} html{scroll-behavior:auto} }
+@media (prefers-reduced-motion:reduce){
+  .js .rv{opacity:1; transform:none; transition:none}
+  html{scroll-behavior:auto}
+  .up{opacity:1; transform:none; animation:none}
+  .book{animation:none}
+  .book .ck{animation:none; opacity:1}
+  .hero .glow{animation:none}
+  .chk,.chk .box,.chk .box svg,.ring .fg,.seg i,.bar .fillbar,.gauge .arc-fg{transition:none}
+  .chk.pulse .box{transform:none}
+}
 </style>
 </head>
 <body>
 
 <!-- ───────── 표지 ───────── -->
 <div class="hero">
+  <span class="glow g1" aria-hidden="true"></span>
+  <span class="glow g2" aria-hidden="true"></span>
   <div class="wrap">
-    <div class="eyebrow">무료 보장분석</div>
-    <h1>여섯 가지 중 하나라도 해당되면,<br>지금이 <em>점검할 때</em>입니다.</h1>
-    <p class="lede">지인 권유로 가입해 내용을 잘 모르거나, 보험료는 부담되는데 무엇을 줄여야 할지 모르겠다면 — 증권 한 장으로 확인해 드립니다.</p>
+    <div class="eyebrow up" style="animation-delay:.05s">무료 보장분석</div>
+    <h1 class="up" style="animation-delay:.14s">여섯 가지 중 하나라도 해당되면,<br>지금이 <em>점검할 때</em>입니다.</h1>
+    <p class="lede up" style="animation-delay:.24s">지인 권유로 가입해 내용을 잘 모르거나, 보험료는 부담되는데 무엇을 줄여야 할지 모르겠다면 — 증권 한 장으로 확인해 드립니다.</p>
 
     <div class="book" aria-hidden="true">
       <svg viewBox="0 0 340 232" role="presentation">
@@ -288,30 +359,96 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
           <text x="34" y="56" font-family="Pretendard,sans-serif" font-size="14" font-weight="800" fill="#0F1720">보험 점검표</text>
           <text x="306" y="56" text-anchor="end" font-family="ui-monospace,monospace" font-size="10" fill="#A97C33" font-weight="700">3 / 6 해당</text>
           <line x1="34" y1="66" x2="306" y2="66" stroke="#D6DCE4"/>
-          <g class="ck" style="animation-delay:.06s"><rect x="34" y="78" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 84.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="89" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">지인 권유로 가입</text></g>
-          <g class="ck" style="animation-delay:.14s"><rect x="34" y="102" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="113" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">보험료가 부담</text></g>
-          <g class="ck" style="animation-delay:.22s"><rect x="34" y="126" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 132.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="137" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">가입한 지 오래됨</text></g>
-          <g class="ck" style="animation-delay:.30s"><rect x="34" y="150" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="161" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">실손 세대 전환 고민</text></g>
-          <g class="ck" style="animation-delay:.38s"><rect x="34" y="174" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 180.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="185" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">진단금 범위 확인</text></g>
-          <g class="ck" style="animation-delay:.46s"><rect x="34" y="198" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="209" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">여러 보험사에 흩어짐</text></g>
+          <g class="ck" style="animation-delay:.5s"><rect x="34" y="78" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 84.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="89" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">지인 권유로 가입</text></g>
+          <g class="ck" style="animation-delay:.6s"><rect x="34" y="102" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="113" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">보험료가 부담</text></g>
+          <g class="ck" style="animation-delay:.7s"><rect x="34" y="126" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 132.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="137" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">가입한 지 오래됨</text></g>
+          <g class="ck" style="animation-delay:.8s"><rect x="34" y="150" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="161" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">실손 세대 전환 고민</text></g>
+          <g class="ck" style="animation-delay:.9s"><rect x="34" y="174" width="13" height="13" rx="4" fill="#A97C33"/><path d="m37.4 180.6 2.4 2.4 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><text x="56" y="185" font-family="Pretendard,sans-serif" font-size="11" font-weight="700" fill="#0F1720">진단금 범위 확인</text></g>
+          <g class="ck" style="animation-delay:1s"><rect x="34" y="198" width="13" height="13" rx="4" fill="none" stroke="#BEC7D2" stroke-width="1.4"/><text x="56" y="209" font-family="Pretendard,sans-serif" font-size="11" fill="#7B8797">여러 보험사에 흩어짐</text></g>
         </g>
       </svg>
     </div>
 
-    <ul class="pledge">
+    <ul class="pledge up" style="animation-delay:.34s">
       <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>신청하셔도 <b>먼저 전화하지 않습니다.</b> 원하시는 시간에만 연락드립니다.</span></li>
       <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>가입을 권유하지 않습니다. <b>지금 계약을 유지하는 편이 나은 경우</b>도 그대로 말씀드립니다.</span></li>
       <li><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span>주민등록번호와 계정 비밀번호는 <b>받지 않습니다.</b></span></li>
     </ul>
 
-    <p class="fine">점검은 가입 권유가 아닙니다. 가입하신 계약의 보장 내용과 조건을 확인해 드리는 상담이며, 실제 보장 여부와 지급 금액은 가입한 특약 구성과 약관상 지급 사유에 따라 달라집니다.</p>
+    <p class="fine up" style="animation-delay:.44s">점검은 가입 권유가 아닙니다. 가입하신 계약의 보장 내용과 조건을 확인해 드리는 상담이며, 실제 보장 여부와 지급 금액은 가입한 특약 구성과 약관상 지급 사유에 따라 달라집니다.</p>
   </div>
 </div>
 
 <div class="wrap">
 
+  <!-- ───────── 숫자 ───────── -->
+  <section>
+    <div class="eyebrow rv">왜 점검인가</div>
+    <h2 class="rv">이제는 걸리는 것도,<br>살아남는 것도 흔한 일입니다</h2>
+    <p class="lede rv" style="margin-top:12px">그래서 질문이 바뀌었습니다. <b>“걸리면 어떡하지”</b> 가 아니라 <b>“치료받는 동안 어떻게 살지”</b> 입니다.</p>
+
+    <div class="gauges rv">
+      <div class="gauge m">
+        <svg width="120" height="70" viewBox="0 0 120 70" aria-hidden="true">
+          <path class="arc-bg" d="M10 62a50 50 0 0 1 100 0"/>
+          <path class="arc-fg" data-pct="44.6" d="M10 62a50 50 0 0 1 100 0"/>
+        </svg>
+        <div class="val num" data-count="44.6" data-dec="1" data-suffix="%">0%</div>
+        <div class="who">남자</div>
+        <div class="cap">약 2명 중 1명</div>
+      </div>
+      <div class="gauge f">
+        <svg width="120" height="70" viewBox="0 0 120 70" aria-hidden="true">
+          <path class="arc-bg" d="M10 62a50 50 0 0 1 100 0"/>
+          <path class="arc-fg" data-pct="38.2" d="M10 62a50 50 0 0 1 100 0"/>
+        </svg>
+        <div class="val num" data-count="38.2" data-dec="1" data-suffix="%">0%</div>
+        <div class="who">여자</div>
+        <div class="cap">약 3명 중 1명</div>
+      </div>
+    </div>
+    <p class="src rv" style="margin-top:11px">평생 동안 암이 발생할 확률 · 중앙암등록본부 「2023년 국가암등록통계」</p>
+
+    <div class="stats rv">
+      <div class="stat">
+        <b class="num" data-count="73.7" data-dec="1" data-suffix="%">0%</b>
+        <span>암환자 5년 상대생존율<br>(2019~2023년 진단)</span>
+      </div>
+      <div class="stat alt">
+        <b class="num" data-count="273" data-dec="0" data-suffix="만 명">0만 명</b>
+        <span>암유병자 수<br>국민 19명당 1명</span>
+      </div>
+    </div>
+    <p class="src rv" style="margin-top:11px">중앙암등록본부 「2023년 국가암등록통계」 · 암유병자 273만 2,906명</p>
+
+    <div class="pull rv">병원비는 실손이 받아 줍니다. 남는 문제는 <b>치료받는 동안 끊기는 소득</b>과, 내 증권이 그 기간을 어디까지 받쳐 주는가입니다.</div>
+  </section>
+
+  <!-- ───────── 실손 세대 ───────── -->
+  <section style="padding-top:0">
+    <div class="eyebrow rv">실손 세대</div>
+    <h2 class="rv">10명 중 6명은<br>아직 1·2세대입니다</h2>
+    <p class="lede rv" style="margin-top:12px">세대마다 자기부담금과 보장 범위, 갱신 주기가 다릅니다. 전환이 유리한지는 <b>사람마다 다릅니다</b> — 그래서 확인이 필요합니다.</p>
+
+    <div class="segwrap rv">
+      <div class="cap"><b>실손의료보험 세대별 비중</b><span>3,622만 건</span></div>
+      <div class="seg" aria-hidden="true">
+        <i data-w="17.1"></i><i data-w="41.2"></i><i data-w="21.6"></i><i data-w="17.7"></i><i data-w="2.4"></i>
+      </div>
+      <div class="legend">
+        <div><em></em>1세대 <b>17.1%</b></div>
+        <div><em></em>2세대 <b>41.2%</b></div>
+        <div><em></em>3세대 <b>21.6%</b></div>
+        <div><em></em>4세대 <b>17.7%</b></div>
+        <div><em></em>그 외 <b>2.4%</b></div>
+      </div>
+    </div>
+    <p class="src rv" style="margin-top:11px">금융감독원 실손의료보험 사업실적 · 2024년 말 계약 기준</p>
+    <p class="fine rv" style="margin-top:10px">세대 전환은 자기부담금·보장범위·보험료가 함께 바뀌므로 모든 분께 유리하지 않습니다. 전환 전 기존 계약의 보장 조건을 반드시 비교해야 합니다.</p>
+  </section>
+
   <!-- ───────── 점검표 ───────── -->
-  <section id="check">
+  <section id="check" style="padding-top:0">
     <div class="eyebrow rv">보험 점검표</div>
     <h2 class="rv">이런 분이라면<br>점검이 필요합니다</h2>
     <p class="lede rv" style="margin-top:12px">해당하는 것만 눌러 보세요. 하나만 해당돼도 신청하실 수 있습니다.</p>
@@ -359,8 +496,8 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
     </div>
   </section>
 
-  <!-- ───────── 무엇을 보는가 ───────── -->
-  <section>
+  <!-- ───────── 분석 항목 ───────── -->
+  <section style="padding-top:0">
     <div class="eyebrow rv">분석 항목</div>
     <h2 class="rv">증권을 받아서,<br>네 가지를 봅니다</h2>
     <div class="does">
@@ -387,25 +524,45 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
     </div>
   </section>
 
-  <!-- ───────── 사례 ───────── -->
-  <section>
+  <!-- ───────── 전후 ───────── -->
+  <section style="padding-top:0">
     <div class="eyebrow rv">상담 사례</div>
     <h2 class="rv">이렇게 정리됩니다</h2>
     <div style="margin-top:20px">
-      <div class="case rv">
-        <span class="lab">사례 1 — <mark class="fill">[연령·가족구성]</mark></span>
-        <p><mark class="fill">[상담 전 상황 — 계약 수, 월 보험료, 겹친 보장]</mark> → <mark class="fill">[정리 후 구성과 달라진 점]</mark></p>
+      <div class="cmp rv">
+        <span class="who">사례 1 — <mark class="fill">[연령·가족구성]</mark></span>
+        <div class="bars">
+          <div class="bar before">
+            <div class="t"><span>상담 전 · 월 보험료</span><b><mark class="fill">[ ]</mark>만원</b></div>
+            <div class="track"><span class="fillbar" data-w="100"></span></div>
+          </div>
+          <div class="bar after">
+            <div class="t"><span>정리 후 · 월 보험료</span><b><mark class="fill">[ ]</mark>만원</b></div>
+            <div class="track"><span class="fillbar" data-w="66"></span></div>
+          </div>
+        </div>
+        <p class="fine" style="margin-top:12px"><mark class="fill">[무엇을 어떻게 바꿨는지 — 겹친 보장 정리, 진단금 재구성 등]</mark></p>
       </div>
-      <div class="case rv">
-        <span class="lab">사례 2 — <mark class="fill">[연령·가족구성]</mark></span>
-        <p><mark class="fill">[상담 전 상황]</mark> → <mark class="fill">[정리 후 구성과 달라진 점]</mark></p>
+      <div class="cmp rv">
+        <span class="who">사례 2 — <mark class="fill">[연령·가족구성]</mark></span>
+        <div class="bars">
+          <div class="bar before">
+            <div class="t"><span>상담 전 · 확인된 보장 항목</span><b><mark class="fill">[ ]</mark>개</b></div>
+            <div class="track"><span class="fillbar" data-w="55"></span></div>
+          </div>
+          <div class="bar after">
+            <div class="t"><span>정리 후 · 확인된 보장 항목</span><b><mark class="fill">[ ]</mark>개</b></div>
+            <div class="track"><span class="fillbar" data-w="100"></span></div>
+          </div>
+        </div>
+        <p class="fine" style="margin-top:12px"><mark class="fill">[무엇을 어떻게 바꿨는지]</mark></p>
       </div>
     </div>
-    <p class="fine rv" style="margin-top:14px">※ 회사가 제공하는 대표 상담 사례이며 모든 고객에게 동일하게 적용되지 않습니다. 보험료 조정액과 보장금액은 기존 계약·연령·건강상태·납입기간과 상품별 약관 및 보험회사 심사 기준에 따라 달라지며, 특정 결과를 보장하지 않습니다. 기존 계약을 해지하고 새로 가입하는 경우 새 계약의 인수 심사·보장 개시일·면책 및 감액 조건을 먼저 확인해야 합니다.</p>
+    <p class="fine rv" style="margin-top:14px">※ 위 막대는 실제 사례를 채우기 전의 자리 표시입니다. 회사가 제공하는 대표 상담 사례이며 모든 고객에게 동일하게 적용되지 않습니다. 보험료 조정액과 보장금액은 기존 계약·연령·건강상태·납입기간과 상품별 약관 및 보험회사 심사 기준에 따라 달라지며, 특정 결과를 보장하지 않습니다. 기존 계약을 해지하고 새로 가입하는 경우 새 계약의 인수 심사·보장 개시일·면책 및 감액 조건을 먼저 확인해야 합니다.</p>
   </section>
 
   <!-- ───────── 진행 ───────── -->
-  <section>
+  <section style="padding-top:0">
     <div class="eyebrow rv">진행 순서</div>
     <h2 class="rv">세 단계로 끝납니다</h2>
     <ol class="steps">
@@ -416,7 +573,7 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
   </section>
 
   <!-- ───────── 신청 ───────── -->
-  <section id="apply">
+  <section id="apply" style="padding-top:0">
     <form id="leadForm" novalidate class="rv">
       <div class="form-hd">
         <b>무료 보장분석 신청</b>
@@ -462,7 +619,7 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
   </section>
 
   <!-- ───────── 문답 ───────── -->
-  <section style="padding-bottom:44px">
+  <section style="padding:0 0 44px">
     <div class="eyebrow rv">자주 묻는 질문</div>
     <h2 class="rv">궁금하실 것들</h2>
     <div style="margin-top:20px">
@@ -485,6 +642,7 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
     <p>본 페이지는 보험 상담 안내를 위한 자료이며, 상품 가입 전 약관과 상품설명서를 반드시 확인하시기 바랍니다.</p>
     <p>상담은 무료이며 특정 상품의 가입 가능 여부, 보험료 절감, 수익률 또는 보험금 지급을 보장하지 않습니다. 실제 조건은 상품별 약관, 개인별 상황 및 보험회사 심사 결과에 따라 달라질 수 있습니다.</p>
     <p>보험설계사는 보험회사로부터 보험계약 체결권을 부여받지 않은 금융상품판매 대리·중개업자이며, 보험계약은 보험회사와 체결됩니다.</p>
+    <p>본 페이지에 인용한 통계는 중앙암등록본부 「2023년 국가암등록통계」와 금융감독원 실손의료보험 사업실적(2024년 말 계약 기준)이며, 통계는 특정 상품의 필요성이나 효과를 보장하지 않습니다.</p>
     <p>※ 투자성 상품(변액보험 등)은 원금손실이 발생할 수 있으며 과거 수익이 미래 수익을 보장하지 않습니다. ※ 외화보험은 환율 변동에 따라 원화 환산 시 원금손실이 발생할 수 있습니다. ※ 세제·한도는 법령 개정에 따라 달라질 수 있으니 상담 시점 기준으로 재확인하시기 바랍니다.</p>
     <p>개인정보 처리 위탁: 상담 신청 접수 및 알림 발송 업무. 자세한 내용은 <a href="#" id="privacyLink">개인정보처리방침</a>에서 확인하실 수 있습니다.</p>
   </div>
@@ -517,29 +675,69 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
   }
   if (SITE.privacyUrl) { document.getElementById('privacyLink').href = SITE.privacyUrl; }
 
+  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── 숫자가 올라간다 ── */
+  function countUp(el){
+    if (el.dataset.done) return;
+    el.dataset.done = '1';
+    var target = parseFloat(el.dataset.count), dec = parseInt(el.dataset.dec || '0', 10);
+    var suffix = el.dataset.suffix || '';
+    if (still) { el.textContent = target.toFixed(dec) + suffix; return; }
+    var t0 = null, dur = 1300;
+    function step(t){
+      if (t0 === null) t0 = t;
+      var p = Math.min((t - t0) / dur, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = (target * e).toFixed(dec) + suffix;
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ── 그래프가 그려진다 ── */
+  function drawArcs(root){
+    root.querySelectorAll('.arc-fg').forEach(function(a){
+      var len = a.getTotalLength();
+      a.style.strokeDasharray = len;
+      a.style.strokeDashoffset = len;
+      requestAnimationFrame(function(){
+        a.style.strokeDashoffset = len * (1 - parseFloat(a.dataset.pct) / 100);
+      });
+    });
+  }
+  function drawWidths(root){
+    root.querySelectorAll('[data-w]').forEach(function(el){ el.style.width = el.dataset.w + '%'; });
+  }
+
   /* ── 등장 ── */
+  function reveal(el){
+    el.classList.add('in');
+    el.querySelectorAll('[data-count]').forEach(countUp);
+    if (el.querySelector('.arc-fg')) drawArcs(el);
+    if (el.querySelector('[data-w]')) drawWidths(el);
+  }
+
   var items = document.querySelectorAll('.rv');
   if (!('IntersectionObserver' in window)) {
-    items.forEach(function(el){ el.classList.add('in'); });
+    items.forEach(reveal);
   } else {
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(e, i){
         if (!e.isIntersecting) return;
-        var d = Math.min(i, 4) * 60;
-        setTimeout(function(){ e.target.classList.add('in'); }, d);
+        setTimeout(function(){ reveal(e.target); }, Math.min(i, 4) * 60);
         io.unobserve(e.target);
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: .08 });
     items.forEach(function(el){ io.observe(el); });
-    /* 안전장치 — 어떤 이유로든 관찰이 안 걸리면 3초 뒤 전부 보인다.
-       글이 안 보이는 페이지보다는 애니메이션 없는 페이지가 낫다. */
-    setTimeout(function(){ items.forEach(function(el){ el.classList.add('in'); }); }, 3000);
+    /* 안전장치 — 관찰이 어긋나도 3초 뒤에는 전부 보인다.
+       글이 안 보이는 페이지보다는 움직임 없는 페이지가 낫다. */
+    setTimeout(function(){ items.forEach(reveal); }, 3000);
   }
 
   /* ── 점검표 ── */
   var picked = [];
   var TOTAL = document.querySelectorAll('#pass .chk').length;
-
   var RING = 2 * Math.PI * 20;
   var ringFg = document.getElementById('ringFg');
   ringFg.style.strokeDasharray = RING;
@@ -562,18 +760,9 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
 
   function render(){
     var n = picked.length;
-
     ringFg.style.strokeDashoffset = RING * (1 - n / TOTAL);
     document.getElementById('ringTxt').textContent = n + '/' + TOTAL;
-
-    var title = document.getElementById('meterTitle'), sub = document.getElementById('meterSub');
-    if (!n) {
-      title.textContent = '해당하는 것을 골라 보세요';
-      sub.textContent = '고르신 항목부터 먼저 확인해 드립니다';
-    } else {
-      title.textContent = n + '가지가 해당됩니다';
-      sub.textContent = '고르신 항목부터 먼저 확인해 드립니다';
-    }
+    document.getElementById('meterTitle').textContent = n ? n + '가지가 해당됩니다' : '해당하는 것을 골라 보세요';
 
     var stat = document.getElementById('barStat');
     if (n) { stat.hidden = false; document.getElementById('barCount').textContent = n + '개'; }
@@ -657,7 +846,6 @@ footer mark.fill{background:rgba(224,119,106,.18); color:#F0A79C}
         btn.textContent = '접수 완료';
         form.querySelectorAll('input, textarea, button').forEach(function(el){ el.disabled = true; });
         say('ok','<b>신청이 접수되었습니다.</b><br>먼저 문자로 인사드리겠습니다. 전화를 먼저 걸지 않으니 편하실 때 답 주시면 됩니다.', true);
-        /* 접수 문구가 하단 바에 가리지 않게 한다. 다 끝났으니 바도 치운다. */
         var bar = document.querySelector('.bar');
         if (bar) { bar.remove(); document.body.style.paddingBottom = '24px'; }
         try { msg.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err) { msg.scrollIntoView(); }
