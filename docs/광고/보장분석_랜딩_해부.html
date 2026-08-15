@@ -1,0 +1,637 @@
+<title>보장분석 랜딩 해부</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#EFF1F4; --surface:#FFFFFF; --surface-2:#F6F8FA; --surface-3:#ECEFF3;
+  --ink:#121821; --ink-2:#4B5867; --ink-3:#7D8998;
+  --line:#DCE1E7; --line-2:#C7CED7;
+  --seal:#BB392F; --seal-ink:#8E2A22; --seal-soft:rgba(187,57,47,.09);
+  --blue:#1C4E7A; --blue-soft:rgba(28,78,122,.09);
+  --ok:#1C7A50; --warn:#9A6B08; --risk:#BB392F;
+  --ok-soft:rgba(28,122,80,.10); --warn-soft:rgba(154,107,8,.12); --risk-soft:rgba(187,57,47,.10);
+  --shadow:0 1px 2px rgba(18,24,33,.05), 0 8px 24px -16px rgba(18,24,33,.22);
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,"Cascadia Mono","D2Coding",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1218; --surface:#151C25; --surface-2:#1B242F; --surface-3:#212C38;
+    --ink:#E7ECF2; --ink-2:#A2AEBC; --ink-3:#73808F;
+    --line:#28323E; --line-2:#394655;
+    --seal:#EE6C60; --seal-ink:#F2897F; --seal-soft:rgba(238,108,96,.13);
+    --blue:#7FB4E2; --blue-soft:rgba(127,180,226,.12);
+    --ok:#4FC38C; --warn:#DFAA46; --risk:#EE6C60;
+    --ok-soft:rgba(79,195,140,.13); --warn-soft:rgba(223,170,70,.13); --risk-soft:rgba(238,108,96,.13);
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1218; --surface:#151C25; --surface-2:#1B242F; --surface-3:#212C38;
+  --ink:#E7ECF2; --ink-2:#A2AEBC; --ink-3:#73808F;
+  --line:#28323E; --line-2:#394655;
+  --seal:#EE6C60; --seal-ink:#F2897F; --seal-soft:rgba(238,108,96,.13);
+  --blue:#7FB4E2; --blue-soft:rgba(127,180,226,.12);
+  --ok:#4FC38C; --warn:#DFAA46; --risk:#EE6C60;
+  --ok-soft:rgba(79,195,140,.13); --warn-soft:rgba(223,170,70,.13); --risk-soft:rgba(238,108,96,.13);
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 28px -18px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:15.5px; line-height:1.72;
+  -webkit-text-size-adjust:100%; word-break:keep-all;
+}
+.wrap{max-width:760px; margin:0 auto; padding:0 16px 72px}
+
+/* ── 상단 ── */
+header.top{padding:34px 0 18px; border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3)}
+h1{margin:10px 0 8px; font-size:clamp(27px,7.2vw,38px); line-height:1.22; letter-spacing:-.025em; font-weight:800; text-wrap:balance}
+.lede{margin:0; color:var(--ink-2); font-size:15px}
+.meta-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:16px}
+.meta-row span{font-family:var(--mono); font-size:11px; color:var(--ink-3); background:var(--surface-3); border:1px solid var(--line); border-radius:999px; padding:3px 9px}
+
+/* ── 목차 칩 ── */
+nav.chips{position:sticky; top:0; z-index:20; margin:0 -16px; padding:9px 16px;
+  background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line); overflow-x:auto; -webkit-overflow-scrolling:touch}
+nav.chips ul{display:flex; gap:6px; list-style:none; margin:0; padding:0; white-space:nowrap}
+nav.chips a{display:inline-block; font-size:12.5px; font-weight:600; color:var(--ink-2); text-decoration:none;
+  background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:5px 11px}
+nav.chips a:hover,nav.chips a:focus-visible{color:var(--ink); border-color:var(--line-2)}
+
+/* ── 섹션 ── */
+section{padding-top:38px; scroll-margin-top:60px}
+h2{margin:6px 0 6px; font-size:clamp(20px,5vw,25px); line-height:1.3; letter-spacing:-.02em; font-weight:800; text-wrap:balance}
+h3{margin:22px 0 8px; font-size:16.5px; letter-spacing:-.01em; font-weight:700}
+h4{margin:16px 0 6px; font-size:14px; font-weight:700; color:var(--ink-2)}
+p{margin:0 0 12px}
+.sub{color:var(--ink-2); font-size:14.5px; margin:0 0 16px}
+strong{font-weight:700}
+a{color:var(--blue)}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 16px; box-shadow:var(--shadow)}
+.stack{display:flex; flex-direction:column; gap:12px}
+.grid2{display:grid; grid-template-columns:1fr; gap:12px}
+@media(min-width:700px){ .grid2{grid-template-columns:1fr 1fr} }
+
+/* 사이트 식별 */
+.site{display:flex; align-items:baseline; gap:8px; margin-bottom:2px}
+.tagA,.tagB,.tagUs{font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.1em; padding:2px 7px; border-radius:5px}
+.tagA{color:var(--seal); background:var(--seal-soft)}
+.tagB{color:var(--blue); background:var(--blue-soft)}
+.tagUs{color:var(--ok); background:var(--ok-soft)}
+.url{font-family:var(--mono); font-size:11.5px; color:var(--ink-3); word-break:break-all}
+
+/* 배지 */
+.badge{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:2.5px 9px; border-radius:999px; white-space:nowrap}
+.b-ok{color:var(--ok); background:var(--ok-soft)}
+.b-warn{color:var(--warn); background:var(--warn-soft)}
+.b-risk{color:var(--risk); background:var(--risk-soft)}
+
+/* 숫자 타일 */
+.tiles{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:14px 0 4px}
+@media(min-width:520px){ .tiles{grid-template-columns:repeat(4,1fr)} }
+.tile{background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:10px 11px}
+.tile b{display:block; font-family:var(--mono); font-size:19px; font-weight:700; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.tile span{display:block; font-size:11.5px; color:var(--ink-3); line-height:1.45; margin-top:1px}
+
+/* 흐름(섹션 순서) */
+ol.flow{list-style:none; counter-reset:f; margin:10px 0 0; padding:0}
+ol.flow li{counter-increment:f; position:relative; padding:7px 0 7px 34px; border-top:1px solid var(--line); font-size:14.5px; line-height:1.6}
+ol.flow li:first-child{border-top:0}
+ol.flow li::before{content:counter(f,decimal-leading-zero); position:absolute; left:0; top:9px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+ol.flow li em{font-style:normal; color:var(--ink-3); font-size:13px}
+ol.flow li.hit{background:var(--seal-soft); margin:0 -8px; padding-left:42px; padding-right:8px; border-radius:8px; border-top-color:transparent}
+ol.flow li.hit::before{left:8px; color:var(--seal)}
+
+/* 목록 */
+ul.tick{list-style:none; margin:8px 0; padding:0}
+ul.tick li{position:relative; padding:4px 0 4px 20px; font-size:14.5px; line-height:1.65}
+ul.tick li::before{content:"—"; position:absolute; left:0; color:var(--ink-3)}
+ul.tick li.plus::before{content:"+"; color:var(--ok); font-weight:700}
+ul.tick li.minus::before{content:"!"; color:var(--risk); font-weight:700}
+
+/* 표 */
+.scroller{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--line); border-radius:12px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; min-width:600px; font-size:13.5px}
+th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.55}
+thead th{position:sticky; top:0; background:var(--surface-2); font-size:11.5px; font-family:var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); font-weight:700}
+tbody th{font-weight:700; color:var(--ink); white-space:nowrap; background:var(--surface)}
+tr:last-child td,tr:last-child th{border-bottom:0}
+td.n{font-family:var(--mono); font-variant-numeric:tabular-nums}
+
+/* 도장 */
+.stampbox{display:flex; gap:14px; align-items:center; flex-wrap:wrap}
+.stamp{flex:0 0 auto; width:96px; height:96px; border-radius:50%; display:grid; place-content:center; text-align:center;
+  border:2.5px solid var(--seal); color:var(--seal); transform:rotate(-8deg); padding:6px}
+.stamp.none{border-style:dashed; border-color:var(--ink-3); color:var(--ink-3)}
+.stamp b{display:block; font-size:15px; font-weight:800; letter-spacing:.02em; line-height:1.2}
+.stamp span{display:block; font-family:var(--mono); font-size:9.5px; margin-top:3px; letter-spacing:.02em}
+
+/* 인용 */
+blockquote{margin:10px 0; padding:10px 14px; background:var(--surface-2); border-left:3px solid var(--line-2);
+  border-radius:0 8px 8px 0; font-size:14px; color:var(--ink-2); line-height:1.65}
+blockquote b{color:var(--ink)}
+
+/* 복사 블록 */
+.copybox{background:var(--surface-2); border:1px solid var(--line); border-radius:10px; padding:12px 13px; margin-top:10px}
+.copybox p{font-size:13.5px; color:var(--ink-2); margin:0 0 8px; line-height:1.7}
+.copybox p:last-of-type{margin-bottom:10px}
+.copybox .k{font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:6px}
+button.copy{font-family:var(--sans); font-size:12.5px; font-weight:700; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line-2); border-radius:8px; padding:6px 12px; cursor:pointer}
+button.copy:hover{border-color:var(--ink-3)}
+button.copy:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--blue); outline-offset:2px}
+button.copy.done{color:var(--ok); border-color:var(--ok)}
+
+/* 광고 카피 */
+.ad{border:1px solid var(--line); border-radius:11px; padding:13px 14px; background:var(--surface)}
+.ad .h{font-weight:800; font-size:15.5px; letter-spacing:-.01em; margin-bottom:5px; line-height:1.4}
+.ad .b{font-size:13.8px; color:var(--ink-2); line-height:1.65}
+.ad .t{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--ink-3); text-transform:uppercase; margin-bottom:7px}
+
+/* 접기 */
+details{border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:0}
+details+details{margin-top:8px}
+summary{cursor:pointer; padding:12px 14px; font-weight:700; font-size:14.5px; list-style:none; display:flex; justify-content:space-between; gap:10px; align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋"; color:var(--ink-3); font-weight:400}
+details[open] summary::after{content:"－"}
+details .body{padding:0 14px 14px; border-top:1px solid var(--line); margin-top:-1px; padding-top:12px}
+
+/* 체크리스트 */
+.check{display:flex; gap:10px; align-items:flex-start; padding:9px 0; border-top:1px solid var(--line); font-size:14.5px; line-height:1.6}
+.check:first-of-type{border-top:0}
+.check input{margin:5px 0 0; width:17px; height:17px; accent-color:var(--seal); flex:0 0 auto}
+.check span em{font-style:normal; display:block; font-size:12.5px; color:var(--ink-3); margin-top:1px}
+#tally{font-family:var(--mono); font-size:12px; color:var(--ink-3); margin-top:12px; font-variant-numeric:tabular-nums}
+
+footer{margin-top:44px; padding-top:18px; border-top:1px solid var(--line); font-size:12.5px; color:var(--ink-3); line-height:1.7}
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">경쟁 랜딩 해부 · 2026.08.15</div>
+  <h1>보장분석 신청 랜딩,<br>두 장을 뜯어봤습니다</h1>
+  <p class="lede">둘 다 “무료 보장분석”을 파는데, 파는 방식이 정반대입니다. 한쪽은 <b>전화 부담을 없애서</b> 팔고, 한쪽은 <b>먼저 보여줘서</b> 팝니다. 우리는 두 개를 합치고, 둘 다 못 하는 걸 붙입니다.</p>
+  <div class="meta-row">
+    <span>착한보험플래너 · Meta 유료</span>
+    <span>인슈플레이 · 카카오 유입</span>
+    <span>기준: config/compliance.json</span>
+  </div>
+</header>
+
+<nav class="chips" aria-label="목차">
+  <ul>
+    <li><a href="#summary">30초 요약</a></li>
+    <li><a href="#siteA">A 해부</a></li>
+    <li><a href="#siteB">B 해부</a></li>
+    <li><a href="#versus">정면 비교</a></li>
+    <li><a href="#simui">심의 점검</a></li>
+    <li><a href="#ours">우리 노하우</a></li>
+    <li><a href="#plan">랜딩 설계안</a></li>
+    <li><a href="#ads">광고 카피</a></li>
+    <li><a href="#legal">준법 문구</a></li>
+    <li><a href="#run">4주 실행</a></li>
+  </ul>
+</nav>
+
+<!-- ───────── 요약 ───────── -->
+<section id="summary">
+  <div class="eyebrow">한 장 요약</div>
+  <h2>30초만에</h2>
+  <div class="stack">
+    <div class="card">
+      <div class="site"><span class="tagA">A</span><b>착한보험플래너</b> <span class="badge b-risk">심의 표기 없음</span></div>
+      <p class="sub" style="margin:6px 0 10px">“보험 고민, 전화 없이 한 번에.” — 상품이 아니라 <b>상담 방식</b>을 판다. 16개 섹션이 전부 카톡 오픈채팅 링크 하나로 수렴.</p>
+      <ul class="tick">
+        <li class="plus">진입 장벽을 오퍼로 바꿨다 — “전화 안 함, 권유 안 함”</li>
+        <li class="plus">숫자마다 조건을 바로 옆에 병기해 뒀다</li>
+        <li class="minus">유료광고를 돌리는데 사업자정보·심의필·처리방침이 아직 비어 있다</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="site"><span class="tagB">B</span><b>인슈플레이</b> <span class="badge b-ok">심의필 제26-06-223호</span></div>
+      <p class="sub" style="margin:6px 0 10px">“같은 암보험, 보장 범위 최대 4배 차이.” — <b>약관을 질병코드로 해체</b>한 데이터로 민다. 페이지 안에서 직접 만져보게 하고 마지막 칸에서 신청을 받는다.</p>
+      <ul class="tick">
+        <li class="plus">신청 전에 결과를 미리 맛보여 준다 — 이게 이 페이지의 진짜 무기</li>
+        <li class="plus">심의필 번호·유효기간·협회 등록번호까지 하단에 다 박아 뒀다</li>
+        <li class="minus">“최대 4배” 후킹이 세다. 개인정보 안내가 팝업 한 줄, 외부 폼 서비스 위탁 고지가 없다</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:var(--line-2)">
+      <div class="site"><span class="tagUs">우리</span><b>가져갈 것 / 버릴 것</b></div>
+      <ul class="tick">
+        <li class="plus"><b>가져간다</b> — A의 “전화 없이” 진입, B의 “먼저 보여주기”, B의 하단 준법 블록</li>
+        <li class="minus"><b>버린다</b> — 근거 약한 1위·절감률 배지, 사은품 미끼, 팝업 한 줄짜리 개인정보 안내</li>
+        <li><b>우리만</b> — 8통장·치료비 통장 언어, 그 자리에서 나오는 비포&애프터, 리드가 CRM으로 바로 꽂히는 구조</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── A ───────── -->
+<section id="siteA">
+  <div class="eyebrow">Site A · 구조 해부</div>
+  <h2>착한보험플래너</h2>
+  <p class="url">honestplanner.com · utm_medium=paid_social · campaign=test_b_landing_20260812 · content=insurance_problem</p>
+  <p class="sub" style="margin-top:10px">캠페인 이름에 <b>test_b</b>가 박혀 있습니다. A/B 중 B안을 메타에 돌리는 중이고, 소재 각도는 “insurance_problem(보험 고민)”입니다. 즉 <b>문제 제기형 소재 → 부담 없는 카톡</b>이 이 팀의 가설입니다.</p>
+
+  <div class="tiles">
+    <div class="tile"><b>16</b><span>섹션 수</span></div>
+    <div class="tile"><b>1</b><span>도착지 (오픈카톡)</span></div>
+    <div class="tile"><b>7+2</b><span>폼 항목 / 동의</span></div>
+    <div class="tile"><b>0원</b><span>상담비 소구</span></div>
+  </div>
+
+  <h3>페이지가 흐르는 순서</h3>
+  <ol class="flow">
+    <li>상단 띠 — <em>“2025 대한민국 고객만족지수 1위 · 상담비 0원”</em></li>
+    <li class="hit">히어로 — <b>“보험 고민, 전화 없이 한 번에.”</b> <em>새 보험 비교·보험금 청구·보상 문의·보장 리모델링까지 카톡 하나로</em></li>
+    <li>3가지 특징 — <em>모든 상담 무료 / 가입과 청구를 한 곳에서 / 가입 후 관리까지</em></li>
+    <li>AWARD — <em>41% 평균 절감률 · 35개사 비교 · 98% 만족도</em></li>
+    <li>WHAT WE DO — <em>현재 보험 정리 · 청구 안내 · 가입 비교 · 지속 관리</em></li>
+    <li class="hit">WHY — <b>NO CALL · NO PRESSURE · CLEAR GUIDE</b> <em>“설계사 중심이 아니라 고객이 선택할 수 있게”</em></li>
+    <li>지금 확인할 포인트 — <em>항암·표적항암 특약 / 미국주식·ETF형 변액연금 / 확정금리는 적용조건이 먼저</em></li>
+    <li>점검 대상 체크리스트 6가지</li>
+    <li>상담 사례 BEFORE→AFTER 3건 — <em>월 18.7만 → 12.4만 / 연금 62만 → 94만</em></li>
+    <li>상담 주제 TOP 6</li>
+    <li>진행 프로세스 3단계 — <em>카톡 질문 → 가입내역 확인 → 맞춤 분석 안내</em></li>
+    <li>이벤트 — <em>스타벅스 아메리카노 1잔</em></li>
+    <li>FAQ 4문항</li>
+    <li class="hit">간편 상담 신청 폼</li>
+    <li>푸터 — <em>카톡 빠른상담 / 상담 신청</em></li>
+  </ol>
+
+  <h3>신청 폼</h3>
+  <div class="card" style="padding:14px">
+    <ul class="tick" style="margin:0">
+      <li>필수 — 이름 · 연락처 · 연령대 · 상담 희망 시간 · 상담 분야 · 월 보험료 구간</li>
+      <li>선택 — 궁금한 점(1000자) · 방문상담 희망 + 지역</li>
+      <li>동의 — <b>[필수]</b> 개인정보 수집·이용 및 상담 담당자 제공 / <b>[선택]</b> 보험사 전산 조회·보장분석</li>
+      <li class="plus">숨은 디테일: 스팸봇 잡는 허니팟 필드(<code>website</code>)까지 박아뒀다 — 리드 품질을 신경 쓴 팀</li>
+    </ul>
+  </div>
+
+  <h3>훔칠 만한 문장</h3>
+  <blockquote>“원하지 않는 전화 상담도 진행하지 않습니다.”<br>“<b>주민등록번호나 계정 비밀번호는 받지 않습니다.</b>”</blockquote>
+  <p class="sub">보장분석 신청에서 고객이 가장 무서워하는 두 가지 — <b>전화 폭탄</b>과 <b>개인정보</b> — 를 정면으로 껐습니다. 우리 랜딩에도 그대로 들어가야 할 두 줄입니다.</p>
+
+  <h3>위험한 부분</h3>
+  <ul class="tick">
+    <li class="minus"><b>1위·41%·98%</b> — 산정기간·모수·조사방식이 페이지에 없습니다. 본인들도 “정식 광고 게시 전 증빙자료에 맞춰 병기합니다”라고 적어둔 상태로 <b>유료광고를 이미 돌리고 있습니다.</b></li>
+    <li class="minus"><b>사업자정보·개인정보처리방침·광고심의 미기재</b> — “정식 운영 전 최종 반영합니다”. 우리 기준으로는 집행 불가 상태입니다.</li>
+    <li class="minus"><b>사은품(스타벅스 1잔)</b> — 보험업법상 특별이익 제공 금지선을 건드릴 수 있는 영역입니다. 금액은 낮지만 “계약”이 아니라 “상담 완료” 기준이라는 점을 문구로 못 박아야 안전합니다.</li>
+  </ul>
+</section>
+
+<!-- ───────── B ───────── -->
+<section id="siteB">
+  <div class="eyebrow">Site B · 구조 해부</div>
+  <h2>인슈플레이</h2>
+  <p class="url">250302-insuplay-bojang.vercel.app · kmckid=… · af_force_deeplink=true</p>
+  <p class="sub" style="margin-top:10px">링크에 <b>af_force_deeplink</b>가 걸려 있습니다. 앱/카톡 안에서 눌러도 인앱 브라우저에 갇히지 않게 강제로 밖으로 빼는 세팅 — 카톡·모먼트 유입을 전제로 만든 링크입니다.</p>
+
+  <div class="tiles">
+    <div class="tile"><b>18,741</b><span>질병코드</span></div>
+    <div class="tile"><b>43</b><span>보험사</span></div>
+    <div class="tile"><b>1,000+</b><span>상품</span></div>
+    <div class="tile"><b>3+24</b><span>폼 필수 / 선택칩</span></div>
+  </div>
+
+  <h3>페이지가 흐르는 순서</h3>
+  <ol class="flow">
+    <li class="hit">히어로 — <b>“같은 암보험, 보장 범위 최대 4배 차이”</b> <em>“18,741개 질병코드 중 내 보험이 실제로 커버하는 건 몇 %일까요?”</em></li>
+    <li>문제 — <em>약관의 구조적 문제 4가지, 별표·부표의 미로</em></li>
+    <li>실제 사례 — <em>자부치 없으면 경추 염좌 0원 / 치아 면책 90일 / 뇌출혈 특약엔 뇌경색(I63) 미포함</em></li>
+    <li>해법 5단계 — <em>약관 PDF 수집 → 분류표 탐지 → KCD 코드 추출 → 18,741개 O/X 판정 → 수술·재해·장해 통합</em></li>
+    <li>숫자로 보는 규모</li>
+    <li class="hit">커버리지 맵 — <b>질병 검색창</b> <em>“어떤 질병이 걱정되세요? (예: 당뇨, E11, 뇌졸중)”</em></li>
+    <li class="hit">질병별 보험사 랭킹 — <em>43개사 중 골라 최대 보장범위 미리보기</em></li>
+    <li>리포트 예시 이미지</li>
+    <li class="hit">무료 보장분석 신청 폼 → 완료 화면</li>
+    <li>준법 블록 — <em>심의필 번호 · 유효기간 · 협회 등록번호 · 변액 유의사항</em></li>
+  </ol>
+
+  <h3>이 페이지의 진짜 노하우</h3>
+  <blockquote>미리보기 버튼을 누르면 <b>최대 보장 범위</b>까지만 보여주고, 그 다음 칸에서 이렇게 말합니다.<br><b>“정확한 분석은 신청하세요 →”</b></blockquote>
+  <p class="sub">읽히는 랜딩이 아니라 <b>만져지는 랜딩</b>입니다. 내 질병을 직접 쳐서 O/X를 본 사람은 이미 자기 문제로 인식한 상태라, 신청 버튼의 성격이 “문의”가 아니라 “확인”으로 바뀝니다. 폼 필수는 이름·연락처·문의 <b>3칸뿐</b>이고, 관심분야 24개는 전부 <b>탭 한 번</b>짜리 칩입니다.</p>
+
+  <h3>준법 처리</h3>
+  <div class="card stampbox">
+    <div class="stamp"><b>심의필</b><span>26-06-223</span></div>
+    <div style="flex:1; min-width:200px">
+      <ul class="tick" style="margin:0">
+        <li>광고심의필 제26-06-223호 · 유효기간 2026.07.01~2027.06.30</li>
+        <li>설계사 강수지 · (주)KFG 대전지점 제2001088108호</li>
+        <li>손해·생명보험협회 제202512-1740-1230호</li>
+        <li class="plus">“보험계약 체결권 없는 <b>금융상품판매 대리·중개업자</b>” 고지</li>
+        <li class="plus">“이 결과는 <b>상품의 최대 보장 범위</b>이며 실제는 가입 특약 구성에 따라 달라집니다”</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>위험한 부분</h3>
+  <ul class="tick">
+    <li class="minus"><b>“최대 4배 차이”</b> 를 히어로에 단정형으로 씁니다. 본문에 근거는 있지만 헤드라인만 잘려 유통되면 오인 소지가 생깁니다.</li>
+    <li class="minus"><b>개인정보 안내가 alert() 팝업 한 줄</b> — 처리방침 문서 링크가 아닙니다.</li>
+    <li class="minus"><b>“제3자에게 절대 제공되지 않습니다”</b> 라고 쓰면서 리드는 외부 폼 서비스와 구글 스프레드시트로 넘어갑니다. 제3자 제공이 아니라 <b>처리 위탁</b>이므로, 수탁자와 위탁업무를 고지해야 말과 실제가 맞습니다.</li>
+  </ul>
+</section>
+
+<!-- ───────── 비교 ───────── -->
+<section id="versus">
+  <div class="eyebrow">정면 비교</div>
+  <h2>같은 오퍼, 다른 무기</h2>
+  <p class="sub">가로로 밀어서 보세요.</p>
+  <div class="scroller">
+    <table>
+      <thead><tr><th scope="col">기준</th><th scope="col">A 착한보험플래너</th><th scope="col">B 인슈플레이</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">파는 것</th><td>상담 방식 (전화 없음)</td><td>분석 기술 (약관 코드 해체)</td></tr>
+        <tr><th scope="row">후킹 축</th><td>부담 제거 — “권유 안 합니다”</td><td>불안 자극 — “내 보험은 몇 %?”</td></tr>
+        <tr><th scope="row">전환 경로</th><td>전 섹션 → 오픈카톡 1개</td><td>도구 체험 → 폼 → 카톡 보조</td></tr>
+        <tr><th scope="row">폼 부담</th><td class="n">필수 6칸 (드롭다운 4)</td><td class="n">필수 3칸 (나머지 칩)</td></tr>
+        <tr><th scope="row">신뢰 근거</th><td>수상·만족도 배지형</td><td>데이터 규모 + 실사례형</td></tr>
+        <tr><th scope="row">근거 병기</th><td>있음 (단, “게시 전 병기 예정”)</td><td>있음 (심평원·뇌졸중학회 출처)</td></tr>
+        <tr><th scope="row">심의 표기</th><td><span class="badge b-risk">없음</span></td><td><span class="badge b-ok">번호·유효기간</span></td></tr>
+        <tr><th scope="row">사업자정보</th><td><span class="badge b-risk">미기재</span></td><td><span class="badge b-ok">기재</span></td></tr>
+        <tr><th scope="row">리드 저장</th><td>자체 폼 + 허니팟</td><td>외부 폼 + 구글시트</td></tr>
+        <tr><th scope="row">사은품</th><td>스타벅스 1잔 (제안서 완료 시)</td><td>없음</td></tr>
+        <tr><th scope="row">모바일</th><td>카톡 직행 — 이탈 적음</td><td>도구 체험 — 체류 김</td></tr>
+        <tr><th scope="row">우리가 배울 점</th><td>공포를 끄는 카피</td><td>먼저 보여주는 구조</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ───────── 심의 ───────── -->
+<section id="simui">
+  <div class="eyebrow">우리 기준 점검</div>
+  <h2>심의필터를 돌리면</h2>
+  <p class="sub">우리 저장소의 발송 전 체크리스트(<code>config/compliance.json</code>)와 외부글 심의필터 규칙 — 단정·수익보장 표현, 비교 근거, 준법감시인 광고심의(필), 개인정보 — 네 항목에 두 페이지를 그대로 대입한 결과입니다.</p>
+
+  <div class="scroller" style="margin-top:14px">
+    <table>
+      <thead><tr><th scope="col">체크 항목</th><th scope="col">A</th><th scope="col">B</th><th scope="col">우리 판정</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">단정·수익 보장 표현</th><td><span class="badge b-warn">주의</span></td><td><span class="badge b-warn">주의</span></td><td>A는 “1위·41%”, B는 “최대 4배”. 둘 다 헤드라인이 단정형</td></tr>
+        <tr><th scope="row">비교 대상·근거 명확</th><td><span class="badge b-warn">주의</span></td><td><span class="badge b-ok">적정</span></td><td>B는 출처 표기, A는 “게시 전 병기 예정”</td></tr>
+        <tr><th scope="row">준법감시인 광고심의(필)</th><td><span class="badge b-risk">미흡</span></td><td><span class="badge b-ok">적정</span></td><td>A는 번호 없이 유료 집행 중</td></tr>
+        <tr><th scope="row">개인정보 고지</th><td><span class="badge b-ok">적정</span></td><td><span class="badge b-warn">주의</span></td><td>A는 “주민번호·비밀번호 안 받음” 명시, B는 팝업 한 줄·위탁 미고지</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card stampbox" style="margin-top:14px">
+    <div class="stamp none"><b>심의 전</b><span>OUR PAGE</span></div>
+    <div style="flex:1; min-width:200px">
+      <h4 style="margin-top:0">우리 페이지에 적용할 세 줄</h4>
+      <ul class="tick" style="margin:0">
+        <li><b>숫자를 쓰면 조건도 같은 화면에</b> — 산정기간·모수·조사방식을 숫자 바로 아래 작은 글씨로. 못 쓰면 숫자를 뺀다.</li>
+        <li><b>심의필 번호·유효기간·등록번호는 푸터 고정</b> — 소재를 바꿔도 이 블록은 안 건드린다.</li>
+        <li><b>사은품은 계약과 분리</b> — “계약 체결과 무관, 상담 완료 기준, 1인 1회”를 이벤트 문구 안에 넣는다.</li>
+      </ul>
+      <p class="sub" style="margin:12px 0 0; font-size:13px">최종 게시는 소속사 준법감시인 확인을 거칩니다. 이 표는 우리 내부 사전 점검용입니다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────── 우리 ───────── -->
+<section id="ours">
+  <div class="eyebrow">우리만의 노하우</div>
+  <h2>둘 다 못 하는 네 가지</h2>
+  <p class="sub">두 페이지의 공통 한계는 하나입니다 — <b>“분석해 드립니다”라고 말만 하고, 결과물은 상담 이후로 미룹니다.</b> 우리는 이미 결과물을 만드는 도구를 갖고 있습니다.</p>
+
+  <div class="grid2" style="margin-top:14px">
+    <div class="card">
+      <div class="eyebrow" style="color:var(--ok)">무기 01</div>
+      <h3 style="margin-top:6px">치료비 통장 언어</h3>
+      <p style="margin:0; font-size:14.5px">둘 다 “보장 범위”를 말합니다. 우리는 <b>“진단비는 치료비가 아니라 일을 쉬는 동안의 생활비”</b>라고 말합니다. 코드 O/X보다 이 한 문장이 계약까지 갑니다.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="color:var(--ok)">무기 02</div>
+      <h3 style="margin-top:6px">8통장 진단지도</h3>
+      <p style="margin:0; font-size:14.5px">생활·병원비·치료비·소득공백·가족보호·은퇴연금·간병요양·자산상속. <b>비어 있는 칸</b>을 그림으로 보여주면 신청 사유가 고객 입에서 나옵니다.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="color:var(--ok)">무기 03</div>
+      <h3 style="margin-top:6px">비포&애프터가 그 자리에서</h3>
+      <p style="margin:0; font-size:14.5px">A는 상담 사례를 <b>이미지로</b> 보여주고, B는 <b>최대 보장범위</b>까지만 보여줍니다. 우리는 상담 자리에서 고객 증권으로 실제 전후를 만들어 냅니다.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="color:var(--ok)">무기 04</div>
+      <h3 style="margin-top:6px">리드가 새지 않는다</h3>
+      <p style="margin:0; font-size:14.5px">B는 구글시트, A는 자체 폼에서 멈춥니다. 우리는 리드 → 접촉 → 약속 → 계약 → 사후관리가 <b>한 줄기</b>로 이어집니다. 광고비 대비 회수는 여기서 갈립니다.</p>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:16px">그리고 우리에게만 있는 다섯 번째 — <b>발행 전 심의필터가 파이프라인 안에 있습니다.</b> A처럼 “나중에 반영” 상태로 광고가 나가는 일이 구조적으로 안 생깁니다.</p>
+</section>
+
+<!-- ───────── 설계안 ───────── -->
+<section id="plan">
+  <div class="eyebrow">실행안 01</div>
+  <h2>우리 랜딩 설계안</h2>
+  <p class="sub">B의 <b>“먼저 만져보게”</b> 구조에 A의 <b>“전화 안 합니다”</b> 안심을 얹고, 축은 우리 8통장으로 세웁니다. 아래 순서 그대로 만들면 됩니다.</p>
+
+  <ol class="flow" style="margin-top:14px">
+    <li class="hit">히어로 — <b>“진단비는 치료비가 아닙니다. 일을 쉬는 동안의 생활비입니다.”</b> <em>서브: 그 돈이 준비된 사람은 열에 몇일까요</em></li>
+    <li>안심 3줄 — <em>전화 먼저 걸지 않습니다 · 가입 권유하지 않습니다 · 주민번호·비밀번호 받지 않습니다</em></li>
+    <li class="hit">미니 도구 — <b>8통장 셀프체크 3문항</b> <em>탭 세 번이면 비어 있는 통장 2~3개가 그림으로 뜬다 (B의 체험 구조)</em></li>
+    <li>결과 미리보기 — <em>“이 칸이 비면 이런 일이 생깁니다” 치료비 지급지도 한 컷</em></li>
+    <li>사례 — <em>비포&애프터 2건. 금액 옆에 조건 병기, 대표 사례임을 명시</em></li>
+    <li>진행 방식 3단계 — <em>신청 → 증권 확인(카톡 사진 가능) → 분석 리포트 설명</em></li>
+    <li class="hit">신청 폼 — <b>필수 3칸</b> <em>이름 · 연락처 · 비어 있는 통장(칩 선택). 나머지는 상담에서</em></li>
+    <li>FAQ 4문항 — <em>비용 / 전화 여부 / 개인정보 / 가입 강요 여부</em></li>
+    <li>준법 푸터 — <em>심의필·등록번호·처리방침 링크 고정 블록</em></li>
+  </ol>
+
+  <div class="card" style="margin-top:16px">
+    <h4 style="margin-top:0">폼은 3칸을 넘기지 않습니다</h4>
+    <p style="margin:0; font-size:14.5px">A는 필수 6칸(드롭다운 4개), B는 필수 3칸입니다. 모바일에서 드롭다운 4개는 이탈 구간입니다. <b>연령대·상담시간·월보험료는 첫 통화에서 물어도 늦지 않습니다.</b> 대신 전산 조회 동의는 <b>선택</b>으로 분리해 두면(A의 방식) 나중에 보장분석 속도가 붙습니다.</p>
+  </div>
+</section>
+
+<!-- ───────── 광고 ───────── -->
+<section id="ads">
+  <div class="eyebrow">실행안 02</div>
+  <h2>메타 광고 카피 5종</h2>
+  <p class="sub">전부 단정·수익보장 표현을 뺀 버전입니다. A의 소재 각도(insurance_problem)와 겹치지 않게, 우리 축인 <b>소득 공백</b>과 <b>통장</b>으로 갑니다.</p>
+
+  <div class="stack" style="margin-top:14px">
+    <div class="ad">
+      <div class="t">01 · 소득 공백</div>
+      <div class="h">암 진단을 받으면, 병원비보다 먼저 끊기는 게 월급입니다.</div>
+      <div class="b">진단비는 치료비가 아니라 일을 쉬는 동안의 생활비입니다. 내 보험이 그 공백을 몇 달까지 버티게 해주는지, 증권 한 장으로 확인해 드립니다. 전화 먼저 걸지 않습니다.</div>
+    </div>
+    <div class="ad">
+      <div class="t">02 · 8통장</div>
+      <div class="h">보험은 8개의 통장입니다. 지금 몇 칸이 비어 있을까요?</div>
+      <div class="b">생활비·병원비·치료비·소득공백·가족보호·은퇴연금·간병요양·자산상속. 탭 세 번이면 비어 있는 칸이 보입니다. 가입 권유 없이 확인만 도와드립니다.</div>
+    </div>
+    <div class="ad">
+      <div class="t">03 · 리모델링</div>
+      <div class="h">보험료를 줄이는 게 아니라, 같은 돈을 다시 배치하는 겁니다.</div>
+      <div class="b">해지 전에 감액·감액완납·연장정기·약관대출부터 검토합니다. 지금 계약을 유지하는 쪽이 나은 경우도 많습니다. 무엇이 나은지 함께 보시죠.</div>
+    </div>
+    <div class="ad">
+      <div class="t">04 · 청구·사후관리</div>
+      <div class="h">가입은 도와줬는데, 청구할 때 연락 닿는 사람이 있으신가요?</div>
+      <div class="b">지급 사유·면책·감액까지 약관 기준으로 정리해 드립니다. 이미 청구가 끝난 건도 다시 볼 수 있습니다.</div>
+    </div>
+    <div class="ad">
+      <div class="t">05 · 부담 제거</div>
+      <div class="h">보장분석 받고 싶은데, 전화가 무서워서 미루셨다면.</div>
+      <div class="b">신청하셔도 먼저 전화하지 않습니다. 원하시는 시간에, 원하시는 방식(카톡·통화)으로만 연락드립니다. 주민등록번호와 계정 비밀번호는 받지 않습니다.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h4 style="margin-top:0">세팅 메모</h4>
+    <ul class="tick" style="margin:0">
+      <li>소재는 <b>2개씩 짝</b>으로 — 01·05(부담 제거형) vs 02·03(구조 설명형)을 같은 예산으로 붙여 각도부터 검증합니다.</li>
+      <li>랜딩 URL에 <code>utm_content</code>로 소재 번호를 넣고, 폼 히든 필드로 받아 <b>CRM 리드에 유입 소재를 그대로 저장</b>합니다. A·B 둘 다 이걸 안 하고 있습니다.</li>
+      <li>인앱 브라우저 대비 — 카톡·인스타에서 열려도 폼이 뜨도록 확인. B는 <code>af_force_deeplink</code>로 이 문제를 처리하고 있습니다.</li>
+      <li>집행 전 <b>심의필터 → 준법감시인</b> 순서. 소재 5종 전부 통과본으로 교체 후 업로드합니다.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ───────── 준법 ───────── -->
+<section id="legal">
+  <div class="eyebrow">실행안 03</div>
+  <h2>푸터에 고정할 준법 블록</h2>
+  <p class="sub">B의 하단 블록을 우리 형식으로 옮긴 것입니다. 대괄호만 채워서 랜딩·블로그·카드뉴스에 그대로 씁니다.</p>
+
+  <div class="copybox">
+    <span class="k">Copy · 랜딩 푸터</span>
+    <p id="legal1">본 자료는 정보 제공 목적의 상담 참고용입니다. 상품 가입 전 약관·상품설명서를 반드시 확인하시기 바랍니다.<br>
+    상담은 무료이며, 특정 상품의 가입 가능 여부·보험료 절감·수익률·보험금 지급을 보장하지 않습니다. 실제 조건은 상품별 약관, 개인별 상황 및 보험회사 심사 결과에 따라 달라질 수 있습니다.<br>
+    기존 계약을 해지하고 새로 가입하는 경우, 새 계약의 인수 심사·보장 개시일·면책 및 감액 조건을 먼저 확인해야 합니다.<br>
+    ※ 투자성 상품(변액보험·펀드 등)은 원금손실이 발생할 수 있으며 과거 수익이 미래 수익을 보장하지 않습니다.<br>
+    ※ 외화보험은 환율 변동에 따라 원화 환산 시 원금손실이 발생할 수 있습니다.<br>
+    ※ 세제·한도는 법령 개정에 따라 달라질 수 있으니 상담 시점 기준으로 재확인하시기 바랍니다.<br>
+    광고심의필 제[    ]호 · 유효기간 [    ] ~ [    ] | 설계사 [이름] · [소속] 등록번호 제[    ]호 | 생명·손해보험협회 제[    ]호 | 사업자등록번호 [    ] | 개인정보처리방침 [링크]</p>
+    <button class="copy" data-src="legal1">복사</button>
+  </div>
+
+  <div class="copybox">
+    <span class="k">Copy · 개인정보 수집 동의 (폼 옆)</span>
+    <p id="legal2">[필수] 개인정보 수집·이용 동의 — 수집항목: 이름, 연락처, 상담 요청 내용. 수집목적: 보장분석 상담 및 결과 안내. 보유기간: 상담 종료 후 [ ]일 이내 파기. 동의를 거부하실 수 있으며, 거부 시 상담 신청이 제한됩니다.<br>
+    [선택] 보험사 전산을 통한 가입내역 확인 및 보장분석 동의 — 본인인증 후 상담 담당자의 권한 범위에서 진행하며, 조회 자료는 보장분석 목적으로만 사용합니다. <b>주민등록번호와 계정 비밀번호는 요청하지 않습니다.</b><br>
+    개인정보 처리 위탁: [폼·메시지 서비스명] (상담 신청 접수 및 알림 발송)</p>
+    <button class="copy" data-src="legal2">복사</button>
+  </div>
+
+  <div class="copybox">
+    <span class="k">Copy · 사례·수치 옆 병기</span>
+    <p id="legal3">※ 회사 제공 대표 상담 사례이며 모든 고객에게 동일하게 적용되지 않습니다. 보험료 조정액과 예상 연금액은 기존 계약·연령·건강상태·납입기간과 상품별 약관 및 보험회사 심사 기준에 따라 달라지며 특정 결과를 보장하지 않습니다.<br>
+    ※ 표기 수치의 산정기간 [    ], 대상 [    ]건, 조사방식 [    ] 기준입니다. 개인별 결과는 다를 수 있습니다.</p>
+    <button class="copy" data-src="legal3">복사</button>
+  </div>
+</section>
+
+<!-- ───────── 실행 ───────── -->
+<section id="run">
+  <div class="eyebrow">실행안 04</div>
+  <h2>4주 안에 올립니다</h2>
+
+  <details open>
+    <summary>1주차 — 심의를 먼저 건다</summary>
+    <div class="body">
+      <ul class="tick" style="margin:0">
+        <li>랜딩 카피 초안 + 광고 소재 5종을 심의필터에 통과시킨다</li>
+        <li>통과본으로 <b>소속사 준법감시인 광고심의 접수</b> — 번호가 나오기 전엔 유료 집행 없음</li>
+        <li>사례로 쓸 비포&애프터 2건 선정, 수치 산정 근거 문서화</li>
+      </ul>
+    </div>
+  </details>
+  <details>
+    <summary>2주차 — 랜딩과 CRM을 붙인다</summary>
+    <div class="body">
+      <ul class="tick" style="margin:0">
+        <li>리드 랜딩페이지 빌더로 9섹션 뼈대 생성 → 8통장 셀프체크 3문항 삽입</li>
+        <li>폼 → CRM 리드 자동 등록, <code>utm_content</code>·소재번호를 리드 필드로 저장</li>
+        <li>허니팟 필드 추가(A의 방식), 인앱 브라우저에서 폼 제출 테스트</li>
+      </ul>
+    </div>
+  </details>
+  <details>
+    <summary>3주차 — 소액으로 각도부터 검증</summary>
+    <div class="body">
+      <ul class="tick" style="margin:0">
+        <li>부담 제거형(01·05) vs 구조 설명형(02·03)을 같은 예산으로 1주</li>
+        <li>보는 지표는 클릭이 아니라 <b>리드당 비용</b>과 <b>통화 연결률</b></li>
+        <li>셀프체크 완료율이 낮으면 문항을 3개 → 2개로 줄인다</li>
+      </ul>
+    </div>
+  </details>
+  <details>
+    <summary>4주차 — 이긴 각도만 키운다</summary>
+    <div class="body">
+      <ul class="tick" style="margin:0">
+        <li>이긴 소재의 헤드라인만 3안 더 파생 (심의 재확인 필요 여부 체크)</li>
+        <li>리드 → 약속 전환율을 CRM에서 보고, 새는 구간에 접촉 자동화를 건다</li>
+        <li>계약까지 간 리드의 유입 소재를 역추적해 다음 달 예산 배분</li>
+      </ul>
+    </div>
+  </details>
+
+  <h3>발행 전 최종 체크</h3>
+  <div class="card">
+    <label class="check"><input type="checkbox"><span>단정·수익 보장 표현이 없다<em>“무조건”, “확정 수익”, “최대 N배”</em></span></label>
+    <label class="check"><input type="checkbox"><span>비교 대상과 근거가 같은 화면에 있다<em>산정기간·모수·조사방식</em></span></label>
+    <label class="check"><input type="checkbox"><span>준법감시인 광고심의(필) 번호와 유효기간이 푸터에 있다</span></label>
+    <label class="check"><input type="checkbox"><span>사업자정보·설계사 등록번호·협회 번호·처리방침 링크가 있다</span></label>
+    <label class="check"><input type="checkbox"><span>고객 실명·연락처가 사례에 노출되지 않는다</span></label>
+    <label class="check"><input type="checkbox"><span>개인정보 수집 동의가 필수/선택으로 분리되고 위탁이 고지됐다</span></label>
+    <label class="check"><input type="checkbox"><span>사은품 문구에 “계약 체결과 무관” 이 들어 있다</span></label>
+    <label class="check"><input type="checkbox"><span>모바일·인앱 브라우저에서 폼 제출이 실제로 된다</span></label>
+    <div id="tally">0 / 8 확인</div>
+  </div>
+</section>
+
+<footer>
+  두 페이지는 2026.08.15 기준으로 직접 받아 구조·문구·폼·푸터를 확인한 내용입니다. 사이트가 수정되면 달라질 수 있습니다.<br>
+  심의 판정은 우리 내부 체크리스트(<code>config/compliance.json</code>) 기준의 사전 점검이며, 법률 자문이 아닙니다. 최종 게시 전 소속사 준법감시인 확인을 거칩니다.
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('button.copy').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var el = document.getElementById(btn.dataset.src);
+    if(!el) return;
+    var text = el.innerText.trim();
+    var done = function(){
+      btn.textContent = '복사됨';
+      btn.classList.add('done');
+      setTimeout(function(){ btn.textContent = '복사'; btn.classList.remove('done'); }, 1600);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ btn.textContent = '복사 실패'; });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e){ btn.textContent = '복사 실패'; }
+      document.body.removeChild(ta);
+    }
+  });
+});
+
+var boxes = document.querySelectorAll('.check input');
+var tally = document.getElementById('tally');
+boxes.forEach(function(b){
+  b.addEventListener('change', function(){
+    var n = 0;
+    boxes.forEach(function(x){ if(x.checked) n++; });
+    tally.textContent = n + ' / ' + boxes.length + ' 확인' + (n === boxes.length ? ' — 발행 가능' : '');
+  });
+});
+</script>
