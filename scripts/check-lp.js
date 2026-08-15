@@ -4,7 +4,7 @@
    옆에 없고, 들어온 사람은 한 번 튕기면 다시 안 온다.
    그래서 여기서 확인하는 것은 화면이 예쁜지가 아니라 이것이다.
 
-     1. 셀프체크를 하면 비어 있는 칸이 폼까지 따라 들어간다
+     1. 점검표에서 고른 항목이 폼까지 따라 들어간다
         — 고객이 같은 말을 두 번 적지 않는다
      2. 동의 없이는 접수되지 않는다 — 그리고 왜 안 되는지 말해 준다
      3. 동의 전에는 고객 자료가 한 글자도 밖으로 안 나간다
@@ -59,33 +59,35 @@ async function open(browser, { stub = true, query = '' } = {}) {
   return page;
 }
 
-/* 셀프체크 세 문항에 답한다. v='gap' 이면 비어 있다고 답한 것. */
-async function answer(page, v) {
-  const qs = await page.$$('.q');
-  for (const q of qs) {
-    const btn = await q.$(`.opts button[data-v="${v}"]`);
-    await btn.click();
-  }
+/* 점검표에서 앞의 n 개를 고른다 */
+async function answer(page, n = 3) {
+  const items = await page.$$('#pass .chk');
+  for (let i = 0; i < Math.min(n, items.length); i++) await items[i].click();
 }
 
 (async () => {
   const browser = await chromium.launch();
   try {
-    /* ── 1. 셀프체크가 폼까지 이어진다 ── */
-    console.log('\n1. 셀프체크 → 폼');
+    /* ── 1. 점검표가 폼까지 이어진다 ── */
+    console.log('\n1. 점검표 → 폼');
     {
       const page = await open(browser);
-      await answer(page, 'gap');
-      /* 칸 하나가 어떤 모양(줄·타일)으로 그려지든, 「비어 있음」 표시만 본다 */
-      const gapCells = await page.$$eval('#pass .gap', els => els.length);
-      ok(gapCells === 3, '비어 있다고 답한 3칸이 통장 그림에 표시된다 (' + gapCells + '칸)');
+      await answer(page, 3);
+      const on = await page.$$eval('#pass .chk[aria-pressed="true"]', els => els.length);
+      ok(on === 3, '고른 3개가 눌린 상태로 남는다 (' + on + '개)');
 
-      const shown = await page.isVisible('#result');
-      ok(shown, '결과 문장이 나온다');
+      ok(await page.isVisible('#result'), '결과 문장이 나온다');
+      ok((await page.textContent('#ringTxt')) === '3/6', '진행 고리가 3/6 을 가리킨다');
 
-      const gaps = await page.inputValue('#f_gaps');
-      ok(gaps.includes('소득공백') && gaps.includes('치료비') && gaps.includes('간병'),
-        '비어 있는 칸이 신청서에 자동으로 들어간다 (' + gaps + ')');
+      const picked = await page.inputValue('#f_gaps');
+      ok(picked.split(',').length === 3 && picked.includes('지인 권유로 가입'),
+        '고른 항목이 신청서에 자동으로 들어간다 (' + picked + ')');
+
+      /* 다시 누르면 빠진다 — 잘못 누른 것을 되돌릴 수 있어야 한다 */
+      await (await page.$$('#pass .chk'))[0].click();
+      const after = await page.inputValue('#f_gaps');
+      ok(!after.includes('지인 권유로 가입') && after.split(',').length === 2,
+        '다시 누르면 선택이 풀린다 (' + after + ')');
       await page.close();
     }
 
@@ -125,7 +127,7 @@ async function answer(page, v) {
     console.log('\n4. 정상 신청');
     {
       const page = await open(browser, { query: '?utm_source=meta&utm_medium=paid_social&utm_content=03' });
-      await answer(page, 'gap');
+      await answer(page, 3);
       await page.fill('#f_name', '홍길동');
       await page.fill('#f_phone', '010-1234-5678');
       await page.fill('#f_memo', '갱신형이 계속 오릅니다');
@@ -141,7 +143,7 @@ async function answer(page, v) {
       ok(r.consent_privacy === true && r.consent_lookup === true, '동의 두 개가 기록된다');
       ok(r.source === '보장분석-홈페이지', 'DB 종류가 붙는다 (' + r.source + ')');
       ok(r.utm_source === 'meta' && r.utm_content === '03', '광고 소재 번호가 함께 저장된다 (utm_content=' + r.utm_content + ')');
-      ok(typeof r.empty_accounts === 'string' && r.empty_accounts.length > 0, '비어 있던 칸도 같이 넘어간다');
+      ok(typeof r.checked_items === 'string' && r.checked_items.length > 0, '고른 항목도 같이 넘어간다 (' + r.checked_items + ')');
 
       const msg = (await page.textContent('#formMsg')) || '';
       ok(msg.includes('접수되었습니다'), '접수됐다고 알려 준다');

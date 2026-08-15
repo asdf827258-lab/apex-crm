@@ -33,7 +33,7 @@ create table if not exists public.web_leads (
   /* 고객이 직접 적는 것 — 세 칸이 전부다 */
   customer_name text not null,
   phone text not null,
-  empty_accounts text,                    /* 8통장 셀프체크에서 비어 있던 칸 */
+  checked_items text,                     /* 점검표에서 고른 항목 */
   memo text,                              /* 궁금한 점 (선택) */
 
   /* 동의 — 받은 사실을 남긴다. 필수 동의 없이는 애초에 넘어오지 않는다 */
@@ -58,8 +58,22 @@ create table if not exists public.web_leads (
   admin_memo text
 );
 
-/* 이미 만들어 둔 서버에도 빠진 칸이 있으면 채운다 */
-alter table public.web_leads add column if not exists empty_accounts text;
+/* 이미 만들어 둔 서버에도 빠진 칸이 있으면 채운다.
+   앞선 판에서 empty_accounts 로 만들어 둔 서버가 있으면 이름만 바꾼다 —
+   들어와 있는 신청은 그대로 두고 옮긴다. */
+do $mig$
+begin
+  if exists (select 1 from information_schema.columns
+             where table_schema='public' and table_name='web_leads' and column_name='empty_accounts')
+     and not exists (select 1 from information_schema.columns
+             where table_schema='public' and table_name='web_leads' and column_name='checked_items')
+  then
+    execute 'alter table public.web_leads rename column empty_accounts to checked_items';
+  end if;
+end
+$mig$;
+
+alter table public.web_leads add column if not exists checked_items text;
 alter table public.web_leads add column if not exists consent_lookup boolean not null default false;
 alter table public.web_leads add column if not exists referrer text;
 alter table public.web_leads add column if not exists admin_memo text;
