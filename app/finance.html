@@ -228,6 +228,32 @@ a { color: inherit; text-decoration: none; }
   border-radius: 99px;
 }
 
+/* 물가상승률 고정 칸 — 상담 중에 제일 자주 만지는 숫자다 */
+.sb-pin{padding:12px 16px 13px;border-bottom:1px solid rgba(255,255,255,.06);
+  background:rgba(96,165,250,.10);flex-shrink:0}
+.sb-pin .pin-k{font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.01em}
+.sb-pin .pin-k em{font-style:normal;font-weight:600;color:rgba(255,255,255,.34);margin-left:5px}
+.sb-pin .pin-in{display:flex;align-items:center;gap:7px;margin-top:7px}
+.sb-pin .pin-in input{flex:1;min-width:0;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);border-radius:8px;color:#fff;
+  font-size:17px;font-weight:800;padding:6px 10px;text-align:right;-webkit-appearance:none}
+.sb-pin .pin-in input:focus{border-color:rgba(96,165,250,.62);outline:none}
+.sb-pin .pin-in span{font-size:13px;font-weight:800;color:#93C5FD}
+.sb-pin .pin-x{font-size:10.5px;line-height:1.55;color:rgba(255,255,255,.40);margin-top:7px}
+.sb-pin .pin-x b{color:rgba(255,255,255,.74)}
+.sf-moved{font-size:11px;line-height:1.5;color:rgba(255,255,255,.34);
+  background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.10);
+  border-radius:6px;padding:5px 8px}
+
+/* 투자 컨설팅 — 고객 자료를 물고 왔다는 표시 */
+.ic-seed{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+  padding:10px 14px;border-radius:12px;background:#EFF6FF;border:1px solid #BFDBFE}
+.ic-seed .t{font-size:12.5px;font-weight:700;color:#1D4ED8;line-height:1.6}
+.ic-seed .t b{color:#111827}
+.ic-seed button{margin-left:auto;font-size:11.5px;font-weight:700;cursor:pointer;
+  padding:5px 11px;border-radius:8px;border:1px solid #93C5FD;background:#fff;color:#1D4ED8}
+.ic-seed button:hover{background:#DBEAFE}
+
 /* 아코디언 */
 .sb-section {
   margin-bottom: 4px;
@@ -1180,6 +1206,18 @@ a { color: inherit; text-decoration: none; }
     <div class="sb-sub">VIP 재무설계 현금흐름표</div>
   </div>
 
+  <!-- 물가상승률 — 접힌 칸 안에 있어서 아무도 못 찾았다.
+       이 한 숫자가 은퇴 목표액·교육자금·부동산·발표자료에 전부 들어가므로
+       상담 중에 바로 만질 수 있게 맨 위에 고정으로 뺐다. -->
+  <div class="sb-pin">
+    <div class="pin-k">📈 물가상승률 <em>모든 계산에 같이 들어갑니다</em></div>
+    <div class="pin-in">
+      <input type="number" id="s_inf" value="3" step="0.1" min="0" max="15" oninput="infSync()">
+      <span>%</span>
+    </div>
+    <div class="pin-x">은퇴 목표액 · 교육자금 · 부동산 · 투자 발표자료가 <b>전부 이 숫자</b>로 계산됩니다</div>
+  </div>
+
   <!-- 좌측 입력 안내 -->
   <div class="input-guide">
     <div class="ig-title">👤 고객 정보를 왼쪽에서 바로 입력</div>
@@ -1313,7 +1351,7 @@ a { color: inherit; text-decoration: none; }
           <div class="sf"><label>기대 수익률(%)</label><input type="number" id="s_ret" value="5" step="0.5" oninput="render()"></div>
         </div>
         <div class="sf2">
-          <div class="sf"><label>물가상승률(%)</label><input type="number" id="s_inf" value="3" step="0.5" oninput="render()"></div>
+          <div class="sf"><label>물가상승률(%)</label><div class="sf-moved">👆 맨 위 고정 칸으로 옮겼습니다</div></div>
           <div class="sf"><label>국민연금 예상(만/월)</label><input type="number" id="s_nps" value="80" oninput="render()"></div>
         </div>
         <div class="sf2">
@@ -1384,7 +1422,7 @@ a { color: inherit; text-decoration: none; }
               <option>대전</option><option>세종</option><option>지방</option>
             </select>
           </div>
-          <div class="sf"><label>예상 물가상승률(%)</label><input type="number" id="r_inflation" value="3" step="0.5" oninput="render()"></div>
+          <div class="sf"><label>예상 물가상승률(%)<small style="color:rgba(255,255,255,.34)"> · 맨 위를 따라옵니다</small></label><input type="number" id="r_inflation" value="3" step="0.5" oninput="render()"></div>
         </div>
         <div class="sf2">
           <div class="sf"><label>희망 매수 시기</label>
@@ -4545,6 +4583,12 @@ function dkMan(v){
   return s+v.toLocaleString()+'만';
 }
 function dkNum(id,d){var e=document.getElementById(id);var v=parseFloat(e&&e.value);return isFinite(v)?v:d;}
+/* 발표 기본값을 고객 칸에서 가져온다. 전에는 setbar 는 고객 나이를 쓰고
+   슬라이드는 40 을 써서, 위에 29세라고 적힌 화면에서 「40세」 슬라이드가 나왔다.
+   dkPaint 가 슬라이드를 먼저 만들고 setbar 를 나중에 붙이는데, 첫 그리기 때는
+   dk_age 칸 자체가 아직 없어서 각자 다른 기본값으로 떨어진 것이다. */
+function dkCli(id,d){var e=document.getElementById(id);var v=parseFloat(e&&e.value);return isFinite(v)?v:d;}
+function dkYears(d){var a=dkCli('s_age',0),r=dkCli('s_rage',0);return (a>0&&r>a)?Math.round(r-a):d;}
 function dkFv(m,annual,years){
   var r=annual/100/12,k=Math.round(years*12);
   if(k<=0)return 0; if(Math.abs(r)<1e-9)return m*k;
@@ -4591,17 +4635,17 @@ function dkSetBar(kind){
   }
   return '<div class="dk-setbar">'+
     '<div><label>월 투자금(만원)</label><input type="number" id="dk_amt" value="'+dkNum('dk_amt',50)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>기간(년)</label><input type="number" id="dk_yrs" value="'+dkNum('dk_yrs',20)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>고객 나이</label><input type="number" id="dk_age" value="'+dkNum('dk_age',40)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>물가상승률(%)</label><input type="number" step="0.1" id="dk_inf" value="'+dkNum('dk_inf',2.5)+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>기간(년)</label><input type="number" id="dk_yrs" value="'+dkNum('dk_yrs',dkYears(20))+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>고객 나이</label><input type="number" id="dk_age" value="'+dkNum('dk_age',dkCli('s_age',40))+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>물가상승률(%)</label><input type="number" step="0.1" id="dk_inf" value="'+dkNum('dk_inf',dkCli('s_inf',2.5))+'" oninput="dkPaint(\'invest\')"></div>'+
   '</div>';
 }
 function dkSet(id,v,kind){var e=document.getElementById(id);if(e)e.value=v;dkPaint(kind);}
 
 /* ═══════ 투자 프레젠테이션 ═══════ */
 function dkInvestSlides(){
-  var m=Math.max(1,dkNum('dk_amt',50)), y=Math.max(1,dkNum('dk_yrs',20));
-  var age=dkNum('dk_age',40), inf=dkNum('dk_inf',2.5);
+  var m=Math.max(1,dkNum('dk_amt',50)), y=Math.max(1,dkNum('dk_yrs',dkYears(20)));
+  var age=dkNum('dk_age',dkCli('s_age',40)), inf=dkNum('dk_inf',dkCli('s_inf',2.5));
   var prin=m*y*12;
   var dep=dkFv(m,2.5,y), depNet=prin+(dep-prin)*0.846;
   var real=depNet/Math.pow(1+Math.max(0,inf)/100,y);
@@ -9974,5 +10018,145 @@ else mount();
 
 })();
 </script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   투자 쪽 세 가지를 고친다.
+
+   ① 물가상승률 한 숫자로 — 맨 위 고정 칸(s_inf)이 주인이고
+      부동산(r_inflation)과 발표자료(dk_inf)가 그 숫자를 따라간다.
+      전에는 세 칸이 각각 3 / 3 / 2.5 로 따로 놀았고, 그중 하나는
+      접힌 칸 안에 있어서 상담 중에 아무도 못 찾았다.
+
+   ② 투자 컨설팅이 고객을 안 보고 있었다 — IC 는 pay:400, age:38 이
+      고정값이라 35세 연봉 6,000만 고객도 38세 월급 400만으로 계산됐다.
+      왼쪽에 이미 받아 둔 값이 있으면 그걸로 채운다. 설계사가 손으로
+      고친 뒤에는 덮어쓰지 않는다 — 「다시 가져오기」를 눌러야 새로 읽는다.
+
+   ③ 투자 탭은 언제나 ETF·주식 포트폴리오부터 — 앞 고객에게 변액 탭을
+      열어 뒀으면 다음 고객도 변액부터 보게 된다. 성향과 배분을 먼저
+      정하고, 투자 컨설팅이 그 성향을 이어받는다.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+
+/* ── 왼쪽 칸에서 숫자 읽기 ── */
+function cliNum(id, dflt){
+  var e = document.getElementById(id);
+  if(!e) return dflt;
+  var v = parseFloat(e.value);
+  return isFinite(v) ? v : dflt;
+}
+function cliYears(dflt){
+  var age = cliNum('s_age', 0), rage = cliNum('s_rage', 0);
+  return (age > 0 && rage > age) ? Math.round(rage - age) : dflt;
+}
+window.cliNum = cliNum;
+window.cliYears = cliYears;
+
+/* ── ① 물가상승률 한 숫자 ── */
+window.infSync = function(){
+  var v = cliNum('s_inf', 3);
+  ['r_inflation','dk_inf'].forEach(function(id){
+    var e = document.getElementById(id);
+    if(e) e.value = v;
+  });
+  /* 발표용 물가는 설계사가 따로 잡아 두는 칸이다. 저장해 둔 값이 있으면 건드리지 않는다. */
+  var ai = document.getElementById('apexInf');
+  if(ai){
+    var saved = null;
+    try{ saved = localStorage.getItem('apex_present_inf'); }catch(x){}
+    if(saved === null || saved === '') ai.value = v;
+  }
+  try{ if(window.render) window.render(); }catch(e){}
+};
+
+/* ── ② 투자·변액 컨설팅에 고객 자료 물리기 ── */
+/* 사이드바 성향은 다섯 단계, 컨설팅은 세 단계다 */
+function icRiskOf(v){
+  if(v === '안정형' || v === '안정추구형') return '안정형';
+  if(v === '적극투자형' || v === '공격형') return '공격형';
+  return '중립형';
+}
+var IC_SEEDED = false;
+window.icSeed = function(force){
+  if(IC_SEEDED && !force) return null;
+  if(typeof IC === 'undefined') return null;
+  var got = [];
+  var gross = cliNum('s_gross', 0);
+  if(gross > 0){ IC.pay = Math.round(gross / 12); got.push('월 급여 <b>' + IC.pay.toLocaleString() + '만</b>'); }
+  var age = cliNum('s_age', 0);
+  if(age > 0){ IC.age = age; got.push('나이 <b>' + age + '세</b>'); }
+  var yrs = cliYears(0);
+  if(yrs > 0){ IC.years = yrs; got.push('운용 <b>' + yrs + '년</b>'); }
+  var it = document.getElementById('s_itype');
+  if(it && it.value){ IC.risk = icRiskOf(it.value); got.push('성향 <b>' + IC.risk + '</b>'); }
+  if(typeof VC !== 'undefined' && yrs > 0) VC.years = yrs;
+  IC_SEEDED = true;
+  return got;
+};
+
+/* renderInvestConsult 를 감싸서 — 그리기 전에 채우고, 그린 뒤에 표시를 붙인다 */
+function wrapConsult(){
+  var cur = window.renderInvestConsult;
+  if(typeof cur !== 'function' || cur.__seed) return;
+  var w = function(){
+    var got = null;
+    try{ got = window.icSeed(false); }catch(e){}
+    var r = cur.apply(this, arguments);
+    try{
+      var host = document.getElementById('inv-consult');
+      if(host && !host.querySelector('.ic-seed')){
+        var bar = document.createElement('div');
+        bar.className = 'ic-seed';
+        var txt = (got && got.length)
+          ? '🔗 왼쪽 고객 자료에서 가져왔습니다 — ' + got.join(' · ')
+          : '🔗 왼쪽 고객 정보(나이 · 연 총급여 · 은퇴 목표 나이 · 투자 성향)를 채우면 여기가 자동으로 맞춰집니다';
+        bar.innerHTML = '<span class="t">' + txt + '</span>' +
+          '<button type="button" onclick="icSeed(true);renderInvestConsult()">↻ 다시 가져오기</button>';
+        host.insertBefore(bar, host.firstChild);
+      }
+    }catch(e){}
+    return r;
+  };
+  w.__seed = true;
+  window.renderInvestConsult = w;
+}
+
+/* ── ③ 투자 탭은 ETF·주식 포트폴리오부터 ── */
+function etfFirst(tab){
+  if(tab !== 'invest') return;
+  var btn = document.getElementById('stab-etf');
+  var pane = document.getElementById('sub-etf');
+  if(!btn || !pane) return;
+  if(pane.style.display === 'none' || !btn.classList.contains('on')){
+    if(window.switchSubTab) window.switchSubTab('etf', btn);
+  }
+}
+/* switchTab 은 이 파일 안에서 여러 번 통째로 덮어써진다. 고치지 말고 감싼다. */
+function wrapTab(){
+  var cur = window.switchTab;
+  if(typeof cur !== 'function' || cur.__inv) return;
+  var w = function(tab, btn){
+    var r = cur.apply(this, arguments);
+    try{ etfFirst(tab); }catch(e){}
+    return r;
+  };
+  w.__inv = true;
+  window.switchTab = w;
+}
+
+function arm(){ wrapTab(); wrapConsult(); }
+arm();
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm);
+[300, 900, 2000].forEach(function(ms){ setTimeout(arm, ms); });
+/* 상담자료에서 고객 값이 넘어온 직후에도 한 번 더 맞춘다 */
+window.addEventListener('message', function(){ setTimeout(function(){
+  try{ window.infSync(); }catch(e){}
+  try{ window.icSeed(true); }catch(e){}
+}, 260); });
+
+})();
+</script>
+
 </body>
 </html>
