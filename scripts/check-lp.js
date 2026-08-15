@@ -76,7 +76,8 @@ async function answer(page, v) {
     {
       const page = await open(browser);
       await answer(page, 'gap');
-      const gapCells = await page.$$eval('#pass .cell.gap', els => els.length);
+      /* 칸 하나가 어떤 모양(줄·타일)으로 그려지든, 「비어 있음」 표시만 본다 */
+      const gapCells = await page.$$eval('#pass .gap', els => els.length);
       ok(gapCells === 3, '비어 있다고 답한 3칸이 통장 그림에 표시된다 (' + gapCells + '칸)');
 
       const shown = await page.isVisible('#result');
