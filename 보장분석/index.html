@@ -3,185 +3,195 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>무료 보장분석 신청 — 8통장으로 보는 내 보험</title>
-<meta name="description" content="가입한 보험을 8개의 통장으로 나눠 비어 있는 칸을 확인해 드립니다. 전화 먼저 걸지 않고, 가입을 권유하지 않습니다.">
+<title>보장 명세서 — 무료 보장분석 신청</title>
+<meta name="description" content="가입한 보험을 8개의 통장으로 나눠, 비어 있는 칸을 명세서처럼 정리해 드립니다. 전화 먼저 걸지 않고, 가입을 권유하지 않습니다.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="내 보험, 8칸 중 몇 칸이 비어 있을까요">
-<meta property="og:description" content="탭 세 번이면 비어 있는 칸이 보입니다. 무료 보장분석 신청.">
-<meta name="theme-color" content="#1F5B4B">
+<meta property="og:title" content="내 보장 명세서 — 8칸 중 몇 칸이 비어 있을까요">
+<meta property="og:description" content="세 문항이면 비어 있는 칸이 보입니다. 무료 보장분석 신청.">
+<meta name="theme-color" content="#17325C">
 <meta name="robots" content="index,follow">
 
 <!-- ─────────────────────────────────────────────────────────────
-     심의 제출 전 채울 것 — 대괄호 [ ] 로 표시된 자리
+     심의 제출 전 채울 것 — 대괄호 [ ] 로 표시된 자리 (화면에서 붉게 보입니다)
        · 푸터의 설계사명 · 소속 · 등록번호 · 협회번호 · 사업자번호 · 주소 · 연락처
        · 광고심의필 번호와 유효기간
-       · 개인정보처리방침 링크 (footer 의 privacy-link)
-       · 상담 사례 두 건의 실제 수치와 산정 근거
-       · 아래 SITE.kakaoUrl 에 오픈채팅 주소 (비워 두면 카톡 버튼이 안 보입니다)
+       · 개인정보 보유기간 일수 (동의 문구 안)
+       · 개인정보처리방침 링크 · 카카오톡 주소 → 아래 SITE
+       · 상담 사례 두 건의 실제 내용과 산정 근거
+     채울 자리 전체 목록은 docs/광고/보장분석_심의제출.md 에 있습니다.
+
      신청은 config.js 의 Supabase 설정이 있으면 신청함(web_leads)으로 들어갑니다.
-     설정이 없으면 전화·카톡 안내로 대체됩니다 — 신청이 조용히 사라지지 않습니다.
+     설정이 없으면 다른 연락 방법을 안내합니다 — 신청이 조용히 사라지지 않습니다.
      ───────────────────────────────────────────────────────────── -->
 
 <style>
 :root{
-  --bg:#F3F5F4; --surface:#FFFFFF; --surface-2:#EBEFED; --surface-3:#E1E7E4;
-  --ink:#121816; --ink-2:#485550; --ink-3:#78857F;
-  --line:#DBE2DF; --line-2:#C4CEC9;
-  --pine:#1F5B4B; --pine-2:#174538; --pine-soft:rgba(31,91,75,.08);
-  --amber:#9A5E0B; --amber-soft:rgba(154,94,11,.11);
-  --shadow:0 1px 2px rgba(18,24,22,.05), 0 10px 28px -18px rgba(18,24,22,.3);
+  --paper:#EFF1F5; --sheet:#FFFFFF; --sheet-2:#F6F7F9;
+  --ink:#0F141C; --ink-2:#454F5C; --ink-3:#78828E;
+  --rule:#E4E8ED; --line:#D3D9E0; --line-2:#BAC2CC;
+  --navy:#17325C; --navy-soft:rgba(23,50,92,.07);
+  --seal:#B8332A; --seal-soft:rgba(184,51,42,.08);
   --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,"Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,"D2Coding",monospace;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,"D2Coding","Nanum Gothic Coding",monospace;
 }
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]){
-    --bg:#0B110F; --surface:#131B18; --surface-2:#1A2320; --surface-3:#212C28;
-    --ink:#E5ECE9; --ink-2:#9EACA7; --ink-3:#6E7C77;
-    --line:#25322D; --line-2:#36453F;
-    --pine:#63C2A5; --pine-2:#8AD4BC; --pine-soft:rgba(99,194,165,.12);
-    --amber:#DFA64C; --amber-soft:rgba(223,166,76,.13);
-    --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -20px rgba(0,0,0,.9);
+    --paper:#0E1218; --sheet:#151B24; --sheet-2:#1A212B;
+    --ink:#E5EAF1; --ink-2:#98A3B2; --ink-3:#6B7684;
+    --rule:#222A35; --line:#2B3541; --line-2:#3B4653;
+    --navy:#8CB4E6; --navy-soft:rgba(140,180,230,.10);
+    --seal:#E5695C; --seal-soft:rgba(229,105,92,.12);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#0B110F; --surface:#131B18; --surface-2:#1A2320; --surface-3:#212C28;
-  --ink:#E5ECE9; --ink-2:#9EACA7; --ink-3:#6E7C77;
-  --line:#25322D; --line-2:#36453F;
-  --pine:#63C2A5; --pine-2:#8AD4BC; --pine-soft:rgba(99,194,165,.12);
-  --amber:#DFA64C; --amber-soft:rgba(223,166,76,.13);
-  --shadow:0 1px 2px rgba(0,0,0,.45), 0 12px 30px -20px rgba(0,0,0,.9);
+  --paper:#0E1218; --sheet:#151B24; --sheet-2:#1A212B;
+  --ink:#E5EAF1; --ink-2:#98A3B2; --ink-3:#6B7684;
+  --rule:#222A35; --line:#2B3541; --line-2:#3B4653;
+  --navy:#8CB4E6; --navy-soft:rgba(140,180,230,.10);
+  --seal:#E5695C; --seal-soft:rgba(229,105,92,.12);
 }
 
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{
-  margin:0; background:var(--bg); color:var(--ink);
-  font-family:var(--sans); font-size:16px; line-height:1.72; word-break:keep-all;
-  padding-bottom:calc(78px + env(safe-area-inset-bottom));
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.75; word-break:keep-all;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom));
 }
-.wrap{max-width:600px; margin:0 auto; padding:0 18px}
-section{padding:38px 0; border-top:1px solid var(--line)}
-section:first-of-type{border-top:0}
-h1,h2,h3{letter-spacing:-.025em; text-wrap:balance; margin:0}
-h1{font-size:clamp(26px,7.4vw,34px); line-height:1.3; font-weight:800}
-h2{font-size:clamp(20px,5.4vw,24px); line-height:1.35; font-weight:800; margin-bottom:8px}
-h3{font-size:16px; font-weight:700; margin-bottom:4px}
-p{margin:0 0 14px}
-.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--pine); font-weight:700; margin-bottom:10px}
+.wrap{max-width:620px; margin:0 auto; padding:0 16px}
+
+/* 문서 한 장 */
+.sheet{background:var(--sheet); border:1px solid var(--line)}
+.sheet+.sheet{margin-top:14px}
+.sheet-hd{border-bottom:1px solid var(--line); padding:12px 16px; display:flex; justify-content:space-between; align-items:baseline; gap:12px; background:var(--sheet-2)}
+.sheet-hd .no{font-family:var(--mono); font-size:11px; letter-spacing:.12em; color:var(--ink-3); white-space:nowrap}
+.sheet-hd .ti{font-size:14px; font-weight:700; letter-spacing:-.01em}
+.sheet-bd{padding:16px}
+
+h1,h2,h3{letter-spacing:-.03em; text-wrap:balance; margin:0; font-weight:800}
+h1{font-size:clamp(25px,7vw,33px); line-height:1.34}
+h2{font-size:clamp(19px,5.2vw,23px); line-height:1.38; margin-bottom:8px}
+h3{font-size:15.5px; font-weight:700; letter-spacing:-.01em}
+p{margin:0 0 13px}
+p:last-child{margin-bottom:0}
 .sub{color:var(--ink-2); font-size:15px}
-a{color:var(--pine)}
-:focus-visible{outline:2px solid var(--pine); outline-offset:2px; border-radius:4px}
+.fine{font-size:12.5px; color:var(--ink-3); line-height:1.75}
+a{color:var(--navy)}
+:focus-visible{outline:2px solid var(--navy); outline-offset:2px}
+mark.fill{background:var(--seal-soft); color:var(--seal); font-family:var(--mono); font-size:.86em; padding:1px 5px; font-weight:700}
 
-/* 히어로 */
-header.hero{padding:44px 0 34px}
-header.hero h1 em{font-style:normal; color:var(--pine); }
-.hero-note{margin-top:16px; font-size:13.5px; color:var(--ink-3); line-height:1.7;
-  border-left:2px solid var(--line-2); padding-left:12px}
+/* 표지 */
+header.cover{padding:26px 0 18px}
+.stamp-line{display:flex; align-items:center; gap:10px; font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--ink-3); text-transform:uppercase}
+.stamp-line::after{content:""; flex:1; height:1px; background:var(--line)}
+header.cover h1{margin:14px 0 0}
+header.cover h1 em{font-style:normal; color:var(--seal)}
+.cover-meta{margin-top:16px; border-top:1px solid var(--line); border-bottom:1px solid var(--line)}
+.cover-meta div{display:flex; gap:12px; padding:8px 0; border-top:1px solid var(--rule); font-size:13.5px}
+.cover-meta div:first-child{border-top:0}
+.cover-meta dt{flex:0 0 84px; font-family:var(--mono); font-size:11.5px; color:var(--ink-3); letter-spacing:.04em; margin:0; padding-top:2px}
+.cover-meta dd{margin:0; color:var(--ink-2); flex:1}
 
-/* 안심 3줄 */
-ul.assure{list-style:none; margin:22px 0 0; padding:0; display:flex; flex-direction:column; gap:1px;
-  background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
-ul.assure li{background:var(--surface); padding:12px 14px; font-size:14.5px; font-weight:600; display:flex; gap:10px; align-items:baseline}
-ul.assure li b{color:var(--pine); font-family:var(--mono); font-size:12px; flex:0 0 auto}
+/* 약속 세 줄 */
+.pledge{margin:0; padding:0}
+.pledge li{list-style:none; display:flex; gap:11px; padding:11px 16px; border-bottom:1px solid var(--rule); font-size:14.5px; line-height:1.62}
+.pledge li:last-child{border-bottom:0}
+.pledge li i{font-style:normal; font-family:var(--mono); font-size:11.5px; color:var(--seal); font-weight:700; padding-top:3px}
+.pledge b{font-weight:700}
 
-/* 8통장 */
-.pass{display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin:18px 0 0}
-@media(min-width:520px){ .pass{grid-template-columns:repeat(4,1fr)} }
-.pass .cell{background:var(--surface); border:1px solid var(--line); border-radius:11px; padding:11px 12px; transition:background .25s, border-color .25s}
-.pass .cell .nm{font-size:14px; font-weight:700; line-height:1.35}
-.pass .cell .st{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; color:var(--ink-3); margin-top:3px; display:block}
-.pass .cell.ok{background:var(--pine-soft); border-color:var(--pine)}
-.pass .cell.ok .st{color:var(--pine)}
-.pass .cell.gap{background:var(--amber-soft); border-color:var(--amber)}
-.pass .cell.gap .st{color:var(--amber); font-weight:700}
-@media (prefers-reduced-motion:reduce){ .pass .cell{transition:none} }
+/* 통장 명세 표 */
+.ledger{border-top:1px solid var(--line)}
+.ledger .cell{display:grid; grid-template-columns:1fr auto; align-items:center; gap:12px;
+  padding:11px 14px; border-bottom:1px solid var(--rule); background:var(--sheet)}
+.ledger .cell .nm{font-size:15px; font-weight:700; letter-spacing:-.01em}
+.ledger .cell .st{font-family:var(--mono); font-size:11.5px; letter-spacing:.04em; color:var(--ink-3); text-align:right; white-space:nowrap}
+.ledger .cell.ok{background:var(--navy-soft)}
+.ledger .cell.ok .st{color:var(--navy); font-weight:700}
+.ledger .cell.gap{background:var(--seal-soft)}
+.ledger .cell.gap .nm{color:var(--seal)}
+.ledger .cell.gap .st{color:var(--seal); font-weight:700}
+.ledger-foot{display:flex; justify-content:space-between; gap:12px; padding:11px 14px; background:var(--sheet-2); font-family:var(--mono); font-size:11.5px; color:var(--ink-3); border-bottom:1px solid var(--line)}
+.ledger-foot b{color:var(--seal); font-size:13px}
 
-/* 셀프체크 */
-.quiz{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:var(--shadow)}
-.q+.q{margin-top:16px; padding-top:16px; border-top:1px solid var(--line)}
-.q .qn{font-family:var(--mono); font-size:11px; color:var(--ink-3); letter-spacing:.1em}
-.q .qt{font-size:15.5px; font-weight:700; line-height:1.55; margin:3px 0 10px}
-.opts{display:flex; flex-wrap:wrap; gap:7px}
+/* 문항 */
+.q{padding:15px 16px; border-bottom:1px solid var(--rule)}
+.q:last-of-type{border-bottom:0}
+.qn{font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:var(--ink-3)}
+.qt{font-size:15.5px; font-weight:700; line-height:1.58; margin:2px 0 11px; letter-spacing:-.01em}
+.opts{display:flex; flex-wrap:wrap; gap:6px}
 .opts button{font-family:var(--sans); font-size:14px; font-weight:600; color:var(--ink);
-  background:var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:8px 13px; cursor:pointer}
-.opts button:hover{border-color:var(--line-2)}
-.opts button[aria-pressed="true"]{background:var(--pine); border-color:var(--pine); color:#fff}
-:root:not([data-theme="light"]) .opts button[aria-pressed="true"]{color:#0B110F}
-@media (prefers-color-scheme:light){ .opts button[aria-pressed="true"]{color:#fff} }
-.result{margin-top:16px; padding:13px 14px; border-radius:11px; background:var(--surface-2); border:1px solid var(--line); font-size:14.5px; line-height:1.65}
-.result b{color:var(--amber)}
+  background:var(--sheet); border:1px solid var(--line-2); border-radius:3px; padding:8px 13px; cursor:pointer}
+.opts button:hover{border-color:var(--ink-3)}
+.opts button[aria-pressed="true"]{background:var(--navy); border-color:var(--navy); color:var(--sheet)}
+.result{padding:13px 16px; background:var(--sheet-2); border-top:1px solid var(--line); font-size:14.5px; line-height:1.68}
+.result b{color:var(--seal)}
 .result.hide{display:none}
 
 /* 목록 */
-ol.steps{list-style:none; counter-reset:s; margin:16px 0 0; padding:0}
-ol.steps li{counter-increment:s; position:relative; padding:11px 0 11px 38px; border-top:1px solid var(--line); font-size:15px; line-height:1.6}
-ol.steps li:first-child{border-top:0}
-ol.steps li::before{content:counter(s); position:absolute; left:0; top:12px; width:23px; height:23px; border-radius:50%;
-  background:var(--pine-soft); color:var(--pine); font-family:var(--mono); font-size:12px; font-weight:700;
-  display:grid; place-content:center}
-ol.steps li b{display:block; font-size:15px}
-ol.steps li span{color:var(--ink-2); font-size:14px}
-
-.does{display:grid; grid-template-columns:1fr; gap:10px; margin-top:16px}
-@media(min-width:520px){ .does{grid-template-columns:1fr 1fr} }
-.does div{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px}
-.does p{margin:0; font-size:14.5px; color:var(--ink-2); line-height:1.65}
+.rows > div{padding:12px 16px; border-bottom:1px solid var(--rule)}
+.rows > div:last-child{border-bottom:0}
+.rows p{margin:3px 0 0; font-size:14.5px; color:var(--ink-2); line-height:1.68}
+ol.steps{list-style:none; margin:0; padding:0; counter-reset:s}
+ol.steps li{counter-increment:s; display:grid; grid-template-columns:26px 1fr; gap:10px;
+  padding:12px 16px; border-bottom:1px solid var(--rule)}
+ol.steps li:last-child{border-bottom:0}
+ol.steps li::before{content:counter(s,decimal-leading-zero); font-family:var(--mono); font-size:11.5px; color:var(--seal); font-weight:700; padding-top:4px}
+ol.steps b{display:block; font-size:15px; letter-spacing:-.01em}
+ol.steps span{font-size:14px; color:var(--ink-2); line-height:1.65}
 
 /* 사례 */
-.case{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px; margin-top:10px}
-.case .lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; color:var(--ink-3); text-transform:uppercase}
-.case p{margin:6px 0 0; font-size:14.5px; line-height:1.65; color:var(--ink-2)}
-.fill{background:var(--amber-soft); color:var(--amber); font-family:var(--mono); font-size:12px; padding:1px 6px; border-radius:5px; font-weight:700}
-.disc{font-size:12.5px; color:var(--ink-3); line-height:1.7; margin-top:12px}
+.case{padding:13px 16px; border-bottom:1px solid var(--rule)}
+.case:last-of-type{border-bottom:1px solid var(--line)}
+.case .lab{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--ink-3)}
+.case p{margin:5px 0 0; font-size:14.5px; color:var(--ink-2); line-height:1.68}
 
-/* FAQ */
-details{background:var(--surface); border:1px solid var(--line); border-radius:12px}
-details+details{margin-top:8px}
-summary{cursor:pointer; padding:13px 15px; font-weight:700; font-size:15px; list-style:none; display:flex; justify-content:space-between; gap:10px}
+/* 문답 */
+details{border-bottom:1px solid var(--rule)}
+details:last-of-type{border-bottom:0}
+summary{cursor:pointer; padding:13px 16px; font-weight:700; font-size:15px; list-style:none; display:flex; justify-content:space-between; gap:12px; letter-spacing:-.01em}
 summary::-webkit-details-marker{display:none}
-summary::after{content:"＋"; color:var(--ink-3); font-weight:400}
-details[open] summary::after{content:"－"}
-details .ans{padding:0 15px 14px; font-size:14.5px; color:var(--ink-2); line-height:1.7}
+summary::after{content:"+"; font-family:var(--mono); color:var(--ink-3); font-weight:400}
+details[open] summary::after{content:"−"}
+details .ans{padding:0 16px 14px; font-size:14.5px; color:var(--ink-2); line-height:1.72}
 
-/* 폼 */
-form{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:18px 16px; box-shadow:var(--shadow)}
-.fld{margin-bottom:14px}
-.fld label{display:block; font-size:13.5px; font-weight:700; margin-bottom:6px}
-.fld label .req{color:var(--pine); font-family:var(--mono); font-size:11px; margin-left:4px}
+/* 신청서 */
+.fld{padding:13px 16px; border-bottom:1px solid var(--rule)}
+.fld label.k{display:block; font-family:var(--mono); font-size:11.5px; letter-spacing:.06em; color:var(--ink-3); margin-bottom:6px}
+.fld label.k .req{color:var(--seal); font-weight:700; margin-left:5px}
 .fld input[type=text],.fld input[type=tel],.fld textarea{
-  width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); background:var(--surface-2);
-  border:1px solid var(--line-2); border-radius:10px; padding:12px 13px; line-height:1.5}
-.fld textarea{resize:vertical; min-height:76px}
-.fld .hint{font-size:12.5px; color:var(--ink-3); margin-top:5px; line-height:1.6}
+  width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); background:var(--sheet-2);
+  border:1px solid var(--line-2); border-radius:3px; padding:11px 12px; line-height:1.5}
+.fld textarea{resize:vertical; min-height:74px}
+.fld .hint{font-size:12.5px; color:var(--ink-3); margin-top:6px; line-height:1.6}
 .hp{position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden}
-.consent{display:flex; gap:10px; align-items:flex-start; padding:11px 0; border-top:1px solid var(--line); font-size:13.5px; line-height:1.6; color:var(--ink-2)}
-.consent input{margin:4px 0 0; width:18px; height:18px; accent-color:var(--pine); flex:0 0 auto}
+.consent{display:flex; gap:11px; align-items:flex-start; padding:13px 16px; border-bottom:1px solid var(--rule);
+  font-size:13.5px; line-height:1.68; color:var(--ink-2); cursor:pointer}
+.consent input{margin:4px 0 0; width:18px; height:18px; accent-color:var(--navy); flex:0 0 auto}
 .consent b{color:var(--ink)}
-.consent .tag{font-family:var(--mono); font-size:10.5px; color:var(--pine); font-weight:700}
-button.submit{width:100%; margin-top:14px; font-family:var(--sans); font-size:16.5px; font-weight:800; color:#fff;
-  background:var(--pine); border:0; border-radius:12px; padding:15px; cursor:pointer}
-:root:not([data-theme="light"]) button.submit{color:#08110E}
-@media (prefers-color-scheme:light){ button.submit{color:#fff} }
-button.submit:disabled{opacity:.55; cursor:progress}
-.formmsg{margin-top:12px; font-size:14px; line-height:1.7; padding:12px 13px; border-radius:10px; display:none}
-.formmsg.on{display:block}
-.formmsg.ok{background:var(--pine-soft); color:var(--pine); border:1px solid var(--pine)}
-.formmsg.err{background:var(--amber-soft); color:var(--amber); border:1px solid var(--amber)}
+.consent .tag{font-family:var(--mono); font-size:10.5px; color:var(--seal); font-weight:700}
+.submit-row{padding:16px}
+button.submit{width:100%; font-family:var(--sans); font-size:16.5px; font-weight:800; letter-spacing:-.01em;
+  color:var(--sheet); background:var(--navy); border:1px solid var(--navy); border-radius:3px; padding:15px; cursor:pointer}
+button.submit:disabled{opacity:.5; cursor:progress}
+.formmsg{display:none; margin:0 16px 16px; padding:13px 14px; font-size:14.5px; line-height:1.7; border:1px solid var(--line)}
+.formmsg.on{display:flex; gap:14px; align-items:center}
+.formmsg.ok{border-color:var(--seal); background:var(--seal-soft)}
+.formmsg.err{border-color:var(--line-2); background:var(--sheet-2); color:var(--ink-2)}
+.formmsg .seal{flex:0 0 auto; width:62px; height:62px; border:2px solid var(--seal); border-radius:50%;
+  color:var(--seal); display:grid; place-content:center; text-align:center; transform:rotate(-11deg);
+  font-family:var(--mono); font-size:15px; font-weight:700; letter-spacing:.1em}
+.formmsg.err .seal{display:none}
 
-/* 하단 고정 바 */
-.bar{position:fixed; left:0; right:0; bottom:0; z-index:30; background:color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter:blur(12px); border-top:1px solid var(--line);
-  padding:10px 18px calc(10px + env(safe-area-inset-bottom))}
-.bar .inner{max-width:600px; margin:0 auto; display:flex; gap:8px}
-.bar a{flex:1; text-align:center; text-decoration:none; font-weight:800; font-size:15.5px; padding:13px 10px; border-radius:11px}
-.bar a.go{background:var(--pine); color:#fff}
-:root:not([data-theme="light"]) .bar a.go{color:#08110E}
-@media (prefers-color-scheme:light){ .bar a.go{color:#fff} }
-.bar a.kakao{flex:0 0 auto; background:var(--surface); color:var(--ink); border:1px solid var(--line-2); padding-left:16px; padding-right:16px}
+/* 하단 고정 */
+.bar{position:fixed; left:0; right:0; bottom:0; z-index:30; background:var(--sheet); border-top:1px solid var(--line-2);
+  padding:9px 16px calc(9px + env(safe-area-inset-bottom))}
+.bar .inner{max-width:620px; margin:0 auto; display:flex; gap:7px}
+.bar a{flex:1; text-align:center; text-decoration:none; font-weight:800; font-size:15.5px; padding:13px 10px; border-radius:3px; letter-spacing:-.01em}
+.bar a.go{background:var(--navy); color:var(--sheet); border:1px solid var(--navy)}
+.bar a.kakao{flex:0 0 auto; background:var(--sheet); color:var(--ink); border:1px solid var(--line-2); padding-left:18px; padding-right:18px}
 
-/* 푸터 */
-footer{border-top:1px solid var(--line); margin-top:8px; padding:22px 0 34px; font-size:12px; color:var(--ink-3); line-height:1.85}
-footer .biz{font-family:var(--mono); font-size:11.5px; color:var(--ink-2); margin-bottom:10px; line-height:1.8}
+footer{margin-top:14px; padding:16px 0 30px; border-top:3px double var(--line-2); font-size:12px; color:var(--ink-3); line-height:1.85}
+footer .biz{font-family:var(--mono); font-size:11.5px; color:var(--ink-2); line-height:1.9; margin-bottom:11px}
 footer p{margin:0 0 8px}
 </style>
 </head>
@@ -189,26 +199,32 @@ footer p{margin:0 0 8px}
 
 <div class="wrap">
 
-  <header class="hero">
-    <div class="eyebrow">무료 보장분석</div>
+  <!-- 표지 -->
+  <header class="cover">
+    <div class="stamp-line">보장 명세서 · 무료</div>
     <h1>진단비는 병원비가 아닙니다.<br><em>일을 쉬는 동안의 생활비</em>입니다.</h1>
-    <p class="sub" style="margin-top:14px">병원비는 실손이 받아 줍니다. 문제는 치료받는 몇 달 동안 <b>끊긴 월급</b>입니다. 내 보험이 그 기간을 버티게 해 주는지, 증권 한 장으로 확인해 드립니다.</p>
-    <div class="hero-note">진단비는 진단이 확정되면 정해진 금액이 지급되는 급부로, 사용처가 정해져 있지 않습니다. 실제 지급 여부와 금액은 가입한 특약 구성과 약관상 지급 사유에 따라 달라집니다.</div>
+    <dl class="cover-meta">
+      <div><dt>대상</dt><dd>보험에 가입은 했는데, 무엇이 들어 있는지 정확히 모르는 분</dd></div>
+      <div><dt>해 드리는 일</dt><dd>가입한 계약을 8개의 통장으로 나눠 비어 있는 칸을 찾아 드립니다</dd></div>
+      <div><dt>비용</dt><dd>없습니다</dd></div>
+    </dl>
+    <p class="sub" style="margin-top:16px">병원비는 실손이 받아 줍니다. 문제는 치료받는 몇 달 동안 끊긴 월급입니다. 내 보험이 그 기간을 버티게 해 주는지 증권 한 장으로 확인해 드립니다.</p>
+    <p class="fine">진단비는 진단이 확정되면 정해진 금액이 지급되는 급부로, 사용처가 정해져 있지 않습니다. 실제 지급 여부와 금액은 가입한 특약 구성과 약관상 지급 사유에 따라 달라집니다.</p>
 
-    <ul class="assure">
-      <li><b>01</b><span>신청하셔도 <b style="font-family:inherit;font-size:inherit">먼저 전화하지 않습니다.</b> 원하시는 시간에만 연락드립니다.</span></li>
-      <li><b>02</b><span>가입을 권유하지 않습니다. <b style="font-family:inherit;font-size:inherit">지금 계약을 유지하는 편이 나은 경우</b>도 그대로 말씀드립니다.</span></li>
-      <li><b>03</b><span>주민등록번호와 계정 비밀번호는 <b style="font-family:inherit;font-size:inherit">받지 않습니다.</b></span></li>
-    </ul>
+    <div class="sheet" style="margin-top:16px">
+      <div class="sheet-hd"><span class="ti">신청 전에 드리는 약속</span><span class="no">3조</span></div>
+      <ul class="pledge">
+        <li><i>01</i><span>신청하셔도 <b>먼저 전화하지 않습니다.</b> 원하시는 시간에만 연락드립니다.</span></li>
+        <li><i>02</i><span>가입을 권유하지 않습니다. <b>지금 계약을 유지하는 편이 나은 경우</b>도 그대로 말씀드립니다.</span></li>
+        <li><i>03</i><span>주민등록번호와 계정 비밀번호는 <b>받지 않습니다.</b></span></li>
+      </ul>
+    </div>
   </header>
 
-  <!-- 셀프체크 -->
-  <section id="check">
-    <div class="eyebrow">8통장 셀프체크</div>
-    <h2>보험은 8개의 통장입니다.<br>지금 몇 칸이 비어 있을까요?</h2>
-    <p class="sub">세 가지만 골라 보세요. 나머지 다섯 칸은 증권을 보고 확인해 드립니다.</p>
-
-    <div class="pass" id="pass" aria-live="polite">
+  <!-- 명세: 8통장 -->
+  <div class="sheet" id="check">
+    <div class="sheet-hd"><span class="ti">보험은 8개의 통장입니다</span><span class="no">8칸 중 3칸 확인</span></div>
+    <div class="ledger" id="pass" aria-live="polite">
       <div class="cell" data-k="생활비"><span class="nm">생활비</span><span class="st">상담에서 확인</span></div>
       <div class="cell" data-k="병원비"><span class="nm">병원비</span><span class="st">상담에서 확인</span></div>
       <div class="cell" data-k="치료비"><span class="nm">치료비</span><span class="st">아래에서 확인</span></div>
@@ -218,101 +234,94 @@ footer p{margin:0 0 8px}
       <div class="cell" data-k="간병요양"><span class="nm">간병·요양</span><span class="st">아래에서 확인</span></div>
       <div class="cell" data-k="자산상속"><span class="nm">자산·상속</span><span class="st">상담에서 확인</span></div>
     </div>
+    <div class="ledger-foot"><span>비어 있는 칸</span><span><b id="gapCount">—</b></span></div>
 
-    <div class="quiz" style="margin-top:18px">
-      <div class="q" data-target="소득공백">
-        <div class="qn">Q1</div>
-        <div class="qt">큰 병으로 석 달을 쉬어야 한다면, 그동안 생활비는 어디서 나옵니까?</div>
-        <div class="opts">
-          <button type="button" data-v="ok">보험에서 나옵니다</button>
-          <button type="button" data-v="gap">모아둔 돈으로 버팁니다</button>
-          <button type="button" data-v="gap">생각해 본 적 없습니다</button>
-        </div>
+    <div class="q" data-target="소득공백">
+      <div class="qn">문 1</div>
+      <div class="qt">큰 병으로 석 달을 쉬어야 한다면, 그동안 생활비는 어디서 나옵니까?</div>
+      <div class="opts">
+        <button type="button" data-v="ok">보험에서 나옵니다</button>
+        <button type="button" data-v="gap">모아둔 돈으로 버팁니다</button>
+        <button type="button" data-v="gap">생각해 본 적 없습니다</button>
       </div>
-      <div class="q" data-target="치료비">
-        <div class="qn">Q2</div>
-        <div class="qt">입원비·수술비 말고, 진단 후 치료받는 동안 쓸 돈이 따로 준비되어 있습니까?</div>
-        <div class="opts">
-          <button type="button" data-v="ok">진단비가 있습니다</button>
-          <button type="button" data-v="gap">실손만 있습니다</button>
-          <button type="button" data-v="gap">잘 모르겠습니다</button>
-        </div>
-      </div>
-      <div class="q" data-target="간병요양">
-        <div class="qn">Q3</div>
-        <div class="qt">부모님이나 배우자에게 간병이 필요해지면, 비용을 감당할 수 있습니까?</div>
-        <div class="opts">
-          <button type="button" data-v="ok">준비되어 있습니다</button>
-          <button type="button" data-v="gap">부담될 것 같습니다</button>
-          <button type="button" data-v="gap">생각해 본 적 없습니다</button>
-        </div>
-      </div>
-      <div class="result hide" id="result"></div>
     </div>
-  </section>
+    <div class="q" data-target="치료비">
+      <div class="qn">문 2</div>
+      <div class="qt">입원비·수술비 말고, 진단 후 치료받는 동안 쓸 돈이 따로 준비되어 있습니까?</div>
+      <div class="opts">
+        <button type="button" data-v="ok">진단비가 있습니다</button>
+        <button type="button" data-v="gap">실손만 있습니다</button>
+        <button type="button" data-v="gap">잘 모르겠습니다</button>
+      </div>
+    </div>
+    <div class="q" data-target="간병요양">
+      <div class="qn">문 3</div>
+      <div class="qt">부모님이나 배우자에게 간병이 필요해지면, 비용을 감당할 수 있습니까?</div>
+      <div class="opts">
+        <button type="button" data-v="ok">준비되어 있습니다</button>
+        <button type="button" data-v="gap">부담될 것 같습니다</button>
+        <button type="button" data-v="gap">생각해 본 적 없습니다</button>
+      </div>
+    </div>
+    <div class="result hide" id="result"></div>
+  </div>
 
-  <!-- 무엇을 하는가 -->
-  <section>
-    <div class="eyebrow">무엇을 해 드리나</div>
-    <h2>증권을 받아서, 네 가지를 봅니다</h2>
-    <div class="does">
+  <!-- 무엇을 보는가 -->
+  <div class="sheet">
+    <div class="sheet-hd"><span class="ti">증권을 받아서 보는 것</span><span class="no">4항</span></div>
+    <div class="rows">
       <div><h3>흩어진 계약을 한 장으로</h3><p>여러 회사에 나뉜 계약을 보장 목적·납입기간·갱신 여부 기준으로 묶어 정리합니다.</p></div>
       <div><h3>겹치는 곳과 비어 있는 곳</h3><p>같은 보장을 두 번 내고 있는지, 반대로 아예 빠진 칸이 있는지 표로 보여 드립니다.</p></div>
-      <div><h3>진단부터 지급까지의 흐름</h3><p>실제 진단을 받으면 어느 특약에서 언제 얼마가 나오는지, 약관 기준으로 순서대로 설명합니다.</p></div>
+      <div><h3>진단부터 지급까지의 흐름</h3><p>실제 진단을 받으면 어느 특약에서 언제 얼마가 나오는지 약관 기준으로 순서대로 설명합니다.</p></div>
       <div><h3>해지보다 유지 먼저</h3><p>해지 전에 감액·감액완납·연장정기·약관대출·납입일시중지 같은 대안부터 검토합니다.</p></div>
     </div>
-  </section>
+  </div>
 
   <!-- 사례 -->
-  <section>
-    <div class="eyebrow">상담 사례</div>
-    <h2>이렇게 정리됩니다</h2>
-
+  <div class="sheet">
+    <div class="sheet-hd"><span class="ti">상담 사례</span><span class="no">2건</span></div>
     <div class="case">
-      <span class="lab">사례 1 · <span class="fill">[연령·가족구성]</span></span>
-      <p><span class="fill">[상담 전 상황 — 계약 수, 월 보험료, 겹친 보장]</span> → <span class="fill">[정리 후 구성과 달라진 점]</span></p>
+      <span class="lab">사례 1 — <mark class="fill">[연령·가족구성]</mark></span>
+      <p><mark class="fill">[상담 전 상황 — 계약 수, 월 보험료, 겹친 보장]</mark> → <mark class="fill">[정리 후 구성과 달라진 점]</mark></p>
     </div>
     <div class="case">
-      <span class="lab">사례 2 · <span class="fill">[연령·가족구성]</span></span>
-      <p><span class="fill">[상담 전 상황]</span> → <span class="fill">[정리 후 구성과 달라진 점]</span></p>
+      <span class="lab">사례 2 — <mark class="fill">[연령·가족구성]</mark></span>
+      <p><mark class="fill">[상담 전 상황]</mark> → <mark class="fill">[정리 후 구성과 달라진 점]</mark></p>
     </div>
-
-    <p class="disc">※ 회사가 제공하는 대표 상담 사례이며 모든 고객에게 동일하게 적용되지 않습니다. 보험료 조정액과 보장금액은 기존 계약·연령·건강상태·납입기간과 상품별 약관 및 보험회사 심사 기준에 따라 달라지며, 특정 결과를 보장하지 않습니다. 기존 계약을 해지하고 새로 가입하는 경우 새 계약의 인수 심사·보장 개시일·면책 및 감액 조건을 먼저 확인해야 합니다.</p>
-  </section>
+    <div class="sheet-bd">
+      <p class="fine">※ 회사가 제공하는 대표 상담 사례이며 모든 고객에게 동일하게 적용되지 않습니다. 보험료 조정액과 보장금액은 기존 계약·연령·건강상태·납입기간과 상품별 약관 및 보험회사 심사 기준에 따라 달라지며, 특정 결과를 보장하지 않습니다. 기존 계약을 해지하고 새로 가입하는 경우 새 계약의 인수 심사·보장 개시일·면책 및 감액 조건을 먼저 확인해야 합니다.</p>
+    </div>
+  </div>
 
   <!-- 진행 -->
-  <section>
-    <div class="eyebrow">진행 방식</div>
-    <h2>세 단계로 끝납니다</h2>
+  <div class="sheet">
+    <div class="sheet-hd"><span class="ti">진행 순서</span><span class="no">3단계</span></div>
     <ol class="steps">
       <li><b>신청서 세 칸을 채웁니다</b><span>이름·연락처와, 위에서 확인한 비어 있는 칸. 그게 전부입니다.</span></li>
       <li><b>증권을 확인합니다</b><span>가입증명서나 증권 사진을 카카오톡으로 보내 주셔도 됩니다. 원하시면 본인인증 후 전산으로 확인해 드립니다.</span></li>
       <li><b>분석 결과를 설명해 드립니다</b><span>정리한 내용을 보시면서 궁금한 점을 물어보시면 됩니다. 이 자리에서 결정하실 필요는 없습니다.</span></li>
     </ol>
-  </section>
+  </div>
 
-  <!-- 신청 -->
-  <section id="apply">
-    <div class="eyebrow">신청</div>
-    <h2>세 칸만 채우시면 됩니다</h2>
-    <p class="sub">나머지는 상담 때 여쭤봅니다.</p>
-
+  <!-- 신청서 -->
+  <div class="sheet" id="apply">
+    <div class="sheet-hd"><span class="ti">보장분석 신청서</span><span class="no">필수 2칸</span></div>
     <form id="leadForm" novalidate>
       <div class="fld">
-        <label for="f_name">이름<span class="req">필수</span></label>
+        <label class="k" for="f_name">이름<span class="req">필수</span></label>
         <input type="text" id="f_name" name="customer_name" maxlength="40" autocomplete="name" placeholder="홍길동" required>
       </div>
       <div class="fld">
-        <label for="f_phone">연락처<span class="req">필수</span></label>
+        <label class="k" for="f_phone">연락처<span class="req">필수</span></label>
         <input type="tel" id="f_phone" name="phone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000" required>
         <div class="hint">문자로 먼저 인사드립니다. 전화를 먼저 걸지 않습니다.</div>
       </div>
       <div class="fld">
-        <label for="f_gaps">비어 있는 칸</label>
-        <input type="text" id="f_gaps" name="empty_accounts" maxlength="120" placeholder="위 셀프체크를 하시면 자동으로 채워집니다">
+        <label class="k" for="f_gaps">비어 있는 칸</label>
+        <input type="text" id="f_gaps" name="empty_accounts" maxlength="120" placeholder="위 세 문항에 답하시면 자동으로 채워집니다">
       </div>
       <div class="fld">
-        <label for="f_memo">궁금한 점 <span style="color:var(--ink-3);font-weight:400">(선택)</span></label>
+        <label class="k" for="f_memo">궁금한 점 <span style="color:var(--ink-3)">(선택)</span></label>
         <textarea id="f_memo" name="memo" maxlength="1000" placeholder="예: 갱신형 보험료가 계속 오르는데 그대로 둬도 되는지 궁금합니다"></textarea>
       </div>
 
@@ -321,7 +330,7 @@ footer p{margin:0 0 8px}
       <label class="consent" for="c_privacy">
         <input type="checkbox" id="c_privacy" required>
         <span><span class="tag">[필수]</span> <b>개인정보 수집·이용에 동의합니다.</b><br>
-        수집항목 이름·연락처·상담 요청 내용 / 수집목적 보장분석 상담 및 결과 안내 / 보유기간 상담 종료 후 <span class="fill">[ ]</span>일 이내 파기. 동의를 거부하실 수 있으며, 거부 시 상담 신청이 제한됩니다.</span>
+        수집항목 이름·연락처·상담 요청 내용 / 수집목적 보장분석 상담 및 결과 안내 / 보유기간 상담 종료 후 <mark class="fill">[ ]</mark>일 이내 파기. 동의를 거부하실 수 있으며, 거부 시 상담 신청이 제한됩니다.</span>
       </label>
       <label class="consent" for="c_lookup">
         <input type="checkbox" id="c_lookup">
@@ -329,27 +338,28 @@ footer p{margin:0 0 8px}
         본인인증을 거쳐 상담 담당자의 권한 범위에서 확인하며, 조회한 자료는 보장분석 목적으로만 사용합니다. 주민등록번호와 계정 비밀번호는 요청하지 않습니다.</span>
       </label>
 
-      <button type="submit" class="submit" id="submitBtn">무료 보장분석 신청하기</button>
+      <div class="submit-row">
+        <button type="submit" class="submit" id="submitBtn">무료 보장분석 신청하기</button>
+      </div>
       <div class="formmsg" id="formMsg" role="status"></div>
     </form>
-  </section>
+  </div>
 
-  <!-- FAQ -->
-  <section>
-    <div class="eyebrow">자주 묻는 질문</div>
-    <h2>궁금하실 것들</h2>
+  <!-- 문답 -->
+  <div class="sheet">
+    <div class="sheet-hd"><span class="ti">자주 묻는 질문</span><span class="no">4문</span></div>
     <details><summary>정말 무료인가요?</summary><div class="ans">보장분석과 상담에는 비용을 받지 않습니다. 보험료·병원 진료비·서류 발급비 등 상담 외에 발생하는 비용은 고객 부담입니다.</div></details>
     <details><summary>신청하면 계속 전화가 오나요?</summary><div class="ans">먼저 전화드리지 않습니다. 문자로 인사드린 뒤, 답을 주신 시간과 방법(카카오톡 또는 통화)으로만 연락드립니다. 연락을 원하지 않으시면 그때 말씀해 주시면 됩니다.</div></details>
     <details><summary>가입을 권유받게 되나요?</summary><div class="ans">분석 결과를 설명해 드리는 것이 이 상담의 목적입니다. 지금 계약을 유지하는 편이 나은 경우에는 그렇게 말씀드립니다. 가입 여부는 충분히 생각하신 뒤 결정하시면 됩니다.</div></details>
     <details><summary>내 보험 내역은 어떻게 확인하나요?</summary><div class="ans">증권이나 가입증명서를 보내 주시면 그 범위에서 확인합니다. 전산 확인을 원하시면 별도 동의와 본인인증을 거쳐 진행합니다. 주민등록번호와 계정 비밀번호는 받지 않습니다.</div></details>
-  </section>
+  </div>
 
   <footer>
     <div class="biz">
-      설계사 <span class="fill">[이름]</span> · <span class="fill">[소속 대리점/보험사]</span> 등록번호 제<span class="fill">[  ]</span>호<br>
-      생명보험협회·손해보험협회 등록번호 제<span class="fill">[  ]</span>호<br>
-      사업자등록번호 <span class="fill">[  ]</span> · <span class="fill">[사업장 주소]</span> · <span class="fill">[연락처]</span><br>
-      광고심의필 제<span class="fill">[  ]</span>호 · 유효기간 <span class="fill">[  ]</span> ~ <span class="fill">[  ]</span>
+      설계사 <mark class="fill">[이름]</mark> · <mark class="fill">[소속 대리점/보험사]</mark> 등록번호 제<mark class="fill">[ ]</mark>호<br>
+      생명보험협회·손해보험협회 등록번호 제<mark class="fill">[ ]</mark>호<br>
+      사업자등록번호 <mark class="fill">[ ]</mark> · <mark class="fill">[사업장 주소]</mark> · <mark class="fill">[연락처]</mark><br>
+      광고심의필 제<mark class="fill">[ ]</mark>호 · 유효기간 <mark class="fill">[ ]</mark> ~ <mark class="fill">[ ]</mark>
     </div>
     <p>본 페이지는 보험 상담 안내를 위한 자료이며, 상품 가입 전 약관과 상품설명서를 반드시 확인하시기 바랍니다.</p>
     <p>상담은 무료이며 특정 상품의 가입 가능 여부, 보험료 절감, 수익률 또는 보험금 지급을 보장하지 않습니다. 실제 조건은 상품별 약관, 개인별 상황 및 보험회사 심사 결과에 따라 달라질 수 있습니다.</p>
@@ -386,8 +396,7 @@ footer p{margin:0 0 8px}
   if (SITE.privacyUrl) { document.getElementById('privacyLink').href = SITE.privacyUrl; }
 
   /* ── 8통장 셀프체크 ── */
-  var picked = {};
-  var cells = {};
+  var picked = {}, cells = {};
   document.querySelectorAll('#pass .cell').forEach(function(c){ cells[c.dataset.k] = c; });
 
   document.querySelectorAll('.q').forEach(function(q){
@@ -413,17 +422,13 @@ footer p{margin:0 0 8px}
   }
 
   function render(){
-    var answered = Object.keys(picked).length;
-    var g = gaps();
-    var box = document.getElementById('result');
+    var answered = Object.keys(picked).length, g = gaps(), box = document.getElementById('result');
+    document.getElementById('gapCount').textContent = answered ? g.length + '칸' : '—';
     if (!answered) { box.classList.add('hide'); return; }
     box.classList.remove('hide');
-    if (g.length) {
-      box.innerHTML = '확인한 3칸 중 <b>' + g.length + '칸(' + g.join(' · ') + ')</b>이 비어 있습니다. '
-        + '나머지 5칸은 증권을 봐야 알 수 있습니다 — 신청하시면 8칸 전부 채워서 보여 드리겠습니다.';
-    } else {
-      box.innerHTML = '확인한 3칸은 준비되어 있습니다. 다만 <b>금액이 충분한지</b>와 나머지 5칸은 증권을 봐야 알 수 있습니다. 점검만 받아 보셔도 좋습니다.';
-    }
+    box.innerHTML = g.length
+      ? '확인한 3칸 중 <b>' + g.length + '칸(' + g.join(' · ') + ')</b>이 비어 있습니다. 나머지 5칸은 증권을 봐야 알 수 있습니다 — 신청하시면 8칸 전부 채워서 보여 드리겠습니다.'
+      : '확인한 3칸은 준비되어 있습니다. 다만 <b>금액이 충분한지</b>와 나머지 5칸은 증권을 봐야 알 수 있습니다. 점검만 받아 보셔도 좋습니다.';
     if (answered === 3) {
       document.getElementById('f_gaps').value = g.length ? g.join(', ') : '확인한 3칸은 준비됨';
     }
@@ -444,9 +449,9 @@ footer p{margin:0 0 8px}
   var btn  = document.getElementById('submitBtn');
   var msg  = document.getElementById('formMsg');
 
-  function say(kind, html){
+  function say(kind, html, sealed){
     msg.className = 'formmsg on ' + kind;
-    msg.innerHTML = html;
+    msg.innerHTML = (sealed ? '<span class="seal">접수</span>' : '') + '<span>' + html + '</span>';
   }
 
   function fallbackText(){
@@ -463,11 +468,11 @@ footer p{margin:0 0 8px}
 
     var name  = document.getElementById('f_name').value.trim();
     var phone = document.getElementById('f_phone').value.trim();
-    var ok    = document.getElementById('c_privacy').checked;
+    var agreed = document.getElementById('c_privacy').checked;
 
     if (name.length < 1) { say('err','이름을 입력해 주세요.'); document.getElementById('f_name').focus(); return; }
     if (phone.replace(/[^0-9]/g,'').length < 9) { say('err','연락처를 다시 확인해 주세요.'); document.getElementById('f_phone').focus(); return; }
-    if (!ok) { say('err','개인정보 수집·이용 동의가 있어야 신청이 접수됩니다.'); document.getElementById('c_privacy').focus(); return; }
+    if (!agreed) { say('err','개인정보 수집·이용 동의가 있어야 신청이 접수됩니다.'); document.getElementById('c_privacy').focus(); return; }
 
     var row = Object.assign({
       customer_name: name,
@@ -493,8 +498,13 @@ footer p{margin:0 0 8px}
       .from('web_leads').insert(row)
       .then(function(res){
         if (res.error) throw res.error;
+        btn.textContent = '접수 완료';
         form.querySelectorAll('input, textarea, button').forEach(function(el){ el.disabled = true; });
-        say('ok','<b>신청이 접수되었습니다.</b><br>먼저 문자로 인사드리겠습니다. 전화를 먼저 걸지 않으니 편하실 때 답 주시면 됩니다.');
+        say('ok','<b>신청이 접수되었습니다.</b><br>먼저 문자로 인사드리겠습니다. 전화를 먼저 걸지 않으니 편하실 때 답 주시면 됩니다.', true);
+        /* 접수 문구가 하단 바에 가리지 않게 한다. 다 끝났으니 바도 치운다. */
+        var bar = document.querySelector('.bar');
+        if (bar) { bar.remove(); document.body.style.paddingBottom = '24px'; }
+        try { msg.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err) { msg.scrollIntoView(); }
       })
       .catch(function(){
         btn.disabled = false; btn.textContent = '무료 보장분석 신청하기';
