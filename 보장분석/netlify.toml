@@ -1,0 +1,23 @@
+# 광고 랜딩 전용 배포 설정 — CRM 앱과 따로 나갑니다.
+#
+# Netlify 사이트를 하나 더 만들고 Base directory 를 「보장분석」 으로 잡으면
+# Netlify 가 이 파일을 읽습니다. 그때부터 이 폴더만 배포됩니다.
+# 광고 문구를 고쳐도 CRM 앱은 다시 배포되지 않습니다.
+#
+# 함수는 없습니다. 신청은 브라우저에서 Supabase 로 바로 들어갑니다.
+[build]
+  publish = "."
+  command = ""
+
+# 광고에서 들어온 사람이 새로고침하거나 뒤로 가도 페이지가 깨지지 않게 한다.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 검색 노출은 열어 두되, 미리보기·시안 배포는 색인되지 않게 한다.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

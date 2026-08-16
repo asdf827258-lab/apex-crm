@@ -53,13 +53,16 @@ async function open(browser, { stub = true, query = '' } = {}) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   /* 외부 CDN 은 타지 않는다 — 인터넷이 없어도 이 검사는 돌아야 한다 */
   await page.route('**/cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  /* 배포 전 상태를 흉내 낸다 — config.js 가 자리표시 그대로인 경우 */
+  await page.route('**/config.js', r => r.fulfill({ status: 200, contentType: 'application/javascript',
+    body: 'window.APEX_CONFIG={url:"YOUR_PROJECT_URL",key:"YOUR_ANON_OR_PUBLISHABLE_KEY"};' }));
   if (stub) await page.addInitScript(STUB);
   await page.goto('http://localhost:' + PORT + encodeURI(PAGE) + query, { waitUntil: 'domcontentloaded' });
   if (stub) await page.evaluate(CONFIG);
   return page;
 }
 
-/* 점검표에서 앞의 n 개를 고른다 */
+/* 첫 화면 점검표에서 앞의 n 개를 고른다 */
 async function answer(page, n = 3) {
   const items = await page.$$('#pass .chk');
   for (let i = 0; i < Math.min(n, items.length); i++) await items[i].click();
@@ -76,8 +79,9 @@ async function answer(page, n = 3) {
       const on = await page.$$eval('#pass .chk[aria-pressed="true"]', els => els.length);
       ok(on === 3, '고른 3개가 눌린 상태로 남는다 (' + on + '개)');
 
-      ok(await page.isVisible('#result'), '결과 문장이 나온다');
+      ok(await page.isVisible('#result'), '신청서 위에 고른 결과가 나온다');
       ok((await page.textContent('#ringTxt')) === '3/6', '진행 고리가 3/6 을 가리킨다');
+      ok((await page.textContent('#heroCta')).includes('3가지'), '첫 화면 버튼이 고른 수를 말한다');
 
       const picked = await page.inputValue('#f_gaps');
       ok(picked.split(',').length === 3 && picked.includes('지인 권유로 가입'),
@@ -89,6 +93,22 @@ async function answer(page, n = 3) {
       ok(!after.includes('지인 권유로 가입') && after.split(',').length === 2,
         '다시 누르면 선택이 풀린다 (' + after + ')');
       await page.close();
+    }
+
+    /* ── 1-2. 첫 화면 안에 점검표가 다 들어온다 ──
+       광고로 들어온 사람은 스크롤하기 전에 판단한다.
+       여섯 문항과 누를 버튼이 첫 화면 밖으로 밀리면 그 자리에서 나간다. */
+    console.log('\n1-2. 첫 화면에 다 들어오는가');
+    {
+      for (const [w, h, name] of [[390, 844, 'iPhone 14'], [360, 780, '갤럭시 · 작은 화면']]) {
+        const page = await browser.newPage({ viewport: { width: w, height: h } });
+        await page.route('**/cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+        await page.goto('http://localhost:' + PORT + encodeURI(PAGE), { waitUntil: 'domcontentloaded' });
+        await page.waitForTimeout(400);
+        const bottom = await page.$eval('#heroCta', el => el.getBoundingClientRect().bottom);
+        ok(bottom <= h, name + ' — 여섯 문항과 버튼이 첫 화면 안에 들어온다 (' + Math.round(bottom) + '/' + h + 'px)');
+        await page.close();
+      }
     }
 
     /* ── 2. 동의 없이는 접수되지 않는다 ── */
