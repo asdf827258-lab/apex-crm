@@ -13358,7 +13358,147 @@ function renderAssistant(){
   '</div>';
   return osPage('AI 비서','오늘의 AI 비서','데이터를 먼저 읽어 오늘 처리할 일을 근거와 함께 알려드립니다(무-AI 집계 우선).',
     hd+'<div id="osNightBrief" style="margin-top:14px"></div>'+
+    '<div id="osInvBrief" style="margin-top:14px"></div>'+
     '<div id="osAsstBody" style="margin-top:14px"><div class="osc-loading">오늘 업무를 집계하는 중…</div></div>');
+}
+
+/* ══════════════ 아침 투자 브리핑 ══════════════
+   invest-daily 함수가 매 영업일 새벽에 계좌별로 만들어 invest_reports 에
+   넣어 둔다. 그런데 지금까지 앱이 그걸 한 번도 읽지 않았다 — 만들어 쌓기만
+   하고 아무도 안 보는 상태였다. 여기서 읽는다.
+
+   네 곳을 한 장으로 모은다:
+     invest_reports  기준일 = 오늘  → 계좌별 브리핑 본문
+     invest_alerts   안 읽은 것     → 목표 도달·손절 이탈
+     invest_signals  기준일 = 오늘  → 봇이 낸 신호(모의)
+     invest_briefs   kind=market_daily → 오늘 시황
+
+   표가 아직 없거나(마이그레이션 전) 자료가 없으면 조용히 아무것도 안 그린다.
+   빈 카드로 화면을 어지럽히지 않는다.                                     */
+var IVB = { loaded:false, reports:[], alerts:[], signals:[], brief:null };
+
+function ivbLoad(){
+  var sb = osClient();
+  if(!sb || !OS.profile) return;
+  var today = osTodayStr();
+
+  /* 표가 없으면 에러 대신 빈 배열로 넘긴다 — 마이그레이션 전에도 화면이 죽지 않게 */
+  function soft(q){
+    return new Promise(function(res){
+      try{ q.then(function(r){ res((r && !r.error && r.data) ? r.data : []); },
+                  function(){ res([]); }); }
+      catch(e){ res([]); }
+    });
+  }
+
+  Promise.all([
+    soft(sb.from('invest_reports').select('account_id,title,body,stats,period')
+           .eq('period', today).order('title', {ascending:true}).limit(20)),
+    soft(sb.from('invest_alerts').select('kind,message,ref_date')
+           .eq('is_read', false).order('ref_date', {ascending:false}).limit(8)),
+    soft(sb.from('invest_signals').select('code,name,side,strategy,reason,price')
+           .eq('ref_date', today).limit(10)),
+    soft(sb.from('invest_briefs').select('title,body,ref_date')
+           .eq('kind','market_daily').eq('ref_date', today).limit(1))
+  ]).then(function(r){
+    IVB.loaded = true;
+    IVB.reports = r[0] || [];
+    IVB.alerts  = r[1] || [];
+    IVB.signals = r[2] || [];
+    IVB.brief   = (r[3] && r[3][0]) || null;
+    ivbPaint();
+  });
+}
+
+function ivbMoney(v){
+  if(v==null) return '—';
+  return Math.round(v).toLocaleString('ko-KR')+'원';
+}
+function ivbSigned(v){
+  if(v==null) return '—';
+  return (v>0?'+':'−')+Math.abs(Math.round(v)).toLocaleString('ko-KR')+'원';
+}
+
+function ivbCardHtml(){
+  if(!IVB.loaded) return '';
+  var n = IVB.reports.length + IVB.alerts.length + IVB.signals.length + (IVB.brief?1:0);
+  if(!n) return '';                       /* 볼 게 없으면 안 그린다 */
+
+  var h = '<div class="card" style="margin-bottom:14px"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🌅</span>아침 투자 브리핑</div>'+
+    '<div class="card-desc">매 영업일 새벽에 서버가 계좌별로 미리 만들어 둡니다. '+
+    '숫자는 앱 화면과 같은 계산기를 씁니다.</div></div><div class="card-body">';
+
+  /* ── 손절선에 가까운 계좌를 맨 위로 ── */
+  if(IVB.alerts.length){
+    h += '<div class="notice" style="background:#FEF2F2;border-color:#FECACA;color:#991B1B">'+
+         '<b>먼저 볼 것 '+IVB.alerts.length+'건</b><ul style="margin:6px 0 0;padding-left:18px">';
+    IVB.alerts.forEach(function(a){
+      h += '<li style="font-size:12px;line-height:1.6">'+osEsc(a.message||a.kind)+'</li>';
+    });
+    h += '</ul></div>';
+  }
+
+  /* ── 계좌별 브리핑 ── */
+  IVB.reports.forEach(function(rep){
+    var s = rep.stats || {};
+    var chips = '';
+    function chip(label, val, cls){
+      chips += '<span style="display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;'+
+               'border-radius:7px;margin:0 5px 5px 0;background:#F2F4F6;color:'+(cls||'#4E5968')+'">'+
+               label+' <b>'+val+'</b></span>';
+    }
+    if(s.endValue!=null) chip('평가', ivbMoney(s.endValue));
+    if(s.dayPL!=null)    chip('어제 대비', ivbSigned(s.dayPL), s.dayPL>0?'#F04452':'#3182F6');
+    if(s.drawdownPct!=null){
+      var room = s.roomToStopPct;
+      chip('낙폭', s.drawdownPct+'%'+(room!=null?' (정지선까지 '+room+'%p)':''),
+           (room!=null && room < 3) ? '#F04452' : '#4E5968');
+    }
+    if(s.offCount) chip('배분 이탈', s.offCount+'건', '#F59F00');
+    if(s.fxSkipped) chip('시세 없음', s.fxSkipped+'종목', '#8B95A1');
+
+    h += '<div style="border-top:1px solid #F2F4F6;padding-top:12px;margin-top:12px">'+
+         '<div style="font-size:13px;font-weight:800;color:#191F28">'+osEsc(rep.title||'브리핑')+'</div>'+
+         '<div style="margin-top:7px">'+chips+'</div>'+
+         '<div style="font-size:12px;color:#4E5968;line-height:1.7;white-space:pre-wrap;'+
+         'max-height:150px;overflow:auto;background:#F9FAFB;border-radius:9px;padding:10px 12px;margin-top:4px">'+
+         osEsc(String(rep.body||'').slice(0,900))+'</div></div>';
+  });
+
+  /* ── 봇 신호 (모의) ── */
+  if(IVB.signals.length){
+    h += '<div style="border-top:1px solid #F2F4F6;padding-top:12px;margin-top:12px">'+
+         '<div style="font-size:13px;font-weight:800;color:#191F28">봇 신호 '+IVB.signals.length+'건 '+
+         '<span style="font-size:11px;font-weight:700;color:#8B95A1">· 모의입니다. 주문은 나가지 않았습니다</span></div>';
+    IVB.signals.forEach(function(g){
+      var buy = String(g.side)==='buy';
+      h += '<div style="font-size:12px;color:#4E5968;margin-top:6px">'+
+           '<b style="color:'+(buy?'#F04452':'#3182F6')+'">'+(buy?'매수':'매도')+'</b> '+
+           osEsc(g.name||g.code)+' <span style="color:#8B95A1">· '+osEsc(g.strategy||'')+
+           (g.reason?' · '+osEsc(String(g.reason).slice(0,60)):'')+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  /* ── 오늘 시황 ── */
+  if(IVB.brief){
+    h += '<div style="border-top:1px solid #F2F4F6;padding-top:12px;margin-top:12px">'+
+         '<div style="font-size:13px;font-weight:800;color:#191F28">'+osEsc(IVB.brief.title||'오늘 시황')+'</div>'+
+         '<div style="font-size:12px;color:#4E5968;line-height:1.7;white-space:pre-wrap;margin-top:6px">'+
+         osEsc(String(IVB.brief.body||'').slice(0,700))+'</div></div>';
+  }
+
+  h += '<div class="btn-row" style="margin-top:12px">'+
+       '<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" onclick="go(\'invest\')">투자·경제 열기</button>'+
+       '<span style="font-size:10.5px;color:#9CA3AF">투자성 상품은 원금손실이 발생할 수 있으며 과거 수익이 미래 수익을 보장하지 않습니다.</span>'+
+       '</div>';
+  return h + '</div></div>';
+}
+
+function ivbPaint(){
+  var el = document.getElementById('osInvBrief');
+  if(el) el.innerHTML = ivbCardHtml();
 }
 /* count 쿼리 — 테이블/컬럼 미존재 시 graceful(skipped).
    head:true는 미존재 테이블에서 오류를 표면화하지 않으므로 일반 select+count 사용. */
@@ -13404,6 +13544,7 @@ function osAsstSpecs(role,uid,today){
 function osAssistantAfterRender(){
   if(!OS.profile)return;
   nbCss();NB.loaded=false;NB.rows=[];nbPaint();nbLoad();
+  IVB.loaded=false;IVB.reports=[];IVB.alerts=[];IVB.signals=[];IVB.brief=null;ivbPaint();ivbLoad();
   var sb=osClient();var box=document.getElementById('osAsstBody');if(!sb||!box)return;
   var uid=OS.session.user.id;var today=osTodayStr();var role=osRole();
   var specs=osAsstSpecs(role,uid,today);
