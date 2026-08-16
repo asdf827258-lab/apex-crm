@@ -3,7 +3,7 @@
 아티팩트: https://claude.ai/code/artifact/8f25654d-e304-44b9-98c4-5910251df678
 
 이 폴더는 **전자책을 고칠 때 쓰는 도구**만 들어 있습니다.
-완성본(`book-final.html`, 5.3MB)은 폰트와 그림이 박혀 있어 저장소에 넣지 않습니다 —
+완성본(`book-final.html`, 5.6MB)은 폰트와 그림이 박혀 있어 저장소에 넣지 않습니다 —
 아티팩트에서 받아 오면 됩니다.
 
 ## 🚫 앱 코드에 손대지 않습니다
@@ -24,18 +24,22 @@
 #    frag_s8.html  10부 처음 켤 때
 #    frag_s12.html 14부 외우는 숫자
 #    frag_map.py    3부 열네 갈래 지도 SVG
+#    frag_maps.py   1부 두 사람의 지도 (사업단장 · 설계사 · 주고받는 넷)
 #    frag_caps.html 보험전략실 · 시스템 갈래 카드
 
-# 2) CRM 화면 사진을 다시 찍으려면 (저장소 최상단에서)
+# 2) 화면 사진을 다시 찍으려면 (저장소 최상단에서)
 export NODE_PATH=/opt/node22/lib/node_modules
-node docs/ebook-book/shots-crm.js <출력폴더>   # 7장 · 가짜 서버를 물려 로그인 없이 찍는다
-#    찍은 PNG 를 web/*.webp 로 줄인 뒤 frag_s6.py 가 base64 로 박는다
+node docs/ebook-book/shots-crm.js  <출력폴더>   # CRM 7장
+node docs/ebook-book/shots-app.js  <출력폴더>   # 앱 본체 — 미끼 레이더 · 상담자료 · 계산기
+node docs/ebook-book/shots-menu.js <출력폴더>   # 왼쪽 메뉴를 접어 열네 칸 한 장으로
+#    찍은 PNG 를 web/*.webp 로 줄인 뒤 frag_s6.py · build4.py 가 base64 로 박는다
 
 # 3) 조립 — 순서대로 돌린다
 python3 frag_bits.py && python3 frag_map.py && python3 frag_s6.py
 python3 build.py    # 1차 — 열네 갈래 · 미끼 레이더 · 처음 켤 때 · 숫자
 python3 build2.py   # 2차 — 2026-08-16 변경분 반영
 python3 build3.py   # 3차 — 1부/5부 삽입 + 장 번호 재배치
+python3 frag_maps.py && python3 build4.py   # 4차 — 두 지도 + 앱 화면 사진
 ```
 
 `build*.py` 의 치환은 전부 **건수를 확인**합니다. 원본이 바뀌어 못 찾으면
@@ -56,18 +60,33 @@ python3 build3.py   # 3차 — 1부/5부 삽입 + 장 번호 재배치
 | `crm-touch` | 오늘의 알림 |
 | `crm-tascript` | TA 맞춤 스크립트 콘솔 |
 
-> 앱 화면(`app/index.html`) 쪽 사진은 `docs/ebook/shots.js` 가 같은 방식으로 찍습니다.
+### 앱 본체 (`shots-app.js` · `shots-menu.js`)
+
+| 잡히는 화면 | 무엇 |
+|---|---|
+| `app-menu-fold` | 왼쪽 메뉴를 접은 모습 — **열네 칸이 한 장에** |
+| `app-mikki-lock` | 미끼 레이더 첫 실행 잠금 |
+| `app-mikki` | 미끼 레이더 첫 화면 — 다섯 묶음 · 하루 30분 루틴 |
+| `app-fpdeck` | 재무설계 상담자료 — 60분 흐름 · 계산기와 나눠 쓰기 |
+| `app-finance` | 재무설계 계산기 — 물가상승률 고정칸 · 발표 트랙 단추 |
+
+**막히는 자리 셋** — ① 아침 보고 모달이 화면을 덮으므로 캡처 전에 반드시 닫습니다
+(`dismiss()`). ② 보험전략실은 `role:'hq'` 라서 프로필 role 을 `branch_manager` 로
+줘야 메뉴에 뜹니다. ③ 뷰포트를 520px 로 줄이면 앱이 모바일 배치로 바뀌어 사이드바가
+사라집니다 — **1480px 를 유지**하고 높이만 키우십시오.
+
+> `docs/ebook/shots.js` 는 앞 세션이 쓰던 같은 방식의 앱 캡처 도구입니다.
 
 ## 앞선 세션에서 밟은 함정 — 반복하지 말 것
 
 - **CSS 클래스 충돌.** 새 클래스는 반드시 기존 161개와 겹치는지 먼저 봅니다.
-  지금까지 쓴 접두사: `rdr-` `nmb-` `cyc-` `pw` `pin`.
+  지금까지 쓴 접두사: `rdr-` `nmb-` `cyc-` `pw` `pin` `mp-`.
 - **장 번호.** 장을 끼워 넣으면 앵커(`#sN`) · `제 N 부` 딱지 · 차례 ·
   표지 읽는 순서 · 꼬리말 · 본문 상호참조가 **전부** 따라 바뀝니다.
   `build3.py` 가 그 전부를 한 번에 처리하니 그 틀을 쓰십시오.
 - **주석과 id 가 어긋나 있습니다.** `<!-- ═══ 5부 ═══ -->` 가 `id="s6"` 앞에
   붙어 있는 식입니다. 삽입 자리를 잡을 때 주석 번호를 믿지 마십시오.
-- **큰 숫자.** 화면 수(85) · 그림 수(109) · 갈래 수(14)는 표지 · 차례 ·
+- **큰 숫자.** 화면 수(85) · 그림 수(114) · 갈래 수(14)는 표지 · 차례 ·
   이동 막대 · 서장 · 도구 백과 머리말에 흩어져 있습니다.
 
 ## 준법 — 어기지 않습니다
