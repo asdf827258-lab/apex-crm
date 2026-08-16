@@ -193,8 +193,24 @@ const B = 'http://127.0.0.1:' + PORT;
     '「기타/월」이 지출 합계에 들어간다 — 빠져 있으면 남는 돈이 부풀려지고 그 돈으로 보험료를 제안하게 된다');
 
   is(errs.length === 0, '세 화면 어디서도 콘솔 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
+  /* ── 탭이 서로 안에 갇히지 않았는가 ──────────────────────────
+     닫는 </div> 하나가 빠지면 그 뒤의 탭들이 전부 앞 탭 안으로 들어간다.
+     그러면 앞 탭을 열지 않는 한 뒤의 탭은 하나도 안 열린다. 실제로 연금
+     탭이 안 닫혀 탭 아홉 개(투자·보험·팩트체크·부동산·교육자금·상속·
+     안내·종합·최종)가 그 안에 갇힌 채로 라이브에 나간 적이 있다.
+     눈에는 안 보이고 문법 검사도 통과한다 — 여기서 잡는다. */
+  console.log('\n[탭 자리] 탭이 서로 안에 갇히지 않았는가');
+  const panes = await fin.evaluate(() => document.querySelectorAll('.tab-pane').length);
+  is(panes >= 10, '계산기 탭을 읽었다 (' + panes + '개)');
+  const nest = await fin.evaluate(() => [...document.querySelectorAll('.tab-pane')]
+    .map(e => { const up = e.parentElement && e.parentElement.closest('.tab-pane');
+                return { id: e.id, inside: up ? up.id : null }; })
+    .filter(x => x.inside));
+  is(nest.length === 0, '모든 탭이 나란히 있다 — 안에 갇힌 탭 없음' +
+    (nest.length ? ' · ' + nest.map(x => x.id + ' ⊂ ' + x.inside).join(' · ') : ''));
 
   await browser.close(); srv.close();
+
   console.log('\n──────────────────────────────');
   console.log(fail === 0
     ? '상담 흐름 점검 통과 — ' + pass + '가지 다 맞습니다.'
