@@ -79,7 +79,8 @@ def cmd_backtest(args, cfg) -> int:
     for a in cfg["assets"]:
         sym, tf = a["symbol"], a["timeframe"]
         try:
-            df, src = dm.load_bars(sym, tf, args.months, synthetic=args.synthetic)
+            df, src = dm.load_bars(sym, tf, args.months,
+                                   synthetic=args.synthetic, public=getattr(args, 'public', False))
             bars[sym] = df
             source = src
             print(f"  {sym:<8} {tf:<6} {len(df):>6}봉  ({src})")
@@ -89,6 +90,7 @@ def cmd_backtest(args, cfg) -> int:
     if not bars:
         print("\n데이터를 하나도 못 받았습니다.")
         print("  · 키가 없다면 .env 를 채우세요")
+        print("  · 키 없이 진짜 시세로 돌리려면:  python main.py backtest --months 6 --public")
         print("  · 배관만 확인하려면:  python main.py backtest --months 6 --synthetic")
         return 1
 
@@ -109,6 +111,11 @@ def _print_backtest(res: dict) -> None:
     print("\n" + "=" * 78)
     if res["source"] == "synthetic":
         print("  ⚠️  합성 데이터입니다. 배관 점검용이고 성과 해석에 쓰면 안 됩니다.")
+        print("=" * 78)
+    elif str(res["source"]).startswith("public"):
+        print("  ℹ️  공개 시세(비공식 경로)로 돌린 결과입니다. 진짜 시장 데이터라 판정에 쓸 수 있지만,")
+        print("      Alpaca 키가 생기면 그쪽으로 다시 한 번 돌려 보세요.")
+        print(f"      출처 — {res['source']}")
         print("=" * 78)
     print(f"  가정 — 수수료 {res['costs']['commission_bps']}bps · 슬리피지 {res['costs']['slippage_bps']}bps")
     print("=" * 78)
@@ -145,14 +152,25 @@ def _gate(label: str, ok: bool, note: str = "") -> None:
 
 
 def _concentration(res: dict) -> str | None:
+    """한 자산에 쏠렸는지.
+
+    ⚠️ 전에는 수익이 쏠린 것만 봤다(tot > 0 일 때만 검사). 그래서 손실이
+       한 종목에 몰려도 '고르게 분포' 라고 통과시켰다. 실제로 공개 시세로
+       돌렸을 때 BTC 하나가 손실의 88% 였는데 이 관문이 초록불이었다.
+       쏠림은 방향과 무관하게 문제다 — 그 종목 하나가 결과를 정한 것이고,
+       나머지 넷은 검증된 게 아니다.
+    """
     tot = res["total"]["total_pnl"]
     if abs(tot) < 1e-9:
         return None
     for sym, s in res["per_symbol"].items():
         if s.get("error"):
             continue
-        if tot > 0 and s["total_pnl"] > tot * 0.8:
-            return f"{sym} 하나가 수익의 80% 초과"
+        pnl = s["total_pnl"]
+        if tot > 0 and pnl > tot * 0.8:
+            return f"{sym} 하나가 수익의 {pnl / tot * 100:.0f}%"
+        if tot < 0 and pnl < tot * 0.8:
+            return f"{sym} 하나가 손실의 {pnl / tot * 100:.0f}%"
     return None
 
 
@@ -444,6 +462,8 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--config", default="config.yaml")
         sp.add_argument("--equity", type=float, default=100_000.0, help="계좌를 못 읽을 때 쓸 가정 잔고")
         sp.add_argument("--synthetic", action="store_true", help="합성 데이터로 배관만 확인")
+        sp.add_argument("--public", action="store_true",
+                        help="키 없이 공개 시세로 받는다 (비공식 경로. Alpaca 키가 있으면 그쪽이 낫다)")
 
     b = sub.add_parser("backtest", help="과거 데이터로 검증")
     common(b)
