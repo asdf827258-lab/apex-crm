@@ -1195,6 +1195,7 @@ a { color: inherit; text-decoration: none; }
 
 .fx-krw{color:var(--ink-3,#7A8493);font-weight:700;font-size:.86em;white-space:nowrap}
 </style>
+<script src="pension-engine.js"></script>
 </head>
 <body>
 <div class="app">
@@ -1635,40 +1636,8 @@ a { color: inherit; text-decoration: none; }
 
   <!-- 3. 연금 시뮬레이션 -->
   <div class="tab-pane" id="tab-pension">
-    <div class="sec-hd">
-      <div><div class="sec-tag">PENSION SIMULATION</div><div class="sec-title">연금 포트폴리오 & 수령액 시뮬레이션</div></div>
-      <button type="button" class="report-safe-btn dark" onclick="apexPresent('w')"
-        title="이 화면의 고객 값을 그대로 넘겨 연금 발표자료를 엽니다">▶ 연금 발표자료</button>
-    </div>
-
-    <!-- 연금 종합 -->
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-hd"><div class="card-tag">PENSION OVERVIEW</div><div class="card-title">은퇴 준비 종합 현황</div></div>
-      <div class="card-body" id="pension-overview"></div>
-    </div>
-
-    <!-- 연금 포트폴리오 도넛 -->
-    <div class="g2" style="margin-bottom:12px">
-      <div class="card">
-        <div class="card-hd"><div class="card-tag">PENSION PORTFOLIO</div><div class="card-title">연금 포트폴리오 구성</div></div>
-        <div class="card-body" id="pension-donut"></div>
-      </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-tag">MONTHLY INCOME AT RETIREMENT</div><div class="card-title">은퇴 후 예상 월 수령액</div></div>
-        <div class="card-body" id="pension-monthly"></div>
-      </div>
-    </div>
-
-    <!-- 필요 납입액 시뮬 -->
-    <div class="card">
-      <div class="card-hd"><div class="card-tag">REQUIRED MONTHLY SAVING</div><div class="card-title">목표 달성을 위한 필요 납입액</div></div>
-      <div class="card-body" id="pension-required"></div>
-    </div>
-  </div>
-
-  <!-- 4. 달러 시뮬레이션 -->
-  <!-- 달러 시뮬레이션 탭은 없앴다. 달러는 투자 컨설팅 안에서 원화와
-       나란히 설명한다 — 따로 떼어 놓으니 아무도 안 열었다. -->
+  <div id="pension-sim"></div>
+  
 
   <div class="tab-pane" id="tab-invest">
     <div class="sec-hd">
@@ -10158,5 +10127,219 @@ window.addEventListener('message', function(){ setTimeout(function(){
 })();
 </script>
 
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   연금 시뮬레이션 — 지금 이대로 → 부족 → 우리와 함께라면 → 전후 비교
+   · 고객 정보는 왼쪽 사이드바에서 그대로 가져온다. 다시 입력하지 않는다.
+   · 숫자는 pension-engine.js (엑셀 254개 시나리오 대조 완료) 한 곳에서만 나온다.
+     상담자료와 같은 엔진이라 두 화면의 숫자가 갈릴 수 없다.
+   ═══════════════════════════════════════════════════════════════ */
+var PSIM = { pid:null, prem:50, pay:10, ret:6.0, cPrem:10, cFund:1.0, premX:0, useHouse:false };
+
+function psN(id,d){ var e=document.getElementById(id); var v=parseFloat(e&&e.value); return isFinite(v)?v:(d||0); }
+function psWon(m){
+  m=Math.round(m); if(!m) return '0원';
+  var s=m<0?'-':'', a=Math.abs(m), e=Math.trunc(a/10000), r=a%10000;
+  return s+(e? e+'억'+(r?' '+r.toLocaleString()+'만원':'') : r.toLocaleString()+'만원');
+}
+function psSet(k,v){
+  if(k==='pid') PSIM.pid=v;
+  else if(k==='useHouse') PSIM.useHouse=!!v;
+  else PSIM[k]=parseFloat(v)||0;
+  renderPensionSim();
+}
+
+function renderPensionSim(){
+  var host=document.getElementById('pension-sim');
+  if(!host || !window.PENSION) return;
+
+  var name=(document.getElementById('s_name')||{value:'고객님'}).value||'고객님';
+  var age=Math.round(psN('s_age',40));
+  var sex=(((document.getElementById('s_gender')||{value:'여성'}).value||'').indexOf('남')>=0)?'남성':'여성';
+  var rage=Math.round(psN('s_rage',65));
+  var inf=psN('s_inf',3);
+
+  /* STEP 1 — 사이드바에 적힌 것만 더한다. 없는 건 만들지 않는다. */
+  var nps=psN('s_nps',0), retp=psN('s_retire_pen',0), priv=psN('s_pen_now',0);
+  var realty=psN('s_realty',0), hpWon=0;
+  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpWon=(h&&h.won)?h.won:0; } }catch(e){}
+  var useH=PSIM.useHouse && hpWon>0;
+  var now=nps+retp+priv+(useH?hpWon:0);
+
+  /* STEP 2 — 물가는 계산에 넣지 않는다(요구사항). 참고로만 보여준다. */
+  var target=psN('s_target',0), gap=Math.max(target-now,0);
+  var yrsTo=Math.max(rage-age,0), futureTarget=target*Math.pow(1+inf/100,yrsTo);
+
+  /* STEP 3 */
+  var pay=Math.round(PSIM.pay)||10, prem=PSIM.prem||0;
+  var list=PENSION.eligible(age,rage,pay); if(!list.length) list=PENSION.products;
+  var p=null; for(var i=0;i<list.length;i++) if(list[i].id===PSIM.pid) p=list[i];
+  if(!p){ p=list[0]; PSIM.pid=p.id; }
+
+  var inp={age:age,sex:sex,start:rage,pay:pay,monthly:prem*10000};
+  var r=null; try{ r=PENSION.calc(p,inp); }catch(e){ r=null; }
+  var addM=r? r.yearly/12/10000 : 0;
+  var omega=p.omega||100, years=Math.max(0,omega-rage), paidTot=prem*12*pay;
+
+  var isVar=(p.type==='변액');
+  var assum={ r:PSIM.ret/100, cPrem:PSIM.cPrem/100, cFund:PSIM.cFund/100 };
+  var fundV=0, beRate=null, varM=0;
+  if(r && isVar){
+    try{
+      fundV=PENSION.fundAt(r.T,inp,assum)/10000;
+      beRate=PENSION.breakEven(r,assum);
+      varM=(r.base>0 && fundV>0)? addM*(fundV*10000/r.base) : 0;
+    }catch(e){}
+  }
+  var payM=Math.max(addM,varM);
+
+  var gPre=0,gPost=0;
+  if(r){ try{
+    gPre=PENSION.deathAt(Math.max(1,r.T-1),r,PSIM.premX)/10000;
+    gPost=PENSION.deathAfter(r)/10000;
+  }catch(e){} }
+
+  var opt=list.map(function(x){ return '<option value="'+x.id+'"'+(x.id===p.id?' selected':'')+'>'+
+      x.co+' · '+x.name+' ('+x.type+')</option>'; }).join('');
+
+  function card(tag,title,body,desc){
+    return '<div class="card" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
+      '<div class="card-title">'+title+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
+      '</div><div class="card-body">'+body+'</div></div>';
+  }
+  function row(l,v,note,strong){
+    return '<div class="cmp-row"><div><span class="cmp-lbl"'+(strong?' style="font-weight:800"':'')+'>'+l+'</span>'+
+      (note?'<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">'+note+'</span>':'')+
+      '</div><div class="cmp-val"'+(strong?' style="font-weight:800"':'')+'>'+v+'</div></div>';
+  }
+  function big(v,c,l,sub){
+    return '<div style="flex:1 1 148px;min-width:0;background:'+(c||'#F8FAFC')+';border-radius:14px;padding:15px 17px">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--ink-4)">'+l+'</div>'+
+      '<div style="font-size:clamp(18px,4.6vw,22px);font-weight:800;letter-spacing:-.03em;margin-top:5px;word-break:keep-all">'+v+'</div>'+
+      (sub?'<div style="font-size:10.5px;color:var(--ink-5);margin-top:3px">'+sub+'</div>':'')+'</div>';
+  }
+  function num(id,label,val,step,hint){
+    return '<div style="min-width:0"><label style="display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin-bottom:4px">'+label+'</label>'+
+      '<input type="number" inputmode="decimal" value="'+val+'" step="'+(step||1)+'" oninput="psSet(\''+id+'\',this.value)" '+
+      'style="width:100%;box-sizing:border-box;border:1px solid #D8E0EC;border-radius:8px;padding:9px 10px;font-size:16px;font-family:inherit">'+
+      (hint?'<div style="font-size:9.5px;color:var(--ink-5);margin-top:3px">'+hint+'</div>':'')+'</div>';
+  }
+  var GRID='display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px';
+
+  var s1=row('국민연금', psWon(nps)+' / 월', nps?null:'사이드바 「국민연금」이 비어 있습니다')+
+    row('퇴직연금', psWon(retp)+' / 월', retp?null:'사이드바 「퇴직연금」이 비어 있습니다')+
+    (priv? row('기존 개인연금', psWon(priv)+' / 월'):'')+
+    (hpWon>0
+      ? '<div class="cmp-row"><div><span class="cmp-lbl">주택연금 <label style="font-weight:600;font-size:10.5px;cursor:pointer">'+
+        '<input type="checkbox" '+(useH?'checked':'')+' onchange="psSet(\'useHouse\',this.checked)" style="vertical-align:-2px;margin-left:6px"> 합산</label></span>'+
+        '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">부동산 '+psWon(realty)+' 기준 · '+rage+'세 개시</span></div>'+
+        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpWon)+' / 월</div></div>' : '')+
+    row('합계', psWon(now)+' / 월', null, true);
+
+  var s2='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+      big(psWon(target)+' / 월','#F1F5F9','은퇴 후 목표 생활비')+
+      big(psWon(now)+' / 월','#F1F5F9','지금 준비된 것')+
+      big(psWon(gap)+' / 월', gap?'#FEF2F2':'#ECFDF5','매달 비는 돈')+'</div>'+
+    (target<=0
+      ? '<div style="margin-top:12px;font-size:12px;color:var(--ink-5)">사이드바 「은퇴 후 목표 생활비」를 넣으면 부족액이 나옵니다.</div>'
+      : gap>0
+        ? '<div style="margin-top:12px;background:#FEF2F2;border:1px solid #FECACA;border-radius:11px;padding:12px 14px;font-size:12.5px;color:#B91C1C;line-height:1.75">'+
+          name+'님은 은퇴 후 매달 <b>'+psWon(gap)+'</b>이 빕니다. '+years+'년으로 보면 <b>'+psWon(gap*12*years)+'</b>입니다.</div>'
+        : '<div style="margin-top:12px;background:#ECFDF5;border:1px solid #A7F3D0;border-radius:11px;padding:12px 14px;font-size:12.5px;color:#047857">목표를 이미 넘겼습니다.</div>')+
+    '<div style="margin-top:10px;font-size:10.5px;color:var(--ink-5);line-height:1.7">'+
+      '※ 물가상승률 '+inf.toFixed(1)+'%를 반영하면 '+yrsTo+'년 뒤 같은 생활 수준은 <b>'+psWon(futureTarget)+' / 월</b>입니다 '+
+      '&mdash; <b>참고용이며 위 계산에는 넣지 않았습니다.</b></div>';
+
+  var s3='<div class="sub-card"><div style="'+GRID+'">'+
+      '<div style="grid-column:1/-1;min-width:0"><label style="display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin-bottom:4px">'+
+        '상품 &mdash; '+age+'세 · '+sex+' · '+rage+'세 개시 · '+pay+'년납으로 <b>가입 가능한 것만</b> ('+list.length+'개)</label>'+
+        '<select onchange="psSet(\'pid\',this.value)" style="width:100%;box-sizing:border-box;border:1px solid #D8E0EC;border-radius:8px;padding:9px 10px;font-size:16px;font-family:inherit">'+opt+'</select></div>'+
+      num('prem','월 납입액(만원)',prem,1)+
+      num('pay','납입기간(년)',pay,1)+
+      num('premX','사망보장 배수',PSIM.premX,10,'메트라이프 동행 사망보장형 = 200')+
+    '</div><div style="font-size:10.5px;color:var(--ink-5);line-height:1.65;margin-top:8px"><b>'+(p.guar||'')+'</b></div></div>'+
+    (r ? '<div style="margin-top:12px">'+
+        row('내는 돈', psWon(paidTot), '월 '+prem+'만원 × '+pay+'년')+
+        row('받는 연금 — 최저보증', psWon(addM)+' / 월', psWon(r.yearly/10000)+' / 년 · '+rage+'세부터 평생')+
+        row('평생 받는 돈', psWon(addM*12*years), rage+'세 ~ '+omega+'세 · '+years+'년', true)+
+      '</div>' : '<div style="margin-top:12px;font-size:12px;color:#B91C1C">이 조건으로는 계산되지 않습니다 — 나이·납입기간을 조정해 보십시오.</div>');
+
+  if(r && isVar){
+    s3+='<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">'+
+      '<div style="font-size:12.5px;font-weight:800;margin-bottom:8px">변액 &mdash; 펀드가 이만큼 났다면</div>'+
+      '<div style="'+GRID+'">'+num('ret','가정 수익률(%)',PSIM.ret,0.5)+
+        num('cPrem','선취 사업비(%)',PSIM.cPrem,0.5)+num('cFund','펀드 보수(%)',PSIM.cFund,0.1)+'</div>'+
+      '<div style="margin-top:10px">'+
+        row('개시시점 적립금 (가정)', psWon(fundV), '연 '+PSIM.ret.toFixed(1)+'% · 사업비 '+PSIM.cPrem+'% · 보수 '+PSIM.cFund+'%')+
+        row('그때 받는 연금 (가정)', psWon(varM)+' / 월', '최저보증 '+psWon(addM)+' 과 비교')+
+        row('실제로 받는 것', psWon(payM)+' / 월', '<b>둘 중 큰 쪽</b>이 지급됩니다', true)+'</div>'+
+      '<div style="margin-top:10px;background:'+(beRate===null?'#ECFDF5':'#FFFBEB')+';border:1px solid '+(beRate===null?'#A7F3D0':'#FDE68A')+
+        ';border-radius:11px;padding:11px 13px;font-size:12px;color:'+(beRate===null?'#047857':'#92400E')+';line-height:1.75">'+
+        (beRate===null
+          ? '이 조건에서는 <b>어떤 수익률로도 최저보증을 넘기 어렵습니다.</b> 즉 최저보증이 그만큼 강합니다.'
+          : '펀드가 <b>연 '+(beRate*100).toFixed(2)+'%</b> 이상 나야 최저보증을 넘어섭니다. 그 아래면 <b>최저보증이 지급</b>됩니다.')+'</div>'+
+      '<div style="margin-top:8px;font-size:10.5px;color:var(--ink-5);line-height:1.65">'+
+        '※ 변액은 <b>실적배당</b>입니다. 위 수익률은 <b>가정</b>이며 확정 수익이 아닙니다. '+
+        '원금 손실이 날 수 있고 사업비·보수는 상품마다 다릅니다. 상품설명서로 확인하십시오.</div></div>';
+  }
+
+  if(r){
+    s3+='<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">'+
+      '<div style="font-size:12.5px;font-weight:800;margin-bottom:8px">사망보장금 &mdash; 일찍 떠나도 남습니다</div>'+
+      row('연금개시 전 사망', psWon(gPre), (p.dth&&p.dth.preLabel?p.dth.preLabel:'')+
+          (PSIM.premX>0?' · 월납 ×'+PSIM.premX+'배와 비교해 큰 쪽':''))+
+      row('연금개시 후 사망', psWon(gPost), (p.dth&&p.dth.postLabel?p.dth.postLabel:''))+
+      '<div style="margin-top:10px;font-size:12px;color:var(--ink-3);line-height:1.75">'+
+        '오래 사시면 <b>연금</b>으로, 일찍 떠나시면 <b>유가족의 목돈</b>으로 나갑니다. '+
+        '이 금액은 <b>상속세 납부재원</b>이 되므로 🏛️ 상속·증여 탭에 그대로 넣어 쓰십시오.</div></div>';
+  }
+
+  var cover=gap>0? Math.min(100,payM/gap*100):100;
+  var lifeNow=now*12*years, lifeAfter=(now+payM)*12*years;
+  var s4='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+      big(psWon(now)+' / 월','#F1F5F9','지금 이대로')+
+      big(psWon(now+payM)+' / 월','#ECFDF5','우리와 함께라면')+
+      big('+'+psWon(payM)+' / 월','#EFF6FF','달라지는 것', (isVar&&varM>addM)?'변액 가정 기준':'최저보증 기준')+'</div>'+
+    '<div style="margin-top:12px">'+
+      row('평생 받는 돈 — 지금 이대로', psWon(lifeNow))+
+      row('평생 받는 돈 — 우리와 함께', psWon(lifeAfter))+
+      row('차이', '+'+psWon(lifeAfter-lifeNow), rage+'세부터 '+years+'년 · 내는 돈 '+psWon(paidTot), true)+
+      (gPre>0? row('여기에 더해 · 사망보장금', psWon(Math.max(gPre,gPost)), '연금과 별개로 유가족에게'):'')+'</div>'+
+    (gap>0
+      ? '<div style="margin-top:12px;background:'+(cover>=100?'#ECFDF5':'#FFFBEB')+';border:1px solid '+(cover>=100?'#A7F3D0':'#FDE68A')+
+        ';border-radius:11px;padding:13px 15px;font-size:12.5px;color:'+(cover>=100?'#047857':'#92400E')+';line-height:1.8">'+
+        (cover>=100? '✅ 매달 비던 <b>'+psWon(gap)+'</b>이 <b>전부 메워집니다.</b>'
+          : '이 설계로 부족액의 <b>'+cover.toFixed(0)+'%</b>가 메워집니다. 남는 <b>'+psWon(Math.max(0,gap-payM))+
+            '</b>은 납입액을 올리거나 다른 재원과 함께 봐야 합니다.')+'</div>' : '')+
+    '<div style="margin-top:10px;font-size:10.5px;color:var(--ink-5);line-height:1.7">'+
+      '※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. '+
+      '국민연금·퇴직연금은 사이드바 입력값을 그대로 씁니다. 실제 계약은 상품설명서·약관으로 확인하십시오.</div>';
+
+  host.innerHTML =
+    card('STEP 1 · NOW','지금 이대로라면 은퇴 후 매달 얼마입니까', s1, '왼쪽 고객 정보에서 그대로 가져옵니다')+
+    card('STEP 2 · GAP','목표까지 얼마가 빕니까', s2)+
+    card('STEP 3 · PLAN','우리와 함께라면 — 이렇게 채웁니다', s3, '엑셀 연금비교표를 그대로 옮긴 엔진으로 계산합니다')+
+    card('STEP 4 · RESULT', name+'님, 이렇게 달라집니다', s4);
+}
+
+(function(){
+  function wrap(){
+    var cur=window.switchTab;
+    if(typeof cur!=='function' || cur.__psim) return;
+    var w=function(tab,btn){
+      var out=cur.apply(this,arguments);
+      try{ if(tab==='pension') renderPensionSim(); }catch(e){ console.error('연금 시뮬레이션:',e); }
+      return out;
+    };
+    w.__psim=true; window.switchTab=w;
+  }
+  function boot(){ wrap(); [300,900,2000].forEach(function(ms){setTimeout(wrap,ms);});
+    try{ renderPensionSim(); }catch(e){} }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  var ids=['s_age','s_gender','s_rage','s_nps','s_retire_pen','s_pen_now','s_target','s_name','s_inf','s_realty'];
+  function hook(e){ if(e.target&&ids.indexOf(e.target.id)>=0){ try{renderPensionSim();}catch(_){} } }
+  document.addEventListener('input',hook); document.addEventListener('change',hook);
+})();
+</script>
 </body>
 </html>
