@@ -75,7 +75,7 @@ def cmd_backtest(args, cfg) -> int:
     )
     print(f"백테스트 {args.months}개월 · 슬리피지 {costs.slippage_bps}bps · 수수료 {costs.commission_bps}bps")
 
-    bars, source = {}, "alpaca"
+    bars, source, spans = {}, "alpaca", {}
     for a in cfg["assets"]:
         sym, tf = a["symbol"], a["timeframe"]
         try:
@@ -83,6 +83,8 @@ def cmd_backtest(args, cfg) -> int:
                                    synthetic=args.synthetic, public=getattr(args, 'public', False))
             bars[sym] = df
             source = src
+            spans[sym] = {"days": int((df.index[-1] - df.index[0]).days),
+                          "bars": len(df), "src": src}
             print(f"  {sym:<8} {tf:<6} {len(df):>6}봉  ({src})")
         except Exception as e:
             print(f"  {sym:<8} {tf:<6} 실패 — {str(e)[:90]}")
@@ -101,6 +103,7 @@ def cmd_backtest(args, cfg) -> int:
         correlation_filter=bool(cfg["risk"]["correlation_filter"]),
         outdir=args.outdir, source=source,
     )
+    res["spans"] = spans
     _print_backtest(res)
     with open(os.path.join(args.outdir, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=2)
@@ -144,6 +147,8 @@ def _print_backtest(res: dict) -> None:
     _gate("비용이 0 이 아닌가", res["costs"]["slippage_bps"] > 0, f"{res['costs']['slippage_bps']}bps")
     big = _concentration(res)
     _gate("한 자산에 쏠리지 않았는가", big is None, big or "고르게 분포")
+    mix = _span_mismatch(res)
+    _gate("자산별 기간이 비슷한가", mix is None, mix or _span_note(res))
     print()
 
 
@@ -167,11 +172,51 @@ def _concentration(res: dict) -> str | None:
         if s.get("error"):
             continue
         pnl = s["total_pnl"]
-        if tot > 0 and pnl > tot * 0.8:
-            return f"{sym} 하나가 수익의 {pnl / tot * 100:.0f}%"
-        if tot < 0 and pnl < tot * 0.8:
-            return f"{sym} 하나가 손실의 {pnl / tot * 100:.0f}%"
+        if not (pnl / tot > 0.8 and (pnl > 0) == (tot > 0)):
+            continue
+        # 비율이 100%를 넘을 수 있다 — 다른 종목이 반대로 벌었을 때다.
+        # 그때 '손실의 118%' 는 맞는 말이지만 오타처럼 읽힌다. 풀어서 적는다.
+        if abs(pnl) > abs(tot):
+            kind = "손실" if tot < 0 else "수익"
+            return f"{sym} 하나가 합계 {kind}보다 크다 ({pnl:,.0f} vs 합계 {tot:,.0f})"
+        return f"{sym} 하나가 {'수익' if tot > 0 else '손실'}의 {pnl / tot * 100:.0f}%"
     return None
+
+
+def _span_days(res: dict) -> dict:
+    return {k: v["days"] for k, v in (res.get("spans") or {}).items() if v.get("days")}
+
+
+def _span_note(res: dict) -> str:
+    d = _span_days(res)
+    return f"{min(d.values())}~{max(d.values())}일" if d else "확인 못 함"
+
+
+def _span_mismatch(res: dict) -> str | None:
+    """자산마다 받아 온 기간이 크게 다르면 합계를 믿을 수 없다.
+
+    ⚠️ 이것 때문에 한 번 속았다. '24개월' 이라고 찍고 돌렸는데 실제로는
+
+        SPY·QQQ  15분봉    86일     ← 공개 소스가 60일까지만 준다
+        BTC/USD  1시간봉  729일
+        GLD·USO  4시간봉 1061일
+
+       이었다. 다섯을 한 잔고 곡선에 태워 놓고 합계 -46% 를 뽑았으니,
+       SPY 는 석 달, BTC 는 2년을 잰 숫자를 더한 셈이다. 낙폭도 샤프도
+       기간이 다른 것끼리는 더할 수 없다.
+
+       봉 종류를 바꾸면 받을 수 있는 기간도 같이 바뀌므로(표는 data.py),
+       전략을 비교할 생각이면 이 관문부터 초록불이어야 한다.
+    """
+    d = _span_days(res)
+    if len(d) < 2:
+        return None
+    lo_sym = min(d, key=d.get)
+    hi_sym = max(d, key=d.get)
+    lo, hi = d[lo_sym], d[hi_sym]
+    if lo >= hi * 0.5:
+        return None
+    return f"{lo_sym} {lo}일 vs {hi_sym} {hi}일 — 합계를 그대로 믿으면 안 됩니다"
 
 
 # ══════════════════════════════════════════════════════════════════════════
