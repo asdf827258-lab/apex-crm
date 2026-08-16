@@ -87,7 +87,12 @@ const SYS =
   '③ 하루 등락으로 호들갑 떨지 마라 — 하루는 소음이다. 추세와 위험선만 짚어라.\n' +
   '④ "무조건·확정 수익" 같은 단정 표현 금지. 투자성 상품은 원금손실 가능성을 전제로 쓴다.\n' +
   '⑤ AI 티 나는 말투 금지("~인 것 같습니다","도움이 되길 바랍니다" 금지). 실무자처럼 짧고 단정하게.\n' +
-  '⑥ 전체 6줄을 넘기지 마라. 아침에 읽는 글이다.';
+  '⑥ 전체 10줄을 넘기지 마라. 아침에 읽는 글이다.\n' +
+  '⑦ 뉴스는 제목만 주어진다. 기사 본문을 읽은 것처럼 내용을 지어내지 마라.\n' +
+  '   제목에 없는 수치·인용·인과관계를 쓰면 안 된다. 제목을 옮길 때는 준 그대로 옮겨라.\n' +
+  '⑧ 뉴스와 내 계좌를 억지로 잇지 마라. 보유 종목·자산군과 직접 닿는 헤드라인이 없으면\n' +
+  '   "오늘 헤드라인 중 내 계좌와 직접 닿는 것은 없다" 고 쓰고 끝내라. 그게 맞는 답이다.\n' +
+  '⑨ 앞날을 단정하지 마라. "오르겠다/빠지겠다" 대신 "무엇을 확인하면 판단이 갈리는지" 를 써라.';
 
 /* 자산군 판정 — 앱의 분류와 같은 기준으로 묶는다 */
 function assetClassOf(h) {
@@ -146,6 +151,34 @@ exports.handler = async function (event) {
     if (r.length) fx = n(r[0].value);
   } catch (e) { /* 마이그레이션 전이거나 아직 안 쌓였다 */ }
   if (fx == null) log.push('환율 없음 — USD 종목은 자산배분에서 제외');
+
+  /* ── 어제 시황과 뉴스 헤드라인 ───────────────────────────────────────
+     market-daily 가 어제 장 마감 뒤(KST 16:10) 만들어 둔 것을 그대로 읽는다.
+     여기서 RSS 를 다시 긁지 않는다 — 같은 뉴스를 두 군데서 받아 오면 아침
+     브리핑과 시황 브리핑이 서로 다른 기사를 말하게 된다.
+
+     ⚠️ today 로 찾으면 안 된다. 이 함수는 07시에 도는데 market-daily 는
+        어제 16시에 돌았으므로 ref_date 가 어제다. 가장 최근 것을 받고,
+        그게 언제 것인지 리포트에 적는다. 사흘 지난 시황을 오늘 것처럼
+        보여 주는 쪽이 아예 없는 것보다 나쁘다. */
+  let mktBrief = null, headlines = null;
+  try {
+    const rows = (await sb('invest_briefs?kind=in.(market_daily,news_daily)' +
+                           '&select=kind,ref_date,title,body&order=ref_date.desc&limit=6')) || [];
+    mktBrief = rows.filter(r => r.kind === 'market_daily')[0] || null;
+    headlines = rows.filter(r => r.kind === 'news_daily')[0] || null;
+  } catch (e) { log.push('시황·뉴스 없음: ' + String(e.message || e).slice(0, 60)); }
+
+  /* 며칠 전 것이면 그렇다고 적는다 */
+  function ageDays(d) {
+    if (!d) return null;
+    return Math.round((Date.parse(today) - Date.parse(d)) / 86400000);
+  }
+  const newsLines = headlines
+    ? String(headlines.body || '').split('\n').filter(s => s.startsWith('- ')).slice(0, 8)
+    : [];
+  const mktAge = mktBrief ? ageDays(mktBrief.ref_date) : null;
+  log.push('시황 ' + (mktBrief ? mktBrief.ref_date : '없음') + ' · 헤드라인 ' + newsLines.length + '건');
 
   let made = 0, skipped = 0;
   for (const acc of accounts) {
@@ -234,7 +267,9 @@ exports.handler = async function (event) {
         twrTotal: twrAll ? twrAll.total : null,
         offCount: reb ? reb.offCount : null,
         fx: fx, fxSkipped: fxSkipped, priceStale: priceStale,
-        signalCount: signals.length, txnCount: done.length, holdings: holds.length
+        signalCount: signals.length, txnCount: done.length, holdings: holds.length,
+        marketBriefDate: mktBrief ? mktBrief.ref_date : null, marketBriefAgeDays: mktAge,
+        newsDate: headlines ? headlines.ref_date : null, newsCount: newsLines.length
       };
 
       const facts =
@@ -264,13 +299,23 @@ exports.handler = async function (event) {
         (signals.length
           ? '· 어제 봇 신호 ' + signals.length + '건(모의): ' +
             signals.slice(0, 4).map(s => (s.name || s.code) + ' ' + (s.side === 'buy' ? '매수' : '매도')).join(' · ') + '\n'
-          : '· 봇 신호: 없음\n');
+          : '· 봇 신호: 없음\n') +
+        (mktBrief
+          ? '\n[' + mktBrief.ref_date + ' 시황 브리핑' +
+            (mktAge > 1 ? ' · ⚠️ ' + mktAge + '일 지난 자료다' : '') + ']\n' +
+            String(mktBrief.body || '').slice(0, 1200) + '\n'
+          : '\n[시황 브리핑: 없음]\n') +
+        (newsLines.length
+          ? '\n[' + (headlines ? headlines.ref_date : '') + ' 경제·보험 뉴스 헤드라인]\n' +
+            newsLines.map(s => s.replace(/^- /, '')).join('\n') + '\n'
+          : '');
 
       let body;
       try {
         body = await askAI(SYS,
-          facts + '\n위 숫자로 아침 브리핑을 써라.\n\n# 형식\n## 한 줄\n## 어제 (2줄)\n' +
-          '## 오늘 볼 것 1가지\n', 900);
+          facts + '\n위 자료로 아침 브리핑을 써라.\n\n# 형식\n## 한 줄\n## 어제 내 계좌 (2줄)\n' +
+          '## 시장·뉴스 (2줄 — 헤드라인 중 내 보유와 닿는 것만. 없으면 없다고 쓴다)\n' +
+          '## 오늘 볼 것 1가지 (무엇을 확인하면 판단이 갈리는지)\n', 1200);
       } catch (e) {
         /* AI 가 없어도 숫자 리포트는 남긴다 — 빈손보다 낫다 */
         body = '## ' + today + ' 아침 브리핑\n\n' + facts +
