@@ -338,6 +338,21 @@ async function quoteOne(raw) {
     }
   }
 
+  /* ①' 집·서버의 toss-agent 가 방금 넣어 둔 값이 있으면 그게 진짜 토스 값이다 */
+  if (relayReady() && s.indexOf(':') < 0) {
+    try {
+      const rows = await relayRows([s]);
+      const row = (rows || [])[0];
+      const age = row ? relayAgeMin(row.src) : null;
+      if (row && age != null && age <= RELAY_FRESH_MIN && num(row.close) != null) {
+        const out = relayShape(row);
+        out.note = (notes.length ? notes.join(' / ') + ' → ' : '') + '토스 중계 ' + age + '분 전';
+        return cSet(k, out, TTL.quote);
+      }
+      if (row && age != null) notes.push('토스 중계 ' + age + '분 전이라 건너뜀');
+    } catch (e) { notes.push('중계 실패: ' + String(e && e.message || e).slice(0, 80)); }
+  }
+
   if (kisOk) {
     try {
       const out = s.indexOf(':') > 0
@@ -439,6 +454,56 @@ async function kisIndexOne(def) {
         실시간이 아니라 T+1 종가지만, 평가금액·수익률·목표/손절 판단에는 충분하다.
         토스나 KIS 가 붙으면 그쪽이 먼저 쓰이고 이건 뒤로 물러난다.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   ①' 토스 중계 — 집·서버에서 도는 toss-agent 가 넣어 둔 값
+
+   토스는 호출 IP 를 등록해야 하는데 Netlify 의 나가는 IP 는 배포마다 바뀐다.
+   서버리스에서는 못 푸는 문제라, 토스에 닿는 부분만 IP 가 고정된 곳으로 옮겼다
+   (scripts/toss-agent.js). 그쪽이 Supabase 에 넣고 여기서는 읽기만 한다.
+
+   ⚠️ 신선할 때만 쓴다. 15분이 넘으면 아예 건너뛰고 아래 단계로 내려간다.
+      오래된 값을 현재가 자리에 놓으면 '토스 연결됨' 이라고 적힌 채 어제 값을
+      보게 된다 — 연결이 끊긴 것보다 그쪽이 나쁘다. 집 인터넷은 IP 가 바뀌고
+      PC 는 꺼지므로, 끊기는 건 예외가 아니라 일상이다.
+   ══════════════════════════════════════════════════════════════════════ */
+const RELAY_FRESH_MIN = 15;
+function relayReady() {
+  return !!(process.env.SUPABASE_SERVICE_ROLE_KEY &&
+            (process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co'));
+}
+async function relayRows(codeList) {
+  const url = (process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co') +
+    /* ⚠️ ymd(d) 는 20260816 을 준다. 날짜 비교에는 하이픈이 있어야 하므로 두 번째
+       인자를 반드시 넘긴다 — 안 넘기면 조용히 0건이 돌아온다. */
+    '/rest/v1/invest_prices?price_date=eq.' + ymd(kstNow(), true) +
+    '&code=in.(' + codeList.map(encodeURIComponent).join(',') + ')' +
+    '&select=code,close,change_rate,currency,name,src&limit=250';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await fetch(url, { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+  if (!r.ok) throw new Error('중계 조회 ' + r.status);
+  return await r.json();
+}
+/* src 는 'toss 14:32' 꼴이다. 몇 분 전 값인지 여기서 되짚는다. */
+function relayAgeMin(src) {
+  const m = String(src || '').match(/^toss\s+(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const d = kstNow();
+  const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const then = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  const diff = mins - then;
+  return diff < 0 ? diff + 1440 : diff;      /* 자정을 넘긴 경우 */
+}
+function relayShape(row) {
+  return {
+    code: row.code, market: 'KRX', currency: row.currency || 'KRW',
+    name: row.name || '',
+    price: num(row.close), change: null,
+    changeRate: num(row.change_rate),
+    delayed: false, asOf: '',
+    src: 'toss-relay', at: new Date().toISOString()
+  };
+}
+
 /* ══════════════════════════════════════════════════════════════════════
    ④ 공개 시세 — 키가 하나도 없을 때의 마지막 줄 (지연 시세)
 
@@ -1211,3 +1276,4 @@ exports.handler = async function (event) {
 /* 검사에서만 쓰는 통로 — 공개 지연 시세의 판정과 계산을 밖에서 확인한다.
    node scripts/check-public-quote.js */
 exports._pub = { looksReal: pubLooksReal, shape: pubShape };
+exports._relay = { ageMin: relayAgeMin, shape: relayShape, freshMin: RELAY_FRESH_MIN };
