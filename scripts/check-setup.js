@@ -50,6 +50,51 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(!/monthly_perf_insert[\s\S]{0,160}with check \(owner_id = auth\.uid\(\)\)/.test(sql),
      '옛 규칙(본인 줄만)이 남아 있지 않다');
   is(/'schema_version', '33'/.test(sql),'SQL 이 끝나면 서버에 33 이라고 남긴다');
+  console.log('\n[3] 서버 열쇠 — 들어가면 바로 보이고, 순서대로 알려 주는가');
+  const kb = await page.evaluate(() => {
+    OS.profile = OS.profile || {}; OS.profile.role = 'owner';
+    try { localStorage.removeItem('apex_nf_keys'); } catch (e) {}
+    const g = document.getElementById('osLoginGate'); if (g) g.style.display = 'none';
+    go('home'); nfKeyPaint();
+    const el = document.getElementById('osNfKeyHome');
+    return { has: !!el, n: el ? el.querySelectorAll('button').length : 0,
+             t: el ? el.textContent.replace(/\s+/g, ' ') : '' };
+  });
+  is(kb.has && kb.n === 2, '홈에 열쇠 배너가 단추 두 개와 함께 뜬다');
+  is(/서버 열쇠가 아직 없습니다/.test(kb.t), '무엇이 없는지 한 줄로 말한다');
+  is(/새벽 5시/.test(kb.t), '안 넣으면 무엇이 멈추는지 적혀 있다');
+
+  const gd = await page.evaluate(() => {
+    nfGuide();
+    const w = document.getElementById('nfGuide');
+    if (!w) return null;
+    return { steps: w.querySelectorAll('.nfg-c').length,
+             keys: Array.from(w.querySelectorAll('.kv-c')).map(e => e.textContent),
+             links: Array.from(w.querySelectorAll('a.go')).map(e => e.getAttribute('href')),
+             t: w.textContent.replace(/\s+/g, ' ') };
+  });
+  is(gd && gd.steps === 5, '눌러서 열리는 안내가 다섯 걸음이다 — ' + (gd ? gd.steps : 0));
+  is(gd && gd.keys.join(',') === 'ANTHROPIC_API_KEY,SUPABASE_SERVICE_ROLE_KEY',
+     '열쇠 이름 두 개를 복사할 수 있게 세워 뒀다');
+  [['configuration/env', 'Netlify 환경변수'], ['console.anthropic.com', '앤트로픽 콘솔'],
+   ['settings/api', 'Supabase API'], ['/deploys', '배포 화면']].forEach(([u, n]) =>
+    is(!!gd && gd.links.some(x => x.indexOf(u) >= 0), '  ' + n + ' 로 바로 간다'));
+  is(gd && /최고 권한/.test(gd.t), 'service_role 경고가 있다 — 대화창에 붙이지 말라고');
+  is(gd && /Clear cache and deploy/.test(gd.t), '재배포해야 열쇠가 들어간다는 것을 적었다');
+
+  const fold = await page.evaluate(() => {
+    nfGuideClose(); nfKeyMark(true);
+    const a = document.getElementById('osNfKeyHome').innerHTML === '';
+    nfKeyMark(false);
+    const b2 = document.getElementById('osNfKeyHome').innerHTML !== '';
+    OS.profile.role = 'member'; nfKeyPaint();
+    const c = document.getElementById('osNfKeyHome').innerHTML === '';
+    return { a, b2, c };
+  });
+  is(fold.a, '한 번 되면 배너가 접힌다');
+  is(fold.b2, '안 되면 다시 뜬다');
+  is(fold.c, '팀원에게는 안 보인다 — 대표만 넣을 수 있는 일이다');
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('점검 실패 — '+bad+'가지'):'점검 통과 — 다 맞습니다.');
