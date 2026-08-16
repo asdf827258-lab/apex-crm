@@ -392,6 +392,71 @@ async function boot(page) {
   is(narrow.over === 0, '좁은 화면에서도 카테고리 이름이 안 잘린다');
   is(narrow.sw <= narrow.cw + 2, '메뉴가 옆으로 안 밀린다 (' + narrow.sw + ' / ' + narrow.cw + ')');
 
+  /* ── [8] 눌러도 없는 화면으로 보내는 단추가 없는가 ──────────────────
+     메뉴를 24칸에서 12칸으로 줄일 때 화면 이름이 바뀌었는데, 다른 화면에서
+     옛 이름으로 부르던 곳이 안 따라왔다. 성장판의 「더 자세히」 다섯 단추 중
+     셋(ckteam·teamx·growth)이 눌러도 아무 일이 없었다. 소리 없이 죽는 종류라
+     아무도 신고하지 않는다. 여기서 전부 대조한다. */
+  console.log('\n[8] 눌러도 없는 화면으로 보내는 단추');
+  const src = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const called = {};
+  const reGo = /go\(\\?'([a-z_0-9]{2,24})\\?'\)/g;
+  let mg;
+  while ((mg = reGo.exec(src))) called[mg[1]] = (called[mg[1]] || 0) + 1;
+
+  const known = await page.evaluate(() => {
+    const s = new Set();
+    (window.TABS || []).forEach(g => (g.items || []).forEach(i => s.add(i.id)));
+    return [...s];
+  });
+  const K = new Set(known);
+  const dead = Object.keys(called).filter(id => !K.has(id)).sort();
+
+  is(known.length > 60, '메뉴에 등록된 화면을 읽었다 (' + known.length + '개)');
+  is(Object.keys(called).length > 20,
+    '앱 안에서 go() 로 부르는 화면을 모았다 (' + Object.keys(called).length + '종류)');
+  is(dead.length === 0, dead.length === 0
+    ? '모든 단추가 실제로 있는 화면으로 간다'
+    : '없는 화면으로 보내는 단추가 있다 — ' + dead.map(d => d + '(×' + called[d] + ')').join(', '));
+
+  /* ── [9] 접어 둔 화면을 정말 열 수 있는가 ──────────────────────────
+     메뉴를 열두 칸으로 줄이면서 화면 넷을 숨김 그룹으로 넣고, 다른 화면 안에
+     「칸」으로 접어 넣었다 — 내 코칭과 본인 점검란은 TFA 업무관리(AR_CAT) 안에,
+     실행 체크판은 조직 관리에 그대로 있다.
+
+     접는 것 자체는 맞다. 다만 접어 놓고 그 칸까지 지우면 화면이 통째로
+     사라진다. go() 로 부르는 곳이 없어도 「칸」으로 살아 있으면 되므로,
+     두 가지를 다 인정하고 하나라도 남아 있는지만 본다. */
+  console.log('\n[9] 숨겨 둔 화면을 정말 열 수 있는가');
+  const hidden = await page.evaluate(() => {
+    const out = [];
+    (window.TABS || []).forEach(g => {
+      if (!g.hide) return;
+      (g.items || []).forEach(i => out.push(i.id));
+    });
+    return out;
+  });
+  const folded = await page.evaluate(() => ({
+    ar: (window.AR_CAT || []).map(c => c[0]),
+    th: (window.TH_CAT || []).map(c => c[0])
+  }));
+  /* 숨은 화면 id → 어느 칸으로 접혔는가 */
+  const FOLD = { mycoach: 'coach', academy: 'acad', growboard: null, ckboard: null, voice: null };
+  const stranded = hidden.filter(id => {
+    if (called[id]) return false;                       /* 어디선가 go() 로 연다 */
+    const k = FOLD[id];
+    if (k && (folded.ar.indexOf(k) >= 0 || folded.th.indexOf(k) >= 0)) return false;  /* 칸으로 산다 */
+    return true;
+  });
+
+  is(hidden.length > 0, '숨김 그룹에 있는 화면을 읽었다 (' + hidden.join(', ') + ')');
+  is(folded.ar.length > 0, 'TFA 업무관리가 칸 목록을 들고 있다 (' + folded.ar.length + '칸)');
+  is(folded.ar.indexOf('coach') >= 0, '「내 코칭」이 TFA 업무관리 안에 칸으로 있다');
+  is(folded.ar.indexOf('acad') >= 0, '「본인 점검란」이 TFA 업무관리 안에 칸으로 있다');
+  is(stranded.length === 0, stranded.length === 0
+    ? '숨은 화면이 전부 어딘가에서 열린다 — go() 로든, 칸으로든'
+    : '열 길이 없어진 화면이 있다 — ' + stranded.join(', '));
+
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 90) : ''));
 

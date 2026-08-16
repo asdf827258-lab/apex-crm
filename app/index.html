@@ -9877,8 +9877,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-14 08:05';
-var APP_BUILD_NOTE='건보료 숫자는 「예시」라고 숫자보다 먼저 밝힙니다 — 고객에게 금액으로 말씀하지 마세요 · 달러 옆에 원화 병기 · 통합상담이 앱 안 창으로 · 교육자금·펀드 「정보수집」 · 가상투자로 해마다 얼마인지 눈으로 봅니다';
+var APP_BUILD='2026-08-15 13:10';
+var APP_BUILD_NOTE='CRM 을 띄울 때 주소에 판 번호를 붙입니다 — 안 붙이면 브라우저가 지난번 CRM 을 그대로 다시 써서 새 기능이 「안 보인다」가 됩니다 · CRM 위쪽에 판 날짜를 찍어 뒀으니 그 숫자로 새 판인지 바로 알 수 있습니다 · 접촉 창의 TA 스크립트는 펴진 채로 나옵니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -9916,7 +9916,9 @@ function osVerCopy(){
 var CRM_URL='/db-crm.html';
 function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
-  f.src=CRM_URL;f._mounted=true;
+  /* 주소에 판 번호를 붙인다. 안 붙이면 브라우저가 지난번에 받아 둔 CRM 을
+     그대로 다시 쓴다 — 새 기능을 넣어도 「안 보인다」가 된다. */
+  f.src=CRM_URL+'?v='+encodeURIComponent(APP_BUILD);f._mounted=true;
 }
 function reloadCrm(){var f=$('crmFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCrm,30);toast('DB CRM 새로고침');}}
 
@@ -12359,10 +12361,12 @@ function gbLeadHtml(){
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔍</span>더 자세히</div>'+
     '<div class="card-desc">여기서 다 보이지만, 원래 화면도 그대로 있습니다</div></div><div class="card-body">'+
     '<div class="btn-row">'+
+    /* ckteam·teamx·growth 세 개를 부르고 있었다. 메뉴를 24칸에서 12칸으로
+       줄일 때 이름이 바뀌었는데 여기가 안 따라와서, 눌러도 아무 일이 안
+       일어났다. 「팀원 종합」은 지금 보고 있는 성장판이 바로 그 화면이라 뺐다. */
     '<button class="btn btn-ghost" onclick="go(\'branch_coach\')">팀 코칭</button>'+
-    '<button class="btn btn-ghost" onclick="go(\'ckteam\')">팀 체크 현황</button>'+
-    '<button class="btn btn-ghost" onclick="go(\'teamx\')">팀원 종합</button>'+
-    '<button class="btn btn-ghost" onclick="go(\'growth\')">팀 성장 대시보드</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'teamhub\')">실행 체크판</button>'+
+    '<button class="btn btn-ghost" onclick="go(\'academy\')">90일 로드맵</button>'+
     '<button class="btn btn-ghost" onclick="go(\'org\')">조직도</button>'+
     '</div></div></div>';
   return h;
@@ -34997,6 +35001,72 @@ function osFinOpen(i){var x=OSC.reps&&OSC.reps[i];if(!x)return;var inputs=(x.con
     else if(tries<10)setTimeout(push,600);})();
 }
 function osFinAskSave(){var f=$('finFrame');if(!f||!f.contentWindow){toast('계산기가 아직 로드되지 않았습니다');return;}try{f.contentWindow.postMessage({type:'apexFinCollect'},'*');}catch(e){toast('저장 요청 실패');}}
+
+/* ── 상담자료 → 계산기 ────────────────────────────────────────────
+   질문(상담자료 sec1)에서 진단(계산기 팩트체크)으로 갈 때 메뉴로 돌아
+   나갔다 들어와야 했다. 상담 중에 메뉴를 헤매는 10초가 고객에게는
+   「준비가 안 됐구나」로 보인다.
+
+   상담자료에 적은 것을 계산기 사이드바 칸으로 옮겨 담고, 계산기의
+   상담 순서를 팩트체크부터 켠다. 고객에게 같은 것을 두 번 묻지 않는다. */
+var TOFIN_MAP=[
+  ['f_name','s_name','t'],  ['f_age','s_age','n'],  ['f_gender','s_gender','t'],
+  ['f_job','s_job','t'],
+  ['f_income','s_gross','x12'],   /* 본인 월소득 → 연 총급여(만원) */
+  ['f_sincome','s_spouse','n'],   ['f_etc','s_other','n'],
+  ['f_house','s_housing','n'],    ['f_loan','s_loan','n'],
+  ['f_edu','s_edu','n'],          ['f_ins','s_insurance','n'],
+  ['f_living','s_food','n'],      /* 생활비 총액 — 계산기는 항목별로 나뉜다 */
+  ['f_home','s_realty','n'],      ['f_debt','s_debt','n'],
+  ['f_dc','s_severance','n'],     ['f_save','s_general','n'],
+  ['f_ret','s_rage','n'],         ['f_retspend','s_target','n'],
+  ['f_np','s_nps','n'],           ['f_pp','s_pension','n']
+];
+function osToFinMap(f){
+  var out={},i,r,v;
+  for(i=0;i<TOFIN_MAP.length;i++){
+    r=TOFIN_MAP[i]; v=f[r[0]];
+    if(v===undefined||v===null||v==='')continue;
+    if(r[2]==='t'){ out[r[1]]=''+v; continue; }
+    v=parseFloat(v); if(!isFinite(v))continue;
+    out[r[1]]=String(r[2]==='x12'?Math.round(v*12):v);
+  }
+  return out;
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.t!=='apex:tofin')return;
+  if(e.origin!==location.origin)return;
+  /* 우리가 띄운 그 틀에서 온 것만 받는다 */
+  var df=$('fpDeckFrame');
+  if(!df||!e.source||e.source!==df.contentWindow)return;
+
+  var f=(d.data&&d.data.f)||{}, inputs=osToFinMap(f), n=0, k;
+  for(k in inputs) if(Object.prototype.hasOwnProperty.call(inputs,k)) n++;
+
+  go('finance');
+  toast('상담자료에서 '+n+'칸을 들고 왔습니다 — 팩트체크부터 이어서 보세요',4200);
+
+  var tries=0;
+  (function push(){
+    tries++;
+    var fr=$('finFrame');
+    if(fr&&fr.contentWindow&&fr._mounted){
+      try{
+        fr.contentWindow.postMessage({type:'apexFinLoad',inputs:inputs},location.origin);
+        fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:(d.pain||'pension')},location.origin);
+      }catch(x){}
+      /* 늦게 뜨는 칸이 있어 한 번 더 밀어 준다 */
+      if(tries<3)setTimeout(push,1500);
+    }
+    else if(tries<12)setTimeout(push,600);
+    else toast('계산기를 여는 데 실패했습니다. 메뉴에서 직접 열어 주세요.',5000);
+  })();
+
+  if(f.f_living)setTimeout(function(){
+    toast('생활비 총액은 계산기 「식비」 칸에 넣었습니다 — 항목별로 나누시면 더 정확합니다',6000);
+  },4600);
+});
 /* ── 계산기가 AI 를 쓰게 해 주는 다리 ────────────────────────────
    계산기(app/finance.html)는 창 안에서 돌아서 AI 키에 손이 안 닿는다.
    그래서 「정보수집」 같은 일은 이 앱에 대신 물어본다.

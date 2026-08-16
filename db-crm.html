@@ -105,6 +105,35 @@
     @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.mobile-menu{display:inline-flex}.topbar{padding:0 16px}.content{padding:18px}.hero{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.toolbar input,.toolbar select{width:100%}}
     @media(max-width:460px){.kpis{grid-template-columns:1fr}.content{padding:14px}}
   .notice-line{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 13px;font-size:12.5px;line-height:1.6;margin-bottom:12px;font-weight:600}
+
+/* TA 스크립트 — 통화 기록 창 안에서 편다 */
+.ta-sc{border:1px solid var(--line);border-radius:12px;margin-bottom:15px;background:#F8FAFC;overflow:hidden}
+.ta-sc>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:13.5px;font-weight:700;
+  color:#1D4ED8;display:flex;align-items:center;gap:7px}
+.ta-sc>summary::-webkit-details-marker{display:none}
+.ta-sc>summary em{font-style:normal;font-weight:600;color:#64748B;font-size:12.5px}
+.ta-tg{margin-left:auto;font-size:11.5px;font-weight:700;color:#1D4ED8;background:#DBEAFE;
+  border:1px solid #BFDBFE;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.ta-sc:not([open])>summary{background:#EFF6FF}
+.ta-sc:not([open])>summary .ta-tg::before{content:'▾ '}
+.ta-sc[open]>summary .ta-tg::before{content:'▴ '}
+.ta-sc>summary:hover{background:#EFF6FF}
+.ta-in{padding:2px 14px 14px;border-top:1px solid var(--line)}
+.ta-h{font-size:11.5px;font-weight:800;color:#64748B;letter-spacing:.02em;margin:13px 0 7px}
+.ta-h:first-child{margin-top:11px}
+.ta-o{border:1px solid var(--line);border-radius:10px;background:#fff;padding:9px 11px;margin-bottom:6px}
+.ta-o .k{font-size:11.5px;font-weight:800;color:#1D4ED8}
+.ta-o .v{font-size:13px;line-height:1.68;color:#1F2937;margin-top:3px;font-weight:500}
+.ta-o .v b{color:#111827;font-weight:700}
+.ta-o.on{border-color:#3182F6;background:#EFF6FF;box-shadow:0 0 0 2px rgba(49,130,246,.12)}
+.ta-o .cp{float:right;font-size:11px;font-weight:700;color:#3182F6;background:#EFF6FF;
+  border:1px solid #BFDBFE;border-radius:6px;padding:2px 7px;cursor:pointer;margin-left:8px}
+.ta-o .cp:hover{background:#DBEAFE}
+.ta-warn{margin-top:12px;padding:10px 12px;border-radius:10px;background:#FFF7ED;
+  border:1px solid #FED7AA;font-size:12px;line-height:1.7;color:#7C2D12;font-weight:500}
+.ta-warn b{font-weight:800}
+.ta-more{margin-top:11px;font-size:12px;color:#64748B;line-height:1.6;font-weight:500}
+.ta-more b{color:#1D4ED8}
 </style>
 </head>
 <body>
@@ -130,7 +159,7 @@
 
 <div class="app hidden" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="mark">A</div><div><strong>APEX <span style="color:#54a3ff">YUN PRO</span></strong><small>재무설계 · DB 통합 워크스페이스</small></div></div>
+    <div class="brand"><div class="mark">A</div><div><strong>APEX <span style="color:#54a3ff">YUN PRO</span></strong><small>재무설계 · DB 통합 워크스페이스</small><small style="color:#54a3ff;font-weight:700" title="이 숫자가 안 바뀌면 옛 판을 보고 계신 겁니다">판 CRM-2026-08-15 13:10</small></div></div>
     <nav class="nav">
       <div class="grp">시작</div>
       <button class="active" data-page="dashboard" onclick="goPage('dashboard',this)">📊 통합 대시보드</button>
@@ -271,8 +300,15 @@
 </div></div>
 
 <div class="modal" id="callModal"><div class="modal-box">
-  <div class="modal-head"><h3>TA 결과 기록</h3><button class="close" onclick="closeModal('callModal')">×</button></div>
-  <div class="modal-body"><input type="hidden" id="callDbId"><div class="notice" id="callSummary" style="margin-bottom:15px"></div><div class="formgrid">
+  <div class="modal-head"><h3>TA 결과 기록<small style="display:block;font-size:11px;font-weight:600;color:#94A3B8;margin-top:2px">판 CRM-2026-08-15 13:10</small></h3><button class="close" onclick="closeModal('callModal')">×</button></div>
+  <div class="modal-body"><input type="hidden" id="callDbId"><div class="notice" id="callSummary" style="margin-bottom:15px"></div>
+    <!-- TA 스크립트 — 전화를 걸기 전에 여기서 한 줄 고르고 건다.
+         결과 칸을 바꾸면 그 결과에 맞는 다음 말이 같이 열린다. -->
+    <details class="ta-sc" id="taScript" open ontoggle="taRemember()">
+      <summary>📞 TA 스크립트<em>뭐라고 열지 · 결과별 다음 말</em><span class="ta-tg">접기</span></summary>
+      <div class="ta-in" id="taScriptBody"></div>
+    </details>
+    <div class="formgrid">
     <div class="field"><label>통화일시</label><input type="datetime-local" id="callAt"></div>
     <div class="field"><label>결과</label><select id="callResult" onchange="toggleAppointment()"><option>부재</option><option>거절</option><option>상담</option></select></div>
     <div class="field"><label>1차 콜매니저 녹음</label><select id="callIssue"><option value="false">문제 없음</option><option value="true">문제 있음</option></select></div>
@@ -912,7 +948,9 @@ async function removeDb(id){
   await loadAll();toast(`${nm} 을(를) 지웠습니다.`);
 }
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
-function toggleAppointment(){$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
+function toggleAppointment(){
+  try{ taPaint(); taRestore(); }catch(e){}
+$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
 /* ── 통화 이력 — 고칠 수 있어야 한다 ────────────────────────────
    지금까지 한 번 남긴 기록은 손댈 수 없었다. 그런데 저장이 오류로
    두세 번 들어가는 일이 있고, 결과를 잘못 고른 일도 있다.
@@ -1340,6 +1378,85 @@ function renderGuideOnce(){
 }
 function gdAll(open){document.querySelectorAll("#guideBody details").forEach(d=>d.open=!!open)}
 init();
+
+/* ═══════════════════════════════════════════════════════════
+   TA 스크립트 — 통화 기록 창 안에서 바로 본다.
+
+   전에는 화법이 앱 쪽 「AI 화법 · TA 스크립트」에만 있었다. 전화를 거는
+   자리는 여기인데 말은 저기 있으니, 신입은 창을 두 개 띄워 놓고 눈을
+   왔다 갔다 했다. 그래서 여는 말 여섯 가지와 결과별 다음 말을 이 창
+   안에 넣었다. 결과 칸을 바꾸면 그 결과의 다음 말이 파랗게 켜진다.
+
+   여기 적힌 것은 뼈대다. 고객 명목에 맞춘 멘트가 필요하면 앱의
+   「상담 도구 → AI 화법 · TA 스크립트」에서 만들어 쓰면 된다.
+   ═══════════════════════════════════════════════════════════ */
+var TA_OPEN = [
+  ['정중형', '안녕하세요, ○○님. <b>에이플러스에셋 △△△</b>입니다. 지금 통화 괜찮으실까요? ' +
+             '다름이 아니라 <b>○○ 건</b>으로 안내드릴 게 있어 연락드렸습니다. 2분이면 됩니다.'],
+  ['공감형', '바쁘신데 죄송합니다. 짧게만 말씀드리겠습니다 — 요즘 <b>보험료 부담</b> 때문에 ' +
+             '정리하시는 분들이 많아서, <b>지금 내시는 게 맞는지</b>만 한 번 봐 드리려고 연락드렸습니다.'],
+  ['혜택형', '○○님, <b>놓치고 계신 게 있는지</b> 확인해 드리려고 연락드렸습니다. ' +
+             '이미 내신 보험료에서 <b>못 받고 계신 게 있는지</b> 봐 드립니다. 가입 권유가 아닙니다.'],
+  ['질문형', '지금 가입하신 보험, <b>마지막으로 언제 보셨어요?</b> … 대부분 3년은 넘으셨더라고요. ' +
+             '그래서 한 번 <b>같이 보시자고</b> 연락드렸습니다.'],
+  ['희소성형', '이번 달 <b>○○ 안내</b>를 순서대로 드리고 있어서 연락드렸습니다. ' +
+               '지금 안 하셔도 되고, <b>필요하실 때 연락 주셔도</b> 됩니다.'],
+  ['소개기반형', '<b>△△△님 소개</b>로 연락드렸습니다. 도움이 되셨다고 하셔서요. ' +
+                 '혹시 지금 통화 괜찮으실까요?']
+];
+var TA_NEXT = {
+  '부재': ['부재 — 문자를 먼저 남긴다',
+    '「○○님, 통화 어려우신 것 같아 문자 남깁니다. <b>편한 시간</b> 알려주시면 맞춰 전화드리겠습니다.」<br>' +
+    '다음 통화는 <b>시간대를 바꿔서</b> — 오전 10~11시 ↔ 오후 7~8시. 같은 시간에 세 번 걸면 세 번 다 부재입니다.'],
+  '거절': ['거절 — 그 통화에서 다시 설득하지 않는다',
+    '「알겠습니다. 혹시 <b>나중에 필요하시면</b> 편하게 연락 주세요. 좋은 하루 보내세요.」<br>' +
+    '문을 닫지 말고 그냥 두십시오. 오늘의 거절은 <b>오늘 상황</b>에 대한 거절입니다.'],
+  '상담': ['상담 약속 — 그 자리에서 날짜를 박는다',
+    '「감사합니다. <b>○월 ○일 ○시</b>로 잡겠습니다. 그때 <b>증권</b> 있으시면 같이 봐 주세요. ' +
+    '문자로 한 번 더 보내드리겠습니다.」<br>' +
+    '끊기 전에 <b>날짜·시각·가져올 것</b> 세 가지를 말로 확인하십시오.']
+};
+
+function taCopy(i, el){
+  var t = TA_OPEN[i][1].replace(/<[^>]+>/g, '');
+  try{
+    if(navigator.clipboard) navigator.clipboard.writeText(t);
+    else { var a=document.createElement('textarea'); a.value=t; document.body.appendChild(a);
+           a.select(); document.execCommand('copy'); a.remove(); }
+    if(el){ var o=el.textContent; el.textContent='복사됨'; setTimeout(function(){ el.textContent=o; }, 1200); }
+  }catch(e){ toast && toast('복사가 안 됩니다. 손으로 긁어 복사해 주세요.'); }
+}
+/* 펴고 접은 것을 기억한다. 처음 여는 사람에게는 펴서 보여 준다 —
+   접어 두면 파란 줄 하나로만 보여서 눌러야 펴지는 줄 모른다. */
+function taRemember(){
+  try{ localStorage.setItem('apexTaOpen', $("taScript").open ? '1' : '0'); }catch(e){}
+}
+function taRestore(){
+  var d=$("taScript"); if(!d) return;
+  var v=null; try{ v=localStorage.getItem('apexTaOpen'); }catch(e){}
+  d.open = (v===null) ? true : (v==='1');
+}
+function taPaint(){
+  var box = $("taScriptBody"); if(!box) return;
+  var r = ($("callResult") && $("callResult").value) || '';
+  var h = '<div class="ta-h">여는 말 — 하나만 골라 그대로 읽습니다</div>';
+  TA_OPEN.forEach(function(o, i){
+    h += '<div class="ta-o"><span class="cp" onclick="taCopy(' + i + ',this)">복사</span>' +
+         '<div class="k">' + o[0] + '</div><div class="v">' + o[1] + '</div></div>';
+  });
+  h += '<div class="ta-h">결과가 나오면 — 다음 말</div>';
+  ['부재','거절','상담'].forEach(function(k){
+    var n = TA_NEXT[k];
+    h += '<div class="ta-o' + (k === r ? ' on' : '') + '"><div class="k">' + n[0] + '</div>' +
+         '<div class="v">' + n[1] + '</div></div>';
+  });
+  h += '<div class="ta-warn"><b>지키는 것 셋</b> · 소속과 이름을 <b>먼저</b> 밝힙니다 · ' +
+       '없는 마감이나 없는 혜택을 만들지 않습니다 · 거절하시면 <b>그 통화에서 다시 설득하지 않습니다.</b></div>';
+  h += '<div class="ta-more">고객 명목에 맞춘 멘트가 필요하면 앱의 ' +
+       '<b>상담 도구 → 💬 AI 상담 어시스턴트</b> 안의 「📞 TA 인트로 멘트」에서 만들어 쓰십시오.</div>';
+  box.innerHTML = h;
+}
+
 </script>
 </body>
 </html>

@@ -228,6 +228,32 @@ a { color: inherit; text-decoration: none; }
   border-radius: 99px;
 }
 
+/* 물가상승률 고정 칸 — 상담 중에 제일 자주 만지는 숫자다 */
+.sb-pin{padding:12px 16px 13px;border-bottom:1px solid rgba(255,255,255,.06);
+  background:rgba(96,165,250,.10);flex-shrink:0}
+.sb-pin .pin-k{font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.01em}
+.sb-pin .pin-k em{font-style:normal;font-weight:600;color:rgba(255,255,255,.34);margin-left:5px}
+.sb-pin .pin-in{display:flex;align-items:center;gap:7px;margin-top:7px}
+.sb-pin .pin-in input{flex:1;min-width:0;background:rgba(255,255,255,.10);
+  border:1px solid rgba(255,255,255,.18);border-radius:8px;color:#fff;
+  font-size:17px;font-weight:800;padding:6px 10px;text-align:right;-webkit-appearance:none}
+.sb-pin .pin-in input:focus{border-color:rgba(96,165,250,.62);outline:none}
+.sb-pin .pin-in span{font-size:13px;font-weight:800;color:#93C5FD}
+.sb-pin .pin-x{font-size:10.5px;line-height:1.55;color:rgba(255,255,255,.40);margin-top:7px}
+.sb-pin .pin-x b{color:rgba(255,255,255,.74)}
+.sf-moved{font-size:11px;line-height:1.5;color:rgba(255,255,255,.34);
+  background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.10);
+  border-radius:6px;padding:5px 8px}
+
+/* 투자 컨설팅 — 고객 자료를 물고 왔다는 표시 */
+.ic-seed{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;
+  padding:10px 14px;border-radius:12px;background:#EFF6FF;border:1px solid #BFDBFE}
+.ic-seed .t{font-size:12.5px;font-weight:700;color:#1D4ED8;line-height:1.6}
+.ic-seed .t b{color:#111827}
+.ic-seed button{margin-left:auto;font-size:11.5px;font-weight:700;cursor:pointer;
+  padding:5px 11px;border-radius:8px;border:1px solid #93C5FD;background:#fff;color:#1D4ED8}
+.ic-seed button:hover{background:#DBEAFE}
+
 /* 아코디언 */
 .sb-section {
   margin-bottom: 4px;
@@ -1180,6 +1206,18 @@ a { color: inherit; text-decoration: none; }
     <div class="sb-sub">VIP 재무설계 현금흐름표</div>
   </div>
 
+  <!-- 물가상승률 — 접힌 칸 안에 있어서 아무도 못 찾았다.
+       이 한 숫자가 은퇴 목표액·교육자금·부동산·발표자료에 전부 들어가므로
+       상담 중에 바로 만질 수 있게 맨 위에 고정으로 뺐다. -->
+  <div class="sb-pin">
+    <div class="pin-k">📈 물가상승률 <em>모든 계산에 같이 들어갑니다</em></div>
+    <div class="pin-in">
+      <input type="number" id="s_inf" value="3" step="0.1" min="0" max="15" oninput="infSync()">
+      <span>%</span>
+    </div>
+    <div class="pin-x">은퇴 목표액 · 교육자금 · 부동산 · 투자 발표자료가 <b>전부 이 숫자</b>로 계산됩니다</div>
+  </div>
+
   <!-- 좌측 입력 안내 -->
   <div class="input-guide">
     <div class="ig-title">👤 고객 정보를 왼쪽에서 바로 입력</div>
@@ -1313,7 +1351,7 @@ a { color: inherit; text-decoration: none; }
           <div class="sf"><label>기대 수익률(%)</label><input type="number" id="s_ret" value="5" step="0.5" oninput="render()"></div>
         </div>
         <div class="sf2">
-          <div class="sf"><label>물가상승률(%)</label><input type="number" id="s_inf" value="3" step="0.5" oninput="render()"></div>
+          <div class="sf"><label>물가상승률(%)</label><div class="sf-moved">👆 맨 위 고정 칸으로 옮겼습니다</div></div>
           <div class="sf"><label>국민연금 예상(만/월)</label><input type="number" id="s_nps" value="80" oninput="render()"></div>
         </div>
         <div class="sf2">
@@ -1384,7 +1422,7 @@ a { color: inherit; text-decoration: none; }
               <option>대전</option><option>세종</option><option>지방</option>
             </select>
           </div>
-          <div class="sf"><label>예상 물가상승률(%)</label><input type="number" id="r_inflation" value="3" step="0.5" oninput="render()"></div>
+          <div class="sf"><label>예상 물가상승률(%)<small style="color:rgba(255,255,255,.34)"> · 맨 위를 따라옵니다</small></label><input type="number" id="r_inflation" value="3" step="0.5" oninput="render()"></div>
         </div>
         <div class="sf2">
           <div class="sf"><label>희망 매수 시기</label>
@@ -4545,6 +4583,12 @@ function dkMan(v){
   return s+v.toLocaleString()+'만';
 }
 function dkNum(id,d){var e=document.getElementById(id);var v=parseFloat(e&&e.value);return isFinite(v)?v:d;}
+/* 발표 기본값을 고객 칸에서 가져온다. 전에는 setbar 는 고객 나이를 쓰고
+   슬라이드는 40 을 써서, 위에 29세라고 적힌 화면에서 「40세」 슬라이드가 나왔다.
+   dkPaint 가 슬라이드를 먼저 만들고 setbar 를 나중에 붙이는데, 첫 그리기 때는
+   dk_age 칸 자체가 아직 없어서 각자 다른 기본값으로 떨어진 것이다. */
+function dkCli(id,d){var e=document.getElementById(id);var v=parseFloat(e&&e.value);return isFinite(v)?v:d;}
+function dkYears(d){var a=dkCli('s_age',0),r=dkCli('s_rage',0);return (a>0&&r>a)?Math.round(r-a):d;}
 function dkFv(m,annual,years){
   var r=annual/100/12,k=Math.round(years*12);
   if(k<=0)return 0; if(Math.abs(r)<1e-9)return m*k;
@@ -4591,17 +4635,17 @@ function dkSetBar(kind){
   }
   return '<div class="dk-setbar">'+
     '<div><label>월 투자금(만원)</label><input type="number" id="dk_amt" value="'+dkNum('dk_amt',50)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>기간(년)</label><input type="number" id="dk_yrs" value="'+dkNum('dk_yrs',20)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>고객 나이</label><input type="number" id="dk_age" value="'+dkNum('dk_age',40)+'" oninput="dkPaint(\'invest\')"></div>'+
-    '<div><label>물가상승률(%)</label><input type="number" step="0.1" id="dk_inf" value="'+dkNum('dk_inf',2.5)+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>기간(년)</label><input type="number" id="dk_yrs" value="'+dkNum('dk_yrs',dkYears(20))+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>고객 나이</label><input type="number" id="dk_age" value="'+dkNum('dk_age',dkCli('s_age',40))+'" oninput="dkPaint(\'invest\')"></div>'+
+    '<div><label>물가상승률(%)</label><input type="number" step="0.1" id="dk_inf" value="'+dkNum('dk_inf',dkCli('s_inf',2.5))+'" oninput="dkPaint(\'invest\')"></div>'+
   '</div>';
 }
 function dkSet(id,v,kind){var e=document.getElementById(id);if(e)e.value=v;dkPaint(kind);}
 
 /* ═══════ 투자 프레젠테이션 ═══════ */
 function dkInvestSlides(){
-  var m=Math.max(1,dkNum('dk_amt',50)), y=Math.max(1,dkNum('dk_yrs',20));
-  var age=dkNum('dk_age',40), inf=dkNum('dk_inf',2.5);
+  var m=Math.max(1,dkNum('dk_amt',50)), y=Math.max(1,dkNum('dk_yrs',dkYears(20)));
+  var age=dkNum('dk_age',dkCli('s_age',40)), inf=dkNum('dk_inf',dkCli('s_inf',2.5));
   var prin=m*y*12;
   var dep=dkFv(m,2.5,y), depNet=prin+(dep-prin)*0.846;
   var real=depNet/Math.pow(1+Math.max(0,inf)/100,y);
@@ -8282,7 +8326,9 @@ window.addEventListener('DOMContentLoaded', function(){
     var age=gv('s_age',38), gender=($('s_gender')||{value:''}).value, job=($('s_job')||{value:''}).value, rage=gv('s_rage',60);
     var family=($('ff_family')||{value:''}).value;
     var income=Math.round(gv('s_gross',0)/12)+gv('s_self',0)+gv('s_spouse',0)+gv('s_other',0);
-    var expense=gv('s_housing')+gv('s_food')+gv('s_dining')+gv('s_edu')+gv('s_medical')+gv('s_transport')+gv('s_telecom')+gv('s_shopping')+gv('s_travel')+gv('s_support')+gv('s_loan')+gv('s_insurance');
+    /* 「기타/월」이 빠져 있었다. 그만큼 남는 돈이 부풀려지고, 그 남는 돈으로
+       낼 수 있는 보험료를 제안하게 된다. 사이드바 지출 칸을 전부 더한다. */
+    var expense=gv('s_housing')+gv('s_food')+gv('s_dining')+gv('s_edu')+gv('s_medical')+gv('s_transport')+gv('s_telecom')+gv('s_shopping')+gv('s_travel')+gv('s_support')+gv('s_loan')+gv('s_insurance')+gv('s_choice_etc');
     var saving=gv('s_emerg')+gv('s_pension')+gv('s_irp')+gv('s_isa')+gv('s_taxfree')+gv('s_general');
     var surplus=income-expense-saving;
     var net=gv('s_realty')+gv('s_severance')-gv('s_debt');
@@ -9689,5 +9735,428 @@ function apexWrapSwitchTab(){
 })();
 
 </script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   상담 순서 — 한 번 열면 종합 재무설계까지 이어서 본다
+
+   탭이 열한 개다. 상담 중에 「다음에 뭘 열지」를 고르는 1초가
+   고객에게는 「준비가 안 됐구나」로 보인다. 순서를 화면이 들고
+   있으면 그 1초가 사라진다.
+
+   순서는 실전화법서의 신뢰 → 질문 → 진단 → 설계 → 실행 중
+   진단부터다. 신뢰·질문은 상담자료가 맡는다.
+
+     ① 팩트체크      빈 곳을 고객이 스스로 본다
+     ② 종합 대시보드  한 장으로 요약
+     ③ 현금흐름      쓸 수 있는 돈을 찾는다
+     ④ 아픈 곳 하나   고객이 말한 통증에 맞춰 고른다
+     ⑤ 종합 재무설계  한 장으로 닫고 고객 365일에 저장
+
+   ④를 여러 개 열지 않는 것이 이 바의 존재 이유다. 여섯 개를
+   훑은 상담은 「많더라」만 남는다.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+
+var KEY = 'apex_flow';
+var FLOW = { on:false, i:0, pain:'pension' };
+
+/* ④ 자리에 올 수 있는 것들 — 고객이 말한 통증 그대로 */
+var PAIN = [
+  { id:'pension',    tab:'pension',    t:'🏦 연금 시뮬레이션', why:'노후가 막막하다' },
+  { id:'invest',     tab:'invest',     t:'📈 투자 포트폴리오', why:'목돈을 굴리고 싶다' },
+  { id:'edufund',    tab:'edufund',    t:'🎓 교육자금',        why:'애들 학비가 걱정' },
+  { id:'insurance',  tab:'insurance',  t:'🛡️ 보험 대시보드',   why:'병원비·간병이 두렵다' },
+  { id:'realestate', tab:'realestate', t:'🏠 부동산·대출',     why:'집·대출이 무겁다' },
+  { id:'inherit',    tab:'inherit',    t:'🏛️ 상속·증여',       why:'물려줄 게 걱정' }
+];
+
+function painOf(){
+  for(var i=0;i<PAIN.length;i++) if(PAIN[i].id===FLOW.pain) return PAIN[i];
+  return PAIN[0];
+}
+function steps(){
+  var p = painOf();
+  return [
+    { tab:'factcheck', t:'팩트체크',       s:'빈 곳을 고객이 먼저 말하게 한다' },
+    { tab:'dashboard', t:'종합 대시보드',   s:'확인한 것을 한 장으로 요약' },
+    { tab:'cashflow',  t:'현금흐름 분석',   s:'어디서 옮길 수 있는지 찾는다' },
+    { tab:p.tab,       t:p.t,              s:p.why + ' — 여기 하나만 깊게' },
+    { tab:'total',     t:'종합 재무설계',   s:'한 장으로 닫고 고객 365일에 저장' }
+  ];
+}
+
+function load(){
+  try{
+    var o = JSON.parse(localStorage.getItem(KEY)||'null');
+    if(o && typeof o==='object'){
+      FLOW.on   = !!o.on;
+      FLOW.i    = Math.max(0, Math.min(4, parseInt(o.i,10)||0));
+      FLOW.pain = o.pain || 'pension';
+    }
+  }catch(e){}
+}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(FLOW)); }catch(e){} }
+
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function css(){
+  if(document.getElementById('flowCss')) return;
+  var st = document.createElement('style');
+  st.id = 'flowCss';
+  st.textContent =
+    '#flowBar{position:fixed;left:20px;bottom:20px;z-index:9998;max-width:min(460px,calc(100vw - 40px));' +
+      'background:#fff;border:1px solid #D9E2F0;border-radius:16px;' +
+      'box-shadow:0 2px 4px rgba(16,26,45,.06),0 18px 44px -18px rgba(16,26,45,.34);' +
+      'font-family:inherit;color:#1B2436;overflow:hidden}' +
+    '#flowBar.mini{display:inline-flex;align-items:center;gap:8px;padding:11px 16px;cursor:pointer;' +
+      'border-color:#C9D8F2;background:linear-gradient(135deg,#F5F9FF,#EAF1FE)}' +
+    '#flowBar.mini:hover{border-color:#8FB4EE}' +
+    '.flw-mini-t{font-size:13.5px;font-weight:800;letter-spacing:-.02em;color:#1D4ED8}' +
+    '.flw-hd{display:flex;align-items:center;gap:9px;padding:12px 15px 10px;border-bottom:1px solid #EDF1F8}' +
+    '.flw-badge{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#1D4ED8;' +
+      'background:#EAF1FE;border-radius:6px;padding:3px 8px;flex-shrink:0}' +
+    '.flw-count{font-size:11.5px;font-weight:700;color:#8493AB;margin-left:auto;flex-shrink:0;' +
+      'font-variant-numeric:tabular-nums}' +
+    '.flw-x{border:none;background:transparent;cursor:pointer;color:#9AA7BC;font-size:17px;' +
+      'line-height:1;padding:2px 4px;font-family:inherit;flex-shrink:0}' +
+    '.flw-x:hover{color:#41506A}' +
+    '.flw-dots{display:flex;gap:4px;padding:11px 15px 0}' +
+    '.flw-dot{flex:1;height:4px;border-radius:99px;background:#E4EAF4}' +
+    '.flw-dot.done{background:#93B4F5}' +
+    '.flw-dot.now{background:#1D4ED8}' +
+    '.flw-now{padding:9px 15px 12px}' +
+    '.flw-t{font-size:16.5px;font-weight:800;letter-spacing:-.03em;margin-bottom:2px}' +
+    '.flw-s{font-size:12.5px;color:#6B7A93;line-height:1.55}' +
+    '.flw-pain{padding:0 15px 12px}' +
+    '.flw-pain select{width:100%;box-sizing:border-box;border:1px solid #D9E2F0;border-radius:9px;' +
+      'padding:8px 10px;font-size:13px;font-weight:700;font-family:inherit;color:#1B2436;background:#fff}' +
+    '.flw-pain-l{font-size:10.5px;font-weight:800;letter-spacing:.09em;color:#8493AB;margin-bottom:5px}' +
+    '.flw-btns{display:flex;gap:7px;padding:0 15px 14px}' +
+    '.flw-b{flex:1;border-radius:10px;padding:10px 12px;font-size:13.5px;font-weight:800;' +
+      'font-family:inherit;cursor:pointer;letter-spacing:-.02em;border:1px solid #D9E2F0;' +
+      'background:#fff;color:#41506A}' +
+    '.flw-b:hover{border-color:#8FB4EE;color:#1D4ED8}' +
+    '.flw-b.go{background:#1D4ED8;border-color:#1D4ED8;color:#fff;flex:1.5}' +
+    '.flw-b.go:hover{background:#1A45BE}' +
+    '.flw-b[disabled]{opacity:.4;cursor:default}' +
+    '.flw-b[disabled]:hover{border-color:#D9E2F0;color:#41506A}' +
+    '.flw-done{padding:0 15px 14px;font-size:12.5px;color:#0F766E;font-weight:700;line-height:1.6}' +
+    '@media(max-width:560px){#flowBar{left:12px;right:12px;bottom:12px;max-width:none}}' +
+    '@media print{#flowBar{display:none!important}}';
+  document.head.appendChild(st);
+}
+
+function box(){
+  var b = document.getElementById('flowBar');
+  if(b) return b;
+  css();
+  b = document.createElement('div');
+  b.id = 'flowBar';
+  document.body.appendChild(b);
+  return b;
+}
+
+function paint(){
+  var b = box(), S = steps(), n = S.length, cur = S[FLOW.i], last = (FLOW.i >= n-1);
+
+  if(!FLOW.on){
+    b.className = 'mini';
+    b.setAttribute('role','button');
+    b.setAttribute('tabindex','0');
+    b.innerHTML = '<span class="flw-mini-t">▶ 상담 순서</span>';
+    b.onclick = start;
+    b.onkeydown = function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); start(); } };
+    return;
+  }
+
+  b.className = '';
+  b.removeAttribute('role'); b.removeAttribute('tabindex');
+  b.onclick = null; b.onkeydown = null;
+
+  var dots = '';
+  for(var i=0;i<n;i++){
+    dots += '<div class="flw-dot ' + (i<FLOW.i?'done':(i===FLOW.i?'now':'')) + '"></div>';
+  }
+  var opts = '';
+  for(var j=0;j<PAIN.length;j++){
+    opts += '<option value="' + PAIN[j].id + '"' + (PAIN[j].id===FLOW.pain?' selected':'') + '>' +
+            esc(PAIN[j].why) + ' → ' + esc(PAIN[j].t) + '</option>';
+  }
+
+  b.innerHTML =
+    '<div class="flw-hd">' +
+      '<span class="flw-badge">상담 순서</span>' +
+      '<span class="flw-count">' + (FLOW.i+1) + ' / ' + n + '</span>' +
+      '<button type="button" class="flw-x" title="닫기" aria-label="상담 순서 닫기">&times;</button>' +
+    '</div>' +
+    '<div class="flw-dots">' + dots + '</div>' +
+    '<div class="flw-now">' +
+      '<div class="flw-t">' + esc(cur.t) + '</div>' +
+      '<div class="flw-s">' + esc(cur.s) + '</div>' +
+    '</div>' +
+    (FLOW.i === 3
+      ? '<div class="flw-pain"><div class="flw-pain-l">고객이 아프다고 한 것</div>' +
+        '<select id="flowPain">' + opts + '</select></div>'
+      : '') +
+    (last
+      ? '<div class="flw-done">여기까지가 한 상담입니다. <b>저장하지 않으면 다음 상담이 처음부터 다시 시작됩니다.</b></div>'
+      : '') +
+    '<div class="flw-btns">' +
+      '<button type="button" class="flw-b" id="flowPrev"' + (FLOW.i===0?' disabled':'') + '>← 이전</button>' +
+      (last
+        ? '<button type="button" class="flw-b go" id="flowSave">💾 고객 365일에 저장</button>'
+        : '<button type="button" class="flw-b go" id="flowNext">다음 → ' + esc(S[FLOW.i+1].t) + '</button>') +
+    '</div>' +
+    (last
+      ? '<div class="flw-btns" style="padding-top:0">' +
+          '<button type="button" class="flw-b" id="flowDeck">▶ 발표자료로</button>' +
+          '<button type="button" class="flw-b" id="flowEnd">상담 끝내기</button>' +
+        '</div>'
+      : '');
+
+  /* 클릭이 위로 올라가는 것을 여기서 끊는다. 안 끊으면 닫는 순간 알약으로
+     다시 그려지면서 #flowBar 에 「열기」가 붙고, 아직 올라가던 그 클릭이
+     곧바로 다시 열어 버린다 — 눌러도 안 닫히는 것처럼 보인다. */
+  function shut(e){ if(e && e.stopPropagation) e.stopPropagation(); stop(); }
+  b.querySelector('.flw-x').onclick = shut;
+  var pv = document.getElementById('flowPrev'); if(pv) pv.onclick = function(){ move(-1); };
+  var nx = document.getElementById('flowNext'); if(nx) nx.onclick = function(){ move(1); };
+  var en = document.getElementById('flowEnd');  if(en) en.onclick = shut;
+
+  /* 마지막 단계의 마무리 두 가지. 여기서 끝내지 않으면 오늘 상담이
+     아무 데도 안 남는다 — 다음 상담이 처음부터 다시 시작된다. */
+  var sv = document.getElementById('flowSave');
+  if(sv) sv.onclick = function(ev){
+    if(ev && ev.stopPropagation) ev.stopPropagation();
+    if(typeof window.trSave === 'function') window.trSave();
+    else alert('종합 재무설계 탭에서 「고객 365일에 저장」을 눌러 주세요.');
+  };
+  var dk = document.getElementById('flowDeck');
+  if(dk) dk.onclick = function(ev){
+    if(ev && ev.stopPropagation) ev.stopPropagation();
+    /* apexPresent 는 탭 이름이 아니라 트랙 글자(w·t·e)를 받는다.
+       지금 탭은 종합 재무설계라 apexTrack() 을 쓰면 늘 연금이 된다.
+       고객이 아프다고 한 곳에 맞는 발표자료를 연다. */
+    if(typeof window.apexPresent === 'function'){
+      var map = window.APEX_TRACK_OF || {};
+      window.apexPresent(map[painOf().tab] || 'w');
+    } else alert('오른쪽 아래 발표 버튼을 눌러 주세요.');
+  };
+  var sel = document.getElementById('flowPain');
+  if(sel) sel.onchange = function(){ FLOW.pain = this.value; save(); jump(); paint(); };
+}
+
+function jump(){
+  var s = steps()[FLOW.i];
+  if(!s) return;
+  try{ if(typeof window.switchTab === 'function') window.switchTab(s.tab); }catch(e){ console.warn('상담 순서 — 탭 이동:', e); }
+}
+function move(d){
+  var n = steps().length;
+  FLOW.i = Math.max(0, Math.min(n-1, FLOW.i + d));
+  save(); jump(); paint();
+  try{ window.scrollTo({top:0,behavior:'smooth'}); }catch(e){ window.scrollTo(0,0); }
+}
+function start(at){
+  FLOW.on = true;
+  if(typeof at === 'number') FLOW.i = Math.max(0, Math.min(4, at));
+  save(); jump(); paint();
+}
+function stop(){ FLOW.on = false; save(); paint(); }
+
+/* 순서를 안 쓰고 손으로 탭을 눌렀을 때도 바가 따라간다.
+   안 그러면 바가 엉뚱한 자리를 가리켜 오히려 헷갈린다. */
+function follow(tab){
+  if(!FLOW.on) return;
+  var S = steps();
+  for(var i=0;i<S.length;i++){
+    if(S[i].tab === tab){ if(FLOW.i !== i){ FLOW.i = i; save(); paint(); } return; }
+  }
+}
+
+/* switchTab 은 이 파일 안에서 여러 번 통째로 덮어씌워진다.
+   고치지 말고 감싸고, 나중에 또 덮이면 재장착한다. */
+function wrap(){
+  var cur = window.switchTab;
+  if(typeof cur !== 'function' || cur.__flow) return;
+  var w = function(tab, btn){
+    var r = cur.apply(this, arguments);
+    try{ follow(tab); }catch(e){}
+    return r;
+  };
+  w.__flow = true;
+  window.switchTab = w;
+}
+
+/* 상담자료에서 넘어올 때 부모 앱이 보내 준다 */
+window.addEventListener('message', function(e){
+  var d = e && e.data;
+  if(!d || d.type !== 'apexFinFlow') return;
+  if(e.origin !== location.origin) return;
+  try{
+    if(d.pain) FLOW.pain = d.pain;
+    start(typeof d.at === 'number' ? d.at : 0);
+  }catch(x){}
+}, false);
+
+/* 바깥에서 부를 수 있게 — 부모 앱과 점검판이 쓴다 */
+window.apexFlow = {
+  start:start, stop:stop, go:function(i){ start(i); },
+  state:function(){ return { on:FLOW.on, i:FLOW.i, pain:FLOW.pain, steps:steps() }; }
+};
+
+function mount(){
+  load();
+  wrap();
+  [300, 900, 2000].forEach(function(ms){ setTimeout(wrap, ms); });
+  paint();
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
+else mount();
+
+})();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   투자 쪽 세 가지를 고친다.
+
+   ① 물가상승률 한 숫자로 — 맨 위 고정 칸(s_inf)이 주인이고
+      부동산(r_inflation)과 발표자료(dk_inf)가 그 숫자를 따라간다.
+      전에는 세 칸이 각각 3 / 3 / 2.5 로 따로 놀았고, 그중 하나는
+      접힌 칸 안에 있어서 상담 중에 아무도 못 찾았다.
+
+   ② 투자 컨설팅이 고객을 안 보고 있었다 — IC 는 pay:400, age:38 이
+      고정값이라 35세 연봉 6,000만 고객도 38세 월급 400만으로 계산됐다.
+      왼쪽에 이미 받아 둔 값이 있으면 그걸로 채운다. 설계사가 손으로
+      고친 뒤에는 덮어쓰지 않는다 — 「다시 가져오기」를 눌러야 새로 읽는다.
+
+   ③ 투자 탭은 언제나 ETF·주식 포트폴리오부터 — 앞 고객에게 변액 탭을
+      열어 뒀으면 다음 고객도 변액부터 보게 된다. 성향과 배분을 먼저
+      정하고, 투자 컨설팅이 그 성향을 이어받는다.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+
+/* ── 왼쪽 칸에서 숫자 읽기 ── */
+function cliNum(id, dflt){
+  var e = document.getElementById(id);
+  if(!e) return dflt;
+  var v = parseFloat(e.value);
+  return isFinite(v) ? v : dflt;
+}
+function cliYears(dflt){
+  var age = cliNum('s_age', 0), rage = cliNum('s_rage', 0);
+  return (age > 0 && rage > age) ? Math.round(rage - age) : dflt;
+}
+window.cliNum = cliNum;
+window.cliYears = cliYears;
+
+/* ── ① 물가상승률 한 숫자 ── */
+window.infSync = function(){
+  var v = cliNum('s_inf', 3);
+  ['r_inflation','dk_inf'].forEach(function(id){
+    var e = document.getElementById(id);
+    if(e) e.value = v;
+  });
+  /* 발표용 물가는 설계사가 따로 잡아 두는 칸이다. 저장해 둔 값이 있으면 건드리지 않는다. */
+  var ai = document.getElementById('apexInf');
+  if(ai){
+    var saved = null;
+    try{ saved = localStorage.getItem('apex_present_inf'); }catch(x){}
+    if(saved === null || saved === '') ai.value = v;
+  }
+  try{ if(window.render) window.render(); }catch(e){}
+};
+
+/* ── ② 투자·변액 컨설팅에 고객 자료 물리기 ── */
+/* 사이드바 성향은 다섯 단계, 컨설팅은 세 단계다 */
+function icRiskOf(v){
+  if(v === '안정형' || v === '안정추구형') return '안정형';
+  if(v === '적극투자형' || v === '공격형') return '공격형';
+  return '중립형';
+}
+var IC_SEEDED = false;
+window.icSeed = function(force){
+  if(IC_SEEDED && !force) return null;
+  if(typeof IC === 'undefined') return null;
+  var got = [];
+  var gross = cliNum('s_gross', 0);
+  if(gross > 0){ IC.pay = Math.round(gross / 12); got.push('월 급여 <b>' + IC.pay.toLocaleString() + '만</b>'); }
+  var age = cliNum('s_age', 0);
+  if(age > 0){ IC.age = age; got.push('나이 <b>' + age + '세</b>'); }
+  var yrs = cliYears(0);
+  if(yrs > 0){ IC.years = yrs; got.push('운용 <b>' + yrs + '년</b>'); }
+  var it = document.getElementById('s_itype');
+  if(it && it.value){ IC.risk = icRiskOf(it.value); got.push('성향 <b>' + IC.risk + '</b>'); }
+  if(typeof VC !== 'undefined' && yrs > 0) VC.years = yrs;
+  IC_SEEDED = true;
+  return got;
+};
+
+/* renderInvestConsult 를 감싸서 — 그리기 전에 채우고, 그린 뒤에 표시를 붙인다 */
+function wrapConsult(){
+  var cur = window.renderInvestConsult;
+  if(typeof cur !== 'function' || cur.__seed) return;
+  var w = function(){
+    var got = null;
+    try{ got = window.icSeed(false); }catch(e){}
+    var r = cur.apply(this, arguments);
+    try{
+      var host = document.getElementById('inv-consult');
+      if(host && !host.querySelector('.ic-seed')){
+        var bar = document.createElement('div');
+        bar.className = 'ic-seed';
+        var txt = (got && got.length)
+          ? '🔗 왼쪽 고객 자료에서 가져왔습니다 — ' + got.join(' · ')
+          : '🔗 왼쪽 고객 정보(나이 · 연 총급여 · 은퇴 목표 나이 · 투자 성향)를 채우면 여기가 자동으로 맞춰집니다';
+        bar.innerHTML = '<span class="t">' + txt + '</span>' +
+          '<button type="button" onclick="icSeed(true);renderInvestConsult()">↻ 다시 가져오기</button>';
+        host.insertBefore(bar, host.firstChild);
+      }
+    }catch(e){}
+    return r;
+  };
+  w.__seed = true;
+  window.renderInvestConsult = w;
+}
+
+/* ── ③ 투자 탭은 ETF·주식 포트폴리오부터 ── */
+function etfFirst(tab){
+  if(tab !== 'invest') return;
+  var btn = document.getElementById('stab-etf');
+  var pane = document.getElementById('sub-etf');
+  if(!btn || !pane) return;
+  if(pane.style.display === 'none' || !btn.classList.contains('on')){
+    if(window.switchSubTab) window.switchSubTab('etf', btn);
+  }
+}
+/* switchTab 은 이 파일 안에서 여러 번 통째로 덮어써진다. 고치지 말고 감싼다. */
+function wrapTab(){
+  var cur = window.switchTab;
+  if(typeof cur !== 'function' || cur.__inv) return;
+  var w = function(tab, btn){
+    var r = cur.apply(this, arguments);
+    try{ etfFirst(tab); }catch(e){}
+    return r;
+  };
+  w.__inv = true;
+  window.switchTab = w;
+}
+
+function arm(){ wrapTab(); wrapConsult(); }
+arm();
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arm);
+[300, 900, 2000].forEach(function(ms){ setTimeout(arm, ms); });
+/* 상담자료에서 고객 값이 넘어온 직후에도 한 번 더 맞춘다 */
+window.addEventListener('message', function(){ setTimeout(function(){
+  try{ window.infSync(); }catch(e){}
+  try{ window.icSeed(true); }catch(e){}
+}, 260); });
+
+})();
+</script>
+
 </body>
 </html>

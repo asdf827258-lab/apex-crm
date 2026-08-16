@@ -59,7 +59,16 @@ const R = (json, opts) => Promise.resolve({
     '켤 수 있는 길 세 가지를 함께 알려 주고, 가장 빨리 되는 것을 앞에 둔다 (' + r.body.need.join(',') + ')');
 
   r = await call(m, { kind: 'toss-probe' });
-  ok(r.body.step === 'config' && r.body.missing.length === 5, '토스 진단이 못 채운 항목 5개를 짚어 준다');
+  /* 개수만 세던 줄이었다. 시세 경로(paths.quote)를 토큰 발급 뒤로 미루면서
+     막는 항목이 5개에서 4개로 줄었는데 이 줄이 옛 숫자 5를 계속 봐서
+     main 이 빨간불이었다. 숫자 대신 「무엇을」 짚는지를 본다. */
+  const miss = function (re) { return r.body.missing.some(function (x) { return re.test(x); }); };
+  ok(r.body.step === 'config'
+    && miss(/TOSS_CLIENT_ID/) && miss(/TOSS_CLIENT_SECRET/)
+    && miss(/providers\.toss\.base/) && miss(/token_path/),
+    '토큰 발급에 필요한 것을 이름으로 전부 짚어 준다 (' + r.body.missing.length + '개)');
+  ok(!miss(/paths\.quote/),
+    '시세 경로는 토큰이 나온 뒤에야 확인할 수 있어 여기서 막지 않는다');
 
   r = await call(m, { kind: 'nope' });
   ok(r.body.ok === false, '모르는 kind 는 거절한다');
