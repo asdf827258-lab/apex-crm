@@ -38,7 +38,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(/서버 준비 SQL/.test(r.권한),'권한에 막혔을 때 — 준비 SQL 을 가리킨다');
   is(/로그인이 풀렸/.test(r.로그인),'로그인이 풀렸을 때 — 새로고침을 가리킨다');
   is(/connection reset/.test(r.기타),'모르는 오류는 서버 말을 그대로 보여 준다');
-  is(r.ver===33,'앱이 기다리는 준비 SQL 판이 33 이다 — '+r.ver);
+  is(r.ver>=34,'앱이 기다리는 준비 SQL 판이 올라가 있다 — '+r.ver);
   console.log('\n[2] 준비 SQL 안에 빠졌던 것이 들어 있는가');
   const sql=await page.evaluate(()=>HX_SQL['00'].lines.join('\n'));
   [['tool_access','메뉴 접근 설정'],['team_plans','리더 사업계획서'],['monthly_perf','월간 영업보고서'],
@@ -49,7 +49,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      '넣기 권한이 can_see_perf 로 바뀌었다 — 리더가 팀원 줄을 만들 수 있다');
   is(!/monthly_perf_insert[\s\S]{0,160}with check \(owner_id = auth\.uid\(\)\)/.test(sql),
      '옛 규칙(본인 줄만)이 남아 있지 않다');
-  is(/'schema_version', '33'/.test(sql),'SQL 이 끝나면 서버에 33 이라고 남긴다');
+  /* 번호를 여기 박아 두면 올릴 때마다 이 파일도 같이 고쳐야 한다.
+     정작 중요한 것은 「앱이 기다리는 번호」와 「SQL 이 남기는 번호」가
+     서로 같은가다. 어긋나면 대표님이 SQL 을 돌려도 배너가 안 사라진다. */
+  const stamped=(sql.match(/'schema_version',\s*'(\d+)'/)||[])[1];
+  is(stamped!==undefined,'SQL 이 끝나면 서버에 판 번호를 남긴다 — '+stamped);
+  is(+stamped===r.ver,'그 번호가 앱이 기다리는 번호와 같다 — SQL '+stamped+' · 앱 '+r.ver);
   console.log('\n[3] 서버 열쇠 — 들어가면 바로 보이고, 순서대로 알려 주는가');
   const kb = await page.evaluate(() => {
     OS.profile = OS.profile || {}; OS.profile.role = 'owner';

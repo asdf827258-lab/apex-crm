@@ -4244,3 +4244,175 @@ function bindDaily(){
 .dy.on .dyt{color:#00734A;text-decoration:line-through;text-decoration-color:rgba(0,115,74,.35)}
 .dyd{flex:1 0 100%;font-size:12.5px;color:var(--mut);padding-left:27px}
 </style>
+
+<script>
+/* ════════ 이 컴퓨터의 일감을 다른 컴퓨터로 ════════
+
+   미끼 레이더가 쌓아 둔 것은 전부 <b>이 브라우저 안</b>에 있다.
+   약관·판매자료는 IndexedDB(mikki/docs) 에, 판정·컨셉·화법은
+   localStorage(mikki_*) 에 있다.
+
+   일부러 그렇게 만들었다 — 원수사 약관이 공개 주소에 놓이면 안 된다.
+   그래서 사무실에서 올린 약관이 집에서는 없다. 원칙은 지켜야 하고,
+   옮기는 길은 있어야 한다.
+
+   파일 하나로 통째 내보내고, 다른 컴퓨터에서 그 파일을 넣으면 된다.
+   서버를 거치지 않으므로 약관은 여전히 밖으로 안 나간다.
+
+   덤으로 이게 <b>유일한 백업</b>이기도 하다. 지금은 브라우저 기록을
+   지우면 올려 둔 약관과 판정이 전부 사라진다. 되돌릴 방법이 없었다.
+
+   PDF 원본은 크다(한 건에 수 MB). 그래서 기본은 <b>빼고</b> 내보낸다 —
+   판정·인용·컨셉·화법은 뽑아 둔 글로 다 돌아간다. PDF 는 약관 쪽을
+   그림으로 떠서 형광펜 칠 때만 쓰므로, 필요할 때만 같이 담는다.     */
+(function(){
+  var KEY_PREFIX='mikki_', EXTRA=['apex_lead_inbox'];
+
+  function lsDump(){
+    var o={},i,k;
+    for(i=0;i<localStorage.length;i++){
+      k=localStorage.key(i);
+      if(!k)continue;
+      if(k.indexOf(KEY_PREFIX)===0||EXTRA.indexOf(k)>=0){
+        try{o[k]=localStorage.getItem(k);}catch(e){}
+      }
+    }
+    return o;
+  }
+  function b64(blob){
+    return new Promise(function(res){
+      var r=new FileReader();
+      r.onload=function(){ res(String(r.result||'').split(',')[1]||''); };
+      r.onerror=function(){ res(''); };
+      r.readAsDataURL(blob);
+    });
+  }
+  function unb64(b,type){
+    var bin=atob(b||''),n=bin.length,u=new Uint8Array(n),i;
+    for(i=0;i<n;i++)u[i]=bin.charCodeAt(i);
+    return new Blob([u],{type:type||'application/pdf'});
+  }
+
+  async function mkExport(withPdf){
+    var box=document.getElementById('mkMoveMsg');
+    if(box)box.textContent='모으는 중…';
+    var docs=[];
+    try{ docs=await dbAll(); }catch(e){ docs=[]; }
+    var out=[],i,d,rec;
+    for(i=0;i<docs.length;i++){
+      d=docs[i];
+      rec={};
+      for(var k in d)if(d.hasOwnProperty(k)&&k!=='pdf')rec[k]=d[k];
+      if(withPdf&&d.pdf){
+        try{ rec.pdfB64=await b64(d.pdf); }catch(e){}
+      }
+      out.push(rec);
+    }
+    var pack={
+      what:'apex-mikki-radar',
+      ver:1,
+      at:new Date().toISOString(),
+      withPdf:!!withPdf,
+      docs:out,
+      ls:lsDump()
+    };
+    var txt=JSON.stringify(pack);
+    var mb=(txt.length/1048576).toFixed(1);
+    var a=document.createElement('a');
+    var dt=new Date(), p=function(n){return (n<10?'0':'')+n;};
+    a.download='미끼레이더_'+dt.getFullYear()+p(dt.getMonth()+1)+p(dt.getDate())+
+               (withPdf?'_약관포함':'')+'.json';
+    a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },1200);
+    if(box)box.innerHTML='<b>내려받았습니다</b> — 자료 '+out.length+'건 · '+mb+'MB'+
+      (withPdf?' (약관 원본 포함)':' (약관 원본은 뺐습니다)')+
+      '<br>이 파일을 다른 컴퓨터에서 「가져오기」 로 넣으시면 그대로 이어집니다.';
+  }
+
+  function mkImport(input){
+    var f=input&&input.files&&input.files[0];
+    if(!f)return;
+    var box=document.getElementById('mkMoveMsg');
+    if(box)box.textContent='읽는 중…';
+    var r=new FileReader();
+    r.onload=async function(){
+      var pack=null;
+      try{ pack=JSON.parse(String(r.result||'')); }catch(e){}
+      if(!pack||pack.what!=='apex-mikki-radar'){
+        if(box)box.innerHTML='<b style="color:#B3261E">미끼 레이더 파일이 아닙니다.</b> '+
+          '내보내기로 만든 <b>미끼레이더_날짜.json</b> 을 골라 주세요.';
+        input.value=''; return;
+      }
+      var n=0,i,d,rec;
+      for(i=0;i<(pack.docs||[]).length;i++){
+        d=pack.docs[i];
+        rec={};
+        for(var k in d)if(d.hasOwnProperty(k)&&k!=='pdfB64')rec[k]=d[k];
+        if(d.pdfB64){ try{ rec.pdf=unb64(d.pdfB64,'application/pdf'); }catch(e){} }
+        try{ await dbPut(rec); n++; }catch(e){}
+      }
+      var m=0;
+      for(var key in (pack.ls||{})){
+        if(!pack.ls.hasOwnProperty(key))continue;
+        try{ localStorage.setItem(key,pack.ls[key]); m++; }catch(e){}
+      }
+      if(box)box.innerHTML='<b>넣었습니다</b> — 자료 '+n+'건 · 저장칸 '+m+'개.'+
+        (pack.withPdf?'':' <span style="color:#8A6100">약관 원본은 안 담긴 파일이라, 쪽을 그림으로 뜨는 것만 안 됩니다.</span>')+
+        '<br>화면을 새로 고칩니다…';
+      input.value='';
+      setTimeout(function(){ location.reload(); },1600);
+    };
+    r.readAsText(f);
+  }
+
+  function panel(){
+    var w=document.getElementById('mkMove');
+    if(w){ w.remove(); return; }
+    w=document.createElement('div');
+    w.id='mkMove';
+    w.style.cssText='position:fixed;right:16px;bottom:70px;z-index:9500;width:330px;max-width:calc(100vw - 24px);'+
+      'background:#fff;border:1px solid #E3E7EC;border-radius:16px;padding:15px 16px;'+
+      'box-shadow:0 20px 54px rgba(15,23,42,.26);font-size:13px;line-height:1.6;color:#1F2937';
+    w.innerHTML=
+      '<div style="font-size:14.5px;font-weight:800;margin-bottom:5px">🔁 다른 컴퓨터로 옮기기</div>'+
+      '<div style="font-size:11.5px;color:#6B7280;line-height:1.65;margin-bottom:11px">'+
+        '여기 쌓은 약관·판정·컨셉은 <b>이 브라우저 안에만</b> 있습니다. 약관을 서버에 올리지 않기 위해서입니다. '+
+        '파일 하나로 내보내 다른 컴퓨터에서 넣으시면 그대로 이어집니다. <b>백업도 이것뿐입니다.</b></div>'+
+      '<button type="button" id="mkExpLite" style="display:block;width:100%;box-sizing:border-box;margin-bottom:7px;'+
+        'border:0;border-radius:11px;padding:12px;background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;'+
+        'font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer">⬇ 내보내기 (가볍게 · 권장)</button>'+
+      '<button type="button" id="mkExpFull" style="display:block;width:100%;box-sizing:border-box;margin-bottom:7px;'+
+        'border:1px solid #C7D2FE;border-radius:11px;padding:11px;background:#F5F9FF;color:#1D4ED8;'+
+        'font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer">⬇ 내보내기 (약관 원본까지 · 파일 큼)</button>'+
+      '<label style="display:block;border:1px dashed #C7D2FE;border-radius:11px;padding:11px;text-align:center;'+
+        'cursor:pointer;color:#1D4ED8;font-weight:800;font-size:12.5px;background:#fff">⬆ 가져오기 — 파일 고르기'+
+        '<input type="file" accept="application/json,.json" id="mkImpFile" style="display:none"></label>'+
+      '<div id="mkMoveMsg" style="font-size:11.5px;color:#42506A;margin-top:10px;line-height:1.65"></div>'+
+      '<button type="button" id="mkMoveX" style="margin-top:9px;width:100%;border:0;background:transparent;'+
+        'color:#8A93A6;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">닫기</button>';
+    document.body.appendChild(w);
+    document.getElementById('mkExpLite').onclick=function(){ mkExport(false); };
+    document.getElementById('mkExpFull').onclick=function(){ mkExport(true); };
+    document.getElementById('mkImpFile').onchange=function(){ mkImport(this); };
+    document.getElementById('mkMoveX').onclick=function(){ w.remove(); };
+  }
+
+  function mount(){
+    if(document.getElementById('mkMoveBtn'))return;
+    var b=document.createElement('button');
+    b.id='mkMoveBtn'; b.type='button';
+    b.title='이 컴퓨터에 쌓인 약관·판정을 다른 컴퓨터로 옮깁니다';
+    b.textContent='🔁 다른 PC로';
+    b.style.cssText='position:fixed;right:16px;bottom:16px;z-index:9499;border:1px solid #E3E7EC;'+
+      'background:#fff;color:#42506A;border-radius:999px;padding:10px 16px;font-family:inherit;'+
+      'font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(15,23,42,.16)';
+    b.onclick=panel;
+    document.body.appendChild(b);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
+  else mount();
+
+  window.mkExport=mkExport; window.mkMovePanel=panel;
+})();
+</script>

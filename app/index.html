@@ -1709,8 +1709,86 @@ function advGet(){
   if(!o.name&&OS.profile&&OS.profile.name)o.name=OS.profile.name;
   return o;
 }
-function advSet(o){
-  try{localStorage.setItem(advKey(),JSON.stringify(o||{}));}catch(e){}
+function advSet(o,noPush){
+  o=o||{};
+  if(!noPush)o.at=Date.now();          /* 어느 쪽이 새것인지 가릴 도장 */
+  try{localStorage.setItem(advKey(),JSON.stringify(o));}catch(e){}
+  if(!noPush)advToServer(o);
+}
+/* ── 내 소개는 이 기기가 아니라 <b>이 아이디</b>의 것이다 ────────
+   전에는 이 기기 저장칸에만 남았다. 아이디별로 칸을 나눠 놨으니 한
+   컴퓨터를 같이 써도 남의 값에 안 덮이긴 했다. 그런데 집 컴퓨터에서
+   적은 소개가 사무실에서는 안 보였고, 태블릿은 또 빈 칸이었다.
+   상담자료 맨 앞에 나가는 얼굴이 기기마다 다른 셈이었다.
+
+   그래서 서버에 둔다. 같은 아이디로 들어오면 어느 기기든, IP 가
+   달라도 같은 소개가 따라온다.
+
+   기기 저장칸은 그대로 둔다 — 서버가 잠깐 안 될 때도 상담이 멈추면
+   안 되고, 비행기 안에서도 표지는 떠야 한다. 서버는 「어디서든 같게」
+   를 맡고, 기기는 「끊겨도 되게」 를 맡는다.
+
+   어느 쪽이 새것인지는 at(적은 시각)으로 가린다. 새것이 이긴다.   */
+var ADV_SRV={on:null,at:'',err:''};
+function advToServer(o){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var me=(OS.profile&&OS.profile.id)||'';
+  if(!sb||!me||me==='preview'){ADV_SRV.on=false;return;}
+  sb.from('advisor_intro').upsert({owner_id:me,data:o||{}},{onConflict:'owner_id'})
+    .then(function(r){
+      if(r&&r.error){ADV_SRV.on=false;ADV_SRV.err=(r.error.message||'').slice(0,90);}
+      else{ADV_SRV.on=true;ADV_SRV.err='';ADV_SRV.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}
+      advSrvPaint();
+    },function(e){ADV_SRV.on=false;ADV_SRV.err=((e&&e.message)||'').slice(0,90);advSrvPaint();});
+}
+function advFromServer(then){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var me=(OS.profile&&OS.profile.id)||'';
+  if(!sb||!me||me==='preview'){if(then)then(false);return;}
+  sb.from('advisor_intro').select('data').eq('owner_id',me).maybeSingle()
+    .then(function(r){
+      if(r&&r.error){ADV_SRV.on=false;ADV_SRV.err=(r.error.message||'').slice(0,90);advSrvPaint();if(then)then(false);return;}
+      ADV_SRV.on=true;ADV_SRV.err='';
+      var srv=(r&&r.data&&r.data.data)||null;
+      if(!srv||!Object.keys(srv).length){
+        /* 서버가 비어 있다 — 이 기기에 적어 둔 게 있으면 그것을 올려 준다.
+           처음 한 번은 이렇게 옮겨 간다. 사람이 다시 적을 일이 없다. */
+        var mine=advGet();
+        var has=false,k;
+        for(k in mine)if(k!=='at'&&mine[k])has=true;
+        if(has)advToServer(mine);
+        advSrvPaint();if(then)then(false);return;
+      }
+      var here=advGet();
+      var newer=(+srv.at||0)>(+here.at||0);
+      if(newer){
+        advSet(srv,true);                 /* 서버 것이 새것이다 — 그대로 받는다 */
+        try{advPushSoon();}catch(e){}
+        try{if(typeof lastTab!=='undefined'&&lastTab==='settings')go('settings');}catch(e){}
+      }else if((+here.at||0)>(+srv.at||0)){
+        advToServer(here);                /* 이 기기 것이 새것이다 — 올려 둔다 */
+      }
+      advSrvPaint();if(then)then(newer);
+    },function(e){ADV_SRV.on=false;ADV_SRV.err=((e&&e.message)||'').slice(0,90);advSrvPaint();if(then)then(false);});
+}
+function advSrvLine(){
+  if(ADV_SRV.on===null)
+    return '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.6">서버 연결을 확인하는 중입니다…</div>';
+  if(ADV_SRV.on)
+    return '<div style="font-size:11.5px;color:#166534;line-height:1.6;background:#F2FBF6;border:1px solid #CDEBDC;'+
+      'border-radius:9px;padding:8px 11px"><b>✅ 이 아이디를 따라다닙니다.</b> '+
+      '집·사무실·태블릿 어디서 들어오셔도, IP 가 달라도 이 소개가 그대로 나옵니다.'+
+      (ADV_SRV.at?(' <span style="color:var(--ink-5)">('+osEsc(ADV_SRV.at)+' 맞춤)</span>'):'')+'</div>';
+  var need=/does not exist|schema cache|relation|42P01/i.test(ADV_SRV.err);
+  return '<div style="font-size:11.5px;color:#7C2D12;line-height:1.6;background:#FFF7ED;border:1px solid #FED7AA;'+
+    'border-radius:9px;padding:8px 11px"><b>⚠️ 아직 이 기기에만 남습니다.</b> '+
+    (need
+      ? '서버에 담을 자리가 없습니다 — 홈 맨 위 <b>「서버 준비 SQL」</b> 을 한 번 실행하시면 어디서든 같아집니다.'
+      : '서버에 못 올렸습니다'+(ADV_SRV.err?(' — '+osEsc(ADV_SRV.err)):'')+'')+'</div>';
+}
+function advSrvPaint(){
+  var e=document.getElementById('advSrvLine');
+  if(e)e.innerHTML=advSrvLine();
 }
 function advSave(){
   var o=advGet(),i,f;
@@ -1807,6 +1885,7 @@ function advCardHtml(){
     '</div>'+
     '<div class="frm">'+ADV_FIELDS.filter(function(f){return f.cover;}).map(fld).join('')+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
+      '<div id="advSrvLine" style="margin-bottom:11px">'+advSrvLine()+'</div>'+
       '<button class="btn btn-primary" onclick="advSave()">저장</button>'+
       '<button class="btn btn-ghost" onclick="go(\'sangdam\')">📋 보장분석 상담자료에서 보기</button>'+
     '</div>'+
@@ -9934,8 +10013,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-16 20:40';
-var APP_BUILD_NOTE='서버 열쇠(Netlify 환경변수) 넣는 법을 한 장짜리 화면으로 만들었습니다 — 홈에 들어가면 바로 뜨고, 다섯 걸음마다 누를 것 하나씩만 있습니다 · 열쇠 이름은 눌러서 복사하고, 값을 가져올 화면은 바로 열립니다 · 한 번 되면 배너가 접힙니다 · 앞 판에서 판 번호 줄을 못 올려 배포가 안 된 것처럼 보이던 것도 바로잡았습니다';
+var APP_BUILD='2026-08-16 22:10';
+var APP_BUILD_NOTE='내 소개(상담자료 맨 앞에 나오는 것)가 이제 아이디를 따라다닙니다 — 집·사무실·태블릿 어디서 들어오셔도, IP 가 달라도 같은 소개가 나옵니다 · 서버가 잠깐 안 되면 이 기기 것으로 그대로 상담할 수 있고, 이어지면 새것끼리 맞춰집니다 · 서버 준비 SQL 을 한 번 더 실행해 주세요';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -24095,7 +24174,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -24901,8 +24980,37 @@ var HX_SQL={
   "  (select count(*) from public.profiles) as profiles,",
   "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
   "",
+  "",
+  "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
+  "   기기 저장칸에만 두면 집에서 적은 것이 사무실에서 안 보인다.",
+  "   같은 아이디면 어디서 들어와도 같아야 한다. 본인만 읽고 쓴다. */",
+  "create table if not exists public.advisor_intro(",
+  "  owner_id   uuid primary key,",
+  "  data       jsonb not null default '{}'::jsonb,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "alter table public.advisor_intro enable row level security;",
+  "grant select, insert, update on public.advisor_intro to authenticated;",
+  "",
+  "drop policy if exists advisor_intro_read on public.advisor_intro;",
+  "create policy advisor_intro_read on public.advisor_intro",
+  "  for select to authenticated",
+  "  using (owner_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists advisor_intro_insert on public.advisor_intro;",
+  "create policy advisor_intro_insert on public.advisor_intro",
+  "  for insert to authenticated with check (owner_id = auth.uid());",
+  "",
+  "drop policy if exists advisor_intro_update on public.advisor_intro;",
+  "create policy advisor_intro_update on public.advisor_intro",
+  "  for update to authenticated",
+  "  using (owner_id = auth.uid()) with check (owner_id = auth.uid());",
+  "",
+  "drop trigger if exists advisor_intro_touch on public.advisor_intro;",
+  "create trigger advisor_intro_touch before update on public.advisor_intro",
+  "  for each row execute function public.touch_updated_at();",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '33')",
+  "values ('schema_version', '34')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -24947,7 +25055,10 @@ var HX_SQL={
   "  '리더 사업계획서', to_regclass('public.team_plans') is not null,",
   "  (select count(*) from pg_policies where schemaname='public' and tablename='team_plans')",
   "union all select",
-  "  '계정 찾기·중복 정리', to_regproc('public.admin_delete_account') is not null, 0;"
+  "  '계정 찾기·중복 정리', to_regproc('public.admin_delete_account') is not null, 0",
+  "union all select",
+  "  '내 소개(아이디별)', to_regclass('public.advisor_intro') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='advisor_intro');"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -26158,7 +26269,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=33;
+var SETUP_VER=34;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
@@ -32656,6 +32767,7 @@ function osProfileApply(sb,uid,r){
         osIpGuardCheck(function(ipOk){
           if(!ipOk){OS.profile=null;osRenderPill();osShowIpBlock();return;}
           osHidePending();osHideLoginGate();osRenderPill();osOnLogin();
+          try{advFromServer();}catch(e){}
         });
       });
     });
