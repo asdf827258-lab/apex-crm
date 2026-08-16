@@ -9282,15 +9282,35 @@ window.addEventListener('message',function(e){
     for(var i=0;i<els.length;i++){var el=els[i];if(el.type==='file')continue;inputs[el.id]=el.value;}
     try{parent.postMessage({type:'apexFinSave',title:'재무설계 스냅샷',inputs:inputs},'*');}catch(x){}
   }
+  if(d.type==='apexFinAsk'){        /* 부모가 「살아 있냐」고 물으면 답한다 */
+    if(window.parent!==window){try{parent.postMessage({type:'apexFinReady'},'*');}catch(x){}}
+  }
   if(d.type==='apexFinLoad'){
     var ins=d.inputs||{};var ks=Object.keys(ins);
-    for(var j=0;j<ks.length;j++){var el2=document.getElementById(ks[j]);if(el2&&(el2.tagName==="INPUT"||el2.tagName==="SELECT"||el2.tagName==="TEXTAREA")&&el2.type!=="file"){el2.value=ins[ks[j]];}}
+    for(var j=0;j<ks.length;j++){var el2=document.getElementById(ks[j]);if(el2&&(el2.tagName==="INPUT"||el2.tagName==="SELECT"||el2.tagName==="TEXTAREA")&&el2.type!=="file"){el2.value=ins[ks[j]];
+      try{el2.dispatchEvent(new Event('input',{bubbles:true}));el2.dispatchEvent(new Event('change',{bubbles:true}));}catch(x){}}}
     try{if(typeof render==="function")render();}catch(x){}
     try{if(typeof renderAll==="function")renderAll();}catch(x){}
     try{if(typeof renderInsuranceDashboard==="function")renderInsuranceDashboard();}catch(x){}
     try{if(typeof icSyncFromDom==="function")icSyncFromDom();}catch(x){}
   }
 });
+/* ── 준비됐다고 먼저 알린다 ────────────────────────────────────
+   전에는 부모가 「이쯤이면 떴겠지」 하고 시간을 재서 밀어 넣었다.
+   이 파일은 크고, 느린 회선에서는 그 시간 안에 못 뜬다. 그러면 넣은
+   값이 빈 문서로 날아가 사라진다 — 상담자료에 다 적어 놓고 계산기로
+   넘어오면 비어 있던 것이 이것이다. 이제 이쪽에서 먼저 알린다.
+
+   창을 따로 띄워 이 파일만 볼 때는 알릴 데가 없다. 그때 parent 는
+   자기 자신이라, 안 막으면 <b>자기가 자기한테</b> 쪽지를 보낸다.
+   그 쪽지를 이 파일 안 다른 귀가 주워 듣고 엉뚱하게 움직였다. */
+(function(){
+  if(window.parent===window)return;          /* 앱 밖에서 혼자 열렸다 */
+  function hello(){ try{ parent.postMessage({type:'apexFinReady'},'*'); }catch(x){} }
+  if(document.readyState==='complete') setTimeout(hello,60);
+  else window.addEventListener('load',function(){ setTimeout(hello,60); });
+  setTimeout(hello,1200);                     /* 늦게 붙는 칸이 있다 */
+})();
 </script>
 <script>
 
@@ -9628,8 +9648,82 @@ function apexCloseModal(){
 function apexPaintBtn(){
   var b = document.getElementById('apexPresentBtn');
   if(!b) return;
+  /* 전에는 여기에 트랙 이름을 박았다. 그런데 단추가 「지금 보는 탭」의
+     트랙만 열어서, 연금 탭에서 달러를 보여 주려면 탭을 옮겨야 했다.
+     상담 중에 그 한 번이 흐름을 끊는다. 이제 단추는 고르는 판을 열고,
+     지금 탭의 트랙은 그 판에서 「지금 보는 탭」 으로 표시만 한다. */
   var t = b.querySelector('.apx-t');
-  if(t) t.textContent = APEX_TRACK_NAME[apexTrack()] + ' 발표';
+  if(t) t.textContent = '발표';
+  var sub = b.querySelector('.apx-s');
+  if(sub) sub.textContent = '트랙 골라 열기 · 지금 ' + APEX_TRACK_NAME[apexTrack()];
+}
+
+/* ── 발표 트랙 고르기 ────────────────────────────────────────
+   네 트랙 어느 것이든 지금 화면의 고객 데이터를 그대로 들고 열린다.
+   무엇을 보여 줄지는 고객이 정하지, 내가 지금 어느 탭을 보고 있느냐가
+   정하는 게 아니다. */
+var APEX_TRACK_WHEN = {
+  w:'노후 생활비가 걱정이라고 하실 때',
+  d:'환율·비과세·달러 자산 이야기가 나올 때',
+  t:'투자 수익률과 세금을 같이 볼 때',
+  e:'자녀 교육비·유학 이야기가 나올 때'
+};
+function apexPickTrack(){
+  if(document.getElementById('apexTrackSheet')){ apexClosePick(); return; }
+  var now = apexTrack();
+  var css = document.getElementById('apexTrackCss');
+  if(!css){
+    css = document.createElement('style'); css.id='apexTrackCss';
+    css.textContent =
+      '#apexTrackScrim{position:fixed;inset:0;z-index:9997;background:rgba(8,8,10,.42)}'+
+      '#apexTrackSheet{position:fixed;right:22px;bottom:82px;z-index:9998;width:302px;max-width:calc(100vw - 24px);'+
+        'background:#fff;border:1px solid #E3E7EC;border-radius:18px;padding:13px;'+
+        'box-shadow:0 22px 60px rgba(15,23,42,.28)}'+
+      '#apexTrackSheet .tk-h{font-size:11px;font-weight:800;letter-spacing:.14em;color:#8A93A6;'+
+        'margin:2px 2px 10px}'+
+      '#apexTrackSheet .tk{display:block;width:100%;text-align:left;border:1px solid #E3E7EC;'+
+        'background:#fff;border-radius:13px;padding:11px 13px;margin-bottom:7px;cursor:pointer;'+
+        'font-family:inherit;transition:border-color .14s,background .14s}'+
+      '#apexTrackSheet .tk:hover{border-color:#1A56DB;background:#F5F9FF}'+
+      '#apexTrackSheet .tk .n{font-size:14px;font-weight:800;color:#0F172A;display:flex;'+
+        'align-items:center;gap:7px}'+
+      '#apexTrackSheet .tk .w{font-size:11.5px;color:#6B7688;margin-top:3px;line-height:1.5}'+
+      '#apexTrackSheet .tk.now{border-color:#C8A25B;background:#FFFDF6}'+
+      '#apexTrackSheet .tk .now-b{font-size:9.5px;font-weight:800;color:#8A6A1F;background:#F7EFD9;'+
+        'border-radius:999px;padding:2px 7px;margin-left:auto}'+
+      '#apexTrackSheet .tk-x{display:block;width:100%;border:0;background:transparent;cursor:pointer;'+
+        'font-family:inherit;font-size:12px;font-weight:700;color:#8A93A6;padding:7px 0 2px}'+
+      '@media print{#apexTrackSheet,#apexTrackScrim{display:none!important}}'+
+      '@media(max-width:640px){#apexTrackSheet{right:12px;bottom:72px}}';
+    document.head.appendChild(css);
+  }
+  var sc=document.createElement('div'); sc.id='apexTrackScrim'; sc.onclick=apexClosePick;
+  document.body.appendChild(sc);
+
+  var w=document.createElement('div'); w.id='apexTrackSheet';
+  var order=['w','d','t','e'], h='<div class="tk-h">어느 트랙으로 발표할까요</div>';
+  order.forEach(function(k){
+    h += '<button type="button" class="tk'+(k===now?' now':'')+'" data-tk="'+k+'">'+
+         '<span class="n">'+APEX_TRACK_NAME[k]+
+         (k===now?'<span class="now-b">지금 보는 탭</span>':'')+'</span>'+
+         '<span class="w">'+APEX_TRACK_WHEN[k]+'</span></button>';
+  });
+  h += '<button type="button" class="tk-x">닫기</button>';
+  w.innerHTML=h;
+  document.body.appendChild(w);
+  w.addEventListener('click', function(e){
+    var b=e.target.closest ? e.target.closest('.tk') : null;
+    if(b && b.getAttribute('data-tk')){ var k=b.getAttribute('data-tk'); apexClosePick(); apexPresent(k); return; }
+    if(e.target.classList && e.target.classList.contains('tk-x')) apexClosePick();
+  });
+  document.addEventListener('keydown', apexPickEsc);
+}
+function apexPickEsc(e){ if(e && e.key==='Escape') apexClosePick(); }
+function apexClosePick(){
+  ['apexTrackSheet','apexTrackScrim'].forEach(function(id){
+    var e=document.getElementById(id); if(e&&e.parentNode) e.parentNode.removeChild(e);
+  });
+  document.removeEventListener('keydown', apexPickEsc);
 }
 
 /* switchTab 은 이 파일 안에서 여러 번 통째로 덮어씌워진다(window.switchTab=...).
@@ -9675,10 +9769,10 @@ function apexWrapSwitchTab(){
     var b = document.createElement('button');
     b.id = 'apexPresentBtn';
     b.type = 'button';
-    b.title = '지금 화면의 고객 데이터를 그대로 넘겨 상담 프레젠테이션을 엽니다';
+    b.title = '어느 트랙으로 발표할지 고르고 엽니다 — 고객 데이터는 그대로 넘어갑니다';
     b.innerHTML = '<span class="apx-i">▶</span><span><span class="apx-t">발표</span>'+
-                  '<span class="apx-s">고객 데이터 그대로 전달</span></span>';
-    b.onclick = function(){ apexPresent(); };
+                  '<span class="apx-s">트랙 골라 열기</span></span>';
+    b.onclick = function(){ apexPickTrack(); };
     document.body.appendChild(b);
 
     /* 발표에 쓸 물가상승률 — 단추 위에 붙인다. 고객 앞에서는 보수적으로
