@@ -138,11 +138,41 @@ async function tossIssueToken() {
   tossTok = { tok: tok, exp: Date.now() + (Math.max(exp, 120) - 60) * 1000 };
   return tok;
 }
+/* ── 차단기 ────────────────────────────────────────────────────────────
+   토스는 호출 IP 를 등록해야 토큰을 준다. 그런데 Netlify 함수가 나갈 때 쓰는
+   IP 는 배포마다 바뀐다(3.144.168.102 → 18.222.65.41 → 3.16.137.242 를 확인).
+   등록이 어긋난 동안에는 토큰 발급이 매번 403 으로 실패한다.
+
+   설정을 규격대로 채우고 나면 토스가 1순위가 되므로, 이 상태에서는 모든 시세
+   요청이 '실패할 게 뻔한 왕복' 을 한 번씩 더 하게 된다. 사용자는 그만큼 늦게
+   화면을 본다. IP 문제는 다음 요청에서 저절로 낫는 종류가 아니므로, 한 번
+   막히면 이 컨테이너에서는 잠시 토스를 건너뛴다.
+
+   ⚠️ 아무 실패에나 차단기를 걸면 안 된다. 잠깐 끊긴 네트워크까지 5분씩
+      막아 버리면 멀쩡한 토스를 안 쓰게 된다. IP·권한 거절일 때만 건다. */
+let tossBlocked = 0;
+const TOSS_BLOCK_MS = 5 * 60 * 1000;
+function tossIsBlocked() { return tossBlocked > Date.now(); }
+function tossBlockUntil(msg) {
+  const m = String(msg || '');
+  if (/ip address not allowed|access_denied|unauthorized_client|invalid_client/i.test(m)) {
+    tossBlocked = Date.now() + TOSS_BLOCK_MS;
+    return true;
+  }
+  return false;
+}
+
 /* KIS 와 같은 이유로 동시 발급을 하나로 묶는다 */
 function tossToken() {
   if (tossTok && tossTok.exp > Date.now()) return Promise.resolve(tossTok.tok);
+  if (tossIsBlocked()) {
+    return Promise.reject(new Error('토스 건너뜀 — 조금 전 IP/권한 거절(' +
+      Math.ceil((tossBlocked - Date.now()) / 1000) + '초 뒤 다시 시도). kind=toss-probe 로 현재 IP 를 확인하세요'));
+  }
   if (tossTokInflight) return tossTokInflight;
-  tossTokInflight = tossIssueToken().finally(() => { tossTokInflight = null; });
+  tossTokInflight = tossIssueToken()
+    .catch(e => { tossBlockUntil(e && e.message); throw e; })
+    .finally(() => { tossTokInflight = null; });
   return tossTokInflight;
 }
 /* 앱은 005930 으로 입력한다 → 토스가 쓰는 A005930 으로 바꿔 보낸다 */
@@ -301,11 +331,10 @@ async function quoteOne(raw) {
   const krxOk = krxReady();
   const notes = [];
 
-  if (tossReady()) {
+  if (tossReady() && !tossIsBlocked()) {
     try { return cSet(k, await tossQuote(s), TTL.quote); }
     catch (e) {
       notes.push('토스 실패: ' + String(e && e.message || e).slice(0, 110));
-      if (!kisOk && !krxOk) throw new Error(notes[0]);   /* 뒤가 없으면 원인을 그대로 */
     }
   }
 
