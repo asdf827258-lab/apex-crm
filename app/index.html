@@ -39777,11 +39777,12 @@ function ivExcess(portfolioTotal, benchTotal) {
 /* ══════════════════════════════════════════════════════════════════════════
    투자·경제 모듈 — 주식관리 · 펀드관리 · 경제동향 실시간
    ──────────────────────────────────────────────────────────────────────────
-   토스 연결 정리
-     · 시세 1순위 = 토스증권 Open API (corp.tossinvest.com/ko/open-api 신청 →
-       client_id/client_secret + 호출 IP 등록). 엔드포인트는 코드에 박지 않고
-       config/market.json → providers.toss 에서 읽는다.
-     · 실패하거나 미설정이면 한국투자증권 KIS 로 자동 폴백한다.
+   시세 연결 정리
+     · 시세 1순위 = 한국투자증권 KIS (실시간·지수까지). 없으면 공공데이터포털
+       전일 종가로 자동 폴백한다. 둘 다 없어도 수동 입력으로 화면은 동작한다.
+     · 토스증권 Open API 는 접었다(#212) — 호출 IP 를 미리 등록해야 하는데
+       Netlify 는 배포마다 IP 가 바뀌어 쫓아갈 수 없었다. 설정은 남아 있지만
+       providers.toss.paths.quote 가 비어 있어 건너뛴다. 다시 쫓아가지 말 것.
      · 토스페이먼츠 API 는 결제·빌링 전용이라 시세를 주지 않는다. 그건 지금대로
        구독 결제만 담당한다(/api/toss-confirm · /api/toss-billing).
      · 종목 옆 '토스 ↗' 버튼은 딥링크라서 API 키가 없어도 항상 열린다.
@@ -40104,9 +40105,9 @@ function invTabsBar(active){
 }
 var INV_NEED_GUIDE={
   'DATA_GO_KR_KEY':'공공데이터포털 인증키 — 승인 대기 없이 오늘 바로 켜는 길(전일 종가). data.go.kr 에서 "금융위원회_주식시세정보"·"지수시세정보" 활용신청(자동승인)',
-  'TOSS_CLIENT_ID':'토스증권 오픈API client_id — 시세 1순위 (corp.tossinvest.com/ko/open-api 신청·승인)',
-  'TOSS_CLIENT_SECRET':'토스증권 오픈API client_secret (client_id와 한 쌍 · 호출 IP 등록 필요)',
-  'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 시세 폴백 + 코스피·코스닥 지수',
+  'TOSS_CLIENT_ID':'⛔ 토스증권은 접었습니다 — 호출 IP 를 미리 등록해야 하는데 배포마다 IP 가 바뀝니다. 넣어도 쓰이지 않습니다',
+  'TOSS_CLIENT_SECRET':'⛔ 위와 같음 — 넣어도 쓰이지 않습니다',
+  'KIS_APP_KEY':'한국투자증권 KIS Developers 앱키 — 시세 1순위(실시간) + 코스피·코스닥 지수',
   'KIS_APP_SECRET':'한국투자증권 앱시크릿 (앱키와 한 쌍)',
   'ECOS_API_KEY':'한국은행 ECOS 인증키 — 기준금리·환율·물가',
   'FUND_API_URL':'data.go.kr 금융위원회 펀드 API 요청 URL — 공모펀드 기준가',
@@ -40119,13 +40120,14 @@ function invNeedBox(need){
   var many=(need||[]).length>2;
   return '<div class="iv-need"><div class="hd">🔌 시세 연결이 아직 안 됐습니다</div>'+
     '<div class="bd">아래 값을 <b>Netlify → Site settings → Environment variables</b> 에 넣고 재배포하면 이 화면에 숫자가 채워집니다.'+
-    (many?' <b>한 세트만 넣으면 됩니다</b> — 가장 빨리 켜지는 건 <b>공공데이터포털</b>(자동승인·계좌 불필요·전일 종가)이고, 실시간이 필요하면 토스증권이나 한국투자증권을 넣으세요. 여러 개 넣으면 앞의 것이 죽어도 뒤가 받습니다.':'')+
+    (many?' <b>한 세트만 넣으면 됩니다</b> — 가장 빨리 켜지는 건 <b>공공데이터포털</b>(자동승인·계좌 불필요·전일 종가)이고, 실시간이 필요하면 <b>한국투자증권</b>을 넣으세요. 여러 개 넣으면 앞의 것이 죽어도 뒤가 받습니다.':'')+
     ' 넣기 전에도 <b>수동 입력</b>과 종목별 <b>토스 ↗</b> 바로가기는 그대로 됩니다.</div>'+
     '<ul>'+li+'</ul>'+
-    '<div class="ft">※ 시세는 <b>토스증권 오픈API</b>를 1순위로 쓰고, 실패하면 한국투자증권으로 자동 폴백합니다. '+
-    '지표는 한국은행입니다. (토스<b>페이먼츠</b> API는 결제 전용이라 시세를 주지 않습니다 — 그건 지금대로 구독 결제만 담당합니다.)<br>'+
-    '토스증권 엔드포인트는 <b>config/market.json → providers.toss</b> 에 채우고 '+
-    '<b>/api/market?kind=toss-probe</b> 로 확인하세요.</div></div>';
+    '<div class="ft">※ 시세는 <b>한국투자증권</b>을 1순위로 쓰고, 실패하면 <b>공공데이터포털</b>(전일 종가)로 자동 폴백합니다. '+
+    '지표는 한국은행입니다.<br>'+
+    '<b>토스증권 오픈API 는 접었습니다</b> — 호출 IP 를 미리 등록해야 하는데 배포마다 IP 가 바뀌어 쫓아갈 수 없었습니다. '+
+    'TOSS_CLIENT_ID/SECRET 은 넣어도 쓰이지 않습니다. 종목 옆 <b>토스 ↗</b> 바로가기는 키 없이 그대로 됩니다. '+
+    '(토스<b>페이먼츠</b> API는 결제 전용이라 시세를 주지 않습니다 — 그건 지금대로 구독 결제만 담당합니다.)</div></div>';
 }
 function invAccBar(){
   var s=invLoad(),a=invCur();

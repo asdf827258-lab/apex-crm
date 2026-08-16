@@ -2,47 +2,60 @@
 
 한 장짜리 인수인계표입니다. 왼쪽만 하시면 되고, 나머지는 복붙해서 AI에게 넘기세요.
 
----
-
-## 🔴 지금 당장 (5분) — 이것부터
-
-### 1. 토스증권 키 재발급
-
-채팅창에 붙여넣은 키(`tsck_live_…`)는 **노출된 것으로 봐야 합니다.** 대화 기록에 남습니다.
-
-- 토스증권 개발자 콘솔 → **Regenerate / 재발급**
-- 재발급하는 순간 이전 키는 무효가 됩니다
-
-> **앞으로 키는 어디에도 붙여넣지 마세요.** AI에게도, 메신저에도, 문서에도.
-> 키가 들어가는 곳은 **Netlify 환경변수 한 곳뿐**입니다.
-> 키 없이도 AI는 다 도울 수 있습니다 — 에러 메시지만 보여주면 됩니다.
+> **키는 어디에도 붙여넣지 마세요.** AI에게도, 메신저에도, 문서에도.
+> 키가 들어가는 곳은 **Netlify 환경변수** 와 **내 컴퓨터의 `.env`** 두 곳뿐입니다.
+> 키 없이도 AI는 다 도울 수 있습니다 — 에러 메시지와 결과 화면만 보여주면 됩니다.
 
 ---
 
-## ✋ 사장님만 할 수 있는 것 (사람 손이 필요한 일)
+## ⛔ 토스증권은 접었습니다 (2026-08, #212)
 
-| # | 할 일 | 어디서 | 시간 |
-|---|---|---|---|
-| 1 | **토스 키 재발급** | 토스증권 개발자 콘솔 | 2분 |
-| 2 | **PR #158 병합** | github.com/asdf827258-lab/apex-crm/pull/158 → Merge | 1분 |
-| 3 | **공공데이터 활용신청** | data.go.kr → `금융위원회_주식시세정보`(15094808), `지수시세정보`(15094807) → 활용신청(자동승인) | 5분 |
-| 4 | **한국은행 인증키 신청** | ecos.bok.or.kr/api (즉시 발급) | 3분 |
-| 5 | **환경변수 입력** | Netlify → Site settings → Environment variables (아래 표) | 5분 |
-| 6 | **Supabase SQL 실행** | Supabase → SQL Editor → `migration_33_invest.sql` 붙여넣고 Run | 2분 |
-| 7 | **토스 IP 등록 확인** | 토스 콘솔에서 "호출 IP 등록"이 필수인지 확인 | 2분 |
+**다시 쫓아가지 마세요.** 키도 주소도 토큰도 전부 통과했습니다(`tokenIssued: true`
+까지 실제로 확인). 막힌 건 딱 하나, **허용 IP** 입니다.
 
-### 5번 — Netlify에 넣을 값
+```
+등록한 3.144.168.102   → 토큰 발급 성공
+배포 한 번 뒤 18.222.65.41 로 바뀜 → 403 IP address not allowed
+```
 
-| 변수명 | 값 | 없으면? |
+한 배포 안에서는 IP 가 고정이지만 **배포하면 바뀝니다.** 토스는 호출 IP 를 미리
+등록하라 하고 Netlify 는 배포마다 IP 가 바뀌니, 등록으로는 쫓아갈 수 없습니다.
+고정 IP 중계를 세우면 되지만 시세 하나에 서버를 더 띄울 일은 아닙니다.
+
+**잃는 것도 거의 없습니다.** 한국투자증권은 IP 등록이 없고 지수까지 줍니다 —
+토스가 더 나은 점이 사실상 없습니다.
+
+- 종목 옆 **`토스 ↗` 딥링크 버튼은 키 없이 그대로 동작합니다.**
+- `config/market.json → providers.toss` 는 `paths.quote` 가 비어 있어
+  **코드가 알아서 건너뜁니다.** 지워도 되고 둬도 됩니다(되살릴 때를 위해 뒀습니다).
+- 토스가 허용 IP 목록을 비울 수 있게 되면 그때 되살릴 수 있습니다.
+
+---
+
+## ✋ 사장님만 할 수 있는 것
+
+| # | 할 일 | 어디서 | 시간 | 급함 |
+|---|---|---|---|---|
+| 1 | **공공데이터 활용신청** | data.go.kr → `금융위원회_주식시세정보`(15094808), `지수시세정보`(15094807) → 활용신청(**자동승인**) | 5분 | ⭐ 이것부터 |
+| 2 | **환경변수 입력 + 재배포** | Netlify → Site settings → Environment variables (아래 표) | 5분 | ⭐ |
+| 3 | 한국은행 인증키 신청 | ecos.bok.or.kr/api (즉시 발급) | 3분 | 선택 |
+| 4 | Supabase SQL 실행 | Supabase → SQL Editor → `migration_33_invest.sql` (표를 아직 안 만들었다면) | 2분 | 최초 1회 |
+| 5 | 한국투자증권 계정 | securities.koreainvestment.com → 앱키 발급 (실시간·지수·**주문**까지 필요할 때) | 15분 | 나중 |
+
+### 2번 — Netlify에 넣을 값
+
+| 변수명 | 무엇 | 없으면? |
 |---|---|---|
-| `DATA_GO_KR_KEY` | data.go.kr **일반 인증키(Decoding)** | 전일 종가 안 나옴 |
-| `ECOS_API_KEY` | 한국은행 인증키 | 기준금리·환율 안 나옴 |
-| `TOSS_CLIENT_ID` | 재발급받은 토스 client_id | 실시간 대신 전일 종가로 동작 |
-| `TOSS_CLIENT_SECRET` | 재발급받은 토스 client_secret | 〃 |
-| `KIS_APP_KEY` / `KIS_APP_SECRET` | (선택) 한국투자증권 | 지수(코스피) 실시간 안 나옴 |
+| `DATA_GO_KR_KEY` | data.go.kr **일반 인증키(Decoding)** | 시세가 아예 안 나옴 |
+| `KIS_APP_KEY` / `KIS_APP_SECRET` | 한국투자증권 | 실시간·지수 없이 전일 종가로만 동작 |
+| `ECOS_API_KEY` | 한국은행 | 기준금리·환율 안 나옴 (달러 종목이 자산배분에서 빠짐) |
 
-> **한 세트만 넣어도 화면은 켜집니다.** 여러 개 넣으면 하나가 죽어도 다음이 받습니다.
-> 넣은 뒤 **재배포(Trigger deploy)** 를 해야 반영됩니다.
+> **`DATA_GO_KR_KEY` 하나만 넣어도 화면은 켜집니다.** 자동승인이라 제일 빠르고
+> 증권 계좌도 IP 등록도 필요 없습니다. 대신 **전일 종가**라 장중엔 숫자가
+> 안 움직이고 화면에 `종가 8/6` 같은 배지가 붙습니다.
+> 실시간이 필요해지면 그때 `KIS_APP_KEY` 로 올리면 됩니다.
+>
+> 넣은 뒤 **Deploys → Trigger deploy** 를 눌러야 함수가 새 값을 읽습니다.
 
 ---
 
@@ -50,24 +63,7 @@
 
 키는 절대 붙여넣지 마세요. **결과 화면만** 보여주면 됩니다.
 
-### ① 토스 엔드포인트 찾기 (배포 후)
-
-브라우저에서 이 주소를 엽니다 → 나온 JSON을 **통째로 복사**
-
-```
-https://apex-os-yunpro.netlify.app/api/market?kind=toss-discover
-```
-
-AI에게:
-
-```
-apex-crm 저장소의 config/market.json 의 providers.toss 를 채워줘.
-아래는 /api/market?kind=toss-discover 결과야.
-
-[여기에 JSON 붙여넣기]
-```
-
-### ② 뭐가 빠졌는지 점검
+### ① 뭐가 빠졌는지 점검
 
 ```
 https://apex-os-yunpro.netlify.app/api/market?kind=health
@@ -82,7 +78,7 @@ apex-crm 투자·경제 시세 연결 점검 결과야. 뭐가 빠졌고 뭘 하
 [여기에 JSON 붙여넣기]
 ```
 
-### ③ 공공데이터가 안 될 때
+### ② 공공데이터가 안 될 때
 
 ```
 https://apex-os-yunpro.netlify.app/api/market?kind=krx-probe
@@ -96,7 +92,7 @@ AI에게:
 [여기에 JSON 붙여넣기]
 ```
 
-### ④ 화면이 이상할 때
+### ③ 화면이 이상할 때
 
 AI에게 (화면 캡처 첨부):
 
@@ -106,26 +102,18 @@ apex-crm 앱 투자·경제 화면인데 이상해. 캡처 보고 원인이랑 �
 netlify/functions/market.js 야.
 ```
 
-### ⑤ 토스 문서를 대신 읽히기
-
-토스 개발자 문서(`developers.tossinvest.com/docs`)의 **시세 조회 페이지를 캡처**해서:
-
-```
-토스증권 오픈API 시세 조회 문서 캡처야. 여기서
-base(호스트) / token_path / paths.quote / field_map 네 가지를 뽑아서
-apex-crm 의 config/market.json providers.toss 에 넣을 JSON 으로 만들어줘.
-```
-
 ---
 
 ## ✅ 다 됐는지 확인하는 법
 
 `https://apex-os-yunpro.netlify.app/api/market?kind=health` 을 열어서:
 
-- `"quoteProvider": "toss"` → 토스 실시간으로 돌고 있음 ✅
-- `"quoteProvider": "kis"` → 한국투자증권 실시간 ✅
-- `"quoteProvider": "krx"` → 공공데이터 전일 종가 (화면에 `종가 8/6` 배지) ✅
-- `"quoteProvider": "none"` → 아직 아무것도 안 들어감 ❌
+| `quoteProvider` | 뜻 |
+|---|---|
+| `kis` | 한국투자증권 실시간 ✅ |
+| `krx` | 공공데이터 전일 종가 (화면에 `종가 8/6` 배지) ✅ |
+| `none` | 아직 아무것도 안 들어감 ❌ |
+| `toss` | **더는 나오지 않습니다** (위 참조) |
 
 앱에서 **투자·경제 → 주식관리** 에 종목코드(예: `005930`)와 수량·평단을 넣었을 때
 현재가와 수익률이 채워지면 끝입니다.
@@ -135,4 +123,7 @@ apex-crm 의 config/market.json providers.toss 에 넣을 JSON 으로 만들어�
 ## 참고
 
 - 키가 하나도 없어도 **종목별 `토스 ↗` 바로가기**와 **수동 입력 수익률 관리**는 됩니다
-- 자세한 설계·문제해결은 `docs/INVEST_MARKET_INTEGRATION.md`
+- 자동매매 봇과 국내 주문(`kis order`)은 `trading/README.md` 와
+  `paper-trading-bot/README.md` 를 보세요. 그쪽 키는 Netlify 가 아니라
+  **내 컴퓨터의 `.env`** 에 들어갑니다.
+- 지금 어디까지 왔고 다음에 뭘 할지는 `docs/이어서_하기.md`

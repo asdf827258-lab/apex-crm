@@ -55,8 +55,10 @@ const R = (json, opts) => Promise.resolve({
 
   r = await call(m, { kind: 'quote', codes: '005930' });
   ok(r.status === 200 && r.body.ok === false, '시세 요청도 200 (앱이 안내 카드를 그릴 수 있다)');
-  ok(r.body.need.length === 5 && r.body.need[0] === 'DATA_GO_KR_KEY',
-    '켤 수 있는 길 세 가지를 함께 알려 주고, 가장 빨리 되는 것을 앞에 둔다 (' + r.body.need.join(',') + ')');
+  ok(r.body.need.length === 3 && r.body.need[0] === 'DATA_GO_KR_KEY',
+    '켤 수 있는 길 두 가지를 함께 알려 주고, 가장 빨리 되는 것을 앞에 둔다 (' + r.body.need.join(',') + ')');
+  ok(r.body.need.every(k => k.indexOf('TOSS') < 0),
+    '접은 토스 키는 안내 카드에 넣지 않는다 (죽은 키를 시키지 않는다)');
 
   r = await call(m, { kind: 'toss-probe' });
   /* 개수만 세던 줄이었다. 시세 경로(paths.quote)를 토큰 발급 뒤로 미루면서
@@ -76,8 +78,13 @@ const R = (json, opts) => Promise.resolve({
   const pre = await m.handler({ httpMethod: 'OPTIONS', headers: {}, queryStringParameters: {} });
   ok(pre.statusCode === 204, 'CORS 사전요청(OPTIONS)에 답한다');
 
-  /* ══ 2) 토스증권이 1순위로 붙는가 ══════════════════════════════════ */
-  console.log('\n[2] 토스증권 오픈API 설정됨');
+  /* ══ 2) 토스 코드가 아직 살아 있는가 (되살릴 때를 위한 보험) ═════════
+     토스는 접었다(#212 — 허용 IP 정책). 하지만 코드는 남겨 뒀고, 언젠가
+     허용 IP 목록을 비울 수 있게 되면 config 만 채워 되살릴 수 있어야 한다.
+     그래서 이 절은 **설정을 여기서 직접 주입해** 그 경로가 아직 도는지 본다.
+     배포된 config/market.json 은 paths.quote 가 비어 있어 실제로는 건너뛴다.
+     즉 아래 '1순위' 는 이 절이 만든 가정 안에서의 이야기지 운영 순서가 아니다. */
+  console.log('\n[2] 토스 경로 회귀검사 (접었지만 코드는 살아 있어야 한다)');
   clearKeys();
   process.env.TOSS_CLIENT_ID = 'cid'; process.env.TOSS_CLIENT_SECRET = 'csec';
   process.env.KIS_APP_KEY = 'kk'; process.env.KIS_APP_SECRET = 'ks';
@@ -112,7 +119,7 @@ const R = (json, opts) => Promise.resolve({
   ok(seen.some(u => /\/v1\/quotes\/A005930$/.test(u)), '국내 종목에 A 접두어를 붙여 보낸다 (005930 → A005930)');
 
   r = await call(m, { kind: 'quote', codes: '005930' });
-  ok(r.body.quotes[0].src === 'toss', '시세 1순위가 토스다');
+  ok(r.body.quotes[0].src === 'toss', '토스 설정을 채워 주면 토스가 1순위로 붙는다 (되살리기 경로)');
 
   r = await call(m, { kind: 'health' });
   ok(r.body.quoteProvider === 'toss', 'health 도 토스라고 보고한다');

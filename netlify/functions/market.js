@@ -10,24 +10,32 @@
  *   kind=econ                기준금리·환율·CD·국고채·물가 (한국은행 ECOS)
  *   kind=news&cat=경제       경제·보험 뉴스 (config/sources.json RSS 재사용)
  *   kind=all                 index+econ+news 한 번에 (경제동향 화면 첫 로딩용)
- *   kind=toss-probe          토스 설정이 맞는지 진단
+ *   kind=toss-probe          토스 설정이 맞는지 진단 (접었다. 아래 참조)
  *   kind=toss-discover       키는 있는데 경로를 모를 때 토스 도메인 안에서 자동 탐색
  *   kind=krx-probe           공공데이터포털 연결 진단
  *
- * ── 토스 API 정리 ─────────────────────────────────────────────────────────
- *   · 토스페이먼츠 API = 결제·빌링 전용. 시세는 주지 않는다. 이 저장소에서는
+ * ── 시세 제공자 순서 ──────────────────────────────────────────────────────
+ *       ① 한국투자증권(실시간·지수까지) → ② 공공데이터포털(전일 종가)
+ *     둘 중 하나만 있어도 화면은 정상 동작한다. 없으면 ③ 이 가장 빠르다 —
+ *     data.go.kr 금융위원회 주식·지수 시세정보는 자동승인이고 증권 계좌도
+ *     IP 등록도 필요 없다(대신 T+1 종가).
+ *
+ * ── 토스는 접었다 (#212) ──────────────────────────────────────────────────
+ *   원래 여기가 '1순위' 였다. 지금은 아니다. 되살리려 하기 전에 이걸 읽어라.
+ *
+ *   키·주소·토큰까지 전부 통과했다(tokenIssued: true 를 실제로 봤다).
+ *   막힌 건 허용 IP 하나다. 등록한 3.144.168.102 로는 토큰이 나왔는데 배포
+ *   한 번에 18.222.65.41 로 바뀌어 403 IP address not allowed 가 났다.
+ *   한 배포 안에서는 IP 가 고정이지만 배포하면 바뀐다. 토스는 호출 IP 를 미리
+ *   등록하라 하고 Netlify 는 배포마다 IP 가 바뀌니 등록으로는 쫓아갈 수 없다.
+ *   한국투자증권은 IP 등록이 없고 지수까지 주므로 잃는 것도 거의 없다.
+ *
+ *   · 아래 toss* 코드는 남겨 뒀다. providers.toss.paths.quote 가 비어 있어
+ *     tossReady() 가 false 를 돌려주고, 그래서 네트워크 호출 없이 건너뛴다.
+ *     토스가 허용 IP 목록을 비울 수 있게 되면 그 칸만 채우면 되살아난다.
+ *   · 종목 옆 '토스 ↗' 딥링크는 키와 무관하게 계속 동작한다.
+ *   · 토스페이먼츠 API 는 별개다 — 결제·빌링 전용이라 시세는 주지 않는다.
  *     지금처럼 구독 결제만 담당한다(/api/toss-confirm, /api/toss-billing).
- *   · 토스증권 Open API = 있다. corp.tossinvest.com/ko/open-api 에서 신청하고
- *     승인되면 client_id / client_secret 을 받아 OAuth 2.0 으로 시세를 부른다.
- *     문서: developers.tossinvest.com/docs
- *     → 이 함수의 '1순위' 시세 제공자다. config/market.json 의 providers.toss 에
- *       문서에 적힌 base / token_path / paths.quote / field_map 을 채우고
- *       TOSS_CLIENT_ID / TOSS_CLIENT_SECRET 을 넣으면 바로 붙는다.
- *   · 채우기 전이거나 호출이 실패하면 다음 제공자로 자동 폴백한다:
- *       ① 토스증권(실시간) → ② 한국투자증권(실시간) → ③ 공공데이터포털(전일 종가)
- *     셋 중 하나만 있어도 화면은 정상 동작한다.
- *   · 토스 승인을 기다리는 중이라면 ③ 이 가장 빠르다 — data.go.kr 금융위원회
- *     주식·지수 시세정보는 자동승인이고 증권 계좌도 필요 없다(대신 T+1 종가).
  *   · 비공식 웹 내부 엔드포인트(WTS)는 쓰지 않는다 — 예고 없이 바뀌고
  *     약관 위반 소지가 있어, 고객 자산을 다루는 CRM 에 둘 성질이 아니다.
  *
@@ -35,9 +43,9 @@
  *                펀드 → data.go.kr 금융위원회 · 뉴스 → config/sources.json RSS
  *
  * ── 환경변수 (Netlify → Site settings → Environment variables) ──────────
- *   TOSS_CLIENT_ID / TOSS_CLIENT_SECRET  토스증권 오픈API      (시세 1순위·실시간)
- *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿 (2순위·실시간·지수)
- *   DATA_GO_KR_KEY                    공공데이터포털 인증키      (3순위·전일 종가)
+ *   KIS_APP_KEY / KIS_APP_SECRET      한국투자증권 앱키·시크릿 (1순위·실시간·지수)
+ *   DATA_GO_KR_KEY                    공공데이터포털 인증키      (2순위·전일 종가·자동승인)
+ *   TOSS_CLIENT_ID / TOSS_CLIENT_SECRET  넣어도 쓰이지 않는다 — 토스는 접었다(위 참조)
  *   KIS_ENV                            real(기본) 또는 vts(모의투자)
  *   ECOS_API_KEY                       한국은행 ECOS 인증키       (경제지표)
  *   FUND_API_URL / FUND_API_KEY        data.go.kr 펀드 API        (펀드)
@@ -82,10 +90,11 @@ function marketOpen() {
 }
 
 /* ══════════════════════════════════════════════════════════════════════
-   0) 토스증권 Open API — 시세 1순위 (OAuth 2.0 client_credentials)
-      엔드포인트를 코드에 박지 않고 config/market.json 에서 읽는다.
-      승인 문서마다 경로·필드명이 다를 수 있어, 값이 비어 있으면 조용히
-      건너뛰고 KIS 로 간다. 추측한 경로로 호출해서 엉뚱한 에러를 내지 않는다.
+   0) 토스증권 Open API — ⛔ 접었다(#212). 머리말의 '토스는 접었다' 를 먼저 읽어라.
+      허용 IP 정책과 Netlify 의 바뀌는 IP 가 안 맞아 유지할 수 없었다.
+      코드는 되살릴 때를 위해 남겨 뒀다. config/market.json 의
+      providers.toss.paths.quote 가 비어 있어 tossReady() 가 false 를 돌려주고,
+      그래서 네트워크 호출 없이 건너뛰고 KIS 로 간다.
    ══════════════════════════════════════════════════════════════════════ */
 function tossCfg() { return P.toss || {}; }
 function tossKeys() { return { id: process.env.TOSS_CLIENT_ID || '', sec: process.env.TOSS_CLIENT_SECRET || '' }; }
@@ -334,8 +343,9 @@ async function quoteOne(raw) {
     }
   }
 
-  /* 아무것도 없다 — 셋 중 '한 세트'만 채우면 된다 */
-  throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+  /* 아무것도 없다 — 둘 중 '한 세트'만 채우면 된다.
+     TOSS_* 는 여기 넣지 않는다. 접은 경로라 안내 카드가 죽은 키를 시키게 된다. */
+  throw new Error('NEED:DATA_GO_KR_KEY,KIS_APP_KEY,KIS_APP_SECRET');
 }
 
 /* ── 지수를 살 수 있는 소스가 있는가 (KIS 또는 공공데이터) ────────────── */
@@ -712,8 +722,8 @@ exports.handler = async function (event) {
           deeplink: (P.toss || {}).deeplink || null,
           guide: {
             DATA_GO_KR_KEY: '공공데이터포털 data.go.kr — 금융위원회 주식·지수 시세정보 활용신청(자동승인, 계좌 불필요). 전일 종가라 실시간은 아니지만 오늘 바로 켤 수 있는 길',
-            TOSS_CLIENT_ID: '토스증권 corp.tossinvest.com/ko/open-api 신청·승인 후 발급 — 시세 1순위(실시간, 호출 IP 등록 필요)',
-            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 실시간 시세 + 지수(계좌 개설 필요)',
+            TOSS_CLIENT_ID: '⛔ 토스증권은 접었습니다 — 호출 IP 를 미리 등록해야 하는데 Netlify 는 배포마다 IP 가 바뀝니다. 넣어도 쓰이지 않습니다. 대신 KIS_APP_KEY 를 쓰세요',
+            KIS_APP_KEY: '한국투자증권 apiportal.koreainvestment.com 에서 발급 — 시세 1순위(실시간) + 지수(계좌 개설 필요, IP 등록 없음)',
             ECOS_API_KEY: '한국은행 ecos.bok.or.kr/api 에서 발급(즉시) — 기준금리·환율·물가',
             FUND_API_URL: 'data.go.kr 금융위원회 펀드 API 활용신청 후 요청 URL 그대로 입력 — 공모펀드 기준가'
           }

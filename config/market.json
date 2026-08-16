@@ -1,10 +1,12 @@
 {
   "_설명": "투자·경제 데이터 소스 설정. netlify/functions/market.js 가 이 파일을 읽어 동작합니다. 코드·엔드포인트가 바뀌면 이 파일만 고치면 됩니다(함수 코드 수정 불필요).",
+  "_제공자_순서": "① 한국투자증권 KIS(실시간·지수까지) → ② 공공데이터포털(전일 종가·자동승인). 둘 중 하나만 있어도 화면은 정상 동작합니다.",
   "_토스API_정리": {
-    "토스페이먼츠": "결제·빌링 전용 API입니다(이미 /api/toss-confirm, /api/toss-billing 에서 구독 결제에 사용 중). 시세·펀드·경제지표는 제공하지 않습니다. 이건 지금대로 결제만 담당합니다.",
-    "토스증권_오픈API": "있습니다. corp.tossinvest.com/ko/open-api 에서 신청 → 승인 후 PC 웹에서 client_id/client_secret 발급 + 호출 IP 등록. OAuth 2.0 방식이며 시세·계좌·주문을 제공합니다. 문서: developers.tossinvest.com/docs",
-    "설정방법": "승인 문서에서 확인한 호스트·엔드포인트를 아래 providers.toss 의 base / token_path / paths.quote / field_map 에 채우고, Netlify 환경변수에 TOSS_CLIENT_ID·TOSS_CLIENT_SECRET 을 넣으면 시세 1순위 제공자가 토스증권으로 바뀝니다. 앱 코드는 건드릴 필요가 없습니다.",
-    "폴백": "토스 설정이 비어 있거나 호출이 실패하면 한국투자증권 KIS 로 자동 폴백합니다. 둘 중 하나만 있어도 화면은 정상 동작합니다.",
+    "결론": "토스증권은 접었습니다(#212, 2026-08). 되살리려 하기 전에 아래 '왜 접었나' 를 읽으세요. 지금은 KIS 가 1순위입니다.",
+    "왜_접었나": "키·주소·토큰까지 전부 통과했습니다(tokenIssued: true 확인). 막힌 건 허용 IP 하나입니다. 등록한 3.144.168.102 로는 토큰이 나왔는데 배포 한 번에 18.222.65.41 로 바뀌어 403 IP address not allowed 가 났습니다. 한 배포 안에서는 IP 가 고정이지만 배포하면 바뀌는데, 토스는 호출 IP 를 미리 등록하라 하고 Netlify 는 배포마다 IP 가 바뀌니 등록으로는 쫓아갈 수 없습니다.",
+    "잃는것": "거의 없습니다. 한국투자증권은 IP 등록이 없고 지수까지 줍니다. 종목 옆 '토스 ↗' 딥링크는 키와 무관하게 계속 동작합니다.",
+    "되살리려면": "아래 providers.toss 설정은 남겨 뒀습니다. paths.quote 가 비어 있어 market.js 의 tossReady() 가 false 를 돌려주고, 그래서 네트워크 호출 없이 건너뜁니다. 토스가 허용 IP 목록을 비울 수 있게 되면 그 칸만 채우면 되살아납니다. TOSS_CLIENT_ID·TOSS_CLIENT_SECRET 만 넣는 것으로는 아무 일도 일어나지 않습니다.",
+    "토스페이먼츠": "별개입니다. 결제·빌링 전용 API 라 시세·펀드·경제지표는 주지 않습니다(이미 /api/toss-confirm, /api/toss-billing 에서 구독 결제에 사용 중). 이건 지금대로 결제만 담당합니다.",
     "주의": "비공식 웹 내부 엔드포인트(WTS)는 쓰지 않습니다. 예고 없이 바뀌고 이용약관 위반 소지가 있어, 고객 자산을 다루는 이 CRM에는 공식 Open API 와 공식 딥링크만 씁니다."
   },
   "providers": {
@@ -95,7 +97,7 @@
       "_주의": "미설정이면 앱의 펀드관리 화면은 '수동 기준가 입력' 모드로 그대로 동작합니다. 기능이 막히지 않습니다."
     },
     "toss": {
-      "_이름": "토스증권 Open API (OAuth 2.0 · 시세 1순위 제공자)",
+      "_이름": "토스증권 Open API (OAuth 2.0) — ⛔ 접었습니다. 위 _토스API_정리 를 먼저 읽으세요. paths.quote 가 비어 있어 코드가 건너뜁니다.",
       "_신청": "https://corp.tossinvest.com/ko/open-api → 승인 후 PC 웹에서 client_id / client_secret 발급 + 호출 IP 등록(Netlify 아웃바운드 IP)",
       "_문서": "https://developers.tossinvest.com/docs",
       "_환경변수": [

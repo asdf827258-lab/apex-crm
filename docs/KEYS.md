@@ -43,8 +43,8 @@
 
 | 변수 | 무엇 | 승인 | 없으면 |
 |---|---|---|---|
-| `TOSS_CLIENT_ID`<br>`TOSS_CLIENT_SECRET` | 토스증권 (실시간·1순위) | 신청·승인 필요 | 건너뜀 |
-| `KIS_APP_KEY`<br>`KIS_APP_SECRET` | 한국투자증권 (실시간·2순위, **지수도 여기**) | 계좌 필요 | 건너뜀 |
+| `KIS_APP_KEY`<br>`KIS_APP_SECRET` | 한국투자증권 (실시간·**1순위**, **지수도 여기**) | 계좌 필요 | 건너뜀 |
+| ~~`TOSS_CLIENT_ID`~~<br>~~`TOSS_CLIENT_SECRET`~~ | ⛔ 토스증권 — **접었습니다**(허용 IP 정책). 넣어도 쓰이지 않습니다 | — | 영향 없음 |
 | `KIS_ENV` | `real`(기본) 또는 `vts`(모의) | — | `real` |
 | `DATA_GO_KR_KEY` | 공공데이터포털 (전일 종가·3순위) | **자동승인** | 건너뜀 |
 
