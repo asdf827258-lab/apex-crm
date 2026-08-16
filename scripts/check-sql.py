@@ -50,7 +50,52 @@ for f in files:
         continue
     print('✓ %s — %d 구문%s' % (f, n, (' (옛 파일, -- %d개는 넘어감)' % dash) if dash else ''))
 
+# ── 앱 안에 문자열로 박아 둔 준비 SQL ────────────────────────────
+#   대표님이 홈 맨 위 배너에서 복사해 붙여넣는 것은 .sql 파일이 아니라
+#   app/index.html 안의 HX_SQL 이다. 정작 손으로 실행하는 그 SQL 을
+#   아무도 안 보고 있었다 — 여기서 같이 본다.
+def embedded_blocks():
+    """app/index.html 의 HX_SQL 을 덩이별로 뽑는다"""
+    try:
+        src = open('app/index.html', encoding='utf-8').read()
+    except OSError:
+        return []
+    k = src.find('var HX_SQL={')
+    if k < 0:
+        return []
+    end = src.find('\n};', k)
+    if end < 0:
+        return []
+    body, out = src[k:end], []
+    for m in re.finditer(r"'(\d+)':\{(.*?)lines:\[(.*?)\n \]\}", body, re.S):
+        key, head, lines = m.group(1), m.group(2), m.group(3)
+        lab = re.search(r'label:"([^"]*)"', head)
+        rows = re.findall(r'"((?:[^"\\]|\\.)*)"', lines)
+        sql = '\n'.join(r.replace('\\"', '"').replace("\\'", "'").replace('\\\\', '\\')
+                        for r in rows)
+        out.append(('HX_SQL[%s] %s' % (key, lab.group(1) if lab else ''), sql))
+    return out
+
+blocks = embedded_blocks()
+if not blocks:
+    print('\n※ app/index.html 에서 준비 SQL 을 못 찾았습니다 — 배너 SQL 검사를 건너뜁니다.')
+else:
+    print()
+    for name, sql in blocks:
+        try:
+            n = len(pglast.parse_sql(sql))
+        except Exception as e:
+            print('✗ %s — 문법 오류' % name)
+            print('    %s' % str(e).replace('\n', ' ')[:200])
+            failed.append(name)
+            continue
+        if '--' in sql:
+            print('✗ %s — `--` 주석이 있습니다. 붙여넣을 때 깨집니다.' % name)
+            failed.append(name)
+            continue
+        print('✓ %s — %d 구문' % (name, n))
+
 if failed:
     print('\n문제가 있는 SQL: %s' % ', '.join(failed))
     sys.exit(1)
-print('\nSQL 검사 통과 — %d 개 파일' % len(files))
+print('\nSQL 검사 통과 — 파일 %d 개 · 앱 안 준비 SQL %d 덩이' % (len(files), len(blocks)))
