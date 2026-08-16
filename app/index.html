@@ -10013,8 +10013,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-16 22:10';
-var APP_BUILD_NOTE='내 소개(상담자료 맨 앞에 나오는 것)가 이제 아이디를 따라다닙니다 — 집·사무실·태블릿 어디서 들어오셔도, IP 가 달라도 같은 소개가 나옵니다 · 서버가 잠깐 안 되면 이 기기 것으로 그대로 상담할 수 있고, 이어지면 새것끼리 맞춰집니다 · 서버 준비 SQL 을 한 번 더 실행해 주세요';
+var APP_BUILD='2026-08-16 23:40';
+var APP_BUILD_NOTE='비포&애프터가 회사마다 다른 담보 이름을 사전으로 잡아 값을 뽑고, 그 값을 표에서 고친 뒤 리포트를 만듭니다 — 못 찾은 칸은 0 이 아니라 비워 둡니다 · 내 소개가 아이디를 따라다닙니다 · 미끼 레이더를 파일 하나로 다른 PC 에 옮깁니다 · 서버 준비 SQL 을 한 번 더 실행해 주세요';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28949,6 +28949,227 @@ function insWho(T) {
 }
 
 /* ── 한 번에 ───────────────────────────────────────────────────── */
+
+/* ════════ 비포 & 애프터 — 읽고, 보여주고, 고치게 한다 ════════
+
+   여태 이 화면은 통합조회 PDF 한 가지 형식만 읽었다(insScan). 그런데
+   비포&애프터에 올리는 <b>신규 제안서</b>는 회사마다 서식이 다르다.
+   그래서 못 읽고, 못 읽은 채로 AI 에게 원문을 통째로 던졌다. AI 가
+   숫자를 잘못 보면 그대로 보고서에 실린다 — 고객 앞에서 틀린 금액을
+   말하게 되는 것이다.
+
+   세 가지로 바꾼다.
+
+     1. <b>읽어야 할 말을 정한다.</b> 회사마다 「뇌혈관질환진단비」 ·
+        「뇌혈관질환 진단급여금」 · 「뇌혈관질환(80% 이상)」 처럼 달리
+        쓴다. 같은 담보로 묶는 사전을 둔다.
+     2. <b>뽑아서 보여준다.</b> 못 찾은 칸은 비워 두고 「못 찾음」 이라고
+        적는다. 0 으로 채우면 없는 것과 구분이 안 된다.
+     3. <b>사람이 고친다.</b> 고친 표가 AI 에게 간다. 원문 대신 확인된
+        표를 주므로, AI 가 숫자를 다시 헤맬 일이 없다.
+
+   금액 단위는 만원으로 통일한다 — 1억 = 10,000만, 3,000만원 = 3,000만.  */
+var BABA={rows:null,at:'',src:{}};
+
+/* 회사마다 다르게 쓰는 말. 앞의 것이 대표 이름이다.
+   ※ 여기 없는 담보는 표에서 직접 줄을 더할 수 있다. */
+var BABA_TERMS=[
+ {k:'death',   n:'사망(주계약)',      syn:['일반사망','사망보험금','주계약 사망','사망시','재해사망']},
+ {k:'disab',   n:'후유장해',          syn:['후유장해','상해후유장해','재해장해','장해급여금']},
+ {k:'cancer',  n:'암 진단비(일반암)', syn:['일반암','암(유사암제외)','악성신생물','암진단비','암진단급여금'],
+  not:['유사','소액','제자리','경계성','피부','갑상선','전립선']},
+ {k:'cancer2', n:'유사암·소액암',     syn:['유사암','소액암','제자리암','경계성종양','기타피부암','갑상선암']},
+ {k:'target',  n:'표적항암치료비',    syn:['표적항암','표적항암약물','표적항암치료']},
+ {k:'antican', n:'항암방사선·약물',   syn:['항암방사선','항암약물','항암방사선약물치료']},
+ {k:'cantx',   n:'암주요치료비',      syn:['암주요치료비','주요치료비','하이클래스']},
+ {k:'brain',   n:'뇌혈관질환 진단비', syn:['뇌혈관질환','뇌혈관']},
+ {k:'stroke',  n:'뇌졸중 진단비',     syn:['뇌졸중']},
+ {k:'brainh',  n:'뇌출혈 진단비',     syn:['뇌출혈']},
+ {k:'braini',  n:'뇌경색 진단비',     syn:['뇌경색']},
+ {k:'heart',   n:'허혈성심장질환',    syn:['허혈성심장','허혈성 심장','심장질환진단']},
+ {k:'mi',      n:'급성심근경색',      syn:['급성심근경색','심근경색']},
+ {k:'surg',    n:'질병수술비',        syn:['질병수술','질병 수술비','수술비(질병)']},
+ {k:'surgA',   n:'상해수술비',        syn:['상해수술','재해수술']},
+ {k:'surgN',   n:'수술비(1~5종)',     syn:['1~5종','종수술','수술비 종','특정수술']},
+ {k:'inpD',    n:'질병입원일당',      syn:['질병입원일당','질병입원','입원일당(질병)']},
+ {k:'inpA',    n:'상해입원일당',      syn:['상해입원일당','상해입원','재해입원']},
+ {k:'icu',     n:'중환자실 입원',     syn:['중환자실']},
+ {k:'silson',  n:'실손의료비',        syn:['실손','실손의료비','급여의료비','비급여의료비','통원의료비']},
+ {k:'frac',    n:'골절·화상·깁스',    syn:['골절','화상','깁스','골절진단']},
+ {k:'er',      n:'응급실 내원비',     syn:['응급실','응급진료']},
+ {k:'teeth',   n:'치아·치과',         syn:['치아','치과','크라운','임플란트']},
+ {k:'care',    n:'간병·요양',         syn:['간병','장기요양','요양병원','간병인지원']},
+ {k:'drive',   n:'운전자 (벌금 등)',  syn:['벌금','변호사선임','형사합의','교통사고처리지원']},
+ {k:'liab',    n:'배상책임',          syn:['배상책임','일상생활배상','화재배상']},
+ {k:'fee',     n:'월 보험료',         syn:['월보험료','합계보험료','납입보험료','보험료 합계','월 납입']}
+];
+
+/* "3,000만원" · "1억" · "5000만" · "10,000,000원" · "3만원" → 만원 숫자 */
+function babaWon(t){
+  t=('' + (t||'')).replace(/[\s,]/g,'');
+  var m=t.match(/(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)만)?/);
+  if(m)return Math.round(parseFloat(m[1])*10000 + (m[2]?parseFloat(m[2]):0));
+  m=t.match(/(\d+(?:\.\d+)?)천만/); if(m)return Math.round(parseFloat(m[1])*1000);
+  m=t.match(/(\d+(?:\.\d+)?)만/);   if(m)return Math.round(parseFloat(m[1]));
+  m=t.match(/(\d{5,})원?/);         if(m)return Math.round(parseInt(m[1],10)/10000);
+  m=t.match(/(\d{1,4})원/);         if(m)return 0;      /* 몇 백원짜리는 금액이 아니다 */
+  return null;
+}
+/* 담보 이름 뒤에 붙은 첫 금액을 집는다. 표가 줄바꿈으로 흩어져도
+   이름에서 60자 안쪽이면 같은 줄로 본다. */
+function babaHit(T,syn,not){
+  var i,idx,seg,v,best=null,where='';
+  for(i=0;i<syn.length;i++){
+    var w=syn[i], from=0;
+    while((idx=T.indexOf(w,from))>=0){
+      from=idx+w.length;
+      /* 「유사암진단비」 안의 「암진단비」 를 일반암으로 집으면 안 된다.
+         바로 앞 여섯 글자에 걸러야 할 말이 있으면 그 자리는 건너뛴다. */
+      if(not&&not.length){
+        var head=T.slice(Math.max(0,idx-6),idx), skip=false, j;
+        for(j=0;j<not.length;j++)if(head.indexOf(not[j])>=0){skip=true;break;}
+        if(skip)continue;
+      }
+      seg=T.slice(idx, idx+90);
+      v=babaWon(seg);
+      if(v!==null&&v>0){ best=v; where=seg.slice(0,52); break; }
+    }
+    if(best!==null)break;
+  }
+  return best===null?null:{won:best,raw:where};
+}
+function babaScan(text){
+  var T=(''+(text||'')).replace(/\s+/g,' ');
+  /* 빈 문서만 걸러 낸다. 기준을 높게 잡으면 담보 몇 줄짜리 짧은
+     제안서를 통째로 안 읽고 넘어간다 — 그러면 표가 텅 빈 채로 뜬다. */
+  if(T.length<10)return {};
+  var out={};
+  BABA_TERMS.forEach(function(t){
+    var h=babaHit(T,t.syn,t.not);
+    if(h)out[t.k]={won:h.won,raw:h.raw};
+  });
+  return out;
+}
+
+/* ── 읽은 값 표 ─────────────────────────────────────────────── */
+function babaMan(v){ return (v===null||v===undefined||v==='')?'':Number(v).toLocaleString(); }
+function babaGridHtml(){
+  if(!BABA.rows)return '';
+  var body=BABA.rows.map(function(r,i){
+    var miss=(r.b===null&&r.a===null);
+    var cell=function(which){
+      var v=r[which];
+      return '<td style="padding:5px 6px;border-bottom:1px solid #F1F4F8">'+
+        '<input value="'+(v===null?'':babaMan(v))+'" placeholder="못 찾음" inputmode="numeric" '+
+        'oninput="babaSet('+i+',\''+which+'\',this.value)" '+
+        'style="width:100%;box-sizing:border-box;border:1px solid '+(v===null?'#F5C6C6':'#D8E0EC')+';'+
+        'border-radius:7px;padding:6px 8px;font-size:13px;text-align:right;font-family:inherit;'+
+        'background:'+(v===null?'#FFFBFB':'#fff')+'">'+
+        '</td>';
+    };
+    return '<tr'+(miss?' style="background:#FFFBFB"':'')+'>'+
+      '<td style="padding:5px 6px;border-bottom:1px solid #F1F4F8;font-size:12.5px;font-weight:700">'+
+        esc(r.n)+(r.own?' <span style="font-size:9.5px;color:#1D4ED8;background:#EFF6FF;border-radius:99px;padding:1px 6px">직접 추가</span>':'')+
+        (r.raw?('<div style="font-size:9.5px;color:var(--ink-5);font-weight:500;margin-top:2px">읽은 자리: '+esc(r.raw)+'</div>'):'')+'</td>'+
+      cell('b')+cell('a')+
+      '<td style="padding:5px 4px;border-bottom:1px solid #F1F4F8;text-align:center">'+
+        '<button type="button" onclick="babaDel('+i+')" style="border:1px solid #EDE9F6;background:#fff;'+
+        'color:#9AA2AD;border-radius:7px;width:24px;height:24px;cursor:pointer;line-height:1">−</button></td></tr>';
+  }).join('');
+  var miss=BABA.rows.filter(function(r){return r.b===null&&r.a===null;}).length;
+  return '<div class="card" style="margin-bottom:12px;border-color:#C7D2FE">'+
+    '<div class="card-hd" style="background:#F5F9FF"><div class="card-title"><span class="ci">📋</span>'+
+      '읽은 값 — <b>보내기 전에 고치세요</b></div>'+
+    '<div class="card-desc">회사마다 담보 이름을 다르게 씁니다. 앱이 사전으로 잡아 봤지만 '+
+      '<b>못 찾은 칸은 비워 두었습니다</b> — 0 으로 채우면 없는 것과 구분이 안 됩니다. '+
+      '여기 고친 값이 그대로 리포트에 들어갑니다. 단위는 <b>만원</b>입니다.</div></div>'+
+    '<div class="card-body">'+
+    (miss?('<div class="bj-warn" style="margin-bottom:10px">못 찾은 담보가 <b>'+miss+'개</b> 있습니다. '+
+      '자료에 없으면 그냥 두시고, 있는데 못 읽었으면 손으로 적어 주세요.</div>'):'')+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:460px">'+
+      '<thead><tr>'+
+      '<th style="text-align:left;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">담보</th>'+
+      '<th style="text-align:right;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">기존(만원)</th>'+
+      '<th style="text-align:right;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">신규(만원)</th>'+
+      '<th style="border-bottom:1px solid #E3E7EC"></th></tr></thead>'+
+      '<tbody>'+body+'</tbody></table></div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-ghost" onclick="babaAdd()">＋ 담보 줄 더하기</button>'+
+      '<button class="btn btn-ghost" onclick="babaClear()">읽은 값 지우기</button>'+
+      '<span style="font-size:11px;color:var(--ink-5)">'+esc(BABA.at)+' 읽음</span>'+
+    '</div></div></div>';
+}
+function babaPaint(){
+  var e=document.getElementById('babaGrid');
+  if(e)e.innerHTML=babaGridHtml();
+}
+function babaSet(i,which,v){
+  if(!BABA.rows||!BABA.rows[i])return;
+  var t=(''+v).replace(/[^\d.]/g,'');
+  BABA.rows[i][which]=t===''?null:Math.round(parseFloat(t)||0);
+}
+function babaDel(i){ if(BABA.rows){BABA.rows.splice(i,1);babaPaint();} }
+function babaAdd(){
+  var n=prompt('담보 이름을 적어 주세요 (예: 중입자치료비)','');
+  if(!n)return;
+  BABA.rows=BABA.rows||[];
+  BABA.rows.push({k:'x'+BABA.rows.length,n:n,b:null,a:null,own:true});
+  babaPaint();
+}
+function babaClear(){ BABA.rows=null;babaPaint();toast('읽은 값을 지웠습니다 — 원문 그대로 보냅니다'); }
+
+/* 첨부한 PDF 를 읽어 표를 만든다 */
+function babaRead(id){
+  var p=null;PDF_TOOLS.forEach(function(x){if(x.id===id)p=x;});if(!p)return;
+  var slots=pdfSlotsFor(p),jobs=[],hasAny=false;
+  slots.forEach(function(s){
+    var arr=PDFSTORE[id+':'+s.id]||[];
+    if(arr.length)hasAny=true;
+    arr.forEach(function(f){
+      jobs.push(extractPdfSmart(f).then(function(r){
+        return {slot:s.label,name:f.name,text:(r.text||'')};
+      },function(){return {slot:s.label,name:f.name,text:''};}));
+    });
+  });
+  if(!hasAny){toast('먼저 PDF 를 첨부해 주세요');return;}
+  var g=document.getElementById('babaGrid');
+  if(g)g.innerHTML='<div class="loading"><div class="spinner"></div>자료에서 담보와 금액을 찾는 중…</div>';
+  Promise.all(jobs).then(function(parts){
+    var bt=parts.filter(function(x){return /기존/.test(x.slot);}).map(function(x){return x.text;}).join(' ');
+    var at=parts.filter(function(x){return !/기존/.test(x.slot);}).map(function(x){return x.text;}).join(' ');
+    var B=babaScan(bt),A=babaScan(at);
+    BABA.rows=BABA_TERMS.map(function(t){
+      var b=B[t.k]||null,a=A[t.k]||null;
+      return {k:t.k,n:t.n,b:b?b.won:null,a:a?a.won:null,raw:(b&&b.raw)||(a&&a.raw)||''};
+    });
+    BABA.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    babaPaint();
+    var got=BABA.rows.filter(function(r){return r.b!==null||r.a!==null;}).length;
+    toast(got+'개 담보를 찾았습니다 — 표에서 확인·수정한 뒤 만들어 주세요',5200);
+  },function(){
+    if(g)g.innerHTML='';
+    toast('자료를 읽지 못했습니다');
+  });
+}
+/* 표를 AI 에게 줄 글로 */
+function babaBrief(){
+  if(!BABA.rows||!BABA.rows.length)return '';
+  var used=BABA.rows.filter(function(r){return r.b!==null||r.a!==null;});
+  if(!used.length)return '';
+  var L=['[설계사가 확인한 담보 표 — 단위 만원]',
+         '아래 값은 사람이 자료에서 뽑아 눈으로 확인한 것이다.',
+         '원문과 다르게 보이더라도 <b>이 표의 숫자를 그대로 쓴다.</b>',
+         '표에 없는 담보만 원문에서 찾아 보탠다. 빈 칸은 "확인 필요" 로 적는다.',''];
+  L.push('| 담보 | 기존 | 신규 |');
+  L.push('|---|---|---|');
+  used.forEach(function(r){
+    L.push('| '+r.n+' | '+(r.b===null?'확인 필요':r.b)+' | '+(r.a===null?'확인 필요':r.a)+' |');
+  });
+  var miss=BABA.rows.length-used.length;
+  if(miss)L.push('\n(표에 없는 '+miss+'개 담보는 자료에서 못 찾았거나 해당 없음이다. 지어내지 말 것.)');
+  return L.join('\n');
+}
+
 function insScan(text) {
   var T = ('' + (text || '')).replace(/\s+/g, ' ');
   if (T.length < 50) return null;
@@ -29687,7 +29908,9 @@ function renderPdfTool(p){
     h+='<div class="fld span2" style="margin-top:13px"><label>직접 입력 (추가 코멘트)</label><textarea data-pcomment="'+p.id+'" placeholder="예: 실비 갱신이 가파르니 4세대 전환도 가볍게 언급할 것"></textarea></div>';}
   if(p.sample)h+='<div class="fld span2" style="margin-top:13px"><label>'+esc(p.sample.label)+'</label><textarea data-psample="'+p.id+'" placeholder="'+esc(p.sample.ph||'')+'"></textarea></div>';
   var engLbl=(getProvider()==='gemini'&&geminiReady())?('Gemini · '+esc(getGeminiModel())):('Claude · '+esc(getModel()));
-  h+='<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="runPdf(\''+p.id+'\')">📄 '+esc(p.cta||'AI 분석')+'</button><span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
+  if(p.id==='baba')h+='<div id="babaGrid">'+(typeof babaGridHtml==='function'?babaGridHtml():'')+'</div>';
+  h+='<div class="btn-row" style="margin-top:14px">'+
+    (p.id==='baba'?('<button class="btn btn-ghost" onclick="babaRead(\''+p.id+'\')">📋 먼저 읽어 보기 · 값 고치기</button>'):'')+'<button class="btn btn-primary" onclick="runPdf(\''+p.id+'\')">📄 '+esc(p.cta||'AI 분석')+'</button><span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
   h+='<div class="result" id="pres_'+p.id+'"></div></div></div>';
   return h;
 }
@@ -29743,6 +29966,12 @@ function runPdf(id){
       if(typeof insCssMount==='function')insCssMount();
       spec={system:spec.system,user:insBrief(scan)+'\n\n'+spec.user,max:spec.max};
     }
+    /* 사람이 눈으로 확인한 표가 있으면 <b>맨 앞에</b> 둔다.
+       AI 가 원문에서 숫자를 다시 헤매다 틀리는 것을 막는다. */
+    try{
+      var bb=(typeof babaBrief==='function')?babaBrief():'';
+      if(bb)spec={system:spec.system,user:bb+'\n\n'+spec.user,max:spec.max};
+    }catch(e){}
     res._parts=parts;res._opts=opts;res._spec=spec;
     if(p.deck){
       if(typeof bjCssMount==='function')bjCssMount();
