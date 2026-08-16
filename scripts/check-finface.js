@@ -255,7 +255,9 @@ const FIN = 'app/재무설계/상담자료.html';
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
+
   await browser.close(); srv.close();
+
   console.log('\n──────────────────────────────');
   console.log(fail === 0
     ? '재무설계 첫 화면 점검 통과 — ' + pass + '가지 다 맞습니다.'
