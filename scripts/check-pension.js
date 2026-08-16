@@ -139,6 +139,48 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
+
+  /* ── [8] 연금 엔진 전수 검사 ─────────────────────────────────
+     돈이 걸린 숫자라 화면 몇 개 눌러 보는 것으로는 부족하다. 상품 × 성별 ×
+     나이 × 개시나이 × 납입기간 × 월납을 전부 돌려 음수·NaN 이 하나라도
+     나오는지 본다.
+
+     실제로 이런 게 있었다 — 납입기간이 보험기간보다 길면 거치기간(D)이
+     음수가 되어 거치이자를 빼 버렸다. 40세가 55세 개시로 20년납을 넣으면
+     거치이자가 -2,880만으로 찍혔고, 그 숫자가 그대로 고객 앞 화면에 갔다.
+     13,440 조합 중 3,432 개(26%)가 그랬다.                              */
+  console.log('\n[8] 연금 엔진 — 모든 조합에서 숫자가 성립하는가');
+  {
+    const src = fs.readFileSync(path.join(ROOT, 'app/pension-engine.js'), 'utf8');
+    const w = {}; new Function('window', src)(w);
+    const P = w.PENSION;
+    is(!!(P && P.products && P.products.length), '연금 엔진을 읽었다 (' +
+      ((P && P.products) ? P.products.length : 0) + '상품)');
+    let n = 0, neg = 0, nan = 0, boom = 0, first = '';
+    for (const p0 of P.products)
+      for (const sex of ['남', '여'])
+        for (const age of [25, 30, 35, 40, 45, 50, 55])
+          for (const start of [55, 60, 65, 70])
+            for (const pay of [5, 7, 10, 12, 15, 20])
+              for (const monthly of [30, 50, 100, 200]) {
+                n++;
+                let r;
+                try { r = P.calc(p0, { sex, age, start, pay, monthly }); }
+                catch (e) { boom++; if (!first) first = '터짐 ' + [p0.name, sex, age, start, pay, monthly]; continue; }
+                const j = JSON.stringify(r);
+                if (/NaN|Infinity/.test(j)) { nan++; if (!first) first = 'NaN ' + [p0.name, sex, age, start, pay, monthly]; continue; }
+                /* D(거치기간)는 음수가 나올 수 있는 값이라 뺀다 — 나머지 돈 항목만 본다 */
+                const bad = Object.entries(r).filter(([k, v]) => typeof v === 'number' && v < 0 && k !== 'D');
+                if (bad.length) { neg++; if (!first) first = '음수 ' + [p0.name, sex, age, start, pay, monthly] + ' :: ' + bad.map(x => x[0] + '=' + Math.round(x[1])).join(','); }
+              }
+    is(boom === 0, n + '가지 조합에서 계산이 터지지 않는다' + (boom ? ' — ' + boom + '건 · ' + first : ''));
+    is(nan === 0, '값이 NaN·무한대로 새지 않는다' + (nan ? ' — ' + nan + '건 · ' + first : ''));
+    is(neg === 0, '돈 항목에 음수가 없다' + (neg ? ' — ' + neg + '건 · ' + first : ''));
+
+    /* 납입기간 > 보험기간 조합은 애초에 고를 수 없어야 한다 */
+    const shown = P.eligible(40, 55, 20);
+    is(shown.length === 0, '납입기간이 보험기간보다 길면 고를 수 있는 상품이 없다 (40세·55세개시·20년납 → ' + shown.length + '개)');
+  }
   console.log('\n──────────────────────────────');
   console.log(fail === 0
     ? '연금 점검 통과 — ' + pass + '가지 다 맞습니다.'
