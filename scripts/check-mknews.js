@@ -330,20 +330,29 @@ async function pressAndRead(fr) {
   is(/서버로 올라가지 않습니다/.test(lib.hint), '  약관이 서버로 안 간다는 것도 밝혀 둔다');
   is(lib.multi, '  PDF 를 여러 개 한꺼번에 받는 칸이다');
 
-  /* 화면 전체를 훑는다 — 열 세 칸 어디에도 없어야 한다 */
+  /* 화면 전체를 훑는다 — 열세 칸에 <b>떠 있는 판까지</b> 다.
+     앞서는 section.page 만 봐서, 「📂 자료 폴더」 처럼 눌러야 뜨는
+     판에 남은 한 군데를 놓쳤다. 이제 그것들도 열어 놓고 훑는다. */
+  await f3.evaluate(() => {
+    try{ if(typeof mkdPanel==='function'&&!document.getElementById('mkdBox'))mkdPanel(); }catch(e){}
+    try{ if(typeof mkMovePanel==='function'&&!document.getElementById('mkMoveBox'))mkMovePanel(); }catch(e){}
+    try{ if(typeof tvPanel==='function'&&!document.getElementById('tvBox'))tvPanel(); }catch(e){}
+  });
+  await f3.waitForTimeout(500);
   const sweep = await f3.evaluate(() => {
     const bad = [];
-    document.querySelectorAll('section.page').forEach(p => {
+    document.querySelectorAll('section.page, #mkdBox, #mkMoveBox, #tvBox, #mknBox').forEach(p => {
       /* 「이 단추가 시작.bat 을 대신합니다」 는 알려 주려고 적은 것이다 */
       const note = p.querySelector('#noBatNote');
       const t = (p.textContent || '').replace(note ? note.textContent : '\u0000', '');
       const m = t.match(/[가-힣A-Za-z_]*\.bat/g);
-      if (m) bad.push(p.id + ': ' + [...new Set(m)].join(','));
+      if (m) bad.push((p.id || p.className) + ': ' + [...new Set(m)].join(','));
     });
     return { bad, left: typeof batLeft === 'function' ? batLeft() : -1 };
   });
   is(sweep.bad.length === 0,
-     '  열세 칸 어디에도 bat 이 안 적혀 있다' + (sweep.bad.length ? ' — 남음: ' + sweep.bad.join(' / ') : ''));
+     '  열세 칸에도, 눌러야 뜨는 판에도 bat 이 안 적혀 있다' +
+     (sweep.bad.length ? ' — 남음: ' + sweep.bad.join(' / ') : ''));
   is(sweep.left === 0, '  안내 상자·표에도 안 남았다 — ' + sweep.left + '군데');
 
   /* 「데이터 불러오기」 단추는 감싸기 전 함수를 붙잡고 있었다 —
