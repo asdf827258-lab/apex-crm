@@ -111,8 +111,12 @@
 .ta-sc>summary{cursor:pointer;list-style:none;padding:11px 14px;font-size:13.5px;font-weight:700;
   color:#1D4ED8;display:flex;align-items:center;gap:7px}
 .ta-sc>summary::-webkit-details-marker{display:none}
-.ta-sc>summary::after{content:'▾';margin-left:auto;font-size:11px;opacity:.6}
-.ta-sc[open]>summary::after{content:'▴'}
+.ta-sc>summary em{font-style:normal;font-weight:600;color:#64748B;font-size:12.5px}
+.ta-tg{margin-left:auto;font-size:11.5px;font-weight:700;color:#1D4ED8;background:#DBEAFE;
+  border:1px solid #BFDBFE;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.ta-sc:not([open])>summary{background:#EFF6FF}
+.ta-sc:not([open])>summary .ta-tg::before{content:'▾ '}
+.ta-sc[open]>summary .ta-tg::before{content:'▴ '}
 .ta-sc>summary:hover{background:#EFF6FF}
 .ta-in{padding:2px 14px 14px;border-top:1px solid var(--line)}
 .ta-h{font-size:11.5px;font-weight:800;color:#64748B;letter-spacing:.02em;margin:13px 0 7px}
@@ -155,7 +159,7 @@
 
 <div class="app hidden" id="app">
   <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="mark">A</div><div><strong>APEX <span style="color:#54a3ff">YUN PRO</span></strong><small>재무설계 · DB 통합 워크스페이스</small></div></div>
+    <div class="brand"><div class="mark">A</div><div><strong>APEX <span style="color:#54a3ff">YUN PRO</span></strong><small>재무설계 · DB 통합 워크스페이스</small><small style="color:#54a3ff;font-weight:700" title="이 숫자가 안 바뀌면 옛 판을 보고 계신 겁니다">판 CRM-2026-08-15 13:10</small></div></div>
     <nav class="nav">
       <div class="grp">시작</div>
       <button class="active" data-page="dashboard" onclick="goPage('dashboard',this)">📊 통합 대시보드</button>
@@ -296,12 +300,12 @@
 </div></div>
 
 <div class="modal" id="callModal"><div class="modal-box">
-  <div class="modal-head"><h3>TA 결과 기록</h3><button class="close" onclick="closeModal('callModal')">×</button></div>
+  <div class="modal-head"><h3>TA 결과 기록<small style="display:block;font-size:11px;font-weight:600;color:#94A3B8;margin-top:2px">판 CRM-2026-08-15 13:10</small></h3><button class="close" onclick="closeModal('callModal')">×</button></div>
   <div class="modal-body"><input type="hidden" id="callDbId"><div class="notice" id="callSummary" style="margin-bottom:15px"></div>
     <!-- TA 스크립트 — 전화를 걸기 전에 여기서 한 줄 고르고 건다.
          결과 칸을 바꾸면 그 결과에 맞는 다음 말이 같이 열린다. -->
-    <details class="ta-sc" id="taScript">
-      <summary>📞 TA 스크립트 — 뭐라고 열지 · 결과별 다음 말</summary>
+    <details class="ta-sc" id="taScript" open ontoggle="taRemember()">
+      <summary>📞 TA 스크립트<em>뭐라고 열지 · 결과별 다음 말</em><span class="ta-tg">접기</span></summary>
       <div class="ta-in" id="taScriptBody"></div>
     </details>
     <div class="formgrid">
@@ -945,7 +949,7 @@ async function removeDb(id){
 }
 function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){
-  try{ taPaint(); }catch(e){}
+  try{ taPaint(); taRestore(); }catch(e){}
 $("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
 /* ── 통화 이력 — 고칠 수 있어야 한다 ────────────────────────────
    지금까지 한 번 남긴 기록은 손댈 수 없었다. 그런데 저장이 오류로
@@ -1421,6 +1425,16 @@ function taCopy(i, el){
            a.select(); document.execCommand('copy'); a.remove(); }
     if(el){ var o=el.textContent; el.textContent='복사됨'; setTimeout(function(){ el.textContent=o; }, 1200); }
   }catch(e){ toast && toast('복사가 안 됩니다. 손으로 긁어 복사해 주세요.'); }
+}
+/* 펴고 접은 것을 기억한다. 처음 여는 사람에게는 펴서 보여 준다 —
+   접어 두면 파란 줄 하나로만 보여서 눌러야 펴지는 줄 모른다. */
+function taRemember(){
+  try{ localStorage.setItem('apexTaOpen', $("taScript").open ? '1' : '0'); }catch(e){}
+}
+function taRestore(){
+  var d=$("taScript"); if(!d) return;
+  var v=null; try{ v=localStorage.getItem('apexTaOpen'); }catch(e){}
+  d.open = (v===null) ? true : (v==='1');
 }
 function taPaint(){
   var box = $("taScriptBody"); if(!box) return;

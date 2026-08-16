@@ -146,6 +146,31 @@ function balanced(src, from) {          /* from 위치의 [ 부터 짝 맞는 ] 
              link: /AI 상담 어시스턴트|AI 화법/.test(b.innerText), text: b.innerText };
   });
   is(panel.openers === 9, '여는 말 여섯 + 결과별 셋 = 아홉 줄이 나온다 — 지금 ' + panel.openers);
+
+  /* 처음 여는 사람에게는 펴서 보여 준다. 접어 두면 파란 줄 하나로만 보여서
+     눌러야 펴지는 줄 모른다 — 실제로 「안 보인다」는 말을 들었다. */
+  const shown = await crmPage.evaluate(() => {
+    try { localStorage.removeItem('apexTaOpen'); } catch (e) {}
+    if (typeof dbs !== 'undefined') dbs.push({ id: 'zz1', customer_name: '홍길동', assigned_to: 'u1', region: '서울' });
+    if (typeof profiles !== 'undefined') profiles.push({ id: 'u1', name: '점검' });
+    openCall('zz1');
+    const d = document.getElementById('taScript');
+    return { open: d.open, h: d.getBoundingClientRect().height,
+             tg: (d.querySelector('.ta-tg') || {}).textContent || '' };
+  });
+  is(shown.open, '처음 여는 사람에게는 펴진 채로 나온다');
+  is(shown.h > 300, '한 줄이 아니라 내용이 실제로 보인다 — 높이 ' + Math.round(shown.h) + 'px');
+  is(/접기|펴기/.test(shown.tg), '눌러서 접었다 폈다 하는 것임이 단추로 보인다 — 「' + shown.tg + '」');
+
+  const memo = await crmPage.evaluate(async () => {
+    const d = document.getElementById('taScript');
+    d.open = false; d.dispatchEvent(new Event('toggle'));
+    await new Promise(r => setTimeout(r, 60));
+    closeModal('callModal'); openCall('zz1');
+    return document.getElementById('taScript').open;
+  });
+  is(memo === false, '접어 두면 다음에 열 때도 접힌 채로 기억한다');
+  await crmPage.evaluate(() => { try { localStorage.removeItem('apexTaOpen'); } catch (e) {} });
   is(panel.copy === 6, '여는 말마다 복사 단추가 있다 — 지금 ' + panel.copy);
   is(panel.link, '더 필요하면 앱의 어느 칸으로 가라고 적어 준다');
 
