@@ -843,6 +843,11 @@ body.crm-mode #crmScreen{display:block;}
 body.sangdam-mode .app{display:none;}
 body.sangdam-mode #sangdamScreen{display:block;}
 #sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 미끼 레이더 전용 화면 (상담자료와 동일 패턴) */
+#mikkiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.mikki-mode .app{display:none;}
+body.mikki-mode #mikkiScreen{display:block;}
+#mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
 #fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.fptalk-mode .app{display:none;}
@@ -979,6 +984,16 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
 </div>
 
 <!-- 상담자료 전용 화면 (고객 상담 프레젠테이션 · CRM과 동일 화면전환) -->
+<!-- 미끼 레이더 전용 화면 -->
+<div id="mikkiScreen">
+  <iframe id="mikkiFrame" class="fin-frame" title="미끼 레이더"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <div id="sangdamScreen">
   <iframe id="sangdamFrame" class="fin-frame" title="보장분석 상담자료"></iframe>
   <div class="fin-float">
@@ -9299,6 +9314,9 @@ function thCss(){
    ak 로 판정한다. 보이는 자리만 바뀌고 열려 있던 문은 그대로다.
    대표가 설정에서 저장해 둔 접근 설정(tool_access)도 그대로 산다.  */
 var TABS=[
+ {group:'보험전략실',role:'hq',items:[
+   {id:'mikki',icon:'🎣',title:'미끼 레이더',cnt:''}
+ ]},
  {group:'하루 시작',items:[
    {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
    {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
@@ -9440,7 +9458,7 @@ var TAB_META={
    카테고리로 크게 묶고 평소엔 접어 둔다. 대신 접힌 채로도 무엇인지 한눈에
    보여야 하므로, 카테고리 글씨를 키우고 칸마다 다른 파스텔 색을 입힌다. */
 var NAVG_KEY='apex_nav_open';
-var NAVG_ICON={'하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
+var NAVG_ICON={'보험전략실':'🎯','하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
  '계약·청구':'📁','자료 조회':'🔎','법인 컨설팅':'🏭','콘텐츠 제작':'✍️',
  '광고·유입':'📣','조직 관리':'🏢','교육 자료':'🎓','시스템':'⚙️','투자·경제':'📈'};
 /* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
@@ -9580,6 +9598,14 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='mikki'){
+    mountMikki();
+    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    document.body.classList.add('mikki-mode');
+    navMark('mikki');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='sangdam'){
     mountSangdam();
     document.body.classList.remove('finance-mode','crm-mode');
@@ -9593,6 +9619,7 @@ function go(tab){
   document.body.classList.remove('sangdam-mode');
   document.body.classList.remove('fptalk-mode');
   document.body.classList.remove('fpdeck-mode');
+  document.body.classList.remove('mikki-mode');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   navMark(tab);
@@ -10135,6 +10162,13 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
+   약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
+var MIKKI_URL='상담자료/미끼레이더/index.html';
+function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
+function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
+function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitMikki(){go(lastTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.
@@ -12992,6 +13026,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
+  else if(document.body.classList.contains('mikki-mode'))exitMikki();
   else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
