@@ -192,6 +192,28 @@ async function pressAndRead(fr) {
   is(/앱 안에서 열어 주세요/.test(msg), '  막히면 어떻게 하면 되는지 말한다 — ' + msg.slice(0, 40));
   is(soloErrs.length === 0, '  혼자 열어도 안 터진다' + (soloErrs.length ? ' — ' + soloErrs[0] : ''));
 
+  console.log('\n[7] 사용 안내가 「안 된다」 고 남아 있지 않다');
+  /* 되는 일을 안 된다고 적어 두면, 사장님은 되는 줄 모르고 안 쓰신다 */
+  const gp = await ctx.newPage();
+  const gErrs = [];
+  gp.on('pageerror', e => gErrs.push(String(e).slice(0, 140)));
+  await gp.goto(base + '/app/상담자료/미끼레이더/사용안내.html', { waitUntil: 'load' });
+  await gp.waitForFunction(() => !!document.querySelector('.wrap.__mkn, .wrap'), null, { timeout: 15000 });
+  await gp.waitForFunction(() => /달라진 것/.test(document.body.innerText), null, { timeout: 15000 });
+  const g = await gp.evaluate(() => {
+    const row = [...document.querySelectorAll('tr')].find(t => /태블릿에서 뉴스 수집/.test(t.textContent));
+    return { first: (document.querySelector('.card h2') || {}).textContent || '',
+             mark: row ? (row.querySelector('td') || {}).textContent : '',
+             row: row ? row.textContent.replace(/\s+/g, ' ') : '',
+             python: /파이썬이 필요합니다/.test(document.body.innerText),
+             onlyNews: /뉴스만입니다/.test(document.body.innerText) };
+  });
+  is(/달라진 것/.test(g.first), '  맨 위에 달라진 것을 알린다 — ' + g.first);
+  is(g.mark === '✓' && !g.python, '  「✕ 태블릿에서 뉴스 수집」 이 ✓ 로 바뀌었다');
+  is(/뉴스 모아 오기/.test(g.row), '  어디를 누르면 되는지 적어 뒀다');
+  is(g.onlyNews, '  뉴스만이고 약관은 직접 올려야 한다고 안내문에도 적혀 있다');
+  is(gErrs.length === 0, '  안내문이 안 터진다' + (gErrs.length ? ' — ' + gErrs[0] : ''));
+
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close();
