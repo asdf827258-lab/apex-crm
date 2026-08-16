@@ -5099,7 +5099,7 @@ var RD_MAN=[
   u:'https://www.gov.kr',risk:1},
  {k:'nf_env',t:'Netlify 환경변수 — 서버가 매일 새벽 일하게 하는 열쇠',
   w:'이게 없으면 매일 새벽 5시 서버 보고가 아무것도 안 만들어집니다. 지금 그 상태입니다.',
-  h:'ANTHROPIC_API_KEY 와 SUPABASE_SERVICE_ROLE_KEY 두 개를 넣으세요. 넣은 뒤 윤시스쿨 → 매일 취합에서 「🌙 서버 야간 근무 점검」 을 누르면 바로 확인됩니다. 열쇠는 대화창에 붙이지 말고 그 화면에서 직접 넣으세요.',
+  h:'아래 단추를 누르면 다섯 걸음을 순서대로 안내합니다 — 화면 열기 · 열쇠 이름 복사 · 값 가져올 곳 열기 · 다시 배포 · 됐는지 확인. 열쇠 값은 그 화면에서 직접 넣으시고 대화창에는 붙이지 마세요.',
   u:'__NF_ENV__'},
  {k:'sb_backup',t:'Supabase 자동 백업 확인',
   w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽 자동 백업입니다.',
@@ -5281,7 +5281,7 @@ function rdManHtml(){
         (on?('<span class="rd-d">'+osEsc(D[m.k])+' 완료</span>'):'')+'</div>'+
       (on?'':('<div class="rd-mw">'+osEsc(m.w)+'</div><div class="rd-mh">'+osEsc(m.h)+'</div>'+
         (m.u?(m.u==='__NF_ENV__'
-              ?('<a class="rd-go" href="'+osEsc(nfEnvUrl())+'" target="_blank" rel="noopener">환경변수 화면 열기 ↗</a>')
+              ?('<button type="button" class="rd-go" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>')
               :('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>')):'')+
         (m.go?('<button type="button" class="rd-go" onclick="go(\''+m.go+'\')">바로 가기 →</button>'):'')))+
       '</div></div>';
@@ -9034,6 +9034,8 @@ function nwRun(then){
       NW.msg=(j&&(j.reason||j.message))||(NW.ok?'서버가 오늘 것을 만들었습니다.':'서버가 답을 주지 않았습니다.');
       NW.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
       try{dgPaint();}catch(e){}
+      /* 한 번 됐으면 홈 배너를 접는다. 안 되면 다시 띄운다. */
+      try{nfKeyMark(NW.ok);}catch(e){}
       if(typeof then==='function')then();
       if(NW.ok){
         setTimeout(function(){try{dgLoad(true);}catch(e){}
@@ -9063,7 +9065,7 @@ function nwBoxHtml(){
     (key?('<br><br>아래 둘을 넣으시면 그날부터 새벽 5시에 저절로 돕니다.'+
       '<br>· <code>SUPABASE_SERVICE_ROLE_KEY</code><br>· <code>ANTHROPIC_API_KEY</code>'+
       '<div class="btn-row" style="margin-top:10px">'+
-        '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+        '<button type="button" class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>'+
         '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
         '<button type="button" class="btn btn-ghost" onclick="nwRun()">넣었습니다 · 다시 점검</button>'+
       '</div>'+
@@ -9958,6 +9960,194 @@ function nfOpenEnv(){
   try{if(typeof copyText==='function'){copyText(u);toast('팝업이 막혀 주소를 복사했습니다 — 붙여넣어 여세요');return;}}catch(e){}
   try{location.href=u;}catch(e){}
 }
+
+/* ════════ 서버 열쇠 넣기 — 한 장에서 끝낸다 ════════
+   전에는 「Netlify 환경변수 화면 열기」 단추 하나였다. 눌러서 들어가면
+   빈 화면이 나오고, 무엇을 어디에 넣어야 하는지는 작은 글씨 설명에만
+   있었다. 그래서 「안 보인다」 가 됐다.
+
+   여기서는 다섯 걸음을 한 장에 세우고, 걸음마다 <b>누를 것 하나</b>만
+   둔다. 열쇠 이름은 눌러서 복사하고, 값은 어디서 가져오는지 그 화면을
+   바로 열어 준다. 마지막에 실제로 서버를 불러 됐는지 확인한다.
+
+   열쇠 값 자체는 이 앱이 만지지 않는다 — service_role 은 DB 전체를
+   여는 열쇠라, 앱을 거치면 브라우저 기록에 남는다. Netlify 화면에
+   직접 넣게 하고, 우리는 이름만 복사해 준다.                        */
+var NF_LINKS={
+  env:  function(){ return 'https://app.netlify.com/projects/'+nfSite()+'/configuration/env'; },
+  dep:  function(){ return 'https://app.netlify.com/projects/'+nfSite()+'/deploys'; },
+  ant:  'https://console.anthropic.com/settings/keys',
+  sb:   'https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/settings/api'
+};
+function nfCopyKey(name,el){
+  try{
+    if(typeof copyText==='function')copyText(name);
+    else if(navigator.clipboard)navigator.clipboard.writeText(name);
+    if(el){var o=el.textContent;el.textContent='복사됨 ✓';setTimeout(function(){el.textContent=o;},1400);}
+    toast('「'+name+'」 를 복사했습니다 — Netlify 의 Key 칸에 붙여넣으세요',4200);
+  }catch(e){ toast('복사가 안 됩니다. 손으로 적어 주세요: '+name,7000); }
+}
+function nfGuideClose(){
+  var w=document.getElementById('nfGuide');
+  if(w&&w.parentNode)w.parentNode.removeChild(w);
+  document.body.style.overflow='';
+  document.removeEventListener('keydown',nfGuideEsc);
+}
+function nfGuideEsc(e){ if(e&&e.key==='Escape')nfGuideClose(); }
+function nfGuideCheck(){
+  nwRun(function(){ nfGuidePaintState(); });
+  nfGuidePaintState();
+}
+function nfGuidePaintState(){
+  var b=document.getElementById('nfState'); if(!b)return;
+  if(NW.busy){ b.className='nfg-st busy'; b.innerHTML='<b>서버에 물어보는 중…</b>'; return; }
+  if(NW.ok===null){ b.className='nfg-st'; b.innerHTML='아래 <b>「지금 확인」</b> 을 누르면 지금 되는지 알려 드립니다.'; return; }
+  if(NW.ok){ b.className='nfg-st ok';
+    b.innerHTML='<b>✅ 됩니다 — 서버가 오늘 것을 만들었습니다.</b><br>'+
+      '<span style="font-weight:600">이제 매일 새벽에 알아서 돕니다. 이 화면은 닫으셔도 됩니다.</span>'; return; }
+  b.className='nfg-st no';
+  b.innerHTML='<b>❌ 아직 안 됩니다.</b><br><span style="font-weight:600">'+osEsc(NW.msg||'')+'</span>';
+}
+function nfGuide(){
+  if(document.getElementById('nfGuide')){ nfGuideClose(); return; }
+  var css=document.getElementById('nfgCss');
+  if(!css){
+    css=document.createElement('style'); css.id='nfgCss';
+    css.textContent=
+      '#nfGuide{position:fixed;inset:0;z-index:9600;background:#0B1220;overflow-y:auto;'+
+        '-webkit-overflow-scrolling:touch}'+
+      '#nfGuide .nfg-in{max-width:640px;margin:0 auto;padding:18px 16px 60px}'+
+      '#nfGuide .nfg-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}'+
+      '#nfGuide .nfg-h{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.02em}'+
+      '#nfGuide .nfg-x{margin-left:auto;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.08);'+
+        'color:#fff;border-radius:999px;padding:7px 15px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}'+
+      '#nfGuide .nfg-sub{font-size:13px;color:#93A4BE;line-height:1.7;margin-bottom:14px}'+
+      '#nfGuide .nfg-st{border-radius:13px;padding:13px 15px;font-size:13.5px;line-height:1.65;margin-bottom:16px;'+
+        'background:rgba(255,255,255,.07);color:#CBD5E1;border:1px solid rgba(255,255,255,.13)}'+
+      '#nfGuide .nfg-st.ok{background:#052E1B;border-color:#14532D;color:#86EFAC}'+
+      '#nfGuide .nfg-st.no{background:#3B0A0A;border-color:#7F1D1D;color:#FCA5A5}'+
+      '#nfGuide .nfg-st.busy{background:#1E293B;border-color:#334155;color:#CBD5E1}'+
+      '#nfGuide .nfg-c{background:#131C2E;border:1px solid #243149;border-radius:16px;padding:15px 16px;margin-bottom:11px}'+
+      '#nfGuide .nfg-cn{display:flex;align-items:center;gap:9px;margin-bottom:8px}'+
+      '#nfGuide .nfg-cb{flex:none;width:26px;height:26px;border-radius:8px;background:#1A56DB;color:#fff;'+
+        'font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}'+
+      '#nfGuide .nfg-ct{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em}'+
+      '#nfGuide .nfg-cd{font-size:12.5px;color:#93A4BE;line-height:1.7;margin-bottom:10px}'+
+      '#nfGuide .nfg-cd b{color:#E2E8F0}'+
+      '#nfGuide .go{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;'+
+        'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;border:0;border-radius:12px;'+
+        'padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:-.01em}'+
+      '#nfGuide .go.g2{background:linear-gradient(135deg,#059669,#047857)}'+
+      '#nfGuide .kv{background:#0B1220;border:1px solid #243149;border-radius:11px;padding:11px 12px;margin-bottom:9px}'+
+      '#nfGuide .kv-l{font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:.08em;margin-bottom:4px}'+
+      '#nfGuide .kv-r{display:flex;gap:8px;align-items:center}'+
+      '#nfGuide .kv-c{flex:1;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;'+
+        'color:#7DD3FC;font-weight:700;word-break:break-all}'+
+      '#nfGuide .kv-b{flex:none;border:1px solid #2C6BED;background:#12233F;color:#93C5FD;border-radius:8px;'+
+        'padding:6px 11px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}'+
+      '#nfGuide .warn{background:#3B2708;border:1px solid #7C4A03;border-radius:11px;padding:11px 12px;'+
+        'font-size:12px;color:#FCD34D;line-height:1.7;margin-top:9px}'+
+      '@media(max-width:420px){#nfGuide .nfg-h{font-size:17px}#nfGuide .go{font-size:14px;padding:13px}}';
+    document.head.appendChild(css);
+  }
+  function step(n,t,d,btn,extra){
+    return '<div class="nfg-c"><div class="nfg-cn"><div class="nfg-cb">'+n+'</div><div class="nfg-ct">'+t+'</div></div>'+
+      '<div class="nfg-cd">'+d+'</div>'+(extra||'')+btn+'</div>';
+  }
+  function link(u,txt,cls){
+    return '<a class="go'+(cls?' '+cls:'')+'" href="'+u+'" target="_blank" rel="noopener">'+txt+'</a>';
+  }
+  function keyRow(name){
+    return '<div class="kv"><div class="kv-l">KEY — 이 이름 그대로</div><div class="kv-r">'+
+      '<div class="kv-c">'+name+'</div>'+
+      '<button type="button" class="kv-b" onclick="nfCopyKey(\''+name+'\',this)">복사</button></div></div>';
+  }
+
+  var w=document.createElement('div'); w.id='nfGuide';
+  w.innerHTML='<div class="nfg-in">'+
+    '<div class="nfg-top"><div class="nfg-h">🔑 서버 열쇠 넣기</div>'+
+      '<button type="button" class="nfg-x" onclick="nfGuideClose()">닫기 ✕</button></div>'+
+    '<div class="nfg-sub">밤에 서버가 혼자 일하려면 열쇠 두 개가 필요합니다. '+
+      '<b style="color:#E2E8F0">아래 순서대로 단추만 누르시면 됩니다.</b> 3분이면 끝납니다.</div>'+
+    '<div class="nfg-st" id="nfState"></div>'+
+
+    step(1,'Netlify 환경변수 화면 열기',
+      '새 창이 뜹니다. 그 화면에서 <b>「Add a variable」</b> 단추를 찾아 누르세요. '+
+      '(이미 몇 개 들어 있어도 괜찮습니다 — 없는 것만 더하면 됩니다.)',
+      link(NF_LINKS.env(),'환경변수 화면 열기 ↗')) +
+
+    step(2,'첫 번째 열쇠 — 글 쓰는 열쇠',
+      'Netlify 의 <b>Key</b> 칸에 아래 이름을 붙여넣고, <b>Value</b> 칸에는 앤트로픽에서 발급한 '+
+      '<b>sk-ant-</b> 로 시작하는 글자를 붙여넣습니다.',
+      link(NF_LINKS.ant,'앤트로픽 콘솔 열기 (키 발급) ↗'),
+      keyRow('ANTHROPIC_API_KEY')) +
+
+    step(3,'두 번째 열쇠 — 서버가 DB 를 여는 열쇠',
+      'Supabase 화면에서 <b>service_role</b> 줄을 찾아 <b>Reveal</b>(눈 모양)을 누르면 긴 글자가 나옵니다. '+
+      '그걸 복사해 Netlify 의 <b>Value</b> 칸에 붙여넣습니다.',
+      link(NF_LINKS.sb,'Supabase API 화면 열기 ↗'),
+      keyRow('SUPABASE_SERVICE_ROLE_KEY')+
+      '<div class="warn">⚠️ 이 열쇠는 <b>DB 전체를 지우고 바꿀 수 있는 최고 권한</b>입니다. '+
+      '저에게도, 팀원에게도, 어떤 대화창에도 붙여넣지 마세요. Netlify 화면에서만 넣으시면 됩니다.</div>') +
+
+    step(4,'다시 배포 — 이걸 해야 열쇠가 서버에 들어갑니다',
+      '넣기만 하면 아직 안 됩니다. 배포 화면에서 <b>Trigger deploy → Clear cache and deploy site</b> 를 누르세요. '+
+      '1~2분 걸립니다.',
+      link(NF_LINKS.dep(),'배포 화면 열기 ↗')) +
+
+    step(5,'됐는지 확인',
+      '배포가 끝난 뒤 누르세요. 서버를 실제로 한 번 불러서 <b>지금 되는지</b> 알려 드립니다.',
+      '<button type="button" class="go g2" onclick="nfGuideCheck()">지금 확인</button>') +
+
+    '<div class="nfg-sub" style="margin-top:14px">'+
+      '넣으면 이것들이 살아납니다 — 새벽 5시 AI 부서 보고 · 새벽 상담 준비 · 평일 종가 수집 · '+
+      '아침 투자 브리핑 · 매월 1일 성과 리포트.</div>'+
+    '</div>';
+  document.body.appendChild(w);
+  document.body.style.overflow='hidden';
+  document.addEventListener('keydown',nfGuideEsc);
+  nfGuidePaintState();
+}
+
+
+/* ── 홈에 바로 뜨는 열쇠 배너 ─────────────────────────────────
+   출발 점검 안에 묻어 두면 찾아 들어가야 한다. 서버 준비 SQL 과 같이
+   홈 맨 위에 세운다 — 켜자마자 보이고, 한 번 되면 다시 안 뜬다.
+
+   서버에 매번 물어보지는 않는다. ai-daily 를 부르는 것은 그날 보고를
+   실제로 만드는 일이라, 홈을 열 때마다 부를 수는 없다. 그래서 「한 번
+   됐다」 를 이 기기에 적어 두고, 그 표시가 있으면 배너를 접는다.     */
+var NFK={hide:false};
+function nfKeyDone(){
+  try{ return localStorage.getItem('apex_nf_keys')==='ok'; }catch(e){ return false; }
+}
+function nfKeyMark(ok){
+  try{ if(ok)localStorage.setItem('apex_nf_keys','ok');
+       else localStorage.removeItem('apex_nf_keys'); }catch(e){}
+  nfKeyPaint();
+}
+function nfKeyShow(){
+  if(typeof setupCanRun!=='function'||!setupCanRun())return false;   /* 대표만 */
+  return !nfKeyDone() && !NFK.hide;
+}
+function nfKeyLater(){ NFK.hide=true; nfKeyPaint(); }
+function nfKeyBarHtml(){
+  if(!nfKeyShow())return '';
+  return '<div class="stp" style="background:linear-gradient(135deg,#3B2708,#241804);border-color:#7C4A03">'+
+    '<div class="stp-hd"><span class="stp-ic">🔑</span>'+
+      '<div><div class="stp-t" style="color:#FCD34D">서버 열쇠가 아직 없습니다</div>'+
+      '<div class="stp-d" style="color:#E7C97A">밤에 서버가 혼자 하는 일이 <b>전부 멈춰</b> 있습니다 — '+
+      '새벽 5시 AI 부서 보고 · 새벽 상담 준비 · 평일 종가 수집 · 아침 투자 브리핑 · 매월 성과 리포트. '+
+      '단추를 누르면 <b>다섯 걸음을 순서대로</b> 안내합니다. 3분이면 끝납니다.</div></div></div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기</button>'+
+      '<button class="btn btn-ghost" onclick="nfKeyLater()">나중에</button>'+
+    '</div></div>';
+}
+function nfKeyPaint(){
+  var a=document.getElementById('osNfKeyHome'); if(a)a.innerHTML=nfKeyBarHtml();
+}
+
 function osVerText(){return '판 '+APP_BUILD;}
 function osVerPaint(){
   var el=document.getElementById('verPillTxt');
@@ -13215,6 +13405,7 @@ function renderHome(){
     '<div class="hero-chips"><span>🤖 AI 비서</span><span>🧠 보험해석</span><span>📈 100점 성장</span><span>🗂️ 고객365일</span><span>🎓 교육</span></div>'+
     loginBtn+'</div>'+
     '<div id="osSetupHome"></div>'+
+    '<div id="osNfKeyHome"></div>'+
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     (osIsOwner()&&typeof owLeft==='function'&&owLeft()
@@ -17082,7 +17273,7 @@ function aoNightHtml(){
        '<div style="margin:8px 0 2px;font-family:ui-monospace,monospace;font-size:11.5px;color:#7C2D12">'+
          '· SUPABASE_SERVICE_ROLE_KEY<br>· ANTHROPIC_API_KEY</div>'+
        '<div class="btn-row" style="margin-top:10px">'+
-         '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+         '<button type="button" class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>'+
          '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
          '<button type="button" class="btn btn-ghost" '+(NW.busy?'disabled':'')+' onclick="aoNightRun()">'+
            (NW.busy?'물어보는 중…':'🌙 지금 돌려보기')+'</button>'+
@@ -26074,6 +26265,7 @@ function setupBarHtml(){
 }
 function setupPaint(){
   var a=document.getElementById('osSetupHome');if(a)a.innerHTML=setupBarHtml();
+  try{nfKeyPaint();}catch(e){}
   var b=document.getElementById('osSetupHx');if(b)b.innerHTML=setupBarHtml();
 }
 function setupCss(){
