@@ -158,11 +158,19 @@ function calcOne(p, inp){
   // ③ 거치기간 이자금액
   let i3;
   if(p.defer==='tier'){
-    i3 = yearInt(hanaRate(T)) * D;
+    /* D 는 T - pay 다. 납입기간이 보험기간보다 길면 음수가 되어
+       거치이자를 빼 버린다 — 여기도 같이 막는다. */
+    i3 = yearInt(hanaRate(T)) * Math.max(0, D);
   }else{
     const {cap, hi, lo} = p.defer;
-    i3 = (T <= cap) ? yearInt(hi) * D
-                    : yearInt(hi) * (cap - pay) + yearInt(lo) * (T - cap);
+    /* 높은이율 구간과 낮은이율 구간을 겹치지 않게 자른다.
+       납입기간이 보증기간(cap)보다 길면 (cap - pay) 가 음수가 되어
+       이자를 빼 버렸다 — 40세가 55세 개시로 20년납을 넣으면 거치이자가
+       -2,880만으로 찍혔다. 아래 두 줄은 rollAt() 이 한 해씩 세는 것과
+       값이 같다. */
+    const hiYears = Math.max(0, Math.min(cap, T) - pay);
+    const loYears = Math.max(0, T - Math.max(cap, pay));
+    i3 = yearInt(hi) * hiYears + yearInt(lo) * loYears;
   }
 
   const base = principal + i2 + i3;                          // ④ 연금기준액
@@ -170,7 +178,11 @@ function calcOne(p, inp){
   const bonus = p.bonus ? (DATA.bonus[p.bonus]?.[T] ?? 0) : 0;// ⑥ 장기유지보너스
   const finalRate = rate * (1 + bonus);                       // ⑦ 최종지급률
 
-  const eligible = p.ok(age, start, pay);
+  /* 납입기간이 보험기간보다 길면 계약 자체가 성립하지 않는다.
+     ok() 가 이걸 안 봐서, 40세·55세개시·20년납 같은 조합이 통과해
+     화면에 숫자가 찍혔다. 한 곳에서 막는다. */
+  const feasible = pay <= T;
+  const eligible = feasible && p.ok(age, start, pay);
   const hasRate  = rate > 0;
   const yearly = (eligible && hasRate) ? base * finalRate : 0; // 매년 보증연금액
   const monthlyPay = yearly / 12;
@@ -257,7 +269,12 @@ g.PENSION = {
   fundAt: fundAt, breakEven: breakEvenRate, estate: estate,
   /* 가입 가능한 상품만 추려 준다 */
   eligible: function(age, start, pay){
-    return P.filter(function(p){ try{ return p.ok(age, start, pay); }catch(e){ return false; } });
+    /* 납입기간이 보험기간보다 길면 어떤 상품도 성립하지 않는다.
+       화면에 고를 수 있게 띄워 두면 그 조합으로 숫자가 나와 버린다. */
+    return P.filter(function(p){
+      try{ return (pay <= (start - age)) && p.ok(age, start, pay); }
+      catch(e){ return false; }
+    });
   }
 };
 })(window);
