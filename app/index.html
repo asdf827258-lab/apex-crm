@@ -843,6 +843,11 @@ body.crm-mode #crmScreen{display:block;}
 body.sangdam-mode .app{display:none;}
 body.sangdam-mode #sangdamScreen{display:block;}
 #sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 미끼 레이더 전용 화면 (상담자료와 동일 패턴) */
+#mikkiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.mikki-mode .app{display:none;}
+body.mikki-mode #mikkiScreen{display:block;}
+#mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
 #fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.fptalk-mode .app{display:none;}
@@ -979,6 +984,16 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
 </div>
 
 <!-- 상담자료 전용 화면 (고객 상담 프레젠테이션 · CRM과 동일 화면전환) -->
+<!-- 미끼 레이더 전용 화면 -->
+<div id="mikkiScreen">
+  <iframe id="mikkiFrame" class="fin-frame" title="미끼 레이더"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <div id="sangdamScreen">
   <iframe id="sangdamFrame" class="fin-frame" title="보장분석 상담자료"></iframe>
   <div class="fin-float">
@@ -1694,8 +1709,86 @@ function advGet(){
   if(!o.name&&OS.profile&&OS.profile.name)o.name=OS.profile.name;
   return o;
 }
-function advSet(o){
-  try{localStorage.setItem(advKey(),JSON.stringify(o||{}));}catch(e){}
+function advSet(o,noPush){
+  o=o||{};
+  if(!noPush)o.at=Date.now();          /* 어느 쪽이 새것인지 가릴 도장 */
+  try{localStorage.setItem(advKey(),JSON.stringify(o));}catch(e){}
+  if(!noPush)advToServer(o);
+}
+/* ── 내 소개는 이 기기가 아니라 <b>이 아이디</b>의 것이다 ────────
+   전에는 이 기기 저장칸에만 남았다. 아이디별로 칸을 나눠 놨으니 한
+   컴퓨터를 같이 써도 남의 값에 안 덮이긴 했다. 그런데 집 컴퓨터에서
+   적은 소개가 사무실에서는 안 보였고, 태블릿은 또 빈 칸이었다.
+   상담자료 맨 앞에 나가는 얼굴이 기기마다 다른 셈이었다.
+
+   그래서 서버에 둔다. 같은 아이디로 들어오면 어느 기기든, IP 가
+   달라도 같은 소개가 따라온다.
+
+   기기 저장칸은 그대로 둔다 — 서버가 잠깐 안 될 때도 상담이 멈추면
+   안 되고, 비행기 안에서도 표지는 떠야 한다. 서버는 「어디서든 같게」
+   를 맡고, 기기는 「끊겨도 되게」 를 맡는다.
+
+   어느 쪽이 새것인지는 at(적은 시각)으로 가린다. 새것이 이긴다.   */
+var ADV_SRV={on:null,at:'',err:''};
+function advToServer(o){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var me=(OS.profile&&OS.profile.id)||'';
+  if(!sb||!me||me==='preview'){ADV_SRV.on=false;return;}
+  sb.from('advisor_intro').upsert({owner_id:me,data:o||{}},{onConflict:'owner_id'})
+    .then(function(r){
+      if(r&&r.error){ADV_SRV.on=false;ADV_SRV.err=(r.error.message||'').slice(0,90);}
+      else{ADV_SRV.on=true;ADV_SRV.err='';ADV_SRV.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});}
+      advSrvPaint();
+    },function(e){ADV_SRV.on=false;ADV_SRV.err=((e&&e.message)||'').slice(0,90);advSrvPaint();});
+}
+function advFromServer(then){
+  var sb=(typeof osClient==='function')?osClient():null;
+  var me=(OS.profile&&OS.profile.id)||'';
+  if(!sb||!me||me==='preview'){if(then)then(false);return;}
+  sb.from('advisor_intro').select('data').eq('owner_id',me).maybeSingle()
+    .then(function(r){
+      if(r&&r.error){ADV_SRV.on=false;ADV_SRV.err=(r.error.message||'').slice(0,90);advSrvPaint();if(then)then(false);return;}
+      ADV_SRV.on=true;ADV_SRV.err='';
+      var srv=(r&&r.data&&r.data.data)||null;
+      if(!srv||!Object.keys(srv).length){
+        /* 서버가 비어 있다 — 이 기기에 적어 둔 게 있으면 그것을 올려 준다.
+           처음 한 번은 이렇게 옮겨 간다. 사람이 다시 적을 일이 없다. */
+        var mine=advGet();
+        var has=false,k;
+        for(k in mine)if(k!=='at'&&mine[k])has=true;
+        if(has)advToServer(mine);
+        advSrvPaint();if(then)then(false);return;
+      }
+      var here=advGet();
+      var newer=(+srv.at||0)>(+here.at||0);
+      if(newer){
+        advSet(srv,true);                 /* 서버 것이 새것이다 — 그대로 받는다 */
+        try{advPushSoon();}catch(e){}
+        try{if(typeof lastTab!=='undefined'&&lastTab==='settings')go('settings');}catch(e){}
+      }else if((+here.at||0)>(+srv.at||0)){
+        advToServer(here);                /* 이 기기 것이 새것이다 — 올려 둔다 */
+      }
+      advSrvPaint();if(then)then(newer);
+    },function(e){ADV_SRV.on=false;ADV_SRV.err=((e&&e.message)||'').slice(0,90);advSrvPaint();if(then)then(false);});
+}
+function advSrvLine(){
+  if(ADV_SRV.on===null)
+    return '<div style="font-size:11.5px;color:var(--ink-5);line-height:1.6">서버 연결을 확인하는 중입니다…</div>';
+  if(ADV_SRV.on)
+    return '<div style="font-size:11.5px;color:#166534;line-height:1.6;background:#F2FBF6;border:1px solid #CDEBDC;'+
+      'border-radius:9px;padding:8px 11px"><b>✅ 이 아이디를 따라다닙니다.</b> '+
+      '집·사무실·태블릿 어디서 들어오셔도, IP 가 달라도 이 소개가 그대로 나옵니다.'+
+      (ADV_SRV.at?(' <span style="color:var(--ink-5)">('+osEsc(ADV_SRV.at)+' 맞춤)</span>'):'')+'</div>';
+  var need=/does not exist|schema cache|relation|42P01/i.test(ADV_SRV.err);
+  return '<div style="font-size:11.5px;color:#7C2D12;line-height:1.6;background:#FFF7ED;border:1px solid #FED7AA;'+
+    'border-radius:9px;padding:8px 11px"><b>⚠️ 아직 이 기기에만 남습니다.</b> '+
+    (need
+      ? '서버에 담을 자리가 없습니다 — 홈 맨 위 <b>「서버 준비 SQL」</b> 을 한 번 실행하시면 어디서든 같아집니다.'
+      : '서버에 못 올렸습니다'+(ADV_SRV.err?(' — '+osEsc(ADV_SRV.err)):'')+'')+'</div>';
+}
+function advSrvPaint(){
+  var e=document.getElementById('advSrvLine');
+  if(e)e.innerHTML=advSrvLine();
 }
 function advSave(){
   var o=advGet(),i,f;
@@ -1792,6 +1885,7 @@ function advCardHtml(){
     '</div>'+
     '<div class="frm">'+ADV_FIELDS.filter(function(f){return f.cover;}).map(fld).join('')+'</div>'+
     '<div class="btn-row" style="margin-top:11px">'+
+      '<div id="advSrvLine" style="margin-bottom:11px">'+advSrvLine()+'</div>'+
       '<button class="btn btn-primary" onclick="advSave()">저장</button>'+
       '<button class="btn btn-ghost" onclick="go(\'sangdam\')">📋 보장분석 상담자료에서 보기</button>'+
     '</div>'+
@@ -5084,7 +5178,7 @@ var RD_MAN=[
   u:'https://www.gov.kr',risk:1},
  {k:'nf_env',t:'Netlify 환경변수 — 서버가 매일 새벽 일하게 하는 열쇠',
   w:'이게 없으면 매일 새벽 5시 서버 보고가 아무것도 안 만들어집니다. 지금 그 상태입니다.',
-  h:'ANTHROPIC_API_KEY 와 SUPABASE_SERVICE_ROLE_KEY 두 개를 넣으세요. 넣은 뒤 윤시스쿨 → 매일 취합에서 「🌙 서버 야간 근무 점검」 을 누르면 바로 확인됩니다. 열쇠는 대화창에 붙이지 말고 그 화면에서 직접 넣으세요.',
+  h:'아래 단추를 누르면 다섯 걸음을 순서대로 안내합니다 — 화면 열기 · 열쇠 이름 복사 · 값 가져올 곳 열기 · 다시 배포 · 됐는지 확인. 글 쓰는 열쇠는 <b>앤트로픽(클로드)이든 구글(제미나이)이든 하나만</b> 있으면 됩니다. 열쇠 값은 그 화면에서 직접 넣으시고 대화창에는 붙이지 마세요.',
   u:'__NF_ENV__'},
  {k:'sb_backup',t:'Supabase 자동 백업 확인',
   w:'앱 안의 백업은 보조입니다. 진짜 안전망은 Supabase 쪽 자동 백업입니다.',
@@ -5266,7 +5360,7 @@ function rdManHtml(){
         (on?('<span class="rd-d">'+osEsc(D[m.k])+' 완료</span>'):'')+'</div>'+
       (on?'':('<div class="rd-mw">'+osEsc(m.w)+'</div><div class="rd-mh">'+osEsc(m.h)+'</div>'+
         (m.u?(m.u==='__NF_ENV__'
-              ?('<a class="rd-go" href="'+osEsc(nfEnvUrl())+'" target="_blank" rel="noopener">환경변수 화면 열기 ↗</a>')
+              ?('<button type="button" class="rd-go" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>')
               :('<a class="rd-go" href="'+osEsc(m.u)+'" target="_blank" rel="noopener">열기 ↗</a>')):'')+
         (m.go?('<button type="button" class="rd-go" onclick="go(\''+m.go+'\')">바로 가기 →</button>'):'')))+
       '</div></div>';
@@ -8340,6 +8434,20 @@ function pfTeamId(){
   var T=pfTeams();
   return T.length?T[0].id:'';
 }
+/* 저장이 안 될 때 「저장 실패」 다섯 글자만 띄우면 무엇을 해야 하는지 알 수 없다.
+   서버가 주는 말은 영어이고, 정작 필요한 것은 「무엇을 눌러야 되느냐」다.
+   여기서 원인별로 다음 할 일까지 붙여 준다. */
+function pfWhy(what,err){
+  var m=((err&&(err.message||err.hint||err.details))||'')+'';
+  var code=(err&&err.code)||'';
+  if(code==='42P01'||/does not exist|schema cache|relation/i.test(m))
+    return what+' — 서버에 담을 자리가 아직 없습니다. 홈 맨 위 「서버 준비 SQL」 을 한 번 실행해 주세요.';
+  if(code==='42501'||/row-level security|policy|permission denied/i.test(m))
+    return what+' — 권한에 막혔습니다. 홈 맨 위 「서버 준비 SQL」 을 한 번 실행하면 리더가 팀원 목표를 만들 수 있게 열립니다.';
+  if(/JWT|not authenticated|invalid token/i.test(m))
+    return what+' — 로그인이 풀렸습니다. 새로고침 후 다시 들어와 주세요.';
+  return what+' — '+m.slice(0,80);
+}
 function pfPlanSave(apply){
   var sb=(typeof osClient==='function')?osClient():null,tid=pfTeamId();
   if(!sb){toast('로그인 후 저장할 수 있습니다');return;}
@@ -8353,7 +8461,7 @@ function pfPlanSave(apply){
     goal_prem:+finV('pf_tgoal',0),share:share,updated_by:pfMyId()};
   if(apply)row.applied_at=new Date().toISOString();
   sb.from('team_plans').upsert(row,{onConflict:'team_id,period'}).then(function(r){
-    if(r&&r.error){toast('저장 실패 — '+(r.error.message||'').slice(0,60));return;}
+    if(r&&r.error){toast(pfWhy('사업계획서를 저장하지 못했습니다',r.error),7000);return;}
     if(!apply){toast('사업계획서를 저장했습니다');PF.loaded=false;pfLoad();return;}
     /* 팀원 목표칸에 내려보낸다 — 목표만 건드리고 실적은 손대지 않는다 */
     var keys=Object.keys(share);
@@ -8363,8 +8471,9 @@ function pfPlanSave(apply){
         {owner_id:oid,period:pfYm(),goal_prem:share[oid],from_team:true},
         {onConflict:'owner_id,period'});
     })).then(function(res){
-      var bad=res.filter(function(x){return x&&x.error;}).length;
-      toast(bad?('일부 적용 실패 — '+bad+'명'):(keys.length+'명에게 목표를 내려보냈습니다'));
+      var er=res.filter(function(x){return x&&x.error;});
+      toast(er.length?pfWhy(er.length+'명에게 목표를 못 내려보냈습니다',er[0].error)
+                     :(keys.length+'명에게 목표를 내려보냈습니다'),er.length?7000:2600);
       PF.loaded=false;pfLoad();
     });
   });
@@ -9004,6 +9113,8 @@ function nwRun(then){
       NW.msg=(j&&(j.reason||j.message))||(NW.ok?'서버가 오늘 것을 만들었습니다.':'서버가 답을 주지 않았습니다.');
       NW.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
       try{dgPaint();}catch(e){}
+      /* 한 번 됐으면 홈 배너를 접는다. 안 되면 다시 띄운다. */
+      try{nfKeyMark(NW.ok);}catch(e){}
       if(typeof then==='function')then();
       if(NW.ok){
         setTimeout(function(){try{dgLoad(true);}catch(e){}
@@ -9033,7 +9144,7 @@ function nwBoxHtml(){
     (key?('<br><br>아래 둘을 넣으시면 그날부터 새벽 5시에 저절로 돕니다.'+
       '<br>· <code>SUPABASE_SERVICE_ROLE_KEY</code><br>· <code>ANTHROPIC_API_KEY</code>'+
       '<div class="btn-row" style="margin-top:10px">'+
-        '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+        '<button type="button" class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>'+
         '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
         '<button type="button" class="btn btn-ghost" onclick="nwRun()">넣었습니다 · 다시 점검</button>'+
       '</div>'+
@@ -9299,6 +9410,9 @@ function thCss(){
    ak 로 판정한다. 보이는 자리만 바뀌고 열려 있던 문은 그대로다.
    대표가 설정에서 저장해 둔 접근 설정(tool_access)도 그대로 산다.  */
 var TABS=[
+ {group:'보험전략실',role:'hq',items:[
+   {id:'mikki',icon:'🎣',title:'미끼 레이더',cnt:'',ak:'보험전략실'}
+ ]},
  {group:'하루 시작',items:[
    {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
    {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
@@ -9440,7 +9554,7 @@ var TAB_META={
    카테고리로 크게 묶고 평소엔 접어 둔다. 대신 접힌 채로도 무엇인지 한눈에
    보여야 하므로, 카테고리 글씨를 키우고 칸마다 다른 파스텔 색을 입힌다. */
 var NAVG_KEY='apex_nav_open';
-var NAVG_ICON={'하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
+var NAVG_ICON={'보험전략실':'🎯','하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
  '계약·청구':'📁','자료 조회':'🔎','법인 컨설팅':'🏭','콘텐츠 제작':'✍️',
  '광고·유입':'📣','조직 관리':'🏢','교육 자료':'🎓','시스템':'⚙️','투자·경제':'📈'};
 /* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
@@ -9544,12 +9658,32 @@ function renderNav(){
 
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
+/* ── 전체화면은 한 번에 하나만 ────────────────────────────────
+   화면을 통째로 덮는 칸이 일곱이다 — 계산기 · CRM · 보장분석 상담자료 ·
+   재무설계 상담자료 · 실전화법서 · 미끼 레이더 · 윤시스쿨. 이것들이
+   각자 「내가 아닌 것 몇 개」 만 지우고 있어서, 지우는 목록에서 빠진
+   조합끼리는 서로 겹쳤다.
+
+   실제로 상담자료를 열어 둔 채 계산기를 누르면 상담자료가 그대로 덮고
+   있었다 — 계산기는 그 뒤에서 멀쩡히 떠 있는데 화면에는 안 보인다.
+   상담자료에서 계산기로 이어 가는 그 순간에 나던 고장이다.
+
+   칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
+   여기 이름만 적으면 나머지는 저절로 꺼진다. */
+var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode',
+                   'fpdeck-mode','fptalk-mode','mikki-mode','yoonsi-mode'];
+function osFullMode(on){
+  var b=document.body,i;
+  for(i=0;i<OS_FULL_MODES.length;i++)
+    if(OS_FULL_MODES[i]!==on)b.classList.remove(OS_FULL_MODES[i]);
+  if(on)b.classList.add(on);
+}
 function go(tab){
   document.body.classList.remove('yoonsi-mode');
   if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
     if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
     if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
-    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    osFullMode('');
     lastTab=tab;
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
@@ -9558,41 +9692,43 @@ function go(tab){
   }
   if(tab==='finance'){
     mountFinance();
-    document.body.classList.remove('crm-mode','sangdam-mode');
-    document.body.classList.add('finance-mode');
+    osFullMode('finance-mode');
     navMark('finance');
+    /* 상담자료에 적어 둔 것이 있으면 사이드바로 들고 온다.
+       틀이 뜨는 데 시간이 걸리므로 조금 뒤에 묻는다. */
+    try{ setTimeout(osAutoToFin, 700); }catch(e){}
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='crm'){
     mountCrm();
-    document.body.classList.remove('finance-mode','sangdam-mode');
-    document.body.classList.add('crm-mode');
+    osFullMode('crm-mode');
     navMark('crm');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='yoonsi'){
     mountYoonsi();
-    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
-    document.body.classList.add('yoonsi-mode');
+    osFullMode('yoonsi-mode');
     navMark('yoonsi');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='mikki'){
+    mountMikki();
+    osFullMode('mikki-mode');
+    navMark('mikki');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='sangdam'){
     mountSangdam();
-    document.body.classList.remove('finance-mode','crm-mode');
-    document.body.classList.add('sangdam-mode');
+    osFullMode('sangdam-mode');
     navMark('sangdam');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
-  document.body.classList.remove('finance-mode');
-  document.body.classList.remove('crm-mode');
-  document.body.classList.remove('sangdam-mode');
-  document.body.classList.remove('fptalk-mode');
-  document.body.classList.remove('fpdeck-mode');
+  osFullMode('');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   navMark(tab);
@@ -9877,8 +10013,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-16 12:30';
-var APP_BUILD_NOTE='연금 시뮬레이션에서 납입기간이 보험기간보다 길면 거치이자가 마이너스로 찍히던 것을 고쳤습니다 — 40세가 55세 개시로 20년납을 넣으면 -2,880만이 나왔고 13,440 조합 중 3,432개가 그랬습니다 · 그런 조합은 애초에 고를 수 없게 막았습니다 · 이제 모든 조합을 점검에서 전수로 봅니다';
+var APP_BUILD='2026-08-17 03:10';
+var APP_BUILD_NOTE='미끼 레이더가 사무실 PC 없이도 돕니다 — 들어가시면 오늘 보험 뉴스(보험신문·한국보험신문·매경·한경)를 서버가 저절로 모아 옵니다. 다시 받고 싶으실 때만 오른쪽 아래 「🌐 뉴스」 를 누르시면 됩니다. 사무실에서 만들어 둔 자료 폴더는 「📂 자료 폴더」 로 통째로 넣으시면 됩니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -9903,6 +10039,212 @@ function nfOpenEnv(){
   try{if(typeof copyText==='function'){copyText(u);toast('팝업이 막혀 주소를 복사했습니다 — 붙여넣어 여세요');return;}}catch(e){}
   try{location.href=u;}catch(e){}
 }
+
+/* ════════ 서버 열쇠 넣기 — 한 장에서 끝낸다 ════════
+   전에는 「Netlify 환경변수 화면 열기」 단추 하나였다. 눌러서 들어가면
+   빈 화면이 나오고, 무엇을 어디에 넣어야 하는지는 작은 글씨 설명에만
+   있었다. 그래서 「안 보인다」 가 됐다.
+
+   여기서는 다섯 걸음을 한 장에 세우고, 걸음마다 <b>누를 것 하나</b>만
+   둔다. 열쇠 이름은 눌러서 복사하고, 값은 어디서 가져오는지 그 화면을
+   바로 열어 준다. 마지막에 실제로 서버를 불러 됐는지 확인한다.
+
+   열쇠 값 자체는 이 앱이 만지지 않는다 — service_role 은 DB 전체를
+   여는 열쇠라, 앱을 거치면 브라우저 기록에 남는다. Netlify 화면에
+   직접 넣게 하고, 우리는 이름만 복사해 준다.                        */
+var NF_LINKS={
+  env:  function(){ return 'https://app.netlify.com/projects/'+nfSite()+'/configuration/env'; },
+  dep:  function(){ return 'https://app.netlify.com/projects/'+nfSite()+'/deploys'; },
+  ant:  'https://console.anthropic.com/settings/keys',
+  gem:  'https://aistudio.google.com/apikey',
+  sb:   'https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/settings/api'
+};
+function nfCopyKey(name,el){
+  try{
+    if(typeof copyText==='function')copyText(name);
+    else if(navigator.clipboard)navigator.clipboard.writeText(name);
+    if(el){var o=el.textContent;el.textContent='복사됨 ✓';setTimeout(function(){el.textContent=o;},1400);}
+    toast('「'+name+'」 를 복사했습니다 — Netlify 의 Key 칸에 붙여넣으세요',4200);
+  }catch(e){ toast('복사가 안 됩니다. 손으로 적어 주세요: '+name,7000); }
+}
+function nfGuideClose(){
+  var w=document.getElementById('nfGuide');
+  if(w&&w.parentNode)w.parentNode.removeChild(w);
+  document.body.style.overflow='';
+  document.removeEventListener('keydown',nfGuideEsc);
+}
+function nfGuideEsc(e){ if(e&&e.key==='Escape')nfGuideClose(); }
+function nfGuideCheck(){
+  nwRun(function(){ nfGuidePaintState(); });
+  nfGuidePaintState();
+}
+function nfGuidePaintState(){
+  var b=document.getElementById('nfState'); if(!b)return;
+  if(NW.busy){ b.className='nfg-st busy'; b.innerHTML='<b>서버에 물어보는 중…</b>'; return; }
+  if(NW.ok===null){ b.className='nfg-st'; b.innerHTML='아래 <b>「지금 확인」</b> 을 누르면 지금 되는지 알려 드립니다.'; return; }
+  if(NW.ok){ b.className='nfg-st ok';
+    b.innerHTML='<b>✅ 됩니다 — 서버가 오늘 것을 만들었습니다.</b><br>'+
+      '<span style="font-weight:600">이제 매일 새벽에 알아서 돕니다. 이 화면은 닫으셔도 됩니다.</span>'; return; }
+  b.className='nfg-st no';
+  b.innerHTML='<b>❌ 아직 안 됩니다.</b><br><span style="font-weight:600">'+osEsc(NW.msg||'')+'</span>';
+}
+function nfGuide(){
+  if(document.getElementById('nfGuide')){ nfGuideClose(); return; }
+  var css=document.getElementById('nfgCss');
+  if(!css){
+    css=document.createElement('style'); css.id='nfgCss';
+    css.textContent=
+      '#nfGuide{position:fixed;inset:0;z-index:9600;background:#0B1220;overflow-y:auto;'+
+        '-webkit-overflow-scrolling:touch}'+
+      '#nfGuide .nfg-in{max-width:640px;margin:0 auto;padding:18px 16px 60px}'+
+      '#nfGuide .nfg-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}'+
+      '#nfGuide .nfg-h{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.02em}'+
+      '#nfGuide .nfg-x{margin-left:auto;border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.08);'+
+        'color:#fff;border-radius:999px;padding:7px 15px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}'+
+      '#nfGuide .nfg-sub{font-size:13px;color:#93A4BE;line-height:1.7;margin-bottom:14px}'+
+      '#nfGuide .nfg-st{border-radius:13px;padding:13px 15px;font-size:13.5px;line-height:1.65;margin-bottom:16px;'+
+        'background:rgba(255,255,255,.07);color:#CBD5E1;border:1px solid rgba(255,255,255,.13)}'+
+      '#nfGuide .nfg-st.ok{background:#052E1B;border-color:#14532D;color:#86EFAC}'+
+      '#nfGuide .nfg-st.no{background:#3B0A0A;border-color:#7F1D1D;color:#FCA5A5}'+
+      '#nfGuide .nfg-st.busy{background:#1E293B;border-color:#334155;color:#CBD5E1}'+
+      '#nfGuide .nfg-c{background:#131C2E;border:1px solid #243149;border-radius:16px;padding:15px 16px;margin-bottom:11px}'+
+      '#nfGuide .nfg-cn{display:flex;align-items:center;gap:9px;margin-bottom:8px}'+
+      '#nfGuide .nfg-cb{flex:none;width:26px;height:26px;border-radius:8px;background:#1A56DB;color:#fff;'+
+        'font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}'+
+      '#nfGuide .nfg-ct{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.01em}'+
+      '#nfGuide .nfg-cd{font-size:12.5px;color:#93A4BE;line-height:1.7;margin-bottom:10px}'+
+      '#nfGuide .nfg-cd b{color:#E2E8F0}'+
+      '#nfGuide .go{display:block;width:100%;box-sizing:border-box;text-align:center;text-decoration:none;'+
+        'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;border:0;border-radius:12px;'+
+        'padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;letter-spacing:-.01em}'+
+      '#nfGuide .go.g2{background:linear-gradient(135deg,#059669,#047857)}'+
+      '#nfGuide .kv{background:#0B1220;border:1px solid #243149;border-radius:11px;padding:11px 12px;margin-bottom:9px}'+
+      '#nfGuide .kv-l{font-size:10.5px;font-weight:800;color:#64748B;letter-spacing:.08em;margin-bottom:4px}'+
+      '#nfGuide .kv-r{display:flex;gap:8px;align-items:center}'+
+      '#nfGuide .kv-c{flex:1;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;'+
+        'color:#7DD3FC;font-weight:700;word-break:break-all}'+
+      '#nfGuide .kv-b{flex:none;border:1px solid #2C6BED;background:#12233F;color:#93C5FD;border-radius:8px;'+
+        'padding:6px 11px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}'+
+      '#nfGuide .warn{background:#3B2708;border:1px solid #7C4A03;border-radius:11px;padding:11px 12px;'+
+        'font-size:12px;color:#FCD34D;line-height:1.7;margin-top:9px}'+
+      '@media(max-width:420px){#nfGuide .nfg-h{font-size:17px}#nfGuide .go{font-size:14px;padding:13px}}';
+    document.head.appendChild(css);
+  }
+  function step(n,t,d,btn,extra){
+    return '<div class="nfg-c"><div class="nfg-cn"><div class="nfg-cb">'+n+'</div><div class="nfg-ct">'+t+'</div></div>'+
+      '<div class="nfg-cd">'+d+'</div>'+(extra||'')+(btn||'')+'</div>';
+  }
+  function link(u,txt,cls){
+    return '<a class="go'+(cls?' '+cls:'')+'" href="'+u+'" target="_blank" rel="noopener">'+txt+'</a>';
+  }
+  function keyRow(name){
+    return '<div class="kv"><div class="kv-l">KEY — 이 이름 그대로</div><div class="kv-r">'+
+      '<div class="kv-c">'+name+'</div>'+
+      '<button type="button" class="kv-b" onclick="nfCopyKey(\''+name+'\',this)">복사</button></div></div>';
+  }
+
+  var w=document.createElement('div'); w.id='nfGuide';
+  w.innerHTML='<div class="nfg-in">'+
+    '<div class="nfg-top"><div class="nfg-h">🔑 서버 열쇠 넣기</div>'+
+      '<button type="button" class="nfg-x" onclick="nfGuideClose()">닫기 ✕</button></div>'+
+    '<div class="nfg-sub">밤에 서버가 혼자 일하려면 열쇠 두 개가 필요합니다 — <b>글 쓰는 열쇠</b> 하나와 <b>DB 여는 열쇠</b> 하나. '+
+      '<b style="color:#E2E8F0">아래 순서대로 단추만 누르시면 됩니다.</b> 3분이면 끝납니다.</div>'+
+    '<div class="nfg-st" id="nfState"></div>'+
+
+    step(1,'Netlify 환경변수 화면 열기',
+      '새 창이 뜹니다. 그 화면에서 <b>「Add a variable」</b> 단추를 찾아 누르세요. '+
+      '(이미 몇 개 들어 있어도 괜찮습니다 — 없는 것만 더하면 됩니다.)',
+      link(NF_LINKS.env(),'환경변수 화면 열기 ↗')) +
+
+    step(2,'첫 번째 열쇠 — 글 쓰는 열쇠',
+      '<b>둘 중 아무거나 하나만</b> 넣으시면 됩니다. 쓰시는 쪽으로 고르세요. '+
+      '(둘 다 넣으면 앤트로픽을 먼저 쓰고, 거절당하면 구글로 넘어갑니다.)',
+      '<div style="display:grid;grid-template-columns:1fr;gap:9px">'+
+        '<div style="border:1px solid #243149;border-radius:13px;padding:12px">'+
+          '<div style="font-size:12.5px;font-weight:800;color:#E2E8F0;margin-bottom:7px">'+
+            '① 앤트로픽(클로드)을 쓰신다면</div>'+
+          keyRow('ANTHROPIC_API_KEY')+
+          '<div style="font-size:11.5px;color:#93A4BE;line-height:1.6;margin-bottom:9px">'+
+            'Value 칸에는 <b>sk-ant-</b> 로 시작하는 글자를 붙여넣습니다.</div>'+
+          link(NF_LINKS.ant,'앤트로픽 콘솔 열기 ↗')+
+        '</div>'+
+        '<div style="border:1px solid #243149;border-radius:13px;padding:12px">'+
+          '<div style="font-size:12.5px;font-weight:800;color:#E2E8F0;margin-bottom:7px">'+
+            '② 구글(제미나이)을 쓰신다면</div>'+
+          keyRow('GEMINI_API_KEY')+
+          '<div style="font-size:11.5px;color:#93A4BE;line-height:1.6;margin-bottom:9px">'+
+            'Google AI Studio 에서 <b>Create API key</b> 를 누르면 나오는 글자를 붙여넣습니다. '+
+            '<b>AIza</b> 로 시작합니다.</div>'+
+          link(NF_LINKS.gem,'Google AI Studio 열기 ↗')+
+        '</div>'+
+      '</div>','') +
+
+    step(3,'두 번째 열쇠 — 서버가 DB 를 여는 열쇠',
+      'Supabase 화면에서 <b>service_role</b> 줄을 찾아 <b>Reveal</b>(눈 모양)을 누르면 긴 글자가 나옵니다. '+
+      '그걸 복사해 Netlify 의 <b>Value</b> 칸에 붙여넣습니다.',
+      link(NF_LINKS.sb,'Supabase API 화면 열기 ↗'),
+      keyRow('SUPABASE_SERVICE_ROLE_KEY')+
+      '<div class="warn">⚠️ 이 열쇠는 <b>DB 전체를 지우고 바꿀 수 있는 최고 권한</b>입니다. '+
+      '저에게도, 팀원에게도, 어떤 대화창에도 붙여넣지 마세요. Netlify 화면에서만 넣으시면 됩니다.</div>') +
+
+    step(4,'다시 배포 — 이걸 해야 열쇠가 서버에 들어갑니다',
+      '넣기만 하면 아직 안 됩니다. 배포 화면에서 <b>Trigger deploy → Clear cache and deploy site</b> 를 누르세요. '+
+      '1~2분 걸립니다.',
+      link(NF_LINKS.dep(),'배포 화면 열기 ↗')) +
+
+    step(5,'됐는지 확인',
+      '배포가 끝난 뒤 누르세요. 서버를 실제로 한 번 불러서 <b>지금 되는지</b> 알려 드립니다.',
+      '<button type="button" class="go g2" onclick="nfGuideCheck()">지금 확인</button>') +
+
+    '<div class="nfg-sub" style="margin-top:14px">'+
+      '넣으면 이것들이 살아납니다 — 새벽 5시 AI 부서 보고 · 새벽 상담 준비 · 평일 종가 수집 · '+
+      '아침 투자 브리핑 · 매월 1일 성과 리포트.</div>'+
+    '</div>';
+  document.body.appendChild(w);
+  document.body.style.overflow='hidden';
+  document.addEventListener('keydown',nfGuideEsc);
+  nfGuidePaintState();
+}
+
+
+/* ── 홈에 바로 뜨는 열쇠 배너 ─────────────────────────────────
+   출발 점검 안에 묻어 두면 찾아 들어가야 한다. 서버 준비 SQL 과 같이
+   홈 맨 위에 세운다 — 켜자마자 보이고, 한 번 되면 다시 안 뜬다.
+
+   서버에 매번 물어보지는 않는다. ai-daily 를 부르는 것은 그날 보고를
+   실제로 만드는 일이라, 홈을 열 때마다 부를 수는 없다. 그래서 「한 번
+   됐다」 를 이 기기에 적어 두고, 그 표시가 있으면 배너를 접는다.     */
+var NFK={hide:false};
+function nfKeyDone(){
+  try{ return localStorage.getItem('apex_nf_keys')==='ok'; }catch(e){ return false; }
+}
+function nfKeyMark(ok){
+  try{ if(ok)localStorage.setItem('apex_nf_keys','ok');
+       else localStorage.removeItem('apex_nf_keys'); }catch(e){}
+  nfKeyPaint();
+}
+function nfKeyShow(){
+  if(typeof setupCanRun!=='function'||!setupCanRun())return false;   /* 대표만 */
+  return !nfKeyDone() && !NFK.hide;
+}
+function nfKeyLater(){ NFK.hide=true; nfKeyPaint(); }
+function nfKeyBarHtml(){
+  if(!nfKeyShow())return '';
+  return '<div class="stp" style="background:linear-gradient(135deg,#3B2708,#241804);border-color:#7C4A03">'+
+    '<div class="stp-hd"><span class="stp-ic">🔑</span>'+
+      '<div><div class="stp-t" style="color:#FCD34D">서버 열쇠가 아직 없습니다</div>'+
+      '<div class="stp-d" style="color:#E7C97A">밤에 서버가 혼자 하는 일이 <b>전부 멈춰</b> 있습니다 — '+
+      '새벽 5시 AI 부서 보고 · 새벽 상담 준비 · 평일 종가 수집 · 아침 투자 브리핑 · 매월 성과 리포트. '+
+      '단추를 누르면 <b>다섯 걸음을 순서대로</b> 안내합니다. 3분이면 끝납니다.</div></div></div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기</button>'+
+      '<button class="btn btn-ghost" onclick="nfKeyLater()">나중에</button>'+
+    '</div></div>';
+}
+function nfKeyPaint(){
+  var a=document.getElementById('osNfKeyHome'); if(a)a.innerHTML=nfKeyBarHtml();
+}
+
 function osVerText(){return '판 '+APP_BUILD;}
 function osVerPaint(){
   var el=document.getElementById('verPillTxt');
@@ -10135,6 +10477,13 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
+   약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
+var MIKKI_URL='상담자료/미끼레이더/index.html';
+function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
+function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
+function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitMikki(){go(lastTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.
@@ -12652,7 +13001,7 @@ function fpJumpNow(to){
 function fpTalkMount(){var f=fpFrame('talk');if(!f||f._mounted)return;f.src=FP_TALK_URL;f._mounted=true;}
 function fpTalkOpen(to){
   fpTalkMount();
-  document.body.classList.add('fptalk-mode');
+  osFullMode('fptalk-mode');
   if(to){ if(FPT.ready)fpJumpNow(to); else FPT.jump=to; }
 }
 function fpTalkReload(){var f=fpFrame('talk');if(f){f._mounted=false;FPT.ready=false;f.src='about:blank';setTimeout(fpTalkMount,40);toast('화법서 새로고침');}}
@@ -12724,7 +13073,7 @@ function osFpTalkAfterRender(){}
 function fpDeckMount(){var f=fpFrame('deck');if(!f||f._mounted)return;f.src=FP_DECK_URL;f._mounted=true;}
 function fpDeckOpen(){
   fpDeckMount();
-  document.body.classList.add('fpdeck-mode');
+  osFullMode('fpdeck-mode');
   if(FPD.ready&&FPD.pend){
     var d=FPD.pend;FPD.pend=null;
     setTimeout(function(){fpAsk('deck','apex:put',d,function(){toast('저장해 둔 상담을 그대로 불러왔습니다',4000);});},150);
@@ -12992,6 +13341,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
+  else if(document.body.classList.contains('mikki-mode'))exitMikki();
   else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
@@ -13152,6 +13502,7 @@ function renderHome(){
     '<div class="hero-chips"><span>🤖 AI 비서</span><span>🧠 보험해석</span><span>📈 100점 성장</span><span>🗂️ 고객365일</span><span>🎓 교육</span></div>'+
     loginBtn+'</div>'+
     '<div id="osSetupHome"></div>'+
+    '<div id="osNfKeyHome"></div>'+
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     (osIsOwner()&&typeof owLeft==='function'&&owLeft()
@@ -17019,7 +17370,7 @@ function aoNightHtml(){
        '<div style="margin:8px 0 2px;font-family:ui-monospace,monospace;font-size:11.5px;color:#7C2D12">'+
          '· SUPABASE_SERVICE_ROLE_KEY<br>· ANTHROPIC_API_KEY</div>'+
        '<div class="btn-row" style="margin-top:10px">'+
-         '<button type="button" class="btn btn-primary" onclick="nfOpenEnv()">🔗 Netlify 환경변수 열기</button>'+
+         '<button type="button" class="btn btn-primary" onclick="nfGuide()">🔑 열쇠 넣기 — 순서대로 안내</button>'+
          '<button type="button" class="btn btn-ghost" onclick="nfCopyNames()">이름 두 개 복사</button>'+
          '<button type="button" class="btn btn-ghost" '+(NW.busy?'disabled':'')+' onclick="aoNightRun()">'+
            (NW.busy?'물어보는 중…':'🌙 지금 돌려보기')+'</button>'+
@@ -20087,43 +20438,46 @@ function manFlow(){
 /* 열세 칸이 각각 무엇인지 — 이 표가 매뉴얼의 뼈대다 */
 function manMap(){
   var rows=[
-    {no:1,ic:'🌅',cat:'하루 시작',when:'아침에 켜서 제일 먼저',
+    {no:1,ic:'🎯',cat:'보험전략실',when:'신상품이 나왔을 때 · 뭘 걸어 볼지 정할 때',
+     chips:[['mikki','🎣','미끼 레이더']],
+     how:'약관·판매자료를 올려 두면 어느 담보가 남들보다 센지 뽑아 줍니다. 올린 자료는 이 브라우저 안에만 쌓이고 서버로 나가지 않습니다. 사업단장만 보입니다.'},
+    {no:2,ic:'🌅',cat:'하루 시작',when:'아침에 켜서 제일 먼저',
      chips:[['home','🏠','홈'],['airep','🧭','TFA 업무관리'],['assistant','🤖','오늘의 AI 비서'],['voiceasst','🎙️','음성 비서'],['brain','🧠','윤시현의 두뇌']],
      how:'오늘 할 일과 오늘 터치할 사람을 확인합니다. 두뇌는 대표의 지식·강의를 넣어 두고 꺼내 쓰는 곳입니다.'},
-    {no:2,ic:'🗂',cat:'내 고객',when:'누구를 만나는지 정할 때',
+    {no:3,ic:'🗂',cat:'내 고객',when:'누구를 만나는지 정할 때',
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
-    {no:3,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
+    {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
      chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
      how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
-    {no:4,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
+    {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
-    {no:5,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
+    {no:6,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
      chips:[['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']],
      how:'고객 계좌의 평가손익·수익률을 보고, 목표 도달과 손절선 이탈을 먼저 알려 줍니다. 성과·자산배분에서는 입출금이 섞여도 정확한 수익률(XIRR)과 목표 비중 대비 조정안을 냅니다. <b>주문은 넣지 않습니다</b> — 실제 매매는 토스 앱에서 직접 하시고, 여기서는 근거와 설명 문장을 만듭니다.'},
-    {no:6,ic:'📁',cat:'계약·청구',when:'만난 뒤',
+    {no:7,ic:'📁',cat:'계약·청구',when:'만난 뒤',
      chips:[['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서'],['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],['med_checkup','🩺','AI 건강검진'],['med_disclosure','📋','알릴의무 필터']],
      how:'계약을 바꾸고 지키는 것부터 청구까지. 해지 이야기가 나오면 여기 계약관리 판단부터 엽니다.'},
-    {no:7,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
+    {no:8,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
      chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_underwrite','⚠️','예외질환 인수확인'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원'],['ref_hidden','💰','숨은보험금찾기']],
      how:'전산 로그인·질병코드·수술명·인수 조회를 한 곳에서 엽니다. 예전에 두 칸으로 흩어져 있던 것을 모았습니다.'},
-    {no:8,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
+    {no:9,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
      chips:[['biz_diag','🧭','사업자 진단'],['biz_fund','🏦','정책자금'],['biz_tax','🧾','세금컨설팅'],['biz_ins','☂️','보험 솔루션'],['biz_retire','🪙','퇴직금 관리'],['biz_staff','👥','직원관리']],
      how:'개인 상담과 다른 흐름이라 따로 뒀습니다. 진단 → 자금 → 세금 → 보험 → 퇴직금 순으로 봅니다.'},
-    {no:9,ic:'✍️',cat:'콘텐츠 제작',when:'새 고객을 만들 때',
+    {no:10,ic:'✍️',cat:'콘텐츠 제작',when:'새 고객을 만들 때',
      chips:[['biz_news','📰','정책·상품 뉴스'],['blog','📝','블로그'],['threads','🧵','Threads'],['insta','📸','인스타그램'],['video','🎬','유튜브&릴스'],['calendar','🗓️','콘텐츠 캘린더'],['simui','🛡️','외부글 심의필터']],
      how:'글·영상을 만드는 곳입니다. 발행 전에 반드시 심의필터를 통과시킵니다.'},
-    {no:10,ic:'📣',cat:'광고·유입',when:'새 고객을 만들 때',
+    {no:11,ic:'📣',cat:'광고·유입',when:'새 고객을 만들 때',
      chips:[['mkt_meta','📣','메타 광고 가이드'],['mkt_volume','📊','키워드 검색량'],['mkt_combine','🔑','키워드 조합기'],['mkt_landing','🎯','리드 랜딩페이지'],['mkt_card','💼','디지털 명함'],['ext_reply','✳️','소상공인 AI 답글'],['ext_thread','📤','스레드 반자동발행'],['ext_naver','📈','네이버 광고 대량등록기']],
      how:'만든 콘텐츠를 퍼뜨리고 문의를 받는 도구입니다. 콘텐츠(8번)와 광고(9번)를 나눠 두었습니다.'},
-    {no:11,ic:'🏢',cat:'조직 관리',when:'팀을 볼 때',
+    {no:12,ic:'🏢',cat:'조직 관리',when:'팀을 볼 때',
      chips:[['org','🏢','조직도'],['teamhub','📋','실행 체크판'],['attend','🗓️','출근 현황'],['daily','📒','매일 취합'],['ai_org','🤖','AI 조직 라이브'],['report','📊','대표 브리핑']],
      how:'조직도는 서버가 정본이라 어느 컴퓨터에서 봐도 같습니다. 팀 코칭·승인·감사로그는 리더에게만 보입니다.'},
-    {no:12,ic:'🎓',cat:'교육 자료',when:'배울 때',
+    {no:13,ic:'🎓',cat:'교육 자료',when:'배울 때',
      chips:[['manual','📘','APEX 사용가이드'],['academy_notion','📓','APEX ACADEMY'],['yoonsi','🏫','윤시스쿨']],
      how:'지금 보고 계신 이 가이드가 여기 있습니다. 왼쪽 위 고정 버튼으로도 언제든 열립니다.'},
-    {no:13,ic:'⚙️',cat:'시스템',when:'거의 안 보지만 필요할 때',
+    {no:14,ic:'⚙️',cat:'시스템',when:'거의 안 보지만 필요할 때',
      chips:[['settings','⚙️','설정'],['pricing','💳','요금제·구독'],['terms','📜','약관·개인정보'],['ready','🚦','출발 점검'],['health','🩺','시스템 점검']],
      how:'AI 키 연결·팀 권한·요금제가 여기 있습니다. 설정과 출발 점검은 대표만 씁니다.'}
   ];
@@ -23838,7 +24192,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -24337,8 +24691,344 @@ var HX_SQL={
   "  ('privacy_officer', '')",
   "on conflict (key) do nothing;",
   "",
+  "",
+  "/* ══════ 메뉴 접근 설정 — 대표가 정한 구분별 개방을 서버에 남긴다 ══════",
+  "   이 표가 없으면 저장이 그 브라우저에만 남는다. 사무실에서 짠 메뉴가",
+  "   집에서는 기본값으로 보이던 것이 이것 때문이다. */",
+  "create table if not exists public.tool_access(",
+  "  group_key  text primary key,",
+  "  roles      text[] not null default '{}',",
+  "  min_tier   text,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "alter table public.tool_access add column if not exists min_tier text;",
+  "alter table public.tool_access enable row level security;",
+  "grant select on public.tool_access to authenticated;",
+  "grant insert, update, delete on public.tool_access to authenticated;",
+  "drop policy if exists tool_access_read on public.tool_access;",
+  "create policy tool_access_read on public.tool_access for select using (true);",
+  "drop policy if exists tool_access_write on public.tool_access;",
+  "create policy tool_access_write on public.tool_access for all to authenticated",
+  "  using      (public.is_admin() or public.is_owner())",
+  "  with check (public.is_admin() or public.is_owner());",
+  "",
+  "/* ══════ 월간 영업보고서 · 리더의 사업계획서 ══════ */",
+  "create or replace function public.can_see_perf(target uuid)",
+  "returns boolean language sql stable security definer set search_path = public as $fn$",
+  "  select",
+  "    target = auth.uid()",
+  "    or exists(select 1 from public.profiles p",
+  "               where p.id = auth.uid()",
+  "                 and p.role in ('admin','owner','master','hq','branch_manager'))",
+  "    or exists(select 1 from public.teams t",
+  "                join public.team_members tm on tm.team_id = t.id",
+  "               where t.leader_id = auth.uid() and tm.member_id = target);",
+  "$fn$;",
+  "grant execute on function public.can_see_perf(uuid) to authenticated;",
+  "",
+  "create or replace function public.leads_team(tid uuid)",
+  "returns boolean language sql stable security definer set search_path = public as $fn$",
+  "  select",
+  "    exists(select 1 from public.teams t where t.id = tid and t.leader_id = auth.uid())",
+  "    or exists(select 1 from public.profiles p",
+  "               where p.id = auth.uid()",
+  "                 and p.role in ('admin','owner','master','hq','branch_manager'));",
+  "$fn$;",
+  "grant execute on function public.leads_team(uuid) to authenticated;",
+  "",
+  "create table if not exists public.monthly_perf(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  owner_id uuid not null,",
+  "  period text not null,",
+  "  goal_prem numeric default 0,",
+  "  act_prem  numeric default 0,",
+  "  goal_case integer default 0,",
+  "  act_case  integer default 0,",
+  "  plan text default '',",
+  "  note text default '',",
+  "  submitted_at timestamptz,",
+  "  ai_draft text default '',",
+  "  feedback text default '',",
+  "  feedback_by uuid,",
+  "  feedback_at timestamptz,",
+  "  from_team boolean default false,",
+  "  updated_at timestamptz default now(),",
+  "  created_at timestamptz default now()",
+  ");",
+  "create unique index if not exists monthly_perf_uni on public.monthly_perf(owner_id, period);",
+  "create index if not exists monthly_perf_period_idx on public.monthly_perf(period desc);",
+  "",
+  "create table if not exists public.team_plans(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  team_id uuid not null,",
+  "  period text not null,",
+  "  plan text default '',",
+  "  goal_prem numeric default 0,",
+  "  share jsonb default '{}'::jsonb,",
+  "  applied_at timestamptz,",
+  "  updated_by uuid,",
+  "  updated_at timestamptz default now(),",
+  "  created_at timestamptz default now()",
+  ");",
+  "create unique index if not exists team_plans_uni on public.team_plans(team_id, period);",
+  "",
+  "alter table public.monthly_perf enable row level security;",
+  "alter table public.team_plans   enable row level security;",
+  "grant select, insert, update on public.monthly_perf to authenticated;",
+  "grant select, insert, update, delete on public.team_plans to authenticated;",
+  "",
+  "drop policy if exists monthly_perf_read on public.monthly_perf;",
+  "create policy monthly_perf_read on public.monthly_perf",
+  "  for select to authenticated using (public.can_see_perf(owner_id));",
+  "",
+  "/* ★ 넣기 규칙이 '본인 줄만' 이라 「저장하고 팀원에게 적용」 이 안 됐다.",
+  "   앱은 팀원 줄을 upsert 로 쓰는데, 포스트그레스는 실제로 넣는 줄에만",
+  "   넣기 규칙을 본다. 그래서 팀원 줄이 아직 없는 그 달 첫 적용은 반드시",
+  "   막혔다 — 매달 초, 정작 필요할 때만 안 되는 셈이었다.",
+  "   고치기 규칙과 같은 잣대로 맞춘다. 리더는 이미 팀원 줄을 고칠 수",
+  "   있었으므로 볼 수 있는 범위는 하나도 넓어지지 않는다. */",
+  "drop policy if exists monthly_perf_insert on public.monthly_perf;",
+  "create policy monthly_perf_insert on public.monthly_perf",
+  "  for insert to authenticated with check (public.can_see_perf(owner_id));",
+  "",
+  "drop policy if exists monthly_perf_update on public.monthly_perf;",
+  "create policy monthly_perf_update on public.monthly_perf",
+  "  for update to authenticated",
+  "  using (public.can_see_perf(owner_id)) with check (public.can_see_perf(owner_id));",
+  "",
+  "drop policy if exists team_plans_read on public.team_plans;",
+  "create policy team_plans_read on public.team_plans",
+  "  for select to authenticated using (",
+  "    public.leads_team(team_id)",
+  "    or exists(select 1 from public.team_members tm",
+  "               where tm.team_id = team_plans.team_id and tm.member_id = auth.uid()));",
+  "",
+  "drop policy if exists team_plans_write on public.team_plans;",
+  "create policy team_plans_write on public.team_plans",
+  "  for all to authenticated",
+  "  using (public.leads_team(team_id)) with check (public.leads_team(team_id));",
+  "",
+  "drop trigger if exists monthly_perf_touch on public.monthly_perf;",
+  "create trigger monthly_perf_touch before update on public.monthly_perf",
+  "  for each row execute function public.touch_updated_at();",
+  "drop trigger if exists team_plans_touch on public.team_plans;",
+  "create trigger team_plans_touch before update on public.team_plans",
+  "  for each row execute function public.touch_updated_at();",
+  "",
+  "/* ══════ 팀원 계정 찾기 · 중복 정리 · 계정 삭제 ══════",
+  "   설정의 「계정 찾기·중복 정리」 가 쓰는 함수들이다. 이게 없으면",
+  "   목록도 안 뜨고 중복 아이디 삭제도 안 된다. */",
+  "alter table public.profiles add column if not exists status text;",
+  "alter table public.profiles add column if not exists plan text;",
+  "alter table public.profiles add column if not exists workspace text default 'both';",
+  "alter table public.profiles add column if not exists active boolean default true;",
+  "create extension if not exists pgcrypto;",
+  "create or replace function public.admin_user_list()",
+  "returns table(",
+  "  id uuid,",
+  "  email text,",
+  "  name text,",
+  "  role text,",
+  "  status text,",
+  "  plan text,",
+  "  workspace text,",
+  "  active boolean,",
+  "  created_at timestamptz,",
+  "  last_sign_in_at timestamptz,",
+  "  confirmed boolean",
+  ")",
+  "language plpgsql",
+  "security definer",
+  "set search_path = public, auth",
+  "as $fn$",
+  "begin",
+  "  if not (public.is_admin() or public.is_owner()) then",
+  "    raise exception '관리자만 계정 목록을 볼 수 있습니다';",
+  "  end if;",
+  "  return query",
+  "  select u.id,",
+  "         u.email::text,",
+  "         coalesce(nullif(btrim(p.name), ''), split_part(coalesce(u.email, ''), '@', 1))::text,",
+  "         coalesce(p.role, 'member')::text,",
+  "         coalesce(p.status, 'approved')::text,",
+  "         p.plan::text,",
+  "         coalesce(p.workspace, 'both')::text,",
+  "         coalesce(p.active, true),",
+  "         u.created_at,",
+  "         u.last_sign_in_at,",
+  "         (u.email_confirmed_at is not null)",
+  "    from auth.users u",
+  "    left join public.profiles p on p.id = u.id",
+  "   order by u.created_at desc;",
+  "end",
+  "$fn$;",
+  "create or replace function public.admin_account_refs(target uuid)",
+  "returns integer",
+  "language plpgsql",
+  "security definer",
+  "set search_path = public, auth",
+  "as $fn$",
+  "declare",
+  "  t text;",
+  "  c text;",
+  "  n integer;",
+  "  total integer := 0;",
+  "begin",
+  "  if not (public.is_admin() or public.is_owner()) then",
+  "    raise exception '관리자만 확인할 수 있습니다';",
+  "  end if;",
+  "  for t, c in",
+  "    select k.table_name, k.column_name",
+  "      from information_schema.columns k",
+  "     where k.table_schema = 'public'",
+  "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
+  "  loop",
+  "    begin",
+  "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
+  "      total := total + coalesce(n, 0);",
+  "    exception when others then",
+  "      null;",
+  "    end;",
+  "  end loop;",
+  "  return total;",
+  "end",
+  "$fn$;",
+  "create or replace function public.admin_set_temp_password(target uuid, newpw text)",
+  "returns text",
+  "language plpgsql",
+  "security definer",
+  "set search_path = public, auth, extensions",
+  "as $fn$",
+  "declare",
+  "  em text;",
+  "begin",
+  "  if not public.is_owner() then",
+  "    raise exception '대표만 임시 비밀번호를 발급할 수 있습니다';",
+  "  end if;",
+  "  if target = auth.uid() then",
+  "    raise exception '본인 비밀번호는 로그인 화면의 비밀번호 재설정으로 바꾸세요';",
+  "  end if;",
+  "  if length(coalesce(newpw, '')) < 8 then",
+  "    raise exception '임시 비밀번호는 8자 이상이어야 합니다';",
+  "  end if;",
+  "  select u.email into em from auth.users u where u.id = target;",
+  "  if em is null then",
+  "    raise exception '없는 계정입니다';",
+  "  end if;",
+  "  update auth.users",
+  "     set encrypted_password = crypt(newpw, gen_salt('bf', 10)),",
+  "         email_confirmed_at = coalesce(email_confirmed_at, now()),",
+  "         updated_at = now()",
+  "   where id = target;",
+  "  return em;",
+  "end",
+  "$fn$;",
+  "create or replace function public.admin_set_active(target uuid, v boolean)",
+  "returns text",
+  "language plpgsql",
+  "security definer",
+  "set search_path = public, auth",
+  "as $fn$",
+  "declare",
+  "  em text;",
+  "begin",
+  "  if not (public.is_admin() or public.is_owner()) then",
+  "    raise exception '관리자만 변경할 수 있습니다';",
+  "  end if;",
+  "  if target = auth.uid() then",
+  "    raise exception '본인 계정은 여기서 잠글 수 없습니다';",
+  "  end if;",
+  "  select u.email into em from auth.users u where u.id = target;",
+  "  if em is null then",
+  "    raise exception '없는 계정입니다';",
+  "  end if;",
+  "  update public.profiles",
+  "     set active = v,",
+  "         status = case when v then 'approved' else 'blocked' end",
+  "   where id = target;",
+  "  return em;",
+  "end",
+  "$fn$;",
+  "create or replace function public.admin_delete_account(target uuid, hard boolean default false)",
+  "returns text",
+  "language plpgsql",
+  "security definer",
+  "set search_path = public, auth",
+  "as $fn$",
+  "declare",
+  "  em text;",
+  "  oe text;",
+  "  refs integer;",
+  "begin",
+  "  if not public.is_owner() then",
+  "    raise exception '대표만 계정을 삭제할 수 있습니다';",
+  "  end if;",
+  "  if target = auth.uid() then",
+  "    raise exception '본인 계정은 삭제할 수 없습니다';",
+  "  end if;",
+  "  select u.email into em from auth.users u where u.id = target;",
+  "  if em is null then",
+  "    raise exception '없는 계정입니다';",
+  "  end if;",
+  "  select value into oe from public.app_config where key = 'owner_email' limit 1;",
+  "  if oe is not null and lower(btrim(em)) = lower(btrim(oe)) then",
+  "    raise exception '대표 계정은 삭제할 수 없습니다';",
+  "  end if;",
+  "  refs := public.admin_account_refs(target);",
+  "  if refs > 0 and not hard then",
+  "    raise exception '이 계정에 연결된 기록이 %건 있습니다. 삭제하면 그 기록이 함께 사라집니다', refs;",
+  "  end if;",
+  "  delete from public.profiles where id = target;",
+  "  delete from auth.users where id = target;",
+  "  return em;",
+  "end",
+  "$fn$;",
+  "revoke execute on function public.admin_user_list() from public;",
+  "revoke execute on function public.admin_account_refs(uuid) from public;",
+  "revoke execute on function public.admin_set_temp_password(uuid, text) from public;",
+  "revoke execute on function public.admin_set_active(uuid, boolean) from public;",
+  "revoke execute on function public.admin_delete_account(uuid, boolean) from public;",
+  "grant execute on function public.admin_user_list() to authenticated;",
+  "grant execute on function public.admin_account_refs(uuid) to authenticated;",
+  "grant execute on function public.admin_set_temp_password(uuid, text) to authenticated;",
+  "grant execute on function public.admin_set_active(uuid, boolean) to authenticated;",
+  "grant execute on function public.admin_delete_account(uuid, boolean) to authenticated;",
+  "select",
+  "  (select count(*) from auth.users) as auth_users,",
+  "  (select count(*) from public.profiles) as profiles,",
+  "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
+  "",
+  "",
+  "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
+  "   기기 저장칸에만 두면 집에서 적은 것이 사무실에서 안 보인다.",
+  "   같은 아이디면 어디서 들어와도 같아야 한다. 본인만 읽고 쓴다. */",
+  "create table if not exists public.advisor_intro(",
+  "  owner_id   uuid primary key,",
+  "  data       jsonb not null default '{}'::jsonb,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "alter table public.advisor_intro enable row level security;",
+  "grant select, insert, update on public.advisor_intro to authenticated;",
+  "",
+  "drop policy if exists advisor_intro_read on public.advisor_intro;",
+  "create policy advisor_intro_read on public.advisor_intro",
+  "  for select to authenticated",
+  "  using (owner_id = auth.uid() or public.is_admin() or public.is_owner());",
+  "",
+  "drop policy if exists advisor_intro_insert on public.advisor_intro;",
+  "create policy advisor_intro_insert on public.advisor_intro",
+  "  for insert to authenticated with check (owner_id = auth.uid());",
+  "",
+  "drop policy if exists advisor_intro_update on public.advisor_intro;",
+  "create policy advisor_intro_update on public.advisor_intro",
+  "  for update to authenticated",
+  "  using (owner_id = auth.uid()) with check (owner_id = auth.uid());",
+  "",
+  "drop trigger if exists advisor_intro_touch on public.advisor_intro;",
+  "create trigger advisor_intro_touch before update on public.advisor_intro",
+  "  for each row execute function public.touch_updated_at();",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '32')",
+  "values ('schema_version', '34')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -24372,7 +25062,21 @@ var HX_SQL={
   "  (select count(*) from pg_policies where schemaname='public' and tablename='coach_notes')",
   "union all select",
   "  '약관 동의 기록', to_regclass('public.legal_consents') is not null,",
-  "  (select count(*) from pg_policies where schemaname='public' and tablename='legal_consents');"
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='legal_consents')",
+  "union all select",
+  "  '메뉴 접근 설정', to_regclass('public.tool_access') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='tool_access')",
+  "union all select",
+  "  '월간 영업보고서', to_regclass('public.monthly_perf') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='monthly_perf')",
+  "union all select",
+  "  '리더 사업계획서', to_regclass('public.team_plans') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='team_plans')",
+  "union all select",
+  "  '계정 찾기·중복 정리', to_regproc('public.admin_delete_account') is not null, 0",
+  "union all select",
+  "  '내 소개(아이디별)', to_regclass('public.advisor_intro') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='advisor_intro');"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -25583,7 +26287,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=32;
+var SETUP_VER=34;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
@@ -25690,6 +26394,7 @@ function setupBarHtml(){
 }
 function setupPaint(){
   var a=document.getElementById('osSetupHome');if(a)a.innerHTML=setupBarHtml();
+  try{nfKeyPaint();}catch(e){}
   var b=document.getElementById('osSetupHx');if(b)b.innerHTML=setupBarHtml();
 }
 function setupCss(){
@@ -28262,6 +28967,227 @@ function insWho(T) {
 }
 
 /* ── 한 번에 ───────────────────────────────────────────────────── */
+
+/* ════════ 비포 & 애프터 — 읽고, 보여주고, 고치게 한다 ════════
+
+   여태 이 화면은 통합조회 PDF 한 가지 형식만 읽었다(insScan). 그런데
+   비포&애프터에 올리는 <b>신규 제안서</b>는 회사마다 서식이 다르다.
+   그래서 못 읽고, 못 읽은 채로 AI 에게 원문을 통째로 던졌다. AI 가
+   숫자를 잘못 보면 그대로 보고서에 실린다 — 고객 앞에서 틀린 금액을
+   말하게 되는 것이다.
+
+   세 가지로 바꾼다.
+
+     1. <b>읽어야 할 말을 정한다.</b> 회사마다 「뇌혈관질환진단비」 ·
+        「뇌혈관질환 진단급여금」 · 「뇌혈관질환(80% 이상)」 처럼 달리
+        쓴다. 같은 담보로 묶는 사전을 둔다.
+     2. <b>뽑아서 보여준다.</b> 못 찾은 칸은 비워 두고 「못 찾음」 이라고
+        적는다. 0 으로 채우면 없는 것과 구분이 안 된다.
+     3. <b>사람이 고친다.</b> 고친 표가 AI 에게 간다. 원문 대신 확인된
+        표를 주므로, AI 가 숫자를 다시 헤맬 일이 없다.
+
+   금액 단위는 만원으로 통일한다 — 1억 = 10,000만, 3,000만원 = 3,000만.  */
+var BABA={rows:null,at:'',src:{}};
+
+/* 회사마다 다르게 쓰는 말. 앞의 것이 대표 이름이다.
+   ※ 여기 없는 담보는 표에서 직접 줄을 더할 수 있다. */
+var BABA_TERMS=[
+ {k:'death',   n:'사망(주계약)',      syn:['일반사망','사망보험금','주계약 사망','사망시','재해사망']},
+ {k:'disab',   n:'후유장해',          syn:['후유장해','상해후유장해','재해장해','장해급여금']},
+ {k:'cancer',  n:'암 진단비(일반암)', syn:['일반암','암(유사암제외)','악성신생물','암진단비','암진단급여금'],
+  not:['유사','소액','제자리','경계성','피부','갑상선','전립선']},
+ {k:'cancer2', n:'유사암·소액암',     syn:['유사암','소액암','제자리암','경계성종양','기타피부암','갑상선암']},
+ {k:'target',  n:'표적항암치료비',    syn:['표적항암','표적항암약물','표적항암치료']},
+ {k:'antican', n:'항암방사선·약물',   syn:['항암방사선','항암약물','항암방사선약물치료']},
+ {k:'cantx',   n:'암주요치료비',      syn:['암주요치료비','주요치료비','하이클래스']},
+ {k:'brain',   n:'뇌혈관질환 진단비', syn:['뇌혈관질환','뇌혈관']},
+ {k:'stroke',  n:'뇌졸중 진단비',     syn:['뇌졸중']},
+ {k:'brainh',  n:'뇌출혈 진단비',     syn:['뇌출혈']},
+ {k:'braini',  n:'뇌경색 진단비',     syn:['뇌경색']},
+ {k:'heart',   n:'허혈성심장질환',    syn:['허혈성심장','허혈성 심장','심장질환진단']},
+ {k:'mi',      n:'급성심근경색',      syn:['급성심근경색','심근경색']},
+ {k:'surg',    n:'질병수술비',        syn:['질병수술','질병 수술비','수술비(질병)']},
+ {k:'surgA',   n:'상해수술비',        syn:['상해수술','재해수술']},
+ {k:'surgN',   n:'수술비(1~5종)',     syn:['1~5종','종수술','수술비 종','특정수술']},
+ {k:'inpD',    n:'질병입원일당',      syn:['질병입원일당','질병입원','입원일당(질병)']},
+ {k:'inpA',    n:'상해입원일당',      syn:['상해입원일당','상해입원','재해입원']},
+ {k:'icu',     n:'중환자실 입원',     syn:['중환자실']},
+ {k:'silson',  n:'실손의료비',        syn:['실손','실손의료비','급여의료비','비급여의료비','통원의료비']},
+ {k:'frac',    n:'골절·화상·깁스',    syn:['골절','화상','깁스','골절진단']},
+ {k:'er',      n:'응급실 내원비',     syn:['응급실','응급진료']},
+ {k:'teeth',   n:'치아·치과',         syn:['치아','치과','크라운','임플란트']},
+ {k:'care',    n:'간병·요양',         syn:['간병','장기요양','요양병원','간병인지원']},
+ {k:'drive',   n:'운전자 (벌금 등)',  syn:['벌금','변호사선임','형사합의','교통사고처리지원']},
+ {k:'liab',    n:'배상책임',          syn:['배상책임','일상생활배상','화재배상']},
+ {k:'fee',     n:'월 보험료',         syn:['월보험료','합계보험료','납입보험료','보험료 합계','월 납입']}
+];
+
+/* "3,000만원" · "1억" · "5000만" · "10,000,000원" · "3만원" → 만원 숫자 */
+function babaWon(t){
+  t=('' + (t||'')).replace(/[\s,]/g,'');
+  var m=t.match(/(\d+(?:\.\d+)?)억(?:(\d+(?:\.\d+)?)만)?/);
+  if(m)return Math.round(parseFloat(m[1])*10000 + (m[2]?parseFloat(m[2]):0));
+  m=t.match(/(\d+(?:\.\d+)?)천만/); if(m)return Math.round(parseFloat(m[1])*1000);
+  m=t.match(/(\d+(?:\.\d+)?)만/);   if(m)return Math.round(parseFloat(m[1]));
+  m=t.match(/(\d{5,})원?/);         if(m)return Math.round(parseInt(m[1],10)/10000);
+  m=t.match(/(\d{1,4})원/);         if(m)return 0;      /* 몇 백원짜리는 금액이 아니다 */
+  return null;
+}
+/* 담보 이름 뒤에 붙은 첫 금액을 집는다. 표가 줄바꿈으로 흩어져도
+   이름에서 60자 안쪽이면 같은 줄로 본다. */
+function babaHit(T,syn,not){
+  var i,idx,seg,v,best=null,where='';
+  for(i=0;i<syn.length;i++){
+    var w=syn[i], from=0;
+    while((idx=T.indexOf(w,from))>=0){
+      from=idx+w.length;
+      /* 「유사암진단비」 안의 「암진단비」 를 일반암으로 집으면 안 된다.
+         바로 앞 여섯 글자에 걸러야 할 말이 있으면 그 자리는 건너뛴다. */
+      if(not&&not.length){
+        var head=T.slice(Math.max(0,idx-6),idx), skip=false, j;
+        for(j=0;j<not.length;j++)if(head.indexOf(not[j])>=0){skip=true;break;}
+        if(skip)continue;
+      }
+      seg=T.slice(idx, idx+90);
+      v=babaWon(seg);
+      if(v!==null&&v>0){ best=v; where=seg.slice(0,52); break; }
+    }
+    if(best!==null)break;
+  }
+  return best===null?null:{won:best,raw:where};
+}
+function babaScan(text){
+  var T=(''+(text||'')).replace(/\s+/g,' ');
+  /* 빈 문서만 걸러 낸다. 기준을 높게 잡으면 담보 몇 줄짜리 짧은
+     제안서를 통째로 안 읽고 넘어간다 — 그러면 표가 텅 빈 채로 뜬다. */
+  if(T.length<10)return {};
+  var out={};
+  BABA_TERMS.forEach(function(t){
+    var h=babaHit(T,t.syn,t.not);
+    if(h)out[t.k]={won:h.won,raw:h.raw};
+  });
+  return out;
+}
+
+/* ── 읽은 값 표 ─────────────────────────────────────────────── */
+function babaMan(v){ return (v===null||v===undefined||v==='')?'':Number(v).toLocaleString(); }
+function babaGridHtml(){
+  if(!BABA.rows)return '';
+  var body=BABA.rows.map(function(r,i){
+    var miss=(r.b===null&&r.a===null);
+    var cell=function(which){
+      var v=r[which];
+      return '<td style="padding:5px 6px;border-bottom:1px solid #F1F4F8">'+
+        '<input value="'+(v===null?'':babaMan(v))+'" placeholder="못 찾음" inputmode="numeric" '+
+        'oninput="babaSet('+i+',\''+which+'\',this.value)" '+
+        'style="width:100%;box-sizing:border-box;border:1px solid '+(v===null?'#F5C6C6':'#D8E0EC')+';'+
+        'border-radius:7px;padding:6px 8px;font-size:13px;text-align:right;font-family:inherit;'+
+        'background:'+(v===null?'#FFFBFB':'#fff')+'">'+
+        '</td>';
+    };
+    return '<tr'+(miss?' style="background:#FFFBFB"':'')+'>'+
+      '<td style="padding:5px 6px;border-bottom:1px solid #F1F4F8;font-size:12.5px;font-weight:700">'+
+        esc(r.n)+(r.own?' <span style="font-size:9.5px;color:#1D4ED8;background:#EFF6FF;border-radius:99px;padding:1px 6px">직접 추가</span>':'')+
+        (r.raw?('<div style="font-size:9.5px;color:var(--ink-5);font-weight:500;margin-top:2px">읽은 자리: '+esc(r.raw)+'</div>'):'')+'</td>'+
+      cell('b')+cell('a')+
+      '<td style="padding:5px 4px;border-bottom:1px solid #F1F4F8;text-align:center">'+
+        '<button type="button" onclick="babaDel('+i+')" style="border:1px solid #EDE9F6;background:#fff;'+
+        'color:#9AA2AD;border-radius:7px;width:24px;height:24px;cursor:pointer;line-height:1">−</button></td></tr>';
+  }).join('');
+  var miss=BABA.rows.filter(function(r){return r.b===null&&r.a===null;}).length;
+  return '<div class="card" style="margin-bottom:12px;border-color:#C7D2FE">'+
+    '<div class="card-hd" style="background:#F5F9FF"><div class="card-title"><span class="ci">📋</span>'+
+      '읽은 값 — <b>보내기 전에 고치세요</b></div>'+
+    '<div class="card-desc">회사마다 담보 이름을 다르게 씁니다. 앱이 사전으로 잡아 봤지만 '+
+      '<b>못 찾은 칸은 비워 두었습니다</b> — 0 으로 채우면 없는 것과 구분이 안 됩니다. '+
+      '여기 고친 값이 그대로 리포트에 들어갑니다. 단위는 <b>만원</b>입니다.</div></div>'+
+    '<div class="card-body">'+
+    (miss?('<div class="bj-warn" style="margin-bottom:10px">못 찾은 담보가 <b>'+miss+'개</b> 있습니다. '+
+      '자료에 없으면 그냥 두시고, 있는데 못 읽었으면 손으로 적어 주세요.</div>'):'')+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:460px">'+
+      '<thead><tr>'+
+      '<th style="text-align:left;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">담보</th>'+
+      '<th style="text-align:right;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">기존(만원)</th>'+
+      '<th style="text-align:right;padding:6px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC">신규(만원)</th>'+
+      '<th style="border-bottom:1px solid #E3E7EC"></th></tr></thead>'+
+      '<tbody>'+body+'</tbody></table></div>'+
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-ghost" onclick="babaAdd()">＋ 담보 줄 더하기</button>'+
+      '<button class="btn btn-ghost" onclick="babaClear()">읽은 값 지우기</button>'+
+      '<span style="font-size:11px;color:var(--ink-5)">'+esc(BABA.at)+' 읽음</span>'+
+    '</div></div></div>';
+}
+function babaPaint(){
+  var e=document.getElementById('babaGrid');
+  if(e)e.innerHTML=babaGridHtml();
+}
+function babaSet(i,which,v){
+  if(!BABA.rows||!BABA.rows[i])return;
+  var t=(''+v).replace(/[^\d.]/g,'');
+  BABA.rows[i][which]=t===''?null:Math.round(parseFloat(t)||0);
+}
+function babaDel(i){ if(BABA.rows){BABA.rows.splice(i,1);babaPaint();} }
+function babaAdd(){
+  var n=prompt('담보 이름을 적어 주세요 (예: 중입자치료비)','');
+  if(!n)return;
+  BABA.rows=BABA.rows||[];
+  BABA.rows.push({k:'x'+BABA.rows.length,n:n,b:null,a:null,own:true});
+  babaPaint();
+}
+function babaClear(){ BABA.rows=null;babaPaint();toast('읽은 값을 지웠습니다 — 원문 그대로 보냅니다'); }
+
+/* 첨부한 PDF 를 읽어 표를 만든다 */
+function babaRead(id){
+  var p=null;PDF_TOOLS.forEach(function(x){if(x.id===id)p=x;});if(!p)return;
+  var slots=pdfSlotsFor(p),jobs=[],hasAny=false;
+  slots.forEach(function(s){
+    var arr=PDFSTORE[id+':'+s.id]||[];
+    if(arr.length)hasAny=true;
+    arr.forEach(function(f){
+      jobs.push(extractPdfSmart(f).then(function(r){
+        return {slot:s.label,name:f.name,text:(r.text||'')};
+      },function(){return {slot:s.label,name:f.name,text:''};}));
+    });
+  });
+  if(!hasAny){toast('먼저 PDF 를 첨부해 주세요');return;}
+  var g=document.getElementById('babaGrid');
+  if(g)g.innerHTML='<div class="loading"><div class="spinner"></div>자료에서 담보와 금액을 찾는 중…</div>';
+  Promise.all(jobs).then(function(parts){
+    var bt=parts.filter(function(x){return /기존/.test(x.slot);}).map(function(x){return x.text;}).join(' ');
+    var at=parts.filter(function(x){return !/기존/.test(x.slot);}).map(function(x){return x.text;}).join(' ');
+    var B=babaScan(bt),A=babaScan(at);
+    BABA.rows=BABA_TERMS.map(function(t){
+      var b=B[t.k]||null,a=A[t.k]||null;
+      return {k:t.k,n:t.n,b:b?b.won:null,a:a?a.won:null,raw:(b&&b.raw)||(a&&a.raw)||''};
+    });
+    BABA.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    babaPaint();
+    var got=BABA.rows.filter(function(r){return r.b!==null||r.a!==null;}).length;
+    toast(got+'개 담보를 찾았습니다 — 표에서 확인·수정한 뒤 만들어 주세요',5200);
+  },function(){
+    if(g)g.innerHTML='';
+    toast('자료를 읽지 못했습니다');
+  });
+}
+/* 표를 AI 에게 줄 글로 */
+function babaBrief(){
+  if(!BABA.rows||!BABA.rows.length)return '';
+  var used=BABA.rows.filter(function(r){return r.b!==null||r.a!==null;});
+  if(!used.length)return '';
+  var L=['[설계사가 확인한 담보 표 — 단위 만원]',
+         '아래 값은 사람이 자료에서 뽑아 눈으로 확인한 것이다.',
+         '원문과 다르게 보이더라도 <b>이 표의 숫자를 그대로 쓴다.</b>',
+         '표에 없는 담보만 원문에서 찾아 보탠다. 빈 칸은 "확인 필요" 로 적는다.',''];
+  L.push('| 담보 | 기존 | 신규 |');
+  L.push('|---|---|---|');
+  used.forEach(function(r){
+    L.push('| '+r.n+' | '+(r.b===null?'확인 필요':r.b)+' | '+(r.a===null?'확인 필요':r.a)+' |');
+  });
+  var miss=BABA.rows.length-used.length;
+  if(miss)L.push('\n(표에 없는 '+miss+'개 담보는 자료에서 못 찾았거나 해당 없음이다. 지어내지 말 것.)');
+  return L.join('\n');
+}
+
 function insScan(text) {
   var T = ('' + (text || '')).replace(/\s+/g, ' ');
   if (T.length < 50) return null;
@@ -29000,7 +29926,9 @@ function renderPdfTool(p){
     h+='<div class="fld span2" style="margin-top:13px"><label>직접 입력 (추가 코멘트)</label><textarea data-pcomment="'+p.id+'" placeholder="예: 실비 갱신이 가파르니 4세대 전환도 가볍게 언급할 것"></textarea></div>';}
   if(p.sample)h+='<div class="fld span2" style="margin-top:13px"><label>'+esc(p.sample.label)+'</label><textarea data-psample="'+p.id+'" placeholder="'+esc(p.sample.ph||'')+'"></textarea></div>';
   var engLbl=(getProvider()==='gemini'&&geminiReady())?('Gemini · '+esc(getGeminiModel())):('Claude · '+esc(getModel()));
-  h+='<div class="btn-row" style="margin-top:14px"><button class="btn btn-primary" onclick="runPdf(\''+p.id+'\')">📄 '+esc(p.cta||'AI 분석')+'</button><span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
+  if(p.id==='baba')h+='<div id="babaGrid">'+(typeof babaGridHtml==='function'?babaGridHtml():'')+'</div>';
+  h+='<div class="btn-row" style="margin-top:14px">'+
+    (p.id==='baba'?('<button class="btn btn-ghost" onclick="babaRead(\''+p.id+'\')">📋 먼저 읽어 보기 · 값 고치기</button>'):'')+'<button class="btn btn-primary" onclick="runPdf(\''+p.id+'\')">📄 '+esc(p.cta||'AI 분석')+'</button><span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
   h+='<div class="result" id="pres_'+p.id+'"></div></div></div>';
   return h;
 }
@@ -29056,6 +29984,12 @@ function runPdf(id){
       if(typeof insCssMount==='function')insCssMount();
       spec={system:spec.system,user:insBrief(scan)+'\n\n'+spec.user,max:spec.max};
     }
+    /* 사람이 눈으로 확인한 표가 있으면 <b>맨 앞에</b> 둔다.
+       AI 가 원문에서 숫자를 다시 헤매다 틀리는 것을 막는다. */
+    try{
+      var bb=(typeof babaBrief==='function')?babaBrief():'';
+      if(bb)spec={system:spec.system,user:bb+'\n\n'+spec.user,max:spec.max};
+    }catch(e){}
     res._parts=parts;res._opts=opts;res._spec=spec;
     if(p.deck){
       if(typeof bjCssMount==='function')bjCssMount();
@@ -31150,7 +32084,7 @@ function osGroupAllowedRoles(g){
   return osGroupDefaultRoles(g);
 }
 /* ak 마다 기본 직급이 다르다 — 매니저 관리는 리더부터, 나머지는 전원 */
-var OS_KEY_ROLE={'매니저 관리':'lead'};
+var OS_KEY_ROLE={'매니저 관리':'lead','보험전략실':'hq'};
 /* 설정 표에 세울 열쇠 목록 — 메뉴에 붙은 ak 를 나온 순서대로 모은다.
    대표가 예전에 저장해 둔 설정(tool_access)이 이 열쇠로 걸려 있으므로,
    메뉴를 어떻게 다시 묶든 이 목록과 저장된 값은 그대로 이어진다. */
@@ -32080,6 +33014,7 @@ function osProfileApply(sb,uid,r){
         osIpGuardCheck(function(ipOk){
           if(!ipOk){OS.profile=null;osRenderPill();osShowIpBlock();return;}
           osHidePending();osHideLoginGate();osRenderPill();osOnLogin();
+          try{advFromServer();}catch(e){}
         });
       });
     });
@@ -35022,6 +35957,94 @@ var TOFIN_MAP=[
   ['f_ret','s_rage','n'],         ['f_retspend','s_target','n'],
   ['f_np','s_nps','n'],           ['f_pp','s_pension','n']
 ];
+/* ── 팩트파인딩 → 계산기, 손 안 대고 ─────────────────────────
+   다리는 놓여 있었지만 <b>사람이 단추를 눌러야</b> 건너갔다. 상담자료에서
+   스물여섯 칸을 다 물어 놓고 계산기로 넘어오면 사이드바가 비어 있었고,
+   그러면 고객 앞에서 같은 것을 두 번 묻게 된다.
+
+   이제 계산기를 열 때 상담자료에 적힌 것을 스스로 들고 온다. 규칙 셋.
+
+     · 상담자료에 적은 게 없으면 아무 일도 안 한다
+     · 지난번에 들고 온 것과 같으면 다시 안 덮는다 — 계산기에서 고친
+       값을 소리 없이 되돌리면 그게 더 큰 사고다
+     · 무엇이 넘어왔는지 말해 주고, 되돌릴 수 있게 한다              */
+var TOFIN={last:'',pend:null};
+function osToFinKey(inputs){
+  var ks=Object.keys(inputs).sort(),i,o=[];
+  for(i=0;i<ks.length;i++)o.push(ks[i]+'='+inputs[ks[i]]);
+  return o.join('|');
+}
+/* 계산기로 밀어 넣는다.
+
+   시간을 재서 넣지 않는다. 계산기 파일은 크고, 느린 회선에서는 몇 초씩
+   걸린다. 그 사이에 넣으면 빈 문서로 날아가 사라진다 — 상담자료에 다
+   적어 놓고 넘어왔는데 비어 있던 것이 이것이었다.
+
+   그래서 넣을 것을 들고만 있다가, 계산기가 「준비됐다」고 알려 줄 때
+   넣는다. 이미 떠 있으면 그 자리에서 바로 답이 오므로 똑같이 빠르다. */
+function osFinPush(inputs,pain,how){
+  var n=0,k;
+  for(k in inputs) if(Object.prototype.hasOwnProperty.call(inputs,k)) n++;
+  if(!n) return;
+  TOFIN.last=osToFinKey(inputs);
+  TOFIN.pend={inputs:inputs,pain:pain,how:how,n:n};
+  /* 여기서 곧바로 넣지 않는다. 앱이 「물렸다」고 표시하는 시점은 주소를
+     걸어 준 순간이지, 그 문서가 다 뜬 순간이 아니다. 그 사이에 넣으면
+     빈 문서로 날아가 사라진다 — 첫 번째 전달만 안 되던 것이 이것이다.
+     계산기가 「준비됐다」고 답할 때 넣는다. 이미 떠 있으면 그 답이
+     곧바로 오므로 늦지 않는다. */
+  osFinPoke();
+}
+/* 계산기에게 「살아 있냐」고 몇 번 물어본다. 답(apexFinReady)이 오면 넣는다. */
+function osFinPoke(){
+  var tries=0;
+  (function ask(){
+    if(!TOFIN.pend)return;                       /* 이미 넣었다 */
+    tries++;
+    var fr=$('finFrame');
+    if(fr&&fr.contentWindow&&fr._mounted){
+      try{fr.contentWindow.postMessage({type:'apexFinAsk'},location.origin);}catch(x){}
+    }
+    if(tries<60)setTimeout(ask,500);             /* 30초까지 기다린다 */
+  })();
+}
+function osFinFlush(){
+  var p=TOFIN.pend; if(!p)return;
+  var fr=$('finFrame');
+  if(!fr||!fr.contentWindow||!fr._mounted)return;
+  try{
+    fr.contentWindow.postMessage({type:'apexFinLoad',inputs:p.inputs},location.origin);
+    if(p.pain)fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:p.pain},location.origin);
+  }catch(x){ return; }
+  TOFIN.pend=null;
+  if(p.how==='auto')
+    toast('상담자료에 적으신 '+p.n+'칸을 계산기로 들고 왔습니다 — 팩트체크부터 이어서 보세요',5200);
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinReady')return;
+  if(e.origin!==location.origin)return;
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
+  osFinFlush();
+});
+/* 계산기를 열 때마다 한 번 — 상담자료에 새로 적힌 게 있으면 들고 온다 */
+function osAutoToFin(){
+  var df=$('fpDeckFrame');
+  if(!df||!df._mounted||!df.contentWindow)return;   /* 상담자료를 아직 안 열었다 */
+  if(typeof fpAsk!=='function')return;
+  try{
+    fpAsk('deck','apex:snap',null,function(m){
+      var f=(m&&m.data&&m.data.f)||null;
+      if(!f)return;
+      var inputs=osToFinMap(f);
+      var key=osToFinKey(inputs);
+      if(!key)return;                 /* 적은 게 없다 */
+      if(key===TOFIN.last)return;     /* 지난번과 같다 — 다시 안 덮는다 */
+      osFinPush(inputs,null,'auto');
+    });
+  }catch(e){}
+}
 function osToFinMap(f){
   var out={},i,r,v;
   for(i=0;i<TOFIN_MAP.length;i++){
@@ -35044,6 +36067,8 @@ window.addEventListener('message',function(e){
   var f=(d.data&&d.data.f)||{}, inputs=osToFinMap(f), n=0, k;
   for(k in inputs) if(Object.prototype.hasOwnProperty.call(inputs,k)) n++;
 
+  /* 단추로 눌러 넘겼으니 자동 전달이 뒤따라 또 덮지 않게 표시해 둔다 */
+  TOFIN.last=osToFinKey(inputs);
   go('finance');
   toast('상담자료에서 '+n+'칸을 들고 왔습니다 — 팩트체크부터 이어서 보세요',4200);
 
@@ -35056,7 +36081,9 @@ window.addEventListener('message',function(e){
         fr.contentWindow.postMessage({type:'apexFinLoad',inputs:inputs},location.origin);
         fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:(d.pain||'pension')},location.origin);
       }catch(x){}
-      /* 늦게 뜨는 칸이 있어 한 번 더 밀어 준다 */
+      /* 계산기가 아직 안 떴을 수 있다 — 들고 있다가 준비되면 다시 넣는다 */
+      TOFIN.pend={inputs:inputs,pain:(d.pain||'pension'),how:'',n:n};
+      osFinPoke();
       if(tries<3)setTimeout(push,1500);
     }
     else if(tries<12)setTimeout(push,600);

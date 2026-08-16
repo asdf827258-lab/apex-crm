@@ -1809,6 +1809,7 @@ a { color: inherit; text-decoration: none; }
     </div>
     <div id="deck-total" style="display:none;margin-bottom:20px"></div>
     <div id="total-report"></div>
+    <div id="dollar-sim"></div>
   </div>
 
   <div class="tab-pane" id="tab-final">
@@ -9282,19 +9283,137 @@ window.addEventListener('message',function(e){
     for(var i=0;i<els.length;i++){var el=els[i];if(el.type==='file')continue;inputs[el.id]=el.value;}
     try{parent.postMessage({type:'apexFinSave',title:'재무설계 스냅샷',inputs:inputs},'*');}catch(x){}
   }
+  if(d.type==='apexFinAsk'){        /* 부모가 「살아 있냐」고 물으면 답한다 */
+    if(window.parent!==window){try{parent.postMessage({type:'apexFinReady'},'*');}catch(x){}}
+  }
   if(d.type==='apexFinLoad'){
     var ins=d.inputs||{};var ks=Object.keys(ins);
-    for(var j=0;j<ks.length;j++){var el2=document.getElementById(ks[j]);if(el2&&(el2.tagName==="INPUT"||el2.tagName==="SELECT"||el2.tagName==="TEXTAREA")&&el2.type!=="file"){el2.value=ins[ks[j]];}}
+    for(var j=0;j<ks.length;j++){var el2=document.getElementById(ks[j]);if(el2&&(el2.tagName==="INPUT"||el2.tagName==="SELECT"||el2.tagName==="TEXTAREA")&&el2.type!=="file"){el2.value=ins[ks[j]];
+      try{el2.dispatchEvent(new Event('input',{bubbles:true}));el2.dispatchEvent(new Event('change',{bubbles:true}));}catch(x){}}}
     try{if(typeof render==="function")render();}catch(x){}
     try{if(typeof renderAll==="function")renderAll();}catch(x){}
     try{if(typeof renderInsuranceDashboard==="function")renderInsuranceDashboard();}catch(x){}
     try{if(typeof icSyncFromDom==="function")icSyncFromDom();}catch(x){}
   }
 });
+/* ── 준비됐다고 먼저 알린다 ────────────────────────────────────
+   전에는 부모가 「이쯤이면 떴겠지」 하고 시간을 재서 밀어 넣었다.
+   이 파일은 크고, 느린 회선에서는 그 시간 안에 못 뜬다. 그러면 넣은
+   값이 빈 문서로 날아가 사라진다 — 상담자료에 다 적어 놓고 계산기로
+   넘어오면 비어 있던 것이 이것이다. 이제 이쪽에서 먼저 알린다.
+
+   창을 따로 띄워 이 파일만 볼 때는 알릴 데가 없다. 그때 parent 는
+   자기 자신이라, 안 막으면 <b>자기가 자기한테</b> 쪽지를 보낸다.
+   그 쪽지를 이 파일 안 다른 귀가 주워 듣고 엉뚱하게 움직였다. */
+(function(){
+  if(window.parent===window)return;          /* 앱 밖에서 혼자 열렸다 */
+  function hello(){ try{ parent.postMessage({type:'apexFinReady'},'*'); }catch(x){} }
+  if(document.readyState==='complete') setTimeout(hello,60);
+  else window.addEventListener('load',function(){ setTimeout(hello,60); });
+  setTimeout(hello,1200);                     /* 늦게 붙는 칸이 있다 */
+})();
 </script>
 <script>
 
 /* 🎓 교육자금 탭 — 나라가 주는 돈으로 유학자금을 만든다 (정밀 계산은 통합상담 e트랙) */
+/* ── 교육자금 · 지원금은 「언제」 들어오는가 ──────────────────
+   지원금을 총액 한 줄로만 적어 두면 상담에서 그 돈이 <b>지금 통장에 다
+   있는 것처럼</b> 쓰이게 된다. 부모급여는 24개월에 나눠 들어오는데
+   1,800만원을 일시금으로 잡으면, 그 해에 낼 수 있는 보험료가 실제보다
+   크게 잡힌다 — 납입재원이 부풀려진다.
+
+   그래서 제도마다 일시금인지 분할인지, 분할이면 몇 개월에 걸쳐 언제부터
+   들어오는지를 같이 적고, <b>해마다 실제로 들어오는 금액</b>을 따로 센다.
+   모르는 것은 「자료 없음」 으로 비운다 — 채우면 그게 거짓말이 된다.  */
+
+/* "1,800만원" · "월 100만원" · "200~300만원" 을 만원 숫자로.
+   못 읽으면 null 을 돌려준다 — 0 으로 치면 없는 것과 구분이 안 된다. */
+function eduAmt(str){
+  var t=String(str||'').replace(/\s|,/g,'');
+  if(!t)return null;
+  var m=t.match(/(\d+(?:\.\d+)?)/);
+  if(!m)return null;
+  var v=parseFloat(m[1]);
+  if(!isFinite(v))return null;
+  if(/억/.test(t))v=v*10000;
+  else if(/만/.test(t))v=v*1;
+  else if(/원/.test(t))v=v/10000;
+  var monthly=/월/.test(t);
+  var range=/[~-]/.test(t.replace(/^\D*/,''));
+  return {man:v, monthly:monthly, range:range};
+}
+/* 한 제도가 해마다 얼마씩 들어오는지 — 만 8세까지 9칸(0~8세) */
+function eduYearly(r){
+  var YRS=9, out=[],i;
+  for(i=0;i<YRS;i++)out.push(0);
+  var a=eduAmt(r.amount);
+  if(!a)return {rows:out, known:false, total:null};
+  var pay=String(r.pay||'');
+  var months=parseInt(r.months,10); if(!isFinite(months)||months<=0)months=0;
+  var start=parseInt(r.start,10);   if(!isFinite(start)||start<0)start=0;
+
+  if(a.monthly && !months) months=YRS*12-start;      /* 월액인데 기간을 안 적었다 */
+  var totalMan = a.monthly ? a.man*(months||1) : a.man;
+
+  if(pay==='분할' || (a.monthly&&pay!=='일시금')){
+    var n=months||1, per=totalMan/n, k;
+    for(k=0;k<n;k++){
+      var mo=start+k, y=Math.floor(mo/12);
+      if(y>=0&&y<YRS)out[y]+=per;
+    }
+    return {rows:out, known:true, total:totalMan, split:true, months:n, start:start};
+  }
+  var y0=Math.floor(start/12); if(y0<0)y0=0; if(y0>=YRS)y0=YRS-1;
+  out[y0]+=totalMan;
+  return {rows:out, known:true, total:totalMan, split:false, start:start};
+}
+function eduMan(v){ return Math.round(v).toLocaleString()+'만'; }
+function eduNone(v){ var t=String(v||'').trim(); return t?t:'<span style="color:#9AA2AD">자료 없음</span>'; }
+
+/* 받는 시점 표 — 해마다 실제로 들어오는 돈 */
+function eduTimingHtml(rows){
+  if(!rows||!rows.length)return '';
+  var YRS=9, sum=[],i;
+  for(i=0;i<YRS;i++)sum.push(0);
+  var unknown=[], any=false;
+  var body=rows.map(function(r){
+    var y=eduYearly(r);
+    if(!y.known){ unknown.push(r.name||'이름 없음'); return ''; }
+    any=true;
+    for(var k=0;k<YRS;k++)sum[k]+=y.rows[k];
+    var tag=y.split
+      ? '<span style="font-size:9.5px;font-weight:800;color:#1D4ED8;background:#EFF6FF;border-radius:99px;padding:2px 7px">분할 '+y.months+'개월</span>'
+      : '<span style="font-size:9.5px;font-weight:800;color:#B45309;background:#FEF3E2;border-radius:99px;padding:2px 7px">일시금</span>';
+    return '<tr><td style="padding:6px 8px;border-bottom:1px solid #F1F4F8;font-size:12px;font-weight:700">'+
+      (r.name||'')+' '+tag+'</td>'+
+      y.rows.map(function(v){
+        return '<td style="padding:6px 6px;border-bottom:1px solid #F1F4F8;text-align:right;font-size:11.5px;'+
+          'font-variant-numeric:tabular-nums;color:'+(v>0?'#0D1117':'#C9CFD8')+'">'+(v>0?eduMan(v):'·')+'</td>';
+      }).join('')+'</tr>';
+  }).join('');
+  if(!any)return '';
+  var head='<tr><th style="padding:6px 8px;text-align:left;font-size:10.5px;font-weight:800;color:#6B7280;border-bottom:1px solid #E6E0F2">제도</th>'+
+    Array.apply(null,{length:YRS}).map(function(_,i){
+      return '<th style="padding:6px 6px;text-align:right;font-size:10.5px;font-weight:800;color:#6B7280;border-bottom:1px solid #E6E0F2">'+i+'세</th>';
+    }).join('')+'</tr>';
+  var tot='<tr><td style="padding:8px;font-size:12px;font-weight:800;border-top:2px solid #E6E0F2">그 해 들어오는 돈</td>'+
+    sum.map(function(v){
+      return '<td style="padding:8px 6px;text-align:right;font-size:12px;font-weight:800;border-top:2px solid #E6E0F2;'+
+        'font-variant-numeric:tabular-nums;color:'+(v>0?'#5B34AD':'#C9CFD8')+'">'+(v>0?eduMan(v):'·')+'</td>';
+    }).join('')+'</tr>';
+  var grand=sum.reduce(function(a,b){return a+b;},0);
+  return '<div style="margin:16px 0 0;background:#fff;border:1px solid #E6E0F2;border-radius:14px;padding:14px 16px">'+
+    '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin-bottom:3px">언제 얼마가 들어옵니까</div>'+
+    '<div style="font-size:11.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
+      '<b>분할은 그 해에 다 들어오지 않습니다.</b> 총액을 일시금으로 잡으면 그 해 낼 수 있는 보험료가 '+
+      '실제보다 크게 잡혀 <b>납입재원이 부풀려집니다.</b> 아래는 해마다 실제로 들어오는 돈입니다.</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">'+
+      '<thead>'+head+'</thead><tbody>'+body+tot+'</tbody></table></div>'+
+    '<div style="font-size:11.5px;color:#6B7280;margin-top:9px">만 8세까지 합계 <b style="color:#0D1117">'+eduMan(grand)+'원</b>'+
+      (unknown.length?(' · 금액을 못 읽어 뺀 제도: <b>'+unknown.join(', ')+'</b>'):'')+'</div>'+
+    '</div>';
+}
+
 /* ── 교육자금 · 우리 지역 지원금 ────────────────────────────── */
 function eduRegion(){
   var e=document.getElementById('eduRegion');
@@ -9326,12 +9445,24 @@ function eduCollect(){
   if(btn){btn.disabled=true;btn.textContent='찾는 중…';}
   if(msg)msg.textContent='';
   var sys='당신은 대한민국 출산·양육 지원금을 정리하는 조사원입니다. '+
-    '아는 것만 적고 모르면 그 줄을 빼십시오. 지어내지 마십시오. '+
-    '반드시 JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. '+
-    '각 원소는 {"name":"제도 이름","amount":"총액 또는 월액","note":"조건 한 줄"} 입니다. '+
-    '전국 공통 제도를 먼저, 그다음 해당 지역 제도를 적습니다. 최대 8개.';
+    '아는 것만 적고, 모르는 칸은 <b>빈 문자열 ""</b> 로 두십시오. 지어내지 마십시오. '+
+    '모르는 칸을 채우는 것보다 비워 두는 것이 낫습니다 — 화면에 「자료 없음」 이라고 나갑니다. '+
+    '반드시 JSON 배열만 출력합니다. 다른 말은 한 글자도 쓰지 마십시오. 최대 8개.\n'+
+    '각 원소는 이렇습니다:\n'+
+    '{"name":"제도 이름",'+
+    '"amount":"총액 또는 월액 (예 1,800만원)",'+
+    '"a1":"첫째 금액","a2":"둘째 금액","a3":"셋째 이상 금액",'+
+    '"pay":"일시금 또는 분할",'+
+    '"months":"분할이면 몇 개월에 나눠 주는지 숫자만","start":"출생 후 몇 개월째부터 나오는지 숫자만",'+
+    '"income":"소득요건 (없으면 \'소득무관\')",'+
+    '"resid":"거주기간요건 (없으면 \'거주기간 요건 없음\')",'+
+    '"asof":"확인일자 YYYY-MM","src":"출처 기관이나 누리집 이름",'+
+    '"note":"조건 한 줄"}\n'+
+    '전국 공통 제도를 먼저, 그다음 해당 지역 제도를 적습니다. '+
+    '<b>일시금인지 분할인지는 반드시 채우십시오</b> — 이 값으로 언제 얼마가 들어오는지 계산합니다.';
   var usr='지역: '+reg+'\n이 지역에 사는 가정이 아이 한 명을 낳아 만 8세가 될 때까지 '+
-    '받을 수 있는 국가·지자체 지원금을 정리해 주세요. 금액은 "1,800만원" 처럼 적습니다.';
+    '받을 수 있는 국가·지자체 지원금을 정리해 주세요. 금액은 "1,800만원" 처럼 적습니다. '+
+    '출산순위(첫째·둘째·셋째)에 따라 금액이 다르면 a1·a2·a3 에 각각 적습니다.';
   infoAI(sys,usr,2200).then(function(txt){
     var rows=infoRows(txt);
     if(btn){btn.disabled=false;btn.textContent='🔎 정보수집';}
@@ -9349,22 +9480,38 @@ function eduCollect(){
 function eduEdit(){
   var host=document.getElementById('eduInfoEdit'); if(!host)return;
   var o=infoGet('edu'); if(!o||!o.rows||!o.rows.length){host.innerHTML='';return;}
-  host.innerHTML='<div style="margin-top:11px;background:#fff;border:1px solid #E6E0F2;border-radius:11px;padding:10px 12px">'+
+  host.innerHTML='<div style="margin-top:11px;background:#fff;border:1px solid #E6E0F2;border-radius:11px;padding:11px 12px">'+
+    '<div style="font-size:11px;color:#6B7280;line-height:1.6;margin-bottom:9px">'+
+      '빈 칸은 화면에 <b>「자료 없음」</b> 으로 나갑니다 — 모르는 것을 채우지 마십시오. '+
+      '<b>일시금·분할</b>은 꼭 채워 주세요. 분할인데 일시금으로 잡으면 그 해 납입재원이 부풀려집니다.</div>'+
     o.rows.map(function(r,i){
       var f=function(k,ph,w){return '<input data-ei="'+i+'" data-ek="'+k+'" placeholder="'+ph+'" '+
         'value="'+String(r[k]||'').replace(/"/g,'&quot;')+'" style="flex:'+w+';min-width:0;padding:6px 8px;'+
         'border:none;border-bottom:1px solid #EDE9F6;font-size:12.5px;font-weight:700">';};
-      return '<div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">'+
-        f('name','제도 이름','0 0 150px')+f('amount','금액','0 0 110px')+f('note','조건','1')+
-        '<button type="button" onclick="eduDel('+i+')" style="flex:none;width:26px;height:26px;border-radius:7px;'+
-        'border:1px solid #EDE9F6;background:#fff;color:#9AA2AD;cursor:pointer">−</button></div>';
+      var sel='<select data-ei="'+i+'" data-ek="pay" style="flex:0 0 92px;padding:6px 4px;border:none;'+
+        'border-bottom:1px solid #EDE9F6;font-size:12.5px;font-weight:700;font-family:inherit;background:transparent">'+
+        ['','일시금','분할'].map(function(v){
+          return '<option value="'+v+'"'+((r.pay||'')===v?' selected':'')+'>'+(v||'(미정)')+'</option>';}).join('')+'</select>';
+      return '<div style="border-bottom:1px dashed #EDE9F6;padding-bottom:8px;margin-bottom:8px">'+
+        '<div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">'+
+          f('name','제도 이름','0 0 150px')+f('amount','총액/월액','0 0 105px')+sel+
+          f('months','분할 개월','0 0 78px')+f('start','시작(개월)','0 0 86px')+
+          '<button type="button" onclick="eduDel('+i+')" style="flex:none;width:26px;height:26px;border-radius:7px;'+
+          'border:1px solid #EDE9F6;background:#fff;color:#9AA2AD;cursor:pointer">−</button></div>'+
+        '<div style="display:flex;gap:7px;align-items:center;margin-bottom:5px">'+
+          f('a1','첫째 금액','1')+f('a2','둘째 금액','1')+f('a3','셋째↑ 금액','1')+'</div>'+
+        '<div style="display:flex;gap:7px;align-items:center">'+
+          f('income','소득요건','1')+f('resid','거주기간요건','1')+
+          f('asof','확인일자 2026-08','0 0 118px')+f('src','출처','0 0 120px')+'</div>'+
+        '<div style="display:flex;gap:7px;align-items:center;margin-top:5px">'+f('note','조건 한 줄','1')+'</div>'+
+        '</div>';
     }).join('')+
-    '<button type="button" onclick="eduSave()" style="margin-top:6px;padding:7px 14px;border-radius:8px;border:none;'+
+    '<button type="button" onclick="eduSave()" style="margin-top:2px;padding:7px 14px;border-radius:8px;border:none;'+
     'cursor:pointer;background:#0F172A;color:#fff;font-size:12.5px;font-weight:800">고친 대로 저장</button></div>';
 }
 function eduSave(){
   var o=infoGet('edu'); if(!o)return;
-  var L=document.querySelectorAll('#eduInfoEdit input'),i,e;
+  var L=document.querySelectorAll('#eduInfoEdit input,#eduInfoEdit select'),i,e;
   for(i=0;i<L.length;i++){
     e=L[i];
     var ix=+e.getAttribute('data-ei'), k=e.getAttribute('data-ek');
@@ -9454,16 +9601,47 @@ function renderEduFund(){
   var nm = v('s_name','고객님');
   /* 수집해 둔 값이 있으면 그것을 쓴다. 없으면 아래 기본값 */
   var SAVED=infoGet('edu');
-  var C = (SAVED&&SAVED.rows&&SAVED.rows.length)
-    ? SAVED.rows.map(function(r){return [r.name||'',r.amount||'',r.note||''];})
-    : [['첫만남이용권','200~300만원','출생 시 1회 (첫째 200 / 둘째↑ 300)'],
-       ['부모급여','1,800만원','0세 월 100만 + 1세 월 50만'],
-       ['아동수당','1,080만원~','만 9세 미만 월 10만 (지역별 우대 有)']];
-  var cards = C.map(function(c){
+  var DEF=[{name:'첫만남이용권',amount:'200~300만원',a1:'200만원',a2:'300만원',a3:'300만원',
+            pay:'일시금',start:'0',income:'소득무관',resid:'거주기간 요건 없음',
+            asof:'2026-08',src:'보건복지부',note:'출생 시 1회 (첫째 200 / 둘째↑ 300)'},
+           {name:'부모급여',amount:'1,800만원',a1:'1,800만원',a2:'1,800만원',a3:'1,800만원',
+            pay:'분할',months:'24',start:'0',income:'소득무관',resid:'거주기간 요건 없음',
+            asof:'2026-08',src:'보건복지부',note:'0세 월 100만 + 1세 월 50만'},
+           {name:'아동수당',amount:'1,080만원',a1:'1,080만원',a2:'1,080만원',a3:'1,080만원',
+            pay:'분할',months:'108',start:'0',income:'소득무관',resid:'거주기간 요건 없음',
+            asof:'2026-08',src:'보건복지부',note:'만 9세 미만 월 10만 (지역별 우대 有)'}];
+  var R = (SAVED&&SAVED.rows&&SAVED.rows.length) ? SAVED.rows : DEF;
+  var cards = R.map(function(r){
+    var ord='';
+    if(r.a1||r.a2||r.a3){
+      ord='<div style="display:flex;gap:5px;flex-wrap:wrap;margin:7px 0 5px">'+
+        [['첫째',r.a1],['둘째',r.a2],['셋째↑',r.a3]].map(function(x){
+          return '<span style="font-size:10.5px;font-weight:700;color:#5B34AD;background:#EFE9FA;'+
+            'border-radius:7px;padding:3px 7px">'+x[0]+' '+(String(x[1]||'').trim()||'자료 없음')+'</span>';
+        }).join('')+'</div>';
+    }
+    var pay=String(r.pay||'').trim();
+    var badge=pay==='분할'
+      ? '<span style="font-size:9.5px;font-weight:800;color:#1D4ED8;background:#EFF6FF;border-radius:99px;padding:2px 7px">분할'+(r.months?(' '+r.months+'개월'):'')+'</span>'
+      : (pay==='일시금'
+         ? '<span style="font-size:9.5px;font-weight:800;color:#B45309;background:#FEF3E2;border-radius:99px;padding:2px 7px">일시금</span>'
+         : '<span style="font-size:9.5px;font-weight:800;color:#9AA2AD;background:#F1F4F8;border-radius:99px;padding:2px 7px">일시금·분할 자료 없음</span>');
+    var line=function(l,v){
+      return '<div style="display:flex;gap:6px;font-size:11px;line-height:1.6;margin-top:3px">'+
+        '<span style="flex:0 0 62px;color:#9AA2AD;font-weight:700">'+l+'</span>'+
+        '<span style="flex:1;min-width:0;color:#6B7280;font-weight:600">'+eduNone(v)+'</span></div>';
+    };
     return '<div style="background:#F5F3FA;border:1px solid #E6E0F2;border-radius:14px;padding:18px 18px 16px">'+
-      '<div style="font-size:11.5px;font-weight:800;color:#5B34AD;letter-spacing:.02em">'+c[0]+'</div>'+
-      '<div style="font-size:23px;font-weight:800;color:#0D1117;margin:7px 0 5px;letter-spacing:-.02em">'+c[1]+'</div>'+
-      '<div style="font-size:11.5px;color:#6B7280;line-height:1.5">'+c[2]+'</div></div>';
+      '<div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">'+
+        '<span style="font-size:11.5px;font-weight:800;color:#5B34AD;letter-spacing:.02em">'+(r.name||'')+'</span>'+badge+'</div>'+
+      '<div style="font-size:23px;font-weight:800;color:#0D1117;margin:7px 0 0;letter-spacing:-.02em">'+
+        (String(r.amount||'').trim()||'<span style="font-size:15px;color:#9AA2AD">자료 없음</span>')+'</div>'+
+      ord+
+      '<div style="font-size:11.5px;color:#6B7280;line-height:1.5;margin-top:4px">'+(r.note||'')+'</div>'+
+      '<div style="margin-top:9px;padding-top:9px;border-top:1px solid #E6E0F2">'+
+        line('소득요건',r.income)+line('거주기간',r.resid)+
+        line('확인일자',r.asof)+line('출처',r.src)+
+      '</div></div>';
   }).join('');
   box.innerHTML =
    '<div style="max-width:1080px">'+
@@ -9475,11 +9653,12 @@ function renderEduFund(){
    '이미 통장에 들어오는 돈이라 <b style="color:#0D1117">새로 나가는 보험료가 없습니다.</b> '+
    '문제는 이 돈이 생활비에 섞여 대부분 그대로 사라진다는 것입니다.</p>'+
    eduInfoBarHtml()+
-   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">'+cards+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px">'+cards+
    '<div style="background:linear-gradient(135deg,#2e1c56,#140d28);border-radius:14px;padding:18px 18px 16px;color:#fff">'+
    '<div style="font-size:11.5px;font-weight:800;color:#C9B3F5;letter-spacing:.02em">첫째·수도권 합계</div>'+
    '<div style="font-size:23px;font-weight:800;margin:7px 0 5px;letter-spacing:-.02em">3,080만원</div>'+
    '<div style="font-size:11.5px;color:rgba(255,255,255,.62);line-height:1.5">지자체 출산장려금은 별도</div></div></div>'+
+   eduTimingHtml(R)+
 
    '<div style="margin-top:22px;background:#FFF8E7;border:1px solid #F5E2B0;border-radius:14px;padding:18px 20px">'+
    '<div style="font-size:12.5px;font-weight:800;color:#8A6100;margin-bottom:6px">이것만으로 유학비 전액은 되지 않습니다</div>'+
@@ -9628,8 +9807,82 @@ function apexCloseModal(){
 function apexPaintBtn(){
   var b = document.getElementById('apexPresentBtn');
   if(!b) return;
+  /* 전에는 여기에 트랙 이름을 박았다. 그런데 단추가 「지금 보는 탭」의
+     트랙만 열어서, 연금 탭에서 달러를 보여 주려면 탭을 옮겨야 했다.
+     상담 중에 그 한 번이 흐름을 끊는다. 이제 단추는 고르는 판을 열고,
+     지금 탭의 트랙은 그 판에서 「지금 보는 탭」 으로 표시만 한다. */
   var t = b.querySelector('.apx-t');
-  if(t) t.textContent = APEX_TRACK_NAME[apexTrack()] + ' 발표';
+  if(t) t.textContent = '발표';
+  var sub = b.querySelector('.apx-s');
+  if(sub) sub.textContent = '트랙 골라 열기 · 지금 ' + APEX_TRACK_NAME[apexTrack()];
+}
+
+/* ── 발표 트랙 고르기 ────────────────────────────────────────
+   네 트랙 어느 것이든 지금 화면의 고객 데이터를 그대로 들고 열린다.
+   무엇을 보여 줄지는 고객이 정하지, 내가 지금 어느 탭을 보고 있느냐가
+   정하는 게 아니다. */
+var APEX_TRACK_WHEN = {
+  w:'노후 생활비가 걱정이라고 하실 때',
+  d:'환율·비과세·달러 자산 이야기가 나올 때',
+  t:'투자 수익률과 세금을 같이 볼 때',
+  e:'자녀 교육비·유학 이야기가 나올 때'
+};
+function apexPickTrack(){
+  if(document.getElementById('apexTrackSheet')){ apexClosePick(); return; }
+  var now = apexTrack();
+  var css = document.getElementById('apexTrackCss');
+  if(!css){
+    css = document.createElement('style'); css.id='apexTrackCss';
+    css.textContent =
+      '#apexTrackScrim{position:fixed;inset:0;z-index:9997;background:rgba(8,8,10,.42)}'+
+      '#apexTrackSheet{position:fixed;right:22px;bottom:82px;z-index:9998;width:302px;max-width:calc(100vw - 24px);'+
+        'background:#fff;border:1px solid #E3E7EC;border-radius:18px;padding:13px;'+
+        'box-shadow:0 22px 60px rgba(15,23,42,.28)}'+
+      '#apexTrackSheet .tk-h{font-size:11px;font-weight:800;letter-spacing:.14em;color:#8A93A6;'+
+        'margin:2px 2px 10px}'+
+      '#apexTrackSheet .tk{display:block;width:100%;text-align:left;border:1px solid #E3E7EC;'+
+        'background:#fff;border-radius:13px;padding:11px 13px;margin-bottom:7px;cursor:pointer;'+
+        'font-family:inherit;transition:border-color .14s,background .14s}'+
+      '#apexTrackSheet .tk:hover{border-color:#1A56DB;background:#F5F9FF}'+
+      '#apexTrackSheet .tk .n{font-size:14px;font-weight:800;color:#0F172A;display:flex;'+
+        'align-items:center;gap:7px}'+
+      '#apexTrackSheet .tk .w{font-size:11.5px;color:#6B7688;margin-top:3px;line-height:1.5}'+
+      '#apexTrackSheet .tk.now{border-color:#C8A25B;background:#FFFDF6}'+
+      '#apexTrackSheet .tk .now-b{font-size:9.5px;font-weight:800;color:#8A6A1F;background:#F7EFD9;'+
+        'border-radius:999px;padding:2px 7px;margin-left:auto}'+
+      '#apexTrackSheet .tk-x{display:block;width:100%;border:0;background:transparent;cursor:pointer;'+
+        'font-family:inherit;font-size:12px;font-weight:700;color:#8A93A6;padding:7px 0 2px}'+
+      '@media print{#apexTrackSheet,#apexTrackScrim{display:none!important}}'+
+      '@media(max-width:640px){#apexTrackSheet{right:12px;bottom:72px}}';
+    document.head.appendChild(css);
+  }
+  var sc=document.createElement('div'); sc.id='apexTrackScrim'; sc.onclick=apexClosePick;
+  document.body.appendChild(sc);
+
+  var w=document.createElement('div'); w.id='apexTrackSheet';
+  var order=['w','d','t','e'], h='<div class="tk-h">어느 트랙으로 발표할까요</div>';
+  order.forEach(function(k){
+    h += '<button type="button" class="tk'+(k===now?' now':'')+'" data-tk="'+k+'">'+
+         '<span class="n">'+APEX_TRACK_NAME[k]+
+         (k===now?'<span class="now-b">지금 보는 탭</span>':'')+'</span>'+
+         '<span class="w">'+APEX_TRACK_WHEN[k]+'</span></button>';
+  });
+  h += '<button type="button" class="tk-x">닫기</button>';
+  w.innerHTML=h;
+  document.body.appendChild(w);
+  w.addEventListener('click', function(e){
+    var b=e.target.closest ? e.target.closest('.tk') : null;
+    if(b && b.getAttribute('data-tk')){ var k=b.getAttribute('data-tk'); apexClosePick(); apexPresent(k); return; }
+    if(e.target.classList && e.target.classList.contains('tk-x')) apexClosePick();
+  });
+  document.addEventListener('keydown', apexPickEsc);
+}
+function apexPickEsc(e){ if(e && e.key==='Escape') apexClosePick(); }
+function apexClosePick(){
+  ['apexTrackSheet','apexTrackScrim'].forEach(function(id){
+    var e=document.getElementById(id); if(e&&e.parentNode) e.parentNode.removeChild(e);
+  });
+  document.removeEventListener('keydown', apexPickEsc);
 }
 
 /* switchTab 은 이 파일 안에서 여러 번 통째로 덮어씌워진다(window.switchTab=...).
@@ -9675,10 +9928,10 @@ function apexWrapSwitchTab(){
     var b = document.createElement('button');
     b.id = 'apexPresentBtn';
     b.type = 'button';
-    b.title = '지금 화면의 고객 데이터를 그대로 넘겨 상담 프레젠테이션을 엽니다';
+    b.title = '어느 트랙으로 발표할지 고르고 엽니다 — 고객 데이터는 그대로 넘어갑니다';
     b.innerHTML = '<span class="apx-i">▶</span><span><span class="apx-t">발표</span>'+
-                  '<span class="apx-s">고객 데이터 그대로 전달</span></span>';
-    b.onclick = function(){ apexPresent(); };
+                  '<span class="apx-s">트랙 골라 열기</span></span>';
+    b.onclick = function(){ apexPickTrack(); };
     document.body.appendChild(b);
 
     /* 발표에 쓸 물가상승률 — 단추 위에 붙인다. 고객 앞에서는 보수적으로
@@ -10339,6 +10592,218 @@ function renderPensionSim(){
   var ids=['s_age','s_gender','s_rage','s_nps','s_retire_pen','s_pen_now','s_target','s_name','s_inf','s_realty'];
   function hook(e){ if(e.target&&ids.indexOf(e.target.id)>=0){ try{renderPensionSim();}catch(_){} } }
   document.addEventListener('input',hook); document.addEventListener('change',hook);
+})();
+</script>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   종합보고서 · 달러 컨설팅 — 연금과 같은 STEP 1~4 틀
+
+   연금은 「지금 얼마 → 얼마 빈다 → 이렇게 채운다 → 이렇게 달라진다」
+   네 걸음으로 설명한다. 달러도 같은 걸음으로 말할 수 있어야 상담이
+   한 줄기로 이어진다.
+
+   숫자는 <b>제안서 원문</b>과 상담자료 달러 트랙에서 그대로 옮겼다.
+   메트라이프 무배당 백만인을 위한 달러종신보험Plus (저해약환급금형Ⅰ)
+   5년납 · 계약일로부터 11년(56세) 경과 후 주계약 해약환급금 전액 전환.
+
+   ★ 납입기간별(7년납·10년납) 환급률표는 <b>만들지 않는다.</b> 이 제안서는
+     5년납 단일 조건이고, 납입기간이 바뀌면 사업비·해지공제가 달라져
+     곡선 자체가 다른 표가 된다. 가진 값을 늘려 쓰면 거짓말이 된다.
+   ═══════════════════════════════════════════════════════════ */
+var DOL = {
+  prem: 177.92,          /* 월 보험료 (달러) */
+  paid: 10675.20,        /* 5년 납입누계 = 저축전환 환급률의 기준 */
+  payYears: 5,
+  switchYear: 11, switchAge: 56,
+  /* 종신 그대로 — 확정이율이라 곡선이 하나다 */
+  keep: [
+    ['5년 (납입완료)', 37.85,  4041],
+    ['5년 +1일 ★',     98.21,  10484],
+    ['10년',           113.80, 12148],
+    ['10년 +1일 ★',    124.80, 13322],
+    ['15년',           129.70, 13846],
+    ['20년',           134.76, 14386],
+    ['30년',           145.08, 15487],
+    ['40년',           154.86, 16531]
+  ],
+  /* 저축전환 — 공시이율을 타므로 곡선이 셋으로 갈린다 */
+  swi: [
+    ['35년', 91,  13304.79, 124.63, 26180.60, 245.25, 50495.84, 473.02],
+    ['40년', 96,  13123.34, 122.93, 28937.29, 271.07, 61612.20, 577.15],
+    ['44년', 100, 12908.77, 120.92, 31334.03, 293.52, 72283.39, 677.12]
+  ],
+  addRate: 200           /* 추가납입 한도 = 기본보험료의 200% */
+};
+function dolUsd(v,d){ return '$'+(Math.round(v*(d===2?100:1))/(d===2?100:1)).toLocaleString(undefined,{minimumFractionDigits:(d===2?2:0),maximumFractionDigits:(d===2?2:0)}); }
+function dolKrw(usd){
+  var r=(typeof fxRate==='function')?fxRate():1380;
+  var man=Math.round(usd*r/10000);
+  return man.toLocaleString()+'만원';
+}
+function dolPair(usd,dec){ return dolUsd(usd,dec)+' <span style="font-size:11px;color:var(--ink-5);font-weight:600">≈ '+dolKrw(usd)+'</span>'; }
+
+function renderDollarSim(){
+  var host=document.getElementById('dollar-sim');
+  if(!host) return;
+  var name=((document.getElementById('s_name')||{}).value)||'고객님';
+  var D=DOL;
+
+  function card(tag,title,body,desc){
+    return '<div class="card" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
+      '<div class="card-title">'+title+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
+      '</div><div class="card-body">'+body+'</div></div>';
+  }
+  function big(v,c,l,sub){
+    return '<div style="flex:1 1 148px;min-width:0;background:'+(c||'#F8FAFC')+';border-radius:14px;padding:15px 17px">'+
+      '<div style="font-size:11px;font-weight:800;color:var(--ink-4)">'+l+'</div>'+
+      '<div style="font-size:clamp(17px,4.4vw,21px);font-weight:800;letter-spacing:-.03em;margin-top:5px;word-break:keep-all">'+v+'</div>'+
+      (sub?'<div style="font-size:10.5px;color:var(--ink-5);margin-top:3px;line-height:1.5">'+sub+'</div>':'')+'</div>';
+  }
+  var TB='width:100%;border-collapse:collapse;font-size:12px';
+  var TH='text-align:right;padding:7px 8px;font-size:10.5px;font-weight:800;color:var(--ink-4);border-bottom:1px solid #E3E7EC';
+  var TD='text-align:right;padding:7px 8px;border-bottom:1px solid #F1F4F8;font-variant-numeric:tabular-nums';
+
+  /* ── STEP 1 — 지금 넣는 돈 */
+  var s1='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+    big(dolPair(D.prem,2),'#EFF6FF','매달 내는 돈', D.payYears+'년만 냅니다')+
+    big(dolPair(D.paid,2),'#F8FAFC','5년 동안 다 내면','이 금액이 앞으로 모든 환급률의 기준입니다')+
+    '</div>'+
+    '<div class="notice" style="margin-top:11px">환율은 계산기 사이드바 값('+
+      (typeof fxRate==='function'?Math.round(fxRate()).toLocaleString():'1,380')+'원)으로 환산했습니다. '+
+      '<b>외화상품이라 받으실 때 환율에 따라 원화 수령액이 달라집니다.</b></div>';
+
+  /* ── STEP 2 — 하루가 만드는 차이 */
+  var s2='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+    big('37.85%','#FEF2F2','5년 — 납입 끝난 날','낸 돈의 1/3 입니다')+
+    big('98.21%','#F2FBF6','5년 +<b>하루</b>','유지보너스 — 하루 차이로 +60%p')+
+    '</div>'+
+    '<div class="cmp-row" style="margin-top:11px"><div><span class="cmp-lbl">10년 +하루</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">2차 유지보너스</span></div>'+
+      '<div class="cmp-val">124.80%</div></div>'+
+    '<div class="cmp-row"><div><span class="cmp-lbl" style="font-weight:800">'+D.switchYear+'년차 ('+D.switchAge+'세)</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">여기서 갈림길이 옵니다 — STEP 3</span></div>'+
+      '<div class="cmp-val" style="font-weight:800">125.77%</div></div>'+
+    '<div class="notice" style="margin-top:11px;background:#FFF7ED;border-color:#FED7AA;color:#7C2D12">'+
+      '<b>「5년만 내시고 하루만 더 두시면 37%가 98%가 됩니다.」</b> — 이 한 문장이 달러 상담의 출발점입니다.</div>';
+
+  /* ── STEP 3 — 두 갈래 */
+  var keepRows=D.keep.map(function(x){
+    var hot=/★/.test(x[0]);
+    return '<tr'+(hot?' style="background:#FFFDF6"':'')+'><td style="'+TD+';text-align:left'+(hot?';font-weight:800':'')+'">'+x[0]+'</td>'+
+      '<td style="'+TD+'">'+dolUsd(x[2])+'</td>'+
+      '<td style="'+TD+';font-weight:800'+(hot?';color:#B45309':'')+'">'+x[1].toFixed(2)+'%</td></tr>';
+  }).join('');
+  var swiRows=D.swi.map(function(x){
+    return '<tr><td style="'+TD+';text-align:left">'+x[0]+'<span style="font-size:10px;color:var(--ink-5)"> · '+x[1]+'세</span></td>'+
+      '<td style="'+TD+'">'+x[3].toFixed(2)+'%</td>'+
+      '<td style="'+TD+'">'+x[5].toFixed(2)+'%</td>'+
+      '<td style="'+TD+';font-weight:800;color:#1A56DB">'+x[7].toFixed(2)+'%</td></tr>';
+  }).join('');
+  var s3='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px">'+
+    '<div><div style="font-size:12px;font-weight:800;color:#0F172A;margin-bottom:6px">① 종신 그대로 둔다</div>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-bottom:7px;line-height:1.6">확정이율이라 곡선이 하나입니다. 10년 이후 연 1.00%로 완만해집니다.</div>'+
+      '<div style="overflow-x:auto"><table style="'+TB+'"><thead><tr>'+
+        '<th style="'+TH+';text-align:left">경과</th><th style="'+TH+'">해약환급금</th><th style="'+TH+'">환급률</th>'+
+      '</tr></thead><tbody>'+keepRows+'</tbody></table></div></div>'+
+    '<div><div style="font-size:12px;font-weight:800;color:#0F172A;margin-bottom:6px">② '+D.switchYear+'년차에 저축으로 전환한다</div>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-bottom:7px;line-height:1.6">공시이율을 타므로 곡선이 셋으로 갈립니다. 기준은 전환 전 이미 낸 '+dolUsd(D.paid,2)+'.</div>'+
+      '<div style="overflow-x:auto"><table style="'+TB+'"><thead><tr>'+
+        '<th style="'+TH+';text-align:left">전환일로부터</th><th style="'+TH+'">최저보증</th>'+
+        '<th style="'+TH+'">평균공시 2.5%</th><th style="'+TH+'">현재공시 4.3%</th>'+
+      '</tr></thead><tbody>'+swiRows+'</tbody></table></div></div>'+
+    '</div>'+
+    '<div class="notice" style="margin-top:12px"><b>읽는 법</b> — 최저보증만 보면 종신(40년 154.86%)이 저축전환(122.93%)보다 <b>높습니다.</b> '+
+      '그런데 공시이율이 유지되면 저축전환이 <b>577%</b>로 벌어집니다. '+
+      '「안전하게 확정」 대 「이율을 탄다」의 선택이지, 어느 쪽이 무조건 낫지 않습니다. <b>두 곡선을 같이 보여드려야 정직합니다.</b></div>'+
+    '<div class="notice" style="margin-top:9px;background:#FEF2F2;border-color:#FECACA;color:#7F1D1D">'+
+      '<b>숨기지 않습니다</b> — 최저보증 곡선은 35년 124.63%에서 44년 <b>120.92%로 내려갑니다.</b> '+
+      '이율이 낮으면 사업비·위험보험료가 적립액을 갉아먹기 때문입니다.</div>';
+
+  /* ── STEP 4 — 전환 뒤 세 장치 */
+  var addLimit=D.paid*D.addRate/100;
+  var s4='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+    big(dolPair(addLimit,0),'#F2FBF6','추가납입 한도','기본보험료의 '+D.addRate+'% · 합쳐서 최대 '+dolUsd(D.paid+addLimit)+'')+
+    '</div>'+
+    '<div class="cmp-row" style="margin-top:11px"><div><span class="cmp-lbl">추가납입</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">전환일로부터 (보험기간 −1)세 계약해당일까지 <b>수시로</b> · '+
+      '<b>신계약 사업비를 다시 물지 않습니다</b> (실제 부가비용은 약관 확인 필수)</span></div>'+
+      '<div class="cmp-val">'+dolUsd(addLimit)+'</div></div>'+
+    '<div class="cmp-row"><div><span class="cmp-lbl">중도인출</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">해약환급금의 50% 내 · 보험년도 기준 연 12회 · '+
+      '수수료는 인출액의 0.2%와 $2 중 <b>작은 금액</b>, 연 4회 면제</span></div>'+
+      '<div class="cmp-val">50% 내</div></div>'+
+    '<div class="cmp-row"><div><span class="cmp-lbl" style="font-weight:800">생활자금인출 — 연금처럼</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">전환일로부터 <b>2년 경과</b> 후 · 매월/3개월/6개월/매년 · <b>수수료 없음</b><br>'+
+      '지급액 = 계약자적립액 − 이미 납입한 보험료 → <b>원금은 남기고 불어난 부분만</b> 나옵니다</span></div>'+
+      '<div class="cmp-val" style="font-weight:800">원금 유지</div></div>'+
+    '<div class="notice" style="margin-top:12px;background:#F5F9FF;border-color:#BFDBFE">'+
+      '<b>'+name+'님께 드리는 한 문장</b><br>'+
+      '「5년만 내시고 하루만 더 두시면 환급률이 37%에서 98%로 뜁니다. '+D.switchYear+'년째에 갈림길이 옵니다 — 확정으로 두실지, 이율을 타실지. '+
+      '이율을 타기로 하시면 그때부터 사업비 없이 두 배까지 더 넣으실 수 있고, 2년 뒤부터는 원금은 그대로 두고 불어난 부분만 매달 받으실 수 있습니다.」</div>';
+
+  /* ── 반드시 말할 것 · 아직 없는 것 */
+  var must=['저축전환 예시는 <b>연금전환특약으로 연금 전환을 하지 않은 계약</b> 기준입니다',
+            '인출이나 추가납입이 있으면 <b>예시 금액과 달라집니다</b>',
+            '공시이율은 <b>매 1개월마다 변동</b>합니다. 최저보증은 전환일로부터 5년이내 1.0% / 초과 0.7%',
+            '환급률 기준은 전환 시 보험료가 아니라 <b>전환 전 이미 납입한 보험료</b> 대비입니다',
+            '<b>외화상품</b>입니다 — 원화 환산 시 환율에 따라 수령액이 달라집니다',
+            '예시 금액과 환급률은 <b>미래 수익을 보장하지 않습니다</b>',
+            '원화환산납입서비스를 쓰면 월 납입액이 환율로 매월 변해 <b>보험차익 비과세 요건을 충족하지 못할 수 있습니다</b> — 비과세로 설명하면 안 됩니다'];
+  var tail='<div class="card" style="margin-bottom:12px;border-color:#FED7AA;background:#FFFDF5">'+
+    '<div class="card-hd"><div class="card-title">화면에 반드시 적을 것 · 금융소비자보호법</div></div>'+
+    '<div class="card-body"><ul style="margin:0;padding-left:17px;font-size:12px;line-height:1.85;color:#7C2D12">'+
+    must.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div></div>'+
+    '<div class="card" style="margin-bottom:12px"><div class="card-hd">'+
+    '<div class="card-title">아직 자료가 없는 것</div>'+
+    '<div class="card-desc">없는 것을 있는 것처럼 채우지 않습니다</div></div>'+
+    '<div class="card-body">'+
+    '<div class="cmp-row"><div><span class="cmp-lbl">7년납 · 10년납 환급률</span>'+
+      '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">이 제안서는 <b>5년납 단일 조건</b>입니다. 납입기간이 바뀌면 사업비·해지공제가 달라져 '+
+      '<b>곡선 자체가 다른 표</b>가 됩니다. 필요하시면 그 조건으로 제안서를 다시 뽑아야 합니다.</span></div>'+
+      '<div class="cmp-val" style="color:var(--ink-5)">자료 없음</div></div>'+
+    '</div></div>';
+
+  host.innerHTML=
+    '<div class="sec-hd" style="margin-top:26px"><div>'+
+      '<div class="sec-tag">DOLLAR CONSULTING</div>'+
+      '<div class="sec-title">$ 달러 컨설팅 — 네 걸음</div></div></div>'+
+    '<div class="notice" style="margin-bottom:12px">메트라이프 <b>무배당 백만인을 위한 달러종신보험Plus</b> (저해약환급금형Ⅰ) · '+
+      '<b>5년납</b> · 계약일로부터 '+D.switchYear+'년('+D.switchAge+'세) 경과 후 주계약 해약환급금 전액 전환 기준. '+
+      '제안서 원문 수치를 그대로 옮겼습니다.</div>'+
+    card('STEP 1 · NOW','얼마를, 얼마 동안 넣습니까', s1, '제안서 기준 금액입니다')+
+    card('STEP 2 · GAP','하루가 만드는 차이', s2)+
+    card('STEP 3 · PLAN',D.switchYear+'년째 갈림길 — 확정으로 둘까, 이율을 탈까', s3, '두 곡선을 같이 봅니다')+
+    card('STEP 4 · RESULT','전환한 뒤 쓸 수 있는 세 가지', s4)+
+    tail;
+}
+
+/* switchTab 은 이 파일 안에서 여러 번 통째로 덮어씌워진다.
+   고치지 말고 감싼다. 나중에 또 덮이면 재장착한다. */
+(function(){
+  function wrap(){
+    var cur=window.switchTab;
+    if(typeof cur!=='function'||cur.__dol)return;
+    var w=function(tab,btn){
+      var r=cur.apply(this,arguments);
+      try{ if(tab==='total') renderDollarSim(); }catch(e){ console.error('달러 컨설팅:',e); }
+      return r;
+    };
+    w.__dol=true; window.switchTab=w;
+  }
+  function arm(){
+    wrap();
+    [300,900,2000].forEach(function(ms){ setTimeout(wrap,ms); });
+    try{ renderDollarSim(); }catch(e){}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',arm);
+  else arm();
+  /* 사이드바 이름·환율이 바뀌면 다시 그린다 */
+  ['s_name','s_usd'].forEach(function(id){
+    var e=document.getElementById(id);
+    if(e){ e.addEventListener('input',function(){ try{renderDollarSim();}catch(x){} });
+           e.addEventListener('change',function(){ try{renderDollarSim();}catch(x){} }); }
+  });
 })();
 </script>
 </body>
