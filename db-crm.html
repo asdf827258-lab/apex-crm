@@ -168,6 +168,7 @@
       <button data-page="db" onclick="goPage('db',this)">📁 DB 관리</button>
       <button data-page="absence" onclick="goPage('absence',this)">🚫 부재 이력</button>
       <button data-page="recordings" onclick="goPage('recordings',this)">🎙 녹음 전달</button>
+      <button data-page="tascript" onclick="goPage('tascript',this)">🗣 TA 맞춤 스크립트</button>
       <div class="grp">분석 · KPI</div>
       <button data-page="kpi" onclick="goPage('kpi',this)">📈 KPI·타율 분석</button>
       <button data-page="stats" onclick="goPage('stats',this)">🏆 담당자·팀 통계</button>
@@ -267,7 +268,14 @@
         <div id="aiBody"></div>
       </section>
 
-      <section class="page" id="page-guide">
+      <section class="page" id="page-tascript">
+  <div class="card section" style="padding:0;overflow:hidden">
+    <iframe id="taScriptFrame" title="TA DB별 연속 상담 스크립트"
+      style="display:block;width:100%;height:calc(100vh - 190px);min-height:560px;border:0"></iframe>
+  </div>
+</section>
+
+<section class="page" id="page-guide">
         <div class="hero"><div><h2>사용 안내</h2><p>항목을 누르면 펼쳐집니다. 신입 교육은 1번부터 순서대로 따라 하면 됩니다.</p></div>
           <div style="display:flex;gap:7px"><button class="btn btn-light" onclick="gdAll(true)">전부 펼치기</button><button class="btn btn-light" onclick="gdAll(false)">전부 접기</button></div></div>
         <div id="guideBody" style="max-width:900px"></div>
@@ -543,7 +551,15 @@ function fillProfiles(){
   $("assignedTo").innerHTML=opts.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("");
   $("ownerFilter").innerHTML=`<option value="">전체 담당자</option>${members.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join("")}`;
 }
-function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");renderAll()}
+function goPage(pg,btn){document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$("page-"+pg).classList.add("active");document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));(btn||document.querySelector(`[data-page="${pg}"]`))?.classList.add("active");$("pageTitle").textContent={dashboard:"통합 대시보드",touch:"오늘의 알림",db:"DB 관리",absence:"부재 이력",recordings:"녹음 전달",kpi:"KPI·타율 분석",stats:"담당자·팀 통계",ai:"AI 피드백",team:"담당자·팀 관리",attendance:"출근 현황",guide:"사용 안내",tascript:"TA 맞춤 스크립트"}[pg]||"APEX CRM";$("sidebar").classList.remove("open");mountTaScript(pg);renderAll()}
+/* TA 맞춤 스크립트 — 받은 파일을 그대로 틀에 띄운다. 열 때 한 번만 불러오고,
+   주소에 판 번호를 붙여 브라우저가 옛 파일을 다시 쓰지 않게 한다. */
+function mountTaScript(pg){
+  if(pg!=="tascript")return;
+  const f=$("taScriptFrame");
+  if(!f||f.dataset.mounted)return;
+  f.src="ta-script.html?v=2026-08-16_10:30";f.dataset.mounted="1";
+}
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
 /* ── DB 종류(카테고리) ──
    목록은 서버 app_config 의 db_sources 한 줄에 있다. 대표가 고치면 모두에게 반영된다.

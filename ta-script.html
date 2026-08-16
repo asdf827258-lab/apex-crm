@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#123B91" />
+  <meta name="color-scheme" content="light" />
+  <title>TA DB별 연속 상담 스크립트 · APEX</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css" />
+  <style>
+    :root{
+      --blue:#123B91;
+      --blue-dark:#0B2C74;
+      --blue-soft:#E8F3FF;
+      --blue-pale:#F2F7FF;
+      --sky:#3182F6;
+      --gold:#A87946;
+      --gold-soft:#FFF4E5;
+      --ink:#111827;
+      --ink-2:#344054;
+      --muted:#667085;
+      --muted-2:#98A2B3;
+      --line:#E5E7EB;
+      --surface:#FFFFFF;
+      --background:#F5F7FB;
+      --green:#16A34A;
+      --green-soft:#ECFDF3;
+      --orange:#F97316;
+      --orange-soft:#FFF7ED;
+      --red:#EF4444;
+      --red-soft:#FEF2F2;
+      --purple:#7C3AED;
+      --purple-soft:#F5F3FF;
+      --shadow:0 10px 30px rgba(16,24,40,.06);
+      --radius:22px;
+      --script-size:21px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      background:linear-gradient(180deg,#F8FAFF 0%,#EEF3FB 100%);
+      color:var(--ink);
+      font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,sans-serif;
+      letter-spacing:-.02em;
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility;
+    }
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh}
+    .topbar{
+      position:sticky;top:0;z-index:50;
+      background:linear-gradient(135deg,#08266C 0%,#123B91 55%,#A87946 130%);
+      border-bottom:1px solid rgba(255,255,255,.14);
+      box-shadow:0 8px 24px rgba(8,38,108,.18);
+    }
+    .topbar-inner{
+      max-width:1520px;margin:0 auto;padding:14px 24px;
+      display:flex;align-items:center;justify-content:space-between;gap:18px;
+    }
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand-mark{
+      width:44px;height:44px;border-radius:15px;display:grid;place-items:center;
+      background:rgba(255,255,255,.14);color:#fff;font-size:19px;font-weight:900;
+      border:1px solid rgba(255,255,255,.28);box-shadow:0 8px 18px rgba(0,0,0,.12)
+    }
+    .brand-kicker{font-size:11px;font-weight:800;color:#D7E6FF;margin-bottom:2px;letter-spacing:.02em}
+    .brand-title{font-size:20px;font-weight:850;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .btn{
+      border:0;border-radius:14px;padding:11px 14px;font-weight:800;
+      display:inline-flex;align-items:center;justify-content:center;gap:7px;
+      transition:transform .16s,background .16s,box-shadow .16s;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn-blue{background:var(--blue);color:#fff;box-shadow:0 8px 20px rgba(49,130,246,.2)}
+    .btn-blue:hover{background:var(--blue-dark)}
+    .btn-soft{background:var(--blue-soft);color:var(--blue-dark)}
+    .btn-ghost{background:#F2F4F6;color:var(--ink-2)}
+    .btn-white{background:#fff;color:var(--ink-2);border:1px solid var(--line)}
+    .btn-danger{background:var(--red-soft);color:#D63845}
+    .layout{
+      max-width:1560px;margin:0 auto;padding:22px;
+      display:flex;flex-direction:column;gap:16px;align-items:stretch;
+    }
+    .panel{
+      background:var(--surface);border:1px solid rgba(0,27,55,.045);
+      border-radius:var(--radius);box-shadow:var(--shadow);
+    }
+    /* 상단 가로 입력바 */
+    .inputbar{padding:16px 18px}
+    .inputbar-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;cursor:pointer}
+    .inputbar-head h2{font-size:16px;margin:0;font-weight:850;display:flex;align-items:center;gap:8px}
+    .inputbar-head .caret{color:var(--muted);font-size:13px;font-weight:800;transition:.18s}
+    .inputbar.collapsed .caret{transform:rotate(-90deg)}
+    .inputbar.collapsed .inputbar-body{display:none}
+    .inputrow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+    .inputrow .field{margin-bottom:0}
+    .inputrow .field label{font-size:11px;margin-bottom:4px}
+    .inputrow .field input,.inputrow .field select,.inputrow .field textarea{padding:9px 10px;border-radius:11px}
+    .inputrow .field.span2{grid-column:span 2}
+    .inputrow .field.span3{grid-column:span 3}
+    .inputrow textarea{min-height:44px}
+    .db-button-row{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+    .db-button-row .db-mini-btn{flex:0 0 auto}
+    /* 작업 영역: 왼쪽 거절처리 · 오른쪽 연속 멘트 */
+    .workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.02fr);gap:16px;align-items:start}
+    .workspace .objections{position:sticky;top:88px;max-height:calc(100vh - 110px);overflow:auto}
+    .workspace .objection-grid{grid-template-columns:1fr}
+    .workspace .rule-flow{grid-template-columns:1fr 1fr}
+    .hidden{display:none!important}
+    .controls{padding:20px}
+    .panel-title{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}
+    .panel-title h2{font-size:20px;margin:0;font-weight:850}
+    .badge{padding:6px 10px;border-radius:999px;background:var(--gold-soft);color:#915E21;font-size:12px;font-weight:800}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-size:12px;color:var(--muted);font-weight:750;margin:0 0 7px 2px}
+    .field input,.field select,.field textarea{
+      width:100%;border:1px solid var(--line);border-radius:14px;background:#FAFBFC;
+      padding:12px 13px;color:var(--ink);font-weight:650;outline:none;transition:.15s;
+    }
+    .field textarea{min-height:92px;resize:vertical;line-height:1.55}
+    .field input:focus,.field select:focus,.field textarea:focus{border-color:#74A7F8;background:#fff;box-shadow:0 0 0 4px rgba(49,130,246,.09)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .section-label{
+      margin:21px 0 12px;padding-top:18px;border-top:1px solid #F0F1F3;
+      font-size:13px;font-weight:850;color:var(--ink-2);display:flex;align-items:center;gap:8px
+    }
+    .section-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+    .hint{font-size:12px;color:var(--muted);line-height:1.55;margin-top:7px}
+    .privacy{padding:12px;border-radius:14px;background:#F7F8FA;color:var(--muted);font-size:12px;line-height:1.55;margin-top:14px}
+    .main{min-width:0;display:flex;flex-direction:column;gap:16px}
+    .hero{padding:24px 26px;background:linear-gradient(135deg,#08266C 0%,#123B91 62%,#A87946 150%);color:#fff;overflow:hidden;position:relative}
+    .hero::after{content:"";position:absolute;width:240px;height:240px;border-radius:50%;right:-90px;top:-120px;background:rgba(255,255,255,.08)}
+    .hero-content{position:relative;z-index:1;display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+    .hero h1{margin:0;font-size:30px;line-height:1.2;font-weight:900;letter-spacing:-.04em}
+    .hero p{margin:9px 0 0;color:#D8E5FF;font-size:14px;line-height:1.6;font-weight:600}
+    .hero-chip{flex:0 0 auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#fff;border-radius:16px;padding:10px 13px;font-size:13px;font-weight:800;line-height:1.4}
+    .coach-card{padding:20px 22px}
+    .coach-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
+    .coach-head h2{margin:0;font-size:19px;font-weight:850}
+    .toggle{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:700}
+    .switch{position:relative;width:44px;height:26px;display:inline-block}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;inset:0;border-radius:999px;background:#DDE1E5;transition:.2s}
+    .slider::before{content:"";position:absolute;width:20px;height:20px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.14);transition:.2s}
+    .switch input:checked + .slider{background:var(--blue)}
+    .switch input:checked + .slider::before{transform:translateX(18px)}
+    .coach-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .coach-item{border-radius:16px;padding:13px 14px;background:#FAFBFC;border:1px solid #F0F1F3}
+    .coach-item strong{display:block;font-size:13px;margin-bottom:5px}
+    .coach-item p{margin:0;color:var(--muted);font-size:12px;line-height:1.5}
+    .coach-mark{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:850;margin-bottom:7px}
+    .mark-blue{color:var(--blue-dark);background:var(--blue-soft)}
+    .mark-green{color:#087B5B;background:var(--green-soft)}
+    .mark-orange{color:#A96700;background:var(--orange-soft)}
+    .mark-purple{color:#6246D3;background:var(--purple-soft)}
+    .script-card{padding:27px 28px 28px;overflow:hidden}
+    .script-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}
+    .script-head h2{margin:0;font-size:22px;font-weight:850}
+    .script-head p{margin:7px 0 0;color:var(--muted);font-size:13px;font-weight:600}
+    .db-chip{flex:0 0 auto;max-width:430px;background:var(--blue-soft);color:var(--blue-dark);border-radius:14px;padding:9px 12px;font-size:12px;font-weight:800;line-height:1.45}
+    .continuous-script{
+      white-space:pre-wrap;font-size:var(--script-size);line-height:1.95;font-weight:560;
+      padding:28px;border-radius:20px;background:#fff;border:1px solid var(--line);
+      min-height:520px;word-break:keep-all;overflow-wrap:anywhere;
+    }
+    .continuous-script .stress{font-weight:850;color:var(--ink);background:linear-gradient(transparent 67%,#DCEBFF 67%)}
+    .continuous-script .source{font-weight:780;color:var(--blue-dark)}
+    .continuous-script .warm{font-weight:800;color:#087B5B}
+    .continuous-script .choice{font-weight:850;color:var(--blue-dark)}
+    .cue{
+      display:inline-flex;align-items:center;vertical-align:middle;margin:0 3px;
+      border-radius:999px;padding:3px 7px;font-size:.57em;line-height:1.2;font-weight:800;
+      transform:translateY(-1px);letter-spacing:0;white-space:nowrap;
+    }
+    .cue-smile{background:var(--green-soft);color:#087B5B}
+    .cue-pause{background:var(--orange-soft);color:#9B6400}
+    .cue-slow{background:var(--purple-soft);color:#6246D3}
+    .cue-listen{background:var(--red-soft);color:#C23845}
+    body.hide-cues .cue{display:none}
+    .quickbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+    .rule-card{padding:20px 22px}
+    .rule-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
+    .rule-head h2{margin:0;font-size:19px;font-weight:850}
+    .rule-flow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .rule-step{background:#FAFBFC;border:1px solid #F0F1F3;border-radius:16px;padding:13px}
+    .rule-no{width:26px;height:26px;border-radius:9px;background:var(--blue);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:900;margin-bottom:8px}
+    .rule-step strong{display:block;font-size:13px;margin-bottom:4px}
+    .rule-step p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+    .objections{padding:22px}
+    .objection-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .objection-head h2{margin:0;font-size:21px;font-weight:850}
+    .objection-head p{margin:6px 0 0;color:var(--muted);font-size:13px;line-height:1.5}
+    .objection-tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .objection-tab{border:1px solid var(--line);background:#fff;color:var(--ink-2);border-radius:999px;padding:8px 11px;font-weight:750;font-size:13px}
+    .objection-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .objection-body{margin-top:15px;border:1px solid var(--line);border-radius:20px;padding:20px;background:#FCFCFD}
+    .objection-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:13px}
+    .objection-title{font-size:19px;font-weight:850}
+    .tone{font-size:12px;font-weight:800;color:#087B5B;background:var(--green-soft);border-radius:999px;padding:6px 9px}
+    .objection-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(270px,.85fr);gap:14px}
+    .objection-main,.objection-side{display:flex;flex-direction:column;gap:10px}
+    .detail-box{border-radius:16px;background:#fff;border:1px solid #ECEFF2;padding:14px 15px}
+    .detail-label{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);font-weight:800;margin-bottom:8px}
+    .detail-dot{width:7px;height:7px;border-radius:50%;background:var(--blue)}
+    .detail-text{white-space:pre-wrap;line-height:1.72;font-size:15px;font-weight:580;color:var(--ink-2)}
+    .detail-text.primary{font-size:17px;color:var(--ink);font-weight:620}
+    .coach-note{background:var(--orange-soft);border-color:#FFE2A8}
+    .stop-note{background:var(--red-soft);border-color:#FFD7DB}
+    .security-note{margin-top:14px;padding:13px 14px;border-radius:15px;background:#F7F8FA;color:var(--muted);font-size:12px;line-height:1.55}
+    .focus-overlay{position:fixed;inset:0;z-index:200;background:#111827;color:#fff;display:none;flex-direction:column}
+    .focus-overlay.active{display:flex}
+    .focus-toolbar{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(255,255,255,.1);background:rgba(17,24,39,.92);backdrop-filter:blur(14px)}
+    .focus-title{font-weight:850}.focus-sub{margin-top:3px;font-size:12px;color:#AAB4C3}
+    .focus-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .focus-script{flex:1;overflow:auto;padding:8vh max(7vw,30px) 35vh;white-space:pre-wrap;font-size:34px;line-height:2.05;font-weight:600;word-break:keep-all;scroll-behavior:smooth}
+    .focus-script .stress{font-weight:900;color:#fff;background:linear-gradient(transparent 67%,rgba(49,130,246,.55) 67%)}
+    .focus-script .source{color:#91BEFF;font-weight:800}.focus-script .warm{color:#7EE3C2;font-weight:800}.focus-script .choice{color:#91BEFF;font-weight:900}
+    .speed-wrap{display:flex;align-items:center;gap:8px;color:#C9D2DE;font-size:12px;font-weight:700;margin-top:6px}
+    input[type="range"]{accent-color:var(--blue)}
+    .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);z-index:500;background:#111827;color:#fff;padding:11px 16px;border-radius:999px;font-weight:750;font-size:13px;opacity:0;pointer-events:none;transition:.22s}
+    .toast.show{opacity:1;transform:translate(-50%,0)}
+    .topbar .btn-ghost,.topbar .btn-white{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.18)}
+    .topbar .btn-blue{background:#fff;color:var(--blue-dark);box-shadow:none}
+    .db-button-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .db-mini-btn{border:1.5px solid #E5E7EB;background:#fff;border-radius:14px;padding:10px 11px;text-align:left;font-size:12px;font-weight:800;color:#344054;transition:.15s}
+    .db-mini-btn:hover{transform:translateY(-1px);box-shadow:0 7px 18px rgba(16,24,40,.07)}
+    .db-mini-btn.active{border-color:var(--sky);background:#E8F3FF;color:#1B64DA}
+    .db-mini-btn.ns.active{border-color:var(--gold);background:var(--gold-soft);color:#915E21}
+    .ns-notice{display:none;margin:10px 0 0;padding:11px 12px;border-radius:13px;background:var(--gold-soft);color:#7A4B17;font-size:12px;font-weight:750;line-height:1.5}
+    .ns-notice.show{display:block}
+    .continuous-script.ns-script{background:linear-gradient(180deg,#FFFCF8 0%,#FFFFFF 100%);border-color:#EAD7C0}
+    .continuous-script.ns-script .source{color:#915E21}
+    .gold-line{height:3px;width:58px;border-radius:999px;background:linear-gradient(90deg,var(--gold),#D7B38B);margin-top:12px}
+    @media(max-width:1120px){
+      .workspace{grid-template-columns:1fr}.workspace .objections{position:static;max-height:none}.controls{position:static;max-height:none}.inputrow{grid-template-columns:repeat(3,1fr)}.hero-content,.script-head{flex-direction:column}.hero-chip,.db-chip{max-width:none}.coach-grid,.rule-flow{grid-template-columns:repeat(2,1fr)}
+    }
+    @media(max-width:760px){
+      .topbar-inner{padding:12px 14px;align-items:flex-start;flex-direction:column}.top-actions{width:100%}.top-actions .btn{flex:1;padding:9px 8px;font-size:12px}
+      .layout{padding:12px;gap:12px}.controls,.hero,.coach-card,.script-card,.rule-card,.objections,.inputbar{padding:16px;border-radius:20px}
+      .inputrow{grid-template-columns:1fr 1fr}.inputrow .field.span2,.inputrow .field.span3{grid-column:span 2}
+      .hero h1{font-size:25px}.continuous-script{padding:18px;font-size:18px;line-height:1.9}.grid2,.grid3{grid-template-columns:1fr}.coach-grid,.rule-flow,.objection-grid{grid-template-columns:1fr}
+      .focus-script{font-size:25px;padding:6vh 22px 35vh}.focus-toolbar{align-items:flex-start;flex-direction:column}.focus-actions{width:100%}.focus-actions .btn{flex:1}
+    }
+    @media print{
+      body{background:#fff}.topbar,.controls,.coach-card,.rule-card,.quickbar,.objections{display:none!important}.layout{display:block;padding:0}.panel{box-shadow:none;border:0}.hero{padding:7mm 10mm}.hero-chip{display:none}.script-card{padding:0 10mm 10mm}.continuous-script{border:0;padding:0;font-size:15pt;line-height:1.72;min-height:auto}.cue{display:none!important}
+    }
+  </style>
+</head>
+<body class="">
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark">A+</div>
+        <div>
+          <div class="brand-kicker">A+에셋 · APEX</div>
+          <div class="brand-title">TA DB별 연속 스크립트 콘솔</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-ghost" id="fontDown">가−</button>
+        <button class="btn btn-ghost" id="fontUp">가＋</button>
+        <button class="btn btn-white" id="printBtn">인쇄</button>
+        <button class="btn btn-blue" id="focusBtn">집중 읽기</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 상단 가로 입력바 -->
+    <section class="panel inputbar" id="inputbar">
+      <div class="inputbar-head" onclick="toggleInputbar()">
+        <h2>📇 상담 정보 입력 <span class="badge">즉시 반영</span></h2>
+        <span class="caret" id="inputbarCaret">접기 ▾</span>
+      </div>
+      <div class="inputbar-body">
+        <select id="dbType" class="hidden"></select>
+        <div class="db-button-row" id="dbButtons"></div>
+        <div class="ns-notice" id="nsNotice">NS홈쇼핑 DB는 화재·누수·가전제품 수리비 안내와 사은품 상담 흐름으로 전체 대본이 전환됩니다.</div>
+        <div class="inputrow">
+          <div class="field span2"><label for="sourceText">유입 사유 멘트</label><textarea id="sourceText"></textarea></div>
+          <div class="field"><label for="customer">고객명</label><input id="customer" value="OOO" autocomplete="off" /></div>
+          <div class="field"><label for="agent">담당자명</label><input id="agent" value="OOO" autocomplete="off" /></div>
+          <div class="field"><label for="region">담당 지역</label><input id="region" value="광주" autocomplete="off" /></div>
+          <div class="field"><label for="dong">방문 지역(동)</label><input id="dong" value="OOO동" autocomplete="off" /></div>
+        </div>
+        <div class="inputrow" style="margin-top:10px">
+          <div class="field span2"><label for="address">확인된 주소</label><input id="address" value="OO시 OO구 OO로" autocomplete="off" /></div>
+          <div class="field"><label for="slot1">선택 일정 ①</label><input id="slot1" value="화요일 오전 11시" autocomplete="off" /></div>
+          <div class="field"><label for="slot2">선택 일정 ②</label><input id="slot2" value="수요일 오후 2시" autocomplete="off" /></div>
+          <div class="field"><label for="birthYear">생년(년)</label><input id="birthYear" value="OO" inputmode="numeric" autocomplete="off" /></div>
+          <div class="field"><label for="birthMonth">월</label><input id="birthMonth" value="OO" inputmode="numeric" autocomplete="off" /></div>
+        </div>
+        <div class="inputrow" style="margin-top:10px;align-items:end">
+          <div class="field"><label for="birthDay">일</label><input id="birthDay" value="OO" inputmode="numeric" autocomplete="off" /></div>
+          <div class="field span2"><label for="front6">주민번호 앞 6자리(읽기용)</label><input id="front6" value="OOOOOO" inputmode="numeric" autocomplete="off" /></div>
+          <div class="field span3" style="display:flex;align-items:center;gap:10px">
+            <span class="toggle" style="white-space:nowrap">화면 코칭 표시<label class="switch"><input id="cueToggle" type="checkbox" checked><span class="slider"></span></label></span>
+            <button class="btn btn-ghost" id="resetBtn" type="button" style="margin-left:auto">입력 초기화</button>
+          </div>
+        </div>
+        <div class="privacy">민감정보는 저장하지 않습니다. 주민번호 뒷자리는 고객의 명확한 동의를 받은 뒤, 회사가 승인한 보안 본인확인 절차에서만 확인하세요. 메모·녹취·메신저에 별도로 남기지 마세요.</div>
+      </div>
+    </section>
+
+    <!-- 작업 영역: 왼쪽 거절처리 · 오른쪽 연속 멘트 -->
+    <div class="workspace">
+      <!-- 왼쪽: 거절처리 (한눈에) -->
+      <section class="panel objections">
+        <div class="objection-head">
+          <div><h2>디테일 거절처리</h2><p>바로 말할 멘트와 다음 질문, 금지 표현, 종료 기준을 함께 확인하세요.</p></div>
+          <button class="btn btn-soft" id="copyObjection">선택 멘트 복사</button>
+        </div>
+        <div class="objection-tabs" id="objectionTabs"></div>
+        <div class="objection-body">
+          <div class="objection-meta"><strong class="objection-title" id="objectionTitle"></strong><span class="tone" id="objectionTone"></span></div>
+          <div class="objection-grid">
+            <div class="objection-main">
+              <div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>바로 말할 멘트</div><div class="detail-text primary" id="objectionText"></div></div>
+              <div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>고객이 다시 반응했을 때</div><div class="detail-text" id="objectionFollow"></div></div>
+            </div>
+            <div class="objection-side">
+              <div class="detail-box coach-note"><div class="detail-label"><span class="detail-dot"></span>딕션·코칭 포인트</div><div class="detail-text" id="objectionTip"></div></div>
+              <div class="detail-box"><div class="detail-label"><span class="detail-dot"></span>피해야 할 표현</div><div class="detail-text" id="objectionAvoid"></div></div>
+              <div class="detail-box stop-note"><div class="detail-label"><span class="detail-dot"></span>종료 기준</div><div class="detail-text" id="objectionStop"></div></div>
+            </div>
+          </div>
+          <div class="rule-card" style="margin-top:16px;padding:16px 0 0;border-top:1px solid #F0F1F3">
+            <div class="rule-head"><h2 style="font-size:16px">거절처리 기본 순서</h2><span class="badge">한 번 설득, 두 번 거절 시 종료</span></div>
+            <div class="rule-flow">
+              <div class="rule-step"><div class="rule-no">1</div><strong>먼저 인정</strong><p>“그럴 수 있습니다”로 고객의 감정을 먼저 받아줍니다.</p></div>
+              <div class="rule-step"><div class="rule-no">2</div><strong>목적 한 문장</strong><p>길게 설명하지 않고 연락 목적을 한 문장으로 다시 잡습니다.</p></div>
+              <div class="rule-step"><div class="rule-no">3</div><strong>선택 질문</strong><p>예·아니오보다 두 가지 시간이나 방식 중 선택하게 합니다.</p></div>
+              <div class="rule-step"><div class="rule-no">4</div><strong>존중하며 종료</strong><p>두 번째 거절에는 붙잡지 않고 기록 반영 후 통화를 마칩니다.</p></div>
+            </div>
+          </div>
+          <div class="security-note">고객이 개인정보 제공을 거부하거나 출처를 의심하면 진행을 밀어붙이지 마세요. 소속·유입 경로·본인확인 목적을 투명하게 설명하고, 공식 확인 방법이나 대체 절차를 안내한 뒤 고객의 선택을 따릅니다.</div>
+        </div>
+      </section>
+
+      <!-- 오른쪽: 연속 상담 멘트 -->
+      <article class="panel script-card">
+        <div class="script-head">
+          <div>
+            <h2>연속 상담 멘트</h2>
+            <p>질문 뒤에는 고객이 답할 때까지 먼저 말하지 않습니다.</p>
+          </div>
+          <div class="db-chip" id="dbChip"></div>
+        </div>
+        <div class="continuous-script" id="scriptOutput" aria-live="polite"></div>
+        <div class="quickbar">
+          <button class="btn btn-blue" id="copyBtn">깨끗한 멘트 복사</button>
+          <button class="btn btn-soft" id="copyCoachBtn">코칭 포함 복사</button>
+          <button class="btn btn-white" id="copySourceBtn">도입부만 복사</button>
+          <button class="btn btn-ghost" id="scrollTopBtn">맨 위로</button>
+        </div>
+      </article>
+    </div>
+  </main>
+</div>
+
+<div class="focus-overlay" id="focusOverlay">
+  <div class="focus-toolbar">
+    <div>
+      <div class="focus-title">집중 읽기 · 연속 스크립트</div>
+      <div class="focus-sub">문장 끝은 낮게, 질문 뒤에는 침묵</div>
+      <div class="speed-wrap">자동 스크롤 속도 <input id="speedRange" type="range" min="1" max="8" value="3" /></div>
+    </div>
+    <div class="focus-actions">
+      <button class="btn btn-white" id="focusFontDown">가−</button>
+      <button class="btn btn-white" id="focusFontUp">가＋</button>
+      <button class="btn btn-soft" id="autoScrollBtn">자동 스크롤 시작</button>
+      <button class="btn btn-blue" id="closeFocus">닫기</button>
+    </div>
+  </div>
+  <div class="focus-script" id="focusScript"></div>
+</div>
+<div class="toast" id="toast">복사되었습니다.</div>
+
+<script>
+  const DB_SOURCES = [
+    { key:'broadcast', label:'방송', text:'ARS·데이터 인바운드 상담 신청을 통해 보장분석 안내' },
+    { key:'analysis1', label:'보장분석', text:'보험료 변동과 실손보험 변경 관련 안내를 통해 5세대 실손 변화·보장분석·보험료 절감 점검' },
+    { key:'analysis3', label:'보장분석3', text:'GA통합센터를 통해 납부 중인 보험료와 보장 내역 점검 및 보험료 절감 상담' },
+    { key:'analysis4', label:'보장분석4', text:'보장분석안내본부를 통해 5세대 실손 변화·보장분석·보험료 절감 점검' },
+    { key:'analysis5', label:'보장분석5', text:'GA통합센터를 통해 납부 중인 보험료와 보장 내역 점검 및 보험료 절감 상담' },
+    { key:'analysis6', label:'보장분석6', text:'GA통합센터를 통해 납부 중인 보험료와 보장 내역 점검 및 보험료 절감 상담' },
+    { key:'analysis7', label:'보장분석7', text:'GA통합센터를 통해 납부 중인 보험료와 보장 내역 점검 및 보험료 절감 상담' },
+    { key:'analysis8', label:'보장분석8', text:'보장분석 접수센터를 통해 미청구 보험금·보험료 절감·보장분석 점검' },
+    { key:'analysis9', label:'보장분석9', text:'GA통합센터를 통해 납부 중인 보험료와 보장 내역 점검 및 보험료 절감 상담' },
+    { key:'analysis10', label:'보장분석10', text:'GA보장분석 서비스 설문 참여를 통해 무료 보장분석 점검' },
+    { key:'analysis11', label:'보장분석11', text:'GA통합센터를 통해 중복보장·보장점검·보험료 절감 상담' },
+    { key:'analysis12', label:'보장분석12', text:'GA통합센터를 통해 숨은 보험금 청구·보험료 절감·보장분석 상담' },
+    { key:'analysis14', label:'보장분석14', text:'보장서비스 접수처를 통해 보험료 절감과 불필요한 보장 조정 점검' },
+    { key:'analysis15', label:'보장분석15', text:'청구의신을 통해 실비청구와 중복보장 및 놓친 보장 점검' },
+    { key:'analysis16', label:'보장분석16', text:'제휴 보장분석 서비스를 통해 가입 보험 점검' },
+    { key:'analysis17', label:'보장분석17', text:'올리고 케이블광고 방송을 통해 못 찾은 보험금과 불필요한 보험료 점검' },
+    { key:'nh', label:'농협', text:'보장분석 접수처를 통해 미청구 보험금과 중복보장 점검' },
+    { key:'ns', label:'NS홈쇼핑 화재보험', text:'NS홈쇼핑을 통해 화재보험 문의' }
+  ];
+
+  const OBJECTIONS = [
+    {
+      title:'사은품만 신청했어요', tone:'사은품 요청을 인정하고 상담 범위를 투명하게',
+      text:'네 고객님, 사은품 신청 내용 확인을 먼저 도와드리는 게 맞습니다. 다만 방송 사은품은 화재보험 상담 접수와 함께 안내되는 내용이라, 현재 가입 여부와 중복되는 보장이 있는지만 짧게 확인한 뒤 정확한 신청 절차를 안내드리겠습니다.',
+      follow:'기존 화재보험이 있으신지만 먼저 확인해도 괜찮을까요? 이미 있으시면 중복되는 부분 없이 필요한 내용만 정리해드리겠습니다.\n\n사은품 안내 외 상담을 원하지 않으시면: “네, 고객님 의사에 따라 상담 진행 없이 가능한 처리 범위만 확인해 안내드리겠습니다.”',
+      tip:'“사은품을 받으려면 가입해야 한다”는 인상을 주면 안 됩니다. 신청 조건과 상담 절차를 사실대로 분리해서 설명하세요.',
+      avoid:'“상담을 받아야 사은품이 나갑니다”, “일단 주민번호부터 주세요”처럼 조건을 단정하거나 개인정보를 서두르는 표현.',
+      stop:'고객이 상담을 원하지 않으면 가입 권유를 이어가지 말고 실제 가능한 사은품 처리 절차만 안내합니다.'
+    },
+    {
+      title:'화재보험 이미 있어요', tone:'기존 준비를 칭찬하고 누수·가전 수리비 범위만 확인',
+      text:'네, 화재보험을 이미 준비해두셨다면 잘하셨습니다. 이번 안내는 새로 무조건 가입하시라는 뜻보다, 현재 계약에 아랫집 누수 배상이나 가전제품 수리비처럼 실제 생활에서 자주 생기는 보장이 포함되어 있는지 확인해드리는 과정입니다.',
+      follow:'최근 증권에서 급배수시설 누출손해나 가족일상생활배상책임, 가전제품 수리비 항목을 확인해보신 적이 있으실까요?',
+      tip:'기존 보험을 부족하다고 단정하지 말고 “포함 여부 확인”에 초점을 맞춥니다.',
+      avoid:'“기존 보험은 옛날 거라 안 됩니다”, “무조건 갈아타셔야 합니다” 같은 단정.',
+      stop:'현재 보장을 정확히 알고 있고 추가 점검을 원하지 않으면 종료합니다.'
+    },
+    {
+      title:'가입 생각 없어요', tone:'가입 결정과 현재 확인을 분리',
+      text:'네 고객님, 지금 가입을 결정하실 필요는 없습니다. 문의 남겨주신 화재·누수 보장이 어떤 내용인지와 사은품 신청 절차를 안내드리고, 기존 보험과 중복되는지 확인한 뒤 고객님이 필요 없다고 판단하시면 진행하지 않으셔도 됩니다.',
+      follow:'가입 결정 없이 현재 보장 유무만 확인받는 방식과, 사은품 신청 절차만 안내받는 방식 중 어느 쪽이 편하실까요?',
+      tip:'“가입”이라는 단어에 힘을 주지 말고 선택권을 분명히 줍니다.',
+      avoid:'“들어보시면 생각이 바뀝니다”, “지금 아니면 안 됩니다” 같은 압박.',
+      stop:'두 방식 모두 원하지 않는다고 하면 감사 인사 후 종료합니다.'
+    },
+    {
+      title:'지금 바빠요', tone:'10초 안에 인정하고 양자택일',
+      text:'네 고객님, 바쁘신 시간에 연락드려 죄송합니다. 지금 길게 설명드리지는 않겠습니다. 연락드린 이유만 10초 안에 말씀드리면, 신청하신 보장점검 내용을 고객님 일정에 맞춰 안내드리기 위해서입니다.',
+      follow:'오늘 저녁 6시 이후와 내일 점심시간 중에는 언제가 조금 더 편하실까요?\n\n그래도 어렵다고 하시면: “네, 알겠습니다. 편하신 시간이 생기실 때 다시 요청하실 수 있도록 오늘 통화는 여기서 마치겠습니다.”',
+      tip:'처음부터 더 빨리 말하지 마세요. 속도를 낮추고 “10초 안에”에서 짧게 끊은 뒤 두 개 시간만 제시합니다.',
+      avoid:'“금방 끝나요”, “잠깐만요”, “일단 들어보세요”처럼 고객의 바쁨을 무시하는 표현.',
+      stop:'두 번째로 시간이 없다고 말하면 추가 설명 없이 종료합니다.'
+    },
+    {
+      title:'보험 이미 있어요', tone:'준비를 칭찬하고 ‘보유’에서 ‘작동’으로',
+      text:'네, 보험을 미리 잘 준비해두신 건 좋은 일입니다. 이번 안내는 보험이 있느냐 없느냐를 확인하는 것이 아니라, 지금 가지고 계신 보험이 실제 청구 상황에서 어떻게 작동하는지를 한눈에 정리해드리는 점검입니다.',
+      follow:'최근 1년 안에 모든 보험을 한 장으로 정리해서 보신 적이 있으실까요?\n\n없다고 하시면: “그 부분만 정리해서 드리겠습니다. 새로 결정하시는 자리가 아니라 현재 내용을 확인하는 시간입니다.”',
+      tip:'“보험이 많다”를 문제로 만들지 말고 준비를 인정한 뒤, ‘있다’보다 ‘필요할 때 된다’는 관점만 전달합니다.',
+      avoid:'“지금 보험은 잘못됐어요”, “담당자가 관리를 안 했네요”처럼 기존 계약이나 담당자를 단정하는 표현.',
+      stop:'최근 점검을 받았고 추가 확인을 원하지 않는다고 분명히 말하면 종료합니다.'
+    },
+    {
+      title:'담당자 있어요', tone:'경쟁하지 않고 세컨드 체크',
+      text:'물론입니다. 기존 담당자를 바꾸거나 대체하려는 뜻은 전혀 아닙니다. 고객님 입장에서 현재 가입 내용을 다른 기준으로 한 번 더 확인해보는 세컨드 체크라고 생각해주시면 됩니다.',
+      follow:'기존 담당자분과 함께 보셔도 괜찮습니다. 자료만 객관적으로 정리해드리는 방식과 전화로 핵심만 확인하는 방식 중 어떤 쪽이 더 편하실까요?',
+      tip:'기존 담당자 이야기가 나오면 즉시 존중부터 표현합니다. 목소리 경쟁을 하지 말고 “함께 보셔도 됩니다”에서 안심을 줍니다.',
+      avoid:'“한 사람만 믿으면 안 됩니다”, “그 담당자보다 제가 더 잘 봅니다” 같은 비교·비난 표현.',
+      stop:'기존 담당자 외에는 상담을 받지 않겠다고 재차 밝히면 존중하고 종료합니다.'
+    },
+    {
+      title:'방문이 부담돼요', tone:'통제권을 고객에게 돌려주기',
+      text:'네, 처음 보는 사람이 방문한다고 하면 충분히 부담스러우실 수 있습니다. 방문을 먼저 결정하실 필요는 없고, 전화로 핵심 내용을 확인하신 뒤 자료가 필요하다고 느끼실 때 고객님이 편한 장소와 방식으로 진행하셔도 됩니다.',
+      follow:'전화로 먼저 3분만 안내받는 방법과 가까운 공개된 장소에서 자료만 받는 방법 중 어느 쪽이 더 편하실까요?',
+      tip:'“왜 부담스러우세요?”라고 묻지 말고 먼저 공감합니다. 방문의 목적을 계약이 아닌 자료 전달과 설명으로 명확히 낮춥니다.',
+      avoid:'“집에 들어가는 것도 아닌데요”, “다들 방문받으세요”처럼 부담을 축소하는 표현.',
+      stop:'방문·전화 모두 원하지 않는다고 하면 추가 선택지를 제시하지 않고 종료합니다.'
+    },
+    {
+      title:'문자로 보내주세요', tone:'요청을 수용한 뒤 정확도 확보',
+      text:'네, 먼저 문자로 받아보시는 게 편하시죠. 기본 안내는 문자로 보내드릴 수 있습니다. 다만 고객님 상황과 맞지 않는 공통 자료를 보내드리면 오히려 헷갈릴 수 있어 두 가지만 확인한 뒤 맞춤 내용으로 정리해드리겠습니다.',
+      follow:'현재 전체 보험료가 대략 어느 정도인지, 최근 1년 안에 보장점검을 받으셨는지만 확인해도 괜찮을까요?\n\n확인을 원하지 않으시면: “네, 그러면 일반 안내만 보내드리고 추가 연락은 고객님 요청이 있을 때 진행하겠습니다.”',
+      tip:'문자 요청을 거절하지 않습니다. “보내드리겠습니다”를 먼저 말한 뒤 최소 확인 항목만 묻습니다.',
+      avoid:'“문자로는 설명이 안 됩니다”, “직접 만나야 합니다”처럼 고객의 요청을 막는 표현.',
+      stop:'개별 확인 없이 일반 문자만 원하면 그 범위로 마무리합니다.'
+    },
+    {
+      title:'생각해 볼게요', tone:'결정이 아닌 판단자료로 전환',
+      text:'네, 바로 결정하실 내용은 아니고 신중하게 보시는 게 맞습니다. 다만 생각해보시려면 현재 보험료와 보장 내용을 한눈에 볼 수 있는 기준 자료가 먼저 있어야 판단이 쉬워집니다.',
+      follow:'결정하시는 자리가 아니라 비교할 자료만 받아보시는 방식으로 진행해도 괜찮을까요? 화요일 오전과 수요일 오후 중 자료 받기 편한 시간만 골라주세요.',
+      tip:'압박을 낮추고 “결정”이라는 단어를 반복하지 않습니다. 자료 확보라는 작은 다음 행동만 제안합니다.',
+      avoid:'“생각만 하시면 달라지는 게 없습니다”, “오늘 해야 합니다” 같은 압박 표현.',
+      stop:'자료도 받지 않겠다고 하면 판단을 존중하고 종료합니다.'
+    },
+    {
+      title:'돈 여유 없어요', tone:'추가 지출이 아니라 누수 점검',
+      text:'맞습니다. 지금 보험료를 더 낸다는 이야기는 부담스러우실 수밖에 없습니다. 그래서 이번 점검도 추가 가입을 먼저 보는 것이 아니라, 중복되거나 불필요하게 빠져나가는 보험료가 있는지부터 확인하는 과정입니다.',
+      follow:'보험료를 늘리지 않는 범위에서 현재 지출 구조만 확인해보시는 건 괜찮으실까요?',
+      tip:'고객의 경제 상황을 평가하지 않습니다. “여유가 없으니 더 필요하다”가 아니라 지출 점검에 초점을 둡니다.',
+      avoid:'“돈이 없을수록 보험이 필요합니다”, “커피값만 줄이면 됩니다” 같은 무례한 표현.',
+      stop:'보험 관련 지출 자체를 검토하고 싶지 않다고 하면 종료합니다.'
+    },
+    {
+      title:'필요 없어요', tone:'이유 확인은 한 번만, 담백하게 종료',
+      text:'네 고객님, 알겠습니다. 불편하게 더 붙잡지는 않겠습니다. 이후 같은 안내가 반복되지 않도록 한 가지만 확인해도 될까요? 최근에 이미 점검을 받으셔서 필요 없으신 건지, 상담 자체를 원하지 않으시는 건지만 말씀해주시면 반영하겠습니다.',
+      follow:'상담 자체를 원하지 않는다고 하시면: “네, 의사 확인했습니다. 오늘 통화는 여기서 마치겠습니다. 감사합니다.”',
+      tip:'표정과 목소리를 바꾸지 말고 처음과 같은 예의를 유지합니다. 이유 확인은 한 번만 묻습니다.',
+      avoid:'“왜 필요 없으세요?”, “손해 보실 수 있어요”처럼 불안이나 죄책감을 유발하는 표현.',
+      stop:'명확한 거절 의사가 확인되면 즉시 종료하고 재설득하지 않습니다.'
+    },
+    {
+      title:'주민번호가 불안해요', tone:'불안을 인정하고 대체 확인 제공',
+      text:'네, 주민번호는 민감한 정보라 조심하시는 게 맞습니다. 본인확인은 고객님 동의하에 회사가 승인한 보안 절차에서만 진행하고, 제가 별도로 적거나 저장하지 않습니다. 지금 바로 진행하지 않으셔도 됩니다.',
+      follow:'공식 대표번호나 안내 문자를 먼저 확인하신 뒤 다시 진행하는 방법과, 가능한 다른 본인확인 절차를 확인해드리는 방법 중 어느 쪽이 편하실까요?',
+      tip:'안전을 강조하기 전에 고객의 우려가 정당하다고 인정합니다. 번호를 다시 재촉하거나 큰소리로 반복하지 않습니다.',
+      avoid:'“다들 알려주세요”, “저를 못 믿으세요?”, “어차피 조회하려면 필요해요” 같은 압박 표현.',
+      stop:'고객이 개인정보 제공을 원하지 않으면 조회를 중단하고 대체 절차가 없을 경우 상담도 종료합니다.'
+    },
+    {
+      title:'어디서 전화했어요?', tone:'소속·출처·목적을 한 번에',
+      text:'고객님, 저는 광주 지역 보장분석 담당자 OOO이고요. 고객님께서 접수하신 “유입 경로” 내용을 확인하고 연락드렸습니다. 오늘 연락 목적은 접수된 보장점검 내용을 안내하고 자료 전달 일정을 조율하는 것입니다.',
+      follow:'제가 접수된 유입 사유와 확인 가능한 정보 범위를 다시 천천히 안내드릴까요? 원하시면 공식 확인 방법을 먼저 안내드리겠습니다.',
+      tip:'회사명·지역·본인 이름·유입 경로·연락 목적 순서로 말합니다. 얼버무리거나 너무 빠르게 넘어가지 않습니다.',
+      avoid:'“아까 설명드렸잖아요”, “고객님이 신청하셨어요”만 반복하는 방어적 표현.',
+      stop:'출처가 확인되지 않거나 고객이 공식 확인 전 진행을 원하지 않으면 통화를 중단합니다.'
+    },
+    {
+      title:'사기 아닌가요?', tone:'방어하지 말고 확인 권리 보장',
+      text:'그렇게 의심하실 수 있습니다. 확인되지 않은 전화에서 개인정보를 바로 말씀하지 않는 것이 맞습니다. 지금 통화에서 서두르실 필요 없고, 소속과 접수 경로를 공식적으로 확인하신 뒤 진행하셔도 됩니다.',
+      follow:'공식 확인 방법을 문자로 먼저 받아보시겠어요, 아니면 오늘 통화는 종료하고 고객님이 직접 확인하신 뒤 다시 요청하시겠어요?',
+      tip:'기분 나쁜 티를 내지 않습니다. 원격제어 앱 설치, 의심스러운 링크 클릭, 송금 요청은 하지 않는다는 점을 명확히 합니다.',
+      avoid:'“제가 사기꾼처럼 들리세요?”, “안 믿으시면 손해입니다” 같은 감정적 대응.',
+      stop:'고객이 의심을 유지하면 개인정보 확인 없이 종료합니다.'
+    },
+    {
+      title:'가족과 상의할게요', tone:'함께 듣는 구조로 전환',
+      text:'네, 보험 내용은 가족과 함께 보시는 게 좋습니다. 혼자 결정하시라는 안내가 아니라 현재 내용을 정확히 정리해드리는 것이니, 배우자분이나 가족분이 함께 들을 수 있는 시간으로 맞춰드리겠습니다.',
+      follow:'평일 저녁과 주말 중 가족분과 같이 듣기 편한 시간대가 언제일까요? 또는 먼저 요약 자료만 받아보시겠어요?',
+      tip:'가족을 장애물로 보지 말고 중요한 의사결정자로 존중합니다.',
+      avoid:'“고객님 보험인데 왜 가족 허락을 받으세요?”처럼 관계를 무시하는 표현.',
+      stop:'가족 상의 후 고객이 직접 연락하겠다고 하면 연락 방법만 안내하고 종료합니다.'
+    },
+    {
+      title:'주소를 어떻게 알았어요?', tone:'정보 출처를 투명하게, 수정권 안내',
+      text:'불편하실 수 있습니다. 제가 보고 있는 주소는 접수 과정에서 확인된 정보 범위 안에 있는 내용입니다. 정확하지 않거나 사용을 원하지 않으시면 더 진행하지 않고 수정 또는 처리 가능한 절차를 안내드리겠습니다.',
+      follow:'주소를 제가 먼저 전체로 읽지 않고 고객님께서 방문 가능한 지역만 말씀해주시는 방식으로 진행할까요, 아니면 주소 확인 없이 전화 안내만 진행할까요?',
+      tip:'주소를 큰소리로 반복하지 말고 일부만 마스킹해 확인합니다. 정보 출처가 확실하지 않으면 추정해서 말하지 않습니다.',
+      avoid:'“이미 다 알고 있습니다”, “시스템에 있으니까 괜찮습니다” 같은 위압적 표현.',
+      stop:'주소 이용을 원하지 않으면 방문 조율을 중단하고 고객이 허용한 방식만 사용합니다.'
+    },
+    {
+      title:'실비청구만 해주세요', tone:'요청 업무를 먼저, 점검은 선택',
+      text:'네, 고객님이 요청하신 실비청구 확인을 먼저 도와드리겠습니다. 중복보장이나 전체 보장점검은 반드시 함께 하셔야 하는 내용은 아니고, 청구 정리 후 원하실 때 추가로 확인하실 수 있습니다.',
+      follow:'우선 이번 청구에 필요한 내용만 확인할까요? 청구가 끝난 뒤 놓친 보험금이 있는지만 간단히 확인받는 방법도 있습니다.',
+      tip:'고객의 첫 요청을 다른 상담으로 바꾸려 하지 않습니다. 요청 업무를 끝낸 뒤 선택권을 줍니다.',
+      avoid:'“청구만으로는 안 됩니다”, “보장분석까지 해야 처리됩니다”처럼 조건을 붙이는 표현.',
+      stop:'청구 외 안내를 원하지 않으면 청구 범위만 진행합니다.'
+    }
+  ];
+
+  const $ = id => document.getElementById(id);
+  const fields = ['customer','agent','region','address','dong','slot1','slot2','birthYear','birthMonth','birthDay','front6','sourceText'];
+  let selectedObjection = 0;
+  let scriptFont = 21;
+  let focusFont = 34;
+  let scrollTimer = null;
+
+  function safe(value,fallback){const v=String(value??'').trim();return v||fallback;}
+  function escapeHTML(str){return String(str).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));}
+  function cue(label,cls){return `<span class="cue ${cls}">${label}</span>`;}
+
+  function buildScriptParts(){
+    const customer=safe($('customer').value,'OOO');
+    const agent=safe($('agent').value,'OOO');
+    const region=safe($('region').value,'광주');
+    const source=safe($('sourceText').value,'보장분석 점검');
+    const address=safe($('address').value,'OO시 OO구 OO로');
+    const dong=safe($('dong').value,'OOO동');
+    const slot1=safe($('slot1').value,'화요일 오전 11시');
+    const slot2=safe($('slot2').value,'수요일 오후 2시');
+    const year=safe($('birthYear').value,'OO');
+    const month=safe($('birthMonth').value,'OO');
+    const day=safe($('birthDay').value,'OO');
+    const front6=safe($('front6').value,'OOOOOO');
+    const dbKey=$('dbType').value;
+
+    let paragraphs;
+    if(dbKey==='ns'){
+      paragraphs=[
+        `${customer} 고객님, 안녕하세요.\nNS홈쇼핑을 통해 화재보험 문의 남겨주셔서 연락드렸습니다.\n저는 사은품 신청과 상담 안내 도와드릴 ${agent} 팀장입니다.`,
+        `화재 보장은 물론이고, 아랫집 물 새는 누수 사고나 비싼 가전제품 수리비까지 보장되다 보니 요즘 고객님들 관심이 정말 많으신데요.\n마침 알뜰한 플랜으로 방송되어서 합리적인 조건으로 설계해 드리겠습니다.`,
+        `기존 가입내역을 꼼꼼하게 확인하여 중복되는 부분 없이 진행해드릴 건데요. 현재 생년월일 ${front6}, 뒷번호 7자리 불러주세요.`
+      ];
+    }else{
+      paragraphs=[
+        `${customer}고객님 안녕하세요! (${source}) 진행해드리고자 연락드렸습니다. 저는 ${region} 지역 담당자 ${agent}입니다.`,
+        `현재 납부 중이신 보험들을 한눈에 확인하실 수 있도록, 여러 보험사의 가입 내용을 하나의 보장분석표로 정리해드릴 예정입니다. 나중에 보험금을 청구하실 때 보험사마다 일일이 확인하지 않으셔도 되도록 보기 쉽게 정리해드리고, 보장 내용과 함께 불필요하게 많이 납부 중인 보험료가 있는지, 놓친 보장이나 확인 가능한 환급 내용은 없는지도 같이 살펴드립니다.`,
+        `보장분석 자료는 제가 직접 전달드리면서 현재 가입하신 보험을 이해하기 쉽게 간단히 설명드리겠습니다. 가입을 바로 결정하시는 자리가 아니라 현재 내용을 정확히 확인하는 시간이니 부담 없이 편하게 들으시면 됩니다.`,
+        `확인된 주소는 ${address}로 되어 있는데, 방문 가능한 주소가 맞으실까요?`,
+        `${dong} 방문은 ${slot1}와 ${slot2} 가능합니다. 두 시간 중 언제가 더 편하세요?`,
+        `네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 ${year}년 ${month}월 ${day}일이고, 주민등록번호 앞자리는 ${front6}으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
+      ];
+    }
+    return {dbKey,customer,agent,region,source,address,dong,slot1,slot2,year,month,day,front6,paragraphs,plain:paragraphs.join('\n\n')};
+  }
+
+  function buildCoachedPlain(p){
+    if(p.dbKey==='ns'){
+      return [
+        `[미소·밝게] ${p.customer} 고객님, 안녕하세요. [0.5초 쉼] NS홈쇼핑을 통해 화재보험 문의 남겨주셔서 연락드렸습니다. [신뢰감 있게] 저는 사은품 신청과 상담 안내 도와드릴 ${p.agent} 팀장입니다.`,
+        `[핵심 단어 강조] 화재 보장은 물론이고, 아랫집 물 새는 누수 사고나 비싼 가전제품 수리비까지 보장되다 보니 요즘 고객님들 관심이 정말 많으신데요. [0.5초 쉼] 마침 알뜰한 플랜으로 방송되어서 합리적인 조건으로 설계해 드리겠습니다.`,
+        `[천천히·개인정보 동의 확인] 기존 가입내역을 꼼꼼하게 확인하여 중복되는 부분 없이 진행해드릴 건데요. 현재 생년월일 ${p.front6}, 뒷번호 7자리 불러주세요.`
+      ].join('\n\n');
+    }
+    return [
+      `[미소·밝게] ${p.customer}고객님 안녕하세요! [0.5초 쉼] (${p.source}) 진행해드리고자 연락드렸습니다. 저는 ${p.region} 지역 담당자 ${p.agent}입니다.`,
+      `[속도 85%] 현재 납부 중이신 보험들을 한눈에 확인하실 수 있도록, 여러 보험사의 가입 내용을 하나의 보장분석표로 정리해드릴 예정입니다. [0.5초 쉼] 나중에 보험금을 청구하실 때 보험사마다 일일이 확인하지 않으셔도 되도록 보기 쉽게 정리해드리고, 보장 내용과 함께 불필요하게 많이 납부 중인 보험료가 있는지, 놓친 보장이나 확인 가능한 환급 내용은 없는지도 같이 살펴드립니다.`,
+      `보장분석 자료는 제가 직접 전달드리면서 현재 가입하신 보험을 이해하기 쉽게 간단히 설명드리겠습니다. [안심시키기] 가입을 바로 결정하시는 자리가 아니라 현재 내용을 정확히 확인하는 시간이니 부담 없이 편하게 들으시면 됩니다.`,
+      `[천천히] 확인된 주소는 ${p.address}로 되어 있는데, 방문 가능한 주소가 맞으실까요? [고객 답변 기다리기]`,
+      `[양자택일·두 시간 강조] ${p.dong} 방문은 ${p.slot1}와 ${p.slot2} 가능합니다. 두 시간 중 언제가 더 편하세요? [고객 답변 기다리기]`,
+      `[천천히·숫자 끊어 읽기] 네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 ${p.year}년 ${p.month}월 ${p.day}일이고, 주민등록번호 앞자리는 ${p.front6}으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
+    ].join('\n\n');
+  }
+
+  function renderScript(){
+    const p=buildScriptParts();
+    let html;
+    if(p.dbKey==='ns'){
+      html=[
+        `${cue('미소','cue-smile')} <span class="stress">${escapeHTML(p.customer)} 고객님, 안녕하세요.</span> ${cue('0.5초 쉼','cue-pause')} <span class="source">NS홈쇼핑을 통해 화재보험 문의 남겨주셔서</span> 연락드렸습니다.\n저는 <span class="stress">사은품 신청과 상담 안내 도와드릴 ${escapeHTML(p.agent)} 팀장</span>입니다.`,
+        `${cue('핵심 강조','cue-pause')} <span class="stress">화재 보장</span>은 물론이고, 아랫집 물 새는 <span class="stress">누수 사고</span>나 비싼 <span class="stress">가전제품 수리비</span>까지 보장되다 보니 요즘 고객님들 관심이 정말 많으신데요.\n${cue('0.5초 쉼','cue-pause')} 마침 <span class="source">알뜰한 플랜으로 방송</span>되어서 합리적인 조건으로 설계해 드리겠습니다.`,
+        `${cue('천천히','cue-slow')} 기존 가입내역을 꼼꼼하게 확인하여 <span class="warm">중복되는 부분 없이</span> 진행해드릴 건데요. 현재 생년월일 <span class="stress">${escapeHTML(p.front6)}</span>, 뒷번호 7자리 불러주세요. ${cue('동의·답변 기다리기','cue-listen')}`
+      ].join('\n\n');
+    }else{
+      html=[
+        `${cue('미소','cue-smile')} <span class="stress">${escapeHTML(p.customer)}고객님 안녕하세요!</span> ${cue('0.5초 쉼','cue-pause')} <span class="source">(${escapeHTML(p.source)})</span> 진행해드리고자 연락드렸습니다. 저는 <span class="stress">${escapeHTML(p.region)} 지역 담당자 ${escapeHTML(p.agent)}</span>입니다.`,
+        `${cue('속도 85%','cue-slow')} 현재 납부 중이신 보험들을 <span class="stress">한눈에 확인</span>하실 수 있도록, 여러 보험사의 가입 내용을 하나의 보장분석표로 정리해드릴 예정입니다. ${cue('0.5초 쉼','cue-pause')} 나중에 보험금을 청구하실 때 보험사마다 일일이 확인하지 않으셔도 되도록 보기 쉽게 정리해드리고, 보장 내용과 함께 불필요하게 많이 납부 중인 보험료가 있는지, 놓친 보장이나 확인 가능한 환급 내용은 없는지도 같이 살펴드립니다.`,
+        `보장분석 자료는 제가 직접 전달드리면서 현재 가입하신 보험을 이해하기 쉽게 간단히 설명드리겠습니다. <span class="warm">가입을 바로 결정하시는 자리가 아니라 현재 내용을 정확히 확인하는 시간</span>이니 부담 없이 편하게 들으시면 됩니다.`,
+        `${cue('천천히','cue-slow')} 확인된 주소는 <span class="stress">${escapeHTML(p.address)}</span>로 되어 있는데, 방문 가능한 주소가 맞으실까요? ${cue('답변 기다리기','cue-listen')}`,
+        `${cue('양자택일','cue-pause')} <span class="stress">${escapeHTML(p.dong)}</span> 방문은 <span class="choice">${escapeHTML(p.slot1)}</span>와 <span class="choice">${escapeHTML(p.slot2)}</span> 가능합니다. <span class="stress">두 시간 중 언제가 더 편하세요?</span> ${cue('답변 기다리기','cue-listen')}`,
+        `${cue('숫자 끊어 읽기','cue-slow')} 네, 일정 등록과 정확한 자료 확인을 위해 본인확인만 도와드리겠습니다. 고객님 생년월일은 <span class="stress">${escapeHTML(p.year)}년 ${escapeHTML(p.month)}월 ${escapeHTML(p.day)}일</span>이고, 주민등록번호 앞자리는 <span class="stress">${escapeHTML(p.front6)}</span>으로 확인됩니다. 고객님 동의하에 회사가 승인한 보안 본인확인 절차에서 뒷번호 7자리를 불러주세요.`
+      ].join('\n\n');
+    }
+    $('scriptOutput').innerHTML=html;
+    $('focusScript').innerHTML=html;
+    $('scriptOutput').classList.toggle('ns-script',p.dbKey==='ns');
+    $('scriptOutput').dataset.plain=p.plain;
+    $('scriptOutput').dataset.coached=buildCoachedPlain(p);
+    const selected=DB_SOURCES.find(x=>x.key===$('dbType').value)||DB_SOURCES[0];
+    $('dbChip').textContent=p.dbKey==='ns' ? `${selected.label} · 전용 화재보험 대본` : `${selected.label} · 유입 사유 자동 반영`;
+    $('nsNotice').classList.toggle('show',p.dbKey==='ns');
+    document.querySelectorAll('.db-mini-btn').forEach(btn=>btn.classList.toggle('active',btn.dataset.key===p.dbKey));
+  }
+
+  function setDB(key){
+    const item=DB_SOURCES.find(x=>x.key===key)||DB_SOURCES[0];
+    $('dbType').value=item.key;
+    $('sourceText').value=item.text;
+    renderScript();
+    renderObjections();
+  }
+
+  function populateDB(){
+    $('dbType').innerHTML=DB_SOURCES.map(x=>`<option value="${x.key}">${x.label}</option>`).join('');
+    $('dbButtons').innerHTML=DB_SOURCES.map(x=>`<button type="button" class="db-mini-btn ${x.key==='ns'?'ns':''}" data-key="${x.key}">${escapeHTML(x.label)}</button>`).join('');
+    document.querySelectorAll('.db-mini-btn').forEach(btn=>btn.addEventListener('click',()=>setDB(btn.dataset.key)));
+    $('dbType').value='ns';
+    $('sourceText').value=DB_SOURCES.find(x=>x.key==='ns').text;
+  }
+
+  function dynamicObjectionText(text){
+    const p=buildScriptParts();
+    return text
+      .replaceAll('OOO',p.agent)
+      .replaceAll('“유입 경로”',`“${p.source}”`);
+  }
+
+  function renderObjections(){
+    $('objectionTabs').innerHTML=OBJECTIONS.map((o,i)=>`<button class="objection-tab ${i===selectedObjection?'active':''}" data-index="${i}">${i+1}. ${escapeHTML(o.title)}</button>`).join('');
+    const o=OBJECTIONS[selectedObjection];
+    $('objectionTitle').textContent=o.title;
+    $('objectionTone').textContent=`톤 · ${o.tone}`;
+    $('objectionText').textContent=dynamicObjectionText(o.text);
+    $('objectionFollow').textContent=dynamicObjectionText(o.follow);
+    $('objectionTip').textContent=o.tip;
+    $('objectionAvoid').textContent=o.avoid;
+    $('objectionStop').textContent=o.stop;
+    document.querySelectorAll('.objection-tab').forEach(btn=>btn.addEventListener('click',()=>{selectedObjection=Number(btn.dataset.index);renderObjections();}));
+  }
+
+  async function copyText(text,message='복사되었습니다.'){
+    try{await navigator.clipboard.writeText(text);}catch(e){const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    showToast(message);
+  }
+  function showToast(message){const t=$('toast');t.textContent=message;t.classList.add('show');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.remove('show'),1600);}
+  function setScriptFont(delta){scriptFont=Math.min(31,Math.max(16,scriptFont+delta));document.documentElement.style.setProperty('--script-size',scriptFont+'px');}
+  function openFocus(){$('focusOverlay').classList.add('active');$('focusScript').scrollTop=0;document.body.style.overflow='hidden';}
+  function closeFocus(){stopAutoScroll();$('focusOverlay').classList.remove('active');document.body.style.overflow='';}
+  function startAutoScroll(){if(scrollTimer){stopAutoScroll();return;}$('autoScrollBtn').textContent='자동 스크롤 멈춤';const tick=()=>{const el=$('focusScript');const speed=Number($('speedRange').value);el.scrollTop+=Math.max(1,speed/2);if(el.scrollTop+el.clientHeight>=el.scrollHeight-3){stopAutoScroll();return;}scrollTimer=requestAnimationFrame(tick);};scrollTimer=requestAnimationFrame(tick);}
+  function stopAutoScroll(){if(scrollTimer)cancelAnimationFrame(scrollTimer);scrollTimer=null;$('autoScrollBtn').textContent='자동 스크롤 시작';}
+  function resetForm(){
+    $('dbType').value='ns';$('sourceText').value=DB_SOURCES.find(x=>x.key==='ns').text;
+    $('customer').value='OOO';$('agent').value='OOO';$('region').value='광주';$('address').value='OO시 OO구 OO로';$('dong').value='OOO동';
+    $('slot1').value='화요일 오전 11시';$('slot2').value='수요일 오후 2시';$('birthYear').value='OO';$('birthMonth').value='OO';$('birthDay').value='OO';$('front6').value='OOOOOO';
+    renderScript();renderObjections();showToast('입력값을 초기화했습니다.');
+  }
+
+  function toggleInputbar(){const bar=$('inputbar');bar.classList.toggle('collapsed');$('inputbarCaret').textContent=bar.classList.contains('collapsed')?'펼치기 ▸':'접기 ▾';}
+  window.toggleInputbar=toggleInputbar;
+
+  populateDB();renderScript();renderObjections();
+  $('dbType').addEventListener('change',()=>setDB($('dbType').value));
+  fields.forEach(id=>$(id).addEventListener('input',()=>{renderScript();renderObjections();}));
+  $('cueToggle').addEventListener('change',e=>document.body.classList.toggle('hide-cues',!e.target.checked));
+  $('copyBtn').addEventListener('click',()=>copyText($('scriptOutput').dataset.plain,'깨끗한 멘트를 복사했습니다.'));
+  $('copyCoachBtn').addEventListener('click',()=>copyText($('scriptOutput').dataset.coached,'코칭 포함 멘트를 복사했습니다.'));
+  $('copySourceBtn').addEventListener('click',()=>copyText(buildScriptParts().paragraphs[0],'도입부를 복사했습니다.'));
+  $('copyObjection').addEventListener('click',()=>{const o=OBJECTIONS[selectedObjection];copyText(`${dynamicObjectionText(o.text)}\n\n다음 한마디\n${dynamicObjectionText(o.follow)}`,'거절 대응 멘트를 복사했습니다.');});
+  $('fontDown').addEventListener('click',()=>setScriptFont(-1));$('fontUp').addEventListener('click',()=>setScriptFont(1));
+  $('printBtn').addEventListener('click',()=>window.print());$('focusBtn').addEventListener('click',openFocus);$('closeFocus').addEventListener('click',closeFocus);$('autoScrollBtn').addEventListener('click',startAutoScroll);
+  $('focusFontDown').addEventListener('click',()=>{focusFont=Math.max(22,focusFont-2);$('focusScript').style.fontSize=focusFont+'px';});
+  $('focusFontUp').addEventListener('click',()=>{focusFont=Math.min(54,focusFont+2);$('focusScript').style.fontSize=focusFont+'px';});
+  $('resetBtn').addEventListener('click',resetForm);$('scrollTopBtn').addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('focusOverlay').classList.contains('active'))closeFocus();});
+</script>
+</body>
+</html>
