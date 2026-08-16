@@ -123,10 +123,17 @@ exports.handler = async function (event) {
   /* 시세 스냅샷은 계좌마다 다시 부르지 않는다 — 하루치 한 번이면 충분하다 */
   let priceByCode = {}, priceDate = null;
   try {
-    const rows = (await sb('invest_prices?select=code,name,close,change_rate,price_date&order=price_date.desc&limit=600')) || [];
-    if (rows.length) {
-      priceDate = rows[0].price_date;
-      rows.filter(r => r.price_date === priceDate).forEach(r => { priceByCode[r.code] = r; });
+    /* 가장 최근 날짜를 먼저 한 줄로 확인한 뒤, 그 날짜만 콕 집어 받는다.
+       전에는 최신 600행을 받아 그중 최신일만 걸렀는데, 여러 날이 섞여 들어오면
+       최신일 종목이 잘려 나갈 수 있었다. 조용히 몇 종목이 빠지는 쪽이
+       한눈에 안 보여서 더 나쁘다. */
+    const head = (await sb('invest_prices?select=price_date&order=price_date.desc&limit=1')) || [];
+    if (head.length) {
+      priceDate = head[0].price_date;
+      const rows = (await sb('invest_prices?price_date=eq.' + priceDate +
+                             '&select=code,name,close,change_rate&limit=2000')) || [];
+      rows.forEach(r => { priceByCode[r.code] = r; });
+      log.push('시세 스냅샷 ' + priceDate + ' · ' + rows.length + '종목');
     }
   } catch (e) { log.push('시세 스냅샷 없음: ' + String(e.message || e).slice(0, 60)); }
 
@@ -197,11 +204,27 @@ exports.handler = async function (event) {
         }
       } catch (e) { /* 목표를 안 정해둔 계좌 — 리밸런싱 항목만 빠진다 */ }
 
-      /* 봇 신호 — 모의 전용 */
+      /* 봇 신호 — 모의 전용.
+         ⚠️ 오늘 날짜로 찾으면 안 된다. 이 함수는 07시에 돌면서 '어제 장' 을
+            보고한다. 신호는 어제 났으므로 today 로 찾으면 영원히 0건이다.
+            실제로 그렇게 짜여 있었다. 자료의 기준일(nav_date)로 찾는다. */
+      const dataDate = last.nav_date;
       let signals = [];
       try {
-        signals = (await sb('invest_signals?' + q + '&ref_date=eq.' + today + '&select=code,name,side,strategy,reason,price&limit=12')) || [];
+        signals = (await sb('invest_signals?' + q + '&ref_date=eq.' + dataDate +
+                            '&select=code,name,side,strategy,reason,price&limit=12')) || [];
       } catch (e) { /* 마이그레이션 전이면 없다 */ }
+
+      /* 어제 실제로 사고판 것 — 신호(계획)와 체결(사실)은 다르다 */
+      let done = [];
+      try {
+        done = (await sb('invest_txns?' + q + '&txn_date=eq.' + dataDate +
+                         '&select=kind,amount,memo&limit=20')) || [];
+      } catch (e) { /* 거래내역을 안 넣는 계좌도 있다 */ }
+
+      /* 시세 스냅샷이 평가액 기준일보다 오래됐으면 '어제 움직인 종목' 이 아니다.
+         모르는 걸 아는 척하지 않는다 — 며칠 전 등락을 어제 것처럼 적으면 안 된다. */
+      const priceStale = !!(priceDate && priceDate !== dataDate);
 
       const stats = {
         date: today, navDate: last.nav_date, priceDate: priceDate,
@@ -210,8 +233,8 @@ exports.handler = async function (event) {
         stopLossPct: stop, roomToStopPct: ddRoom == null ? null : Math.round(ddRoom * 100) / 100,
         twrTotal: twrAll ? twrAll.total : null,
         offCount: reb ? reb.offCount : null,
-        fx: fx, fxSkipped: fxSkipped,
-        signalCount: signals.length, holdings: holds.length
+        fx: fx, fxSkipped: fxSkipped, priceStale: priceStale,
+        signalCount: signals.length, txnCount: done.length, holdings: holds.length
       };
 
       const facts =
@@ -222,8 +245,15 @@ exports.handler = async function (event) {
         '· 최고점 대비 낙폭: ' + (ddPct == null ? '—' : Math.round(ddPct * 100) / 100 + '%') +
           (stop != null ? ' / 정지선 ' + stop + '% (여유 ' + (ddRoom == null ? '—' : Math.round(ddRoom * 100) / 100 + '%p') + ')' : '') + '\n' +
         (moved.length
-          ? '· 어제 많이 움직인 종목: ' + moved.slice(0, 3).map(m => m.name + ' ' + rateS(m.rate)).join(' · ') + '\n'
+          ? (priceStale
+              ? '· 많이 움직인 종목(' + priceDate + ' 기준 · 어제 자료 아님): '
+                + moved.slice(0, 3).map(m => m.name + ' ' + rateS(m.rate)).join(' · ') + '\n'
+              : '· 어제 많이 움직인 종목: '
+                + moved.slice(0, 3).map(m => m.name + ' ' + rateS(m.rate)).join(' · ') + '\n')
           : '· 종목별 등락: 확인 안 됨 (시세 스냅샷 없음)\n') +
+        (done.length
+          ? '· 어제 체결: ' + done.map(t => (t.kind || '') + ' ' + won(n(t.amount))).join(' · ') + '\n'
+          : '· 어제 체결: 없음\n') +
         (reb
           ? (reb.offCount
               ? '· 목표 배분 이탈 ' + reb.offCount + '건: ' + reb.rows.filter(r => r.off)
