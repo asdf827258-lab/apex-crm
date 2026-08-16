@@ -4661,13 +4661,20 @@ function bindDaily(){
     if(e){e.innerHTML=msg;e.style.color=bad?'#B3261E':'#42506A';}
     try{ if(typeof toast==='function')toast(String(msg).replace(/<[^>]+>/g,'').slice(0,60)); }catch(x){}
   }
+  function pill(txt,warn){
+    var b=document.getElementById('mknOpen');
+    if(!b)return;
+    b.textContent=txt;
+    b.style.background=warn?'linear-gradient(135deg,#B45309,#92400E)'
+                           :'linear-gradient(135deg,#059669,#047857)';
+  }
   function pull(){
     var b=document.getElementById('mknBtn');
     if(b){b.disabled=true;b.textContent='🌐 모으는 중…';}
     say('서버가 보험 뉴스를 모으는 중입니다…');
     var h={},t=tokenOf();
     if(t)h['X-App-Token']=t;
-    fetch('/api/market?kind=news&cat=보험',{headers:h})
+    return fetch('/api/market?kind=news&cat=보험',{headers:h})
       .then(function(r){
         if(r.status===401)throw new Error('앱 안에서 열어 주세요 — 파일만 따로 열면 서버가 막습니다.');
         if(!r.ok)throw new Error('서버가 '+r.status+' 로 답했습니다.');
@@ -4695,12 +4702,35 @@ function bindDaily(){
         if(!kept)throw new Error(items.length+'건을 받았지만 보험 기사가 하나도 없었습니다. 잠시 뒤 다시 눌러 주세요.');
         say('<b>'+kept+'건이 들어왔습니다.</b> 미끼 점수 높은 순으로 세워 두었습니다.'+
             (kept<items.length?(' <span style="color:#8A93A6">(받은 '+items.length+'건 중 보험 기사만 골랐습니다)</span>'):''));
+        pill('🌐 뉴스 '+kept+'건');
+        return true;
       })
-      .catch(function(e){ say((e&&e.message)||'가져오지 못했습니다', true); })
-      .then(function(){
+      .catch(function(e){
+        say((e&&e.message)||'가져오지 못했습니다', true);
+        pill('🌐 뉴스 모아 오기', true);
+        return false;
+      })
+      .then(function(ok){
         var b2=document.getElementById('mknBtn');
         if(b2){b2.disabled=false;b2.textContent='🌐 뉴스 모아 오기';}
+        return ok;
       });
+  }
+
+  /* ── 들어가면 바로 켜지게 ──────────────────────────────────────────
+     집에서 열었더니 텅 비어 있더라 — 그 자리를 없앤다. 목록이 비어
+     있을 때만 한 번 스스로 모아 온다. 이미 기사가 있으면 건드리지
+     않는다(보시던 것을 마음대로 갈아 치우지 않는다).
+     앱 밖에서 파일만 열었을 때는 하지 않는다 — 어차피 서버가 막고,
+     열자마자 빨간 글씨만 뜨는 꼴이 된다.                            */
+  function auto(){
+    if(!tokenOf())return;
+    var n=0;
+    try{ if(typeof state==='undefined'||!state||typeof ingest!=='function')return;
+         n=(state.news||[]).length; }catch(e){ return; }
+    if(n>0){ pill('🌐 뉴스 '+n+'건'); return; }
+    pill('🌐 오늘 뉴스 모으는 중…');
+    pull();
   }
   function panel(){
     var w=document.getElementById('mknBox');
@@ -4715,6 +4745,8 @@ function bindDaily(){
       '<div style="font-size:11.5px;color:#6B7280;line-height:1.65;margin-bottom:11px">'+
         '사무실 PC 를 켜 두지 않아도 됩니다. <b>서버가 보험 뉴스를 모아 옵니다</b> — '+
         '보험신문 · 한국보험신문 · 매일경제 금융 · 한국경제 금융.<br><br>'+
+        '이 화면에 들어오시면 <b>목록이 비어 있을 때 한 번 저절로</b> 모아 옵니다. '+
+        '이미 기사가 있으면 건드리지 않으니, 새로 받고 싶으실 때만 아래를 누르시면 됩니다.<br><br>'+
         '<b>뉴스만입니다.</b> 약관 원문과 신상품 분석은 여기서 직접 올리셔야 합니다 — '+
         '원수사 약관을 서버에 두지 않는다는 원칙 때문입니다.</div>'+
       '<button type="button" id="mknBtn" style="display:block;width:100%;box-sizing:border-box;border:0;'+
@@ -4739,9 +4771,11 @@ function bindDaily(){
       'box-shadow:0 8px 22px rgba(5,150,105,.3)';
     b.onclick=panel;
     document.body.appendChild(b);
+    /* 화면이 자기 저장분을 다 그린 뒤에 본다 — 먼저 보면 늘 0 으로 보인다 */
+    setTimeout(auto,900);
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
   else mount();
-  window.mknPull=pull; window.mknPanel=panel;
+  window.mknPull=pull; window.mknPanel=panel; window.mknAuto=auto;
 })();
 </script>

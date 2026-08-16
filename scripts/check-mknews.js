@@ -13,6 +13,8 @@
 
    여기서 확인한다.
 
+     0. 들어가면 <b>누르지 않아도</b> 오늘 뉴스가 들어오는가
+        — 그리고 이미 기사가 있으면 다시 안 부르는가 (보시던 것을 안 갈아엎는다)
      1. 단추가 있고 눌리는가
      2. 앱 안에서 열면 토큰을 달고 부르는가 (서버가 SHARED_TOKEN 으로 막는다)
      3. 받은 기사가 진짜로 화면에 들어오는가
@@ -20,7 +22,9 @@
      5. 막히거나 비었을 때 조용히 끝나지 않고 이유를 말하는가
         — 특히 함수가 안 올라간 배포에서 되돌림 규칙 때문에 404 가 아니라
           앱 첫 화면 HTML 이 200 으로 오는 자리
-     6. 앱 밖에서 파일만 열었을 때도 그렇다고 말해 주는가              */
+     6. 앱 밖에서 파일만 열었을 때도 그렇다고 말해 주는가
+     7. 사용 안내가 아직 「태블릿에서 뉴스 수집은 안 됩니다」 라고
+        남아 있지 않은가 — 되는 일을 안 된다고 두면 안 쓰시게 된다   */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -107,13 +111,35 @@ async function pressAndRead(fr) {
 
   await page.goto(base + '/__app.html', { waitUntil: 'domcontentloaded' });
   const fh = await page.waitForSelector('#mk');
-  const fr = await fh.contentFrame();
+  let fr = await fh.contentFrame();
   await fr.waitForFunction(() => typeof ingest === 'function', null, { timeout: 30000 });
   await fr.waitForFunction(() => !!document.getElementById('mknOpen'), null, { timeout: 30000 });
 
+  console.log('\n[0] 들어가면 누르지 않아도 오늘 뉴스가 들어온다');
+  /* 「집에서 열었더니 텅 비어 있더라」 — 그 자리를 없앴다 */
+  await fr.waitForFunction(() => typeof state !== 'undefined' && state.news && state.news.length > 0,
+                           null, { timeout: 25000 });
+  const auto0 = await fr.evaluate(() => ({
+    n: state.news.length, pill: document.getElementById('mknOpen').textContent
+  }));
+  is(auto0.n === 3, '  아무것도 안 눌렀는데 3건이 들어와 있다 — ' + auto0.n + '건');
+  is(/뉴스 3건/.test(auto0.pill), '  단추가 몇 건인지 보여 준다 — ' + auto0.pill);
+  is(seen && seen.token === TOKEN, '  스스로 부를 때도 토큰을 붙인다');
+
+  /* 이미 기사가 있으면 다시 안 가져온다 — 보시던 것을 갈아 치우지 않는다 */
+  seen = null;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  const fh2 = await page.waitForSelector('#mk');
+  fr = await fh2.contentFrame();
+  await fr.waitForFunction(() => !!document.getElementById('mknOpen'), null, { timeout: 30000 });
+  await fr.waitForFunction(() => typeof state !== 'undefined' && state.news && state.news.length > 0,
+                           null, { timeout: 25000 });
+  await page.waitForTimeout(2000);
+  is(seen === null, '  이미 기사가 있으면 다시 안 부른다 (보시던 목록을 갈아 치우지 않는다)');
+
   console.log('\n[1] 단추가 있고, 눌러야 판이 열린다');
   const openTxt = await fr.evaluate(() => document.getElementById('mknOpen').textContent);
-  is(/뉴스 모아 오기/.test(openTxt), '「🌐 뉴스 모아 오기」 단추가 있다 — ' + openTxt);
+  is(/🌐 뉴스/.test(openTxt), '「🌐 뉴스」 단추가 있다 — ' + openTxt);
   is(await fr.evaluate(() => !document.getElementById('mknBox')), '누르기 전에는 판이 안 떠 있다');
   /* 화면에 잠금 덮개가 있어 마우스가 안 닿는다 — 직접 누른다 */
   await fr.evaluate(() => document.getElementById('mknOpen').click());
@@ -184,6 +210,9 @@ async function pressAndRead(fr) {
   solo.on('pageerror', e => soloErrs.push(String(e).slice(0, 140)));
   await solo.goto(base + '/app/상담자료/미끼레이더/index.html', { waitUntil: 'domcontentloaded' });
   await solo.waitForFunction(() => !!document.getElementById('mknOpen'), null, { timeout: 30000 });
+  seen = null;
+  await solo.waitForTimeout(2000);
+  is(seen === null, '  토큰이 없으면 스스로 부르지 않는다 (열자마자 빨간 글씨만 뜨지 않게)');
   await solo.evaluate(() => document.getElementById('mknOpen').click());
   await solo.waitForSelector('#mknBtn', { timeout: 10000 });
   seen = null;
