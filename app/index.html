@@ -843,6 +843,11 @@ body.crm-mode #crmScreen{display:block;}
 body.sangdam-mode .app{display:none;}
 body.sangdam-mode #sangdamScreen{display:block;}
 #sangdamScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 미끼 레이더 전용 화면 (상담자료와 동일 패턴) */
+#mikkiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.mikki-mode .app{display:none;}
+body.mikki-mode #mikkiScreen{display:block;}
+#mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
 #fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.fptalk-mode .app{display:none;}
@@ -979,6 +984,16 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
 </div>
 
 <!-- 상담자료 전용 화면 (고객 상담 프레젠테이션 · CRM과 동일 화면전환) -->
+<!-- 미끼 레이더 전용 화면 -->
+<div id="mikkiScreen">
+  <iframe id="mikkiFrame" class="fin-frame" title="미끼 레이더"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <div id="sangdamScreen">
   <iframe id="sangdamFrame" class="fin-frame" title="보장분석 상담자료"></iframe>
   <div class="fin-float">
@@ -9299,6 +9314,9 @@ function thCss(){
    ak 로 판정한다. 보이는 자리만 바뀌고 열려 있던 문은 그대로다.
    대표가 설정에서 저장해 둔 접근 설정(tool_access)도 그대로 산다.  */
 var TABS=[
+ {group:'보험전략실',role:'hq',items:[
+   {id:'mikki',icon:'🎣',title:'미끼 레이더',cnt:'',ak:'보험전략실'}
+ ]},
  {group:'하루 시작',items:[
    {id:'home',icon:'🏠',title:'홈',cnt:'',ak:'홈'},
    {id:'airep',icon:'🧭',title:'TFA 업무관리',cnt:'',ak:'홈'},
@@ -9440,7 +9458,7 @@ var TAB_META={
    카테고리로 크게 묶고 평소엔 접어 둔다. 대신 접힌 채로도 무엇인지 한눈에
    보여야 하므로, 카테고리 글씨를 키우고 칸마다 다른 파스텔 색을 입힌다. */
 var NAVG_KEY='apex_nav_open';
-var NAVG_ICON={'하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
+var NAVG_ICON={'보험전략실':'🎯','하루 시작':'🌅','내 고객':'🗂','증권 분석':'🛡','상담 도구':'💬',
  '계약·청구':'📁','자료 조회':'🔎','법인 컨설팅':'🏭','콘텐츠 제작':'✍️',
  '광고·유입':'📣','조직 관리':'🏢','교육 자료':'🎓','시스템':'⚙️','투자·경제':'📈'};
 /* 색을 흩뿌리면 어수선하다. 한 줄기로 흐르게 한다 —
@@ -9580,6 +9598,14 @@ function go(tab){
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
+  if(tab==='mikki'){
+    mountMikki();
+    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    document.body.classList.add('mikki-mode');
+    navMark('mikki');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='sangdam'){
     mountSangdam();
     document.body.classList.remove('finance-mode','crm-mode');
@@ -9593,6 +9619,7 @@ function go(tab){
   document.body.classList.remove('sangdam-mode');
   document.body.classList.remove('fptalk-mode');
   document.body.classList.remove('fpdeck-mode');
+  document.body.classList.remove('mikki-mode');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   navMark(tab);
@@ -9877,8 +9904,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-16 12:30';
-var APP_BUILD_NOTE='연금 시뮬레이션에서 납입기간이 보험기간보다 길면 거치이자가 마이너스로 찍히던 것을 고쳤습니다 — 40세가 55세 개시로 20년납을 넣으면 -2,880만이 나왔고 13,440 조합 중 3,432개가 그랬습니다 · 그런 조합은 애초에 고를 수 없게 막았습니다 · 이제 모든 조합을 점검에서 전수로 봅니다';
+var APP_BUILD='2026-08-16 14:40';
+var APP_BUILD_NOTE='미끼 레이더를 열었습니다 — 약관·판매자료를 올려 두면 어느 담보가 남들보다 센지 뽑아 줍니다 · 올린 자료는 이 브라우저 안에만 쌓이고 서버로 나가지 않습니다 · 보험전략실 칸은 사업단장에게만 보입니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -10135,6 +10162,13 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(lastTab||'home');}
+/* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
+   약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
+var MIKKI_URL='상담자료/미끼레이더/index.html';
+function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
+function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
+function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitMikki(){go(lastTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.
@@ -12992,6 +13026,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
+  else if(document.body.classList.contains('mikki-mode'))exitMikki();
   else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
@@ -20087,43 +20122,46 @@ function manFlow(){
 /* 열세 칸이 각각 무엇인지 — 이 표가 매뉴얼의 뼈대다 */
 function manMap(){
   var rows=[
-    {no:1,ic:'🌅',cat:'하루 시작',when:'아침에 켜서 제일 먼저',
+    {no:1,ic:'🎯',cat:'보험전략실',when:'신상품이 나왔을 때 · 뭘 걸어 볼지 정할 때',
+     chips:[['mikki','🎣','미끼 레이더']],
+     how:'약관·판매자료를 올려 두면 어느 담보가 남들보다 센지 뽑아 줍니다. 올린 자료는 이 브라우저 안에만 쌓이고 서버로 나가지 않습니다. 사업단장만 보입니다.'},
+    {no:2,ic:'🌅',cat:'하루 시작',when:'아침에 켜서 제일 먼저',
      chips:[['home','🏠','홈'],['airep','🧭','TFA 업무관리'],['assistant','🤖','오늘의 AI 비서'],['voiceasst','🎙️','음성 비서'],['brain','🧠','윤시현의 두뇌']],
      how:'오늘 할 일과 오늘 터치할 사람을 확인합니다. 두뇌는 대표의 지식·강의를 넣어 두고 꺼내 쓰는 곳입니다.'},
-    {no:2,ic:'🗂',cat:'내 고객',when:'누구를 만나는지 정할 때',
+    {no:3,ic:'🗂',cat:'내 고객',when:'누구를 만나는지 정할 때',
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
-    {no:3,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
+    {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
      chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
      how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
-    {no:4,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
+    {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
-    {no:5,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
+    {no:6,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
      chips:[['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']],
      how:'고객 계좌의 평가손익·수익률을 보고, 목표 도달과 손절선 이탈을 먼저 알려 줍니다. 성과·자산배분에서는 입출금이 섞여도 정확한 수익률(XIRR)과 목표 비중 대비 조정안을 냅니다. <b>주문은 넣지 않습니다</b> — 실제 매매는 토스 앱에서 직접 하시고, 여기서는 근거와 설명 문장을 만듭니다.'},
-    {no:6,ic:'📁',cat:'계약·청구',when:'만난 뒤',
+    {no:7,ic:'📁',cat:'계약·청구',when:'만난 뒤',
      chips:[['contracts','📜','계약관리 판단'],['endorse','✍️','배서 안내서'],['claims','🧾','청구·사후관리'],['med_silbi','🧮','AI 실비계산기'],['med_checkup','🩺','AI 건강검진'],['med_disclosure','📋','알릴의무 필터']],
      how:'계약을 바꾸고 지키는 것부터 청구까지. 해지 이야기가 나오면 여기 계약관리 판단부터 엽니다.'},
-    {no:7,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
+    {no:8,ic:'🔎',cat:'자료 조회',when:'언제든 꺼내 볼 때',
      chips:[['ref_jeonsan','🏢','보험사 전산'],['ref_underwrite','⚠️','예외질환 인수확인'],['ref_kcd','📕','질병코드·특약'],['ref_surgery','🔪','수술명 검색'],['ref_hira','🔗','심평원'],['ref_hidden','💰','숨은보험금찾기']],
      how:'전산 로그인·질병코드·수술명·인수 조회를 한 곳에서 엽니다. 예전에 두 칸으로 흩어져 있던 것을 모았습니다.'},
-    {no:8,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
+    {no:9,ic:'🏭',cat:'법인 컨설팅',when:'사업자·법인 고객일 때',
      chips:[['biz_diag','🧭','사업자 진단'],['biz_fund','🏦','정책자금'],['biz_tax','🧾','세금컨설팅'],['biz_ins','☂️','보험 솔루션'],['biz_retire','🪙','퇴직금 관리'],['biz_staff','👥','직원관리']],
      how:'개인 상담과 다른 흐름이라 따로 뒀습니다. 진단 → 자금 → 세금 → 보험 → 퇴직금 순으로 봅니다.'},
-    {no:9,ic:'✍️',cat:'콘텐츠 제작',when:'새 고객을 만들 때',
+    {no:10,ic:'✍️',cat:'콘텐츠 제작',when:'새 고객을 만들 때',
      chips:[['biz_news','📰','정책·상품 뉴스'],['blog','📝','블로그'],['threads','🧵','Threads'],['insta','📸','인스타그램'],['video','🎬','유튜브&릴스'],['calendar','🗓️','콘텐츠 캘린더'],['simui','🛡️','외부글 심의필터']],
      how:'글·영상을 만드는 곳입니다. 발행 전에 반드시 심의필터를 통과시킵니다.'},
-    {no:10,ic:'📣',cat:'광고·유입',when:'새 고객을 만들 때',
+    {no:11,ic:'📣',cat:'광고·유입',when:'새 고객을 만들 때',
      chips:[['mkt_meta','📣','메타 광고 가이드'],['mkt_volume','📊','키워드 검색량'],['mkt_combine','🔑','키워드 조합기'],['mkt_landing','🎯','리드 랜딩페이지'],['mkt_card','💼','디지털 명함'],['ext_reply','✳️','소상공인 AI 답글'],['ext_thread','📤','스레드 반자동발행'],['ext_naver','📈','네이버 광고 대량등록기']],
      how:'만든 콘텐츠를 퍼뜨리고 문의를 받는 도구입니다. 콘텐츠(8번)와 광고(9번)를 나눠 두었습니다.'},
-    {no:11,ic:'🏢',cat:'조직 관리',when:'팀을 볼 때',
+    {no:12,ic:'🏢',cat:'조직 관리',when:'팀을 볼 때',
      chips:[['org','🏢','조직도'],['teamhub','📋','실행 체크판'],['attend','🗓️','출근 현황'],['daily','📒','매일 취합'],['ai_org','🤖','AI 조직 라이브'],['report','📊','대표 브리핑']],
      how:'조직도는 서버가 정본이라 어느 컴퓨터에서 봐도 같습니다. 팀 코칭·승인·감사로그는 리더에게만 보입니다.'},
-    {no:12,ic:'🎓',cat:'교육 자료',when:'배울 때',
+    {no:13,ic:'🎓',cat:'교육 자료',when:'배울 때',
      chips:[['manual','📘','APEX 사용가이드'],['academy_notion','📓','APEX ACADEMY'],['yoonsi','🏫','윤시스쿨']],
      how:'지금 보고 계신 이 가이드가 여기 있습니다. 왼쪽 위 고정 버튼으로도 언제든 열립니다.'},
-    {no:13,ic:'⚙️',cat:'시스템',when:'거의 안 보지만 필요할 때',
+    {no:14,ic:'⚙️',cat:'시스템',when:'거의 안 보지만 필요할 때',
      chips:[['settings','⚙️','설정'],['pricing','💳','요금제·구독'],['terms','📜','약관·개인정보'],['ready','🚦','출발 점검'],['health','🩺','시스템 점검']],
      how:'AI 키 연결·팀 권한·요금제가 여기 있습니다. 설정과 출발 점검은 대표만 씁니다.'}
   ];
@@ -31150,7 +31188,7 @@ function osGroupAllowedRoles(g){
   return osGroupDefaultRoles(g);
 }
 /* ak 마다 기본 직급이 다르다 — 매니저 관리는 리더부터, 나머지는 전원 */
-var OS_KEY_ROLE={'매니저 관리':'lead'};
+var OS_KEY_ROLE={'매니저 관리':'lead','보험전략실':'hq'};
 /* 설정 표에 세울 열쇠 목록 — 메뉴에 붙은 ak 를 나온 순서대로 모은다.
    대표가 예전에 저장해 둔 설정(tool_access)이 이 열쇠로 걸려 있으므로,
    메뉴를 어떻게 다시 묶든 이 목록과 저장된 값은 그대로 이어진다. */
