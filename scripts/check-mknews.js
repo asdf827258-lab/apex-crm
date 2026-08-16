@@ -24,7 +24,11 @@
           앱 첫 화면 HTML 이 200 으로 오는 자리
      6. 앱 밖에서 파일만 열었을 때도 그렇다고 말해 주는가
      7. 사용 안내가 아직 「태블릿에서 뉴스 수집은 안 됩니다」 라고
-        남아 있지 않은가 — 되는 일을 안 된다고 두면 안 쓰시게 된다   */
+        남아 있지 않은가 — 되는 일을 안 된다고 두면 안 쓰시게 된다
+     8. 「▶ 오늘 것 찾기」 한 번이 시작.bat 을 그대로 대신하는가
+        — 뉴스 → 훅 → 서재 → 판정 → 정리 다섯 걸음이 끝까지 도는가
+     9. 화면 <b>어디에도</b> 「bat 을 눌러라」 가 안 남아 있는가
+        — 한 군데라도 남으면 「또 눌러야 하나」 싶어진다        */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -241,7 +245,121 @@ async function pressAndRead(fr) {
   is(g.mark === '✓' && !g.python, '  「✕ 태블릿에서 뉴스 수집」 이 ✓ 로 바뀌었다');
   is(/뉴스 모아 오기/.test(g.row), '  어디를 누르면 되는지 적어 뒀다');
   is(g.onlyNews, '  뉴스만이고 약관은 직접 올려야 한다고 안내문에도 적혀 있다');
+  const routine = await gp.evaluate(() => {
+    const f = [...document.querySelectorAll('.flow')].find(x => /오늘 것 찾기|시작\.bat/.test(x.textContent));
+    const ok = [...document.querySelectorAll('.ok')].find(x => /손대는 건 3가지/.test(x.textContent));
+    return { flow: f ? f.textContent.replace(/\s+/g, ' ') : '',
+             three: ok ? ok.textContent.replace(/\s+/g, ' ') : '' };
+  });
+  is(/오늘 것 찾기/.test(routine.flow) && !/시작\.bat 더블클릭/.test(routine.flow),
+     '  매달 순서가 「시작.bat 더블클릭」 에서 「▶ 오늘 것 찾기」 로 바뀌었다');
+  is(/여러 개 한꺼번에/.test(routine.flow), '  약관은 화면에 여러 개 끌어다 놓는 것으로 적혀 있다');
+  is(/오늘 것 찾기/.test(routine.three) && !/시작\.bat/.test(routine.three),
+     '  「손대는 건 3가지」 에서도 bat 이 빠졌다 — ' + routine.three.slice(0, 52));
   is(gErrs.length === 0, '  안내문이 안 터진다' + (gErrs.length ? ' — ' + gErrs[0] : ''));
+
+  console.log('\n[8] 「▶ 오늘 것 찾기」 한 번이면 시작.bat 을 대신한다');
+  /* bat 이 하던 다섯 걸음(뉴스 → 훅 → 서재 → 판정 → 정리)이 이 화면 안에
+     다 있었다. 막힌 곳은 ① 뉴스 하나뿐이었다 — data/news.json 은 사무실
+     PC 가 만드는 파일이라 웹에는 없다. 그 자리를 서버로 이었다.        */
+  MODE = 'ok';
+  const page2 = await ctx.newPage();
+  const e2 = [];
+  page2.on('pageerror', e => e2.push(String(e).slice(0, 140)));
+  await page2.goto(base + '/__app.html', { waitUntil: 'domcontentloaded' });
+  const fh3 = await page2.waitForSelector('#mk');
+  const f3 = await fh3.contentFrame();
+  await f3.waitForFunction(() => typeof goRun === 'function' && typeof uploadFiles === 'function',
+                           null, { timeout: 30000 });
+  await f3.waitForFunction(() => !!document.getElementById('noBatNote'), null, { timeout: 20000 });
+
+  const note = await f3.evaluate(() => document.getElementById('noBatNote').textContent);
+  is(/시작.bat.*대신/.test(note.replace(/\s+/g, '')) || /대신합니다/.test(note),
+     '  시작 화면이 「이 단추가 시작.bat 을 대신합니다」 라고 알려 준다');
+  is(/사무실 PC/.test(note), '  사무실 PC 를 안 켜도 된다고 적혀 있다');
+
+  /* 약관 한 건을 서재에 올린다 — uploadFiles 는 txt 도 받는다.
+     한글 파일 이름은 시험 도구가 못 붙여서 영문으로 만든다.          */
+  const tmp = path.join(require('os').tmpdir(), 'terms-sample.txt');
+  fs.writeFileSync(tmp,
+    '제1조(목적) 이 약관은 보험계약에 관한 사항을 정함을 목적으로 합니다.\n' +
+    '제3조(보험금의 지급사유) 회사는 피보험자가 보험기간 중 암으로 진단확정된 경우 ' +
+    '암진단보험금을 지급합니다. 다만 계약일부터 90일이 지나지 아니한 때에는 지급하지 아니합니다.\n' +
+    '제5조(보험금을 지급하지 않는 사유) 회사는 피보험자가 고의로 자신을 해친 경우 ' +
+    '보험금을 지급하지 않습니다. 갱신형 특약의 보험료는 갱신 시점의 나이와 위험률에 따라 인상될 수 있습니다.\n' +
+    '제7조(감액지급) 계약일부터 1년 이내에 보험금 지급사유가 발생한 경우 보험금의 50퍼센트를 감액하여 지급합니다.\n');
+  await f3.evaluate(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.t === 'lib'); if (t) t.click(); });
+  await f3.setInputFiles('#upFiles', tmp);
+  await f3.waitForFunction(() => /쌓았습니다/.test((document.getElementById('upState') || {}).innerHTML || ''),
+                           null, { timeout: 30000 });
+  const libN = await f3.evaluate(() => ((state.lib && state.lib.items) || []).length);
+  is(libN >= 1, '  약관을 화면에서 바로 쌓는다 (bat 없이) — 서재 ' + libN + '건');
+
+  /* 이제 「오늘 것 찾기」 한 번 */
+  await f3.evaluate(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.t === 'start'); if (t) t.click(); });
+  seen = null;
+  await f3.evaluate(() => { state.news = []; document.getElementById('btnGo').click(); });
+  await f3.waitForFunction(() => /완료|오류/.test((document.getElementById('goState') || {}).textContent || ''),
+                           null, { timeout: 60000 });
+  const run = await f3.evaluate(() => ({
+    state: (document.getElementById('goState') || {}).textContent || '',
+    out: (document.getElementById('goOut') || {}).textContent || '',
+    news: state.news.length,
+    hint: (document.getElementById('loadHint') || {}).textContent || ''
+  }));
+  is(/완료/.test(run.state), '  다섯 걸음이 끝까지 돈다 — ' + run.state.trim());
+  is(run.news > 0, '  ① 뉴스가 서버에서 들어온다 (data/news.json 없이) — ' + run.news + '건');
+  is(seen && seen.token === TOKEN, '  그때도 토큰을 붙여 부른다');
+  is(!/시작\.bat/.test(run.hint), '  「시작.bat 으로 여세요」 가 더는 안 뜬다 — ' + run.hint.slice(0, 40));
+  is(/접촉 명분|이달의 훅/.test(run.out), '  ② 이달의 훅이 뽑힌다');
+  is(/약관 판정/.test(run.out), '  ④ 약관 판정 표가 나온다');
+  is(/1건 판정|약관 1건/.test(run.out.replace(/\s+/g, ' ')) || /감액|갱신/.test(run.out),
+     '  올린 약관이 실제로 판정된다');
+
+  console.log('\n[9] 화면 어디에도 「bat 을 눌러라」 가 안 남아 있다');
+  /* 한 군데라도 남아 있으면 「또 bat 을 눌러야 하나」 싶어진다.
+     앞서 두 군데만 고쳤다가, 훑어보니 아홉 군데가 더 있었다.     */
+  await f3.evaluate(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.t === 'lib'); if (t) t.click(); });
+  await f3.waitForTimeout(400);
+  const lib = await f3.evaluate(() => ({
+    hint: (document.getElementById('libHint') || {}).textContent || '',
+    multi: !!document.querySelector('#upFiles[multiple]')
+  }));
+  is(!/\.bat|상품총서/.test(lib.hint), '  「상품총서_적재.bat」 안내가 사라졌다');
+  is(/한꺼번에/.test(lib.hint), '  대신 「여러 개 한꺼번에 끌어다 놓으세요」 라고 적혀 있다');
+  is(/서버로 올라가지 않습니다/.test(lib.hint), '  약관이 서버로 안 간다는 것도 밝혀 둔다');
+  is(lib.multi, '  PDF 를 여러 개 한꺼번에 받는 칸이다');
+
+  /* 화면 전체를 훑는다 — 열 세 칸 어디에도 없어야 한다 */
+  const sweep = await f3.evaluate(() => {
+    const bad = [];
+    document.querySelectorAll('section.page').forEach(p => {
+      /* 「이 단추가 시작.bat 을 대신합니다」 는 알려 주려고 적은 것이다 */
+      const note = p.querySelector('#noBatNote');
+      const t = (p.textContent || '').replace(note ? note.textContent : '\u0000', '');
+      const m = t.match(/[가-힣A-Za-z_]*\.bat/g);
+      if (m) bad.push(p.id + ': ' + [...new Set(m)].join(','));
+    });
+    return { bad, left: typeof batLeft === 'function' ? batLeft() : -1 };
+  });
+  is(sweep.bad.length === 0,
+     '  열세 칸 어디에도 bat 이 안 적혀 있다' + (sweep.bad.length ? ' — 남음: ' + sweep.bad.join(' / ') : ''));
+  is(sweep.left === 0, '  안내 상자·표에도 안 남았다 — ' + sweep.left + '군데');
+
+  /* 「데이터 불러오기」 단추는 감싸기 전 함수를 붙잡고 있었다 —
+     그래서 이 단추로만 「시작.bat 으로 여세요」 가 계속 떴다.      */
+  await f3.evaluate(() => { const t = [...document.querySelectorAll('.tab')].find(x => x.dataset.t === 'radar'); if (t) t.click(); });
+  await f3.evaluate(() => { state.news = []; });
+  seen = null;
+  await f3.evaluate(() => document.getElementById('btnSync').click());
+  await f3.waitForFunction(() => typeof state !== 'undefined' && state.news.length > 0, null, { timeout: 25000 });
+  const hint2 = await f3.evaluate(() => (document.getElementById('loadHint') || {}).textContent || '');
+  is(!/\.bat/.test(hint2), '  「데이터 불러오기」 단추를 눌러도 bat 이 안 뜬다 — ' + hint2.slice(0, 44));
+  is(/서버에서 오늘 보험 뉴스/.test(hint2), '  대신 서버에서 받았다고 말한다');
+  is(seen && seen.token === TOKEN, '  그 단추도 서버를 부른다');
+
+  is(e2.length === 0, '  이 화면이 안 터진다' + (e2.length ? ' — ' + e2[0] : ''));
+  try { fs.unlinkSync(tmp); } catch (e) {}
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
