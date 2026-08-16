@@ -607,16 +607,28 @@ async function fetchFeed(feed) {
     return [];                      /* 한 피드가 죽어도 나머지는 그대로 나온다 */
   } finally { clearTimeout(timer); }
 }
+/* config/sources.json 에서 진짜 피드 칸만 (「_」 메모와 「키워드_」 낱말 목록은 뺀다) */
+function feedCats() {
+  return Object.keys(SOURCES).filter(k => k[0] !== '_' && k.indexOf('키워드_') !== 0
+                                          && Array.isArray(SOURCES[k]) && SOURCES[k].length
+                                          && SOURCES[k][0] && SOURCES[k][0].url);
+}
 async function news(cat) {
   const nc = CFG.news || {};
-  const cats = cat && cat !== 'all' ? [cat] : (nc.categories || ['경제']);
+  /* cat=보험,부동산 처럼 여러 칸을 한 번에 부를 수 있다. 앱이 칸을 나눠
+     보여 주려면 한 번에 다 받아 오는 편이 왕복이 적고 빠르다.        */
+  const asked = cat && cat !== 'all'
+    ? String(cat).split(',').map(s => s.trim()).filter(Boolean)
+    : (nc.categories || feedCats());
+  const known = feedCats();
+  const cats = asked.filter(c => known.indexOf(c) >= 0);
   const k = 'n:' + cats.join(',');
   const hit = cGet(k);
   if (hit) return hit;
 
   let feeds = [];
   cats.forEach(c => { (SOURCES[c] || []).forEach(f => feeds.push(f)); });
-  if (!feeds.length) return cSet(k, { items: [], keywords: [] }, 60);
+  if (!feeds.length) return cSet(k, { items: [], keywords: [], cats: known }, 60);
 
   const lists = await Promise.all(feeds.map(fetchFeed));
   const seen = {}, items = [];
@@ -640,7 +652,10 @@ async function news(cat) {
     return tb - ta;
   });
 
-  return cSet(k, { items: items.slice(0, nc.max_items || 30), keywords: kws }, TTL.news);
+  /* 한 칸만 부르면 30건, 여러 칸을 부르면 칸마다 그만큼 — 칸을 나눠 놓고
+     보여 줄 때 한 칸이 다른 칸 자리를 다 먹지 않게 한다.            */
+  const cap = Math.max(nc.max_items || 30, cats.length * (nc.max_per_cat || 25));
+  return cSet(k, { items: items.slice(0, cap), keywords: kws, cats: known }, TTL.news);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1006,7 +1021,7 @@ exports.handler = async function (event) {
     /* ── 뉴스 ──────────────────────────────────────────────────────────── */
     if (kind === 'news') {
       const n = await news(q.cat || '');
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, meta: meta, news: n.items, keywords: n.keywords }) };
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, meta: meta, news: n.items, keywords: n.keywords, cats: n.cats || feedCats() }) };
     }
 
     /* ── 경제동향 화면 첫 로딩 — 지수·지표·뉴스·관심종목을 한 번에 ─────── */

@@ -157,8 +157,15 @@ window.osClient=function(){
   is(/advisor_intro_read[\s\S]{0,200}owner_id = auth\.uid\(\)/.test(sql.txt), '본인 것만 읽는다');
   is(/advisor_intro_insert[\s\S]{0,160}with check \(owner_id = auth\.uid\(\)\)/.test(sql.txt),
      '남의 이름으로 못 쓴다');
-  is(sql.ver === 34, '앱이 기다리는 준비 SQL 판이 34 다 — ' + sql.ver);
-  is(/'schema_version', '34'/.test(sql.txt), 'SQL 이 끝나면 서버에 34 라고 남긴다');
+  /* 판 번호를 여기 박아 두면, 표를 하나 더할 때마다 이 점검이 빨간불이
+     된다. 진짜로 봐야 할 것은 <b>앱과 SQL 이 서로 같은 숫자를 보는가</b>
+     다 — 어긋나면 사장님 화면에 「준비 SQL 을 다시 실행하세요」 가 영영
+     떠 있거나, 반대로 안 뜬 채로 자리가 없는 상태가 된다.           */
+  const stamped = (sql.txt.match(/'schema_version',\s*'(\d+)'/) || [])[1];
+  is(sql.ver > 0, '앱이 기다리는 준비 SQL 판이 있다 — ' + sql.ver);
+  is(!!stamped, 'SQL 이 끝나면 서버에 판 번호를 남긴다 — ' + stamped);
+  is(String(sql.ver) === String(stamped),
+     '앱이 기다리는 판과 SQL 이 남기는 판이 같다 — 앱 ' + sql.ver + ' · SQL ' + stamped);
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

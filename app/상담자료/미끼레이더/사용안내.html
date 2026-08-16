@@ -218,16 +218,41 @@ code{background:#F2F4F6;border-radius:5px;padding:2px 6px;font-size:12.6px;
     else if(sub&&sub.nextSibling)w.insertBefore(card,sub.nextSibling);
     else w.appendChild(card);
 
-    /* 4. 「매달 하는 일」 순서에도 한 줄 보탠다 */
+    /* 4. 「매달 하는 일」 순서를 통째로 바꾼다.
+
+       bat 이 하던 다섯 걸음(뉴스 → 훅 → 서재 → 판정 → 정리)은 이미
+       화면 안의 goRun() 에 다 있었다. 막힌 곳은 뉴스 하나뿐이었고,
+       그 자리를 서버로 이었다. 이제 bat 을 눌러야 할 이유가 없다.  */
     var flows=document.querySelectorAll('.flow');
     for(i=0;i<flows.length;i++){
       if((flows[i].textContent||'').indexOf('시작.bat 더블클릭')<0)continue;
+      flows[i].innerHTML=
+        '<b>[어디서든]</b>  🎣 미끼 레이더 → <b>▶ 오늘 것 찾기</b> 한 번\n'+
+        '            뉴스 → 이달의 훅 → 서재 → 약관 판정 → 정리 (예전 시작.bat 이 하던 그대로)\n\n'+
+        '<b>[화면]</b>  🎭 이달의 컨셉 → 이번 달 각도 1개 고르기\n'+
+        '          🏆 베스트 찾기 → 담보별로 밀 상품 정하기\n'+
+        '          🧾 고객 제시 → 약관 원문 캡처 붙인 자료 인쇄\n'+
+        '          🤝 접촉 엔진 → 문자 보내고 [CRM으로 보내기]\n\n'+
+        '<b>[수시]</b>  약관 PDF 받으면 → 📜 약관 › 서재 에 <b>여러 개 한꺼번에</b> 끌어다 놓기\n'+
+        '          판매자료 받으면 → 📡 신상품 › 상품 분석 에 본문 붙여넣기';
       var note=document.createElement('div');
       note.className='ok';
-      note.style.cssText='margin-top:12px';
-      note.innerHTML='<b>사무실이 아니라면</b> — 시작.bat 대신 미끼 레이더에서 '+
-                     '<b>🌐 뉴스 모아 오기</b> 를 누르시면 됩니다. 그다음 순서는 똑같습니다.';
+      note.style.cssText='margin-top:12px;background:#F0FDF6;border-color:#A7F3D0;color:#065F46';
+      note.innerHTML='<b>시작.bat 은 이제 안 누르셔도 됩니다.</b><br><br>'+
+        '뉴스는 서버가 모아 오고, 약관 PDF 는 화면에 끌어다 놓으면 글자 뽑기·회사 구분·'+
+        '29항목 판정까지 이 화면 안에서 다 합니다. 파이썬도, 사무실 PC 도 필요 없습니다.<br><br>'+
+        '<span style="color:#047857">원수사 약관은 여전히 서버로 안 올라갑니다 — 넣으신 브라우저에만 쌓입니다. '+
+        '다른 기기로 옮기실 때만 <b>📤 자료 내보내기 → 📦 자료 불러오기</b> 를 쓰세요.</span>';
       flows[i].parentNode.insertBefore(note,flows[i].nextSibling);
+      break;
+    }
+
+    /* 5. 「손대는 건 3가지」 에서도 bat 을 뺀다 */
+    var oks=document.querySelectorAll('.ok');
+    for(i=0;i<oks.length;i++){
+      if((oks[i].textContent||'').indexOf('① 시작.bat 더블클릭')<0)continue;
+      oks[i].innerHTML='<b>사장님이 실제로 손대는 건 3가지뿐입니다</b><br>'+
+        '① <b>▶ 오늘 것 찾기</b> 한 번 &nbsp;② 컨셉·상품 고르기 &nbsp;③ 약관 PDF 끌어다 놓기';
       break;
     }
   }
