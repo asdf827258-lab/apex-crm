@@ -9577,12 +9577,32 @@ function renderNav(){
 
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
+/* ── 전체화면은 한 번에 하나만 ────────────────────────────────
+   화면을 통째로 덮는 칸이 일곱이다 — 계산기 · CRM · 보장분석 상담자료 ·
+   재무설계 상담자료 · 실전화법서 · 미끼 레이더 · 윤시스쿨. 이것들이
+   각자 「내가 아닌 것 몇 개」 만 지우고 있어서, 지우는 목록에서 빠진
+   조합끼리는 서로 겹쳤다.
+
+   실제로 상담자료를 열어 둔 채 계산기를 누르면 상담자료가 그대로 덮고
+   있었다 — 계산기는 그 뒤에서 멀쩡히 떠 있는데 화면에는 안 보인다.
+   상담자료에서 계산기로 이어 가는 그 순간에 나던 고장이다.
+
+   칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
+   여기 이름만 적으면 나머지는 저절로 꺼진다. */
+var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode',
+                   'fpdeck-mode','fptalk-mode','mikki-mode','yoonsi-mode'];
+function osFullMode(on){
+  var b=document.body,i;
+  for(i=0;i<OS_FULL_MODES.length;i++)
+    if(OS_FULL_MODES[i]!==on)b.classList.remove(OS_FULL_MODES[i]);
+  if(on)b.classList.add(on);
+}
 function go(tab){
   document.body.classList.remove('yoonsi-mode');
   if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
     if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
     if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
-    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
+    osFullMode('');
     lastTab=tab;
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
@@ -9591,50 +9611,43 @@ function go(tab){
   }
   if(tab==='finance'){
     mountFinance();
-    document.body.classList.remove('crm-mode','sangdam-mode');
-    document.body.classList.add('finance-mode');
+    osFullMode('finance-mode');
     navMark('finance');
+    /* 상담자료에 적어 둔 것이 있으면 사이드바로 들고 온다.
+       틀이 뜨는 데 시간이 걸리므로 조금 뒤에 묻는다. */
+    try{ setTimeout(osAutoToFin, 700); }catch(e){}
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='crm'){
     mountCrm();
-    document.body.classList.remove('finance-mode','sangdam-mode');
-    document.body.classList.add('crm-mode');
+    osFullMode('crm-mode');
     navMark('crm');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='yoonsi'){
     mountYoonsi();
-    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
-    document.body.classList.add('yoonsi-mode');
+    osFullMode('yoonsi-mode');
     navMark('yoonsi');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='mikki'){
     mountMikki();
-    document.body.classList.remove('finance-mode','crm-mode','sangdam-mode');
-    document.body.classList.add('mikki-mode');
+    osFullMode('mikki-mode');
     navMark('mikki');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
   if(tab==='sangdam'){
     mountSangdam();
-    document.body.classList.remove('finance-mode','crm-mode');
-    document.body.classList.add('sangdam-mode');
+    osFullMode('sangdam-mode');
     navMark('sangdam');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
-  document.body.classList.remove('finance-mode');
-  document.body.classList.remove('crm-mode');
-  document.body.classList.remove('sangdam-mode');
-  document.body.classList.remove('fptalk-mode');
-  document.body.classList.remove('fpdeck-mode');
-  document.body.classList.remove('mikki-mode');
+  osFullMode('');
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   navMark(tab);
@@ -9919,8 +9932,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-16 15:20';
-var APP_BUILD_NOTE='사업계획서의 「저장하고 팀원에게 적용」 이 그 달 첫 적용에서 반드시 막히던 것을 고쳤습니다 — 넣기 권한이 본인 줄만 허용하고 있었습니다 · 메뉴 접근 설정·월간 영업보고서·계정 중복 정리까지 「한 번에 전부」 SQL 하나로 합쳤습니다(홈 맨 위 배너를 한 번 실행해 주세요) · 저장이 안 될 때 무엇을 눌러야 하는지 알려 줍니다 · 미끼 레이더를 열었습니다';
+var APP_BUILD='2026-08-16 17:10';
+var APP_BUILD_NOTE='상담자료에 적은 팩트파인딩이 계산기 사이드바로 저절로 넘어갑니다 — 단추를 안 눌러도 됩니다 · 상담자료를 열어 둔 채 계산기를 누르면 상담자료가 그대로 덮고 있던 것을 고쳤습니다 · 우하단 발표 단추가 네 트랙 중에 골라 열립니다 — 보고 있는 탭을 옮기지 않아도 됩니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12701,7 +12714,7 @@ function fpJumpNow(to){
 function fpTalkMount(){var f=fpFrame('talk');if(!f||f._mounted)return;f.src=FP_TALK_URL;f._mounted=true;}
 function fpTalkOpen(to){
   fpTalkMount();
-  document.body.classList.add('fptalk-mode');
+  osFullMode('fptalk-mode');
   if(to){ if(FPT.ready)fpJumpNow(to); else FPT.jump=to; }
 }
 function fpTalkReload(){var f=fpFrame('talk');if(f){f._mounted=false;FPT.ready=false;f.src='about:blank';setTimeout(fpTalkMount,40);toast('화법서 새로고침');}}
@@ -12773,7 +12786,7 @@ function osFpTalkAfterRender(){}
 function fpDeckMount(){var f=fpFrame('deck');if(!f||f._mounted)return;f.src=FP_DECK_URL;f._mounted=true;}
 function fpDeckOpen(){
   fpDeckMount();
-  document.body.classList.add('fpdeck-mode');
+  osFullMode('fpdeck-mode');
   if(FPD.ready&&FPD.pend){
     var d=FPD.pend;FPD.pend=null;
     setTimeout(function(){fpAsk('deck','apex:put',d,function(){toast('저장해 둔 상담을 그대로 불러왔습니다',4000);});},150);
@@ -35393,6 +35406,94 @@ var TOFIN_MAP=[
   ['f_ret','s_rage','n'],         ['f_retspend','s_target','n'],
   ['f_np','s_nps','n'],           ['f_pp','s_pension','n']
 ];
+/* ── 팩트파인딩 → 계산기, 손 안 대고 ─────────────────────────
+   다리는 놓여 있었지만 <b>사람이 단추를 눌러야</b> 건너갔다. 상담자료에서
+   스물여섯 칸을 다 물어 놓고 계산기로 넘어오면 사이드바가 비어 있었고,
+   그러면 고객 앞에서 같은 것을 두 번 묻게 된다.
+
+   이제 계산기를 열 때 상담자료에 적힌 것을 스스로 들고 온다. 규칙 셋.
+
+     · 상담자료에 적은 게 없으면 아무 일도 안 한다
+     · 지난번에 들고 온 것과 같으면 다시 안 덮는다 — 계산기에서 고친
+       값을 소리 없이 되돌리면 그게 더 큰 사고다
+     · 무엇이 넘어왔는지 말해 주고, 되돌릴 수 있게 한다              */
+var TOFIN={last:'',pend:null};
+function osToFinKey(inputs){
+  var ks=Object.keys(inputs).sort(),i,o=[];
+  for(i=0;i<ks.length;i++)o.push(ks[i]+'='+inputs[ks[i]]);
+  return o.join('|');
+}
+/* 계산기로 밀어 넣는다.
+
+   시간을 재서 넣지 않는다. 계산기 파일은 크고, 느린 회선에서는 몇 초씩
+   걸린다. 그 사이에 넣으면 빈 문서로 날아가 사라진다 — 상담자료에 다
+   적어 놓고 넘어왔는데 비어 있던 것이 이것이었다.
+
+   그래서 넣을 것을 들고만 있다가, 계산기가 「준비됐다」고 알려 줄 때
+   넣는다. 이미 떠 있으면 그 자리에서 바로 답이 오므로 똑같이 빠르다. */
+function osFinPush(inputs,pain,how){
+  var n=0,k;
+  for(k in inputs) if(Object.prototype.hasOwnProperty.call(inputs,k)) n++;
+  if(!n) return;
+  TOFIN.last=osToFinKey(inputs);
+  TOFIN.pend={inputs:inputs,pain:pain,how:how,n:n};
+  /* 여기서 곧바로 넣지 않는다. 앱이 「물렸다」고 표시하는 시점은 주소를
+     걸어 준 순간이지, 그 문서가 다 뜬 순간이 아니다. 그 사이에 넣으면
+     빈 문서로 날아가 사라진다 — 첫 번째 전달만 안 되던 것이 이것이다.
+     계산기가 「준비됐다」고 답할 때 넣는다. 이미 떠 있으면 그 답이
+     곧바로 오므로 늦지 않는다. */
+  osFinPoke();
+}
+/* 계산기에게 「살아 있냐」고 몇 번 물어본다. 답(apexFinReady)이 오면 넣는다. */
+function osFinPoke(){
+  var tries=0;
+  (function ask(){
+    if(!TOFIN.pend)return;                       /* 이미 넣었다 */
+    tries++;
+    var fr=$('finFrame');
+    if(fr&&fr.contentWindow&&fr._mounted){
+      try{fr.contentWindow.postMessage({type:'apexFinAsk'},location.origin);}catch(x){}
+    }
+    if(tries<60)setTimeout(ask,500);             /* 30초까지 기다린다 */
+  })();
+}
+function osFinFlush(){
+  var p=TOFIN.pend; if(!p)return;
+  var fr=$('finFrame');
+  if(!fr||!fr.contentWindow||!fr._mounted)return;
+  try{
+    fr.contentWindow.postMessage({type:'apexFinLoad',inputs:p.inputs},location.origin);
+    if(p.pain)fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:p.pain},location.origin);
+  }catch(x){ return; }
+  TOFIN.pend=null;
+  if(p.how==='auto')
+    toast('상담자료에 적으신 '+p.n+'칸을 계산기로 들고 왔습니다 — 팩트체크부터 이어서 보세요',5200);
+}
+window.addEventListener('message',function(e){
+  var d=e&&e.data;
+  if(!d||d.type!=='apexFinReady')return;
+  if(e.origin!==location.origin)return;
+  var fr=$('finFrame');
+  if(!fr||!e.source||e.source!==fr.contentWindow)return;
+  osFinFlush();
+});
+/* 계산기를 열 때마다 한 번 — 상담자료에 새로 적힌 게 있으면 들고 온다 */
+function osAutoToFin(){
+  var df=$('fpDeckFrame');
+  if(!df||!df._mounted||!df.contentWindow)return;   /* 상담자료를 아직 안 열었다 */
+  if(typeof fpAsk!=='function')return;
+  try{
+    fpAsk('deck','apex:snap',null,function(m){
+      var f=(m&&m.data&&m.data.f)||null;
+      if(!f)return;
+      var inputs=osToFinMap(f);
+      var key=osToFinKey(inputs);
+      if(!key)return;                 /* 적은 게 없다 */
+      if(key===TOFIN.last)return;     /* 지난번과 같다 — 다시 안 덮는다 */
+      osFinPush(inputs,null,'auto');
+    });
+  }catch(e){}
+}
 function osToFinMap(f){
   var out={},i,r,v;
   for(i=0;i<TOFIN_MAP.length;i++){
@@ -35415,6 +35516,8 @@ window.addEventListener('message',function(e){
   var f=(d.data&&d.data.f)||{}, inputs=osToFinMap(f), n=0, k;
   for(k in inputs) if(Object.prototype.hasOwnProperty.call(inputs,k)) n++;
 
+  /* 단추로 눌러 넘겼으니 자동 전달이 뒤따라 또 덮지 않게 표시해 둔다 */
+  TOFIN.last=osToFinKey(inputs);
   go('finance');
   toast('상담자료에서 '+n+'칸을 들고 왔습니다 — 팩트체크부터 이어서 보세요',4200);
 
@@ -35427,7 +35530,9 @@ window.addEventListener('message',function(e){
         fr.contentWindow.postMessage({type:'apexFinLoad',inputs:inputs},location.origin);
         fr.contentWindow.postMessage({type:'apexFinFlow',at:0,pain:(d.pain||'pension')},location.origin);
       }catch(x){}
-      /* 늦게 뜨는 칸이 있어 한 번 더 밀어 준다 */
+      /* 계산기가 아직 안 떴을 수 있다 — 들고 있다가 준비되면 다시 넣는다 */
+      TOFIN.pend={inputs:inputs,pain:(d.pain||'pension'),how:'',n:n};
+      osFinPoke();
       if(tries<3)setTimeout(push,1500);
     }
     else if(tries<12)setTimeout(push,600);
