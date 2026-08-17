@@ -30,6 +30,8 @@
 #    frag_stage.py  2부 단계 — TA·AP·PC·CS·관리 파이프라인과 단계별 카드
 #    frag_date.html 2부 날짜 절 — 날짜 넷 · 단계별 며칠 안에 · 7/90/365 리듬
 #    frag_quote.py  부록 「아침에 한 줄」 서른 날치
+#    frag_brain.py  맨 앞 「윤시현의 뇌」 — 모든 지도를 합친 한 장 (여덟 가지)
+#    frag_flow.py   맨 앞 「영업프로세스 — APEX 는 어떻게 접근하는가」 (여섯 칸 · 네 줄)
 
 # 2) 화면 사진을 다시 찍으려면 (저장소 최상단에서)
 export NODE_PATH=/opt/node22/lib/node_modules
@@ -46,6 +48,7 @@ python3 build3.py   # 3차 — 1부/5부 삽입 + 장 번호 재배치
 python3 frag_maps.py && python3 build4.py   # 4차 — 두 지도 + 앱 화면 사진
 python3 frag_open.py && python3 frag_stage.py && python3 build5.py   # 5차 — 맨 앞 장 · 단계 · 말투
 python3 frag_quote.py && python3 build6.py   # 6차 — 날짜 절 · 아침 한 줄 · 권유형 말투
+python3 frag_brain.py && python3 frag_flow.py && python3 build7.py   # 7차 — 맨 앞 큰 지도 둘
 ```
 
 `build*.py` 의 치환은 전부 **건수를 확인**합니다. 원본이 바뀌어 못 찾으면
@@ -86,7 +89,13 @@ python3 frag_quote.py && python3 build6.py   # 6차 — 날짜 절 · 아침 한
 ## 앞선 세션에서 밟은 함정 — 반복하지 말 것
 
 - **CSS 클래스 충돌.** 새 클래스는 반드시 기존 161개와 겹치는지 먼저 봅니다.
-  지금까지 쓴 접두사: `rdr-` `nmb-` `cyc-` `pw` `pin` `mp-` `op-` `st-` `dt-` `qt-`.
+  지금까지 쓴 접두사: `rdr-` `nmb-` `cyc-` `pw` `pin` `mp-` `op-` `st-` `dt-` `qt-`
+  `brain` `bn-` `fl-`.
+
+- **본문 폭을 넘기는 그림.** 큰 지도 둘(`.brain`)은 740px 본문 폭으로는 글씨가 너무 작아져서
+  `width:min(96vw,1080px); margin-left:50%; transform:translateX(-50%)` 로 화면 폭까지 넓혔습니다.
+  `100vw` 를 쓰면 스크롤바 때문에 가로가 넘치니 **96vw 를 유지**하세요.
+  인쇄에서는 `@media print` 가 원래 폭으로 되돌립니다.
 - **장 번호.** 장을 끼워 넣으면 앵커(`#sN`) · `제 N 부` 딱지 · 차례 ·
   표지 읽는 순서 · 꼬리말 · 본문 상호참조가 **전부** 따라 바뀝니다.
   `build3.py` 가 그 전부를 한 번에 처리하니 그 틀을 쓰십시오.
@@ -106,7 +115,9 @@ python3 frag_quote.py && python3 build6.py   # 6차 — 날짜 절 · 아침 한
 ## 장 차례 (2026-08-17 기준)
 
 ```
-우리가 하는 일 (s-what)  ← 맨 앞. 값을 올리는 여섯 가지
+우리가 하는 일 (s-what)   ← 맨 앞. 값을 올리는 여섯 가지
+윤시현의 뇌 (s-brain)     ← 모든 지도를 합친 한 장
+영업프로세스 (s-flow)      ← 여섯 칸 · 사람이 하던 것 / APEX 가 하는 것 / 남는 것
 여는 이야기 (s-pro) · 서장 (s0)
 1부 한 장으로   2부 단계   3부 전문성   4부 마인드맵
 5부 CRM   6부 CRM 설명서   7부 미끼 레이더   8부 고객 앞에서
