@@ -62,7 +62,8 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status);
   }
   if (!GM_KEY) throw new Error('AI 키 없음');
-  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM_KEY)) + ':generateContent?key=' + GM_KEY, {
+  const gemModel = await GEMMODEL.resolveModel(GM_KEY);
+  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gemModel + ':generateContent?key=' + GM_KEY, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
@@ -70,7 +71,7 @@ async function askAI(system, user, maxTokens) {
       generationConfig: { maxOutputTokens: maxTokens || 1400 }
     })
   });
-  if (!r2.ok) throw new Error('Gemini ' + r2.status);
+  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' (모델 ' + gemModel + ') — ' + (await r2.text()).slice(0, 200));
   const j2 = await r2.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }

@@ -68,8 +68,9 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status + ' ' + (await r.text()).slice(0, 140));
   }
   if (!GM_KEY) throw new Error('AI 키가 없습니다 (ANTHROPIC_API_KEY 또는 GEMINI_API_KEY)');
+  const gemModel = await GEMMODEL.resolveModel(GM_KEY);
   const r2 = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM_KEY)) + ':generateContent?key=' + GM_KEY,
+    'https://generativelanguage.googleapis.com/v1beta/models/' + gemModel + ':generateContent?key=' + GM_KEY,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +81,7 @@ async function askAI(system, user, maxTokens) {
       })
     }
   );
-  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' ' + (await r2.text()).slice(0, 140));
+  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' (모델 ' + gemModel + ') — ' + (await r2.text()).slice(0, 180));
   const j2 = await r2.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }
