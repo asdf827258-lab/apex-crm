@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>APEX 자동차사고 과실·보상 분석기 v3</title>
+<meta name="description" content="손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 사고 상황도·법적 근거·판례·보상금·처리 절차까지 한 번에 정리합니다.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',-apple-system,sans-serif;
+background:#F2F4F6;color:#191F28;word-break:keep-all;line-height:1.5;padding-bottom:80px}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+header{padding:26px 4px 16px}
+.brand{font-size:12px;font-weight:800;letter-spacing:1.6px;color:#3182F6;margin-bottom:10px}
+h1{font-size:25px;font-weight:900;letter-spacing:-1px;line-height:1.34}
+h1 em{font-style:normal;color:#3182F6}
+.lead{margin-top:10px;font-size:14px;color:#6B7684;font-weight:500;line-height:1.65}
+.card{background:#fff;border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.hint{font-size:13px;color:#8B95A1;font-weight:500;margin-bottom:14px;line-height:1.6}
+/* 상단 네비 */
+.nav{display:flex;gap:5px;background:#fff;border-radius:16px;padding:5px;margin-bottom:14px;
+box-shadow:0 2px 8px rgba(0,0,0,.04);overflow-x:auto}
+.nav b{flex:1;text-align:center;padding:11px 8px;border-radius:11px;font-size:13.5px;font-weight:700;
+color:#8B95A1;cursor:pointer;transition:.15s;white-space:nowrap}
+.nav b.on{background:#3182F6;color:#fff}
+.view{display:none}.view.on{display:block}
+/* 탭 */
+.tabs{display:flex;gap:6px;background:#F2F4F6;border-radius:14px;padding:5px;margin-bottom:16px}
+.tab{flex:1;text-align:center;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;color:#8B95A1;cursor:pointer;transition:.15s}
+.tab.on{background:#fff;color:#191F28;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.pane{display:none}.pane.on{display:block}
+label.fl{display:block;font-size:13px;font-weight:700;color:#4E5968;margin:14px 0 7px}
+textarea,input[type=text],input[type=number],select{width:100%;border:1.5px solid #E5E8EB;border-radius:13px;padding:13px 14px;
+font-size:15px;font-family:inherit;background:#fff;color:#191F28;outline:none;transition:.15s}
+textarea{min-height:118px;resize:vertical;line-height:1.6}
+textarea:focus,input:focus,select:focus{border-color:#3182F6}
+textarea::placeholder,input::placeholder{color:#C4CCD6}
+.two{display:flex;gap:9px}.two>div{flex:1}
+.drop{border:2px dashed #D1D6DB;border-radius:16px;padding:28px 16px;text-align:center;background:#FAFBFC;cursor:pointer;transition:.15s}
+.drop:active{border-color:#3182F6;background:#F0F6FF}
+.drop .ic{font-size:29px;margin-bottom:8px}
+.drop .t{font-size:15px;font-weight:700;color:#4E5968}
+.drop .s{font-size:12.5px;color:#8B95A1;margin-top:5px;font-weight:500}
+.thumbs{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.thumbs img{width:72px;height:52px;object-fit:cover;border-radius:9px;border:1px solid #E5E8EB}
+.filetag{margin-top:10px;font-size:13px;color:#3182F6;font-weight:700;background:#F0F6FF;padding:9px 13px;border-radius:10px}
+.chipset{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:9px 13px;border-radius:11px;background:#F2F4F6;border:1.5px solid transparent;font-size:13px;font-weight:600;color:#4E5968;cursor:pointer;transition:.12s}
+.chip.on{background:#F0F6FF;border-color:#3182F6;color:#3182F6;font-weight:700}
+.chip.g-grave.on{background:#FFF1F2;border-color:#F04452;color:#F04452}
+.chip.g-minus.on{background:#EDF7EE;border-color:#12B886;color:#0F9C74}
+.btn{width:100%;padding:16px;border:none;border-radius:15px;background:#3182F6;color:#fff;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;letter-spacing:-.3px}
+.btn:active{background:#1B64DA;transform:scale(.99)}
+.btn:disabled{background:#D1D6DB}
+.btn.ghost{background:#F2F4F6;color:#4E5968;margin-top:9px}
+.btn.sm{padding:13px;font-size:14.5px}
+/* 진행 */
+#load{display:none;padding:24px 20px}
+.stepline{display:flex;flex-direction:column;gap:13px}
+.st{display:flex;align-items:center;gap:12px;opacity:.35;transition:.3s}
+.st.on,.st.done{opacity:1}
+.st .ic{width:30px;height:30px;border-radius:10px;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#B0B8C1;flex-shrink:0}
+.st.on .ic{background:#3182F6;color:#fff}
+.st.done .ic{background:#E7F0FE;color:#3182F6}
+.st .tx{font-size:14.5px;font-weight:700;color:#4E5968}
+.st.on .tx{color:#191F28}
+.mini{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* 결과 */
+.rtype{font-size:12.5px;font-weight:700;color:#3182F6;background:#F0F6FF;display:inline-block;padding:6px 11px;border-radius:9px;margin-bottom:11px}
+.rtype.warn{color:#B8860B;background:#FFF7E0}
+.rtitle{font-size:19.5px;font-weight:900;letter-spacing:-.6px;line-height:1.42;margin-bottom:16px}
+.bar{display:flex;height:62px;border-radius:15px;overflow:hidden;margin-bottom:10px}
+.bar>div{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px}
+.bar .me{background:#DDE3EA}.bar .op{background:#3182F6}
+.bar b{font-size:21px;font-weight:900}
+.bar .me b{color:#333D4B}.bar .op b{color:#fff}
+.bar span{font-size:11.5px;font-weight:700;margin-top:2px}
+.bar .me span{color:#8B95A1}.bar .op span{color:rgba(255,255,255,.85)}
+.conf{font-size:12.5px;color:#8B95A1;font-weight:600;text-align:right;line-height:1.55}
+.calc{background:#F7F8FA;border-radius:14px;padding:16px;margin-top:14px}
+.calc-t{font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px}
+.crow{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;gap:12px}
+.crow .l{font-size:14px;color:#4E5968;font-weight:600;flex:1}
+.crow .l i{display:block;font-style:normal;font-size:12px;color:#B0B8C1;margin-top:3px;font-weight:500;line-height:1.5}
+.crow .v{font-size:15px;font-weight:800;white-space:nowrap}
+.v.up{color:#F04452}.v.down{color:#12B886}
+.cline{height:1px;background:#E5E8EB;margin:6px 0}
+.crow.total .l{font-size:15px;font-weight:800;color:#191F28}
+.crow.total .v{font-size:19px;color:#3182F6}
+.sec{background:#fff;border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.sec h3{font-size:15.5px;font-weight:800;margin-bottom:13px;display:flex;align-items:center;gap:7px}
+.sec h3 .dot{width:7px;height:7px;border-radius:50%;background:#3182F6;flex-shrink:0}
+.sec h3.red .dot{background:#F04452}.sec h3.gray .dot{background:#B0B8C1}.sec h3.green .dot{background:#12B886}
+.li{font-size:14.5px;color:#4E5968;line-height:1.68;font-weight:500;padding-left:15px;position:relative;margin-bottom:9px}
+.li:last-child{margin-bottom:0}
+.li:before{content:'';position:absolute;left:0;top:9px;width:4.5px;height:4.5px;border-radius:50%;background:#C4CCD6}
+.li b{color:#191F28;font-weight:700}
+.para{font-size:14.5px;color:#4E5968;line-height:1.72;font-weight:500}
+.para b{color:#191F28;font-weight:700}
+/* 사고도 */
+.scene{background:#F7F8FA;border-radius:16px;padding:10px}
+.scene svg{width:100%;height:auto;display:block;border-radius:11px}
+.legend{display:flex;gap:13px;justify-content:center;margin-top:10px;flex-wrap:wrap}
+.lg{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4E5968}
+.lg i{width:14px;height:14px;border-radius:4px;display:block}
+.pins{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.pin{display:flex;gap:9px;align-items:flex-start;background:#fff;border-radius:12px;padding:11px 13px}
+.pin u{flex-shrink:0;width:21px;height:21px;border-radius:50%;background:#191F28;color:#fff;font-size:11.5px;
+font-weight:800;display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:1px}
+.pin p{font-size:13.5px;color:#4E5968;font-weight:500;line-height:1.62}
+.pin p b{color:#191F28;font-weight:700}
+/* 충돌 부위 */
+.hits{display:flex;gap:12px;margin-top:12px}
+.hitbox{flex:1;background:#F7F8FA;border-radius:14px;padding:13px;text-align:center}
+.hitbox .cap{font-size:12px;font-weight:800;color:#8B95A1;margin-bottom:8px}
+.hitbox svg{width:74px;height:auto}
+.hitbox .z{font-size:12.5px;font-weight:700;color:#4E5968;margin-top:6px}
+/* 법조문 */
+.lawc{border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;margin-bottom:9px}
+.lawc:last-child{margin-bottom:0}
+.lawc .n{font-size:13px;font-weight:800;color:#3182F6}
+.lawc .t{font-size:14.5px;font-weight:800;margin:3px 0 6px}
+.lawc .d{font-size:13.5px;color:#4E5968;line-height:1.65;font-weight:500}
+/* 판례 */
+.case{border:1.5px solid #E5E8EB;border-radius:14px;padding:15px;margin-bottom:10px}
+.case:last-child{margin-bottom:0}
+.case .ct{font-size:14.5px;font-weight:800;line-height:1.45;margin-bottom:6px}
+.case .cs{font-size:12.5px;color:#8B95A1;font-weight:600;margin-bottom:8px}
+.case .cd{font-size:13.5px;color:#4E5968;line-height:1.65;font-weight:500}
+.case .cr{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:#3182F6;background:#F0F6FF;padding:5px 10px;border-radius:8px}
+.case a{display:inline-block;margin-top:9px;margin-left:6px;font-size:12.5px;color:#8B95A1;font-weight:600;text-decoration:none;border-bottom:1px solid #E5E8EB}
+/* 도표 사전 */
+.clist{display:flex;flex-direction:column;gap:8px}
+.citem{border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;cursor:pointer;transition:.12s}
+.citem:active{border-color:#3182F6;background:#F8FBFF}
+.citem.on{border-color:#3182F6;background:#F8FBFF}
+.citem .cc{font-size:11.5px;font-weight:800;color:#8B95A1}
+.citem .cn{font-size:14.5px;font-weight:800;margin:3px 0 5px;line-height:1.4}
+.citem .cb{font-size:13px;font-weight:800;color:#3182F6}
+.citem .cb s{color:#B0B8C1;text-decoration:none;font-weight:600}
+/* 안내문 */
+.lt h2{font-size:20px;font-weight:900;letter-spacing:-.7px;line-height:1.4;margin-bottom:6px}
+.lt .to{font-size:13px;color:#8B95A1;font-weight:600;margin-bottom:18px}
+.lt p{font-size:14.5px;color:#4E5968;line-height:1.75;font-weight:500;margin-bottom:14px}
+.lt h4{font-size:15px;font-weight:800;margin:20px 0 10px;padding-top:16px;border-top:1px solid #F2F4F6}
+.lt .box{background:#F7F8FA;border-radius:13px;padding:15px 17px;font-size:14px;color:#4E5968;line-height:1.72;font-weight:500}
+.lt .box b{color:#191F28;font-weight:800}
+.sign{margin-top:22px;padding-top:16px;border-top:1px solid #F2F4F6;font-size:13px;color:#8B95A1;font-weight:600;line-height:1.7}
+.notebox{background:#FFF9E8;border-radius:13px;padding:14px 16px;font-size:13.5px;color:#8B6D1F;font-weight:600;line-height:1.62;margin-top:12px}
+.okbox{background:#EDF7EE;border-radius:13px;padding:14px 16px;font-size:13.5px;color:#0F7B5C;font-weight:600;line-height:1.62;margin-top:12px}
+.err{background:#FFF4F4;color:#D63A46;border-radius:13px;padding:14px 16px;font-size:13.5px;font-weight:600;line-height:1.6;margin-top:12px;display:none}
+.disc{font-size:12px;color:#B0B8C1;line-height:1.75;text-align:center;padding:18px 8px;font-weight:500}
+.disc b{color:#8B95A1}
+.setting{margin-top:10px;font-size:12.5px;color:#B0B8C1;text-align:center;font-weight:600;cursor:pointer}
+#keybox{display:none;margin-top:12px}
+.linkc{display:block;border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;margin-bottom:9px;text-decoration:none}
+.linkc .t{font-size:14.5px;font-weight:800;color:#191F28}
+.linkc .u{font-size:12px;color:#3182F6;font-weight:700;margin:3px 0 5px;word-break:break-all}
+.linkc .d{font-size:13px;color:#6B7684;line-height:1.6;font-weight:500}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #F2F4F6;font-size:14px}
+.kv:last-child{border:none}
+.kv .k{color:#4E5968;font-weight:600;flex:1}
+.kv .k i{display:block;font-style:normal;font-size:11.5px;color:#B0B8C1;margin-top:2px;font-weight:500;line-height:1.5}
+.kv .v{font-weight:800;white-space:nowrap}
+.kv.big .v{font-size:18px;color:#3182F6}
+.step{border-left:2px solid #E5E8EB;padding:0 0 20px 18px;position:relative;margin-left:6px}
+.step:last-child{padding-bottom:0}
+.step:before{content:'';position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:#3182F6;border:2px solid #fff}
+.step .sw{font-size:11.5px;font-weight:800;color:#3182F6;background:#F0F6FF;display:inline-block;padding:3px 8px;border-radius:7px}
+.step .stt{font-size:15px;font-weight:800;margin:6px 0 5px;line-height:1.42}
+.step .sd{font-size:13.5px;color:#6B7684;font-weight:500;line-height:1.62;margin-bottom:8px}
+@media print{body{background:#fff;padding:0}.nav,#inputCard,#load,.tabs,.btn,.setting,.drop{display:none!important}
+.view{display:block!important}.sec,.card{box-shadow:none;border:1px solid #E5E8EB;break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">APEX · YUN PRO</div>
+  <h1>사고 상황을 넣으면 <em>과실 · 상황도 · 법조문<br>판례 · 보상금 · 안내문</em>까지</h1>
+  <div class="lead">손해보험협회 「자동차사고 과실비율 인정기준」 도표를 그대로 데이터로 넣어 두었습니다. AI 는 <b>어느 도표에 해당하는지만</b> 고르고, 숫자 계산은 인정기준의 수정요소 규칙이 합니다. 그래서 매번 같은 상황이면 같은 답이 나옵니다.</div>
+</header>
+
+<div class="nav" id="nav">
+  <b class="on" data-v="v1">사고 분석</b>
+  <b data-v="v2">과실 도표</b>
+  <b data-v="v3">보상 계산</b>
+  <b data-v="v4">처리 절차</b>
+  <b data-v="v5">법 · 판례</b>
+</div>
+
+<!-- ══════════ 1. 사고 분석 ══════════ -->
+<div class="view on" id="v1">
+
+<div class="card" id="inputCard">
+  <div class="tabs">
+    <div class="tab on" data-p="p0">직접 고르기</div>
+    <div class="tab" data-p="p1">글로 설명</div>
+    <div class="tab" data-p="p2">블랙박스</div>
+    <div class="tab" data-p="p3">사진</div>
+  </div>
+
+  <!-- 직접 고르기 : AI 없이도 돌아가는 규칙 엔진 -->
+  <div class="pane on" id="p0">
+    <div class="hint">인터넷 연결이나 AI 없이도 바로 결과가 나옵니다. 상황을 고르면 인정기준 도표의 기본과실을 그대로 적용합니다.</div>
+    <label class="fl">1. 어떤 종류의 사고입니까</label>
+    <div class="chipset" id="catbox"></div>
+    <label class="fl">2. 상황을 고르세요</label>
+    <div class="clist" id="chartbox"></div>
+    <div id="rolebox"></div>
+  </div>
+
+  <div class="pane" id="p1">
+    <div class="hint">누가 어디서 어떻게 부딪혔는지 아는 대로 적어주세요. 문장이 거칠어도 괜찮습니다.</div>
+    <textarea id="desc" placeholder="예) 신호등 없는 교차로에서 제가 직진 중이었고, 오른쪽 좁은 골목에서 상대 차가 일시정지 없이 나오면서 제 조수석 앞쪽을 박았습니다. 저는 시속 40km 정도였습니다."></textarea>
+  </div>
+
+  <div class="pane" id="p2">
+    <div class="hint">영상에서 장면을 자동으로 뽑아 분석합니다. 충돌 전후 10초 내외로 잘라 올리면 정확도가 올라갑니다.</div>
+    <div class="drop" id="vdrop"><div class="ic">🎥</div><div class="t">블랙박스 영상 올리기</div><div class="s">mp4 · mov · avi</div></div>
+    <input type="file" id="vfile" accept="video/*" hidden><video id="vprev" hidden></video>
+    <div id="vinfo"></div><div class="thumbs" id="vthumbs"></div>
+    <label class="fl">보충 설명 (선택)</label>
+    <textarea id="vdesc" style="min-height:80px" placeholder="영상만으로 안 보이는 정보를 적어주세요. 예) 검은색 차량이 제 차입니다."></textarea>
+  </div>
+
+  <div class="pane" id="p3">
+    <div class="hint">파손 부위, 현장, 노면표시, 신호등이 나온 사진을 올려주세요. 여러 장 가능합니다.</div>
+    <div class="drop" id="idrop"><div class="ic">📷</div><div class="t">사진 올리기</div><div class="s">최대 6장 · jpg · png</div></div>
+    <input type="file" id="ifile" accept="image/*" multiple hidden>
+    <div class="thumbs" id="ithumbs"></div>
+    <label class="fl">보충 설명 (선택)</label>
+    <textarea id="idesc" style="min-height:80px" placeholder="사진에 안 나오는 상황을 적어주세요."></textarea>
+  </div>
+
+  <label class="fl">해당되는 것을 골라주세요 — 여기서 과실이 실제로 움직입니다</label>
+  <div style="font-size:12.5px;color:#8B95A1;font-weight:600;margin-bottom:8px">🔴 내 잘못 / 🔵 상대 잘못 을 눌러 고릅니다</div>
+  <div id="modbox"></div>
+
+  <div class="two" style="margin-top:14px">
+    <div>
+      <label class="fl">고객 성함 (안내문용 · 선택)</label>
+      <input type="text" id="cname" placeholder="예) 김철수">
+    </div>
+    <div>
+      <label class="fl">상대는 누구인가요</label>
+      <select id="counter">
+        <option>자동차</option><option>이륜차 (오토바이)</option><option>자전거 · 개인형 이동장치</option><option>보행자</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" id="go" style="margin-top:18px">과실비율 분석하기</button>
+  <div class="err" id="err"></div>
+  <div class="setting" id="setToggle">⚙︎ 판례 검색을 켜려면 API 키를 넣으세요</div>
+  <div id="keybox">
+    <input type="text" id="apikey" placeholder="sk-ant-... (이 브라우저에만 저장됩니다)">
+    <div style="font-size:12px;color:#B0B8C1;font-weight:500;line-height:1.6;margin-top:8px">
+      키를 넣지 않아도 <b>직접 고르기</b>는 그대로 작동합니다. 회사 서버(/api/generate)가 붙어 있으면 글·사진 분석도 키 없이 됩니다.
+      다만 <b>판례 웹검색</b>은 키를 넣어야 켜집니다.
+    </div>
+  </div>
+</div>
+
+<div class="card" id="load">
+  <div class="stepline">
+    <div class="st" id="s1"><div class="ic">1</div><div class="tx">사고 상황을 읽고 해당 도표를 찾습니다</div></div>
+    <div class="st" id="s2"><div class="ic">2</div><div class="tx">인정기준 규칙으로 과실을 계산합니다</div></div>
+    <div class="st" id="s3"><div class="ic">3</div><div class="tx">유사 판례와 사례를 찾습니다</div></div>
+    <div class="st" id="s4"><div class="ic">4</div><div class="tx">보상금과 고객 안내문을 만듭니다</div></div>
+  </div>
+</div>
+
+<div id="result"></div>
+</div>
+
+<!-- ══════════ 2. 과실 도표 사전 ══════════ -->
+<div class="view" id="v2">
+  <div class="card">
+    <h1 style="font-size:20px;margin-bottom:8px">과실비율 도표 사전</h1>
+    <div class="hint">인정기준의 대표 유형을 담았습니다. 눌러서 상황도와 근거 법조문을 볼 수 있습니다.
+      숫자는 <b>왼쪽 역할 : 오른쪽 역할</b> 순서입니다.</div>
+    <input type="text" id="dsearch" placeholder="🔎 신호위반, 진로변경, 무단횡단, 주차장 …">
+    <div style="margin-top:12px" class="chipset" id="dcat"></div>
+    <div class="clist" id="dlist" style="margin-top:14px"></div>
+  </div>
+  <div id="ddetail"></div>
+</div>
+
+<!-- ══════════ 3. 보상 계산 ══════════ -->
+<div class="view" id="v3">
+  <div class="card">
+    <h1 style="font-size:20px;margin-bottom:8px">보상금 계산기</h1>
+    <div class="hint">자동차보험 표준약관의 대인·대물 지급기준으로 계산합니다. 과실비율을 넣으면 <b>실제로 손에 쥐는 금액</b>이 나옵니다.</div>
+    <div class="two">
+      <div><label class="fl">내 과실 (%)</label><input type="number" id="pf_my" value="30" min="0" max="100"></div>
+      <div><label class="fl">상대 과실 (%)</label><input type="number" id="pf_op" value="70" min="0" max="100" readonly style="background:#F7F8FA"></div>
+    </div>
+
+    <label class="fl" style="margin-top:20px;font-size:14px;color:#191F28">🚑 다친 경우 (대인)</label>
+    <div class="two">
+      <div><label class="fl">치료비 (원)</label><input type="number" id="pf_cure" placeholder="3000000"></div>
+      <div><label class="fl">향후 치료비 (원)</label><input type="number" id="pf_future" placeholder="0"></div>
+    </div>
+    <div class="two">
+      <div><label class="fl">월 소득 (원)</label><input type="number" id="pf_income" placeholder="3000000"></div>
+      <div><label class="fl">일하지 못한 날</label><input type="number" id="pf_days" placeholder="14"></div>
+    </div>
+    <label class="fl">상해 급수 (진단서 기준 · 1급이 가장 무거움)</label>
+    <select id="pf_grade"><option value="">모름 · 해당 없음</option></select>
+
+    <label class="fl" style="margin-top:20px;font-size:14px;color:#191F28">🚗 차가 망가진 경우 (대물)</label>
+    <div class="two">
+      <div><label class="fl">내 차 수리비 (원)</label><input type="number" id="pf_fix" placeholder="4000000"></div>
+      <div><label class="fl">내 차 가액 (원)</label><input type="number" id="pf_value" placeholder="20000000"></div>
+    </div>
+    <div class="two">
+      <div><label class="fl">출고 후 몇 년</label><input type="number" id="pf_age" placeholder="3" step="0.5"></div>
+      <div><label class="fl">상대 차 수리비 (원)</label><input type="number" id="pf_opfix" placeholder="2000000"></div>
+    </div>
+    <div class="two">
+      <div><label class="fl">렌트 일수</label><input type="number" id="pf_rday" placeholder="10"></div>
+      <div><label class="fl">렌트 일 요금 (원)</label><input type="number" id="pf_rfee" placeholder="90000"></div>
+    </div>
+    <label class="fl"><input type="checkbox" id="pf_norent" style="width:auto;margin-right:7px">렌트를 쓰지 않고 돈으로 받겠다 (통상요금의 35%)</label>
+    <div class="two" style="margin-top:8px">
+      <div><label class="fl">물적사고 할증기준금액</label>
+        <select id="pf_limit"><option value="2000000">200만원</option><option value="1500000">150만원</option>
+        <option value="1000000">100만원</option><option value="500000">50만원</option></select></div>
+      <div><label class="fl">내 차 수리에 자차를 쓸까요</label>
+        <select id="pf_own"><option value="1">예 (자기차량손해 사용)</option><option value="0">아니오</option></select></div>
+    </div>
+    <button class="btn" id="pf_go" style="margin-top:18px">계산하기</button>
+  </div>
+  <div id="payout"></div>
+</div>
+
+<!-- ══════════ 4. 처리 절차 ══════════ -->
+<div class="view" id="v4"><div id="stepsBox"></div></div>
+
+<!-- ══════════ 5. 법 · 판례 ══════════ -->
+<div class="view" id="v5"><div id="lawBox"></div></div>
+
+<div class="disc">
+  본 결과는 <b>참고용 추정치</b>이며 공식 과실비율이 아닙니다.<br>
+  최종 과실은 블랙박스·현장조사·보험사 협의로 정해지고, 불복하면 손해보험협회 과실비율분쟁심의위원회, 그래도 안 되면 법원에서 확정됩니다.<br>
+  기본과실 숫자는 손해보험협회 「자동차사고 과실비율 인정기준」을 옮긴 것이며 <b>개정될 수 있습니다.</b> 인용 전 <a href="https://accident.knia.or.kr" target="_blank" rel="noopener" style="color:#8B95A1">과실비율정보포털</a>에서 원문 도표를 확인하세요.<br><br>
+  <b>에이플러스에셋 온탑본부 · APEX YUN PRO</b>
+</div>
+</div>
+
+<script src="kb.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   0. 공통
+   ══════════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const won = n => (Math.round(n) || 0).toLocaleString('ko-KR') + '원';
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const chartById = id => CHARTS.find(c => c.id === id);
+
+document.querySelectorAll('#nav b').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#nav b').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); $(b.dataset.v).classList.add('on');
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('on'));
+  document.querySelectorAll('.pane').forEach(x => x.classList.remove('on'));
+  t.classList.add('on'); $(t.dataset.p).classList.add('on');
+});
+$('setToggle').onclick = () => {
+  const b = $('keybox');
+  b.style.display = b.style.display === 'block' ? 'none' : 'block';
+  $('apikey').value = localStorage.getItem('apex_key') || '';
+};
+$('apikey').addEventListener('change', e => { try { localStorage.setItem('apex_key', e.target.value.trim()); } catch(_){} });
+
+/* ══════════════════════════════════════════════════════════════════════
+   1. 과실 계산 엔진 — 인정기준의 수정요소 중복 규칙을 그대로 구현
+      · 현저한 과실끼리 여러 개여도 최대 +20
+      · 중대한 과실이 있으면 현저한 과실은 적용하지 않는다
+      · 중과실 + 그 밖의 가산을 합쳐도 특별한 사정이 없으면 최대 +30
+   ══════════════════════════════════════════════════════════════════════ */
+function calcFault(base, picks) {
+  const side = who => {
+    const list = picks.filter(p => p.who === who);
+    const sig   = list.filter(p => p.g === 'sig');
+    const grave = list.filter(p => p.g === 'grave');
+    const etc   = list.filter(p => p.g === 'etc' && p.v > 0);
+    const minus = list.filter(p => p.g === 'minus' || p.v < 0);
+    const notes = [];
+    let used = [];
+    let sigSum = sig.reduce((a,b) => a + b.v, 0);
+    const graveSum = grave.reduce((a,b) => a + b.v, 0);
+    const etcSum = etc.reduce((a,b) => a + b.v, 0);
+    if (grave.length && sig.length) {
+      notes.push('중대한 과실이 있어 현저한 과실(' + sig.map(s=>s.k).join(', ') + ')은 따로 더하지 않았습니다');
+      sigSum = 0; used = grave.concat(etc);
+    } else {
+      if (sigSum > 20) { notes.push('현저한 과실이 여러 개라 +20%까지만 반영했습니다'); sigSum = 20; }
+      used = sig.concat(grave, etc);
+    }
+    let add = sigSum + graveSum + etcSum;
+    if (add > 30) { notes.push('가산요소를 모두 더하면 +' + add + '% 이지만 인정기준상 한도인 +30%까지만 반영했습니다'); add = 30; }
+    const sub = minus.reduce((a,b) => a + Math.abs(b.v), 0);
+    return {add, sub, notes, list: used.concat(minus)};
+  };
+  const A = side('A'), B = side('B');
+  const net = (A.add - A.sub) - (B.add - B.sub);
+  const a = clamp(Math.round(base[0] + net), 0, 100);
+  return {A: a, B: 100 - a, net, sideA: A, sideB: B, base};
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   2. 사고 상황도 렌더러
+      AI 가 좌표를 만들지 않는다. 도로 종류와 진입 방향만 받고 그림은 여기서 그린다.
+   ══════════════════════════════════════════════════════════════════════ */
+const VW = 470, VH = 470, CX = 235, CY = 235, HALF = 80, L_IN = 26, L_OUT = 60;
+const CO = {road:'#D5DBE2', edge:'#C2C9D2', line:'#fff', yellow:'#F5C543', bg:'#F7F8FA',
+            me:'#3182F6', op:'#F04452', hit:'#FF9500', txt:'#4E5968', walk:'#8B5CF6'};
+
+const HEAD = {S:'N', N:'S', W:'E', E:'W'};
+const TURN = {N:{left:'W',right:'E',u:'S'}, S:{left:'E',right:'W',u:'N'},
+              E:{left:'N',right:'S',u:'W'}, W:{left:'S',right:'N',u:'E'}};
+
+function entryPt(from, off) {
+  if (from === 'S') return [CX + off, VH];
+  if (from === 'N') return [CX - off, 0];
+  if (from === 'W') return [0, CY + off];
+  return [VW, CY - off];
+}
+function exitPt(head, off) {
+  if (head === 'N') return [CX + off, 0];
+  if (head === 'S') return [CX - off, VH];
+  if (head === 'E') return [VW, CY + off];
+  return [0, CY - off];
+}
+const vertical = h => h === 'N' || h === 'S';
+
+/* 경로 계산 — 폴리라인으로 돌려준다(차 위치·각도·충돌점 계산에 그대로 쓴다) */
+function pathOf(sc, car) {
+  const road = sc.road, act = car.act || 'straight', from = car.from || 'S';
+  const off = car.lane === 'in' ? L_IN : car.lane === 'edge' ? L_OUT + 14
+            : car.lane === 'out' ? L_OUT : (act === 'left' ? L_IN : L_OUT);
+
+  /* 보행자는 도로 종류보다 먼저 처리한다 — 안 그러면 차로 위를 걷게 된다 */
+  if (from === 'cross')    return [[VW*.60, CY+HALF+34], [VW*.60, CY-HALF-34]];
+  if (from === 'walkline') return [[VW*.26, CY-HALF-20], [VW*.94, CY-HALF-20]];
+
+  if (road === 'straight' || road === 'highway' || road === 'narrow' || road === 'sidewalk') {
+    const east = from !== 'E';
+    const y = o => east ? CY + o : CY - o;
+    if (act === 'lc-l')   return east ? [[0,y(L_OUT)],[VW*.40,y(L_OUT)],[VW*.62,y(L_IN)],[VW,y(L_IN)]]
+                                      : [[VW,y(L_OUT)],[VW*.60,y(L_OUT)],[VW*.38,y(L_IN)],[0,y(L_IN)]];
+    if (act === 'lc-r')   return east ? [[0,y(L_IN)],[VW*.40,y(L_IN)],[VW*.62,y(L_OUT)],[VW,y(L_OUT)]]
+                                      : [[VW,y(L_IN)],[VW*.60,y(L_IN)],[VW*.38,y(L_OUT)],[0,y(L_OUT)]];
+    if (act === 'center') return [[VW,CY-L_IN],[VW*.62,CY-L_IN],[VW*.36,CY+L_IN],[0,CY+L_IN]];
+    if (act === 'uturn')  return [[VW,CY-L_OUT],[VW*.46,CY-L_OUT],[VW*.31,CY],[VW*.46,CY+L_OUT],[VW,CY+L_OUT]];
+    if (act === 'back')   return [[VW*.66,y(off)],[VW*.28,y(off)]];
+    if (act === 'stop')   return [[0,y(off)],[VW*.58,y(off)]];
+    if (act === 'parked' || act === 'door')
+      return road === 'highway' ? [[VW*.50,CY+L_OUT+30],[VW*.78,CY+L_OUT+30]] : [[VW*.40,y(off)],[VW*.72,y(off)]];
+    if (act === 'sidewalk') return [[0,CY+L_IN],[VW*.45,CY+L_IN],[VW*.72,CY-HALF-24],[VW,CY-HALF-24]];
+    return east ? [[0,y(off)],[VW,y(off)]] : [[VW,y(off)],[0,y(off)]];
+  }
+
+  if (road === 'merge') {
+    if (from === 'merge') return [[0,VH-16],[VW*.32,VH*.76],[VW*.58,CY+L_OUT],[VW,CY+L_OUT]];
+    return [[0,CY+off],[VW,CY+off]];
+  }
+
+  if (road === 'round') {
+    const R = 116;
+    if (act === 'circle') {
+      /* 회전교차로는 반시계방향 — 화면 좌표에서는 각도가 줄어드는 쪽이다 */
+      const pts = [];
+      for (let a = 205; a >= 55; a -= 10) { const r = a*Math.PI/180; pts.push([CX+Math.cos(r)*R, CY+Math.sin(r)*R]); }
+      return pts;
+    }
+    return [[CX+38,VH],[CX+38,CY+R+34],[CX+32,CY+R+2]];
+  }
+
+  if (road === 'parking') {
+    if (from === 'slotS') return [[CX-40,CY+78],[CX-40,CY+112]];   /* 아래쪽 주차구획 */
+    if (from === 'slot') {
+      if (act === 'parked') return [[CX-40,CY-112],[CX-40,CY-78]];
+      return [[CX-40,CY-108],[CX-40,CY-6]];
+    }
+    if (from === 'S' || from === 'N') return [entryPt(from,off), exitPt(HEAD[from],off)];
+    return [[0,CY+off],[VW,CY+off]];
+  }
+
+  /* 횡단보도 도로에서 회전하지 않는 차는 그냥 가로로 지나간다 */
+  if (road === 'crosswalk' && act !== 'right' && act !== 'left')
+    return [[0, CY+off], [VW, CY+off]];
+
+  /* 교차로류 (cross · tcross · crosswalk 의 회전) */
+  const head = HEAD[from];
+  /* 소로(좁은 길)는 차로 폭도 좁다 — 대로 vs 소로 그림에서 차가 길 밖으로 나가지 않게 */
+  const vOff = h => (sc.narrowV && vertical(h)) ? 22 : null;
+  const off2 = vOff(head) || off;
+  const start = entryPt(from, off2);
+  if (act === 'overtake') {
+    const s2 = entryPt(from, L_OUT), e2 = exitPt(head, L_IN);
+    return [s2, [s2[0], VH*.66], [e2[0], VH*.40], e2];
+  }
+  if (act === 'back') return [start, [start[0] + (vertical(head)?0:(head==='E'?-110:110)), start[1] + (vertical(head)?(head==='N'?110:-110):0)]];
+  if (act === 'stop') {
+    const e = exitPt(head, off);
+    return [start, [start[0]+(e[0]-start[0])*.34, start[1]+(e[1]-start[1])*.34]];
+  }
+  if (act === 'enter') return [start, [start[0], CY+70]];
+  if (act === 'straight') return [start, exitPt(head, off2)];
+
+  const nh = act === 'uturn' ? TURN[head].u : TURN[head][act] || head;
+  const noff = vOff(nh) || (act === 'left' ? L_IN : L_OUT);
+  const end = exitPt(nh, noff);
+  const corner = vertical(head) ? [start[0], end[1]] : [end[0], start[1]];
+  return [start, corner, end];
+}
+
+function along(p, f) {
+  const segs = []; let tot = 0;
+  for (let i = 1; i < p.length; i++) { const d = Math.hypot(p[i][0]-p[i-1][0], p[i][1]-p[i-1][1]); segs.push(d); tot += d; }
+  let t = tot * f;
+  for (let i = 0; i < segs.length; i++) {
+    if (t <= segs[i] || i === segs.length - 1) { const r = segs[i] ? t/segs[i] : 0;
+      return [p[i][0] + (p[i+1][0]-p[i][0])*r, p[i][1] + (p[i+1][1]-p[i][1])*r]; }
+    t -= segs[i];
+  }
+  return p[p.length-1];
+}
+function angleAt(p, f) {
+  const a = along(p, Math.max(0, f-.05)), b = along(p, Math.min(1, f+.05));
+  return Math.atan2(b[1]-a[1], b[0]-a[0]) * 180 / Math.PI;
+}
+/* 두 경로가 가장 가까워지는 지점 = 충돌 지점.
+   거리만 보면 후미추돌처럼 두 경로가 완전히 겹치는 그림에서 별이 화면 끝에 찍힌다.
+   그래서 "가깝고 + 그려 놓은 두 차에서도 가까운" 곳을 고른다. */
+function nearest(p1, p2, q1, q2) {
+  let best = null, bs = 1e9, bd = 1e9;
+  for (let i = 0; i <= 70; i++) { const a = along(p1, i/70);
+    for (let j = 0; j <= 70; j++) { const b = along(p2, j/70);
+      const d = Math.hypot(a[0]-b[0], a[1]-b[1]);
+      /* 끌어당기는 항을 제곱으로 두면 후미추돌처럼 경로가 완전히 겹칠 때
+         두 차의 한가운데가 유일한 최소값이 된다 — 별이 화면 끝으로 튀지 않는다 */
+      const s = d + .004 * (((a[0]-q1[0])**2 + (a[1]-q1[1])**2) + ((b[0]-q2[0])**2 + (b[1]-q2[1])**2));
+      if (s < bs) { bs = s; bd = d; best = [(a[0]+b[0])/2, (a[1]+b[1])/2]; } } }
+  return bd < 130 ? best : null;
+}
+
+/* 도로 바탕 */
+function roadBase(sc) {
+  const t = sc.road || 'cross';
+  let g = `<rect width="${VW}" height="${VH}" fill="${CO.bg}" rx="12"/>`;
+  const hRoad = `<rect x="0" y="${CY-HALF}" width="${VW}" height="${HALF*2}" fill="${CO.road}"/>`;
+  const vRoad = h => `<rect x="${CX-HALF}" y="${h?0:CY-HALF}" width="${HALF*2}" height="${h?VH:VH/2+HALF}" fill="${CO.road}"/>`;
+  const yellowH = `<line x1="0" y1="${CY}" x2="${VW}" y2="${CY}" stroke="${CO.yellow}" stroke-width="3"/>`;
+  const laneH = (x1,x2) => `<line x1="${x1}" y1="${CY+L_IN+17}" x2="${x2}" y2="${CY+L_IN+17}" stroke="${CO.line}" stroke-width="2.5" stroke-dasharray="16 12"/>
+    <line x1="${x1}" y1="${CY-L_IN-17}" x2="${x2}" y2="${CY-L_IN-17}" stroke="${CO.line}" stroke-width="2.5" stroke-dasharray="16 12"/>`;
+
+  if (t === 'cross' || t === 'tcross' || t === 'crosswalk') {
+    const vh = sc.narrowV ? 42 : HALF;          /* 소로면 세로 도로를 좁게 그린다 */
+    g += hRoad;
+    g += `<rect x="${CX-vh}" y="${t === 'tcross' ? CY-HALF : 0}" width="${vh*2}"
+            height="${t === 'tcross' ? VH/2+HALF : VH}" fill="${CO.road}"/>`;
+    g += `<line x1="0" y1="${CY}" x2="${CX-vh}" y2="${CY}" stroke="${CO.yellow}" stroke-width="3"/>
+          <line x1="${CX+vh}" y1="${CY}" x2="${VW}" y2="${CY}" stroke="${CO.yellow}" stroke-width="3"/>`;
+    if (!sc.narrowV)
+      g += `<line x1="${CX}" y1="0" x2="${CX}" y2="${CY-HALF}" stroke="${CO.yellow}" stroke-width="3"/>
+            <line x1="${CX}" y1="${CY+HALF}" x2="${CX}" y2="${VH}" stroke="${CO.yellow}" stroke-width="3"/>`;
+    /* 정지선 */
+    g += `<rect x="${CX+4}" y="${CY+HALF-6}" width="${vh-8}" height="5" fill="${CO.line}"/>
+          <rect x="${CX-vh+4}" y="${CY-HALF+1}" width="${vh-8}" height="5" fill="${CO.line}"/>
+          <rect x="${CX-vh+1}" y="${CY+4}" width="5" height="${HALF-8}" fill="${CO.line}"/>
+          <rect x="${CX+vh-6}" y="${CY-HALF+4}" width="5" height="${HALF-8}" fill="${CO.line}"/>`;
+    if (sc.narrowV)
+      g += `<text x="${CX+vh+8}" y="${VH-14}" font-size="11.5" font-weight="800" fill="#8B95A1" font-family="sans-serif">소로(좁은 길)</text>
+            <text x="10" y="${CY-HALF-10}" font-size="11.5" font-weight="800" fill="#8B95A1" font-family="sans-serif">대로(넓은 길)</text>`;
+    if (t === 'crosswalk') for (let i = 0; i < 7; i++)
+      g += `<rect x="${VW*.60-32+i*10}" y="${CY-HALF+6}" width="6" height="${HALF*2-12}" fill="${CO.line}" opacity=".95"/>`;
+    return g;
+  }
+  if (t === 'round') {
+    g += hRoad + vRoad(true);
+    g += `<circle cx="${CX}" cy="${CY}" r="118" fill="${CO.road}"/>
+          <circle cx="${CX}" cy="${CY}" r="118" fill="none" stroke="${CO.line}" stroke-width="2.5" stroke-dasharray="12 10"/>
+          <circle cx="${CX}" cy="${CY}" r="54" fill="#CBD8C6" stroke="${CO.edge}" stroke-width="3"/>`;
+    return g;
+  }
+  if (t === 'parking') {
+    g += `<rect x="0" y="${CY-70}" width="${VW}" height="140" fill="${CO.road}"/>`;
+    for (let i = 0; i < 6; i++) {
+      g += `<rect x="${10+i*76}" y="${CY-152}" width="66" height="80" fill="#E9EDF1" stroke="${CO.edge}" stroke-width="2.5"/>`;
+      g += `<rect x="${10+i*76}" y="${CY+72}" width="66" height="80" fill="#E9EDF1" stroke="${CO.edge}" stroke-width="2.5"/>`;
+    }
+    return g;
+  }
+  if (t === 'merge') {
+    g += hRoad + yellowH + laneH(0, VW);
+    g += `<path d="M0,${VH-2} L${VW*.30},${VH*.74} L${VW*.60},${CY+HALF} L${VW*.60},${CY+HALF+46} L${VW*.34},${VH*.90} L0,${VH+40} Z" fill="${CO.road}"/>`;
+    g += `<path d="M${VW*.30},${VH*.74} L${VW*.60},${CY+HALF}" stroke="${CO.line}" stroke-width="2.5" stroke-dasharray="14 10" fill="none"/>`;
+    return g;
+  }
+  if (t === 'highway') {
+    g += `<rect x="0" y="${CY-HALF-16}" width="${VW}" height="${HALF*2+32}" fill="${CO.road}"/>`;
+    g += `<line x1="0" y1="${CY+HALF+8}" x2="${VW}" y2="${CY+HALF+8}" stroke="${CO.line}" stroke-width="3"/>`;
+    g += yellowH + laneH(0, VW);
+    return g;
+  }
+  if (t === 'narrow') {
+    g += `<rect x="0" y="${CY-46}" width="${VW}" height="92" fill="${CO.road}"/>`;
+    return g;
+  }
+  if (t === 'sidewalk') {
+    g += hRoad + yellowH + laneH(0, VW);
+    g += `<rect x="0" y="${CY-HALF-40}" width="${VW}" height="40" fill="#DCE3D9" stroke="${CO.edge}" stroke-width="2"/>`;
+    return g;
+  }
+  g += hRoad + yellowH + laneH(0, VW);
+  if (sc.solid) g += `<line x1="0" y1="${CY+L_IN+17}" x2="${VW}" y2="${CY+L_IN+17}" stroke="${CO.line}" stroke-width="3.5"/>`;
+  if (sc.bike) g += `<rect x="0" y="${CY+HALF-30}" width="${VW}" height="30" fill="#BFD8C4"/>
+    <line x1="0" y1="${CY+HALF-30}" x2="${VW}" y2="${CY+HALF-30}" stroke="${CO.line}" stroke-width="3"/>
+    <text x="12" y="${CY+HALF-10}" font-size="11.5" font-weight="800" fill="#2F6B45" font-family="sans-serif">자전거 전용도로</text>`;
+  if (sc.safezone) {
+    g += `<path d="M${VW*.30},${CY+L_IN+6} L${VW*.66},${CY+L_IN+6} L${VW*.60},${CY+L_IN+30} L${VW*.24},${CY+L_IN+30} Z" fill="#EFF2F5" stroke="${CO.line}" stroke-width="2"/>`;
+    for (let i=0;i<6;i++) g += `<line x1="${VW*.28+i*22}" y1="${CY+L_IN+30}" x2="${VW*.34+i*22}" y2="${CY+L_IN+6}" stroke="${CO.line}" stroke-width="2"/>`;
+  }
+  return g;
+}
+
+function carIcon(x, y, ang, col, label, kind) {
+  const t = `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${ang.toFixed(1)})`;
+  let body;
+  if (kind === 'moto') body = `<rect x="-15" y="-7" width="30" height="14" rx="6" fill="${col}"/><circle cx="-9" cy="0" r="4" fill="#333D4B"/><circle cx="9" cy="0" r="4" fill="#333D4B"/>`;
+  else if (kind === 'bike') body = `<rect x="-13" y="-5" width="26" height="10" rx="5" fill="${col}"/><circle cx="-9" cy="0" r="5" fill="none" stroke="#333D4B" stroke-width="2"/><circle cx="9" cy="0" r="5" fill="none" stroke="#333D4B" stroke-width="2"/>`;
+  else body = `<rect x="-25" y="-13.5" width="50" height="27" rx="7" fill="${col}"/>
+    <rect x="-11" y="-9.5" width="17" height="19" rx="4" fill="#fff" opacity=".5"/>
+    <rect x="18" y="-10.5" width="5" height="7" rx="2" fill="#fff" opacity=".85"/>
+    <rect x="18" y="3.5" width="5" height="7" rx="2" fill="#fff" opacity=".85"/>`;
+  return `<g transform="${t}">${body}</g>
+    <text x="${x.toFixed(1)}" y="${(y+32).toFixed(1)}" font-size="12.5" font-weight="800" fill="${col}"
+      text-anchor="middle" font-family="sans-serif" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(label)}</text>`;
+}
+function pedIcon(x, y, col) {
+  return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
+    <circle cx="0" cy="-12" r="7" fill="${col}"/><rect x="-5.5" y="-4" width="11" height="17" rx="5" fill="${col}"/></g>
+    <text x="${x.toFixed(1)}" y="${(y+28).toFixed(1)}" font-size="12.5" font-weight="800" fill="${col}" text-anchor="middle"
+      font-family="sans-serif" paint-order="stroke" stroke="#fff" stroke-width="3">보행자</text>`;
+}
+function arrowHead(p, ang, col) {
+  return `<g transform="translate(${p[0].toFixed(1)},${p[1].toFixed(1)}) rotate(${ang.toFixed(1)})">
+    <path d="M-13,-8 L3,0 L-13,8 Z" fill="${col}" opacity=".75"/></g>`;
+}
+function starPath(cx, cy, r) {
+  let d = '';
+  for (let i = 0; i < 10; i++) { const a = (Math.PI/5)*i - Math.PI/2, rr = i%2 ? r*.44 : r;
+    d += (i ? 'L' : 'M') + (cx + Math.cos(a)*rr).toFixed(1) + ',' + (cy + Math.sin(a)*rr).toFixed(1); }
+  return d + 'Z';
+}
+function pinBadge(x, y, n) {
+  return `<g><circle cx="${x}" cy="${y}" r="13" fill="#191F28" stroke="#fff" stroke-width="2.5"/>
+    <text x="${x}" y="${y+4.5}" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" font-family="sans-serif">${n}</text></g>`;
+}
+function signalBox(sc, myRole) {
+  if (!sc.sig || (!sc.sig[0] && !sc.sig[1])) return '';
+  const color = s => /녹색/.test(s) ? '#12B886' : /적색/.test(s) ? '#F04452' : /황색/.test(s) ? '#F5A524' : '#8B95A1';
+  /* sig[0] 은 A 역할, sig[1] 은 B 역할의 신호다. 사용자가 B 이면 이름표를 바꿔 단다. */
+  const name = i => (i === 0 ? 'A' : 'B') === myRole ? '내 쪽' : '상대';
+  let g = `<rect x="10" y="10" width="184" height="${sc.sig[1] ? 56 : 32}" rx="10" fill="#fff" opacity=".95"/>`;
+  if (sc.sig[0]) g += `<circle cx="26" cy="26" r="7" fill="${color(sc.sig[0])}"/>
+    <text x="40" y="30" font-size="12.5" font-weight="800" fill="${CO.txt}" font-family="sans-serif">${name(0)} ${esc(sc.sig[0])}</text>`;
+  if (sc.sig[1]) g += `<circle cx="26" cy="50" r="7" fill="${color(sc.sig[1])}"/>
+    <text x="40" y="54" font-size="12.5" font-weight="800" fill="${CO.txt}" font-family="sans-serif">${name(1)} ${esc(sc.sig[1])}</text>`;
+  return g;
+}
+
+/* myRole: 'A' | 'B' — 사용자가 어느 역할인지. 그 쪽이 파란색 「내 차」가 된다. */
+function drawScene(sc, myRole) {
+  if (!sc) return '';
+  let g = `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg" role="img">` + roadBase(sc);
+  const cars = sc.cars || [];
+  const paths = cars.map(c => ({c, p: pathOf(sc, c)}));
+  const spot = ({c, p}) => along(p, c.at != null ? c.at : (c.act === 'parked' ? .5 : .42));
+  const hit = paths.length >= 2 ? nearest(paths[0].p, paths[1].p, spot(paths[0]), spot(paths[1])) : null;
+  const pins = [];
+
+  paths.forEach(({c, p}, i) => {
+    const mine = c.who === myRole;
+    const isPed = sc.ped === c.who || c.act === 'walk';
+    const kind = sc.moto === c.who ? 'moto' : (sc.bike === c.who ? 'bike' : 'car');
+    const col = isPed ? CO.walk : (mine ? CO.me : CO.op);
+    const noun = kind === 'moto' ? '오토바이' : kind === 'bike' ? '자전거' : '차';
+    const at = c.at != null ? c.at : (c.act === 'parked' ? .5 : .42);
+    const pos = along(p, at), ang = angleAt(p, at);
+    if (c.act !== 'parked')
+      g += `<polyline points="${p.map(q => q[0].toFixed(1)+','+q[1].toFixed(1)).join(' ')}" fill="none"
+              stroke="${col}" stroke-width="3.5" stroke-dasharray="9 8" opacity=".42" stroke-linecap="round"/>`;
+    if (c.act === 'back') g += arrowHead(along(p,.99), angleAt(p,.99), col);
+    else if (c.act !== 'parked') g += arrowHead(along(p,.985), angleAt(p,.985), col);
+    if (c.act === 'door') g += `<rect x="${pos[0]-4}" y="${pos[1]-42}" width="8" height="30" rx="3" fill="${col}"/>`;
+    g += isPed ? pedIcon(pos[0], pos[1], CO.walk)
+               : carIcon(pos[0], pos[1], ang, col, (mine ? '내 ' : '상대 ') + noun, kind);
+    pins.push([pos[0] - 26, pos[1] - 24, i + 1]);
+  });
+
+  if (hit) {
+    g += `<circle cx="${hit[0]}" cy="${hit[1]}" r="24" fill="${CO.hit}" opacity=".2"/>
+          <path d="${starPath(hit[0], hit[1], 14)}" fill="${CO.hit}"/>`;
+    pins.push([hit[0] + 26, hit[1] - 20, paths.length + 1]);
+  }
+  g += signalBox(sc, myRole);
+  pins.forEach(([x, y, n]) => g += pinBadge(clamp(x, 16, VW-16), clamp(y, 16, VH-16), n));
+  return g + '</svg>';
+}
+
+/* 충돌 부위 그림 */
+const ZONE = {F:[22,4,36,14], FR:[52,14,18,20], R:[52,36,18,32], BR:[52,72,18,20],
+              B:[22,92,36,14], BL:[10,72,18,20], L:[10,36,18,32], FL:[10,14,18,20]};
+const ZNAME = {F:'앞', FR:'앞 우측', R:'오른쪽 옆', BR:'뒤 우측', B:'뒤', BL:'뒤 좌측', L:'왼쪽 옆', FL:'앞 좌측'};
+function hitDiagram(zone, col) {
+  let g = `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
+    <rect x="10" y="4" width="60" height="102" rx="14" fill="#E5E8EB"/>
+    <rect x="20" y="22" width="40" height="26" rx="6" fill="#fff" opacity=".8"/>
+    <rect x="20" y="58" width="40" height="26" rx="6" fill="#fff" opacity=".8"/>`;
+  const z = ZONE[zone];
+  if (z) g += `<rect x="${z[0]}" y="${z[1]}" width="${z[2]}" height="${z[3]}" rx="5" fill="${col}"/>`;
+  return g + '</svg>';
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3. 직접 고르기 (규칙 엔진 UI)
+   ══════════════════════════════════════════════════════════════════════ */
+const CATS = [...new Set(CHARTS.map(c => c.cat))];
+let PICKED = null, MYROLE = 'A';
+
+$('catbox').innerHTML = CATS.map(c => `<div class="chip" data-c="${esc(c)}">${esc(c)}</div>`).join('');
+$('catbox').onclick = e => {
+  const d = e.target.closest('.chip'); if (!d) return;
+  $('catbox').querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+  d.classList.add('on'); renderChartList(d.dataset.c);
+};
+function renderChartList(cat) {
+  const list = CHARTS.filter(c => c.cat === cat);
+  $('chartbox').innerHTML = list.map(c => `<div class="citem" data-id="${c.id}">
+    <div class="cc">${esc(c.cat)}${c.official ? ' · 도표 ' + esc(c.official) : ''}</div>
+    <div class="cn">${esc(c.name)}</div>
+    <div class="cb">${c.base[0]} : ${c.base[1]} <s>· ${esc(c.A)} : ${esc(c.B)}</s></div></div>`).join('');
+  $('rolebox').innerHTML = '';
+  PICKED = null;
+}
+$('chartbox').onclick = e => {
+  const d = e.target.closest('.citem'); if (!d) return;
+  $('chartbox').querySelectorAll('.citem').forEach(x => x.classList.remove('on'));
+  d.classList.add('on');
+  PICKED = chartById(d.dataset.id); MYROLE = 'A';
+  renderRole();
+};
+function renderRole() {
+  if (!PICKED) return;
+  $('rolebox').innerHTML = `<label class="fl">3. 이 사고에서 나는 어느 쪽입니까</label>
+    <div class="chipset" id="rolechips">
+      <div class="chip ${MYROLE==='A'?'on':''}" data-r="A">${esc(PICKED.A)} (${PICKED.base[0]}%)</div>
+      <div class="chip ${MYROLE==='B'?'on':''}" data-r="B">${esc(PICKED.B)} (${PICKED.base[1]}%)</div>
+    </div>
+    <div class="okbox">${esc(PICKED.why)}</div>`;
+  $('rolechips').onclick = e => {
+    const d = e.target.closest('.chip'); if (!d) return;
+    MYROLE = d.dataset.r; renderRole(); renderMods();
+  };
+  renderMods();
+}
+
+/* 수정요소 칩 — 도표 고유 + 공통 */
+let MODPICK = [];
+function modPool() {
+  const own = (PICKED?.mods || []).map(m => ({...m, src:'도표'}));
+  const gen = MODS.map(m => ({...m, src:'공통'}));
+  return own.concat(gen);
+}
+function renderMods() {
+  const pool = modPool();
+  const label = w => w === MYROLE ? '🔴 내 쪽' : '🔵 상대 쪽';
+  const rows = [];
+  /* 도표 고유 수정요소는 대상이 정해져 있다 */
+  pool.filter(m => m.src === '도표').forEach((m, i) => {
+    rows.push(`<div class="chip g-${m.g||'etc'}" data-k="${i}" data-src="own">${label(m.who)} · ${esc(m.k)} ${m.v>0?'+':''}${m.v}%</div>`);
+  });
+  /* 공통 수정요소는 양쪽 모두 고를 수 있게 두 개씩 */
+  let out = `<div class="chipset">${rows.join('')}</div>`;
+  ['A','B'].forEach(side => {
+    const t = side === MYROLE ? '🔴 내 쪽에 해당하는 것' : '🔵 상대 쪽에 해당하는 것';
+    out += `<label class="fl">${t}</label><div class="chipset">` +
+      pool.map((m, i) => m.src !== '공통' ? '' :
+        `<div class="chip g-${m.g}" data-k="${i}" data-side="${side}">${esc(m.k)} ${m.v>0?'+':''}${m.v}%</div>`).join('') +
+      `</div>`;
+  });
+  $('modbox').innerHTML = out;
+  $('modbox').querySelectorAll('.chip').forEach(c => c.onclick = () => c.classList.toggle('on'));
+}
+function collectMods() {
+  const pool = modPool(); const picks = [];
+  $('modbox').querySelectorAll('.chip.on').forEach(c => {
+    const m = pool[+c.dataset.k]; if (!m) return;
+    picks.push({who: c.dataset.src === 'own' ? m.who : c.dataset.side, k: m.k, v: m.v, g: m.g || 'etc', law: m.law});
+  });
+  return picks;
+}
+/* 첫 화면 — 첫 분류를 열어 둔다 */
+$('catbox').querySelector('.chip').classList.add('on');
+renderChartList(CATS[0]);
+renderMods();
+
+/* ══════════════════════════════════════════════════════════════════════
+   4. 업로드
+   ══════════════════════════════════════════════════════════════════════ */
+let IMGS = [], FRAMES = [];
+$('idrop').onclick = () => $('ifile').click();
+$('ifile').onchange = e => {
+  const fs = [...e.target.files].slice(0, 6); IMGS = []; $('ithumbs').innerHTML = '';
+  fs.forEach(f => { const r = new FileReader();
+    r.onload = () => shrink(r.result, 1000).then(d => {
+      IMGS.push({media:'image/jpeg', data: d.split(',')[1]});
+      const im = document.createElement('img'); im.src = d; $('ithumbs').appendChild(im); });
+    r.readAsDataURL(f); });
+};
+function shrink(src, max) {
+  return new Promise(res => { const img = new Image(); img.onload = () => {
+    let w = img.width, h = img.height;
+    if (w > max || h > max) { const s = max/Math.max(w,h); w = Math.round(w*s); h = Math.round(h*s); }
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    c.getContext('2d').drawImage(img, 0, 0, w, h); res(c.toDataURL('image/jpeg', .78)); }; img.src = src; });
+}
+$('vdrop').onclick = () => $('vfile').click();
+$('vfile').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  $('vinfo').innerHTML = '<div class="filetag">📼 ' + esc(f.name) + ' — 장면 추출 중...</div>';
+  extractFrames(f, 9).then(fr => {
+    FRAMES = fr.map(d => ({media:'image/jpeg', data: d.split(',')[1]}));
+    const t = $('vthumbs'); t.innerHTML = '';
+    fr.forEach(d => { const im = new Image(); im.src = d; t.appendChild(im); });
+    $('vinfo').innerHTML = '<div class="filetag">✓ ' + esc(f.name) + ' — 장면 ' + fr.length + '컷 추출 완료</div>';
+  }).catch(() => { $('vinfo').innerHTML = '<div class="filetag" style="background:#FFF4F4;color:#D63A46">영상을 읽지 못했습니다. 사진 탭을 이용해 주세요.</div>'; });
+};
+function extractFrames(file, n) {
+  return new Promise((res, rej) => { const v = $('vprev');
+    v.preload = 'auto'; v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file); v.onerror = rej;
+    v.onloadedmetadata = async () => { const dur = v.duration;
+      if (!isFinite(dur) || dur <= 0) { rej(); return; }
+      const c = document.createElement('canvas');
+      let w = v.videoWidth, h = v.videoHeight; const max = 900;
+      if (w > max) { h = Math.round(h*max/w); w = max; }
+      c.width = w; c.height = h; const ctx = c.getContext('2d'); const out = [];
+      for (let i = 0; i < n; i++) { await seek(v, dur*(i+.5)/n); ctx.drawImage(v, 0, 0, w, h); out.push(c.toDataURL('image/jpeg', .72)); }
+      res(out); }; });
+}
+function seek(v, t) { return new Promise(r => { const h = () => { v.removeEventListener('seeked', h); setTimeout(r, 60); };
+  v.addEventListener('seeked', h); v.currentTime = t; }); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   5. AI 호출 — 회사 서버(/api/generate) 우선, 없으면 개인 키로 직접
+   ══════════════════════════════════════════════════════════════════════ */
+const MODEL = 'claude-sonnet-4-6';
+const myKey = () => (localStorage.getItem('apex_key') || '').trim();
+
+async function ask(sys, content, opt) {
+  opt = opt || {};
+  const key = myKey();
+  const body = {model: MODEL, max_tokens: opt.max || 2500, system: sys, messages:[{role:'user', content}]};
+  if (opt.tools && key) body.tools = [{type:'web_search_20250305', name:'web_search'}];
+
+  if (key) {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01',
+               'anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify(body)});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    return d.content.filter(x => x.type === 'text').map(x => x.text).join('\n');
+  }
+  const r = await fetch('/api/generate', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  if (!r.ok) { let m = 'HTTP ' + r.status; try { m = (await r.json()).message || m; } catch(_){} throw new Error(m); }
+  const d = await r.json();
+  return d.text || '';
+}
+function parseJSON(t) {
+  const c = String(t).replace(/```json|```/g, '').trim();
+  const s = c.indexOf('{'), e = c.lastIndexOf('}');
+  if (s < 0) throw new Error('AI 응답 형식 오류');
+  return JSON.parse(c.slice(s, e+1));
+}
+function step(id, state) {
+  const el = $(id); el.className = 'st ' + state;
+  el.querySelector('.ic').innerHTML = state === 'on' ? '<div class="mini"></div>' : (state === 'done' ? '✓' : id[1]);
+}
+const showErr = m => { const e = $('err'); e.textContent = m; e.style.display = 'block'; };
+const hideErr = () => $('err').style.display = 'none';
+
+/* ══════════════════════════════════════════════════════════════════════
+   6. 실행
+   ══════════════════════════════════════════════════════════════════════ */
+let CTX = '', MEDIA = [], RES = {};
+
+$('go').onclick = async () => {
+  const active = document.querySelector('.tab.on').dataset.p;
+  let desc = ''; MEDIA = [];
+  if (active === 'p1') desc = $('desc').value.trim();
+  if (active === 'p2') { desc = $('vdesc').value.trim(); MEDIA = FRAMES; }
+  if (active === 'p3') { desc = $('idesc').value.trim(); MEDIA = IMGS; }
+  if (active === 'p0' && !PICKED) { showErr('상황을 하나 골라주세요.'); return; }
+  if (active !== 'p0' && !desc && !MEDIA.length) { showErr('사고 상황을 적거나 영상·사진을 올려주세요.'); return; }
+  hideErr();
+
+  /* ── 직접 고르기: AI 없이 즉시 ── */
+  if (active === 'p0') {
+    RES = {chart: PICKED, role: MYROLE, picks: collectMods(), mode:'직접 선택'};
+    RES.fault = calcFault(PICKED.base, RES.picks);
+    $('inputCard').style.display = 'none';
+    renderAll();
+    /* 판례·안내문은 AI 가 붙어 있을 때만 덧붙인다 */
+    if (myKey() || location.protocol.startsWith('http')) enrich();
+    return;
+  }
+
+  /* ── AI 분석 ── */
+  CTX = `· 상대 대상: ${$('counter').value}
+· 첨부: ${MEDIA.length ? (active === 'p2' ? '블랙박스 영상 캡처 ' + MEDIA.length + '컷(시간순)' : '현장 사진 ' + MEDIA.length + '장') : '없음'}
+· 사고 설명: ${desc || '(설명 없음 — 첨부 이미지로 판단)'}`;
+
+  $('inputCard').style.display = 'none';
+  $('result').innerHTML = '';
+  $('load').style.display = 'block';
+  ['s1','s2','s3','s4'].forEach(i => step(i, ''));
+  window.scrollTo({top:0, behavior:'smooth'});
+
+  try {
+    step('s1','on');
+    const cls = await classify();
+    step('s1','done'); step('s2','on');
+
+    const ch = chartById(cls.도표) || null;
+    if (ch) {
+      RES = {chart: ch, role: cls.내역할 === 'B' ? 'B' : 'A', mode:'AI 분석', ai: cls,
+             picks: (cls.수정요소 || []).map(m => ({who: m.대상 === '상대' ? (cls.내역할==='A'?'B':'A') : (cls.내역할==='A'?'A':'B'),
+                                                   k: m.항목, v: +m.증감 || 0, g: m.종류 || 'etc'}))};
+      RES.fault = calcFault(ch.base, RES.picks);
+    } else {
+      /* 도표에 없는 비정형 사고 — AI 가 직접 산정한 값을 쓰되 표시를 다르게 한다 */
+      RES = {chart: null, role:'A', mode:'비정형(도표 없음)', ai: cls, picks: [],
+             fault: {A: clamp(+cls.기본과실_본인 || 50, 0, 100), B: 100 - clamp(+cls.기본과실_본인 || 50, 0, 100),
+                     sideA:{add:0,sub:0,notes:[],list:[]}, sideB:{add:0,sub:0,notes:[],list:[]},
+                     base:[clamp(+cls.기본과실_본인 || 50,0,100), 100 - clamp(+cls.기본과실_본인 || 50,0,100)]}};
+    }
+    step('s2','done');
+    renderAll();
+    await enrich();
+    $('load').style.display = 'none';
+  } catch (e) {
+    $('load').style.display = 'none';
+    $('inputCard').style.display = 'block';
+    showErr('분석에 실패했습니다. (' + e.message + ') 회사 서버가 없는 곳에서 열었다면 ⚙︎ 에서 API 키를 넣거나, 「직접 고르기」 탭을 쓰면 AI 없이도 결과가 나옵니다.');
+  }
+};
+
+/* 1단계 — 어느 도표인지 고르게 한다 (숫자는 AI 가 만들지 않는다) */
+async function classify() {
+  const idx = CHARTS.map(c => `${c.id} | ${c.cat} | ${c.name} | A=${c.A} B=${c.B} | 기본 ${c.base[0]}:${c.base[1]}`).join('\n');
+  const modIdx = MODS.map(m => `${m.k} (${m.g}, ${m.v > 0 ? '+' : ''}${m.v}%)`).join('\n');
+  const sys = `당신은 한국 자동차보험 손해사정 실무자다. 손해보험협회 「자동차사고 과실비율 인정기준」으로 사고를 분류한다.
+
+[해야 할 일]
+1. 아래 도표 목록에서 이 사고에 가장 가까운 것 하나를 고른다.
+2. 사용자가 그 도표의 A 역할인지 B 역할인지 정한다.
+3. 적용할 수정요소를 아래 목록에서만 고른다. 목록에 없는 항목은 만들지 않는다.
+4. 과실 숫자는 절대 직접 계산하지 않는다. 계산은 프로그램이 한다.
+
+[도표 목록]
+${idx}
+
+[고를 수 있는 수정요소]
+${modIdx}
+
+[원칙]
+- 이미지가 있으면 시간순으로 진행방향·신호·차로·충돌부위를 읽는다.
+- 정보가 부족하면 단정하지 말고 신뢰도를 낮추고 추가질문에 담는다.
+- 목록의 어느 도표에도 맞지 않으면 도표를 빈 문자열로 두고 기본과실_본인 에 추정치를 적는다.
+- 유리한 점과 불리한 점을 모두 정직하게 쓴다. 과장 금지. "확정"이 아니라 "추정"으로 쓴다.
+
+[출력] 설명 없이 JSON 만:
+{"도표":"S01 같은 id 또는 빈 문자열","내역할":"A|B","기본과실_본인":0,
+"요약":"한 문장으로 사고 정리","관측":["이미지·설명에서 실제로 확인한 사실만"],
+"수정요소":[{"대상":"본인|상대","항목":"목록에 있는 문구 그대로","증감":10,"종류":"sig|grave|etc|minus"}],
+"신뢰도":"높음|보통|낮음","신뢰도이유":"",
+"유리한주장":[""],"불리한요소":[""],"추가질문":[""],
+"핀":{"본인":"상황도 ①에 붙일 한 줄","상대":"②에 붙일 한 줄","충돌":"③에 붙일 한 줄"},
+"검색어":"판례를 찾기 위한 한국어 검색어 한 줄"}`;
+  const content = [];
+  MEDIA.slice(0, 10).forEach(m => content.push({type:'image', source:{type:'base64', media_type:m.media, data:m.data}}));
+  content.push({type:'text', text:'[입력 정보]\n' + CTX});
+  return parseJSON(await ask(sys, content, {max: 2500}));
+}
+
+/* 3·4단계 — 판례와 안내문 */
+async function enrich() {
+  try {
+    step('s3','on');
+    if (myKey()) { RES.cases = await findCases(); }
+    step('s3','done');
+  } catch(_) { step('s3','done'); }
+  renderCases();
+  try {
+    step('s4','on');
+    RES.letter = await writeLetter();
+    step('s4','done');
+  } catch(_) { step('s4','done'); }
+  renderLetter();
+  $('load').style.display = 'none';
+}
+
+async function findCases() {
+  const c = RES.chart;
+  const q = (RES.ai && RES.ai.검색어) || (c ? c.name + ' 과실비율 판례' : '교통사고 과실비율 판례');
+  const sys = `너는 한국 교통사고 판례 리서처다. web_search 도구로 검색해 유사 사례를 찾는다.
+[절대 원칙]
+- 검색 결과에 실제로 나온 내용만 쓴다. 사건번호·판결내용을 절대 지어내지 않는다.
+- 검색 결과에서 확인되지 않는 사건번호는 쓰지 말고 제목만 쓴다.
+- 출처 URL 은 검색 결과에 있는 것만 그대로 쓴다. 없으면 빈 문자열.
+- 찾은 게 없으면 빈 배열을 반환한다.
+[출력] 설명 없이 JSON 만:
+{"사례":[{"제목":"","출처":"대법원|하급심|분쟁심의위|언론보도|해설","요지":"2~3문장","과실":"예: 80:20 또는 확인 안 됨","url":""}],
+"정리":"찾은 사례가 이 사고에 시사하는 점 2~3문장. 없으면 못 찾았다고 쓴다."}`;
+  const txt = await ask(sys,
+    `다음 사고와 유사한 판례·분쟁조정 사례·보도자료를 찾아줘.\n검색어: "${q}", "${q} 판결", "${q} 손해배상"\n\n[사고 개요]\n${c ? c.name + ' — ' + c.why : (RES.ai?.요약 || '')}\n[추정 과실] 나 ${RES.fault.A} : 상대 ${RES.fault.B}`,
+    {tools:true, max:2500});
+  return parseJSON(txt);
+}
+
+async function writeLetter() {
+  const name = $('cname').value.trim();
+  const c = RES.chart;
+  const sys = `너는 보험설계사가 고객에게 보내는 사고처리 안내문을 쓰는 작성자다.
+[톤] 존댓말 ~습니다체. 전문용어는 풀어서 설명한다. 겁주지 않고 차분하게. 과장·확언 금지.
+[내용 원칙]
+- 과실비율은 "추정"이며 확정이 아님을 초반에 밝힌다.
+- 대인 처리(상대방/본인)와 자동차상해 담보 활용을 안내한다. 자동차상해는 중복수령이 아니라 과실상계로 부족해진 부분을 메우는 구조라고 설명한다.
+- 치료비 중 본인 과실분은 나중에 합의금에서 공제된다는 점을 부드럽게 알린다.
+- 자기부담금·할증·환입(취소) 검토 절차를 짧게 안내한다.
+- 고객이 지금 해야 할 일을 3~4개로 정리한다.
+[출력] 설명 없이 JSON 만:
+{"제목":"","인사":"1~2문장","현황":"사고 상황과 추정 과실 설명 3~4문장",
+"보상안내":"받을 수 있는 보상 항목 설명 3~4문장","할증안내":"보험료 할증과 환입 검토 안내 2~3문장",
+"할일":["지금 하실 일 3~4개"],"맺음":"1~2문장"}`;
+  const txt = await ask(sys,
+`[고객명] ${name || '고객님'}
+[사고 유형] ${c ? c.name : (RES.ai?.요약 || '분류되지 않은 사고')}
+[내 역할] ${c ? (RES.role === 'A' ? c.A : c.B) : '본인'}
+[추정 과실] 나 ${RES.fault.A} : 상대 ${RES.fault.B}
+[근거] ${c ? c.why : ''}
+[확보할 증거] ${(c?.evid || []).join(', ')}`, {max: 2000});
+  return parseJSON(txt);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   7. 결과 렌더
+   ══════════════════════════════════════════════════════════════════════ */
+function sec(t, arr, cls) {
+  if (!arr || !arr.length) return '';
+  return `<div class="sec"><h3 class="${cls||''}"><span class="dot"></span>${t}</h3>${arr.map(x => '<div class="li">' + esc(x) + '</div>').join('')}</div>`;
+}
+
+function renderAll() {
+  const f = RES.fault, c = RES.chart;
+  const me = RES.role === 'A' ? f.A : f.B, op = 100 - me;
+  const mySide = RES.role === 'A' ? f.sideA : f.sideB;
+  const opSide = RES.role === 'A' ? f.sideB : f.sideA;
+  const baseMe = RES.role === 'A' ? f.base[0] : f.base[1];
+
+  /* 산정 과정 */
+  let rows = `<div class="crow"><div class="l">기본과실<i>${c ? esc(c.name) + ' — ' + esc(RES.role === 'A' ? c.A : c.B) + ' 기준' : 'AI 추정'}</i></div>
+    <div class="v">${baseMe} : ${100 - baseMe}</div></div><div class="cline"></div>`;
+  const lines = [];
+  mySide.list.forEach(m => lines.push(`<div class="crow"><div class="l">🔴 내 쪽 · ${esc(m.k)}${m.law && LAW[m.law] ? `<i>${esc(LAW[m.law].n)} ${esc(LAW[m.law].t)}</i>` : ''}</div>
+    <div class="v ${m.v > 0 ? 'up' : 'down'}">${m.v > 0 ? '+' : ''}${m.v}%</div></div>`));
+  opSide.list.forEach(m => lines.push(`<div class="crow"><div class="l">🔵 상대 쪽 · ${esc(m.k)}${m.law && LAW[m.law] ? `<i>${esc(LAW[m.law].n)} ${esc(LAW[m.law].t)}</i>` : ''}</div>
+    <div class="v ${m.v > 0 ? 'down' : 'up'}">${m.v > 0 ? '+' : ''}${m.v}%</div></div>`));
+  rows += lines.length ? lines.join('') : '<div class="crow"><div class="l">적용된 수정요소 없음</div><div class="v" style="color:#B0B8C1">—</div></div>';
+  rows += `<div class="cline"></div><div class="crow total"><div class="l">최종 추정 과실 (나 : 상대)</div><div class="v">${me} : ${op}</div></div>`;
+  const capNotes = [].concat(mySide.notes, opSide.notes);
+
+  const conf = RES.ai ? `추정 신뢰도 ${esc(RES.ai.신뢰도 || '보통')} · ${esc(RES.ai.신뢰도이유 || '')}`
+                      : '직접 선택한 상황이라 인정기준 도표를 그대로 적용했습니다';
+
+  let html = `<div class="card">
+    <div class="rtype ${c ? '' : 'warn'}">${esc(RES.mode)}${c ? ' · ' + esc(c.cat) + (c.official ? ' · 도표 ' + esc(c.official) : '') : ''}</div>
+    <div class="rtitle">${esc(c ? c.name : (RES.ai?.요약 || '사고 분석 결과'))}</div>
+    <div class="bar"><div class="me" style="width:${me}%"><b>${me}%</b><span>나</span></div>
+      <div class="op" style="width:${op}%"><b>${op}%</b><span>상대방</span></div></div>
+    <div class="conf">${conf}</div>
+    <div class="calc"><div class="calc-t">산정 과정 — 기본과실에 수정요소를 더하고 뺍니다</div>${rows}</div>
+    ${capNotes.length ? `<div class="notebox">${capNotes.map(esc).join('<br>')}</div>` : ''}
+  </div>`;
+
+  /* 사고 상황도 + 왜 그런지 */
+  if (c && c.scene) {
+    const pinAI = RES.ai?.핀 || {};
+    const roleName = r => r === 'A' ? c.A : c.B;
+    const p1 = c.scene.cars[0], p2 = c.scene.cars[1];
+    const pinText = car => {
+      const mine = car.who === RES.role;
+      const custom = mine ? pinAI.본인 : pinAI.상대;
+      return `<b>${mine ? '내 차' : '상대 차'} — ${esc(roleName(car.who))}</b> · ${esc(custom || actWord(car.act))}. 기본과실 ${car.who === 'A' ? c.base[0] : c.base[1]}%로 출발합니다.`;
+    };
+    html += `<div class="sec"><h3><span class="dot"></span>사고 상황도 — 왜 이 숫자가 나왔는지</h3>
+      <div class="scene">${drawScene(c.scene, RES.role)}</div>
+      <div class="legend">
+        <div class="lg"><i style="background:${CO.me}"></i>내 차</div>
+        <div class="lg"><i style="background:${CO.op}"></i>상대</div>
+        <div class="lg"><i style="background:${CO.hit}"></i>충돌 지점</div>
+        ${c.scene.ped ? `<div class="lg"><i style="background:${CO.walk}"></i>보행자</div>` : ''}
+      </div>
+      <div class="pins">
+        <div class="pin"><u>1</u><p>${pinText(p1)}</p></div>
+        ${p2 ? `<div class="pin"><u>2</u><p>${pinText(p2)}</p></div>` : ''}
+        <div class="pin"><u>3</u><p><b>충돌 지점</b> · ${esc(pinAI.충돌 || hitWord(c, RES.role))}</p></div>
+        ${c.scene.sig && (c.scene.sig[0] || c.scene.sig[1]) ? `<div class="pin"><u>4</u><p><b>신호·표지</b> · ${esc(c.scene.sig.filter(Boolean).join(' / '))} 상태였다는 전제입니다. 신호가 다르면 결론이 통째로 바뀝니다.</p></div>` : ''}
+      </div>
+      ${c.hit && c.hit.A && c.hit.B ? `<div class="hits">
+        <div class="hitbox"><div class="cap">내 차 파손 부위</div>${hitDiagram(RES.role === 'A' ? c.hit.A : c.hit.B, CO.me)}
+          <div class="z">${esc(ZNAME[RES.role === 'A' ? c.hit.A : c.hit.B] || '—')}</div></div>
+        <div class="hitbox"><div class="cap">상대 차 파손 부위</div>${hitDiagram(RES.role === 'A' ? c.hit.B : c.hit.A, CO.op)}
+          <div class="z">${esc(ZNAME[RES.role === 'A' ? c.hit.B : c.hit.A] || '—')}</div></div>
+      </div>
+      <div class="notebox">파손 부위는 말보다 정확한 증거입니다. 옆면을 받았으면 상대가 먼저 들어와 있었다는 뜻이고, 앞면끼리면 동시 진입에 가깝습니다. 실제 사진과 이 그림이 다르면 과실이 달라질 수 있으니 담당자에게 사진을 꼭 보여주세요.</div>` : ''}
+    </div>`;
+  }
+
+  /* 왜 이렇게 되는가 + 법조문 */
+  if (c) {
+    html += `<div class="sec"><h3><span class="dot"></span>이 과실이 나오는 이유</h3>
+      <div class="para">${esc(c.why)}</div></div>`;
+    const laws = (c.law || []).map(k => LAW[k]).filter(Boolean);
+    if (laws.length) html += `<div class="sec"><h3><span class="dot"></span>근거 법조문</h3>
+      ${laws.map(l => `<div class="lawc"><div class="n">${esc(l.n)}</div><div class="t">${esc(l.t)}</div><div class="d">${esc(l.d)}</div></div>`).join('')}
+      <div class="notebox">조문 원문은 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:#8B6D1F">국가법령정보센터</a>에서 확인할 수 있습니다.</div></div>`;
+  }
+
+  if (RES.ai?.관측?.length) html += sec('AI 가 영상·사진에서 실제로 읽어낸 것', RES.ai.관측, '');
+  html += sec('유리하게 주장할 수 있는 점', RES.ai?.유리한주장 || defaultPro(), '');
+  html += sec('불리하게 작용할 수 있는 점', RES.ai?.불리한요소 || defaultCon(), 'red');
+  html += sec('지금 확보해야 할 증거', c?.evid || [], 'green');
+  html += sec('이것까지 확인되면 정확해집니다', RES.ai?.추가질문 || [], 'gray');
+
+  html += `<div id="casebox"></div><div id="paybox"></div><div id="letterbox"></div>
+    <div class="sec">
+      <h3><span class="dot"></span>납득이 안 되면</h3>
+      <div class="para">과실비율은 <b>보험사끼리 협의한 결과</b>이지 통보 사항이 아닙니다. 담당자에게 「어느 도표를 적용했고 수정요소가 무엇인지」 물어 기록으로 남기세요.
+      그래도 납득이 안 되면 손해보험협회 <b>과실비율분쟁심의위원회</b>로 갑니다. 신청은 보험사가 하고 비용은 보험사·공제사가 부담하므로 가입자가 내는 돈은 없습니다.
+      대표협의회 → 소심의위원회 → 재심의위원회 3단계로 진행되고, 결정에 이의가 있으면 이의기간(24일) 안에 다음 단계를 요청합니다. 마지막은 법원입니다.</div>
+      <a class="linkc" href="https://accident.knia.or.kr" target="_blank" rel="noopener" style="margin-top:12px">
+        <div class="t">공식 도표에서 직접 확인하기</div>
+        <div class="u">accident.knia.or.kr</div>
+        <div class="d">손해보험협회 과실비율 정보포털. 인정기준 원문 도표와 심의제도 안내가 있습니다.</div></a>
+      <button class="btn ghost sm" onclick="location.reload()">다시 분석하기</button>
+      <button class="btn ghost sm" onclick="window.print()">전체 저장 · 인쇄</button>
+    </div>`;
+
+  const R = $('result'); R.innerHTML = html; R.style.display = 'block';
+  fillPayFromResult();
+  renderPayInline();
+  renderCases();   /* AI 판례가 없어도 법리 카드는 먼저 보여 준다 */
+}
+
+function actWord(a) {
+  return {straight:'직진하고 있었습니다', left:'좌회전 중이었습니다', right:'우회전 중이었습니다',
+    'lc-l':'왼쪽 차로로 진로를 변경했습니다', 'lc-r':'오른쪽 차로로 진로를 변경했습니다',
+    center:'중앙선을 넘어왔습니다', uturn:'유턴했습니다', back:'후진했습니다', stop:'정지·급제동했습니다',
+    parked:'정차·주차해 있었습니다', door:'문을 열었습니다', walk:'걸어서 건너고 있었습니다',
+    enter:'교차로에 진입했습니다', circle:'회전교차로를 돌고 있었습니다', overtake:'앞지르기했습니다',
+    sidewalk:'보도로 올라섰습니다'}[a] || '진행 중이었습니다';
+}
+function hitWord(c, role) {
+  const mine = ZNAME[role === 'A' ? c.hit?.A : c.hit?.B], other = ZNAME[role === 'A' ? c.hit?.B : c.hit?.A];
+  const base = mine && other ? `내 차 ${mine}과 상대 차 ${other}이 부딪히는 것이 이 유형의 전형적인 모습입니다. ` : '';
+  return base + '충돌 부위가 이와 다르면 진입 순서나 진로가 다르다는 뜻이므로 과실이 조정될 수 있습니다.';
+}
+function defaultPro() {
+  const c = RES.chart; if (!c) return [];
+  const meBase = RES.role === 'A' ? c.base[0] : c.base[1];
+  const out = [];
+  if (meBase <= 30) out.push('인정기준상 이 유형은 상대 과실이 기본적으로 무겁습니다. 도표 번호와 기본과실을 먼저 제시하고 협의를 시작하세요.');
+  if (meBase === 0) out.push('일방과실(0:100) 유형입니다. 상대 보험사가 쌍방과실을 주장하면 인정기준 도표를 근거로 반박할 수 있습니다.');
+  out.push('블랙박스 원본과 현장 사진을 먼저 제출하면 협의 주도권을 가져올 수 있습니다.');
+  out.push('상대의 법규위반(신호·중앙선·실선·방향지시등)이 영상으로 확인되면 수정요소로 과실을 더 낮출 수 있습니다.');
+  return out;
+}
+function defaultCon() {
+  const c = RES.chart; if (!c) return [];
+  const out = ['속도가 빨랐다면 「현저한 과실」로 +10%, 20km/h 초과면 「중대한 과실」로 +20%가 붙습니다.',
+               '블랙박스가 없거나 구간이 잘려 있으면 상대 주장이 그대로 받아들여질 수 있습니다.'];
+  const meBase = RES.role === 'A' ? c.base[0] : c.base[1];
+  if (meBase >= 50) out.push('이 유형은 내 쪽 기본과실이 이미 무겁습니다. 선진입·상대 위반 같은 감산 근거를 찾는 것이 핵심입니다.');
+  return out;
+}
+
+function renderCases() {
+  const box = $('casebox'); if (!box) return;
+  const c = RES.cases;
+  let html = `<div class="sec"><h3><span class="dot"></span>알아 두면 좋은 법리</h3>
+    ${CASELAW.map(x => `<div class="case"><div class="ct">${esc(x.t)}</div><div class="cs">${esc(x.c)}</div>
+      <div class="cd">${esc(x.d)}</div>
+      ${x.u ? `<a href="${esc(x.u)}" target="_blank" rel="noopener">원문 찾아보기</a>` : ''}</div>`).join('')}</div>`;
+
+  if (c && c.사례 && c.사례.length) {
+    html += `<div class="sec"><h3><span class="dot"></span>웹에서 찾은 유사 사례 ${c.사례.length}건</h3>
+      ${c.사례.map(x => `<div class="case"><div class="ct">${esc(x.제목)}</div><div class="cs">${esc(x.출처 || '')}</div>
+        <div class="cd">${esc(x.요지 || '')}</div>
+        ${x.과실 ? `<span class="cr">${esc(x.과실)}</span>` : ''}
+        ${x.url ? `<a href="${esc(x.url)}" target="_blank" rel="noopener">원문 보기</a>` : ''}</div>`).join('')}
+      ${c.정리 ? `<div class="para" style="margin-top:12px">${esc(c.정리)}</div>` : ''}
+      <div class="notebox">검색으로 찾은 결과입니다. 고객에게 인용하기 전 반드시 원문과 사건번호를 확인하세요.</div></div>`;
+  } else {
+    html += `<div class="sec"><h3 class="gray"><span class="dot"></span>유사 판례 웹검색</h3>
+      <div class="li">${myKey() ? '검색으로는 이 사고와 충분히 유사한 공개 사례를 찾지 못했습니다.' : '판례 웹검색은 개인 API 키를 넣어야 켜집니다(⚙︎ 메뉴). 키 없이도 위의 법리와 과실 계산은 그대로 사용할 수 있습니다.'}</div>
+      <div class="li">공식 도표와 심의사례는 <b>과실비율정보포털(accident.knia.or.kr)</b>, 판례 원문은 <b>대법원 종합법률정보(glaw.scourt.go.kr)</b>에서 직접 확인하세요.</div></div>`;
+  }
+  box.innerHTML = html;
+}
+
+function renderLetter() {
+  const box = $('letterbox'); if (!box || !RES.letter) return;
+  const l = RES.letter, name = $('cname').value.trim() || '고객';
+  box.innerHTML = `<div class="sec"><h3><span class="dot"></span>고객 안내문</h3>
+    <div class="lt" id="ltbody">
+      <h2>${esc(l.제목 || '교통사고 처리 안내')}</h2>
+      <div class="to">${esc(name)}님께</div>
+      <p>${esc(l.인사 || '')}</p>
+      <h4>현재 상황</h4><p>${esc(l.현황 || '')}</p>
+      <h4>보상 안내</h4><p>${esc(l.보상안내 || '')}</p>
+      <h4>보험료 · 환입 검토</h4><div class="box">${esc(l.할증안내 || '')}</div>
+      <h4>지금 하실 일</h4><div class="box">${(l.할일 || []).map((x,i) => `<b>${i+1}.</b> ${esc(x)}`).join('<br>')}</div>
+      <p style="margin-top:18px">${esc(l.맺음 || '')}</p>
+      <div class="sign">에이플러스에셋 온탑본부 · APEX YUN PRO<br>본 안내문의 과실비율은 추정치이며, 최종 과실은 보험사 협의와 심의 절차로 확정됩니다.</div>
+    </div>
+    <button class="btn ghost sm" onclick="copyLetter()">안내문 텍스트 복사</button></div>`;
+}
+function copyLetter() {
+  const t = $('ltbody').innerText;
+  navigator.clipboard?.writeText(t).then(() => alert('안내문이 복사되었습니다. 카톡이나 문자에 붙여넣으세요.'))
+    .catch(() => alert('복사에 실패했습니다. 화면에서 직접 선택해 복사해 주세요.'));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   8. 보상 계산
+   ══════════════════════════════════════════════════════════════════════ */
+const gradeSel = $('pf_grade');
+Object.keys(PAY.부상위자료).forEach(g => {
+  const o = document.createElement('option'); o.value = g;
+  o.textContent = g + '급 (위자료 ' + PAY.부상위자료[g].toLocaleString() + '원)';
+  gradeSel.appendChild(o);
+});
+$('pf_my').addEventListener('input', e => {
+  const v = clamp(+e.target.value || 0, 0, 100); $('pf_op').value = 100 - v;
+});
+const num = id => +($(id).value || 0);
+
+function calcPay() {
+  const my = clamp(num('pf_my'), 0, 100), op = 100 - my;
+  const cure = num('pf_cure'), future = num('pf_future');
+  const income = num('pf_income'), days = num('pf_days');
+  const grade = $('pf_grade').value;
+  const fix = num('pf_fix'), value = num('pf_value'), age = num('pf_age'), opfix = num('pf_opfix');
+  const rday = num('pf_rday'), rfee = num('pf_rfee'), norent = $('pf_norent').checked;
+  const limit = num('pf_limit'), useOwn = $('pf_own').value === '1';
+
+  /* 대인 */
+  const 휴업 = income && days ? (income / 30) * days * PAY.휴업손해율 : 0;
+  const 위자료 = grade ? PAY.부상위자료[grade] : 0;
+  const 대인손해 = cure + future + 휴업 + 위자료;
+  const 대인수령 = 대인손해 * op / 100;
+  const 치료비공제 = cure * my / 100;
+
+  /* 대물 */
+  const 전손 = value > 0 && fix > value;
+  const 수리인정 = 전손 ? value : fix;
+  let 시세하락 = 0, 시세근거 = '해당 없음';
+  if (fix > 0 && value > 0 && age > 0 && age <= 5 && fix > value * .2) {
+    const band = PAY.시세하락.find(b => age <= b.y);
+    if (band) { 시세하락 = fix * band.r; 시세근거 = band.t + ' → 수리비의 ' + Math.round(band.r*100) + '%'; }
+  }
+  const 대차 = rday && rfee ? (norent ? rday * rfee * PAY.대차료.미대차율 : rday * rfee) : 0;
+  const 대물손해 = 수리인정 + 시세하락 + 대차;
+  const 대물수령 = 대물손해 * op / 100;
+
+  /* 자차·자기부담금 */
+  const 최저 = PAY.자차자기부담금.최저표[limit] || limit * .1;
+  const 자기부담금 = useOwn && fix > 0 ? clamp(fix * PAY.자차자기부담금.율, 최저, PAY.자차자기부담금.최고) : 0;
+  const 내가물어줄대물 = opfix * my / 100;
+  const 물적보험금 = 내가물어줄대물 + (useOwn ? Math.max(수리인정 * my / 100 - 자기부담금, 0) : 0);
+
+  return {my, op, 휴업, 위자료, 대인손해, 대인수령, 치료비공제, 전손, 수리인정, 시세하락, 시세근거,
+          대차, 대물손해, 대물수령, 자기부담금, 내가물어줄대물, 물적보험금, limit, useOwn, cure, future, norent, rday};
+}
+
+function payHTML(r) {
+  const row = (k, v, i, cls) => `<div class="kv ${cls||''}"><div class="k">${k}${i ? `<i>${i}</i>` : ''}</div><div class="v">${v}</div></div>`;
+  let h = `<div class="sec"><h3><span class="dot"></span>내가 받을 돈 — 대인 (다친 것)</h3>`;
+  if (r.대인손해 > 0) {
+    h += row('치료비', won(r.cure), '상대 보험사가 병원에 직접 지불하는 것이 보통입니다');
+    h += row('향후 치료비', won(r.future));
+    h += row('휴업손해', won(r.휴업), '실제 수입 감소액의 85% (표준약관)');
+    h += row('부상 위자료', won(r.위자료), '자동차보험 표준약관 상해 급수별 정액');
+    h += row('손해액 합계', won(r.대인손해));
+    h += row(`× 상대 과실 ${r.op}%`, won(r.대인수령), '과실상계 후 실제 수령액', 'big');
+    if (r.치료비공제 > 0) h += `<div class="notebox">치료비 ${won(r.cure)} 중 <b>내 과실분 ${won(r.치료비공제)}</b>은 합의금에서 빠집니다.
+      「치료는 상대 보험으로 다 받았는데 합의금이 왜 이것밖에 안 되나」의 정체가 이것입니다(대법원 2008다91180).</div>`;
+  } else h += `<div class="li">다친 항목을 입력하지 않았습니다.</div>`;
+  h += `</div>`;
+
+  h += `<div class="sec"><h3><span class="dot"></span>내가 받을 돈 — 대물 (차 망가진 것)</h3>`;
+  if (r.대물손해 > 0) {
+    h += row(r.전손 ? '수리비 (전손 처리 · 차량가액 한도)' : '수리비', won(r.수리인정),
+             r.전손 ? '수리비가 차량가액을 넘어 전손으로 처리됩니다. 폐차 부대비용은 별도 청구 가능' : '');
+    h += row('시세하락손해 (격락손해)', won(r.시세하락), r.시세근거 + ' · 지급조건: ' + PAY.시세하락조건);
+    h += row('대차료 (렌트)', won(r.대차), r.norent ? '렌트를 쓰지 않아 통상요금의 35%' : '동급 최저요금 기준 · 통상 수리기간 한도');
+    h += row('손해액 합계', won(r.대물손해));
+    h += row(`× 상대 과실 ${r.op}%`, won(r.대물수령), '과실상계 후 실제 수령액', 'big');
+  } else h += `<div class="li">차량 손해 항목을 입력하지 않았습니다.</div>`;
+  h += `</div>`;
+
+  h += `<div class="sec"><h3 class="red"><span class="dot"></span>내가 내야 할 돈</h3>`;
+  h += row('상대 차 수리비 중 내 부담', won(r.내가물어줄대물), `상대 수리비 × 내 과실 ${r.my}% — 대물배상에서 나갑니다`);
+  if (r.useOwn) h += row('자차 자기부담금', won(r.자기부담금),
+    `수리비의 20% · 물적사고 할증기준금액 ${(r.limit/10000)}만원 기준 최저 ${(PAY.자차자기부담금.최저표[r.limit]||r.limit*.1)/10000}만원 ~ 최고 50만원`);
+  h += `</div>`;
+
+  const over = r.물적보험금 > r.limit;
+  h += `<div class="sec"><h3><span class="dot"></span>보험료 할증 — 이 사고로 나간 보험금</h3>
+    ${row('물적사고 지급 예상액', won(r.물적보험금), '대물배상 + 자기차량손해로 보험사가 실제로 낸 돈')}
+    ${row('물적사고 할증기준금액', won(r.limit))}
+    <div class="${over ? 'notebox' : 'okbox'}">
+      ${over ? `기준금액을 <b>넘습니다</b>. 사고점수 1점이 붙어 다음 갱신에서 할증 폭이 커집니다.
+        지급액이 크지 않다면 <b>자비로 물어내고 사고를 취소(환입)</b>하는 쪽이 3년 총보험료 기준으로 유리한 경우가 많습니다. 담당자에게 「환입 시 보험료 비교 견적」을 요청하세요.`
+             : `기준금액 <b>이하</b>입니다. 사고점수가 0.5점으로 낮게 잡히지만, 할증과 별개로 <b>사고건수제</b>에 따라 「무사고 할인」이 끊깁니다.
+        갱신 견적을 뽑아 자비 처리와 비교한 뒤 결정하세요.`}
+    </div>
+    <div class="notebox">할증 폭은 보험사·계약·직전 3년 사고이력에 따라 다릅니다. 위 내용은 일반 기준이며, 실제 금액은 반드시 <b>갱신 견적으로 비교</b>하세요.</div>
+  </div>`;
+
+  h += `<div class="sec"><h3 class="green"><span class="dot"></span>놓치기 쉬운 것</h3>
+    <div class="li"><b>자동차상해(자상)</b> — 내 과실이 커서 상대에게 못 받는 부분을 내 보험으로 메웁니다. 과실상계를 하지 않고 약관 기준으로 지급하므로, 내 과실이 클수록 위력이 큽니다. 중복수령이 아니라 <b>부족분 보완</b> 구조입니다.</div>
+    <div class="li"><b>시세하락손해</b>는 보험사가 먼저 알려주지 않는 경우가 많습니다. 출고 5년 이하 + 수리비가 차량가액의 20% 초과면 반드시 청구하세요.</div>
+    <div class="li"><b>렌트를 쓰지 않아도</b> 통상요금의 35%를 돈으로 받을 수 있습니다.</div>
+    <div class="li"><b>의무보험 한도</b> — 대인 사망 1억5천만원, 대물 사고 1건당 2천만원(자동차손해배상 보장법 시행령 제3조). 이를 넘는 손해는 종합보험(대인Ⅱ·대물 확대)에서 나갑니다.</div>
+    <div class="li"><b>형사합의</b>는 민사 합의와 다릅니다. 12대 중과실·중상해·사망사고라면 형사 절차가 따로 진행되므로 합의서 문구를 분리해 작성하세요.</div>
+  </div>`;
+  return h;
+}
+
+$('pf_go').onclick = () => { $('payout').innerHTML = payHTML(calcPay()); };
+
+/* 분석 결과의 과실을 계산기에 밀어 넣고, 결과 화면 안에도 요약을 띄운다 */
+function fillPayFromResult() {
+  if (!RES.fault) return;
+  const me = RES.role === 'A' ? RES.fault.A : RES.fault.B;
+  $('pf_my').value = me; $('pf_op').value = 100 - me;
+}
+function renderPayInline() {
+  const box = $('paybox'); if (!box) return;
+  const me = RES.role === 'A' ? RES.fault.A : RES.fault.B;
+  box.innerHTML = `<div class="sec"><h3><span class="dot"></span>이 과실이면 돈은 어떻게 되나</h3>
+    <div class="para">추정 과실 <b>나 ${me}% : 상대 ${100-me}%</b> 기준으로,
+    내 손해액의 <b>${100-me}%</b>를 상대 보험사에서 받고, 상대 손해액의 <b>${me}%</b>를 내가 물어줍니다.
+    치료비는 상대 보험사가 병원에 먼저 내지만 <b>내 과실분은 합의금에서 공제</b>되므로, 치료를 많이 받았다고 합의금이 늘지 않습니다.</div>
+    <div class="okbox">위쪽 메뉴의 <b>「보상 계산」</b> 탭에 이 과실비율이 이미 채워져 있습니다. 치료비·수리비만 넣으면 실제 금액이 바로 나옵니다.</div>
+    <button class="btn ghost sm" onclick="document.querySelector('#nav b[data-v=v3]').click()">보상 계산으로 가기</button>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   9. 처리 절차 · 법 · 판례 · 도표 사전
+   ══════════════════════════════════════════════════════════════════════ */
+$('stepsBox').innerHTML = `<div class="card">
+  <h1 style="font-size:20px;margin-bottom:8px">사고 처리 절차</h1>
+  <div class="hint">사고 직후부터 합의·할증 검토까지, 순서대로 무엇을 해야 하는지 정리했습니다. 고객에게 그대로 읽어 주셔도 됩니다.</div>
+  </div>
+  <div class="sec">${STEPS.map(s => `<div class="step">
+    <span class="sw">${esc(s.when)}</span>
+    <div class="stt">${esc(s.t)}</div>
+    <div class="sd">${esc(s.d)}</div>
+    ${s.li.map(x => `<div class="li">${esc(x)}</div>`).join('')}
+  </div>`).join('')}</div>
+  <div class="sec"><h3 class="red"><span class="dot"></span>12대 중과실 — 보험에 들었어도 형사처벌 됩니다</h3>
+    <div class="para" style="margin-bottom:12px">교통사고처리 특례법 제3조는 종합보험에 들었거나 합의하면 공소를 제기하지 못하도록 하지만,
+    아래 12가지와 사망사고·뺑소니·중상해는 예외입니다. 상대가 여기 해당하면 과실 협상에서도 결정적인 지렛대가 됩니다.</div>
+    ${GRAVE12.map((g,i) => `<div class="li"><b>${i+1}. ${esc(g[0])}</b>${LAW[g[1]] ? ' — ' + esc(LAW[g[1]].n) : ''}</div>`).join('')}
+    <div class="notebox">위반과 사고 사이에 인과관계가 있어야 적용됩니다. 처벌은 5년 이하 금고 또는 2천만원 이하 벌금이 기본입니다.</div>
+  </div>`;
+
+$('lawBox').innerHTML = `<div class="card">
+  <h1 style="font-size:20px;margin-bottom:8px">법조문 · 판례 · 원자료</h1>
+  <div class="hint">과실비율은 결국 법조문 싸움입니다. 담당자와 이야기할 때 조문 번호를 대면 대화의 무게가 달라집니다.</div></div>
+  <div class="sec"><h3><span class="dot"></span>과실비율에 자주 쓰이는 조문</h3>
+    ${Object.values(LAW).map(l => `<div class="lawc"><div class="n">${esc(l.n)}</div><div class="t">${esc(l.t)}</div><div class="d">${esc(l.d)}</div></div>`).join('')}</div>
+  <div class="sec"><h3><span class="dot"></span>알아 두면 좋은 법리</h3>
+    ${CASELAW.map(x => `<div class="case"><div class="ct">${esc(x.t)}</div><div class="cs">${esc(x.c)}</div>
+      <div class="cd">${esc(x.d)}</div>${x.u ? `<a href="${esc(x.u)}" target="_blank" rel="noopener">원문 찾아보기</a>` : ''}</div>`).join('')}
+    <div class="notebox">판례는 사건마다 사실관계가 다릅니다. 고객에게 인용하기 전 반드시 원문을 확인하세요.</div></div>
+  <div class="sec"><h3><span class="dot"></span>수정요소 — 무엇이 몇 % 를 움직이나</h3>
+    <div class="para" style="margin-bottom:12px">인정기준은 기본과실에 아래 요소를 더하고 뺍니다. 중복 규칙이 따로 있어서 무한정 쌓이지는 않습니다.</div>
+    ${['sig','grave','etc','minus'].map(g => {
+      const t = {sig:'현저한 과실 (+10%)', grave:'중대한 과실 (+20%)', etc:'그 밖의 가산요소', minus:'감산요소'}[g];
+      return `<div class="li" style="margin-top:10px"><b>${t}</b></div>` +
+        MODS.filter(m => m.g === g).map(m => `<div class="li">${esc(m.k)} <b>${m.v > 0 ? '+' : '−'}${Math.abs(m.v)}%</b></div>`).join('');
+    }).join('')}
+    <div class="notebox">중복 적용 규칙 — 현저한 과실은 여러 개여도 최대 +20%. 중대한 과실이 있으면 현저한 과실은 따로 더하지 않습니다.
+      중과실과 그 밖의 가산요소를 합쳐도 특별한 사정이 없으면 최대 +30%. 최종 과실은 0~100% 를 벗어나지 않습니다.</div></div>
+  <div class="sec"><h3><span class="dot"></span>원자료 바로가기</h3>
+    ${LINKS.map(l => `<a class="linkc" href="${esc(l.u)}" target="_blank" rel="noopener">
+      <div class="t">${esc(l.t)}</div><div class="u">${esc(l.u)}</div><div class="d">${esc(l.d)}</div></a>`).join('')}</div>`;
+
+/* 도표 사전 */
+let DCAT = '';
+$('dcat').innerHTML = `<div class="chip on" data-c="">전체</div>` + CATS.map(c => `<div class="chip" data-c="${esc(c)}">${esc(c)}</div>`).join('');
+$('dcat').onclick = e => {
+  const d = e.target.closest('.chip'); if (!d) return;
+  $('dcat').querySelectorAll('.chip').forEach(x => x.classList.remove('on'));
+  d.classList.add('on'); DCAT = d.dataset.c; renderDict();
+};
+$('dsearch').addEventListener('input', renderDict);
+function renderDict() {
+  const q = $('dsearch').value.trim().toLowerCase();
+  const list = CHARTS.filter(c => (!DCAT || c.cat === DCAT) &&
+    (!q || (c.name + c.cat + c.tags + c.A + c.B + c.why).toLowerCase().includes(q)));
+  $('dlist').innerHTML = list.length ? list.map(c => `<div class="citem" data-id="${c.id}">
+    <div class="cc">${esc(c.cat)}${c.official ? ' · 도표 ' + esc(c.official) : ''}</div>
+    <div class="cn">${esc(c.name)}</div>
+    <div class="cb">${c.base[0]} : ${c.base[1]} <s>· ${esc(c.A)} : ${esc(c.B)}</s></div></div>`).join('')
+    : '<div class="li">찾는 상황이 없습니다. 다른 말로 검색해 보시거나 「사고 분석」에서 글로 설명해 주세요.</div>';
+}
+$('dlist').onclick = e => {
+  const d = e.target.closest('.citem'); if (!d) return;
+  const c = chartById(d.dataset.id); if (!c) return;
+  const laws = (c.law || []).map(k => LAW[k]).filter(Boolean);
+  $('ddetail').innerHTML = `<div class="sec">
+    <div class="rtype">${esc(c.cat)}${c.official ? ' · 도표 ' + esc(c.official) : ''}</div>
+    <div class="rtitle">${esc(c.name)}</div>
+    <div class="bar"><div class="me" style="width:${c.base[0]}%"><b>${c.base[0]}%</b><span>${esc(c.A)}</span></div>
+      <div class="op" style="width:${c.base[1]}%"><b>${c.base[1]}%</b><span>${esc(c.B)}</span></div></div>
+    <div class="scene" style="margin-top:14px">${drawScene(c.scene, 'A')}</div>
+    <div class="legend"><div class="lg"><i style="background:${CO.me}"></i>${esc(c.A)}</div>
+      <div class="lg"><i style="background:${CO.op}"></i>${esc(c.B)}</div>
+      <div class="lg"><i style="background:${CO.hit}"></i>충돌 지점</div></div>
+    <div class="para" style="margin-top:14px">${esc(c.why)}</div>
+    ${c.mods?.length ? `<div class="calc"><div class="calc-t">이 도표의 수정요소</div>
+      ${c.mods.map(m => `<div class="crow"><div class="l">${m.who === 'A' ? esc(c.A) : esc(c.B)} · ${esc(m.k)}</div>
+        <div class="v ${m.v > 0 ? 'up' : 'down'}">${m.v > 0 ? '+' : ''}${m.v}%</div></div>`).join('')}</div>` : ''}
+    ${laws.length ? `<div style="margin-top:14px">${laws.map(l => `<div class="lawc"><div class="n">${esc(l.n)}</div>
+      <div class="t">${esc(l.t)}</div><div class="d">${esc(l.d)}</div></div>`).join('')}</div>` : ''}
+    ${c.evid?.length ? `<div class="calc"><div class="calc-t">확보할 증거</div>${c.evid.map(x => `<div class="li">${esc(x)}</div>`).join('')}</div>` : ''}
+    <a class="linkc" href="https://accident.knia.or.kr/myaccident1" target="_blank" rel="noopener" style="margin-top:14px">
+      <div class="t">공식 도표에서 확인하기</div><div class="u">accident.knia.or.kr</div>
+      <div class="d">손해보험협회 과실비율 정보포털에서 같은 상황의 원문 도표를 볼 수 있습니다.</div></a>
+  </div>`;
+  $('ddetail').scrollIntoView({behavior:'smooth', block:'start'});
+};
+renderDict();
+</script>
+</body>
+</html>
