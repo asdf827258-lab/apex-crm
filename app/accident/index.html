@@ -6,172 +6,301 @@
 <title>APEX 자동차사고 과실·보상 분석기 v3</title>
 <meta name="description" content="손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 사고 상황도·법적 근거·판례·보상금·처리 절차까지 한 번에 정리합니다.">
 <style>
+/* ══ 색·글자·간격 토큰 ═══════════════════════════════════════════════════
+   이 도구는 어두운 CRM 껍데기(#0D1117) 안에서 열리고, 설계사가 사고 현장에서
+   밤에도 휴대폰으로 꺼낸다. 그래서 밝은 화면과 어두운 화면을 둘 다 만든다.
+   색은 전부 아래 토큰으로만 쓴다 — 미디어쿼리 안에서 색을 처음 정의하면
+   시스템 설정이 "자동"인 사람에게 그 색이 아예 적용되지 않는다.            */
+:root{
+  --ground:#EDF0F4; --surface:#FFFFFF; --sunk:#F5F7FA; --raise:#FFFFFF;
+  --ink:#131A23; --ink2:#3D4A5A; --muted:#5B6878; --faint:#8592A2;
+  --line:#E1E7EE; --line2:#EDF1F5;
+  --brand:#2E6FF2; --brand-ink:#1B54C8; --brand-bg:#EBF2FF; --brand-line:#C9DDFB;
+  --up:#DC3E44; --up-bg:#FDEDEE; --down:#0E9F6E; --down-bg:#E8F7F1;
+  --warn:#9A6B10; --warn-bg:#FDF6E3;
+  --me:#2E6FF2; --op:#E5484D; --hit:#F08C00; --walk:#7C5CF0;
+  --road:#D3DAE3; --roadline:#FFFFFF; --roadedge:#BFC8D4; --yellow:#EFC043;
+  --island:#C9D8C6; --slot:#E7ECF2; --bikelane:#BEDAC5; --bikeink:#276B45;
+  --shadow:0 1px 2px rgba(16,28,44,.05), 0 4px 14px rgba(16,28,44,.06);
+  --ring:0 0 0 3px rgba(46,111,242,.32);
+  --r:20px; --r2:14px; --r3:11px;
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E141B; --surface:#18202A; --sunk:#131A23; --raise:#1E2733;
+    --ink:#E6ECF3; --ink2:#BCC7D4; --muted:#8794A5; --faint:#6B7889;
+    --line:#26313E; --line2:#1F2833;
+    --brand:#5C9DFF; --brand-ink:#8FBAFF; --brand-bg:#152438; --brand-line:#2A4C7A;
+    --up:#FF6B6F; --up-bg:#33191C; --down:#3DD9A0; --down-bg:#0F2A22;
+    --warn:#E3B341; --warn-bg:#2C2413;
+    --me:#5C9DFF; --op:#FF6B6F; --hit:#FFAE3D; --walk:#A98BFF;
+    --road:#2C3542; --roadline:#5E6C7D; --roadedge:#3A4553; --yellow:#B98F2E;
+    --island:#3A4A3C; --slot:#212A35; --bikelane:#26402F; --bikeink:#7FC79C;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.28);
+    --ring:0 0 0 3px rgba(92,157,255,.38);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E141B; --surface:#18202A; --sunk:#131A23; --raise:#1E2733;
+  --ink:#E6ECF3; --ink2:#BCC7D4; --muted:#8794A5; --faint:#6B7889;
+  --line:#26313E; --line2:#1F2833;
+  --brand:#5C9DFF; --brand-ink:#8FBAFF; --brand-bg:#152438; --brand-line:#2A4C7A;
+  --up:#FF6B6F; --up-bg:#33191C; --down:#3DD9A0; --down-bg:#0F2A22;
+  --warn:#E3B341; --warn-bg:#2C2413;
+  --me:#5C9DFF; --op:#FF6B6F; --hit:#FFAE3D; --walk:#A98BFF;
+  --road:#2C3542; --roadline:#5E6C7D; --roadedge:#3A4553; --yellow:#B98F2E;
+  --island:#3A4A3C; --slot:#212A35; --bikelane:#26402F; --bikeink:#7FC79C;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.28);
+  --ring:0 0 0 3px rgba(92,157,255,.38);
+}
+
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',-apple-system,sans-serif;
-background:#F2F4F6;color:#191F28;word-break:keep-all;line-height:1.5;padding-bottom:80px}
+/* 한글 웹폰트는 통째로 넣으면 몇 MB 라 못 싣는다. 대신 어느 기기에서 무엇으로
+   떨어질지 끝까지 적어 둔다 — 조용히 엉뚱한 글꼴로 바뀌지 않게. */
+body{font-family:'Pretendard Variable',Pretendard,'Apple SD Gothic Neo','Noto Sans KR',
+  'Malgun Gothic',system-ui,-apple-system,'Segoe UI',sans-serif;
+  background:var(--ground);color:var(--ink);word-break:keep-all;line-height:1.55;padding-bottom:80px;
+  -webkit-font-smoothing:antialiased}
 .wrap{max-width:760px;margin:0 auto;padding:0 16px}
-header{padding:26px 4px 16px}
-.brand{font-size:12px;font-weight:800;letter-spacing:1.6px;color:#3182F6;margin-bottom:10px}
-h1{font-size:25px;font-weight:900;letter-spacing:-1px;line-height:1.34}
-h1 em{font-style:normal;color:#3182F6}
-.lead{margin-top:10px;font-size:14px;color:#6B7684;font-weight:500;line-height:1.65}
-.card{background:#fff;border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.hint{font-size:13px;color:#8B95A1;font-weight:500;margin-bottom:14px;line-height:1.6}
-/* 상단 네비 */
-.nav{display:flex;gap:5px;background:#fff;border-radius:16px;padding:5px;margin-bottom:14px;
-box-shadow:0 2px 8px rgba(0,0,0,.04);overflow-x:auto}
-.nav b{flex:1;text-align:center;padding:11px 8px;border-radius:11px;font-size:13.5px;font-weight:700;
-color:#8B95A1;cursor:pointer;transition:.15s;white-space:nowrap}
-.nav b.on{background:#3182F6;color:#fff}
+b,strong{font-weight:700}
+/* 숫자가 세로로 줄 맞춰 서야 읽힌다 — 과실 %, 금액, 도표 비율이 전부 숫자다 */
+.bar b,.crow .v,.kv .v,.citem .cb,.conf,.hitbox .z,.rtype{font-variant-numeric:tabular-nums}
+
+header{padding:26px 4px 14px}
+.brand{font-size:11.5px;font-weight:800;letter-spacing:1.8px;color:var(--brand);margin-bottom:9px}
+h1{font-size:25px;font-weight:800;letter-spacing:-.9px;line-height:1.32;text-wrap:balance}
+h1 em{font-style:normal;color:var(--brand)}
+.lead{margin-top:10px;font-size:14px;color:var(--muted);font-weight:500;line-height:1.7;max-width:60ch}
+.lead b{color:var(--ink2)}
+
+.card,.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.hint{font-size:13px;color:var(--muted);font-weight:500;margin-bottom:14px;line-height:1.65}
+
+/* 결과가 길다. 다섯 칸은 스크롤 중에도 손에 닿아야 한다. */
+.nav{position:sticky;top:0;z-index:20;display:flex;gap:4px;background:var(--surface);
+  border:1px solid var(--line);border-radius:16px;padding:5px;margin-bottom:14px;
+  box-shadow:var(--shadow);overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav b{flex:1;text-align:center;padding:11px 10px;border-radius:11px;font-size:13.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.nav b.on{background:var(--brand);color:#fff}
+@media (max-width:470px){ .nav b{padding:10px 5px;font-size:12.5px;letter-spacing:-.4px} }
 .view{display:none}.view.on{display:block}
-/* 탭 */
-.tabs{display:flex;gap:6px;background:#F2F4F6;border-radius:14px;padding:5px;margin-bottom:16px}
-.tab{flex:1;text-align:center;padding:11px 4px;border-radius:10px;font-size:13.5px;font-weight:700;color:#8B95A1;cursor:pointer;transition:.15s}
-.tab.on{background:#fff;color:#191F28;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+
+.tabs{display:flex;gap:5px;background:var(--sunk);border-radius:var(--r2);padding:5px;margin-bottom:16px}
+.tab{flex:1;text-align:center;padding:11px 4px;border-radius:var(--r3);font-size:13.5px;font-weight:700;
+  color:var(--muted);cursor:pointer;transition:background .15s,color .15s}
+.tab.on{background:var(--raise);color:var(--ink);box-shadow:var(--shadow)}
 .pane{display:none}.pane.on{display:block}
-label.fl{display:block;font-size:13px;font-weight:700;color:#4E5968;margin:14px 0 7px}
-textarea,input[type=text],input[type=number],select{width:100%;border:1.5px solid #E5E8EB;border-radius:13px;padding:13px 14px;
-font-size:15px;font-family:inherit;background:#fff;color:#191F28;outline:none;transition:.15s}
-textarea{min-height:118px;resize:vertical;line-height:1.6}
-textarea:focus,input:focus,select:focus{border-color:#3182F6}
-textarea::placeholder,input::placeholder{color:#C4CCD6}
-.two{display:flex;gap:9px}.two>div{flex:1}
-.drop{border:2px dashed #D1D6DB;border-radius:16px;padding:28px 16px;text-align:center;background:#FAFBFC;cursor:pointer;transition:.15s}
-.drop:active{border-color:#3182F6;background:#F0F6FF}
+
+label.fl{display:block;font-size:12.5px;font-weight:700;color:var(--ink2);margin:15px 0 7px;
+  letter-spacing:.1px}
+textarea,input[type=text],input[type=number],select{width:100%;border:1.5px solid var(--line);
+  border-radius:13px;padding:13px 14px;font-size:15px;font-family:inherit;background:var(--surface);
+  color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s}
+textarea{min-height:118px;resize:vertical;line-height:1.65}
+textarea:focus,input:focus,select:focus{border-color:var(--brand);box-shadow:var(--ring)}
+textarea::placeholder,input::placeholder{color:var(--faint)}
+input[type=checkbox]{accent-color:var(--brand)}
+.two{display:flex;gap:9px;flex-wrap:wrap}.two>div{flex:1 1 160px}
+
+.drop{border:2px dashed var(--line);border-radius:16px;padding:28px 16px;text-align:center;
+  background:var(--sunk);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop:active{border-color:var(--brand);background:var(--brand-bg)}
 .drop .ic{font-size:29px;margin-bottom:8px}
-.drop .t{font-size:15px;font-weight:700;color:#4E5968}
-.drop .s{font-size:12.5px;color:#8B95A1;margin-top:5px;font-weight:500}
+.drop .t{font-size:15px;font-weight:700;color:var(--ink2)}
+.drop .s{font-size:12.5px;color:var(--muted);margin-top:5px;font-weight:500}
 .thumbs{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
-.thumbs img{width:72px;height:52px;object-fit:cover;border-radius:9px;border:1px solid #E5E8EB}
-.filetag{margin-top:10px;font-size:13px;color:#3182F6;font-weight:700;background:#F0F6FF;padding:9px 13px;border-radius:10px}
+.thumbs img{width:72px;height:52px;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+.filetag{margin-top:10px;font-size:13px;color:var(--brand-ink);font-weight:700;background:var(--brand-bg);
+  padding:9px 13px;border-radius:var(--r3)}
+.filetag.bad{background:var(--up-bg);color:var(--up)}
+
 .chipset{display:flex;flex-wrap:wrap;gap:7px}
-.chip{padding:9px 13px;border-radius:11px;background:#F2F4F6;border:1.5px solid transparent;font-size:13px;font-weight:600;color:#4E5968;cursor:pointer;transition:.12s}
-.chip.on{background:#F0F6FF;border-color:#3182F6;color:#3182F6;font-weight:700}
-.chip.g-grave.on{background:#FFF1F2;border-color:#F04452;color:#F04452}
-.chip.g-minus.on{background:#EDF7EE;border-color:#12B886;color:#0F9C74}
-.btn{width:100%;padding:16px;border:none;border-radius:15px;background:#3182F6;color:#fff;font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;letter-spacing:-.3px}
-.btn:active{background:#1B64DA;transform:scale(.99)}
-.btn:disabled{background:#D1D6DB}
-.btn.ghost{background:#F2F4F6;color:#4E5968;margin-top:9px}
+.chip{padding:9px 13px;border-radius:var(--r3);background:var(--sunk);border:1.5px solid transparent;
+  font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;transition:.12s}
+.chip:hover{border-color:var(--line)}
+.chip.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand-ink);font-weight:700}
+.chip.g-grave.on{background:var(--up-bg);border-color:var(--up);color:var(--up)}
+.chip.g-minus.on{background:var(--down-bg);border-color:var(--down);color:var(--down)}
+
+.btn{width:100%;padding:16px;border:none;border-radius:15px;background:var(--brand);color:#fff;
+  font-size:16px;font-weight:800;font-family:inherit;cursor:pointer;letter-spacing:-.3px;
+  transition:background .15s,transform .08s}
+.btn:hover{background:var(--brand-ink)}
+.btn:active{transform:scale(.99)}
+.btn:disabled{background:var(--line);color:var(--muted);cursor:progress}
+.btn.ghost{background:var(--sunk);color:var(--ink2);margin-top:9px}
+.btn.ghost:hover{background:var(--line2)}
 .btn.sm{padding:13px;font-size:14.5px}
-/* 진행 */
+
+/* 키보드로도 다 눌러진다 — 칩·탭·카드가 div 라서 예전엔 탭 키가 지나쳤다 */
+:focus-visible{outline:none;box-shadow:var(--ring);border-radius:var(--r3)}
+[role="button"]{cursor:pointer}
+
 #load{display:none;padding:24px 20px}
 .stepline{display:flex;flex-direction:column;gap:13px}
-.st{display:flex;align-items:center;gap:12px;opacity:.35;transition:.3s}
+.st{display:flex;align-items:center;gap:12px;opacity:.35;transition:opacity .3s}
 .st.on,.st.done{opacity:1}
-.st .ic{width:30px;height:30px;border-radius:10px;background:#F2F4F6;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#B0B8C1;flex-shrink:0}
-.st.on .ic{background:#3182F6;color:#fff}
-.st.done .ic{background:#E7F0FE;color:#3182F6}
-.st .tx{font-size:14.5px;font-weight:700;color:#4E5968}
-.st.on .tx{color:#191F28}
-.mini{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+.st .ic{width:30px;height:30px;border-radius:10px;background:var(--sunk);display:flex;align-items:center;
+  justify-content:center;font-size:14px;font-weight:800;color:var(--faint);flex-shrink:0}
+.st.on .ic{background:var(--brand);color:#fff}
+.st.done .ic{background:var(--brand-bg);color:var(--brand-ink)}
+.st .tx{font-size:14.5px;font-weight:700;color:var(--ink2)}
+.st.on .tx{color:var(--ink)}
+.mini{width:15px;height:15px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;
+  border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-/* 결과 */
-.rtype{font-size:12.5px;font-weight:700;color:#3182F6;background:#F0F6FF;display:inline-block;padding:6px 11px;border-radius:9px;margin-bottom:11px}
-.rtype.warn{color:#B8860B;background:#FFF7E0}
-.rtitle{font-size:19.5px;font-weight:900;letter-spacing:-.6px;line-height:1.42;margin-bottom:16px}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important}
+  .mini{border-top-color:transparent;border-color:#fff}
+}
+
+.rtype{font-size:12.5px;font-weight:700;color:var(--brand-ink);background:var(--brand-bg);
+  display:inline-block;padding:6px 11px;border-radius:9px;margin-bottom:11px}
+.rtype.warn{color:var(--warn);background:var(--warn-bg)}
+.rtitle{font-size:19.5px;font-weight:800;letter-spacing:-.5px;line-height:1.42;margin-bottom:16px;
+  text-wrap:balance}
 .bar{display:flex;height:62px;border-radius:15px;overflow:hidden;margin-bottom:10px}
 .bar>div{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:54px}
-.bar .me{background:#DDE3EA}.bar .op{background:#3182F6}
-.bar b{font-size:21px;font-weight:900}
-.bar .me b{color:#333D4B}.bar .op b{color:#fff}
+.bar .me{background:var(--sunk);border:1px solid var(--line);border-right:none}
+.bar .op{background:var(--brand)}
+.bar b{font-size:21px;font-weight:800}
+.bar .me b{color:var(--ink)}.bar .op b{color:#fff}
 .bar span{font-size:11.5px;font-weight:700;margin-top:2px}
-.bar .me span{color:#8B95A1}.bar .op span{color:rgba(255,255,255,.85)}
-.conf{font-size:12.5px;color:#8B95A1;font-weight:600;text-align:right;line-height:1.55}
-.calc{background:#F7F8FA;border-radius:14px;padding:16px;margin-top:14px}
-.calc-t{font-size:12.5px;font-weight:800;color:#8B95A1;margin-bottom:10px}
+.bar .me span{color:var(--muted)}.bar .op span{color:rgba(255,255,255,.88)}
+.conf{font-size:12.5px;color:var(--muted);font-weight:600;text-align:right;line-height:1.6}
+
+.calc{background:var(--sunk);border-radius:var(--r2);padding:16px;margin-top:14px}
+.calc-t{font-size:12.5px;font-weight:800;color:var(--muted);margin-bottom:10px;letter-spacing:.1px}
 .crow{display:flex;justify-content:space-between;align-items:flex-start;padding:8px 0;gap:12px}
-.crow .l{font-size:14px;color:#4E5968;font-weight:600;flex:1}
-.crow .l i{display:block;font-style:normal;font-size:12px;color:#B0B8C1;margin-top:3px;font-weight:500;line-height:1.5}
-.crow .v{font-size:15px;font-weight:800;white-space:nowrap}
-.v.up{color:#F04452}.v.down{color:#12B886}
-.cline{height:1px;background:#E5E8EB;margin:6px 0}
-.crow.total .l{font-size:15px;font-weight:800;color:#191F28}
-.crow.total .v{font-size:19px;color:#3182F6}
-.sec{background:#fff;border-radius:20px;padding:20px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
-.sec h3{font-size:15.5px;font-weight:800;margin-bottom:13px;display:flex;align-items:center;gap:7px}
-.sec h3 .dot{width:7px;height:7px;border-radius:50%;background:#3182F6;flex-shrink:0}
-.sec h3.red .dot{background:#F04452}.sec h3.gray .dot{background:#B0B8C1}.sec h3.green .dot{background:#12B886}
-.li{font-size:14.5px;color:#4E5968;line-height:1.68;font-weight:500;padding-left:15px;position:relative;margin-bottom:9px}
+.crow .l{font-size:14px;color:var(--ink2);font-weight:600;flex:1}
+.crow .l i{display:block;font-style:normal;font-size:12px;color:var(--faint);margin-top:3px;
+  font-weight:500;line-height:1.55}
+.crow .v{font-size:15px;font-weight:800;white-space:nowrap;color:var(--ink)}
+.v.up{color:var(--up)}.v.down{color:var(--down)}
+.cline{height:1px;background:var(--line);margin:6px 0}
+.crow.total .l{font-size:15px;font-weight:800;color:var(--ink)}
+.crow.total .v{font-size:19px;color:var(--brand)}
+
+.sec h3{font-size:15.5px;font-weight:800;margin-bottom:13px;display:flex;align-items:center;gap:8px;
+  color:var(--ink)}
+.sec h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--brand);flex-shrink:0}
+.sec h3.red .dot{background:var(--up)}
+.sec h3.gray .dot{background:var(--faint)}
+.sec h3.green .dot{background:var(--down)}
+.li{font-size:14.5px;color:var(--ink2);line-height:1.7;font-weight:500;padding-left:15px;
+  position:relative;margin-bottom:9px}
 .li:last-child{margin-bottom:0}
-.li:before{content:'';position:absolute;left:0;top:9px;width:4.5px;height:4.5px;border-radius:50%;background:#C4CCD6}
-.li b{color:#191F28;font-weight:700}
-.para{font-size:14.5px;color:#4E5968;line-height:1.72;font-weight:500}
-.para b{color:#191F28;font-weight:700}
-/* 사고도 */
-.scene{background:#F7F8FA;border-radius:16px;padding:10px}
+.li:before{content:'';position:absolute;left:0;top:10px;width:4.5px;height:4.5px;border-radius:50%;
+  background:var(--faint)}
+.li b{color:var(--ink);font-weight:700}
+.para{font-size:14.5px;color:var(--ink2);line-height:1.75;font-weight:500}
+.para b{color:var(--ink);font-weight:700}
+
+.scene{background:var(--sunk);border-radius:16px;padding:10px}
 .scene svg{width:100%;height:auto;display:block;border-radius:11px}
 .legend{display:flex;gap:13px;justify-content:center;margin-top:10px;flex-wrap:wrap}
-.lg{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:#4E5968}
+.lg{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink2)}
 .lg i{width:14px;height:14px;border-radius:4px;display:block}
 .pins{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-.pin{display:flex;gap:9px;align-items:flex-start;background:#fff;border-radius:12px;padding:11px 13px}
-.pin u{flex-shrink:0;width:21px;height:21px;border-radius:50%;background:#191F28;color:#fff;font-size:11.5px;
-font-weight:800;display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:1px}
-.pin p{font-size:13.5px;color:#4E5968;font-weight:500;line-height:1.62}
-.pin p b{color:#191F28;font-weight:700}
-/* 충돌 부위 */
+.pin{display:flex;gap:10px;align-items:flex-start;background:var(--sunk);border-radius:var(--r2);
+  padding:11px 13px}
+.pin u{flex-shrink:0;width:21px;height:21px;border-radius:50%;background:var(--ink);color:var(--surface);
+  font-size:11.5px;font-weight:800;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;margin-top:1px;font-variant-numeric:tabular-nums}
+.pin p{font-size:13.5px;color:var(--ink2);font-weight:500;line-height:1.65}
+.pin p b{color:var(--ink);font-weight:700}
+
 .hits{display:flex;gap:12px;margin-top:12px}
-.hitbox{flex:1;background:#F7F8FA;border-radius:14px;padding:13px;text-align:center}
-.hitbox .cap{font-size:12px;font-weight:800;color:#8B95A1;margin-bottom:8px}
+.hitbox{flex:1;background:var(--sunk);border-radius:var(--r2);padding:13px;text-align:center}
+.hitbox .cap{font-size:12px;font-weight:800;color:var(--muted);margin-bottom:8px}
 .hitbox svg{width:74px;height:auto}
-.hitbox .z{font-size:12.5px;font-weight:700;color:#4E5968;margin-top:6px}
-/* 법조문 */
-.lawc{border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;margin-bottom:9px}
-.lawc:last-child{margin-bottom:0}
-.lawc .n{font-size:13px;font-weight:800;color:#3182F6}
-.lawc .t{font-size:14.5px;font-weight:800;margin:3px 0 6px}
-.lawc .d{font-size:13.5px;color:#4E5968;line-height:1.65;font-weight:500}
-/* 판례 */
-.case{border:1.5px solid #E5E8EB;border-radius:14px;padding:15px;margin-bottom:10px}
-.case:last-child{margin-bottom:0}
-.case .ct{font-size:14.5px;font-weight:800;line-height:1.45;margin-bottom:6px}
-.case .cs{font-size:12.5px;color:#8B95A1;font-weight:600;margin-bottom:8px}
-.case .cd{font-size:13.5px;color:#4E5968;line-height:1.65;font-weight:500}
-.case .cr{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:#3182F6;background:#F0F6FF;padding:5px 10px;border-radius:8px}
-.case a{display:inline-block;margin-top:9px;margin-left:6px;font-size:12.5px;color:#8B95A1;font-weight:600;text-decoration:none;border-bottom:1px solid #E5E8EB}
-/* 도표 사전 */
+.hitbox .z{font-size:12.5px;font-weight:700;color:var(--ink2);margin-top:6px}
+
+.lawc,.case,.citem{border:1.5px solid var(--line);border-radius:var(--r2);padding:15px;margin-bottom:9px;
+  background:var(--surface)}
+.lawc:last-child,.case:last-child{margin-bottom:0}
+.lawc .n{font-size:13px;font-weight:800;color:var(--brand)}
+.lawc .t{font-size:14.5px;font-weight:800;margin:3px 0 6px;color:var(--ink)}
+.lawc .d{font-size:13.5px;color:var(--ink2);line-height:1.68;font-weight:500}
+.case .ct{font-size:14.5px;font-weight:800;line-height:1.45;margin-bottom:6px;color:var(--ink)}
+.case .cs{font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.case .cd{font-size:13.5px;color:var(--ink2);line-height:1.68;font-weight:500}
+.case .cr{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:800;color:var(--brand-ink);
+  background:var(--brand-bg);padding:5px 10px;border-radius:8px}
+.case a{display:inline-block;margin-top:9px;margin-left:6px;font-size:12.5px;color:var(--muted);
+  font-weight:600;text-decoration:none;border-bottom:1px solid var(--line)}
+.case a:hover{color:var(--brand);border-color:var(--brand)}
+
 .clist{display:flex;flex-direction:column;gap:8px}
-.citem{border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;cursor:pointer;transition:.12s}
-.citem:active{border-color:#3182F6;background:#F8FBFF}
-.citem.on{border-color:#3182F6;background:#F8FBFF}
-.citem .cc{font-size:11.5px;font-weight:800;color:#8B95A1}
-.citem .cn{font-size:14.5px;font-weight:800;margin:3px 0 5px;line-height:1.4}
-.citem .cb{font-size:13px;font-weight:800;color:#3182F6}
-.citem .cb s{color:#B0B8C1;text-decoration:none;font-weight:600}
-/* 안내문 */
-.lt h2{font-size:20px;font-weight:900;letter-spacing:-.7px;line-height:1.4;margin-bottom:6px}
-.lt .to{font-size:13px;color:#8B95A1;font-weight:600;margin-bottom:18px}
-.lt p{font-size:14.5px;color:#4E5968;line-height:1.75;font-weight:500;margin-bottom:14px}
-.lt h4{font-size:15px;font-weight:800;margin:20px 0 10px;padding-top:16px;border-top:1px solid #F2F4F6}
-.lt .box{background:#F7F8FA;border-radius:13px;padding:15px 17px;font-size:14px;color:#4E5968;line-height:1.72;font-weight:500}
-.lt .box b{color:#191F28;font-weight:800}
-.sign{margin-top:22px;padding-top:16px;border-top:1px solid #F2F4F6;font-size:13px;color:#8B95A1;font-weight:600;line-height:1.7}
-.notebox{background:#FFF9E8;border-radius:13px;padding:14px 16px;font-size:13.5px;color:#8B6D1F;font-weight:600;line-height:1.62;margin-top:12px}
-.okbox{background:#EDF7EE;border-radius:13px;padding:14px 16px;font-size:13.5px;color:#0F7B5C;font-weight:600;line-height:1.62;margin-top:12px}
-.err{background:#FFF4F4;color:#D63A46;border-radius:13px;padding:14px 16px;font-size:13.5px;font-weight:600;line-height:1.6;margin-top:12px;display:none}
-.disc{font-size:12px;color:#B0B8C1;line-height:1.75;text-align:center;padding:18px 8px;font-weight:500}
-.disc b{color:#8B95A1}
-.setting{margin-top:10px;font-size:12.5px;color:#B0B8C1;text-align:center;font-weight:600;cursor:pointer}
+.citem{cursor:pointer;transition:border-color .12s,background .12s;margin-bottom:0}
+.citem:hover,.citem.on{border-color:var(--brand);background:var(--brand-bg)}
+.citem .cc{font-size:11.5px;font-weight:800;color:var(--muted)}
+.citem .cn{font-size:14.5px;font-weight:800;margin:3px 0 5px;line-height:1.4;color:var(--ink)}
+.citem .cb{font-size:13px;font-weight:800;color:var(--brand)}
+.citem .cb s{color:var(--muted);text-decoration:none;font-weight:600}
+
+.lt h2{font-size:20px;font-weight:800;letter-spacing:-.6px;line-height:1.4;margin-bottom:6px;color:var(--ink)}
+.lt .to{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:18px}
+.lt p{font-size:14.5px;color:var(--ink2);line-height:1.8;font-weight:500;margin-bottom:14px}
+.lt h4{font-size:15px;font-weight:800;margin:20px 0 10px;padding-top:16px;border-top:1px solid var(--line);
+  color:var(--ink)}
+.lt .box{background:var(--sunk);border-radius:13px;padding:15px 17px;font-size:14px;color:var(--ink2);
+  line-height:1.78;font-weight:500}
+.lt .box b{color:var(--ink);font-weight:800}
+.sign{margin-top:22px;padding-top:16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);
+  font-weight:600;line-height:1.7}
+
+.notebox,.okbox{border-radius:13px;padding:14px 16px;font-size:13.5px;font-weight:600;line-height:1.68;
+  margin-top:12px}
+.notebox{background:var(--warn-bg);color:var(--warn)}
+.okbox{background:var(--down-bg);color:var(--down)}
+.notebox a{color:inherit}
+.err{background:var(--up-bg);color:var(--up);border-radius:13px;padding:14px 16px;font-size:13.5px;
+  font-weight:600;line-height:1.65;margin-top:12px;display:none}
+
+.disc{font-size:12px;color:var(--faint);line-height:1.8;text-align:center;padding:18px 8px;font-weight:500}
+.disc b{color:var(--muted)}
+.disc a{color:var(--muted)}
+.setting{margin-top:12px;font-size:12.5px;color:var(--faint);text-align:center;font-weight:600;cursor:pointer}
+.setting:hover{color:var(--brand)}
 #keybox{display:none;margin-top:12px}
-.linkc{display:block;border:1.5px solid #E5E8EB;border-radius:14px;padding:14px;margin-bottom:9px;text-decoration:none}
-.linkc .t{font-size:14.5px;font-weight:800;color:#191F28}
-.linkc .u{font-size:12px;color:#3182F6;font-weight:700;margin:3px 0 5px;word-break:break-all}
-.linkc .d{font-size:13px;color:#6B7684;line-height:1.6;font-weight:500}
-.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #F2F4F6;font-size:14px}
+
+.linkc{display:block;border:1.5px solid var(--line);border-radius:var(--r2);padding:14px;margin-bottom:9px;
+  text-decoration:none;background:var(--surface);transition:border-color .12s}
+.linkc:hover{border-color:var(--brand)}
+.linkc .t{font-size:14.5px;font-weight:800;color:var(--ink)}
+.linkc .u{font-size:12px;color:var(--brand);font-weight:700;margin:3px 0 5px;word-break:break-all}
+.linkc .d{font-size:13px;color:var(--muted);line-height:1.65;font-weight:500}
+
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line2);
+  font-size:14px}
 .kv:last-child{border:none}
-.kv .k{color:#4E5968;font-weight:600;flex:1}
-.kv .k i{display:block;font-style:normal;font-size:11.5px;color:#B0B8C1;margin-top:2px;font-weight:500;line-height:1.5}
-.kv .v{font-weight:800;white-space:nowrap}
-.kv.big .v{font-size:18px;color:#3182F6}
-.step{border-left:2px solid #E5E8EB;padding:0 0 20px 18px;position:relative;margin-left:6px}
+.kv .k{color:var(--ink2);font-weight:600;flex:1}
+.kv .k i{display:block;font-style:normal;font-size:11.5px;color:var(--faint);margin-top:3px;
+  font-weight:500;line-height:1.55}
+.kv .v{font-weight:800;white-space:nowrap;color:var(--ink)}
+.kv.big .v{font-size:18px;color:var(--brand)}
+
+.step{border-left:2px solid var(--line);padding:0 0 20px 18px;position:relative;margin-left:6px}
 .step:last-child{padding-bottom:0}
-.step:before{content:'';position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;background:#3182F6;border:2px solid #fff}
-.step .sw{font-size:11.5px;font-weight:800;color:#3182F6;background:#F0F6FF;display:inline-block;padding:3px 8px;border-radius:7px}
-.step .stt{font-size:15px;font-weight:800;margin:6px 0 5px;line-height:1.42}
-.step .sd{font-size:13.5px;color:#6B7684;font-weight:500;line-height:1.62;margin-bottom:8px}
-@media print{body{background:#fff;padding:0}.nav,#inputCard,#load,.tabs,.btn,.setting,.drop{display:none!important}
-.view{display:block!important}.sec,.card{box-shadow:none;border:1px solid #E5E8EB;break-inside:avoid}}
+.step:before{content:'';position:absolute;left:-6px;top:4px;width:10px;height:10px;border-radius:50%;
+  background:var(--brand);border:2px solid var(--surface)}
+.step .sw{font-size:11.5px;font-weight:800;color:var(--brand-ink);background:var(--brand-bg);
+  display:inline-block;padding:3px 8px;border-radius:7px}
+.step .stt{font-size:15px;font-weight:800;margin:6px 0 5px;line-height:1.42;color:var(--ink)}
+.step .sd{font-size:13.5px;color:var(--muted);font-weight:500;line-height:1.68;margin-bottom:8px}
+
+@media print{
+  body{background:#fff;color:#000;padding:0}
+  .nav,#inputCard,#load,.tabs,.btn,.setting,.drop{display:none!important}
+  .view{display:block!important}
+  .sec,.card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+}
 </style>
 </head>
 <body>
@@ -179,7 +308,7 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
 
 <header>
   <div class="brand">APEX · YUN PRO</div>
-  <h1>사고 상황을 넣으면 <em>과실 · 상황도 · 법조문<br>판례 · 보상금 · 안내문</em>까지</h1>
+  <h1>사고 상황을 넣으면 <em>과실 · 상황도 · 법조문 · 판례 · 보상금 · 안내문</em>까지</h1>
   <div class="lead">손해보험협회 「자동차사고 과실비율 인정기준」 도표를 그대로 데이터로 넣어 두었습니다. AI 는 <b>어느 도표에 해당하는지만</b> 고르고, 숫자 계산은 인정기준의 수정요소 규칙이 합니다. 그래서 매번 같은 상황이면 같은 답이 나옵니다.</div>
 </header>
 
@@ -188,7 +317,7 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
   <b data-v="v2">과실 도표</b>
   <b data-v="v3">보상 계산</b>
   <b data-v="v4">처리 절차</b>
-  <b data-v="v5">법 · 판례</b>
+  <b data-v="v5">법·판례</b>
 </div>
 
 <!-- ══════════ 1. 사고 분석 ══════════ -->
@@ -230,13 +359,13 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
     <div class="hint">파손 부위, 현장, 노면표시, 신호등이 나온 사진을 올려주세요. 여러 장 가능합니다.</div>
     <div class="drop" id="idrop"><div class="ic">📷</div><div class="t">사진 올리기</div><div class="s">최대 6장 · jpg · png</div></div>
     <input type="file" id="ifile" accept="image/*" multiple hidden>
-    <div class="thumbs" id="ithumbs"></div>
+    <div id="istat"></div><div class="thumbs" id="ithumbs"></div>
     <label class="fl">보충 설명 (선택)</label>
     <textarea id="idesc" style="min-height:80px" placeholder="사진에 안 나오는 상황을 적어주세요."></textarea>
   </div>
 
   <label class="fl">해당되는 것을 골라주세요 — 여기서 과실이 실제로 움직입니다</label>
-  <div style="font-size:12.5px;color:#8B95A1;font-weight:600;margin-bottom:8px">🔴 내 잘못 / 🔵 상대 잘못 을 눌러 고릅니다</div>
+  <div style="font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:8px">🔴 내 잘못 / 🔵 상대 잘못 을 눌러 고릅니다</div>
   <div id="modbox"></div>
 
   <div class="two" style="margin-top:14px">
@@ -257,7 +386,7 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
   <div class="setting" id="setToggle">⚙︎ 판례 검색을 켜려면 API 키를 넣으세요</div>
   <div id="keybox">
     <input type="text" id="apikey" placeholder="sk-ant-... (이 브라우저에만 저장됩니다)">
-    <div style="font-size:12px;color:#B0B8C1;font-weight:500;line-height:1.6;margin-top:8px">
+    <div style="font-size:12px;color:var(--faint);font-weight:500;line-height:1.6;margin-top:8px">
       키를 넣지 않아도 <b>직접 고르기</b>는 그대로 작동합니다. 회사 서버(/api/generate)가 붙어 있으면 글·사진 분석도 키 없이 됩니다.
       다만 <b>판례 웹검색</b>은 키를 넣어야 켜집니다.
     </div>
@@ -296,10 +425,10 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
     <div class="hint">자동차보험 표준약관의 대인·대물 지급기준으로 계산합니다. 과실비율을 넣으면 <b>실제로 손에 쥐는 금액</b>이 나옵니다.</div>
     <div class="two">
       <div><label class="fl">내 과실 (%)</label><input type="number" id="pf_my" value="30" min="0" max="100"></div>
-      <div><label class="fl">상대 과실 (%)</label><input type="number" id="pf_op" value="70" min="0" max="100" readonly style="background:#F7F8FA"></div>
+      <div><label class="fl">상대 과실 (%)</label><input type="number" id="pf_op" value="70" min="0" max="100" readonly style="background:var(--sunk)"></div>
     </div>
 
-    <label class="fl" style="margin-top:20px;font-size:14px;color:#191F28">🚑 다친 경우 (대인)</label>
+    <label class="fl" style="margin-top:20px;font-size:14px;color:var(--ink)">🚑 다친 경우 (대인)</label>
     <div class="two">
       <div><label class="fl">치료비 (원)</label><input type="number" id="pf_cure" placeholder="3000000"></div>
       <div><label class="fl">향후 치료비 (원)</label><input type="number" id="pf_future" placeholder="0"></div>
@@ -311,7 +440,7 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
     <label class="fl">상해 급수 (진단서 기준 · 1급이 가장 무거움)</label>
     <select id="pf_grade"><option value="">모름 · 해당 없음</option></select>
 
-    <label class="fl" style="margin-top:20px;font-size:14px;color:#191F28">🚗 차가 망가진 경우 (대물)</label>
+    <label class="fl" style="margin-top:20px;font-size:14px;color:var(--ink)">🚗 차가 망가진 경우 (대물)</label>
     <div class="two">
       <div><label class="fl">내 차 수리비 (원)</label><input type="number" id="pf_fix" placeholder="4000000"></div>
       <div><label class="fl">내 차 가액 (원)</label><input type="number" id="pf_value" placeholder="20000000"></div>
@@ -346,7 +475,7 @@ font-weight:800;display:flex;align-items:center;justify-content:center;text-deco
 <div class="disc">
   본 결과는 <b>참고용 추정치</b>이며 공식 과실비율이 아닙니다.<br>
   최종 과실은 블랙박스·현장조사·보험사 협의로 정해지고, 불복하면 손해보험협회 과실비율분쟁심의위원회, 그래도 안 되면 법원에서 확정됩니다.<br>
-  기본과실 숫자는 손해보험협회 「자동차사고 과실비율 인정기준」을 옮긴 것이며 <b>개정될 수 있습니다.</b> 인용 전 <a href="https://accident.knia.or.kr" target="_blank" rel="noopener" style="color:#8B95A1">과실비율정보포털</a>에서 원문 도표를 확인하세요.<br><br>
+  기본과실 숫자는 손해보험협회 「자동차사고 과실비율 인정기준」을 옮긴 것이며 <b>개정될 수 있습니다.</b> 인용 전 <a href="https://accident.knia.or.kr" target="_blank" rel="noopener" style="color:var(--muted)">과실비율정보포털</a>에서 원문 도표를 확인하세요.<br><br>
   <b>에이플러스에셋 온탑본부 · APEX YUN PRO</b>
 </div>
 </div>
@@ -361,6 +490,22 @@ const esc = s => String(s ?? '').replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;'
 const won = n => (Math.round(n) || 0).toLocaleString('ko-KR') + '원';
 const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
 const chartById = id => CHARTS.find(c => c.id === id);
+
+/* 칩·탭·도표카드는 div 라서 탭 키가 그냥 지나쳤다. 화면을 새로 그릴 때마다
+   버튼 역할을 붙여 주고, 엔터·스페이스로도 눌리게 한다. */
+function wireKeys(root) {
+  (root || document).querySelectorAll('.chip,.tab,.citem,.nav b').forEach(el => {
+    if (el.getAttribute('role')) return;
+    el.setAttribute('role','button'); el.setAttribute('tabindex','0');
+  });
+}
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = document.activeElement;
+  if (el && el.getAttribute && el.getAttribute('role') === 'button') { e.preventDefault(); el.click(); }
+});
+new MutationObserver(() => wireKeys()).observe(document.body, {childList:true, subtree:true});
+wireKeys();
 
 document.querySelectorAll('#nav b').forEach(b => b.onclick = () => {
   document.querySelectorAll('#nav b').forEach(x => x.classList.remove('on'));
@@ -421,8 +566,11 @@ function calcFault(base, picks) {
       AI 가 좌표를 만들지 않는다. 도로 종류와 진입 방향만 받고 그림은 여기서 그린다.
    ══════════════════════════════════════════════════════════════════════ */
 const VW = 470, VH = 470, CX = 235, CY = 235, HALF = 80, L_IN = 26, L_OUT = 60;
-const CO = {road:'#D5DBE2', edge:'#C2C9D2', line:'#fff', yellow:'#F5C543', bg:'#F7F8FA',
-            me:'#3182F6', op:'#F04452', hit:'#FF9500', txt:'#4E5968', walk:'#8B5CF6'};
+/* 그림 색도 CSS 토큰을 그대로 쓴다. 인라인 SVG 는 var() 를 알아듣기 때문에
+   밝은 화면·어두운 화면이 바뀌어도 다시 그릴 필요가 없다. */
+const CO = {road:'var(--road)', edge:'var(--roadedge)', line:'var(--roadline)', yellow:'var(--yellow)',
+            bg:'var(--sunk)', me:'var(--me)', op:'var(--op)', hit:'var(--hit)',
+            txt:'var(--ink2)', walk:'var(--walk)', halo:'var(--sunk)'};
 
 const HEAD = {S:'N', N:'S', W:'E', E:'W'};
 const TURN = {N:{left:'W',right:'E',u:'S'}, S:{left:'E',right:'W',u:'N'},
@@ -580,8 +728,8 @@ function roadBase(sc) {
           <rect x="${CX-vh+1}" y="${CY+4}" width="5" height="${HALF-8}" fill="${CO.line}"/>
           <rect x="${CX+vh-6}" y="${CY-HALF+4}" width="5" height="${HALF-8}" fill="${CO.line}"/>`;
     if (sc.narrowV)
-      g += `<text x="${CX+vh+8}" y="${VH-14}" font-size="11.5" font-weight="800" fill="#8B95A1" font-family="sans-serif">소로(좁은 길)</text>
-            <text x="10" y="${CY-HALF-10}" font-size="11.5" font-weight="800" fill="#8B95A1" font-family="sans-serif">대로(넓은 길)</text>`;
+      g += `<text x="${CX+vh+8}" y="${VH-14}" font-size="11.5" font-weight="800" fill="var(--muted)" font-family="sans-serif">소로(좁은 길)</text>
+            <text x="10" y="${CY-HALF-10}" font-size="11.5" font-weight="800" fill="var(--muted)" font-family="sans-serif">대로(넓은 길)</text>`;
     if (t === 'crosswalk') for (let i = 0; i < 7; i++)
       g += `<rect x="${VW*.60-32+i*10}" y="${CY-HALF+6}" width="6" height="${HALF*2-12}" fill="${CO.line}" opacity=".95"/>`;
     return g;
@@ -590,14 +738,14 @@ function roadBase(sc) {
     g += hRoad + vRoad(true);
     g += `<circle cx="${CX}" cy="${CY}" r="118" fill="${CO.road}"/>
           <circle cx="${CX}" cy="${CY}" r="118" fill="none" stroke="${CO.line}" stroke-width="2.5" stroke-dasharray="12 10"/>
-          <circle cx="${CX}" cy="${CY}" r="54" fill="#CBD8C6" stroke="${CO.edge}" stroke-width="3"/>`;
+          <circle cx="${CX}" cy="${CY}" r="54" fill="var(--island)" stroke="${CO.edge}" stroke-width="3"/>`;
     return g;
   }
   if (t === 'parking') {
     g += `<rect x="0" y="${CY-70}" width="${VW}" height="140" fill="${CO.road}"/>`;
     for (let i = 0; i < 6; i++) {
-      g += `<rect x="${10+i*76}" y="${CY-152}" width="66" height="80" fill="#E9EDF1" stroke="${CO.edge}" stroke-width="2.5"/>`;
-      g += `<rect x="${10+i*76}" y="${CY+72}" width="66" height="80" fill="#E9EDF1" stroke="${CO.edge}" stroke-width="2.5"/>`;
+      g += `<rect x="${10+i*76}" y="${CY-152}" width="66" height="80" fill="var(--slot)" stroke="${CO.edge}" stroke-width="2.5"/>`;
+      g += `<rect x="${10+i*76}" y="${CY+72}" width="66" height="80" fill="var(--slot)" stroke="${CO.edge}" stroke-width="2.5"/>`;
     }
     return g;
   }
@@ -619,16 +767,16 @@ function roadBase(sc) {
   }
   if (t === 'sidewalk') {
     g += hRoad + yellowH + laneH(0, VW);
-    g += `<rect x="0" y="${CY-HALF-40}" width="${VW}" height="40" fill="#DCE3D9" stroke="${CO.edge}" stroke-width="2"/>`;
+    g += `<rect x="0" y="${CY-HALF-40}" width="${VW}" height="40" fill="var(--island)" stroke="${CO.edge}" stroke-width="2"/>`;
     return g;
   }
   g += hRoad + yellowH + laneH(0, VW);
   if (sc.solid) g += `<line x1="0" y1="${CY+L_IN+17}" x2="${VW}" y2="${CY+L_IN+17}" stroke="${CO.line}" stroke-width="3.5"/>`;
-  if (sc.bike) g += `<rect x="0" y="${CY+HALF-30}" width="${VW}" height="30" fill="#BFD8C4"/>
+  if (sc.bike) g += `<rect x="0" y="${CY+HALF-30}" width="${VW}" height="30" fill="var(--bikelane)"/>
     <line x1="0" y1="${CY+HALF-30}" x2="${VW}" y2="${CY+HALF-30}" stroke="${CO.line}" stroke-width="3"/>
-    <text x="12" y="${CY+HALF-10}" font-size="11.5" font-weight="800" fill="#2F6B45" font-family="sans-serif">자전거 전용도로</text>`;
+    <text x="12" y="${CY+HALF-10}" font-size="11.5" font-weight="800" fill="var(--bikeink)" font-family="sans-serif">자전거 전용도로</text>`;
   if (sc.safezone) {
-    g += `<path d="M${VW*.30},${CY+L_IN+6} L${VW*.66},${CY+L_IN+6} L${VW*.60},${CY+L_IN+30} L${VW*.24},${CY+L_IN+30} Z" fill="#EFF2F5" stroke="${CO.line}" stroke-width="2"/>`;
+    g += `<path d="M${VW*.30},${CY+L_IN+6} L${VW*.66},${CY+L_IN+6} L${VW*.60},${CY+L_IN+30} L${VW*.24},${CY+L_IN+30} Z" fill="var(--sunk)" stroke="${CO.line}" stroke-width="2"/>`;
     for (let i=0;i<6;i++) g += `<line x1="${VW*.28+i*22}" y1="${CY+L_IN+30}" x2="${VW*.34+i*22}" y2="${CY+L_IN+6}" stroke="${CO.line}" stroke-width="2"/>`;
   }
   return g;
@@ -637,21 +785,21 @@ function roadBase(sc) {
 function carIcon(x, y, ang, col, label, kind) {
   const t = `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${ang.toFixed(1)})`;
   let body;
-  if (kind === 'moto') body = `<rect x="-15" y="-7" width="30" height="14" rx="6" fill="${col}"/><circle cx="-9" cy="0" r="4" fill="#333D4B"/><circle cx="9" cy="0" r="4" fill="#333D4B"/>`;
-  else if (kind === 'bike') body = `<rect x="-13" y="-5" width="26" height="10" rx="5" fill="${col}"/><circle cx="-9" cy="0" r="5" fill="none" stroke="#333D4B" stroke-width="2"/><circle cx="9" cy="0" r="5" fill="none" stroke="#333D4B" stroke-width="2"/>`;
+  if (kind === 'moto') body = `<rect x="-15" y="-7" width="30" height="14" rx="6" fill="${col}"/><circle cx="-9" cy="0" r="4" fill="var(--ink)"/><circle cx="9" cy="0" r="4" fill="var(--ink)"/>`;
+  else if (kind === 'bike') body = `<rect x="-13" y="-5" width="26" height="10" rx="5" fill="${col}"/><circle cx="-9" cy="0" r="5" fill="none" stroke="var(--ink)" stroke-width="2"/><circle cx="9" cy="0" r="5" fill="none" stroke="var(--ink)" stroke-width="2"/>`;
   else body = `<rect x="-25" y="-13.5" width="50" height="27" rx="7" fill="${col}"/>
     <rect x="-11" y="-9.5" width="17" height="19" rx="4" fill="#fff" opacity=".5"/>
     <rect x="18" y="-10.5" width="5" height="7" rx="2" fill="#fff" opacity=".85"/>
     <rect x="18" y="3.5" width="5" height="7" rx="2" fill="#fff" opacity=".85"/>`;
   return `<g transform="${t}">${body}</g>
     <text x="${x.toFixed(1)}" y="${(y+32).toFixed(1)}" font-size="12.5" font-weight="800" fill="${col}"
-      text-anchor="middle" font-family="sans-serif" paint-order="stroke" stroke="#fff" stroke-width="3">${esc(label)}</text>`;
+      text-anchor="middle" font-family="sans-serif" paint-order="stroke" stroke="var(--sunk)" stroke-width="3">${esc(label)}</text>`;
 }
 function pedIcon(x, y, col) {
   return `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})">
     <circle cx="0" cy="-12" r="7" fill="${col}"/><rect x="-5.5" y="-4" width="11" height="17" rx="5" fill="${col}"/></g>
-    <text x="${x.toFixed(1)}" y="${(y+28).toFixed(1)}" font-size="12.5" font-weight="800" fill="${col}" text-anchor="middle"
-      font-family="sans-serif" paint-order="stroke" stroke="#fff" stroke-width="3">보행자</text>`;
+    <text x="${x.toFixed(1)}" y="${(y-26).toFixed(1)}" font-size="12.5" font-weight="800" fill="${col}" text-anchor="middle"
+      font-family="sans-serif" paint-order="stroke" stroke="var(--sunk)" stroke-width="3">보행자</text>`;
 }
 function arrowHead(p, ang, col) {
   return `<g transform="translate(${p[0].toFixed(1)},${p[1].toFixed(1)}) rotate(${ang.toFixed(1)})">
@@ -664,15 +812,15 @@ function starPath(cx, cy, r) {
   return d + 'Z';
 }
 function pinBadge(x, y, n) {
-  return `<g><circle cx="${x}" cy="${y}" r="13" fill="#191F28" stroke="#fff" stroke-width="2.5"/>
-    <text x="${x}" y="${y+4.5}" font-size="13" font-weight="800" fill="#fff" text-anchor="middle" font-family="sans-serif">${n}</text></g>`;
+  return `<g><circle cx="${x}" cy="${y}" r="13" fill="var(--ink)" stroke="var(--sunk)" stroke-width="2.5"/>
+    <text x="${x}" y="${y+4.5}" font-size="13" font-weight="800" fill="var(--surface)" text-anchor="middle" font-family="sans-serif">${n}</text></g>`;
 }
 function signalBox(sc, myRole) {
   if (!sc.sig || (!sc.sig[0] && !sc.sig[1])) return '';
-  const color = s => /녹색/.test(s) ? '#12B886' : /적색/.test(s) ? '#F04452' : /황색/.test(s) ? '#F5A524' : '#8B95A1';
+  const color = s => /녹색/.test(s) ? 'var(--down)' : /적색/.test(s) ? 'var(--op)' : /황색/.test(s) ? 'var(--hit)' : 'var(--muted)';
   /* sig[0] 은 A 역할, sig[1] 은 B 역할의 신호다. 사용자가 B 이면 이름표를 바꿔 단다. */
   const name = i => (i === 0 ? 'A' : 'B') === myRole ? '내 쪽' : '상대';
-  let g = `<rect x="10" y="10" width="184" height="${sc.sig[1] ? 56 : 32}" rx="10" fill="#fff" opacity=".95"/>`;
+  let g = `<rect x="10" y="10" width="184" height="${sc.sig[1] ? 56 : 32}" rx="10" fill="var(--surface)" opacity=".95"/>`;
   if (sc.sig[0]) g += `<circle cx="26" cy="26" r="7" fill="${color(sc.sig[0])}"/>
     <text x="40" y="30" font-size="12.5" font-weight="800" fill="${CO.txt}" font-family="sans-serif">${name(0)} ${esc(sc.sig[0])}</text>`;
   if (sc.sig[1]) g += `<circle cx="26" cy="50" r="7" fill="${color(sc.sig[1])}"/>
@@ -725,9 +873,9 @@ const ZONE = {F:[22,4,36,14], FR:[52,14,18,20], R:[52,36,18,32], BR:[52,72,18,20
 const ZNAME = {F:'앞', FR:'앞 우측', R:'오른쪽 옆', BR:'뒤 우측', B:'뒤', BL:'뒤 좌측', L:'왼쪽 옆', FL:'앞 좌측'};
 function hitDiagram(zone, col) {
   let g = `<svg viewBox="0 0 80 110" xmlns="http://www.w3.org/2000/svg">
-    <rect x="10" y="4" width="60" height="102" rx="14" fill="#E5E8EB"/>
-    <rect x="20" y="22" width="40" height="26" rx="6" fill="#fff" opacity=".8"/>
-    <rect x="20" y="58" width="40" height="26" rx="6" fill="#fff" opacity=".8"/>`;
+    <rect x="10" y="4" width="60" height="102" rx="14" fill="var(--line)"/>
+    <rect x="20" y="22" width="40" height="26" rx="6" fill="var(--surface)" opacity=".8"/>
+    <rect x="20" y="58" width="40" height="26" rx="6" fill="var(--surface)" opacity=".8"/>`;
   const z = ZONE[zone];
   if (z) g += `<rect x="${z[0]}" y="${z[1]}" width="${z[2]}" height="${z[3]}" rx="5" fill="${col}"/>`;
   return g + '</svg>';
@@ -820,13 +968,34 @@ renderMods();
    4. 업로드
    ══════════════════════════════════════════════════════════════════════ */
 let IMGS = [], FRAMES = [];
+/* 사진을 줄이는 동안 분석 버튼을 잠근다.
+   예전에는 큰 사진 여섯 장을 고르자마자 누르면 아직 안 줄어든 사진이 빠진 채
+   분석이 돌았다. 화면에는 아무 말이 없어서 왜 엉뚱한 답이 나오는지 알 수 없었다. */
+let BUSY = 0;
+function busy(n, msg) {
+  BUSY = Math.max(0, BUSY + n);
+  $('go').disabled = BUSY > 0;
+  $('go').textContent = BUSY > 0 ? (msg || '준비 중입니다…') : '과실비율 분석하기';
+}
 $('idrop').onclick = () => $('ifile').click();
 $('ifile').onchange = e => {
-  const fs = [...e.target.files].slice(0, 6); IMGS = []; $('ithumbs').innerHTML = '';
-  fs.forEach(f => { const r = new FileReader();
+  const fs = [...e.target.files].slice(0, 6);
+  if (!fs.length) return;
+  IMGS = new Array(fs.length); $('ithumbs').innerHTML = '';
+  $('istat').innerHTML = `<div class="filetag">📷 사진 ${fs.length}장 준비 중…</div>`;
+  busy(1, `사진 ${fs.length}장 준비 중…`);
+  let done = 0;
+  fs.forEach((f, i) => { const r = new FileReader();
     r.onload = () => shrink(r.result, 1000).then(d => {
-      IMGS.push({media:'image/jpeg', data: d.split(',')[1]});
-      const im = document.createElement('img'); im.src = d; $('ithumbs').appendChild(im); });
+      IMGS[i] = {media:'image/jpeg', data: d.split(',')[1]};      /* 고른 순서를 지킨다 */
+      const im = document.createElement('img'); im.src = d; im.alt = `사진 ${i+1}`;
+      $('ithumbs').appendChild(im);
+      if (++done === fs.length) {
+        IMGS = IMGS.filter(Boolean);
+        $('istat').innerHTML = `<div class="filetag">✓ 사진 ${IMGS.length}장 준비 완료</div>`;
+        busy(-1);
+      }
+    }).catch(() => { if (++done === fs.length) { IMGS = IMGS.filter(Boolean); busy(-1); } });
     r.readAsDataURL(f); });
 };
 function shrink(src, max) {
@@ -839,13 +1008,18 @@ function shrink(src, max) {
 $('vdrop').onclick = () => $('vfile').click();
 $('vfile').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
-  $('vinfo').innerHTML = '<div class="filetag">📼 ' + esc(f.name) + ' — 장면 추출 중...</div>';
+  $('vinfo').innerHTML = '<div class="filetag">📼 ' + esc(f.name) + ' — 장면 추출 중…</div>';
+  busy(1, '영상에서 장면 뽑는 중…');
   extractFrames(f, 9).then(fr => {
     FRAMES = fr.map(d => ({media:'image/jpeg', data: d.split(',')[1]}));
     const t = $('vthumbs'); t.innerHTML = '';
-    fr.forEach(d => { const im = new Image(); im.src = d; t.appendChild(im); });
+    fr.forEach((d, i) => { const im = new Image(); im.src = d; im.alt = `장면 ${i+1}`; t.appendChild(im); });
     $('vinfo').innerHTML = '<div class="filetag">✓ ' + esc(f.name) + ' — 장면 ' + fr.length + '컷 추출 완료</div>';
-  }).catch(() => { $('vinfo').innerHTML = '<div class="filetag" style="background:#FFF4F4;color:#D63A46">영상을 읽지 못했습니다. 사진 탭을 이용해 주세요.</div>'; });
+    busy(-1);
+  }).catch(() => {
+    $('vinfo').innerHTML = '<div class="filetag bad">영상을 읽지 못했습니다. 사진 탭을 이용해 주세요.</div>';
+    busy(-1);
+  });
 };
 function extractFrames(file, n) {
   return new Promise((res, rej) => { const v = $('vprev');
@@ -1091,7 +1265,7 @@ function renderAll() {
     <div class="v ${m.v > 0 ? 'up' : 'down'}">${m.v > 0 ? '+' : ''}${m.v}%</div></div>`));
   opSide.list.forEach(m => lines.push(`<div class="crow"><div class="l">🔵 상대 쪽 · ${esc(m.k)}${m.law && LAW[m.law] ? `<i>${esc(LAW[m.law].n)} ${esc(LAW[m.law].t)}</i>` : ''}</div>
     <div class="v ${m.v > 0 ? 'down' : 'up'}">${m.v > 0 ? '+' : ''}${m.v}%</div></div>`));
-  rows += lines.length ? lines.join('') : '<div class="crow"><div class="l">적용된 수정요소 없음</div><div class="v" style="color:#B0B8C1">—</div></div>';
+  rows += lines.length ? lines.join('') : '<div class="crow"><div class="l">적용된 수정요소 없음</div><div class="v" style="color:var(--faint)">—</div></div>';
   rows += `<div class="cline"></div><div class="crow total"><div class="l">최종 추정 과실 (나 : 상대)</div><div class="v">${me} : ${op}</div></div>`;
   const capNotes = [].concat(mySide.notes, opSide.notes);
 
@@ -1149,7 +1323,7 @@ function renderAll() {
     const laws = (c.law || []).map(k => LAW[k]).filter(Boolean);
     if (laws.length) html += `<div class="sec"><h3><span class="dot"></span>근거 법조문</h3>
       ${laws.map(l => `<div class="lawc"><div class="n">${esc(l.n)}</div><div class="t">${esc(l.t)}</div><div class="d">${esc(l.d)}</div></div>`).join('')}
-      <div class="notebox">조문 원문은 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:#8B6D1F">국가법령정보센터</a>에서 확인할 수 있습니다.</div></div>`;
+      <div class="notebox">조문 원문은 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:inherit">국가법령정보센터</a>에서 확인할 수 있습니다.</div></div>`;
   }
 
   if (RES.ai?.관측?.length) html += sec('AI 가 영상·사진에서 실제로 읽어낸 것', RES.ai.관측, '');
