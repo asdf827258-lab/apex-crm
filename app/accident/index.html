@@ -114,6 +114,11 @@ input[type=checkbox]{accent-color:var(--brand)}
 .drop .s{font-size:12.5px;color:var(--muted);margin-top:5px;font-weight:500}
 .thumbs{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .thumbs img{width:72px;height:52px;object-fit:cover;border-radius:9px;border:1px solid var(--line)}
+.thumbs img.key{border:2.5px solid var(--hit);box-shadow:0 0 0 3px var(--warn-bg)}
+.privacy{background:var(--down-bg);color:var(--down);border-radius:13px;padding:12px 14px;font-size:12.5px;
+  font-weight:600;line-height:1.65;margin-bottom:14px}
+.privacy b{font-weight:800}
+.btn.wipe{margin-top:10px;font-size:13px;padding:11px}
 .filetag{margin-top:10px;font-size:13px;color:var(--brand-ink);font-weight:700;background:var(--brand-bg);
   padding:9px 13px;border-radius:var(--r3)}
 .filetag.bad{background:var(--up-bg);color:var(--up)}
@@ -244,6 +249,33 @@ input[type=checkbox]{accent-color:var(--brand)}
 .citem .cb{font-size:13px;font-weight:800;color:var(--brand)}
 .citem .cb s{color:var(--muted);text-decoration:none;font-weight:600}
 
+/* ── 고객 안내문 ─────────────────────────────────────────────────────
+   화면에서도 읽히고, 종이로 뽑았을 때 한 장짜리 문서로 보여야 한다.  */
+.lt{padding:4px 2px}
+.lt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding-bottom:14px;margin-bottom:18px;border-bottom:2px solid var(--ink)}
+.lt-mark{font-size:12px;font-weight:700;color:var(--muted);line-height:1.5}
+.lt-mark span{display:block;font-size:15px;font-weight:800;letter-spacing:2px;color:var(--brand);margin-bottom:2px}
+.lt-date{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap;padding-top:2px}
+.lt-lead{color:var(--ink2)}
+.lt-sum{border:1px solid var(--line);border-radius:var(--r2);padding:4px 15px;margin:16px 0 12px;
+  background:var(--sunk)}
+.lt-row{display:flex;justify-content:space-between;gap:14px;padding:10px 0;
+  border-bottom:1px solid var(--line2);font-size:13.5px}
+.lt-row:last-child{border:none}
+.lt-row span{color:var(--muted);font-weight:600;flex-shrink:0}
+.lt-row b{color:var(--ink);font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.lt-bar{height:52px;margin-bottom:8px}
+.lt-note{font-size:12px;color:var(--muted);font-weight:600;text-align:right;margin-bottom:4px}
+.lt-fig{margin:14px 0 4px}
+.lt-cap{font-size:12px;color:var(--muted);font-weight:600;text-align:center;margin-top:8px}
+.lt-check{list-style:none;counter-reset:c;display:flex;flex-direction:column;gap:9px;margin-top:4px}
+.lt-check li{counter-increment:c;position:relative;padding:12px 14px 12px 42px;background:var(--sunk);
+  border-radius:var(--r3);font-size:14px;color:var(--ink2);font-weight:500;line-height:1.65}
+.lt-check li:before{content:counter(c);position:absolute;left:13px;top:12px;width:19px;height:19px;
+  border-radius:6px;background:var(--brand);color:#fff;font-size:11.5px;font-weight:800;
+  display:flex;align-items:center;justify-content:center}
+.lt-close{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);color:var(--ink2)}
 .lt h2{font-size:20px;font-weight:800;letter-spacing:-.6px;line-height:1.4;margin-bottom:6px;color:var(--ink)}
 .lt .to{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:18px}
 .lt p{font-size:14.5px;color:var(--ink2);line-height:1.8;font-weight:500;margin-bottom:14px}
@@ -296,10 +328,19 @@ input[type=checkbox]{accent-color:var(--brand)}
 .step .sd{font-size:13.5px;color:var(--muted);font-weight:500;line-height:1.68;margin-bottom:8px}
 
 @media print{
+  @page{size:A4;margin:14mm}
   body{background:#fff;color:#000;padding:0}
-  .nav,#inputCard,#load,.tabs,.btn,.setting,.drop{display:none!important}
+  .nav,#inputCard,#load,.tabs,.btn,.setting,.drop,.privacy{display:none!important}
   .view{display:block!important}
   .sec,.card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  /* 안내문만 인쇄 — 고객에게 건네는 종이에 분석 화면까지 딸려 나가면 안 된다 */
+  body.only-letter header,body.only-letter .disc,body.only-letter .card,
+  body.only-letter .sec{display:none!important}
+  body.only-letter #letterbox,body.only-letter #letterSec{display:block!important;
+    border:none!important;padding:0!important;margin:0!important}
+  body.only-letter #letterSec h3{display:none!important}
+  body.only-letter .lt-check li,body.only-letter .lt-sum,body.only-letter .lt-fig{break-inside:avoid}
+  body.only-letter .lt-fig .scene{max-width:340px;margin:0 auto}
 }
 </style>
 </head>
@@ -347,19 +388,27 @@ input[type=checkbox]{accent-color:var(--brand)}
   </div>
 
   <div class="pane" id="p2">
-    <div class="hint">영상에서 장면을 자동으로 뽑아 분석합니다. 충돌 전후 10초 내외로 잘라 올리면 정확도가 올라갑니다.</div>
+    <div class="hint">영상을 먼저 훑어 <b>화면이 가장 크게 변하는 순간(충돌로 추정)</b>을 찾고, 그 앞뒤를 촘촘히 뽑습니다.
+      영상이 길어도 부딪히는 장면을 놓치지 않습니다.</div>
+    <div class="privacy">🔒 <b>영상은 이 기기 밖으로 나가지 않습니다.</b>
+      장면을 뽑는 일은 전부 브라우저 안에서 일어나고, 분석에 쓰이는 장면 그림만 잠시 전송됩니다.
+      영상도 장면도 <b>이 앱에 저장하지 않습니다</b> — 화면을 닫으면 사라집니다.</div>
     <div class="drop" id="vdrop"><div class="ic">🎥</div><div class="t">블랙박스 영상 올리기</div><div class="s">mp4 · mov · avi</div></div>
     <input type="file" id="vfile" accept="video/*" hidden><video id="vprev" hidden></video>
     <div id="vinfo"></div><div class="thumbs" id="vthumbs"></div>
+    <button class="btn ghost sm wipe" type="button" onclick="clearMedia()">올린 사진·영상 지금 지우기</button>
     <label class="fl">보충 설명 (선택)</label>
     <textarea id="vdesc" style="min-height:80px" placeholder="영상만으로 안 보이는 정보를 적어주세요. 예) 검은색 차량이 제 차입니다."></textarea>
   </div>
 
   <div class="pane" id="p3">
-    <div class="hint">파손 부위, 현장, 노면표시, 신호등이 나온 사진을 올려주세요. 여러 장 가능합니다.</div>
+    <div class="hint">파손 부위, 현장, 노면표시, 신호등이 나온 사진을 올려주세요. 여러 장 가능합니다.
+      <b>바퀴와 차로 경계선이 함께 나온 사진</b>이 과실을 가르는 가장 강한 증거입니다.</div>
+    <div class="privacy">🔒 사진은 이 기기에서 줄인 뒤 분석에만 쓰이고, <b>이 앱에 저장하지 않습니다.</b></div>
     <div class="drop" id="idrop"><div class="ic">📷</div><div class="t">사진 올리기</div><div class="s">최대 6장 · jpg · png</div></div>
     <input type="file" id="ifile" accept="image/*" multiple hidden>
     <div id="istat"></div><div class="thumbs" id="ithumbs"></div>
+    <button class="btn ghost sm wipe" type="button" onclick="clearMedia()">올린 사진·영상 지금 지우기</button>
     <label class="fl">보충 설명 (선택)</label>
     <textarea id="idesc" style="min-height:80px" placeholder="사진에 안 나오는 상황을 적어주세요."></textarea>
   </div>
@@ -831,7 +880,10 @@ function signalBox(sc, myRole) {
 /* myRole: 'A' | 'B' — 사용자가 어느 역할인지. 그 쪽이 파란색 「내 차」가 된다. */
 function drawScene(sc, myRole) {
   if (!sc) return '';
-  let g = `<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg" role="img">` + roadBase(sc);
+  /* 가로로 뻗은 도로는 화면 위아래가 텅 빈다. 그 종류만 세로를 잘라 보여 준다. */
+  const flat = ['straight','highway','narrow','sidewalk'].includes(sc.road);
+  const vb = flat ? `0 ${CY-142} ${VW} 284` : `0 0 ${VW} ${VH}`;
+  let g = `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg" role="img">` + roadBase(sc);
   const cars = sc.cars || [];
   const paths = cars.map(c => ({c, p: pathOf(sc, c)}));
   const spot = ({c, p}) => along(p, c.at != null ? c.at : (c.act === 'parked' ? .5 : .42));
@@ -967,7 +1019,7 @@ renderMods();
 /* ══════════════════════════════════════════════════════════════════════
    4. 업로드
    ══════════════════════════════════════════════════════════════════════ */
-let IMGS = [], FRAMES = [];
+let IMGS = [], FRAMES = [], TIMELINE = '', VIDEOMETA = '';
 /* 사진을 줄이는 동안 분석 버튼을 잠근다.
    예전에는 큰 사진 여섯 장을 고르자마자 누르면 아직 안 줄어든 사진이 빠진 채
    분석이 돌았다. 화면에는 아무 말이 없어서 왜 엉뚱한 답이 나오는지 알 수 없었다. */
@@ -976,6 +1028,16 @@ function busy(n, msg) {
   BUSY = Math.max(0, BUSY + n);
   $('go').disabled = BUSY > 0;
   $('go').textContent = BUSY > 0 ? (msg || '준비 중입니다…') : '과실비율 분석하기';
+}
+/* 「지금 지우기」 — 메모리에 들고 있던 그림까지 실제로 놓는다.
+   어차피 어디에도 저장하지 않지만, 눈으로 확인할 수 있어야 안심이 된다. */
+function clearMedia() {
+  IMGS = []; FRAMES = []; TIMELINE = ''; VIDEOMETA = ''; MEDIA = [];
+  ['ithumbs','vthumbs','istat','vinfo'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+  ['ifile','vfile'].forEach(id => { const el = $(id); if (el) el.value = ''; });
+  const v = $('vprev'); if (v) { v.removeAttribute('src'); try { v.load(); } catch(_) {} }
+  $('istat').innerHTML = '<div class="filetag">✓ 올렸던 사진·영상을 모두 지웠습니다</div>';
+  setTimeout(() => { if ($('istat')) $('istat').innerHTML = ''; }, 4000);
 }
 $('idrop').onclick = () => $('ifile').click();
 $('ifile').onchange = e => {
@@ -1008,33 +1070,103 @@ function shrink(src, max) {
 $('vdrop').onclick = () => $('vfile').click();
 $('vfile').onchange = e => {
   const f = e.target.files[0]; if (!f) return;
-  $('vinfo').innerHTML = '<div class="filetag">📼 ' + esc(f.name) + ' — 장면 추출 중…</div>';
+  $('vinfo').innerHTML = '<div class="filetag">📼 ' + esc(f.name) + ' — 여는 중…</div>';
   busy(1, '영상에서 장면 뽑는 중…');
-  extractFrames(f, 9).then(fr => {
-    FRAMES = fr.map(d => ({media:'image/jpeg', data: d.split(',')[1]}));
+  extractFrames(f, 9).then(r => {
+    FRAMES = r.frames.map(d => ({media:'image/jpeg', data: d.data.split(',')[1]}));
+    /* 몇 번째 컷이 충돌 몇 초 전인지 글로도 알려 준다 — 그림만으로는 순서를 확신할 수 없다 */
+    TIMELINE = r.frames.map((d, i) =>
+      `${i+1}번째 컷 = 충돌 추정 시점 ${d.rel === 0 ? '바로 그 순간' : (d.rel < 0 ? Math.abs(d.rel)+'초 전' : d.rel+'초 후')}`).join(' / ');
+    VIDEOMETA = `영상 길이 ${r.dur}초 · 충돌 추정 시점 ${r.impact}초`;
     const t = $('vthumbs'); t.innerHTML = '';
-    fr.forEach((d, i) => { const im = new Image(); im.src = d; im.alt = `장면 ${i+1}`; t.appendChild(im); });
-    $('vinfo').innerHTML = '<div class="filetag">✓ ' + esc(f.name) + ' — 장면 ' + fr.length + '컷 추출 완료</div>';
+    r.frames.forEach((d, i) => { const im = new Image(); im.src = d.data;
+      im.alt = `장면 ${i+1} (${d.rel}초)`; im.title = d.t + '초';
+      if (Math.abs(d.rel) < .3) im.className = 'key';
+      t.appendChild(im); });
+    $('vinfo').innerHTML = `<div class="filetag">✓ 장면 ${r.frames.length}컷 — 충돌로 보이는 ${r.impact}초 지점 앞뒤를 집중해서 뽑았습니다</div>`;
     busy(-1);
-  }).catch(() => {
-    $('vinfo').innerHTML = '<div class="filetag bad">영상을 읽지 못했습니다. 사진 탭을 이용해 주세요.</div>';
+  }).catch(err => {
+    $('vinfo').innerHTML = `<div class="filetag bad">영상을 읽지 못했습니다 (${esc(err.message || '알 수 없는 이유')}). 사진 탭을 이용해 주세요.</div>`;
     busy(-1);
   });
 };
-function extractFrames(file, n) {
-  return new Promise((res, rej) => { const v = $('vprev');
-    v.preload = 'auto'; v.muted = true; v.playsInline = true; v.src = URL.createObjectURL(file); v.onerror = rej;
-    v.onloadedmetadata = async () => { const dur = v.duration;
-      if (!isFinite(dur) || dur <= 0) { rej(); return; }
-      const c = document.createElement('canvas');
-      let w = v.videoWidth, h = v.videoHeight; const max = 900;
-      if (w > max) { h = Math.round(h*max/w); w = max; }
-      c.width = w; c.height = h; const ctx = c.getContext('2d'); const out = [];
-      for (let i = 0; i < n; i++) { await seek(v, dur*(i+.5)/n); ctx.drawImage(v, 0, 0, w, h); out.push(c.toDataURL('image/jpeg', .72)); }
-      res(out); }; });
+/* 영상에서 장면 뽑기 — 충돌 순간을 먼저 찾고 그 앞뒤를 촘촘히 본다.
+   예전에는 영상 전체를 9등분해서 고르게 뽑았다. 3분짜리 블랙박스에서
+   충돌이 2분 40초에 있으면 정작 부딪히는 장면이 한 컷도 안 들어갔다.
+   그래서 먼저 작은 그림으로 훑어 화면이 가장 크게 변하는 순간을 찾고,
+   거기서부터 앞뒤로 컷을 잡는다. 전체 흐름을 놓치지 않게 넓게 보는 컷도 섞는다.
+
+   ⚠️ 영상 파일 자체는 이 기기 밖으로 나가지 않는다. 아래 캔버스 작업은 전부
+      브라우저 안에서 일어나고, 서버로 보내는 것은 뽑아낸 장면 그림뿐이다.
+      끝나면 만들어 둔 임시 주소(objectURL)를 즉시 반납한다.               */
+async function extractFrames(file, n) {
+  const v = $('vprev');
+  v.preload = 'auto'; v.muted = true; v.playsInline = true;
+  const url = URL.createObjectURL(file);
+  try {
+    v.src = url;
+    const dur = await new Promise((res, rej) => {
+      v.onloadedmetadata = () => res(v.duration);
+      v.onerror = () => rej(new Error('영상을 열 수 없습니다'));
+      setTimeout(() => rej(new Error('영상을 읽는 데 너무 오래 걸립니다')), 20000);
+    });
+    if (!isFinite(dur) || dur <= 0) throw new Error('영상 길이를 알 수 없습니다');
+
+    /* 1단계 — 작은 그림으로 빠르게 훑어 「가장 크게 변한 순간」을 찾는다 */
+    const sc = document.createElement('canvas'); sc.width = 80; sc.height = 45;
+    const sctx = sc.getContext('2d', {willReadFrequently:true});
+    const scans = clamp(Math.round(dur * 2.5), 10, 26);
+    let prev = null, peakT = dur * .6, peak = -1;
+    for (let i = 0; i < scans; i++) {
+      const t = dur * (i + .5) / scans;
+      await seek(v, t, 40);
+      sctx.drawImage(v, 0, 0, 80, 45);
+      const d = sctx.getImageData(0, 0, 80, 45).data;
+      const cur = new Float32Array(3600);
+      for (let k = 0, j = 0; k < d.length; k += 4, j++) cur[j] = d[k]*.299 + d[k+1]*.587 + d[k+2]*.114;
+      if (prev) { let s = 0; for (let j = 0; j < 3600; j++) s += Math.abs(cur[j] - prev[j]);
+        if (s > peak) { peak = s; peakT = t; } }
+      prev = cur;
+      $('vinfo').innerHTML = `<div class="filetag">🔍 충돌 순간을 찾는 중… ${Math.round((i+1)/scans*100)}%</div>`;
+    }
+
+    /* 2단계 — 충돌 추정 시점 앞뒤를 촘촘히, 그리고 전체 흐름용 컷을 섞는다 */
+    const around = [-2.4, -1.5, -0.9, -0.5, -0.2, 0.35, 0.9].map(o => peakT + o);
+    const wide = [dur*.12, dur*.42, dur*.78];
+    /* 자리가 모자라면 넓게 보는 컷을 버린다. 충돌 앞뒤는 절대 버리지 않는다. */
+    const times = [...new Set(around.concat(wide).map(t => +clamp(t, 0, Math.max(0, dur - .05)).toFixed(2)))]
+      .slice(0, n).sort((a, b) => a - b);
+
+    const c = document.createElement('canvas');
+    let w = v.videoWidth, h = v.videoHeight; const max = 1100;
+    if (!w || !h) throw new Error('영상 화면 크기를 알 수 없습니다');
+    if (w > max) { h = Math.round(h * max / w); w = max; }
+    c.width = w; c.height = h; const ctx = c.getContext('2d');
+    const out = [];
+    for (let i = 0; i < times.length; i++) {
+      await seek(v, times[i], 70);
+      ctx.drawImage(v, 0, 0, w, h);
+      /* 신호등·차선을 읽으려면 화질이 필요하지만, 아홉 장이 전송 한도를 넘으면 안 된다.
+         무거운 컷만 골라 한 단계 낮춘다. */
+      let img = c.toDataURL('image/jpeg', .82);
+      if (img.length > 420000) img = c.toDataURL('image/jpeg', .62);
+      out.push({data: img, t: times[i], rel: +(times[i] - peakT).toFixed(2)});
+      $('vinfo').innerHTML = `<div class="filetag">🎞 장면 뽑는 중… ${i+1}/${times.length}</div>`;
+    }
+    return {frames: out, dur: +dur.toFixed(1), impact: +peakT.toFixed(2)};
+  } finally {
+    /* 임시 주소를 붙잡고 있으면 영상이 메모리에 남는다 — 바로 놓아 준다 */
+    v.removeAttribute('src'); try { v.load(); } catch(_) {}
+    URL.revokeObjectURL(url);
+  }
 }
-function seek(v, t) { return new Promise(r => { const h = () => { v.removeEventListener('seeked', h); setTimeout(r, 60); };
-  v.addEventListener('seeked', h); v.currentTime = t; }); }
+function seek(v, t, wait) {
+  return new Promise(r => {
+    const h = () => { v.removeEventListener('seeked', h); setTimeout(r, wait || 60); };
+    v.addEventListener('seeked', h); v.currentTime = t;
+    setTimeout(() => { v.removeEventListener('seeked', h); r(); }, 2500);   /* 안 오면 그냥 넘어간다 */
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════════════
    5. AI 호출 — 회사 서버(/api/generate) 우선, 없으면 개인 키로 직접
@@ -1105,8 +1237,14 @@ $('go').onclick = async () => {
   }
 
   /* ── AI 분석 ── */
+  const attach = !MEDIA.length ? '없음'
+    : active === 'p2' ? `블랙박스 영상에서 뽑은 장면 ${MEDIA.length}컷 (시간순으로 붙임)`
+    : `현장 사진 ${MEDIA.length}장`;
   CTX = `· 상대 대상: ${$('counter').value}
-· 첨부: ${MEDIA.length ? (active === 'p2' ? '블랙박스 영상 캡처 ' + MEDIA.length + '컷(시간순)' : '현장 사진 ' + MEDIA.length + '장') : '없음'}
+· 첨부: ${attach}${active === 'p2' && TIMELINE ? `
+· 영상 정보: ${VIDEOMETA}
+· 컷별 시각: ${TIMELINE}
+  (충돌 추정 시점은 화면이 가장 크게 변한 순간으로 자동 계산한 값이라 실제와 다를 수 있다)` : ''}
 · 사고 설명: ${desc || '(설명 없음 — 첨부 이미지로 판단)'}`;
 
   $('inputCard').style.display = 'none';
@@ -1162,15 +1300,28 @@ ${idx}
 [고를 수 있는 수정요소]
 ${modIdx}
 
+[이미지를 읽는 순서 — 반드시 이 차례로 본다]
+1) 촬영 주체: 블랙박스 장면이면 카메라가 달린 차가 곧 사용자 차다. 화면 아래쪽 보닛이 사용자 차다.
+2) 도로: 차로 수, 중앙선 색(황색=중앙선, 백색=차로), 실선인지 점선인지, 정지선, 횡단보도, 안전지대,
+   회전교차로, 자전거전용도로, 노면 화살표(직진·좌회전 표시). 실선/점선 구분은 과실을 20% 움직인다.
+3) 신호: 신호등이 보이면 어느 방향의 신호인지와 색을 컷마다 적는다. 안 보이면 "안 보임"이라고 쓴다.
+4) 두 차의 진행: 컷 사이의 위치 변화로 진행방향과 상대속도를 읽는다. 방향지시등 점등도 본다.
+5) 충돌: 어느 부위끼리 닿았는지. 옆면을 받았으면 받힌 쪽이 먼저 그 자리에 있었다는 뜻이다.
+6) 마지막으로 "이 사진들로는 확인할 수 없는 것"을 스스로 정리한다.
+
 [원칙]
-- 이미지가 있으면 시간순으로 진행방향·신호·차로·충돌부위를 읽는다.
+- 컷을 인용할 때는 "3번째 컷에서" 처럼 번호를 반드시 붙인다. 번호 없는 관측은 쓰지 않는다.
+- 보이지 않는 것을 추측해서 관측에 적지 않는다. 추측은 추가질문으로 돌린다.
+- 신호·실선 여부처럼 결론을 뒤집는 요소가 안 보이면 신뢰도를 "낮음"으로 둔다.
 - 정보가 부족하면 단정하지 말고 신뢰도를 낮추고 추가질문에 담는다.
 - 목록의 어느 도표에도 맞지 않으면 도표를 빈 문자열로 두고 기본과실_본인 에 추정치를 적는다.
 - 유리한 점과 불리한 점을 모두 정직하게 쓴다. 과장 금지. "확정"이 아니라 "추정"으로 쓴다.
 
 [출력] 설명 없이 JSON 만:
 {"도표":"S01 같은 id 또는 빈 문자열","내역할":"A|B","기본과실_본인":0,
-"요약":"한 문장으로 사고 정리","관측":["이미지·설명에서 실제로 확인한 사실만"],
+"요약":"한 문장으로 사고 정리",
+"관측":["몇 번째 컷에서 무엇이 보였는지. 실제로 보이는 것만"],
+"안보인것":["결론에 영향을 주는데 이 자료로는 확인할 수 없는 것"],
 "수정요소":[{"대상":"본인|상대","항목":"목록에 있는 문구 그대로","증감":10,"종류":"sig|grave|etc|minus"}],
 "신뢰도":"높음|보통|낮음","신뢰도이유":"",
 "유리한주장":[""],"불리한요소":[""],"추가질문":[""],
@@ -1192,7 +1343,8 @@ async function enrich() {
   renderCases();
   try {
     step('s4','on');
-    RES.letter = await writeLetter();
+    const ai = await writeLetter();
+    if (ai) RES.letter = Object.assign(composeLetter(), ai);   /* 빠진 칸은 우리 문장으로 채운다 */
     step('s4','done');
   } catch(_) { step('s4','done'); }
   renderLetter();
@@ -1326,7 +1478,8 @@ function renderAll() {
       <div class="notebox">조문 원문은 <a href="https://www.law.go.kr" target="_blank" rel="noopener" style="color:inherit">국가법령정보센터</a>에서 확인할 수 있습니다.</div></div>`;
   }
 
-  if (RES.ai?.관측?.length) html += sec('AI 가 영상·사진에서 실제로 읽어낸 것', RES.ai.관측, '');
+  if (RES.ai?.관측?.length) html += sec('영상·사진에서 실제로 읽어낸 것', RES.ai.관측, '');
+  if (RES.ai?.안보인것?.length) html += sec('이 자료로는 확인할 수 없는 것 — 결론이 바뀔 수 있는 부분', RES.ai.안보인것, 'red');
   html += sec('유리하게 주장할 수 있는 점', RES.ai?.유리한주장 || defaultPro(), '');
   html += sec('불리하게 작용할 수 있는 점', RES.ai?.불리한요소 || defaultCon(), 'red');
   html += sec('지금 확보해야 할 증거', c?.evid || [], 'green');
@@ -1349,7 +1502,8 @@ function renderAll() {
   const R = $('result'); R.innerHTML = html; R.style.display = 'block';
   fillPayFromResult();
   renderPayInline();
-  renderCases();   /* AI 판례가 없어도 법리 카드는 먼저 보여 준다 */
+  renderCases();    /* AI 판례가 없어도 법리 카드는 먼저 보여 준다 */
+  renderLetter();   /* 안내문도 데이터만으로 먼저 한 통 써 둔다 */
 }
 
 function actWord(a) {
@@ -1408,23 +1562,113 @@ function renderCases() {
   box.innerHTML = html;
 }
 
-function renderLetter() {
-  const box = $('letterbox'); if (!box || !RES.letter) return;
-  const l = RES.letter, name = $('cname').value.trim() || '고객';
-  box.innerHTML = `<div class="sec"><h3><span class="dot"></span>고객 안내문</h3>
-    <div class="lt" id="ltbody">
-      <h2>${esc(l.제목 || '교통사고 처리 안내')}</h2>
-      <div class="to">${esc(name)}님께</div>
-      <p>${esc(l.인사 || '')}</p>
-      <h4>현재 상황</h4><p>${esc(l.현황 || '')}</p>
-      <h4>보상 안내</h4><p>${esc(l.보상안내 || '')}</p>
-      <h4>보험료 · 환입 검토</h4><div class="box">${esc(l.할증안내 || '')}</div>
-      <h4>지금 하실 일</h4><div class="box">${(l.할일 || []).map((x,i) => `<b>${i+1}.</b> ${esc(x)}`).join('<br>')}</div>
-      <p style="margin-top:18px">${esc(l.맺음 || '')}</p>
-      <div class="sign">에이플러스에셋 온탑본부 · APEX YUN PRO<br>본 안내문의 과실비율은 추정치이며, 최종 과실은 보험사 협의와 심의 절차로 확정됩니다.</div>
-    </div>
-    <button class="btn ghost sm" onclick="copyLetter()">안내문 텍스트 복사</button></div>`;
+/* 안내문은 AI 가 없어도 반드시 나와야 한다. 우리가 아는 것(도표·과실·법조문)으로
+   먼저 한 통을 쓰고, AI 가 붙어 있으면 문장만 더 다듬어 덮어쓴다. */
+function composeLetter() {
+  const c = RES.chart, f = RES.fault;
+  const me = RES.role === 'A' ? f.A : f.B, op = 100 - me;
+  const role = c ? (RES.role === 'A' ? c.A : c.B) : '본인';
+  const other = c ? (RES.role === 'A' ? c.B : c.A) : '상대방';
+  const name = $('cname').value.trim() || '고객';
+  const 할일 = [
+    '블랙박스 원본 파일을 따로 복사해 두세요. 덮어쓰기로 지워지는 일이 가장 많습니다.',
+    '주변 상점·건물 CCTV는 보존기간이 7~30일로 짧습니다. 오늘 안에 보존을 요청하세요.',
+    '통증이 없어도 48시간 안에 진료를 받고 기록을 남겨 두세요. 늦으면 사고와의 관련성을 의심받습니다.',
+    '보험사 담당자에게 "어느 도표를 적용했고 수정요소가 무엇인지" 물어 문자로 남겨 두세요.'
+  ];
+  if (c?.evid?.length) 할일.unshift(`무엇보다 「${c.evid[0]}」를 먼저 확보해 주세요. 이 유형에서 결론을 가르는 증거입니다.`);
+  return {
+    제목: c ? `${c.name} — 처리 및 보상 안내` : '교통사고 처리 및 보상 안내',
+    인사: `${name}님, 이번 사고로 많이 놀라셨을 줄 압니다. 지금까지 확인된 내용과 앞으로의 절차를 한 장으로 정리해 보내드립니다. 궁금한 점은 편하게 연락 주십시오.`,
+    현황: `이번 사고는 「${c ? c.name : '분류 전 사고'}」 유형에 해당하며, ${name}님은 ${role}, 상대방은 ${other}입니다. `
+        + `손해보험협회 「자동차사고 과실비율 인정기준」을 적용하면 과실은 ${name}님 ${me}%, 상대방 ${op}%로 추정됩니다. `
+        + `다만 이는 확정된 값이 아니라 추정입니다. 최종 과실은 블랙박스와 현장조사를 바탕으로 양측 보험사가 협의해 정합니다.`
+        + (lawNames(c) ? ` 판단 근거가 되는 조문은 ${lawNames(c)}입니다.` : ''),
+    보상안내: `${name}님의 손해액 가운데 상대방 과실에 해당하는 ${op}%를 상대 보험사에서 받게 됩니다. `
+        + `치료비는 상대 보험사가 병원에 직접 지급하는 것이 보통이지만, 그중 ${name}님 과실분(${me}%)은 나중에 합의금에서 공제됩니다. `
+        + `치료를 많이 받는다고 합의금이 늘지 않는 이유가 이것입니다. `
+        + `차량은 수리비 외에도 출고 5년 이내이고 수리비가 차량가액의 20%를 넘으면 시세하락손해를 따로 청구할 수 있고, `
+        + `렌트를 이용하지 않으셨다면 통상 대여요금의 35%를 현금으로 받으실 수 있습니다.`
+        + (me >= 30 ? ` 과실이 있는 만큼 상대에게 받지 못하는 부분은 ${name}님이 가입하신 「자동차상해」로 메울 수 있는지 확인해 드리겠습니다. 중복으로 받는 것이 아니라 부족분을 채우는 구조입니다.` : ''),
+    할증안내: `보험 처리로 나간 금액이 계약하신 물적사고 할증기준금액을 넘는지에 따라 갱신 보험료가 달라집니다. `
+        + `금액이 크지 않다면 자비로 부담하고 사고를 취소(환입)하는 편이 3년 총보험료 기준으로 유리한 경우가 많습니다. `
+        + `제가 갱신 견적을 두 가지로 뽑아 비교해 드린 뒤 결정하셔도 늦지 않습니다.`,
+    할일: 할일.slice(0, 5),
+    맺음: `과실비율은 통보받는 것이 아니라 협의하는 것입니다. 납득이 어려우시면 손해보험협회 과실비율분쟁심의위원회에 이의를 제기할 수 있고, 비용은 보험사가 부담합니다. 끝까지 함께 챙기겠습니다.`
+  };
 }
+
+/* 「도로교통법 제19조, 도로교통법 제38조」처럼 법 이름이 반복되지 않게 묶는다 */
+function lawNames(c) {
+  const list = (c?.law || []).map(k => LAW[k] && LAW[k].n).filter(Boolean);
+  if (!list.length) return '';
+  const by = {};
+  list.forEach(n => { const m = n.match(/^(.*?법(?:률)?(?: 시행령)?)\s*(제.*)$/);
+    if (m) (by[m[1]] = by[m[1]] || []).push(m[2]); else (by[n] = by[n] || []); });
+  return Object.keys(by).map(k => by[k].length ? k + ' ' + by[k].join('·') : k).join(', ');
+}
+
+function renderLetter() {
+  const box = $('letterbox'); if (!box) return;
+  if (!RES.letter) RES.letter = composeLetter();
+  const l = RES.letter, c = RES.chart, f = RES.fault;
+  const name = $('cname').value.trim() || '고객';
+  const me = RES.role === 'A' ? f.A : f.B, op = 100 - me;
+  const today = new Date();
+  const stamp = `${today.getFullYear()}년 ${today.getMonth()+1}월 ${today.getDate()}일`;
+  const rows = [
+    ['사고 유형', c ? c.name : '분류 전'],
+    ['고객님 위치', c ? (RES.role === 'A' ? c.A : c.B) : '본인'],
+    ['추정 과실', `고객님 ${me}%  ·  상대방 ${op}%`],
+    ['적용 근거', c ? ('인정기준 ' + c.cat + (c.official ? ' 도표 ' + c.official : '') ) : 'AI 추정'],
+    ['근거 법조문', lawNames(c) || '—']
+  ];
+  box.innerHTML = `<div class="sec" id="letterSec">
+    <h3><span class="dot"></span>고객 안내문</h3>
+    <div class="lt" id="ltbody">
+      <div class="lt-head">
+        <div class="lt-mark"><span>APEX</span>에이플러스에셋 온탑본부</div>
+        <div class="lt-date">${stamp}</div>
+      </div>
+      <h2>${esc(l.제목 || '교통사고 처리 안내')}</h2>
+      <div class="to">${esc(name)} 님께</div>
+      <p class="lt-lead">${esc(l.인사 || '')}</p>
+
+      <div class="lt-sum">
+        ${rows.map(r => `<div class="lt-row"><span>${esc(r[0])}</span><b>${esc(r[1])}</b></div>`).join('')}
+      </div>
+      <div class="bar lt-bar"><div class="me" style="width:${me}%"><b>${me}%</b><span>고객님</span></div>
+        <div class="op" style="width:${op}%"><b>${op}%</b><span>상대방</span></div></div>
+      <div class="lt-note">위 과실비율은 <b>추정치</b>이며 확정된 값이 아닙니다.</div>
+
+      <h4>현재 상황</h4><p>${esc(l.현황 || '')}</p>
+      ${c && c.scene ? `<div class="lt-fig"><div class="scene">${drawScene(c.scene, RES.role)}</div>
+        <div class="lt-cap">사고 상황을 위에서 내려다본 그림입니다. 파란색이 고객님 차량입니다.</div></div>` : ''}
+      <h4>보상 안내</h4><p>${esc(l.보상안내 || '')}</p>
+      <h4>보험료 · 환입 검토</h4><p>${esc(l.할증안내 || '')}</p>
+      <h4>지금 하실 일</h4>
+      <ol class="lt-check">${(l.할일 || []).map(x => `<li>${esc(x)}</li>`).join('')}</ol>
+      <p class="lt-close">${esc(l.맺음 || '')}</p>
+
+      <div class="sign">
+        <b>에이플러스에셋 온탑본부 · APEX YUN PRO</b><br>
+        본 안내문의 과실비율은 손해보험협회 「자동차사고 과실비율 인정기준」에 따른 추정치이며,
+        최종 과실은 보험사 협의와 분쟁심의 절차를 거쳐 확정됩니다.
+      </div>
+    </div>
+    <button class="btn ghost sm" type="button" onclick="printLetter()">안내문만 인쇄 · PDF로 저장</button>
+    <button class="btn ghost sm" type="button" onclick="copyLetter()">문자·카톡용 텍스트 복사</button>
+  </div>`;
+}
+
+/* 안내문 한 장만 깨끗하게 인쇄한다 — 분석 화면은 빼고 */
+function printLetter() {
+  document.body.classList.add('only-letter');
+  const off = () => { document.body.classList.remove('only-letter'); window.removeEventListener('afterprint', off); };
+  window.addEventListener('afterprint', off);
+  setTimeout(() => { window.print(); setTimeout(off, 1200); }, 60);
+}
+
 function copyLetter() {
   const t = $('ltbody').innerText;
   navigator.clipboard?.writeText(t).then(() => alert('안내문이 복사되었습니다. 카톡이나 문자에 붙여넣으세요.'))
