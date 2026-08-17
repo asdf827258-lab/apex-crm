@@ -95,6 +95,64 @@ console.log('\n③ 실패했을 때 원인을 알려 주는가');
   try { await G.resolveModel('', good); ok('키가 없으면 바로 예외', false); }
   catch (e) { ok('키가 없으면 바로 예외', /GEMINI_API_KEY/.test(e.message)); }
 
+
+  console.log('\n⑤ 되는 모델을 찾을 때까지 내려가는가');
+
+  /* ⚠️ 실제로 이런 일이 있었다 — 목록에 gemini-2.5-flash 가 있어서 그걸 골랐는데
+        generateContent 로 부르면 404 였다. 하나만 고르면 그때 방법이 없다. */
+  G._reset();
+  let hit = [];
+  const flaky = (u, o) => {
+    if (String(u).indexOf('?key=') > 0 && String(u).indexOf(':generateContent') < 0) {
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] }
+      ] })) });
+    }
+    const m = String(u).match(/models\/([^:]+):generateContent/)[1];
+    hit.push(m);
+    if (m === 'gemini-2.5-flash') return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('{"error":{"code":404}}') });
+    return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({ candidates: [] }) });
+  };
+  const got = await G.callGemini('k', { x: 1 }, flaky);
+  ok('404 나면 다음 후보로 내려간다', got.model === 'gemini-2.0-flash', got.model);
+  ok('막힌 것도 시도는 해 봤다', hit[0] === 'gemini-2.5-flash', hit);
+
+  hit = [];
+  await G.callGemini('k', { x: 1 }, flaky);
+  ok('되던 모델을 기억해 바로 쓴다', hit.length === 1 && hit[0] === 'gemini-2.0-flash', hit);
+
+  /* ⚠️ 429(한도)·500(서버)에서 다음 모델로 넘어가면 멀쩡한 모델을 버리고
+        한도만 더 쓴다. 404·400 에서만 내려가야 한다. */
+  G._reset();
+  let tries = 0;
+  const rate = (u) => {
+    if (String(u).indexOf(':generateContent') < 0)
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] },
+        { name: 'models/gemini-2.0-flash', supportedGenerationMethods: ['generateContent'] }
+      ] })) });
+    tries++;
+    return Promise.resolve({ ok: false, status: 429, text: () => Promise.resolve('rate limit') });
+  };
+  try { await G.callGemini('k', {}, rate); ok('429 면 즉시 멈춘다', false); }
+  catch (e) { ok('429 면 즉시 멈춘다 (다음 모델로 안 넘어간다)', tries === 1, tries);
+              ok('429 라고 알려 준다', /429/.test(e.message)); }
+
+  G._reset();
+  const allGone = (u) => {
+    if (String(u).indexOf(':generateContent') < 0)
+      return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify({ models: [
+        { name: 'models/gemini-2.5-flash', supportedGenerationMethods: ['generateContent'] }
+      ] })) });
+    return Promise.resolve({ ok: false, status: 404, text: () => Promise.resolve('nope') });
+  };
+  try { await G.callGemini('k', {}, allGone); ok('전부 막히면 예외', false); }
+  catch (e) {
+    ok('전부 막히면 예외', true);
+    ok('무엇을 시도했는지 남긴다', /gemini-2.5-flash=404/.test(e.message), e.message.slice(0, 110));
+  }
+
   console.log('\n' + (fail ? '❌' : '✅') + '  ' + pass + ' 통과 · ' + fail + ' 실패\n');
   process.exit(fail ? 1 : 0);
 })();

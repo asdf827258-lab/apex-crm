@@ -28,6 +28,21 @@ const PREFER = [
 ];
 
 /* 목록에서 고르는 규칙만 따로 뺐다. 네트워크 없이 검사할 수 있어야 한다. */
+/* 후보를 순서대로 준다. 하나만 고르면 그게 안 될 때 방법이 없다 —
+   목록에 있는데도 generateContent 가 404 로 막히는 조합이 실제로 있었다
+   (gemini-2.5-flash 를 목록에서 골랐는데 부르면 404). 이유를 캐는 대신
+   되는 것을 찾을 때까지 내려간다. */
+function rankModels(names) {
+  const bad = /embedding|aqa|vision|tts|image|imagen|veo|learnlm/i;
+  const usable = (names || []).map(s => String(s || '').replace(/^models\//, ''))
+                              .filter(n => n && !bad.test(n));
+  const out = [];
+  for (const p of PREFER) if (usable.indexOf(p) >= 0) out.push(p);
+  usable.filter(n => /flash/i.test(n)).forEach(n => { if (out.indexOf(n) < 0) out.push(n); });
+  usable.forEach(n => { if (out.indexOf(n) < 0) out.push(n); });
+  return out;
+}
+
 function pickModel(names) {
   const usable = (names || []).map(s => String(s || '').replace(/^models\//, '')).filter(Boolean);
   if (!usable.length) return null;
@@ -45,43 +60,96 @@ function pickModel(names) {
 let cached = null, cachedAt = 0, inflight = null;
 const TTL_MS = 6 * 3600 * 1000;
 
+/* 이 키로 쓸 수 있는 모델 목록. resolveModel 과 callGemini 가 같이 쓴다. */
+async function listModels(key, fetchImpl) {
+  if (!key) throw new Error('GEMINI_API_KEY 가 없습니다');
+  const doFetch = fetchImpl || fetch;
+  const r = await doFetch(LIST_URL + '?key=' + encodeURIComponent(key), {
+    signal: AbortSignal.timeout(15000)
+  });
+  const txt = await r.text();
+  if (!r.ok) {
+    /* 상태 코드만 던지면 원인을 못 찾는다. 본문을 같이 준다 —
+       키가 틀렸는지, 결제가 안 됐는지, 지역 제한인지가 거기 적혀 있다. */
+    throw new Error('Gemini 모델 목록 ' + r.status + ' — ' + txt.slice(0, 180));
+  }
+  let j = {};
+  try { j = JSON.parse(txt); } catch (e) { throw new Error('Gemini 모델 목록이 JSON 이 아닙니다'); }
+  const all = (j.models || []).map(m => String(m.name || '').replace(/^models\//, '')).filter(Boolean);
+  const gen = (j.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0)
+    .map(m => String(m.name || '').replace(/^models\//, ''));
+  /* generateContent 를 지원한다고 표시된 것이 없으면 전체를 후보로 둔다 —
+     목록의 표시가 비어 있어도 실제로는 되는 경우가 있어서, 시도는 해 본다. */
+  const out = gen.length ? gen : all;
+  out._all = all;
+  return out;
+}
+
 async function resolveModel(key, fetchImpl) {
   if (!key) throw new Error('GEMINI_API_KEY 가 없습니다');
   if (cached && Date.now() - cachedAt < TTL_MS) return cached;
   if (inflight) return inflight;
-
-  const doFetch = fetchImpl || fetch;
   inflight = (async () => {
-    const r = await doFetch(LIST_URL + '?key=' + encodeURIComponent(key), {
-      signal: AbortSignal.timeout(15000)
-    });
-    const txt = await r.text();
-    if (!r.ok) {
-      /* 상태 코드만 던지면 원인을 못 찾는다. 본문을 같이 준다 —
-         키가 틀렸는지, 결제가 안 됐는지, 지역 제한인지가 거기 적혀 있다. */
-      throw new Error('Gemini 모델 목록 ' + r.status + ' — ' + txt.slice(0, 180));
-    }
-    let j = {};
-    try { j = JSON.parse(txt); } catch (e) { throw new Error('Gemini 모델 목록이 JSON 이 아닙니다'); }
-
-    const all = (j.models || []).map(m => String(m.name || '').replace(/^models\//, '')).filter(Boolean);
-    const names = (j.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).indexOf('generateContent') >= 0)
-      .map(m => m.name);
+    const names = await listModels(key, fetchImpl);
     const hit = pickModel(names);
     if (!hit) {
-      /* ⚠️ 걸러낸 뒤 목록을 보여 주면 언제나 "(비어 있음)" 이다. 정작 무엇이
-            왔는지가 안 보여서 원인을 못 찾는다. 거르기 전 목록을 보여 준다. */
       throw new Error('이 키로 글을 쓸 수 있는 Gemini 모델이 없습니다. 받은 모델: ' +
-        (all.length ? all.slice(0, 8).join(', ') : '(응답에 모델이 하나도 없음)'));
+        ((names._all || names).length ? (names._all || names).slice(0, 8).join(', ') : '(응답에 모델이 하나도 없음)'));
     }
     cached = hit; cachedAt = Date.now();
     return hit;
   })().finally(() => { inflight = null; });
-
   return inflight;
 }
 
-function _reset() { cached = null; cachedAt = 0; inflight = null; }
+/* ── 실제로 되는 모델로 부른다 ────────────────────────────────────────
+   목록에서 후보를 받아 앞에서부터 시도한다. 404/400 이면 다음 후보로 내려가고,
+   성공한 것을 기억해 다음부터는 그것만 쓴다.
 
-module.exports = { resolveModel, pickModel, PREFER, LIST_URL, _reset };
+   ⚠️ 404·400 에서만 내려간다. 429(한도)·500(서버)에서 다음 모델로 넘어가면
+      멀쩡한 모델을 버리고 한도만 더 쓴다. */
+let good = null, goodAt = 0;
+
+async function callGemini(key, body, fetchImpl) {
+  const doFetch = fetchImpl || fetch;
+  const url = m => LIST_URL + '/' + m + ':generateContent?key=' + encodeURIComponent(key);
+
+  if (good && Date.now() - goodAt < TTL_MS) {
+    const r = await doFetch(url(good), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(60000)
+    });
+    if (r.ok) return { res: r, model: good };
+    if (r.status !== 404 && r.status !== 400) {
+      throw new Error('Gemini ' + r.status + ' (모델 ' + good + ') — ' + (await r.text()).slice(0, 200));
+    }
+    good = null;                       /* 되던 모델이 막혔다 — 다시 찾는다 */
+  }
+
+  const names = await listModels(key, doFetch);
+  const cands = rankModels(names);
+  if (!cands.length) {
+    throw new Error('이 키로 글을 쓸 수 있는 Gemini 모델이 없습니다. 받은 모델: ' +
+      (names.length ? names.slice(0, 8).join(', ') : '(응답에 모델이 하나도 없음)'));
+  }
+
+  const tried = [];
+  for (const m of cands.slice(0, 6)) {
+    const r = await doFetch(url(m), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body), signal: AbortSignal.timeout(60000)
+    });
+    if (r.ok) { good = m; goodAt = Date.now(); return { res: r, model: m }; }
+    if (r.status !== 404 && r.status !== 400) {
+      throw new Error('Gemini ' + r.status + ' (모델 ' + m + ') — ' + (await r.text()).slice(0, 200));
+    }
+    tried.push(m + '=' + r.status);
+  }
+  throw new Error('Gemini 후보를 다 시도했지만 전부 막혔습니다 — ' + tried.join(' · ') +
+    ' / 목록에 있던 모델: ' + cands.slice(0, 6).join(', '));
+}
+
+function _reset() { cached = null; cachedAt = 0; inflight = null; good = null; goodAt = 0; }
+
+module.exports = { resolveModel, callGemini, pickModel, rankModels, PREFER, LIST_URL, _reset };
