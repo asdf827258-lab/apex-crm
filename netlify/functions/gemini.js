@@ -9,7 +9,10 @@
  *   1) 이 파일을  netlify/functions/gemini.js  로 둔다(이미 위치함).
  *   2) 루트 netlify.toml 의 redirect 로  /api/gemini → 이 함수  연결(이미 설정).
  *   3) Netlify → Site settings → Environment variables 에
- *        GEMINI_API_KEY = AIza... 또는 AQ...   (회사 Gemini 키) 추가.
+ *        GEMINI_API_KEY = AIza...   (회사 Gemini 키) 추가.
+ *        ※ Google AI Studio → Get API key 에서 나오는 AIza… 로 시작하는 값이어야 한다.
+ *          AQ. 로 시작하는 값은 API 키가 아니다 — 넣으면 구글이 401 UNAUTHENTICATED
+ *          ("Expected OAuth 2 access token") 로 거절한다. 확인했다.
  *        (무료 키도 되지만, 30명 공용은 Google AI Studio에서 결제를 켠 유료 키를 권장 — 한도 수십 배)
  *   4) 앱 설정 → 무료 AI(Gemini) 카드 → "공용 프록시(무키)" 칸에  /api/gemini  입력.
  *

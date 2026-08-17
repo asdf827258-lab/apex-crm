@@ -20,7 +20,41 @@ const srv=http.createServer((rq,rs)=>{let p=decodeURIComponent(url.parse(rq.url)
   if(!fs.existsSync(f)){rs.writeHead(404);rs.end('no');return;}
   rs.writeHead(200,{'Content-Type':MIME[path.extname(f)]||'text/plain'});fs.createReadStream(f).pipe(rs);});
 let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++;};
+/* 예약이 걸린 함수는 주소로 못 부른다. Netlify 가 빈 몸통에 403 만 준다.
+   그런데 화면이 그걸 부르면 「서버가 답을 안 준다」 로 보인다 — 열쇠는
+   멀쩡한데 열쇠를 다시 넣으라고 시키게 된다. 실제로 그랬다.
+   그래서 여기서 못 박는다: 화면도 _redirects 도 예약 함수를 부르지 않는다. */
+function schedGuard(){
+  console.log('\n[0] 예약 함수를 주소로 부르지 않는가');
+  const toml=fs.readFileSync(path.join(ROOT,'netlify.toml'),'utf8');
+  const sched=[...toml.matchAll(/\[functions\."([^"]+)"\][^[]*?schedule\s*=/g)].map(m=>m[1]);
+  is(sched.length>0,'netlify.toml 에서 예약 함수를 찾았다 — '+sched.join(' · '));
+  const pages=['app/index.html','app/윤시스쿨/index.html','app/상담자료/미끼레이더/index.html']
+    .filter(p=>fs.existsSync(path.join(ROOT,p)));
+  const rd=fs.readFileSync(path.join(ROOT,'_redirects'),'utf8')
+    .split('\n').filter(l=>l.trim()&&!l.trim().startsWith('#')).join('\n');
+  sched.forEach(fn=>{
+    const hit=pages.filter(p=>new RegExp('/\\.netlify/functions/'+fn+'\\b')
+      .test(fs.readFileSync(path.join(ROOT,p),'utf8')));
+    is(hit.length===0,'  화면이 '+fn+' 을 직접 부르지 않는다'+(hit.length?' ← '+hit.join(', '):''));
+    is(!new RegExp('/\\.netlify/functions/'+fn+'\\b').test(rd),
+       '  _redirects 가 '+fn+' 주소를 열어 두지 않았다');
+  });
+  /* 점검 버튼이 부르는 자리는 반대로 살아 있어야 한다 */
+  const app=fs.readFileSync(path.join(ROOT,'app/index.html'),'utf8');
+  const m=app.match(/fetch\('(\/api\/[a-z-]+)',\{method:'POST'\}\)\s*\n\s*\.then\(function\(r\)\{return r\.json/);
+  is(!!m,'「지금 확인」 이 /api/… 를 부른다 — '+(m?m[1]:'못 찾음'));
+  if(m){
+    const name=m[1].replace('/api/','');
+    is(new RegExp('^'+m[1].replace(/\//g,'\\/')+'\\s+\\/\\.netlify\\/functions\\/'+name,'m').test(rd),
+       '  그 주소가 _redirects 에 연결돼 있다');
+    is(fs.existsSync(path.join(ROOT,'netlify/functions/'+name+'.js')),
+       '  그 함수 파일이 있다 — netlify/functions/'+name+'.js');
+    is(sched.indexOf(name)<0,'  그 함수에는 예약이 걸려 있지 않다');
+  }
+}
 (async()=>{
+  schedGuard();
   await new Promise(r=>srv.listen(0,r));
   const b=await chromium.launch(); const page=await b.newPage();
   await page.goto('http://127.0.0.1:'+srv.address().port+'/app/index.html',{waitUntil:'domcontentloaded'});

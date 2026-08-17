@@ -195,7 +195,11 @@ Supabase → SQL Editor 에서 **`migration_33_invest.sql`** 실행.
   schedule = "10 7 * * 1-5"     # 평일 16:10 KST
 ```
 
-지금 바로 돌려보려면 `https://<사이트>/api/market-daily` 를 한 번 열면 됩니다.
+지금 바로 돌려보려면 **Netlify 대시보드 → Functions → `market-daily` → Run** 을 누릅니다.
+주소로는 부를 수 없습니다 — 스케줄이 걸린 함수의 HTTP 호출은 Netlify 가 막고 빈 몸통에
+**403** 만 돌려줍니다. 예약 실행은 정상으로 돕니다. 그래서 `_redirects` 에도 이 함수의
+`/api/…` 주소를 두지 않습니다. 열어 두면 눌렀을 때 403 만 나와서 고장 난 것처럼 보입니다.
+
 결과는 앱 → 시스템 점검 / `ai_dept_reports` 의 **📈 투자·경제 자동수집** 항목에 남습니다.
 
 ---
