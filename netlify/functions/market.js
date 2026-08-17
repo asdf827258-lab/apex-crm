@@ -138,11 +138,41 @@ async function tossIssueToken() {
   tossTok = { tok: tok, exp: Date.now() + (Math.max(exp, 120) - 60) * 1000 };
   return tok;
 }
+/* ── 차단기 ────────────────────────────────────────────────────────────
+   토스는 호출 IP 를 등록해야 토큰을 준다. 그런데 Netlify 함수가 나갈 때 쓰는
+   IP 는 배포마다 바뀐다(3.144.168.102 → 18.222.65.41 → 3.16.137.242 를 확인).
+   등록이 어긋난 동안에는 토큰 발급이 매번 403 으로 실패한다.
+
+   설정을 규격대로 채우고 나면 토스가 1순위가 되므로, 이 상태에서는 모든 시세
+   요청이 '실패할 게 뻔한 왕복' 을 한 번씩 더 하게 된다. 사용자는 그만큼 늦게
+   화면을 본다. IP 문제는 다음 요청에서 저절로 낫는 종류가 아니므로, 한 번
+   막히면 이 컨테이너에서는 잠시 토스를 건너뛴다.
+
+   ⚠️ 아무 실패에나 차단기를 걸면 안 된다. 잠깐 끊긴 네트워크까지 5분씩
+      막아 버리면 멀쩡한 토스를 안 쓰게 된다. IP·권한 거절일 때만 건다. */
+let tossBlocked = 0;
+const TOSS_BLOCK_MS = 5 * 60 * 1000;
+function tossIsBlocked() { return tossBlocked > Date.now(); }
+function tossBlockUntil(msg) {
+  const m = String(msg || '');
+  if (/ip address not allowed|access_denied|unauthorized_client|invalid_client/i.test(m)) {
+    tossBlocked = Date.now() + TOSS_BLOCK_MS;
+    return true;
+  }
+  return false;
+}
+
 /* KIS 와 같은 이유로 동시 발급을 하나로 묶는다 */
 function tossToken() {
   if (tossTok && tossTok.exp > Date.now()) return Promise.resolve(tossTok.tok);
+  if (tossIsBlocked()) {
+    return Promise.reject(new Error('토스 건너뜀 — 조금 전 IP/권한 거절(' +
+      Math.ceil((tossBlocked - Date.now()) / 1000) + '초 뒤 다시 시도). kind=toss-probe 로 현재 IP 를 확인하세요'));
+  }
   if (tossTokInflight) return tossTokInflight;
-  tossTokInflight = tossIssueToken().finally(() => { tossTokInflight = null; });
+  tossTokInflight = tossIssueToken()
+    .catch(e => { tossBlockUntil(e && e.message); throw e; })
+    .finally(() => { tossTokInflight = null; });
   return tossTokInflight;
 }
 /* 앱은 005930 으로 입력한다 → 토스가 쓰는 A005930 으로 바꿔 보낸다 */
@@ -301,12 +331,26 @@ async function quoteOne(raw) {
   const krxOk = krxReady();
   const notes = [];
 
-  if (tossReady()) {
+  if (tossReady() && !tossIsBlocked()) {
     try { return cSet(k, await tossQuote(s), TTL.quote); }
     catch (e) {
       notes.push('토스 실패: ' + String(e && e.message || e).slice(0, 110));
-      if (!kisOk && !krxOk) throw new Error(notes[0]);   /* 뒤가 없으면 원인을 그대로 */
     }
+  }
+
+  /* ①' 집·서버의 toss-agent 가 방금 넣어 둔 값이 있으면 그게 진짜 토스 값이다 */
+  if (relayReady() && s.indexOf(':') < 0) {
+    try {
+      const rows = await relayRows([s]);
+      const row = (rows || [])[0];
+      const age = row ? relayAgeMin(row.src) : null;
+      if (row && age != null && age <= RELAY_FRESH_MIN && num(row.close) != null) {
+        const out = relayShape(row);
+        out.note = (notes.length ? notes.join(' / ') + ' → ' : '') + '토스 중계 ' + age + '분 전';
+        return cSet(k, out, TTL.quote);
+      }
+      if (row && age != null) notes.push('토스 중계 ' + age + '분 전이라 건너뜀');
+    } catch (e) { notes.push('중계 실패: ' + String(e && e.message || e).slice(0, 80)); }
   }
 
   if (kisOk) {
@@ -330,17 +374,57 @@ async function quoteOne(raw) {
       return cSet(k, out, TTL.quote);
     } catch (e) {
       notes.push('공공데이터 실패: ' + String(e && e.message || e).slice(0, 110));
-      throw new Error(notes.join(' / '));
     }
   }
 
-  /* 아무것도 없다 — 셋 중 '한 세트'만 채우면 된다 */
-  throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+  /* ④ 키가 하나도 없거나 앞의 셋이 다 실패했다 — 지연 시세라도 내보낸다.
+        빈 화면보다 '지연 시세'가 낫다. 단, 지연이라고 반드시 적어서 보낸다. */
+  try {
+    const out = await pubQuote(s);
+    out.note = (notes.length ? notes.join(' / ') + ' → ' : '') + '공개 지연 시세';
+    return cSet(k, out, TTL.quote);
+  } catch (e) {
+    notes.push('공개 시세 실패: ' + String(e && e.message || e).slice(0, 110));
+    /* ⚠️ 마지막 줄까지 실패했는데 키도 하나 없다면, '무엇을 넣으면 되는지' 를
+          반드시 같이 줘야 한다. 앱은 이 NEED: 목록으로 안내 카드를 그린다.
+          공개 시세를 넣으면서 이 줄을 지웠더니, 키가 없는 사람에게 원인만
+          보이고 해결 방법이 안 보였다. 검사가 그걸 잡았다. */
+    if (!tossReady() && !kisOk && !krxOk) {
+      throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+    }
+    throw new Error(notes.join(' / '));
+  }
 }
 
 /* ── 지수를 살 수 있는 소스가 있는가 (KIS 또는 공공데이터) ────────────── */
+/* 지수를 '지수로서' 주는 소스가 있는가 (KIS 또는 공공데이터).
+   ⚠️ 여기서 무조건 true 를 돌려주게 고쳤다가 검사 4개를 깨뜨렸다. 그러면
+      indexProxyList 로 갈 일이 없어지는데, 토스 키만 있는 사람은 그 길로
+      토스 시세의 ETF 값을 받고 있었다. 무조건 true 는 그 사람들의 지수를
+      토스 값에서 공개 지연값으로 바꿔치기하고, 공개 경로마저 막히면 화면을
+      통째로 비운다. 공개 지연 지수는 '지수 소스' 가 아니라 '마지막 보루' 다. */
 function hasIndexSource() {
   return !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET) || krxReady();
+}
+
+/* 지수 전용 소스(KIS·공공데이터)가 없을 때 무엇으로 채우나.
+
+   ① 공개 지연 '진짜 지수' (^KS11 = 코스피 그 자체)
+   ② 그것도 안 되면 지수를 따라가는 ETF 로 대신 (토스 키만 있는 사람이 이 길)
+
+   순서를 반대로 짰다가 되돌렸다. ETF 를 먼저 쓰면, 진짜 코스피(6,977.94)를
+   받을 수 있는데도 화면에 'KODEX 200 · ETF 기준' 이 뜬다. 대체품은 원본을
+   못 구할 때 쓰는 것이지 먼저 쓰는 게 아니다.
+
+   ⚠️ indexProxyList 는 배열이 아니라 settle 의 결과({list, errors})를 준다.
+      (proxy||[]).length 로 봤더니 객체에 length 가 없어 언제나 거짓이었고,
+      토스에서 값이 멀쩡히 왔는데도 버리고 있었다. 검사 4개가 그걸 잡았다. */
+async function indexFallback() {
+  try {
+    const real = await settle(CFG.indices || [], pubIndexOne);
+    if (real && (real.list || []).length) return { rows: real, proxy: false };
+  } catch (e) { /* 아래 ETF 대체로 */ }
+  return { rows: await indexProxyList(), proxy: true };
 }
 /* 지수 전용 소스가 없을 때 — 지수를 따라가는 ETF 시세로 대신한다.
    토스증권 키 하나만 있어도 경제동향 화면이 비지 않게 하는 장치.
@@ -367,14 +451,18 @@ async function indexOne(def) {
   if (hit) return hit;
 
   if (!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET)) {
-    if (krxReady()) return cSet(k, await krxIndex(def), TTL.index);
-    throw new Error('NEED:DATA_GO_KR_KEY,KIS_APP_KEY,KIS_APP_SECRET');
+    if (krxReady()) {
+      try { return cSet(k, await krxIndex(def), TTL.index); } catch (e) { /* ④ 로 */ }
+    }
+    return cSet(k, await pubIndexOne(def), TTL.index);
   }
   try {
     return cSet(k, await kisIndexOne(def), TTL.index);
   } catch (e) {
-    if (krxReady()) return cSet(k, await krxIndex(def), TTL.index);
-    throw e;
+    if (krxReady()) {
+      try { return cSet(k, await krxIndex(def), TTL.index); } catch (e2) { /* ④ 로 */ }
+    }
+    return cSet(k, await pubIndexOne(def), TTL.index);
   }
 }
 async function kisIndexOne(def) {
@@ -398,6 +486,180 @@ async function kisIndexOne(def) {
         실시간이 아니라 T+1 종가지만, 평가금액·수익률·목표/손절 판단에는 충분하다.
         토스나 KIS 가 붙으면 그쪽이 먼저 쓰이고 이건 뒤로 물러난다.
    ══════════════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════
+   ①' 토스 중계 — 집·서버에서 도는 toss-agent 가 넣어 둔 값
+
+   토스는 호출 IP 를 등록해야 하는데 Netlify 의 나가는 IP 는 배포마다 바뀐다.
+   서버리스에서는 못 푸는 문제라, 토스에 닿는 부분만 IP 가 고정된 곳으로 옮겼다
+   (scripts/toss-agent.js). 그쪽이 Supabase 에 넣고 여기서는 읽기만 한다.
+
+   ⚠️ 신선할 때만 쓴다. 15분이 넘으면 아예 건너뛰고 아래 단계로 내려간다.
+      오래된 값을 현재가 자리에 놓으면 '토스 연결됨' 이라고 적힌 채 어제 값을
+      보게 된다 — 연결이 끊긴 것보다 그쪽이 나쁘다. 집 인터넷은 IP 가 바뀌고
+      PC 는 꺼지므로, 끊기는 건 예외가 아니라 일상이다.
+   ══════════════════════════════════════════════════════════════════════ */
+const RELAY_FRESH_MIN = 15;
+function relayReady() {
+  return !!(process.env.SUPABASE_SERVICE_ROLE_KEY &&
+            (process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co'));
+}
+async function relayRows(codeList) {
+  const url = (process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co') +
+    /* ⚠️ ymd(d) 는 20260816 을 준다. 날짜 비교에는 하이픈이 있어야 하므로 두 번째
+       인자를 반드시 넘긴다 — 안 넘기면 조용히 0건이 돌아온다. */
+    '/rest/v1/invest_prices?price_date=eq.' + ymd(kstNow(), true) +
+    '&code=in.(' + codeList.map(encodeURIComponent).join(',') + ')' +
+    '&select=code,close,change_rate,currency,name,src&limit=250';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const r = await fetch(url, { headers: { apikey: key, Authorization: 'Bearer ' + key } });
+  if (!r.ok) throw new Error('중계 조회 ' + r.status);
+  return await r.json();
+}
+/* src 는 'toss 14:32' 꼴이다. 몇 분 전 값인지 여기서 되짚는다. */
+function relayAgeMin(src) {
+  const m = String(src || '').match(/^toss\s+(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const d = kstNow();
+  const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
+  const then = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  const diff = mins - then;
+  return diff < 0 ? diff + 1440 : diff;      /* 자정을 넘긴 경우 */
+}
+function relayShape(row) {
+  return {
+    code: row.code, market: 'KRX', currency: row.currency || 'KRW',
+    name: row.name || '',
+    price: num(row.close), change: null,
+    changeRate: num(row.change_rate),
+    delayed: false, asOf: '',
+    src: 'toss-relay', at: new Date().toISOString()
+  };
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ④ 공개 시세 — 키가 하나도 없을 때의 마지막 줄 (지연 시세)
+
+   증권사 API 없이 국내 시세를 받을 방법을 찾다가 여기까지 왔다. 결론부터:
+   체결 즉시 오는 진짜 실시간은 증권사를 거치지 않으면 못 받는다. 거래소가
+   실시간 시세를 유료로 팔고 증권사가 고객에게 뿌리는 구조라, 기술이 아니라
+   계약의 문제다. 우회하는 방법을 찾는 건 약관을 어기는 쪽으로 가는 길이다.
+
+   대신 지연 시세는 키 없이 받을 수 있다. 코스피·코스닥·ETF·지수 모두 되는 것을
+   확인했다(삼성전자 005930.KS · 에코프로비엠 247540.KQ · KODEX200 069500.KS ·
+   ^KS11 · ^KQ11 · ^KS200).
+
+   ⚠️ 반드시 delayed:true 를 달아 내보낸다. 화면이 지연 시세를 현재가처럼
+      보여 주면 그게 제일 나쁘다 — 틀린 걸 모르는 채로 판단하게 된다.
+
+   비공식 경로다. 예고 없이 막히거나 모양이 바뀔 수 있다. 그래서 마지막 줄이고,
+   앞의 셋(토스·KIS·공공데이터) 중 하나라도 살아 있으면 그쪽이 먼저다.
+   ══════════════════════════════════════════════════════════════════════ */
+const PUB_HOST = 'https://query1.finance.yahoo.com/v8/finance/chart/';
+const PUB_IDX = { kospi: '^KS11', kosdaq: '^KQ11', kospi200: '^KS200' };
+/* 코스피(.KS)인지 코스닥(.KQ)인지는 코드만 봐서는 모른다. 한 번 알아내면 기억한다 */
+const pubSuffix = new Map();
+
+async function pubFetch(ticker) {
+  const url = PUB_HOST + encodeURIComponent(ticker) + '?range=5d&interval=1d';
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 9000);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) throw new Error('공개 시세 ' + r.status);
+    const j = await r.json();
+    const res = ((j.chart || {}).result || [])[0];
+    if (!res || !res.meta) throw new Error((((j.chart || {}).error || {}).description) || '빈 응답');
+    const q = (((res.indicators || {}).quote || [])[0]) || {};
+    /* 종가 배열을 같이 돌려준다 — 등락률을 여기서 직접 계산해야 하기 때문이다.
+       ⚠️ meta.chartPreviousClose 를 전일 종가로 쓰면 안 된다. 그건 '요청한
+          구간이 시작되기 전' 의 종가라, range=5d 로 부르면 닷새 전 값이다.
+          그걸 전일 종가로 쓰는 바람에 삼성전자가 +18.83%, 코스피가 +11.49%
+          로 찍혔다. meta.previousClose 는 아예 안 온다. */
+    return { meta: res.meta, closes: (q.close || []).filter(v => v != null).map(Number) };
+  } finally { clearTimeout(timer); }
+}
+
+/* 이 응답이 내가 찾던 그 종목이 맞는가.
+   ⚠️ 없는 티커를 물어도 404 가 아니라 '비슷한 것' 을 만들어 돌려준다.
+      에코프로비엠(코스닥 247540)을 247540.KS 로 물었더니 200 에
+      meta.symbol 도 '247540.KS' 로 맞춰서 왔다. 그런데 내용은
+      instrumentType=MUTUALFUND 에 이름이 '247540.KS,0P0001GZPV,623889',
+      현재가 194000(실제 116700). 그대로 믿었으면 화면에 다른 종목 값이
+      찍혔을 것이다. 종목 코드가 펀드로 올 수는 없으므로 거기서 걸러낸다. */
+function pubLooksReal(meta) {
+  const type = String(meta.instrumentType || '').toUpperCase();
+  if (['EQUITY', 'ETF', 'INDEX'].indexOf(type) < 0) return false;
+  const nm = String(meta.longName || meta.shortName || '');
+  if (!nm) return false;
+  if (nm.indexOf(',') >= 0 && /\d{6}/.test(nm)) return false;   /* 코드 나열은 이름이 아니다 */
+  return true;
+}
+
+/* 국내 코드 → 코스피(.KS)인지 코스닥(.KQ)인지 찾아 준다 */
+async function pubKrTicker(code) {
+  const memo = pubSuffix.get(code);
+  if (memo) return code + memo;
+  const why = [];
+  for (const sfx of ['.KS', '.KQ']) {
+    try {
+      const got = await pubFetch(code + sfx);
+      if (!pubLooksReal(got.meta)) { why.push(sfx + '=다른 종목'); continue; }
+      pubSuffix.set(code, sfx);
+      return code + sfx;
+    } catch (e) { why.push(sfx + '=' + String(e.message || e).slice(0, 30)); }
+  }
+  throw new Error('공개 시세에 ' + code + ' 가 없습니다 (' + why.join(' · ') + ')');
+}
+
+function pubShape(got, code, market, currency) {
+  const m = got.meta, cl = got.closes || [];
+  /* 현재가는 마지막 일봉 종가로 잡는다. 장중이면 그 봉이 진행 중이라
+     regularMarketPrice 와 같은 값이고, 장 마감 뒤면 그날 종가다.
+     전일 종가는 그 앞 봉이다 — 같은 배열에서 뽑아야 둘이 어긋나지 않는다. */
+  const p = cl.length ? cl[cl.length - 1] : num(m.regularMarketPrice);
+  /* 봉이 하나뿐일 때만 chartPreviousClose 를 쓴다 — 그때는 '구간 직전 종가'가
+     곧 전일 종가라 정확하다. 코스피200(^KS200)이 5일을 물어도 봉을 하나만
+     주기 때문에 이 갈래가 필요하다. 봉이 둘 이상이면 절대 쓰지 않는다. */
+  const prev = cl.length >= 2 ? cl[cl.length - 2]
+             : (cl.length === 1 ? num(m.chartPreviousClose) : null);
+  const chg = (p != null && prev != null) ? p - prev : null;
+  return {
+    code: code, market: market, currency: currency || m.currency || 'KRW',
+    name: m.longName || m.shortName || '',
+    price: p == null ? null : Math.round(p * 100) / 100,
+    change: chg == null ? null : Math.round(chg * 100) / 100,
+    changeRate: (chg != null && prev) ? Math.round(chg / prev * 10000) / 100 : null,
+    prevClose: prev == null ? null : Math.round(prev * 100) / 100,
+    high52: num(m.fiftyTwoWeekHigh), low52: num(m.fiftyTwoWeekLow),
+    volume: num(m.regularMarketVolume),
+    /* 지연 시세라는 사실을 지우지 않는다 */
+    delayed: true,
+    asOf: m.regularMarketTime ? new Date(m.regularMarketTime * 1000).toISOString() : '',
+    src: 'public', at: new Date().toISOString()
+  };
+}
+
+async function pubQuote(raw) {
+  const s = String(raw || '').trim().toUpperCase();
+  if (s.indexOf(':') > 0) {                       /* 'NAS:AAPL' → 해외 */
+    const symb = s.split(':')[1];
+    const got = await pubFetch(symb);
+    if (!pubLooksReal(got.meta)) throw new Error('공개 시세에 ' + symb + ' 가 없습니다');
+    return pubShape(got, symb, s.split(':')[0], 'USD');
+  }
+  const t = await pubKrTicker(s);
+  return pubShape(await pubFetch(t), s, 'KRX', 'KRW');
+}
+
+async function pubIndexOne(def) {
+  const sym = PUB_IDX[def.id];
+  if (!sym) throw new Error('공개 시세에 지수 ' + def.id + ' 표기가 없습니다');
+  const q = pubShape(await pubFetch(sym), def.code, 'KRX', 'KRW');
+  return { id: def.id, name: def.name, code: def.code,
+           price: q.price, change: q.change, changeRate: q.changeRate, volume: q.volume,
+           delayed: true, asOf: q.asOf, src: 'public', at: q.at };
+}
+
 function krxCfg() { return P.krx || {}; }
 function krxReady() {
   const c = krxCfg();
@@ -993,12 +1255,14 @@ exports.handler = async function (event) {
 
     /* ── 지수 ──────────────────────────────────────────────────────────── */
     if (kind === 'index') {
-      const r = hasIndexSource() ? await settle(CFG.indices || [], indexOne) : await indexProxyList();
+      let r, isProxy = false;
+      if (hasIndexSource()) { r = await settle(CFG.indices || [], indexOne); }
+      else { const f = await indexFallback(); r = f.rows; isProxy = f.proxy; }
       return {
         statusCode: 200, headers: cors,
         body: JSON.stringify({
           ok: r.list.length > 0, meta: meta, indices: r.list,
-          proxy: !hasIndexSource(),
+          proxy: isProxy,
           errors: r.errors, need: needsOf(r.errors)
         })
       };
@@ -1028,7 +1292,7 @@ exports.handler = async function (event) {
     if (kind === 'all') {
       const wl = (CFG.watchlist || []).map(w => w.code);
       const [idx, ec, nw, wq] = await Promise.all([
-        hasIndexSource() ? settle(CFG.indices || [], indexOne) : indexProxyList(),
+        hasIndexSource() ? settle(CFG.indices || [], indexOne) : indexFallback().then(f => f.rows),
         settle(CFG.econ || [], econOne),
         news(q.cat || '').catch(() => ({ items: [], keywords: [] })),
         settle(wl, quoteOne)
@@ -1057,3 +1321,8 @@ exports.handler = async function (event) {
     };
   }
 };
+
+/* 검사에서만 쓰는 통로 — 공개 지연 시세의 판정과 계산을 밖에서 확인한다.
+   node scripts/check-public-quote.js */
+exports._pub = { looksReal: pubLooksReal, shape: pubShape };
+exports._relay = { ageMin: relayAgeMin, shape: relayShape, freshMin: RELAY_FRESH_MIN };

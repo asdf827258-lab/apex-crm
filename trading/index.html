@@ -146,6 +146,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;letter
   background:var(--sunk2);color:var(--t3);white-space:nowrap;
 }
 .srcchip.live{background:var(--green-tint);color:var(--green)}
+/* 지연 시세는 초록(실시간)으로 두면 안 된다 — 색만 보고 넘어간다 */
+.srcchip.live.delay{background:var(--amber-tint);color:var(--amber)}
 .srcchip.need{background:var(--amber-tint);color:var(--amber);cursor:pointer}
 .srcchip.need:hover{background:var(--amber);color:#fff}
 .js-px,.js-pct{transition:background .5s}
@@ -1310,9 +1312,21 @@ function mktApi(qs){
     return r.json();
   });
 }
+/* 증권사 키가 없을 때는 공개 지연 시세로 채워진다. 그걸 '실시간' 이라고
+   써 붙이면 안 된다 — 15~20분 늦은 값을 지금 값으로 알고 판단하게 된다.
+   프록시가 delayed 를 달아 보내 주므로 그대로 받아 문구를 바꾼다. */
+var sawDelayed=false;
 function markLive(label){
   var c=document.getElementById("srcChip");
-  c.textContent=label; c.classList.add("live");
+  /* '지연 시세 · 참고용' 은 옆 버튼에 잘렸다. 줄여도 뜻이 죽지 않는 쪽으로
+     자른다 — 잘려서 '지연 시...' 로 보이는 것보다 짧고 온전한 편이 낫다.
+     자세한 설명은 tooltip 으로 남긴다. */
+  c.textContent = sawDelayed ? "지연 시세" : label;
+  c.classList.add("live");
+  if(sawDelayed){
+    c.classList.add("delay");
+    c.title="증권사 API 가 연결되지 않아 공개 지연 시세로 표시합니다. 체결 즉시 값이 아닙니다.";
+  }
 }
 function pctSpan(rate){
   var cls = rate>0?"u":(rate<0?"d":"f");
@@ -1327,6 +1341,7 @@ function pullIndex(){
       return /코스피/.test(x.name||"") && !/200/.test(x.name||"");
     })[0] || j.indices[0];
     if(!k||k.price==null) return false;
+    if(k.delayed) sawDelayed=true;
     document.getElementById("kospiV").textContent=fmt(k.price,2);
     var c=document.getElementById("kospiC"), r=k.changeRate;
     c.textContent=(k.change>0?"+":"")+fmt(k.change,2)+" ("+Math.abs(r||0).toFixed(2)+"%)";
@@ -1344,6 +1359,7 @@ function pullQuotes(){
     j.quotes.forEach(function(q){
       var code=String(q.code||q.id||"").trim();
       if(!code||q.price==null) return;
+      if(q.delayed) sawDelayed=true;
       LIVEPX[code]={price:q.price, rate:q.changeRate==null?null:q.changeRate, name:q.name};
       var tr=document.querySelector('#mkbody tr[data-code="'+code+'"]');
       if(!tr) return;

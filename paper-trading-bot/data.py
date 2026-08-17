@@ -115,8 +115,105 @@ def synthetic_bars(symbol: str, timeframe: str, months: int = 6, seed: int | Non
     )
 
 
-def load_bars(symbol: str, timeframe: str, months: int = 6, synthetic: bool = False) -> tuple[pd.DataFrame, str]:
+# ── 키 없이 받는 공개 시세 ──────────────────────────────────────────────
+# Alpaca 키가 없어서 백테스트를 계속 합성 데이터로만 돌리고 있었다. 합성
+# 데이터로는 전략이 통하는지 알 수가 없다 — 순수 랜덤워크에서는 평균회귀가
+# 비용만큼 잃는 게 정상이라, 좋게 나와도 나쁘게 나와도 판단 근거가 안 된다.
+#
+# 그래서 키 없이 받을 수 있는 공개 시세를 하나 더 뒀다. 진짜 시장 데이터라
+# 관문 판정에 쓸 수 있다. 다만 두 가지를 알고 써야 한다:
+#   · 비공식 경로다. 예고 없이 막히거나 모양이 바뀔 수 있다.
+#     Alpaca 키가 생기면 그쪽이 1순위다.
+#   · 봉 종류마다 받을 수 있는 기간이 다르다(아래 표). 15분봉은 60일까지라
+#     6개월치를 달라고 해도 60일밖에 안 온다. 그럴 때는 조용히 줄이지 않고
+#     실제로 몇 일치를 받았는지 출처 문자열에 적어 돌려준다.
+
+_PUB_HOST = "https://query1.finance.yahoo.com/v8/finance/chart/"
+
+# 우리 표기 → 공개 소스 표기
+_PUB_SYMBOL = {"BTC/USD": "BTC-USD", "ETH/USD": "ETH-USD"}
+
+# 봉 → (공개 소스 interval, 받을 수 있는 최대 기간(일), 묶어야 하는 배수)
+_PUB_TF = {
+    "1Min": ("1m", 7, 1),
+    "5Min": ("5m", 60, 1),
+    "15Min": ("15m", 60, 1),
+    "30Min": ("30m", 60, 1),
+    "1Hour": ("1h", 730, 1),
+    "4Hour": ("1h", 730, 4),    # 4시간봉은 안 준다. 1시간봉을 넷씩 묶는다.
+    "1Day": ("1d", 3650, 1),
+}
+
+
+def _pub_resample(df: pd.DataFrame, mult: int) -> pd.DataFrame:
+    """1시간봉 넷을 4시간봉 하나로 묶는다. 고가는 최대, 저가는 최소."""
+    if mult <= 1:
+        return df
+    rule = f"{mult}h"
+    out = df.resample(rule, label="left", closed="left").agg(
+        {"open": "first", "high": "max", "low": "min", "close": "last", "volume": "sum"}
+    )
+    return out.dropna(subset=["close"])
+
+
+def fetch_bars_public(symbol: str, timeframe: str, months: int = 6) -> tuple[pd.DataFrame, str]:
+    """키 없이 공개 경로에서 과거 봉을 받는다. (데이터, 출처설명) 을 돌려준다."""
+    import json
+    import urllib.request
+
+    if timeframe not in _PUB_TF:
+        raise RuntimeError(f"{timeframe} 봉은 공개 소스에서 받을 수 없습니다.")
+    interval, max_days, mult = _PUB_TF[timeframe]
+
+    want_days = int(months * 31)
+    days = min(want_days, max_days)
+    ticker = _PUB_SYMBOL.get(symbol, symbol.replace("/", "-"))
+
+    url = f"{_PUB_HOST}{ticker}?range={days}d&interval={interval}"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        j = json.loads(r.read().decode())
+
+    res = (j.get("chart") or {}).get("result") or []
+    if not res:
+        err = ((j.get("chart") or {}).get("error") or {}).get("description", "")
+        raise RuntimeError(f"{symbol} 공개 시세를 받지 못했습니다. {err}"[:160])
+
+    r0 = res[0]
+    ts = r0.get("timestamp") or []
+    q = ((r0.get("indicators") or {}).get("quote") or [{}])[0]
+    if not ts:
+        raise RuntimeError(f"{symbol} 공개 시세가 비어 있습니다 (기간 {days}일 · {interval})")
+
+    df = pd.DataFrame({
+        "open": q.get("open"), "high": q.get("high"),
+        "low": q.get("low"), "close": q.get("close"), "volume": q.get("volume"),
+    }, index=pd.to_datetime(ts, unit="s", utc=True))
+
+    # 장 마감·휴장 구간은 값이 비어서 온다. 채우지 않고 버린다 —
+    # 앞 값으로 채우면 없던 봉이 생겨 신호가 가짜로 늘어난다.
+    df = df.dropna(subset=["close"]).sort_index()
+    df["volume"] = df["volume"].fillna(0)
+    df = _pub_resample(df, mult)
+
+    if len(df) < 30:
+        raise RuntimeError(f"{symbol} 봉이 {len(df)}개뿐이라 백테스트에 쓸 수 없습니다.")
+
+    got_days = (df.index[-1] - df.index[0]).days
+    note = f"public:{interval}"
+    if mult > 1:
+        note += f"x{mult}"
+    note += f" {got_days}일 {len(df)}봉"
+    if days < want_days:
+        note += f" (요청 {want_days}일 → 이 봉은 {max_days}일까지만 받을 수 있습니다)"
+    return df, note
+
+
+def load_bars(symbol: str, timeframe: str, months: int = 6,
+              synthetic: bool = False, public: bool = False) -> tuple[pd.DataFrame, str]:
     """(데이터, 출처). 출처는 결과 파일에 그대로 적어 둔다."""
     if synthetic:
         return synthetic_bars(symbol, timeframe, months), "synthetic"
+    if public:
+        return fetch_bars_public(symbol, timeframe, months)
     return fetch_bars(symbol, timeframe, months), "alpaca"

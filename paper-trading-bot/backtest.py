@@ -312,11 +312,29 @@ def _try_plot(curve: list, path: str, source: str) -> None:
         import matplotlib.pyplot as plt
     except Exception:
         return
+    # 출처 문자열에 한글이 섞여 있다("... 1061일 1707봉 (요청 744일 → ...)").
+    # 기본 폰트(DejaVu Sans)에 한글이 없어서 그림에는 □□□ 가 찍히고, 글자 하나마다
+    # 경고가 한 줄씩 나와 화면이 경고로 뒤덮인다. 한글 폰트가 깔려 있으면 쓰고,
+    # 없으면 제목에서 한글을 떼어 낸다 — 그림 제목은 어차피 영어다.
+    label = source
+    if any(ord(ch) > 0x2000 for ch in source):
+        try:
+            from matplotlib import font_manager
+            have = {f.name for f in font_manager.fontManager.ttflist}
+            korean = next((f for f in ("Pretendard", "Noto Sans KR", "NanumGothic",
+                                       "Malgun Gothic", "AppleGothic") if f in have), None)
+        except Exception:
+            korean = None
+        if korean:
+            matplotlib.rcParams["font.family"] = korean
+            matplotlib.rcParams["axes.unicode_minus"] = False
+        else:
+            label = source.split(" ")[0]          # 'public:1hx4' 처럼 앞부분만
     try:
         ys = [v for _, v in curve]
         fig, ax = plt.subplots(figsize=(10, 4.5))
         ax.plot(range(len(ys)), ys, linewidth=1.4)
-        ax.set_title(f"Equity curve ({source})")
+        ax.set_title(f"Equity curve ({label})")
         ax.set_xlabel("trade #")
         ax.set_ylabel("equity")
         ax.grid(alpha=0.3)

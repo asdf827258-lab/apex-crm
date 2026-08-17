@@ -296,6 +296,26 @@ exports.handler = async function () {
       });
       log.push('시황 브리핑 ok');
     } else log.push('브리핑 건너뜀(데이터 없음)');
+
+    /* 헤드라인 원문도 따로 남긴다.
+       위 브리핑은 AI 가 요약한 글이라 "무슨 기사를 보고 쓴 것인지" 가 사라진다.
+       아침 브리핑(invest-daily)에서 제목과 링크를 그대로 보여 주려면 원문이
+       필요하다. 요약만 있으면 확인할 방법이 없고, 확인할 수 없는 요약은
+       투자 판단에 쓸 물건이 아니다.
+       ⚠️ 제목과 링크만 저장한다. 기사 본문은 저장하지 않는다 — 남의 저작물이다. */
+    if (news.length) {
+      const lines = news.slice(0, 20)
+        .map(x => '- [' + (x.source || '출처미상') + '] ' + String(x.title).replace(/\s+/g, ' ').trim() +
+                  (x.link ? '\n  ' + x.link : ''));
+      await sb('invest_briefs?on_conflict=kind,ref_date', {
+        method: 'POST',
+        body: JSON.stringify([{
+          kind: 'news_daily', ref_date: today, title: today + ' 뉴스 헤드라인 ' + lines.length + '건',
+          body: lines.join('\n'), src: 'auto'
+        }])
+      });
+      log.push('헤드라인 ' + lines.length + '건 보관');
+    }
   } catch (e) { log.push('브리핑 실패: ' + e.message.slice(0, 90)); }
 
   /* ── ⑥ 실행 기록 (앱 점검 화면에서 마지막 실행 시각 확인) ───────────── */
