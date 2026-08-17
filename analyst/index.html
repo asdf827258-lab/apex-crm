@@ -513,8 +513,18 @@ GO.onclick=run;
 Q.addEventListener("keydown",function(e){ if(e.key==="Enter") run(); });
 
 setMarket("KR");
-OUT.innerHTML='<div class="empty"><div class="big">🔎</div>'+
-  '<div class="msg">종목을 고르면 시세·뉴스·공시를 한 번에 봅니다.<br>위 버튼을 눌러 보세요.</div></div>';
+
+/* 매매 화면의 '분석 ›' 이 /analyst/?codes=005930 으로 보낸다. 들어오자마자 돈다 —
+   주소에 종목이 있는데 빈 화면을 보여 주면 한 번 더 누르게 만든다. */
+var qs=new URLSearchParams(location.search);
+var pre=(qs.get("codes")||"").trim();
+if(pre){
+  if(qs.get("market")==="US"||/^[A-Z.]{1,6}$/.test(pre)&&!/^\d/.test(pre)) setMarket("US");
+  Q.value=pre; run();
+}else{
+  OUT.innerHTML='<div class="empty"><div class="big">🔎</div>'+
+    '<div class="msg">종목을 고르면 시세·뉴스·공시를 한 번에 봅니다.<br>위 버튼을 눌러 보세요.</div></div>';
+}
 })();
 </script>
 </body>
