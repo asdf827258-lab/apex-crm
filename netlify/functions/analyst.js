@@ -154,7 +154,7 @@ async function analyzeOne(code, overseas, nowMs, givenName, exchange) {
   /* ── ③ 뉴스 ──
      ⚠️ 회사 이름을 모르면 검색하지 않는다. 6자리 코드로 뉴스를 찾으면
         전혀 다른 기사가 잡힌다. */
-  let analyzed = [];
+  let analyzed = [], rawFresh = [];
   let searchName = out.company;
   if (!overseas) {
     const kr = await krNameOf(code, givenName || out.company);
@@ -191,6 +191,7 @@ async function analyzeOne(code, overseas, nowMs, givenName, exchange) {
       .sort((a, b) => Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0))
       .slice(0, 30);
 
+    rawFresh = fresh;
     if (fresh.length) {
       const res = await AIX.analyzeNews({ ticker: code, company: out.company }, fresh);
       /* dupCount 를 분석 결과에 다시 붙인다 — 집계에서 받아쓴 수를 쓴다 */
@@ -222,6 +223,18 @@ async function analyzeOne(code, overseas, nowMs, givenName, exchange) {
     sentiment: x.sentiment, importance: x.importance, reason: x.reason, dupCount: x.dupCount || 1
   }));
 
+  /* ⚠️ 감성 분석이 안 됐다고 기사까지 감추면 안 된다.
+        AI 키가 없을 때 43건을 모아 놓고 화면에는 한 줄도 안 보여 주고 있었다.
+        제목·언론사·시각은 AI 없이도 다 아는 사실이다. 아는 것은 보여 주고,
+        모르는 것(감성·중요도)만 비운다. 왜 비었는지는 newsAnalyzed 로 알린다. */
+  out.newsAnalyzed = out.topNews.length > 0;
+  if (!out.topNews.length && rawFresh.length) {
+    out.topNews = rawFresh.slice(0, 6).map(x => ({
+      title: x.title, url: x.url || '', source: x.source, publishedAt: x.publishedAt,
+      sentiment: null, importance: null, reason: '', dupCount: x.dupCount || 1
+    }));
+  }
+
   /* 상승요인·하락위험은 중요도 순으로 모아 중복을 지운다 */
   const pick = (key) => {
     const seen = new Set(), list = [];
@@ -236,8 +249,12 @@ async function analyzeOne(code, overseas, nowMs, givenName, exchange) {
   /* ── ⑥ 뉴스와 주가 방향 ── */
   out.alignment = CORE.alignment(agg.netScore, out.changeRate);
 
-  /* ── ⑦ 시장 의견 ── */
-  if (!agg.enoughForOpinion) {
+  /* ── ⑦ 시장 의견 ──
+     ⚠️ 기사를 42건 모아 놓고 '기사 0건' 이라고 적고 있었다. 화면 안에서 말이
+        어긋나면 어느 쪽이 참인지 알 수 없다. 모은 것과 분석한 것을 갈라 말한다. */
+  if (!out.newsAnalyzed && out.news.deduped) {
+    out.marketOpinion = '기사 ' + out.news.deduped + '건 · 감성은 못 쟀습니다';
+  } else if (!agg.enoughForOpinion) {
     out.marketOpinion = agg.note || '표본이 적어 의견을 말하지 않습니다';
   } else if (agg.netScore > 0.25) out.marketOpinion = '최근 기사는 대체로 우호적입니다';
   else if (agg.netScore < -0.25) out.marketOpinion = '최근 기사는 대체로 부정적입니다';
@@ -255,6 +272,7 @@ async function analyzeOne(code, overseas, nowMs, givenName, exchange) {
     (out.delayed ? ' · 지연' : ''));
   if (out.volumeChange && out.volumeChange.ratio != null) bits.push('거래량 ' + out.volumeChange.note);
   if (out.news.analyzed) bits.push('기사 ' + out.news.analyzed + '건 분석 · ' + out.marketOpinion);
+  else if (out.news.deduped) bits.push('기사 ' + out.news.deduped + '건 모았으나 감성 분석은 못 했습니다');
   else bits.push('분석할 기사가 없습니다');
   if (out.alignment && out.alignment.verdict === 'diverged') bits.push('⚠️ ' + out.alignment.reason);
   if (out.disclosures.length) bits.push('공시 ' + out.disclosures.length + '건');
