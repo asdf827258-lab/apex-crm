@@ -15,6 +15,8 @@
      ANTHROPIC_API_KEY 또는 GEMINI_API_KEY (없으면 숫자만 담긴 리포트가 만들어진다)
    ════════════════════════════════════════════════════════════════════════ */
 
+const GEMMODEL = require('../../scripts/gemini-model.js');
+
 const PERF = require('../../scripts/perf-core.js');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
@@ -60,7 +62,7 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status);
   }
   if (!GM_KEY) throw new Error('AI 키 없음');
-  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GM_KEY, {
+  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM_KEY)) + ':generateContent?key=' + GM_KEY, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: system }] },
