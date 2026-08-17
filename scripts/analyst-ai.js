@@ -160,13 +160,14 @@ async function askAI(system, user, maxTokens) {
     if (!GM) throw new Error('Anthropic ' + r.status);
   }
   if (!GM) throw new Error('AI 키 없음 (ANTHROPIC_API_KEY 또는 GEMINI_API_KEY)');
-  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM)) + ':generateContent?key=' + GM, {
+  const gemModel = await GEMMODEL.resolveModel(GM);
+  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gemModel + ':generateContent?key=' + GM, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] },
                            contents: [{ role: 'user', parts: [{ text: user }] }],
                            generationConfig: { maxOutputTokens: maxTokens || 4000, responseMimeType: 'application/json' } })
   });
-  if (!r2.ok) throw new Error('Gemini ' + r2.status);
+  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' (모델 ' + gemModel + ') — ' + (await r2.text()).slice(0, 200));
   const j2 = await r2.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('');
 }

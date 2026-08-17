@@ -90,6 +90,13 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;letter
   font-size:14.5px;font-weight:600;color:var(--t2);padding:4px 0;position:relative;
 }
 .nav-links button:hover{color:var(--t1)}
+/* 눌러도 홈으로 가던 버튼(피드·주식 골라보기)을 지우고, 실제로 갈 데가 있는
+   두 곳만 링크로 남겼다. 버튼과 같아 보여야 하므로 모양을 맞춘다. */
+.nav-links .navlink{
+  font:inherit;letter-spacing:inherit;color:var(--t2);
+  font-size:14.5px;font-weight:600;text-decoration:none;white-space:nowrap;padding:4px 0;
+}
+.nav-links .navlink:hover{color:var(--t1)}
 .nav-links button[aria-current="page"]{color:var(--t1);font-weight:700}
 .nav-links button[aria-current="page"]::after{
   content:"";position:absolute;left:0;right:0;bottom:-17px;height:2px;background:var(--t1);
@@ -130,9 +137,17 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;letter
 /* ══ 시장 상태 줄 ════════════════════════════════════════════════ */
 .mkt{display:flex;align-items:center;gap:20px;padding:12px 20px 0;flex-wrap:wrap}
 .mkt span{font-size:12.5px;color:var(--t2);font-weight:500;display:flex;align-items:center;gap:6px}
-.mkt .live{width:6px;height:6px;border-radius:99px;background:var(--green)}
-.mkt .live.off{background:var(--t4)}
+/* ⚠️ 여기가 칩을 뭉개고 있었다. 이 규칙은 장 상태를 알리는 초록 점(<i>)용인데,
+   출처 칩도 켜질 때 .live 를 달아서 같이 걸렸다. width:6px 이 씌워져 칩이
+   18×10px 로 찌그러졌고 글자가 밖으로 넘쳤다. 이름이 겹쳤을 뿐인데 두 시간을
+   'flex 가 안 먹는다' 고 엉뚱한 데서 찾았다. 점에만 걸리도록 i 를 붙인다. */
+.mkt i.live{width:6px;height:6px;border-radius:99px;background:var(--green)}
+.mkt i.live.off{background:var(--t4)}
 .mkt .sp{flex:1}
+/* ⚠️ 칩이 계속 잘렸다. .srcchip 에 flex:0 0 auto 를 줬는데도 안 먹었다 —
+   바로 위 .mkt span 규칙이 특이도가 높아 이기고 있었다. 여기서 잡는다.
+   출처 표시가 잘리면 지연인지 실시간인지 못 읽는다. */
+.mkt .srcchip{flex:0 0 auto;display:inline-block}
 .botbtn{
   display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:10px;
   padding:7px 12px;font-size:12.5px;font-weight:700;color:var(--t1);background:var(--panel);
@@ -141,9 +156,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;letter
 .botbtn .sparkle{color:var(--blue)}
 .botbtn.on{background:var(--blue);border-color:var(--blue);color:#fff}
 .botbtn.on .sparkle{color:#fff}
+.tolink{font-size:12px;font-weight:700;color:var(--blue);text-decoration:none}
+.tolink:hover{text-decoration:underline}
 .srcchip{
   font-size:11px;font-weight:700;padding:5px 9px;border-radius:8px;
   background:var(--sunk2);color:var(--t3);white-space:nowrap;
+  /* 글자를 줄여도 옆 버튼에 밀려 잘렸다. 줄지 않게 자리를 잡아 준다 —
+     출처 표시가 잘리면 지연인지 실시간인지 못 읽는다. */
+  flex:0 0 auto;
 }
 .srcchip.live{background:var(--green-tint);color:var(--green)}
 /* 지연 시세는 초록(실시간)으로 두면 안 된다 — 색만 보고 넘어간다 */
@@ -462,9 +482,8 @@ input[type=range]::-moz-range-thumb{
   <div class="brand"><span class="mk">A</span>APEX 증권</div>
   <div class="nav-links">
     <button data-view="home" aria-current="page">홈</button>
-    <button data-view="home">피드</button>
-    <button data-view="home">주식 골라보기</button>
-    <button data-view="home">내 계좌</button>
+    <a class="navlink" href="/analyst/">종목 분석</a>
+    <a class="navlink" href="/app/">내 계좌</a>
     <button data-view="bot">자동매매<span class="dot"></span></button>
   </div>
   <span class="nav-sp"></span>
@@ -492,9 +511,12 @@ input[type=range]::-moz-range-thumb{
         <div class="big"><span id="kospiV">6,579.04</span><span class="chg up" id="kospiC">+233.51 (3.67%)</span></div>
         <svg class="spark" data-seed="7" data-dir="1" data-w="258" data-h="64" viewBox="0 0 258 64" preserveAspectRatio="none" aria-hidden="true"></svg>
         <div class="flows">
-          <div>개인<b class="down">−39,339</b></div>
-          <div>외국인<b class="up">+34,155</b></div>
-          <div>기관<b class="up">+7,329</b></div>
+          <!-- ⚠️ 수급은 받아오는 곳이 없다. 숫자를 박아 두면 매일 같은 값이
+                   '오늘 수급' 으로 보인다. 토스 /api/v1/stocks/{symbol}/
+                   investor-trading 이 붙으면 그때 채운다. -->
+          <div>개인<b class="flat" id="flowIndi">—</b></div>
+          <div>외국인<b class="flat" id="flowFore">—</b></div>
+          <div>기관<b class="flat" id="flowInst">—</b></div>
         </div>
       </div>
 
@@ -676,8 +698,10 @@ input[type=range]::-moz-range-thumb{
   </div>
 
   <div class="cash">
-    <div><div class="k">원화</div><div class="v">6,969,620원</div></div>
-    <div><div class="k">달러</div><div class="v">$0.00</div></div>
+    <!-- ⚠️ 여기 6,969,620원 이 박혀 있었다. 아무 계좌도 아닌 숫자를 잔고로
+             보여 주고 있었다. 계좌를 붙이기 전에는 비운다. -->
+    <div><div class="k">원화</div><div class="v" id="cashKRW">—</div></div>
+    <div><div class="k">달러</div><div class="v" id="cashUSD">—</div></div>
   </div>
 
   <div class="botw">
@@ -688,7 +712,7 @@ input[type=range]::-moz-range-thumb{
     <div class="grid">
       <div class="cell"><div class="k">운용 모드</div><div class="v" id="sideMode">모의투자</div></div>
       <div class="cell"><div class="k">위험예산</div><div class="v" id="sideBudget">1,000 USD</div></div>
-      <div class="cell"><div class="k">감시 종목</div><div class="v" id="sideWatch">5개</div></div>
+      <div class="cell"><div class="k">감시 종목</div><div class="v" id="sideWatch">0개</div></div>
       <div class="cell"><div class="k">오늘 체결</div><div class="v" id="sideFill">0건</div></div>
     </div>
     <button class="golink" id="goBot">콘솔 열기 ›</button>
@@ -696,8 +720,8 @@ input[type=range]::-moz-range-thumb{
 
   <div class="block">
     <div class="bh">내 투자<span class="sp"></span><span class="cv">⌃</span></div>
-    <div class="tot">20,188,451원</div>
-    <div class="totd up">+1,610,534원 (8.66%)</div>
+    <div class="tot" id="portTot">—</div>
+    <div class="totd" id="portDelta">계좌를 연결하면 여기에 표시됩니다</div>
     <div class="sortrow">
       <span class="s">직접 설정한 순 ▾</span><span class="sp"></span>
       <div class="cseg"><button aria-pressed="false">현재가</button><button aria-pressed="true">평가금</button></div>
@@ -792,22 +816,28 @@ minis.innerHTML = MINIS.map(function(m){
 }).join("");
 
 /* ── 시세 표 ─────────────────────────────────────────────────── */
+/* ⚠️ 거래대금·시가총액·거래비율·산업·AI요약 이 종목마다 박혀 있었다.
+      현재가와 등락률은 실제 시세로 덮이는데 그 옆 칸들은 안 덮인다 —
+      진짜 숫자와 지어낸 숫자가 한 줄에 나란히 앉아 있었다. 어느 쪽이
+      진짜인지 볼 방법이 없으니 제일 나쁜 모양이다. 받아오는 곳이
+      생기기 전까지 비운다. 종목명을 누르면 /analyst/ 로 간다 —
+      거기서 뉴스·공시·감성을 실제로 받아 온다. */
 var ROWS=[
- {f:1,n:"삼성전자",       c:"#1428A0",i:"삼", px:"256,000",   p:6.88,  amt:"100억원",  cap:"1,553.5조원", b:55, ind:"종합반도체", ai:"주주환원 기대",     sym:"005930", cur:"KRW", stop:6400},
- {f:1,n:"SK하이닉스",     c:"#E60012",i:"SK", px:"1,516,000", p:6.38,  amt:"92억원",   cap:"1,046.8조원", b:53, ind:"종합반도체", ai:"반도체주 강세",     sym:"000660", cur:"KRW", stop:38000},
- {f:0,n:"SOXL",          c:"#F5A623",i:"3X", px:"196,402",   p:4.36,  amt:"23억원",   cap:"32.1조원",   b:53, ind:"반도체",    ai:"반도체 업황 확산",   sym:"SOXL",  cur:"KRW", stop:9800},
- {f:0,n:"삼성전기",       c:"#1428A0",i:"삼", px:"1,335,000", p:5.78,  amt:"11억원",   cap:"96.7조원",   b:69, ind:"스마트폰MLCC",ai:"MLCC 호조 전망",   sym:"009150", cur:"KRW", stop:33000},
- {f:0,n:"마녀공장",       c:"#E8618C",i:"마", px:"18,410",    p:-3.76, amt:"9.8억원",  cap:"3,286억원",  b:51, ind:"화장품제조", ai:"",                sym:"439090", cur:"KRW", stop:740},
+ {f:1,n:"삼성전자",       c:"#1428A0",i:"삼", px:"256,000",   p:6.88,  amt:"", cap:"", b:null, ind:"", ai:"",     sym:"005930", cur:"KRW", stop:6400},
+ {f:1,n:"SK하이닉스",     c:"#E60012",i:"SK", px:"1,516,000", p:6.38,  amt:"", cap:"", b:null, ind:"", ai:"",     sym:"000660", cur:"KRW", stop:38000},
+ {f:0,n:"SOXL",          c:"#F5A623",i:"3X", px:"196,402",   p:4.36,  amt:"", cap:"", b:null, ind:"", ai:"",   sym:"SOXL",  cur:"KRW", stop:9800},
+ {f:0,n:"삼성전기",       c:"#1428A0",i:"삼", px:"1,335,000", p:5.78,  amt:"", cap:"", b:null, ind:"", ai:"",   sym:"009150", cur:"KRW", stop:33000},
+ {f:0,n:"마녀공장",       c:"#E8618C",i:"마", px:"18,410",    p:-3.76, amt:"", cap:"", b:null, ind:"", ai:"",                sym:"439090", cur:"KRW", stop:740},
  {f:0,n:"플래닛 그린 홀딩스",c:"#2E7D32",i:"P", px:"1,995",   p:-75.73,amt:"8.1억원",  cap:"1,170억원",  b:36, ind:"지주사",     ai:"",                sym:"PLAG",  cur:"KRW", stop:300},
- {f:0,n:"SK하이닉스(ADR)", c:"#E60012",i:"AD",px:"206,745",   p:3.14,  amt:"6.4억원",  cap:"1,461.2조원",b:62, ind:"종합반도체", ai:"AI 메모리 강세",    sym:"HXSCL", cur:"KRW", stop:5200},
- {f:0,n:"KORU",          c:"#5B4DBE",i:"3X", px:"26,658",    p:6.80,  amt:"6.0억원",  cap:"1.9조원",    b:59, ind:"",          ai:"",                sym:"KORU",  cur:"KRW", stop:1330},
- {f:0,n:"SOXS",          c:"#D8402F",i:"3X", px:"59,713",    p:-4.15, amt:"5.3억원",  cap:"2.1조원",    b:34, ind:"반도체",    ai:"HBM 수급기대",      sym:"SOXS",  cur:"KRW", stop:2980},
- {f:0,n:"SK스퀘어",       c:"#E60012",i:"SK", px:"1,037,000", p:9.73,  amt:"4.9억원",  cap:"126.0조원",  b:55, ind:"지주사",    ai:"반도체주 강세",     sym:"402340", cur:"KRW", stop:26000},
- {f:0,n:"씨젠",          c:"#00A0B0",i:"씨", px:"34,400",    p:5.68,  amt:"4.5억원",  cap:"1.7조원",    b:41, ind:"진단기기",   ai:"호실적 모멘텀",     sym:"096530", cur:"KRW", stop:1030},
- {f:0,n:"대원전선",       c:"#C0392B",i:"대", px:"16,030",    p:10.39, amt:"4.1억원",  cap:"1.2조원",    b:34, ind:"전기설비",   ai:"외국인 기관 순매수", sym:"006340", cur:"KRW", stop:640},
- {f:0,n:"SGOV",          c:"#2C7A4B",i:"S",  px:"142,221",   p:0.00,  amt:"3.6억원",  cap:"144.2조원",  b:48, ind:"",          ai:"",                sym:"SGOV",  cur:"KRW", stop:280},
- {f:0,n:"한국콜마",       c:"#0E5FA4",i:"한", px:"132,000",   p:22.33, amt:"3.2억원",  cap:"2.7조원",    b:46, ind:"화장품제조", ai:"2분기 최대 실적",   sym:"161890", cur:"KRW", stop:5280},
- {f:0,n:"샌디스크",       c:"#B02A30",i:"SD", px:"1,858,036", p:3.30,  amt:"3.2억원",  cap:"266.4조원",  b:28, ind:"종합반도체", ai:"AI 메모리 호조",    sym:"SNDK",  cur:"KRW", stop:46000}
+ {f:0,n:"SK하이닉스(ADR)", c:"#E60012",i:"AD",px:"206,745",   p:3.14,  amt:"", cap:"", b:null, ind:"", ai:"",    sym:"HXSCL", cur:"KRW", stop:5200},
+ {f:0,n:"KORU",          c:"#5B4DBE",i:"3X", px:"26,658",    p:6.80,  amt:"", cap:"", b:null, ind:"", ai:"",                sym:"KORU",  cur:"KRW", stop:1330},
+ {f:0,n:"SOXS",          c:"#D8402F",i:"3X", px:"59,713",    p:-4.15, amt:"", cap:"", b:null, ind:"", ai:"",      sym:"SOXS",  cur:"KRW", stop:2980},
+ {f:0,n:"SK스퀘어",       c:"#E60012",i:"SK", px:"1,037,000", p:9.73,  amt:"", cap:"", b:null, ind:"", ai:"",     sym:"402340", cur:"KRW", stop:26000},
+ {f:0,n:"씨젠",          c:"#00A0B0",i:"씨", px:"34,400",    p:5.68,  amt:"", cap:"", b:null, ind:"", ai:"",     sym:"096530", cur:"KRW", stop:1030},
+ {f:0,n:"대원전선",       c:"#C0392B",i:"대", px:"16,030",    p:10.39, amt:"", cap:"", b:null, ind:"", ai:"", sym:"006340", cur:"KRW", stop:640},
+ {f:0,n:"SGOV",          c:"#2C7A4B",i:"S",  px:"142,221",   p:0.00,  amt:"", cap:"", b:null, ind:"", ai:"",                sym:"SGOV",  cur:"KRW", stop:280},
+ {f:0,n:"한국콜마",       c:"#0E5FA4",i:"한", px:"132,000",   p:22.33, amt:"", cap:"", b:null, ind:"", ai:"",   sym:"161890", cur:"KRW", stop:5280},
+ {f:0,n:"샌디스크",       c:"#B02A30",i:"SD", px:"1,858,036", p:3.30,  amt:"", cap:"", b:null, ind:"", ai:"",    sym:"SNDK",  cur:"KRW", stop:46000}
 ];
 function pctCls(p){return p==null?"f":(p>0?"u":(p<0?"d":"f"));}
 function pctTxt(p){return p==null?"—":((p>0?"+":(p<0?"−":""))+Math.abs(p).toFixed(2)+"%");}
@@ -821,27 +851,29 @@ document.getElementById("mkbody").innerHTML = ROWS.map(function(r,i){
    '<td class="px js-px">'+(r.px==null?dash():r.px+(r.cur==="USD"?"":"원"))+'</td>'+
    '<td class="js-pct"><span class="pct '+pctCls(r.p)+'">'+pctTxt(r.p)+'</span></td>'+
    '<td class="sub">'+(r.amt||dash())+'</td><td class="sub">'+(r.cap||dash())+'</td>'+
-   '<td><div class="ratio"><span class="down">'+r.b+'</span><span class="rbar"><i style="width:'+r.b+'%"></i></span><span class="up">'+(100-r.b)+'</span></div></td>'+
+   /* 거래비율은 받아오는 곳이 없으면 막대를 그리지 않는다 — 빈 막대라도
+      그려 두면 '50:50 이구나' 로 읽힌다. 없는 것은 없다고 둔다. */
+   '<td>'+(r.b==null?'<span style="color:var(--t4)">—</span>':
+     '<div class="ratio"><span class="down">'+r.b+'</span><span class="rbar"><i style="width:'+r.b+'%"></i></span><span class="up">'+(100-r.b)+'</span></div>')+'</td>'+
    '<td class="l ind">'+(r.ind||'<span style="color:var(--t4)">—</span>')+'</td>'+
-   '<td class="l ai">'+(r.ai||'<span style="color:var(--t4)">—</span>')+'</td>'+
+   /* 'AI 요약' 자리에 지어낸 문구가 있었다. 이제 진짜로 분석하는 화면으로 보낸다 —
+      거기서 뉴스·공시를 실제로 받아 감성과 근거를 붙인다. */
+   '<td class="l ai"><a class="tolink" href="/analyst/?codes='+encodeURIComponent(r.sym)+
+     '" title="뉴스·공시 분석 보기">분석 ›</a></td>'+
    '<td><button class="addbot" data-add="'+i+'">+봇</button></td></tr>';
 }).join("");
 }
 renderMarket();
 
 /* ── 보유 종목 ───────────────────────────────────────────────── */
-var OVERSEAS=[
- {n:"스페이스X", c:"#111111", i:"X",  q:"5주",          a:"951,658원",   d:"+11,848원 (1.26%)",  u:1},
- {n:"CONY",    c:"#3E7BFA", i:"CY", q:"20주",         a:"511,381원",   d:"−900,044원 (63.76%)",u:-1},
- {n:"JEPI",    c:"#7B4DBE", i:"JE", q:"7주",          a:"572,608원",   d:"+36,426원 (6.79%)",  u:1},
- {n:"QQQM",    c:"#0B6BCB", i:"QQ", q:"15.416799주",  a:"6,480,295원", d:"+924,164원 (16.63%)",u:1},
- {n:"SCHD",    c:"#1B7F5A", i:"SC", q:"222.396147주", a:"10,784,445원",d:"+1,607,842원 (17.52%)",u:1},
- {n:"TSLL",    c:"#C0392B", i:"2x", q:"30주",         a:"354,033원",   d:"−144,483원 (28.98%)",u:-1}
-];
-var DOMESTIC=[
- {n:"TIGER 200커버드콜", c:"#D8402F", i:"200", q:"22주", a:"262,680원", d:"+10,680원 (4.23%)",  u:1},
- {n:"TIGER 미국S&P500",  c:"#0E5FA4", i:"S&P", q:"10주", a:"271,350원", d:"+64,100원 (30.92%)", u:1}
-];
+/* ⚠️ 여기 예전에 표본 보유 종목이 박혀 있었다 — 스페이스X 5주, SCHD 222주,
+      합계 2,018만원. 화면에는 '내 투자' 라고 적힌 채였다. 남의 계좌도 아니고
+      아무 계좌도 아닌 숫자를 내 자산처럼 보여 주고 있었던 것이다.
+
+      보유 종목은 로그인해서 실제 계좌를 붙였을 때만 나온다(applyServerAccounts).
+      붙기 전에는 비운다. 채워 넣을 것이 없으면 비우는 게 맞다. */
+var OVERSEAS=[];
+var DOMESTIC=[];
 function holds(list){return list.map(function(h){
   return '<div class="hold"><span class="lg" style="background:'+h.c+';width:26px;height:26px;flex:0 0 26px;border-radius:8px">'+h.i+'</span>'+
    '<div class="m"><div class="n">'+h.n+'</div><div class="q">'+h.q+'</div></div>'+
@@ -863,13 +895,11 @@ var state={
   running:false, risk:1.0, dd:10, fills:0, mode:"paper",
   strategies:{mean_reversion:true, breakout:true, trend_following:true},
   corr:true,
-  watch:[
-    {sym:"SPY",     nm:"SPY",     px:690.12, stop:6.90,  cur:"USD", strat:"mean_reversion"},
-    {sym:"QQQ",     nm:"QQQ",     px:505.66, stop:6.74,  cur:"USD", strat:"mean_reversion"},
-    {sym:"BTC/USD", nm:"BTC/USD", px:61240,  stop:2400,  cur:"USD", strat:"breakout"},
-    {sym:"GLD",     nm:"GLD",     px:200.40, stop:3.00,  cur:"USD", strat:"trend_following"},
-    {sym:"USO",     nm:"USO",     px:71.20,  stop:1.42,  cur:"USD", strat:"trend_following"}
-  ]
+  /* ⚠️ SPY·QQQ·BTC·GLD·USO 다섯이 박혀 있었다. 화면에는 "감시 종목 5개" 로
+     떴는데 사용자가 고른 적이 없는 종목들이다. 게다가 이 다섯은 백테스트가
+     관문 4개를 못 넘긴 바로 그 조합이다. 콘솔 안내가 "표에서 +봇 을 누르면
+     추가됩니다" 이므로 0에서 시작하는 게 맞다. */
+  watch:[]
 };
 
 function fmt(n,dec){
