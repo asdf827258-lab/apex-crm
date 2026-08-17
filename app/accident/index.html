@@ -376,7 +376,7 @@ document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
 $('setToggle').onclick = () => {
   const b = $('keybox');
   b.style.display = b.style.display === 'block' ? 'none' : 'block';
-  $('apikey').value = localStorage.getItem('apex_key') || '';
+  try { $('apikey').value = localStorage.getItem('apex_key') || ''; } catch(_) {}
 };
 $('apikey').addEventListener('change', e => { try { localStorage.setItem('apex_key', e.target.value.trim()); } catch(_){} });
 
@@ -866,7 +866,9 @@ function seek(v, t) { return new Promise(r => { const h = () => { v.removeEventL
    5. AI 호출 — 회사 서버(/api/generate) 우선, 없으면 개인 키로 직접
    ══════════════════════════════════════════════════════════════════════ */
 const MODEL = 'claude-sonnet-4-6';
-const myKey = () => (localStorage.getItem('apex_key') || '').trim();
+/* 사파리 비공개 모드나 샌드박스된 화면에서는 localStorage 를 읽는 것만으로도 예외가 난다.
+   키가 없는 것과 못 읽는 것은 결과가 같으므로 조용히 빈 값으로 넘긴다. */
+const myKey = () => { try { return (localStorage.getItem('apex_key') || '').trim(); } catch(_) { return ''; } };
 
 async function ask(sys, content, opt) {
   opt = opt || {};
