@@ -432,6 +432,95 @@ window.__errs=[];
   });
   ok(insSaved === 1, '보험 목록이 client_meta 에 저장된다 — 새 표를 안 만든다 (' + insSaved + '건)');
 
+  console.log('\n[20-1] 증권에서 가져오기 — 서류의 「보험료」 를 월납으로 옮긴다');
+  /* 통합조회 서류가 주는 모양 그대로 심는다. fee 는 -1 이 「보험료 미제공」 이다. */
+  const scanRows = await page.evaluate(() => {
+    window.PR = window.PR || {};
+    PR.scan = { who: { name: '김철수', age: 45, sex: '남' }, plans: [
+      { co: 'A생명', name: '종신보험',   from: '2015-03-01', pay: '월납',    fee: 300000 },
+      { co: 'B화재', name: '실손의료비', from: '2018-06-01', pay: '연납',    fee: 1200000 },
+      { co: 'C생명', name: '암보험',     from: '2020-01-01', pay: '3개월납', fee: 300000 },
+      { co: 'D화재', name: '운전자',     from: '2021-01-01', pay: '6개월납', fee: 300000 },
+      { co: 'E생명', name: '연금',       from: '2019-01-01', pay: '일시납',  fee: 50000000 },
+      { co: 'F화재', name: '치아',       from: '2022-01-01', pay: '전기납',  fee: 40000 },
+      { co: 'G생명', name: '어린이',     from: '2023-01-01', pay: '',        fee: 70000 },
+      { co: 'H화재', name: '주택',       from: '2024-01-01', pay: '월납',    fee: -1 }
+    ] };
+    return ccScanRows();
+  });
+  const sr = {}; scanRows.forEach(r => sr[r.co] = r);
+  ok(sr['A생명'].pay === 300000, '월납 30만원은 그대로 30만원');
+  ok(sr['B화재'].pay === 100000,
+    '연납 120만원은 12로 나눠 10만원 — 그대로 두면 없던 VIP 가 생긴다 (' + sr['B화재'].pay + ')');
+  ok(sr['C생명'].pay === 100000, '3개월납 30만원은 3으로 나눠 10만원');
+  ok(sr['D화재'].pay === 50000, '6개월납 30만원은 6으로 나눠 5만원');
+  ok(sr['E생명'].pay === null && /일시납/.test(sr['E생명'].why),
+    '일시납은 매달 나가는 돈이 아니다 → 0 이 아니라 「모름」 — ' + sr['E생명'].why);
+  ok(sr['F화재'].pay === null && /전기납/.test(sr['F화재'].why),
+    '전기납도 서류만으로는 알 수 없다 → 「모름」');
+  ok(sr['G생명'].pay === 70000 && /월납으로 봤습니다/.test(sr['G생명'].why),
+    '주기가 안 적혔으면 월납으로 보되 그렇다고 적는다 — ' + sr['G생명'].why);
+  ok(sr['H화재'].pay === null && /안 적혀/.test(sr['H화재'].why),
+    '「보험료 미제공」(-1) 은 0 이 아니라 「모름」');
+  ok(sr['A생명'].yr === 2015, '가입 연도도 같이 옮긴다 (' + sr['A생명'].yr + ')');
+
+  console.log('\n[20-2] 상담자료로 가는 길도 같은 규칙을 쓴다');
+  const sd = await page.evaluate(() => {
+    const m = {}; sdPlanRows().forEach(r => m[r.company] = r.monthlyPayment); return m;
+  });
+  ok(sd['B화재'] === 100000, '상담자료 보장분석표에도 연납은 한 달치로 간다 (' + sd['B화재'] + ')');
+  ok(sd['E생명'] === 0, '못 옮긴 것은 여태처럼 0 으로 넘긴다 — 저쪽 s10Money() 가 「모름」 으로 받는다');
+  ok(sd['A생명'] === 300000, '월납은 그대로');
+
+  console.log('\n[20-3] 남의 증권을 남의 고객에게 옮기지 않는다');
+  const match = await page.evaluate(() => {
+    /* c1 은 김*수 → 김철수 와 맞다. c2 는 박*준 → 안 맞다. */
+    return { c1: ccScanMatch('c1'), c2: ccScanMatch('c2'),
+             none: (function () { const w = PR.scan.who; PR.scan.who = null;
+               const r = ccScanMatch('c1'); PR.scan.who = w; return r; })() };
+  });
+  ok(match.c1 === 'yes', '마스킹 이름(김*수)이 증권의 김철수와 맞으면 yes');
+  ok(match.c2 === 'no', '박*준 고객에게는 no — 이름이 다르면 조용히 옮기지 않는다');
+  ok(match.none === 'unknown', '견줄 이름이 없으면 「맞다」 가 아니라 「모른다」');
+
+  console.log('\n[20-4] 자료를 고객에게 저장하면 월납도 같이 옮겨진다');
+  const auto = await page.evaluate(() => {
+    cmOf('c1').ins = []; cmOf('c2').ins = [];        /* 빈 상태에서 시작 */
+    ccInsAfterSave('bojang', 'c1');
+    ccInsAfterSave('bojang', 'c2');                  /* 이름이 달라 안 들어가야 한다 */
+    ccInsAfterSave('finance', 'c3');                 /* 증권과 무관한 자료 */
+    return null;
+  });
+  await page.waitForTimeout(1400);
+  const filled = await page.evaluate(() => {
+    ccDrop();
+    return { c1: ccInsOf('c1').length, c2: ccInsOf('c2').length, c3: ccInsOf('c3').length,
+             vip: (ccOf('c1') || {}).vip, sum: (ccOf('c1') || {}).sum,
+             saved: (window.__saved.filter(x => x.client_id === 'c1' && x.kind === 'client_meta').pop() || {}).content };
+  });
+  ok(filled.c1 === 8, '이름이 맞는 고객에게는 여덟 건이 그대로 들어간다 (' + filled.c1 + ')');
+  ok(filled.c2 === 0, '이름이 다른 고객에게는 안 들어간다 (' + filled.c2 + ')');
+  ok(filled.c3 === 0, '증권과 무관한 자료(재무설계)로는 아무것도 안 옮긴다');
+  ok(filled.sum === 620000,
+    '읽어 낸 것만 더한다 = 30만 + 10만 + 10만 + 5만 + 7만 = 62만 (' + filled.sum + ')');
+  ok(filled.vip === false, '62만이므로 아직 VIP 는 아니다 (' + filled.sum + '원)');
+  const unsure = await page.evaluate(() => (ccOf('c1') || {}).unsure);
+  ok(unsure === true,
+    '다만 「모름」 이 셋 남아 있어 「확인 필요」 로 둔다 — 그 셋이 문턱을 넘길 수 있다');
+  ok(!!(filled.saved && filled.saved.ins && filled.saved.ins.length === 8),
+    '서버 client_meta 에 실제로 저장됐다 — 새 표는 안 만든다');
+  ok((filled.saved.ins.filter(x => x.cyc === '연납')[0] || {}).pay === 100000,
+    '서류에 적혀 있던 주기(연납)도 같이 남는다 — 어디서 온 숫자인지 나중에 견줄 수 있게');
+
+  console.log('\n[20-5] 이미 적어 둔 보험 목록은 안 덮는다');
+  const keep = await page.evaluate(() => {
+    ccInsAfterSave('bojang', 'c1');   /* 이미 여덟 건이 있다 */
+    return ccInsOf('c1').length;
+  });
+  await page.waitForTimeout(900);
+  const kept = await page.evaluate(() => { ccDrop(); return ccInsOf('c1').length; });
+  ok(kept === 8, '손으로 고쳐 둔 것이 있으면 증권이 다시 와도 안 덮는다 (' + kept + ')');
+
   console.log('\n[21] TFA 업무관리에 팀원별 달성률이 뜬다');
   await page.evaluate(() => { OSC.view = 'list'; OSC.current = null; });
   await page.evaluate(() => go('airep'));
@@ -494,12 +583,17 @@ window.__errs=[];
 
   console.log('\n[24] 연락 거리 — 「고객에게 전할 뉴스」 에서 가져온다');
   const news = await page.evaluate(() => {
+    /* 이 칸이 보는 것은 「VIP 에게 무엇을 고르는가」 다.
+       앞 단계가 c1 의 보험 목록을 바꿔 놓았으므로 여기서 직접 VIP 로 세운다. */
+    cmOf('c1').ins = [{ co: 'A생명', nm: '종신', pay: 1200000 }];
+    ccDrop();
     NLIVE.items = [
       { t: '전세 대출 금리 인하', u: 'https://x/1', cats: ['realty'], s: '한겨레' },
       { t: '연말정산 세액공제 확대', u: 'https://x/2', cats: ['tax'], s: '조선' },
       { t: '실손보험 개편안', u: 'https://x/3', cats: ['ins'], s: '매경' }
     ];
     /* c1 은 VIP → 세금 칸을 먼저 고른다 */
+    if (!(ccOf('c1') || {}).vip) return { title: '(VIP 로 안 잡혔습니다)', msg: '' };
     const i = ccNewsPick('c1');
     return { i: i, title: (NLIVE.items[i] || {}).t, msg: nlMsg(i) };
   });
