@@ -13,6 +13,8 @@
    보내고, 이름은 우리 서버에서 제목에 붙인다.
    ════════════════════════════════════════════════════════════════ */
 
+const GEMMODEL = require('../../scripts/gemini-model.js');
+
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const AI_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -73,7 +75,7 @@ async function askAI(system, user, maxTokens) {
   }
   if (!GM_KEY) throw new Error('AI 키가 없습니다');
   const r2 = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GM_KEY,
+    'https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM_KEY)) + ':generateContent?key=' + GM_KEY,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

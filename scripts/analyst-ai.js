@@ -14,6 +14,8 @@
 
 'use strict';
 
+const GEMMODEL = require('./gemini-model.js');
+
 const SENTIMENTS = ['positive', 'neutral', 'negative'];
 
 /* 사용자가 정한 그대로의 모양. 빠진 칸은 채우지 않고 비운다. */
@@ -158,7 +160,7 @@ async function askAI(system, user, maxTokens) {
     if (!GM) throw new Error('Anthropic ' + r.status);
   }
   if (!GM) throw new Error('AI 키 없음 (ANTHROPIC_API_KEY 또는 GEMINI_API_KEY)');
-  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GM, {
+  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + (await GEMMODEL.resolveModel(GM)) + ':generateContent?key=' + GM, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] },
                            contents: [{ role: 'user', parts: [{ text: user }] }],
