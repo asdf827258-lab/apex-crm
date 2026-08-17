@@ -308,6 +308,51 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(noai === 'scan-noai', '  스캔본인데 AI 가 없으면 조용히 빈 표를 내밀지 않는다 — ' + noai);
 
+  console.log('\n[16] 전·후 차이가 그림으로 나오는가');
+  const ch = await page.evaluate(() => {
+    localStorage.removeItem('apex_baba_rows');
+    BABA.rows = null; babaBlank();
+    const set = (name, b, a) => {
+      const i = BABA.rows.findIndex(r => r.n === name);
+      if (i < 0) return;
+      if (b !== null) babaSet(i, 'b', String(b));
+      if (a !== null) babaSet(i, 'a', String(a));
+    };
+    set('암 진단비(일반암)', 3000, 5000);      /* 늘어남 */
+    set('뇌혈관질환 진단비', 2000, 1000);      /* 줄어듦 */
+    set('급성심근경색', 1000, 1000);           /* 그대로 */
+    set('간병·요양', null, 2000);              /* 기존에만 없음 */
+    set('월 보험료', 21, 18);                  /* 보험료는 줄었다 */
+    BABA_CH_ON = true;
+    const h = babaChartHtml();
+    return { sumB: babaSum('b'), sumA: babaSum('a'),
+             feeB: babaFee('b'), feeA: babaFee('a'),
+             html: h, off: (BABA_CH_ON = false, babaChartHtml()) };
+  });
+  is(ch.sumB === 6000 && ch.sumA === 9000,
+     '  보장 합계를 더한다 — 기존 ' + ch.sumB + ' → 신규 ' + ch.sumA + ' (만원)');
+  is(ch.feeB === 21 && ch.feeA === 18, '  월 보험료는 보장 합계에 안 넣고 따로 센다');
+  is(/보장이[\s\S]{0,40}3,000만[\s\S]{0,20}늘었습니다/.test(ch.html),
+     '  맨 위 한 줄이 「보장이 3,000만 늘었습니다」 라고 말한다');
+  is(/보험료는[\s\S]{0,40}3만원[\s\S]{0,20}줄었습니다/.test(ch.html),
+     '  보험료가 줄어든 것도 같이 말한다');
+  is(/▲[\s\S]{0,20}2,000만/.test(ch.html), '  늘어난 담보에 ▲ 2,000만');
+  is(/▼[\s\S]{0,20}1,000만/.test(ch.html), '  줄어든 담보에 ▼ 1,000만');
+  is(/그대로/.test(ch.html), '  안 바뀐 담보는 「그대로」');
+  is(/한쪽만 확인/.test(ch.html), '  한쪽만 있는 담보는 「한쪽만 확인」 — 0 으로 안 채운다');
+  is(!/치아|응급실/.test(ch.html), '  둘 다 빈 담보는 아예 안 그린다 (없는 것을 그리지 않는다)');
+  is(/#3182F6/.test(ch.html) && /#FF9500/.test(ch.html),
+     '  토스 파랑으로 늘어난 것, 주황으로 줄어든 것 — 빨강은 안 쓴다');
+  is(!/#F04452|#E5484D|red/i.test(ch.html), '  고객 앞에서 빨강을 안 쓴다');
+  is(/babaChartPrint\(\)/.test(ch.html), '  「인쇄 · PDF 로 저장」 단추가 있다');
+  is(ch.off === '', '  접으면 안 그린다');
+
+  const src2 = require('fs').readFileSync('app/index.html', 'utf8');
+  is(/babaChartToggle\(\)/.test(src2), '  화면에 「📈 전·후 그래프」 단추가 붙어 있다');
+  is(/babaChartHtml\(\)\+babaGridHtml\(\)/.test(src2.replace(/\s/g, '')),
+     '  표를 다시 그릴 때 그래프도 같이 그린다 (고친 값이 바로 반영된다)');
+  is(/보장·지급은 약관과 심사/.test(src2), '  인쇄본에 약관·심사 단서가 붙는다');
+
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close();
