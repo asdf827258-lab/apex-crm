@@ -385,15 +385,47 @@ async function quoteOne(raw) {
     return cSet(k, out, TTL.quote);
   } catch (e) {
     notes.push('공개 시세 실패: ' + String(e && e.message || e).slice(0, 110));
+    /* ⚠️ 마지막 줄까지 실패했는데 키도 하나 없다면, '무엇을 넣으면 되는지' 를
+          반드시 같이 줘야 한다. 앱은 이 NEED: 목록으로 안내 카드를 그린다.
+          공개 시세를 넣으면서 이 줄을 지웠더니, 키가 없는 사람에게 원인만
+          보이고 해결 방법이 안 보였다. 검사가 그걸 잡았다. */
+    if (!tossReady() && !kisOk && !krxOk) {
+      throw new Error('NEED:DATA_GO_KR_KEY,TOSS_CLIENT_ID,TOSS_CLIENT_SECRET,KIS_APP_KEY,KIS_APP_SECRET');
+    }
     throw new Error(notes.join(' / '));
   }
 }
 
 /* ── 지수를 살 수 있는 소스가 있는가 (KIS 또는 공공데이터) ────────────── */
-/* ④ 공개 지연 시세가 지수도 주므로, 이제 지수 소스가 없는 경우는 없다.
-   ETF 로 대신하던 장치(indexProxyList)는 그래도 남겨 둔다 — 공개 경로가
-   막히는 날이 오면 그때 다시 쓰인다. */
-function hasIndexSource() { return true; }
+/* 지수를 '지수로서' 주는 소스가 있는가 (KIS 또는 공공데이터).
+   ⚠️ 여기서 무조건 true 를 돌려주게 고쳤다가 검사 4개를 깨뜨렸다. 그러면
+      indexProxyList 로 갈 일이 없어지는데, 토스 키만 있는 사람은 그 길로
+      토스 시세의 ETF 값을 받고 있었다. 무조건 true 는 그 사람들의 지수를
+      토스 값에서 공개 지연값으로 바꿔치기하고, 공개 경로마저 막히면 화면을
+      통째로 비운다. 공개 지연 지수는 '지수 소스' 가 아니라 '마지막 보루' 다. */
+function hasIndexSource() {
+  return !!(process.env.KIS_APP_KEY && process.env.KIS_APP_SECRET) || krxReady();
+}
+
+/* 지수 전용 소스(KIS·공공데이터)가 없을 때 무엇으로 채우나.
+
+   ① 공개 지연 '진짜 지수' (^KS11 = 코스피 그 자체)
+   ② 그것도 안 되면 지수를 따라가는 ETF 로 대신 (토스 키만 있는 사람이 이 길)
+
+   순서를 반대로 짰다가 되돌렸다. ETF 를 먼저 쓰면, 진짜 코스피(6,977.94)를
+   받을 수 있는데도 화면에 'KODEX 200 · ETF 기준' 이 뜬다. 대체품은 원본을
+   못 구할 때 쓰는 것이지 먼저 쓰는 게 아니다.
+
+   ⚠️ indexProxyList 는 배열이 아니라 settle 의 결과({list, errors})를 준다.
+      (proxy||[]).length 로 봤더니 객체에 length 가 없어 언제나 거짓이었고,
+      토스에서 값이 멀쩡히 왔는데도 버리고 있었다. 검사 4개가 그걸 잡았다. */
+async function indexFallback() {
+  try {
+    const real = await settle(CFG.indices || [], pubIndexOne);
+    if (real && (real.list || []).length) return { rows: real, proxy: false };
+  } catch (e) { /* 아래 ETF 대체로 */ }
+  return { rows: await indexProxyList(), proxy: true };
+}
 /* 지수 전용 소스가 없을 때 — 지수를 따라가는 ETF 시세로 대신한다.
    토스증권 키 하나만 있어도 경제동향 화면이 비지 않게 하는 장치.
    지수 그 자체가 아니므로 proxy 표시를 달아 앱이 'ETF 기준' 이라고 밝히게 한다. */
@@ -1208,12 +1240,14 @@ exports.handler = async function (event) {
 
     /* ── 지수 ──────────────────────────────────────────────────────────── */
     if (kind === 'index') {
-      const r = hasIndexSource() ? await settle(CFG.indices || [], indexOne) : await indexProxyList();
+      let r, isProxy = false;
+      if (hasIndexSource()) { r = await settle(CFG.indices || [], indexOne); }
+      else { const f = await indexFallback(); r = f.rows; isProxy = f.proxy; }
       return {
         statusCode: 200, headers: cors,
         body: JSON.stringify({
           ok: r.list.length > 0, meta: meta, indices: r.list,
-          proxy: !hasIndexSource(),
+          proxy: isProxy,
           errors: r.errors, need: needsOf(r.errors)
         })
       };
@@ -1243,7 +1277,7 @@ exports.handler = async function (event) {
     if (kind === 'all') {
       const wl = (CFG.watchlist || []).map(w => w.code);
       const [idx, ec, nw, wq] = await Promise.all([
-        hasIndexSource() ? settle(CFG.indices || [], indexOne) : indexProxyList(),
+        hasIndexSource() ? settle(CFG.indices || [], indexOne) : indexFallback().then(f => f.rows),
         settle(CFG.econ || [], econOne),
         news(q.cat || '').catch(() => ({ items: [], keywords: [] })),
         settle(wl, quoteOne)
