@@ -32,6 +32,8 @@
 #    frag_quote.py  부록 「아침에 한 줄」 서른 날치
 #    frag_brain.py  맨 앞 「윤시현의 뇌」 — 모든 지도를 합친 한 장 (여덟 가지)
 #    frag_flow.py   맨 앞 「영업프로세스 — APEX 는 어떻게 접근하는가」 (여섯 칸 · 네 줄)
+#    frag_six.py    같은 장의 「여섯 칸을 처음부터 끝까지」 — 한 칸에 한 장씩 SVG 카드
+#    frag_story.html 여는 이야기 일곱 블록 (터치 · 시스템 · 트렌드)
 
 # 2) 화면 사진을 다시 찍으려면 (저장소 최상단에서)
 export NODE_PATH=/opt/node22/lib/node_modules
@@ -90,7 +92,12 @@ python3 frag_brain.py && python3 frag_flow.py && python3 build7.py   # 7차 — 
 
 - **CSS 클래스 충돌.** 새 클래스는 반드시 기존 161개와 겹치는지 먼저 봅니다.
   지금까지 쓴 접두사: `rdr-` `nmb-` `cyc-` `pw` `pin` `mp-` `op-` `st-` `dt-` `qt-`
-  `brain` `bn-` `fl-`.
+  `brain` `bn-` `fl-` `sx-`.
+
+- **표로 만들면 잘립니다.** 좁은 화면에서 표는 가로로 잘리거나 스크롤이 생깁니다.
+  「한눈에 다 보여야 하는」 내용은 **표 대신 SVG 카드**로 그리세요 —
+  `frag_six.py` 가 그 본보기입니다. 줄바꿈을 직접 정하니 어디서도 안 잘립니다.
+  칩(태그)은 `tw()` 로 글자 너비를 어림해 자동 줄바꿈합니다.
 
 - **본문 폭을 넘기는 그림.** 큰 지도 둘(`.brain`)은 740px 본문 폭으로는 글씨가 너무 작아져서
   `width:min(96vw,1080px); margin-left:50%; transform:translateX(-50%)` 로 화면 폭까지 넓혔습니다.
