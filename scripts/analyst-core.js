@@ -237,3 +237,93 @@ module.exports = {
   DEFAULTS, normTitle, similarity, dedupe, recencyWeight,
   aggregate, alignment, volumeChange, confidence
 };
+
+/* ── 주제별로 묶기 ──────────────────────────────────────────────────────
+   종목 하나씩 보는 것과, 오늘 시장에 무슨 일이 있었는지 보는 것은 다른 일이다.
+   기사 200건을 시간순으로 늘어놓으면 아무것도 안 읽힌다. 같은 이야기끼리
+   묶어야 '오늘은 반도체와 환율이었다' 가 보인다.
+
+   ⚠️ 묶는 규칙을 AI 에게 맡기지 않는다. 매번 다르게 묶이면 어제와 오늘을
+      견줄 수가 없다. 낱말로 묶고, 그 안의 글은 AI 가 쓴다.
+
+   ⚠️ 한 기사가 여러 주제에 걸릴 수 있다(반도체 + 환율). 하나에만 넣으면
+      다른 쪽에서 사라진다. 걸리는 곳에 다 넣되, 어디에 몇 건인지로 크기를
+      재므로 합계가 전체보다 클 수 있다 — 그게 사실이다. */
+const TOPICS = [
+  { id: 'semi',    name: '반도체·AI',    words: ['반도체', 'HBM', '메모리', 'D램', '디램', '낸드', '파운드리', 'AI', '엔비디아', 'TSMC', '웨이퍼', 'GPU'] },
+  { id: 'rate',    name: '금리·통화',    words: ['금리', '기준금리', '연준', 'FOMC', '한국은행', '금통위', '국채', '채권', '긴축', '완화'] },
+  { id: 'fx',      name: '환율',        words: ['환율', '원화', '달러', '엔화', '위안', '외환', '고환율', '약세', '강세'] },
+  { id: 'policy',  name: '정책·규제',    words: ['정부', '금융위', '금감원', '규제', '법안', '과세', '세제', '공정위', '관세', '제재'] },
+  { id: 'earn',    name: '실적',        words: ['실적', '영업이익', '순이익', '매출', '어닝', '잠정', '컨센서스', '가이던스', '적자', '흑자'] },
+  { id: 'share',   name: '배당·주주환원', words: ['배당', '자사주', '주주환원', '소각', '무상증자', '유상증자', '액면분할'] },
+  { id: 'battery', name: '2차전지',      words: ['배터리', '2차전지', '이차전지', '전기차', '양극재', '음극재', '리튬', 'ESS'] },
+  { id: 'bio',     name: '바이오·제약',   words: ['바이오', '제약', '임상', 'FDA', '신약', 'CDMO', '위탁생산'] },
+  { id: 'ship',    name: '조선·방산',     words: ['조선', '수주', '방산', '무기', '전투기', '잠수함', 'LNG선'] },
+  { id: 'energy',  name: '유가·원자재',   words: ['유가', '원유', 'OPEC', '천연가스', '금값', '구리', '원자재'] },
+  { id: 'geo',     name: '지정학',       words: ['전쟁', '휴전', '중동', '우크라', '대만', '북한', '트럼프', '미중'] },
+  { id: 'realty',  name: '부동산·건설',   words: ['부동산', '아파트', '분양', '건설', '재건축', '전세', '주담대', '가계부채'] }
+];
+
+function topicsOf(text) {
+  const s = String(text || '');
+  const hit = [];
+  TOPICS.forEach(t => { if (t.words.some(w => s.indexOf(w) >= 0)) hit.push(t.id); });
+  return hit;
+}
+
+/* 기사 묶음 → 주제별 묶음. 큰 것부터. 아무 주제에도 안 걸리면 '기타' 로 간다. */
+function clusterByTopic(items, nowMs, opts) {
+  const o = Object.assign({}, DEFAULTS, opts || {});
+  const byId = {};
+  TOPICS.forEach(t => { byId[t.id] = { id: t.id, name: t.name, items: [], weight: 0 }; });
+  const etc = { id: 'etc', name: '기타', items: [], weight: 0 };
+
+  (items || []).forEach(x => {
+    if (!x || !x.title) return;
+    const rw = recencyWeight(x.publishedAt, nowMs, o);
+    if (rw <= 0) return;                       /* 오래된 것은 오늘 이야기가 아니다 */
+    const dup = 1 + Math.log2(Math.max(1, n(x.dupCount) || 1)) * 0.25;
+    const w = rw * dup;
+    const ids = topicsOf(x.title);
+    if (!ids.length) { etc.items.push(x); etc.weight += w; return; }
+    ids.forEach(id => { byId[id].items.push(x); byId[id].weight += w; });
+  });
+
+  const out = TOPICS.map(t => byId[t.id]).filter(g => g.items.length);
+  out.forEach(g => {
+    g.weight = Math.round(g.weight * 1000) / 1000;
+    /* 묶음 안에서도 최신·많이 받아쓴 것이 위로 */
+    g.items.sort((a, b) => (recencyWeight(b.publishedAt, nowMs, o) * (1 + Math.log2(Math.max(1, n(b.dupCount) || 1)) * 0.25))
+                         - (recencyWeight(a.publishedAt, nowMs, o) * (1 + Math.log2(Math.max(1, n(a.dupCount) || 1)) * 0.25)));
+  });
+  out.sort((a, b) => b.weight - a.weight);
+  /* ⚠️ '기타' 는 주제가 아니라 '아직 주제를 못 붙인 것' 이다. 크기로 줄을
+        세우면 맨 앞에 온다 — 실제로 36건 중 21건이 기타라 그게 1등이었다.
+        읽는 사람은 첫 칸을 오늘의 핵심으로 읽는데, 거기에 지역 개발사업과
+        조례안이 앉아 있었다. 크기와 무관하게 맨 뒤로 보낸다. */
+  if (etc.items.length) out.push(etc);
+  return out;
+}
+
+/* 보유 종목과 오늘 기사를 잇는다.
+   ⚠️ 종목명이 짧으면(두 글자) 엉뚱한 기사가 딸려 온다 — '한전' 이 '한전산업'
+      기사를 물어 오는 식이다. 이름이 통째로 들어 있을 때만 잇고, 못 이으면
+      '닿는 기사 없음' 이라고 말한다. 억지로 잇는 것보다 없다고 하는 게 낫다. */
+function linkToHoldings(holdings, items, nowMs, opts) {
+  const o = Object.assign({}, DEFAULTS, opts || {});
+  return (holdings || []).map(h => {
+    const nm = String(h.name || '').trim();
+    const hits = nm.length < 2 ? [] : (items || []).filter(x => {
+      if (!x || !x.title) return false;
+      if (recencyWeight(x.publishedAt, nowMs, o) <= 0) return false;
+      return String(x.title).indexOf(nm) >= 0;
+    });
+    hits.sort((a, b) => recencyWeight(b.publishedAt, nowMs, o) - recencyWeight(a.publishedAt, nowMs, o));
+    return { holding: h, news: hits.slice(0, 5), count: hits.length };
+  });
+}
+
+module.exports.TOPICS = TOPICS;
+module.exports.topicsOf = topicsOf;
+module.exports.clusterByTopic = clusterByTopic;
+module.exports.linkToHoldings = linkToHoldings;
