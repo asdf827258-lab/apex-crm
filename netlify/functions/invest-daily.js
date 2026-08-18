@@ -68,16 +68,14 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status);
   }
   if (!GM_KEY) throw new Error('AI 키 없음');
-  const gemModel = await GEMMODEL.resolveModel(GM_KEY);
-  const r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gemModel + ':generateContent?key=' + GM_KEY, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: user }] }],
-      generationConfig: { maxOutputTokens: maxTokens || 900 }
-    })
+  /* 되는 모델을 찾을 때까지 후보를 내려간다 — 목록에 있어도 부르면 404 인
+     조합이 있다. 실패하면 무엇을 몇 번 시도했는지 메시지에 담긴다. */
+  const gem = await GEMMODEL.callGemini(GM_KEY, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: { maxOutputTokens: maxTokens || 900 }
   });
-  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' (모델 ' + gemModel + ') — ' + (await r2.text()).slice(0, 200));
+  const r2 = gem.res;
   const j2 = await r2.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }
