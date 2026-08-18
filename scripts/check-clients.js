@@ -297,6 +297,10 @@ const later = n => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); ret
 
   await page.evaluate(() => osBackToList());
   await page.waitForTimeout(500);
+  /* 이제 켜면 「급한 순」 한 줄이 기본이다 — 30일 넘은 사람이 묶음 아래에 숨으면 안 되니까.
+     가족으로 보려면 단추를 한 번 누른다. 여기서 그 단추를 누르고 본다. */
+  await page.evaluate(() => cmFamToggle());
+  await page.waitForTimeout(300);
   const grp = await page.evaluate(() => ({
     heads: Array.prototype.map.call(document.querySelectorAll('.cm-fh'), e => e.textContent.replace(/\s+/g, ' ').trim()),
     inFam: document.querySelectorAll('.cm-fam .cm-row').length
