@@ -1374,8 +1374,13 @@ function pullIndex(){
     if(k.delayed) sawDelayed=true;
     document.getElementById("kospiV").textContent=fmt(k.price,2);
     var c=document.getElementById("kospiC"), r=k.changeRate;
-    c.textContent=(k.change>0?"+":"")+fmt(k.change,2)+" ("+Math.abs(r||0).toFixed(2)+"%)";
-    c.className="chg "+(k.change>0?"up":(k.change<0?"down":"flat"));
+    /* ⚠️ 예전에 (r||0) 이라고 썼다. 전일 종가를 못 구해 등락률이 비면
+       화면에 0.00% 가 찍힌다 — '오늘 안 움직였다' 로 읽히는 거짓말이다.
+       모르면 모른다고 적는다. */
+    c.textContent = (r==null)
+      ? "등락률 확인 안 됨"
+      : (k.change>0?"+":"")+fmt(k.change,2)+" ("+Math.abs(r).toFixed(2)+"%)";
+    c.className="chg "+(r==null?"flat":(k.change>0?"up":(k.change<0?"down":"flat")));
     return true;
   });
 }
@@ -1395,7 +1400,9 @@ function pullQuotes(){
       if(!tr) return;
       hit++;
       tr.querySelector(".js-px").textContent=fmt(q.price)+"원";
-      tr.querySelector(".js-pct").innerHTML=pctSpan(q.changeRate||0);
+      /* 같은 이유로 (||0) 을 쓰지 않는다 — 없으면 '—' 를 그린다 */
+      tr.querySelector(".js-pct").innerHTML =
+        q.changeRate==null ? '<span class="flat">—</span>' : pctSpan(q.changeRate);
       tr.classList.add("fresh");
       setTimeout(function(){tr.classList.remove("fresh")},900);
       /* 봇이 감시 중인 종목이면 진입가·손절거리·수량을 같이 갱신한다 */

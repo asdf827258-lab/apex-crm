@@ -29,7 +29,7 @@ jobs:
           python-version: '3.11'
 
       - name: 화면 파일 문법 검사
-        run: node scripts/check-html.js app/index.html app/finance.html db-crm.html db-crm-teams.html ta-script.html index.html "app/재무설계/실전화법서.html" "app/재무설계/상담자료.html" "app/상담자료/메인 상담자료.html" app/상담자료/apex-deck.js app/상담자료/미끼레이더/index.html app/상담자료/미끼레이더/사용안내.html "app/상담자료/미끼상품_접촉전략.html"
+        run: node scripts/check-html.js app/index.html app/finance.html db-crm.html db-crm-teams.html ta-script.html index.html trading/index.html brief/index.html analyst/index.html "app/재무설계/실전화법서.html" "app/재무설계/상담자료.html" "app/상담자료/메인 상담자료.html" app/상담자료/apex-deck.js app/상담자료/미끼레이더/index.html app/상담자료/미끼레이더/사용안내.html "app/상담자료/미끼상품_접촉전략.html"
 
       - name: SQL 문법 검사
         run: |
@@ -187,3 +187,24 @@ jobs:
 
       - name: 약관 판정 — 팀이 다 같이 보는가 · 약관 원문은 안 나가는가
         run: node scripts/check-tvshare.js
+
+      # ⚠️ 아래 여섯 개는 만들어 놓고 CI 에 안 걸어 뒀었다. 검사를 써 놓고
+      #    돌리지 않으면 없는 것과 같다 — 실제로 시세·AI 쪽 고장이 여기서
+      #    안 걸리고 배포까지 나갔다.
+      - name: 공개 지연 시세 — 등락률을 조용히 틀리게 내보내지 않는가
+        run: node scripts/check-public-quote.js
+
+      - name: 토스 중계 — 오래된 값을 현재가로 내놓지 않는가
+        run: node scripts/check-toss-relay.js
+
+      - name: Gemini 모델 — 이름을 코드에 박아 두지 않는가
+        run: node scripts/check-gemini-model.js
+
+      - name: 오늘의 정리 — 중복제거·최신가중·주제묶기가 맞는가
+        run: node scripts/check-analyst.js
+
+      - name: AI 정리 — 정해진 칸을 벗어난 답을 걸러 내는가
+        run: node scripts/check-analyst-ai.js
+
+      - name: 모의매매 — 수수료·슬리피지를 빼먹지 않는가
+        run: node scripts/check-simcore.js

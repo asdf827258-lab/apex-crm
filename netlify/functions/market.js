@@ -559,7 +559,7 @@ const PUB_IDX = { kospi: '^KS11', kosdaq: '^KQ11', kospi200: '^KS200' };
 /* 코스피(.KS)인지 코스닥(.KQ)인지는 코드만 봐서는 모른다. 한 번 알아내면 기억한다 */
 const pubSuffix = new Map();
 
-async function pubFetch(ticker) {
+async function pubFetchOnce(ticker) {
   const url = PUB_HOST + encodeURIComponent(ticker) + '?range=5d&interval=1d';
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), 9000);
@@ -574,9 +574,41 @@ async function pubFetch(ticker) {
        ⚠️ meta.chartPreviousClose 를 전일 종가로 쓰면 안 된다. 그건 '요청한
           구간이 시작되기 전' 의 종가라, range=5d 로 부르면 닷새 전 값이다.
           그걸 전일 종가로 쓰는 바람에 삼성전자가 +18.83%, 코스피가 +11.49%
-          로 찍혔다. meta.previousClose 는 아예 안 온다. */
-    return { meta: res.meta, closes: (q.close || []).filter(v => v != null).map(Number) };
+          로 찍혔다. meta.previousClose 는 아예 안 온다.
+
+       ⚠️ null 을 걸러 내지 않는다. 예전에 .filter(v => v != null) 로 지웠는데,
+          그러면 빠진 자리가 흔적도 없이 사라져 '하루 전' 이 '나흘 전' 으로
+          바뀐다. 코스닥이 실제로 그렇게 됐다 — 아래 pubFetch 주석 참고. */
+    return { meta: res.meta,
+             closes: (q.close || []).map(v => (v == null ? null : Number(v))) };
   } finally { clearTimeout(timer); }
+}
+
+/* ⚠️ 같은 주소를 연달아 불러도 어제 봉이 있다가 없다가 한다. 실제로 본 것:
+      코스닥 5일치를 다섯 번 불렀더니 첫 번째만 08-18 자리가 null 이었고
+      나머지 네 번은 834.20 이 들어 있었다. null 을 지우고 배열을 당기면
+      전일 종가가 08-14 종가(864.65)로 바뀌어 +0.26% 가 −3.28% 로 찍힌다.
+      화면 맨 위 숫자가 새로고침할 때마다 널뛴 이유가 이것이었다.
+
+      그래서 '바로 앞 봉이 비었으면' 한 번 다시 묻는다. 그래도 비면 지어내지
+      않고 등락률을 비운다 — 틀린 숫자보다 빈 칸이 낫다. */
+function prevMissing(cl) {
+  return (cl || []).length >= 2 &&
+         cl[cl.length - 1] != null && cl[cl.length - 2] == null;
+}
+async function pubFetch(ticker) {
+  let got = await pubFetchOnce(ticker);
+  /* 다섯 번에 한 번쯤 비므로 두 번까지 다시 묻는다. 세 번 다 비면 그때는
+     정말 없는 것으로 보고 등락률을 비운다 — 거기서부터는 지어내는 것이다. */
+  for (let i = 0; i < 2 && prevMissing(got.closes); i++) {
+    await new Promise(r => setTimeout(r, 250));
+    try {
+      const again = await pubFetchOnce(ticker);
+      if (!prevMissing(again.closes)) return again;
+      got = again;
+    } catch (e) { break; }        /* 다시 물어 실패하면 처음 것을 그대로 쓴다 */
+  }
+  return got;
 }
 
 /* 이 응답이 내가 찾던 그 종목이 맞는가.
@@ -615,13 +647,24 @@ function pubShape(got, code, market, currency) {
   const m = got.meta, cl = got.closes || [];
   /* 현재가는 마지막 일봉 종가로 잡는다. 장중이면 그 봉이 진행 중이라
      regularMarketPrice 와 같은 값이고, 장 마감 뒤면 그날 종가다.
-     전일 종가는 그 앞 봉이다 — 같은 배열에서 뽑아야 둘이 어긋나지 않는다. */
-  const p = cl.length ? cl[cl.length - 1] : num(m.regularMarketPrice);
-  /* 봉이 하나뿐일 때만 chartPreviousClose 를 쓴다 — 그때는 '구간 직전 종가'가
-     곧 전일 종가라 정확하다. 코스피200(^KS200)이 5일을 물어도 봉을 하나만
-     주기 때문에 이 갈래가 필요하다. 봉이 둘 이상이면 절대 쓰지 않는다. */
-  const prev = cl.length >= 2 ? cl[cl.length - 2]
-             : (cl.length === 1 ? num(m.chartPreviousClose) : null);
+     전일 종가는 바로 그 앞 봉이다 — 같은 배열에서 뽑아야 둘이 어긋나지 않는다. */
+  const last = cl.length ? cl[cl.length - 1] : null;
+  const p = last != null ? last : num(m.regularMarketPrice);
+
+  /* ⚠️ 앞 봉이 비었다고 그 앞을 집으면 안 된다. 그건 '전일' 이 아니라
+        '며칠 전' 이고, 며칠 전인지는 화면 어디에도 안 적힌다. 비었으면 비운다. */
+  let prev = null, why = '';
+  if (cl.length >= 2) {
+    prev = cl[cl.length - 2];
+    if (prev == null) why = '전일 종가가 비어 있습니다';
+  } else if (cl.length === 1) {
+    /* 봉이 하나뿐이면 chartPreviousClose 밖에 없다. 코스피200(^KS200)이
+       range 를 어떻게 줘도 봉을 하나만 준다.
+       ⚠️ 다만 이 값은 부를 때마다 조금씩 달라진다 (1082.0 / 1080.36 을 봤다).
+          그래서 '어림값' 이라고 표시해 화면이 확정된 숫자처럼 보이지 않게 한다. */
+    prev = num(m.chartPreviousClose);
+    if (prev != null) why = '전일 종가가 대략값입니다';
+  }
   const chg = (p != null && prev != null) ? p - prev : null;
   return {
     code: code, market: market, currency: currency || m.currency || 'KRW',
@@ -630,6 +673,7 @@ function pubShape(got, code, market, currency) {
     change: chg == null ? null : Math.round(chg * 100) / 100,
     changeRate: (chg != null && prev) ? Math.round(chg / prev * 10000) / 100 : null,
     prevClose: prev == null ? null : Math.round(prev * 100) / 100,
+    approx: why || '',
     high52: num(m.fiftyTwoWeekHigh), low52: num(m.fiftyTwoWeekLow),
     volume: num(m.regularMarketVolume),
     /* 지연 시세라는 사실을 지우지 않는다 */
@@ -657,6 +701,9 @@ async function pubIndexOne(def) {
   const q = pubShape(await pubFetch(sym), def.code, 'KRX', 'KRW');
   return { id: def.id, name: def.name, code: def.code,
            price: q.price, change: q.change, changeRate: q.changeRate, volume: q.volume,
+           /* 전일 종가가 대략값이면 그 사실을 지수 행까지 들고 간다 —
+              여기서 지우면 화면은 확정된 숫자로 읽는다 */
+           approx: q.approx || '',
            delayed: true, asOf: q.asOf, src: 'public', at: q.at };
 }
 

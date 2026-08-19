@@ -77,6 +77,33 @@ const 봉없음 = _pub.shape(
 ok('봉이 없으면 등락률을 지어내지 않는다', 봉없음.changeRate === null, 봉없음.changeRate);
 ok('봉이 없어도 현재가는 meta 에서 살린다', 봉없음.price === 110, 봉없음.price);
 
+console.log('\n③\' 빈 봉을 건너뛰어 남의 날짜를 전일로 삼지 않는가');
+
+/* ⚠️ 실제로 겪은 것. 코스닥 5일치를 연달아 부르면 08-18 자리가 있다가 없다가
+      했다. 예전 코드는 null 을 지우고 배열을 당겨서, 빠진 날이 흔적 없이
+      사라지고 08-14 종가가 '전일' 이 됐다. 화면 맨 위 숫자가 새로고침마다
+      +0.26% ↔ −3.28% 로 널뛰었다 — 현재가는 그대로인데. */
+const 코스닥정상 = _pub.shape(
+  { meta: { currency: 'KRW', longName: 'KOSDAQ Composite Index', chartPreviousClose: 857.84 },
+    closes: [858.91, 861.37, 864.65, 834.20, 836.25] }, '1001', 'KRX', 'KRW');
+ok('전일은 바로 앞 봉(834.20)', 코스닥정상.prevClose === 834.2, 코스닥정상.prevClose);
+ok('코스닥 +0.25%', near(코스닥정상.changeRate, 0.25), 코스닥정상.changeRate);
+
+const 코스닥빈봉 = _pub.shape(
+  { meta: { currency: 'KRW', longName: 'KOSDAQ Composite Index', chartPreviousClose: 857.84 },
+    closes: [858.91, 861.37, 864.65, null, 836.25] }, '1001', 'KRX', 'KRW');
+ok('앞 봉이 비면 나흘 전(864.65)으로 넘어가지 않는다',
+   코스닥빈봉.prevClose !== 864.65, 코스닥빈봉.prevClose);
+ok('앞 봉이 비면 등락률을 비운다 (−3.28% 를 찍지 않는다)',
+   코스닥빈봉.changeRate === null, 코스닥빈봉.changeRate);
+ok('현재가는 그대로 살린다', 코스닥빈봉.price === 836.25, 코스닥빈봉.price);
+ok('왜 비었는지 남긴다', /전일 종가/.test(코스닥빈봉.approx || ''), 코스닥빈봉.approx);
+
+/* 봉이 하나뿐이라 chartPreviousClose 를 쓸 때는 '대략값' 이라고 밝힌다.
+   ⚠️ 그 값은 부를 때마다 달라진다 — ^KS200 에서 1082.0 과 1080.36 을 봤다. */
+ok('봉이 하나면 대략값이라고 표시한다', /대략값/.test(코스피200.approx || ''), 코스피200.approx);
+ok('봉이 둘 이상이면 그런 표시가 없다', !코스피.approx, 코스피.approx);
+
 console.log('\n④ 소수점이 흘러넘치지 않는가');
 
 const 애플 = _pub.shape(

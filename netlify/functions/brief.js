@@ -159,6 +159,10 @@ exports.handler = async function (event) {
   try {
     const j = await mkt({ kind: 'index' });
     out.indices = (j.indices || []).map(x => ({
+      /* ⚠️ approx 를 여기서 떨어뜨리면 화면은 대략값을 확정값으로 그린다.
+            코스피200 은 전일 종가를 부를 때마다 다르게 준다 — 그 사실이
+            숫자 옆에 안 적히면 아무도 모른다. */
+      approx: x.approx || '',
       name: x.name, price: x.price, changeRate: x.changeRate, delayed: !!x.delayed
     }));
     out.delayed = out.indices.some(x => x.delayed);

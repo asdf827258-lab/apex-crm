@@ -63,6 +63,7 @@ h1{font-size:27px;font-weight:800;letter-spacing:-.045em;margin:8px 0 0;line-hei
 .ic .v{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:3px}
 .up{color:var(--red)}.down{color:var(--blue)}.flat{color:var(--t3)}
 .ic .d{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.ic .nt{font-size:10px;font-weight:600;color:var(--t3);letter-spacing:0}
 
 h2{font-size:12px;font-weight:800;color:var(--t3);letter-spacing:.04em;margin:34px 0 12px}
 
@@ -172,9 +173,14 @@ function render(j){
   document.getElementById("mine").hidden=false;
 
   document.getElementById("idx").innerHTML=(j.indices||[]).map(function(i){
+    /* 등락률이 없거나 대략값이면 그렇다고 적는다. 숫자만 지우면
+       '0%' 처럼 읽히고, 대략값을 그냥 그리면 확정값처럼 읽힌다. */
+    var note = i.changeRate==null ? (i.approx||"전일 종가 없음")
+             : (i.approx ? "어림값" : "");
     return '<div class="ic"><div class="k">'+esc(i.name)+(i.delayed?" · 지연":"")+'</div>'+
       '<div class="v '+cls(i.changeRate)+'">'+(i.price==null?"—":Number(i.price).toLocaleString("ko-KR"))+'</div>'+
-      '<div class="d '+cls(i.changeRate)+'">'+pct(i.changeRate)+'</div></div>';
+      '<div class="d '+cls(i.changeRate)+'">'+pct(i.changeRate)+
+      (note?' <span class="nt">'+esc(note)+'</span>':'')+'</div></div>';
   }).join("");
 
   var h=[];
