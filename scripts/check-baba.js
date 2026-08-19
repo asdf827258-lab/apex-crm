@@ -139,8 +139,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(btn.has, '  비포&애프터 카드가 있다');
   const src = require('fs').readFileSync('app/index.html', 'utf8');
-  is(/babaDeepRead\(/.test(src) && /끝까지 읽기/.test(src),
-     '  「끝까지 읽기 · 값 고치기」 단추가 있다 (쪼개서 전부 읽는 쪽으로 바뀌었다)');
+  is(/babaDeepRead\(/.test(src) && /값만 읽기/.test(src),
+     '  「값만 읽기 · 고치기」 단추가 있다 (쪼개서 전부 읽는 쪽으로 바뀌었다)');
+  is(/babaMake\(/.test(src) && /전·후 제안서 만들기/.test(src),
+     '  「전·후 제안서 만들기」 한 단추가 앞에 있다 — 읽기부터 한 번에');
   is(/babaBrief\(\)/.test(src), '  만들 때 확인한 표를 앞에 붙인다');
 
   console.log('\n[7] 무엇을 읽는지 표로 보여 준다');
@@ -213,7 +215,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   const btn3 = require('fs').readFileSync('app/index.html', 'utf8');
   is(/babaBlank\(\)/.test(btn3), '  「✍️ 표만 열기 (손으로 적기)」 가 있다');
   is(/babaDictToggle\(\)/.test(btn3), '  「📖 읽는 담보 보기」 가 있다');
-  is(/babaDeepRead\(/.test(btn3), '  「📋 끝까지 읽기」 도 그대로 있다');
+  is(/babaDeepRead\(/.test(btn3), '  「📋 값만 읽기」 도 그대로 있다');
+  is(/babaMake\(/.test(btn3), '  「📊 전·후 제안서 만들기」 가 맨 앞에 있다');
 
   console.log('\n[11] AI 가 준 담보명을 우리 27칸에 제대로 앉히는가');
   const map = await page.evaluate(() => ({
