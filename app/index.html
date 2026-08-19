@@ -10095,8 +10095,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-17 17:40';
-var APP_BUILD_NOTE='고객 365일이 이제 <b>30일 안에 모든 고객에게 연락했는지</b> 대신 세어 드립니다 — 메뉴에 빨간 숫자가 뜨고, 홈에 「오늘 안에 연락해야 할 분 N명」 한 줄이 서고, 그분들이 목록 맨 위에 이미 올라와 있습니다. 줄에서 「✅ 오늘 연락함」 을 누르면 그 자리에서 0일이 되고 잘못 누르셨으면 되돌리실 수 있습니다. 월납 100만원이 넘는 분은 👑 VIP 로 14일마다 뜹니다 — <b>보장분석·비포&애프터·제안서를 고객께 저장하시면 증권에서 읽은 월납이 저절로 옮겨 담깁니다.</b> 연납은 12로 나눠 한 달치로 담고, 일시납처럼 한 달에 얼마인지 알 수 없는 것은 0원이 아니라 「모름」 으로 둡니다. 무슨 말로 열지 모르실 땐 「📰 연락 거리」 가 「고객에게 전할 뉴스」 에서 한 건 골라 문구까지 만들어 드립니다. TFA 업무관리에는 팀원별 달성률 표가 생겼습니다';
+var APP_BUILD='2026-08-17 19:20';
+var APP_BUILD_NOTE='고객 365일 맨 위에 <b>「🏃 지금 진행중인 분」</b> 칸이 생겼습니다 — 약속을 잡아 둔 분, 다음 할 일을 적어 두신 분, CRM 단계가 도는 분, 상담하고 아직 마무리 안 된 분이 급한 순서로 섭니다. 줄마다 <b>왜 진행중인지</b> 적혀 있고, 「이분들만 보기」 로 그분들만 볼 수도 있습니다. 계약이 끝나신 분은 여기 안 나옵니다. 그리고 30일 안에 모든 고객에게 연락했는지 화면이 대신 세어 드립니다 — 메뉴에 빨간 숫자, 홈에 「오늘 안에 연락해야 할 분 N명」, 그분들이 목록 맨 위에. 「✅ 오늘 연락함」 을 누르면 그 자리에서 0일이 되고 되돌리기도 됩니다. 월납 100만원이 넘는 분은 👑 VIP 로 14일마다 뜨고, 보장분석·제안서를 저장하시면 증권에서 읽은 월납이 저절로 옮겨 담깁니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -37236,6 +37236,7 @@ function cmRowHtml(c){
   /* 한 줄에 날짜가 둘이면 안 된다 — 배지가 며칠째인지 말하니 여기는 언제였는지만 말한다 */
   if(ccr)sub.push(ccr.at?('마지막 연락 '+ccr.at+({call:' · 통화',meta:' · 접촉 기록',both:''}[ccr.src]||''))
                         :'통화 기록에도 접촉 기록에도 없음');
+  if(ccr&&ccr.run&&ccr.why&&ccr.rOrd!==1)sub.push(ccr.why);   /* 다음 할 일은 아래 줄에 이미 뜬다 */
   else sub.push(tp.e+' '+tp.t);
   if(m.rel)sub.push(m.rel);
   if(bd>=0&&bd<=30)sub.push('🎂 '+(bd===0?'오늘':('D-'+bd)));
@@ -37257,6 +37258,8 @@ function cmRowHtml(c){
   if(cc){
     dd='<span class="cc-dd" style="background:'+ccColor(cc.k)+'" title="'+osEsc(ccLabel(cc))+'">'+
        osEsc(ccShort(cc))+'</span>'+
+       (cc.run?('<span class="cc-go" title="'+osEsc(cc.why)+'">🏃 진행중</span>'):'')+
+       (cc.won?('<span class="cc-won" title="'+osEsc(cc.stage)+'">✔ '+osEsc(cc.stage)+'</span>'):'')+
        (cc.vip?'<span class="cc-vip">👑</span>':'')+
        (cc.unsure?'<span class="cc-unsure" title="보험 월납을 못 읽었습니다 — VIP 인지 알 수 없습니다">❓</span>':'');
     var un=(ccTodayIdx(c.id)>=0);
@@ -37610,6 +37613,16 @@ ccCfgLoad();
 
 /* ── 날짜 — 한국 시각 기준, 날짜만 ── */
 function ccToday(){return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);}
+/* 약속 시각은 timestamptz 로 온다. 그대로 잘라 쓰면 UTC 가 화면에 뜨고,
+   밤 시간대 약속은 <b>날짜까지 하루 밀린다</b> — 오전 8시 약속이 어제로 보인다.
+   한국 시각으로 옮겨서 날짜와 시각을 뽑는다 (nbTime 이 쓰는 방식과 같다). */
+function ccKst(iso){
+  var t=Date.parse(''+(iso||''));
+  if(isNaN(t))return '';
+  return new Date(t+9*3600*1000).toISOString();
+}
+function ccWhenDate(iso){return ccKst(iso).slice(0,10);}
+function ccWhenTime(iso){var k=ccKst(iso);return k?k.slice(11,16):'';}
 function ccDiff(a,b){
   if(!a)return null;
   var x=Date.parse(a+'T00:00:00Z'),y=Date.parse((b||ccToday())+'T00:00:00Z');
@@ -37698,28 +37711,42 @@ function ccRows(clients,metas,dbs,calls,today,cfg){
   if(metas&&metas.push){for(i=0;i<metas.length;i++)meta[metas[i].client_id]=metas[i].content||metas[i];}
   else if(metas)meta=metas;
 
-  /* DB 한 건마다 통화 날짜들 — AR.calls 처럼 줄인 모양으로 와도 읽는다 */
+  /* DB 한 건마다 통화 — AR.calls 처럼 줄인 모양(b·d·r)으로 와도 읽는다.
+     날짜만이 아니라 결과와 약속까지 봐야 「진행중」 을 가릴 수 있다. */
   var byDb={},d;
   for(i=0;i<calls.length;i++){
     var did=calls[i].db_id||calls[i].b;
     if(!did)continue;
     d=(''+(calls[i].call_at||calls[i].d||'')).slice(0,10);
     if(!d)continue;
-    (byDb[did]||(byDb[did]=[])).push(d);
+    (byDb[did]||(byDb[did]=[])).push(
+      {d:d,r:(''+(calls[i].result||calls[i].r||'')),ap:(''+(calls[i].appointment_at||''))});
   }
 
   var lk=ccLinkFrom(clients,dbs),out=[];
   for(i=0;i<clients.length;i++){
     var c=clients[i],m=meta[c.id]||{};
     var hit=lk.map[c.id]||[],cl='',ml='',mon=false;
+    var stage='',appt='',res='';
 
     for(j=0;j<hit.length;j++){
+      /* 단계는 가장 멀리 간 것으로 본다 — 한 사람에게 DB 가 둘이면
+         뒤처진 쪽이 앞선 쪽을 가리면 안 된다 */
+      var st=''+(hit[j].stage||'');
+      if(ccStageRank(st)>ccStageRank(stage))stage=st;
+      /* 약속은 dbs.next_appt 를 먼저 본다 — 약속을 잡은 뒤 부재 통화가 한 번 더
+         들어가면 통화 기록만 보던 눈에서는 약속이 사라진다 (arDbCalc 와 같은 이유) */
+      var ap0=''+(hit[j].next_appt||hit[j].appt||'');
+      if(ap0>appt)appt=ap0;
       var arr=byDb[hit[j].id]||[];
       for(k=0;k<arr.length;k++){
-        if(arr[k]>cl)cl=arr[k];
-        if(arr[k]>=mStart&&arr[k]<=today)mon=true;
+        if(arr[k].d>cl){cl=arr[k].d;res=arr[k].r;}
+        if(arr[k].ap>appt)appt=arr[k].ap;
+        if(arr[k].d>=mStart&&arr[k].d<=today)mon=true;
       }
     }
+    /* AR.db 는 이미 arDbCalc 가 최근 결과를 골라 둔다 — 통화를 줄여 넘겨도 안 잃게 */
+    for(j=0;j<hit.length&&!res;j++)res=''+(hit[j].res||'');
     var T=(m.touch&&m.touch.push)?m.touch:[];
     for(j=0;j<T.length;j++){
       var td=ccTouchAt(T[j]);
@@ -37743,15 +37770,54 @@ function ccRows(clients,metas,dbs,calls,today,cfg){
     else if(days>=cycle-warn)kk='soon';
     else kk='ok';
 
+    /* ── 지금 진행중인가 ──
+       계약이 끝났으면 진행중이 아니다. 그 밖에는 아래 넷 중 하나라도 걸리면
+       진행중이고, 걸린 까닭을 그대로 화면에 적는다 — 왜 여기 있는지 모르면
+       설계사는 그 줄을 안 믿는다. 위에서부터 급한 순서다. */
+    var won=!!CC_WON_STAGE[stage],run=false,why='',rOrd=9,rKey='';
+    /* 날짜만 적힌 값(2026-08-21)도 오고 시각까지 붙은 값도 온다 — 둘 다 읽는다 */
+    var apD=appt?(/T/.test(''+appt)?ccWhenDate(appt):(''+appt).slice(0,10)):'';
+    var apT=(appt&&/T/.test(''+appt))?ccWhenTime(appt):'';
+    var nx=(m.next&&m.next.what)?m.next:null;
+    if(!won){
+      if(apD&&apD>=today){
+        run=true;rOrd=0;rKey=apD+' '+apT;
+        why='약속 '+apD+(apT?(' '+apT):'');
+      }else if(nx){
+        var nd=nx.due?ccDiff(nx.due,today):null;
+        run=true;rOrd=1;rKey=nx.due||'';
+        why='다음 할 일 · '+nx.what+
+          (nd===null?'':(nd>0?(' — '+nd+'일 지남'):(nd===0?' — 오늘':(' — D'+nd))));
+      }else if(CC_RUN_STAGE[stage]){
+        run=true;rOrd=2;rKey=stage;why='CRM 단계 '+stage;
+      }else if(res==='상담'&&days!==null&&days<=45){
+        run=true;rOrd=3;why='상담하고 '+days+'일째';
+      }
+    }
     out.push({id:c.id,who:c.advisor_id||'',
       masked:c.name_masked||'',
       at:at,src:src,d:days,since:since,k:kk,cycle:cycle,
       vip:v.vip,unsure:v.unsure,sum:v.sum,insN:v.n,insUnknown:v.unknown,
-      mon:mon,linked:hit.length,amb:(hit.length>1)});
+      mon:mon,linked:hit.length,amb:(hit.length>1),
+      stage:stage,appt:appt,res:res,won:won,run:run,why:why,rOrd:rOrd,rKey:rKey});
   }
   out._amb=lk.amb;out._linked=lk.linked;
   return out;
 }
+
+/* ── 지금 진행중인 사람 ────────────────────────────────────────────
+   「연락 주기」 는 <b>모두</b>를 보는 눈이고, 「진행중」 은 <b>지금 붙어 있는</b>
+   사람을 보는 눈이다. 둘은 다르다 — 어제 만난 사람은 주기로는 여유지만
+   지금 한창 진행중이다. 그 사람을 놓치면 계약이 날아간다.
+
+   TFA 의 arTouch() 가 DB 쪽에서 쓰는 「진행중(run)」 과 같은 뜻으로 맞춘다.
+   두 화면이 같은 사람을 다르게 부르면 안 된다.
+
+   계약이 끝난 사람은 진행중이 아니다 — 끝난 사람을 섞으면 할 일이 흐려진다. */
+var CC_STAGE=['미접촉','TA','AP','PC','CS','계약완료','증권전달'];
+var CC_RUN_STAGE={TA:1,AP:1,PC:1,CS:1};
+var CC_WON_STAGE={'계약완료':1,'증권전달':1};
+function ccStageRank(s){var i=CC_STAGE.indexOf(''+(s||''));return i<0?-1:i;}
 
 /* 급한 순서 — 한 번도 안 한 사람이 맨 위, 그 다음 많이 지난 사람 */
 function ccRank(r){return (r.k==='never')?0:(r.k==='over')?1:(r.k==='soon')?2:3;}
@@ -37767,7 +37833,7 @@ function ccSortRows(rows){
   return out;
 }
 function ccSum(rows){
-  var o={n:0,never:0,over:0,soon:0,ok:0,vip:0,unsure:0,due:0,mon:0,rate:0},i,r;
+  var o={n:0,never:0,over:0,soon:0,ok:0,vip:0,unsure:0,due:0,mon:0,rate:0,run:0,won:0},i,r;
   rows=rows||[];
   for(i=0;i<rows.length;i++){
     r=rows[i];o.n++;
@@ -37775,6 +37841,8 @@ function ccSum(rows){
     if(r.vip)o.vip++;
     if(r.unsure)o.unsure++;
     if(r.mon)o.mon++;
+    if(r.run)o.run++;
+    if(r.won)o.won++;
   }
   o.due=o.over+o.never;
   o.rate=o.n?Math.round((o.n-o.due)/o.n*1000)/10:0;
@@ -37797,6 +37865,22 @@ function ccByWho(rows){
   return out;
 }
 
+/* 진행중인 사람만 · 급한 순서로.
+   약속 잡힌 사람 → 다음 할 일이 있는 사람 → CRM 단계가 도는 사람 → 상담한 사람.
+   같은 칸 안에서는 날짜가 가까운(또는 많이 지난) 사람이 위로 온다. */
+function ccRunList(rows){
+  var out=[],i;
+  rows=rows||[];
+  for(i=0;i<rows.length;i++)if(rows[i].run)out.push(rows[i]);
+  out.sort(function(a,b){
+    if(a.rOrd!==b.rOrd)return a.rOrd-b.rOrd;
+    /* 상담만 해 두고 다음이 안 잡힌 사람은 <b>오래된 쪽이 더 급하다</b> — 식어 간다 */
+    if(a.rOrd===3)return (b.d||0)-(a.d||0);
+    /* 약속·기한은 이른 것이 위 */
+    return (''+a.rKey).localeCompare(''+b.rKey);
+  });
+  return out;
+}
 var CC_COLOR={never:'#FF9500',over:'#FF9500',soon:'#FFC043',ok:'#8B95A1'};
 function ccColor(k){return CC_COLOR[k]||'#8B95A1';}
 function ccShort(r){
@@ -37850,10 +37934,27 @@ function ccLoad(force,then){
   if(CC.busy){if(then)CC.pend.push(then);return;}
   CC.busy=true;CC.err='';
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
-  Promise.all([
-    q(sb.from('dbs').select('id,assigned_to,customer_name')),
-    q(sb.from('calls').select('db_id,created_by,call_at').order('call_at',{ascending:false}).limit(4000))
-  ]).then(function(r){
+  /* 단계·약속 칸은 migration_41 을 돌린 서버에만 있다. 없으면 한 칸씩 내려가며
+     다시 부른다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 된다.
+     arLoad() 가 쓰는 방식 그대로다. */
+  var down=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
+  var base='id,assigned_to,customer_name';
+  var qDbs=function(){
+    return q(sb.from('dbs').select(base+',stage,next_appt')).then(function(a){
+      if(!a||!a.error||!down((a.error||{}).message))return a;
+      CC.noStage=true;
+      return q(sb.from('dbs').select(base));
+    });
+  };
+  var qCalls=function(){
+    return q(sb.from('calls').select('db_id,created_by,call_at,result,appointment_at')
+      .order('call_at',{ascending:false}).limit(4000)).then(function(a){
+      if(!a||!a.error||!down((a.error||{}).message))return a;
+      CC.noRes=true;
+      return q(sb.from('calls').select('db_id,created_by,call_at').order('call_at',{ascending:false}).limit(4000));
+    });
+  };
+  Promise.all([qDbs(),qCalls()]).then(function(r){
     CC.busy=false;CC.loaded=true;CC.at=new Date().toLocaleTimeString('ko-KR');
     CC.dbs=r[0].error?[]:(r[0].data||[]);
     CC.calls=r[1].error?[]:(r[1].data||[]);
@@ -38289,6 +38390,8 @@ function ccDetailHtml(id){
   return '<div class="osc-panel cc-panel" style="margin-bottom:16px;border-left:4px solid '+c+'">'+
     '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">연락 주기 '+
       '<span class="cc-dd" style="background:'+c+'">'+osEsc(ccShort(r))+'</span>'+
+      (r.run?('<span class="cc-go">🏃 진행중</span>'):'')+
+      (r.won?('<span class="cc-won">✔ '+osEsc(r.stage)+'</span>'):'')+
       (r.vip?'<span class="cc-vip">👑 VIP</span>':'')+
       (r.unsure?'<span class="cc-unsure">❓ 보험료 확인 필요</span>':'')+'</h3>'+
     '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
@@ -38298,6 +38401,8 @@ function ccDetailHtml(id){
       '<br>이 고객은 <b>'+r.cycle+'일</b> 주기로 봅니다.'+
       (r.linked?'':' 이 고객은 DB 통합 CRM 과 이어져 있지 않습니다 — 접촉 기록만으로 셉니다.')+
       (r.amb?' <b>같은 마스킹 이름에 CRM DB 가 여러 건 걸려 있습니다</b> — 실명을 적어 두면 정확히 이어집니다.':'')+
+      (r.run?('<br><b>지금 진행중</b> — '+osEsc(r.why)+'. 이분은 목록 맨 위 「🏃 지금 진행중인 분」 에도 섭니다.'):'')+
+      (r.won?('<br>CRM 단계가 <b>'+osEsc(r.stage)+'</b> 입니다 — 끝난 건이라 진행중에는 안 넣습니다.'):'')+
     '</p>'+
     '<div class="btn-row">'+
       (undo
@@ -38308,6 +38413,48 @@ function ccDetailHtml(id){
     (news?('<div class="cc-news">전할 소식 후보 — '+osEsc(news)+
       ' <button type="button" onclick="go(\'news_live\')">뉴스 칸 열기</button></div>'):'')+
   '</div>';
+}
+
+/* ── 지금 진행중인 분 ──
+   설계사가 하루에 실제로 붙는 사람은 이 몇 명이다. 나머지는 「안 놓치게」 세는 것이고,
+   여기는 「지금 하고 있는 것」 이다. 왜 진행중인지를 줄마다 적는다 —
+   까닭이 안 보이면 이 목록을 안 믿는다. */
+function ccRunToggle(){CC.runOnly=!CC.runOnly;osRenderList();}
+function ccRunHtml(rows){
+  var L=ccRunList(rows);
+  if(!L.length){
+    /* 없으면 없다고 말한다. 빈 칸을 지우면 「내가 아무것도 안 하고 있다」 가 안 보인다 */
+    return '<div class="cc-run none"><div class="cc-rh">🏃 지금 진행중인 분이 없습니다</div>'+
+      '<div class="cc-rn">약속을 잡거나, 고객 화면에서 <b>다음에 할 일</b> 을 한 줄 적어 두시면 '+
+      '여기에 섭니다. DB 통합 CRM 에서 단계가 도는 분도 여기로 옵니다.</div></div>';
+  }
+  var h='',i,x,nm,c;
+  for(i=0;i<L.length&&i<12;i++){
+    x=L[i];
+    c=(x.rOrd===0)?'#1D4ED8':(x.rOrd===1?'#C2410C':(x.rOrd===2?'#7C3AED':'#047857'));
+    nm='';
+    try{
+      var j,cl=(typeof OSC!=='undefined'&&OSC.list)||[];
+      for(j=0;j<cl.length;j++)if(cl[j].id===x.id)nm=(typeof cmName==='function')?cmName(cl[j]):(cl[j].name_masked||'');
+    }catch(e){}
+    if(!nm)nm=x.masked||'(이름 없음)';
+    h+='<button type="button" class="cc-rr" onclick="osOpenClient(\''+x.id+'\')">'+
+      '<span class="nm">'+osEsc(nm)+(x.vip?' 👑':'')+'</span>'+
+      '<span class="wy" style="color:'+c+'">'+osEsc(x.why)+'</span>'+
+      '<span class="dd" style="background:'+ccColor(x.k)+'">'+osEsc(ccShort(x))+'</span>'+
+    '</button>';
+  }
+  return '<div class="cc-run">'+
+    '<div class="cc-rh">🏃 지금 진행중인 분 <b>'+L.length+'명</b>'+
+      '<button type="button" class="cc-cfg" onclick="ccRunToggle()">'+
+      (CC.runOnly?'✕ 전체 보기':'이분들만 보기')+'</button></div>'+
+    h+
+    (L.length>12?('<div class="cc-rn">12명까지만 보여 줍니다 — 나머지 '+(L.length-12)+'명은 '+
+      '<b>이분들만 보기</b> 를 누르시면 다 나옵니다.</div>'):'')+
+    '<div class="cc-rn">약속 잡힌 분 → 다음 할 일이 있는 분 → CRM 단계가 도는 분 → 상담만 해 둔 분 순서입니다. '+
+    '계약이 끝난 분은 여기 없습니다.'+
+    (CC.noStage?' <b>이 서버는 CRM 단계 칸이 없어</b> 단계로는 못 가립니다 — 약속과 다음 할 일로만 셉니다.':'')+
+    '</div></div>';
 }
 
 /* ── 목록 맨 위 요약 ── */
@@ -38345,9 +38492,11 @@ function ccTopHtml(all){
       chip(s.vip,'👑 VIP('+CC.vipCycle+'일)','#7C3AED')+
       (s.unsure?chip(s.unsure,'❓ 확인 필요','#B45309'):'')+
       chip(s.mon,'이번 달 연락함','#047857')+
+      (s.run?chip(s.run,'🏃 진행중','#1D4ED8'):'')+
     '</div>'+
     (note.length?('<div class="cc-note">'+note.map(function(x){return '· '+osEsc(x);}).join('<br>')+'</div>'):'')+
-  '</div>';
+  '</div>'+
+  ccRunHtml(rows);
 }
 function ccCfgOpen(){
   var ovl=document.createElement('div');
@@ -38528,6 +38677,25 @@ function ccCss(){
     '.cc-ir input:nth-child(3){width:104px;text-align:right}'+
     '.cc-un{font-size:10.5px;font-weight:800;color:#92400E;background:#FEF3C7;border-radius:20px;padding:2px 8px}'+
     '.cc-cy{font-size:10.5px;font-weight:800;color:#1D4ED8;background:#EFF6FF;border-radius:20px;padding:2px 8px}'+
+    '.cc-go{display:inline-block;background:#1D4ED8;color:#fff;font-size:10.5px;font-weight:800;'+
+      'border-radius:20px;padding:2px 8px;margin-left:6px;white-space:nowrap}'+
+    '.cc-won{display:inline-block;background:#ECFDF5;color:#047857;font-size:10.5px;font-weight:800;'+
+      'border:1px solid #A7F3D0;border-radius:20px;padding:1px 7px;margin-left:6px;white-space:nowrap}'+
+    '.cc-run{border:1px solid #BFDBFE;background:#EFF6FF;border-radius:13px;padding:12px 14px;margin:0 0 12px}'+
+    '.cc-run.none{border-color:var(--ink-7);background:var(--ink-9,#F8FAFC)}'+
+    '.cc-rh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:800;'+
+      'color:#1E3A8A;margin-bottom:8px}'+
+    '.cc-run.none .cc-rh{color:var(--ink-3)}'+
+    '.cc-rh b{font-size:14px;font-weight:900}'+
+    '.cc-rr{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;'+
+      'background:#fff;border-radius:10px;padding:8px 11px;margin-bottom:5px;cursor:pointer;'+
+      'font-family:inherit;box-shadow:0 1px 2px rgba(15,23,42,.05)}'+
+    '.cc-rr:hover{box-shadow:0 2px 8px rgba(29,78,216,.14)}'+
+    '.cc-rr .nm{font-size:13px;font-weight:800;color:var(--ink-1);flex:none;min-width:74px}'+
+    '.cc-rr .wy{font-size:11.5px;font-weight:700;flex:1;min-width:0;overflow:hidden;'+
+      'text-overflow:ellipsis;white-space:nowrap}'+
+    '.cc-rr .dd{font-size:10.5px;font-weight:800;color:#fff;border-radius:20px;padding:2px 8px;flex:none}'+
+    '.cc-rn{font-size:10.5px;color:var(--ink-4);line-height:1.7;margin-top:7px}'+
     '.cc-why{flex-basis:100%;font-size:10.5px;color:var(--ink-5);line-height:1.5;margin:-2px 0 2px 2px}'+
     '.cc-ix{border:0;background:none;color:var(--ink-6);cursor:pointer;font-size:15px;line-height:1;padding:0 2px}'+
     '.cc-tw{overflow-x:auto}'+
@@ -38541,7 +38709,8 @@ function ccCss(){
     '.cc-tb tr.cc-me td{background:#F0F9FF}'+
     '.cc-tb tr.cc-sum td{font-weight:800;border-top:2px solid var(--ink-7);background:var(--ink-9,#F8FAFC)}'+
     '@media(max-width:520px){.cc-home button{margin-left:0;width:100%}'+
-      '.cc-ir input:nth-child(2){min-width:100%}}';
+      '.cc-ir input:nth-child(2){min-width:100%}'+
+      '.cc-rr{flex-wrap:wrap;gap:5px}.cc-rr .wy{flex-basis:100%;white-space:normal}}';
   document.head.appendChild(st);
 }
 function renderClientsPage(){
@@ -38615,20 +38784,30 @@ function osRenderList(){
   var all=OSC.list||[],rows=[],i;
   for(i=0;i<all.length;i++){
     if(CM.pick&&(all[i].advisor_id||'')!==CM.pick)continue;
+    /* 「진행중인 분들만 보기」 — 켜 두면 지금 붙어 있는 사람만 남는다 */
+    if(CC.runOnly){var rr=ccOf(all[i].id);if(!rr||!rr.run)continue;}
     if(cmHit(all[i],q))rows.push(all[i]);
   }
   cmSortRows(rows);
   var h=cmTopHtml(q,all);
   var who=CM.pick?(CM.who[CM.pick]||'이 담당자'):'';
   if(!rows.length){
+    if(CC.runOnly&&!q){
+      osSetList(h+'<div class="osc-empty">지금 진행중인 분이 없습니다. '+
+        '<button type="button" class="cc-cfg" onclick="ccRunToggle()">✕ 전체 보기</button></div>');
+      return;
+    }
     osSetList(h+'<div class="osc-empty">'+(q
       ?('"'+osEsc(q)+'" 로 찾은 고객이 '+(who?('<b>'+osEsc(who)+'</b> 담당 중에는 '):'')+'없습니다. 실명·초성·연락처 뒷자리·가족 이름·담당자 이름으로도 찾을 수 있습니다.')
       :(who?('<b>'+osEsc(who)+'</b> 이(가) 맡은 고객이 없습니다.')
           :'아직 등록된 고객이 없습니다. 위 <b>+ 새 고객</b>으로 시작하세요.'))+'</div>');
     return;
   }
-  if(q||who)h+='<div class="cm-lab" style="margin:0 0 8px">'+
-    (who?('<b>'+osEsc(who)+'</b> 담당 '):'')+rows.length+'명'+(q?' 찾았습니다':'')+'</div>';
+  if(q||who||CC.runOnly)h+='<div class="cm-lab" style="margin:0 0 8px">'+
+    (CC.runOnly?'🏃 진행중인 분만 보는 중 · ':'')+
+    (who?('<b>'+osEsc(who)+'</b> 담당 '):'')+rows.length+'명'+(q?' 찾았습니다':'')+
+    (CC.runOnly?' <button type="button" class="cc-cfg" style="margin-left:6px" onclick="ccRunToggle()">✕ 전체 보기</button>':'')+
+    '</div>';
   h+=(CM.byWho&&!q)?cmWhoGroupHtml(rows)
     :((CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows));
   osSetList(h);

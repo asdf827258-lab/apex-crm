@@ -48,7 +48,7 @@ const core =
   cut('function ccToday()', '/* ── 지금 화면이 쓰는 값 ── */') +
   '\nreturn {ccMoney:ccMoney,ccInsSum:ccInsSum,ccVipOf:ccVipOf,ccTouchAt:ccTouchAt,' +
   'ccRows:ccRows,ccSum:ccSum,ccByWho:ccByWho,ccSortRows:ccSortRows,ccLinkFrom:ccLinkFrom,' +
-  'ccLabel:ccLabel,ccShort:ccShort,CC:CC};';
+  'ccLabel:ccLabel,ccShort:ccShort,ccRunList:ccRunList,ccStageRank:ccStageRank,CC:CC};';
 
 let C = null;
 try { C = new Function(core)(); } catch (e) { console.log('    (떼어 내기 실패: ' + e.message + ')'); }
@@ -171,6 +171,88 @@ if (C) {
   ok(sorted[1] === 'over2' && sorted[2] === 'over1', '그 다음은 많이 지난 순서 (61일 → 35일)');
   ok(sorted[3] === 'soon' && sorted[4] === 'ok', '임박 · 여유가 그 뒤');
 
+
+  /* ── 지금 진행중인 사람 ── */
+  console.log('\n[10-1] 「지금 진행중」 을 가리는 규칙');
+  /* 한 사람씩 세워 놓고 무엇이 진행중으로 잡히는지 본다 */
+  const one = (opt) => {
+    const dbs = opt.db ? [Object.assign({ id: 'dx', assigned_to: 'a1', customer_name: '홍길동' }, opt.db)] : [];
+    const cls = (opt.calls || []).map(c => Object.assign({ db_id: 'dx', created_by: 'a1' }, c));
+    return C.ccRows(
+      [{ id: 'x', advisor_id: 'a1', name_masked: '홍*동', created_at: '2020-01-01T00:00:00Z' }],
+      [{ client_id: 'x', content: Object.assign({ touch: [{ at: opt.touch || '2026-08-15' }] }, opt.meta || {}) }],
+      dbs, cls, TODAY)[0];
+  };
+  const soon = '2026-08-21', past = '2026-08-10';
+
+  const appt = one({ db: { next_appt: soon + 'T05:00:00Z' } });   /* 한국 시각 오후 2시 */
+  ok(appt.run === true && /약속 2026-08-21/.test(appt.why), '앞으로 약속이 잡혀 있으면 진행중 — ' + appt.why);
+  ok(/14:00/.test(appt.why), '약속 시각을 한국 시각으로 적는다 (05:00Z → 14:00) — ' + appt.why);
+  /* 밤 약속은 UTC 로 자르면 날짜가 하루 밀린다 — 오전 8시 약속이 어제로 보인다 */
+  const night = one({ db: { next_appt: '2026-08-21T23:30:00Z' } });   /* 한국 시각 8/22 오전 8시 30분 */
+  ok(/약속 2026-08-22 08:30/.test(night.why),
+    '자정을 넘는 약속도 한국 날짜로 뜬다 — ' + night.why);
+
+  const gone = one({ db: { next_appt: past + 'T14:00:00Z' } });
+  ok(gone.run === false, '지나간 약속만 있으면 진행중이 아니다 — 끝난 약속이 사람을 붙잡아 두면 안 된다');
+
+  const nx = one({ meta: { next: { what: '증권 받기', due: past } } });
+  ok(nx.run === true && /다음 할 일 · 증권 받기/.test(nx.why) && /7일 지남/.test(nx.why),
+    '다음 할 일이 잡혀 있으면 진행중 · 며칠 지났는지도 적는다 — ' + nx.why);
+
+  const st = one({ db: { stage: 'AP' } });
+  ok(st.run === true && /CRM 단계 AP/.test(st.why), 'CRM 단계가 도는 중이면 진행중 — ' + st.why);
+  ok(one({ db: { stage: '미접촉' } }).run === false, '미접촉은 진행중이 아니다');
+
+  const talked = one({ db: {}, touch: '2026-08-05', calls: [{ call_at: '2026-08-05T02:00:00Z', result: '상담' }] });
+  ok(talked.run === true && /상담하고 12일째/.test(talked.why), '상담하고 45일 안이면 진행중 — ' + talked.why);
+  const cold = one({ db: {}, touch: '2026-06-01', calls: [{ call_at: '2026-06-01T02:00:00Z', result: '상담' }] });
+  ok(cold.run === false, '상담한 지 45일이 넘으면 진행중에서 뺀다 — 그건 다시 여는 일이다');
+  const miss = one({ db: {}, calls: [{ call_at: '2026-08-15T02:00:00Z', result: '부재' }] });
+  ok(miss.run === false, '부재는 진행중이 아니다');
+
+  console.log('\n[10-2] 계약이 끝난 사람은 진행중이 아니다');
+  const won1 = one({ db: { stage: '계약완료', next_appt: soon + 'T14:00:00Z' },
+                     meta: { next: { what: '증권 전달', due: past } } });
+  ok(won1.won === true && won1.run === false,
+    '계약완료면 약속이 있어도 · 다음 할 일이 있어도 진행중이 아니다 — 끝난 사람을 섞으면 할 일이 흐려진다');
+  ok(one({ db: { stage: '증권전달' } }).won === true, '증권전달도 끝난 것으로 본다');
+
+  console.log('\n[10-3] 급한 순서 — 약속 → 다음 할 일 → 단계 → 상담');
+  const runSorted = C.ccRunList([
+    { id: '상담', run: true, rOrd: 3, d: 10 },
+    { id: '상담오래', run: true, rOrd: 3, d: 40 },
+    { id: '단계', run: true, rOrd: 2, rKey: 'AP' },
+    { id: '기한지남', run: true, rOrd: 1, rKey: '2026-08-01' },
+    { id: '기한나중', run: true, rOrd: 1, rKey: '2026-08-30' },
+    { id: '약속내일', run: true, rOrd: 0, rKey: '2026-08-18' },
+    { id: '안함', run: false, rOrd: 9 }
+  ]).map(r => r.id);
+  ok(runSorted.indexOf('안함') < 0, '진행중이 아닌 사람은 아예 안 들어온다');
+  ok(runSorted[0] === '약속내일', '약속 잡힌 사람이 맨 위 (' + runSorted.join(' → ') + ')');
+  ok(runSorted[1] === '기한지남' && runSorted[2] === '기한나중', '다음 할 일은 기한이 이른 것부터');
+  ok(runSorted[3] === '단계', '그 다음이 CRM 단계');
+  ok(runSorted[4] === '상담오래' && runSorted[5] === '상담', '상담만 해 둔 사람은 오래된 쪽이 위 — 식어 간다');
+
+  console.log('\n[10-4] 「진행중」 과 「연락 주기」 는 다른 눈이다');
+  const justMet = one({ touch: '2026-08-16', meta: { next: { what: '설계안 보내기', due: '2026-08-20' } } });
+  ok(justMet.k === 'ok' && justMet.run === true,
+    '어제 만난 사람은 주기로는 여유지만 지금 한창 진행중이다 (' + justMet.k + ' · run ' + justMet.run + ')');
+  const stale = one({ touch: '2026-06-01' });
+  ok(stale.k === 'over' && stale.run === false,
+    '오래 안 만났는데 잡아 둔 것도 없으면 밀린 것이지 진행중이 아니다 (' + stale.k + ')');
+  ok(C.ccSum([justMet, stale]).run === 1, '합계도 진행중을 따로 센다');
+
+  console.log('\n[10-5] 한 사람에게 DB 가 둘이면 멀리 간 단계를 쓴다');
+  ok(C.ccStageRank('CS') > C.ccStageRank('TA'), 'CS 가 TA 보다 멀리 간 단계다');
+  const two = C.ccRows(
+    [{ id: 'y', advisor_id: 'a1', name_masked: '홍*동', created_at: '2020-01-01T00:00:00Z' }],
+    [{ client_id: 'y', content: { touch: [{ at: '2026-08-15' }] } }],
+    [{ id: 'p', assigned_to: 'a1', customer_name: '홍길동', stage: '미접촉' },
+     { id: 'q', assigned_to: 'a1', customer_name: '홍길동', stage: 'PC' }], [], TODAY)[0];
+  ok(two.stage === 'PC' && two.run === true,
+    '뒤처진 DB 가 앞선 DB 를 가리지 않는다 (' + two.stage + ')');
+
   /* ── 팀원별 달성률 ── */
   console.log('\n[11] TFA 달성률이 손으로 센 값과 같다');
   const many = [];
@@ -248,13 +330,13 @@ window.__clients=[
  {id:'c3',advisor_id:'me',name_masked:'최*아',consent_status:'none',created_at:'2025-03-12T00:00:00Z'},
  {id:'c9',advisor_id:'p2',name_masked:'남*것',consent_status:'none',created_at:'2025-03-12T00:00:00Z'}
 ];
-window.__dbs=[{id:'d1',assigned_to:'me',customer_name:'김철수'}];
+window.__dbs=[{id:'d1',assigned_to:'me',customer_name:'김철수',stage:'AP',next_appt:''}];
 window.__calls=[{db_id:'d1',created_by:'me',call_at:'${dayAgo(40)}T02:00:00Z'}];
 /* c1 — 40일 전 통화 한 번 (넘김) · VIP 아님
    c2 — 3일 전 접촉 · 월납 120만 (VIP · 3일이면 여유)
    c3 — 아무 기록 없음 (한 번도 연락 안 함) */
 window.__seedMeta=[
- {id:'r1',client_id:'c2',advisor_id:'me',kind:'client_meta',content:{touch:[{at:'${dayAgo(3)}',how:'만남',note:''}],ins:[{co:'A생명',nm:'종신',pay:1200000}],fp:{},fam:'',rel:'',next:null,bd:'',up:1}},
+ {id:'r1',client_id:'c2',advisor_id:'me',kind:'client_meta',content:{touch:[{at:'${dayAgo(3)}',how:'만남',note:''}],ins:[{co:'A생명',nm:'종신',pay:1200000}],fp:{},fam:'',rel:'',next:{what:'설계안 보내드리기',due:'${dayAgo(-2)}'},bd:'',up:1}},
  {id:'r2',client_id:'c1',advisor_id:'me',kind:'client_meta',content:{touch:[],ins:[{co:'B화재',nm:'실손',pay:-1}],fp:{},fam:'',rel:'',next:null,bd:'',up:1}}
 ];
 window.__saved=window.__seedMeta.slice();
@@ -358,6 +440,44 @@ window.__errs=[];
   ok(crowns === 1, '월납 120만원인 고객에게만 👑 가 붙는다 (' + crowns + '개)');
   const q = await page.evaluate(() => document.querySelectorAll('#oscList .cc-unsure').length);
   ok(q >= 1, '월납을 못 읽은 고객에게 ❓ 가 붙는다 (' + q + '개)');
+
+
+  console.log('\n[16-1] 「지금 진행중인 분」 칸');
+  const runBox = await page.evaluate(() => {
+    const e = document.querySelector('.cc-run');
+    return e ? { txt: e.textContent.replace(/\s+/g, ' ').trim(), rows: e.querySelectorAll('.cc-rr').length } : null;
+  });
+  ok(!!runBox, '목록 맨 위에 「지금 진행중인 분」 칸이 선다');
+  ok(/지금 진행중인 분 2명/.test(runBox.txt),
+    'CRM 단계가 도는 김철수 + 다음 할 일이 잡힌 박서준 = 2명 — ' + runBox.txt.slice(0, 46));
+  ok(runBox.rows === 2, '두 줄이 실제로 그려진다 (' + runBox.rows + '줄)');
+  ok(/다음 할 일 · 설계안 보내드리기/.test(runBox.txt), '왜 진행중인지 줄마다 적는다');
+  ok(/CRM 단계 AP/.test(runBox.txt), 'CRM 단계로 잡힌 사람도 그 까닭이 적힌다');
+  ok(/계약이 끝난 분은 여기 없습니다/.test(runBox.txt), '무엇이 빠졌는지 밝힌다');
+  const runChip = await page.evaluate(() => {
+    const L = document.querySelectorAll('.cc-top .cc-chip');
+    for (let i = 0; i < L.length; i++) if (/진행중/.test(L[i].textContent)) return L[i].textContent.replace(/\s+/g, ' ').trim();
+    return '';
+  });
+  ok(/2 .*진행중/.test(runChip), '맨 위 요약에도 진행중 숫자가 뜬다 — ' + runChip);
+
+  console.log('\n[16-2] 「이분들만 보기」');
+  await page.evaluate(() => ccRunToggle());
+  await page.waitForTimeout(500);
+  const only = await page.evaluate(() => ({
+    n: document.querySelectorAll('#oscList .cm-row').length,
+    lab: Array.prototype.map.call(document.querySelectorAll('#oscList .cm-lab'),
+      e => e.textContent).join(' | ')
+  }));
+  ok(only.n === 2, '진행중인 두 명만 남는다 (' + only.n + '명)');
+  ok(/진행중인 분만 보는 중/.test(only.lab), '왜 줄었는지 적어 준다 — 안 적으면 고장으로 본다');
+  await page.evaluate(() => ccRunToggle());
+  await page.waitForTimeout(500);
+  const allBack = await page.evaluate(() => document.querySelectorAll('#oscList .cm-row').length);
+  ok(allBack === 3, '끄면 다시 전부 나온다 (' + allBack + '명)');
+
+  const goBadge = await page.evaluate(() => document.querySelectorAll('#oscList .cc-go').length);
+  ok(goBadge === 2, '줄에도 🏃 진행중 표시가 붙는다 (' + goBadge + '개)');
 
   console.log('\n[17] 「오늘 연락함」 을 누르면 D-day 가 0 이 된다');
   const before = await page.evaluate(() => (ccOf('c1') || {}).d);
