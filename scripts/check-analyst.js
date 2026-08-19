@@ -109,5 +109,63 @@ ok('기사가 아예 없으면 0 — 모르면서 확신하지 않는다', A.con
 ok('팽팽하면 깎는다',
    A.confidence({ used: 12, positiveRatio: 50, negativeRatio: 48, enoughForOpinion: true }, true, true).score < strong.score);
 
+
+/* ════════════════════════════════════════════════════════════════════════
+   오늘의 정리 — 주제 묶기와 보유 연결
+   ════════════════════════════════════════════════════════════════════════ */
+console.log('\n⑦ 주제로 묶는가');
+
+const news = [
+  { title: '삼성전자 HBM4 양산 앞당긴다', publishedAt: ago(2), dupCount: 3 },
+  { title: 'SK하이닉스 반도체 수출 급증', publishedAt: ago(3), dupCount: 1 },
+  { title: '한국은행 기준금리 동결', publishedAt: ago(4), dupCount: 5 },
+  { title: '원달러 환율 1,420원 돌파', publishedAt: ago(5), dupCount: 2 },
+  { title: '고환율에 반도체 수출업체 수혜', publishedAt: ago(1), dupCount: 1 },
+  { title: '오늘의 운세', publishedAt: ago(2), dupCount: 1 }
+];
+const g = A.clusterByTopic(news, NOW);
+const names = g.map(x => x.name);
+ok('반도체·금리·환율이 각각 묶인다',
+   names.indexOf('반도체·AI') >= 0 && names.indexOf('금리·통화') >= 0 && names.indexOf('환율') >= 0, names);
+/* ⚠️ 한 기사가 여러 주제에 걸린다(고환율 + 반도체). 하나에만 넣으면 다른
+      쪽에서 사라진다. */
+const semi = g.filter(x => x.id === 'semi')[0], fx = g.filter(x => x.id === 'fx')[0];
+ok('두 주제에 걸친 기사는 양쪽에 다 들어간다',
+   semi.items.some(x => /고환율/.test(x.title)) && fx.items.some(x => /고환율/.test(x.title)));
+ok('아무 주제에도 안 걸리면 기타로 간다',
+   (g.filter(x => x.id === 'etc')[0] || { items: [] }).items.some(x => /운세/.test(x.title)));
+ok('큰 묶음이 앞에 온다', g[0].weight >= g[g.length - 1].weight, g.map(x => x.name + ':' + x.weight));
+
+/* ⚠️ 사흘 지난 기사로 '오늘의 정리' 를 쓰면 안 된다 */
+const oldOnly = A.clusterByTopic([{ title: '반도체 호황', publishedAt: ago(100), dupCount: 1 }], NOW);
+ok('오래된 기사만 있으면 묶음이 안 생긴다', oldOnly.length === 0, oldOnly.length);
+
+console.log('\n⑧ 보유 종목에 기사를 잇는가');
+
+const link = A.linkToHoldings(
+  [{ code: '005930', name: '삼성전자' }, { code: '000660', name: 'SK하이닉스' }, { code: '999999', name: '없는회사' }],
+  news, NOW);
+ok('이름이 들어간 기사만 잇는다', link[0].count === 1 && /삼성전자/.test(link[0].news[0].title), link[0].count);
+ok('닿는 기사가 없으면 0 으로 둔다 — 억지로 잇지 않는다', link[2].count === 0);
+/* ⚠️ 이름이 한 글자면 아무 기사나 딸려 온다 */
+ok('한 글자 이름은 잇지 않는다',
+   A.linkToHoldings([{ code: 'X', name: '한' }], news, NOW)[0].count === 0);
+ok('오래된 기사는 안 잇는다',
+   A.linkToHoldings([{ code: 'A', name: '삼성전자' }],
+     [{ title: '삼성전자 옛날 기사', publishedAt: ago(200) }], NOW)[0].count === 0);
+
+/* ⚠️ '기타' 는 주제가 아니라 주제를 못 붙인 것이다. 크기로 줄 세우면 맨 앞에
+      오는데, 읽는 사람은 첫 칸을 오늘의 핵심으로 읽는다. 실제로 36건 중
+      21건이 기타여서 지역 개발사업이 1등으로 올라와 있었다. */
+const manyEtc = A.clusterByTopic([
+  { title: '인천 옛 공병단 개발사업 차질', publishedAt: ago(1), dupCount: 1 },
+  { title: '울산 계절근로 조례안 마련', publishedAt: ago(1), dupCount: 1 },
+  { title: '부산 축제 개막', publishedAt: ago(1), dupCount: 1 },
+  { title: '삼성전자 HBM 양산', publishedAt: ago(1), dupCount: 1 }
+], NOW);
+ok('기타는 크기와 무관하게 맨 뒤로 간다',
+   manyEtc[manyEtc.length - 1].id === 'etc' && manyEtc[0].id === 'semi',
+   manyEtc.map(x => x.id + ':' + x.items.length));
+
 console.log('\n' + (fail ? '❌' : '✅') + '  ' + pass + ' 통과 · ' + fail + ' 실패\n');
 process.exit(fail ? 1 : 0);
