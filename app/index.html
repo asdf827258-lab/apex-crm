@@ -892,6 +892,11 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 body.yoonsi-mode .app{display:none;}
 body.yoonsi-mode #yoonsiScreen{display:block;}
 #yoonsiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 자동차사고 과실·보상 분석기 전용 화면 (윤시스쿨과 동일 패턴) */
+#accScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.accident-mode .app{display:none;}
+body.accident-mode #accScreen{display:block;}
+#accScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 
 /* 모바일 */
 .mobile-bar{display:none;}
@@ -1070,6 +1075,16 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
     <button class="ff-back" style="background:#1A56DB;color:#fff;border-color:#1A56DB" onclick="go('ai_org')" title="AI 조직 라이브">🤖 AI 조직 라이브</button>
     <button class="ff-ico" onclick="reloadYoonsi()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openYoonsiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 자동차사고 과실·보상 분석기 전용 화면 -->
+<div id="accScreen">
+  <iframe id="accFrame" class="fin-frame" title="자동차사고 과실·보상 분석기"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitAcc()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadAcc()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openAccNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -9496,7 +9511,8 @@ var TABS=[
    {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리'},
    {id:'med_silbi',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리'},
    {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:'',ak:'청구·사후관리'},
-   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'}
+   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'},
+   {id:'accident',icon:'🚗',title:'자동차사고 과실·보상',cnt:'45',ak:'청구·사후관리'}
  ]},
  {group:'자료 조회',items:[
    {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
@@ -9712,7 +9728,7 @@ var lastTab='dashboard';
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode',
                    'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode',
-                   'yoonsi-mode'];
+                   'yoonsi-mode','accident-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -9752,6 +9768,13 @@ function go(tab){
     mountYoonsi();
     osFullMode('yoonsi-mode');
     navMark('yoonsi');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='accident'){
+    mountAcc();
+    osFullMode('accident-mode');
+    navMark('accident');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -11552,6 +11575,8 @@ var VA_ALIAS={
  '계산기':'finance','재무설계계산기':'finance','재무계산기':'finance','실무계산기':'calc',
  '제안서':'ai_prop','비포애프터':'baba','비교':'compare','카톡':'katalk',
  '청구':'claims','사후관리':'claims','실비':'med_silbi','실비계산기':'med_silbi',
+ '과실':'accident','과실비율':'accident','자동차사고':'accident','교통사고':'accident',
+ '블랙박스':'accident','자동차상해':'accident','자부치':'accident','대물':'accident',
  '건강검진':'med_checkup','알릴의무':'med_disclosure','고지':'med_disclosure',
  '인수':'ref_underwrite','인수기준':'ref_underwrite','전산':'ref_jeonsan',
  '코칭':'branch_coach','팀코칭':'branch_coach','내코칭':'mycoach',
@@ -13391,6 +13416,13 @@ function mountYoonsi(){var f=$('yoonsiFrame');if(!f||f._mounted)return;f.src=YOO
 function reloadYoonsi(){var f=$('yoonsiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountYoonsi,30);toast('윤시스쿨 새로고침');}}
 function openYoonsiNewTab(){var w=window.open(YOONSI_URL,'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
 function exitYoonsi(){go(lastTab||'home');}
+/* 자동차사고 과실·보상 분석기 — app/accident/index.html 을 틀에 얹는다.
+   같은 사이트라 /api/generate 프록시를 그대로 쓴다(키 없이 AI 분석 가능). */
+var ACC_URL='accident/index.html';
+function mountAcc(){var f=$('accFrame');if(!f||f._mounted)return;f.src=ACC_URL;f._mounted=true;}
+function reloadAcc(){var f=$('accFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountAcc,30);toast('과실비율 분석기 새로고침');}}
+function openAccNewTab(){var w=window.open(ACC_URL,'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
+function exitAcc(){go(lastTab||'home');}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
   if(document.body.classList.contains('finance-mode'))exitFinance();
@@ -13399,6 +13431,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
+  else if(document.body.classList.contains('accident-mode'))exitAcc();
   else if(document.body.classList.contains('yoonsi-mode'))exitYoonsi();
 });
 
