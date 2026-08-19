@@ -39350,8 +39350,16 @@ function cmRecentHtml(){
 }
 function cmTodoHtml(all){
   var t=cmTodo(all);
-  if(!t.n)return '<div class="cm-todo ok"><b>오늘 급히 챙길 고객은 없습니다.</b> '+
-    '새로 만난 분을 등록하거나, 오래 못 뵌 분께 먼저 연락해 보세요.</div>';
+  if(!t.n){
+    /* 위 「오늘의 터치」 가 이미 사람을 세워 놓았는데 여기서 「없습니다」 라고 하면
+       한 화면에서 두 말이 어긋난다. 이 칸이 무엇만 보는 자리인지 밝힌다. */
+    var n=0;
+    try{ n=(typeof ccPlanList==='function')?ccPlanList(all).length:0; }catch(e){}
+    if(n)return '<div class="cm-todo ok"><b>기한 지난 일 · 이번 주 생일 · 60일 넘게 조용한 분은 없습니다.</b> '+
+      '오늘 연락할 <b>'+n+'명</b>은 위 <b>📋 오늘의 터치</b> 에 서 있습니다.</div>';
+    return '<div class="cm-todo ok"><b>오늘 급히 챙길 고객은 없습니다.</b> '+
+      '새로 만난 분을 등록하거나, 오래 못 뵌 분께 먼저 연락해 보세요.</div>';
+  }
   var line=function(k,cls,ttl,list){
     if(!list.length)return '';
     var nm=[],i;

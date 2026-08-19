@@ -121,9 +121,29 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(/ccTelAsk\('c1'\)/.test(plain), '  번호가 없으면 넣는 길을 준다');
   is(/오늘의 터치/.test(plain), '  칸 이름이 「오늘의 터치」 다');
 
-  console.log('\n[7] 고객 목록 맨 위에 붙어 있다');
+  console.log('\n[7] 고객 목록 맨 위에 붙어 있다 · 한 화면에서 말이 안 어긋난다');
   const top = await page.evaluate(() => cmTopHtml('', OSC.list));
   is(/오늘의 터치/.test(top), '  고객 365일 첫 화면에 나온다');
+  /* 위에서 「전화 n명」 이라 해 놓고 아래에서 「없습니다」 라고 하면 안 된다.
+     기한·생일·60일에는 안 걸리지만 주기는 넘긴 VIP 한 사람만 세워 본다. */
+  const both = await page.evaluate(() => {
+    const day = (n) => new Date(Date.now() + 9 * 3600e3 - n * 86400e3).toISOString().slice(0, 10);
+    const keepList = OSC.list, keepMeta = CM.meta;
+    OSC.list = [{ id: 'v1', name_masked: '성○향', advisor_id: 'me', created_at: day(300) }];
+    CM.meta = { v1: { fp: { f_ins: 150, c_cancer: 5000, c_death: 10000 },
+                      touch: [{ at: day(20), how: '전화' }] } };
+    const out = { plan: ccPlanList(OSC.list).length, todo: cmTodo(OSC.list).n,
+                  html: cmTopHtml('', OSC.list).replace(/\s+/g, ' ') };
+    OSC.list = keepList; CM.meta = keepMeta;
+    return out;
+  });
+  is(both.todo === 0 && both.plan > 0,
+     '  기한·생일·60일에는 안 걸리는데 주기는 넘긴 사람이 있는 판을 만들었다 (터치 ' + both.plan + ' · 챙길 ' + both.todo + ')');
+  is(!/오늘 급히 챙길 고객은 없습니다/.test(both.html),
+     '  오늘의 터치에 사람이 서 있으면 아래에서 「없습니다」 라고 하지 않는다');
+  is(/오늘의 터치.{0,8}에 서 있습니다|오늘의 터치/.test(both.html) && /서 있습니다/.test(both.html),
+     '  대신 「오늘의 터치에 서 있습니다」 라고 짚어 준다');
+  is(!/오늘 급히 챙길 고객은 없습니다/.test(top), '  사람이 서 있을 때 말이 어긋나지 않는다');
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
