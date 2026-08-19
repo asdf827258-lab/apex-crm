@@ -94,7 +94,7 @@ LOGO = ('<svg viewBox="0 0 240 220" fill="currentColor"><path d="M120 26 212 190
         '120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>')
 
 
-def head(n, tot=4):
+def head(n, tot=5):
     return f'''<div class="hd"><div class="bi">{LOGO}
     <div class="bw">APEX <span>YUN PRO</span></div></div>
     <div class="pt">고객 처방전 · 설계와 운영<br>{n} / {tot}</div></div>'''
@@ -402,8 +402,113 @@ P4 = f'''<div class="pg">
 {FOOT}
 </div>'''
 
+
+
+# ═══════════════════════════════════ 5쪽 — 말투 카드
+# 예문은 전부 앱 주석과 화면에서 그대로 가져온 것이다. 지어낸 문장이 아니다.
+PAT = [
+ ("A 가 아니라 B", "다시 짚어 준다",
+  ["혼잡이 <b>아니라</b> 처음부터 시간 안에 끝날 수 없는 주문이었다",
+   "가운데가 비면 그림이 <b>아니라</b> 구멍이다",
+   "「부재 6건」이 <b>아니라</b> 「고객12 · 12일째 · 문자 먼저」여야 손이 움직인다"],
+  "고객이 쓴 말을 그대로 받지 말고 <b>한 번 바꿔서</b> 돌려줍니다"),
+
+ ("아무도 안 —", "실패를 사람이 아니라 구조 탓으로",
+  ["네 군데를 오가면 <b>아무도 안 본다</b>",
+   "서른 장을 한 번에 읽으라고 하면 <b>아무도 안 읽는다</b>",
+   "여섯 칸을 사람이 채워 넣게 해 두니 정작 <b>아무도 안 채우고</b> 화면만 복잡했다"],
+  "「왜 안 했어」가 없습니다. <b>안 하게 만든 구조</b>를 탓합니다"),
+
+ ("하나만", "줄여서 준다",
+  ["여기는 「체크판」 <b>하나만</b> 한다",
+   "전체화면은 한 번에 <b>하나만</b>",
+   "나머지는 이것을 <b>돕는 것뿐</b>이다"],
+  "고를 것을 주지 않습니다. <b>다음 하나</b>를 정해 줍니다"),
+
+ ("이랬다 → 그래서", "고백하고 고친다",
+  ["전에는 실패해도 「복사되었습니다」라고 말했다 — <b>이제는 확인하고 말한다</b>",
+   "타율은 여기 있으니 화면을 오가야 했다 — <b>그래서</b> 한 칸에 모았다",
+   "두 번 눌러 찾아 들어가야 하면 안 보게 된다"],
+  "자랑으로 시작하지 않습니다. <b>못했던 것</b>부터 적고 고친 것을 붙입니다"),
+
+ ("하지 않는다", "금지를 분명히",
+  ["모르는 것을 「유지」로 <b>단정하지 않는다</b>",
+   "숫자를 채워 넣으라고 <b>하지 않는다</b>",
+   "같은 계산을 두 번 <b>하지 않는다</b>"],
+  "할 것보다 <b>안 할 것</b>을 먼저 못박습니다"),
+
+ ("숫자로 못박기", "말 대신 수",
+  ["끊고 <b>30초</b> 안에", "가장 낮은 칸 <b>하나만</b>",
+   "이 셋만 하면 나머지는 따라옵니다"],
+  "「자주」 「빨리」를 안 씁니다. <b>30초 · 다섯 명 · 하나</b>로 적습니다"),
+]
+
+NO = [("길게 쓰기", "한 문장에 뜻 하나. 두 개면 자릅니다"),
+      ("영어·전문용어", "「온보딩」 「퍼널」 안 씁니다 — <b>처음 켤 때</b> · <b>깔때기</b>"),
+      ("「…십시오」", "본문은 <b>…습니다</b>, 시키는 말은 <b>…세요 / …시죠</b>"),
+      ("느낌표와 과장", "「최고」 「완벽」 없습니다. 숫자로 대신합니다"),
+      ("추상 명사", "「효율화」 대신 <b>「두 번 누를 걸 한 번에」</b>"),
+      ("고객에게 단정", "금액·환급률·인수 여부는 <b>「확인해 드리겠습니다」</b>")]
+
+pat_rows = "".join(
+    f'''<tr><td style="width:118px"><b>{n}</b><br>
+    <span style="font-size:11.5px;color:#8B95A1">{sub}</span></td>
+    <td style="width:430px">{"<br>".join("· " + e for e in ex)}</td>
+    <td>{why}</td></tr>''' for n, sub, ex, why in PAT)
+
+def no_row(items):
+    return "".join(
+        f'''<div class="bx"><div class="v" style="color:#E5484D">✕ {n}</div>
+        <p>{d}</p></div>''' for n, d in items)
+
+P5 = f'''<div class="pg">
+{head(5)}
+<h1>말투 — 이렇게 씁니다</h1>
+<p class="sub">아래 예문은 <b>지어낸 것이 하나도 없습니다.</b>
+전부 앱 주석과 화면에 이미 적혀 있던 문장입니다.
+새 글을 쓸 때 <b>이 여섯 꼴 안에서</b> 쓰면 같은 사람이 쓴 것처럼 됩니다.</p>
+
+<div class="sec"><h2>쓰는 꼴 여섯</h2>
+<table>
+<thead><tr><th>꼴</th><th>이미 쓰고 있는 예</th><th>왜 이렇게 쓰나</th></tr></thead>
+<tbody>{pat_rows}</tbody>
+</table></div>
+
+<div class="sec"><h2>안 쓰는 것 여섯</h2>
+<div class="row" style="margin-bottom:11px">{no_row(NO[:3])}</div>
+<div class="row">{no_row(NO[3:])}</div>
+</div>
+
+<div class="sec"><h2>한 문장을 고치는 순서 — 30초</h2>
+<table>
+<thead><tr><th style="width:80px">순서</th><th style="width:250px">이렇게 묻습니다</th>
+<th>고치기 전 → 고친 뒤</th></tr></thead>
+<tbody>
+<tr><td><b>1</b></td><td>뜻이 두 개인가?</td>
+  <td>두 개면 자릅니다. <b>한 문장에 하나</b></td></tr>
+<tr><td><b>2</b></td><td>바꿔 줄 말이 있나?</td>
+  <td>「보험이 많다」 → <b>「많은 게 아니라 겹친 겁니다」</b></td></tr>
+<tr><td><b>3</b></td><td>추상 명사가 있나?</td>
+  <td>「관리가 필요합니다」 → <b>「90일 넘은 사람이 다섯입니다」</b></td></tr>
+<tr><td><b>4</b></td><td>숫자로 바꿀 수 있나?</td>
+  <td>「자주 연락하세요」 → <b>「7일 넘기지 마세요」</b></td></tr>
+<tr><td><b>5</b></td><td>단정하고 있나?</td>
+  <td>「나옵니다」 → <b>「확인해 드리겠습니다」</b></td></tr>
+</tbody></table></div>
+
+<div class="bx dark close-bx" style="margin-bottom:18px">
+  <div class="k">이 말투의 정체</div>
+  <div class="v" style="font-size:20px;line-height:1.5;margin-top:3px">
+  <b style="color:#60A5FA">사람을 탓하지 않고 구조를 탓하는 말</b>이고,<br>
+  <b style="color:#60A5FA">할 것보다 안 할 것을 먼저 정해 주는 말</b>입니다.<br>
+  그래서 듣는 사람이 <b style="color:#60A5FA">기죽지 않고 움직입니다.</b></div>
+</div>
+
+{FOOT}
+</div>'''
+
 HTML = ('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
         f'<title>고객 처방전 — 설계와 운영</title><style>{CSS}</style></head>'
-        f'<body>{P1}{P2}{P3}{P4}</body></html>')
+        f'<body>{P1}{P2}{P3}{P4}{P5}</body></html>')
 open("rx.html", "w", encoding="utf8").write(HTML)
 print(f"rx.html {len(HTML.encode())/1024:.0f}KB · 처방 {len(RX)}개")
