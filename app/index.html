@@ -906,6 +906,11 @@ body.mikki-mode #mikkiScreen{display:block;}
 .nl-mini:last-of-type{border-bottom:0}
 .nl-mt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#191F28;font-weight:600}
 .nl-mini a{font-size:11px;color:#1A56DB;font-weight:700;text-decoration:none;white-space:nowrap}
+/* 자동차사고 과실·보상 분석기 — 미끼 레이더와 같은 틀 */
+#carFaultScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.carfault-mode .app{display:none;}
+body.carfault-mode #carFaultScreen{display:block;}
+#carFaultScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 미끼상품&접촉전략 — 미끼 레이더와 같은 틀 */
 #mkTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.mktalk-mode .app{display:none;}
@@ -1054,6 +1059,16 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
     <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 자동차사고 과실·보상 분석기 -->
+<div id="carFaultScreen">
+  <iframe id="carFaultFrame" class="fin-frame" title="자동차사고 과실·보상 분석기"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitCarFault()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadCarFault()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openCarFaultNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -9693,7 +9708,8 @@ var TABS=[
    {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리'},
    {id:'med_silbi',icon:'🧮',title:'AI 실비계산기',cnt:'',ak:'청구·사후관리'},
    {id:'med_checkup',icon:'🩺',title:'AI 건강검진',cnt:'',ak:'청구·사후관리'},
-   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'}
+   {id:'med_disclosure',icon:'📋',title:'알릴의무 필터',cnt:'',ak:'청구·사후관리'},
+   {id:'car_fault',icon:'🚗',title:'자동차사고 과실·보상',cnt:'',ak:'청구·사후관리'}
  ]},
  {group:'자료 조회',items:[
    {id:'ref_jeonsan',icon:'🏢',title:'보험사 전산',cnt:'',ak:'보험 레퍼런스'},
@@ -9908,7 +9924,7 @@ var lastTab='dashboard';
    칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode',
-                   'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode',
+                   'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
                    'yoonsi-mode'];
 function osFullMode(on){
   var b=document.body,i;
@@ -9956,6 +9972,13 @@ function go(tab){
     mountMikki();
     osFullMode('mikki-mode');
     navMark('mikki');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='car_fault'){
+    mountCarFault();
+    osFullMode('carfault-mode');
+    navMark('car_fault');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -10267,8 +10290,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-19 14:40';
-var APP_BUILD_NOTE='보험 내용이 무조건 정리되게 했습니다 — 상담자료 보장분석에서 보험마다 담보가 카드를 안 눌러도 전부 보이고, 「담보 7개 · 암·뇌·심장 · 최대 5,000만 — 3대 진단비가 다 있습니다」 처럼 한 줄로 요약됩니다. 비포&애프터에는 「📄 제안서 한 부로 만들기」 를 넣어 표지·한눈에·인체 한 장·전·후 그래프·짚어 드릴 것이 한 부로 묶여 나옵니다. 「고객에게 전할 뉴스」 에서 「🎨 이 소식으로 카드뉴스」 를 누르면 인스타 스튜디오로 주제까지 옮겨 담습니다. 미끼 레이더는 달마다 쌓아 두고 달로 나눠 봅니다';
+var APP_BUILD='2026-08-19 17:10';
+var APP_BUILD_NOTE='📁 계약·청구 칸에 「🚗 자동차사고 과실·보상」 을 넣었습니다 — 손해보험협회 과실비율 인정기준 도표로 과실을 계산하고 담보·청구·보상금·처리 절차·법령·고객 안내문까지 한 화면에서 냅니다. 인터넷이나 AI 없이도 「직접 고르기」 는 그대로 돌아가고, 글·사진·블랙박스 분석은 회사 서버(/api/generate)로 나갑니다. 그리고 앞서: 상담자료에서 보험마다 담보가 카드를 안 눌러도 전부 보이고 한 줄로 요약됩니다. 비포&애프터에 「📄 제안서 한 부로 만들기」, 전할 뉴스에 「🎨 이 소식으로 카드뉴스」, 미끼 레이더는 달마다 쌓아 둡니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -10737,6 +10760,20 @@ var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
 function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
 function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+/* ════════ 자동차사고 과실·보상 분석기 ════════
+   손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
+   처리 절차·법령·안내문까지 한 화면에서 낸다.
+
+   서버에 묻는 것은 글·사진·블랙박스 분석 하나뿐이고, 그것도 이 앱의
+   /api/generate 를 그대로 쓴다. 창(iframe) 안에서 열리므로 공유 토큰은
+   바깥 앱에서 빌려 간다(그 화면의 appToken()).
+   AI 가 안 붙어 있어도 「직접 고르기」 는 그대로 돌아간다.              */
+var CARFAULT_URL='상담자료/자동차사고_과실분석.html';
+function mountCarFault(){var f=$('carFaultFrame');if(!f||f._mounted)return;f.src=CARFAULT_URL;f._mounted=true;}
+function reloadCarFault(){var f=$('carFaultFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCarFault,30);toast('자동차사고 과실·보상 새로고침');}}
+function openCarFaultNewTab(){var w=window.open(CARFAULT_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitCarFault(){go(lastTab||'home');}
+
 /* ════════ 미끼상품&접촉전략 (같은 폴더의 정적 문서) ════════
    27장짜리 화법서다. 바깥으로 나가는 것은 글꼴뿐이고 서버에 묻는 것이
    없다. 그래서 그냥 통째로 띄운다. */
