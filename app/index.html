@@ -679,7 +679,7 @@ a{color:inherit;text-decoration:none;}
 .sbg-t{font-size:13px;font-weight:800;color:#DBE9FF;letter-spacing:-.01em;}
 .sbg-go{margin-left:auto;font-size:9.5px;font-weight:700;color:rgba(219,233,255,.62);white-space:nowrap;}
 .nav-allbtns{display:flex;gap:6px;padding:2px 2px 10px;}
-.nav-allbtns button{flex:1;font-family:inherit;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:rgba(255,255,255,.05);border:none;border-radius:8px;padding:7px 5px;cursor:pointer;transition:all .15s;}
+.nav-allbtns button{flex:1;min-height:34px;font-family:inherit;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:rgba(255,255,255,.05);border:none;border-radius:8px;padding:8px 5px;cursor:pointer;transition:all .15s;}
 .nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);}
 .tab-btn{position:relative;display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:var(--r-sm);font-size:12.5px;font-weight:600;color:rgba(255,255,255,.84);cursor:pointer;transition:all var(--dur) var(--ease);border:none;background:transparent;width:100%;text-align:left;letter-spacing:-.01em;margin-bottom:1px;}
 .tab-btn:hover{background:rgba(255,255,255,.05);color:rgba(255,255,255,.85);}
@@ -711,6 +711,27 @@ a{color:inherit;text-decoration:none;}
 
 .page-hd{margin-bottom:18px;}
 .page-tag{font-size:9px;font-weight:700;color:var(--ink-5);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;}
+
+/* ── 폰에서 보기 ──────────────────────────────────────────────────
+   폰에서는 9~9.5px 짜리 꼬리표가 거의 안 읽힌다. 자리마다 쫓아다니며
+   고치면 새로 만드는 자리에서 또 작아지므로, <b>폰에서만 바닥을 올린다.</b>
+   데스크톱은 그대로 둔다 — 거기서는 촘촘한 편이 오히려 읽기 좋다.
+   손가락으로 누르는 것도 마찬가지다. 34px 아래로는 잘 안 눌린다.        */
+@media(max-width:520px){
+  .page-tag{font-size:10.5px}
+  .sbg-go{font-size:11px}
+  .ver-pill{font-size:11px}
+  .fld .hint{font-size:11px}
+  .badge{font-size:10.5px}
+  .bp-disc,.bp-note{font-size:11px}
+  .osc-note{font-size:11.5px}
+  /* 자리마다 손으로 박아 둔 9px·9.5px 는 폰에서만 끌어올린다 */
+  .app [style*="font-size:9px"],
+  .app [style*="font-size:9.5px"]{font-size:11px!important}
+  /* 누를 것은 손가락에 맞춘다 */
+  .app button,.app .tab-btn,.app .btn{min-height:34px}
+  .app button.nav-star,.app .cc-b,.app .chip-opt{min-height:32px}
+}
 .page-title{font-size:21px;font-weight:800;color:var(--ink-1);letter-spacing:-.045em;}
 .page-desc{font-size:12px;color:var(--ink-4);margin-top:5px;line-height:1.6;max-width:680px;}
 
@@ -38761,6 +38782,230 @@ function ccNews(id){
   else toast('복사를 못 했습니다');
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   오늘의 터치 — 누구에게 · 어떻게 · 무엇을
+
+   「30일 지났습니다」 까지는 앱이 말해 줬다. 그런데 그 말만으로는 손이
+   안 나간다. 전화를 걸까 카톡을 보낼까, 무슨 말을 꺼낼까를 그 자리에서
+   또 생각해야 하기 때문이다. 생각할 게 남아 있으면 미룬다.
+
+   그래서 세 가지를 한 줄에 붙인다.
+     · 누구에게  — 오래 지난 순, VIP 먼저
+     · 어떻게    — 전화인지 카톡인지, <b>왜 그쪽인지</b>까지
+     · 무엇을    — 이 고객에게 맞는 소식 한 건 (앱이 이미 모아 둔 것)
+   그리고 단추 하나로 <b>바로</b> 걸고, 바로 보내고, 바로 기록한다.
+
+   판정 규칙은 아래 CC_RULES 가 전부다. 숨기지 않고 화면에도 그대로 적는다 —
+   왜 이 사람을 지금 전화하라는지 팀원이 납득해야 따라 한다.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 연락처는 실명과 같은 자리 — 이 기기에만 둔다. 서버로 보내지 않는다. */
+function ccTels(){var o=cmLS('apex_cli_tel_'+cmWho(),{});return (o&&typeof o==='object')?o:{};}
+function ccTelOf(id){return ccTels()[id]||'';}
+function ccTelSet(id,v){
+  var o=ccTels();
+  v=(''+(v||'')).replace(/[^0-9+\-]/g,'');
+  if(v)o[id]=v.slice(0,20);else delete o[id];
+  cmLSSet('apex_cli_tel_'+cmWho(),o);
+}
+function ccTelAsk(id,then){
+  var v=prompt('연락처를 적어 주세요 (이 기기에만 저장됩니다)',ccTelOf(id)||'');
+  if(v===null)return;
+  ccTelSet(id,v);
+  if(then)then(ccTelOf(id));
+  ccAfter();
+}
+
+function ccDaysAgo(n){
+  return (new Date(Date.now()+9*3600*1000-(n||0)*86400000)).toISOString().slice(0,10);
+}
+/* 최근 어떻게 연락해 왔나 — 전화인지, 글인지, 만났는지 */
+function ccWays(id,days){
+  var L=(cmOf(id).touch)||[],lim=ccDaysAgo(days||90),o={call:0,talk:0,meet:0,n:0},i,d,h;
+  for(i=0;i<L.length;i++){
+    if(!L[i])continue;
+    d=(''+(L[i].at||L[i].d||'')).slice(0,10);
+    if(!d||d<lim)continue;
+    h=''+(L[i].how||'');
+    o.n++;
+    if(/전화|통화|콜/.test(h))o.call++;
+    else if(/만남|미팅|방문|면담|대면/.test(h))o.meet++;
+    else o.talk++;
+  }
+  return o;
+}
+
+/* ── 판정 규칙 ── 위에서부터 먼저 맞는 것 하나를 쓴다.
+   pri 가 클수록 오늘 먼저 할 일이다. */
+var CC_RULES=[
+ {k:'never', pri:100, way:'call', t:'한 번도 연락한 적이 없습니다',
+  why:'첫 연락은 글로 열리지 않습니다. 목소리가 먼저입니다.',
+  hit:function(x){return !x.b.ever&&x.b.d!==null&&x.b.d>=7;}},
+ {k:'vipover',pri:95, way:'call', t:'VIP 인데 주기를 넘겼습니다',
+  why:'월 납입이 큰 고객입니다. 이 분들은 전화로 챙깁니다.',
+  hit:function(x){return x.vip&&x.b.over;}},
+ {k:'long',  pri:90, way:'call', t:'두 달 넘게 소식이 없습니다',
+  why:'오래 끊긴 관계는 글로 안 살아납니다 — 전화 한 통이 훨씬 빠릅니다.',
+  hit:function(x){return x.b.d!==null&&x.b.d>=60;}},
+ {k:'talkonly',pri:85,way:'call', t:'요즘 글로만 이어져 왔습니다',
+  why:'최근 석 달 접촉이 다 카톡·문자입니다. 목소리를 한 번 넣어야 관계가 두터워집니다.',
+  hit:function(x){return x.b.over&&x.w.n>=3&&x.w.call===0;}},
+ {k:'gap',   pri:80, way:'talk', t:'보장이 비어 있습니다',
+  why:'암·사망 진단금이 안 잡힙니다. 먼저 소식으로 문을 두드리고, 답이 오면 전화로 넘어갑니다.',
+  hit:function(x){return x.b.over&&!x.n('c_cancer')&&!x.n('c_death');}},
+ {k:'over',  pri:70, way:'call', t:'연락 주기를 넘겼습니다',
+  why:'30일 안에 한 바퀴 도는 것이 이 팀의 약속입니다.',
+  hit:function(x){return x.b.over;}},
+ {k:'ff',    pri:60, way:'call', t:'아는 것이 너무 적습니다',
+  why:'팩트파인딩이 절반도 안 찼습니다. 통화하면서 두세 칸만 채우면 됩니다.',
+  hit:function(x){return x.b.soon&&x.ff<0.5;}},
+ {k:'soon',  pri:50, way:'talk', t:'곧 때가 됩니다',
+  why:'아직 여유가 있습니다. 가벼운 소식 한 건이면 충분합니다.',
+  hit:function(x){return x.b.soon;}}
+];
+/* 이 고객에게 오늘 무엇을 할까 — 규칙 하나를 골라 준다 */
+function ccPlan(c){
+  var id=c.id;
+  var m=cmOf(id),f=(m&&m.fp)||{};
+  var x={b:ccBand(c),vip:ccIsVip(id),w:ccWays(id,90),
+         ff:(typeof cmFfCount==='function'&&typeof cmFfTotal==='function')
+              ?(cmFfCount(id)/Math.max(1,cmFfTotal())):1,
+         n:function(k){return ccMoney(f[k]);}};
+  var i,r;
+  for(i=0;i<CC_RULES.length;i++){
+    r=CC_RULES[i];
+    /* VIP 는 같은 규칙 안에서만 조금 앞으로. 규칙 사이 간격(5)보다 작게 두어
+       「한 번도 없음」 같은 더 급한 자리를 넘어서지 못하게 한다. */
+    if(r.hit(x))return {k:r.k,pri:r.pri+(x.vip?4:0),way:r.way,t:r.t,why:r.why,
+                        band:x.b,vip:x.vip,ways:x.w};
+  }
+  return null;
+}
+/* 오늘 할 것 — 먼저 할 사람부터 */
+function ccPlanList(all){
+  var mine=ccScope(all||[]),out=[],i,p;
+  for(i=0;i<mine.length;i++){
+    p=ccPlan(mine[i]);
+    if(p)out.push({c:mine[i],p:p});
+  }
+  out.sort(function(a,b){
+    if(b.p.pri!==a.p.pri)return b.p.pri-a.p.pri;
+    var x=a.p.band.d,y=b.p.band.d;
+    return (y===null?-1:y)-(x===null?-1:x);
+  });
+  return out;
+}
+/* 전화를 너무 안 했으면 짚어 준다 —
+   카톡만 쌓이면 숫자는 도는데 관계는 얇아진다. */
+function ccCallAlarm(all){
+  var mine=ccScope(all||[]),call=0,n=0,i,w;
+  for(i=0;i<mine.length;i++){
+    w=ccWays(mine[i].id,30);
+    call+=w.call;n+=w.n;
+  }
+  if(n<5)return null;                       /* 표본이 적으면 말하지 않는다 */
+  var pct=Math.round(call/n*100);
+  if(pct>=30)return null;
+  return {pct:pct,n:n,call:call};
+}
+
+/* ── 바로 하기 ── */
+function ccCall(id){
+  var t=ccTelOf(id);
+  if(!t){ccTelAsk(id,function(v){if(v)ccCall(id);});return;}
+  try{ location.href='tel:'+t; }catch(e){}
+  ccMark(id,'전화');
+}
+function ccSms(id){
+  var t=ccTelOf(id);
+  if(!t){ccTelAsk(id,function(v){if(v)ccSms(id);});return;}
+  var body=ccMsgText(id);
+  try{ location.href='sms:'+t+(body?('?&body='+encodeURIComponent(body)):''); }catch(e){}
+  ccMark(id,'문자');
+}
+/* 보낼 글 한 통 — 앱이 모아 둔 소식에서 뽑는다. 고객 이름은 넣지 않는다. */
+function ccMsgText(id){
+  var by='';
+  try{ by=(OS.profile&&OS.profile.name)||''; }catch(e){}
+  var i=(typeof ccNewsIdx==='function')?ccNewsIdx(id):-1;
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  var head='고객님 안녕하세요, '+(by?(by+' 입니다. '):'')+'잘 지내고 계신지요.';
+  if(i<0||!L[i])return head+'\n\n요즘 바뀐 것들 정리해서 곧 다시 연락드리겠습니다.';
+  var it=L[i];
+  return head+'\n\n요즘 이런 소식이 있어 전해 드립니다.\n· '+(it.t||'')+
+    (it.s?('\n  (출처 '+it.s+')'):'')+'\n\n궁금하신 것 있으시면 편하게 말씀 주세요.';
+}
+function ccCopyMsg(id){
+  var t=ccMsgText(id);
+  if(typeof copyText==='function')copyText(t);
+  else toast('복사를 못 했습니다');
+}
+
+/* ── 화면 ── */
+function ccPlanRowHtml(r,i){
+  var c=r.c,p=r.p,nm=cmName(c),tel=ccTelOf(c.id);
+  var isCall=(p.way==='call');
+  var wayT=isCall?'☎️ 전화':'💬 카톡·문자';
+  return '<div class="ccp-row'+(isCall?' call':'')+'">'+
+    '<div class="ccp-n">'+(i+1)+'</div>'+
+    '<div class="ccp-m">'+
+      '<div class="ccp-t">'+osEsc(nm)+
+        (p.vip?'<span class="ccp-vip">👑 VIP</span>':'')+
+        '<span class="ccp-dd">'+osEsc(p.band.t)+'</span></div>'+
+      '<div class="ccp-w"><b>'+wayT+'</b> — '+osEsc(p.t)+'</div>'+
+      '<div class="ccp-y">'+osEsc(p.why)+'</div>'+
+    '</div>'+
+    '<div class="ccp-b">'+
+      (isCall
+        ? '<button type="button" class="ccp-go call" onclick="ccCall(\''+c.id+'\')">☎️ 지금 걸기</button>'+
+          '<button type="button" class="ccp-go" onclick="ccCopyMsg(\''+c.id+'\')">💬 보낼 글 복사</button>'
+        : '<button type="button" class="ccp-go talk" onclick="ccSms(\''+c.id+'\')">💬 문자로 보내기</button>'+
+          '<button type="button" class="ccp-go" onclick="ccCopyMsg(\''+c.id+'\')">📋 카톡 글 복사</button>')+
+      '<button type="button" class="ccp-go" onclick="ccMark(\''+c.id+'\',\''+(isCall?'전화':'카톡')+'\')">✓ 했음</button>'+
+      (tel?'':'<button type="button" class="ccp-go tel" onclick="ccTelAsk(\''+c.id+'\')">📱 번호 넣기</button>')+
+    '</div></div>';
+}
+var CC_PLAN_ON=false;
+var CC_PLAN_N=6;
+function ccPlanToggle(){CC_PLAN_ON=!CC_PLAN_ON;ccAfter();}
+function ccPlanMore(){CC_PLAN_N+=6;ccAfter();}
+function ccRoadmapHtml(){
+  return '<div class="ccp-map">'+
+    '<div class="h">이 순서로 정합니다 — 위에서부터 먼저 맞는 하나</div>'+
+    CC_RULES.map(function(r,i){
+      return '<div class="li"><span class="no">'+(i+1)+'</span>'+
+        '<b>'+(r.way==='call'?'☎️ 전화':'💬 카톡·문자')+'</b>'+
+        '<span class="t">'+osEsc(r.t)+'</span>'+
+        '<span class="y">'+osEsc(r.why)+'</span></div>';
+    }).join('')+
+    '<div class="n">※ VIP 는 같은 규칙 안에서 조금 더 앞으로 옵니다. '+
+    '연락처는 <b>이 기기에만</b> 저장되고 서버로 가지 않습니다. '+
+    '보낼 글에는 고객 이름을 넣지 않습니다 — 잘못 보내도 누구인지 드러나지 않게.</div>'+
+    '</div>';
+}
+function ccPlanHtml(all){
+  var L=ccPlanList(all);
+  if(!L.length)return '';
+  var al=ccCallAlarm(all);
+  var show=L.slice(0,CC_PLAN_N);
+  var callN=0,i;
+  for(i=0;i<L.length;i++)if(L[i].p.way==='call')callN++;
+  return '<div class="ccp">'+
+    '<div class="ccp-hd"><b>📋 오늘의 터치</b>'+
+      '<span class="ccp-c">전화 '+callN+'명 · 글 '+(L.length-callN)+'명</span>'+
+      '<button type="button" class="ccp-x" onclick="ccPlanToggle()">'+
+        (CC_PLAN_ON?'규칙 접기':'왜 이 순서인가')+'</button></div>'+
+    (al?('<div class="ccp-alarm">☎️ 최근 30일 접촉 '+al.n+'건 중 <b>전화가 '+al.call+'건('+al.pct+'%)</b>뿐입니다. '+
+         '글로만 이어지면 숫자는 도는데 관계는 얇아집니다 — <b>오늘 세 통만</b> 걸어 보세요.</div>'):'')+
+    (CC_PLAN_ON?ccRoadmapHtml():'')+
+    '<div class="ccp-list">'+show.map(ccPlanRowHtml).join('')+'</div>'+
+    (L.length>show.length
+      ?('<button type="button" class="ccp-more" onclick="ccPlanMore()">더 보기 — 남은 '+(L.length-show.length)+'명</button>')
+      :'')+
+    '</div>';
+}
+
 /* ── 다시 그리기 ── */
 function ccAfter(){
   if(document.getElementById('oscList')&&typeof osRenderList==='function')osRenderList();
@@ -39182,7 +39427,7 @@ function cmTopHtml(q,all){
      내 것만 보는 중인데 남의 고객이 위에 뜨면 그게 내 일인 줄 안다. */
   var mine=all,i;
   if(CM.pick){mine=[];for(i=0;i<all.length;i++)if(all[i].advisor_id===CM.pick)mine.push(all[i]);}
-  return ccBoardHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
+  return ccBoardHtml(all)+ccPlanHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -39558,6 +39803,50 @@ function cmCss(){
     '.cc-team .warn{color:#B45309;font-weight:800}'+
     '.cc-team .good{color:#0F766E;font-weight:800}'+
     '@media(max-width:520px){.cc-cfg>span{margin-left:0;width:100%}.cc-hb{margin-left:0}}'+
+    /* ── 오늘의 터치 — 폰에서 한 손으로 누를 수 있어야 한다 ── */
+    '.ccp{border:1px solid #C7DBFF;background:#F7FAFF;border-radius:16px;padding:13px 14px;margin:0 0 12px}'+
+    '.ccp-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}'+
+    '.ccp-hd b{font-size:14px;font-weight:800;color:#191F28}'+
+    '.ccp-c{font-size:11.5px;font-weight:700;color:#1B64DA;background:#E8F2FF;padding:3px 9px;border-radius:999px}'+
+    '.ccp-x{margin-left:auto;appearance:none;border:1px solid #C7DBFF;background:#fff;border-radius:999px;'+
+      'padding:5px 11px;font-family:inherit;font-size:11.5px;font-weight:700;color:#1B64DA;cursor:pointer}'+
+    '.ccp-alarm{background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:10px 12px;'+
+      'font-size:12.5px;color:#7C2D12;line-height:1.7;margin-bottom:9px}'+
+    '.ccp-list{display:grid;gap:8px}'+
+    '.ccp-row{display:grid;grid-template-columns:26px 1fr;gap:9px;background:#fff;border:1px solid #E3E7EC;'+
+      'border-radius:13px;padding:11px 12px}'+
+    '.ccp-row.call{border-color:#BFDBFE;background:#FCFDFF}'+
+    '.ccp-n{width:22px;height:22px;border-radius:50%;background:#E8F2FF;color:#1B64DA;font-size:11px;'+
+      'font-weight:800;display:grid;place-items:center}'+
+    '.ccp-t{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;font-size:13.5px;font-weight:800;color:#191F28}'+
+    '.ccp-vip{font-size:10.5px;font-weight:800;color:#8A6524;background:#FDF6E8;border-radius:999px;padding:2px 7px}'+
+    '.ccp-dd{font-size:11px;font-weight:700;color:#8B95A1}'+
+    '.ccp-w{font-size:12.5px;color:#4E5968;margin-top:3px;line-height:1.6}'+
+    '.ccp-w b{color:#1B64DA}'+
+    '.ccp-y{font-size:11.5px;color:#8B95A1;margin-top:2px;line-height:1.65}'+
+    '.ccp-b{grid-column:2;display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}'+
+    '.ccp-go{appearance:none;border:1px solid #D8E0EC;background:#fff;border-radius:10px;padding:8px 11px;'+
+      'font-family:inherit;font-size:12px;font-weight:700;color:#4E5968;cursor:pointer;min-height:36px}'+
+    '.ccp-go.call{background:#1B64DA;border-color:#1B64DA;color:#fff}'+
+    '.ccp-go.talk{background:#0F766E;border-color:#0F766E;color:#fff}'+
+    '.ccp-go.tel{border-style:dashed}'+
+    '.ccp-more{width:100%;margin-top:9px;appearance:none;border:1px dashed #C7DBFF;background:#fff;'+
+      'border-radius:12px;padding:10px;font-family:inherit;font-size:12px;font-weight:700;color:#1B64DA;cursor:pointer}'+
+    '.ccp-map{background:#fff;border:1px solid #E3E7EC;border-radius:13px;padding:12px 13px;margin-bottom:9px}'+
+    '.ccp-map .h{font-size:12.5px;font-weight:800;color:#191F28;margin-bottom:8px}'+
+    '.ccp-map .li{display:flex;gap:7px;flex-wrap:wrap;align-items:baseline;padding:5px 0;'+
+      'border-top:1px solid #F1F4F8;font-size:12px;line-height:1.6}'+
+    '.ccp-map .li:first-of-type{border-top:0}'+
+    '.ccp-map .no{width:17px;height:17px;border-radius:5px;background:#F2F4F6;color:#8B95A1;font-size:10px;'+
+      'font-weight:800;display:grid;place-items:center;flex:0 0 auto}'+
+    '.ccp-map .li b{font-weight:800;color:#1B64DA;white-space:nowrap}'+
+    '.ccp-map .t{font-weight:700;color:#191F28}'+
+    '.ccp-map .y{flex:1 1 100%;color:#8B95A1;font-size:11.5px;padding-left:24px}'+
+    '.ccp-map .n{margin-top:9px;font-size:11px;color:#8B95A1;line-height:1.7}'+
+    '@media(max-width:520px){.ccp{padding:11px 11px}.ccp-row{grid-template-columns:1fr}'+
+      '.ccp-n{display:none}.ccp-b{grid-column:1}.ccp-go{flex:1 1 auto;text-align:center}'+
+      '.ccp-map .y{padding-left:0}}'+
+
     '@media(max-width:520px){.cm-nrow input[type=text]{min-width:100%}'+
       '.cm-td .w{display:none}}';
   document.head.appendChild(st);
