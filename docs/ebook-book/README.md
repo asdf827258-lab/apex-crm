@@ -6,10 +6,16 @@
 완성본(`book-final.html`, 5.6MB)은 폰트와 그림이 박혀 있어 저장소에 넣지 않습니다 —
 아티팩트에서 받아 오면 됩니다.
 
-## 🚫 앱 코드에 손대지 않습니다
+## 🚫 앱 코드에 손대지 않습니다 — 딱 한 곳만 빼고
 
-전자책 작업은 **읽기만** 합니다. `app/**` · `db-crm*.html` · `scripts/**` ·
+전자책 작업은 **읽기만** 합니다. `app/**` · `scripts/**` ·
 `migration_*.sql` 은 고치지 않습니다. 이유는 `docs/전자책_인계.md` 0장에 있습니다.
+
+**예외 하나** — `db-crm.html` 의 **고객 처방전**(`.rx-*` · `rx*()`)은
+2026-08-19 에 대표님이 직접 넣으라고 하셔서 이 폴더에서 만들었습니다(`crm_rx.py`).
+그 밖의 CRM 코드는 여전히 **읽기만** 합니다. 처방 내용을 고칠 때는
+`rx_data.py` 를 고치고 `crm_rx.py` 를 다시 돌리는 게 아니라,
+**`db-crm.html` 안의 `RX_LIST` 를 직접** 고치세요 — 이미 들어가 있습니다.
 
 ## 고치는 순서
 
@@ -40,6 +46,8 @@
 #    frag_365.html   8부 고객 365일 — 여섯 칸 · 담보 검수 · 고객 동의
 #    frag_level.py  18부 레벨업 — 성장판 여섯 축 · 점수 공식 · 열두 주제
 #    frag_intent.html 맨 앞 「내가 이걸로 하려는 것」 — 관리 · 얻는 것 · 부탁
+#    crm_rx.py      db-crm.html 에 고객 처방전을 넣는 도구 (한 번만 돌린다)
+#    shots-rx.js    처방전 동작 확인 + 책에 실을 그림 넷
 #    plan_gen.py    사업계획서 낱장 A4 두 쪽 (PNG·PDF) — plan_shot.js 로 뽑는다
 #    rx_data.py     「고객 처방전」 처방 열둘 (고객 말 → 화면 순서 → 여는 말 → 남길 것)
 #    rx_gen.py      처방전 설계·운영 문서 A4 네 쪽 — rx_shot.js 로 뽑는다
@@ -69,6 +77,7 @@ python3 frag_use.py && python3 frag_talk.py && python3 build11.py && python3 bui
 python3 frag_level.py && python3 build13.py  # 13차 — 18부 레벨업 (부록만 s18→s19)
 python3 build14.py && python3 build15.py     # 14·15차 — 2026-08-19 배포판(88화면) 반영
 python3 build16.py                           # 16차 — 맨 앞 「내가 이걸로 하려는 것」
+node shots-rx.js . && python3 build17.py     # 17차 — 19부 고객 처방전 (그림 넷 포함)
 python3 plan_gen.py && node plan_shot.js     # 사업계획서 이미지·PDF
 python3 rx_gen.py   && node rx_shot.js       # 고객 처방전 설계 문서 이미지·PDF
 ```
@@ -287,7 +296,7 @@ PNG(2480×3508)와 PDF 로 뽑습니다.
 5부 CRM   6부 CRM 설명서   7부 상담   8부 고객 365일
 9부 미끼 레이더   10부 고객 앞에서   11부 사용설명서   12부 도구 백과
 13부 처음 켤 때   14부 정착   15부 90일   16부 자립   17부 숫자
-18부 레벨업   부록 (s19)
+18부 레벨업   19부 고객 처방전   부록 (s20)
 ```
 
 **장을 끼우면 뒤가 전부 밀립니다.** `build11.py` 가 그 처리의 본보기입니다 —

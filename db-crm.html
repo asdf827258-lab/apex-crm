@@ -134,6 +134,48 @@
 .ta-warn b{font-weight:800}
 .ta-more{margin-top:11px;font-size:12px;color:#64748B;line-height:1.6;font-weight:500}
 .ta-more b{color:#1D4ED8}
+
+/* ══ 고객 처방전 ══ 오늘의 알림 맨 위. 적으면 나오게 한다 */
+.rx-box{margin-bottom:13px}
+.rx-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  padding:15px 17px 12px}
+.rx-hd h3{margin:0 0 3px;font-size:16px;font-weight:800;letter-spacing:-.03em}
+.rx-hd p{margin:0;font-size:12.5px;color:var(--ink-3,#64748B);line-height:1.55}
+.rx-fold{flex:none;font-size:12px;padding:5px 11px}
+#rxWrap{padding:0 17px 15px}
+.rx-in{width:100%;padding:11px 13px;border:2px solid var(--line,#E2E8F0);border-radius:10px;
+  font-size:15px;font-weight:600;font-family:inherit;outline:none;background:#fff}
+.rx-in:focus{border-color:#1A56DB}
+.rx-chips{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 0}
+.rx-chip{font-size:12px;font-weight:700;color:#475569;background:#F1F5F9;border:1px solid #E2E8F0;
+  border-radius:999px;padding:5px 10px;cursor:pointer}
+.rx-chip:hover{background:#E0EAFB;border-color:#93B4F0;color:#1A56DB}
+.rx-card{border:1px solid var(--line,#E2E8F0);border-radius:12px;margin-top:11px;overflow:hidden;
+  background:#fff}
+.rx-t{background:#EFF6FF;border-bottom:1px solid #DBE7FA;padding:9px 13px;
+  font-size:13.5px;font-weight:800;color:#1A56DB}
+.rx-t small{font-weight:600;color:#64748B;margin-left:6px}
+.rx-r{display:grid;grid-template-columns:84px 1fr;gap:10px;padding:9px 13px;
+  border-top:1px solid #F1F5F9;align-items:start}
+.rx-r:first-of-type{border-top:0}
+.rx-k{font-size:11.5px;font-weight:800;color:#94A3B8;padding-top:3px}
+.rx-v{font-size:13px;color:#334155;line-height:1.6;font-weight:500}
+.rx-step{display:flex;align-items:center;gap:6px;margin-bottom:4px;flex-wrap:wrap}
+.rx-no{width:17px;height:17px;border-radius:50%;background:#1A56DB;color:#fff;font-size:10.5px;
+  font-weight:800;display:grid;place-items:center;flex:none}
+.rx-go{font-size:12.5px;font-weight:700;color:#1A56DB;background:#EFF6FF;border:1px solid #C7DBFA;
+  border-radius:7px;padding:3px 9px;cursor:pointer}
+.rx-go:hover{background:#DBEAFE}
+.rx-at{font-size:12.5px;font-weight:700;color:#334155;background:#F8FAFC;border:1px solid #E2E8F0;
+  border-radius:7px;padding:3px 9px}
+.rx-at i{font-style:normal;color:#94A3B8;font-weight:600}
+.rx-keep{color:#047857;font-weight:700}
+.rx-cp{font-size:11.5px;font-weight:700;color:#64748B;background:#fff;border:1px solid #E2E8F0;
+  border-radius:6px;padding:2px 8px;cursor:pointer;margin-left:6px}
+.rx-cp:hover{border-color:#1A56DB;color:#1A56DB}
+.rx-none{padding:13px;font-size:13px;color:#64748B;line-height:1.65;background:#F8FAFC;
+  border-radius:10px;margin-top:11px}
+.rx-none b{color:#0F172A}
 </style>
 </head>
 <body>
@@ -250,7 +292,23 @@
 
       <section class="page" id="page-touch">
         <div class="hero"><div><h2>오늘의 알림 — 꾸준히 터치하는 시스템</h2><p><b>7일 이상 손대지 않은 고객</b>, 부재 재시도, 상담 후 안부까지 — 오늘 연락할 고객과 <b>할 말</b>을 매일 자동으로 정리합니다.</p></div></div>
-        <div id="touchBody"></div>
+<div class="card section rx-box">
+          <div class="rx-hd">
+            <div>
+              <h3>고객 처방전</h3>
+              <p>고객이 한 말을 적으면 <b>무엇을 열지 · 뭐라고 열지 · 무엇을 남길지</b>가 나옵니다.</p>
+            </div>
+            <button class="btn-ghost rx-fold" id="rxFold" onclick="rxToggle()">접기</button>
+          </div>
+          <div id="rxWrap">
+            <input id="rxSearch" class="rx-in" type="search" autocomplete="off"
+                   placeholder="예) 돈이 안 모여요 · 사고 났어요 · 보험 많이 들어 있어요"
+                   oninput="rxRender()">
+            <div class="rx-chips" id="rxChips"></div>
+            <div id="rxOut"></div>
+          </div>
+        </div>
+                <div id="touchBody"></div>
       </section>
 
       <section class="page" id="page-kpi">
@@ -519,7 +577,7 @@ async function startApp(){
   try{await sb.from("attendance").upsert({member_id:profile.id,att_date:todayLocal()},{onConflict:"member_id,att_date"});}catch(e){}
   /* 최근 접속시각 갱신(베스트에포트) — last_seen 컬럼이 있으면 기록, 없으면 조용히 무시(출근 기록엔 영향 없음) */
   try{await sb.from("attendance").update({last_seen:new Date().toISOString()}).eq("member_id",profile.id).eq("att_date",todayLocal());}catch(e){}
-  await loadAll();
+  await loadAll();rxInit();
 }
 let crmTeams=[],crmTeamOf={};
 function teamName(pid){const t=crmTeams.find(x=>x.id===crmTeamOf[pid]);return t?t.name:""}
@@ -1476,6 +1534,103 @@ function taPaint(){
   h += '<div class="ta-more">고객 명목에 맞춘 멘트가 필요하면 앱의 ' +
        '<b>상담 도구 → 💬 AI 상담 어시스턴트</b> 안의 「📞 TA 인트로 멘트」에서 만들어 쓰십시오.</div>';
   box.innerHTML = h;
+}
+
+
+/* ══════════════ 고객 처방전 ══════════════
+   화면이 여든여덟 개인데, 「돈이 안 모여요」를 듣고 8통장 진단지도를 떠올리는
+   사람은 이미 잘하는 사람이다. 나머지는 아무것도 안 연다.
+   외워서 찾게 하지 말고 적으면 나오게 한다.
+   마지막 칸이 「남길 것」인 이유는, 추천이 아니라 기록이 목적이기 때문이다. */
+var RX_LIST = [{"q":"보험 많이 들어 있어요","w":"중복·과다가 걱정","s":[{"n":"AI 보장분석","g":"증권 분석","p":""},{"n":"비포&애프터","g":"증권 분석","p":""},{"n":"보장분석 상담자료","g":"상담 도구","p":""}],"o":"「몇 개 있는지는 안 여쭙겠습니다. 겹치는 게 있는지만 보겠습니다.」 — 줄이자는 말을 먼저 하면 고객은 방어부터 합니다","v":"증권 올려 분석표 → 겹치는 담보만 짚기 → 비포&애프터로 전후","k":"단계 AP · 메모에 「월 보험료 ○○ · 중복 ○개」"},{"q":"돈이 안 모여요","w":"현금흐름을 못 잡음","s":[{"n":"8통장 진단지도","g":"증권 분석","p":""},{"n":"재무설계 계산기","g":"상담 도구","p":""},{"n":"재무설계 상담자료","g":"상담 도구","p":""}],"o":"「얼마 버시는지 말고 어디로 나가는지부터 보시죠.」 — 여기서 상품 이야기를 꺼내면 그 상담은 거기서 끝납니다","v":"8통장으로 새는 칸 찾기 → 계산기 「▶ 상담 순서」 다섯 단계","k":"단계 PC · 스냅샷 저장 · 다음 약속"},{"q":"노후가 막막해요","w":"은퇴 후 소득","s":[{"n":"재무설계 계산기","g":"상담 도구","p":""},{"n":"니즈 시뮬레이터","g":"상담 도구","p":""},{"n":"재무설계 상담자료","g":"상담 도구","p":""}],"o":"「막막한 게 아니라 계산을 안 해 보신 겁니다. 같이 세어 보시죠.」 — 겁주지 않습니다. 숫자만 보여 줍니다","v":"소득대체율 → 부족액 → 채우는 순서 (한 번에 다 하지 않기)","k":"단계 PC · 부족액 숫자를 메모에"},{"q":"목돈을 굴리고 싶어요","w":"투자·분산","s":[{"n":"성과·자산배분","g":"투자·경제","p":""},{"n":"재무설계 계산기","g":"상담 도구","p":""},{"n":"실무 계산기","g":"상담 도구","p":""}],"o":"「얼마를 버느냐가 아니라 언제 쓸 돈이냐부터 여쭙겠습니다.」 — 원금 보장은 단정하지 않습니다","v":"기간·세금·유동성 세 축 → 분산 이야기 (환율 예측 없이)","k":"단계 PC · 위험성향을 메모에"},{"q":"물려줄 게 걱정이에요","w":"상속·증여","s":[{"n":"세금컨설팅","g":"법인 컨설팅","p":""},{"n":"보험 솔루션","g":"법인 컨설팅","p":""},{"n":"재무설계 상담자료","g":"상담 도구","p":""}],"o":"「얼마를 물려주느냐가 아니라 누구 이름으로 되어 있느냐가 세금을 바꿉니다.」","v":"조합을 그려서 설명 → 추정 금액은 말하지 않기","k":"단계 PC · 가족 관계를 고객 365일 메모에"},{"q":"집 대출이 무거워요","w":"부채·보장 공백","s":[{"n":"8통장 진단지도","g":"증권 분석","p":""},{"n":"AI 보장분석","g":"증권 분석","p":""},{"n":"고객에게 전할 뉴스","g":"콘텐츠 제작","p":""}],"o":"「대출 줄이는 이야기는 제가 못 합니다. 대신 일을 6개월 쉬면 어떻게 되는지는 같이 보겠습니다.」","v":"대출 대비 사망·소득상실 보장 공백 → 뉴스의 부동산 칸으로 열기","k":"단계 AP · 대출 잔액·기간을 메모에"},{"q":"사업을 합니다","w":"법인·사업자","s":[{"n":"사업자 진단","g":"법인 컨설팅","p":""},{"n":"정책자금","g":"법인 컨설팅","p":""},{"n":"세금컨설팅","g":"법인 컨설팅","p":""},{"n":"퇴직금 관리","g":"법인 컨설팅","p":""}],"o":"「대표님 개인 이야기 말고 회사 돈부터 보시죠.」 — 개인 상담과 순서가 다릅니다","v":"진단 → 자금 → 세금 → 보험 → 퇴직금 순서 (개인 상담과 흐름이 다릅니다)","k":"단계 AP · 업종·직원 수를 메모에"},{"q":"보험금을 못 받았어요","w":"부지급·청구","s":[{"n":"청구·사후관리","g":"계약·청구","p":""},{"n":"치료비 지급지도","g":"증권 분석","p":""},{"n":"숨은보험금찾기","g":"자료 조회","p":""}],"o":"「왜 안 나왔는지부터 찾겠습니다. 새로 드는 이야기는 오늘 안 합니다.」","v":"부지급 사유 확인 → 재청구 가능한지 → 서류 목록","k":"고객 365일에 등록 · 청구 건으로 남기기"},{"q":"이 병이 있는데 가입돼요?","w":"인수 가능 여부","s":[{"n":"예외질환 인수확인","g":"자료 조회","p":""},{"n":"알릴의무 필터","g":"계약·청구","p":""},{"n":"질병코드·특약","g":"자료 조회","p":""}],"o":"「된다 안 된다를 지금 말씀드리면 그건 거짓말입니다. 확인하고 연락드리겠습니다.」","v":"인수 기준 확인 → 고지 대상인지 → 반드시 기록으로 남기기","k":"단계 AP · 고지 내용을 반드시 기록 (여기서 넘어가면 부지급으로 돌아옵니다)"},{"q":"사고 났어요","w":"자동차 사고","s":[{"n":"자동차사고 과실·보상","g":"계약·청구","p":""},{"n":"청구·사후관리","g":"계약·청구","p":""}],"o":"「지금 화면 켜고 같이 보겠습니다.」 — 「알아보고 연락드릴게요」 하면 그사이 상대 보험사가 먼저 갑니다","v":"상황 고르기 → 상황도 같이 보기 → 보상금 → 청구 서류 → 안내문 보내기","k":"고객 365일에 등록 · 올린 사진은 「지금 지우기」"},{"q":"부모님이 편찮으세요","w":"간병·장기요양","s":[{"n":"치료비 지급지도","g":"증권 분석","p":""},{"n":"AI 보장분석","g":"증권 분석","p":""},{"n":"보장분석 상담자료","g":"상담 도구","p":""}],"o":"「등급이 나오면 얼마가 나오는지부터 알려 드리겠습니다.」 — 파는 이야기는 그다음입니다","v":"재가급여와 간병인의 차이 → 지금 보장으로 얼마가 나오는지","k":"단계 AP · 부모님 연세·상태를 메모에"},{"q":"애들 학비가 걱정이에요","w":"교육자금","s":[{"n":"재무설계 계산기","g":"상담 도구","p":""},{"n":"니즈 시뮬레이터","g":"상담 도구","p":""},{"n":"상담카드·팩트파인딩","g":"내 고객","p":""}],"o":"「걱정만 하면 안 모입니다. 몇 살에 얼마인지 세어 보시죠.」","v":"시기별 필요 금액 → 지금 준비 상태 → 부족분","k":"단계 PC · 자녀 나이를 고객 365일에"}];
+var RX_FB = {"s":[{"n":"상담카드·팩트파인딩","g":"내 고객","p":""},{"n":"AI 상담 어시스턴트","g":"내 고객","p":""}],"o":"처방을 억지로 만들지 않습니다. 팩트파인딩 다섯 칸으로 되돌아갑니다 — 소득 · 가족 · 보장 · 걱정 · 우선순위."};
+
+function rxNorm(s){ return (s||'').replace(/\s+/g,'').toLowerCase(); }
+
+/* 적은 말과 처방을 견준다 — 사람은 화면 이름을 정확히 말하지 않는다 */
+function rxFind(q){
+  var n = rxNorm(q);
+  if(!n) return [];
+  var hit = RX_LIST.filter(function(r){
+    return rxNorm(r.q).indexOf(n) >= 0 || rxNorm(r.w).indexOf(n) >= 0 ||
+           r.s.some(function(x){ return rxNorm(x.n).indexOf(n) >= 0; });
+  });
+  if(hit.length) return hit;
+  /* 한 글자씩 흩어서 다시 — 「돈모여」 같이 줄여 적어도 찾게 */
+  return RX_LIST.filter(function(r){
+    var t = rxNorm(r.q + r.w), i = 0;
+    for(var j = 0; j < n.length; j++){ i = t.indexOf(n[j], i); if(i < 0) return false; i++; }
+    return true;
+  });
+}
+
+function rxChips(){
+  var el = $("rxChips"); if(!el) return;
+  el.innerHTML = RX_LIST.map(function(r){
+    return '<span class="rx-chip" onclick="rxPick(' + JSON.stringify(r.q).replace(/"/g,'&quot;') + ')">'
+      + esc(r.q) + '</span>';
+  }).join('');
+}
+function rxPick(q){ var i = $("rxSearch"); if(i){ i.value = q; rxRender(); } }
+
+function rxStep(x, i){
+  var go = x.p
+    ? '<button class="rx-go" onclick="goPage(\'' + x.p + '\')">' + esc(x.n) + ' 열기 →</button>'
+    : '<span class="rx-at">' + esc(x.n) + ' <i>· 앱 왼쪽 ' + esc(x.g) + '</i></span>';
+  return '<div class="rx-step"><span class="rx-no">' + (i + 1) + '</span>' + go + '</div>';
+}
+
+function rxCard(r){
+  return '<div class="rx-card">'
+    + '<div class="rx-t">' + esc(r.q) + '<small>' + esc(r.w) + '</small></div>'
+    + '<div class="rx-r"><div class="rx-k">이 순서로</div><div class="rx-v">'
+      + r.s.map(rxStep).join('') + '</div></div>'
+    + '<div class="rx-r"><div class="rx-k">이렇게 여세요</div><div class="rx-v">' + esc(r.o)
+      + '<button class="rx-cp" onclick="rxCopy(this)" data-t="' + esc(r.o) + '">복사</button>'
+      + '</div></div>'
+    + '<div class="rx-r"><div class="rx-k">보여 줄 것</div><div class="rx-v">' + esc(r.v) + '</div></div>'
+    + '<div class="rx-r"><div class="rx-k">끝나면</div><div class="rx-v rx-keep">' + esc(r.k)
+      + '</div></div>'
+    + '</div>';
+}
+
+function rxCopy(b){
+  var t = b.getAttribute('data-t') || '';
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){ b.textContent = '복사됨'; },
+                                          function(){ b.textContent = '실패'; });
+  } else { b.textContent = '실패'; }
+  setTimeout(function(){ b.textContent = '복사'; }, 1500);
+}
+
+function rxRender(){
+  var out = $("rxOut"), i = $("rxSearch"); if(!out) return;
+  var q = i ? i.value.trim() : '';
+  if(!q){ out.innerHTML = ''; return; }
+  var hit = rxFind(q);
+  if(!hit.length){
+    /* 억지로 처방을 만들지 않는다 — 팩트파인딩으로 되돌린다 */
+    out.innerHTML = '<div class="rx-none"><b>여기 없는 말입니다.</b> '
+      + esc(RX_FB.o) + '<div style="margin-top:8px">'
+      + RX_FB.s.map(function(x){ return '<span class="rx-at">' + esc(x.n)
+          + ' <i>· 앱 왼쪽 ' + esc(x.g) + '</i></span> '; }).join('')
+      + '</div></div>';
+    return;
+  }
+  out.innerHTML = hit.slice(0, 3).map(rxCard).join('');
+}
+
+function rxToggle(){
+  var w = $("rxWrap"), b = $("rxFold"); if(!w || !b) return;
+  var hide = w.style.display !== 'none';
+  w.style.display = hide ? 'none' : '';
+  b.textContent = hide ? '펴기' : '접기';
+  try{ localStorage.setItem('rxFold', hide ? '1' : '0'); }catch(e){}
+}
+
+function rxInit(){
+  rxChips();
+  try{ if(localStorage.getItem('rxFold') === '1') rxToggle(); }catch(e){}
 }
 
 </script>
