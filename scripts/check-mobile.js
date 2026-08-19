@@ -31,8 +31,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
 const W = 390;
 /* 폰에서 자주 여는 칸부터 */
-const TABS = ['home', 'clients', 'crm', 'ta', 'ckboard', 'growboard', 'bojang', 'baba',
-              'news_live', 'insta', 'airep', 'voiceasst', 'settings', 'phoneapp'];
+const TABS = ['home', 'clients', 'crm', 'ckboard', 'growboard', 'bojang', 'baba',
+              'news_live', 'insta', 'airep', 'voiceasst', 'settings', 'phone_app',
+              'teamhub', 'org', 'fact_find', 'sangdam', 'finance', 'mikki'];
 
 (async () => {
   await new Promise(r => srv.listen(0, r));
@@ -74,9 +75,13 @@ const TABS = ['home', 'clients', 'crm', 'ta', 'ckboard', 'growboard', 'bojang', 
         over.push((el.className || el.tagName).toString().slice(0, 48) +
                   ' →' + Math.round(b.right));
       });
-      return { skip: false, sw: de.scrollWidth, cw: de.clientWidth, over: over };
+      /* 이름이 틀린 칸을 조용히 넘어가면 그 화면은 영영 점검되지 않는다 */
+      let known = false;
+      try { (TABS || []).forEach(g => (g.items || []).forEach(x => { if (x.id === t) known = true; })); } catch (e) {}
+      return { skip: false, known, sw: de.scrollWidth, cw: de.clientWidth, over: over };
     }, t);
-    if (r.skip) { console.log('  · ' + t + ' — 열 수 없어 건너뜁니다'); continue; }
+    if (r.skip) { is(false, '  ' + t + ' — 열지 못했습니다: ' + r.why); continue; }
+    if (!r.known) { is(false, '  ' + t + ' — 그런 칸이 없습니다 (이름이 틀렸습니다)'); continue; }
     is(r.sw <= r.cw + 1, '  ' + t + ' (' + r.sw + '/' + r.cw + ')' +
        (r.over.length ? ' — 밀어내는 칸: ' + r.over.join(' , ') : ''));
   }
