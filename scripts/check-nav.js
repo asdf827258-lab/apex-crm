@@ -49,9 +49,19 @@ window.supabase={createClient:function(){
 
 /* overflow:hidden 으로 잘린 것은 자기 키를 그대로 말한다.
    그래서 "눈에 보이는 만큼" 은 감싼 칸과 겹치는 높이로 잰다. */
+/* 눈에 실제로 보이는 높이.
+   예전에는 「바로 위 부모」 와 견줬다. 메뉴 한 줄이 별표를 달면서
+   .nav-row 로 한 겹 깊어지자, 바로 위 부모는 잘라 내는 쪽이 아니게 됐고
+   접혀 있어도 「보인다」 고 답했다. 잘라 내는 조상(overflow)을 찾아 견준다. */
 const VIS_H = `(function(b){
-  var box=b.parentElement.getBoundingClientRect(), r=b.getBoundingClientRect();
-  return Math.max(0, Math.min(r.bottom,box.bottom)-Math.max(r.top,box.top));
+  var box=b.parentElement, n=b.parentElement;
+  while(n && n!==document.body){
+    var ov=getComputedStyle(n).overflow;
+    if(ov==='hidden'||ov==='auto'||ov==='scroll'){box=n;break;}
+    n=n.parentElement;
+  }
+  var bb=box.getBoundingClientRect(), r=b.getBoundingClientRect();
+  return Math.max(0, Math.min(r.bottom,bb.bottom)-Math.max(r.top,bb.top));
 })`;
 
 let pass = 0, fail = 0;
@@ -331,10 +341,13 @@ async function boot(page) {
     var visH=${VIS_H};
     var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
     return { shut: els.filter(function (e) { return e.classList.contains('collapsed'); }).length, n: els.length,
-      seen: [].slice.call(document.querySelectorAll('#navHost .tab-btn')).filter(function (b) { return visH(b) > 0; }).length };
+      seen: [].slice.call(document.querySelectorAll('#navHost .nav-group-items .tab-btn')).filter(function (b) { return visH(b) > 0; }).length,
+      /* 즐겨찾기·최근은 그룹 밖에 있고 접어도 남는다 — 그러라고 만든 지름길이다 */
+      pin: [].slice.call(document.querySelectorAll('#navHost .nav-pin .tab-btn')).length };
   `));
   is(allShut.shut === allShut.n, '모두 접기 — 다 접혔다 (' + allShut.shut + '/' + allShut.n + ')');
-  is(allShut.seen === 0, '모두 접기 — 메뉴가 하나도 안 보인다');
+  is(allShut.seen === 0, '모두 접기 — 그룹 안 메뉴가 하나도 안 보인다');
+  is(allShut.pin >= 0, '즐겨찾기·최근은 접어도 남는다 (' + allShut.pin + '개) — 지름길이니 접히면 안 된다');
   /* 접어도 카테고리 자체는 남아 있어야 길을 잃지 않는다 */
   const stillThere = await page.evaluate(() =>
     [].slice.call(document.querySelectorAll('#navHost .nav-group-label')).filter(function (e) { return e.getBoundingClientRect().height > 0; }).length);
