@@ -41,6 +41,8 @@
 #    frag_level.py  18부 레벨업 — 성장판 여섯 축 · 점수 공식 · 열두 주제
 #    frag_intent.html 맨 앞 「내가 이걸로 하려는 것」 — 관리 · 얻는 것 · 부탁
 #    plan_gen.py    사업계획서 낱장 A4 두 쪽 (PNG·PDF) — plan_shot.js 로 뽑는다
+#    rx_data.py     「고객 처방전」 처방 열둘 (고객 말 → 화면 순서 → 여는 말 → 남길 것)
+#    rx_gen.py      처방전 설계·운영 문서 A4 네 쪽 — rx_shot.js 로 뽑는다
 #    frag_two.py    (옛 판 — 11차에서 frag_use.py 로 교체됨)
 #    ui.py · audit.py  화면 글자 뽑기 · 책과 대조 (아래 「화면 글자」 참고)
 
@@ -68,6 +70,7 @@ python3 frag_level.py && python3 build13.py  # 13차 — 18부 레벨업 (부록
 python3 build14.py && python3 build15.py     # 14·15차 — 2026-08-19 배포판(88화면) 반영
 python3 build16.py                           # 16차 — 맨 앞 「내가 이걸로 하려는 것」
 python3 plan_gen.py && node plan_shot.js     # 사업계획서 이미지·PDF
+python3 rx_gen.py   && node rx_shot.js       # 고객 처방전 설계 문서 이미지·PDF
 ```
 
 # 4) 화면 글자 대조 — 새 글을 쓴 뒤에는 반드시
@@ -185,6 +188,21 @@ python3 audit.py    # 책이 「」로 인용한 말을 화면 글자와 맞춰 
   기록 창의 입력칸은 `상담 약속일시` 입니다. **둘을 바꿔 쓰지 마세요.**
 
 책 안에도 이 약속을 적어 두었습니다 — 제6부 머리의 「이 설명서의 약속」.
+
+## 🧾 낱장 문서(사업계획서 · 처방전)를 뽑을 때
+
+`plan_gen.py` · `rx_gen.py` 는 **A4 세로 낱장**을 만들고 `*_shot.js` 가
+PNG(2480×3508)와 PDF 로 뽑습니다.
+
+- **한글 폰트.** 이 환경에는 쓸 만한 한글 폰트가 없습니다(WenQuanYi·Unifont 뿐).
+  책에 박힌 **Pretendard 다섯 벌을 떼어 `fonts.css`** 로 두고 낱장에서 재사용합니다.
+  `book-final.html` 에서 `@font-face` 를 긁어 오면 됩니다.
+- **맺음 상자가 늘어납니다.** `.pg` 가 flex column 이고 `.ft{margin-top:auto}` 라,
+  마지막 상자에 `flex:none` 을 안 주면 **남은 공간을 다 먹어** 거대한 빈 상자가 됩니다.
+- **쪽이 비면 채우세요.** 한 쪽이 30% 넘게 비면 인쇄물로 못 씁니다.
+  내용을 옮기기보다 **빠진 절(문제 진술 · 일정 · 위험)을 넣는 편**이 낫습니다.
+- **처방의 화면 이름은 반드시 대조.** `rx_data.py` 를 고치면
+  TABS 의 `title` 과 맞는지 확인하세요 — 없는 화면을 처방하면 설명서가 거짓말이 됩니다.
 
 ## 📅 앱이 자라면 책의 숫자가 먼저 틀립니다
 
