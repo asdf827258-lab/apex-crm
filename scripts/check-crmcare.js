@@ -48,7 +48,9 @@ const core =
   cut('function ccToday()', '/* ── 지금 화면이 쓰는 값 ── */') +
   '\nreturn {ccMoney:ccMoney,ccInsSum:ccInsSum,ccVipOf:ccVipOf,ccTouchAt:ccTouchAt,' +
   'ccRows:ccRows,ccSum:ccSum,ccByWho:ccByWho,ccSortRows:ccSortRows,ccLinkFrom:ccLinkFrom,' +
-  'ccLabel:ccLabel,ccShort:ccShort,ccRunList:ccRunList,ccStageRank:ccStageRank,CC:CC};';
+  'ccLabel:ccLabel,ccShort:ccShort,ccRunList:ccRunList,ccStageRank:ccStageRank,' +
+  'ccSinceOf:ccSinceOf,ccPlanRows:ccPlanRows,ccYearRows:ccYearRows,ccDueTouch:ccDueTouch,' +
+  'CC_PLAN:CC_PLAN,CC_YEARLY:CC_YEARLY,CC:CC};';
 
 let C = null;
 try { C = new Function(core)(); } catch (e) { console.log('    (떼어 내기 실패: ' + e.message + ')'); }
@@ -252,6 +254,92 @@ if (C) {
      { id: 'q', assigned_to: 'a1', customer_name: '홍길동', stage: 'PC' }], [], TODAY)[0];
   ok(two.stage === 'PC' && two.run === true,
     '뒤처진 DB 가 앞선 DB 를 가리지 않는다 (' + two.stage + ')');
+
+
+  /* ── 3년 관리 규칙 ── */
+  console.log('\n[10-6] 기준일이 어디서 왔는지 밝힌다');
+  const sinceOf = (m, c, hit) => C.ccSinceOf(m, c || {}, hit || []);
+  ok(sinceOf({ since: '2024-03-15' }).src === '직접 적음',
+    '손으로 적은 계약일이 가장 먼저다');
+  ok(sinceOf({}, {}, [{ contracted_at: '2024-05-01T00:00:00Z' }]).at === '2024-05-01',
+    'CRM 계약일을 그 다음으로 쓴다');
+  ok(sinceOf({}, {}, [{ policy_sent_at: '2024-06-01T00:00:00Z' }]).src === 'CRM 증권전달일',
+    '계약일이 없으면 증권전달일');
+  const byYr = sinceOf({ ins: [{ yr: 2021 }, { yr: 2019 }] });
+  ok(byYr.at === '2019-01-01' && byYr.sure === false,
+    '증권에서 읽은 가장 이른 가입연도로 잡되 <b>추정</b>이라고 표시한다 (' + byYr.at + ')');
+  const byReg = sinceOf({}, { created_at: '2023-02-02T00:00:00Z' });
+  ok(byReg.at === '2023-02-02' && byReg.sure === false && /계약일이 아닙니다/.test(byReg.src),
+    '아무것도 없으면 등록일로 세되 계약일이 아니라고 못 박는다 — ' + byReg.src);
+  ok(sinceOf({}).at === '', '기준 삼을 것이 하나도 없으면 빈 값 — 지어내지 않는다');
+
+  console.log('\n[10-7] 계약일로부터 며칠째냐로 할 일이 정해진다');
+  /* 계약일을 오늘로부터 N일 전으로 놓고, 그때 무엇이 열리는지 본다 */
+  const at = (daysAgo) => {
+    const d = new Date(Date.parse(TODAY + 'T00:00:00Z') - daysAgo * 86400000).toISOString().slice(0, 10);
+    return { at: d, src: '직접 적음', sure: true };
+  };
+  const due = (daysAgo, m) => C.ccDueTouch(m || {}, at(daysAgo), TODAY).map(x => x.k);
+  /* 계약일 기준 일정만 따로 본다 — 달력이 정하는 것(기념일·연말정산)은 [10-11] 에서 본다 */
+  const plan = (daysAgo, m) =>
+    C.ccPlanRows(m || {}, at(daysAgo), TODAY).filter(x => x.st === 'now').map(x => x.k);
+  ok(plan(3).join() === 'hello', '계약 3일째면 감사 인사 차례 (' + plan(3) + ')');
+  ok(plan(20).join() === 'policy', '20일째면 증권 전달·보장 설명');
+  ok(plan(35).join() === 'pay1', '35일째면 첫 회 출금 확인 — 실효가 제일 많이 나는 자리');
+  ok(plan(95).join() === 'wait90', '95일째면 암 면책 90일 종료 안내');
+  ok(plan(370).join() === 'y1', '1년이면 13회차 유지 확인');
+  ok(plan(1100).join() === 'y3', '3년이면 보장 전체 재점검');
+  ok(plan(1).length === 0, '계약 바로 다음 날은 아직 아무 창도 안 열렸다 (2일째부터)');
+  ok(plan(300).length === 0, '창과 창 사이에는 아무것도 안 띄운다 — 없는 일을 만들지 않는다');
+  /* 창은 일부러 겹친다 — 면책 종료와 3개월 점검은 한 통에 같이 하면 된다 */
+  ok(plan(110).join() === 'wait90,m3',
+    '110일째는 두 창이 겹친다 — 한 번 걸 때 같이 하면 된다 (' + plan(110) + ')');
+
+  console.log('\n[10-8] 지나간 일정은 알람으로 안 띄운다');
+  const longAgo = C.ccPlanRows({}, at(1200), TODAY);
+  const missed = longAgo.filter(x => x.st === 'miss').length;
+  ok(missed >= 10, '3년 넘은 고객을 지금 넣으면 지나간 항목이 ' + missed + '개나 된다');
+  ok(due(1200).length <= 1,
+    '그래도 알람은 최대 한 건이다 — 열 개가 쏟아지면 아무것도 안 하게 된다 (' + due(1200).length + '건)');
+  ok(longAgo.filter(x => x.st === 'miss').length > 0 && longAgo.some(x => x.t),
+    '지나간 것은 타임라인에 「안 했음」 으로 남는다 — 지우지는 않는다');
+
+  console.log('\n[10-9] 한 것은 다시 안 뜬다');
+  ok(plan(110, { plan: { m3: '2026-08-01' } }).join() === 'wait90',
+    '3개월 점검을 했다고 체크하면 그 창만 닫힌다 (' + plan(110, { plan: { m3: 'x' } }) + ')');
+  ok(plan(110, { plan: { y1: '2026-08-01' } }).join() === 'wait90,m3',
+    '다른 것을 체크한 것은 이 창들에 영향이 없다');
+
+  console.log('\n[10-10] 3년이 지나도 관리는 안 끝난다');
+  const y5 = C.ccPlanRows({}, at(365 * 5 + 5), TODAY);
+  const every = y5.filter(x => /^yr\d/.test(x.k));
+  ok(every.length >= 2, '3년 뒤로도 해마다 한 칸씩 이어진다 (' + every.map(x => x.k).join(',') + ')');
+  ok(/주년/.test((every[0] || {}).t || ''), '몇 주년인지 이름에 적힌다 — ' + (every[0] || {}).t);
+  ok(plan(365 * 5 + 5).length === 1, '5년째에도 그 해 것 하나가 뜬다');
+
+  console.log('\n[10-11] 달력이 정하는 것 — 해마다');
+  const dec = '2026-12-01', mar = '2026-03-20';
+  ok(C.ccYearRows({}, at(400), dec).some(x => /연말정산/.test(x.t)),
+    '11/15~12/31 에는 연말정산 안내가 뜬다');
+  ok(!C.ccYearRows({}, at(400), mar).some(x => /연말정산/.test(x.t)),
+    '3월에는 안 뜬다');
+  ok(C.ccYearRows({}, { at: '2024-03-11', src: '직접 적음', sure: true }, mar).some(x => /계약 기념일/.test(x.t)),
+    '계약한 달이 오면 기념일이 뜬다');
+  ok(!C.ccYearRows({}, { at: '2024-03-11', src: '등록일', sure: false }, mar).some(x => /계약 기념일/.test(x.t)),
+    '기준일이 추정이면 기념일은 안 띄운다 — 엉뚱한 달에 축하하면 안 하느니만 못하다');
+  ok(!C.ccYearRows({ plan: { tax2026: '2026-11-20' } }, at(400), dec).some(x => /연말정산/.test(x.t)),
+    '올해 연말정산을 했다고 체크하면 올해는 안 뜬다');
+  /* 계약일 일정과 달력 일정은 같이 뜬다 — 둘은 서로 다른 시계다 */
+  const both = due(3);   /* at(3) 은 이번 달이라 기념일도 같이 걸린다 */
+  ok(both.indexOf('hello') >= 0 && both.some(k => /^anniv/.test(k)),
+    '계약일 일정과 계약 기념일이 같은 날 겹치면 둘 다 뜬다 (' + both.join(',') + ')');
+
+  console.log('\n[10-12] 제도가 정한 기간은 표시해 둔다');
+  const law = C.CC_PLAN.filter(p => p.lw).map(p => p.k);
+  ok(law.indexOf('policy') >= 0 && law.indexOf('wait90') >= 0 && law.indexOf('m3') >= 0,
+    '청약철회·암 면책 90일·품질보증 3개월은 「제도」 로 표시된다 (' + law.join(',') + ')');
+  ok(C.CC_PLAN.every(p => p.t && p.how && p.why),
+    '규칙마다 무엇을 하는지와 왜 하는지가 다 적혀 있다 — 까닭이 없으면 아무도 안 한다');
 
   /* ── 팀원별 달성률 ── */
   console.log('\n[11] TFA 달성률이 손으로 센 값과 같다');
