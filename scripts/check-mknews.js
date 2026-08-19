@@ -43,9 +43,20 @@ const NEWS_INS = [
   { title: '생보사 뇌·심장 진단비 담보 한도 상향', link: 'https://x/2', date: '2026-08-15', source: '한국경제', desc: '' },
   { title: '손보 빅4, 암 보험금 지급 기준 손질', link: 'https://x/3', date: '2026-08-14', source: '매일경제', desc: '' }
 ];
+/* 보험은 아니지만 이제는 남겨야 하는 것 — 부동산·정책자금·세금 */
 const NEWS_OTHER = [
   { title: '반도체 수출 3개월 연속 증가', link: 'https://x/9', date: '2026-08-15', source: '매일경제', desc: '' },
   { title: '서울 아파트 거래량 회복세', link: 'https://x/8', date: '2026-08-14', source: '한국경제', desc: '' }
+];
+/* 사업자·세금 기사 — 넓힌 그물이 이걸 잡아야 한다 */
+const NEWS_BIZ = [
+  { title: '소상공인 정책자금 500억 추가 공모… 다음 달 3일부터 접수', link: 'https://x/7', date: '2026-08-15', source: '연합뉴스', desc: '' },
+  { title: '종합소득세 세액공제 한도 상향 시행령 개정', link: 'https://x/6', date: '2026-08-15', source: '한국경제', desc: '' }
+];
+/* 어느 주제에도 안 걸리는 것 — 이건 여전히 버려야 한다 */
+const NEWS_JUNK = [
+  { title: '프로야구 오늘의 경기 결과', link: 'https://x/5', date: '2026-08-15', source: '연합뉴스', desc: '' },
+  { title: '주말 전국 흐리고 곳에 따라 비', link: 'https://x/4', date: '2026-08-15', source: '연합뉴스', desc: '' }
 ];
 
 /* 서버가 어떻게 답할지 — 시험 중에 바꿔 가며 본다 */
@@ -67,6 +78,8 @@ const srv = http.createServer((rq, rs) => {
     if (MODE === 'empty') return j({ ok: true, news: [], keywords: [] });
     if (MODE === 'other') return j({ ok: true, news: NEWS_OTHER, keywords: [] });
     if (MODE === 'mixed') return j({ ok: true, news: NEWS_INS.concat(NEWS_OTHER), keywords: [] });
+    if (MODE === 'biz') return j({ ok: true, news: NEWS_BIZ, keywords: [] });
+    if (MODE === 'junk') return j({ ok: true, news: NEWS_JUNK, keywords: [] });
     return j({ ok: true, news: NEWS_INS, keywords: [] });
   }
 
@@ -157,8 +170,12 @@ async function pressAndRead(fr) {
   MODE = 'ok';
   let msg = await pressAndRead(fr);
   is(seen && seen.token === TOKEN, '  X-App-Token 을 붙여 보낸다 (없으면 서버가 401 로 막는다)');
-  is(seen && /kind=news/.test(seen.query) && /cat=%EB%B3%B4%ED%97%98|cat=보험/.test(decodeURIComponent(seen.query) + seen.query),
-     '  보험 칸을 부른다 — ' + (seen ? seen.query : ''));
+  const askedCats = seen ? decodeURIComponent(seen.query) : '';
+  is(/kind=news/.test(seen ? seen.query : ''), '  뉴스를 부른다');
+  /* 예전에는 보험 칸 하나만 불렀다. 그래서 정책자금·세금·부동산은
+     서버에서 아예 오지도 않았다. */
+  ['보험', '경제', '부동산', '생활정책', '정책자금'].forEach(c =>
+    is(askedCats.indexOf(c) >= 0, '  ' + c + ' 칸을 부른다'));
 
   console.log('\n[3] 받은 기사가 진짜로 화면에 들어온다');
   is(/3건이 들어왔습니다/.test(msg), '  들어온 건수를 말한다 — ' + msg.slice(0, 40));
@@ -173,16 +190,32 @@ async function pressAndRead(fr) {
   is(/3/.test(got.stat), '  위쪽 「뉴스 N건」 도 같이 바뀐다 — ' + got.stat.trim());
   is(got.saved === 3, '  껐다 켜도 남게 저장한다 — ' + got.saved + '건');
 
-  console.log('\n[4] 보험 기사가 아닌 것은 걸러 내고, 남은 수를 말한다');
+  console.log('\n[4] 쓸 주제만 남기고, 남은 수를 말한다');
   MODE = 'mixed';
   msg = await pressAndRead(fr);
-  is(/3건이 들어왔습니다/.test(msg), '  5건 받아 3건만 남긴다 — ' + msg.slice(0, 30));
+  /* 보험 3 + 아파트(부동산) 1 = 4. 반도체 기사는 어느 주제에도 안 걸려 버린다.
+     예전에는 보험이 아니면 무조건 버려서 3건이었다. */
+  is(/4건이 들어왔습니다/.test(msg), '  5건 받아 4건 남긴다 — 부동산 기사도 이제 남는다 — ' + msg.slice(0, 30));
   is(/5건 중/.test(msg), '  받은 수도 같이 밝힌다 (숫자가 줄어든 이유) — ' + msg.slice(-40));
-  is(await fr.evaluate(() => state.news.length) === 3, '  목록도 3건이다');
+  let ttl = await fr.evaluate(() => state.news.map(n => n.title));
+  is(ttl.length === 4, '  목록도 4건이다');
+  is(ttl.some(x => /아파트/.test(x)), '  부동산 기사가 남았다');
+  is(!ttl.some(x => /반도체/.test(x)), '  어느 주제에도 안 걸리는 기사는 그대로 버린다');
 
-  MODE = 'other';
+  console.log('\n[4-2] 사업자·세금 기사도 잡는다');
+  MODE = 'biz';
   msg = await pressAndRead(fr);
-  is(/보험 기사가 하나도 없었습니다/.test(msg), '  보험 기사가 하나도 없으면 그렇게 말한다 — ' + msg.slice(0, 40));
+  is(/2건이 들어왔습니다/.test(msg), '  정책자금·세금 기사 2건이 다 남는다 — ' + msg.slice(0, 30));
+  const biz = await fr.evaluate(() => state.news.map(n => ({ t: n.title, g: n.tags, s: n.score })));
+  is(biz.some(x => (x.g || []).indexOf('정책자금') >= 0), '  「정책자금」 이름표가 붙는다');
+  is(biz.some(x => (x.g || []).indexOf('세금') >= 0), '  「세금」 이름표가 붙는다');
+  /* 마감이 있는 자금 기사가 사업자에게는 제일 센 미끼다 */
+  const fund = biz.filter(x => /정책자금 500억/.test(x.t))[0];
+  is(fund && fund.s >= 60, '  기한이 있는 자금 기사는 미끼 점수가 높다 — ' + (fund ? fund.s : '-'));
+
+  MODE = 'junk';
+  msg = await pressAndRead(fr);
+  is(/쓸 만한 기사가 하나도 없었습니다/.test(msg), '  쓸 주제가 하나도 없으면 그렇게 말한다 — ' + msg.slice(0, 40));
 
   console.log('\n[5] 안 될 때 조용히 끝나지 않는다');
   MODE = 'empty';
@@ -374,6 +407,36 @@ async function pressAndRead(fr) {
 
   await browser.close();
   srv.close();
+  /* ══ 스스로 쌓기 · 자료 칸 ══════════════════════════════════ */
+  console.log('\n[10] 하루 한 번 스스로 모아 달 서랍에 쌓는다');
+  const mk = fs.readFileSync('app/상담자료/미끼레이더/index.html', 'utf8');
+  is(/function pulledToday\(\)/.test(mk), '  오늘 모았는지 기억하는 자리가 있다');
+  is(/localStorage\.setItem\('mikki_pullday'/.test(mk), '  모은 날을 적어 둔다');
+  is(/if\(pulledToday\(\)\)\{/.test(mk), '  오늘 이미 모았으면 다시 안 부른다 — 서버에 미안하지 않게');
+  is(/pull\(\)\.then\(function\(ok\)\{ if\(ok\)markPulled\(\); \}/.test(mk),
+     '  성공했을 때만 「오늘 모았다」 로 적는다 — 실패했는데 적으면 하루를 통째로 건너뛴다');
+  is(/const added=archAdd\(state\.news\)/.test(mk), '  모은 것은 달 서랍에 쌓인다');
+  is(/new Date\(Date\.now\(\)\+9\*3600\*1000\)/.test(mk), '  「오늘」 은 한국 시각으로 센다');
+
+  console.log('\n[11] 정책자금·세금·부동산까지 긁어 온다');
+  const src = JSON.parse(fs.readFileSync('config/sources.json', 'utf8'));
+  is(Array.isArray(src['정책자금']) && src['정책자금'].length >= 3,
+     '  정책자금 피드 칸이 있다 (' + ((src['정책자금'] || []).length) + '개)');
+  (src['정책자금'] || []).forEach(f =>
+    is(!!f.url && /^https:\/\//.test(f.url), '  ' + (f.name || '?') + ' 에 주소가 있다'));
+  [['키워드_정책자금', 60], ['키워드_세금', 50], ['키워드_부동산', 60], ['키워드_지원금혜택', 45]].forEach(([k, n]) =>
+    is((src[k] || []).length >= n, '  ' + k + ' 이(가) ' + n + '개 이상이다 — 지금 ' + ((src[k] || []).length)));
+  /* 없애지 않았는가 — 있던 칸이 다 살아 있어야 한다 */
+  ['경제', '보험', '부동산', '생활정책', '키워드_보험핫이슈', '키워드_투자솔루션'].forEach(k =>
+    is(Array.isArray(src[k]) && src[k].length > 0, '  있던 칸 「' + k + '」 이(가) 그대로 있다'));
+  /* 사업자 낱말이 실제로 들어 있는가 */
+  ['소상공인', '신용보증', '이차보전', '노란우산공제', '두루누리'].forEach(w =>
+    is((src['키워드_정책자금'] || []).indexOf(w) >= 0, '  「' + w + '」 이(가) 낱말에 있다'));
+  ['가업상속공제', '경정청구', '금융소득종합과세'].forEach(w =>
+    is((src['키워드_세금'] || []).indexOf(w) >= 0, '  세금 낱말에 「' + w + '」 이(가) 있다'));
+  ['스트레스 DSR', '분양가상한제', '재건축초과이익'].forEach(w =>
+    is((src['키워드_부동산'] || []).indexOf(w) >= 0, '  부동산 낱말에 「' + w + '」 이(가) 있다'));
+
   console.log('\n──────────────────────────────');
   console.log(bad ? '뉴스 모아 오기 점검 실패 — ' + bad + '가지 어긋납니다.'
                   : '뉴스 모아 오기 점검 통과 — 다 맞습니다.');
