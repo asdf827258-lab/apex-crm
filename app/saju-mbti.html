@@ -860,7 +860,7 @@ function combine(p){
 /* 궁합 */
 function fitCalc(me,cl){
   var a=me.saju,b=cl.saju,mc=personCode(me),cc=personCode(cl),items=[],sj=50,mb=50;
-  var hasS=!!(a&&b), hasM=!!(mc&&cc);
+  var hasS=!!(a&&b), hasM=!!(mc&&cc), hasB=!!(me.blood&&cl.blood), bl=null;
   var jr=hasS?jiRel(a.dj,b.dj):null, gr=hasS?ganRel(a.dg,b.dg):null, of1={lack:[],filled:[]};
   if(hasS){
     items.push({k:'일지 관계',v:jr.k,s:jr.s,txt:jr.txt}); sj+=jr.s;
@@ -881,12 +881,18 @@ function fitCalc(me,cl){
   });
   /* 사주가 좋다고 상담이 되는 게 아니고, 성향이 어긋난다고 안 되는 것도 아니다.
      두 쪽을 따로 매기고 반반으로 합친다. */
+  if(hasB){
+    bl=bloodScore(me.blood,cl.blood);
+    items.push({k:'혈액형',v:me.blood+'형 vs '+cl.blood+'형',s:Math.round((bl-60)/2),bloodRow:true,
+      txt:bloodFit(me.blood,cl.blood)});
+  }
   sj=hasS?Math.max(8,Math.min(98,Math.round(sj))):null;
   mb=hasM?Math.max(8,Math.min(98,Math.round(mb))):null;
-  var sc=(sj===null)?mb:((mb===null)?sj:Math.round((sj+mb)/2));
+  var parts=[];if(sj!==null)parts.push(sj);if(mb!==null)parts.push(mb);if(bl!==null)parts.push(bl);
+  var sc=parts.length?Math.round(parts.reduce(function(x,y){return x+y;},0)/parts.length):50;
   var lv=sc>=80?{t:'아주 잘 맞음',c:'#1F7A61',bg:'#EAF8F3'}:sc>=65?{t:'잘 맞는 편',c:'#6F63C4',bg:'#F1EEFF'}
     :sc>=50?{t:'보통 — 준비하면 된다',c:'#9A5B0C',bg:'#FFF6E9'}:{t:'어긋나기 쉬움 — 방식을 바꿔야 한다',c:'#BB3A54',bg:'#FFF0F1'};
-  return {score:sc,sajuScore:sj,mbtiScore:mb,level:lv,items:items,jr:jr,gr:gr,fill:of1,hasS:hasS,hasM:hasM};
+  return {score:sc,sajuScore:sj,mbtiScore:mb,bloodScore:bl,level:lv,items:items,jr:jr,gr:gr,fill:of1,hasS:hasS,hasM:hasM,hasB:hasB};
 }
 /* 상담 전략 — 축마다 나 / 상대 / 이대로 하면 / 이렇게 바꿔라 */
 function talkPlan(me,cl){
@@ -1221,7 +1227,8 @@ function tabSum(){
         '<div style="flex:1;min-width:0"><div style="font-size:26px;font-weight:900;color:'+fit.level.c+'">'+fit.score+'점</div>'+
         '<div class="pill" style="color:'+fit.level.c+';background:'+fit.level.bg+';margin-top:4px">'+fit.level.t+'</div>'+
         '<div class="chiplist">'+(fit.sajuScore!==null?'<span class="chip">사주 '+fit.sajuScore+'</span>':'')+
-          (fit.mbtiScore!==null?'<span class="chip">성향 '+fit.mbtiScore+'</span>':'')+'</div>'+
+          (fit.mbtiScore!==null?'<span class="chip">성향 '+fit.mbtiScore+'</span>':'')+
+          (fit.bloodScore!==null?'<span class="chip">혈액형 '+fit.bloodScore+'</span>':'')+'</div>'+
         (fit.hasS?'<p style="font-size:12.5px">'+esc(fit.jr.txt)+'</p>':'')+'</div></div>'+
       (plan?('<div class="hr"></div><h2 style="font-size:14px">오늘 이 세 가지만 지키세요</h2>'+
         plan.rows.filter(function(r){return !r.same&&r.label!=='말의 양';}).concat(plan.rows.filter(function(r){return !r.same&&r.label==='말의 양';})).slice(0,2).map(function(r){
@@ -1299,6 +1306,7 @@ function tabFit(){
       '<div class="pill" style="color:'+fit.level.c+';background:'+fit.level.bg+';margin-top:4px">'+fit.level.t+'</div>'+
       (fit.sajuScore!==null?'<div class="kv" style="margin-top:9px"><span>🀄 사주 궁합</span><b>'+fit.sajuScore+'점</b></div>':'')+
       (fit.mbtiScore!==null?'<div class="kv"><span>🧩 성향 궁합</span><b>'+fit.mbtiScore+'점</b></div>':'')+
+      (fit.bloodScore!==null?'<div class="kv"><span>🩸 혈액형 궁합</span><b>'+fit.bloodScore+'점</b></div>':'')+
       '<p style="font-size:12.5px">두 쪽을 반반으로 합친 점수입니다. 궁합이 낮다고 계약이 안 되는 게 아닙니다. <b>어디서 어긋나는지</b>를 알고 그 지점만 바꾸면 됩니다.</p></div></div>'+
   '</div>';
   var tb='<div class="card"><h2><span class="n">표</span>무엇을 보고 매긴 점수인가</h2>'+
@@ -1310,11 +1318,13 @@ function tabFit(){
     '<tr><td class="plain" colspan="4" style="background:#FAF8FF">'+
       (fit.sajuScore!==null?'<b>사주 '+fit.sajuScore+'점</b>(일지·일간·오행) ':'')+
       (fit.mbtiScore!==null?'<b>성향 '+fit.mbtiScore+'점</b>(네 축) ':'')+
-      '을 기본 50점에서 더하고 뺐습니다'+(fit.sajuScore!==null&&fit.mbtiScore!==null?'. 반반으로 합쳐 <b>'+fit.score+'점</b>이 됐습니다':'')+'.</td></tr>'+
+      (fit.bloodScore!==null?'<b>혈액형 '+fit.bloodScore+'점</b> ':'')+
+      '을 각각 매긴 뒤 평균해 <b>'+fit.score+'점</b>이 됐습니다.</td></tr>'+
     '</tbody></table></div></div>';
   var gr=fit.gr;
   var read='<div class="card"><h2><span class="n">읽기</span>이 관계는 이렇게 굴러갑니다</h2>'+
     (fit.hasS?'<div class="talk">🀄 <b>사주</b> — '+esc(fit.jr.txt)+' '+esc(gr.txt)+'</div>':'')+
+    (fit.hasB?'<div class="talk">🩸 <b>혈액형</b> ('+esc(S.me.blood)+'형 ↔ '+esc(cl.blood)+'형) — '+esc(bloodFit(S.me.blood,cl.blood))+'</div>':'')+
     (fit.fill.filled.length?'<div class="talk good">🌿 <b>보완</b> — 내게 없는 '+fit.fill.filled.join('·')+' 기운을 이 고객이 갖고 있습니다. 내가 어려워하는 이야기를 이 사람은 편하게 받습니다.</div>':'')+
     (fit.hasM?fit.items.filter(function(x){return x.k.indexOf('성향')===0;}):[]).map(function(x){
       return '<div class="talk'+(x.s<0?' bad':'')+'">'+(x.s<0?'⚠️':'👍')+' <b>'+esc(x.k)+'</b> ('+esc(x.v)+') — '+esc(x.txt)+'</div>';}).join('')+
@@ -1808,6 +1818,7 @@ function tabIns(){
     care.map(function(r){return '<tr><td class="head"><b>'+r[0]+'</b></td><td class="plain">'+esc(r[1])+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
     (ip.gan?'<div class="note ok"><b>연락할 때</b> — '+esc(ip.gan.care)+'</div>':'')+
+    (cl.blood&&BLOOD[cl.blood]?'<div class="note info">🩸 <b>'+cl.blood+'형</b> — '+esc(BLOOD[cl.blood].manage)+'</div>':'')+
   '</div>';
   var oh='';
   if(ip.lack.length||ip.many.length){
@@ -2270,10 +2281,14 @@ var BLOOD_FIT={
   'O|AB':'제가 밀고 상대가 정리하는 조합입니다. 결론을 상대가 말하게 두면 매끄럽습니다.',
   'AB|AB':'이해는 빠르지만 둘 다 결정을 미룹니다. 날짜를 못 박는 사람이 있어야 끝납니다.'
 };
+var BLOOD_ORDER=['A','B','O','AB'];
+function bloodKey(a,b){
+  var ia=BLOOD_ORDER.indexOf(a),ib=BLOOD_ORDER.indexOf(b);
+  return (ia<=ib)?(a+'|'+b):(b+'|'+a);
+}
 function bloodFit(a,b){
   if(!a||!b)return '';
-  var k=[a,b].sort().join('|');
-  return BLOOD_FIT[k]||'';
+  return BLOOD_FIT[bloodKey(a,b)]||'';
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2391,6 +2406,27 @@ function tabBlood(){
     '<p>'+esc(B.line)+'</p>'+
     '<div class="talk good" style="text-align:left">🌾 '+esc(B.bless)+'</div>'+
   '</div>';
+  var D=BLOOD_DEEP[b];
+  var deep='<div class="card"><h2><span class="n">표</span>'+b+'형은 이렇게 삽니다</h2>'+
+    '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:110px">항목</th><th>내용</th></tr></thead><tbody>'+
+    [['인생 결',D.life],['일',D.work],['돈',D.money],['사랑·인연',D.love],['건강',D.health],
+     ['지칠 때',D.stress],['평생 숙제',D.grow]].map(function(r){
+      return '<tr><td class="head"><b>'+r[0]+'</b></td><td class="plain">'+esc(r[1])+'</td></tr>';}).join('')+
+    '</tbody></table></div>'+
+    '<div class="note info"><b>이 분을 대할 때</b> — '+esc(D.with)+'</div></div>';
+  var TYPES=['A','B','O','AB'];
+  var matrix='<div class="card"><h2><span class="n">궁합</span>혈액형 궁합 한눈에</h2>'+
+    '<div class="tbwrap scrollx"><table class="tb"><thead><tr><th style="width:64px">나 \\ 상대</th>'+
+    TYPES.map(function(x){return '<th style="width:110px">'+BLOOD[x].emo+' '+x+'형</th>';}).join('')+'</tr></thead><tbody>'+
+    TYPES.map(function(x){
+      return '<tr><td><b>'+BLOOD[x].emo+' '+x+'형</b></td>'+TYPES.map(function(y){
+        var sc=bloodScore(x,y),hi=(x===mb&&y===b)||(x===b&&y===mb);
+        var c=sc>=70?'#1F7A61':(sc>=60?'#6F63C4':'#9A5B0C');
+        return '<td'+(hi?' style="background:#F4F1FF"':'')+'><b style="color:'+c+'">'+sc+'점</b>'+(hi?' <span class="pill" style="background:#EFEAFF;color:#6F63C4">우리</span>':'')+'</td>';
+      }).join('')+'</tr>';}).join('')+
+    '</tbody></table></div>'+
+    (mb?'<div class="note ok"><b>'+mb+'형(나) ↔ '+b+'형 · '+bloodScore(mb,b)+'점</b> — '+esc(fit)+'</div>':'')+
+  '</div>';
   var t1='<div class="card"><h2><span class="n">표</span>강점과 조심할 점</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:36px">#</th><th>강점</th><th>'+(S.view==='agent'?'조심할 점':'조금만 더 하시면 좋은 것')+'</th></tr></thead><tbody>'+
     B.str.map(function(x,i){return '<tr><td class="head">'+(i+1)+'</td><td class="full" data-l="강점">'+esc(x)+'</td><td class="full" data-l="조심">'+esc(B.care[i]||'')+'</td></tr>';}).join('')+
@@ -2408,7 +2444,7 @@ function tabBlood(){
     '<div class="talk">"'+esc(B.str[0])+' — 주변에서 그런 말 자주 들으시죠?"</div>'+
     '<div class="sub" style="margin-top:8px">맞다고 하시면 그 이야기로, 아니라고 하시면 "그럼 어떤 쪽이세요?"로 이어가면 됩니다. 어느 쪽이든 대화가 열립니다.</div>'+
   '</div>';
-  return head+agentOnly(ice)+t1+t2+warn+footNote();
+  return head+agentOnly(ice)+t1+deep+matrix+t2+warn+footNote();
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2753,6 +2789,7 @@ function tabWorry(){
     (w.txt?'<div class="talk" style="margin-top:10px">"'+esc(w.txt)+'"</div>':'')+
     '<p>'+o.now+'</p>'+
     '<div class="talk good">🌾 '+esc(o.bless)+'</div>'+
+    (cl.blood&&BLOOD_DEEP[cl.blood]?'<div class="talk">🩸 '+esc(cl.blood)+'형이시라 '+esc(BLOOD_DEEP[cl.blood].stress)+'</div>':'')+
     '<div class="row" style="margin-top:12px"><button class="btn ghost sm" onclick="worryReset()">다른 고민 물어보기</button>'+
     (paid?'<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button>':'')+'</div>'+
   '</div>';
@@ -2896,7 +2933,11 @@ function relPlan(me,other,rk){
   var gr=(me.saju&&other.saju)?ganRel(me.saju.dg,other.saju.dg):null;
   var jr=(me.saju&&other.saju)?jiRel(me.saju.dj,other.saju.dj):null;
   var sajuLine=gr?((GAN_ROLE[gr.k]&&GAN_ROLE[gr.k][g==='client'?'client':g])||gr.txt):'';
+  var bg=(g==='client')?'side':g;
+  var bloodTip=(other.blood&&BLOOD_ROLE[bg])?BLOOD_ROLE[bg][other.blood]:'';
+  var bloodPairTxt=(me.blood&&other.blood)?bloodFit(me.blood,other.blood):'';
   var out={role:R,group:g,rows:rows,og:og,mg:mg,gr:gr,jr:jr,saju:sajuLine,
+    blood:other.blood||'',bloodTip:bloodTip,bloodPair:bloodPairTxt,myBlood:me.blood||'',
     learn:og?LEARN[og]:'',manage:og?MANAGE[og]:'',grow:og?GROW[og]:null,
     ogName:og?PAL[og].name:'',mgName:mg?PAL[mg].name:''};
   /* 역할별 실전 표 */
@@ -2947,9 +2988,12 @@ function tabRel(){
       '<div class="pill" style="color:'+fit.level.c+';background:'+fit.level.bg+';margin-top:4px">'+fit.level.t+'</div>'+
       '<div class="sub" style="margin-top:6px">나('+esc(S.me.name)+' · '+(personCode(S.me)||'-')+') ↔ '+esc(cl.name)+'('+(personCode(cl)||'-')+') · '+R.n+'</div></div></div>'+
   '</div>';
-  var saju=p.saju?('<div class="card"><h2><span class="n">사주</span>이 관계의 결</h2>'+
-    '<div class="talk">🀄 <b>'+(p.gr?p.gr.k:'')+'</b> — '+p.saju+'</div>'+
-    (p.jr?'<div class="talk">📍 일지 <b>'+p.jr.k+'</b> — '+esc(p.jr.txt)+'</div>':'')+'</div>'):'';
+  var saju=(p.saju||p.bloodTip)?('<div class="card"><h2><span class="n">결</span>이 관계의 바탕</h2>'+
+    (p.saju?'<div class="talk">🀄 <b>'+(p.gr?p.gr.k:'')+'</b> — '+p.saju+'</div>':'')+
+    (p.jr?'<div class="talk">📍 일지 <b>'+p.jr.k+'</b> — '+esc(p.jr.txt)+'</div>':'')+
+    (p.bloodTip?'<div class="talk">🩸 <b>'+esc(p.blood)+'형 '+esc(R.you)+'</b> — '+esc(p.bloodTip)+'</div>':'')+
+    (p.bloodPair?'<div class="talk">🩸 <b>'+esc(p.myBlood)+'형 ↔ '+esc(p.blood)+'형 ('+bloodScore(p.myBlood,p.blood)+'점)</b> — '+esc(p.bloodPair)+'</div>':'')+
+    '</div>'):'';
   var tb='<div class="card"><h2><span class="n">실전</span>'+esc(R.n)+' — 이렇게 하세요</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:150px">항목</th><th>이렇게</th></tr></thead><tbody>'+
     p.table.filter(function(r){return r[1];}).map(function(r){
@@ -2972,6 +3016,70 @@ function tabRel(){
     '<div class="talk">💬 물어볼 질문 — "그 상황에서 어떤 기준으로 결정하셨어요?" 방법보다 <b>기준</b>을 물어야 남습니다.</div>'+
     '<div class="note info">배울 것이 없는 상사는 드뭅니다. 성향이 다를수록 <b>내가 약한 축</b>을 그분이 갖고 있을 가능성이 큽니다.</div></div>'):'';
   return pick+saju+tb+axis+grow+learn+footNote();
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   24. 혈액형을 깊게 — 인생·일·돈·건강, 관계 역할별 대응, 궁합 점수
+   ══════════════════════════════════════════════════════════════════
+   과학적으로 확인된 것이 아니라는 점은 그대로다. 다만 우리나라에서는
+   첫 자리에서 가장 빨리 꺼낼 수 있는 이야기라, 쓸 거면 제대로 쓴다.  */
+var BLOOD_DEEP={
+  A:{life:'차근차근 쌓아 올리는 인생입니다. 남들보다 늦어 보여도 무너지지 않습니다.',
+    work:'맡은 자리를 끝까지 지킵니다. 실수가 적어 오래 쓰이는 사람이 됩니다.',
+    money:'아껴 모으는 쪽입니다. 큰 수익보다 원금이 지켜지는 것을 먼저 봅니다.',
+    love:'천천히 다가가고 오래 갑니다. 표현이 늦어 오해를 사기도 합니다.',
+    health:'속으로 삭이다 위장과 어깨로 옵니다. 참는 것이 병이 되는 유형입니다.',
+    stress:'걱정이 앞서고 잠이 얕아집니다. 할 일을 종이에 적어 밖으로 꺼내면 가라앉습니다.',
+    grow:'거절하는 연습. 다 맡다가 정작 내 일을 못 합니다.',
+    with:'결정을 대신 내려주려 하지 마세요. 시간을 드리면 스스로 정하십니다.'},
+  B:{life:'하고 싶은 걸 하며 사는 인생입니다. 남의 기준으로 재면 답이 안 나옵니다.',
+    work:'몰입할 때의 결과가 남다릅니다. 관심이 식으면 손을 놓습니다.',
+    money:'쓸 때 시원하게 씁니다. 목적이 분명한 지출은 아끼지 않습니다.',
+    love:'솔직하고 뜨겁습니다. 구속하면 그날로 식습니다.',
+    health:'무리해도 티가 안 나다 한 번에 무너집니다. 규칙적인 생활이 최고의 보약입니다.',
+    stress:'답답하면 밖으로 나가야 풀립니다. 가둬 두면 더 커집니다.',
+    grow:'마무리하는 연습. 시작한 것 중 하나만 끝까지 가보세요.',
+    with:'규정부터 말하지 마세요. 하고 싶은 이야기를 먼저 듣고 나서 조건을 붙이면 됩니다.'},
+  O:{life:'목표를 정하고 밀고 가는 인생입니다. 사람이 따르는 자리에 자주 서게 됩니다.',
+    work:'결단이 빠르고 판을 키웁니다. 세부는 다른 사람이 채워줘야 합니다.',
+    money:'벌어서 크게 쓰는 쪽입니다. 사람에게 쓰는 돈을 아끼지 않습니다.',
+    love:'직진합니다. 마음을 숨기지 못해 상처도 빨리 받습니다.',
+    health:'체력은 좋은데 과신합니다. 혈압·간 쪽을 정기적으로 보셔야 합니다.',
+    stress:'지는 것을 못 견뎌 몸으로 풉니다. 운동이 가장 잘 듣는 유형입니다.',
+    grow:'기다리는 연습. 남의 속도를 인정하면 사람이 더 붙습니다.',
+    with:'이기려 들지 마세요. 선택지를 드리고 고르게 하면 그 자리에서 정하십니다.'},
+  AB:{life:'한 발 떨어져 보며 사는 인생입니다. 휩쓸리지 않아 큰 손해가 적습니다.',
+    work:'머리 회전이 빠르고 정리가 깔끔합니다. 관심 없는 일에는 냉담합니다.',
+    money:'계산이 정확합니다. 감정으로 지갑을 열지 않습니다.',
+    love:'거리를 두다 한 번에 마음을 엽니다. 그 전까지는 속을 모릅니다.',
+    health:'신경 쓰는 만큼 소화기와 두통으로 옵니다. 생각을 줄이는 것이 약입니다.',
+    stress:'말수가 줄고 혼자 있으려 합니다. 그때는 붙잡지 말고 시간을 주는 게 낫습니다.',
+    grow:'마음을 먼저 보여주는 연습. 재고 있으면 상대도 재게 됩니다.',
+    with:'밀어붙이면 닫힙니다. 자료를 두고 나오면 혼자 검토한 뒤 답을 주십니다.'}
+};
+/* 관계 역할별 — 상대가 이 혈액형일 때 */
+var BLOOD_ROLE={
+  up:{A:'꼼꼼히 보시는 분입니다. 빠진 칸이 있는 보고는 그 자리에서 멈춥니다. 완성도를 먼저 챙기세요.',
+    B:'형식보다 내용입니다. 길게 쓰지 말고 핵심 세 줄로. 대신 새로운 시도는 반겨 주십니다.',
+    O:'결론부터 말씀드리세요. 서론이 길면 끊으십니다. 대신 밀어주실 때는 확실히 밀어주십니다.',
+    AB:'감정을 잘 안 보이십니다. 반응이 없다고 관심이 없는 게 아니니 근거를 조용히 쌓으세요.'},
+  down:{A:'칭찬에 약합니다. 잘한 것을 구체적으로 짚어주면 몇 배로 갚습니다. 공개 지적은 오래 남습니다.',
+    B:'자율을 주세요. 방법까지 정해주면 힘이 죽습니다. 대신 마감은 짧게 끊어주셔야 합니다.',
+    O:'목표와 인정을 주세요. 눈에 보이는 성과와 자리에서 힘이 납니다. 무시당한다고 느끼면 바로 식습니다.',
+    AB:'이유를 설명해주세요. 납득되면 알아서 합니다. 감정적인 독려는 잘 안 통합니다.'},
+  side:{A:'먼저 나서지 않지만 뒤에서 다 챙깁니다. 고맙다는 말을 자주 해주세요.',
+    B:'아이디어를 맡기면 잘합니다. 마감 챙기는 몫은 내가 가져가는 편이 낫습니다.',
+    O:'판을 키우는 쪽입니다. 내가 세부를 잡아주면 짝이 잘 맞습니다.',
+    AB:'조율을 잘합니다. 갈등이 생기면 이 사람에게 가운데를 맡기세요.'}
+};
+/* 혈액형 궁합 점수 — 열 가지 조합 */
+var BLOOD_SCORE={'A|A':64,'A|B':46,'A|O':72,'A|AB':66,'B|B':58,'B|O':70,'B|AB':74,'O|O':52,'O|AB':68,'AB|AB':56};
+function bloodScore(a,b){
+  if(!a||!b)return null;
+  return BLOOD_SCORE[bloodKey(a,b)]||60;
+}
+function bloodPair(a,b){
+  return {score:bloodScore(a,b),txt:bloodFit(a,b)};
 }
 
 /* ══════════════════════════════════════════════════════════════════

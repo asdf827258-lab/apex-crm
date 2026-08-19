@@ -395,6 +395,39 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
       bloodMode: tabsFor('blood', 'agent').join(',') };
   });
   ok(bl.types === 4 && bl.fitAll === 10, '혈액형 네 가지 · 궁합 조합 10개 (' + bl.types + ' / ' + bl.fitAll + ')');
+  const bl2 = await page.evaluate(() => {
+    const T = ['A', 'B', 'O', 'AB'], miss = [], sc = {};
+    T.forEach(x => T.forEach(y => {
+      const f = bloodFit(x, y), s2 = bloodScore(x, y);
+      if (!f || !s2) miss.push(x + '-' + y);
+      sc[x + y] = s2;
+      if (bloodScore(x, y) !== bloodScore(y, x)) miss.push('비대칭 ' + x + '-' + y);
+    }));
+    const deep = Object.keys(BLOOD_DEEP);
+    const need = ['life', 'work', 'money', 'love', 'health', 'stress', 'grow', 'with'];
+    const bad = [];
+    deep.forEach(k => need.forEach(f => { if (!BLOOD_DEEP[k][f]) bad.push(k + '.' + f); }));
+    const roles = Object.keys(BLOOD_ROLE).every(g => T.every(x => !!BLOOD_ROLE[g][x]));
+    return { miss: miss, bad: bad, roles: roles, ab: sc['BAB'], oab: sc['OAB'] };
+  });
+  ok(bl2.miss.length === 0, '열여섯 칸 어느 쪽으로 물어도 궁합 글과 점수가 나온다' +
+     (bl2.miss.length ? ' — 빈 곳: ' + bl2.miss.slice(0, 4).join(', ') : ''));
+  ok(bl2.ab === 74 && bl2.oab === 68, 'AB형이 섞인 조합도 제 점수로 나온다 (B-AB ' + bl2.ab + ' · O-AB ' + bl2.oab + ')');
+  ok(bl2.bad.length === 0, '네 혈액형 모두 인생·일·돈·사랑·건강·스트레스·숙제·대하는 법이 채워진다');
+  ok(bl2.roles, '윗사람·아랫사람·동료일 때 혈액형별 대응이 모두 있다');
+
+  const bfit = await page.evaluate(() => {
+    S.me.blood = 'O'; S.cl.blood = 'A';
+    const f = fitCalc(S.me, S.cl);
+    S.tab = 'blood'; draw();
+    const t = document.getElementById('view').textContent;
+    return { blood: f.bloodScore, score: f.score, saju: f.sajuScore, mbti: f.mbtiScore,
+      matrix: /혈액형 궁합 한눈에/.test(t), deep: /A형은 이렇게 삽니다/.test(t) };
+  });
+  ok(bfit.blood === 72, '궁합에 혈액형 점수가 들어간다 (O-A ' + bfit.blood + '점)');
+  ok(bfit.score === Math.round((bfit.saju + bfit.mbti + bfit.blood) / 3),
+     '종합 점수는 사주 · 성향 · 혈액형 셋의 평균이다 (' + bfit.score + ')');
+  ok(bfit.matrix && bfit.deep, '혈액형 탭에 4×4 궁합표와 인생 성향표가 나온다');
   ok(bl.nick && !!bl.fit, 'A형 화면과 O형과의 조합 문구가 나온다');
   ok(bl.warn, '혈액형은 과학적 근거가 없다는 안내가 설계사 화면에 붙어 있다');
   ok(bl.tabIn && bl.bloodMode.indexOf('blood') >= 0, '혈액형을 넣으면 통합 모드에도 탭이 생기고, 혈액형 전용 모드도 있다');
