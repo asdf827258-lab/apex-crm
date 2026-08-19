@@ -144,7 +144,17 @@ function pct(v){var x=parseFloat(v);return isFinite(x)?((x>0?"+":x<0?"−":"")+M
 function ago(iso){var t=Date.parse(iso);if(!isFinite(t))return"";
   var m=Math.round((Date.now()-t)/60000);
   return m<60?m+"분 전":(m<1440?Math.round(m/60)+"시간 전":Math.round(m/1440)+"일 전");}
-function appToken(){try{return localStorage.getItem("apex_app_token")||localStorage.getItem("APEX_APP_TOKEN")||"";}catch(e){return"";}}
+/* ⚠️ 키 이름을 지어냈다가 두 화면이 통째로 막혔다. 앱은 LS.set('apptoken') 으로
+   저장하고 LS 는 'apex_studio_' 를 앞에 붙인다 — 실제 이름은 apex_studio_apptoken
+   이다. 나는 apex_app_token 을 읽고 있었고 그런 키는 어디에도 없다. 앱을 몇 번
+   열어도 영영 401 이었다. 매매 화면이 이미 맞는 이름을 쓰고 있었는데 안 봤다. */
+function appToken(){
+  try{
+    return localStorage.getItem("apex_studio_apptoken")
+        || localStorage.getItem("apex_app_token")
+        || localStorage.getItem("APEX_APP_TOKEN") || "";
+  }catch(e){ return ""; }
+}
 
 function arts(list){
   if(!list||!list.length) return "";

@@ -288,9 +288,16 @@ function cls(v){return v>0?"up":(v<0?"down":"flat");}
 function pct(v){var x=num(v);return x==null?"—":((x>0?"+":x<0?"−":"")+Math.abs(x).toFixed(2)+"%");}
 
 /* 앱이 저장해 둔 공유 토큰. 없으면 그대로 부르고, 401 이면 안내한다. */
+/* ⚠️ 키 이름을 지어냈다가 두 화면이 통째로 막혔다. 앱은 LS.set('apptoken') 으로
+   저장하고 LS 는 'apex_studio_' 를 앞에 붙인다 — 실제 이름은 apex_studio_apptoken
+   이다. 나는 apex_app_token 을 읽고 있었고 그런 키는 어디에도 없다. 앱을 몇 번
+   열어도 영영 401 이었다. 매매 화면이 이미 맞는 이름을 쓰고 있었는데 안 봤다. */
 function appToken(){
-  try{ return localStorage.getItem("apex_app_token")||localStorage.getItem("APEX_APP_TOKEN")||""; }
-  catch(e){ return ""; }
+  try{
+    return localStorage.getItem("apex_studio_apptoken")
+        || localStorage.getItem("apex_app_token")
+        || localStorage.getItem("APEX_APP_TOKEN") || "";
+  }catch(e){ return ""; }
 }
 
 function drawQuick(){
