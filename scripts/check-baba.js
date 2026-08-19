@@ -349,9 +349,95 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   const src2 = require('fs').readFileSync('app/index.html', 'utf8');
   is(/babaChartToggle\(\)/.test(src2), '  화면에 「📈 전·후 그래프」 단추가 붙어 있다');
-  is(/babaChartHtml\(\)\+babaGridHtml\(\)/.test(src2.replace(/\s/g, '')),
-     '  표를 다시 그릴 때 그래프도 같이 그린다 (고친 값이 바로 반영된다)');
+  is(/babaChartHtml\(\)\+babaBodyWrapHtml\(\)\+babaGridHtml\(\)/.test(src2.replace(/\s/g, '')),
+     '  표를 다시 그릴 때 그래프·인체 한 장도 같이 그린다 (고친 값이 바로 반영된다)');
   is(/보장·지급은 약관과 심사/.test(src2), '  인쇄본에 약관·심사 단서가 붙는다');
+
+  console.log('\n[17] 인체 한 장 — 현장 서식 그대로 전·후를 담는가');
+  const bd = await page.evaluate(() => {
+    localStorage.removeItem('apex_baba_rows'); localStorage.removeItem('apex_baba_rec');
+    BABA.rows = null; babaBlank();
+    const set = (k, b, a) => {
+      const i = BABA.rows.findIndex(r => r.k === k);
+      if (i < 0) return false;
+      if (b !== null) babaSet(i, 'b', String(b));
+      if (a !== null) babaSet(i, 'a', String(a));
+      return true;
+    };
+    /* 사진 속 수치 그대로 — 암 일반암 5,000 권장에 가입 18,000 */
+    const okKeys = ['cancer', 'cancer2', 'antican', 'target', 'brain', 'stroke', 'brainh', 'brainS',
+                    'dem1', 'dem2', 'ltcH', 'ltcF', 'heartS', 'heart', 'mi', 'heartOp',
+                    'surg', 'surgA', 'surg5D', 'surg5A', 'deathD', 'deathA', 'disabD', 'disabA',
+                    'inpD', 'inpA', 'inpC', 'outC', 'nurD', 'nurA', 'nurUD', 'nurUA',
+                    'silD', 'silDO', 'silA', 'silAO', 'carAcc', 'lawyer', 'fine', 'liab']
+                   .filter(k => BABA.rows.some(r => r.k === k));
+    set('cancer', 5000, 18000);
+    set('heart', 2000, 5000);
+    set('deathA', 20000, 16405);   /* 줄어든 것 */
+    set('ltcH', null, null);       /* 자료 없음 */
+    BABA_BD_ON = true;
+    const h = babaBodyHtml(true), pr = babaBodyHtml(false);
+    return { groups: BABA_BODY.length,
+             rowsPerGroup: BABA_BODY.map(g => g.rows.length),
+             covered: okKeys.length,
+             rec: babaRec().cancer,
+             html: h, print: pr,
+             feed: babaFeedHtml(),
+             top: babaTop(5).map(x => x.n + ':' + x.d),
+             terms: BABA_TERMS.length };
+  });
+  is(bd.groups === 10, '  부위가 열 칸이다 — ' + bd.groups);
+  is(bd.rowsPerGroup.every(n => n === 4), '  부위마다 네 줄이다 (사진 서식 그대로)');
+  is(bd.covered === 40, '  마흔 줄이 사전에 다 있다 — ' + bd.covered + '개');
+  is(bd.terms >= 53, '  담보 사전이 ' + bd.terms + '개로 늘었다');
+  ['뇌', '치매/재가', '암', '심장', '수술', '사망/후유장해', '입원/통원', '간병인일당', '실손의료비', '비용']
+    .forEach(g => is(bd.html.indexOf(g) >= 0, '  「' + g + '」 칸이 있다'));
+  is(/권장/.test(bd.html) && /기존/.test(bd.html) && /신규/.test(bd.html),
+     '  권장 · 기존 · 신규 세 칸이 나란히 선다');
+  is(bd.rec === 5000, '  일반암 권장금액이 5,000만으로 들어 있다 — ' + bd.rec);
+  is(/18,000/.test(bd.html), '  신규 가입금액 18,000 이 그대로 뜬다');
+  is(/babaRecSet/.test(bd.html), '  권장금액은 화면에서 고칠 수 있다');
+  is(!/babaRecSet/.test(bd.print), '  인쇄본에는 입력칸이 아니라 숫자로 나온다');
+  is(/<svg/.test(bd.html), '  사람 그림이 들어 있다 (직접 그린 SVG)');
+  is(/—/.test(bd.html), '  값이 없는 줄은 「—」 — 0 으로 안 채운다');
+
+  console.log('\n[18] 가장 큰 차이 · 권장 미달 피드백');
+  is(/가장 크게 달라진 것/.test(bd.feed), '  「가장 크게 달라진 것」 칸이 있다');
+  is(bd.top[0] && bd.top[0].indexOf('암 진단비') === 0, '  가장 크게 바뀐 것이 맨 위 — ' + bd.top[0]);
+  is(bd.top.some(t => t.indexOf('-') > 0), '  줄어든 것도 같이 센다 — ' + bd.top.join(' · '));
+  is(/아직 권장에 못 미치는 것/.test(bd.feed), '  「권장에 못 미치는 것」 칸이 있다');
+  is(/부족/.test(bd.feed), '  얼마나 부족한지 적는다');
+  is(/권장금액은 참고 기준/.test(bd.feed), '  권장금액이 절대 기준이 아니라고 밝힌다');
+
+  console.log('\n[19] 같은 보장을 두 번 세지 않는가');
+  const dup = await page.evaluate(() => {
+    BABA.rows = null; babaBlank();
+    const set = (k, b, a) => {
+      const i = BABA.rows.findIndex(r => r.k === k);
+      if (i >= 0) { babaSet(i, 'b', String(b)); babaSet(i, 'a', String(a)); }
+    };
+    set('deathD', 10000, 10000);
+    set('deathA', 20000, 20000);
+    const only = babaSum('b');           /* 30000 — 넓은 사망은 아직 빈칸 */
+    set('death', 30000, 30000);          /* 넓은 것에도 값이 들어오면 */
+    const both = babaSum('b');           /* 그래도 30000 이어야 한다 */
+    BABA.rows = null; babaBlank();
+    set('death', 30000, 30000);          /* 넓은 것만 있으면 */
+    const wide = babaSum('b');           /* 30000 */
+    return { only, both, wide };
+  });
+  is(dup.only === 30000, '  질병사망 1억 + 상해사망 2억 = 3억 — ' + dup.only);
+  is(dup.both === 30000, '  거기에 사망(주계약)이 또 잡혀도 3억 그대로 (두 번 안 센다) — ' + dup.both);
+  is(dup.wide === 30000, '  넓은 것만 있으면 그것으로 센다 — ' + dup.wide);
+
+  console.log('\n[20] 화면·인쇄에 붙어 있는가');
+  const src3 = require('fs').readFileSync('app/index.html', 'utf8');
+  is(/babaBodyToggle\(\)/.test(src3), '  「🧍 인체 한 장」 단추가 있다');
+  is(/babaBodyPrint\(\)/.test(src3), '  인쇄 단추가 있다');
+  is(/size:A4/.test(src3), '  A4 한 장으로 앉힌다');
+  is(/babaBodyWrapHtml\(\)/.test(src3.replace(/\s/g, '')), '  표를 다시 그릴 때 인체 한 장도 같이 그린다');
+  is(/0 원이라는 뜻이 아닙니다/.test(src3), '  인쇄본이 「빈 칸은 0 원이 아니다」 라고 밝힌다');
+  is(/◀ 기존/.test(src3) && /신규\(만원\) ▶/.test(src3), '  입력 표가 좌우(기존 ◀ ▶ 신규)로 읽힌다');
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
