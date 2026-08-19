@@ -10085,8 +10085,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-17 09:20';
-var APP_BUILD_NOTE='비포&애프터가 이제 끝까지 읽습니다 — 글자 없는 스캔본도 전 페이지를 넉 장씩 쪼개 AI 가 판독해 표를 채웁니다(예전엔 앞 20쪽에서 잘렸습니다). 한 묶음이 넘어져도 나머지는 살리고 몇 묶음 못 읽었는지 말합니다. 「📖 읽는 담보 보기」 에 27개와 찾는 이름이 표로 뜨고, 회사가 다르게 쓰면 그 표기를 넣으시면 다음부터 읽습니다. PDF 가 없어도 「✍️ 표만 열기」 로 손으로 적을 수 있습니다';
+var APP_BUILD='2026-08-19 02:20';
+var APP_BUILD_NOTE='계약·청구에 「🚗 자동차사고 과실·보상」이 생겼습니다 — 사고 상황을 고르면 손해보험협회 과실비율 인정기준 도표 45개로 과실을 계산하고, 사고 상황도를 그려 왜 그 숫자인지 번호로 짚어 줍니다. 근거 법조문과 12대 중과실, 보상금 계산(휴업손해·위자료·시세하락·렌트·자기부담금·할증)까지 붙어 있습니다. 자동차보험 말고도 받을 곳을 담보 15개로 정리했습니다 — 자동차상해·자기신체사고·자동차사고 부상치료비·교통상해 입원일당·교통사고처리지원금까지, 담보마다 필요 서류와 증권에서 찾을 이름을 적어 두었습니다. 고객 안내문은 A4 한 장으로 뽑히고 「예시 · 확인 중」이라고 밝힙니다. 블랙박스 영상은 충돌 순간을 찾아 그 앞뒤를 집중해서 읽고, 영상도 사진도 저장하지 않습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13419,9 +13419,12 @@ function exitYoonsi(){go(lastTab||'home');}
 /* 자동차사고 과실·보상 분석기 — app/accident/index.html 을 틀에 얹는다.
    같은 사이트라 /api/generate 프록시를 그대로 쓴다(키 없이 AI 분석 가능). */
 var ACC_URL='accident/index.html';
-function mountAcc(){var f=$('accFrame');if(!f||f._mounted)return;f.src=ACC_URL;f._mounted=true;}
+/* 주소에 판 번호를 붙인다. 안 붙이면 브라우저가 지난번에 받아 둔 것을 그대로
+   다시 쓴다 — 도표를 고쳐도 「안 보인다」가 된다. DB CRM 과 같은 방식이다. */
+function accSrc(){return ACC_URL+'?v='+encodeURIComponent(APP_BUILD);}
+function mountAcc(){var f=$('accFrame');if(!f||f._mounted)return;f.src=accSrc();f._mounted=true;}
 function reloadAcc(){var f=$('accFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountAcc,30);toast('과실비율 분석기 새로고침');}}
-function openAccNewTab(){var w=window.open(ACC_URL,'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
+function openAccNewTab(){var w=window.open(accSrc(),'_blank','noopener');if(!w)toast('팝업 차단 해제 후 다시');}
 function exitAcc(){go(lastTab||'home');}
 document.addEventListener('keydown',function(e){
   if(e.key!=='Escape')return;
