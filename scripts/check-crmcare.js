@@ -302,7 +302,11 @@ window.supabase={createClient:function(){
     };
   });
   ok(r.board === true, '맨 위에 30일 판이 선다');
-  ok(r.pills.length === 4, '알약 넷이 뜬다 — ' + r.pills.join(' / '));
+  /* 알약 넷은 늘 있고, 진행중·할 터치는 있을 때만 붙는다 */
+  ok(r.pills.length >= 4 && /지금 연락해야 함/.test(r.pills.join('')) &&
+     /곧 때가 됩니다/.test(r.pills.join('')) && /VIP/.test(r.pills.join('')) &&
+     /이번 달 연락함/.test(r.pills.join('')),
+    '기본 알약 넷이 뜬다 — ' + r.pills.join(' / '));
   ok(/지금 연락해야 함/.test(r.pills.join('|')), '「지금 연락해야 함」 이 있다');
   ok(/VIP/.test(r.pills.join('|')), '「VIP」 칸이 있다');
   ok(r.dd.length >= 3, '고객 줄마다 며칠 됐는지 붙는다 — ' + r.dd.join(' / '));
@@ -469,11 +473,192 @@ window.supabase={createClient:function(){
   ok(r.indexOf('홍길동') < 0, '서버로 나간 것에 실명이 없다');
   ok(r.indexOf('name_masked') < 0, '서버로 나간 관리 기록에 이름 칸 자체가 없다');
 
-  /* ══ [16] 로그인 세션이 없을 때 ══════════════════════════════
+  /* ══ [16] 지금 진행중인 분 ══════════════════════════════════ */
+  console.log('\n[16] 「지금 진행중」 을 가리는 규칙');
+  const runOf = await page.evaluate(() => {
+    var mk = (id, opt) => {
+      var c = { id: id, advisor_id: 'me', name_masked: '차○○',
+                created_at: new Date(Date.now() - 400 * 864e5).toISOString() };
+      OSC.list.push(c);
+      CM.meta[id] = { fp: {}, fam: '', rel: '', next: opt.next || null, bd: '', up: 0,
+                      touch: opt.touch ? [{ at: opt.touch, how: '전화', note: '' }] : [] };
+      if (opt.stage) CC.stage[id] = opt.stage;
+      if (opt.appt) CC.appt[id] = opt.appt;
+      if (opt.res) CC.res[id] = opt.res;
+      return ccRun(c);
+    };
+    var d = n => new Date(Date.now() + 9 * 36e5 - n * 864e5).toISOString().slice(0, 10);
+    return {
+      appt:  mk('r_ap', { appt: d(-4) + 'T05:00:00Z' }),
+      gone:  mk('r_gone', { appt: d(4) + 'T05:00:00Z' }),
+      next:  mk('r_nx', { next: { what: '증권 받기', due: d(7) } }),
+      stage: mk('r_st', { stage: 'AP' }),
+      none:  mk('r_no', { stage: '미접촉' }),
+      talk:  mk('r_tk', { stage: '', res: '상담', touch: d(12) }),
+      cold:  mk('r_cd', { stage: '', res: '상담', touch: d(60) }),
+      miss:  mk('r_ms', { stage: '', res: '부재', touch: d(3) }),
+      won:   mk('r_wn', { stage: '계약완료', appt: d(-4) + 'T05:00:00Z',
+                          next: { what: '증권 전달', due: d(7) } }),
+      sent:  mk('r_sn', { stage: '증권전달' })
+    };
+  });
+  ok(runOf.appt.run === true && /약속/.test(runOf.appt.why), '앞으로 약속이 있으면 진행중 — ' + runOf.appt.why);
+  ok(/14:00/.test(runOf.appt.why), '약속 시각을 한국 시각으로 적는다 (05:00Z → 14:00)');
+  ok(runOf.gone.run === false, '지나간 약속만 있으면 진행중이 아니다');
+  ok(runOf.next.run === true && /7일 지남/.test(runOf.next.why),
+    '다음 할 일이 잡혀 있으면 진행중 · 며칠 지났는지도 — ' + runOf.next.why);
+  ok(runOf.stage.run === true && /CRM 단계 AP/.test(runOf.stage.why), 'CRM 단계가 돌면 진행중');
+  ok(runOf.none.run === false, '미접촉은 진행중이 아니다');
+  ok(runOf.talk.run === true && /상담하고 12일째/.test(runOf.talk.why), '상담하고 45일 안이면 진행중');
+  ok(runOf.cold.run === false, '상담한 지 45일이 넘으면 뺀다 — 그건 다시 여는 일이다');
+  ok(runOf.miss.run === false, '부재는 진행중이 아니다');
+  ok(runOf.won.run === false && runOf.won.won === true,
+    '계약완료면 약속이 있어도 · 다음 할 일이 있어도 진행중이 아니다 — 끝난 사람을 섞으면 할 일이 흐려진다');
+  ok(runOf.sent.won === true, '증권전달도 끝난 것으로 본다');
+
+  const runSort = await page.evaluate(() =>
+    ccRunList(OSC.list.filter(c => /^r_/.test(c.id))).map(x => x.c.id));
+  ok(runSort[0] === 'r_ap', '약속 잡힌 분이 맨 위 (' + runSort.join(' → ') + ')');
+  ok(runSort[1] === 'r_nx', '그 다음이 다음 할 일');
+  ok(runSort[2] === 'r_st', '그 다음이 CRM 단계');
+  ok(runSort[3] === 'r_tk', '상담만 해 둔 분이 마지막');
+  ok(runSort.indexOf('r_wn') < 0 && runSort.indexOf('r_ms') < 0, '진행중이 아닌 사람은 아예 안 들어온다');
+
+  /* ══ [17] 3년 관리 규칙 ═════════════════════════════════════ */
+  console.log('\n[17] 계약일로부터 며칠째냐로 할 일이 정해진다');
+  const planAt = await page.evaluate(() => {
+    var d = n => new Date(Date.now() + 9 * 36e5 - n * 864e5).toISOString().slice(0, 10);
+    var at = (days, plan) => {
+      var id = 'p_' + days + '_' + (plan ? 'x' : 'o');
+      var c = { id: id, advisor_id: 'me', name_masked: '카○○', created_at: d(days) + 'T00:00:00Z' };
+      OSC.list.push(c);
+      CM.meta[id] = { fp: {}, fam: '', rel: '', next: null, bd: '', up: 0, touch: [],
+                      since: d(days), plan: plan || {} };
+      return { now: ccTodoList(c).map(x => x.k), all: ccPlanList(c).map(x => x.k + ':' + x.st) };
+    };
+    return {
+      d3: at(3), d20: at(20), d35: at(35), d95: at(95), d110: at(110),
+      d370: at(370), d1100: at(1100), d1: at(1), d300: at(300),
+      d110done: at(110, { m3: '2026-01-01' }),
+      d1200: at(1200), y5: at(365 * 5 + 5)
+    };
+  });
+  const only = (o) => o.now.filter(k => !/^(tax|anniv)/.test(k)).join();
+  ok(only(planAt.d3) === 'hello', '계약 3일째면 감사 인사 (' + only(planAt.d3) + ')');
+  ok(only(planAt.d20) === 'policy', '20일째면 증권 전달 · 보장 설명');
+  ok(only(planAt.d35) === 'pay1', '35일째면 첫 회 출금 확인 — 실효가 제일 많이 나는 자리');
+  ok(only(planAt.d95) === 'wait90', '95일째면 암 면책 90일 종료 안내');
+  ok(only(planAt.d110) === 'wait90,m3', '110일째는 두 창이 겹친다 — 한 번 걸 때 같이 하면 된다');
+  ok(only(planAt.d370) === 'y1', '1년이면 13회차 유지 확인');
+  ok(only(planAt.d1100) === 'y3', '3년이면 보장 전체 재점검');
+  ok(only(planAt.d1) === '', '계약 바로 다음 날은 아직 아무 창도 안 열렸다');
+  ok(only(planAt.d300) === '', '창과 창 사이에는 아무것도 안 띄운다 — 없는 일을 만들지 않는다');
+  ok(only(planAt.d110done) === 'wait90', '한 것을 체크하면 그 창만 닫힌다');
+
+  console.log('\n[18] 지나간 일정은 알람으로 안 띄운다');
+  const missN = planAt.d1200.all.filter(x => /:miss$/.test(x)).length;
+  ok(missN >= 10, '3년 넘은 고객을 지금 넣으면 지나간 항목이 ' + missN + '개나 된다');
+  ok(only(planAt.d1200).length <= 4,
+    '그래도 알람은 한 건을 안 넘는다 — 열 개가 쏟아지면 아무것도 안 하게 된다 (' + only(planAt.d1200) + ')');
+  ok(planAt.y5.all.filter(x => /^yr\d/.test(x)).length >= 2,
+    '3년 뒤로도 해마다 한 칸씩 이어진다 — 3년이 끝이 아니다');
+
+  console.log('\n[19] 기준일이 어디서 왔는지 밝힌다');
+  const base = await page.evaluate(() => {
+    var c = { id: 'b_1', advisor_id: 'me', name_masked: '타○○', created_at: '2023-02-02T00:00:00Z' };
+    OSC.list.push(c);
+    CM.meta.b_1 = { fp: {}, fam: '', rel: '', next: null, bd: '', up: 0, touch: [], since: '', plan: {} };
+    var byReg = ccBase(c);
+    CC.sent = { b_1: '2024-06-01' }; var bySent = ccBase(c);
+    CC.made = { b_1: '2024-05-01' }; var byMade = ccBase(c);
+    CM.meta.b_1.since = '2024-03-15'; var byHand = ccBase(c);
+    CC.made = {}; CC.sent = {};
+    return { byReg: byReg, bySent: bySent, byMade: byMade, byHand: byHand };
+  });
+  ok(base.byReg.at === '2023-02-02' && base.byReg.sure === false && /계약일이 아닙니다/.test(base.byReg.src),
+    '아무것도 없으면 등록일로 세되 계약일이 아니라고 못 박는다 — ' + base.byReg.src);
+  ok(base.bySent.src === 'CRM 증권전달일', '증권전달일이 등록일보다 먼저다');
+  ok(base.byMade.src === 'CRM 계약일', '계약일이 증권전달일보다 먼저다');
+  ok(base.byHand.src === '직접 적음' && base.byHand.sure === true, '손으로 적은 것이 가장 먼저다');
+
+  const anniv = await page.evaluate(() => {
+    var t = ccToday(), mm = t.slice(5, 7);
+    var mk = (id, sure) => {
+      var c = { id: id, advisor_id: 'me', name_masked: '파○○',
+                created_at: '2023-' + mm + '-05T00:00:00Z' };
+      OSC.list.push(c);
+      CM.meta[id] = { fp: {}, fam: '', rel: '', next: null, bd: '', up: 0, touch: [],
+                      since: sure ? ('2023-' + mm + '-05') : '', plan: {} };
+      return ccPlanList(c).some(x => /계약 기념일/.test(x.t));
+    };
+    return { sure: mk('an_1', true), guess: mk('an_2', false) };
+  });
+  ok(anniv.sure === true, '계약한 달이 오면 기념일이 뜬다');
+  ok(anniv.guess === false, '기준일이 추정이면 기념일은 안 띄운다 — 엉뚱한 달에 축하하면 안 하느니만 못하다');
+
+  /* ══ [20] 증권 → 월납 ═══════════════════════════════════════ */
+  console.log('\n[20] 증권의 「보험료」 를 월납으로 옮긴다');
+  const scan = await page.evaluate(() => {
+    window.PR = window.PR || {};
+    PR.scan = { who: { name: '홍길동' }, plans: [
+      { co: 'A생명', name: '종신', from: '2015-03-01', pay: '월납', fee: 300000 },
+      { co: 'B화재', name: '실손', from: '2018-06-01', pay: '연납', fee: 1200000 },
+      { co: 'C생명', name: '암', from: '2020-01-01', pay: '3개월납', fee: 300000 },
+      { co: 'D화재', name: '운전자', from: '2021-01-01', pay: '6개월납', fee: 300000 },
+      { co: 'E생명', name: '연금', from: '2019-01-01', pay: '일시납', fee: 50000000 },
+      { co: 'F화재', name: '치아', from: '2022-01-01', pay: '전기납', fee: 40000 },
+      { co: 'G생명', name: '어린이', from: '2023-01-01', pay: '', fee: 70000 },
+      { co: 'H화재', name: '주택', from: '2024-01-01', pay: '월납', fee: -1 }
+    ] };
+    var m = {}; ccScanRows().forEach(r => m[r.co] = r);
+    var sd = {}; sdPlanRows().forEach(r => sd[r.company] = r.monthlyPayment);
+    return { rows: m, sum: ccScanSum(), sd: sd,
+             match: { hong: ccScanMatch('mate', '홍*동'), other: ccScanMatch('a29', '가○○') } };
+  });
+  ok(scan.rows['A생명'].won === 300000, '월납 30만원은 그대로');
+  ok(scan.rows['B화재'].won === 100000,
+    '연납 120만원은 12로 나눠 10만원 — 그대로 두면 없던 VIP 가 생긴다 (' + scan.rows['B화재'].won + ')');
+  ok(scan.rows['C생명'].won === 100000 && scan.rows['D화재'].won === 50000, '3개월납 ÷3 · 6개월납 ÷6');
+  ok(scan.rows['E생명'].won === null && /일시납/.test(scan.rows['E생명'].why),
+    '일시납은 매달 나가는 돈이 아니다 → 0 이 아니라 「모름」');
+  ok(scan.rows['F화재'].won === null, '전기납도 서류만으로는 알 수 없다 → 「모름」');
+  ok(scan.rows['G생명'].won === 70000 && /월납으로 봤습니다/.test(scan.rows['G생명'].why),
+    '주기가 안 적혔으면 월납으로 보되 그렇다고 적는다');
+  ok(scan.rows['H화재'].won === null, '「보험료 미제공」(-1) 은 0 이 아니라 「모름」');
+  ok(scan.sum.man === 62, '읽은 것만 더해 월 62만원 (팩트파인딩은 만원 단위) — ' + scan.sum.man);
+  ok(scan.sum.unknown === 3, '못 옮긴 3건은 뺐다고 세어 둔다');
+  ok(scan.sd['B화재'] === 100000, '상담자료로 가는 길도 같은 규칙 — 연납은 한 달치로');
+  ok(scan.sd['E생명'] === 0, '못 옮긴 것은 여태처럼 0 으로 넘긴다 — s10Money() 가 「모름」 으로 받는다');
+  ok(scan.match.hong === 'yes' && scan.match.other === 'no',
+    '이름이 맞는 고객에게만 옮긴다 — 남의 증권을 조용히 덮으면 VIP 가 통째로 거짓이 된다');
+
+  await page.evaluate(() => {
+    delete cmOf('mate').fp.f_ins;          /* 비어 있는 고객이라야 옮겨진다 */
+    ccScanAfterSave('bojang', 'a29');      /* 이름이 다르다 — 안 들어가야 한다 */
+    ccScanAfterSave('finance', 'mate');    /* 증권과 무관한 자료 — 안 들어가야 한다 */
+    ccScanAfterSave('bojang', 'mate');     /* 이름이 맞고 비어 있다 — 들어가야 한다 */
+  });
+  await page.waitForTimeout(1400);
+  const after = await page.evaluate(() => ({
+    mate: (cmOf('mate').fp || {}).f_ins, a29: (cmOf('a29').fp || {}).f_ins
+  }));
+  ok(after.a29 === 20, '이름이 다른 고객의 보험료는 안 건드린다 (' + after.a29 + ')');
+  ok(after.mate === '62', '이름이 맞고 비어 있으면 보험료 칸에 62만원이 들어간다 (' + after.mate + ')');
+
+  /* 손으로 고쳐 둔 값이 증권 한 번에 날아가면 다시는 안 고친다 */
+  await page.evaluate(() => {
+    cmOf('mate').fp.f_ins = '99';
+    ccScanAfterSave('bojang', 'mate');
+  });
+  await page.waitForTimeout(1000);
+  const noOver = await page.evaluate(() => (cmOf('mate').fp || {}).f_ins);
+  ok(noOver === '99', '이미 적혀 있으면 증권이 다시 와도 안 덮는다 (' + noOver + ')');
+
+  /* ══ [21] 로그인 세션이 없을 때 ══════════════════════════════
      OS.profile 은 남아 있는데 OS.session 이 아직/이미 없는 때가 있다.
      그때 홈이 고객 목록을 읽으려다 OS.session.user.id 에서 터지면
      화면 전체가 죽는다. 실제로 CI 에서 이 오류가 났다.               */
-  console.log('\n[16] 로그인 세션이 없어도 안 터진다');
+  console.log('\n[21] 로그인 세션이 없어도 안 터진다');
   const before = errs.length;
   r = await page.evaluate(() => {
     var savedSession = OS.session, savedList = OSC.list;
@@ -495,8 +680,8 @@ window.supabase={createClient:function(){
   ok(r.threw === '', '불러오기·저장·홈 그리기 어느 것도 터지지 않는다' + (r.threw ? (' — ' + r.threw) : ''));
   ok(errs.length === before, '뒤늦게 터지는 오류도 없다' + (errs.length > before ? (' — ' + errs[before]) : ''));
 
-  /* ══ [17] 오류 · 좁은 화면 ═══════════════════════════════════ */
-  console.log('\n[17] 오류와 좁은 화면');
+  /* ══ [22] 오류 · 좁은 화면 ═══════════════════════════════════ */
+  console.log('\n[22] 오류와 좁은 화면');
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? (' — ' + errs[0]) : ''));
   await page.setViewportSize({ width: 390, height: 900 });
   await page.evaluate(() => { OSC.view = 'list'; go('clients'); });
@@ -505,6 +690,7 @@ window.supabase={createClient:function(){
   ok(w[0] <= w[1] + 1, '390px 가로 스크롤 없음 (' + w[0] + '/' + w[1] + ')');
 
   await browser.close(); srv.close();
+
   console.log('\n──────────────────────────────');
   if (fail.length) { console.log('실패 ' + fail.length + '건'); fail.forEach(m => console.log('  ✗ ' + m)); process.exit(1); }
   console.log('고객 케어 점검 통과 — 30일 안에 모두에게, 그 하나를 지킵니다.');
