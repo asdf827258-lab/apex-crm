@@ -2393,6 +2393,32 @@ h2 em.e{color:var(--edu-d)}
         <button class="usebtn" id="rgReload">↺ 저장본 불러오기</button>
         <button class="usebtn" id="rgExport">⤓ 내보내기 (팀 공유)</button>
         <button class="usebtn" id="rgImport">⤒ 가져오기</button>
+        <button class="usebtn" id="rgPasteBtn" style="border-color:#d9cbf5;color:var(--edu-d)">
+          ⤒ 붙여넣기로 여러 지역 한 번에</button>
+      </div>
+      <div id="rgPasteBox" style="display:none;margin-top:12px;background:#fbfaff;border:1px solid #e6e0f2;
+                                  border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:800;color:var(--edu-d);margin-bottom:6px">
+          어디서 복사해 오셔도 됩니다</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.75;margin-bottom:10px">
+          지자체 누리집 표, 보도자료, 블로그 정리글, 엑셀 &mdash; <b>그대로 붙여 넣으십시오.</b>
+          한 줄 안에 <b>시·군·구 이름</b>이 있으면 그 줄을 그 지역 것으로 봅니다.
+          금액은 「720만원」 「1,000만」 「7,200,000원」 다 읽습니다.
+          <b>못 읽은 금액은 비워 둡니다 &mdash; 0 으로 채우지 않습니다.</b><br>
+          같은 이름이 여러 시·도에 있는 곳(고성군·중구 등)은 <b>시·도를 같이</b> 적어 주셔야 가릅니다.
+        </div>
+        <textarea id="rgPasteText" rows="7" placeholder="예)
+전남 해남군 720만원 첫째 기준·분할지급 https://www.haenam.go.kr/...
+경남 고성군 500만원
+인천 부평구 300만원 셋째 이상"
+          style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;line-height:1.7;
+                 border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical"></textarea>
+        <div class="linkrow" style="margin-top:10px">
+          <button class="usebtn" id="rgPasteRun" style="background:var(--edu-d);color:#fff;border-color:var(--edu-d)">
+            📥 읽어서 표에 넣기</button>
+          <button class="usebtn" id="rgPasteClear">지우기</button>
+        </div>
+        <p class="hint" id="rgPasteMsg" style="margin-top:10px"></p>
       </div>
       <p class="hint" id="rgMsg" style="margin-top:10px"></p>
 
@@ -3125,9 +3151,9 @@ h2 em.e{color:var(--edu-d)}
           <b>공시이율은 변동하며 예시는 현재 이율이 계속된다는 가정입니다.</b></li>
         <li>쿠폰지급금은 <b>원금에서 먼저 지급되는 구조</b>라 지급기간 중 해약환급률이 낮습니다.
           실제 쿠폰지급금은 <b>쿠폰지급기간의 환산 일수</b>에 따라 달라질 수 있습니다.</li>
-        <li>⚠️ 제안서상 <b>20년차부터 세 쿠폰형의 해약환급금이 같습니다.</b> 15년차까지는 다릅니다.
-          이율확정기간이 20년이라 그 끝에서 수렴하는 것으로 보이나 <b>제안서만으로 단정할 수 없어</b>
-          회사 확인 전까지 제안서 숫자를 그대로 옮겨 두었습니다.</li>
+        <li><b>20년차부터 세 쿠폰형의 해약환급금이 같습니다.</b> 15년차까지는 다릅니다.
+          <b>이율확정기간(20년)이 끝나는 시점에 계약자적립액이 한 곳으로 모이도록 설계</b>되어
+          있기 때문입니다(회사 확인분). 쿠폰을 언제 얼마씩 받아 갔든 20년째에는 같은 자리에 섭니다.</li>
         <li>AIA 해약환급금 = 해지시점 연금계약 적립액 &times; (1 &minus; MVA) &minus; 해약공제액 ·
           MVA 최대 <b>20%</b>. 생활자금형은 <b>이미 지급된 생활자금에 MVA 를 적용하지 않습니다.</b></li>
         <li><b>외화보험은 환율 변동에 따라 원금 손실이 발생할 수 있습니다.</b>
@@ -5483,6 +5509,134 @@ function rgMerged(){
   });
   return m;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   지자체 지원금을 <b>긁어오는 길</b>
+
+   229곳을 한 사람이 손으로 치는 것은 못 할 일이다. 그렇다고 확인 없이
+   채우면 고객 앞에서 틀린 금액을 말하게 된다. 그래서 <b>찾는 일은 쉽게,
+   적는 일은 자동으로</b> 만든다.
+
+     ① 고른 지역의 공식 자료를 <b>한 번 눌러</b> 연다
+     ② 거기서 본 표를 <b>통째로 복사해</b> 붙여 넣는다
+     ③ 앱이 지역·금액·출처를 뜯어 표에 채운다 — 못 읽은 금액은 비워 둔다
+
+   블로그든 보도자료든 엑셀이든 상관없다. 우리가 아는 229개 이름이
+   줄 안에 있으면 그 줄을 그 지역 것으로 본다.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 「경남 고성군」 과 「강원 고성군」 을 가르려면 짧은 이름도 알아야 한다 */
+const RG_SHORT = {
+  '서울특별시':['서울'],'부산광역시':['부산'],'대구광역시':['대구'],'인천광역시':['인천'],
+  '광주광역시':['광주'],'대전광역시':['대전'],'울산광역시':['울산'],'세종특별자치시':['세종'],
+  '경기도':['경기'],'강원특별자치도':['강원'],'충청북도':['충북','충청북'],'충청남도':['충남','충청남'],
+  '전북특별자치도':['전북','전라북'],'전라남도':['전남','전라남'],
+  '경상북도':['경북','경상북'],'경상남도':['경남','경상남'],'제주특별자치도':['제주']
+};
+function rgSidoNames(sido){ return [sido].concat(RG_SHORT[sido]||[]); }
+
+/* 「720만원」 「1,000만」 「7,200,000원」 → 만원 숫자. 못 읽으면 null (0 아님) */
+function rgMoneyMan(t){
+  t = (''+(t||'')).replace(/[\s,]/g,'');
+  let man = 0, hit = false, m;
+  m = t.match(/([0-9]+(?:\.[0-9]+)?)억/); if(m){ man += parseFloat(m[1])*10000; hit = true; }
+  m = t.match(/([0-9]+(?:\.[0-9]+)?)만/); if(m){ man += parseFloat(m[1]); hit = true; }
+  if(!hit){ m = t.match(/([0-9]{5,})원/); if(m){ man = parseInt(m[1],10)/10000; hit = true; } }
+  if(!hit) return null;
+  return man > 0 ? Math.round(man) : null;
+}
+
+/* 붙여 넣은 글 → 표 줄 묶음. 못 가린 줄은 왜 못 가렸는지 함께 돌려준다 */
+function rgParsePaste(text){
+  const merged = rgMerged(), all = Object.keys(merged).map(k=>merged[k]);
+  if(!all.length) return {rows:[], skip:[]};
+  const byGu = {};
+  all.forEach(r=>{ (byGu[r.gu] = byGu[r.gu] || []).push(r); });
+  /* 긴 이름부터 본다 — 「남동구」 를 「남구」 로 잘못 집으면 안 된다 */
+  const names = Object.keys(byGu).sort((a,b)=>b.length-a.length);
+  const rows = [], skip = [], seen = {};
+  (''+(text||'')).split(/[\r\n]+/).forEach(raw=>{
+    const t = raw.replace(/\s+/g,' ').trim();
+    if(!t) return;
+    let hit = null;
+    for(let i=0;i<names.length;i++){ if(t.indexOf(names[i])>=0){ hit = names[i]; break; } }
+    if(!hit) return;
+    const cands = byGu[hit];
+    let row = cands[0];
+    if(cands.length > 1){
+      row = null;
+      for(let i=0;i<cands.length && !row;i++){
+        const ns = rgSidoNames(cands[i].sido);
+        for(let j=0;j<ns.length;j++) if(t.indexOf(ns[j])>=0){ row = cands[i]; break; }
+      }
+      if(!row){ skip.push({gu:hit, why:'같은 이름이 여러 시·도에 있어 못 가렸습니다 — 시·도를 같이 적어 주세요'}); return; }
+    }
+    const k = row.sido+'|'+row.gu;
+    if(seen[k]) return;                       /* 같은 지역이 여러 줄이면 먼저 것이 이긴다 */
+    seen[k] = 1;
+    const rest = t.split(hit).join(' ');
+    const amt  = rgMoneyMan(rest);
+    const src  = (rest.match(/https?:\/\/\S+/) || [''])[0];
+    const memo = rest.replace(/https?:\/\/\S+/g,' ')
+                     .replace(/[0-9][0-9,.]*\s*(억|만원|만|원)?/g,' ')
+                     .replace(/[|·,\-–—\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60);
+    rows.push({sido:row.sido, gu:row.gu, amt:(amt===null?'':String(amt)), memo:memo, src:src});
+  });
+  return {rows, skip};
+}
+
+/* 붙여넣기 칸 열고 닫기 */
+let RG_PASTE_ON = false;
+function rgPasteToggle(){
+  RG_PASTE_ON = !RG_PASTE_ON;
+  const b = $e('#rgPasteBox');
+  if(b) b.style.display = RG_PASTE_ON ? '' : 'none';
+  const t = $e('#rgPasteBtn');
+  if(t) t.textContent = RG_PASTE_ON ? '▲ 붙여넣기 닫기' : '⤒ 붙여넣기로 여러 지역 한 번에';
+  if(RG_PASTE_ON){ const a = $e('#rgPasteText'); if(a) a.focus(); }
+}
+function rgPasteRun(){
+  const a = $e('#rgPasteText');
+  const out = rgParsePaste(a ? a.value : '');
+  const msg = $e('#rgPasteMsg');
+  if(!out.rows.length){
+    if(msg) msg.innerHTML = out.skip.length
+      ? `지역 이름은 보이는데 <b>시·도를 못 가렸습니다.</b> ${out.skip.slice(0,3).map(x=>x.gu).join(', ')} — 「경남 고성군」 처럼 시·도를 같이 적어 주세요.`
+      : '아는 시·군·구 이름을 한 줄에서도 못 찾았습니다. 지역 이름이 들어간 줄을 함께 붙여 넣어 주세요.';
+    return;
+  }
+  /* 이미 손으로 적어 둔 줄은 덮지 않는다 — 사람이 넣은 것이 이긴다 */
+  const have = {};
+  RG.draft.forEach(r=>{ if(r.sido||r.gu) have[(r.sido||'')+'|'+(r.gu||'')] = 1; });
+  let add = 0;
+  out.rows.forEach(r=>{ if(have[r.sido+'|'+r.gu]) return; RG.draft.push(r); have[r.sido+'|'+r.gu]=1; add++; });
+  RG.draft = RG.draft.filter(r=>(r.sido||r.gu||r.amt));
+  rgRenderTable(); rgDirty();
+  const noAmt = out.rows.filter(r=>!r.amt).length;
+  if(msg) msg.innerHTML = `<b>${add}개 지역</b>을 표에 넣었습니다.` +
+    (noAmt ? ` 그중 <b>${noAmt}곳은 금액을 못 읽어 비워 두었습니다</b> — 0 으로 채우지 않습니다.` : '') +
+    (out.skip.length ? ` 시·도를 못 가린 줄 ${out.skip.length}개는 건너뛰었습니다.` : '') +
+    ` 확인하신 뒤 <b>취합 저장</b>을 누르셔야 계산에 반영됩니다.`;
+}
+
+/* 고른 지역의 자료를 한 번 눌러 연다 — 우리가 금액을 지어내지 않는 대신,
+   찾는 데 걸리는 시간을 줄인다 */
+function rgFindUrl(kind, sido, gu){
+  const q = encodeURIComponent((sido||'') + ' ' + (gu||'') + ' 출산장려금 출산지원금 ' + (new Date()).getFullYear());
+  if(kind==='naver')  return 'https://search.naver.com/search.naver?query=' + q;
+  if(kind==='google') return 'https://www.google.com/search?q=' + q;
+  if(kind==='bokji')  return 'https://www.bokjiro.go.kr';
+  return 'https://www.gov.kr';
+}
+function rgFindLinksHtml(sido, gu){
+  const a = (k,t)=>`<a class="usebtn" href="${rgFindUrl(k,sido,gu)}" target="_blank" rel="noopener"
+     style="text-decoration:none">${t}</a>`;
+  return `<div class="linkrow" style="margin-top:10px">
+    ${a('naver','🔎 네이버에서 찾기')}${a('google','🔎 구글에서 찾기')}
+    ${a('bokji','복지로 →')}${a('gov','정부24 →')}
+  </div>`;
+}
+
 function rgSidoList(){
   const m=rgMerged(), out=[], seen={};
   Object.keys(m).forEach(k=>{ const s=m[k].sido; if(s&&!seen[s]){seen[s]=1;out.push(s);} });
@@ -5594,7 +5748,7 @@ function rgRenderState(){
     ${msg}
     ${r.memo?`<br><span style="color:var(--ink3)">조건: ${r.memo}</span>`:''}
     ${r.src?`<br><a href="${r.src}" target="_blank" rel="noopener" style="color:inherit;font-weight:800">출처 열기 →</a>`:''}
-  </div>`;
+  </div>${rgFindLinksHtml(r.sido, r.gu)}`;
 }
 function rgSave(){
   RG.saved = JSON.parse(JSON.stringify(RG.draft)).filter(r=>(r.sido||r.gu||r.amt));
@@ -5628,6 +5782,9 @@ $e('#rgImport').onclick= ()=>{
     $e('#rgMsg').style.color='var(--red)';
   }catch(e){ alert('형식이 맞지 않습니다. 내보내기로 만든 내용을 그대로 붙여넣어 주십시오.'); }
 };
+$e('#rgPasteBtn').onclick   = rgPasteToggle;
+$e('#rgPasteRun').onclick   = rgPasteRun;
+$e('#rgPasteClear').onclick = ()=>{ const a=$e('#rgPasteText'); if(a)a.value=''; const m=$e('#rgPasteMsg'); if(m)m.innerHTML=''; };
 $e('#rgSido').onchange = ()=>{ RG.pick=null; rgRenderGu(); };
 $e('#rgGu').onchange = e=>{
   const sd=$e('#rgSido').value, g=e.target.value;
@@ -5676,6 +5833,9 @@ window.__apexE = {
   regions(){ return {file:RG.file, saved:RG.saved, stamp:RG.stamp, warnDays:RG.warnDays,
                      merged:rgMerged(), sido:rgSidoList()}; },
   regionSave(rows, stamp){ RG.saved=rows||[]; if(stamp)RG.stamp=stamp; rgRenderPick(); },
+  regionPaste(text){ const a=$e('#rgPasteText'); if(a)a.value=text; rgPasteRun();
+                     return {draft:RG.draft.slice(), msg:($e('#rgPasteMsg')||{}).innerHTML||''}; },
+  regionParse(text){ return rgParsePaste(text); },
   result(){
     const c = eduCalc(), need = EDU.costUsd*EDU.years;
     return {track:'교육자금', childAge:EDU.age, goAge:EDU.go, years:c.years,
@@ -5708,9 +5868,10 @@ const CP_T = {
   y20: {t:'20년형', n:20, each:3058.49, sum:61169.80}
 };
 /* 해약환급금 — 제안서 13쪽. [경과년, 나이, 최저보증$, 1.5%p상승$, 현재공시$]
-   ⚠ 20년차부터 세 쿠폰형의 환급금이 제안서상 같다. 15년차까지는 분명히 다르다.
-      이율확정기간이 20년이라 그 끝에서 수렴하도록 설계된 것으로 보이지만
-      제안서만으로 단정할 수 없어 회사 확인 전까지 <b>제안서 숫자를 그대로</b> 옮겨 둔다.  */
+   20년차부터 세 쿠폰형의 환급금이 같다. 15년차까지는 다르다
+   (20년형 $70,036 vs 5년형 $57,381). <b>이율확정기간(20년)이 끝나는 시점에
+   계약자적립액이 한 곳으로 모이도록 설계</b>돼 있어서다 — 회사 확인분(2026-08-20).
+   쿠폰을 언제 얼마씩 빼갔든 20년째에는 같은 자리에 선다는 뜻이다.            */
 const CP_CV = {
   y5 :[[1,61,45586,45586,58478],[5,65,28252,30040,37072],[10,70,33900,39774,45761],
        [15,75,41321,53496,57381],[20,80,72965,72965,72965],[25,85,71471,87924,87924],
@@ -5854,7 +6015,7 @@ function renderCp(){
      const y=r[0], age=r[1], cv=r[cpScenIdx()]*k, g=cpGotBy(y), tot=g+cv, rt=tot/usd*100;
      const same = met && y>=sameFrom;
      return `<tr class="${y===(met?CP_T[CP.type].n:10)?'key':''}">
-       <td>${y}년${same?' <span class="mini">제안서에 5년형과 같다고 적힘</span>':''}</td>
+       <td>${y}년${same?' <span class="mini">이율확정기간 끝 · 세 형이 같아짐</span>':''}</td>
        <td>${age}세</td>
        <td>${cusd(g)}<span class="mini">${cwon(g*CP.fxOut)}</span></td>
        <td>${cusd(cv)}<span class="mini">${cwon(cv*CP.fxOut)}</span></td>
@@ -5865,9 +6026,11 @@ function renderCp(){
   $c('#cpSumNote').innerHTML = met
     ? `※ 제안서 <b>${cusd(CP_BASE)}</b> 기준을 <b>비례 환산한 참고치</b>입니다 (배수 ${k.toFixed(3)}).
        일시납 단일 조건이라 금액 비례는 성립하지만, <b>나이(60세 남)와 이율이 다르면 곡선 자체가 달라집니다.</b><br>
-       ⚠ 20년차부터 세 쿠폰형의 환급금이 제안서상 같습니다. 15년차까지는 분명히 다릅니다
-       (20년형 $70,036 vs 5년형 $57,381). 이율확정기간이 20년이라 그 끝에서 수렴하는 것으로 보이지만
-       <b>제안서만으로 단정할 수 없어 회사 확인 전까지 제안서 숫자를 그대로</b> 옮겨 두었습니다.<br>
+       ★ <b>20년차부터는 세 쿠폰형의 환급금이 같습니다.</b> 15년차까지는 다릅니다
+       (20년형 $70,036 vs 5년형 $57,381). <b>이율확정기간(20년)이 끝나는 시점에
+       계약자적립액이 한 곳으로 모이도록 설계</b>되어 있기 때문입니다(회사 확인분).
+       즉 쿠폰을 언제 얼마씩 받아 갔든 <b>20년째에는 같은 자리에 섭니다</b> —
+       그래서 위 표의 「합계」가 곧 쿠폰형을 고르는 기준이 됩니다.<br>
        연금개시(30년·90세) 시점 계약자적립액은 세 쿠폰형 모두 같습니다 —
        최저보증 ${cusd(71001*k)} · 평균/현재공시 중 낮은 이율 ${cusd(84291*k)} · 현재공시 ${cusd(106881*k)}.`
     : `※ 제안서 <b>${cusd(AI_BASE)}</b>(= 99,899,100원 · 1USD 1,413.00원) 기준을

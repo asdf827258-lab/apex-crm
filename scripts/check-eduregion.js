@@ -122,7 +122,51 @@ const PAGE = '/app/' + encodeURIComponent('상담자료') + '/' + encodeURICompo
   is(/2025-01-01/.test(old), '  언제 확인한 값인지 적는다');
   is(/해마다 바뀝니다/.test(old), '  왜 다시 확인해야 하는지 말한다');
 
-  console.log('\n[6] 파일을 못 읽어도 안 무너진다');
+  console.log('\n[6] 붙여넣기 한 번으로 여러 지역을 채운다');
+  const paste = await page.evaluate(() => {
+    window.__apexE.regionSave([], '');
+    const txt = [
+      '전남 해남군 720만원 첫째 기준·분할지급 https://www.haenam.go.kr/announce/1',
+      '경남 고성군 500만원',
+      '강원 고성군 1,000만',
+      '인천 부평구 7,200,000원 셋째 이상',
+      '서울 종로구 지급액 미정',
+      '고성군 300만원',                       /* 시·도가 없어 못 가린다 */
+      '아무 지역도 없는 줄'
+    ].join('\n');
+    const parsed = window.__apexE.regionParse(txt);
+    const done = window.__apexE.regionPaste(txt);
+    const by = {};
+    done.draft.forEach(r => { if (r.sido || r.gu) by[(r.sido || '') + '|' + (r.gu || '')] = r; });
+    return { parsed, by, msg: done.msg };
+  });
+  const g = (k) => paste.by[k];
+  is(!!g('전라남도|해남군') && g('전라남도|해남군').amt === '720', '  「전남 해남군 720만원」 → 720');
+  is(!!g('전라남도|해남군') && /haenam/.test(g('전라남도|해남군').src || ''), '  줄 안의 주소를 출처로 넣는다');
+  is(!!g('전라남도|해남군') && /첫째/.test(g('전라남도|해남군').memo || ''), '  나머지 말은 메모로 남긴다');
+  is(!!g('경상남도|고성군') && g('경상남도|고성군').amt === '500', '  「경남 고성군」 과');
+  is(!!g('강원특별자치도|고성군') && g('강원특별자치도|고성군').amt === '1000',
+     '  「강원 고성군」 을 가른다 — 같은 이름이 두 곳에 있다');
+  is(!!g('인천광역시|부평구') && g('인천광역시|부평구').amt === '720', '  「7,200,000원」 → 720만원');
+  is(!!g('서울특별시|종로구') && !g('서울특별시|종로구').amt,
+     '  금액을 못 읽으면 비워 둔다 — 0 으로 안 채운다');
+  is((paste.parsed.skip || []).length === 1, '  시·도 없는 「고성군」 은 건너뛴다');
+  is(/시·도를 못 가린 줄/.test(paste.msg), '  왜 건너뛰었는지 말해 준다');
+  is(/0 으로 채우지 않습니다/.test(paste.msg), '  금액을 못 읽은 곳이 몇인지 알려 준다');
+
+  console.log('\n[7] 찾아보는 길을 열어 준다');
+  const links = await page.evaluate(() => {
+    const sd = document.getElementById('rgSido'), gu = document.getElementById('rgGu');
+    sd.value = '전라남도'; sd.dispatchEvent(new Event('change', { bubbles: true }));
+    gu.value = '해남군'; gu.dispatchEvent(new Event('change', { bubbles: true }));
+    const box = document.getElementById('rgPickState');
+    return { html: box.innerHTML, n: box.querySelectorAll('a[target="_blank"]').length };
+  });
+  is(links.n >= 4, '  고른 지역으로 바로 찾는 단추가 있다 (' + links.n + '개)');
+  is(/해남군/.test(decodeURIComponent(links.html)), '  검색어에 그 지역 이름이 들어간다');
+  is(/bokjiro|gov\.kr/.test(links.html), '  복지로·정부24 도 함께 연다');
+
+  console.log('\n[8] 파일을 못 읽어도 안 무너진다');
   breakJson = true;
   const p2 = await browser.newPage({ viewport: { width: 1100, height: 900 } });
   const e2 = []; p2.on('pageerror', e => e2.push(String(e).slice(0, 160)));
