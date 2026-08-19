@@ -121,13 +121,18 @@ const TABS = ['home', 'clients', 'crm', 'ckboard', 'growboard', 'bojang', 'baba'
   console.log('\n[4] 오늘의 터치가 폰에서도 한 줄로 읽힌다');
   const cc = await page.evaluate(async () => {
     const day = (n) => new Date(Date.now() + 9 * 3600e3 - n * 86400e3).toISOString().slice(0, 10);
-    OSC.list = [{ id: 'c1', name_masked: '홍○동', advisor_id: 'me', created_at: day(60) }];
-    CM.meta = { c1: { fp: {}, touch: [] } }; CM.loaded = true; CC.loaded = true; CM.pick = '';
+    /* 화면을 먼저 열고 <b>그다음에</b> 견본을 심는다. 순서를 바꾸면 화면이 열리면서
+       서버에서 고객을 다시 읽어와 우리 견본을 덮어쓴다 — CI 에서만 나던 흔들림이었다. */
+    window.osLoadClients = function () {};
     go('clients');
     await new Promise(r => setTimeout(r, 350));
+    OSC.list = [{ id: 'c1', name_masked: '홍○동', advisor_id: 'me', created_at: day(60) }];
+    CM.meta = { c1: { fp: {}, touch: [] } }; CM.loaded = true; CC.loaded = true; CM.pick = '';
     const el = document.getElementById('oscList');
     if (el) el.innerHTML = cmTopHtml('', OSC.list);
-    await new Promise(r => setTimeout(r, 120));
+    /* 그려질 때까지 기다린다 — 시간으로 찍으면 느린 기계에서 또 흔들린다 */
+    for (let i = 0; i < 40 && !document.querySelector('.ccp-row'); i++)
+      await new Promise(r => setTimeout(r, 50));
     const row = document.querySelector('.ccp-row');
     const btn = document.querySelector('.ccp-go');
     return { has: !!row,
