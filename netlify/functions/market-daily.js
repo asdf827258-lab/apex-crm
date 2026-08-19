@@ -20,6 +20,8 @@
      ANTHROPIC_API_KEY 또는 GEMINI_API_KEY     (없으면 브리핑만 건너뛴다)
    ════════════════════════════════════════════════════════════════════════ */
 
+const GEMMODEL = require('../../scripts/gemini-model.js');
+
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const AI_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -75,19 +77,14 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status);
   }
   if (!GM_KEY) throw new Error('AI 키가 없습니다 (ANTHROPIC_API_KEY 또는 GEMINI_API_KEY)');
-  const r2x = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GM_KEY,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { maxOutputTokens: maxTokens || 1600 }
-      })
-    }
-  );
-  if (!r2x.ok) throw new Error('Gemini ' + r2x.status);
+  /* 되는 모델을 찾을 때까지 후보를 내려간다 — 목록에 있어도 부르면 404 인
+     조합이 있다. 실패하면 무엇을 몇 번 시도했는지 메시지에 담긴다. */
+  const gem = await GEMMODEL.callGemini(GM_KEY, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: { maxOutputTokens: maxTokens || 1600 }
+  });
+  const r2x = gem.res;
   const j2 = await r2x.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }
@@ -296,6 +293,26 @@ exports.handler = async function () {
       });
       log.push('시황 브리핑 ok');
     } else log.push('브리핑 건너뜀(데이터 없음)');
+
+    /* 헤드라인 원문도 따로 남긴다.
+       위 브리핑은 AI 가 요약한 글이라 "무슨 기사를 보고 쓴 것인지" 가 사라진다.
+       아침 브리핑(invest-daily)에서 제목과 링크를 그대로 보여 주려면 원문이
+       필요하다. 요약만 있으면 확인할 방법이 없고, 확인할 수 없는 요약은
+       투자 판단에 쓸 물건이 아니다.
+       ⚠️ 제목과 링크만 저장한다. 기사 본문은 저장하지 않는다 — 남의 저작물이다. */
+    if (news.length) {
+      const lines = news.slice(0, 20)
+        .map(x => '- [' + (x.source || '출처미상') + '] ' + String(x.title).replace(/\s+/g, ' ').trim() +
+                  (x.link ? '\n  ' + x.link : ''));
+      await sb('invest_briefs?on_conflict=kind,ref_date', {
+        method: 'POST',
+        body: JSON.stringify([{
+          kind: 'news_daily', ref_date: today, title: today + ' 뉴스 헤드라인 ' + lines.length + '건',
+          body: lines.join('\n'), src: 'auto'
+        }])
+      });
+      log.push('헤드라인 ' + lines.length + '건 보관');
+    }
   } catch (e) { log.push('브리핑 실패: ' + e.message.slice(0, 90)); }
 
   /* ── ⑥ 실행 기록 (앱 점검 화면에서 마지막 실행 시각 확인) ───────────── */

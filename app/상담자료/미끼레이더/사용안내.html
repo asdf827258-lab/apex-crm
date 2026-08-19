@@ -148,3 +148,115 @@ code{background:#F2F4F6;border-radius:5px;padding:2px 6px;font-size:12.6px;
 "이 고객한테는 이 회사가 낫다"가 근거를 갖고 나옵니다. 그때부터 이 도구가 제 값을 합니다.</div>
 </div>
 </div>
+
+<script>
+/* ════════ 안내문 고치기 — 이제 되는 일을 안 된다고 두지 않는다 ════════
+
+   이 안내문에는 「✕ 태블릿에서 뉴스 수집 — 파이썬이 필요합니다. PC에서
+   시작.bat 돌리고 번들로 옮기세요」 라고 적혀 있었다. 맞는 말이었다.
+
+   이제 아니다. 미끼 레이더 화면에 「🌐 뉴스 모아 오기」 를 넣었다.
+   서버가 보험 RSS 를 모아 주므로 PC 를 안 켜 놔도 뉴스가 들어온다.
+
+   안내문이 틀린 채로 남아 있으면, 되는 일을 안 된다고 믿고 안 쓰게 된다.
+   그래서 여기서 고친다.
+
+   본문 HTML 은 손대지 않는다 — 이 파일은 다른 세션이 만든 것이라 안을
+   건드리면 다음 병합에서 부딪힌다. 글자로 찾아서 그 자리만 바꾼다.   */
+(function(){
+  function run(){
+    var w=document.querySelector('.wrap');
+    if(!w||w.__mkn)return; w.__mkn=1;
+
+    /* 1. 「안 되는 것」 표에서 뉴스 수집 줄을 되는 것으로 바꾼다 */
+    var rows=document.querySelectorAll('tr'),i,r,td;
+    for(i=0;i<rows.length;i++){
+      r=rows[i];
+      if((r.textContent||'').indexOf('태블릿에서 뉴스 수집')<0)continue;
+      td=r.getElementsByTagName('td');
+      if(td.length<3)continue;
+      td[0].className='o'; td[0].textContent='✓';
+      td[1].innerHTML='<b>태블릿에서 뉴스 수집</b><br><span style="font-size:11.5px;color:#00A661;'+
+                      'font-weight:800">이제 됩니다</span>';
+      td[2].innerHTML='미끼 레이더 오른쪽 아래 <b>🌐 뉴스 모아 오기</b> 를 누르시면 됩니다. '+
+                      '서버가 보험신문·한국보험신문·매경·한경을 모아 옵니다. '+
+                      '파이썬도, 사무실 PC 도 필요 없습니다.';
+      r.style.background='#F0FDF6';
+      break;
+    }
+
+    /* 2. 「안 되는 것 8가지」 → 7가지 (하나가 되는 것으로 옮겨 갔다) */
+    var hs=document.querySelectorAll('h2'),h;
+    for(i=0;i<hs.length;i++){
+      h=hs[i];
+      if((h.textContent||'').indexOf('안 되는 것')<0)continue;
+      h.innerHTML=h.innerHTML.replace('8가지','7가지');
+      break;
+    }
+
+    /* 3. 맨 위에 「달라진 것」 을 한 장 끼운다 */
+    var card=document.createElement('div');
+    card.className='card';
+    card.style.cssText='border:2px solid #00A661;background:#F0FDF6';
+    card.innerHTML=
+      '<h2><span class="bar" style="background:#00A661"></span>달라진 것 — 뉴스는 이제 어디서든</h2>'+
+      '<p style="margin-top:0">여태 뉴스 수집은 <b>사무실 PC 의 시작.bat</b> 이 했습니다. '+
+      '그 컴퓨터를 켜 두고 오셔야 오늘 기사를 볼 수 있었습니다.<br><br>'+
+      '이제 미끼 레이더 화면 <b>오른쪽 아래 「🌐 뉴스 모아 오기」</b> 를 누르시면 '+
+      '집에서도, 갤럭시탭에서도, 출장지에서도 오늘 보험 뉴스가 들어옵니다. '+
+      '보험신문 · 한국보험신문 · 매일경제 금융 · 한국경제 금융 을 서버가 모아 옵니다.</p>'+
+      '<div class="warn" style="margin-top:12px"><b>뉴스만입니다.</b><br><br>'+
+      '약관 원문과 판매자료는 여전히 직접 올리셔야 합니다 — '+
+      '원수사 약관을 서버에 두지 않는다는 원칙 때문입니다. 그건 '+
+      '<b>📚 상품 서재</b> 에 끌어다 놓거나, 사무실에서 만든 <b>data 폴더</b>를 '+
+      '<b>📂 자료 폴더</b> 단추로 통째로 넣으시면 됩니다.</div>'+
+      '<div class="ok" style="margin-top:12px">앱 <b>안에서</b> 열어야 합니다 — '+
+      '왼쪽 메뉴 영업 무기 › 🎣 미끼 레이더. '+
+      'HTML 파일만 따로 열면 서버가 막습니다(그때는 화면이 그렇다고 알려 줍니다).</div>';
+    var sub=w.querySelector('.sub'), first=w.querySelector('.card');
+    if(first)w.insertBefore(card,first);
+    else if(sub&&sub.nextSibling)w.insertBefore(card,sub.nextSibling);
+    else w.appendChild(card);
+
+    /* 4. 「매달 하는 일」 순서를 통째로 바꾼다.
+
+       bat 이 하던 다섯 걸음(뉴스 → 훅 → 서재 → 판정 → 정리)은 이미
+       화면 안의 goRun() 에 다 있었다. 막힌 곳은 뉴스 하나뿐이었고,
+       그 자리를 서버로 이었다. 이제 bat 을 눌러야 할 이유가 없다.  */
+    var flows=document.querySelectorAll('.flow');
+    for(i=0;i<flows.length;i++){
+      if((flows[i].textContent||'').indexOf('시작.bat 더블클릭')<0)continue;
+      flows[i].innerHTML=
+        '<b>[어디서든]</b>  🎣 미끼 레이더 → <b>▶ 오늘 것 찾기</b> 한 번\n'+
+        '            뉴스 → 이달의 훅 → 서재 → 약관 판정 → 정리 (예전 시작.bat 이 하던 그대로)\n\n'+
+        '<b>[화면]</b>  🎭 이달의 컨셉 → 이번 달 각도 1개 고르기\n'+
+        '          🏆 베스트 찾기 → 담보별로 밀 상품 정하기\n'+
+        '          🧾 고객 제시 → 약관 원문 캡처 붙인 자료 인쇄\n'+
+        '          🤝 접촉 엔진 → 문자 보내고 [CRM으로 보내기]\n\n'+
+        '<b>[수시]</b>  약관 PDF 받으면 → 📜 약관 › 서재 에 <b>여러 개 한꺼번에</b> 끌어다 놓기\n'+
+        '          판매자료 받으면 → 📡 신상품 › 상품 분석 에 본문 붙여넣기';
+      var note=document.createElement('div');
+      note.className='ok';
+      note.style.cssText='margin-top:12px;background:#F0FDF6;border-color:#A7F3D0;color:#065F46';
+      note.innerHTML='<b>시작.bat 은 이제 안 누르셔도 됩니다.</b><br><br>'+
+        '뉴스는 서버가 모아 오고, 약관 PDF 는 화면에 끌어다 놓으면 글자 뽑기·회사 구분·'+
+        '29항목 판정까지 이 화면 안에서 다 합니다. 파이썬도, 사무실 PC 도 필요 없습니다.<br><br>'+
+        '<span style="color:#047857">원수사 약관은 여전히 서버로 안 올라갑니다 — 넣으신 브라우저에만 쌓입니다. '+
+        '다른 기기로 옮기실 때만 <b>📤 자료 내보내기 → 📦 자료 불러오기</b> 를 쓰세요.</span>';
+      flows[i].parentNode.insertBefore(note,flows[i].nextSibling);
+      break;
+    }
+
+    /* 5. 「손대는 건 3가지」 에서도 bat 을 뺀다 */
+    var oks=document.querySelectorAll('.ok');
+    for(i=0;i<oks.length;i++){
+      if((oks[i].textContent||'').indexOf('① 시작.bat 더블클릭')<0)continue;
+      oks[i].innerHTML='<b>사장님이 실제로 손대는 건 3가지뿐입니다</b><br>'+
+        '① <b>▶ 오늘 것 찾기</b> 한 번 &nbsp;② 컨셉·상품 고르기 &nbsp;③ 약관 PDF 끌어다 놓기';
+      break;
+    }
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);
+  else run();
+})();
+</script>

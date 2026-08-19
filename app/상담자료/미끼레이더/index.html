@@ -294,8 +294,9 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
       <div style="margin-top:8px"><button class="btn sm" id="btnParsePaste">분석하기</button></div>
     </div>
     <div style="margin-top:10px" class="tipbox" id="loadHint">
-      <b>자동 수집을 쓰려면</b> 이 폴더의 <b>미끼레이더_실행.bat</b> 을 더블클릭하세요. 뉴스를 자동으로 모아 <b>data/news.json</b> 을 만들고
-      이 화면을 열어줍니다. (그냥 파일만 열었을 때는 위 <b>직접 붙여넣기</b>를 쓰세요.)
+      <b>뉴스는 서버가 모아 옵니다.</b> 🚀 오늘 › <b>▶ 오늘 것 찾기</b> 를 누르거나, 오른쪽 아래 <b>🌐 뉴스</b> 를 누르면
+      보험신문 · 한국보험신문 · 매일경제 금융 · 한국경제 금융 에서 오늘 기사를 받아 옵니다. <b>배치파일도, 사무실 PC 도 필요 없습니다.</b>
+      (서버가 막히거나 원하는 기사가 따로 있으면 위 <b>직접 붙여넣기</b>를 쓰세요.)
     </div>
   </div>
 
@@ -324,8 +325,9 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
     <input type="file" id="upFiles" accept=".pdf,.txt" multiple hidden>
     <div class="cnt" id="upState" style="margin-top:9px">쌓인 약관이 많을수록 회사별 비교가 정확해집니다</div>
     <div class="tipbox" style="margin-top:10px" id="libHint">
-      <b>쌓는 방법</b> · 받은 PDF를 이 폴더의 <b>상품총서\</b> 안에 넣고 <b>상품총서_적재.bat</b> 을 더블클릭하세요.
-      글자를 전부 뽑아 <b>data/library.json</b> 으로 저장합니다. 그 뒤엔 창을 닫아도 남아 있습니다.
+      <b>쌓는 방법</b> · 위 칸에 약관 PDF 를 <b>여러 개 한꺼번에</b> 끌어다 놓으세요. 글자를 전부 뽑아
+      회사·종류까지 나눠 이 브라우저에 쌓습니다. 창을 닫아도 남습니다. <b>배치파일도, 사무실 PC 도 필요 없습니다.</b>
+      <b>원수사 약관은 서버로 올라가지 않습니다</b> — 다른 기기로 옮기실 때만 <b>📤 자료 내보내기</b> → <b>📦 자료 불러오기</b> 를 쓰세요.
     </div>
   </div>
   <div id="libList"></div>
@@ -667,8 +669,32 @@ const NEWS_RULES=[
  {tag:'노후',     kw:['연금','노후','시니어','고령','상속','증여','종신'],                       v:2},
  {tag:'저축',     kw:['저축','달러','환율','금리','공시이율','최저보증'],                        v:1},
  {tag:'디지털',   kw:['미니','앱 전용','다이렉트','간편가입','온라인 전용'],                     v:2},
- {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1}
+ {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1},
+ /* ── 여기부터는 보험 밖 주제다 ──────────────────────────────────
+    사업자 고객에게는 보험보다 자금·세금 이야기로 문이 먼저 열린다.
+    보험 기사와 섞이지 않게 이름표를 따로 달아 둔다.
+    미끼 점수는 아래 scoreNews 에서 주제에 맞게 따로 매긴다. */
+ {tag:'정책자금', kw:['정책자금','정책금융','소상공인','자영업자','개인사업자','신용보증','기술보증',
+                     '신보','기보','소진공','중진공','중기부','중소벤처기업부','이차보전','저리대출',
+                     '운전자금','시설자금','경영안정자금','긴급경영안정','융자','지원사업','공모사업',
+                     '수출바우처','스마트공장','새출발기금','대환대출','상환유예','만기연장',
+                     '고용지원금','고용장려금','일자리안정자금','두루누리','노란우산공제',
+                     '전통시장','골목상권','가맹점','프랜차이즈','중소기업','벤처기업','창업'],       v:3},
+ {tag:'세금',     kw:['연말정산','세액공제','소득공제','종합소득세','종소세','양도소득세','양도세',
+                     '상속세','증여세','종부세','종합부동산세','취득세','재산세','부가가치세','부가세',
+                     '법인세','세법개정','세제개편','과세표준','비과세','절세','국세청','홈택스',
+                     '세무조사','감면','공제한도','가업승계','가업상속공제','사전증여','경정청구'],   v:3},
+ {tag:'부동산',   kw:['청약','분양','전세','월세','임대차','재건축','재개발','정비사업','아파트',
+                     '주택담보','주담대','LTV','DSR','공시가격','보금자리','디딤돌','버팀목',
+                     '전세사기','깡통전세','입주','매매가','집값','부동산','실거래가','규제지역',
+                     '조정대상지역','토지거래허가','분양가상한제','1주택','다주택','임대사업자',
+                     '주택연금','역모기지','경매','임대소득'],                                       v:3},
+ {tag:'지원금',   kw:['지원금','보조금','바우처','장려금','수당','환급','재난지원금','근로장려금',
+                     '자녀장려금','실업급여','구직급여','육아휴직급여','기초연금','주거급여',
+                     '청년도약계좌','내일채움공제','신청 기간','접수','지급 대상'],                  v:2}
 ];
+/* 보험 밖 주제 이름표 — 그물과 점수가 같은 목록을 본다 */
+const OUT_TAGS=['정책자금','세금','부동산','지원금'];
 
 /* 태그별 화법 재료 : 오프너 / 니즈환기 질문 / 연결 */
 const TAG_TALK={
@@ -1147,7 +1173,8 @@ function copy(txt,msg){navigator.clipboard.writeText(txt).then(()=>toast(msg||'�
 const bytes=s=>{let n=0;for(const c of s)n+=c.charCodeAt(0)>127?2:1;return n};
 
 const state={news:LS.get('news',[]),newsAt:LS.get('newsAt',''),hook:LS.get('hook',null),
-  terms:LS.get('terms',[]),lastA:null,lastB:null,filter:new Set(),design:null,touch:null};
+  terms:LS.get('terms',[]),lastA:null,lastB:null,filter:new Set(),design:null,touch:null,
+  mon:''};   /* 고른 달. 빈 값이면 이번에 모은 것 전부 */
 
 /* ---------------- 탭 ---------------- */
 /* 화면이 13칸이라 뭘 눌러야 할지 어려웠다. 하는 일이 같은 것끼리 5칸으로 묶는다.
@@ -1221,6 +1248,15 @@ function scoreNews(it){
   if(/실손|비급여|도수/.test(t)){s+=8;why.push('누구나 해당돼서 말 걸기 쉬움')}
   if(/앱|다이렉트|온라인|1분/.test(t)){s+=5;why.push('가입이 간단함')}
   if(tags.includes('주의')){s-=14;why.push('⚠ 부정 이슈 — 화법에 쓰지 말 것')}
+  /* 보험 밖 주제는 보험 잣대로 재면 뜻이 흐려진다. 그 주제에서 「연락할 명분이
+     되는가」 로 따로 잰다. 사업자에게는 마감이 있는 자금 기사가 제일 센 미끼다. */
+  if(tags.some(t=>OUT_TAGS.indexOf(t)>=0)){
+    if(/신청|접수|공모|선착순|마감|기한|시행|시행일|오늘부터|내달부터/.test(t)){s+=14;why.push('기한이 있어 지금 연락할 명분이 됨')}
+    if(/확대|신설|상향|인상|완화|추가 지원|늘린/.test(t)){s+=10;why.push('전에 안 되던 고객이 대상이 됨')}
+    if(/개편|개정|바뀐다|달라진다|시행령/.test(t)){s+=8;why.push('바뀐 것을 알려 주는 전화가 된다')}
+    if(tags.includes('정책자금')){s+=6;why.push('사업자 고객에게 바로 쓸 수 있음')}
+    if(tags.includes('세금')){s+=6;why.push('세금 이야기는 재무설계로 이어짐')}
+  }
   if(!tags.length)s-=18;
   s=Math.max(5,Math.min(99,s));
   return {tags,score:s,why};
@@ -1240,6 +1276,14 @@ function parsePasted(txt){
 }
 /* 보험 기사인지 최소 확인. '약관'은 상품권·통신 약관에도 쓰이므로 판정어에서 뺀다. */
 const INSURANCE=/보험|보장|담보|실손|진단비|손보|생보|보험료|보험금|금감원|금융감독원|손해보험|생명보험/;
+/* 보험이 아니어도 남길 것 — 정책자금·세금·부동산·지원금.
+   예전에는 보험이 아니면 무조건 버렸다. 그래서 사업자 고객에게 쓸
+   자금·세금 기사가 들어와도 화면에 한 건도 안 남았다.
+   보험 판정은 그대로 두고, 위 네 이름표가 하나라도 붙으면 같이 남긴다. */
+function keepNews(x){
+  if(INSURANCE.test(x.title))return true;
+  return (x.tags||[]).some(t=>OUT_TAGS.indexOf(t)>=0);
+}
 function ingest(items){
   const seen=new Set();let dropped=0;
   state.news=items.map(it=>{
@@ -1247,37 +1291,122 @@ function ingest(items){
     const sc=scoreNews({title});
     return {title,link:it.link||'',source:it.source||'',date:it.pubDate||it.date||'',...sc}})
     .filter(x=>{const k=x.title.slice(0,28);if(!x.title||seen.has(k))return false;seen.add(k);
-      if(!INSURANCE.test(x.title)){dropped++;return false}return true});
-  if(dropped)console.info('[미끼레이더] 보험 기사가 아니어서 제외한 것 '+dropped+'건');
+      if(!keepNews(x)){dropped++;return false}return true});
+  if(dropped)console.info('[미끼레이더] 쓸 주제가 아니어서 제외한 것 '+dropped+'건');
   state.newsAt=new Date().toLocaleString('ko-KR');
   LS.set('news',state.news);LS.set('newsAt',state.newsAt);
+  /* 이번에 받은 것을 달 서랍에도 넣는다 — 다음 달에 이번 달 것을 다시 볼 수 있게 */
+  const added=archAdd(state.news);
+  if(added)console.info('[미끼레이더] 달 서랍에 '+added+'건 새로 넣었습니다');
   renderNews();renderHookPick();
   $('#stNews').innerHTML='뉴스 <b>'+state.news.length+'</b>건';
 }
 function dnum(d){const t=Date.parse(d);return isNaN(t)?0:t}
+/* ── 달 서랍 ──────────────────────────────────────────────────────
+   예전에는 새로 모을 때마다 state.news 를 통째로 갈아 끼웠다.
+   그래서 지난달 기사는 그냥 사라졌다. 이제 쌓아 두고 달로 나눠 본다.
+   제목이 같으면 한 번만 넣는다 — 같은 기사를 여러 날 받아도 하나다. */
+const MK_ARCH_MAX=1500;   /* 이 기기에 남길 최대 건수 — 오래된 달부터 버린다 */
+function monOf(n){
+  const t=Date.parse((n&&n.date)||'');
+  if(!isNaN(t))return new Date(t+9*3600*1000).toISOString().slice(0,7);
+  /* 날짜를 못 읽은 기사도 버리지 않는다. 받은 달에 넣고 그렇다고 적는다. */
+  return (n&&n.got)||'없음';
+}
+function monTxt(k){
+  if(k==='없음')return '날짜 모름';
+  const p=k.split('-');
+  return p[0]+'년 '+(+p[1])+'월';
+}
+function archLoad(){
+  const a=LS.get('arch',[]);
+  return (a&&a.push)?a:[];
+}
+function archSave(a){LS.set('arch',a);}
+/* 이번에 받은 것을 서랍에 넣는다. 먼저 있던 것이 이긴다 —
+   같은 기사를 다시 받아도 처음 본 날짜를 지킨다. */
+function archAdd(list){
+  const now=new Date(Date.now()+9*3600*1000).toISOString().slice(0,7);
+  const a=archLoad(),seen=new Set();
+  a.forEach(x=>seen.add(String(x.title||'').slice(0,28)));
+  let add=0;
+  (list||[]).forEach(n=>{
+    const k=String(n.title||'').slice(0,28);
+    if(!k||seen.has(k))return;
+    seen.add(k);
+    a.push({...n,got:now});
+    add++;
+  });
+  /* 넘치면 오래된 달부터 버린다 */
+  a.sort((x,y)=>{
+    const mx=monOf(x),my=monOf(y);
+    if(mx!==my)return mx<my?1:-1;
+    return dnum(y.date)-dnum(x.date);
+  });
+  if(a.length>MK_ARCH_MAX)a.length=MK_ARCH_MAX;
+  archSave(a);
+  return add;
+}
+/* 달마다 몇 건인가 — 최근 달이 앞으로. 「날짜 모름」 은 맨 뒤. */
+function archMonths(){
+  const c={};
+  archLoad().forEach(n=>{const m=monOf(n);c[m]=(c[m]||0)+1;});
+  return Object.keys(c).sort((a,b)=>{
+    if(a==='없음')return 1;
+    if(b==='없음')return -1;
+    return a<b?1:-1;
+  }).map(m=>({m:m,n:c[m]}));
+}
+function monSet(m){
+  state.mon=(state.mon===m)?'':m;
+  renderNews();
+}
+function monChipsHtml(){
+  const ms=archMonths();
+  if(!ms.length)return '';
+  const tot=ms.reduce((s,x)=>s+x.n,0);
+  let h='<div class="chips" style="margin-bottom:10px"><span class="f" style="align-self:center;margin-right:4px">달별</span>'+
+    '<span class="chip'+(state.mon?'':' on')+'" data-mon="">전체 '+tot+'</span>';
+  ms.forEach(x=>{
+    h+='<span class="chip'+(state.mon===x.m?' on':'')+'" data-mon="'+esc(x.m)+'">'+
+       esc(monTxt(x.m))+' '+x.n+'</span>';
+  });
+  return h+'</div>';
+}
+
 function renderNews(){
   const per=+$('#selPeriod').value, sort=$('#selSort').value;
   const now=Date.now(), lim=per*864e5;
-  let list=state.news.filter(n=>{
-    if(per<9999&&n.date&&dnum(n.date)&&now-dnum(n.date)>lim)return false;
-    if(state.filter.size&&!n.tags.some(t=>state.filter.has(t)))return false;
+  /* 달을 고르면 서랍 전체에서 그 달만 본다 — 이번에 받은 것만이 아니라
+     쌓아 둔 것 전부에서 고른다. 그러라고 쌓아 둔 것이다. */
+  const src=state.mon?archLoad().filter(n=>monOf(n)===state.mon):state.news;
+  let list=src.filter(n=>{
+    /* 달을 고른 동안에는 기간 제한을 걸지 않는다 — 두 잣대가 겹치면
+       「8월을 골랐는데 아무것도 없다」 가 된다 */
+    if(!state.mon&&per<9999&&n.date&&dnum(n.date)&&now-dnum(n.date)>lim)return false;
+    if(state.filter.size&&!(n.tags||[]).some(t=>state.filter.has(t)))return false;
     return true});
   list.sort((a,b)=>sort==='date'?dnum(b.date)-dnum(a.date):b.score-a.score||dnum(b.date)-dnum(a.date));
   /* 태그 필터 */
-  const cnt={};state.news.forEach(n=>n.tags.forEach(t=>cnt[t]=(cnt[t]||0)+1));
-  $('#tagFilter').innerHTML=Object.entries(cnt).sort((a,b)=>b[1]-a[1])
+  const cnt={};src.forEach(n=>(n.tags||[]).forEach(t=>cnt[t]=(cnt[t]||0)+1));
+  $('#tagFilter').innerHTML=monChipsHtml()+'<div class="chips">'+Object.entries(cnt).sort((a,b)=>b[1]-a[1])
     .map(([t,c])=>'<span class="chip'+(state.filter.has(t)?' on':'')+(t==='주의'?' rd':'')+'" data-tag="'+t+'">'+t+' '+c+'</span>').join('')
-    +(state.filter.size?'<span class="chip" data-tag="__all">✕ 필터 해제</span>':'');
-  $$('#tagFilter .chip').forEach(c=>c.onclick=()=>{
+    +(state.filter.size?'<span class="chip" data-tag="__all">✕ 필터 해제</span>':'')+'</div>';
+  $$('#tagFilter .chip[data-mon]').forEach(c=>c.onclick=()=>monSet(c.dataset.mon));
+  $$('#tagFilter .chip[data-tag]').forEach(c=>c.onclick=()=>{
     const t=c.dataset.tag;
     if(t==='__all')state.filter.clear();
     else state.filter.has(t)?state.filter.delete(t):state.filter.add(t);
     renderNews()});
-  if(!list.length){$('#newsList').innerHTML='<div class="empty">뉴스가 없어요.<br>위의 <b>수집 데이터 불러오기</b> 또는 <b>직접 붙여넣기</b>를 눌러주세요.</div>';return}
-  $('#newsList').innerHTML='<div class="cnt" style="margin-bottom:8px">'+list.length+'건 · 마지막 갱신 '+esc(state.newsAt||'-')+'</div>'
+  if(!list.length){$('#newsList').innerHTML='<div class="empty">'+
+    (state.mon?('<b>'+esc(monTxt(state.mon))+'</b> 에 모아 둔 기사가 없습니다.<br>위 <b>전체</b> 를 누르면 다 보입니다.')
+             :'뉴스가 없어요.<br>위의 <b>수집 데이터 불러오기</b> 또는 <b>직접 붙여넣기</b>를 눌러주세요.')+
+    '</div>';return}
+  $('#newsList').innerHTML='<div class="cnt" style="margin-bottom:8px">'+
+    (state.mon?('<b>'+esc(monTxt(state.mon))+'</b> · '):'')+list.length+'건 · 마지막 갱신 '+esc(state.newsAt||'-')+'</div>'
    +list.map((n,i)=>{
     const cls=n.score>=70?'g':n.score>=50?'b':'n';
-    return '<div class="nitem" data-i="'+state.news.indexOf(n)+'">'
+    return '<div class="nitem" data-i="'+list.indexOf(n)+'" data-t="'+esc(String(n.title||'').slice(0,28))+'">'
      +'<div class="nt">'+(n.link?'<a href="'+esc(n.link)+'" target="_blank" rel="noopener">'+esc(n.title)+'</a>':esc(n.title))+'</div>'
      +'<div class="nmeta"><span class="score">🎣 미끼점수 '+n.score+'</span>'
      +n.tags.map(t=>'<span class="bd '+(t==='주의'?'r':'b')+'">'+t+'</span>').join('')
@@ -1289,13 +1418,17 @@ function renderNews(){
     const box=e.target.closest('.nitem'),i=+box.dataset.i;
     const hb=box.querySelector('.hookbox');
     if(hb.classList.contains('on')){hb.classList.remove('on');return}
-    const n=state.news[i],tk=talkFor(n.tags);
+    const n=list[i];if(!n)return;
+    const tk=talkFor(n.tags);
     hb.innerHTML=hookHTML(n);hb.classList.add('on');
     hb.querySelector('.useHook').onclick=()=>{state.hook=n;LS.set('hook',n);
       renderHookPick();toast('이달의 훅으로 지정했어요 → 설계기/접촉 엔진에 반영됩니다')};
     hb.querySelector('.cpHook').onclick=()=>copy('['+n.title+']\n\n① '+tk.o+'\n② '
       +tk.q+'\n③ '+tk.b)});
-  $$('.mkrep').forEach(b=>b.onclick=e=>npFromNews(state.news[+e.target.closest('.nitem').dataset.i],true));
+  $$('.mkrep').forEach(b=>b.onclick=e=>{
+    const n=list[+e.target.closest('.nitem').dataset.i];
+    if(n)npFromNews(n,true);
+  });
 }
 /* 화법을 고를 때의 우선순위 — 고객의 '관심사(질병·상황)'가 '제도 얘기'보다 먼저 */
 const PRIORITY=['실손','암','뇌심장','간병','치아','운전자','자녀','생활','노후','간편심사','면책완화',
@@ -1341,11 +1474,9 @@ async function loadNewsFile(){
     toast('수집 데이터를 불러왔어요 ('+(j.items||[]).length+'건)');
     $('#loadHint').innerHTML='✅ <b>data/news.json</b> 을 읽었습니다. 수집 시각: '+esc(j.generated||'-');
   }catch(e){
-    toast('data/news.json 을 못 읽었어요 — 붙여넣기를 써주세요');
-    $('#loadHint').innerHTML='⚠️ 수집 데이터를 자동으로 못 읽었습니다.<br>'
-      +'· 내 PC에서 쓰는 경우 → <b>시작.bat</b> 으로 여세요.<br>'
-      +'· CRM에 올려 둔 화면인 경우 → 📚 상품 서재의 <b>📦 자료 불러오기</b> 로 '
-      +'<b>mikki_bundle.json</b> 을 여세요. (약관은 서버에 올리지 않는 구조입니다)';
+    /* 옆에 놓인 news.json 이 없다는 것뿐이다. 곧바로 서버에서 받아 온다
+       (아래에 붙여 둔 감싸기가 이어받는다). 그러니 여기서 겁주지 않는다. */
+    $('#loadHint').innerHTML='⏳ 옆에 놓인 수집 파일이 없어 <b>서버에서 받아 오는 중</b>입니다…';
     $('#pasteWrap').style.display='block';
   }
 }
@@ -1985,8 +2116,8 @@ function libRender(){
   const j=state.lib;
   if(!j||!j.items||!j.items.length){
     $('#libList').innerHTML='<div class="empty">아직 쌓인 자료가 없어요.<br><br>'
-      +'· 내 PC에서 : 받은 PDF를 <b>상품총서\\</b> 폴더에 넣고 <b>시작.bat</b> 더블클릭<br>'
-      +'· CRM에서 : 위 <b>📦 자료 불러오기</b> 로 <b>mikki_bundle.json</b> 열기</div>';return}
+      +'· <b>여기서 바로</b> : 위 칸에 약관 PDF 를 <b>여러 개 한꺼번에</b> 끌어다 놓으세요<br>'
+      +'· <b>다른 기기에 쌓아 두셨으면</b> : 위 <b>📦 자료 불러오기</b> 로 내보낸 파일 열기</div>';return}
   const kinds=[...new Set(j.items.map(x=>x.kind))],cos=[...new Set(j.items.map(x=>x.co).filter(Boolean))];
   const kSel=$('#libKind'),cSel=$('#libCo');
   if(kSel.options.length<=1){kSel.innerHTML='<option value="">종류 전체</option>'+kinds.map(k=>'<option>'+esc(k)+'</option>').join('');
@@ -2340,7 +2471,7 @@ $('#helpOut').innerHTML=`
 
 <div class="card" style="margin-top:14px"><h3>🔁 매달 한 번 (30분)</h3>
 <table class="tbl"><tr><th style="width:56px">순서</th><th>할 일</th></tr>
-<tr><td><b>1</b></td><td><b>시작.bat</b> 더블클릭 → 뉴스 수집 + 약관 판정 + 화면 열림</td></tr>
+<tr><td><b>1</b></td><td>🚀 오늘 › <b>▶ 오늘 것 찾기</b> 한 번 → 뉴스 + 이달의 훅 + 약관 판정까지 한 번에</td></tr>
 <tr><td><b>2</b></td><td>📡 신상품 › <b>이달의 컨셉</b> → 이번 달 각도 1개 정하기</td></tr>
 <tr><td><b>3</b></td><td>📜 약관 › <b>베스트 찾기</b> → 담보별로 밀 상품 정하기</td></tr>
 <tr><td><b>4</b></td><td>🧾 고객 › <b>고객 제시자료</b> → 약관 원문 캡처 붙여 인쇄</td></tr>
@@ -2349,9 +2480,9 @@ $('#helpOut').innerHTML=`
 <div class="card" style="margin-top:14px"><h3>📥 약관·자료 넣는 법</h3>
 <table class="tbl"><tr><th style="width:150px">무엇</th><th>어떻게</th></tr>
 <tr><td><b>약관 PDF</b></td><td>📜 약관 › 서재에 <b>끌어다 놓기</b>(여러 개 한꺼번에). 이 브라우저에 계속 쌓입니다</td></tr>
-<tr><td><b>판매자료</b></td><td>PDF·PPTX를 <b>상품자료\\</b> 폴더에 넣고 <b>상품자료_분석.bat</b> → 📡 신상품 › 상품 분석</td></tr>
+<tr><td><b>판매자료</b></td><td>📡 신상품 › <b>상품 분석</b> 에 본문을 붙여넣기 (약관을 넣어 두셨으면 <b>📜 약관 본문 가져오기</b> 한 번)</td></tr>
 <tr><td><b>다른 기기로</b></td><td>서재에서 <b>📤 자료 내보내기</b> → 그 파일을 태블릿에서 <b>📦 자료 불러오기</b></td></tr>
-<tr><td><b>뉴스</b></td><td>시작.bat 이 자동으로. 인터넷이 안 되면 제목을 붙여넣어도 됩니다</td></tr></table>
+<tr><td><b>뉴스</b></td><td><b>서버가 자동으로</b> 모아 옵니다. 인터넷이 안 되면 제목을 붙여넣어도 됩니다</td></tr></table>
 <p class="desc" style="margin-top:8px"><b>스캔 이미지 PDF는 글자가 없어 분석되지 않습니다.</b>
 서재에 빨간 <b>스캔·분석불가</b>로 표시되니, 필요한 조항만 복사해 붙여넣으세요.</p></div>
 
@@ -2918,7 +3049,7 @@ async function goRun(){
     goRender(0);await wait(60);
     let newsOK=false;
     if(location.protocol!=='file:'){try{await loadNewsFile(true);newsOK=true}catch(e){}}
-    if(!state.news.length)log.push(['뉴스','수집 데이터를 못 읽었습니다 — 시작.bat 으로 열었는지 확인하세요']);
+    if(!state.news.length)log.push(['뉴스','오늘 기사를 못 받았습니다 — 📡 레이더 › 직접 붙여넣기 로 넣으실 수 있습니다']);
 
     /* ② 훅 */
     goRender(1);await wait(60);
@@ -2989,7 +3120,7 @@ function goPaint(o){
      +'</table>'
      +'<div class="tipbox" style="margin-top:10px"><b>「확인 n/29」가 낮으면 점수가 실제와 다릅니다.</b> '
      +'그 약관에서 해당 특약 조문을 못 찾았다는 뜻이지, 보장하지 않는다는 뜻이 아닙니다.</div>';
-  }else h+='<div class="tipbox">판정할 약관이 없습니다. 받은 PDF를 <b>상품총서\\</b> 폴더에 넣고 <b>시작.bat</b> 을 다시 돌리세요.</div>';
+  }else h+='<div class="tipbox">판정할 약관이 없습니다. 📜 <b>약관 › 서재</b> 에 약관 PDF 를 <b>여러 개 한꺼번에</b> 끌어다 놓은 뒤 다시 눌러 주세요.</div>';
 
   /* 다음 할 일 */
   h+='<div class="sec-t"><span class="bar"></span>이제 하실 일</div>'
@@ -3142,7 +3273,7 @@ async function bestRun(){
     if(location.protocol!=='file:')await libLoad(true);
     const items=((state.lib&&state.lib.items)||[]).filter(x=>!x.scanned);
     if(!items.length){$('#bestState').textContent='';$('#bestOut').innerHTML=
-      '<div class="empty">서재에 약관이 없습니다. 받은 PDF를 <b>상품총서\\</b> 에 넣고 <b>시작.bat</b> 을 돌리세요.</div>';return}
+      '<div class="empty">서재에 약관이 없습니다. 📜 <b>약관 › 서재</b> 에 약관 PDF 를 <b>여러 개 한꺼번에</b> 끌어다 놓아 주세요.</div>';return}
     const P=[];
     for(let i=0;i<items.length;i++){
       const it=items[i];$('#bestState').textContent='판정 중 '+(i+1)+'/'+items.length+' · '+it.title.slice(0,22);
@@ -3778,7 +3909,7 @@ function briefRender(){
   let h='<div class="card"><h3>📣 상품 브리프 <span class="cnt">판매자료 → 카톡 이미지 · 5장 자료 · 대상자 · 화법</span></h3>';
   if(!BRIEF.list||!BRIEF.list.items||!BRIEF.list.items.length){
     h+='<div class="tipbox">아직 분석한 판매자료가 없습니다.<br>'
-     +'홍보에 쓸 <b>PDF·PPTX 를 상품자료\\ 폴더</b>에 넣고 <b>상품자료_분석.bat</b> 을 더블클릭하세요.</div>';
+     +'📡 <b>신상품 › 상품 분석</b> 에 판매자료 본문을 붙여넣고 <b>리포트 생성</b> 을 누르시면 여기에 쌓입니다.</div>';
   }else{
     h+='<div class="row" style="align-items:flex-end"><div style="flex:1;min-width:220px">'
      +'<label class="f">판매자료 고르기</label><select class="inp" id="briefSel">'
@@ -4414,5 +4545,728 @@ function bindDaily(){
   else mount();
 
   window.mkExport=mkExport; window.mkMovePanel=panel;
+})();
+</script>
+
+<script>
+/* ════════ 자료 폴더(data/) 를 이 브라우저 안으로 ════════
+
+   이 화면은 옆에 있는 <b>data/ 폴더</b>에서 자료를 읽는다.
+
+       data/library.json              모아 둔 약관·판매자료 목록
+       data/news.json                 신상품·정책 뉴스
+       data/docs/<id>.txt             문서에서 뽑은 글
+       data/products/index.json       신상품 목록
+       data/products/<slug>/brief.json  상품 분석
+       data/products/<slug>/img/*     약관 쪽 그림
+
+   그 폴더는 사무실 PC 에서 「시작.bat」 이 만들어 준다. 뉴스와 신상품을
+   긁어 와 저 구조로 쌓는 일을 그 배치파일이 한다.
+
+   그런데 <b>웹에는 그 폴더가 없다.</b> 약관을 공개 주소에 올릴 수 없어
+   저장소에 넣지 않았기 때문이다. 게다가 더 나빴다 — 없는 주소를 부르면
+   Netlify 의 되돌림 규칙(/* → /index.html 200) 때문에 <b>404 가 아니라
+   APEX 첫 화면 HTML 이 200 으로 돌아온다.</b> 화면은 그걸 JSON 으로
+   읽으려다 조용히 실패하고, 아무 말 없이 빈 채로 있었다.
+   「사무실에선 됐는데 집에선 안 된다」 가 이것이었다.
+
+   그래서 두 가지를 한다.
+
+     1. 사무실에서 만든 data 폴더를 <b>통째로 골라</b> 이 브라우저에
+        넣는다. 서버를 거치지 않으므로 약관은 여전히 밖으로 안 나간다.
+     2. 넣어 둔 것이 있으면 fetch 를 가로채 그것을 돌려준다. 원래
+        코드는 한 줄도 고치지 않는다 — 이 파일은 다른 세션이 만든
+        것이라 안을 건드리면 다음 병합에서 부딪힌다.
+
+   저장은 <b>따로 만든 DB</b>(mikki-data)에 한다. 원래 DB(mikki/docs)의
+   판을 올리면 dbOpen 을 고쳐야 하고, 그러면 원본을 건드리게 된다.     */
+(function(){
+  var MKD={name:'mikki-data',store:'files',ready:false,n:0};
+
+  function open(){
+    return new Promise(function(res,rej){
+      var r=indexedDB.open(MKD.name,1);
+      r.onupgradeneeded=function(){
+        var d=r.result;
+        if(!d.objectStoreNames.contains(MKD.store))d.createObjectStore(MKD.store,{keyPath:'path'});
+      };
+      r.onsuccess=function(){res(r.result);};
+      r.onerror=function(){rej(r.error);};
+    });
+  }
+  function put(path,type,buf){
+    return open().then(function(d){
+      return new Promise(function(res,rej){
+        var t=d.transaction(MKD.store,'readwrite').objectStore(MKD.store)
+               .put({path:path,type:type,buf:buf});
+        t.onsuccess=function(){res();};t.onerror=function(){rej(t.error);};
+      });
+    });
+  }
+  function get(path){
+    return open().then(function(d){
+      return new Promise(function(res){
+        var t=d.transaction(MKD.store).objectStore(MKD.store).get(path);
+        t.onsuccess=function(){res(t.result||null);};t.onerror=function(){res(null);};
+      });
+    });
+  }
+  function count(){
+    return open().then(function(d){
+      return new Promise(function(res){
+        var t=d.transaction(MKD.store).objectStore(MKD.store).count();
+        t.onsuccess=function(){res(t.result||0);};t.onerror=function(){res(0);};
+      });
+    }).catch(function(){return 0;});
+  }
+  function wipe(){
+    return open().then(function(d){
+      return new Promise(function(res){
+        var t=d.transaction(MKD.store,'readwrite').objectStore(MKD.store).clear();
+        t.onsuccess=function(){res();};t.onerror=function(){res();};
+      });
+    });
+  }
+
+  /* 주소에서 data/ 아래 상대경로만 뽑는다. ?t=… 는 떼어 낸다. */
+  function relOf(u){
+    var t=String(u||'').split('?')[0].split('#')[0];
+    var i=t.indexOf('data/');
+    return i<0?null:t.slice(i);
+  }
+  var MIME={'.json':'application/json','.txt':'text/plain; charset=utf-8',
+            '.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg',
+            '.webp':'image/webp','.gif':'image/gif','.pdf':'application/pdf'};
+  function mimeOf(p){
+    var i=p.lastIndexOf('.');
+    return (i<0?'':MIME[p.slice(i).toLowerCase()])||'application/octet-stream';
+  }
+
+  /* fetch 가로채기 — 넣어 둔 것이 있으면 그걸 준다. 없으면 원래대로. */
+  var raw=window.fetch.bind(window);
+  window.fetch=function(u,o){
+    var url=(typeof u==='string')?u:(u&&u.url)||'';
+    var rel=relOf(url);
+    if(!rel||!MKD.ready)return raw(u,o);
+    return get(rel).then(function(rec){
+      if(!rec)return raw(u,o);
+      return new Response(rec.buf,{status:200,headers:{'Content-Type':rec.type||mimeOf(rel)}});
+    },function(){return raw(u,o);});
+  };
+
+  /* 폴더를 통째로 받아 넣는다 */
+  function importDir(input){
+    var files=input&&input.files?Array.prototype.slice.call(input.files):[];
+    if(!files.length)return;
+    var box=document.getElementById('mkdMsg');
+    if(box)box.textContent='읽는 중… ('+files.length+'개)';
+    var jobs=files.map(function(f){
+      /* webkitRelativePath 는 「data/products/…」 또는 「고른폴더/…」 로 온다 */
+      var rp=f.webkitRelativePath||f.name;
+      var i=rp.indexOf('data/');
+      var rel=(i>=0)?rp.slice(i):('data/'+rp.split('/').slice(1).join('/'));
+      if(!/^data\//.test(rel))rel='data/'+rp;
+      return f.arrayBuffer().then(function(buf){
+        return put(rel,f.type||mimeOf(rel),buf);
+      }).catch(function(){});
+    });
+    Promise.all(jobs).then(function(){
+      return count();
+    }).then(function(n){
+      MKD.n=n;MKD.ready=true;
+      if(box)box.innerHTML='<b>넣었습니다 — 파일 '+n+'개.</b><br>화면을 새로 고칩니다…';
+      input.value='';
+      setTimeout(function(){location.reload();},1500);
+    });
+  }
+
+  /* 화면에 붙이기 */
+  function panel(){
+    var w=document.getElementById('mkdBox');
+    if(w){w.remove();return;}
+    w=document.createElement('div');
+    w.id='mkdBox';
+    w.style.cssText='position:fixed;right:16px;bottom:118px;z-index:9500;width:340px;max-width:calc(100vw - 24px);'+
+      'background:#fff;border:1px solid #E3E7EC;border-radius:16px;padding:15px 16px;'+
+      'box-shadow:0 20px 54px rgba(15,23,42,.26);font-size:13px;line-height:1.6;color:#1F2937';
+    w.innerHTML=
+      '<div style="font-size:14.5px;font-weight:800;margin-bottom:5px">📂 자료 폴더 넣기</div>'+
+      '<div style="font-size:11.5px;color:#6B7280;line-height:1.65;margin-bottom:11px">'+
+        '<b>안 쓰셔도 됩니다.</b> 뉴스는 서버가 모아 오고, 약관은 <b>📜 약관 › 서재</b> 에 '+
+        'PDF 를 여러 개 한꺼번에 끌어다 놓으시면 됩니다.<br><br>'+
+        '<b>예전에</b> 사무실 PC 에서 만들어 두신 <b>data 폴더</b>가 있으시면, 그것만 여기서 '+
+        '통째로 넣으실 수 있습니다. 서버로는 안 올라갑니다.</div>'+
+      '<div style="background:#F5F9FF;border:1px solid #C7D2FE;border-radius:10px;padding:9px 11px;'+
+        'font-size:11px;color:#1D4ED8;line-height:1.7;margin-bottom:10px">'+
+        '예전에 만들어 두신 폴더가 있을 때만 — 미끼레이더 밑의 <b>data</b> 폴더 하나를 고르세요.<br>'+
+        '(안에 library.json · news.json · docs · products 가 들어 있는 그 폴더)</div>'+
+      '<label style="display:block;border:0;border-radius:12px;padding:13px;text-align:center;cursor:pointer;'+
+        'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-weight:800;font-size:14px">'+
+        '📂 data 폴더 고르기'+
+        '<input type="file" id="mkdPick" webkitdirectory directory multiple style="display:none"></label>'+
+      '<div id="mkdMsg" style="font-size:11.5px;color:#42506A;margin-top:10px;line-height:1.65"></div>'+
+      '<div class="mkd-now" style="font-size:11px;color:#8A93A6;margin-top:8px"></div>'+
+      '<div style="display:flex;gap:7px;margin-top:9px">'+
+        '<button type="button" id="mkdClr" style="flex:1;border:1px solid #EDE9F6;background:#fff;color:#8A93A6;'+
+          'border-radius:9px;padding:8px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">넣은 것 지우기</button>'+
+        '<button type="button" id="mkdX" style="flex:1;border:0;background:transparent;color:#8A93A6;'+
+          'font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
+    document.body.appendChild(w);
+    document.getElementById('mkdPick').onchange=function(){importDir(this);};
+    document.getElementById('mkdX').onclick=function(){w.remove();};
+    document.getElementById('mkdClr').onclick=function(){
+      wipe().then(function(){
+        var b=document.getElementById('mkdMsg');
+        if(b)b.innerHTML='<b>지웠습니다.</b><br>화면을 새로 고칩니다…';
+        setTimeout(function(){location.reload();},1200);
+      });
+    };
+    count().then(function(n){
+      var e=w.querySelector('.mkd-now');
+      if(e)e.textContent=n?('지금 넣어 둔 파일 '+n+'개'):'아직 넣은 파일이 없습니다';
+    });
+  }
+
+  function mount(){
+    if(document.getElementById('mkdBtn'))return;
+    var b=document.createElement('button');
+    b.id='mkdBtn';b.type='button';
+    b.title='사무실에서 만든 data 폴더를 이 브라우저에 넣습니다';
+    b.textContent='📂 자료 폴더';
+    b.style.cssText='position:fixed;right:16px;bottom:62px;z-index:9499;border:1px solid #E3E7EC;'+
+      'background:#fff;color:#42506A;border-radius:999px;padding:10px 16px;font-family:inherit;'+
+      'font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 8px 22px rgba(15,23,42,.16)';
+    b.onclick=panel;
+    document.body.appendChild(b);
+    count().then(function(n){
+      MKD.n=n;MKD.ready=n>0;
+      if(!n){
+        b.style.background='linear-gradient(135deg,#B45309,#92400E)';
+        b.style.color='#fff';b.style.borderColor='transparent';
+        b.textContent='📂 자료 폴더 없음';
+      }else{
+        b.textContent='📂 자료 '+n+'개';
+      }
+    });
+  }
+  /* fetch 가로채기는 먼저 걸어 두고, 준비 여부만 나중에 켠다 */
+  count().then(function(n){MKD.n=n;MKD.ready=n>0;});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
+  else mount();
+
+  window.mkdPanel=panel; window.mkdState=function(){return {n:MKD.n,ready:MKD.ready};};
+})();
+</script>
+
+<script>
+/* ════════ 뉴스는 서버가 모아 준다 — 사무실 PC 없이 ════════
+
+   여태 뉴스 수집은 사무실 PC 의 배치파일이 했다. 그 PC 를 켜 놓고
+   와야만 오늘 뉴스를 볼 수 있었다.
+
+   그런데 이 저장소에는 이미 보험 뉴스 RSS 목록이 있고(config/sources.json
+   의 「보험」 칸 — 보험신문 · 한국보험신문 · 매일경제 금융 · 한국경제
+   금융), 그걸 모아 주는 서버 창구도 있다(/api/market?kind=news&cat=보험).
+   경제동향 화면이 쓰던 길이다. <b>미끼 레이더만 그 길을 안 쓰고 있었다.</b>
+
+   그래서 잇는다. 이제 어느 기기에서든 단추 하나로 오늘 뉴스가 들어온다.
+
+   ※ 뉴스만이다. 약관 원문과 신상품 분석은 여전히 각자 올린다 —
+     원수사 약관을 공개 주소에 두지 않는다는 원칙은 그대로다.
+
+   ※ 서버 창구는 앱이 쓰는 토큰(SHARED_TOKEN)으로 남용을 막는다. 이
+     화면은 앱 안 같은 주소에서 열리므로 부모에게 토큰을 물어서 쓴다.
+     앱 밖에서 파일만 열었을 때는 토큰이 없어 막히는데, 그때는 그렇다고
+     말해 준다 — 조용히 실패하지 않는다.                              */
+(function(){
+  /* 받아 올 칸. sources.json 의 피드 칸 이름과 같아야 한다. */
+  var MKN_FEEDS='보험,경제,부동산,생활정책,정책자금';
+  function tokenOf(){
+    try{
+      if(window.parent&&window.parent!==window&&typeof window.parent.getAppToken==='function')
+        return window.parent.getAppToken()||'';
+    }catch(e){}
+    return '';
+  }
+  function say(msg,bad){
+    var e=document.getElementById('mknMsg');
+    if(e){e.innerHTML=msg;e.style.color=bad?'#B3261E':'#42506A';}
+    try{ if(typeof toast==='function')toast(String(msg).replace(/<[^>]+>/g,'').slice(0,60)); }catch(x){}
+  }
+  function pill(txt,warn){
+    var b=document.getElementById('mknOpen');
+    if(!b)return;
+    b.textContent=txt;
+    b.style.background=warn?'linear-gradient(135deg,#B45309,#92400E)'
+                           :'linear-gradient(135deg,#059669,#047857)';
+  }
+  function pull(){
+    var b=document.getElementById('mknBtn');
+    if(b){b.disabled=true;b.textContent='🌐 모으는 중…';}
+    say('서버가 오늘 기사를 모으는 중입니다 — 보험 · 정책자금 · 세금 · 부동산 · 지원금…');
+    var h={},t=tokenOf();
+    if(t)h['X-App-Token']=t;
+    /* 예전에는 보험 칸 하나만 불렀다. 그래서 정책자금·세금·부동산 기사는
+       서버에서 아예 오지도 않았다. 다섯 칸을 다 받아 온다 —
+       무엇을 남길지는 위 keepNews() 가 정한다. */
+    return fetch('/api/market?kind=news&cat='+encodeURIComponent(MKN_FEEDS),{headers:h})
+      .then(function(r){
+        if(r.status===401)throw new Error('앱 안에서 열어 주세요 — 파일만 따로 열면 서버가 막습니다.');
+        if(!r.ok)throw new Error('서버가 '+r.status+' 로 답했습니다.');
+        /* 곧바로 r.json() 하면 안 된다. 서버에 함수가 안 올라가 있으면
+           되돌림 규칙(/* → /index.html 200) 때문에 <b>404 가 아니라 앱
+           첫 화면 HTML 이 200 으로</b> 온다. 그걸 JSON 으로 읽으려다
+           알 수 없는 영어 오류만 뜨고 조용히 끝나던 자리다.          */
+        return r.text().then(function(t){
+          try{ return JSON.parse(t); }
+          catch(x){
+            throw new Error('서버 창구(/api/market)가 아직 없습니다 — 배포에 함수가 올라갔는지 확인해 주세요.');
+          }
+        });
+      })
+      .then(function(j){
+        if(j&&j.ok===false)throw new Error(j.message||'서버가 자료를 주지 못했습니다.');
+        var items=(j&&j.news)||[];
+        if(!items.length)throw new Error('가져온 뉴스가 없습니다. 잠시 뒤 다시 눌러 주세요.');
+        if(typeof ingest!=='function')throw new Error('이 화면이 아직 다 뜨지 않았습니다.');
+        ingest(items);
+        /* ingest 는 쓸 수 없는 기사를 걸러 낸다. 받은 수가 아니라
+           <b>남은 수</b>를 말해야 화면과 말이 맞는다.                  */
+        var kept=items.length;
+        try{ if(typeof state!=='undefined'&&state&&state.news)kept=state.news.length; }catch(x){}
+        if(!kept)throw new Error(items.length+'건을 받았지만 쓸 만한 기사가 하나도 없었습니다. 잠시 뒤 다시 눌러 주세요.');
+        say('<b>'+kept+'건이 들어왔습니다.</b> 미끼 점수 높은 순으로 세워 두었습니다.'+
+            (kept<items.length?(' <span style="color:#8A93A6">(받은 '+items.length+
+              '건 중 보험 · 정책자금 · 세금 · 부동산 · 지원금 기사만 골랐습니다)</span>'):''));
+        pill('🌐 뉴스 '+kept+'건');
+        return true;
+      })
+      .catch(function(e){
+        say((e&&e.message)||'가져오지 못했습니다', true);
+        pill('🌐 뉴스 모아 오기', true);
+        return false;
+      })
+      .then(function(ok){
+        var b2=document.getElementById('mknBtn');
+        if(b2){b2.disabled=false;b2.textContent='🌐 뉴스 모아 오기';}
+        return ok;
+      });
+  }
+
+  /* ── 들어가면 바로 켜지게 ──────────────────────────────────────────
+     집에서 열었더니 텅 비어 있더라 — 그 자리를 없앤다. 목록이 비어
+     있을 때만 한 번 스스로 모아 온다. 이미 기사가 있으면 건드리지
+     않는다(보시던 것을 마음대로 갈아 치우지 않는다).
+     앱 밖에서 파일만 열었을 때는 하지 않는다 — 어차피 서버가 막고,
+     열자마자 빨간 글씨만 뜨는 꼴이 된다.                            */
+  /* 오늘 이미 모았는가. 하루에 한 번만 스스로 모은다 —
+     화면을 열 때마다 부르면 서버에 미안하고, 하루에 한 번도 안 모으면
+     달 서랍이 안 쌓인다. */
+  function pulledToday(){
+    try{
+      var d=localStorage.getItem('mikki_pullday');
+      return d===new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+    }catch(e){ return false; }
+  }
+  function markPulled(){
+    try{ localStorage.setItem('mikki_pullday',
+      new Date(Date.now()+9*3600*1000).toISOString().slice(0,10)); }catch(e){}
+  }
+  function auto(){
+    if(!tokenOf())return;
+    var n=0;
+    try{ if(typeof state==='undefined'||!state||typeof ingest!=='function')return;
+         n=(state.news||[]).length; }catch(e){ return; }
+    /* 예전에는 목록이 비어 있을 때만 모았다. 그래서 한 번 채워진 뒤로는
+       며칠이 지나도 다시 안 모았고, 달 서랍에 아무것도 안 쌓였다.
+       이제는 「오늘 아직 안 모았으면」 모은다 — 하루 한 번. */
+    if(pulledToday()){ if(n)pill('🌐 뉴스 '+n+'건'); return; }
+    pill('🌐 오늘 뉴스 모으는 중…');
+    pull().then(function(ok){ if(ok)markPulled(); },function(){});
+  }
+  function panel(){
+    var w=document.getElementById('mknBox');
+    if(w){w.remove();return;}
+    w=document.createElement('div');
+    w.id='mknBox';
+    w.style.cssText='position:fixed;right:16px;bottom:174px;z-index:9500;width:330px;max-width:calc(100vw - 24px);'+
+      'background:#fff;border:1px solid #E3E7EC;border-radius:16px;padding:15px 16px;'+
+      'box-shadow:0 20px 54px rgba(15,23,42,.26);font-size:13px;line-height:1.6;color:#1F2937';
+    w.innerHTML=
+      '<div style="font-size:14.5px;font-weight:800;margin-bottom:5px">🌐 뉴스 모아 오기</div>'+
+      '<div style="font-size:11.5px;color:#6B7280;line-height:1.65;margin-bottom:11px">'+
+        '사무실 PC 를 켜 두지 않아도 됩니다. <b>서버가 보험 뉴스를 모아 옵니다</b> — '+
+        '보험신문 · 한국보험신문 · 매일경제 금융 · 한국경제 금융.<br><br>'+
+        '이 화면에 들어오시면 <b>목록이 비어 있을 때 한 번 저절로</b> 모아 옵니다. '+
+        '이미 기사가 있으면 건드리지 않으니, 새로 받고 싶으실 때만 아래를 누르시면 됩니다.<br><br>'+
+        '<b>뉴스만입니다.</b> 약관 원문과 신상품 분석은 여기서 직접 올리셔야 합니다 — '+
+        '원수사 약관을 서버에 두지 않는다는 원칙 때문입니다.</div>'+
+      '<button type="button" id="mknBtn" style="display:block;width:100%;box-sizing:border-box;border:0;'+
+        'border-radius:12px;padding:13px;background:linear-gradient(135deg,#059669,#047857);color:#fff;'+
+        'font-family:inherit;font-size:14px;font-weight:800;cursor:pointer">🌐 뉴스 모아 오기</button>'+
+      '<div id="mknMsg" style="font-size:11.5px;color:#42506A;margin-top:10px;line-height:1.65"></div>'+
+      '<button type="button" id="mknX" style="margin-top:9px;width:100%;border:0;background:transparent;'+
+        'color:#8A93A6;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">닫기</button>';
+    document.body.appendChild(w);
+    document.getElementById('mknBtn').onclick=pull;
+    document.getElementById('mknX').onclick=function(){w.remove();};
+  }
+  function mount(){
+    if(document.getElementById('mknOpen'))return;
+    var b=document.createElement('button');
+    b.id='mknOpen';b.type='button';
+    b.title='사무실 PC 없이 서버가 오늘 보험 뉴스를 모아 옵니다';
+    b.textContent='🌐 뉴스 모아 오기';
+    b.style.cssText='position:fixed;right:16px;bottom:108px;z-index:9499;border:0;'+
+      'background:linear-gradient(135deg,#059669,#047857);color:#fff;border-radius:999px;'+
+      'padding:10px 16px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;'+
+      'box-shadow:0 8px 22px rgba(5,150,105,.3)';
+    b.onclick=panel;
+    document.body.appendChild(b);
+    /* 화면이 자기 저장분을 다 그린 뒤에 본다 — 먼저 보면 늘 0 으로 보인다 */
+    setTimeout(auto,900);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
+  else mount();
+  window.mknPull=pull; window.mknPanel=panel; window.mknAuto=auto;
+})();
+</script>
+
+<script>
+/* ════════ 시작.bat 없이 — 「▶ 오늘 것 찾기」 한 번이면 끝 ════════
+
+   bat 이 하던 일은 이미 이 화면 안에 다 있다.
+
+     goRun()        ① 뉴스 ② 훅 ③ 서재 ④ 판정 ⑤ 정리
+     uploadFiles()  PDF 여러 개를 한꺼번에 → 글자 뽑기 → 서재
+     analyzeTerms() 29항목 판정 · 독소조항
+     judgeOne()     조문 단위 정밀 판정
+
+   막힌 곳은 ① 하나였다. 뉴스를 data/news.json 에서 읽는데 그 파일은
+   사무실 PC 의 bat 이 만든다. 웹에는 없다. 없으면 되돌림 규칙 때문에
+   404 도 아니고 앱 첫 화면 HTML 이 200 으로 와서, 조용히 빈손이 됐다.
+
+   이제 서버가 뉴스를 준다. 파일이 없으면 서버에서 받게 잇는다.
+   그러면 「오늘 것 찾기」 한 번이 bat 을 그대로 대신한다.
+
+   원본은 한 줄도 안 고친다 — 감싸기만 한다.                        */
+(function(){
+  function has(n){ return typeof window[n]==='function'; }
+  function newsN(){
+    try{ return (typeof state!=='undefined'&&state&&state.news)?state.news.length:0; }
+    catch(e){ return 0; }
+  }
+  function setHtml(id,html){
+    var e=document.getElementById(id);
+    if(e)e.innerHTML=html;
+  }
+
+  /* ── ① 뉴스: 파일이 없으면 서버에서 ───────────────────────────── */
+  var origLoad=window.loadNewsFile;
+  if(typeof origLoad==='function'){
+    window.loadNewsFile=function(){
+      var before=newsN(), self=this, args=arguments;
+      return Promise.resolve()
+        .then(function(){ return origLoad.apply(self,args); })
+        .catch(function(){})
+        .then(function(){
+          if(newsN()>before)return true;        /* 파일에서 읽혔다 */
+          if(!has('mknPull'))return false;
+          return window.mknPull().then(function(ok){
+            if(ok){
+              setHtml('loadHint','✅ <b>서버에서 오늘 보험 뉴스 '+newsN()+'건</b>을 받았습니다. '+
+                '<b>사무실 PC 를 켜 두지 않아도 됩니다.</b>');
+            }else{
+              setHtml('loadHint','⚠️ 서버에서도 못 받았습니다. 아래 <b>📋 직접 붙여넣기</b> 로 넣으실 수 있습니다.');
+            }
+            return ok;
+          });
+        });
+    };
+  }
+
+  /* ── 단추를 다시 묶는다 ───────────────────────────────────────
+     $('#btnLoad').onclick=loadNewsFile 은 <b>그때의 함수 자체</b>를
+     붙잡는다. 나중에 감싸도 그 단추는 옛 함수를 그대로 부른다.
+     그래서 「시작.bat 으로 여세요」 가 여기서만 계속 떴다.
+     이름으로 부르게 다시 묶어 준다.                              */
+  ['btnLoad','btnSync'].forEach(function(id){
+    var b=document.getElementById(id);
+    if(b)b.onclick=function(){ return window.loadNewsFile(); };
+  });
+
+  /* ── 남은 안내 손보기 ─────────────────────────────────────── */
+  /* 화면 곳곳의 bat 안내는 원문에서 직접 고쳤다(11군데). 여기서는
+     혹시 남은 것이 있으면 눈에 띄게만 해 둔다 — 조용히 두지 않는다. */
+  function batLeft(){
+    var all=document.querySelectorAll('.tipbox,.empty,td'),i,n=0;
+    for(i=0;i<all.length;i++)if(/\.bat/.test(all[i].textContent||''))n++;
+    return n;
+  }
+
+  /* ── 시작 화면에 「이게 bat 을 대신합니다」 를 적어 둔다 ───────── */
+  function mountNote(){
+    if(document.getElementById('noBatNote'))return;
+    var p=document.getElementById('p-start');
+    if(!p)return;
+    var head=p.querySelector('.phead');
+    var d=document.createElement('div');
+    d.id='noBatNote';
+    d.style.cssText='margin:12px 0 4px;border:1px solid #A7F3D0;background:#F0FDF6;border-radius:14px;'+
+      'padding:13px 15px;font-size:12.8px;line-height:1.75;color:#065F46';
+    d.innerHTML=
+      '<b style="font-size:13.5px">이 단추가 「시작.bat」 을 대신합니다.</b><br>'+
+      '아래 <b>▶ 오늘 것 찾기</b> 를 한 번 누르시면 <b>뉴스 → 이달의 훅 → 서재 → 약관 판정 → 정리</b> '+
+      '까지 예전 bat 이 하던 순서를 그대로 돕니다. 뉴스는 서버가 모아 오므로 <b>사무실 PC 를 켜 두지 않아도 됩니다.</b>'+
+      '<div style="margin-top:9px;padding-top:9px;border-top:1px solid #A7F3D0;color:#047857;font-size:12px">'+
+      '약관은 <b>📜 약관 › 서재</b> 에서 <b>PDF 를 여러 개 한꺼번에</b> 끌어다 놓으시면 됩니다. '+
+      '글자 뽑기·회사 구분·29항목 판정 전부 이 화면 안에서 합니다. '+
+      '<span style="color:#6B7280">원수사 약관은 서버로 올라가지 않습니다 — 이 브라우저에만 쌓입니다.</span></div>';
+    if(head&&head.parentNode)head.parentNode.insertBefore(d,head.nextSibling);
+    else p.insertBefore(d,p.firstChild);
+  }
+
+  function boot(){ mountNote(); }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+  setTimeout(boot,700); setTimeout(boot,2200);
+  window.noBatFix=boot; window.batLeft=batLeft;
+})();
+</script>
+
+<script>
+/* ════════ 판정은 다 같이 본다 — 약관은 각자, 결과는 팀 전체 ════════
+
+   여태 약관 서재는 넣은 브라우저에만 쌓였다. 사장님이 사무실에서 40건을
+   넣어도 팀원 화면은 비어 있었다. 「원수사 약관을 서버에 두지 않는다」 는
+   원칙 때문에 일부러 그렇게 만든 구조였다.
+
+   그 원칙은 그대로 둔다. 대신 <b>판정 결과</b>를 올린다.
+
+     서버에 올라가는 것    회사 · 상품명 · 종류 · 등급 · 유리/불리 건수
+                          29항목 판정(항목 이름과 판정만) · 독소조항 이름
+     안 올라가는 것        약관 원문 · PDF · 조문 인용 문장
+
+   그러면 팀원은 로그인만 하면 「이 회사 이 담보는 이렇더라」 를 본다.
+   약관을 각자 안 넣어도 된다. 원문 캡처가 필요할 때만 그 약관을 넣는다.
+
+   같은 상품을 여러 사람이 판정할 수 있으므로 열쇠는 (id, owner_id) 다.
+   남의 판정을 덮어쓰지 않고 나란히 선다.                              */
+(function(){
+  var TV={rows:[],at:'',busy:false,err:'',q:''};
+
+  function sb(){
+    try{
+      if(window.parent&&window.parent!==window&&typeof window.parent.osClient==='function')
+        return window.parent.osClient();
+    }catch(e){}
+    return null;
+  }
+  function me(){
+    try{
+      var p=window.parent&&window.parent.OS&&window.parent.OS.profile;
+      if(p&&p.id&&p.id!=='preview')return {id:p.id,name:p.name||p.email||''};
+    }catch(e){}
+    return null;
+  }
+  function keyOf(co,title){
+    var t=((co||'')+'|'+(title||'')).replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
+    var h=0,i;
+    for(i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))|0;
+    return 'v'+(h>>>0).toString(36)+'_'+t.length;
+  }
+  function say(msg,bad){
+    var e=document.getElementById('tvMsg');
+    if(e){e.innerHTML=msg;e.style.color=bad?'#B3261E':'#42506A';}
+  }
+
+  /* ── 올리기 ──────────────────────────────────────────────────── */
+  function toRow(it,j,a){
+    var who=me();
+    var verdict=[],toxic=[],i;
+    var jr=(j&&j.rows)||[];
+    for(i=0;i<jr.length;i++){
+      var r=jr[i];
+      if(!r||r.v==='none')continue;                  /* 「자료에 없음」 은 안 올린다 */
+      verdict.push({c:r.c||'',k:r.k||'',v:r.v||'',lab:(r.lab||'').slice(0,40)});
+    }
+    var af=(a&&a.finds)||[];
+    for(i=0;i<af.length;i++){
+      var f=af[i];
+      if(!f||f.v==='good'||f.v==='info')continue;
+      toxic.push({cat:f.cat||'',label:(f.label||'').slice(0,60)});
+    }
+    return {
+      id:keyOf(it.co,it.title),
+      owner_id:who?who.id:null,
+      co:(it.co||'').slice(0,40),
+      title:(it.title||'').slice(0,120),
+      kind:(it.kind||'').slice(0,30),
+      grade:(a&&a.grade)||'',
+      good:(a&&a.stat&&a.stat.good)||0,
+      bad:(a&&a.stat&&a.stat.bad)||0,
+      verdict:verdict, toxic:toxic,
+      by_name:who?(who.name||'').slice(0,40):''
+    };
+  }
+  function push(rows){
+    var c=sb(),who=me();
+    if(!c||!who||!rows.length)return Promise.resolve(0);
+    return c.from('terms_verdicts').upsert(rows,{onConflict:'id,owner_id'})
+      .then(function(r){
+        if(r&&r.error){
+          TV.err=whyTv('팀에 올리지 못했습니다',r.error);
+          return 0;
+        }
+        return rows.length;
+      },function(){return 0;});
+  }
+  function whyTv(what,err){
+    var m=((err&&(err.message||err.hint||err.details))||'')+'',code=(err&&err.code)||'';
+    if(code==='42P01'||/does not exist|schema cache|relation/i.test(m))
+      return what+' — 서버에 담을 자리가 아직 없습니다. 홈 맨 위 「서버 준비 SQL」 을 한 번 실행해 주세요.';
+    if(code==='42501'||/row-level security|policy|permission denied/i.test(m))
+      return what+' — 권한에 막혔습니다. 홈 맨 위 「서버 준비 SQL」 을 한 번 실행해 주세요.';
+    if(/JWT|not authenticated|invalid token/i.test(m))
+      return what+' — 로그인이 풀렸습니다. 새로고침 후 다시 들어와 주세요.';
+    return what+' — '+m.slice(0,80);
+  }
+
+  /* 판정이 끝나면 저절로 올린다 — goPaint 가 결과를 들고 온다 */
+  var origPaint=window.goPaint;
+  if(typeof origPaint==='function'){
+    window.goPaint=function(o){
+      var r=origPaint.apply(this,arguments);
+      try{
+        var judged=(o&&o.judged)||[],rows=[],i;
+        for(i=0;i<judged.length;i++)rows.push(toRow(judged[i].it,judged[i].j,judged[i].a));
+        if(rows.length)push(rows).then(function(n){
+          if(n&&typeof toast==='function')toast('판정 '+n+'건을 팀에 올렸습니다');
+          pull(true);
+        });
+      }catch(e){}
+      return r;
+    };
+  }
+
+  /* ── 가져오기 ────────────────────────────────────────────────── */
+  function pull(quiet){
+    var c=sb();
+    if(!c){ TV.err='앱 안에서 열어 주세요 — 로그인한 화면에서만 팀 판정이 보입니다.'; paint(); return Promise.resolve(); }
+    TV.busy=true; if(!quiet)paint();
+    return c.from('terms_verdicts').select('*').order('updated_at',{ascending:false}).limit(500)
+      .then(function(r){
+        TV.busy=false;
+        if(r&&r.error){ TV.err=whyTv('팀 판정을 못 읽었습니다',r.error); paint(); return; }
+        TV.rows=(r&&r.data)||[]; TV.err='';
+        TV.at=(new Date(Date.now()+9*3600*1000)).toISOString().replace('T',' ').slice(0,16);
+        try{ localStorage.setItem('mikki_tv',JSON.stringify({rows:TV.rows,at:TV.at})); }catch(e){}
+        paint();
+      },function(){ TV.busy=false; TV.err='팀 판정을 못 읽었습니다.'; paint(); });
+  }
+  function cached(){
+    try{
+      var v=JSON.parse(localStorage.getItem('mikki_tv')||'null');
+      if(v&&v.rows&&v.rows.push){TV.rows=v.rows;TV.at=v.at||'';}
+    }catch(e){}
+  }
+
+  /* ── 화면 ────────────────────────────────────────────────────── */
+  function esc2(x){return String(x==null?'':x).replace(/[&<>"]/g,function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c];});}
+  function listHtml(){
+    var q=(TV.q||'').replace(/^\s+|\s+$/g,''),out=[],i;
+    for(i=0;i<TV.rows.length;i++){
+      var r=TV.rows[i];
+      if(q&&((r.co||'')+' '+(r.title||'')+' '+(r.kind||'')).indexOf(q)<0)continue;
+      out.push(r);
+    }
+    if(!out.length){
+      return '<div style="border:1px dashed #E3E7EC;border-radius:12px;padding:20px 14px;text-align:center;'+
+        'font-size:12.5px;color:#64748B">'+
+        (TV.err?('<b style="color:#B3261E">'+esc2(TV.err)+'</b>'):
+         (TV.rows.length?'찾는 것이 없습니다.':'아직 팀에 올라온 판정이 없습니다.<br>약관을 넣고 <b>▶ 오늘 것 찾기</b> 를 누르면 저절로 올라갑니다.'))+
+        '</div>';
+    }
+    var h='',k;
+    for(i=0;i<out.length&&i<60;i++){
+      var x=out[i],tox=(x.toxic||[]).slice(0,3).map(function(t){return t.label;}).join(' · ');
+      h+='<div style="border:1px solid #E3E7EC;border-radius:12px;padding:10px 12px;margin-bottom:7px">'+
+        '<div style="font-size:13px;font-weight:700;color:#191F28">'+esc2(x.title||'-')+'</div>'+
+        '<div style="font-size:11px;color:#64748B;margin-top:3px">'+
+          (x.co?('<b>'+esc2(x.co)+'</b> · '):'')+esc2(x.kind||'')+
+          (x.grade?(' · 등급 <b>'+esc2(x.grade)+'</b>'):'')+
+          ' · <span style="color:#047857">유리 '+(x.good||0)+'</span>'+
+          ' · <span style="color:#B3261E">불리 '+(x.bad||0)+'</span>'+
+          ((x.verdict&&x.verdict.length)?(' · 29항목 중 '+x.verdict.length+'개 확인'):'')+
+        '</div>'+
+        (tox?('<div style="font-size:11px;color:#B45309;margin-top:5px">⚠ '+esc2(tox)+'</div>'):'')+
+        '<div style="font-size:10.5px;color:#94A3B8;margin-top:5px">'+
+          esc2(x.by_name||'이름 없음')+' · '+esc2((x.updated_at||'').slice(0,10))+'</div>'+
+        '</div>';
+    }
+    if(out.length>60)h+='<div style="font-size:11px;color:#94A3B8;text-align:center">앞의 60건만 보입니다 — 위에서 회사나 상품 이름으로 찾으세요</div>';
+    return h;
+  }
+  function paint(){
+    var b=document.getElementById('tvList');
+    if(b)b.innerHTML=listHtml();
+    var t=document.getElementById('tvTop');
+    if(t)t.innerHTML='팀이 올린 판정 <b>'+TV.rows.length+'건</b>'+
+      (TV.at?(' · 받은 때 '+esc2(TV.at)):'')+(TV.busy?' · 받는 중…':'');
+    var p=document.getElementById('tvOpen');
+    if(p)p.textContent='🤝 팀 판정 '+(TV.rows.length||0);
+  }
+  function panel(){
+    var w=document.getElementById('tvBox');
+    if(w){w.remove();return;}
+    w=document.createElement('div');
+    w.id='tvBox';
+    w.style.cssText='position:fixed;right:16px;bottom:220px;z-index:9500;width:360px;max-width:calc(100vw - 24px);'+
+      'max-height:70vh;overflow:auto;background:#fff;border:1px solid #E3E7EC;border-radius:16px;'+
+      'padding:15px 16px;box-shadow:0 20px 54px rgba(15,23,42,.26);font-size:13px;color:#1F2937';
+    w.innerHTML=
+      '<div style="font-size:14.5px;font-weight:800;margin-bottom:4px">🤝 팀이 올린 약관 판정</div>'+
+      '<div style="font-size:11.5px;color:#6B7280;line-height:1.65;margin-bottom:10px">'+
+        '누구든 로그인만 하면 여기서 <b>다 같이 봅니다.</b> 약관을 각자 안 넣으셔도 됩니다.<br>'+
+        '<span style="color:#94A3B8">올라가는 것은 판정 결과뿐입니다 — 약관 원문·PDF 는 넣으신 브라우저에만 남습니다.</span></div>'+
+      '<input id="tvQ" placeholder="회사나 상품 이름으로 찾기" style="width:100%;box-sizing:border-box;'+
+        'border:1px solid #E3E7EC;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:12.5px;margin-bottom:9px">'+
+      '<div id="tvTop" style="font-size:11.5px;color:#42506A;margin-bottom:8px"></div>'+
+      '<div id="tvList"></div>'+
+      '<div id="tvMsg" style="font-size:11.5px;color:#42506A;margin-top:8px"></div>'+
+      '<div style="display:flex;gap:7px;margin-top:10px">'+
+        '<button type="button" id="tvRe" style="flex:1;border:0;border-radius:10px;padding:9px;'+
+          'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-family:inherit;'+
+          'font-size:12.5px;font-weight:800;cursor:pointer">↻ 새로 받기</button>'+
+        '<button type="button" id="tvX" style="flex:1;border:0;background:transparent;color:#8A93A6;'+
+          'font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer">닫기</button></div>';
+    document.body.appendChild(w);
+    document.getElementById('tvX').onclick=function(){w.remove();};
+    document.getElementById('tvRe').onclick=function(){pull();};
+    document.getElementById('tvQ').oninput=function(){TV.q=this.value;paint();};
+    paint();
+    pull(true);
+  }
+  function mount(){
+    if(document.getElementById('tvOpen'))return;
+    var b=document.createElement('button');
+    b.id='tvOpen';b.type='button';
+    b.title='팀이 올린 약관 판정을 다 같이 봅니다';
+    b.textContent='🤝 팀 판정';
+    b.style.cssText='position:fixed;right:16px;bottom:154px;z-index:9499;border:0;'+
+      'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;border-radius:999px;'+
+      'padding:10px 16px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;'+
+      'box-shadow:0 8px 22px rgba(26,86,219,.28)';
+    b.onclick=panel;
+    document.body.appendChild(b);
+    cached(); paint();
+    setTimeout(function(){ if(sb())pull(true); },1200);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);
+  else mount();
+
+  window.tvPanel=panel; window.tvPull=pull; window.tvPush=push;
+  window.tvRow=toRow; window.tvState=function(){return {n:TV.rows.length,err:TV.err};};
 })();
 </script>

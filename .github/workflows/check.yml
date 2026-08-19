@@ -13,7 +13,10 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 검사가 56단계로 늘면서 15분에 닿았다. 빠른 날은 13분, 느린 날은 15분을
+    # 넘겨 24단계에서 잘렸다 — 코드가 틀려서가 아니라 시간이 모자라서였다.
+    # 여유를 준다. 진짜로 멈춘 것은 25분이면 확실히 걸린다.
+    timeout-minutes: 25
     steps:
       - name: 소스 체크아웃
         uses: actions/checkout@v4
@@ -29,7 +32,7 @@ jobs:
           python-version: '3.11'
 
       - name: 화면 파일 문법 검사
-        run: node scripts/check-html.js app/index.html app/finance.html db-crm.html db-crm-teams.html ta-script.html index.html "app/재무설계/실전화법서.html" "app/재무설계/상담자료.html" "app/상담자료/메인 상담자료.html" app/상담자료/apex-deck.js app/상담자료/미끼레이더/index.html app/상담자료/미끼레이더/사용안내.html
+        run: node scripts/check-html.js app/index.html app/finance.html db-crm.html db-crm-teams.html ta-script.html index.html "app/재무설계/실전화법서.html" "app/재무설계/상담자료.html" "app/상담자료/메인 상담자료.html" app/상담자료/apex-deck.js app/상담자료/미끼레이더/index.html app/상담자료/미끼레이더/사용안내.html "app/상담자료/미끼상품_접촉전략.html"
 
       - name: SQL 문법 검사
         run: |
@@ -64,6 +67,15 @@ jobs:
 
       - name: 고객 365일 눌러 보기
         run: node scripts/check-clients.js
+
+      - name: 30일 안에 모든 고객에게 연락되는가
+        run: node scripts/check-crmcare.js
+
+      - name: 담보·제안서·뉴스→카드·달 서랍이 되는가
+        run: node scripts/check-cardfix.js
+
+      - name: 자동차사고 과실·보상이 앱 안에서 열리는가
+        run: node scripts/check-carfault.js
 
       - name: 출발 점검 눌러 보기
         run: node scripts/check-ready.js
@@ -175,3 +187,15 @@ jobs:
 
       - name: 비포&애프터 — 회사마다 다른 담보 이름을 잡아내는가
         run: node scripts/check-baba.js
+
+      - name: 미끼 레이더 — 사무실 자료 폴더를 웹에서도 쓰는가
+        run: node scripts/check-mkdata.js
+
+      - name: 미끼 레이더 — 사무실 PC 를 안 켜도 오늘 뉴스가 들어오는가
+        run: node scripts/check-mknews.js
+
+      - name: 고객에게 전할 뉴스 — 다섯 칸으로 나뉘고 정책·상품 뉴스와 이어지는가
+        run: node scripts/check-newslive.js
+
+      - name: 약관 판정 — 팀이 다 같이 보는가 · 약관 원문은 안 나가는가
+        run: node scripts/check-tvshare.js

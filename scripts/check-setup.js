@@ -79,10 +79,13 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
              t: w.textContent.replace(/\s+/g, ' ') };
   });
   is(gd && gd.steps === 5, '눌러서 열리는 안내가 다섯 걸음이다 — ' + (gd ? gd.steps : 0));
-  is(gd && gd.keys.join(',') === 'ANTHROPIC_API_KEY,SUPABASE_SERVICE_ROLE_KEY',
-     '열쇠 이름 두 개를 복사할 수 있게 세워 뒀다');
+  /* 글 쓰는 열쇠는 앤트로픽이든 구글이든 하나면 된다 — 둘 다 길을 열어 둔다 */
+  is(gd && gd.keys.join(',') === 'ANTHROPIC_API_KEY,GEMINI_API_KEY,SUPABASE_SERVICE_ROLE_KEY',
+     '열쇠 이름 셋을 복사할 수 있게 세워 뒀다 — ' + (gd ? gd.keys.join(' / ') : ''));
+  is(gd && /둘 중 아무거나 하나만/.test(gd.t), '글 쓰는 열쇠는 하나만 넣으면 된다고 말한다');
   [['configuration/env', 'Netlify 환경변수'], ['console.anthropic.com', '앤트로픽 콘솔'],
-   ['settings/api', 'Supabase API'], ['/deploys', '배포 화면']].forEach(([u, n]) =>
+   ['settings/api', 'Supabase API'], ['/deploys', '배포 화면'],
+   ['aistudio.google.com', 'Google AI Studio']].forEach(([u, n]) =>
     is(!!gd && gd.links.some(x => x.indexOf(u) >= 0), '  ' + n + ' 로 바로 간다'));
   is(gd && /최고 권한/.test(gd.t), 'service_role 경고가 있다 — 대화창에 붙이지 말라고');
   is(gd && /Clear cache and deploy/.test(gd.t), '재배포해야 열쇠가 들어간다는 것을 적었다');

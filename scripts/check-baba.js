@@ -139,8 +139,305 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(btn.has, '  비포&애프터 카드가 있다');
   const src = require('fs').readFileSync('app/index.html', 'utf8');
-  is(/babaRead\(/.test(src) && /먼저 읽어 보기/.test(src), '  「먼저 읽어 보기 · 값 고치기」 단추가 있다');
+  is(/babaDeepRead\(/.test(src) && /끝까지 읽기/.test(src),
+     '  「끝까지 읽기 · 값 고치기」 단추가 있다 (쪼개서 전부 읽는 쪽으로 바뀌었다)');
   is(/babaBrief\(\)/.test(src), '  만들 때 확인한 표를 앞에 붙인다');
+
+  console.log('\n[7] 무엇을 읽는지 표로 보여 준다');
+  const dict = await page.evaluate(() => {
+    babaDictToggle();
+    const h = babaDictHtml();
+    return { on: BABA_DICT_ON, n: BABA_TERMS.length, html: h,
+             /* 머리줄(thead)은 빼고 센다 */
+             rows: ((h.split('<tbody>')[1] || '').match(/<tr>/g) || []).length };
+  });
+  is(dict.on && dict.rows === dict.n,
+     '  읽어내는 담보 ' + dict.n + '개가 한 줄씩 다 나온다 — ' + dict.rows + '줄');
+  is(/읽어내는 담보/.test(dict.html), '  「읽어내는 담보 N개」 라고 제목이 붙는다');
+  is(/이 이름들을 찾습니다/.test(dict.html), '  담보마다 찾는 이름이 같이 보인다');
+  is(/일반암.*악성신생물|악성신생물.*일반암/s.test(dict.html), '  같은 담보의 여러 표기가 보인다');
+  is(/건너뜀/.test(dict.html), '  헷갈리는 이름은 「건너뜀」 이라고 밝힌다 (유사암 → 일반암 오탐 방지)');
+  is(/우리 회사 표기/.test(dict.html), '  회사 표기를 직접 넣는 단추가 줄마다 있다');
+
+  console.log('\n[8] 못 읽으면 가르칠 수 있다 — 이게 「어떤 상황에서도」 의 답이다');
+  const teach = await page.evaluate(() => {
+    /* 사전에 없는 회사 표기 */
+    /* 사전 어디에도 안 걸리는 표기를 골라야 한다. 「뇌혈관보장특약」 은
+       기본 사전의 「뇌혈관」 에 이미 걸리므로 시험거리가 못 된다.      */
+    const odd = '무배당OO생명 특약안내 · 악성종양보장특약Ⅱ 4,500만원 · 머리혈관보장특약Ⅲ 2,500만원';
+    const before = babaScan(odd);
+    /* 사장님이 이 회사 표기를 넣는다 */
+    const add = {};
+    add.cancer = ['악성종양보장특약'];
+    add.brain = ['머리혈관보장특약'];
+    localStorage.setItem('apex_baba_syn', JSON.stringify(add));
+    const after = babaScan(odd);
+    const terms = babaTerms();
+    const c = terms.filter(t => t.k === 'cancer')[0];
+    return { beforeCancer: !!before.cancer, beforeBrain: !!before.brain,
+             afterCancer: after.cancer ? after.cancer.won : null,
+             afterBrain: after.brain ? after.brain.won : null,
+             first: c ? c.syn[0] : '', keptDefault: c ? c.syn.indexOf('일반암') >= 0 : false };
+  });
+  is(!teach.beforeCancer && !teach.beforeBrain,
+     '  처음 보는 회사 표기는 못 읽는다 (당연하다) — 암 ' + teach.beforeCancer + ' · 뇌 ' + teach.beforeBrain);
+  is(teach.afterCancer === 4500, '  그 표기를 넣으면 바로 읽는다 — 악성종양보장특약Ⅱ 4,500만 → ' + teach.afterCancer);
+  is(teach.afterBrain === 2500, '  머리혈관보장특약Ⅲ 2,500만 → ' + teach.afterBrain);
+  is(teach.first === '악성종양보장특약', '  넣으신 표기를 먼저 본다 — ' + teach.first);
+  is(teach.keptDefault, '  원래 사전도 그대로 남는다 (덮어쓰지 않는다)');
+
+  console.log('\n[9] PDF 가 없어도 표를 열어 손으로 적는다');
+  const blank = await page.evaluate(() => {
+    localStorage.removeItem('apex_baba_syn');
+    BABA.rows = null;
+    babaBlank();
+    const n = BABA.rows.length;
+    babaSet(2, 'b', '3,000');
+    babaSet(2, 'a', '5000');
+    const saved = JSON.parse(localStorage.getItem('apex_baba_rows') || 'null');
+    /* 새로고침한 셈 치고 되살려 본다 */
+    BABA.rows = null;
+    babaLoad();
+    return { n: n, b: BABA.rows[2].b, a: BABA.rows[2].a,
+             savedN: saved && saved.rows ? saved.rows.length : 0,
+             brief: babaBrief() };
+  });
+  is(blank.n === dict.n, '  PDF 없이도 ' + blank.n + '줄이 통째로 열린다');
+  is(blank.b === 3000 && blank.a === 5000, '  손으로 적은 값이 들어간다 — 3,000 / 5,000');
+  is(blank.savedN === dict.n, '  적은 것이 저장된다 — ' + blank.savedN + '줄');
+  is(blank.b === 3000, '  새로고침해도 살아 있다');
+  is(/3000/.test(blank.brief.replace(/,/g, '')) && /5000/.test(blank.brief.replace(/,/g, '')),
+     '  손으로 적은 값도 그대로 AI 에게 간다');
+
+  console.log('\n[10] 화면에 세 단추가 다 있다');
+  const btn3 = require('fs').readFileSync('app/index.html', 'utf8');
+  is(/babaBlank\(\)/.test(btn3), '  「✍️ 표만 열기 (손으로 적기)」 가 있다');
+  is(/babaDictToggle\(\)/.test(btn3), '  「📖 읽는 담보 보기」 가 있다');
+  is(/babaDeepRead\(/.test(btn3), '  「📋 끝까지 읽기」 도 그대로 있다');
+
+  console.log('\n[11] AI 가 준 담보명을 우리 27칸에 제대로 앉히는가');
+  const map = await page.evaluate(() => ({
+    normal: babaMapName('일반암진단비'),
+    space:  babaMapName('악성신생물(암) 진단급여금'),
+    trap:   babaMapName('유사암진단비'),
+    trap2:  babaMapName('갑상선암진단비'),
+    brain:  babaMapName('뇌혈관질환진단비Ⅱ'),
+    fee:    babaMapName('합계보험료'),
+    none:   babaMapName('연금개시나이')
+  }));
+  is(map.normal === 'cancer', '  「일반암진단비」 → 일반암');
+  is(map.space === 'cancer', '  「악성신생물(암) 진단급여금」 → 일반암');
+  is(map.trap === 'cancer2', '  「유사암진단비」 는 유사암으로 — 일반암으로 안 샌다');
+  is(map.trap2 === 'cancer2', '  「갑상선암진단비」 도 유사암으로');
+  is(map.brain === 'brain', '  「뇌혈관질환진단비Ⅱ」 → 뇌혈관');
+  is(map.fee === 'fee', '  「합계보험료」 → 월 보험료');
+  is(map.none === null, '  모르는 이름은 억지로 안 맞춘다');
+
+  console.log('\n[12] AI 가 지저분하게 답해도 숫자를 건져 낸다');
+  const parse = await page.evaluate(() => ({
+    fence: babaParseAi('```json\n[{"n":"일반암","won":3000}]\n```'),
+    prose: babaParseAi('네, 판독했습니다.\n[{"n":"뇌혈관","won":2000}]\n이상입니다.'),
+    str:   babaParseAi('[{"n":"월 보험료","won":"128,900"}]'),
+    nulln: babaParseAi('[{"n":"치아","won":null},{"n":"암","won":500}]'),
+    junk:  babaParseAi('읽지 못했습니다'),
+    empty: babaParseAi('')
+  }));
+  is(parse.fence.length === 1 && parse.fence[0].won === 3000, '  코드펜스를 벗겨 낸다');
+  is(parse.prose.length === 1 && parse.prose[0].won === 2000, '  앞뒤에 말을 붙여도 배열만 집는다');
+  is(parse.str.length === 1 && parse.str[0].won === 128900, '  숫자를 글자로 줘도 숫자로 바꾼다');
+  is(parse.nulln.length === 2 && parse.nulln[0].won === null, '  없는 값은 null 로 둔다 (0 으로 안 만든다)');
+  is(parse.junk.length === 0 && parse.empty.length === 0, '  배열이 없으면 빈손으로 — 안 터진다');
+
+  console.log('\n[13] 스물몇 쪽짜리 스캔본을 쪼개서 끝까지 읽는가');
+  /* 진짜 스캔 PDF 를 만들 수는 없으니, 읽는 길만 흉내 낸다.
+     보는 것은 <b>몇 묶음으로 쪼개 어디까지 갔는가</b> 다.        */
+  const deep = await page.evaluate(async () => {
+    const calls = [];
+    window.babaTextAll = () => Promise.resolve({ text: '', pages: 11 });   /* 글자 없는 11쪽 */
+    window.babaImgRange = (f, from, to) => { calls.push([from, to]); return Promise.resolve(['img']); };
+    window.aiReady = () => true;
+    window.callAIVision = (sys, user) => {
+      const m = user.match(/(\d+)~(\d+)쪽/);
+      const from = +m[1];
+      if (from === 5) return Promise.reject(new Error('한 묶음 실패'));   /* 가운데 하나를 일부러 넘어뜨린다 */
+      if (from === 1) return Promise.resolve('[{"n":"일반암진단비","won":3000}]');
+      return Promise.resolve('[{"n":"뇌혈관질환진단비","won":2000},{"n":"합계보험료","won":21}]');
+    };
+    const steps = [];
+    const r = await babaReadFile({ name: 'scan.pdf' }, (c, t, from, to) => steps.push(c + '/' + t + ':' + from + '-' + to));
+    return { kind: r.kind, chunks: r.chunks, failed: r.failed,
+             found: r.found, calls, steps, sys: babaAiSys(), user: babaAiUser(9, 11) };
+  });
+  is(deep.kind === 'scan', '  글자가 없으면 스캔본으로 본다');
+  is(deep.chunks === 3, '  11쪽을 넉 장씩 3묶음으로 쪼갠다 — ' + deep.chunks + '묶음');
+  is(JSON.stringify(deep.calls) === '[[1,4],[5,8],[9,11]]',
+     '  1~4 · 5~8 · 9~11 쪽을 빠짐없이 훑는다 — ' + JSON.stringify(deep.calls));
+  is(deep.steps.length === 3 && /1\/3:1-4/.test(deep.steps[0]),
+     '  어디까지 갔는지 화면에 알린다 — ' + deep.steps.join(' · '));
+  is(deep.failed === 1, '  가운데 묶음이 넘어져도 세어 둔다 — 못 읽은 묶음 ' + deep.failed + '개');
+  is(deep.found.length === 3, '  나머지 묶음 값은 그대로 살아 있다 — ' + deep.found.length + '개');
+  is(deep.found.some(x => x.won === 2000), '  9~11쪽(마지막 묶음) 값도 들어온다 — 뒤쪽을 안 버린다');
+  is(/JSON 배열만/.test(deep.sys) && /지어내지 마라/.test(deep.sys),
+     '  AI 에게 JSON 만 · 지어내지 말라고 못 박는다');
+  is(/만원 단위 정수/.test(deep.sys), '  단위를 만원으로 못 박는다');
+
+  console.log('\n[14] 글자형과 스캔본을 한 표로 합치는가');
+  const merged = await page.evaluate(() => {
+    const out = babaMerge([
+      { kind: 'text', text: '일반암진단비 3,000만원 · 뇌혈관질환진단비 1,000만원' },
+      { kind: 'scan', found: [{ n: '일반암진단비', won: 9999 },        /* 뒤에 온 것은 안 덮는다 */
+                              { n: '급성심근경색증진단비', won: 1500 },
+                              { n: '치아보철', won: null }] }
+    ]);
+    return { cancer: out.cancer ? out.cancer.won : null,
+             brain: out.brain ? out.brain.won : null,
+             mi: out.mi ? out.mi.won : null,
+             teeth: out.teeth ? out.teeth.won : null };
+  });
+  is(merged.cancer === 3000, '  글자에서 먼저 읽은 값이 이긴다 — 3,000 (9,999 로 안 덮인다)');
+  is(merged.brain === 1000, '  글자 쪽 값이 그대로 남는다');
+  is(merged.mi === 1500, '  스캔 쪽에만 있는 담보는 스캔에서 가져온다');
+  is(merged.teeth === null || merged.teeth === undefined, '  값이 없으면 0 이 아니라 빈 칸이다');
+
+  console.log('\n[15] AI 가 없으면 그렇다고 말한다');
+  const noai = await page.evaluate(async () => {
+    window.babaTextAll = () => Promise.resolve({ text: '', pages: 8 });
+    window.aiReady = () => false;
+    const r = await babaReadFile({ name: 'scan.pdf' }, () => {});
+    return r.kind;
+  });
+  is(noai === 'scan-noai', '  스캔본인데 AI 가 없으면 조용히 빈 표를 내밀지 않는다 — ' + noai);
+
+  console.log('\n[16] 전·후 차이가 그림으로 나오는가');
+  const ch = await page.evaluate(() => {
+    localStorage.removeItem('apex_baba_rows');
+    BABA.rows = null; babaBlank();
+    const set = (name, b, a) => {
+      const i = BABA.rows.findIndex(r => r.n === name);
+      if (i < 0) return;
+      if (b !== null) babaSet(i, 'b', String(b));
+      if (a !== null) babaSet(i, 'a', String(a));
+    };
+    set('암 진단비(일반암)', 3000, 5000);      /* 늘어남 */
+    set('뇌혈관질환 진단비', 2000, 1000);      /* 줄어듦 */
+    set('급성심근경색', 1000, 1000);           /* 그대로 */
+    set('간병·요양', null, 2000);              /* 기존에만 없음 */
+    set('월 보험료', 21, 18);                  /* 보험료는 줄었다 */
+    BABA_CH_ON = true;
+    const h = babaChartHtml();
+    return { sumB: babaSum('b'), sumA: babaSum('a'),
+             feeB: babaFee('b'), feeA: babaFee('a'),
+             html: h, off: (BABA_CH_ON = false, babaChartHtml()) };
+  });
+  is(ch.sumB === 6000 && ch.sumA === 9000,
+     '  보장 합계를 더한다 — 기존 ' + ch.sumB + ' → 신규 ' + ch.sumA + ' (만원)');
+  is(ch.feeB === 21 && ch.feeA === 18, '  월 보험료는 보장 합계에 안 넣고 따로 센다');
+  is(/보장이[\s\S]{0,40}3,000만[\s\S]{0,20}늘었습니다/.test(ch.html),
+     '  맨 위 한 줄이 「보장이 3,000만 늘었습니다」 라고 말한다');
+  is(/보험료는[\s\S]{0,40}3만원[\s\S]{0,20}줄었습니다/.test(ch.html),
+     '  보험료가 줄어든 것도 같이 말한다');
+  is(/▲[\s\S]{0,20}2,000만/.test(ch.html), '  늘어난 담보에 ▲ 2,000만');
+  is(/▼[\s\S]{0,20}1,000만/.test(ch.html), '  줄어든 담보에 ▼ 1,000만');
+  is(/그대로/.test(ch.html), '  안 바뀐 담보는 「그대로」');
+  is(/한쪽만 확인/.test(ch.html), '  한쪽만 있는 담보는 「한쪽만 확인」 — 0 으로 안 채운다');
+  is(!/치아|응급실/.test(ch.html), '  둘 다 빈 담보는 아예 안 그린다 (없는 것을 그리지 않는다)');
+  is(/#3182F6/.test(ch.html) && /#FF9500/.test(ch.html),
+     '  토스 파랑으로 늘어난 것, 주황으로 줄어든 것 — 빨강은 안 쓴다');
+  is(!/#F04452|#E5484D|red/i.test(ch.html), '  고객 앞에서 빨강을 안 쓴다');
+  is(/babaChartPrint\(\)/.test(ch.html), '  「인쇄 · PDF 로 저장」 단추가 있다');
+  is(ch.off === '', '  접으면 안 그린다');
+
+  const src2 = require('fs').readFileSync('app/index.html', 'utf8');
+  is(/babaChartToggle\(\)/.test(src2), '  화면에 「📈 전·후 그래프」 단추가 붙어 있다');
+  is(/babaChartHtml\(\)\+babaBodyWrapHtml\(\)\+babaGridHtml\(\)/.test(src2.replace(/\s/g, '')),
+     '  표를 다시 그릴 때 그래프·인체 한 장도 같이 그린다 (고친 값이 바로 반영된다)');
+  is(/보장·지급은 약관과 심사/.test(src2), '  인쇄본에 약관·심사 단서가 붙는다');
+
+  console.log('\n[17] 인체 한 장 — 현장 서식 그대로 전·후를 담는가');
+  const bd = await page.evaluate(() => {
+    localStorage.removeItem('apex_baba_rows'); localStorage.removeItem('apex_baba_rec');
+    BABA.rows = null; babaBlank();
+    const set = (k, b, a) => {
+      const i = BABA.rows.findIndex(r => r.k === k);
+      if (i < 0) return false;
+      if (b !== null) babaSet(i, 'b', String(b));
+      if (a !== null) babaSet(i, 'a', String(a));
+      return true;
+    };
+    /* 사진 속 수치 그대로 — 암 일반암 5,000 권장에 가입 18,000 */
+    const okKeys = ['cancer', 'cancer2', 'antican', 'target', 'brain', 'stroke', 'brainh', 'brainS',
+                    'dem1', 'dem2', 'ltcH', 'ltcF', 'heartS', 'heart', 'mi', 'heartOp',
+                    'surg', 'surgA', 'surg5D', 'surg5A', 'deathD', 'deathA', 'disabD', 'disabA',
+                    'inpD', 'inpA', 'inpC', 'outC', 'nurD', 'nurA', 'nurUD', 'nurUA',
+                    'silD', 'silDO', 'silA', 'silAO', 'carAcc', 'lawyer', 'fine', 'liab']
+                   .filter(k => BABA.rows.some(r => r.k === k));
+    set('cancer', 5000, 18000);
+    set('heart', 2000, 5000);
+    set('deathA', 20000, 16405);   /* 줄어든 것 */
+    set('ltcH', null, null);       /* 자료 없음 */
+    BABA_BD_ON = true;
+    const h = babaBodyHtml(true), pr = babaBodyHtml(false);
+    return { groups: BABA_BODY.length,
+             rowsPerGroup: BABA_BODY.map(g => g.rows.length),
+             covered: okKeys.length,
+             rec: babaRec().cancer,
+             html: h, print: pr,
+             feed: babaFeedHtml(),
+             top: babaTop(5).map(x => x.n + ':' + x.d),
+             terms: BABA_TERMS.length };
+  });
+  is(bd.groups === 10, '  부위가 열 칸이다 — ' + bd.groups);
+  is(bd.rowsPerGroup.every(n => n === 4), '  부위마다 네 줄이다 (사진 서식 그대로)');
+  is(bd.covered === 40, '  마흔 줄이 사전에 다 있다 — ' + bd.covered + '개');
+  is(bd.terms >= 53, '  담보 사전이 ' + bd.terms + '개로 늘었다');
+  ['뇌', '치매/재가', '암', '심장', '수술', '사망/후유장해', '입원/통원', '간병인일당', '실손의료비', '비용']
+    .forEach(g => is(bd.html.indexOf(g) >= 0, '  「' + g + '」 칸이 있다'));
+  is(/권장/.test(bd.html) && /기존/.test(bd.html) && /신규/.test(bd.html),
+     '  권장 · 기존 · 신규 세 칸이 나란히 선다');
+  is(bd.rec === 5000, '  일반암 권장금액이 5,000만으로 들어 있다 — ' + bd.rec);
+  is(/18,000/.test(bd.html), '  신규 가입금액 18,000 이 그대로 뜬다');
+  is(/babaRecSet/.test(bd.html), '  권장금액은 화면에서 고칠 수 있다');
+  is(!/babaRecSet/.test(bd.print), '  인쇄본에는 입력칸이 아니라 숫자로 나온다');
+  is(/<svg/.test(bd.html), '  사람 그림이 들어 있다 (직접 그린 SVG)');
+  is(/—/.test(bd.html), '  값이 없는 줄은 「—」 — 0 으로 안 채운다');
+
+  console.log('\n[18] 가장 큰 차이 · 권장 미달 피드백');
+  is(/가장 크게 달라진 것/.test(bd.feed), '  「가장 크게 달라진 것」 칸이 있다');
+  is(bd.top[0] && bd.top[0].indexOf('암 진단비') === 0, '  가장 크게 바뀐 것이 맨 위 — ' + bd.top[0]);
+  is(bd.top.some(t => t.indexOf('-') > 0), '  줄어든 것도 같이 센다 — ' + bd.top.join(' · '));
+  is(/아직 권장에 못 미치는 것/.test(bd.feed), '  「권장에 못 미치는 것」 칸이 있다');
+  is(/부족/.test(bd.feed), '  얼마나 부족한지 적는다');
+  is(/권장금액은 참고 기준/.test(bd.feed), '  권장금액이 절대 기준이 아니라고 밝힌다');
+
+  console.log('\n[19] 같은 보장을 두 번 세지 않는가');
+  const dup = await page.evaluate(() => {
+    BABA.rows = null; babaBlank();
+    const set = (k, b, a) => {
+      const i = BABA.rows.findIndex(r => r.k === k);
+      if (i >= 0) { babaSet(i, 'b', String(b)); babaSet(i, 'a', String(a)); }
+    };
+    set('deathD', 10000, 10000);
+    set('deathA', 20000, 20000);
+    const only = babaSum('b');           /* 30000 — 넓은 사망은 아직 빈칸 */
+    set('death', 30000, 30000);          /* 넓은 것에도 값이 들어오면 */
+    const both = babaSum('b');           /* 그래도 30000 이어야 한다 */
+    BABA.rows = null; babaBlank();
+    set('death', 30000, 30000);          /* 넓은 것만 있으면 */
+    const wide = babaSum('b');           /* 30000 */
+    return { only, both, wide };
+  });
+  is(dup.only === 30000, '  질병사망 1억 + 상해사망 2억 = 3억 — ' + dup.only);
+  is(dup.both === 30000, '  거기에 사망(주계약)이 또 잡혀도 3억 그대로 (두 번 안 센다) — ' + dup.both);
+  is(dup.wide === 30000, '  넓은 것만 있으면 그것으로 센다 — ' + dup.wide);
+
+  console.log('\n[20] 화면·인쇄에 붙어 있는가');
+  const src3 = require('fs').readFileSync('app/index.html', 'utf8');
+  is(/babaBodyToggle\(\)/.test(src3), '  「🧍 인체 한 장」 단추가 있다');
+  is(/babaBodyPrint\(\)/.test(src3), '  인쇄 단추가 있다');
+  is(/size:A4/.test(src3), '  A4 한 장으로 앉힌다');
+  is(/babaBodyWrapHtml\(\)/.test(src3.replace(/\s/g, '')), '  표를 다시 그릴 때 인체 한 장도 같이 그린다');
+  is(/0 원이라는 뜻이 아닙니다/.test(src3), '  인쇄본이 「빈 칸은 0 원이 아니다」 라고 밝힌다');
+  is(/◀ 기존/.test(src3) && /신규\(만원\) ▶/.test(src3), '  입력 표가 좌우(기존 ◀ ▶ 신규)로 읽힌다');
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

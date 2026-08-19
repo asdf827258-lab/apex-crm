@@ -108,32 +108,34 @@
       "token_style": "form",
       "_token_style설명": "form = application/x-www-form-urlencoded 로 grant_type/client_id/client_secret 전송(OAuth 표준·기본값) · json = JSON 바디 · basic = Authorization: Basic base64(id:secret) + grant_type 만 전송. 문서에 맞는 것을 고르세요.",
       "paths": {
-        "quote": ""
+        "quote": "/api/v1/prices?symbols={code}"
       },
-      "_paths설명": "quote 예시 형태: /v1/quotes/{code} 또는 /api/v1/stocks/{code}/price — {code} 자리에 종목코드가 치환됩니다. 코드가 쿼리스트링이면 /v1/quotes?code={code} 처럼 그대로 쓰면 됩니다.",
+      "_paths설명": "공식 OpenAPI 규격(openapi.tossinvest.com/openapi-docs/latest/openapi.json v1.2.14)에서 그대로 가져왔다. {code} 자리에 종목코드가 치환된다. 현재가는 /api/v1/prices 하나뿐이고 symbols 에 콤마로 최대 200개까지 넣을 수 있다.",
       "headers": {},
       "_headers설명": "문서가 요구하는 추가 헤더가 있으면 여기에 넣으세요. 계좌·주문 API는 X-Tossinvest-Account 가 필요하지만, 시세만 쓰는 이 화면에는 보통 필요 없습니다.",
       "code": {
-        "krx_prefix": "A",
+        "krx_prefix": "",
         "overseas_as_ticker": true
       },
-      "_code설명": "토스는 국내 종목을 A005930 처럼 A + 6자리로 씁니다. 앱에는 005930 으로 입력해도 호출할 때 자동으로 A 를 붙입니다. 해외는 티커(AAPL) 그대로 보냅니다.",
+      "_code설명": "규격 예시가 symbols=005930,000660 이라 접두사를 붙이지 않는다. 전에는 A005930 으로 보내려 했는데 그건 딥링크(웹 주소) 규칙이지 API 규칙이 아니다. 해외는 티커(AAPL) 그대로.",
       "field_map": {
-        "root": "",
-        "name": "name",
-        "price": "close",
-        "change": "change",
-        "change_rate": "changeRate",
-        "prev_close": "base",
-        "volume": "volume"
+        "root": "result",
+        "name": "",
+        "price": "lastPrice",
+        "change": "",
+        "change_rate": "",
+        "prev_close": "",
+        "volume": ""
       },
-      "_field_map설명": "응답 JSON 에서 값을 꺼내는 경로입니다. root 는 종목 객체까지의 경로(예: data 또는 result.quote, 최상위면 빈 문자열). 나머지는 root 기준 필드명이며 점(.)으로 깊이 지정이 됩니다. 실제 응답을 /api/market?kind=toss-probe 로 확인한 뒤 맞추세요.",
+      "_field_map설명": "규격상 /api/v1/prices 가 주는 것은 symbol · timestamp · lastPrice · currency 넷뿐이다. 종목명·등락률·전일종가·거래량은 이 엔드포인트에 없다 — 등락률이 필요하면 /api/v1/candles 를 따로 불러야 한다. 없는 필드를 지어내지 않으려고 빈 문자열로 둔다.",
       "deeplink": {
         "krx": "https://www.tossinvest.com/stocks/A{code}",
         "overseas": "https://www.tossinvest.com/?focusedProductCode={code}"
       },
       "_deeplink설명": "앱의 종목 옆 '토스' 버튼이 여는 주소. API 키가 없어도 이건 항상 동작합니다.",
-      "_찾은경위": "kind=toss-discover 로 12개 후보를 돌려 찾은 값이다. 이 주소만 OAuth 규격 응답(invalid_client)을 돌려주고 나머지는 CDN 이 edge-blocked 로 끊었다. paths.quote 는 토큰이 먼저 발급돼야 확인할 수 있어 아직 비어 있다."
+      "_찾은경위": "kind=toss-discover 로 base 와 token_path 를 찾았고, 나머지는 developers.tossinvest.com/llms.txt 가 가리키는 공식 OpenAPI 문서(v1.2.14)에서 가져왔다. 추측한 값이 하나도 없다.",
+      "_커뮤니티": "토스 Open API 에는 종목토론·댓글·의견·뉴스·리포트가 없다. 규격 33개 엔드포인트를 전부 확인했고 community/comment/opinion/sentiment/news/discussion 단어 자체가 없다. 사람들의 이야기는 토스 앱·웹에만 있고, 그건 deeplink 로 열어서 본다.",
+      "_수급데이터": "대신 수급은 준다: /api/v1/stocks/{symbol}/investor-trading(투자자별) · short-selling(공매도) · program-trades(프로그램) · credit-trades(신용) · securities-lending(대차) · /api/v1/rankings(랭킹). 말이 아니라 실제로 무엇을 샀는지의 기록이다."
     }
   },
   "_지수": "경제동향 화면 상단 지수 카드. code 는 KIS 업종지수 코드(FID_INPUT_ISCD), krx_name 은 공공데이터포털이 쓰는 지수명입니다(띄어쓰기까지 정확해야 합니다).",

@@ -5,6 +5,8 @@
    실행 시각은 netlify.toml 의 schedule 로 지정한다.
    ════════════════════════════════════════════════════════════════ */
 
+const GEMMODEL = require('../../scripts/gemini-model.js');
+
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 const AI_KEY = process.env.ANTHROPIC_API_KEY || '';
@@ -66,19 +68,14 @@ async function askAI(system, user, maxTokens) {
     if (!GM_KEY) throw new Error('Anthropic ' + r.status + ' ' + (await r.text()).slice(0, 140));
   }
   if (!GM_KEY) throw new Error('AI 키가 없습니다 (ANTHROPIC_API_KEY 또는 GEMINI_API_KEY)');
-  const r2 = await fetch(
-    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + GM_KEY,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: 'user', parts: [{ text: user }] }],
-        generationConfig: { maxOutputTokens: maxTokens || 2000 }
-      })
-    }
-  );
-  if (!r2.ok) throw new Error('Gemini ' + r2.status + ' ' + (await r2.text()).slice(0, 140));
+  /* 되는 모델을 찾을 때까지 후보를 내려간다 — 목록에 있어도 부르면 404 인
+     조합이 있다. 실패하면 무엇을 몇 번 시도했는지 메시지에 담긴다. */
+  const gem = await GEMMODEL.callGemini(GM_KEY, {
+    systemInstruction: { parts: [{ text: system }] },
+    contents: [{ role: 'user', parts: [{ text: user }] }],
+    generationConfig: { maxOutputTokens: maxTokens || 2000 }
+  });
+  const r2 = gem.res;
   const j2 = await r2.json();
   return ((j2.candidates || [])[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
 }
