@@ -5662,7 +5662,22 @@ function arLoad(force){
                      h:parseInt((''+(calls[ci].call_at||'')).slice(11,13),10)||0,
                      r:calls[ci].result||'',b:calls[ci].db_id||''});
     AR.cli=arCliCalc(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
-    AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]));
+    /* 통화는 DB 줄(db_id)에 붙어 있고 고객은 따로 있다. 둘을 잇는 것은 이름뿐이다.
+       실명은 서버에 없으니 가린 모양(김OO)끼리 견준다. */
+    var lastCall={},lcd={},lci,lk,lnm,lmk,ld;
+    for(lci=0;lci<calls.length;lci++){
+      lk=calls[lci].db_id;if(!lk)continue;
+      ld=(''+(calls[lci].call_at||'')).slice(0,10);
+      if(ld&&(!lcd[lk]||ld>lcd[lk]))lcd[lk]=ld;
+    }
+    for(lci=0;lci<dbs.length;lci++){
+      lnm=(''+(dbs[lci].customer_name||'')).replace(/\s/g,'');
+      ld=lcd[dbs[lci].id];
+      if(!lnm||!ld)continue;
+      lmk=(typeof osMaskName==='function')?osMaskName(lnm):lnm;
+      if(!lastCall[lmk]||ld>lastCall[lmk])lastCall[lmk]=ld;
+    }
+    AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]),lastCall);
     var rows=r[4].error?[]:(r[4].data||[]),i,c;
     /* 같은 사람 것이 여러 줄이면 가장 최근 것만 쓴다 */
     for(i=0;i<rows.length;i++){
@@ -5705,23 +5720,45 @@ function arCliCalc(clients,metas){
       o.plan++;
       if(m.next.due&&m.next.due<=today)o.due++;
     }
-    lt='';tc=m.touch||[];
-    for(j=0;j<tc.length;j++){var d=(''+(tc[j].d||'')).slice(0,10);if(d>lt)lt=d;}
+    /* 접촉 기록은 {at:'2026-08-19'} 로 적힌다. 예전에 여기서 .d 를 보는 바람에
+       기록이 하나도 안 잡혔고 모든 고객이 「한 번도 안 만난 사람」이 됐다.
+       옛 줄이 섞여 있을 수 있으니 둘 다 본다. */
+    lt=arTouchLast(m);
     if(!lt)lt=(''+(c.created_at||'')).slice(0,10);
     if(arDaysAgo(lt)>=90)o.cold++;
   }
   return out;
 }
 
+/* 접촉 기록 중 가장 최근 날. 적을 때 쓰는 칸은 at 이다 —
+   옛 줄에 d 로 적힌 것이 섞여 있을 수 있어 둘 다 본다. */
+function arTouchLast(m){
+  var tc=(m&&m.touch)||[],lt='',j,d;
+  for(j=0;j<tc.length;j++){
+    if(!tc[j])continue;
+    d=(''+(tc[j].at||tc[j].d||'')).slice(0,10);
+    if(d>lt)lt=d;
+  }
+  return lt;
+}
+/* 월납 보험료(만원) — 0 보다 큰 수만 돈이다. 0·-1·빈칸은 「모른다」 이지 0 이 아니다 */
+function arManOf(m){
+  var v=(m&&m.fp)?m.fp.f_ins:null,n=Number(v);
+  return (v!==''&&v!=null&&isFinite(n)&&n>0)?n:null;
+}
 /* 고객 한 사람 한 사람 — 언제 마지막으로 손댔고 다음에 뭘 하기로 했는지 */
-function arCliRows(clients,metas){
+function arCliRows(clients,metas,last){
   var byId={},out=[],i,c,m,lt,j,tc,d;
   for(i=0;i<metas.length;i++)byId[metas[i].client_id]=metas[i].content||{};
   for(i=0;i<clients.length;i++){
     c=clients[i];if(!c.advisor_id)continue;
     m=byId[c.id]||{};
-    lt='';tc=m.touch||[];
-    for(j=0;j<tc.length;j++){d=(''+(tc[j].d||'')).slice(0,10);if(d>lt)lt=d;}
+    lt=arTouchLast(m);
+    /* DB 통합 CRM 에 남은 통화도 연락이다. 통화는 고객이 아니라 DB 줄에 붙어 있으니
+       이름으로 잇는다 — 실명은 이 기기에만 있으므로 가린 모양끼리 견준다. */
+    d=(last||{})[c.name_masked||''];
+    if(d&&d>lt)lt=d;
+    var ever=!!lt;
     /* 한 번도 손대지 않았으면 등록한 날을 기준으로 센다 — 피드백 숫자와 같은 뜻이어야 한다 */
     if(!lt)lt=(''+(c.created_at||'')).slice(0,10);
     out.push({id:c.id,who:c.advisor_id,
@@ -5729,6 +5766,8 @@ function arCliRows(clients,metas){
       plan:(m.next&&m.next.what)?m.next.what:'',
       due:(m.next&&m.next.due)?m.next.due:'',
       bd:m.bd||'',
+      man:arManOf(m),
+      ever:ever,at:ever?lt:'',
       days:lt?arDaysAgo(lt):9999});
   }
   return out;
@@ -6002,6 +6041,7 @@ var AR_CAT=[
  ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
  ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
+ ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
  ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all']
 ];
@@ -6134,6 +6174,12 @@ function arCatN(k){
   if(k==='todo')return arTodoList().length;
   if(k==='score')return 0;
   if(k==='touch')return arTouch(me).length;
+  if(k==='care'){
+    /* 리더도 자기 숫자부터 본다 — 남의 것이 내 배지에 섞이면 안 된다 */
+    var cr=(typeof ccTeamRows==='function')?ccTeamRows():[],ci;
+    for(ci=0;ci<cr.length;ci++)if(cr[ci].id===me)return cr[ci].over;
+    return 0;
+  }
   if(k==='lead')return (typeof CK_LDR!=='undefined'&&arIsLead())
     ? arUndone('day',CK_LDR.a.concat(CK_LDR.b,CK_LDR.c,CK_LDR.d)).length : 0;
   if(k==='team'){var l=arScope(),i,n=0;for(i=0;i<l.length;i++)if(!AR.rep[l[i].id])n++;return n;}
@@ -6182,6 +6228,120 @@ function arLine(e,t,s,right,warn,click){
     '<span class="e">'+e+'</span><span class="t">'+t+'</span>'+
     (s?('<span class="s">'+s+'</span>'):'')+
     (right?('<span class="r">'+right+'</span>'):'')+'</div>';
+}
+
+
+/* ── 🎯 30일 고객관리 — 팀원별로 ──
+   팀원 본인은 자기 것만, 리더는 팀 전체. 이미 calls 에 created_by 가 있고
+   clients 에 advisor_id 가 있으니 사람별로 가르는 것은 벌써 되고 있었다. */
+function ccTeamRows(){
+  var l=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
+  var cfg=(typeof ccCfg==='function')?ccCfg():{days:30,vipDays:14,vipMan:100};
+  var mo=(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7);
+  var by={},i,c,k,o,cy,vip;
+  for(i=0;i<l.length;i++){
+    c=l[i];k=c.who||'';if(!k)continue;
+    o=by[k]||(by[k]={id:k,n:0,over:0,mon:0,never:0,vip:0,vipOver:0,unk:0});
+    o.n++;
+    vip=(c.man!==null&&c.man!==undefined&&c.man>=cfg.vipMan);
+    if(c.man===null||c.man===undefined)o.unk++;
+    if(vip)o.vip++;
+    cy=vip?cfg.vipDays:cfg.days;
+    if(c.days>=cy){o.over++;if(vip)o.vipOver++;}
+    if(!c.ever)o.never++;
+    if(c.ever&&(''+(c.at||'')).slice(0,7)===mo)o.mon++;
+  }
+  var out=[],who;
+  for(k in by)if(by.hasOwnProperty(k)){
+    o=by[k];
+    o.rate=o.n?Math.round(((o.n-o.over)/o.n)*1000)/10:null;
+    o.name=(typeof arNameOf==='function')?arNameOf(k):'팀원';
+    out.push(o);
+  }
+  /* 달성률이 낮은 사람이 위로 — 도와야 할 사람이 먼저 보여야 한다 */
+  out.sort(function(a,b){return (a.rate===null?101:a.rate)-(b.rate===null?101:b.rate)||b.n-a.n;});
+  return out;
+}
+function ccTeamHtml(){
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var lead=(typeof arIsLead==='function')?arIsLead():false;
+  var cfg=ccCfg();
+  var rows=ccTeamRows(),i,r,out=[];
+  if(lead){
+    /* 리더는 지금 고른 팀만 본다 — 성장판·체크판과 같은 팀이다 */
+    var sc=(typeof arScope==='function')?arScope():[],ok={},j;
+    for(j=0;j<sc.length;j++)ok[sc[j].id]=1;
+    for(i=0;i<rows.length;i++)if(!sc.length||ok[rows[i].id])out.push(rows[i]);
+  }else{
+    for(i=0;i<rows.length;i++)if(rows[i].id===me)out.push(rows[i]);
+  }
+  var body;
+  if(!out.length){
+    body='<div class="ar-none">아직 셀 고객이 없습니다. 고객 365일에 고객을 등록하면 여기에서 '+
+      cfg.days+'일 주기가 지켜지는지 사람별로 셉니다.</div>';
+  }else{
+    var tot={n:0,over:0,mon:0,never:0,vip:0,unk:0};
+    var h='<div style="overflow-x:auto"><table class="cc-team"><thead><tr>'+
+      '<th>팀원</th><th>고객</th><th>'+cfg.days+'일 넘음</th><th>👑 VIP</th>'+
+      '<th>한 번도 없음</th><th>이번 달 연락</th><th>달성률</th></tr></thead><tbody>';
+    for(i=0;i<out.length;i++){
+      r=out[i];
+      tot.n+=r.n;tot.over+=r.over;tot.mon+=r.mon;tot.never+=r.never;tot.vip+=r.vip;tot.unk+=r.unk;
+      h+='<tr'+(r.id===me?' class="me"':'')+'>'+
+        '<td>'+osEsc(r.name)+(r.id===me?' <b class="cm-mytag">나</b>':'')+'</td>'+
+        '<td>'+r.n+'</td>'+
+        '<td'+(r.over?' class="warn"':'')+'>'+r.over+(r.vipOver?(' <span style="font-size:10px">(VIP '+r.vipOver+')</span>'):'')+'</td>'+
+        '<td>'+r.vip+'</td>'+
+        '<td'+(r.never?' class="warn"':'')+'>'+r.never+'</td>'+
+        '<td>'+r.mon+'</td>'+
+        '<td class="'+(r.rate===null?'':(r.rate>=90?'good':(r.rate>=70?'':'warn')))+'">'+
+          (r.rate===null?'-':(r.rate+'%'))+'</td></tr>';
+    }
+    var trate=tot.n?Math.round(((tot.n-tot.over)/tot.n)*1000)/10:null;
+    h+='</tbody><tfoot><tr style="font-weight:800">'+
+      '<td>합계</td><td>'+tot.n+'</td><td'+(tot.over?' class="warn"':'')+'>'+tot.over+'</td>'+
+      '<td>'+tot.vip+'</td><td>'+tot.never+'</td><td>'+tot.mon+'</td>'+
+      '<td class="'+(trate===null?'':(trate>=90?'good':'warn'))+'">'+
+        (trate===null?'-':(trate+'%'))+'</td></tr></tfoot></table></div>';
+    /* 조용히 세지 않는다 — 못 읽은 사람이 있으면 몇 명인지 적는다 */
+    if(tot.unk)
+      h+='<div class="notice" style="margin-top:10px;font-size:11.5px">월납 보험료를 못 읽은 고객이 '+
+        '<b>'+tot.unk+'명</b> 있습니다. 그분들은 VIP 인지 아닌지 아직 모르고 일반 주기('+cfg.days+'일)로 셌습니다. '+
+        '고객 365일에서 팩트파인딩의 <b>보험료</b> 칸을 채우면 바로 갈립니다.</div>';
+    body=h;
+  }
+  return arCard('🎯','30일 고객관리 — 팀원별',
+      '달성률 = (전체 − 주기 넘긴 사람) ÷ 전체. 일반 '+cfg.days+'일 · VIP '+cfg.vipDays+'일(월 '+cfg.vipMan+'만원 이상) 기준입니다',
+      body,
+      '<div class="ar-none" style="margin-top:10px">마지막 연락일은 <b>고객 365일 접촉 기록</b>과 '+
+      '<b>DB 통합 CRM 통화 기록</b> 중 더 최근 것으로 셉니다. 한 번도 연락한 적이 없으면 '+
+      '등록한 날부터 세고 「한 번도 없음」 으로 따로 적습니다.</div>')+
+    ccTeamOverHtml(out,me,lead);
+}
+/* 누가 밀렸는지까지 보여 준다 — 숫자만 보면 사람이 안 보인다 */
+function ccTeamOverHtml(rows,me,lead){
+  var l=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
+  var cfg=ccCfg(),ok={},i,c,out=[];
+  for(i=0;i<rows.length;i++)ok[rows[i].id]=1;
+  for(i=0;i<l.length;i++){
+    c=l[i];
+    if(!ok[c.who||''])continue;
+    var vip=(c.man!==null&&c.man!==undefined&&c.man>=cfg.vipMan);
+    if(c.days<(vip?cfg.vipDays:cfg.days))continue;
+    out.push({c:c,vip:vip});
+  }
+  out.sort(function(a,b){return b.c.days-a.c.days;});
+  var lines=[],n=0;
+  for(i=0;i<out.length&&i<40;i++){
+    c=out[i].c;n++;
+    lines.push(arLine(out[i].vip?'👑':'⏰',
+      osEsc(c.name)+(lead?(' <span style="font-size:10.5px;color:var(--ink-5)">'+osEsc(arNameOf(c.who))+'</span>'):''),
+      c.ever?(c.days+'일 전'):'한 번도 없음',
+      c.plan?osEsc(vaCut(c.plan,18)):'',true,"go('clients')"));
+  }
+  return arCard('⏰','지금 연락해야 할 분들',
+    (out.length>40?('밀린 순서로 위에서부터 40명만 보여 드립니다 — 모두 '+out.length+'명입니다'):'밀린 순서로'),
+    arRowsHtml(lines,'주기를 넘긴 고객이 없습니다. 다 돌았습니다.'));
 }
 
 /* 📅 스케줄 관리 */
@@ -8729,6 +8889,7 @@ function arBodyHtml(cat){
     if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
     return pfMeHtml();
   }
+  if(cat==='care')return ccTeamHtml();
   if(cat==='touch')return arTouchHtml();
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
@@ -9791,7 +9952,15 @@ function go(tab){
   var dyn=$('dynPane');
   if(tab==='home'||tab==='dashboard'){dyn.innerHTML=(typeof osRole==='function'&&typeof osEsc==='function'&&typeof renderHome==='function')?renderHome():renderDashboard();
     if(typeof osNoticeApply==='function')osNoticeApply();
-    if(typeof osNoticeLoad==='function')osNoticeLoad();}
+    if(typeof osNoticeLoad==='function')osNoticeLoad();
+    /* 오늘 안에 연락해야 할 분이 있으면 첫 화면에서 바로 보인다.
+       고객 목록을 아직 안 읽었으면 읽고 나서 그린다. */
+    if(typeof ccHomePaint==='function'){
+      ccHomePaint();
+      if(OS.profile&&typeof cmUid==='function'&&cmUid()&&
+         typeof OSC!=='undefined'&&!(OSC.list&&OSC.list.length)&&typeof osLoadClients==='function')
+        try{osLoadClients();}catch(e){}
+    }}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
   else if(tab==='airep'){dyn.innerHTML=renderAiRep();if(typeof osAiRepAfterRender==='function')osAiRepAfterRender();}
   else if(tab==='teamhub'){dyn.innerHTML=renderTeamHub();if(typeof osTeamHubAfterRender==='function')osTeamHubAfterRender();}
@@ -10070,8 +10239,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-17 15:30';
-var APP_BUILD_NOTE='비포&애프터에 「🧍 인체 한 장」 을 넣었습니다 — 현장에서 쓰는 주요 보장 요약 서식 그대로(뇌·치매·암·심장·수술·사망/후유장해·입원/통원·간병인·실손·비용 열 칸)에 권장·기존·신규 세 칸이 나란히 서고, 🖨 로 A4 한 장이 나옵니다. 「가장 크게 달라진 것」 과 「권장에 못 미치는 것」 도 같이 뜹니다. 담보 사전은 27개에서 53개로 늘렸습니다';
+var APP_BUILD='2026-08-19 10:20';
+var APP_BUILD_NOTE='고객관리를 「30일 안에 모두에게」 하나로 모았습니다 — 고객 365일 맨 위에 달성률 판이 서고, 줄마다 며칠 됐는지와 「☎️ 연락함」 한 번이 붙습니다. 월 100만원 이상은 👑 VIP 로 14일 주기, 나머지는 30일 주기입니다. 마지막 연락일은 접촉 기록과 DB 통합 CRM 통화 기록 중 더 최근 것으로 세고, 한 번도 연락 안 한 분은 「한 번도 없음」 으로 따로 뜹니다. TFA 업무관리에 「🎯 30일 고객관리」 칸이 생겨 팀원별 달성률이 보이고, 밀린 고객 줄에서 「고객에게 전할 뉴스」 문구를 바로 복사할 수 있습니다';
 
 /* ── Netlify 설정 화면 바로가기 ────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13569,6 +13738,7 @@ function renderHome(){
     '<div id="osSetupHome"></div>'+
     '<div id="osNfKeyHome"></div>'+
     '<div id="osNoticeHome"></div>'+
+    (OS.profile?'<div id="ccHomeLine"></div>':'')+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     (osIsOwner()&&typeof owLeft==='function'&&owLeft()
       ?('<div class="notice" style="margin:14px 0 0;background:#FFF7ED;border-color:#FED7AA;color:#9A3412;'+
@@ -37020,6 +37190,12 @@ var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{},
 var CM_KIND='client_meta';
 
 /* ── 이 기기에만 두는 것 ── */
+/* 로그인 번호. OS.profile 은 있는데 OS.session 이 아직/이미 없는 때가 있다 —
+   그때 OS.session.user.id 를 그냥 읽으면 화면 전체가 터진다.
+   없으면 없다고 답하고, 부르는 쪽이 조용히 물러나게 한다. */
+function cmUid(){
+  try{ return (OS.session&&OS.session.user&&OS.session.user.id)||null; }catch(e){ return null; }
+}
 function cmLS(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function cmLSSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function cmWho(){try{return (OS.profile&&(OS.profile.id||OS.profile.email))||'local';}catch(e){return 'local';}}
@@ -37055,10 +37231,10 @@ function cmOf(id){
   m=cmBlank();CM.meta[id]=m;return m;
 }
 function cmLoadAll(then){
-  var sb=osClient();
-  if(!sb||!OS.profile){if(then)then();return;}
+  var sb=osClient(),uid=cmUid();
+  if(!sb||!OS.profile||!uid){if(then)then();return;}
   sb.from('saved_reports').select('id,client_id,content').eq('kind',CM_KIND)
-    .eq('advisor_id',OS.session.user.id).then(function(r){
+    .eq('advisor_id',uid).then(function(r){
     CM.loaded=true;
     if(r&&r.error){if(then)then();return;}
     var rows=(r&&r.data)||[],i,c,m;
@@ -37075,8 +37251,8 @@ function cmLoadAll(then){
   },function(){CM.loaded=true;if(then)then();});
 }
 function cmSave(id,patch,then){
-  var sb=osClient();
-  if(!sb||!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
+  var sb=osClient(),uid=cmUid();
+  if(!sb||!OS.profile||!uid){toast('로그인 후 저장할 수 있습니다');return;}
   var m=cmOf(id),k;
   for(k in patch)m[k]=patch[k];
   m.up=new Date().getTime();
@@ -37093,7 +37269,7 @@ function cmSave(id,patch,then){
     },bad);
     return;
   }
-  sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:id,
+  sb.from('saved_reports').insert({advisor_id:uid,client_id:id,
     kind:CM_KIND,title:'고객 관리',content:body}).then(function(r){
     if(r&&r.error){bad(r);return;}
     /* 방금 넣은 줄의 번호를 다시 받아 온다 — 다음 저장이 두 줄이 되면 안 된다 */
@@ -37178,6 +37354,373 @@ function cmTodo(list){
     if(cmTemp(c.id).d>=60||(cmTemp(c.id).d<0&&cmDays((c.created_at||'').slice(0,10))>=60))cold.push(c);
   }
   return {due:due,bd:bd,cold:cold,n:due.length+bd.length+cold.length};
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   고객 케어 — 30일 안에 모든 고객에게
+
+   목표는 하나다. <b>30일 안에 모든 고객에게 반드시 연락한다.</b>
+   그것이 되는지 화면이 대신 세어 주고, 안 된 사람을 눈앞에 들이밀고,
+   연락할 거리까지 쥐여 준다.
+
+   새 표는 만들지 않았다. 마지막 연락일은 이미 두 군데에 있다 —
+   고객 365일의 접촉 기록(client_meta.touch)과 DB 통합 CRM 의 통화 기록(calls).
+   둘 중 <b>더 최근 것</b>이 진짜 마지막 연락일이다.
+   ══════════════════════════════════════════════════════════════════════ */
+var CC={calls:{},loaded:false,busy:false,err:'',dbN:0,hitN:0};
+var CC_CFG_KEY='apex_cc_cfg';
+
+/* 오늘 — 한국 시각으로. 새벽 두 시에 눌러도 어제로 세면 안 된다 */
+function ccToday(){return (new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10);}
+
+function ccCfg(){
+  var d={days:30,vipDays:14,vipMan:100};   /* vipMan 은 만원 — 100 = 월 100만원 */
+  try{
+    var v=JSON.parse(localStorage.getItem(CC_CFG_KEY)||'null');
+    if(v&&typeof v==='object'){
+      if(v.days>0)d.days=v.days;
+      if(v.vipDays>0)d.vipDays=v.vipDays;
+      if(v.vipMan>0)d.vipMan=v.vipMan;
+    }
+  }catch(e){}
+  return d;
+}
+function ccCfgSet(k){
+  var c=ccCfg(),now=c[k];
+  var lab={days:'일반 고객 연락 주기(일)',vipDays:'VIP 연락 주기(일)',vipMan:'VIP 기준 월납(만원)'}[k]||k;
+  var v=prompt(lab,''+now);
+  if(v===null)return;
+  var n=parseInt((''+v).replace(/[^0-9]/g,''),10);
+  if(!(n>0)){toast('0 보다 큰 수를 적어 주세요');return;}
+  c[k]=n;
+  try{localStorage.setItem(CC_CFG_KEY,JSON.stringify(c));}catch(e){}
+  toast(lab+' 을(를) '+n+' 로 바꿨습니다 — 이 기기에만 남습니다');
+  ccAfter();
+}
+
+/* 0 보다 큰 수만 돈이다. 0·-1·빈칸·글자는 「모른다」 — 0 으로 채우지 않는다.
+   상담자료의 s10Money() 와 같은 규칙이다. */
+function ccMoney(v){
+  if(v===''||v===null||v===undefined)return null;
+  var n=Number(v);
+  return (isFinite(n)&&n>0)?n:null;
+}
+/* 월납 보험료(만원) — 팩트파인딩의 「보험료」 칸에서 온다 */
+function ccMan(id){
+  var m=(typeof cmOf==='function')?cmOf(id):null;
+  return ccMoney(m&&m.fp?m.fp.f_ins:null);
+}
+function ccIsVip(id){var w=ccMan(id);return w!==null&&w>=ccCfg().vipMan;}
+
+/* ── 마지막 연락일 ──
+   접촉 기록과 통화 기록 중 더 최근 것. 한 번도 없으면 빈 값이다.
+   0 으로 채우지 않는다 — 「모른다」 와 「오늘 했다」 는 다르다. */
+function ccLastAt(id){
+  var a=(typeof cmLastTouch==='function')?cmLastTouch(id):'';
+  var b=CC.calls[id]||'';
+  return (a>b)?a:b;
+}
+/* 며칠 지났나. 한 번도 연락한 적이 없으면 등록한 날부터 세되
+   「한 번도 없음」 이라고 따로 표시한다. */
+function ccIdle(c){
+  var at=ccLastAt(c.id),n;
+  if(at){n=cmDays(at,ccToday());return {d:(n<0?null:n),ever:true,at:at};}
+  var born=(''+(c.created_at||'')).slice(0,10);
+  n=born?cmDays(born,ccToday()):-1;
+  return {d:(n<0?null:n),ever:false,at:''};
+}
+function ccCycle(id){var c=ccCfg();return ccIsVip(id)?c.vipDays:c.days;}
+
+/* 색: 넘음 주황 · 임박 노랑 · 여유 회색.
+   빨강은 아껴 쓴다 — 다 빨가면 아무것도 안 급해 보인다. */
+function ccBand(c){
+  var w=ccIdle(c),cy=ccCycle(c.id);
+  if(w.d===null)
+    return {k:'none',t:'등록일을 모릅니다',col:'#8B95A1',over:false,soon:false,d:null,ever:false,cy:cy};
+  var over=w.d>=cy;
+  var soon=(!over)&&(w.d>=Math.max(1,Math.round(cy*5/6)));
+  return {k:over?'over':(soon?'soon':'ok'),
+          t:w.ever?(w.d===0?'오늘 연락함':(w.d+'일 전')):('한 번도 없음 · 등록 '+w.d+'일'),
+          col:over?'#FF9500':(soon?'#FFC043':'#8B95A1'),
+          over:over,soon:soon,d:w.d,ever:w.ever,cy:cy};
+}
+
+/* ── 목록 ── */
+function ccScope(all){
+  var out=[],i;
+  if(!CM.pick)return (all||[]).slice();
+  for(i=0;i<all.length;i++)if((all[i].advisor_id||'')===CM.pick)out.push(all[i]);
+  return out;
+}
+function ccSortByIdle(list){
+  list.sort(function(a,b){
+    var x=ccBand(a).d,y=ccBand(b).d;
+    if(x===null)x=-1;if(y===null)y=-1;
+    return y-x;
+  });
+  return list;
+}
+function ccOverList(list){
+  var out=[],i;
+  for(i=0;i<list.length;i++)if(ccBand(list[i]).over)out.push(list[i]);
+  return ccSortByIdle(out);
+}
+function ccSoonList(list){
+  var out=[],i;
+  for(i=0;i<list.length;i++)if(ccBand(list[i]).soon)out.push(list[i]);
+  return ccSortByIdle(out);
+}
+function ccVipList(list){
+  var out=[],i;
+  for(i=0;i<list.length;i++)if(ccIsVip(list[i].id))out.push(list[i]);
+  return ccSortByIdle(out);
+}
+/* 보험료를 못 읽어서 VIP 인지 아닌지 모르는 사람 —
+   조용히 빼지 않고 몇 명인지 화면에 적는다. VIP 를 놓치는 게 제일 아프다. */
+function ccUnknownList(list){
+  var out=[],i;
+  for(i=0;i<list.length;i++)if(ccMan(list[i].id)===null)out.push(list[i]);
+  return out;
+}
+function ccNeverList(list){
+  var out=[],i;
+  for(i=0;i<list.length;i++)if(!ccIdle(list[i]).ever)out.push(list[i]);
+  return ccSortByIdle(out);
+}
+function ccMonthDone(list){
+  var mo=ccToday().slice(0,7),n=0,i,at;
+  for(i=0;i<list.length;i++){at=ccLastAt(list[i].id);if(at&&at.slice(0,7)===mo)n++;}
+  return n;
+}
+/* 달성률 = (전체 − 주기 넘긴 사람) / 전체. 고객이 없으면 숫자가 없다(null) */
+function ccRate(list){
+  if(!list||!list.length)return null;
+  return Math.round(((list.length-ccOverList(list).length)/list.length)*1000)/10;
+}
+
+/* ── 통화 기록을 고객에 잇는다 ──
+   calls 는 고객이 아니라 DB 줄(db_id)에 붙어 있다. 둘을 잇는 것은 이름뿐이다.
+   실명은 이 기기에만 있으니, 실명을 아는 고객은 실명으로, 모르면 가린 모양끼리 견준다. */
+function ccLoadCalls(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!OS.profile){CC.loaded=true;return;}
+  if(CC.busy)return;
+  CC.busy=true;CC.err='';
+  var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  var fail=function(){
+    CC.busy=false;CC.loaded=true;
+    CC.err='DB 통합 CRM 의 통화 기록을 못 읽었습니다 — 고객 365일 접촉 기록만으로 셉니다.';
+    ccAfter();
+  };
+  Promise.all([
+    q(sb.from('dbs').select('id,customer_name')),
+    q(sb.from('calls').select('db_id,call_at').order('call_at',{ascending:false}).limit(4000))
+  ]).then(function(r){
+    if(r[0].error||r[1].error){fail();return;}
+    CC.busy=false;CC.loaded=true;
+    var dbs=r[0].data||[],calls=r[1].data||[],perDb={},byReal={},byMask={},i,k,d,nm,mk;
+    for(i=0;i<calls.length;i++){
+      k=calls[i].db_id;if(!k)continue;
+      d=(''+(calls[i].call_at||'')).slice(0,10);
+      if(d&&(!perDb[k]||d>perDb[k]))perDb[k]=d;
+    }
+    for(i=0;i<dbs.length;i++){
+      nm=(''+(dbs[i].customer_name||'')).replace(/\s/g,'');
+      d=perDb[dbs[i].id];
+      if(!nm||!d)continue;
+      if(!byReal[nm]||d>byReal[nm])byReal[nm]=d;
+      mk=(typeof osMaskName==='function')?osMaskName(nm):nm;
+      if(!byMask[mk]||d>byMask[mk])byMask[mk]=d;
+    }
+    CC.calls={};CC.dbN=dbs.length;CC.hitN=0;
+    var L=OSC.list||[],c,real,hit;
+    for(i=0;i<L.length;i++){
+      c=L[i];
+      real=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
+      hit=real?byReal[real.replace(/\s/g,'')]:null;
+      if(!hit)hit=byMask[c.name_masked||''];
+      if(hit){CC.calls[c.id]=hit;CC.hitN++;}
+    }
+    ccAfter();
+  },fail);
+}
+
+/* ── 「오늘 연락함」 한 번 ──
+   누르면 접촉 기록에 한 줄. cc 표시를 같이 남긴다.
+   되돌릴 때 이 표시가 있는 오늘 것만 지운다 — 손으로 적어 둔 진짜 기록을 지우면 안 된다. */
+var CC_HOW=['전화','카톡','만남','문자'];
+function ccMark(id,how){
+  how=how||'전화';
+  var m=cmOf(id),L=(m.touch||[]).slice();
+  L.unshift({at:ccToday(),how:how,note:'30일 관리',cc:1});
+  cmSave(id,{touch:L},function(){
+    toast(how+' 기록을 남겼습니다 — 오늘부터 다시 셉니다');
+    ccAfter();
+  });
+}
+function ccCanUndo(id){
+  var L=(cmOf(id).touch)||[],t=ccToday(),i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].cc&&L[i].at===t)return true;
+  return false;
+}
+function ccUndo(id){
+  var m=cmOf(id),L=(m.touch||[]).slice(),t=ccToday(),i,hit=-1;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].cc&&L[i].at===t){hit=i;break;}
+  if(hit<0){toast('오늘 이 단추로 남긴 기록이 없습니다');return;}
+  L.splice(hit,1);
+  cmSave(id,{touch:L},function(){toast('되돌렸습니다');ccAfter();});
+}
+
+/* ── 연락할 거리 ──
+   「고객에게 전할 뉴스」 다섯 칸 중 이 고객에게 맞는 칸에서 한 건.
+   고객 이름은 넣지 않는다(「고객님」) — 지금 규칙 그대로. */
+function ccNewsCat(id){
+  var m=(typeof cmOf==='function')?cmOf(id):null,f=(m&&m.fp)||{};
+  var n=function(k){return ccMoney(f[k]);};
+  if(ccIsVip(id)||n('f_home'))return 'tax';
+  if(n('f_debt'))return 'realty';
+  if(n('f_edu'))return 'help';
+  if(!n('c_cancer')&&!n('c_death'))return 'ins';
+  return 'econ';
+}
+function ccNewsIdx(id){
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  var want=ccNewsCat(id),i;
+  for(i=0;i<L.length;i++)if((L[i].cats||[]).indexOf(want)>=0)return i;
+  return L.length?0:-1;
+}
+function ccNews(id){
+  if(typeof nlLoad==='function'&&(typeof NLIVE==='undefined'||!NLIVE.items.length))nlLoad();
+  var i=ccNewsIdx(id);
+  if(i<0){
+    toast('아직 받아 둔 소식이 없습니다 — 「고객에게 전할 뉴스」 에서 먼저 모아 주세요',5000);
+    if(typeof go==='function')go('news_live');
+    return;
+  }
+  if(typeof nlCopy==='function')nlCopy(i);
+  else toast('복사를 못 했습니다');
+}
+
+/* ── 다시 그리기 ── */
+function ccAfter(){
+  if(document.getElementById('oscList')&&typeof osRenderList==='function')osRenderList();
+  ccNavPaint();ccHomePaint();
+  if(typeof AR!=='undefined'&&AR.cat==='care'&&typeof arPaint==='function')arPaint();
+}
+/* 메뉴의 「고객 365일」 옆 숫자 — 오늘 안에 연락해야 할 사람 */
+function ccNavPaint(){
+  var b=document.querySelector('.tab-btn[data-tab="clients"]');
+  if(!b)return;
+  var n=(OSC.list&&OSC.list.length)?ccOverList(ccMyList()).length:0;
+  var s=b.querySelector('.tc');
+  if(!n){if(s&&s.parentNode)s.parentNode.removeChild(s);return;}
+  if(!s){s=document.createElement('span');s.className='tc';b.appendChild(s);}
+  s.textContent=n;
+  s.style.background='#FFF3E0';s.style.color='#B45309';s.style.borderColor='#FDBA74';
+}
+/* 홈 한 줄 — 오늘 안에 연락해야 할 분이 있으면 첫 화면에서 바로 보인다 */
+function ccHomePaint(){
+  var el=document.getElementById('ccHomeLine');
+  if(!el)return;
+  var mine=ccMyList();
+  if(!mine.length){el.innerHTML='';return;}
+  var over=ccOverList(mine),soon=ccSoonList(mine);
+  if(!over.length&&!soon.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="notice cc-home" style="margin:14px 0 0">'+
+    (over.length
+      ?('<b>오늘 안에 연락해야 할 분이 '+over.length+'명</b> 있습니다.')
+      :('<b>곧 연락할 때가 되는 분이 '+soon.length+'명</b> 있습니다.'))+
+    (over.length&&soon.length?(' 곧 다가오는 분도 '+soon.length+'명.'):'')+
+    '<button type="button" class="btn btn-primary cc-hb" onclick="go(\'clients\')">고객 365일 열기</button></div>';
+}
+function ccMyList(){
+  var all=OSC.list||[],me=(OS.profile&&OS.profile.id)||'',out=[],i;
+  if(!me)return all.slice();
+  for(i=0;i<all.length;i++)if(all[i].advisor_id===me)out.push(all[i]);
+  return out.length?out:[];
+}
+
+
+/* ── 맨 위 판 — 오늘 안에 연락해야 할 사람이 몇 명인가 ── */
+function ccPill(n,t,cls,click){
+  return '<button type="button" class="cc-pill '+cls+'"'+(click?(' onclick="'+click+'"'):'')+'>'+
+    '<span class="n">'+n+'</span><span class="t">'+osEsc(t)+'</span></button>';
+}
+function ccNames(list,k){
+  var nm=[],i;
+  for(i=0;i<list.length&&i<3;i++)nm.push(cmName(list[i]));
+  if(!nm.length)return '';
+  return osEsc(nm.join(', '))+(list.length>3?(' 외 '+(list.length-3)+'명'):'');
+}
+function ccBoardHtml(all){
+  var mine=ccScope(all);
+  if(!mine.length)return '';
+  var cfg=ccCfg();
+  var over=ccOverList(mine),soon=ccSoonList(mine),vip=ccVipList(mine);
+  var never=ccNeverList(mine),unk=ccUnknownList(mine);
+  var rate=ccRate(mine),mon=ccMonthDone(mine);
+  var vipOver=ccOverList(vip);
+  var h='<div class="cc-board'+(over.length?' hot':'')+'">'+
+    '<div class="cc-hd"><b>🎯 30일 안에 모두에게</b>'+
+      '<span class="cc-rate'+(rate!==null&&rate>=90?' ok':'')+'">'+
+        (rate===null?'-':(rate+'%'))+'</span>'+
+      '<em>고객 '+mine.length+'명 중 '+(mine.length-over.length)+'명이 주기 안에 있습니다</em>'+
+    '</div>'+
+    '<div class="cc-bar2"><span class="cc-fill" style="width:'+(rate===null?0:rate)+'%"></span></div>'+
+    '<div class="cc-pills">'+
+      ccPill(over.length,'지금 연락해야 함','over',"ccSort('over')")+
+      ccPill(soon.length,'곧 때가 됩니다','soon',"ccSort('soon')")+
+      ccPill(vip.length,'👑 VIP','vip',"ccSort('vip')")+
+      ccPill(mon,'이번 달 연락함','done','')+
+    '</div>';
+  if(over.length)
+    h+='<div class="cc-say over"><b>'+over.length+'명</b>이 '+
+       '연락 주기를 넘겼습니다 — '+ccNames(over)+'</div>';
+  else
+    h+='<div class="cc-say ok"><b>다 돌았습니다.</b> 주기를 넘긴 고객이 한 명도 없습니다.</div>';
+  if(vipOver.length)
+    h+='<div class="cc-say vip">👑 <b>VIP '+vipOver.length+'명</b>이 '+cfg.vipDays+'일을 넘겼습니다 — '+ccNames(vipOver)+'</div>';
+  if(never.length)
+    h+='<div class="cc-say none"><b>'+never.length+'명</b>은 등록 뒤 <b>한 번도</b> 연락 기록이 없습니다 — '+ccNames(never)+'</div>';
+  /* 조용히 세지 않는다 — 뺀 사람이 있으면 몇 명인지 적는다 */
+  if(unk.length)
+    h+='<div class="cc-say unk">월납 보험료를 못 읽은 고객이 <b>'+unk.length+'명</b> 있습니다. '+
+       'VIP 인지 아닌지 아직 모릅니다 — 고객을 열어 팩트파인딩의 <b>보험료</b> 칸을 채워 주세요.</div>';
+  if(CC.err)h+='<div class="cc-say unk">'+osEsc(CC.err)+'</div>';
+  h+='<div class="cc-cfg">주기 '+
+      '<button type="button" onclick="ccCfgSet(\'days\')">일반 '+cfg.days+'일</button>'+
+      '<button type="button" onclick="ccCfgSet(\'vipDays\')">VIP '+cfg.vipDays+'일</button>'+
+      '<button type="button" onclick="ccCfgSet(\'vipMan\')">VIP 기준 월 '+cfg.vipMan+'만원</button>'+
+      '<span>'+(CC.loaded
+        ?('통화 기록까지 함께 셉니다 · 이어진 고객 '+CC.hitN+'명')
+        :'통화 기록을 읽는 중…')+'</span></div>'+
+    '</div>';
+  return h;
+}
+/* 판의 알약을 누르면 그 사람들만 위로 온다 */
+function ccSort(k){
+  CM.sort=(CM.sort==='cc_'+k)?'seen':('cc_'+k);
+  osRenderList();
+}
+/* 고객 한 줄에 붙는 것 — 며칠 됐나, 그리고 지금 할 수 있는 일 */
+function ccRowChip(c){
+  var b=ccBand(c);
+  return '<span class="cc-dd '+b.k+'" title="'+osEsc(b.cy+'일 주기')+'">'+osEsc(b.t)+'</span>';
+}
+function ccRowActHtml(c){
+  var b=ccBand(c);
+  if(!b.over&&!b.soon&&!ccCanUndo(c.id))return '';
+  var h='<div class="cc-act">';
+  if(ccCanUndo(c.id)){
+    h+='<span class="cc-ok">✓ 오늘 연락함</span>'+
+       '<button type="button" class="cc-b undo" onclick="event.stopPropagation();ccUndo(\''+c.id+'\')">되돌리기</button>';
+  }else{
+    h+='<button type="button" class="cc-b go" onclick="event.stopPropagation();ccMark(\''+c.id+'\',\'전화\')">☎️ 연락함</button>'+
+       '<button type="button" class="cc-b" onclick="event.stopPropagation();ccMark(\''+c.id+'\',\'카톡\')">💬 카톡</button>'+
+       '<button type="button" class="cc-b news" onclick="event.stopPropagation();ccNews(\''+c.id+'\')">📰 전할 소식 복사</button>';
+  }
+  return h+'</div>';
 }
 
 /* ── 팩트파인딩 ──
@@ -37342,6 +37885,20 @@ function cmRealSaveNow(id){
 function cmSortRows(rows){
   var s=CM.sort;
   rows.sort(function(a,b){
+    /* 연락이 밀린 사람이 맨 위로. 한 번도 연락 안 한 사람은 등록한 날부터 센다 */
+    if(s==='cc_over'||s==='cc_soon'){
+      var ba=ccBand(a),bb=ccBand(b);
+      var oa=(ba.over?2:(ba.soon?1:0)),ob=(bb.over?2:(bb.soon?1:0));
+      if(oa!==ob)return ob-oa;
+      return (bb.d===null?-1:bb.d)-(ba.d===null?-1:ba.d);
+    }
+    /* VIP 를 먼저. VIP 안에서는 오래 못 뵌 순서 */
+    if(s==='cc_vip'){
+      var va=ccIsVip(a.id)?1:0,vb=ccIsVip(b.id)?1:0;
+      if(va!==vb)return vb-va;
+      var ca=ccBand(a),cb=ccBand(b);
+      return (cb.d===null?-1:cb.d)-(ca.d===null?-1:ca.d);
+    }
     if(s==='seen')return cmSeenAt(b.id)-cmSeenAt(a.id);
     if(s==='name')return (''+cmName(a)).localeCompare(''+cmName(b),'ko');
     if(s==='cold'){
@@ -37454,18 +38011,19 @@ function cmBarHtml(){
     'onclick="cmSortSet(\''+k+'\')">'+t+'</button>';};
   return '<div class="cm-bar">'+
     s('seen','최근 본 순')+s('name','이름순')+s('new','등록순')+s('cold','오래된 순')+
+    s('cc_over','⏰ 연락 밀린 순')+s('cc_vip','👑 VIP 먼저')+
     '<button type="button" class="cm-sb'+(CM.byWho?' on':'')+'" style="margin-left:auto" '+
     'onclick="cmWhoToggle()">👤 담당자로 묶기</button>'+
     '<button type="button" class="cm-sb'+(CM.fam?' on':'')+'" '+
     'onclick="cmFamToggle()">👨‍👩‍👧 가족으로 묶기</button></div>';
 }
 function cmTopHtml(q,all){
-  if(q)return cmWhoChipsHtml(all);
+  if(q)return ccBoardHtml(all)+cmWhoChipsHtml(all);
   /* 「오늘 챙길 고객」 은 지금 고른 담당자 것만 센다.
      내 것만 보는 중인데 남의 고객이 위에 뜨면 그게 내 일인 줄 안다. */
   var mine=all,i;
   if(CM.pick){mine=[];for(i=0;i<all.length;i++)if(all[i].advisor_id===CM.pick)mine.push(all[i]);}
-  return cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
+  return ccBoardHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -37485,12 +38043,17 @@ function cmRowHtml(c){
     var wn=cmWhoName(c);
     if(wn)wtag='<i class="cm-wt">'+osEsc(wn)+'</i>';
   }
-  return '<div class="cm-row" onclick="osOpenClient(\''+c.id+'\')">'+
+  var vip=(typeof ccIsVip==='function')&&ccIsVip(c.id);
+  return '<div class="cm-row'+((typeof ccBand==='function'&&ccBand(c).over)?' cc-over':'')+'" '+
+    'onclick="osOpenClient(\''+c.id+'\')">'+
     '<div class="cm-av '+tp.k+'">'+osEsc((''+nm).charAt(0))+'</div>'+
-    '<div class="cm-mid"><div class="cm-nm">'+wtag+osEsc(nm)+
+    '<div class="cm-mid"><div class="cm-nm">'+wtag+
+      (vip?'<b class="cc-vip">👑 VIP</b>':'')+osEsc(nm)+
       (cmRealOf(c.id)?'<em>'+osEsc(c.name_masked||'')+'</em>':'')+'</div>'+
-      '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+'</div>'+
-    '<div class="cm-rt"><span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
+      '<div class="cm-sub">'+osEsc(sub.join(' · '))+'</div>'+nx+
+      ((typeof ccRowActHtml==='function')?ccRowActHtml(c):'')+'</div>'+
+    '<div class="cm-rt">'+((typeof ccRowChip==='function')?ccRowChip(c):'')+
+      '<span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span>'+
       '<span class="cm-ff">'+cmFfCount(c.id)+'/'+cmFfTotal()+'</span></div>'+
   '</div>';
 }
@@ -37778,6 +38341,64 @@ function cmCss(){
     '.cm-fc label{font-size:10.5px;font-weight:700;color:var(--ink-4)}'+
     '.cm-fc input,.cm-fc select{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);'+
       'border-radius:8px;padding:8px 9px;font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    '.cc-board{border:1px solid var(--ink-7);border-radius:14px;padding:13px 14px;margin:0 0 12px;background:#fff}'+
+    '.cc-board.hot{border-color:#FDBA74;background:#FFFBF5}'+
+    '.cc-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}'+
+    '.cc-hd b{font-size:13.5px;color:var(--ink-1)}'+
+    '.cc-hd em{font-style:normal;font-size:11px;color:var(--ink-4);flex:1;min-width:120px}'+
+    '.cc-rate{font-size:17px;font-weight:800;color:#FF9500;letter-spacing:-.02em}'+
+    '.cc-rate.ok{color:#0F766E}'+
+    '.cc-bar2{height:6px;border-radius:99px;background:#EEF1F5;overflow:hidden;margin-bottom:11px}'+
+    '.cc-fill{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#3182F6,#0F766E)}'+
+    '.cc-pills{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}'+
+    '.cc-pill{display:inline-flex;align-items:baseline;gap:6px;border:1px solid var(--ink-7);background:#fff;'+
+      'border-radius:999px;padding:6px 13px;cursor:pointer;font-family:inherit}'+
+    '.cc-pill .n{font-size:15px;font-weight:800;color:var(--ink-1)}'+
+    '.cc-pill .t{font-size:11.5px;font-weight:700;color:var(--ink-4)}'+
+    '.cc-pill.over{border-color:#FDBA74;background:#FFF7ED}.cc-pill.over .n{color:#B45309}'+
+    '.cc-pill.soon{border-color:#FDE68A;background:#FFFBEB}.cc-pill.soon .n{color:#92400E}'+
+    '.cc-pill.vip{border-color:#C7D2FE;background:#EEF2FF}.cc-pill.vip .n{color:#3730A3}'+
+    '.cc-pill.done{border-color:#BBF7D0;background:#F0FDF4}.cc-pill.done .n{color:#166534}'+
+    '.cc-say{font-size:11.5px;line-height:1.65;color:var(--ink-3);border-top:1px solid #F1F5F9;padding:7px 0 0;margin-top:2px}'+
+    '.cc-say b{color:var(--ink-1)}'+
+    '.cc-say.over b{color:#B45309}.cc-say.ok{color:#0F766E}.cc-say.vip b{color:#3730A3}'+
+    '.cc-say.none b{color:#B45309}.cc-say.unk{color:var(--ink-4)}'+
+    '.cc-cfg{display:flex;gap:6px;flex-wrap:wrap;align-items:center;border-top:1px solid #F1F5F9;'+
+      'margin-top:9px;padding-top:9px}'+
+    '.cc-cfg button{border:1px solid var(--ink-7);background:#fff;border-radius:8px;padding:4px 10px;'+
+      'font-family:inherit;font-size:10.5px;font-weight:700;color:var(--ink-3);cursor:pointer}'+
+    '.cc-cfg button:hover{border-color:var(--primary);color:var(--primary)}'+
+    '.cc-cfg>span{font-size:10.5px;color:var(--ink-5);margin-left:auto}'+
+    '.cm-row.cc-over{background:#FFFCF7}'+
+    '.cc-vip{display:inline-block;font-size:9.5px;font-weight:800;color:#3730A3;background:#EEF2FF;'+
+      'border:1px solid #C7D2FE;border-radius:5px;padding:1px 5px;margin-right:5px;vertical-align:1px}'+
+    '.cc-dd{display:inline-block;font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;'+
+      'color:#64748B;background:#F1F5F9;white-space:nowrap}'+
+    '.cc-dd.over{color:#B45309;background:#FFF3E0}'+
+    '.cc-dd.soon{color:#92400E;background:#FEF9C3}'+
+    '.cc-dd.none{color:#94A3B8;background:#F8FAFC}'+
+    '.cc-act{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}'+
+    '.cc-b{border:1px solid var(--ink-7);background:#fff;border-radius:7px;padding:4px 9px;'+
+      'font-family:inherit;font-size:10.5px;font-weight:700;color:var(--ink-3);cursor:pointer}'+
+    '.cc-b:hover{border-color:var(--primary);color:var(--primary)}'+
+    '.cc-b.go{border-color:#FDBA74;color:#B45309;background:#FFF7ED}'+
+    '.cc-b.news{border-color:#BFDBFE;color:#1A56DB;background:#EFF6FF}'+
+    '.cc-b.undo{color:var(--ink-5)}'+
+    '.cc-ok{font-size:10.5px;font-weight:800;color:#166534;background:#F0FDF4;border:1px solid #BBF7D0;'+
+      'border-radius:7px;padding:4px 9px}'+
+    '.cc-home{background:#FFF7ED;border-color:#FED7AA;color:#9A3412;display:flex;gap:11px;'+
+      'align-items:center;flex-wrap:wrap;font-size:13px}'+
+    '.cc-hb{padding:6px 13px;font-size:12px;margin-left:auto}'+
+    '.cc-team{width:100%;border-collapse:collapse;font-size:12px}'+
+    '.cc-team th{font-size:10.5px;font-weight:800;color:var(--ink-4);text-align:right;padding:6px 7px;'+
+      'border-bottom:1px solid var(--ink-7);white-space:nowrap}'+
+    '.cc-team th:first-child{text-align:left}'+
+    '.cc-team td{padding:8px 7px;border-bottom:1px solid #F1F5F9;text-align:right;white-space:nowrap}'+
+    '.cc-team td:first-child{text-align:left;font-weight:700;color:var(--ink-1)}'+
+    '.cc-team tr.me td{background:#F8FAFF}'+
+    '.cc-team .warn{color:#B45309;font-weight:800}'+
+    '.cc-team .good{color:#0F766E;font-weight:800}'+
+    '@media(max-width:520px){.cc-cfg>span{margin-left:0;width:100%}.cc-hb{margin-left:0}}'+
     '@media(max-width:520px){.cm-nrow input[type=text]{min-width:100%}'+
       '.cm-td .w{display:none}}';
   document.head.appendChild(st);
@@ -37825,7 +38446,12 @@ function osLoadClients(){
     }
     /* 관리 기록이 와야 온도·다음 할 일이 나온다. 먼저 한 번 그리고, 오면 다시 그린다 */
     osRenderList();
-    cmLoadAll(function(){osRenderList();});
+    cmLoadAll(function(){
+      osRenderList();
+      /* 마지막 연락일은 접촉 기록만으로는 모자라다 — DB 통합 CRM 의 통화도 연락이다 */
+      ccLoadCalls();
+      ccNavPaint();
+    });
   };
   /* 누가 맡은 고객인지 이름으로 보여주려면 담당자 표를 같이 읽어야 한다.
      못 읽어도 목록은 그대로 뜬다 — 담당자 이름만 안 보일 뿐이다. */
