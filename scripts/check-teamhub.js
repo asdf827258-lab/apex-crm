@@ -164,8 +164,20 @@ window.supabase={createClient:function(){
     renderNav();
     return Array.prototype.map.call(document.querySelectorAll('#navHost .tab-btn'), e => e.getAttribute('data-tab'));
   });
-  ok(menu.indexOf('조직 관리|teamhub') >= 0, '메뉴 「조직 관리」 밑에 실행 체크판이 있다');
-  ok(nav.indexOf('teamhub') >= 0, '사이드바에 실제로 그려진다');
+  ok(menu.indexOf('조직 관리|teamhub') >= 0, '메뉴 목록에 TEAM 총괄 관리가 남아 있다 — 지우지 않았다');
+  /* 같은 일이 TFA 업무관리 안에 있어 눈에서만 뺐다. 지운 게 아니라 숨긴 것이므로
+     찾기로 치면 나와야 한다 — 안 나오면 그건 없앤 것이다. */
+  ok(nav.indexOf('teamhub') < 0, '평소 사이드바에는 안 보인다 — 눈에서 뺀 칸이다');
+  const found = await page.evaluate(() => {
+    NAV_Q = 'TEAM 총괄'; renderNav();
+    var ok1 = !!document.querySelector('#navHost .tab-btn[data-tab="teamhub"]');
+    NAV_Q = '실행 체크판'; renderNav();
+    var ok2 = !!document.querySelector('#navHost .tab-btn[data-tab="teamhub"]');
+    NAV_Q = ''; renderNav();
+    return { byName: ok1, byOld: ok2 };
+  });
+  ok(found.byName, '「TEAM 총괄」 로 찾으면 나온다');
+  ok(found.byOld, '옛 이름 「실행 체크판」 으로 찾아도 나온다');
   ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(t =>
     ok(nav.indexOf(t) < 0, '사이드바에서 ' + t + ' 이 사라졌다'));
   ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(async t => { });
