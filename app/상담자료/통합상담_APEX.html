@@ -626,6 +626,23 @@ body.present .crmbadge{top:16px}
 .hstep.safe .no{color:var(--usd-d)}
 
 
+/* ═══ 원화 병기 ═══
+   고객은 달러 금액만 보면 크기를 못 가늠한다. $32,158 이 얼마인지
+   머릿속에서 환산하는 사이 설명이 지나간다. 그래서 달러를 적는 자리마다
+   원화를 함께 적고, 그 원화가 <b>어느 환율로 나온 값인지</b>를 위에 띄워 둔다. */
+.kw{font-size:.76em;font-weight:700;color:var(--ink3);white-space:nowrap;letter-spacing:-.02em}
+.res .kw,.split .kw,.kpi .kw{color:rgba(255,255,255,.62)}
+.dc.fx .kw{color:var(--usd-d);opacity:.72}
+.fxbar{position:sticky;top:64px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid var(--line);
+  border-radius:14px;padding:11px 16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(16,24,40,.07)}
+.fxbar .t{font-size:11.5px;font-weight:800;color:var(--ink3);background:var(--bg);
+  padding:4px 10px;border-radius:999px;white-space:nowrap}
+.fxbar .v{font-size:14.5px;font-weight:800;letter-spacing:-.035em;white-space:nowrap}
+.fxbar .n{font-size:11.5px;color:var(--ink3);line-height:1.5;flex:1 1 220px}
+@media(max-width:980px){.fxbar{top:60px}}
+@media print{.fxbar{position:static;box-shadow:none;backdrop-filter:none}}
+
 /* ═══ 교육자금 트랙 전용 ═══ */
 :root{--edu:#7a4fd6;--edu-l:#f1ecfd;--edu-d:#5b34ad}
 .nt.e.on{background:var(--edu-d)}
@@ -1635,6 +1652,7 @@ h2 em.e{color:var(--edu-d)}
       </div>
 
       <div>
+        <div class="fxbar" id="dFxBar"></div>
         <div class="res" id="resBox"></div>
         <div class="decomp" id="decompBox"></div>
 
@@ -1672,7 +1690,7 @@ h2 em.e{color:var(--edu-d)}
           <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">전체 환급률표</div>
           <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 18px">제안서 원본 수치 그대로 &mdash; 나이는 표기하지 않습니다</div>
           <div class="tw" style="box-shadow:none;border:1px solid var(--line)">
-            <table class="t" id="fullTable" style="min-width:600px"></table>
+            <table class="t" id="fullTable" style="min-width:800px"></table>
           </div>
         </div>
       </div>
@@ -2441,7 +2459,8 @@ h2 em.e{color:var(--edu-d)}
         <div class="hint">움직여 보십시오. 환율이 오를수록 <b>달러로 모은 쪽의 원화 가치</b>가 커집니다.</div>
       </div>
 
-      <div class="res" style="margin-top:24px" id="eRes"></div>
+      <div class="fxbar" id="eFxBar" style="margin-top:24px"></div>
+      <div class="res" id="eRes"></div>
       <div id="eWhenBox"></div>
       <div class="decomp" id="eSplit"></div>
       <div class="mile-wrap"><table class="mile" id="eTable"></table></div>
@@ -3901,6 +3920,22 @@ function won(n){
   }
   return m.toLocaleString('ko-KR')+'만원';
 }
+/* 달러 옆에 늘 원화를 붙인다.
+   낸 돈은 <b>가입환율</b>, 받는 돈은 <b>수령환율</b> — 두 환율이 다르면
+   붙는 원화도 달라야 한다. 하나로 뭉치면 환차익이 화면에서 사라진다. */
+function usdIn(n){  return usd(n)+' <span class="kw">약 '+won(n*S.fxIn)+'</span>'; }
+function usdOut(n){ return usd(n)+' <span class="kw">약 '+won(n*S.fxOut)+'</span>'; }
+/* 아래 원화가 어느 환율에서 나온 값인지 — 화면 위에 붙여 두고 슬라이더를 따라 움직인다 */
+function fxBar(){
+  const el=$('#dFxBar'); if(!el) return;
+  const d=S.fxOut-S.fxIn;
+  el.innerHTML = `<span class="t">기준 환율</span>
+    <span class="v">가입 ${nf(S.fxIn)}원 <span style="color:var(--ink3)">&rarr;</span> 수령 ${nf(S.fxOut)}원</span>
+    <span class="v" style="color:${d>0?'var(--usd-d)':(d<0?'var(--red)':'var(--ink3)')}">${d>0?'+':''}${nf(d)}원</span>
+    <span class="n">아래 원화 금액은 모두 이 환율로 환산한 값입니다 &mdash;
+      <b>수령 환율</b>을 움직이면 함께 바뀝니다.</span>`;
+}
+
 /* 상품별 기본 표시 지점 — 첫 화면이 환급률 0%인 3개월로 열리지 않도록 */
 function defaultIdx(R){
   const want = S.prod==='met' ? ['10년 +1일 ★','5년 +1일 ★'] : ['15년 (연금개시)'];
@@ -3942,6 +3977,7 @@ function render(){
   const r = R[S.idx];
 
   // 슬라이더 · 시나리오 셀렉트
+  fxBar();
   const sl=$('#iYear'); sl.max=R.length-1; sl.value=S.idx;
   $('#yrEcho').textContent = r.l;
   $('#paidEcho').innerHTML = `5년 총납입 ${usd(S.prem*60)} · 가입환율 기준 ${won(S.prem*60*S.fxIn)}`;
@@ -3976,7 +4012,8 @@ function render(){
     <div class="split">
       <div><div class="lbl">달러 기준 환급률</div>
         <div class="big g">${r.rt.toFixed(2)}<span style="font-size:.45em">%</span></div>
-        <div class="sm">${usd(r.paid)} 납입 → <b style="color:#fff">${usd(cvUsd)}</b></div></div>
+        <div class="sm">${usdIn(r.paid)} 납입 → <b style="color:#fff">${usd(cvUsd)}</b>
+          <span class="kw">약 ${won(recvWon)}</span></div></div>
       <div><div class="lbl">원화 기준 환급률</div>
         <div class="big" style="color:${rtWon>=100?'#fff':'#ff9aa4'}">${rtWon.toFixed(2)}<span style="font-size:.45em">%</span></div>
         <div class="sm">${won(paidWon)} 납입 → <b style="color:#fff">${won(recvWon)}</b></div></div>
@@ -3984,7 +4021,7 @@ function render(){
     <div class="kpi">
       <div><b class="${total>=0?'g':'r'}">${total>=0?'+':''}${won(total)}</b><span>원화 총 손익</span></div>
       <div><b>${(S.fxOut/S.fxIn*100-100>=0?'+':'')}${(S.fxOut/S.fxIn*100-100).toFixed(1)}%</b><span>환율 변동률</span></div>
-      <div><b>${usd(cvUsd - r.paid)}</b><span>달러 기준 순증가</span></div>
+      <div><b>${usd(cvUsd - r.paid)}</b><span>달러 기준 순증가 · 약 ${won((cvUsd-r.paid)*S.fxOut)}</span></div>
     </div>`;
 
   // ── 수익 분해 ──────────────────────────────
@@ -4001,7 +4038,7 @@ function render(){
       <div class="v" style="${gainFxWon<0?'color:var(--red)':''}">${gainFxWon>=0?'+':''}${won(gainFxWon)}</div>
       <div class="n">${S.fxOut===S.fxIn
         ? `가입 때와 수령 때 환율이 <b>같다고 가정</b>했습니다. 수령 환율을 움직이면 이 값이 바뀝니다.`
-        : `쌓인 달러 ${usd(cvUsd)} 전체에 환율 차이 ${nf(Math.abs(S.fxOut-S.fxIn))}원이 곱해진 금액입니다.
+        : `쌓인 달러 ${usdOut(cvUsd)} 전체에 환율 차이 ${nf(Math.abs(S.fxOut-S.fxIn))}원이 곱해진 금액입니다.
            환율이 가입 때보다 <b>${S.fxOut>S.fxIn?'올라 이익':'내려 손실'}</b>입니다.`}</div>
     </div>
     <div style="grid-column:1/-1">
@@ -4107,8 +4144,8 @@ function renderAiaPost(){
      브릿지연금형은 <b>기대여명까지 5배로 앞당겨 주고 그 이후 줄어드는</b> 구조라,
      누적 수령액이 34년째부터 완만해집니다. 정액형·확정형을 고르면 곡선이 달라집니다.<br>
      공시이율 4.81%가 유지된다는 가정에서 <b>100세까지 총 연금수령액</b>은
-     종신연금형(정액·10년보증) 기준 <b>${usd(162437*sc)}</b>, 확정연금 20년형 <b>${usd(102448*sc)}</b>입니다
-     (제안서 p.13). 납입 ${usd(paid)} 대비 각각 <b>${(162437*sc/paid*100).toFixed(0)}%</b>,
+     종신연금형(정액·10년보증) 기준 <b>${usdOut(162437*sc)}</b>, 확정연금 20년형 <b>${usdOut(102448*sc)}</b>입니다
+     (제안서 p.13). 납입 ${usdIn(paid)} 대비 각각 <b>${(162437*sc/paid*100).toFixed(0)}%</b>,
      <b>${(102448*sc/paid*100).toFixed(0)}%</b>.`;
 }
 
@@ -4116,11 +4153,15 @@ function renderAiaPost(){
 function renderFull(R){
   const k=S.fxOut/S.fxIn;
   $('#fullTable').innerHTML =
-   `<thead><tr><th>경과</th><th>납입누계 (USD)</th><th>해약환급금 (USD)</th><th>달러 환급률</th><th>원화 환급률</th></tr></thead><tbody>`+
+   `<thead><tr><th>경과</th>
+     <th>납입누계 (USD)</th><th>납입누계 (원)<span class="mini">가입 ${nf(S.fxIn)}원</span></th>
+     <th>해약환급금 (USD)</th><th>해약환급금 (원)<span class="mini">수령 ${nf(S.fxOut)}원</span></th>
+     <th>달러 환급률</th><th>원화 환급률</th></tr></thead><tbody>`+
    R.map((d,i)=>{
      const cv=d.paid*d.rt/100, rtw=d.rt*k;
      return `<tr class="${i===S.idx?'key':(d.bonus?'jump':'')}">
-       <td>${d.l}</td><td class="n">${usd(d.paid)}</td><td class="n">${usd(cv)}</td>
+       <td>${d.l}</td><td class="n">${usd(d.paid)}</td><td class="n">${won(d.paid*S.fxIn)}</td>
+       <td class="n">${usd(cv)}</td><td class="n">${won(cv*S.fxOut)}</td>
        <td class="n">${d.rt.toFixed(2)}%</td>
        <td class="n" style="color:${rtw>=100?'var(--usd-d)':'var(--red)'}">${rtw.toFixed(2)}%</td></tr>`;
    }).join('')+'</tbody>';
@@ -4635,7 +4676,20 @@ function ewon(n){
     return s+e+'억'+(r?' '+r.toLocaleString('ko-KR')+'만원':'원');}
   return m.toLocaleString('ko-KR')+'만원';
 }
-const eusd = n=>'$'+Math.round(n).toLocaleString('ko-KR');
+const eusd = n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+/* 달러 옆에 늘 원화를 붙인다 — 넣을 때는 가입환율, 받을 때는 유학 시점 환율 */
+function eusdIn(n){  return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxIn)+'</span>'; }
+function eusdOut(n){ return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxOut)+'</span>'; }
+/* 아래 원화가 어느 환율에서 나온 값인지 — 슬라이더를 따라 움직인다 */
+function eduFxBar(){
+  const el=$e('#eFxBar'); if(!el) return;
+  const d=EDU.fxOut-EDU.fxIn;
+  el.innerHTML = `<span class="t">기준 환율</span>
+    <span class="v">넣을 때 ${enf(EDU.fxIn)}원 <span style="color:var(--ink3)">&rarr;</span> 나올 때 ${enf(EDU.fxOut)}원</span>
+    <span class="v" style="color:${d>0?'var(--edu-d)':(d<0?'var(--red)':'var(--ink3)')}">${d>0?'+':''}${enf(d)}원</span>
+    <span class="n">아래 원화 금액은 모두 이 환율로 환산한 값입니다 &mdash;
+      <b>나올 때 환율</b>을 움직이면 함께 바뀝니다.</span>`;
+}
 
 /* 나이 t(만)에 그 해 받는 월 지원금 (원) */
 function monthlyAid(t){
@@ -4748,6 +4802,7 @@ function renderEdu(){
   const c = eduCalc();
   const fxNow = EDU.fxIn;
   const echo = $e('#eFxOutEcho'); if(echo) echo.textContent = enf(EDU.fxOut);
+  eduFxBar();
   // 유학 시점 환율 시나리오
   const scen = [1200, EDU.fxIn, 1800, 1965];
   const wonUsd = c.won / fxNow;        // 원화로 모은 돈을 그때 환전하면 (환율 시나리오별로 달라짐)
@@ -4762,9 +4817,11 @@ function renderEdu(){
         <div class="sm">${EDU.age}세부터 ${EDU.go}세까지 실제로 통장에 들어올 돈입니다.</div></div>
       <div><div class="lbl">달러 상품에서 찾을 때 (${EDU.go}세 · ${c.years}년 경과)</div>
         <div class="big ${c.rate>=100?'g':''}" ${c.rate<100?'style="color:var(--red)"':''}>${eusd(c.usd)}</div>
-        <div class="sm">환급률 <b>${c.rate.toFixed(2)}%</b> 적용
+        <div class="sm"><b style="color:#fff">약 ${ewon(c.usd*EDU.fxOut)}</b>
+          <span class="kw">· 나올 때 ${enf(EDU.fxOut)}원 기준</span><br>
+          환급률 <b>${c.rate.toFixed(2)}%</b> 적용
           &mdash; ${EDU.prod==='met'?'메트라이프 백만달러':'AIA 글로벌 파워'} 5년납 제안서 표<br>
-          납입 재원 ${ewon(c.premWon)} (가입환율 ${enf(fxNow)}원 → ${eusd(c.premUsd)})</div></div>
+          납입 재원 ${ewon(c.premWon)} (넣을 때 ${enf(fxNow)}원 → ${eusd(c.premUsd)})</div></div>
     </div>
     <div class="kpi">
       <div><b class="g">${c.usd*EDU.fxOut-c.paid>=0?'+':''}${ewon(c.usd*EDU.fxOut-c.paid)}</b>
@@ -4789,7 +4846,7 @@ function renderEdu(){
     <div class="dc fx" style="background:var(--edu-l);border-color:#d9cbf5">
       <div class="h" style="color:var(--edu-d)">② 환차익 <span style="font-weight:600">(${enf(EDU.fxIn)}원 → ${enf(fxOut)}원)</span></div>
       <div class="v" style="color:${gainFx>=0?'var(--edu-d)':'var(--red)'}">${gainFx>=0?'+':''}${ewon(gainFx)}</div>
-      <div class="n">쌓인 달러 <b>${eusd(c.usd)}</b> 전체에 환율 차이
+      <div class="n">쌓인 달러 <b>${eusdOut(c.usd)}</b> 전체에 환율 차이
         <b>${enf(Math.abs(fxOut-EDU.fxIn))}원</b>이 곱해진 금액입니다.
         ${fxOut>EDU.fxIn?`환율이 <b style="color:var(--edu-d)">오른 만큼 그대로 이익</b>입니다.`
           :fxOut<EDU.fxIn?`환율이 <b style="color:var(--red)">내려 손실</b>입니다 &mdash; 이 위험도 함께 봐야 합니다.`
@@ -4822,7 +4879,7 @@ function renderEdu(){
       <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">
         언제 찾느냐가 얼마를 받느냐를 정합니다</div>
       <div style="font-size:12.5px;color:var(--ink3);margin:6px 0 16px;line-height:1.7">
-        납입 재원 <b>${ewon(c.premWon)}</b>(= ${eusd(c.premUsd)})를 넣었을 때,
+        납입 재원 <b>${ewon(c.premWon)}</b>(= ${eusd(c.premUsd)} · 넣을 때 ${enf(EDU.fxIn)}원)를 넣었을 때,
         <b>찾는 시점</b>별 환급률과 수령액입니다. ${scenTxt} 기준.
         ${EDU.prod==='met'?'메트는 <b>5년 + 하루</b>와 <b>10년 + 하루</b>에 유지보너스가 붙어 환급률이 계단처럼 뜁니다 &mdash; 하루 차이로 갈립니다.':''}
       </div>
@@ -4877,8 +4934,9 @@ function renderEdu(){
      const a=c.won/fx, b=c.usd;
      return `<tr class="${fx===EDU.fxIn?'key':''}">
        <td>${enf(fx)}원${fx===1965?' <span class="mini">1997 고점</span>':fx===EDU.fxIn?' <span class="mini">현재 가정</span>':''}</td>
-       <td>${eusd(a)}</td><td class="up">${eusd(b)}</td>
-       <td class="up">+${eusd(b-a)}</td>
+       <td>${eusd(a)}<span class="mini">${ewon(c.won)}</span></td>
+       <td class="up">${eusd(b)}<span class="mini">${ewon(b*fx)}</span></td>
+       <td class="${b-a>=0?'up':''}" ${b-a<0?'style="color:var(--red)"':''}>${b-a>=0?'+':''}${eusd(b-a)}<span class="mini">${b*fx-c.won>=0?'+':''}${ewon(b*fx-c.won)}</span></td>
        <td>${(b/Math.max(1,EDU.costUsd)*12).toFixed(1)}개월
          <span class="mini">원화는 ${(a/Math.max(1,EDU.costUsd)*12).toFixed(1)}개월</span></td></tr>`;
    }).join('')+'</tbody>';
