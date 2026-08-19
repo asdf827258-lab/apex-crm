@@ -1149,7 +1149,8 @@ function copy(txt,msg){navigator.clipboard.writeText(txt).then(()=>toast(msg||'�
 const bytes=s=>{let n=0;for(const c of s)n+=c.charCodeAt(0)>127?2:1;return n};
 
 const state={news:LS.get('news',[]),newsAt:LS.get('newsAt',''),hook:LS.get('hook',null),
-  terms:LS.get('terms',[]),lastA:null,lastB:null,filter:new Set(),design:null,touch:null};
+  terms:LS.get('terms',[]),lastA:null,lastB:null,filter:new Set(),design:null,touch:null,
+  mon:''};   /* 고른 달. 빈 값이면 이번에 모은 것 전부 */
 
 /* ---------------- 탭 ---------------- */
 /* 화면이 13칸이라 뭘 눌러야 할지 어려웠다. 하는 일이 같은 것끼리 5칸으로 묶는다.
@@ -1253,33 +1254,118 @@ function ingest(items){
   if(dropped)console.info('[미끼레이더] 보험 기사가 아니어서 제외한 것 '+dropped+'건');
   state.newsAt=new Date().toLocaleString('ko-KR');
   LS.set('news',state.news);LS.set('newsAt',state.newsAt);
+  /* 이번에 받은 것을 달 서랍에도 넣는다 — 다음 달에 이번 달 것을 다시 볼 수 있게 */
+  const added=archAdd(state.news);
+  if(added)console.info('[미끼레이더] 달 서랍에 '+added+'건 새로 넣었습니다');
   renderNews();renderHookPick();
   $('#stNews').innerHTML='뉴스 <b>'+state.news.length+'</b>건';
 }
 function dnum(d){const t=Date.parse(d);return isNaN(t)?0:t}
+/* ── 달 서랍 ──────────────────────────────────────────────────────
+   예전에는 새로 모을 때마다 state.news 를 통째로 갈아 끼웠다.
+   그래서 지난달 기사는 그냥 사라졌다. 이제 쌓아 두고 달로 나눠 본다.
+   제목이 같으면 한 번만 넣는다 — 같은 기사를 여러 날 받아도 하나다. */
+const MK_ARCH_MAX=1500;   /* 이 기기에 남길 최대 건수 — 오래된 달부터 버린다 */
+function monOf(n){
+  const t=Date.parse((n&&n.date)||'');
+  if(!isNaN(t))return new Date(t+9*3600*1000).toISOString().slice(0,7);
+  /* 날짜를 못 읽은 기사도 버리지 않는다. 받은 달에 넣고 그렇다고 적는다. */
+  return (n&&n.got)||'없음';
+}
+function monTxt(k){
+  if(k==='없음')return '날짜 모름';
+  const p=k.split('-');
+  return p[0]+'년 '+(+p[1])+'월';
+}
+function archLoad(){
+  const a=LS.get('arch',[]);
+  return (a&&a.push)?a:[];
+}
+function archSave(a){LS.set('arch',a);}
+/* 이번에 받은 것을 서랍에 넣는다. 먼저 있던 것이 이긴다 —
+   같은 기사를 다시 받아도 처음 본 날짜를 지킨다. */
+function archAdd(list){
+  const now=new Date(Date.now()+9*3600*1000).toISOString().slice(0,7);
+  const a=archLoad(),seen=new Set();
+  a.forEach(x=>seen.add(String(x.title||'').slice(0,28)));
+  let add=0;
+  (list||[]).forEach(n=>{
+    const k=String(n.title||'').slice(0,28);
+    if(!k||seen.has(k))return;
+    seen.add(k);
+    a.push({...n,got:now});
+    add++;
+  });
+  /* 넘치면 오래된 달부터 버린다 */
+  a.sort((x,y)=>{
+    const mx=monOf(x),my=monOf(y);
+    if(mx!==my)return mx<my?1:-1;
+    return dnum(y.date)-dnum(x.date);
+  });
+  if(a.length>MK_ARCH_MAX)a.length=MK_ARCH_MAX;
+  archSave(a);
+  return add;
+}
+/* 달마다 몇 건인가 — 최근 달이 앞으로. 「날짜 모름」 은 맨 뒤. */
+function archMonths(){
+  const c={};
+  archLoad().forEach(n=>{const m=monOf(n);c[m]=(c[m]||0)+1;});
+  return Object.keys(c).sort((a,b)=>{
+    if(a==='없음')return 1;
+    if(b==='없음')return -1;
+    return a<b?1:-1;
+  }).map(m=>({m:m,n:c[m]}));
+}
+function monSet(m){
+  state.mon=(state.mon===m)?'':m;
+  renderNews();
+}
+function monChipsHtml(){
+  const ms=archMonths();
+  if(!ms.length)return '';
+  const tot=ms.reduce((s,x)=>s+x.n,0);
+  let h='<div class="chips" style="margin-bottom:10px"><span class="f" style="align-self:center;margin-right:4px">달별</span>'+
+    '<span class="chip'+(state.mon?'':' on')+'" data-mon="">전체 '+tot+'</span>';
+  ms.forEach(x=>{
+    h+='<span class="chip'+(state.mon===x.m?' on':'')+'" data-mon="'+esc(x.m)+'">'+
+       esc(monTxt(x.m))+' '+x.n+'</span>';
+  });
+  return h+'</div>';
+}
+
 function renderNews(){
   const per=+$('#selPeriod').value, sort=$('#selSort').value;
   const now=Date.now(), lim=per*864e5;
-  let list=state.news.filter(n=>{
-    if(per<9999&&n.date&&dnum(n.date)&&now-dnum(n.date)>lim)return false;
-    if(state.filter.size&&!n.tags.some(t=>state.filter.has(t)))return false;
+  /* 달을 고르면 서랍 전체에서 그 달만 본다 — 이번에 받은 것만이 아니라
+     쌓아 둔 것 전부에서 고른다. 그러라고 쌓아 둔 것이다. */
+  const src=state.mon?archLoad().filter(n=>monOf(n)===state.mon):state.news;
+  let list=src.filter(n=>{
+    /* 달을 고른 동안에는 기간 제한을 걸지 않는다 — 두 잣대가 겹치면
+       「8월을 골랐는데 아무것도 없다」 가 된다 */
+    if(!state.mon&&per<9999&&n.date&&dnum(n.date)&&now-dnum(n.date)>lim)return false;
+    if(state.filter.size&&!(n.tags||[]).some(t=>state.filter.has(t)))return false;
     return true});
   list.sort((a,b)=>sort==='date'?dnum(b.date)-dnum(a.date):b.score-a.score||dnum(b.date)-dnum(a.date));
   /* 태그 필터 */
-  const cnt={};state.news.forEach(n=>n.tags.forEach(t=>cnt[t]=(cnt[t]||0)+1));
-  $('#tagFilter').innerHTML=Object.entries(cnt).sort((a,b)=>b[1]-a[1])
+  const cnt={};src.forEach(n=>(n.tags||[]).forEach(t=>cnt[t]=(cnt[t]||0)+1));
+  $('#tagFilter').innerHTML=monChipsHtml()+'<div class="chips">'+Object.entries(cnt).sort((a,b)=>b[1]-a[1])
     .map(([t,c])=>'<span class="chip'+(state.filter.has(t)?' on':'')+(t==='주의'?' rd':'')+'" data-tag="'+t+'">'+t+' '+c+'</span>').join('')
-    +(state.filter.size?'<span class="chip" data-tag="__all">✕ 필터 해제</span>':'');
-  $$('#tagFilter .chip').forEach(c=>c.onclick=()=>{
+    +(state.filter.size?'<span class="chip" data-tag="__all">✕ 필터 해제</span>':'')+'</div>';
+  $$('#tagFilter .chip[data-mon]').forEach(c=>c.onclick=()=>monSet(c.dataset.mon));
+  $$('#tagFilter .chip[data-tag]').forEach(c=>c.onclick=()=>{
     const t=c.dataset.tag;
     if(t==='__all')state.filter.clear();
     else state.filter.has(t)?state.filter.delete(t):state.filter.add(t);
     renderNews()});
-  if(!list.length){$('#newsList').innerHTML='<div class="empty">뉴스가 없어요.<br>위의 <b>수집 데이터 불러오기</b> 또는 <b>직접 붙여넣기</b>를 눌러주세요.</div>';return}
-  $('#newsList').innerHTML='<div class="cnt" style="margin-bottom:8px">'+list.length+'건 · 마지막 갱신 '+esc(state.newsAt||'-')+'</div>'
+  if(!list.length){$('#newsList').innerHTML='<div class="empty">'+
+    (state.mon?('<b>'+esc(monTxt(state.mon))+'</b> 에 모아 둔 기사가 없습니다.<br>위 <b>전체</b> 를 누르면 다 보입니다.')
+             :'뉴스가 없어요.<br>위의 <b>수집 데이터 불러오기</b> 또는 <b>직접 붙여넣기</b>를 눌러주세요.')+
+    '</div>';return}
+  $('#newsList').innerHTML='<div class="cnt" style="margin-bottom:8px">'+
+    (state.mon?('<b>'+esc(monTxt(state.mon))+'</b> · '):'')+list.length+'건 · 마지막 갱신 '+esc(state.newsAt||'-')+'</div>'
    +list.map((n,i)=>{
     const cls=n.score>=70?'g':n.score>=50?'b':'n';
-    return '<div class="nitem" data-i="'+state.news.indexOf(n)+'">'
+    return '<div class="nitem" data-i="'+list.indexOf(n)+'" data-t="'+esc(String(n.title||'').slice(0,28))+'">'
      +'<div class="nt">'+(n.link?'<a href="'+esc(n.link)+'" target="_blank" rel="noopener">'+esc(n.title)+'</a>':esc(n.title))+'</div>'
      +'<div class="nmeta"><span class="score">🎣 미끼점수 '+n.score+'</span>'
      +n.tags.map(t=>'<span class="bd '+(t==='주의'?'r':'b')+'">'+t+'</span>').join('')
@@ -1291,13 +1377,17 @@ function renderNews(){
     const box=e.target.closest('.nitem'),i=+box.dataset.i;
     const hb=box.querySelector('.hookbox');
     if(hb.classList.contains('on')){hb.classList.remove('on');return}
-    const n=state.news[i],tk=talkFor(n.tags);
+    const n=list[i];if(!n)return;
+    const tk=talkFor(n.tags);
     hb.innerHTML=hookHTML(n);hb.classList.add('on');
     hb.querySelector('.useHook').onclick=()=>{state.hook=n;LS.set('hook',n);
       renderHookPick();toast('이달의 훅으로 지정했어요 → 설계기/접촉 엔진에 반영됩니다')};
     hb.querySelector('.cpHook').onclick=()=>copy('['+n.title+']\n\n① '+tk.o+'\n② '
       +tk.q+'\n③ '+tk.b)});
-  $$('.mkrep').forEach(b=>b.onclick=e=>npFromNews(state.news[+e.target.closest('.nitem').dataset.i],true));
+  $$('.mkrep').forEach(b=>b.onclick=e=>{
+    const n=list[+e.target.closest('.nitem').dataset.i];
+    if(n)npFromNews(n,true);
+  });
 }
 /* 화법을 고를 때의 우선순위 — 고객의 '관심사(질병·상황)'가 '제도 얘기'보다 먼저 */
 const PRIORITY=['실손','암','뇌심장','간병','치아','운전자','자녀','생활','노후','간편심사','면책완화',
