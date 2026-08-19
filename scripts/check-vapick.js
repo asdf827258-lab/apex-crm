@@ -47,9 +47,11 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     OS.profile = { id: 'va', name: '점검', role: 'owner', plan: 'vip' };
   });
 
+  /* 앞 물음이 남아 있으면 다음 말이 그 답으로 먹힌다 — 그건 옳은 동작이다.
+     여기서는 <b>새 말</b>을 보는 것이므로 되묻던 것을 먼저 치운다. */
   const run = (t) => page.evaluate((t) => {
     window.__went = ''; window.__ai = '';
-    VA.pick = null; VA.log = []; VA.hist = [];
+    VA.pick = null; VA.pend = null; VA.conf = null; VA.log = []; VA.hist = [];
     vaRun(t);
     return { pick: VA.pick ? VA.pick.list.map(x => x.title) : null,
              say: (VA.log.filter(x => x.w === 'bot').pop() || {}).t || '',
@@ -93,6 +95,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(!e1.pick, '  「고객이 비싸다고 하는데」 — 메뉴를 내밀지 않는다');
   const e2 = await run('암 진단비가 왜 필요한지 설명해줘');
   is(!e2.pick, '  「암 진단비가 왜 필요한지」 — 메뉴를 내밀지 않는다');
+
+  console.log('\n[4-2] 시키는 말에는 메뉴가 안 튀어나온다');
+  /* 「그거 좀 어떻게 해봐」 는 시키는 말이다. 「좀」 하나 들어갔다고
+     메뉴 셋을 내밀면 시키던 일이 막힌다 — 실제로 한 번 막혔던 자리다. */
+  for (const t of ['그거 좀 어떻게 해봐', '전화 5통 체크해줘', '도와줄 것 좀 적어줘',
+                   '박서준 피드백 좀 남겨줘', '그거 처리해줘']) {
+    const r = await run(t);
+    is(!r.pick, '  「' + t + '」 — 메뉴를 내밀지 않는다');
+  }
 
   console.log('\n[5] 이름을 정확히 부르면 그냥 연다 — 셋을 거치지 않는다');
   const f = await run('고객 365 열어줘');
