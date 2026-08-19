@@ -2372,14 +2372,18 @@ h2 em.e{color:var(--edu-d)}
                     padding:6px 12px;border-radius:999px;white-space:nowrap" id="rgStamp">취합본 없음</div>
       </div>
 
-      <div class="f" style="margin:18px 0 0;max-width:420px">
-        <label>계산에 적용할 지역</label>
-        <select id="rgPick"><option value="-1">직접 입력 — 계산 화면에서</option></select>
-        <div class="hint" id="rgPickNote">취합본을 저장하면 여기서 지역을 고를 수 있습니다.</div>
+      <div class="grid g2" style="gap:14px;margin:18px 0 0;max-width:640px">
+        <div class="f" style="margin:0"><label>시 · 도</label>
+          <select id="rgSido"><option value="">불러오는 중…</option></select></div>
+        <div class="f" style="margin:0"><label>시 · 군 · 구</label>
+          <select id="rgGu"><option value="">시·도를 먼저 고르십시오</option></select></div>
       </div>
+      <div id="rgPickState" style="margin-top:10px"></div>
+      <div class="hint" id="rgPickNote" style="margin-top:8px">
+        전국 <b>229개 시·군·구</b>가 미리 들어 있습니다. 고르기만 하시면 됩니다.</div>
 
       <div class="tw" style="box-shadow:none;border:1px solid var(--line);margin-top:16px">
-        <table class="t fundtbl" id="rgTable" style="min-width:660px"></table>
+        <table class="t fundtbl" id="rgTable" style="min-width:820px"></table>
       </div>
 
       <div class="linkrow" style="margin-top:14px">
@@ -2400,7 +2404,8 @@ h2 em.e{color:var(--edu-d)}
       <p class="hint" style="margin-top:12px">
         ※ 지자체 지원금은 <b>정부가 한곳에 모아 제공하는 공개 API가 없어</b> 자동 수집이 불가능합니다.
         위 링크에서 확인한 값을 한 번 채워 <b>취합본으로 저장</b>해 두시면, 상담 때마다 고르기만 하면 됩니다.
-        금액은 <b>2026년 8월 확인 기준</b>이며 매년 바뀌고, 소득·거주기간 요건이 붙는 지역도 많습니다.</p>
+        <b>확인일자는 「취합 저장」을 누른 날이 자동으로 들어갑니다</b> &mdash; 반년이 지나면 화면에 경고가 붙습니다.
+        금액은 매년 바뀌고, 소득·거주기간 요건이 붙는 지역도 많습니다.</p>
     </div>
   </div>
 </section>
@@ -5411,9 +5416,58 @@ function renderEdu(){
    ─ 정부가 지자체 지원금을 한곳에 모아주는 공개 API가 없어 수동 취합이 유일한 방법이다.
    ═══════════════════════════════════════════════ */
 const RG_KEY = 'apex_edu_regions';
-const RG = {draft:[], saved:[], stamp:''};
+const RG = {draft:[], saved:[], stamp:'', file:null, warnDays:180, pick:null};
 
-function rgBlank(){ return {sido:'', gu:'', amt:'', memo:''}; }
+/* ── 전국 시·군·구 뼈대 ────────────────────────────────────────────
+   팀이 손으로 채우게 두면 사람마다 다른 값을 쓰고, 누가 언제 확인한
+   값인지 아무도 모른다. 그래서 시·도 › 시·군·구 뼈대를 미리 깔아 두고
+   금액마다 <b>확인일자와 출처</b>를 함께 남긴다.
+
+   ※ 없는 주소도 200 으로 앱 HTML 을 돌려주는 배포 규칙이 있어
+     r.json() 을 곧바로 부르면 조용히 터진다. 글로 받아 손으로 뜯는다. */
+const RG_URL = '../edu-regions.json';
+function rgKeyOf(a,b){ return (a||'')+'|'+(b||''); }
+function rgLoadFile(){
+  return fetch(RG_URL, {cache:'no-store'}).then(r=>r.text()).then(t=>{
+    let o=null;
+    try{ o=JSON.parse(t); }catch(e){ o=null; }
+    if(!o || !Array.isArray(o.regions)) throw new Error('형식이 맞지 않습니다');
+    RG.file=o;
+    if(o.meta && +o.meta.warnAfterDays>0) RG.warnDays=+o.meta.warnAfterDays;
+    return o;
+  });
+}
+/* 파일 위에 팀 취합본을 덮는다 — 손으로 확인한 값이 이긴다 */
+function rgMerged(){
+  const m={};
+  if(RG.file) RG.file.regions.forEach(r=>{ m[rgKeyOf(r.sido,r.gu)]={...r}; });
+  RG.saved.forEach(r=>{
+    const k=rgKeyOf(r.sido,r.gu), amt=parseFloat(r.amt);
+    const base=m[k]||{sido:r.sido||'',gu:r.gu||'',amt:null,memo:'',checked:'',src:''};
+    m[k]={...base, amt: isFinite(amt)&&amt>=0 ? amt : base.amt,
+          memo: r.memo||base.memo, checked: RG.stamp||base.checked, src: r.src||base.src, mine:1};
+  });
+  return m;
+}
+function rgSidoList(){
+  const m=rgMerged(), out=[], seen={};
+  Object.keys(m).forEach(k=>{ const s=m[k].sido; if(s&&!seen[s]){seen[s]=1;out.push(s);} });
+  return out;
+}
+function rgGuList(sido){
+  const m=rgMerged(), out=[];
+  Object.keys(m).forEach(k=>{ if(m[k].sido===sido) out.push(m[k]); });
+  return out;
+}
+/* 며칠 지났나 — 반년이 넘으면 화면에 경고한다. 해마다 바뀌는 값이다. */
+function rgAgeDays(d){
+  if(!d) return null;
+  const t=Date.parse(d+'T00:00:00+09:00');
+  if(isNaN(t)) return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+
+function rgBlank(){ return {sido:'', gu:'', amt:'', memo:'', src:''}; }
 function rgLoad(){
   try{
     const o = JSON.parse(localStorage.getItem(RG_KEY)||'null');
@@ -5426,14 +5480,17 @@ function rgStampText(){
 }
 function rgRenderTable(){
   $e('#rgTable').innerHTML =
-   `<thead><tr><th style="width:20%">시·도</th><th style="width:26%">시·군·구</th>
-     <th style="width:18%">지원금 (만원)</th><th>메모 (조건·비고)</th><th style="width:8%"></th></tr></thead><tbody>`+
+   `<thead><tr><th style="width:16%">시·도</th><th style="width:20%">시·군·구</th>
+     <th style="width:14%">지원금 (만원)</th><th>메모 (조건·비고)</th>
+     <th style="width:22%">출처 (주소)</th><th style="width:6%"></th></tr></thead><tbody>`+
    RG.draft.map((r,i)=>`<tr>
-     <td><input data-i="${i}" data-k="sido" value="${r.sido||''}" placeholder="예: 전남"></td>
+     <td><input data-i="${i}" data-k="sido" value="${r.sido||''}" placeholder="예: 전라남도" list="rgSidoOpts"></td>
      <td><input data-i="${i}" data-k="gu" value="${r.gu||''}" placeholder="예: 해남군"></td>
      <td><input data-i="${i}" data-k="amt" value="${r.amt||''}" inputmode="decimal" placeholder="예: 720"></td>
      <td><input data-i="${i}" data-k="memo" value="${r.memo||''}" placeholder="예: 첫째 기준·분할지급·1년 거주"></td>
-     <td><button class="usebtn" data-del="${i}" style="padding:7px 9px">✕</button></td></tr>`).join('')+'</tbody>';
+     <td><input data-i="${i}" data-k="src" value="${r.src||''}" placeholder="확인한 고시·안내 주소"></td>
+     <td><button class="usebtn" data-del="${i}" style="padding:7px 9px">✕</button></td></tr>`).join('')+'</tbody>'+
+   `<datalist id="rgSidoOpts">${rgSidoList().map(x=>`<option value="${x}">`).join('')}</datalist>`;
   $e('#rgTable').querySelectorAll('input').forEach(inp=>{
     inp.oninput = e=>{ RG.draft[+e.target.dataset.i][e.target.dataset.k]=e.target.value; rgDirty(); };
   });
@@ -5447,17 +5504,67 @@ function rgDirty(){
   $e('#rgMsg').style.color = 'var(--red)';
 }
 function rgRenderPick(){
-  const sel = $e('#rgPick'), prev = sel.value;
-  sel.innerHTML = `<option value="-1">직접 입력 — 계산 화면에서</option>` +
-    RG.saved.map((r,i)=>`<option value="${i}">${[r.sido,r.gu].filter(Boolean).join(' ')||'(이름없음)'} — ${r.amt||0}만원</option>`).join('');
-  sel.value = prev && +prev < RG.saved.length ? prev : '-1';
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd||!gu) return;
+  const list=rgSidoList();
+  const keepS=RG.pick?RG.pick.sido:sd.value;
+  sd.innerHTML = `<option value="">시·도를 고르십시오</option>`+
+    list.map(x=>`<option value="${x}">${x}</option>`).join('');
+  if(keepS && list.indexOf(keepS)>=0) sd.value=keepS;
+  rgRenderGu();
   $e('#rgStamp').textContent = rgStampText();
-  $e('#rgPickNote').textContent = RG.saved.length
-    ? '고르면 다음 계산 화면의 지자체 지원금이 자동으로 채워집니다.'
-    : '취합본을 저장하면 여기서 지역을 고를 수 있습니다.';
+  $e('#rgPickNote').innerHTML = RG.file
+    ? `전국 <b>${RG.file.regions.length}개 시·군·구</b>가 미리 들어 있습니다. 고르기만 하시면 됩니다.
+       금액이 비어 있으면 아래 표에서 채우고 <b>취합 저장</b>을 누르시면 그때부터 여기에도 나옵니다.`
+    : `지역 파일을 읽지 못했습니다 — 아래 표에 직접 채워 <b>취합 저장</b>하시면 됩니다.`;
+}
+function rgRenderGu(){
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd||!gu) return;
+  const rows=sd.value?rgGuList(sd.value):[];
+  gu.innerHTML = rows.length
+    ? `<option value="">시·군·구를 고르십시오</option>`+
+      rows.map(r=>`<option value="${r.gu}">${r.gu}${r.amt!=null?(' — '+r.amt+'만원'):' — 자료 없음'}</option>`).join('')
+    : `<option value="">시·도를 먼저 고르십시오</option>`;
+  if(RG.pick && RG.pick.sido===sd.value) gu.value=RG.pick.gu;
+  rgRenderState();
+}
+/* 고른 지역이 어떤 값인지 · 언제 확인한 값인지 */
+function rgRenderState(){
+  const box=$e('#rgPickState'); if(!box) return;
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd.value||!gu.value){ box.innerHTML=''; return; }
+  const r=rgMerged()[rgKeyOf(sd.value,gu.value)];
+  if(!r){ box.innerHTML=''; return; }
+  const age=rgAgeDays(r.checked);
+  let tone='#f2fbf6', line='#bfe8d2', ink='#1f6b45', msg='';
+  if(r.amt==null){
+    tone='#fffaf0'; line='#f5e2b0'; ink='#7a5b16';
+    msg=`<b>아직 확인하지 않은 지역입니다.</b> 금액을 0 으로 잡지 않습니다 —
+         「모른다」와 「없다」는 다릅니다. 아래 링크에서 확인해 표에 채워 주십시오.`;
+  }else if(age===null){
+    tone='#fffaf0'; line='#f5e2b0'; ink='#7a5b16';
+    msg=`금액은 있는데 <b>언제 확인한 값인지 적혀 있지 않습니다.</b> 확인일자를 함께 남겨 주십시오.`;
+  }else if(age>RG.warnDays){
+    tone='#fff4f4'; line='#ffd4d4'; ink='#8a2b2b';
+    msg=`⚠️ <b>${age}일 전(${r.checked})에 확인한 값</b>입니다. 지자체 지원금은 해마다 바뀝니다 —
+         상담 전에 다시 확인해 주십시오.`;
+  }else{
+    msg=`${r.checked} 확인 · ${age}일 지났습니다.`;
+  }
+  box.innerHTML = `<div style="background:${tone};border:1px solid ${line};border-radius:12px;
+      padding:12px 15px;font-size:12.5px;color:${ink};line-height:1.75">
+    <b>${r.sido} ${r.gu}</b> —
+    ${r.amt==null?'<b>자료 없음</b>':`<b>${r.amt.toLocaleString('ko-KR')}만원</b>`}
+    ${r.mine?' <span class="mini" style="display:inline">우리 팀 취합본</span>':''}<br>
+    ${msg}
+    ${r.memo?`<br><span style="color:var(--ink3)">조건: ${r.memo}</span>`:''}
+    ${r.src?`<br><a href="${r.src}" target="_blank" rel="noopener" style="color:inherit;font-weight:800">출처 열기 →</a>`:''}
+  </div>`;
 }
 function rgSave(){
   RG.saved = JSON.parse(JSON.stringify(RG.draft)).filter(r=>(r.sido||r.gu||r.amt));
+  /* 확인일자는 「취합 저장」 누른 날이다 — 손으로 적게 하면 아무도 안 적는다 */
   const d = new Date();
   RG.stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   try{ localStorage.setItem(RG_KEY, JSON.stringify({rows:RG.saved, stamp:RG.stamp})); }catch(e){}
@@ -5487,15 +5594,21 @@ $e('#rgImport').onclick= ()=>{
     $e('#rgMsg').style.color='var(--red)';
   }catch(e){ alert('형식이 맞지 않습니다. 내보내기로 만든 내용을 그대로 붙여넣어 주십시오.'); }
 };
-$e('#rgPick').onchange = e=>{
-  const i = +e.target.value;
-  if(i < 0) return;
-  const amt = parseFloat(RG.saved[i]?.amt) || 0;
-  EDU.local = amt;
-  const f = $e('#eLocal'); if(f) f.value = amt;
+$e('#rgSido').onchange = ()=>{ RG.pick=null; rgRenderGu(); };
+$e('#rgGu').onchange = e=>{
+  const sd=$e('#rgSido').value, g=e.target.value;
+  RG.pick = (sd&&g)?{sido:sd,gu:g}:null;
+  rgRenderState();
+  if(!RG.pick) return;
+  const r=rgMerged()[rgKeyOf(sd,g)];
+  /* 자료가 없으면 <b>0 으로 채우지 않는다.</b> 없는 것과 모르는 것은 다르다. */
+  if(!r || r.amt==null) return;
+  EDU.local = r.amt;
+  const f = $e('#eLocal'); if(f) f.value = r.amt;
   renderEdu();
 };
 rgLoad(); rgRenderTable(); rgRenderPick();
+rgLoadFile().then(()=>{ rgRenderPick(); },()=>{ rgRenderPick(); });
 
 const ecl=(v,a,b)=>isNaN(v)?a:Math.min(b,Math.max(a,v));
 $e('#eAge').oninput    = e=>{ EDU.age=ecl(+e.target.value,0,17); renderEdu(); };
@@ -5525,6 +5638,10 @@ window.__renderE = renderEdu;
 window.__apexE = {
   set(v){ Object.assign(EDU, v); renderEdu(); },
   get(){ return {...EDU}; },
+  /* 지역 뼈대 — 점검이 여기로 들여다본다 */
+  regions(){ return {file:RG.file, saved:RG.saved, stamp:RG.stamp, warnDays:RG.warnDays,
+                     merged:rgMerged(), sido:rgSidoList()}; },
+  regionSave(rows, stamp){ RG.saved=rows||[]; if(stamp)RG.stamp=stamp; rgRenderPick(); },
   result(){
     const c = eduCalc(), need = EDU.costUsd*EDU.years;
     return {track:'교육자금', childAge:EDU.age, goAge:EDU.go, years:c.years,
