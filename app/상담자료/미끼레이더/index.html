@@ -669,8 +669,32 @@ const NEWS_RULES=[
  {tag:'노후',     kw:['연금','노후','시니어','고령','상속','증여','종신'],                       v:2},
  {tag:'저축',     kw:['저축','달러','환율','금리','공시이율','최저보증'],                        v:1},
  {tag:'디지털',   kw:['미니','앱 전용','다이렉트','간편가입','온라인 전용'],                     v:2},
- {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1}
+ {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1},
+ /* ── 여기부터는 보험 밖 주제다 ──────────────────────────────────
+    사업자 고객에게는 보험보다 자금·세금 이야기로 문이 먼저 열린다.
+    보험 기사와 섞이지 않게 이름표를 따로 달아 둔다.
+    미끼 점수는 아래 scoreNews 에서 주제에 맞게 따로 매긴다. */
+ {tag:'정책자금', kw:['정책자금','정책금융','소상공인','자영업자','개인사업자','신용보증','기술보증',
+                     '신보','기보','소진공','중진공','중기부','중소벤처기업부','이차보전','저리대출',
+                     '운전자금','시설자금','경영안정자금','긴급경영안정','융자','지원사업','공모사업',
+                     '수출바우처','스마트공장','새출발기금','대환대출','상환유예','만기연장',
+                     '고용지원금','고용장려금','일자리안정자금','두루누리','노란우산공제',
+                     '전통시장','골목상권','가맹점','프랜차이즈','중소기업','벤처기업','창업'],       v:3},
+ {tag:'세금',     kw:['연말정산','세액공제','소득공제','종합소득세','종소세','양도소득세','양도세',
+                     '상속세','증여세','종부세','종합부동산세','취득세','재산세','부가가치세','부가세',
+                     '법인세','세법개정','세제개편','과세표준','비과세','절세','국세청','홈택스',
+                     '세무조사','감면','공제한도','가업승계','가업상속공제','사전증여','경정청구'],   v:3},
+ {tag:'부동산',   kw:['청약','분양','전세','월세','임대차','재건축','재개발','정비사업','아파트',
+                     '주택담보','주담대','LTV','DSR','공시가격','보금자리','디딤돌','버팀목',
+                     '전세사기','깡통전세','입주','매매가','집값','부동산','실거래가','규제지역',
+                     '조정대상지역','토지거래허가','분양가상한제','1주택','다주택','임대사업자',
+                     '주택연금','역모기지','경매','임대소득'],                                       v:3},
+ {tag:'지원금',   kw:['지원금','보조금','바우처','장려금','수당','환급','재난지원금','근로장려금',
+                     '자녀장려금','실업급여','구직급여','육아휴직급여','기초연금','주거급여',
+                     '청년도약계좌','내일채움공제','신청 기간','접수','지급 대상'],                  v:2}
 ];
+/* 보험 밖 주제 이름표 — 그물과 점수가 같은 목록을 본다 */
+const OUT_TAGS=['정책자금','세금','부동산','지원금'];
 
 /* 태그별 화법 재료 : 오프너 / 니즈환기 질문 / 연결 */
 const TAG_TALK={
@@ -1224,6 +1248,15 @@ function scoreNews(it){
   if(/실손|비급여|도수/.test(t)){s+=8;why.push('누구나 해당돼서 말 걸기 쉬움')}
   if(/앱|다이렉트|온라인|1분/.test(t)){s+=5;why.push('가입이 간단함')}
   if(tags.includes('주의')){s-=14;why.push('⚠ 부정 이슈 — 화법에 쓰지 말 것')}
+  /* 보험 밖 주제는 보험 잣대로 재면 뜻이 흐려진다. 그 주제에서 「연락할 명분이
+     되는가」 로 따로 잰다. 사업자에게는 마감이 있는 자금 기사가 제일 센 미끼다. */
+  if(tags.some(t=>OUT_TAGS.indexOf(t)>=0)){
+    if(/신청|접수|공모|선착순|마감|기한|시행|시행일|오늘부터|내달부터/.test(t)){s+=14;why.push('기한이 있어 지금 연락할 명분이 됨')}
+    if(/확대|신설|상향|인상|완화|추가 지원|늘린/.test(t)){s+=10;why.push('전에 안 되던 고객이 대상이 됨')}
+    if(/개편|개정|바뀐다|달라진다|시행령/.test(t)){s+=8;why.push('바뀐 것을 알려 주는 전화가 된다')}
+    if(tags.includes('정책자금')){s+=6;why.push('사업자 고객에게 바로 쓸 수 있음')}
+    if(tags.includes('세금')){s+=6;why.push('세금 이야기는 재무설계로 이어짐')}
+  }
   if(!tags.length)s-=18;
   s=Math.max(5,Math.min(99,s));
   return {tags,score:s,why};
@@ -1243,6 +1276,14 @@ function parsePasted(txt){
 }
 /* 보험 기사인지 최소 확인. '약관'은 상품권·통신 약관에도 쓰이므로 판정어에서 뺀다. */
 const INSURANCE=/보험|보장|담보|실손|진단비|손보|생보|보험료|보험금|금감원|금융감독원|손해보험|생명보험/;
+/* 보험이 아니어도 남길 것 — 정책자금·세금·부동산·지원금.
+   예전에는 보험이 아니면 무조건 버렸다. 그래서 사업자 고객에게 쓸
+   자금·세금 기사가 들어와도 화면에 한 건도 안 남았다.
+   보험 판정은 그대로 두고, 위 네 이름표가 하나라도 붙으면 같이 남긴다. */
+function keepNews(x){
+  if(INSURANCE.test(x.title))return true;
+  return (x.tags||[]).some(t=>OUT_TAGS.indexOf(t)>=0);
+}
 function ingest(items){
   const seen=new Set();let dropped=0;
   state.news=items.map(it=>{
@@ -1250,8 +1291,8 @@ function ingest(items){
     const sc=scoreNews({title});
     return {title,link:it.link||'',source:it.source||'',date:it.pubDate||it.date||'',...sc}})
     .filter(x=>{const k=x.title.slice(0,28);if(!x.title||seen.has(k))return false;seen.add(k);
-      if(!INSURANCE.test(x.title)){dropped++;return false}return true});
-  if(dropped)console.info('[미끼레이더] 보험 기사가 아니어서 제외한 것 '+dropped+'건');
+      if(!keepNews(x)){dropped++;return false}return true});
+  if(dropped)console.info('[미끼레이더] 쓸 주제가 아니어서 제외한 것 '+dropped+'건');
   state.newsAt=new Date().toLocaleString('ko-KR');
   LS.set('news',state.news);LS.set('newsAt',state.newsAt);
   /* 이번에 받은 것을 달 서랍에도 넣는다 — 다음 달에 이번 달 것을 다시 볼 수 있게 */
@@ -4738,6 +4779,8 @@ function bindDaily(){
      앱 밖에서 파일만 열었을 때는 토큰이 없어 막히는데, 그때는 그렇다고
      말해 준다 — 조용히 실패하지 않는다.                              */
 (function(){
+  /* 받아 올 칸. sources.json 의 피드 칸 이름과 같아야 한다. */
+  var MKN_FEEDS='보험,경제,부동산,생활정책,정책자금';
   function tokenOf(){
     try{
       if(window.parent&&window.parent!==window&&typeof window.parent.getAppToken==='function')
@@ -4760,10 +4803,13 @@ function bindDaily(){
   function pull(){
     var b=document.getElementById('mknBtn');
     if(b){b.disabled=true;b.textContent='🌐 모으는 중…';}
-    say('서버가 보험 뉴스를 모으는 중입니다…');
+    say('서버가 오늘 기사를 모으는 중입니다 — 보험 · 정책자금 · 세금 · 부동산 · 지원금…');
     var h={},t=tokenOf();
     if(t)h['X-App-Token']=t;
-    return fetch('/api/market?kind=news&cat=보험',{headers:h})
+    /* 예전에는 보험 칸 하나만 불렀다. 그래서 정책자금·세금·부동산 기사는
+       서버에서 아예 오지도 않았다. 다섯 칸을 다 받아 온다 —
+       무엇을 남길지는 위 keepNews() 가 정한다. */
+    return fetch('/api/market?kind=news&cat='+encodeURIComponent(MKN_FEEDS),{headers:h})
       .then(function(r){
         if(r.status===401)throw new Error('앱 안에서 열어 주세요 — 파일만 따로 열면 서버가 막습니다.');
         if(!r.ok)throw new Error('서버가 '+r.status+' 로 답했습니다.');
@@ -4784,13 +4830,14 @@ function bindDaily(){
         if(!items.length)throw new Error('가져온 뉴스가 없습니다. 잠시 뒤 다시 눌러 주세요.');
         if(typeof ingest!=='function')throw new Error('이 화면이 아직 다 뜨지 않았습니다.');
         ingest(items);
-        /* ingest 는 보험 기사가 아닌 것을 걸러 낸다. 받은 수가 아니라
+        /* ingest 는 쓸 수 없는 기사를 걸러 낸다. 받은 수가 아니라
            <b>남은 수</b>를 말해야 화면과 말이 맞는다.                  */
         var kept=items.length;
         try{ if(typeof state!=='undefined'&&state&&state.news)kept=state.news.length; }catch(x){}
-        if(!kept)throw new Error(items.length+'건을 받았지만 보험 기사가 하나도 없었습니다. 잠시 뒤 다시 눌러 주세요.');
+        if(!kept)throw new Error(items.length+'건을 받았지만 쓸 만한 기사가 하나도 없었습니다. 잠시 뒤 다시 눌러 주세요.');
         say('<b>'+kept+'건이 들어왔습니다.</b> 미끼 점수 높은 순으로 세워 두었습니다.'+
-            (kept<items.length?(' <span style="color:#8A93A6">(받은 '+items.length+'건 중 보험 기사만 골랐습니다)</span>'):''));
+            (kept<items.length?(' <span style="color:#8A93A6">(받은 '+items.length+
+              '건 중 보험 · 정책자금 · 세금 · 부동산 · 지원금 기사만 골랐습니다)</span>'):''));
         pill('🌐 뉴스 '+kept+'건');
         return true;
       })
@@ -4812,14 +4859,30 @@ function bindDaily(){
      않는다(보시던 것을 마음대로 갈아 치우지 않는다).
      앱 밖에서 파일만 열었을 때는 하지 않는다 — 어차피 서버가 막고,
      열자마자 빨간 글씨만 뜨는 꼴이 된다.                            */
+  /* 오늘 이미 모았는가. 하루에 한 번만 스스로 모은다 —
+     화면을 열 때마다 부르면 서버에 미안하고, 하루에 한 번도 안 모으면
+     달 서랍이 안 쌓인다. */
+  function pulledToday(){
+    try{
+      var d=localStorage.getItem('mikki_pullday');
+      return d===new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+    }catch(e){ return false; }
+  }
+  function markPulled(){
+    try{ localStorage.setItem('mikki_pullday',
+      new Date(Date.now()+9*3600*1000).toISOString().slice(0,10)); }catch(e){}
+  }
   function auto(){
     if(!tokenOf())return;
     var n=0;
     try{ if(typeof state==='undefined'||!state||typeof ingest!=='function')return;
          n=(state.news||[]).length; }catch(e){ return; }
-    if(n>0){ pill('🌐 뉴스 '+n+'건'); return; }
+    /* 예전에는 목록이 비어 있을 때만 모았다. 그래서 한 번 채워진 뒤로는
+       며칠이 지나도 다시 안 모았고, 달 서랍에 아무것도 안 쌓였다.
+       이제는 「오늘 아직 안 모았으면」 모은다 — 하루 한 번. */
+    if(pulledToday()){ if(n)pill('🌐 뉴스 '+n+'건'); return; }
     pill('🌐 오늘 뉴스 모으는 중…');
-    pull();
+    pull().then(function(ok){ if(ok)markPulled(); },function(){});
   }
   function panel(){
     var w=document.getElementById('mknBox');
