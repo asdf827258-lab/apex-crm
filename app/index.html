@@ -9957,7 +9957,8 @@ function go(tab){
        고객 목록을 아직 안 읽었으면 읽고 나서 그린다. */
     if(typeof ccHomePaint==='function'){
       ccHomePaint();
-      if(OS.profile&&typeof OSC!=='undefined'&&!(OSC.list&&OSC.list.length)&&typeof osLoadClients==='function')
+      if(OS.profile&&typeof cmUid==='function'&&cmUid()&&
+         typeof OSC!=='undefined'&&!(OSC.list&&OSC.list.length)&&typeof osLoadClients==='function')
         try{osLoadClients();}catch(e){}
     }}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
@@ -37189,6 +37190,12 @@ var CM={meta:{},loaded:false,busy:false,fam:true,sort:'seen',open:{},
 var CM_KIND='client_meta';
 
 /* ── 이 기기에만 두는 것 ── */
+/* 로그인 번호. OS.profile 은 있는데 OS.session 이 아직/이미 없는 때가 있다 —
+   그때 OS.session.user.id 를 그냥 읽으면 화면 전체가 터진다.
+   없으면 없다고 답하고, 부르는 쪽이 조용히 물러나게 한다. */
+function cmUid(){
+  try{ return (OS.session&&OS.session.user&&OS.session.user.id)||null; }catch(e){ return null; }
+}
 function cmLS(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
 function cmLSSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function cmWho(){try{return (OS.profile&&(OS.profile.id||OS.profile.email))||'local';}catch(e){return 'local';}}
@@ -37224,10 +37231,10 @@ function cmOf(id){
   m=cmBlank();CM.meta[id]=m;return m;
 }
 function cmLoadAll(then){
-  var sb=osClient();
-  if(!sb||!OS.profile){if(then)then();return;}
+  var sb=osClient(),uid=cmUid();
+  if(!sb||!OS.profile||!uid){if(then)then();return;}
   sb.from('saved_reports').select('id,client_id,content').eq('kind',CM_KIND)
-    .eq('advisor_id',OS.session.user.id).then(function(r){
+    .eq('advisor_id',uid).then(function(r){
     CM.loaded=true;
     if(r&&r.error){if(then)then();return;}
     var rows=(r&&r.data)||[],i,c,m;
@@ -37244,8 +37251,8 @@ function cmLoadAll(then){
   },function(){CM.loaded=true;if(then)then();});
 }
 function cmSave(id,patch,then){
-  var sb=osClient();
-  if(!sb||!OS.profile){toast('로그인 후 저장할 수 있습니다');return;}
+  var sb=osClient(),uid=cmUid();
+  if(!sb||!OS.profile||!uid){toast('로그인 후 저장할 수 있습니다');return;}
   var m=cmOf(id),k;
   for(k in patch)m[k]=patch[k];
   m.up=new Date().getTime();
@@ -37262,7 +37269,7 @@ function cmSave(id,patch,then){
     },bad);
     return;
   }
-  sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:id,
+  sb.from('saved_reports').insert({advisor_id:uid,client_id:id,
     kind:CM_KIND,title:'고객 관리',content:body}).then(function(r){
     if(r&&r.error){bad(r);return;}
     /* 방금 넣은 줄의 번호를 다시 받아 온다 — 다음 저장이 두 줄이 되면 안 된다 */

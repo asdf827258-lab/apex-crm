@@ -469,8 +469,34 @@ window.supabase={createClient:function(){
   ok(r.indexOf('홍길동') < 0, '서버로 나간 것에 실명이 없다');
   ok(r.indexOf('name_masked') < 0, '서버로 나간 관리 기록에 이름 칸 자체가 없다');
 
-  /* ══ [16] 오류 · 좁은 화면 ═══════════════════════════════════ */
-  console.log('\n[16] 오류와 좁은 화면');
+  /* ══ [16] 로그인 세션이 없을 때 ══════════════════════════════
+     OS.profile 은 남아 있는데 OS.session 이 아직/이미 없는 때가 있다.
+     그때 홈이 고객 목록을 읽으려다 OS.session.user.id 에서 터지면
+     화면 전체가 죽는다. 실제로 CI 에서 이 오류가 났다.               */
+  console.log('\n[16] 로그인 세션이 없어도 안 터진다');
+  const before = errs.length;
+  r = await page.evaluate(() => {
+    var savedSession = OS.session, savedList = OSC.list;
+    OS.session = null;                 /* 프로필만 남고 세션이 사라진 상태 */
+    OSC.list = [];
+    var out = { uid: (typeof cmUid === 'function') ? cmUid() : 'cmUid 없음', threw: '' };
+    try {
+      cmLoadAll(function () { });
+      cmSave('a30', { bd: '01-01' });
+      ccHomePaint();
+      ccNavPaint();
+      go('home');
+    } catch (e) { out.threw = '' + (e && e.message); }
+    OS.session = savedSession; OSC.list = savedList;
+    return out;
+  });
+  await page.waitForTimeout(700);
+  ok(r.uid === null, '세션이 없으면 cmUid() 가 null 을 준다 — 억지로 읽지 않는다');
+  ok(r.threw === '', '불러오기·저장·홈 그리기 어느 것도 터지지 않는다' + (r.threw ? (' — ' + r.threw) : ''));
+  ok(errs.length === before, '뒤늦게 터지는 오류도 없다' + (errs.length > before ? (' — ' + errs[before]) : ''));
+
+  /* ══ [17] 오류 · 좁은 화면 ═══════════════════════════════════ */
+  console.log('\n[17] 오류와 좁은 화면');
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? (' — ' + errs[0]) : ''));
   await page.setViewportSize({ width: 390, height: 900 });
   await page.evaluate(() => { OSC.view = 'list'; go('clients'); });
