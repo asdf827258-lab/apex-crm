@@ -18365,17 +18365,17 @@ function osBackupRun(kind){
     sb.from('reports').select('id,author_id,author_name,kind,title,body,created_at'),
     sb.from('attendance').select('member_id,att_date'),
     sb.from('teams').select('id,name,leader_id'),
-    sb.from('team_members').select('team_id,member_id'),
-    sb.from('ai_dept_reports').select('id,dept,period,ref_date,title,body'),
-    sb.from('ai_ideas').select('id,dept,title,body,status')
+    sb.from('team_members').select('team_id,member_id')
+    /* ai_dept_reports · ai_ideas 는 2026-08-20 에 화면을 지우면서 백업에서도 뺐다.
+       아무도 안 보는 글을 본문까지 날마다 받아 오는 것은 그냥 낭비다.
+       서버 표는 그대로 있으니 자료가 사라진 것은 아니다. */
   ]).then(function(r){
     var payload={
       version:1, taken_at:new Date().toISOString(),
       profiles:(r[0]&&r[0].data)||[], clients:(r[1]&&r[1].data)||[],
       saved_reports:(r[2]&&r[2].data)||[], reports:(r[3]&&r[3].data)||[],
       attendance:(r[4]&&r[4].data)||[], teams:(r[5]&&r[5].data)||[],
-      team_members:(r[6]&&r[6].data)||[], ai_dept_reports:(r[7]&&r[7].data)||[],
-      ai_ideas:(r[8]&&r[8].data)||[]
+      team_members:(r[6]&&r[6].data)||[]
     };
     var json=JSON.stringify(payload);
     var rows=0,k;for(k in payload)if(payload[k]&&payload[k].length)rows+=payload[k].length;
