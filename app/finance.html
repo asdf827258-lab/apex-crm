@@ -1258,6 +1258,12 @@ a { color: inherit; text-decoration: none; }
       </div>
     </div>
 
+    <!-- 상담 순서가 설 자리.
+         전에는 화면 왼쪽 <b>맨 아래</b>에 떠 있었다. 상담 중에 눈이
+         가는 곳이 아니고, 폰에서는 아예 안 보였다. 기본 정보를 채우고
+         나면 바로 그 밑에서 「다음에 무엇을 열지」가 보여야 한다. -->
+    <div id="flowSlot"></div>
+
     <!-- 소득 -->
     <div class="sb-section on">
       <div class="sb-sec-head" onclick="sbToggle(this)">
@@ -7773,7 +7779,10 @@ window.addEventListener('DOMContentLoaded', function(){
       '<button class="pdf-ins-btn" id="pdf-ins-btn">📎 PDF 파일 선택</button>'+
       '<input type="file" id="pdf-ins-file" accept="application/pdf" style="display:none">'+
       '<div class="pdf-ins-status" id="pdf-ins-status"></div>';
-    if(firstSec && firstSec.parentNode) firstSec.parentNode.insertBefore(card, firstSec.nextSibling);
+    /* 상담 순서가 기본 정보 <b>바로</b> 밑이어야 한다 — 그 사이에 끼어들면
+       또 한 칸 내려가고, 내려간 만큼 안 보인다. 그래서 그 아래에 붙는다. */
+    var anchor = $('flowSlot') || firstSec;
+    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(card, anchor.nextSibling);
     else { var sc=document.querySelector('.sb-scroll'); if(sc) sc.insertBefore(card, sc.firstChild); }
     $('pdf-ins-btn').addEventListener('click',function(){ $('pdf-ins-file').click(); });
     $('pdf-ins-file').addEventListener('change',handlePdf);
@@ -10069,6 +10078,11 @@ function css(){
     '.flw-b[disabled]:hover{border-color:#D9E2F0;color:#41506A}' +
     '.flw-done{padding:0 15px 14px;font-size:12.5px;color:#0F766E;font-weight:700;line-height:1.6}' +
     '@media(max-width:560px){#flowBar{left:12px;right:12px;bottom:12px;max-width:none}}' +
+    /* 사이드바 안에 설 때는 떠 있지 않는다 — 그 자리에 그냥 놓인다 */
+    '#flowBar.inpane{position:static;left:auto;bottom:auto;max-width:none;width:100%;' +
+      'margin:0 0 10px;box-shadow:0 4px 14px rgba(16,24,40,.08)}' +
+    '#flowBar.inpane.mini{display:flex;justify-content:center;width:100%}' +
+    '@media(max-width:560px){#flowBar.inpane{left:auto;right:auto;bottom:auto}}' +
     '@media print{#flowBar{display:none!important}}';
   document.head.appendChild(st);
 }
@@ -10079,15 +10093,22 @@ function box(){
   css();
   b = document.createElement('div');
   b.id = 'flowBar';
-  document.body.appendChild(b);
+  /* 기본 정보 바로 밑에 세운다. 그 자리가 없으면(다른 화면에서 쓰면)
+     예전처럼 화면 구석에 띄운다 — 어느 쪽이든 사라지지는 않게. */
+  var slot = document.getElementById('flowSlot');
+  if(slot){ b.classList.add('inpane'); slot.appendChild(b); }
+  else document.body.appendChild(b);
   return b;
 }
 
 function paint(){
   var b = box(), S = steps(), n = S.length, cur = S[FLOW.i], last = (FLOW.i >= n-1);
 
+  /* className 을 통째로 갈아 끼우면 <b>어디에 서 있는지(inpane)를 잊는다.</b>
+     그러면 사이드바 안에 있으면서도 화면 구석에 떠 버린다. */
+  var seat = b.classList.contains('inpane') ? 'inpane' : '';
   if(!FLOW.on){
-    b.className = 'mini';
+    b.className = (seat ? seat + ' ' : '') + 'mini';
     b.setAttribute('role','button');
     b.setAttribute('tabindex','0');
     b.innerHTML = '<span class="flw-mini-t">▶ 상담 순서</span>';
@@ -10096,7 +10117,7 @@ function paint(){
     return;
   }
 
-  b.className = '';
+  b.className = seat;
   b.removeAttribute('role'); b.removeAttribute('tabindex');
   b.onclick = null; b.onkeydown = null;
 
