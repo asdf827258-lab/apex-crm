@@ -72,7 +72,10 @@ body{font-family:'Noto Sans KR','Gothic A1',-apple-system,BlinkMacSystemFont,san
 .top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--hair);
   padding:calc(env(safe-area-inset-top) + 11px) 14px 11px}
 .t1{display:flex;align-items:center;gap:9px}
-.t1 b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.6px}
+.t1 b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.6px;
+  white-space:nowrap;flex:none}
+.t1 .sp{min-width:0}
+.pill{overflow:hidden;text-overflow:ellipsis;max-width:112px}
 .t1 span{font-size:12px;color:var(--ink3);font-weight:700}
 .t1 .sp{margin-left:auto;display:flex;gap:6px;align-items:center}
 .pill{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;border-radius:99px;
@@ -169,6 +172,19 @@ body{font-family:'Noto Sans KR','Gothic A1',-apple-system,BlinkMacSystemFont,san
 .fbt b{display:block;font-family:'Gothic A1',sans-serif;font-weight:800;font-size:14px;letter-spacing:-.3px}
 .fbt b i{font-style:normal;font-weight:600;font-size:10.5px;color:var(--ink3);margin-left:6px;
   font-family:'IBM Plex Mono',monospace}
+.fbt b s{display:block;text-decoration:none;font-size:10px;font-weight:800;margin-top:3px;
+  color:var(--ink3)}
+.fbt b s:first-letter{color:var(--yes)}
+.send{background:var(--card);border:1.5px solid var(--core);border-radius:15px;padding:13px 15px;
+  margin:4px 0 6px;box-shadow:var(--sh)}
+.send>b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:14px;color:var(--core)}
+.send>span{display:block;font-size:11.5px;color:var(--ink3);line-height:1.7;margin-top:5px}
+.send>span b{color:var(--ink2);font-weight:800}
+.send>u{display:block;text-decoration:none;font-size:11.5px;color:var(--ink2);margin-top:9px;
+  background:var(--sunk);border-radius:9px;padding:8px 11px}
+.send>u b{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--yes)}
+.send>u i{font-style:normal;float:right;color:var(--core);font-weight:800;cursor:pointer;font-size:11px}
+.send>.go{margin-top:10px}
 .fbt p{margin:5px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.75}
 .fbi .cp{grid-column:3;grid-row:1;align-self:start;border:1px solid var(--hair);background:var(--sunk);
   color:var(--ink2);border-radius:9px;padding:6px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
@@ -403,7 +419,7 @@ function head(){
   $('tWd').textContent=['일','월','화','수','목','금','토'][d.getUTCDay()]+'요일';
   /* 알약은 「지금 보고 있는 것이 진짜인가」 만 말한다.
      왜 안 붙었는지는 아래 띠가 따로 말한다 — 두 가지를 한 자리에 쓰면 둘 다 안 읽힌다 */
-  $('pSrc').textContent=R.live?('실제 기록'+(MENAME?(' · '+MENAME):'')):'미리보기';
+  $('pSrc').textContent=R.live?(MENAME||'실제 기록'):'미리보기';
   $('pSrc').className='pill'+(R.live?' on':'');
   $('pTeam').textContent=R.none?'팀 없음':('👥 '+(R.team||'내 팀')+' '+((R.list||[]).length)+'명');
   var S=R.sum||{d:0,dAp:0,w:0,zero:0};
@@ -524,7 +540,8 @@ function detHtml(m){
    저장은 쓰던 saved_reports 를 그대로 쓴다 (kind='team_feedback').
    새 표를 만들지 않으므로 SQL 을 다시 실행할 필요가 없다.
    ══════════════════════════════════════════════════════════════════ */
-var FB={busy:false,err:'',all:'',each:{},at:'',rid:'',loaded:false};
+var FB={busy:false,err:'',all:'',each:{},at:'',rid:'',loaded:false,
+        sent:'',sending:false,seen:{},serr:''};
 var FB_KIND='team_feedback';
 
 /* 무엇을 AI 에게 보낼지 — 이 글자 그대로 나간다. 화면에서 열어 볼 수 있다 */
@@ -644,11 +661,66 @@ function fbLoad(){
         if(c.date===T0()){
           FB.rid=r.data[i].id;FB.all=c.all||'';FB.at=c.at||'';
           (c.each||[]).forEach(function(x){if(x.id)FB.each[x.id]=x.msg||'';});
-          paint();return;
+          seenLoad();paint();return;
         }
       }
     },function(){});
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   팀원 폰으로 바로 꽂기
+
+   지금까지는 복사해서 카톡으로 보내는 길밖에 없었다. 이제 서버에도 남는다.
+   팀원이 자기 「하루 한 장」 을 열면 — 폰이든 컴퓨터든 — 맨 위에 뜬다.
+   읽으면 여기 「읽음」 으로 되돌아온다.
+
+   담는 자리는 team_feedback (migration_44_teamfb.sql).
+   보는 잣대는 can_see_perf — 내가 리더로 있는 팀의 팀원에게만 쓸 수 있다.
+   ══════════════════════════════════════════════════════════════════ */
+window.tSend=function(){
+  var sb=sbOf(),R=D();
+  if(!sb||!ME||FB.sending)return;
+  if(!R.live){tToast('미리보기라 보내지 않았습니다 — 앱에 로그인하면 진짜로 갑니다');return;}
+  var rows=[];
+  R.list.forEach(function(m){
+    if(m.id===ME)return;                       /* 나에게는 안 보낸다 */
+    if(!FB.each[m.id])return;
+    rows.push({member_id:m.id,from_id:ME,from_name:MENAME||'',fb_date:T0(),
+               msg:FB.each[m.id],team_msg:FB.all||'',seen_at:null,
+               updated_at:new Date().toISOString()});
+  });
+  if(!rows.length){tToast('보낼 말이 없습니다');return;}
+  FB.sending=true;FB.serr='';paint();
+  sb.from('team_feedback').upsert(rows,{onConflict:'member_id,fb_date,from_id'}).then(function(r){
+    FB.sending=false;
+    if(r&&r.error){
+      var m2=(r.error.message||'')+'';
+      FB.serr=/team_feedback/.test(m2)&&/does not exist|schema cache|relation/i.test(m2)
+        ? '보낼 자리가 서버에 아직 없습니다 — migration_44_teamfb.sql 을 한 번 실행해 주세요'
+        : ('보내지 못했습니다 — '+m2.slice(0,70));
+      paint();return;
+    }
+    FB.sent=new Date().toLocaleTimeString('ko-KR');
+    FB.seen={};
+    tToast(rows.length+'명에게 보냈습니다 — 팀원이 하루 한 장을 열면 맨 위에 뜹니다');
+    seenLoad();paint();
+  },function(e){FB.sending=false;FB.serr='보내지 못했습니다 — 신호를 확인해 주세요';paint();});
+};
+/* 누가 읽었는가 */
+function seenLoad(){
+  var sb=sbOf();
+  if(!sb||!ME)return;
+  sb.from('team_feedback').select('member_id,seen_at,created_at')
+    .eq('from_id',ME).eq('fb_date',T0()).then(function(r){
+      if(!r||r.error||!r.data)return;
+      var st={},n=0;
+      r.data.forEach(function(x){st[x.member_id]=x.seen_at||'';n++;});
+      FB.seen=st;
+      if(n&&!FB.sent)FB.sent='이미 보냄';
+      paint();
+    },function(){});
+}
+window.tSeen=function(){seenLoad();tToast('읽음을 다시 확인했습니다');};
 
 /* ── 피드백 판 ──────────────────────────────────────────────── */
 var SHOWD=false;
@@ -667,14 +739,26 @@ function vFb(){
     h+='<button type="button" class="go"'+(FB.busy?' disabled':'')+' onclick="tRun()">'+
        (FB.busy?'<span class="spin"></span>AI 가 쓰는 중…':'오늘 피드백 만들기')+'</button>';
   if(n){
+    if(FB.serr)h+='<div class="warnbox"><b>'+esc(FB.serr)+'</b></div>';
+    var seenN=0,k2;for(k2 in FB.seen)if(FB.seen[k2])seenN++;
+    h+='<div class="send">'+
+       '<b>팀원 폰으로 바로 보내기</b>'+
+       '<span>보내면 팀원이 <b>하루 한 장</b>을 열 때 — 폰이든 컴퓨터든 — 맨 위에 뜹니다. '+
+       '읽으면 여기 「읽음」 으로 되돌아옵니다.</span>'+
+       (FB.sent?('<u>✓ '+esc(FB.sent)+' 에 보냈습니다 · 읽음 <b>'+seenN+'/'+n+'명</b>'+
+                 '<i onclick="tSeen()">다시 확인</i></u>'):'')+
+       '<button type="button" class="go"'+(FB.sending?' disabled':'')+' onclick="tSend()">'+
+       (FB.sending?'<span class="spin"></span>보내는 중…':(FB.sent?'고친 내용으로 다시 보내기':'팀원 '+n+'명에게 보내기'))+
+       '</button></div>';
     h+='<div class="sec">사람마다 <i>'+n+'명</i>'+
-       '<button type="button" class="mini" onclick="tCopyEach()">📋 사람별 전체 복사</button></div>';
+       '<button type="button" class="mini" onclick="tCopyEach()">📋 카톡용 전체 복사</button></div>';
     h+=R.list.map(function(m){
       var t=FB.each[m.id];
       if(!t)return '';
       return '<div class="fbi'+(m.d?'':' zero')+'">'+
         '<span class="av">'+esc(ini(m.name))+'</span>'+
-        '<div class="fbt"><b>'+esc(m.name)+'<i>오늘 '+m.d+'통 · 이번 주 '+m.w+'통</i></b>'+
+        '<div class="fbt"><b>'+esc(m.name)+'<i>오늘 '+m.d+'통 · 이번 주 '+m.w+'통</i>'+
+        (FB.sent&&m.id!==ME?('<s>'+(FB.seen[m.id]?'✓ 읽음':'보냄 · 아직 안 읽음')+'</s>'):'')+'</b>'+
         '<p>'+esc(t)+'</p></div>'+
         '<button type="button" class="cp" onclick="tCopyOne(\''+m.id+'\')">📋 복사</button></div>';
     }).join('');

@@ -13,9 +13,11 @@
      다섯 · 약속을 잡으면 진짜 .ics 가 나오는가 — 폰이 울려야 캘린더다
 
      여섯 · 로그인 전에는 가짜 숫자를 진짜인 척 내놓지 않는가
+     일곱 · 팀장이 보낸 한 마디가 맨 위에 뜨고, 읽으면 서버로 되돌아가는가
 
    서버에 붙지 않은 상태로 본다. 그래야 매번 같은 답이 나온다.        */
 const { chromium } = require('playwright');
+const { SB_STUB } = require('./lib-sbstub.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8897;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
@@ -179,6 +181,43 @@ const srv = http.createServer((req, res) => {
   const bar = await p2.locator('.nop').first().innerText().catch(() => '');
   ok(/로그인이 필요합니다/.test(bar), '「로그인이 필요합니다」 라고 맨 위에 세운다');
   ok(await p2.locator('.nop a[href="./index.html"]').count() === 1, '눌러서 APEX 로 가는 단추가 붙어 있다');
+
+  /* 아홉 · 팀장이 보낸 말이 폰에도 컴퓨터에도 뜨는가 */
+  console.log('\n팀장이 보낸 한 마디');
+  const TODAY = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const p3 = await ctx.newPage();
+  await p3.addInitScript(SB_STUB({
+    __me: 'me-1',
+    profiles: [{ name: '김민수' }],
+    dbs: [{ id: 'x1', assigned_to: 'me-1', customer_name: '홍길동', phone: '010-1111-2222',
+            region: '서울', assigned_date: TODAY, source: '방송' }],
+    calls: [], clients: [], saved_reports: [],
+    /* 처음 열 때는 없다가, 나중에 팀장이 보낸다 */
+    team_feedback: { __seq: [[], [{ id: 'f1', from_name: '윤시현', fb_date: TODAY,
+      msg: '오늘 11통인데 상담이 1건입니다. 오후 6시 이후로 옮겨서 다섯 통만 더 돌려 보세요.',
+      team_msg: '오늘 팀 통화 43통입니다. 각자 세 통씩만 더 채웁시다.', seen_at: null }]] }
+  }));
+  await p3.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await p3.waitForTimeout(2200);
+  ok(await p3.locator('.tf').count() === 0, '보낸 것이 없으면 아무것도 안 뜬다');
+  /* 다른 화면을 보다가 돌아왔다 — 그 사이에 팀장이 보냈다 */
+  await p3.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  await p3.waitForTimeout(800);
+  const tf = await p3.locator('.tf').innerText().catch(() => '');
+  ok(/윤시현 님이 오늘 한 마디/.test(tf), '누가 보냈는지와 함께 맨 위에 선다');
+  ok(/오후 6시 이후로 옮겨서/.test(tf), '팀장이 쓴 말이 그대로 실린다');
+  ok(/팀 전체에게 —/.test(tf), '그날 전체에게 한 말도 같이 보인다');
+  ok(await p3.locator('#tbToday .bdg').count() === 1, '아래 「오늘」 탭에 빨간 점이 붙는다');
+  const note = await p3.evaluate(() => (window.__notes || [])[0] || null);
+  ok(!!note && /윤시현/.test(note.t), '폰 알림이 뜬다 (알림을 켜 둔 폰에서)');
+
+  await p3.click('.tf em button');            /* 읽었습니다 */
+  await p3.waitForTimeout(400);
+  const wrote = await p3.evaluate(() => window.__wrote.filter(w => w.t === 'team_feedback'));
+  ok(wrote.length === 1 && wrote[0].op === 'update' && !!wrote[0].v.seen_at,
+     '읽으면 seen_at 이 서버로 되돌아간다 — 팀장 화면에 「읽음」 으로 뜬다');
+  ok(await p3.locator('.tf').count() === 0, '읽은 뒤에는 사라진다');
+  ok(await p3.locator('#tbToday .bdg').count() === 0, '빨간 점도 같이 없어진다');
 
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));

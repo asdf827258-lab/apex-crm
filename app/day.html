@@ -88,7 +88,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--hair);
   padding:11px 16px 10px}
 .t1{display:flex;align-items:center;gap:9px}
-.t1 b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.6px}
+.t1 b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.6px;
+  white-space:nowrap;flex:none}
+.t1 .sp{min-width:0}
+.pill{overflow:hidden;text-overflow:ellipsis;max-width:112px}
 .t1 span{font-size:12px;color:var(--ink3);font-weight:700}
 .t1 .sp{margin-left:auto;display:flex;gap:6px;align-items:center}
 .pill{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;border-radius:99px;
@@ -198,6 +201,18 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .tab b{font-family:'Gothic A1',sans-serif;font-weight:800;font-size:11.5px}
 .tab .ic{font-size:19px;line-height:1}
 .tab.on{color:var(--core);background:var(--glow)}
+.tf{background:var(--card);border:1.5px solid var(--core);border-radius:15px;padding:13px 15px;
+  margin-bottom:12px;box-shadow:var(--sh)}
+.tf>b{display:block;font-family:'Gothic A1',sans-serif;font-weight:900;font-size:13px;color:var(--core)}
+.tf>b s{text-decoration:none;font-weight:600;font-size:10px;color:var(--ink3);
+  font-family:'IBM Plex Mono',monospace}
+.tf>p{margin:7px 0 0;font-size:14px;line-height:1.8;color:var(--ink);white-space:pre-wrap}
+.tf>q{display:block;quotes:none;margin-top:9px;background:var(--sunk);border-radius:10px;
+  padding:9px 11px;font-size:11.5px;color:var(--ink2);line-height:1.7}
+.tf>em{display:flex;gap:7px;margin-top:11px;font-style:normal}
+.tf>em button{flex:1;border:0;border-radius:11px;padding:11px 6px;background:var(--core);color:#fff;
+  font-family:'Gothic A1',sans-serif;font-weight:800;font-size:12.5px;cursor:pointer}
+.tf>em button.gh{flex:0 0 auto;background:var(--sunk);color:var(--ink2);padding:11px 13px}
 .tab .bdg{position:absolute;transform:translate(15px,-4px);background:var(--no);color:#fff;
   font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;border-radius:99px;padding:1px 5px}
 
@@ -1323,7 +1338,8 @@ function head(){
   var wd=['일','월','화','수','목','금','토'][d.getUTCDay()];
   $('dTop').textContent=(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일';
   $('dWd').textContent=wd+'요일';
-  $('pSrc').textContent=AUTH?AUTH.slice(0,14):(R.live?('실제 기록'+(ME&&ME.name?(' · '+ME.name):'')):'미리보기');
+  /* 알약이 길면 날짜가 두 줄로 접힌다. 짧게 — 이름이 있으면 이름만 */
+  $('pSrc').textContent=AUTH?AUTH.slice(0,12):(R.live?((ME&&ME.name)||'실제 기록'):'미리보기');
   $('pSrc').className='pill'+((R.live&&!AUTH)?' on':'');
   var mn=MDn();
   $('pStreak').textContent=mn?('📅 이번 달 '+mn+'일'):'이번 달 첫날';
@@ -1361,6 +1377,88 @@ function paint(){
   ['tbToday','tbWeek','tbList','tbReg'].forEach(function(id,i){
     $(id).classList.toggle('on',['today','week','list','reg'][i]===TAB);
   });
+  /* 팀장이 보낸 말이 있으면 「오늘」 탭에 빨간 점 — 읽을 때까지 안 없어진다 */
+  var nb=tfNew().length, tb=$('tbToday'), old=tb.querySelector('.bdg');
+  if(old)old.parentNode.removeChild(old);
+  if(nb){var e2=document.createElement('span');e2.className='bdg';e2.textContent=nb;tb.appendChild(e2);}
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   팀장이 보낸 말 — 폰이든 컴퓨터든 열면 맨 위에 뜬다
+
+   지금까지 팀장의 코칭은 카톡에 있었다. 카톡은 흘러간다. 오늘 아침에
+   받은 말이 점심이면 스무 개 밑에 깔린다.
+
+   그래서 여기 세운다. 읽을 때까지 안 사라지고, 「오늘」 판 맨 위에 붙어
+   있고, 아래 탭에 빨간 점이 뜬다. 읽으면 팀장 화면에 「읽음」 으로 간다.
+
+   담긴 자리는 team_feedback (migration_44_teamfb.sql).
+   보낸 사람과 나만 볼 수 있다.
+
+   알림 — 이 화면이 떠 있는 동안(폰 홈 화면 앱 포함) 새 말이 오면
+   폰 알림이 뜬다. 안드로이드와 컴퓨터는 다른 화면을 보고 있어도 뜬다.
+   아이폰은 앱을 완전히 닫으면 안 뜬다 — 그건 서버가 밀어 주는
+   웹푸시가 있어야 하고, 우리 서버에 아직 그 부품이 없다.
+   그래서 <b>화면이 그 사실을 그대로 말한다.</b> 되는 척하지 않는다.
+   ══════════════════════════════════════════════════════════════════ */
+var TF={list:[],loaded:false,seen:{},asked:false,pollAt:0};
+var TFSEEN='apex_day_tfseen';
+function tfSeenLocal(){try{return JSON.parse(localStorage.getItem(TFSEEN)||'{}')||{};}catch(e){return {};}}
+function tfMarkLocal(id){var v=tfSeenLocal();v[id]=1;try{localStorage.setItem(TFSEEN,JSON.stringify(v));}catch(e){}}
+function tfNew(){var v=tfSeenLocal();return TF.list.filter(function(x){return !x.seen_at&&!v[x.id];});}
+function tfLoad(quiet){
+  var sb=sbOf(), me=meOf();
+  if(!sb||!me)return;
+  var before=tfNew().length;
+  sb.from('team_feedback').select('id,from_name,fb_date,msg,team_msg,seen_at')
+    .eq('member_id',me).gte('fb_date',Tn(-3)).order('fb_date',{ascending:false}).limit(5)
+    .then(function(r){
+      TF.loaded=true;
+      if(!r||r.error||!r.data)return;                 /* 표가 아직 없으면 조용히 넘어간다 */
+      TF.list=r.data;
+      var now=tfNew();
+      if(now.length>before&&!quiet)tfRing(now[0]);
+      paint();
+    },function(){TF.loaded=true;});
+}
+/* 폰 알림 — 켜져 있을 때만. 허락은 사람이 눌러야 받는다 */
+function tfCan(){try{return typeof Notification!=='undefined';}catch(e){return false;}}
+function tfOn(){try{return tfCan()&&Notification.permission==='granted';}catch(e){return false;}}
+window.dBellOn=function(){
+  if(!tfCan()){dToast('이 폰은 알림을 지원하지 않습니다');return;}
+  try{Notification.requestPermission().then(function(p){
+    dToast(p==='granted'?'알림을 켰습니다 — 팀장이 보내면 폰이 울립니다':'알림이 꺼져 있습니다 — 폰 설정에서 켜 주세요');
+    paint();
+  });}catch(e){dToast('알림을 켤 수 없습니다');}
+};
+function tfRing(x){
+  if(!tfOn()||!x)return;
+  try{
+    var n=new Notification((x.from_name||'팀장')+' 님이 오늘 한 마디 남겼습니다',
+      {body:(''+(x.msg||'')).slice(0,110),tag:'apex-tf-'+x.id,icon:'icons/icon-192.png'});
+    n.onclick=function(){try{window.focus();}catch(e){}TAB='today';paint();n.close();};
+  }catch(e){}
+}
+window.dTfOk=function(id){
+  tfMarkLocal(id);
+  var sb=sbOf();
+  if(sb)sb.from('team_feedback').update({seen_at:new Date().toISOString()}).eq('id',id).then(function(){},function(){});
+  var i;for(i=0;i<TF.list.length;i++)if(TF.list[i].id===id)TF.list[i].seen_at=new Date().toISOString();
+  dToast('읽음으로 표시했습니다 — 팀장 화면에도 보입니다');
+  paint();
+};
+function tfHtml(){
+  var n=tfNew();
+  if(!n.length)return '';
+  return n.map(function(x){
+    return '<div class="tf"><b>💬 '+esc(x.from_name||'팀장')+' 님이 오늘 한 마디'+
+      (x.fb_date!==T0()?(' <s>'+esc(x.fb_date.slice(5).replace('-','월 '))+'일</s>'):'')+'</b>'+
+      '<p>'+esc(x.msg||'')+'</p>'+
+      (x.team_msg?('<q>팀 전체에게 — '+esc(x.team_msg)+'</q>'):'')+
+      '<em><button type="button" onclick="dTfOk(\''+x.id+'\')">읽었습니다</button>'+
+      (tfOn()?'':'<button type="button" class="gh" onclick="dBellOn()">🔔 알림 켜기</button>')+
+      '</em></div>';
+  }).join('');
 }
 
 /* ── 오늘 ── */
@@ -1388,6 +1486,7 @@ function vToday(){
   if(bk)h+='<div class="bk">밀린 사람 <b>'+bk+'명</b>은 접어 두었습니다 — 오늘은 <b>'+CAP()+'명</b>만 봅니다.'+
      '<span>하루에 <em>'+[10,20,30,50].map(function(n){
         return '<u class="'+(CAP()===n?'on':'')+'" onclick="dCap('+n+')">'+n+'</u>';}).join('')+'</em>명</span></div>';
+  h+=tfHtml();
   h+='<div class="sec">지금 이 사람 <i>'+q.length+'명 남음</i></div>';
   if(!r){
     h+='<div class="now"><div class="now-h"><div class="now-t"><b>오늘 걸 사람이 없습니다</b></div>'+
@@ -1876,6 +1975,18 @@ $('tbReg').onclick=function(){TAB='reg';paint();};
 sbBoot();
 rxLoad();
 paint();
+/* 팀장이 보낸 말은 켜자마자 한 번, 그 뒤 1분에 한 번쯤 본다.
+   딴 화면을 보고 있어도 계속 본다 — 그래야 컴퓨터에서 다른 탭을 보다가
+   알림이 뜬다. 브라우저가 알아서 뒤로 미뤄 주므로 배터리는 축나지 않는다.
+   돌아왔을 때는 기다리지 않고 바로 본다.                             */
+function tfTick(force){
+  var t=Date.now();
+  if(!force&&t-TF.pollAt<55000)return;
+  TF.pollAt=t; tfLoad(!TF.loaded);       /* 처음 한 번은 조용히 — 눈앞에 띠가 뜨니까 */
+}
+setTimeout(function(){tfTick(true);},1200);
+setInterval(function(){tfTick(false);},20000);
+document.addEventListener('visibilitychange',function(){if(!document.hidden)tfTick(true);});
 /* 앱 안이면 부모가 자료를 읽을 때까지 몇 번 다시 그린다 */
 if(P()){var n=0,iv=setInterval(function(){paint();if(++n>6||rows().live)clearInterval(iv);},1800);}
 })();

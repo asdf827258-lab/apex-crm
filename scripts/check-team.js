@@ -11,8 +11,10 @@
      셋   · AI 에게 보내는 글에 <b>고객 이름·번호·통화 메모가 없는가</b>
             셋째가 가장 중요하다. 팀을 보자고 고객을 넘기면 안 된다.
      넷   · AI 가 전체 한 줄과 사람별 한 줄을 만들어 주는가
-     다섯 · 리더가 읽고 <b>복사해서</b> 보내는가 — AI 가 직접 보내지 않는다  */
+     다섯 · 리더가 읽고 <b>복사해서</b> 보내는가 — AI 가 직접 보내지 않는다
+     여섯 · 「팀원에게 보내기」 가 team_feedback 에 올바른 줄을 만드는가        */
 const { chromium } = require('playwright');
+const { SB_STUB } = require('./lib-sbstub.js');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8898;
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
@@ -112,7 +114,7 @@ const ai = http.createServer((req, res) => {
   ok(/오늘 팀 통화 43통/.test(fb), 'AI 가 쓴 말이 그대로 실린다');
   ok(await page.locator('.fbi').count() >= 5, '사람마다 따로 한 줄씩 붙는다');
   ok(await page.locator('.fbi .cp').count() >= 5, '한 사람에게 보낼 말을 따로 복사할 수 있다');
-  ok(/전체 복사/.test(fb) && /사람별 전체 복사/.test(fb), '단톡방용·사람별, 두 가지로 복사된다');
+  ok(/전체 복사/.test(fb) && /카톡용 전체 복사/.test(fb), '카톡으로 보낼 길도 그대로 남아 있다');
   ok(/대표님이 읽고 고쳐서/.test(fb), 'AI 가 직접 보내지 않는다고 화면이 못박는다');
 
   /* 만들어 둔 것이 팀원 판에도 따라붙는가 */
@@ -121,6 +123,53 @@ const ai = http.createServer((req, res) => {
   await page.click('.mrow'); await page.waitForTimeout(240);
   ok(/이 사람에게 보낼 말/.test(await page.locator('.det').innerText()),
      '팀원을 눌렀을 때 그 사람 피드백이 거기에도 붙는다');
+
+  /* 여섯 · 진짜로 팀원 폰에 꽂히는가 — 줄의 모양을 본다 */
+  console.log('\n팀원 폰으로 바로 보내기');
+  const TODAY = new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 10);
+  const p4 = await ctx.newPage();
+  await p4.addInitScript(SB_STUB({
+    __me: 'lead-1',
+    profiles: [
+      { id: 'lead-1', name: '윤시현', role: 'member', active: true },
+      { id: 'm1', name: '김민수', role: 'member', active: true },
+      { id: 'm2', name: '박서준', role: 'member', active: true }
+    ],
+    teams: [{ id: 't1', name: '온탑 1팀', leader_id: 'lead-1' }],
+    team_members: [{ team_id: 't1', member_id: 'm1' }, { team_id: 't1', member_id: 'm2' }],
+    calls: [
+      { created_by: 'm1', call_at: TODAY + 'T09:12:00', result: '부재', appointment_at: null },
+      { created_by: 'm1', call_at: TODAY + 'T10:20:00', result: '상담', appointment_at: TODAY + 'T14:00:00' }
+    ],
+    dbs: [{ id: 'd1', assigned_to: 'm1', assigned_date: TODAY, stage: '' },
+          { id: 'd2', assigned_to: 'm2', assigned_date: TODAY, stage: '' }],
+    saved_reports: [], team_feedback: []
+  }));
+  await p4.addInitScript(() => {
+    try { localStorage.setItem('apex_studio_gproxy', 'http://127.0.0.1:8899/ai'); } catch (e) { }
+  });
+  await p4.goto('http://127.0.0.1:' + PORT + '/app/team.html', { waitUntil: 'domcontentloaded' });
+  await p4.waitForTimeout(1600);
+  ok(/윤시현/.test(await p4.locator('#pSrc').textContent()), '로그인하면 진짜 팀 기록으로 돈다 — 누구로 보고 있는지도 적힌다');
+  ok(/온탑 1팀/.test(await p4.locator('#pTeam').textContent()), '조직도의 내 팀을 그대로 따른다');
+
+  await p4.click('#tbFb'); await p4.waitForTimeout(300);
+  await p4.click('.go'); await p4.waitForTimeout(1500);
+  ok(await p4.locator('.send').count() === 1, '「팀원 폰으로 바로 보내기」 가 뜬다');
+  await p4.click('.send .go'); await p4.waitForTimeout(700);
+
+  const sent = await p4.evaluate(() => window.__wrote.filter(w => w.t === 'team_feedback' && w.op === 'upsert'));
+  ok(sent.length === 1, '한 번에 모두 보낸다');
+  const rows = (sent[0] || {}).v || [];
+  ok(rows.length === 2, '팀원 두 명 몫이 만들어진다 — 나에게는 안 보낸다 (' + rows.length + '줄)');
+  const r0 = rows[0] || {};
+  for (const k of ['member_id', 'from_id', 'from_name', 'fb_date', 'msg', 'team_msg'])
+    ok(k in r0, 'team_feedback 의 칸: ' + k);
+  ok(r0.from_id === 'lead-1', '보낸 사람은 나로 박힌다 — 남의 이름으로 못 보낸다');
+  ok(r0.fb_date === TODAY, '오늘 몫으로 들어간다 — 하루 한 줄');
+  ok(rows.every(x => x.member_id !== 'lead-1'), '나 자신에게는 보내지 않는다');
+  ok(r0.seen_at === null, '보낸 직후는 「아직 안 읽음」 이다');
+  ok(/보냈습니다/.test(await p4.locator('.send u').innerText().catch(() => '')), '몇 시에 보냈는지·몇 명이 읽었는지가 남는다');
 
   console.log('\nAI 가 없는 폰');
   const p2 = await ctx.newPage();
