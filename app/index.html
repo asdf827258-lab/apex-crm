@@ -29799,12 +29799,32 @@ function babaPlanPush(out,seen,nm,T,at,co){
   out.push({nm:nm,co:co||babaPlanCoFind(near),prem:prem});
 }
 /* 월 보험료 — 「월 123,456원」 꼴만 받는다. 없으면 null 이다(0 이 아니다). */
+/* ── 월 보험료 읽기 ──────────────────────────────────────────────
+   전에는 <b>「월」 이라는 글자와 「원」 을 둘 다</b> 요구했다. 그래서
+   「월보험료 62,000원」 만 읽고, 회사마다 흔한 이런 꼴을 전부 놓쳤다.
+
+     보험료 62,000원        ← 「월」 이 없다
+     합계보험료 62,000      ← 「원」 이 없다
+     영업보험료 62,000원
+     월납입보험료 62,000원
+     보험료계 62,000
+
+   이제 <b>이름표를 먼저 찾고 그 뒤의 첫 숫자</b>를 집는다. 「원」 은 있으면
+   좋고 없어도 된다. 대신 뒤에 <b>만·억</b>이 붙으면 그건 가입금액이지
+   보험료가 아니므로 버린다 — 5,000만원을 보험료로 읽으면 큰일이다.     */
+var BABA_PREM_LAB='(?:월\\s*납입\\s*보험료|월\\s*보험료|월납\\s*보험료|합계\\s*보험료|영업\\s*보험료|'+
+  '납입\\s*보험료|총\\s*보험료|보험료\\s*계|보험료|월납입|월납|월\\s*부담)';
 function babaPlanPrem(t){
-  var m=(''+t).match(/월\s*(?:보험료|납입|납입보험료)?\s*[:：]?\s*([0-9][0-9,]{2,12})\s*원/);
-  if(!m)m=(''+t).match(/보험료\s*[:：]?\s*([0-9][0-9,]{2,12})\s*원\s*\/?\s*월/);
-  if(!m)return null;
-  var v=parseInt(m[1].replace(/,/g,''),10);
-  return (v>0&&v<20000000)?v:null;
+  t=''+(t||'');
+  var re=new RegExp(BABA_PREM_LAB+'[^0-9]{0,12}([0-9][0-9,]{2,12})\\s*(원|만|억)?','g'),m,v,u;
+  while((m=re.exec(t))){
+    u=m[2]||'';
+    if(u==='만'||u==='억')continue;          /* 가입금액이다 — 보험료가 아니다 */
+    v=parseInt((m[1]||'').replace(/,/g,''),10);
+    /* 한 달 보험료로 말이 되는 범위. 천원 미만·2천만원 초과는 다른 숫자다. */
+    if(isFinite(v)&&v>=1000&&v<=20000000)return v;
+  }
+  return null;
 }
 function babaPlans(){
   if(BABA.plans)return BABA.plans;
@@ -30523,25 +30543,80 @@ function babaPropFootHtml(){
 }
 /* 제안서 본문 — 화면에서 미리 보는 것과 인쇄본이 같은 것을 쓴다.
    두 벌로 만들면 반드시 어느 한쪽이 뒤처진다. */
+/* 장의 <b>차례와 제목은 고정</b>이다. 자료가 바뀌어도 순서는 안 바뀐다.
+   상담에서 같은 순서로 말하게 되고, 화면도 매번 같은 자리에 선다.
+   짧은 이름(s)은 위 칩에 쓴다 — 좁은 폰에서 열한 개가 한 줄에 들어가야 한다. */
+var BABA_SECS=[
+ {n:1, t:'한눈에',                    s:'한눈에',   brk:0, f:function(){return babaPropHeadHtml()+'<div id="bpAiSlot">'+babaAiHtml()+'</div>';}},
+ {n:2, t:'지금 가진 보험 — 유지 · 해지', s:'가진 보험', brk:0, f:function(){return babaPlanDeckHtml();}},
+ {n:3, t:'3대 진단비 — 암 · 뇌 · 심장',  s:'3대',     brk:1, f:function(){return babaTriHtml();}},
+ {n:4, t:'주요 보장 요약 — 인체 한 장',  s:'인체',    brk:1, f:function(){return babaBodyHtml(false);}},
+ {n:5, t:'달라지는 보장 — 큰 것부터',    s:'달라진 것', brk:1, f:function(){return babaDeckBarsHtml();}},
+ {n:6, t:'담보 전체 — 한 표로',         s:'전체 표',  brk:1, f:function(){return babaDeckTableHtml();}},
+ {n:7, t:'가장 크게 달라지는 것',        s:'큰 것 셋', brk:1, f:function(){return babaTopCardsHtml();}},
+ {n:8, t:'새로 생기는 보장 · 없어지는 보장',s:'생김·없어짐',brk:0,f:function(){return babaNewGoneHtml();}},
+ {n:9, t:'아직 비어 있는 것',           s:'빈 자리',  brk:0, f:function(){return babaGapDeckHtml();}},
+ {n:10,t:'보험료 — 매달, 그리고 오래 두면',s:'보험료',  brk:1, f:function(){return babaFeeHtml();}},
+ {n:11,t:'오늘 정하실 것',              s:'정하실 것', brk:0, f:function(){return babaPropAskHtml();}}
+];
+function babaSecHtml(x){
+  var body='';
+  try{ body=x.f()||''; }catch(e){ body='<div class="bp-none">이 장을 그리지 못했습니다.</div>'; }
+  return '<div class="bp-sec'+(x.brk?' bp-break':'')+'" data-sec="'+x.n+'">'+
+    '<div class="bp-h"><i>'+x.n+'</i>'+x.t+'</div>'+body+'</div>';
+}
+/* 인쇄·PDF 는 <b>열한 장 전부</b>. 종이는 넘기는 것이 아니라 쌓는 것이다. */
 function babaPropBodyHtml(){
-  /* 장의 <b>차례와 제목은 고정</b>이다. 자료가 바뀌어도 순서는 안 바뀐다.
-     상담에서 같은 순서로 말하게 되고, 화면도 매번 같은 자리에 선다. */
-  var sec=function(n,title,body,brk){
-    return '<div class="bp-sec'+(brk?' bp-break':'')+'">'+
-      '<div class="bp-h"><i>'+n+'</i>'+title+'</div>'+body+'</div>';
-  };
+  return babaPropCoverHtml()+BABA_SECS.map(babaSecHtml).join('')+babaPropFootHtml();
+}
+/* ── 화면은 <b>한 장씩</b> ────────────────────────────────────────
+   열한 장을 한꺼번에 그리면 세로가 5,500px 이 넘는다. 폰에서 스크롤이
+   끊기고(렉), 지금 어느 장인지 알 수 없고, 고객에게 「4장 보세요」 라고
+   말할 수도 없다.
+
+   그래서 화면에서는 <b>고른 장 하나만</b> 그린다. 그릴 양이 열한 분의
+   일로 줄어 렉이 사라지고, 위에 번호 칩이 있어 어디쯤인지 늘 보인다.
+   인쇄는 그대로 전부다 — 두 길이 같은 함수를 쓰므로 어긋나지 않는다. */
+var BABA_PAGE=1;
+function babaPageGo(n){
+  n=Math.max(1,Math.min(BABA_SECS.length,+n||1));
+  BABA_PAGE=n;
+  var host=document.getElementById('bpPageBody');
+  if(!host)return;
+  host.innerHTML=babaSecHtml(BABA_SECS[n-1]);
+  var bar=document.getElementById('bpPageBar');
+  if(bar)bar.innerHTML=babaPageChips();
+  try{ host.scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){}
+}
+/* 왼쪽·오른쪽 화살표로도 넘긴다 — 발표 중에 마우스를 안 찾게 */
+document.addEventListener('keydown',function(e){
+  if(!document.getElementById('bpPageBody'))return;
+  var t=e.target,tag=(t&&t.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA'||(t&&t.isContentEditable))return;
+  if(e.key==='ArrowLeft')babaPageGo(BABA_PAGE-1);
+  else if(e.key==='ArrowRight')babaPageGo(BABA_PAGE+1);
+});
+function babaPageChips(){
+  return BABA_SECS.map(function(x){
+    return '<button type="button" class="bp-chipn'+(x.n===BABA_PAGE?' on':'')+'" '+
+      'onclick="babaPageGo('+x.n+')" title="'+osEsc(x.t)+'">'+
+      '<i>'+x.n+'</i>'+osEsc(x.s)+'</button>';
+  }).join('');
+}
+function babaPageHtml(){
+  var cur=BABA_SECS[BABA_PAGE-1]||BABA_SECS[0];
   return babaPropCoverHtml()+
-    sec(1,'한눈에',babaPropHeadHtml()+'<div id="bpAiSlot">'+babaAiHtml()+'</div>')+
-    sec(2,'지금 가진 보험 — 유지 · 해지',babaPlanDeckHtml())+
-    sec(3,'3대 진단비 — 암 · 뇌 · 심장',babaTriHtml(),1)+
-    sec(4,'주요 보장 요약 — 인체 한 장',babaBodyHtml(false),1)+
-    sec(5,'달라지는 보장 — 큰 것부터',babaDeckBarsHtml(),1)+
-    sec(6,'담보 전체 — 한 표로',babaDeckTableHtml(),1)+
-    sec(7,'가장 크게 달라지는 것',babaTopCardsHtml(),1)+
-    sec(8,'새로 생기는 보장 · 없어지는 보장',babaNewGoneHtml())+
-    sec(9,'아직 비어 있는 것',babaGapDeckHtml())+
-    sec(10,'보험료 — 매달, 그리고 오래 두면',babaFeeHtml(),1)+
-    sec(11,'오늘 정하실 것',babaPropAskHtml())+
+    '<div class="bp-pagebar" id="bpPageBar">'+babaPageChips()+'</div>'+
+    '<div id="bpPageBody">'+babaSecHtml(cur)+'</div>'+
+    '<div class="bp-pagenav">'+
+      '<button type="button" onclick="babaPageGo('+(BABA_PAGE-1)+')"'+
+        (BABA_PAGE<=1?' disabled':'')+'>‹ 앞장</button>'+
+      '<span>'+BABA_PAGE+' / '+BABA_SECS.length+'</span>'+
+      '<button type="button" onclick="babaPageGo('+(BABA_PAGE+1)+')"'+
+        (BABA_PAGE>=BABA_SECS.length?' disabled':'')+'>다음장 ›</button>'+
+    '</div>'+
+    '<div class="bp-note" style="text-align:center">화면은 한 장씩 보여 드립니다 — '+
+    '<b>🖨 인쇄</b> 를 누르면 열한 장이 모두 한 부로 나옵니다.</div>'+
     babaPropFootHtml();
 }
 /* ── 2장 · 지금 가진 보험 — 유지 · 해지 ─────────────────────────
@@ -30913,7 +30988,7 @@ function babaShowDeck(id){
       '<button class="btn btn-ghost" onclick="runPdf(\''+id+'\')">📄 AI 글 리포트도 보기</button>'+
     '</div></div>'+
     '<div class="result-body">'+babaWhyHtml()+
-      '<div class="bp-prev">'+babaPropBodyHtml()+'</div></div>';
+      '<div class="bp-prev">'+babaPageHtml()+'</div></div>';
 }
 
 /* 인쇄본에 같이 실을 자리 모양 — 화면 CSS 를 그대로 옮긴다 */
@@ -31054,6 +31129,23 @@ function babaPropCss(){
     '.bp-ask .li b:first-child{color:var(--bl);margin-right:6px}'+
 
     /* ── 맺음말 · 잔글씨 ── */
+    /* ── 장 넘김 (화면 전용 · 인쇄에서는 숨긴다) ── */
+    '.bp-pagebar{display:flex;gap:5px;overflow-x:auto;padding:2px 0 10px;margin-bottom:14px;'+
+      '-webkit-overflow-scrolling:touch;scrollbar-width:none}'+
+    '.bp-pagebar::-webkit-scrollbar{display:none}'+
+    '.bp-chipn{appearance:none;border:0;background:var(--bg2);border-radius:999px;padding:7px 12px;'+
+      'font-family:inherit;font-size:11.5px;font-weight:700;color:var(--ink2);cursor:pointer;'+
+      'white-space:nowrap;display:inline-flex;align-items:center;gap:5px;min-height:34px;flex:0 0 auto}'+
+    '.bp-chipn i{font-style:normal;font-size:10px;font-weight:800;color:var(--ink3)}'+
+    '.bp-chipn.on{background:var(--bl);color:#fff}'+
+    '.bp-chipn.on i{color:rgba(255,255,255,.75)}'+
+    '.bp-pagenav{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:18px}'+
+    '.bp-pagenav button{appearance:none;border:0;background:var(--bg2);border-radius:12px;'+
+      'padding:11px 18px;font-family:inherit;font-size:13px;font-weight:800;color:var(--ink);'+
+      'cursor:pointer;min-height:42px}'+
+    '.bp-pagenav button:disabled{opacity:.35;cursor:default}'+
+    '.bp-pagenav span{font-size:12.5px;font-weight:800;color:var(--ink3);min-width:52px;text-align:center}'+
+    '@media print{.bp-pagebar,.bp-pagenav{display:none!important}}'+
     '.bp-close{margin:20px 0 12px;padding:16px 18px;border-radius:18px;background:#F4F8FF;'+
       'border:0;font-size:13.5px;line-height:1.8;color:var(--bl2);font-weight:700}'+
     '.bp-disc{font-size:10px;color:var(--ink3);line-height:1.8;border-top:1px solid var(--ln);padding-top:10px}'+
@@ -31169,7 +31261,7 @@ function babaPropWrapHtml(){
     '</div>';
   if(BABA_PROP_ON){
     bpEnsureCss();
-    h+='<div class="bp-prev" id="babaProp">'+babaPropBodyHtml()+'</div>';
+    h+='<div class="bp-prev" id="babaProp">'+babaPageHtml()+'</div>';
   }
   return h+'</div></div>';
 }
@@ -39375,12 +39467,29 @@ function cmFfCount(id){
   return n;
 }
 function cmFfTotal(){var n=0,i;for(i=0;i<CM_FF.length;i++)n+=CM_FF[i].f.length;return n;}
-function cmFfRead(){
-  var o={},i,j,g,e;
+/* ── 팩트파인딩 읽기 — 화면이 없으면 <b>저장해 둔 것</b>을 쓴다 ──────
+   전에는 화면의 입력칸에서만 읽었다. 그래서 팩트파인딩을 적어 저장한 뒤
+   칸을 접거나 다른 고객을 봤다가 「계산기로 보내기」 를 누르면 <b>빈 손</b>
+   으로 갔다. 저장은 해 뒀는데 계산기는 텅 비어서, 고객 앞에서 스물여섯
+   가지를 다시 묻게 됐다.
+
+   이제 두 곳을 겹쳐 읽는다 — 화면에 떠 있으면 그 값이 이기고(방금 고친
+   것이므로), 화면이 없으면 저장해 둔 값을 쓴다.                      */
+function cmFfRead(id){
+  var o={},i,j,g,e,k,saved=null,any=false;
+  try{ saved=(id&&typeof cmOf==='function')?(cmOf(id).fp||null):null; }catch(x){}
+  if(saved)for(k in saved)if(Object.prototype.hasOwnProperty.call(saved,k))o[k]=(''+saved[k]);
   for(i=0;i<CM_FF.length;i++){g=CM_FF[i].f;
     for(j=0;j<g.length;j++){e=document.getElementById('cmff_'+g[j][0]);
-      if(e)o[g[j][0]]=(''+e.value).replace(/^\s+|\s+$/g,'');}}
+      if(e){any=true;o[g[j][0]]=(''+e.value).replace(/^\s+|\s+$/g,'');}}}
+  o.__onScreen=any;      /* 화면에서 읽었는지 — 저장할 때 이걸 본다 */
   return o;
+}
+/* 저장할 때 쓰는 값에서 표시용 표를 걷어낸다 */
+function cmFfClean(o){
+  var out={},k;
+  for(k in o)if(Object.prototype.hasOwnProperty.call(o,k)&&k!=='__onScreen')out[k]=o[k];
+  return out;
 }
 function cmFfHtml(id){
   var m=cmOf(id),h='',i,j,g,f,v;
@@ -39406,7 +39515,12 @@ function cmFfHtml(id){
   return h;
 }
 function cmFfSave(id,quiet){
-  var fp=cmFfRead();
+  var fp=cmFfRead(id);
+  /* 화면에 칸이 하나도 없으면 저장하지 않는다. 예전에는 이때 빈 표를
+     덮어써서 <b>적어 둔 팩트파인딩이 지워졌다.</b> 안 보이는 것을 저장하는
+     것보다 아무것도 안 하는 편이 백 배 낫다. */
+  if(!fp.__onScreen){ if(!quiet)toast('팩트파인딩 칸이 열려 있지 않습니다 — 펼친 뒤 저장해 주세요'); return; }
+  fp=cmFfClean(fp);
   cmSave(id,{fp:fp},function(){
     if(!quiet)toast('팩트파인딩을 저장했습니다 — '+cmFfCount(id)+'/'+cmFfTotal()+'칸');
     var b=document.getElementById('cmFfN');
@@ -39415,21 +39529,26 @@ function cmFfSave(id,quiet){
 }
 /* 계산기로 — 화법서 라인이 쓰는 길을 그대로 쓴다 */
 function cmToCalc(id){
-  cmFfSave(id,true);
+  cmFfSave(id,true);                     /* 화면에 떠 있을 때만 저장된다 */
   if(typeof fpToFin!=='function'||typeof fpPushFin!=='function'){toast('재무설계 계산기를 찾지 못했습니다');return;}
-  var fp=cmFfRead(),nm=cmRealOf(id);
+  var fp=cmFfClean(cmFfRead(id)),nm=cmRealOf(id),n=0,k;
   if(nm)fp.f_name=nm;
-  var o=fpToFin({f:fp});
-  fpPushFin(o);
+  for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
+  if(!n){toast('이 고객에게 적어 둔 팩트파인딩이 없습니다 — 먼저 채워 주세요',5000);return;}
+  fpPushFin(fpToFin({f:fp}));
+  toast(n+'칸을 계산기로 보냈습니다',3500);
 }
 /* 상담자료로 — 저장해 둔 상담을 되살릴 때 쓰는 길을 그대로 쓴다 */
 function cmToDeck(id){
   cmFfSave(id,true);
   if(typeof fpDeckOpen!=='function'||typeof FPD==='undefined'){toast('재무설계 상담자료를 찾지 못했습니다');return;}
-  var fp=cmFfRead(),nm=cmRealOf(id);
+  var fp=cmFfClean(cmFfRead(id)),nm=cmRealOf(id),n=0,k;
   if(nm)fp.f_name=nm;
+  for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
+  if(!n){toast('이 고객에게 적어 둔 팩트파인딩이 없습니다 — 먼저 채워 주세요',5000);return;}
   FPD.pend={f:fp};
   fpDeckOpen();
+  toast(n+'칸을 상담자료로 보냈습니다',3500);
 }
 
 /* ── 다음 할 일 · 접촉 기록 ──
