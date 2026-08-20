@@ -38,7 +38,7 @@ window.__DATA={profiles:{rows:[{id:'smoke',name:'점검',role:'owner',active:tru
 
 /* 그룹마다 최소 한 곳씩 — 골고루 훑는다 */
 const TABS = [
-  'home', 'brain', 'manual', 'ckboard', 'academy', 'org', 'yoonsi', 'ai_org', 'report',
+  'home', 'brain', 'manual', 'ckboard', 'academy', 'org', 'report',
   'assistant', 'teamx', 'growth', 'ckteam', 'sangdam', 'clients', 'fact_find',
   'attend', 'interpret', 'wallets', 'contracts', 'endorse', 'treatpay', 'ai_prop',
   'bojang', 'baba', 'compare', 'katalk', 'finance', 'calc', 'biz_diag', 'biz_news',
