@@ -11168,8 +11168,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-20 22:10';
-var APP_BUILD_NOTE='<b>비포·애프터가 이제 스스로 맞습니다.</b> 「해지」 를 찍으면 그 보험이 들고 있던 담보가 <b>기존에서 그만큼 빠져</b> 앞장·표·그래프가 한꺼번에 바뀌고, 2장에 「해지하시면 이만큼 빕니다」 가 섭니다 — <b>유지로 되돌리면 숫자도 그대로 돌아옵니다.</b> 읽는 것도 두 군데 고쳤습니다. 계약 세 건의 월 보험료가 <b>모두 첫 계약 값</b>으로 찍히던 것, 「암진단비(유사암제외)」 의 <b>「유사암」 을 보장으로 잘못 집어 없는 3,000만원을 만들어 내던 것</b>입니다. 인쇄도 <b>더 이상 안 짤립니다.</b> 일시납·쿠폰(트랙 C)에는 <b>부동산 도해 세 장</b>을 직접 그려 넣었습니다 — 임대소득이 얹혀 구간이 뛰는 것, 피부양자에서 지역가입자로 넘어가는 것, 열두 달 중 두 달이 0원인 것. 세금 뉴스 칸은 <b>신문에서 그대로 받아 옵니다</b> — 제목·언론사·날짜·링크가 기사 그대로이고, <b>못 받아 오면 지어내지 않고 없다고 적습니다.</b> 비과세는 <b>결론 대신 요건</b>을 월적립식·일시납·종신형 세 갈래 표로 보여 드립니다.';;
+var APP_BUILD='2026-08-20 23:05';
+var APP_BUILD_NOTE='<b>고객 365일에서 계산기로 보낼 때 이름·나이·생활비가 함께 갑니다.</b> 팩트파인딩이 비어 있어도 고객 정보에 적어 둔 출생년도·성별·월소득·생활비가 따라갑니다 — <b>팩트파인딩에 적은 값이 있으면 그것이 이깁니다.</b> 생활비는 적어 둘 칸조차 없었는데 <b>고객 정보와 팩트파인딩 두 군데</b>에 만들었습니다. 성별을 「여성」 이라 적으면 오히려 남성으로 넘어가던 것도 고쳤습니다. <b>비포·애프터</b>는 「해지」 를 찍으면 그 보험 담보가 기존에서 그만큼 빠지고, 유지로 되돌리면 숫자도 돌아옵니다. 계약마다 제 보험료를 읽고, 「암진단비(유사암제외)」 의 「유사암」 을 <b>없는 보장으로 만들어 내던 것</b>을 고쳤습니다. 인쇄도 안 짤립니다. <b>일시납·쿠폰(트랙 C)</b> 에는 부동산 도해 세 장을 직접 그려 넣었고, 세금 뉴스는 <b>신문에서 그대로 받아 오되 못 받으면 지어내지 않습니다.</b> 비과세는 결론 대신 <b>요건</b>을 월적립식·일시납·종신형 세 갈래 표로 보여 드립니다.';
 function nfSite(){
   try{
     var h=location.hostname||'';
@@ -14475,29 +14475,56 @@ function fpRepOpen(i){
 /* ── 계산기로 넘기기 ──
    상담자료는 그림으로 보여 주는 곳이고, 부족액을 숫자로 못 박는 건 계산기다.
    같은 숫자를 두 번 치지 않도록 넘겨 준다.                       */
+/* ※ 이 표는 <b>하나뿐이어야 한다.</b> 전에는 같은 일을 하는 표가 둘
+   있었다(FP_MAP·TOFIN_MAP). 한쪽에 생활비를 넣어도 다른 쪽에는 없어서,
+   어느 길로 넘기느냐에 따라 생활비가 갔다 안 갔다 했다. 아래 하나만
+   두고 TOFIN_MAP 은 이것을 가리키게 한다 — 고칠 자리를 하나로 만든다.
+
+     세 번째 값은 옮기는 방법이다.
+       t   그대로 글자로       n   숫자만 (숫자가 아니면 안 보낸다)
+       g   남·여로 고쳐서      x12 월 → 연 (만원 그대로)              */
 var FP_MAP=[
- ['f_name','s_name'],['f_age','s_age'],['f_job','s_job'],['f_ret','s_rage'],
- ['f_etc','s_other'],['f_sincome','s_spouse'],
- ['f_house','s_housing'],['f_loan','s_loan'],['f_edu','s_edu'],['f_ins','s_insurance'],
- ['f_retspend','s_target'],['f_np','s_nps'],['f_pp','s_pension'],
- ['f_home','s_realty'],['f_debt','s_debt'],['f_dc','s_severance'],
- ['r_inf','s_inf'],['r_eq','s_ret'],
- ['c_cancer','ins_cancer_dx'],['c_brain','ins_brain'],['c_heart','ins_heart'],
- ['c_care','ins_homecare'],['c_death','ins_life'],['f_ins','ins_monthly']
+ ['f_name','s_name','t'],      ['f_age','s_age','n'],
+ ['f_gender','s_gender','g'],  ['f_job','s_job','t'],
+ ['f_ret','s_rage','n'],
+ ['f_income','s_gross','x12'],  /* 본인 월소득 → 연 총급여(만원) */
+ ['f_sincome','s_spouse','n'], ['f_etc','s_other','n'],
+ ['f_house','s_housing','n'],  ['f_loan','s_loan','n'],
+ ['f_edu','s_edu','n'],        ['f_ins','s_insurance','n'],
+ ['f_living','s_food','n'],    /* 생활비 — 계산기는 「식비/월」 자리로 받는다 */
+ ['f_home','s_realty','n'],    ['f_debt','s_debt','n'],
+ ['f_dc','s_severance','n'],   ['f_save','s_general','n'],
+ ['f_retspend','s_target','n'],['f_np','s_nps','n'], ['f_pp','s_pension','n'],
+ ['r_inf','s_inf','n'],        ['r_eq','s_ret','n'],
+ ['c_cancer','ins_cancer_dx','n'],['c_brain','ins_brain','n'],
+ ['c_heart','ins_heart','n'],  ['c_care','ins_homecare','n'],
+ ['c_death','ins_life','n'],   ['f_ins','ins_monthly','n']
 ];
-var FP_HAND=['생활비 — 계산기는 식비·외식·교통으로 나눠 받습니다',
+var FP_HAND=['생활비 항목 나누기 — 넘긴 값은 「식비/월」 에 들어갑니다',
              '투자 성향 — 상담에서 들은 대로 고르세요',
              '실손 세대 — 증권을 봐야 압니다'];
-function fpToFin(d){
-  var f=(d&&d.f)||{},o={},i,k;
+/* 「F」 만 여자로 보던 탓에, 팩트파인딩에 <b>「여성」</b> 이라고 적어 두면
+   오히려 남성으로 넘어갔다. 어느 표기로 적혀 있어도 알아듣게 한다. */
+function fpGender(v){
+  v=''+(v||'');
+  if(/여|F/i.test(v))return '여성';
+  if(/남|M/i.test(v))return '남성';
+  return '';
+}
+function fpMapApply(f){
+  var o={},i,r,v,g;
+  f=f||{};
   for(i=0;i<FP_MAP.length;i++){
-    k=FP_MAP[i];
-    if(f[k[0]]!==undefined&&f[k[0]]!=='')o[k[1]]=f[k[0]];
+    r=FP_MAP[i]; v=f[r[0]];
+    if(v===undefined||v===null||v==='')continue;
+    if(r[2]==='t'){ o[r[1]]=''+v; continue; }
+    if(r[2]==='g'){ g=fpGender(v); if(g)o[r[1]]=g; continue; }
+    v=parseFloat(v); if(!isFinite(v))continue;
+    o[r[1]]=String(r[2]==='x12'?Math.round(v*12):v);
   }
-  if(f.f_gender)o.s_gender=(f.f_gender==='F'?'여성':'남성');
-  if(f.f_income)o.s_gross=String(Math.round((parseFloat(f.f_income)||0)*12));
   return o;
 }
+function fpToFin(d){ return fpMapApply((d&&d.f)||{}); }
 function fpPushFin(inputs){
   var n=0,k;for(k in inputs)n++;
   if(!n){toast('넘길 숫자가 없습니다');return;}
@@ -14510,7 +14537,7 @@ function fpPushFin(inputs){
     if(f&&f.contentWindow&&f._mounted){
       try{f.contentWindow.postMessage({type:'apexFinLoad',inputs:inputs},'*');}catch(e){}
       if(tries<3)setTimeout(push,1400);
-      else toast('넘겼습니다 — 생활비와 투자 성향은 직접 채워 주세요',7000);
+      else toast('넘겼습니다 — 비어 있는 칸만 채워 주세요',6000);
     }else if(tries<12)setTimeout(push,600);
     else toast('계산기가 열리지 않았습니다 — 재무설계 계산기를 먼저 열어 주세요',7000);
   })();
@@ -38586,15 +38613,19 @@ function osRepSaveToClient(kind,title,content){
 function osRepSave(elId,title){var el=$(elId);var raw=(el&&el._raw)||'';if(!raw){toast('저장할 내용이 없습니다');return;}osRepSaveToClient(lastTab||'report',title||'상담 자료',{md:raw});}
 function osRepSaveGen(id,title){var el=$('res_'+id);var raw=(el&&el._raw)||'';if(!raw){toast('저장할 내용이 없습니다');return;}osRepSaveToClient(lastTab||'report',title||'상담 자료',{md:raw});}
 function osCliInfoLoad(){var sb=osClient();if(!sb||!OSC.current)return;
-  sb.from('clients').select('phone,birth_year,gender,monthly_income,household_notes').eq('id',OSC.current.id).single().then(function(r){
+  sb.from('clients').select('phone,birth_year,gender,monthly_income,monthly_fixed_expense,household_notes').eq('id',OSC.current.id).single().then(function(r){
     if(r.error||!r.data)return;var d=r.data;var set=function(id,v){var e=$(id);if(e)e.value=(v==null?'':v);};
-    set('cliPhone',d.phone);set('cliBirth',d.birth_year);set('cliIncome',d.monthly_income);set('cliMemo',d.household_notes);var g=$('cliGender');if(g)g.value=d.gender||'';
+    set('cliPhone',d.phone);set('cliBirth',d.birth_year);set('cliIncome',d.monthly_income);
+    set('cliExp',d.monthly_fixed_expense);set('cliMemo',d.household_notes);var g=$('cliGender');if(g)g.value=d.gender||'';
+    try{CM_BASE[OSC.current.id]={by:d.birth_year,gd:d.gender,inc:d.monthly_income,exp:d.monthly_fixed_expense};}catch(e){}
   });
 }
 function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
-  var payload={phone:(osVal('cliPhone')||null),birth_year:(parseInt(osVal('cliBirth'),10)||null),gender:(osVal('cliGender')||null),monthly_income:(parseInt(osVal('cliIncome'),10)||null),household_notes:(osVal('cliMemo')||null)};
+  var payload={phone:(osVal('cliPhone')||null),birth_year:(parseInt(osVal('cliBirth'),10)||null),gender:(osVal('cliGender')||null),monthly_income:(parseInt(osVal('cliIncome'),10)||null),monthly_fixed_expense:(parseInt(osVal('cliExp'),10)||null),household_notes:(osVal('cliMemo')||null)};
   sb.from('clients').update(payload).eq('id',OSC.current.id).then(function(r){
     if(r.error){var m=r.error.message||'';toast('저장 실패: '+m+(/phone/i.test(m)?' — migration_10 SQL 실행 필요':''));return;}
+    /* 방금 고친 값을 손에 들고 있어야 계산기로 그 값이 간다 — 옛 값이 남으면 안 된다 */
+    try{CM_BASE[OSC.current.id]={by:payload.birth_year,gd:payload.gender,inc:payload.monthly_income,exp:payload.monthly_fixed_expense};}catch(e){}
     toast('고객 정보를 저장했습니다.');
   });
 }
@@ -38635,19 +38666,9 @@ function osFinAskSave(){var f=$('finFrame');if(!f||!f.contentWindow){toast('계�
 
    상담자료에 적은 것을 계산기 사이드바 칸으로 옮겨 담고, 계산기의
    상담 순서를 팩트체크부터 켠다. 고객에게 같은 것을 두 번 묻지 않는다. */
-var TOFIN_MAP=[
-  ['f_name','s_name','t'],  ['f_age','s_age','n'],  ['f_gender','s_gender','t'],
-  ['f_job','s_job','t'],
-  ['f_income','s_gross','x12'],   /* 본인 월소득 → 연 총급여(만원) */
-  ['f_sincome','s_spouse','n'],   ['f_etc','s_other','n'],
-  ['f_house','s_housing','n'],    ['f_loan','s_loan','n'],
-  ['f_edu','s_edu','n'],          ['f_ins','s_insurance','n'],
-  ['f_living','s_food','n'],      /* 생활비 총액 — 계산기는 항목별로 나뉜다 */
-  ['f_home','s_realty','n'],      ['f_debt','s_debt','n'],
-  ['f_dc','s_severance','n'],     ['f_save','s_general','n'],
-  ['f_ret','s_rage','n'],         ['f_retspend','s_target','n'],
-  ['f_np','s_nps','n'],           ['f_pp','s_pension','n']
-];
+/* 위(FP_MAP)와 같은 표다. 둘로 나뉘어 있던 탓에 한쪽만 고쳐서
+   생활비가 어떤 길로는 가고 어떤 길로는 안 갔다. 이제 하나다. */
+var TOFIN_MAP=FP_MAP;
 /* ── 팩트파인딩 → 계산기, 손 안 대고 ─────────────────────────
    다리는 놓여 있었지만 <b>사람이 단추를 눌러야</b> 건너갔다. 상담자료에서
    스물여섯 칸을 다 물어 놓고 계산기로 넘어오면 사이드바가 비어 있었고,
@@ -38736,17 +38757,7 @@ function osAutoToFin(){
     });
   }catch(e){}
 }
-function osToFinMap(f){
-  var out={},i,r,v;
-  for(i=0;i<TOFIN_MAP.length;i++){
-    r=TOFIN_MAP[i]; v=f[r[0]];
-    if(v===undefined||v===null||v==='')continue;
-    if(r[2]==='t'){ out[r[1]]=''+v; continue; }
-    v=parseFloat(v); if(!isFinite(v))continue;
-    out[r[1]]=String(r[2]==='x12'?Math.round(v*12):v);
-  }
-  return out;
-}
+function osToFinMap(f){ return fpMapApply(f); }
 window.addEventListener('message',function(e){
   var d=e&&e.data;
   if(!d||d.t!=='apex:tofin')return;
@@ -39610,7 +39621,10 @@ var CM_FF=[
  {t:'매달 버는 돈 (만원)',c:'💰',f:[['f_income','본인 월소득','500'],
    ['f_sincome','배우자 월소득','250'],['f_etc','기타 월소득','0']]},
  {t:'매달 나가는 돈 (만원)',c:'💸',f:[['f_house','주거·관리','80'],['f_loan','대출상환','120'],
-   ['f_edu','교육비','90'],['f_ins','보험료','45']]},
+   ['f_edu','교육비','90'],['f_ins','보험료','45'],
+   /* 생활비 칸이 아예 없어서 계산기로 넘어갈 때마다 비어 있었다.
+      계산기는 이 값을 「식비/월」 자리에 받는다(TOFIN_MAP: f_living → s_food). */
+   ['f_living','생활비(식비·통신 등)','150']]},
  {t:'은퇴 준비',c:'🌴',f:[['f_retspend','은퇴 후 희망 생활비(월)','300'],
    ['f_np','국민연금 예상액(월)','120'],['f_pp','개인연금 월납','30'],['f_dc','퇴직연금 적립액','4000']]},
  {t:'가진 것 · 갚을 것 (만원)',c:'🏠',f:[['f_home','거주 부동산','60000'],['f_debt','대출 잔액','15000']]},
@@ -39686,27 +39700,91 @@ function cmFfSave(id,quiet){
   });
 }
 /* 계산기로 — 화법서 라인이 쓰는 길을 그대로 쓴다 */
-function cmToCalc(id){
+/* ── 고객 기본정보도 함께 보낸다 ────────────────────────────────
+   전에는 <b>팩트파인딩 스물여섯 칸만</b> 넘겼다. 그래서 고객 정보에
+   출생년도·성별·월 소득을 다 적어 두고도 계산기를 열면 이름도 나이도
+   비어 있었다. 생활비는 아예 적어 둘 칸조차 없었다.
+
+   고객 정보는 서버에 있고, 목록을 받을 때 이 칸들까지 받아 오면 고객
+   수만큼 쓸데없이 커진다 — 지난번 서버 사용량을 세 배로 넘긴 것이
+   그런 식의 「미리 다 받아 두기」 였다. 그래서 <b>보낼 때 그 고객 한
+   줄만</b> 받아 오고, 받은 것은 손에 들고 있다가 다시 쓴다.        */
+var CM_BASE={};
+function cmBaseLoad(id,then){
+  if(!id){then(null);return;}
+  if(CM_BASE[id]){then(CM_BASE[id]);return;}
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){then(null);return;}
+  sb.from('clients').select('birth_year,gender,monthly_income,monthly_fixed_expense')
+    .eq('id',id).single().then(function(r){
+      var d=(r&&!r.error&&r.data)||null;
+      CM_BASE[id]=d?{by:d.birth_year,gd:d.gender,inc:d.monthly_income,exp:d.monthly_fixed_expense}:{};
+      then(CM_BASE[id]);
+    },function(){ then(null); });
+}
+/* 실명이 없으면 마스킹 이름이라도 — 「고객님」 보다 낫다 */
+function cmAnyName(id){
+  var nm=(typeof cmRealOf==='function')?cmRealOf(id):'';
+  if(nm)return nm;
+  try{
+    var L=(typeof OSC!=='undefined'&&OSC.list)||[],i;
+    for(i=0;i<L.length;i++)if(L[i].id===id)return L[i].name_masked||'';
+  }catch(e){}
+  return '';
+}
+/* 빈칸만 채운다. <b>사람이 적은 값이 언제나 이긴다</b> — 방금 상담하며
+   고친 숫자를 옛 기본정보로 소리 없이 되돌리면 그게 더 큰 사고다.    */
+function cmBaseFill(fp,base,nm){
+  var got=[],y=new Date().getFullYear(),v;
+  function put(k,val,lab){
+    if(val===null||val===undefined||val==='')return;
+    if(fp[k]!==undefined&&fp[k]!=='')return;
+    fp[k]=''+val; got.push(lab);
+  }
+  if(nm)put('f_name',nm,'이름');
+  if(base){
+    v=parseInt(base.by,10);
+    if(isFinite(v)&&v>=1900&&v<=y)put('f_age',y-v,'나이');
+    if(base.gd==='M')put('f_gender','남성','성별');
+    else if(base.gd==='F')put('f_gender','여성','성별');
+    put('f_income',base.inc,'월 소득');
+    put('f_living',base.exp,'생활비');
+  }
+  return got;
+}
+/* 넘길 짐을 싼다 — 팩트파인딩 위에 고객 기본정보를 얹어서 */
+function cmSendPrep(id,then){
   cmFfSave(id,true);                     /* 화면에 떠 있을 때만 저장된다 */
+  cmBaseLoad(id,function(base){
+    var fp=cmFfClean(cmFfRead(id)),got=cmBaseFill(fp,base,cmAnyName(id)),n=0,k;
+    for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
+    then(fp,n,got);
+  });
+}
+function cmSendNote(n,got,where){
+  return n+'칸을 '+where+'로 보냈습니다'+
+    (got.length?(' — 그중 '+got.join(' · ')+'는 고객 정보에서 가져왔습니다'):'');
+}
+function cmSendEmpty(){
+  toast('이 고객에게 적어 둔 것이 없습니다 — 위 고객 정보나 팩트파인딩을 먼저 채워 주세요',5500);
+}
+function cmToCalc(id){
   if(typeof fpToFin!=='function'||typeof fpPushFin!=='function'){toast('재무설계 계산기를 찾지 못했습니다');return;}
-  var fp=cmFfClean(cmFfRead(id)),nm=cmRealOf(id),n=0,k;
-  if(nm)fp.f_name=nm;
-  for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
-  if(!n){toast('이 고객에게 적어 둔 팩트파인딩이 없습니다 — 먼저 채워 주세요',5000);return;}
-  fpPushFin(fpToFin({f:fp}));
-  toast(n+'칸을 계산기로 보냈습니다',3500);
+  cmSendPrep(id,function(fp,n,got){
+    if(!n){cmSendEmpty();return;}
+    fpPushFin(fpToFin({f:fp}));
+    toast(cmSendNote(n,got,'계산기'),4500);
+  });
 }
 /* 상담자료로 — 저장해 둔 상담을 되살릴 때 쓰는 길을 그대로 쓴다 */
 function cmToDeck(id){
-  cmFfSave(id,true);
   if(typeof fpDeckOpen!=='function'||typeof FPD==='undefined'){toast('재무설계 상담자료를 찾지 못했습니다');return;}
-  var fp=cmFfClean(cmFfRead(id)),nm=cmRealOf(id),n=0,k;
-  if(nm)fp.f_name=nm;
-  for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
-  if(!n){toast('이 고객에게 적어 둔 팩트파인딩이 없습니다 — 먼저 채워 주세요',5000);return;}
-  FPD.pend={f:fp};
-  fpDeckOpen();
-  toast(n+'칸을 상담자료로 보냈습니다',3500);
+  cmSendPrep(id,function(fp,n,got){
+    if(!n){cmSendEmpty();return;}
+    FPD.pend={f:fp};
+    fpDeckOpen();
+    toast(cmSendNote(n,got,'상담자료'),4500);
+  });
 }
 
 /* ── 다음 할 일 · 접촉 기록 ──
@@ -40512,6 +40590,9 @@ function osClientDetailHtml(c){
         '<div class="fld"><label>출생년도</label><input id="cliBirth" type="number" placeholder="1980"/></div>'+
         '<div class="fld"><label>성별</label><select id="cliGender"><option value="">선택</option><option value="M">남</option><option value="F">여</option></select></div>'+
         '<div class="fld"><label>월 소득(만원)</label><input id="cliIncome" type="number" placeholder="500"/></div>'+
+        /* 생활비를 적어 둘 자리가 없어서, 계산기로 넘어갈 때마다 비어 있었다.
+           여기 적어 두면 팩트파인딩을 안 채운 고객도 생활비가 따라간다. */
+        '<div class="fld"><label>월 생활비(만원)</label><input id="cliExp" type="number" placeholder="300"/></div>'+
         '<div class="fld span2"><label>메모(가족·니즈·상담 노트)</label><textarea id="cliMemo" style="width:100%;min-height:70px;border:1px solid var(--ink-7);border-radius:9px;padding:9px 11px;font-size:12.5px;box-sizing:border-box;font-family:inherit"></textarea></div>'+
       '</div>'+
       '<button class="btn btn-primary" style="margin-top:10px" onclick="osCliInfoSave()">💾 정보 저장</button>'+
