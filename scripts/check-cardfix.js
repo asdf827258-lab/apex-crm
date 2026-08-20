@@ -109,10 +109,18 @@ const S = f => fs.readFileSync(f, 'utf8');
   ok(/bp-cover/.test(r.body), '제안서에 표지가 있다');
   ok(/한눈에/.test(r.body) && /bp-kpi/.test(r.body), '「한눈에」 숫자 판이 있다');
   ok(/baba-body-grid/.test(r.body), '인체 한 장이 들어 있다');
-  ok(/담보별 전·후 비교/.test(r.body), '전·후 그래프 자리가 있다');
+  /* 전에는 「담보별 전·후 비교」 한 장이었다. 마흔 줄을 전부 막대로 그려
+     세로가 8,000px 을 넘었다. 두 장으로 나눴다 — 달라지는 것은 막대로,
+     담보 전부는 표로. 여기서는 <b>이름</b>이 아니라 둘 다 서는지를 본다. */
+  ok(/달라지는 보장/.test(r.body) && /bp-bars/.test(r.body), '전·후 그래프 자리가 있다');
+  ok(/담보 전체/.test(r.body) && /bp-all/.test(r.body), '담보 전부를 담은 표도 있다');
   ok(!/그릴 담보가 없습니다/.test(r.body),
     '화면 토글이 꺼져 있어도 그래프가 그려진다 — 제안서는 토글과 무관해야 한다');
-  ok(/baba-feed/.test(r.body), '피드백이 들어 있다');
+  /* 피드백 자리도 옮겼다. 「가장 크게 달라지는 것」 은 7장에 따로 있으므로
+     9장은 <b>모자란 것만</b> 말한다 — 같은 말을 두 번 하면 둘 다 안 읽는다. */
+  ok(/아직 비어 있는 것/.test(r.body) && /bp-half/.test(r.body), '피드백이 들어 있다');
+  ok(/가장 크게 달라지는 것/.test(r.body) && /bp-tops/.test(r.body), '가장 크게 달라지는 것도 따로 선다');
+  ok(/지금 가진 보험/.test(r.body), '지금 가진 보험(유지·해지) 장이 있다');
   ok(/bp-disc/.test(r.body) && /0 원이라는 뜻이 아닙니다/.test(r.body),
     '빈 칸이 0 원이 아니라는 것을 제안서가 스스로 밝힌다');
   ok(!/아래 표에서 고치신 값이/.test(r.body),
