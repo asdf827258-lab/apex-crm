@@ -1,0 +1,3653 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>APEX 전체 지도 · 자비스</title>
+<style>
+:root{
+  --bg1:#EDF2FA; --bg2:#DFE7F3;
+  --ink:#0E1A30; --mut:#5A6B85; --line:#D3DEEE;
+  --blue:#1541B5; --blue-bg:#E9F0FF; --blue-br:#BDD0F7;
+  --gold:#C8A24A;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100vh; color:var(--ink);
+  background:linear-gradient(180deg,var(--bg1),var(--bg2)) fixed;
+  font-family:'Malgun Gothic','맑은 고딕','Apple SD Gothic Neo','Noto Sans KR',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══ 위 띠 ═══════════════════════════════ */
+.bar{
+  position:sticky; top:0; z-index:60;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  padding:12px 22px; background:rgba(238,243,250,.92);
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--line);
+  box-shadow:0 4px 16px rgba(18,42,85,.06);
+}
+.bar h1{font-size:17px; font-weight:800; margin:0; letter-spacing:-.3px}
+.bar h1 b{color:var(--gold)}
+.sp{flex:1}
+.btn{
+  border:1px solid var(--line); background:linear-gradient(180deg,#fff,#F2F6FC); color:#33425C;
+  font:inherit; font-size:13px; font-weight:700; padding:8px 14px;
+  border-radius:10px; cursor:pointer; white-space:nowrap;
+  box-shadow:0 2px 0 #C9D6E9, 0 3px 8px rgba(18,42,85,.10);
+}
+.btn:hover{color:var(--ink); border-color:#B4C4DC}
+.btn:active{transform:translateY(2px); box-shadow:0 0 0 #C9D6E9, 0 2px 5px rgba(18,42,85,.12)}
+.btn.off{opacity:.55}
+.btn.go{background:linear-gradient(180deg,#2E5BD8,#1541B5); color:#fff; border-color:#12379B;
+  box-shadow:0 3px 0 #0E2E80, 0 6px 14px rgba(21,65,181,.35)}
+.btn.go:hover{color:#fff; border-color:#0E2E80}
+.zoom{display:flex; gap:6px; align-items:center}
+.zoom span{font-size:12.5px; color:var(--mut); min-width:42px; text-align:center; font-weight:700}
+#aiBtn .dot{
+  display:inline-block; width:8px; height:8px; border-radius:50%;
+  background:#C3CDDD; margin-right:6px; vertical-align:1px;
+}
+#aiBtn.on .dot{background:#16A34A; box-shadow:0 0 0 3px rgba(22,163,74,.18)}
+
+/* ══ 자비스에게 묻는 칸 ═══════════════════════════════ */
+.ask{max-width:920px; margin:16px auto 0; padding:0 20px}
+.askrow{
+  display:flex; align-items:center; gap:10px;
+  background:linear-gradient(180deg,#fff,#F3F7FD); border:1px solid #C6D4EA;
+  border-radius:16px; padding:10px 12px 10px 16px;
+  box-shadow:0 4px 0 #CFDBEC, 0 14px 28px rgba(18,42,85,.13);
+}
+.lamp{
+  width:11px; height:11px; border-radius:50%; background:#1541B5; flex:0 0 11px;
+  box-shadow:0 0 0 4px rgba(21,65,181,.18); animation:lamp 1.5s ease-in-out infinite;
+}
+@keyframes lamp{0%,100%{opacity:.4; transform:scale(.8)} 50%{opacity:1; transform:scale(1.15)}}
+#ask{
+  flex:1; border:0; background:none; outline:none; font:inherit; font-size:15.5px;
+  font-weight:600; color:var(--ink); padding:6px 2px; min-width:120px;
+}
+#ask::placeholder{color:#9AA8BF; font-weight:400}
+.chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:11px}
+.chip{
+  border:1px solid #C9D5E8; background:rgba(255,255,255,.85); color:#3D4E68;
+  font:inherit; font-size:12.5px; font-weight:600; padding:6px 12px; border-radius:20px;
+  cursor:pointer; box-shadow:0 2px 0 #D8E1EE;
+}
+.chip:hover{border-color:#8FA9D6; color:var(--blue); background:#fff}
+
+/* ══ 쓰는 법 안내 ═══════════════════════════════ */
+.howto{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:14px 20px 2px}
+.how{
+  display:flex; align-items:center; gap:10px;
+  background:rgba(255,255,255,.82); border:1px solid var(--line);
+  border-radius:14px; padding:9px 15px 9px 11px;
+  box-shadow:0 3px 0 #CFDBEC, 0 8px 18px rgba(18,42,85,.09);
+  font-size:13.5px; color:#3D4E68;
+}
+.how .num{
+  width:22px; height:22px; border-radius:50%; background:var(--ink); color:#fff;
+  font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; flex:0 0 22px;
+}
+.how b{color:var(--ink)}
+.how .sample{font-size:11.5px; font-weight:700; border-radius:8px; padding:3px 9px; white-space:nowrap}
+.sample.s1{background:#EEF1F7; border:1px solid #C9D3E4; color:#33425C}
+.sample.s2{background:#fff; border:1px solid #C9D3E4; color:#33425C}
+.sample.s3{background:var(--blue-bg); border:1px solid var(--blue-br); color:var(--blue)}
+
+/* ══ 무대 ═══════════════════════════════ */
+#stage{padding:22px 30px 90px; overflow-x:auto; perspective:2200px; perspective-origin:50% 38%}
+#map{
+  position:relative; width:max-content; margin:0 auto;
+  transform-origin:top center; transform-style:preserve-3d;
+  transition:transform .28s cubic-bezier(.22,.68,.36,1);
+}
+body.flat #map{transform-style:flat !important}
+#wires{position:absolute; left:0; top:0; overflow:visible; pointer-events:none; z-index:0}
+.cols{display:flex; align-items:center; position:relative; z-index:1; transform-style:preserve-3d}
+.side{display:flex; flex-direction:column; justify-content:center; gap:50px; transform-style:preserve-3d}
+.mid{padding:0 96px; transform-style:preserve-3d}
+.branch{display:flex; align-items:center; gap:78px; transform-style:preserve-3d}
+.side.right .branch{flex-direction:row}
+.side.left  .branch{flex-direction:row-reverse}
+
+.head{
+  width:244px; flex:0 0 244px; border-radius:17px; padding:13px 16px 12px;
+  cursor:pointer; text-align:left; font:inherit; position:relative;
+  background:linear-gradient(180deg,#FFFFFF,#EFF4FB); border:1px solid var(--line);
+  transform:translateZ(26px);
+  box-shadow:inset 0 1px 0 #fff, 0 4px 0 var(--sd),
+    0 14px 22px -8px rgba(18,42,85,.30), 0 34px 50px -26px rgba(18,42,85,.40);
+  transition:transform .2s, box-shadow .2s;
+}
+body.flat .head{transform:none}
+.head:hover{transform:translateZ(38px) translateY(-2px)}
+body.flat .head:hover{transform:translateY(-2px)}
+.head .hrow{display:flex; align-items:center; gap:11px}
+.head .ic{font-size:23px; line-height:1}
+.head .nm{font-size:21px; font-weight:800; letter-spacing:-.4px}
+.head .tg{font-size:12.5px; font-weight:700; margin-top:8px; line-height:1.35}
+.head .hint{font-size:11.5px; color:#8593AB; margin-top:3px}
+.head .fold{
+  position:absolute; right:12px; top:11px; font-size:11px; font-weight:700;
+  color:#5A6B85; background:#EEF2F8; border:1px solid #D3DEEE; border-radius:20px; padding:3px 9px;
+}
+.head .fold::after{content:'접기 ▾'}
+.branch.shut .head .fold::after{content:'펴기 ▸'}
+
+.cards{display:flex; flex-direction:column; gap:16px; transform-style:preserve-3d}
+.cards.two{display:grid; grid-template-columns:repeat(2,370px); gap:16px 20px; align-items:start}
+.branch.shut .cards{display:none}
+.card{
+  width:404px; border-radius:14px; position:relative; overflow:hidden;
+  background:linear-gradient(180deg,#FFFFFF,#EFF4FB); border:1px solid var(--line);
+  transform:translateZ(10px);
+  box-shadow:inset 0 1px 0 #fff, 0 3px 0 #CFDBEC,
+    0 10px 18px -8px rgba(18,42,85,.24), 0 26px 44px -24px rgba(18,42,85,.34);
+  transition:transform .2s, box-shadow .2s;
+}
+body.flat .card{transform:none}
+.cards.two .card{width:370px}
+.card:hover{transform:translateZ(22px) translateY(-2px)}
+body.flat .card:hover{transform:translateY(-2px)}
+.card::before{
+  content:''; position:absolute; left:2px; top:13px; bottom:13px; width:5px;
+  border-radius:3px; background:linear-gradient(180deg,var(--c),var(--cd));
+  box-shadow:0 1px 3px rgba(18,42,85,.35);
+}
+.ct{
+  display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  font:inherit; font-size:15.5px; font-weight:700; color:var(--ink);
+  background:none; border:0; padding:15px 15px 14px 22px; cursor:pointer;
+}
+.ct:hover{background:rgba(214,228,255,.35)}
+.ct .tx{flex:1}
+.ct .open-hint{
+  font-size:11px; font-weight:700; color:#5A6B85; white-space:nowrap;
+  background:#fff; border:1px solid #C9D3E4; border-radius:20px; padding:3px 9px;
+  box-shadow:0 1px 0 #D8E1EE;
+}
+.ct .open-hint::after{content:'눌러서 열기  ' attr(data-n) '개'}
+.card.open .ct .open-hint::after{content:'닫기'}
+.leaves{display:grid; grid-template-rows:0fr; transition:grid-template-rows .26s ease}
+.card.open .leaves{grid-template-rows:1fr}
+.leaves > div{overflow:hidden}
+.lv{padding:0 15px 14px 22px; display:flex; flex-direction:column; gap:6px}
+a.leaf{
+  display:flex; align-items:center; gap:9px; text-decoration:none;
+  background:var(--blue-bg); border:1px solid var(--blue-br); border-radius:10px;
+  padding:8px 9px 8px 12px; font-size:13.5px; font-weight:700; color:var(--blue);
+  box-shadow:0 2px 0 #CFDDF7; transition:transform .13s, box-shadow .13s, background .13s;
+}
+a.leaf:hover{background:#DEE9FF; transform:translateY(-1px); box-shadow:0 3px 0 #C3D4F5}
+a.leaf .tx{flex:1}
+a.leaf .go{
+  font-size:11.5px; font-weight:800; background:#fff; border:1px solid var(--blue-br);
+  border-radius:9px; padding:3px 8px; white-space:nowrap;
+}
+/* 그 화면 「안에 든 것」 */
+.kidbtn{
+  align-self:flex-start; margin:-2px 0 0 12px; border:1px dashed #C3D2E8;
+  background:rgba(255,255,255,.7); color:#5A6B85; font:inherit; font-size:11.5px;
+  font-weight:700; border-radius:9px; padding:3px 9px; cursor:pointer;
+  display:flex; gap:5px; align-items:center;
+}
+.kidbtn:hover{border-color:#8FA9D6; color:var(--blue); background:#fff}
+.kidbtn .ka{transition:transform .18s}
+.kidbtn.on .ka{transform:rotate(180deg)}
+.kids{display:none; margin:4px 0 2px 18px; padding-left:11px; border-left:2px solid #D6E1F2}
+.kids.on{display:block}
+.kids div{font-size:12px; color:#5D6E88; line-height:1.62; padding:1px 0}
+.note{
+  display:flex; align-items:flex-start; gap:9px;
+  font-size:13.5px; line-height:1.55; color:#4A5568; padding:2px 2px 2px 0;
+}
+.note .dot{width:5px; height:5px; border-radius:50%; background:#AEBBCE; margin-top:8px; flex:0 0 5px}
+
+.center{
+  width:412px; border-radius:28px; padding:36px 26px 30px; text-align:center;
+  background:linear-gradient(160deg,#1B294A,#101B33 55%,#070C17);
+  transform:translateZ(56px);
+  box-shadow:inset 0 1px 0 rgba(143,166,204,.45), 0 6px 0 #060B15,
+    0 30px 44px -18px rgba(10,23,48,.55), 0 60px 90px -40px rgba(10,23,48,.6);
+}
+body.flat .center{transform:none}
+.center .tg{font-size:12.5px; font-weight:700; color:var(--gold); letter-spacing:3px}
+.center .ti{font-size:41px; font-weight:800; color:#fff; margin:13px 0 0; letter-spacing:-1px}
+.center .ti b{color:var(--gold)}
+.center .sb{font-size:15.5px; font-weight:600; color:#A6B8D8; margin-top:11px}
+.center .rule{width:60px; height:2px; background:var(--gold); opacity:.55; margin:17px auto 0}
+.center .ft{font-size:11.5px; color:#6D7F9F; margin-top:15px; line-height:1.7}
+
+.dim{opacity:.18}
+.foot{text-align:center; color:#7E8DA5; font-size:12.5px; padding:0 20px 44px; line-height:1.8}
+
+/* 지도 위에서 켜지는 파란 불 */
+@keyframes ring{
+  0%{box-shadow:0 0 0 0 rgba(21,65,181,.55), 0 2px 0 #CFDDF7}
+  70%{box-shadow:0 0 0 15px rgba(21,65,181,0), 0 2px 0 #CFDDF7}
+  100%{box-shadow:0 0 0 0 rgba(21,65,181,0), 0 2px 0 #CFDDF7}
+}
+a.leaf.lit{background:#D5E4FF; border-color:var(--blue); animation:ring 1.8s infinite}
+a.leaf.lit .tx{color:#0E2E80}
+a.leaf.lit .num{
+  width:21px; height:21px; flex:0 0 21px; border-radius:50%; background:var(--blue); color:#fff;
+  font-size:11.5px; font-weight:800; display:flex; align-items:center; justify-content:center;
+}
+a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px}
+.card.hit{border-color:#9CBAF0}
+.head.hit{border-color:var(--blue) !important}
+.head.hit .fold{background:var(--blue); border-color:var(--blue); color:#fff}
+
+/* ══ 자비스 ═══════════════════════════════ */
+#jarvis{
+  position:fixed; right:18px; top:86px; width:382px; z-index:70; display:none;
+  max-height:calc(100vh - 108px); flex-direction:column;
+  background:linear-gradient(180deg,#FFFFFF,#F1F6FD);
+  border:1px solid #B9CCF5; border-radius:18px;
+  box-shadow:0 8px 0 #C9D9F5, 0 26px 50px -14px rgba(18,42,85,.40);
+}
+#jarvis.on{display:flex}
+.j-top{
+  display:flex; align-items:center; gap:9px; padding:13px 14px 11px;
+  border-bottom:1px solid #DCE6F7; flex:0 0 auto;
+  background:linear-gradient(180deg,#FFFFFF,#F6F9FE); border-radius:18px 18px 0 0;
+}
+.j-top .t{font-size:14.5px; font-weight:800; flex:1; line-height:1.3}
+.j-top .t small{display:block; font-size:11px; font-weight:600; color:#7E8DA5; margin-top:2px}
+.j-x{border:0; background:#EDF2FA; color:#5A6B85; font:inherit; font-size:15px; font-weight:800;
+  width:28px; height:28px; border-radius:9px; cursor:pointer; flex:0 0 28px}
+.j-x:hover{background:#DFE8F6; color:var(--ink)}
+#jLog{flex:1 1 auto; overflow-y:auto; padding:13px 14px 4px}
+.msg{margin-bottom:12px}
+.msg.me{text-align:right}
+.msg.me .bub{
+  display:inline-block; background:var(--ink); color:#fff; border-radius:14px 14px 4px 14px;
+  padding:8px 12px; font-size:13.5px; font-weight:600; max-width:86%; text-align:left; line-height:1.5;
+}
+.msg.j .bub{
+  background:#fff; border:1px solid #DCE6F7; border-radius:14px 14px 14px 4px;
+  padding:11px 13px; font-size:13.5px; line-height:1.65; color:#2B3A54;
+  box-shadow:0 2px 6px rgba(18,42,85,.07); white-space:pre-wrap;
+}
+.msg.j.err .bub{background:#FEF2F2; border-color:#FCA5A5; color:#991B1B}
+.think{display:inline-flex; gap:4px; align-items:center; padding:4px 0}
+.think i{width:6px; height:6px; border-radius:50%; background:#9AB0D6; animation:bl 1.1s infinite}
+.think i:nth-child(2){animation-delay:.15s} .think i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,80%,100%{opacity:.25} 40%{opacity:1}}
+
+.steps{list-style:none; margin:9px 0 0; padding:0}
+.steps li{display:flex; gap:10px; padding:8px 0; border-bottom:1px dashed #DDE6F3}
+.steps li:last-child{border-bottom:0}
+.steps li.now .sn{background:var(--blue); color:#fff; box-shadow:0 0 0 5px rgba(21,65,181,.18)}
+.sn{
+  width:24px; height:24px; flex:0 0 24px; border-radius:50%;
+  background:#E2EAFA; color:var(--blue); font-size:12.5px; font-weight:800;
+  display:flex; align-items:center; justify-content:center; margin-top:1px;
+}
+.st-n{font-size:13.5px; font-weight:800; color:var(--ink)}
+.st-g{font-size:10.5px; font-weight:700; color:#7E8DA5; margin-left:5px}
+.st-d{font-size:12.5px; color:#4A5568; line-height:1.5; margin:2px 0 5px}
+.st-b{display:flex; gap:6px; flex-wrap:wrap}
+.st-b a, .st-b button{
+  font:inherit; font-size:11.5px; font-weight:700; border-radius:8px; padding:4px 10px;
+  text-decoration:none; cursor:pointer; border:1px solid var(--blue-br);
+}
+.st-b a{background:var(--blue-bg); color:var(--blue)}
+.st-b a:hover{background:#DBE7FF}
+.st-b button{background:#fff; color:#5A6B85; border-color:#C9D3E4}
+.st-b button:hover{color:var(--ink)}
+.j-next{margin-top:10px; background:#F3F8FF; border:1px solid #D5E3FA; border-radius:11px; padding:9px 11px}
+.j-next b{display:block; font-size:11.5px; color:var(--blue); margin-bottom:4px}
+.j-next div{font-size:12.5px; color:#42536E; line-height:1.6; padding-left:12px; text-indent:-12px}
+.j-walk{display:flex; gap:6px; margin-top:9px}
+.j-walk button{flex:1; font-size:12px; padding:6px 10px}
+#jFoot{flex:0 0 auto; border-top:1px solid #DCE6F7; padding:10px 12px 12px}
+.j-in{display:flex; gap:7px; align-items:flex-end}
+#jSay{
+  flex:1; border:1px solid var(--line); border-radius:11px; background:#fff; font:inherit;
+  font-size:13.5px; padding:9px 11px; outline:none; resize:none; max-height:96px; line-height:1.5;
+}
+#jSay:focus{border-color:#8FA9D6}
+.j-tip{font-size:11px; color:#8593AB; margin-top:7px; line-height:1.5}
+
+/* AI 연결 */
+#keyBox{position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center;
+  background:rgba(14,26,48,.45); backdrop-filter:blur(3px); padding:20px}
+#keyBox.on{display:flex}
+.kb{
+  width:100%; max-width:470px; background:#fff; border-radius:18px; padding:22px;
+  box-shadow:0 30px 60px rgba(10,23,48,.4); max-height:90vh; overflow:auto;
+}
+.kb h3{margin:0 0 4px; font-size:17px}
+.kb p{margin:0 0 14px; font-size:12.5px; color:var(--mut); line-height:1.6}
+.kb label{display:block; font-size:12px; font-weight:700; color:#42536E; margin:12px 0 5px}
+.kb input, .kb select{
+  width:100%; border:1px solid var(--line); border-radius:10px; padding:9px 11px;
+  font:inherit; font-size:13.5px; outline:none; background:#fff;
+}
+.kb input:focus, .kb select:focus{border-color:#8FA9D6}
+.kb .row{display:flex; gap:8px; margin-top:18px}
+.kb .row .btn{flex:1; text-align:center}
+.kb .warn{background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:10px 12px;
+  font-size:11.5px; color:#92400E; line-height:1.6; margin-top:14px}
+.kb a{color:var(--blue); font-weight:700}
+
+@media (max-width:1180px){
+  #wires{display:none}
+  #stage{perspective:none; padding:16px 14px 60px}
+  .cols{flex-direction:column; align-items:stretch; gap:26px}
+  .mid{padding:0; display:flex; justify-content:center}
+  .side{gap:26px}
+  .branch{flex-direction:column !important; align-items:stretch; gap:12px}
+  .head{width:auto; flex:auto; transform:none !important}
+  .cards.two{grid-template-columns:1fr}
+  .card, .cards.two .card{width:auto; transform:none !important}
+  .center{width:auto; max-width:412px; transform:none !important}
+  #map{width:auto; transform:none !important}
+  .howto{padding:12px 12px 0}
+  #jarvis{position:static; width:auto; margin:14px 14px 0; max-height:none; right:auto; top:auto}
+  .ask{padding:0 14px}
+  .askrow{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <h1>APEX 전체 지도 · <b>자비스</b></h1>
+  <span class="sp"></span>
+  <button class="btn" id="aiBtn"><span class="dot"></span>AI 연결</button>
+  <button class="btn" id="bOpen">다 열기</button>
+  <button class="btn" id="bShut">다 닫기</button>
+  <button class="btn" id="b3d">입체 끄기</button>
+  <span class="zoom">
+    <button class="btn" id="zOut">작게</button><span id="zVal">100%</span><button class="btn" id="zIn">크게</button>
+  </span>
+</div>
+
+<div class="ask">
+  <div class="askrow">
+    <span class="lamp"></span>
+    <input id="ask" type="text" placeholder="자비스에게 물어보세요   예) 상담은 했는데 계약이 안 돼요">
+    <button class="btn go" id="askGo">물어보기</button>
+  </div>
+  <div class="chips" id="chips"></div>
+</div>
+
+<div id="jarvis">
+  <div class="j-top">
+    <span class="lamp"></span>
+    <span class="t">자비스<small id="jMode">지도에 담긴 것만 아는 상태입니다</small></span>
+    <button class="j-x" id="jX" title="닫기">×</button>
+  </div>
+  <div id="jLog"></div>
+  <div id="jFoot">
+    <div class="j-in">
+      <textarea id="jSay" rows="1" placeholder="이어서 물어보세요"></textarea>
+      <button class="btn go" id="jSend">보내기</button>
+    </div>
+    <div class="j-tip">파란 칸을 누르면 그 화면이 열립니다 · 지도에도 순서대로 불이 켜집니다</div>
+  </div>
+</div>
+
+<div class="howto">
+  <div class="how"><span class="num">1</span>
+    <span class="sample s1">🧭 믿음</span><span><b>덩어리 이름</b>을 누르면 통째로 접힙니다</span></div>
+  <div class="how"><span class="num">2</span>
+    <span class="sample s2">눌러서 열기</span><span><b>카드 제목</b>을 누르면 안에 든 것이 보입니다</span></div>
+  <div class="how"><span class="num">3</span>
+    <span class="sample s3">고객 365일 &nbsp;열기 ›</span><span><b>파란 칸</b>을 누르면 그 화면이 열립니다</span></div>
+</div>
+
+<div id="stage">
+  <div id="map">
+    <svg id="wires"></svg>
+    <div class="cols">
+      <div class="side left" id="sideL"></div>
+      <div class="mid">
+        <div class="center">
+          <div class="tg" id="cTag"></div>
+          <div class="ti">윤시현의 <b>뇌</b></div>
+          <div class="sb" id="cSub"></div>
+          <div class="rule"></div>
+          <div class="ft" id="cFoot"></div>
+        </div>
+      </div>
+      <div class="side right" id="sideR"></div>
+    </div>
+  </div>
+</div>
+
+<p class="foot">파란 칸은 모두 실제 화면으로 이어집니다<br>
+막히는 게 있으면 맨 위 칸에 그냥 적어 보세요 — 자비스가 순서를 짜서 지도에 불을 켜 드립니다</p>
+
+<div id="keyBox">
+  <div class="kb">
+    <h3>자비스에게 머리를 달아 주기</h3>
+    <p>키를 넣지 않아도 자비스는 지도에 담긴 것(화면 83개 · 순서표 18가지)을 그대로 안내합니다.
+       키를 넣으면 그 위에 <b>Claude</b> 가 붙어서, 적어 주신 상황을 읽고 직접 답하고 방향까지 찾아 줍니다.</p>
+    <label>Claude API 키 (이 컴퓨터에만 저장됩니다)</label>
+    <input id="kKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+    <label>어느 머리를 쓸까요</label>
+    <select id="kModel">
+      <option value="claude-opus-5">Claude Opus 5 — 가장 똑똑함 (추천)</option>
+      <option value="claude-sonnet-5">Claude Sonnet 5 — 빠르고 저렴</option>
+    </select>
+    <label>회사 서버를 거쳐 쓰는 경우에만 (선택)</label>
+    <input id="kProxy" type="text" placeholder="https://…/api/generate  — 비워 두면 직접 연결" autocomplete="off">
+    <div class="warn">키는 이 브라우저에만 저장되고 다른 곳으로 보내지 않습니다.
+      발급은 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API Keys</a>
+      에서 하고, Billing 에 <b>월 상한</b>을 걸어 두면 과금 걱정이 없습니다. 쓴 만큼 요금이 나갑니다.</div>
+    <div class="row">
+      <button class="btn" id="kClear">지우기</button>
+      <button class="btn" id="kCancel">닫기</button>
+      <button class="btn go" id="kSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var BASE = "https://apex-os-yunpro.netlify.app/app/#";
+var DATA = {
+ "center": {
+  "tag": "APEX YUN PRO",
+  "sub": "설계사의 값을 올린다",
+  "foot": "왼쪽 = 내가 만든 것    ·    오른쪽 = 고객에게 일어나는 일"
+ },
+ "left": [
+  {
+   "ic": "🧭",
+   "name": "믿음",
+   "tag": "내가 안 바꾸는 여섯 가지",
+   "hint": "일하는 방식의 기준",
+   "color": "#7C4DFF",
+   "children": [
+    {
+     "t": "① 상품이 아니라 순서를 판다",
+     "leaves": [
+      {
+       "t": "급한 것부터 차례대로 푼다",
+       "id": null
+      },
+      {
+       "t": "8통장 진단지도",
+       "id": "wallets"
+      },
+      {
+       "t": "니즈 시뮬레이터",
+       "id": "cs_needs"
+      }
+     ]
+    },
+    {
+     "t": "② 기억이 아니라 기록으로",
+     "leaves": [
+      {
+       "t": "통화·약속·메모는 그 자리에서 남긴다",
+       "id": null
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      },
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      }
+     ]
+    },
+    {
+     "t": "③ 감이 아니라 계산한 숫자로",
+     "leaves": [
+      {
+       "t": "말하기 전에 계산기로 한 번 더",
+       "id": null
+      },
+      {
+       "t": "재무설계 계산기",
+       "id": "finance"
+      },
+      {
+       "t": "실무 계산기",
+       "id": "calc"
+      }
+     ]
+    },
+    {
+     "t": "④ 파는 게 아니라 푸는 것",
+     "leaves": [
+      {
+       "t": "고객의 걱정이 무엇인지부터 찾는다",
+       "id": null
+      },
+      {
+       "t": "상담카드·팩트파인딩",
+       "id": "fact_find"
+      },
+      {
+       "t": "AI 상담 어시스턴트",
+       "id": "cs_assist"
+      }
+     ]
+    },
+    {
+     "t": "⑤ 계약이 아니라 보험금까지",
+     "leaves": [
+      {
+       "t": "도장 찍는 날이 끝이 아니다",
+       "id": null
+      },
+      {
+       "t": "청구·사후관리",
+       "id": "claims"
+      },
+      {
+       "t": "AI 실비계산기",
+       "id": "med_silbi"
+      }
+     ]
+    },
+    {
+     "t": "⑥ 혼자가 아니라 물려줄 수 있게",
+     "leaves": [
+      {
+       "t": "내 방식이 남에게 그대로 넘어간다",
+       "id": null
+      },
+      {
+       "t": "APEX 사용가이드",
+       "id": "manual"
+      },
+      {
+       "t": "윤시스쿨",
+       "id": "yoonsi"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ic": "💎",
+   "name": "값",
+   "tag": "내가 잘한다고 말할 수 있는 여섯",
+   "hint": "고객이 나를 찾는 이유",
+   "color": "#4F46E5",
+   "children": [
+    {
+     "t": "기억 — 이백 명을 다 기억한다",
+     "leaves": [
+      {
+       "t": "이름·가족·지난 이야기가 화면에 먼저 뜬다",
+       "id": null
+      },
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      },
+      {
+       "t": "오늘의 AI 비서",
+       "id": "assistant"
+      }
+     ]
+    },
+    {
+     "t": "근거 — 약관에 적힌 대로 말한다",
+     "leaves": [
+      {
+       "t": "보험 해석",
+       "id": "interpret"
+      },
+      {
+       "t": "질병코드·특약",
+       "id": "ref_kcd"
+      },
+      {
+       "t": "예외질환 인수확인",
+       "id": "ref_underwrite"
+      }
+     ]
+    },
+    {
+     "t": "숫자 — 계산해 본 것만 말한다",
+     "leaves": [
+      {
+       "t": "재무설계 계산기",
+       "id": "finance"
+      },
+      {
+       "t": "제안서 비교",
+       "id": "compare"
+      },
+      {
+       "t": "치료비 지급지도",
+       "id": "treatpay"
+      }
+     ]
+    },
+    {
+     "t": "속도 — 5분 안에 답을 찾는다",
+     "leaves": [
+      {
+       "t": "보험사 전산",
+       "id": "ref_jeonsan"
+      },
+      {
+       "t": "수술명 검색",
+       "id": "ref_surgery"
+      },
+      {
+       "t": "보험 비서",
+       "id": "ins_asst"
+      }
+     ]
+    },
+    {
+     "t": "끝까지 — 보험금 받을 때까지",
+     "leaves": [
+      {
+       "t": "계약관리 판단",
+       "id": "contracts"
+      },
+      {
+       "t": "배서 안내서",
+       "id": "endorse"
+      },
+      {
+       "t": "숨은보험금찾기",
+       "id": "ref_hidden"
+      }
+     ]
+    },
+    {
+     "t": "알림 — 고객이 먼저 찾아오게",
+     "leaves": [
+      {
+       "t": "블로그",
+       "id": "blog"
+      },
+      {
+       "t": "메타 광고 가이드",
+       "id": "mkt_meta"
+      },
+      {
+       "t": "리드 랜딩페이지",
+       "id": "mkt_landing"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ic": "🧰",
+   "name": "연장",
+   "tag": "실제로 쓰는 화면 전부",
+   "hint": "14칸 79개 + 안에서 열리는 12개",
+   "color": "#0EA5E9",
+   "children": [
+    {
+     "t": "🎯 보험전략실",
+     "leaves": [
+      {
+       "t": "미끼 레이더",
+       "id": "mikki"
+      }
+     ]
+    },
+    {
+     "t": "🌅 하루 시작",
+     "leaves": [
+      {
+       "t": "홈",
+       "id": "home"
+      },
+      {
+       "t": "TFA 업무관리",
+       "id": "airep"
+      },
+      {
+       "t": "오늘의 AI 비서",
+       "id": "assistant"
+      },
+      {
+       "t": "음성 비서",
+       "id": "voiceasst"
+      },
+      {
+       "t": "윤시현의 두뇌",
+       "id": "brain"
+      }
+     ]
+    },
+    {
+     "t": "🗂 내 고객",
+     "leaves": [
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      },
+      {
+       "t": "상담카드·팩트파인딩",
+       "id": "fact_find"
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      }
+     ]
+    },
+    {
+     "t": "🛡 증권 분석",
+     "leaves": [
+      {
+       "t": "AI 보장분석",
+       "id": "bojang"
+      },
+      {
+       "t": "비포&애프터",
+       "id": "baba"
+      },
+      {
+       "t": "제안서 비교",
+       "id": "compare"
+      },
+      {
+       "t": "AI 제안서 생성",
+       "id": "ai_prop"
+      },
+      {
+       "t": "제안서 카톡설명",
+       "id": "katalk"
+      },
+      {
+       "t": "보험 해석",
+       "id": "interpret"
+      },
+      {
+       "t": "치료비 지급지도",
+       "id": "treatpay"
+      },
+      {
+       "t": "8통장 진단지도",
+       "id": "wallets"
+      }
+     ]
+    },
+    {
+     "t": "💬 상담 도구",
+     "leaves": [
+      {
+       "t": "AI 상담 어시스턴트",
+       "id": "cs_assist"
+      },
+      {
+       "t": "니즈 시뮬레이터",
+       "id": "cs_needs"
+      },
+      {
+       "t": "보험 비서",
+       "id": "ins_asst"
+      },
+      {
+       "t": "금소법 AI",
+       "id": "cs_gso"
+      },
+      {
+       "t": "보장분석 상담자료",
+       "id": "sangdam"
+      },
+      {
+       "t": "재무설계 상담자료",
+       "id": "fp_deck"
+      },
+      {
+       "t": "재무설계 실전화법서",
+       "id": "fp_talk"
+      },
+      {
+       "t": "미끼상품&접촉전략",
+       "id": "mikki_talk"
+      },
+      {
+       "t": "재무설계 계산기",
+       "id": "finance"
+      },
+      {
+       "t": "실무 계산기",
+       "id": "calc"
+      }
+     ]
+    },
+    {
+     "t": "📈 투자·경제",
+     "leaves": [
+      {
+       "t": "주식관리",
+       "id": "inv_stock"
+      },
+      {
+       "t": "펀드관리",
+       "id": "inv_fund"
+      },
+      {
+       "t": "성과·자산배분",
+       "id": "inv_perf"
+      },
+      {
+       "t": "경제동향 실시간",
+       "id": "inv_econ"
+      }
+     ]
+    },
+    {
+     "t": "📁 계약·청구",
+     "leaves": [
+      {
+       "t": "계약관리 판단",
+       "id": "contracts"
+      },
+      {
+       "t": "배서 안내서",
+       "id": "endorse"
+      },
+      {
+       "t": "청구·사후관리",
+       "id": "claims"
+      },
+      {
+       "t": "AI 실비계산기",
+       "id": "med_silbi"
+      },
+      {
+       "t": "AI 건강검진",
+       "id": "med_checkup"
+      },
+      {
+       "t": "알릴의무 필터",
+       "id": "med_disclosure"
+      },
+      {
+       "t": "자동차사고 과실·보상",
+       "id": "car_fault"
+      }
+     ]
+    },
+    {
+     "t": "🔎 자료 조회",
+     "leaves": [
+      {
+       "t": "보험사 전산",
+       "id": "ref_jeonsan"
+      },
+      {
+       "t": "예외질환 인수확인",
+       "id": "ref_underwrite"
+      },
+      {
+       "t": "질병코드·특약",
+       "id": "ref_kcd"
+      },
+      {
+       "t": "수술명 검색",
+       "id": "ref_surgery"
+      },
+      {
+       "t": "건강보험심사평가원",
+       "id": "ref_hira"
+      },
+      {
+       "t": "숨은보험금찾기",
+       "id": "ref_hidden"
+      }
+     ]
+    },
+    {
+     "t": "🏭 법인 컨설팅",
+     "leaves": [
+      {
+       "t": "사업자 진단",
+       "id": "biz_diag"
+      },
+      {
+       "t": "정책자금",
+       "id": "biz_fund"
+      },
+      {
+       "t": "세금컨설팅",
+       "id": "biz_tax"
+      },
+      {
+       "t": "보험 솔루션",
+       "id": "biz_ins"
+      },
+      {
+       "t": "퇴직금 관리",
+       "id": "biz_retire"
+      },
+      {
+       "t": "직원관리",
+       "id": "biz_staff"
+      }
+     ]
+    },
+    {
+     "t": "✍️ 콘텐츠 제작",
+     "leaves": [
+      {
+       "t": "고객에게 전할 뉴스",
+       "id": "news_live"
+      },
+      {
+       "t": "정책·상품 뉴스",
+       "id": "biz_news"
+      },
+      {
+       "t": "블로그",
+       "id": "blog"
+      },
+      {
+       "t": "Threads",
+       "id": "threads"
+      },
+      {
+       "t": "인스타그램",
+       "id": "insta"
+      },
+      {
+       "t": "유튜브&릴스",
+       "id": "video"
+      },
+      {
+       "t": "콘텐츠 캘린더",
+       "id": "calendar"
+      },
+      {
+       "t": "외부글 심의필터",
+       "id": "simui"
+      }
+     ]
+    },
+    {
+     "t": "📣 광고·유입",
+     "leaves": [
+      {
+       "t": "메타 광고 가이드",
+       "id": "mkt_meta"
+      },
+      {
+       "t": "키워드 검색량",
+       "id": "mkt_volume"
+      },
+      {
+       "t": "키워드 조합기",
+       "id": "mkt_combine"
+      },
+      {
+       "t": "리드 랜딩페이지",
+       "id": "mkt_landing"
+      },
+      {
+       "t": "디지털 명함",
+       "id": "mkt_card"
+      },
+      {
+       "t": "소상공인 AI 답글",
+       "id": "ext_reply"
+      },
+      {
+       "t": "스레드 반자동발행",
+       "id": "ext_thread"
+      },
+      {
+       "t": "네이버 광고 대량등록기",
+       "id": "ext_naver"
+      }
+     ]
+    },
+    {
+     "t": "🏢 조직 관리",
+     "leaves": [
+      {
+       "t": "조직도",
+       "id": "org"
+      },
+      {
+       "t": "출근 현황",
+       "id": "attend"
+      },
+      {
+       "t": "감사로그",
+       "id": "audit"
+      }
+     ]
+    },
+    {
+     "t": "🎓 교육 자료",
+     "leaves": [
+      {
+       "t": "APEX 사용가이드",
+       "id": "manual"
+      },
+      {
+       "t": "APEX ACADEMY | 노션",
+       "id": "academy_notion"
+      },
+      {
+       "t": "윤시스쿨",
+       "id": "yoonsi"
+      }
+     ]
+    },
+    {
+     "t": "⚙️ 시스템",
+     "leaves": [
+      {
+       "t": "설정",
+       "id": "settings"
+      },
+      {
+       "t": "요금제·구독",
+       "id": "pricing"
+      },
+      {
+       "t": "약관·개인정보",
+       "id": "terms"
+      },
+      {
+       "t": "출발 점검",
+       "id": "ready"
+      },
+      {
+       "t": "시스템 점검",
+       "id": "health"
+      },
+      {
+       "t": "폰에 담기",
+       "id": "phone_app"
+      },
+      {
+       "t": "내 캘린더",
+       "id": "mycal"
+      }
+     ]
+    },
+    {
+     "t": "🔓 메뉴에서 뺐지만 열리는 곳",
+     "leaves": [
+      {
+       "t": "TEAM 총괄 관리",
+       "id": "teamhub"
+      },
+      {
+       "t": "대표 브리핑",
+       "id": "report"
+      },
+      {
+       "t": "매일 취합",
+       "id": "daily"
+      },
+      {
+       "t": "AI 조직 라이브",
+       "id": "ai_org"
+      },
+      {
+       "t": "팀 코칭",
+       "id": "branch_coach"
+      },
+      {
+       "t": "승인·규칙",
+       "id": "hq"
+      },
+      {
+       "t": "건의함 · 불편한 점",
+       "id": "voice"
+      },
+      {
+       "t": "실행 체크판",
+       "id": "ckboard"
+      },
+      {
+       "t": "내 코칭",
+       "id": "mycoach"
+      },
+      {
+       "t": "APEX 본인 점검란",
+       "id": "academy"
+      },
+      {
+       "t": "성장판",
+       "id": "growboard"
+      },
+      {
+       "t": "APEX 전체 지도",
+       "id": "apexmap"
+      }
+     ]
+    }
+   ],
+   "cols": 2
+  },
+  {
+   "ic": "👥",
+   "name": "사람",
+   "tag": "나와 설계사가 만나는 곳",
+   "hint": "누가 무엇을 하나",
+   "color": "#059669",
+   "children": [
+    {
+     "t": "내가 만드는 것 — 도구와 규칙",
+     "leaves": [
+      {
+       "t": "미끼 레이더",
+       "id": "mikki"
+      },
+      {
+       "t": "TEAM 총괄 관리",
+       "id": "teamhub"
+      },
+      {
+       "t": "승인·규칙",
+       "id": "hq"
+      }
+     ]
+    },
+    {
+     "t": "설계사가 하는 것 — 기록과 결과",
+     "leaves": [
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      },
+      {
+       "t": "출근 현황",
+       "id": "attend"
+      },
+      {
+       "t": "매일 취합",
+       "id": "daily"
+      }
+     ]
+    },
+    {
+     "t": "서로 확인하는 곳 — 언제나 CRM",
+     "leaves": [
+      {
+       "t": "대표 브리핑",
+       "id": "report"
+      },
+      {
+       "t": "팀 코칭",
+       "id": "branch_coach"
+      },
+      {
+       "t": "감사로그",
+       "id": "audit"
+      }
+     ]
+    },
+    {
+     "t": "무엇을 보고 고치나",
+     "leaves": [
+      {
+       "t": "조직도",
+       "id": "org"
+      },
+      {
+       "t": "AI 조직 라이브",
+       "id": "ai_org"
+      },
+      {
+       "t": "TFA 업무관리",
+       "id": "airep"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "right": [
+  {
+   "ic": "🔄",
+   "name": "한 바퀴",
+   "tag": "고객이 오고 계약까지 가는 여덟 걸음",
+   "hint": "한 바퀴 보통 석 달",
+   "color": "#2563EB",
+   "children": [
+    {
+     "t": "① 알린다 — 나를 알린다",
+     "leaves": [
+      {
+       "t": "글과 광고로 사람들이 나를 알게 한다",
+       "id": null
+      },
+      {
+       "t": "블로그",
+       "id": "blog"
+      },
+      {
+       "t": "메타 광고 가이드",
+       "id": "mkt_meta"
+      }
+     ]
+    },
+    {
+     "t": "② 받는다 — 연락이 온다",
+     "leaves": [
+      {
+       "t": "문의와 명단이 들어온다",
+       "id": null
+      },
+      {
+       "t": "리드 랜딩페이지",
+       "id": "mkt_landing"
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      }
+     ]
+    },
+    {
+     "t": "③ 건다 — 전화를 건다",
+     "leaves": [
+      {
+       "t": "명단을 받고 3일 안에 건다",
+       "id": null
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      },
+      {
+       "t": "미끼상품&접촉전략",
+       "id": "mikki_talk"
+      }
+     ]
+    },
+    {
+     "t": "④ 잡는다 — 만날 날을 잡는다",
+     "leaves": [
+      {
+       "t": "통화가 됐으면 약속으로 옮긴다",
+       "id": null
+      },
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      },
+      {
+       "t": "오늘의 AI 비서",
+       "id": "assistant"
+      }
+     ]
+    },
+    {
+     "t": "⑤ 푼다 — 걱정을 푼다",
+     "leaves": [
+      {
+       "t": "무엇이 문제인지 같이 정리한다",
+       "id": null
+      },
+      {
+       "t": "상담카드·팩트파인딩",
+       "id": "fact_find"
+      },
+      {
+       "t": "8통장 진단지도",
+       "id": "wallets"
+      }
+     ]
+    },
+    {
+     "t": "⑥ 맺는다 — 계약을 맺는다",
+     "leaves": [
+      {
+       "t": "맞는 것을 골라 제안하고 청약한다",
+       "id": null
+      },
+      {
+       "t": "제안서 비교",
+       "id": "compare"
+      },
+      {
+       "t": "AI 제안서 생성",
+       "id": "ai_prop"
+      }
+     ]
+    },
+    {
+     "t": "⑦ 지킨다 — 끝까지 챙긴다",
+     "leaves": [
+      {
+       "t": "증권 전달부터 보험금 받을 때까지",
+       "id": null
+      },
+      {
+       "t": "계약관리 판단",
+       "id": "contracts"
+      },
+      {
+       "t": "청구·사후관리",
+       "id": "claims"
+      }
+     ]
+    },
+    {
+     "t": "⑧ 소개받는다 — 다시 ① 로",
+     "leaves": [
+      {
+       "t": "잘 챙긴 고객이 다음 사람을 데려온다",
+       "id": null
+      },
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ic": "📊",
+   "name": "단계",
+   "tag": "이 고객이 어디까지 왔나",
+   "hint": "막힌 곳을 찾는 법",
+   "color": "#0891B2",
+   "children": [
+    {
+     "t": "처음 — 연락을 붙이는 때",
+     "leaves": [
+      {
+       "t": "미접촉 — 아직 한 번도 안 건 사람",
+       "id": null
+      },
+      {
+       "t": "TA — 전화가 된 사람",
+       "id": null
+      },
+      {
+       "t": "AP — 약속이 잡힌 사람",
+       "id": null
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      }
+     ]
+    },
+    {
+     "t": "중간 — 걱정을 푸는 때",
+     "leaves": [
+      {
+       "t": "PC — 만나서 상담한 사람",
+       "id": null
+      },
+      {
+       "t": "CS — 제안하고 답을 기다리는 사람",
+       "id": null
+      },
+      {
+       "t": "계약완료 — 청약서를 낸 사람",
+       "id": null
+      },
+      {
+       "t": "AI 상담 어시스턴트",
+       "id": "cs_assist"
+      }
+     ]
+    },
+    {
+     "t": "끝 — 계약 뒤에 챙기는 때",
+     "leaves": [
+      {
+       "t": "증권전달 — 증권을 손에 쥐어 준다",
+       "id": null
+      },
+      {
+       "t": "관리 — 7일 · 90일 · 365일",
+       "id": null
+      },
+      {
+       "t": "청구·사후관리",
+       "id": "claims"
+      }
+     ]
+    },
+    {
+     "t": "안 되면 여기를 보세요",
+     "leaves": [
+      {
+       "t": "전화는 되는데 약속이 안 잡히면 — 만나자는 말이 약하다",
+       "id": null
+      },
+      {
+       "t": "상담은 했는데 제안이 안 나가면 — 못 물어본 게 있다",
+       "id": null
+      },
+      {
+       "t": "증권 전달이 밀리면 — 그 뒤 관리가 다 끊긴다",
+       "id": null
+      },
+      {
+       "t": "대표 브리핑",
+       "id": "report"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ic": "📅",
+   "name": "날짜",
+   "tag": "며칠 안에 무엇을 하나",
+   "hint": "날짜를 놓치면 끊긴다",
+   "color": "#7C3AED",
+   "children": [
+    {
+     "t": "처음 연락할 때",
+     "leaves": [
+      {
+       "t": "명단 받은 날부터 3일 안에 건다",
+       "id": null
+      },
+      {
+       "t": "안 받으면 2~3일 뒤 다시 건다",
+       "id": null
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      }
+     ]
+    },
+    {
+     "t": "만나기 전후",
+     "leaves": [
+      {
+       "t": "약속 전날 문자 한 통",
+       "id": null
+      },
+      {
+       "t": "제안하고 7일 안에 다시 확인",
+       "id": null
+      },
+      {
+       "t": "오늘의 AI 비서",
+       "id": "assistant"
+      }
+     ]
+    },
+    {
+     "t": "계약하고 나서",
+     "leaves": [
+      {
+       "t": "증권은 나오는 즉시 전달",
+       "id": null
+      },
+      {
+       "t": "7일 넘기면 알림이 올려 준다",
+       "id": null
+      },
+      {
+       "t": "계약관리 판단",
+       "id": "contracts"
+      }
+     ]
+    },
+    {
+     "t": "그 뒤로도 계속",
+     "leaves": [
+      {
+       "t": "7일 — 잘 받았는지",
+       "id": null
+      },
+      {
+       "t": "90일 — 바뀐 것 없는지",
+       "id": null
+      },
+      {
+       "t": "365일 — 한 해 점검",
+       "id": null
+      },
+      {
+       "t": "고객 365일",
+       "id": "clients"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "ic": "🌞",
+   "name": "하루",
+   "tag": "오늘 실제로 하는 일",
+   "hint": "다 합쳐 20분",
+   "color": "#D97706",
+   "children": [
+    {
+     "t": "아침 10분",
+     "leaves": [
+      {
+       "t": "오늘 만날 사람과 오늘 걸 사람만 본다",
+       "id": null
+      },
+      {
+       "t": "홈",
+       "id": "home"
+      },
+      {
+       "t": "오늘의 AI 비서",
+       "id": "assistant"
+      }
+     ]
+    },
+    {
+     "t": "통화 끝나고 30초",
+     "leaves": [
+      {
+       "t": "결과 · 메모 · 다음 약속 세 가지만 적는다",
+       "id": null
+      },
+      {
+       "t": "DB 통합 CRM",
+       "id": "crm"
+      }
+     ]
+    },
+    {
+     "t": "저녁 5분",
+     "leaves": [
+      {
+       "t": "알림 0건 만들고 빨간 글씨 지우기",
+       "id": null
+      },
+      {
+       "t": "TFA 업무관리",
+       "id": "airep"
+      }
+     ]
+    },
+    {
+     "t": "월요일 5분",
+     "leaves": [
+      {
+       "t": "숫자 셋 보기 — 전화율 · 약속율 · 계약율",
+       "id": null
+      },
+      {
+       "t": "대표 브리핑",
+       "id": "report"
+      },
+      {
+       "t": "TEAM 총괄 관리",
+       "id": "teamhub"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "menu": {
+  "mikki": {
+   "n": "미끼 레이더",
+   "g": "보험전략실",
+   "d": "요즘 뜨는 미끼상품과 뉴스를 모아 준다",
+   "k": []
+  },
+  "home": {
+   "n": "홈",
+   "g": "하루 시작",
+   "d": "오늘 만날 사람과 오늘 할 일이 한눈에",
+   "k": []
+  },
+  "airep": {
+   "n": "TFA 업무관리",
+   "g": "하루 시작",
+   "d": "밀린 일과 빨간 글씨를 잡아 준다",
+   "k": []
+  },
+  "assistant": {
+   "n": "오늘의 AI 비서",
+   "g": "하루 시작",
+   "d": "오늘 뭘 하면 되는지 AI 가 짚어 준다",
+   "k": []
+  },
+  "voiceasst": {
+   "n": "음성 비서",
+   "g": "하루 시작",
+   "d": "말로 물어보고 말로 답을 듣는다",
+   "k": []
+  },
+  "brain": {
+   "n": "윤시현의 두뇌",
+   "g": "하루 시작",
+   "d": "일하는 방식과 기준을 모아 둔 곳",
+   "k": []
+  },
+  "clients": {
+   "n": "고객 365일",
+   "g": "내 고객",
+   "d": "고객 한 사람의 1년치가 다 들어 있다",
+   "k": []
+  },
+  "fact_find": {
+   "n": "상담카드·팩트파인딩",
+   "g": "내 고객",
+   "d": "상담 전에 물어볼 것을 정리해 준다",
+   "k": []
+  },
+  "crm": {
+   "n": "DB 통합 CRM",
+   "g": "내 고객",
+   "d": "명단·통화·약속·단계를 굴리는 본진",
+   "k": []
+  },
+  "bojang": {
+   "n": "AI 보장분석",
+   "g": "증권 분석",
+   "d": "보장분석 PDF 를 상담용 리포트로 바꾼다",
+   "k": []
+  },
+  "baba": {
+   "n": "비포&애프터",
+   "g": "증권 분석",
+   "d": "지금 보장과 새 제안을 나란히 비교한다",
+   "k": []
+  },
+  "compare": {
+   "n": "제안서 비교",
+   "g": "증권 분석",
+   "d": "여러 회사 제안서를 한 표로 비교한다",
+   "k": []
+  },
+  "ai_prop": {
+   "n": "AI 제안서 생성",
+   "g": "증권 분석",
+   "d": "조건을 넣으면 제안서를 만들어 준다",
+   "k": []
+  },
+  "katalk": {
+   "n": "제안서 카톡설명",
+   "g": "증권 분석",
+   "d": "제안서를 카톡으로 보낼 말로 바꿔 준다",
+   "k": []
+  },
+  "interpret": {
+   "n": "보험 해석",
+   "g": "증권 분석",
+   "d": "약관에 뭐라 적혔는지 찾아 읽어 준다",
+   "k": []
+  },
+  "treatpay": {
+   "n": "치료비 지급지도",
+   "g": "증권 분석",
+   "d": "병에 걸리면 돈이 얼마나 드는지 보여 준다",
+   "k": []
+  },
+  "wallets": {
+   "n": "8통장 진단지도",
+   "g": "증권 분석",
+   "d": "돈을 여덟 통장으로 나눠 순서를 잡아 준다",
+   "k": [
+    "생활 통장",
+    "병원비 통장",
+    "치료비 통장",
+    "소득공백 통장",
+    "가족보호 통장",
+    "은퇴·연금 통장",
+    "간병·장기요양 통장",
+    "자산이전·상속 통장"
+   ]
+  },
+  "cs_assist": {
+   "n": "AI 상담 어시스턴트",
+   "g": "상담 도구",
+   "d": "상담 준비와 상담 뒤 복기를 도와준다",
+   "k": []
+  },
+  "cs_needs": {
+   "n": "니즈 시뮬레이터",
+   "g": "상담 도구",
+   "d": "고객이 왜 필요한지 눈앞에서 보여 준다",
+   "k": []
+  },
+  "ins_asst": {
+   "n": "보험 비서",
+   "g": "상담 도구",
+   "d": "보험 관련 궁금한 것을 물어보는 곳",
+   "k": []
+  },
+  "cs_gso": {
+   "n": "금소법 AI",
+   "g": "상담 도구",
+   "d": "금소법에 맞게 말했는지 봐 준다",
+   "k": []
+  },
+  "sangdam": {
+   "n": "보장분석 상담자료",
+   "g": "상담 도구",
+   "d": "고객 앞에서 여는 보장분석 화면",
+   "k": [
+    "암 — 어떤 기준으로 준비할까",
+    "뇌혈관 — 평생 갱신되는 구독료",
+    "심장 — 터진 댐 이야기",
+    "간병인 — 에어백 이야기",
+    "실비 — 「월세」 이야기",
+    "인생 자산 곡선과 질병 충격",
+    "말 한마디가 4,000만 원",
+    "사례 + 한 줄 스토리",
+    "프리미엄 — 촘촘 20단계",
+    "마무리 — 보험, 그리고 사람"
+   ]
+  },
+  "fp_deck": {
+   "n": "재무설계 상담자료",
+   "g": "상담 도구",
+   "d": "고객 앞에서 여는 재무설계 화면",
+   "k": []
+  },
+  "fp_talk": {
+   "n": "재무설계 실전화법서",
+   "g": "상담 도구",
+   "d": "재무설계 상담에서 쓸 말을 모아 뒀다",
+   "k": []
+  },
+  "mikki_talk": {
+   "n": "미끼상품&접촉전략",
+   "g": "상담 도구",
+   "d": "처음 전화에서 꺼낼 말과 미끼 27가지",
+   "k": [
+    "첫 통화에서 꺼낼 말 27가지 (문서 한 권)"
+   ]
+  },
+  "finance": {
+   "n": "재무설계 계산기",
+   "g": "상담 도구",
+   "d": "연금·달러·교육자금을 숫자로 계산한다",
+   "k": [
+    "📊 종합 대시보드 — 핵심 요약 한 장",
+    "💰 현금흐름 분석 — 버는 돈과 나가는 돈",
+    "🏦 연금 시뮬레이션 — 건보료·국민연금까지",
+    "📈 투자 포트폴리오 — 안에 여섯 칸(아래)",
+    "🛡️ 보험 대시보드 — 암·뇌·심·간병",
+    "✅ 팩트체크 — 3대 점검",
+    "🏠 부동산·대출 — 은행원 관점",
+    "🎓 교육자금 — 국가 지원금",
+    "🏛️ 상속·증여 — 세무사 관점",
+    "🧭 상담 가이드 — 계약으로 잇는 말",
+    "🧾 종합 재무설계 — 한 장으로 정리",
+    "└ 투자 안: ETF·주식 / 배당주 / 메트라이프 변액 / 카디프 변액 / 투자 컨설팅 / 변액 컨설팅"
+   ]
+  },
+  "calc": {
+   "n": "실무 계산기",
+   "g": "상담 도구",
+   "d": "실무에서 자주 쓰는 계산기 7가지",
+   "k": [
+    "보험나이 계산기",
+    "BMI 계산기",
+    "일할 보험료 계산기",
+    "일정 계산기",
+    "연금 소득공백 계산기",
+    "간병·요양 자금 계산기",
+    "상속세 개산 계산기"
+   ]
+  },
+  "inv_stock": {
+   "n": "주식관리",
+   "g": "투자·경제",
+   "d": "고객 주식을 정리해 본다",
+   "k": []
+  },
+  "inv_fund": {
+   "n": "펀드관리",
+   "g": "투자·경제",
+   "d": "고객 펀드를 정리해 본다",
+   "k": []
+  },
+  "inv_perf": {
+   "n": "성과·자산배분",
+   "g": "투자·경제",
+   "d": "수익이 어땠는지, 어떻게 나눌지 본다",
+   "k": []
+  },
+  "inv_econ": {
+   "n": "경제동향 실시간",
+   "g": "투자·경제",
+   "d": "지금 경제가 어떤지 실시간으로 본다",
+   "k": []
+  },
+  "contracts": {
+   "n": "계약관리 판단",
+   "g": "계약·청구",
+   "d": "계약이 어디까지 갔는지 판단해 준다",
+   "k": [
+    "배서(계약 변경)",
+    "감액(보장금액 축소)",
+    "감액완납",
+    "연장정기보험",
+    "자동대출납입(APL)",
+    "납입일시중지(유예)",
+    "연금전환",
+    "부활(효력회복)",
+    "해지(임의해지)",
+    "중도인출",
+    "보험계약대출(약관대출)",
+    "특약 해지(일부)",
+    "자동갱신(갱신형)",
+    "청약철회",
+    "품질보증해지",
+    "실효(효력상실)",
+    "승환계약(갈아타기)"
+   ]
+  },
+  "endorse": {
+   "n": "배서 안내서",
+   "g": "계약·청구",
+   "d": "계약 내용을 바꿀 때 안내서를 만든다",
+   "k": []
+  },
+  "claims": {
+   "n": "청구·사후관리",
+   "g": "계약·청구",
+   "d": "보험금 청구와 그 뒤 관리를 챙긴다",
+   "k": []
+  },
+  "med_silbi": {
+   "n": "AI 실비계산기",
+   "g": "계약·청구",
+   "d": "실비가 얼마 나올지 계산해 준다",
+   "k": []
+  },
+  "med_checkup": {
+   "n": "AI 건강검진",
+   "g": "계약·청구",
+   "d": "건강검진 결과를 읽어 준다",
+   "k": []
+  },
+  "med_disclosure": {
+   "n": "알릴의무 필터",
+   "g": "계약·청구",
+   "d": "알릴 의무가 있는지 걸러 준다",
+   "k": []
+  },
+  "car_fault": {
+   "n": "자동차사고 과실·보상",
+   "g": "계약·청구",
+   "d": "자동차 사고 과실과 보상을 따져 준다",
+   "k": []
+  },
+  "ref_jeonsan": {
+   "n": "보험사 전산",
+   "g": "자료 조회",
+   "d": "보험사 전산 사이트를 한곳에서 연다",
+   "k": []
+  },
+  "ref_underwrite": {
+   "n": "예외질환 인수확인",
+   "g": "자료 조회",
+   "d": "이 질환도 가입되는지 확인한다",
+   "k": []
+  },
+  "ref_kcd": {
+   "n": "질병코드·특약",
+   "g": "자료 조회",
+   "d": "질병코드와 맞는 특약을 찾는다",
+   "k": []
+  },
+  "ref_surgery": {
+   "n": "수술명 검색",
+   "g": "자료 조회",
+   "d": "수술 이름으로 보장 여부를 찾는다",
+   "k": []
+  },
+  "ref_hira": {
+   "n": "건강보험심사평가원",
+   "g": "자료 조회",
+   "d": "건강보험심사평가원 자료를 찾아본다",
+   "k": []
+  },
+  "ref_hidden": {
+   "n": "숨은보험금찾기",
+   "g": "자료 조회",
+   "d": "고객이 모르는 보험금을 찾아 준다",
+   "k": []
+  },
+  "biz_diag": {
+   "n": "사업자 진단",
+   "g": "법인 컨설팅",
+   "d": "사장님 회사 상태를 먼저 진단한다",
+   "k": []
+  },
+  "biz_fund": {
+   "n": "정책자금",
+   "g": "법인 컨설팅",
+   "d": "받을 수 있는 정책자금을 찾아 준다",
+   "k": []
+  },
+  "biz_tax": {
+   "n": "세금컨설팅",
+   "g": "법인 컨설팅",
+   "d": "세금 줄일 방법을 정리해 준다",
+   "k": []
+  },
+  "biz_ins": {
+   "n": "보험 솔루션",
+   "g": "법인 컨설팅",
+   "d": "법인에 맞는 보험을 설계한다",
+   "k": []
+  },
+  "biz_retire": {
+   "n": "퇴직금 관리",
+   "g": "법인 컨설팅",
+   "d": "퇴직금을 어떻게 쌓을지 잡아 준다",
+   "k": []
+  },
+  "biz_staff": {
+   "n": "직원관리",
+   "g": "법인 컨설팅",
+   "d": "직원 관련 챙길 것을 정리한다",
+   "k": []
+  },
+  "news_live": {
+   "n": "고객에게 전할 뉴스",
+   "g": "콘텐츠 제작",
+   "d": "고객에게 보낼 만한 뉴스를 골라 준다",
+   "k": [
+    "그날그날 바뀝니다 — 고객에게 보낼 뉴스 다섯 꼭지"
+   ]
+  },
+  "biz_news": {
+   "n": "정책·상품 뉴스",
+   "g": "콘텐츠 제작",
+   "d": "정책과 상품이 뭐가 바뀌었는지 본다",
+   "k": []
+  },
+  "blog": {
+   "n": "블로그",
+   "g": "콘텐츠 제작",
+   "d": "검색에 걸리는 블로그 글을 써 준다",
+   "k": []
+  },
+  "threads": {
+   "n": "Threads",
+   "g": "콘텐츠 제작",
+   "d": "스레드 글을 여러 개 만들어 준다",
+   "k": []
+  },
+  "insta": {
+   "n": "인스타그램",
+   "g": "콘텐츠 제작",
+   "d": "인스타 글과 해시태그를 만들어 준다",
+   "k": []
+  },
+  "video": {
+   "n": "유튜브&릴스",
+   "g": "콘텐츠 제작",
+   "d": "유튜브·릴스 제목과 대본을 만들어 준다",
+   "k": []
+  },
+  "calendar": {
+   "n": "콘텐츠 캘린더",
+   "g": "콘텐츠 제작",
+   "d": "한 달치 올릴 거리를 짜 준다",
+   "k": []
+  },
+  "simui": {
+   "n": "외부글 심의필터",
+   "g": "콘텐츠 제작",
+   "d": "쓴 글이 광고 규정에 걸리는지 봐 준다",
+   "k": []
+  },
+  "mkt_meta": {
+   "n": "메타 광고 가이드",
+   "g": "광고·유입",
+   "d": "메타(인스타·페북) 광고 거는 법",
+   "k": []
+  },
+  "mkt_volume": {
+   "n": "키워드 검색량",
+   "g": "광고·유입",
+   "d": "그 단어를 사람들이 얼마나 찾나 본다",
+   "k": []
+  },
+  "mkt_combine": {
+   "n": "키워드 조합기",
+   "g": "광고·유입",
+   "d": "쓸 만한 검색어를 잔뜩 만들어 준다",
+   "k": []
+  },
+  "mkt_landing": {
+   "n": "리드 랜딩페이지",
+   "g": "광고·유입",
+   "d": "문의가 들어오는 소개 페이지를 만든다",
+   "k": []
+  },
+  "mkt_card": {
+   "n": "디지털 명함",
+   "g": "광고·유입",
+   "d": "링크·QR 로 보내는 모바일 명함",
+   "k": []
+  },
+  "ext_reply": {
+   "n": "소상공인 AI 답글",
+   "g": "광고·유입",
+   "d": "사장님 가게 리뷰에 답글을 달아 준다",
+   "k": []
+  },
+  "ext_thread": {
+   "n": "스레드 반자동발행",
+   "g": "광고·유입",
+   "d": "스레드에 반자동으로 올려 준다",
+   "k": []
+  },
+  "ext_naver": {
+   "n": "네이버 광고 대량등록기",
+   "g": "광고·유입",
+   "d": "네이버 광고를 한 번에 등록한다",
+   "k": []
+  },
+  "org": {
+   "n": "조직도",
+   "g": "조직 관리",
+   "d": "우리 조직이 어떻게 생겼는지 본다",
+   "k": []
+  },
+  "attend": {
+   "n": "출근 현황",
+   "g": "조직 관리",
+   "d": "누가 나왔는지 오늘 출근을 본다",
+   "k": []
+  },
+  "audit": {
+   "n": "감사로그",
+   "g": "조직 관리",
+   "d": "누가 무엇을 했는지 기록이 남는다",
+   "k": []
+  },
+  "manual": {
+   "n": "APEX 사용가이드",
+   "g": "교육 자료",
+   "d": "APEX 를 처음 쓸 때 보는 설명서",
+   "k": []
+  },
+  "academy_notion": {
+   "n": "APEX ACADEMY | 노션",
+   "g": "교육 자료",
+   "d": "노션에 정리된 교육 자료",
+   "k": []
+  },
+  "yoonsi": {
+   "n": "윤시스쿨",
+   "g": "교육 자료",
+   "d": "윤시스쿨 — 배우고 익히는 곳",
+   "k": []
+  },
+  "settings": {
+   "n": "설정",
+   "g": "시스템",
+   "d": "API 키 같은 기본 설정",
+   "k": []
+  },
+  "pricing": {
+   "n": "요금제·구독",
+   "g": "시스템",
+   "d": "요금제와 구독 상태",
+   "k": []
+  },
+  "terms": {
+   "n": "약관·개인정보",
+   "g": "시스템",
+   "d": "약관과 개인정보 안내",
+   "k": []
+  },
+  "ready": {
+   "n": "출발 점검",
+   "g": "시스템",
+   "d": "쓰기 전에 준비가 됐는지 점검",
+   "k": []
+  },
+  "health": {
+   "n": "시스템 점검",
+   "g": "시스템",
+   "d": "시스템이 잘 도는지 점검",
+   "k": []
+  },
+  "phone_app": {
+   "n": "폰에 담기",
+   "g": "시스템",
+   "d": "이 시스템을 폰 홈화면에 앱처럼 담는 법",
+   "k": []
+  },
+  "mycal": {
+   "n": "내 캘린더",
+   "g": "시스템",
+   "d": "약속을 폰 기본 달력에 넣어 알림을 받는다",
+   "k": []
+  },
+  "teamhub": {
+   "n": "TEAM 총괄 관리",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "오늘 체크·이번 주·업무 루트·성장판·내 코칭·본인 점검란을 한 칸에 모았다",
+   "k": []
+  },
+  "report": {
+   "n": "대표 브리핑",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "숫자 셋으로 정리된 대표용 보고",
+   "k": []
+  },
+  "daily": {
+   "n": "매일 취합",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "하루치 실적을 한 장으로 모은다",
+   "k": []
+  },
+  "ai_org": {
+   "n": "AI 조직 라이브",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "AI 조직이 돌아가는 걸 지켜본다",
+   "k": []
+  },
+  "branch_coach": {
+   "n": "팀 코칭",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "팀원 한 명씩 코칭 거리를 잡아 준다",
+   "k": []
+  },
+  "hq": {
+   "n": "승인·규칙",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "승인할 것과 규칙을 정하는 곳",
+   "k": []
+  },
+  "voice": {
+   "n": "건의함 · 불편한 점",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "불편한 점과 바라는 것을 적어 보내는 곳",
+   "k": []
+  },
+  "ckboard": {
+   "n": "실행 체크판",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "이번 주 할 일을 체크하는 안쪽 화면",
+   "k": []
+  },
+  "mycoach": {
+   "n": "내 코칭",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "나에게 필요한 코칭 거리를 짚어 준다",
+   "k": []
+  },
+  "academy": {
+   "n": "APEX 본인 점검란",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "내가 얼마나 하고 있는지 스스로 점검",
+   "k": []
+  },
+  "growboard": {
+   "n": "성장판",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "얼마나 늘었는지 성장을 본다",
+   "k": []
+  },
+  "apexmap": {
+   "n": "APEX 전체 지도",
+   "g": "메뉴에서 뺐지만 열리는 곳",
+   "d": "지금 보고 있는 이 지도 — 왼쪽 위 단추로 열린다",
+   "k": []
+  }
+ },
+ "recipes": [
+  {
+   "q": "사람이 없어요 — 새 고객을 늘리고 싶다",
+   "words": [
+    "신규",
+    "새 고객",
+    "새고객",
+    "사람이 없",
+    "DB",
+    "명단",
+    "고객이 없",
+    "늘리",
+    "유입",
+    "모객"
+   ],
+   "why": "먼저 나를 알리고, 들어온 명단을 3일 안에 굴리는 순서입니다.",
+   "steps": [
+    {
+     "id": "mkt_landing",
+     "do": "문의가 들어올 소개 페이지부터 만든다"
+    },
+    {
+     "id": "mkt_meta",
+     "do": "그 페이지로 광고를 건다"
+    },
+    {
+     "id": "blog",
+     "do": "검색에서도 걸리게 글을 올린다"
+    },
+    {
+     "id": "crm",
+     "do": "들어온 명단을 3일 안에 건다"
+    },
+    {
+     "id": "mikki_talk",
+     "do": "첫 통화에서 꺼낼 말을 고른다"
+    }
+   ],
+   "end": "여기까지가 한 바퀴의 ①~③ 입니다.",
+   "k": "new",
+   "next": "appt"
+  },
+  {
+   "q": "전화는 되는데 약속이 안 잡혀요",
+   "words": [
+    "약속",
+    "안 잡",
+    "만나자",
+    "거절",
+    "전화는 되",
+    "TA 는",
+    "AP 로"
+   ],
+   "why": "만나자는 말이 약할 때입니다. 말을 바꾸고 날짜를 붙이세요.",
+   "steps": [
+    {
+     "id": "mikki_talk",
+     "do": "만나자는 말을 다른 것으로 바꿔 본다"
+    },
+    {
+     "id": "cs_needs",
+     "do": "왜 만나야 하는지 눈에 보이게 만든다"
+    },
+    {
+     "id": "crm",
+     "do": "통화 결과를 남기고 다음 날짜를 박는다"
+    },
+    {
+     "id": "assistant",
+     "do": "약속 전날 문자 보낼 사람을 확인한다"
+    }
+   ],
+   "end": "약속이 잡히면 ④ 잡는다 로 넘어간 것입니다.",
+   "k": "appt",
+   "next": "close"
+  },
+  {
+   "q": "상담은 했는데 계약이 안 돼요",
+   "words": [
+    "계약이 안",
+    "클로징",
+    "PC",
+    "CS",
+    "제안",
+    "안 돼",
+    "결정",
+    "고민해 볼"
+   ],
+   "why": "못 물어본 것이 있을 때입니다. 다시 묻고 숫자로 보여 주세요.",
+   "steps": [
+    {
+     "id": "fact_find",
+     "do": "빠뜨린 질문이 없는지 다시 본다"
+    },
+    {
+     "id": "wallets",
+     "do": "무엇부터 풀지 순서를 보여 준다"
+    },
+    {
+     "id": "cs_needs",
+     "do": "필요한 이유를 눈앞에서 보여 준다"
+    },
+    {
+     "id": "compare",
+     "do": "다른 회사와 나란히 비교해 준다"
+    },
+    {
+     "id": "ai_prop",
+     "do": "고른 대로 제안서를 만든다"
+    },
+    {
+     "id": "katalk",
+     "do": "카톡으로 보낼 설명까지 만들어 보낸다"
+    }
+   ],
+   "end": "제안하고 7일 안에 한 번 더 확인하세요.",
+   "k": "close",
+   "next": "jeungkwon"
+  },
+  {
+   "q": "기존 고객 보장을 점검해 주고 싶다",
+   "words": [
+    "보장분석",
+    "점검",
+    "리모델링",
+    "기존 고객",
+    "증권",
+    "보장이"
+   ],
+   "why": "지금 무엇이 부족한지 보여 주고, 바꾼 뒤 그림까지 만드는 순서입니다.",
+   "steps": [
+    {
+     "id": "bojang",
+     "do": "보장분석 자료를 리포트로 바꾼다"
+    },
+    {
+     "id": "baba",
+     "do": "지금과 바꾼 뒤를 나란히 놓는다"
+    },
+    {
+     "id": "treatpay",
+     "do": "병에 걸리면 얼마 드는지 보여 준다"
+    },
+    {
+     "id": "sangdam",
+     "do": "고객 앞에서 이 화면을 연다"
+    }
+   ],
+   "end": "고객 365일에 저장해 두면 다음에 이어집니다.",
+   "k": "bojang",
+   "next": "claim"
+  },
+  {
+   "q": "보험금 청구를 도와야 해요",
+   "words": [
+    "청구",
+    "보험금",
+    "지급",
+    "실비",
+    "받아야",
+    "병원",
+    "입원",
+    "수술비"
+   ],
+   "why": "받을 수 있는 것부터 확인하고, 빠진 돈이 없는지까지 봅니다.",
+   "steps": [
+    {
+     "id": "claims",
+     "do": "무엇을 청구할 수 있는지 정리한다"
+    },
+    {
+     "id": "med_silbi",
+     "do": "실비가 얼마 나올지 계산한다"
+    },
+    {
+     "id": "ref_surgery",
+     "do": "그 수술이 보장되는지 확인한다"
+    },
+    {
+     "id": "ref_hidden",
+     "do": "받지 않은 돈이 남았는지 찾는다"
+    }
+   ],
+   "end": "지급까지 가야 끝입니다.",
+   "k": "claim",
+   "next": "news"
+  },
+  {
+   "q": "약관·보장 내용이 헷갈려요",
+   "words": [
+    "약관",
+    "보장되나",
+    "해석",
+    "특약",
+    "질병코드",
+    "면책",
+    "되나요",
+    "헷갈"
+   ],
+   "why": "감이 아니라 적힌 문장으로 확인하는 순서입니다.",
+   "steps": [
+    {
+     "id": "interpret",
+     "do": "약관에 뭐라 적혔는지 찾는다"
+    },
+    {
+     "id": "ref_kcd",
+     "do": "질병코드와 맞는 특약을 본다"
+    },
+    {
+     "id": "ref_surgery",
+     "do": "수술 이름으로 다시 확인한다"
+    },
+    {
+     "id": "ref_hira",
+     "do": "필요하면 공식 자료로 확인한다"
+    }
+   ],
+   "end": "찾은 문장을 그대로 고객에게 읽어 주세요.",
+   "k": "yakgwan",
+   "next": "bojang"
+  },
+  {
+   "q": "이 사람 가입이 될지 모르겠어요",
+   "words": [
+    "인수",
+    "가입 될",
+    "고지",
+    "알릴",
+    "병력",
+    "유병자",
+    "심사",
+    "거절될"
+   ],
+   "why": "넣기 전에 걸릴 것을 미리 거르는 순서입니다.",
+   "steps": [
+    {
+     "id": "med_disclosure",
+     "do": "알려야 할 것이 있는지 거른다"
+    },
+    {
+     "id": "ref_underwrite",
+     "do": "그 질환도 받아 주는지 확인한다"
+    },
+    {
+     "id": "med_checkup",
+     "do": "건강검진 결과를 읽어 본다"
+    },
+    {
+     "id": "ref_jeonsan",
+     "do": "회사 전산에서 마지막으로 확인한다"
+    }
+   ],
+   "end": "미리 걸러야 나중에 안 뒤집힙니다.",
+   "k": "underwrite",
+   "next": "close"
+  },
+  {
+   "q": "사장님(법인) 상담을 하고 싶다",
+   "words": [
+    "법인",
+    "사장",
+    "대표님",
+    "사업자",
+    "회사",
+    "가지급금",
+    "정책자금",
+    "퇴직금"
+   ],
+   "why": "보험부터 꺼내지 않습니다. 회사 상태를 먼저 봅니다.",
+   "steps": [
+    {
+     "id": "biz_diag",
+     "do": "회사가 어떤 상태인지 진단한다"
+    },
+    {
+     "id": "biz_fund",
+     "do": "받을 수 있는 정책자금을 찾는다"
+    },
+    {
+     "id": "biz_tax",
+     "do": "세금 줄일 방법을 정리한다"
+    },
+    {
+     "id": "biz_retire",
+     "do": "퇴직금을 어떻게 쌓을지 잡는다"
+    },
+    {
+     "id": "biz_ins",
+     "do": "그다음에 보험을 붙인다"
+    }
+   ],
+   "end": "순서를 바꾸면 상품 파는 사람이 됩니다.",
+   "k": "biz",
+   "next": "inherit"
+  },
+  {
+   "q": "노후·연금 상담을 하고 싶다",
+   "words": [
+    "연금",
+    "노후",
+    "은퇴",
+    "국민연금",
+    "건보료",
+    "재무설계"
+   ],
+   "why": "숫자를 먼저 계산하고, 그 숫자로 이야기합니다.",
+   "steps": [
+    {
+     "id": "finance",
+     "do": "「🏦 연금 시뮬레이션」 칸 — 건보료·국민연금까지 계산"
+    },
+    {
+     "id": "finance",
+     "do": "「📊 종합 대시보드」 칸 — 한 장으로 요약"
+    },
+    {
+     "id": "wallets",
+     "do": "돈 나누는 순서를 보여 준다"
+    },
+    {
+     "id": "fp_deck",
+     "do": "고객 앞에서 이 화면을 연다"
+    },
+    {
+     "id": "fp_talk",
+     "do": "막히면 여기 있는 말을 쓴다"
+    }
+   ],
+   "end": "계산해 본 숫자만 꺼내세요.",
+   "k": "pension",
+   "next": "close"
+  },
+  {
+   "q": "아이 교육자금을 준비해 주고 싶다",
+   "words": [
+    "교육자금",
+    "학자금",
+    "아이",
+    "자녀",
+    "대학",
+    "유학"
+   ],
+   "why": "새로 나가는 돈 없이 준비하는 길부터 봅니다. 국가 지원금이 먼저입니다.",
+   "steps": [
+    {
+     "id": "finance",
+     "do": "「🎓 교육자금」 칸 — 국가 지원금부터 확인"
+    },
+    {
+     "id": "finance",
+     "do": "「💰 현금흐름 분석」 칸 — 지금 여유가 어디 있는지"
+    },
+    {
+     "id": "fp_deck",
+     "do": "고객 앞에서 이 화면을 연다"
+    }
+   ],
+   "end": "지원금만으로 부족한 만큼이 준비할 돈입니다.",
+   "k": "edu",
+   "next": "cash"
+  },
+  {
+   "q": "상속·증여를 물어보십니다",
+   "words": [
+    "상속",
+    "증여",
+    "물려",
+    "세금 얼마",
+    "상속세",
+    "증여세"
+   ],
+   "why": "세무사 관점으로 먼저 세금을 세어 보고, 그다음 보험으로 풉니다.",
+   "steps": [
+    {
+     "id": "finance",
+     "do": "「🏛️ 상속·증여」 칸 — 세무사 관점으로 계산"
+    },
+    {
+     "id": "calc",
+     "do": "「상속세 개산 계산기」 로 빠르게 어림"
+    },
+    {
+     "id": "biz_retire",
+     "do": "법인이면 퇴직금 쪽도 같이 본다"
+    },
+    {
+     "id": "fp_deck",
+     "do": "고객 앞에서 이 화면을 연다"
+    }
+   ],
+   "end": "세금 숫자가 나오면 보험 이야기가 쉬워집니다.",
+   "k": "inherit",
+   "next": "biz"
+  },
+  {
+   "q": "집·대출 이야기가 나왔습니다",
+   "words": [
+    "부동산",
+    "대출",
+    "집",
+    "전세",
+    "매매",
+    "이자",
+    "은행"
+   ],
+   "why": "은행원 관점으로 갚는 그림을 먼저 그립니다.",
+   "steps": [
+    {
+     "id": "finance",
+     "do": "「🏠 부동산·대출」 칸 — 은행원 관점"
+    },
+    {
+     "id": "finance",
+     "do": "「💰 현금흐름 분석」 칸 — 갚고 나면 얼마 남나"
+    },
+    {
+     "id": "finance",
+     "do": "「✅ 팩트체크」 칸 — 3대 점검"
+    }
+   ],
+   "end": "대출부터 정리해야 보험이 안 깨집니다.",
+   "k": "house",
+   "next": "cash"
+  },
+  {
+   "q": "돈이 어디로 새는지 모르겠답니다",
+   "words": [
+    "현금흐름",
+    "지출",
+    "새는",
+    "월급",
+    "소득",
+    "적자",
+    "여유가 없"
+   ],
+   "why": "버는 돈과 나가는 돈을 한 장에 놓으면 답이 보입니다.",
+   "steps": [
+    {
+     "id": "finance",
+     "do": "「💰 현금흐름 분석」 칸 — 소득·지출을 넣는다"
+    },
+    {
+     "id": "wallets",
+     "do": "여덟 통장으로 나눠 순서를 잡는다"
+    },
+    {
+     "id": "finance",
+     "do": "「🧾 종합 재무설계」 칸 — 한 장으로 정리"
+    }
+   ],
+   "end": "새는 곳을 막고 나서 새 보험을 이야기하세요.",
+   "k": "cash",
+   "next": "pension"
+  },
+  {
+   "q": "오늘 뭐부터 해야 할지 모르겠어요",
+   "words": [
+    "오늘",
+    "뭐부터",
+    "시작",
+    "아침",
+    "할 일",
+    "정리가 안"
+   ],
+   "why": "아침 10분 · 통화 30초 · 저녁 5분이면 됩니다.",
+   "steps": [
+    {
+     "id": "home",
+     "do": "오늘 만날 사람과 걸 사람만 본다"
+    },
+    {
+     "id": "assistant",
+     "do": "AI 가 짚어 주는 것부터 처리한다"
+    },
+    {
+     "id": "crm",
+     "do": "통화가 끝나면 30초 안에 적는다"
+    },
+    {
+     "id": "airep",
+     "do": "저녁에 알림 0건을 만든다"
+    }
+   ],
+   "end": "이거 셋이면 하루가 끝납니다.",
+   "k": "today",
+   "next": "appt"
+  },
+  {
+   "q": "증권 전달이 밀렸어요",
+   "words": [
+    "증권",
+    "전달",
+    "밀렸",
+    "발송",
+    "사후관리 끊"
+   ],
+   "why": "여기가 밀리면 그 뒤 관리가 통째로 끊깁니다.",
+   "steps": [
+    {
+     "id": "contracts",
+     "do": "어디까지 갔는지 상태를 본다"
+    },
+    {
+     "id": "clients",
+     "do": "전달할 사람을 뽑는다"
+    },
+    {
+     "id": "airep",
+     "do": "7일 넘은 건이 있는지 확인한다"
+    }
+   ],
+   "end": "증권은 나오는 즉시 전달입니다.",
+   "k": "jeungkwon",
+   "next": "bojang"
+  },
+  {
+   "q": "계약을 바꾸거나 정리해야 해요",
+   "words": [
+    "배서",
+    "변경",
+    "해지",
+    "감액",
+    "부활",
+    "계약 바꾸",
+    "명의"
+   ],
+   "why": "바꾸기 전에 판단하고, 안내서를 만들어 드립니다.",
+   "steps": [
+    {
+     "id": "contracts",
+     "do": "지금 계약이 어떤 상태인지 본다"
+    },
+    {
+     "id": "endorse",
+     "do": "바꿀 내용으로 안내서를 만든다"
+    },
+    {
+     "id": "clients",
+     "do": "바뀐 내용을 고객 기록에 남긴다"
+    }
+   ],
+   "end": "실제 접수는 보험사 기준을 따릅니다.",
+   "k": "endorse",
+   "next": "jeungkwon"
+  },
+  {
+   "q": "자동차 사고가 났대요",
+   "words": [
+    "자동차",
+    "차 사고",
+    "교통사고",
+    "과실",
+    "대물",
+    "합의"
+   ],
+   "why": "과실부터 따지고 받을 것을 정리합니다.",
+   "steps": [
+    {
+     "id": "car_fault",
+     "do": "과실이 몇 대 몇인지 따져 본다"
+    },
+    {
+     "id": "claims",
+     "do": "받을 수 있는 것을 정리한다"
+    }
+   ],
+   "end": "숫자를 알고 통화하면 흔들리지 않습니다.",
+   "k": "car",
+   "next": "claim"
+  },
+  {
+   "q": "고객에게 보낼 이야깃거리가 없어요",
+   "words": [
+    "보낼 말",
+    "안부",
+    "이야깃거리",
+    "뉴스",
+    "소식",
+    "연락할 거리",
+    "명분"
+   ],
+   "why": "빈손으로 걸지 않습니다. 손에 뭔가 들고 겁니다.",
+   "steps": [
+    {
+     "id": "news_live",
+     "do": "고객에게 보낼 만한 뉴스를 고른다"
+    },
+    {
+     "id": "biz_news",
+     "do": "바뀐 정책·상품이 있는지 본다"
+    },
+    {
+     "id": "mikki",
+     "do": "요즘 먹히는 미끼를 확인한다"
+    },
+    {
+     "id": "crm",
+     "do": "누구에게 보낼지 골라 건다"
+    }
+   ],
+   "end": "명분이 있으면 전화가 쉬워집니다.",
+   "k": "news",
+   "next": "new"
+  },
+  {
+   "q": "글·영상으로 나를 알리고 싶다",
+   "words": [
+    "블로그",
+    "콘텐츠",
+    "글쓰기",
+    "유튜브",
+    "릴스",
+    "인스타",
+    "스레드",
+    "알리고"
+   ],
+   "why": "먼저 한 달치를 짜 놓고, 하나씩 만들어 올립니다.",
+   "steps": [
+    {
+     "id": "calendar",
+     "do": "한 달치 올릴 거리를 짠다"
+    },
+    {
+     "id": "mkt_volume",
+     "do": "사람들이 찾는 말인지 확인한다"
+    },
+    {
+     "id": "blog",
+     "do": "글을 쓴다"
+    },
+    {
+     "id": "video",
+     "do": "같은 내용을 영상으로 만든다"
+    },
+    {
+     "id": "simui",
+     "do": "올리기 전에 규정에 걸리는지 본다"
+    }
+   ],
+   "end": "심의필터를 지나지 않은 글은 올리지 마세요.",
+   "k": "content",
+   "next": "new"
+  },
+  {
+   "q": "우리 팀이 어떻게 돌아가는지 보고 싶다",
+   "words": [
+    "팀",
+    "조직",
+    "팀원",
+    "관리",
+    "브리핑",
+    "실적",
+    "지점",
+    "매니저"
+   ],
+   "why": "숫자를 먼저 보고, 사람을 그다음에 봅니다.",
+   "steps": [
+    {
+     "id": "report",
+     "do": "숫자 셋으로 전체를 본다"
+    },
+    {
+     "id": "attend",
+     "do": "오늘 누가 나왔는지 본다"
+    },
+    {
+     "id": "daily",
+     "do": "하루치 실적을 모아 본다"
+    },
+    {
+     "id": "teamhub",
+     "do": "이번 주 할 일을 체크한다"
+    },
+    {
+     "id": "branch_coach",
+     "do": "한 명씩 코칭 거리를 잡는다"
+    }
+   ],
+   "end": "숫자가 먼저, 잔소리는 나중입니다.",
+   "k": "team",
+   "next": "today"
+  },
+  {
+   "q": "APEX 를 처음 써요",
+   "words": [
+    "처음",
+    "어떻게 쓰",
+    "사용법",
+    "배우",
+    "교육",
+    "신입",
+    "가이드"
+   ],
+   "why": "설명서 → 연습 → 실전 순서입니다.",
+   "steps": [
+    {
+     "id": "manual",
+     "do": "먼저 설명서를 한 번 훑는다"
+    },
+    {
+     "id": "ready",
+     "do": "쓸 준비가 됐는지 점검한다"
+    },
+    {
+     "id": "yoonsi",
+     "do": "윤시스쿨에서 익힌다"
+    },
+    {
+     "id": "home",
+     "do": "그리고 오늘 것부터 해 본다"
+    }
+   ],
+   "end": "하루만 돌려 보면 감이 옵니다.",
+   "k": "start",
+   "next": "today"
+  },
+  {
+   "q": "경제 이야기로 상담을 열고 싶다",
+   "words": [
+    "경제",
+    "주식",
+    "펀드",
+    "금리",
+    "환율",
+    "투자",
+    "시장",
+    "ETF",
+    "변액",
+    "배당"
+   ],
+   "why": "지금 시장 이야기로 열고, 고객 자산으로 좁힙니다.",
+   "steps": [
+    {
+     "id": "inv_econ",
+     "do": "지금 경제가 어떤지 본다"
+    },
+    {
+     "id": "inv_stock",
+     "do": "고객이 가진 주식을 정리한다"
+    },
+    {
+     "id": "inv_fund",
+     "do": "펀드도 같이 본다"
+    },
+    {
+     "id": "finance",
+     "do": "「📈 투자 포트폴리오」 칸 — ETF·배당주·변액을 한자리에"
+    },
+    {
+     "id": "inv_perf",
+     "do": "그래서 어떻게 나눌지 보여 준다"
+    }
+   ],
+   "end": "투자 권유가 아니라 정리라는 점을 지키세요.",
+   "k": "econ",
+   "next": "pension"
+  }
+ ]
+};
+var MENU = DATA.menu, RECIPES = DATA.recipes;
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function shade(hex,f){
+  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  function h(v){v=Math.round(v*f);return ('0'+Math.max(0,Math.min(255,v)).toString(16)).slice(-2);}
+  return '#'+h(r)+h(g)+h(b);
+}
+
+/* ══ 지도 그리기 ═══════════════════════════════ */
+function buildSide(host, list){
+  list.forEach(function(br){
+    var wrap = document.createElement('div');
+    wrap.className = 'branch';
+    wrap.dataset.color = br.color;
+
+    var head = document.createElement('button');
+    head.className = 'head';
+    head.style.setProperty('--sd', shade(br.color,.55));
+    head.style.borderColor = br.color + '66';
+    head.style.background = 'linear-gradient(180deg,#fff,' + br.color + '14)';
+    head.innerHTML =
+      '<span class="fold"></span>' +
+      '<span class="hrow"><span class="ic">' + br.ic + '</span>' +
+      '<span class="nm">' + esc(br.name) + '</span></span>' +
+      '<div class="tg" style="color:' + shade(br.color,.85) + '">' + esc(br.tag) + '</div>' +
+      '<div class="hint">' + esc(br.hint) + '</div>';
+    head.onclick = function(){ wrap.classList.toggle('shut'); animate(); };
+
+    var cards = document.createElement('div');
+    cards.className = 'cards' + (br.cols === 2 ? ' two' : '');
+
+    br.children.forEach(function(c){
+      var card = document.createElement('div');
+      card.className = 'card';
+      card.style.setProperty('--c', br.color);
+      card.style.setProperty('--cd', shade(br.color,.7));
+
+      var t = document.createElement('button');
+      t.className = 'ct';
+      t.innerHTML = '<span class="tx">' + esc(c.t) + '</span>' +
+                    '<span class="open-hint" data-n="' + c.leaves.length + '"></span>';
+      t.onclick = function(){ card.classList.toggle('open'); animate(); };
+
+      var box = document.createElement('div');
+      box.className = 'leaves';
+      var inner = document.createElement('div');
+      var lv = document.createElement('div');
+      lv.className = 'lv';
+      c.leaves.forEach(function(lf){
+        var e;
+        if (lf.id){
+          e = document.createElement('a');
+          e.className = 'leaf';
+          e.href = BASE + lf.id;
+          e.target = '_blank';
+          e.rel = 'noopener';
+          e.setAttribute('data-id', lf.id);
+          e.innerHTML = '<span class="tx">' + esc(lf.t) + '</span><span class="go">열기 ›</span>';
+        } else {
+          e = document.createElement('div');
+          e.className = 'note';
+          e.innerHTML = '<span class="dot"></span><span class="tx">' + esc(lf.t) + '</span>';
+        }
+        lv.appendChild(e);
+
+        /* 그 화면 안에 든 낱장 — 접어 두었다가 눌러서 편다 */
+        var kids = (lf.id && MENU[lf.id] && MENU[lf.id].k) || [];
+        if (kids.length){
+          var kb = document.createElement('button');
+          kb.className = 'kidbtn';
+          kb.innerHTML = '<span class="kc">안에 ' + kids.length + '칸</span><span class="ka">▾</span>';
+          var kd = document.createElement('div');
+          kd.className = 'kids';
+          kd.innerHTML = kids.map(function(k){ return '<div>' + esc(k) + '</div>'; }).join('');
+          kb.onclick = function(){
+            var on = kd.classList.toggle('on');
+            kb.classList.toggle('on', on);
+            animate();
+          };
+          lv.appendChild(kb);
+          lv.appendChild(kd);
+        }
+      });
+      inner.appendChild(lv);
+      box.appendChild(inner);
+      card.appendChild(t);
+      card.appendChild(box);
+      cards.appendChild(card);
+    });
+
+    wrap.appendChild(head);
+    wrap.appendChild(cards);
+    host.appendChild(wrap);
+  });
+}
+
+buildSide(document.getElementById('sideL'), DATA.left);
+buildSide(document.getElementById('sideR'), DATA.right);
+
+/* CRM 안(창 속의 창)에서 열렸으면 새 탭을 띄우지 않고 CRM 화면을 바로 바꾼다.
+   밖에서 그냥 열었을 때는 지금처럼 새 탭으로 연다. */
+var inCrm = false;
+try { inCrm = (window.parent !== window) && typeof window.parent.go === 'function'; } catch(e){ inCrm = false; }
+if (inCrm){
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.href.indexOf(BASE) !== 0) return;      /* CRM 화면으로 가는 링크만 */
+    var id = a.getAttribute('data-id') || a.href.slice(BASE.length);
+    if (!id) return;
+    e.preventDefault();
+    try { window.parent.go(id); } catch(err){ window.open(a.href,'_blank','noopener'); }
+  });
+}
+document.getElementById('cTag').textContent = DATA.center.tag;
+document.getElementById('cSub').textContent = DATA.center.sub;
+document.getElementById('cFoot').textContent = DATA.center.foot;
+
+/* ══ 연결선 ═══════════════════════════════
+   자리는 getBoundingClientRect 가 아니라 offsetLeft/offsetTop 으로 잰다.
+   카드가 입체로 기울어 있어 rect 는 기울어진 값이 나오기 때문이다. */
+var map = document.getElementById('map');
+var svg = document.getElementById('wires');
+var SVGNS = 'http://www.w3.org/2000/svg';
+var scale = 1, tiltX = 0, tiltY = 0, use3d = true;
+
+function box(el){
+  var x = 0, y = 0, n = el;
+  while (n && n !== map){ x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent; }
+  return {x:x, y:y, w:el.offsetWidth, h:el.offsetHeight};
+}
+function curve(x1,y1,x2,y2,color,wd,op){
+  var mx = (x1 + x2) / 2;
+  var p = document.createElementNS(SVGNS,'path');
+  p.setAttribute('d','M '+x1+' '+y1+' C '+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2);
+  p.setAttribute('fill','none'); p.setAttribute('stroke',color);
+  p.setAttribute('stroke-width',wd); p.setAttribute('stroke-opacity',op);
+  p.setAttribute('stroke-linecap','round');
+  svg.appendChild(p);
+}
+function redraw(){
+  if (window.innerWidth <= 1180) return;
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  svg.setAttribute('width', map.offsetWidth);
+  svg.setAttribute('height', map.offsetHeight);
+  var ctr = box(document.querySelector('.center'));
+  var cy = ctr.y + ctr.h/2;
+  [['#sideL', true], ['#sideR', false]].forEach(function(pair){
+    var host = document.querySelector(pair[0]), isLeft = pair[1];
+    Array.prototype.forEach.call(host.children, function(wrap){
+      var col = wrap.dataset.color, dk = shade(col,.5);
+      var h = box(wrap.querySelector('.head'));
+      var hy = h.y + h.h/2;
+      var x1 = isLeft ? ctr.x : ctr.x + ctr.w;
+      var x2 = isLeft ? h.x + h.w : h.x;
+      curve(x1, cy, x2, hy, dk, 7, .12);
+      curve(x1, cy, x2, hy, col, 2.6, .55);
+      if (wrap.classList.contains('shut')) return;
+      Array.prototype.forEach.call(wrap.querySelectorAll('.card'), function(cd){
+        if (cd.offsetParent === null) return;
+        var b = box(cd), by = b.y + b.h/2;
+        var sx = isLeft ? h.x : h.x + h.w;
+        var ex = isLeft ? b.x + b.w : b.x;
+        curve(sx, hy, ex, by, dk, 4.5, .10);
+        curve(sx, hy, ex, by, col, 1.7, .38);
+      });
+    });
+  });
+}
+function apply(){
+  map.style.transform = 'rotateX(' + tiltX + 'deg) rotateY(' + tiltY + 'deg) scale(' + scale + ')';
+}
+function animate(){
+  var t0 = performance.now();
+  (function step(){
+    redraw();
+    if (performance.now() - t0 < 420) requestAnimationFrame(step);
+  })();
+}
+
+/* ══ 지도 단추 ═══════════════════════════════ */
+function setAll(open){
+  clearLight();
+  Array.prototype.forEach.call(document.querySelectorAll('.branch'), function(b){ b.classList.remove('shut'); });
+  Array.prototype.forEach.call(document.querySelectorAll('.card'), function(c){ c.classList.toggle('open', open); });
+  animate();
+}
+document.getElementById('bOpen').onclick = function(){ setAll(true); };
+document.getElementById('bShut').onclick = function(){ setAll(false); };
+document.getElementById('b3d').onclick = function(){
+  use3d = !use3d;
+  document.body.classList.toggle('flat', !use3d);
+  this.textContent = use3d ? '입체 끄기' : '입체 켜기';
+  this.classList.toggle('off', !use3d);
+  if (!use3d){ tiltX = 0; tiltY = 0; }
+  apply(); redraw();
+};
+function setZoom(z){
+  scale = Math.min(1.4, Math.max(.4, Math.round(z*10)/10));
+  document.getElementById('zVal').textContent = Math.round(scale*100) + '%';
+  apply(); redraw();
+}
+document.getElementById('zIn').onclick = function(){ setZoom(scale + .1); };
+document.getElementById('zOut').onclick = function(){ setZoom(scale - .1); };
+var stage = document.getElementById('stage');
+stage.addEventListener('mousemove', function(e){
+  if (!use3d || window.innerWidth <= 1180) return;
+  var r = stage.getBoundingClientRect();
+  tiltY = ((e.clientX - r.left) / r.width - .5) * 4.4;
+  tiltX = -((e.clientY - r.top) / r.height - .5) * 2.6;
+  apply();
+});
+stage.addEventListener('mouseleave', function(){ tiltX = 0; tiltY = 0; apply(); });
+
+/* ══ 지도에 불 켜기 ═══════════════════════════════ */
+function clearLight(){
+  Array.prototype.forEach.call(document.querySelectorAll('a.leaf.lit,a.leaf.now'), function(a){
+    a.classList.remove('lit','now');
+    var n = a.querySelector('.num');
+    if (n) n.parentNode.removeChild(n);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.card.hit,.card.dim,.head.hit'), function(e){
+    e.classList.remove('hit','dim');
+  });
+}
+function light(list){
+  clearLight();
+  if (!list || !list.length){ animate(); return; }
+  var wanted = {};
+  list.forEach(function(s, i){ if (!(s.id in wanted)) wanted[s.id] = i + 1; });
+  Array.prototype.forEach.call(document.querySelectorAll('a.leaf[data-id]'), function(a){
+    var id = a.getAttribute('data-id');
+    if (!(id in wanted)) return;
+    a.classList.add('lit');
+    var n = document.createElement('span');
+    n.className = 'num';
+    n.textContent = wanted[id];
+    a.insertBefore(n, a.firstChild);
+    var card = a.closest('.card'), br = a.closest('.branch');
+    card.classList.add('open','hit');
+    if (br){ br.classList.remove('shut'); br.querySelector('.head').classList.add('hit'); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.card'), function(c){
+    if (!c.classList.contains('hit')) c.classList.add('dim');
+  });
+  animate();
+}
+var curSteps = [], curAt = -1;
+function goStep(i){
+  if (!curSteps.length) return;
+  curAt = Math.max(0, Math.min(curSteps.length - 1, i));
+  var id = curSteps[curAt].id;
+  Array.prototype.forEach.call(document.querySelectorAll('a.leaf.now'), function(a){ a.classList.remove('now'); });
+  Array.prototype.forEach.call(document.querySelectorAll('#jLog .steps li'), function(li){ li.classList.remove('now'); });
+  var lis = document.querySelectorAll('#jLog .msg:last-child .steps li');
+  if (lis[curAt]) lis[curAt].classList.add('now');
+  var first = document.querySelector('a.leaf.lit[data-id="' + id + '"]');
+  if (first){ first.classList.add('now'); first.scrollIntoView({behavior:'smooth', block:'center', inline:'center'}); }
+}
+
+/* ══ 자비스 ═══════════════════════════════ */
+var jarvis = document.getElementById('jarvis');
+var jLog = document.getElementById('jLog');
+var chatLog = [];        /* Claude 에 보낼 대화 기록 */
+var busy = false;
+
+/* 파일을 그냥 두 번 눌러서 열면(file://) 브라우저가 저장칸을 막을 때가 있다.
+   그럴 땐 창을 닫기 전까지만 기억한다 — 껐다 켜면 키를 다시 넣어야 한다. */
+var MEM = {}, LS_OK = true;
+var LS = {
+  get:function(k,d){
+    try{ var v = localStorage.getItem('apex_studio_'+k); return v==null?(k in MEM?MEM[k]:d):v; }
+    catch(e){ LS_OK = false; return (k in MEM) ? MEM[k] : d; }
+  },
+  set:function(k,v){ MEM[k]=v; try{ localStorage.setItem('apex_studio_'+k,v); }catch(e){ LS_OK=false; } },
+  del:function(k){ delete MEM[k]; try{ localStorage.removeItem('apex_studio_'+k); }catch(e){ LS_OK=false; } }
+};
+/* 키·프록시는 CRM 과 같은 이름을 쓴다 — 이 지도를 CRM 안에 넣으면 그대로 이어진다.
+   모델은 지도 전용으로 따로 둔다(CRM 쪽 모델이 이 기능을 못 쓰는 것일 수 있어서). */
+function getKey(){ return (LS.get('apikey','') || '').replace(/^\s+|\s+$/g,''); }
+function getProxy(){ return (LS.get('proxy','') || '').replace(/^\s+|\s+$/g,''); }
+function getModel(){ return LS.get('map_model','claude-opus-5'); }
+function hasAI(){ return !!(getKey() || getProxy()); }
+
+function modeLabel(){
+  var m = document.getElementById('jMode'), b = document.getElementById('aiBtn');
+  if (hasAI()){
+    m.textContent = (getProxy() ? '회사 서버' : getModel()) + ' 에 연결됨'
+      + (LS_OK ? '' : ' · 이 창에서만');
+    b.classList.add('on');
+  } else {
+    m.textContent = '지도에 담긴 것만 아는 상태입니다';
+    b.classList.remove('on');
+  }
+}
+
+function openJ(){ jarvis.classList.add('on'); }
+document.getElementById('jX').onclick = function(){
+  jarvis.classList.remove('on'); clearLight(); animate();
+};
+
+function addMe(text){
+  var d = document.createElement('div');
+  d.className = 'msg me';
+  d.innerHTML = '<span class="bub">' + esc(text) + '</span>';
+  jLog.appendChild(d); jLog.scrollTop = jLog.scrollHeight;
+}
+function addThinking(){
+  var d = document.createElement('div');
+  d.className = 'msg j'; d.id = 'jThink';
+  d.innerHTML = '<div class="bub"><span class="think"><i></i><i></i><i></i></span></div>';
+  jLog.appendChild(d); jLog.scrollTop = jLog.scrollHeight;
+}
+function dropThinking(){ var t = document.getElementById('jThink'); if (t) t.parentNode.removeChild(t); }
+
+/* 자비스의 대답 한 덩어리를 그린다 */
+function addJ(res, isErr){
+  dropThinking();
+  var d = document.createElement('div');
+  d.className = 'msg j' + (isErr ? ' err' : '');
+  var h = '<div class="bub">' + esc(res.answer || '');
+
+  var steps = (res.steps || []).filter(function(s){ return MENU[s.id]; });
+  if (steps.length){
+    h += '<ol class="steps">';
+    steps.forEach(function(s, i){
+      var m = MENU[s.id];
+      h += '<li><span class="sn">' + (i+1) + '</span><div>' +
+           '<div><span class="st-n">' + esc(m.n) + '</span><span class="st-g">' + esc(m.g) + '</span></div>' +
+           '<p class="st-d">' + esc(s.do || m.d) + '</p>' +
+           '<div class="st-b"><a href="' + BASE + s.id + '" target="_blank" rel="noopener">이 화면 열기 ›</a>' +
+           '<button data-go="' + i + '">지도에서 보기</button></div></div></li>';
+    });
+    h += '</ol>';
+  }
+  var nx = (res.next || []).filter(function(x){ return x; });
+  if (nx.length){
+    h += '<div class="j-next"><b>그다음에 하면 좋은 것</b>';
+    nx.forEach(function(x){ h += '<div>· ' + esc(x) + '</div>'; });
+    h += '</div>';
+  }
+  if (steps.length > 1){
+    h += '<div class="j-walk"><button class="btn" data-walk="-1">◂ 이전</button>' +
+         '<button class="btn go" data-walk="1">다음 ▸</button></div>';
+  }
+  h += '</div>';
+  d.innerHTML = h;
+  jLog.appendChild(d);
+  jLog.scrollTop = jLog.scrollHeight;
+
+  Array.prototype.forEach.call(d.querySelectorAll('[data-go]'), function(b){
+    b.onclick = function(){ goStep(+b.getAttribute('data-go')); };
+  });
+  Array.prototype.forEach.call(d.querySelectorAll('[data-walk]'), function(b){
+    b.onclick = function(){
+      var dir = +b.getAttribute('data-walk');
+      goStep(dir < 0 ? curAt - 1 : (curAt < 0 ? 0 : curAt + 1));
+    };
+  });
+
+  curSteps = steps; curAt = -1;
+  light(steps);
+  if (steps.length) goStep(0);
+}
+
+/* ── 키 없이도 아는 것: 지도 안의 자료로 답한다 ── */
+function findRecipe(q){
+  var best = null, bs = 0;
+  RECIPES.forEach(function(r){
+    var sc = 0;
+    if (q === r.q) sc += 100;
+    r.words.forEach(function(w){ if (q.indexOf(w) >= 0) sc += w.length * 2; });
+    if (sc > bs){ bs = sc; best = r; }
+  });
+  return bs >= 4 ? best : null;
+}
+function findMenus(q){
+  /* 이름이 겹칠 때(재무설계 「계산기」 와 「상담자료」) 앞에 있는 것이 아니라
+     더 정확히 맞는 것이 먼저 나와야 한다. 띄어쓰기는 무시하고 점수를 매긴다. */
+  var qs = q.replace(/\s/g, '');
+  function score(id){
+    var m = MENU[id], n = m.n.replace(/\s/g, ''), d = m.d.replace(/\s/g, '');
+    if (n === qs) return 1000;
+    if (n.indexOf(qs) >= 0) return 500 + qs.length;
+    if (qs.indexOf(n) >= 0) return 400 + n.length;
+    if (d.indexOf(qs) >= 0) return 100;
+    if (m.g.replace(/\s/g, '').indexOf(qs) >= 0) return 50;
+    return 0;
+  }
+  var hits = Object.keys(MENU).filter(function(id){ return score(id) > 0; })
+                  .sort(function(a, b){ return score(b) - score(a); });
+  if (!hits.length && q.length >= 2){
+    for (var i = 0; i + 2 <= q.length; i++){
+      var piece = q.substr(i, 2);
+      Object.keys(MENU).forEach(function(id){
+        var m = MENU[id];
+        if ((m.n.indexOf(piece) >= 0 || m.d.indexOf(piece) >= 0) && hits.indexOf(id) < 0) hits.push(id);
+      });
+    }
+  }
+  return hits;
+}
+/* 이 화면이 어느 순서표에 나오는지 되짚는다 */
+function usedIn(id){
+  var out = [];
+  RECIPES.forEach(function(r){
+    r.steps.forEach(function(s, i){
+      if (s.id === id) out.push({q:r.q, no:i+1, of:r.steps.length, do:s.do});
+    });
+  });
+  return out;
+}
+function recipeByKey(k){
+  for (var i = 0; i < RECIPES.length; i++) if (RECIPES[i].k === k) return RECIPES[i];
+  return null;
+}
+
+function offline(q){
+  /* 순서가 중요하다.
+     ① 화면 이름을 대고 「어떻게 써?」 하면 그 화면 설명이 먼저다
+        (「재무설계 계산기 어떻게 써?」 가 연금 순서표로 새지 않게)
+     ② 그다음이 상황별 순서표
+     ③ 두루뭉술한 인사는 맨 나중 (「청구를 도와야 해요」 가 인사로 새지 않게) */
+
+  /* 사용법 묻기 — 화면 이름이 실제로 잡힐 때만 */
+  var wantGuide = /어떻게|사용법|쓰나|쓰는|무슨|뭐하는|뭔가요|설명/.test(q);
+  var clean = q.replace(/어떻게|사용법|쓰나요|쓰나|쓰는|무슨|뭐하는|뭔가요|설명|해줘|알려줘|\?|\s/g, '');
+  if (wantGuide && clean.length >= 2){
+    var ids = findMenus(clean);
+    if (ids.length){
+      var id = ids[0], m = MENU[id], u = usedIn(id);
+      var a = '「' + m.n + '」 — ' + m.d + '.\n왼쪽 「연장」 가지의 ' + m.g + ' 칸에 있습니다.';
+      if (m.k && m.k.length){
+        a += '\n\n이 화면 안에는 ' + m.k.length + '칸이 있습니다:';
+        m.k.forEach(function(k){ a += '\n  · ' + k; });
+      }
+      if (u.length){
+        a += '\n\n이럴 때 씁니다:';
+        u.slice(0,3).forEach(function(x){
+          a += '\n· ' + x.q + ' — ' + x.no + '번째로 «' + x.do + '»';
+        });
+      }
+      var nx2;
+      if (hasAI()) nx2 = ['더 자세한 사용법이 필요하면 이어서 물어봐 주세요'];
+      else if (m.k && m.k.length) nx2 = ['어느 칸을 써야 할지 모르겠으면 상황을 그대로 적어 주세요 — 순서를 짜 드립니다'];
+      else nx2 = ['화면 안쪽까지는 제가 아직 모릅니다 — 「AI 연결」 을 켜면 자세히 안내해 드립니다'];
+      return {answer:a, steps:[{id:id, do:m.d}], next:nx2};
+    }
+  }
+  /* 상황별 순서표 */
+  var r = findRecipe(q);
+  if (r){
+    var nx = recipeByKey(r.next);
+    return {answer:r.why, steps:r.steps,
+      next:[r.end].concat(nx ? ['이게 풀리면 다음은 — ' + nx.q] : [])};
+  }
+  /* 방향 묻기 */
+  if (/다음|방향|뭐부터|무엇부터|어디서부터|먼저 뭐/.test(q)){
+    var r0 = recipeByKey('today');
+    return {answer:'무엇부터 할지 모르겠을 땐 오늘 하루를 먼저 세우는 게 빠릅니다.',
+      steps:r0.steps, next:[r0.end, '그다음: ' + (recipeByKey(r0.next) || {}).q]};
+  }
+  /* 인사·소개 */
+  if (/^(안녕|하이|여보세요|자비스)/.test(q) ||
+      /뭘 할 수|뭐 할 수|무엇을 할 수|넌 뭐|너 뭐|도와줘|도와주세요|사용법 알려/.test(q)){
+    return {answer:'저는 자비스입니다. 이 지도에 담긴 화면 ' + Object.keys(MENU).length +
+      '개와 상황별 순서표 ' + RECIPES.length + '가지를 알고 있습니다.\n\n' +
+      '“상담은 했는데 계약이 안 돼요” 처럼 지금 막힌 것을 그대로 적어 주시면 순서를 짜 드리고, ' +
+      '“고객 365일 어떻게 써?” 처럼 화면 이름을 물으시면 그 화면을 설명해 드립니다.',
+      steps:[], next:['아래 단추 중 하나를 눌러 보세요','위쪽 「AI 연결」 을 켜면 제가 직접 읽고 답합니다']};
+  }
+  /* 이름으로 찾기 */
+  var hits = findMenus(q);
+  if (hits.length){
+    return {answer:'“' + q + '” 로 찾으면 이 화면들이 있습니다.',
+      steps:hits.slice(0,10).map(function(id){ return {id:id, do:MENU[id].d}; }),
+      next:['찾는 게 없으면 상황을 그대로 적어 주세요 — 순서를 짜 드립니다']};
+  }
+  return {answer:'“' + q + '” 에 맞는 것을 찾지 못했습니다.\n' +
+    '계약 · 청구 · 약관 · 법인 · 연금 · 신규 · 팀 같은 말로 다시 적어 주시거나, 아래 단추를 눌러 보세요.',
+    steps:[], next: hasAI() ? [] : ['「AI 연결」 을 켜면 제가 직접 읽고 답해 드릴 수 있습니다']};
+}
+
+/* ── 키가 있을 때: Claude 에게 묻는다 ── */
+var SCHEMA = {
+  type:'object',
+  properties:{
+    answer:{type:'string'},
+    steps:{type:'array', items:{type:'object',
+      properties:{id:{type:'string'}, do:{type:'string'}},
+      required:['id','do'], additionalProperties:false}},
+    next:{type:'array', items:{type:'string'}}
+  },
+  required:['answer','steps','next'], additionalProperties:false
+};
+
+function sysPrompt(){
+  var L = [];
+  L.push('당신은 「자비스」입니다. 보험 설계사 윤시현이 만든 업무 시스템 「APEX YUN PRO」 의 안내자이고, 지금은 그 시스템의 전체 지도 위에서 대화하고 있습니다.');
+  L.push('상대는 보험 설계사입니다. 존댓말로, 쉬운 우리말로, 짧게 답합니다. 어려운 말과 영어 약자는 풀어서 씁니다.');
+  L.push('');
+  L.push('## 답하는 방법');
+  L.push('- answer: 무엇을 왜 그렇게 하면 되는지 3~6줄로. 인사말·머리말 없이 바로 본론.');
+  L.push('- steps: 실제로 열어야 할 화면을 순서대로. 아래 목록에 있는 id 만 씁니다. 지어내지 않습니다. 화면을 열 필요가 없는 질문이면 빈 배열.');
+  L.push('- steps[].do: 그 화면에서 무엇을 하는지 한 줄로.');
+  L.push('- next: 이 일이 끝난 뒤에 이어서 하면 좋은 것 1~3개. 방향을 짚어 주는 자리입니다.');
+  L.push('- 모르는 것은 모른다고 말합니다. 화면 안쪽의 세부 조작은 목록의 설명 이상으로는 지어내지 않습니다.');
+  L.push('- 반드시 JSON 하나만 출력합니다. 다른 글자는 붙이지 않습니다.');
+  L.push('');
+  L.push('## 지켜야 할 것');
+  L.push('- 보험 광고 문구를 만들어 달라고 하면, 반드시 협회 심의를 받아야 한다는 점을 함께 안내합니다.');
+  L.push('- 랜딩페이지·홍보물에서 고객의 이름·연락처 같은 개인정보를 받는 방식은 권하지 않습니다(심의로 막혀 있습니다).');
+  L.push('- 수익률·환급률·보험금 액수 같은 숫자는 지어내지 않습니다. 계산이 필요하면 계산 화면으로 안내합니다.');
+  L.push('');
+  L.push('## 쓸 수 있는 화면 (id | 이름 | 어느 칸 | 무엇을 하는 곳)');
+  Object.keys(MENU).forEach(function(id){
+    var m = MENU[id];
+    L.push(id + ' | ' + m.n + ' | ' + m.g + ' | ' + m.d);
+  });
+  L.push('');
+  L.push('## 화면 안에 든 칸 — 「그 화면의 어느 칸을 쓰라」 까지 짚어 주세요');
+  L.push('(steps 의 id 는 바깥 화면 id 를 쓰고, do 에 어느 칸인지 적습니다)');
+  Object.keys(MENU).forEach(function(id){
+    var m = MENU[id];
+    if (m.k && m.k.length) L.push(id + ' 안 ▸ ' + m.k.join(' / '));
+  });
+  L.push('');
+  L.push('## 자주 나오는 상황과 이미 정해 둔 순서 (참고. 상황이 다르면 새로 짜도 됩니다)');
+  RECIPES.forEach(function(r){
+    L.push('- ' + r.q + ' → ' + r.steps.map(function(s){ return s.id; }).join(' → ') + '  (' + r.why + ')');
+  });
+  L.push('');
+  L.push('## 지도의 여덟 가지 (왼쪽=윤시현이 만든 것, 오른쪽=고객에게 일어나는 일)');
+  DATA.left.concat(DATA.right).forEach(function(b){
+    L.push('- ' + b.name + ' (' + b.tag + '): ' + b.children.map(function(c){ return c.t; }).join(' / '));
+  });
+  return L.join('\n');
+}
+
+function parseReply(txt){
+  var t = String(txt || '').replace(/^\s*```(json)?/i,'').replace(/```\s*$/,'');
+  try { return JSON.parse(t); } catch(e){}
+  var a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a >= 0 && b > a){ try { return JSON.parse(t.slice(a, b+1)); } catch(e){} }
+  return {answer:String(txt || '').replace(/^\s+|\s+$/g,''), steps:[], next:[]};
+}
+
+function askClaude(q){
+  var key = getKey(), proxy = getProxy(), model = getModel(), sys = sysPrompt();
+  var url, headers, body;
+  chatLog.push({role:'user', content:q});
+  if (chatLog.length > 12) chatLog = chatLog.slice(-12);
+
+  if (proxy){
+    /* 회사 서버를 거치는 경우 — 서버가 model/max_tokens/system/messages 만 넘긴다 */
+    url = proxy;
+    headers = {'Content-Type':'application/json'};
+    body = {model:model, max_tokens:4000, system:sys, messages:chatLog};
+  } else {
+    url = 'https://api.anthropic.com/v1/messages';
+    headers = {
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    };
+    body = {
+      model: model,
+      max_tokens: 4000,
+      system: [{type:'text', text:sys, cache_control:{type:'ephemeral'}}],
+      messages: chatLog,
+      output_config: {format:{type:'json_schema', schema:SCHEMA}, effort:'medium'}
+    };
+  }
+
+  return fetch(url, {method:'POST', headers:headers, body:JSON.stringify(body)})
+    .then(function(res){
+      return res.text().then(function(txt){
+        if (!res.ok){
+          var msg = txt;
+          try { var j = JSON.parse(txt); msg = (j.error && j.error.message) || j.message || txt; } catch(e){}
+          var e2 = new Error(msg); e2.status = res.status; throw e2;
+        }
+        var data = JSON.parse(txt);
+        var out = (typeof data.text === 'string') ? data.text
+          : (data.content || []).filter(function(b){ return b.type === 'text'; })
+              .map(function(b){ return b.text; }).join('\n');
+        chatLog.push({role:'assistant', content:out});
+        return parseReply(out);
+      });
+    });
+}
+
+function whyFailed(e){
+  var m = String((e && e.message) || e || '');
+  if (e && (e.status === 401 || e.status === 403) || /api[- ]?key|authentication|unauthorized/i.test(m))
+    return '키가 맞지 않습니다. 「AI 연결」 에서 키를 다시 넣어 주세요.';
+  if (e && e.status === 429 || /rate.?limit|too many/i.test(m))
+    return '잠깐 너무 많이 불렀습니다. 30초쯤 뒤에 다시 물어봐 주세요.';
+  if (/credit|billing|balance|insufficient/i.test(m))
+    return 'Claude 계정 잔액이 부족합니다. console.anthropic.com → Billing 에서 충전해 주세요.';
+  if (e && e.status === 404 || /not.?found|no such model/i.test(m))
+    return '고른 머리(모델) 이름이 맞지 않습니다. 「AI 연결」 에서 다시 골라 주세요.';
+  if (/failed to fetch|networkerror|load failed/i.test(m))
+    return '인터넷에 닿지 못했습니다. 연결을 확인해 주세요.';
+  return '불러오지 못했습니다 — ' + m;
+}
+
+/* ── 물어보기 ── */
+function ask(raw){
+  var q = (raw || '').replace(/^\s+|\s+$/g,'');
+  if (!q || busy) return;
+  openJ();
+  addMe(q);
+  document.getElementById('ask').value = '';
+  document.getElementById('jSay').value = '';
+
+  if (!hasAI()){ addJ(offline(q)); return; }
+
+  busy = true;
+  addThinking();
+  askClaude(q).then(function(res){
+    busy = false;
+    if (!res.answer && !(res.steps || []).length) res = offline(q);
+    addJ(res);
+  }).catch(function(e){
+    busy = false;
+    chatLog.pop();
+    addJ({answer:whyFailed(e) + '\n\n대신 지도에 담긴 것으로 답해 드리겠습니다.', steps:[], next:[]}, true);
+    addJ(offline(q));
+  });
+}
+
+document.getElementById('askGo').onclick = function(){ ask(document.getElementById('ask').value); };
+document.getElementById('ask').addEventListener('keydown', function(e){
+  if (e.key === 'Enter') ask(this.value);
+});
+document.getElementById('jSend').onclick = function(){ ask(document.getElementById('jSay').value); };
+document.getElementById('jSay').addEventListener('keydown', function(e){
+  if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(this.value); }
+});
+
+/* 빠른 단추 */
+(function(){
+  var host = document.getElementById('chips');
+  RECIPES.forEach(function(r){
+    var b = document.createElement('button');
+    b.className = 'chip';
+    b.textContent = r.q;
+    b.onclick = function(){ ask(r.q); };
+    host.appendChild(b);
+  });
+})();
+
+/* ══ AI 연결 ═══════════════════════════════ */
+var keyBox = document.getElementById('keyBox');
+document.getElementById('aiBtn').onclick = function(){
+  document.getElementById('kKey').value = getKey();
+  document.getElementById('kProxy').value = getProxy();
+  document.getElementById('kModel').value = getModel();
+  keyBox.classList.add('on');
+};
+document.getElementById('kCancel').onclick = function(){ keyBox.classList.remove('on'); };
+keyBox.addEventListener('click', function(e){ if (e.target === keyBox) keyBox.classList.remove('on'); });
+document.getElementById('kSave').onclick = function(){
+  LS.set('apikey', document.getElementById('kKey').value.replace(/^\s+|\s+$/g,''));
+  LS.set('proxy', document.getElementById('kProxy').value.replace(/^\s+|\s+$/g,''));
+  LS.set('map_model', document.getElementById('kModel').value);
+  keyBox.classList.remove('on');
+  modeLabel();
+  chatLog = [];
+  openJ();
+  addJ({answer: hasAI()
+      ? '연결됐습니다. 이제 제가 직접 읽고 답해 드립니다.\n지금 막힌 것을 그대로 적어 주세요.'
+      : '연결을 껐습니다. 이제부터는 지도에 담긴 것만으로 안내해 드립니다.',
+    steps:[], next:[]});
+};
+document.getElementById('kClear').onclick = function(){
+  LS.del('apikey'); LS.del('proxy');
+  document.getElementById('kKey').value = '';
+  document.getElementById('kProxy').value = '';
+  modeLabel();
+};
+
+modeLabel();
+window.addEventListener('resize', redraw);
+window.addEventListener('load', redraw);
+apply();
+redraw();
+</script>
+</body>
+</html>
