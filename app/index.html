@@ -3235,17 +3235,22 @@ function osInsAsstAfter(){var t=$('insQ');if(t)t.focus();insRenderThread();}
    기초 상담자료를 만들어 고객 정보를 취합·저장(이 기기)하고, AI 니즈분석과 상담지 출력까지. */
 var FACT={list:null,cur:'',busy:false};
 var FACT_DISC='본 상담카드·니즈분석은 판매 목적의 상담 참고자료이며, 확정 수익·지급 보장·과장 표현을 포함하지 않습니다. 상품 가입 전 약관·상품설명서 확인과 적합성 원칙(금융소비자보호법)에 따른 안내가 필요합니다.';
+/* ── 상담카드의 <b>말로 적는 칸</b> ─────────────────────────────
+   숫자 칸은 아래에서 <b>고객 365일과 똑같은 질문지</b>(CM_FF)를 그대로
+   쓴다. 전에는 여기만 「나이·성별」 을 한 칸에 글로 받고, 「월 소득」 을
+   「900만원」 같은 글자로 받았다. 그러니 같은 고객을 두 군데에 두 번
+   적어야 했고, 계산기로도 못 넘어갔다.
+
+   숫자는 저쪽 질문지가 맡고, 여기는 <b>숫자로 못 적는 것</b>만 맡는다 —
+   가족·건강·목표처럼 말로 들어야 하는 것들이다.                    */
 var FACT_FIELDS=[
  {id:'name',l:'고객명',ph:'예: 홍길동'},
- {id:'age',l:'나이·성별',ph:'예: 45세 남'},
  {id:'contact',l:'연락처',ph:'예: 010-1234-5678'},
- {id:'job',l:'직업·직장',ph:'예: 제조업 대표'},
- {id:'income',l:'월 소득(대략)',ph:'예: 900만원'},
  {id:'family',l:'가족구성',ph:'예: 배우자·자녀 2명(8·5세)'},
+ {id:'budget',l:'월 납입 가능 예산',ph:'예: 40~60만원'},
  {id:'asset',l:'보유자산',ph:'예: 아파트, 금융자산 2억, 사업지분',ta:1},
  {id:'debt',l:'부채',ph:'예: 주택담보 1.5억'},
  {id:'exist',l:'기존 보험·연금',ph:'예: 종신 1억, 실손, 연금저축 월 30만',ta:1},
- {id:'budget',l:'월 납입 가능 예산',ph:'예: 40~60만원'},
  {id:'health',l:'건강상태·가족력',ph:'예: 고혈압약 복용, 부친 위암력',ta:1},
  {id:'goal',l:'상담 목표·관심사',ph:'예: 은퇴자금 + 상속 절세 + 자녀 보장',ta:1}
 ];
@@ -3269,10 +3274,16 @@ function factListHtml(){
     var when='';try{when=c.ts?new Date(c.ts).toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'}):'';}catch(e){}
     var cats=(c.cats||[]).map(function(id){var f=FACT_CATS.filter(function(x){return x.id===id;})[0];return f?f.e:'';}).join('');
     var ai=c.ai?'<span class="badge green" style="font-size:9.5px">AI분석</span>':'';
+    /* 나이·성별은 이제 숫자 질문지(fp)에 있다 — 옛 카드는 c.age 에 있으니 둘 다 본다 */
+    var who=c.age||'';
+    if(!who&&c.fp){
+      var a=c.fp.f_age?(c.fp.f_age+'세'):'',gg=c.fp.f_gender||'';
+      who=(a+(a&&gg?' ':'')+gg);
+    }
     return '<div class="fact-row'+(c.id===FACT.cur?' on':'')+'" style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid var(--ink-7);border-radius:10px;margin-bottom:7px;background:#fff">'+
       '<div style="flex:1;min-width:0;cursor:pointer" onclick="factOpen(\''+c.id+'\')">'+
         '<div style="font-size:13.5px;font-weight:800;color:var(--ink-1)">'+osEsc(c.name||'(무명)')+' '+cats+' '+ai+'</div>'+
-        '<div style="font-size:11px;color:var(--ink-5);margin-top:2px">'+osEsc(c.age||'')+(c.goal?' · '+osEsc((c.goal||'').slice(0,28)):'')+(when?' · '+when:'')+'</div>'+
+        '<div style="font-size:11px;color:var(--ink-5);margin-top:2px">'+osEsc(who)+(c.goal?' · '+osEsc((c.goal||'').slice(0,28)):'')+(when?' · '+when:'')+'</div>'+
       '</div>'+
       '<button class="btn btn-ghost" style="padding:4px 9px;font-size:11px" onclick="factOpen(\''+c.id+'\')">열기</button>'+
       '<button class="btn btn-ghost" style="padding:4px 8px;font-size:11px;color:#DC2626" onclick="factDelete(\''+c.id+'\')">삭제</button></div>';
@@ -3281,6 +3292,10 @@ function factListHtml(){
 }
 function renderFactFind(){
   factLoad();
+  /* 숫자 질문지는 고객 365일의 칸 모양(.cm-fg/.cm-fc)을 그대로 쓴다.
+     그 옷은 저쪽 화면에서만 입혀 주고 있었다 — 여기서도 입힌다.
+     안 그러면 같은 질문지가 이 화면에서만 벌거벗은 채로 선다. */
+  try{ if(typeof cmCss==='function')cmCss(); }catch(e){}
   var cur=FACT.cur?factFindCard(FACT.cur):null;
   var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none">'+
     '<div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">고객 상담자료 · FACT-FINDING</div>'+
@@ -3290,23 +3305,86 @@ function renderFactFind(){
   var editor='<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title"><span class="ci">✍️</span><span id="factEditTitle">'+(cur?osEsc(cur.name||'상담카드')+' — 수정':'새 상담카드')+'</span></div><div class="card-desc">아는 값만 입력해도 됩니다. 저장 후 언제든 다시 열어 이어서 채울 수 있습니다.</div></div><div class="card-body">'+
     '<input type="hidden" id="factCurId" value="'+osEsc(FACT.cur||'')+'"/>'+
     '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">관심 분야 (복수 선택)</div><div class="chips" id="factCats" style="margin-bottom:14px">'+factCatChips(cur?cur.cats:[])+'</div>'+
-    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">팩트파인딩</div><div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:11px">'+factFieldsHtml(cur)+'</div>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:0 0 7px">말로 듣는 것</div>'+
+    '<div class="frm" style="display:grid;grid-template-columns:1fr 1fr;gap:11px">'+factFieldsHtml(cur)+'</div>'+
+    '<div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:18px 0 7px">'+
+      '숫자로 듣는 것 <span style="font-weight:600;color:var(--ink-5)">— 고객 365일·계산기·상담자료와 <b>똑같은 칸</b>입니다</span></div>'+
+    cmFfAvgBar('ffx_','cmAvgN2')+
+    cmFfHtml('','ffx_',(cur&&cur.fp)||null)+
     '<div class="btn-row" style="margin-top:14px;flex-wrap:wrap"><button class="btn btn-primary" onclick="factSaveCard()">💾 저장</button>'+
     '<button class="btn" style="background:#1A56DB;color:#fff" onclick="factAnalyze()">🎯 AI 니즈분석</button>'+
+    '<button class="btn" style="background:#0F172A;color:#fff" onclick="factToCalc()">📊 계산기로 보내기</button>'+
     '<button class="btn btn-ghost" onclick="factPrint()">🖨 상담지 인쇄</button>'+
     '<button class="btn btn-ghost" onclick="factNew()">비우기</button></div>'+
     '<div class="result" id="factRes" style="margin-top:12px">'+(cur&&cur.ai?reportResultBox('factRes','factAnalyze()','고객 니즈분석 · 상담 설계',(cur.name||'고객')+' 님',cur.ai):'')+'</div>'+
     '<div class="rpt-disc" style="margin-top:12px;font-size:11px;color:var(--ink-5)">'+osEsc(FACT_DISC)+'</div></div></div>';
   return osPage('고객','고객 상담카드 · 팩트파인딩','상담 현장에서 고객 정보를 한 장으로 취합하고, AI 니즈분석·상담지 출력까지 한 번에 처리하는 기초 상담자료 도구입니다.',hero+list+editor);
 }
-function osFactAfter(){var r=$('factRes');if(r&&r._pendRaw){/*noop*/}}
+/* 카드를 다시 열면 <b>어떤 칸이 평균이었는지</b>도 같이 되살린다.
+   저장할 때 「평균으로 채운 칸」 이름을 함께 적어 두었기 때문이다.
+   이게 없으면 다시 연 순간부터 평균값이 고객 숫자인 척한다.        */
+function factAvgRestore(){
+  var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';
+  var card=id?factFindCard(id):null,avg=(card&&card.avg)||[];
+  var i,j,g,f,e,k;
+  for(k in CM_AVG)if(k.indexOf('ffx_')===0)delete CM_AVG[k];
+  if(avg.length)for(i=0;i<CM_FF.length;i++){g=CM_FF[i];
+    for(j=0;j<g.f.length;j++){f=g.f[j];
+      if(avg.indexOf(f[1])<0)continue;
+      e=document.getElementById('ffx_'+f[0]);
+      if(e&&(''+e.value)!==''){e.classList.add('cm-avg');CM_AVG['ffx_'+f[0]]=1;}
+    }}
+  cmAvgPaint();
+}
+function osFactAfter(){var r=$('factRes');if(r&&r._pendRaw){/*noop*/}
+  try{factAvgRestore();}catch(e){}}
+/* 숫자 질문지를 사람이 읽는 줄로 편다. 평균으로 채운 칸은 <b>평균이라고
+   적는다</b> — 그러지 않으면 AI 도 인쇄물도 그것을 고객 숫자로 읽는다. */
+function factFpLines(o){
+  var fp=(o&&o.fp)||{},avg=(o&&o.avg)||[],out=[],i,j,g,f,v;
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i];
+    for(j=0;j<g.f.length;j++){f=g.f[j];v=fp[f[0]];
+      if(v===undefined||v===null||v==='')continue;
+      out.push('- '+g.t+' / '+f[1]+': '+v+(avg.indexOf(f[1])>=0?' (평균 예시 — 고객이 모른다고 하신 칸)':''));
+    }}
+  return out;
+}
+function factFpRows(o){
+  var fp=(o&&o.fp)||{},avg=(o&&o.avg)||[],h='',i,j,g,f,v;
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i];
+    for(j=0;j<g.f.length;j++){f=g.f[j];v=fp[f[0]];
+      if(v===undefined||v===null||v==='')continue;
+      h+='<tr><th>'+osEsc(g.t+' · '+f[1])+'</th><td>'+osEsc(''+v)+
+        (avg.indexOf(f[1])>=0?' <span class="muted">(평균 예시)</span>':'')+'</td></tr>';
+    }}
+  return h;
+}
 function factReadForm(){
   var o={};FACT_FIELDS.forEach(function(f){var e=$('ff_'+f.id);o[f.id]=e?e.value.replace(/^\s+|\s+$/g,''):'';});
   var cats=[];document.querySelectorAll('#factCats [data-fcat]').forEach(function(b){if(b.classList.contains('on'))cats.push(b.getAttribute('data-fcat'));});
-  o.cats=cats;return o;
+  o.cats=cats;
+  /* 숫자 칸은 고객 365일과 같은 질문지에서 읽는다 — 같은 이름, 같은 뜻 */
+  var raw=(typeof cmFfRead==='function')?cmFfRead('','ffx_'):{__avg:[]};
+  o.avg=raw.__avg||[];
+  o.fp=(typeof cmFfClean==='function')?cmFfClean(raw):{};
+  return o;
 }
-function factNew(){FACT.cur='';var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var m=$('main');if(m)m.scrollTop=0;}
-function factOpen(id){FACT.cur=id;var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();var el=document.getElementById('factEditTitle');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});}
+/* 상담카드에서도 곧바로 계산기로 — 같은 칸이니 옮길 것이 없다 */
+function factToCalc(){
+  if(typeof fpToFin!=='function'||typeof fpPushFin!=='function'){toast('재무설계 계산기를 찾지 못했습니다');return;}
+  var o=factReadForm(),fp={},k,n=0;
+  for(k in (o.fp||{}))if(Object.prototype.hasOwnProperty.call(o.fp,k)&&o.fp[k]!==''){fp[k]=o.fp[k];n++;}
+  if(o.name){fp.f_name=o.name;n++;}
+  if(!n){toast('숫자 칸을 먼저 채워 주세요 — 「모르는 칸은 평균으로」 도 있습니다',5000);return;}
+  fpPushFin(fpToFin({f:fp}));
+  toast(n+'칸을 계산기로 보냈습니다'+
+    ((o.avg&&o.avg.length)?(' · '+o.avg.length+'칸은 평균 예시입니다(고객 숫자 아님)'):''),5000);
+}
+function factNew(){FACT.cur='';var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();
+  try{factAvgRestore();}catch(e){}var m=$('main');if(m)m.scrollTop=0;}
+function factOpen(id){FACT.cur=id;var p=document.querySelector('.tab-pane.on');if(p)p.outerHTML=renderFactFind();
+  try{factAvgRestore();}catch(e){}
+  var el=document.getElementById('factEditTitle');if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'center'});}
 function factSaveCard(){
   var o=factReadForm();
   if(!o.name){toast('고객명을 입력하면 카드로 저장됩니다.');var n=$('ff_name');if(n)n.focus();return;}
@@ -3330,10 +3408,15 @@ function factDelete(id){
 function factSys(){var kb=(typeof brainKbGet==='function')?brainKbGet():'';var base='너는 "윤시현의 두뇌" 재무설계 컨설팅 엔진이다. 상담카드(팩트파인딩)를 근거로 고객의 니즈를 분석하고, 보험·연금뿐 아니라 정책자금·세제까지 고려한 우선순위와 상담 설계를 제시한다.\n[원칙]\n- 팩트파인딩의 사실만 근거로. 없는 수치는 지어내지 말고 "확인 필요" 또는 합리적 (가정)으로 표기.\n- 보험료·연금액은 시장 통상범위의 (예상/추정)으로, 정확값은 "설계 필요".\n- 치료비 통장·8통장 프레임 활용. 표·번호목록·콜아웃(>)으로 구조화.\n- 준법: 확정 수익·지급 보장·절세 단정 금지. 정책자금·대출은 조건·심사 전제. 고객 발송용은 "발송 전 준법감시 확인". 적합성 원칙(금융소비자보호법) 준수.';if(kb)base+='\n\n[윤시현이 축적한 지식 — 최우선 반영]\n'+kb;return sys(base);}
 function factAnalyze(){
   if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 니즈분석이 작동합니다.');osSetReload();return;}
-  var o=factReadForm();var filled=0;FACT_FIELDS.forEach(function(f){if(o[f.id])filled++;});
+  var o=factReadForm(),fpLines=factFpLines(o);
+  var filled=fpLines.length;FACT_FIELDS.forEach(function(f){if(o[f.id])filled++;});
   if(filled<2){toast('팩트파인딩을 최소 2개 이상 입력해주세요.');return;}
   if(FACT.busy)return;FACT.busy=true;
-  var fact=FACT_FIELDS.filter(function(f){return o[f.id];}).map(function(f){return '- '+f.l+': '+o[f.id];}).join('\n');
+  var fact=FACT_FIELDS.filter(function(f){return o[f.id];}).map(function(f){return '- '+f.l+': '+o[f.id];})
+    .concat(fpLines).join('\n');
+  if(o.avg&&o.avg.length)fact+='\n\n[주의] 위에서 「평균 예시」 라고 적힌 칸은 고객이 '+
+    '모른다고 하셔서 평균값으로 채운 것입니다. 이 고객의 실제 숫자가 아니므로 '+
+    '그 값을 근거로 단정하지 말고, 확인이 필요하다고 짚어 주십시오.';
   var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?c.t:'';}).filter(Boolean).join(', ')||'미선택(설계사 판단)';
   var res=$('factRes');if(res){res.classList.add('on');res.innerHTML='<div class="loading"><div class="spinner"></div>상담카드를 바탕으로 니즈분석·상담 설계 중… (15~40초)</div>';}
   var user='[상담카드 · 팩트파인딩]\n'+fact+'\n\n[관심 분야]\n'+catLabels+'\n\n위 고객의 <니즈분석 · 상담 설계 요약>을 아래 형식으로 작성해줘. 상담 자리에서 바로 활용할 수 있게, 각 판단의 "왜"를 설계사답게.\n\n> **한 줄 니즈 진단** — 이 고객의 핵심 니즈와 가장 시급한 준비 한 가지.\n\n## 1. 니즈 분석\n팩트에서 읽히는 재무 라이프사이클상 위치와 우선순위 3가지(근거와 함께).\n\n## 2. 보장·준비 우선순위\n표: | 우선순위 | 목적 | 상품유형(예) | 월 예상보험료 | 이유 | — 월 예산 안에서 배분하고 표 아래 월 합계(예상).\n\n## 3. 추가 검토 (정책자금·세제·연금)\n해당 고객에게 도움될 제도·세제·연금 방향을 실제 제도명으로 2~4개. 조건은 "연도별 변동, 관계기관 확인".\n\n## 4. 다음 상담 talking point\n다음 만남에서 확인/제안할 질문·화법 4~6개(바로 말할 수 있게).\n\n## 5. 고객 설명용 요약\n어려운 용어는 괄호로 풀어, 고객에게 그대로 보여줄 4~6줄 쉬운 요약.\n\n금액·연금액은 (예상) 표기, 확정은 설계·심사 필요. 과장·확정수익 표현 금지.';
@@ -3348,7 +3431,8 @@ function factAnalyze(){
 function factPrint(){
   var o=factReadForm();
   var w=window.open('','_blank');if(!w){toast('팝업이 차단되었습니다');return;}
-  var rows=FACT_FIELDS.map(function(f){return '<tr><th>'+osEsc(f.l)+'</th><td>'+(osEsc(o[f.id]||'')||'<span class="muted">—</span>')+'</td></tr>';}).join('');
+  var rows=FACT_FIELDS.map(function(f){return '<tr><th>'+osEsc(f.l)+'</th><td>'+(osEsc(o[f.id]||'')||'<span class="muted">—</span>')+'</td></tr>';}).join('')
+    +factFpRows(o);
   var catLabels=(o.cats||[]).map(function(id){var c=FACT_CATS.filter(function(x){return x.id===id;})[0];return c?(c.e+' '+c.t):'';}).filter(Boolean).join('　')||'—';
   var aiHtml='';var id=($('factCurId')&&$('factCurId').value)||FACT.cur||'';var card=id?factFindCard(id):null;
   if(card&&card.ai)aiHtml='<h3 class="sec">AI 니즈분석 · 상담 설계</h3><div class="ai">'+renderMd(card.ai)+'</div>';
@@ -39647,44 +39731,107 @@ function cmFfTotal(){var n=0,i;for(i=0;i<CM_FF.length;i++)n+=CM_FF[i].f.length;r
 
    이제 두 곳을 겹쳐 읽는다 — 화면에 떠 있으면 그 값이 이기고(방금 고친
    것이므로), 화면이 없으면 저장해 둔 값을 쓴다.                      */
-function cmFfRead(id){
-  var o={},i,j,g,e,k,saved=null,any=false;
+function cmFfRead(id,pfx){
+  pfx=pfx||'cmff_';
+  var o={},i,j,g,e,k,saved=null,any=false,avg=[];
   try{ saved=(id&&typeof cmOf==='function')?(cmOf(id).fp||null):null; }catch(x){}
   if(saved)for(k in saved)if(Object.prototype.hasOwnProperty.call(saved,k))o[k]=(''+saved[k]);
   for(i=0;i<CM_FF.length;i++){g=CM_FF[i].f;
-    for(j=0;j<g.length;j++){e=document.getElementById('cmff_'+g[j][0]);
-      if(e){any=true;o[g[j][0]]=(''+e.value).replace(/^\s+|\s+$/g,'');}}}
+    for(j=0;j<g.length;j++){e=document.getElementById(pfx+g[j][0]);
+      if(e){
+        any=true;o[g[j][0]]=(''+e.value).replace(/^\s+|\s+$/g,'');
+        /* 평균으로 채운 칸은 이름을 남긴다 — 나중에 「이건 평균입니다」 라고
+           말할 수 있어야 한다. 말 못 하면 고객 숫자인 척하게 된다. */
+        if(CM_AVG[pfx+g[j][0]]&&o[g[j][0]]!=='')avg.push(g[j][1]);
+      }}}
   o.__onScreen=any;      /* 화면에서 읽었는지 — 저장할 때 이걸 본다 */
+  o.__avg=avg;
   return o;
 }
 /* 저장할 때 쓰는 값에서 표시용 표를 걷어낸다 */
 function cmFfClean(o){
   var out={},k;
-  for(k in o)if(Object.prototype.hasOwnProperty.call(o,k)&&k!=='__onScreen')out[k]=o[k];
+  for(k in o)if(Object.prototype.hasOwnProperty.call(o,k)&&k.slice(0,2)!=='__')out[k]=o[k];
   return out;
 }
-function cmFfHtml(id){
-  var m=cmOf(id),h='',i,j,g,f,v;
+/* ── 팩트파인딩 칸을 그린다 ──────────────────────────────────────
+   접두사를 받는 이유: <b>같은 칸을 두 화면에서 쓴다.</b> 고객 365일과
+   상담카드가 같은 질문지를 쓰되, 두 화면이 같은 id 를 쓰면 서로의 값을
+   덮는다. 칸의 <b>이름</b>은 같고 화면의 <b>주소</b>만 다르게 한다.   */
+function cmFfHtml(id,pfx,seed){
+  pfx=pfx||'cmff_';
+  var m=(id&&typeof cmOf==='function')?cmOf(id):null,src=(seed||(m&&m.fp)||{});
+  var h='',i,j,g,f,v;
   for(i=0;i<CM_FF.length;i++){
     g=CM_FF[i];
     h+='<div class="cm-fg"><div class="cm-ft">'+g.c+' '+osEsc(g.t)+'</div><div class="cm-fr">';
     for(j=0;j<g.f.length;j++){
-      f=g.f[j];v=(m.fp&&m.fp[f[0]]!=null)?(''+m.fp[f[0]]):'';
+      f=g.f[j];v=(src&&src[f[0]]!=null)?(''+src[f[0]]):'';
       h+='<div class="cm-fc"><label>'+osEsc(f[1])+'</label>';
       if(f[3]){
-        h+='<select id="cmff_'+f[0]+'">';
+        h+='<select id="'+pfx+f[0]+'" oninput="cmAvgClear(this)" onchange="cmAvgClear(this)">';
         for(var k=0;k<f[3].length;k++)
           h+='<option value="'+osEsc(f[3][k])+'"'+(v===f[3][k]?' selected':'')+'>'+
             osEsc(f[3][k]||'선택')+'</option>';
         h+='</select>';
       }else{
-        h+='<input id="cmff_'+f[0]+'" type="text" value="'+osEsc(v)+'" placeholder="'+osEsc(f[2])+'">';
+        h+='<input id="'+pfx+f[0]+'" type="text" value="'+osEsc(v)+'" placeholder="'+
+          osEsc(f[2])+'" oninput="cmAvgClear(this)">';
       }
       h+='</div>';
     }
     h+='</div></div>';
   }
   return h;
+}
+/* ── 모르면 평균 예시로 ──────────────────────────────────────────
+   상담 자리에서 「글쎄요, 잘 모르겠는데」 가 나오면 거기서 멈춘다.
+   빈칸으로 두면 계산이 안 되고, 아무 숫자나 넣으면 <b>그게 고객 숫자인
+   줄 알게 된다.</b> 그래서 채우되 <b>노랗게 표시</b>하고, 몇 칸이
+   평균인지 계속 말해 준다. 고객이 진짜 숫자를 말하는 순간 표시는
+   저절로 사라진다 — 사람이 손댄 칸은 더 이상 평균이 아니다.        */
+var CM_AVG={};
+function cmAvgClear(el){
+  if(!el||!el.id)return;
+  if(CM_AVG[el.id]){ delete CM_AVG[el.id]; el.classList.remove('cm-avg'); cmAvgPaint(); }
+}
+function cmAvgCount(pfx){
+  pfx=pfx||'cmff_';
+  var n=0,k;
+  for(k in CM_AVG)if(Object.prototype.hasOwnProperty.call(CM_AVG,k)&&k.indexOf(pfx)===0)n++;
+  return n;
+}
+function cmAvgPaint(){
+  var b=document.getElementById('cmAvgN');
+  if(b)b.textContent=cmAvgCount(b.getAttribute('data-pfx')||'cmff_');
+  var b2=document.getElementById('cmAvgN2');
+  if(b2)b2.textContent=cmAvgCount(b2.getAttribute('data-pfx')||'ffx_');
+}
+function cmFfAvgFill(pfx){
+  pfx=pfx||'cmff_';
+  var i,j,g,f,e,n=0;
+  for(i=0;i<CM_FF.length;i++){g=CM_FF[i];
+    for(j=0;j<g.f.length;j++){
+      f=g.f[j]; e=document.getElementById(pfx+f[0]);
+      if(!e)continue;
+      if((''+e.value).replace(/^\s+|\s+$/g,'')!=='')continue;   /* 적힌 값은 안 건드린다 */
+      if(!f[2])continue;                                        /* 예시가 없으면 안 지어낸다 */
+      e.value=f[2]; e.classList.add('cm-avg'); CM_AVG[pfx+f[0]]=1; n++;
+    }
+  }
+  cmAvgPaint();
+  toast(n?(n+'칸을 평균 예시로 채웠습니다 — 노란 칸은 고객 숫자가 아닙니다')
+         :'빈 칸이 없습니다 — 채울 것이 없습니다', 4500);
+  return n;
+}
+function cmFfAvgBar(pfx,nid){
+  pfx=pfx||'cmff_';
+  return '<div class="cm-avgbar">'+
+    '<div class="t">고객이 <b>모르겠다</b>고 하시면 빈 칸을 평균 예시로 채워 이야기를 이어 가십시오. '+
+      '채운 칸은 <b>노랗게</b> 남고, 고객이 진짜 숫자를 말씀하시면 그 표시는 사라집니다. '+
+      '지금 평균으로 채운 칸 <b><span id="'+nid+'" data-pfx="'+pfx+'">0</span></b>칸.</div>'+
+    '<button class="btn btn-ghost" style="padding:6px 11px;font-size:11.5px" '+
+      'onclick="cmFfAvgFill(\''+pfx+'\')">📊 모르는 칸은 평균으로</button></div>';
 }
 function cmFfSave(id,quiet){
   var fp=cmFfRead(id);
@@ -39756,34 +39903,36 @@ function cmBaseFill(fp,base,nm){
 function cmSendPrep(id,then){
   cmFfSave(id,true);                     /* 화면에 떠 있을 때만 저장된다 */
   cmBaseLoad(id,function(base){
-    var fp=cmFfClean(cmFfRead(id)),got=cmBaseFill(fp,base,cmAnyName(id)),n=0,k;
+    var raw=cmFfRead(id),avg=raw.__avg||[],fp=cmFfClean(raw),
+        got=cmBaseFill(fp,base,cmAnyName(id)),n=0,k;
     for(k in fp)if(Object.prototype.hasOwnProperty.call(fp,k)&&fp[k]!=='')n++;
-    then(fp,n,got);
+    then(fp,n,got,avg);
   });
 }
-function cmSendNote(n,got,where){
+function cmSendNote(n,got,where,avg){
   return n+'칸을 '+where+'로 보냈습니다'+
-    (got.length?(' — 그중 '+got.join(' · ')+'는 고객 정보에서 가져왔습니다'):'');
+    (got&&got.length?(' — 그중 '+got.join(' · ')+'는 고객 정보에서 가져왔습니다'):'')+
+    (avg&&avg.length?(' · '+avg.length+'칸은 평균 예시입니다(고객 숫자 아님)'):'');
 }
 function cmSendEmpty(){
   toast('이 고객에게 적어 둔 것이 없습니다 — 위 고객 정보나 팩트파인딩을 먼저 채워 주세요',5500);
 }
 function cmToCalc(id){
   if(typeof fpToFin!=='function'||typeof fpPushFin!=='function'){toast('재무설계 계산기를 찾지 못했습니다');return;}
-  cmSendPrep(id,function(fp,n,got){
+  cmSendPrep(id,function(fp,n,got,avg){
     if(!n){cmSendEmpty();return;}
     fpPushFin(fpToFin({f:fp}));
-    toast(cmSendNote(n,got,'계산기'),4500);
+    toast(cmSendNote(n,got,'계산기',avg),5000);
   });
 }
 /* 상담자료로 — 저장해 둔 상담을 되살릴 때 쓰는 길을 그대로 쓴다 */
 function cmToDeck(id){
   if(typeof fpDeckOpen!=='function'||typeof FPD==='undefined'){toast('재무설계 상담자료를 찾지 못했습니다');return;}
-  cmSendPrep(id,function(fp,n,got){
+  cmSendPrep(id,function(fp,n,got,avg){
     if(!n){cmSendEmpty();return;}
     FPD.pend={f:fp};
     fpDeckOpen();
-    toast(cmSendNote(n,got,'상담자료'),4500);
+    toast(cmSendNote(n,got,'상담자료',avg),5000);
   });
 }
 
@@ -40173,8 +40322,9 @@ function cmFfPanelHtml(id){
     '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">팩트파인딩 '+
       '<span class="cm-cnt" id="cmFfN">'+cmFfCount(id)+' / '+cmFfTotal()+'칸</span></h3>'+
     '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:12px">'+
-      '<b>재무설계 계산기·상담자료와 같은 칸</b>입니다. 여기서 한 번 채우면 저 둘로 그대로 넘어갑니다. '+
+      '<b>재무설계 계산기·상담자료·상담카드와 같은 칸</b>입니다. 여기서 한 번 채우면 그대로 넘어갑니다. '+
       '아는 것만 채워도 됩니다.</p>'+
+    cmFfAvgBar('cmff_','cmAvgN')+
     cmFfHtml(id)+
     '<div class="btn-row" style="margin-top:14px;flex-wrap:wrap">'+
       '<button class="btn btn-primary" onclick="cmFfSave(\''+id+'\')">💾 저장</button>'+
@@ -40332,6 +40482,12 @@ function cmCss(){
     '.cm-fc label{font-size:10.5px;font-weight:700;color:var(--ink-4)}'+
     '.cm-fc input,.cm-fc select{width:100%;box-sizing:border-box;border:1px solid var(--ink-7);'+
       'border-radius:8px;padding:8px 9px;font-size:12.5px;font-family:inherit;color:var(--ink-1);background:#fff}'+
+    /* 평균으로 채운 칸은 <b>눈에 보이게</b> 다르다. 고객 숫자와 섞이면
+       나중에 무엇이 사실이었는지 아무도 모른다 — 그게 제일 위험하다. */
+    '.cm-fc input.cm-avg,.cm-fc select.cm-avg{background:#FFFBEB;border-color:#FDE68A;color:#92400E}'+
+    '.cm-avgbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:0 0 12px;'+
+      'background:#FFFBEB;border:1px solid #FDE68A;border-radius:11px;padding:9px 12px}'+
+    '.cm-avgbar .t{font-size:11.5px;color:#92400E;line-height:1.6;flex:1;min-width:180px}'+
     '.cc-board{border:1px solid var(--ink-7);border-radius:14px;padding:13px 14px;margin:0 0 12px;background:#fff}'+
     '.cc-board.hot{border-color:#FDBA74;background:#FFFBF5}'+
     '.cc-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:9px}'+
