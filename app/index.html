@@ -1361,6 +1361,10 @@ body.yoonsi-mode #yoonsiScreen{display:block;}
      존재를 확인하므로 빈 채로 남겨 둔다. -->
 <script type="text/plain" id="finB64"></script>
 
+<!-- 전체 지도가 아는 것을 음성 비서에게도 물려준다 —
+     상황별 순서표와 「화면 안쪽 칸」. 없어도 앱은 그대로 돈다(있으면 더 알아듣는다). -->
+<script src="apex-map-data.js"></script>
+
 
 
 
@@ -12112,7 +12116,19 @@ function vaRun(t){
   if(d){vaReply(d.say,d);return;}
   var ch=vaFindCh(s);
   if(ch){vaReply('화법서 '+ch[1]+' 을 엽니다.',{ch:ch[0]});return;}
+  /* 화면 안쪽 칸 이름을 불렀나 — 「교육자금」, 「감액완납」, 「보험나이 계산기」 */
+  var kid=vaKidHit(s);
+  if(kid){
+    vaReply(vaTabName(kid.id)+' 을 엽니다. 그 안에서 「'+kid.kid+'」 칸을 누르세요.',{go:kid.id});
+    return;
+  }
   var tab=vaIsOpen(s)?vaFindTab(s):'';
+  /* 화면을 콕 집어 부른 게 아니면, 상황을 말한 것일 수 있다.
+     「못 알아들었습니다」 하고 셋을 내놓기 <b>전에</b> 지도의 순서표를 먼저 본다. */
+  if(!tab){
+    var rc0=vaRecipeHit(s);
+    if(rc0){vaReply(vaRecipeSay(rc0),{go:rc0.steps[0].id});return;}
+  }
   /* 「고객」 처럼 여러 화면에 걸리는 말이면 아무거나 열지 않고 셋을 드린다.
      하나만 또렷이 걸리면 묻지 않고 그냥 연다 — 잘 되던 길을 느리게 만들지 않는다. */
   if(vaWantsMenu(s)){
@@ -12364,6 +12380,59 @@ function vaTabInfo(id){
    않는다 — 이름 안의 글자까지 지워지면 오히려 못 찾는다. */
 var VA_FILLER=/(뭐가|뭐|무엇|어디에|어디로|어디|어떻게|한번|좀|해줘|해주|주세요|보여줘|보여|보자|열어줘|열어|열기|띄워|켜줘|가자|가줘|찾아줘|찾아|있지|있나|있어|있는|싶어|하고싶|하려면|할래|해야되|해야하|메뉴|화면|알려줘|알려)/g;
 function vaKey(s){ return vaLat(vaNorm(s)).replace(VA_FILLER,''); }
+/* ════════ 전체 지도에서 빌려 온 귀 두 개 ════════
+   여태 음성 비서는 「화면 이름」 만 알아들었다. 그래서
+     · 「교육자금」 처럼 화면 <b>안쪽 칸</b> 이름을 부르면 못 알아듣고,
+     · 「계약이 안 돼요」 처럼 <b>상황</b>을 말하면 AI 를 부르러 갔다.
+   지도(apex-map-data.js)가 그 둘을 알고 있으니 그대로 빌려 쓴다.
+   파일이 없으면 아무 일도 안 일어난다 — 앱은 그대로 돈다. */
+
+/* 「🎓 교육자금 — 국가 지원금」 → 「교육자금」 */
+function vaKidName(k){
+  return (''+k).replace(/^[^가-힣A-Za-z0-9]+/,'').split('—')[0]
+               .replace(/\s+$/,'').replace(/^└\s*/,'');
+}
+/* 화면 안쪽 칸을 부르면 그 화면을 열고 어느 칸인지 짚어 준다 */
+function vaKidHit(s){
+  if(typeof APEX_MAP==='undefined'||!APEX_MAP||!APEX_MAP.kids)return null;
+  var q=vaKey(s);
+  if(!q||q.length<2)return null;
+  var best=null,bl=0,id,i,ks,nm;
+  for(id in APEX_MAP.kids){
+    ks=APEX_MAP.kids[id]||[];
+    for(i=0;i<ks.length;i++){
+      nm=vaKey(vaKidName(ks[i]));
+      /* 두 글자짜리는 아무 데나 걸린다 — 세 글자부터 인정한다 */
+      if(nm.length>=3&&q.indexOf(nm)>=0&&nm.length>bl){
+        best={id:id,kid:vaKidName(ks[i])};bl=nm.length;
+      }
+    }
+  }
+  return best;
+}
+/* 상황을 말하면 순서를 읽어 주고 첫 화면을 연다 */
+function vaRecipeHit(s){
+  if(typeof APEX_MAP==='undefined'||!APEX_MAP||!APEX_MAP.recipes)return null;
+  var q=vaLat(vaNorm(s)),best=null,bs=0;
+  APEX_MAP.recipes.forEach(function(r){
+    var sc=0;
+    (r.words||[]).forEach(function(w){
+      var k=vaLat(vaNorm(w));
+      if(k.length>=2&&q.indexOf(k)>=0)sc+=k.length*2;
+    });
+    if(sc>bs){bs=sc;best=r;}
+  });
+  /* 말은 잘못 들리는 일이 잦다. 글로 칠 때보다 문턱을 높인다 */
+  return bs>=6?best:null;
+}
+function vaRecipeSay(r){
+  var nm=(APEX_MAP&&APEX_MAP.names)||{},i,parts=[];
+  for(i=0;i<r.steps.length&&i<3;i++)parts.push(nm[r.steps[i].id]||r.steps[i].id);
+  var more=(r.steps.length>3)?(' 해서 모두 '+r.steps.length+'단계입니다'):'';
+  return r.why+' 순서는 '+parts.join(', ')+more+'. 먼저 '+
+         (nm[r.steps[0].id]||r.steps[0].id)+' 을 엽니다.';
+}
+
 /* 가까운 화면 셋 — 이름·별칭·묶음 이름을 다 보고 점수를 매긴다 */
 function vaTop3(s){
   var q=vaKey(s),out=[],i,j,it,sc,nm;
