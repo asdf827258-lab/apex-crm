@@ -78,6 +78,25 @@ const srv = http.createServer((req, res) => {
   const before = await page.locator('.save[disabled]').count();
   ok(before === 1, '아무것도 안 고르면 저장이 잠겨 있다');
 
+  /* 일곱 · 지난번에 들은 말이 오늘 첫 마디로 돌아오는가 — 기록할 이유를 만드는 자리 */
+  console.log('\n지난번에 들은 말이 오늘 맨 위로 올라오는가');
+  await page.evaluate(() => window.dJump('d2'));   /* 두 번 걸었는데 메모가 없는 사람 */
+  await page.waitForTimeout(300);
+  const none = await page.locator('.last').first().innerText().catch(() => '');
+  ok(/지난번 메모가 없습니다/.test(none), '메모가 없으면 없다고 말한다 — 지어내지 않는다');
+  ok(/다음에 이 자리에 그대로/.test(none), '왜 적어야 하는지를 알려 준다 (관리가 아니라 내 손해라서)');
+
+  await page.evaluate(() => window.dJump('d0'));   /* 「보험료가 부담된다」 고 한 사람 */
+  await page.waitForTimeout(300);
+  const last = await page.locator('.last').first().innerText().catch(() => '');
+  ok(/🔁 지난번/.test(last), '「지난번」 칸이 카드 안에 있다');
+  ok(/보험료가 부담된다/.test(last), '지난 통화에서 들은 말이 그대로 적혀 있다');
+  ok(/오늘 첫 마디/.test(last), '무슨 말로 시작할지가 붙어 있다');
+  ok(/님, 지난번에 「/.test(last), '첫 마디가 지난번 말을 되돌려 준다 — 새 화법을 지어내지 않는다');
+  ok(/처방전에.*보험료.*를 미리 넣어/.test(last), '지난 메모에서 뽑은 낱말을 처방전에 미리 넣어 둔다 (조사까지 맞춰서)');
+  const ph = await page.locator('.memo').getAttribute('placeholder');
+  ok(/다음에 이 사람이 뜰 때/.test(ph || ''), '메모 칸이 「이게 다음에 돌아온다」 고 말한다');
+
   /* 둘 · 상담인데 약속이 없으면 CRM 이 거부한다. 여기서 먼저 막는다 */
   await page.evaluate(() => window.dRes('상담')); await page.waitForTimeout(200);
   ok(await page.locator('.save[disabled]').count() === 1, '「상담」만 골라서는 저장이 안 된다');
@@ -95,6 +114,30 @@ const srv = http.createServer((req, res) => {
   ok(/BEGIN:VALARM/.test(ics) && /TRIGGER:-PT60M/.test(ics), '한 시간 전 알람(VALARM)이 들어 있다');
   ok(/DTSTART;TZID=Asia\/Seoul:/.test(ics), '우리 시간대(Asia/Seoul)로 적힌다');
   ok(ics.indexOf('\r\n') > 0, '줄바꿈이 캘린더 규격(CRLF)이다');
+  ok(!/[^\r]\n/.test(ics), '어느 줄도 규격을 벗어나지 않는다');
+  ok(!ics.split('\r\n').some(l => Buffer.byteLength(l, 'utf8') > 75), '한 줄이 75바이트를 넘지 않는다 (한글 일정이 통째로 안 들어가는 것을 막는다)');
+
+  /* 여덟 · 폰이 먼저 울리게 — 열어야 보이는 화면은 안 열린다 */
+  console.log('\n알림 — 앱을 안 열어도 그날 폰이 울리는가');
+  await page.click('#tbWeek'); await page.waitForTimeout(320);
+  ok(await page.locator('.bell2 button').count() === 2, '이번 주 담기 · 평일 아침마다, 두 갈래가 있다');
+  await page.evaluate(() => { window.__ics = ''; });
+  await page.click('.bell2 button');            /* 이번 주 담기 */
+  await page.waitForTimeout(360);
+  const wk = await page.evaluate(() => window.__ics || '');
+  const nEv = (wk.match(/BEGIN:VEVENT/g) || []).length;
+  ok(nEv >= 2, '이번 주 일정이 여러 건 한 파일에 담긴다 (' + nEv + '건)');
+  ok((wk.match(/BEGIN:VALARM/g) || []).length === nEv, '모든 일정에 알람이 붙어 있다');
+  ok(/TRIGGER:PT0S/.test(wk), '시각이 없는 일(걸 사람·기한·생일)은 그날 아침에 울린다');
+  ok(/TRIGGER:-PT60M/.test(wk), '상담 약속은 한 시간 전에 울린다');
+
+  await page.evaluate(() => { window.__ics = ''; });
+  await page.click('.bell2 button.gh');         /* 평일 아침마다 */
+  await page.waitForTimeout(360);
+  const dly = await page.evaluate(() => window.__ics || '');
+  ok(/RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR/.test(dly), '평일 아침 알림은 한 번 담으면 되풀이된다');
+  ok(/하루 한 장/.test(dly), '알림을 누르면 무엇을 열어야 하는지 적혀 있다');
+  await page.click('#tbToday'); await page.waitForTimeout(320);
 
   /* 셋 · CRM 에 들어가는 한 줄의 모양 */
   console.log('\n저장하면 CRM 의 calls 표에 이 모양으로 들어간다');

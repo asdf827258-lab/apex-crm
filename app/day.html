@@ -358,6 +358,35 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .icsp{margin:0;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.6;
   color:var(--ink2);white-space:pre-wrap;word-break:break-all;max-height:210px;overflow:auto}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01ms!important}}
+.last{margin-top:10px;border-left:3px solid var(--core);background:var(--sunk);
+  border-radius:0 12px 12px 0;padding:10px 12px}
+.last>b{display:block;font-family:'Gothic A1',sans-serif;font-weight:800;font-size:10.5px;
+  color:var(--core);letter-spacing:-.2px}
+.last q{display:block;quotes:none;font-size:13px;color:var(--ink);line-height:1.6;margin-top:4px;font-weight:500}
+.last u{display:block;text-decoration:none;font-size:10.5px;color:var(--ink3);margin-top:5px;line-height:1.6}
+.last u.k{color:var(--core)}
+.last u.k b{font-weight:800}
+.last em{display:block;font-style:normal;font-family:'Gothic A1',sans-serif;font-weight:800;
+  font-size:10px;color:var(--ink3);margin-top:9px}
+.last i{display:block;font-style:normal;font-size:13.5px;color:var(--ink);line-height:1.65;
+  margin-top:3px;font-weight:700;letter-spacing:-.3px}
+.last.none{border-left-color:var(--miss);background:var(--miss-bg)}
+.last.none>b{color:var(--miss)}
+.last.none span{display:block;font-size:12px;color:var(--ink2);line-height:1.7;margin-top:4px}
+.last.none span b{font-weight:800;color:var(--ink)}
+.sec .mini.bell{margin-left:auto}
+.mini.bell{border:1px solid var(--core);background:var(--glow);color:var(--core);
+  border-radius:9px;padding:5px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
+  font-family:'Gothic A1',sans-serif}
+.bell2{background:var(--card);border:1px solid var(--core);border-radius:14px;padding:12px 14px;
+  margin-bottom:13px;box-shadow:var(--sh)}
+.bell2>b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:14px;color:var(--core)}
+.bell2>span{display:block;font-size:11.5px;color:var(--ink3);line-height:1.7;margin-top:5px}
+.bell2>span b{color:var(--ink2);font-weight:800}
+.bell2>em{display:flex;gap:7px;margin-top:10px;font-style:normal}
+.bell2 button{flex:1;border:0;background:var(--core);color:#fff;border-radius:11px;padding:11px 6px;
+  font-family:'Gothic A1',sans-serif;font-weight:800;font-size:12px;cursor:pointer}
+.bell2 button.gh{background:var(--sunk);color:var(--ink2)}
 </style>
 </head>
 <body>
@@ -457,22 +486,25 @@ function calcDb(dbs,calls){
   var by={},i,c,d;
   for(i=0;i<calls.length;i++){
     c=calls[i]; if(!c.db_id)continue;
-    var a=by[c.db_id]||(by[c.db_id]={n:0,last:'',res:'',appt:'',memo:''});
+    var a=by[c.db_id]||(by[c.db_id]={n:0,last:'',res:'',appt:'',memo:'',h:[]});
     a.n++;
     d=(''+(c.call_at||'')).slice(0,10);
     if(d>a.last){a.last=d;a.res=c.result||'';a.memo=(''+(c.memo||'')).slice(0,90);}
+    /* 지난번에 무슨 말을 들었는지 — 세 번치까지 들고 다닌다.
+       이것이 다음 통화의 첫 마디가 된다. 기록이 나에게 돌아오는 자리다 */
+    if(c.memo&&a.h.length<3)a.h.push({d:d,r:c.result||'',m:(''+c.memo).slice(0,140)});
     if(c.appointment_at&&c.appointment_at>a.appt)a.appt=c.appointment_at;
   }
   var out=[];
   for(i=0;i<dbs.length;i++){
-    var x=dbs[i], a2=by[x.id]||{n:0,last:'',res:'',appt:'',memo:''};
+    var x=dbs[i], a2=by[x.id]||{n:0,last:'',res:'',appt:'',memo:'',h:[]};
     var base=a2.last||(''+(x.assigned_date||'')).slice(0,10);
     var ap=(''+(x.next_appt||'')); if(a2.appt>ap)ap=a2.appt;
     out.push({id:x.id,name:x.customer_name||'(이름 없음)',phone:x.phone||'',
       region:x.region||'',src:(''+(x.source||'')).trim()||'일반',
       stage:(''+(x.stage||'')).trim(),
       cAt:(''+(x.contracted_at||'')).slice(0,10),pAt:(''+(x.policy_sent_at||'')).slice(0,10),
-      n:a2.n,res:a2.res||'',memo:a2.memo,appt:ap,
+      n:a2.n,res:a2.res||'',memo:a2.memo,appt:ap,lastAt:a2.last,hist:a2.h||[],
       days:base?ago(base):9999});
   }
   return out;
@@ -538,6 +570,23 @@ function hhm(t){var h=parseInt(t.slice(0,2),10);return (h<12?'오전 ':'오후 '
 function dLabel(d){return (d===T0()?'오늘':d===Tn(1)?'내일':d===Tn(2)?'모레':(d.slice(5,7).replace(/^0/,'')+'월 '+d.slice(8).replace(/^0/,'')+'일'))+' ('+wd(d)+')';}
 function $(i){return document.getElementById(i);}
 
+/* 미리보기에서도 「지난번에 이렇게 말씀하셨습니다」 가 보여야 뜻이 전해진다 */
+var DEMO_MEMO=[
+ '보험료가 부담된다고 하심. 지금 내는 것도 많다고',
+ '바쁘다고 이따 다시 걸어 달라고 하심',
+ '',
+ '이미 아는 설계사가 있다고 하심',
+ '',
+ '',
+ '',
+ '암 진단금이 얼마인지 모르겠다고 하심. 증권 찾아보시기로',
+ '남편과 상의해 보고 알려 주겠다고 하심',
+ '계약 완료. 증권 나오면 방문 전달하기로',
+ '증권 전달 완료. 소개 부탁드림',
+ '필요 없다고 하심. 말투는 부드러웠음',
+ '',
+ '통화 됐으나 회의 중이라고 하심'
+];
 var DEMO_DB=[
  ['권○○','경기','보장분석','부재',1,31,'','','010-0000-0031'],
  ['이○○','경기','보장분석','부재',1,23,'','','010-0000-0023'],
@@ -554,7 +603,8 @@ var DEMO_DB=[
  ['신○○','경기','방송','거절',1,32,'','','010-0000-0032'],
  ['서○○','서울','농협','부재',2,4,'','','010-0000-0044']
 ].map(function(a,i){return {id:'d'+i,name:a[0],region:a[1],src:a[2],res:a[3],n:a[4],days:a[5],
-  stage:a[6],appt:a[7],phone:a[8],memo:''};});
+  stage:a[6],appt:a[7],phone:a[8],memo:DEMO_MEMO[i]||'',lastAt:a[5]?Tn(-a[5]):'',
+  hist:DEMO_MEMO[i]?[{d:Tn(-a[5]),r:a[3],m:DEMO_MEMO[i]}]:[]};});
 var DEMO_CLI=[
  /* 앞의 셋은 배정 DB 에도 있는 사람 — 고객 365일로 이미 넘어간 경우 */
  {id:'c0',name:'조○○',days:2,plan:'상담 뒤 제안서',due:Tn(2),bdIn:-1,man:'8/24칸'},
@@ -567,6 +617,34 @@ var DEMO_CLI=[
  {id:'c5',name:'유○○',days:64,plan:'',due:'',bdIn:6}
 ];
 var DEMO_TODO=[['오전 전화 한 시간','체크판'],['상담카드 채우기','체크판'],['오늘 기록 남기기','체크판']];
+
+/* 앱 안에서 열면 부모(AR)가 읽어 둔 자료를 그대로 쓴다. 그런데 AR 은
+   전화번호와 통화 메모를 안 담는다 — 번호는 안 쓰기 때문이고, 메모는
+   AI 로 넘어갈까 봐 일부러 뺐다. 폰에서는 둘 다 필요하다.
+   그래서 부모를 고치지 않고, 폰이 그 둘만 따로 한 번 더 읽어 온다.
+   메모는 화면에만 쓰고 AI 로는 보내지 않는다 — 그 선은 그대로다.      */
+var TOP=null;
+function topUp(){
+  if(TOP||SRV)return;
+  var sb=sbOf(), me=meOf();
+  if(!sb||!me)return;
+  TOP={ph:{},hs:{}};                    /* 두 번 묻지 않는다 */
+  var q=function(pp){return pp.then(function(r){return r;},function(){return {error:1};});};
+  Promise.all([
+    q(sb.from('dbs').select('id,phone').eq('assigned_to',me)),
+    q(sb.from('calls').select('db_id,call_at,result,memo').eq('created_by',me)
+        .order('call_at',{ascending:false}).limit(1500))
+  ]).then(function(r){
+    var ph={},hs={};
+    if(!r[0].error)(r[0].data||[]).forEach(function(x){if(x.phone)ph[x.id]=x.phone;});
+    if(!r[1].error)(r[1].data||[]).forEach(function(c){
+      if(!c.db_id||!c.memo)return;
+      var a=hs[c.db_id]||(hs[c.db_id]=[]);
+      if(a.length<3)a.push({d:(''+(c.call_at||'')).slice(0,10),r:c.result||'',m:(''+c.memo).slice(0,140)});
+    });
+    TOP={ph:ph,hs:hs}; bust(); paint();
+  },function(){});
+}
 
 function rows(){
   if(_R)return _R;
@@ -581,6 +659,13 @@ function rows(){
         o.bdIn=(typeof p.arBdIn==='function'&&c.bd)?p.arBdIn(c.bd):-1;return o;});
       var td=[];
       try{ td=(p.arTodoList()||[]).filter(function(x){return x.k==='ck';}).map(function(x){return [x.t,'체크판'];}); }catch(e){}
+      topUp();
+      if(TOP)db=db.map(function(x){
+        var o={},k;for(k in x)o[k]=x[k];
+        if(!o.phone&&TOP.ph[o.id])o.phone=TOP.ph[o.id];
+        o.hist=TOP.hs[o.id]||[]; o.lastAt=o.last||'';
+        if(!o.memo&&o.hist.length)o.memo=o.hist[0].m;
+        return o;});
       _R={db:db,cli:cl,todo:td,live:true};return _R;
     }
   }catch(e){}
@@ -692,6 +777,77 @@ function cardHtml(r){
     bits.map(function(x){return '<span><em>'+esc(x[0])+'</em>'+esc(x[1])+'</span>';}).join('')+
     '<u>자세히 보기·고치기는 컴퓨터에서</u></div>';
 }
+/* ══════════════════════════════════════════════════════════════════
+   지난번에 들은 말이 오늘의 첫 마디가 된다
+
+   지금 메모를 적는 이유는 「관리 당하려고」다. 그래서 안 적는다.
+   두 줄 적어 봐야 회사가 볼 뿐, 나한테 돌아오는 것이 없다.
+
+   뒤집는다. 오늘 적은 한 줄이 다음에 이 사람이 뜰 때 <b>맨 위에</b> 뜬다.
+   안 적으면 다음에 내가 맨땅에서 시작한다. 벌이 아니라 손해라서 적게 된다.
+
+   화법은 여기서 만들지 않는다 — 지난 메모에서 낱말을 뽑아
+   db-crm.html 의 처방전(RX_LIST)을 <b>대신 찾아 준다.</b>
+   대표가 거기 한 곳만 고치면 이 자리도 같이 바뀐다.
+   ══════════════════════════════════════════════════════════════════ */
+var SAY=[/부담|비싸|비쌉|여유|보험료/,
+         /바쁘|시간이|나중|이따|회의|운전/,
+         /생각|고민|검토|알아보|보고서/,
+         /남편|아내|배우자|와이프|가족|부모님/,
+         /이미|가입|들어 ?있|아는 ?설계사|아는 ?사람/,
+         /필요 ?없|관심 ?없|됐다|됐습니다|안 ?한다/,
+         /암|뇌|심장|진단|수술|입원|실손|치료비/,
+         /연금|노후|퇴직|저축|이자|수익/,
+         /자녀|아이|교육|학자금/,
+         /증권|서류|자료|보내|카톡|소개/];
+/* 받침이 있으면 「을」, 없으면 「를」. 이런 것이 어긋나면 사람이 먼저 안다 */
+function eul(w){
+  var c=(''+w).charCodeAt((''+w).length-1);
+  if(c<0xAC00||c>0xD7A3)return '을';
+  return ((c-0xAC00)%28)?'을':'를';
+}
+function sayWord(m){var i,x;for(i=0;i<SAY.length;i++){x=(''+(m||'')).match(SAY[i]);if(x)return x[0];}return '';}
+function memoClean(m){return (''+(m||'')).replace(/^\[장소\][^\n]*\n?/,'').replace(/\s+/g,' ').trim();}
+function histOf(r){
+  if(r.hist&&r.hist.length)return r.hist;
+  return r.memo?[{d:r.lastAt||'',r:r.res||'',m:r.memo}]:[];
+}
+/* 첫 마디는 「지난번에 들은 말을 그대로 되돌려 주는 한 문장」 뿐이다.
+   화법을 새로 쓰지 않는다 — 자세한 것은 아래 처방전이 맡는다.
+
+   메모는 「보험료가 부담된다고 하심.」 처럼 3인칭 기록체로 적힌다.
+   그걸 그대로 따옴표에 넣으면 말이 안 된다. 첫 문장만 떼고
+   기록체 꼬리(~고 하심 · ~하셨음 · ~함)를 잘라 낸다.            */
+function memoSay(m){
+  var q=memoClean(m).split(/[.·]/)[0].trim();
+  q=q.replace(/\s*고?\s*(하심|하셨음|하셨습니다|하셨다|했음|하였음|함)\s*$/,'').trim();
+  q=q.replace(/[,\s]+$/,'');
+  if(q.length>20)q=q.slice(0,20)+'…';
+  return q;
+}
+function firstLine(r,h){
+  var q=memoSay(h.m);
+  return q ? ('"'+r.name+'님, 지난번에 「'+q+'」 하신 것 — 그 부분부터 말씀드리려고 연락드렸습니다."')
+           : ('"'+r.name+'님, 지난번 통화 이어서 연락드렸습니다."');
+}
+function lastSay(r){
+  if(!r.n)return '';                       /* 첫 통화면 지난번이 없다 */
+  var H=histOf(r);
+  if(!H.length)
+    return '<div class="last none"><b>🔁 지난번 메모가 없습니다</b>'+
+      '<span>오늘 한 줄만 남기시면, <b>다음에 이 자리에 그대로</b> 뜹니다. '+
+      '다음 통화를 맨땅에서 시작하지 않게 됩니다.</span></div>';
+  var h0=H[0], w=sayWord(h0.m);
+  var h='<div class="last"><b>🔁 지난번'+(h0.d?(' · '+h0.d.slice(5,7).replace(/^0/,'')+'월 '+h0.d.slice(8).replace(/^0/,'')+'일'):'')+
+        (h0.r?(' ('+esc(h0.r)+')'):'')+'</b>'+
+        '<q>'+esc(memoClean(h0.m))+'</q>';
+  if(H.length>1)h+='<u>그 전 '+(H.length-1)+'번 · '+
+     H.slice(1).map(function(x){return esc(memoClean(x.m).slice(0,18));}).join(' / ')+'</u>';
+  h+='<em>오늘 첫 마디</em><i>'+esc(firstLine(r,h0))+'</i>';
+  if(w)h+='<u class="k">아래 처방전에 <b>「'+esc(w)+'」</b>'+eul(w)+' 미리 넣어 두었습니다</u>';
+  return h+'</div>';
+}
+
 function tagOf(r){
   if(r.stage==='계약완료')return ['yes','증권 보낼 것'];
   if(r.res==='상담')return ['yes','진행중'];
@@ -938,31 +1094,127 @@ function vReg(){
 /* ── 캘린더에 담기 (.ics) ── */
 function icsAt(d,t){ return (''+d).replace(/-/g,'')+'T'+(''+t).replace(':','')+'00'; }
 function icsEsc(v){ return (''+(v||'')).replace(/([,;\\\\])/g,'\\\\$1').replace(/\n/g,'\\\\n'); }
-function icsMake(nm,d,t,place,memo){
-  var uid='apex-'+d.replace(/-/g,'')+'-'+Math.abs(hashOf(nm+d+t))+'@apex';
-  var st=icsAt(d,t), en=icsAt(d,addH(t,1));
-  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//APEX YUN PRO//KO','CALSCALE:GREGORIAN',
-    'BEGIN:VTIMEZONE','TZID:Asia/Seoul','BEGIN:STANDARD','DTSTART:19700101T000000',
-    'TZOFFSETFROM:+0900','TZOFFSETTO:+0900','TZNAME:KST','END:STANDARD','END:VTIMEZONE',
-    'BEGIN:VEVENT','UID:'+uid,'DTSTAMP:'+icsAt(T0(),'000000'.slice(0,5)),
-    'DTSTART;TZID=Asia/Seoul:'+st,'DTEND;TZID=Asia/Seoul:'+en,
-    'SUMMARY:'+icsEsc(nm+' 상담'),
-    (place?('LOCATION:'+icsEsc(place)):''),
-    'DESCRIPTION:'+icsEsc((memo||'')+(memo?'\n':'')+'APEX YUN PRO 에서 잡은 상담입니다.'),
-    'BEGIN:VALARM','TRIGGER:-PT60M','ACTION:DISPLAY','DESCRIPTION:'+icsEsc(nm+' 상담 한 시간 전'),
-    'END:VALARM','END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
+function icsUid(seed){return 'apex-'+Math.abs(hashOf(seed))+'@apexyunpro';}
+/* 캘린더 규격은 한 줄이 75바이트를 넘으면 안 된다. 한글은 한 자에 3바이트라
+   스물다섯 자면 넘는다. 넘겨 보내면 어떤 폰에서는 일정이 통째로 안 들어간다 */
+function icsFold(s2){
+  var out=[],cur='',b=0,i,ch,n;
+  for(i=0;i<s2.length;i++){
+    ch=s2.charAt(i);
+    n=ch.charCodeAt(0)<128?1:3;
+    if(b+n>72){out.push(cur);cur=' ';b=1;}
+    cur+=ch;b+=n;
+  }
+  out.push(cur);
+  return out.join('\r\n');
 }
-function addH(t,h){var p2=(''+t).split(':'),n=(parseInt(p2[0],10)+h)%24;return (n<10?'0':'')+n+':'+(p2[1]||'00');}
-function hashOf(s){var h=0,i;for(i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return h;}
-window.dIcs=function(nm,d,t,place){
-  var txt=icsMake(nm,d,t,place,'');
+/* 한 건 = VEVENT 하나.
+     al  알림을 몇 분 전에 울릴까 (0 이면 그 시각에)
+     rr  되풀이 규칙 (매일 아침 알림에만 쓴다)                     */
+function icsEv(e){
+  var st=icsAt(e.d,e.t), en=icsAt(e.d,addM(e.t,e.dur||60));
+  var al=(e.al===0)?'TRIGGER:PT0S':('TRIGGER:-PT'+(e.al||60)+'M');
+  return ['BEGIN:VEVENT','UID:'+icsUid(e.d+e.t+e.sum),
+    'DTSTAMP:'+icsAt(T0(),'00:00')+'Z',
+    'DTSTART;TZID=Asia/Seoul:'+st,'DTEND;TZID=Asia/Seoul:'+en,
+    (e.rr?('RRULE:'+e.rr):''),
+    'SUMMARY:'+icsEsc(e.sum),
+    (e.place?('LOCATION:'+icsEsc(e.place)):''),
+    'DESCRIPTION:'+icsEsc((e.desc||'')+(e.desc?'\n':'')+'APEX 하루 한 장에서 잡은 일입니다.'),
+    'BEGIN:VALARM',al,'ACTION:DISPLAY','DESCRIPTION:'+icsEsc(e.sum),
+    'END:VALARM','END:VEVENT'].filter(Boolean).join('\r\n');
+}
+function icsDoc(evs){
+  var head=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//APEX YUN PRO//하루 한 장//KO',
+    'CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VTIMEZONE','TZID:Asia/Seoul',
+    'BEGIN:STANDARD','DTSTART:19700101T000000','TZOFFSETFROM:+0900','TZOFFSETTO:+0900',
+    'TZNAME:KST','END:STANDARD','END:VTIMEZONE'];
+  var body=evs.map(icsEv);
+  return head.concat(body).concat(['END:VCALENDAR'])
+    .join('\r\n').split('\r\n').map(icsFold).join('\r\n');
+}
+function icsMake(nm,d,t,place,memo){
+  return icsDoc([{d:d,t:t,dur:60,sum:nm+' 상담',place:place,desc:memo,al:60}]);
+}
+function addM(t,m){
+  var p2=(''+t).split(':'), mm=(parseInt(p2[0],10)*60+parseInt(p2[1]||'0',10)+(m||0))%1440;
+  var h2=Math.floor(mm/60), n2=mm%60;
+  return (h2<10?'0':'')+h2+':'+(n2<10?'0':'')+n2;
+}
+function addH(t,h){return addM(t,h*60);}
+function hashOf(s2){var h=0,i;for(i=0;i<s2.length;i++)h=(h*31+s2.charCodeAt(i))|0;return h;}
+/* 폰에 건네준다. 막혀 있으면 글자로라도 보여 준다 — 조용히 실패하지 않는다 */
+function icsGive(name,txt){
   try{
     var bl=new Blob([txt],{type:'text/calendar;charset=utf-8'});
     var u=URL.createObjectURL(bl), a=document.createElement('a');
-    a.href=u; a.download=nm+'_상담_'+d+'.ics'; document.body.appendChild(a); a.click();
+    a.href=u; a.download=name+'.ics'; document.body.appendChild(a); a.click();
     setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u);},1200);
+    return true;
+  }catch(e){ ICS=txt; paint(); return false; }
+}
+window.dIcs=function(nm,d,t,place){
+  if(icsGive(nm+'_상담_'+d, icsMake(nm,d,t,place,'')))
     dToast('캘린더에 담았습니다 — 한 시간 전에 알람이 옵니다');
-  }catch(e){ ICS=txt; paint(); }
+};
+
+/* ══════════════════════════════════════════════════════════════════
+   알림 — 폰이 먼저 울리게
+
+   좋은 화면을 만들어도 폰은 <b>열어야</b> 보이는 물건이다. 사람은 안 연다.
+   그래서 폰이 먼저 울려야 한다. 서버도, 푸시 등록도, 앱스토어도 없이
+   울리게 하는 길이 하나 있다 — <b>폰 캘린더</b>다.
+
+   시각이 있는 것(상담 약속)은 그 시각에, 한 시간 전 알림.
+   시각이 없는 것(걸 사람·고객 365일 기한·생일)은 그날 아침 9시에 알림만.
+   한 번 담으면 앱을 안 열어도 그날 폰이 울린다.
+   ══════════════════════════════════════════════════════════════════ */
+function bellEvents(days){
+  var M=weekMap(days), out=[], i, j;
+  for(i=0;i<days.length;i++){
+    var d=days[i], ev=M[d]||[];
+    for(j=0;j<ev.length;j++){
+      var e=ev[j];
+      if(e.k==='ap'&&/^\d\d:\d\d$/.test(e.t))
+        out.push({d:d,t:e.t,dur:60,sum:e.n+' 상담',desc:e.s,al:60});
+      else
+        out.push({d:d,t:'09:00',dur:15,al:0,
+          sum:(e.k==='bd'?'🎂 ':(e.k==='cl'?'📞 ':''))+e.n+' — '+(e.k==='bd'?'생일':(e.s||'할 일')),
+          desc:e.s||''});
+    }
+  }
+  return out;
+}
+function weekDays(){
+  var d0=new Date(Date.now()+9*3600000), dow=d0.getUTCDay(), a=[], i;
+  for(i=0;i<7;i++)a.push(Tn(i-dow+(dow===0?-6:1)));
+  return a;
+}
+function bellN(days){return bellEvents(days).length;}
+window.dBell=function(scope){
+  var days=(scope==='week')?weekDays():[T0()];
+  var ev=bellEvents(days);
+  if(!ev.length){dToast('담을 일정이 없습니다');return;}
+  if(icsGive('APEX_'+(scope==='week'?'이번주':T0()), icsDoc(ev)))
+    dToast(ev.length+'건을 폰 캘린더에 담았습니다 — 그날 폰이 울립니다');
+};
+/* 그날 하루치 — 통화 뒤에 「다음에 언제」 를 고른 그 자리에서 바로 */
+window.dBellOne=function(){
+  var q=queue(); if(!q.length||!PICK.next)return;
+  var r=q[0];
+  var ev=[{d:PICK.next,t:'09:00',dur:15,al:0,sum:'📞 '+r.name+' — 전화',
+           desc:memoClean(PICK.memo)||'하루 한 장에서 잡은 다음 통화'}];
+  if(icsGive(r.name+'_전화_'+PICK.next, icsDoc(ev)))
+    dToast(dLabel(PICK.next)+' 아침에 폰이 울립니다');
+};
+/* 매일 아침 한 번 — 이 화면을 열라고 폰이 알려 준다. 한 번만 담으면 된다 */
+window.dBellDaily=function(){
+  var ev=[{d:Tn(1),t:'09:00',dur:15,al:0,rr:'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR',
+           sum:'📱 APEX 하루 한 장 — 오늘 걸 사람 보기',
+           desc:'평일 아침마다 울립니다. 알림을 눌러 하루 한 장을 여세요.'}];
+  if(icsGive('APEX_매일아침', icsDoc(ev)))
+    dToast('평일 아침 9시마다 폰이 울립니다 — 한 번만 담으면 됩니다');
 };
 var ICS=null;
 window.dIcsClose=function(){ICS=null;paint();};
@@ -995,10 +1247,9 @@ window.dSmsCopy=function(){
 };
 
 /* ── 처방전 — db-crm.html 의 RX_LIST 를 그대로 읽어 온다 ── */
-var RX={list:null,tried:false,q:'',open:''};
+var RX={list:null,tried:false,q:'',open:'',auto:''};
 function rxLoad(){
   if(RX.tried)return; RX.tried=true;
-  if(!P()){RX.list=[];return;}          /* 앱 밖에서는 못 읽는다 */
   try{
     fetch('/db-crm.html',{cache:'no-store'}).then(function(r){return r.text();}).then(function(t){
       var m=t.match(/var\s+RX_LIST\s*=\s*(\[[\s\S]*?\n\];)/);
@@ -1117,6 +1368,9 @@ function vToday(){
   var R=rows(),v=L(),q=queue(),h='';
   var r=q[0];
   PICKfit(r);
+  /* 지난번에 들은 말에서 낱말을 뽑아 처방전 칸에 미리 넣어 둔다.
+     사람이 바뀌었을 때만 넣는다 — 손으로 고친 것을 덮어쓰면 안 된다 */
+  if(r&&RX.auto!==r.id){RX.auto=r.id;RX.q=sayWord((histOf(r)[0]||{}).m)||'';}
   var qn=Q().length;
   var qo=Qold();
   if(qo)h+='<div class="qbar old">하루가 넘은 기록 <b>'+qo+'건</b> — 그 사이 컴퓨터에서 또 적으셨다면 두 줄이 됩니다.'+
@@ -1145,6 +1399,7 @@ function vToday(){
         '<div class="now-t"><b>'+esc(r.name)+'</b><span class="tag '+t[0]+'">'+esc(t[1])+'</span></div>'+
         '<div class="now-s">'+esc([r.region,r.src].filter(Boolean).join(' · '))+' · '+esc(r.phone||'번호 없음')+'</div>'+
         '<div class="now-w">'+why(r)+'</div>'+
+        lastSay(r)+
         cardHtml(r)+
       '</div>'+
       /* 전화는 곁들이다. 이 화면은 「관리」 를 하는 곳이지 「거는」 곳이 아니다 */
@@ -1161,7 +1416,7 @@ function vToday(){
         rxBox()+
         '<div id="recTop">'+recTop()+'</div>'+
         '<div class="memowrap">'+
-          '<textarea class="memo" id="dMemo" oninput="dMemoIn(this.value)" placeholder="무슨 말을 들었는지 한 줄 (안 적으면 내일 또 이 사람이 뜹니다)">'+esc(PICK.memo)+'</textarea>'+
+          '<textarea class="memo" id="dMemo" oninput="dMemoIn(this.value)" placeholder="무슨 말을 들었는지 한 줄 — 다음에 이 사람이 뜰 때 맨 위에 그대로 뜹니다">'+esc(PICK.memo)+'</textarea>'+
           (canHear()?('<button type="button" class="hear'+(REC?' on':'')+'" onclick="dHear()">'+(REC?'■ 멈춤':'🎙 말로')+'</button>'):'')+
         '</div>'+
         '<div id="recBot">'+recBot()+'</div>'+
@@ -1170,7 +1425,10 @@ function vToday(){
 
   /* 오늘 일정 — 캘린더의 오늘치 */
   var ev=dayEvents(T0(),false);
-  h+='<div class="sec">오늘 일정 <i>'+ev.length+'</i></div>';
+  var bn=bellN([T0()]);
+  h+='<div class="sec">오늘 일정 <i>'+ev.length+'</i>'+
+     (bn?('<button type="button" class="mini bell" onclick="dBell(\'day\')">🔔 오늘 '+bn+'건 알림</button>'):'')+
+     '</div>';
   h+=ev.length?ev.map(evRow).join(''):'<div class="empty">오늘 시각이 정해진 일정은 없습니다.<br>위 명단부터 도세요.</div>';
 
   /* TFA 할 일 */
@@ -1219,7 +1477,7 @@ function vToday(){
 function rxBox(){
   if(RX.list===null)return '<div class="rx wait">고객 처방전을 읽는 중…</div>';
   if(!RX.list.length)
-    return '<div class="rx none">고객 처방전은 <b>앱 안에서</b> 뜹니다 — db-crm.html 의 RX_LIST 를 읽어 옵니다.</div>';
+    return '<div class="rx none">고객 처방전이 아직 <b>서버에 없습니다</b> — db-crm.html 의 RX_LIST 를 읽어 옵니다.</div>';
   var hit=rxHit(RX.q), h='<div class="rx"><b>고객이 뭐라고 하던가요</b>'+
     '<input placeholder="예) 돈이 안 모여요 · 보험 많아요" value="'+esc(RX.q)+'" oninput="dRx(this.value)">';
   if(RX.q&&!hit.length)h+='<div class="rxn">그 말은 아직 처방이 없습니다 — <b>팩트파인딩</b>부터 하세요.</div>';
@@ -1252,7 +1510,9 @@ function recTop(){
         return '<button type="button" class="'+(PICK.next===Tn(x[1])?'on':'')+'" onclick="dNext('+x[1]+')">'+x[0]+' 뒤</button>';
       }).join('')+
       '<button type="button" class="'+(PICK.next===T0()?'on':'')+'" onclick="dNext(0)">오늘 다시</button>'+
-    '</div>'));
+    '</div>'+
+    (PICK.next?('<div class="apok"><b>'+dLabel(PICK.next)+'</b> 에 다시 겁니다'+
+      '<button type="button" onclick="dBellOne()">🔔 그날 알림 담기</button></div>'):'')));
 }
 function recBot(){
   var ok=canSave();
@@ -1394,11 +1654,14 @@ function weekMap(days){
   return m;
 }
 function vWeek(){
-  var h='<div class="sec">이번 주 — 날짜를 누르면 그날이 보입니다</div><div class="wk">',i;
-  var d0=new Date(Date.now()+9*3600000), dow=d0.getUTCDay(), days=[];
-  for(i=0;i<7;i++)days.push(Tn(i-dow+(dow===0?-6:1)));
-  if(days.indexOf(WDAY)<0)days.push(WDAY);
-  var M=weekMap(days);
+  var i, days=weekDays(), bw=bellN(days);
+  var h='<div class="bell2"><b>🔔 폰이 먼저 울리게</b>'+
+     '<span>한 번 담으면 앱을 안 열어도 그날 폰이 울립니다. '+
+     '상담 약속은 <b>한 시간 전</b>, 걸 사람·기한·생일은 <b>그날 아침 9시</b>에 알립니다.</span>'+
+     '<em><button type="button" onclick="dBell(\'week\')">이번 주 '+bw+'건 담기</button>'+
+     '<button type="button" class="gh" onclick="dBellDaily()">평일 아침마다 알려 주기</button></em></div>'+
+     '<div class="sec">이번 주 — 날짜를 누르면 그날이 보입니다</div><div class="wk">';
+  var M=weekMap(days.indexOf(WDAY)<0?days.concat([WDAY]):days);
   for(i=0;i<7;i++){
     var day=days[i], ev=M[day]||[];
     var dd=new Date(day+'T00:00:00Z');
@@ -1568,7 +1831,9 @@ window.dSave=function(){
 
   if(sbOf()){
     Qadd(pl);
-    Qflush(function(k){ dToast(k>0?('CRM 에 남겼습니다 · '+(PICK.res==='상담'?('약속 '+PICK.apD.slice(5)):('다음 '+v.next[r.id].slice(5))))
+    var nx=v.next[r.id]||'';
+    Qflush(function(k){ dToast(k>0?('CRM 에 남겼습니다'+(PICK.res==='상담'?(' · 약속 '+PICK.apD.slice(5))
+                                                       :(nx?(' · 다음 '+nx.slice(5)):' · 다음 날짜는 미정')))
                                   :'폰에 넣어 두었습니다 — 신호가 오면 올립니다'); });
   }else{
     SHOW=pl;   /* 미리보기 — 서버에 안 올리고, 무엇이 들어가는지 그대로 보여 준다 */
