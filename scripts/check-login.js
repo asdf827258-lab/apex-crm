@@ -71,7 +71,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
       if (how === 'rate') return Promise.resolve({ error: { message: 'Email rate limit exceeded' } });
       return Promise.resolve({ data: {}, error: null });
     };
-    OS.sb = { auth: { signInWithPassword: give, signUp: give } };
+    /* 로그인이 되고 나면 앱이 감사 로그·프로필을 부른다.
+       대역에 from 이 없으면 그 자리에서 터진다 — 앱 잘못이 아니라 대역이 모자란 것이다. */
+    const chain = () => {
+      const o = {};
+      ['select', 'insert', 'update', 'delete', 'eq', 'limit', 'order', 'single'].forEach(k => o[k] = () => o);
+      o.then = (f) => Promise.resolve({ data: null, error: null }).then(f);
+      return o;
+    };
+    OS.sb = { auth: { signInWithPassword: give, signUp: give }, from: chain };
     window.osCloseModal = function () { window.__closed = true; };
     window.toast = function () {};
     window.__closed = false;
