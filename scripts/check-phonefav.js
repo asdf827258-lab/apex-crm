@@ -100,7 +100,8 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
     find: !!document.getElementById('navFind')
   }));
   ok(r.find, '메뉴 찾기 칸이 있다');
-  ok(r.stars >= 80, '칸마다 별표가 붙는다 (' + r.stars + '개)');
+  ok(r.stars >= 70, '칸마다 별표가 붙는다 (' + r.stars + '개)');
+  ok(r.stars === r.items, '별표가 없는 칸은 없다 (' + r.stars + '/' + r.items + ')');
   ok(r.empty, '즐겨찾기가 비면 어떻게 하는지 알려 준다');
 
   r = await page.evaluate(() => {

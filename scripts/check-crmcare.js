@@ -534,7 +534,7 @@ window.supabase={createClient:function(){
       OSC.list.push(c);
       CM.meta[id] = { fp: {}, fam: '', rel: '', next: null, bd: '', up: 0, touch: [],
                       since: d(days), plan: plan || {} };
-      return { now: ccTodoList(c).map(x => x.k), all: ccPlanList(c).map(x => x.k + ':' + x.st) };
+      return { now: ccTodoList(c).map(x => x.k), all: ccCareList(c).map(x => x.k + ':' + x.st) };
     };
     return {
       d3: at(3), d20: at(20), d35: at(35), d95: at(95), d110: at(110),
@@ -589,7 +589,7 @@ window.supabase={createClient:function(){
       OSC.list.push(c);
       CM.meta[id] = { fp: {}, fam: '', rel: '', next: null, bd: '', up: 0, touch: [],
                       since: sure ? ('2023-' + mm + '-05') : '', plan: {} };
-      return ccPlanList(c).some(x => /계약 기념일/.test(x.t));
+      return ccCareList(c).some(x => /계약 기념일/.test(x.t));
     };
     return { sure: mk('an_1', true), guess: mk('an_2', false) };
   });

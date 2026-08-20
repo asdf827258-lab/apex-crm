@@ -488,8 +488,15 @@ table.t tr.jump td:first-child,table.t tr.jump td.n{color:var(--gold-d);font-wei
 .nt.u.on i{color:#fff}
 .nt.t.on{background:var(--blue-d)}
 .nt.t.on i{color:#fff}
-@media(max-width:560px){.nt{padding:8px 9px;font-size:12px;gap:4px}.brand{font-size:15px}.brand i{display:none}
-  .navtrk{margin-left:4px;padding:3px;gap:2px}}
+/* 갈래가 다섯이 되면서 폰에서 한 줄에 안 들어간다. 줄이지 않고 <b>제 칸 안에서</b>
+   옆으로 밀리게 둔다 — 몸통이 밀리면 글이 잘리지만, 이 띠만 밀리는 건 괜찮다. */
+@media(max-width:560px){.nt{padding:8px 8px;font-size:11.5px;gap:3px}.nt i{font-size:12px}
+  .brand{font-size:15px;margin-right:0}.brand i{display:none}
+  .navtrk{margin-left:4px;padding:3px;gap:2px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;flex:1 1 auto;min-width:0}
+  .navtrk::-webkit-scrollbar{display:none}
+  nav .wrap{gap:4px}
+  nav a.lnk,nav .cta{display:none}}
 .track.off{display:none}
 #calc,#dcalc{padding-top:64px}
 .fork{display:grid;grid-template-columns:1fr 1fr;gap:16px}
@@ -626,6 +633,36 @@ body.present .crmbadge{top:16px}
 .hstep.safe .no{color:var(--usd-d)}
 
 
+/* ═══ 일시납·쿠폰 트랙 전용 ═══ */
+:root{--cp:#c07615;--cp-l:#fdf3e3;--cp-d:#8a5310}
+.nt.c.on{background:var(--cp-d)}
+.ch.c{color:var(--cp-d);background:var(--cp-l)}
+h2 em.c{color:var(--cp-d)}
+.fk.c .bd{background:var(--cp-l);color:var(--cp-d)}
+.fk.c .go{color:var(--cp-d)}
+.seg.c button.on{background:var(--cp);border-color:var(--cp)}
+.stat.cp{background:linear-gradient(150deg,#fffaf2,#fdf2e0);border-color:#f0ddbc}
+.stat.cp .v{color:var(--cp-d)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:820px){.g3{grid-template-columns:1fr}}
+
+/* ═══ 원화 병기 ═══
+   고객은 달러 금액만 보면 크기를 못 가늠한다. $32,158 이 얼마인지
+   머릿속에서 환산하는 사이 설명이 지나간다. 그래서 달러를 적는 자리마다
+   원화를 함께 적고, 그 원화가 <b>어느 환율로 나온 값인지</b>를 위에 띄워 둔다. */
+.kw{font-size:.76em;font-weight:700;color:var(--ink3);white-space:nowrap;letter-spacing:-.02em}
+.res .kw,.split .kw,.kpi .kw{color:rgba(255,255,255,.62)}
+.dc.fx .kw{color:var(--usd-d);opacity:.72}
+.fxbar{position:sticky;top:64px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;
+  background:rgba(255,255,255,.95);backdrop-filter:blur(12px);border:1px solid var(--line);
+  border-radius:14px;padding:11px 16px;margin-bottom:14px;box-shadow:0 6px 18px rgba(16,24,40,.07)}
+.fxbar .t{font-size:11.5px;font-weight:800;color:var(--ink3);background:var(--bg);
+  padding:4px 10px;border-radius:999px;white-space:nowrap}
+.fxbar .v{font-size:14.5px;font-weight:800;letter-spacing:-.035em;white-space:nowrap}
+.fxbar .n{font-size:11.5px;color:var(--ink3);line-height:1.5;flex:1 1 220px}
+@media(max-width:980px){.fxbar{top:60px}}
+@media print{.fxbar{position:static;box-shadow:none;backdrop-filter:none}}
+
 /* ═══ 교육자금 트랙 전용 ═══ */
 :root{--edu:#7a4fd6;--edu-l:#f1ecfd;--edu-d:#5b34ad}
 .nt.e.on{background:var(--edu-d)}
@@ -691,6 +728,7 @@ h2 em.e{color:var(--edu-d)}
       <button class="nt u"  data-go="d"><i>$</i>달러</button>
       <button class="nt t"  data-go="t"><i>&#128200;</i>투자&middot;세금</button>
       <button class="nt e"  data-go="e"><i>&#127891;</i>교육자금</button>
+      <button class="nt c"  data-go="c"><i>&#127970;</i>일시납&middot;쿠폰</button>
     </div>
     <button class="presbtn" id="presStart">&#9654; 발표</button>
   </div>
@@ -1030,10 +1068,18 @@ h2 em.e{color:var(--edu-d)}
           &middot; 1997년 유학생 사례 &middot; 환전수수료 절감</div>
         <div class="go">교육자금 계산하기 &rarr;</div>
       </button>
+      <button class="fk c" data-go="c" style="border-color:#f0ddbc;background:linear-gradient(150deg,#fffcf7,#fdf3e3)">
+        <span class="bd">갈래 E &middot; 일시납&middot;쿠폰</span>
+        <div class="ti">목돈을 넣어 두고 <b>해마다 받는다</b></div>
+        <div class="li">&middot; 부동산 월세와 목적은 같고 <b>관리가 없다</b><br>
+          &middot; 메트 <b>매년</b> 쿠폰 &middot; AIA <b>매월</b> 생활자금<br>
+          &middot; 받은 것 + 남은 것 <b>합계</b>로 본다</div>
+        <div class="go">쿠폰 계산하기 &rarr;</div>
+      </button>
     </div>
     <p class="hint rv" style="margin-top:16px;text-align:center">
       선택하면 아래 내용이 바뀝니다. 화면 맨 위
-      <b>&#8361; 연금 / $ 달러 / &#128200; 투자&middot;세금 / &#127891; 교육자금</b> 버튼으로 언제든 오갈 수 있습니다.</p>
+      <b>&#8361; 연금 / $ 달러 / &#128200; 투자&middot;세금 / &#127891; 교육자금 / &#127970; 일시납&middot;쿠폰</b> 버튼으로 언제든 오갈 수 있습니다.</p>
   </div>
 </section>
 
@@ -1635,6 +1681,7 @@ h2 em.e{color:var(--edu-d)}
       </div>
 
       <div>
+        <div class="fxbar" id="dFxBar"></div>
         <div class="res" id="resBox"></div>
         <div class="decomp" id="decompBox"></div>
 
@@ -1672,7 +1719,7 @@ h2 em.e{color:var(--edu-d)}
           <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">전체 환급률표</div>
           <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 18px">제안서 원본 수치 그대로 &mdash; 나이는 표기하지 않습니다</div>
           <div class="tw" style="box-shadow:none;border:1px solid var(--line)">
-            <table class="t" id="fullTable" style="min-width:600px"></table>
+            <table class="t" id="fullTable" style="min-width:800px"></table>
           </div>
         </div>
       </div>
@@ -2325,14 +2372,18 @@ h2 em.e{color:var(--edu-d)}
                     padding:6px 12px;border-radius:999px;white-space:nowrap" id="rgStamp">취합본 없음</div>
       </div>
 
-      <div class="f" style="margin:18px 0 0;max-width:420px">
-        <label>계산에 적용할 지역</label>
-        <select id="rgPick"><option value="-1">직접 입력 — 계산 화면에서</option></select>
-        <div class="hint" id="rgPickNote">취합본을 저장하면 여기서 지역을 고를 수 있습니다.</div>
+      <div class="grid g2" style="gap:14px;margin:18px 0 0;max-width:640px">
+        <div class="f" style="margin:0"><label>시 · 도</label>
+          <select id="rgSido"><option value="">불러오는 중…</option></select></div>
+        <div class="f" style="margin:0"><label>시 · 군 · 구</label>
+          <select id="rgGu"><option value="">시·도를 먼저 고르십시오</option></select></div>
       </div>
+      <div id="rgPickState" style="margin-top:10px"></div>
+      <div class="hint" id="rgPickNote" style="margin-top:8px">
+        전국 <b>229개 시·군·구</b>가 미리 들어 있습니다. 고르기만 하시면 됩니다.</div>
 
       <div class="tw" style="box-shadow:none;border:1px solid var(--line);margin-top:16px">
-        <table class="t fundtbl" id="rgTable" style="min-width:660px"></table>
+        <table class="t fundtbl" id="rgTable" style="min-width:820px"></table>
       </div>
 
       <div class="linkrow" style="margin-top:14px">
@@ -2342,6 +2393,32 @@ h2 em.e{color:var(--edu-d)}
         <button class="usebtn" id="rgReload">↺ 저장본 불러오기</button>
         <button class="usebtn" id="rgExport">⤓ 내보내기 (팀 공유)</button>
         <button class="usebtn" id="rgImport">⤒ 가져오기</button>
+        <button class="usebtn" id="rgPasteBtn" style="border-color:#d9cbf5;color:var(--edu-d)">
+          ⤒ 붙여넣기로 여러 지역 한 번에</button>
+      </div>
+      <div id="rgPasteBox" style="display:none;margin-top:12px;background:#fbfaff;border:1px solid #e6e0f2;
+                                  border-radius:12px;padding:14px 16px">
+        <div style="font-size:13px;font-weight:800;color:var(--edu-d);margin-bottom:6px">
+          어디서 복사해 오셔도 됩니다</div>
+        <div style="font-size:12.5px;color:var(--ink3);line-height:1.75;margin-bottom:10px">
+          지자체 누리집 표, 보도자료, 블로그 정리글, 엑셀 &mdash; <b>그대로 붙여 넣으십시오.</b>
+          한 줄 안에 <b>시·군·구 이름</b>이 있으면 그 줄을 그 지역 것으로 봅니다.
+          금액은 「720만원」 「1,000만」 「7,200,000원」 다 읽습니다.
+          <b>못 읽은 금액은 비워 둡니다 &mdash; 0 으로 채우지 않습니다.</b><br>
+          같은 이름이 여러 시·도에 있는 곳(고성군·중구 등)은 <b>시·도를 같이</b> 적어 주셔야 가릅니다.
+        </div>
+        <textarea id="rgPasteText" rows="7" placeholder="예)
+전남 해남군 720만원 첫째 기준·분할지급 https://www.haenam.go.kr/...
+경남 고성군 500만원
+인천 부평구 300만원 셋째 이상"
+          style="width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;line-height:1.7;
+                 border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical"></textarea>
+        <div class="linkrow" style="margin-top:10px">
+          <button class="usebtn" id="rgPasteRun" style="background:var(--edu-d);color:#fff;border-color:var(--edu-d)">
+            📥 읽어서 표에 넣기</button>
+          <button class="usebtn" id="rgPasteClear">지우기</button>
+        </div>
+        <p class="hint" id="rgPasteMsg" style="margin-top:10px"></p>
       </div>
       <p class="hint" id="rgMsg" style="margin-top:10px"></p>
 
@@ -2353,7 +2430,8 @@ h2 em.e{color:var(--edu-d)}
       <p class="hint" style="margin-top:12px">
         ※ 지자체 지원금은 <b>정부가 한곳에 모아 제공하는 공개 API가 없어</b> 자동 수집이 불가능합니다.
         위 링크에서 확인한 값을 한 번 채워 <b>취합본으로 저장</b>해 두시면, 상담 때마다 고르기만 하면 됩니다.
-        금액은 <b>2026년 8월 확인 기준</b>이며 매년 바뀌고, 소득·거주기간 요건이 붙는 지역도 많습니다.</p>
+        <b>확인일자는 「취합 저장」을 누른 날이 자동으로 들어갑니다</b> &mdash; 반년이 지나면 화면에 경고가 붙습니다.
+        금액은 매년 바뀌고, 소득·거주기간 요건이 붙는 지역도 많습니다.</p>
     </div>
   </div>
 </section>
@@ -2435,13 +2513,18 @@ h2 em.e{color:var(--edu-d)}
         <div class="f" style="margin:0"><label>들어갈 때 환율 (납입)</label>
           <input id="eFxIn" type="number" step="10" value="1484"></div>
       </div>
+      <div class="f" style="margin:14px 0 0;max-width:260px"><label>월 납입액 (만원)</label>
+        <input id="eMon" type="number" step="5" min="0" value="30">
+        <div class="hint">지원금 말고 <b>따로 넣는 돈</b>이 있다면 적어 주십시오</div></div>
       <div class="f" style="margin:14px 0 0;max-width:520px">
         <label>나올 때 환율 (유학 시점) &mdash; <b id="eFxOutEcho">1,484</b>원</label>
         <input class="rr" id="eFxOut" type="range" min="1000" max="2100" step="1" value="1484">
         <div class="hint">움직여 보십시오. 환율이 오를수록 <b>달러로 모은 쪽의 원화 가치</b>가 커집니다.</div>
       </div>
 
-      <div class="res" style="margin-top:24px" id="eRes"></div>
+      <div class="fxbar" id="eFxBar" style="margin-top:24px"></div>
+      <div class="res" id="eRes"></div>
+      <div id="eMonBox"></div>
       <div id="eWhenBox"></div>
       <div class="decomp" id="eSplit"></div>
       <div class="mile-wrap"><table class="mile" id="eTable"></table></div>
@@ -2608,6 +2691,308 @@ h2 em.e{color:var(--edu-d)}
 </section>
 </div>
 
+<!-- ══ 트랙 C : 일시납 · 쿠폰 운용 ══ -->
+<div class="track off" id="trackC">
+<section class="pcover" id="coverC"><div class="wrap">
+  <span class="eyebrow">● 일시납 · 쿠폰 운용 리포트</span>
+  <h1>목돈을 넣어 두고<br><em>해마다 받는</em> 방법.</h1>
+  <p class="sub">부동산으로 월세를 받는 것과 목적은 같습니다. 다만 <b>세입자도, 공실도, 수선도 없습니다.</b><br>
+    그리고 나눌 수 있고, 6개월 안에 현금이 됩니다.</p>
+  <div class="hstats">
+    <div><b>1억</b><span>일시납 (제안서 $71,000)</span></div>
+    <div><b>매년</b><span>메트 &mdash; 쿠폰지급금</span></div>
+    <div><b>매월</b><span>AIA &mdash; 생활자금</span></div>
+  </div>
+</div></section>
+
+<section id="cp1">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch c"><b>1장</b> 먼저 짚을 것</span>
+      <h2>부동산으로 월세 받는 것의<br><em class="c">진짜 얼굴</em></h2>
+      <p class="lead">부동산이 나쁘다는 말이 아닙니다. <b>월세를 받는 방법이 그것 하나가 아니라는</b> 말입니다.
+        같은 목돈으로 같은 목적을 이루는 다른 길이 있고, 그 길에는 아래 넷이 없습니다.</p>
+    </div>
+
+    <div class="grid g2 rv">
+      <div class="stat cp"><div class="k">① 임대소득세</div><div class="v">종합소득에 <small>합산</small></div>
+        <div class="d">임대소득은 다른 소득과 <b>합쳐져서</b> 과세됩니다. 근로소득·사업소득이 있으면
+          그 위에 얹혀 <b>구간이 뜁니다.</b> 「월세 얼마」가 곧 「손에 쥐는 돈」이 아닙니다.</div></div>
+      <div class="stat cp"><div class="k">② 건강보험료</div><div class="v">피부양자 <small>탈락</small></div>
+        <div class="d">임대소득이 잡히면 피부양자에서 빠져 <b>지역가입자</b>가 될 수 있습니다.
+          그때부터 재산에도 보험료가 붙습니다. 금액은 사람마다 달라 여기서 단정하지 않습니다.</div></div>
+      <div class="stat cp"><div class="k">③ 사람과 손이 든다</div><div class="v">공실 · 명도 · 수선</div>
+        <div class="d">세입자를 맞춰야 하고, 비면 그 달은 0원이고, 나갈 때 다투기도 하고,
+          보일러는 꼭 겨울에 터집니다. 중개보수도 몇 년에 한 번씩 나갑니다.</div></div>
+      <div class="stat cp"><div class="k">④ 상속</div><div class="v">나누기 어렵다</div>
+        <div class="d">건물 하나를 자녀 셋이 나눠 갖기 어렵습니다. 그리고 상속세는 <b>6개월 안에 현금</b>으로
+          내야 하는데, 부동산은 그 안에 안 팔립니다. 급매로 넘기는 일이 그래서 생깁니다.</div></div>
+    </div>
+
+    <div class="card rv" style="margin-top:22px">
+      <div style="font-size:15px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px">
+        그래서 여쭤보는 질문은 하나입니다</div>
+      <p class="lead" style="margin-top:0;font-size:16px">
+        <b>「월세를 받고 싶으신 겁니까, 건물을 갖고 싶으신 겁니까?」</b><br>
+        건물을 갖고 싶으신 거라면 부동산이 맞습니다. 그런데 <b>월세를 받고 싶으신 거라면</b>,
+        같은 목돈으로 같은 일을 하는 다른 길을 한 번 보셔도 됩니다.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cp2" style="background:#fff">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch c"><b>2장</b> 다른 길</span>
+      <h2>그래서 <em class="c">거치해서 굴린다</em>는 선택지</h2>
+      <p class="lead">목돈을 한 번 넣어 두고, 해마다(또는 다달이) 정해진 돈을 받습니다.
+        구조는 단순합니다. <b>관리가 없고, 나눌 수 있고, 현금입니다.</b></p>
+    </div>
+    <div class="eduflow rv">
+      <div class="b"><b>목돈을 한 번</b><span>일시납</span></div>
+      <div class="ar">&rarr;</div>
+      <div class="b hot"><b>해마다 받는다</b><span>메트 &mdash; 쿠폰지급금 (매년)<br>AIA &mdash; 생활자금 (매월)</span></div>
+      <div class="ar">&rarr;</div>
+      <div class="b"><b>남은 것은 그대로</b><span>해약환급금 · 사망 시 지급금</span></div>
+    </div>
+    <div class="grid g3 rv" style="margin-top:22px">
+      <div class="stat cp"><div class="k">관리</div><div class="v">없음</div>
+        <div class="d">세입자·공실·수선·중개보수가 없습니다.</div></div>
+      <div class="stat cp"><div class="k">나누기</div><div class="v">수익자 지정</div>
+        <div class="d">건물과 달리 <b>비율로 나눠</b> 물려줄 수 있습니다.</div></div>
+      <div class="stat cp"><div class="k">현금</div><div class="v">바로</div>
+        <div class="d">파는 데 시간이 걸리지 않습니다. 상속세 낼 현금이 됩니다.</div></div>
+    </div>
+    <p class="hint rv" style="margin-top:18px">
+      대신 <b>부동산에 있는 것이 여기엔 없습니다</b> &mdash; 시세 상승도, 레버리지도 없습니다.
+      어느 쪽이 낫다가 아니라 <b>목적이 무엇이냐</b>의 문제입니다.</p>
+  </div>
+</section>
+
+<section id="cp3">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch c"><b>3장</b> 구조</span>
+      <h2>쿠폰이 <em class="c">무엇입니까</em></h2>
+      <p class="lead">이름이 낯설 뿐 구조는 간단합니다. 넣어 둔 목돈에서 <b>정해진 날에 정해진 돈</b>이 나옵니다.</p>
+    </div>
+
+    <div class="grid g2 rv">
+      <div class="card">
+        <div style="font-size:13px;font-weight:800;color:var(--cp-d);margin-bottom:10px">메트라이프 &mdash; 매년 받습니다</div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.04em;margin-bottom:8px">쿠폰지급금</div>
+        <ul style="margin:0;padding-left:17px;font-size:13.5px;line-height:1.9;color:var(--ink2)">
+          <li>계약일 이후 <b>만 1년 경과시점부터</b> 매년 계약해당일에</li>
+          <li>지급기간은 <b>5년 · 10년 · 20년</b> 중 선택</li>
+          <li>받지 않고 두면 <b>연금개시시점에 일시금</b>으로</li>
+          <li>실제 금액은 <b>쿠폰지급기간의 환산 일수</b>에 따라 달라질 수 있음</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div style="font-size:13px;font-weight:800;color:var(--cp-d);margin-bottom:10px">AIA &mdash; 매월 받습니다</div>
+        <div style="font-size:20px;font-weight:800;letter-spacing:-.04em;margin-bottom:8px">생활자금</div>
+        <ul style="margin:0;padding-left:17px;font-size:13.5px;line-height:1.9;color:var(--ink2)">
+          <li>계약일 이후 <b>만 1개월 경과시점부터</b> 매월 계약해당일에</li>
+          <li>지급기간은 <b>120개월(10년)</b> 고정</li>
+          <li>이미 지급된 생활자금에는 <b>MVA 를 적용하지 않습니다</b></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card rv" style="margin-top:16px;background:linear-gradient(150deg,#fffaf3,#fff4e6);border-color:#f3d9ae">
+      <div style="font-size:15px;font-weight:800;letter-spacing:-.03em;margin-bottom:8px">
+        ★ 여기서 오해가 생깁니다 &mdash; 환급률만 보면 안 됩니다</div>
+      <p style="font-size:14px;line-height:1.85;color:var(--ink2);margin:0">
+        5년 쿠폰형의 <b>5년차 해약환급률은 39.79%</b> 입니다. 이것만 보면 「원금 반토막」입니다.<br>
+        그런데 그 5년 동안 쿠폰으로 <b style="color:var(--cp-d)">$42,513</b> 을 이미 받았습니다.
+        <b>쿠폰은 원금에서 먼저 나가는 구조</b>이기 때문에 남은 잔액이 그만큼 줄어 있는 것입니다.<br>
+        그래서 이 자료는 <b>「받은 것 + 남은 것」 합계</b>를 언제나 같이 보여 드립니다.
+        아래 계산기에서 그 합계가 맨 앞에 나옵니다.</p>
+    </div>
+
+    <div class="card rv" style="margin-top:14px">
+      <div style="font-size:13px;font-weight:800;color:var(--ink3);margin-bottom:8px">사망 시 지급금 &middot; 그 밖에</div>
+      <p style="font-size:13px;line-height:1.85;color:var(--ink2);margin:0">
+        사망 시 지급금은 <b>「사망 당시 계약자적립액」 · 「이미 납입한 보험료(이미 지급된 쿠폰지급금 차감)」 ·
+        「해약환급금」 셋 중 큰 금액</b>입니다.
+        고도재해장해보험금 $10,000 (연금개시 전, 재해로 장해지급률 합계 80% 이상, 최초 1회).<br>
+        예금자보호는 해약환급금+기타지급금 합산 <b>1인당 1억원까지</b>입니다(법인 계약 제외).</p>
+    </div>
+  </div>
+</section>
+
+<section id="cpcalc" style="background:#fff">
+  <div class="wrap">
+    <div class="sec-head rv" style="max-width:820px">
+      <span class="ch c"><b>4장</b> 계산</span>
+      <h2>얼마 넣으면 <em class="c">얼마 받습니까</em></h2>
+      <p class="lead">제안서 원본(메트 $71,000 · AIA $70,700)을 <b>비례 환산</b>한 참고치입니다.
+        일시납 단일 조건이라 금액 비례는 성립하지만, <b>나이와 이율이 다르면 곡선 자체가 달라집니다.</b>
+        확정 금액은 해당 조건으로 제안서를 다시 뽑아 확인하십시오.</p>
+    </div>
+
+    <div class="calc-shell">
+      <div class="panel">
+        <h3>조건 입력</h3>
+        <div class="ph">입력 즉시 다시 계산됩니다</div>
+
+        <div class="f"><label>회사 &middot; 받는 주기</label>
+          <div class="seg c" id="cpCo" style="flex-direction:column">
+            <button data-v="met" class="on" style="text-align:left;padding:13px 14px">메트라이프 &mdash; <b>매년</b><br>
+              <span style="opacity:.7">오늘의 달러 연금보험 2형(쿠폰형)</span></button>
+            <button data-v="aia" style="text-align:left;padding:13px 14px">AIA &mdash; <b>매월</b><br>
+              <span style="opacity:.7">달러로 받는 연금보험Ⅲ 1형1종(생활자금형)</span></button>
+          </div>
+        </div>
+
+        <div class="f" id="cpWrapType"><label>쿠폰형 (받는 기간)</label>
+          <div class="seg c" id="cpType">
+            <button data-v="y5" class="on">5년</button>
+            <button data-v="y10">10년</button>
+            <button data-v="y20">20년</button>
+          </div>
+          <div class="hint">기간이 길수록 한 번에 받는 돈은 줄고 <b>누계는 커집니다</b></div>
+        </div>
+
+        <div class="f"><label>투자금액 (원화, 만원)</label>
+          <input id="cpWon" type="number" step="1000" min="100" value="10000">
+          <div class="hint"><b id="cpWonEcho">—</b></div>
+        </div>
+
+        <div class="f-inline">
+          <div class="f"><label>가입 시 환율</label><input id="cpFxIn" type="number" step="10" value="1484"></div>
+          <div class="f"><label>수령 시 환율</label><input id="cpFxOut" type="number" step="10" value="1484"></div>
+        </div>
+        <div class="f" style="margin-top:-6px">
+          <input class="rr" id="cpFxRange" type="range" min="1000" max="2100" step="10" value="1484">
+          <div class="hint">외화상품입니다 &mdash; 환율이 내리면 <b>원화 기준 원금 손실</b>이 날 수 있습니다</div>
+        </div>
+
+        <div class="f"><label>이율 가정</label>
+          <select id="cpScen">
+            <option value="cur">현재 공시이율</option>
+            <option value="up">공시이율 1.5%p 상승</option>
+            <option value="min">최저보증</option>
+          </select>
+        </div>
+
+        <div class="f"><label>비교할 부동산 임대수익률 (연 %)</label>
+          <input id="cpYield" type="number" step="0.1" min="0" value="4.5">
+          <div class="hint">같은 돈으로 상가·오피스텔을 샀다고 가정합니다</div>
+        </div>
+        <div class="f-inline">
+          <div class="f"><label>공실률 (%)</label><input id="cpVac" type="number" step="1" min="0" max="50" value="8"></div>
+          <div class="f"><label>관리·수선 (%)</label><input id="cpMnt" type="number" step="1" min="0" max="50" value="10"></div>
+        </div>
+        <div class="f"><label>임대소득 세율 가정 (%)</label>
+          <input id="cpTax" type="number" step="0.5" min="0" max="60" value="16.5">
+          <div class="hint">종합소득 합산이라 <b>사람마다 다릅니다</b> &mdash; 가정값입니다</div>
+        </div>
+
+        <button class="btn btn-p" style="width:100%;justify-content:center;background:var(--navy);color:#fff;margin-top:8px"
+          onclick="window.print()">📄 인쇄 / PDF 저장</button>
+      </div>
+
+      <div>
+        <div class="fxbar" id="cpFxBar"></div>
+        <div class="res" id="cpRes"></div>
+
+        <div class="card rv" style="margin-top:16px">
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">받은 것 + 남은 것</div>
+          <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 18px" id="cpSumSub"></div>
+          <div class="mile-wrap"><table class="mile" id="cpSumTable" style="min-width:640px"></table></div>
+          <p class="hint" style="margin-top:12px" id="cpSumNote"></p>
+        </div>
+
+        <div class="card rv" style="margin-top:16px">
+          <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">부동산 월세와 나란히</div>
+          <div style="font-size:12.5px;color:var(--ink3);margin:2px 0 18px">
+            같은 목돈으로 상가를 샀다고 가정했을 때와, 이 구조로 받았을 때</div>
+          <div id="cpVs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cp5">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch c"><b>5장</b> 세금</span>
+      <h2>비과세는 <em class="c">요건을 충족할 때</em>입니다</h2>
+      <p class="lead">이 자리에서 가장 조심해야 할 대목입니다. <b>단정하지 않겠습니다.</b></p>
+    </div>
+
+    <div class="card rv" style="border-color:#f3d9ae;background:linear-gradient(150deg,#fffaf3,#fff4e6)">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px">사실과 결론을 갈라 놓겠습니다</div>
+      <div class="grid g2" style="gap:14px">
+        <div style="background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px">
+          <div style="font-size:12.5px;font-weight:800;color:var(--cp-d);margin-bottom:8px">✔ 사실</div>
+          <ul style="margin:0;padding-left:17px;font-size:13.5px;line-height:1.9;color:var(--ink2)">
+            <li>쿠폰지급금은 <b>원금에서 먼저 지급되는 구조</b>입니다. 그래서 초반 해약환급률이 낮습니다.</li>
+            <li>사망 시 지급금 계산에서 <b>이미 지급된 쿠폰지급금은 차감</b>됩니다.</li>
+            <li>저축성보험의 보험차익은 <b>이자소득</b>입니다.</li>
+          </ul>
+        </div>
+        <div style="background:#fff;border:1px solid #ffd0d4;border-radius:14px;padding:16px 18px">
+          <div style="font-size:12.5px;font-weight:800;color:var(--red);margin-bottom:8px">✕ 쓰지 않는 말</div>
+          <ul style="margin:0;padding-left:17px;font-size:13.5px;line-height:1.9;color:var(--ink2)">
+            <li>「쿠폰이라서 세금이 없습니다」</li>
+            <li>「원금이니까 과세 대상이 아닙니다」</li>
+            <li>「비과세 상품입니다」</li>
+          </ul>
+          <p style="margin-top:10px;font-size:12.5px;color:var(--ink3);line-height:1.7">
+            세무 확인 전에는 <b>사실만</b> 말씀드리고 결론은 내지 않습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card rv" style="margin-top:16px">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px">보험차익 비과세 &mdash; <b style="color:var(--cp-d)">요건 충족 시</b></div>
+      <p style="font-size:13.5px;line-height:1.9;color:var(--ink2);margin:0">
+        제안서에도 이렇게 적혀 있습니다 &mdash;
+        <b>「보험차익 비과세(이자소득세 비과세) &mdash; 일시납·월적립식 저축성보험계약요건
+        또는 종신형 연금보험계약요건 충족」</b>.<br><br>
+        즉 <b>요건을 충족할 때</b> 적용됩니다. 계약 형태·납입 방식·유지 기간·한도에 따라 달라지고,
+        <b>세법이 개정되면 또 달라집니다.</b><br>
+        그리고 <b>원화환산납입서비스</b>를 쓰면 월 납입액이 환율에 따라 매달 변해
+        <b style="color:var(--red)">비과세 요건을 충족하지 못할 수 있습니다.</b><br><br>
+        <b>이 자료는 세무 자문이 아닙니다.</b> 실제 과세 여부는 반드시 세무 전문가와 확인하십시오.</p>
+    </div>
+  </div>
+</section>
+
+<section id="cp6" style="background:#fff">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="ch c"><b>6장</b> 정리</span>
+      <h2>부동산 vs 쿠폰 <em class="c">나란히 보기</em></h2>
+      <p class="lead">어느 쪽이 낫다가 아닙니다. <b>무엇을 원하시느냐</b>에 따라 답이 갈립니다.</p>
+    </div>
+    <div class="tw rv"><table class="cmp" style="min-width:660px">
+      <thead><tr><th>구분</th><th>부동산 (상가·오피스텔)</th><th style="color:var(--cp-d)">일시납 · 쿠폰 운용</th></tr></thead>
+      <tbody>
+        <tr><td>목적</td><td class="n">건물을 갖고, 월세를 받는다</td><td class="n">월세처럼 <b>받기만</b> 한다</td></tr>
+        <tr><td>관리</td><td class="n">세입자·공실·수선·중개보수</td><td class="n"><b>없음</b></td></tr>
+        <tr><td>비는 달</td><td class="n">공실이면 그 달 0원</td><td class="n">정해진 날 <b>그대로</b></td></tr>
+        <tr><td>세금</td><td class="n">임대소득 <b>종합소득 합산</b></td><td class="n">보험차익은 이자소득 &mdash; <b>비과세는 요건 충족 시</b></td></tr>
+        <tr><td>건강보험</td><td class="n">피부양자 탈락 가능</td><td class="n">소득 발생 여부는 <b>과세 판정에 따름</b> (세무 확인)</td></tr>
+        <tr><td>나누기</td><td class="n">건물 하나를 나누기 어려움</td><td class="n">수익자 지정 &mdash; <b>비율로</b></td></tr>
+        <tr><td>현금화</td><td class="n">파는 데 시간 &mdash; 상속세 6개월</td><td class="n"><b>바로</b></td></tr>
+        <tr><td>시세 상승</td><td class="n"><b>있음</b> &mdash; 오르면 내 것</td><td class="n">없음</td></tr>
+        <tr><td>레버리지</td><td class="n"><b>있음</b> &mdash; 대출로 키울 수 있음</td><td class="n">없음</td></tr>
+        <tr><td>원금 위험</td><td class="n">시세 하락</td><td class="n"><b>환율 하락</b> · 중도해지</td></tr>
+        <tr><td>이런 분께</td><td class="n">건물을 <b>갖고 싶은</b> 분<br>시세 상승을 노리는 분</td>
+            <td class="n">월세처럼 <b>받기만</b> 하고 싶은 분<br>관리에 손 대고 싶지 않은 분<br>나눠 물려주고 싶은 분</td></tr>
+      </tbody>
+    </table></div>
+    <p class="hint rv" style="margin-top:16px">
+      ※ 위 표는 <b>구조의 차이</b>를 정리한 것입니다. 실제 수익은 매입 물건·지역·시점·개인의 세율에 따라
+      완전히 달라집니다. 부동산 쪽 숫자는 4장 계산기에서 <b>직접 넣으신 가정</b>으로 계산됩니다.</p>
+  </div>
+</section>
+</div>
+
 <!-- ══ 공통 마무리 ══ -->
 <section id="faq">
   <div class="wrap">
@@ -2751,6 +3136,40 @@ h2 em.e{color:var(--edu-d)}
         <li>1997년 환율 사례는 <b>당시 유학 경험자의 회고(언론 기고문)</b>를 인용한 것이며, 환율 고점은 1997.12.24 종가 기준입니다. <b>과거 환율이 미래를 예측하지 않습니다.</b></li>
         <li>환전수수료 절감액은 입력한 <b>스프레드(원/달러) 가정</b>에 따른 계산이며, 실제 우대율은 은행·거래실적에 따라 다릅니다. 달러보험도 <b>보험료 납입 시 환전이 일어나며</b> 그 비용은 별도입니다.</li>
         <li>자녀 명의·수익자 설정, 증여세 신고 여부는 <b>세무 전문가와 반드시 상의</b>하십시오. 미성년 자녀에 대한 증여는 신고 요건이 있습니다.</li>
+      </ul>
+      <b style="margin-top:22px">갈래 E &mdash; 일시납 &middot; 쿠폰 운용</b>
+      <ul>
+        <li>본 자료는 <b>상담 설명용 참고자료</b>이며 청약서·상품설명서·약관을 대체하지 않습니다.
+          쿠폰지급금·생활자금·해약환급률은 제안서 원본 수치를 그대로 사용했습니다.</li>
+        <li>계산기의 금액은 <b>제안서 기준액(메트 $71,000 / AIA $70,700)을 비례 환산한 참고치</b>입니다.
+          일시납 단일 조건이라 금액 비례는 성립하지만, <b>나이·이율·개시시점이 다르면 곡선 자체가 달라집니다.</b>
+          메트는 보험나이 60세 남자·연금개시 90세, AIA 는 61세 남자·연금개시 71세 기준입니다.</li>
+        <li>메트 이율: 이율확정기간(계약일로부터 20년) 공시이율 <b>5.62%</b>(매월 2회 변동) ·
+          이후 <b>4.85%</b>(매달 1일 변동) · 최저보증 <b>연복리 0.7%</b> (2026-08-16 기준).
+          AIA 이율: 이율확정기간(10년) 공시이율 <b>연복리 5.79%</b> · 이후 <b>3.82%</b> 가정 ·
+          최저보증 확정기간 이내 <b>1.0%</b> / 이후 <b>0.5%</b> (2026-08-19 기준).
+          <b>공시이율은 변동하며 예시는 현재 이율이 계속된다는 가정입니다.</b></li>
+        <li>쿠폰지급금은 <b>원금에서 먼저 지급되는 구조</b>라 지급기간 중 해약환급률이 낮습니다.
+          실제 쿠폰지급금은 <b>쿠폰지급기간의 환산 일수</b>에 따라 달라질 수 있습니다.</li>
+        <li><b>20년차부터 세 쿠폰형의 해약환급금이 같습니다.</b> 15년차까지는 다릅니다.
+          <b>이율확정기간(20년)이 끝나는 시점에 계약자적립액이 한 곳으로 모이도록 설계</b>되어
+          있기 때문입니다(회사 확인분). 쿠폰을 언제 얼마씩 받아 갔든 20년째에는 같은 자리에 섭니다.</li>
+        <li>AIA 해약환급금 = 해지시점 연금계약 적립액 &times; (1 &minus; MVA) &minus; 해약공제액 ·
+          MVA 최대 <b>20%</b>. 생활자금형은 <b>이미 지급된 생활자금에 MVA 를 적용하지 않습니다.</b></li>
+        <li><b>외화보험은 환율 변동에 따라 원금 손실이 발생할 수 있습니다.</b>
+          <b>원화환산납입서비스</b>를 쓰면 납입액이 환율에 따라 변해
+          <b>보험차익 비과세 요건을 충족하지 못할 수 있습니다.</b></li>
+        <li>보험차익 비과세는 <b>일시납·월적립식 저축성보험계약요건 또는 종신형 연금보험계약요건 충족 시</b>에만
+          적용되며 세법 개정에 따라 달라집니다. <b>「쿠폰이라 세금이 없다」는 결론을 쓰지 않습니다.</b>
+          본 자료는 세무 자문이 아니므로 반드시 세무 전문가와 상담하십시오.</li>
+        <li>부동산 비교의 임대수익률·공실률·관리비·세율은 <b>전부 사용자가 입력한 가정값</b>이며,
+          건물값이 그대로라는 전제입니다. <b>양도소득세·취득세·중개보수는 반영하지 않았습니다.</b>
+          임대소득에 따른 <b>건강보험료 변동은 개인마다 달라 금액을 적지 않았습니다.</b></li>
+        <li>사망 시 지급금은 「계약자적립액」·「이미 납입한 보험료(지급된 쿠폰 차감)」·「해약환급금」
+          <b>셋 중 큰 금액</b>입니다. 예금자보호는 해약환급금+기타지급금 합산 <b>1인당 1억원까지</b>(법인 계약 제외).</li>
+        <li><b>중도 해지 시 해약환급금은 납입한 보험료보다 적을 수 있습니다.</b>
+          예시 금액과 환급률은 <b>미래 수익을 보장하지 않습니다.</b></li>
+        <li>본 자료는 개인정보를 수집·저장·전송하지 않습니다. 입력값은 이 브라우저 안에서만 계산에 쓰입니다.</li>
       </ul>
       <b style="margin-top:22px">갈래 C &mdash; 투자 vs 보험 (세금&middot;건보료)</b>
       <ul>
@@ -3901,6 +4320,22 @@ function won(n){
   }
   return m.toLocaleString('ko-KR')+'만원';
 }
+/* 달러 옆에 늘 원화를 붙인다.
+   낸 돈은 <b>가입환율</b>, 받는 돈은 <b>수령환율</b> — 두 환율이 다르면
+   붙는 원화도 달라야 한다. 하나로 뭉치면 환차익이 화면에서 사라진다. */
+function usdIn(n){  return usd(n)+' <span class="kw">약 '+won(n*S.fxIn)+'</span>'; }
+function usdOut(n){ return usd(n)+' <span class="kw">약 '+won(n*S.fxOut)+'</span>'; }
+/* 아래 원화가 어느 환율에서 나온 값인지 — 화면 위에 붙여 두고 슬라이더를 따라 움직인다 */
+function fxBar(){
+  const el=$('#dFxBar'); if(!el) return;
+  const d=S.fxOut-S.fxIn;
+  el.innerHTML = `<span class="t">기준 환율</span>
+    <span class="v">가입 ${nf(S.fxIn)}원 <span style="color:var(--ink3)">&rarr;</span> 수령 ${nf(S.fxOut)}원</span>
+    <span class="v" style="color:${d>0?'var(--usd-d)':(d<0?'var(--red)':'var(--ink3)')}">${d>0?'+':''}${nf(d)}원</span>
+    <span class="n">아래 원화 금액은 모두 이 환율로 환산한 값입니다 &mdash;
+      <b>수령 환율</b>을 움직이면 함께 바뀝니다.</span>`;
+}
+
 /* 상품별 기본 표시 지점 — 첫 화면이 환급률 0%인 3개월로 열리지 않도록 */
 function defaultIdx(R){
   const want = S.prod==='met' ? ['10년 +1일 ★','5년 +1일 ★'] : ['15년 (연금개시)'];
@@ -3942,6 +4377,7 @@ function render(){
   const r = R[S.idx];
 
   // 슬라이더 · 시나리오 셀렉트
+  fxBar();
   const sl=$('#iYear'); sl.max=R.length-1; sl.value=S.idx;
   $('#yrEcho').textContent = r.l;
   $('#paidEcho').innerHTML = `5년 총납입 ${usd(S.prem*60)} · 가입환율 기준 ${won(S.prem*60*S.fxIn)}`;
@@ -3976,7 +4412,8 @@ function render(){
     <div class="split">
       <div><div class="lbl">달러 기준 환급률</div>
         <div class="big g">${r.rt.toFixed(2)}<span style="font-size:.45em">%</span></div>
-        <div class="sm">${usd(r.paid)} 납입 → <b style="color:#fff">${usd(cvUsd)}</b></div></div>
+        <div class="sm">${usdIn(r.paid)} 납입 → <b style="color:#fff">${usd(cvUsd)}</b>
+          <span class="kw">약 ${won(recvWon)}</span></div></div>
       <div><div class="lbl">원화 기준 환급률</div>
         <div class="big" style="color:${rtWon>=100?'#fff':'#ff9aa4'}">${rtWon.toFixed(2)}<span style="font-size:.45em">%</span></div>
         <div class="sm">${won(paidWon)} 납입 → <b style="color:#fff">${won(recvWon)}</b></div></div>
@@ -3984,7 +4421,7 @@ function render(){
     <div class="kpi">
       <div><b class="${total>=0?'g':'r'}">${total>=0?'+':''}${won(total)}</b><span>원화 총 손익</span></div>
       <div><b>${(S.fxOut/S.fxIn*100-100>=0?'+':'')}${(S.fxOut/S.fxIn*100-100).toFixed(1)}%</b><span>환율 변동률</span></div>
-      <div><b>${usd(cvUsd - r.paid)}</b><span>달러 기준 순증가</span></div>
+      <div><b>${usd(cvUsd - r.paid)}</b><span>달러 기준 순증가 · 약 ${won((cvUsd-r.paid)*S.fxOut)}</span></div>
     </div>`;
 
   // ── 수익 분해 ──────────────────────────────
@@ -4001,7 +4438,7 @@ function render(){
       <div class="v" style="${gainFxWon<0?'color:var(--red)':''}">${gainFxWon>=0?'+':''}${won(gainFxWon)}</div>
       <div class="n">${S.fxOut===S.fxIn
         ? `가입 때와 수령 때 환율이 <b>같다고 가정</b>했습니다. 수령 환율을 움직이면 이 값이 바뀝니다.`
-        : `쌓인 달러 ${usd(cvUsd)} 전체에 환율 차이 ${nf(Math.abs(S.fxOut-S.fxIn))}원이 곱해진 금액입니다.
+        : `쌓인 달러 ${usdOut(cvUsd)} 전체에 환율 차이 ${nf(Math.abs(S.fxOut-S.fxIn))}원이 곱해진 금액입니다.
            환율이 가입 때보다 <b>${S.fxOut>S.fxIn?'올라 이익':'내려 손실'}</b>입니다.`}</div>
     </div>
     <div style="grid-column:1/-1">
@@ -4107,8 +4544,8 @@ function renderAiaPost(){
      브릿지연금형은 <b>기대여명까지 5배로 앞당겨 주고 그 이후 줄어드는</b> 구조라,
      누적 수령액이 34년째부터 완만해집니다. 정액형·확정형을 고르면 곡선이 달라집니다.<br>
      공시이율 4.81%가 유지된다는 가정에서 <b>100세까지 총 연금수령액</b>은
-     종신연금형(정액·10년보증) 기준 <b>${usd(162437*sc)}</b>, 확정연금 20년형 <b>${usd(102448*sc)}</b>입니다
-     (제안서 p.13). 납입 ${usd(paid)} 대비 각각 <b>${(162437*sc/paid*100).toFixed(0)}%</b>,
+     종신연금형(정액·10년보증) 기준 <b>${usdOut(162437*sc)}</b>, 확정연금 20년형 <b>${usdOut(102448*sc)}</b>입니다
+     (제안서 p.13). 납입 ${usdIn(paid)} 대비 각각 <b>${(162437*sc/paid*100).toFixed(0)}%</b>,
      <b>${(102448*sc/paid*100).toFixed(0)}%</b>.`;
 }
 
@@ -4116,11 +4553,15 @@ function renderAiaPost(){
 function renderFull(R){
   const k=S.fxOut/S.fxIn;
   $('#fullTable').innerHTML =
-   `<thead><tr><th>경과</th><th>납입누계 (USD)</th><th>해약환급금 (USD)</th><th>달러 환급률</th><th>원화 환급률</th></tr></thead><tbody>`+
+   `<thead><tr><th>경과</th>
+     <th>납입누계 (USD)</th><th>납입누계 (원)<span class="mini">가입 ${nf(S.fxIn)}원</span></th>
+     <th>해약환급금 (USD)</th><th>해약환급금 (원)<span class="mini">수령 ${nf(S.fxOut)}원</span></th>
+     <th>달러 환급률</th><th>원화 환급률</th></tr></thead><tbody>`+
    R.map((d,i)=>{
      const cv=d.paid*d.rt/100, rtw=d.rt*k;
      return `<tr class="${i===S.idx?'key':(d.bonus?'jump':'')}">
-       <td>${d.l}</td><td class="n">${usd(d.paid)}</td><td class="n">${usd(cv)}</td>
+       <td>${d.l}</td><td class="n">${usd(d.paid)}</td><td class="n">${won(d.paid*S.fxIn)}</td>
+       <td class="n">${usd(cv)}</td><td class="n">${won(cv*S.fxOut)}</td>
        <td class="n">${d.rt.toFixed(2)}%</td>
        <td class="n" style="color:${rtw>=100?'var(--usd-d)':'var(--red)'}">${rtw.toFixed(2)}%</td></tr>`;
    }).join('')+'</tbody>';
@@ -4624,7 +5065,7 @@ window.__apexT = {
    ═══════════════════════════════════════════════ */
 const EDU = {age:0, order:2000000, region:100000, local:0,
              go:19, prod:'met', scen:'cur', fxIn:1484, fxOut:1484,
-             costUsd:50000, years:4, spread:2};
+             costUsd:50000, years:4, spread:2, mon:30};
 
 const $e = s=>document.querySelector(s);
 const enf = n=>Math.round(n).toLocaleString('ko-KR');
@@ -4635,7 +5076,20 @@ function ewon(n){
     return s+e+'억'+(r?' '+r.toLocaleString('ko-KR')+'만원':'원');}
   return m.toLocaleString('ko-KR')+'만원';
 }
-const eusd = n=>'$'+Math.round(n).toLocaleString('ko-KR');
+const eusd = n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+/* 달러 옆에 늘 원화를 붙인다 — 넣을 때는 가입환율, 받을 때는 유학 시점 환율 */
+function eusdIn(n){  return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxIn)+'</span>'; }
+function eusdOut(n){ return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxOut)+'</span>'; }
+/* 아래 원화가 어느 환율에서 나온 값인지 — 슬라이더를 따라 움직인다 */
+function eduFxBar(){
+  const el=$e('#eFxBar'); if(!el) return;
+  const d=EDU.fxOut-EDU.fxIn;
+  el.innerHTML = `<span class="t">기준 환율</span>
+    <span class="v">넣을 때 ${enf(EDU.fxIn)}원 <span style="color:var(--ink3)">&rarr;</span> 나올 때 ${enf(EDU.fxOut)}원</span>
+    <span class="v" style="color:${d>0?'var(--edu-d)':(d<0?'var(--red)':'var(--ink3)')}">${d>0?'+':''}${enf(d)}원</span>
+    <span class="n">아래 원화 금액은 모두 이 환율로 환산한 값입니다 &mdash;
+      <b>나올 때 환율</b>을 움직이면 함께 바뀝니다.</span>`;
+}
 
 /* 나이 t(만)에 그 해 받는 월 지원금 (원) */
 function monthlyAid(t){
@@ -4724,6 +5178,104 @@ function eduCalc(){
           payYears: payEnd - start, done: years >= EDU_PAYYEARS};
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   월 얼마 넣으면 얼마 — 지원금 말고 <b>따로 넣는 돈</b>
+
+   여태 이 화면은 지원금 총액만 다뤘다. 그래서 「지원금 말고 내가 월
+   30만원씩 더 넣으면 얼마가 되냐」 는 물음에 답할 자리가 없었다.
+   상담에서 제일 많이 나오는 물음인데도.
+
+   두 상품 모두 <b>5년납</b>이다. 월 납입액 × 60 이 납입누계이고,
+   그 뒤는 이미 있는 환급률표를 그대로 태운다 — 새 곡선을 만들지 않는다.
+   ═══════════════════════════════════════════════════════════════ */
+function eduMonCalc(){
+  const won   = Math.max(0, EDU.mon) * 10000 * 12 * EDU_PAYYEARS;  /* 5년 총납입(원) */
+  const usd   = EDU.fxIn>0 ? won/EDU.fxIn : 0;                     /* 가입환율로 달러 환산 */
+  return {won, usd};
+}
+/* 지원금 재원을 월납으로 바꾸면 얼마인가 — 나란히 보여 주려고 */
+function eduAidPerMonth(c){
+  return c.premWon / (12*EDU_PAYYEARS);
+}
+function renderEduMon(){
+  const box = $e('#eMonBox'); if(!box) return;
+  const m = eduMonCalc();
+  if(!(m.won>0)){
+    box.innerHTML = `<div class="card rv" style="margin-top:16px">
+      <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">월 얼마 넣으면 얼마가 됩니까</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin-top:6px;line-height:1.7">
+        위 <b>월 납입액</b> 칸에 금액을 적으면 여기 계산됩니다. 지원금과는 <b>따로</b> 넣는 돈입니다.</div></div>`;
+    return;
+  }
+  const c    = eduCalc();
+  const aid  = eduAidPerMonth(c);
+  const marks = (EDU.prod==='met')
+    ? [[5,'5년 · 납입완료'],[5.01,'5년 + 하루 ★'],[8,'8년 · 원금 회복'],[10,'10년'],
+       [10.01,'10년 + 하루 ★'],[15,'15년'],[20,'20년'],[c.years,`유학 시점 (${EDU.go}세)`]]
+    : [[5,'5년 · 납입완료'],[7,'7년 · 원금 회복'],[10,'10년'],[12,'12년'],
+       [15,'15년 · 연금개시'],[c.years,`유학 시점 (${EDU.go}세)`]];
+  const seen = {};
+  const rows = marks.filter(([t])=>{ const k=t.toFixed(2); if(seen[k])return false; seen[k]=1; return true; })
+    .sort((a,b)=>a[0]-b[0])
+    .map(([t,l])=>{
+      const rt  = eduRateAt(t), usd = m.usd*rt/100, won = usd*EDU.fxOut;
+      return {t, l, rt, usd, won, diff: won-m.won, est: eduIsEst(t), key: Math.abs(t-c.years)<0.001};
+    });
+  const at = rows.find(r=>r.key) || rows[rows.length-1];
+
+  box.innerHTML = `
+    <div class="card rv" style="margin-top:16px;background:#fbfaff;border:1px solid #e6e0f2">
+      <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">
+        월 <b style="color:var(--edu-d)">${enf(EDU.mon)}만원</b>씩 5년 넣으면</div>
+      <div style="font-size:12.5px;color:var(--ink3);margin:6px 0 16px;line-height:1.7">
+        지원금과 <b>따로</b> 넣는 돈입니다. 두 상품 모두 <b>5년납</b>이라
+        월 납입액 &times; 60 이 납입누계가 되고, 그 뒤는 제안서 환급률표를 그대로 태웁니다.</div>
+
+      <div class="eduflow rv" style="margin-top:0">
+        <div class="b"><b>월 ${enf(EDU.mon)}만원</b><span>&times; 60개월</span></div>
+        <div class="ar">&rarr;</div>
+        <div class="b"><b>${ewon(m.won)}</b><span>5년 총납입 &middot; ${eusd(m.usd)}<br>넣을 때 ${enf(EDU.fxIn)}원</span></div>
+        <div class="ar">&rarr;</div>
+        <div class="b hot"><b>${eusd(at.usd)}</b>
+          <span>${at.l} &middot; 환급률 ${at.rt.toFixed(2)}%<br>
+          약 ${ewon(at.won)} (나올 때 ${enf(EDU.fxOut)}원)</span></div>
+      </div>
+
+      <div class="mile-wrap" style="margin-top:18px"><table class="mile">
+        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 (USD)</th>
+          <th>원화 (${enf(EDU.fxOut)}원)</th><th>낸 돈 대비</th></tr></thead>
+        <tbody>${rows.map(r=>`
+          <tr class="${r.key?'key':''}">
+            <td>${r.l}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
+            <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}>
+              <b>${r.rt.toFixed(2)}%</b>${r.est?'<span class="mini">추정</span>':''}</td>
+            <td>${eusd(r.usd)}</td>
+            <td>${ewon(r.won)}</td>
+            <td class="${r.diff>=0?'up':''}" ${r.diff<0?'style="color:var(--red)"':''}>
+              ${r.diff>=0?'+':''}${ewon(r.diff)}</td></tr>`).join('')}</tbody>
+      </table></div>
+
+      <div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 15px">
+        <div style="font-size:12.5px;font-weight:800;color:var(--edu-d);margin-bottom:6px">지원금과 나란히 보면</div>
+        <div style="font-size:12.5px;color:var(--ink2);line-height:1.8">
+          지원금으로 넣는 재원 ${ewon(c.premWon)} 은 5년으로 나누면 <b>월 ${ewon(aid)}</b> 꼴입니다.
+          여기에 <b>월 ${enf(EDU.mon)}만원</b>을 더하면 실제로는
+          <b style="color:var(--edu-d)">월 ${ewon(aid + EDU.mon*10000)}</b> 짜리 설계가 됩니다.<br>
+          유학 시점(${c.years}년)에 받는 금액은
+          지원금 몫 ${eusd(c.usd)} + 추가납입 몫 ${eusd(at.usd)}
+          = <b style="color:var(--edu-d)">${eusd(c.usd + at.usd)}</b>
+          <span class="kw">약 ${ewon((c.usd + at.usd)*EDU.fxOut)}</span> 입니다.
+        </div>
+      </div>
+
+      <div style="margin-top:12px;font-size:11.5px;color:var(--ink4);line-height:1.7">
+        ※ 환급률은 <b>메트 보험나이 45세 &middot; AIA 40세 제안서</b> 기준을 그대로 쓴 것입니다.
+        나이와 가입금액이 다르면 곡선도 달라지므로 <b>구조를 보는 용도</b>이고 확정 금액이 아닙니다.
+        정확한 금액은 해당 조건으로 제안서를 다시 뽑아 확인하십시오.
+        외화보험은 환율에 따라 원금 손실이 생길 수 있습니다.</div>
+    </div>`;
+}
+
 /* 언제 찾느냐 — 같은 돈인데 시점 하나로 금액이 갈린다 */
 function eduWhenRows(c){
   const marks = (EDU.prod==='met')
@@ -4748,6 +5300,7 @@ function renderEdu(){
   const c = eduCalc();
   const fxNow = EDU.fxIn;
   const echo = $e('#eFxOutEcho'); if(echo) echo.textContent = enf(EDU.fxOut);
+  eduFxBar();
   // 유학 시점 환율 시나리오
   const scen = [1200, EDU.fxIn, 1800, 1965];
   const wonUsd = c.won / fxNow;        // 원화로 모은 돈을 그때 환전하면 (환율 시나리오별로 달라짐)
@@ -4762,9 +5315,11 @@ function renderEdu(){
         <div class="sm">${EDU.age}세부터 ${EDU.go}세까지 실제로 통장에 들어올 돈입니다.</div></div>
       <div><div class="lbl">달러 상품에서 찾을 때 (${EDU.go}세 · ${c.years}년 경과)</div>
         <div class="big ${c.rate>=100?'g':''}" ${c.rate<100?'style="color:var(--red)"':''}>${eusd(c.usd)}</div>
-        <div class="sm">환급률 <b>${c.rate.toFixed(2)}%</b> 적용
+        <div class="sm"><b style="color:#fff">약 ${ewon(c.usd*EDU.fxOut)}</b>
+          <span class="kw">· 나올 때 ${enf(EDU.fxOut)}원 기준</span><br>
+          환급률 <b>${c.rate.toFixed(2)}%</b> 적용
           &mdash; ${EDU.prod==='met'?'메트라이프 백만달러':'AIA 글로벌 파워'} 5년납 제안서 표<br>
-          납입 재원 ${ewon(c.premWon)} (가입환율 ${enf(fxNow)}원 → ${eusd(c.premUsd)})</div></div>
+          납입 재원 ${ewon(c.premWon)} (넣을 때 ${enf(fxNow)}원 → ${eusd(c.premUsd)})</div></div>
     </div>
     <div class="kpi">
       <div><b class="g">${c.usd*EDU.fxOut-c.paid>=0?'+':''}${ewon(c.usd*EDU.fxOut-c.paid)}</b>
@@ -4772,6 +5327,8 @@ function renderEdu(){
       <div><b>${(c.usd/Math.max(1,EDU.costUsd)*12).toFixed(1)}개월</b><span>유학비 기준 커버 기간</span></div>
       <div><b>0원</b><span>새로 나가는 돈</span></div>
     </div>`;
+
+  renderEduMon();
 
   // 환차익 분해 — 들어갈 때 환율 vs 나올 때 환율
   const fxOut = EDU.fxOut;
@@ -4789,7 +5346,7 @@ function renderEdu(){
     <div class="dc fx" style="background:var(--edu-l);border-color:#d9cbf5">
       <div class="h" style="color:var(--edu-d)">② 환차익 <span style="font-weight:600">(${enf(EDU.fxIn)}원 → ${enf(fxOut)}원)</span></div>
       <div class="v" style="color:${gainFx>=0?'var(--edu-d)':'var(--red)'}">${gainFx>=0?'+':''}${ewon(gainFx)}</div>
-      <div class="n">쌓인 달러 <b>${eusd(c.usd)}</b> 전체에 환율 차이
+      <div class="n">쌓인 달러 <b>${eusdOut(c.usd)}</b> 전체에 환율 차이
         <b>${enf(Math.abs(fxOut-EDU.fxIn))}원</b>이 곱해진 금액입니다.
         ${fxOut>EDU.fxIn?`환율이 <b style="color:var(--edu-d)">오른 만큼 그대로 이익</b>입니다.`
           :fxOut<EDU.fxIn?`환율이 <b style="color:var(--red)">내려 손실</b>입니다 &mdash; 이 위험도 함께 봐야 합니다.`
@@ -4822,7 +5379,7 @@ function renderEdu(){
       <div style="font-size:16px;font-weight:800;letter-spacing:-.03em">
         언제 찾느냐가 얼마를 받느냐를 정합니다</div>
       <div style="font-size:12.5px;color:var(--ink3);margin:6px 0 16px;line-height:1.7">
-        납입 재원 <b>${ewon(c.premWon)}</b>(= ${eusd(c.premUsd)})를 넣었을 때,
+        납입 재원 <b>${ewon(c.premWon)}</b>(= ${eusd(c.premUsd)} · 넣을 때 ${enf(EDU.fxIn)}원)를 넣었을 때,
         <b>찾는 시점</b>별 환급률과 수령액입니다. ${scenTxt} 기준.
         ${EDU.prod==='met'?'메트는 <b>5년 + 하루</b>와 <b>10년 + 하루</b>에 유지보너스가 붙어 환급률이 계단처럼 뜁니다 &mdash; 하루 차이로 갈립니다.':''}
       </div>
@@ -4877,8 +5434,9 @@ function renderEdu(){
      const a=c.won/fx, b=c.usd;
      return `<tr class="${fx===EDU.fxIn?'key':''}">
        <td>${enf(fx)}원${fx===1965?' <span class="mini">1997 고점</span>':fx===EDU.fxIn?' <span class="mini">현재 가정</span>':''}</td>
-       <td>${eusd(a)}</td><td class="up">${eusd(b)}</td>
-       <td class="up">+${eusd(b-a)}</td>
+       <td>${eusd(a)}<span class="mini">${ewon(c.won)}</span></td>
+       <td class="up">${eusd(b)}<span class="mini">${ewon(b*fx)}</span></td>
+       <td class="${b-a>=0?'up':''}" ${b-a<0?'style="color:var(--red)"':''}>${b-a>=0?'+':''}${eusd(b-a)}<span class="mini">${b*fx-c.won>=0?'+':''}${ewon(b*fx-c.won)}</span></td>
        <td>${(b/Math.max(1,EDU.costUsd)*12).toFixed(1)}개월
          <span class="mini">원화는 ${(a/Math.max(1,EDU.costUsd)*12).toFixed(1)}개월</span></td></tr>`;
    }).join('')+'</tbody>';
@@ -4918,9 +5476,186 @@ function renderEdu(){
    ─ 정부가 지자체 지원금을 한곳에 모아주는 공개 API가 없어 수동 취합이 유일한 방법이다.
    ═══════════════════════════════════════════════ */
 const RG_KEY = 'apex_edu_regions';
-const RG = {draft:[], saved:[], stamp:''};
+const RG = {draft:[], saved:[], stamp:'', file:null, warnDays:180, pick:null};
 
-function rgBlank(){ return {sido:'', gu:'', amt:'', memo:''}; }
+/* ── 전국 시·군·구 뼈대 ────────────────────────────────────────────
+   팀이 손으로 채우게 두면 사람마다 다른 값을 쓰고, 누가 언제 확인한
+   값인지 아무도 모른다. 그래서 시·도 › 시·군·구 뼈대를 미리 깔아 두고
+   금액마다 <b>확인일자와 출처</b>를 함께 남긴다.
+
+   ※ 없는 주소도 200 으로 앱 HTML 을 돌려주는 배포 규칙이 있어
+     r.json() 을 곧바로 부르면 조용히 터진다. 글로 받아 손으로 뜯는다. */
+const RG_URL = '../edu-regions.json';
+function rgKeyOf(a,b){ return (a||'')+'|'+(b||''); }
+function rgLoadFile(){
+  return fetch(RG_URL, {cache:'no-store'}).then(r=>r.text()).then(t=>{
+    let o=null;
+    try{ o=JSON.parse(t); }catch(e){ o=null; }
+    if(!o || !Array.isArray(o.regions)) throw new Error('형식이 맞지 않습니다');
+    RG.file=o;
+    if(o.meta && +o.meta.warnAfterDays>0) RG.warnDays=+o.meta.warnAfterDays;
+    return o;
+  });
+}
+/* 파일 위에 팀 취합본을 덮는다 — 손으로 확인한 값이 이긴다 */
+function rgMerged(){
+  const m={};
+  if(RG.file) RG.file.regions.forEach(r=>{ m[rgKeyOf(r.sido,r.gu)]={...r}; });
+  RG.saved.forEach(r=>{
+    const k=rgKeyOf(r.sido,r.gu), amt=parseFloat(r.amt);
+    const base=m[k]||{sido:r.sido||'',gu:r.gu||'',amt:null,memo:'',checked:'',src:''};
+    m[k]={...base, amt: isFinite(amt)&&amt>=0 ? amt : base.amt,
+          memo: r.memo||base.memo, checked: RG.stamp||base.checked, src: r.src||base.src, mine:1};
+  });
+  return m;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   지자체 지원금을 <b>긁어오는 길</b>
+
+   229곳을 한 사람이 손으로 치는 것은 못 할 일이다. 그렇다고 확인 없이
+   채우면 고객 앞에서 틀린 금액을 말하게 된다. 그래서 <b>찾는 일은 쉽게,
+   적는 일은 자동으로</b> 만든다.
+
+     ① 고른 지역의 공식 자료를 <b>한 번 눌러</b> 연다
+     ② 거기서 본 표를 <b>통째로 복사해</b> 붙여 넣는다
+     ③ 앱이 지역·금액·출처를 뜯어 표에 채운다 — 못 읽은 금액은 비워 둔다
+
+   블로그든 보도자료든 엑셀이든 상관없다. 우리가 아는 229개 이름이
+   줄 안에 있으면 그 줄을 그 지역 것으로 본다.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 「경남 고성군」 과 「강원 고성군」 을 가르려면 짧은 이름도 알아야 한다 */
+const RG_SHORT = {
+  '서울특별시':['서울'],'부산광역시':['부산'],'대구광역시':['대구'],'인천광역시':['인천'],
+  '광주광역시':['광주'],'대전광역시':['대전'],'울산광역시':['울산'],'세종특별자치시':['세종'],
+  '경기도':['경기'],'강원특별자치도':['강원'],'충청북도':['충북','충청북'],'충청남도':['충남','충청남'],
+  '전북특별자치도':['전북','전라북'],'전라남도':['전남','전라남'],
+  '경상북도':['경북','경상북'],'경상남도':['경남','경상남'],'제주특별자치도':['제주']
+};
+function rgSidoNames(sido){ return [sido].concat(RG_SHORT[sido]||[]); }
+
+/* 「720만원」 「1,000만」 「7,200,000원」 → 만원 숫자. 못 읽으면 null (0 아님) */
+function rgMoneyMan(t){
+  t = (''+(t||'')).replace(/[\s,]/g,'');
+  let man = 0, hit = false, m;
+  m = t.match(/([0-9]+(?:\.[0-9]+)?)억/); if(m){ man += parseFloat(m[1])*10000; hit = true; }
+  m = t.match(/([0-9]+(?:\.[0-9]+)?)만/); if(m){ man += parseFloat(m[1]); hit = true; }
+  if(!hit){ m = t.match(/([0-9]{5,})원/); if(m){ man = parseInt(m[1],10)/10000; hit = true; } }
+  if(!hit) return null;
+  return man > 0 ? Math.round(man) : null;
+}
+
+/* 붙여 넣은 글 → 표 줄 묶음. 못 가린 줄은 왜 못 가렸는지 함께 돌려준다 */
+function rgParsePaste(text){
+  const merged = rgMerged(), all = Object.keys(merged).map(k=>merged[k]);
+  if(!all.length) return {rows:[], skip:[]};
+  const byGu = {};
+  all.forEach(r=>{ (byGu[r.gu] = byGu[r.gu] || []).push(r); });
+  /* 긴 이름부터 본다 — 「남동구」 를 「남구」 로 잘못 집으면 안 된다 */
+  const names = Object.keys(byGu).sort((a,b)=>b.length-a.length);
+  const rows = [], skip = [], seen = {};
+  (''+(text||'')).split(/[\r\n]+/).forEach(raw=>{
+    const t = raw.replace(/\s+/g,' ').trim();
+    if(!t) return;
+    let hit = null;
+    for(let i=0;i<names.length;i++){ if(t.indexOf(names[i])>=0){ hit = names[i]; break; } }
+    if(!hit) return;
+    const cands = byGu[hit];
+    let row = cands[0];
+    if(cands.length > 1){
+      row = null;
+      for(let i=0;i<cands.length && !row;i++){
+        const ns = rgSidoNames(cands[i].sido);
+        for(let j=0;j<ns.length;j++) if(t.indexOf(ns[j])>=0){ row = cands[i]; break; }
+      }
+      if(!row){ skip.push({gu:hit, why:'같은 이름이 여러 시·도에 있어 못 가렸습니다 — 시·도를 같이 적어 주세요'}); return; }
+    }
+    const k = row.sido+'|'+row.gu;
+    if(seen[k]) return;                       /* 같은 지역이 여러 줄이면 먼저 것이 이긴다 */
+    seen[k] = 1;
+    const rest = t.split(hit).join(' ');
+    const amt  = rgMoneyMan(rest);
+    const src  = (rest.match(/https?:\/\/\S+/) || [''])[0];
+    const memo = rest.replace(/https?:\/\/\S+/g,' ')
+                     .replace(/[0-9][0-9,.]*\s*(억|만원|만|원)?/g,' ')
+                     .replace(/[|·,\-–—\t]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60);
+    rows.push({sido:row.sido, gu:row.gu, amt:(amt===null?'':String(amt)), memo:memo, src:src});
+  });
+  return {rows, skip};
+}
+
+/* 붙여넣기 칸 열고 닫기 */
+let RG_PASTE_ON = false;
+function rgPasteToggle(){
+  RG_PASTE_ON = !RG_PASTE_ON;
+  const b = $e('#rgPasteBox');
+  if(b) b.style.display = RG_PASTE_ON ? '' : 'none';
+  const t = $e('#rgPasteBtn');
+  if(t) t.textContent = RG_PASTE_ON ? '▲ 붙여넣기 닫기' : '⤒ 붙여넣기로 여러 지역 한 번에';
+  if(RG_PASTE_ON){ const a = $e('#rgPasteText'); if(a) a.focus(); }
+}
+function rgPasteRun(){
+  const a = $e('#rgPasteText');
+  const out = rgParsePaste(a ? a.value : '');
+  const msg = $e('#rgPasteMsg');
+  if(!out.rows.length){
+    if(msg) msg.innerHTML = out.skip.length
+      ? `지역 이름은 보이는데 <b>시·도를 못 가렸습니다.</b> ${out.skip.slice(0,3).map(x=>x.gu).join(', ')} — 「경남 고성군」 처럼 시·도를 같이 적어 주세요.`
+      : '아는 시·군·구 이름을 한 줄에서도 못 찾았습니다. 지역 이름이 들어간 줄을 함께 붙여 넣어 주세요.';
+    return;
+  }
+  /* 이미 손으로 적어 둔 줄은 덮지 않는다 — 사람이 넣은 것이 이긴다 */
+  const have = {};
+  RG.draft.forEach(r=>{ if(r.sido||r.gu) have[(r.sido||'')+'|'+(r.gu||'')] = 1; });
+  let add = 0;
+  out.rows.forEach(r=>{ if(have[r.sido+'|'+r.gu]) return; RG.draft.push(r); have[r.sido+'|'+r.gu]=1; add++; });
+  RG.draft = RG.draft.filter(r=>(r.sido||r.gu||r.amt));
+  rgRenderTable(); rgDirty();
+  const noAmt = out.rows.filter(r=>!r.amt).length;
+  if(msg) msg.innerHTML = `<b>${add}개 지역</b>을 표에 넣었습니다.` +
+    (noAmt ? ` 그중 <b>${noAmt}곳은 금액을 못 읽어 비워 두었습니다</b> — 0 으로 채우지 않습니다.` : '') +
+    (out.skip.length ? ` 시·도를 못 가린 줄 ${out.skip.length}개는 건너뛰었습니다.` : '') +
+    ` 확인하신 뒤 <b>취합 저장</b>을 누르셔야 계산에 반영됩니다.`;
+}
+
+/* 고른 지역의 자료를 한 번 눌러 연다 — 우리가 금액을 지어내지 않는 대신,
+   찾는 데 걸리는 시간을 줄인다 */
+function rgFindUrl(kind, sido, gu){
+  const q = encodeURIComponent((sido||'') + ' ' + (gu||'') + ' 출산장려금 출산지원금 ' + (new Date()).getFullYear());
+  if(kind==='naver')  return 'https://search.naver.com/search.naver?query=' + q;
+  if(kind==='google') return 'https://www.google.com/search?q=' + q;
+  if(kind==='bokji')  return 'https://www.bokjiro.go.kr';
+  return 'https://www.gov.kr';
+}
+function rgFindLinksHtml(sido, gu){
+  const a = (k,t)=>`<a class="usebtn" href="${rgFindUrl(k,sido,gu)}" target="_blank" rel="noopener"
+     style="text-decoration:none">${t}</a>`;
+  return `<div class="linkrow" style="margin-top:10px">
+    ${a('naver','🔎 네이버에서 찾기')}${a('google','🔎 구글에서 찾기')}
+    ${a('bokji','복지로 →')}${a('gov','정부24 →')}
+  </div>`;
+}
+
+function rgSidoList(){
+  const m=rgMerged(), out=[], seen={};
+  Object.keys(m).forEach(k=>{ const s=m[k].sido; if(s&&!seen[s]){seen[s]=1;out.push(s);} });
+  return out;
+}
+function rgGuList(sido){
+  const m=rgMerged(), out=[];
+  Object.keys(m).forEach(k=>{ if(m[k].sido===sido) out.push(m[k]); });
+  return out;
+}
+/* 며칠 지났나 — 반년이 넘으면 화면에 경고한다. 해마다 바뀌는 값이다. */
+function rgAgeDays(d){
+  if(!d) return null;
+  const t=Date.parse(d+'T00:00:00+09:00');
+  if(isNaN(t)) return null;
+  return Math.floor((Date.now()-t)/86400000);
+}
+
+function rgBlank(){ return {sido:'', gu:'', amt:'', memo:'', src:''}; }
 function rgLoad(){
   try{
     const o = JSON.parse(localStorage.getItem(RG_KEY)||'null');
@@ -4933,14 +5668,17 @@ function rgStampText(){
 }
 function rgRenderTable(){
   $e('#rgTable').innerHTML =
-   `<thead><tr><th style="width:20%">시·도</th><th style="width:26%">시·군·구</th>
-     <th style="width:18%">지원금 (만원)</th><th>메모 (조건·비고)</th><th style="width:8%"></th></tr></thead><tbody>`+
+   `<thead><tr><th style="width:16%">시·도</th><th style="width:20%">시·군·구</th>
+     <th style="width:14%">지원금 (만원)</th><th>메모 (조건·비고)</th>
+     <th style="width:22%">출처 (주소)</th><th style="width:6%"></th></tr></thead><tbody>`+
    RG.draft.map((r,i)=>`<tr>
-     <td><input data-i="${i}" data-k="sido" value="${r.sido||''}" placeholder="예: 전남"></td>
+     <td><input data-i="${i}" data-k="sido" value="${r.sido||''}" placeholder="예: 전라남도" list="rgSidoOpts"></td>
      <td><input data-i="${i}" data-k="gu" value="${r.gu||''}" placeholder="예: 해남군"></td>
      <td><input data-i="${i}" data-k="amt" value="${r.amt||''}" inputmode="decimal" placeholder="예: 720"></td>
      <td><input data-i="${i}" data-k="memo" value="${r.memo||''}" placeholder="예: 첫째 기준·분할지급·1년 거주"></td>
-     <td><button class="usebtn" data-del="${i}" style="padding:7px 9px">✕</button></td></tr>`).join('')+'</tbody>';
+     <td><input data-i="${i}" data-k="src" value="${r.src||''}" placeholder="확인한 고시·안내 주소"></td>
+     <td><button class="usebtn" data-del="${i}" style="padding:7px 9px">✕</button></td></tr>`).join('')+'</tbody>'+
+   `<datalist id="rgSidoOpts">${rgSidoList().map(x=>`<option value="${x}">`).join('')}</datalist>`;
   $e('#rgTable').querySelectorAll('input').forEach(inp=>{
     inp.oninput = e=>{ RG.draft[+e.target.dataset.i][e.target.dataset.k]=e.target.value; rgDirty(); };
   });
@@ -4954,17 +5692,67 @@ function rgDirty(){
   $e('#rgMsg').style.color = 'var(--red)';
 }
 function rgRenderPick(){
-  const sel = $e('#rgPick'), prev = sel.value;
-  sel.innerHTML = `<option value="-1">직접 입력 — 계산 화면에서</option>` +
-    RG.saved.map((r,i)=>`<option value="${i}">${[r.sido,r.gu].filter(Boolean).join(' ')||'(이름없음)'} — ${r.amt||0}만원</option>`).join('');
-  sel.value = prev && +prev < RG.saved.length ? prev : '-1';
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd||!gu) return;
+  const list=rgSidoList();
+  const keepS=RG.pick?RG.pick.sido:sd.value;
+  sd.innerHTML = `<option value="">시·도를 고르십시오</option>`+
+    list.map(x=>`<option value="${x}">${x}</option>`).join('');
+  if(keepS && list.indexOf(keepS)>=0) sd.value=keepS;
+  rgRenderGu();
   $e('#rgStamp').textContent = rgStampText();
-  $e('#rgPickNote').textContent = RG.saved.length
-    ? '고르면 다음 계산 화면의 지자체 지원금이 자동으로 채워집니다.'
-    : '취합본을 저장하면 여기서 지역을 고를 수 있습니다.';
+  $e('#rgPickNote').innerHTML = RG.file
+    ? `전국 <b>${RG.file.regions.length}개 시·군·구</b>가 미리 들어 있습니다. 고르기만 하시면 됩니다.
+       금액이 비어 있으면 아래 표에서 채우고 <b>취합 저장</b>을 누르시면 그때부터 여기에도 나옵니다.`
+    : `지역 파일을 읽지 못했습니다 — 아래 표에 직접 채워 <b>취합 저장</b>하시면 됩니다.`;
+}
+function rgRenderGu(){
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd||!gu) return;
+  const rows=sd.value?rgGuList(sd.value):[];
+  gu.innerHTML = rows.length
+    ? `<option value="">시·군·구를 고르십시오</option>`+
+      rows.map(r=>`<option value="${r.gu}">${r.gu}${r.amt!=null?(' — '+r.amt+'만원'):' — 자료 없음'}</option>`).join('')
+    : `<option value="">시·도를 먼저 고르십시오</option>`;
+  if(RG.pick && RG.pick.sido===sd.value) gu.value=RG.pick.gu;
+  rgRenderState();
+}
+/* 고른 지역이 어떤 값인지 · 언제 확인한 값인지 */
+function rgRenderState(){
+  const box=$e('#rgPickState'); if(!box) return;
+  const sd=$e('#rgSido'), gu=$e('#rgGu');
+  if(!sd.value||!gu.value){ box.innerHTML=''; return; }
+  const r=rgMerged()[rgKeyOf(sd.value,gu.value)];
+  if(!r){ box.innerHTML=''; return; }
+  const age=rgAgeDays(r.checked);
+  let tone='#f2fbf6', line='#bfe8d2', ink='#1f6b45', msg='';
+  if(r.amt==null){
+    tone='#fffaf0'; line='#f5e2b0'; ink='#7a5b16';
+    msg=`<b>아직 확인하지 않은 지역입니다.</b> 금액을 0 으로 잡지 않습니다 —
+         「모른다」와 「없다」는 다릅니다. 아래 링크에서 확인해 표에 채워 주십시오.`;
+  }else if(age===null){
+    tone='#fffaf0'; line='#f5e2b0'; ink='#7a5b16';
+    msg=`금액은 있는데 <b>언제 확인한 값인지 적혀 있지 않습니다.</b> 확인일자를 함께 남겨 주십시오.`;
+  }else if(age>RG.warnDays){
+    tone='#fff4f4'; line='#ffd4d4'; ink='#8a2b2b';
+    msg=`⚠️ <b>${age}일 전(${r.checked})에 확인한 값</b>입니다. 지자체 지원금은 해마다 바뀝니다 —
+         상담 전에 다시 확인해 주십시오.`;
+  }else{
+    msg=`${r.checked} 확인 · ${age}일 지났습니다.`;
+  }
+  box.innerHTML = `<div style="background:${tone};border:1px solid ${line};border-radius:12px;
+      padding:12px 15px;font-size:12.5px;color:${ink};line-height:1.75">
+    <b>${r.sido} ${r.gu}</b> —
+    ${r.amt==null?'<b>자료 없음</b>':`<b>${r.amt.toLocaleString('ko-KR')}만원</b>`}
+    ${r.mine?' <span class="mini" style="display:inline">우리 팀 취합본</span>':''}<br>
+    ${msg}
+    ${r.memo?`<br><span style="color:var(--ink3)">조건: ${r.memo}</span>`:''}
+    ${r.src?`<br><a href="${r.src}" target="_blank" rel="noopener" style="color:inherit;font-weight:800">출처 열기 →</a>`:''}
+  </div>${rgFindLinksHtml(r.sido, r.gu)}`;
 }
 function rgSave(){
   RG.saved = JSON.parse(JSON.stringify(RG.draft)).filter(r=>(r.sido||r.gu||r.amt));
+  /* 확인일자는 「취합 저장」 누른 날이다 — 손으로 적게 하면 아무도 안 적는다 */
   const d = new Date();
   RG.stamp = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   try{ localStorage.setItem(RG_KEY, JSON.stringify({rows:RG.saved, stamp:RG.stamp})); }catch(e){}
@@ -4994,15 +5782,24 @@ $e('#rgImport').onclick= ()=>{
     $e('#rgMsg').style.color='var(--red)';
   }catch(e){ alert('형식이 맞지 않습니다. 내보내기로 만든 내용을 그대로 붙여넣어 주십시오.'); }
 };
-$e('#rgPick').onchange = e=>{
-  const i = +e.target.value;
-  if(i < 0) return;
-  const amt = parseFloat(RG.saved[i]?.amt) || 0;
-  EDU.local = amt;
-  const f = $e('#eLocal'); if(f) f.value = amt;
+$e('#rgPasteBtn').onclick   = rgPasteToggle;
+$e('#rgPasteRun').onclick   = rgPasteRun;
+$e('#rgPasteClear').onclick = ()=>{ const a=$e('#rgPasteText'); if(a)a.value=''; const m=$e('#rgPasteMsg'); if(m)m.innerHTML=''; };
+$e('#rgSido').onchange = ()=>{ RG.pick=null; rgRenderGu(); };
+$e('#rgGu').onchange = e=>{
+  const sd=$e('#rgSido').value, g=e.target.value;
+  RG.pick = (sd&&g)?{sido:sd,gu:g}:null;
+  rgRenderState();
+  if(!RG.pick) return;
+  const r=rgMerged()[rgKeyOf(sd,g)];
+  /* 자료가 없으면 <b>0 으로 채우지 않는다.</b> 없는 것과 모르는 것은 다르다. */
+  if(!r || r.amt==null) return;
+  EDU.local = r.amt;
+  const f = $e('#eLocal'); if(f) f.value = r.amt;
   renderEdu();
 };
 rgLoad(); rgRenderTable(); rgRenderPick();
+rgLoadFile().then(()=>{ rgRenderPick(); },()=>{ rgRenderPick(); });
 
 const ecl=(v,a,b)=>isNaN(v)?a:Math.min(b,Math.max(a,v));
 $e('#eAge').oninput    = e=>{ EDU.age=ecl(+e.target.value,0,17); renderEdu(); };
@@ -5024,6 +5821,7 @@ $e('#eFxOut').oninput  = e=>{ EDU.fxOut=+e.target.value||1484;
 $e('#eCostUsd').oninput= e=>{ EDU.costUsd=Math.max(0,+e.target.value||0); renderEdu(); };
 $e('#eYears').oninput  = e=>{ EDU.years=ecl(+e.target.value,1,10); renderEdu(); };
 $e('#eSpread').oninput = e=>{ EDU.spread=Math.max(0,+e.target.value||0); renderEdu(); };
+$e('#eMon').oninput    = e=>{ EDU.mon=Math.max(0,+e.target.value||0); renderEdu(); };
 
 renderEdu();
 
@@ -5031,6 +5829,13 @@ window.__renderE = renderEdu;
 window.__apexE = {
   set(v){ Object.assign(EDU, v); renderEdu(); },
   get(){ return {...EDU}; },
+  /* 지역 뼈대 — 점검이 여기로 들여다본다 */
+  regions(){ return {file:RG.file, saved:RG.saved, stamp:RG.stamp, warnDays:RG.warnDays,
+                     merged:rgMerged(), sido:rgSidoList()}; },
+  regionSave(rows, stamp){ RG.saved=rows||[]; if(stamp)RG.stamp=stamp; rgRenderPick(); },
+  regionPaste(text){ const a=$e('#rgPasteText'); if(a)a.value=text; rgPasteRun();
+                     return {draft:RG.draft.slice(), msg:($e('#rgPasteMsg')||{}).innerHTML||''}; },
+  regionParse(text){ return rgParsePaste(text); },
   result(){
     const c = eduCalc(), need = EDU.costUsd*EDU.years;
     return {track:'교육자금', childAge:EDU.age, goAge:EDU.go, years:c.years,
@@ -5042,13 +5847,322 @@ window.__apexE = {
 
 })();
 
+
+/* ══════════ 트랙 C2 : 일시납 · 쿠폰 운용 ══════════ */
+(function(){
+
+/* ═══════════════════════════════════════════════════════════════
+   제안서 원본 — 여기 없는 값은 만들어 쓰지 않는다.
+   다른 나이·다른 금액의 곡선은 제안서를 다시 뽑아야 한다.
+
+   메트라이프 무배당 오늘의 달러 연금보험 (2형 쿠폰형) · 저축성
+     일시납 $71,000 · 보험나이 60세 남자 · 연금지급개시 90세
+     이율확정기간(계약일로부터 20년) 공시 5.62% (매월 2회 변동)
+     이율확정기간 이후 4.85% (매달 1일 변동) · 최저보증 연복리 0.7%
+     (2026-08-16 기준)
+   ═══════════════════════════════════════════════════════════════ */
+const CP_BASE = 71000;
+const CP_T = {
+  y5 : {t:'5년형',  n:5,  each:8502.51, sum:42512.55},
+  y10: {t:'10년형', n:10, each:4828.78, sum:48287.80},
+  y20: {t:'20년형', n:20, each:3058.49, sum:61169.80}
+};
+/* 해약환급금 — 제안서 13쪽. [경과년, 나이, 최저보증$, 1.5%p상승$, 현재공시$]
+   20년차부터 세 쿠폰형의 환급금이 같다. 15년차까지는 다르다
+   (20년형 $70,036 vs 5년형 $57,381). <b>이율확정기간(20년)이 끝나는 시점에
+   계약자적립액이 한 곳으로 모이도록 설계</b>돼 있어서다 — 회사 확인분(2026-08-20).
+   쿠폰을 언제 얼마씩 빼갔든 20년째에는 같은 자리에 선다는 뜻이다.            */
+const CP_CV = {
+  y5 :[[1,61,45586,45586,58478],[5,65,28252,30040,37072],[10,70,33900,39774,45761],
+       [15,75,41321,53496,57381],[20,80,72965,72965,72965],[25,85,71471,87924,87924],
+       [30,90,69924,106881,106881]],
+  y10:[[1,61,48158,48158,61777],[5,65,42638,45337,55950],[10,70,33900,39774,45761],
+       [15,75,41321,53496,57381],[20,80,72965,72965,72965],[25,85,71471,87924,87924],
+       [30,90,69924,106881,106881]],
+  y20:[[1,61,49397,49397,63367],[5,65,49571,52708,65047],[10,70,49945,58599,67420],
+       [15,75,50433,65293,70036],[20,80,72965,72965,72965],[25,85,71471,87924,87924],
+       [30,90,69924,106881,106881]]
+};
+/* 10년형은 10년차부터, 20년형은 20년차부터 5년형과 같다고 제안서에 적혀 있다.
+   그 구간은 「제안서에 같다고 적힌 값」이라는 뜻이므로 화면에 밝힌다. */
+const CP_SAME_FROM = {y5:99, y10:10, y20:20};
+
+/* AIA 무배당 AIA 달러로 받는 연금보험Ⅲ 1형1종(생활자금형)
+   일시납 $70,700 (= 99,899,100원 · 1USD=1,413.00원) · 남자 61세 · 연금개시 71세
+   이율확정기간(10년) 공시 연복리 5.79% · 이후 3.82% 가정
+   최저보증 확정기간 이내 1.0% / 이후 0.5% (2026-08-19 기준)                */
+const AI_BASE = 70700;
+const AI_MON  = 227.93, AI_N = 120;          /* 매월 · 120개월 */
+const AI_CV = [[1,62,54424,57561,65499],[3,64,54705,60051,66317],[5,66,54930,62524,67063],
+               [7,68,55527,65617,68435],[10,71,70700,70700,70700]];
+
+const CP = {co:'met', type:'y5', won:10000, fxIn:1484, fxOut:1484, scen:'cur',
+            yieldPct:4.5, vac:8, mnt:10, tax:16.5};
+
+const $c  = s=>document.querySelector(s);
+const cnf = n=>Math.round(n).toLocaleString('ko-KR');
+const cusd= n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
+function cwon(n){
+  const m=Math.round(n/10000);
+  if(m===0) return '0원';
+  if(Math.abs(m)>=10000){const s=m<0?'-':'',a=Math.abs(m),e=Math.trunc(a/10000),r=a%10000;
+    return s+e+'억'+(r?' '+r.toLocaleString('ko-KR')+'만원':'원');}
+  return m.toLocaleString('ko-KR')+'만원';
+}
+/* 달러 옆에 늘 원화를 — 받는 돈은 수령환율로 */
+function cusdOut(n){ return cusd(n)+' <span class="kw">약 '+cwon(n*CP.fxOut)+'</span>'; }
+
+const cpIsMet = ()=>CP.co==='met';
+const cpBase  = ()=>cpIsMet()?CP_BASE:AI_BASE;
+/* 제안서 금액에 대한 비례 배수. 일시납 단일 조건이라 비례가 성립한다 —
+   다만 화면에 「비례 환산한 참고치」라고 반드시 적는다. */
+function cpK(){
+  const usd = CP.fxIn>0 ? (CP.won*10000)/CP.fxIn : 0;
+  return {usd, k: usd/cpBase()};
+}
+function cpScenIdx(){ return {min:2, up:3, cur:4}[CP.scen] || 4; }
+function cpCvTable(){ return cpIsMet()? CP_CV[CP.type] : AI_CV; }
+function cpCvAt(y){
+  const T=cpCvTable(), i=cpScenIdx();
+  for(let r=0;r<T.length;r++) if(T[r][0]===y) return T[r][i];
+  return null;
+}
+/* 받은 것 — 그 시점까지 나온 쿠폰(또는 생활자금) 누계 */
+function cpGotBy(y){
+  const {k}=cpK();
+  if(cpIsMet()){
+    const T=CP_T[CP.type];
+    return Math.min(y, T.n) * T.each * k;      /* 만 1년 경과부터 매년 */
+  }
+  return Math.min(y*12, AI_N) * AI_MON * k;    /* 만 1개월 경과부터 매월 */
+}
+function cpEach(){
+  const {k}=cpK();
+  return cpIsMet() ? CP_T[CP.type].each*k : AI_MON*k;
+}
+function cpTimes(){ return cpIsMet()? CP_T[CP.type].n : AI_N; }
+function cpTotalGot(){ return cpEach()*cpTimes(); }
+
+/* 부동산 월세 — 같은 목돈으로 상가를 샀다고 가정.
+   가정값은 전부 사용자가 넣는다. 우리가 시장 수익률을 단정하지 않는다. */
+function cpRealty(){
+  const buy = CP.won*10000;
+  const gross = buy * CP.yieldPct/100;                 /* 연 임대료(명목) */
+  const afterVac = gross * (1 - CP.vac/100);
+  const afterMnt = afterVac * (1 - CP.mnt/100);
+  const net = afterMnt * (1 - CP.tax/100);
+  return {buy, gross, net, monthly: net/12, grossMonthly: gross/12};
+}
+
+function cpFxBar(){
+  const el=$c('#cpFxBar'); if(!el) return;
+  const d=CP.fxOut-CP.fxIn;
+  el.innerHTML = `<span class="t">기준 환율</span>
+    <span class="v">가입 ${cnf(CP.fxIn)}원 <span style="color:var(--ink3)">&rarr;</span> 수령 ${cnf(CP.fxOut)}원</span>
+    <span class="v" style="color:${d>0?'var(--cp-d)':(d<0?'var(--red)':'var(--ink3)')}">${d>0?'+':''}${cnf(d)}원</span>
+    <span class="n">아래 원화 금액은 모두 이 환율로 환산한 값입니다 &mdash;
+      <b>수령 환율</b>을 움직이면 함께 바뀝니다. 외화상품이라 환율이 내리면 원화 기준 손실이 날 수 있습니다.</span>`;
+}
+
+function renderCp(){
+  cpFxBar();
+  const {usd,k}=cpK();
+  const met=cpIsMet();
+  $c('#cpWrapType').style.display = met ? '' : 'none';
+  const we=$c('#cpWonEcho');
+  if(we) we.innerHTML = `일시납 <b>${cusd(usd)}</b> (가입환율 ${cnf(CP.fxIn)}원) ·
+    제안서 ${cusd(cpBase())} 의 <b>${(k*100).toFixed(1)}%</b>`;
+
+  const each=cpEach(), n=cpTimes(), got=cpTotalGot();
+  const per = met ? '매년' : '매월';
+  const lastY = met ? CP_T[CP.type].n : 10;
+  const cvAtLast = cpCvAt(met ? (lastY<=5?5:(lastY<=10?10:20)) : 10);
+  const cvUsd = cvAtLast===null ? null : cvAtLast*k;
+
+  $c('#cpRes').innerHTML = `
+    <span class="pill">${met?'메트라이프 · 쿠폰지급금':'AIA · 생활자금'} · ${met?CP_T[CP.type].t:'120개월'}</span>
+    <div class="pn">${met?'무배당 오늘의 달러 연금보험 2형(쿠폰형)':'무배당 AIA 달러로 받는 연금보험Ⅲ 1형1종'}</div>
+    <div class="sub2">일시납 ${cwon(CP.won*10000)} = ${cusd(usd)} · 가입환율 ${cnf(CP.fxIn)}원 → 수령환율 ${cnf(CP.fxOut)}원</div>
+    <div class="split">
+      <div><div class="lbl">${per} 받는 돈</div>
+        <div class="big g">${cusd(each)}</div>
+        <div class="sm"><b style="color:#fff">약 ${cwon(each*CP.fxOut)}</b> · ${per} ${n}회
+          ${met?'':'<br>월 환산이 아니라 <b>실제로 매월</b> 나옵니다'}</div></div>
+      <div><div class="lbl">다 받으면 (누계)</div>
+        <div class="big">${cusd(got)}</div>
+        <div class="sm">약 ${cwon(got*CP.fxOut)} · 넣은 돈의
+          <b style="color:#fff">${(got/usd*100).toFixed(1)}%</b></div></div>
+    </div>
+    <div class="kpi">
+      <div><b>${met? cusd(each/12) : cusd(each)}</b>
+        <span>${met?'월 환산 참고치 — 실제로는 1년에 한 번':'매월 실제 지급액'}</span></div>
+      <div><b>${cvUsd===null?'—':cusd(cvUsd)}</b><span>${met?CP_T[CP.type].n:10}년차 해약환급금</span></div>
+      <div><b class="g">${cvUsd===null?'—':cusd(got+cvUsd)}</b><span>받은 것 + 남은 것</span></div>
+    </div>`;
+
+  /* ── 받은 것 + 남은 것 ── 환급률만 보여주면 오해한다 */
+  const scenT = {cur:'현재 공시이율', up:'공시이율 1.5%p 상승', min:'최저보증'}[CP.scen];
+  $c('#cpSumSub').innerHTML = met
+    ? `쿠폰은 <b>원금에서 먼저 나가는 구조</b>라 초반 환급률이 낮습니다.
+       그래서 <b>받은 쿠폰을 합친 총액</b>을 같이 놓아야 그림이 맞습니다. ${scenT} 기준.`
+    : `생활자금을 받고도 <b>10년차 환급률이 100.00%</b> 입니다 — 세 가정이 그 자리에서 만납니다. ${scenT} 기준.`;
+
+  const T=cpCvTable(), sameFrom = met ? CP_SAME_FROM[CP.type] : 99;
+  $c('#cpSumTable').innerHTML =
+   `<thead><tr><th>경과</th><th>나이</th><th>받은 ${met?'쿠폰':'생활자금'}</th>
+     <th>해약환급금</th><th>합계</th><th>넣은 돈 대비</th></tr></thead><tbody>`+
+   T.map(r=>{
+     const y=r[0], age=r[1], cv=r[cpScenIdx()]*k, g=cpGotBy(y), tot=g+cv, rt=tot/usd*100;
+     const same = met && y>=sameFrom;
+     return `<tr class="${y===(met?CP_T[CP.type].n:10)?'key':''}">
+       <td>${y}년${same?' <span class="mini">이율확정기간 끝 · 세 형이 같아짐</span>':''}</td>
+       <td>${age}세</td>
+       <td>${cusd(g)}<span class="mini">${cwon(g*CP.fxOut)}</span></td>
+       <td>${cusd(cv)}<span class="mini">${cwon(cv*CP.fxOut)}</span></td>
+       <td class="up"><b>${cusd(tot)}</b><span class="mini">${cwon(tot*CP.fxOut)}</span></td>
+       <td class="${rt>=100?'up':''}" ${rt<100?'style="color:var(--red)"':''}><b>${rt.toFixed(1)}%</b></td></tr>`;
+   }).join('')+'</tbody>';
+
+  $c('#cpSumNote').innerHTML = met
+    ? `※ 제안서 <b>${cusd(CP_BASE)}</b> 기준을 <b>비례 환산한 참고치</b>입니다 (배수 ${k.toFixed(3)}).
+       일시납 단일 조건이라 금액 비례는 성립하지만, <b>나이(60세 남)와 이율이 다르면 곡선 자체가 달라집니다.</b><br>
+       ★ <b>20년차부터는 세 쿠폰형의 환급금이 같습니다.</b> 15년차까지는 다릅니다
+       (20년형 $70,036 vs 5년형 $57,381). <b>이율확정기간(20년)이 끝나는 시점에
+       계약자적립액이 한 곳으로 모이도록 설계</b>되어 있기 때문입니다(회사 확인분).
+       즉 쿠폰을 언제 얼마씩 받아 갔든 <b>20년째에는 같은 자리에 섭니다</b> —
+       그래서 위 표의 「합계」가 곧 쿠폰형을 고르는 기준이 됩니다.<br>
+       연금개시(30년·90세) 시점 계약자적립액은 세 쿠폰형 모두 같습니다 —
+       최저보증 ${cusd(71001*k)} · 평균/현재공시 중 낮은 이율 ${cusd(84291*k)} · 현재공시 ${cusd(106881*k)}.`
+    : `※ 제안서 <b>${cusd(AI_BASE)}</b>(= 99,899,100원 · 1USD 1,413.00원) 기준을
+       <b>비례 환산한 참고치</b>입니다 (배수 ${k.toFixed(3)}). 남자 61세 · 연금개시 71세 조건입니다.<br>
+       해약환급금 = 해지시점 연금계약 적립액 × (1 − MVA) − 해약공제액 ·
+       MVA 최대 20% · <b>이미 지급된 생활자금에는 MVA 를 적용하지 않습니다.</b>`;
+
+  /* ── 부동산과 나란히 ──
+     ★ 월세와 쿠폰을 그냥 견주면 <b>거짓말이 된다.</b>
+       월세는 건물을 그대로 두고 나오는 돈이고, 쿠폰은 <b>원금에서 먼저 나가는 돈</b>이다.
+       그래서 월 금액을 나란히 놓되 그 사실을 크게 적고,
+       진짜 견줄 수 있는 「N년 뒤 손에 남는 것 전부」 를 아래에 따로 놓는다. */
+  const R=cpRealty();
+  const cpMonthlyWon = met ? (each*CP.fxOut/12) : (each*CP.fxOut);
+  const cpNote = met ? '쿠폰을 12로 나눈 월 환산 참고치입니다 — 실제로는 1년에 한 번 나옵니다'
+                     : '실제로 매월 나오는 금액입니다';
+  /* 같은 해에 두 쪽이 각각 얼마를 손에 쥐고 있는가 */
+  const cmpRows = (met ? [5,10,20,30] : [5,10]).map(y=>{
+    const cv = cpCvAt(y);
+    if(cv===null) return null;
+    const cpTot = (cpGotBy(y) + cv*k) * CP.fxOut;              /* 받은 것 + 남은 것 (원화) */
+    const rentTot = R.net*y + R.buy;                            /* 월세 누계 + 건물(시세 변동 0 가정) */
+    return {y, cpTot, rentTot, rent:R.net*y};
+  }).filter(Boolean);
+  $c('#cpVs').innerHTML = `
+    <div class="decomp" style="margin-top:0">
+      <div class="dc">
+        <div class="h">부동산 &mdash; 상가·오피스텔 ${CP.yieldPct}%</div>
+        <div class="v">${cwon(R.monthly)}<span style="font-size:.5em;font-weight:700"> / 월</span></div>
+        <div class="n">명목 월세 ${cwon(R.grossMonthly)} 에서
+          공실 ${CP.vac}% · 관리·수선 ${CP.mnt}% · 세금 ${CP.tax}% 를 뺀 <b>손에 쥐는 돈</b>입니다.<br>
+          여기에 <b>건강보험료</b>가 더 붙을 수 있습니다 &mdash; 피부양자에서 빠지면 재산에도 보험료가 붙습니다.
+          사람마다 달라 금액을 적지 않았습니다.</div>
+      </div>
+      <div class="dc fx" style="background:var(--cp-l);border-color:#f0d9b4">
+        <div class="h" style="color:var(--cp-d)">일시납 · ${met?'쿠폰':'생활자금'} ${met?CP_T[CP.type].t:'120개월'}</div>
+        <div class="v" style="color:var(--cp-d)">${cwon(cpMonthlyWon)}<span style="font-size:.5em;font-weight:700"> / 월</span></div>
+        <div class="n">${cpNote}. 받는 기간은 <b>${met?CP_T[CP.type].n+'년':'10년'}</b> 이고,
+          그 뒤에도 <b>해약환급금이 남습니다.</b><br>
+          세금은 <b>요건 충족 시</b> 비과세이며 <b>단정하지 않습니다</b> &mdash; 5장을 함께 보십시오.</div>
+      </div>
+      <div style="grid-column:1/-1">
+        <div class="bar2">
+          <i style="width:${Math.max(2,Math.min(98,R.monthly/(R.monthly+cpMonthlyWon||1)*100)).toFixed(1)}%;background:#a9bdd2"></i>
+          <i style="width:${Math.max(2,Math.min(98,cpMonthlyWon/(R.monthly+cpMonthlyWon||1)*100)).toFixed(1)}%;background:var(--cp)"></i>
+        </div>
+        <div style="margin-top:14px;background:#fff4f4;border:1px solid #ffd4d4;border-radius:12px;
+                    padding:13px 16px;font-size:13px;color:#8a2b2b;line-height:1.8">
+          ⚠️ <b>이 두 숫자를 그대로 견주시면 안 됩니다.</b>
+          월세는 <b>건물을 그대로 두고</b> 나오는 돈이고,
+          ${met?'쿠폰':'생활자금'}은 <b>넣으신 원금에서 먼저 나가는 돈</b>입니다.
+          그래서 ${met?'쿠폰':'생활자금'} 쪽 월 금액이 더 커 보이는 것이 당연합니다 &mdash;
+          받는 동안 잔액이 그만큼 줄어듭니다.<br>
+          정직하게 견줄 수 있는 것은 아래 <b>「그 해에 손에 쥐고 있는 것 전부」</b> 입니다.</div>
+      </div>
+      <div style="grid-column:1/-1">
+        <div style="font-size:14px;font-weight:800;letter-spacing:-.03em;margin:6px 0 10px">
+          그 해에 손에 쥐고 있는 것 전부</div>
+        <div class="mile-wrap"><table class="mile" style="min-width:600px">
+          <thead><tr><th>경과</th>
+            <th>부동산 &mdash; 월세 누계 + 건물</th>
+            <th>${met?'쿠폰':'생활자금'} &mdash; 받은 것 + 남은 것</th>
+            <th>차이</th></tr></thead>
+          <tbody>${cmpRows.map(r=>{
+            const d=r.cpTot-r.rentTot;
+            return `<tr>
+              <td>${r.y}년</td>
+              <td>${cwon(r.rentTot)}<span class="mini">월세 ${cwon(r.rent)} + 건물 ${cwon(R.buy)}</span></td>
+              <td class="up"><b>${cwon(r.cpTot)}</b></td>
+              <td class="${d>=0?'up':''}" ${d<0?'style="color:var(--red)"':''}>${d>=0?'+':''}${cwon(d)}</td></tr>`;
+          }).join('')}</tbody>
+        </table></div>
+        <p class="hint" style="margin-top:12px">
+          부동산 쪽은 <b>건물값이 그대로라고 가정</b>했습니다 &mdash; 오르면 그만큼 부동산이 앞서고,
+          내리면 그만큼 뒤집힙니다. 그리고 <b>양도소득세·중개보수·취득세</b>는 넣지 않았습니다.<br>
+          ${met?'쿠폰':'생활자금'} 쪽은 <b>수령환율 ${cnf(CP.fxOut)}원</b> 기준입니다 &mdash;
+          환율이 내리면 그만큼 줄어듭니다. 위 슬라이더를 움직여 보십시오.<br>
+          두 쪽 다 <b>왼쪽에 넣으신 가정</b>으로 계산한 것입니다. 숫자 하나로 우열을 가릴 수 없습니다 &mdash;
+          6장의 표를 함께 보십시오.</p>
+      </div>
+    </div>`;
+}
+
+/* ═══ 입력 ═══ */
+function cpSeg(sel,key,after){
+  document.querySelectorAll(sel+' button').forEach(b=>{
+    b.onclick=()=>{
+      document.querySelectorAll(sel+' button').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on'); CP[key]=b.dataset.v; if(after) after(); renderCp();
+    };
+  });
+}
+cpSeg('#cpCo','co');
+cpSeg('#cpType','type');
+const ccl=(v,a,b)=>isNaN(v)?a:Math.min(b,Math.max(a,v));
+$c('#cpWon').oninput   = e=>{ CP.won=Math.max(1,+e.target.value||1); renderCp(); };
+$c('#cpFxIn').oninput  = e=>{ CP.fxIn=Math.max(100,+e.target.value||100); renderCp(); };
+$c('#cpFxOut').oninput = e=>{ CP.fxOut=Math.max(100,+e.target.value||100);
+  const r=$c('#cpFxRange'); if(r) r.value=CP.fxOut; renderCp(); };
+$c('#cpFxRange').oninput=e=>{ CP.fxOut=+e.target.value;
+  const t=$c('#cpFxOut'); if(t) t.value=CP.fxOut; renderCp(); };
+$c('#cpScen').onchange = e=>{ CP.scen=e.target.value; renderCp(); };
+$c('#cpYield').oninput = e=>{ CP.yieldPct=Math.max(0,+e.target.value||0); renderCp(); };
+$c('#cpVac').oninput   = e=>{ CP.vac=ccl(+e.target.value,0,50); renderCp(); };
+$c('#cpMnt').oninput   = e=>{ CP.mnt=ccl(+e.target.value,0,50); renderCp(); };
+$c('#cpTax').oninput   = e=>{ CP.tax=ccl(+e.target.value,0,60); renderCp(); };
+
+renderCp();
+window.__renderC = renderCp;
+window.__apexC = {
+  set(v){ Object.assign(CP, v); renderCp(); },
+  get(){ return {...CP}; },
+  result(){
+    const {usd,k}=cpK(), got=cpTotalGot();
+    const y = cpIsMet()? (CP_T[CP.type].n<=5?5:(CP_T[CP.type].n<=10?10:20)) : 10;
+    const cv = (cpCvAt(y)||0)*k;
+    return {track:'일시납·쿠폰', co:CP.co, type:cpIsMet()?CP.type:'aia120',
+      wonIn:CP.won*10000, usdIn:usd, each:cpEach(), times:cpTimes(),
+      gotTotal:got, cashValue:cv, sum:got+cv, fxIn:CP.fxIn, fxOut:CP.fxOut};
+  }
+};
+
+})();
+
 /* ═══ 트랙 전환 ═══ */
 (function(){
   const EL = {w:document.getElementById('trackW'), d:document.getElementById('trackD'),
-              t:document.getElementById('trackT'), e:document.getElementById('trackE')};
-  const FN = {w:'__renderW', d:'__renderD', t:'__renderT', e:'__renderE'};
-  const START = {w:'how', d:'c1', t:'t1', e:'e1'},
-        CALC  = {w:'calc', d:'dcalc', t:'tcalc', e:'ecalc'};
+              t:document.getElementById('trackT'), e:document.getElementById('trackE'),
+              c:document.getElementById('trackC')};
+  const FN = {w:'__renderW', d:'__renderD', t:'__renderT', e:'__renderE', c:'__renderC'};
+  const START = {w:'how', d:'c1', t:'t1', e:'e1', c:'cp1'},
+        CALC  = {w:'calc', d:'dcalc', t:'tcalc', e:'ecalc', c:'cpcalc'};
   let cur = 'w';
   function redraw(k){
     const fn = window[FN[k]];
