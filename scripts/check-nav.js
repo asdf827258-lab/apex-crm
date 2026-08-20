@@ -168,7 +168,9 @@ async function boot(page) {
     NAV_Q = ''; renderNav();
     return { n: want.length, stillSeen: stillSeen, notFound: notFound };
   });
-  is(hid.n >= 6, '눈에서 뺀 칸이 ' + hid.n + '개 있다');
+  /* 여섯이었는데 AI 조직 라이브를 아예 지워 다섯이 됐다.
+     숫자를 못 박기보다 「감춘 칸이 있고, 찾으면 나온다」 를 본다. */
+  is(hid.n >= 5, '눈에서 뺀 칸이 ' + hid.n + '개 있다');
   is(hid.stillSeen.length === 0, '평소 목록에는 안 보인다' + (hid.stillSeen.length ? ' — 아직 보임: ' + hid.stillSeen.join(', ') : ''));
   is(hid.notFound.length === 0, '이름으로 찾으면 나온다 — 지운 게 아니다' + (hid.notFound.length ? ' — 못 찾음: ' + hid.notFound.join(', ') : ''));
 
