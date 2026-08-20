@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<title>팀 하루 한 장 · APEX</title>
+<link rel="manifest" href="team.webmanifest"/>
+<meta name="theme-color" content="#7C3AED"/>
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png"/>
+<link rel="apple-touch-icon" href="icons/icon-180.png"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="팀 하루 한 장"/>
+<script>
+window.APEX_SB = window.APEX_SB || {
+  url: "https://miakdhxtqofpndtlyzxa.supabase.co",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU"
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;700;800;900&family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   팀 하루 한 장 — 사업단장이 폰에서 보는 판.
+
+   개인용 「하루 한 장」 과 같은 얼굴이되, 색만 다르다 (보라).
+   내 것과 팀 것을 헷갈리면 안 되기 때문이다.
+
+   여기서 새로 만드는 표는 없다. DB 통합 CRM 이 이미 쌓고 있는
+   calls · dbs 를 사람별로 세기만 한다. 그래서 숫자가 어긋날 수 없다.
+
+   피드백은 AI 가 쓰되, <b>고객 이름·번호·통화 메모는 보내지 않는다.</b>
+   나가는 것은 팀원 이름과 숫자뿐이다. 그 선은 개인용과 같다.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --bg:#F5F3FB; --card:#FFFFFF; --sunk:#EDE9FA;
+  --ink:#1E1B3A; --ink2:#4C4470; --ink3:#8B84A8; --hair:#E2DDF2;
+  --core:#7C3AED; --core2:#A78BFA; --glow:rgba(124,58,237,.13);
+  --miss:#B45309; --miss-bg:rgba(180,83,9,.10);
+  --no:#B91C1C;   --no-bg:rgba(185,28,28,.10);
+  --yes:#15803D;  --yes-bg:rgba(21,128,61,.10);
+  --sh:0 8px 22px -14px rgba(30,27,58,.5);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0B0716; --card:#181330; --sunk:#221B44;
+  --ink:#EFEAFB; --ink2:#B8AEDC; --ink3:#7E75A3; --hair:#2E2557;
+  --core:#A78BFA; --core2:#C4B5FD; --glow:rgba(167,139,250,.16);
+  --miss:#FBBF24; --miss-bg:rgba(251,191,36,.14);
+  --no:#F87171;   --no-bg:rgba(248,113,113,.14);
+  --yes:#4ADE80;  --yes-bg:rgba(74,222,128,.14);
+  --sh:0 10px 26px -16px #000;
+}}
+:root[data-theme="dark"]{
+  --bg:#0B0716; --card:#181330; --sunk:#221B44;
+  --ink:#EFEAFB; --ink2:#B8AEDC; --ink3:#7E75A3; --hair:#2E2557;
+  --core:#A78BFA; --core2:#C4B5FD; --glow:rgba(167,139,250,.16);
+  --miss:#FBBF24; --miss-bg:rgba(251,191,36,.14);
+  --no:#F87171;   --no-bg:rgba(248,113,113,.14);
+  --yes:#4ADE80;  --yes-bg:rgba(74,222,128,.14);
+  --sh:0 10px 26px -16px #000;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg)}
+body{font-family:'Noto Sans KR','Gothic A1',-apple-system,BlinkMacSystemFont,sans-serif;
+  color:var(--ink);-webkit-text-size-adjust:100%}
+.phone{max-width:460px;margin:0 auto;height:100vh;height:100dvh;overflow:hidden;
+  display:flex;flex-direction:column;position:relative;background:var(--bg)}
+
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--hair);
+  padding:calc(env(safe-area-inset-top) + 11px) 14px 11px}
+.t1{display:flex;align-items:center;gap:9px}
+.t1 b{font-family:'Gothic A1',sans-serif;font-weight:900;font-size:19px;letter-spacing:-.6px}
+.t1 span{font-size:12px;color:var(--ink3);font-weight:700}
+.t1 .sp{margin-left:auto;display:flex;gap:6px;align-items:center}
+.pill{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;border-radius:99px;
+  padding:3px 8px;border:1px dashed var(--hair);color:var(--ink3);white-space:nowrap}
+.pill.on{border-style:solid;border-color:var(--core);color:var(--core);background:var(--glow)}
+.t2{display:flex;gap:7px;margin-top:9px}
+.kpi{flex:1;background:var(--sunk);border-radius:11px;padding:7px 9px;text-align:center}
+.kpi b{display:block;font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:17px;line-height:1.2;
+  letter-spacing:-.5px}
+.kpi span{display:block;font-size:10px;color:var(--ink3);margin-top:1px}
+.kpi.a b{color:var(--miss)} .kpi.b b{color:var(--core)} .kpi.c b{color:var(--yes)} .kpi.d b{color:var(--no)}
+
+.body{flex:1;overflow-y:auto;padding:14px 14px 90px;-webkit-overflow-scrolling:touch}
+.sec{font-family:'Gothic A1',sans-serif;font-weight:800;font-size:11.5px;color:var(--ink3);
+  margin:19px 0 8px;display:flex;align-items:center;gap:6px;letter-spacing:-.2px}
+.sec i{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--sunk);
+  border-radius:99px;padding:2px 7px;color:var(--ink2)}
+.sec:first-child{margin-top:2px}
+.sec .mini{margin-left:auto;border:1px solid var(--core);background:var(--glow);color:var(--core);
+  border-radius:9px;padding:5px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
+  font-family:'Gothic A1',sans-serif}
+
+.mrow{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--hair);
+  border-radius:13px;padding:11px 12px;margin-bottom:7px;width:100%;text-align:left;cursor:pointer;
+  font:inherit;color:inherit}
+.mrow .av{flex:none;width:34px;height:34px;border-radius:11px;background:var(--sunk);color:var(--ink2);
+  display:flex;align-items:center;justify-content:center;font-family:'Gothic A1',sans-serif;
+  font-weight:900;font-size:14px}
+.mrow.zero .av{background:var(--no-bg);color:var(--no)}
+.mrow.top .av{background:var(--yes-bg);color:var(--yes)}
+.mrow .m{flex:1;min-width:0}
+.mrow .m b{display:block;font-family:'Gothic A1',sans-serif;font-weight:800;font-size:14.5px;letter-spacing:-.3px}
+.mrow .m span{display:block;font-size:11.5px;color:var(--ink3);margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .n{flex:none;text-align:right;font-family:'IBM Plex Mono',monospace}
+.mrow .n b{display:block;font-weight:600;font-size:17px;line-height:1.1;color:var(--core)}
+.mrow.zero .n b{color:var(--no)}
+.mrow .n span{display:block;font-size:9.5px;color:var(--ink3);font-family:'Noto Sans KR',sans-serif}
+.mrow.open{border-color:var(--core);box-shadow:var(--sh)}
+
+.det{background:var(--sunk);border-radius:0 0 13px 13px;margin:-9px 0 9px;padding:11px 13px 12px}
+.det .g{display:flex;flex-wrap:wrap;gap:5px 0}
+.det .g span{width:50%;font-size:12px;color:var(--ink2);line-height:1.8}
+.det .g span em{font-style:normal;color:var(--ink3);font-size:10.5px;display:inline-block;min-width:64px}
+.det .g span b{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--ink)}
+.det .fb{margin-top:9px;background:var(--card);border-radius:10px;padding:10px 12px;
+  font-size:12.5px;line-height:1.75;color:var(--ink)}
+.det .fb u{display:block;text-decoration:none;font-family:'Gothic A1',sans-serif;font-weight:800;
+  font-size:10px;color:var(--core);margin-bottom:4px}
+.det .fb button{margin-top:8px;border:1px solid var(--hair);background:var(--sunk);color:var(--ink2);
+  border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer}
+
+.bar{display:flex;align-items:flex-end;gap:3px;height:46px;background:var(--card);
+  border:1px solid var(--hair);border-radius:13px;padding:8px 9px 6px;margin-bottom:8px}
+.bar i{flex:1;background:var(--core);border-radius:2px;min-height:2px;opacity:.85}
+.bar i.z{background:var(--hair)}
+.barx{display:flex;gap:3px;font-size:9px;color:var(--ink3);font-family:'IBM Plex Mono',monospace;
+  margin:-4px 0 12px;padding:0 9px}
+.barx span{flex:1;text-align:center}
+
+.note{font-size:11px;color:var(--ink3);line-height:1.8;background:var(--sunk);border-radius:12px;
+  padding:11px 13px;margin-top:13px}
+.note b{color:var(--ink2);font-weight:800}
+.empty{font-size:12.5px;color:var(--ink3);text-align:center;padding:22px 10px;line-height:1.9}
+.warnbox{background:var(--no-bg);border-radius:12px;padding:12px 14px;font-size:12.5px;
+  color:var(--ink);line-height:1.75;margin-bottom:12px}
+.warnbox b{font-weight:800;color:var(--no)}
+.warnbox a{display:inline-block;margin-top:8px;text-decoration:none;background:var(--core);color:#fff;
+  border-radius:10px;padding:9px 14px;font-family:'Gothic A1',sans-serif;font-weight:800;font-size:12px}
+
+.go{width:100%;border:0;border-radius:14px;padding:15px;background:var(--core);color:#fff;
+  font-family:'Gothic A1',sans-serif;font-weight:900;font-size:15px;cursor:pointer;
+  box-shadow:0 8px 20px -10px var(--core)}
+.go[disabled]{opacity:.4;box-shadow:none}
+.go.gh{background:var(--sunk);color:var(--ink2);box-shadow:none}
+.all{background:var(--card);border:1.5px solid var(--core);border-radius:15px;padding:13px 15px;
+  margin-bottom:12px;box-shadow:var(--sh)}
+.all>u{display:block;text-decoration:none;font-family:'Gothic A1',sans-serif;font-weight:800;
+  font-size:10.5px;color:var(--core);letter-spacing:-.2px}
+.all>p{margin:6px 0 0;font-size:13.5px;line-height:1.8;color:var(--ink);white-space:pre-wrap}
+.all>em{display:flex;gap:7px;margin-top:11px;font-style:normal}
+.all>em button{flex:1;border:0;border-radius:11px;padding:11px 6px;background:var(--core);color:#fff;
+  font-family:'Gothic A1',sans-serif;font-weight:800;font-size:12px;cursor:pointer}
+.all>em button.gh{background:var(--sunk);color:var(--ink2)}
+
+.fbi{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:start;
+  background:var(--card);border:1px solid var(--hair);border-radius:13px;padding:11px 12px;margin-bottom:7px}
+.fbi.zero{border-color:var(--no)}
+.fbi .av{flex:none;width:34px;height:34px;border-radius:11px;background:var(--sunk);color:var(--ink2);
+  display:flex;align-items:center;justify-content:center;font-family:'Gothic A1',sans-serif;
+  font-weight:900;font-size:14px}
+.fbi.zero .av{background:var(--no-bg);color:var(--no)}
+.fbt{grid-column:2;grid-row:1}
+.fbt b{display:block;font-family:'Gothic A1',sans-serif;font-weight:800;font-size:14px;letter-spacing:-.3px}
+.fbt b i{font-style:normal;font-weight:600;font-size:10.5px;color:var(--ink3);margin-left:6px;
+  font-family:'IBM Plex Mono',monospace}
+.fbt p{margin:5px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.75}
+.fbi .cp{grid-column:3;grid-row:1;align-self:start;border:1px solid var(--hair);background:var(--sunk);
+  color:var(--ink2);border-radius:9px;padding:6px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
+  white-space:nowrap;font-family:'Gothic A1',sans-serif}
+.tabs{position:absolute;left:0;right:0;bottom:0;display:flex;background:var(--card);
+  border-top:1px solid var(--hair);padding:5px 8px calc(env(safe-area-inset-bottom) + 7px);gap:4px}
+.tab{flex:1;border:0;background:transparent;padding:9px 4px 7px;cursor:pointer;border-radius:13px;
+  color:var(--ink3);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.tab b{font-family:'Gothic A1',sans-serif;font-weight:800;font-size:11.5px}
+.tab .ic{font-size:19px;line-height:1}
+.tab.on{color:var(--core);background:var(--glow)}
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(8px);background:var(--ink);
+  color:var(--bg);padding:11px 17px;border-radius:12px;font-size:13px;font-weight:700;z-index:60;
+  opacity:0;pointer-events:none;transition:.22s;max-width:88%;text-align:center;line-height:1.5}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid var(--hair);border-top-color:var(--core);
+  border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="top">
+    <div class="t1">
+      <b id="tTop"></b><span id="tWd"></span>
+      <span class="sp"><span class="pill" id="pSrc"></span><span class="pill on" id="pTeam"></span></span>
+    </div>
+    <div class="t2">
+      <div class="kpi b"><b id="kCall">0</b><span>오늘 통화</span></div>
+      <div class="kpi c"><b id="kAp">0</b><span>오늘 상담</span></div>
+      <div class="kpi d"><b id="kZero">0</b><span>아직 0통</span></div>
+      <div class="kpi a"><b id="kWeek">0</b><span>이번 주 통화</span></div>
+    </div>
+  </div>
+
+  <div class="body" id="body"></div>
+
+  <div class="tabs">
+    <button type="button" class="tab on" id="tbNow"><span class="ic">📊</span><b>오늘</b></button>
+    <button type="button" class="tab" id="tbWho"><span class="ic">👥</span><b>팀원</b></button>
+    <button type="button" class="tab" id="tbFb"><span class="ic">💬</span><b>피드백</b></button>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+'use strict';
+/* ══════════════════════════════════════════════════════════════════
+   팀 하루 한 장
+
+   사업단장의 일은 자기 전화가 아니다. 팀원 스무 명이 오늘 걸었는가,
+   안 걸었으면 왜 안 걸었는가다. 그런데 그걸 보려면 컴퓨터를 켜고
+   TEAM 총괄을 열어야 했다. 폰에서는 볼 수 없었다.
+
+   여기서는 세 판만 본다.
+     오늘   — 팀 숫자 한 줄, 아직 0통인 사람, 시간대
+     팀원   — 사람마다 오늘·이번 주, 눌러서 자세히
+     피드백 — AI 가 전체 한 줄 + 사람별 한 줄을 쓴다. 복사해서 보낸다.
+
+   새 표를 만들지 않는다. calls · dbs 를 사람별로 세기만 한다.
+   AI 로 나가는 것은 <b>팀원 이름과 숫자뿐</b>이다 —
+   고객 이름·번호·통화 메모는 보내지 않는다.
+   ══════════════════════════════════════════════════════════════════ */
+
+function $(i){return document.getElementById(i);}
+function esc(s){return (''+(s==null?'':s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function T0(){return new Date(Date.now()+9*3600000).toISOString().slice(0,10);}
+function Tn(n){return new Date(Date.now()+9*3600000+n*86400000).toISOString().slice(0,10);}
+function wd(d){return ['일','월','화','수','목','금','토'][new Date(d+'T00:00:00Z').getUTCDay()];}
+function P(){try{var p=window.parent;if(p&&p!==window&&typeof p.go==='function')return p;}catch(e){}return null;}
+function ago(d){if(!d)return 9999;return Math.max(0,Math.round((new Date(T0()+'T00:00:00Z')-new Date((''+d).slice(0,10)+'T00:00:00Z'))/86400000));}
+/* 이번 주 월요일 */
+function monday(){var d=new Date(Date.now()+9*3600000),w=d.getUTCDay();return Tn(1-(w===0?7:w));}
+
+var SB=null, ME=null, MENAME='', AUTH='', T=null, TAB='now', OPEN='';
+
+/* ── 서버 ─────────────────────────────────────────────────────── */
+function sbOf(){
+  if(SB)return SB;
+  var p=P();try{if(p&&typeof p.osClient==='function')return p.osClient();}catch(e){}
+  return null;
+}
+function boot(){
+  var p=P();
+  if(p){
+    try{
+      SB=p.osClient();
+      ME=(p.OS&&p.OS.profile&&p.OS.profile.id)||null;
+      MENAME=(p.OS&&p.OS.profile&&p.OS.profile.name)||'';
+    }catch(e){}
+    if(SB&&ME){load();return;}
+  }
+  if(typeof window.supabase==='undefined'){AUTH='서버에 붙지 못했습니다';paint();return;}
+  var cfg=window.APEX_SB||null;
+  if(!cfg||!cfg.url){try{cfg=JSON.parse(localStorage.getItem('apexSupabaseConfigV1')||'null');}catch(e){cfg=null;}}
+  if(!cfg||!cfg.url||!cfg.key){AUTH='서버 설정이 없습니다 — APEX 를 한 번 열어 주세요';paint();return;}
+  try{SB=window.supabase.createClient(cfg.url,cfg.key);}catch(e){AUTH='서버에 붙지 못했습니다';paint();return;}
+  AUTH='서버에 붙는 중…';paint();
+  SB.auth.getSession().then(function(r){
+    var u=r&&r.data&&r.data.session&&r.data.session.user;
+    if(!u){SB=null;AUTH='로그인이 필요합니다 — APEX 에서 한 번 로그인하시면 여기도 열립니다';paint();return;}
+    ME=u.id;
+    SB.from('profiles').select('name').eq('id',u.id).single().then(function(x){
+      if(x&&x.data&&x.data.name)MENAME=x.data.name;
+      load();
+    },function(){load();});
+  },function(){SB=null;AUTH='서버에 붙지 못했습니다 — 신호를 확인해 주세요';paint();});
+}
+
+var LEAD_ROLES=['admin','owner','master','hq','branch_manager'];
+function load(){
+  var sb=sbOf();
+  if(!sb||!ME)return;
+  AUTH='팀 기록을 읽는 중…';paint();
+  var q=function(pp){return pp.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
+  var d14=Tn(-14)+'T00:00:00';
+  Promise.all([
+    q(sb.from('profiles').select('id,name,role,active')),
+    q(sb.from('teams').select('id,name,leader_id')),
+    q(sb.from('team_members').select('team_id,member_id')),
+    q(sb.from('calls').select('created_by,call_at,result,appointment_at').gte('call_at',d14).limit(6000)),
+    q(sb.from('dbs').select('id,assigned_to,assigned_date,stage'))
+  ]).then(function(r){
+    var prof=r[0].error?[]:(r[0].data||[]);
+    var teams=r[1].error?[]:(r[1].data||[]);
+    var tms=r[2].error?[]:(r[2].data||[]);
+    var calls=r[3].error?[]:(r[3].data||[]);
+    var dbs=r[4].error?[]:(r[4].data||[]);
+    if(r[3].error){AUTH='통화 기록을 읽지 못했습니다 — '+((r[3].error.message||'')+'').slice(0,44);paint();return;}
+    T=calc(prof,teams,tms,calls,dbs);
+    AUTH='';paint();
+  });
+}
+
+/* 누구를 볼 것인가 — 내가 이끄는 팀. 본부·관리자면 전체 */
+function scopeOf(prof,teams,tms){
+  var me=null,i;
+  for(i=0;i<prof.length;i++)if(prof[i].id===ME)me=prof[i];
+  var role=(me&&me.role)||'';
+  var mine=teams.filter(function(t){return t.leader_id===ME;});
+  if(mine.length){
+    var ids={},nm=mine.map(function(t){return t.name;}).join(' · ');
+    mine.forEach(function(t){tms.forEach(function(m){if(m.team_id===t.id)ids[m.member_id]=1;});});
+    ids[ME]=1;                                   /* 리더도 자기 숫자를 본다 */
+    return {name:nm||'내 팀',ids:ids,wide:false};
+  }
+  if(LEAD_ROLES.indexOf(role)>=0){
+    var all={};
+    prof.forEach(function(p){if(p.active!==false)all[p.id]=1;});
+    return {name:'전체',ids:all,wide:true};
+  }
+  return null;
+}
+
+function calc(prof,teams,tms,calls,dbs){
+  var sc=scopeOf(prof,teams,tms);
+  if(!sc)return {none:true};
+  var name={},i;
+  for(i=0;i<prof.length;i++)name[prof[i].id]=prof[i].name||'(이름 없음)';
+  var today=T0(), mon=monday();
+  var M={};
+  var mk=function(id){
+    return M[id]||(M[id]={id:id,name:name[id]||'(이름 없음)',
+      d:0,dAp:0,dNo:0,dRej:0,w:0,wAp:0,first:'',last:'',lastDay:'',
+      hrs:[0,0,0,0,0,0,0,0,0,0,0,0,0,0], db:0, cold:0, apSet:{}, appt:0, won:0});
+  };
+  for(i in sc.ids)mk(i);
+  for(i=0;i<calls.length;i++){
+    var c=calls[i], who=c.created_by;
+    if(!sc.ids[who])continue;
+    var a=mk(who), d=(''+(c.call_at||'')).slice(0,10), t=(''+(c.call_at||'')).slice(11,16);
+    if(d>a.lastDay){a.lastDay=d;}
+    if(d>=mon){a.w++; if(c.result==='상담')a.wAp++;}
+    if(d===today){
+      a.d++;
+      if(c.result==='상담')a.dAp++; else if(c.result==='부재')a.dNo++; else if(c.result==='거절')a.dRej++;
+      if(!a.first||t<a.first)a.first=t;
+      if(t>a.last)a.last=t;
+      var hh=parseInt(t.slice(0,2),10);
+      if(hh>=8&&hh<=21)a.hrs[hh-8]++;
+    }
+    /* 같은 약속이 통화 두 줄에 붙어 있을 수 있다 — 시각으로 겹치는 것을 뺀다 */
+    if(c.appointment_at&&(''+c.appointment_at).slice(0,10)>=today)a.apSet[''+c.appointment_at]=1;
+  }
+  for(i=0;i<dbs.length;i++){
+    var x=dbs[i], w2=x.assigned_to;
+    if(!sc.ids[w2])continue;
+    var b=mk(w2);
+    b.db++;
+    var st=(''+(x.stage||'')).trim();
+    if(st==='계약완료'||st==='증권전달')b.won++;
+  }
+  /* 한 통도 안 걸린 배정 DB — 통화 기록이 붙은 db_id 를 셀 수 없으니
+     받은 지 오래됐는데 그 사람이 오늘까지 통화가 0인 것으로 갈음하지 않는다.
+     지어내지 않고, 아는 것만 센다. */
+  var list=[];
+  for(i in M){var k2,cc=0;for(k2 in M[i].apSet)cc++;M[i].appt=cc;list.push(M[i]);}
+  list.sort(function(a,b){return b.d-a.d||b.w-a.w;});
+  var sum={d:0,dAp:0,w:0,zero:0,hrs:[0,0,0,0,0,0,0,0,0,0,0,0,0,0]};
+  list.forEach(function(m){
+    sum.d+=m.d;sum.dAp+=m.dAp;sum.w+=m.w;
+    if(!m.d)sum.zero++;
+    for(var k=0;k<14;k++)sum.hrs[k]+=m.hrs[k];
+  });
+  return {team:sc.name,wide:sc.wide,list:list,sum:sum,live:true};
+}
+
+/* ── 미리보기 — 로그인 전에는 이 자료로 돈다. 화면이 스스로 밝힌다 ── */
+var DEMO=(function(){
+  var d=[['김민수',14,3,52,2,'09:12','17:40',18,3],['박서준',11,1,44,1,'09:40','16:20',22,2],
+         ['이하늘',9,2,38,1,'10:05','15:50',15,4],['최유진',6,0,27,0,'11:20','14:10',12,1],
+         ['정다은',3,0,16,0,'13:40','14:30',9,0],['강태오',0,0,9,0,'','',7,0],
+         ['한소희',0,0,4,0,'','',5,1],['오준혁',0,0,0,0,'','',3,0]];
+  var list=d.map(function(a,i){
+    var hrs=[0,0,0,0,0,0,0,0,0,0,0,0,0,0],k,n=a[1];
+    for(k=0;k<n;k++)hrs[(k*3+1)%9]++;
+    return {id:'m'+i,name:a[0],d:a[1],dAp:a[2],dNo:Math.max(0,a[1]-a[2]-1),dRej:a[1]?1:0,
+            w:a[3],wAp:a[4],first:a[5],last:a[6],lastDay:a[1]?T0():Tn(-(i+1)),
+            hrs:hrs,db:a[7],cold:0,apSet:{},appt:a[8],won:a[8]};
+  });
+  var sum={d:0,dAp:0,w:0,zero:0,hrs:[0,0,0,0,0,0,0,0,0,0,0,0,0,0]};
+  list.forEach(function(m){sum.d+=m.d;sum.dAp+=m.dAp;sum.w+=m.w;if(!m.d)sum.zero++;
+    for(var k=0;k<14;k++)sum.hrs[k]+=m.hrs[k];});
+  return {team:'온탑 1팀',wide:false,list:list,sum:sum,live:false};
+})();
+function D(){return T||DEMO;}
+
+/* ── 위 ─────────────────────────────────────────────────────── */
+function head(){
+  var R=D(),d=new Date(Date.now()+9*3600000);
+  $('tTop').textContent=(d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일';
+  $('tWd').textContent=['일','월','화','수','목','금','토'][d.getUTCDay()]+'요일';
+  /* 알약은 「지금 보고 있는 것이 진짜인가」 만 말한다.
+     왜 안 붙었는지는 아래 띠가 따로 말한다 — 두 가지를 한 자리에 쓰면 둘 다 안 읽힌다 */
+  $('pSrc').textContent=R.live?('실제 기록'+(MENAME?(' · '+MENAME):'')):'미리보기';
+  $('pSrc').className='pill'+(R.live?' on':'');
+  $('pTeam').textContent=R.none?'팀 없음':('👥 '+(R.team||'내 팀')+' '+((R.list||[]).length)+'명');
+  var S=R.sum||{d:0,dAp:0,w:0,zero:0};
+  $('kCall').textContent=S.d; $('kAp').textContent=S.dAp;
+  $('kZero').textContent=S.zero; $('kWeek').textContent=S.w;
+}
+function authBar(){
+  if(!AUTH)return '';
+  if(!/로그인/.test(AUTH))return '<div class="warnbox"><b>'+esc(AUTH)+'</b></div>';
+  return '<div class="warnbox"><b>로그인이 필요합니다</b><br>'+
+    '아래를 눌러 APEX 에 한 번 로그인하시면, 이 화면도 바로 우리 팀 기록으로 바뀝니다.'+
+    '<a href="./index.html">APEX 열어서 로그인</a></div>';
+}
+function paint(){
+  head();
+  var R=D(),h='';
+  if(R.none){
+    h='<div class="warnbox"><b>팀장 화면입니다</b><br>'+
+      '지금 계정으로 이끄는 팀이 없습니다. 조직도에서 팀장으로 지정되면 여기가 열립니다.'+
+      '<a href="./index.html">APEX 에서 조직도 열기</a></div>';
+  }else if(TAB==='now')h=vNow();
+  else if(TAB==='who')h=vWho();
+  else h=vFb();
+  $('body').innerHTML=authBar()+h;
+  $('body').scrollTop=0;
+  ['tbNow','tbWho','tbFb'].forEach(function(id,i){
+    $(id).classList.toggle('on',['now','who','fb'][i]===TAB);
+  });
+}
+function ini(n){return (''+(n||'?')).charAt(0);}
+
+/* ── 오늘 ───────────────────────────────────────────────────── */
+function hourBar(hrs){
+  var mx=Math.max.apply(null,hrs.concat([1])),h='<div class="bar">',i;
+  for(i=0;i<14;i++)h+='<i class="'+(hrs[i]?'':'z')+'" style="height:'+Math.round(hrs[i]/mx*100)+'%"></i>';
+  h+='</div><div class="barx">';
+  for(i=0;i<14;i++)h+='<span>'+((i+8)%3===0?(i+8):'')+'</span>';
+  return h+'</div>';
+}
+function vNow(){
+  var R=D(),S=R.sum,h='',zero=R.list.filter(function(m){return !m.d;});
+  var run=R.list.filter(function(m){return m.d;});
+  h+='<div class="sec">오늘 팀 <i>'+R.list.length+'명</i></div>';
+  h+='<div class="all"><u>지금까지</u><p>'+
+     '통화 <b>'+S.d+'통</b> · 상담 <b>'+S.dAp+'건</b> · 돌린 사람 <b>'+run.length+'명</b>'+
+     (zero.length?(' · 아직 <b>'+zero.length+'명</b>이 0통'):' · 전원 시작했습니다')+
+     '</p></div>';
+  h+='<div class="sec">몇 시에 걸고 있나 <i>8시 → 21시</i></div>';
+  h+=hourBar(S.hrs);
+  if(zero.length){
+    h+='<div class="sec">아직 0통 <i>'+zero.length+'명</i>'+
+       '<button type="button" class="mini" onclick="tGo(\'fb\')">피드백 만들기</button></div>';
+    h+=zero.map(function(m){
+      return '<div class="mrow zero"><span class="av">'+esc(ini(m.name))+'</span>'+
+        '<span class="m"><b>'+esc(m.name)+'</b><span>'+
+        (m.lastDay?('마지막 통화 '+ago(m.lastDay)+'일 전'):'통화 기록이 없습니다')+
+        ' · 이번 주 '+m.w+'통</span></span>'+
+        '<span class="n"><b>0</b><span>오늘</span></span></div>';
+    }).join('');
+  }
+  h+='<div class="sec">오늘 많이 돈 사람 <i>'+run.length+'명</i></div>';
+  h+=run.length?run.slice(0,5).map(function(m,i){
+      return '<div class="mrow'+(i===0?' top':'')+'"><span class="av">'+esc(ini(m.name))+'</span>'+
+        '<span class="m"><b>'+esc(m.name)+'</b><span>'+
+        (m.first?(m.first+' 시작'):'')+(m.dAp?(' · 상담 '+m.dAp+'건'):'')+' · 이번 주 '+m.w+'통</span></span>'+
+        '<span class="n"><b>'+m.d+'</b><span>오늘</span></span></div>';
+    }).join('')
+   :'<div class="empty">아직 아무도 시작하지 않았습니다.<br>피드백 판에서 한 줄 보내 보세요.</div>';
+  h+='<div class="note">숫자는 <b>DB 통합 CRM</b> 이 쌓고 있는 그 기록입니다 — 팀원이 폰에서 남긴 것이 여기 바로 올라옵니다. '+
+     '새로 적는 표는 없습니다.</div>';
+  return h;
+}
+
+/* ── 팀원 ───────────────────────────────────────────────────── */
+function vWho(){
+  var R=D(),h='';
+  h+='<div class="sec">팀원 <i>'+R.list.length+'명</i><span style="margin-left:auto;font-weight:400">눌러서 자세히</span></div>';
+  h+=R.list.map(function(m){
+    var o=(OPEN===m.id);
+    return '<button type="button" class="mrow'+(m.d?'':' zero')+(o?' open':'')+'" onclick="tOpen(\''+m.id+'\')">'+
+      '<span class="av">'+esc(ini(m.name))+'</span>'+
+      '<span class="m"><b>'+esc(m.name)+'</b><span>'+
+        '이번 주 '+m.w+'통 · 상담 '+m.wAp+'건 · 배정 '+m.db+'건'+
+      '</span></span>'+
+      '<span class="n"><b>'+m.d+'</b><span>오늘</span></span></button>'+
+      (o?detHtml(m):'');
+  }).join('');
+  return h;
+}
+function detHtml(m){
+  var fb=(FB.each||{})[m.id];
+  var h='<div class="det"><div class="g">'+
+    '<span><em>오늘</em><b>'+m.d+'통</b></span>'+
+    '<span><em>오늘 상담</em><b>'+m.dAp+'건</b></span>'+
+    '<span><em>부재·거절</em><b>'+m.dNo+'·'+m.dRej+'</b></span>'+
+    '<span><em>이번 주</em><b>'+m.w+'통</b></span>'+
+    '<span><em>첫 통화</em><b>'+(m.first||'—')+'</b></span>'+
+    '<span><em>마지막</em><b>'+(m.last||'—')+'</b></span>'+
+    '<span><em>배정 DB</em><b>'+m.db+'건</b></span>'+
+    '<span><em>잡힌 상담</em><b>'+m.appt+'건</b></span>'+
+    '</div>';
+  if(fb)h+='<div class="fb"><u>이 사람에게 보낼 말</u>'+esc(fb)+
+    '<button type="button" onclick="tCopyOne(\''+m.id+'\')">📋 복사해서 보내기</button></div>';
+  else h+='<div class="fb"><u>이 사람에게 보낼 말</u>'+
+    '<span style="color:var(--ink3)">피드백 판에서 「오늘 피드백 만들기」 를 누르면 여기에 붙습니다.</span></div>';
+  return h+'</div>';
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   피드백 — AI 가 쓰고, 사람이 보낸다
+
+   AI 가 팀원에게 직접 보내지 않는다. 리더가 읽고, 고치고, 보낸다.
+   그래서 「복사」 다. 자동으로 나가면 어느 날 엉뚱한 말이 나간다.
+
+   AI 로 넘어가는 것은 <b>팀원 이름과 숫자뿐</b>이다.
+   고객 이름·전화번호·통화 메모는 한 글자도 보내지 않는다.
+
+   저장은 쓰던 saved_reports 를 그대로 쓴다 (kind='team_feedback').
+   새 표를 만들지 않으므로 SQL 을 다시 실행할 필요가 없다.
+   ══════════════════════════════════════════════════════════════════ */
+var FB={busy:false,err:'',all:'',each:{},at:'',rid:'',loaded:false};
+var FB_KIND='team_feedback';
+
+/* 무엇을 AI 에게 보낼지 — 이 글자 그대로 나간다. 화면에서 열어 볼 수 있다 */
+function digest(){
+  var R=D(),S=R.sum,L2=[];
+  L2.push('[팀] '+(R.team||'내 팀')+' · '+R.list.length+'명 · '+T0()+' ('+wd(T0())+'요일) 기준');
+  L2.push('[팀 합계] 오늘 통화 '+S.d+'통, 오늘 상담 '+S.dAp+'건, 아직 0통 '+S.zero+'명, 이번 주 통화 '+S.w+'통');
+  L2.push('[사람별] 이름 | 오늘통화 | 오늘상담 | 오늘부재 | 오늘거절 | 첫통화 | 마지막통화 | 이번주통화 | 이번주상담 | 배정DB | 잡힌상담 | 마지막통화일로부터');
+  R.list.forEach(function(m){
+    L2.push(m.name+' | '+m.d+' | '+m.dAp+' | '+m.dNo+' | '+m.dRej+' | '+(m.first||'-')+' | '+(m.last||'-')+
+      ' | '+m.w+' | '+m.wAp+' | '+m.db+' | '+m.appt+' | '+(m.lastDay?(ago(m.lastDay)+'일 전'):'기록없음'));
+  });
+  return L2.join('\n');
+}
+var FB_SYS='당신은 보험·재무설계 영업조직의 팀장을 돕는 코치입니다. '+
+  '숫자만 보고 팀장이 오늘 팀원에게 할 말을 씁니다.\n'+
+  '규칙:\n'+
+  '- 반드시 아래 JSON 하나만 출력합니다. 설명·머리말·코드펜스 금지.\n'+
+  '  {"all":"전체에게 보낼 말","each":[{"name":"팀원 이름","msg":"그 사람에게 보낼 말"}]}\n'+
+  '- all 은 2~3문장. 단톡방에 그대로 붙일 수 있는 말. 오늘 팀 숫자를 하나 이상 인용하고, '+
+  '오늘 남은 시간에 무엇을 할지 하나만 콕 집습니다.\n'+
+  '- each 는 준 명단의 모든 사람을 빠짐없이 씁니다. 한 사람당 2~3문장.\n'+
+  '- 각 msg 는 (1) 그 사람의 숫자를 인용하고 (2) 지금 당장 할 한 가지를 말하고 '+
+  '(3) 짧게 힘을 줍니다. 0통인 사람에게는 다그치지 말고 시작하기 쉬운 크기를 줍니다(예: 세 통).\n'+
+  '- 존댓말. 과장·미사여구·이모지 금지. 한 문장은 짧게.\n'+
+  '- 없는 사실을 만들지 않습니다. 준 숫자 안에서만 말합니다.\n'+
+  '- 고객 이름이나 계약 이야기는 하지 않습니다 — 받은 적이 없습니다.';
+
+/* AI 한 번 부르기.
+   앱 안이면 앱이 쓰던 그 길(callAI)로 간다 — 한도·대체·기록이 전부 앱 것이다.
+   앱 밖이면 회사 공용 Gemini 중계만 쓴다. 개인 키는 만지지 않는다. */
+function aiOnce(sys,user){
+  var p=P();
+  if(p&&typeof p.callAI==='function'){
+    try{ return p.callAI(sys,user,2400,'team_feedback'); }catch(e){}
+  }
+  var gpx='',tok='';
+  try{gpx=localStorage.getItem('apex_studio_gproxy')||'';tok=localStorage.getItem('apex_studio_apptoken')||'';}catch(e){}
+  if(!gpx)return Promise.reject(new Error('NO_AI'));
+  var hd={'Content-Type':'application/json'};
+  if(tok)hd['X-App-Token']=tok;
+  var mdl='';
+  try{mdl=localStorage.getItem('apex_studio_gmodel')||'';}catch(e){}
+  return fetch(gpx,{method:'POST',headers:hd,body:JSON.stringify({
+    model:mdl||'gemini-2.5-flash',
+    systemInstruction:{parts:[{text:sys}]},
+    contents:[{role:'user',parts:[{text:user}]}],
+    generationConfig:{maxOutputTokens:2400,temperature:0.6}
+  })}).then(function(res){
+    return res.text().then(function(t){
+      if(!res.ok){var m=t;try{var j=JSON.parse(t);m=(j.error&&j.error.message)||j.message||t;}catch(e){}
+        throw new Error((''+m).slice(0,90));}
+      var data=JSON.parse(t), c=data.candidates&&data.candidates[0];
+      if(!c||!c.content||!c.content.parts)throw new Error('응답이 비어 있습니다');
+      return c.content.parts.map(function(x){return x.text||'';}).join('');
+    });
+  });
+}
+function jsonOf(txt){
+  var t=(''+txt).replace(/^[\s\S]*?```(?:json)?/,'').replace(/```[\s\S]*$/,'');
+  if(!/[{]/.test(t))t=''+txt;
+  var a=t.indexOf('{'), b=t.lastIndexOf('}');
+  if(a<0||b<a)return null;
+  try{return JSON.parse(t.slice(a,b+1));}catch(e){return null;}
+}
+window.tRun=function(){
+  var R=D();
+  if(FB.busy||R.none)return;
+  FB.busy=true;FB.err='';paint();
+  aiOnce(FB_SYS,digest()).then(function(txt){
+    var j=jsonOf(txt);
+    FB.busy=false;
+    if(!j||!j.all){FB.err='AI 가 형식을 지키지 않았습니다 — 다시 눌러 주세요';paint();return;}
+    FB.all=(''+j.all).trim();
+    FB.each={};
+    var byName={};
+    R.list.forEach(function(m){byName[(''+m.name).replace(/\s/g,'')]=m.id;});
+    (j.each||[]).forEach(function(x){
+      var id=byName[(''+(x.name||'')).replace(/\s/g,'')];
+      if(id)FB.each[id]=(''+(x.msg||'')).trim();
+    });
+    FB.at=new Date().toLocaleTimeString('ko-KR');
+    save();paint();
+  },function(e){
+    FB.busy=false;
+    var m=(e&&e.message)||'';
+    FB.err=(m==='NO_AI')
+      ? 'AI 가 이 폰에 연결되어 있지 않습니다 — APEX 안에서 열면 회사 AI 로 씁니다'
+      : ('AI 가 답하지 못했습니다 — '+m.slice(0,60));
+    paint();
+  });
+};
+
+/* 하루 한 줄만 남긴다 — 다시 만들면 그 줄을 고쳐 쓴다 */
+function save(){
+  var sb=sbOf(),R=D();
+  if(!sb||!ME||!R.live)return;
+  var body={date:T0(),team:R.team||'',all:FB.all,at:FB.at,
+    each:R.list.map(function(m){return {id:m.id,name:m.name,msg:FB.each[m.id]||''};})};
+  if(FB.rid){sb.from('saved_reports').update({content:body}).eq('id',FB.rid).then(function(){},function(){});return;}
+  sb.from('saved_reports').insert({advisor_id:ME,client_id:null,kind:FB_KIND,
+    title:'팀 피드백 · '+T0(),content:body}).select('id').then(function(r){
+      /* 아이디를 받아 둬야 다시 쓸 때 새 줄이 아니라 그 줄을 고친다 */
+      if(r&&!r.error&&r.data&&r.data[0])FB.rid=r.data[0].id;
+    },function(){});
+}
+function fbLoad(){
+  var sb=sbOf();
+  if(FB.loaded||!sb||!ME)return;
+  FB.loaded=true;
+  sb.from('saved_reports').select('id,content,created_at').eq('kind',FB_KIND)
+    .order('created_at',{ascending:false}).limit(10).then(function(r){
+      if(!r||r.error||!r.data)return;
+      var i,c;
+      for(i=0;i<r.data.length;i++){
+        c=r.data[i].content||{};
+        if(c.date===T0()){
+          FB.rid=r.data[i].id;FB.all=c.all||'';FB.at=c.at||'';
+          (c.each||[]).forEach(function(x){if(x.id)FB.each[x.id]=x.msg||'';});
+          paint();return;
+        }
+      }
+    },function(){});
+}
+
+/* ── 피드백 판 ──────────────────────────────────────────────── */
+var SHOWD=false;
+function vFb(){
+  var R=D(),h='',n=0,i;
+  for(i in FB.each)if(FB.each[i])n++;
+  h+='<div class="sec">오늘 피드백'+(FB.at?(' <i>'+esc(FB.at)+' 씀</i>'):'')+'</div>';
+  if(FB.err)h+='<div class="warnbox"><b>'+esc(FB.err)+'</b>'+
+    (/연결되어 있지 않/.test(FB.err)?'<a href="./index.html">APEX 열기</a>':'')+'</div>';
+  if(FB.all){
+    h+='<div class="all"><u>전체에게 — 단톡방에 그대로</u><p>'+esc(FB.all)+'</p>'+
+       '<em><button type="button" onclick="tCopyAll()">📋 전체 복사</button>'+
+       '<button type="button" class="gh" onclick="tRun()">'+(FB.busy?'쓰는 중…':'다시 쓰기')+'</button></em></div>';
+  }
+  if(!FB.all||FB.busy)
+    h+='<button type="button" class="go"'+(FB.busy?' disabled':'')+' onclick="tRun()">'+
+       (FB.busy?'<span class="spin"></span>AI 가 쓰는 중…':'오늘 피드백 만들기')+'</button>';
+  if(n){
+    h+='<div class="sec">사람마다 <i>'+n+'명</i>'+
+       '<button type="button" class="mini" onclick="tCopyEach()">📋 사람별 전체 복사</button></div>';
+    h+=R.list.map(function(m){
+      var t=FB.each[m.id];
+      if(!t)return '';
+      return '<div class="fbi'+(m.d?'':' zero')+'">'+
+        '<span class="av">'+esc(ini(m.name))+'</span>'+
+        '<div class="fbt"><b>'+esc(m.name)+'<i>오늘 '+m.d+'통 · 이번 주 '+m.w+'통</i></b>'+
+        '<p>'+esc(t)+'</p></div>'+
+        '<button type="button" class="cp" onclick="tCopyOne(\''+m.id+'\')">📋 복사</button></div>';
+    }).join('');
+  }
+  h+='<div class="sec">AI 에게 무엇을 보내나 '+
+     '<button type="button" class="mini" onclick="tShowD()">'+(SHOWD?'접기':'열어 보기')+'</button></div>';
+  if(SHOWD)h+='<div class="all"><u>이 글자 그대로 나갑니다</u><p style="font-family:\'IBM Plex Mono\',monospace;'+
+     'font-size:11px;line-height:1.7">'+esc(digest())+'</p></div>';
+  h+='<div class="note">나가는 것은 <b>팀원 이름과 숫자뿐</b>입니다 — 고객 이름·전화번호·통화 메모는 '+
+     '한 글자도 보내지 않습니다.<br>AI 가 팀원에게 직접 보내지 않습니다. '+
+     '<b>대표님이 읽고 고쳐서</b> 보내십시오 — 그래서 「복사」 입니다.'+
+     (D().live?'<br>오늘 쓴 것은 서버에 하루 한 줄로 남습니다 — 컴퓨터에서도 그대로 보입니다.':'')+
+     '</div>';
+  return h;
+}
+
+/* ── 손이 닿는 곳 ───────────────────────────────────────────── */
+function copy(t){
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      return navigator.clipboard.writeText(t).then(function(){tToast('복사했습니다 — 붙여넣으세요');},fall);
+  }catch(e){}
+  fall();
+  function fall(){
+    try{
+      var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';
+      document.body.appendChild(a);a.focus();a.select();
+      var ok=document.execCommand('copy');document.body.removeChild(a);
+      tToast(ok?'복사했습니다 — 붙여넣으세요':'복사가 막혀 있습니다 — 길게 눌러 복사해 주세요');
+    }catch(e){tToast('복사가 막혀 있습니다 — 길게 눌러 복사해 주세요');}
+  }
+}
+window.tCopyAll=function(){if(FB.all)copy(FB.all);};
+window.tCopyOne=function(id){
+  var t=FB.each[id];if(!t)return;
+  var R=D(),nm='';
+  R.list.forEach(function(m){if(m.id===id)nm=m.name;});
+  copy(nm+' 님\n\n'+t);
+};
+window.tCopyEach=function(){
+  var R=D(),o=[];
+  R.list.forEach(function(m){if(FB.each[m.id])o.push('['+m.name+']\n'+FB.each[m.id]);});
+  if(o.length)copy(o.join('\n\n'));
+};
+window.tShowD=function(){SHOWD=!SHOWD;paint();};
+window.tOpen=function(id){OPEN=(OPEN===id)?'':id;paint();};
+window.tGo=function(t){TAB=t;paint();};
+var tt=0;
+window.tToast=function(m){var e=$('toast');e.textContent=m;e.classList.add('on');
+  clearTimeout(tt);tt=setTimeout(function(){e.classList.remove('on');},2600);};
+$('tbNow').onclick=function(){TAB='now';paint();};
+$('tbWho').onclick=function(){TAB='who';paint();};
+$('tbFb').onclick=function(){TAB='fb';fbLoad();paint();};
+
+boot();
+paint();
+})();
+</script>
+</body>
+</html>
