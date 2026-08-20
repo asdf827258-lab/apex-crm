@@ -159,7 +159,58 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(lgFollow, '  남기려는 금액을 3억으로 바꾸면 3억으로 선다');
 
-  console.log('\n[9] 콘솔이 조용하다');
+  console.log('\n[9] 종합 재무설계 — 그 자리에서 연금 · 달러 · 일시납');
+  const cz = await page.evaluate(() => {
+    switchTab('total');
+    CZ.mode = 'month'; CZ.amt = 50; CZ.years = 10; czPaint();
+    const b = document.getElementById('closeOne');
+    return { tag: (b.querySelector('.card-tag') || {}).textContent || '',
+             txt: b.textContent.replace(/\s+/g, ' ') };
+  });
+  is(cz.tag === 'CLOSING', '  맨 앞에 클로징 한 장이 선다 — ' + cz.tag);
+  ['연금', '달러', '일시납'].forEach(k =>
+    is(cz.txt.indexOf(k) >= 0, '  ' + k + ' 갈래가 있다'));
+  is(/오늘 정하실 것은 셋입니다/.test(cz.txt), '  「오늘 정하실 것」 으로 닫는다');
+  is(/50만원 \(매달\)/.test(cz.txt), '  적으신 금액을 그대로 되짚어 준다');
+  is(!/억/.test(cz.txt.split('오늘 정하실 것은 셋입니다')[1] || ''),
+     '  50만원을 「50억」 으로 찍지 않는다 — 단위가 맞다');
+  is(/서로 대신하지 않습니다/.test(cz.txt), '  세 갈래가 서로 대신하지 않는다고 짚는다');
+  is(/심사 결과/.test(cz.txt), '  실제 계약은 심사에 따른다고 밝힌다');
+  is(/요건을 충족할 때/.test(cz.txt), '  세제는 「요건 충족 시」 로만 말한다');
+  is(/환율 변동/.test(cz.txt), '  외화는 환율로 손실이 날 수 있다고 밝힌다');
+  is(/5년납 제안서/.test(cz.txt) && /다른 납입기간 표는 만들지 않습니다/.test(cz.txt),
+     '  달러는 제안서에 있는 5년납만 쓰고, 없는 표는 만들지 않는다');
+
+  const cz2 = await page.evaluate(() => {
+    CZ.mode = 'lump'; CZ.amt = 10000; czPaint();
+    const t = document.getElementById('closeOne').textContent.replace(/\s+/g, ' ');
+    CZ.amt = 0; czPaint();
+    const t0 = document.getElementById('closeOne').textContent.replace(/\s+/g, ' ');
+    CZ.mode = 'month'; CZ.amt = 50; czPaint();
+    return { lump: t, zero: t0 };
+  });
+  is(/해마다 받는 쿠폰/.test(cz2.lump), '  목돈으로 바꾸면 쿠폰을 계산한다');
+  is(/비례 환산한 <b>참고치<\/b>|비례 환산한 참고치/.test(cz2.lump),
+     '  제안서 기준을 비례 환산한 참고치라고 밝힌다');
+  is(/매달 넣는 방식입니다/.test(cz2.lump), '  안 맞는 갈래는 왜 안 되는지 말한다');
+  is(/아무 숫자도 만들지 않습니다/.test(cz2.zero), '  금액이 0 이면 지어내지 않는다');
+
+  console.log('\n[10] 부동산 — 내 몫 · 은행 몫 · 매달 나가는 돈');
+  const re = await page.evaluate(() => {
+    switchTab("realestate"); renderRealEstate();
+    const c = document.querySelector('#realestate-content .card');
+    return { tag: (c.querySelector('.card-tag') || {}).textContent || '',
+             txt: c.textContent.replace(/\s+/g, ' ') };
+  });
+  is(re.tag === 'ONE PAGE', '  맨 앞 카드가 한 장이다 — ' + re.tag);
+  ['내 몫', '은행 몫', '원리금'].forEach(k =>
+    is(re.txt.indexOf(k) >= 0, '  ' + k + ' 이 보인다'));
+  is(/소득의 \d+%/.test(re.txt), '  소득 대비 몇 퍼센트인지 말해 준다');
+  is(/억/.test(re.txt), '  큰 금액은 억으로 적는다 — 「50,000만원」 이 아니라');
+  is(/30년 원리금균등 가정/.test(re.txt), '  무엇을 가정했는지 밝힌다');
+  is(/금융기관 심사/.test(re.txt), '  한도·금리는 심사에 따른다고 밝힌다');
+
+  console.log('\n[11] 콘솔이 조용하다');
   is(errs.length === 0, '  오류 없음' + (errs.length ? ' — ' + errs.join(' | ') : ''));
 
   await browser.close();
