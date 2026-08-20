@@ -219,6 +219,124 @@ const srv = http.createServer((req, res) => {
   ok(await p3.locator('.tf').count() === 0, '읽은 뒤에는 사라진다');
   ok(await p3.locator('#tbToday .bdg').count() === 0, '빨간 점도 같이 없어진다');
 
+  /* 열 · 시각이 기기 시간대에 흔들리지 않는가 — 여기가 틀리면 「몇 시에 걸었나」 가 통째로 무너진다 */
+  console.log('\n시간대가 달라도 시각이 맞는가 (뉴욕 시간으로 맞춘 폰)');
+  const ny = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true,
+    hasTouch: true, timezoneId: 'America/New_York' });
+  await ny.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0
+    ? r.continue() : r.fulfill({ status: 200, contentType: 'text/css', body: '' }));
+  const pz = await ny.newPage();
+  pz.on('pageerror', e => errs.push('[tz] ' + e.message));
+  await pz.addInitScript(SB_STUB({
+    __me: 'me-1', profiles: [{ name: '박서준' }],
+    dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
+            region: '경기', assigned_date: TODAY, source: '보장분석' }],
+    calls: [], clients: [], saved_reports: [], team_feedback: [], app_config: []
+  }));
+  await pz.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await pz.waitForTimeout(1800);
+  const t0 = Date.now();
+  await pz.evaluate(() => { window.dCall(); window.dRes('상담'); });
+  await pz.waitForTimeout(200);
+  const apD = await pz.evaluate(() => {
+    const d = new Date(Date.now() + 9 * 3600000 + 86400000).toISOString().slice(0, 10);
+    window.dApD(d); window.dApT('14:00'); return d;
+  });
+  await pz.waitForTimeout(250);
+  await pz.evaluate(() => { const m = document.getElementById('dMemo'); m.value = '내일 두 시로 잡았습니다'; window.dMemoIn(m.value); });
+  await pz.click('.save.ready'); await pz.waitForTimeout(600);
+  const call = await pz.evaluate(() => (window.__wrote.filter(w => w.t === 'calls')[0] || {}).v || null);
+  ok(!!call, '뉴욕 시간대 폰에서도 통화 기록이 올라간다');
+  const drift = Math.abs(new Date(call.call_at).getTime() - t0);
+  ok(drift < 120000, '걸린 시각이 진짜 그 순간이다 — 어긋남 ' + Math.round(drift / 1000) + '초 (9시간이면 32400초)');
+  const want = new Date(apD + 'T14:00:00+09:00').toISOString();
+  ok(call.appointment_at === want, '약속은 「한국 시각 오후 2시」 로 못박혀 들어간다 (' + call.appointment_at + ')');
+  await ny.close();
+
+  /* 열하나 · 고객 365일을 폰에서 고치는가 — 그리고 있던 것을 안 지우는가 */
+  console.log('\n고객 365일 — 폰에서 고치기');
+  const p5 = await ctx.newPage();
+  p5.on('pageerror', e => errs.push('[365] ' + e.message));
+  await p5.addInitScript(SB_STUB({
+    __me: 'me-1', profiles: [{ name: '박서준' }],
+    dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
+            region: '경기', assigned_date: TODAY, source: '보장분석' }],
+    calls: [], team_feedback: [], app_config: [],
+    clients: [{ id: 'c1', advisor_id: 'me-1', name_masked: '권*윤', created_at: TODAY }],
+    /* 이미 컴퓨터에서 적어 둔 것 — 폰에서 고쳤다고 이게 날아가면 안 된다 */
+    saved_reports: [{ id: 'meta-1', client_id: 'c1', content: {
+      fp: { f_job: '자영업', f_income: '월 400' }, fam: '권씨네', rel: '본인',
+      touch: [{ at: TODAY, how: '전화', note: '증권 확인 부탁드림' }],
+      next: null, bd: '', up: 1 } }]
+  }));
+  await p5.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await p5.waitForTimeout(1800);
+  ok(/고치기/.test(await p5.locator('.c365').innerText()), '고객 365일 칸에 「고치기」 가 붙는다');
+  await p5.click('.c365 .ed'); await p5.waitForTimeout(300);
+  ok(await p5.locator('.ce').count() === 1, '눌러서 그 자리에서 펴진다');
+  ok(await p5.locator('.bd2 select').count() === 2, '생일은 월·일 두 칸으로 고른다 — 연도는 안 받는다');
+
+  await p5.evaluate(() => { window.dCeWhat('증권 전달하고 소개 요청'); });
+  await p5.locator('.ce .rn button').nth(2).click();       /* 1주 뒤 */
+  await p5.waitForTimeout(200);
+  await p5.locator('.bd2 select').first().selectOption('03');
+  await p5.locator('.bd2 select').nth(1).selectOption('15');
+  await p5.waitForTimeout(250);
+  ok(/D-/.test(await p5.locator('.bd2 b').innerText().catch(() => '')), '생일을 고르면 며칠 남았는지 바로 보인다');
+  await p5.click('.cebt .sv'); await p5.waitForTimeout(600);
+
+  const meta = await p5.evaluate(() => (window.__wrote.filter(w => w.t === 'saved_reports')[0] || {}).v || null);
+  ok(!!meta && !!meta.content, '고객 365일 줄을 고친다 (새로 만들지 않는다)');
+  const cn = (meta || {}).content || {};
+  ok(cn.next && cn.next.what === '증권 전달하고 소개 요청', '다음 할 일이 들어간다');
+  ok(cn.next && cn.next.due === new Date(Date.now() + 9 * 3600000 + 7 * 86400000).toISOString().slice(0, 10),
+     '「1주 뒤」 가 그 날짜로 들어간다');
+  ok(cn.bd === '03-15', '생일이 MM-DD 로 들어간다 — 앱이 읽는 그 모양');
+  ok(cn.fp && cn.fp.f_job === '자영업', '컴퓨터에서 적은 팩트파인딩이 그대로 남는다');
+  ok(cn.fam === '권씨네' && cn.rel === '본인', '가족 묶음이 그대로 남는다');
+  ok((cn.touch || []).length === 1 && cn.touch[0].note === '증권 확인 부탁드림', '접촉 기록이 그대로 남는다');
+  for (const k of ['fp', 'fam', 'rel', 'next', 'touch', 'bd', 'up'])
+    ok(k in cn, 'cmSave() 와 같은 칸: ' + k);
+
+  /* 「끝냈습니다」 — 접촉 기록에 남고 다음 할 일은 비워진다 (앱의 cmNextDone 과 같게) */
+  const p6 = await ctx.newPage();
+  p6.on('pageerror', e => errs.push('[done] ' + e.message));
+  await p6.addInitScript(SB_STUB({
+    __me: 'me-1', profiles: [{ name: '박서준' }],
+    dbs: [{ id: 'z1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-2222-3333',
+            region: '경기', assigned_date: TODAY, source: '보장분석' }],
+    calls: [], team_feedback: [],
+    /* 대표님이 종류를 여섯 개로 바꿔 두셨다 */
+    app_config: [{ key: 'db_sources', value: '일반,방송,농협,보장분석,소개,순천개척' }],
+    clients: [{ id: 'c1', advisor_id: 'me-1', name_masked: '권*윤', created_at: TODAY }],
+    saved_reports: [{ id: 'meta-1', client_id: 'c1', content: {
+      fp: { f_job: '자영업' }, fam: '', rel: '',
+      touch: [{ at: TODAY, how: '전화', note: '지난 통화' }],
+      next: { what: '증권 전달', due: TODAY }, bd: '03-15', up: 1 } }]
+  }));
+  await p6.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await p6.waitForTimeout(1800);
+  ok(/증권 전달/.test(await p6.locator('.c365').innerText()), '잡아 둔 다음 할 일이 카드에 보인다');
+  ok(/D-/.test(await p6.locator('.c365').innerText()), '생일까지 며칠 남았는지도 보인다');
+  await p6.click('.c365 .ed'); await p6.waitForTimeout(300);
+  ok(await p6.locator('.cebt .dn').count() === 1, '잡아 둔 일이 있으면 「끝냈습니다」 가 뜬다');
+  await p6.click('.cebt .dn'); await p6.waitForTimeout(600);
+  const dn = await p6.evaluate(() => ((window.__wrote.filter(w => w.t === 'saved_reports')[0] || {}).v || {}).content || null);
+  ok(!!dn && dn.next === null, '끝내면 다음 할 일이 비워진다');
+  ok(dn && dn.touch[0] && dn.touch[0].how === '처리' && dn.touch[0].note === '증권 전달',
+     '무엇을 끝냈는지 접촉 기록 맨 위에 남는다 — 앱의 「처리」 와 같은 모양');
+  ok(dn && dn.touch.length === 2, '있던 접촉 기록은 밀려 내려갈 뿐 안 지워진다');
+  ok(dn && dn.bd === '03-15', '생일은 건드리지 않는다');
+
+  /* DB 종류 — 대표가 정한 목록을 폰이 그대로 따라가는가 */
+  console.log('\nDB 종류 — 대표가 정하고 폰은 따라가기만');
+  await p6.click('#tbReg'); await p6.waitForTimeout(300);
+  await p6.fill('#rgTxt', '나신규 010-9999-8888');
+  await p6.click('.pastebox .mini'); await p6.waitForTimeout(320);
+  const srcs = await p6.locator('.rn button').allInnerTexts();
+  ok(srcs.indexOf('순천개척') >= 0, '대표님이 새로 만든 종류가 폰에도 뜬다 (' + srcs.join('·') + ')');
+  ok(srcs.indexOf('지인') < 0, '대표님이 안 쓰는 종류는 안 뜬다');
+
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
