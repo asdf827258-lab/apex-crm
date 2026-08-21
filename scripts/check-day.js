@@ -337,6 +337,54 @@ const srv = http.createServer((req, res) => {
   ok(srcs.indexOf('순천개척') >= 0, '대표님이 새로 만든 종류가 폰에도 뜬다 (' + srcs.join('·') + ')');
   ok(srcs.indexOf('지인') < 0, '대표님이 안 쓰는 종류는 안 뜬다');
 
+  /* 열둘 · 배정 DB 와 고객 365일이 한 명단에서 보이는가 */
+  console.log('\n사람 — 두 표가 한 명단으로');
+  const p7 = await ctx.newPage();
+  p7.on('pageerror', e => errs.push('[people] ' + e.message));
+  await p7.addInitScript(SB_STUB({
+    __me: 'me-1', profiles: [{ name: '박서준' }], calls: [], team_feedback: [], app_config: [],
+    dbs: [
+      { id: 'a1', assigned_to: 'me-1', customer_name: '권도윤', phone: '010-1111-1111', region: '경기', assigned_date: TODAY },
+      { id: 'a2', assigned_to: 'me-1', customer_name: '나신규', phone: '010-2222-2222', region: '서울', assigned_date: TODAY }
+    ],
+    clients: [
+      /* 권도윤 은 양쪽에 다 있다 (가린 이름으로 만난다) */
+      { id: 'c1', advisor_id: 'me-1', name_masked: '권*윤', created_at: TODAY },
+      /* 오래된 계약 고객 — 배정 DB 에는 없다 */
+      { id: 'c2', advisor_id: 'me-1', name_masked: '문*희', created_at: TODAY }
+    ],
+    saved_reports: [
+      { id: 'm1', client_id: 'c1', content: { fp: {}, fam: '', rel: '', touch: [], next: { what: '증권 전달', due: TODAY }, bd: '', up: 1 } },
+      { id: 'm2', client_id: 'c2', content: { fp: {}, fam: '', rel: '', touch: [], next: { what: '소개 요청', due: TODAY }, bd: '05-02', up: 1 } }
+    ]
+  }));
+  await p7.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await p7.waitForTimeout(1900);
+  await p7.click('#tbList'); await p7.waitForTimeout(400);
+  const ls = await p7.locator('#body').innerText();
+  ok(/권도윤/.test(ls) && /나신규/.test(ls), '배정 DB 사람이 보인다');
+  ok(/문\*희/.test(ls), '고객 365일에만 있는 사람도 같은 명단에 보인다');
+  ok(await p7.locator('.row').count() === 3, '세 사람이 선다 — 겹치는 사람은 한 줄로 합쳐진다');
+  ok(await p7.locator('.row .both').count() === 1, '양쪽에 다 있는 사람에는 「🗂 365」 가 붙는다');
+  ok(await p7.locator('.row .only').count() === 1, '고객 365일에만 있는 사람은 그렇다고 딱지가 붙는다');
+  ok(/증권 전달/.test(ls), '합쳐진 사람 줄에 고객 365일의 다음 할 일이 같이 보인다');
+
+  /* 고객 365일에만 있는 사람도 폰에서 고칠 수 있어야 한다 */
+  await p7.click('.row .only'); await p7.waitForTimeout(350);
+  ok(await p7.locator('.ce').count() === 1, '눌러서 그 자리에서 다음 할 일·생일을 고친다');
+  await p7.evaluate(() => window.dCeWhat('생일 문자 보내기'));
+  await p7.click('.cebt .sv'); await p7.waitForTimeout(600);
+  const w7 = await p7.evaluate(() => (window.__wrote.filter(w => w.t === 'saved_reports')[0] || {}).v || null);
+  ok(!!w7 && w7.content.next.what === '생일 문자 보내기', '배정 DB 에 없는 고객도 폰에서 관리된다');
+  ok(w7.content.bd === '05-02', '적어 둔 생일은 그대로 남는다');
+
+  /* 걸개 */
+  await p7.evaluate(() => window.dFil('c365')); await p7.waitForTimeout(320);
+  ok(await p7.locator('.row').count() === 2, '「고객 365일」 로 좁히면 그 사람들만 남는다');
+  await p7.evaluate(() => window.dFil('')); await p7.waitForTimeout(250);
+  await p7.evaluate(() => window.dFind('문')); await p7.waitForTimeout(400);
+  ok(await p7.locator('.row').count() === 1, '고객 365일에만 있는 사람도 이름으로 찾힌다');
+
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 

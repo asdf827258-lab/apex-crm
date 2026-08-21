@@ -430,6 +430,10 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .cebt .cl{flex:0 0 62px;background:var(--sunk);color:var(--ink3)}
 .cen{font-size:10.5px;color:var(--ink3);line-height:1.7;margin-top:9px}
 .cen b{color:var(--ink2);font-weight:800}
+.row .m b i.both{font-style:normal;font-size:9.5px;font-weight:700;color:var(--core);
+  background:var(--glow);border-radius:99px;padding:2px 6px;vertical-align:1px}
+.row .m b i.only{font-style:normal;font-size:9.5px;font-weight:700;color:var(--yes);
+  background:var(--yes-bg);border-radius:99px;padding:2px 6px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -740,7 +744,7 @@ function rows(){
 /* ── 내가 적은 기록 (미리보기에서는 이 기기에만) ── */
 var K='apex_day_log';
 var _L=null,_Q=null,_R=null;
-function bust(){_L=null;_Q=null;_R=null;}
+function bust(){_L=null;_Q=null;_R=null;_CX=null;_PP=null;}
 function L(){if(_L)return _L;var v={};try{v=JSON.parse(localStorage.getItem(K)||'{}')||{};}catch(e){v={};}
   if(v.day!==T0())v={day:T0(),done:{},next:v.next||{},calls:0,att:v.att||'',streak:v.streak||0,last:v.last||''};
   if(!v.done)v.done={};if(!v.next)v.next={};_L=v;return v;}
@@ -825,9 +829,26 @@ function why(r){
 /* 이 사람의 고객 카드 — 있으면 요약만 보여 준다. 쓰지 않는다.
    찾는 규칙은 CRM 이 쓰는 것과 같다 — 담당자 + 가린 이름.
    실명은 서버에 없다. 그 기기에 적어 둔 사람만 실명이 보인다. */
+/* 배정 DB 200명 × 고객 365일 200명이면 사람마다 훑을 때 4만 번을 견준다.
+   폰에서는 그 사이 화면이 멈춘다. 그래서 「첫 글자 + 글자 수」 로 미리 묶어 둔다 —
+   한 묶음에 두세 명뿐이라 견주는 횟수가 몇십 번으로 준다. */
+var _CX=null;
+function cliIndex(){
+  if(_CX)return _CX;
+  var R=rows(),i,m={};
+  for(i=0;i<R.cli.length;i++){
+    var n=(''+(R.cli[i].name||'')).replace(/\s/g,'');
+    if(!n)continue;
+    var k=n.charAt(0)+'|'+n.length;
+    (m[k]||(m[k]=[])).push(R.cli[i]);
+  }
+  _CX=m;return m;
+}
 function cardOf(r){
-  var R=rows(),i;
-  for(i=0;i<R.cli.length;i++)if(sameName(r.name,R.cli[i].name))return R.cli[i];
+  var n=(''+(r.name||'')).replace(/\s/g,'');
+  if(!n)return null;
+  var a=cliIndex()[n.charAt(0)+'|'+n.length]||[],i;
+  for(i=0;i<a.length;i++)if(sameName(r.name,a[i].name))return a[i];
   return null;
 }
 /* ══════════════════════════════════════════════════════════════════
@@ -1972,33 +1993,104 @@ function vWeek(){
   return h;
 }
 
-/* ── 사람 ── */
-var FIL=[['','전체'],['run','진행중'],['no','부재'],['rej','거절'],['new','미진행'],['won','계약·증권']];
+/* ══════════════════════════════════════════════════════════════════
+   사람 — 배정 DB 와 고객 365일을 한 명단으로
+
+   두 표는 원래 따로 산다. DB 통합 CRM 은 「전화를 거는 판」 이고
+   고객 365일은 「평생 관리하는 판」 이다. 그런데 사람은 하나다.
+   폰에서 「김민수」 를 찾을 때 어느 판에 있는지 먼저 떠올려야 한다면
+   그건 합쳐진 게 아니다.
+
+   그래서 한 명단으로 세운다.
+     양쪽에 다 있는 사람  →  한 줄로 합친다 (겹쳐 보이지 않는다)
+     배정 DB 에만 있는 사람 →  전화·기록이 된다
+     고객 365일에만 있는 사람 → 번호가 없다(clients 표에 번호 칸이 없다).
+                                누르면 다음 할 일·생일을 고친다.
+
+   잇는 열쇠는 가린 이름이다 — 서버에 실명이 없기 때문이다.
+   완벽하지 않으므로(김*수 가 둘일 수 있다) <b>보여 주기와 고치기에만</b>
+   쓴다. 통화 기록은 db_id 라는 확실한 번호로만 들어간다.
+   ══════════════════════════════════════════════════════════════════ */
+var _PP=null;
+function people(){
+  if(_PP)return _PP;
+  var R=rows(),out=[],got={},i;
+  for(i=0;i<R.db.length;i++){
+    var r=R.db[i], c=cardOf(r);
+    if(c)got[c.id]=1;
+    out.push({k:'db',id:r.id,name:r.name,db:r,cli:c});
+  }
+  for(i=0;i<R.cli.length;i++){
+    var c2=R.cli[i];
+    if(got[c2.id])continue;
+    out.push({k:'cli',id:c2.id,name:c2.name,db:null,cli:c2});
+  }
+  _PP=out;return out;
+}
+var FIL=[['','전체'],['run','진행중'],['no','부재'],['rej','거절'],['new','미진행'],
+         ['won','계약·증권'],['c365','고객 365일']];
+function pRow(x,v){
+  var c=x.cli;
+  if(x.k==='cli'){
+    /* 고객 365일에만 있는 사람 — 번호가 없다. 누르면 고치는 화면이 펴진다 */
+    var when=c.due?(c.due.slice(5).replace('-','/')):'—';
+    var lateC=c.due&&c.due<T0();
+    return '<button type="button" class="row'+(lateC?' bad':'')+'" onclick="dCe(\''+c.id+'\')">'+
+      '<span class="tm">'+esc(when)+'</span>'+
+      '<span class="m"><b>'+esc(c.name)+' <i class="only">고객 365일</i></b><span>'+
+        esc(c.plan||'다음 할 일이 없습니다')+' · '+(c.days>=9000?'접촉 기록 없음':(c.days+'일 전'))+
+        (c.bdIn>=0?(' · 생일 D-'+c.bdIn):'')+'</span></span>'+
+      '<span class="r">✏️</span></button>'+
+      (CE.open===c.id?ceHtml(c):'');
+  }
+  var r=x.db, t=tagOf(r), nx=nextOf(r,v);
+  return '<button type="button" class="row'+(due(r,v)&&!v.done[r.id]?' bad':'')+'" onclick="dJump(\''+r.id+'\')">'+
+    '<span class="tm">'+(v.done[r.id]?'✓':(due(r,v)?'오늘':(nx?(nx.slice(5).replace('-','/')):'미정')))+'</span>'+
+    '<span class="m"><b>'+esc(r.name)+(c?' <i class="both">🗂 365</i>':'')+'</b><span>'+
+      esc(t[1])+' · '+r.days+'일 전 · '+esc(r.region||'')+
+      (c&&c.plan?(' · '+esc(c.plan)):'')+'</span></span>'+
+    '<span class="r">›</span></button>';
+}
 function vList(){
-  var R=rows(),v=L(),h='',i;
+  var v=L(),h='';
   h+='<div class="find"><span>🔎</span><input id="dQ" placeholder="이름·지역·번호로 찾기" value="'+esc(QRY)+'" oninput="dFind(this.value)"></div>';
   h+='<div class="chips">'+FIL.map(function(f){
     return '<button type="button" class="'+(FILTER===f[0]?'on':'')+'" onclick="dFil(\''+f[0]+'\')">'+f[1]+'</button>';}).join('')+'</div>';
-  var l=R.db.filter(function(r){
-    if(QRY&&((r.name||'')+(r.region||'')+(r.phone||'')).toLowerCase().indexOf(QRY.toLowerCase())<0)return false;
+  var q=QRY.toLowerCase();
+  var l=people().filter(function(x){
+    if(q){
+      var hay=(x.name||'')+((x.db&&(x.db.region||''))||'')+((x.db&&(x.db.phone||''))||'')+
+              ((x.cli&&(x.cli.plan||''))||'');
+      if(hay.toLowerCase().indexOf(q)<0)return false;
+    }
+    if(FILTER==='c365')return !!x.cli;
+    if(!x.db)return FILTER==='';                 /* 고객 365일만 있는 사람은 CRM 걸개에 안 걸린다 */
+    var r=x.db;
     if(FILTER==='run')return r.res==='상담'&&!r.stage;
     if(FILTER==='no')return r.res==='부재';
     if(FILTER==='rej')return r.res==='거절';
     if(FILTER==='new')return !r.n;
     if(FILTER==='won')return r.stage==='계약완료'||r.stage==='증권전달';
     return true;
-  }).sort(function(a,b){return b.days-a.days;});
-  h+='<div class="sec">'+ (FIL.filter(function(f){return f[0]===FILTER;})[0]||['','전체'])[1] +' <i>'+l.length+'명</i></div>';
+  }).sort(function(a,b){
+    var da=a.db?a.db.days:(a.cli.days||0), db2=b.db?b.db.days:(b.cli.days||0);
+    return db2-da;
+  });
+  var nBoth=0,nOnly=0,i;
+  for(i=0;i<l.length;i++){if(l[i].k==='cli')nOnly++;else if(l[i].cli)nBoth++;}
+  h+='<div class="sec">'+ (FIL.filter(function(f){return f[0]===FILTER;})[0]||['','전체'])[1] +
+     ' <i>'+l.length+'명</i>'+
+     ((nBoth||nOnly)?('<span style="margin-left:auto;font-weight:400;font-size:10.5px">'+
+       (nBoth?('🗂 둘 다 '+nBoth+'명'):'')+(nBoth&&nOnly?' · ':'')+
+       (nOnly?('고객 365일만 '+nOnly+'명'):'')+'</span>'):'')+
+     '</div>';
   var more=l.length>60;
   if(more)l=l.slice(0,60);
-  h+=l.length?l.map(function(r){
-    var t=tagOf(r), nx=nextOf(r,v);
-    return '<button type="button" class="row'+(due(r,v)&&!v.done[r.id]?' bad':'')+'" onclick="dJump(\''+r.id+'\')">'+
-      '<span class="tm">'+(v.done[r.id]?'✓':(due(r,v)?'오늘':(nx?(nx.slice(5).replace('-','/')):'미정')))+'</span>'+
-      '<span class="m"><b>'+esc(r.name)+'</b><span>'+esc(t[1])+' · '+r.days+'일 전 · '+esc(r.region||'')+'</span></span>'+
-      '<span class="r">›</span></button>';}).join('')
+  h+=l.length?l.map(function(x){return pRow(x,v);}).join('')
     :'<div class="empty">걸리는 사람이 없습니다.</div>';
   if(more)h+='<div class="empty">위에서 60명만 보입니다 — 이름이나 지역으로 좁혀 보세요.</div>';
+  h+='<div class="note"><b>🗂 365</b> 가 붙은 사람은 <b>배정 DB 와 고객 365일에 다 있는</b> 사람입니다 — 한 줄로 합쳐 두었습니다.<br>'+
+     '<b>고객 365일</b> 딱지만 있는 사람은 배정 DB 에 없어 <b>번호가 없습니다</b>. 눌러서 다음 할 일·생일만 고칩니다.</div>';
   return h;
 }
 
