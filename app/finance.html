@@ -1258,6 +1258,12 @@ a { color: inherit; text-decoration: none; }
       </div>
     </div>
 
+    <!-- 상담 순서가 설 자리.
+         전에는 화면 왼쪽 <b>맨 아래</b>에 떠 있었다. 상담 중에 눈이
+         가는 곳이 아니고, 폰에서는 아예 안 보였다. 기본 정보를 채우고
+         나면 바로 그 밑에서 「다음에 무엇을 열지」가 보여야 한다. -->
+    <div id="flowSlot"></div>
+
     <!-- 소득 -->
     <div class="sb-section on">
       <div class="sb-sec-head" onclick="sbToggle(this)">
@@ -1645,6 +1651,12 @@ a { color: inherit; text-decoration: none; }
       <button onclick="printReport()" class="print-btn">🖨️ 보고서 출력</button>
     </div>
 
+    <!-- ── 한 장으로 ──────────────────────────────────────────────
+         여섯 칸을 하나씩 들어가 봐야 그림이 그려졌다. 상담 자리에서
+         그럴 시간이 없다. <b>여기 한 장</b>에 나눈 자리 · 기간 · 수익률이
+         한꺼번에 서고, 「그래서 얼마」 가 돈 그래프로 나온다.        -->
+    <div id="ivOne"></div>
+
     <!-- 서브 탭 네비 -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;border-bottom:2px solid var(--ink-7);padding-bottom:0">
       <button class="sub-tab on" onclick="switchSubTab('etf',this)" id="stab-etf">📈 ETF · 주식 포트폴리오</button>
@@ -1808,6 +1820,11 @@ a { color: inherit; text-decoration: none; }
       </div>
     </div>
     <div id="deck-total" style="display:none;margin-bottom:20px"></div>
+    <!-- ── 오늘 정하실 것 ──────────────────────────────────────────
+         고객이 「이 정도는 할 수 있겠다」 하시는 순간이 상담의 끝이다.
+         그때 화면을 옮겨 다니면 그 순간이 식는다. <b>그 자리에서</b>
+         연금 · 달러 · 일시납 세 갈래를 계산해 놓는다.               -->
+    <div id="closeOne"></div>
     <div id="total-report"></div>
     <div id="dollar-sim"></div>
   </div>
@@ -2395,13 +2412,18 @@ function housePenPer(atAge){
 function housePension(realtyMan, atAge){
   var v=Math.max(+realtyMan||0,0), a=Math.max(+atAge||0,0);
   var young=(a<HOUSE_PEN.minAge), over=(v>HOUSE_PEN.capMan);
-  if(v<=0)return {won:0,per:0,over:false,young:false,usedMan:0};
-  if(young)return {won:0,per:0,over:over,young:true,usedMan:v};
+  /* ※ 이 칸 이름이 오래 <b>won</b> 이었는데 실제로 담은 것은 <b>만원</b>이다.
+     이름이 거짓말을 하면 부르는 쪽이 원 단위로 알고 만 배를 틀린다 —
+     이번에 월 50만원이 「50억」 으로 찍힌 것이 정확히 그 병이었다.
+     그래서 <b>man</b> 으로 고쳐 이름이 단위를 말하게 한다.            */
+  if(v<=0)return {man:0,per:0,over:false,young:false,usedMan:0};
+  if(young)return {man:0,per:0,over:over,young:true,usedMan:v};
   /* 상한을 넘으면 0 으로 지우지 않는다 — 상한까지의 참고값은 보여 주되
      가입 대상이 아니라고 화면에 밝힌다 */
   var used=Math.min(v,HOUSE_PEN.capMan);
   var per=housePenPer(a);
-  return {won:Math.round((used/10000)*per),per:per,over:over,young:false,usedMan:used};
+  /* (억 수) × (억당 월 수령 만원) = <b>만원 / 월</b> */
+  return {man:Math.round((used/10000)*per),per:per,over:over,young:false,usedMan:used};
 }
 /* 퇴직금을 20년(240개월) 동안 나눠 받는다. 남은 돈은 은퇴 후 수익률로
    굴린다 — 이 화면의 다른 계산과 같은 가정을 쓴다.
@@ -2470,7 +2492,7 @@ function render() {
     : Math.round((requiredCapital*r12)/(Math.pow(1+r12,n_months)-1));
 
   const housePen = housePension(realty, rage);
-  const housingPension = housePen.won;
+  const housingPension = housePen.man;   /* 만원 / 월 */
   const sevPension = sevPensionOf(severance, retRate);
   const currentMonthlyInvest = pension + irp + taxfree + general;
 
@@ -2987,6 +3009,9 @@ function render() {
 
 /* ─── 투자 탭 ─── */
 function renderInvestTab() {
+  /* 한 장은 <b>제일 먼저</b> 그린다. 아래 화면이 무엇 때문에 못 서더라도
+     「그래서 얼마」 한 장은 남아 있어야 상담이 이어진다. */
+  try{ ivOnePaint(); }catch(e){}
   if (!$('risk-profile-wrap')) return;
   const profile = RISK_PROFILES[currentRisk] || RISK_PROFILES['중립형'];
   const riskColor = profile.c;
@@ -3685,6 +3710,184 @@ var VC={pay:50,add:0,years:20,rate:6,fee:5,efee:12,eyrs:7,addfee:2,arate:0.7,
 var IC_VIEW='bal', VC_VIEW='sim';
 
 /* ── 공통 유틸 ── */
+/* ═══════════════════════════════════════════════════════════════
+   투자 한 장 — 나눈 자리 · 기간 · 수익률이 만드는 돈
+
+   여섯 개 하위 화면을 하나씩 들어가 봐야 그림이 그려졌다. 상담 자리에서
+   그럴 시간이 없고, 고객은 세 번째 화면쯤에서 「많더라」만 남긴다.
+
+   그래서 한 장에 세 가지를 같이 세운다.
+
+     ① 지금 <b>어디에 나눠</b> 넣고 계신가 — 다섯 자리와 그 자리의 이유
+     ② <b>기간</b>이 만드는 돈 — 원금선 위로 벌어지는 곡선
+     ③ <b>수익률</b>이 만드는 돈 — 같은 기간, 다른 결과
+
+   숫자는 전부 <b>왼쪽 사이드바에 적힌 값</b>에서 나온다. 지어내지 않는다.
+   세제는 「요건 충족 시」로만 적는다 — 이 자리에서 단정하면 나중에
+   요건 하나가 어긋났을 때 고객 앞에서 무너진다.
+   ═══════════════════════════════════════════════════════════════ */
+var IV_BUCKETS = [
+  { id:'s_pension',  t:'연금저축',   c:'#1A56DB',
+    why:'세액공제 대상입니다 <b>(요건·한도 충족 시)</b>. 55세 이후 연금으로 받습니다.' },
+  { id:'s_irp',      t:'IRP',        c:'#2563EB',
+    why:'연금저축과 <b>합쳐서</b> 세액공제 한도를 봅니다 (요건 충족 시).' },
+  { id:'s_isa',      t:'ISA',        c:'#0891B2',
+    why:'만기까지 유지하면 이자·배당에 <b>비과세 한도</b>가 있습니다 (요건 충족 시).' },
+  { id:'s_taxfree',  t:'비과세 저축', c:'#7C3AED',
+    why:'보험차익 비과세는 <b>요건을 충족할 때</b>입니다 — 기간·한도·납입 모양을 확인하십시오.' },
+  { id:'s_general',  t:'일반 투자',   c:'#6B7280',
+    why:'<b>언제든 꺼낼 수 있는</b> 자리입니다. 대신 세제 혜택은 없습니다.' }
+];
+function ivNum(id,d){
+  var e=document.getElementById(id);
+  var v=e?parseFloat(e.value):NaN;
+  return isFinite(v)?v:(d||0);
+}
+function ivRate(){
+  try{
+    var p=RISK_PROFILES[currentRisk];
+    if(p&&isFinite(+p.ret))return +p.ret;
+  }catch(e){}
+  var r=ivNum('s_ret',NaN);
+  return isFinite(r)&&r>0?r:5;
+}
+/* 돈 그래프 — 원금선 위로 세 곡선. 축에 숫자를 적어 눈으로 재게 한다. */
+function ivOneChart(m,years,rates,base){
+  var W=720,H=300,L=64,R=16,T=18,B=34;
+  var iw=W-L-R,ih=H-T-B;
+  if(m<=0||years<=0)
+    return '<div style="font-size:12px;color:var(--g5);padding:22px 4px">'+
+      '월 투자액과 은퇴 나이를 채우시면 여기에 그래프가 섭니다.</div>';
+  var i,k,top=0,ser=[];
+  for(k=0;k<rates.length;k++){
+    var pts=[],y;
+    for(i=0;i<=years;i++){ y=icFv(m,rates[k],i); pts.push(y); if(y>top)top=y; }
+    ser.push(pts);
+  }
+  var prin=[];
+  for(i=0;i<=years;i++)prin.push(m*12*i);
+  if(m*12*years>top)top=m*12*years;
+  top=top*1.06||1;
+  var X=function(i){ return L+iw*(i/years); };
+  var Y=function(v){ return T+ih-ih*(v/top); };
+  var path=function(a){
+    var d='',j;
+    for(j=0;j<a.length;j++)d+=(j?'L':'M')+X(j).toFixed(1)+' '+Y(a[j]).toFixed(1)+' ';
+    return d;
+  };
+  var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="납입 기간과 수익률에 따라 적립금이 어떻게 벌어지는지 보여 주는 그래프">';
+  /* 가로선 넷 + 금액 */
+  for(k=0;k<=4;k++){
+    var vv=top*k/4, yy=Y(vv);
+    g+='<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+yy.toFixed(1)+'" stroke="#EEF1F5"/>'+
+       '<text x="'+(L-8)+'" y="'+(yy+4).toFixed(1)+'" font-size="10" fill="#9CA3AF" text-anchor="end">'+
+       (k?icMan(vv):'0')+'</text>';
+  }
+  /* 연차 */
+  var step=years<=12?2:(years<=25?5:10);
+  for(i=0;i<=years;i+=step)
+    g+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" font-size="10" fill="#9CA3AF" text-anchor="middle">'+i+'년</text>';
+  g+='<path d="'+path(prin)+'" fill="none" stroke="#9CA3AF" stroke-width="1.6" stroke-dasharray="5 4"/>';
+  var col=['#93C5FD','#1A56DB','#7C3AED'];
+  for(k=0;k<ser.length;k++)
+    g+='<path d="'+path(ser[k])+'" fill="none" stroke="'+col[k%3]+'" stroke-width="'+(rates[k]===base?3.2:2)+'"/>';
+  /* 끝점에 금액 */
+  for(k=0;k<ser.length;k++){
+    var last=ser[k][years];
+    g+='<circle cx="'+X(years).toFixed(1)+'" cy="'+Y(last).toFixed(1)+'" r="'+(rates[k]===base?4.5:3.2)+'" fill="'+col[k%3]+'"/>';
+  }
+  g+='<text x="'+L+'" y="'+(T+10)+'" font-size="10.5" font-weight="700" fill="#9CA3AF">점선 = 넣은 돈(원금)</text>';
+  g+='</svg>';
+  return g;
+}
+function ivOneHtml(){
+  var i,b,e,tot=0,parts=[];
+  for(i=0;i<IV_BUCKETS.length;i++){
+    b=IV_BUCKETS[i];
+    var v=ivNum(b.id,0);
+    if(v>0){ parts.push({b:b,v:v}); tot+=v; }
+  }
+  var age=ivNum('s_age',35),rage=ivNum('s_rage',65);
+  var years=Math.max(1,Math.min(50,Math.round(rage-age)));
+  var base=ivRate();
+  var rates=[Math.max(1,base-2),base,base+2];
+  var h='<div class="card" style="margin-bottom:14px">'+
+    '<div class="card-hd"><div class="card-tag">ONE PAGE</div>'+
+      '<div class="card-title">한 장으로 — 나눈 자리 · 기간 · 수익률</div></div>'+
+    '<div class="card-body">';
+  if(!tot){
+    h+='<div style="font-size:12.5px;color:var(--g6);line-height:1.75">'+
+      '왼쪽 <b>투자·저축</b> 칸(연금저축 · IRP · ISA · 비과세 저축 · 일반)에 금액을 넣으시면 '+
+      '여기에 <b>나눈 자리와 그 결과</b>가 한 장으로 섭니다. 지금은 넣으신 금액이 없어 '+
+      '<b>아무 숫자도 만들지 않습니다.</b></div></div></div>';
+    return h;
+  }
+  /* ① 나눈 자리 */
+  h+='<div style="font-size:13.5px;font-weight:800;color:var(--g9);margin-bottom:9px">'+
+    '매달 <b style="color:var(--primary)">'+icMan(tot)+'원</b>을 이렇게 나누고 계십니다</div>'+
+    '<div style="display:flex;height:26px;border-radius:8px;overflow:hidden;margin-bottom:10px">';
+  for(i=0;i<parts.length;i++)
+    h+='<div style="width:'+(parts[i].v/tot*100).toFixed(1)+'%;background:'+parts[i].b.c+';'+
+      'display:flex;align-items:center;justify-content:center;color:#fff;font-size:10.5px;font-weight:800">'+
+      ((parts[i].v/tot>=0.13)?Math.round(parts[i].v/tot*100)+'%':'')+'</div>';
+  h+='</div><div style="display:grid;gap:7px;margin-bottom:16px">';
+  for(i=0;i<parts.length;i++)
+    h+='<div style="display:flex;gap:9px;align-items:flex-start;font-size:11.5px;line-height:1.65;color:var(--g6)">'+
+      '<span style="flex:0 0 8px;height:8px;border-radius:3px;background:'+parts[i].b.c+';margin-top:5px"></span>'+
+      '<span style="flex:0 0 96px;font-weight:800;color:var(--g9)">'+parts[i].b.t+
+        ' <span style="color:var(--g5);font-weight:700">'+icMan(parts[i].v)+'</span></span>'+
+      '<span style="flex:1;min-width:0">'+parts[i].b.why+'</span></div>';
+  h+='</div>';
+  /* ② 기간이 만드는 돈 */
+  h+='<div style="font-size:13.5px;font-weight:800;color:var(--g9);margin-bottom:4px">'+
+    '이 돈을 <b style="color:var(--primary)">'+years+'년</b> 넣으면 (지금 '+Math.round(age)+'세 → '+Math.round(rage)+'세)</div>'+
+    '<div style="font-size:11.5px;color:var(--g5);margin-bottom:8px">'+
+      '가운데 굵은 선이 지금 고르신 성향의 기대수익 '+icP1(base)+'% 입니다. 위아래는 ±2%p 입니다.</div>'+
+    ivOneChart(tot,years,rates,base);
+  /* ③ 기간 × 수익률 */
+  var YS=[10,20,years].filter(function(v,ix,a){return v>0&&a.indexOf(v)===ix;}).sort(function(x,y){return x-y;});
+  var RS=[3,5,7];
+  if(RS.indexOf(Math.round(base))<0){RS.push(Math.round(base));RS.sort(function(x,y){return x-y;});}
+  h+='<div style="font-size:13.5px;font-weight:800;color:var(--g9);margin:18px 0 8px">'+
+    '기간과 수익률이 만드는 차이 — 같은 '+icMan(tot)+'원입니다</div>'+
+    '<div style="overflow-x:auto"><table style="width:100%;min-width:420px;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr><th style="text-align:left;padding:8px 10px;background:var(--ink-9);color:var(--g6);font-size:11px">넣는 기간</th>';
+  for(i=0;i<RS.length;i++)
+    h+='<th style="text-align:right;padding:8px 10px;background:var(--ink-9);color:'+
+      (Math.round(base)===RS[i]?'var(--primary)':'var(--g6)')+';font-size:11px">해마다 '+RS[i]+'%</th>';
+  h+='</tr></thead><tbody>';
+  for(var yi=0;yi<YS.length;yi++){
+    var yy2=YS[yi],last=(yy2===years);
+    h+='<tr'+(last?' style="background:var(--primary-pale)"':'')+'>'+
+      '<td style="padding:9px 10px;border-top:1px solid var(--ink-7);font-weight:800;color:var(--g9)">'+
+        yy2+'년'+(last?' <span style="font-weight:700;color:var(--primary);font-size:10.5px">은퇴까지</span>':'')+
+        '<div style="font-size:10.5px;color:var(--g5);font-weight:600">넣은 돈 '+icMan(tot*12*yy2)+'</div></td>';
+    for(i=0;i<RS.length;i++){
+      var fv=icFv(tot,RS[i],yy2),gain=fv-tot*12*yy2;
+      h+='<td style="padding:9px 10px;border-top:1px solid var(--ink-7);text-align:right;'+
+        'font-weight:'+(Math.round(base)===RS[i]?'900':'700')+';color:'+(Math.round(base)===RS[i]?'var(--primary)':'var(--g9)')+'">'+
+        icMan(fv)+'<div style="font-size:10.5px;font-weight:700;color:var(--pos)">+'+icMan(gain)+'</div></td>';
+    }
+    h+='</tr>';
+  }
+  h+='</tbody></table></div>';
+  h+='<div style="margin-top:14px;background:var(--primary-pale);border:1px solid #D8E7FF;border-radius:12px;padding:13px 15px;'+
+    'font-size:12.5px;line-height:1.8;color:var(--ink-2)">'+
+    '<b>같은 돈입니다.</b> 달라지는 것은 <b>어디에 나눠 두느냐</b>와 <b>얼마나 오래 두느냐</b> 둘뿐입니다. '+
+    '그래서 한 자리에 몰지 않고 나눕니다 — 세제 혜택을 받는 자리, 만기까지 두는 자리, '+
+    '<b>언제든 꺼낼 수 있는 자리</b>가 각각 하는 일이 다릅니다.</div>'+
+    '<div style="margin-top:10px;font-size:11px;color:var(--g5);line-height:1.7">'+
+    '※ 위 금액은 <b>적어 주신 값과 가정 수익률로 계산한 예시</b>이며 미래 수익을 보장하지 않습니다. '+
+    '세제 혜택은 <b>요건을 충족할 때</b> 적용되고 법령·개인 상황에 따라 달라집니다 — 이 자리에서 단정하지 않습니다.</div>';
+  h+='</div></div>';
+  return h;
+}
+function ivOnePaint(){
+  var box=document.getElementById('ivOne');
+  if(!box)return;
+  try{ box.innerHTML=ivOneHtml(); }
+  catch(e){ box.innerHTML=''; try{console.warn('투자 한 장:',e);}catch(x){} }
+}
 function icE(id){return document.getElementById(id);}
 function icMan(v){
   v=Math.round(v||0); var s=v<0?'-':''; v=Math.abs(v);
@@ -6251,11 +6454,211 @@ function renderRealEstate() {
       '※ 공제는 일괄공제 5억'+(reSpouse?' + 배우자공제 최소 5억':'')+'만 반영한 <b>상담용 개산</b>입니다. '+
       '동거주택 상속공제·금융재산 상속공제 등은 요건이 붙어 넣지 않았습니다. 실제 세액은 <b>세무사 확인</b>이 필요합니다.</div>';
 
-  $('realestate-content').innerHTML = sec('HOUSING STATUS · TAX', '주택 자산 현황 & 세금 분석', status) + sec('INHERITANCE LIQUIDITY','이 집이 상속될 때 — 세금 낼 현금이 있습니까',liqBody) + sec('PRICE FORECAST · '+region, '지역별 주택 가격 미래 예측', forecast) + sec('LOAN DIAGNOSIS · BANKER MODE', '대출 가능 진단 & 6개 상품 비교', loanBody) + sec('PURCHASE PLAN', '구입 자금 계획', plan) + sec('SOLUTION ROADMAP', '부동산·대출 실행 솔루션', solution) + rentCompare;
+  /* ── 한 장으로 ──────────────────────────────────────────────
+     여섯 칸이 다 맞는 말인데 첫 표에서 눈이 흐려진다. 부동산 이야기의
+     핵심은 둘뿐이다 — <b>이 집에서 내 몫이 얼마인가</b>, 그리고
+     <b>매달 나가는 돈이 감당되는가</b>. 그 둘을 먼저 보여 준다.       */
+  /* 5억을 「50,000만원」 이라고 읽어 드리면 고객은 한 박자 늦게 알아듣는다.
+     큰 금액은 <b>억</b>으로 적는다 — 말하는 그대로.                    */
+  function eok(v){
+    v=Math.round(v||0); if(!v)return '0원';
+    var sg=v<0?'-':'', a=Math.abs(v), e=Math.trunc(a/10000), r=a%10000;
+    return sg+(e? e+'억'+(r?' '+r.toLocaleString()+'만원':'') : r.toLocaleString()+'만원');
+  }
+  var oneBody;
+  if(houseVal<=0){
+    oneBody='<div style="font-size:12.5px;color:var(--ink-4);line-height:1.8">'+
+      '왼쪽 <b>거주 부동산</b> 값을 넣으시면 여기에 <b>내 몫 · 은행 몫 · 매달 나가는 돈</b>이 '+
+      '한 장으로 섭니다. 지금은 <b>아무 숫자도 만들지 않습니다.</b></div>';
+  }else{
+    var myPct=Math.max(0,Math.min(100,100-debtRatio));
+    var tone=incomeRatio>=50?'#F04452':(incomeRatio>=40?'#D97706':'#0F9D58');
+    var toneL=incomeRatio>=50?'#FEF2F2':(incomeRatio>=40?'#FFFBEB':'#ECFDF5');
+    var word=incomeRatio>=50?'무겁습니다':(incomeRatio>=40?'빠듯합니다':'감당하고 계십니다');
+    oneBody=
+      '<div style="font-size:13.5px;font-weight:800;color:var(--ink-1);margin-bottom:9px">'+
+        '이 집 <b style="color:var(--primary)">'+eok(houseVal)+'</b> 가운데 <b>내 몫</b>은 이만큼입니다</div>'+
+      '<div style="display:flex;height:30px;border-radius:9px;overflow:hidden;margin-bottom:9px">'+
+        '<div style="width:'+myPct.toFixed(1)+'%;background:#1A56DB;display:flex;align-items:center;'+
+          'justify-content:center;color:#fff;font-size:11.5px;font-weight:800">'+
+          (myPct>=18?('내 몫 '+myPct+'%'):'')+'</div>'+
+        '<div style="width:'+(100-myPct).toFixed(1)+'%;background:#E5E8EB;display:flex;align-items:center;'+
+          'justify-content:center;color:#6B7280;font-size:11.5px;font-weight:800">'+
+          ((100-myPct)>=18?('은행 몫 '+(100-myPct)+'%'):'')+'</div></div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-3);margin-bottom:16px">'+
+        '<span><b>내 몫(순자산)</b> '+eok(netAsset)+'</span>'+
+        '<span style="color:var(--ink-5)">·</span>'+
+        '<span><b>대출 잔액</b> '+eok(mortgage)+'</span>'+
+        '<span style="color:var(--ink-5)">·</span>'+
+        '<span><b>금리</b> '+fmt1(mtgRate)+'%</span></div>'+
+      '<div style="font-size:13.5px;font-weight:800;color:var(--ink-1);margin-bottom:9px">'+
+        '매달 나가는 원리금은 소득의 <b style="color:'+tone+'">'+incomeRatio+'%</b> 입니다</div>'+
+      '<div style="height:14px;border-radius:999px;background:#F2F4F6;overflow:hidden;margin-bottom:7px">'+
+        '<div style="width:'+Math.max(0,Math.min(100,incomeRatio))+'%;height:100%;background:'+tone+'"></div></div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--ink-3)">'+
+        '<span><b>원리금</b> '+fmt0(monthlyPrincipal)+'만원 / 월 <span style="color:var(--ink-5)">(30년 기준)</span></span>'+
+        '<span style="color:var(--ink-5)">·</span>'+
+        '<span><b>이자만</b> '+fmt0(monthlyInterest)+'만원 / 월</span>'+
+        '<span style="color:var(--ink-5)">·</span>'+
+        '<span><b>월 소득</b> '+fmt0(netIncome)+'만원</span></div>'+
+      '<div style="margin-top:14px;background:'+toneL+';border:1px solid '+tone+'33;border-radius:12px;'+
+        'padding:13px 15px;font-size:12.5px;line-height:1.85;color:var(--ink-2)">'+
+        '집은 있는데 <b>매달 나가는 돈</b>이 소득의 <b style="color:'+tone+'">'+incomeRatio+'%</b> 라 '+
+        '<b>'+word+'</b>. '+
+        (incomeRatio>=40
+          ? '아래에서 <b>금리·기간·정책대출</b>을 바꿔 보시면 이 막대가 바로 움직입니다. '+
+            '먼저 줄일 수 있는 것이 무엇인지부터 봅니다.'
+          : '여유가 있는 만큼 <b>남는 돈을 어디에 둘지</b>가 다음 이야기입니다.')+
+        '</div>'+
+      '<div style="margin-top:10px;font-size:11px;color:var(--ink-5);line-height:1.7">'+
+        '※ 원리금은 <b>30년 원리금균등 가정</b>이며 실제 상환 방식·잔여 기간에 따라 다릅니다. '+
+        '대출 한도·금리는 <b>금융기관 심사</b>에 따르고, 세금은 <b>세무 확인</b>이 필요합니다.</div>';
+  }
+  $('realestate-content').innerHTML = sec('ONE PAGE','한 장으로 — 내 몫 · 은행 몫 · 매달 나가는 돈',oneBody)
+    + sec('HOUSING STATUS · TAX', '주택 자산 현황 & 세금 분석', status) + sec('INHERITANCE LIQUIDITY','이 집이 상속될 때 — 세금 낼 현금이 있습니까',liqBody) + sec('PRICE FORECAST · '+region, '지역별 주택 가격 미래 예측', forecast) + sec('LOAN DIAGNOSIS · BANKER MODE', '대출 가능 진단 & 6개 상품 비교', loanBody) + sec('PURCHASE PLAN', '구입 자금 계획', plan) + sec('SOLUTION ROADMAP', '부동산·대출 실행 솔루션', solution) + rentCompare;
 }
 
 
 
+/* ═══════════════════════════════════════════════════════════════
+   같은 돈으로 남기는 세 가지 길 — 사망보험금 · 은행 · 현금
+
+   「상속·증여는 어렵다」 는 말은 <b>표가 많다</b>는 뜻이다. 계산서를
+   먼저 보여 주면 고객은 첫 표에서 손을 놓는다.
+
+   그래서 맨 앞에 <b>질문 하나</b>를 놓는다 —
+     「같은 돈을 세 군데에 두었을 때, 그날 유가족 손에 얼마가 옵니까?」
+
+   세 길의 성질이 정말로 다르다.
+     · 사망보험금 — <b>첫 회부터</b> 정해진 금액이 선다. 시간이 필요 없다.
+     · 은행 예금  — 시간이 지나야 늘어난다. 일찍 떠나면 넣은 돈뿐이다.
+     · 현금       — 늘지 않는다.
+
+   그리고 상속세는 <b>6개월 안에 현금</b>으로 낸다. 집·사업체는 그 안에
+   안 팔린다. 급매로 넘기는 일이 그래서 생긴다 — <b>자산을 지키려고</b>
+   사망보험금을 두는 이유가 여기 있다.
+
+   세금은 <b>단정하지 않는다.</b> 사망보험금이 상속재산에 들어가는지는
+   계약자·피보험자·수익자를 누구로 두었고 <b>보험료를 실제로 누가 냈는지</b>
+   에 따라 갈린다. 그 판단은 세무 전문가의 몫이다.
+   ═══════════════════════════════════════════════════════════════ */
+var LGV = { prem:30, years:20, face:0, rate:3 };
+function lgvSet(k,v){ LGV[k]=parseFloat(v)||0; try{ renderInherit(); }catch(e){} }
+function lgvWon(m){
+  m=Math.round(m||0); if(!m)return '0원';
+  var s=m<0?'-':'', a=Math.abs(m), e=Math.trunc(a/10000), r=a%10000;
+  return s+(e? e+'억'+(r?' '+r.toLocaleString()+'만원':'') : r.toLocaleString()+'만원');
+}
+function lgvNum(id,d){ var e=document.getElementById(id); var v=parseFloat(e&&e.value); return isFinite(v)?v:(d||0); }
+function lgvChart(face,prem,years,rate){
+  var W=720,H=280,L=68,R=104,T=20,B=34,iw=W-L-R,ih=H-T-B;
+  var i,bank=[],cash=[],top=face;
+  for(i=0;i<=years;i++){
+    var paid=prem*12*i;
+    bank.push(icFv(prem,rate,i));
+    cash.push(paid);
+    if(bank[i]>top)top=bank[i];
+  }
+  top=top*1.08||1;
+  var X=function(i){ return L+iw*(years?i/years:0); };
+  var Y=function(v){ return T+ih-ih*(v/top); };
+  var path=function(a){ var d='',j; for(j=0;j<a.length;j++)d+=(j?'L':'M')+X(j).toFixed(1)+' '+Y(a[j]).toFixed(1)+' '; return d; };
+  var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+
+    '같은 돈을 사망보험금·은행 예금·현금으로 두었을 때 해가 지날수록 유가족이 받는 금액이 어떻게 달라지는지 보여 주는 그래프">';
+  for(var k=0;k<=4;k++){
+    var vv=top*k/4, yy=Y(vv);
+    g+='<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(W-R)+'" y2="'+yy.toFixed(1)+'" stroke="#EEF1F5"/>'+
+       '<text x="'+(L-8)+'" y="'+(yy+4).toFixed(1)+'" font-size="10" fill="#9CA3AF" text-anchor="end">'+(k?lgvWon(vv):'0')+'</text>';
+  }
+  var st=years<=12?2:(years<=25?5:10);
+  for(i=0;i<=years;i+=st)
+    g+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" font-size="10" fill="#9CA3AF" text-anchor="middle">'+i+'년</text>';
+  g+='<line x1="'+L+'" y1="'+Y(face).toFixed(1)+'" x2="'+(W-R)+'" y2="'+Y(face).toFixed(1)+
+     '" stroke="#0F9D58" stroke-width="3.2"/>';
+  g+='<path d="'+path(bank)+'" fill="none" stroke="#1A56DB" stroke-width="2.2"/>';
+  g+='<path d="'+path(cash)+'" fill="none" stroke="#9CA3AF" stroke-width="1.8" stroke-dasharray="5 4"/>';
+  g+='<text x="'+(W-R+8)+'" y="'+(Y(face)-6).toFixed(1)+'" font-size="11" font-weight="800" fill="#0F9D58">사망보험금</text>'+
+     '<text x="'+(W-R+8)+'" y="'+(Y(face)+9).toFixed(1)+'" font-size="10" fill="#0F9D58">'+lgvWon(face)+'</text>';
+  g+='<text x="'+(W-R+8)+'" y="'+(Y(bank[years])+4).toFixed(1)+'" font-size="10.5" font-weight="700" fill="#1A56DB">은행 '+lgvWon(bank[years])+'</text>';
+  g+='<text x="'+(W-R+8)+'" y="'+(Y(cash[years])+16).toFixed(1)+'" font-size="10.5" font-weight="700" fill="#9CA3AF">현금 '+lgvWon(cash[years])+'</text>';
+  g+='</svg>';
+  return g;
+}
+function lgvHtml(){
+  var face=LGV.face||lgvNum('ins_life',0)||10000;
+  var prem=LGV.prem||0, years=Math.max(1,Math.min(50,Math.round(LGV.years||20))), rate=LGV.rate;
+  var f=function(id,lb,val,step,hint){
+    return '<div style="min-width:0"><label style="display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin-bottom:4px">'+lb+'</label>'+
+      '<input type="number" inputmode="decimal" value="'+val+'" step="'+(step||1)+'" oninput="lgvSet(\''+id+'\',this.value)" '+
+      'style="width:100%;box-sizing:border-box;border:1px solid #D8E0EC;border-radius:8px;padding:9px 10px;font-size:16px;font-family:inherit">'+
+      (hint?'<div style="font-size:9.5px;color:var(--ink-5);margin-top:3px">'+hint+'</div>':'')+'</div>';
+  };
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px">'+
+    f('face','남기려는 금액(만원)',face,1000,'사이드바 「종신/사망보험금」 값을 씁니다')+
+    f('prem','월 보험료(만원)',prem,1)+
+    f('years','볼 기간(년)',years,1)+
+    f('rate','은행 금리(%)',rate,0.1,'세전 · 단순 비교용')+'</div>';
+  h+=lgvChart(face,prem,years,rate);
+  /* 몇 년 뒤에 떠나시느냐에 따라 — 표 */
+  var YS=[1,5,10,years].filter(function(v,i,a){return v>0&&v<=years&&a.indexOf(v)===i;}).sort(function(x,y){return x-y;});
+  h+='<div style="overflow-x:auto;margin-top:16px"><table style="width:100%;min-width:520px;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:8px 10px;background:var(--ink-9);color:var(--ink-4);font-size:11px">그날이 언제냐에 따라</th>'+
+      '<th style="text-align:right;padding:8px 10px;background:var(--ink-9);color:var(--ink-4);font-size:11px">그때까지 낸 돈</th>'+
+      '<th style="text-align:right;padding:8px 10px;background:#ECFDF5;color:#047857;font-size:11px">사망보험금</th>'+
+      '<th style="text-align:right;padding:8px 10px;background:var(--ink-9);color:#1A56DB;font-size:11px">은행에 뒀다면</th>'+
+      '<th style="text-align:right;padding:8px 10px;background:var(--ink-9);color:var(--ink-4);font-size:11px">현금 그대로</th>'+
+    '</tr></thead><tbody>';
+  for(var i=0;i<YS.length;i++){
+    var y=YS[i], paid=prem*12*y, bk=icFv(prem,rate,y);
+    var mult=paid>0?(face/paid):0;
+    h+='<tr><td style="padding:9px 10px;border-top:1px solid var(--ink-7);font-weight:800;color:var(--ink-1)">'+
+        y+'년 뒤</td>'+
+      '<td style="padding:9px 10px;border-top:1px solid var(--ink-7);text-align:right;color:var(--ink-3)">'+lgvWon(paid)+'</td>'+
+      '<td style="padding:9px 10px;border-top:1px solid var(--ink-7);text-align:right;font-weight:900;color:#047857;background:#F6FEFA">'+
+        lgvWon(face)+(mult>1?'<div style="font-size:10.5px;font-weight:800">낸 돈의 '+(mult>=10?Math.round(mult):mult.toFixed(1))+'배</div>':'')+'</td>'+
+      '<td style="padding:9px 10px;border-top:1px solid var(--ink-7);text-align:right;font-weight:700;color:#1A56DB">'+lgvWon(bk)+'</td>'+
+      '<td style="padding:9px 10px;border-top:1px solid var(--ink-7);text-align:right;color:var(--ink-4)">'+lgvWon(paid)+'</td></tr>';
+  }
+  h+='</tbody></table></div>';
+  /* 성질이 다른 세 가지 */
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:16px">'+
+    '<div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:13px;padding:14px 15px">'+
+      '<div style="font-size:12.5px;font-weight:900;color:#047857">사망보험금</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.75;margin-top:6px">'+
+        '<b>첫 회부터</b> 정해진 금액이 섭니다. 시간이 필요 없습니다.<br>'+
+        '그날 <b>바로 현금</b>이 되어 상속세를 낼 수 있습니다.</div></div>'+
+    '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:13px;padding:14px 15px">'+
+      '<div style="font-size:12.5px;font-weight:900;color:#1A56DB">은행 예금</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.75;margin-top:6px">'+
+        '<b>시간이 지나야</b> 늘어납니다. 일찍 떠나시면 넣은 돈에 이자 조금입니다.<br>'+
+        '이자에는 <b>이자소득세</b>가 붙고, 예금도 상속재산입니다.</div></div>'+
+    '<div style="background:var(--ink-9);border:1px solid var(--ink-7);border-radius:13px;padding:14px 15px">'+
+      '<div style="font-size:12.5px;font-weight:900;color:var(--ink-3)">현금 그대로</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-3);line-height:1.75;margin-top:6px">'+
+        '<b>늘지 않습니다.</b> 물가가 오르면 실제로는 줄어듭니다.<br>'+
+        '현금도 <b>상속재산</b>에 들어갑니다.</div></div></div>';
+  /* 왜 자산을 지키려면 사망보험금인가 */
+  h+='<div style="margin-top:16px;background:#0F172A;color:#fff;border-radius:16px;padding:18px 20px">'+
+    '<div style="font-size:14px;font-weight:900;letter-spacing:-.03em;margin-bottom:9px">'+
+      '왜 <span style="color:#7EE0B4">자산을 지키려면</span> 사망보험금입니까</div>'+
+    '<div style="font-size:12.5px;line-height:1.9;color:rgba(255,255,255,.9)">'+
+      '상속세는 <b>돌아가신 달의 말일부터 6개월 안에 현금</b>으로 냅니다. '+
+      '그런데 남기신 것이 집이나 사업체라면 <b>그 안에 안 팔립니다.</b> '+
+      '그래서 급매로 넘기거나, 대출을 내거나, 나눠 내기(연부연납)로 이자를 더 물게 됩니다.<br><br>'+
+      '사망보험금은 <b>그날 바로 현금</b>입니다. 이 돈으로 세금을 내면 '+
+      '<b>집도 사업체도 그대로 물려줄 수 있습니다.</b> 자산을 늘리려고 드는 것이 아니라 '+
+      '<b>이미 가진 것을 지키려고</b> 드는 것입니다.</div></div>';
+  /* 세금은 단정하지 않는다 */
+  h+='<div style="margin-top:12px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:13px 15px;'+
+    'font-size:11.5px;color:#92400E;line-height:1.85">'+
+    '※ <b>세금은 이 자리에서 단정하지 않습니다.</b> 사망보험금이 상속재산에 들어가는지는 '+
+    '<b>계약자 · 피보험자 · 수익자를 누구로 두었는지</b>, 그리고 <b>보험료를 실제로 누가 냈는지</b>에 따라 갈립니다. '+
+    '구성에 따라 결과가 완전히 달라지므로 <b>반드시 세무 전문가와 확인</b>하십시오.<br>'+
+    '※ 위 금액은 적어 주신 값으로 계산한 <b>예시</b>입니다. 실제 보험료·가입금액은 나이·건강·상품에 따라 다르고 '+
+    '<b>심사 결과에 따릅니다.</b> 은행 금리는 세전 단순 비교용입니다.</div>';
+  return h;
+}
 function renderInherit() {
   if (!$('inherit-content')) return;
   var total = parseFloat(($('inh_total')||{value:0}).value)||0;
@@ -6341,9 +6744,9 @@ function renderInherit() {
   var cashGiftTax = tax(Math.max(houseVal-giftDeduct,0));
   var burdenGiftTaxable = Math.max(giftBaseHouse-giftDeduct,0);
   var burdenGiftTax = tax(burdenGiftTaxable);
-  var taxTable = [
-    ['1억 이하','10%','0',10000],['5억 이하','20%','1,000만',50000],['10억 이하','30%','6,000만',100000],['30억 이하','40%','1억6,000만',300000],['30억 초과','50%','4억6,000만',999999999]
-  ].map(function(r){var on = taxable<=r[3] && (r[3]===10000?taxable>0:taxable>arguments.callee.prev); arguments.callee.prev=r[3]; return r;});
+  /* ※ 여기 있던 taxTable 은 <b>죽은 코드</b>였다 — 바로 아래 taxRows 와
+     칸이 100% 같은데 아무도 쓰지 않았고, arguments.callee 까지 써서
+     strict mode 로 바뀌면 터질 물건이었다. 표는 taxRows 하나만 둔다. */
   var prev=0;
   var taxRows = [
     ['1억 이하','10%','0',10000],['5억 이하','20%','1,000만',50000],['10억 이하','30%','6,000만',100000],['30억 이하','40%','1억6,000만',300000],['30억 초과','50%','4억6,000만',999999999]
@@ -6521,7 +6924,13 @@ function renderInherit() {
       '동거주택은 10년 이상 계속 동거·상속개시일 현재 1세대1주택·상속인이 무주택이어야 합니다. '+
       '<b>실제 신고는 반드시 세무사 확인</b>을 거치십시오.</div>';
 
-  $('inherit-content').innerHTML = sec('INHERITANCE TAX · TAX ADVISOR MODE','상속세 정밀 계산서',calc) + sec('DEDUCTIONS · CASE BY CASE','상속공제 — 이 집에 해당되는 것 전부',dedBody) + sec('DEATH BENEFIT · LIQUIDITY','사망보장금으로 상속세를 냅니다',gmdbBody) + sec('ANNUITY VALUATION','연금으로 넘기면 과세가액이 낮아집니다 — 정기금 평가',pvBody) + sec('GIFT TAX · 10 YEAR PLAN','증여세 계산 & 10년 분할 타임라인',giftBody) + sec('REAL ESTATE TRANSFER STRATEGY','부동산 증여 vs 매각 vs 부담부증여',prop) + sec('ACTION PLAN · LEGAL BASIS','절세 액션플랜 — 법적 근거 포함',actions+memoBox) + sec('CHECKLIST','상속·증여 준비 체크리스트',checks,'0');
+  var lgv='';
+  /* sec() 의 네 번째 값은 <b>아래 여백</b>이다 — 설명글을 넣으면
+     margin-bottom 이 글자가 되어 여백이 깨진다. 설명은 본문 첫 줄로. */
+  try{ lgv=sec('ONE QUESTION','같은 돈을 세 군데에 두면 — 사망보험금 · 은행 · 현금',
+    '<div style="font-size:12px;color:var(--ink-4);line-height:1.7;margin-bottom:12px">'+
+    '아래 계산서를 보기 전에 <b>이 한 장</b>부터 보십시오.</div>'+lgvHtml()); }catch(e){ lgv=''; }
+  $('inherit-content').innerHTML = lgv + sec('INHERITANCE TAX · TAX ADVISOR MODE','상속세 정밀 계산서',calc) + sec('DEDUCTIONS · CASE BY CASE','상속공제 — 이 집에 해당되는 것 전부',dedBody) + sec('DEATH BENEFIT · LIQUIDITY','사망보장금으로 상속세를 냅니다',gmdbBody) + sec('ANNUITY VALUATION','연금으로 넘기면 과세가액이 낮아집니다 — 정기금 평가',pvBody) + sec('GIFT TAX · 10 YEAR PLAN','증여세 계산 & 10년 분할 타임라인',giftBody) + sec('REAL ESTATE TRANSFER STRATEGY','부동산 증여 vs 매각 vs 부담부증여',prop) + sec('ACTION PLAN · LEGAL BASIS','절세 액션플랜 — 법적 근거 포함',actions+memoBox) + sec('CHECKLIST','상속·증여 준비 체크리스트',checks,'0');
 }
 
 
@@ -6529,90 +6938,16 @@ function renderInherit() {
 
 
 /* ─── 상담 · 계약 전환 가이드 ─── */
-function renderConsultingGuide() {
-  const name = ($('s_name')||{value:'고객님'}).value || '고객님';
-  const age = n('age') || 35;
-  const gross = n('gross');
-  const monthlyGross = Math.round(gross/12);
-  const netSalary = Math.round(monthlyGross * 0.82);
-  const passive = n('passive'), spouse = n('spouse'), self = n('self'), other = n('other');
-  const totalIncome = netSalary + passive + spouse + self + other;
-  const essential = n('housing')+n('loan')+n('food')+n('telecom')+n('transport')+n('insurance')+n('medical')+n('edu')+n('support');
-  const choice = n('dining')+n('shopping')+n('travel')+n('choice_etc');
-  const saving = n('emerg')+n('pension')+n('irp')+n('isa')+n('taxfree')+n('general');
-  const surplus = totalIncome - essential - choice - saving;
-  const realty = n('realty');
-  const debt = n('debt');
-  const netWorth = Math.max(realty + n('pen_now') + n('severance') - debt, 0);
-  const incomeMsg = surplus >= 0 ? '월 잉여금이 있어 연금·보장·투자 우선순위를 재배치할 수 있습니다.' : '현재 현금흐름이 마이너스라 신규 투자보다 지출·보험료 구조 점검이 먼저입니다.';
-  const riskType = ($('s_itype')||{value:'중립형'}).value;
-  const html = `
-    <div class="dark-banner">
-      <div class="db-title">CONSULTING POSITIONING</div>
-      <div style="font-size:19px;font-weight:900;letter-spacing:-.04em;margin-bottom:6px">${name}님 상담의 핵심은 “상품 판매”가 아니라 “현금흐름·노후·세금 리스크를 한 장에서 보이게 하는 것”입니다.</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.72);line-height:1.7">네이버증권 연동은 종목을 권유하기 위한 장치가 아니라, 고객이 직접 가격 변동·뉴스·차트를 확인하면서 장기투자와 연금계좌의 필요성을 이해하도록 만드는 신뢰 장치입니다.</div>
-    </div>
+/* ※ 여기 있던 renderConsultingGuide(84줄) 는 <b>죽은 코드</b>였다.
+   화면을 그리는 것은 아래 renderGuide 이고, 초기화가 끝나면
+   window.renderConsultingGuide = renderGuide 로 덮어써진다.
 
-    <div class="mg m4" style="margin-bottom:12px">
-      ${metric('월 추정소득', fmtM(totalIncome), '급여·부업·배우자·기타 포함', 'blue')}
-      ${metric('월 잉여금', fmtM(surplus), incomeMsg, surplus>=0?'green':'red')}
-      ${metric('순자산 추정', fmtM(netWorth), '부동산+연금자산+퇴직금-부채', 'pur')}
-      ${metric('투자성향', riskType, '포트폴리오 상담 기준', 'gold')}
-    </div>
+   그런데 덮어쓰기 <b>전</b>에 부르는 자리가 셋 있어서, 첫 그리기에는
+   이 죽은 판이 돌다가 <b>metric is not defined</b> 로 터지고 있었다.
+   try/catch 에 싸여 있어 조용히 console.error 만 남겼다 — 그래서
+   아무도 몰랐다.
 
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 1 · OPENING</div><div class="card-title">상담 시작 3분 오프닝 스크립트</div></div><div class="card-body">
-      <div class="hb blue"><b>오프닝 멘트</b><br>“${name}님, 오늘은 보험이나 투자를 바로 권유드리는 시간이 아닙니다. 먼저 현재 돈이 어디로 흐르고, 은퇴 이후에 국민연금·건강보험료·부동산·상속까지 어떤 리스크가 생길 수 있는지 한 번에 보여드리겠습니다.”</div>
-      <div class="g3" style="margin-top:10px">
-        ${miniStep('① 숫자 확인','월 소득·지출·저축·보험료를 확인하고 ‘현재 남는 돈’을 먼저 보여줍니다.')}
-        ${miniStep('② 미래 리스크','은퇴 후 연금 부족, 건강보험료 상승, 부동산 세금, 상속세를 연결합니다.')}
-        ${miniStep('③ 선택지 제시','보험·연금·투자·부동산을 각각 따로 보지 않고 우선순위로 정리합니다.')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 2 · NAVER STOCK LINK</div><div class="card-title">네이버증권 연동 활용 상담법</div></div><div class="card-body">
-      <table class="fc-table"><thead><tr><th>상담 장면</th><th>보여줄 화면</th><th>핵심 질문</th><th>계약 연결</th></tr></thead><tbody>
-        <tr><td>고객이 투자에 관심 있음</td><td>ETF/주식 카드 클릭 → 네이버증권</td><td>“이 가격 변동을 10년 이상 버틸 수 있으세요?”</td><td>연금저축·IRP·ISA 분산 필요성</td></tr>
-        <tr><td>고객이 원금손실을 무서워함</td><td>S&P500·배당 ETF·채권 ETF 비교</td><td>“수익률보다 먼저 지켜야 할 돈은 얼마일까요?”</td><td>보장성 보험·비상금·안전자산 비중</td></tr>
-        <tr><td>고객이 종목을 묻는 경우</td><td>개별주 뉴스/차트 확인</td><td>“종목보다 중요한 건 계좌 위치와 납입 기간입니다.”</td><td>연금계좌·ISA·비과세 장기 플랜</td></tr>
-        <tr><td>고객이 노후 준비 부족</td><td>연금 시뮬레이션 탭</td><td>“국민연금만으로 월 생활비가 맞나요?”</td><td>개인연금·변액연금·연금저축 보완</td></tr>
-      </tbody></table>
-      <div class="hb navy">주의: 종목명은 투자교육·비교 예시입니다. 특정 종목 매수 권유가 아니라 고객의 위험성향, 투자기간, 세금계좌 활용 여부를 확인하는 용도로 사용하세요.</div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 3 · NEEDS DISCOVERY</div><div class="card-title">계약 니즈를 만드는 질문 12개</div></div><div class="card-body">
-      <div class="g2">
-        ${questionBox('현금흐름','1. 매월 남는 돈이 정확히 얼마인지 알고 계신가요?<br>2. 보험료·대출·저축 중 줄이거나 늘려야 할 항목을 구분해보신 적 있나요?<br>3. 소득이 3개월만 끊기면 어떤 자산부터 깨야 하나요?')}
-        ${questionBox('연금·노후','4. 은퇴 후 월 생활비 목표가 현재가치인지 미래가치인지 구분해보셨나요?<br>5. 국민연금이 줄거나 늦어지면 어떤 계좌가 대신해야 하나요?<br>6. 건강보험료가 은퇴 후에도 계속 나간다는 점을 알고 계셨나요?')}
-        ${questionBox('투자·세금','7. 투자 상품보다 먼저 ISA/IRP/연금저축 계좌 위치를 정해보셨나요?<br>8. 같은 ETF라도 일반계좌와 연금계좌의 세금 차이를 알고 계신가요?<br>9. 하락장에서 추가 납입할 현금흐름이 있나요?')}
-        ${questionBox('부동산·상속','10. 부동산 가격보다 대출 상환액이 소득에서 차지하는 비율을 계산해보셨나요?<br>11. 상속세가 생기면 현금으로 낼 준비가 되어 있나요?<br>12. 자녀에게 줄 돈과 배우자가 지킬 돈을 나눠보셨나요?')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 4 · SOLUTION MAP</div><div class="card-title">상담 결과별 솔루션 연결표</div></div><div class="card-body">
-      <table class="fc-table"><thead><tr><th>진단 결과</th><th>우선순위</th><th>제안 방향</th><th>클로징 멘트</th></tr></thead><tbody>
-        <tr><td>잉여금 부족</td><td>지출/보험료 리모델링</td><td>중복·갱신·고보험료 정리 후 필수 보장 유지</td><td>“새로 가입보다 먼저 새는 돈을 막겠습니다.”</td></tr>
-        <tr><td>연금 부족</td><td>개인연금·연금저축·IRP</td><td>세액공제형+비과세형+투자형을 역할별로 분리</td><td>“연금은 상품이 아니라 월급을 하나 더 만드는 구조입니다.”</td></tr>
-        <tr><td>투자 관심 높음</td><td>ISA/연금계좌</td><td>ETF는 계좌 위치, 납입기간, 리밸런싱 규칙 제안</td><td>“종목을 맞히기보다 오래 유지되는 구조를 만들겠습니다.”</td></tr>
-        <tr><td>부동산/대출 부담</td><td>DSR·상환액 관리</td><td>대출 갈아타기, 정책대출, 매수시기 조정</td><td>“집을 사는 것보다 버틸 수 있는 현금흐름이 먼저입니다.”</td></tr>
-        <tr><td>상속세 예상</td><td>납부재원·증여 타임라인</td><td>종신보험, 사전증여, 신탁/유언 검토</td><td>“상속은 세금을 줄이는 것보다 가족 분쟁과 현금 부족을 막는 게 먼저입니다.”</td></tr>
-      </tbody></table>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 5 · CLOSING</div><div class="card-title">계약 전환 클로징 스크립트</div></div><div class="card-body">
-      <div class="timeline">
-        ${timeline('1','문제 확인','“오늘 숫자로 보니 ${name}님은 지금 당장 상품이 아니라 우선순위 정리가 필요합니다.”','var(--primary-pale)')}
-        ${timeline('2','선택지 제시','“A안은 보험료 조정, B안은 연금 보완, C안은 연금+보장+세금까지 같이 잡는 방식입니다.”','var(--pos-l)')}
-        ${timeline('3','작은 결정','“오늘은 전체를 결정하지 마시고, 우선 다음 미팅에서 ①보험료 구조 ②연금 부족액 ③건보료/세금 리스크만 확정해보겠습니다.”','var(--warn-l)')}
-        ${timeline('4','계약 연결','“계약은 설명을 다 듣고 필요성을 납득하실 때만 진행하겠습니다. 다만 준비가 늦어질수록 보험료·건강·세금 조건은 불리해질 수 있습니다.”','var(--pur-l)')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">COMPLIANCE</div><div class="card-title">상담 시 고정 고지 문구</div></div><div class="card-body">
-      <div class="hb red">본 자료는 고객 상담을 위한 예시·추정 자료이며, 투자수익률·세금·대출한도·보험금 지급은 확정값이 아닙니다. 실제 계약 전에는 상품설명서, 약관, 투자위험, 세법, 대출심사 기준을 반드시 확인해야 합니다.</div>
-      <div class="hb blue">투자형 상품은 원금 손실 가능성이 있으며, 보험상품은 해지 시 원금 손실 또는 환급금 손실이 발생할 수 있습니다. 고객의 재무상황·위험성향·투자기간·보장 필요성을 확인한 뒤 적합성 원칙에 따라 안내하세요.</div>
-    </div></div>`;
-  if($('consulting-guide-content')) $('consulting-guide-content').innerHTML = html;
-}
+   같은 화면을 그리는 곳이 둘이면 언젠가 한쪽만 고친다. 하나만 둔다. */
 function miniStep(title, desc){ return `<div style="border:1px solid var(--ink-7);border-radius:var(--r);padding:12px;background:var(--ink-9)"><div style="font-size:12px;font-weight:900;color:var(--ink-1);margin-bottom:5px">${title}</div><div style="font-size:10.5px;color:var(--ink-4);line-height:1.6">${desc}</div></div>`; }
 function questionBox(title, body){ return `<div style="border:1px solid var(--ink-7);border-radius:var(--r);padding:13px 14px;background:var(--white);margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:var(--primary);margin-bottom:6px">${title}</div><div style="font-size:10.5px;color:var(--ink-3);line-height:1.8">${body}</div></div>`; }
 function timeline(num,title,desc,bg){ return `<div class="tl-item"><div class="tl-dot" style="background:${bg};color:var(--ink-1);font-weight:900">${num}</div><div class="tl-con"><div class="tl-title">${title}</div><div class="tl-desc">${desc}</div></div></div>`; }
@@ -6650,7 +6985,7 @@ function getFinancialSnapshot(){
   const fvInvest = currentPensionPay>0 && r12>0 ? Math.round(currentPensionPay*((Math.pow(1+r12,months)-1)/r12)*(1+r12)) : currentPensionPay*months;
   const monthlyFromCapital = Math.round((fvInvest + penNow*Math.pow(1+ret/100, yearsLeft))*0.04/12);
   const housePen = housePension(realty, rage);
-  const housingPension = housePen.won;
+  const housingPension = housePen.man;   /* 만원 / 월 */
   const sevPension = sevPensionOf(severance, ret);
   const totalPension = n('nps') + n('retire_pen') + monthlyFromCapital + housingPension + sevPension;
   const pensionGap = Math.max(futureTarget-totalPension,0);
@@ -6699,50 +7034,16 @@ function pickFinalLineup(risk){
   const names = byRisk[risk] || byRisk['중립형'];
   return names.map(key => MOCK_ASSETS.find(a => a.name.includes(key))).filter(Boolean).slice(0,3);
 }
-function renderFinalReport(){
-  if(!$('final-report-content')) return;
-  const d = getFinancialSnapshot();
-  const cashLevel = d.surplus>=0 && d.savingRatio>=20 ? 'good' : d.surplus>=0 ? 'warn' : 'bad';
-  const pensionLevel = d.pensionGap<=0 ? 'good' : d.pensionGap<=150 ? 'warn' : 'bad';
-  const debtLevel = d.dsr<=35 && d.ltv<=60 ? 'good' : d.dsr<=45 || d.ltv<=70 ? 'warn' : 'bad';
-  const inheritLevel = d.inheritTax<=0 ? 'good' : d.inheritCashGap<=0 ? 'warn' : 'bad';
-  const totalScore = Math.max(0, Math.min(100, (cashLevel==='good'?25:cashLevel==='warn'?15:5) + (pensionLevel==='good'?25:pensionLevel==='warn'?15:5) + (debtLevel==='good'?25:debtLevel==='warn'?15:5) + (inheritLevel==='good'?25:inheritLevel==='warn'?15:5)));
-  const headline = totalScore>=80 ? '현재 구조는 비교적 안정적입니다. 다만 노후 현금흐름과 세금 리스크를 미리 고정하면 완성도가 높아집니다.' : totalScore>=55 ? '현재 구조는 유지 가능하지만, 연금·대출·보장 중 하나만 흔들려도 현금흐름 압박이 생길 수 있습니다.' : '현재 구조는 우선순위 재정리가 필요합니다. 신규 상품보다 지출·대출·연금 공백을 먼저 정리해야 합니다.';
-  const lineup = pickFinalLineup(d.riskType).map(a=>`<div class="final-lineup-card"><div class="fl-name">${a.name}</div><div class="fl-meta">${a.tag} · ${a.account.slice(0,2).join('/')}</div><div class="fl-text"><b>역할:</b> ${a.desc}<br><b>활용:</b> ${a.strategy}</div><div style="margin-top:8px"><button class="print-btn" style="padding:5px 9px;font-size:10px" onclick="openNaverStock('${jsEsc(a.name)}','${jsEsc(a.code||'')}','${jsEsc(a.market||'')}',event)">네이버증권 보기</button></div></div>`).join('');
-  const actions = [
-    `<b>1. 현금흐름:</b> 월 잉여금 ${fmtM(d.surplus)} 기준으로 보험료·대출·저축의 우선순위를 다시 배치합니다.`,
-    `<b>2. 연금:</b> 은퇴 목표 월 ${fmtM(d.futureTarget)} 대비 예상 월 ${fmtM(d.totalPension)}입니다. 부족액 ${fmtM(d.pensionGap)}은 개인연금/IRP/연금저축으로 보완합니다.`,
-    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다. <b>(두 값 모두 예시 — 공단·공단 모의계산으로 확인)</b>`,
-    `<b>4. 부동산·대출:</b> DSR ${d.dsr}%, LTV ${d.ltv}%입니다. 상환액이 부담되면 금리·기간·정책대출 가능성을 먼저 봅니다.`,
-    `<b>5. 상속·증여:</b> 예상 상속세 ${fmtM(d.inheritTax)}, 납부재원 부족 ${fmtM(d.inheritCashGap)}입니다. 사전증여와 종신보험 납부재원을 분리합니다.`,
-    `<b>6. 다음 미팅:</b> 증권/보험/대출 자료를 확인해 실제 수치로 다시 계산한 뒤 실행안 A/B/C로 결정합니다.`
-  ].map(x=>`<div class="final-action">${x}</div>`).join('');
-  $('final-report-content').innerHTML = `
-    <div class="final-report-cover">
-      <div class="fr-kicker">APEX YUN PRO · CLIENT SUMMARY</div>
-      <div class="fr-title">${d.name}님 재무상황 평가 보고서</div>
-      <div class="fr-sub">이 보고서는 고객님의 입력 정보를 기준으로 현금흐름, 연금, 건강보험료, 국민연금, 부동산 대출, 상속·증여 리스크를 한 장의 상담 흐름으로 정리한 고객용 요약본입니다.</div>
-    </div>
-    <div class="mg m4" style="margin-bottom:10px">
-      ${metric('고객 정보', `${d.age}세 · ${d.job}`, `${d.gender} / 은퇴목표 ${d.rage}세`, 'blue')}
-      ${metric('월 추정소득', fmtM(d.totalIncome), `저축률 ${d.savingRatio}%`, 'green')}
-      ${metric('월 잉여금', fmtM(d.surplus), d.surplus>=0?'추가 설계 가능':'현금흐름 조정 우선', d.surplus>=0?'green':'red')}
-      ${metric('종합 안정도', `${totalScore}점`, d.riskType+' 기준 평가', totalScore>=80?'green':totalScore>=55?'gold':'red')}
-    </div>
-    <div class="feedback-summary"><div class="fs-title">종합 평가</div><div class="fs-text">${headline}</div></div>
-    <div class="final-section-title">고객 상황 평가</div>
-    ${finalEvalCard('① 현금흐름 평가', cashLevel==='good'?'양호':cashLevel==='warn'?'점검':'주의', cashLevel, `월 소득 ${fmtM(d.totalIncome)} 중 필수지출 ${fmtM(d.essential)}, 선택지출 ${fmtM(d.choice)}, 저축·투자 ${fmtM(d.saving)}입니다. 현재 월 잉여금은 ${fmtM(d.surplus)}이며, 고객님의 계약 가능성은 “남는 돈”보다 “재배치 가능한 돈”을 찾는 데 있습니다.`)}
-    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다. <b>이 두 금액은 상담용 예시</b>이며 실제 값은 건강보험공단·국민연금공단 모의계산으로 확인해야 합니다.`)}
-    ${finalEvalCard('③ 부동산·대출 평가', debtLevel==='good'?'안정':debtLevel==='warn'?'관리':'부담', debtLevel, `주택가치 ${fmtM(d.houseVal)}, 대출잔액 ${fmtM(d.mortgage)}, 순주택자산 ${fmtM(d.equity)}입니다. 추정 LTV는 ${d.ltv}%, DSR은 ${d.dsr}%이며 월 원리금은 약 ${fmtM(d.mortgagePay)}입니다. 대출은 가능 여부보다 “소득이 흔들려도 버틸 수 있는가”를 기준으로 판단해야 합니다.`)}
-    ${finalEvalCard('④ 상속·증여 평가', inheritLevel==='good'?'낮음':inheritLevel==='warn'?'준비':'필요', inheritLevel, `예상 상속재산은 ${fmtM(d.totalEstate)}이며, 상담용 추정 상속세는 ${fmtM(d.inheritTax)}입니다. 종신보험 사망보험금 등을 반영해도 납부재원 부족액이 ${fmtM(d.inheritCashGap)}으로 계산됩니다. 사전증여 예정액 ${fmtM(d.inhGift)}은 10년 합산 규칙을 고려해 나눠서 설계하는 것이 좋습니다.`)}
-    <div class="final-section-title">${d.riskType} 성향 기준 추천 펀드/ETF 라인업 2~3개</div>
-    <div class="final-note" style="margin-bottom:8px">전체 펀드 라인업은 고객에게 모두 보여주지 않고, 현재 성향과 상담 목적에 맞는 2~3개만 제시합니다. 아래 항목은 투자 권유가 아니라 계좌 위치·납입기간·위험수용도 확인을 위한 상담 예시입니다.</div>
-    <div class="final-lineup">${lineup}</div>
-    <div class="final-section-title">종합 피드백 및 다음 실행 순서</div>
-    <div class="final-actions">${actions}</div>
-    <div class="hb red" style="margin-top:12px">본 자료는 입력값 기준의 상담용 추정 자료입니다. 실제 세금, 대출한도, 건강보험료, 국민연금, 투자수익률, 보험계약 여부는 관련 기관·상품설명서·약관·심사 결과에 따라 달라질 수 있습니다.</div>
-  `;
-}
+/* ※ 여기 있던 renderFinalReport(44줄) 도 <b>죽은 코드</b>였다 — 위의
+   renderConsultingGuide 와 똑같은 병이다. 화면을 그리는 것은 아래
+   renderFinal / renderFinalMap 이고, 초기화가 끝나면
+   window.renderFinalReport 가 그것으로 덮어써진다.
+
+   덮어쓰기 <b>전</b>에 부르면 이 죽은 판이 돌다가 metric is not
+   defined 로 터졌다. try/catch 에 싸여 조용히 넘어갔을 뿐이다.
+
+   ※ check-html 은 function 선언끼리만 견주므로 이런 것을 못 봤다.
+     window.X = … 로 덮어쓰는 꼴은 check-twins 가 본다. */
 
 /* ─── 보고서 출력 안정화 FINAL HOTFIX ─── */
 function collectPrintStyles(){
@@ -7773,7 +8074,10 @@ window.addEventListener('DOMContentLoaded', function(){
       '<button class="pdf-ins-btn" id="pdf-ins-btn">📎 PDF 파일 선택</button>'+
       '<input type="file" id="pdf-ins-file" accept="application/pdf" style="display:none">'+
       '<div class="pdf-ins-status" id="pdf-ins-status"></div>';
-    if(firstSec && firstSec.parentNode) firstSec.parentNode.insertBefore(card, firstSec.nextSibling);
+    /* 상담 순서가 기본 정보 <b>바로</b> 밑이어야 한다 — 그 사이에 끼어들면
+       또 한 칸 내려가고, 내려간 만큼 안 보인다. 그래서 그 아래에 붙는다. */
+    var anchor = $('flowSlot') || firstSec;
+    if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(card, anchor.nextSibling);
     else { var sc=document.querySelector('.sb-scroll'); if(sc) sc.insertBefore(card, sc.firstChild); }
     $('pdf-ins-btn').addEventListener('click',function(){ $('pdf-ins-file').click(); });
     $('pdf-ins-file').addEventListener('change',handlePdf);
@@ -10069,6 +10373,11 @@ function css(){
     '.flw-b[disabled]:hover{border-color:#D9E2F0;color:#41506A}' +
     '.flw-done{padding:0 15px 14px;font-size:12.5px;color:#0F766E;font-weight:700;line-height:1.6}' +
     '@media(max-width:560px){#flowBar{left:12px;right:12px;bottom:12px;max-width:none}}' +
+    /* 사이드바 안에 설 때는 떠 있지 않는다 — 그 자리에 그냥 놓인다 */
+    '#flowBar.inpane{position:static;left:auto;bottom:auto;max-width:none;width:100%;' +
+      'margin:0 0 10px;box-shadow:0 4px 14px rgba(16,24,40,.08)}' +
+    '#flowBar.inpane.mini{display:flex;justify-content:center;width:100%}' +
+    '@media(max-width:560px){#flowBar.inpane{left:auto;right:auto;bottom:auto}}' +
     '@media print{#flowBar{display:none!important}}';
   document.head.appendChild(st);
 }
@@ -10079,15 +10388,22 @@ function box(){
   css();
   b = document.createElement('div');
   b.id = 'flowBar';
-  document.body.appendChild(b);
+  /* 기본 정보 바로 밑에 세운다. 그 자리가 없으면(다른 화면에서 쓰면)
+     예전처럼 화면 구석에 띄운다 — 어느 쪽이든 사라지지는 않게. */
+  var slot = document.getElementById('flowSlot');
+  if(slot){ b.classList.add('inpane'); slot.appendChild(b); }
+  else document.body.appendChild(b);
   return b;
 }
 
 function paint(){
   var b = box(), S = steps(), n = S.length, cur = S[FLOW.i], last = (FLOW.i >= n-1);
 
+  /* className 을 통째로 갈아 끼우면 <b>어디에 서 있는지(inpane)를 잊는다.</b>
+     그러면 사이드바 안에 있으면서도 화면 구석에 떠 버린다. */
+  var seat = b.classList.contains('inpane') ? 'inpane' : '';
   if(!FLOW.on){
-    b.className = 'mini';
+    b.className = (seat ? seat + ' ' : '') + 'mini';
     b.setAttribute('role','button');
     b.setAttribute('tabindex','0');
     b.innerHTML = '<span class="flw-mini-t">▶ 상담 순서</span>';
@@ -10096,7 +10412,7 @@ function paint(){
     return;
   }
 
-  b.className = '';
+  b.className = seat;
   b.removeAttribute('role'); b.removeAttribute('tabindex');
   b.onclick = null; b.onkeydown = null;
 
@@ -10405,6 +10721,68 @@ function psSet(k,v){
   renderPensionSim();
 }
 
+/* ── 한 장으로 ────────────────────────────────────────────────
+   네 단계가 다 맞는 말인데, 고객은 첫 표에서 벌써 눈이 흐려진다.
+   숫자를 읽어 드리는 것과 <b>보이게 하는 것</b>은 다르다.
+
+   그래서 맨 앞에 막대 셋을 세운다 — 목표 · 지금 · 함께라면.
+   빈 자리는 <b>빗금</b>으로 남겨 「여기가 비어 있습니다」 를 눈으로 보게
+   한다. 숫자는 아래 네 단계가 그대로 설명한다.
+
+   값을 지어내지 않는다. 목표가 비어 있으면 막대를 세우지 않고
+   <b>무엇을 채워야 하는지</b>를 말한다.                             */
+function psOneHtml(name,target,now,plus,gap,rage,years){
+  if(target<=0)
+    return '<div style="font-size:12.5px;color:var(--ink-4);line-height:1.8">'+
+      '왼쪽 <b>은퇴 후 목표 생활비</b>를 넣으시면 여기에 '+
+      '<b>목표 · 지금 · 함께라면</b> 세 막대가 한 장으로 섭니다. '+
+      '지금은 목표가 비어 있어 <b>아무 숫자도 만들지 않습니다.</b></div>';
+  var after=now+plus, top=Math.max(target,after)*1.02||1;
+  var W=720,H=232,L=92,R=118,T=22,BH=34,GAP=22;
+  var iw=W-L-R;
+  var w=function(v){ return Math.max(0,Math.min(iw,iw*(v/top))); };
+  var rows=[
+    {t:'목표',      v:target, c:'#94A3B8', fill:target, sub:'이만큼 있어야 지금처럼 사십니다'},
+    {t:'지금 이대로', v:now,    c:'#F04452', fill:now,    sub:'국민연금 · 퇴직연금 · 기존 연금'},
+    {t:'함께라면',   v:after,  c:'#0F9D58', fill:now,    sub:'위에 이 설계를 더하면'}
+  ];
+  var g='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+
+    '은퇴 후 매달 필요한 돈과 지금 준비된 돈, 이 설계를 더했을 때를 나란히 놓은 막대 그림">';
+  for(var i=0;i<rows.length;i++){
+    var y=T+i*(BH+GAP), r=rows[i];
+    g+='<text x="'+(L-10)+'" y="'+(y+BH/2+1)+'" font-size="12" font-weight="800" fill="#4E5968" text-anchor="end">'+r.t+'</text>';
+    g+='<rect x="'+L+'" y="'+y+'" width="'+iw+'" height="'+BH+'" rx="7" fill="#F2F4F6"/>';
+    if(i===2&&plus>0){
+      g+='<rect x="'+L+'" y="'+y+'" width="'+w(after).toFixed(1)+'" height="'+BH+'" rx="7" fill="#0F9D58" opacity=".28"/>';
+      g+='<rect x="'+L+'" y="'+y+'" width="'+w(now).toFixed(1)+'" height="'+BH+'" rx="7" fill="#0F9D58"/>';
+    }else{
+      g+='<rect x="'+L+'" y="'+y+'" width="'+w(r.fill).toFixed(1)+'" height="'+BH+'" rx="7" fill="'+r.c+'"/>';
+    }
+    /* 목표선 — 어디까지 가야 하는지 */
+    if(i>0)g+='<line x1="'+(L+w(target)).toFixed(1)+'" y1="'+(y-4)+'" x2="'+(L+w(target)).toFixed(1)+'" y2="'+(y+BH+4)+
+      '" stroke="#94A3B8" stroke-width="1.4" stroke-dasharray="4 3"/>';
+    g+='<text x="'+(W-R+10)+'" y="'+(y+BH/2-2)+'" font-size="13" font-weight="800" fill="#191F28">'+psWon(r.v)+'</text>'+
+       '<text x="'+(W-R+10)+'" y="'+(y+BH/2+13)+'" font-size="9.5" fill="#8B95A1">/ 월</text>';
+  }
+  /* 비는 자리 표시 */
+  if(gap>0){
+    var yb=T+(BH+GAP)+BH+5;
+    g+='<text x="'+(L+w(now)+6).toFixed(1)+'" y="'+(yb+11)+'" font-size="10.5" font-weight="800" fill="#F04452">'+
+      '← 여기가 빕니다 '+psWon(gap)+'</text>';
+  }
+  g+='<text x="'+L+'" y="'+(H-6)+'" font-size="10" fill="#8B95A1">'+
+    rage+'세부터 '+years+'년 기준 · 물가상승률은 넣지 않았습니다</text>';
+  g+='</svg>';
+  var line;
+  if(gap<=0) line='<b>이미 목표를 넘기셨습니다.</b> 남는 힘은 자녀·상속 쪽으로 돌려 보셔도 됩니다.';
+  else if(plus<=0) line='매달 <b style="color:#F04452">'+psWon(gap)+'</b>이 빕니다. 아래에서 <b>월 납입액</b>을 넣어 보시면 '+
+    '얼마가 메워지는지 이 그림이 바로 바뀝니다.';
+  else if(plus>=gap) line='매달 비던 <b>'+psWon(gap)+'</b>이 이 설계로 <b style="color:#0F9D58">전부 메워집니다.</b>';
+  else line='매달 <b style="color:#F04452">'+psWon(gap)+'</b>이 비는데, 이 설계로 <b style="color:#0F9D58">'+psWon(plus)+
+    '</b>이 메워집니다. 남는 <b>'+psWon(gap-plus)+'</b>은 납입액을 올리거나 다른 재원과 함께 봅니다.';
+  return g+'<div style="margin-top:12px;background:#F8FAFC;border-radius:12px;padding:13px 15px;'+
+    'font-size:13px;line-height:1.85;color:var(--ink-2)">'+name+'님, '+line+'</div>';
+}
 function renderPensionSim(){
   var host=document.getElementById('pension-sim');
   if(!host || !window.PENSION) return;
@@ -10417,10 +10795,10 @@ function renderPensionSim(){
 
   /* STEP 1 — 사이드바에 적힌 것만 더한다. 없는 건 만들지 않는다. */
   var nps=psN('s_nps',0), retp=psN('s_retire_pen',0), priv=psN('s_pen_now',0);
-  var realty=psN('s_realty',0), hpWon=0;
-  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpWon=(h&&h.won)?h.won:0; } }catch(e){}
-  var useH=PSIM.useHouse && hpWon>0;
-  var now=nps+retp+priv+(useH?hpWon:0);
+  var realty=psN('s_realty',0), hpMan=0;
+  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpMan=(h&&h.man)?h.man:0; } }catch(e){}
+  var useH=PSIM.useHouse && hpMan>0;
+  var now=nps+retp+priv+(useH?hpMan:0);
 
   /* STEP 2 — 물가는 계산에 넣지 않는다(요구사항). 참고로만 보여준다. */
   var target=psN('s_target',0), gap=Math.max(target-now,0);
@@ -10485,11 +10863,11 @@ function renderPensionSim(){
   var s1=row('국민연금', psWon(nps)+' / 월', nps?null:'사이드바 「국민연금」이 비어 있습니다')+
     row('퇴직연금', psWon(retp)+' / 월', retp?null:'사이드바 「퇴직연금」이 비어 있습니다')+
     (priv? row('기존 개인연금', psWon(priv)+' / 월'):'')+
-    (hpWon>0
+    (hpMan>0
       ? '<div class="cmp-row"><div><span class="cmp-lbl">주택연금 <label style="font-weight:600;font-size:10.5px;cursor:pointer">'+
         '<input type="checkbox" '+(useH?'checked':'')+' onchange="psSet(\'useHouse\',this.checked)" style="vertical-align:-2px;margin-left:6px"> 합산</label></span>'+
         '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">부동산 '+psWon(realty)+' 기준 · '+rage+'세 개시</span></div>'+
-        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpWon)+' / 월</div></div>' : '')+
+        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpMan)+' / 월</div></div>' : '')+
     row('합계', psWon(now)+' / 월', null, true);
 
   var s2='<div style="display:flex;gap:10px;flex-wrap:wrap">'+
@@ -10571,7 +10949,10 @@ function renderPensionSim(){
       '※ 최저보증 금액 기준입니다. 물가상승률은 반영하지 않았습니다. '+
       '국민연금·퇴직연금은 사이드바 입력값을 그대로 씁니다. 실제 계약은 상품설명서·약관으로 확인하십시오.</div>';
 
+  var s0='';
+  try{ s0=psOneHtml(name,target,now,payM,gap,rage,years); }catch(e){ s0=''; }
   host.innerHTML =
+    (s0?card('ONE PAGE','한 장으로 — 목표 · 지금 · 함께라면', s0, '아래 네 단계를 한 그림으로 줄인 것입니다'):'')+
     card('STEP 1 · NOW','지금 이대로라면 은퇴 후 매달 얼마입니까', s1, '왼쪽 고객 정보에서 그대로 가져옵니다')+
     card('STEP 2 · GAP','목표까지 얼마가 빕니까', s2)+
     card('STEP 3 · PLAN','우리와 함께라면 — 이렇게 채웁니다', s3, '엑셀 연금비교표를 그대로 옮긴 엔진으로 계산합니다')+
@@ -10648,7 +11029,194 @@ function dolPair(usd,dec){ return dolUsd(usd,dec)+' <span style="font-size:11px;
 /* 표 칸 안 — 옆에 붙이면 칸이 터지므로 아랫줄에 적는다 */
 function dolPairB(usd,dec){ return dolUsd(usd,dec)+'<span style="display:block;font-size:10px;color:var(--ink-5);font-weight:600">≈ '+dolKrw(usd)+'</span>'; }
 
+/* ═══════════════════════════════════════════════════════════════
+   오늘 정하실 것 — 그 자리에서 세 갈래
+
+   상담의 끝은 고객이 「이 정도는 할 수 있겠다」 하시는 순간이다. 그때
+   화면을 옮겨 다니며 계산기를 찾으면 그 순간이 식는다. 그래서 <b>여기
+   한 장</b>에서 금액 하나만 받아 세 갈래를 동시에 세운다.
+
+     · 매달 넣으실 수 있다면 → <b>연금</b> · <b>달러</b>
+     · 목돈이 있으시다면     → <b>일시납 · 쿠폰</b>
+
+   숫자는 전부 <b>제안서에서 나온 것</b>이다.
+     연금  — 엑셀 연금비교표를 옮긴 엔진(PENSION)이 계산한다.
+     달러  — 메트라이프 달러종신Plus 5년납 제안서 환급률표(DOL).
+             <b>5년납 말고는 만들지 않는다</b> — 납입기간이 바뀌면 곡선
+             자체가 다른 표가 되므로 가진 값을 늘려 쓰면 거짓말이 된다.
+     쿠폰  — 메트라이프 일시납 제안서($71,000 기준)의 쿠폰지급금.
+             금액만 <b>비례 환산</b>하고 그렇다고 밝힌다.
+
+   계산이 안 되는 갈래는 <b>빈칸으로 두지 않고 왜 안 되는지</b> 말한다.
+   ═══════════════════════════════════════════════════════════════ */
+var CZ = { mode:'month', amt:50, years:10, cp:'y10' };
+var CZ_CP = {                       /* 제안서 $71,000 기준 · 해마다 받는 쿠폰 */
+  base:71000,
+  t:{ y5 :{t:'5년형',  n:5,  each:8502.51},
+      y10:{t:'10년형', n:10, each:4828.78},
+      y20:{t:'20년형', n:20, each:3058.49} }
+};
+function czSet(k,v){
+  if(k==='mode'||k==='cp')CZ[k]=v; else CZ[k]=parseFloat(v)||0;
+  czPaint();
+}
+function czFx(){ try{ return (typeof fxRate==='function')?fxRate():1380; }catch(e){ return 1380; } }
+/* ※ czWon 은 <b>만원 단위 숫자</b>를 받는다. 원 단위를 그대로 넣으면
+   50만원이 「50억」 으로 찍힌다 — 고객 앞에서 가장 창피한 종류의 오류다.
+   원 단위 값은 czWonR 로 넣는다.                                     */
+function czWon(m){
+  m=Math.round(m||0); if(!m)return '0원';
+  var s=m<0?'-':'', a=Math.abs(m), e=Math.trunc(a/10000), r=a%10000;
+  return s+(e? e+'억'+(r?' '+r.toLocaleString()+'만원':'') : r.toLocaleString()+'만원');
+}
+function czWonR(won){ return czWon(Math.round((won||0)/10000)); }
+function czNum(id,d){ var e=document.getElementById(id); var v=parseFloat(e&&e.value); return isFinite(v)?v:(d||0); }
+function czCard(t,tone,body,foot){
+  var c=tone==='g'?'#ECFDF5':(tone==='b'?'#EFF6FF':'#FFFBEB');
+  var bd=tone==='g'?'#A7F3D0':(tone==='b'?'#BFDBFE':'#FDE68A');
+  var tc=tone==='g'?'#047857':(tone==='b'?'#1A56DB':'#92400E');
+  return '<div style="flex:1 1 230px;min-width:0;background:'+c+';border:1px solid '+bd+';border-radius:16px;padding:16px 17px">'+
+    '<div style="font-size:13px;font-weight:900;color:'+tc+';margin-bottom:10px">'+t+'</div>'+body+
+    (foot?'<div style="margin-top:10px;font-size:10.5px;color:var(--ink-4);line-height:1.65">'+foot+'</div>':'')+
+    '</div>';
+}
+function czLine(l,v,sub){
+  return '<div style="margin-bottom:8px"><div style="font-size:10.5px;font-weight:700;color:var(--ink-4)">'+l+'</div>'+
+    '<div style="font-size:clamp(16px,3.4vw,20px);font-weight:900;letter-spacing:-.03em;color:var(--ink-1);margin-top:2px;word-break:keep-all">'+v+'</div>'+
+    (sub?'<div style="font-size:10.5px;color:var(--ink-4);margin-top:2px;line-height:1.55">'+sub+'</div>':'')+'</div>';
+}
+function czNope(t,msg){
+  return '<div style="flex:1 1 230px;min-width:0;background:var(--ink-9);border:1px dashed var(--ink-6);border-radius:16px;padding:16px 17px">'+
+    '<div style="font-size:13px;font-weight:900;color:var(--ink-4);margin-bottom:8px">'+t+'</div>'+
+    '<div style="font-size:11.5px;color:var(--ink-4);line-height:1.8">'+msg+'</div></div>';
+}
+/* ── 연금 — 엔진이 계산한다. 조건에 맞는 상품이 없으면 그렇다고 말한다 */
+function czPension(monWon,years){
+  if(!window.PENSION)return czNope('🏦 연금','연금 엔진을 불러오지 못했습니다.');
+  var age=Math.round(czNum('s_age',40)),rage=Math.round(czNum('s_rage',65));
+  var sex=(((document.getElementById('s_gender')||{value:'여성'}).value||'').indexOf('남')>=0)?'남성':'여성';
+  var pay=Math.max(1,Math.round(years));
+  var list=[];
+  try{ list=PENSION.eligible(age,rage,pay)||[]; }catch(e){}
+  if(!list.length)
+    return czNope('🏦 연금','지금 나이('+age+'세) · 개시('+rage+'세) · '+pay+'년납으로 '+
+      '<b>가입 가능한 상품이 없습니다.</b> 나이나 납입기간을 바꿔 보십시오.');
+  var p=list[0],r=null;
+  try{ r=PENSION.calc(p,{age:age,sex:sex,start:rage,pay:pay,monthly:monWon}); }catch(e){ r=null; }
+  if(!r)return czNope('🏦 연금','이 조건으로는 계산되지 않습니다.');
+  var m=r.yearly/12/10000, omega=p.omega||100, yrs=Math.max(0,omega-rage);
+  var paid=monWon/10000*12*pay;
+  return czCard('🏦 연금 — 평생 받습니다','g',
+    czLine(rage+'세부터 매달', czWon(m), '최저보증 기준 · '+omega+'세까지 '+yrs+'년')+
+    czLine('평생 받는 돈', czWon(m*12*yrs))+
+    czLine('그때까지 내는 돈', czWon(paid), '월 '+czWonR(monWon)+' × '+pay+'년'),
+    p.co+' · '+p.name+' 기준 · 실제 계약은 상품설명서·약관과 <b>심사 결과</b>에 따릅니다.');
+}
+/* ── 달러 — 제안서 5년납 표 그대로, 금액만 비례 */
+function czDollar(monWon){
+  if(typeof DOL==='undefined')return czNope('$ 달러','달러 제안서 값을 불러오지 못했습니다.');
+  var fx=czFx(), baseWon=DOL.prem*fx;
+  if(baseWon<=0)return czNope('$ 달러','환율을 읽지 못했습니다.');
+  var k=monWon/baseWon;
+  var paid=DOL.paid*k, row=null,i;
+  for(i=0;i<DOL.keep.length;i++)if(/10년 \+1일/.test(DOL.keep[i][0]))row=DOL.keep[i];
+  if(!row)row=DOL.keep[DOL.keep.length-1];
+  var cvUsd=row[2]*k, rate=row[1];
+  return czCard('$ 달러 — 목돈으로 남습니다','b',
+    czLine('5년 넣으면', czWonR(paid*fx), '$'+Math.round(paid).toLocaleString()+' · 월 '+czWonR(monWon)+' × 5년')+
+    czLine(row[0].replace(' ★','')+' 해약환급금', czWonR(cvUsd*fx), '$'+Math.round(cvUsd).toLocaleString()+' · 환급률 '+rate+'%')+
+    czLine('기준 환율', Math.round(fx).toLocaleString()+'원 / $1', '수령 시 환율에 따라 원화 금액이 달라집니다'),
+    '메트라이프 달러종신Plus <b>5년납 제안서</b> 기준을 금액만 비례 환산했습니다. '+
+    '<b>다른 납입기간 표는 만들지 않습니다</b> — 사업비·해지공제가 달라 곡선 자체가 다릅니다. '+
+    '<b>환율이 떨어지면 원화로 손실</b>이 날 수 있습니다.');
+}
+/* ── 일시납·쿠폰 — 제안서 $71,000 기준 비례 */
+function czCoupon(lumpWon){
+  var fx=czFx(), baseWon=CZ_CP.base*fx;
+  if(baseWon<=0)return czNope('🎫 일시납 · 쿠폰','환율을 읽지 못했습니다.');
+  var k=lumpWon/baseWon, t=CZ_CP.t[CZ.cp]||CZ_CP.t.y10;
+  var each=t.each*k;
+  var pick='';
+  for(var key in CZ_CP.t)pick+='<button type="button" onclick="czSet(\'cp\',\''+key+'\')" '+
+    'style="border:1px solid '+(CZ.cp===key?'#B45309':'var(--ink-6)')+';background:'+(CZ.cp===key?'#FFFBEB':'#fff')+
+    ';color:'+(CZ.cp===key?'#92400E':'var(--ink-4)')+';border-radius:999px;padding:5px 11px;font-size:11px;'+
+    'font-weight:800;font-family:inherit;cursor:pointer;margin-right:5px">'+CZ_CP.t[key].t+'</button>';
+  return czCard('🎫 일시납 · 쿠폰 — 해마다 받습니다','w',
+    '<div style="margin-bottom:10px">'+pick+'</div>'+
+    czLine('해마다 받는 쿠폰', czWonR(each*fx), '$'+Math.round(each).toLocaleString()+' × '+t.n+'회')+
+    czLine(t.n+'년 동안 받는 돈', czWonR(each*t.n*fx))+
+    czLine('넣는 목돈', czWonR(lumpWon), '$'+Math.round(lumpWon/fx).toLocaleString()),
+    '메트라이프 일시납 제안서 <b>$'+CZ_CP.base.toLocaleString()+' 기준</b>을 금액만 비례 환산한 <b>참고치</b>입니다(배수 '+
+    k.toFixed(3)+'). 쿠폰은 <b>원금에서 먼저 지급</b>되는 구조라 초반 해약환급률이 낮고, '+
+    '사망 시 지급금에서 이미 받은 쿠폰이 차감됩니다. <b>비과세는 요건 충족 시</b>입니다.');
+}
+function czHtml(){
+  var name=((document.getElementById('s_name')||{}).value)||'고객님';
+  var isM=CZ.mode==='month', amt=Math.max(0,CZ.amt||0), won=amt*10000;
+  var seg=function(k,t){
+    return '<button type="button" onclick="czSet(\'mode\',\''+k+'\')" style="flex:1;border:1px solid '+
+      (CZ.mode===k?'var(--primary)':'var(--ink-6)')+';background:'+(CZ.mode===k?'var(--primary)':'#fff')+
+      ';color:'+(CZ.mode===k?'#fff':'var(--ink-4)')+';border-radius:10px;padding:10px;font-size:12.5px;'+
+      'font-weight:800;font-family:inherit;cursor:pointer">'+t+'</button>';
+  };
+  var h='<div style="font-size:13px;color:var(--ink-3);line-height:1.8;margin-bottom:12px">'+
+    name+'님이 <b>「이 정도는 할 수 있겠다」</b> 하신 금액을 적으십시오. '+
+    '화면을 옮기지 않고 <b>여기서 바로</b> 세 갈래를 계산합니다.</div>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:10px">'+seg('month','매달 넣습니다')+seg('lump','목돈이 있습니다')+'</div>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">'+
+    '<div><label style="display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin-bottom:4px">'+
+      (isM?'월 납입액(만원)':'목돈(만원)')+'</label>'+
+      '<input type="number" inputmode="decimal" value="'+amt+'" step="'+(isM?10:1000)+'" oninput="czSet(\'amt\',this.value)" '+
+      'style="width:100%;box-sizing:border-box;border:1px solid #D8E0EC;border-radius:8px;padding:10px;font-size:17px;font-weight:800;font-family:inherit"></div>'+
+    (isM?'<div><label style="display:block;font-size:10.5px;font-weight:700;color:var(--ink-4);margin-bottom:4px">납입기간(년) — 연금</label>'+
+      '<input type="number" inputmode="decimal" value="'+CZ.years+'" step="1" oninput="czSet(\'years\',this.value)" '+
+      'style="width:100%;box-sizing:border-box;border:1px solid #D8E0EC;border-radius:8px;padding:10px;font-size:17px;font-weight:800;font-family:inherit"></div>':'')+
+    '</div>';
+  if(amt<=0)
+    return h+'<div style="background:var(--ink-9);border:1px dashed var(--ink-6);border-radius:14px;padding:20px;'+
+      'font-size:12.5px;color:var(--ink-4);line-height:1.8">금액을 적으시면 여기에 <b>연금 · 달러 · 일시납</b> 세 갈래가 '+
+      '나란히 섭니다. 지금은 <b>아무 숫자도 만들지 않습니다.</b></div>';
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap">';
+  if(isM){
+    h+=czPension(won,CZ.years);
+    h+=czDollar(won);
+    h+=czNope('🎫 일시납 · 쿠폰','이 갈래는 <b>목돈</b>을 한 번에 넣는 방식입니다. '+
+      '위에서 <b>「목돈이 있습니다」</b> 를 누르시면 해마다 얼마를 받으시는지 계산합니다.');
+  }else{
+    h+=czCoupon(won);
+    h+=czNope('🏦 연금','이 갈래는 <b>매달</b> 넣는 방식입니다. 위에서 <b>「매달 넣습니다」</b> 를 눌러 주십시오.');
+    h+=czNope('$ 달러','이 제안서는 <b>5년납</b> 조건입니다. 위에서 <b>「매달 넣습니다」</b> 를 눌러 주십시오.');
+  }
+  h+='</div>';
+  /* 오늘 정하실 것 */
+  h+='<div style="margin-top:16px;background:#0F172A;color:#fff;border-radius:16px;padding:18px 20px">'+
+    '<div style="font-size:14px;font-weight:900;letter-spacing:-.03em;margin-bottom:10px">오늘 정하실 것은 셋입니다</div>'+
+    '<div style="font-size:12.5px;line-height:1.95;color:rgba(255,255,255,.9)">'+
+      '<b>① 얼마를</b> — 지금 적으신 '+czWonR(won)+(isM?' (매달)':' (목돈)')+'<br>'+
+      '<b>② 어디에</b> — 위 세 갈래 중 어느 것을 먼저 하실지<br>'+
+      '<b>③ 언제부터</b> — 이번 달부터인지, 다음 달부터인지</div>'+
+    '<div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.62);line-height:1.7">'+
+      '세 갈래는 <b>서로 대신하지 않습니다.</b> 연금은 평생 받는 것, 달러는 목돈으로 남기는 것, '+
+      '쿠폰은 해마다 받는 것입니다. 무엇이 <b>지금 필요하신지</b>로 고르십시오.</div></div>';
+  h+='<div style="margin-top:12px;font-size:11px;color:var(--ink-5);line-height:1.8">'+
+    '※ 위 금액은 <b>제안서 값과 적어 주신 숫자로 계산한 예시</b>입니다. 확정 수익이 아니며 '+
+    '실제 계약은 나이·건강·상품과 <b>보험사 심사 결과</b>에 따릅니다. '+
+    '세제 혜택은 <b>요건을 충족할 때</b> 적용되고 법령·개인 상황에 따라 달라집니다 — 세무 확인이 필요합니다. '+
+    '외화보험은 <b>환율 변동</b>으로 원화 수령액이 달라져 손실이 날 수 있습니다.</div>';
+  return h;
+}
+function czPaint(){
+  var box=document.getElementById('closeOne');
+  if(!box)return;
+  try{
+    box.innerHTML='<div class="card" style="margin-bottom:14px">'+
+      '<div class="card-hd"><div class="card-tag">CLOSING</div>'+
+      '<div class="card-title">오늘 정하실 것 — 그 자리에서 연금 · 달러 · 일시납</div></div>'+
+      '<div class="card-body">'+czHtml()+'</div></div>';
+  }catch(e){ box.innerHTML=''; try{console.warn('클로징 한 장:',e);}catch(x){} }
+}
 function renderDollarSim(){
+  try{ czPaint(); }catch(e){}
   var host=document.getElementById('dollar-sim');
   if(!host) return;
   var name=((document.getElementById('s_name')||{}).value)||'고객님';
