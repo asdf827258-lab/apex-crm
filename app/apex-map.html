@@ -3731,6 +3731,10 @@ function askGemini(q){
     if (payload.model) payload.model = useModel;
     else url = 'https://generativelanguage.googleapis.com/v1beta/models/' + useModel +
                ':generateContent?key=' + encodeURIComponent(gkey);
+    /* 가벼운 모델(lite)은 「생각 끄기」 설정을 못 받는다 — 넣으면 400 이다.
+       직접 재 봤다: lite+생각끔 400, lite 기본 200, flash+생각끔 200. */
+    if (useModel.indexOf('lite') >= 0) delete payload.generationConfig.thinkingConfig;
+    else payload.generationConfig.thinkingConfig = {thinkingBudget:0};
     var body = JSON.stringify(payload);
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
     var timer = setTimeout(function(){ if (ctl) ctl.abort(); }, 11000);
