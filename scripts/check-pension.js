@@ -49,7 +49,7 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
     '나이를 안 보던 1억당 23만원 고정값이 사라졌다');
   is(!/sevPension *= *Math\.round\(severance\/240\)/.test(fin),
     '퇴직금을 그냥 240으로 나누던 줄이 사라졌다');
-  is(/housingPension *= *housePen\.won/.test(fin) && /sevPension *= *sevPensionOf\(/.test(fin),
+  is(/housingPension *= *housePen\.man/.test(fin) && /sevPension *= *sevPensionOf\(/.test(fin),
     '두 자리 모두 새 함수를 부른다 — 한 곳만 고치면 화면끼리 달라진다');
   is(/var HOUSE_PEN *= *\{/.test(fin), '주택연금 기준표가 한 곳에 모였다');
   is(/asOf:/.test(fin) && /base:/.test(fin), '언제 · 무엇을 기준으로 한 표인지 적어 뒀다');
@@ -73,7 +73,9 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
     /* 10억 주택을 나이별로 */
     byAge: [50, 55, 57, 60, 65, 70, 75, 80, 85].map(a => {
       const h = housePension(100000, a);
-      return { age: a, won: h.won, per: h.per, young: h.young, over: h.over };
+      /* 칸 이름이 won 이던 시절 만원을 담고 있어 이름이 거짓말을 했다.
+         이제 man 이다 — 여기서도 그 이름으로 받는다. */
+      return { age: a, man: h.man, per: h.per, young: h.young, over: h.over };
     }),
     cap12: housePension(120000, 60),
     cap30: housePension(300000, 60),
@@ -83,13 +85,13 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
   const at = a => R.byAge.filter(x => x.age === a)[0];
 
   console.log('\n[2] 나이를 보는가 — 이게 핵심이다');
-  is(at(55).won !== at(70).won, '55세와 70세가 <b>다른 금액</b>이다 (전에는 같았다)');
-  is(at(55).won < at(60).won && at(60).won < at(65).won && at(65).won < at(70).won
-    && at(70).won < at(75).won && at(75).won < at(80).won,
+  is(at(55).man !== at(70).man, '55세와 70세가 <b>다른 금액</b>이다 (전에는 같았다)');
+  is(at(55).man < at(60).man && at(60).man < at(65).man && at(65).man < at(70).man
+    && at(70).man < at(75).man && at(75).man < at(80).man,
     '나이가 오르면 월지급금도 오른다 — 55→80세 ' +
-    R.byAge.filter(x => x.age >= 55 && x.age <= 80).map(x => x.won).join(' → '));
-  is(at(80).won >= at(55).won * 3, '80세가 55세의 세 배 넘는다 (' +
-    at(55).won + ' → ' + at(80).won + '만원) — 이 차이를 뭉개면 안 된다');
+    R.byAge.filter(x => x.age >= 55 && x.age <= 80).map(x => x.man).join(' → '));
+  is(at(80).man >= at(55).man * 3, '80세가 55세의 세 배 넘는다 (' +
+    at(55).man + ' → ' + at(80).man + '만원) — 이 차이를 뭉개면 안 된다');
 
   /* 표 값을 그대로 쓰는지 손으로 대조한다. 10억 = 10 × (1억당 월지급금) */
   console.log('\n[3] 표대로 계산하는가 (10억 주택)');
@@ -97,24 +99,24 @@ const near = (a, b, tol, m) => is(Math.abs(a - b) <= tol, m + ' — 나온 값 '
     const a = row[0], per = row[1];
     const h = R.byAge.filter(x => x.age === a)[0];
     if (!h) return;
-    near(h.won, Math.round(10 * per), 1, a + '세 — 1억당 ' + per + '만원 × 10억');
+    near(h.man, Math.round(10 * per), 1, a + '세 — 1억당 ' + per + '만원 × 10억');
   });
 
   console.log('\n[4] 표에 없는 나이도 이어서 보는가');
   /* 57세는 55(16.0)과 60(21.3) 사이 = 16.0 + (21.3-16.0)*(2/5) = 18.12 → 10억이면 181만원 */
-  near(at(57).won, 181, 2, '57세는 55세와 60세를 이어서 잡는다');
-  is(at(57).won > at(55).won && at(57).won < at(60).won, '이은 값이 양옆 사이에 있다');
-  near(at(85).won, at(80).won, 0, '표 끝을 넘는 나이는 끝 값으로 묶는다 (85세 = 80세)');
+  near(at(57).man, 181, 2, '57세는 55세와 60세를 이어서 잡는다');
+  is(at(57).man > at(55).man && at(57).man < at(60).man, '이은 값이 양옆 사이에 있다');
+  near(at(85).man, at(80).man, 0, '표 끝을 넘는 나이는 끝 값으로 묶는다 (85세 = 80세)');
 
   console.log('\n[5] 가입 요건을 지키는가');
   is(R.cap30.over === true, '상한을 넘으면 넘었다고 알린다');
-  near(R.cap30.won, R.cap12.won, 0, '30억이어도 상한(12억)까지만 잡는다 — 690만원이 안 나온다');
-  is(R.cap30.won < 300, '30억일 때 월 ' + R.cap30.won + '만원 — 전에는 690만원이었다');
+  near(R.cap30.man, R.cap12.man, 0, '30억이어도 상한(12억)까지만 잡는다 — 690만원이 안 나온다');
+  is(R.cap30.man < 300, '30억일 때 월 ' + R.cap30.man + '만원 — 전에는 690만원이었다');
   is(R.cap12.over === false, '상한 딱 맞으면 경고하지 않는다');
-  is(at(50).young === true && at(50).won === 0,
-    '만 ' + R.minAge + '세 미만은 셈에 아예 안 넣는다 (50세 → ' + at(50).won + '만원)');
-  is(at(55).young === false && at(55).won > 0, '만 55세부터는 셈에 넣는다');
-  is(R.zero.won === 0 && R.zero.young === false && R.zero.over === false,
+  is(at(50).young === true && at(50).man === 0,
+    '만 ' + R.minAge + '세 미만은 셈에 아예 안 넣는다 (50세 → ' + at(50).man + '만원)');
+  is(at(55).young === false && at(55).man > 0, '만 55세부터는 셈에 넣는다');
+  is(R.zero.man === 0 && R.zero.young === false && R.zero.over === false,
     '부동산이 없으면 조용히 0 이다 — 헛경고를 안 한다');
 
   console.log('\n[6] 화면이 사정을 말하는가');
