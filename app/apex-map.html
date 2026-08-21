@@ -76,6 +76,17 @@ body{
   cursor:pointer; box-shadow:0 2px 0 #D8E1EE;
 }
 .chip:hover{border-color:#8FA9D6; color:var(--blue); background:#fff}
+.chip.big{
+  display:flex; align-items:center; gap:10px; text-align:left; border-radius:14px;
+  padding:9px 15px 9px 12px; background:linear-gradient(180deg,#fff,#F4F8FE);
+  box-shadow:0 3px 0 #D8E1EE, 0 8px 16px rgba(18,42,85,.08);
+}
+.chip.big .ci{font-size:19px; line-height:1}
+.chip.big .cw{display:flex; flex-direction:column; line-height:1.3}
+.chip.big .cw b{font-size:13.5px; color:var(--ink)}
+.chip.big .cw i{font-style:normal; font-size:11px; color:#8593AB; margin-top:2px}
+.chip.big:hover{border-color:var(--blue); box-shadow:0 3px 0 #C3D4F5, 0 10px 20px rgba(21,65,181,.14)}
+.chip.back{background:#EEF2F8; color:#5A6B85; font-weight:700}
 
 /* ══ 쓰는 법 안내 ═══════════════════════════════ */
 .howto{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; padding:14px 20px 2px}
@@ -369,6 +380,7 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
   <h1>APEX 전체 지도 · <b>자비스</b></h1>
   <span class="sp"></span>
   <button class="btn" id="aiBtn"><span class="dot"></span>AI 연결</button>
+  <button class="btn" id="bFit">한눈에</button>
   <button class="btn" id="bOpen">다 열기</button>
   <button class="btn" id="bShut">다 닫기</button>
   <button class="btn" id="b3d">입체 끄기</button>
@@ -380,7 +392,7 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
 <div class="ask">
   <div class="askrow">
     <span class="lamp"></span>
-    <input id="ask" type="text" placeholder="자비스에게 물어보세요   예) 상담은 했는데 계약이 안 돼요">
+    <input id="ask" type="text" placeholder="무엇 때문에 오셨나요?   아래에서 고르시거나, 지금 상황을 그대로 적어 주세요">
     <button class="btn go" id="askGo">물어보기</button>
   </div>
   <div class="chips" id="chips"></div>
@@ -390,6 +402,7 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
   <div class="j-top">
     <span class="lamp"></span>
     <span class="t">자비스<small id="jMode">지도에 담긴 것만 아는 상태입니다</small></span>
+    <button class="j-x" id="jMic" title="말로 물어보기">🎤</button>
     <button class="j-x" id="jVoice" title="읽어 주기 켜고 끄기">🔊</button>
     <button class="j-x" id="jX" title="닫기">×</button>
   </div>
@@ -401,15 +414,6 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
     </div>
     <div class="j-tip">파란 칸을 누르면 그 화면이 열립니다 · 지도에도 순서대로 불이 켜집니다</div>
   </div>
-</div>
-
-<div class="howto">
-  <div class="how"><span class="num">1</span>
-    <span class="sample s1">🧭 믿음</span><span><b>덩어리 이름</b>을 누르면 통째로 접힙니다</span></div>
-  <div class="how"><span class="num">2</span>
-    <span class="sample s2">눌러서 열기</span><span><b>카드 제목</b>을 누르면 안에 든 것이 보입니다</span></div>
-  <div class="how"><span class="num">3</span>
-    <span class="sample s3">고객 365일 &nbsp;열기 ›</span><span><b>파란 칸</b>을 누르면 그 화면이 열립니다</span></div>
 </div>
 
 <div id="stage">
@@ -3003,6 +3007,72 @@ var DATA = {
    "next": "pension",
    "real": "경제 이야기는 여는 말이지 파는 말이 아닙니다. 투자 권유로 넘어가면 규정에 걸립니다."
   }
+ ],
+ "ask": [
+  {
+   "ic": "📣",
+   "t": "사람이 없어요",
+   "s": "새 고객·명단·알리기",
+   "k": [
+    "new",
+    "content",
+    "news"
+   ]
+  },
+  {
+   "ic": "📞",
+   "t": "약속이 안 잡혀요",
+   "s": "전화는 되는데 그다음이",
+   "k": [
+    "appt",
+    "today"
+   ]
+  },
+  {
+   "ic": "🤝",
+   "t": "상담·계약이 안 돼요",
+   "s": "만났는데 안 넘어갑니다",
+   "k": [
+    "close",
+    "bojang",
+    "yakgwan",
+    "underwrite"
+   ]
+  },
+  {
+   "ic": "💰",
+   "t": "돈 이야기를 해야 해요",
+   "s": "연금·교육비·상속·대출·법인",
+   "k": [
+    "cash",
+    "pension",
+    "edu",
+    "inherit",
+    "house",
+    "biz",
+    "econ"
+   ]
+  },
+  {
+   "ic": "🛡",
+   "t": "계약 뒤가 문제예요",
+   "s": "증권·청구·변경·사고",
+   "k": [
+    "jeungkwon",
+    "claim",
+    "endorse",
+    "car"
+   ]
+  },
+  {
+   "ic": "🏢",
+   "t": "팀·내 일을 봐야 해요",
+   "s": "숫자 보기·처음 배우기",
+   "k": [
+    "team",
+    "start"
+   ]
+  }
  ]
 };
 var MENU = DATA.menu, RECIPES = DATA.recipes;
@@ -3203,12 +3273,30 @@ document.getElementById('b3d').onclick = function(){
   apply(); redraw();
 };
 function setZoom(z){
-  scale = Math.min(1.4, Math.max(.4, Math.round(z*10)/10));
+  /* 0.1 단위로 반올림하면 0.57 이 0.6 이 되어 화면 밖으로 조금 삐져나간다 */
+  scale = Math.min(1.4, Math.max(.4, Math.round(z*100)/100));
   document.getElementById('zVal').textContent = Math.round(scale*100) + '%';
   apply(); redraw();
 }
 document.getElementById('zIn').onclick = function(){ setZoom(scale + .1); };
 document.getElementById('zOut').onclick = function(){ setZoom(scale - .1); };
+
+/* 처음 열었을 때 화면 밖으로 삐져나가면 「한눈에」 가 안 된다.
+   가로·세로 둘 다 들어오도록 줄여서 보여 준다. 사람이 크기를 만졌으면 건드리지 않는다. */
+var zoomTouched = false;
+function fitAll(){
+  if (window.innerWidth <= 1180) return;
+  var w = map.offsetWidth;
+  if (!w) return;
+  /* 세로까지 맞추면 40% 까지 줄어 글씨를 못 읽는다.
+     이 지도는 「왼쪽 = 내가 만든 것 / 오른쪽 = 고객에게 일어나는 일」 이 뼈대다.
+     그러니 가로를 맞춰 좌우가 한눈에 들어오게 하고, 아래는 굴려서 본다. */
+  var z = (stage.clientWidth - 48) / w;
+  setZoom(Math.max(0.5, Math.min(1, Math.floor(z * 100) / 100)));
+}
+document.getElementById('zIn').addEventListener('click', function(){ zoomTouched = true; });
+document.getElementById('zOut').addEventListener('click', function(){ zoomTouched = true; });
+document.getElementById('bFit').onclick = function(){ zoomTouched = false; fitAll(); };
 var stage = document.getElementById('stage');
 stage.addEventListener('mousemove', function(e){
   if (!use3d || window.innerWidth <= 1180) return;
@@ -3374,6 +3462,48 @@ document.getElementById('jX').onclick = function(){
   ttsStop();
   jarvis.classList.remove('on'); clearLight(); animate();
 };
+/* ══ 말로 물어보기 ═══════════════════════════════
+   운전 중이거나 고객 앞이면 손으로 못 친다. 눌러서 말하면 자비스가 듣는다.
+   브라우저가 못 알아들으면 단추를 지운다 — 눌리지도 않는 단추는 없느니만 못하다. */
+(function(){
+  var b = document.getElementById('jMic');
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ b.parentNode.removeChild(b); return; }
+  var rec = null, listening = false;
+  function stop(){
+    listening = false;
+    b.textContent = '🎤'; b.style.background = ''; b.style.color = '';
+    try { if (rec) rec.stop(); } catch(e){}
+  }
+  b.onclick = function(){
+    if (listening){ stop(); return; }
+    try {
+      ttsStop();                       /* 읽어 주는 중이면 멈춘다 — 제 목소리를 다시 듣지 않게 */
+      rec = new SR();
+      rec.lang = 'ko-KR';
+      rec.interimResults = false;
+      rec.maxAlternatives = 1;
+      rec.onresult = function(ev){
+        var t = '';
+        try { t = ev.results[0][0].transcript || ''; } catch(e){}
+        stop();
+        if (t) ask(t);
+      };
+      rec.onerror = function(ev){
+        stop();
+        var why = (ev && ev.error === 'not-allowed')
+          ? '마이크를 못 씁니다. 브라우저 주소창 왼쪽에서 마이크를 허용해 주세요.'
+          : '잘 못 들었습니다. 다시 한 번 눌러 말씀해 주세요.';
+        openJ(); addJ({answer:why, steps:[], next:[]}, true);
+      };
+      rec.onend = function(){ if (listening) stop(); };
+      rec.start();
+      listening = true;
+      b.textContent = '⏹'; b.style.background = '#DC2626'; b.style.color = '#fff';
+      openJ();
+    } catch(e){ stop(); }
+  };
+})();
 (function(){
   var b = document.getElementById('jVoice');
   function paint(){ b.textContent = TTS.on ? '🔊' : '🔇'; b.style.opacity = TTS.on ? '1' : '.5'; }
@@ -3884,17 +4014,42 @@ document.getElementById('jSay').addEventListener('keydown', function(e){
   if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); ask(this.value); }
 });
 
-/* 빠른 단추 */
-(function(){
-  var host = document.getElementById('chips');
-  RECIPES.forEach(function(r){
+/* ══ 먼저 물어본다 ═══════════════════════════════
+   스물두 가지를 한꺼번에 늘어놓으면 아무도 안 고른다.
+   큰 갈래 여섯만 보이고, 고르면 그 안에서만 다시 보여 준다. */
+var ASK = DATA.ask || [];
+var chipHost = document.getElementById('chips');
+
+function chipsTop(){
+  chipHost.innerHTML = '';
+  ASK.forEach(function(g){
+    var b = document.createElement('button');
+    b.className = 'chip big';
+    b.innerHTML = '<span class="ci">' + g.ic + '</span>' +
+                  '<span class="cw"><b>' + esc(g.t) + '</b><i>' + esc(g.s) + '</i></span>';
+    b.onclick = function(){ chipsIn(g); };
+    chipHost.appendChild(b);
+  });
+}
+function chipsIn(g){
+  chipHost.innerHTML = '';
+  var back = document.createElement('button');
+  back.className = 'chip back';
+  back.textContent = '‹ 처음으로';
+  back.onclick = function(){ chipsTop(); };
+  chipHost.appendChild(back);
+  RECIPES.filter(function(r){ return g.k.indexOf(r.k) >= 0; }).forEach(function(r){
     var b = document.createElement('button');
     b.className = 'chip';
     b.textContent = r.q;
     b.onclick = function(){ ask(r.q); };
-    host.appendChild(b);
+    chipHost.appendChild(b);
   });
-})();
+  openJ();
+  addJ({answer:'「' + g.t + '」 군요.\n이 중에 가까운 것이 있으면 눌러 주세요. 없으면 지금 상황을 그대로 적어 주셔도 됩니다.',
+        steps:[], next:[]});
+}
+chipsTop();
 
 /* ══ AI 연결 ═══════════════════════════════ */
 var keyBox = document.getElementById('keyBox');
@@ -3949,10 +4104,11 @@ document.getElementById('kClear').onclick = function(){
 };
 
 modeLabel();
-window.addEventListener('resize', redraw);
-window.addEventListener('load', redraw);
+window.addEventListener('resize', function(){ redraw(); if (!zoomTouched) fitAll(); });
+window.addEventListener('load', function(){ redraw(); fitAll(); });
 apply();
 redraw();
+setTimeout(fitAll, 60);        /* 글꼴이 자리를 잡은 뒤 한 번 더 재 본다 */
 </script>
 </body>
 </html>
