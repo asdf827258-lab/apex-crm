@@ -12094,8 +12094,9 @@ function vaRun(t){
   }
   var tab=vaIsOpen(s)?vaFindTab(s):'';
   /* 화면을 콕 집어 부른 게 아니면, 상황을 말한 것일 수 있다.
-     「못 알아들었습니다」 하고 셋을 내놓기 <b>전에</b> 지도의 순서표를 먼저 본다. */
-  if(!tab){
+     「못 알아들었습니다」 하고 셋을 내놓기 <b>전에</b> 지도의 순서표를 먼저 본다.
+     다만 앱이 이미 할 줄 아는 말(브리핑·체크 같은 것)은 그쪽이 먼저다. */
+  if(!tab&&!vaActHit(t,s)){
     var rc0=vaRecipeHit(s);
     if(rc0){vaReply(vaRecipeSay(rc0),{go:rc0.steps[0].id});return;}
   }
@@ -12385,15 +12386,17 @@ function vaRecipeHit(s){
   if(typeof APEX_MAP==='undefined'||!APEX_MAP||!APEX_MAP.recipes)return null;
   var q=vaLat(vaNorm(s)),best=null,bs=0;
   APEX_MAP.recipes.forEach(function(r){
-    var sc=0;
+    var sc=0,n=0;
     (r.words||[]).forEach(function(w){
       var k=vaLat(vaNorm(w));
-      if(k.length>=2&&q.indexOf(k)>=0)sc+=k.length*2;
+      if(k.length>=2&&q.indexOf(k)>=0){sc+=k.length*2;n++;}
     });
-    if(sc>bs){bs=sc;best=r;}
+    /* 낱말 하나만 스치면 안 잡는다. 「오늘 브리핑해줘」 의 「브리핑」,
+       「뭐부터 해야 할까」 의 「뭐부터」 처럼 한 낱말은 다른 길이 맡아야 한다.
+       상황을 말한 것이라면 한 순서표에 두 낱말 이상 걸린다. */
+    if(n>=2&&sc>bs){bs=sc;best=r;}
   });
-  /* 말은 잘못 들리는 일이 잦다. 글로 칠 때보다 문턱을 높인다 */
-  return bs>=6?best:null;
+  return best;
 }
 function vaRecipeSay(r){
   var nm=(APEX_MAP&&APEX_MAP.names)||{},i,parts=[];
