@@ -3605,6 +3605,37 @@ var SCHEMA = {
   required:['answer','steps','real','next'], additionalProperties:false
 };
 
+/* 짧은 판 — 회사 서버(Netlify)는 10초 안에 끝나야 한다.
+   긴 판을 보내면 구글이 답을 다 쓰기 전에 서버가 끊는다.
+   그래서 구글로 갈 때는 뼈대만 보낸다: 화면 이름 · 순서표 · 말투 본보기 셋. */
+function sysPromptShort(){
+  var L = [];
+  L.push('당신은 「자비스」입니다. 보험 설계사 윤시현의 업무 시스템 APEX YUN PRO 안내자입니다.');
+  L.push('상대는 보험 설계사. 존댓말로, 쉬운 우리말로, 짧게. JSON 하나만 출력합니다.');
+  L.push('{"answer":"3~5줄","steps":[{"id":"화면id","do":"거기서 뭘 하나"}],"real":"듣기 싫어도 짚어야 하는 말 1~2줄","next":["다음에 할 것"]}');
+  L.push('- steps 의 id 는 아래 목록에 있는 것만. 없으면 빈 배열.');
+  L.push('- real 이 제일 중요합니다. 원인을 짚고, 방법이 틀렸으면 틀렸다고 말합니다. 지어내지 않습니다.');
+  L.push('- 광고 문구는 협회 심의가 필요하다고 알립니다. 랜딩페이지에서 개인정보 받는 방식은 권하지 않습니다.');
+  L.push('- 수익률·환급률·보험금 액수는 지어내지 않습니다.');
+  L.push('');
+  L.push('## 화면 (id | 이름 | 하는 일)');
+  Object.keys(MENU).forEach(function(id){
+    var m = MENU[id];
+    L.push(id + '|' + m.n + '|' + String(m.d).slice(0, 22));
+  });
+  L.push('');
+  L.push('## 상황별 순서 (참고. 다르면 새로 짜도 됩니다)');
+  RECIPES.forEach(function(r){
+    L.push(r.q + ' → ' + r.steps.map(function(s){ return s.id; }).join(','));
+  });
+  L.push('');
+  L.push('## real 말투 본보기');
+  RECIPES.slice(0, 3).forEach(function(r){ if (r.real) L.push('· ' + r.real); });
+  L.push('');
+  L.push('※ 재무설계 계산기(finance) 안에는 열한 칸이 있습니다 — 종합 대시보드·현금흐름·연금·투자·보험·팩트체크·부동산·교육자금·상속증여·상담가이드·종합. 어느 칸을 쓸지 do 에 적어 주세요.');
+  return L.join('\n');
+}
+
 function sysPrompt(){
   var L = [];
   L.push('당신은 「자비스」입니다. 보험 설계사 윤시현이 만든 업무 시스템 「APEX YUN PRO」 의 안내자이고, 지금은 그 시스템의 전체 지도 위에서 대화하고 있습니다.');
@@ -3667,7 +3698,7 @@ function parseReply(txt){
    보내는 모양은 CRM 이 쓰는 것과 같다(systemInstruction / contents / generationConfig).
    JSON 으로 달라고 responseMimeType 을 걸어 둔다 — 프록시가 그대로 흘려보낸다. */
 function askGemini(q){
-  var gkey = getGKey(), gpx = getGProxy(), mdl = getGModel(), sys = sysPrompt();
+  var gkey = getGKey(), gpx = getGProxy(), mdl = getGModel(), sys = sysPromptShort();
   chatLog.push({role:'user', content:q});
   if (chatLog.length > 12) chatLog = chatLog.slice(-12);
 
@@ -3676,7 +3707,11 @@ function askGemini(q){
     contents: chatLog.map(function(m){
       return {role:(m.role === 'assistant') ? 'model' : 'user', parts:[{text:m.content}]};
     }),
-    generationConfig:{maxOutputTokens:4000, temperature:0.7, responseMimeType:'application/json'}
+    /* 회사 서버가 10초에 끊는다. 생각을 줄이고 분량을 줄여 그 안에 들어온다.
+       thinkingConfig 는 구글이 받아 준다(직접 재 봤다 — 400 이 아니라 200). */
+    generationConfig:{maxOutputTokens:1200, temperature:0.7,
+                      responseMimeType:'application/json',
+                      thinkingConfig:{thinkingBudget:0}}
   };
   var url, headers = {'Content-Type':'application/json'};
   if (gkey){
@@ -3688,16 +3723,28 @@ function askGemini(q){
     var tok = getAppToken();
     if (tok) headers['X-App-Token'] = tok;
   }
-  var body = JSON.stringify(payload);
-  /* 구글은 사람이 몰리면 503 을 낸다 — 한두 번 더 두드리면 대개 열린다.
-     여기서 포기하면 「구글이 고장났다」 고 오해하게 된다. */
-  function once(left){
-    return fetch(url, {method:'POST', headers:headers, body:body})
+  /* 구글이 몰리면 503 을 낸다. 같은 모델을 또 두드려 봐야 또 밀린다 —
+     덜 붐비는 가벼운 모델로 옮겨 탄다. 그리고 언제까지고 기다리지 않는다.
+     기다리다 지치면 지도에 담긴 것으로 답하는 편이 낫다. */
+  var LITE = 'gemini-flash-lite-latest';
+  function once(left, useModel){
+    if (payload.model) payload.model = useModel;
+    else url = 'https://generativelanguage.googleapis.com/v1beta/models/' + useModel +
+               ':generateContent?key=' + encodeURIComponent(gkey);
+    var body = JSON.stringify(payload);
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var timer = setTimeout(function(){ if (ctl) ctl.abort(); }, 11000);
+    var opt = {method:'POST', headers:headers, body:body};
+    if (ctl) opt.signal = ctl.signal;
+    return fetch(url, opt)
+      .then(function(r){ clearTimeout(timer); return r; }, function(err){ clearTimeout(timer); throw err; })
       .then(function(res){
         return res.text().then(function(txt){
           if (!res.ok){
-            if (left > 0 && (res.status === 503 || res.status === 429 || res.status === 500)){
-              return new Promise(function(ok){ setTimeout(ok, 1200); }).then(function(){ return once(left - 1); });
+            if (left > 0 && (res.status === 503 || res.status === 429 || res.status === 500 ||
+                             res.status === 502 || res.status === 504)){
+              return new Promise(function(ok){ setTimeout(ok, 700); })
+                       .then(function(){ return once(left - 1, LITE); });
             }
             var msg = txt;
             try { var j = JSON.parse(txt); msg = (j.error && j.error.message) || j.message || txt; } catch(e){}
@@ -3709,15 +3756,16 @@ function askGemini(q){
             out = (data.candidates[0].content.parts || [])
                     .map(function(p){ return p.text || ''; }).join('');
           } catch(e){ out = (typeof data.text === 'string') ? data.text : ''; }
-          if (!out && left > 0){           /* 생각만 하다 분량이 다 찬 경우 — 한 번 더 */
-            return new Promise(function(ok){ setTimeout(ok, 800); }).then(function(){ return once(left - 1); });
+          if (!out && left > 0){           /* 생각만 하다 분량이 다 찬 경우 — 가벼운 모델로 */
+            return new Promise(function(ok){ setTimeout(ok, 500); })
+                     .then(function(){ return once(left - 1, LITE); });
           }
           chatLog.push({role:'assistant', content:out});
           return parseReply(out);
         });
       });
   }
-  return once(2);
+  return once(1, mdl);
 }
 
 function askClaude(q){
@@ -3791,6 +3839,8 @@ function whyFailed(e){
   if (e && (e.status === 503 || e.status === 500) || /overload|unavailable|try again later/i.test(m))
     return (getEngine() === 'gemini' ? '구글이 지금 밀리고 있습니다' : '서버가 지금 밀리고 있습니다')
            + '(503). 몇 번 더 두드려 봤는데도 안 열렸습니다 — 잠시 뒤 다시 물어봐 주세요.';
+  if (/abort/i.test(m) || (e && e.name === 'AbortError'))
+    return '구글이 제때 답을 못 줬습니다(밀리는 중). 지도에 담긴 것으로 먼저 답해 드리겠습니다.';
   if (/failed to fetch|networkerror|load failed/i.test(m))
     return '인터넷에 닿지 못했습니다. 연결을 확인해 주세요.';
   return '불러오지 못했습니다 — ' + m;
