@@ -38515,12 +38515,17 @@ function osNoticeCardHtml(){
     '</div></div>';
 }
 /* ═══════════ 빠른 시작 가이드 — 플로팅 버튼 + 첫 로그인 시 1회 자동 안내 ═══════════ */
-function osGuideSeen(){try{return localStorage.getItem('apex_guide_seen')==='1';}catch(e){return false;}}
-function osGuideDontToggle(cb){try{localStorage.setItem('apex_guide_seen',cb.checked?'1':'0');}catch(e){}}
+/* 「다시 안 보기」 를 눌러 둔 사람은 새 기능이 들어와도 영영 못 본다.
+   안내가 크게 바뀌면 이름을 한 칸 올려 한 번만 다시 보여 준다.
+   v2 = 전체 지도·자비스가 들어간 판. */
+var OS_GUIDE_KEY='apex_guide_seen_v2';
+function osGuideSeen(){try{return localStorage.getItem(OS_GUIDE_KEY)==='1';}catch(e){return false;}}
+function osGuideDontToggle(cb){try{localStorage.setItem(OS_GUIDE_KEY,cb.checked?'1':'0');}catch(e){}}
 function osGuideRows(arr){return arr.map(function(s){return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9"><span style="flex:none;font-size:21px;line-height:1.3">'+s[0]+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A">'+osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.6;margin-top:3px">'+osEsc(s[2])+'</div></div></div>';}).join('');}
 function osQuickGuideBody(){
   var admin=osIsAppAdmin();
   var member=[
+    ['🗺️','APEX 전체 지도 — 여기서 시작하세요','화면 여든아홉 개가 한 장에 있습니다. 왼쪽 맨 위 초록 단추. 막히는 것을 적으면 「자비스」가 순서를 짜서 지도에 불을 켜 주고, 듣기 싫어도 짚어야 할 말까지 해 줍니다. 🎤 를 누르면 말로 물어봐도 됩니다.'],
     ['🧠','윤시현의 두뇌 — 막힘 없는 상담','상담이 막히면 질문만 입력 → 약관·화법·전략을 즉답. "지식 추가"에 내 노하우를 넣을수록 더 나처럼 답합니다.'],
     ['📑','AI 보장분석','고객 증권을 올리면 담보 공백·중복을 찾아 1:1 리포트. 리모델링 상담의 결정적 무기.'],
     ['📝','고객 상담카드','상담 현장에서 정보를 한 장으로 취합 → AI 니즈분석·상담지 인쇄까지.'],
@@ -38547,11 +38552,13 @@ function osGuideOpen(){
   ov.innerHTML='<div style="background:#fff;width:100%;max-width:470px;max-height:88vh;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)">'+
     '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">QUICK START</div><div style="font-size:18px;font-weight:800;margin-top:2px">🚀 빠른 시작 가이드</div></div><button onclick="osGuideClose()" style="border:none;background:rgba(255,255,255,.16);color:#fff;width:31px;height:31px;border-radius:50%;font-size:16px;cursor:pointer">✕</button></div>'+
     '<div style="padding:14px 20px;overflow-y:auto">'+osQuickGuideBody()+'</div>'+
-    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between;align-items:center"><label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="osGuideDont" onchange="osGuideDontToggle(this)"'+(osGuideSeen()?' checked':'')+'/> 다시 안 보기</label><button onclick="osGuideClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">시작하기</button></div>'+
+    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between;align-items:center"><label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="osGuideDont" onchange="osGuideDontToggle(this)"'+(osGuideSeen()?' checked':'')+'/> 다시 안 보기</label><div style="display:flex;gap:7px"><button onclick="osGuideGoMap()" style="border:1px solid #A7F3D0;background:linear-gradient(135deg,#ECFDF5,#D1FAE5);color:#065F46;font-size:13px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">🗺️ 지도 열어 보기</button><button onclick="osGuideClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">시작하기</button></div></div>'+
   '</div>';
   document.body.appendChild(ov);
 }
 function osGuideClose(){var o=document.getElementById('osGuideOvl');if(o&&o.parentNode)o.parentNode.removeChild(o);}
+/* 안내를 읽고 바로 지도로 — 읽고 나서 「그래서 어디로?」 가 되면 안 읽은 것과 같다 */
+function osGuideGoMap(){osGuideClose();try{if(typeof go==='function')go('apexmap');}catch(e){}}
 function osGuideFab(){
   if(document.getElementById('osGuideFab'))return;
   var b=document.createElement('button');b.id='osGuideFab';b.title='빠른 시작 가이드';b.setAttribute('aria-label','빠른 시작 가이드');
