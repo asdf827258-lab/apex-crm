@@ -434,15 +434,36 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
     <h3>자비스에게 머리를 달아 주기</h3>
     <p>키를 넣지 않아도 자비스는 지도에 담긴 것(화면 83개 · 순서표 18가지)을 그대로 안내합니다.
        키를 넣으면 그 위에 <b>Claude</b> 가 붙어서, 적어 주신 상황을 읽고 직접 답하고 방향까지 찾아 줍니다.</p>
-    <label>Claude API 키 (이 컴퓨터에만 저장됩니다)</label>
-    <input id="kKey" type="password" placeholder="sk-ant-…" autocomplete="off">
-    <label>어느 머리를 쓸까요</label>
-    <select id="kModel">
-      <option value="claude-opus-5">Claude Opus 5 — 가장 똑똑함 (추천)</option>
-      <option value="claude-sonnet-5">Claude Sonnet 5 — 빠르고 저렴</option>
+    <label>어느 회사 것을 쓸까요</label>
+    <select id="kEngine">
+      <option value="claude">Claude (Anthropic)</option>
+      <option value="gemini">Gemini (구글) — 값이 쌉니다</option>
     </select>
-    <label>회사 서버를 거쳐 쓰는 경우에만 (선택)</label>
-    <input id="kProxy" type="text" placeholder="https://…/api/generate  — 비워 두면 직접 연결" autocomplete="off">
+
+    <div id="kClaudeBox">
+      <label>Claude API 키 (이 컴퓨터에만 저장됩니다)</label>
+      <input id="kKey" type="password" placeholder="sk-ant-…" autocomplete="off">
+      <label>어느 머리를 쓸까요</label>
+      <select id="kModel">
+        <option value="claude-opus-5">Claude Opus 5 — 가장 똑똑함 (추천)</option>
+        <option value="claude-sonnet-5">Claude Sonnet 5 — 빠르고 저렴</option>
+      </select>
+      <label>회사 서버를 거쳐 쓰는 경우에만 (선택)</label>
+      <input id="kProxy" type="text" placeholder="https://…/api/generate  — 비워 두면 직접 연결" autocomplete="off">
+    </div>
+
+    <div id="kGeminiBox" style="display:none">
+      <label>Gemini API 키 (이 컴퓨터에만 저장됩니다)</label>
+      <input id="kGKey" type="password" placeholder="AIza…  — 비워 두면 아래 회사 서버로" autocomplete="off">
+      <label>어느 머리를 쓸까요</label>
+      <select id="kGModel">
+        <option value="gemini-flash-latest">Gemini Flash (최신) — 빠르고 쌉니다 (추천)</option>
+        <option value="gemini-flash-lite-latest">Gemini Flash Lite — 가장 빠름</option>
+        <option value="gemini-2.5-pro">Gemini 2.5 Pro — 품질 우선</option>
+      </select>
+      <label>회사 서버를 거쳐 쓰는 경우에만 (선택)</label>
+      <input id="kGProxy" type="text" placeholder="/api/gemini  — 비워 두면 위 키로 직접 연결" autocomplete="off">
+    </div>
     <div class="warn">키는 이 브라우저에만 저장되고 다른 곳으로 보내지 않습니다.
       발급은 <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com → API Keys</a>
       에서 하고, Billing 에 <b>월 상한</b>을 걸어 두면 과금 걱정이 없습니다. 쓴 만큼 요금이 나갑니다.</div>
@@ -3254,13 +3275,33 @@ function getProxy(){ return (LS.get('proxy','') || '').replace(/^\s+|\s+$/g,'');
    이걸 안 보내면 서버가 401 로 막고, 앱은 「키가 틀렸나」 하고 헤맨다. */
 function getAppToken(){ return (LS.get('apptoken','') || '').replace(/^\s+|\s+$/g,''); }
 function getModel(){ return LS.get('map_model','claude-opus-5'); }
-function hasAI(){ return !!(getKey() || getProxy()); }
+/* 구글(제미나이) 쪽도 CRM 이 쓰는 자리를 그대로 본다 —
+   개인 키(gkey)가 있으면 그걸로 직접, 없으면 회사 프록시(gproxy)로. */
+function getGKey(){ return (LS.get('gkey','') || '').replace(/^\s+|\s+$/g,''); }
+function getGProxy(){ return (LS.get('gproxy','') || '').replace(/^\s+|\s+$/g,''); }
+function getGModel(){ return LS.get('gmodel','gemini-flash-latest'); }
+/* 어느 머리를 쓸까 — 지도에서 고른 것이 먼저, 없으면 CRM 설정을 따른다 */
+function getEngine(){
+  var e = LS.get('map_engine','');
+  if (e === 'gemini' || e === 'claude') return e;
+  if (LS.get('provider','') === 'gemini') return 'gemini';
+  /* 고른 적이 없으면 구글을 먼저 쓴다 — 값이 싸고, 회사 통로가 이미 열려 있다.
+     Claude 로 바꾸려면 「AI 연결」 에서 고르면 된다. */
+  if (getGKey() || getGProxy()) return 'gemini';
+  return 'claude';
+}
+function hasAI(){
+  return (getEngine() === 'gemini') ? !!(getGKey() || getGProxy())
+                                    : !!(getKey() || getProxy());
+}
 
 function modeLabel(){
   var m = document.getElementById('jMode'), b = document.getElementById('aiBtn');
   if (hasAI()){
-    m.textContent = (getProxy() ? '회사 서버' : getModel()) + ' 에 연결됨'
-      + (LS_OK ? '' : ' · 이 창에서만');
+    var gem = (getEngine() === 'gemini');
+    var via = gem ? (getGKey() ? getGModel() : '회사 서버 · ' + getGModel())
+                  : (getProxy() ? '회사 서버' : getModel());
+    m.textContent = via + ' 에 연결됨' + (LS_OK ? '' : ' · 이 창에서만');
     b.classList.add('on');
   } else {
     m.textContent = '지도에 담긴 것만 아는 상태입니다';
@@ -3607,6 +3648,51 @@ function parseReply(txt){
   return {answer:String(txt || '').replace(/^\s+|\s+$/g,''), steps:[], next:[]};
 }
 
+/* ── 구글(제미나이) 로 묻기 ──
+   보내는 모양은 CRM 이 쓰는 것과 같다(systemInstruction / contents / generationConfig).
+   JSON 으로 달라고 responseMimeType 을 걸어 둔다 — 프록시가 그대로 흘려보낸다. */
+function askGemini(q){
+  var gkey = getGKey(), gpx = getGProxy(), mdl = getGModel(), sys = sysPrompt();
+  chatLog.push({role:'user', content:q});
+  if (chatLog.length > 12) chatLog = chatLog.slice(-12);
+
+  var payload = {
+    systemInstruction:{parts:[{text:sys}]},
+    contents: chatLog.map(function(m){
+      return {role:(m.role === 'assistant') ? 'model' : 'user', parts:[{text:m.content}]};
+    }),
+    generationConfig:{maxOutputTokens:4000, temperature:0.7, responseMimeType:'application/json'}
+  };
+  var url, headers = {'Content-Type':'application/json'};
+  if (gkey){
+    url = 'https://generativelanguage.googleapis.com/v1beta/models/' + mdl +
+          ':generateContent?key=' + encodeURIComponent(gkey);
+  } else {
+    url = gpx;
+    payload.model = mdl;
+    var tok = getAppToken();
+    if (tok) headers['X-App-Token'] = tok;
+  }
+  return fetch(url, {method:'POST', headers:headers, body:JSON.stringify(payload)})
+    .then(function(res){
+      return res.text().then(function(txt){
+        if (!res.ok){
+          var msg = txt;
+          try { var j = JSON.parse(txt); msg = (j.error && j.error.message) || j.message || txt; } catch(e){}
+          var e2 = new Error(msg); e2.status = res.status; throw e2;
+        }
+        var data = JSON.parse(txt);
+        var out = '';
+        try {
+          out = (data.candidates[0].content.parts || [])
+                  .map(function(p){ return p.text || ''; }).join('');
+        } catch(e){ out = (typeof data.text === 'string') ? data.text : ''; }
+        chatLog.push({role:'assistant', content:out});
+        return parseReply(out);
+      });
+    });
+}
+
 function askClaude(q){
   var key = getKey(), proxy = getProxy(), model = getModel(), sys = sysPrompt();
   var url, headers, body;
@@ -3689,7 +3775,7 @@ function ask(raw){
 
   busy = true;
   addThinking();
-  askClaude(q).then(function(res){
+  (getEngine() === 'gemini' ? askGemini(q) : askClaude(q)).then(function(res){
     busy = false;
     if (!res.answer && !(res.steps || []).length) res = offline(q);
     addJ(res);
@@ -3724,18 +3810,34 @@ document.getElementById('jSay').addEventListener('keydown', function(e){
 
 /* ══ AI 연결 ═══════════════════════════════ */
 var keyBox = document.getElementById('keyBox');
+function kPaintEngine(){
+  var g = (document.getElementById('kEngine').value === 'gemini');
+  document.getElementById('kClaudeBox').style.display = g ? 'none' : '';
+  document.getElementById('kGeminiBox').style.display = g ? '' : 'none';
+}
+document.getElementById('kEngine').onchange = kPaintEngine;
 document.getElementById('aiBtn').onclick = function(){
+  document.getElementById('kEngine').value = getEngine();
   document.getElementById('kKey').value = getKey();
   document.getElementById('kProxy').value = getProxy();
   document.getElementById('kModel').value = getModel();
+  document.getElementById('kGKey').value = getGKey();
+  document.getElementById('kGProxy').value = getGProxy();
+  document.getElementById('kGModel').value = getGModel();
+  kPaintEngine();
   keyBox.classList.add('on');
 };
 document.getElementById('kCancel').onclick = function(){ keyBox.classList.remove('on'); };
 keyBox.addEventListener('click', function(e){ if (e.target === keyBox) keyBox.classList.remove('on'); });
 document.getElementById('kSave').onclick = function(){
-  LS.set('apikey', document.getElementById('kKey').value.replace(/^\s+|\s+$/g,''));
-  LS.set('proxy', document.getElementById('kProxy').value.replace(/^\s+|\s+$/g,''));
+  var v = function(id){ return document.getElementById(id).value.replace(/^\s+|\s+$/g,''); };
+  LS.set('map_engine', document.getElementById('kEngine').value);
+  LS.set('apikey', v('kKey'));
+  LS.set('proxy', v('kProxy'));
   LS.set('map_model', document.getElementById('kModel').value);
+  LS.set('gkey', v('kGKey'));
+  LS.set('gproxy', v('kGProxy'));
+  LS.set('gmodel', document.getElementById('kGModel').value);
   keyBox.classList.remove('on');
   modeLabel();
   chatLog = [];
@@ -3746,9 +3848,15 @@ document.getElementById('kSave').onclick = function(){
     steps:[], next:[]});
 };
 document.getElementById('kClear').onclick = function(){
-  LS.del('apikey'); LS.del('proxy');
-  document.getElementById('kKey').value = '';
-  document.getElementById('kProxy').value = '';
+  if (document.getElementById('kEngine').value === 'gemini'){
+    LS.del('gkey'); LS.del('gproxy');
+    document.getElementById('kGKey').value = '';
+    document.getElementById('kGProxy').value = '';
+  } else {
+    LS.del('apikey'); LS.del('proxy');
+    document.getElementById('kKey').value = '';
+    document.getElementById('kProxy').value = '';
+  }
   modeLabel();
 };
 
