@@ -3673,24 +3673,36 @@ function askGemini(q){
     var tok = getAppToken();
     if (tok) headers['X-App-Token'] = tok;
   }
-  return fetch(url, {method:'POST', headers:headers, body:JSON.stringify(payload)})
-    .then(function(res){
-      return res.text().then(function(txt){
-        if (!res.ok){
-          var msg = txt;
-          try { var j = JSON.parse(txt); msg = (j.error && j.error.message) || j.message || txt; } catch(e){}
-          var e2 = new Error(msg); e2.status = res.status; throw e2;
-        }
-        var data = JSON.parse(txt);
-        var out = '';
-        try {
-          out = (data.candidates[0].content.parts || [])
-                  .map(function(p){ return p.text || ''; }).join('');
-        } catch(e){ out = (typeof data.text === 'string') ? data.text : ''; }
-        chatLog.push({role:'assistant', content:out});
-        return parseReply(out);
+  var body = JSON.stringify(payload);
+  /* 구글은 사람이 몰리면 503 을 낸다 — 한두 번 더 두드리면 대개 열린다.
+     여기서 포기하면 「구글이 고장났다」 고 오해하게 된다. */
+  function once(left){
+    return fetch(url, {method:'POST', headers:headers, body:body})
+      .then(function(res){
+        return res.text().then(function(txt){
+          if (!res.ok){
+            if (left > 0 && (res.status === 503 || res.status === 429 || res.status === 500)){
+              return new Promise(function(ok){ setTimeout(ok, 1200); }).then(function(){ return once(left - 1); });
+            }
+            var msg = txt;
+            try { var j = JSON.parse(txt); msg = (j.error && j.error.message) || j.message || txt; } catch(e){}
+            var e2 = new Error(msg); e2.status = res.status; throw e2;
+          }
+          var data = JSON.parse(txt);
+          var out = '';
+          try {
+            out = (data.candidates[0].content.parts || [])
+                    .map(function(p){ return p.text || ''; }).join('');
+          } catch(e){ out = (typeof data.text === 'string') ? data.text : ''; }
+          if (!out && left > 0){           /* 생각만 하다 분량이 다 찬 경우 — 한 번 더 */
+            return new Promise(function(ok){ setTimeout(ok, 800); }).then(function(){ return once(left - 1); });
+          }
+          chatLog.push({role:'assistant', content:out});
+          return parseReply(out);
+        });
       });
-    });
+  }
+  return once(2);
 }
 
 function askClaude(q){
@@ -3757,6 +3769,9 @@ function whyFailed(e){
                      : 'Claude 계정 잔액이 부족합니다. console.anthropic.com → Billing 에서 충전해 주세요.');
   if (e && e.status === 404 || /not.?found|no such model/i.test(m))
     return '고른 머리(모델) 이름이 맞지 않습니다. 「AI 연결」 에서 다시 골라 주세요.';
+  if (e && (e.status === 503 || e.status === 500) || /overload|unavailable|try again later/i.test(m))
+    return (getEngine() === 'gemini' ? '구글이 지금 밀리고 있습니다' : '서버가 지금 밀리고 있습니다')
+           + '(503). 몇 번 더 두드려 봤는데도 안 열렸습니다 — 잠시 뒤 다시 물어봐 주세요.';
   if (/failed to fetch|networkerror|load failed/i.test(m))
     return '인터넷에 닿지 못했습니다. 연결을 확인해 주세요.';
   return '불러오지 못했습니다 — ' + m;
