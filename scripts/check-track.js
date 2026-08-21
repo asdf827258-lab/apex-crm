@@ -6,7 +6,7 @@
 
    여기서 확인한다.
 
-     1. 단추를 누르면 네 트랙이 다 뜨는가
+     1. 단추를 누르면 다섯 트랙이 다 뜨는가
      2. 지금 보는 탭이 어느 것인지 표시되는가
      3. 어느 트랙을 골라도 그 트랙으로 열리는가 — 탭을 안 옮기고
      4. 고객 데이터가 트랙과 함께 그대로 넘어가는가                */
@@ -49,8 +49,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     els => els.map(e => ({ k: e.getAttribute('data-tk'),
                            n: (e.querySelector('.n') || {}).textContent || '',
                            now: e.classList.contains('now') })));
-  is(tracks.length === 4, '네 트랙이 다 있다 — ' + tracks.map(t => t.k).join(' '));
-  ['w', 'd', 't', 'e'].forEach(k => is(tracks.some(t => t.k === k), '  트랙 ' + k));
+  is(tracks.length === 5, '다섯 트랙이 다 있다 — ' + tracks.map(t => t.k).join(' '));
+  ['w', 'd', 't', 'e', 'c'].forEach(k => is(tracks.some(t => t.k === k), '  트랙 ' + k));
 
   console.log('\n[2] 지금 보는 탭을 알려 준다');
   const nowOn = tracks.filter(t => t.now);
@@ -59,7 +59,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   console.log('\n[3] 고른 트랙으로 열린다 — 탭은 그대로 둔 채');
   const before = await page.evaluate(() => apexCurrentTab());
-  for (const k of ['w', 'd', 't', 'e']) {
+  for (const k of ['w', 'd', 't', 'e', 'c']) {
     await page.evaluate(() => { if (!document.getElementById('apexTrackSheet')) apexPickTrack(); });
     await page.waitForTimeout(160);
     await page.click('#apexTrackSheet .tk[data-tk="' + k + '"]');
@@ -80,6 +80,32 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   }
   const after = await page.evaluate(() => apexCurrentTab());
   is(before === after, '트랙을 골라도 보던 탭은 안 바뀐다 — ' + before);
+
+  console.log('\n[3-2] 상담자료 쪽에서도 그 갈래가 실제로 열린다');
+  /* 발표 단추가 track=c 를 보내도 상담자료가 안 받으면 첫 갈래가 열린다.
+     아무 소리도 안 나기 때문에 여기서 반드시 잡아야 한다. */
+  for (const k of ['w', 'd', 't', 'e', 'c']) {
+    const deck = await browser.newPage();
+    await deck.goto(base + '/app/상담자료/통합상담_APEX.html?track=' + k,
+                    { waitUntil: 'domcontentloaded' });
+    await deck.waitForTimeout(1400);
+    const got = await deck.evaluate(() => (window.__curTrack ? window.__curTrack() : '?'));
+    is(got === k, '  ?track=' + k + ' 로 열면 그 갈래가 선다 — ' + got);
+    await deck.close();
+  }
+  const cApi = await browser.newPage();
+  await cApi.goto(base + '/app/상담자료/통합상담_APEX.html?track=c', { waitUntil: 'domcontentloaded' });
+  await cApi.waitForTimeout(1400);
+  const cInfo = await cApi.evaluate(() => {
+    const el = document.getElementById('trackC');
+    return { has: !!window.__apexC, on: !!el && !el.classList.contains('off'),
+             txt: el ? el.textContent.replace(/\s+/g, ' ') : '' };
+  });
+  is(cInfo.has, '  일시납·쿠폰 갈래에 손잡이(__apexC)가 있다');
+  is(cInfo.on, '  그 갈래가 화면에 떠 있다');
+  is(/월세/.test(cInfo.txt) && /상가|부동산/.test(cInfo.txt), '  부동산 이야기가 그 안에 있다');
+  is(/쿠폰/.test(cInfo.txt), '  쿠폰 이야기가 그 안에 있다');
+  await cApi.close();
 
   console.log('\n[4] 닫기');
   await page.evaluate(() => apexPickTrack());

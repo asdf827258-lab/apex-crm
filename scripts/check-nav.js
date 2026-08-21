@@ -109,7 +109,10 @@ async function boot(page) {
     var want = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
     var got = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
     return {
-      want: want.map(function (g) { return { name: g.group, n: g.items.length }; }),
+      /* 눈에서 뺀(hide) 칸은 세지 않는다 — 일부러 안 보이게 한 것이다 */
+      want: want.map(function (g) {
+        return { name: g.group, n: g.items.filter(function (it) { return !it.hide; }).length };
+      }),
       got: got.map(function (el) {
         var t = el.querySelector('.ngl-t'), n = el.querySelector('.ngl-n'), ic = el.querySelector('.ngl-ic');
         return {
@@ -133,15 +136,43 @@ async function boot(page) {
   is(groups.got.every(g => g.badge && +g.badge > 0), '칸마다 개수 표시가 붙는다');
   is(groups.got.every(g => g.icon && g.icon !== '•'), '칸마다 그림 표시가 붙는다');
 
-  /* 메뉴가 하나도 빠지지 않았는가 — 접는 과정에서 통째로 날아가는 것이 가장 무섭다 */
+  /* 메뉴가 하나도 빠지지 않았는가 — 접는 과정에서 통째로 날아가는 것이 가장 무섭다.
+     단, hide 를 단 칸은 <b>일부러</b> 눈에서 뺀 것이다. 그건 아래에서 따로 본다. */
   const lost = await page.evaluate(() => {
     var want = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
     var ids = {}, miss = [];
     [].slice.call(document.querySelectorAll('#navHost .tab-btn')).forEach(function (b) { ids[b.getAttribute('data-tab')] = 1; });
-    want.forEach(function (g) { g.items.forEach(function (it) { if (!ids[it.id]) miss.push(g.group + '/' + it.id); }); });
+    want.forEach(function (g) {
+      g.items.forEach(function (it) { if (!it.hide && !ids[it.id]) miss.push(g.group + '/' + it.id); });
+    });
     return miss;
   });
-  is(lost.length === 0, '메뉴가 한 개도 안 빠졌다' + (lost.length ? ' — 빠진 것: ' + lost.slice(0, 6).join(', ') : ''));
+  is(lost.length === 0, '눈에 보이기로 한 칸은 한 개도 안 빠졌다' + (lost.length ? ' — 빠진 것: ' + lost.slice(0, 6).join(', ') : ''));
+
+  /* 눈에서 뺀 칸 — 지운 게 아니다. 찾기로 치면 나와야 한다.
+     안 나오면 그건 숨긴 게 아니라 <b>없앤 것</b>이다. */
+  const hid = await page.evaluate(() => {
+    var all = (typeof visibleTabs === 'function' ? visibleTabs() : TABS).filter(function (g) { return !g.hide; });
+    var want = [];
+    all.forEach(function (g) { g.items.forEach(function (it) { if (it.hide) want.push(it); }); });
+    NAV_Q = ''; renderNav();
+    var shown = {};
+    [].slice.call(document.querySelectorAll('#navHost .tab-btn')).forEach(function (b) { shown[b.getAttribute('data-tab')] = 1; });
+    var stillSeen = want.filter(function (it) { return shown[it.id]; }).map(function (it) { return it.id; });
+    var notFound = [];
+    want.forEach(function (it) {
+      NAV_Q = it.title; renderNav();
+      var ok = !!document.querySelector('#navHost .tab-btn[data-tab="' + it.id + '"]');
+      if (!ok) notFound.push(it.id);
+    });
+    NAV_Q = ''; renderNav();
+    return { n: want.length, stillSeen: stillSeen, notFound: notFound };
+  });
+  /* 여섯이었는데 AI 조직 라이브를 아예 지워 다섯이 됐다.
+     숫자를 못 박기보다 「감춘 칸이 있고, 찾으면 나온다」 를 본다. */
+  is(hid.n >= 5, '눈에서 뺀 칸이 ' + hid.n + '개 있다');
+  is(hid.stillSeen.length === 0, '평소 목록에는 안 보인다' + (hid.stillSeen.length ? ' — 아직 보임: ' + hid.stillSeen.join(', ') : ''));
+  is(hid.notFound.length === 0, '이름으로 찾으면 나온다 — 지운 게 아니다' + (hid.notFound.length ? ' — 못 찾음: ' + hid.notFound.join(', ') : ''));
 
   /* 메뉴를 다른 칸으로 옮길 때 ak 를 안 달고 가면 요금제 문이 조용히 따라 움직인다.
      화면으로는 절대 안 보이는 사고라, 여기서 못을 박아 둔다. */

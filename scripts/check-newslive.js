@@ -211,7 +211,7 @@ async function settle(page) {
     return { full: document.body.classList.contains('mktalk-mode'),
              src: f ? (f.getAttribute('src') || '') : '',
              others: ['finance-mode', 'crm-mode', 'sangdam-mode', 'fpdeck-mode', 'fptalk-mode',
-                      'mikki-mode', 'yoonsi-mode'].filter(c => document.body.classList.contains(c)),
+                      'mikki-mode'].filter(c => document.body.classList.contains(c)),
              listed: OS_FULL_MODES.indexOf('mktalk-mode') >= 0 };
   });
   is(talk.full, '  전체화면으로 열린다');

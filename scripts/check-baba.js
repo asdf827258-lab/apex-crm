@@ -56,6 +56,19 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
    ['만짧', 5000, '5000만'], ['천만', 2000, '2천만원'], ['원', 1000, '10,000,000원'],
    ['보험료', 13, '128,900원 → 12.89 → 13']].forEach(([k, want, label]) =>
     is(money[k] === want, '  ' + label + ' = ' + want + '만 · 나온 값 ' + money[k]));
+  /* 보험료만은 원 그대로 읽는다 — 만원으로 반올림하면 20년에 백만원 단위가 어긋난다 */
+  const raw = await page.evaluate(() => ({
+    원:   babaWonRaw('128,900원'),
+    만:   babaWonRaw('3,000만원'),
+    억:   babaWonRaw('1억 5,000만원'),
+    앞:   babaWonRaw('월보험료128,000원암진단비5,000만원'),
+    없음: babaWonRaw('가입금액 —')
+  }));
+  is(raw.원 === 128900, '  보험료는 원 그대로 — 128,900원 = ' + raw.원);
+  is(raw.만 === 30000000, '  「3,000만원」 도 원으로 = ' + raw.만);
+  is(raw.억 === 150000000, '  「1억 5,000만원」 도 원으로 = ' + raw.억);
+  is(raw.앞 === 128000, '  뒤에 더 큰 금액이 있어도 앞의 것을 집는다 = ' + raw.앞);
+  is(raw.없음 === null, '  숫자가 없으면 「모름」 이다');
   is(money.잔돈 === 0, '  몇 백원짜리는 금액으로 안 본다');
   is(money.없음 === null, '  숫자가 없으면 0 이 아니라 「모름」 이다');
 
@@ -72,11 +85,11 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(co.A.cancer && co.A.cancer.won === 3000, '  A사 「일반암진단비 3,000만원」 → 3,000');
   is(co.A.brain && co.A.brain.won === 2000, '  A사 「뇌혈관질환진단비」 → 2,000');
   is(co.A.mi && co.A.mi.won === 1500, '  A사 「급성심근경색증진단비」 → 1,500');
-  is(co.A.fee && co.A.fee.won === 13, '  A사 「월보험료 128,900원」 → 13만');
+  is(co.A.fee && co.A.fee.won === 128900, '  A사 「월보험료 128,900원」 → 128,900원 (원 그대로)');
   is(co.B.cancer && co.B.cancer.won === 5000, '  B사 「암진단급여금 5,000만원」 → 5,000');
   is(co.B.brain && co.B.brain.won === 3000, '  B사 「뇌혈관질환 진단급여금」 → 3,000 (띄어쓰기 달라도)');
   is(co.B.heart && co.B.heart.won === 2000, '  B사 「허혈성심장질환진단급여금」 → 2,000');
-  is(co.B.fee && co.B.fee.won === 21, '  B사 「합계보험료 210,500원」 → 21만');
+  is(co.B.fee && co.B.fee.won === 210500, '  B사 「합계보험료 210,500원」 → 210,500원 (원 그대로)');
   is(co.C.cancer && co.C.cancer.won === 10000, '  C사 「악성신생물(암)진단비 1억원」 → 10,000');
   is(co.C.stroke && co.C.stroke.won === 2000, '  C사 「뇌졸중진단비」 → 2,000');
   is(co.C.target && co.C.target.won === 3000, '  C사 「표적항암약물허가치료비」 → 3,000');
@@ -139,8 +152,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(btn.has, '  비포&애프터 카드가 있다');
   const src = require('fs').readFileSync('app/index.html', 'utf8');
-  is(/babaDeepRead\(/.test(src) && /끝까지 읽기/.test(src),
-     '  「끝까지 읽기 · 값 고치기」 단추가 있다 (쪼개서 전부 읽는 쪽으로 바뀌었다)');
+  is(/babaDeepRead\(/.test(src) && /값만 읽기/.test(src),
+     '  「값만 읽기 · 고치기」 단추가 있다 (쪼개서 전부 읽는 쪽으로 바뀌었다)');
+  is(/babaMake\(/.test(src) && /전·후 제안서 만들기/.test(src),
+     '  「전·후 제안서 만들기」 한 단추가 앞에 있다 — 읽기부터 한 번에');
   is(/babaBrief\(\)/.test(src), '  만들 때 확인한 표를 앞에 붙인다');
 
   console.log('\n[7] 무엇을 읽는지 표로 보여 준다');
@@ -213,7 +228,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   const btn3 = require('fs').readFileSync('app/index.html', 'utf8');
   is(/babaBlank\(\)/.test(btn3), '  「✍️ 표만 열기 (손으로 적기)」 가 있다');
   is(/babaDictToggle\(\)/.test(btn3), '  「📖 읽는 담보 보기」 가 있다');
-  is(/babaDeepRead\(/.test(btn3), '  「📋 끝까지 읽기」 도 그대로 있다');
+  is(/babaDeepRead\(/.test(btn3), '  「📋 값만 읽기」 도 그대로 있다');
+  is(/babaMake\(/.test(btn3), '  「📊 전·후 제안서 만들기」 가 맨 앞에 있다');
 
   console.log('\n[11] AI 가 준 담보명을 우리 27칸에 제대로 앉히는가');
   const map = await page.evaluate(() => ({
@@ -322,7 +338,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     set('뇌혈관질환 진단비', 2000, 1000);      /* 줄어듦 */
     set('급성심근경색', 1000, 1000);           /* 그대로 */
     set('간병·요양', null, 2000);              /* 기존에만 없음 */
-    set('월 보험료', 21, 18);                  /* 보험료는 줄었다 */
+    set('월 보험료', 210000, 180000);          /* 보험료는 줄었다 — 원 단위 */
     BABA_CH_ON = true;
     const h = babaChartHtml();
     return { sumB: babaSum('b'), sumA: babaSum('a'),
@@ -331,11 +347,11 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
   is(ch.sumB === 6000 && ch.sumA === 9000,
      '  보장 합계를 더한다 — 기존 ' + ch.sumB + ' → 신규 ' + ch.sumA + ' (만원)');
-  is(ch.feeB === 21 && ch.feeA === 18, '  월 보험료는 보장 합계에 안 넣고 따로 센다');
+  is(ch.feeB === 210000 && ch.feeA === 180000, '  월 보험료는 보장 합계에 안 넣고 따로 센다 (원 단위)');
   is(/보장이[\s\S]{0,40}3,000만[\s\S]{0,20}늘었습니다/.test(ch.html),
      '  맨 위 한 줄이 「보장이 3,000만 늘었습니다」 라고 말한다');
-  is(/보험료는[\s\S]{0,40}3만원[\s\S]{0,20}줄었습니다/.test(ch.html),
-     '  보험료가 줄어든 것도 같이 말한다');
+  is(/보험료는[\s\S]{0,40}30,000원[\s\S]{0,20}줄었습니다/.test(ch.html),
+     '  보험료가 줄어든 것도 같이 말한다 — 원으로');
   is(/▲[\s\S]{0,20}2,000만/.test(ch.html), '  늘어난 담보에 ▲ 2,000만');
   is(/▼[\s\S]{0,20}1,000만/.test(ch.html), '  줄어든 담보에 ▼ 1,000만');
   is(/그대로/.test(ch.html), '  안 바뀐 담보는 「그대로」');
@@ -377,8 +393,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     set('ltcH', null, null);       /* 자료 없음 */
     BABA_BD_ON = true;
     const h = babaBodyHtml(true), pr = babaBodyHtml(false);
+    const home = {};
+    BABA_BODY.forEach(g => g.rows.forEach(r => home[r[0]] = 1));
+    const lost = BABA_TERMS.filter(t => t.k !== 'fee' && !home[t.k]).map(t => t.n);
     return { groups: BABA_BODY.length,
              rowsPerGroup: BABA_BODY.map(g => g.rows.length),
+             homeless: lost.length, homelessNames: lost,
              covered: okKeys.length,
              rec: babaRec().cancer,
              html: h, print: pr,
@@ -387,7 +407,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
              terms: BABA_TERMS.length };
   });
   is(bd.groups === 10, '  부위가 열 칸이다 — ' + bd.groups);
-  is(bd.rowsPerGroup.every(n => n === 4), '  부위마다 네 줄이다 (사진 서식 그대로)');
+  /* 전에는 「부위마다 네 줄」 이었다. 그런데 그 마흔 칸에 자리가 없는 담보는
+     읽어 놓고도 표에 안 나왔다 — 넓은 이름(사망·후유장해·실손)이 그랬다.
+     이제는 줄 수가 아니라 <b>빠진 담보가 없는지</b> 를 본다. */
+  is(bd.rowsPerGroup.every(n => n >= 4), '  부위마다 넉 줄 이상이다 — ' + bd.rowsPerGroup.join(','));
+  is(bd.homeless === 0, '  읽을 수 있는 담보는 모두 표에 자리가 있다' +
+     (bd.homeless ? ' — 빠진 것 ' + bd.homelessNames.join(', ') : ''));
   is(bd.covered === 40, '  마흔 줄이 사전에 다 있다 — ' + bd.covered + '개');
   is(bd.terms >= 53, '  담보 사전이 ' + bd.terms + '개로 늘었다');
   ['뇌', '치매/재가', '암', '심장', '수술', '사망/후유장해', '입원/통원', '간병인일당', '실손의료비', '비용']
