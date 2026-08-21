@@ -434,6 +434,18 @@ body{margin:0;background:var(--bg);color:var(--ink);
   background:var(--glow);border-radius:99px;padding:2px 6px;vertical-align:1px}
 .row .m b i.only{font-style:normal;font-size:9.5px;font-weight:700;color:var(--yes);
   background:var(--yes-bg);border-radius:99px;padding:2px 6px;vertical-align:1px}
+.gox{display:inline-flex;align-items:center;gap:5px;margin-top:8px;margin-right:6px;
+  border:1px solid var(--core);background:var(--glow);color:var(--core);border-radius:10px;
+  padding:8px 11px;font-family:var(--f);font-weight:800;font-size:11.5px;cursor:pointer}
+.gox i{font-style:normal;opacity:.6;font-size:10px}
+.gox.wide{display:flex;width:100%;justify-content:center;margin-right:0;padding:12px;font-size:13px}
+.c365>u.gos{display:flex;flex-wrap:wrap;gap:0;margin-top:2px}
+.gogrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.gocard{border:1px solid var(--hair);background:var(--card);border-radius:13px;padding:12px 5px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--ink2)}
+.gocard .ic{font-size:20px;line-height:1}
+.gocard b{font-family:var(--f);font-weight:800;font-size:10.5px;text-align:center;line-height:1.35;
+  letter-spacing:-.3px}
 </style>
 </head>
 <body>
@@ -961,7 +973,9 @@ function ceHtml(c){
 }
 function cardHtml(r){
   var c=cardOf(r);
-  if(!c)return '<div class="c365 none">고객 365일에 아직 없습니다 — <b>컴퓨터에서 넘기세요</b></div>';
+  if(!c)return '<div class="c365 none">고객 365일에 아직 없습니다.<br>'+
+    '<b>DB 통합 CRM 에서 넘기면</b> 생일·팩트파인딩이 붙습니다.'+
+    goBtn('crm','DB 통합 CRM 에서 넘기기')+'</div>';
   if(CE.open===c.id)return '<div class="c365 edit"><b>고객 365일 고치기</b></div>'+ceHtml(c);
   var bits=[];
   bits.push(['마지막 접촉', c.days>=9000?'기록 없음':(c.days+'일 전')]);
@@ -971,7 +985,7 @@ function cardHtml(r){
   return '<div class="c365"><b>고객 365일 '+
     '<button type="button" class="ed" onclick="dCe(\''+c.id+'\')">✏️ 고치기</button></b>'+
     bits.map(function(x){return '<span><em>'+esc(x[0])+'</em>'+esc(x[1])+'</span>';}).join('')+
-    '<u>팩트파인딩·가족은 컴퓨터에서</u></div>';
+    '<u class="gos">'+goBtn('clients','고객 365일에서 자세히')+goBtn('fact_find','팩트파인딩 24칸')+'</u></div>';
 }
 /* ══════════════════════════════════════════════════════════════════
    지난번에 들은 말이 오늘의 첫 마디가 된다
@@ -1296,7 +1310,8 @@ function vReg(){
   h+='<button type="button" class="save'+(picked&&!RG.busy?' ready':'')+'"'+(picked&&!RG.busy?'':' disabled')+
      ' onclick="rgSave()">'+(RG.busy?'넣는 중…':('고른 '+picked+'명 CRM 에 넣기'))+'</button>';
   h+='<div class="note">담당자는 <b>나</b>, 배정일은 <b>오늘</b>로 들어갑니다. '+
-     '지역·메모·단계는 컴퓨터에서 마저 채우면 됩니다.</div>';
+     '지역·메모·단계는 DB 통합 CRM 에서 마저 채우면 됩니다.</div>'+
+     goBtn('crm','DB 통합 CRM 열기','wide');
   return h;
 }
 
@@ -1743,9 +1758,9 @@ function vToday(){
   /* TFA 할 일 */
   h+='<div class="sec">오늘 할 일 <i>'+R.todo.length+'</i></div>';
   h+=R.todo.length?R.todo.map(function(t){
-      return '<button type="button" class="row" onclick="dToast(\'앱 안에서 열면 체크판이 바로 열립니다\')">'+
-        '<span class="tm">📋</span><span class="m"><b>'+esc(t[0])+'</b><span>'+esc(t[1])+'</span></span>'+
-        '<span class="r">›</span></button>';}).join('')
+      return '<button type="button" class="row" onclick="dGo(\'ckboard\')">'+
+        '<span class="tm">📋</span><span class="m"><b>'+esc(t[0])+'</b><span>'+esc(t[1])+' · 눌러서 체크판</span></span>'+
+        '<span class="r">↗</span></button>';}).join('')
     :'<div class="empty">오늘 할 일을 다 하셨습니다.</div>';
 
   /* 기한 지난 것 */
@@ -1753,9 +1768,10 @@ function vToday(){
   if(od.length){
     h+='<div class="sec">기한이 지났습니다 <i>'+od.length+'</i></div>';
     h+=od.map(function(c){
-      return '<button type="button" class="row bad" onclick="dToast(\'앱 안에서 열면 고객 365일이 열립니다\')">'+
-        '<span class="tm">⏰</span><span class="m"><b>'+esc(c.name)+'</b><span>'+esc(c.plan)+'</span></span>'+
-        '<span class="r">'+ago(c.due)+'일</span></button>';}).join('');
+      return '<button type="button" class="row bad" onclick="dCe(\''+c.id+'\')">'+
+        '<span class="tm">⏰</span><span class="m"><b>'+esc(c.name)+'</b><span>'+esc(c.plan)+' · 눌러서 고치기</span></span>'+
+        '<span class="r">'+ago(c.due)+'일</span></button>'+
+        (CE.open===c.id?ceHtml(c):'');}).join('');
   }
 
   /* 컴퓨터에서 마저 할 것 — 새 칸 없이, 지금 자료로 계산한다 */
@@ -1763,17 +1779,19 @@ function vToday(){
   if(rest.length){
     h+='<div class="sec">컴퓨터에서 마저 할 것 <i>'+rest.length+'</i></div>';
     h+=rest.map(function(x){
-      return '<button type="button" class="row" onclick="dToast(\'컴퓨터에서 DB 통합 CRM 을 열면 이것부터 뜹니다\')">'+
+      return '<button type="button" class="row" onclick="dGo(\''+(x.go||'crm')+'\')">'+
         '<span class="tm">💻</span><span class="m"><b>'+esc(x.n)+'</b><span>'+esc(x.s)+'</span></span>'+
-        '<span class="r">›</span></button>';}).join('');
+        '<span class="r">↗</span></button>';}).join('');
   }
 
   /* 번호가 없으면 폰 판은 그 사람에게 아무것도 못 한다.
      몇 건인지 스스로 세어 알려 준다 — 컴퓨터에서 채우면 바로 걸린다. */
   var noP=R.db.filter(function(x){return !x.phone&&x.stage!=='증권전달';}).length;
   if(noP)h+='<div class="nop">번호가 없는 DB <b>'+noP+'건</b> · 전체 '+R.db.length+'건 가운데'+
-    '<span>번호가 없으면 폰에서 걸 수 없습니다. 컴퓨터에서 채우면 그날부터 명단에 올라옵니다.</span></div>';
+    '<span>번호가 없으면 폰에서 걸 수 없습니다. 채우면 그날부터 명단에 올라옵니다.</span>'+
+    goBtn('crm','DB 통합 CRM 에서 번호 채우기')+'</div>';
 
+  h+=goBar();
   h+='<div class="note">'+(rows().live
     ? '숫자는 <b>DB 통합 CRM · TFA 업무관리</b> 가 보는 그 기록입니다. 저장하면 CRM 에 그대로 남습니다.'
     : '<b>미리보기</b>입니다 — 전화는 걸리지 않고, 기록은 이 기기에만 남습니다. 앱 안에 넣으면 진짜 명단으로 돕니다.')+
@@ -1891,8 +1909,8 @@ function restList(){
   }
   for(i=0;i<R.db.length;i++){
     var r=R.db[i];
-    if(r.res==='상담'&&!cardOf(r))out.push({n:r.name,s:'상담까지 갔는데 고객 365일에 없습니다 — 넘기기'});
-    if(r.stage==='계약완료')out.push({n:r.name,s:'계약완료인데 증권 전달 기록이 없습니다'});
+    if(r.res==='상담'&&!cardOf(r))out.push({n:r.name,s:'상담까지 갔는데 고객 365일에 없습니다 — 넘기기',go:'crm'});
+    if(r.stage==='계약완료')out.push({n:r.name,s:'계약완료인데 증권 전달 기록이 없습니다',go:'crm'});
   }
   return out.slice(0,8);
 }
@@ -2089,9 +2107,48 @@ function vList(){
   h+=l.length?l.map(function(x){return pRow(x,v);}).join('')
     :'<div class="empty">걸리는 사람이 없습니다.</div>';
   if(more)h+='<div class="empty">위에서 60명만 보입니다 — 이름이나 지역으로 좁혀 보세요.</div>';
+  h+=goBtn('crm','DB 통합 CRM 전체 열기','wide')+goBtn('clients','고객 365일 전체 열기','wide');
   h+='<div class="note"><b>🗂 365</b> 가 붙은 사람은 <b>배정 DB 와 고객 365일에 다 있는</b> 사람입니다 — 한 줄로 합쳐 두었습니다.<br>'+
      '<b>고객 365일</b> 딱지만 있는 사람은 배정 DB 에 없어 <b>번호가 없습니다</b>. 눌러서 다음 할 일·생일만 고칩니다.</div>';
   return h;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   APEX 본체로 넘어가기
+
+   폰은 빠르게 남기는 곳이고, APEX 는 자세히 하는 곳이다. 그런데 지금까지
+   폰 화면은 「컴퓨터에서 하세요」 라고 <b>말만 하고 끝냈다.</b>
+   말만 하면 아무도 안 간다. 눌러서 그 화면이 바로 열려야 이어진 것이다.
+
+   앱 안(iframe)이면 부모에게 그 판을 열라고 한다 — 새로 뜨지 않는다.
+   앱 밖(폰 홈 화면)이면 주소로 넘어간다. APEX 가 ?go=crm 을 이미 읽는다.
+   ══════════════════════════════════════════════════════════════════ */
+var APEX={
+  crm:['🗄️','DB 통합 CRM'],   clients:['🗂️','고객 365일'],
+  airep:['🧭','TFA 업무관리'], ckboard:['📋','실행 체크판'],
+  fact_find:['📝','상담카드·팩트파인딩'], bojang:['📑','AI 보장분석'],
+  brain:['🧠','윤시현의 두뇌'], news_live:['🌐','고객에게 전할 뉴스']
+};
+window.dGo=function(tab){
+  var p=P();
+  if(p&&typeof p.go==='function'){
+    try{p.go(tab);dToast((APEX[tab]?APEX[tab][1]:tab)+' 을 엽니다');return;}catch(e){}
+  }
+  try{location.href='index.html?go='+encodeURIComponent(tab);}catch(e){dToast('열지 못했습니다');}
+};
+function goBtn(tab,label,cls){
+  var a=APEX[tab]||['↗',tab];
+  return '<button type="button" class="gox'+(cls?(' '+cls):'')+'" onclick="dGo(\''+tab+'\')">'+
+    a[0]+' '+esc(label||(a[1]+' 열기'))+' <i>↗</i></button>';
+}
+/* 오늘 판 맨 아래 — 폰에서 못 하는 것들로 가는 문 */
+function goBar(){
+  return '<div class="sec">여기서 이어서 하기 <span style="margin-left:auto;font-weight:400;font-size:10.5px">APEX 가 열립니다</span></div>'+
+    '<div class="gogrid">'+
+    ['crm','clients','fact_find','bojang','ckboard','airep'].map(function(k){
+      return '<button type="button" class="gocard" onclick="dGo(\''+k+'\')">'+
+        '<span class="ic">'+APEX[k][0]+'</span><b>'+esc(APEX[k][1])+'</b></button>';
+    }).join('')+'</div>';
 }
 
 /* ── 손이 닿는 곳 ── */

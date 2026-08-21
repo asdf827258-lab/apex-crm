@@ -182,6 +182,17 @@ const ai = http.createServer((req, res) => {
   ok(/AI 가 이 폰에 연결되어 있지 않습니다/.test(w), 'AI 가 없으면 없다고 말한다 — 조용히 아무것도 안 하지 않는다');
   ok(await p2.locator('.warnbox a[href="./index.html"]').count() >= 1, '어디로 가면 되는지 단추가 붙는다');
 
+  /* 일곱 · 팀장이 손댈 것은 APEX 로 이어지는가 */
+  console.log('\nAPEX 본체로 이어지는가');
+  await p4.click('#tbNow'); await p4.waitForTimeout(350);
+  ok(await p4.locator('.gogrid .gocard').count() === 6, '오늘 판 아래에 「여기서 이어서 하기」 여섯 칸이 있다');
+  const tc = await p4.locator('.gogrid .gocard b').allInnerTexts();
+  for (const x of ['조직도', '성장판', 'DB 통합 CRM'])
+    ok(tc.indexOf(x) >= 0, '이어서 갈 곳: ' + x);
+  await p4.evaluate(() => window.tApex('org'));
+  await p4.waitForTimeout(500);
+  ok(/\?go=org/.test(p4.url()), '누르면 APEX 조직도가 바로 열린다');
+
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 

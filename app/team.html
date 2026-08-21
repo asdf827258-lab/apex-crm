@@ -194,6 +194,12 @@ body{font-family:var(--f);
 .fbi .cp{grid-column:3;grid-row:1;align-self:start;border:1px solid var(--hair);background:var(--sunk);
   color:var(--ink2);border-radius:9px;padding:6px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
   white-space:nowrap;font-family:var(--f)}
+.gogrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.gocard{border:1px solid var(--hair);background:var(--card);border-radius:13px;padding:12px 5px 10px;
+  display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--ink2)}
+.gocard .ic{font-size:20px;line-height:1}
+.gocard b{font-family:var(--f);font-weight:800;font-size:10.5px;text-align:center;line-height:1.35;
+  letter-spacing:-.3px}
 .tabs{position:absolute;left:0;right:0;bottom:0;display:flex;background:var(--card);
   border-top:1px solid var(--hair);padding:5px 8px calc(env(safe-area-inset-bottom) + 7px);gap:4px}
 .tab{flex:1;border:0;background:transparent;padding:9px 4px 7px;cursor:pointer;border-radius:13px;
@@ -444,7 +450,7 @@ function paint(){
   if(R.none){
     h='<div class="warnbox"><b>팀장 화면입니다</b><br>'+
       '지금 계정으로 이끄는 팀이 없습니다. 조직도에서 팀장으로 지정되면 여기가 열립니다.'+
-      '<a href="./index.html">APEX 에서 조직도 열기</a></div>';
+      '<a href="./index.html?go=org">APEX 에서 조직도 열기</a></div>';
   }else if(TAB==='now')h=vNow();
   else if(TAB==='who')h=vWho();
   else h=vFb();
@@ -493,6 +499,7 @@ function vNow(){
         '<span class="n"><b>'+m.d+'</b><span>오늘</span></span></div>';
     }).join('')
    :'<div class="empty">아직 아무도 시작하지 않았습니다.<br>피드백 판에서 한 줄 보내 보세요.</div>';
+  h+=goBar();
   h+='<div class="note">숫자는 <b>DB 통합 CRM</b> 이 쌓고 있는 그 기록입니다 — 팀원이 폰에서 남긴 것이 여기 바로 올라옵니다. '+
      '새로 적는 표는 없습니다.</div>';
   return h;
@@ -778,6 +785,27 @@ function vFb(){
      (D().live?'<br>오늘 쓴 것은 서버에 하루 한 줄로 남습니다 — 컴퓨터에서도 그대로 보입니다.':'')+
      '</div>';
   return h;
+}
+
+/* ── APEX 본체로 넘어가기 ──────────────────────────────────────
+   폰에서 팀을 「보고」, APEX 에서 「손댄다」. 조직도·목표·코칭 기록은
+   여기서 만들지 않는다 — 이미 APEX 에 있다. 눌러서 그리로 간다.  */
+var APEX={org:['🏢','조직도'],teamhub:['📋','실행 체크판'],growboard:['📈','성장판'],
+          airep:['🧭','TFA 업무관리'],crm:['🗄️','DB 통합 CRM'],ai_org:['🤖','AI 조직 라이브']};
+window.tApex=function(tab){
+  var p=P();
+  if(p&&typeof p.go==='function'){
+    try{p.go(tab);tToast((APEX[tab]?APEX[tab][1]:tab)+' 을 엽니다');return;}catch(e){}
+  }
+  try{location.href='index.html?go='+encodeURIComponent(tab);}catch(e){tToast('열지 못했습니다');}
+};
+function goBar(){
+  return '<div class="sec">여기서 이어서 하기 <span style="margin-left:auto;font-weight:400;font-size:10.5px">APEX 가 열립니다</span></div>'+
+    '<div class="gogrid">'+
+    ['org','teamhub','growboard','airep','crm','ai_org'].map(function(k){
+      return '<button type="button" class="gocard" onclick="tApex(\''+k+'\')">'+
+        '<span class="ic">'+APEX[k][0]+'</span><b>'+esc(APEX[k][1])+'</b></button>';
+    }).join('')+'</div>';
 }
 
 /* ── 손이 닿는 곳 ───────────────────────────────────────────── */

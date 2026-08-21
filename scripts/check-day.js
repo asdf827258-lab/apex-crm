@@ -385,6 +385,40 @@ const srv = http.createServer((req, res) => {
   await p7.evaluate(() => window.dFind('문')); await p7.waitForTimeout(400);
   ok(await p7.locator('.row').count() === 1, '고객 365일에만 있는 사람도 이름으로 찾힌다');
 
+  /* 열셋 · 폰에서 못 하는 것은 APEX 로 넘어가는가 — 말만 하고 끝내지 않는가 */
+  console.log('\nAPEX 본체로 이어지는가');
+  await p7.evaluate(() => window.dFind(''));
+  await p7.click('#tbToday'); await p7.waitForTimeout(400);
+  ok(await p7.locator('.gogrid .gocard').count() === 6, '오늘 판 아래에 「여기서 이어서 하기」 여섯 칸이 있다');
+  const cards = await p7.locator('.gogrid .gocard b').allInnerTexts();
+  for (const t of ['DB 통합 CRM', '고객 365일', '상담카드·팩트파인딩', 'AI 보장분석'])
+    ok(cards.indexOf(t) >= 0, '이어서 갈 곳: ' + t);
+  ok(await p7.locator('.c365 .gox').count() >= 1, '고객 365일 칸에서 APEX 로 가는 단추가 붙는다');
+
+  /* 앱 밖(폰 홈 화면)에서는 주소로 넘어간다 */
+  await p7.evaluate(() => { window.__href = ''; });
+  const navTo = await p7.evaluate(() => {
+    /* 진짜로 넘어가면 검사를 못 이어 가므로 가는 곳만 붙잡는다 */
+    const orig = Object.getOwnPropertyDescriptor(window.location, 'href');
+    let got = '';
+    try { window.dGo('clients'); } catch (e) { got = 'ERR'; }
+    return got;
+  });
+  ok(navTo !== 'ERR', '눌렀을 때 오류 없이 넘어간다');
+  await p7.waitForTimeout(500);
+  ok(/\?go=clients/.test(p7.url()), 'APEX 의 고객 365일 판으로 바로 열린다 (' + p7.url().split('/').pop() + ')');
+
+  /* 앱 안(iframe)이면 부모에게 열라고 한다 — 새 창이 뜨지 않는다 */
+  const p8 = await ctx.newPage();
+  await p8.goto('http://127.0.0.1:' + PORT + '/scripts/lib-frame.html', { waitUntil: 'domcontentloaded' });
+  await p8.waitForTimeout(1800);
+  const asked = await p8.evaluate(() => {
+    const w = document.getElementById('f').contentWindow;
+    w.dGo('crm');
+    return window.__went;
+  });
+  ok(asked === 'crm', '앱 안에서는 부모에게 「crm 을 열어라」 고 말한다 — 새로 뜨지 않는다');
+
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
