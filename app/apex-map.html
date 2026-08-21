@@ -3980,6 +3980,45 @@ function whyFailed(e){
   return '불러오지 못했습니다 — ' + m;
 }
 
+/* ══ 무엇을 물었는지 남긴다 ═══════════════════════════════
+   지금 갈래 여섯과 순서표 스물두 가지는 「이럴 것이다」 로 지은 것이다.
+   실제로 무엇이 막히는지는 한 달치 질문이 쌓여야 보인다.
+   그때 갈래를 다시 짜면 훨씬 정확해진다.
+
+   남기는 것: 물어본 말 · 무엇으로 답했는지 · 언제.
+   남기지 않는 것: 자비스가 쓴 답 전문(길고, 다시 만들 수 있다).
+   CRM 안에서 열렸으면 회사 표(suggestions, kind='jarvis_q')에 같이 넣는다 —
+   새 표를 만들지 않는다. 밖에서 열었으면 이 브라우저에만 쌓인다. */
+function logAsk(q, res, how){
+  var row = {q:String(q).slice(0,200), how:how || '', at:new Date().toISOString(),
+             steps:(res && res.steps ? res.steps.map(function(s){ return s.id; }).slice(0,6) : [])};
+  try {
+    var prev = JSON.parse(LS.get('map_asks','[]') || '[]');
+    if (!prev.length || prev[prev.length-1].q !== row.q){
+      prev.push(row);
+      if (prev.length > 300) prev = prev.slice(-300);
+      LS.set('map_asks', JSON.stringify(prev));
+    }
+  } catch(e){}
+  /* 회사 표에도 한 줄 — 실패해도 조용히 넘어간다. 물어본 사람 일을 막으면 안 된다. */
+  try {
+    if (!inCrm) return;
+    var P = window.parent;
+    var sb = (typeof P.osClient === 'function') ? P.osClient() : null;
+    var me = (P.OS && P.OS.profile && P.OS.profile.id) || '';
+    if (!sb || !me) return;
+    sb.from('suggestions').insert({
+      member_id: me,
+      author_name: (P.OS.profile && P.OS.profile.name) || '',
+      kind: 'jarvis_q',
+      title: row.q.slice(0, 120),
+      body: how || '',
+      context: {source:'map', steps:row.steps, engine:getEngine(), at:row.at},
+      status: 'new'
+    }).then(function(){}, function(){});
+  } catch(e){}
+}
+
 /* ── 물어보기 ── */
 function ask(raw){
   var q = (raw || '').replace(/^\s+|\s+$/g,'');
@@ -3989,19 +4028,23 @@ function ask(raw){
   document.getElementById('ask').value = '';
   document.getElementById('jSay').value = '';
 
-  if (!hasAI()){ addJ(offline(q)); return; }
+  if (!hasAI()){ var r0 = offline(q); logAsk(q, r0, '지도'); addJ(r0); return; }
 
   busy = true;
   addThinking();
   (getEngine() === 'gemini' ? askGemini(q) : askClaude(q)).then(function(res){
     busy = false;
-    if (!res.answer && !(res.steps || []).length) res = offline(q);
+    var how = getEngine();
+    if (!res.answer && !(res.steps || []).length){ res = offline(q); how = '지도(AI 빈답)'; }
+    logAsk(q, res, how);
     addJ(res);
   }).catch(function(e){
     busy = false;
     chatLog.pop();
-    addJ({answer:whyFailed(e) + '\n\n대신 지도에 담긴 것으로 답해 드리겠습니다.', steps:[], next:[]}, true);
-    addJ(offline(q));
+    var r1 = offline(q);
+    logAsk(q, r1, '지도(AI 실패)');
+    addJ({answer:whyFailed(e) + ' 대신 지도에 담긴 것으로 답해 드리겠습니다.', steps:[], next:[]}, true);
+    addJ(r1);
   });
 }
 

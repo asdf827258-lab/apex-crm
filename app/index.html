@@ -27238,7 +27238,10 @@ function vcLoad(){
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){VOICE.err='서버에 연결되어 있지 않습니다.';vcPaint();return;}
   VOICE.busy=true;vcPaint();
+  /* 자비스가 받아 적은 질문(kind='jarvis_q')은 건의가 아니다 — 같은 표에 쌓이지만
+     여기 목록에는 안 섞는다. 섞이면 진짜 건의가 파묻힌다. */
   sb.from('suggestions').select('id,member_id,author_name,kind,title,body,status,reply,created_at')
+    .neq('kind','jarvis_q')
     .order('created_at',{ascending:false}).limit(200).then(function(r){
     VOICE.busy=false;
     if(r.error){
