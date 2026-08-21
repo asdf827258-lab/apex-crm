@@ -298,6 +298,11 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
 .st-b a:hover{background:#DBE7FF}
 .st-b button{background:#fff; color:#5A6B85; border-color:#C9D3E4}
 .st-b button:hover{color:var(--ink)}
+.j-real{
+  margin-top:10px; background:#FFF8EC; border:1px solid #F5DCB0; border-left:4px solid #C8A24A;
+  border-radius:11px; padding:9px 11px; font-size:12.5px; color:#5A4522; line-height:1.65;
+}
+.j-real b{display:block; font-size:11.5px; color:#8A6A20; margin-bottom:3px}
 .j-next{margin-top:10px; background:#F3F8FF; border:1px solid #D5E3FA; border-radius:11px; padding:9px 11px}
 .j-next b{display:block; font-size:11.5px; color:var(--blue); margin-bottom:4px}
 .j-next div{font-size:12.5px; color:#42536E; line-height:1.6; padding-left:12px; text-indent:-12px}
@@ -380,6 +385,7 @@ a.leaf.now{background:#BFD5FF; outline:2px solid var(--blue); outline-offset:1px
   <div class="j-top">
     <span class="lamp"></span>
     <span class="t">자비스<small id="jMode">지도에 담긴 것만 아는 상태입니다</small></span>
+    <button class="j-x" id="jVoice" title="읽어 주기 켜고 끄기">🔊</button>
     <button class="j-x" id="jX" title="닫기">×</button>
   </div>
   <div id="jLog"></div>
@@ -2219,7 +2225,8 @@ var DATA = {
    ],
    "end": "여기까지가 한 바퀴의 ①~③ 입니다.",
    "k": "new",
-   "next": "appt"
+   "next": "appt",
+   "real": "명단이 없어서 안 되는 경우보다, 받은 명단을 3일 안에 안 걸어서 죽는 경우가 많습니다. 새로 뿌리기 전에 지난 명단부터 보세요."
   },
   {
    "q": "전화는 되는데 약속이 안 잡혀요",
@@ -2253,7 +2260,8 @@ var DATA = {
    ],
    "end": "약속이 잡히면 ④ 잡는다 로 넘어간 것입니다.",
    "k": "appt",
-   "next": "close"
+   "next": "close",
+   "real": "약속이 안 잡히는 건 대개 말솜씨가 아니라 전화한 시각입니다. 늘 같은 시간대에만 걸고 있지 않은지 보세요."
   },
   {
    "q": "상담은 했는데 계약이 안 돼요",
@@ -2296,7 +2304,8 @@ var DATA = {
    ],
    "end": "제안하고 7일 안에 한 번 더 확인하세요.",
    "k": "close",
-   "next": "jeungkwon"
+   "next": "jeungkwon",
+   "real": "비싸서 안 하는 경우는 생각보다 드뭅니다. 대개 고객이 무엇을 걱정하는지 못 들은 것입니다."
   },
   {
    "q": "기존 고객 보장을 점검해 주고 싶다",
@@ -2329,7 +2338,8 @@ var DATA = {
    ],
    "end": "고객 365일에 저장해 두면 다음에 이어집니다.",
    "k": "bojang",
-   "next": "claim"
+   "next": "claim",
+   "real": "보장분석은 파는 자료가 아닙니다. 안 바꿔도 된다는 결론이 나오면 그렇게 말해야 다음이 있습니다."
   },
   {
    "q": "보험금 청구를 도와야 해요",
@@ -2364,7 +2374,8 @@ var DATA = {
    ],
    "end": "지급까지 가야 끝입니다.",
    "k": "claim",
-   "next": "news"
+   "next": "news",
+   "real": "청구는 돈이 안 되는 일처럼 보이지만, 소개가 나오는 자리는 거의 여기입니다."
   },
   {
    "q": "약관·보장 내용이 헷갈려요",
@@ -2399,7 +2410,8 @@ var DATA = {
    ],
    "end": "찾은 문장을 그대로 고객에게 읽어 주세요.",
    "k": "yakgwan",
-   "next": "bojang"
+   "next": "bojang",
+   "real": "약관 문장을 읽어 주면 믿음이 생깁니다. 다만 확답은 보험사 심사가 합니다 — 「제가 보기엔」 을 빼지 마세요."
   },
   {
    "q": "이 사람 가입이 될지 모르겠어요",
@@ -2434,7 +2446,8 @@ var DATA = {
    ],
    "end": "미리 걸러야 나중에 안 뒤집힙니다.",
    "k": "underwrite",
-   "next": "close"
+   "next": "close",
+   "real": "미리 거르지 않고 넣으면 거절 기록이 남습니다. 그다음엔 다른 회사도 어려워집니다."
   },
   {
    "q": "사장님(법인) 상담을 하고 싶다",
@@ -2473,7 +2486,8 @@ var DATA = {
    ],
    "end": "순서를 바꾸면 상품 파는 사람이 됩니다.",
    "k": "biz",
-   "next": "inherit"
+   "next": "inherit",
+   "real": "사장님은 보험 이야기를 하러 나오지 않습니다. 첫 자리에서 보험이 먼저 나오면 다음 자리가 없습니다."
   },
   {
    "q": "노후·연금 상담을 하고 싶다",
@@ -2510,7 +2524,8 @@ var DATA = {
    ],
    "end": "계산해 본 숫자만 꺼내세요.",
    "k": "pension",
-   "next": "close"
+   "next": "close",
+   "real": "연금은 수익률로 설득하면 반드시 비교당합니다. 「언제부터 얼마」 하나로 좁히세요."
   },
   {
    "q": "아이 교육자금을 준비해 주고 싶다",
@@ -2539,7 +2554,8 @@ var DATA = {
    ],
    "end": "지원금만으로 부족한 만큼이 준비할 돈입니다.",
    "k": "edu",
-   "next": "cash"
+   "next": "cash",
+   "real": "국가 지원금만으로 유학은 안 됩니다. 그 사실을 먼저 말해야 나머지 이야기가 먹힙니다."
   },
   {
    "q": "상속·증여를 물어보십니다",
@@ -2572,7 +2588,8 @@ var DATA = {
    ],
    "end": "세금 숫자가 나오면 보험 이야기가 쉬워집니다.",
    "k": "inherit",
-   "next": "biz"
+   "next": "biz",
+   "real": "상속은 급하지 않다고 미루다 한 번에 터집니다. 세금 숫자를 눈으로 보여 주는 것 말고는 방법이 없습니다."
   },
   {
    "q": "집·대출 이야기가 나왔습니다",
@@ -2602,7 +2619,8 @@ var DATA = {
    ],
    "end": "대출부터 정리해야 보험이 안 깨집니다.",
    "k": "house",
-   "next": "cash"
+   "next": "cash",
+   "real": "대출이 남은 집은 보험보다 먼저입니다. 순서를 뒤집으면 계약이 오래 못 갑니다."
   },
   {
    "q": "돈이 어디로 새는지 모르겠답니다",
@@ -2634,7 +2652,8 @@ var DATA = {
    ],
    "end": "새는 곳을 막고 나서 새 보험을 이야기하세요.",
    "k": "cash",
-   "next": "pension"
+   "next": "pension",
+   "real": "여유가 없다는 말은 대개 사실입니다. 새 보험을 얹지 말고 새는 곳부터 막으세요."
   },
   {
    "q": "오늘 뭐부터 해야 할지 모르겠어요",
@@ -2667,7 +2686,8 @@ var DATA = {
    ],
    "end": "이거 셋이면 하루가 끝납니다.",
    "k": "today",
-   "next": "appt"
+   "next": "appt",
+   "real": "할 일이 많아서 못 하는 게 아닙니다. 오늘 걸 사람이 정해지지 않아서 못 하는 것입니다."
   },
   {
    "q": "증권 전달이 밀렸어요",
@@ -2695,7 +2715,8 @@ var DATA = {
    ],
    "end": "증권은 나오는 즉시 전달입니다.",
    "k": "jeungkwon",
-   "next": "bojang"
+   "next": "bojang",
+   "real": "증권 전달은 끝이 아니라 사후관리의 시작입니다. 여기서 끊기면 소개도 같이 끊깁니다."
   },
   {
    "q": "계약을 바꾸거나 정리해야 해요",
@@ -2725,7 +2746,8 @@ var DATA = {
    ],
    "end": "실제 접수는 보험사 기준을 따릅니다.",
    "k": "endorse",
-   "next": "jeungkwon"
+   "next": "jeungkwon",
+   "real": "해지하겠다는 말은 대개 돈 문제입니다. 해지 말고 줄이는 길부터 보여 주세요."
   },
   {
    "q": "자동차 사고가 났대요",
@@ -2750,7 +2772,8 @@ var DATA = {
    ],
    "end": "숫자를 알고 통화하면 흔들리지 않습니다.",
    "k": "car",
-   "next": "claim"
+   "next": "claim",
+   "real": "과실은 우리가 정하지 않습니다. 숫자를 알고 통화하면 흔들리지 않을 뿐입니다."
   },
   {
    "q": "고객에게 보낼 이야깃거리가 없어요",
@@ -2784,7 +2807,8 @@ var DATA = {
    ],
    "end": "명분이 있으면 전화가 쉬워집니다.",
    "k": "news",
-   "next": "new"
+   "next": "new",
+   "real": "빈손으로 거는 전화가 제일 안 됩니다. 명분 하나만 들고 거세요."
   },
   {
    "q": "글·영상으로 나를 알리고 싶다",
@@ -2823,7 +2847,8 @@ var DATA = {
    ],
    "end": "심의필터를 지나지 않은 글은 올리지 마세요.",
    "k": "content",
-   "next": "new"
+   "next": "new",
+   "real": "한 달 하고 그만두면 안 한 것과 같습니다. 주 한 번으로 낮춰서라도 이어가세요."
   },
   {
    "q": "우리 팀이 어떻게 돌아가는지 보고 싶다",
@@ -2862,7 +2887,8 @@ var DATA = {
    ],
    "end": "숫자가 먼저, 잔소리는 나중입니다.",
    "k": "team",
-   "next": "today"
+   "next": "today",
+   "real": "숫자가 나빠진 뒤에 사람을 부르면 늦습니다. 매일 취합이 밀리는 것부터 보세요."
   },
   {
    "q": "APEX 를 처음 써요",
@@ -2896,7 +2922,8 @@ var DATA = {
    ],
    "end": "하루만 돌려 보면 감이 옵니다.",
    "k": "start",
-   "next": "today"
+   "next": "today",
+   "real": "다 배우고 시작하려면 못 씁니다. 오늘 통화 하나를 기록해 보는 것부터입니다."
   },
   {
    "q": "경제 이야기로 상담을 열고 싶다",
@@ -2937,7 +2964,8 @@ var DATA = {
    ],
    "end": "투자 권유가 아니라 정리라는 점을 지키세요.",
    "k": "econ",
-   "next": "pension"
+   "next": "pension",
+   "real": "경제 이야기는 여는 말이지 파는 말이 아닙니다. 투자 권유로 넘어가면 규정에 걸립니다."
   }
  ]
 };
@@ -3222,6 +3250,9 @@ var LS = {
    모델은 지도 전용으로 따로 둔다(CRM 쪽 모델이 이 기능을 못 쓰는 것일 수 있어서). */
 function getKey(){ return (LS.get('apikey','') || '').replace(/^\s+|\s+$/g,''); }
 function getProxy(){ return (LS.get('proxy','') || '').replace(/^\s+|\s+$/g,''); }
+/* 회사 서버에 공유 토큰이 걸려 있으면 그것도 같이 보내야 한다.
+   이걸 안 보내면 서버가 401 로 막고, 앱은 「키가 틀렸나」 하고 헤맨다. */
+function getAppToken(){ return (LS.get('apptoken','') || '').replace(/^\s+|\s+$/g,''); }
 function getModel(){ return LS.get('map_model','claude-opus-5'); }
 function hasAI(){ return !!(getKey() || getProxy()); }
 
@@ -3237,10 +3268,68 @@ function modeLabel(){
   }
 }
 
+/* ══ 목소리 ═══════════════════════════════
+   자비스는 읽어 주는 편이 낫다 — 운전 중이거나 고객 앞이라 화면을 못 볼 때가 있다.
+   같은 한국어라도 또렷한 목소리가 있다. CRM 이 쓰는 차례를 그대로 따른다. */
+var VOICE_PREF = ['Google 한국의','Google 한국어','Google Korean','Yuna','유나',
+                  'SunHi','선히','Heami','혜미','InJoon','인준','Microsoft'];
+var TTS = {on:(LS.get('map_voice','1') === '1'), v:null};
+function ttsVoices(){
+  try { return window.speechSynthesis ? (window.speechSynthesis.getVoices() || []) : []; }
+  catch(e){ return []; }
+}
+function ttsPick(){
+  var all = ttsVoices();
+  var ko = all.filter(function(v){ return /^ko/i.test(v.lang || ''); });
+  var i, j;
+  for (j = 0; j < VOICE_PREF.length; j++)
+    for (i = 0; i < ko.length; i++)
+      if ((ko[i].name || '').indexOf(VOICE_PREF[j]) >= 0) return ko[i];
+  return ko.length ? ko[0] : null;
+}
+/* 읽을 때는 이모지·기호를 걷어낸다 — 「🎓」 를 소리로 읽으면 우스워진다 */
+function ttsClean(s){
+  return String(s || '')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2460}-\u{24FF}]/gu, ' ')
+    .replace(/[「」『』·▸▾›└]/g, ' ')
+    .replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+}
+function speak(text){
+  if (!TTS.on || !window.speechSynthesis) return;
+  var t = ttsClean(text);
+  if (!t) return;
+  try {
+    window.speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(t.slice(0, 400));
+    if (!TTS.v) TTS.v = ttsPick();
+    if (TTS.v){ u.voice = TTS.v; u.lang = TTS.v.lang; } else { u.lang = 'ko-KR'; }
+    u.rate = 1.0; u.pitch = 1.03; u.volume = 1;
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+}
+function ttsStop(){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+if (window.speechSynthesis){
+  try { window.speechSynthesis.onvoiceschanged = function(){ TTS.v = ttsPick(); }; } catch(e){}
+  TTS.v = ttsPick();
+}
+
 function openJ(){ jarvis.classList.add('on'); }
 document.getElementById('jX').onclick = function(){
+  ttsStop();
   jarvis.classList.remove('on'); clearLight(); animate();
 };
+(function(){
+  var b = document.getElementById('jVoice');
+  function paint(){ b.textContent = TTS.on ? '🔊' : '🔇'; b.style.opacity = TTS.on ? '1' : '.5'; }
+  b.onclick = function(){
+    TTS.on = !TTS.on;
+    LS.set('map_voice', TTS.on ? '1' : '0');
+    paint();
+    if (!TTS.on) ttsStop();
+    else speak('네, 듣고 있습니다.');
+  };
+  paint();
+})();
 
 function addMe(text){
   var d = document.createElement('div');
@@ -3276,6 +3365,9 @@ function addJ(res, isErr){
     });
     h += '</ol>';
   }
+  if (res.real){
+    h += '<div class="j-real"><b>솔직히 말씀드리면</b>' + esc(res.real) + '</div>';
+  }
   var nx = (res.next || []).filter(function(x){ return x; });
   if (nx.length){
     h += '<div class="j-next"><b>그다음에 하면 좋은 것</b>';
@@ -3304,6 +3396,25 @@ function addJ(res, isErr){
   curSteps = steps; curAt = -1;
   light(steps);
   if (steps.length) goStep(0);
+
+  /* 읽어 준다 — 답, 순서 셋, 그리고 짚어 주는 말까지 */
+  if (!isErr){
+    var say = res.answer || '';
+    if (steps.length){
+      /* 같은 화면의 다른 칸을 이어 쓰는 순서가 많다. 소리로 읽을 때
+         「재무설계 계산기, 재무설계 계산기」 하면 우습다 — 칸 이름으로 읽는다. */
+      var names = [], last = '';
+      steps.forEach(function(s){
+        var kan = /「([^」]+)」/.exec(s.do || '');
+        var nm = kan ? (kan[1] + ' 칸') : ((MENU[s.id] && MENU[s.id].n) || s.id);
+        if (nm !== last){ names.push(nm); last = nm; }
+      });
+      say += ' 순서는 ' + names.slice(0,3).join(', ') +
+        (names.length > 3 ? (' 해서 모두 ' + names.length + '단계입니다.') : ' 입니다.');
+    }
+    if (res.real) say += ' 솔직히 말씀드리면, ' + res.real;
+    speak(say);
+  }
 }
 
 /* ── 키 없이도 아는 것: 지도 안의 자료로 답한다 ── */
@@ -3394,7 +3505,7 @@ function offline(q){
   var r = findRecipe(q);
   if (r){
     var nx = recipeByKey(r.next);
-    return {answer:r.why, steps:r.steps,
+    return {answer:r.why, steps:r.steps, real:r.real || '',
       next:[r.end].concat(nx ? ['이게 풀리면 다음은 — ' + nx.q] : [])};
   }
   /* 방향 묻기 */
@@ -3432,9 +3543,10 @@ var SCHEMA = {
     steps:{type:'array', items:{type:'object',
       properties:{id:{type:'string'}, do:{type:'string'}},
       required:['id','do'], additionalProperties:false}},
+    real:{type:'string'},
     next:{type:'array', items:{type:'string'}}
   },
-  required:['answer','steps','next'], additionalProperties:false
+  required:['answer','steps','real','next'], additionalProperties:false
 };
 
 function sysPrompt(){
@@ -3446,6 +3558,11 @@ function sysPrompt(){
   L.push('- answer: 무엇을 왜 그렇게 하면 되는지 3~6줄로. 인사말·머리말 없이 바로 본론.');
   L.push('- steps: 실제로 열어야 할 화면을 순서대로. 아래 목록에 있는 id 만 씁니다. 지어내지 않습니다. 화면을 열 필요가 없는 질문이면 빈 배열.');
   L.push('- steps[].do: 그 화면에서 무엇을 하는지 한 줄로.');
+  L.push('- real: 듣기 좋은 말 말고, 실제로 무엇이 문제인지 한두 줄로 짚습니다. 이 자리가 제일 중요합니다.');
+  L.push('  · 적어 주신 말에서 원인을 짐작해 말합니다 — 「대개 이런 경우는 …입니다」.');
+  L.push('  · 방법이 틀렸다고 보이면 그렇게 말합니다. 시키는 대로만 하지 않습니다.');
+  L.push('  · 화면을 여는 것으로 안 풀리는 문제(시간대·말투·순서·고객이 안 급한 것)면 그 사실을 말합니다.');
+  L.push('  · 근거 없는 단정은 하지 않습니다. 짐작이면 짐작이라고 말합니다.');
   L.push('- next: 이 일이 끝난 뒤에 이어서 하면 좋은 것 1~3개. 방향을 짚어 주는 자리입니다.');
   L.push('- 모르는 것은 모른다고 말합니다. 화면 안쪽의 세부 조작은 목록의 설명 이상으로는 지어내지 않습니다.');
   L.push('- 반드시 JSON 하나만 출력합니다. 다른 글자는 붙이지 않습니다.');
@@ -3468,9 +3585,11 @@ function sysPrompt(){
     if (m.k && m.k.length) L.push(id + ' 안 ▸ ' + m.k.join(' / '));
   });
   L.push('');
-  L.push('## 자주 나오는 상황과 이미 정해 둔 순서 (참고. 상황이 다르면 새로 짜도 됩니다)');
+  L.push('## 자주 나오는 상황 · 정해 둔 순서 · 윤시현이 짚는 말');
+  L.push('(순서는 참고입니다. 상황이 다르면 새로 짜도 됩니다. 짚는 말의 결을 그대로 따라 하세요.)');
   RECIPES.forEach(function(r){
-    L.push('- ' + r.q + ' → ' + r.steps.map(function(s){ return s.id; }).join(' → ') + '  (' + r.why + ')');
+    L.push('- ' + r.q + ' → ' + r.steps.map(function(s){ return s.id; }).join(' → '));
+    L.push('    왜: ' + r.why + (r.real ? ('  |  짚는 말: ' + r.real) : ''));
   });
   L.push('');
   L.push('## 지도의 여덟 가지 (왼쪽=윤시현이 만든 것, 오른쪽=고객에게 일어나는 일)');
@@ -3498,6 +3617,8 @@ function askClaude(q){
     /* 회사 서버를 거치는 경우 — 서버가 model/max_tokens/system/messages 만 넘긴다 */
     url = proxy;
     headers = {'Content-Type':'application/json'};
+    var tok = getAppToken();
+    if (tok) headers['X-App-Token'] = tok;
     body = {model:model, max_tokens:4000, system:sys, messages:chatLog};
   } else {
     url = 'https://api.anthropic.com/v1/messages';
@@ -3536,12 +3657,18 @@ function askClaude(q){
 
 function whyFailed(e){
   var m = String((e && e.message) || e || '');
+  var viaProxy = !!getProxy();
+  if (/토큰이 올바르지/.test(m) || (viaProxy && e && e.status === 401))
+    return '회사 서버가 이 화면을 못 알아봤습니다(공유 토큰). 설정 화면에서 토큰을 한 번 저장하시면 이 화면도 같이 씁니다.';
+  if (/ANTHROPIC_API_KEY/.test(m))
+    return '회사 서버에 열쇠가 안 꽂혀 있습니다. Netlify 환경변수 ANTHROPIC_API_KEY 를 확인해 주세요.';
   if (e && (e.status === 401 || e.status === 403) || /api[- ]?key|authentication|unauthorized/i.test(m))
     return '키가 맞지 않습니다. 「AI 연결」 에서 키를 다시 넣어 주세요.';
   if (e && e.status === 429 || /rate.?limit|too many/i.test(m))
     return '잠깐 너무 많이 불렀습니다. 30초쯤 뒤에 다시 물어봐 주세요.';
   if (/credit|billing|balance|insufficient/i.test(m))
-    return 'Claude 계정 잔액이 부족합니다. console.anthropic.com → Billing 에서 충전해 주세요.';
+    return (viaProxy ? '회사 Claude 계정의 잔액이 떨어졌습니다. 충전 전까지는 이 앱의 AI 기능이 다 멈춥니다.\n대표님께 알려 주세요 — console.anthropic.com → Billing.'
+                     : 'Claude 계정 잔액이 부족합니다. console.anthropic.com → Billing 에서 충전해 주세요.');
   if (e && e.status === 404 || /not.?found|no such model/i.test(m))
     return '고른 머리(모델) 이름이 맞지 않습니다. 「AI 연결」 에서 다시 골라 주세요.';
   if (/failed to fetch|networkerror|load failed/i.test(m))
