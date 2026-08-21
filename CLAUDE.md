@@ -87,6 +87,12 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 - 클래스를 넣어 주는 `xxxCss()`를 쓰는 화면은 **그 화면에서도 부른다.**
 - `el.className = '…'`로 통째 대입하지 않는다 — 다른 곳이 붙여 둔 클래스를
   잃는다. `classList.add/remove`를 쓴다.
+- **`function X(){}` 를 두고 나중에 `window.X = 다른것` 으로 덮어쓰지 않는다.**
+  덮어쓰기 전에 부르는 자리가 있으면 그때는 <b>죽은 판</b>이 돈다. 실제로
+  `renderConsultingGuide`·`renderFinalReport` 가 그랬고, 첫 그리기마다
+  `metric is not defined` 로 터진 뒤 try/catch 에 조용히 삼켜지고 있었다.
+  `check-html` 은 `function` 선언끼리만 견주므로 이것을 못 본다 —
+  `check-twins` 가 본다.
 
 ## 6. 화면 구조
 
@@ -144,7 +150,7 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 
 | 스크립트 | 보는 것 |
 |---|---|
-| `check-twins.js` | 같은 것이 두 곳에 있나 · 돈 단위 규약 · 대소문자 쌍둥이 (정적, 몇 초) |
+| `check-twins.js` | 선언 없이 쓰는 전역 · 같은 것이 두 곳에 있나 · 돈 단위 규약 · 대소문자 쌍둥이 (정적, 몇 초) |
 | `check-sane.js` | 화면에 부서진 값·터진 자릿수·되짚기 어긋남이 있나 |
 | `check-html.js` | 문법 · 함수 이름 중복 |
 | `smoke.js` | 63개 화면이 실제로 열리나 |

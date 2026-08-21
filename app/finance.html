@@ -6938,90 +6938,16 @@ function renderInherit() {
 
 
 /* ─── 상담 · 계약 전환 가이드 ─── */
-function renderConsultingGuide() {
-  const name = ($('s_name')||{value:'고객님'}).value || '고객님';
-  const age = n('age') || 35;
-  const gross = n('gross');
-  const monthlyGross = Math.round(gross/12);
-  const netSalary = Math.round(monthlyGross * 0.82);
-  const passive = n('passive'), spouse = n('spouse'), self = n('self'), other = n('other');
-  const totalIncome = netSalary + passive + spouse + self + other;
-  const essential = n('housing')+n('loan')+n('food')+n('telecom')+n('transport')+n('insurance')+n('medical')+n('edu')+n('support');
-  const choice = n('dining')+n('shopping')+n('travel')+n('choice_etc');
-  const saving = n('emerg')+n('pension')+n('irp')+n('isa')+n('taxfree')+n('general');
-  const surplus = totalIncome - essential - choice - saving;
-  const realty = n('realty');
-  const debt = n('debt');
-  const netWorth = Math.max(realty + n('pen_now') + n('severance') - debt, 0);
-  const incomeMsg = surplus >= 0 ? '월 잉여금이 있어 연금·보장·투자 우선순위를 재배치할 수 있습니다.' : '현재 현금흐름이 마이너스라 신규 투자보다 지출·보험료 구조 점검이 먼저입니다.';
-  const riskType = ($('s_itype')||{value:'중립형'}).value;
-  const html = `
-    <div class="dark-banner">
-      <div class="db-title">CONSULTING POSITIONING</div>
-      <div style="font-size:19px;font-weight:900;letter-spacing:-.04em;margin-bottom:6px">${name}님 상담의 핵심은 “상품 판매”가 아니라 “현금흐름·노후·세금 리스크를 한 장에서 보이게 하는 것”입니다.</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.72);line-height:1.7">네이버증권 연동은 종목을 권유하기 위한 장치가 아니라, 고객이 직접 가격 변동·뉴스·차트를 확인하면서 장기투자와 연금계좌의 필요성을 이해하도록 만드는 신뢰 장치입니다.</div>
-    </div>
+/* ※ 여기 있던 renderConsultingGuide(84줄) 는 <b>죽은 코드</b>였다.
+   화면을 그리는 것은 아래 renderGuide 이고, 초기화가 끝나면
+   window.renderConsultingGuide = renderGuide 로 덮어써진다.
 
-    <div class="mg m4" style="margin-bottom:12px">
-      ${metric('월 추정소득', fmtM(totalIncome), '급여·부업·배우자·기타 포함', 'blue')}
-      ${metric('월 잉여금', fmtM(surplus), incomeMsg, surplus>=0?'green':'red')}
-      ${metric('순자산 추정', fmtM(netWorth), '부동산+연금자산+퇴직금-부채', 'pur')}
-      ${metric('투자성향', riskType, '포트폴리오 상담 기준', 'gold')}
-    </div>
+   그런데 덮어쓰기 <b>전</b>에 부르는 자리가 셋 있어서, 첫 그리기에는
+   이 죽은 판이 돌다가 <b>metric is not defined</b> 로 터지고 있었다.
+   try/catch 에 싸여 있어 조용히 console.error 만 남겼다 — 그래서
+   아무도 몰랐다.
 
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 1 · OPENING</div><div class="card-title">상담 시작 3분 오프닝 스크립트</div></div><div class="card-body">
-      <div class="hb blue"><b>오프닝 멘트</b><br>“${name}님, 오늘은 보험이나 투자를 바로 권유드리는 시간이 아닙니다. 먼저 현재 돈이 어디로 흐르고, 은퇴 이후에 국민연금·건강보험료·부동산·상속까지 어떤 리스크가 생길 수 있는지 한 번에 보여드리겠습니다.”</div>
-      <div class="g3" style="margin-top:10px">
-        ${miniStep('① 숫자 확인','월 소득·지출·저축·보험료를 확인하고 ‘현재 남는 돈’을 먼저 보여줍니다.')}
-        ${miniStep('② 미래 리스크','은퇴 후 연금 부족, 건강보험료 상승, 부동산 세금, 상속세를 연결합니다.')}
-        ${miniStep('③ 선택지 제시','보험·연금·투자·부동산을 각각 따로 보지 않고 우선순위로 정리합니다.')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 2 · NAVER STOCK LINK</div><div class="card-title">네이버증권 연동 활용 상담법</div></div><div class="card-body">
-      <table class="fc-table"><thead><tr><th>상담 장면</th><th>보여줄 화면</th><th>핵심 질문</th><th>계약 연결</th></tr></thead><tbody>
-        <tr><td>고객이 투자에 관심 있음</td><td>ETF/주식 카드 클릭 → 네이버증권</td><td>“이 가격 변동을 10년 이상 버틸 수 있으세요?”</td><td>연금저축·IRP·ISA 분산 필요성</td></tr>
-        <tr><td>고객이 원금손실을 무서워함</td><td>S&P500·배당 ETF·채권 ETF 비교</td><td>“수익률보다 먼저 지켜야 할 돈은 얼마일까요?”</td><td>보장성 보험·비상금·안전자산 비중</td></tr>
-        <tr><td>고객이 종목을 묻는 경우</td><td>개별주 뉴스/차트 확인</td><td>“종목보다 중요한 건 계좌 위치와 납입 기간입니다.”</td><td>연금계좌·ISA·비과세 장기 플랜</td></tr>
-        <tr><td>고객이 노후 준비 부족</td><td>연금 시뮬레이션 탭</td><td>“국민연금만으로 월 생활비가 맞나요?”</td><td>개인연금·변액연금·연금저축 보완</td></tr>
-      </tbody></table>
-      <div class="hb navy">주의: 종목명은 투자교육·비교 예시입니다. 특정 종목 매수 권유가 아니라 고객의 위험성향, 투자기간, 세금계좌 활용 여부를 확인하는 용도로 사용하세요.</div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 3 · NEEDS DISCOVERY</div><div class="card-title">계약 니즈를 만드는 질문 12개</div></div><div class="card-body">
-      <div class="g2">
-        ${questionBox('현금흐름','1. 매월 남는 돈이 정확히 얼마인지 알고 계신가요?<br>2. 보험료·대출·저축 중 줄이거나 늘려야 할 항목을 구분해보신 적 있나요?<br>3. 소득이 3개월만 끊기면 어떤 자산부터 깨야 하나요?')}
-        ${questionBox('연금·노후','4. 은퇴 후 월 생활비 목표가 현재가치인지 미래가치인지 구분해보셨나요?<br>5. 국민연금이 줄거나 늦어지면 어떤 계좌가 대신해야 하나요?<br>6. 건강보험료가 은퇴 후에도 계속 나간다는 점을 알고 계셨나요?')}
-        ${questionBox('투자·세금','7. 투자 상품보다 먼저 ISA/IRP/연금저축 계좌 위치를 정해보셨나요?<br>8. 같은 ETF라도 일반계좌와 연금계좌의 세금 차이를 알고 계신가요?<br>9. 하락장에서 추가 납입할 현금흐름이 있나요?')}
-        ${questionBox('부동산·상속','10. 부동산 가격보다 대출 상환액이 소득에서 차지하는 비율을 계산해보셨나요?<br>11. 상속세가 생기면 현금으로 낼 준비가 되어 있나요?<br>12. 자녀에게 줄 돈과 배우자가 지킬 돈을 나눠보셨나요?')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 4 · SOLUTION MAP</div><div class="card-title">상담 결과별 솔루션 연결표</div></div><div class="card-body">
-      <table class="fc-table"><thead><tr><th>진단 결과</th><th>우선순위</th><th>제안 방향</th><th>클로징 멘트</th></tr></thead><tbody>
-        <tr><td>잉여금 부족</td><td>지출/보험료 리모델링</td><td>중복·갱신·고보험료 정리 후 필수 보장 유지</td><td>“새로 가입보다 먼저 새는 돈을 막겠습니다.”</td></tr>
-        <tr><td>연금 부족</td><td>개인연금·연금저축·IRP</td><td>세액공제형+비과세형+투자형을 역할별로 분리</td><td>“연금은 상품이 아니라 월급을 하나 더 만드는 구조입니다.”</td></tr>
-        <tr><td>투자 관심 높음</td><td>ISA/연금계좌</td><td>ETF는 계좌 위치, 납입기간, 리밸런싱 규칙 제안</td><td>“종목을 맞히기보다 오래 유지되는 구조를 만들겠습니다.”</td></tr>
-        <tr><td>부동산/대출 부담</td><td>DSR·상환액 관리</td><td>대출 갈아타기, 정책대출, 매수시기 조정</td><td>“집을 사는 것보다 버틸 수 있는 현금흐름이 먼저입니다.”</td></tr>
-        <tr><td>상속세 예상</td><td>납부재원·증여 타임라인</td><td>종신보험, 사전증여, 신탁/유언 검토</td><td>“상속은 세금을 줄이는 것보다 가족 분쟁과 현금 부족을 막는 게 먼저입니다.”</td></tr>
-      </tbody></table>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">STEP 5 · CLOSING</div><div class="card-title">계약 전환 클로징 스크립트</div></div><div class="card-body">
-      <div class="timeline">
-        ${timeline('1','문제 확인','“오늘 숫자로 보니 ${name}님은 지금 당장 상품이 아니라 우선순위 정리가 필요합니다.”','var(--primary-pale)')}
-        ${timeline('2','선택지 제시','“A안은 보험료 조정, B안은 연금 보완, C안은 연금+보장+세금까지 같이 잡는 방식입니다.”','var(--pos-l)')}
-        ${timeline('3','작은 결정','“오늘은 전체를 결정하지 마시고, 우선 다음 미팅에서 ①보험료 구조 ②연금 부족액 ③건보료/세금 리스크만 확정해보겠습니다.”','var(--warn-l)')}
-        ${timeline('4','계약 연결','“계약은 설명을 다 듣고 필요성을 납득하실 때만 진행하겠습니다. 다만 준비가 늦어질수록 보험료·건강·세금 조건은 불리해질 수 있습니다.”','var(--pur-l)')}
-      </div>
-    </div></div>
-
-    <div class="card"><div class="card-hd"><div class="card-tag">COMPLIANCE</div><div class="card-title">상담 시 고정 고지 문구</div></div><div class="card-body">
-      <div class="hb red">본 자료는 고객 상담을 위한 예시·추정 자료이며, 투자수익률·세금·대출한도·보험금 지급은 확정값이 아닙니다. 실제 계약 전에는 상품설명서, 약관, 투자위험, 세법, 대출심사 기준을 반드시 확인해야 합니다.</div>
-      <div class="hb blue">투자형 상품은 원금 손실 가능성이 있으며, 보험상품은 해지 시 원금 손실 또는 환급금 손실이 발생할 수 있습니다. 고객의 재무상황·위험성향·투자기간·보장 필요성을 확인한 뒤 적합성 원칙에 따라 안내하세요.</div>
-    </div></div>`;
-  if($('consulting-guide-content')) $('consulting-guide-content').innerHTML = html;
-}
+   같은 화면을 그리는 곳이 둘이면 언젠가 한쪽만 고친다. 하나만 둔다. */
 function miniStep(title, desc){ return `<div style="border:1px solid var(--ink-7);border-radius:var(--r);padding:12px;background:var(--ink-9)"><div style="font-size:12px;font-weight:900;color:var(--ink-1);margin-bottom:5px">${title}</div><div style="font-size:10.5px;color:var(--ink-4);line-height:1.6">${desc}</div></div>`; }
 function questionBox(title, body){ return `<div style="border:1px solid var(--ink-7);border-radius:var(--r);padding:13px 14px;background:var(--white);margin-bottom:10px"><div style="font-size:12px;font-weight:900;color:var(--primary);margin-bottom:6px">${title}</div><div style="font-size:10.5px;color:var(--ink-3);line-height:1.8">${body}</div></div>`; }
 function timeline(num,title,desc,bg){ return `<div class="tl-item"><div class="tl-dot" style="background:${bg};color:var(--ink-1);font-weight:900">${num}</div><div class="tl-con"><div class="tl-title">${title}</div><div class="tl-desc">${desc}</div></div></div>`; }
@@ -7108,50 +7034,16 @@ function pickFinalLineup(risk){
   const names = byRisk[risk] || byRisk['중립형'];
   return names.map(key => MOCK_ASSETS.find(a => a.name.includes(key))).filter(Boolean).slice(0,3);
 }
-function renderFinalReport(){
-  if(!$('final-report-content')) return;
-  const d = getFinancialSnapshot();
-  const cashLevel = d.surplus>=0 && d.savingRatio>=20 ? 'good' : d.surplus>=0 ? 'warn' : 'bad';
-  const pensionLevel = d.pensionGap<=0 ? 'good' : d.pensionGap<=150 ? 'warn' : 'bad';
-  const debtLevel = d.dsr<=35 && d.ltv<=60 ? 'good' : d.dsr<=45 || d.ltv<=70 ? 'warn' : 'bad';
-  const inheritLevel = d.inheritTax<=0 ? 'good' : d.inheritCashGap<=0 ? 'warn' : 'bad';
-  const totalScore = Math.max(0, Math.min(100, (cashLevel==='good'?25:cashLevel==='warn'?15:5) + (pensionLevel==='good'?25:pensionLevel==='warn'?15:5) + (debtLevel==='good'?25:debtLevel==='warn'?15:5) + (inheritLevel==='good'?25:inheritLevel==='warn'?15:5)));
-  const headline = totalScore>=80 ? '현재 구조는 비교적 안정적입니다. 다만 노후 현금흐름과 세금 리스크를 미리 고정하면 완성도가 높아집니다.' : totalScore>=55 ? '현재 구조는 유지 가능하지만, 연금·대출·보장 중 하나만 흔들려도 현금흐름 압박이 생길 수 있습니다.' : '현재 구조는 우선순위 재정리가 필요합니다. 신규 상품보다 지출·대출·연금 공백을 먼저 정리해야 합니다.';
-  const lineup = pickFinalLineup(d.riskType).map(a=>`<div class="final-lineup-card"><div class="fl-name">${a.name}</div><div class="fl-meta">${a.tag} · ${a.account.slice(0,2).join('/')}</div><div class="fl-text"><b>역할:</b> ${a.desc}<br><b>활용:</b> ${a.strategy}</div><div style="margin-top:8px"><button class="print-btn" style="padding:5px 9px;font-size:10px" onclick="openNaverStock('${jsEsc(a.name)}','${jsEsc(a.code||'')}','${jsEsc(a.market||'')}',event)">네이버증권 보기</button></div></div>`).join('');
-  const actions = [
-    `<b>1. 현금흐름:</b> 월 잉여금 ${fmtM(d.surplus)} 기준으로 보험료·대출·저축의 우선순위를 다시 배치합니다.`,
-    `<b>2. 연금:</b> 은퇴 목표 월 ${fmtM(d.futureTarget)} 대비 예상 월 ${fmtM(d.totalPension)}입니다. 부족액 ${fmtM(d.pensionGap)}은 개인연금/IRP/연금저축으로 보완합니다.`,
-    `<b>3. 건보료·국민연금:</b> 은퇴 후 건보료 상승 가능액 ${fmtM(d.nhisIncrease)}, 국민연금 감소 가능액 ${fmtM(d.npsReduction)}을 별도 체크합니다. <b>(두 값 모두 예시 — 공단·공단 모의계산으로 확인)</b>`,
-    `<b>4. 부동산·대출:</b> DSR ${d.dsr}%, LTV ${d.ltv}%입니다. 상환액이 부담되면 금리·기간·정책대출 가능성을 먼저 봅니다.`,
-    `<b>5. 상속·증여:</b> 예상 상속세 ${fmtM(d.inheritTax)}, 납부재원 부족 ${fmtM(d.inheritCashGap)}입니다. 사전증여와 종신보험 납부재원을 분리합니다.`,
-    `<b>6. 다음 미팅:</b> 증권/보험/대출 자료를 확인해 실제 수치로 다시 계산한 뒤 실행안 A/B/C로 결정합니다.`
-  ].map(x=>`<div class="final-action">${x}</div>`).join('');
-  $('final-report-content').innerHTML = `
-    <div class="final-report-cover">
-      <div class="fr-kicker">APEX YUN PRO · CLIENT SUMMARY</div>
-      <div class="fr-title">${d.name}님 재무상황 평가 보고서</div>
-      <div class="fr-sub">이 보고서는 고객님의 입력 정보를 기준으로 현금흐름, 연금, 건강보험료, 국민연금, 부동산 대출, 상속·증여 리스크를 한 장의 상담 흐름으로 정리한 고객용 요약본입니다.</div>
-    </div>
-    <div class="mg m4" style="margin-bottom:10px">
-      ${metric('고객 정보', `${d.age}세 · ${d.job}`, `${d.gender} / 은퇴목표 ${d.rage}세`, 'blue')}
-      ${metric('월 추정소득', fmtM(d.totalIncome), `저축률 ${d.savingRatio}%`, 'green')}
-      ${metric('월 잉여금', fmtM(d.surplus), d.surplus>=0?'추가 설계 가능':'현금흐름 조정 우선', d.surplus>=0?'green':'red')}
-      ${metric('종합 안정도', `${totalScore}점`, d.riskType+' 기준 평가', totalScore>=80?'green':totalScore>=55?'gold':'red')}
-    </div>
-    <div class="feedback-summary"><div class="fs-title">종합 평가</div><div class="fs-text">${headline}</div></div>
-    <div class="final-section-title">고객 상황 평가</div>
-    ${finalEvalCard('① 현금흐름 평가', cashLevel==='good'?'양호':cashLevel==='warn'?'점검':'주의', cashLevel, `월 소득 ${fmtM(d.totalIncome)} 중 필수지출 ${fmtM(d.essential)}, 선택지출 ${fmtM(d.choice)}, 저축·투자 ${fmtM(d.saving)}입니다. 현재 월 잉여금은 ${fmtM(d.surplus)}이며, 고객님의 계약 가능성은 “남는 돈”보다 “재배치 가능한 돈”을 찾는 데 있습니다.`)}
-    ${finalEvalCard('② 연금·건보료·국민연금 평가', pensionLevel==='good'?'충분':pensionLevel==='warn'?'보완':'부족', pensionLevel, `은퇴 후 목표 생활비는 물가 반영 시 월 ${fmtM(d.futureTarget)} 수준입니다. 현재 예상 연금성 현금흐름은 월 ${fmtM(d.totalPension)}이며 부족액은 월 ${fmtM(d.pensionGap)}입니다. 재산과 소득 구조에 따라 은퇴 후 건강보험료가 월 ${fmtM(d.nhisIncrease)} 증가할 수 있고, 국민연금 납입 공백이 길어지면 월 ${fmtM(d.npsReduction)} 수준의 감소 리스크가 있습니다. <b>이 두 금액은 상담용 예시</b>이며 실제 값은 건강보험공단·국민연금공단 모의계산으로 확인해야 합니다.`)}
-    ${finalEvalCard('③ 부동산·대출 평가', debtLevel==='good'?'안정':debtLevel==='warn'?'관리':'부담', debtLevel, `주택가치 ${fmtM(d.houseVal)}, 대출잔액 ${fmtM(d.mortgage)}, 순주택자산 ${fmtM(d.equity)}입니다. 추정 LTV는 ${d.ltv}%, DSR은 ${d.dsr}%이며 월 원리금은 약 ${fmtM(d.mortgagePay)}입니다. 대출은 가능 여부보다 “소득이 흔들려도 버틸 수 있는가”를 기준으로 판단해야 합니다.`)}
-    ${finalEvalCard('④ 상속·증여 평가', inheritLevel==='good'?'낮음':inheritLevel==='warn'?'준비':'필요', inheritLevel, `예상 상속재산은 ${fmtM(d.totalEstate)}이며, 상담용 추정 상속세는 ${fmtM(d.inheritTax)}입니다. 종신보험 사망보험금 등을 반영해도 납부재원 부족액이 ${fmtM(d.inheritCashGap)}으로 계산됩니다. 사전증여 예정액 ${fmtM(d.inhGift)}은 10년 합산 규칙을 고려해 나눠서 설계하는 것이 좋습니다.`)}
-    <div class="final-section-title">${d.riskType} 성향 기준 추천 펀드/ETF 라인업 2~3개</div>
-    <div class="final-note" style="margin-bottom:8px">전체 펀드 라인업은 고객에게 모두 보여주지 않고, 현재 성향과 상담 목적에 맞는 2~3개만 제시합니다. 아래 항목은 투자 권유가 아니라 계좌 위치·납입기간·위험수용도 확인을 위한 상담 예시입니다.</div>
-    <div class="final-lineup">${lineup}</div>
-    <div class="final-section-title">종합 피드백 및 다음 실행 순서</div>
-    <div class="final-actions">${actions}</div>
-    <div class="hb red" style="margin-top:12px">본 자료는 입력값 기준의 상담용 추정 자료입니다. 실제 세금, 대출한도, 건강보험료, 국민연금, 투자수익률, 보험계약 여부는 관련 기관·상품설명서·약관·심사 결과에 따라 달라질 수 있습니다.</div>
-  `;
-}
+/* ※ 여기 있던 renderFinalReport(44줄) 도 <b>죽은 코드</b>였다 — 위의
+   renderConsultingGuide 와 똑같은 병이다. 화면을 그리는 것은 아래
+   renderFinal / renderFinalMap 이고, 초기화가 끝나면
+   window.renderFinalReport 가 그것으로 덮어써진다.
+
+   덮어쓰기 <b>전</b>에 부르면 이 죽은 판이 돌다가 metric is not
+   defined 로 터졌다. try/catch 에 싸여 조용히 넘어갔을 뿐이다.
+
+   ※ check-html 은 function 선언끼리만 견주므로 이런 것을 못 봤다.
+     window.X = … 로 덮어쓰는 꼴은 check-twins 가 본다. */
 
 /* ─── 보고서 출력 안정화 FINAL HOTFIX ─── */
 function collectPrintStyles(){

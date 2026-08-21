@@ -154,6 +154,112 @@ function cssMissing(src) {
   return out;
 }
 
+/* ── ⑥ 선언 없이 쓰는 전역 이름 ────────────────────────────────
+   이번에 <b>NF_SITE_FALLBACK 선언 한 줄이 통째로 사라졌다.</b> 고치는
+   중에 치환 앵커가 어긋나 옆줄을 먹은 것이다. 문법은 멀쩡했고, 화면
+   점검 63개도 통과했다 — 그 함수를 부르는 화면 하나를 열기 전까지는
+   아무도 몰랐다. CI 가 12분 뒤에야 잡아 줬다.
+
+   조용히 사라지는 것이 제일 위험하다.
+
+   ※ 처음엔 대문자 이름을 정규식으로 훑었다가 <b>색상 코드(D1D5DB)와
+     카드 태그(TOTAL)까지 잡아</b> 헛것이 백 개씩 나왔다. 그런 알람은
+     아무도 안 믿는다. 그래서 <b>진짜 파서</b>(eslint no-undef)로 바꿨다 —
+     따옴표 안인지 코드인지, 어느 범위에서 선언됐는지를 파서가 안다.  */
+var Linter = null;
+try { Linter = require('eslint').Linter; } catch (e) { Linter = null; }
+
+/* 브라우저·표준이 들고 있는 이름. 여기 없어서 걸리면 <b>여기에 적는다</b> —
+   한 번 적으면 끝이고, 적는 순간 「이건 밖에서 온 것」이라는 기록이 된다. */
+var BROWSER = ('window document location navigator history screen console alert confirm prompt ' +
+  'setTimeout clearTimeout setInterval clearInterval requestAnimationFrame cancelAnimationFrame ' +
+  'fetch Headers Request Response FormData URL URLSearchParams Blob File FileReader ' +
+  'localStorage sessionStorage indexedDB caches crypto performance ' +
+  'Event CustomEvent MouseEvent KeyboardEvent MessageEvent PopStateEvent ErrorEvent ' +
+  'Element HTMLElement HTMLCanvasElement HTMLImageElement Image Audio Option Node NodeList ' +
+  'DOMParser XMLSerializer XMLHttpRequest MutationObserver IntersectionObserver ResizeObserver ' +
+  'Math JSON Date RegExp Object Array String Number Boolean Function Symbol BigInt ' +
+  'Promise Map Set WeakMap WeakSet Proxy Reflect Error TypeError RangeError SyntaxError ' +
+  'parseInt parseFloat isNaN isFinite encodeURIComponent decodeURIComponent encodeURI decodeURI ' +
+  'NaN Infinity undefined globalThis self top parent frames escape unescape btoa atob structuredClone ' +
+  'AbortController TextEncoder TextDecoder Intl getComputedStyle matchMedia print open close scrollTo ' +
+  'Uint8Array Int8Array Uint16Array Int32Array Float32Array Float64Array ArrayBuffer DataView ' +
+  'speechSynthesis SpeechSynthesisUtterance webkitSpeechRecognition SpeechRecognition ' +
+  'MediaRecorder ClipboardItem Notification BroadcastChannel CSS ' +
+  'addEventListener removeEventListener dispatchEvent scrollY scrollX innerWidth innerHeight ' +
+  'devicePixelRatio pageXOffset pageYOffset getSelection requestIdleCallback queueMicrotask ' +
+  'CanvasRenderingContext2D SVGElement Text Range').split(/\s+/);
+
+/* 밖에서 실려 오는 것 — CDN 스크립트, 옆 파일, 서버가 심어 주는 값.
+   <b>여기 적힌 것만</b> 봐주고 나머지는 잡는다.                       */
+var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', 'JSZip',
+  'saveAs', 'marked', 'Chart', 'gtag', 'dataLayer', 'APEX_SB', 'APEX_CFG', 'kakao', 'Kakao',
+  'TossPayments'];
+
+function scriptsOf(src) {
+  var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;
+  while ((m = re.exec(src))) {
+    var attr = m[1] || '';
+    if (/\bsrc\s*=/i.test(attr)) continue;
+    if (/type\s*=\s*["'](?!text\/javascript|application\/javascript|module)/i.test(attr)) continue;
+    out.push({ code: m[2], at: lineOf(src, m.index) });
+  }
+  return out;
+}
+function undeclared(src) {
+  if (!Linter) return null;                       /* eslint 이 없으면 이 규칙은 건너뛴다 */
+  var blocks = scriptsOf(src);
+  if (!blocks.length) return [];
+  /* 여러 <script> 가 전역을 나눠 쓰므로 <b>한 덩이로 이어</b> 본다.
+     줄 번호는 블록마다 어긋나니, 이름만 보고 파일에서 다시 찾는다. */
+  var joined = blocks.map(function (b) { return b.code; }).join('\n;\n');
+  var g = {}, m;
+  BROWSER.concat(EXTERNAL).forEach(function (k) { g[k] = 'readonly'; });
+  /* 이 저장소는 IIFE 안에서 만들고 <b>window.X = …</b> 로 내보내는 자리가 많다.
+     그렇게 내놓은 이름은 선언된 것으로 본다. */
+  var win = /window\.([A-Za-z_$][\w$]*)\s*=[^=]/g;
+  while ((m = win.exec(joined))) g[m[1]] = 'writable';
+  /* <b>typeof X</b> 로 감싼 것은 「있으면 쓴다」 는 뜻이다 — 작성자가 없을
+     수도 있음을 알고 지킨 자리이므로 잡지 않는다. NF_SITE_FALLBACK 처럼
+     <b>지키지 않고 그냥 쓰는</b> 이름만 남는다.                       */
+  var tof = /typeof\s+([A-Za-z_$][\w$]*)/g;
+  while ((m = tof.exec(joined))) if (!g[m[1]]) g[m[1]] = 'readonly';
+  var msgs;
+  try {
+    msgs = new Linter().verify(joined, {
+      languageOptions: { ecmaVersion: 2022, sourceType: 'script', globals: g },
+      rules: { 'no-undef': 'error' }
+    });
+  } catch (e) { return null; }
+  var seen = {}, out = [];
+  msgs.forEach(function (x) {
+    var n = (String(x.message).match(/'([^']+)'/) || [])[1];
+    if (!n || seen[n]) return;
+    if (x.ruleId !== 'no-undef') return;
+    seen[n] = 1;
+    var at = src.indexOf(n);
+    out.push({ n: n, at: at >= 0 ? lineOf(src, at) : 0 });
+  });
+  return out;
+}
+
+console.log('\n[0] 선언 없이 쓰는 전역 이름이 없는가');
+if (!Linter) {
+  console.log('  · eslint 가 없어 이 규칙은 건너뜁니다 (CI 에는 있습니다)');
+} else {
+  FILES.forEach(function (f) {
+    var src = read(f);
+    if (!src) return;
+    var U = undeclared(src);
+    if (U === null) { console.log('  · ' + f + ' — 읽지 못해 건너뜁니다'); return; }
+    is(U.length === 0, '  ' + f +
+      (U.length ? ' — ✗ ' + U.map(function (u) { return u.n + '(' + u.at + '줄 근처)'; }).join(' · ') +
+        '\n      → 선언이 사라졌거나 이름을 잘못 쓴 것입니다. 밖에서 오는 것이면 ' +
+        'check-twins.js 의 EXTERNAL 에 적어 주십시오.'
+        : ' — 없음'));
+  });
+}
+
 console.log('\n[1] 같은 일을 하는 표가 두 벌은 아닌가');
 FILES.forEach(f => {
   const src = read(f);
