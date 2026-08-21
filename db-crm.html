@@ -717,6 +717,12 @@ async function bulkAssign(){
   if(!inMyScope(owner)){toast("내 팀 밖의 담당자로는 넘길 수 없습니다.");return}
   const out=ids.filter(id=>!canEditDb(dbs.find(x=>x.id===id)));
   if(out.length){toast("다른 팀의 DB 가 "+out.length+"건 섞여 있습니다. 선택을 다시 해주세요.",6000);return}
+  /* 한도 — 옮겨 오는 것만 센다. 이미 그 사람 것인 줄은 개수가 그대로다.
+     고른 줄의 배정일이 여러 달에 걸쳐 있으면 달마다 따로 본다. */
+  const move=ids.filter(x=>{const d=dbs.find(y=>y.id===x);return d&&d.assigned_to!==owner});
+  const per={};
+  move.forEach(x=>{const d=dbs.find(y=>y.id===x);const ym=(d&&d.assigned_date)?String(d.assigned_date).slice(0,7):"";if(ym)per[ym]=(per[ym]||0)+1});
+  for(const ym in per){if(!await quotaGate(owner,ym,per[ym],null))return}
   if(!confirm(ids.length+"건을 "+nm+" 담당으로 일괄 변경할까요?"))return;
   const {error}=await sb.from("dbs").update({assigned_to:owner}).in("id",ids);
   if(error){wErr(error,"담당자 일괄 변경");return}
@@ -819,6 +825,59 @@ function stagePick(){
   if(won&&$("contractedAt")&&!$("contractedAt").value)$("contractedAt").value=today();
   if(pol&&$("policySentAt")&&!$("policySentAt").value)$("policySentAt").value=today();
 }
+/* ── DB 한도 ───────────────────────────────────────────────────────
+   한 사람이 한 달에 받는 개수에는 한도가 있다 — 기본 20개, 변액이 있으면
+   30개를 더해 50개. 종이(「8월 DB 신청」)에 20칸을 그려 두고 손으로 세던
+   것을 여기로 옮긴 것이다.
+
+   한도는 <b>서버가 답한다</b>(db_quota_list). 여기서 20 더하기 30 을 하지
+   않는다 — 답하는 자리가 둘이 되면 한도를 25로 바꾼 날 한쪽만 바뀐다.
+
+   한도표가 아직 없는 서버에서는 <b>막지 않는다.</b> migration_44 를 안
+   돌렸을 뿐인데 배정 자체가 멈추면 안 된다. 세는 데 실패해도 마찬가지다.
+
+   세는 것은 지금 화면이 들고 있는 dbs 다. 그래서 내 권한 밖에 있어 안
+   보이는 줄은 안 세어진다 — 그만큼 느슨하게 잡힌다. 조이는 쪽으로 틀리면
+   멀쩡한 배정이 막히므로, 틀릴 거면 느슨한 쪽으로 틀리게 두었다. */
+async function quotaLimitOf(memberId){
+  try{
+    const {data,error}=await sb.from("db_quota_list").select("quota").eq("member_id",memberId).limit(1);
+    if(error)return null;
+    return (data&&data[0]&&typeof data[0].quota==="number")?data[0].quota:null;
+  }catch(e){return null}
+}
+/* 그 달에 이미 몇 개 받았나. exclId 는 지금 고치고 있는 그 줄이다 —
+   자기 자신을 세면 한 건을 두 번 세게 된다. */
+function quotaUsedOf(memberId,ym,exclId){
+  let n=0;
+  for(let i=0;i<dbs.length;i++){
+    const d=dbs[i];
+    if(exclId&&d.id===exclId)continue;
+    if(d.assigned_to!==memberId)continue;
+    if(!d.assigned_date)continue;
+    if(String(d.assigned_date).slice(0,7)!==ym)continue;
+    n++;
+  }
+  return n;
+}
+/* 넣어도 되나. true 면 진행, false 면 멈춘다.
+   한도를 넘기는 것은 대표·운영자가 그 자리에서 정한다 — 팀원은 못 넘는다. */
+async function quotaGate(memberId,ym,add,exclId){
+  if(!memberId||!ym)return true;
+  const limit=await quotaLimitOf(memberId);
+  if(typeof limit!=="number")return true;
+  const used=quotaUsedOf(memberId,ym,exclId);
+  const left=limit-used;
+  if(add<=left)return true;
+  const nm=pname(memberId)||"이 담당자";
+  const head=nm+" — "+ym+" 한도 "+limit+"개 중 이미 "+used+"개를 받았습니다.\n"+
+    "남은 자리는 "+Math.max(left,0)+"개인데 "+add+"건을 배정하려 합니다.";
+  if(!isAdmin()){
+    toast(nm+" 는 "+ym+" 한도("+limit+"개)를 이미 채웠습니다. 남은 자리 "+Math.max(left,0)+"개 — 한도를 넘는 배정은 대표·운영자만 합니다.",7000);
+    return false;
+  }
+  return confirm(head+"\n\n대표 권한으로 한도를 넘겨 배정할까요?");
+}
 async function saveDb(){
   const id=$("dbId").value,payload={assigned_date:$("assignedDate").value,assigned_to:$("assignedTo").value,customer_name:$("customerName").value.trim(),phone:$("phone").value.trim(),source:srcSafe($("dbSource").value),region:$("region").value.trim(),report_name:$("reportName").value.trim()||"보장분석 3DB",memo:$("dbMemo").value.trim(),created_by:profile.id,updated_at:new Date().toISOString()};
   /* 단계는 고른 것만 보낸다. 「자동」이면 null 로 지워서 예전처럼 짐작하게 둔다 */
@@ -831,6 +890,8 @@ async function saveDb(){
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
+  /* 한도를 넘기지 않는가. 고치는 중이면 그 줄은 빼고 센다. */
+  if(!await quotaGate(payload.assigned_to,String(payload.assigned_date).slice(0,7),1,id||null))return;
   const put=p2=>id?sb.from("dbs").update(p2).eq("id",id):sb.from("dbs").insert(p2);
   let {error}=await put(payload);
   /* 단계 칸이 아직 없는 서버 — 단계만 빼고 저장해서 일을 막지 않는다.

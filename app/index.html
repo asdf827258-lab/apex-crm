@@ -10113,6 +10113,7 @@ var TABS=[
  {group:'조직 관리',items:[
    {id:'org',icon:'🏢',title:'조직도',cnt:'',ak:'조직'},
    {id:'attend',icon:'🗓️',title:'출근 현황',cnt:'',ak:'DB CRM'},
+   {id:'dbquota',icon:'🎯',title:'DB 배정 현황',cnt:'',ak:'DB CRM 배정 한도 배정률 변액'},
    {id:'audit',icon:'🛡️',title:'감사로그',cnt:'',ak:'매니저 관리'},
    /* ── 아래 여섯은 눈에서만 뺀다. <b>지우지 않는다.</b> ──────────────
       같은 일이 TFA 업무관리 안에 있어서 메뉴에 두 번 서 있었다.
@@ -11027,6 +11028,7 @@ function go(tab){
   else if(tab==='report'){dyn.innerHTML=renderReportPage();if(typeof osRepAfterRender==='function')osRepAfterRender();}
   else if(tab==='academy_notion'){dyn.innerHTML=renderNotionPage();if(typeof osNotionAfterRender==='function')osNotionAfterRender();}
   else if(tab==='attend'){dyn.innerHTML=renderAttend();if(typeof osAttendLoad==='function')osAttendLoad();}
+  else if(tab==='dbquota'){dyn.innerHTML=renderDbq();if(typeof osDbqLoad==='function')osDbqLoad();}
   else if(tab==='assistant'){dyn.innerHTML=renderAssistant();if(typeof osAssistantAfterRender==='function')osAssistantAfterRender();}
   else if(tab==='growth'){dyn.innerHTML=renderTeamDash();if(typeof osTeamDashAfterRender==='function')osTeamDashAfterRender();}
   else if(tab==='fin_usd'){dyn.innerHTML=renderFinUsd();setTimeout(function(){try{finUsdCalc();}catch(e){}},60);}
@@ -11294,8 +11296,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-21 03:20';
-var APP_BUILD_NOTE='<b>비포·애프터 그래프를 준비정도 게이지로 바꿨습니다.</b> 담보를 서로 견주던 막대는 사망 1억 옆에서 입원일당 3만원이 보이지도 않았습니다. 이제 담보마다 <b>자기 자</b>를 세웁니다 — 회색 칸이 <b>권장금액(100%)</b>이고, <b>왼쪽이 지금 · 오른쪽이 바꾸면</b> 되는 것입니다. 위에 <b>충분 · 주의 · 부족 · 미가입</b>이 몇 건인지 한 줄로 섭니다(권장 대비 100%·50% 기준). 권장금액은 「인체 한 장」 화면의 표를 <b>그대로</b> 씁니다 — 두 곳에 두지 않았습니다. 그리고 그것은 <b>설계사가 정한 기준</b>이며 법이나 회사가 정한 값이 아니라고 화면에 밝힙니다. <b>앱이 스스로 자기 화면을 검사합니다</b> — 숫자 위생·쌍둥이 점검이 이번에 <b>쿠폰 상담이 연금으로 기록되던 것</b>을 포함해 진짜 버그 셋을 물어 왔습니다.';
+var APP_BUILD='2026-08-21 14:40';
+var APP_BUILD_NOTE='<b>DB 배정에 한도가 생겼습니다.</b> 한 사람이 한 달에 받는 개수는 <b>기본 20개</b>이고, <b>변액이 있으면 30개를 더해 50개</b>입니다. 종이(「8월 DB 신청」)에 20칸을 그려 두고 손으로 세던 것을 옮긴 것입니다 — 종이는 칸에 <b>날짜가 없어</b> 「오늘 몇 개 나갔나」를 못 세었고, 칸이 20개뿐이라 <b>변액 보유자의 50개를 적을 자리가 없었습니다.</b> 새 화면 <b>🎯 DB 배정 현황</b>(조직 관리)에서 사람별로 한도의 몇 %를 받았는지, 날짜별로 몇 개가 나갔는지 봅니다. <b>자료를 새로 만들지 않았습니다</b> — DB 통합 CRM 이 쓰는 그 표를 읽기만 합니다. 한도를 채운 사람에게는 <b>더 배정되지 않습니다</b>. 넘겨야 할 때는 대표·운영자가 그 자리에서 확인하고 넘깁니다. 변액 여부는 <b>대표가 화면에서 체크</b>합니다 — 고정 명단이 아니라 달마다 바뀝니다. 한도 숫자(20·30)는 코드가 아니라 서버 설정 한 줄에 있어, 바꾸면 <b>바꾼 시점부터만</b> 달라집니다. 쓰기 전에 <b>migration_44_db_quota.sql</b> 을 Supabase 에서 한 번 실행하십시오 — 안 돌리면 화면이 무엇을 해야 하는지 적고 서지 않습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14928,6 +14930,183 @@ function osAttToday(){var d=new Date(),p=function(n){return(n<10?'0':'')+n;};ret
 /* 로그인(접속)만 해도 오늘 출근이 자동 기록되게 — 앱과 같은 Supabase attendance 테이블 */
 function osBackupBoot(){try{if(typeof osBackupTick==='function')setTimeout(osBackupTick,4000);}catch(e){}}
 function osAttendMark(){try{var sb=(typeof osClient==='function')?osClient():null;var uid=(typeof OS!=='undefined'&&OS.profile)?OS.profile.id:null;if(sb&&uid)sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
+/* ══════════════════════════════════════════════════════════════════
+   DB 배정 현황 — 한도 대비 몇 % 나갔나
+
+   종이(「8월 DB 신청」)가 하던 일이다. 16명 × 20칸을 손으로 세던 표는
+   두 가지를 못 했다. 칸에 날짜가 없어 「오늘 몇 개 나갔나」를 못 세었고,
+   칸이 20개뿐이라 변액 보유자의 50개를 적을 자리가 없었다.
+
+   <b>자료를 새로 만들지 않는다.</b> DB 통합 CRM 이 쓰는 dbs 를 그대로
+   읽는다. 여기서는 한 줄도 고치지 않는다 — 배정은 CRM 에서 한다.
+
+   한도는 서버(db_quota_list)가 답한다. 여기서 20 더하기 30 을 하지
+   않는다. 답하는 자리가 둘이 되면 한도를 25로 바꾼 날 한쪽만 바뀐다.
+   ══════════════════════════════════════════════════════════════════ */
+var DBQ={month:null,people:[],rows:[],quota:{}};
+
+function osDbqP2(n){return (n<10?'0':'')+n;}
+function osDbqRange(){
+  if(!DBQ.month)DBQ.month=new Date();
+  var y=DBQ.month.getFullYear(),m=DBQ.month.getMonth(),last=new Date(y,m+1,0).getDate();
+  return {y:y,m:m,days:last,from:y+'-'+osDbqP2(m+1)+'-01',to:y+'-'+osDbqP2(m+1)+'-'+osDbqP2(last)};
+}
+function osDbqWarn(msg,detail){
+  return '<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:12px">'+msg+
+    (detail?' <span style="color:var(--ink-4)">('+osEsc(detail)+')</span>':'')+'</div>';
+}
+function renderDbq(){
+  if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">DB 배정 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
+  return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">DB 배정 현황</div>'+
+    '<div class="page-desc">한 사람이 이번 달에 한도의 몇 %를 받았는지 봅니다. <b>DB 통합 CRM과 같은 자료</b>를 읽기만 합니다 — 배정과 수정은 CRM에서 합니다.</div></div>'+
+    '<div id="dbqKpi" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px"></div>'+
+    '<div class="card"><div class="card-hd" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'+
+      '<div class="card-title"><span class="ci">🎯</span><span id="dbqMonthLabel">이번 달</span> 사람별 배정률</div>'+
+      '<div style="display:flex;gap:6px"><button class="btn btn-ghost" style="padding:6px 11px;font-size:12px" onclick="osDbqShift(-1)">◀ 이전달</button><button class="btn btn-ghost" style="padding:6px 11px;font-size:12px" onclick="osDbqShift(0)">이번달</button><button class="btn btn-ghost" style="padding:6px 11px;font-size:12px" onclick="osDbqShift(1)">다음달 ▶</button></div></div>'+
+      '<div class="card-body"><div id="dbqBoard"><div class="loading" style="padding:16px"><div class="spinner"></div>배정 기록을 읽는 중…</div></div></div></div>'+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">📅</span>날짜별 배정 건수</div></div>'+
+      '<div class="card-body"><div id="dbqDaily" style="overflow-x:auto"></div></div></div></div>';
+}
+function osDbqShift(dir){
+  if(!DBQ.month)DBQ.month=new Date();
+  DBQ.month=(dir===0)?new Date():new Date(DBQ.month.getFullYear(),DBQ.month.getMonth()+dir,1);
+  osDbqLoad();
+}
+function osDbqLoad(){
+  var board=document.getElementById('dbqBoard'),sb=osClient();
+  if(!board)return;
+  if(!sb){board.innerHTML=osDbqWarn('서버에 연결되어 있지 않습니다.','');return;}
+  var r=osDbqRange();
+  board.innerHTML='<div class="loading" style="padding:16px"><div class="spinner"></div>배정 기록을 읽는 중…</div>';
+  Promise.all([
+    sb.from('profiles').select('id,name,role,active,status').order('name'),
+    sb.from('profiles').select('id,workspace'),
+    sb.from('dbs').select('assigned_to,assigned_date').gte('assigned_date',r.from).lte('assigned_date',r.to),
+    sb.from('db_quota_list').select('member_id,has_variable,quota_override,quota')
+  ]).then(function(res){
+    var pr=res[0],ws=res[1],db=res[2],qt=res[3];
+    if(pr.error){board.innerHTML=osDbqWarn('팀원 명단을 읽지 못했습니다.',pr.error.message);return;}
+    if(!ws||ws.error){board.innerHTML=osDbqWarn('회원 구분(소속)을 읽지 못해 명단을 표시하지 않습니다.','');return;}
+    if(db.error){board.innerHTML=osDbqWarn('배정 기록(dbs)을 읽지 못했습니다.',db.error.message);return;}
+    /* 한도표가 없으면 화면을 세우지 않는다. 한도를 모르는 채 「11개」만
+       띄우면 그것이 많은지 적은지 아무도 모른다. 무엇을 해야 하는지 적는다. */
+    if(qt.error){board.innerHTML=osDbqWarn('한도표를 읽지 못했습니다. <b>migration_44_db_quota.sql</b> 을 Supabase SQL Editor 에서 한 번 실행해 주세요.',qt.error.message);return;}
+    var wmap={};(ws.data||[]).forEach(function(w){wmap[w.id]=w.workspace||'both';});
+    var me=(OS.session&&OS.session.user&&OS.session.user.id)||null;
+    DBQ.people=(pr.data||[]).filter(function(p){
+      if(p.active===false)return false;
+      if(p.id===me)return true;
+      var w=wmap[p.id]||'both';
+      if(w!=='apex'&&w!=='both')return false;
+      return p.status==null||p.status==='approved';
+    });
+    DBQ.rows=db.data||[];
+    DBQ.quota={};(qt.data||[]).forEach(function(q){DBQ.quota[q.member_id]=q;});
+    osDbqRender();
+  },function(){board.innerHTML=osDbqWarn('불러오기에 실패했습니다 — 잠시 후 다시 시도하세요.','');});
+}
+function osDbqRender(){
+  var board=document.getElementById('dbqBoard'),kpi=document.getElementById('dbqKpi'),daily=document.getElementById('dbqDaily');
+  if(!board)return;
+  var r=osDbqRange(),now=new Date();
+  var isCur=(r.y===now.getFullYear()&&r.m===now.getMonth());
+  var lbl=document.getElementById('dbqMonthLabel');if(lbl)lbl.textContent=r.y+'년 '+(r.m+1)+'월';
+  var today=now.getFullYear()+'-'+osDbqP2(now.getMonth()+1)+'-'+osDbqP2(now.getDate());
+  /* 사람별·날짜별로 센다. 배정일이 없는 줄은 애초에 받아 오지 않았다 —
+     언제 나갔는지 모르는 것을 이번 달로 밀어 넣으면 배정률이 부풀어 오른다. */
+  var used={},byDay={},todayCnt=0,total=0,i;
+  for(i=0;i<DBQ.rows.length;i++){
+    var row=DBQ.rows[i],who=row.assigned_to,day=row.assigned_date;
+    if(who){used[who]=(used[who]||0)+1;}
+    if(day){byDay[day]=(byDay[day]||0)+1;if(day===today)todayCnt++;}
+    total++;
+  }
+  /* 페이스 — 이 달의 몇 %가 지났나. 지난달을 볼 때는 100%가 기준이다. */
+  var pace=isCur?Math.round(now.getDate()/r.days*100):100;
+  var teamQuota=0,teamUsed=0;
+  for(i=0;i<DBQ.people.length;i++){
+    var pid=DBQ.people[i].id,q=DBQ.quota[pid];
+    teamQuota+=(q&&typeof q.quota==='number')?q.quota:0;
+    teamUsed+=(used[pid]||0);
+  }
+  var teamRate=teamQuota?Math.round(teamUsed/teamQuota*100):0;
+  var need=r.days?Math.round(teamQuota/r.days*10)/10:0;
+  if(kpi){
+    kpi.innerHTML=osAttKpiCard('오늘 배정',todayCnt+'건',isCur?today:'이번 달이 아닙니다',todayCnt>0?'#059669':'var(--ink-1)')+
+      osAttKpiCard('이번 달 배정',teamUsed+'건','배정일이 적힌 것만')+
+      osAttKpiCard('팀 배정률',teamRate+'%','한도 합계 '+teamQuota+'개',teamRate>=pace?'#059669':'#DC2626')+
+      osAttKpiCard('하루 필요량',need+'개','한도를 다 채우려면');
+  }
+  var admin=(typeof osIsAppAdmin==='function')&&osIsAppAdmin();
+  var list=DBQ.people.slice();
+  list.sort(function(a,b){
+    var qa=DBQ.quota[a.id],qb=DBQ.quota[b.id];
+    var ra=(qa&&qa.quota)?(used[a.id]||0)/qa.quota:0;
+    var rb=(qb&&qb.quota)?(used[b.id]||0)/qb.quota:0;
+    if(ra===rb)return (a.name||'').localeCompare(b.name||'');
+    return ra-rb;
+  });
+  if(!list.length){board.innerHTML=osDbqWarn('표시할 팀원이 없습니다.','');return;}
+  var head='<tr><th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--ink-7);color:var(--ink-4)">팀원</th>'+
+    '<th style="text-align:center;padding:8px 6px;border-bottom:1px solid var(--ink-7);color:var(--ink-4);white-space:nowrap">변액 +30</th>'+
+    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--ink-7);color:var(--ink-4);min-width:160px">한도 대비</th>'+
+    '<th style="text-align:right;padding:8px 10px;border-bottom:1px solid var(--ink-7);color:var(--ink-4);white-space:nowrap">배정 / 한도</th>'+
+    '<th style="text-align:right;padding:8px 10px;border-bottom:1px solid var(--ink-7);color:var(--ink-4)">남은 개수</th></tr>';
+  var body=list.map(function(p){
+    var q=DBQ.quota[p.id],quota=(q&&typeof q.quota==='number')?q.quota:null,u=used[p.id]||0;
+    var rate=(quota&&quota>0)?Math.round(u/quota*100):null;
+    var behind=(rate!==null)&&(rate<pace);
+    var col=(rate===null)?'var(--ink-5)':(behind?'#DC2626':'#059669');
+    var bar=(rate===null)?'':'<div style="height:8px;border-radius:4px;background:var(--ink-8);overflow:hidden"><div style="height:100%;width:'+Math.min(rate,100)+'%;background:'+col+';border-radius:4px"></div></div>';
+    var chk=admin
+      ? '<input type="checkbox" '+((q&&q.has_variable)?'checked':'')+' onchange="osDbqVar(&quot;'+p.id+'&quot;,this.checked)" style="width:16px;height:16px;cursor:pointer">'
+      : ((q&&q.has_variable)?'<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#EEF2FF;color:#4338CA">변액</span>':'<span style="color:var(--ink-6)">·</span>');
+    var left=(quota===null)?'—':Math.max(quota-u,0)+'개';
+    var over=(quota!==null&&u>quota)?' <span style="font-size:11px;font-weight:800;color:#B45309">한도 외 '+(u-quota)+'</span>':'';
+    return '<tr>'+
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--ink-8);font-weight:800">'+osEsc(p.name||'(이름없음)')+'</td>'+
+      '<td style="padding:9px 6px;border-bottom:1px solid var(--ink-8);text-align:center">'+chk+'</td>'+
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--ink-8)">'+(bar||'<span style="color:var(--ink-5);font-size:11.5px">한도 없음</span>')+'</td>'+
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--ink-8);text-align:right;white-space:nowrap"><b style="color:'+col+'">'+(rate===null?'—':rate+'%')+'</b> <span style="color:var(--ink-5)">'+u+' / '+(quota===null?'—':quota)+'</span>'+over+'</td>'+
+      '<td style="padding:9px 10px;border-bottom:1px solid var(--ink-8);text-align:right;color:var(--ink-4)">'+left+'</td>'+
+      '</tr>';
+  }).join('');
+  board.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">'+head+body+'</table></div>'+
+    '<div style="font-size:11px;color:var(--ink-5);margin-top:10px">덜 받은 사람을 위로 세웠습니다 · 이 달의 '+pace+'%가 지났습니다 — '+
+    '<span style="color:#DC2626;font-weight:800">빨강</span>은 그보다 덜 받은 사람, <span style="color:#059669;font-weight:800">초록</span>은 페이스대로 받은 사람입니다. '+
+    (admin?'변액 칸을 켜면 그 사람 한도가 30개 늘어납니다.':'변액 설정은 대표·운영자만 바꿉니다.')+'</div>';
+  if(daily){
+    var maxd=0,d0,key;
+    for(d0=1;d0<=r.days;d0++){key=r.y+'-'+osDbqP2(r.m+1)+'-'+osDbqP2(d0);if((byDay[key]||0)>maxd)maxd=byDay[key]||0;}
+    var wd=['일','월','화','수','목','금','토'],cells='';
+    for(d0=1;d0<=r.days;d0++){
+      key=r.y+'-'+osDbqP2(r.m+1)+'-'+osDbqP2(d0);
+      var c=byDay[key]||0,h=maxd?Math.round(c/maxd*44):0,dow=new Date(r.y,r.m,d0).getDay();
+      var isToday=(key===today);
+      cells+='<td style="text-align:center;vertical-align:bottom;padding:0 2px;min-width:26px">'+
+        '<div style="font-size:10.5px;color:'+(c?'var(--ink-3)':'var(--ink-6)')+';font-weight:800;margin-bottom:3px">'+(c||'')+'</div>'+
+        '<div style="height:'+Math.max(h,c?3:1)+'px;border-radius:3px 3px 0 0;background:'+(c?(isToday?'#4338CA':'#94A3B8'):'var(--ink-8)')+'"></div>'+
+        '<div style="font-size:10px;color:'+((dow===0||dow===6)?'#c0392b':'var(--ink-5)')+';margin-top:4px">'+d0+'</div>'+
+        '<div style="font-size:9.5px;color:var(--ink-6)">'+wd[dow]+'</div></td>';
+    }
+    daily.innerHTML='<table style="border-collapse:collapse"><tr>'+cells+'</tr></table>'+
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:8px">이 달 배정 '+total+'건 · 하루 평균 '+(r.days?Math.round(total/r.days*10)/10:0)+'건 · 필요량은 하루 '+need+'개입니다. 막대가 필요량에 못 미치는 날이 이어지면 <b>DB가 모자란 것</b>이지 팀원이 덜 받은 것이 아닙니다.</div>';
+  }
+}
+function osDbqVar(id,on){
+  var sb=osClient();
+  if(!sb){toast('서버 연결이 필요합니다');return;}
+  if(typeof osIsAppAdmin!=='function'||!osIsAppAdmin()){toast('변액 설정은 대표·운영자만 바꿉니다');osDbqLoad();return;}
+  sb.from('db_quota_flags').upsert({
+    member_id:id,has_variable:!!on,
+    updated_at:new Date().toISOString(),
+    updated_by:(OS.profile&&OS.profile.id)||null
+  },{onConflict:'member_id'}).then(function(res){
+    if(res&&res.error){toast('저장하지 못했습니다 — '+(res.error.message||''));osDbqLoad();return;}
+    toast(on?'변액 +30 적용':'변액 해제');
+    osDbqLoad();
+  },function(){toast('저장하지 못했습니다');osDbqLoad();});
+}
 function renderAttend(){
   if(!OS.profile){return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div></div><div class="card"><div class="card-body"><div class="notice" style="color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';}
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">DB CRM</div><div class="page-title">출근 현황</div>'+
