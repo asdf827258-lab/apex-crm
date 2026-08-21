@@ -2412,13 +2412,18 @@ function housePenPer(atAge){
 function housePension(realtyMan, atAge){
   var v=Math.max(+realtyMan||0,0), a=Math.max(+atAge||0,0);
   var young=(a<HOUSE_PEN.minAge), over=(v>HOUSE_PEN.capMan);
-  if(v<=0)return {won:0,per:0,over:false,young:false,usedMan:0};
-  if(young)return {won:0,per:0,over:over,young:true,usedMan:v};
+  /* ※ 이 칸 이름이 오래 <b>won</b> 이었는데 실제로 담은 것은 <b>만원</b>이다.
+     이름이 거짓말을 하면 부르는 쪽이 원 단위로 알고 만 배를 틀린다 —
+     이번에 월 50만원이 「50억」 으로 찍힌 것이 정확히 그 병이었다.
+     그래서 <b>man</b> 으로 고쳐 이름이 단위를 말하게 한다.            */
+  if(v<=0)return {man:0,per:0,over:false,young:false,usedMan:0};
+  if(young)return {man:0,per:0,over:over,young:true,usedMan:v};
   /* 상한을 넘으면 0 으로 지우지 않는다 — 상한까지의 참고값은 보여 주되
      가입 대상이 아니라고 화면에 밝힌다 */
   var used=Math.min(v,HOUSE_PEN.capMan);
   var per=housePenPer(a);
-  return {won:Math.round((used/10000)*per),per:per,over:over,young:false,usedMan:used};
+  /* (억 수) × (억당 월 수령 만원) = <b>만원 / 월</b> */
+  return {man:Math.round((used/10000)*per),per:per,over:over,young:false,usedMan:used};
 }
 /* 퇴직금을 20년(240개월) 동안 나눠 받는다. 남은 돈은 은퇴 후 수익률로
    굴린다 — 이 화면의 다른 계산과 같은 가정을 쓴다.
@@ -2487,7 +2492,7 @@ function render() {
     : Math.round((requiredCapital*r12)/(Math.pow(1+r12,n_months)-1));
 
   const housePen = housePension(realty, rage);
-  const housingPension = housePen.won;
+  const housingPension = housePen.man;   /* 만원 / 월 */
   const sevPension = sevPensionOf(severance, retRate);
   const currentMonthlyInvest = pension + irp + taxfree + general;
 
@@ -6739,9 +6744,9 @@ function renderInherit() {
   var cashGiftTax = tax(Math.max(houseVal-giftDeduct,0));
   var burdenGiftTaxable = Math.max(giftBaseHouse-giftDeduct,0);
   var burdenGiftTax = tax(burdenGiftTaxable);
-  var taxTable = [
-    ['1억 이하','10%','0',10000],['5억 이하','20%','1,000만',50000],['10억 이하','30%','6,000만',100000],['30억 이하','40%','1억6,000만',300000],['30억 초과','50%','4억6,000만',999999999]
-  ].map(function(r){var on = taxable<=r[3] && (r[3]===10000?taxable>0:taxable>arguments.callee.prev); arguments.callee.prev=r[3]; return r;});
+  /* ※ 여기 있던 taxTable 은 <b>죽은 코드</b>였다 — 바로 아래 taxRows 와
+     칸이 100% 같은데 아무도 쓰지 않았고, arguments.callee 까지 써서
+     strict mode 로 바뀌면 터질 물건이었다. 표는 taxRows 하나만 둔다. */
   var prev=0;
   var taxRows = [
     ['1억 이하','10%','0',10000],['5억 이하','20%','1,000만',50000],['10억 이하','30%','6,000만',100000],['30억 이하','40%','1억6,000만',300000],['30억 초과','50%','4억6,000만',999999999]
@@ -7054,7 +7059,7 @@ function getFinancialSnapshot(){
   const fvInvest = currentPensionPay>0 && r12>0 ? Math.round(currentPensionPay*((Math.pow(1+r12,months)-1)/r12)*(1+r12)) : currentPensionPay*months;
   const monthlyFromCapital = Math.round((fvInvest + penNow*Math.pow(1+ret/100, yearsLeft))*0.04/12);
   const housePen = housePension(realty, rage);
-  const housingPension = housePen.won;
+  const housingPension = housePen.man;   /* 만원 / 월 */
   const sevPension = sevPensionOf(severance, ret);
   const totalPension = n('nps') + n('retire_pen') + monthlyFromCapital + housingPension + sevPension;
   const pensionGap = Math.max(futureTarget-totalPension,0);
@@ -10898,10 +10903,10 @@ function renderPensionSim(){
 
   /* STEP 1 — 사이드바에 적힌 것만 더한다. 없는 건 만들지 않는다. */
   var nps=psN('s_nps',0), retp=psN('s_retire_pen',0), priv=psN('s_pen_now',0);
-  var realty=psN('s_realty',0), hpWon=0;
-  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpWon=(h&&h.won)?h.won:0; } }catch(e){}
-  var useH=PSIM.useHouse && hpWon>0;
-  var now=nps+retp+priv+(useH?hpWon:0);
+  var realty=psN('s_realty',0), hpMan=0;
+  try{ if(typeof housePension==='function'){ var h=housePension(realty,rage); hpMan=(h&&h.man)?h.man:0; } }catch(e){}
+  var useH=PSIM.useHouse && hpMan>0;
+  var now=nps+retp+priv+(useH?hpMan:0);
 
   /* STEP 2 — 물가는 계산에 넣지 않는다(요구사항). 참고로만 보여준다. */
   var target=psN('s_target',0), gap=Math.max(target-now,0);
@@ -10966,11 +10971,11 @@ function renderPensionSim(){
   var s1=row('국민연금', psWon(nps)+' / 월', nps?null:'사이드바 「국민연금」이 비어 있습니다')+
     row('퇴직연금', psWon(retp)+' / 월', retp?null:'사이드바 「퇴직연금」이 비어 있습니다')+
     (priv? row('기존 개인연금', psWon(priv)+' / 월'):'')+
-    (hpWon>0
+    (hpMan>0
       ? '<div class="cmp-row"><div><span class="cmp-lbl">주택연금 <label style="font-weight:600;font-size:10.5px;cursor:pointer">'+
         '<input type="checkbox" '+(useH?'checked':'')+' onchange="psSet(\'useHouse\',this.checked)" style="vertical-align:-2px;margin-left:6px"> 합산</label></span>'+
         '<span style="display:block;font-size:10px;color:var(--ink-5);margin-top:2px">부동산 '+psWon(realty)+' 기준 · '+rage+'세 개시</span></div>'+
-        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpWon)+' / 월</div></div>' : '')+
+        '<div class="cmp-val"'+(useH?'':' style="color:var(--ink-5)"')+'>'+psWon(hpMan)+' / 월</div></div>' : '')+
     row('합계', psWon(now)+' / 월', null, true);
 
   var s2='<div style="display:flex;gap:10px;flex-wrap:wrap">'+

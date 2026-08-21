@@ -6575,14 +6575,22 @@ document.querySelectorAll('.nt,.fk').forEach(b=>{
 const CRM = {ch:null, ctx:null};
 try{ CRM.ch = new BroadcastChannel('apex-report'); }catch(e){}
 
+/* 지금 어느 트랙인가 — <b>답하는 곳은 하나여야 한다.</b>
+
+   전에는 여기서 .off 클래스를 다시 세어 따로 답했다. 그런데 그 목록에
+   <b>쿠폰 트랙(trackC)이 빠져 있었다.</b> 그래서 쿠폰 상담을 하는 내내
+   이 함수는 「연금(w)」 이라고 답했고, CRM 에 남는 기록도 · 발표를 닫을 때
+   다시 그리는 차트도 전부 연금 것이었다.
+
+   트랙이 늘 때마다 고쳐야 할 자리가 둘이면 언젠가 하나를 빠뜨린다.
+   그래서 <b>go() 가 들고 있는 값 하나만</b> 본다.                    */
 function curTrack(){
-  const on = id => !document.getElementById(id).classList.contains('off');
-  return on('trackD') ? 'd' : on('trackT') ? 't' : on('trackE') ? 'e' : 'w';
+  try{ if(typeof window.__curTrack==='function') return window.__curTrack(); }catch(e){}
+  return 'w';
 }
-function trackApi(k){
-  return k==='d'?window.__apexD : k==='t'?window.__apexT : k==='e'?window.__apexE :
-         k==='c'?window.__apexC : window.__apexW;
-}
+/* 삼항을 이어 쓰면 트랙이 늘 때 여기도 빠뜨린다 — 표로 둔다 */
+const TRACK_API = {w:'__apexW', d:'__apexD', t:'__apexT', e:'__apexE', c:'__apexC'};
+function trackApi(k){ return window[TRACK_API[k] || TRACK_API.w]; }
 function crmResult(){
   const k = curTrack();
   const api = trackApi(k);
