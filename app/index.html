@@ -11252,8 +11252,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-21 02:10';
-var APP_BUILD_NOTE='<b>이제 앱이 스스로 자기 화면을 검사합니다.</b> 「숫자 위생」 점검이 모든 화면을 열어 <b>부서진 값 · 터진 자릿수 · 적어 준 금액과 다른 되짚기</b>를 잡고, 「쌍둥이」 점검이 <b>같은 것이 두 곳에 있는지</b>를 몇 초 만에 잡습니다. 이 두 장치가 곧바로 진짜 버그 셋을 물었습니다 — <b>쿠폰 상담이 연금으로 기록되던 것</b>(트랙을 알아내는 곳이 둘이었습니다), 죽은 세율표 하나, 그리고 <b>만원을 담고 이름은 「원」이던 칸</b>입니다. <b>연금 · 투자 · 상속 · 부동산</b>은 그림 한 장이 맨 앞에 서고, <b>종합 재무설계</b>에서는 금액 하나로 <b>연금 · 달러 · 일시납</b>을 그 자리에서 계산해 「오늘 정하실 것 셋」 으로 닫습니다. 상담카드 팩트파인딩은 고객 365일과 <b>같은 칸</b>이고, 모르는 칸은 <b>평균 예시</b>로 채우되 노랗게 표시됩니다.';
+var APP_BUILD='2026-08-21 03:20';
+var APP_BUILD_NOTE='<b>비포·애프터 그래프를 준비정도 게이지로 바꿨습니다.</b> 담보를 서로 견주던 막대는 사망 1억 옆에서 입원일당 3만원이 보이지도 않았습니다. 이제 담보마다 <b>자기 자</b>를 세웁니다 — 회색 칸이 <b>권장금액(100%)</b>이고, <b>왼쪽이 지금 · 오른쪽이 바꾸면</b> 되는 것입니다. 위에 <b>충분 · 주의 · 부족 · 미가입</b>이 몇 건인지 한 줄로 섭니다(권장 대비 100%·50% 기준). 권장금액은 「인체 한 장」 화면의 표를 <b>그대로</b> 씁니다 — 두 곳에 두지 않았습니다. 그리고 그것은 <b>설계사가 정한 기준</b>이며 법이나 회사가 정한 값이 아니라고 화면에 밝힙니다. <b>앱이 스스로 자기 화면을 검사합니다</b> — 숫자 위생·쌍둥이 점검이 이번에 <b>쿠폰 상담이 연금으로 기록되던 것</b>을 포함해 진짜 버그 셋을 물어 왔습니다.';
 function nfSite(){
   try{
     var h=location.hostname||'';
@@ -30501,9 +30501,170 @@ function babaBarRows(){
    그래서 <b>줄마다</b> 그 줄의 큰 값을 가득 찬 길이로 잡는다. 담보끼리
    길이를 견주지 말라고 아래에 적어 둔다 — 이 장이 말하려는 것은
    「담보 A 가 B 보다 크다」 가 아니라 「이 담보가 이만큼 늘었다」 다. */
+/* ═══════════════════════════════════════════════════════════════
+   준비정도 게이지 — <b>권장금액 대비 얼마나 차 있나</b>
+
+   막대를 서로 견주는 그림은 담보끼리 자릿수가 달라 읽기 어렵다. 사망
+   1억 옆에 입원일당 3만원을 그리면 3만원은 보이지도 않는다.
+
+   그래서 <b>담보마다 자기 자를 세운다.</b> 회색 칸이 권장금액(100%)이고,
+   그 안이 얼마나 차 있는지를 본다. 그러면 사망도 입원일당도 <b>같은 높이의
+   칸</b>에서 견줄 수 있고, 고객은 「어디가 비었는지」를 한눈에 본다.
+
+   비포·애프터라 채움이 둘이다.
+     · 연한 칸 = <b>지금</b> 가입된 것
+     · 진한 칸 = <b>바꾸면</b> 되는 것
+
+   ※ 권장금액 표는 <b>이미 BABA_BODY 에 있다.</b> 여기서 또 만들면 한쪽만
+     고쳐지는 날이 온다 — 그 병으로 이번에 생활비가 한쪽 표에만 있었다.
+     묶음도 색도 저 표가 들고 있는 것을 그대로 쓴다.
+   ※ 그 금액은 <b>설계사가 정한 기준</b>이다. 법이나 회사가 정한 값이
+     아니라고 화면에 밝힌다.                                        */
+/* 게이지 옷 — <b>한 벌만 적는다.</b> 화면과 제안서는 서로 다른 문서라
+   각자 입어야 하지만, 글은 여기 하나뿐이다. 두 벌로 적으면 한쪽만
+   고쳐지는 날이 온다.                                             */
+function babaGaugeCss(){
+  return '.bg-sum{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 14px}'+
+    '.bg-sum .s{font-size:12.5px;font-weight:800;border-radius:999px;padding:6px 12px;background:#F2F4F6;color:#4E5968}'+
+    '.bg-sum .s b{font-size:14px;margin-left:3px}'+
+    '.bg-sum .s.o{background:#ECFDF5;color:#0F766E}'+
+    '.bg-sum .s.w{background:#EFF6FF;color:#1A56DB}'+
+    '.bg-sum .s.d{background:#FEF2F2;color:#F04452}'+
+    '.bg-sum .s.x{background:#FFFBEB;color:#B45309}'+
+    '.bg-sum em{font-style:normal;font-size:11px;color:#8B95A1;line-height:1.6}'+
+    '.bg-wrap{border:1px solid #E5E8EB;border-radius:14px;padding:14px 14px 4px;background:#fff}'+
+    '.bg-axis{display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;color:#8B95A1;margin-bottom:8px}'+
+    '.bg-grp{margin-bottom:16px;break-inside:avoid;page-break-inside:avoid}'+
+    '.bg-gt{font-size:13px;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}'+
+    '.bg-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:8px}'+
+    '.bg-cell{min-width:0;text-align:center}'+
+    '.bg-rec{font-size:11px;font-weight:800;color:#4E5968;margin-bottom:3px;white-space:nowrap;'+
+      'overflow:hidden;text-overflow:ellipsis}'+
+    '.bg-track{display:flex;gap:3px;height:86px}'+
+    '.bg-half{position:relative;flex:1;min-width:0;background:#EEF1F5;border-radius:5px;overflow:hidden;'+
+      '-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    '.bg-bar{position:absolute;left:0;right:0;bottom:0;'+
+      '-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    '.bg-bar.old{background:#BBD3F5}'+
+    '.bg-bar.new{background:#3E6FD9}'+
+    '.bg-pct{position:absolute;left:0;right:0;bottom:14px;font-size:10px;font-weight:800;color:#8B95A1}'+
+    '.bg-pct.in{color:#fff}'+
+    '.bg-tag{position:absolute;left:0;right:0;bottom:2px;font-size:9px;font-weight:700;color:#8B95A1}'+
+    '.bg-now{font-size:10.5px;font-weight:700;color:#8B95A1;margin-top:4px}'+
+    '.bg-now i{font-style:normal;margin:0 1px}'+
+    '.bg-now b{color:#191F28;font-weight:800}'+
+    '.bg-nm{font-size:10.5px;color:#4E5968;line-height:1.35;margin-top:2px;word-break:keep-all;min-height:28px}'+
+    '.bg-mk{font-size:10px;font-weight:800;margin-top:1px}'+
+    '@media(max-width:520px){.bg-row{grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}'+
+      '.bg-track{height:70px}.bg-nm{font-size:9.5px}.bg-tag{font-size:8px}}';
+}
+/* 화면 쪽에도 그 한 벌을 입힌다 — 안 부르면 게이지가 벌거벗은 채로 선다 */
+function babaGaugeCssOn(){
+  if(document.getElementById('bgStyle'))return;
+  var st=document.createElement('style');st.id='bgStyle';
+  st.textContent=babaGaugeCss();
+  document.head.appendChild(st);
+}
+function babaRecEdited(){
+  try{ var v=JSON.parse(localStorage.getItem(BABA_REC_KEY)||'null');
+       return !!(v&&typeof v==='object'&&Object.keys(v).length); }catch(e){ return false; }
+}
+/* 준비정도 — 권장 대비 100%이상 충분 · 50%이상 주의 · 그 아래 부족 · 0 미가입 */
+function babaReadyOf(rec,v){
+  if(!rec||rec<=0)return null;
+  if(!v||v<=0)return {k:'x',t:'미가입',m:'×',c:'#B45309'};
+  var p=v/rec;
+  if(p>=1)return {k:'o',t:'충분',m:'●',c:'#0F766E',p:p};
+  if(p>=0.5)return {k:'w',t:'주의',m:'▲',c:'#1A56DB',p:p};
+  return {k:'d',t:'부족',m:'△',c:'#F04452',p:p};
+}
+/* 칸 하나 — <b>지금</b>과 <b>바꾸면</b>을 나란히 세운다.
+
+   처음엔 한 칸 안에 두 겹을 포개 그렸는데, 개선이 기존보다 크면 진한
+   칸이 연한 칸을 <b>완전히 덮어</b> 「지금」이 보이지 않았다. 비포·애프터
+   인데 비포가 안 보이면 그림이 뜻을 잃는다. 그래서 둘로 세운다.       */
+function babaGaugeCell(nm,rec,b,a){
+  var pb=rec>0?Math.max(0,Math.min(1,(b||0)/rec)):0;
+  var pa=rec>0?Math.max(0,Math.min(1,(a||0)/rec)):0;
+  var r=babaReadyOf(rec,(a>0?a:b));
+  var sub=function(p,cls,lab){
+    return '<div class="bg-half">'+
+      '<div class="bg-bar '+cls+'" style="height:'+(p*100).toFixed(1)+'%"></div>'+
+      '<div class="bg-pct'+(p>=0.34?' in':'')+'">'+Math.round(p*100)+'%</div>'+
+      '<div class="bg-tag">'+lab+'</div></div>';
+  };
+  return '<div class="bg-cell">'+
+    '<div class="bg-rec">'+babaWonTxt(rec)+'</div>'+
+    '<div class="bg-track">'+sub(pb,'old','지금')+sub(pa,'new','바꾸면')+'</div>'+
+    '<div class="bg-now">'+babaWonTxt(b)+' <i>→</i> <b>'+babaWonTxt(a)+'</b></div>'+
+    '<div class="bg-nm">'+osEsc(nm)+'</div>'+
+    (r?'<div class="bg-mk" style="color:'+r.c+'">'+r.m+' '+r.t+'</div>':'')+
+  '</div>';
+}
+/* 그릴 수 있는 것만 — 권장금액이 있고, 기존이든 개선이든 값이 있는 담보 */
+function babaGaugeRows(){
+  var V=babaRowsV()||[],rec=babaRec(),by={},i,j;
+  for(i=0;i<V.length;i++)by[V[i].k]=V[i];
+  var out=[];
+  for(i=0;i<BABA_BODY.length;i++){
+    var g=BABA_BODY[i],cells=[];
+    for(j=0;j<g.rows.length;j++){
+      var k=g.rows[j][0],r=by[k];
+      if(!r||!rec[k])continue;
+      if(!(r.b>0)&&!(r.a>0))continue;
+      cells.push({k:k,n:r.n,rec:rec[k],b:r.b||0,a:r.a||0});
+    }
+    if(cells.length)out.push({t:g.g,ic:g.ic,c:g.c,cells:cells});
+  }
+  return out;
+}
+function babaReadyTally(){
+  var G=babaGaugeRows(),n={o:0,w:0,d:0,x:0},i,j;
+  for(i=0;i<G.length;i++)for(j=0;j<G[i].cells.length;j++){
+    var c=G[i].cells[j],r=babaReadyOf(c.rec,Math.max(c.b,c.a));
+    if(r)n[r.k]++;
+  }
+  return n;
+}
+function babaGaugeHtml(){
+  try{ babaGaugeCssOn(); }catch(e){}
+  var G=babaGaugeRows();
+  if(!G.length)
+    return '<div class="bp-none">아직 그릴 담보가 없습니다 — 자료를 읽거나 표에 손으로 적어 주시면 '+
+      '<b>권장금액 대비 얼마나 차 있는지</b>가 여기에 섭니다. <b>없는 숫자는 만들지 않습니다.</b></div>';
+  var n=babaReadyTally();
+  var head='<div class="bg-sum">'+
+    '<span class="s o">● 충분 <b>'+n.o+'</b></span>'+
+    '<span class="s w">▲ 주의 <b>'+n.w+'</b></span>'+
+    '<span class="s d">△ 부족 <b>'+n.d+'</b></span>'+
+    '<span class="s x">× 미가입 <b>'+n.x+'</b></span>'+
+    '<em>권장금액 대비 100% 이상 충분 · 50% 이상 주의 · 50% 미만 부족</em></div>';
+  var body=G.map(function(g){
+    return '<div class="bg-grp"><div class="bg-gt" style="color:'+g.c+'">'+g.ic+' '+osEsc(g.t)+'</div>'+
+      '<div class="bg-row">'+g.cells.map(function(c){
+        return babaGaugeCell(c.n,c.rec,c.b,c.a);
+      }).join('')+'</div></div>';
+  }).join('');
+  return head+'<div class="bg-wrap"><div class="bg-axis"><span>권장금액</span><span>가입금액</span></div>'+
+    body+'</div>'+
+    '<div class="bp-note">· 회색 칸이 <b>권장금액(100%)</b>입니다. '+
+    '칸마다 <b>왼쪽이 지금</b>, <b>오른쪽이 바꾸면</b> 되는 것입니다. 숫자는 각각의 준비율입니다.<br>'+
+    '· 담보마다 <b>자기 자</b>로 재므로 사망 1억과 입원일당 3만원을 나란히 놓고 볼 수 있습니다. '+
+    '단위는 <b>만원</b>입니다.<br>'+
+    '· 권장금액은 <b>설계사가 정한 기준</b>이며 법이나 회사가 정한 값이 아닙니다'+
+    (babaRecEdited()?'':' — 지금은 <b>기본값</b>입니다')+'. 「인체 한 장」 화면에서 고치실 수 있습니다.<br>'+
+    '· 실제 가입 여부와 보험료는 <b>심사 결과에 따릅니다.</b></div>';
+}
 function babaDeckBarsHtml(){
+  /* 게이지가 <b>먼저</b>다 — 「어디가 비었나」를 보고 나서 「무엇이 얼마나
+     달라지나」를 본다. 순서가 반대면 고객이 숫자부터 만나 눈이 흐려진다. */
+  var g='';
+  try{ g=babaGaugeHtml(); }catch(e){ g=''; }
   var rows=babaBarRows();
-  if(!rows.length)return '<div class="bp-none">그릴 담보가 없습니다.</div>';
+  if(!rows.length)return g||'<div class="bp-none">그릴 담보가 없습니다.</div>';
+  if(g)g='<div style="margin-bottom:18px">'+g+'</div>'+
+    '<div style="font-size:13.5px;font-weight:800;letter-spacing:-.02em;margin:0 0 10px">'+
+    '무엇이 얼마나 달라지는지 — 큰 것부터</div>';
   var moved=rows.filter(function(x){return x.d!==null&&x.d!==0;});
   var pick=(moved.length?moved:rows).slice(0);
   pick.sort(function(x,y){
@@ -30528,7 +30689,7 @@ function babaDeckBarsHtml(){
       '<div class="bd"><span>기존</span>'+bar(x.b,x.rb,'old',mx)+
         '<span class="nw">신규</span>'+bar(x.a,x.ra,'new',mx)+'</div></div>';
   }).join('');
-  return '<div class="bp-bars">'+body+'</div>'+
+  return g+'<div class="bp-bars">'+body+'</div>'+
     '<div class="bp-note">· 막대는 <b>그 담보 안에서만</b> 견준 것입니다 — 담보끼리 길이로 견주지 마세요. '+
     '입원일당 3만원과 사망 1억을 한 자로 재면 3만원은 보이지도 않기 때문입니다. 정확한 크기는 옆 숫자로 봐 주세요.'+
     (rest>0?('<br>· 여기 못 담은 '+rest+'개를 포함해 <b>담보 전부</b>는 다음 장 표에 있습니다.')
@@ -30635,6 +30796,10 @@ function babaChartHtml(bare){
               babaFeeTxt(fb)+' → '+babaFeeTxt(fa)+'</div></div>'):'')+
         '</div></div>'+
       (bare?'':babaFeedHtml())+
+      /* 준비정도 게이지가 <b>먼저</b> — 「어디가 비었나」를 보고 나서
+         담보별 전·후 막대로 넘어간다.                              */
+      (function(){ try{ var g=babaGaugeHtml();
+        return g?('<div style="margin:4px 0 18px">'+g+'</div>'):''; }catch(e){ return ''; } })()+
       (rows.length?body:'<div style="text-align:center;padding:20px;font-size:12.5px;color:'+GR+'">'+
         '아직 값이 없습니다. 아래 표에 적으시면 여기 그려집니다.</div>')+
       (bare?'':('<div class="btn-row" style="margin-top:12px">'+
@@ -31399,6 +31564,7 @@ function babaPropCss(){
       'border:0;font-size:13.5px;line-height:1.8;color:var(--bl2);font-weight:700}'+
     '.bp-disc{font-size:10px;color:var(--ink3);line-height:1.8;border-top:1px solid var(--ln);padding-top:10px}'+
     '.bp-none{font-size:12.5px;color:var(--ink3);padding:14px 16px;background:var(--bg);border-radius:14px;line-height:1.7}'+
+    babaGaugeCss()+
     '.bp-note{font-size:11px;color:var(--ink3);line-height:1.75;margin-top:10px}'+
     '.bp-ai{margin-top:14px;border-radius:14px;background:var(--bg);padding:14px 16px}'+
     '.bp-ai b{display:block;font-size:14px;font-weight:800;color:var(--ink);line-height:1.6}'+
