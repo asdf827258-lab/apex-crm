@@ -48,11 +48,11 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
   const one = await page.evaluate(() => {
     const out = {};
     ['y5', 'y10', 'y20'].forEach(t => {
-      window.__apexC.set({ co: 'met', type: t, fxIn: 1484, won: 71000 * 1484 / 10000, scen: 'cur' });
+      window.__apexC.set({ co: 'met', type: t, fxIn: 1484, man: 71000 * 1484 / 10000, scen: 'cur' });
       const r = window.__apexC.result();
       out[t] = { each: r.each, times: r.times, got: r.gotTotal, usd: r.usdIn };
     });
-    window.__apexC.set({ co: 'aia', fxIn: 1484, won: 70700 * 1484 / 10000 });
+    window.__apexC.set({ co: 'aia', fxIn: 1484, man: 70700 * 1484 / 10000 });
     const a = window.__apexC.result();
     out.aia = { each: a.each, times: a.times, got: a.gotTotal, usd: a.usdIn };
     return out;
@@ -70,7 +70,7 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
 
   console.log('\n[2] 비례 환산이 맞고, 참고치라고 밝힌다');
   const half = await page.evaluate(() => {
-    window.__apexC.set({ co: 'met', type: 'y5', fxIn: 1484, won: 71000 * 1484 / 10000 / 2 });
+    window.__apexC.set({ co: 'met', type: 'y5', fxIn: 1484, man: 71000 * 1484 / 10000 / 2 });
     const r = window.__apexC.result();
     return { each: r.each, note: (document.getElementById('cpSumNote').textContent || '').replace(/\s+/g, ' ') };
   });
@@ -83,10 +83,10 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
     const out = {};
     ['y5', 'y10', 'y20'].forEach(t => {
       window.__apexC.set({ co: 'met', type: t, fxIn: 1484, fxOut: 1484,
-                           won: 71000 * 1484 / 10000, scen: 'cur' });
+                           man: 71000 * 1484 / 10000, scen: 'cur' });
       out[t] = (document.getElementById('cpSumTable').textContent || '').replace(/\s+/g, ' ');
     });
-    window.__apexC.set({ co: 'aia', fxIn: 1484, fxOut: 1484, won: 70700 * 1484 / 10000, scen: 'cur' });
+    window.__apexC.set({ co: 'aia', fxIn: 1484, fxOut: 1484, man: 70700 * 1484 / 10000, scen: 'cur' });
     out.aia = (document.getElementById('cpSumTable').textContent || '').replace(/\s+/g, ' ');
     return out;
   });
@@ -114,9 +114,17 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
   is(/건물값이 그대로라고 가정/.test(vs), '  부동산 쪽 가정도 밝힌다');
   is(/건강보험료/.test(vs), '  건강보험료가 더 붙을 수 있다고 짚는다');
 
-  console.log('\n[6] 여섯 장이 다 있다');
-  [['부동산으로 월세 받는 것', '1장'], ['거치해서 굴린다', '2장'], ['쿠폰이', '3장'],
-   ['얼마 넣으면', '4장'], ['요건을 충족할 때', '5장'], ['나란히 보기', '6장']]
+  console.log('\n[6] 일곱 장이 다 있다');
+  /* 1장은 넷으로 갈렸다 — 도해 셋이 한 장에 다 들어가 <b>키가 3,093px</b> 이라
+     카드 밑에 묻혀 있었다. 발표 한 장이 네 화면이면 아래는 아무도 안 본다. */
+  [['월세를 받는 것', '1장 · 건물과 월세를 가른다'],
+   ['따로 붙지 않습니다', '1장① · 세금'],
+   ['먼저 오는 고지서', '1장② · 건강보험료'],
+   ['열두 달이', '1장③ · 실제로 들어오는 달'],
+   ['거치해서 굴린다', '2장'], ['쿠폰이', '3장'],
+   ['받는 방법에 따라', '4장 · 얼마 · 어떻게'],
+   ['얼마 넣으면', '5장 · 계산'],
+   ['요건을 충족할 때', '6장'], ['나란히 보기', '7장']]
     .forEach(([w, n]) => is(txt.indexOf(w) >= 0, '  ' + n + ' — ' + w));
   const nav = await page.evaluate(() => ({
     btn: !!document.querySelector('.nt[data-go="c"]'),

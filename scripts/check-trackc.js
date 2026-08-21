@@ -70,8 +70,13 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   await page.evaluate(() => { if (window.__go) window.__go('c'); });
   await page.waitForTimeout(500);
 
-  console.log('\n[1] cp1 에 직접 그린 도해 세 장이 선다');
-  const figs = await page.$$eval('#cp1 .cpfig', els => els.map(e => ({
+  /* 1장은 넷으로 갈려 있다 — 전에는 한 장에 다 있어 키가 3,093px 이었고,
+     발표 한 장이 네 화면이라 <b>도해를 아무도 못 찾았다.</b> */
+  const CP1 = '#cp1,#cp1a,#cp1b,#cp1c';
+  const FIG = CP1.split(',').map(s => s + ' .cpfig').join(',');
+
+  console.log('\n[1] 1장 묶음에 직접 그린 도해 세 장이 선다');
+  const figs = await page.$$eval(FIG, els => els.map(e => ({
     svg: e.querySelectorAll('svg').length,
     img: e.querySelectorAll('img').length,
     label: (e.querySelector('svg') || {}).getAttribute ? e.querySelector('svg').getAttribute('aria-label') : '',
@@ -88,14 +93,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     is(f.texts >= 5, '  ' + (i + 1) + '번 글자가 그림 안에 살아 있다 — ' + f.texts + '개');
   });
   const words = ['임대소득', '피부양자', '지역가입자', '공실', '중개보수'];
-  const allTxt = await page.$eval('#cp1', e => e.textContent);
+  const allTxt = await page.$$eval(CP1, els => els.map(e => e.textContent).join(' '));
   words.forEach(w => is(allTxt.indexOf(w) >= 0, '  「' + w + '」 를 말한다'));
 
   console.log('\n[2] 도해마다 근거를 밝힌다 — 지어낸 그림이 아니다');
   is(figs[0].src, '  ① 임대소득 도해에 근거 링크가 있다');
   is(figs[1].src, '  ② 피부양자 도해에 근거 링크가 있다');
   is(/예시/.test(figs[2].cap), '  ③ 공실 도해는 「예시」 라고 밝힌다 — 고객 숫자인 척하지 않는다');
-  const hrefs = await page.$$eval('#cp1 .cpfig .src a', a => a.map(x => x.href));
+  const SRC = CP1.split(',').map(s => s + ' .cpfig .src a').join(',');
+  const hrefs = await page.$$eval(SRC, a => a.map(x => x.href));
   is(hrefs.length >= 3, '  근거 링크가 셋 이상이다 — ' + hrefs.length + '개');
   is(hrefs.every(h => /^https:/.test(h)), '  모두 https 다');
   is(hrefs.some(h => /nts\.go\.kr/.test(h)), '  국세청 안내로 이어진다');
@@ -152,7 +158,148 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(!/비과세 상품입니다」?\s*$/.test(cp5.txt), '  「비과세 상품입니다」 로 끝내지 않는다');
   is(/원화환산납입서비스/.test(cp5.txt), '  요건이 깨질 수 있는 경우를 먼저 말한다');
 
-  console.log('\n[5] 발표를 누르면 여덟 장이 차례로 선다');
+
+  console.log('\n[4b] 도해가 제 장 앞쪽에 선다 — 카드 밑에 묻히지 않는다');
+  /* 전에는 cp1 한 장에 카드 넷 + 도해 셋이 다 들어가 키가 3,093px 이었다.
+     발표 한 장이 네 화면이면 아래는 아무도 안 본다 — 실제로 도해를 못
+     찾으셨다. 그래서 <b>도해가 제 장 위쪽에 오는지</b>를 잰다.        */
+  const figTop = await page.evaluate(() => ['cp1a','cp1b','cp1c'].map(id => {
+    const s = document.getElementById(id);
+    const f = s && s.querySelector('.cpfig');
+    if (!s || !f) return { id, top: -1 };
+    return { id, top: Math.round(f.getBoundingClientRect().top - s.getBoundingClientRect().top) };
+  }));
+  figTop.forEach(t => is(t.top >= 0 && t.top < 700,
+    '  ' + t.id + ' — 도해가 장 시작에서 ' + t.top + 'px 자리에 있다'));
+
+  console.log('\n[4c] 1장 — 건물과 금융상품을 나란히 놓고, 한쪽 편만 들지 않는다');
+  const rvs = await page.evaluate(() => {
+    const t = document.querySelector('#cp1 .rvs');
+    if (!t) return null;
+    const rows = [].map.call(t.querySelectorAll('.rw'), r => ({
+      k: (r.querySelector('.k') || {}).textContent || '',
+      re: r.classList.contains('re')
+    }));
+    return { rows, txt: document.getElementById('cp1').textContent.replace(/\s+/g, ' ') };
+  });
+  is(!!rvs, '  대조표가 선다');
+  if (rvs) {
+    is(rvs.rows.length >= 10, '  맞대 놓은 줄이 열 이상이다 — ' + rvs.rows.length + '줄');
+    ['비는 달', '고치는 돈', '세금', '건강보험료', '급히 현금'].forEach(k =>
+      is(rvs.rows.some(r => r.k.indexOf(k) >= 0), '  「' + k + '」 줄이 있다'));
+    /* 부동산이 이기는 자리를 감추면 고객이 먼저 알아본다.
+       시세 상승과 레버리지는 <b>부동산 쪽에만 있는 것</b>이라 그대로 적는다. */
+    is(rvs.rows.filter(r => r.re).length >= 2,
+       '  부동산이 이기는 자리를 따로 표시한다 — ' + rvs.rows.filter(r => r.re).length + '줄');
+    is(/값이 오르는 것/.test(rvs.txt) && /대출로 키우기/.test(rvs.txt),
+       '  시세 상승·레버리지를 숨기지 않는다');
+    is(/요건을 충족할 때|요건 충족 시/.test(rvs.txt), '  세금은 조건부로만 말한다');
+    is(!/비과세 상품입니다/.test(rvs.txt), '  「비과세 상품입니다」 라고 단정하지 않는다');
+  }
+
+  console.log('\n[4d] 4장 — 얼마 넣고 어떻게 굴리냐가 한 장에 보인다');
+  const cpm = await page.evaluate(() => {
+    const g = document.getElementById('cpmGrid');
+    if (!g) return null;
+    const cards = [].map.call(g.querySelectorAll('.cpm'), c => ({
+      head: (c.querySelector('.cpm-h b') || {}).textContent || '',
+      rows: [].map.call(c.querySelectorAll('.cpm-r .e'), e => e.textContent.replace(/\s+/g, ' ').trim())
+    }));
+    const s = document.getElementById('cpmoney');
+    return { cards, txt: s ? s.textContent.replace(/\s+/g, ' ') : '' };
+  });
+  is(!!cpm, '  금액 장이 선다');
+  if (cpm) {
+    is(cpm.cards.length === 3, '  금액이 셋이다 — ' + cpm.cards.map(c => c.head).join(' · '));
+    is(cpm.cards.every(c => c.rows.length === 4),
+       '  금액마다 굴리는 방법이 넷이다 — ' + (cpm.cards[0] || {}).rows);
+    is(cpm.cards.every(c => c.rows.every(r => /만원|억/.test(r) && !/NaN|undefined|Infinity/.test(r))),
+       '  칸마다 원화 금액이 제대로 찍힌다');
+    /* 짧게 많이 받는 것과 길게 더 많이 받는 것 — 이 차이가 이 장의 전부다.
+       숫자가 뒤집히면(5년형 누계가 20년형보다 크면) 표를 잘못 읽은 것이다. */
+    const man = t => Number(String(t).replace(/[^0-9]/g, ''));
+    const c1 = cpm.cards[0] || { rows: [] };
+    is(man(c1.rows[0]) > man(c1.rows[2]), '  한 번에 받는 돈은 5년형이 크다');
+    is(/받는 총액은 20년형이 큽니다/.test(cpm.txt), '  받는 총액은 20년형이 크다고 적는다');
+    is(/비례 환산한 참고치/.test(cpm.txt), '  「비례 환산한 참고치」 라고 밝힌다 — 없는 표를 만들지 않는다');
+    is(/제안서를 다시 뽑아/.test(cpm.txt), '  확정 금액은 제안서로 확인하라고 적는다');
+  }
+
+  console.log('\n[4e] 달러를 적은 자리에는 언제나 원화가 붙는다');
+  /* 고객은 $71,000 이 얼마인지 환산하는 사이 설명을 놓친다. 그런데 자리마다
+     손으로 적으면 <b>반드시 빠뜨린다</b> — 실제로 열두 자리 중 여덟 곳만
+     적혀 있었다. 그래서 data-usd 만 적으면 채워지게 만들었고, 여기서 지킨다. */
+  const kw = await page.evaluate(() => {
+    const ns = [].slice.call(document.querySelectorAll('[data-usd]'));
+    return { n: ns.length,
+             filled: ns.filter(e => { const k = e.querySelector('.kw');
+               return k && /[0-9].*원/.test(k.textContent); }).length,
+             one: (ns[0] || {}).textContent || '' };
+  });
+  is(kw.n >= 8, '  달러 자리에 원화 자리표가 붙어 있다 — ' + kw.n + '곳');
+  is(kw.filled === kw.n, '  그 자리가 전부 채워졌다 — ' + kw.filled + '/' + kw.n);
+  const fxBefore = await page.$eval('[data-usd="71000"]', e => e.textContent);
+  await page.evaluate(() => { const i = document.getElementById('cpFxIn');
+    i.value = '1300'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.waitForTimeout(300);
+  const fxAfter = await page.$eval('[data-usd="71000"]', e => e.textContent);
+  is(fxBefore !== fxAfter, '  환율을 바꾸면 원화도 같이 따라간다 — ' +
+     fxBefore.replace(/\s+/g, ' ') + ' → ' + fxAfter.replace(/\s+/g, ' '));
+  await page.evaluate(() => { const i = document.getElementById('cpFxIn');
+    i.value = '1484'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+
+  /* 화면만 보면 새로 적은 달러를 놓친다. 원본을 훑어 <b>자리표 없는 달러</b>가
+     남아 있는지 본다. 코드와 주석은 고객이 안 보므로 걷어내고 센다.        */
+  const raw = fs.readFileSync(path.join(ROOT, 'app/상담자료/통합상담_APEX.html'), 'utf8');
+  const body = raw.replace(/<script[\s\S]*?<\/script>/g, '')
+                  .replace(/<style[\s\S]*?<\/style>/g, '')
+                  .replace(/<!--[\s\S]*?-->/g, '');
+  const loose = body.replace(/<(\w+)[^>]*data-usd="[^"]*"[^>]*>[\s\S]*?<\/\1>/g, '')
+                    .match(/\$[0-9][0-9,]{2,}(\.[0-9]+)?/g) || [];
+  is(loose.length === 0, '  원화 없이 남은 달러가 없다' + (loose.length ? ' — ' + loose.join(' ') : ''));
+
+  console.log('\n[4f] 표지 다섯 장이 첫 문장으로 붙잡는다');
+  const covers = await page.evaluate(() => ['hero','coverD','coverT','coverE','coverC'].map(id => {
+    const s = document.getElementById(id);
+    if (!s) return { id, h: '', sub: '', stats: 0 };
+    const h = s.querySelector('h1,h2');
+    const p = s.querySelector('.sub,.p');
+    return { id, h: h ? h.textContent.replace(/\s+/g, ' ').trim() : '',
+             sub: p ? p.textContent.replace(/\s+/g, ' ').trim() : '',
+             stats: s.querySelectorAll('.hstats div').length };
+  }));
+  covers.forEach(c => {
+    is(c.h.length >= 8, '  ' + c.id + ' 첫 문장이 있다 — ' + c.h.slice(0, 34));
+    is(c.sub.length >= 20, '  ' + c.id + ' 받는 문장이 있다');
+    is(c.stats === 3, '  ' + c.id + ' 숫자 셋이 선다');
+  });
+  const cvTxt = covers.map(c => c.h + ' ' + c.sub).join(' ');
+  /* 표지에 <b>한도·기준액</b>을 박으면 시행령이 바뀔 때 그대로 틀린 말이 된다.
+     실제로 「2,000만원 넘으면 피부양자 탈락」 이 박혀 있었다.            */
+  is(!/[0-9,]+만원\s*(넘으면|이상)/.test(cvTxt) &&
+     !covers.some(c => /탈락/.test(c.sub) && /[0-9],?[0-9]*만원/.test(c.sub)),
+     '  표지에 세법·건보 기준액을 박아 두지 않는다');
+  is(!/비과세 상품입니다|세금이 없습니다/.test(cvTxt), '  표지에서 비과세를 단정하지 않는다');
+
+  console.log('\n[4g] 장 번호가 겹치거나 건너뛰지 않는다');
+  /* 금액 장을 4장으로 끼워 넣었더니 계산기도 4장이라 <b>「4장」이 둘</b>이
+     되었다. 고객 앞에서 「4장 보세요」 라고 하면 어느 쪽인지 모른다.
+     장이 늘 때마다 손으로 다시 세면 반드시 틀리므로 여기서 센다.      */
+  const chs = await page.evaluate(() => [].map.call(
+    document.querySelectorAll('#trackC .ch.c'),
+    e => (e.querySelector('b') || {}).textContent || ''));
+  const nums = chs.map(t => parseInt(String(t).replace(/[^0-9]/g, ''), 10))
+                  .filter(v => !isNaN(v));
+  const uniq = [...new Set(nums)];
+  is(nums.length === chs.length, '  장마다 번호가 붙어 있다 — ' + chs.join(' '));
+  is(uniq.length === Math.max(...uniq),
+     '  1장부터 ' + Math.max(...uniq) + '장까지 건너뛴 번호가 없다 — ' + uniq.join(','));
+  /* 같은 번호가 둘 이상이어도 되는 것은 <b>1장의 ①②③</b> 뿐이다 */
+  const dup = uniq.filter(v => nums.filter(x => x === v).length > 1);
+  is(dup.every(v => v === 1), '  겹친 번호가 1장(①②③) 말고는 없다' +
+     (dup.length ? ' — ' + dup.join(',') + '장' : ''));
+
+  console.log('\n[5] 발표를 누르면 열두 장이 차례로 선다');
   /* 표지(.pcover)는 발표 모드에서만 보인다 — 그냥 높이를 재면 0 이다.
      그러니 <b>실제로 발표를 켜서</b> 한 장씩 넘겨 본다. 쿠폰 발표가 달러로
      새던 것도, 계산기 장에서 엉뚱한 차트를 그리던 것도 여기서 잡힌다. */
@@ -169,7 +316,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     presExit();
     return out;
   });
-  const want = ['coverC', 'cp1', 'cp2', 'cp3', 'cpcalc', 'cp5', 'cp6', 'close'];
+  const want = ['coverC', 'cp1', 'cp1a', 'cp1b', 'cp1c', 'cp2', 'cp3',
+                'cpmoney', 'cpcalc', 'cp5', 'cp6', 'close'];
   is(deck.length === want.length,
      '  ' + want.length + '장이다 — ' + deck.length + '장 (' + deck.map(d => d.id).join(' ') + ')');
   want.forEach((id, i) => {
