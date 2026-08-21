@@ -45,7 +45,18 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
   ok(sc.length >= 2, '바로가기가 둘 이상이다 (' + sc.length + ')');
   ok(sc.some(x => /crm/.test(x.url)), 'DB 통합 CRM 바로가기가 있다');
   ok(sc.some(x => /airep/.test(x.url)), 'TFA 업무관리 바로가기가 있다');
-  sc.forEach(x => ok(/^\.\/\?go=[a-z_]+$/.test(x.url), '  주소 모양이 맞다 — ' + x.url));
+  /* 바로가기가 가는 곳은 두 갈래다.
+       ./?go=crm      앱 안의 판을 연다
+       ./day.html     따로 선 화면을 연다 (하루 한 장 · 팀 하루 한 장)
+     두 번째를 그냥 통과시키면 오타(./dayy.html)를 못 잡는다.
+     그래서 <b>그 파일이 실제로 있는지</b> 본다 — 첫 번째의 탭 이름 검사와 같은 무게다. */
+  sc.forEach(x => {
+    const u = x.url || '';
+    if (/^\.\/[a-z0-9-]+\.html$/i.test(u))
+      ok(fs.existsSync(path.join('app', u.slice(2))), '  가리키는 화면이 실제로 있다 — ' + u);
+    else
+      ok(/^\.\/\?go=[a-z_]+$/.test(u), '  주소 모양이 맞다 — ' + u);
+  });
 
   const html = fs.readFileSync('app/index.html', 'utf8').slice(0, 4000);
   ok(/<link rel="manifest" href="manifest\.webmanifest"/.test(html), 'manifest 를 머리말에서 부른다');
