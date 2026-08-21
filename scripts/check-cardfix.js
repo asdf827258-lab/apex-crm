@@ -129,10 +129,28 @@ const S = f => fs.readFileSync(f, 'utf8');
   ok(/babaPropWrapHtml\(\)/.test(r.paint), '제안서 칸이 비포&애프터 화면에 선다');
   ok(/page-break-before/.test(r.css), '인쇄할 때 쪽이 나뉜다');
 
-  /* 두 벌로 만들면 반드시 한쪽이 뒤처진다 — 미리보기와 인쇄본이 같은 것을 쓰는가 */
-  r = await page.evaluate(() => ({ p: ('' + babaPropPrint), w: ('' + babaPropWrapHtml) }));
-  ok(/babaPropBodyHtml\(\)/.test(r.p) && /babaPropBodyHtml\(\)/.test(r.w),
-    '미리보기와 인쇄본이 같은 본문을 쓴다');
+  /* 두 벌로 만들면 반드시 한쪽이 뒤처진다.
+     화면은 한 장씩(babaPageHtml), 인쇄는 전부(babaPropBodyHtml) 로 갈렸지만
+     <b>장을 그리는 곳은 하나</b>여야 한다 — BABA_SECS 와 babaSecHtml.
+     그래서 「같은 함수를 부르는가」 가 아니라 「같은 장이 나오는가」 를 본다. */
+  r = await page.evaluate(() => {
+    const d = document.createElement('div'); d.innerHTML = babaPropBodyHtml();
+    const printTitles = Array.prototype.map.call(d.querySelectorAll('.bp-sec .bp-h'),
+      e => e.textContent.replace(/\s+/g, ' ').trim());
+    const secTitles = BABA_SECS.map(x => x.n + x.t.replace(/\s+/g, ' '));
+    const one = document.createElement('div'); one.innerHTML = babaPageHtml();
+    return { printN: printTitles.length, secN: BABA_SECS.length,
+             match: printTitles.every((t, i) => t.replace(/\s/g, '') === secTitles[i].replace(/\s/g, '')),
+             screenN: one.querySelectorAll('.bp-sec').length,
+             chips: one.querySelectorAll('.bp-chipn').length,
+             src: ('' + babaPropBodyHtml).indexOf('babaSecHtml') >= 0 &&
+                  ('' + babaPageHtml).indexOf('babaSecHtml') >= 0 };
+  });
+  ok(r.src, '미리보기와 인쇄본이 같은 본문을 쓴다 (둘 다 babaSecHtml)');
+  ok(r.printN === r.secN && r.match,
+    '인쇄본은 ' + r.secN + '장이 차례대로 다 나온다 — ' + r.printN + '장');
+  ok(r.screenN === 1, '화면은 한 장만 그린다 (렉·가독성) — ' + r.screenN + '장');
+  ok(r.chips === r.secN, '위에 ' + r.secN + '개 장 칩이 있어 어디든 바로 간다 — ' + r.chips + '개');
 
   console.log('\n[5] 고객에게 전할 뉴스 → 카드뉴스');
   r = await page.evaluate(() => {
