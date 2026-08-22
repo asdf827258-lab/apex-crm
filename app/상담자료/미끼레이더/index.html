@@ -5358,11 +5358,19 @@ function bindDaily(){
   /* 상품명은 따옴표 안에 있는 것만. 못 찾으면 <b>비워 둔다</b> —
      제목을 잘라 상품명인 척 적으면 그게 지어내는 것이다.            */
   function prodOf(title){
-    var m=title.match(/[‘“'"「『]([^’”'"」』]{2,40})[’”'"」』]/);
-    if(!m) return '';
-    var p=m[1].trim();
-    return /보험|연금|저축|플랜|케어|라이프/.test(p) ? p : '';
+    /* 제목에 따옴표가 여럿일 때가 많다 —
+       「KB손해보험, '건강관리·3대 질병 보장' 결합…'헬스케어+ 건강보험' 출시」
+       처럼 앞의 것은 <b>홍보 문구</b>이고 뒤의 것이 상품명이다.
+       첫 짝만 보고 포기하면 <b>상품명이 없다고</b> 잘못 적힌다. 다 훑는다. */
+    var re=/[‘“'"「『]([^’”'"」』]{2,40})[’”'"」』]/g, m, p;
+    while((m=re.exec(title))){
+      p=m[1].trim();
+      if(/보험|연금|저축|플랜|케어|라이프/.test(p)) return p;
+    }
+    return '';
   }
+  /* 견줄 때 쓰는 납작한 이름 — 공백과 괄호 속을 턴다. 화면에는 원래 이름을 쓴다 */
+  function npFlat(x){ return String(x).replace(/\([^)]*\)/g,'').replace(/\s/g,''); }
   function dt(s){
     var d=new Date(s); if(isNaN(d)) return '';
     return d.getFullYear()+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+('0'+d.getDate()).slice(-2);
@@ -5394,13 +5402,15 @@ function bindDaily(){
          품고 있으면 하나로 묶고, <b>긴 이름</b>을 남긴다(더 정확하니까). */
       var key=null;
       if(p.charAt(0)!=='('){
-        var flat=p.replace(/\s/g,''), k;
+        /* 신문마다 괄호를 넣었다 뺐다 한다 —
+           「핏테크」 와 「핏(Fit)테크」 는 같은 상품이다. 견줄 때만 괄호를 턴다. */
+        var flat=npFlat(p), k;
         for(k in by[co]){
           if(k.charAt(0)==='(') continue;
-          var kf=k.replace(/\s/g,'');
+          var kf=npFlat(k);
           if(kf.indexOf(flat)>=0 || flat.indexOf(kf)>=0){ key=k; break; }
         }
-        if(key && key.replace(/\s/g,'').length < flat.length){
+        if(key && npFlat(key).length < flat.length){
           by[co][p]=by[co][key]; delete by[co][key]; key=p;   /* 긴 이름으로 바꿔 단다 */
         }
       }
@@ -5511,6 +5521,6 @@ function bindDaily(){
 
   window.npcoPull=pull; window.npcoPaint=paint;
   window.npcoState=function(){return {n:(NPC.list||[]).length, err:NPC.err};};
-  window.npcoCoOf=coOf; window.npcoProdOf=prodOf;
+  window.npcoCoOf=coOf; window.npcoProdOf=prodOf; window.npcoFlat=npFlat;
 })();
 </script>
