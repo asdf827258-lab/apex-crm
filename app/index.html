@@ -516,6 +516,35 @@ window.APEX_SB = window.APEX_SB || {
 .tj-desc{font-size:10.5px;color:#6B7280;line-height:1.5;margin-top:8px;text-align:left;}
 .tp-call{border:1px solid #C7D2FE;background:linear-gradient(135deg,#F5F8FF,#EBF3FF);border-radius:12px;padding:14px 16px;margin-top:6px;font-size:12.5px;color:#1E3A8A;line-height:1.65;}
 .tp-call b{color:#1A56DB;}
+/* 그래서 무엇이 달라지는가 — 돈을 달(月)과 갚는 방법으로 옮긴 자리 */
+.tp-chgs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.tp-chg{border:1px solid #EEF0F3;border-radius:14px;padding:14px 15px;background:#FBFCFE;}
+.tp-chg .ic{font-size:20px;line-height:1;}
+.tp-chg .t{font-size:11.5px;font-weight:800;color:#6B7280;margin-top:7px;}
+.tp-chg .v{font-size:22px;font-weight:800;letter-spacing:-.03em;margin:3px 0 6px;}
+.tp-chg .d{font-size:11.5px;color:#4B5563;line-height:1.7;}
+.tp-chg .d b{color:#1C2434;}
+.tp-none{border:1px solid #FDE68A;background:#FFFBEB;border-radius:14px;padding:14px 16px;margin-top:14px;}
+.tp-none .nh{font-size:13px;font-weight:800;color:#92400E;margin-bottom:9px;}
+.tp-none .nl{display:grid;gap:6px;}
+.tp-none .ni{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  font-size:12px;color:#78350F;padding:5px 0;border-bottom:1px dashed #FDE68A;}
+.tp-none .ni:last-child{border-bottom:0;}
+.tp-none .ni i{font-style:normal;font-size:10.5px;color:#A16207;}
+.tp-none .ni b{font-weight:800;color:#92400E;white-space:nowrap;text-align:right;}
+.tp-none .nn{font-size:10.5px;color:#A16207;line-height:1.7;margin-top:9px;}
+.tp-prem{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:14px;padding:14px 16px;margin-top:12px;}
+.tp-prem .ph{font-size:13px;font-weight:800;color:#1E3A8A;margin-bottom:9px;}
+.tp-prem .pr{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;font-size:12px;color:#3730A3;}
+.tp-prem .pr em{font-style:normal;font-weight:800;color:#1E3A8A;}
+.tp-prem .pr em.big{font-size:18px;letter-spacing:-.03em;}
+.tp-prem .pr .ar{color:#94A3B8;font-weight:800;}
+.tp-prem .pn{font-size:10.5px;color:#64748B;line-height:1.7;margin-top:9px;}
+.tp-say{border:1px dashed #CBD5E1;background:#F8FAFC;border-radius:12px;padding:11px 14px;margin-top:14px;
+  font-size:12px;color:#334155;line-height:1.7;}
+.tp-say>b:first-child{display:block;font-size:10.5px;font-weight:800;color:#64748B;margin-bottom:3px;}
+.tp-say em{font-style:normal;font-weight:800;color:#0F172A;}
+@media(max-width:760px){.tp-chgs{grid-template-columns:1fr;}}
 /* 배서 안내서 */
 .endo-cmp{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
 .endo-row{border:1px solid #EEF0F3;border-radius:10px;padding:10px 12px;background:#FCFDFF;}
@@ -19549,7 +19578,8 @@ var TP_DISEASES=[
    {ic:'🚶',k:'회복·통원',dur:'2~4주',pay:['실손(통원)'],desc:'경과 관찰과 통원. 대체로 회복이 양호하다.'}
   ]}
 ];
-var TP={dis:'cancer_major',cov:{diag:5000,surg:300,perDay:10,days:21,chemo:3000,bill:2000,silbi:80,income:400,off:6}};
+var TP={dis:'cancer_major',cov:{diag:5000,surg:300,perDay:10,days:21,chemo:3000,bill:2000,silbi:80,income:400,off:6,
+        rate:6,prem:0,years:0}};
 function tpDisease(){for(var i=0;i<TP_DISEASES.length;i++){if(TP_DISEASES[i].id===TP.dis)return TP_DISEASES[i];}return TP_DISEASES[0];}
 function tpLoad(){try{var m=JSON.parse(localStorage.getItem('apex_treatpay')||'{}');if(m.dis)TP.dis=m.dis;if(m.cov){for(var k in m.cov){if(m.cov.hasOwnProperty(k))TP.cov[k]=m.cov[k];}}}catch(e){}}
 function tpSave(){try{localStorage.setItem('apex_treatpay',JSON.stringify({dis:TP.dis,cov:TP.cov}));}catch(e){}}
@@ -19627,13 +19657,120 @@ function tpBody(){
     '<div style="display:flex;align-items:center;gap:16px;margin-top:14px;flex-wrap:wrap"><div>'+vizDonut(coverRate,{size:120,color:coverRate>=80?'#059669':coverRate>=50?'#D97706':'#DC2626',big:coverRate+'%',bigColor:'#0D1117',sub:'보장 충당률',subColor:'#6B7280'})+'</div>'+
     '<div style="flex:1;min-width:220px" class="tp-call">이번 '+osEsc(d.name)+' 사건의 예상 총부담 <b>'+vizWon(beforeSelf)+'</b> 중 보험이 <b>'+vizWon(covered)+'</b>('+coverRate+'%)를 메워, 실제 내 부담은 <b>'+vizWon(afterSelf)+'</b>으로 줄어듭니다.'+(extra>0?' 게다가 정액 목돈이 병원비를 넘어 <b>'+vizWon(extra)+'</b>만큼 소득공백·생활비까지 보전합니다.':'')+'<br><span style="font-size:11px;color:#64748B">※ 진단비 같은 정액보험금은 병원비 정산이 아니라 "일을 쉬는 동안의 월급"으로 쓸 수 있는 것이 핵심입니다.</span></div></div>';
   h+='</div>';
+
+  /* ── 5장 · 그래서 무엇이 달라지는가 ───────────────────────────
+     4장까지는 <b>돈이 얼마 줄어드는가</b>에서 끝난다. 고객이 정작
+     궁금한 것은 그 다음이다 — 「그래서 내 삶이 어떻게 달라지는데요」.
+
+     여기서는 <b>새 숫자를 만들지 않는다.</b> 위에서 이미 넣은 값
+     (정액 목돈·월 소득·소득중단 개월·총부담)을 <b>사람이 쓰는 단위</b>로
+     바꿔 놓을 뿐이다 — 돈을 <b>달(月)</b> 로, 부담을 <b>갚는 방법</b>으로.
+     가정을 쓴 자리(대출 금리)는 그 자리에 밝히고, 고칠 수 있게 둔다.   */
+  var rate=Math.max(0,Math.min(30,num(c.rate))),prem=num(c.prem),years=num(c.years);
+  var payMonths=income>0?(liquid/income):0;          /* 정액 목돈이 월급 몇 달치인가 */
+  var restMonths=payMonths-off;                      /* 쉬어야 하는 기간을 메우고 남는 달 */
+  var saveMonths=income>0?(beforeSelf/income):0;     /* 한 푼도 안 쓰고 모으면 몇 달 */
+  var loanM=0,loanInt=0;
+  if(beforeSelf>0){
+    var im=rate/100/12,nn=60;
+    loanM=(im>0)?(beforeSelf*im/(1-Math.pow(1+im,-nn))):(beforeSelf/nn);
+    loanInt=loanM*nn-beforeSelf;
+  }
+  var premTotal=prem*12*years;
+
+  var card=function(ic,ttl,big,bigC,body){
+    return '<div class="tp-chg"><div class="ic">'+ic+'</div>'+
+      '<div class="t">'+ttl+'</div>'+
+      '<div class="v" style="color:'+bigC+'">'+big+'</div>'+
+      '<div class="d">'+body+'</div></div>';
+  };
+  var c1=card('💳','통장',vizWon(covered),'#059669',
+    beforeSelf>0
+      ? '이번 사건으로 통장에서 빠져나갈 <b>'+vizWon(beforeSelf)+'</b> 중 '+
+        '<b>'+vizWon(covered)+'</b>을 보험이 대신 냅니다. 남는 부담은 <b>'+vizWon(afterSelf)+'</b>.'
+      : '월 소득과 예상 병원비를 넣으면 계산됩니다.');
+  var c2=card('🗓️','시간',
+    income>0?(vizN(payMonths)+'개월'):'—','#1A56DB',
+    income>0
+      ? '정액 목돈 <b>'+vizWon(liquid)+'</b>은 월 소득 '+fmt(income)+'만원 기준 <b>'+vizN(payMonths)+'개월치 월급</b>입니다. '+
+        (off>0
+          ? (restMonths>=0
+              ? '일을 쉬어야 하는 <b>'+fmt(off)+'개월</b>을 메우고도 <b>'+vizN(restMonths)+'개월</b>이 남습니다 — 서둘러 복귀하지 않아도 됩니다.'
+              : '일을 쉬어야 하는 <b>'+fmt(off)+'개월</b>에 <b>'+vizN(-restMonths)+'개월</b>이 모자랍니다 — 그만큼은 다른 데서 마련해야 합니다.')
+          : '소득중단 개월을 넣으면 몇 달을 버티는지까지 나옵니다.')
+      : '월 소득을 넣으면 「몇 달치 월급인지」 로 바꿔 보여 드립니다.');
+  var c3=card('🏥','선택',
+    chemo>0?vizWon(chemo):(diag>0?vizWon(diag):'—'),'#7C3AED',
+    chemo>0
+      ? '항암·표적 치료비 <b>'+vizWon(chemo)+'</b>는 병원비 정산과 <b>따로</b> 나옵니다. '+
+        '고가의 비급여 치료를 <b>돈 때문에 포기하는 상황</b>을 피할 여지가 생깁니다.'
+      : (diag>0
+          ? '진단비 <b>'+vizWon(diag)+'</b>는 영수증을 내고 받는 돈이 아니라 <b>확진되면 나오는 목돈</b>입니다. '+
+            '어디서 치료받을지, 언제 복귀할지를 <b>돈이 아니라 몸 상태로</b> 정할 수 있습니다.'
+          : '진단비·항암치료비를 넣으면 여기에 표시됩니다.'));
+
+  h+='<div class="rpt-sec"><div class="hd"><span class="n">5</span>그래서 무엇이 달라집니까 — 이 한 번을 겪고 난 뒤</div>'+
+    '<div class="sub">앞의 숫자를 <b>사람이 쓰는 단위</b>로 바꿔 놓은 것입니다. 새로 만든 값은 없습니다 — 위에 넣으신 금액을 달(月)과 갚는 방법으로 옮겼을 뿐입니다.</div>'+
+    '<div class="tp-chgs">'+c1+c2+c3+'</div>';
+
+  /* 쉬어야 하는 달 vs 목돈이 버텨 주는 달 — 한 눈에 */
+  if(income>0&&off>0){
+    var mRows=[
+      {label:'쉬어야 하는 기간',value:off,color:'#DC2626',valLabel:fmt(off)+'개월'},
+      {label:'목돈이 버텨 주는 기간',value:payMonths,color:'#1A56DB',valLabel:vizN(payMonths)+'개월'}
+    ];
+    h+='<div class="viz-wrap" style="margin-top:14px">'+
+      vizBarH(mRows,{width:580,labelW:152,max:Math.max(off,payMonths,1),valW:74})+'</div>';
+  }
+
+  /* 보험이 없었다면 — 이 돈을 어디서 만드는가 */
+  if(beforeSelf>0){
+    h+='<div class="tp-none"><div class="nh">보험이 없었다면, 이 <b>'+vizWon(beforeSelf)+'</b>을 어디서 만듭니까</div>'+
+      '<div class="nl">'+
+        (income>0?('<div class="ni"><span>월급을 한 푼도 안 쓰고 모으면</span><b>'+vizN(saveMonths)+'개월</b></div>'):'')+
+        '<div class="ni"><span>신용대출로 메우면 <i>(연 '+vizN(rate)+'% · 5년 원리금균등 가정)</i></span>'+
+          '<b>매달 '+fmt(loanM)+'만원 · 이자만 '+vizWon(Math.round(loanInt))+'</b></div>'+
+        '<div class="ni"><span>그 5년 동안</span><b>저축·노후 준비는 멈춥니다</b></div>'+
+      '</div>'+
+      '<div class="nn">※ 대출 금리는 <b>가정</b>입니다. 실제 조건에 맞게 아래에서 고쳐 주세요. '+
+      '치료비는 병원비만이 아니라 <b>일을 못 하는 동안 끊긴 소득</b>까지 포함한 금액입니다.</div></div>';
+  }
+
+  /* 지금까지 낸 보험료와 견주면 (넣으신 경우에만) */
+  if(prem>0&&years>0&&payout>0){
+    h+='<div class="tp-prem"><div class="ph">지금까지 낸 보험료와 견주면</div>'+
+      '<div class="pr"><span>월 '+fmt(prem)+'만원 × '+fmt(years)+'년</span><em>낸 보험료 '+vizWon(premTotal)+'</em>'+
+      '<span class="ar">→</span><em class="big">이번 한 번에 '+vizWon(payout)+'</em></div>'+
+      '<div class="pn">※ 정직하게 덧붙입니다 — 낸 보험료에는 <b>이 사건에 쓰이지 않는 다른 담보</b>의 값도 들어 있고, '+
+      '<b>앞으로 낼 보험료</b>는 빠져 있습니다. 사건이 없으면 지급도 없습니다. 수익률로 견줄 수 있는 숫자가 아니라 '+
+      '<b>「그날 이 돈이 준비되어 있는가」</b> 를 보는 숫자입니다.</div></div>';
+  }
+
+  /* 이 두 칸은 이 장에서만 쓰는 입력이라 여기 둔다 */
+  h+='<div class="rpt-fin" style="margin-top:14px">'+
+    tpFinField('rate','대출 금리',rate,'% · 가정')+
+    tpFinField('prem','월 보험료',prem,'만원 · 선택')+
+    tpFinField('years','납입 경과',years,'년 · 선택')+
+    '</div>';
+
+  /* 설계사에게 드리는 한 줄 — 고객 인쇄본에는 안 나간다 */
+  h+='<div class="tp-say"><b>이 자리에서 이 한 줄</b>'+
+    (income>0&&off>0&&restMonths>=0
+      ? '「치료비가 나오는 것보다 중요한 게 있습니다 — '+fmt(off)+'개월을 <em>쉬어도 되는가</em>. 이 설계는 '+vizN(payMonths)+'개월치 월급을 만들어 둡니다.」'
+      : (beforeSelf>0
+          ? '「'+vizWon(beforeSelf)+'이 없다면 어디서 만드시겠습니까. 대출로 메우면 5년 동안 매달 '+fmt(loanM)+'만원입니다.」'
+          : '「지금 가입하신 담보 금액을 넣어 보시면, 그날 무엇이 달라지는지 이 자리에서 바로 보여 드리겠습니다.」'))+
+    '</div>';
+  h+='</div>';
+
   // KPI 요약 + 인쇄
-  h+='<div class="rpt-sec" id="tpRptContent"><div class="hd"><span class="n">5</span>요약</div>'+
+  h+='<div class="rpt-sec" id="tpRptContent"><div class="hd"><span class="n">6</span>요약</div>'+
     '<div class="rpt-kpis">'+
     '<div class="rpt-kpi"><div class="k">예상 지급 총액</div><div class="v" style="color:#1A56DB;font-size:16px">'+vizWon(payout)+'</div><div class="s">실손+정액 합산</div></div>'+
     '<div class="rpt-kpi"><div class="k">정액 목돈</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(liquid)+'</div><div class="s">진단·수술·일당·항암</div></div>'+
     '<div class="rpt-kpi"><div class="k">무보험 총부담</div><div class="v" style="color:#DC2626;font-size:16px">'+vizWon(beforeSelf)+'</div><div class="s">병원비+소득손실</div></div>'+
     '<div class="rpt-kpi"><div class="k">보험적용 실부담</div><div class="v" style="color:#059669;font-size:16px">'+vizWon(afterSelf)+'</div><div class="s">충당률 '+coverRate+'%</div></div>'+
+    (income>0?('<div class="rpt-kpi"><div class="k">쉴 수 있는 기간</div><div class="v" style="color:#1A56DB;font-size:16px">'+vizN(payMonths)+'<small> 개월</small></div><div class="s">정액 목돈 ÷ 월 소득</div></div>'):'')+
     '</div></div>';
   h+='<div class="rpt-tools" style="margin-top:0"><button class="pr" onclick="tpPrint()">🖨 인쇄 · PDF 저장</button></div>';
   h+='<div class="rpt-disc">본 자료는 입력값과 <b>일반적 치료경과 예시</b>에 근거한 참고용 상담자료이며, 특정 상품 권유나 지급 보장이 아닙니다. 실제 치료 과정·기간·비용과 보험금 지급 여부·금액은 개인 상태, 약관, 보험사 심사에 따라 달라집니다(최종은 약관·심사 기준). 제도·수가는 시행일 기준 공식값을 확인하세요. 게시·발송 전 준법감시 확인이 필요합니다.</div>';
@@ -19651,7 +19788,7 @@ function tpPrint(){
     '.rpt-kpis{display:flex;gap:10px;flex-wrap:wrap}.rpt-kpi{flex:1;min-width:118px;border:1px solid #EEF0F3;border-radius:12px;padding:10px 12px;background:#F9FAFB}.rpt-kpi .k{font-size:11px;color:#6B7280;font-weight:700}.rpt-kpi .v{font-size:16px;font-weight:800;margin-top:3px}.rpt-kpi .s{font-size:10.5px;color:#9AA2AD;margin-top:3px}'+
     '.tj{display:flex;flex-wrap:wrap;gap:8px}.tj-step{flex:1;min-width:150px;border:1px solid #EEF0F3;border-radius:10px;padding:10px;text-align:center}.tj-ic{width:44px;height:44px;border-radius:50%;background:#EBF3FF;border:2px solid #1A56DB;display:flex;align-items:center;justify-content:center;font-size:21px;margin:0 auto 6px}.tj-k{font-size:12.5px;font-weight:800}.tj-dur{font-size:10.5px;color:#6B7280}.tj-pay{margin-top:6px;display:flex;flex-direction:column;gap:3px;align-items:center}.tj-pay span{font-size:10px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:6px;padding:2px 7px}.tj-desc{font-size:10.5px;color:#6B7280;line-height:1.5;margin-top:6px;text-align:left}'+
     '.rpt-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#4B5563}.rpt-legend span{display:flex;align-items:center;gap:5px}.rpt-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}'+
-    '.tp-call{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;font-size:12px;color:#1E3A8A;line-height:1.6}.tp-dis,.rpt-fin,.rpt-tools{display:none}svg{max-width:100%;height:auto}.rpt-disc{font-size:11px;color:#9AA2AD;border-top:1px solid #F1F5F9;padding-top:10px}@media print{body{margin:6px}}</style>';
+    '.tp-call{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;font-size:12px;color:#1E3A8A;line-height:1.6}.tp-chgs{display:flex;gap:10px}.tp-chg{flex:1;border:1px solid #EEF0F3;border-radius:12px;padding:12px 13px;background:#FBFCFE}.tp-chg .ic{font-size:18px}.tp-chg .t{font-size:11px;font-weight:800;color:#6B7280;margin-top:6px}.tp-chg .v{font-size:19px;font-weight:800;margin:2px 0 5px}.tp-chg .d{font-size:11px;color:#4B5563;line-height:1.6}.tp-none{border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:12px 14px;margin-top:12px}.tp-none .nh{font-size:12.5px;font-weight:800;color:#92400E;margin-bottom:8px}.tp-none .ni{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:#78350F;padding:4px 0;border-bottom:1px dashed #FDE68A}.tp-none .ni i{font-style:normal;font-size:10px;color:#A16207}.tp-none .ni b{font-weight:800;color:#92400E}.tp-none .nn{font-size:10px;color:#A16207;line-height:1.65;margin-top:8px}.tp-prem{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;margin-top:10px}.tp-prem .ph{font-size:12.5px;font-weight:800;color:#1E3A8A;margin-bottom:7px}.tp-prem .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#3730A3}.tp-prem .pr em{font-style:normal;font-weight:800;color:#1E3A8A}.tp-prem .pr em.big{font-size:16px}.tp-prem .pn{font-size:10px;color:#64748B;line-height:1.65;margin-top:8px}.tp-dis,.rpt-fin,.rpt-tools,.tp-say{display:none}svg{max-width:100%;height:auto}.rpt-disc{font-size:11px;color:#9AA2AD;border-top:1px solid #F1F5F9;padding-top:10px}@media print{body{margin:6px}}</style>';
   var body='<h1>APEX 치료비 지급지도 — '+d.ic+' '+osEsc(d.name)+'</h1><div class="hdln">치료 여정과 보장 지급 시뮬레이션 · '+new Date().toLocaleDateString('ko-KR')+'</div>'+content.innerHTML;
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>APEX 치료비 지급지도</title>'+css+'</head><body>'+body+'</body></html>');
   w.document.close();
