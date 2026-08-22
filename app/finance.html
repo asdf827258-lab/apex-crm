@@ -6354,7 +6354,7 @@ function renderRealEstate() {
   }
   function row(l,v,c,note){ return '<div class="cmp-row"><div><span class="cmp-lbl">'+l+'</span>'+(note?'<span style="font-size:9px;color:var(--ink-5);margin-left:5px">'+note+'</span>':'')+'</div><span class="cmp-val" style="color:'+(c||'var(--ink-1)')+'">'+v+'</span></div>'; }
   function hb(cls,html){ return '<div class="hb '+cls+'">'+html+'</div>'; }
-  function sec(tag,title,body,mb){ return '<div class="card" style="margin-bottom:'+(mb||'12')+'px"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+'</div></div><div class="card-body">'+body+'</div></div>'; }
+  function sec(tag,title,body,mb,fold){ return '<div class="card'+finFold(fold)+'" style="margin-bottom:'+(mb||'12')+'px"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+finHint(fold)+'</div></div><div class="card-body">'+body+'</div></div>'; }
   var netAsset = Math.max(houseVal - mortgage, 0);
   var debtRatio = houseVal>0 ? Math.round(mortgage/houseVal*100) : 0;
   var monthlyInterest = Math.round(mortgage*(mtgRate/100)/12);
@@ -6584,7 +6584,14 @@ function renderRealEstate() {
         '대출 한도·금리는 <b>금융기관 심사</b>에 따르고, 세금은 <b>세무 확인</b>이 필요합니다.</div>';
   }
   $('realestate-content').innerHTML = sec('ONE PAGE','한 장으로 — 내 몫 · 은행 몫 · 매달 나가는 돈',oneBody)
-    + sec('HOUSING STATUS · TAX', '주택 자산 현황 & 세금 분석', status) + sec('INHERITANCE LIQUIDITY','이 집이 상속될 때 — 세금 낼 현금이 있습니까',liqBody) + sec('PRICE FORECAST · '+region, '지역별 주택 가격 미래 예측', forecast) + sec('LOAN DIAGNOSIS · BANKER MODE', '대출 가능 진단 & 6개 상품 비교', loanBody) + sec('PURCHASE PLAN', '구입 자금 계획', plan) + sec('SOLUTION ROADMAP', '부동산·대출 실행 솔루션', solution) + rentCompare;
+    /* 「한 장으로」 와 「상속될 때 현금이 있는가」 는 펴 둔다 — 상담에서
+       제일 먼저 보는 둘이다. 나머지는 물어보실 때 펴면 된다.        */
+    + sec('HOUSING STATUS · TAX', '주택 자산 현황 &amp; 세금 분석', status, '', 1)
+    + sec('INHERITANCE LIQUIDITY','이 집이 상속될 때 — 세금 낼 현금이 있습니까',liqBody)
+    + sec('PRICE FORECAST · '+region, '지역별 주택 가격 미래 예측', forecast, '', 1)
+    + sec('LOAN DIAGNOSIS · BANKER MODE', '대출 가능 진단 &amp; 6개 상품 비교', loanBody, '', 1)
+    + sec('PURCHASE PLAN', '구입 자금 계획', plan, '', 1)
+    + sec('SOLUTION ROADMAP', '부동산·대출 실행 솔루션', solution, '', 1) + rentCompare;
 }
 
 
@@ -6743,7 +6750,7 @@ function renderInherit() {
   function fmt0(v){ return Math.round(v).toLocaleString(); }
   function row(l,v,c,note){ return '<div class="cmp-row"><div><span class="cmp-lbl">'+l+'</span>'+(note?'<span style="font-size:9px;color:var(--ink-5);margin-left:5px">'+note+'</span>':'')+'</div><span class="cmp-val" style="color:'+(c||'var(--ink-1)')+'">'+v+'</span></div>'; }
   function hb(cls,html){ return '<div class="hb '+cls+'">'+html+'</div>'; }
-  function sec(tag,title,body,mb){ return '<div class="card" style="margin-bottom:'+(mb||'12')+'px"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+'</div></div><div class="card-body">'+body+'</div></div>'; }
+  function sec(tag,title,body,mb,fold){ return '<div class="card'+finFold(fold)+'" style="margin-bottom:'+(mb||'12')+'px"><div class="card-hd"><div class="card-tag">'+tag+'</div><div class="card-title">'+title+finHint(fold)+'</div></div><div class="card-body">'+body+'</div></div>'; }
   function tax(t){ if(t<=0)return 0; if(t<=10000)return Math.round(t*.10); if(t<=50000)return Math.round(t*.20-1000); if(t<=100000)return Math.round(t*.30-6000); if(t<=300000)return Math.round(t*.40-16000); return Math.round(t*.50-46000); }
   function rate(t){ return t>300000?50:t>100000?40:t>50000?30:t>10000?20:t>0?10:0; }
   var spouseExists = spouse==='있음';
@@ -6999,7 +7006,17 @@ function renderInherit() {
   try{ lgv=sec('ONE QUESTION','같은 돈을 세 군데에 두면 — 사망보험금 · 은행 · 현금',
     '<div style="font-size:12px;color:var(--ink-4);line-height:1.7;margin-bottom:12px">'+
     '아래 계산서를 보기 전에 <b>이 한 장</b>부터 보십시오.</div>'+lgvHtml()); }catch(e){ lgv=''; }
-  $('inherit-content').innerHTML = lgv + sec('INHERITANCE TAX · TAX ADVISOR MODE','상속세 정밀 계산서',calc) + sec('DEDUCTIONS · CASE BY CASE','상속공제 — 이 집에 해당되는 것 전부',dedBody) + sec('DEATH BENEFIT · LIQUIDITY','사망보장금으로 상속세를 냅니다',gmdbBody) + sec('ANNUITY VALUATION','연금으로 넘기면 과세가액이 낮아집니다 — 정기금 평가',pvBody) + sec('GIFT TAX · 10 YEAR PLAN','증여세 계산 & 10년 분할 타임라인',giftBody) + sec('REAL ESTATE TRANSFER STRATEGY','부동산 증여 vs 매각 vs 부담부증여',prop) + sec('ACTION PLAN · LEGAL BASIS','절세 액션플랜 — 법적 근거 포함',actions+memoBox) + sec('CHECKLIST','상속·증여 준비 체크리스트',checks,'0');
+  /* 「사망보험금 vs 은행 vs 현금」(lgv) 과 「사망보장금으로 낸다」 만 펴 둔다.
+     이 판이 5,270px 이라 상담 중에 굴리다 무슨 얘기였는지 잊는다.      */
+  $('inherit-content').innerHTML = lgv
+    + sec('INHERITANCE TAX · TAX ADVISOR MODE','상속세 정밀 계산서',calc,'',1)
+    + sec('DEDUCTIONS · CASE BY CASE','상속공제 — 이 집에 해당되는 것 전부',dedBody,'',1)
+    + sec('DEATH BENEFIT · LIQUIDITY','사망보장금으로 상속세를 냅니다',gmdbBody)
+    + sec('ANNUITY VALUATION','연금으로 넘기면 과세가액이 낮아집니다 — 정기금 평가',pvBody,'',1)
+    + sec('GIFT TAX · 10 YEAR PLAN','증여세 계산 &amp; 10년 분할 타임라인',giftBody,'',1)
+    + sec('REAL ESTATE TRANSFER STRATEGY','부동산 증여 vs 매각 vs 부담부증여',prop,'',1)
+    + sec('ACTION PLAN · LEGAL BASIS','절세 액션플랜 — 법적 근거 포함',actions+memoBox,'',1)
+    + sec('CHECKLIST','상속·증여 준비 체크리스트',checks,'0',1);
 }
 
 
@@ -10905,9 +10922,9 @@ function renderPensionSim(){
   var opt=list.map(function(x){ return '<option value="'+x.id+'"'+(x.id===p.id?' selected':'')+'>'+
       x.co+' · '+x.name+' ('+x.type+')</option>'; }).join('');
 
-  function card(tag,title,body,desc){
-    return '<div class="card" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
-      '<div class="card-title">'+title+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
+  function card(tag,title,body,desc,fold){
+    return '<div class="card'+finFold(fold)+'" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
+      '<div class="card-title">'+title+finHint(fold)+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
       '</div><div class="card-body">'+body+'</div></div>';
   }
   function row(l,v,note,strong){
@@ -11022,10 +11039,12 @@ function renderPensionSim(){
   try{ s0=psOneHtml(name,target,now,payM,gap,rage,years); }catch(e){ s0=''; }
   host.innerHTML =
     (s0?card('ONE PAGE','한 장으로 — 목표 · 지금 · 함께라면', s0, '아래 네 단계를 한 그림으로 줄인 것입니다'):'')+
-    card('STEP 1 · NOW','지금 이대로라면 은퇴 후 매달 얼마입니까', s1, '왼쪽 고객 정보에서 그대로 가져옵니다')+
-    card('STEP 2 · GAP','목표까지 얼마가 빕니까', s2)+
-    card('STEP 3 · PLAN','우리와 함께라면 — 이렇게 채웁니다', s3, '엑셀 연금비교표를 그대로 옮긴 엔진으로 계산합니다')+
-    card('STEP 4 · RESULT', name+'님, 이렇게 달라집니다', s4);
+    /* 「한 장으로」 만 펴 둔다. 네 단계는 그 한 장을 풀어 쓴 것이라
+       필요할 때 펴면 된다 — 다 펴 두면 3,588px 가 그대로 돌아온다. */
+    card('STEP 1 · NOW','지금 이대로라면 은퇴 후 매달 얼마입니까', s1, '왼쪽 고객 정보에서 그대로 가져옵니다', 1)+
+    card('STEP 2 · GAP','목표까지 얼마가 빕니까', s2, '', 1)+
+    card('STEP 3 · PLAN','우리와 함께라면 — 이렇게 채웁니다', s3, '엑셀 연금비교표를 그대로 옮긴 엔진으로 계산합니다', 1)+
+    card('STEP 4 · RESULT', name+'님, 이렇게 달라집니다', s4, '', 1);
 }
 
 (function(){
@@ -11291,9 +11310,9 @@ function renderDollarSim(){
   var name=((document.getElementById('s_name')||{}).value)||'고객님';
   var D=DOL;
 
-  function card(tag,title,body,desc){
-    return '<div class="card" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
-      '<div class="card-title">'+title+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
+  function card(tag,title,body,desc,fold){
+    return '<div class="card'+finFold(fold)+'" style="margin-bottom:12px"><div class="card-hd"><div class="card-tag">'+tag+'</div>'+
+      '<div class="card-title">'+title+finHint(fold)+'</div>'+(desc?'<div class="card-desc">'+desc+'</div>':'')+
       '</div><div class="card-body">'+body+'</div></div>';
   }
   function big(v,c,l,sub){
@@ -11455,6 +11474,10 @@ function renderDollarSim(){
 /* ══ 긴 카드 접기 — 한 곳에서만 ══════════════════════════════
    card 에 class="fold" 를 달면 접힌다. 편 상태는 이 브라우저에 남는다.
    두 곳에 만들면 한쪽이 안 접히므로 <b>여기 하나만</b> 둔다.        */
+/* 접을 카드인가 — 판단은 <b>여기 한 곳</b>에서만. 카드를 짓는 자리가
+   여럿(연금·부동산·상속)이라 각자 판단하게 두면 한 곳이 반드시 어긋난다. */
+function finFold(f){ return f ? ' fold' : ''; }
+function finHint(f){ return f ? '<span class="fold-n">눌러서 펴기</span>' : ''; }
 function foldKey(c){
   var b=c.querySelector('.card-body'), t=c.querySelector('.card-title');
   return 'apex_fold_'+((b&&b.id)||(t&&t.textContent.slice(0,20))||'x');
@@ -11477,8 +11500,17 @@ function foldWire(root){
     })(cs[i]);
   }
 }
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){foldWire();});
-else foldWire();
+/* 카드는 탭을 열 때 <b>그때그때 그려진다.</b> 한 번만 붙이면 처음 판만
+   접히고 나머지는 안 접힌다. 그래서 새 카드가 생기는 것을 지켜본다 —
+   지켜보는 자리도 <b>하나만</b> 둔다. 이미 붙인 카드는 c._folded 로 건너뛴다. */
+function foldWatch(){
+  foldWire();
+  if(!('MutationObserver' in window)) return;
+  var host=document.querySelector('.report-area')||document.body;
+  new MutationObserver(function(){ foldWire(); }).observe(host,{childList:true,subtree:true});
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',foldWatch);
+else foldWatch();
 </script>
 </body>
 </html>

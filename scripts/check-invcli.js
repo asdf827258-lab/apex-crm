@@ -302,6 +302,29 @@ function handSimp(m, annual, months) {
   await page.emulateMedia({ media: 'screen' });
   is(pr === 'block', '인쇄에서는 접혀 있어도 다 나온다 — 자료가 비면 안 된다');
 
+  /* 투자만 짧아지면 반쪽이다 — 긴 판이 넷이었다.
+     「한 장으로」 같은 요약은 펴 두고 깊은 계산·표만 접는다.       */
+  const panes = [];
+  for (const [id, nm, cap] of [['pension','연금 시뮬레이션',2400],
+                               ['realestate','부동산·대출',2000],
+                               ['inherit','상속·증여',3000]]) {
+    await page.evaluate(x => window.switchTab(x), id);
+    await page.waitForTimeout(900);
+    panes.push(await page.evaluate(a => {
+      const p = document.getElementById('tab-' + a[0]);
+      if (!p) return { nm: a[1], miss: true };
+      return { nm: a[1], cap: a[2], h: p.scrollHeight,
+               fold: p.querySelectorAll('.card.fold').length,
+               open: p.querySelectorAll('.card.fold.open').length };
+    }, [id, nm, cap]));
+  }
+  panes.forEach(p => {
+    is(!p.miss && p.fold >= 3, '  ' + p.nm + ' — 긴 카드가 접힌다 (' + (p.fold || 0) + '장)');
+    is(!p.miss && p.h <= p.cap, '  ' + p.nm + ' — ' + p.h + 'px (' + p.cap + 'px 아래)');
+  });
+  /* 다 접어 버리면 열었을 때 빈 화면이다 — 요약 한 장은 반드시 펴 둔다 */
+  is(panes.every(p => p.miss || p.fold > p.open), '  전부 접지는 않는다 — 요약은 펴 둔다');
+
   console.log(fail === 0
     ? '투자 연동 · 복리 점검 통과 — ' + pass + '가지 다 맞습니다.'
     : '투자 연동 · 복리 점검 실패 — ' + fail + '가지 어긋납니다 (통과 ' + pass + ').');
