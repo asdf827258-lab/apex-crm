@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>질병 보험가이드 · 질병 → 원인 → 치료과정 → 담보 → 화법</title>
+<!--
+  질병 보험가이드 — 고객 앞에서 답해야 하는 다섯 가지를 한 자리에.
+
+  이 화면은 <b>아무 숫자도 스스로 만들지 않습니다.</b> 질병·담보·화법은 전부
+  app/질병가이드-data.js 한 벌에서 나옵니다. 그 파일이 없으면 화면을 세우지 않고
+  「자료를 못 읽었습니다」 라고 적습니다 — 빈 표를 그럴듯하게 세우지 않습니다.
+
+  담보 이름은 app/index.html 의 INS_KEY·INS_AREA 가 아는 이름만 씁니다.
+  질병코드는 KCD_DATA 에 있는 코드만 씁니다. scripts/check-disease.js 가 견줍니다.
+
+  준법 문구와 상담사 이름은 상담자료 공통 덧붙임(apex-deck.js)이 붙입니다.
+  여기서 따로 쓰지 않습니다 — 두 곳에 두면 언젠가 서로 달라집니다.
+-->
+<style>
+  :root{
+    --ink:#0D1117; --ink2:#1C2434; --ink3:#374151; --ink4:#6B7280; --ink5:#9AA2AD;
+    --line:#E5E7EB; --line2:#EEF0F3; --bg:#F7F8FA; --card:#FFFFFF;
+    --blue:#1A56DB; --blue-l:#EFF4FF; --green:#059669; --green-l:#ECFDF5;
+    --red:#DC2626; --red-l:#FEF2F2; --amber:#D97706; --amber-l:#FFFBEB;
+    --purple:#7C3AED; --purple-l:#F5F3FF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;-webkit-text-size-adjust:100%;}
+  b{font-weight:800;}
+  a{color:var(--blue);}
+
+  /* ── 머리 ── */
+  .top{background:linear-gradient(135deg,#0F172A 0%,#1A56DB 68%,#38BDF8 130%);color:#fff;padding:26px 20px 22px;}
+  .top .wrap{max-width:1180px;margin:0 auto;}
+  .top .ey{font-size:11px;font-weight:800;letter-spacing:.14em;color:#BFDBFE;}
+  .top h1{font-size:23px;font-weight:800;letter-spacing:-.03em;margin:6px 0 7px;}
+  .top p{font-size:13px;color:#DBEAFE;max-width:760px;}
+  .top .flow{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px;}
+  .top .flow span{font-size:11.5px;font-weight:800;background:rgba(255,255,255,.14);
+    border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:5px 12px;}
+
+  /* ── 도구줄 ── */
+  .bar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);padding:11px 20px;}
+  .bar .wrap{max-width:1180px;margin:0 auto;display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
+  .q{flex:1;min-width:200px;font-family:inherit;font-size:13.5px;padding:10px 14px;
+    border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);}
+  .q:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,219,.1);}
+  .btn{font-family:inherit;font-size:12.5px;font-weight:800;padding:9px 15px;border-radius:10px;
+    border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer;white-space:nowrap;}
+  .btn:hover{border-color:var(--blue);color:var(--blue);}
+  .btn.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+  .main{max-width:1180px;margin:0 auto;padding:20px 20px 120px;}
+
+  /* ── 질병 고르기 ── */
+  .grp{margin-bottom:22px;}
+  .grp-hd{display:flex;align-items:baseline;gap:9px;margin:0 0 10px;}
+  .grp-hd h2{font-size:15px;font-weight:800;letter-spacing:-.02em;}
+  .grp-hd span{font-size:11.5px;color:var(--ink4);}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:11px;}
+  .dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+    cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;text-align:left;
+    font-family:inherit;color:inherit;width:100%;display:block;}
+  .dcard:hover{border-color:var(--blue);box-shadow:0 6px 18px rgba(15,23,42,.07);transform:translateY(-1px);}
+  .dcard .ic{font-size:21px;}
+  .dcard .nm{font-size:15px;font-weight:800;margin:6px 0 4px;letter-spacing:-.02em;}
+  .dcard .one{font-size:12px;color:var(--ink4);line-height:1.55;}
+  .dcard .tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;}
+  .dcard .tags i{font-style:normal;font-size:10.5px;font-weight:700;color:var(--blue);
+    background:var(--blue-l);border-radius:6px;padding:2px 7px;}
+  .none{background:#fff;border:1px dashed var(--line);border-radius:14px;padding:26px;
+    text-align:center;font-size:13px;color:var(--ink4);}
+
+  /* ── 상세 ── */
+  .detail{display:none;}
+  .detail.on{display:block;}
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:19px 20px;margin-bottom:13px;}
+  .sec>h3{font-size:14.5px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;margin-bottom:11px;}
+  .sec>h3 em{font-style:normal;font-size:10.5px;font-weight:800;color:#fff;background:var(--ink2);
+    border-radius:6px;padding:2px 7px;letter-spacing:.03em;}
+  .sec p{font-size:13.5px;color:var(--ink3);margin-bottom:9px;}
+  .sec p:last-child{margin-bottom:0;}
+
+  .hero{background:linear-gradient(135deg,#0F172A,#1A56DB 72%);color:#fff;border:0;}
+  .hero h2{font-size:24px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:10px;}
+  .hero .one{font-size:14px;color:#DBEAFE;margin-top:8px;}
+  .hero .codes{display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;}
+  .hero .codes i{font-style:normal;font-size:11px;font-weight:700;background:rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:4px 9px;}
+  .hero .codes i b{font-family:'Menlo',monospace;font-weight:800;margin-right:5px;color:#93C5FD;}
+
+  .ul{list-style:none;}
+  .ul li{font-size:13px;color:var(--ink3);padding:6px 0 6px 17px;position:relative;border-bottom:1px dashed var(--line2);}
+  .ul li:last-child{border-bottom:0;}
+  .ul li:before{content:'';position:absolute;left:3px;top:14px;width:5px;height:5px;border-radius:50%;background:var(--blue);}
+  .ul.warn li:before{background:var(--red);}
+
+  /* 범위표 */
+  .range{border:1.5px solid var(--red);border-radius:14px;overflow:hidden;background:var(--red-l);}
+  .range .rh{font-size:13px;font-weight:800;color:var(--red);padding:11px 14px;border-bottom:1px solid rgba(220,38,38,.2);}
+  .range table{width:100%;border-collapse:collapse;background:#fff;}
+  .range th,.range td{font-size:12.5px;text-align:left;padding:9px 13px;border-bottom:1px solid var(--line2);}
+  .range th{background:#FAFBFC;font-weight:800;color:var(--ink4);font-size:11px;letter-spacing:.03em;}
+  .range td.c{font-family:'Menlo',monospace;font-weight:800;color:var(--blue);}
+  .range .rd{font-size:12.5px;color:var(--ink3);padding:11px 14px;}
+
+  /* 치료 여정 */
+  .path{display:flex;flex-direction:column;gap:0;}
+  .stage{display:grid;grid-template-columns:44px 1fr;gap:13px;position:relative;padding-bottom:16px;}
+  .stage:last-child{padding-bottom:0;}
+  .stage .rail{position:relative;display:flex;flex-direction:column;align-items:center;}
+  .stage .dot{width:38px;height:38px;border-radius:12px;background:var(--blue-l);border:1.5px solid var(--blue);
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto;}
+  .stage .line{flex:1;width:2px;background:var(--line);margin-top:5px;min-height:14px;}
+  .stage:last-child .line{display:none;}
+  .stage .body{padding-bottom:3px;}
+  .stage .k{font-size:14px;font-weight:800;letter-spacing:-.02em;}
+  .stage .dur{font-size:11px;font-weight:700;color:var(--blue);background:var(--blue-l);
+    border-radius:6px;padding:2px 8px;margin-left:7px;}
+  .stage .desc{font-size:12.8px;color:var(--ink3);margin-top:5px;}
+  .stage .pays{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
+  .stage .pay{font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-l);
+    border:1px solid rgba(5,150,105,.25);border-radius:999px;padding:4px 11px;cursor:pointer;
+    font-family:inherit;}
+  .stage .pay:hover{background:#D1FAE5;}
+  .stage .nopay{font-size:11.5px;color:var(--ink5);background:#F3F4F6;border-radius:999px;padding:4px 11px;}
+  .stage .watch{font-size:12.3px;color:var(--ink3);background:var(--amber-l);
+    border-left:3px solid var(--amber);border-radius:0 9px 9px 0;padding:9px 12px;margin-top:9px;}
+  .stage .watch b{color:#92400E;}
+
+  /* 막히는 자리 */
+  .traps{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:10px;}
+  .trap{background:var(--red-l);border:1px solid rgba(220,38,38,.22);border-radius:12px;padding:13px 14px;}
+  .trap .t{font-size:13px;font-weight:800;color:var(--red);margin-bottom:5px;}
+  .trap .d{font-size:12.3px;color:var(--ink3);}
+
+  /* 화법 */
+  .talk-open{background:var(--purple-l);border-left:3px solid var(--purple);border-radius:0 10px 10px 0;
+    padding:12px 14px;font-size:13.2px;color:var(--ink2);margin-bottom:13px;}
+  .spin{display:grid;gap:7px;margin-bottom:13px;}
+  .spin .row{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;
+    background:#FAFBFC;border:1px solid var(--line2);border-radius:10px;padding:10px 12px;}
+  .spin .lb{font-size:12px;font-weight:800;color:#fff;background:var(--purple);border-radius:7px;
+    text-align:center;padding:3px 0;}
+  .spin .tx{font-size:13px;color:var(--ink2);}
+  .bi{font-size:13px;color:var(--ink2);background:var(--blue-l);border-radius:11px;padding:12px 14px;margin-bottom:13px;}
+  .bi:before{content:'비유 ';font-size:10.5px;font-weight:800;color:var(--blue);letter-spacing:.06em;display:block;margin-bottom:4px;}
+  .obj{display:grid;gap:8px;}
+  .obj .o{border:1px solid var(--line);border-radius:11px;overflow:hidden;}
+  .obj .oq{font-size:12.8px;font-weight:800;color:var(--ink2);background:#FAFBFC;padding:9px 13px;border-bottom:1px solid var(--line2);}
+  .obj .oq:before{content:'“';}.obj .oq:after{content:'”';}
+  .obj .oa{font-size:12.8px;color:var(--ink3);padding:10px 13px;}
+
+  /* 근거 */
+  .src{list-style:none;}
+  .src li{font-size:12.3px;padding:7px 0;border-bottom:1px dashed var(--line2);}
+  .src li:last-child{border-bottom:0;}
+  .src a{text-decoration:none;font-weight:700;}
+  .src a:hover{text-decoration:underline;}
+
+  /* 담보 되짚기 */
+  .cov{display:grid;gap:9px;}
+  .cov .c{border:1px solid var(--line);border-radius:12px;padding:12px 14px;}
+  .cov .cn{font-size:13.2px;font-weight:800;color:var(--green);margin-bottom:6px;}
+  .cov .cl{font-size:12.3px;color:var(--ink3);padding:3px 0;}
+  .cov .cl b{color:var(--ink2);}
+
+  .disc{background:#FAFBFC;border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:14px;}
+  .disc div{font-size:11.8px;color:var(--ink4);padding:4px 0;}
+  .disc div b{color:var(--ink3);}
+
+  .backrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px;}
+
+  @media(max-width:640px){
+    .top h1{font-size:19px;} .main{padding:15px 13px 130px;}
+    .sec{padding:15px 14px;} .hero h2{font-size:20px;}
+    .cards{grid-template-columns:1fr;}
+  }
+
+  /* ── 인쇄 — 고객께 드리는 자료가 잘리면 안 됩니다 ── */
+  @media print{
+    body{background:#fff;}
+    .bar,.backrow,.noprint{display:none !important;}
+    .top{background:#0F172A !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .main{max-width:none;padding:0;}
+    .sec,.stage,.trap,.dcard,.range,.obj .o{page-break-inside:avoid;break-inside:avoid;}
+    .sec{border-color:#D5D9E0;box-shadow:none;margin-bottom:9px;}
+    .detail.on{display:block !important;}
+    .cards{grid-template-columns:1fr 1fr;}
+    a{color:#1A56DB;text-decoration:none;}
+    .stage .pay,.trap,.bi,.talk-open,.stage .watch,.hero{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<div class="top"><div class="wrap">
+  <div class="ey">APEX YUN PRO · 질병 보험가이드</div>
+  <h1>질병 → 원인 → 치료과정 → 담보 → 화법</h1>
+  <p>고객 앞에서 답해야 하는 다섯 가지를 질병마다 한 자리에 모았습니다.
+     담보 이름은 보장분석이 쓰는 이름 그대로이고, 숫자는 출처가 있는 것만 적었습니다.</p>
+  <div class="flow"><span>① 어떤 병인가</span><span>② 왜 생기나</span><span>③ 어떻게 치료하나</span>
+    <span>④ 그때 나오는 담보</span><span>⑤ 어떻게 말하나</span></div>
+</div></div>
+
+<div class="bar"><div class="wrap">
+  <input class="q" id="q" placeholder="질병 · 증상 · 담보 이름으로 찾기 (예: 뇌경색, 표적항암, 투석, 간병)" oninput="paint()">
+  <button class="btn" id="bAll" onclick="setGrp('')">전체</button>
+  <span id="grpBtns"></span>
+  <button class="btn" onclick="covAll()">💊 담보 말모이</button>
+  <button class="btn" onclick="printAll()">📚 전부 펼쳐 인쇄</button>
+  <button class="btn" onclick="window.print()">🖨 인쇄</button>
+</div></div>
+
+<div class="main">
+  <div id="listPane"></div>
+  <div class="detail" id="detailPane"></div>
+</div>
+
+<script src="../질병가이드-data.js"></script>
+<script src="../상담자료/apex-deck.js"></script>
+<script>
+'use strict';
+
+var D = window.DZ_DATA || null;
+var GRP = '';
+var CUR = '';
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+/* 자료 안의 <b> 만 살린다 — 나머지 태그는 글자로 만든다 */
+function rich(s){ return esc(s).replace(/&lt;(\/?b)&gt;/g,'<$1>'); }
+
+function payName(p){ return p.k + (p.n ? '(' + p.n + ')' : ''); }
+
+/* ── 자료를 못 읽었으면 화면을 세우지 않는다 ───────────────────
+   빈 표를 그럴듯하게 세우면 상담 자리에서 없는 것을 있는 것처럼 말하게 된다. */
+function noData(why){
+  document.getElementById('listPane').innerHTML =
+    '<div class="none"><b>아무 자료도 만들지 않습니다.</b><br><br>' + esc(why) +
+    '<br><br>app/질병가이드-data.js 가 함께 올라갔는지 확인해 주세요.</div>';
+}
+
+/* ══ 목록 ══════════════════════════════════════════════════ */
+function hit(d, q){
+  if (!q) return true;
+  var hay = [d.name, d.one, d.find, d.grp].join(' ');
+  (d.path || []).forEach(function(s){
+    hay += ' ' + s.k + ' ' + s.desc;
+    (s.pay || []).forEach(function(p){ hay += ' ' + payName(p); });
+  });
+  (d.trap || []).forEach(function(t){ hay += ' ' + t.t; });
+  return hay.indexOf(q) >= 0;
+}
+
+function listHtml(){
+  var q = (document.getElementById('q').value || '').replace(/^\s+|\s+$/g,'');
+  var h = '', any = 0;
+  D.grp.forEach(function(g){
+    if (GRP && GRP !== g.k) return;
+    var rows = D.list.filter(function(d){ return d.grp === g.k && hit(d, q); });
+    if (!rows.length) return;
+    any += rows.length;
+    h += '<div class="grp"><div class="grp-hd"><h2>' + g.ic + ' ' + esc(g.k) +
+         '</h2><span>' + esc(g.d) + '</span></div><div class="cards">';
+    rows.forEach(function(d){
+      h += '<button class="dcard" onclick="open_(\'' + d.id + '\')">' +
+           '<div class="ic">' + d.ic + '</div>' +
+           '<div class="nm">' + esc(d.name) + '</div>' +
+           '<div class="one">' + rich(d.one) + '</div>' +
+           '<div class="tags"><i>치료 ' + d.path.length + '단계</i>' +
+           '<i>막히는 자리 ' + (d.trap || []).length + '</i>' +
+           (d.range ? '<i>범위 함정</i>' : '') + '</div></button>';
+    });
+    h += '</div></div>';
+  });
+  if (!any) h = '<div class="none">찾는 말이 없습니다. 다른 낱말로 해 보세요 — 예: 뇌경색, 표적항암, 투석, 간병, 유사암.</div>';
+  return h;
+}
+
+/* ══ 상세 ══════════════════════════════════════════════════ */
+function stageHtml(s){
+  var pays = (s.pay || []).length
+    ? (s.pay || []).map(function(p){
+        return '<button class="pay" onclick="findCov(\'' + esc(p.k).replace(/'/g,'') + '\')">' +
+               esc(payName(p)) + '</button>'; }).join('')
+    : '<span class="nopay">이 단계에서 열리는 담보 없음</span>';
+  return '<div class="stage"><div class="rail"><div class="dot">' + s.ic + '</div><div class="line"></div></div>' +
+    '<div class="body"><div><span class="k">' + esc(s.k) + '</span>' +
+    '<span class="dur">' + esc(s.dur) + '</span></div>' +
+    '<div class="desc">' + rich(s.desc) + '</div>' +
+    '<div class="pays">' + pays + '</div>' +
+    (s.watch ? '<div class="watch"><b>여기서 갈립니다 · </b>' + rich(s.watch) + '</div>' : '') +
+    '</div></div>';
+}
+
+function detailHtml(d){
+  return '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    '<button class="btn" onclick="window.print()">🖨 이 질병 인쇄</button></div>' +
+    detailBody(d) + discHtml();
+}
+
+/* 한 질병의 몸통 — 화면에서 여는 것과 전부 인쇄가 <b>같은 글</b>을 쓴다 */
+function detailBody(d){
+  var h = '';
+
+  /* 표지 */
+  h += '<div class="sec hero"><h2>' + d.ic + ' ' + esc(d.name) + '</h2>' +
+       '<div class="one">' + rich(d.one) + '</div>';
+  if ((d.codes || []).length) {
+    h += '<div class="codes">' + d.codes.map(function(c){
+      return '<i><b>' + esc(c[0]) + '</b>' + esc(c[1]) + '</i>'; }).join('') + '</div>';
+  }
+  h += '</div>';
+
+  /* ① 어떤 병인가 */
+  h += '<div class="sec"><h3><em>①</em>어떤 병입니까</h3>' +
+       (d.what || []).map(function(t){ return '<p>' + rich(t) + '</p>'; }).join('') + '</div>';
+
+  /* 범위 함정 */
+  if (d.range) {
+    h += '<div class="sec"><h3><em>!</em>범위가 곧 돈입니다</h3><div class="range">' +
+      '<div class="rh">' + rich(d.range.t) + '</div>' +
+      '<table><tr><th>담보가 담는 말</th><th>코드 범위</th><th>차지하는 몫</th></tr>' +
+      d.range.rows.map(function(r){
+        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="c">' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td></tr>';
+      }).join('') + '</table>' +
+      '<div class="rd">' + rich(d.range.d) + '</div></div></div>';
+  }
+
+  /* ② 왜 생기나 */
+  h += '<div class="sec"><h3><em>②</em>왜 생깁니까</h3>' +
+       (d.cause.why || []).map(function(t){ return '<p>' + rich(t) + '</p>'; }).join('') +
+       '<ul class="ul">' + (d.cause.risk || []).map(function(r){
+         return '<li>' + rich(r) + '</li>'; }).join('') + '</ul>' +
+       '<div class="watch" style="margin-top:11px;font-size:12.3px;color:#374151;background:#FFFBEB;' +
+       'border-left:3px solid #D97706;border-radius:0 9px 9px 0;padding:9px 12px;">' +
+       '<b>말할 때 · </b>' + rich(d.cause.say) + '</div></div>';
+
+  /* ③ 치료과정 + ④ 담보 */
+  h += '<div class="sec"><h3><em>③④</em>어떻게 치료하고, 그때 어떤 담보가 나옵니까</h3>' +
+       '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">' +
+       '초록 알약이 그 단계에서 열리는 담보입니다. 눌러 보시면 <b>그 담보가 다른 질병 어디에서 또 일하는지</b> 보여 드립니다.</p>' +
+       '<div class="path">' + d.path.map(stageHtml).join('') + '</div></div>';
+
+  /* ⑤ 막히는 자리 */
+  if ((d.trap || []).length) {
+    h += '<div class="sec"><h3><em>⑤</em>여기서 자주 막힙니다</h3><div class="traps">' +
+      d.trap.map(function(t){
+        return '<div class="trap"><div class="t">' + esc(t.t) + '</div><div class="d">' + rich(t.d) + '</div></div>';
+      }).join('') + '</div></div>';
+  }
+
+  /* ⑥ 화법 */
+  h += '<div class="sec"><h3><em>⑥</em>어떻게 말합니까</h3>' +
+    '<div class="talk-open">' + rich(d.talk.open) + '</div>' +
+    '<div class="spin">' + (d.talk.spin || []).map(function(s){
+      return '<div class="row"><div class="lb">' + esc(s[0]) + '</div><div class="tx">' + rich(s[1]) + '</div></div>';
+    }).join('') + '</div>' +
+    (d.talk.bi ? '<div class="bi">' + rich(d.talk.bi) + '</div>' : '') +
+    '<div class="obj">' + (d.talk.obj || []).map(function(o){
+      return '<div class="o"><div class="oq">' + esc(o[0]) + '</div><div class="oa">' + rich(o[1]) + '</div></div>';
+    }).join('') + '</div></div>';
+
+  /* ⑦ 근거 */
+  h += '<div class="sec"><h3><em>⑦</em>근거</h3>';
+  if ((d.src || []).length) {
+    h += '<ul class="src">' + d.src.map(function(s){
+      return '<li>· ' + esc(s[0]) + ' <a href="' + esc(s[1]) + '" target="_blank" rel="noopener">원문 ↗</a></li>';
+    }).join('') + '</ul>';
+  } else {
+    h += '<p style="font-size:12.5px;color:#6B7280;">이 질병에는 <b>아직 확인한 기사·통계를 붙이지 않았습니다.</b> ' +
+         '확인하지 못한 숫자를 적지 않으려고 비워 둡니다 — 상담에서는 이 화면의 설명까지만 쓰시고, ' +
+         '숫자가 필요하면 1차 자료를 직접 확인해 인용하십시오.</p>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
+/* 전부 펼쳐 인쇄 — 한 권으로 묶어 들고 다니실 수 있게.
+   화면에서 하나씩 여는 것과 <b>같은 글</b>을 그대로 이어 붙인다. 인쇄용 글을
+   따로 쓰지 않는다 — 두 벌이 되면 한쪽만 고쳐지고, 인쇄물만 옛말을 하게 된다. */
+function printAll(){
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    '<button class="btn" onclick="window.print()">🖨 지금 인쇄</button></div>';
+  h += '<div class="sec hero"><h2>📚 질병 보험가이드 — 전부</h2>' +
+    '<div class="one">질병 ' + D.list.length + '종 · 담보 ' + (D.cov || []).length + '가지</div></div>';
+  D.list.forEach(function(d){ h += detailBody(d); });
+  h += discHtml();
+  showDetail(h);
+  setTimeout(function(){ try { window.print(); } catch (e) {} }, 400);
+}
+
+/* ══ 담보 되짚기 — 이 담보는 어디에서 일하나 ══════════════ */
+function findCov(name){
+  var rows = [];
+  D.list.forEach(function(d){
+    d.path.forEach(function(s){
+      (s.pay || []).forEach(function(p){
+        if (p.k === name) rows.push({ d: d, s: s, p: p });
+      });
+    });
+  });
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    (CUR ? '<button class="btn" onclick="open_(\'' + CUR + '\')">← 보던 질병으로</button>' : '') + '</div>';
+  var v = vocab(name);
+  h += '<div class="sec"><h3><em>담보</em>' + esc(name) + ' 는 어디에서 일합니까</h3>';
+  if (v) {
+    h += '<div class="bi" style="background:#ECFDF5;"><span style="font-size:10.5px;font-weight:800;' +
+      'color:#059669;letter-spacing:.06em;display:block;margin-bottom:4px;">무슨 돈입니까</span>' +
+      rich(v.d) + '</div>';
+    if (v.w) h += '<div class="stage"><div class="body" style="grid-column:1/-1"><div class="watch">' +
+      '<b>여기서 갈립니다 · </b>' + rich(v.w) + '</div></div></div>';
+  }
+  h += '<p style="font-size:12.5px;color:#6B7280;margin:12px 0;">이 담보 하나가 <b>몇 개의 질병, 몇 개의 단계</b>에서 열리는지 보여 드립니다. ' +
+    '고객에게 「이 담보 왜 넣어요?」 라는 질문을 받으면 이 화면을 보여 주십시오.</p><div class="cov">';
+  if (!rows.length) {
+    h += '<div class="none">이 담보가 걸린 단계를 찾지 못했습니다.</div>';
+  } else {
+    var by = {};
+    rows.forEach(function(r){ (by[r.d.id] = by[r.d.id] || { d: r.d, rows: [] }).rows.push(r); });
+    Object.keys(by).forEach(function(k){
+      var g = by[k];
+      h += '<div class="c"><div class="cn">' + g.d.ic + ' ' + esc(g.d.name) + '</div>' +
+        g.rows.map(function(r){
+          return '<div class="cl">' + r.s.ic + ' <b>' + esc(r.s.k) + '</b> · ' + esc(r.s.dur) +
+                 ' — ' + esc(payName(r.p)) + '</div>';
+        }).join('') +
+        '<div style="margin-top:8px"><button class="btn noprint" onclick="open_(\'' + g.d.id + '\')">이 질병 열기 →</button></div></div>';
+    });
+  }
+  h += '</div></div>' + discHtml();
+  showDetail(h);
+}
+
+/* 담보 말모이 — 이 자료가 쓰는 담보 이름과 그 뜻은 한 곳에만 있다 */
+function vocab(k){
+  var C = D.cov || [], i;
+  for (i = 0; i < C.length; i++) if (C[i].k === k) return C[i];
+  return null;
+}
+function covUsedBy(k){
+  var out = [];
+  D.list.forEach(function(d){
+    var n = 0;
+    d.path.forEach(function(s){ (s.pay || []).forEach(function(p){ if (p.k === k) n++; }); });
+    if (n) out.push(d.ic + ' ' + d.name);
+  });
+  return out;
+}
+function covAll(){
+  var byArea = {}, order = [];
+  (D.cov || []).forEach(function(c){
+    if (!byArea[c.area]) { byArea[c.area] = []; order.push(c.area); }
+    byArea[c.area].push(c);
+  });
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    (CUR ? '<button class="btn" onclick="open_(\'' + CUR + '\')">← 보던 질병으로</button>' : '') +
+    '<button class="btn" onclick="window.print()">🖨 인쇄</button></div>';
+  h += '<div class="sec"><h3><em>💊</em>담보 말모이 — 이 돈이 무슨 돈입니까</h3>' +
+    '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">이 자료가 쓰는 담보 이름은 <b>여기 적힌 것뿐</b>입니다. ' +
+    '보장분석이 쓰는 이름 그대로라, 증권에서 같은 말로 찾으실 수 있습니다.</p>';
+  order.forEach(function(a){
+    h += '<div class="grp-hd" style="margin:16px 0 8px"><h2 style="font-size:13px">' + esc(a) + '</h2>' +
+         '<span>' + byArea[a].length + '개</span></div><div class="cov">';
+    byArea[a].forEach(function(c){
+      var usedBy = covUsedBy(c.k);
+      h += '<div class="c"><div class="cn">' + esc(c.k) + '</div>' +
+        '<div class="cl">' + rich(c.d) + '</div>' +
+        (c.w ? '<div class="watch" style="margin-top:8px">' + '<b>여기서 갈립니다 · </b>' + rich(c.w) + '</div>' : '') +
+        (usedBy.length ? '<div class="cl" style="margin-top:8px;color:#6B7280">여기에서 일합니다 — ' + esc(usedBy.join(' · ')) + '</div>' : '') +
+        '<div style="margin-top:8px"><button class="btn noprint" onclick="findCov(\'' + esc(c.k).replace(/'/g,'') + '\')">단계별로 보기 →</button></div>' +
+        '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div>' + discHtml();
+  showDetail(h);
+}
+
+function discHtml(){
+  return '<div class="disc">' +
+    '<div><b>치료 · </b>' + rich(D.disc.med) + '</div>' +
+    '<div><b>지급 · </b>' + rich(D.disc.pay) + '</div>' +
+    '<div><b>숫자 · </b>' + rich(D.disc.num) + '</div>' +
+    '<div><b>제도 · </b>산정특례·장기요양 같은 <b>제도의 조건과 기간은 개정될 수 있습니다.</b> ' +
+    '상담 자리에서 제도의 숫자를 외워 말하지 마시고, 링크의 1차 자료로 그날 확인하십시오.</div>' +
+    '</div>';
+}
+
+/* ══ 화면 전환 ═════════════════════════════════════════════ */
+function showDetail(h){
+  document.getElementById('detailPane').innerHTML = h;
+  document.getElementById('detailPane').classList.add('on');
+  document.getElementById('listPane').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+function open_(id){
+  var d = null, i;
+  for (i = 0; i < D.list.length; i++) if (D.list[i].id === id) d = D.list[i];
+  if (!d) return;
+  CUR = id;
+  showDetail(detailHtml(d));
+  try { location.hash = id; } catch (e) {}
+  say('open', id);
+}
+function close_(){
+  CUR = '';
+  document.getElementById('detailPane').classList.remove('on');
+  document.getElementById('listPane').style.display = '';
+  try { location.hash = ''; } catch (e) {}
+  window.scrollTo(0, 0);
+}
+function setGrp(k){
+  GRP = k;
+  paint();
+  var b = document.getElementById('grpBtns').getElementsByTagName('button'), i;
+  document.getElementById('bAll').className = 'btn' + (k ? '' : ' on');
+  for (i = 0; i < b.length; i++) b[i].className = 'btn' + (b[i].getAttribute('data-k') === k ? ' on' : '');
+}
+function paint(){
+  if (!D) return;
+  document.getElementById('listPane').innerHTML = listHtml();
+}
+
+/* ── 앱(틀) 과 주고받는 말 — 상담자료 덱과 같은 규약 ── */
+function say(t, v){
+  try { parent.postMessage({ t: 'apex:guide', act: t, id: v }, location.origin); } catch (e) {}
+}
+window.addEventListener('message', function(ev){
+  if (ev.origin !== location.origin) return;
+  var m = ev.data;
+  if (!m || typeof m !== 'object') return;
+  if (m.t === 'apex:jump' && m.to) open_(m.to);
+  if (m.t === 'apex:home') close_();
+});
+
+/* ══ 시작 ══════════════════════════════════════════════════ */
+(function boot(){
+  if (!D || !D.list || !D.list.length) {
+    noData('질병 자료(DZ_DATA)를 읽지 못했습니다.');
+    return;
+  }
+  document.getElementById('grpBtns').innerHTML = D.grp.map(function(g){
+    return '<button class="btn" data-k="' + esc(g.k) + '" onclick="setGrp(\'' + esc(g.k) + '\')">' +
+           g.ic + ' ' + esc(g.k) + '</button>';
+  }).join(' ');
+  setGrp('');
+  var hash = (location.hash || '').replace('#','');
+  if (hash) open_(hash);
+  say('ready', '');
+})();
+</script>
+</body>
+</html>

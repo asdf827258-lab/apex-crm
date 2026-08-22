@@ -1145,6 +1145,11 @@ body.fptalk-mode #fpTalkScreen{display:block;}
 body.fpdeck-mode .app{display:none;}
 body.fpdeck-mode #fpDeckScreen{display:block;}
 #fpDeckScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 질병 보험가이드 — 화법서와 같은 틀 */
+#dzGuideScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.dzguide-mode .app{display:none;}
+body.dzguide-mode #dzGuideScreen{display:block;}
+#dzGuideScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -1326,6 +1331,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   </div>
 </div>
 
+<!-- 질병 보험가이드 -->
+<div id="dzGuideScreen">
+  <iframe id="dzGuideFrame" class="fin-frame" title="질병 보험가이드"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitDzGuide()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="dzGuideReload()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="dzGuideNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <!-- 재무설계 상담자료 (고객 앞에서 여는 화면) -->
 <div id="fpDeckScreen">
   <iframe id="fpDeckFrame" class="fin-frame" title="재무설계 상담자료"></iframe>
@@ -1348,6 +1363,7 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 <!-- 전체 지도가 아는 것을 음성 비서에게도 물려준다 —
      상황별 순서표와 「화면 안쪽 칸」. 없어도 앱은 그대로 돈다(있으면 더 알아듣는다). -->
 <script src="apex-map-data.js"></script>
+<script src="질병가이드-data.js"></script>
 
 
 
@@ -4635,6 +4651,7 @@ function osTabProbe(tab){
   if(tab==='growboard')return renderGrowBoard();
   if(tab==='voiceasst')return renderVoiceAsst();
   if(tab==='fp_talk')return renderFpTalk();
+  if(tab==='dz_guide')return renderDzGuide();
   if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
   if(tab==='teamx')return renderTeamX();
@@ -10079,6 +10096,7 @@ var TABS=[
    {id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:'',ak:'고객'},
    {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
+   {id:'dz_guide',icon:'🩺',title:'질병 보험가이드',cnt:'',ak:'고객'},
    {id:'mikki_talk',icon:'🎣',title:'미끼상품&접촉전략',cnt:'27',ak:'고객'},
    {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
@@ -10188,6 +10206,7 @@ var TAB_META={
  video:{tag:'CONTENT',title:'유튜브 & 릴스',desc:'영상 포맷·길이별 제목·후킹·대본을 \'삶을 설계하다\' 톤으로.'},
  simui:{tag:'CONTENT',title:'외부글 심의필터',desc:'작성한 글의 보험광고 규정 위반 소지를 점검하고 교정안을 제시합니다.'},
  calendar:{tag:'CONTENT',title:'콘텐츠 캘린더',desc:'한 달치 발행 일정과 주제를 자동 편성합니다(로컬 저장).'},
+ dz_guide:{tag:'CONSULT',title:'질병 보험가이드',desc:'질병마다 원인·치료과정·그 단계에서 열리는 담보·화법을 한 자리에 모아 둔 자료입니다. 담보 이름은 보장분석이 쓰는 이름 그대로입니다.'},
  treatpay:{tag:'ANALYSIS',title:'치료비 지급지도',desc:'질병별 치료 여정과 단계별 보장 지급, 보험 유무에 따른 가계 부담 차이를 그래프로 보여주는 상담자료입니다.'},
  endorse:{tag:'CONTRACT',title:'배서 안내서 생성',desc:'계약 변경(배서) 유형을 고르고 변경 전·후를 입력하면 필요서류·유의사항·고객 안내문을 한 번에 만들어 줍니다. 실제 배서 접수·심사는 보험사 기준을 따릅니다.'},
  bojang:{tag:'ANALYSIS',title:'AI 보장분석',desc:'보장분석 리포트 PDF를 올리면 1:1 맞춤 상담 리포트로 변환합니다.'},
@@ -11037,7 +11056,7 @@ var lastTab='dashboard';
    칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode',
-                   'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
+                   'fpdeck-mode','fptalk-mode','dzguide-mode','mikki-mode','mktalk-mode','carfault-mode',
                    'apexmap-mode'];
 function osFullMode(on){
   var b=document.body,i;
@@ -11156,6 +11175,7 @@ function go(tab){
   else if(tab==='growboard'){dyn.innerHTML=renderGrowBoard();if(typeof osGrowBoardAfterRender==='function')osGrowBoardAfterRender();}
   else if(tab==='voiceasst'){dyn.innerHTML=renderVoiceAsst();if(typeof osVoiceAsstAfterRender==='function')osVoiceAsstAfterRender();}
   else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
+  else if(tab==='dz_guide'){dyn.innerHTML=renderDzGuide();if(typeof osDzGuideAfterRender==='function')osDzGuideAfterRender();}
   else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
@@ -11406,8 +11426,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-22 07:20';
-var APP_BUILD_NOTE='<b>계산기 네 판이 절반 아래로 줄었습니다.</b> 투자 컨설팅 <b>7,014→2,103px</b> · 연금 시뮬레이션 <b>3,588→1,942px</b> · 부동산·대출 <b>3,256→1,415px</b> · 상속·증여 <b>5,270→2,514px</b>. 「한 장으로」 같은 <b>요약은 펴 두고</b> 깊은 계산·표만 접었습니다 — 눌러서 펴시면 됩니다. 탭 열넷도 <b>285→74px</b> 로 눕혀, 열자마자 요약 한 장이 바로 보입니다. 본문의 절반 가까이가 8~10px 이라 눈을 찌푸리시던 것을 <b>화면에서만</b> 10.5~11.5px 로 올렸습니다. <b>인쇄에는 접혀 있어도 전부 나갑니다</b> — 고객께 드리는 자료가 비면 안 되니까요.';
+var APP_BUILD='2026-08-22 21:40';
+var APP_BUILD_NOTE='<b>질병 보험가이드가 생겼습니다 — 상담 도구 안에 있습니다.</b> 질병 <b>12종</b>마다 ① 어떤 병인지 ② 왜 생기는지 ③ 어떻게 치료하는지 ④ <b>그 단계에서 어떤 담보가 열리는지</b> ⑤ 그 말을 어떻게 꺼낼지(오프닝·SPIN·비유·거절처리) 를 한 자리에 모았습니다. 담보 알약을 누르면 <b>그 담보가 다른 질병 어디에서 또 일하는지</b> 되짚어 보여 드리고, 「💊 담보 말모이」 에는 담보 <b>25가지가 무슨 돈인지</b>와 자주 걸리는 자리가 적혀 있습니다. 뇌·심장은 <b>범위표</b>(뇌출혈 I60~I62 · 뇌졸중 I60~I63 · 뇌혈관질환 I60~I69)를 따로 세웠습니다 — 범위가 곧 돈입니다. 질병 표는 <b>한 벌만</b> 둡니다: 치료비 지급지도도 이제 같은 표를 읽습니다. 담보 이름은 보장분석이 쓰는 이름 그대로라 증권에서 같은 말로 찾힙니다. 숫자는 <b>출처가 있는 것만</b> 적었고, 못 붙인 값은 적지 않았습니다. 인쇄해서 고객께 드리셔도 안 짤립니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13123,6 +13143,7 @@ var VA_ALIAS={
  '성장판':'growboard','팀':'growboard','팀원':'growboard','성장':'growboard',
  '두뇌':'brain','윤시현의두뇌':'brain','뇌':'brain',
  '화법서':'fp_talk','화법':'fp_talk','실전화법서':'fp_talk',
+ '질병가이드':'dz_guide','보험가이드':'dz_guide','질병':'dz_guide','질병보험가이드':'dz_guide','치료과정':'dz_guide',
  '재무설계상담자료':'fp_deck','재무상담':'fp_deck','생애설계':'fp_deck',
  '보장분석상담자료':'sangdam','상담자료':'sangdam',
  '보장분석':'bojang','증권':'bojang','증권분석':'bojang',
@@ -14716,6 +14737,7 @@ function renderFpTalk(){
     '<div class="card"><div class="card-body">'+
       '<div class="btn-row"><button class="btn btn-primary" onclick="fpTalkOpen(\'\')">화법서 열기</button>'+
       '<button class="btn btn-ghost" onclick="go(\'fp_deck\')">재무설계 상담자료</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'dz_guide\')">질병 보험가이드</button>'+
       '<button class="btn btn-ghost" onclick="fpTalkNewTab()">새 탭에서</button></div>'+
       '<div class="fp-tod"><b>오늘 이 장</b>'+osEsc(t[1])+
         '<span>'+osEsc(t[3])+'</span>'+
@@ -14736,6 +14758,119 @@ function renderFpTalk(){
       '(금융소비자보호법상 설명의무·부당권유 금지)</div></div></div>');
 }
 function osFpTalkAfterRender(){}
+
+/* ════════ 질병 보험가이드 — 질병·원인·치료과정·담보·화법 한 벌 ════════
+   자료는 app/질병가이드-data.js 한 곳에만 있다. 이 화면도, 치료비 지급지도도
+   그 한 벌을 읽는다. 여기에 질병 표를 다시 적지 않는다 — 두 벌이 되는 순간
+   한쪽만 고쳐지고, 화면마다 다른 말이 나온다.
+
+   자료를 못 읽으면 <b>화면을 세우지 않는다.</b> 빈 표를 그럴듯하게 세우면
+   상담 자리에서 없는 것을 있는 것처럼 말하게 된다.                        */
+var DZ_URL='재무설계/질병보험가이드.html';
+var DZG={ready:false,jump:''};
+
+function dzList(){
+  var D=window.DZ_DATA;
+  return (D&&D.list&&D.list.length)?D.list:[];
+}
+function dzFrame(){return document.getElementById('dzGuideFrame');}
+function dzGuideMount(){var f=dzFrame();if(!f||f._mounted)return;f.src=DZ_URL;f._mounted=true;}
+function dzGuideOpen(to){
+  dzGuideMount();
+  osFullMode('dzguide-mode');
+  if(to){ if(DZG.ready)dzJumpNow(to); else DZG.jump=to; }
+  if(window.innerWidth<=880){var sb=$('sidebar'),sc=$('scrim');if(sb)sb.classList.remove('open');if(sc)sc.classList.remove('on');}
+}
+function dzJumpNow(to){
+  var f=dzFrame();
+  if(!f||!f.contentWindow)return;
+  try{f.contentWindow.postMessage({t:'apex:jump',to:to},location.origin);}catch(e){}
+}
+function dzGuideReload(){
+  var f=dzFrame();
+  if(f){f._mounted=false;DZG.ready=false;f.src='about:blank';setTimeout(dzGuideMount,40);toast('질병 보험가이드 새로고침');}
+}
+function dzGuideNewTab(){var w=window.open(DZ_URL,'_blank','noopener');if(!w)toast('팝업이 막혔습니다. 허용 후 다시 시도하세요.',6000);}
+function exitDzGuide(){document.body.classList.remove('dzguide-mode');}
+
+/* 가이드가 「준비됐다」 고 알려 오면 그때 원하던 질병으로 넘긴다 */
+window.addEventListener('message',function(ev){
+  if(ev.origin!==location.origin)return;
+  var m=ev.data,f=dzFrame();
+  if(!m||typeof m!=='object'||m.t!=='apex:guide')return;
+  if(!f||ev.source!==f.contentWindow)return;
+  if(m.act==='ready'){
+    DZG.ready=true;
+    if(DZG.jump){var to=DZG.jump;DZG.jump='';setTimeout(function(){dzJumpNow(to);},200);}
+  }
+});
+
+function dzGuideCss(){
+  if(document.getElementById('dzGuideCss'))return;
+  var st=document.createElement('style');st.id='dzGuideCss';
+  st.textContent=
+   '.dz-gp{font-size:12px;font-weight:800;color:var(--ink-4);letter-spacing:.02em;margin:16px 0 8px;display:flex;align-items:baseline;gap:8px}'+
+   '.dz-gp em{font-style:normal;font-weight:700;color:var(--ink-5);font-size:11px}'+
+   '.dz-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--ink-7);border-radius:12px;margin-bottom:7px;background:#fff}'+
+   '.dz-row .di{font-size:19px;flex:0 0 auto}'+
+   '.dz-row .dx{flex:1;min-width:0}'+
+   '.dz-row .dn{font-size:13.5px;font-weight:800;color:var(--ink-1)}'+
+   '.dz-row .dd{font-size:11.5px;color:var(--ink-4);margin-top:2px;line-height:1.5}'+
+   '.dz-row .dg{font-size:10.5px;font-weight:800;color:#1A56DB;background:#EFF4FF;border-radius:6px;padding:2px 7px;white-space:nowrap}'+
+   '.dz-go{font-family:inherit;font-size:11.5px;font-weight:800;padding:7px 12px;border-radius:9px;border:1px solid var(--ink-7);background:#fff;color:var(--ink-2);cursor:pointer;white-space:nowrap}'+
+   '.dz-go:hover{border-color:#1A56DB;color:#1A56DB}';
+  document.head.appendChild(st);
+}
+
+function dzRowHtml(d){
+  var n=(d.path||[]).length,t=(d.trap||[]).length;
+  return '<div class="dz-row"><span class="di">'+d.ic+'</span>'+
+    '<span class="dx"><span class="dn">'+osEsc(d.name)+'</span>'+
+    '<div class="dd">'+osEsc((d.one||'').replace(/<[^>]+>/g,''))+'</div></span>'+
+    '<span class="dg">치료 '+n+'단계 · 함정 '+t+'</span>'+
+    '<button type="button" class="dz-go" onclick="dzGuideOpen(\''+d.id+'\')">열기 →</button></div>';
+}
+
+function dzGuideBodyHtml(){
+  var L=dzList(),D=window.DZ_DATA,h='',i,j,rows;
+  if(!L.length){
+    return '<div class="card"><div class="card-body"><div class="notice">'+
+      '<b>아무 자료도 만들지 않습니다.</b> 질병 자료(app/질병가이드-data.js)를 읽지 못했습니다. '+
+      '없는 것을 그럴듯하게 채우지 않으려고 화면을 세우지 않습니다. '+
+      '자료 파일이 함께 올라갔는지 확인해 주세요.</div></div></div>';
+  }
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🩺</span>어떤 병입니까'+
+     '<span class="badge green">'+L.length+'종</span></div>'+
+     '<div class="card-desc">질병마다 <b>원인 · 치료과정 · 그 단계에서 열리는 담보 · 화법</b>이 한 자리에 있습니다. '+
+     '담보 이름은 보장분석이 쓰는 이름 그대로라, 증권에서 바로 찾아보실 수 있습니다.</div></div>'+
+     '<div class="card-body">';
+  for(i=0;i<D.grp.length;i++){
+    rows=[];
+    for(j=0;j<L.length;j++)if(L[j].grp===D.grp[i].k)rows.push(L[j]);
+    if(!rows.length)continue;
+    h+='<div class="dz-gp">'+D.grp[i].ic+' '+osEsc(D.grp[i].k)+' <em>'+osEsc(D.grp[i].d)+'</em></div>';
+    for(j=0;j<rows.length;j++)h+=dzRowHtml(rows[j]);
+  }
+  h+='</div></div>';
+  return h;
+}
+
+function renderDzGuide(){
+  dzGuideCss();
+  return osPage('가이드','질병 보험가이드',
+    '고객이 묻는 다섯 가지 — 무슨 병인지, 왜 생기는지, 어떻게 치료하는지, 그때 어떤 담보가 나오는지, 그 말을 어떻게 꺼낼지.',
+    '<div class="card"><div class="card-body">'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="dzGuideOpen(\'\')">가이드 열기</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'treatpay\')">치료비 지급지도</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'fp_talk\')">실전화법서</button>'+
+      '<button class="btn btn-ghost" onclick="dzGuideNewTab()">새 탭에서</button></div>'+
+      '<div class="notice">치료 과정은 <b>일반적인 흐름의 예시</b>이며 실제 치료는 주치의 판단에 따릅니다. '+
+      '어떤 담보가 나오는지는 <b>가입한 약관</b>이 정하고, 최종 지급은 <b>보험사 심사 결과에 따릅니다.</b> '+
+      '이 화면의 숫자는 출처가 있는 것만 적었습니다 — 확인하지 못한 값은 적지 않았습니다.</div>'+
+    '</div></div>'+
+    dzGuideBodyHtml());
+}
+function osDzGuideAfterRender(){}
 
 /* ── 상담자료 화면 ── */
 function fpDeckMount(){var f=fpFrame('deck');if(!f||f._mounted)return;f.src=FP_DECK_URL;f._mounted=true;}
@@ -19625,57 +19760,52 @@ function waReportPrint(){
   setTimeout(function(){try{w.focus();w.print();}catch(e){}},500);
 }
 /* ════════ 치료비 지급지도 — 치료 여정 · 보장 지급 시뮬레이터 (deterministic · AI 불필요) ════════ */
-var TP_DISEASES=[
- {id:'cancer_major',name:'고액암(위·폐·간·췌)',ic:'🎗️',inpat:21,off:6,bill:2000,chemo:3000,
-  stages:[
-   {ic:'🔬',k:'진단·확진',dur:'1~2주',pay:['암진단비','실손(검사)'],desc:'조직검사·CT/MRI/PET로 확진. 확진되면 암진단비(정액)가 목돈으로 즉시 지급되어 치료 방법을 돈 걱정 없이 고를 수 있게 한다.'},
-   {ic:'💉',k:'수술·입원',dur:'2~3주',pay:['수술비','입원일당','실손(입원)'],desc:'절제 수술과 입원. 한 번의 수술에 수술비·입원일당·실손이 각각 열린다(한 사건, 여러 지갑).'},
-   {ic:'💊',k:'항암·표적치료',dur:'3~6개월',pay:['항암치료비','실손(통원)'],desc:'보조·표적·면역 항암은 고가이고 반복된다. 항암치료비 특약과 실손이 가계의 핵심 방어선이 된다.'},
-   {ic:'🚶',k:'통원·추적관찰',dur:'~5년',pay:['실손(통원)'],desc:'정기 추적검사와 재발 감시. 실손이 장기간의 통원비를 보전한다.'}
-  ]},
- {id:'stroke',name:'뇌졸중(뇌출혈·뇌경색)',ic:'🧠',inpat:18,off:5,bill:1500,chemo:0,
-  stages:[
-   {ic:'🚑',k:'발병·응급',dur:'48시간',pay:['뇌혈관진단비','실손(응급)'],desc:'골든타임 응급처치. 가입한 특약이 뇌혈관 "전체"인지, 뇌출혈만인지에 따라 지급 여부가 갈린다(범위가 곧 돈).'},
-   {ic:'🏥',k:'입원·시술',dur:'2~4주',pay:['수술비','입원일당','실손(입원)'],desc:'혈전제거술·개두술 등. 수술비·입원일당·실손이 함께 작동한다.'},
-   {ic:'🧑‍⚕️',k:'재활치료',dur:'3~12개월',pay:['실손(재활)','입원일당'],desc:'마비·언어 재활은 장기전이다. 통원·입원 재활비를 실손과 일당이 보전한다.'},
-   {ic:'♿',k:'후유장해·간병',dur:'장기',pay:['후유장해','간병자금'],desc:'후유장해가 남으면 장해보험금과 간병자금이 끊긴 소득과 돌봄비를 메운다.'}
-  ]},
- {id:'mi',name:'급성심근경색',ic:'❤️',inpat:10,off:3,bill:1200,chemo:0,
-  stages:[
-   {ic:'🚑',k:'발병·응급',dur:'수 시간',pay:['허혈성심장진단비','실손(응급)'],desc:'응급 스텐트 삽입이 골든타임을 가른다. 허혈성심장질환 "전체" 보장인지, 급성심근경색만인지 범위가 지급을 가른다.'},
-   {ic:'💉',k:'시술·입원',dur:'1~2주',pay:['수술비','입원일당','실손(입원)'],desc:'관상동맥 중재술(스텐트). 수술비·입원일당·실손이 동시에 작동한다.'},
-   {ic:'💊',k:'약물·관리',dur:'평생',pay:['실손(통원)'],desc:'항혈소판제 등 평생 관리가 필요하다. 통원 실손이 지속적으로 보전한다.'},
-   {ic:'🚶',k:'재발예방·추적',dur:'장기',pay:['실손(통원)'],desc:'재발 위험 관리와 정기검사가 이어진다.'}
-  ]},
- {id:'thyroid',name:'갑상선암(유사암)',ic:'🦋',inpat:5,off:1,bill:500,chemo:0,
-  stages:[
-   {ic:'🔬',k:'진단·확진',dur:'1~2주',pay:['유사암진단비','실손(검사)'],desc:'유사암은 일반암 대비 진단비가 작게 책정된 경우가 많다. 유사암 한도 점검이 핵심.'},
-   {ic:'💉',k:'수술·입원',dur:'3~5일',pay:['수술비','입원일당','실손(입원)'],desc:'갑상선 절제술. 수술비·일당·실손이 함께 작동한다.'},
-   {ic:'💊',k:'방사성요오드',dur:'수 일',pay:['실손(치료)'],desc:'방사성요오드 치료와 호르몬 관리.'},
-   {ic:'🚶',k:'통원·추적',dur:'장기',pay:['실손(통원)'],desc:'정기 추적관찰. 경과는 대체로 양호하나 관리가 필요하다.'}
-  ]},
- {id:'surgery',name:'일반 질병수술(담낭·맹장)',ic:'🔪',inpat:5,off:1,bill:400,chemo:0,
-  stages:[
-   {ic:'🔬',k:'진단',dur:'1~3일',pay:['실손(검사)'],desc:'복통 등으로 내원해 검사로 질병을 확인한다.'},
-   {ic:'💉',k:'수술·입원',dur:'3~7일',pay:['질병수술비','입원일당','실손(입원)'],desc:'복강경 수술과 단기 입원. 수술비 특약·입원일당·실손이 함께 작동한다.'},
-   {ic:'🚶',k:'회복·통원',dur:'2~4주',pay:['실손(통원)'],desc:'경과 관찰과 통원. 대체로 회복이 양호하다.'}
-  ]}
-];
+/* 질병 표는 <b>한 벌만</b> 둔다 — app/질병가이드-data.js.
+   질병 보험가이드와 이 지급지도가 같은 표를 읽는다. 예전에는 두 곳에
+   따로 적혀 있어 한쪽만 고쳐지곤 했다. 여기서는 그 표에서 치료 단계와
+   단계별 담보를 그대로 꺼내 쓰고, 이 화면에 필요한 숫자(입원일수·공백
+   개월·병원비·항암비)는 그 표의 sim 칸에서 가져온다.
+
+   sim 칸이 없는 질병은 시뮬레이터에 세우지 않는다 — 넣을 숫자가 없는데
+   화면을 세우면 없는 값을 지어내게 된다. 그 질병들은 가이드에서 본다. */
+function dzPayLabel(p){return p.k+(p.n?'('+p.n+')':'');}
+var TP_DISEASES=(function(){
+  var L=(window.DZ_DATA&&window.DZ_DATA.list)||[],out=[],i;
+  for(i=0;i<L.length;i++){
+    var d=L[i];
+    if(!d.sim)continue;
+    out.push({id:d.id,name:d.name,ic:d.ic,
+      inpat:d.sim.inpat,off:d.sim.off,bill:d.sim.bill,chemo:d.sim.chemo,
+      stages:(d.path||[]).map(function(s){
+        return {ic:s.ic,k:s.k,dur:s.dur,desc:s.desc,
+                pay:(s.pay||[]).map(dzPayLabel)};
+      })});
+  }
+  return out;
+})();
 var TP={dis:'cancer_major',cov:{diag:5000,surg:300,perDay:10,days:21,chemo:3000,bill:2000,silbi:80,income:400,off:6}};
-function tpDisease(){for(var i=0;i<TP_DISEASES.length;i++){if(TP_DISEASES[i].id===TP.dis)return TP_DISEASES[i];}return TP_DISEASES[0];}
+function tpDisease(){for(var i=0;i<TP_DISEASES.length;i++){if(TP_DISEASES[i].id===TP.dis)return TP_DISEASES[i];}return TP_DISEASES[0]||null;}
 function tpLoad(){try{var m=JSON.parse(localStorage.getItem('apex_treatpay')||'{}');if(m.dis)TP.dis=m.dis;if(m.cov){for(var k in m.cov){if(m.cov.hasOwnProperty(k))TP.cov[k]=m.cov[k];}}}catch(e){}}
 function tpSave(){try{localStorage.setItem('apex_treatpay',JSON.stringify({dis:TP.dis,cov:TP.cov}));}catch(e){}}
-function tpSetDis(id){TP.dis=id;var d=tpDisease();TP.cov.days=d.inpat;TP.cov.off=d.off;TP.cov.bill=d.bill;TP.cov.chemo=d.chemo;tpSave();tpRerender();}
+function tpSetDis(id){TP.dis=id;var d=tpDisease();if(!d){tpRerender();return;}TP.cov.days=d.inpat;TP.cov.off=d.off;TP.cov.bill=d.bill;TP.cov.chemo=d.chemo;tpSave();tpRerender();}
 function tpCovSet(k,v){var n=parseFloat(v);TP.cov[k]=isFinite(n)?n:0;tpSave();tpRerender();}
 function tpRerender(){var b=$('tpBody');if(b)b.innerHTML=tpBody();}
 function renderTreatPay(){
   tpLoad();
   return osPage('치료비 지급지도','치료 여정 · 보장 지급 시뮬레이터','질병을 고르고 보유 담보 금액을 넣으면, 진단→수술→치료→통원 각 단계에서 어떤 담보가 지급되는지와, 보험이 있을 때/없을 때 가계 부담이 어떻게 달라지는지를 그래프로 보여줍니다. (일반적 경과 예시이며 실제 치료·지급은 개인·약관·보험사 심사에 따라 다릅니다)',
+    '<div class="card"><div class="card-body"><div class="btn-row" style="margin:0">'+
+      '<button class="btn btn-ghost" onclick="go(\'dz_guide\')">🩺 질병 보험가이드 — 원인·치료과정·화법까지</button>'+
+      '</div><div class="notice" style="margin-top:10px">여기 나오는 치료 단계와 담보는 <b>질병 보험가이드와 같은 표</b>에서 옵니다. '+
+      '왜 그 단계에서 그 담보가 열리는지, 고객에게 어떻게 말할지는 가이드에 있습니다.</div></div></div>'+
     '<div id="tpBody">'+tpBody()+'</div>');
 }
 function tpFinField(k,label,val,hint){return '<div><label>'+label+(hint?' <span style="color:#9AA2AD;font-weight:600">'+hint+'</span>':'')+'</label><input type="number" min="0" step="1" value="'+(val>0?val:(val===0?'0':''))+'" onchange="tpCovSet(\''+k+'\',this.value)" placeholder="0"></div>';}
 function tpBody(){
   var d=tpDisease(),c=TP.cov;
+  /* 질병 자료를 못 읽었으면 아무 숫자도 만들지 않는다 — 빈 그래프를 세우면
+     상담 자리에서 없는 값을 있는 것처럼 말하게 된다. */
+  if(!d)return '<div class="notice"><b>아무 숫자도 만들지 않습니다.</b> 질병 자료(app/질병가이드-data.js)를 읽지 못해 '+
+    '치료 단계와 기준값을 세울 수 없습니다. 자료 파일이 함께 올라갔는지 확인해 주세요.</div>';
   function num(x){x=parseFloat(x);return isFinite(x)?x:0;}
   var diag=num(c.diag),surg=num(c.surg),perDay=num(c.perDay),days=num(c.days),chemo=num(c.chemo),bill=num(c.bill),silbi=Math.max(0,Math.min(100,num(c.silbi))),income=num(c.income),off=num(c.off);
   var stayPay=perDay*days;
@@ -21229,7 +21359,7 @@ function manMap(){
      chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
      how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
-     chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
+     chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['dz_guide','🩺','질병 보험가이드'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
     {no:6,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
      chips:[['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']],

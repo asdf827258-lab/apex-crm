@@ -45,7 +45,7 @@ const TABS = [
   'ins_asst', 'cs_assist', 'cs_needs', 'cs_gso', 'claims', 'med_silbi', 'med_checkup',
   'med_disclosure', 'branch_coach', 'hq', 'audit', 'blog', 'threads', 'insta', 'video',
   'simui', 'calendar', 'ref_jeonsan', 'ref_kcd', 'ref_surgery', 'pricing',
-  'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'growboard', 'voiceasst',
+  'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'dz_guide', 'growboard', 'voiceasst',
   'ready', 'airep', 'teamhub', 'daily'
 ];
 
