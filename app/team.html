@@ -194,6 +194,25 @@ body{font-family:var(--f);
 .fbi .cp{grid-column:3;grid-row:1;align-self:start;border:1px solid var(--hair);background:var(--sunk);
   color:var(--ink2);border-radius:9px;padding:6px 9px;font-size:10.5px;font-weight:800;cursor:pointer;
   white-space:nowrap;font-family:var(--f)}
+.pin{flex:none;background:var(--core);color:#fff;padding-top:env(safe-area-inset-top)}
+.pin[hidden]{display:none}
+.pin-h{width:100%;display:flex;align-items:center;gap:10px;border:0;background:transparent;
+  color:#fff;padding:11px 14px;cursor:pointer;text-align:left;font:inherit}
+.pin-h .ic{font-size:19px;line-height:1;flex:none}
+.pin-h b{flex:1;min-width:0;font-family:var(--f);font-weight:800;font-size:13.5px;letter-spacing:-.3px}
+.pin-h b span{display:block;font-weight:500;font-size:11px;opacity:.82;margin-top:1px}
+.pin-h i{flex:none;font-style:normal;font-size:12px;opacity:.85;transition:transform .18s}
+.pin.on .pin-h i{transform:rotate(180deg)}
+.pin-b{padding:0 14px 13px}
+.pin-b[hidden]{display:none}
+.pin-r{display:flex;gap:8px;align-items:flex-start;margin-top:9px}
+.pin-r em{flex:none;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.75);margin-top:7px}
+.pin-r span{font-size:12px;line-height:1.75;opacity:.95}
+.pin-r b{font-weight:800}
+.pin-r u{text-decoration:none;font-weight:800;border-bottom:1.5px solid rgba(255,255,255,.5)}
+.pin-r .k{display:inline-block;background:rgba(255,255,255,.22);border-radius:5px;padding:0 5px;
+  font-weight:700}
+.pin-r s{display:block;text-decoration:none;font-size:10.5px;opacity:.8;margin-top:2px}
 .gogrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
 .gocard{border:1px solid var(--hair);background:var(--card);border-radius:13px;padding:12px 5px 10px;
   display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--ink2)}
@@ -218,6 +237,22 @@ body{font-family:var(--f);
 </head>
 <body>
 <div class="phone">
+  <!-- 홈 화면에 담기 — 맨 위 붙박이. 담고 나면 스스로 사라진다 -->
+  <div class="pin" id="pin" hidden>
+    <button type="button" class="pin-h" id="pinH">
+      <span class="ic">📲</span>
+      <b>홈 화면에 추가<span>주소창 없이 앱처럼 열립니다</span></b>
+      <i id="pinC">▾</i>
+    </button>
+    <div class="pin-b" id="pinB" hidden>
+      <div class="pin-r"><em></em><span><b>아이폰</b> — <u>Safari</u> 로 열고 아래 가운데
+        <b>공유 <span class="k">⬆︎</span></b> → 내려서 <b>「홈 화면에 추가」</b> → 오른쪽 위 <b>추가</b>
+        <s>크롬에서는 안 됩니다. 반드시 Safari.</s></span></div>
+      <div class="pin-r"><em></em><span><b>안드로이드</b> — Chrome 오른쪽 위
+        <b><span class="k">⋮</span></b> → <b>「홈 화면에 추가」</b> 또는 <b>「앱 설치」</b></span></div>
+    </div>
+  </div>
+
   <div class="top">
     <div class="t1">
       <b id="tTop"></b><span id="tWd"></span>
@@ -845,6 +880,32 @@ window.tToast=function(m){var e=$('toast');e.textContent=m;e.classList.add('on')
 $('tbNow').onclick=function(){TAB='now';paint();};
 $('tbWho').onclick=function(){TAB='who';paint();};
 $('tbFb').onclick=function(){TAB='fb';fbLoad();paint();};
+
+/* 이미 홈 화면에서 열고 있으면 담으라고 할 이유가 없다 */
+function inApp(){
+  try{
+    if(P())return true;
+    if(window.navigator.standalone)return true;
+    if(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches)return true;
+    if(window.matchMedia&&window.matchMedia('(display-mode: minimal-ui)').matches)return true;
+  }catch(e){}
+  return false;
+}
+var PINK='apex_team_pin';
+window.tPin=function(){
+  var w=$('pin'),b=$('pinB'),on=b.hasAttribute('hidden');
+  if(on){b.removeAttribute('hidden');w.classList.add('on');}
+  else{b.setAttribute('hidden','');w.classList.remove('on');}
+  try{localStorage.setItem(PINK,on?'1':'0');}catch(e){}
+};
+(function pinInit(){
+  if(inApp())return;
+  $('pin').removeAttribute('hidden');
+  $('pinH').onclick=tPin;
+  var open='1';
+  try{open=localStorage.getItem(PINK)||'1';}catch(e){}
+  if(open==='1'){$('pinB').removeAttribute('hidden');$('pin').classList.add('on');}
+})();
 
 boot();
 paint();

@@ -419,6 +419,38 @@ const srv = http.createServer((req, res) => {
   });
   ok(asked === 'crm', '앱 안에서는 부모에게 「crm 을 열어라」 고 말한다 — 새로 뜨지 않는다');
 
+  /* 홈 화면에 담기 — 맨 위 붙박이. 링크로 받은 사람이 제일 먼저 봐야 하는 것 */
+  console.log('\n홈 화면에 추가 — 맨 위 붙박이');
+  const pinPage = await ctx.newPage();
+  await pinPage.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await pinPage.waitForTimeout(1200);
+  ok(await pinPage.locator('#pin:not([hidden])').count() === 1, '브라우저로 열면 맨 위에 뜬다');
+  const pinTxt = await pinPage.locator('#pin').innerText();
+  ok(/홈 화면에 추가/.test(pinTxt), '무엇을 하라는지 한 줄로 말한다');
+  ok(/Safari/.test(pinTxt) && /안드로이드/.test(pinTxt), '아이폰·안드로이드 두 길을 다 적는다');
+  ok(/반드시 Safari/.test(pinTxt), '아이폰은 크롬으로 안 된다고 못박는다 — 제일 많이 막히는 자리');
+  /* 화면을 끝까지 내려도 그 자리에 있어야 한다 */
+  const pinY0 = await pinPage.locator('#pin').boundingBox();
+  await pinPage.evaluate(() => { const b = document.getElementById('body'); b.scrollTop = b.scrollHeight; });
+  await pinPage.waitForTimeout(300);
+  const pinY1 = await pinPage.locator('#pin').boundingBox();
+  ok(pinY0 && pinY1 && Math.abs(pinY0.y - pinY1.y) < 2, '끝까지 내려도 안 사라진다 — 붙박이다');
+  /* 접었다 폈다 */
+  await pinPage.click('#pinH'); await pinPage.waitForTimeout(200);
+  ok(await pinPage.locator('#pinB[hidden]').count() === 1, '눌러서 접을 수 있다 — 자리를 계속 먹지 않는다');
+  await pinPage.click('#pinH'); await pinPage.waitForTimeout(200);
+  ok(await pinPage.locator('#pinB:not([hidden])').count() === 1, '다시 눌러 펴진다');
+
+  /* 이미 담아서 앱처럼 열고 있으면 뜨지 않는다 */
+  const inst = await ctx.newPage();
+  await inst.addInitScript(() => {
+    const m = window.matchMedia.bind(window);
+    window.matchMedia = q => (/standalone/.test(q) ? { matches: true, media: q, addListener() { }, removeListener() { } } : m(q));
+  });
+  await inst.goto('http://127.0.0.1:' + PORT + '/app/day.html', { waitUntil: 'domcontentloaded' });
+  await inst.waitForTimeout(1000);
+  ok(await inst.locator('#pin:not([hidden])').count() === 0, '이미 담은 사람에게는 안 뜬다 — 다 한 일을 또 시키지 않는다');
+
   console.log('\n오류');
   ok(errs.length === 0, '화면이 도는 동안 오류가 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
 
