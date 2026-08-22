@@ -258,28 +258,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
                     .match(/\$[0-9][0-9,]{2,}(\.[0-9]+)?/g) || [];
   is(loose.length === 0, '  원화 없이 남은 달러가 없다' + (loose.length ? ' — ' + loose.join(' ') : ''));
 
-  console.log('\n[4f] 표지 다섯 장이 첫 문장으로 붙잡는다');
-  const covers = await page.evaluate(() => ['hero','coverD','coverT','coverE','coverC'].map(id => {
-    const s = document.getElementById(id);
-    if (!s) return { id, h: '', sub: '', stats: 0 };
-    const h = s.querySelector('h1,h2');
-    const p = s.querySelector('.sub,.p');
-    return { id, h: h ? h.textContent.replace(/\s+/g, ' ').trim() : '',
-             sub: p ? p.textContent.replace(/\s+/g, ' ').trim() : '',
-             stats: s.querySelectorAll('.hstats div').length };
-  }));
-  covers.forEach(c => {
-    is(c.h.length >= 8, '  ' + c.id + ' 첫 문장이 있다 — ' + c.h.slice(0, 34));
-    is(c.sub.length >= 20, '  ' + c.id + ' 받는 문장이 있다');
-    is(c.stats === 3, '  ' + c.id + ' 숫자 셋이 선다');
-  });
-  const cvTxt = covers.map(c => c.h + ' ' + c.sub).join(' ');
-  /* 표지에 <b>한도·기준액</b>을 박으면 시행령이 바뀔 때 그대로 틀린 말이 된다.
-     실제로 「2,000만원 넘으면 피부양자 탈락」 이 박혀 있었다.            */
-  is(!/[0-9,]+만원\s*(넘으면|이상)/.test(cvTxt) &&
-     !covers.some(c => /탈락/.test(c.sub) && /[0-9],?[0-9]*만원/.test(c.sub)),
-     '  표지에 세법·건보 기준액을 박아 두지 않는다');
-  is(!/비과세 상품입니다|세금이 없습니다/.test(cvTxt), '  표지에서 비과세를 단정하지 않는다');
+  /* 표지 다섯 장은 <b>check-cover.js</b> 가 본다 — 여기서도 보면 두 곳이
+     되고, 표지를 고칠 때 한쪽만 고쳐 놓게 된다. 트랙 C 표지도 그쪽이 본다. */
 
   console.log('\n[4g] 장 번호가 겹치거나 건너뛰지 않는다');
   /* 금액 장을 4장으로 끼워 넣었더니 계산기도 4장이라 <b>「4장」이 둘</b>이
