@@ -858,13 +858,31 @@ async function fetchFeed(feed) {
     if (!r.ok) return [];
     const xml = await r.text();
     const blocks = xml.match(/<(item|entry)[\s\S]*?<\/(item|entry)>/gi) || [];
-    return blocks.slice(0, 20).map(b => ({
-      title: pick(b, 'title'),
-      link: pickLink(b),
-      date: pick(b, 'pubDate') || pick(b, 'published') || pick(b, 'updated') || pick(b, 'dc:date'),
-      desc: (pick(b, 'description') || pick(b, 'summary')).slice(0, 200),
-      source: feed.name
-    })).filter(x => x.title && x.link);
+    return blocks.slice(0, 20).map(b => {
+      let title = pick(b, 'title');
+      let press = feed.name;
+      /* 모아 주는 피드(구글 뉴스 같은)는 <source> 에 <b>진짜 언론사</b>를 담고
+         제목 끝에 「 - 언론사」 를 붙여 준다. 그걸 그대로 두면 언론사 칸에
+         「보험 상품 출시」 같은 <b>질의문이 언론사인 척</b> 찍힌다.
+         그래서 진짜 언론사를 꺼내 오고 제목에서는 꼬리를 뗀다.
+         config 에서 gnews 로 <b>표시한 피드에만</b> 적용한다 —
+         다른 피드가 <source> 를 다른 뜻으로 쓸 수도 있다.            */
+      if (feed.gnews) {
+        const real = pick(b, 'source');
+        if (real) {
+          press = real;
+          const tail = ' - ' + real;
+          if (title.slice(-tail.length) === tail) title = title.slice(0, -tail.length);
+        }
+      }
+      return {
+        title: title,
+        link: pickLink(b),
+        date: pick(b, 'pubDate') || pick(b, 'published') || pick(b, 'updated') || pick(b, 'dc:date'),
+        desc: (pick(b, 'description') || pick(b, 'summary')).slice(0, 200),
+        source: press
+      };
+    }).filter(x => x.title && x.link);
   } catch (e) {
     return [];                      /* 한 피드가 죽어도 나머지는 그대로 나온다 */
   } finally { clearTimeout(timer); }

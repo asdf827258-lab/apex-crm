@@ -2583,7 +2583,19 @@ function aiRetryHide(){
 }
 /* 모델 사다리 — 한 모델이 몰리면 여유 있는 쪽으로 갈아탄다.
    같은 모델을 계속 두드리는 것보다 이쪽이 훨씬 잘 뚫린다. */
-var AI_LADDER=['claude-sonnet-4-6','claude-haiku-4-5-20251001','claude-opus-4-8'];
+/* 사다리는 <b>이미 한 번 실패한 뒤에만</b> 돈다. 그래서 칸을 늘리는 것은
+   나빠질 일이 없고, 뚫릴 길만 많아진다. 새 세대를 앞에 두되 옛 세대를
+   뒤에 남겨 둔다 — 계정이 새 모델을 아직 못 쓰더라도 뒤 칸에서 걸린다.
+   기본 모델은 손대지 않는다: 지금 돌고 있는 것을 갑자기 바꾸면 더 나쁘다. */
+var AI_LADDER=['claude-sonnet-5','claude-haiku-4-5-20251001','claude-opus-5',
+               'claude-sonnet-4-6','claude-opus-4-8'];
+/* 사다리에서 <b>없는 모델</b>을 만나면 거기서 멈추지 않고 다음 칸으로 간다.
+   여태는 404 를 「혼잡 아님」 으로 보고 그대로 끝냈다 — 사다리를 놓고도
+   두 번째 칸에서 주저앉던 자리다. */
+function aiNoModel(e){
+  var m=((e&&e.message)||'')+'';
+  return (e&&e.status===404)||/not[_ ]?found|does not exist|no such model|unsupported model/i.test(m);
+}
 function aiLadderFor(cur){
   var out=[],i;
   for(i=0;i<AI_LADDER.length;i++){if(AI_LADDER[i]!==cur)out.push(AI_LADDER[i]);}
@@ -2603,6 +2615,18 @@ function aiWithRetry(make,label){
       aiTickStop();
       /* 시간 초과는 한 번만 더 해본다 — 5분짜리를 여섯 번 돌리면 30분이 된다 */
       if(e&&e.timedOut){slow++;if(slow>1){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}}
+      /* 사다리로 갈아탄 모델이 <b>계정에 없는 모델</b>이면 그 칸만 버리고
+         다음 칸으로 간다. 여기서 멈추면 사다리를 놓은 뜻이 없다. */
+      if(aiNoModel(e)&&AI_FORCE_MODEL){
+        var bad=AI_FORCE_MODEL; AI_FORCE_MODEL='';
+        alts=alts.filter(function(x){return x!==bad;});
+        if(alts.length&&tries<DELAY.length){
+          var nx=alts[0];
+          AI_FORCE_MODEL=nx; tries++;
+          aiRetryShow(tries,DELAY.length,1,label+' · '+aiShortModel(nx)+'로 전환');
+          return aiSleep(400).then(run);
+        }
+      }
       if(!aiIsBusy(e)||tries>=DELAY.length){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}
       var d=DELAY[tries]+Math.floor(Math.random()*700);
       tries++;
@@ -10461,6 +10485,8 @@ function navItemOf(id){
 }
 /* 찾기 — 이름·아이콘으로. 초성으로도 찾히게 한다 */
 var NAV_Q='';
+/* 엄하게 찾아 하나도 없을 때만 켠다 — 오타를 봐 주는 판 */
+var NAV_LOOSE=false;
 function navFind(v){
   NAV_Q=(''+(v||'')).replace(/^\s+|\s+$/g,'');
   renderNav();
@@ -10468,13 +10494,89 @@ function navFind(v){
   if(el){ el.value=NAV_Q; el.focus(); }
   if(typeof navMark==='function'&&typeof lastTab!=='undefined')navMark(lastTab);
 }
-function navHit(it,q){
+/* ── 오타를 쳐도 찾히게 ────────────────────────────────────────
+   「메뉴 찾기에서 자꾸 오타가 난다」 — 못 찾는 이유는 셋이었다.
+
+     ① 한/영 키를 안 바꾸고 쳤다 — 「고객」 을 <b>rhro</b> 로 친다
+     ② 띄어쓰기·점이 다르다 — 「고객365일」 vs 「고객 365일」
+     ③ <b>치는 중</b>이라 글자가 덜 됐다 — 「보자」 까지 쳤는데 「보장」 이 안 뜬다
+
+   ①②③ 을 다 견디는 방법은 하나다: <b>자모로 풀어서 견준다.</b>
+   「보장」 은 ㅂㅗㅈㅏㅇ, 「보자」 는 ㅂㅗㅈㅏ — 앞이 같으니 걸린다.
+   영타도 자모로 바꿔 놓으면 같은 자리에서 만난다.
+
+   그래도 못 찾으면 <b>한 글자 틀린 것</b>까지 봐 준다. 다만 너무 넓게
+   잡으면 엉뚱한 메뉴가 올라와 더 못 찾게 되므로, 세 글자 이상일 때만
+   그리고 <b>아무것도 못 찾았을 때만</b> 쓴다.                          */
+var NF_JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ',
+               'ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+var NF_JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ',
+               'ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+/* 두벌식 자판 — 키를 안 바꾸고 친 글자를 되돌린다 */
+var NF_KEY = {q:'ㅂ',w:'ㅈ',e:'ㄷ',r:'ㄱ',t:'ㅅ',y:'ㅛ',u:'ㅕ',i:'ㅑ',o:'ㅐ',p:'ㅔ',
+  a:'ㅁ',s:'ㄴ',d:'ㅇ',f:'ㄹ',g:'ㅎ',h:'ㅗ',j:'ㅓ',k:'ㅏ',l:'ㅣ',
+  z:'ㅋ',x:'ㅌ',c:'ㅊ',v:'ㅍ',b:'ㅠ',n:'ㅜ',m:'ㅡ',
+  Q:'ㅃ',W:'ㅉ',E:'ㄸ',R:'ㄲ',T:'ㅆ',O:'ㅒ',P:'ㅖ'};
+/* 글자를 자모로 푼다. 「보장」 → ㅂㅗㅈㅏㅇ */
+function nfJamo(s){
+  s = '' + (s || '');
+  var o = '', i, c, n;
+  for (i = 0; i < s.length; i++){
+    c = s.charCodeAt(i);
+    if (c >= 0xAC00 && c <= 0xD7A3){
+      n = c - 0xAC00;
+      o += CM_CHO[Math.floor(n / 588)] + NF_JUNG[Math.floor((n % 588) / 28)] + NF_JONG[n % 28];
+    } else o += s.charAt(i);
+  }
+  return o;
+}
+/* 띄어쓰기·점·괄호는 사람마다 다르게 친다 — 견줄 때는 턴다 */
+function nfFlat(s){ return ('' + (s || '')).toLowerCase().replace(/[\s·.,()\-_/]/g, ''); }
+/* 영타로 친 것을 자모로 — 「rhro」 → ㄱㅗㄱㅐ (고객의 자모) */
+function nfFromKey(s){
+  s = '' + (s || '');
+  var o = '', i, ch, any = false;
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (NF_KEY[ch]){ o += NF_KEY[ch]; any = true; }
+    else o += ch;
+  }
+  return any ? o : '';
+}
+/* 한 글자만 틀린 것까지 봐 준다 (편집거리 1) */
+function nfNear(a, b){
+  if (a === b) return true;
+  var la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  var i = 0, j = 0, bad = 0;
+  while (i < la && j < lb){
+    if (a.charAt(i) === b.charAt(j)){ i++; j++; continue; }
+    if (++bad > 1) return false;
+    if (la > lb) i++; else if (lb > la) j++; else { i++; j++; }
+  }
+  return bad + (la - i) + (lb - j) <= 1;
+}
+function navHit(it,q,loose){
   if(!q)return true;
   var hay=(it.title||'')+' '+(it.ak||'')+' '+(it.id||'');
   if(hay.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
   /* 「ㄱㅈ」 처럼 초성으로 쳐도 찾히게 — 고객 365일의 「고객」 이 ㄱㄱ 이다 */
   if(typeof cmCho==='function'&&typeof cmOnlyCho==='function'&&cmOnlyCho(q))
-    return cmCho(it.title||'').indexOf(q)>=0;
+    return cmCho(hay).indexOf(q)>=0;
+  var H=nfFlat(hay), Q=nfFlat(q);
+  if(!Q)return false;
+  if(H.indexOf(Q)>=0)return true;                 /* 띄어쓰기·점만 다른 것 */
+  var HJ=nfJamo(H), QJ=nfJamo(Q);
+  if(HJ.indexOf(QJ)>=0)return true;               /* 「보자」 로도 「보장」 이 걸린다 */
+  var K=nfFromKey(nfFlat(q));                     /* 한/영 안 바꾸고 친 것 */
+  if(K&&HJ.indexOf(K)>=0)return true;
+  /* 여기까지 아무것도 못 찾았을 때만 <b>한 글자 틀린 것</b>을 봐 준다.
+     넓게 잡으면 엉뚱한 메뉴가 올라와 오히려 더 못 찾으신다. */
+  if(loose&&QJ.length>=4){
+    var i;
+    for(i=0;i+QJ.length<=HJ.length+1;i++)
+      if(nfNear(HJ.substr(i,QJ.length),QJ))return true;
+  }
   return false;
 }
 /* 메뉴 한 줄 — 별표를 같이 단다 */
@@ -11040,13 +11142,23 @@ function renderNav(){
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
   var open=navOpen(),vis=[];
   groups.forEach(function(g){if(!g.hide)vis.push(g);});   /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
+  /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
+     처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
+  NAV_LOOSE=false;
+  if(NAV_Q){
+    var hitN=0;
+    vis.forEach(function(g){
+      g.items.forEach(function(it){ if(navHit(it,NAV_Q,false))hitN++; });
+    });
+    NAV_LOOSE=(hitN===0);
+  }
   var found=0;
   vis.forEach(function(g,i){
     var c=navRamp(i,vis.length),name=g.group;
     /* 찾는 중에는 걸린 것만 남긴다.
        평소에는 hide 가 달린 칸을 뺀다 — 지운 게 아니라 <b>눈에서만</b> 뺀 것이라
        찾기·음성·주소로는 그대로 열린다. */
-    var items=NAV_Q?g.items.filter(function(it){return navHit(it,NAV_Q);})
+    var items=NAV_Q?g.items.filter(function(it){return navHit(it,NAV_Q,NAV_LOOSE);})
                    :g.items.filter(function(it){return !it.hide;});
     if(NAV_Q&&!items.length)return;
     found+=items.length;
@@ -11458,7 +11570,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-21 06:58';
+var APP_BUILD='2026-08-22 06:57';
 var APP_BUILD_NOTE='<b>폰에서 하루가 끝나게 했습니다.</b> 「하루 한 장」(<code>/app/day.html</code>) 한 화면에서 오늘 걸 사람을 세우고, 전화·문자하고, 세 번 눌러 기록합니다 — 그 한 줄이 <b>DB 통합 CRM 에 그대로</b> 들어갑니다. 지난번에 들은 말이 다음에 그 사람이 뜰 때 <b>맨 위에</b> 뜨고 오늘 첫 마디가 됩니다. <b>고객 365일도 폰에서 고칩니다</b> — 다음 할 일·생일. 팩트파인딩·가족·접촉 기록은 한 글자도 안 건드립니다. 「사람」 판에서 <b>배정 DB 와 고객 365일이 한 명단</b>으로 섭니다. 약속을 잡으면 <b>진짜 .ics</b> 가 나와 폰이 한 시간 전에 울립니다 — 앱 전체에 VEVENT 가 0건이었습니다. <b>팀 하루 한 장</b>(<code>/app/team.html</code>) 은 팀 통화·아직 0통인 사람을 폰에서 보여 주고, AI 가 전체 한 줄과 사람별 한 줄을 써서 <b>팀원 폰으로 바로 꽂습니다</b>. 고친 것 둘 — 폰 시간대가 한국이 아니면 통화 시각이 <b>아홉 시간 어긋나던 것</b>, DB 종류가 대표님이 정한 목록을 <b>안 따라가던 것</b>.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -28772,8 +28884,10 @@ function renderSettings(){
 
     '<div style="font-size:12px;font-weight:800;color:var(--ink-1);margin-bottom:7px">② Claude 모델</div>'+
     '<div class="fld"><select id="setModel" onchange="saveModel()">'+
-    opt('claude-opus-4-8','Claude Opus 4.8 — 최고 품질 (보고서·제안서)')+
-    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 균형 (평소 추천)')+
+    opt('claude-opus-5','Claude Opus 5 — 최고 품질 (보고서·제안서)')+
+    opt('claude-sonnet-5','Claude Sonnet 5 — 균형')+
+    opt('claude-opus-4-8','Claude Opus 4.8 — 이전 세대·최고 품질')+
+    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 이전 세대·균형 (지금 기본)')+
     opt('claude-haiku-4-5-20251001','Claude Haiku 4.5 — 초고속·저비용')+
     '</select></div>'+
 
@@ -33989,6 +34103,159 @@ function bjMoney(v) { return (v == null || v === '') ? '확인필요' : ('' + v)
 
 /* AI 가 없거나 터졌을 때 — 읽어 낸 것만으로 구조를 갖춘 리포트를 만든다.
    추정하지 않는다. 자료에 있는 것만 옮기고, 나머지는 확인 목록으로 남긴다. */
+/* ══════════════════════════════════════════════════════════════════
+   상담 설계도 — 「이 고객을 어떤 순서로 상담할 것인가」
+
+   AI 가 몰려 답을 못 주면 여태 <b>판정도 처방도 없이</b> 읽어 낸 표만
+   남았다. 그런데 상담에서 정말 필요한 것은 「무엇부터 여쭙고, 무엇을
+   확인하고, 무엇을 비교할 것인가」다. 그건 <b>읽어 낸 것만으로도</b> 짤 수 있다.
+
+   그래서 이 장들은 AI 를 부르지 않는다. 증권에서 읽은 계약·담보·빈 자리를
+   보고 <b>규칙으로</b> 순서를 세운다. AI 가 되든 안 되든 언제나 나온다.
+
+   지어내지 않기 위한 선:
+     · 없는 담보를 있다고 하지 않는다 — 읽은 것만 말한다
+     · 보험료·환급금을 새로 계산하지 않는다
+     · 세금·비과세는 <b>결론을 내지 않는다</b>
+     · 「이 상품을 드십시오」 가 아니라 <b>「무엇을 여쭤보고 무엇을 확인하라」</b>
+   ══════════════════════════════════════════════════════════════════ */
+/* 받침이 있으면 이/은/을, 없으면 가/는/를. 「암 가」 로 찍히면
+   고객 앞에서 그대로 읽을 수가 없다. */
+function bjJosa(w, kind) {
+  w = '' + (w || '');
+  var c = w.charCodeAt(w.length - 1), has = false;
+  if (c >= 0xAC00 && c <= 0xD7A3) has = ((c - 0xAC00) % 28) !== 0;
+  else has = /[0-9a-zA-Z]$/.test(w) && !/[aeiouAEIOU0-9]$/.test(w);
+  var P = { '이': ['이', '가'], '은': ['은', '는'], '을': ['을', '를'], '과': ['과', '와'] };
+  var p = P[kind] || P['이'];
+  return w + (has ? p[0] : p[1]);
+}
+function bjPlanFind(sc) {
+  var t = (sc && sc.total) || {}, out = [];
+  /* ① 멈춰 있는 계약 — 보장이 지금 없다. 제일 급하다 */
+  if (t.lapsedN > 0)
+    out.push({ k: 'lapsed', n: t.lapsedN,
+      what: '멈춰 있는 계약 ' + t.lapsedN + '건',
+      why: '지금 <b>보장이 없습니다.</b> 본인은 있다고 알고 계신 경우가 많습니다.',
+      ask: '「이 계약은 어떤 사정으로 멈추셨습니까? 지금도 필요하신 보장입니까?」' });
+  /* ② 실지급을 가르는 계열이 비어 있음 */
+  var no = ((sc && sc.gaps) || []).filter(function (g) { return !g.has; });
+  if (no.length)
+    out.push({ k: 'gap', n: no.length, names: no.map(function (g) { return g.name; }),
+      what: '치료비 계열 ' + no.length + '개가 비어 있음',
+      why: '기준담보 표에는 안 나오는 것들입니다 — ' + no.slice(0, 3).map(function (x) { return x; }).join(' · ') +
+           (no.length > 3 ? ' 외' : ''),
+      ask: '「치료비는 어디서 나오나요? 진단금은 있으신데 <b>치료 중에 들어가는 돈</b>은요?」' });
+  /* ③ 부족·미가입이 많은 영역부터 */
+  var sh = ((sc && sc.areas) || []).filter(function (a) { return a.short > 0; })
+    .sort(function (a, b) { return b.short - a.short; });
+  if (sh.length)
+    out.push({ k: 'short', n: sh[0].short, area: sh[0].area,
+      what: bjJosa(sh[0].area, '이') + ' 가장 비었습니다 (' + sh[0].short + '개)',
+      why: '원본 보장분석표가 <b>부족·미가입</b> 으로 본 담보입니다.',
+      ask: '「' + sh[0].area + ' 쪽은 어떤 생각으로 준비하셨습니까?」' });
+  /* ④ 곧 끝나는 계약 — 만기 뒤가 비는 자리 */
+  var yr = new Date().getFullYear(), soon = [];
+  ((sc && sc.plans) || []).forEach(function (p) {
+    var m = ('' + (p.till || '')).match(/(19|20)\d{2}/);
+    if (!m) return;
+    var y = +m[0];
+    if (y >= yr && y - yr <= 10) soon.push({ co: p.co, name: p.name, y: y });
+  });
+  if (soon.length)
+    out.push({ k: 'till', n: soon.length, soon: soon,
+      what: '10년 안에 끝나는 계약 ' + soon.length + '건',
+      why: '가장 빠른 것이 <b>' + soon.sort(function (a, b) { return a.y - b.y; })[0].y + '년</b>입니다. 그 뒤로는 그 보장이 없습니다.',
+      ask: '「이 보험 만기가 ' + soon[0].y + '년입니다. 그다음은 어떻게 하실 생각이십니까?」' });
+  /* ⑤ 보험료를 못 읽은 계약 — 총액을 말하기 전에 메워야 한다 */
+  if (t.unknown > 0)
+    out.push({ k: 'fee', n: t.unknown,
+      what: '보험료를 못 읽은 계약 ' + t.unknown + '건',
+      why: '월 합계를 말씀드리기 전에 <b>이것부터</b> 채워야 숫자가 맞습니다.',
+      ask: '「이 계약은 매달 얼마 나가고 계십니까? 자동이체 내역만 보시면 됩니다.」' });
+  return out;
+}
+
+function bjPlanSlides(sc) {
+  if (!sc) return [];
+  var F = bjPlanFind(sc), t = sc.total || {}, who = sc.who || {}, S = [];
+  var him = who.name ? (who.name + '님') : '고객님';
+  var age = who.age > 0 ? who.age : 0;
+
+  S.push({ type: 'divider', eyebrow: '상담 설계도', tone: 'blue',
+    title: '이제 <em>무엇부터</em> 여쭤볼 것인가',
+    lead: '읽어 낸 것만으로 짠 순서입니다 — <b>AI 없이도 늘 나옵니다.</b> ' +
+          '상품을 권하는 자리가 아니라, <b>무엇을 확인할지</b> 정하는 자리입니다.' });
+
+  /* ── 오늘 이 순서로 ── */
+  var rows = [], i;
+  for (i = 0; i < F.length; i++)
+    rows.push({ cells: [(i + 1) + '', F[i].what, F[i].why, F[i].ask],
+      tone: i === 0 ? 'hi' : '' });
+  if (!rows.length)
+    rows.push({ cells: ['1', '빈 자리가 안 잡혔습니다', '읽어 낸 범위에서는 부족·미가입·실효가 없습니다.',
+      '「지금 보장에서 <b>가장 걱정되시는 것</b>이 무엇입니까?」 부터 여십시오.'] });
+  rows.push({ cells: [(rows.length + 1) + '', '월 보험료 총액 점검',
+    '유효 ' + t.n + '건 · 월 ' + insWon(t.fee) + '원' + (t.unknown ? ' (' + t.unknown + '건 미제공)' : '') +
+    ' — <b>더 내시라는 말이 아니라</b> 같은 돈으로 더 받으실 수 있는지 봅니다.',
+    '「지금 내시는 돈은 그대로 두고, <b>들어가는 자리만</b> 바꿔 보시겠습니까?」'] });
+
+  S.push({ type: 'table', eyebrow: '상담 설계도 · 순서',
+    title: '오늘은 <em>이 순서</em>로 여쭙니다',
+    sub: '위에서부터 급한 것입니다 — 읽어 낸 자료가 정한 순서입니다',
+    head: ['', '무엇을 봅니다', '왜 지금입니까', '첫 마디'],
+    rows: rows,
+    note: { tone: 'blue', title: '순서를 지키는 이유',
+      text: '빈 자리를 먼저 보여 드리지 않고 상품부터 말씀드리면, <b>파는 사람</b>이 됩니다. ' +
+            '무엇이 비어 있는지 ' + him + ' 이 먼저 보시게 하는 것이 이 순서의 전부입니다.' } });
+
+  /* ── 확인 · 비교 · 관리 ── */
+  var chk = [], cmp = [], mng = [];
+  chk.push({ ic: 'r', mark: '1', title: '증권 원본으로 확정',
+    text: '신정원 조회는 <b>「기타 인보험(정액)담보」</b> 로 뭉뚱그려지는 항목이 있습니다. 여기 안 잡혔어도 실제로는 있을 수 있습니다.' });
+  if (t.lapsedN > 0)
+    chk.push({ ic: 'r', mark: '2', title: '멈춘 ' + t.lapsedN + '건이 살아나는지',
+      text: '부활이 되는지, 된다면 <b>고지·심사</b>가 다시 붙는지 회사에 확인합니다.' });
+  chk.push({ ic: 'b', mark: chk.length + 1 + '', title: '갱신형인지 비갱신형인지',
+    text: '갱신형이면 <b>지금 보험료가 그대로 가지 않습니다.</b> 증권의 갱신 주기를 봅니다.' });
+  if (age >= 45)
+    chk.push({ ic: 'a', mark: chk.length + 1 + '', title: '80세·100세 만기 여부',
+      text: '만기가 언제인지가 <b>은퇴 뒤에 보장이 남는가</b>를 정합니다.' });
+
+  var noG = ((sc.gaps) || []).filter(function (g) { return !g.has; });
+  if (noG.length)
+    cmp.push({ ic: 'r', mark: '1', title: '빈 계열을 지금 채우면 얼마인가',
+      text: noG.slice(0, 3).join(' · ') + (noG.length > 3 ? ' 외 ' + (noG.length - 3) + '개' : '') +
+            ' — <b>같은 보장을 오늘 사면</b> 얼마인지 견적을 뽑아 견줍니다.' });
+  cmp.push({ ic: 'b', mark: cmp.length + 1 + '', title: '유지 vs 갈아타기',
+    text: '기존 계약을 <b>깨지 않고</b> 모자란 것만 얹는 쪽과, 새로 짜는 쪽을 나란히 놓고 봅니다.' });
+  cmp.push({ ic: 'a', mark: cmp.length + 1 + '', title: '해지는 마지막에',
+    text: '새 계약 <b>승낙을 확인한 뒤</b>에 정리합니다. 먼저 깨면 그 사이가 무보험입니다.' });
+
+  mng.push({ ic: 'b', mark: '1', title: '갱신·만기 달력',
+    text: '갱신일과 만기일을 <b>미리</b> 알려 드립니다 — 통보서를 받고 아시면 늦습니다.' });
+  mng.push({ ic: 'g', mark: '2', title: '청구 도우미',
+    text: '치료받으실 때 <b>어느 담보에서 나오는지</b> 찾아 드립니다. 넣어 두고 못 받는 분이 많습니다.' });
+  mng.push({ ic: 'b', mark: '3', title: '해마다 한 번 다시 봅니다',
+    text: '가족·소득·건강이 바뀌면 필요한 보장도 바뀝니다.' });
+
+  S.push({ type: 'list', eyebrow: '상담 설계도 · 확인',
+    title: '무엇을 <em>확인</em>하고 무엇을 <em>비교</em>할 것인가',
+    sub: '왼쪽은 확정해야 할 것, 오른쪽은 견줘 봐야 할 것입니다',
+    left: chk, right: cmp,
+    note: { tone: 'amber', title: '여기서 결론을 내지 않습니다',
+      text: '담보의 지급 여부·범위와 인수 결과는 <b>회사의 약관과 심사</b>가 최종입니다. ' +
+            '세금은 <b>요건을 충족할 때</b>만이며 판단은 세무 전문가께 넘깁니다.' } });
+
+  S.push({ type: 'cards', eyebrow: '상담 설계도 · 관리', cols: 3,
+    title: '계약하고 끝이 아니라 <em>관리를 받으시는</em> 것입니다',
+    sub: '이것이 설계사를 두시는 이유입니다',
+    cards: mng.map(function (m) { return { tone: '', label: m.mark, title: m.title, text: m.text }; }),
+    note: { tone: 'blue', title: him + ' 께 드릴 마지막 한 마디',
+      text: '「오늘 <b>정하실 것은 없습니다.</b> 무엇이 있고 무엇이 비어 있는지만 같이 보시고, ' +
+            '채우실지 말지는 <b>보시고 나서</b> 정하시면 됩니다.」' } });
+  return S;
+}
 function bjLocalDeck(parts, o, why, scan) {
   var text = (parts || []).map(function (p) { return p.text || ''; }).join('\n');
   var sc = scan || null;
@@ -34232,6 +34499,16 @@ function bjActions(id) {
 
 function bjPaint(id, deck, banner) {
   var res = $('pres_' + id); if (!res) return;
+  /* ── 상담 설계도는 <b>여기 한 곳</b>에서만 붙인다 ──────────────
+     AI 가 그린 덱도, AI 가 몰려 못 그려 읽어 낸 것만 세운 덱도 전부
+     이 목을 지난다. 두 곳에 넣으면 한쪽에서 두 번 그려진다.
+     읽어 낸 것(sc)만으로 짜므로 <b>AI 가 죽어도 언제나 나온다.</b>   */
+  try {
+    if (deck && !deck._planned && typeof bjPlanSlides === 'function' && res._scan) {
+      var pl = bjPlanSlides(res._scan);
+      if (pl && pl.length) { deck.slides = bjArr(deck.slides).concat(pl); deck._planned = true; }
+    }
+  } catch (e) {}
   res._deck = deck;
   BJ.last = deck;
   var read = (res._scan && typeof insCardHtml === 'function') ? insCardHtml(res._scan) : '';
@@ -38679,12 +38956,17 @@ function osNoticeCardHtml(){
     '</div></div>';
 }
 /* ═══════════ 빠른 시작 가이드 — 플로팅 버튼 + 첫 로그인 시 1회 자동 안내 ═══════════ */
-function osGuideSeen(){try{return localStorage.getItem('apex_guide_seen')==='1';}catch(e){return false;}}
-function osGuideDontToggle(cb){try{localStorage.setItem('apex_guide_seen',cb.checked?'1':'0');}catch(e){}}
+/* 「다시 안 보기」 를 눌러 둔 사람은 새 기능이 들어와도 영영 못 본다.
+   안내가 크게 바뀌면 이름을 한 칸 올려 한 번만 다시 보여 준다.
+   v2 = 전체 지도·자비스가 들어간 판. */
+var OS_GUIDE_KEY='apex_guide_seen_v2';
+function osGuideSeen(){try{return localStorage.getItem(OS_GUIDE_KEY)==='1';}catch(e){return false;}}
+function osGuideDontToggle(cb){try{localStorage.setItem(OS_GUIDE_KEY,cb.checked?'1':'0');}catch(e){}}
 function osGuideRows(arr){return arr.map(function(s){return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9"><span style="flex:none;font-size:21px;line-height:1.3">'+s[0]+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A">'+osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.6;margin-top:3px">'+osEsc(s[2])+'</div></div></div>';}).join('');}
 function osQuickGuideBody(){
   var admin=osIsAppAdmin();
   var member=[
+    ['🗺️','APEX 전체 지도 — 여기서 시작하세요','화면 여든아홉 개가 한 장에 있습니다. 왼쪽 맨 위 초록 단추. 막히는 것을 적으면 「자비스」가 순서를 짜서 지도에 불을 켜 주고, 듣기 싫어도 짚어야 할 말까지 해 줍니다. 🎤 를 누르면 말로 물어봐도 됩니다.'],
     ['🧠','윤시현의 두뇌 — 막힘 없는 상담','상담이 막히면 질문만 입력 → 약관·화법·전략을 즉답. "지식 추가"에 내 노하우를 넣을수록 더 나처럼 답합니다.'],
     ['📑','AI 보장분석','고객 증권을 올리면 담보 공백·중복을 찾아 1:1 리포트. 리모델링 상담의 결정적 무기.'],
     ['📝','고객 상담카드','상담 현장에서 정보를 한 장으로 취합 → AI 니즈분석·상담지 인쇄까지.'],
@@ -38711,11 +38993,13 @@ function osGuideOpen(){
   ov.innerHTML='<div style="background:#fff;width:100%;max-width:470px;max-height:88vh;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.3)">'+
     '<div style="background:linear-gradient(135deg,#0F172A,#1A56DB);color:#fff;padding:18px 20px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:11px;font-weight:800;color:#93C5FD;letter-spacing:.4px">QUICK START</div><div style="font-size:18px;font-weight:800;margin-top:2px">🚀 빠른 시작 가이드</div></div><button onclick="osGuideClose()" style="border:none;background:rgba(255,255,255,.16);color:#fff;width:31px;height:31px;border-radius:50%;font-size:16px;cursor:pointer">✕</button></div>'+
     '<div style="padding:14px 20px;overflow-y:auto">'+osQuickGuideBody()+'</div>'+
-    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between;align-items:center"><label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="osGuideDont" onchange="osGuideDontToggle(this)"'+(osGuideSeen()?' checked':'')+'/> 다시 안 보기</label><button onclick="osGuideClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">시작하기</button></div>'+
+    '<div style="padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;gap:8px;justify-content:space-between;align-items:center"><label style="font-size:11.5px;color:#64748B;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="osGuideDont" onchange="osGuideDontToggle(this)"'+(osGuideSeen()?' checked':'')+'/> 다시 안 보기</label><div style="display:flex;gap:7px"><button onclick="osGuideGoMap()" style="border:1px solid #A7F3D0;background:linear-gradient(135deg,#ECFDF5,#D1FAE5);color:#065F46;font-size:13px;font-weight:800;padding:9px 15px;border-radius:10px;cursor:pointer">🗺️ 지도 열어 보기</button><button onclick="osGuideClose()" style="border:none;background:#1A56DB;color:#fff;font-size:13px;font-weight:800;padding:9px 20px;border-radius:10px;cursor:pointer">시작하기</button></div></div>'+
   '</div>';
   document.body.appendChild(ov);
 }
 function osGuideClose(){var o=document.getElementById('osGuideOvl');if(o&&o.parentNode)o.parentNode.removeChild(o);}
+/* 안내를 읽고 바로 지도로 — 읽고 나서 「그래서 어디로?」 가 되면 안 읽은 것과 같다 */
+function osGuideGoMap(){osGuideClose();try{if(typeof go==='function')go('apexmap');}catch(e){}}
 function osGuideFab(){
   if(document.getElementById('osGuideFab'))return;
   var b=document.createElement('button');b.id='osGuideFab';b.title='빠른 시작 가이드';b.setAttribute('aria-label','빠른 시작 가이드');

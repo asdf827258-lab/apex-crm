@@ -186,6 +186,57 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
   ok(r.pinGone, '찾는 중에는 즐겨찾기를 접어 둔다 — 찾는 것만 보이게');
   ok(r.back >= 80, '지우면 다시 다 보인다 (' + r.back + '칸)');
 
+
+  console.log('\n[7-2] 오타를 쳐도 찾힌다');
+  /* 「메뉴 찾기에서 자꾸 오타가 난다」 — 못 찾던 이유는 셋이었다.
+       ① 한/영 키를 안 바꾸고 쳤다 (고객 → rhro)
+       ② 치는 중이라 글자가 덜 됐다 (보장 → 보자)
+       ③ 한 글자를 틀렸다 (보장분석 → 보징분석)
+     자모로 풀어서 견주면 ①②가 한 자리에서 풀리고, ③ 은 아무것도 못
+     찾았을 때만 봐 준다 — 처음부터 넓게 잡으면 엉뚱한 메뉴가 올라온다. */
+  const typo = await page.evaluate(() => {
+    const all = [];
+    TABS.forEach(g => g.items.forEach(i => all.push(i)));
+    const hit = q => {
+      let n = 0;
+      all.forEach(i => { if (navHit(i, q, false)) n++; });
+      const loose = (n === 0);
+      const names = all.filter(i => navHit(i, q, loose)).map(i => i.title);
+      return { n: names.length, loose: loose, names: names };
+    };
+    return {
+      n: all.length,
+      바르게:   hit('고객'),
+      붙여서:   hit('고객365'),
+      치는중:   hit('보자'),
+      영타고객: hit('rhro'),
+      영타보장: hit('qhwkd'),
+      오타보장: hit('보징분석'),
+      오타미끼: hit('미키'),
+      오타재무: hit('재무설게'),
+      초성:     hit('ㅁㄲ'),
+      없는것:   hit('없는메뉴이름xyz')
+    };
+  });
+  ok(typo.n >= 80, '메뉴가 ' + typo.n + '칸이다');
+  ok(/고객 365일/.test(typo.바르게.names.join()), '바르게 치면 찾힌다');
+  ok(/고객 365일/.test(typo.붙여서.names.join()), '띄어쓰기 없이 쳐도 찾힌다 — 「고객365」');
+  ok(/보장분석/.test(typo.치는중.names.join()) && !typo.치는중.loose,
+     '치는 중에도 찾힌다 — 「보자」 로 보장분석이 (넓게 안 가고)');
+  ok(/고객 365일/.test(typo.영타고객.names.join()) && !typo.영타고객.loose,
+     '한/영 안 바꾸고 쳐도 찾힌다 — 「rhro」 → 고객 365일');
+  ok(/보장분석/.test(typo.영타보장.names.join()), '「qhwkd」 → 보장분석');
+  /* 한 글자 오타는 <b>아무것도 못 찾았을 때만</b> 봐 준다 */
+  ok(typo.오타보장.loose && /보장분석/.test(typo.오타보장.names.join()),
+     '한 글자 틀려도 찾힌다 — 「보징분석」 (넓게)');
+  ok(/미끼 레이더/.test(typo.오타미끼.names.join()), '「미키」 → 미끼 레이더');
+  ok(/재무설계/.test(typo.오타재무.names.join()), '「재무설게」 → 재무설계');
+  ok(/미끼 레이더/.test(typo.초성.names.join()), '초성 「ㅁㄲ」 로도 찾힌다');
+  /* 넓게 봐 주더라도 <b>아무거나 다</b> 걸리면 안 된다 — 그건 못 찾는 것과 같다 */
+  ok(typo.없는것.n === 0, '없는 이름은 넓게 봐 줘도 안 걸린다');
+  ok(typo.오타보장.n < typo.n / 3,
+     '넓게 봐 줘도 절반이 우르르 걸리지 않는다 — ' + typo.오타보장.n + '/' + typo.n + '칸');
+
   console.log('\n[8] 폰에 담기 화면');
   r = await page.evaluate(() => {
     go('phone_app');
