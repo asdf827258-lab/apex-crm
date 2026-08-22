@@ -289,6 +289,50 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(!/자료에서 못 찾음/.test(deck.txt), '「자료에서 못 찾음」 이 안 나온다');
   is(/신규 계약 승낙을 확인한 뒤/.test(deck.txt), '준법 고지가 붙는다');
 
+  /* ── 10 ── */
+  console.log('\n[9-2] 상담 설계도 — AI 가 죽어도 「어떻게 상담할지」가 나온다');
+  /* 「🚦 AI 서버가 몰려 있습니다」 가 떠도 상담은 해야 한다. 그런데 여태
+     그럴 때 남는 것은 읽어 낸 표뿐이었고 <b>무엇부터 여쭐지</b>는 없었다.
+     읽어 낸 계약·담보·빈 자리만으로 순서를 세우므로 AI 와 무관하게 선다. */
+  const plan = await page.evaluate(d => {
+    var s = insScan(d);
+    var pl = bjPlanSlides(s);
+    var txt = pl.map(function (x) { return bjSlideHtml(x); }).join(' ')
+      .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    /* bjPaint 가 붙이는 자리에서도 실제로 붙는가 — 목이 하나인지 본다 */
+    var host = document.createElement('div'); host.id = 'pres_plantest';
+    document.body.appendChild(host); host._scan = s;
+    var deck = { slides: [{ type: 'cover', title: '자리' }] };
+    bjPaint('plantest', deck);
+    var twice = { first: deck.slides.length, planned: !!deck._planned };
+    bjPaint('plantest', deck);                 /* 두 번 그려도 두 번 안 붙어야 한다 */
+    twice.second = deck.slides.length;
+    host.parentNode.removeChild(host);
+    return { n: pl.length, types: pl.map(function (x) { return x.type; }).join(','), txt: txt,
+             raw: bjPlanFind(s).map(function (f) { return f.what; }), twice: twice };
+  }, DOC);
+  is(plan.n >= 4, '설계도가 ' + plan.n + '장 나온다');
+  is(/divider/.test(plan.types) && /table/.test(plan.types) && /list/.test(plan.types) && /cards/.test(plan.types),
+    '순서 표 · 확인/비교 · 관리 카드가 다 있다');
+  /* 이 고객의 자료에서 나온 것이어야 한다 — 일반론이면 쓸모가 없다 */
+  is(/치매·간병|뇌·심장|암/.test(plan.txt), '이 고객의 <b>영역 이름</b>이 들어간다');
+  /* 태그를 지우면 「<b>사람</b>이」 가 「사람 이」 가 된다 — 그건 글이 아니라
+     지우기 자국이다. 헛것을 잡지 않도록 <b>원래 문장</b>에서만 본다. */
+  is(!/[가-힣] (가|이) [가장비어]/.test(plan.raw.join(' ')),
+     '조사가 어긋나 「암 가」 처럼 찍히지 않는다 — ' + (plan.raw[2] || plan.raw[0] || ''));
+  is(/472,797/.test(plan.txt), '이 고객의 월 보험료 합계가 들어간다');
+  is(/보험료를 못 읽은 계약/.test(plan.txt), '보험료 미제공 계약을 짚는다');
+  is(/「/.test(plan.txt) && /여쭙|물어|말씀/.test(plan.txt), '실제로 <b>할 말</b>이 적혀 있다');
+  /* 지어내지 않는다 — 상품을 팔라고 하지 않고, 세금을 단정하지 않는다 */
+  is(!/가입하십시오|드십시오|추천드립니다/.test(plan.txt), '상품을 권하지 않는다 — 확인·비교만 말한다');
+  is(!/비과세 상품입니다|세금이 없습니다/.test(plan.txt), '세금을 단정하지 않는다');
+  is(/약관과 심사|심사가 최종|약관/.test(plan.txt), '지급은 약관·심사가 최종이라고 밝힌다');
+  is(/승낙을 확인한 뒤|먼저 깨면/.test(plan.txt), '기존 계약을 먼저 깨지 말라고 적는다');
+  /* 목이 하나인가 — 두 번 그려도 설계도가 두 벌 붙으면 안 된다 */
+  is(plan.twice.planned, 'bjPaint 가 설계도를 붙인다');
+  is(plan.twice.first === plan.twice.second,
+    '두 번 그려도 한 벌만 붙는다 — ' + plan.twice.first + ' → ' + plan.twice.second);
+
   /* 양식이 다른 자료 — 담보 이름만이라도 긁어 큰 틀로 */
   const loose = await page.evaluate(() => {
     var t = '고객 보장 요약입니다. 일반암 진단비 5,000만원 가입되어 있고 뇌혈관질환 3,000만원, ' +

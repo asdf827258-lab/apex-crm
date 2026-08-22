@@ -405,6 +405,130 @@ async function pressAndRead(fr) {
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
+  console.log('\n[12] 회사별 신상품 — 어느 회사가 무엇을 냈나');
+  /* 「왜 뉴스만 찾느냐」는 물음에서 나온 칸이다. 여태 이 화면은 신문 RSS
+     세 개만 봤고 <b>어느 회사가 지금 무엇을 파는가</b>를 보는 창구가 없었다.
+     보험사는 상품을 내면 보도자료를 뿌리고 그게 기사가 된다 — 상품명도
+     홍보 문구도 거기 있다. 그것을 회사별로 묶는 칸이 이번에 생겼다.       */
+  {
+    /* 이 묶음은 브라우저가 살아 있는 자리에서 돌아야 해서 위로 올라왔다.
+       아래에서 읽는 src·mk 보다 앞이라 <b>여기서 따로 읽는다.</b>      */
+    const src = JSON.parse(fs.readFileSync('config/sources.json', 'utf8'));
+    const mk  = fs.readFileSync('app/상담자료/미끼레이더/index.html', 'utf8');
+    /* 소스 칸이 있는가 — 없으면 서버가 부를 것이 없다 */
+    is(Array.isArray(src['보험사']) && src['보험사'].length >= 3,
+       '  config 에 「보험사」 칸이 있다 — ' + ((src['보험사'] || []).length) + '개');
+    (src['보험사'] || []).forEach(f => {
+      is(/^https:\/\//.test(f.url || ''), '  ' + (f.name || '?') + ' 에 https 주소가 있다');
+      /* gnews 표시가 없으면 <b>언론사 칸에 질의문이 찍힌다</b> —
+         「보험 상품 출시」 가 언론사인 척 나온다.                        */
+      is(f.gnews === true, '  ' + (f.name || '?') + ' 에 gnews 표시가 있다 — 진짜 언론사를 따로 읽는다');
+    });
+    /* 회사마다 따로 부르면 열아홉 번이다. 무료 한도를 세 배로 넘긴 적이 있다 */
+    is((src['보험사'] || []).length <= 5,
+       '  피드가 다섯을 넘지 않는다 — 서버를 아껴 쓴다 (' + ((src['보험사'] || []).length) + '개)');
+
+    /* 서버가 모으는 쪽 — 진짜 구글 뉴스 모양을 먹여 <b>언론사가 바뀌는지</b> 본다 */
+    const mkfn = require(path.join(ROOT, 'netlify/functions/market.js'));
+    const realXml =
+      '<rss><channel>' +
+      '<item><title>삼성생명, ‘삼성 한번에내는연금보험’ 출시 - 보험신보</title>' +
+      '<link>https://example.test/g1</link><pubDate>Tue, 18 Aug 2026 00:27:00 GMT</pubDate>' +
+      '<source url="https://www.insweek.co.kr">보험신보</source></item>' +
+      '<item><title>DB손해보험, ‘참좋은운전자보험’ 출시 - 한국보험신문</title>' +
+      '<link>https://example.test/g2</link><pubDate>Wed, 12 Aug 2026 02:17:19 GMT</pubDate>' +
+      '<source url="https://www.inspress.co.kr">한국보험신문</source></item>' +
+      '</channel></rss>';
+    const realFetch = global.fetch;
+    global.fetch = async () => ({ ok: true, status: 200, text: async () => realXml });
+    let out = [];
+    try {
+      const rr = await mkfn.handler({ httpMethod: 'GET',
+        queryStringParameters: { kind: 'news', cat: '보험사' }, headers: {} });
+      out = (JSON.parse(rr.body).news) || [];
+    } catch (e) { out = []; }
+    global.fetch = realFetch;
+
+    is(out.length >= 2, '  서버가 「보험사」 칸을 모아 준다 — ' + out.length + '건');
+    const one = out[0] || {};
+    is(one.source === '보험신보' || one.source === '한국보험신문',
+       '  언론사 칸에 <b>진짜 언론사</b>가 들어간다 — ' + (one.source || '없음'));
+    is(!/보험 상품 출시|생명보험 신상품|손해보험 신상품/.test(one.source || ''),
+       '  질의문이 언론사인 척 찍히지 않는다');
+    is(out.every(x => !/ - (보험신보|한국보험신문)$/.test(x.title || '')),
+       '  제목 끝의 「 - 언론사」 꼬리를 뗀다');
+
+    /* 화면 쪽 — 회사와 상품명을 제목에서 읽는가 */
+    await page.goto(base + '/app/상담자료/미끼레이더/index.html', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1200);
+    const rd = await page.evaluate(() => {
+      if (typeof npcoCoOf !== 'function') return null;
+      return {
+        co1: npcoCoOf('삼성생명, ‘삼성 한번에내는연금보험’ 출시'),
+        co2: npcoCoOf('DB손해보험, ‘참좋은운전자보험’ 선보여'),
+        co3: npcoCoOf('금감원, 실손보험 비급여 기준 개정 예고'),
+        p1: npcoProdOf('삼성생명, ‘삼성 한번에내는연금보험’ 출시'),
+        p2: npcoProdOf('생명보험사, 복합형 종신보험 확대'),
+        p3: npcoProdOf("KB손해보험, '건강관리·3대 질병 보장' 결합...‘헬스케어+ 건강보험’ 출시"),
+        /* 신문마다 괄호를 넣었다 뺐다 한다 — 견줄 때 괄호를 털어야 같은 상품이 된다 */
+        same: (typeof npcoFlat === 'function')
+          && npcoFlat('KB다이렉트 핏테크 건강보험') === npcoFlat('KB다이렉트 핏(Fit)테크 건강보험'),
+        card: !!document.getElementById('npcoCard'),
+        pulled: (npcoState() || {}).n
+      };
+    });
+    is(!!rd, '  회사별 신상품 칸이 붙어 있다');
+    if (rd) {
+      is(rd.card, '  화면에 칸이 선다');
+      is(rd.co1 === '삼성생명', '  「삼성생명」 을 읽는다 — ' + rd.co1);
+      /* 긴 이름부터 맞춰야 「DB손해보험」 을 「DB생명」 으로 안 잡는다 */
+      is(rd.co2 === 'DB손해보험', '  「DB손해보험」 을 읽는다 — ' + rd.co2);
+      is(rd.co3 === null, '  회사가 아닌 것(금감원)은 안 잡는다');
+      is(rd.p1 === '삼성 한번에내는연금보험', '  상품명을 따옴표에서 집는다 — ' + rd.p1);
+      /* 제목에 따옴표가 여럿일 때 앞의 것은 <b>홍보 문구</b>이고 뒤가 상품명이다.
+         첫 짝만 보고 포기하면 「상품명이 없다」고 잘못 적힌다 — 실제 기사에서 났다. */
+      is(rd.p3 === '헬스케어+ 건강보험',
+         '  홍보 문구 뒤에 숨은 상품명도 집는다 — ' + rd.p3);
+      /* 신문마다 괄호를 넣었다 뺐다 한다. 「핏테크」와 「핏(Fit)테크」는 같은 상품 */
+      is(rd.same, '  괄호만 다른 같은 상품을 하나로 묶는다');
+      /* 따옴표가 없으면 <b>비워 둔다</b>. 제목을 잘라 상품명인 척 적으면 지어내는 것이다 */
+      is(rd.p2 === '', '  따옴표가 없으면 상품명을 지어내지 않는다');
+      /* 서버를 아껴 쓴다 — 안 보는 판에서는 안 부른다 */
+      is(rd.pulled === 0, '  들어가기 전에는 서버를 안 부른다');
+    }
+    /* ── 공시실 바로가기 ──────────────────────────────────────
+       기사는 <b>무엇이 나왔는지</b>만 알려 준다. 상품요약서·약관은
+       공시실에만 있다. 그래서 그리로 가는 길이 붙어 있어야 한다. */
+    const gs = await page.evaluate(() => {
+      if (typeof gongsiCount !== 'function') return null;
+      const box = document.getElementById('gongsiList');
+      const links = [].map.call((box || document).querySelectorAll('a[href]'),
+        a => ({ href: a.getAttribute('href'), blank: a.getAttribute('target') === '_blank',
+                rel: a.getAttribute('rel') || '' }));
+      return { c: gongsiCount(), links: links,
+               txt: (document.getElementById('gongsiCard') || {}).innerText || '' };
+    });
+    is(!!gs, '  공시실 바로가기 칸이 붙어 있다');
+    if (gs) {
+      is(gs.c.org >= 2, '  협회 통합공시가 둘 이상이다 — ' + gs.c.org + '곳');
+      is(gs.c.co >= 15, '  회사가 열다섯 곳 이상이다 — ' + gs.c.co + '곳');
+      is(gs.links.length >= 18, '  누를 수 있는 주소가 ' + gs.links.length + '개다');
+      is(gs.links.every(l => /^https:\/\//.test(l.href)), '  모두 https 다');
+      /* 새 창으로 열어야 상담 화면이 안 닫힌다. noopener 없이 target=_blank 는 위험하다 */
+      is(gs.links.every(l => l.blank && /noopener/.test(l.rel)),
+         '  새 창으로 열고 noopener 를 붙인다');
+      /* 공시실 깊은 주소를 찍어 맞히면 개편될 때 404 가 된다 —
+         확인한 곳만 공시실로 잇고 나머지는 홈으로 보낸다 */
+      is(/홈/.test(gs.txt) && /공시실/.test(gs.txt),
+         '  확인한 곳은 「공시실」, 못 한 곳은 「홈」 이라고 갈라 적는다');
+    }
+
+    /* 기사만 보고 보장을 말하지 않는다 — 약관은 따로 봐야 한다고 적혀 있는가 */
+    const npTxt = mk.slice(mk.indexOf('npcoCard'), mk.indexOf('npcoCard') + 2200);
+    is(/약관이 아닙니다|약관 분석기/.test(npTxt),
+       '  「기사는 약관이 아니다」 라고 적어 둔다');
+  }
+
   await browser.close();
   srv.close();
   /* ══ 스스로 쌓기 · 자료 칸 ══════════════════════════════════ */
