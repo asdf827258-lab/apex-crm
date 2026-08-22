@@ -10321,6 +10321,8 @@ function navItemOf(id){
 }
 /* 찾기 — 이름·아이콘으로. 초성으로도 찾히게 한다 */
 var NAV_Q='';
+/* 엄하게 찾아 하나도 없을 때만 켠다 — 오타를 봐 주는 판 */
+var NAV_LOOSE=false;
 function navFind(v){
   NAV_Q=(''+(v||'')).replace(/^\s+|\s+$/g,'');
   renderNav();
@@ -10328,13 +10330,89 @@ function navFind(v){
   if(el){ el.value=NAV_Q; el.focus(); }
   if(typeof navMark==='function'&&typeof lastTab!=='undefined')navMark(lastTab);
 }
-function navHit(it,q){
+/* ── 오타를 쳐도 찾히게 ────────────────────────────────────────
+   「메뉴 찾기에서 자꾸 오타가 난다」 — 못 찾는 이유는 셋이었다.
+
+     ① 한/영 키를 안 바꾸고 쳤다 — 「고객」 을 <b>rhro</b> 로 친다
+     ② 띄어쓰기·점이 다르다 — 「고객365일」 vs 「고객 365일」
+     ③ <b>치는 중</b>이라 글자가 덜 됐다 — 「보자」 까지 쳤는데 「보장」 이 안 뜬다
+
+   ①②③ 을 다 견디는 방법은 하나다: <b>자모로 풀어서 견준다.</b>
+   「보장」 은 ㅂㅗㅈㅏㅇ, 「보자」 는 ㅂㅗㅈㅏ — 앞이 같으니 걸린다.
+   영타도 자모로 바꿔 놓으면 같은 자리에서 만난다.
+
+   그래도 못 찾으면 <b>한 글자 틀린 것</b>까지 봐 준다. 다만 너무 넓게
+   잡으면 엉뚱한 메뉴가 올라와 더 못 찾게 되므로, 세 글자 이상일 때만
+   그리고 <b>아무것도 못 찾았을 때만</b> 쓴다.                          */
+var NF_JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ',
+               'ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+var NF_JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ',
+               'ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+/* 두벌식 자판 — 키를 안 바꾸고 친 글자를 되돌린다 */
+var NF_KEY = {q:'ㅂ',w:'ㅈ',e:'ㄷ',r:'ㄱ',t:'ㅅ',y:'ㅛ',u:'ㅕ',i:'ㅑ',o:'ㅐ',p:'ㅔ',
+  a:'ㅁ',s:'ㄴ',d:'ㅇ',f:'ㄹ',g:'ㅎ',h:'ㅗ',j:'ㅓ',k:'ㅏ',l:'ㅣ',
+  z:'ㅋ',x:'ㅌ',c:'ㅊ',v:'ㅍ',b:'ㅠ',n:'ㅜ',m:'ㅡ',
+  Q:'ㅃ',W:'ㅉ',E:'ㄸ',R:'ㄲ',T:'ㅆ',O:'ㅒ',P:'ㅖ'};
+/* 글자를 자모로 푼다. 「보장」 → ㅂㅗㅈㅏㅇ */
+function nfJamo(s){
+  s = '' + (s || '');
+  var o = '', i, c, n;
+  for (i = 0; i < s.length; i++){
+    c = s.charCodeAt(i);
+    if (c >= 0xAC00 && c <= 0xD7A3){
+      n = c - 0xAC00;
+      o += CM_CHO[Math.floor(n / 588)] + NF_JUNG[Math.floor((n % 588) / 28)] + NF_JONG[n % 28];
+    } else o += s.charAt(i);
+  }
+  return o;
+}
+/* 띄어쓰기·점·괄호는 사람마다 다르게 친다 — 견줄 때는 턴다 */
+function nfFlat(s){ return ('' + (s || '')).toLowerCase().replace(/[\s·.,()\-_/]/g, ''); }
+/* 영타로 친 것을 자모로 — 「rhro」 → ㄱㅗㄱㅐ (고객의 자모) */
+function nfFromKey(s){
+  s = '' + (s || '');
+  var o = '', i, ch, any = false;
+  for (i = 0; i < s.length; i++){
+    ch = s.charAt(i);
+    if (NF_KEY[ch]){ o += NF_KEY[ch]; any = true; }
+    else o += ch;
+  }
+  return any ? o : '';
+}
+/* 한 글자만 틀린 것까지 봐 준다 (편집거리 1) */
+function nfNear(a, b){
+  if (a === b) return true;
+  var la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > 1) return false;
+  var i = 0, j = 0, bad = 0;
+  while (i < la && j < lb){
+    if (a.charAt(i) === b.charAt(j)){ i++; j++; continue; }
+    if (++bad > 1) return false;
+    if (la > lb) i++; else if (lb > la) j++; else { i++; j++; }
+  }
+  return bad + (la - i) + (lb - j) <= 1;
+}
+function navHit(it,q,loose){
   if(!q)return true;
   var hay=(it.title||'')+' '+(it.ak||'')+' '+(it.id||'');
   if(hay.toLowerCase().indexOf(q.toLowerCase())>=0)return true;
   /* 「ㄱㅈ」 처럼 초성으로 쳐도 찾히게 — 고객 365일의 「고객」 이 ㄱㄱ 이다 */
   if(typeof cmCho==='function'&&typeof cmOnlyCho==='function'&&cmOnlyCho(q))
-    return cmCho(it.title||'').indexOf(q)>=0;
+    return cmCho(hay).indexOf(q)>=0;
+  var H=nfFlat(hay), Q=nfFlat(q);
+  if(!Q)return false;
+  if(H.indexOf(Q)>=0)return true;                 /* 띄어쓰기·점만 다른 것 */
+  var HJ=nfJamo(H), QJ=nfJamo(Q);
+  if(HJ.indexOf(QJ)>=0)return true;               /* 「보자」 로도 「보장」 이 걸린다 */
+  var K=nfFromKey(nfFlat(q));                     /* 한/영 안 바꾸고 친 것 */
+  if(K&&HJ.indexOf(K)>=0)return true;
+  /* 여기까지 아무것도 못 찾았을 때만 <b>한 글자 틀린 것</b>을 봐 준다.
+     넓게 잡으면 엉뚱한 메뉴가 올라와 오히려 더 못 찾으신다. */
+  if(loose&&QJ.length>=4){
+    var i;
+    for(i=0;i+QJ.length<=HJ.length+1;i++)
+      if(nfNear(HJ.substr(i,QJ.length),QJ))return true;
+  }
   return false;
 }
 /* 메뉴 한 줄 — 별표를 같이 단다 */
@@ -10900,13 +10978,23 @@ function renderNav(){
   var groups=(typeof visibleTabs==='function')?visibleTabs():TABS;
   var open=navOpen(),vis=[];
   groups.forEach(function(g){if(!g.hide)vis.push(g);});   /* 한 칸에 모은 것은 메뉴에 두 번 세우지 않는다 */
+  /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
+     처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
+  NAV_LOOSE=false;
+  if(NAV_Q){
+    var hitN=0;
+    vis.forEach(function(g){
+      g.items.forEach(function(it){ if(navHit(it,NAV_Q,false))hitN++; });
+    });
+    NAV_LOOSE=(hitN===0);
+  }
   var found=0;
   vis.forEach(function(g,i){
     var c=navRamp(i,vis.length),name=g.group;
     /* 찾는 중에는 걸린 것만 남긴다.
        평소에는 hide 가 달린 칸을 뺀다 — 지운 게 아니라 <b>눈에서만</b> 뺀 것이라
        찾기·음성·주소로는 그대로 열린다. */
-    var items=NAV_Q?g.items.filter(function(it){return navHit(it,NAV_Q);})
+    var items=NAV_Q?g.items.filter(function(it){return navHit(it,NAV_Q,NAV_LOOSE);})
                    :g.items.filter(function(it){return !it.hide;});
     if(NAV_Q&&!items.length)return;
     found+=items.length;
