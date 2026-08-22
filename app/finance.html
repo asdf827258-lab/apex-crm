@@ -429,6 +429,75 @@ a { color: inherit; text-decoration: none; }
 }
 .card-body { padding: 0 20px 18px; }
 
+/* ══ 글자 바닥 — 화면에서만 ══
+   본문의 절반 가까이가 8~10px 이었다. 종이에서는 읽히지만 화면에서는
+   고객이 눈을 찌푸리신다. 그렇다고 인쇄까지 키우면 한 장에 안 들어간다.
+   그래서 <b>화면에서만</b> 바닥을 올린다. 인쇄는 원래 크기 그대로 나간다.
+   22가지 크기가 흩어져 있어 한 줄씩 적는다 — 늘어나면 여기만 고친다. */
+@media screen {
+.tab-pane [style*="font-size:7.4px"],
+.tab-pane [style*="font-size: 7.4px"],
+.tab-pane [style*="font-size:7.5px"],
+.tab-pane [style*="font-size: 7.5px"],
+.tab-pane [style*="font-size:7.8px"],
+.tab-pane [style*="font-size: 7.8px"],
+.tab-pane [style*="font-size:8px"],
+.tab-pane [style*="font-size: 8px"],
+.tab-pane [style*="font-size:8.1px"],
+.tab-pane [style*="font-size: 8.1px"],
+.tab-pane [style*="font-size:8.2px"],
+.tab-pane [style*="font-size: 8.2px"],
+.tab-pane [style*="font-size:8.3px"],
+.tab-pane [style*="font-size: 8.3px"],
+.tab-pane [style*="font-size:8.5px"],
+.tab-pane [style*="font-size: 8.5px"],
+.tab-pane [style*="font-size:8.6px"],
+.tab-pane [style*="font-size: 8.6px"],
+.tab-pane [style*="font-size:8.7px"],
+.tab-pane [style*="font-size: 8.7px"],
+.tab-pane [style*="font-size:8.8px"],
+.tab-pane [style*="font-size: 8.8px"],
+.tab-pane [style*="font-size:9px"],
+.tab-pane [style*="font-size: 9px"],
+.tab-pane [style*="font-size:9.2px"],
+.tab-pane [style*="font-size: 9.2px"],
+.tab-pane [style*="font-size:9.3px"],
+.tab-pane [style*="font-size: 9.3px"],
+.tab-pane [style*="font-size:9.4px"],
+.tab-pane [style*="font-size: 9.4px"],
+.tab-pane [style*="font-size:9.5px"],
+.tab-pane [style*="font-size: 9.5px"],
+.tab-pane [style*="font-size:9.6px"],
+.tab-pane [style*="font-size: 9.6px"],
+.tab-pane [style*="font-size:9.8px"],
+.tab-pane [style*="font-size: 9.8px"] { font-size: 10.5px !important; }
+.tab-pane [style*="font-size:10px"],
+.tab-pane [style*="font-size: 10px"],
+.tab-pane [style*="font-size:10.2px"],
+.tab-pane [style*="font-size: 10.2px"],
+.tab-pane [style*="font-size:10.5px"],
+.tab-pane [style*="font-size: 10.5px"],
+.tab-pane [style*="font-size:10.8px"],
+.tab-pane [style*="font-size: 10.8px"] { font-size: 11.5px !important; }
+}
+/* ══ 긴 카드 접기 ══
+   투자 컨설팅 한 판이 7,014px 이었다 — 일곱 화면이다. 상담 중에
+   그만큼 굴리면 고객은 무엇을 보고 있었는지 잊는다. 긴 카드는 접어 두고
+   <b>필요할 때 펴게</b> 한다. 인쇄에는 전부 펴서 나간다.            */
+.card.fold > .card-hd { cursor: pointer; padding-bottom: 14px; position: relative;
+  padding-right: 44px; user-select: none; }
+.card.fold > .card-hd::after { content: '▾'; position: absolute; right: 18px; top: 50%;
+  transform: translateY(-50%) rotate(-90deg); font-size: 13px; color: var(--ink-5);
+  transition: transform var(--dur) var(--ease); }
+.card.fold.open > .card-hd::after { transform: translateY(-50%); }
+.card.fold > .card-hd:hover::after { color: var(--ink-2); }
+.card.fold > .card-body { display: none; }
+.card.fold.open > .card-body { display: block; }
+.card.fold > .card-hd .fold-n { font-size: 10.5px; font-weight: 700; color: var(--ink-5);
+  margin-left: 7px; }
+@media print { .card.fold > .card-body { display: block !important; }
+  .card.fold > .card-hd::after { display: none; } }
+
 /* ══════════════════════════════
    메트릭 박스
 ══════════════════════════════ */
@@ -928,15 +997,17 @@ a { color: inherit; text-decoration: none; }
   grid-template-columns: repeat(10, minmax(82px,1fr));
   gap: 7px;
 }
+/* 탭 열넷이 285px 을 먹고 있었다 — 화면 하나가 통째로 메뉴였다.
+   아이콘과 이름을 <b>한 줄</b>에 놓아 절반 아래로 줄인다. */
 .report-tab {
   border: 1px solid var(--ink-7);
   background: var(--white);
   border-radius: var(--r);
-  padding: 9px 8px 8px;
+  padding: 8px 10px;
   cursor: pointer;
   transition: all var(--dur) var(--ease);
   text-align: left;
-  min-height: 58px;
+  display: flex; align-items: center; gap: 7px;
   box-shadow: var(--shadow-xs);
 }
 .report-tab:hover {
@@ -950,20 +1021,18 @@ a { color: inherit; text-decoration: none; }
   color: var(--white);
   box-shadow: var(--shadow-blue);
 }
-.report-tab .rt-ico { font-size: 16px; line-height: 1; margin-bottom: 5px; }
+.report-tab .rt-ico { font-size: 15px; line-height: 1; flex: 0 0 auto; }
 .report-tab .rt-title {
-  font-size: 11px;
+  font-size: 12.5px;
   font-weight: 800;
-  letter-spacing: -.04em;
+  letter-spacing: -.035em;
   color: var(--ink-2);
   line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.report-tab .rt-sub {
-  margin-top: 2px;
-  font-size: 8.5px;
-  color: var(--ink-5);
-  line-height: 1.2;
-}
+/* 8.5px 은 화면에서 못 읽는다. 이름만 남기고 설명은 <b>손을 올리면</b> 뜬다 —
+   자리를 반으로 줄이면서 잃는 것이 없다. */
+.report-tab .rt-sub { display: none; }
 .report-tab.on .rt-title { color: var(--white); }
 .report-tab.on .rt-sub { color: rgba(255,255,255,.48); }
 .tab-pane { padding-top: 18px; }
@@ -1525,17 +1594,17 @@ a { color: inherit; text-decoration: none; }
     </div>
     <div class="top-tab-grid">
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
-      <button class="report-tab" onclick="switchTab('cashflow',this)"><div class="rt-ico">💰</div><div class="rt-title">현금흐름 분석</div><div class="rt-sub">소득·지출</div></button>
-      <button class="report-tab" onclick="switchTab('pension',this)"><div class="rt-ico">🏦</div><div class="rt-title">연금 시뮬레이션</div><div class="rt-sub">건보료·국민연금</div></button>
-      <button class="report-tab" onclick="goConsult(this)"><div class="rt-ico">🧭</div><div class="rt-title">투자 컨설팅</div><div class="rt-sub">급여별 포트폴리오</div></button>
-      <button class="report-tab" onclick="switchTab('invest',this)"><div class="rt-ico">📈</div><div class="rt-title">투자 포트폴리오</div><div class="rt-sub">ETF·변액</div></button>
-      <button class="report-tab" onclick="switchTab('insurance',this)"><div class="rt-ico">🛡️</div><div class="rt-title">보험 대시보드</div><div class="rt-sub">암·뇌·심·간병</div></button>
-      <button class="report-tab" onclick="switchTab('factcheck',this)"><div class="rt-ico">✅</div><div class="rt-title">팩트체크</div><div class="rt-sub">3대 점검</div></button>
-      <button class="report-tab" onclick="switchTab('realestate',this)"><div class="rt-ico">🏠</div><div class="rt-title">부동산·대출</div><div class="rt-sub">은행원 관점</div></button>
-      <button class="report-tab" onclick="switchTab('edufund',this)"><div class="rt-ico">🎓</div><div class="rt-title">교육자금</div><div class="rt-sub">국가 지원금</div></button>
-      <button class="report-tab" onclick="switchTab('inherit',this)"><div class="rt-ico">🏛️</div><div class="rt-title">상속·증여</div><div class="rt-sub">세무사 관점</div></button>
-      <button class="report-tab" onclick="switchTab('guide',this)"><div class="rt-ico">🧭</div><div class="rt-title">상담 가이드</div><div class="rt-sub">계약 전환</div></button>
-      <button class="report-tab" onclick="switchTab('total',this)"><div class="rt-ico">🧾</div><div class="rt-title">종합 재무설계</div><div class="rt-sub">한 장 정리·저장</div></button>
+      <button class="report-tab" onclick="switchTab('cashflow',this)" title="현금흐름 분석 — 소득·지출"><div class="rt-ico">💰</div><div class="rt-title">현금흐름 분석</div><div class="rt-sub">소득·지출</div></button>
+      <button class="report-tab" onclick="switchTab('pension',this)" title="연금 시뮬레이션 — 건보료·국민연금"><div class="rt-ico">🏦</div><div class="rt-title">연금 시뮬레이션</div><div class="rt-sub">건보료·국민연금</div></button>
+      <button class="report-tab" onclick="goConsult(this)" title="투자 컨설팅 — 급여별 포트폴리오"><div class="rt-ico">🧭</div><div class="rt-title">투자 컨설팅</div><div class="rt-sub">급여별 포트폴리오</div></button>
+      <button class="report-tab" onclick="switchTab('invest',this)" title="투자 포트폴리오 — ETF·변액"><div class="rt-ico">📈</div><div class="rt-title">투자 포트폴리오</div><div class="rt-sub">ETF·변액</div></button>
+      <button class="report-tab" onclick="switchTab('insurance',this)" title="보험 대시보드 — 암·뇌·심·간병"><div class="rt-ico">🛡️</div><div class="rt-title">보험 대시보드</div><div class="rt-sub">암·뇌·심·간병</div></button>
+      <button class="report-tab" onclick="switchTab('factcheck',this)" title="팩트체크 — 3대 점검"><div class="rt-ico">✅</div><div class="rt-title">팩트체크</div><div class="rt-sub">3대 점검</div></button>
+      <button class="report-tab" onclick="switchTab('realestate',this)" title="부동산·대출 — 은행원 관점"><div class="rt-ico">🏠</div><div class="rt-title">부동산·대출</div><div class="rt-sub">은행원 관점</div></button>
+      <button class="report-tab" onclick="switchTab('edufund',this)" title="교육자금 — 국가 지원금"><div class="rt-ico">🎓</div><div class="rt-title">교육자금</div><div class="rt-sub">국가 지원금</div></button>
+      <button class="report-tab" onclick="switchTab('inherit',this)" title="상속·증여 — 세무사 관점"><div class="rt-ico">🏛️</div><div class="rt-title">상속·증여</div><div class="rt-sub">세무사 관점</div></button>
+      <button class="report-tab" onclick="switchTab('guide',this)" title="상담 가이드 — 계약 전환"><div class="rt-ico">🧭</div><div class="rt-title">상담 가이드</div><div class="rt-sub">계약 전환</div></button>
+      <button class="report-tab" onclick="switchTab('total',this)" title="종합 재무설계 — 한 장 정리·저장"><div class="rt-ico">🧾</div><div class="rt-title">종합 재무설계</div><div class="rt-sub">한 장 정리·저장</div></button>
     </div>
   </div>
 
@@ -1686,25 +1755,25 @@ a { color: inherit; text-decoration: none; }
 
     <!-- 포트폴리오 도넛 + 코어 ETF -->
     <div class="g2" style="margin-bottom:12px">
-      <div class="card">
-        <div class="card-hd"><div class="card-tag">PORTFOLIO ALLOCATION</div><div class="card-title">자산 배분</div></div>
+      <div class="card fold">
+        <div class="card-hd"><div class="card-tag">PORTFOLIO ALLOCATION</div><div class="card-title">자산 배분<span class="fold-n">눌러서 펴기</span></div></div>
         <div class="card-body" id="port-donut-wrap"></div>
       </div>
-      <div class="card">
-        <div class="card-hd"><div class="card-tag">CORE ETF LINEUP</div><div class="card-title">코어 ETF 라인업 (클릭 = 상세)</div></div>
+      <div class="card fold">
+        <div class="card-hd"><div class="card-tag">CORE ETF LINEUP</div><div class="card-title">코어 ETF 라인업<span class="fold-n">눌러서 펴기 · 종목 누르면 상세</span></div></div>
         <div class="card-body" id="core-assets"></div>
       </div>
     </div>
 
     <!-- 위성 종목 -->
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-hd"><div class="card-tag">SATELLITE ASSETS</div><div class="card-title">위성 종목 라인업 (클릭 = 상세)</div></div>
+    <div class="card fold" style="margin-bottom:12px">
+      <div class="card-hd"><div class="card-tag">SATELLITE ASSETS</div><div class="card-title">위성 종목 라인업<span class="fold-n">눌러서 펴기 · 종목 누르면 상세</span></div></div>
       <div class="card-body" id="satellite-assets"></div>
     </div>
 
     <!-- ISA / IRP / 연금저축 가이드 -->
-    <div class="card">
-      <div class="card-hd"><div class="card-tag">TAX-ADVANTAGED ACCOUNT GUIDE</div><div class="card-title">절세 계좌 개설 & 활용 가이드 (ISA · IRP · 연금저축)</div></div>
+    <div class="card fold">
+      <div class="card-hd"><div class="card-tag">TAX-ADVANTAGED ACCOUNT GUIDE</div><div class="card-title">절세 계좌 &mdash; ISA · IRP · 연금저축<span class="fold-n">눌러서 펴기</span></div></div>
       <div class="card-body" id="tax-account-guide"></div>
     </div>
     </div><!-- /sub-etf -->
@@ -11382,6 +11451,34 @@ function renderDollarSim(){
            e.addEventListener('change',function(){ try{renderDollarSim();}catch(x){} }); }
   });
 })();
+
+/* ══ 긴 카드 접기 — 한 곳에서만 ══════════════════════════════
+   card 에 class="fold" 를 달면 접힌다. 편 상태는 이 브라우저에 남는다.
+   두 곳에 만들면 한쪽이 안 접히므로 <b>여기 하나만</b> 둔다.        */
+function foldKey(c){
+  var b=c.querySelector('.card-body'), t=c.querySelector('.card-title');
+  return 'apex_fold_'+((b&&b.id)||(t&&t.textContent.slice(0,20))||'x');
+}
+function foldSet(c, open){
+  c.classList.toggle('open', !!open);
+  try{ localStorage.setItem(foldKey(c), open?'1':'0'); }catch(e){}
+}
+function foldWire(root){
+  var cs=(root||document).querySelectorAll('.card.fold'), i;
+  for(i=0;i<cs.length;i++){
+    (function(c){
+      if(c._folded) return; c._folded=true;
+      var hd=c.querySelector('.card-hd'); if(!hd) return;
+      var saved=null;
+      try{ saved=localStorage.getItem(foldKey(c)); }catch(e){}
+      /* 처음에는 접어 둔다 — 펴 두면 일곱 화면이 그대로 돌아온다 */
+      c.classList.toggle('open', saved==='1');
+      hd.onclick=function(){ foldSet(c, !c.classList.contains('open')); };
+    })(cs[i]);
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){foldWire();});
+else foldWire();
 </script>
 </body>
 </html>
