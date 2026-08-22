@@ -2583,7 +2583,19 @@ function aiRetryHide(){
 }
 /* 모델 사다리 — 한 모델이 몰리면 여유 있는 쪽으로 갈아탄다.
    같은 모델을 계속 두드리는 것보다 이쪽이 훨씬 잘 뚫린다. */
-var AI_LADDER=['claude-sonnet-4-6','claude-haiku-4-5-20251001','claude-opus-4-8'];
+/* 사다리는 <b>이미 한 번 실패한 뒤에만</b> 돈다. 그래서 칸을 늘리는 것은
+   나빠질 일이 없고, 뚫릴 길만 많아진다. 새 세대를 앞에 두되 옛 세대를
+   뒤에 남겨 둔다 — 계정이 새 모델을 아직 못 쓰더라도 뒤 칸에서 걸린다.
+   기본 모델은 손대지 않는다: 지금 돌고 있는 것을 갑자기 바꾸면 더 나쁘다. */
+var AI_LADDER=['claude-sonnet-5','claude-haiku-4-5-20251001','claude-opus-5',
+               'claude-sonnet-4-6','claude-opus-4-8'];
+/* 사다리에서 <b>없는 모델</b>을 만나면 거기서 멈추지 않고 다음 칸으로 간다.
+   여태는 404 를 「혼잡 아님」 으로 보고 그대로 끝냈다 — 사다리를 놓고도
+   두 번째 칸에서 주저앉던 자리다. */
+function aiNoModel(e){
+  var m=((e&&e.message)||'')+'';
+  return (e&&e.status===404)||/not[_ ]?found|does not exist|no such model|unsupported model/i.test(m);
+}
 function aiLadderFor(cur){
   var out=[],i;
   for(i=0;i<AI_LADDER.length;i++){if(AI_LADDER[i]!==cur)out.push(AI_LADDER[i]);}
@@ -2603,6 +2615,18 @@ function aiWithRetry(make,label){
       aiTickStop();
       /* 시간 초과는 한 번만 더 해본다 — 5분짜리를 여섯 번 돌리면 30분이 된다 */
       if(e&&e.timedOut){slow++;if(slow>1){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}}
+      /* 사다리로 갈아탄 모델이 <b>계정에 없는 모델</b>이면 그 칸만 버리고
+         다음 칸으로 간다. 여기서 멈추면 사다리를 놓은 뜻이 없다. */
+      if(aiNoModel(e)&&AI_FORCE_MODEL){
+        var bad=AI_FORCE_MODEL; AI_FORCE_MODEL='';
+        alts=alts.filter(function(x){return x!==bad;});
+        if(alts.length&&tries<DELAY.length){
+          var nx=alts[0];
+          AI_FORCE_MODEL=nx; tries++;
+          aiRetryShow(tries,DELAY.length,1,label+' · '+aiShortModel(nx)+'로 전환');
+          return aiSleep(400).then(run);
+        }
+      }
       if(!aiIsBusy(e)||tries>=DELAY.length){aiClockStop();aiRetryHide();AI_FORCE_MODEL='';throw e;}
       var d=DELAY[tries]+Math.floor(Math.random()*700);
       tries++;
@@ -11294,8 +11318,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-21 07:35';
-var APP_BUILD_NOTE='<b>미끼 레이더가 이제 「어느 회사가 무엇을 냈나」를 찾아옵니다.</b> 여태 이 화면이 보던 것은 신문 RSS 세 개뿐이었고, <b>회사와 상품을 보는 창구가 아예 없었습니다</b> — 약관도 상품도 전부 손으로 넣어야 했습니다. 보험사는 상품을 내면 반드시 보도자료를 뿌리고 그게 기사가 됩니다. 상품명도 홍보 문구도 거기 다 있습니다. 그 기사를 받아 <b>회사별 · 상품별로 묶습니다.</b> 신문마다 따옴표를 다르게 쳐도 같은 상품이면 한 줄로 모입니다. 그리고 상품마다 <b>「이 상품으로 분석」</b> 단추가 붙어, 누르면 회사 · 상품명 · 기사가 <b>신상품 분석 리포트에 그대로 들어갑니다</b> — 여태 손으로 치던 자리입니다. 지어내지 않기 위한 선을 그었습니다: <b>제목 · 언론사 · 날짜 · 링크는 기사에 실린 그대로</b>, 상품명은 <b>제목의 따옴표 안에 있는 것만</b> 집고 없으면 적지 않으며, <b>보장 내용은 한 글자도 말하지 않습니다</b> — 기사는 약관이 아닙니다. 서버는 아껴 씁니다: 회사마다 부르면 열아홉 번이라 넓은 질의 <b>셋</b>으로 받고, <b>그 화면에 들어오실 때 한 번만</b> 부릅니다.';
+var APP_BUILD='2026-08-21 09:10';
+var APP_BUILD_NOTE='<b>「🚦 AI 서버가 몰려 있습니다」 가 떠도 상담은 하실 수 있습니다.</b> 여태 그럴 때 남는 것은 읽어 낸 표뿐이었고 <b>무엇부터 여쭐지</b>는 없었습니다. 이제 <b>상담 설계도</b> 네 장이 늘 따라옵니다 — ① 오늘 이 순서로 여쭙니다(급한 것부터, 첫 마디까지) ② 무엇을 확인하고 무엇을 비교할 것인가 ③ 계약하고 끝이 아니라 관리를 받으시는 것입니다. <b>읽어 낸 계약·담보·빈 자리만으로</b> 순서를 세우므로 AI 가 되든 안 되든 나옵니다. 상품을 권하지 않고 <b>확인할 것과 비교할 것</b>만 말합니다. AI 쪽도 손봤습니다 — 혼잡할 때 갈아탈 <b>모델 사다리를 다섯 칸</b>으로 늘리고, 사다리 중간에 <b>계정에 없는 모델</b>을 만나면 거기서 멈추던 것을 다음 칸으로 넘어가게 고쳤습니다. 미끼 레이더에는 <b>상품 공시실 바로가기</b>를 놓았습니다 — 기사는 무엇이 나왔는지만 알려 주고 <b>상품요약서·약관은 공시실에만</b> 있습니다. 협회 통합공시 셋 + 회사 열일곱 곳이며, <b>확인한 곳은 공시실로 · 못 한 곳은 회사 홈으로</b> 갈라 두었습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28605,8 +28629,10 @@ function renderSettings(){
 
     '<div style="font-size:12px;font-weight:800;color:var(--ink-1);margin-bottom:7px">② Claude 모델</div>'+
     '<div class="fld"><select id="setModel" onchange="saveModel()">'+
-    opt('claude-opus-4-8','Claude Opus 4.8 — 최고 품질 (보고서·제안서)')+
-    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 균형 (평소 추천)')+
+    opt('claude-opus-5','Claude Opus 5 — 최고 품질 (보고서·제안서)')+
+    opt('claude-sonnet-5','Claude Sonnet 5 — 균형')+
+    opt('claude-opus-4-8','Claude Opus 4.8 — 이전 세대·최고 품질')+
+    opt('claude-sonnet-4-6','Claude Sonnet 4.6 — 이전 세대·균형 (지금 기본)')+
     opt('claude-haiku-4-5-20251001','Claude Haiku 4.5 — 초고속·저비용')+
     '</select></div>'+
 
@@ -33822,6 +33848,159 @@ function bjMoney(v) { return (v == null || v === '') ? '확인필요' : ('' + v)
 
 /* AI 가 없거나 터졌을 때 — 읽어 낸 것만으로 구조를 갖춘 리포트를 만든다.
    추정하지 않는다. 자료에 있는 것만 옮기고, 나머지는 확인 목록으로 남긴다. */
+/* ══════════════════════════════════════════════════════════════════
+   상담 설계도 — 「이 고객을 어떤 순서로 상담할 것인가」
+
+   AI 가 몰려 답을 못 주면 여태 <b>판정도 처방도 없이</b> 읽어 낸 표만
+   남았다. 그런데 상담에서 정말 필요한 것은 「무엇부터 여쭙고, 무엇을
+   확인하고, 무엇을 비교할 것인가」다. 그건 <b>읽어 낸 것만으로도</b> 짤 수 있다.
+
+   그래서 이 장들은 AI 를 부르지 않는다. 증권에서 읽은 계약·담보·빈 자리를
+   보고 <b>규칙으로</b> 순서를 세운다. AI 가 되든 안 되든 언제나 나온다.
+
+   지어내지 않기 위한 선:
+     · 없는 담보를 있다고 하지 않는다 — 읽은 것만 말한다
+     · 보험료·환급금을 새로 계산하지 않는다
+     · 세금·비과세는 <b>결론을 내지 않는다</b>
+     · 「이 상품을 드십시오」 가 아니라 <b>「무엇을 여쭤보고 무엇을 확인하라」</b>
+   ══════════════════════════════════════════════════════════════════ */
+/* 받침이 있으면 이/은/을, 없으면 가/는/를. 「암 가」 로 찍히면
+   고객 앞에서 그대로 읽을 수가 없다. */
+function bjJosa(w, kind) {
+  w = '' + (w || '');
+  var c = w.charCodeAt(w.length - 1), has = false;
+  if (c >= 0xAC00 && c <= 0xD7A3) has = ((c - 0xAC00) % 28) !== 0;
+  else has = /[0-9a-zA-Z]$/.test(w) && !/[aeiouAEIOU0-9]$/.test(w);
+  var P = { '이': ['이', '가'], '은': ['은', '는'], '을': ['을', '를'], '과': ['과', '와'] };
+  var p = P[kind] || P['이'];
+  return w + (has ? p[0] : p[1]);
+}
+function bjPlanFind(sc) {
+  var t = (sc && sc.total) || {}, out = [];
+  /* ① 멈춰 있는 계약 — 보장이 지금 없다. 제일 급하다 */
+  if (t.lapsedN > 0)
+    out.push({ k: 'lapsed', n: t.lapsedN,
+      what: '멈춰 있는 계약 ' + t.lapsedN + '건',
+      why: '지금 <b>보장이 없습니다.</b> 본인은 있다고 알고 계신 경우가 많습니다.',
+      ask: '「이 계약은 어떤 사정으로 멈추셨습니까? 지금도 필요하신 보장입니까?」' });
+  /* ② 실지급을 가르는 계열이 비어 있음 */
+  var no = ((sc && sc.gaps) || []).filter(function (g) { return !g.has; });
+  if (no.length)
+    out.push({ k: 'gap', n: no.length, names: no.map(function (g) { return g.name; }),
+      what: '치료비 계열 ' + no.length + '개가 비어 있음',
+      why: '기준담보 표에는 안 나오는 것들입니다 — ' + no.slice(0, 3).map(function (x) { return x; }).join(' · ') +
+           (no.length > 3 ? ' 외' : ''),
+      ask: '「치료비는 어디서 나오나요? 진단금은 있으신데 <b>치료 중에 들어가는 돈</b>은요?」' });
+  /* ③ 부족·미가입이 많은 영역부터 */
+  var sh = ((sc && sc.areas) || []).filter(function (a) { return a.short > 0; })
+    .sort(function (a, b) { return b.short - a.short; });
+  if (sh.length)
+    out.push({ k: 'short', n: sh[0].short, area: sh[0].area,
+      what: bjJosa(sh[0].area, '이') + ' 가장 비었습니다 (' + sh[0].short + '개)',
+      why: '원본 보장분석표가 <b>부족·미가입</b> 으로 본 담보입니다.',
+      ask: '「' + sh[0].area + ' 쪽은 어떤 생각으로 준비하셨습니까?」' });
+  /* ④ 곧 끝나는 계약 — 만기 뒤가 비는 자리 */
+  var yr = new Date().getFullYear(), soon = [];
+  ((sc && sc.plans) || []).forEach(function (p) {
+    var m = ('' + (p.till || '')).match(/(19|20)\d{2}/);
+    if (!m) return;
+    var y = +m[0];
+    if (y >= yr && y - yr <= 10) soon.push({ co: p.co, name: p.name, y: y });
+  });
+  if (soon.length)
+    out.push({ k: 'till', n: soon.length, soon: soon,
+      what: '10년 안에 끝나는 계약 ' + soon.length + '건',
+      why: '가장 빠른 것이 <b>' + soon.sort(function (a, b) { return a.y - b.y; })[0].y + '년</b>입니다. 그 뒤로는 그 보장이 없습니다.',
+      ask: '「이 보험 만기가 ' + soon[0].y + '년입니다. 그다음은 어떻게 하실 생각이십니까?」' });
+  /* ⑤ 보험료를 못 읽은 계약 — 총액을 말하기 전에 메워야 한다 */
+  if (t.unknown > 0)
+    out.push({ k: 'fee', n: t.unknown,
+      what: '보험료를 못 읽은 계약 ' + t.unknown + '건',
+      why: '월 합계를 말씀드리기 전에 <b>이것부터</b> 채워야 숫자가 맞습니다.',
+      ask: '「이 계약은 매달 얼마 나가고 계십니까? 자동이체 내역만 보시면 됩니다.」' });
+  return out;
+}
+
+function bjPlanSlides(sc) {
+  if (!sc) return [];
+  var F = bjPlanFind(sc), t = sc.total || {}, who = sc.who || {}, S = [];
+  var him = who.name ? (who.name + '님') : '고객님';
+  var age = who.age > 0 ? who.age : 0;
+
+  S.push({ type: 'divider', eyebrow: '상담 설계도', tone: 'blue',
+    title: '이제 <em>무엇부터</em> 여쭤볼 것인가',
+    lead: '읽어 낸 것만으로 짠 순서입니다 — <b>AI 없이도 늘 나옵니다.</b> ' +
+          '상품을 권하는 자리가 아니라, <b>무엇을 확인할지</b> 정하는 자리입니다.' });
+
+  /* ── 오늘 이 순서로 ── */
+  var rows = [], i;
+  for (i = 0; i < F.length; i++)
+    rows.push({ cells: [(i + 1) + '', F[i].what, F[i].why, F[i].ask],
+      tone: i === 0 ? 'hi' : '' });
+  if (!rows.length)
+    rows.push({ cells: ['1', '빈 자리가 안 잡혔습니다', '읽어 낸 범위에서는 부족·미가입·실효가 없습니다.',
+      '「지금 보장에서 <b>가장 걱정되시는 것</b>이 무엇입니까?」 부터 여십시오.'] });
+  rows.push({ cells: [(rows.length + 1) + '', '월 보험료 총액 점검',
+    '유효 ' + t.n + '건 · 월 ' + insWon(t.fee) + '원' + (t.unknown ? ' (' + t.unknown + '건 미제공)' : '') +
+    ' — <b>더 내시라는 말이 아니라</b> 같은 돈으로 더 받으실 수 있는지 봅니다.',
+    '「지금 내시는 돈은 그대로 두고, <b>들어가는 자리만</b> 바꿔 보시겠습니까?」'] });
+
+  S.push({ type: 'table', eyebrow: '상담 설계도 · 순서',
+    title: '오늘은 <em>이 순서</em>로 여쭙니다',
+    sub: '위에서부터 급한 것입니다 — 읽어 낸 자료가 정한 순서입니다',
+    head: ['', '무엇을 봅니다', '왜 지금입니까', '첫 마디'],
+    rows: rows,
+    note: { tone: 'blue', title: '순서를 지키는 이유',
+      text: '빈 자리를 먼저 보여 드리지 않고 상품부터 말씀드리면, <b>파는 사람</b>이 됩니다. ' +
+            '무엇이 비어 있는지 ' + him + ' 이 먼저 보시게 하는 것이 이 순서의 전부입니다.' } });
+
+  /* ── 확인 · 비교 · 관리 ── */
+  var chk = [], cmp = [], mng = [];
+  chk.push({ ic: 'r', mark: '1', title: '증권 원본으로 확정',
+    text: '신정원 조회는 <b>「기타 인보험(정액)담보」</b> 로 뭉뚱그려지는 항목이 있습니다. 여기 안 잡혔어도 실제로는 있을 수 있습니다.' });
+  if (t.lapsedN > 0)
+    chk.push({ ic: 'r', mark: '2', title: '멈춘 ' + t.lapsedN + '건이 살아나는지',
+      text: '부활이 되는지, 된다면 <b>고지·심사</b>가 다시 붙는지 회사에 확인합니다.' });
+  chk.push({ ic: 'b', mark: chk.length + 1 + '', title: '갱신형인지 비갱신형인지',
+    text: '갱신형이면 <b>지금 보험료가 그대로 가지 않습니다.</b> 증권의 갱신 주기를 봅니다.' });
+  if (age >= 45)
+    chk.push({ ic: 'a', mark: chk.length + 1 + '', title: '80세·100세 만기 여부',
+      text: '만기가 언제인지가 <b>은퇴 뒤에 보장이 남는가</b>를 정합니다.' });
+
+  var noG = ((sc.gaps) || []).filter(function (g) { return !g.has; });
+  if (noG.length)
+    cmp.push({ ic: 'r', mark: '1', title: '빈 계열을 지금 채우면 얼마인가',
+      text: noG.slice(0, 3).join(' · ') + (noG.length > 3 ? ' 외 ' + (noG.length - 3) + '개' : '') +
+            ' — <b>같은 보장을 오늘 사면</b> 얼마인지 견적을 뽑아 견줍니다.' });
+  cmp.push({ ic: 'b', mark: cmp.length + 1 + '', title: '유지 vs 갈아타기',
+    text: '기존 계약을 <b>깨지 않고</b> 모자란 것만 얹는 쪽과, 새로 짜는 쪽을 나란히 놓고 봅니다.' });
+  cmp.push({ ic: 'a', mark: cmp.length + 1 + '', title: '해지는 마지막에',
+    text: '새 계약 <b>승낙을 확인한 뒤</b>에 정리합니다. 먼저 깨면 그 사이가 무보험입니다.' });
+
+  mng.push({ ic: 'b', mark: '1', title: '갱신·만기 달력',
+    text: '갱신일과 만기일을 <b>미리</b> 알려 드립니다 — 통보서를 받고 아시면 늦습니다.' });
+  mng.push({ ic: 'g', mark: '2', title: '청구 도우미',
+    text: '치료받으실 때 <b>어느 담보에서 나오는지</b> 찾아 드립니다. 넣어 두고 못 받는 분이 많습니다.' });
+  mng.push({ ic: 'b', mark: '3', title: '해마다 한 번 다시 봅니다',
+    text: '가족·소득·건강이 바뀌면 필요한 보장도 바뀝니다.' });
+
+  S.push({ type: 'list', eyebrow: '상담 설계도 · 확인',
+    title: '무엇을 <em>확인</em>하고 무엇을 <em>비교</em>할 것인가',
+    sub: '왼쪽은 확정해야 할 것, 오른쪽은 견줘 봐야 할 것입니다',
+    left: chk, right: cmp,
+    note: { tone: 'amber', title: '여기서 결론을 내지 않습니다',
+      text: '담보의 지급 여부·범위와 인수 결과는 <b>회사의 약관과 심사</b>가 최종입니다. ' +
+            '세금은 <b>요건을 충족할 때</b>만이며 판단은 세무 전문가께 넘깁니다.' } });
+
+  S.push({ type: 'cards', eyebrow: '상담 설계도 · 관리', cols: 3,
+    title: '계약하고 끝이 아니라 <em>관리를 받으시는</em> 것입니다',
+    sub: '이것이 설계사를 두시는 이유입니다',
+    cards: mng.map(function (m) { return { tone: '', label: m.mark, title: m.title, text: m.text }; }),
+    note: { tone: 'blue', title: him + ' 께 드릴 마지막 한 마디',
+      text: '「오늘 <b>정하실 것은 없습니다.</b> 무엇이 있고 무엇이 비어 있는지만 같이 보시고, ' +
+            '채우실지 말지는 <b>보시고 나서</b> 정하시면 됩니다.」' } });
+  return S;
+}
 function bjLocalDeck(parts, o, why, scan) {
   var text = (parts || []).map(function (p) { return p.text || ''; }).join('\n');
   var sc = scan || null;
@@ -34065,6 +34244,16 @@ function bjActions(id) {
 
 function bjPaint(id, deck, banner) {
   var res = $('pres_' + id); if (!res) return;
+  /* ── 상담 설계도는 <b>여기 한 곳</b>에서만 붙인다 ──────────────
+     AI 가 그린 덱도, AI 가 몰려 못 그려 읽어 낸 것만 세운 덱도 전부
+     이 목을 지난다. 두 곳에 넣으면 한쪽에서 두 번 그려진다.
+     읽어 낸 것(sc)만으로 짜므로 <b>AI 가 죽어도 언제나 나온다.</b>   */
+  try {
+    if (deck && !deck._planned && typeof bjPlanSlides === 'function' && res._scan) {
+      var pl = bjPlanSlides(res._scan);
+      if (pl && pl.length) { deck.slides = bjArr(deck.slides).concat(pl); deck._planned = true; }
+    }
+  } catch (e) {}
   res._deck = deck;
   BJ.last = deck;
   var read = (res._scan && typeof insCardHtml === 'function') ? insCardHtml(res._scan) : '';

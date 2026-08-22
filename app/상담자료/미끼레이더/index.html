@@ -180,6 +180,23 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .npco-s{display:block;font-size:11px;color:var(--mut);font-weight:700}
 .npco-go{margin-top:7px}
 @media print{.npco-go,#npcoBtn{display:none}}
+/* ══ 상품 공시실 바로가기 ══ */
+.gs-org{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px}
+.gs-o{display:block;border:1px solid var(--line);border-radius:12px;padding:12px 14px;
+  background:var(--blue-l);text-decoration:none;color:var(--ink)}
+.gs-o:hover{border-color:var(--blue)}
+.gs-o b{display:block;font-size:13.5px;font-weight:800;letter-spacing:-.02em}
+.gs-o span{display:block;font-size:11.5px;color:var(--sub);margin-top:3px;line-height:1.5}
+.gs-h{font-size:12px;font-weight:800;color:var(--mut);margin:12px 0 7px}
+.gs-g{display:flex;flex-wrap:wrap;gap:7px}
+.gs-c{border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:12.5px;
+  font-weight:700;text-decoration:none;color:var(--ink);background:#fff;white-space:nowrap}
+.gs-c:hover{border-color:var(--blue);background:var(--blue-l)}
+.gs-c.ok{border-color:#BFDBFE;background:var(--blue-l)}
+.gs-c i{font-style:normal;font-size:10.5px;font-weight:800;color:var(--blue-d);margin-left:3px}
+.gs-c i.dim{color:var(--mut)}
+@media(max-width:700px){.gs-org{grid-template-columns:1fr}}
+@media print{.gs-org,.gs-g{display:none}}
 .tbl{width:100%;border-collapse:collapse;font-size:13.2px;background:#fff;border-radius:12px;overflow:hidden;
   border:1px solid var(--line)}
 .tbl th{background:#F7F9FA;font-weight:800;font-size:12.3px;color:var(--sub);padding:9px 10px;text-align:left;
@@ -310,6 +327,26 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
       ※ 여기 있는 것은 <b>기사</b>이지 약관이 아닙니다. 「약관상 무엇이 매력적인가」는
       상품을 고르신 뒤 <b>📜 약관 분석기</b>에 약관을 넣어 보셔야 나옵니다 —
       기사만 보고 보장을 말씀드리면 그 자리에서 무너집니다.</p>
+  </div>
+
+  <!-- ══════ 상품 공시실 바로가기 ══════
+       「뉴스에서 찾는 게 아니라 각 회사 공시실에 들어가서 찾아야 한다」 —
+       맞는 말이다. 기사는 <b>무엇이 나왔는지</b>만 알려 주고,
+       <b>상품요약서·약관</b>은 공시실에만 있다.
+       그래서 위 회사별 신상품에서 상품을 찾으면, 여기서 그 회사 공시실로
+       바로 들어가 원문을 받아 → 📜 약관 분석기에 넣는 순서가 된다.
+
+       주소는 확인된 것만 공시실로 잇는다. 못 확인한 곳은 <b>회사 홈</b>으로
+       보낸다 — 고객 앞에서 404 를 만나는 것보다 한 번 더 누르는 게 낫다. -->
+  <div class="card" id="gongsiCard" style="margin-bottom:14px">
+    <h3 style="margin:0">🏛 상품 공시실 바로가기 <span class="cnt">상품요약서 · 약관은 여기에만 있습니다</span></h3>
+    <p class="desc" style="margin:6px 0 10px">
+      위에서 상품을 찾으셨으면 <b>그 회사 공시실</b>에서 상품요약서·약관을 받아
+      <b>📜 약관 분석기</b>에 넣으십시오. 기사는 약관이 아닙니다.</p>
+    <div id="gongsiList"></div>
+    <p class="tipbox" style="margin-top:12px">
+      ※ 협회 통합공시는 <b>여러 회사를 한 자리에서</b> 볼 수 있어 비교할 때 편합니다.
+      회사 주소가 안 열리면 알려 주십시오 &mdash; 그 회사만 고쳐 두겠습니다.</p>
   </div>
 
   <div class="card" style="margin-bottom:14px">
@@ -5522,5 +5559,69 @@ function bindDaily(){
   window.npcoPull=pull; window.npcoPaint=paint;
   window.npcoState=function(){return {n:(NPC.list||[]).length, err:NPC.err};};
   window.npcoCoOf=coOf; window.npcoProdOf=prodOf; window.npcoFlat=npFlat;
+})();
+</script>
+
+<script>
+/* ══════════ 상품 공시실 바로가기 ══════════
+   주소는 <b>한 표에만</b> 둔다. ok:true 는 여기서 실제로 열리는 것을
+   확인한 공시실이고, ok 가 없으면 <b>회사 홈</b>이다 — 공시실 깊은 주소를
+   찍어 맞히면 개편될 때마다 404 가 되고, 그걸 고객 앞에서 만난다.
+   한 번 더 누르시는 편이 낫다.                                        */
+(function(){
+  var GS_ORG = [
+    {n:'생명보험협회 공시실', u:'https://pub.insure.or.kr', ok:true,
+     d:'생보사 상품을 <b>한 자리에서</b> 비교합니다'},
+    {n:'손해보험협회 공시실', u:'https://kpub.knia.or.kr',
+     d:'손보사 상품을 한 자리에서 비교합니다'},
+    {n:'금융감독원 파인', u:'https://fine.fss.or.kr', ok:true,
+     d:'내 보험 다 보기 · 숨은 보험금 찾기'}
+  ];
+  var GS_CO = [
+    {n:'삼성생명', u:'https://www.samsunglife.com/publicnotice/main', ok:true, k:'생'},
+    {n:'한화생명', u:'https://www.hanwhalife.com', k:'생'},
+    {n:'교보생명', u:'https://www.kyobo.co.kr', k:'생'},
+    {n:'신한라이프', u:'https://www.shinhanlife.co.kr', k:'생'},
+    {n:'NH농협생명', u:'https://www.nhlife.co.kr', k:'생'},
+    {n:'미래에셋생명', u:'https://life.miraeasset.com', k:'생'},
+    {n:'동양생명', u:'https://www.myangel.co.kr', k:'생'},
+    {n:'KB라이프', u:'https://www.kblife.co.kr', k:'생'},
+    {n:'흥국생명', u:'https://www.heungkuklife.co.kr', k:'생'},
+    {n:'삼성화재', u:'https://www.samsungfire.com', k:'손'},
+    {n:'현대해상', u:'https://www.hi.co.kr/serviceAction.do?menuId=100240', ok:true, k:'손'},
+    {n:'DB손해보험', u:'https://www.idbins.com', k:'손'},
+    {n:'KB손해보험', u:'https://www.kbinsure.co.kr/CG302030001.ec', ok:true, k:'손'},
+    {n:'메리츠화재', u:'https://www.meritzfire.com', k:'손'},
+    {n:'한화손해보험', u:'https://www.hwgeneralins.com', k:'손'},
+    {n:'롯데손해보험', u:'https://www.lotteins.co.kr', k:'손'},
+    {n:'흥국화재', u:'https://www.heungkukfire.co.kr', k:'손'}
+  ];
+  function esc3(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function paint(){
+    var box=document.getElementById('gongsiList'); if(!box) return;
+    var h='<div class="gs-org">';
+    GS_ORG.forEach(function(o){
+      h+='<a class="gs-o" href="'+esc3(o.u)+'" target="_blank" rel="noopener">'
+       + '<b>'+esc3(o.n)+'</b><span>'+o.d+'</span></a>';
+    });
+    h+='</div>';
+    [['생','생명보험'],['손','손해보험']].forEach(function(g){
+      var list=GS_CO.filter(function(c){return c.k===g[0];});
+      h+='<div class="gs-h">'+g[1]+' <span class="cnt">'+list.length+'곳</span></div><div class="gs-g">';
+      list.forEach(function(c){
+        h+='<a class="gs-c'+(c.ok?' ok':'')+'" href="'+esc3(c.u)+'" target="_blank" rel="noopener" '
+         + 'title="'+(c.ok?'공시실로 바로 갑니다':'회사 홈으로 갑니다 — 공시실은 홈에서 찾으십시오')+'">'
+         + esc3(c.n)+(c.ok?' <i>공시실</i>':' <i class="dim">홈</i>')+'</a>';
+      });
+      h+='</div>';
+    });
+    box.innerHTML=h;
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paint);
+  else paint();
+  window.gongsiPaint=paint;
+  window.gongsiCount=function(){return {org:GS_ORG.length, co:GS_CO.length,
+    ok:GS_CO.filter(function(c){return c.ok;}).length};};
 })();
 </script>

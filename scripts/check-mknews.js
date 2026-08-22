@@ -496,6 +496,33 @@ async function pressAndRead(fr) {
       /* 서버를 아껴 쓴다 — 안 보는 판에서는 안 부른다 */
       is(rd.pulled === 0, '  들어가기 전에는 서버를 안 부른다');
     }
+    /* ── 공시실 바로가기 ──────────────────────────────────────
+       기사는 <b>무엇이 나왔는지</b>만 알려 준다. 상품요약서·약관은
+       공시실에만 있다. 그래서 그리로 가는 길이 붙어 있어야 한다. */
+    const gs = await page.evaluate(() => {
+      if (typeof gongsiCount !== 'function') return null;
+      const box = document.getElementById('gongsiList');
+      const links = [].map.call((box || document).querySelectorAll('a[href]'),
+        a => ({ href: a.getAttribute('href'), blank: a.getAttribute('target') === '_blank',
+                rel: a.getAttribute('rel') || '' }));
+      return { c: gongsiCount(), links: links,
+               txt: (document.getElementById('gongsiCard') || {}).innerText || '' };
+    });
+    is(!!gs, '  공시실 바로가기 칸이 붙어 있다');
+    if (gs) {
+      is(gs.c.org >= 2, '  협회 통합공시가 둘 이상이다 — ' + gs.c.org + '곳');
+      is(gs.c.co >= 15, '  회사가 열다섯 곳 이상이다 — ' + gs.c.co + '곳');
+      is(gs.links.length >= 18, '  누를 수 있는 주소가 ' + gs.links.length + '개다');
+      is(gs.links.every(l => /^https:\/\//.test(l.href)), '  모두 https 다');
+      /* 새 창으로 열어야 상담 화면이 안 닫힌다. noopener 없이 target=_blank 는 위험하다 */
+      is(gs.links.every(l => l.blank && /noopener/.test(l.rel)),
+         '  새 창으로 열고 noopener 를 붙인다');
+      /* 공시실 깊은 주소를 찍어 맞히면 개편될 때 404 가 된다 —
+         확인한 곳만 공시실로 잇고 나머지는 홈으로 보낸다 */
+      is(/홈/.test(gs.txt) && /공시실/.test(gs.txt),
+         '  확인한 곳은 「공시실」, 못 한 곳은 「홈」 이라고 갈라 적는다');
+    }
+
     /* 기사만 보고 보장을 말하지 않는다 — 약관은 따로 봐야 한다고 적혀 있는가 */
     const npTxt = mk.slice(mk.indexOf('npcoCard'), mk.indexOf('npcoCard') + 2200);
     is(/약관이 아닙니다|약관 분석기/.test(npTxt),
