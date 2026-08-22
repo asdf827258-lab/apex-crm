@@ -279,6 +279,30 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
      사람이 안 남는다. 왼쪽 인물 사진 · 오른쪽 이름과 이력의 검은 표지를
      그 자리에 새로 짓는다. 값은 전부 「내 소개」 에서 온다. */
   console.log('\n[9] 표지 — 넣은 값이 그대로 표지가 되는가');
+  /* 사진을 안 올린 설계사부터 본다. merge() 는 <b>빈 값으로 덮지 않으므로</b>
+     (부분 쪽지가 값을 지우면 안 되니 옳다) 사진을 한 번 준 뒤에는 못 지운다.
+     그래서 사진 없는 경우를 먼저 본다 — 처음 열린 그대로다.
+     전에는 사진을 안 줘도 표지에 사진이 떴다. 남의 사진으로 메우고 있었기
+     때문이다. 내 이름 옆에 남의 얼굴이 서던 자리다. */
+  const CVN = await fr.evaluate(() => {
+    window.postMessage({ t: 'apex:intro', data: { name: '홍보험', title: '보장분석 전문가' } }, location.origin);
+    return new Promise(r => setTimeout(() => {
+      const w = document.querySelector('.apex-star-wrap');
+      const ph = document.querySelector('.as-photo');
+      const img = document.querySelector('.as-photo img');
+      r({
+        built: !!w, nophoto: !!(w && w.classList.contains('nophoto')),
+        shown: !!(ph && ph.offsetParent !== null),
+        src: img ? (img.getAttribute('src') || '') : '(img 없음)',
+        name: (document.querySelector('.as-name') || {}).textContent || ''
+      });
+    }, 520));
+  });
+  is(CVN.built && CVN.name === '홍보험', '사진이 없어도 표지는 선다');
+  is(CVN.nophoto, '사진 칸을 안 세운다고 표시한다 (nophoto)');
+  is(!CVN.shown, '사진 칸이 안 보인다 — 빈 액자를 세우지 않는다');
+  is(CVN.src === '(img 없음)', '남의 사진을 끌어오지 않는다 (' + CVN.src.slice(0, 24) + ')');
+
   const CV = await fr.evaluate(() => {
     window.postMessage({ t: 'apex:intro', data: {
       name: '홍보험', nameEn: 'HONG BO HEOM', title: '보장분석 전문가',
@@ -287,7 +311,11 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
       license: '생명·손해·변액', career: '상담 900+ · 7년',
       onair: 'NBN 「보험 불만제로」\nMBC 「경제 한 조각」',
       tags: '운전자보험, 종신·정기보험, 보장분석',
-      team: 'TEAM ONTOP · INSURANCE PROFESSIONALS'
+      team: 'TEAM ONTOP · INSURANCE PROFESSIONALS',
+      /* 사진도 <b>이 사람이 올린 것</b>을 준다. 전에는 안 주고도 사진이
+         떴는데, 그것은 표지가 남의 사진으로 메우고 있었기 때문이다 —
+         내 이름 옆에 남의 얼굴이 서던 자리다. 이제 되돌림 사진은 없다. */
+      photo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', photo2: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', photo3: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
     } }, location.origin);
     return new Promise(r => setTimeout(() => {
       const g = s => { const e = document.querySelector(s); return e ? e.textContent.trim() : ''; };
@@ -325,6 +353,7 @@ const read = f => fs.readFileSync(path.join(ROOT, DIR, f), 'utf8');
   is(/TEAM ONTOP/.test(CV.team), '팀 이름이 왼쪽 아래에 놓인다');
   is(CV.heroHidden, '원래 표지는 가려진다 — 두 개가 겹쳐 보이지 않는다');
   is(CV.photoW > 300, '인물 사진이 왼쪽 ' + CV.photoW + 'px 를 채운다');
+
 
   /* 이름이 없으면 새 표지를 짓지 않는다 — 빈 표지보다 원래 것이 낫다 */
   const CV0 = await fr.evaluate(() => {

@@ -35,7 +35,8 @@ const LANES = [
   { k: '라. 미끼 레이더', t: 'app/상담자료/미끼레이더/',        m: [/^app\/상담자료\/미끼레이더\//] },
   { k: '마. 서버·소스',  t: 'netlify/functions/ · config/',   m: [/^netlify\//, /^config\//] },
   { k: '바. 지도',       t: 'app/apex-map*',                  m: [/^app\/apex-map/] },
-  { k: '사. 그 밖',      t: '',                               m: [/./] }
+  { k: '사. 재무설계 자료', t: 'app/재무설계/',                m: [/^app\/재무설계\//] },
+  { k: '아. 그 밖',      t: '',                               m: [/./] }
 ];
 
 /* 갈래마다 자기 점검을 하나씩 새로 만들고, 아래 「함께 쓰는 자리」는 따로
@@ -56,7 +57,7 @@ const SHARED = {
 function laneOf(f) {
   if (OWN.some(function (r) { return r.test(f); })) return null;
   for (const L of LANES) if (L.m.some(function (r) { return r.test(f); })) return L.k;
-  return '사. 그 밖';
+  return '아. 그 밖';
 }
 
 /* ── 1. 어디를 건드렸나 ───────────────────────────────────────────── */
@@ -66,13 +67,21 @@ if (!mb) {
   process.exit(0);
 }
 const files = git('diff --name-only ' + mb + '...HEAD').split('\n').filter(Boolean);
+/* 아직 담지 않은 것은 diff 에 안 잡힌다. 밀기 전에 보는 도구인데 「아직
+   바꾼 것이 없습니다」 라고 하면 헛말이 된다 — 담으라고 알려 준다. */
+const dirty = git('status --porcelain').split('\n').filter(Boolean);
 
 console.log('');
 console.log('  갈래 — ' + git('rev-parse --abbrev-ref HEAD') + '  (견주는 곳: ' + BASE + ')');
 console.log('  ' + '─'.repeat(64));
 
+if (dirty.length) {
+  console.log('  아직 담지 않은 것이 ' + dirty.length + '개 있습니다 — 담은 것만 견줍니다.');
+  console.log('  git add -A && git commit  뒤에 다시 부르십시오.');
+  console.log('');
+}
 if (!files.length) {
-  console.log('  아직 바꾼 것이 없습니다.\n');
+  console.log('  담아 둔 것 중에는 바꾼 것이 없습니다.\n');
   process.exit(0);
 }
 

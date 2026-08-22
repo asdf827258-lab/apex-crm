@@ -422,7 +422,10 @@
 
      ★ 파일의 HTML 은 손대지 않는다. 원래 내용은 <b>숨기고</b>,
        새 표지를 자식으로 <b>덧붙인다.</b> 값이 없으면 원래 표지가 그대로 나온다. */
-  var COVER_FALLBACK = { photo: 'photo1.jpg', photo2: 'photo2.png', photo3: 'photo3.jpg' };
+  /* 사진이 없을 때 <b>남의 사진</b>으로 메우던 자리다. 이름은 내 것인데
+     얼굴은 남의 것인 표지가 고객 앞 첫 화면에 떴다. 되돌림 사진은 없다 —
+     사진이 없으면 사진 칸을 아예 안 세운다(nophoto). 재무설계 상담자료가
+     이미 그렇게 한다. 두 표지가 같은 규칙을 쓴다. */
 
   function esc(s) {
     return ('' + (s == null ? '' : s)).replace(/&/g, '&amp;').replace(/</g, '&lt;')
@@ -437,11 +440,7 @@
   function station(t) { return ('' + t).split(/[「\s]/)[0] || ''; }
   /* 이름을 못 받았으면 로마자를 억지로 만들지 않는다 — 틀린 이름은 안 쓰는 게 낫다 */
   function coverPhotos() {
-    return {
-      main: INTRO.photo || COVER_FALLBACK.photo,
-      a: INTRO.photo2 || COVER_FALLBACK.photo2,
-      b: INTRO.photo3 || COVER_FALLBACK.photo3
-    };
+    return { main: INTRO.photo || '', a: INTRO.photo2 || '', b: INTRO.photo3 || '' };
   }
 
   function coverBuildCss() {
@@ -451,6 +450,9 @@
     st.textContent = [
       '#s1.apex-star>*:not(.apex-star-wrap){display:none !important}',
       '#s1.apex-star{padding:0 !important;background:#08080A !important;overflow:hidden}',
+      /* 사진이 없으면 사진 칸을 안 세우고 오른쪽 칸이 판 전체를 쓴다 */
+      '.apex-star-wrap.nophoto .as-photo{display:none}',
+      '.apex-star-wrap.nophoto .as-info{padding:44px 56px 56px}',
       '.apex-star-wrap{position:absolute;inset:0;display:flex;background:#08080A;color:#F3EEE3;',
       'font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;overflow:hidden}',
       /* 왼쪽 — 인물 */
@@ -531,9 +533,9 @@
 
     var vert = on.map(station).filter(Boolean).join(' · ');
 
-    return '<div class="apex-star-wrap">' +
+    return '<div class="apex-star-wrap' + (P.main ? '' : ' nophoto') + '">' +
       '<div class="as-photo">' +
-        '<img src="' + esc(P.main) + '" alt="" onerror="this.style.display=\'none\'">' +
+        (P.main ? '<img src="' + esc(P.main) + '" alt="" onerror="this.style.display=\'none\'">' : '') +
         (vert ? '<div class="as-vert">' + esc(vert) + '</div>' : '') +
         (INTRO.team ? '<div class="as-team">' + esc(INTRO.team) + '</div>' : '') +
       '</div>' +
