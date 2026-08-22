@@ -101,6 +101,30 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(/\.tp-chg\b/.test(src) && /\.tp-none\b/.test(src) && /\.tp-prem\b/.test(src),
      '  인쇄본에도 새 칸의 모양이 실려 있다');
 
+  console.log('\n[9] 마무리 — 고객에게 그대로 읽어 드리는 말');
+  is(/마무리 — 오늘, 이 자리에서/.test(h), '  마지막 장이 있다');
+  is(/tp-close/.test(h) && /겁을 드리려는 그림이 아닙니다/.test(h), '  겁주는 말로 열지 않는다');
+  is(/4,400만원<\/b>이 나갑니다/.test(h), '  이 화면의 숫자로 만든 문장이다 (지어낸 값이 아니다)');
+  is(/그래서 오늘 새로 정하실 것은 없습니다/.test(h),
+     '  보장이 다 차 있으면 <b>더 팔지 않는다</b> — 「오늘 정하실 것 없습니다」');
+  is(/오늘 정하실 것 — 딱 세 가지/.test(h), '  오늘 정할 것을 셋으로 좁힌다');
+  is(!/반드시 지급|무조건|보장됩니다/.test(h), '  확정적으로 약속하는 말을 쓰지 않는다');
+  is(/tpCloseCopy\(\)/.test(h), '  그 문장을 그대로 복사할 수 있다');
+
+  const gap = await set(Object.assign({}, FULL, { diag: 500, chemo: 0, surg: 0, perDay: 0, days: 0 }));
+  is(/이 댁이 냅니다/.test(gap), '  모자라면 <b>모자란 만큼 이 댁이 낸다</b>고 말한다');
+  is(/「보험에 가입할까 말까」 가 아닙니다/.test(gap),
+     '  질문을 바꿔 준다 — 「가입할까 말까」 가 아니라 「언제 정할까」');
+  is(/오늘 채울지, 언제까지 미룰지/.test(gap), '  오늘 정할 것이 그에 맞게 바뀐다');
+
+  const none = await set({ diag: 0, surg: 0, perDay: 0, days: 0, chemo: 0, bill: 0,
+                           silbi: 0, income: 0, off: 0, rate: 6, prem: 0, years: 0 });
+  is(/그대로 읽어 드릴 문장이 만들어집니다/.test(none),
+     '  값이 없으면 <b>문장을 지어내지 않는다</b> — 무엇을 넣으라고만 한다');
+
+  const full2 = await set(FULL);
+  is(full2.length > 0, '  값을 되돌려도 그대로 선다');
+
   console.log('\n[8] 단서를 빼지 않았는가');
   is(/약관, 보험사 심사에 따라 달라집니다/.test(h), '  약관·심사 단서가 그대로 있다');
   is(/일반적 치료경과 예시/.test(h), '  일반적 예시라고 밝힌다');

@@ -516,6 +516,17 @@ window.APEX_SB = window.APEX_SB || {
 .tj-desc{font-size:10.5px;color:#6B7280;line-height:1.5;margin-top:8px;text-align:left;}
 .tp-call{border:1px solid #C7D2FE;background:linear-gradient(135deg,#F5F8FF,#EBF3FF);border-radius:12px;padding:14px 16px;margin-top:6px;font-size:12.5px;color:#1E3A8A;line-height:1.65;}
 .tp-call b{color:#1A56DB;}
+/* 마무리 — 고객에게 그대로 읽어 드리는 말 */
+.tp-close{border:0;border-radius:16px;padding:18px 20px;background:linear-gradient(135deg,#F0F7FF,#EAF2FF);
+  font-size:14px;line-height:1.95;color:#12294D;letter-spacing:-.01em;}
+.tp-close b{color:#1A56DB;font-weight:800;}
+.tp-ask{margin-top:12px;display:grid;gap:6px;}
+.tp-ask .ah{font-size:12px;font-weight:800;color:#6B7280;margin-bottom:2px;}
+.tp-ask .ai{display:flex;gap:10px;align-items:flex-start;font-size:12.5px;color:#374151;line-height:1.75;
+  background:#FBFCFE;border:1px solid #EEF0F3;border-radius:10px;padding:9px 12px;}
+.tp-ask .ai>b{flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:#1A56DB;color:#fff;
+  font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:2px;}
+.tp-ask .ai b{color:#1C2434;}
 /* 그래서 무엇이 달라지는가 — 돈을 달(月)과 갚는 방법으로 옮긴 자리 */
 .tp-chgs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .tp-chg{border:1px solid #EEF0F3;border-radius:14px;padding:14px 15px;background:#FBFCFE;}
@@ -19772,9 +19783,81 @@ function tpBody(){
     '<div class="rpt-kpi"><div class="k">보험적용 실부담</div><div class="v" style="color:#059669;font-size:16px">'+vizWon(afterSelf)+'</div><div class="s">충당률 '+coverRate+'%</div></div>'+
     (income>0?('<div class="rpt-kpi"><div class="k">쉴 수 있는 기간</div><div class="v" style="color:#1A56DB;font-size:16px">'+vizN(payMonths)+'<small> 개월</small></div><div class="s">정액 목돈 ÷ 월 소득</div></div>'):'')+
     '</div></div>';
+  /* ══════════════════════════════════════════════════════════════
+     7장 · 마무리 — <b>고객에게 그대로 읽어 드리는 말</b>
+
+     여기까지 숫자를 다 보여 주고도 상담이 흐지부지 끝나는 이유는
+     <b>마지막 한마디가 없어서</b>다. 「어떻게 하시겠어요」 로 끝나면
+     고객은 「생각해 볼게요」 로 답한다. 그건 질문이 잘못된 것이다.
+
+     그래서 마지막 말은 <b>이 화면의 숫자로 만든다.</b> 겁주지 않고,
+     지어내지 않고, 확답을 약속하지 않는다. 고객이 오늘 고를 것은
+     「가입하느냐 마느냐」 가 아니라 <b>「그날 이 돈이 준비되어 있게
+     할 것인가」</b> 하나로 좁혀 준다.
+
+     ※ 이 장은 <b>고객 인쇄본에도 나간다.</b> 그래서 확정적 표현
+       (반드시 지급된다 · 무조건 보장된다)은 쓰지 않는다.
+     ══════════════════════════════════════════════════════════════ */
+  var close='',ask=[];
+  if(beforeSelf>0){
+    var line1='오늘 보신 것은 겁을 드리려는 그림이 아닙니다. '+osEsc(d.name)+
+      '이 왔을 때 이 댁 통장에서 <b>'+vizWon(beforeSelf)+'</b>이 나갑니다 — '+
+      '병원비뿐 아니라 <b>일을 못 하는 동안 끊긴 소득</b>까지 합쳐서요.'+
+      (loanM>0?(' 그 돈을 대출로 메우면 5년 동안 매달 <b>'+fmt(loanM)+'만원</b>입니다.'):'');
+    var line2,line3;
+    if(coverRate>=100){
+      line2='지금 준비하신 보장은 그 '+vizWon(beforeSelf)+'을 <b>다 메우고</b>'+
+        (income>0&&payMonths>0?(', 거기에 <b>'+vizN(payMonths)+'개월치 월급</b>까지 만들어 둡니다. '+
+          '치료는 병원이 하고, 그동안의 생활은 이 돈이 합니다.'):' 남는 부담을 0 으로 만듭니다.');
+      line3='그래서 오늘 새로 정하실 것은 없습니다. 다만 <b>이 종이를 그대로 두셨다가</b>, '+
+        '그런 일이 생기면 <b>가장 먼저 저에게 연락</b> 주십시오. 청구 절차를 처음부터 끝까지 같이 하겠습니다.';
+      ask=['이 표의 숫자가 <b>내 증권과 같은지</b> — 다른 곳이 있으면 오늘 짚어 주세요.',
+           '그날 <b>가장 먼저 연락할 사람</b>을 정해 두시는 것 — 번호를 저장해 두세요.',
+           '해마다 한 번, <b>보장이 그대로인지</b> 같이 확인하는 날을 정하는 것.'];
+    }else{
+      line2='지금 준비된 보장은 그 중 <b>'+vizWon(covered)+'</b>('+coverRate+'%)을 메웁니다. '+
+        '나머지 <b>'+vizWon(afterSelf)+'</b>은 <b>이 댁이 냅니다.</b>'+
+        (income>0&&off>0&&restMonths<0?(' 그리고 쉬어야 하는 '+fmt(off)+'개월 중 <b>'+vizN(-restMonths)+
+          '개월</b>은 들어오는 돈이 없습니다.'):'');
+      line3='오늘 정하실 것은 <b>「보험에 가입할까 말까」 가 아닙니다.</b> '+
+        '그날 이 <b>'+vizWon(afterSelf)+'</b>을 어디서 만들지 — <b>오늘 정해 둘지, 그날 정할지</b> '+
+        '그것만 고르시면 됩니다.';
+      ask=['이 표의 숫자가 <b>내 증권과 같은지</b> — 다른 곳이 있으면 오늘 짚어 주세요.',
+           '비는 <b>'+vizWon(afterSelf)+'</b>을 <b>오늘 채울지, 언제까지 미룰지</b>.',
+           '한 번에 다 못 채우신다면 <b>무엇부터</b> 채울지 — 순서만 오늘 정하셔도 됩니다.'];
+    }
+    close=line1+'<br><br>'+line2+'<br><br>'+line3;
+  }else{
+    close='가입하신 담보 금액과 월 소득을 넣어 주시면, 이 자리에 '+
+      '<b>「그날 이 댁에서 얼마가 나가고, 보험이 얼마를 대신 내는지」</b> 를 '+
+      '그대로 읽어 드릴 문장이 만들어집니다.';
+    ask=['증권을 꺼내 <b>진단비·수술비·입원일당</b>부터 넣어 보시는 것.',
+         '<b>월 소득</b>과 <b>쉬어야 하는 기간</b>을 넣으면 「몇 달을 버티는지」 가 나옵니다.',
+         '숫자가 다 차면 오늘 <b>무엇부터 채울지</b> 정하시면 됩니다.'];
+  }
+  /* 복사할 때는 줄바꿈을 살린다 — 카톡으로 보내면 한 덩어리가 되면 안 읽힌다 */
+  var plain=close.replace(new RegExp('<br\\s*/?>','gi'),'\n').replace(/<[^>]+>/g,'');
+  h+='<div class="rpt-sec"><div class="hd"><span class="n">7</span>마무리 — 오늘, 이 자리에서</div>'+
+    '<div class="sub">아래 문장은 이 화면의 숫자로 만든 것입니다. 고객께 <b>그대로 읽어 드려도</b> 되고, 종이로 드려도 됩니다.</div>'+
+    '<div class="tp-close">'+close+'</div>'+
+    '<div class="tp-ask"><div class="ah">오늘 정하실 것 — 딱 세 가지</div>'+
+      ask.map(function(x,i){return '<div class="ai"><b>'+(i+1)+'</b><span>'+x+'</span></div>';}).join('')+
+    '</div>'+
+    '<div class="rpt-tools" style="margin-top:12px">'+
+      '<button class="pr" onclick="tpCloseCopy()">📋 이 문장 복사</button>'+
+    '</div></div>';
   h+='<div class="rpt-tools" style="margin-top:0"><button class="pr" onclick="tpPrint()">🖨 인쇄 · PDF 저장</button></div>';
+  TP._close=plain;
   h+='<div class="rpt-disc">본 자료는 입력값과 <b>일반적 치료경과 예시</b>에 근거한 참고용 상담자료이며, 특정 상품 권유나 지급 보장이 아닙니다. 실제 치료 과정·기간·비용과 보험금 지급 여부·금액은 개인 상태, 약관, 보험사 심사에 따라 달라집니다(최종은 약관·심사 기준). 제도·수가는 시행일 기준 공식값을 확인하세요. 게시·발송 전 준법감시 확인이 필요합니다.</div>';
   return h;
+}
+/* 마무리 문장을 그대로 복사 — 카톡·문자로 보내 드리기 좋게 */
+function tpCloseCopy(){
+  var t=(TP&&TP._close)?TP._close:'';
+  if(!t){toast('먼저 담보 금액을 넣어 주세요');return;}
+  if(typeof copyText==='function')copyText(t);
+  else{try{navigator.clipboard.writeText(t);}catch(e){}}
+  toast('마무리 문장을 복사했습니다 — 고객께 그대로 보내셔도 됩니다',4500);
 }
 function tpPrint(){
   var d=tpDisease();
@@ -19788,7 +19871,7 @@ function tpPrint(){
     '.rpt-kpis{display:flex;gap:10px;flex-wrap:wrap}.rpt-kpi{flex:1;min-width:118px;border:1px solid #EEF0F3;border-radius:12px;padding:10px 12px;background:#F9FAFB}.rpt-kpi .k{font-size:11px;color:#6B7280;font-weight:700}.rpt-kpi .v{font-size:16px;font-weight:800;margin-top:3px}.rpt-kpi .s{font-size:10.5px;color:#9AA2AD;margin-top:3px}'+
     '.tj{display:flex;flex-wrap:wrap;gap:8px}.tj-step{flex:1;min-width:150px;border:1px solid #EEF0F3;border-radius:10px;padding:10px;text-align:center}.tj-ic{width:44px;height:44px;border-radius:50%;background:#EBF3FF;border:2px solid #1A56DB;display:flex;align-items:center;justify-content:center;font-size:21px;margin:0 auto 6px}.tj-k{font-size:12.5px;font-weight:800}.tj-dur{font-size:10.5px;color:#6B7280}.tj-pay{margin-top:6px;display:flex;flex-direction:column;gap:3px;align-items:center}.tj-pay span{font-size:10px;font-weight:700;color:#1A56DB;background:#EBF3FF;border-radius:6px;padding:2px 7px}.tj-desc{font-size:10.5px;color:#6B7280;line-height:1.5;margin-top:6px;text-align:left}'+
     '.rpt-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#4B5563}.rpt-legend span{display:flex;align-items:center;gap:5px}.rpt-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}'+
-    '.tp-call{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;font-size:12px;color:#1E3A8A;line-height:1.6}.tp-chgs{display:flex;gap:10px}.tp-chg{flex:1;border:1px solid #EEF0F3;border-radius:12px;padding:12px 13px;background:#FBFCFE}.tp-chg .ic{font-size:18px}.tp-chg .t{font-size:11px;font-weight:800;color:#6B7280;margin-top:6px}.tp-chg .v{font-size:19px;font-weight:800;margin:2px 0 5px}.tp-chg .d{font-size:11px;color:#4B5563;line-height:1.6}.tp-none{border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:12px 14px;margin-top:12px}.tp-none .nh{font-size:12.5px;font-weight:800;color:#92400E;margin-bottom:8px}.tp-none .ni{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:#78350F;padding:4px 0;border-bottom:1px dashed #FDE68A}.tp-none .ni i{font-style:normal;font-size:10px;color:#A16207}.tp-none .ni b{font-weight:800;color:#92400E}.tp-none .nn{font-size:10px;color:#A16207;line-height:1.65;margin-top:8px}.tp-prem{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;margin-top:10px}.tp-prem .ph{font-size:12.5px;font-weight:800;color:#1E3A8A;margin-bottom:7px}.tp-prem .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#3730A3}.tp-prem .pr em{font-style:normal;font-weight:800;color:#1E3A8A}.tp-prem .pr em.big{font-size:16px}.tp-prem .pn{font-size:10px;color:#64748B;line-height:1.65;margin-top:8px}.tp-dis,.rpt-fin,.rpt-tools,.tp-say{display:none}svg{max-width:100%;height:auto}.rpt-disc{font-size:11px;color:#9AA2AD;border-top:1px solid #F1F5F9;padding-top:10px}@media print{body{margin:6px}}</style>';
+    '.tp-call{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;font-size:12px;color:#1E3A8A;line-height:1.6}.tp-chgs{display:flex;gap:10px}.tp-chg{flex:1;border:1px solid #EEF0F3;border-radius:12px;padding:12px 13px;background:#FBFCFE}.tp-chg .ic{font-size:18px}.tp-chg .t{font-size:11px;font-weight:800;color:#6B7280;margin-top:6px}.tp-chg .v{font-size:19px;font-weight:800;margin:2px 0 5px}.tp-chg .d{font-size:11px;color:#4B5563;line-height:1.6}.tp-none{border:1px solid #FDE68A;background:#FFFBEB;border-radius:12px;padding:12px 14px;margin-top:12px}.tp-none .nh{font-size:12.5px;font-weight:800;color:#92400E;margin-bottom:8px}.tp-none .ni{display:flex;justify-content:space-between;gap:12px;font-size:11.5px;color:#78350F;padding:4px 0;border-bottom:1px dashed #FDE68A}.tp-none .ni i{font-style:normal;font-size:10px;color:#A16207}.tp-none .ni b{font-weight:800;color:#92400E}.tp-none .nn{font-size:10px;color:#A16207;line-height:1.65;margin-top:8px}.tp-prem{border:1px solid #C7D2FE;background:#F5F8FF;border-radius:12px;padding:12px 14px;margin-top:10px}.tp-prem .ph{font-size:12.5px;font-weight:800;color:#1E3A8A;margin-bottom:7px}.tp-prem .pr{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#3730A3}.tp-prem .pr em{font-style:normal;font-weight:800;color:#1E3A8A}.tp-prem .pr em.big{font-size:16px}.tp-prem .pn{font-size:10px;color:#64748B;line-height:1.65;margin-top:8px}.tp-close{border-radius:14px;padding:15px 17px;background:#F0F7FF;font-size:13px;line-height:1.9;color:#12294D}.tp-close b{color:#1A56DB;font-weight:800}.tp-ask{margin-top:10px;display:grid;gap:5px}.tp-ask .ah{font-size:11.5px;font-weight:800;color:#6B7280}.tp-ask .ai{display:flex;gap:9px;font-size:12px;color:#374151;line-height:1.7;background:#FBFCFE;border:1px solid #EEF0F3;border-radius:9px;padding:8px 11px}.tp-ask .ai>b{flex:0 0 auto;width:18px;height:18px;border-radius:50%;background:#1A56DB;color:#fff;font-size:10.5px;font-weight:800;display:flex;align-items:center;justify-content:center}.tp-dis,.rpt-fin,.rpt-tools,.tp-say{display:none}svg{max-width:100%;height:auto}.rpt-disc{font-size:11px;color:#9AA2AD;border-top:1px solid #F1F5F9;padding-top:10px}@media print{body{margin:6px}}</style>';
   var body='<h1>APEX 치료비 지급지도 — '+d.ic+' '+osEsc(d.name)+'</h1><div class="hdln">치료 여정과 보장 지급 시뮬레이션 · '+new Date().toLocaleDateString('ko-KR')+'</div>'+content.innerHTML;
   w.document.write('<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>APEX 치료비 지급지도</title>'+css+'</head><body>'+body+'</body></html>');
   w.document.close();
@@ -29883,7 +29966,11 @@ var BABA_TERMS=[
  {k:'care',    n:'간병·요양',         syn:['간병','장기요양','요양병원','간병인지원']},
  {k:'drive',   n:'운전자 (벌금 등)',  syn:['벌금','변호사선임','형사합의','교통사고처리지원']},
  {k:'liab',    n:'배상책임',          syn:['배상책임','일상생활배상','화재배상']},
- {k:'fee',     n:'월 보험료',         syn:['월보험료','합계보험료','납입보험료','보험료 합계','월 납입']},
+ /* 「월 보험료 <b>차이</b>」 는 보험료가 아니라 <b>차액</b>이다. 비교표에
+    흔히 나오는데, 이걸 보험료로 집으면 34,400원짜리 보험이 되어 버린다.
+    naft = 이 말이 <b>바로 뒤에</b> 오면 그 자리는 건너뛴다.          */
+ {k:'fee',     n:'월 보험료',         syn:['월보험료','합계보험료','납입보험료','보험료 합계','월 납입'],
+  naft:['차이','차액','절감','증감','인상','인하','증가','감소']},
  /* ── 아래는 「주요 보장 요약(인체)」 서식 40줄을 채우려고 더한 것 ──
     넓은 것(사망·후유장해·실손)은 좁은 것이 잡히면 합계에서 빠진다.
     sup 에 자기를 대신하는 좁은 키를 적어 둔다.                      */
@@ -30044,7 +30131,7 @@ function babaPrep(T){
 function babaAt(P,i){ return (i>=0&&i<P.map.length)?P.map[i]:P.T.length; }
 /* 사전에 적힌 이름이 <b>담보 이름으로 쓰인 자리</b>만 모은다 */
 function babaSpots(P,t){
-  var out=[],i,j,idx,w,from,head,skip,no;
+  var out=[],i,j,idx,w,from,head,tail,skip,no;
   for(i=0;i<t.syn.length;i++){
     w=(''+t.syn[i]).replace(/\s+/g,'');
     if(!w)continue;
@@ -30058,6 +30145,14 @@ function babaSpots(P,t){
         for(j=0;j<t.not.length;j++){
           no=(''+t.not[j]).replace(/\s+/g,'');
           if(no&&head.indexOf(no)>=0){skip=true;break;}
+        }
+      }
+      /* 이름 <b>바로 뒤</b>에 오면 안 되는 말 — 「월 보험료 차이」 */
+      if(!skip&&t.naft&&t.naft.length){
+        tail=P.s.slice(from,from+6);
+        for(j=0;j<t.naft.length;j++){
+          no=(''+t.naft[j]).replace(/\s+/g,'');
+          if(no&&tail.indexOf(no)>=0){skip=true;break;}
         }
       }
       /* 「암진단비(유사암제외)」 의 「유사암」, 「골절진단비(치아파절제외)」 의
@@ -30137,7 +30232,15 @@ function babaTerms(){
   var add=babaSyn();
   return BABA_TERMS.map(function(t){
     var mine=add[t.k]||[];
-    return mine.length?{k:t.k,n:t.n,syn:mine.concat(t.syn),not:t.not,mine:mine}:t;
+    /* ── 제 이름도 사전에 넣는다 ──────────────────────────────
+       우리가 뽑은 제안서에는 <b>이 표의 이름 그대로</b> 「사망(주계약)」
+       이라고 찍힌다. 그런데 사전에는 「주계약 사망」 만 있어서 <b>우리가
+       만든 종이를 우리가 못 읽었다.</b> 제 이름을 맨 뒤에 붙여 둔다 —
+       맨 뒤라 회사 표기가 먼저 걸리는 순서는 그대로다.            */
+    var syn=mine.concat(t.syn);
+    var self=(''+t.n).replace(/\s+/g,'');
+    if(self&&syn.indexOf(t.n)<0&&syn.indexOf(self)<0)syn=syn.concat([t.n]);
+    return {k:t.k,n:t.n,syn:syn,not:t.not,naft:t.naft,mine:mine};
   });
 }
 function babaSynAdd(k){
@@ -31806,8 +31909,19 @@ function babaWhyHtml(){
       var f=d[i];
       if(f.kind==='scan-noai')
         why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> 은 글자가 없는 <b>스캔본</b>입니다 — AI 를 연결해야 그림을 읽습니다. (설정 → AI 연결)');
+      else if(f.kind==='text-weak')
+        why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> — '+osEsc(f.why||'글을 믿을 수 없습니다')+'. '+
+          '<b>AI 를 연결하면 같은 파일을 그림으로 다시 읽습니다</b>(설정 → AI 연결). '+
+          '그때까지는 아래 표에 손으로 적어 주세요.');
+      else if(f.kind==='scan'&&f.why&&!/글자가 거의 없습니다/.test(f.why))
+        why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> — '+osEsc(f.why)+'. '+
+          '그래서 <b>그림으로 다시 읽었습니다.</b> 금액을 한 번만 눈으로 맞춰 주세요.');
       else if(f.kind==='fail')
-        why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> 을 열지 못했습니다 — 파일이 손상됐거나 암호가 걸려 있을 수 있습니다.');
+        why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> 을 열지 못했습니다 — '+
+          osEsc(f.why||'파일이 손상됐거나 암호가 걸려 있을 수 있습니다')+'.');
+      else if(f.miss)
+        why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> 에서 '+f.miss+'쪽은 글자를 못 뽑았습니다 — '+
+          '그 쪽에 있던 담보는 표에 안 들어갑니다. 손으로 채워 주세요.');
       else if(f.failed)
         why.push('<b>'+osEsc(f.name.slice(0,24))+'</b> 에서 '+f.failed+'개 묶음을 못 읽었습니다 — 다시 만들기를 한 번 더 눌러 주세요.');
       else if(!f.found)
@@ -31824,7 +31938,8 @@ function babaWhyHtml(){
     tbl='<div class="bp-diagwrap"><table class="bp-diag"><thead><tr>'+
       '<th>자료</th><th>칸</th><th>쪽</th><th>어떻게 읽었나</th><th>찾은 담보</th></tr></thead><tbody>'+
       d.map(function(f){
-        var kind={text:'글자로 바로',scan:'스캔본 → AI 가 그림으로','scan-noai':'스캔본 · AI 없음',fail:'열지 못함'}[f.kind]||f.kind;
+        var kind={text:'글자로 바로',scan:'그림으로 (AI 판독)','scan-noai':'스캔본 · AI 없음',
+                  'text-weak':'글이 못 미더움 · AI 없음',fail:'열지 못함'}[f.kind]||f.kind;
         return '<tr><td class="nm">'+osEsc(f.name.slice(0,28))+'</td>'+
           '<td>'+(f.old?'기존':'신규')+'</td><td>'+(f.pages||'—')+'</td>'+
           '<td>'+kind+(f.chars?(' <span>'+f.chars.toLocaleString()+'자</span>'):'')+
@@ -31935,7 +32050,17 @@ function babaPropCss(){
       '--or:#FF9500;--gn:#0F766E;--bg:#F9FAFB;--bg2:#F2F4F6;--ln:#E5E8EB}'+
     'body{font-family:Pretendard,-apple-system,"Noto Sans KR",sans-serif;margin:0;padding:0;'+
       'color:var(--ink);background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;'+
-      'letter-spacing:-.02em;font-feature-settings:"tnum" 1}'+
+      'letter-spacing:-.02em}'+
+    /* ── 숫자를 가지런히 세우는 tnum 은 <b>화면에서만</b> 쓴다 ─────
+       「font-feature-settings:"tnum"」 을 켠 채로 브라우저에서 PDF 로
+       저장하면, 바뀐 숫자 글자가 <b>유니코드를 잃는다.</b> 사람 눈에는
+       3억 5,719만원인데 프로그램이 읽으면 「억 만원」 — 숫자가 통째로
+       사라지고 사용자 지정 글자(U+E0xx)만 남는다.
+
+       그 종이를 다시 비포&애프터에 넣으면 금액을 하나도 못 읽는다.
+       <b>우리가 만든 제안서를 우리가 못 읽는 것</b>이다. 실제로 그랬다.
+       가지런함보다 <b>다시 읽히는 것</b>이 중요하다.                */
+    '@media screen{body{font-feature-settings:"tnum" 1}}'+
 
     /* ── 표지 ── */
     '.bp-cover{position:relative;overflow:hidden;padding:38px 32px 30px;border-radius:24px;'+
@@ -32317,18 +32442,19 @@ var BABA_DEEP={on:false,msg:'',done:0,total:0,failed:0};
 function babaTextAll(file){
   return ensurePdfJs().then(function(lib){
     return file.arrayBuffer().then(function(buf){
-      return lib.getDocument({data:buf}).promise.then(function(pdf){
-        var n=pdf.numPages,chain=Promise.resolve(),pages=[];
+      /* 여는 것 자체가 안 될 수 있다 — 암호·손상. 30초를 넘기면 접는다 */
+      return pdfWait(lib.getDocument({data:buf}).promise,30000,'PDF 열기').then(function(pdf){
+        var n=pdf.numPages,chain=Promise.resolve(),pages=[],miss=0;
         for(var i=1;i<=n;i++){(function(i){
           chain=chain.then(function(){
-            return pdf.getPage(i).then(function(pg){
-              return pg.getTextContent().then(function(tc){
+            return pdfWait(pdf.getPage(i).then(function(pg){return pg.getTextContent();}),8000,'글자 뽑기')
+              .then(function(tc){
                 pages.push(tc.items.map(function(it){return it.str;}).join(' '));
-              });
-            });
+              },function(){ miss++; pages.push(''); });   /* 이 쪽만 비우고 간다 */
           });
         })(i);}
-        return chain.then(function(){return {text:pages.join('\n'),pages:n};});
+        /* 씻어서 넘긴다 — 안 보이는 글자가 섞여 있으면 사전이 헛돈다 */
+        return chain.then(function(){return {text:pdfClean(pages.join('\n')),pages:n,miss:miss};});
       });
     });
   });
@@ -32348,9 +32474,14 @@ function babaImgRange(file,from,to,edge){
               var vp=pg.getViewport({scale:scl});
               var cv=document.createElement('canvas');
               cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
-              return pg.render({canvasContext:cv.getContext('2d'),viewport:vp}).promise.then(function(){
+              /* 탭이 뒤로 가도 안 멈추게 — intent:'print' (pdfDraw 안에 있다) */
+              return pdfDraw(pg,cv,vp,20000).then(function(){
                 imgs.push(cv.toDataURL('image/jpeg',0.82).split(',')[1]);
                 cv.width=cv.height=0;
+              },function(e){
+                cv.width=cv.height=0;
+                /* 이 쪽만 버리고 간다 — 한 쪽 때문에 전부를 잃지 않는다 */
+                if(typeof BABA_DEEP==='object'&&BABA_DEEP)BABA_DEEP.skipped=(BABA_DEEP.skipped||0)+1;
               });
             });
           });
@@ -32427,10 +32558,14 @@ function babaMapName(name){
 /* 파일 하나를 끝까지 읽는다 — 글자면 글자로, 스캔본이면 쪼개서 그림으로 */
 function babaReadFile(file,onStep){
   return babaTextAll(file).then(function(r){
-    var clean=(r.text||'').replace(/\s+/g,'');
-    if(clean.length>=400)return {kind:'text',text:r.text,pages:r.pages,chunks:0,failed:0};
-    /* 글자가 없다 — 스캔본이다. 쪼개서 AI 에게 보낸다. */
-    if(!aiReady())return {kind:'scan-noai',text:'',pages:r.pages,chunks:0,failed:0};
+    var tr=pdfTextTrust(r.text);
+    if(tr.ok)return {kind:'text',text:r.text,pages:r.pages,miss:r.miss||0,chunks:0,failed:0};
+    /* 글이 못 미더우면 <b>같은 파일을 그림으로</b> 다시 읽는다.
+       AI 가 없으면 있는 글이라도 넘기되, 왜 못 미더운지 반드시 말한다. */
+    if(!aiReady())
+      return tr.scan
+        ? {kind:'scan-noai',text:'',pages:r.pages,chunks:0,failed:0,why:tr.why}
+        : {kind:'text-weak',text:r.text||'',pages:r.pages,miss:r.miss||0,chunks:0,failed:0,why:tr.why};
     var total=Math.ceil(r.pages/BABA_CHUNK),got=[],failed=0;
     var chain=Promise.resolve(),c=0;
     for(var from=1;from<=r.pages;from+=BABA_CHUNK){(function(from){
@@ -32440,19 +32575,26 @@ function babaReadFile(file,onStep){
         if(onStep)onStep(c,total,from,to);
         return babaImgRange(file,from,to,1400).then(function(imgs){
           if(!imgs.length)return;
-          return callAIVision(babaAiSys(),babaAiUser(from,to),imgs,1400,'baba')
-            .then(function(out){
-              var list=babaParseAi(out);
-              got=got.concat(list);
-            },function(){failed++;});
+          /* 한 번 실패했다고 그 묶음을 버리지 않는다 — 조용히 한 번 더 */
+          var ask=function(){return callAIVision(babaAiSys(),babaAiUser(from,to),imgs,1400,'baba');};
+          return ask().then(null,function(){
+            if(onStep)onStep(c,total,from,to,'다시');
+            return ask();
+          }).then(function(out){
+            var list=babaParseAi(out);
+            got=got.concat(list);
+          },function(){failed++;});
         },function(){failed++;});
       });
     })(from);}
     return chain.then(function(){
-      return {kind:'scan',text:'',pages:r.pages,found:got,chunks:total,failed:failed};
+      /* 글이 반쯤 뽑히던 파일이면 그 글도 같이 넘긴다 — 담보 이름은 거기 있다 */
+      return {kind:'scan',text:tr.scan?'':(r.text||''),pages:r.pages,found:got,
+              chunks:total,failed:failed,why:tr.why};
     });
-  },function(){
-    return {kind:'fail',text:'',pages:0,chunks:0,failed:1};
+  },function(e){
+    /* 「자료를 읽지 못했습니다」 한 줄로 끝내지 않는다 — 이름을 대고 말한다 */
+    return {kind:'fail',text:'',pages:0,chunks:0,failed:1,why:pdfWhy(e)};
   });
 }
 /* 여러 결과를 한 장의 값 묶음으로 — 먼저 찾은 것이 이긴다 */
@@ -32460,7 +32602,7 @@ function babaMerge(results){
   var out={},i,j;
   for(i=0;i<results.length;i++){
     var r=results[i];
-    if(r.kind==='text'){
+    if(r.kind==='text'||r.kind==='text-weak'){
       var got=babaScan(r.text),k;
       for(k in got)if(got.hasOwnProperty(k)&&!out[k])out[k]=got[k];
     }else if(r.kind==='scan'&&r.found){
@@ -32492,23 +32634,25 @@ function babaDeepRead(id){
     chain=chain.then(function(){
       n++;
       babaDeepSay('자료 '+n+'/'+files.length+' — '+it.f.name.slice(0,26)+' 읽는 중…');
-      return babaReadFile(it.f,function(c,total,from,to){
-        babaDeepSay('자료 '+n+'/'+files.length+' · '+c+'/'+total+' 묶음 ('+from+'~'+to+'쪽) 읽는 중…');
+      return babaReadFile(it.f,function(c,total,from,to,again){
+        babaDeepSay('자료 '+n+'/'+files.length+' · '+c+'/'+total+' 묶음 ('+from+'~'+to+'쪽) '+
+                    (again?'한 번 더 읽는 중… (처음에 안 왔습니다)':'읽는 중…'));
       }).then(function(r){
         if(r.kind==='scan-noai')noai++;
         BABA_DEEP.failed+=r.failed||0;
         /* 한 파일이 어떻게 읽혔는지 그대로 적어 둔다 — 나중에 「왜 안 됐나」 를
            짐작으로 말하지 않으려면 읽는 그 순간에 남겨야 한다. */
-        var one=(r.kind==='text')?babaScan(r.text):{};
+        var one=(r.kind==='text'||r.kind==='text-weak')?babaScan(r.text):{};
         /* 담보 금액만이 아니라 <b>계약 이름</b>도 같이 뽑는다. 상품 목록이
            비어 있으면 「무엇을 남기고 무엇을 없애는지」 를 말할 수가 없다. */
-        var pl=(r.kind==='text')?babaPlanScan(r.text):[];
+        var pl=(r.kind==='text'||r.kind==='text-weak'||(r.kind==='scan'&&r.text))?babaPlanScan(r.text||''):[];
         if(pl.length)babaPlanMerge(pl,it.old?'b':'a');
         var cnt=(r.kind==='scan')?(r.found||[]).filter(function(f){return f.won!==null;}).length
                                  :Object.keys(one).length;
         BABA.diag.push({name:it.f.name,slot:it.slot,old:!!it.old,kind:r.kind,
                         pages:r.pages||0,chars:((r.text||'').replace(/\s+/g,'')).length,
-                        chunks:r.chunks||0,failed:r.failed||0,found:cnt,plans:pl.length});
+                        chunks:r.chunks||0,failed:r.failed||0,found:cnt,plans:pl.length,
+                        why:r.why||'',miss:r.miss||0});
         (it.old?B:A).push(r);
       });
     });
@@ -33005,10 +33149,23 @@ function ensurePdfJs(){
   if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
   if(_pdfReady)return _pdfReady;
   _pdfReady=new Promise(function(res,rej){
-    var s=document.createElement('script');
+    var s=document.createElement('script'),done=false;
+    /* 사내망에서 CDN 이 막히면 onerror 도 안 오고 <b>그냥 조용하다.</b>
+       기다림에 끝을 둔다 — 안 그러면 스피너가 영원히 돈다. */
+    var t=setTimeout(function(){
+      if(done)return; done=true;
+      _pdfReady=null;                       /* 다음에 다시 시도할 수 있게 */
+      rej(new Error('pdfjs: 읽기 프로그램을 15초 안에 못 받았습니다 — 인터넷·사내 방화벽을 확인해 주세요'));
+    },15000);
     s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload=function(){try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){rej(e);}};
-    s.onerror=function(){rej(new Error('pdf.js 로드 실패 — 인터넷 연결을 확인하세요'));};
+    s.onload=function(){
+      if(done)return; done=true; clearTimeout(t);
+      try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(window.pdfjsLib);}catch(e){_pdfReady=null;rej(e);}
+    };
+    s.onerror=function(){
+      if(done)return; done=true; clearTimeout(t); _pdfReady=null;
+      rej(new Error('pdfjs: 읽기 프로그램을 못 받았습니다 — 인터넷 연결을 확인해 주세요'));
+    };
     document.head.appendChild(s);
   });
   return _pdfReady;
@@ -33039,13 +33196,112 @@ var PDF_TEXT_PAGES=250;  /* 텍스트형 PDF 읽는 최대 페이지 — 기존 
 var PDF_IMG_PAGES=20;    /* 이미지(스캔)형 PDF 판독 최대 페이지 — 한 요청에 실을 수 있는 양에 맞춘다 */
 var PDF_IMG_EDGE=1600;   /* 페이지 이미지 긴 변(px) — 담보 표의 작은 숫자까지 읽으려면 이 정도는 필요하다 */
 var PDF_IMG_Q=0.82;      /* JPEG 품질 — 여기서 낮추면 판독이 흐려진다. 용량은 보낼 때만 맞춘다 */
+/* ══════════════════════════════════════════════════════════════════
+   글씨를 읽는 자리 — <b>멈추지 않게</b> 만드는 세 가지
+
+   여기가 이 앱에서 제일 자주 「그냥 안 되던」 자리다. 원인은 셋이었다.
+
+   ① <b>pdf.js 가 조용히 영원히 멈춘다.</b> page.render() 는 안에서
+      requestAnimationFrame 으로 그림을 그리는데, 탭이 뒤로 가면 rAF 가
+      멈춰 <b>promise 가 영영 안 끝난다.</b> 에러도 안 난다 — 스피너만
+      돈다. 스캔본 한 부 읽는 데 몇 분이 걸리니 그동안 다른 탭을 보는
+      것은 <b>당연한 일</b>이고, 그때마다 읽기가 죽었다.
+      → intent:'print' 로 그리면 rAF 를 안 탄다.
+
+   ② <b>기다림에 끝이 없다.</b> 한 쪽이 걸리면 나머지도 같이 선다.
+      → 모든 단계에 시간 제한을 두고, 넘으면 그 쪽만 버리고 간다.
+
+   ③ <b>못 읽으면 왜 못 읽었는지를 안 말한다.</b> 암호가 걸린 파일도,
+      망가진 파일도, 인터넷이 막혀 pdf.js 를 못 받은 것도 전부
+      「자료를 읽지 못했습니다」 한 줄이었다.
+      → 무엇 때문인지 이름을 대고, 다음에 뭘 하면 되는지 적는다.
+   ══════════════════════════════════════════════════════════════════ */
+/* 시간 제한 — 넘으면 <b>그 조각만</b> 버린다. 전체를 죽이지 않는다. */
+function pdfWait(p,ms,what){
+  return new Promise(function(res,rej){
+    var done=false;
+    var t=setTimeout(function(){
+      if(done)return; done=true;
+      rej(new Error('TIMEOUT:'+(what||'읽기')+' ('+Math.round(ms/1000)+'초'));
+    },ms);
+    Promise.resolve(p).then(function(v){
+      if(done)return; done=true; clearTimeout(t); res(v);
+    },function(e){
+      if(done)return; done=true; clearTimeout(t); rej(e);
+    });
+  });
+}
+/* 왜 못 읽었는지를 <b>사람 말</b>로 */
+function pdfWhy(e){
+  var m=(e&&(e.name||''))+' '+(e&&(e.message||e)||'');
+  if(/TIMEOUT/.test(m))return '시간 안에 못 끝냈습니다 — 쪽수가 많거나 그림이 무거운 파일입니다';
+  if(/Password|password/.test(m))return '암호가 걸린 PDF 입니다 — 암호를 풀어 다시 저장한 뒤 올려 주세요';
+  if(/InvalidPDF|Invalid PDF|corrupt/i.test(m))return '파일이 손상됐거나 PDF 가 아닙니다 — 다시 내려받아 주세요';
+  if(/Missing PDF|Unexpected server response|fetch|Failed to fetch|NetworkError/i.test(m))
+    return '파일을 여는 중 끊겼습니다 — 다시 한 번 눌러 주세요';
+  if(/pdfjs|PDFJS/i.test(m))return 'PDF 읽기 프로그램을 못 받았습니다 — 인터넷 연결을 확인해 주세요';
+  return (''+m).slice(0,60)||'알 수 없는 이유';
+}
+/* 한 쪽을 그림으로 — <b>숨은 탭에서도</b> 그려지게 */
+function pdfDraw(pg,cv,vp,ms){
+  return pdfWait(pg.render({canvasContext:cv.getContext('2d'),viewport:vp,
+    /* 이 두 줄이 「스피너가 안 멈추는」 병의 약이다 */
+    intent:'print',background:'#ffffff'}).promise,ms||20000,'페이지 그리기');
+}
+/* ── 뽑아 낸 글을 씻는다 ────────────────────────────────────────
+   PDF 에서 나온 글에는 눈에 안 보이는 것이 섞여 있다. 제어문자(U+0001),
+   폭 없는 공백(U+200B), 소프트하이픈(U+00AD), 전각 숫자(１２３)와
+   전각 쉼표. 사람 눈에는 「암진단비 3,000만원」 인데 프로그램에는
+   「암진단비\u200b３，０００만원」 이라 사전에도 안 걸리고 숫자로도
+   안 읽힌다. 씻어 놓지 않으면 그 뒤의 모든 규칙이 헛돈다.        */
+function pdfClean(t){
+  t=''+(t||'');
+  /* 전각 → 반각. ①·㈜·Ⅱ 같은 것도 같이 풀린다 — 이름 맞추기에 이롭다 */
+  try{ if(t.normalize)t=t.normalize('NFKC'); }catch(e){}
+  t=t.replace(new RegExp('[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]','g'),' ');
+  t=t.replace(new RegExp('[\u200B-\u200D\u2060\uFEFF\u00AD]','g'),'');
+  t=t.replace(new RegExp('[\u00A0\u2007\u202F\u3000]','g'),' ');
+  t=t.replace(new RegExp('[\u2028\u2029]','g'),'\n');
+  return t;
+}
+/* ── 뽑아 낸 글을 믿어도 되는가 ─────────────────────────────────
+   글자가 나온다고 다 읽은 것이 아니다. 화면에서 인쇄한 PDF 는
+   <b>글은 멀쩡한데 숫자만 사라지는</b> 일이 흔하다 — 글꼴이 숫자를
+   자기만 아는 글자(U+E000~F8FF)로 바꿔 넣기 때문이다.
+
+   그걸 모르고 「글자 4,929자니까 읽었다」 로 넘기면, 담보 이름은
+   맞는데 금액은 인쇄 머리글의 날짜(26. 8. 20.)를 집어 온다. 실제로
+   「암주요치료비 26만원」 이 그렇게 나왔다.
+
+   그래서 <b>믿을 수 있는 글인지</b>를 먼저 묻고, 아니면 같은 파일을
+   <b>그림으로 다시</b> 읽는다.                                     */
+function pdfTextTrust(t){
+  t=''+(t||'');
+  var body=t.replace(/\s+/g,'');
+  if(body.length<400)
+    return {ok:false,scan:true,pua:0,dig:0,why:'글자가 거의 없습니다 — 스캔한 그림 PDF 입니다'};
+  var pua=(t.match(new RegExp('[\uE000-\uF8FF]','g'))||[]).length;
+  var dig=(t.match(/[0-9]/g)||[]).length;
+  if(pua>=10)
+    return {ok:false,scan:false,pua:pua,dig:dig,
+            why:'글꼴이 숫자를 감춘 PDF 입니다(읽을 수 없는 글자 '+pua+'개) — 화면에서 인쇄한 종이에 흔합니다'};
+  if(dig<Math.max(12,Math.round(body.length*0.004)))
+    return {ok:false,scan:false,pua:pua,dig:dig,
+            why:'글은 뽑히는데 숫자가 '+dig+'개뿐입니다 — 금액이 그림으로 박힌 PDF 입니다'};
+  return {ok:true,scan:false,pua:pua,dig:dig,why:''};
+}
 function extractPdfText(file){
   return ensurePdfJs().then(function(lib){
     return file.arrayBuffer().then(function(buf){
       return lib.getDocument({data:buf}).promise.then(function(pdf){
         var n=Math.min(pdf.numPages,PDF_TEXT_PAGES),chain=Promise.resolve(),pages=[];
-        for(var i=1;i<=n;i++){(function(i){chain=chain.then(function(){return pdf.getPage(i).then(function(pg){return pg.getTextContent().then(function(tc){pages.push(tc.items.map(function(it){return it.str;}).join(' '));});});});})(i);}
-        return chain.then(function(){return pages.join('\n');});
+        for(var i=1;i<=n;i++){(function(i){chain=chain.then(function(){
+          /* 한 쪽이 걸려도 그 쪽만 버리고 간다 */
+          return pdfWait(pdf.getPage(i).then(function(pg){return pg.getTextContent();}),8000,'글자 뽑기')
+            .then(function(tc){pages.push(tc.items.map(function(it){return it.str;}).join(' '));},
+                  function(){pages.push('');});
+        });})(i);}
+        return chain.then(function(){return pdfClean(pages.join('\n'));});
       });
     });
   });
@@ -33068,10 +33324,13 @@ function renderPdfPagesToImages(file,maxPages,longEdge){
             canvas.width=Math.floor(vp.width);canvas.height=Math.floor(vp.height);
             var ctx=canvas.getContext('2d');
             ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
-            return pg.render({canvasContext:ctx,viewport:vp}).promise.then(function(){
+            /* 탭이 뒤로 가도 안 멈추게 — intent:'print' (pdfDraw 안에 있다) */
+            return pdfDraw(pg,canvas,vp,20000).then(function(){
               var url=canvas.toDataURL('image/jpeg',PDF_IMG_Q);
               imgs.push({page_no:i,mime:'image/jpeg',data:url.split(',')[1]||''});
               canvas.width=0;canvas.height=0;
+            },function(){
+              canvas.width=0;canvas.height=0;   /* 이 쪽만 버리고 간다 */
             });
           });
         });})(i);}
@@ -33084,12 +33343,13 @@ function renderPdfPagesToImages(file,maxPages,longEdge){
    반환: {mode:'text'|'image', text, images[]} */
 function extractPdfSmart(file){
   return extractPdfText(file).then(function(txt){
-    var clean=(txt||'').replace(/\s+/g,'');
-    if(clean.length>=400)return {mode:'text',text:txt,images:[]};
+    var tr=pdfTextTrust(txt);
+    if(tr.ok)return {mode:'text',text:txt,images:[]};
+    /* 글이 있어도 <b>못 믿을 글</b>이면 그림도 같이 보낸다 — 숫자는 눈으로 읽게 */
     return renderPdfPagesToImages(file,PDF_IMG_PAGES,PDF_IMG_EDGE).then(function(imgs){
-      if(!imgs.length)return {mode:'text',text:txt,images:[]};
-      return {mode:'image',text:txt||'',images:imgs};
-    }).catch(function(){return {mode:'text',text:txt,images:[]};});
+      if(!imgs.length)return {mode:'text',text:txt,images:[],weak:tr.why};
+      return {mode:'image',text:tr.scan?(txt||''):(txt||''),images:imgs,weak:tr.why};
+    }).catch(function(){return {mode:'text',text:txt,images:[],weak:tr.why};});
   });
 }
 
