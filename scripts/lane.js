@@ -20,9 +20,14 @@
 
 const { execSync } = require('child_process');
 
+/* core.quotepath=false 가 없으면 git 이 한글 경로를 "app/\354\203\201…" 처럼
+   8진수로 감싸 내놓는다. 그러면 갈래가 하나도 안 맞아 전부 「그 밖」 으로
+   떨어지고, 화면에도 깨진 글자가 찍힌다. 이 저장소는 한글 경로가 많다. */
 function git(cmd) {
-  try { return execSync('git ' + cmd, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim(); }
-  catch (e) { return ''; }
+  try {
+    return execSync('git -c core.quotepath=false ' + cmd,
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch (e) { return ''; }
 }
 
 const BASE = process.argv[2] || 'origin/main';
@@ -138,7 +143,7 @@ if (hit.length) {
 console.log('');
 let clash = null;
 try {
-  execSync('git merge-tree --write-tree --name-only HEAD ' + BASE,
+  execSync('git -c core.quotepath=false merge-tree --write-tree --name-only HEAD ' + BASE,
     { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   clash = [];
 } catch (e) {
