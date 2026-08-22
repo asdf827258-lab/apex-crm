@@ -15,6 +15,8 @@ node scripts/check-twins.js      # 몇 초 — 같은 것이 두 곳에 있나
 node scripts/check-html.js app/index.html app/finance.html   # 문법·함수 이름 중복
 node scripts/check-sane.js       # 화면에 말이 안 되는 숫자가 찍혔나
 node scripts/smoke.js            # 63개 화면이 실제로 열리나
+
+node scripts/lane.js             # 밀기 전 — 다른 세션과 부딪히나 (11번)
 ```
 
 앞의 둘은 브라우저를 안 띄워 **몇 초**면 끝납니다. 고치는 중에 계속 돌리십시오.
@@ -143,6 +145,87 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 - TLS 검증을 끄거나 `HTTPS_PROXY` 를 지우지 않는다.
 - Supabase `anon` 키는 공개용(RLS 보호)이라 진단에 써도 되지만 불필요하게
   반복 노출하지 않는다.
+
+---
+
+## 11. 여럿이 나눠 만들 때 — 갈래
+
+세션을 나눠 동시에 만듭니다. **실제로 됩니다.** 한 세션이 계산기를 고치는
+동안 다른 세션이 지도를 새로 그렸고, **둘 다 `app/index.html` 을 건드렸는데도**
+줄이 멀어 git 이 알아서 붙였습니다. 45,000줄짜리 파일이라 오히려 유리합니다.
+
+### 갈래
+
+| 갈래 | 맡는 곳 |
+|---|---|
+| 가. 본체 | `app/index.html` |
+| 나. 계산기 | `app/finance.html` |
+| 다. 발표 덱 | `app/상담자료/*.html` · `apex-deck.js` |
+| 라. 미끼 레이더 | `app/상담자료/미끼레이더/` |
+| 마. 서버·소스 | `netlify/functions/` · `config/` |
+| 바. 지도 | `app/apex-map*` |
+
+점검은 **자기 갈래 것만** 각자 만듭니다 — 파일이 하나씩 따로라 서로 모릅니다.
+
+### 부딪히는 자리는 딱 둘
+
+1. **`APP_BUILD` · `APP_BUILD_NOTE` 두 줄.** PR 마다 고치는 규칙이라, 세션이
+   여럿이면 거의 매번 부딪힙니다. 충돌해도 잃을 것이 없으니 **나중 것으로
+   덮으십시오.**
+2. **`.github/workflows/check.yml`.** 새 점검 단계는 **파일 맨 끝에만**
+   붙입니다. 순서는 상관없습니다 — 전부 따로 돕니다.
+
+그 밖에는 안 부딪힙니다.
+
+### 차례
+
+```bash
+git fetch origin main && git checkout -B <내브랜치> origin/main   # ① main 에서 시작
+node scripts/lane.js                                             # ② 밀기 전에 한 번
+git push -u origin <내브랜치>                                     # ③ 끝나면 바로 민다
+git fetch origin main && git merge origin/main                   # ④ 나중 쪽이 받아 붙인다
+node scripts/check-twins.js && node scripts/check-sane.js        # ⑤ 붙인 뒤 반드시
+```
+
+②의 `lane.js` 는 **점검이 아닙니다** — CI 에 넣지 않습니다. 갈래를 넘는 PR 도
+얼마든지 정당하기 때문입니다(계산기를 고치면서 그 점검도 함께 넣습니다).
+빨간불을 켜는 대신, 밀기 전에 눈으로 한 번 보라고 적어 줄 뿐입니다.
+「헛것을 잡는 점검은 안 잡는 점검보다 나쁘다」(8번)를 지키느라 그렇습니다.
+
+③ **끝나면 바로 미십시오.** 이 컨테이너의 로컬 저장소가 턴 사이에 초기화된
+적이 있습니다. 밀어 둔 덕에 원격에서 되찾았습니다.
+
+**먼저 병합한 쪽이 이깁니다.** 나중 쪽이 ④로 받아 붙이고 점검을 다시 돕니다.
+
+### 진짜 위험은 충돌이 아니라 「쌍둥이」다
+
+5번을 다시 봅니다 — 「같은 것을 두 곳에 두지 않는다」. 세션이 여럿이면 이것이
+**훨씬 잘 터집니다.** 두 세션이 각자 자기 매핑표를 만들어 넣으면 git 은
+**충돌 없이 둘 다 붙여 줍니다.** 빨간불이 안 켜집니다. `FP_MAP`·`TOFIN_MAP` 이
+두 벌 되던 자리가 그것입니다. **붙인 뒤에 `check-twins.js` 를 안 돌면 아무도
+못 봅니다.**
+
+### 한 파일 안에서도
+
+- **같은 함수는 한 세션만** 만집니다. 이건 git 이 못 잡아 줍니다.
+- 새 함수는 **자기가 고치던 자리 가까이** 둡니다. 다들 파일 끝에 붙이면
+  거기서 부딪힙니다.
+
+### 세션마다 이렇게 시킨다 (복사용)
+
+> `app/finance.html` 만 만지십시오. 다른 갈래 파일은 열지 마시고, `APP_BUILD`
+> 두 줄도 건드리지 마십시오. 새 점검은 `scripts/check-<새이름>.js` 로 만들고
+> `.github/workflows/check.yml` **맨 끝에** 단계를 붙이십시오. 시작 전에
+> `git fetch origin main && git checkout -B <브랜치> origin/main`, 밀기 전에
+> `node scripts/lane.js`, 끝나면 바로 미십시오.
+
+갈래 이름(`app/finance.html`)만 바꿔서 세션마다 주면 됩니다.
+
+### 값
+
+PR 하나에 CI 12~13분. 세 세션이면 PR 셋이 **동시에** 돌아 시계로는 13분입니다.
+다만 병합은 한 줄로 서므로, 두 번째부터는 `git merge origin/main` 뒤 CI 를
+한 판 더 돕니다.
 
 ---
 
