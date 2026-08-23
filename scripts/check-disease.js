@@ -234,6 +234,13 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
      '위험감 화법마다 <b>왜 먹히나</b>와 <b>해결로 넘기는 말</b>이 짝으로 있다' +
      (fearHole.length ? ' — 짝 없음: ' + fearHole.join(' / ') : ''));
   const nLayer = (D.list || []).reduce((a, d) => a + ((d.plan && d.plan.layers) || []).length, 0);
+  /* 연습의 채점 기준 — 질병마다 「없으면 설계가 성립 안 되는 자리」가 있어야 한다 */
+  const noMust = (D.list || []).filter(d =>
+    ((d.plan && d.plan.layers) || []).reduce((a, L) => a + (L.rows || []).filter(r => r.must).length, 0) < 3
+  ).map(d => d.name);
+  is(noMust.length === 0, '질병마다 꼭 들어가야 하는 자리가 셋 이상 정해져 있다' +
+     (noMust.length ? ' — 모자람: ' + noMust.join(' / ') : ''));
+
   const nRow = (D.list || []).reduce((a, d) =>
     a + ((d.plan && d.plan.layers) || []).reduce((b, L) => b + (L.rows || []).length, 0), 0);
   is(nRow > 100, '층별 담보 줄이 넉넉하다 — 층 ' + nLayer + ' · 줄 ' + nRow);
@@ -354,6 +361,45 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   await page.waitForTimeout(180);
   is(/는 어디에서 일합니까/.test(await page.locator('#detailPane').innerText()),
      '설계표의 담보 이름을 누르면 그 담보 설명으로 이어진다');
+
+  console.log('\n[8-4] 설계 연습 — 체크하면 화법까지 나오는가');
+  await page.evaluate(() => drillOpen('stroke'));
+  await page.waitForTimeout(300);
+  const boxes = await page.locator('.dl input').count();
+  is(boxes > 0, '층별 담보가 체크할 수 있게 놓인다 (' + boxes + '칸)');
+  is(/설계 연습/.test(await page.locator('.drill-hd').innerText()), '연습 화면이 열린다');
+
+  /* 하나도 안 고르고 채점 — 빠뜨린 자리가 전부 나와야 한다 */
+  await page.evaluate(() => drillScore());
+  await page.waitForTimeout(250);
+  const zero = await page.locator('.score .n').innerText();
+  is(/^0\//.test(zero), '아무것도 안 고르면 0점이 나온다 (' + zero + ')');
+  const missAll = await page.locator('.miss .m').count();
+  is(missAll > 0, '빠뜨린 자리가 하나씩 짚인다 (' + missAll + '개)');
+  is(/없으면 ·/.test(await page.locator('.miss').innerText()), '빠뜨린 자리마다 「없으면」이 붙는다');
+
+  /* 몇 개 고르고 다시 채점 — 대본이 그만큼 두꺼워져야 한다 */
+  await page.evaluate(() => {
+    drillAgain();
+    ['뇌혈관질환 (전체)', '입원일당', '간병인사용일당'].forEach(k => { DRILL.picked[k] = true; });
+    drillScore();
+  });
+  await page.waitForTimeout(250);
+  const sc = await page.locator('.script').innerText();
+  is(/이 설계를 이렇게 설명하십시오/.test(sc), '채점하면 대본이 나온다');
+  is(/문을 엽니다/.test(sc) && /위험을 짚습니다/.test(sc) && /한 문장으로 묶습니다/.test(sc),
+     '대본이 열기 → 위험 → 설명 → 비유 → 닫기 순서로 선다');
+  is(sc.indexOf('뇌혈관질환 (전체)') >= 0, '고른 담보가 대본 안에서 설명된다');
+  is(/대본에 없는 것/.test(sc), '빠뜨린 것은 대본에서 빠졌다고 알려 준다');
+  is(/그대로 읽는 원고가 아니라/.test(await page.locator('#detailPane').innerText()),
+     '대본에 준법 꼬리표가 붙는다');
+  /* 체크가 달라지면 대본도 달라져야 한다 — 안 그러면 연습이 아니다 */
+  const len1 = sc.length;
+  await page.evaluate(() => { drillAgain(); drillAll(1); drillScore(); });
+  await page.waitForTimeout(250);
+  const len2 = (await page.locator('.script').innerText()).length;
+  is(len2 > len1, '더 많이 고르면 대본도 그만큼 두꺼워진다 (' + len1 + ' → ' + len2 + '자)');
+  is(/^\d+\/\d+$/.test((await page.locator('.score .n').innerText()).replace(/\s/g, '')), '점수가 분수로 나온다');
 
   console.log('\n[9] 담보 말모이가 화면에 서는가 — 「이 돈이 무슨 돈인지」');
   await page.locator('button.btn', { hasText: '담보 말모이' }).click();
