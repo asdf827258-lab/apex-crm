@@ -178,7 +178,7 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     if (!t) return null;
     const rows = [].map.call(t.querySelectorAll('.rw'), r => ({
       k: (r.querySelector('.k') || {}).textContent || '',
-      re: r.classList.contains('re')
+      re: r.classList.contains('o')   /* o = 기회 · 부동산이 이기는 자리 */
     }));
     return { rows, txt: document.getElementById('cp1').textContent.replace(/\s+/g, ' ') };
   });

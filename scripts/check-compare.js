@@ -63,7 +63,9 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
     await page.evaluate(x => window.__go(x), k);
     await page.waitForTimeout(300);
     const got = await page.evaluate(kk => [].map.call(
-      document.querySelectorAll('.track:not(.off) table.t.own, table.t.own'), t => {
+      /* cmp 표도 같은 규약을 쓴다 — 클래스 이름이 t 냐 cmp 냐로 갈리면
+         한쪽만 칠해진다. 실제로 cp6 이 그렇게 벌거벗어 있었다. */
+      document.querySelectorAll('table.t.own, table.cmp.own'), t => {
         const sec = t.closest('section');
         const cell = s => t.querySelector(s);
         const cs = e => e ? getComputedStyle(e).backgroundColor : '';
@@ -97,6 +99,18 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
 
   console.log('\n[1] 색을 쓰는 비교표를 찾는다');
   is(tbls.length >= 2, '  own 표가 ' + tbls.length + '장 — ' + tbls.map(t => t.id).join(' · '));
+
+  /* own 을 떼면 그 표가 목록에서 통째로 빠져 <b>아무도 안 보게</b> 된다.
+     아래 검사가 전부 남은 표만 보고 초록으로 끝난다 — 알람이 안 울린다.
+     그래서 「색을 칠했으면 own 도 달렸는가」 를 따로 센다.
+     색이 아예 없는 표는 안 본다 — 펀드 목록·계산 결과처럼 비교표가 아닌
+     것이 많아서, 넓게 잡으면 헛것을 잡는다. */
+  const naked = await page.evaluate(() => [].filter.call(
+    document.querySelectorAll('table.t, table.cmp'),
+    t => t.querySelectorAll('td.w, td.o').length > 0 && !t.classList.contains('own')
+  ).map(t => { const s = t.closest('section'); return s ? s.id : '?'; }));
+  is(naked.length === 0,
+     '  색을 칠한 표에는 own 이 빠짐없이 달려 있다' + (naked.length ? ' — 빠진 곳: ' + naked.join(', ') : ''));
 
   console.log('\n[2] 보험 칸이 세로로 눈에 들어온다');
   tbls.forEach(t => {
