@@ -117,15 +117,42 @@ const near = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
   console.log('\n[6] 일곱 장이 다 있다');
   /* 1장은 넷으로 갈렸다 — 도해 셋이 한 장에 다 들어가 <b>키가 3,093px</b> 이라
      카드 밑에 묻혀 있었다. 발표 한 장이 네 화면이면 아래는 아무도 안 본다. */
-  [['월세를 받는 것', '1장 · 건물과 월세를 가른다'],
-   ['따로 붙지 않습니다', '1장① · 세금'],
-   ['먼저 오는 고지서', '1장② · 건강보험료'],
-   ['열두 달이', '1장③ · 실제로 들어오는 달'],
-   ['거치해서 굴린다', '2장'], ['쿠폰이', '3장'],
-   ['받는 방법에 따라', '4장 · 얼마 · 어떻게'],
-   ['얼마 넣으면', '5장 · 계산'],
-   ['요건을 충족할 때', '6장'], ['나란히 보기', '7장']]
-    .forEach(([w, n]) => is(txt.indexOf(w) >= 0, '  ' + n + ' — ' + w));
+  /* 전에는 <b>제목 문장</b>으로 셌다. 그래서 말투를 다듬으려면 이 점검이
+     먼저 깨졌고, 「고치려면 점검부터 고쳐야 한다」 는 이유로 딱딱한 제목이
+     그대로 남아 있었다. 점검이 화면을 고치지 못하게 막고 있었던 셈이다.
+     장은 <b>id</b> 로 센다 — id 는 말투가 아니라 뼈대다.
+     그리고 그 id 가 실제로 <b>발표 차례(DECK.c)</b> 에 들어 있는지까지 본다.
+     장을 만들어 놓고 차례에 안 넣으면 고객 앞에서 안 넘어간다.       */
+  const WANT = [
+    ['cp1',     '1장 · 건물과 월세를 가른다'],
+    ['cp1a',    '1장① · 세금'],
+    ['cp1b',    '1장② · 건강보험료'],
+    ['cp1c',    '1장③ · 실제로 들어오는 달'],
+    ['cp2',     '2장 · 다른 길'],
+    ['cp3',     '3장 · 쿠폰이 무엇인가'],
+    ['cpmoney', '4장 · 얼마 · 어떻게'],
+    ['cpcalc',  '5장 · 계산'],
+    ['cp5',     '6장 · 세금'],
+    ['cp6',     '7장 · 나란히']
+  ];
+  const deckC = await page.evaluate(() => (typeof DECK !== 'undefined' && DECK.c) ? DECK.c.slice() : []);
+  const heads = await page.evaluate(ids => ids.reduce((o, id) => {
+    const e = document.getElementById(id);
+    const h = e ? e.querySelector('h2') : null;
+    o[id] = h ? h.textContent.replace(/\s+/g, ' ').trim() : null;
+    return o;
+  }, {}), WANT.map(x => x[0]));
+  WANT.forEach(([id, n]) => is(!!heads[id] && deckC.indexOf(id) >= 0,
+    '  ' + n + ' — #' + id + (heads[id] ? (' 「' + heads[id].slice(0, 26) + '」') : ' (장이 없음)')
+    + (deckC.indexOf(id) < 0 ? ' ⚠ 발표 차례에 없음' : '')));
+  /* 제목은 <b>말</b>이어야 한다 — 명사로 끝나면 고객 앞에서 읽히지 않는다.
+     「…는 선택지」·「…나란히 보기」 처럼 끝나던 자리다. */
+  const stiff = WANT.map(x => x[0]).filter(id => {
+    const h = heads[id]; if (!h) return false;
+    return !/(다|까|요|음)[.?!]?$/.test(h.replace(/[\s.]+$/, ''));
+  });
+  is(stiff.length === 0,
+     '  장 제목이 명사로 끝나지 않는다 — 말이 된다' + (stiff.length ? ' — 딱딱한 곳: ' + stiff.join(', ') : ''));
   const nav = await page.evaluate(() => ({
     btn: !!document.querySelector('.nt[data-go="c"]'),
     fk: !!document.querySelector('.fk[data-go="c"]'),
