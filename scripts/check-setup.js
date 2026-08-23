@@ -49,6 +49,22 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      '넣기 권한이 can_see_perf 로 바뀌었다 — 리더가 팀원 줄을 만들 수 있다');
   is(!/monthly_perf_insert[\s\S]{0,160}with check \(owner_id = auth\.uid\(\)\)/.test(sql),
      '옛 규칙(본인 줄만)이 남아 있지 않다');
+
+  /* ── 팀 하루 한 장 피드백 ─────────────────────────────────────
+     리더가 팀원 폰에 꽂는 자리다. 이것이 준비 SQL 밖에 따로 있으면
+     대표님께 「그 파일을 여세요」 라고 말해야 한다 — 그러면 안 하신다.
+     표만 있고 규칙이 없으면 RLS 에 막혀 아무도 못 읽으니 넷을 다 본다. */
+  [['create table if not exists public.team_feedback','표를 만든다'],
+   ['team_feedback_read','읽기 규칙'],
+   ['team_feedback_insert','넣기 규칙'],
+   ['team_feedback_update','읽음 표시 규칙']].forEach(([k,n])=>{
+    is(sql.indexOf(k)>=0, '팀 하루 한 장 피드백 — '+n);
+  });
+  is(/team_feedback_read[\s\S]{0,220}can_see_perf\(member_id\)/.test(sql),
+     '보는 잣대가 can_see_perf 다 — 새 잣대를 만들지 않았다');
+  is(/team_feedback_uni[\s\S]{0,140}\(member_id, fb_date, from_id\)/.test(sql),
+     '같은 사람 · 같은 날은 한 줄로 덮어쓴다');
+
   /* 번호를 여기 박아 두면 올릴 때마다 이 파일도 같이 고쳐야 한다.
      정작 중요한 것은 「앱이 기다리는 번호」와 「SQL 이 남기는 번호」가
      서로 같은가다. 어긋나면 대표님이 SQL 을 돌려도 배너가 안 사라진다. */

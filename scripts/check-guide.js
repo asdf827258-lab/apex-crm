@@ -155,18 +155,25 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* ── 4 ── */
   console.log('\n[4] 왼쪽 맨 위 고정 버튼');
   const pin = await page.evaluate(() => {
-    var b = document.querySelector('#navHost .sb-guide');
+    /* 맨 위 고정 단추가 「첫 번째」 인지로 견주지 않는다 — 위에 또 하나가 서면
+       엉뚱한 단추를 붙잡고 사용가이드가 사라졌다고 운다. 부르는 화면(manual)으로 집는다. */
+    var all = Array.prototype.slice.call(document.querySelectorAll('#navHost .sb-guide'));
+    var b = null;
+    all.forEach(function (e) { if (/go\('manual'\)/.test(e.getAttribute('onclick') || '')) b = e; });
     if (!b) return { has: false };
     var r = b.getBoundingClientRect();
-    var first = document.querySelector('#navHost .sb-guide, #navHost .nav-group, #navHost .nav-allbtns');
+    var groups = document.querySelector('#navHost .nav-group, #navHost .nav-allbtns');
     b.click();
     return { has: true, text: (b.textContent || '').replace(/\s+/g, ' ').trim(),
-      top: r.top, isFirst: first === b, tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
+      top: r.top, n: all.length,
+      /* 분류 칸들보다 위에 있는가 — 그 위에 다른 고정 단추가 몇이든 상관없다 */
+      aboveGroups: !!groups && (b.compareDocumentPosition(groups) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+      tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
   });
   await page.waitForTimeout(400);
   is(pin.has, '왼쪽 맨 위에 고정 버튼이 있다');
   is(pin.has && /APEX 사용가이드/.test(pin.text), '이름이 「APEX 사용가이드」 다 — ' + (pin.text || ''));
-  is(pin.isFirst === true, '메뉴 칸들보다 위에 있다');
+  is(pin.aboveGroups === true, '메뉴 칸들보다 위에 있다 (고정 단추 ' + (pin.n || 0) + '개 중)');
   const after = await page.evaluate(() => (typeof lastTab !== 'undefined') ? lastTab : '');
   is(after === 'manual', '누르면 사용가이드로 간다 (' + after + ')');
 
