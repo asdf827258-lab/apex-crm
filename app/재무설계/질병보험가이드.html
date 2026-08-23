@@ -218,6 +218,43 @@
   .op .orow i.ins{background:var(--red);}
   .op .pays{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
 
+  /* ── 설계사 전용 · 이렇게 설계합니다 ─────────────────────────
+     고객 화면과 눈에 띄게 다르게 합니다. 실수로 고객 앞에서 펴지 않도록. */
+  .sec.pro{border:1.5px solid #0F172A;background:linear-gradient(180deg,#F8FAFC,#fff);}
+  .sec.pro>h3 em{background:#0F172A;}
+  .pro-badge{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;
+    color:#fff;background:#0F172A;border-radius:6px;padding:3px 9px;margin-left:auto;letter-spacing:.02em;}
+  .pro-why{background:#0F172A;border-radius:12px;padding:14px 16px;margin-bottom:13px;}
+  .pro-why div{font-size:13px;color:#E2E8F0;padding:4px 0;line-height:1.7;}
+  .pro-why div b{color:#FCD34D;}
+  .pro-why div:before{content:'· ';color:#64748B;}
+  .fear{display:grid;gap:9px;margin-bottom:14px;}
+  .fear .f{border:1px solid var(--line);border-left:4px solid var(--red);border-radius:0 12px 12px 0;
+    background:#fff;padding:12px 14px;}
+  .fear .fs{font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.65;}
+  .fear .fw{font-size:12.2px;color:var(--ink4);margin-top:7px;padding-left:11px;border-left:2px solid var(--line);}
+  .fear .ft{font-size:12.8px;color:#065F46;background:var(--green-l);border-radius:8px;padding:8px 11px;margin-top:8px;}
+  .lay{border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px;background:#fff;}
+  .lay .lh{background:#0F172A;color:#fff;padding:10px 14px;}
+  .lay .ln{font-size:13.5px;font-weight:800;}
+  .lay .ld{font-size:11.8px;color:#CBD5E1;margin-top:3px;}
+  .lay table{width:100%;border-collapse:collapse;}
+  .lay th{font-size:10.5px;font-weight:800;color:var(--ink4);background:#FAFBFC;text-align:left;
+    padding:7px 12px;border-bottom:1px solid var(--line2);letter-spacing:.03em;}
+  .lay td{font-size:12.4px;color:var(--ink3);padding:9px 12px;border-bottom:1px solid var(--line2);vertical-align:top;}
+  .lay tr:last-child td{border-bottom:0;}
+  .lay td.k{font-weight:800;color:var(--green);white-space:nowrap;}
+  .lay td.s{font-weight:700;color:var(--blue);white-space:nowrap;}
+  .lay td.g{color:var(--red);}
+  .lay .kbtn{font-family:inherit;font-size:12.4px;font-weight:800;color:var(--green);background:none;
+    border:0;padding:0;cursor:pointer;text-align:left;text-decoration:underline dotted;}
+  .pro-first{background:var(--blue-l);border-radius:11px;padding:12px 14px;margin-bottom:11px;}
+  .pro-first div{font-size:12.8px;color:var(--ink2);padding:3px 0;}
+  .pro-check{background:#FFFBEB;border:1px solid rgba(217,119,6,.3);border-radius:11px;padding:12px 14px;}
+  .pro-check .t{font-size:12px;font-weight:800;color:#B45309;margin-bottom:6px;}
+  .pro-check div.c{font-size:12.6px;color:var(--ink3);padding:4px 0 4px 16px;position:relative;}
+  .pro-check div.c:before{content:'□';position:absolute;left:0;color:#D97706;font-weight:800;}
+
   /* ── 사례 ── */
   .cases{display:grid;gap:11px;}
   .case{border:1px solid var(--line);border-radius:13px;overflow:hidden;background:#fff;}
@@ -271,7 +308,9 @@
     .dzart{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .dzart-tools,.dzart-hint{display:none;}
     .dzart.nolbl .lbl{display:inline;}
-    .viz,.op,.case,.term,.dzflat,.dzart{page-break-inside:avoid;break-inside:avoid;}
+    .viz,.op,.case,.term,.dzflat,.dzart,.lay,.fear .f{page-break-inside:avoid;break-inside:avoid;}
+    .sec.pro{border-color:#0F172A;}
+    .pro-why,.lay .lh{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .dzflat{overflow:visible;}
     .dzflat svg,.dzrow svg{max-width:100%;height:auto;}
   }
@@ -436,19 +475,19 @@ function detailBody(d){
        '초록 알약이 그 단계에서 열리는 담보입니다. 눌러 보시면 <b>그 담보가 다른 질병 어디에서 또 일하는지</b> 보여 드립니다.</p>' +
        '<div class="path">' + d.path.map(stageHtml).join('') + '</div></div>';
 
-  /* ⑤ 술식 상세 · ⑥ 사례 */
-  h += opsHtml(d) + casesHtml(d);
+  /* ⑤ 술식 상세 · ⑥ 사례 · ⑦ 설계사용 설계 */
+  h += opsHtml(d) + casesHtml(d) + planHtml(d);
 
-  /* ⑦ 막히는 자리 */
+  /* ⑧ 막히는 자리 */
   if ((d.trap || []).length) {
-    h += '<div class="sec"><h3><em>⑦</em>여기서 자주 막힙니다</h3><div class="traps">' +
+    h += '<div class="sec"><h3><em>⑧</em>여기서 자주 막힙니다</h3><div class="traps">' +
       d.trap.map(function(t){
         return '<div class="trap"><div class="t">' + esc(t.t) + '</div><div class="d">' + rich(t.d) + '</div></div>';
       }).join('') + '</div></div>';
   }
 
   /* ⑥ 화법 */
-  h += '<div class="sec"><h3><em>⑧</em>어떻게 말합니까</h3>' +
+  h += '<div class="sec"><h3><em>⑨</em>어떻게 말합니까</h3>' +
     '<div class="talk-open">' + rich(d.talk.open) + '</div>' +
     '<div class="spin">' + (d.talk.spin || []).map(function(s){
       return '<div class="row"><div class="lb">' + esc(s[0]) + '</div><div class="tx">' + rich(s[1]) + '</div></div>';
@@ -459,7 +498,7 @@ function detailBody(d){
     }).join('') + '</div></div>';
 
   /* ⑦ 근거 */
-  h += '<div class="sec"><h3><em>⑨</em>근거</h3>';
+  h += '<div class="sec"><h3><em>⑩</em>근거</h3>';
   if ((d.src || []).length) {
     h += '<ul class="src">' + d.src.map(function(s){
       return '<li>· ' + esc(s[0]) + ' <a href="' + esc(s[1]) + '" target="_blank" rel="noopener">원문 ↗</a></li>';
@@ -571,6 +610,59 @@ function opsHtml(d){
           : '<div class="pays"><span class="nopay">이 자리에서 열리는 담보 없음</span></div>') +
         '</div></div>';
     }).join('') + '</div></div>';
+}
+
+/* ── 설계사 전용 · 이렇게 설계합니다 ────────────────────────
+   고객용 설명과 섞지 않는다. 위험감 화법도 여기 있다 — 겁을 주는 것이 아니라
+   구조를 보여 주는 말이라, 문제 뒤에는 반드시 해결이 오게 짝지어 둔다. */
+function planHtml(d){
+  var P = d.plan;
+  if (!P) return '';
+  var h = '<div class="sec pro"><h3><em>⑦</em>이렇게 설계합니다' +
+    '<span class="pro-badge">설계사용 · 고객 화면 아님</span></h3>';
+
+  h += '<div class="pro-why">' + (P.why || []).map(function(t){
+    return '<div>' + rich(t) + '</div>'; }).join('') + '</div>';
+
+  h += '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin:4px 0 8px">' +
+    '위험을 느끼게 하는 말 <span style="font-weight:600;color:#6B7280">— 겁을 주는 것이 아니라 구조를 보여 드리는 것입니다. ' +
+    '문제를 말했으면 <b>반드시 해결로 넘어가십시오.</b></span></div>';
+  h += '<div class="fear">' + (P.fear || []).map(function(f){
+    return '<div class="f"><div class="fs">' + rich(f.say) + '</div>' +
+      '<div class="fw">왜 먹히나 · ' + rich(f.why) + '</div>' +
+      '<div class="ft">→ 이어서 · ' + rich(f.then) + '</div></div>';
+  }).join('') + '</div>';
+
+  h += '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin:4px 0 8px">' +
+    '층으로 짠 구성 <span style="font-weight:600;color:#6B7280">— 담보 이름은 요즘 증권에 적히는 이름입니다. ' +
+    '눌러 보시면 그 담보가 무슨 돈인지 나옵니다.</span></div>';
+  h += (P.layers || []).map(function(L){
+    return '<div class="lay"><div class="lh"><div class="ln">' + esc(L.n) + '</div>' +
+      '<div class="ld">' + rich(L.d) + '</div></div>' +
+      '<table><tr><th>담보</th><th>기준</th><th>왜 넣는가</th><th>없으면</th></tr>' +
+      L.rows.map(function(r){
+        return '<tr><td class="k"><button class="kbtn" onclick="findCov(\'' + esc(r.k).replace(/'/g,'') + '\')">' +
+          esc(r.k) + '</button></td>' +
+          '<td class="s">' + rich(r.std || '') + '</td>' +
+          '<td>' + rich(r.why || '') + '</td>' +
+          '<td class="g">' + rich(r.gap || '') + '</td></tr>';
+      }).join('') + '</table></div>';
+  }).join('');
+
+  h += '<div class="pro-first"><div style="font-size:12px;font-weight:800;color:#1A56DB;margin-bottom:4px">' +
+    '예산이 빠듯할 때 이 순서로</div>' +
+    (P.first || []).map(function(t){ return '<div>' + rich(t) + '</div>'; }).join('') + '</div>';
+
+  h += '<div class="pro-check"><div class="t">증권에서 이것만은 확인</div>' +
+    (P.check || []).map(function(t){ return '<div class="c">' + rich(t) + '</div>'; }).join('') + '</div>';
+
+  h += '<div style="font-size:11.5px;color:#9AA2AD;margin-top:12px;line-height:1.7">' +
+    '기준선은 <b>대표님 판단 기준</b>이며 고객의 소득·고정지출·부양가족에 따라 조정합니다 — 그대로 확정하지 마십시오. ' +
+    '담보 이름과 지급 조건은 회사·개정회차마다 다르고, <b>최종 지급은 약관과 보험사 심사 결과에 따릅니다.</b> ' +
+    '인수 가능 여부를 설계사가 확정해 말하지 않습니다.</div>';
+
+  h += '</div>';
+  return h;
 }
 
 /* ── 사례 ── */

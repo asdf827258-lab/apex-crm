@@ -117,11 +117,15 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   /* INS_KEY 열넷은 요즘 실지급을 가르는 계열이다. 말모이가 하나라도 빠뜨리면
      설계사가 그 담보를 설명할 자리가 없어진다. */
   const keyMiss = KEY.filter(k => !VOCAB.has(k));
-  is(keyMiss.length === 0, 'INS_KEY 열넷을 하나도 빠뜨리지 않았다' + (keyMiss.length ? ' — 빠짐: ' + keyMiss.join(' / ') : ''));
+  is(keyMiss.length === 0, 'INS_KEY 계열(' + KEY.length + '개)을 하나도 빠뜨리지 않았다' + (keyMiss.length ? ' — 빠짐: ' + keyMiss.join(' / ') : ''));
 
   /* 말모이에만 있고 아무 질병에서도 안 쓰이는 담보는 설명만 있고 갈 곳이 없다 */
   const usedK = new Set();
-  (D.list || []).forEach(d => (d.path || []).forEach(s => (s.pay || []).forEach(p => usedK.add(p.k))));
+  (D.list || []).forEach(d => {
+    (d.path || []).forEach(s => (s.pay || []).forEach(p => usedK.add(p.k)));
+    ((d.plan && d.plan.layers) || []).forEach(L => (L.rows || []).forEach(r => usedK.add(r.k)));
+  });
+  (D.ops || []).forEach(o => (o.pay || []).forEach(p => usedK.add(p.k)));
   const idle = [...VOCAB.keys()].filter(k => !usedK.has(k));
   is(idle.length === 0, '말모이의 담보가 전부 어느 질병 어느 단계엔가 붙어 있다' + (idle.length ? ' — 갈 곳 없음: ' + idle.join(' / ') : ''));
 
@@ -199,6 +203,40 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(noLbl.length === 0, '사실 그림마다 이름표가 붙어 있다' + (noLbl.length ? ' — 없음: ' + noLbl.join(' / ') : ''));
   const noZoom = REAL.filter(k => { const v = VIZ.get(k); return !v || v.html.indexOf('dzart') < 0; });
   is(noZoom.length === 0, '사실 그림은 확대해서 볼 수 있다' + (noZoom.length ? ' — 안 됨: ' + noZoom.join(' / ') : ''));
+
+  /* ═══ 4-6. 설계사용 설계 ═══ */
+  console.log('\n[4-6] 설계사용 — 위험감 화법과 층별 구성이 다 채워졌는가');
+  const planHole = [], planBad = [], fearHole = [];
+  (D.list || []).forEach(d => {
+    const P = d.plan;
+    if (!P) { planHole.push(d.name + ' 설계 없음'); return; }
+    if (!(P.why || []).length) planHole.push(d.name + ' 왜 어려운가');
+    if (!(P.layers || []).length) planHole.push(d.name + ' 층');
+    if (!(P.first || []).length) planHole.push(d.name + ' 예산 순서');
+    if (!(P.check || []).length) planHole.push(d.name + ' 증권 확인');
+    (P.fear || []).forEach(f => {
+      /* 문제만 던지고 끝내지 않는다 — 해결로 넘기는 말이 반드시 짝으로 있어야 한다 */
+      if (!f.say || !f.why || !f.then) fearHole.push(d.name + ' · ' + (f.say || '').slice(0, 14));
+    });
+    if (!(P.fear || []).length) planHole.push(d.name + ' 위험감 화법');
+    (P.layers || []).forEach(L => {
+      if (!L.n || !L.d || !(L.rows || []).length) planHole.push(d.name + ' 층 빈칸');
+      (L.rows || []).forEach(r => {
+        if (!VOCAB.has(r.k)) planBad.push(d.name + ' · ' + r.k);
+        if (!r.why) planHole.push(d.name + ' · ' + r.k + ' 왜 넣는가');
+      });
+    });
+  });
+  is(planHole.length === 0, '질병 ' + (D.list || []).length + '종에 설계가 빠짐없이 붙어 있다' +
+     (planHole.length ? ' — 빈칸: ' + planHole.slice(0, 5).join(' / ') : ''));
+  is(planBad.length === 0, '설계에 쓴 담보가 전부 말모이에 있다' + (planBad.length ? ' — 모르는 이름: ' + planBad.join(' / ') : ''));
+  is(fearHole.length === 0,
+     '위험감 화법마다 <b>왜 먹히나</b>와 <b>해결로 넘기는 말</b>이 짝으로 있다' +
+     (fearHole.length ? ' — 짝 없음: ' + fearHole.join(' / ') : ''));
+  const nLayer = (D.list || []).reduce((a, d) => a + ((d.plan && d.plan.layers) || []).length, 0);
+  const nRow = (D.list || []).reduce((a, d) =>
+    a + ((d.plan && d.plan.layers) || []).reduce((b, L) => b + (L.rows || []).length, 0), 0);
+  is(nRow > 100, '층별 담보 줄이 넉넉하다 — 층 ' + nLayer + ' · 줄 ' + nRow);
 
   /* ═══ 5. 단정하지 않는가 ═══ */
   console.log('\n[5] 단정하지 않는가 — 지급은 약관과 심사가 정한다');
@@ -295,6 +333,27 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   } else {
     no('사실 그림을 찾지 못했다');
   }
+
+  console.log('\n[8-3] 설계사용 칸이 화면에 서는가 — 고객 화면과 섞이지 않게');
+  await page.evaluate(id => open_(id), 'stroke');
+  await page.waitForTimeout(300);
+  is((await page.locator('.sec.pro').count()) === 1, '설계사용 칸이 한 곳에 선다');
+  const proTxt = await page.locator('.sec.pro').innerText();
+  is(/설계사용 · 고객 화면 아님/.test(proTxt), '고객 화면이 아니라는 표시가 붙는다');
+  is((await page.locator('.sec.pro .lay').count()) > 0, '층별 구성표가 그려진다 (' +
+     (await page.locator('.sec.pro .lay').count()) + '층)');
+  is((await page.locator('.sec.pro .fear .f').count()) > 0, '위험감 화법이 그려진다');
+  is(/왜 먹히나/.test(proTxt) && /→ 이어서/.test(proTxt), '화법마다 「왜 먹히나」와 「이어서」가 함께 나온다');
+  is(/겁을 주는 것이 아니라 구조를 보여 드리는 것/.test(proTxt), '겁주는 자료가 아니라고 적어 둔다');
+  is(/그대로 확정하지 마십시오/.test(proTxt) && /심사 결과에 따릅니다/.test(proTxt),
+     '기준선을 확정하지 말라는 말과 심사 꼬리표가 붙는다');
+  is(/예산이 빠듯할 때 이 순서로/.test(proTxt), '예산이 빠듯할 때의 순서가 있다');
+  is(/증권에서 이것만은 확인/.test(proTxt), '증권 확인 체크리스트가 있다');
+  /* 층의 담보 이름을 누르면 그 담보 설명으로 간다 */
+  await page.locator('.sec.pro .kbtn').first().click();
+  await page.waitForTimeout(180);
+  is(/는 어디에서 일합니까/.test(await page.locator('#detailPane').innerText()),
+     '설계표의 담보 이름을 누르면 그 담보 설명으로 이어진다');
 
   console.log('\n[9] 담보 말모이가 화면에 서는가 — 「이 돈이 무슨 돈인지」');
   await page.locator('button.btn', { hasText: '담보 말모이' }).click();
