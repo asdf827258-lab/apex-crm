@@ -74,8 +74,16 @@ function serve(){ return http.createServer((q,r)=>{
   const gs = (srvjs.match(/async function gongsiList[\s\S]*?\n}/) || [''])[0];
   is(!!gs, '  gongsiList 가 있다');
   is(!/fetch\([^)]*FileDown/.test(srvjs), '  서버가 FileDown(PDF) 을 부르지 않는다');
-  is((gs.match(/await fetch\(/g) || []).length === 1, '  바깥을 부르는 곳은 목록 한 번뿐이다');
-  is(/AbortController/.test(gs) && /9000/.test(gs), '  10초에 끊기는 자리라 그 안에 들어온다');
+  is((gs.match(/await fetch\(/g) || []).length === 1, '  바깥을 부르는 곳은 목록 한 곳뿐이다');
+  /* 이 함수는 10초에 끊긴다. 첫 판 6초 + 쉼 0.6초 + 다시 2.5초 = 9.1초라
+     제일 오래 걸려도 안 잘린다. 숫자를 늘리면 여기서 걸린다. */
+  is(/AbortController/.test(gs), '  시간제한을 걸어 둔다');
+  const ms = (gs.match(/once\((\d+)\)/g) || []).map(x => +x.replace(/\D/g, ''));
+  const wait = +((gs.match(/setTimeout\(r, *(\d+)\)/) || [])[1] || 0);
+  const worst = ms.reduce((a, b) => a + b, 0) + wait;
+  is(ms.length === 2 && worst <= 9500,
+     '  제일 오래 걸려도 10초 안에 끝난다 (' + ms.join('+') + '+' + wait + ' = ' + worst + 'ms)');
+  is(/Date\.now\(\) - t0 > 2500/.test(gs), '  느리게 실패한 것은 다시 하지 않는다 — 시간이 없다');
   is(/pageUnit=200/.test(gs), '  한 번에 받아 온다 — 쪽마다 되풀이해 부르지 않는다');
 
   console.log('\n[3~5] 목록을 읽고 · 이름을 맞추고 · 못 찾으면 말하는가');

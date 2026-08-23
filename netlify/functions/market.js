@@ -950,14 +950,28 @@ async function gongsiList(coNm, q) {
     throw e;
   }
   const url = (GONGSI['목록주소'] || '') + '?search_memberCd=' + encodeURIComponent(cd) + '&pageUnit=200';
-  const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), 9000);     /* 10초에 끊기는 자리라 그 안에 들어온다 */
-  let html;
+  /* 시간 셈 — 이 함수는 10초에 끊긴다. 재 보니 한 번 받는 데 0.5~4.1초였다.
+     그래서 첫 판은 6초까지 기다리고, <b>빨리 실패했을 때만</b> 한 번 더 해 본다.
+     연달아 두드리면 협회가 잠깐 막는 것을 봤다 — 그때는 조금 쉬었다 가면 된다.
+     느리게 실패한 것(시간 초과)은 다시 해 볼 시간이 없으니 그냥 알린다.
+     제일 오래 걸려도 6 + 0.6 + 2.5 = 9.1초라 10초 안에 끝난다.        */
+  async function once(ms) {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), ms);
+    try {
+      const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!r.ok) throw new Error('협회 공시실이 ' + r.status + ' 로 답했습니다.');
+      return await r.text();
+    } finally { clearTimeout(timer); }
+  }
+  let html, t0 = Date.now();
   try {
-    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
-    if (!r.ok) throw new Error('협회 공시실이 ' + r.status + ' 로 답했습니다.');
-    html = await r.text();
-  } finally { clearTimeout(timer); }
+    html = await once(6000);
+  } catch (e1) {
+    if (Date.now() - t0 > 2500) throw e1;            /* 느리게 실패 — 다시 할 시간이 없다 */
+    await new Promise(r => setTimeout(r, 600));      /* 잠깐 쉬었다 한 번만 더 */
+    html = await once(2500);
+  }
   let rows = gongsiParse(html, 200);
   if (!rows.length) throw new Error('협회 공시실에서 목록을 읽지 못했습니다 — 페이지가 바뀐 것 같습니다.');
   /* 같은 상품이 두 번 오면 받기 단추도 두 번 뜬다. 중복은 받지 않는다.

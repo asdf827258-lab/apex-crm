@@ -561,6 +561,35 @@ async function pressAndRead(fr) {
   ['스트레스 DSR', '분양가상한제', '재건축초과이익'].forEach(w =>
     is((src['키워드_부동산'] || []).indexOf(w) >= 0, '  부동산 낱말에 「' + w + '」 이(가) 있다'));
 
+  /* ── 배포 주소가 막혀 있지 않은가 ──────────────────────────────────
+     화면은 낱말을 config/sources.json 에서 읽는다. 그런데 _redirects 에
+     「/config/* → 404!」 가 있고 <b>!(강제)</b> 라 실제 파일이 있어도 막힌다.
+     점검 서버는 파일을 그대로 주기 때문에 <b>운영에서만</b> 조용히 안 됐다.
+     그 자리를 여기서 지킨다.                                            */
+  console.log('\n[12] 화면이 부르는 주소가 배포에서 막히지 않는가');
+  const rd = fs.readFileSync('_redirects', 'utf8').split('\n')
+    .map(l => l.trim()).filter(l => l && l[0] !== '#');
+  const rules = rd.map(l => l.split(/\s+/)).filter(p => p.length >= 3);
+  /* 위에서부터 먼저 맞는 규칙이 이긴다 — 넷리파이와 같은 순서로 흉내 낸다 */
+  const routeOf = url => {
+    for (const [from, to, code] of rules) {
+      const re = new RegExp('^' + from.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$');
+      if (re.test(url)) return { to, code };
+    }
+    return null;
+  };
+  const kwUrl = '/config/sources.json';
+  const hit = routeOf(kwUrl);
+  is(!!hit && /^200/.test(hit.code || ''), '  ' + kwUrl + ' 이(가) 열려 있다 — 화면이 낱말을 읽을 수 있다');
+  /* 화면이 실제로 그 주소를 부르는지도 같이 본다 (주소가 바뀌면 여기서 걸린다) */
+  is(/\.\.\/\.\.\/\.\.\/config\/sources\.json/.test(mk),
+     '  화면이 부르는 곳과 열어 둔 곳이 같다');
+  /* 나머지 config 는 그대로 막혀 있어야 한다 — 구멍을 넓히지 않는다 */
+  ['/config/market.json', '/config/products.json', '/config/gongsi.json'].forEach(u => {
+    const h = routeOf(u);
+    is(!!h && /404/.test(h.code || ''), '  ' + u + ' 은(는) 그대로 막혀 있다');
+  });
+
   console.log('\n──────────────────────────────');
   console.log(bad ? '뉴스 모아 오기 점검 실패 — ' + bad + '가지 어긋납니다.'
                   : '뉴스 모아 오기 점검 통과 — 다 맞습니다.');
