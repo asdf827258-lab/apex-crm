@@ -243,6 +243,19 @@ body.form-mode{background:#fff}
 #sec1 .sub{margin:9px 0 16px;font-size:13px}
 #sec1 .chips{gap:7px}
 
+/* 한 장 안의 묶음 머리 — 일곱 장을 한 장으로 합치니 어디서 어디까지가
+   한 덩어리인지가 안 보였다. 번호를 달아 상담 순서 그대로 읽히게 한다.
+   판을 나누는 것이 아니라 눈으로만 나눈다 — 판이 나뉘면 다시 일곱 번
+   내려야 한다. */
+#sec1 .sec1-grp{display:flex;align-items:center;gap:9px;margin:0 0 13px;
+  font-size:15.5px;font-weight:800;letter-spacing:-.03em;color:var(--txt)}
+#sec1 .sec1-grp b{flex:none;width:22px;height:22px;border-radius:7px;background:var(--blue-l);
+  color:var(--blue);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+#sec1 .sec1-cols+.divider{margin:22px 0 20px}
+#sec1 .sec1-cols>.sec1-col>.sec1-grp:first-child{margin-top:0}
+/* 두 칸이 위아래로 접히는 좁은 화면에서는 묶음 사이를 벌린다 */
+@media(max-width:900px){#sec1 .sec1-col+.sec1-col .sec1-grp{margin-top:22px}}
+
 /* 머리 — 앱 글꼴 그대로. 「두 번째 장」 은 눈썹 한 줄로만 남긴다 */
 #sec1 .sec1-eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.22em;color:var(--txt-3)}
 #sec1 h2{font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--txt);margin:7px 0 0;display:block}
@@ -960,14 +973,24 @@ svg{display:block;width:100%;height:auto;overflow:visible}
 <div id="form-view">
 
 
+  <!-- 고객의 상황 — 한 장.
+       전에는 일곱 장이었습니다. 사람 · 돈 · 자산 · 연금 · 보장 · 목표 · 걱정이
+       각각 다른 판이라, 고객 앞에서 일곱 번을 내려야 상황 하나가 정리됐습니다.
+       내려가는 동안 앞에서 적은 것이 화면에서 사라지니, 「아까 소득이 얼마라고
+       하셨죠」 를 되묻게 됩니다.
+       한 장에 담습니다. 읽는 순서는 상담 순서 그대로입니다 —
+       누구십니까 → 얼마를 벌고 쓰십니까 → 무엇을 갖고 계십니까 →
+       앞으로 어떻습니까 → 지금 보장은 → 무엇이 걱정이십니까. -->
   <div class="card" id="sec1">
     <div class="sec1-eyebrow">CLIENT SITUATION · 두 번째 장</div>
     <h2><span class="step-no">1</span>고객의 상황을 정리합니다</h2>
     <div class="sec1-who"><span class="lb">FOR</span><span class="nm empty" id="sec1Who">아래에 고객명을 적으시면 여기 섭니다</span>
       <span class="sec1-sum" id="sec1Sum"></span></div>
     <p class="sub">여기 적는 숫자가 뒤의 스물다섯 장을 전부 만듭니다. 모르는 칸은 비워 두셔도 됩니다</p>
+
     <div class="sec1-cols">
     <div class="sec1-col">
+    <div class="sec1-grp"><b>1</b>지금 이 분은</div>
     <div class="grid g2">
       <div class="field"><label>고객명</label><input id="f_name" placeholder="홍길동" value=""></div>
       <div class="field"><label>나이</label><div class="inwrap"><input id="f_age" class="has-unit" type="number" value="42"><span class="unit">세</span></div></div>
@@ -993,10 +1016,28 @@ svg{display:block;width:100%;height:auto;overflow:visible}
     <p class="mini-title">부모님 (양가)</p>
     <div id="parents"></div>
     <button class="addbtn" id="addparent">+ 부모님 추가</button>
-    </div>
-    <div class="sec1-col">
-    <p class="mini-title">소득과 지출 <span class="mt-sub">월 기준 · 세후 실수령액</span></p>
+    <div class="divider"></div>
+    <div class="mt-row"><p class="mini-title">임신·출산 계획</p>
+    <div class="chips">
+      <button class="chip" data-tog="preg" data-v="1">있음</button>
+      <button class="chip on" data-tog="preg" data-v="0">없음</button>
+    </div></div>
 
+    <div class="divider"></div>
+    <div class="sec1-grp"><b>2</b>앞으로 — 은퇴와 연금</div>
+    <div class="grid g3">
+      <div class="field"><label>은퇴 희망나이</label><div class="inwrap"><input id="f_ret" class="has-unit" type="number" value="60"><span class="unit">세</span></div></div>
+      <div class="field"><label>기대수명</label><div class="inwrap"><input id="f_life" class="has-unit" type="number" value="90"><span class="unit">세</span></div></div>
+      <div class="field"><label>은퇴 후 희망 생활비</label><div class="inwrap"><input id="f_retspend" class="has-unit" type="number" value="350"><span class="unit">만원</span></div></div>
+      <div class="field"><label>국민연금 예상액(월)</label><div class="inwrap"><input id="f_np" class="has-unit" type="number" value="140"><span class="unit">만원</span></div></div>
+      <div class="field"><label>국민연금 개시</label><div class="inwrap"><input id="f_npage" class="has-unit" type="number" value="65"><span class="unit">세</span></div></div>
+      <div class="field"><label>개인연금 월납</label><div class="inwrap"><input id="f_pp" class="has-unit" type="number" value="0"><span class="unit">만원</span></div></div>
+    </div>
+    </div>
+
+    <div class="sec1-col">
+    <div class="sec1-grp"><b>3</b>버는 것 · 쓰는 것 · 가진 것</div>
+    <p class="mini-title">소득과 지출 <span class="mt-sub">월 기준 · 세후 실수령액</span></p>
     <div class="grid g2">
       <div class="field"><label>본인 월소득</label><div class="inwrap"><input id="f_income" class="has-unit" type="number" value="550"><span class="unit">만원</span></div></div>
       <div class="field"><label>기타 월소득</label><div class="inwrap"><input id="f_etc" class="has-unit" type="number" value="0"><span class="unit">만원</span></div></div>
@@ -1012,27 +1053,9 @@ svg{display:block;width:100%;height:auto;overflow:visible}
       <div class="field"><label>대출 잔여</label><div class="inwrap"><input id="f_loanyr" class="has-unit" type="number" value="15"><span class="unit">년</span></div></div>
     </div>
     <div class="sec1-cash" id="sec1Cash"></div>
-    <div class="tofin-row">
-      <button type="button" class="tofin" onclick="apexToFin()">
-        <span class="tofin-t">계산기에서 이어서 보기 →</span>
-        <span class="tofin-s">지금 바로 넘어갑니다 — 메뉴로 열어도 여기 적은 것은 따라갑니다</span>
-      </button>
-    </div>
     <div class="divider"></div>
-    <p class="mini-title">임신·출산 계획</p>
-    <div class="chips">
-      <button class="chip" data-tog="preg" data-v="1">있음</button>
-      <button class="chip on" data-tog="preg" data-v="0">없음</button>
-    </div>
-
-    </div>
-    </div>
-</div>
-
-  <div class="card" id="sec3">
-    <h2><span class="step-no">3</span>자산과 부채</h2>
-    <p class="sub">거주 부동산은 생활비 재원에서 제외하고 계산합니다</p>
-    <div class="grid g2">
+    <p class="mini-title">가진 것과 갚을 것 <span class="mt-sub">거주 부동산은 생활비 재원에서 뺍니다</span></p>
+    <div class="grid g3">
       <div class="field"><label>거주 부동산</label><div class="inwrap"><input id="f_home" class="has-unit" type="number" value="50000"><span class="unit">만원</span></div></div>
       <div class="field"><label>금융자산(예적금)</label><div class="inwrap"><input id="f_cash" class="has-unit" type="number" value="8000"><span class="unit">만원</span></div></div>
       <div class="field"><label>투자자산(펀드·주식)</label><div class="inwrap"><input id="f_inv" class="has-unit" type="number" value="4000"><span class="unit">만원</span></div></div>
@@ -1042,7 +1065,7 @@ svg{display:block;width:100%;height:auto;overflow:visible}
     </div>
     <p class="hint">월 저축액을 0으로 두면 소득에서 지출을 뺀 여유자금 전액을 저축하는 것으로 계산합니다.</p>
     <div class="divider"></div>
-    <p class="mini-title">기대수익률 <span style="color:var(--txt-3);font-weight:600">(연 %, 슬라이드에서 실시간 변경 가능)</span></p>
+    <p class="mini-title">기대수익률 <span class="mt-sub">연 % · 슬라이드에서 바로 바꿉니다</span></p>
     <div class="grid g3">
       <div class="field"><label>예금·적금</label><div class="inwrap"><input id="r_dep" class="has-unit" type="number" step="0.1" value="3.0"><span class="unit">%</span></div></div>
       <div class="field"><label>주식·ETF</label><div class="inwrap"><input id="r_eq" class="has-unit" type="number" step="0.1" value="8.5"><span class="unit">%</span></div></div>
@@ -1051,24 +1074,12 @@ svg{display:block;width:100%;height:auto;overflow:visible}
       <div class="field"><label>연금계좌</label><div class="inwrap"><input id="r_pen" class="has-unit" type="number" step="0.1" value="6.5"><span class="unit">%</span></div></div>
       <div class="field"><label>물가상승률</label><div class="inwrap"><input id="r_inf" class="has-unit" type="number" step="0.1" value="2.3"><span class="unit">%</span></div></div>
     </div>
-  </div>
-
-  <div class="card" id="sec4">
-    <h2><span class="step-no">4</span>은퇴와 연금</h2>
-    <p class="sub">노후 준비의 현재 좌표를 확인합니다</p>
-    <div class="grid g3">
-      <div class="field"><label>은퇴 희망나이</label><div class="inwrap"><input id="f_ret" class="has-unit" type="number" value="60"><span class="unit">세</span></div></div>
-      <div class="field"><label>기대수명</label><div class="inwrap"><input id="f_life" class="has-unit" type="number" value="90"><span class="unit">세</span></div></div>
-      <div class="field"><label>은퇴 후 희망 생활비</label><div class="inwrap"><input id="f_retspend" class="has-unit" type="number" value="350"><span class="unit">만원</span></div></div>
-      <div class="field"><label>국민연금 예상액(월)</label><div class="inwrap"><input id="f_np" class="has-unit" type="number" value="140"><span class="unit">만원</span></div></div>
-      <div class="field"><label>국민연금 개시</label><div class="inwrap"><input id="f_npage" class="has-unit" type="number" value="65"><span class="unit">세</span></div></div>
-      <div class="field"><label>개인연금 월납</label><div class="inwrap"><input id="f_pp" class="has-unit" type="number" value="0"><span class="unit">만원</span></div></div>
     </div>
-  </div>
+    </div>
 
-  <div class="card" id="sec5">
-    <h2><span class="step-no">5</span>현재 보장</h2>
-    <p class="sub">가입한 보험의 보장금액을 적어주세요</p>
+    <div class="divider"></div>
+
+    <div class="sec1-grp"><b>4</b>지금 들어 있는 보장</div>
     <div class="grid g3">
       <div class="field"><label>사망보험금</label><div class="inwrap"><input id="c_death" class="has-unit" type="number" value="10000"><span class="unit">만원</span></div></div>
       <div class="field"><label>암 진단금</label><div class="inwrap"><input id="c_cancer" class="has-unit" type="number" value="3000"><span class="unit">만원</span></div></div>
@@ -1077,22 +1088,26 @@ svg{display:block;width:100%;height:auto;overflow:visible}
       <div class="field"><label>간병(LTC) 자금</label><div class="inwrap"><input id="c_care" class="has-unit" type="number" value="0"><span class="unit">만원</span></div></div>
       <div class="field"><label>실손의료비</label><select id="c_silson"><option value="1">가입</option><option value="0">미가입</option></select></div>
     </div>
-  </div>
 
-  <div class="card" id="sec6">
-    <h2><span class="step-no">6</span>인생 목표</h2>
-    <p class="sub">앞으로 반드시 준비해야 할 것을 골라주세요</p>
+    <div class="divider"></div>
+
+    <div class="sec1-grp"><b>5</b>무엇을 준비하고, 무엇이 걱정이십니까</div>
+    <p class="mini-title">인생 목표 <span class="mt-sub">앞으로 반드시 준비해야 할 것</span></p>
     <div class="chips" id="goals"></div>
-  </div>
-
-  <div class="card" id="sec7">
-    <h2><span class="step-no">7</span>지금 가장 걱정되는 것</h2>
-    <p class="sub">고른 항목이 슬라이드에서 우선순위로 정리됩니다</p>
+    <div class="divider"></div>
+    <p class="mini-title">지금 가장 걱정되는 것 <span class="mt-sub">고른 것이 슬라이드에서 우선순위가 됩니다</span></p>
     <div class="chips" id="worries"></div>
     <div class="divider"></div>
-    <p class="mini-title">가장 먼저 듣고 싶은 것 <span style="color:var(--txt-3);font-weight:600">(먼저 고른 순서대로 다룹니다)</span></p>
+    <p class="mini-title">가장 먼저 듣고 싶은 것 <span class="mt-sub">먼저 고른 순서대로 다룹니다</span></p>
     <div class="chips" id="focus"></div>
-  </div>
+
+    <div class="tofin-row">
+      <button type="button" class="tofin" onclick="apexToFin()">
+        <span class="tofin-t">계산기에서 이어서 보기 →</span>
+        <span class="tofin-s">지금 바로 넘어갑니다 — 메뉴로 열어도 여기 적은 것은 따라갑니다</span>
+      </button>
+    </div>
+</div>
   <div class="card" id="sec9">
     <h2><span class="step-no">9</span>뉴스 · 자료 첨부</h2>
     <p class="sub">실제 기사나 사진을 넣으면 지정한 슬라이드에 함께 나옵니다</p>
@@ -1314,9 +1329,9 @@ $('addparent').onclick=function(){addParent('본가',72);};
 addParent('본가',72);
 
 /* ---------- 섹션 네비 · 진행률 ---------- */
-var SECS=[{id:'sec1',n:'고객 상황'},{id:'sec3',n:'자산'},
-          {id:'sec4',n:'연금'},{id:'sec5',n:'보장'},{id:'sec6',n:'목표'},
-          {id:'sec7',n:'걱정'},{id:'sec9',n:'뉴스·자료'}];
+/* 자산·연금·보장·목표·걱정을 「고객의 상황」 한 장으로 합쳤다.
+   칸 목록도 둘이다 — 없는 판을 목록에 두면 눌러도 아무 데도 안 간다. */
+var SECS=[{id:'sec1',n:'고객의 상황'},{id:'sec9',n:'뉴스·자료'}];
 var touched={};
 (function(){
   var h='';
