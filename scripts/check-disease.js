@@ -18,7 +18,9 @@
      9. 담보 말모이 — 이 돈이 무슨 돈인지 스물다섯 가지가 다 적히는가
     10. 전부 펼쳐 인쇄하면 한 권으로 묶이는가
     11. 좁은 화면에서 옆으로 안 밀리는가 · 인쇄에서 안 짤리는가
-    12. <b>자료를 못 읽으면 화면을 안 세우는가</b> — 일부러 끊어 보고 확인한다              */
+    12. <b>자료를 못 읽으면 화면을 안 세우는가</b> — 일부러 끊어 보고 확인한다
+    13. <b>겹쳐 받는 법</b> — 동시에 열리는 개수를 흐름에서 세는가 ·
+        그 병과 <b>상관없는 담보를 권하지 않는가</b>                                       */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8877;
@@ -387,7 +389,11 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   await page.waitForTimeout(300);
   const boxes = await page.locator('.dl input').count();
   is(boxes > 0, '층별 담보가 체크할 수 있게 놓인다 (' + boxes + '칸)');
-  is(/설계 연습/.test(await page.locator('.drill-hd').innerText()), '연습 화면이 열린다');
+  /* 연습은 <b>배우는 자리가 아니라 확인하는 자리</b>다. 그래서 머리에
+     「겹쳐 받는 법부터 보기」 가 있어야 한다 — 문제부터 내면 안 된다. */
+  const drillHd = await page.locator('.drill-hd').innerText();
+  is(/익혔는지 확인/.test(drillHd), '연습 화면이 열리고, <b>확인하는 자리</b>임을 밝힌다');
+  is(/겹쳐 받는 법/.test(drillHd), '연습보다 <b>가르치는 화면을 먼저</b> 가리킨다');
 
   /* 하나도 안 고르고 채점 — 빠뜨린 자리가 전부 나와야 한다 */
   await page.evaluate(() => drillScore());
@@ -552,6 +558,115 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/\.dzart-tools,\.dzart-hint\{display:none;?\}/.test(html.replace(/\s+/g, '')),
      '인쇄물에는 단추가 나가지 않는다');
   is(/@media\s+print/.test(html), '인쇄용 규칙이 있다');
+  await page.close();
+
+
+  /* ═══ 13. 겹쳐 받는 법 — 가르치는 화면이 실제로 가르치는가 ═══
+     여기서 가장 위험한 것은 <b>그 병과 상관없는 담보를 권하는 것</b>이다.
+     피부암 상담에서 뇌혈관질환수술비를 「＋ 얹으십시오」 로 띄우면
+     그 자리에서 설계사가 신뢰를 잃는다. 그래서 그것부터 본다. */
+  console.log('\n[13] 겹쳐 받는 법 — 가르치는 자리');
+  const S = D.stack;
+  is(!!S, '겹치기 자료가 한 벌 있다');
+  is(S && S.law.length >= 3, '겹치기가 되는 이유를 ' + (S ? S.law.length : 0) + '가지 적어 둔다');
+  is(S && S.rule.length >= 5, '층별 규칙이 ' + (S ? S.rule.length : 0) + '개다');
+  is(S && S.no.length >= 4, '겹치지 <b>않는</b> 자리도 ' + (S ? S.no.length : 0) + '개 적어 둔다');
+  is(S && S.ord.length >= 5, '예산이 빠듯할 때의 순서가 적혀 있다');
+
+  /* 규칙의 담보 이름은 말모이 안에서만 */
+  const covSet = new Set(D.cov.map(c => c.k));
+  const ruleBad = [];
+  (S ? S.rule : []).forEach(r => (r.layer || []).forEach(l =>
+    (l.alt || []).forEach(k => { if (!covSet.has(k)) ruleBad.push(k); })));
+  is(ruleBad.length === 0, '규칙이 부르는 담보 이름이 전부 말모이 안에 있다' +
+     (ruleBad.length ? ' — 없는 이름: ' + ruleBad.join(', ') : ''));
+  const anyBad = (S ? S.any : []).filter(k => !covSet.has(k));
+  is(anyBad.length === 0, '「병을 가리지 않는 담보」 목록도 말모이 안에 있다' +
+     (anyBad.length ? ' — ' + anyBad.join(', ') : ''));
+
+  /* 층은 이름이 아니라 <b>역할</b>로 적는다 — 이름을 못 박으면 다른 병에서 회색으로 뜬다 */
+  const noRole = [];
+  (S ? S.rule : []).forEach(r => (r.layer || []).forEach(l => {
+    if (!l.role || !l.alt || !l.alt.length || !l.d) noRole.push(r.n);
+  }));
+  is(noRole.length === 0, '층마다 <b>역할·후보·설명</b>이 다 있다' +
+     (noRole.length ? ' — 빠짐: ' + [...new Set(noRole)].join(' / ') : ''));
+  const noEx = (S ? S.rule : []).filter(r => !r.how || !r.watch || !r.ex).map(r => r.n);
+  is(noEx.length === 0, '규칙마다 <b>겹치는 법 · 갈리는 자리 · 보기</b>가 다 붙어 있다' +
+     (noEx.length ? ' — 빠짐: ' + noEx.join(' / ') : ''));
+  is(!!(S && /심사/.test(S.tail)), '겹친다고 <b>지급을 약속하지 않는다</b> — 심사를 말한다');
+
+  /* ── 브라우저 ── */
+  page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+
+  await page.evaluate(() => stackOpen('mi'));
+  await page.waitForTimeout(400);
+  const stkTxt = await page.locator('#detailPane').innerText();
+  is(stkTxt.length > 3000, '겹쳐 받는 법 화면이 선다 (' + stkTxt.length + '자)');
+  is(await page.locator('.stk-rule').count() >= 5, '층별 규칙이 화면에 다 선다');
+
+  /* 동시에 열리는 개수는 <b>자료에 적지 않고 흐름에서 센다.</b>
+     화면이 세는 값과 path 에서 직접 센 값이 같아야 한 벌에서 나온 것이다. */
+  const cnts = await page.locator('.stk-st .cnt').allInnerTexts();
+  const mi = D.list.find(d => d.id === 'mi');
+  const want = (mi.path || []).map(st => new Set((st.pay || []).map(p => p.k)).size);
+  const got = cnts.map(t => parseInt(t, 10));
+  is(JSON.stringify(got) === JSON.stringify(want),
+     '동시에 열리는 개수를 <b>치료 흐름에서 센다</b> — 자료에 따로 적지 않는다 (' +
+     got.join('·') + ' vs ' + want.join('·') + ')');
+
+  /* 상관없는 담보를 권하지 않는다 — 피부암 화면에 뇌·심장 전용이 ＋ 로 뜨면 안 된다 */
+  await page.evaluate(() => stackOpen('skin'));
+  await page.waitForTimeout(400);
+  const canTxt = (await page.locator('.stk-rule .r.can').allInnerTexts()).join(' ');
+  const wrong = ['뇌혈관질환수술비', '허혈성심장질환수술비', '뇌혈관질환 (전체)', '허혈성심장질환 (전체)']
+    .filter(k => canTxt.indexOf(k) >= 0);
+  is(wrong.length === 0, '피부암 상담에 <b>뇌·심장 전용 담보를 권하지 않는다</b>' +
+     (wrong.length ? ' — 권하고 있음: ' + wrong.join(', ') : ''));
+  is(canTxt.length > 0, '피부암에서도 얹을 자리는 짚어 준다');
+
+  /* 질병을 바꾸면 ✓ 조합이 실제로 달라진다 — 한 벌에서 나온다는 증거 */
+  const hasOf = async id => {
+    await page.evaluate(i => stackOpen(i), id);
+    await page.waitForTimeout(300);
+    return (await page.locator('.stk-rule .r.has .nm').allInnerTexts()).join('|');
+  };
+  const hMi = await hasOf('mi'), hCan = await hasOf('cancer_major');
+  is(hMi !== hCan && hMi.length > 0 && hCan.length > 0,
+     '질병을 바꾸면 <b>겹치는 자리가 실제로 달라진다</b>');
+
+  /* 치료 흐름 아래의 겹침 한 줄이 모든 질병에 붙는가 */
+  let miniN = 0;
+  for (const d of D.list) {
+    await page.evaluate(i => open_(i), d.id);
+    await page.waitForTimeout(90);
+    if (await page.locator('.stk-mini').count()) miniN++;
+  }
+  is(miniN === D.list.length, '질병마다 치료 흐름 아래에 <b>몇 개가 동시에 열리는지</b> 한 줄이 붙는다 (' +
+     miniN + '/' + D.list.length + ')');
+
+  /* 들머리는 한 곳만 안다 — 삼항 사슬로 늘어놓지 않는다 */
+  is(!/hash === '/.test(html) && /var GOTO = \{/.test(html),
+     '「어디로 갈 것인가」를 <b>표 하나</b>로 둔다 — 삼항 사슬로 늘어놓지 않는다');
+  /* 프래그먼트만 바꾸면 브라우저가 다시 열지 않는다 — 그러면 이전 화면을
+     그대로 읽고 여섯 개가 전부 통과해 버린다. 실제로 그렇게 헛것을 잡고 있었다.
+     그래서 <b>매번 새 창</b>에서 연다. 그리고 화면마다 다른 글이 나오는지 본다. */
+  const seenTxt = {};
+  for (const to of ['stack', 'drill', 'lab', 'nav', 'cov', 'terms']) {
+    const pg = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await pg.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}#${to}`,
+                  { waitUntil: 'networkidle' });
+    await pg.waitForTimeout(500);
+    const t = await pg.locator('#detailPane').innerText();
+    seenTxt[to] = t.length;
+    is(t.length > 400, '#' + to + ' 로 바로 들어가진다 (' + t.length + '자)');
+    await pg.close();
+  }
+  is(new Set(Object.values(seenTxt)).size === Object.keys(seenTxt).length,
+     '들머리마다 <b>서로 다른 화면</b>이 열린다 — 같은 화면을 여섯 번 세지 않는다 (' +
+     Object.keys(seenTxt).map(k => k + ':' + seenTxt[k]).join(' · ') + ')');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */
