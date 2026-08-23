@@ -739,6 +739,21 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(deep.brain >= 300 && deep.brainVs >= 300,
      '뇌를 <b>사실 그림</b>으로 그렸다 (구역 ' + deep.brain + '도형 · 막힘/터짐 ' + deep.brainVs + '도형)');
 
+  /* 질병마다 <b>사실 그림</b>이 하나 이상 붙어야 한다. 도식(색칠한 판)만
+     붙어 있으면 고객 앞에서 「그림으로 보여 드리겠습니다」 가 안 된다. */
+  const noReal = await page.evaluate(() => {
+    const out = [];
+    window.DZ_DATA.list.forEach(d => {
+      const g = window.DZ_VIZ.forDz(d.id) || [];
+      const real = g.filter(o =>
+        ((o.html || '').match(/<(path|circle|ellipse|rect|line|polyline|polygon)\b/g) || []).length >= 150);
+      if (!real.length) out.push(d.name);
+    });
+    return out;
+  });
+  is(noReal.length === 0, '질병 ' + D.list.length + '종 <b>전부</b> 사실 그림이 하나 이상 붙는다' +
+     (noReal.length ? ' — 도식뿐: ' + noReal.join(' / ') : ''));
+
   /* 뇌경색과 뇌출혈을 <b>한 그림에서 견주는</b> 장이 있어야 한다 */
   const vsTxt = await page.evaluate(() => (window.DZ_VIZ.get('brain_vs') || {}).d || '');
   is(/뇌경색/.test(vsTxt) && /뇌출혈/.test(vsTxt) && /범위/.test(vsTxt),

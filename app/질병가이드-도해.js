@@ -1029,6 +1029,10 @@
   function brainAxial(mode) {
     var R = rnd(20260825), s = '', i, a, x, y, r;
     var CX = 540, CY = 320;
+    /* 위축 — 뇌가 줄어 머리뼈와 사이가 벌고, 고랑이 넓어지고,
+       빈자리를 물(뇌실)이 대신 채운다. 그림에서 이 셋이 함께 보여야
+       「뇌가 줄어듭니다」 가 말이 된다. */
+    var SH = (mode === 3) ? 0.86 : 1, VZ = (mode === 3) ? 1.7 : 1;
 
     s += '<defs>' +
       '<clipPath id="cpBrain' + mode + '"><path d="' + BRAIN_D + '"/></clipPath>' +
@@ -1047,6 +1051,7 @@
          'transform="translate(' + CX + ' ' + CY + ') scale(1.13) translate(' + (-CX) + ' ' + (-CY) + ')"/>';
 
     /* 뇌 — 회색질(겉)과 백색질(속) */
+    if (SH !== 1) s += '<g transform="translate(' + CX + ' ' + CY + ') scale(' + SH + ') translate(' + (-CX) + ' ' + (-CY) + ')">';
     s += '<path d="' + BRAIN_D + '" fill="url(#gGray' + mode + ')" stroke="#9E8F80" stroke-width="2.6"/>';
     s += '<g clip-path="url(#cpBrain' + mode + ')">';
     s += '<path d="' + BRAIN_D + '" fill="url(#gWhite' + mode + ')" ' +
@@ -1081,8 +1086,9 @@
     /* 뇌실 — 나비 모양 */
     var VENT_L = 'M508 246 C486 262 474 300 480 344 C486 378 500 396 512 392 C518 366 516 300 508 246 Z';
     var VENT_R = 'M572 246 C594 262 606 300 600 344 C594 378 580 396 568 392 C562 366 564 300 572 246 Z';
-    s += '<path d="' + VENT_L + '" fill="#6E7F92" opacity=".75"/>';
-    s += '<path d="' + VENT_R + '" fill="#6E7F92" opacity=".75"/>';
+    var vt = VZ === 1 ? '' : ' transform="translate(540 320) scale(' + VZ + ') translate(-540 -320)"';
+    s += '<path d="' + VENT_L + '" fill="#6E7F92" opacity=".75"' + vt + '/>';
+    s += '<path d="' + VENT_R + '" fill="#6E7F92" opacity=".75"' + vt + '/>';
     /* 깊은 회색질 덩어리 */
     s += '<ellipse cx="472" cy="304" rx="30" ry="46" fill="#B49E8B" opacity=".8"/>';
     s += '<ellipse cx="608" cy="304" rx="30" ry="46" fill="#B49E8B" opacity=".8"/>';
@@ -1130,6 +1136,7 @@
            '" stroke="#C0392B" stroke-width="1.7" opacity=".45" stroke-linecap="round"/>';
     }
     s += '</g>';
+    if (SH !== 1) s += '</g>';
 
     /* ── 병 ── */
     /* 왼쪽 중간대뇌동맥 영역 (화면에서는 왼쪽 반) */
@@ -1786,6 +1793,411 @@
            '실제 비율·모양과 다릅니다. 무엇이 무엇을 밀어내는지를 보여 주는 그림입니다.</text>';
       s += '</svg>';
       return art({ svg: s, vb: '0 0 1120 520' });
+    }
+  };
+
+  /* ═══ 갑상선 — 나비 하나와, 그 뒤에 지나는 것들 ═══════════════
+     갑상선 상담이 어려운 이유는 <b>「암인데 암이 아닌 것처럼」</b> 다뤄지기
+     때문이다. 실제로 많은 약관이 이것을 유사암(소액암) 칸에 넣어 감액한다.
+
+     그런데 <b>수술은 진짜다.</b> 목 앞 나비 모양 장기 바로 뒤로
+     목소리를 내는 신경(되돌이후두신경)이 지나고, 뒤쪽 네 귀퉁이에
+     칼슘을 맡는 좁쌀만 한 부갑상선이 붙어 있다. 그래서 절반만 떼느냐
+     전부 떼느냐가 <b>그 뒤 평생</b>을 가른다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function thyroid(mode, R) {
+    var s = '', i, x, y;
+    /* 목 — 기도와 후두 */
+    s += '<path d="M258 30 C258 18 342 18 342 30 L342 400 C342 414 258 414 258 400 Z" ' +
+         'fill="#F0DCCB" stroke="#C8A183" stroke-width="2.6"/>';
+    for (i = 0; i < 11; i++) {
+      s += '<rect x="256" y="' + (56 + i * 30) + '" width="88" height="17" rx="8" ' +
+           'fill="#E3CBB6" stroke="#C09B78" stroke-width="1.8"/>';
+    }
+    s += '<path d="M266 26 C266 6 334 6 334 26" fill="#E8D3C0" stroke="#C8A183" stroke-width="2.6"/>';
+
+    /* 갑상선 — 나비 */
+    function lobe(sign, gone) {
+      var cx = 300 + sign * 44;          /* 기도 옆에 딱 붙는다 — 그래야 나비가 된다 */
+      if (gone) return '<path d="M' + cx + ' 118 q' + (sign * 52) + ' 24 ' + (sign * 44) + ' 96 q' +
+        (-sign * 16) + ' 62 ' + (-sign * 48) + ' 68 q' + (-sign * 30) + ' -76 ' + (sign * 4) + ' -164 Z" ' +
+        'fill="none" stroke="#B08F72" stroke-width="2.4" stroke-dasharray="7 5"/>';
+      var LD = 'M' + cx + ' 118 q' + (sign * 52) + ' 24 ' + (sign * 44) + ' 96 q' +
+        (-sign * 16) + ' 62 ' + (-sign * 48) + ' 68 q' + (-sign * 30) + ' -76 ' + (sign * 4) + ' -164 Z';
+      var cid = 'cpThy' + mode + (sign > 0 ? 'R' : 'L');
+      var o = '<defs><clipPath id="' + cid + '"><path d="' + LD + '"/></clipPath></defs>';
+      o += '<path d="' + LD + '" fill="#B4544C" stroke="#7E2A24" stroke-width="2.6"/>';
+      /* 소포 — 알갱이가 촘촘하다. 잎 밖으로 새지 않게 잎 모양으로 잘라 낸다 */
+      o += '<g clip-path="url(#' + cid + ')">';
+      for (i = 0; i < 60; i++) {
+        x = cx + sign * (R() * 54 + 2); y = 126 + R() * 150;
+        o += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (3.6 + R() * 2.4).toFixed(1) +
+             '" fill="#D4736A" stroke="#8E3830" stroke-width="0.9" opacity=".95"/>';
+      }
+      o += '</g>';
+      return o;
+    }
+    /* 가운데 다리 */
+    if (mode !== 3) s += '<path d="M266 196 q34 -16 68 0 q0 32 -34 34 q-34 -2 -34 -34 Z" fill="#B4544C" stroke="#7E2A24" stroke-width="2.4"/>';
+    s += lobe(-1, mode === 3);
+    s += lobe(1, mode === 2 || mode === 3);
+
+    /* 혹 — 오른쪽 잎에 */
+    if (mode >= 1) {
+      s += '<circle cx="' + (300 + 44 + 30) + '" cy="190" r="26" ' +
+           'fill="' + (mode >= 2 ? '#EADFD3' : '#3F2A55') + '" stroke="' + (mode >= 2 ? '#B08F72' : '#241436') +
+           '" stroke-width="2.6"' + (mode >= 2 ? ' stroke-dasharray="6 4"' : '') + '/>';
+      if (mode === 1) {
+        for (i = 0; i < 14; i++) {
+          s += '<circle cx="' + (374 + (R() - 0.5) * 34).toFixed(0) + '" cy="' + (190 + (R() - 0.5) * 34).toFixed(0) +
+               '" r="' + (2 + R() * 2.4).toFixed(1) + '" fill="#6D3FA0" opacity=".9"/>';
+        }
+      }
+    }
+
+    /* 뒤로 지나는 것 — 목소리 신경 */
+    s += '<path d="M232 400 C238 320 240 240 236 150 C234 112 240 84 254 62" fill="none" ' +
+         'stroke="#E3C878" stroke-width="9" stroke-linecap="round"/>';
+    s += '<path d="M368 400 C362 320 360 240 364 150 C366 112 360 84 346 62" fill="none" ' +
+         'stroke="#E3C878" stroke-width="9" stroke-linecap="round"/>';
+    /* 좁쌀 넷 — 부갑상선 */
+    [[250,146],[254,258],[350,146],[346,258]].forEach(function (p) {
+      s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="9" fill="#D9A441" stroke="#9A6F1E" stroke-width="2"/>';
+    });
+    return s;
+  }
+
+  V.thyroid_lobe = {
+    t: '갑상선 — 절반을 떼느냐 전부를 떼느냐가 그 뒤를 가릅니다',
+    d: '목 앞의 <b>나비 모양</b> 장기입니다. 바로 뒤로 <b>목소리를 내는 신경</b>이 지나고, ' +
+       '뒤쪽 네 귀퉁이에 칼슘을 맡는 <b>좁쌀만 한 부갑상선</b>이 붙어 있습니다. ' +
+       '그래서 <b>얼마나 떼느냐</b>가 그 뒤 평생을 가릅니다 — 전부 떼면 호르몬제를 평생 드십니다. ' +
+       '보험에서는 이 병이 <b>유사암(소액암)</b> 칸으로 가 감액되는 약관이 많은데, ' +
+       '수술과 그 뒤는 감액되지 않습니다. 그 간극을 미리 좁혀 두지 않으면 지급 때 민원이 됩니다.',
+    dz: ['thyroid'],
+    build: function () {
+      var R = rnd(20260830);
+      var P = [
+        [0, '정상', '나비 하나, 뒤에 신경과 부갑상선', '#334155'],
+        [1, '혹이 생김', '한쪽 잎에 결절 — 세침검사로 확인합니다', '#B45309'],
+        [2, '반절제', '한쪽만 뗍니다 — 남은 쪽이 일하면 약을 안 드실 수도', '#1D4ED8'],
+        [3, '전절제', '전부 뗍니다 — 호르몬제를 평생 드십니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1420 560" width="1420" height="560">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 348;
+        s += '<rect x="' + x + '" y="8" width="330" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="27" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③', '④'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 130) + ' 44) scale(0.79)">' + thyroid(p[0], R) + '</g>';
+        s += '<text x="' + (x + 4) + '" y="392" font-size="12.8" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<rect x="36" y="414" width="26" height="10" rx="5" fill="#E3C878"/>';
+      s += '<text x="72" y="424" font-size="12.5" fill="#334155">목소리를 내는 신경 — 다치면 쉰 목소리가 남습니다</text>';
+      s += '<circle cx="472" cy="419" r="8" fill="#D9A441" stroke="#9A6F1E" stroke-width="1.8"/>';
+      s += '<text x="490" y="424" font-size="12.5" fill="#334155">부갑상선 — 칼슘을 맡습니다. 다치면 손발이 저립니다</text>';
+      s += '<circle cx="900" cy="419" r="8" fill="#3F2A55"/>';
+      s += '<text x="918" y="424" font-size="12.5" fill="#334155">혹 (결절)</text>';
+      s += '</g>';
+      s += '<rect x="20" y="444" width="1380" height="96" rx="14" fill="#0F172A"/>';
+      s += '<text x="44" y="476" font-size="15" font-weight="800" fill="#fff">고객 기대와 약관의 간극</text>';
+      s += '<text x="44" y="502" font-size="13.2" fill="#CBD5E1">' +
+           '「암이라는데 왜 이것밖에 안 나옵니까」 — 많은 약관이 이 병을 유사암 칸에 넣어 감액합니다.</text>';
+      s += '<text x="44" y="524" font-size="13.2" fill="#93C5FD">' +
+           '어느 칸에서 나오는 암인지를 가입 전에 말해 두십시오. 분류와 지급은 약관과 심사가 정합니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1420 560' });
+    }
+  };
+
+  V.brain_atrophy = {
+    t: '치매 — 뇌가 줄어들고, 그 빈자리를 물이 채웁니다',
+    d: '치매는 <b>기억이 나빠지는 것</b>으로 시작하지만, 몸에서 일어나는 일은 <b>뇌가 실제로 줄어드는 것</b>입니다. ' +
+       '겉의 주름이 얇아지고 고랑이 넓어지며, 뇌와 머리뼈 사이가 벌어집니다. 그 빈자리를 물이 대신 채워 ' +
+       '가운데 방(뇌실)이 커집니다. ' +
+       '<b>줄어든 것은 돌아오지 않습니다</b> — 그래서 이 병의 부담은 치료비가 아니라 <b>돌보는 시간</b>에 있습니다.',
+    dz: ['dementia'],
+    build: function () {
+      var s = '<svg viewBox="0 0 1120 600" width="1120" height="600">';
+      [[0, '정상', '주름이 두껍고 뇌가 머리뼈에 닿아 있습니다', '#334155'],
+       [3, '위축', '주름이 얇아지고 사이가 벌어지며, 가운데 방이 커집니다', '#6D28D9']
+      ].forEach(function (p, i) {
+        var x = 30 + i * 546;
+        s += '<rect x="' + x + '" y="10" width="510" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 132) + ' 32) scale(0.5)">' + brainAxial(p[0]) + '</g>';
+        s += '<text x="' + (x + 8) + '" y="374" font-size="13.2" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<rect x="30" y="400" width="1060" height="136" rx="14" fill="#0F172A"/>';
+      s += '<text x="54" y="434" font-size="15" font-weight="800" fill="#fff">그래서 설계가 다릅니다</text>';
+      s += '<text x="54" y="460" font-size="13.2" fill="#CBD5E1">' +
+           '수술도 항암도 없습니다. 진단비 한 번으로 끝나는 병이 아니라 <tspan font-weight="800" fill="#fff">돌보는 시간이 길게 이어지는</tspan> 병입니다.</text>';
+      s += '<text x="54" y="484" font-size="13.2" fill="#CBD5E1">' +
+           '등급을 받으면 열리는 자리(장기요양·치매), 사람을 쓰면 열리는 자리(간병인사용일당),</text>';
+      s += '<text x="54" y="506" font-size="13.2" fill="#93C5FD">' +
+           '요양병원에 들어가면 열리는 자리 — 이 셋이 실제 부담을 받칩니다. 일반 입원일당은 요양병원에서 빠지는 약관이 많습니다.</text>';
+      s += '<text x="30" y="566" font-size="11.8" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 무엇이 어떻게 달라지는지를 보여 주는 그림입니다. 진단은 의사가 합니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1120 600' });
+    }
+  };
+
+  /* ═══ 유방 — 젖샘과 겨드랑 사이 ═══════════════════════════════
+     유방은 <b>젖을 만드는 방(젖샘엽)</b>과 그것을 젖꼭지로 나르는 <b>관</b>,
+     그 사이를 채운 지방으로 되어 있다. 대부분의 유방암은 <b>관</b>에서 시작한다.
+
+     설계에서 중요한 것은 <b>겨드랑</b>이다. 유방의 림프는 겨드랑으로 모이고,
+     암세포도 그 길을 탄다. 그래서 수술이 가슴에서 끝나지 않고 겨드랑까지
+     간다 — 얼마나 떼느냐에 따라 팔이 붓는 것이 평생 남기도 한다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function breastBody(mode, R) {
+    var s = '', i, a, x, y;
+    /* 가슴벽과 근육 */
+    s += '<path d="M120 60 L168 60 L168 470 L120 470 Z" fill="#EDE3D2" stroke="#B9A98C" stroke-width="2.6"/>';
+    s += '<path d="M168 60 L200 60 L200 470 L168 470 Z" fill="#B4544C" stroke="#7E2A24" stroke-width="2.4"/>';
+    for (i = 0; i < 22; i++) {
+      s += '<path d="M170 ' + (66 + i * 18) + ' L198 ' + (72 + i * 18) + '" stroke="#93332D" stroke-width="1.8" opacity=".7"/>';
+    }
+    /* 유방 겉 — 옆에서 본 반달 */
+    var B = 'M200 96 C330 100 424 176 434 262 C440 344 348 424 200 430 Z';
+    s += '<defs><clipPath id="cpBr' + mode + '"><path d="' + B + '"/></clipPath></defs>';
+    s += '<path d="' + B + '" fill="#F6E2D2" stroke="#C8A183" stroke-width="2.8"/>';
+    s += '<g clip-path="url(#cpBr' + mode + ')">';
+    /* 지방 — 방울방울 */
+    for (i = 0; i < 120; i++) {
+      x = 206 + R() * 226; y = 100 + R() * 326;
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (7 + R() * 7).toFixed(1) +
+           '" fill="#FBEFE2" stroke="#E3CBB6" stroke-width="1.2" opacity=".85"/>';
+    }
+    /* 쿠퍼인대 — 가슴벽에서 살갗까지 걸린 줄 */
+    for (i = 0; i < 9; i++) {
+      var yy = 118 + i * 36;
+      s += '<path d="M204 ' + yy + ' Q320 ' + (yy - 14) + ' 420 ' + (yy + 8) + '" stroke="#DCC6AE" ' +
+           'stroke-width="2.4" fill="none" opacity=".8"/>';
+    }
+    /* 젖샘엽과 관 — 젖꼭지로 모인다 */
+    var NX = 436, NY = 264;
+    for (i = 0; i < 9; i++) {
+      a = -1.05 + (i / 8) * 2.1;
+      var lx = NX - 150 - Math.cos(a) * 46, ly = NY + Math.sin(a) * 150;
+      s += '<path d="M' + lx.toFixed(0) + ' ' + ly.toFixed(0) + ' Q' + (NX - 90).toFixed(0) + ' ' +
+           (NY + (ly - NY) * 0.55).toFixed(0) + ' ' + (NX - 12) + ' ' + NY +
+           '" stroke="#D9A441" stroke-width="6" fill="none" opacity=".92"/>';
+      /* 방울처럼 매달린 젖샘엽 */
+      for (var j = 0; j < 7; j++) {
+        var t2 = j / 7, bx = lx - 26 + R() * 30, by = ly - 26 + R() * 52;
+        s += '<circle cx="' + bx.toFixed(0) + '" cy="' + by.toFixed(0) + '" r="' + (7 + R() * 4).toFixed(1) +
+             '" fill="#E8C98C" stroke="#B08A3C" stroke-width="1.4" opacity=".95"/>';
+      }
+    }
+    /* 종양 — 관에서 시작한다 */
+    if (mode >= 1) {
+      s += '<circle cx="316" cy="212" r="30" fill="#3F2A55" opacity=".92"/>';
+      for (i = 0; i < 18; i++) {
+        a = R() * Math.PI * 2;
+        s += '<circle cx="' + (316 + Math.cos(a) * R() * 34).toFixed(0) + '" cy="' +
+             (212 + Math.sin(a) * R() * 34).toFixed(0) + '" r="' + (2.4 + R() * 2.6).toFixed(1) +
+             '" fill="#6D3FA0" opacity=".9"/>';
+      }
+      /* 삐죽한 가장자리 — 파고드는 모양 */
+      for (i = 0; i < 12; i++) {
+        a = i * 0.52;
+        s += '<path d="M' + (316 + Math.cos(a) * 28).toFixed(0) + ' ' + (212 + Math.sin(a) * 28).toFixed(0) +
+             ' L' + (316 + Math.cos(a) * (40 + R() * 14)).toFixed(0) + ' ' +
+             (212 + Math.sin(a) * (40 + R() * 14)).toFixed(0) + '" stroke="#3F2A55" stroke-width="3.4" ' +
+             'stroke-linecap="round" opacity=".85"/>';
+      }
+    }
+    s += '</g>';
+    /* 젖꼭지 */
+    s += '<path d="M432 240 q22 -6 26 22 q-4 28 -26 24 Z" fill="#C88A76" stroke="#9A6350" stroke-width="2.4"/>';
+
+    /* ── 겨드랑 림프절 ── */
+    var LN = [[520,120],[566,150],[540,186],[592,196],[556,232],[606,244]];
+    /* 림프가 흐르는 길 */
+    s += '<path d="M330 170 C400 140 460 122 512 118" stroke="#7C9A3E" stroke-width="5" fill="none" opacity=".8"/>';
+    s += '<path d="M340 210 C420 190 480 168 534 152" stroke="#7C9A3E" stroke-width="4" fill="none" opacity=".7"/>';
+    LN.forEach(function (p, k) {
+      var sick = mode >= 2 && k < 2;
+      s += '<ellipse cx="' + p[0] + '" cy="' + p[1] + '" rx="17" ry="13" fill="' +
+           (sick ? '#3F2A55' : '#B8D08A') + '" stroke="' + (sick ? '#241436' : '#6E8C3A') + '" stroke-width="2.2"/>';
+      if (k < LN.length - 1) {
+        s += '<path d="M' + p[0] + ' ' + p[1] + ' L' + LN[k + 1][0] + ' ' + LN[k + 1][1] +
+             '" stroke="#7C9A3E" stroke-width="3" opacity=".7"/>';
+      }
+    });
+    return s;
+  }
+
+  V.breast_node = {
+    t: '유방암은 <b>겨드랑</b>까지 갑니다 — 그래서 수술이 가슴에서 안 끝납니다',
+    d: '유방은 젖을 만드는 <b>방(젖샘엽)</b>과 그것을 젖꼭지로 나르는 <b>관</b>, 그 사이를 채운 지방으로 되어 있습니다. ' +
+       '대부분의 유방암은 <b>관</b>에서 시작합니다. 그런데 유방의 림프는 <b>겨드랑</b>으로 모이고, 암세포도 그 길을 탑니다. ' +
+       '그래서 수술이 가슴에서 끝나지 않고 겨드랑까지 갑니다 — 얼마나 떼느냐에 따라 <b>팔이 붓는 것이 평생 남기도 합니다.</b>',
+    dz: ['cancer_female'],
+    build: function () {
+      var R = rnd(20260831);
+      var P = [
+        [0, '정상', '관이 젖꼭지로 모이고, 림프는 겨드랑으로 흐릅니다', '#334155'],
+        [1, '관에서 시작', '가장자리가 삐죽하게 파고듭니다', '#B45309'],
+        [2, '겨드랑까지', '림프절이 굳어집니다 — 수술 범위가 넓어집니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1980 620" width="1980" height="620">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 654;
+        s += '<rect x="' + x + '" y="10" width="630" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 90) + ' 44)">' + breastBody(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="546" font-size="13.2" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="40" cy="576" r="9" fill="#E8C98C" stroke="#B08A3C" stroke-width="1.6"/>';
+      s += '<text x="58" y="581" font-size="12.5" fill="#334155">젖샘엽 (젖을 만드는 방)</text>';
+      s += '<rect x="270" y="572" width="26" height="7" rx="3" fill="#D9A441"/>';
+      s += '<text x="306" y="581" font-size="12.5" fill="#334155">유관 (젖꼭지로 나르는 길)</text>';
+      s += '<ellipse cx="580" cy="576" rx="15" ry="11" fill="#B8D08A" stroke="#6E8C3A" stroke-width="1.8"/>';
+      s += '<text x="602" y="581" font-size="12.5" fill="#334155">림프절 — 겨드랑에 줄지어 있습니다</text>';
+      s += '<circle cx="900" cy="576" r="10" fill="#3F2A55"/>';
+      s += '<text x="918" y="581" font-size="12.5" fill="#334155">암 — 굳어진 림프절도 같은 색으로 그렸습니다</text>';
+      s += '<text x="1320" y="581" font-size="12.5" fill="#6B7280">실제 비율·모양과 다릅니다. 관계를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1980 620' });
+    }
+  };
+
+  /* ═══ 배를 여는 두 가지 길 — 째느냐, 뚫느냐 ═════════════════════
+     담낭·맹장 같은 흔한 수술에서 설계사가 가장 많이 듣는 말이
+     「배 안 째고 했는데요」 이다. 그 말이 <b>보험에서 무슨 뜻인지</b> 를
+     설명하지 못하면 상담이 멈춘다.
+
+     배벽은 겹이다 — 살갗 · 지방 · 근막 · 근육 · 복막. 개복은 이 겹을
+     <b>한 줄로 길게</b> 가르고, 복강경은 <b>작은 구멍 몇 개</b>로 관을 꽂아
+     카메라와 기구를 넣는다. 몸에는 복강경이 낫지만, 약관에서는
+     <b>어느 쪽이든 수술로 보는지</b> 가 따로 정해져 있다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function bellyWall(open, R) {
+    var s = '', i, x, y;
+    var X0 = 40, X1 = 620;
+    /* 겹 — 위에서부터 */
+    var L = [
+      ['살갗',       58,  22, '#F3DCC8', '#D6B394'],
+      ['피하지방',   80,  56, '#FBF0DC', '#E4D2A8'],
+      ['근막',      136,  14, '#E6E0D0', '#B9AE92'],
+      ['근육',      150,  60, '#B4544C', '#7E2A24'],
+      ['복막',      210,  10, '#E8EEF2', '#9DB2C0']
+    ];
+    L.forEach(function (l) {
+      s += '<rect x="' + X0 + '" y="' + l[1] + '" width="' + (X1 - X0) + '" height="' + l[2] +
+           '" fill="' + l[3] + '" stroke="' + l[4] + '" stroke-width="2"/>';
+    });
+    /* 살갗 결 · 지방 방울 · 근육 결 */
+    for (i = 0; i < 60; i++) {
+      x = X0 + 4 + R() * (X1 - X0 - 8);
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + (60 + R() * 50).toFixed(0) + '" r="' + (4 + R() * 5).toFixed(1) +
+           '" fill="#FFF8E8" stroke="#E4D2A8" stroke-width="1" opacity=".85"/>';
+    }
+    for (i = 0; i < 52; i++) {
+      x = X0 + 6 + R() * (X1 - X0 - 12); y = 154 + R() * 52;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l' + (10 + R() * 16).toFixed(0) + ' 0" ' +
+           'stroke="#93332D" stroke-width="' + (1.6 + R() * 1.6).toFixed(1) + '" opacity=".75"/>';
+    }
+    /* 배 안 — 장기 */
+    s += '<rect x="' + X0 + '" y="220" width="' + (X1 - X0) + '" height="150" fill="#F7EFE6"/>';
+    /* 담낭 — 배 모양 주머니 */
+    s += '<path d="M330 246 q46 -10 58 30 q10 44 -22 62 q-40 12 -52 -26 q-8 -42 16 -66 Z" ' +
+         'fill="#9FBF6A" stroke="#6E8C3A" stroke-width="2.6"/>';
+    s += '<path d="M338 244 q-24 -18 -42 -14" stroke="#6E8C3A" stroke-width="6" fill="none" stroke-linecap="round"/>';
+    /* 간 자락 */
+    s += '<path d="M' + X0 + ' 226 C160 232 260 236 340 232 C300 254 200 262 ' + X0 + ' 258 Z" ' +
+         'fill="#B4544C" opacity=".75"/>';
+    /* 장 */
+    for (i = 0; i < 5; i++) {
+      s += '<ellipse cx="' + (450 + (i % 3) * 52) + '" cy="' + (290 + Math.floor(i / 3) * 48) +
+           '" rx="34" ry="24" fill="#E5B79A" stroke="#B98A63" stroke-width="2.2"/>';
+    }
+
+    if (open) {
+      /* 개복 — 한 줄로 길게 가른다 */
+      s += '<path d="M250 50 L250 220 M410 50 L410 220" stroke="#8B1A1A" stroke-width="3" opacity=".35"/>';
+      s += '<path d="M250 50 C214 90 214 180 250 220 L410 220 C446 180 446 90 410 50 Z" fill="#FBF7F2" opacity=".55"/>';
+      s += '<path d="M250 50 C214 90 214 180 250 220" stroke="#8B1A1A" stroke-width="4" fill="none"/>';
+      s += '<path d="M410 50 C446 90 446 180 410 220" stroke="#8B1A1A" stroke-width="4" fill="none"/>';
+      /* 벌린 자리를 잡아 주는 기구 */
+      s += '<rect x="232" y="120" width="26" height="70" rx="6" fill="#9CA3AF" stroke="#6B7280" stroke-width="2"/>';
+      s += '<rect x="402" y="120" width="26" height="70" rx="6" fill="#9CA3AF" stroke="#6B7280" stroke-width="2"/>';
+      /* 손이 들어간다 */
+      s += '<path d="M300 40 C300 120 316 190 340 230" stroke="#E0BFA6" stroke-width="34" ' +
+           'stroke-linecap="round" fill="none"/>';
+      s += '<path d="M300 40 C300 120 316 190 340 230" stroke="#C79E82" stroke-width="2" fill="none" opacity=".7"/>';
+    } else {
+      /* 복강경 — 작은 구멍 셋에 관을 꽂는다. 배는 가스로 부풀린다 */
+      s += '<path d="' + 'M' + X0 + ' 220 C200 196 440 196 ' + X1 + ' 220' + '" fill="none" ' +
+           'stroke="#9DB2C0" stroke-width="3" stroke-dasharray="8 5"/>';
+      [[168, -22], [330, 0], [492, 22]].forEach(function (t, k) {
+        var tx = t[0];
+        s += '<rect x="' + (tx - 13) + '" y="' + (30 + 0) + '" width="26" height="196" rx="7" ' +
+             'fill="#CBD5E1" stroke="#7E8C9A" stroke-width="2.2"/>';
+        s += '<rect x="' + (tx - 19) + '" y="14" width="38" height="26" rx="8" fill="#94A3B8" stroke="#64748B" stroke-width="2"/>';
+        /* 관 끝에서 나오는 것 */
+        if (k === 1) {   /* 카메라 */
+          s += '<circle cx="' + tx + '" cy="238" r="11" fill="#334155" stroke="#0F172A" stroke-width="2"/>';
+          s += '<circle cx="' + tx + '" cy="238" r="5" fill="#93C5FD"/>';
+          s += '<path d="M' + (tx - 46) + ' 300 L' + tx + ' 244 L' + (tx + 46) + ' 300" fill="#BFDBFE" opacity=".35"/>';
+        } else {
+          s += '<path d="M' + tx + ' 232 L' + (tx + (k ? -26 : 26)) + ' 268" stroke="#94A3B8" ' +
+               'stroke-width="7" stroke-linecap="round"/>';
+          s += '<path d="M' + (tx + (k ? -26 : 26)) + ' 268 l' + (k ? -12 : 12) + ' 10 M' +
+               (tx + (k ? -26 : 26)) + ' 268 l' + (k ? -14 : 14) + ' -4" stroke="#64748B" ' +
+               'stroke-width="4" stroke-linecap="round"/>';
+        }
+      });
+    }
+    return s;
+  }
+
+  V.belly_open = {
+    t: '째느냐, 뚫느냐 — 배를 여는 두 가지 길',
+    d: '배벽은 겹입니다 — <b>살갗 · 지방 · 근막 · 근육 · 복막.</b> ' +
+       '개복은 이 겹을 <b>한 줄로 길게</b> 가르고 손을 넣습니다. 복강경은 <b>작은 구멍 몇 개</b>로 관을 꽂아 ' +
+       '카메라와 기구를 넣고, 배는 가스로 부풀려 공간을 만듭니다. ' +
+       '몸에는 복강경이 훨씬 낫습니다 — 덜 아프고 빨리 나갑니다. ' +
+       '다만 <b>보험에서는 흉터 크기로 정하지 않습니다.</b> 약관의 수술 분류에 드는지가 전부입니다.',
+    dz: ['surgery', 'cancer_major'],
+    build: function () {
+      var R = rnd(20260901);
+      var s = '<svg viewBox="0 0 1400 560" width="1400" height="560">';
+      [[1, '개복 — 한 줄로 길게 가릅니다', '겹을 다 가르고 손이 들어갑니다. 오래 아프고 오래 입원합니다.', '#991B1B'],
+       [0, '복강경 — 작은 구멍 몇 개', '관을 꽂아 카메라와 기구를 넣습니다. 덜 아프고 빨리 나갑니다.', '#1D4ED8']
+      ].forEach(function (p, i) {
+        var x = 20 + i * 690;
+        s += '<rect x="' + x + '" y="10" width="666" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 20) + ' 44)">' + bellyWall(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="452" font-size="13.2" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      ['살갗', '피하지방', '근막', '근육', '복막'].forEach(function (t, k) {
+        s += '<rect x="' + (30 + k * 128) + '" y="470" width="22" height="12" rx="3" fill="' +
+             ['#F3DCC8', '#FBF0DC', '#E6E0D0', '#B4544C', '#E8EEF2'][k] + '" stroke="#9A8C74" stroke-width="1.4"/>';
+        s += '<text x="' + (60 + k * 128) + '" y="480" font-size="12.5" fill="#334155">' + t + '</text>';
+      });
+      s += '</g>';
+      s += '<rect x="20" y="494" width="1360" height="52" rx="12" fill="#0F172A"/>';
+      s += '<text x="44" y="516" font-size="13.4" font-weight="800" fill="#fff">' +
+           '「배 안 째고 했는데요」 — 그 말이 보험에서 뜻하는 것</text>';
+      s += '<text x="44" y="536" font-size="12.8" fill="#93C5FD">' +
+           '흉터가 작다고 수술이 아닌 것이 아닙니다. 약관의 수술 분류에 드는지가 전부이고, 그것은 약관과 심사가 정합니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1400 560' });
     }
   };
 
