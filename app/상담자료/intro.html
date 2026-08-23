@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>이동엽 · 소개카드</title>
+<title>소개카드</title>
 <style>
 /* ===== 기본 ===== */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -13,7 +13,7 @@ body{font-family:'Apple SD Gothic Neo','Helvetica Neue',sans-serif;color:#f4ecd8
 /* ===== 인물 풀블리드 + 켄번스 ===== */
 .hero{position:absolute;inset:0;overflow:hidden;opacity:0;transform:scale(1.06) translateX(-36px);
   animation:heroIn 1.8s cubic-bezier(.16,1,.3,1) .3s forwards}
-.hero .img{position:absolute;inset:0;background:url('photo1.jpg') left 14%/auto 116%;background-repeat:no-repeat;
+.hero .img{position:absolute;inset:0;background:none left 14%/auto 116%;background-repeat:no-repeat;
   filter:saturate(.82) contrast(1.06) brightness(.98);transform:scale(1.08);transform-origin:left center;animation:ken 22s ease-out .3s forwards}
 @keyframes heroIn{from{opacity:0;transform:scale(1.06) translateX(-36px)}to{opacity:1;transform:scale(1) translateX(0)}}
 @keyframes ken{to{transform:scale(1.0)}}
@@ -167,34 +167,28 @@ body{font-family:'Apple SD Gothic Neo','Helvetica Neue',sans-serif;color:#f4ecd8
   <div class="tone"></div>
   <div class="shade"></div>
   <div class="lightbeam"></div>
-  <div class="bgtype">LDY</div>
+  <div class="bgtype" id="iBg"></div>
   <div class="dust" id="dust"></div>
   <div class="vig"></div>
 
   <div class="bar t"></div><div class="bar b"></div>
 
-  <div class="no">No.07 / 08</div>
-  <div class="side">NBN · SEOUL ECONOMIC TV</div>
+  <div class="no" id="iNo"></div>
+  <div class="side" id="iSide"></div>
 
   <div class="info">
     <div class="kick">STARRING</div>
-    <h1 class="name" id="name">이동엽</h1>
-    <div class="en">LEE&nbsp;&nbsp;DONG&nbsp;&nbsp;YEOP</div>
-    <div class="role"><b>보장분석 전문가</b></div>
-    <div class="slogan">한 사람의 인생에 꼭 맞는 보장을 설계합니다.</div>
+    <h1 class="name" id="name"></h1>
+    <div class="en" id="iEn"></div>
+    <div class="role" id="iRole"></div>
+    <div class="slogan" id="iMotto"></div>
     <div class="rule"></div>
-    <div class="meta">
-      <div class="c"><div class="k">License</div><div class="v"><b>생명·손해·변액</b></div></div>
-      <div class="c"><div class="k">On Air</div><div class="v">NBN 「보험 불만제로」<br>서울경제TV 「인생설계 원픽」</div></div>
-      <div class="c"><div class="k">Career</div><div class="v">상담 <b id="count">0</b>+ · 8년</div></div>
-    </div>
-    <div class="tags">
-      <span>운전자보험</span><span>종신·정기보험</span><span>보장분석</span><span>은퇴·연금설계</span>
-    </div>
+    <div class="meta" id="iMeta"></div>
+    <div class="tags" id="iTags"></div>
     <div class="gallery" id="gallery"></div>
   </div>
 
-  <div class="foot"><b>TEAM ROY</b> · INSURANCE PROFESSIONALS</div>
+  <div class="foot" id="iFoot"></div>
   <div class="streak s1"></div><div class="streak s2"></div><div class="streak s3"></div>
   <div class="flash"></div>
   <div class="grain"></div>
@@ -207,22 +201,20 @@ function fit(){var s=Math.min(innerWidth/1920,innerHeight/1080);
   document.getElementById('stage').style.transform='translate(-50%,-50%) scale('+s+')';}
 addEventListener('resize',fit);fit();
 
-// 이름 글자별 등장 (스태거)
-(function(){
-  var el=document.getElementById('name');var t=el.textContent.trim();el.textContent='';
-  t.split('').forEach(function(c,i){
+// 이름 글자별 등장 (스태거) — 값이 나중에 와도 다시 부를 수 있게 이름을 준다
+function nameStagger(t){
+  var el=document.getElementById('name');if(!el)return;
+  el.textContent='';
+  String(t||'').split('').forEach(function(c,i){
     var s=document.createElement('span');s.className='ch';s.textContent=c;
     s.style.animationDelay=(1.0+i*0.16)+'s';el.appendChild(s);
   });
-})();
+}
 
-// ON AIR 방송 스틸 갤러리 (사진 배열 — 여기에 추가하면 자동으로 카드 생성)
-(function(){
-  var stills=[
-    {img:'photo2.png', size:'200%', pos:'58% 26%', cap:'NBN 「보험 불만제로」'},
-    {img:'photo3.jpg', size:'200%', pos:'24% 28%', cap:'서울경제TV 「인생설계 원픽」'}
-  ];
-  var g=document.getElementById('gallery');
+// ON AIR 방송 스틸 갤러리 — 사진도 「내 소개」 에서 온다
+function gallery(stills){
+  var g=document.getElementById('gallery');if(!g)return;
+  g.innerHTML='';
   stills.forEach(function(s,i){
     var card=document.createElement('div');card.className='gcard';
     card.style.animationDelay=(3.0+i*0.18)+'s';
@@ -230,12 +222,13 @@ addEventListener('resize',fit);fit();
       '<div class="cap"><span class="dot"></span>ON AIR&nbsp;<b>'+s.cap+'</b></div>';
     g.appendChild(card);
   });
-})();
+}
 
-// 상담 수 카운트업 (0 → 1,200) — 유한 setTimeout 스텝 (headless 호환)
-(function(){
+// 경력 줄에 숫자가 있으면 그 숫자까지 세어 올린다 — 없는 숫자는 만들지 않는다
+function countUp(){
   var el=document.getElementById('count');if(!el)return;
-  var target=1200,steps=28;
+  var target=+(el.getAttribute('data-to')||0),steps=28;
+  if(!(target>0)){el.textContent=el.getAttribute('data-raw')||'';return;}
   setTimeout(function(){
     var i=0;
     (function step(){
@@ -244,7 +237,7 @@ addEventListener('resize',fit);fit();
       if(i<steps)setTimeout(step,50);
     })();
   },2700); // 시작 지연 2.7s
-})();
+}
 
 // 골드 입자 생성
 (function(){
@@ -261,6 +254,99 @@ addEventListener('resize',fit);fit();
   }
 })();
 </script>
+  <!-- 소개카드를 그리는 곳. apex-deck.js <b>앞에</b> 둔다 — 덱 HTML 은
+       </body> 바로 앞에 apex-deck 한 줄만 붙이는 규칙이라서다(check-deck).
+       값은 apex-deck 이 다 칠한 뒤 알려 주는 apex:intro 로 받는다. -->
+  <script>
+  /* 소개카드 — 값은 전부 「내 소개」 에서 온다.
+
+     전에는 한 사람의 이름·영문이름·사진 석 장·방송·자격·경력·전문분야·
+     팀 이름이 <b>글자 그대로 박혀</b> 있었다. 다른 설계사가 이 카드를 열면
+     처음부터 끝까지 남의 소개가 떴다. 고쳐 쓸 자리도 없었다.
+
+     이제 apex-deck.js 가 읽어 둔 값(apexDeckIntro) 하나만 본다. 열쇠를
+     여기서 다시 훑지 않는다 — 두 곳이 갈라지면 카드만 옛 이름을 말한다.
+     비어 있으면 「내 설정 → 내 소개」 로 안내한다. 없는 값은 안 만든다. */
+  (function(){
+    function $(id){return document.getElementById(id);}
+    function esc(v){return (''+(v==null?'':v)).replace(/[&<>"']/g,function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];});}
+    /* 「NBN 「보험 불만제로」」 처럼 붙은 줄을 나눈다 — apex-deck 과 같은 방식 */
+    function lines(v){return (''+(v||'')).split(/\n|,(?![^「]*」)/)
+      .map(function(t){return t.replace(/^\s+|\s+$/g,'');}).filter(Boolean);}
+    function station(t){return (''+t).split(/[「\s]/)[0]||'';}
+    /* 영문 이름의 머리글자 — 없으면 큰 배경 글자를 안 세운다 */
+    function initials(en){
+      var w=(''+(en||'')).split(/\s+/).filter(Boolean);
+      return w.length?w.map(function(x){return x.charAt(0).toUpperCase();}).join(''):'';
+    }
+    function show(el,on){ if(el) el.style.display = on ? '' : 'none'; }
+
+    function paint(){
+      var I=window.apexDeckIntro||{};
+      var on=lines(I.onair), tg=lines(I.tags);
+
+      nameStagger(I.name||'이름');
+      var nm=$('name'); if(nm) nm.style.opacity = I.name ? '' : '.45';
+
+      $('iEn').innerHTML = I.nameEn ? esc(I.nameEn).split('').join('&nbsp;') : '';
+      $('iRole').innerHTML = I.title ? '<b>'+esc(I.title)+'</b>' : '';
+      $('iMotto').textContent = I.motto || '';
+      $('iNo').textContent = I.issue || '';
+      $('iBg').textContent = initials(I.nameEn);
+      $('iSide').textContent = on.map(station).filter(Boolean).join(' · ');
+      $('iFoot').innerHTML = I.team ? esc(I.team) : '';
+
+      /* 세 칸 — 값이 있는 것만 세운다. 빈 칸을 세우면 「없다」 는 뜻이 된다 */
+      var meta='';
+      if(I.license) meta+='<div class="c"><div class="k">License</div>'+
+        '<div class="v"><b>'+esc(I.license)+'</b></div></div>';
+      if(on.length) meta+='<div class="c"><div class="k">On Air</div>'+
+        '<div class="v">'+on.map(esc).join('<br>')+'</div></div>';
+      if(I.career){
+        /* 경력 줄에 숫자가 있으면 그 숫자만 세어 올린다 */
+        var m=(''+I.career).match(/([\d,]{3,})/);
+        var v=m ? esc(I.career).replace(m[1],'<b id="count" data-to="'+
+                (+m[1].replace(/,/g,''))+'">0</b>') : esc(I.career);
+        meta+='<div class="c"><div class="k">Career</div><div class="v">'+v+'</div></div>';
+      }
+      $('iMeta').innerHTML=meta;
+      countUp();
+
+      $('iTags').innerHTML = tg.map(function(t,i){
+        return '<span style="animation-delay:'+(2.8+i*0.1).toFixed(1)+'s">'+esc(t)+'</span>';
+      }).join('');
+
+      /* 사진 — 없으면 안 세운다. 남의 사진으로 메우지 않는다 */
+      var img=document.querySelector('.hero .img');
+      if(img) img.style.backgroundImage = I.photo ? ('url("'+encodeURI(I.photo)+'")') : 'none';
+      var st=[];
+      if(I.photo2) st.push({img:I.photo2,size:'200%',pos:'58% 26%',cap:on[0]||''});
+      if(I.photo3) st.push({img:I.photo3,size:'200%',pos:'24% 28%',cap:on[1]||''});
+      gallery(st);
+
+      /* 비어 있으면 어디서 채우는지 말한다 — 세 자료가 같은 말을 쓴다 */
+      var tip=$('iTip');
+      if(!I.name){
+        if(!tip){
+          tip=document.createElement('div'); tip.id='iTip';
+          tip.style.cssText='position:absolute;left:0;right:0;bottom:112px;z-index:30;text-align:center;'+
+            'font-size:22px;font-weight:700;line-height:1.9;color:#EBDFC4;'+
+            "font-family:'Apple SD Gothic Neo',sans-serif;text-shadow:0 2px 18px rgba(0,0,0,.8)";
+          (document.getElementById('stage')||document.body).appendChild(tip);
+        }
+        tip.innerHTML='「내 소개」 가 아직 비어 있습니다.<br>'+
+          '<b>내 설정 → 내 소개</b> 에서 한 번 적으시면<br>'+
+          '프레젠테이션 · 보장분석 · 재무설계 세 자료와 이 카드가 함께 바뀝니다.';
+        show(tip,true);
+      } else if(tip){ show(tip,false); }
+    }
+
+    paint();
+    /* 앱이 값을 보내 주면 apex-deck 이 받아서 알려 준다 — 그때 다시 그린다 */
+    document.addEventListener('apex:intro', paint, false);
+  })();
+  </script>
   <script src="apex-deck.js"></script>
 </body>
 </html>

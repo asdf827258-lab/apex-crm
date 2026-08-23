@@ -348,6 +348,18 @@ const FIN = 'app/재무설계/상담자료.html';
   is(/내 설정/.test(main), '비어 있으면 보장분석 표지도 「내 설정」 을 가리킨다');
   is(/apex:editintro/.test(main), '앱 안에서 고치면 내 설정으로 보낸다 — 두 곳에 안 적는다');
 
+  /* 소개카드도 같은 자리다. 여기는 한 사람의 이름·영문이름·사진 석 장·
+     방송·자격·경력·전문분야·팀 이름이 글자 그대로 박혀 있어서, 다른
+     설계사가 열면 처음부터 끝까지 남의 소개가 떴다. */
+  const card = fs.readFileSync(path.join(ROOT, 'app/상담자료/intro.html'), 'utf8');
+  is(!person.test(card), '소개카드에도 한 사람의 이름이 안 박혀 있다');
+  is(!/photo1\.jpg|photo2\.png|photo3\.jpg/.test(card), '소개카드가 남의 사진을 안 물고 있다');
+  is(!/TEAM ROY|LEE&nbsp;|LDY</.test(card), '팀·영문이름·배경 글자도 값에서 온다');
+  is(/apexDeckIntro/.test(card),
+     '「내 소개」 를 읽어 둔 <b>한 곳</b>만 본다 — localStorage 를 따로 훑지 않는다');
+  is(/window\.apexDeckIntro/.test(deck), '읽어 둔 값을 밖으로 내준다');
+  is(/내 설정/.test(card), '비어 있으면 소개카드도 「내 설정」 을 가리킨다');
+
   console.log('\n[10] 앱이 이 화면에 값을 보낼 줄 아는가');
   /* advFrames() 에 <b>없는 id</b> 가 적혀 있었다. 그런 이름의 함수는 있어도
      그런 틀은 없다. 재무설계 상담자료는 주소 훑기에 겨우 걸려 챙겨졌다. */
@@ -359,6 +371,52 @@ const FIN = 'app/재무설계/상담자료.html';
        app.indexOf('id="' + id + '"') >= 0,
        id + ' 은 실제로 있는 틀이다');
   });
+
+  console.log('\n[11] 소개카드가 내 값으로 서는가');
+  const card2 = await ctx.newPage();
+  await card2.goto('http://127.0.0.1:' + PORT + '/app/' +
+    ['상담자료', 'intro.html'].map(encodeURIComponent).join('/'), { waitUntil: 'domcontentloaded' });
+  await card2.waitForTimeout(1200);
+  const EMPTY = await card2.evaluate(() => {
+    const t = document.getElementById('iTip');
+    return {
+      tip: t ? t.textContent : '', name: (document.getElementById('name') || {}).textContent || '',
+      photo: getComputedStyle(document.querySelector('.hero .img')).backgroundImage,
+      shots: document.querySelectorAll('.gcard').length
+    };
+  });
+  is(/내 설정/.test(EMPTY.tip), '비어 있으면 어디서 채우는지 말한다');
+  is(EMPTY.photo === 'none', '사진이 없으면 남의 사진을 안 깐다 (' + EMPTY.photo + ')');
+  is(EMPTY.shots === 0, '방송 스틸도 안 세운다');
+
+  const FILLED = await card2.evaluate(() => {
+    const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    window.postMessage({ t: 'apex:intro', data: {
+      name: '홍길동', nameEn: 'HONG GIL DONG', title: '보장분석 전문가', issue: 'No.03 / 08',
+      license: '생명·손해·변액', career: '상담 1,200+ · 8년',
+      onair: 'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」',
+      tags: '운전자보험, 종신·정기보험, 보장분석', team: 'TEAM ONTOP',
+      photo: PNG, photo2: PNG, photo3: PNG
+    } }, location.origin);
+    return new Promise(r => setTimeout(() => r({
+      name: (document.getElementById('name') || {}).textContent || '',
+      bg: (document.getElementById('iBg') || {}).textContent || '',
+      side: (document.getElementById('iSide') || {}).textContent || '',
+      cells: document.querySelectorAll('#iMeta .c').length,
+      tags: document.querySelectorAll('#iTags span').length,
+      team: (document.getElementById('iFoot') || {}).textContent || '',
+      shots: document.querySelectorAll('.gcard').length,
+      tipOff: (document.getElementById('iTip') || {}).style ? document.getElementById('iTip').style.display === 'none' : true
+    }), 700));
+  });
+  is(FILLED.name === '홍길동', '내 이름이 선다 (' + FILLED.name + ')');
+  is(FILLED.bg === 'HGD', '배경 큰 글자도 내 영문이름에서 나온다 (' + FILLED.bg + ')');
+  is(/NBN/.test(FILLED.side) && /서울경제TV/.test(FILLED.side), '방송사가 뽑힌다 — ' + FILLED.side);
+  is(FILLED.cells === 3, '자격 · 방송 · 경력 세 칸이 선다 (' + FILLED.cells + ')');
+  is(FILLED.tags === 3, '전문 분야가 알약 ' + FILLED.tags + '개로 나뉜다');
+  is(FILLED.team === 'TEAM ONTOP', '팀 이름도 내 것이다 (' + FILLED.team + ')');
+  is(FILLED.shots === 2, '내가 올린 방송 스틸만 붙는다 (' + FILLED.shots + '컷)');
+  is(FILLED.tipOff, '채우고 나면 안내가 사라진다');
 
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

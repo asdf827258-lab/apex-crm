@@ -204,9 +204,17 @@
 
   /* ── 3) 앱과 연결 ────────────────────────────────────────────
      앱이 「내 소개」를 보내면 받아서 다시 칠한다. 어디서 왔는지 반드시 확인한다. */
+  /* 다 칠했다고 알린다 — 소개카드처럼 자기 판을 따로 그리는 화면이
+     같은 값으로 다시 그릴 수 있게. 「내 소개」 를 읽어 둔 곳은 하나뿐이고,
+     다른 화면이 localStorage 를 자기 방식으로 다시 훑으면 열쇠 이름이
+     갈라진다. */
+  function tellPainted() {
+    try { document.dispatchEvent(new CustomEvent('apex:intro')); } catch (e) {}
+  }
   function apply(src) {
     setIntro(src);
     fixText(); fixSlots(); paintBar(); coverBuild();
+    tellPainted();
   }
 
   window.addEventListener('message', function (ev) {
@@ -622,7 +630,8 @@
     watch(); watchReport(); hello();
     /* 덱이 스스로 글자를 다시 그리는 경우가 있어 한 번 더 맞춘다.
        탭을 눌러 나중에 나타나는 칸도 있어서 그때 다시 잰다. */
-    setTimeout(function () { nodes = null; fixText(); fixSlots(); rdApply(); }, 900);
+    tellPainted();
+    setTimeout(function () { nodes = null; fixText(); fixSlots(); rdApply(); tellPainted(); }, 900);
     setTimeout(rdApply, 2600);
     document.addEventListener('click', function () { setTimeout(rdApply, 260); }, true);
   }
@@ -630,6 +639,8 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, false);
   else boot();
 
-  /* 밖에서도 부를 수 있게 열어 둔다 */
+  /* 밖에서도 부를 수 있게 열어 둔다.
+     apexDeckIntro 는 <b>읽어 둔 그 값</b>이다 — 베껴 두지 않는다. */
   window.apexDeckApply = apply;
+  window.apexDeckIntro = INTRO;
 })();
