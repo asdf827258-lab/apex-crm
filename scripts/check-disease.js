@@ -73,8 +73,8 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/var CLAIM_SCENARIOS\s*=\s*\(window\.DZ_DATA/.test(app),
      '청구·사후관리의 질병 사례도 같은 한 벌에서 온다');
   is(!/var CLAIM_SCENARIOS\s*=\s*\[/.test(app), '앱 안에 사례 표가 다시 적혀 있지 않다');
-  is(/<script src="질병가이드-도해\.js"><\/script>|질병가이드-도해\.js/.test(html),
-     '가이드가 도해 파일을 싣는다');
+  is(/질병가이드-도해\.js/.test(html), '가이드가 그림 파일을 싣는다');
+  is(!/dz3d/.test(html) && !/dz3d/.test(vizRaw), '돌리기만 하던 옛 3D 자취가 남아 있지 않다');
   is(/<script src="apex-deck\.js">|상담자료\/apex-deck\.js/.test(html),
      '준법 문구는 상담자료 공통 덧붙임에서 온다 (여기서 따로 쓰지 않는다)');
 
@@ -190,7 +190,15 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(!/<img\s/i.test(vizRaw), '도해에 남의 그림을 갖다 붙이지 않았다 (img 없음)');
   is(!/url\s*\(\s*['"]?https?:/i.test(vizRaw), '바깥에서 그림을 받아 오지 않는다');
   is(/<svg/i.test(vizRaw), '직접 그린 SVG 로 되어 있다');
-  is(/직접 그린/.test(vizRaw), '「직접 그린 도식」 이라고 화면에 밝힌다');
+  is(/직접 그린/.test(vizRaw), '「직접 그린 그림」 이라고 화면에 밝힌다');
+  /* 사실 그림 — 조직처럼 보이려면 이름표와 층이 실제로 들어 있어야 한다 */
+  const REAL = ['skin_cross', 'skin_cancer', 'cancer_invade', 'wall_layer', 'wall_invade', 'artery_cross', 'artery_rupture'];
+  const realMiss = REAL.filter(k => (VIZ.keys || []).indexOf(k) < 0);
+  is(realMiss.length === 0, '사실 그림 일곱 장이 다 있다' + (realMiss.length ? ' — 빠짐: ' + realMiss.join(' / ') : ''));
+  const noLbl = REAL.filter(k => { const v = VIZ.get(k); return !v || v.html.indexOf('class="lbl"') < 0; });
+  is(noLbl.length === 0, '사실 그림마다 이름표가 붙어 있다' + (noLbl.length ? ' — 없음: ' + noLbl.join(' / ') : ''));
+  const noZoom = REAL.filter(k => { const v = VIZ.get(k); return !v || v.html.indexOf('dzart') < 0; });
+  is(noZoom.length === 0, '사실 그림은 확대해서 볼 수 있다' + (noZoom.length ? ' — 안 됨: ' + noZoom.join(' / ') : ''));
 
   /* ═══ 5. 단정하지 않는가 ═══ */
   console.log('\n[5] 단정하지 않는가 — 지급은 약관과 심사가 정한다');
@@ -257,26 +265,35 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/예시입니다|예시입니다\.|지급을 보장하는 숫자가 아닙니다/.test(await page.locator('#detailPane').innerText()),
      '사례 금액이 예시라고 밝힌다');
 
-  /* 3D 를 끌면 실제로 돌아가는가 — 안 돌면 그냥 그림 한 장이다 */
-  await page.locator('.dz3d-box').first().scrollIntoViewIfNeeded();
+  /* 확대해서 들여다볼 수 있는가 — 못 하면 그냥 그림 한 장이다 */
+  await page.locator('.dzart').first().scrollIntoViewIfNeeded();
   await page.waitForTimeout(150);
-  const box3d = await page.locator('.dz3d-box').first().boundingBox();
-  if (box3d) {
-    const before = await page.locator('.dz3d-stage').first().evaluate(el => el.style.transform);
-    await page.mouse.move(box3d.x + box3d.width / 2, box3d.y + box3d.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(box3d.x + box3d.width / 2 + 90, box3d.y + box3d.height / 2 - 40, { steps: 6 });
-    await page.mouse.up();
+  const artN = await page.locator('.dzart').count();
+  is(artN > 0, '확대해서 보는 사실 그림이 있다 (' + artN + '장)');
+  if (artN) {
+    const svg0 = page.locator('.dzart svg').first();
+    const before = await svg0.getAttribute('viewBox');
+    await page.locator('.dzart .dzart-b[data-act="in"]').first().click();
     await page.waitForTimeout(150);
-    const after = await page.locator('.dz3d-stage').first().evaluate(el => el.style.transform);
-    is(before !== after, '3D 도해를 끌면 실제로 돌아간다');
-    /* 돌려도 이름표는 읽혀야 한다 — 3D 에서 떼어 놓은 이유가 이것이다 */
-    const tagBox = await page.locator('.dz3d-tag').first().boundingBox();
-    const vizBox = await page.locator('.dz3d').first().boundingBox();
-    is(!!tagBox && tagBox.y >= vizBox.y - 1 && tagBox.y + tagBox.height <= vizBox.y + vizBox.height + 1,
-       '돌린 뒤에도 이름표가 그림 안에 남아 있다');
+    const after = await svg0.getAttribute('viewBox');
+    is(before !== after, '「+ 확대」 를 누르면 실제로 확대된다');
+    await page.locator('.dzart .dzart-b[data-act="reset"]').first().click();
+    await page.waitForTimeout(120);
+    is((await svg0.getAttribute('viewBox')) === before, '「처음으로」 를 누르면 되돌아온다');
+
+    /* 이름표 끄기 — 고객 앞에서 하나씩 짚으려면 꺼져야 한다 */
+    const lblN = await page.locator('.dzart .lbl').first().count();
+    is(lblN > 0, '사실 그림에 이름표가 붙어 있다');
+    await page.locator('.dzart .dzart-b[data-act="label"]').first().click();
+    await page.waitForTimeout(120);
+    is(await page.locator('.dzart').first().evaluate(el => el.classList.contains('nolbl')),
+       '「이름표 끄기」 를 누르면 이름표가 사라진다');
+    await page.locator('.dzart .dzart-b[data-act="label"]').first().click();
+    await page.waitForTimeout(120);
+    is(!(await page.locator('.dzart').first().evaluate(el => el.classList.contains('nolbl'))),
+       '다시 누르면 이름표가 돌아온다');
   } else {
-    no('3D 도해를 찾지 못했다');
+    no('사실 그림을 찾지 못했다');
   }
 
   console.log('\n[9] 담보 말모이가 화면에 서는가 — 「이 돈이 무슨 돈인지」');
@@ -311,9 +328,10 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   is(over <= 2, '390px 에서 옆으로 안 밀린다 (' + over + 'px)');
   is(/page-break-inside\s*:\s*avoid/.test(html), '인쇄에서 토막이 잘리지 않게 해 두었다');
-  is(/\.dz3d-stage\{transform:rotateX\([0-9.]+deg\)/.test(html.replace(/\s+/g, '')) ||
-     /dz3d-stage\{transform:rotateX/.test(html.replace(/\s+/g, '')),
-     '종이에서는 3D 를 보기 좋은 각도로 고정해 인쇄한다');
+  is(/\.dzart\.nolbl\.lbl\{display:inline;?\}/.test(html.replace(/\s+/g, '')),
+     '종이에는 이름표를 켜서 인쇄한다 — 화면에서 꺼 뒀어도');
+  is(/\.dzart-tools,\.dzart-hint\{display:none;?\}/.test(html.replace(/\s+/g, '')),
+     '인쇄물에는 단추가 나가지 않는다');
   is(/@media\s+print/.test(html), '인쇄용 규칙이 있다');
   await page.close();
 

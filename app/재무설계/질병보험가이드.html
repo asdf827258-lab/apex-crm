@@ -174,22 +174,23 @@
 
   .backrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:13px;}
 
-  /* ── 도해 · 3D ───────────────────────────────────────────────
-     겹을 z 로 띄우고 끌면 돌아갑니다. 바깥에서 아무것도 받아 오지 않습니다. */
-  .dz3d{display:flex;align-items:center;gap:18px;background:radial-gradient(circle at 34% 45%,#F8FAFC,#EBEFF5);
-    border-radius:14px;border:1px solid var(--line);padding:14px 16px;}
-  .dz3d-box{perspective:1400px;flex:1 1 340px;min-width:0;height:400px;position:relative;
-    display:flex;align-items:center;justify-content:center;
-    cursor:grab;user-select:none;-webkit-user-select:none;touch-action:pan-y;overflow:hidden;}
-  .dz3d-box.dragging,.dz3d.dragging .dz3d-box{cursor:grabbing;}
-  .dz3d-stage{transform-style:preserve-3d;position:relative;}
-  .dz3d-layer{position:absolute;left:0;top:0;transform-style:preserve-3d;
-    filter:drop-shadow(0 8px 14px rgba(15,23,42,.18));}
-  .dz3d-legend{flex:0 1 300px;display:grid;gap:9px;}
-  .dz3d-tag{background:#fff;border:1px solid var(--line);border-left:4px solid #9CA3AF;
-    border-radius:10px;padding:9px 12px;box-shadow:0 3px 10px rgba(15,23,42,.08);}
-  .dz3d-hint{position:absolute;bottom:6px;left:0;right:0;text-align:center;font-size:11px;
-    font-weight:700;color:var(--ink5);pointer-events:none;}
+  /* ── 그림 — 확대해서 들여다보기 ─────────────────────────────
+     조직은 돌려 보는 것이 아니라 들여다보는 것입니다. 끌면 옮겨지고,
+     + − · 두 손가락 · 두 번 누르기로 크게 봅니다. 이름표를 끄면
+     고객 앞에서 하나씩 짚어 가며 설명하실 수 있습니다. */
+  .dzart{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#FBFCFD;}
+  .dzart-tools{display:flex;gap:6px;padding:9px 11px;border-bottom:1px solid var(--line2);
+    background:#FAFBFC;flex-wrap:wrap;align-items:center;}
+  .dzart-b{font-family:inherit;font-size:12px;font-weight:800;padding:6px 12px;border-radius:8px;
+    border:1px solid var(--line);background:#fff;color:var(--ink2);cursor:pointer;}
+  .dzart-b:hover{border-color:var(--blue);color:var(--blue);}
+  .dzart-b.on{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .dzart-view{cursor:grab;user-select:none;-webkit-user-select:none;touch-action:none;
+    background:#fff;overflow:hidden;}
+  .dzart.dragging .dzart-view{cursor:grabbing;}
+  .dzart-view svg{display:block;width:100%;height:auto;}
+  .dzart.nolbl .lbl{display:none;}
+  .dzart-hint{font-size:11px;color:var(--ink5);padding:8px 12px;border-top:1px solid var(--line2);background:#FAFBFC;}
   .dzflat{overflow-x:auto;padding:6px 2px 4px;}
   .dzflat svg{display:block;margin:0 auto;}
   .dzrow{display:flex;gap:14px;align-items:flex-end;justify-content:center;min-width:min-content;}
@@ -251,9 +252,7 @@
     .top h1{font-size:19px;} .main{padding:15px 13px 130px;}
     .sec{padding:15px 14px;} .hero h2{font-size:20px;}
     .cards{grid-template-columns:1fr;}
-    .dz3d{flex-direction:column;align-items:stretch;}
-    .dz3d-box{height:320px;}
-    .dz3d-legend{flex:none;}
+    .dzart-hint{font-size:10.5px;}
   }
 
   /* ── 인쇄 — 고객께 드리는 자료가 잘리면 안 됩니다 ── */
@@ -268,12 +267,11 @@
     .cards{grid-template-columns:1fr 1fr;}
     a{color:#1A56DB;text-decoration:none;}
     .stage .pay,.trap,.bi,.talk-open,.stage .watch,.hero{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    /* 3D 는 종이에서 못 돌리므로 보기 좋은 각도로 고정해 인쇄한다 */
-    .dz3d{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-    .dz3d-box{height:330px;}
-    .dz3d-stage{transform:rotateX(58deg) rotateY(-20deg) !important;}
-    .dz3d-hint{display:none;}
-    .viz,.op,.case,.term,.dzflat{page-break-inside:avoid;break-inside:avoid;}
+    /* 종이에서는 확대할 수 없으니 처음 크기 그대로, 이름표는 켜서 인쇄한다 */
+    .dzart{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .dzart-tools,.dzart-hint{display:none;}
+    .dzart.nolbl .lbl{display:inline;}
+    .viz,.op,.case,.term,.dzflat,.dzart{page-break-inside:avoid;break-inside:avoid;}
     .dzflat{overflow:visible;}
     .dzflat svg,.dzrow svg{max-width:100%;height:auto;}
   }
