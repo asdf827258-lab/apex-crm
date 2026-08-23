@@ -702,6 +702,16 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(badCol.length === 0, '색 값이 전부 진짜 색이다 — 오타 하나로 도형이 <b>말없이 사라지지</b> 않는다' +
      (badCol.length ? ' — 깨짐: ' + badCol.slice(0, 4).join(' / ') : ''));
 
+  /* SVG 안의 <text> 에는 <b> 를 쓸 수 없다. 넣으면 브라우저가 그 자리에서
+     문서를 포기하고 <b>그 뒤 전부를 맨 글자로 흘려 버린다</b> — 그림 한 장이
+     아니라 화면 아래가 통째로 무너진다. 실제로 투석 그림에서 그랬다. */
+  const bTag = [];
+  (vizSrc.match(/(?:lbl|note)\([^;]*?\);/gs) || []).forEach(v => {
+    if (v.indexOf('<b>') >= 0) bTag.push(v.slice(0, 70).replace(/\s+/g, ' '));
+  });
+  is(bTag.length === 0, '이름표 글에 <b> 를 쓰지 않는다 — SVG 글자칸은 <b> 를 모른다' +
+     (bTag.length ? ' — 들어 있음: ' + bTag.slice(0, 3).join(' / ') : ''));
+
   /* 그림마다 실제로 도형이 들어 있는가 — 빈 껍데기를 세우지 않는다 */
   const thin = await page.evaluate(() => {
     const out = [];

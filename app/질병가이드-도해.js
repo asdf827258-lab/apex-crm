@@ -1243,6 +1243,552 @@
     }
   };
 
+  /* ═══ 콩팥 — 거르는 기계와, 그것을 대신하는 기계 ═══════════════
+     투석 상담에서 가장 안 먹히는 말이 「신장이 나빠지면 투석합니다」 이다.
+     <b>무엇을 거르는지</b> 를 모르면 남 얘기로 들린다.
+
+     그래서 둘을 나란히 놓는다.
+       · 콩팥 안에서 실제로 거르는 자리 — <b>사구체</b>. 모세혈관 뭉치다.
+       · 그것이 망가졌을 때 몸 밖에서 대신 거르는 것 — <b>투석</b>.
+
+     투석은 <b>고치는 것이 아니라 대신하는 것</b>이다. 그래서 평생 간다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function kidneyBody() {
+    var R = rnd(20260826), s = '', i, a, x, y;
+
+    /* 콩팥 겉 — 강낭콩 모양, 안쪽이 옴폭 들어간다 */
+    var K = 'M300 96 C378 92 442 148 456 232 C468 306 452 388 408 444 ' +
+            'C368 494 306 512 258 486 C226 468 214 434 226 404 ' +
+            'C244 358 250 320 232 288 C214 256 216 216 240 176 ' +
+            'C258 144 274 110 300 96 Z';
+    s += '<defs><clipPath id="cpKid"><path d="' + K + '"/></clipPath>' +
+      '<linearGradient id="gKid" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#B4544C"/><stop offset="1" stop-color="#8A322C"/></linearGradient></defs>';
+    s += '<path d="' + K + '" fill="url(#gKid)" stroke="#6B211D" stroke-width="3"/>';
+    s += '<g clip-path="url(#cpKid)">';
+
+    /* 겉껍질(피질) — 바깥 띠 */
+    s += '<path d="' + K + '" fill="#C4675E" opacity=".85"/>';
+    s += '<path d="' + K + '" fill="#9E3E37" transform="translate(300 290) scale(0.74) translate(-300 -290)"/>';
+
+    /* 속질 피라미드 — 안쪽을 향해 삼각으로 모인다 */
+    var PY = [[356,168,-38],[404,236,-8],[400,320,14],[356,392,42],[300,440,72]];
+    PY.forEach(function (p) {
+      s += '<g transform="rotate(' + p[2] + ' ' + p[0] + ' ' + p[1] + ')">' +
+        '<path d="M' + (p[0] - 40) + ' ' + (p[1] - 34) + ' L' + (p[0] + 34) + ' ' + p[1] +
+        ' L' + (p[0] - 40) + ' ' + (p[1] + 34) + ' Z" fill="#B9645A" opacity=".9"/>';
+      for (i = 0; i < 9; i++) {
+        s += '<path d="M' + (p[0] - 38) + ' ' + (p[1] - 28 + i * 7) + ' L' + (p[0] + 28) + ' ' +
+             (p[1] - 8 + i * 2).toFixed(0) + '" stroke="#8E4038" stroke-width="1.5" opacity=".65"/>';
+      }
+      s += '</g>';
+    });
+    /* 잔 → 신우 → 요관 */
+    s += '<path d="M262 300 C300 226 322 214 356 206 M262 300 C300 262 330 258 372 262 ' +
+         'M262 300 C302 306 332 312 372 330 M262 300 C300 342 322 366 344 400" ' +
+         'fill="none" stroke="#E6D9B8" stroke-width="13" stroke-linecap="round" opacity=".95"/>';
+    s += '<path d="M262 300 C238 306 226 322 224 344 C222 372 232 392 250 404" ' +
+         'fill="none" stroke="#E6D9B8" stroke-width="20" stroke-linecap="round"/>';
+    /* 굵은 혈관이 들어가고 나온다 */
+    s += '<path d="M232 268 C200 262 176 258 150 258" fill="none" stroke="#C0392B" stroke-width="17" stroke-linecap="round"/>';
+    s += '<path d="M236 320 C204 328 180 334 154 336" fill="none" stroke="#4A6FA5" stroke-width="15" stroke-linecap="round"/>';
+    /* 잔가지 — 피질 쪽으로 부챗살 */
+    for (i = 0; i < 26; i++) {
+      a = -1.15 + (i / 25) * 2.4;
+      var r0 = 62, r1 = 150 + R() * 26;
+      s += '<path d="M' + (256 + Math.cos(a) * r0).toFixed(0) + ' ' + (296 + Math.sin(a) * r0).toFixed(0) +
+           ' Q' + (256 + Math.cos(a) * (r0 + r1) / 2 + 14).toFixed(0) + ' ' +
+           (296 + Math.sin(a) * (r0 + r1) / 2).toFixed(0) + ' ' +
+           (256 + Math.cos(a) * r1).toFixed(0) + ' ' + (296 + Math.sin(a) * r1).toFixed(0) +
+           '" stroke="' + (i % 2 ? '#C0392B' : '#4A6FA5') + '" stroke-width="' + (2 + R() * 2).toFixed(1) +
+           '" fill="none" opacity=".7"/>';
+    }
+    /* 겉껍질에 박힌 알갱이들 — 사구체 */
+    for (i = 0; i < 54; i++) {
+      a = -1.3 + R() * 2.7; var rr = 150 + R() * 44;
+      x = 256 + Math.cos(a) * rr; y = 296 + Math.sin(a) * rr;
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (3.6 + R() * 2).toFixed(1) +
+           '" fill="#7E1F1A" opacity=".8"/>';
+    }
+    s += '</g>';
+
+    /* ── 확대해서 본 사구체 한 개 ── */
+    var GX = 700, GY = 210;
+    s += '<circle cx="' + GX + '" cy="' + GY + '" r="118" fill="#FFF8F2" stroke="#C8A183" stroke-width="3"/>';
+    s += '<path d="M' + (256 + 170) + ' 200 L' + (GX - 120) + ' ' + (GY - 30) + '" stroke="#8A6A4A" ' +
+         'stroke-width="1.6" stroke-dasharray="5 4" fill="none"/>';
+    /* 보먼주머니 */
+    s += '<circle cx="' + GX + '" cy="' + GY + '" r="82" fill="#FDEFE2" stroke="#B98A63" stroke-width="2.6"/>';
+    /* 들어오는 혈관은 굵고, 나가는 혈관은 가늘다 — 그래서 안에서 눌려 걸러진다 */
+    s += '<path d="M' + (GX - 130) + ' ' + (GY + 40) + ' C' + (GX - 96) + ' ' + (GY + 34) + ' ' +
+         (GX - 74) + ' ' + (GY + 22) + ' ' + (GX - 52) + ' ' + (GY + 10) + '" fill="none" ' +
+         'stroke="#C0392B" stroke-width="17" stroke-linecap="round"/>';
+    s += '<path d="M' + (GX - 118) + ' ' + (GY + 66) + ' C' + (GX - 88) + ' ' + (GY + 62) + ' ' +
+         (GX - 66) + ' ' + (GY + 52) + ' ' + (GX - 46) + ' ' + (GY + 42) + '" fill="none" ' +
+         'stroke="#C0392B" stroke-width="9" stroke-linecap="round"/>';
+    /* 모세혈관 뭉치 — 실타래 */
+    var R5 = rnd(5151);
+    for (i = 0; i < 26; i++) {
+      a = R5() * Math.PI * 2; var rad = 16 + R5() * 34;
+      var cx2 = GX + Math.cos(a) * (rad * 0.7), cy2 = GY + Math.sin(a) * (rad * 0.7);
+      s += '<circle cx="' + cx2.toFixed(0) + '" cy="' + cy2.toFixed(0) + '" r="' + (10 + R5() * 12).toFixed(0) +
+           '" fill="none" stroke="#C0392B" stroke-width="' + (5 + R5() * 3).toFixed(1) + '" opacity=".8"/>';
+    }
+    /* 걸러져 나가는 물 */
+    s += '<path d="M' + (GX + 40) + ' ' + (GY + 62) + ' C' + (GX + 76) + ' ' + (GY + 86) + ' ' +
+         (GX + 66) + ' ' + (GY + 122) + ' ' + (GX + 26) + ' ' + (GY + 130) + '" fill="none" ' +
+         'stroke="#E6D9B8" stroke-width="15" stroke-linecap="round"/>';
+    for (i = 0; i < 10; i++) {
+      s += '<circle cx="' + (GX + 30 + R() * 46).toFixed(0) + '" cy="' + (GY + 70 + R() * 52).toFixed(0) +
+           '" r="' + (2 + R() * 2).toFixed(1) + '" fill="#C8B98C" opacity=".9"/>';
+    }
+    return s;
+  }
+
+  V.kidney_filter = {
+    t: '콩팥은 어떻게 거릅니까 — 거르는 자리는 <b>모세혈관 뭉치</b>입니다',
+    d: '콩팥 겉껍질에는 <b>실타래처럼 뭉친 모세혈관</b>이 수없이 박혀 있습니다. ' +
+       '들어오는 혈관은 굵고 나가는 혈관은 가늘어, 그 안에서 <b>피가 눌립니다.</b> ' +
+       '눌린 힘으로 물과 노폐물이 짜여 나오고, 몸에 필요한 것은 되돌려 받습니다. ' +
+       '이 뭉치가 망가지면 <b>다시 자라지 않습니다</b> — 그래서 신장병은 되돌아오지 않습니다.',
+    dz: ['kidney'],
+    build: function () {
+      var s = '<svg viewBox="0 0 900 560" width="900" height="560">' + kidneyBody();
+      s += lbl(300, 140, 640, 396, '겉껍질 (피질)', '거르는 뭉치가 여기 박혀 있습니다', '#C4675E');
+      s += lbl(390, 300, 640, 452, '속질', '걸러진 물이 모여 내려가는 관들', '#B9645A');
+      s += lbl(240, 380, 640, 508, '신우 · 요관', '오줌이 모여 방광으로 갑니다', '#A48C50');
+      s += lbl(700, 210, 250, 40, '사구체 — 거르는 뭉치', '들어오는 길은 굵고 나가는 길은 가늡니다', '#B91C1C');
+      s += lbl(726, 340, 250, 500, '걸러져 나온 물', '여기서 오줌이 시작됩니다', '#A48C50');
+      s += note(250, 546, '이 뭉치는 한번 망가지면 다시 자라지 않습니다', '#0F172A');
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 900 560' });
+    }
+  };
+
+  V.dialysis_real = {
+    t: '투석은 <b>고치는 것이 아니라 대신하는 것</b>입니다',
+    d: '망가진 콩팥을 되살리는 치료가 아닙니다. 콩팥이 하던 일을 <b>몸 밖 기계가 대신</b> 합니다. ' +
+       '피를 뽑아 얇은 막에 흘리고, 막 건너편으로 노폐물과 물을 넘긴 뒤 다시 몸으로 돌려보냅니다. ' +
+       '그래서 <b>끝이 없습니다.</b> 일주일에 몇 번씩, 이식을 받기 전까지 평생 이어집니다. ' +
+       '보험에서 이 병이 무거운 이유는 치료비 자체보다 <b>끝나지 않는다는 것</b>에 있습니다.',
+    dz: ['kidney', 'chronic'],
+    build: function () {
+      var R = rnd(777), s = '<svg viewBox="0 0 1000 520" width="1000" height="520">', i, x, y;
+
+      /* 팔 — 동정맥루 */
+      s += '<path d="M60 150 C120 128 200 126 250 150 C250 196 250 240 250 286 ' +
+           'C200 312 120 310 60 288 Z" fill="#F0D9C6" stroke="#C8A183" stroke-width="2.6"/>';
+      s += '<path d="M70 214 C130 200 190 200 246 214" fill="none" stroke="#C0392B" stroke-width="13" opacity=".9"/>';
+      s += '<path d="M70 244 C130 234 190 234 246 244" fill="none" stroke="#4A6FA5" stroke-width="11" opacity=".85"/>';
+      /* 이어붙인 자리 — 굵어진 혈관 */
+      s += '<ellipse cx="150" cy="229" rx="42" ry="21" fill="#B03A3A" opacity=".9"/>';
+      s += '<ellipse cx="150" cy="229" rx="42" ry="21" fill="none" stroke="#7F1D1D" stroke-width="2.4"/>';
+      s += '<circle cx="126" cy="222" r="4.4" fill="#0F172A"/><circle cx="172" cy="236" r="4.4" fill="#0F172A"/>';
+      s += lbl(150, 229, 60, 88, '동정맥루', '동맥과 정맥을 이어 굵게 만든 자리 — 여기에 바늘을 꽂습니다', '#8B1A1A');
+
+      /* 나가는 줄 */
+      s += '<path d="M172 236 C260 268 300 300 340 300" fill="none" stroke="#C0392B" stroke-width="11" stroke-linecap="round"/>';
+      /* 펌프 */
+      s += '<circle cx="372" cy="300" r="30" fill="#E5E7EB" stroke="#9CA3AF" stroke-width="3"/>';
+      s += '<circle cx="372" cy="300" r="12" fill="#9CA3AF"/>';
+      s += '<path d="M372 270 A30 30 0 0 1 396 316" fill="none" stroke="#6B7280" stroke-width="7" stroke-linecap="round"/>';
+      s += lbl(372, 300, 336, 396, '펌프', '피를 일정하게 돌립니다', '#4B5563');
+
+      /* 투석기 — 속이 빈 실 다발 */
+      s += '<rect x="446" y="140" width="130" height="290" rx="42" fill="#EEF2F7" stroke="#94A3B8" stroke-width="3"/>';
+      s += '<rect x="446" y="140" width="130" height="290" rx="42" fill="none" stroke="#CBD5E1" stroke-width="10" opacity=".5"/>';
+      for (i = 0; i < 17; i++) {
+        x = 458 + i * 6.6;
+        s += '<path d="M' + x + ' 156 L' + x + ' 414" stroke="#C0392B" stroke-width="2.6" opacity=".8"/>';
+      }
+      for (i = 0; i < 60; i++) {
+        s += '<circle cx="' + (452 + R() * 118).toFixed(0) + '" cy="' + (158 + R() * 254).toFixed(0) +
+             '" r="' + (1.6 + R() * 2.4).toFixed(1) + '" fill="#0EA5A5" opacity=".45"/>';
+      }
+      s += '<path d="M372 270 C372 200 400 172 446 172" fill="none" stroke="#C0392B" stroke-width="11" stroke-linecap="round"/>';
+      s += '<path d="M576 172 C640 172 660 200 660 250" fill="none" stroke="#4A6FA5" stroke-width="11" stroke-linecap="round"/>';
+      /* 투석액 — 반대 방향으로 흐른다 */
+      s += '<path d="M576 400 C630 400 654 372 654 330 M446 400 C400 400 384 380 384 350" ' +
+           'fill="none" stroke="#0EA5A5" stroke-width="8" stroke-linecap="round" opacity=".8"/>';
+      s += lbl(510, 286, 700, 120, '얇은 막 (투석기)', '속이 빈 가는 실 다발 — 이 막이 콩팥을 대신합니다', '#334155');
+      s += lbl(576, 400, 700, 186, '투석액', '피와 반대 방향으로 흘려야 잘 넘어갑니다', '#0E7490');
+
+      /* 돌아오는 줄 */
+      s += '<path d="M660 250 C700 300 620 380 480 470 C380 486 240 420 150 300 C138 282 132 262 126 240" ' +
+           'fill="none" stroke="#4A6FA5" stroke-width="11" stroke-linecap="round" opacity=".9"/>';
+      s += lbl(480, 470, 700, 252, '몸으로 되돌아갑니다', '깨끗해진 피가 다시 들어갑니다', '#3F628F');
+
+      /* 넘어가는 것들 */
+      s += '<g class="lbl">';
+      s += '<rect x="700" y="300" width="272" height="150" rx="14" fill="#0F172A"/>';
+      s += '<text x="722" y="330" font-size="14" font-weight="800" fill="#fff">막을 건너가는 것</text>';
+      s += '<text x="722" y="356" font-size="12.8" fill="#CBD5E1">노폐물 · 남는 물 · 넘치는 전해질</text>';
+      s += '<text x="722" y="384" font-size="14" font-weight="800" fill="#fff">건너가지 못하는 것</text>';
+      s += '<text x="722" y="410" font-size="12.8" fill="#CBD5E1">적혈구 · 단백질 — 알이 커서 막을 못 지납니다</text>';
+      s += '<text x="722" y="436" font-size="12.5" fill="#93C5FD">그래서 피는 남고, 찌꺼기만 빠집니다</text>';
+      s += '</g>';
+      s += note(60, 500, '고치는 것이 아니라 대신하는 것이라, 일주일에 몇 번씩 이식 전까지 이어집니다', '#0F172A');
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1000 520' });
+    }
+  };
+
+  /* ═══ 간 — 굳어 가는 네 걸음 (소엽 단면) ═══════════════════════
+     간은 <b>육각형 방(소엽)</b>이 벌집처럼 붙어 있는 장기다. 방 가운데에
+     정맥이 서고, 방 모서리마다 문맥·동맥·담관 셋이 함께 지난다.
+     간세포는 그 사이를 <b>줄</b>로 늘어서고, 줄 사이 틈(굴모양혈관)으로
+     피가 스며 지난다 — 그래서 간은 「거르는 스펀지」에 가깝다.
+
+     술·지방·바이러스가 오래 가면 이 방이 순서대로 무너진다.
+       ① 정상 → ② 지방이 낀다 → ③ 줄 사이에 흉터가 낀다 → ④ 방이 무너져 혹이 된다
+
+     ④ 는 <b>되돌아오지 않는다.</b> 그래서 ②·③ 에서 잡는 것이 전부다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function lobule(stage, R) {
+    var s = '', i, j, a, x, y;
+    var CX = 150, CY = 150, RAD = 118;
+
+    /* 육각형 방 */
+    var pts = [], ang;
+    for (i = 0; i < 6; i++) {
+      ang = -Math.PI / 2 + i * Math.PI / 3;
+      pts.push([CX + Math.cos(ang) * RAD, CY + Math.sin(ang) * RAD]);
+    }
+    var hex = 'M' + pts.map(function (p) { return p[0].toFixed(0) + ' ' + p[1].toFixed(0); }).join(' L') + ' Z';
+    s += '<defs><clipPath id="cpLob' + stage + '"><path d="' + hex + '"/></clipPath></defs>';
+    s += '<path d="' + hex + '" fill="' + (stage >= 3 ? '#C8A98C' : '#D8B08A') + '" stroke="#9A7350" stroke-width="2.6"/>';
+    s += '<g clip-path="url(#cpLob' + stage + ')">';
+
+    /* 간세포 줄 — 가운데 정맥에서 바깥으로 뻗는다 */
+    for (i = 0; i < 30; i++) {
+      a = (i / 30) * Math.PI * 2;
+      var wob = stage >= 3 ? 16 : 5;
+      var d = 'M' + (CX + Math.cos(a) * 16).toFixed(0) + ' ' + (CY + Math.sin(a) * 16).toFixed(0) +
+              ' Q' + (CX + Math.cos(a + 0.12) * 70 + (R() - 0.5) * wob).toFixed(0) + ' ' +
+              (CY + Math.sin(a + 0.12) * 70 + (R() - 0.5) * wob).toFixed(0) + ' ' +
+              (CX + Math.cos(a) * 124).toFixed(0) + ' ' + (CY + Math.sin(a) * 124).toFixed(0);
+      s += '<path d="' + d + '" stroke="#B98A63" stroke-width="' + (5 + R() * 2).toFixed(1) +
+           '" fill="none" opacity=".85"/>';
+      s += '<path d="' + d + '" stroke="#8E6A4A" stroke-width="1.3" fill="none" opacity=".5"/>';
+    }
+    /* 간세포 — 알갱이 */
+    for (i = 0; i < 130; i++) {
+      a = R() * Math.PI * 2; var rr = 18 + R() * 104;
+      x = CX + Math.cos(a) * rr; y = CY + Math.sin(a) * rr;
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (3.4 + R() * 1.8).toFixed(1) +
+           '" fill="#E2C29E" stroke="#A9825C" stroke-width="0.9"/>';
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="1.5" fill="#7B5A3C" opacity=".8"/>';
+    }
+    /* ② 지방 방울 */
+    if (stage >= 1) {
+      var n = stage === 1 ? 78 : (stage === 2 ? 54 : 30);
+      for (i = 0; i < n; i++) {
+        a = R() * Math.PI * 2; var r2 = 20 + R() * 100;
+        s += '<circle cx="' + (CX + Math.cos(a) * r2).toFixed(0) + '" cy="' + (CY + Math.sin(a) * r2).toFixed(0) +
+             '" r="' + (4 + R() * 5).toFixed(1) + '" fill="#F5E06B" stroke="#D9BE3E" stroke-width="1" opacity=".9"/>';
+      }
+    }
+    /* ③ 흉터 — 줄 사이를 가로지르는 띠 */
+    if (stage >= 2) {
+      var m = stage === 2 ? 9 : 16;
+      for (i = 0; i < m; i++) {
+        a = (i / m) * Math.PI * 2 + 0.2;
+        var d2 = 'M' + (CX + Math.cos(a) * 30).toFixed(0) + ' ' + (CY + Math.sin(a) * 30).toFixed(0);
+        for (j = 1; j <= 5; j++) {
+          var rr2 = 30 + j * 20;
+          d2 += ' L' + (CX + Math.cos(a + (R() - 0.5) * 0.5) * rr2).toFixed(0) + ' ' +
+                (CY + Math.sin(a + (R() - 0.5) * 0.5) * rr2).toFixed(0);
+        }
+        s += '<path d="' + d2 + '" stroke="#8FA88C" stroke-width="' + (stage === 2 ? 4 : 8) +
+             '" fill="none" opacity=".9" stroke-linejoin="round"/>';
+      }
+    }
+    /* ④ 혹(결절) — 흉터에 갇힌 간세포 덩어리 */
+    if (stage >= 3) {
+      for (i = 0; i < 7; i++) {
+        a = i * 0.9; var r3 = 42 + (i % 3) * 30;
+        s += '<circle cx="' + (CX + Math.cos(a) * r3).toFixed(0) + '" cy="' + (CY + Math.sin(a) * r3).toFixed(0) +
+             '" r="' + (17 + R() * 9).toFixed(0) + '" fill="#D9B489" stroke="#7E8F72" stroke-width="5" opacity=".95"/>';
+      }
+    }
+    /* 가운데 정맥 */
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="17" fill="#4A6FA5" opacity=".9"/>';
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="17" fill="none" stroke="#2F4C74" stroke-width="2"/>';
+    s += '</g>';
+    /* 모서리마다 셋이 함께 지난다 — 문맥·동맥·담관 */
+    pts.forEach(function (p) {
+      s += '<circle cx="' + (p[0] - 7).toFixed(0) + '" cy="' + (p[1] + 4).toFixed(0) + '" r="7" fill="#4A6FA5"/>';
+      s += '<circle cx="' + (p[0] + 7).toFixed(0) + '" cy="' + (p[1] + 2).toFixed(0) + '" r="4.6" fill="#C0392B"/>';
+      s += '<circle cx="' + p[0].toFixed(0) + '" cy="' + (p[1] - 8).toFixed(0) + '" r="4.6" fill="#7C9A3E"/>';
+    });
+    return s;
+  }
+
+  V.liver_lobule = {
+    t: '간이 굳어 가는 네 걸음 — 방 하나를 들여다봅니다',
+    d: '간은 <b>육각형 방</b>이 벌집처럼 붙어 있습니다. 가운데에 정맥이 서고, 모서리마다 ' +
+       '<b>문맥·동맥·담관</b> 셋이 함께 지납니다. 간세포는 그 사이를 줄로 늘어서고, 줄 사이 틈으로 피가 스며 지납니다. ' +
+       '술·지방·바이러스가 오래 가면 <b>지방이 끼고 → 줄 사이에 흉터가 차고 → 방이 무너져 혹이 됩니다.</b> ' +
+       '마지막 걸음은 <b>되돌아오지 않습니다</b> — 그래서 앞의 두 걸음에서 잡아야 합니다.',
+    dz: ['liver', 'chronic'],
+    build: function () {
+      var R = rnd(20260827);
+      var P = [
+        ['정상', '줄이 곧고 틈이 열려 있습니다', '#166534'],
+        ['지방간', '세포마다 기름방울이 낍니다 — 아직 되돌아옵니다', '#B45309'],
+        ['섬유화', '줄 사이에 흉터가 찹니다 — 피가 지나기 어려워집니다', '#C2410C'],
+        ['간경변', '방이 무너져 혹이 됩니다 — 되돌아오지 않습니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1300 470" width="1300" height="470">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 320;
+        s += '<rect x="' + x + '" y="8" width="300" height="28" rx="9" fill="' + p[2] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="27" font-size="14" font-weight="800" fill="#fff">' +
+             '④①②③'.charAt(i === 0 ? 1 : (i === 1 ? 2 : (i === 2 ? 3 : 0))) + ' ' + p[0] + '</text>';
+        s += '<g transform="translate(' + (x + 6) + ' 46)">' + lobule(i, R) + '</g>';
+        s += '<text x="' + (x + 4) + '" y="382" font-size="12.8" font-weight="800" fill="#0D1117">' + p[1] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="40" cy="412" r="8" fill="#4A6FA5"/><text x="54" y="417" font-size="12.5" fill="#334155">가운데 정맥 · 문맥</text>';
+      s += '<circle cx="210" cy="412" r="6" fill="#C0392B"/><text x="222" y="417" font-size="12.5" fill="#334155">동맥</text>';
+      s += '<circle cx="300" cy="412" r="6" fill="#7C9A3E"/><text x="312" y="417" font-size="12.5" fill="#334155">담관 (쓸개즙 길)</text>';
+      s += '<circle cx="470" cy="412" r="7" fill="#F5E06B" stroke="#D9BE3E" stroke-width="1.4"/><text x="484" y="417" font-size="12.5" fill="#334155">기름방울</text>';
+      s += '<rect x="580" y="406" width="26" height="7" rx="3" fill="#8FA88C"/><text x="614" y="417" font-size="12.5" fill="#334155">흉터 (섬유)</text>';
+      s += '</g>';
+      s += note(20, 452, '앞의 두 걸음에서 잡으면 되돌아옵니다 — 마지막 걸음은 되돌아오지 않습니다', '#0F172A');
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1300 470' });
+    }
+  };
+
+  /* ═══ 척추 — 디스크가 밀려 나와 신경을 누릅니다 ═══════════════
+     척추뼈 사이에는 <b>물주머니</b>가 하나씩 끼어 있다. 가운데가 젤리
+     같은 속질핵이고, 그것을 질긴 섬유테가 겹겹이 감싼다. 나이가 들고
+     눌리는 시간이 쌓이면 테가 갈라지고, 젤리가 <b>뒤로</b> 밀려 나온다.
+     뒤에는 신경뿌리가 지난다 — 그래서 다리가 저린다.
+
+     보험에서 여기가 갈리는 이유는 <b>고치는 방법이 여럿</b>이라서다.
+     바늘로 하는 것, 내시경으로 하는 것, 째고 하는 것이 다 다르고,
+     약관이 그중 어디까지를 「수술」로 보는지가 지급을 가른다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function discPanel(stage, R) {
+    var s = '', i, a;
+    var CX = 160, CY = 150;
+
+    /* 척추뼈 몸통 — 위아래 */
+    s += '<path d="M52 46 C52 26 72 18 160 18 C248 18 268 26 268 46 L268 92 ' +
+         'C268 106 236 112 160 112 C84 112 52 106 52 92 Z" fill="#EDE3D2" stroke="#B9A98C" stroke-width="2.6"/>';
+    s += '<path d="M52 254 C52 274 72 282 160 282 C248 282 268 274 268 254 L268 208 ' +
+         'C268 194 236 188 160 188 C84 188 52 194 52 208 Z" fill="#EDE3D2" stroke="#B9A98C" stroke-width="2.6"/>';
+    /* 뼈 속 결 */
+    for (i = 0; i < 46; i++) {
+      var bx = 58 + R() * 204, by = (R() < 0.5 ? 24 + R() * 80 : 196 + R() * 80);
+      s += '<path d="M' + bx.toFixed(0) + ' ' + by.toFixed(0) + ' l' + (6 + R() * 12).toFixed(0) + ' ' +
+           ((R() - 0.5) * 10).toFixed(0) + '" stroke="#C9B89A" stroke-width="1.6" opacity=".8"/>';
+    }
+    /* 뒤쪽 뼈 기둥과 신경이 지나는 굴 */
+    s += '<path d="M268 40 L318 34 L332 62 L322 98 L268 96 Z" fill="#E3D8C4" stroke="#B9A98C" stroke-width="2.4"/>';
+    s += '<path d="M268 260 L318 266 L332 238 L322 202 L268 204 Z" fill="#E3D8C4" stroke="#B9A98C" stroke-width="2.4"/>';
+
+    /* 디스크 — 섬유테와 속질핵 */
+    var bulge = [0, 14, 34, 52][stage];
+    var ring = 'M52 116 C52 104 84 96 160 96 C236 96 268 104 268 116 ' +
+               'C' + (268 + bulge) + ' 132 ' + (268 + bulge) + ' 168 268 184 ' +
+               'C268 196 236 204 160 204 C84 204 52 196 52 184 C52 168 52 132 52 116 Z';
+    s += '<path d="' + ring + '" fill="#CFDCE4" stroke="#7E97A8" stroke-width="2.6"/>';
+    /* 섬유테 — 겹겹이 감긴 테 */
+    for (i = 0; i < 7; i++) {
+      var k = i / 7, w = 96 - i * 11, h = 46 - i * 4.6;
+      s += '<ellipse cx="' + (160 + bulge * k * 1.1).toFixed(0) + '" cy="' + CY + '" rx="' + (w + 12).toFixed(0) +
+           '" ry="' + h.toFixed(0) + '" fill="none" stroke="#8FA9B8" stroke-width="2.2" opacity="' +
+           (0.85 - i * 0.06).toFixed(2) + '"/>';
+    }
+    /* 갈라진 테 */
+    if (stage >= 1) {
+      for (i = 0; i < 2 + stage; i++) {
+        var ay = 132 + i * 12;
+        s += '<path d="M' + (236 - i * 6) + ' ' + ay + ' L' + (272 + bulge * 0.8).toFixed(0) + ' ' +
+             (ay + 6) + '" stroke="#5C7484" stroke-width="2.4" opacity=".9"/>';
+      }
+    }
+    /* 속질핵 — 젤리 */
+    var nx = 160 + bulge * 1.25;
+    s += '<ellipse cx="' + nx.toFixed(0) + '" cy="' + CY + '" rx="' + (44 - stage * 3).toFixed(0) +
+         '" ry="' + (32 - stage * 2).toFixed(0) + '" fill="#8ECAE0" stroke="#3F87A6" stroke-width="2.4" opacity=".95"/>';
+    for (i = 0; i < 16; i++) {
+      a = R() * Math.PI * 2;
+      s += '<circle cx="' + (nx + Math.cos(a) * R() * 32).toFixed(0) + '" cy="' + (CY + Math.sin(a) * R() * 22).toFixed(0) +
+           '" r="' + (1.6 + R() * 2).toFixed(1) + '" fill="#B9E3F0" opacity=".9"/>';
+    }
+    /* 밀려 나온 젤리 */
+    if (stage >= 2) {
+      s += '<path d="M266 128 C' + (292 + bulge) + ' 128 ' + (300 + bulge) + ' 150 ' + (292 + bulge) + ' 172 ' +
+           'C' + (280 + bulge) + ' 184 266 180 264 172 Z" fill="#8ECAE0" stroke="#3F87A6" stroke-width="2.4"/>';
+    }
+
+    /* 신경뿌리 — 뒤로 지난다 */
+    var press = stage >= 2 ? (stage === 3 ? 16 : 8) : 0;
+    s += '<path d="M330 30 C' + (334 + press) + ' 90 ' + (334 + press) + ' 210 330 270" fill="none" ' +
+         'stroke="#E3C878" stroke-width="' + (18 - press * 0.5).toFixed(1) + '" stroke-linecap="round"/>';
+    s += '<path d="M330 30 C' + (334 + press) + ' 90 ' + (334 + press) + ' 210 330 270" fill="none" ' +
+         'stroke="#C9A63E" stroke-width="2" opacity=".6"/>';
+    if (stage >= 2) {
+      s += '<circle cx="' + (332 + press) + '" cy="150" r="' + (20 + stage * 3) + '" fill="none" ' +
+           'stroke="#DC2626" stroke-width="3" stroke-dasharray="5 4"/>';
+    }
+    return s;
+  }
+
+  V.disc_press = {
+    t: '디스크는 <b>뒤로</b> 밀려 나옵니다 — 거기에 신경이 있습니다',
+    d: '척추뼈 사이에는 물주머니가 하나씩 끼어 있습니다. 가운데가 젤리 같은 <b>속질핵</b>, ' +
+       '그것을 질긴 <b>섬유테</b>가 겹겹이 감싸고 있습니다. 눌리는 시간이 쌓이면 테가 갈라지고 ' +
+       '젤리가 <b>뒤쪽으로</b> 밀려 나옵니다. 하필 뒤에는 신경뿌리가 지납니다 — 그래서 허리가 아니라 ' +
+       '<b>다리가 저립니다.</b>',
+    dz: ['joint'],
+    build: function () {
+      var R = rnd(20260828);
+      var P = [
+        ['정상', '젤리가 가운데 있고 테가 온전합니다', '#166534'],
+        ['부풀음', '테가 늘어나 전체가 불룩해집니다', '#B45309'],
+        ['튀어나옴', '테가 갈라져 젤리가 밀려 나옵니다', '#C2410C'],
+        ['신경 눌림', '밀려 나온 젤리가 신경을 누릅니다 — 다리가 저립니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1560 480" width="1560" height="480">';
+      P.forEach(function (p, i) {
+        var x = 16 + i * 386;
+        s += '<rect x="' + x + '" y="8" width="366" height="28" rx="9" fill="' + p[2] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="27" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③', '④'][i] + ' ' + p[0] + '</text>';
+        s += '<g transform="translate(' + (x + 4) + ' 48)">' + discPanel(i, R) + '</g>';
+        s += '<text x="' + (x + 4) + '" y="386" font-size="12.8" font-weight="800" fill="#0D1117">' +
+             p[1] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<ellipse cx="40" cy="414" rx="14" ry="9" fill="#8ECAE0" stroke="#3F87A6" stroke-width="1.6"/>';
+      s += '<text x="62" y="419" font-size="12.5" fill="#334155">속질핵 (젤리)</text>';
+      s += '<ellipse cx="220" cy="414" rx="16" ry="9" fill="none" stroke="#8FA9B8" stroke-width="2.2"/>';
+      s += '<text x="244" y="419" font-size="12.5" fill="#334155">섬유테 (겹겹이 감긴 테)</text>';
+      s += '<rect x="500" y="408" width="26" height="12" rx="6" fill="#E3C878"/>';
+      s += '<text x="534" y="419" font-size="12.5" fill="#334155">신경뿌리</text>';
+      s += '<rect x="640" y="406" width="26" height="16" rx="5" fill="#EDE3D2" stroke="#B9A98C" stroke-width="1.6"/>';
+      s += '<text x="674" y="419" font-size="12.5" fill="#334155">척추뼈</text>';
+      s += '</g>';
+      s += '<rect x="16" y="436" width="1528" height="36" rx="10" fill="#0F172A"/>';
+      s += '<text x="38" y="459" font-size="13.2" fill="#CBD5E1">' +
+           '고치는 방법이 여럿입니다 — 바늘로 하는 것 · 내시경으로 하는 것 · 째고 하는 것. ' +
+           '약관이 그중 어디까지를 「수술」로 보는지가 지급을 가릅니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1560 480' });
+    }
+  };
+
+  /* ═══ 골수 — 피를 만드는 공장, 그리고 그 공장이 무너지는 것 ═══════
+     혈액암은 <b>덩어리가 생기는 병이 아니다.</b> 그래서 「어디에 났습니까」
+     라는 질문이 안 통하고, 설계사도 설명하기 어려워한다.
+
+     피는 뼈 속 <b>골수</b>에서 만들어진다. 한 줄기 세포에서 적혈구·백혈구·
+     혈소판 셋이 갈라져 나온다. 백혈병은 그중 한 갈래가 <b>덜 자란 채로</b>
+     끝없이 불어나 공장을 가득 메우는 병이다. 자리를 빼앗긴 나머지 둘이
+     못 만들어지니 — <b>숨차고(적혈구), 자꾸 감염되고(백혈구), 멍이 든다(혈소판).</b>
+
+     이 그림의 요점은 하나다. 덩어리를 잘라 내는 병이 아니라서
+     <b>수술비가 놀고, 대신 입원과 치료비가 길게 나간다.</b>
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function marrowPanel(sick, R) {
+    var s = '', i, a, x, y;
+    /* 뼈 껍질 — 단단한 겉과 성긴 속 */
+    s += '<path d="M30 24 L330 24 L330 300 L30 300 Z" fill="#F2EADA" stroke="#B9A98C" stroke-width="3"/>';
+    s += '<rect x="30" y="24" width="300" height="26" fill="#E0D3B8"/>';
+    s += '<rect x="30" y="274" width="300" height="26" fill="#E0D3B8"/>';
+    /* 성긴 뼈기둥 */
+    for (i = 0; i < 34; i++) {
+      x = 36 + R() * 288; y = 54 + R() * 214;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l' + (16 + R() * 26).toFixed(0) + ' ' +
+           ((R() - 0.5) * 26).toFixed(0) + '" stroke="#DCCDAE" stroke-width="' + (3 + R() * 3).toFixed(1) +
+           '" opacity=".9" stroke-linecap="round"/>';
+    }
+    /* 굴 — 피가 빠져나가는 길 */
+    s += '<path d="M30 168 C110 150 200 190 330 164" fill="none" stroke="#C0392B" stroke-width="9" opacity=".45"/>';
+
+    /* 세포들 */
+    function cell(x, y, r, fill, ring, dot) {
+      var o = '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + r.toFixed(1) +
+              '" fill="' + fill + '" stroke="' + ring + '" stroke-width="1.2"/>';
+      if (dot) o += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (r * 0.45).toFixed(1) +
+                    '" fill="' + dot + '" opacity=".9"/>';
+      return o;
+    }
+    var nRed = sick ? 8 : 46, nWhiteOK = sick ? 5 : 20, nPlt = sick ? 5 : 26, nBlast = sick ? 92 : 0;
+    for (i = 0; i < nRed; i++) {           /* 적혈구 — 가운데가 옴폭 */
+      x = 40 + R() * 280; y = 58 + R() * 210;
+      s += cell(x, y, 6.4, '#C0392B', '#8E2A22', '#9B2F26');
+    }
+    for (i = 0; i < nWhiteOK; i++) {       /* 다 자란 백혈구 */
+      x = 40 + R() * 280; y = 58 + R() * 210;
+      s += cell(x, y, 8.2, '#EEF2F7', '#7E93A8', '#5B7186');
+    }
+    for (i = 0; i < nPlt; i++) {           /* 혈소판 — 작은 조각 */
+      x = 40 + R() * 280; y = 58 + R() * 210;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l6 -3 l4 5 l-5 4 Z" fill="#D9A441" opacity=".95"/>';
+    }
+    for (i = 0; i < nBlast; i++) {         /* 덜 자란 세포 — 핵이 크다 */
+      x = 40 + R() * 280; y = 58 + R() * 210;
+      s += cell(x, y, 9.4, '#DCC9E8', '#7E5AA0', '#6D3FA0');
+    }
+    return s;
+  }
+
+  V.marrow = {
+    t: '혈액암은 <b>덩어리가 생기는 병이 아닙니다</b> — 공장이 메워지는 병입니다',
+    d: '피는 뼈 속 <b>골수</b>에서 만들어집니다. 한 줄기 세포에서 <b>적혈구·백혈구·혈소판</b> 셋이 갈라져 나옵니다. ' +
+       '백혈병은 그중 한 갈래가 <b>덜 자란 채로</b> 끝없이 불어나 공장을 가득 메우는 병입니다. ' +
+       '자리를 빼앗긴 나머지가 못 만들어지니 — <b>숨차고(적혈구), 자꾸 감염되고(백혈구), 멍이 듭니다(혈소판).</b> ' +
+       '덩어리를 잘라 내는 병이 아니라서 <b>수술비가 놀고, 대신 입원과 치료비가 길게 나갑니다.</b>',
+    dz: ['cancer_blood'],
+    build: function () {
+      var R = rnd(20260829);
+      var s = '<svg viewBox="0 0 1120 520" width="1120" height="520">';
+      s += '<rect x="24" y="8" width="360" height="28" rx="9" fill="#166534"/>';
+      s += '<text x="38" y="27" font-size="14" font-weight="800" fill="#fff">① 정상 골수 — 셋이 고루 만들어집니다</text>';
+      s += '<g transform="translate(24 44)">' + marrowPanel(0, R) + '</g>';
+      s += '<rect x="420" y="8" width="360" height="28" rx="9" fill="#991B1B"/>';
+      s += '<text x="434" y="27" font-size="14" font-weight="800" fill="#fff">② 백혈병 — 덜 자란 세포가 자리를 메웁니다</text>';
+      s += '<g transform="translate(420 44)">' + marrowPanel(1, R) + '</g>';
+
+      /* 범례 */
+      s += '<g class="lbl">';
+      s += '<circle cx="820" cy="70" r="7" fill="#C0392B" stroke="#8E2A22" stroke-width="1.2"/>';
+      s += '<text x="838" y="75" font-size="13" font-weight="800" fill="#0D1117">적혈구</text>';
+      s += '<text x="838" y="93" font-size="12" fill="#4B5563">모자라면 숨이 찹니다</text>';
+      s += '<circle cx="820" cy="126" r="8" fill="#EEF2F7" stroke="#7E93A8" stroke-width="1.4"/>';
+      s += '<text x="838" y="131" font-size="13" font-weight="800" fill="#0D1117">백혈구</text>';
+      s += '<text x="838" y="149" font-size="12" fill="#4B5563">모자라면 자꾸 감염됩니다</text>';
+      s += '<path d="M814 178 l8 -4 l5 6 l-7 5 Z" fill="#D9A441"/>';
+      s += '<text x="838" y="187" font-size="13" font-weight="800" fill="#0D1117">혈소판</text>';
+      s += '<text x="838" y="205" font-size="12" fill="#4B5563">모자라면 멍이 들고 피가 안 멎습니다</text>';
+      s += '<circle cx="820" cy="238" r="9" fill="#DCC9E8" stroke="#7E5AA0" stroke-width="1.4"/>';
+      s += '<text x="838" y="243" font-size="13" font-weight="800" fill="#0D1117">덜 자란 세포</text>';
+      s += '<text x="838" y="261" font-size="12" fill="#4B5563">일은 못 하면서 자리만 차지합니다</text>';
+      s += '</g>';
+
+      s += '<rect x="24" y="374" width="1072" height="112" rx="14" fill="#0F172A"/>';
+      s += '<text x="48" y="406" font-size="15" font-weight="800" fill="#fff">그래서 설계가 다릅니다</text>';
+      s += '<text x="48" y="432" font-size="13.2" fill="#CBD5E1">' +
+           '잘라 낼 덩어리가 없으니 수술비 담보가 놉니다. 대신 오래 입원하고, 항암을 여러 차례 받습니다.</text>';
+      s += '<text x="48" y="456" font-size="13.2" fill="#93C5FD">' +
+           '입원일당의 한도일수와, 치료할 때마다 열리는 치료비 담보가 실지급을 가릅니다.</text>';
+      s += '<text x="24" y="510" font-size="11.8" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 무엇이 무엇을 밀어내는지를 보여 주는 그림입니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1120 520' });
+    }
+  };
+
   V.vessel = {
     t: '혈관은 이렇게 좁아지고, 이렇게 엽니다',
     d: '기름때가 쌓여 길이 좁아지다가(협심증), 그 덩어리가 터지면 피떡이 생겨 완전히 막힙니다(심근경색). ' +
