@@ -245,6 +245,26 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
     a + ((d.plan && d.plan.layers) || []).reduce((b, L) => b + (L.rows || []).length, 0), 0);
   is(nRow > 100, '층별 담보 줄이 넉넉하다 — 층 ' + nLayer + ' · 줄 ' + nRow);
 
+  /* ═══ 4-7. 약관 어디를 보나 ═══ */
+  console.log('\n[4-7] 약관 지도 — 자리와 함정이 다 적혀 있는가');
+  const N = D.nav || {};
+  is((N.order || []).length >= 5, '찾는 순서가 다섯 걸음 이상 적혀 있다 — ' + (N.order || []).length + '걸음');
+  is((N.where || []).length >= 20, '질문이 넉넉히 있다 — ' + (N.where || []).length + '가지');
+  const navHole = [], navBad = [];
+  (N.where || []).forEach(w => {
+    if (!w.q || !(w.at || []).length || !w.how || !w.trap) navHole.push((w.q || '').slice(0, 14));
+    (w.cov || []).forEach(k => { if (!VOCAB.has(k)) navBad.push(w.q.slice(0, 10) + ' · ' + k); });
+    (w.dz || []).forEach(k => { if (!dzIds.has(k)) navBad.push(w.q.slice(0, 10) + ' · ' + k); });
+  });
+  is(navHole.length === 0, '질문마다 <b>펴야 할 자리 · 무엇을 확인하나 · 자주 틀리는 자리</b>가 다 있다' +
+     (navHole.length ? ' — 빈칸: ' + navHole.join(' / ') : ''));
+  is(navBad.length === 0, '약관 지도가 가리키는 담보·질병이 실재한다' + (navBad.length ? ' — ' + navBad.join(' / ') : ''));
+  /* 약관 원문을 옮겨 적지 않았는가 — 목차 이름만 있어야 한다 */
+  const navTxt = JSON.stringify(N);
+  is(!/제\s*\d+\s*조\s*\(/.test(navTxt), '약관 조문을 옮겨 적지 않았다 (목차 이름만)');
+  is(/원문을 서버나 공개 주소에 올리지 않습니다|원문은 적지 않습니다/.test(navTxt),
+     '약관 원문을 올리지 않는다는 규칙이 적혀 있다');
+
   /* ═══ 5. 단정하지 않는가 ═══ */
   console.log('\n[5] 단정하지 않는가 — 지급은 약관과 심사가 정한다');
   const SAY_NO = [
@@ -400,6 +420,57 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const len2 = (await page.locator('.script').innerText()).length;
   is(len2 > len1, '더 많이 고르면 대본도 그만큼 두꺼워진다 (' + len1 + ' → ' + len2 + '자)');
   is(/^\d+\/\d+$/.test((await page.locator('.score .n').innerText()).replace(/\s/g, '')), '점수가 분수로 나온다');
+
+  console.log('\n[8-5] 가상설계창 — 담아 놓고 질병 열셋에 대 보는가');
+  await page.evaluate(() => { try { localStorage.removeItem('apex_dz_lab'); } catch (e) {} labOpen(); });
+  await page.waitForTimeout(300);
+  const labBox = await page.locator('.lab-box input[type=checkbox]').count();
+  is(labBox === (D.cov || []).length, '말모이 ' + (D.cov || []).length + '가지를 다 담을 수 있다 (' + labBox + '칸)');
+  is((await page.locator('.cvg .row').count()) === (D.list || []).length,
+     '질병 ' + (D.list || []).length + '종이 모두 막대로 선다');
+  /* 아무것도 안 담으면 0%, 담으면 올라가야 한다 */
+  const z = await page.locator('.lab-sum .n').innerText();
+  is(/^0/.test(z), '아무것도 안 담으면 0% 다 (' + z.replace(/\s/g, '') + ')');
+  await page.evaluate(() => {
+    ['일반암진단비', '유사암진단비', '실손', '질병수술비', '입원일당'].forEach(k => { LAB.picked[k] = true; });
+    labPaintScore();
+  });
+  await page.waitForTimeout(250);
+  const z2 = await page.locator('.lab-sum .n').innerText();
+  is(parseInt(z2, 10) > 0, '담으면 덮는 비율이 올라간다 (' + z2.replace(/\s/g, '') + ')');
+  /* 막대가 실제로 칠해지는가.
+     한 번 이걸 클래스 이름(.cvg .cb i)으로 찾게 짰다가 낭패를 봤다 —
+     이름을 도구줄과 겹치는 .bar 로 되돌려 막대가 사라져도 <b>점검이 못 잡았다.</b>
+     찾을 것이 없으면 그냥 조용해지기 때문이다. 그래서 이름이 아니라
+     <b>자리(줄의 두 번째 칸, 그 안의 첫 자식)</b>로 재고, 못 찾으면 실패로 본다. */
+  const barBox = await page.locator('.cvg .row').first().evaluate(el => {
+    const cell = el.children[1], fill = cell && cell.firstElementChild;
+    if (!fill) return { w: 0, h: 0, none: 1 };
+    const r = fill.getBoundingClientRect();
+    return { w: Math.round(r.width), h: Math.round(r.height) };
+  });
+  is(!barBox.none && barBox.w > 4 && barBox.h > 4,
+     '막대가 눈에 보이게 칠해진다' + (barBox.none ? ' — 칠할 것을 못 찾았다' : ' (' + barBox.w + '×' + barBox.h + 'px)'));
+  is((await page.locator('.hole .r').count()) > 0, '가장 크게 빈 곳을 짚어 준다');
+  is(/보험료는 계산하지 않습니다/.test(await page.locator('.lab-hd').innerText()),
+     '보험료를 지어내지 않는다고 적어 둔다');
+  /* 질병을 누르면 그 병에서 무엇이 열리는지 */
+  await page.evaluate(() => labShow('stroke'));
+  await page.waitForTimeout(250);
+  const labShown = await page.locator('#detailPane').innerText();
+  is(/이 병이 오면 내 설계에서 무엇이 열립니까/.test(labShown), '질병을 누르면 단계별로 펼쳐진다');
+  is(/안 담으신 것 ·/.test(labShown), '그 단계에서 안 담은 담보를 짚어 준다');
+
+  console.log('\n[8-6] 약관 어디를 보나 — 자리를 짚어 주는가');
+  await page.locator('button.btn', { hasText: '약관 어디를 보나' }).click();
+  await page.waitForTimeout(250);
+  const navTx = await page.locator('#detailPane').innerText();
+  is(/약관 — 어디를 펴야 합니까/.test(navTx), '약관 지도가 열린다');
+  is((await page.locator('.navq').count()) === (N.where || []).length,
+     '질문 ' + (N.where || []).length + '가지가 모두 적힌다');
+  is((await page.locator('.ordr .o').count()) === (N.order || []).length, '찾는 순서가 적힌다');
+  is(/여기서 자주 틀립니다/.test(navTx), '질문마다 자주 틀리는 자리가 붙는다');
+  is(/원문은 적지 않습니다/.test(navTx), '약관 원문은 안 적는다고 화면에 밝힌다');
 
   console.log('\n[9] 담보 말모이가 화면에 서는가 — 「이 돈이 무슨 돈인지」');
   await page.locator('button.btn', { hasText: '담보 말모이' }).click();
