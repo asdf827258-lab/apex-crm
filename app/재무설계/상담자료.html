@@ -49,6 +49,8 @@ input,select{font-family:inherit}
 .field input:focus,.field select:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(49,130,246,.12)}
 .unit{position:absolute;right:14px;font-size:13px;color:var(--txt-3);font-weight:600;pointer-events:none}
 .field input.has-unit{padding-right:46px}
+/* 적으신 큰 금액을 억으로 되짚어 주는 줄 */
+.eok{font-size:11.5px;font-weight:700;color:var(--blue);letter-spacing:-.01em;margin-top:1px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{padding:10px 14px;border-radius:999px;background:var(--gray-1);border:1px solid var(--gray-2);
   font-size:14px;font-weight:600;color:var(--txt-2);transition:.15s}
@@ -200,100 +202,91 @@ body.form-mode{background:#fff}
 .ff-hero-hint b{display:block;font-size:18px;margin-top:5px;letter-spacing:0;color:rgba(212,185,120,.5)}
 /* 내 소개가 아직 비어 있으면 어디서 채우는지 알려 준다 */
 .ff-hero-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  z-index:6;color:#EBDFC4;font-size:14px;font-weight:700;text-align:center;line-height:1.9;padding:24px}
+  z-index:6;color:#EBDFC4;font-size:14px;font-weight:700;text-align:center;line-height:1.9;padding:24px;
+  pointer-events:none}   /* 글이 「내 소개 고치기」 단추를 덮으면 못 누른다 */
+/* 아래 막대(.bar z:50)가 표지 오른쪽 아래를 덮고 있었다. 단추는 있는데
+   눌러지지 않았다 — 보이는데 안 눌리는 것이 제일 나쁘다.
+   오른쪽 <b>위</b> 로 옮긴다. 아래는 막대가 덮고, 가운데 오른쪽에는
+   이름이 크게 선다. 위쪽만 비어 있다.
+   여기(.ff-hero)에서만 그런다 — 발표 슬라이드에는 막대가 없다. */
+.ff-hero .as-edit{z-index:60;top:22px;right:22px;bottom:auto}
+/* 안내 글은 flex 한 항목으로 묶는다 — 안 묶으면 <b> 가 각각 항목이 되어
+   줄바꿈이 무시되고 한 줄로 옆으로 퍼졌다 */
+.ff-hero-empty-in{max-width:min(660px,88vw)}
+/* 아직 비어 있을 때는 흐리게 두지 않는다 — 어두운 표지에서 못 찾는다 */
+.as-edit-hot{opacity:1;border-color:rgba(212,185,120,.85);background:rgba(212,185,120,.16);color:#FBF3DF}
 @media(max-width:900px){.ff-hero{min-height:82vh}.ff-hero .as-info{padding:16px 22px 46px}}
 
 /* ===== 두 번째 장 — 고객 팩트파인딩 =====
-   여기서 적는 숫자가 뒤의 스물다섯 장을 전부 만듭니다. 그런데 지금까지
-   여느 입력 폼과 똑같이 생겨서, 고객 앞에서 열기가 민망했습니다.
-   표지와 같은 금색을 얇게 두르고, 칸을 종이 서식처럼 밑줄로 바꿉니다.  */
-/* 두 번째 장은 <b>가로로 넓게</b> 편다. 고객 상황은 한눈에 들어와야
-   하는데, 720px 안에 두 칸씩 세로로 쌓이면 스무 번을 내려야 끝이 났다.
-   화면이 넓으면 넓은 만큼 쓴다 — 좁으면 예전처럼 접힌다. */
-/* 두 번째 장 — 고객 상황과 소득·지출을 <b>한 장</b>에 담는다.
-   전에는 둘이 따로여서 상담 중에 두 번 스크롤해야 했다. 이제 한 화면에
-   들어오도록 가로로 펴고(최대 +560px) 줄 간격을 촘촘히 한다. */
-#form-view #sec1{position:relative;background:#fff;border:1px solid #E8E1D2;
-  border-radius:20px;padding:26px 28px 22px;overflow:hidden;
+   여기서 적는 숫자가 뒤의 스물다섯 장을 전부 만듭니다.
+
+   전에는 이 판만 <b>금색·명조·밑줄</b> 이었습니다. 표지와 이어 보이게
+   하려던 것인데, 바로 밑 「자산과 부채」 는 앱 기본(흰 바탕·파란 강조·
+   채워진 칸)이라 <b>한 화면에서 두 디자인이 싸웠습니다.</b> 고객 앞에서
+   내리는 동안 서식이 바뀌어 버립니다.
+
+   그래서 스킨을 걷어냅니다. 앱 기본이 이미 이 톤이므로 여기서는
+   <b>배치와 밀도만</b> 정합니다 — 색·글꼴·칸 모양은 한 곳(위의 .field ·
+   .chip · .divider)에서만 정해집니다. 같은 것을 두 곳에 두지 않습니다.
+
+   가로로는 넓게 폅니다. 720px 안에 두 칸씩 세로로 쌓이면 스무 번을
+   내려야 끝이 났습니다. 넓으면 넓은 만큼 쓰고, 좁으면 예전처럼 접힙니다. */
+#form-view #sec1{position:relative;background:#fff;border:1px solid var(--gray-2);
+  border-radius:var(--r);padding:26px 28px 22px;
   margin-left:calc(-1 * clamp(0px,(100vw - 740px)/2,280px));
   margin-right:calc(-1 * clamp(0px,(100vw - 740px)/2,280px))}
-#sec1 .divider{margin:16px 0 13px}
-#sec1 .mini-title{font-size:14.5px;margin:0 0 9px;display:flex;align-items:baseline;gap:9px}
-#sec1 .mt-sub{font-size:10.5px;font-weight:700;letter-spacing:.14em;color:#B08D45;
-  font-family:Pretendard,-apple-system,sans-serif}
-#sec1 .field input,#sec1 .field select{padding:6px 2px;font-size:14.5px}
-#sec1 .field{gap:3px}
-#sec1 .field label{font-size:9.5px}
-#sec1 .grid{gap:9px}
-#sec1 .kid-row{margin-bottom:6px}
-#sec1 .addbtn{padding:8px;font-size:13px}
-#sec1 .divider{margin:13px 0 11px}
-#sec1 .sub{margin:9px 0 14px;font-size:12px}
-#sec1 h2{font-size:23px}
-#sec1 .sec1-who{padding:10px 14px;margin-top:10px}
-#sec1 .chips{gap:6px}
-#sec1 .chip{padding:6px 13px;font-size:12.5px}
+/* 밀도 — 한 화면에 들어오게 촘촘히. 칸 모양은 안 건드린다 */
+#sec1 .divider{margin:15px 0 13px}
+#sec1 .field{gap:5px}
+#sec1 .grid{gap:10px}
+#sec1 .kid-row{margin-bottom:8px}
+#sec1 .sub{margin:9px 0 16px;font-size:13px}
+#sec1 .chips{gap:7px}
+
+/* 머리 — 앱 글꼴 그대로. 「두 번째 장」 은 눈썹 한 줄로만 남긴다 */
+#sec1 .sec1-eyebrow{font-size:10.5px;font-weight:800;letter-spacing:.22em;color:var(--txt-3)}
+#sec1 h2{font-size:24px;font-weight:800;letter-spacing:-.03em;color:var(--txt);margin:7px 0 0;display:block}
+#sec1 h2 .step-no{display:none}
+#sec1 .mini-title{font-size:15px;margin:0 0 10px;display:flex;align-items:baseline;gap:9px}
+#sec1 .mt-sub{font-size:11px;font-weight:700;letter-spacing:.02em;color:var(--txt-3);font-family:inherit}
 /* 「배우자」 · 「임신·출산 계획」 은 고르는 칸이 하나뿐이라 제목 옆에 붙인다 */
-#sec1 .mt-row{display:flex;align-items:center;gap:12px;margin:0 0 9px;flex-wrap:wrap}
+#sec1 .mt-row{display:flex;align-items:center;gap:12px;margin:0 0 10px;flex-wrap:wrap}
 #sec1 .mt-row .mini-title{margin:0}
+
+/* 「FOR ○○○ 님」 줄 — 이 판이 누구 것인지 */
+#sec1 .sec1-who{margin-top:12px;padding:12px 15px;border-radius:14px;
+  background:var(--gray-1);border:1px solid var(--gray-2);
+  display:flex;align-items:baseline;gap:11px;flex-wrap:wrap}
+#sec1 .sec1-who .lb{font-size:10.5px;font-weight:800;letter-spacing:.18em;color:var(--blue);flex:none}
+#sec1 .sec1-who .nm{font-size:19px;font-weight:800;letter-spacing:-.03em;color:var(--txt);line-height:1.25}
+#sec1 .sec1-who .nm.empty{font-size:14px;font-weight:600;color:var(--txt-3)}
+#sec1 .sec1-sum{margin-left:auto;font-size:12px;font-weight:700;color:var(--txt-3);letter-spacing:-.01em}
+@media(max-width:700px){#sec1 .sec1-sum{display:none}}
+
 /* 소득·지출을 적으면 남는 돈을 바로 되짚어 준다 — 상담의 출발점이다 */
-#sec1 .sec1-cash{margin-top:14px;padding:13px 16px;border-radius:3px;background:#FBF8F1;
-  border:1px solid #EFE6D2;font-size:13px;font-weight:700;color:#6B6252;line-height:1.75}
-#sec1 .sec1-cash b{color:#171512}
+#sec1 .sec1-cash{margin-top:14px;padding:13px 16px;border-radius:14px;background:var(--blue-l);
+  border:1px solid #D6E8FF;font-size:13.5px;font-weight:700;color:var(--txt-2);line-height:1.75}
+#sec1 .sec1-cash b{color:var(--txt)}
+#sec1 .sec1-cash .neg{color:var(--red)}
+
 /* 계산기로 넘어가는 자리 — 질문(여기)에서 진단(팩트체크)으로 끊기지 않게 */
-#sec1 .tofin-row{margin-top:12px}
+#sec1 .tofin-row{margin-top:13px}
 #sec1 .tofin{display:block;width:100%;text-align:left;cursor:pointer;font-family:inherit;
-  padding:13px 16px;border-radius:3px;border:1px solid #D6CDB8;background:#fff;
+  padding:14px 16px;border-radius:14px;border:1px solid var(--gray-2);background:var(--gray-1);
   transition:border-color .15s,background .15s}
-#sec1 .tofin:hover{border-color:#A38F63;background:#FDFBF6}
-#sec1 .tofin-t{display:block;font-size:13.5px;font-weight:800;color:#7A6740;letter-spacing:-.02em}
-#sec1 .tofin-s{display:block;font-size:11.5px;font-weight:600;color:#8B8574;margin-top:3px;line-height:1.5}
+#sec1 .tofin:hover{border-color:var(--blue);background:var(--blue-l)}
+#sec1 .tofin-t{display:block;font-size:14px;font-weight:800;color:var(--blue);letter-spacing:-.02em}
+#sec1 .tofin-s{display:block;font-size:12px;font-weight:600;color:var(--txt-3);margin-top:3px;line-height:1.5}
 @media print{#sec1 .tofin-row{display:none}}
+
 /* 좌우 두 칸 — 가족은 왼쪽, 돈은 오른쪽. 한 화면에 같이 들어온다.
    좁으면 예전처럼 한 칸으로 쌓인다. */
 #sec1 .sec1-cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
 #sec1 .sec1-col{min-width:0}
 #sec1 .sec1-col>.divider:first-child{display:none}
 @media(max-width:900px){#sec1 .sec1-cols{grid-template-columns:1fr;gap:0}}
-#sec1 .sec1-cash .neg{color:#B91C1C}
 #sec1 .grid.g2{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 #sec1 .grid.g3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-#sec1 .sec1-sum{margin-left:auto;font-size:11.5px;font-weight:700;color:#8C8271;
-  text-align:right;line-height:1.6;white-space:nowrap}
-@media(max-width:700px){#sec1 .sec1-sum{display:none}}
-#sec1 .sec1-who{flex-wrap:wrap}
-#sec1::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;
-  background:linear-gradient(90deg,#C8A25B,rgba(212,185,120,.30),transparent)}
-#sec1 .sec1-eyebrow{font-size:10px;font-weight:800;letter-spacing:.36em;color:#B08D45}
-#sec1 h2{font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;
-  font-size:25px;font-weight:700;letter-spacing:.01em;color:#171512;margin:9px 0 0;display:block}
-#sec1 h2 .step-no{display:none}
-#sec1 .sec1-who{margin-top:12px;padding:13px 16px;border-radius:3px;
-  background:#FBF8F1;border:1px solid #EFE6D2;display:flex;align-items:baseline;gap:11px}
-#sec1 .sec1-who .lb{font-size:9.5px;font-weight:800;letter-spacing:.26em;color:#B08D45;flex:none}
-#sec1 .sec1-who .nm{font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;
-  font-size:20px;font-weight:700;letter-spacing:.01em;color:#171512;line-height:1.2}
-#sec1 .sec1-who .nm.empty{font-size:14px;font-weight:600;color:#A79C86;font-family:inherit;font-style:italic}
-#sec1 .sub{font-size:12.5px;color:#8C8271;margin:11px 0 22px;font-weight:600;line-height:1.6}
-#sec1 .field label{font-size:10px;font-weight:800;letter-spacing:.20em;color:#A08A5F}
-#sec1 .field input,#sec1 .field select{border:none;border-bottom:1px solid #E2D9C6;
-  border-radius:0;background:transparent;padding:10px 2px;font-size:16px;font-weight:700;
-  letter-spacing:-.01em;color:#171512}
-#sec1 .field input:focus,#sec1 .field select:focus{border-bottom-color:#C8A25B;background:transparent;
-  box-shadow:0 1px 0 0 #C8A25B}
-#sec1 .field input::placeholder{color:#C6BCA6;font-weight:600}
-#sec1 .unit{right:2px;color:#B08D45;font-weight:700}
-#sec1 .divider{height:1px;margin:26px 0 20px;background:transparent;
-  background-image:linear-gradient(90deg,rgba(200,162,91,.42),rgba(200,162,91,.10),transparent)}
-#sec1 .mini-title{font-family:"Noto Serif KR","Nanum Myeongjo","Noto Sans KR",serif;
-  font-size:16px;font-weight:700;letter-spacing:.01em;color:#171512;margin:0 0 13px}
-#sec1 .chip{border-radius:2px;background:#fff;border:1px solid #E2D9C6;color:#6B6252;
-  font-weight:700;padding:9px 16px;letter-spacing:.01em}
-#sec1 .chip.on{background:#171512;border-color:#171512;color:#EBDFC4}
-#sec1 .addbtn{border-radius:2px;background:transparent;border:1px dashed #D8CBAE;color:#A08A5F;
-  font-weight:800;letter-spacing:.02em}
-#sec1 .addbtn:hover{border-color:#C8A25B;color:#8A6F35}
-#sec1 .kid-del{border-radius:2px;background:transparent;border:1px solid #E2D9C6;color:#A08A5F}
 
 /* 섹션 네비 */
 .ff-nav{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.94);
@@ -1187,6 +1180,51 @@ var FOCUS=['노후·연금','보장·의료','자녀 교육·결혼','저축·�
 var WORRIES=['노후 생활비가 부족할까봐','아프면 치료비 감당이 안 될까봐','내가 없을 때 가족 생활','자녀 교육비 부담','대출 상환 부담','보험료가 과한 것 같아서','보장이 제대로 되는지 몰라서','물가·저금리로 자산이 줄어서'];
 var sel={goals:[],worries:[],focus:[],spouse:1,preg:0};
 
+/* ── 고른 것(칩)을 담고 · 되돌리고 · 칠하는 자리 — 여기 하나뿐이다 ──
+   칩은 <button> 이라 input 이 아니다. 그래서 고객 365일로 저장할 때
+   snap() 이 훑는 input 목록에 안 잡혔다. 「배우자 없음」 으로 저장한
+   상담을 다시 열면 기본값 「있음」 으로 되살아났다 — 싱글이신 고객
+   앞에서 「배우자분은…」 이 나가던 자리다.
+   목표 · 걱정 · 가장 먼저 듣고 싶은 것도 함께 사라졌고, 그중 focus 는
+   계산기의 상담 순서(FOCUS2PAIN)까지 정하므로 되읽은 상담이 아예
+   다른 순서로 흘렀다.
+
+   담는 곳 · 되돌리는 곳 · 칠하는 곳을 하나로 모은다. 칩이 늘어도
+   SEL_TOG · SEL_LIST 에 이름만 더하면 빠뜨릴 자리가 없다.        */
+var SEL_TOG=['spouse','preg'], SEL_LIST=['goals','worries','focus'];
+function selGet(){
+  var o={},i;
+  for(i=0;i<SEL_LIST.length;i++)o[SEL_LIST[i]]=sel[SEL_LIST[i]].slice();
+  for(i=0;i<SEL_TOG.length;i++)o[SEL_TOG[i]]=sel[SEL_TOG[i]];
+  return o;
+}
+function selSet(o){
+  if(!o)return;
+  var i,k;
+  for(i=0;i<SEL_LIST.length;i++){k=SEL_LIST[i];if(o[k]&&o[k].slice)sel[k]=o[k].slice();}
+  for(i=0;i<SEL_TOG.length;i++){k=SEL_TOG[i];if(o[k]!==undefined&&o[k]!==null)sel[k]=+o[k];}
+  selPaint();
+}
+/* 누를 때도, 되읽을 때도 여기로 온다. className 통째 대입은 안 한다 —
+   다른 곳이 붙여 둔 클래스를 잃는다. */
+function selPaint(){
+  var L=document.querySelectorAll('.chip[data-tog]'),i,j,c,box,cs;
+  for(i=0;i<L.length;i++){
+    c=L[i];
+    if(+c.dataset.v===+sel[c.dataset.tog])c.classList.add('on');
+    else c.classList.remove('on');
+  }
+  for(i=0;i<SEL_LIST.length;i++){
+    box=$(SEL_LIST[i]);if(!box)continue;
+    cs=box.querySelectorAll('.chip');
+    for(j=0;j<cs.length;j++){
+      if(sel[SEL_LIST[i]].indexOf(cs[j].textContent)>=0)cs[j].classList.add('on');
+      else cs[j].classList.remove('on');
+    }
+  }
+  box=$('spouse-box');if(box)box.style.display=sel.spouse?'grid':'none';
+}
+
 function renderChips(box,arr,key){
   var h='';
   for(var i=0;i<arr.length;i++) h+='<button class="chip" data-k="'+key+'" data-i="'+i+'">'+arr[i]+'</button>';
@@ -1195,6 +1233,7 @@ function renderChips(box,arr,key){
 renderChips('goals',GOALS,'goals');
 renderChips('worries',WORRIES,'worries');
 renderChips('focus',FOCUS,'focus');
+selPaint();     /* 첫 그림도 고른 것에서 나온다 — 칠하는 곳은 selPaint 하나뿐이다 */
 
 function fmtU(v,u){ return u==='만원' ? cm(v)+'원' : (Math.round(v)+u); }
 document.addEventListener('click',function(e){
@@ -1235,16 +1274,13 @@ document.addEventListener('click',function(e){
   var c=e.target.closest('.chip'); if(!c) return;
   if(c.dataset.tog){
     sel[c.dataset.tog]=+c.dataset.v;
-    var sib=c.parentNode.querySelectorAll('.chip');
-    for(var i=0;i<sib.length;i++) sib[i].classList.remove('on');
-    c.classList.add('on');
-    if(c.dataset.tog==='spouse') $('spouse-box').style.display=sel.spouse?'grid':'none';
+    selPaint();
     return;
   }
   var k=c.dataset.k; if(!k) return;
   var label=c.textContent, list=sel[k], p=list.indexOf(label);
-  if(p>=0){list.splice(p,1);c.classList.remove('on');}
-  else{list.push(label);c.classList.add('on');}
+  if(p>=0)list.splice(p,1); else list.push(label);
+  selPaint();
 });
 
 var kidN=0;
@@ -1309,7 +1345,7 @@ function updateProgress(){
 var PHOTO='';
 /* 내 소개는 여기서 안 적는다 — 보장분석 상담자료의 「내 소개」 한 곳에서
    적고 두 자료가 함께 읽는다. 두 번 적으면 반드시 어긋난다. */
-function saveProfile(){ toast('내 소개는 보장분석 상담자료 표지에서 고치시면 여기도 같이 바뀝니다'); }
+function saveProfile(){ toast('내 소개는 「내 설정 \u2192 내 소개」 에서 고치시면 세 자료가 함께 바뀝니다'); }
 /* ── 내 소개 — 보장분석 상담자료와 <b>같은 칸</b>을 본다 ────────
    전에는 이 화면 안에 「내 소개」 입력 카드가 따로 있었다. 그래서 같은
    설계사가 두 자료에 이름을 두 번 적어야 했고, 한쪽만 고치면 두 자료가
@@ -1373,8 +1409,12 @@ function heroPaint(){
   var body=(typeof starCoverHtml==='function')?starCoverHtml():'';
   h.innerHTML=body+
     (ADV.name?'<div class="ff-hero-hint">SCROLL<b>↓</b></div>'
-             :'<div class="ff-hero-empty">「내 소개」 가 아직 비어 있습니다.<br>'+
-              '보장분석 상담자료 표지에서 한 번 적으시면<br>이 자료도 같은 얼굴이 됩니다.</div>');
+             :'<div class="ff-hero-empty"><div class="ff-hero-empty-in">'+
+              '「내 소개」 가 아직 비어 있습니다.<br>'+
+              '오른쪽 위 <b>\u270F\uFE0F 내 소개 고치기</b> 를 누르시면<br>'+
+              '<b>내 설정</b> 에서 한 번에 적으실 수 있습니다.<br>'+
+              '프레젠테이션 \u00B7 보장분석 \u00B7 재무설계 세 자료가 함께 바뀝니다.'+
+              '</div></div>');
 }
 /* 표지에 들어가는 값은 <b>고객에게 그대로 보인다.</b> 꺾쇠 하나가
    섞여도 판이 깨지므로 반드시 막고 넣는다. */
@@ -1422,8 +1462,27 @@ function cashWon(v){
     return g+e+'억'+(r?' '+r.toLocaleString()+'만':'')+'원';}
   return g+v.toLocaleString()+'만원';
 }
+/* 큰 금액은 억으로 되짚어 준다 — 「50000 만원」 은 한 박자 늦게 읽힌다.
+   고객 앞에서 5억을 5천만으로 읽으면 그 자리에서 상담이 어그러진다.
+   적으신 값을 그대로 다시 읽어 줄 뿐, 없는 값을 만들지 않는다.
+   되짚을 칸은 여기 한 곳에만 적는다 — 칸이 늘어도 빠뜨릴 자리가 없다. */
+var EOK_IDS=['f_home','f_cash','f_inv','f_dc','f_debt'];
+function eokPaint(){
+  var i,e,fld,tag,v;
+  for(i=0;i<EOK_IDS.length;i++){
+    e=$(EOK_IDS[i]); if(!e)continue;
+    fld=e.parentNode&&e.parentNode.parentNode; if(!fld)continue;
+    tag=fld.querySelector('.eok');
+    v=parseFloat(e.value);
+    if(isNaN(v)||Math.abs(v)<10000){ if(tag)tag.parentNode.removeChild(tag); continue; }
+    if(!tag){ tag=document.createElement('div'); tag.className='eok'; fld.appendChild(tag); }
+    tag.textContent='= '+cashWon(v);
+  }
+}
+eokPaint();     /* 열자마자 한 번 — 견본 값도 억으로 읽힌다 */
 document.addEventListener('input',function(e){
   markSection(e.target);
+  if(e.target.id&&EOK_IDS.indexOf(e.target.id)>=0) eokPaint();
   if(e.target.id&&e.target.id.indexOf('a_')===0) mePreview();
   if(/^f_(name|age|job|income|etc|living|house|edu|ins|loan|sincome)$/.test(e.target.id||'')) sec1Paint();
 });
@@ -3219,8 +3278,27 @@ function starCoverHtml(){
         shots.map(function(x){return '<div class="as-shot"><img src="'+esc(x.src)+'" alt="" '+
           'onerror="this.parentElement.style.display=\'none\'">'+
           (x.cap?'<div class="as-cap"><i>●</i>ON AIR · '+esc(x.cap)+'</div>':'')+'</div>';}).join('')+'</div>'):'')+
+      /* 「내 소개 고치기」 — 보장분석 상담자료 표지와 <b>같은 단추</b>다.
+         전에는 이 자료에만 단추가 없어서, 표지가 「보장분석 상담자료
+         표지에서 적으시라」 고 다른 화면을 가리켰다. 팀원마다 소개가
+         다른데 고칠 자리가 한 자료에만 있으면, 나머지 사람은 남의
+         이름이 뜨거나 「이름」 이라고 뜬 채로 고객을 만난다.
+         아직 비어 있으면 눈에 띄게 한다 — 어두운 표지에서 흐린 단추는
+         못 찾는다. */
+      '<button type="button" class="as-edit'+(ADV.name?'':' as-edit-hot')+'" data-apex-edit>'+
+        '\u270F\uFE0F 내 소개 고치기</button>'+
     '</div></div>';
 }
+/* 누르면 앱의 <b>내 설정</b> 으로 보낸다. 값을 넣는 곳은 거기 한 곳뿐이다. */
+document.addEventListener('click',function(e){
+  var b=e.target&&e.target.closest?e.target.closest('[data-apex-edit]'):null;
+  if(!b)return;
+  if(window.parent&&window.parent!==window){
+    try{window.parent.postMessage({t:'apex:editintro'},location.origin);}catch(x){}
+    return;
+  }
+  toast('앱 안에서 열면 「내 설정 → 내 소개」 로 바로 넘어갑니다');
+});
 function buildSlides(r){
   var d=r.d, S=[];
 
@@ -4724,7 +4802,10 @@ $('show').addEventListener('touchend',function(e){
     return out;
   }
   function snap(){
-    var o={v:1,f:{},kids:[],parents:[]},L=document.querySelectorAll('input,select,textarea'),i,e;
+    /* v:2 부터 고른 것(sel)을 함께 담는다. v:1 로 저장된 옛 자료에는
+       고른 것이 아예 없으므로, 열 때 기본값으로 선다 — 없는 값을
+       그럴듯하게 지어내지 않는다. */
+    var o={v:2,f:{},kids:[],parents:[]},L=document.querySelectorAll('input,select,textarea'),i,e;
     for(i=0;i<L.length;i++){
       e=L[i];
       if(!e.id||e.type==='file')continue;
@@ -4732,6 +4813,7 @@ $('show').addEventListener('touchend',function(e){
     }
     o.kids=rowsOf('kids',['k-name','k-age']);
     o.parents=rowsOf('parents',['p-rel','p-age']);
+    if(typeof selGet==='function')o.sel=selGet();
     return o;
   }
   function fire(e){
@@ -4758,6 +4840,10 @@ $('show').addEventListener('touchend',function(e){
       else e.value=o.f[k];
       fire(e);
     }
+    /* 고른 것은 맨 뒤에 되돌린다 — 배우자 칸을 보일지 말지가
+       여기서 정해지므로, 값을 다 채운 뒤여야 한다. */
+    if(o.sel&&typeof selSet==='function')selSet(o.sel);
+    if(typeof eokPaint==='function')eokPaint();
   }
   function reply(src,org,msg){try{src.postMessage(msg,org||ORG);}catch(x){}}
   window.addEventListener('message',function(ev){
