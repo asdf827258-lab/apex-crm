@@ -418,6 +418,139 @@ const FIN = 'app/재무설계/상담자료.html';
   is(FILLED.shots === 2, '내가 올린 방송 스틸만 붙는다 (' + FILLED.shots + '컷)');
   is(FILLED.tipOff, '채우고 나면 안내가 사라진다');
 
+  console.log('\n[12] 앱을 안 켜도 누구나 자기 소개를 적을 수 있는가');
+  /* 이 카드는 앱 밖에서도 열린다. 고칠 자리가 앱 안에만 있으면 앱을 안 켠
+     분은 빈 카드(전에는 남의 카드)를 그대로 들고 고객을 만난다.
+     그렇다고 두 곳에 적히면 안 된다 — 앱 안이면 「내 설정」 한 곳으로 보내고,
+     밖에서 열렸을 때만 그 자리에서 적는다. */
+  const ED = await card2.evaluate(async () => {
+    localStorage.clear();
+    const btn = document.getElementById('ecEdit');
+    if (!btn) return { none: true };          /* 터지지 말고 빨간불을 켠다 */
+    btn.click();
+    await new Promise(r => setTimeout(r, 250));
+    const w = document.getElementById('ecWrap');
+    const open = !!(w && w.style.display === 'flex');
+    const set = (k, v) => { const e = document.querySelector('#ecWrap [data-k="' + k + '"]'); if (e) e.value = v; };
+    set('name', '성춘향'); set('nameEn', 'SUNG CHUN HYANG'); set('title', '재무설계 전문가');
+    set('license', '생명·손해'); set('career', '상담 800+ · 6년'); set('team', 'TEAM APEX');
+    set('onair', 'KBS 「돈이 되는 이야기」'); set('tags', '연금, 상속, 보장분석');
+    const fields = document.querySelectorAll('#ecWrap [data-k]').length;
+    const photos = document.querySelectorAll('#ecWrap [data-p]').length;
+    document.getElementById('ecSave').click();
+    await new Promise(r => setTimeout(r, 500));
+    let stored = {};
+    try { stored = JSON.parse(localStorage.getItem('apex_profile') || '{}'); } catch (e) {}
+    return {
+      open: open, fields: fields, photos: photos,
+      name: (document.getElementById('name') || {}).textContent || '',
+      team: (document.getElementById('iFoot') || {}).textContent || '',
+      cells: document.querySelectorAll('#iMeta .c').length,
+      closed: !!(w && w.style.display === 'none'),
+      keys: Object.keys(stored)
+    };
+  });
+  is(!ED.none, '표지에 「내 소개 고치기」 단추가 있다');
+  /* 단추가 없으면 아래가 전부 undefined 라 점검이 <b>터진다.</b> 터지면
+     어디가 어긋났는지 안 보인다 — 빈 값으로 채워 빨간불로 보이게 한다. */
+  if (ED.none) Object.assign(ED, { open: false, fields: 0, photos: 0, name: '', team: '', cells: 0, closed: false, keys: [] });
+  is(ED.open, '앱 밖에서 열면 그 자리에서 적을 수 있다');
+  is(ED.fields === 10 && ED.photos === 3,
+     '글 ' + ED.fields + '칸 · 사진 ' + ED.photos + '칸이 선다');
+  is(ED.name === '성춘향', '저장하면 카드가 바로 그 이름으로 선다 (' + ED.name + ')');
+  is(ED.team === 'TEAM APEX' && ED.cells === 3, '팀·자격·방송·경력도 함께 바뀐다');
+  is(ED.closed, '저장하면 수정칸이 닫힌다');
+  is(ED.keys.indexOf('name') >= 0, '적은 것이 담긴다 (' + ED.keys.length + '칸)');
+
+  /* 다시 열어도 남아 있어야 한다 — 이 브라우저에만 남는다 */
+  await card2.reload({ waitUntil: 'domcontentloaded' });
+  await card2.waitForTimeout(1100);
+  const AGAIN = await card2.evaluate(() => ({
+    name: (document.getElementById('name') || {}).textContent || '',
+    btn: (document.getElementById('ecEdit') || {}).className || ''
+  }));
+  is(AGAIN.name === '성춘향', '다시 열어도 남아 있다 (' + AGAIN.name + ')');
+  is(AGAIN.btn.indexOf('hot') < 0, '채우고 나면 고치기 단추가 눈에 안 띄게 물러난다');
+
+  /* 앱 안에서는 두 곳에 안 적는다.
+     글자만 보면 안 된다 — if (inApp()) 을 if (false) 로 바꿔 놔도 두 낱말이
+     그대로 남아 통과해 버린다. 실제로 눌러 본다. */
+  const INAPP = await card2.evaluate(async () => {
+    const sent = [];
+    Object.defineProperty(window, 'parent', {
+      configurable: true,
+      value: { postMessage: function (m) { sent.push(m && m.t); } }
+    });
+    const w0 = document.getElementById('ecWrap');
+    if (w0) w0.style.display = 'none';
+    const btn = document.getElementById('ecEdit');
+    if (!btn) return { sent: [], opened: false };   /* 터지지 말고 빨간불을 켠다 */
+    btn.click();
+    await new Promise(r => setTimeout(r, 300));
+    const w = document.getElementById('ecWrap');
+    return { sent: sent, opened: !!(w && w.style.display === 'flex') };
+  });
+  is(INAPP.sent.indexOf('apex:editintro') >= 0,
+     '앱 안에서 누르면 「내 설정」 으로 보낸다 (' + INAPP.sent.join(',') + ')');
+  is(!INAPP.opened, '앱 안에서는 그 자리 수정칸을 안 연다 — 두 곳에 안 적힌다');
+
+  /* 카드가 앱이 모르는 열쇠를 새로 만들면, 앱에서 적은 값이 카드에 안 온다 */
+  const advKeys = ((app.match(/var ADV_FIELDS=\[([\s\S]*?)\];/) || [])[1] || '')
+    .concat((app.match(/var ADV_PHOTOS=\[([\s\S]*?)\];/) || [])[1] || '')
+    .match(/\bk:\s*'([a-zA-Z0-9_]+)'/g) || [];
+  const adv = advKeys.map(x => x.replace(/.*'([^']+)'.*/, '$1'));
+  const cardKeys = ((card.match(/var CARD_FIELDS = \[([\s\S]*?)\];/) || [])[1] || '')
+    .concat((card.match(/var CARD_PHOTOS = \[([\s\S]*?)\];/) || [])[1] || '')
+    .match(/\bk:\s*'([a-zA-Z0-9_]+)'/g) || [];
+  const ck = cardKeys.map(x => x.replace(/.*'([^']+)'.*/, '$1'));
+  is(adv.length >= 15 && ck.length >= 10, '양쪽 칸 이름을 읽어 냈다 — 앱 ' + adv.length + ' · 카드 ' + ck.length);
+  const stray = ck.filter(k => adv.indexOf(k) < 0);
+  is(stray.length === 0,
+     '카드가 앱이 모르는 칸 이름을 새로 만들지 않는다' + (stray.length ? ' — ' + stray.join(', ') : ''));
+  is(/max: 900/.test(card) && /max: 520/.test(card) && /900/.test(app) ,
+     '사진 줄이는 크기가 앱과 같다 (900 · 520) — 한쪽만 크면 같은 사진이 달라 보인다');
+  is(/apex_profile/.test(card) && !/localStorage\.setItem\('apex_intro/.test(card),
+     '앱이 이미 읽는 칸에 담는다 — 새 칸을 만들지 않는다');
+
+  /* 로그인한 사람의 칸이 옛 공용 칸을 이겨야 한다 */
+  const PRIO = await card2.evaluate(async () => {
+    localStorage.setItem('apex_intro_u1', JSON.stringify({ name: '홍길동', title: '로그인 칸' }));
+    localStorage.setItem('apex_profile', JSON.stringify({ name: '성춘향', title: '옛 공용 칸' }));
+    return true;
+  });
+  await card2.reload({ waitUntil: 'domcontentloaded' });
+  await card2.waitForTimeout(1100);
+  const WHO = await card2.evaluate(() => (document.getElementById('name') || {}).textContent || '');
+  is(PRIO && WHO === '홍길동',
+     '로그인한 사람의 칸이 옛 공용 칸을 이긴다 (' + WHO + ') — 한 브라우저를 같이 써도 안 덮인다');
+
+  /* 옛 칸(s6_profile)이 남아 있어도, 카드에서 고친 것이 살아남아야 한다.
+     전에는 고친 직후엔 맞다가 다시 열면 옛 이름으로 되살아났다 —
+     「고쳤는데 그대로예요」 가 되는 자리다. */
+  const KEEP = await card2.evaluate(async () => {
+    localStorage.clear();
+    localStorage.setItem('s6_profile', JSON.stringify({ name: '옛날사람', title: '옛 칸' }));
+    return true;
+  });
+  await card2.reload({ waitUntil: 'domcontentloaded' });
+  await card2.waitForTimeout(1100);
+  const K1 = await card2.evaluate(async () => {
+    const before = (document.getElementById('name') || {}).textContent || '';
+    document.getElementById('ecEdit').click();
+    await new Promise(r => setTimeout(r, 250));
+    const f = document.querySelector('#ecWrap [data-k="name"]');
+    if (f) f.value = '성춘향';
+    document.getElementById('ecSave').click();
+    await new Promise(r => setTimeout(r, 400));
+    return { before: before, after: (document.getElementById('name') || {}).textContent || '' };
+  });
+  await card2.reload({ waitUntil: 'domcontentloaded' });
+  await card2.waitForTimeout(1100);
+  const K2 = await card2.evaluate(() => (document.getElementById('name') || {}).textContent || '');
+  is(KEEP && K1.before === '옛날사람', '옛 칸만 있으면 그것이 선다 — 쓰던 값을 안 지운다');
+  is(K1.after === '성춘향', '고치면 그 자리에서 바뀐다');
+  is(K2 === '성춘향', '다시 열어도 고친 것이 남는다 (' + K2 + ') — 옛 칸이 되살아나지 않는다');
+
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
 

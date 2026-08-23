@@ -282,6 +282,206 @@ function countUp(){
     }
     function show(el,on){ if(el) el.style.display = on ? '' : 'none'; }
 
+
+  /* ── 개인 수정칸 ────────────────────────────────────────────────
+     이 카드는 앱 밖에서도 열린다. 그런데 고칠 자리가 앱 안에만 있으면,
+     앱을 안 켠 분은 남의(또는 빈) 카드를 그대로 들고 고객을 만난다.
+
+     그래서 <b>앱 안에서는 「내 설정 → 내 소개」 한 곳</b>으로 보내고,
+     <b>밖에서 열렸을 때만</b> 여기서 적게 한다. 두 곳에 적히지 않는다.
+
+     적은 것은 apex-deck 이 이미 읽는 칸(apex_profile)에 담는다 — 새 칸을
+     만들면 열쇠가 갈라져 카드만 다른 이름을 말하게 된다. 로그인해서 앱을
+     쓰시면 로그인 칸이 이 칸을 이긴다(readLocal).
+
+     사진은 <b>이 브라우저에만</b> 남는다. 서버로 나가지 않는다.        */
+  var CARD_FIELDS = [
+    { k: 'name',    t: '이름',        ph: '홍길동' },
+    { k: 'nameEn',  t: '이름 영문',   ph: 'HONG GIL DONG' },
+    { k: 'title',   t: '직함',        ph: '보장분석 전문가' },
+    { k: 'issue',   t: '표지 번호',   ph: 'No.03 / 08' },
+    { k: 'license', t: '보유 자격',   ph: '생명·손해·변액' },
+    { k: 'career',  t: '경력 한 줄',  ph: '상담 1,200+ · 8년' },
+    { k: 'motto',   t: '한 줄 소개 (따옴표 안에 들어갑니다)', ph: '한 사람의 인생에 꼭 맞는 보장을 설계합니다', wide: 1 },
+    { k: 'onair',   t: '방송 출연 (줄바꿈으로 여러 줄)', ph: 'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」', wide: 1, area: 1 },
+    { k: 'tags',    t: '전문 분야 (쉼표로 나눔)', ph: '운전자보험, 종신·정기보험, 보장분석', wide: 1 },
+    { k: 'team',    t: '팀 이름 (왼쪽 아래)', ph: 'TEAM ONTOP · INSURANCE PROFESSIONALS', wide: 1 }
+  ];
+  /* 줄이는 크기는 앱의 내 소개(advPhotoPick)와 같은 숫자를 쓴다 —
+     한쪽만 크게 담으면 같은 사진이 화면마다 다르게 보인다. */
+  var CARD_PHOTOS = [
+    { k: 'photo',  t: '인물 사진',   d: '왼쪽 전체를 채웁니다. 세로로 긴 사진이 좋습니다.', max: 900 },
+    { k: 'photo2', t: '방송 화면 ①', d: '오른쪽 아래 ON AIR 첫 칸', max: 520 },
+    { k: 'photo3', t: '방송 화면 ②', d: '오른쪽 아래 ON AIR 둘째 칸', max: 520 }
+  ];
+  var STORE = 'apex_profile';
+  var draft = null;
+
+  function readStore() {
+    try { return JSON.parse(localStorage.getItem(STORE) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function inApp() {
+    try { return !!(window.parent && window.parent !== window); } catch (e) { return false; }
+  }
+
+  function panelHtml() {
+    var f = CARD_FIELDS.map(function (x) {
+      var v = esc(draft[x.k] || '');
+      return '<label class="ec-f' + (x.wide ? ' w' : '') + '"><span>' + esc(x.t) + '</span>' +
+        (x.area
+          ? '<textarea data-k="' + x.k + '" rows="2" placeholder="' + esc(x.ph) + '">' + v + '</textarea>'
+          : '<input data-k="' + x.k + '" value="' + v + '" placeholder="' + esc(x.ph) + '">') +
+        '</label>';
+    }).join('');
+    var p = CARD_PHOTOS.map(function (x) {
+      var v = draft[x.k] || '';
+      return '<div class="ec-p"><span>' + esc(x.t) + '</span>' +
+        (v ? '<img src="' + esc(v) + '" alt="">' : '<i>아직 없음</i>') +
+        '<input type="file" accept="image/*" data-p="' + x.k + '" hidden>' +
+        '<div class="ec-pb"><button type="button" data-pick="' + x.k + '">📷 올리기</button>' +
+        '<button type="button" data-clear="' + x.k + '">지우기</button></div>' +
+        '<em>' + esc(x.d) + '</em></div>';
+    }).join('');
+    return '<div class="ec-box"><div class="ec-hd">내 소개 — 이 카드에 그대로 나옵니다' +
+      '<button type="button" id="ecX">✕</button></div>' +
+      '<div class="ec-bd"><div class="ec-ph">' + p + '</div><div class="ec-fs">' + f + '</div>' +
+      '<p class="ec-note">적으신 것과 사진은 <b>이 브라우저에만</b> 남습니다 — 서버로 나가지 않습니다. ' +
+      '다른 컴퓨터에서는 한 번 더 채워 주셔야 합니다. 앱에 로그인해서 쓰시면 ' +
+      '<b>「내 설정 → 내 소개」</b> 가 어느 기기에서든 따라옵니다.</p></div>' +
+      '<div class="ec-ft"><button type="button" id="ecSave">저장</button>' +
+      '<button type="button" id="ecCancel">닫기</button></div></div>';
+  }
+
+  function shrink(file, max, done) {
+    if (file.size > 10 * 1024 * 1024) { alert('10MB 이하 사진을 골라 주세요'); return; }
+    var rd = new FileReader();
+    rd.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var w = img.width, h = img.height, sc = Math.min(1, max / Math.max(w, h));
+        var cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+        var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+        cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        done(cv.toDataURL('image/jpeg', 0.84));
+      };
+      img.src = '' + e.target.result;
+    };
+    rd.readAsDataURL(file);
+  }
+
+  function openPanel() {
+    draft = readStore();
+    var I = window.apexDeckIntro || {};
+    /* 앱이 보내 준 값이 있으면 그것부터 보여 준다 — 빈 칸부터 시작하지 않는다 */
+    CARD_FIELDS.concat(CARD_PHOTOS).forEach(function (x) {
+      if (!draft[x.k] && I[x.k]) draft[x.k] = I[x.k];
+    });
+    var el = document.getElementById('ecWrap');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'ecWrap';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = panelHtml();
+    el.style.display = 'flex';
+    el.onclick = function (ev) {
+      var t = ev.target, k;
+      if (t.id === 'ecX' || t.id === 'ecCancel' || t === el) { el.style.display = 'none'; return; }
+      if ((k = t.getAttribute && t.getAttribute('data-pick'))) {
+        el.querySelector('[data-p="' + k + '"]').click(); return;
+      }
+      if ((k = t.getAttribute && t.getAttribute('data-clear'))) {
+        draft[k] = ''; el.innerHTML = panelHtml(); return;
+      }
+      if (t.id === 'ecSave') { savePanel(el); return; }
+    };
+    el.onchange = function (ev) {
+      var k = ev.target.getAttribute && ev.target.getAttribute('data-p');
+      if (!k || !ev.target.files || !ev.target.files[0]) return;
+      var spec = CARD_PHOTOS.filter(function (x) { return x.k === k; })[0];
+      shrink(ev.target.files[0], spec.max, function (url) {
+        draft[k] = url; el.innerHTML = panelHtml();
+      });
+    };
+  }
+
+  function savePanel(el) {
+    var out = {}, i, n;
+    n = el.querySelectorAll('[data-k]');
+    for (i = 0; i < n.length; i++) out[n[i].getAttribute('data-k')] = n[i].value.replace(/^\s+|\s+$/g, '');
+    CARD_PHOTOS.forEach(function (x) { out[x.k] = draft[x.k] || ''; });
+    try {
+      localStorage.setItem(STORE, JSON.stringify(out));
+    } catch (e) {
+      alert('저장칸이 가득 찼습니다 — 사진을 하나 지우고 다시 해 보세요.');
+      return;
+    }
+    el.style.display = 'none';
+    /* 읽는 곳은 apex-deck 하나다. 거기로 넘겨 다시 칠하게 한다 */
+    if (typeof window.apexDeckApply === 'function') window.apexDeckApply(out);
+    else paint();
+  }
+
+  function editCss() {
+    if (document.getElementById('ecCss')) return;
+    var st = document.createElement('style'); st.id = 'ecCss';
+    st.textContent = [
+      '#ecEdit{position:fixed;left:18px;top:18px;z-index:60;padding:9px 16px;border-radius:999px;',
+      'border:1px solid rgba(212,175,90,.55);background:rgba(20,16,10,.72);color:#EBDFC4;',
+      "font-size:14px;font-weight:700;cursor:pointer;font-family:'Apple SD Gothic Neo',sans-serif}",
+      '#ecEdit.hot{background:rgba(212,175,90,.2);border-color:rgba(212,175,90,.9);color:#FBF3DF}',
+      '#ecWrap{position:fixed;inset:0;z-index:70;background:rgba(6,6,8,.72);display:none;',
+      "align-items:center;justify-content:center;padding:18px;font-family:'Apple SD Gothic Neo',sans-serif}",
+      '.ec-box{width:min(880px,96vw);max-height:92vh;display:flex;flex-direction:column;',
+      'background:#fff;color:#191F28;border-radius:20px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}',
+      '.ec-hd{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;',
+      'font-size:16px;font-weight:800;border-bottom:1px solid #E5E8EB}',
+      '.ec-hd button{border:0;background:none;font-size:19px;color:#8B95A1;cursor:pointer}',
+      '.ec-bd{padding:18px 22px;overflow:auto}',
+      '.ec-ph{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}',
+      '.ec-p{min-width:0}.ec-p>span{display:block;font-size:12px;font-weight:800;color:#4E5968;margin-bottom:5px}',
+      '.ec-p img{width:100%;height:92px;object-fit:cover;border-radius:10px;border:1px solid #E5E8EB;display:block}',
+      '.ec-p i{display:flex;height:92px;border:1px dashed #B0B8C1;border-radius:10px;align-items:center;',
+      'justify-content:center;font-size:12px;color:#8B95A1;font-style:normal}',
+      '.ec-pb{display:flex;gap:6px;margin-top:6px}',
+      '.ec-pb button{flex:1;padding:6px;border-radius:8px;border:1px solid #E5E8EB;background:#F9FAFB;',
+      'font-size:12px;font-weight:700;color:#4E5968;cursor:pointer}',
+      '.ec-p em{display:block;font-size:11px;color:#8B95A1;margin-top:4px;font-style:normal;line-height:1.5}',
+      '.ec-fs{display:grid;grid-template-columns:1fr 1fr;gap:11px}',
+      '.ec-f{display:flex;flex-direction:column;gap:5px;min-width:0}.ec-f.w{grid-column:1/-1}',
+      '.ec-f span{font-size:12px;font-weight:800;color:#4E5968}',
+      '.ec-f input,.ec-f textarea{width:100%;padding:11px 13px;border:1px solid #E5E8EB;border-radius:11px;',
+      "font-size:14px;font-weight:600;background:#F9FAFB;color:#191F28;outline:none;font-family:inherit;resize:vertical}",
+      '.ec-f input:focus,.ec-f textarea:focus{border-color:#3182F6;background:#fff;box-shadow:0 0 0 3px rgba(49,130,246,.12)}',
+      '.ec-note{margin:14px 0 0;font-size:12px;color:#4E5968;line-height:1.7;background:#F9FAFB;',
+      'border:1px solid #E5E8EB;border-radius:11px;padding:11px 13px}',
+      '.ec-ft{display:flex;gap:9px;padding:14px 22px;border-top:1px solid #E5E8EB}',
+      '.ec-ft button{flex:1;padding:13px;border-radius:12px;border:0;font-size:15px;font-weight:800;cursor:pointer}',
+      '#ecSave{background:#3182F6;color:#fff}#ecCancel{flex:0 0 auto;padding:13px 20px;background:#F2F4F6;color:#4E5968}',
+      '@media(max-width:640px){.ec-fs{grid-template-columns:1fr}}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  function editBtn() {
+    editCss();
+    var b = document.getElementById('ecEdit');
+    if (!b) {
+      b = document.createElement('button');
+      b.id = 'ecEdit'; b.type = 'button';
+      b.textContent = '✏️ 내 소개 고치기';
+      b.onclick = function () {
+        /* 앱 안이면 값을 넣는 곳은 「내 설정 → 내 소개」 한 곳뿐이다 */
+        if (inApp()) {
+          try { window.parent.postMessage({ t: 'apex:editintro' }, location.origin); return; } catch (e) {}
+        }
+        openPanel();
+      };
+      document.body.appendChild(b);
+    }
+    var I = window.apexDeckIntro || {};
+    if (I.name) b.classList.remove('hot'); else b.classList.add('hot');
+  }
+
     function paint(){
       var I=window.apexDeckIntro||{};
       var on=lines(I.onair), tg=lines(I.tags);
@@ -340,6 +540,8 @@ function countUp(){
           '프레젠테이션 · 보장분석 · 재무설계 세 자료와 이 카드가 함께 바뀝니다.';
         show(tip,true);
       } else if(tip){ show(tip,false); }
+
+      editBtn();   /* 「고치기」 단추도 같이 챙긴다 — 비어 있으면 눈에 띄게 */
     }
 
     paint();

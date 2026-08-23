@@ -35,7 +35,12 @@
 
   function readLocal() {
     var got = {}, i, k, raw, o;
-    var keys = ['s6_profile', 'apex_profile'];
+    /* 순서가 곧 우선순위다 — 앞엣것이 이긴다.
+       apex_profile 은 소개카드의 <b>개인 수정칸</b>이 담는 곳이라 앞에 둔다.
+       뒤에 두었더니 카드에서 고쳐도 다시 열면 옛 칸(s6_profile)이 되살아나,
+       「고쳤는데 그대로예요」 가 됐다. 빈 값은 merge 가 건너뛰므로, 카드를
+       안 쓰신 분은 예전처럼 s6_profile 이 그대로 선다. */
+    var keys = ['apex_profile', 's6_profile'];
     /* 로그인별로 남는 칸(apex_intro_<아이디>)도 훑는다 */
     try {
       for (i = 0; i < localStorage.length; i++) {
@@ -43,7 +48,11 @@
         if (k && k.indexOf('apex_intro_') === 0) keys.unshift(k);
       }
     } catch (e) {}
-    for (i = 0; i < keys.length; i++) {
+    /* 「앞에 있는 것이 이긴다」 — 그런데 merge 는 <b>뒤엣것으로 덮으므로</b>
+       그냥 돌리면 순서가 뒤집힌다. 실제로 옛 공용 칸(apex_profile)이
+       로그인한 사람의 칸(apex_intro_<아이디>)을 이기고 있었다. 한 브라우저를
+       같이 쓰면 남의 소개가 내 표지에 떴다. 뒤에서부터 담아 앞엣것이 이기게 한다. */
+    for (i = keys.length - 1; i >= 0; i--) {
       try {
         raw = localStorage.getItem(keys[i]);
         if (!raw) continue;
