@@ -24,7 +24,9 @@
      9. 준법 문구를 config/compliance.json 에서 읽고 <b>운영에서도 열리는가</b>
     10. 그림이 SVG 로 서고 <b>PNG 로 바뀌는가</b> · 없는 숫자를 안 그리는가
     11. <b>올리기</b> — 서식 복사가 진짜 HTML 인가 · 자리표시가 보이는가
-    12. 자료를 <b>여기에 다시 적어 두지 않았는가</b>                       */
+    12. 자료를 <b>여기에 다시 적어 두지 않았는가</b>
+    13. <b>연결</b> — 앱과 같은 칸에 쓰는가 · 키를 화면에 되비추지 않는가 ·
+        연결이 없으면 <b>묻지 않아도 열리는가</b>                            */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -158,6 +160,9 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   console.log('\n[5] 글감이 없으면 AI 를 안 부르는가');
   const noSeed = await page.evaluate(async () => {
     let calls = 0;
+    /* 갈아 끼운 것은 <b>돌려놓는다</b> — 안 그러면 뒤 항목이 「연결돼 있다」 로
+       잘못 읽고 조용히 헛통과한다. 실제로 [13] 이 그렇게 넘어갔다. */
+    const realAsk = window.ask, realReady = window.aiReady;
     window.ask = function(){ calls++; return Promise.resolve('x'); };
     window.aiReady = () => true;
     localStorage.removeItem('apex_blog_mine_ask'); localStorage.removeItem('apex_blog_mine_culture');
@@ -165,6 +170,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     const empties = S.rows.filter(r => !r.seed).length;
     S.rows.forEach((r, i) => { if (!r.seed) draft(i); });
     await new Promise(r => setTimeout(r, 600));
+    window.ask = realAsk; window.aiReady = realReady;
     return { calls, empties, made:S.rows.filter(r => r.out).length,
              shown:/글감 없음/.test(document.getElementById('rows').innerText) };
   });
@@ -271,6 +277,33 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     return got;
   });
   is(blocked === 'NONE', '  고칠 곳이 남은 글은 <b>서식 복사가 안 열린다</b>');
+  /* 눌러 보고 나서야 아는 것이 아니라, <b>눌리지 않는 것</b>이 보여야 한다 */
+  const btns = await page.evaluate(async () => {
+    S.rows = [{ when:'1/1', kind:'econ', seed:{ kind:'econ', title:'x', src:'기사' },
+      out:'이 상품은 무조건 좋습니다.', guard:null }];
+    S.rows[0].guard = guard(S.rows[0].out, 'econ');
+    await show(0);
+    const t = document.getElementById('view').innerText;
+    const dis = [...document.querySelectorAll('#view button')].filter(b => b.disabled).map(b => b.textContent);
+    return { dis, plain:/마크다운으로 복사/.test(t) };
+  });
+  is(btns.dis.some(t => /서식 있는 복사/.test(t)), '  막혔을 때 그 단추가 <b>눌리지 않는다</b>');
+  is(btns.dis.some(t => /고칠 곳 \d+군데/.test(t)), '  단추에 몇 군데 고쳐야 하는지 적힌다 — ' + (btns.dis[0]||''));
+  is(btns.plain, '  그래도 마크다운 복사는 열어 둔다 — 손으로 고치실 수 있게');
+  /* 저장해 둔 글을 <b>다시 열었을 때</b>도 준법 문구가 붙어야 한다.
+     열 때 안 읽어 두면 「못 읽었습니다」 가 잘못 뜬다 — 실제로 그랬다. */
+  const restored = await page.evaluate(async () => {
+    S.comply = null;                       /* 새로 연 것처럼 */
+    let got = '';
+    navigator.clipboard.writeText = t => { got = t; return Promise.resolve(); };
+    S.rows = [{ when:'1/1', kind:'ours', seed:{ kind:'ours', title:'x', src:'메뉴' },
+      out:'보장 내용은 심사 결과에 따릅니다.', guard:null }];
+    S.rows[0].guard = guard(S.rows[0].out, 'ours');
+    await copyPlain(0);
+    return got;
+  });
+  is(restored.indexOf('못 읽었습니다') < 0 && restored.indexOf(fixed) >= 0,
+     '  저장해 둔 글을 다시 열어도 준법 문구가 붙는다');
 
   console.log('\n[10] 그림이 서는가 · PNG 로 바뀌는가 · 없는 숫자를 안 그리는가');
   const art = await page.evaluate(async (draft) => {
@@ -383,6 +416,101 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(/지도[^]{0,20}못 읽어/.test(noMap.w), '  지도를 못 읽으면 8통장 그림도 안 그린다 — 이름을 지어내지 않는다');
   is(/localStorage/.test(SRC) && SRC.indexOf("'apex_studio_'") > 0,
      '  AI 연결·내 소개는 앱에 저장해 둔 값을 그대로 쓴다');
+
+  console.log('\n[13] 연결 — 앱과 같은 칸에 쓰는가 · 키를 되비추지 않는가');
+  /* 칸을 따로 만들면 두 벌이 되어 「앱에서는 되는데 여기서는 안 되는」 자리가 생긴다.
+     그리고 키는 화면에 통째로 다시 띄우면 안 된다 (CLAUDE.md 10). */
+  const conn = await page.evaluate(() => {
+    ['apikey','proxy','apptoken','model','conn'].forEach(k => localStorage.removeItem('apex_studio_' + k));
+    localStorage.removeItem('apex_intro_guest');
+    CONN_OPEN = false; paint();
+    const shownWhenEmpty = !document.getElementById('conn').hidden;
+    /* 내 키로 저장 */
+    connMode('direct');
+    document.getElementById('c_key').value = 'sk-ant-TESTKEY1234567890abcd';
+    document.getElementById('c_model').value = 'claude-sonnet-4-6';
+    document.getElementById('c_org').value = '○○본부';
+    document.getElementById('c_name').value = '홍길동';
+    document.getElementById('c_title').value = '사업단장';
+    connSave();
+    const box = document.getElementById('conn').innerHTML;
+    const intro = JSON.parse(localStorage.getItem('apex_intro_guest') || 'null');
+    return {
+      shownWhenEmpty,
+      key: localStorage.getItem('apex_studio_apikey'),
+      model: localStorage.getItem('apex_studio_model'),
+      ready: aiReady(),
+      full: box.indexOf('sk-ant-TESTKEY1234567890abcd') >= 0,
+      masked: /sk-ant-…abcd/.test(box),
+      inputVal: (document.getElementById('c_key') || {}).value,
+      intro, brandLine: brand()
+    };
+  });
+  is(conn.shownWhenEmpty, '  연결이 없으면 <b>묻지 않아도</b> 연결 칸이 열려 있다');
+  is(conn.key === 'sk-ant-TESTKEY1234567890abcd', '  키를 앱이 쓰는 그 칸(apex_studio_apikey)에 쓴다');
+  is(conn.model === 'claude-sonnet-4-6', '  모델도 같은 칸에 쓴다');
+  is(conn.ready, '  넣고 나면 연결됨으로 바뀐다');
+  is(!conn.full, '  저장한 키를 화면에 <b>그대로 되비추지 않는다</b> (CLAUDE.md 10)');
+  is(conn.masked, '  앞뒤 몇 자만 보여 준다 — 무엇을 넣어 뒀는지는 알 수 있게');
+  is(!conn.inputVal, '  입력 칸을 비워 둔다 — 캡처·어깨너머로 안 읽히게');
+  is(!!conn.intro && conn.intro.org === '○○본부', '  그림 꼬리말 이름을 앱이 쓰는 칸(apex_intro_)에 쓴다');
+  is(/○○본부/.test(conn.brandLine) && /홍길동 사업단장/.test(conn.brandLine),
+     '  그림 꼬리말이 그 값을 그대로 쓴다 — ' + conn.brandLine);
+  const footed = await page.evaluate(() => build('w8', {}).svg);
+  is(/○○본부/.test(footed), '  그림에 실제로 꼬리말이 들어간다');
+  const empty = await page.evaluate(() => {
+    localStorage.removeItem('apex_intro_guest');
+    return { line: brand(), svg: build('w8', {}).svg };
+  });
+  is(empty.line === '', '  안 적어 두면 꼬리말이 빈다 — 없는 이름을 만들지 않는다');
+  is(!/○○본부/.test(empty.svg), '  그림에도 안 들어간다');
+  /* 빈 칸으로 저장했다고 넣어 둔 키가 날아가면 안 된다 */
+  const keep = await page.evaluate(() => {
+    document.getElementById('c_key').value = '';
+    connSave();
+    return localStorage.getItem('apex_studio_apikey');
+  });
+  is(keep === 'sk-ant-TESTKEY1234567890abcd', '  빈 칸으로 저장해도 넣어 둔 키가 안 날아간다');
+  /* 프록시 쪽도 같은 칸을 쓴다 */
+  const px = await page.evaluate(() => {
+    connMode('proxy');
+    document.getElementById('c_proxy').value = 'https://example.test/api/generate';
+    document.getElementById('c_tok').value = 'tok-123';
+    connSave();
+    return { p: localStorage.getItem('apex_studio_proxy'), t: localStorage.getItem('apex_studio_apptoken'),
+             c: localStorage.getItem('apex_studio_conn'), ready: aiReady() };
+  });
+  is(px.p === 'https://example.test/api/generate' && px.t === 'tok-123' && px.c === 'proxy',
+     '  프록시·토큰·방식도 앱이 쓰는 칸에 그대로 쓴다');
+  is(px.ready, '  프록시만으로도 연결됨이 된다');
+  const badUrl = await page.evaluate(() => {
+    document.getElementById('c_proxy').value = 'example.test/api';
+    connSave();
+    return localStorage.getItem('apex_studio_proxy');
+  });
+  is(badUrl === 'https://example.test/api/generate', '  https:// 가 아닌 주소는 저장하지 않는다');
+  /* 연결 확인이 진짜로 부르는가 — 눌러 보고 답을 받아야 「된다」 고 말할 수 있다 */
+  const tested = await page.evaluate(async () => {
+    let hit = null;
+    const real = window.fetch;
+    window.fetch = async (u, o) => {
+      if (String(u).includes('/api/generate')) { hit = JSON.parse(o.body);
+        return new Response(JSON.stringify({ content:[{ type:'text', text:'좋습니다' }] }), { status:200 }); }
+      return real(u, o);
+    };
+    document.getElementById('c_proxy').value = 'https://example.test/api/generate';
+    connSave();
+    await connTest();
+    window.fetch = real;
+    return hit;
+  });
+  is(!!tested, '  «연결 확인» 이 진짜로 AI 를 부른다');
+  is(!!tested && tested.max_tokens <= 64, '  확인은 아주 짧게 부른다 (' + (tested ? tested.max_tokens : '?') + '토큰) — 지갑을 안 태운다');
+  is(!!tested && tested.model === 'claude-sonnet-4-6', '  저장해 둔 모델로 부른다');
+  /* 키가 코드나 로그에 박혀 있지 않은가 (CLAUDE.md 10) */
+  is(!/sk-ant-[A-Za-z0-9_-]{10,}/.test(SRC) && !/sk-ant-[A-Za-z0-9_-]{10,}/.test(ART_SRC),
+     '  페이지 어디에도 진짜 키가 적혀 있지 않다');
+  is(!/console\.log\([^)]*apikey/i.test(SRC), '  키를 로그에 찍지 않는다');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

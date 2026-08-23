@@ -116,13 +116,15 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
 <body>
 <header><div class="in">
   <h1>🏭 블로그 <span>공장</span></h1>
-  <span class="tag" id="tgAi">연결 확인 중…</span>
+  <span class="tag" id="tgAi" style="cursor:pointer" onclick="connOpen()">연결 확인 중…</span>
   <span class="tag" id="tgNews">뉴스 —</span>
   <span style="flex:1"></span>
   <button class="sm" onclick="location.href='index.html'">앱으로</button>
 </div></header>
 
 <div class="wrap">
+  <div class="card" id="conn" hidden></div>
+
   <div class="card">
     <h2>① 오늘 쓸 것 고르기</h2>
     <div class="desc">주제를 생각해 내지 않습니다. <b>이미 있는 것</b>에서 글감이 나옵니다 — 없으면 비워 두고, 만들어 채우지 않습니다.</div>
@@ -376,14 +378,14 @@ async function comply(){
 }
 
 /* ══════════ AI — 앱에 저장해 둔 연결을 그대로 쓴다 ══════════ */
-function aiReady(){ return LS('conn')==='proxy' ? !!LS('proxy') : !!LS('apikey'); }
+function aiReady(){ return LS('conn','direct')==='proxy' ? !!LS('proxy') : !!LS('apikey'); }
 async function ask(system,user,max){
-  const proxy=LS('conn')==='proxy';
+  const proxy=LS('conn','direct')==='proxy';
   const url=proxy?LS('proxy'):'https://api.anthropic.com/v1/messages';
-  if(!url) throw new Error('앱 설정에서 AI 를 먼저 연결해 주세요.');
+  if(!url) throw new Error('맨 위 «연결» 에서 AI 를 먼저 연결해 주세요.');
   const headers={'Content-Type':'application/json'};
   if(proxy){ const t=LS('apptoken'); if(t) headers['X-App-Token']=t; }
-  else{ const k=LS('apikey'); if(!k) throw new Error('앱 설정에서 AI 를 먼저 연결해 주세요.');
+  else{ const k=LS('apikey'); if(!k) throw new Error('맨 위 «연결» 에서 AI 를 먼저 연결해 주세요.');
         headers['x-api-key']=k; headers['anthropic-version']='2023-06-01';
         headers['anthropic-dangerous-direct-browser-access']='true'; }
   const model=LS('model'); const messages=[{role:'user',content:user}];
@@ -431,7 +433,8 @@ function userPrompt(row){
 async function draft(i){
   const row=S.rows[i]; if(!row) return;
   if(!row.seed){ toast('이 줄은 글감이 없습니다. 위에서 글감을 채워 주세요.'); return; }
-  if(!aiReady()){ toast('앱 설정에서 AI 를 먼저 연결해 주세요.'); return; }
+  if(!aiReady()){ toast('맨 위 «연결» 에서 AI 를 먼저 연결해 주세요.'); CONN_OPEN=true; paint();
+    $('conn').scrollIntoView({behavior:'smooth',block:'center'}); return; }
   if(S.busy>=0){ toast('한 편씩 만듭니다.'); return; }
   S.busy=i; paint();
   try{
@@ -534,6 +537,7 @@ function packText(i){
 async function copyRich(i){
   const row=S.rows[i];
   if(!row.guard||!row.guard.ok){ toast('고칠 곳이 남아 있습니다. 위 빨간 칸을 먼저 처리해 주세요.'); return; }
+  await comply();          /* 저장해 둔 글을 다시 열었을 때도 준법 문구가 붙게 */
   const text=packText(i);
   const html='<div style="font-family:sans-serif;line-height:1.7">'+md2html(text,true)+'</div>';
   try{
@@ -552,6 +556,7 @@ async function copyRich(i){
   }
 }
 async function copyPlain(i){
+  await comply();
   try{ await navigator.clipboard.writeText(packText(i)); toast('마크다운 그대로 복사했습니다'); }
   catch(e){ toast('복사하지 못했습니다'); }
 }
@@ -622,8 +627,9 @@ function gateBox(g){
       '</b> 처럼 <span class="hole">노란 칸</span>으로 보입니다. <b>사장님이 확인해 채우셔야</b> 합니다.</li>':'')+
     '</ul></div>';
 }
-function show(i){
+async function show(i){
   const row=S.rows[i]; if(!row||!row.out) return;
+  await comply();          /* 아래 미리보기에도 준법 문구가 제대로 보이게 */
   const d=KINDS[row.kind], g=row.guard||guard(row.out,row.kind);
   const arts=d.art.map(id=>({id,d:ART[id],r:build(id,row)}));
   const okArts=arts.filter(a=>!a.r.err);
@@ -632,7 +638,10 @@ function show(i){
     '<div class="desc">이 글이 딛고 선 것 — <b>'+esc(row.seed.src.split('\n')[0])+'</b></div>'+
     gateBox(g)+
     '<div class="row">'+
-      '<button class="p" onclick="copyRich('+i+')">📋 서식 있는 복사 (편집기에 그대로)</button>'+
+      (g.ok
+        ? '<button class="p" onclick="copyRich('+i+')">📋 서식 있는 복사 (편집기에 그대로)</button>'
+        : '<button disabled title="위 빨간 칸을 먼저 고쳐 주세요">📋 서식 있는 복사 — 고칠 곳 '+
+          (g.hits.length+g.miss.length+g.holes.length)+'군데</button>')+
       '<button onclick="copyPlain('+i+')">마크다운으로 복사</button>'+
       '<button onclick="downAll('+i+')">⬇ 그림 '+okArts.length+'장 모두 내려받기</button>'+
       '<button onclick="draft('+i+')">🔄 다시 만들기</button>'+
@@ -665,15 +674,112 @@ function pngOne(i,id){ const r=build(id,S.rows[i]); if(r.err){ toast(r.err); ret
 function copyAlt(i,id){ const r=build(id,S.rows[i]); if(r.err){ toast(r.err); return; }
   navigator.clipboard.writeText(r.alt).then(()=>toast('alt 를 복사했습니다'),()=>toast('복사하지 못했습니다')); }
 
+/* ══════════ 연결 — 앱과 <b>같은 저장칸</b>에 쓴다 ══════════
+   여기서 넣으면 앱에도 그대로 들어가고, 앱에서 넣으면 여기서도 쓰인다.
+   칸을 따로 만들면 두 벌이 되어 「앱에서는 되는데 여기서는 안 되는」
+   자리가 생긴다 (CLAUDE.md 5).
+
+   키는 <b>이 브라우저에만</b> 남는다. 서버로 보내지 않는다. 화면에도
+   통째로 다시 띄우지 않는다 — 어깨너머로 읽히고, 캡처에 찍힌다.
+   저장해 둔 것은 앞뒤 몇 자만 보여 준다 (CLAUDE.md 10).            */
+const LSset = (k, v) => { try{ v ? localStorage.setItem(LSK(k), v) : localStorage.removeItem(LSK(k)); }catch(e){} };
+const mask = v => !v ? '' : (v.length <= 12 ? '••••' : v.slice(0,7) + '…' + v.slice(-4));
+let CONN_OPEN = false;
+function connOpen(){ CONN_OPEN = !CONN_OPEN; paint(); if(CONN_OPEN) $('conn').scrollIntoView({behavior:'smooth',block:'center'}); }
+function connMode(m){ LSset('conn', m); paint(); }
+function connSave(){
+  const m = LS('conn','direct');
+  if (m === 'proxy'){
+    const u = ($('c_proxy').value||'').trim();
+    if (u && !/^https?:\/\//.test(u)){ toast('프록시 주소는 https:// 로 시작해야 합니다.'); return; }
+    LSset('proxy', u); LSset('apptoken', ($('c_tok').value||'').trim());
+  } else {
+    const k = ($('c_key').value||'').trim();
+    /* 빈 칸이면 지우지 않는다 — 넣어 둔 키를 실수로 날리지 않게 */
+    if (k){
+      if (!/^sk-ant-/.test(k)) toast('Claude 키는 보통 sk-ant- 로 시작합니다. 그대로 저장은 했습니다.');
+      LSset('apikey', k);
+    }
+  }
+  LSset('model', ($('c_model').value||'').trim());
+  const org=($('c_org').value||'').trim(), nm=($('c_name').value||'').trim(), ttl=($('c_title').value||'').trim();
+  if (org || nm){
+    /* 그림 꼬리말에 들어갈 이름. 앱이 쓰는 그 칸에 그대로 쓴다.
+       로그인 전 앱도 이 칸(guest)을 본다. */
+    try{ localStorage.setItem('apex_intro_guest', JSON.stringify({ org, name:nm, title:ttl, at:Date.now() })); }catch(e){}
+  }
+  if ($('c_key')) $('c_key').value = '';
+  /* 저장하면 연결됨이 되어 이 칸이 닫히던 자리 — 넣자마자 사라져서
+     제대로 들어갔는지 확인할 수가 없었다. 저장 뒤에는 열어 둔다.
+     («연결 확인» 을 눌러 보시라고 두는 것이기도 하다.) */
+  CONN_OPEN = true;
+  toast('저장했습니다 — 앱에도 같이 반영됩니다');
+  paint();
+}
+function connClear(){
+  if (!confirm('저장해 둔 연결(키·프록시·토큰)을 지울까요? 앱에서도 같이 지워집니다.')) return;
+  ['apikey','proxy','apptoken','model'].forEach(k => LSset(k, ''));
+  toast('지웠습니다'); paint();
+}
+async function connTest(){
+  const b = $('c_test'); b.disabled = true; b.innerHTML = '<span class="spin"></span> 부르는 중…';
+  try{
+    const out = await ask('한 단어로만 답한다.', '연결 확인. 「좋습니다」 라고만 답해줘.', 32);
+    toast(out && out.trim() ? ('연결됐습니다 — AI 가 답했습니다: ' + out.trim().slice(0,20)) : '답이 비어서 왔습니다');
+  }catch(e){ toast('연결 안 됩니다 — ' + (e.message||'').slice(0,120), 6000); }
+  b.disabled = false; b.textContent = '🔌 연결 확인';
+  paint();
+}
+function connBox(){
+  const m = LS('conn','direct'), ok = aiReady();
+  let intro = {};
+  try{ intro = JSON.parse(localStorage.getItem('apex_intro_guest')||'null') || {}; }catch(e){}
+  return '<h2>⚙ 연결 — 이 브라우저에만 저장됩니다</h2>'+
+    '<div class="desc">앱(APEX)에 넣어 두셨다면 <b>그대로 쓰입니다</b> — 여기서 넣으면 앱에도 같이 들어갑니다. '+
+    '<b>키는 서버로 보내지 않고 이 브라우저에만</b> 남습니다.</div>'+
+    '<div class="row" style="margin-bottom:10px">'+
+      '<button class="'+(m==='direct'?'p':'')+'" onclick="connMode(\'direct\')">① 내 API 키 직접</button>'+
+      '<button class="'+(m==='proxy'?'p':'')+'" onclick="connMode(\'proxy\')">② 서버 프록시(키 없이)</button>'+
+    '</div>'+
+    (m==='proxy'
+      ? '<div style="margin-bottom:8px"><label>프록시 주소</label>'+
+        '<input id="c_proxy" placeholder="https://내사이트/api/generate" value="'+esc(LS('proxy'))+'"></div>'+
+        '<div style="margin-bottom:8px"><label>공유 토큰 (서버에 SHARED_TOKEN 을 걸어 두셨을 때만)</label>'+
+        '<input id="c_tok" placeholder="비워 두면 미사용" value="'+esc(LS('apptoken'))+'"></div>'
+      : '<div style="margin-bottom:8px"><label>내 Claude API 키'+
+        (LS('apikey')?' <span style="color:var(--ok)">— 저장돼 있습니다 ('+esc(mask(LS('apikey')))+')</span>':'')+'</label>'+
+        '<input id="c_key" type="password" autocomplete="off" placeholder="'+(LS('apikey')?'바꿀 때만 새로 넣으세요':'sk-ant-…')+'"></div>')+
+    '<div style="margin-bottom:8px"><label>모델 (비워 두면 서버·앱이 정한 기본값)</label>'+
+    '<input id="c_model" placeholder="예: claude-sonnet-4-6" value="'+esc(LS('model'))+'"></div>'+
+    '<div class="row" style="margin-bottom:12px">'+
+      '<button class="p" onclick="connSave()">저장</button>'+
+      '<button id="c_test" onclick="connTest()"'+(ok?'':' disabled')+'>🔌 연결 확인</button>'+
+      '<button onclick="connClear()">지우기</button>'+
+    '</div>'+
+    '<h2 style="font-size:14px">그림 꼬리말에 넣을 이름 <span style="font-weight:400;font-size:12px;color:var(--sub)">(비워 두면 아무것도 안 넣습니다)</span></h2>'+
+    '<div class="row">'+
+      '<div style="flex:1;min-width:150px"><label>소속</label><input id="c_org" placeholder="예: ○○본부" value="'+esc(intro.org||'')+'"></div>'+
+      '<div style="flex:1;min-width:110px"><label>이름</label><input id="c_name" placeholder="예: 홍길동" value="'+esc(intro.name||'')+'"></div>'+
+      '<div style="flex:1;min-width:110px"><label>직함</label><input id="c_title" placeholder="예: 사업단장" value="'+esc(intro.title||'')+'"></div>'+
+    '</div>'+
+    '<div class="note">넣어 두시면 그림 오른쪽 아래에 <b>소속 · 이름 직함</b>이 들어갑니다. '+
+    '안 넣으시면 <b>아무것도 안 넣습니다</b> — 없는 이름을 만들지 않습니다. '+
+    '앱에 「내 소개」를 이미 적어 두셨다면 그것을 그대로 씁니다.</div>';
+}
+
 function paint(){
   paintSeeds(); paintRows();
-  $('tgAi').textContent=aiReady()?'AI 연결됨':'AI 연결 안 됨 — 앱 설정에서';
+  /* 연결이 안 돼 있으면 묻지 않아도 열어 둔다 — 여기서 막히면 아무것도 못 한다 */
+  const box = $('conn'), want = CONN_OPEN || !aiReady();
+  box.hidden = !want;
+  if (want) box.innerHTML = connBox();
+  $('tgAi').textContent=aiReady()?('AI 연결됨'+(LS('conn','direct')==='proxy'?' · 프록시':' · 내 키')):'AI 연결 안 됨 — 누르세요';
   $('tgAi').className='tag '+(aiReady()?'on':'off');
   const n=(S.news.items||[]).length;
   $('tgNews').textContent=n?('뉴스 '+n+'건 · '+S.news.at):'뉴스 아직 안 받음';
   $('tgNews').className='tag '+(n?'on':'');
 }
-load(); paint();
+load(); paint(); comply();
 </script>
 </body>
 </html>
