@@ -43,9 +43,12 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
  const srv=serve(); const br=await chromium.launch(); const pg=await br.newPage();
  await pg.route('**/api/market**',r=>r.abort());
  await pg.goto(U,{waitUntil:'domcontentloaded',timeout:60000});
- await pg.waitForSelector('#lockPw',{timeout:20000});
- await pg.fill('#lockPw','test1234'); await pg.click('#lockGo');
- await pg.waitForSelector('#lockOv',{state:'detached',timeout:10000});
+ /* 잠금은 이제 <b>골라 쓰는 것</b>이다 — 안 걸려 있으면 그냥 열린다.
+    걸려 있을 때만 푼다. 없는 것을 기다리면 여기서 20초를 버린다. */
+ if (await pg.$('#lockPw')) {
+   await pg.fill('#lockPw', 'test1234'); await pg.click('#lockGo');
+   await pg.waitForSelector('#lockOv', { state: 'detached', timeout: 10000 });
+ }
  await pg.evaluate(()=>document.querySelector('.tab[data-t="lib"]').click());
  await pg.waitForTimeout(300);
 
@@ -201,9 +204,12 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
    const p2=await cx.newPage();
    await p2.route('**/api/market**',r=>r.abort());
    await p2.goto(U,{waitUntil:'domcontentloaded',timeout:60000});
-   await p2.waitForSelector('#lockPw',{timeout:20000});
-   await p2.fill('#lockPw','test1234'); await p2.click('#lockGo');
-   await p2.waitForSelector('#lockOv',{state:'detached',timeout:10000});
+   /* 잠금은 이제 <b>골라 쓰는 것</b>이다 — 안 걸려 있으면 그냥 열린다.
+      걸려 있을 때만 푼다. 없는 것을 기다리면 여기서 20초를 버린다. */
+   if (await p2.$('#lockPw')) {
+     await p2.fill('#lockPw', 'test1234'); await p2.click('#lockGo');
+     await p2.waitForSelector('#lockOv', { state: 'detached', timeout: 10000 });
+   }
    await p2.evaluate(()=>document.querySelector('.tab[data-t="lib"]').click());
    await p2.waitForTimeout(400);
    const r=await p2.evaluate(()=>{

@@ -27,6 +27,13 @@ const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; chars
   '.css':'text/css', '.json':'application/json' };
 let bad = 0;
 const is = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) bad++; };
+/* 기다리다 안 되면 <b>터지지 말고</b> 빨간불을 켠다.
+   waitForFunction 은 시간이 지나면 던져 버려서, 거기서 점검이 통째로 죽는다.
+   죽으면 무엇이 어긋났는지가 안 보인다 — 터진 점검은 알람이 아니다. */
+async function waitOr(pg, fn, what, ms) {
+  try { await pg.waitForFunction(fn, { timeout: ms || 12000 }); is(true, what); return true; }
+  catch (e) { is(false, what + ' — 기다렸는데 안 됐습니다'); return false; }
+}
 
 /* 협회 목록 페이지의 실제 생김새를 그대로 본뜬 대역 */
 function fakeList(rows) {
@@ -142,9 +149,12 @@ function serve(){ return http.createServer((q,r)=>{
     await pg.goto('http://127.0.0.1:' + PORT + '/app/상담자료/미끼레이더/index.html'
       .split('/').map(encodeURIComponent).join('/').replace(/%2F/g, '/'),
       { waitUntil:'domcontentloaded', timeout:60000 });
-    await pg.waitForSelector('#lockPw', { timeout:20000 });
-    await pg.fill('#lockPw', 'test1234'); await pg.click('#lockGo');
-    await pg.waitForSelector('#lockOv', { state:'detached', timeout:10000 });
+    /* 잠금은 이제 <b>골라 쓰는 것</b>이다 — 안 걸려 있으면 그냥 열린다.
+       걸려 있을 때만 푼다. 없는 것을 기다리면 여기서 20초를 버린다. */
+    if (await pg.$('#lockPw')) {
+      await pg.fill('#lockPw', 'test1234'); await pg.click('#lockGo');
+      await pg.waitForSelector('#lockOv', { state: 'detached', timeout: 10000 });
+    }
     await pg.evaluate(() => document.querySelector('.tab[data-t="promo"]').click());
     await pg.fill('#pmCo', '삼성생명'); await pg.fill('#pmName', '종신');
     await pg.click('#pmFind2');
@@ -160,6 +170,165 @@ function serve(){ return http.createServer((q,r)=>{
     await pg.fill('#pmCo', '삼성생명'); await pg.click('#pmFind2');
     await pg.waitForFunction("/공시실 바로가기/.test(document.querySelector('#pmGs').textContent)", { timeout:10000 });
     is(true, '  서버가 죽으면 늘 쓰던 공시실 바로가기로 넘긴다');
+
+    console.log('\n[7] 이미 본 상품은 다시 모으지 않는가 — 상품명과 판(연월)까지');
+    /* 회사 공시실에 들어가 보는 일은 매달 하는 일이다. 지난달에 이미 본 것을
+       또 받아 읽으면 200쪽짜리를 헛읽는다.
+       연도는 <b>지어내지 않는다 — 상품명 안에 이미 있다.</b> 협회가 주는 이름이
+       「삼성 더착한종신보험(2608)(무배당)」 이고 그 (2608) 이 2026년 8월판이다.
+       같은 이름이라도 판이 올라가면 다른 상품이다 — 사업비도 담보도 바뀐다. */
+    const MANY = { ok:true, kindOf:'상품요약서', co:'삼성생명', q:'', total:3, matched:null, items:[
+      { co:'삼성생명', prod:'삼성 더착한종신보험(2608)(무배당)[저해약환급금형]',
+        file:'https://pub.insure.or.kr/FileDown.do?fileNo=41117&seq=6', page:'https://x/p1' },
+      { co:'삼성생명', prod:'삼성 VVIP 종신보험(2608)(무배당)',
+        file:'https://pub.insure.or.kr/FileDown.do?fileNo=41119&seq=6', page:'https://x/p2' },
+      { co:'삼성생명', prod:'삼성 간편한 건강보험(2701)(무배당)',
+        file:'https://pub.insure.or.kr/FileDown.do?fileNo=41120&seq=6', page:'https://x/p3' }] };
+    const p7 = await browser.newPage();
+    await p7.route('**/api/market**', r => {
+      if (r.request().url().indexOf('kind=gongsi') < 0) return r.abort();
+      r.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(MANY) });
+    });
+    await p7.goto('http://127.0.0.1:' + PORT + '/app/상담자료/미끼레이더/index.html',
+      { waitUntil:'domcontentloaded', timeout:60000 });
+    if (await p7.$('#lockPw')) {
+      await p7.fill('#lockPw','test1234'); await p7.click('#lockGo');
+      await p7.waitForSelector('#lockOv',{ state:'detached', timeout:10000 });
+    }
+    await p7.evaluate(() => { try{localStorage.removeItem('mikki_seen')}catch(e){} });
+    await p7.evaluate(() => document.querySelector('.tab[data-t="promo"]').click());
+
+    /* 판 읽기 — 여기서 틀리면 아래가 전부 헛것이 된다 */
+    const V = await p7.evaluate(() => ({
+      ok:  prodVer('삼성 더착한종신보험(2608)(무배당)'),
+      no:  prodVer('삼성 어쩌구보험(1234)'),          /* 34월은 없다 */
+      none:prodVer('삼성 이름만있는보험'),
+      base1: prodBase('삼성 더착한종신보험(2608)(무배당)[저해약환급금형]'),
+      base2: prodBase('삼성 더착한종신보험(2701)(무배당)')
+    }));
+    is(V.ok.ver === '2608' && V.ok.y === 2026 && V.ok.mo === 8,
+       '  상품명 안의 (2608) 을 2026년 8월판으로 읽는다');
+    is(V.no.ver === '' && V.none.ver === '',
+       '  아무 숫자나 연도로 읽지 않는다 — (1234) 는 34월이 없으므로 판이 아니다');
+    is(V.base1 === V.base2 && V.base1.length > 3,
+       '  판·무배당·[○○형] 을 떼면 같은 상품 줄기로 본다 (' + V.base1 + ')');
+
+    await p7.fill('#pmCo', '삼성생명'); await p7.click('#pmFind2');
+    await waitOr(p7, "document.querySelectorAll('#pmGs .gsbadge').length===3", '  목록 세 줄이 뜬다');
+    const A = await p7.evaluate(() => ({
+      badges: [...document.querySelectorAll('#pmGs .gsbadge')].map(x => x.textContent),
+      folded: !!document.querySelector('#pmGs details')
+    }));
+    is(A.badges.filter(x => /새 상품/.test(x)).length === 3, '  처음에는 셋 다 「새 상품」 이다');
+    is(/26년 8월판/.test(A.badges.join(' ')), '  몇 년 몇 월판인지 적어 준다');
+    is(!A.folded, '  이미 본 것이 없으면 접을 것도 없다');
+
+    /* 하나를 「봤음」 으로 적는다 = 그 상품은 다시 안 모은다 */
+    await p7.evaluate(() => document.querySelectorAll('#pmGs .gsmark')[0].click());
+    await waitOr(p7, "!!document.querySelector('#pmGs details')", '  「봤음」 을 누르면 접히는 자리가 생긴다');
+    const B = await p7.evaluate(() => ({
+      badges: [...document.querySelectorAll('#pmGs .gsbadge')].map(x => x.textContent),
+      fold: (document.querySelector('#pmGs details summary') || {}).textContent || '',
+      dim: !!document.querySelector('#pmGs .gsrow.seen'),
+      led: Object.keys(JSON.parse(localStorage.getItem('mikki_seen') || '{}')).length
+    }));
+    is(B.led === 1, '  장부에 한 건이 적힌다 (' + B.led + ')');
+    is(B.badges.filter(x => /이미 봤습니다/.test(x)).length === 1, '  그 줄이 「이미 봤습니다」 로 바뀐다');
+    is(/이미 본 1건/.test(B.fold), '  이미 본 것은 접어 둔다 — 지우지는 않는다 (' + B.fold.trim() + ')');
+    is(B.dim, '  접힌 줄은 흐리게 둔다');
+
+    /* 판이 올라가면 다른 상품이다 */
+    const C = await p7.evaluate(() => {
+      seenMark('삼성생명', '삼성 간편한 건강보험(2608)(무배당)', '시험');
+      return seenOf('삼성생명', '삼성 간편한 건강보험(2701)(무배당)');
+    });
+    is(C && C.state === 'newer' && C.old === '2608' && C.now === '2701',
+       '  같은 이름이라도 판이 올라가면 <b>새 상품</b>으로 본다 (' + (C ? C.old + '→' + C.now : '못 읽음') + ')');
+    await p7.click('#pmFind2');
+    await waitOr(p7, "/판 올라감/.test(document.querySelector('#pmGs').textContent)", '  판이 올라간 것을 목록에 띄운다');
+    const D = await p7.evaluate(() => document.querySelector('#pmGs').textContent);
+    is(/판 올라감 2608 → 2701/.test(D), '  무엇이 올라갔는지 적어 준다');
+    is(/모을 것/.test(D), '  몇 건을 모아야 하는지 먼저 알려 준다');
+
+    /* 되돌릴 자리가 있어야 한다 — 잘못 적혔을 때 */
+    await p7.evaluate(() => {
+      const b = [...document.querySelectorAll('#pmGs .gsmark')].find(x => x.dataset.on === '1');
+      if (b) b.click();
+    });
+    await p7.waitForTimeout(600);
+    const E = await p7.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('mikki_seen') || '{}')).length);
+    is(E === 1, '  손으로 「다시 보기로」 되돌릴 수 있다 (' + E + '건 남음)');
+
+    /* 다 본 회사 */
+    await p7.evaluate(() => {
+      ['삼성 더착한종신보험(2608)(무배당)[저해약환급금형]','삼성 VVIP 종신보험(2608)(무배당)',
+       '삼성 간편한 건강보험(2701)(무배당)'].forEach(n => seenMark('삼성생명', n, '시험'));
+    });
+    await p7.click('#pmFind2');
+    await waitOr(p7, "/새로 모을 것이 없습니다/.test(document.querySelector('#pmGs').textContent)", '  다 본 회사에는 모을 것이 없다고 말한다');
+    is(true, '  다 본 회사에는 「새로 모을 것이 없습니다」 라고 말한다 — 헛읽지 않게');
+
+    /* 답하는 곳이 하나인가 */
+    const src = fs.readFileSync(path.join(ROOT,'app/상담자료/미끼레이더/index.html'),'utf8');
+    const code = src.replace(/\/\*[\s\S]*?\*\//g,'');
+    is((code.match(/function seenOf\(/g)||[]).length === 1, '  전에 봤는지 답하는 곳은 하나다');
+    is((code.match(/function prodVer\(/g)||[]).length === 1, '  판을 읽는 곳도 하나다');
+    is(!/mikki_seen/.test(code.replace(/const SEEN_KEY='mikki_seen';/,'')),
+       '  장부 열쇠는 한 곳에만 적혀 있다');
+    await p7.close();
+
+    console.log('\n[8] 세 단계로 풀려 있는가');
+    /* 공시실에서 찾기 · 서재에서 고르기 · 발췌하기가 한 판에 섞여 있었다.
+       하는 일이 다른데 나란히 놓여 있어 어디부터 시작하는지가 안 보였다. */
+    const p8 = await browser.newPage();
+    await p8.route('**/api/market**', r => r.abort());
+    await p8.goto('http://127.0.0.1:' + PORT + '/app/상담자료/미끼레이더/index.html',
+      { waitUntil:'domcontentloaded', timeout:60000 });
+    if (await p8.$('#lockPw')) {
+      await p8.fill('#lockPw','test1234'); await p8.click('#lockGo');
+      await p8.waitForSelector('#lockOv',{ state:'detached', timeout:10000 });
+    }
+    await p8.evaluate(() => document.querySelector('.tab[data-t="promo"]').click());
+    const S8 = await p8.evaluate(() => {
+      const steps = [...document.querySelectorAll('#p-promo .stepc')];
+      const inStep = (n, id) => { const e = document.getElementById(id);
+        return !!(e && steps[n] && steps[n].parentNode.contains(e)); };
+      return {
+        n: steps.length,
+        txt: steps.map(e => e.innerText.replace(/\s+/g,' ').trim()),
+        s1: inStep(0,'pmCo') && inStep(0,'pmGs'),
+        s2: inStep(1,'pmDocs') && inStep(1,'pmRun'),
+        s3: inStep(2,'pmOut')
+      };
+    });
+    is(S8.n === 3, '  단계가 셋이다 (' + S8.n + ')');
+    is(/신상품 확인/.test(S8.txt[0]||''), '  1단계는 신상품 확인 — ' + (S8.txt[0]||''));
+    is(/발췌/.test(S8.txt[1]||''), '  2단계는 약관·상품설명서 발췌');
+    is(/홍보/.test(S8.txt[2]||''), '  3단계는 어떻게 홍보할까');
+    is(S8.s1 && S8.s2 && S8.s3, '  각 단계 안에 그 단계의 것만 들어 있다');
+    await p8.close();
+
+    console.log('\n[9] 잠금은 골라 쓰는 것인가');
+    const p9 = await browser.newPage();
+    await p9.route('**/api/market**', r => r.abort());
+    await p9.goto('http://127.0.0.1:' + PORT + '/app/상담자료/미끼레이더/index.html',
+      { waitUntil:'domcontentloaded', timeout:60000 });
+    await p9.waitForTimeout(1200);
+    is(!(await p9.$('#lockPw')), '  안 걸어 두셨으면 암호를 안 묻는다 — 상담 직전에 손이 안 멈춘다');
+    const L = await p9.evaluate(async () => {
+      const r1 = await window.mikkiLock.on('123');          /* 너무 짧다 */
+      const r2 = await window.mikkiLock.on('test1234');
+      const has = window.mikkiLock.has();
+      window.mikkiLock.off();
+      return { short: r1.ok, on: r2.ok, has: has, off: window.mikkiLock.has() };
+    });
+    is(L.short === false, '  4자 미만은 안 걸린다');
+    is(L.on === true && L.has === true, '  켜면 걸린다');
+    is(L.off === false, '  끄면 풀린다');
+    await p9.reload({ waitUntil:'domcontentloaded' }); await p9.waitForTimeout(900);
+    is(!(await p9.$('#lockPw')), '  끈 뒤에는 다시 안 묻는다');
+    await p9.close();
+
   } finally { await browser.close(); server.close(); }
 
   console.log('\n──────────────────────────────');
