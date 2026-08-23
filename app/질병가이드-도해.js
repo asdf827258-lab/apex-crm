@@ -2900,6 +2900,360 @@
     }
   };
 
+  /* ═══ 심장의 전기 — 펌프는 멀쩡한데 신호가 어지러운 병 ══════════
+     심장은 <b>펌프이면서 전기</b>다. 오른쪽 위 구석의 작은 발전소에서
+     신호가 나와 심방을 훑고, 가운데 중계소에서 잠깐 멈췄다가
+     아래 심실로 퍼진다. 그래서 <b>위가 먼저, 아래가 나중에</b> 짜진다.
+
+     심방세동은 그 발전소 대신 <b>심방 여기저기서 제멋대로</b> 신호가 나서
+     심방이 짜지지 못하고 <b>떨기만</b> 하는 병이다. 그러면 심방 구석
+     (귀처럼 접힌 자리)에 피가 고이고, 고인 피는 <b>굳는다.</b>
+     그 덩어리가 떨어져 나가면 곧장 <b>뇌로</b> 간다.
+
+     그래서 이 병은 심장병이면서 <b>뇌경색의 원인</b>이다.
+     상담에서 이 둘을 잇지 못하면 「가슴 두근거리는 것」 으로 끝난다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function conduction(af, R) {
+    var s = '', i, a, x, y;
+    /* 발전소 — 오른쪽 위 (그림에서는 왼쪽 위) */
+    var SA = [406, 150], AV = [486, 244];
+    if (!af) {
+      s += '<circle cx="' + SA[0] + '" cy="' + SA[1] + '" r="15" fill="#F59E0B" stroke="#B45309" stroke-width="3"/>';
+      /* 심방을 훑는 물결 */
+      for (i = 1; i <= 3; i++) {
+        s += '<circle cx="' + SA[0] + '" cy="' + SA[1] + '" r="' + (26 + i * 22) + '" fill="none" ' +
+             'stroke="#F59E0B" stroke-width="2.6" opacity="' + (0.5 - i * 0.11).toFixed(2) + '"/>';
+      }
+    } else {
+      /* 제멋대로 도는 잔물결 여럿 */
+      var W = [[392,168],[452,158],[560,176],[606,214],[498,196],[438,214],[588,150]];
+      W.forEach(function (p, k) {
+        s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="9" fill="#DC2626" opacity=".9"/>';
+        for (i = 1; i <= 2; i++) {
+          s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (14 + i * 11) + '" fill="none" ' +
+               'stroke="#DC2626" stroke-width="2" opacity="' + (0.45 - i * 0.14).toFixed(2) + '"/>';
+        }
+      });
+    }
+    /* 중계소와 아래로 퍼지는 길 */
+    s += '<circle cx="' + AV[0] + '" cy="' + AV[1] + '" r="12" fill="#F59E0B" stroke="#B45309" stroke-width="2.6"/>';
+    s += '<path d="M' + AV[0] + ' ' + (AV[1] + 12) + ' L' + (AV[0] - 4) + ' ' + (AV[1] + 58) + '" ' +
+         'stroke="#F59E0B" stroke-width="7" stroke-linecap="round"/>';
+    ['M482 302 C452 350 434 420 442 500', 'M482 302 C520 350 540 410 546 470'].forEach(function (d) {
+      s += '<path d="' + d + '" fill="none" stroke="#F59E0B" stroke-width="6" stroke-linecap="round" opacity=".9"/>';
+    });
+    for (i = 0; i < 12; i++) {
+      a = -1.2 + (i / 11) * 2.4;
+      var bx = 470 + Math.cos(a) * 90, by = 430 + Math.sin(a) * 70;
+      s += '<path d="M' + bx.toFixed(0) + ' ' + by.toFixed(0) + ' l' + (Math.cos(a) * 26).toFixed(0) + ' ' +
+           (Math.sin(a) * 22).toFixed(0) + '" stroke="#F59E0B" stroke-width="3" opacity=".7" stroke-linecap="round"/>';
+    }
+
+    /* 심방 구석에 고인 피 — 굳어 덩어리가 된다 */
+    if (af) {
+      s += '<path d="M352 176 q-26 22 -14 50 q26 14 44 -12 q-6 -22 -30 -38 Z" fill="#5B1111" opacity=".9"/>';
+      s += '<circle cx="352" cy="204" r="14" fill="#3B0764"/>';
+      for (i = 0; i < 8; i++) {
+        a = i * 0.8;
+        s += '<circle cx="' + (352 + Math.cos(a) * (4 + R() * 7)).toFixed(0) + '" cy="' +
+             (204 + Math.sin(a) * (4 + R() * 7)).toFixed(0) + '" r="2.4" fill="#7E22CE" opacity=".9"/>';
+      }
+      s += '<circle cx="352" cy="204" r="24" fill="none" stroke="#3B0764" stroke-width="2.4" stroke-dasharray="5 4"/>';
+    }
+    return s;
+  }
+
+  V.heart_rhythm = {
+    t: '심방세동 — 펌프는 멀쩡한데 <b>신호가 어지러운</b> 병입니다',
+    d: '심장은 <b>펌프이면서 전기</b>입니다. 오른쪽 위 작은 발전소에서 신호가 나와 위(심방)를 훑고, ' +
+       '가운데 중계소를 지나 아래(심실)로 퍼집니다. ' +
+       '심방세동은 그 발전소 대신 <b>심방 여기저기서 제멋대로</b> 신호가 나서, 심방이 짜지지 못하고 <b>떨기만</b> 하는 병입니다. ' +
+       '그러면 심방 구석에 피가 <b>고이고, 고인 피는 굳습니다.</b> 그 덩어리가 떨어지면 곧장 <b>뇌로</b> 갑니다 — ' +
+       '그래서 이 병은 심장병이면서 <b>뇌경색의 원인</b>입니다.',
+    dz: ['afib'],
+    build: function () {
+      var R = rnd(20260907);
+      var s = '<svg viewBox="0 0 1320 700" width="1320" height="700">';
+      [[0, '정상 — 한 곳에서 신호가 납니다', '위가 먼저, 아래가 나중에 <tspan font-weight="800">차례로</tspan> 짜집니다', '#334155'],
+       [1, '심방세동 — 여기저기서 제멋대로', '위가 <tspan font-weight="800">떨기만</tspan> 해서 구석에 피가 고이고 굳습니다', '#991B1B']
+      ].forEach(function (p, i) {
+        var x = 20 + i * 646;
+        s += '<rect x="' + x + '" y="10" width="620" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 260) + ' 44) scale(0.86)">' + heartBody(0) + conduction(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="620" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="38" cy="650" r="10" fill="#F59E0B" stroke="#B45309" stroke-width="2.4"/>';
+      s += '<text x="58" y="655" font-size="12.5" fill="#334155">전기가 나는 곳과 지나는 길</text>';
+      s += '<circle cx="330" cy="650" r="8" fill="#DC2626"/>';
+      s += '<text x="348" y="655" font-size="12.5" fill="#334155">제멋대로 도는 잔물결</text>';
+      s += '<circle cx="600" cy="650" r="9" fill="#3B0764"/>';
+      s += '<text x="618" y="655" font-size="12.5" fill="#334155">구석에 고여 굳은 피 — 떨어지면 뇌로 갑니다</text>';
+      s += '</g>';
+      s += '<rect x="20" y="666" width="1280" height="26" rx="8" fill="#0F172A"/>';
+      s += '<text x="44" y="684" font-size="12.5" fill="#93C5FD">' +
+           '이 병은 <tspan font-weight="800" fill="#fff">심장 담보와 뇌 담보를 함께</tspan> 봐야 하는 자리입니다. ' +
+           '실제 비율·모양과 다릅니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1320 700' });
+    }
+  };
+
+  /* ═══ 식도와 위 사이 — 문이 헐거워지는 병, 벽이 파이는 병 ═══════
+     위 속은 <b>산</b>이다. 위벽은 그 산을 견디게 되어 있지만 <b>식도는 아니다.</b>
+     둘 사이에 조임쇠(하부식도괄약근)가 있어 평소에는 닫혀 있는데,
+     이것이 헐거워지면 산이 올라와 식도를 <b>헐게</b> 한다 — 역류성식도염.
+
+     한편 위벽 자체가 파이는 것이 <b>궤양</b>이다. 점막을 지나 깊이 파고들면
+     혈관을 만나 <b>피가 나고</b>, 더 가면 <b>구멍이 뚫린다.</b>
+
+     보험에서 이 둘이 중요한 이유는 <b>내시경이 흔하다</b>는 것과,
+     내시경으로 하는 처치가 <b>수술로 잡히느냐</b> 가 갈린다는 것이다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function gastroJunction(mode, R) {
+    var s = '', i, a, x, y;
+    /* 식도 — 위에서 내려온다 */
+    var loose = mode === 1;
+    s += '<path d="M232 20 L318 20 L318 210 L232 210 Z" fill="#F6E8DC" stroke="#C8A183" stroke-width="3"/>';
+    s += '<path d="M244 20 L306 20 L306 206 L244 206 Z" fill="#FBF3EC"/>';
+    /* 식도 점막 주름 */
+    for (i = 0; i < 9; i++) {
+      s += '<path d="M246 ' + (34 + i * 19) + ' q14 6 28 0 q14 -6 28 0" stroke="#E3CBB6" stroke-width="2" fill="none"/>';
+    }
+    /* 조임쇠 */
+    var gap = loose ? 30 : 8;
+    s += '<path d="M' + (275 - 44) + ' 210 q' + (44 - gap) + ' 26 ' + (-(44 - gap) + 44) + ' 34" fill="none" ' +
+         'stroke="#B4544C" stroke-width="16" stroke-linecap="round"/>';
+    s += '<path d="M' + (275 + 44) + ' 210 q' + (-(44 - gap)) + ' 26 ' + ((44 - gap) - 44) + ' 34" fill="none" ' +
+         'stroke="#B4544C" stroke-width="16" stroke-linecap="round"/>';
+
+    /* 위 — 자루 */
+    var ST = 'M180 246 C120 300 116 420 176 480 C240 542 400 546 452 476 ' +
+             'C500 410 486 300 400 250 C356 226 224 224 180 246 Z';
+    s += '<defs><clipPath id="cpSt' + mode + '"><path d="' + ST + '"/></clipPath></defs>';
+    s += '<path d="' + ST + '" fill="#E5B79A" stroke="#B98A63" stroke-width="3"/>';
+    s += '<g clip-path="url(#cpSt' + mode + ')">';
+    /* 위 안쪽 주름 */
+    for (i = 0; i < 16; i++) {
+      s += '<path d="M' + (140 + i * 22) + ' 260 C' + (150 + i * 22) + ' 340 ' + (130 + i * 22) + ' 420 ' +
+           (152 + i * 22) + ' 520" stroke="#D8A88C" stroke-width="5" fill="none" opacity=".75"/>';
+    }
+    /* 위산 */
+    s += '<path d="M130 400 C220 380 360 384 476 402 C470 470 380 536 288 534 C200 532 140 470 130 400 Z" ' +
+         'fill="#EFDFA8" opacity=".8"/>';
+    for (i = 0; i < 20; i++) {
+      s += '<circle cx="' + (150 + R() * 310).toFixed(0) + '" cy="' + (410 + R() * 110).toFixed(0) +
+           '" r="' + (2 + R() * 3).toFixed(1) + '" fill="#D9BE3E" opacity=".7"/>';
+    }
+    /* 궤양 — 벽이 파인다 */
+    if (mode === 2) {
+      s += '<path d="M300 258 q40 -6 52 26 q6 42 -26 62 q-44 6 -56 -30 q-4 -44 30 -58 Z" fill="#F3E6DA"/>';
+      s += '<path d="M312 268 q28 -2 34 22 q4 30 -20 44 q-32 2 -38 -22 q0 -34 24 -44 Z" fill="#C0392B" opacity=".85"/>';
+      s += '<path d="M322 282 q16 -2 18 14 q2 18 -12 24 q-18 0 -20 -14 q0 -20 14 -24 Z" fill="#7F1D1D"/>';
+      /* 혈관을 만났다 */
+      s += '<path d="M300 330 C270 350 250 380 246 410" stroke="#C0392B" stroke-width="7" fill="none"/>';
+      for (i = 0; i < 10; i++) {
+        s += '<circle cx="' + (318 + (R() - 0.5) * 40).toFixed(0) + '" cy="' + (330 + R() * 60).toFixed(0) +
+             '" r="' + (2.4 + R() * 3).toFixed(1) + '" fill="#7F1D1D" opacity=".85"/>';
+      }
+    }
+    s += '</g>';
+
+    /* 역류 — 산이 올라온다 */
+    if (loose) {
+      s += '<path d="M275 250 L275 40" stroke="#D9BE3E" stroke-width="16" opacity=".65" stroke-linecap="round"/>';
+      for (i = 0; i < 12; i++) {
+        s += '<circle cx="' + (275 + (R() - 0.5) * 34).toFixed(0) + '" cy="' + (46 + R() * 190).toFixed(0) +
+             '" r="' + (3 + R() * 3.4).toFixed(1) + '" fill="#D9BE3E" opacity=".9"/>';
+      }
+      /* 헐어 버린 식도 */
+      for (i = 0; i < 8; i++) {
+        s += '<path d="M' + (248 + (i % 2) * 40) + ' ' + (60 + i * 18) + ' l16 6" stroke="#C0392B" ' +
+             'stroke-width="5" stroke-linecap="round" opacity=".9"/>';
+      }
+      s += '<path d="M275 60 l-14 -22 M275 60 l14 -22" stroke="#D9BE3E" stroke-width="5" ' +
+           'stroke-linecap="round" fill="none"/>';
+    }
+    /* 십이지장 쪽 */
+    s += '<path d="M452 420 C520 420 546 470 540 530" fill="none" stroke="#E5B79A" stroke-width="34" stroke-linecap="round"/>';
+    s += '<path d="M452 420 C520 420 546 470 540 530" fill="none" stroke="#F6E8DC" stroke-width="16" stroke-linecap="round"/>';
+    return s;
+  }
+
+  V.gastro_reflux = {
+    t: '식도와 위 사이 — 문이 헐거워지는 병, 벽이 파이는 병',
+    d: '위 속은 <b>산</b>입니다. 위벽은 그 산을 견디게 되어 있지만 <b>식도는 아닙니다.</b> ' +
+       '둘 사이의 조임쇠가 평소엔 닫혀 있는데, 헐거워지면 산이 올라와 식도를 <b>헐게</b> 합니다 — 역류성식도염. ' +
+       '한편 위벽 자체가 파이는 것이 <b>궤양</b>입니다. 깊이 파고들어 혈관을 만나면 <b>피가 나고</b>, ' +
+       '더 가면 <b>구멍이 뚫립니다.</b> ' +
+       '보험에서는 <b>내시경으로 하는 처치가 수술로 잡히느냐</b> 가 갈리는 자리입니다.',
+    dz: ['gerd'],
+    build: function () {
+      var R = rnd(20260908);
+      var P = [
+        [0, '정상', '조임쇠가 닫혀 산이 <tspan font-weight="800">올라오지 못합니다</tspan>', '#334155'],
+        [1, '역류성식도염', '조임쇠가 헐거워져 산이 올라오고 식도가 <tspan font-weight="800">헐었습니다</tspan>', '#B45309'],
+        [2, '위궤양', '위벽이 파여 <tspan font-weight="800">혈관을 만나면 피가 납니다</tspan>', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1900 660" width="1900" height="660">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 626;
+        s += '<rect x="' + x + '" y="10" width="600" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 20) + ' 44)">' + gastroJunction(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="608" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<path d="M30 634 l30 0" stroke="#B4544C" stroke-width="10" stroke-linecap="round"/>';
+      s += '<text x="72" y="639" font-size="12.5" fill="#334155">조임쇠 (평소엔 닫혀 있는 문)</text>';
+      s += '<circle cx="380" cy="634" r="8" fill="#D9BE3E"/>';
+      s += '<text x="398" y="639" font-size="12.5" fill="#334155">위산</text>';
+      s += '<circle cx="500" cy="634" r="8" fill="#C0392B"/>';
+      s += '<text x="518" y="639" font-size="12.5" fill="#334155">헐거나 파인 자리 · 피</text>';
+      s += '<text x="760" y="639" font-size="12.5" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 무엇이 어디서 새고 어디가 파이는지를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1900 660' });
+    }
+  };
+
+  /* ═══ 다리 정맥 — 문이 망가져 피가 거꾸로 고인다 ═══════════════
+     다리에서 심장까지 피는 <b>중력을 거슬러</b> 올라간다. 그 일을 하는 것이
+     종아리 근육의 펌프질과, 정맥 안에 층층이 달린 <b>한쪽으로만 열리는 문</b>
+     (판막)이다. 이 문이 망가지면 피가 <b>거꾸로 내려와 고이고</b>, 그 무게에
+     혈관이 늘어나 구불구불 튀어나온다.
+
+     보험에서 이 병이 어려운 이유는 <b>고치는 방법이 여럿</b>이라서다.
+     째서 뽑기 · 레이저로 태우기 · 약을 넣어 붙이기 — 약관이 어디까지를
+     수술로 보는지가 지급을 가른다.                                       */
+  function legVein(mode, R) {
+    var s = '', i, y;
+    var bad = mode === 1;
+    /* 살 */
+    s += '<rect x="40" y="20" width="420" height="520" rx="30" fill="#F6E3D2" stroke="#C8A183" stroke-width="3"/>';
+    for (i = 0; i < 40; i++) {
+      s += '<path d="M' + (52 + R() * 396).toFixed(0) + ' ' + (32 + R() * 496).toFixed(0) +
+           ' l' + (8 + R() * 14).toFixed(0) + ' 2" stroke="#E8CDB6" stroke-width="2" opacity=".8"/>';
+    }
+    /* 정맥 — 세로로, 판막 넷 */
+    var VW = bad ? 78 : 46, CX = 250;
+    var vd = 'M' + (CX - VW / 2) + ' 40 ';
+    for (i = 0; i < 5; i++) {
+      var bulge = bad ? (i % 2 ? 34 : -30) : 0;
+      vd += 'C' + (CX - VW / 2 + bulge) + ' ' + (140 + i * 100) + ' ' + (CX - VW / 2 - bulge) + ' ' +
+            (160 + i * 100) + ' ' + (CX - VW / 2) + ' ' + (200 + i * 100) + ' ';
+    }
+    s += '<path d="M' + (CX - VW / 2) + ' 40 L' + (CX - VW / 2) + ' 520 L' + (CX + VW / 2) + ' 520 L' +
+         (CX + VW / 2) + ' 40 Z" fill="#4A6FA5" opacity=".18"/>';
+    /* 혈관 벽 */
+    for (var side = -1; side <= 1; side += 2) {
+      var d2 = 'M' + (CX + side * VW / 2) + ' 30';
+      for (i = 0; i < 5; i++) {
+        var bg = bad ? (i % 2 ? 30 : -26) : 0;
+        d2 += ' C' + (CX + side * VW / 2 + side * bg) + ' ' + (70 + i * 100) + ' ' +
+              (CX + side * VW / 2 + side * bg) + ' ' + (110 + i * 100) + ' ' +
+              (CX + side * VW / 2) + ' ' + (130 + i * 100);
+      }
+      s += '<path d="' + d2 + '" fill="none" stroke="#3F628F" stroke-width="6" stroke-linecap="round"/>';
+    }
+    /* 판막 — 한쪽으로만 열리는 문 */
+    for (i = 0; i < 4; i++) {
+      y = 130 + i * 100;
+      if (!bad) {
+        s += '<path d="M' + (CX - VW / 2 + 3) + ' ' + y + ' q' + (VW / 2 - 6) + ' 26 ' + (VW / 2 - 6) + ' 4 ' +
+             'M' + (CX + VW / 2 - 3) + ' ' + y + ' q' + (-(VW / 2 - 6)) + ' 26 ' + (-(VW / 2 - 6)) + ' 4" ' +
+             'fill="#93C5FD" stroke="#3F628F" stroke-width="3"/>';
+      } else {
+        /* 못 닫힌다 */
+        s += '<path d="M' + (CX - VW / 2 + 3) + ' ' + y + ' q10 26 4 40" fill="none" stroke="#8E9CAA" stroke-width="4"/>';
+        s += '<path d="M' + (CX + VW / 2 - 3) + ' ' + y + ' q-10 26 -4 40" fill="none" stroke="#8E9CAA" stroke-width="4"/>';
+      }
+    }
+    /* 피가 도는 방향 */
+    for (i = 0; i < 6; i++) {
+      y = 70 + i * 78;
+      if (!bad) {
+        s += '<path d="M' + CX + ' ' + (y + 22) + ' L' + CX + ' ' + (y - 8) + ' M' + (CX - 9) + ' ' + (y + 4) +
+             ' L' + CX + ' ' + (y - 8) + ' L' + (CX + 9) + ' ' + (y + 4) + '" stroke="#1D4ED8" ' +
+             'stroke-width="4" fill="none" stroke-linecap="round"/>';
+      } else {
+        s += '<path d="M' + CX + ' ' + (y - 8) + ' L' + CX + ' ' + (y + 22) + ' M' + (CX - 9) + ' ' + (y + 10) +
+             ' L' + CX + ' ' + (y + 22) + ' L' + (CX + 9) + ' ' + (y + 10) + '" stroke="#DC2626" ' +
+             'stroke-width="4" fill="none" stroke-linecap="round"/>';
+      }
+    }
+    /* 종아리 근육 — 이 펌프가 피를 밀어 올린다. 그래서 걸으면 낫는다 */
+    for (i = 0; i < 22; i++) {
+      var my = 60 + i * 21;
+      s += '<path d="M64 ' + my + ' q26 ' + (bad ? 6 : 10) + ' 52 0" stroke="#C98A76" ' +
+           'stroke-width="' + (3 + R() * 2).toFixed(1) + '" fill="none" opacity=".55"/>';
+      s += '<path d="M384 ' + my + ' q26 ' + (bad ? 6 : 10) + ' 52 0" stroke="#C98A76" ' +
+           'stroke-width="' + (3 + R() * 2).toFixed(1) + '" fill="none" opacity=".55"/>';
+    }
+    /* 곁가지 정맥 — 늘어나면 여기가 밖으로 불거진다 */
+    for (i = 0; i < 5; i++) {
+      var by2 = 110 + i * 96, amp = bad ? 44 : 14;
+      s += '<path d="M' + (CX - VW / 2) + ' ' + by2 + ' C' + (CX - VW / 2 - amp) + ' ' + (by2 + 24) + ' ' +
+           (CX - VW / 2 - amp) + ' ' + (by2 + 48) + ' ' + (CX - VW / 2 - amp * 0.4) + ' ' + (by2 + 70) +
+           '" stroke="#4A6FA5" stroke-width="' + (bad ? 9 : 5) + '" fill="none" opacity=".8" stroke-linecap="round"/>';
+      s += '<path d="M' + (CX + VW / 2) + ' ' + (by2 + 40) + ' C' + (CX + VW / 2 + amp) + ' ' + (by2 + 64) + ' ' +
+           (CX + VW / 2 + amp) + ' ' + (by2 + 88) + ' ' + (CX + VW / 2 + amp * 0.4) + ' ' + (by2 + 110) +
+           '" stroke="#4A6FA5" stroke-width="' + (bad ? 8 : 4.5) + '" fill="none" opacity=".7" stroke-linecap="round"/>';
+    }
+
+    /* 고인 피와 살갗의 변화 */
+    if (bad) {
+      for (i = 0; i < 26; i++) {
+        s += '<circle cx="' + (CX + (R() - 0.5) * 90).toFixed(0) + '" cy="' + (60 + R() * 450).toFixed(0) +
+             '" r="' + (2.6 + R() * 3.4).toFixed(1) + '" fill="#3F628F" opacity=".55"/>';
+      }
+      s += '<ellipse cx="140" cy="470" rx="58" ry="34" fill="#A98060" opacity=".45"/>';
+      s += '<ellipse cx="366" cy="440" rx="44" ry="26" fill="#A98060" opacity=".35"/>';
+    }
+    return s;
+  }
+
+  V.vein_valve = {
+    t: '하지정맥류 — 한쪽으로만 열리는 문이 망가진 것입니다',
+    d: '다리에서 심장까지 피는 <b>중력을 거슬러</b> 올라갑니다. 그 일을 종아리 근육의 펌프질과, ' +
+       '정맥 안에 층층이 달린 <b>한쪽으로만 열리는 문(판막)</b>이 합니다. ' +
+       '이 문이 망가지면 피가 <b>거꾸로 내려와 고이고</b>, 그 무게에 혈관이 늘어나 구불구불 튀어나옵니다. ' +
+       '보험에서 어려운 이유는 <b>고치는 방법이 여럿</b>이라서입니다 — 째서 뽑기, 레이저로 태우기, 약을 넣어 붙이기. ' +
+       '<b>어디까지를 수술로 보는지</b>가 지급을 가릅니다.',
+    dz: ['varicose'],
+    build: function () {
+      var R = rnd(20260909);
+      var s = '<svg viewBox="0 0 1180 640" width="1180" height="640">';
+      [[0, '정상 — 문이 닫힙니다', '피가 <tspan font-weight="800">위로만</tspan> 올라갑니다', '#334155'],
+       [1, '망가짐 — 문이 못 닫힙니다', '피가 <tspan font-weight="800">거꾸로 고여</tspan> 혈관이 늘어납니다', '#991B1B']
+      ].forEach(function (p, i) {
+        var x = 20 + i * 570;
+        s += '<rect x="' + x + '" y="10" width="544" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 30) + ' 44)">' + legVein(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="604" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<path d="M30 630 l0 -20 M24 -14 l0 0" stroke="#1D4ED8" stroke-width="4"/>';
+      s += '<text x="46" y="632" font-size="12.5" fill="#334155">올라가는 피</text>';
+      s += '<path d="M180 610 l0 20" stroke="#DC2626" stroke-width="4"/>';
+      s += '<text x="196" y="632" font-size="12.5" fill="#334155">거꾸로 내려온 피</text>';
+      s += '<path d="M370 616 q14 12 0 16" stroke="#3F628F" stroke-width="3" fill="#93C5FD"/>';
+      s += '<text x="396" y="632" font-size="12.5" fill="#334155">판막 (한쪽으로만 열리는 문)</text>';
+      s += '<text x="700" y="632" font-size="12.5" fill="#6B7280">실제 비율·모양과 다릅니다. 관계를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1180 640' });
+    }
+  };
+
   V.vessel = {
     t: '혈관은 이렇게 좁아지고, 이렇게 엽니다',
     d: '기름때가 쌓여 길이 좁아지다가(협심증), 그 덩어리가 터지면 피떡이 생겨 완전히 막힙니다(심근경색). ' +
