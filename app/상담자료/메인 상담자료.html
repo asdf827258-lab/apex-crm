@@ -2887,7 +2887,7 @@
   <div id="hint"><kbd>←</kbd> <kbd>→</kbd> 또는 클릭으로 이동</div>
 
   <!-- Name edit button -->
-  <button id="nameBtn" onclick="openNameModal()">✏️ <span id="nameBtnLabel">이동엽</span></button>
+  <button id="nameBtn" onclick="openNameModal()">✏️ <span id="nameBtnLabel">내 소개</span></button>
   <button id="apiBtn" onclick="openApiModal()">🔑 <span id="apiBtnLabel">API</span></button>
 
   <!-- 섹션 토글 탭 (상담 / 결과 보고서) -->
@@ -2984,7 +2984,7 @@
 
       <div class="p-field">
         <label>이름</label>
-        <input type="text" id="pName" placeholder="예: 이동엽 컨설턴트" maxlength="30">
+        <input type="text" id="pName" placeholder="예: 홍길동 컨설턴트" maxlength="30">
       </div>
       <div class="p-field">
         <label>직책 / 소속</label>
@@ -3004,7 +3004,7 @@
       </div>
       <div class="p-field">
         <label>인사말 (상세 보기에서 표시)</label>
-        <textarea id="pIntro" placeholder="예: 안녕하세요. APEX 사업단 이동엽 컨설턴트입니다. 가입자 한 분 한 분의 라이프 사이클을 분석해 가장 합리적인 보장을 제안합니다." maxlength="300"></textarea>
+        <textarea id="pIntro" placeholder="예: 안녕하세요. APEX 사업단 홍길동 컨설턴트입니다. 가입자 한 분 한 분의 라이프 사이클을 분석해 가장 합리적인 보장을 제안합니다." maxlength="300"></textarea>
       </div>
       <div class="p-field">
         <label>경력 / 자격 (한 줄에 한 항목)</label>
@@ -3098,8 +3098,8 @@
             <img id="s1HeroPhoto" alt="프로필 사진" style="display:none" onerror="this.style.display='none';var p=document.getElementById('s1HeroPhotoPh');if(p)p.style.display='flex';">
             <span class="s1-hero-ph" id="s1HeroPhotoPh">👤</span>
           </div>
-          <div class="s1-hero-name presenter-name" id="s1HeroName">이동엽</div>
-          <div class="s1-hero-title" id="s1HeroTitle">APEX 사업단 · 보장분석 전문가</div>
+          <div class="s1-hero-name presenter-name" id="s1HeroName">담당 컨설턴트</div>
+          <div class="s1-hero-title" id="s1HeroTitle">「내 설정 → 내 소개」 에서 한 번 적으시면 여기 섭니다</div>
           <button class="s1-hero-edit" onclick="openProfileModal()">✏️ 사진·이름 편집</button>
         </div>
         <div class="animate-up opacity-0 delay-3" style="margin-top:26px;">
@@ -10424,9 +10424,25 @@ ${JSON.stringify(insurances.map(i => ({
     const total = slides.length;
     let cur = 0;
 
+    /* ── 값을 넣는 곳은 한 곳뿐이다 ──────────────────────────────
+       이 자료는 혼자서도 열리므로 자기 편집칸을 가지고 있다. 그런데
+       앱 안에서 열렸을 때까지 여기서 적으면, 앱의 「내 소개」와 이
+       자료의 칸이 <b>둘</b> 이 되어 표지마다 다른 이름이 뜬다.
+       앱 안이면 「내 설정 → 내 소개」 로 보낸다. 혼자 열렸을 때만
+       여기서 적는다.                                              */
+    function inApexApp() {
+      try { return !!(window.parent && window.parent !== window); } catch (e) { return false; }
+    }
+    function toIntroSettings() {
+      if (!inApexApp()) return false;
+      try { window.parent.postMessage({ t: 'apex:editintro' }, location.origin); return true; }
+      catch (e) { return false; }
+    }
+
     // ── Name customization ──
-    let presenterName = '이동엽';
+    let presenterName = '';   /* 비어 있으면 비어 있다고 말한다 — 남의 이름을 세우지 않는다 */
     function openNameModal() {
+      if (toIntroSettings()) return;
       document.getElementById('nameInput').value = presenterName;
       document.getElementById('nameModal').classList.add('open');
       setTimeout(() => document.getElementById('nameInput').focus(), 100);
@@ -10491,11 +10507,17 @@ ${JSON.stringify(insurances.map(i => ({
     updateApiBtnLabel(); // 초기 라벨
 
     // ── Slide 7 담당 컨설턴트 프로필 ──
+    /* 기본값에 <b>한 사람의 이름·사진</b>이 박혀 있었다. 그래서 다른
+       설계사가 이 자료를 열면 고객 앞 첫 화면에 <b>남의 얼굴과 남의
+       이름</b>이 떴다. 팀원마다 소개가 다른데 기본값이 한 사람이면
+       나머지 전부가 틀린 표지를 들고 고객을 만난다.
+       비워 둔다. 모르는 값을 그럴듯하게 채우지 않는다 —
+       비어 있으면 「내 설정 → 내 소개」 로 안내한다. */
     let profileData = {
-      photos: ['photo1.jpg', null, null],
-      name: '이동엽', title: 'APEX 사업단 · 보장분석 전문가',
+      photos: [null, null, null],
+      name: '', title: '',
       phone: '', email: '',
-      region: '', intro: '', bio: '', specialties: '운전자보험, 종신·정기보험, 보장분석, 은퇴·연금설계'
+      region: '', intro: '', bio: '', specialties: ''
     };
 
     /** localStorage 에서 프로필 로드 후 카드에 반영 (옛 단일 photo 키도 마이그레이션) */
@@ -10544,8 +10566,8 @@ ${JSON.stringify(insurances.map(i => ({
         parts.length ? parts.join(' &nbsp;·&nbsp; ') : '연락처·경력 미입력 — ✏️ 편집 클릭';
 
       // ── 슬라이드 1 자기소개 히어로 + 헤더 이름 동기화 (사진·이름 편집 실시간 반영) ──
-      const _nm = profileData.name || '이동엽';
-      const _tt = profileData.title || 'APEX 사업단 · 보장분석 전문가';
+      const _nm = profileData.name || '담당 컨설턴트';
+      const _tt = profileData.title || '「내 설정 → 내 소개」 에서 한 번 적으시면 여기 섭니다';
       const heroName = document.getElementById('s1HeroName');
       if (heroName) heroName.textContent = _nm;
       const heroTitle = document.getElementById('s1HeroTitle');
@@ -10564,6 +10586,7 @@ ${JSON.stringify(insurances.map(i => ({
 
     /** 모달 열기 — 입력 필드 + 3 슬롯 미리보기 동기화 */
     function openProfileModal() {
+      if (toIntroSettings()) return;
       document.getElementById('pName').value = profileData.name || '';
       document.getElementById('pTitle').value = profileData.title || '';
       document.getElementById('pPhone').value = profileData.phone || '';
@@ -14139,7 +14162,7 @@ ${JSON.stringify(insurances.map(i => ({
       });
       return {
         meta: {
-          presenter: typeof presenterName === 'string' ? presenterName : '이동엽',
+          presenter: typeof presenterName === 'string' ? presenterName : '',
           generatedAt: new Date().toISOString(),
           version: 1,
         },
