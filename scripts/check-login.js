@@ -130,6 +130,28 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(okRun.closed === true, '  로그인 창이 닫힌다');
   is(okRun.disabled === false, '  단추도 되살아난다');
 
+  /* ══ [7] 로그인 안 한 사람에게 「결제」 를 들이밀지 않는가 ══════════
+     폰 홈 화면에 담은 앱은 사파리와 저장 공간이 따로다. 담고 처음 열면
+     반드시 로그아웃 상태다. 그때 「🔒 상위 플랜 기능입니다 · 구독하기」 가
+     뜨면 「돈을 더 내라는 건가」 로 읽힌다. 못 여는 이유는 돈이 아니라
+     로그인이다.                                                        */
+  console.log('\n[7] 로그인 전에는 결제가 아니라 로그인을 보여 준다');
+  const gate = await page.evaluate(() => {
+    OS.profile = null; OS.session = null;
+    const pro = osBlockedPageHtml('crm');      /* 등급이 필요한 판 */
+    const th = thBlocked('growboard');
+    OS.profile = { id: 'x', name: '점검', role: 'member', plan: 'free' };
+    const paid = osBlockedPageHtml('crm');     /* 로그인은 했는데 등급이 낮다 */
+    OS.profile = null;
+    return { pro, th, paid };
+  });
+  is(/로그인/.test(gate.pro), '  로그아웃 상태에서 「로그인」 이라고 말한다');
+  is(!/요금제|구독하기|상위 플랜/.test(gate.pro), '  로그아웃 상태에서는 결제 이야기를 꺼내지 않는다');
+  is(/홈 화면에 담은 앱/.test(gate.pro), '  왜 로그아웃인지(저장 공간이 따로임) 알려 준다');
+  is(/osOpenModal/.test(gate.pro), '  그 자리에서 로그인 창을 열 수 있다');
+  is(/로그인/.test(gate.th) && !/요금제/.test(gate.th), '  작은 칸(thBlocked)도 같다');
+  is(/상위 플랜|요금제/.test(gate.paid), '  로그인한 사람에게는 등급 이야기를 제대로 한다');
+
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close();
