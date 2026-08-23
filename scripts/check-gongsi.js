@@ -308,6 +308,93 @@ function serve(){ return http.createServer((q,r)=>{
     is(S8.s1 && S8.s2 && S8.s3, '  각 단계 안에 그 단계의 것만 들어 있다');
     await p8.close();
 
+    console.log('\n[10] 회사가 이 상품을 어떻게 홍보하는지 보여 주는가');
+    /* 약관·상품설명서는 회사가 <b>약속한 것</b>이다. 그런데 사장님이 알아야
+       하는 것은 회사가 그 상품을 <b>어떤 말로 밀고 있는가</b> 다 — 그것이
+       시장에서 그 상품이 서는 자리고, 우리가 맞받거나 비켜 갈 자리다.
+       그 말은 지어낼 수 없다. <b>회사가 실제로 낸 말만</b> 옮긴다. */
+    const pA = await browser.newPage();
+    await pA.route('**/api/market**', r => {
+      if (r.request().url().indexOf('kind=gongsi') < 0) return r.abort();
+      r.fulfill({ status:200, contentType:'application/json', body: JSON.stringify(MANY) });
+    });
+    await pA.goto('http://127.0.0.1:' + PORT + '/app/상담자료/미끼레이더/index.html',
+      { waitUntil:'domcontentloaded', timeout:60000 });
+    if (await pA.$('#lockPw')) {
+      await pA.fill('#lockPw','test1234'); await pA.click('#lockGo');
+      await pA.waitForSelector('#lockOv',{ state:'detached', timeout:10000 });
+    }
+    await pA.evaluate(() => { try{localStorage.removeItem('mikki_seen')}catch(e){} });
+    await pA.evaluate(() => document.querySelector('.tab[data-t="promo"]').click());
+
+    /* 아직 아무 기사도 없을 때 — 없는 말을 지어내면 안 된다 */
+    await pA.evaluate(() => { LS.set('arch', []); state.news = []; });
+    await pA.fill('#pmName', '삼성 간편한 건강보험(2701)(무배당)');
+    await pA.fill('#pmCo', '삼성생명');
+    await pA.evaluate(() => pmPushRun());
+    const N0 = await pA.evaluate(() => document.getElementById('pmPush').innerText);
+    is(/못 찾았습니다/.test(N0), '  기사가 없으면 「못 찾았습니다」 라고 적는다 — 빈 자리를 안 채운다');
+    is(/지어내지 않습니다/.test(N0), '  지어내지 않는다고 화면에 밝힌다');
+    is(/뉴스 모아 오기/.test(N0), '  무엇을 하면 되는지 말해 준다');
+
+    /* 회사가 낸 말이 있을 때 */
+    await pA.evaluate(() => {
+      LS.set('arch', [
+        { title:'삼성생명, 「삼성 간편한 건강보험」 출시… 유병자도 3개월만 지나면 가입',
+          source:'한국경제', date:'2026-08-12', link:'https://n/1', got:'2026-08' },
+        { title:'삼성생명 간편한 건강보험, 간편심사로 가입 문턱 낮춰',
+          source:'매일경제', date:'2026-08-13', link:'https://n/2', got:'2026-08' },
+        { title:'교보생명, 새 종신보험 내놔', source:'파이낸셜뉴스', date:'2026-08-10',
+          link:'https://n/4', got:'2026-08' }
+      ]);
+    });
+    await pA.evaluate(() => pmPushRun());
+    const N1 = await pA.evaluate(() => {
+      const box = document.getElementById('pmPush');
+      return { txt: box.innerText,
+        rows: [...box.querySelectorAll('.gsrow')].map(r => r.innerText.replace(/\s+/g,' ')),
+        /* 컨셉 낱말만 본다 — 「맞은 근거」 배지(회사 + 간편한·건강보험)까지 세면
+           엉뚱한 것을 잡는다. 실제로 한 번 그렇게 헛불이 켜졌다. */
+        words: [...box.querySelectorAll('.pushw')].map(b => b.textContent.replace(/\d+$/,'').trim()),
+        links: [...box.querySelectorAll('a[href^="https://n/"]')].map(a => a.getAttribute('href')) };
+    });
+    is(N1.rows.length === 2, '  이 회사·이 상품 이야기만 골라낸다 (' + N1.rows.length + '건)');
+    is(!/교보생명/.test(N1.txt), '  남의 회사 기사는 안 끌어온다');
+    is(/한국경제/.test(N1.txt) && /2026-08-12/.test(N1.txt),
+       '  언론사와 날짜를 그대로 옮긴다 (CLAUDE.md 9)');
+    is(N1.links.indexOf('https://n/1') >= 0, '  기사 링크를 그대로 단다 — 사장님이 원문을 여실 수 있게');
+    is(/상품 이름 그대로/.test(N1.txt) && /회사 \+/.test(N1.txt),
+       '  <b>얼마나 확실히 맞았는지</b>도 같이 말한다 — 「비슷한 것 같다」 를 「맞다」 로 안 내놓는다');
+    is(N1.words.indexOf('간편심사') >= 0 && N1.words.indexOf('유병자') >= 0,
+       '  회사가 덧붙이는 말을 뽑는다 (' + N1.words.slice(0,4).join(' · ') + ')');
+    is(N1.words.indexOf('삼성생명') < 0 && !N1.words.some(w => /건강보험/.test(w)),
+       '  회사·상품 이름은 안 센다 — 이름만 되풀이되면 정작 미는 말이 묻힌다');
+    is(/못 읽습니다/.test(N1.txt),
+       '  회사 상품페이지 본문은 못 읽는다고 밝힌다 — 못 하는 것을 된다고 하지 않는다');
+
+    /* 1단계에서 고르면 2·3단계가 그 상품을 본다 */
+    await pA.click('#pmFind2');
+    await waitOr(pA, "document.querySelectorAll('#pmGs .gspick').length===3", '  1단계에 「이 상품으로」 가 붙는다');
+    await pA.evaluate(() => {
+      const b = [...document.querySelectorAll('#pmGs .gspick')].find(x => /간편한 건강/.test(x.dataset.prod));
+      if (b) b.click();
+    });
+    await pA.waitForTimeout(700);
+    const N2 = await pA.evaluate(() => ({
+      name: document.getElementById('pmName').value,
+      push: document.getElementById('pmPush').innerText,
+      page: !!document.querySelector('#pmPush a[href="https://x/p3"]')
+    }));
+    is(/간편한 건강보험/.test(N2.name), '  고른 상품 이름이 따라간다 — 두 번 적게 하지 않는다');
+    is(/회사가 낸 말/.test(N2.push), '  고르는 것만으로 회사가 미는 말까지 나온다');
+    is(N2.page, '  그 상품의 회사 페이지로 가는 길이 붙는다');
+
+    /* 답하는 곳이 하나인가 */
+    const src2 = fs.readFileSync(path.join(ROOT,'app/상담자료/미끼레이더/index.html'),'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g,'');
+    is((src2.match(/function pushMatch\(/g)||[]).length === 1, '  어느 기사가 이 상품 것인지 답하는 곳은 하나다');
+    await pA.close();
+
     console.log('\n[9] 잠금은 골라 쓰는 것인가');
     const p9 = await browser.newPage();
     await p9.route('**/api/market**', r => r.abort());

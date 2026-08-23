@@ -565,7 +565,15 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
   <!-- ── 3단계 · 어떻게 홍보할까 ── -->
   <div class="card stepcard" style="margin-bottom:12px">
     <div class="stepc"><b>3</b>어떻게 홍보할까 <span>핵심 컨셉 · 그대로 읽는 화법 · 반드시 같이 말할 것</span></div>
-    <div id="pmOut"><div class="tipbox">위에서 <b>🎯 발췌하기</b> 를 누르시면 여기에 나옵니다 —
+    <!-- ㉮ 회사가 어떻게 홍보하나 — 회사가 실제로 낸 말만 옮긴다 -->
+    <div class="row" style="align-items:center;margin-bottom:8px">
+      <div style="flex:0 0 auto"><button class="btn gh sm" id="pmPushGo">🔎 회사가 미는 말 찾기</button></div>
+      <div style="flex:1;align-self:center" class="cnt" id="pmPushMsg">모아 둔 기사에서 이 회사·이 상품 이야기를 찾아 <b>그대로</b> 옮깁니다</div>
+    </div>
+    <div id="pmPush" style="margin-bottom:12px"></div>
+
+    <!-- ㉯ 우리가 쓸 말 — 약관·상품설명서에서 뽑은 것 -->
+    <div id="pmOut"><div class="tipbox">위 <b>2단계</b>에서 <b>🎯 발췌하기</b> 를 누르시면 여기에 나옵니다 —
       <b>이 상품이 무엇인가 · 홍보에 쓸 대목 · 반드시 같이 말할 것</b> 순서로 정리됩니다.</div></div>
   </div>
 </section>
@@ -6236,7 +6244,7 @@ function bindDaily(){
      · 원문은 이 브라우저 밖으로 나가지 않는다 (CLAUDE.md 9)
    ════════════════════════════════════════════════════════════════ */
 (function(){
-  var PM={picked:[], res:null};
+  var PM={picked:[], res:null, page:''};
 
   function libItems(){
     var j=state.lib;
@@ -6486,6 +6494,8 @@ function bindDaily(){
               +' data-seen-co="'+esc(x.co)+'" data-seen-prod="'+esc(x.prod)+'">⬇ 요약서 받기</a>'
             :'<span class="cnt">요약서 없음</span>')
           +(x.page?'<a class="pg" href="'+esc(x.page)+'" target="_blank" rel="noopener">회사 상품페이지</a>':'')
+          +'<button type="button" class="btn sm gspick" data-co="'+esc(x.co)+'" data-prod="'+esc(x.prod)+'"'
+          +' data-page="'+esc(x.page||'')+'">이 상품으로 →</button>'
           +'<button type="button" class="btn gh sm gsmark" data-co="'+esc(x.co)+'" data-prod="'+esc(x.prod)+'"'
           +' data-on="'+(s2?'1':'0')+'">'+(s2?'다시 보기로':'봤음으로')+'</button>'
           +'</div>';
@@ -6517,6 +6527,19 @@ function bindDaily(){
         if(typeof seenMark==='function')seenMark(a.dataset.seenCo,a.dataset.seenProd,'요약서 받기');
       });
     });
+    /* 1단계에서 고른 상품이 2·3단계로 따라간다 — 이름을 두 번 적게 하지 않는다 */
+    box.querySelectorAll('.gspick').forEach(function(b){
+      b.onclick=function(e){
+        e.preventDefault();
+        $('#pmName').value=b.dataset.prod;
+        PM.page=b.dataset.page||'';
+        if($('#pmFind')){ $('#pmFind').value=prodWords(b.dataset.prod)[0]||''; paintDocs(); }
+        toast('이 상품으로 이어 갑니다 — 2·3단계를 보십시오');
+        pushRun();
+        const c=document.getElementById('pmDocs');
+        if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'center'});
+      };
+    });
     box.querySelectorAll('.gsmark').forEach(function(b){
       b.onclick=function(e){
         e.preventDefault();
@@ -6527,8 +6550,149 @@ function bindDaily(){
     });
   }
 
+  /* ══ 회사가 이 상품을 어떻게 홍보하나 ═══════════════════════════
+     약관·상품설명서는 회사가 <b>약속한 것</b>이다. 그런데 사장님이 알아야
+     하는 것은 회사가 그 상품을 <b>어떤 말로 밀고 있는가</b> 다 — 광고 문구,
+     보도자료 제목, 되풀이하는 낱말. 그것이 시장에서 그 상품이 서는 자리고,
+     우리가 맞받거나 비켜 갈 자리다.
+
+     그 말은 <b>지어낼 수 없다.</b> 회사가 실제로 낸 말만 옮긴다.
+       · 모아 둔 기사·보도자료에서 이 회사·이 상품 이야기를 찾는다
+       · 제목 · 언론사 · 날짜 · 링크를 <b>그대로</b> 옮긴다 (CLAUDE.md 9)
+       · 되풀이되는 낱말은 <b>제목에 실제로 나온 것만</b> 센다
+       · 못 찾으면 <b>못 찾았다고 적는다</b>
+       · 회사 상품페이지 본문은 앱이 대신 못 읽는다 — 회사가 바깥에서
+         읽어 가는 것을 막아 두었다. 열어 보시라고 길만 놓는다      */
+
+  /* 상품 이름에서 쓸 만한 낱말만 — 회사명·「보험」 같은 흔한 말은 뺀다.
+     안 빼면 「삼성생명」 기사가 전부 이 상품 이야기로 잡힌다. */
+  function prodWords(name){
+    return String(name||'')
+      .replace(/\([^)]*\)/g,' ').replace(/\[[^\]]*\]/g,' ')
+      .replace(/무배당|배당|저해약환급금형|해약환급금|갱신형|비갱신형/g,' ')
+      .split(/[\s·,]+/)
+      .map(function(w){return w.replace(/[^가-힣A-Za-z0-9]/g,'')})
+      .filter(function(w){return w.length>=2 && !/^(보험|생명|손해|화재|해상|라이프|손보)$/.test(w)});
+  }
+  function pushNews(){
+    const a=(typeof archLoad==='function')?archLoad():[];
+    const b=(typeof state!=='undefined'&&state.news)?state.news:[];
+    const seen={}, out=[];
+    a.concat(b).forEach(function(n){
+      const k=String(n.title||'').slice(0,28);
+      if(!k||seen[k])return; seen[k]=1; out.push(n);
+    });
+    return out;
+  }
+  /* 얼마나 확실히 맞았는지도 같이 말한다 — 「비슷한 것 같다」 를 「맞다」 로
+     내놓으면 고객 앞에서 엉뚱한 상품 이야기를 하게 된다. */
+  function pushMatch(co,prod){
+    const flat=function(t){return String(t||'').replace(/[\s·,]/g,'')};
+    const base=(typeof prodBase==='function')?prodBase(prod):flat(prod);
+    const words=prodWords(prod).filter(function(w){return co.indexOf(w)<0});
+    const hard=[],soft=[];
+    pushNews().forEach(function(n){
+      const t=String(n.title||''), f=flat(t);
+      if(base&&base.length>=4&&f.indexOf(base)>=0){hard.push(n);return}
+      if(!co)return;
+      if(f.indexOf(flat(co))<0)return;
+      const hit=words.filter(function(w){return f.indexOf(flat(w))>=0});
+      if(hit.length)soft.push({...n,_hit:hit});
+    });
+    return {hard:hard, soft:soft};
+  }
+  /* 되풀이되는 낱말 — 제목에 실제로 나온 것만 센다. 없는 말을 만들지 않는다 */
+  const PUSH_STOP=/^(보험|생명|손해|화재|해상|라이프|출시|판매|신상품|상품|고객|가입|보장|업계|시장|기자|사진|제공|것|수|등|더|올해|지난|이번|지나|개월|공개|선보|내놔|내놓|확대|강화|한다|했다|위해|통해)$/;
+  /* 조사를 뗀다 — 「유병자도 · 간편심사로」 는 「유병자 · 간편심사」 다.
+     떼고 나서 한 글자가 되면 안 뗀다(「도」 같은 것이 남으면 말이 아니다). */
+  function pushStem(w){
+    const t=w.replace(/(으로서|으로|에서|에게|까지|부터|이나|라도|이라|으로써|도|로|를|을|은|는|이|가|의|에|만|과|와)$/,'');
+    return t.length>=2 ? t : w;
+  }
+  function pushWords(list,co,prod){
+    /* 회사 이름과 상품 이름은 빼고 센다. 안 빼면 「삼성생명 2 · 건강보험 2」 처럼
+       이름만 되풀이되고, 정작 회사가 덧붙이는 말(유병자·간편심사·문턱)이 묻힌다.
+       우리가 알아야 하는 것은 <b>이름 말고 그 옆에 붙는 말</b>이다. */
+    const mine=new Set();
+    (String(co||'').match(/[가-힣]{2,}|[A-Za-z]{3,}/g)||[]).forEach(function(w){mine.add(w)});
+    prodWords(prod).forEach(function(w){mine.add(w)});
+    const c={};
+    list.forEach(function(n){
+      (String(n.title||'').match(/[가-힣]{2,}|[A-Za-z]{3,}/g)||[]).forEach(function(w0){
+        const w=pushStem(w0);
+        if(w.length<2||PUSH_STOP.test(w))return;
+        let skip=false;
+        mine.forEach(function(m){ if(w.indexOf(m)>=0||m.indexOf(w)>=0)skip=true; });
+        if(skip)return;
+        c[w]=(c[w]||0)+1;
+      });
+    });
+    /* 같은 횟수면 긴 말이 먼저 — 「간편심사」 가 「낮춰」 보다 컨셉에 가깝다 */
+    const all=Object.keys(c).map(function(w){return {w:w,n:c[w]}})
+      .sort(function(a,b){return (b.n-a.n)||(b.w.length-a.w.length)});
+    const many=all.filter(function(x){return x.n>=2});
+    /* 기사가 적으면 되풀이가 안 생긴다 — 그때는 「나온 말」 이라고 밝히고 그대로 보여 준다.
+       되풀이가 없다고 빈칸을 두면 정작 회사가 쓴 말을 못 보게 된다. */
+    return many.length ? {list:many.slice(0,10), rep:true}
+                       : {list:all.slice(0,10), rep:false};
+  }
+  function pushRow(n,why){
+    return '<div class="gsrow"><b>'+esc(n.title||'')+'</b>'
+      +(n.source?'<span class="bd n">'+esc(n.source)+'</span>':'')
+      +(n.date?'<span class="cnt">'+esc(String(n.date).slice(0,16))+'</span>':'')
+      +(why?'<span class="gsbadge nw">'+esc(why)+'</span>':'')
+      +(n.link?'<a class="pg" href="'+esc(n.link)+'" target="_blank" rel="noopener">기사 열기</a>':'')
+      +'</div>';
+  }
+  function pushRun(){
+    const box=$('#pmPush'), msg=$('#pmPushMsg');
+    if(!box)return;
+    const co=($('#pmCo').value||'').trim();
+    const prod=($('#pmName').value||'').trim();
+    if(!prod){ box.innerHTML='<div class="tipbox"><b>1단계</b>에서 상품을 고르시거나, '
+      +'위 <b>상품 이름</b> 칸에 이름을 적어 주세요.</div>'; return; }
+    const m=pushMatch(co,prod);
+    const all=m.hard.concat(m.soft);
+    const gs=PM.page||'';
+    let h='';
+    if(!all.length){
+      h='<div class="warnbox"><b>회사가 미는 말을 아직 못 찾았습니다.</b><br>'
+        +'모아 둔 기사 '+pushNews().length+'건 안에 <b>'+esc(co||'이 회사')+'</b> 의 '
+        +'<b>'+esc(prod)+'</b> 이야기가 없습니다. 없는 말을 지어내지 않습니다.<br>'
+        +'· 📡 <b>뉴스 모아 오기</b> 를 한 번 돌려 보세요 — 새 보도자료가 들어올 수 있습니다<br>'
+        +'· 상품이 갓 나왔으면 아직 기사가 없을 수 있습니다</div>';
+    }else{
+      const kw=pushWords(all,co,prod);
+      h='<div class="okbox" style="margin-bottom:8px"><b>회사가 낸 말 '+all.length+'건</b>'
+        +(m.hard.length?(' — 그중 상품 이름이 그대로 들어간 것 '+m.hard.length+'건'):'')
+        +'<br><span class="cnt">제목·언론사·날짜·링크를 <b>그대로</b> 옮겼습니다. 요약하거나 고치지 않았습니다.</span></div>';
+      if(kw.list.length){
+        h+='<div class="tipbox" style="margin-bottom:8px"><b>'
+          +(kw.rep?'회사가 되풀이하는 말':'회사가 쓴 말')+'</b> '
+          +'<span class="cnt">(회사·상품 이름은 빼고, 제목에 <b>실제로 나온</b> 낱말만'
+          +(kw.rep?' 셌습니다)':' 적었습니다 — 기사가 '+all.length+'건이라 되풀이는 아직 안 잡힙니다)')
+          +'</span><br>'
+          +kw.list.map(function(x){return '<span class="gsbadge nw pushw" style="margin:3px 4px 0 0">'
+            +esc(x.w)+(kw.rep?(' <b>'+x.n+'</b>'):'')+'</span>'}).join('')
+          +'<div class="cnt" style="margin-top:6px">이것이 <b>회사가 이 상품을 미는 자리</b>입니다 — '
+          +'맞받거나 비켜 갈 곳입니다.</div></div>';
+      }
+      h+=m.hard.map(function(n){return pushRow(n,'상품 이름 그대로')}).join('')
+        +m.soft.map(function(n){return pushRow(n,'회사 + '+esc((n._hit||[]).join(' · ')))}).join('');
+    }
+    h+='<div class="tipbox" style="margin-top:8px">'
+      +'<b>회사 상품페이지 본문은 앱이 대신 못 읽습니다</b> — 회사가 바깥에서 읽어 가는 것을 막아 두었습니다. '
+      +(gs?('<a class="pg" href="'+esc(gs)+'" target="_blank" rel="noopener">이 상품 페이지 열기</a> 로 직접 보십시오.')
+         :'1단계에서 상품을 고르시면 그 회사 상품페이지로 가는 길이 여기 뜹니다.')
+      +'</div>';
+    box.innerHTML=h;
+    if(msg)msg.innerHTML='모아 둔 기사 <b>'+pushNews().length+'</b>건에서 찾았습니다';
+  }
+  window.pmPushRun=pushRun;
+
   function boot(){
     if(!$('#pmDocs'))return;
+    $('#pmPushGo').onclick=function(e){e.preventDefault();pushRun()};
     $('#pmFind').addEventListener('input',paintDocs);
     $('#pmFind2').onclick=function(e){e.preventDefault();gsFind()};
     $('#pmRun').onclick=function(){run().catch(function(e){
