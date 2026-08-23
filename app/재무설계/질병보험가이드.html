@@ -117,6 +117,28 @@
   .range .rlgd .y{color:#047857;font-weight:800;}
   .range .rlgd .n{color:#C4CAD3;font-weight:800;}
   .range .rlgd .q{color:#B45309;font-weight:800;}
+  /* 🔍 코드로 찾기 — 진단서의 코드를 그대로 넣어 보는 자리 */
+  .kcdbox{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;margin-bottom:14px;}
+  .kcdbox input{width:100%;font-size:16px;font-weight:700;padding:12px 14px;border:1.5px solid var(--line);
+    border-radius:11px;font-family:'Menlo',monospace;}
+  .kcdbox input:focus{outline:none;border-color:var(--blue);}
+  .kcdhint{font-size:11.5px;color:var(--ink4);margin-top:8px;}
+  .kcdn{font-size:12px;color:var(--ink4);margin:12px 0 8px;font-weight:700;}
+  .kcdr{display:flex;align-items:flex-start;gap:11px;padding:11px 12px;border:1px solid var(--line2);
+    border-radius:12px;margin-bottom:8px;background:#fff;}
+  .kcdr .c{font-family:'Menlo',monospace;font-weight:800;color:var(--blue);font-size:14px;min-width:52px;}
+  .kcdr .n{flex:1;font-size:13.5px;font-weight:700;color:var(--ink);line-height:1.45;}
+  .kcdr .n small{display:block;font-weight:600;color:var(--ink4);font-size:11.5px;margin-top:3px;}
+  .kcdr .go{flex:0 0 auto;}
+  .kcdr .go button{font-size:11.5px;font-weight:800;padding:7px 11px;border-radius:9px;border:1.5px solid var(--blue);
+    background:var(--blue);color:#fff;cursor:pointer;}
+  .kcdr .go .none{border:1px dashed var(--line);background:#FAFBFC;color:var(--ink4);font-weight:700;
+    padding:7px 11px;border-radius:9px;font-size:11.5px;}
+  .kcdtag{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:999px;margin-right:5px;}
+  .kcdtag.dz{background:#EFF6FF;color:#1D4ED8;}
+  .kcdtag.no{background:#FEF3C7;color:#92400E;}
+  .kcdwarn{font-size:12px;color:var(--ink3);padding:11px 13px;border-radius:11px;
+    background:rgba(220,38,38,.05);border:1px dashed rgba(220,38,38,.35);margin-top:12px;}
   .range .rwarn{font-size:12px;color:var(--ink3);padding:11px 14px;border-top:1px dashed rgba(220,38,38,.35);background:rgba(220,38,38,.04);}
 
   /* 치료 여정 */
@@ -708,6 +730,7 @@
   <button class="btn" onclick="stackOpen('')">🔗 겹쳐 받는 법</button>
   <button class="btn" onclick="drillOpen('')">🎯 설계 연습</button>
   <button class="btn" onclick="labOpen()">🧪 가상설계창</button>
+  <button class="btn" onclick="kcdOpen()">🔍 코드로 찾기</button>
   <button class="btn" onclick="navAll()">📜 약관 어디를 보나</button>
   <button class="btn" onclick="printAll()">📚 전부 펼쳐 인쇄</button>
   <button class="btn" onclick="window.print()">🖨 인쇄</button>
@@ -720,6 +743,7 @@
 
 <script src="../질병가이드-data.js"></script>
 <script src="../질병가이드-도해.js"></script>
+<script src="../질병가이드-코드.js"></script>
 <script src="../상담자료/apex-deck.js"></script>
 <script>
 'use strict';
@@ -1324,6 +1348,97 @@ function labOutHtml(){
   return h;
 }
 
+
+/* ══ 코드로 찾기 ═════════════════════════════════════════════
+   고객이 진단서를 내밉니다. 거기 적힌 것은 병 이름이 아니라 <b>코드</b>입니다.
+   설계사가 그 자리에서 알아야 하는 것은 백과사전이 아니라 <b>어느 갈래냐</b> 입니다.
+
+   그래서 이 화면은 상담자료가 아니라 <b>찾는 자리</b>입니다. 네 가지만 답합니다 —
+     ① 그 코드의 이름 (KCD 에서 받아 온 그대로)
+     ② 진단명인가, 아니면 사고 원인·증상·검진 코드인가
+     ③ 어느 담보 갈래를 펴 볼 것인가
+     ④ 가까운 상담자료가 있으면 그리로
+
+   <b>담보를 정하지 않습니다.</b> 실제 지급은 그 상품 약관의 분류표가 정합니다.  */
+var KCD_KIND = {
+  '질병': { t:'진단명', d:'', c:'' },
+  '외인': { t:'사고 원인 코드', d:'무엇에 다쳤는지를 적는 코드입니다 — <b>진단명이 아닙니다.</b> 상해 담보를 볼 때 함께 봅니다.', c:'no' },
+  '증상': { t:'증상·징후 코드', d:'아직 <b>병이 확정되지 않은</b> 상태를 적는 코드입니다. 진단이 붙기 전이라 진단비가 열리지 않는 것이 통상입니다.', c:'no' },
+  '보건': { t:'검진·예방접종 등', d:'병이 아니라 <b>보건서비스와 접한 일</b>을 적는 코드입니다. 대개 보장 밖입니다.', c:'no' },
+  '한의': { t:'한의 고유코드', d:'한의 분류에 쓰이는 코드입니다. 담보와 바로 이어지지 않습니다.', c:'no' }
+};
+
+function kcdOpen(pre){
+  var K = window.DZ_KCD;
+  if (!K) { showDetail('<div class="none"><b>아무 코드도 만들지 않습니다.</b> 코드 자료(app/질병가이드-코드.js)를 읽지 못했습니다.</div>'); return; }
+  showDetail(kcdHtml(pre || ''));
+  var i = document.getElementById('kcdQ');
+  if (i) { i.value = pre || ''; i.focus(); }
+}
+
+function kcdFind(){
+  var i = document.getElementById('kcdQ'), box = document.getElementById('kcdRes');
+  if (!i || !box) return;
+  box.innerHTML = kcdRows(i.value);
+}
+
+function kcdHtml(pre){
+  var K = window.DZ_KCD, n = 0, dis = 0, i;
+  for (i = 0; i < K.rows.length; i++) { n++; if (K.kind(K.rows[i][0]) === '질병') dis++; }
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button></div>';
+  h += '<div class="sec"><h3><em>🔍</em>코드로 찾기</h3>' +
+    '<p style="font-size:12.5px;color:#6B7280;margin-bottom:13px;">' +
+    '고객이 내민 진단서에 적힌 것은 병 이름이 아니라 <b>코드</b>입니다. 그대로 넣어 보십시오.<br>' +
+    '한국표준질병·사인분류(KCD) 3자리 코드 <b>' + n + '벌</b> — 그중 진단명이 <b>' + dis + '벌</b>입니다. ' +
+    '나머지는 사고 원인·증상·검진 코드라 <b>따로 표시</b>합니다.</p>';
+  h += '<div class="kcdbox">' +
+    '<input id="kcdQ" placeholder="코드나 병 이름 (예: I63, C18, 뇌경색, 결장)" oninput="kcdFind()">' +
+    '<div class="kcdhint">코드는 앞자리만 넣어도 됩니다 — <b>I6</b> 이라고만 넣으면 I60~I69 가 다 나옵니다.</div>' +
+    '</div>';
+  h += '<div id="kcdRes">' + kcdRows(pre) + '</div>';
+  h += '<div class="kcdwarn"><b>이 표는 담보를 정하지 않습니다.</b> 어느 담보에 걸리는지는 ' +
+    '<b>그 상품 약관의 분류표</b>가 정하고, 회사·개정회차마다 다릅니다. ' +
+    '여기서는 「어느 갈래를 펴 보십시오」 까지만 말합니다.</div>';
+  h += '<ul class="src"><li>' + esc(K.src.n) + ' — <a href="' + esc(K.src.u) + '" target="_blank" rel="noopener">' +
+    esc(K.src.u) + '</a> (' + esc(K.src.got) + ' 받음)<br>' +
+    '<span style="color:#6B7280">' + esc(K.src.note) + '</span></li></ul>';
+  return h + '</div>';
+}
+
+function kcdRows(q){
+  var K = window.DZ_KCD;
+  q = (q || '').replace(/^\s+|\s+$/g, '');
+  if (!q) return '<div class="kcdn">코드나 병 이름을 넣으면 여기에 나옵니다.</div>';
+  var hits = K.find(q, 60);
+  if (!hits.length) {
+    return '<div class="kcdn">찾는 코드가 없습니다. 3자리 코드(<b>I63</b>)나 병 이름 일부(<b>뇌경색</b>)로 넣어 보십시오.<br>' +
+      '이 표에 없으면 <b>지어내지 않습니다</b> — 진단서의 코드를 그대로 보시고, 공식 조회처에서 확인하십시오.</div>';
+  }
+  var h = '<div class="kcdn">' + hits.length + '건' + (hits.length >= 60 ? '+ (좁혀서 찾으십시오)' : '') + '</div>';
+  h += hits.map(function(r){
+    var code = r[0], kind = K.kind(code), id = K.dz(code);
+    var info = KCD_KIND[kind] || KCD_KIND['질병'];
+    var d = D.list.filter(function(x){ return x.id === id; })[0];
+    /* 이어진 자료가 있으면 <b>그 자료의 갈래</b>를 씁니다 — 코드 규칙과 자료가
+       서로 다른 갈래를 말하면 설계사가 어느 쪽을 믿을지 몰라집니다.
+       실제로 G46(뇌혈관 증후군)이 「수술·입원」 이라 적히면서 뇌졸중으로 가고 있었습니다. */
+    var ar = d ? d.area : K.area(code);
+    var t = '';
+    if (kind !== '질병') t += '<span class="kcdtag no">' + info.t + '</span>';
+    if (ar) t += '<span class="kcdtag dz">' + esc(ar) + '</span>';
+    return '<div class="kcdr"><div class="c">' + esc(code) + '</div>' +
+      '<div class="n">' + esc(r[1]) +
+        (t ? '<small>' + t + '</small>' : '') +
+        (info.d ? '<small>' + rich(info.d) + '</small>' : '') +
+      '</div>' +
+      '<div class="go">' + (d
+        ? '<button onclick="open_(\'' + d.id + '\')">' + esc(d.ic) + ' ' + esc(d.name) + '</button>'
+        : '<span class="none">이 코드에 맞는<br>상담자료는 아직 없습니다</span>') +
+      '</div></div>';
+  }).join('');
+  return h;
+}
 
 /* ══ 약관 어디를 보나 ═══════════════════════════════════════ */
 function navAll(){
@@ -2231,6 +2346,7 @@ var GOTO = {
   stack:  function(){ stackOpen(''); },
   drill: function(){ drillOpen(''); },
   lab:   function(){ labOpen(); },
+  kcd:   function(){ kcdOpen(''); },
   nav:   function(){ navAll(); },
   cov:   function(){ covAll(); },
   terms: function(){ termsAll(); }

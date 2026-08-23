@@ -25,6 +25,8 @@
         새로 그린 그림이 목록에서 빠지지 않는가
     15. <b>전이·합병증</b> — 겁만 주고 끝내지 않는가(무엇을 하는가·담보가 붙는가) ·
         외운 비율을 적지 않는가 · 없는 질병에 지어내 붙이지 않는가
+    17. <b>코드로 찾기</b> — 코드 표가 한 벌인가 · 진단명과 사고 원인을 가르는가 ·
+        지도가 있는 자료만 가리키는가 · 담보를 정하지 않는다고 적는가
     16. <b>범위 표</b> — 출처 없는 비율을 적지 않는가 · 코드를 세부별로 빠짐없이
         폈는가 · 그 코드를 앱이 아는가 · 「약관이 정한다」 고 적는가                     */
 const { chromium } = require('playwright');
@@ -55,6 +57,7 @@ const is = (c, m) => c ? ok(m) : no(m);
 
 const DATA = 'app/질병가이드-data.js';
 const VIZF = 'app/질병가이드-도해.js';
+const KCDF = 'app/질병가이드-코드.js';
 const PAGE = 'app/재무설계/질병보험가이드.html';
 
 (async () => {
@@ -64,11 +67,14 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
 
   /* 자료를 그대로 읽어 온다 */
   const vizRaw = fs.readFileSync(path.join(ROOT, VIZF), 'utf8');
+  const kcdRaw = fs.readFileSync(path.join(ROOT, KCDF), 'utf8');
   const sandbox = { window: {} };
   new Function('window', raw)(sandbox.window);
   new Function('window', 'document', vizRaw)(sandbox.window, { querySelectorAll: function () { return []; } });
+  new Function('window', kcdRaw)(sandbox.window);
   const D = sandbox.window.DZ_DATA;
   const VIZ = sandbox.window.DZ_VIZ;
+  const KCD = sandbox.window.DZ_KCD;
 
   /* ═══ 1. 표가 한 벌인가 ═══ */
   console.log('\n[1] 질병 표가 한 벌인가 — 두 벌이면 한쪽만 고쳐진다');
@@ -975,6 +981,96 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/약관/.test(rTxt) && /회사·개정회차/.test(rTxt),
      '무엇이 지급되는지는 <b>그 상품 약관이 정한다</b>고 화면에 적는다 — 이 표를 결론으로 읽지 않게');
   is(!/[0-9]+\s*%/.test(rTxt), '화면에 찍힌 범위 표에도 비율이 없다');
+  await page.close();
+
+  /* ═══ 8-4. 코드로 찾기 ═══
+     1,491개 질병 코드를 한 벌로 들여왔다. 이 표가 조용히 어긋나면
+     설계사가 진단서를 들고 <b>엉뚱한 갈래</b>를 펴게 된다.
+
+     ★ 이 표는 <b>담보를 정하지 않는다.</b> 「어느 갈래를 보십시오」 까지다.
+       그 말이 화면에서 사라지면 결론으로 읽힌다 — 그것도 여기서 본다.       */
+  console.log('\n[17] 코드로 찾기 — 코드 표가 한 벌인가 · 담보를 정하지 않는가');
+  is(!!(KCD && KCD.rows && KCD.rows.length > 1500),
+     'KCD 코드 표가 읽힌다 — ' + ((KCD && KCD.rows) ? KCD.rows.length : 0) + '벌');
+  is(/<script src="\.\.\/질병가이드-코드\.js"><\/script>/.test(html), '가이드가 코드 표를 싣는다');
+
+  /* 이름을 <b>사람이 타이핑하지 않았다</b>는 것이 이 표의 값어치다.
+     어디서 받았는지가 없으면 다음 사람이 손으로 고치기 시작한다. */
+  is(!!(KCD.src && KCD.src.u && KCD.src.got), '<b>어디서 언제 받았는지</b>가 표에 적혀 있다');
+  is(fs.existsSync(path.join(ROOT, 'scripts/kcd-fetch.js')),
+     '다시 받아 오는 스크립트가 있다 — 개정되면 손으로 고치지 않는다');
+
+  /* 코드마다 이름이 있고, 3자리 꼴이며, 두 번 적히지 않았다 */
+  const kSeen = new Set(), kBad = [];
+  KCD.rows.forEach(r => {
+    if (!/^[A-Z][0-9]{2}$/.test(r[0])) kBad.push('꼴이 이상함 ' + r[0]);
+    /* 처음엔 「두 글자보다 짧으면 이름 없음」 으로 잡았다. 그랬더니 <b>B86 「옴」</b>이
+       걸렸다 — 한 글자짜리 진짜 KCD 이름이다. 헛것을 잡는 점검은 안 잡는 점검보다
+       나쁘므로, <b>비어 있는 것만</b> 잡는다. */
+    if (!r[1]) kBad.push('이름 없음 ' + r[0]);
+    if (kSeen.has(r[0])) kBad.push('두 번 적힘 ' + r[0]);
+    kSeen.add(r[0]);
+  });
+  is(kBad.length === 0, '코드가 3자리 꼴이고 이름이 있고 <b>두 번 적히지 않았다</b>' +
+     (kBad.length ? ' — ' + kBad.slice(0, 5).join(' / ') : ''));
+
+  /* 진단명과 그렇지 않은 것을 <b>갈라 놓는다.</b>
+     X00(불에 노출)을 질병으로 착각하면 상담이 통째로 어긋난다. */
+  const kKinds = {};
+  KCD.rows.forEach(r => { const k = KCD.kind(r[0]); kKinds[k] = (kKinds[k] || 0) + 1; });
+  is((kKinds['외인'] || 0) > 300 && (kKinds['증상'] || 0) > 50 && (kKinds['보건'] || 0) > 50,
+     '사고 원인·증상·검진 코드를 <b>진단명과 갈라 둔다</b> — ' +
+     Object.keys(kKinds).map(k => k + ' ' + kKinds[k]).join(' · '));
+  is(KCD.kind('X00') === '외인' && KCD.kind('R42') === '증상' && KCD.kind('Z11') === '보건' &&
+     KCD.kind('C18') === '질병', '표본 넷이 제 갈래에 든다 (X00·R42·Z11·C18)');
+  is(KCD.area('X00') === null && KCD.area('C18') === '암',
+     '진단명이 아닌 코드에는 <b>담보 갈래를 붙이지 않는다</b>');
+
+  /* 지도가 가리키는 곳이 <b>실재하는 질병</b>인가 */
+  const kIds = new Set(D.list.map(d => d.id));
+  const kGhost = [...new Set(KCD.rows.map(r => KCD.dz(r[0])).filter(x => x && !kIds.has(x)))];
+  is(kGhost.length === 0, '지도가 <b>있는 상담자료만</b> 가리킨다' +
+     (kGhost.length ? ' — 없는 질병: ' + kGhost.join(' / ') : ''));
+
+  /* 질병 자료가 적어 둔 코드는 <b>전부 이어져야</b> 한다.
+     자료에는 있는데 코드에서 못 찾으면, 설계사가 진단서를 들고 헤맨다. */
+  const kMiss = [];
+  D.list.forEach(d => (d.codes || []).forEach(c => { if (!KCD.dz(c[0])) kMiss.push(d.id + ':' + c[0]); }));
+  is(kMiss.length === 0, '질병 자료가 적어 둔 코드가 <b>전부 상담자료로 이어진다</b>' +
+     (kMiss.length ? ' — 못 이음: ' + kMiss.slice(0, 8).join(' / ') : ''));
+
+  /* 어느 질병도 코드에서 <b>못 닿는 채로</b> 남지 않는다 */
+  const kHit = new Set(KCD.rows.map(r => KCD.dz(r[0])).filter(Boolean));
+  const kOrphan = D.list.filter(d => !kHit.has(d.id)).map(d => d.id);
+  is(kOrphan.length === 0, '질병 ' + D.list.length + '종 <b>전부</b> 코드에서 닿는다' +
+     (kOrphan.length ? ' — 못 닿음: ' + kOrphan.join(' / ') : ''));
+
+  /* 화면에서 실제로 찾아진다 — 자료만 고치고 그리는 자리를 안 고친 적이 있다 */
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => kcdOpen(''));
+  await page.waitForTimeout(200);
+  await page.fill('#kcdQ', 'I63');
+  await page.waitForTimeout(250);
+  const kTxt = await page.locator('#kcdRes').innerText();
+  is(/I63/.test(kTxt) && /뇌경색증/.test(kTxt), '코드를 넣으면 <b>KCD 이름</b>이 나온다 (I63)');
+  is((await page.locator('.kcdr .go button').count()) > 0, '이어진 상담자료로 <b>갈 수 있다</b>');
+
+  await page.fill('#kcdQ', 'X00');
+  await page.waitForTimeout(250);
+  const kX = await page.locator('#kcdRes').innerText();
+  is(/진단명이 아닙니다/.test(kX), '사고 원인 코드에는 <b>「진단명이 아닙니다」</b> 라고 적는다');
+
+  await page.fill('#kcdQ', 'ZZZZZ');
+  await page.waitForTimeout(250);
+  is(/지어내지 않습니다/.test(await page.locator('#kcdRes').innerText()),
+     '없는 코드에는 <b>지어내지 않는다</b>고 적는다');
+
+  const kAll = await page.locator('#detailPane').innerText();
+  is(/약관의 분류표/.test(kAll) && /회사·개정회차/.test(kAll),
+     '<b>이 표는 담보를 정하지 않는다</b>고 화면에 적는다');
+  is(/kcdcode\.kr/.test(kAll) && /KOICD/.test(kAll),
+     '어디서 받았는지와 <b>못 들어간 곳(KOICD)</b>을 화면에 적는다');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */
