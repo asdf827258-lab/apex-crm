@@ -2201,6 +2201,283 @@
     }
   };
 
+  /* ═══ 눈 — 렌즈 한 장이 뿌예지는 병 ═══════════════════════════
+     백내장은 <b>우리나라에서 가장 많이 하는 수술</b> 축에 든다. 그런데
+     상담에서 가장 자주 부딪히는 것도 이 병이다 — 「보험 되죠?」 라고
+     물으시는데, <b>렌즈를 무엇으로 넣느냐</b>에 따라 답이 갈리기 때문이다.
+
+     눈은 사진기와 같다. 앞의 <b>각막</b>과 <b>수정체</b>가 렌즈이고,
+     뒤의 <b>망막</b>이 필름이다. 백내장은 <b>렌즈가 뿌예지는 것</b>이라
+     그 렌즈를 빼고 인공 렌즈를 넣는다. 필름(망막)은 그대로다 —
+     그래서 망막이 상한 사람은 렌즈를 바꿔도 잘 안 보인다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function eyeBall(mode, R) {
+    var s = '', i, a, x, y;
+    var CX = 300, CY = 240, RR = 190;
+
+    s += '<defs><clipPath id="cpEye' + mode + '"><circle cx="' + CX + '" cy="' + CY + '" r="' + RR + '"/></clipPath>' +
+      '<radialGradient id="gVit' + mode + '" cx="0.5" cy="0.5" r="0.6">' +
+      '<stop offset="0" stop-color="#EAF4F8"/><stop offset="1" stop-color="#CFE3EC"/></radialGradient>' +
+      '<linearGradient id="gLens' + mode + '" x1="0" y1="0" x2="1" y2="0">' +
+      (mode === 1
+        ? '<stop offset="0" stop-color="#D8C89C"/><stop offset="0.5" stop-color="#B79E62"/><stop offset="1" stop-color="#D8C89C"/>'
+        : '<stop offset="0" stop-color="#E8F6FB"/><stop offset="0.5" stop-color="#CFEAF4"/><stop offset="1" stop-color="#E8F6FB"/>') +
+      '</linearGradient></defs>';
+
+    /* 흰자(공막)와 속 */
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + RR + '" fill="#F6F3EC" stroke="#C9BFA9" stroke-width="4"/>';
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + (RR - 14) + '" fill="url(#gVit' + mode + ')"/>';
+    s += '<g clip-path="url(#cpEye' + mode + ')">';
+
+    /* 맥락막·망막 — 뒤쪽 안쪽 벽 */
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + (RR - 16) + '" fill="none" stroke="#B4544C" stroke-width="11" opacity=".85"/>';
+    s += '<circle cx="' + CX + '" cy="' + CY + '" r="' + (RR - 25) + '" fill="none" stroke="#E9C6A8" stroke-width="8" opacity=".9"/>';
+    /* 망막의 혈관 — 시신경에서 부챗살로 */
+    for (i = 0; i < 12; i++) {
+      a = -1.9 + (i / 11) * 3.8;
+      s += '<path d="M' + (CX + RR - 34) + ' ' + CY + ' Q' + (CX + 90) + ' ' + (CY + Math.sin(a) * 70).toFixed(0) +
+           ' ' + (CX + Math.cos(a) * 40).toFixed(0) + ' ' + (CY + Math.sin(a) * 150).toFixed(0) +
+           '" stroke="#C0392B" stroke-width="' + (1.6 + R() * 1.6).toFixed(1) + '" fill="none" opacity=".65"/>';
+    }
+    /* 황반 — 가장 잘 보이는 자리 */
+    s += '<ellipse cx="' + (CX + RR - 52) + '" cy="' + (CY + 26) + '" rx="20" ry="14" fill="#8E4038" opacity=".7"/>';
+
+    /* 홍채와 동공 */
+    s += '<path d="M' + (CX - RR + 18) + ' ' + (CY - 92) + ' q46 26 46 52 q0 26 -46 52" fill="#5B7186" stroke="#3C4E5E" stroke-width="2.4"/>';
+    s += '<path d="M' + (CX - RR + 18) + ' ' + (CY + 92) + ' q46 -26 46 -52 q0 -26 -46 -52" fill="#5B7186" stroke="#3C4E5E" stroke-width="2.4"/>';
+
+    /* 수정체 — 볼록렌즈 */
+    var lx = CX - RR + 66;
+    if (mode !== 2) {
+      s += '<path d="M' + lx + ' ' + (CY - 54) + ' q40 26 40 54 q0 28 -40 54 q-40 -26 -40 -54 q0 -28 40 -54 Z" ' +
+           'fill="url(#gLens' + mode + ')" stroke="' + (mode === 1 ? '#8E7434' : '#8FB8C8') + '" stroke-width="2.6"/>';
+      /* 렌즈의 결 */
+      for (i = 1; i <= 3; i++) {
+        s += '<path d="M' + lx + ' ' + (CY - 54 + i * 9) + ' q' + (30 - i * 6) + ' ' + (26 - i * 4) + ' ' +
+             (30 - i * 6) + ' ' + (54 - i * 9) + ' q0 ' + (28 - i * 5) + ' -' + (30 - i * 6) + ' ' + (54 - i * 9) +
+             '" fill="none" stroke="' + (mode === 1 ? '#9A8244' : '#A9CEDC') + '" stroke-width="1.6" opacity=".8"/>';
+      }
+      if (mode === 1) {   /* 뿌예진 알갱이 */
+        for (i = 0; i < 70; i++) {
+          a = R() * Math.PI * 2; var rr = R() * 46;
+          s += '<circle cx="' + (lx + Math.cos(a) * rr * 0.72).toFixed(0) + '" cy="' + (CY + Math.sin(a) * rr).toFixed(0) +
+               '" r="' + (1.6 + R() * 2.6).toFixed(1) + '" fill="#F0E6C4" opacity=".8"/>';
+        }
+      }
+    } else {
+      /* 인공 수정체 — 얇은 판에 다리 둘 */
+      s += '<path d="M' + lx + ' ' + (CY - 34) + ' q26 16 26 34 q0 18 -26 34 q-26 -16 -26 -34 q0 -18 26 -34 Z" ' +
+           'fill="#E8F6FB" stroke="#3F87A6" stroke-width="2.6"/>';
+      s += '<path d="M' + (lx - 22) + ' ' + (CY - 26) + ' q-30 -22 -14 -50 M' + (lx - 22) + ' ' + (CY + 26) +
+           ' q-30 22 -14 50" stroke="#3F87A6" stroke-width="3" fill="none"/>';
+      s += '<circle cx="' + lx + '" cy="' + CY + '" r="9" fill="none" stroke="#93C5FD" stroke-width="2" opacity=".8"/>';
+    }
+    /* 모양체 — 렌즈를 잡아 주는 실 */
+    for (i = -3; i <= 3; i++) {
+      if (!i) continue;
+      s += '<path d="M' + (lx + 6) + ' ' + (CY + i * 16) + ' L' + (CX - RR + 30) + ' ' + (CY + i * 30) +
+           '" stroke="#9AA7B4" stroke-width="1.8" opacity=".8"/>';
+    }
+
+    /* 빛이 지나가는 길 */
+    var ok = mode !== 1;
+    s += '<path d="M' + (CX - RR - 40) + ' ' + (CY - 30) + ' L' + lx + ' ' + CY + ' L' + (CX + RR - 52) + ' ' + (CY + 26) + '" ' +
+         'stroke="' + (ok ? '#F59E0B' : '#CBD5E1') + '" stroke-width="3" fill="none" opacity="' + (ok ? '.95' : '.4') + '"/>';
+    s += '<path d="M' + (CX - RR - 40) + ' ' + (CY + 30) + ' L' + lx + ' ' + CY + ' L' + (CX + RR - 52) + ' ' + (CY + 26) + '" ' +
+         'stroke="' + (ok ? '#F59E0B' : '#CBD5E1') + '" stroke-width="3" fill="none" opacity="' + (ok ? '.95' : '.4') + '"/>';
+    if (mode === 1) {  /* 흩어지는 빛 */
+      for (i = 0; i < 9; i++) {
+        a = -0.8 + i * 0.2;
+        s += '<path d="M' + (lx + 30) + ' ' + CY + ' L' + (lx + 30 + Math.cos(a) * 150).toFixed(0) + ' ' +
+             (CY + Math.sin(a) * 150).toFixed(0) + '" stroke="#F59E0B" stroke-width="1.6" opacity=".35"/>';
+      }
+    }
+    s += '</g>';
+
+    /* 각막 — 앞으로 볼록 */
+    s += '<path d="M' + (CX - RR + 18) + ' ' + (CY - 92) + ' q-58 44 -58 92 q0 48 58 92" fill="#F0FAFD" ' +
+         'stroke="#7FB6C9" stroke-width="4" opacity=".92"/>';
+    /* 시신경 */
+    s += '<path d="M' + (CX + RR - 6) + ' ' + (CY - 26) + ' q56 -6 78 8 q-22 40 -78 44 Z" fill="#E8D9B8" stroke="#B39A62" stroke-width="2.6"/>';
+    return s;
+  }
+
+  V.eye_cataract = {
+    t: '백내장 — 렌즈 한 장이 뿌예지는 병입니다',
+    d: '눈은 사진기와 같습니다. 앞의 <b>각막과 수정체</b>가 렌즈이고, 뒤의 <b>망막</b>이 필름입니다. ' +
+       '백내장은 <b>렌즈가 뿌예지는 것</b>이라, 그 렌즈를 빼고 <b>인공 렌즈</b>를 넣습니다. ' +
+       '필름은 그대로 둡니다 — 그래서 망막이 이미 상한 분은 렌즈를 바꿔도 기대만큼 안 보입니다. ' +
+       '보험에서 갈리는 곳은 <b>어떤 렌즈를 넣느냐</b> 입니다.',
+    dz: ['cataract'],
+    build: function () {
+      var R = rnd(20260902);
+      var P = [
+        [0, '정상', '렌즈가 맑아 빛이 한 점으로 모입니다', '#334155'],
+        [1, '백내장', '렌즈가 뿌예져 빛이 <tspan font-weight="800">흩어집니다</tspan> — 안개 낀 것처럼 보입니다', '#B45309'],
+        [2, '인공 렌즈를 넣은 뒤', '뿌연 렌즈를 빼고 인공 렌즈를 넣습니다', '#1D4ED8']
+      ];
+      var s = '<svg viewBox="0 0 1900 620" width="1900" height="620">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 626;
+        s += '<rect x="' + x + '" y="10" width="600" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 10) + ' 44)">' + eyeBall(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="536" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<text x="30" y="572" font-size="12.5" fill="#334155">' +
+           '왼쪽이 앞(빛이 들어오는 쪽), 오른쪽이 뒤(망막·시신경)입니다. 노란 선이 빛이 지나가는 길입니다.</text>';
+      s += '<text x="30" y="594" font-size="12.5" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 무엇이 뿌예지고 무엇을 바꾸는지를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1900 620' });
+    }
+  };
+
+  /* ═══ 허파 — 나뭇가지 끝에 매달린 주머니들 ══════════════════════
+     허파는 <b>나무</b>다. 기관에서 갈라진 가지가 스무 번 넘게 갈라지고,
+     그 끝에 <b>포도송이 같은 주머니(폐포)</b>가 매달려 있다. 주머니 겉을
+     모세혈관이 그물처럼 감싸고, 그 얇은 벽 하나를 사이에 두고
+     <b>산소와 이산화탄소가 자리를 바꾼다.</b>
+
+     그래서 허파 병은 두 갈래다.
+       · <b>주머니 안이 차는 병</b> — 폐렴. 물과 고름이 차서 바꿀 자리가 없다.
+       · <b>주머니 벽이 무너지는 병</b> — COPD. 작은 주머니 여럿이 큰 자루
+         하나가 되어 <b>넓이가 줄고</b>, 숨을 내쉴 때 길이 눌려 닫힌다.
+
+     둘 다 「숨이 찬다」 지만 <b>이유가 정반대</b>다. 그래서 치료도 다르다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function alveoli(mode, R) {
+    var s = '', i, j, a, x, y;
+    var CX = 250, CY = 220;
+
+    /* 끝가지 — 여기서 주머니로 갈라진다 */
+    var narrow = mode === 2;
+    s += '<path d="M20 220 C80 220 110 220 150 220" fill="none" stroke="#E0C7B4" stroke-width="' +
+         (narrow ? 18 : 30) + '" stroke-linecap="round"/>';
+    s += '<path d="M20 220 C80 220 110 220 150 220" fill="none" stroke="#F6E8DC" stroke-width="' +
+         (narrow ? 8 : 18) + '" stroke-linecap="round"/>';
+    if (narrow) {
+      /* 벽이 두꺼워지고 가래가 낀다 */
+      s += '<path d="M20 220 C80 220 110 220 150 220" fill="none" stroke="#C9A98C" stroke-width="26" ' +
+           'stroke-linecap="round" opacity=".35"/>';
+      for (i = 0; i < 8; i++) {
+        s += '<ellipse cx="' + (34 + i * 15) + '" cy="' + (218 + (R() - 0.5) * 8).toFixed(0) +
+             '" rx="6" ry="3.4" fill="#B7C58A" opacity=".85"/>';
+      }
+    }
+
+    /* 주머니 — 정상은 작은 것 여럿, COPD 는 큰 자루 몇 개 */
+    var sacs = [];
+    if (mode === 2) {
+      sacs = [[250,150,74],[330,236,64],[236,300,60],[356,124,44]];
+    } else {
+      for (i = 0; i < 7; i++) {
+        a = -1.5 + (i / 6) * 3.0;
+        sacs.push([CX + Math.cos(a) * 86, CY + Math.sin(a) * 96, 40 + (i % 2) * 8]);
+      }
+      for (i = 0; i < 6; i++) {
+        a = -1.2 + (i / 5) * 2.4;
+        sacs.push([CX + 70 + Math.cos(a) * 96, CY + Math.sin(a) * 108, 34 + (i % 2) * 7]);
+      }
+    }
+    /* 가지에서 주머니로 이어지는 목 */
+    sacs.forEach(function (p) {
+      s += '<path d="M150 220 L' + p[0].toFixed(0) + ' ' + p[1].toFixed(0) + '" stroke="#E0C7B4" ' +
+           'stroke-width="' + (narrow ? 6 : 9) + '" stroke-linecap="round" opacity=".9"/>';
+    });
+    sacs.forEach(function (p, k) {
+      var filled = mode === 1 && k % 3 !== 2;
+      s += '<circle cx="' + p[0].toFixed(0) + '" cy="' + p[1].toFixed(0) + '" r="' + p[2] +
+           '" fill="' + (filled ? '#D8CFA8' : '#FDF6EE') + '" stroke="' + (mode === 2 ? '#C4B49E' : '#D9BFA6') +
+           '" stroke-width="' + (mode === 2 ? 2 : 3) + '"' + (mode === 2 ? ' stroke-dasharray="7 5"' : '') + '/>';
+      if (filled) {
+        /* 물과 고름 — 싸우는 세포들 */
+        for (i = 0; i < 22; i++) {
+          a = R() * Math.PI * 2; var rr = R() * (p[2] - 8);
+          s += '<circle cx="' + (p[0] + Math.cos(a) * rr).toFixed(0) + '" cy="' + (p[1] + Math.sin(a) * rr).toFixed(0) +
+               '" r="' + (2.2 + R() * 3).toFixed(1) + '" fill="' + (i % 3 ? '#B7C58A' : '#EEF2F7') +
+               '" stroke="#8E9C62" stroke-width="0.8" opacity=".9"/>';
+        }
+      }
+      /* 겉을 감싼 모세혈관 그물 */
+      for (i = 0; i < 7; i++) {
+        a = (i / 7) * Math.PI * 2;
+        s += '<path d="M' + (p[0] + Math.cos(a) * p[2]).toFixed(0) + ' ' + (p[1] + Math.sin(a) * p[2]).toFixed(0) +
+             ' q' + (Math.cos(a + 1) * 14).toFixed(0) + ' ' + (Math.sin(a + 1) * 14).toFixed(0) + ' ' +
+             (Math.cos(a + 0.9) * p[2] * 0.52).toFixed(0) + ' ' + (Math.sin(a + 0.9) * p[2] * 0.52).toFixed(0) +
+             '" stroke="#C0392B" stroke-width="' + (mode === 2 ? 1.4 : 2.4) + '" fill="none" opacity="' +
+             (mode === 2 ? '.35' : '.7') + '"/>';
+      }
+    });
+    /* COPD — 무너진 벽 자국 */
+    if (mode === 2) {
+      for (i = 0; i < 14; i++) {
+        x = 200 + R() * 190; y = 130 + R() * 200;
+        s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l' + (10 + R() * 16).toFixed(0) + ' ' +
+             ((R() - 0.5) * 18).toFixed(0) + '" stroke="#C4B49E" stroke-width="2.4" opacity=".6" stroke-dasharray="4 4"/>';
+      }
+    }
+    /* 산소와 이산화탄소가 자리를 바꾸는 것 */
+    if (mode === 0) {
+      for (i = 0; i < 5; i++) {
+        var sp = sacs[i * 2];
+        if (!sp) continue;
+        s += '<path d="M' + (sp[0] + sp[2] - 6) + ' ' + sp[1] + ' l16 -9 M' + (sp[0] + sp[2] + 12) + ' ' +
+             (sp[1] + 8) + ' l-16 9" stroke="#1D4ED8" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>';
+      }
+    }
+    return s;
+  }
+
+  V.lung_alv = {
+    t: '허파 — 차는 병(폐렴)과 무너지는 병(COPD)은 정반대입니다',
+    d: '허파는 <b>나무</b>입니다. 가지 끝에 포도송이 같은 <b>주머니(폐포)</b>가 매달려 있고, ' +
+       '그 겉을 모세혈관이 감싸 <b>얇은 벽 하나를 사이에 두고</b> 산소와 이산화탄소가 자리를 바꿉니다. ' +
+       '<b>폐렴</b>은 그 주머니 <b>안이 차는</b> 병이고, <b>COPD</b>는 주머니 <b>벽이 무너지는</b> 병입니다. ' +
+       '둘 다 「숨이 찬다」 고 하시지만 <b>이유가 정반대</b>라 치료도 다릅니다.',
+    dz: ['pneumonia', 'copd'],
+    build: function () {
+      var R = rnd(20260903);
+      var P = [
+        [0, '정상', '주머니가 비어 있고 겉을 혈관이 감쌉니다 — 파란 화살표가 자리를 바꾸는 곳', '#334155'],
+        [1, '폐렴 — 안이 찹니다', '물과 고름이 차서 <tspan font-weight="800">바꿀 자리가 없어집니다.</tspan> 약으로 비워 냅니다', '#991B1B'],
+        [2, 'COPD — 벽이 무너집니다', '작은 주머니 여럿이 <tspan font-weight="800">큰 자루 하나</tspan>가 되어 넓이가 줄고, 길도 좁아집니다', '#B45309']
+      ];
+      var s = '<svg viewBox="0 0 1560 560" width="1560" height="560">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 512;
+        s += '<rect x="' + x + '" y="10" width="490" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 4) + ' 44) scale(1.02)">' + alveoli(p[0], R) + '</g>';
+        s += '<text x="' + (x + 4) + '" y="452" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="38" cy="486" r="9" fill="#FDF6EE" stroke="#D9BFA6" stroke-width="2.4"/>';
+      s += '<text x="56" y="491" font-size="12.5" fill="#334155">폐포 (숨을 바꾸는 주머니)</text>';
+      s += '<path d="M300 486 q12 -8 24 0" stroke="#C0392B" stroke-width="2.6" fill="none"/>';
+      s += '<text x="336" y="491" font-size="12.5" fill="#334155">모세혈관 그물</text>';
+      s += '<rect x="520" y="480" width="26" height="12" rx="6" fill="#E0C7B4"/>';
+      s += '<text x="556" y="491" font-size="12.5" fill="#334155">기관지 (공기가 오가는 길)</text>';
+      s += '<circle cx="820" cy="486" r="7" fill="#B7C58A" stroke="#8E9C62" stroke-width="1"/>';
+      s += '<text x="836" y="491" font-size="12.5" fill="#334155">고름·염증 세포</text>';
+      s += '</g>';
+      s += '<rect x="20" y="504" width="1520" height="44" rx="11" fill="#0F172A"/>';
+      s += '<text x="44" y="524" font-size="13.2" font-weight="800" fill="#fff">' +
+           '보험에서 갈리는 자리 — 둘 다 수술이 아닙니다</text>';
+      s += '<text x="44" y="542" font-size="12.5" fill="#93C5FD">' +
+           '수술비가 놀고 <tspan font-weight="800" fill="#fff">입원일당과 실손</tspan>이 일합니다. COPD 는 좋아졌다 나빠졌다 하며 ' +
+           '<tspan font-weight="800" fill="#fff">반복 입원</tspan>하므로 한도일수를 보십시오.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1560 560' });
+    }
+  };
+
   V.vessel = {
     t: '혈관은 이렇게 좁아지고, 이렇게 엽니다',
     d: '기름때가 쌓여 길이 좁아지다가(협심증), 그 덩어리가 터지면 피떡이 생겨 완전히 막힙니다(심근경색). ' +
