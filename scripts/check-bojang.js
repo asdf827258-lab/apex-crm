@@ -181,7 +181,11 @@ window.supabase={createClient:function(){
     '서버에 기록을 못 남겨도 결과물은 나온다 — 사람의 동의는 유효하다');
   ok(r3.open === false, '창이 닫힌다 — 눌러도 아무 일 없는 상태로 안 갇힌다');
   ok(r3.saved === 0, '서버에는 실제로 안 남았다 (표가 없으므로)');
-  ok(/migration_32_legal\.sql/.test(r3.msg), '무엇을 실행해야 하는지 알려 준다 — ' + r3.msg.slice(0, 70));
+  /* 파일 이름을 대던 자리였다. 파일 이름을 들으면 대표님께는 그 파일을
+     찾아 여는 일이 남고, 그러면 안 하신다. 이제는 <b>누를 자리</b>를 말한다 —
+     그래서 여기서도 파일 이름이 아니라 「어디를 누르는지」 가 있는지 본다. */
+  ok(/필요한 SQL|서버 준비 SQL/.test(r3.msg) && !/migration_[A-Za-z0-9_]*\.sql/.test(r3.msg),
+     '어디를 누르면 되는지 알려 준다 — 파일 이름은 대지 않는다 — ' + r3.msg.slice(0, 80));
 
   const kept2 = await page.evaluate(() => ({ has: lgHas('sensitive', LG_SENS_VER) }));
   ok(kept2.has === true, '표가 없어도 이 기기에는 남는다 — 다음부터 안 묻는다');

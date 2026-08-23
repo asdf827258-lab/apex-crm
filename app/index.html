@@ -686,6 +686,16 @@ a{color:inherit;text-decoration:none;}
  border-color:rgba(110,231,183,.5);}
 .sb-guide.map .sbg-t{color:#D7FBEC;}
 .sb-guide.map .sbg-go{color:rgba(215,251,236,.62);}
+/* 맨 위 · 카테고리 없이 — 폰에 담는 길은 「설정」 안에 있으면 아무도 못 찾는다.
+   한 번 담으면 다시 안 누를 칸이지만, 그 한 번을 못 찾으면 폰에서 아예 못 쓴다.
+   그래서 분류에서 빼서(TABS 에는 hide 로 남겨 둔다 — 찾기·음성·?go= 는 그대로)
+   사용가이드보다도 위에 상시 고정한다. 주황빛으로 갈라 셋이 붙어 보이지 않게. */
+.sb-guide.inst{margin-bottom:9px;border-color:rgba(253,186,116,.32);
+ background:linear-gradient(135deg,rgba(251,146,60,.22),rgba(249,115,22,.14));}
+.sb-guide.inst:hover{background:linear-gradient(135deg,rgba(251,146,60,.34),rgba(249,115,22,.24));
+ border-color:rgba(253,186,116,.56);}
+.sb-guide.inst .sbg-t{color:#FFE7CE;}
+.sb-guide.inst .sbg-go{color:rgba(255,231,206,.66);}
 .nav-allbtns{display:flex;gap:6px;padding:2px 2px 10px;}
 .nav-allbtns button{flex:1;min-height:34px;font-family:inherit;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:rgba(255,255,255,.05);border:none;border-radius:8px;padding:8px 5px;cursor:pointer;transition:all .15s;}
 .nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);}
@@ -2361,7 +2371,7 @@ function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)|
 function osIpLoadList(){
   var host=document.getElementById('osIpList');if(!host)return;var sb=osClient();if(!sb){host.innerHTML='';return;}
   Promise.all([sb.from('login_ips').select('member_id,ip,status,last_seen').order('last_seen',{ascending:false}),sb.from('profiles').select('id,name')]).then(function(res){
-    if(res[0]&&res[0].error){host.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;font-size:11.5px">접속 IP 테이블이 아직 없습니다 — 보안 SQL(migration_09_security.sql)을 Supabase에서 1회 실행하세요.</div>';return;}
+    if(res[0]&&res[0].error){host.innerHTML=sqlNeedHtml('09','접속 기록');return;}
     var rows=(res[0]&&res[0].data)||[],profs=(res[1]&&res[1].data)||[],nm={};for(var i=0;i<profs.length;i++)nm[profs[i].id]=profs[i].name;
     if(!rows.length){host.innerHTML='<div style="font-size:12px;color:var(--ink-5);padding:8px">아직 기록된 접속 IP가 없습니다.</div>';return;}
     var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
@@ -3226,7 +3236,7 @@ function brainSys(){var kb=brainKbGet();var base='너는 "윤시현의 두뇌" �
     if(bxOpt('geminix',true)&&bxEngine()==='gemini')base+=BX_GEM;
   }catch(e){}
   return sys(base);}
-function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');osSetReload();return;}BRAIN.busy=true;if(ta)ta.value='';BRAIN.hist.push({q:q,a:null});brainRenderThread();if(typeof bdPaint==='function')bdPaint();var ctx='';var prev=BRAIN.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n';}var user=ctx+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';callAI(brainSys(),user,6000,'brain').then(function(out){
+function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(q||(ta?ta.value:'')||'').trim();if(!q){toast('궁금한 것을 입력하세요');return;}if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 키를 연결하면 두뇌가 답합니다.');osSetReload();return;}BRAIN.busy=true;if(ta)ta.value='';BRAIN.hist.push({q:q,a:null});brainRenderThread();if(typeof bdPaint==='function')bdPaint();var ctx='';var prev=BRAIN.hist.slice(-4,-1);if(prev.length){ctx='[직전 대화 맥락]\n'+prev.map(function(t){return 'Q: '+t.q+'\nA: '+((t.a||'').slice(0,600));}).join('\n---\n')+'\n\n';}var crm=(typeof brainCrmCtx==='function')?brainCrmCtx(opt.crm):'';var user=ctx+crm+'[질문]\n'+q+'\n\n윤시현의 두뇌로서, 바로 실전에 쓸 수 있게 구체적으로 답해줘.';callAI(brainSys(),user,6000,'brain').then(function(out){
     if(bxOpt('polish',false)&&out&&(''+out).length>200){
       var l0=BRAIN.hist[BRAIN.hist.length-1];
       l0.a=null;l0.note='<div class="notice" style="margin:0">초안을 한 번 더 다듬는 중…</div>';
@@ -3244,8 +3254,172 @@ function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(
 /* 묻고 나서 답이 오면 그대로 발표자료까지. 주제를 다시 칠 일이 없다. */
 function brainAskPpt(q){brainAsk(q,{ppt:true});}
 function brainRenderThread(){var el=$('brainThread');if(!el)return;var h='';BRAIN.hist.forEach(function(t,i){h+='<div style="margin:0 0 6px;display:flex;justify-content:flex-end"><div style="max-width:86%;background:#1A56DB;color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:13.5px;line-height:1.6;white-space:pre-wrap">'+esc(t.q)+'</div></div>';if(t.a===null){h+='<div style="margin:0 0 16px"><div class="loading" style="padding:12px"><div class="spinner"></div>두뇌가 생각하는 중…</div></div>';}else if(typeof t.a==='string'&&t.a.indexOf('__ERR__')===0){h+='<div style="margin:0 0 16px"><div class="err-box">⚠️ '+esc(t.a.slice(7))+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.</div></div>';}else{h+='<div style="margin:0 0 16px"><div style="background:#fff;border:1px solid #E5E9F0;border-radius:14px 14px 14px 4px;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#F5F9FF;border-bottom:1px solid #E5E9F0"><span style="font-size:11px;font-weight:800;color:#1A56DB">🧠 윤시현의 두뇌</span><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+(t.eng||'')+'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="copyText((BRAIN.hist['+i+']||{}).a||\'\')">📋 복사</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportWord('+i+')">📄 Word</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportPpt('+i+')">📊 PPT</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainStar('+i+')" title="이 답의 결을 다음부터 따라 쓰게 합니다">⭐ 이렇게</button></span></div>'+(t.note||'')+'<div class="result-body" style="padding:12px 14px">'+renderMd(t.a)+'</div></div></div>';}});el.innerHTML=h;el.scrollTop=el.scrollHeight;}
-function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none"><div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">제2의 두뇌 · SECOND BRAIN</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🧠 윤시현의 두뇌</div><div style="font-size:12.5px;opacity:.9;margin-top:8px;line-height:1.6">상담·세일즈·화법·마케팅·팀관리·자기경영 — 무엇이든 물어보세요. 윤시현의 관점·전략·화법으로 바로 쓸 수 있게 답합니다. 아래 <b>두뇌에 지식 추가</b>에 평소 쓰던 프롬프트·노하우를 넣을수록 더 당신처럼 답합니다.</div></div>';var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:10.5px;color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:13.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-primary" id="bdAsk" style="background:#0F172A" onclick="brainAskPpt()">📊 물어보고 발표자료까지</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:10.5px;color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','당신의 관점·전략·화법을 담은 제2의 두뇌입니다. 무엇이든 물어보세요. 답을 그대로 발표자료(.pptx)로도 만듭니다.',hero+renderConsult()+kb+bxCardHtml()+ask+bdCardHtml());}
-function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread();if(typeof bdPaint==='function')bdPaint();}
+function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none"><div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">제2의 두뇌 · SECOND BRAIN</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🧠 윤시현의 두뇌</div><div style="font-size:12.5px;opacity:.9;margin-top:8px;line-height:1.6">상담·세일즈·화법·마케팅·팀관리·자기경영 — 무엇이든 물어보세요. 윤시현의 관점·전략·화법으로 바로 쓸 수 있게 답합니다. 아래 <b>두뇌에 지식 추가</b>에 평소 쓰던 프롬프트·노하우를 넣을수록 더 당신처럼 답합니다.</div></div>';var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:10.5px;color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:13.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-primary" id="bdAsk" style="background:#0F172A" onclick="brainAskPpt()">📊 물어보고 발표자료까지</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:10.5px;color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','당신의 관점·전략·화법을 담은 제2의 두뇌입니다. 무엇이든 물어보세요. 답을 그대로 발표자료(.pptx)로도 만듭니다.',hero+bcrCardHtml()+renderConsult()+kb+bxCardHtml()+ask+bdCardHtml());}
+function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread();if(typeof bdPaint==='function')bdPaint();if(typeof bcrEnsure==='function')bcrEnsure();}
+/* ════════ 두뇌 → DB 통합 CRM — 뇌를 따라가면 우리 DB 가 열린다 ════════
+   두뇌는 잘 답했다. 그런데 그 답이 늘 허공에 떴다. 오늘 누구에게 걸어야
+   하는지는 CRM 안에만 있었고, 두뇌는 그것을 한 번도 본 적이 없었다.
+   그래서 「좋은 말」과 「오늘 할 일」이 서로 남남이었다.
+
+   여기서 둘을 잇는다.
+     하나 · 두뇌 화면이 CRM 의 지금 기록을 그대로 읽어 온다.
+            (AI 관리판이 이미 읽어 둔 것을 쓴다 — 같은 것을 두 번 읽지 않는다)
+     둘  · 그 줄을 누르면 DB 통합 CRM 이 열린다. 뇌를 따라가면 우리 DB 다.
+     셋  · 두뇌에게 물을 때 그 숫자를 함께 넘긴다.
+            넘기는 것은 숫자뿐이다 — 고객 이름·연락처는 넘기지 않는다.        */
+var BCR={all:false};
+var BCR_ORD=['run','no','rej','new','old','bd','pol','won'];
+function bcrLead(){try{return (typeof arIsLead==='function')&&arIsLead();}catch(e){return false;}}
+function bcrWho(){var me=(typeof arMyId==='function')?arMyId():null;return (BCR.all&&bcrLead())?'':me;}
+function bcrReady(){return (typeof AR!=='undefined')&&!!AR.db;}
+function bcrBusy(){return (typeof AR!=='undefined')&&AR.busy==='load';}
+/* 처음 열 때 한 번만 읽는다. 이미 읽어 둔 것이 있으면 그것을 그대로 쓴다 */
+function bcrEnsure(){
+  if(typeof AR==='undefined'||typeof arLoad!=='function')return;
+  if(bcrReady()||bcrBusy()){bcrPaint();return;}
+  arLoad();
+  setTimeout(bcrPaint,2200);setTimeout(bcrPaint,5200);setTimeout(bcrPaint,9000);
+}
+function bcrReload(){
+  if(typeof AR==='undefined'||typeof arLoad!=='function')return;
+  AR.loaded=false;AR.db=null;arLoad(true);bcrPaint();
+  setTimeout(bcrPaint,2400);setTimeout(bcrPaint,5400);
+  if(typeof toast==='function')toast('CRM 기록을 다시 읽습니다');
+}
+function bcrAllSet(v){BCR.all=!!v;bcrPaint();}
+function bcrList(n){try{return (typeof arTouch==='function')?arTouch(bcrWho()).slice(0,n||6):[];}catch(e){return [];}}
+function bcrCount(){try{return (typeof arTkCount==='function')?arTkCount(bcrWho()):null;}catch(e){return null;}}
+/* 여기가 「따라가면 열린다」 — 배정 DB 는 CRM 으로, 고객·생일은 고객 365일로 */
+function bcrGo(where){
+  var t=(where==='clients')?'clients':'crm';
+  if(typeof go==='function')go(t);
+}
+function bcrBodyHtml(){
+  if(typeof AR==='undefined'||typeof arTouch!=='function')
+    return '<div class="bcr-none">이 화면에서는 CRM 기록을 읽을 수 없습니다.</div>';
+  if(!bcrReady())
+    return '<div class="bcr-none'+(AR.err?' bad':'')+'">'+
+      (bcrBusy()?'CRM 기록을 읽는 중입니다…'
+        :(AR.err?osEsc(AR.err):'아직 읽지 못했습니다. 아래 <b>↻ 다시 읽기</b> 를 눌러 보세요.'))+'</div>';
+  var c=bcrCount(),l=bcrList(6),h='',i,k,x;
+  if(!c||!c.all)
+    return '<div class="bcr-none">오늘 손댈 사람이 없습니다. 배정된 DB 가 생기면 여기 올라옵니다.</div>';
+  h+='<div class="bcr-chips">';
+  for(i=0;i<BCR_ORD.length;i++){
+    k=BCR_ORD[i];if(!c[k])continue;
+    h+='<button type="button" class="bcr-c '+(AR_TKC[k]||'')+'" '+
+       'onclick="bcrGo(\''+((k==='bd'||k==='old')?'clients':'crm')+'\')">'+
+       '<b>'+c[k]+'</b>'+osEsc(AR_TKL[k]||k)+'</button>';
+  }
+  h+='</div><div class="bcr-rows">';
+  for(i=0;i<l.length;i++){
+    x=l[i];
+    h+='<div class="bcr-r" onclick="bcrGo(\''+(x.go||'crm')+'\')">'+
+       '<span class="bg '+(AR_TKC[x.k]||'')+'">'+osEsc(AR_TKL[x.k]||'')+'</span>'+
+       '<span class="nm">'+osEsc(x.nm||'')+'</span>'+
+       '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
+       '<span class="do">'+osEsc(x.todo||'')+'</span>'+
+       '<span class="ar">→</span></div>';
+  }
+  h+='</div>';
+  h+='<div class="bcr-tail">오늘 손댈 사람 <b>'+c.all+'명</b> 가운데 위에서 '+l.length+
+     '명입니다. 줄을 누르면 <b>DB 통합 CRM</b> 이 그대로 열립니다.</div>';
+  return h;
+}
+function bcrCardHtml(){
+  bcrCss();
+  return '<div class="card" style="margin-top:14px">'+
+    '<div class="card-hd"><div class="card-title"><span class="ci">🗄️</span>두뇌가 보고 있는 우리 DB'+
+      '<span class="bcr-at" id="bcrAt"></span></div>'+
+      '<div class="card-desc">DB 통합 CRM 에 쌓인 <b>지금 기록</b>입니다. 줄을 누르면 그 자리에서 CRM 이 열립니다. '+
+      '두뇌에게 물으면 이 숫자를 근거로 답합니다 — 고객 이름·연락처는 AI 로 넘기지 않습니다.</div></div>'+
+    '<div class="card-body">'+
+      (bcrLead()?('<div class="bcr-tabs">'+
+        '<button type="button" class="bcr-t'+(BCR.all?'':' on')+'" onclick="bcrAllSet(false)">내 DB</button>'+
+        '<button type="button" class="bcr-t'+(BCR.all?' on':'')+'" onclick="bcrAllSet(true)">팀 전체</button></div>'):'')+
+      '<div id="bcrBody">'+bcrBodyHtml()+'</div>'+
+      '<div class="btn-row" style="margin-top:11px">'+
+        '<button class="btn btn-primary" id="bcrAskBtn" onclick="bcrAsk()">🧠 이 명단으로 오늘 순서 짜기</button>'+
+        '<button class="btn btn-primary" id="bcrOpen" style="background:#0F172A" onclick="bcrGo(\'crm\')">🗄️ DB 통합 CRM 열기</button>'+
+        '<button class="btn btn-ghost" onclick="bcrReload()">↻ 다시 읽기</button>'+
+      '</div>'+
+    '</div></div>';
+}
+function bcrPaint(){
+  var el=document.getElementById('bcrBody');
+  if(!el)return;
+  el.innerHTML=bcrBodyHtml();
+  var at=document.getElementById('bcrAt');
+  if(at)at.textContent=(typeof AR!=='undefined'&&AR.at)?(AR.at+' 기준'):'';
+}
+/* 두뇌에게 넘기는 글 — 숫자는 주되 고객은 주지 않는다.
+   ('full' 일 때만 전화 습관까지 붙인다. 평소 질문에는 오늘 판만 붙는다) */
+function brainCrmCtx(mode){
+  if(!bcrReady())return '';
+  var who=bcrWho(),c=bcrCount(),s;
+  if(!c||!c.all)return '';
+  s='[지금 우리 DB — DB 통합 CRM 실제 기록'+(who?'':' · 팀 전체')+']\n'+
+    '- 오늘 손댈 사람 '+c.all+'명: 진행중 '+c.run+' · 부재 '+c.no+' · 거절 '+c.rej+
+    ' · 미진행 '+c['new']+' · 기고객 '+c.old+' · 생일 '+c.bd+' · 계약 '+c.pol+' · 증권 '+c.won+'\n';
+  try{
+    var ap=(typeof arAppt==='function')?arAppt(who):[];
+    if(ap.length)s+='- 앞으로 잡힌 상담 약속 '+ap.length+'건 (가장 가까운 것 '+(''+ap[0].appt).slice(0,10)+')\n';
+  }catch(e){}
+  if(mode==='full'){
+    try{
+      var me=(typeof arMyId==='function')?arMyId():null;
+      if(typeof arCrmDeepText==='function')s+=arCrmDeepText(who||me);
+    }catch(e){}
+  }
+  s+='(고객 이름·연락처는 넘기지 않았습니다. 위 숫자만 쓰고 없는 숫자는 지어내지 마세요. '+
+     '특정 고객을 이름으로 지목하지 마세요.)\n\n';
+  return s;
+}
+function bcrAsk(){
+  if(!bcrReady()){bcrEnsure();if(typeof toast==='function')toast('CRM 기록을 읽는 중입니다. 곧 다시 눌러 주세요.');return;}
+  var c=bcrCount();
+  if(!c||!c.all){if(typeof toast==='function')toast('오늘 손댈 사람이 없습니다');return;}
+  brainAsk('지금 [우리 DB] 숫자를 근거로 오늘 전화 순서를 짜 줘. '+
+    '① 지금 당장 걸 세 통 — 어느 무리(진행중·부재·거절·미진행·기고객·생일)를 왜 먼저 거는지와 첫 두 문장 화법. '+
+    '② 오늘 안에 끝낼 것. ③ 오늘은 손대지 않아도 되는 것. '+
+    '고객 이름은 주어지지 않았으니 특정인을 지목하지 말고 단계와 경과일로만 말해 줘.',{crm:'full'});
+  try{var t=document.getElementById('brainThread');if(t)t.scrollIntoView({behavior:'smooth',block:'center'});}catch(e){}
+}
+function bcrCss(){
+  if(document.getElementById('bcrCss'))return;
+  var st=document.createElement('style');st.id='bcrCss';
+  st.textContent=
+   '.bcr-at{margin-left:8px;font-size:10.5px;font-weight:700;color:#94A3B8}'+
+   '.bcr-tabs{display:flex;gap:6px;margin-bottom:10px}'+
+   '.bcr-t{border:1px solid #E2E8F0;background:#fff;border-radius:999px;padding:5px 13px;font-size:11.5px;'+
+     'font-weight:800;color:#64748B;cursor:pointer;font-family:inherit}'+
+   '.bcr-t.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.bcr-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}'+
+   '.bcr-c{border:1px solid #E2E8F0;background:#F8FAFC;border-radius:999px;padding:4px 11px;font-size:11px;'+
+     'font-weight:700;color:#64748B;cursor:pointer;font-family:inherit;line-height:1.6}'+
+   '.bcr-c b{color:#0B2447;font-weight:900;margin-right:4px;font-variant-numeric:tabular-nums}'+
+   '.bcr-c.red b{color:#B91C1C}.bcr-c.amb b{color:#B45309}.bcr-c.grn b{color:#15803D}'+
+   '.bcr-rows{border:1px solid #EEF2F7;border-radius:11px;overflow:hidden}'+
+   '.bcr-r{display:flex;align-items:center;gap:8px;padding:9px 11px;border-bottom:1px solid #F1F5F9;'+
+     'cursor:pointer;font-size:12px;background:#fff}'+
+   '.bcr-r:last-child{border-bottom:0}'+
+   '.bcr-r:hover{background:#F5F9FF}'+
+   '.bcr-r .bg{flex:none;font-size:10px;font-weight:900;border-radius:999px;padding:2px 8px;'+
+     'background:#F1F5F9;color:#475569}'+
+   '.bcr-r .bg.red{background:#FEF2F2;color:#B91C1C}'+
+   '.bcr-r .bg.amb{background:#FFFBEB;color:#B45309}'+
+   '.bcr-r .bg.grn{background:#F0FDF4;color:#15803D}'+
+   '.bcr-r .nm{flex:none;font-weight:800;color:#0B2447;max-width:32%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+   '.bcr-r .dy{flex:none;font-size:11px;color:#94A3B8;font-variant-numeric:tabular-nums}'+
+   '.bcr-r .do{flex:1;font-size:11.5px;color:#64748B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+   '.bcr-r .ar{flex:none;color:#1D4ED8;font-weight:900}'+
+   '.bcr-tail{font-size:11px;color:#94A3B8;margin-top:9px;line-height:1.7}'+
+   '.bcr-tail b{color:#0B2447;font-weight:800}'+
+   '.bcr-none{font-size:12px;color:#94A3B8;line-height:1.8;padding:6px 0}'+
+   '.bcr-none.bad{color:#B91C1C}'+
+   '@media(max-width:560px){.bcr-r .do{display:none}.bcr-r .nm{max-width:none;flex:1}}';
+  document.head.appendChild(st);
+}
 /* ===== #6 보험 비서 — 보험 실무 전문 AI(담보·약관·청구·질병/수술·고지·상품구조) ===== */
 var INS={busy:false,hist:[]};
 function insSys(){
@@ -5094,7 +5268,7 @@ function osPayAdminLoad(){
         '<td style="padding:7px 6px;text-align:right;white-space:nowrap">'+(p2.plan_until?osEsc((''+p2.plan_until).slice(0,10)):'-')+'</td>'+
       '</tr>';
     }).join('');
-    host.innerHTML=(subErr?'<div class="notice" style="font-size:11.5px;margin-bottom:9px">결제 테이블이 아직 없습니다 — <b>migration_11_billing.sql</b>을 Supabase에서 1회 실행하면 자동결제·결제일이 표시됩니다.</div>':'')+
+    host.innerHTML=(subErr?sqlNeedHtml('11','자동결제·결제일을 담을 자리'):'')+
       '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:10px">'+
         '<div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid var(--ink-7);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink-5);font-weight:700">자동결제 중</div><div style="font-size:19px;font-weight:900;color:#059669">'+paid+'명</div></div>'+
         '<div style="flex:1;min-width:120px;background:#F8FAFC;border:1px solid var(--ink-7);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink-5);font-weight:700">월 예상 매출</div><div style="font-size:19px;font-weight:900;color:#1A56DB">'+apexWon(sum)+'</div></div>'+
@@ -5720,7 +5894,10 @@ function rdAuto(){
   add({k:'sql',t:'서버 준비 SQL',
     st:(ver>=need)?'ok':'no',
     now:(ver>=need)?('실행됨 · 버전 '+ver):('아직입니다 (지금 '+(ver||0)+' · 필요 '+need+')'),
-    how:'홈 맨 위 배너의 SQL 을 복사해 Supabase → SQL Editor 에 붙여 넣고 한 번 실행하세요.',
+    how:'아래 단추를 누르면 SQL 복사와 Supabase 열기가 한 번에 됩니다. '+
+         '붙여넣고 RUN 을 누른 뒤 「다 됐는지 확인」 만 누르시면 됩니다.',
+    act:'setupGo()',actT:'📋 복사하고 Supabase 열기',
+    act2:'setupCheck()',
     go:'home'});
 
   /* 2. AI 연결 */
@@ -5821,7 +5998,11 @@ function rdBadge(st){
 }
 function rdRowHtml(x){
   var btn='';
-  if(x.go)btn='<button type="button" class="rd-go" onclick="go(\''+x.go+'\')">바로 가기 →</button>';
+  /* 여기서 바로 끝나야 한다. 「홈으로 가서 맨 위 배너를 찾으세요」 는 두 걸음이고,
+     두 걸음이면 안 하신다. act 가 있으면 이 줄에서 그 일을 그대로 한다. */
+  if(x.act)btn='<button type="button" class="rd-go" onclick="'+x.act+'">'+osEsc(x.actT||'지금 하기')+'</button>';
+  if(x.act2)btn+='<button type="button" class="rd-go" onclick="'+x.act2+'">'+osEsc(x.act2T||'✅ 다 됐는지 확인')+'</button>';
+  if(x.go)btn+='<button type="button" class="rd-go" onclick="go(\''+x.go+'\')">바로 가기 →</button>';
   return '<div class="rd-r '+x.st+'">'+
     '<div class="rd-h">'+rdBadge(x.st)+'<b>'+osEsc(x.t)+'</b>'+
       '<span class="rd-now">'+osEsc(x.now||'')+'</span></div>'+
@@ -8483,7 +8664,7 @@ function pfMeHtml(){
       '<button class="btn btn-ghost" onclick="pfCardOpen()">🖼️ 매월 영업보고서</button>'+
     '</div>'+
     (PF.err?('<div class="notice" style="margin-top:9px">읽기·저장이 막혔습니다 — <b>'+osEsc(PF.err.slice(0,90))+'</b><br>'+
-      'Supabase 에서 <b>migration_40_perf.sql</b> 을 한 번 실행하셔야 합니다.</div>'):'')+
+      '<b>시스템 점검 → 필요한 SQL</b> 에서 「한 번에 전부」 를 눌러 한 번 만드시면 됩니다.</div>'):'')+
     '</div></div>';
 
   h+=pfChartHtml();
@@ -9165,7 +9346,7 @@ function pfTeamBoardHtml(){
   });
   h+='</tbody></table>'+
     (rows.length<=1?'<div class="notice" style="margin-top:10px">팀원 실적이 안 보이면 Supabase 에서 '+
-      '<b>migration_40_perf.sql</b> 을 실행하셨는지 확인해 주세요. 열람 권한은 DB 가 막습니다.</div>':'')+
+      '<b>시스템 점검 → 필요한 SQL</b> 의 「한 번에 전부」 를 누르셨는지 확인해 주세요. 열람 권한은 DB 가 막습니다.</div>':'')+
     '</div></div>';
   return h;
 }
@@ -9929,6 +10110,11 @@ function thCount(k){
   return '';
 }
 function thBlocked(tab){
+  /* 로그인 안 한 사람에게 「요금제」 를 들이밀면 안 된다.
+     못 여는 이유가 돈이 아니라 로그인이기 때문이다. 폰 홈 화면에 담은 앱은
+     사파리와 저장 공간이 따로라, 담고 처음 열면 반드시 로그아웃 상태다.
+     그때 결제 화면이 뜨면 「돈을 더 내라는 건가」 로 읽힌다.           */
+  if(!OS.profile)return osNeedLoginHtml();
   return '<div class="card"><div class="card-body"><div class="ar-none">'+
     '이 칸은 상위 요금제에서 열립니다.<div class="btn-row" style="margin-top:11px">'+
     '<button class="btn btn-primary" onclick="go(\'pricing\')">요금제 보기</button></div></div></div></div>';
@@ -10168,7 +10354,9 @@ var TABS=[
    {id:'terms',icon:'📜',title:'약관·개인정보',cnt:'',ak:'구독·요금제'},
    {id:'ready',icon:'🚦',title:'출발 점검',cnt:'',ak:'홈'},
    {id:'health',icon:'🩺',title:'시스템 점검',cnt:'',ak:'시스템 점검'},
-   {id:'phone_app',icon:'📲',title:'폰에 담기',cnt:'',ak:'홈'},
+   /* 맨 위에 단추로 세워 둔다(renderNav) — 지도와 같은 이유로 여기서는 hide 로
+      눈에서만 뺀다. 지운 것이 아니라 찾기·음성·?go=phone_app 으로 그대로 열린다. */
+   {id:'phone_app',icon:'📲',title:'내 폰에 설치',cnt:'',hide:true,ak:'홈 폰에 담기 설치 앱 홈화면 추가 pwa'},
    {id:'mycal',icon:'📅',title:'내 캘린더',cnt:'',ak:'홈 달력 일정 알림 캘린더'}
  ]},
  /* 아래 셋은 메뉴에 세우지 않는다 — 다른 화면 안에서 열린다.
@@ -10963,12 +11151,15 @@ function renderPhoneApp(){
       '<b>「DB CRM」</b> · <b>「TFA」</b> 처럼 적으면 홈 화면에서 구분하기 쉽습니다.</div>'+
     '</div></div>';
 
-  return osPage('시스템','폰에 담기',
+  return osPage('설치','📲 내 폰에 설치',
     '홈 화면에 담으면 주소창 없이 앱처럼 열립니다. DB 통합 CRM 과 TFA 업무관리는 따로 담을 수 있습니다.',h);
 }
 
 function renderNav(){
   var h='<div id="osNoticeNav"></div>'+
+    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
+      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
+      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
     '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
       '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
       '<span class="sbg-go">처음이시면 여기부터</span></button>'+
@@ -11409,8 +11600,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-23 04:10';
-var APP_BUILD_NOTE='<b>재무설계 상담자료가 한 장이 됐습니다.</b> 고객 상황을 정리하는 데 <b>일곱 판</b>을 내려야 했습니다 — 사람 · 소득 · 자산 · 연금 · 보장 · 목표 · 걱정이 각각 따로였습니다. 내려가는 동안 앞에서 적은 것이 화면에서 사라져 「아까 소득이 얼마라고 하셨죠」 를 되묻게 됐습니다. 이제 <b>「고객의 상황을 정리합니다」 한 장</b>에 다 들어갑니다. 왼쪽은 <b>이 분과 앞날</b>(가족 · 은퇴와 연금), 오른쪽은 <b>버는 것 · 쓰는 것 · 가진 것</b>, 아래에 <b>지금 들어 있는 보장</b>과 <b>목표 · 걱정</b>. 묶음마다 번호를 달아 상담 순서 그대로 읽힙니다. 높이는 <b>2,930→2,135px</b> 로 줄었고, 39칸은 <b>하나도 없어지지 않았습니다</b> — 점검이 전수로 셉니다. 좁은 화면에서는 예전처럼 한 줄로 접힙니다.';
+var APP_BUILD='2026-08-23 09:12';
+var APP_BUILD_NOTE='<b>이제 앱 밖으로 나가실 일이 없습니다.</b> 화면이 「그 파일을 여세요」 라고 말하던 자리를 <b>전부</b> 없앴습니다 — 저장소 SQL 아홉 벌을 앱 안으로 들여와, 막힌 자리마다 <b>「\ud83d\udccb 복사하고 Supabase 열기」</b> 한 번으로 끝납니다. <b>팀 하루 한 장 피드백</b>도 「한 번에 전부」 안에 들어가 따로 실행할 것이 없습니다. 시스템 점검의 표에서도 빠진 줄마다 <b>만들기</b> 단추가 바로 섭니다. 새 점검(<code>check-nofile</code>)이 화면 글에 파일 이름이 다시 스며드는지 지킵니다. <b>「내 폰에 설치」</b> 는 메뉴 맨 위에 상시 고정되어 있고(옛 이름 「폰에 담기」 로도 찾힙니다), 로그인 안 하신 분께는 결제 칸 대신 <b>로그인 안내</b>가 뜹니다. 폰에서는 <b>하루 한 장</b>(<code>/app/day.html</code>) 한 화면에서 오늘 걸 사람을 세우고 전화·문자하고 세 번 눌러 기록하면 그 한 줄이 <b>DB 통합 CRM 에 그대로</b> 들어갑니다. <b>고객 365일도 폰에서</b> 고칩니다 — 다음 할 일·생일. <b>팀 하루 한 장</b>(<code>/app/team.html</code>) 은 AI 가 쓴 한 줄을 <b>팀원 폰으로 바로 꽂습니다</b>.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18580,7 +18771,7 @@ function tdLoad(){
   ]).then(function(r){
     var err=r.filter(function(x,ix){return ix<7&&x&&x.error;});
     if(err.length&&/teams|team_members/.test(JSON.stringify(err[0].error||{}))){
-      box.innerHTML='<div class="osrv-warn">팀 테이블이 아직 없습니다. Supabase에서 <b>migration_13_teams_ai.sql</b>을 실행해 주세요.</div>';return;
+      box.innerHTML=sqlNeedHtml('13','팀 표');return;
     }
     var profs=((r[0]&&r[0].data)||[]).filter(function(x){return x.active!==false;});
     /* 가입한 적 없는 사람(공유 DB의 CRM 계정·미승인 계정)이 새지 않도록:
@@ -18752,7 +18943,7 @@ function osBackupLoad(){
   var box=$('osBackupList');var sb=osClient();if(!box||!sb)return;
   sb.from('backups').select('id,kind,label,ref_date,rows_count,size_bytes,created_at').order('created_at',{ascending:false}).limit(40)
   .then(function(r){
-    if(r.error){box.innerHTML='<div class="acad-note">백업 테이블이 아직 없습니다. <b>migration_13_teams_ai.sql</b>을 실행해 주세요.</div>';return;}
+    if(r.error){box.innerHTML=sqlNeedHtml('13','자동 백업을 담을 자리');return;}
     var d=r.data||[];
     if(!d.length){box.innerHTML='<div class="acad-note">아직 백업이 없습니다. [지금 백업]을 눌러 첫 백업을 만드세요.</div>';return;}
     box.innerHTML='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
@@ -18812,7 +19003,7 @@ function osTeamLoad(){
     sb.from('team_members').select('team_id,member_id'),
     sb.from('profiles').select('id,name,role,active').order('name')
   ]).then(function(r){
-    if(r[0]&&r[0].error){box.innerHTML='<div class="acad-note">팀 테이블이 아직 없습니다. <b>migration_13_teams_ai.sql</b>을 실행해 주세요.</div>';return;}
+    if(r[0]&&r[0].error){box.innerHTML=sqlNeedHtml('13','팀 표');return;}
     var teams=(r[0]&&r[0].data)||[], mem=(r[1]&&r[1].data)||[];
     var profs=((r[2]&&r[2].data)||[]).filter(function(x){return x.active!==false;});
     var teamOf={};mem.forEach(function(m){teamOf[m.member_id]=m.team_id;});
@@ -21336,7 +21527,7 @@ function manOrgOps(){
     manChip('daily','📒','매일 취합')+' · '+manChip('report','📊','대표 브리핑')+' — 대표는 전사를, 팀 리더는 자기 팀을 봅니다. 3일 이상 소통이 끊긴 팀원이 먼저 뜹니다.',
     manChip('branch_coach','🧑‍🏫','팀 코칭')+' · '+manChip('hq','🏛️','승인·규칙')+' · '+manChip('audit','🛡️','감사로그')+' — <b>리더 이상에게만</b> 보입니다. 승인·규칙은 고위험 제안을 승인하는 곳이고, 감사로그는 누가 무엇을 했는지 남는 기록입니다.'
   ]);
-  h+='<div style="background:#FEF9EE;border:1px solid #F6E0B4;border-radius:11px;padding:11px 13px;margin-top:9px;font-size:12.2px;color:#7A5310;line-height:1.68">조직도가 이 기기에만 남고 다른 컴퓨터에서 안 보이면, Supabase 에서 <b>migration_38_final.sql</b> 이 실행됐는지 확인합니다.</div>';
+  h+='<div style="background:#FEF9EE;border:1px solid #F6E0B4;border-radius:11px;padding:11px 13px;margin-top:9px;font-size:12.2px;color:#7A5310;line-height:1.68">조직도가 이 기기에만 남고 다른 컴퓨터에서 안 보이면, <b>시스템 점검 → 필요한 SQL</b> 의 「조직도 서버 저장」 을 한 번 눌러 만드십시오.</div>';
   return h;
 }
 
@@ -21439,7 +21630,7 @@ function manTeamOps(){
   h+=manStepBox(4,'리더의 팀 브리핑','대표는 전사를, <b>팀 리더는 자기 팀</b>을 '+manChip('report','📊','대표 브리핑')+'에서 봅니다. 3일 이상 소통이 끊긴 팀원이 먼저 뜹니다.');
   h+=manUL([
     '자동 백업은 하루 한 번 돌아갑니다. 설정에서 <b>지금 백업</b>을 눌러 수동으로도 받을 수 있습니다.',
-    '팀 기능이 안 보이면 Supabase에서 <b>migration_13_teams_ai.sql</b>이 실행됐는지 확인합니다.',
+    '팀 기능이 안 보이면 시스템 점검 → 필요한 SQL 의 「팀 · AI 부서 보고 · 자동 백업」 을 한 번 누르십시오.',
     '팀원 성장 점수는 <b>평가가 아니라 코칭 재료</b>입니다. 순위로 압박하지 말고 막힌 지점을 찾는 데 씁니다.'
   ]);
   return h;
@@ -24973,7 +25164,7 @@ function txCss(){
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -25859,8 +26050,65 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "create index if not exists terms_verdicts_co_idx on public.terms_verdicts(co);",
   "",
+  "/* ── 팀 하루 한 장 — 리더가 쓴 말이 팀원 폰에 뜬다 ─────────────",
+  "   리더가 팀원 줄에 쓸 자리가 없었다. daily_checks 는 쓰기가",
+  "   member_id = auth.uid() 라 리더가 못 쓰고, saved_reports 는 읽기가",
+  "   advisor_id = auth.uid() 라 팀원이 리더 줄을 못 읽는다.",
+  "   보는 잣대는 위에서 만든 can_see_perf 를 그대로 쓴다 —",
+  "   새 잣대를 만들면 권한이 두 갈래로 갈라진다. */",
+  "create table if not exists public.team_feedback(",
+  "  id         uuid primary key default gen_random_uuid(),",
+  "  member_id  uuid not null,",
+  "  from_id    uuid not null,",
+  "  from_name  text default '',",
+  "  fb_date    date not null,",
+  "  msg        text not null default '',",
+  "  team_msg   text default '',",
+  "  seen_at    timestamptz,",
+  "  created_at timestamptz default now(),",
+  "  updated_at timestamptz default now()",
+  ");",
+  "",
+  "/* 하루에 한 줄 — 같은 사람에게 같은 날 두 번 쓰면 덮어쓴다 */",
+  "create unique index if not exists team_feedback_uni",
+  "  on public.team_feedback(member_id, fb_date, from_id);",
+  "create index if not exists team_feedback_member_idx",
+  "  on public.team_feedback(member_id, fb_date desc);",
+  "",
+  "alter table public.team_feedback enable row level security;",
+  "grant select, insert, update, delete on public.team_feedback to authenticated;",
+  "",
+  "/* 읽기 — 받는 사람 본인, 그리고 그 사람을 볼 수 있는 리더 */",
+  "drop policy if exists team_feedback_read on public.team_feedback;",
+  "create policy team_feedback_read on public.team_feedback",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.can_see_perf(member_id));",
+  "",
+  "/* 넣기 — 내가 볼 수 있는 사람에게만. 보낸 사람은 반드시 나 */",
+  "drop policy if exists team_feedback_insert on public.team_feedback;",
+  "create policy team_feedback_insert on public.team_feedback",
+  "  for insert to authenticated",
+  "  with check (public.can_see_perf(member_id) and from_id = auth.uid());",
+  "",
+  "/* 고치기 — 리더는 내용을, 팀원은 읽음 표시를. 남의 줄은 못 건드린다 */",
+  "drop policy if exists team_feedback_update on public.team_feedback;",
+  "create policy team_feedback_update on public.team_feedback",
+  "  for update to authenticated",
+  "  using (from_id = auth.uid() or member_id = auth.uid())",
+  "  with check (from_id = auth.uid() or member_id = auth.uid());",
+  "",
+  "/* 지우기 — 보낸 사람만 */",
+  "drop policy if exists team_feedback_delete on public.team_feedback;",
+  "create policy team_feedback_delete on public.team_feedback",
+  "  for delete to authenticated",
+  "  using (from_id = auth.uid());",
+  "",
+  "drop trigger if exists team_feedback_touch on public.team_feedback;",
+  "create trigger team_feedback_touch before update on public.team_feedback",
+  "  for each row execute function public.touch_updated_at();",
+  "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '35')",
+  "values ('schema_version', '36')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -25911,7 +26159,722 @@ var HX_SQL={
   "  (select count(*) from pg_policies where schemaname='public' and tablename='advisor_intro')",
   "union all select",
   "  '약관 판정 함께 보기', to_regclass('public.terms_verdicts') is not null,",
-  "  (select count(*) from pg_policies where schemaname='public' and tablename='terms_verdicts');"
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='terms_verdicts')",
+  "union all select",
+  "  '팀 하루 한 장 피드백', to_regclass('public.team_feedback') is not null,",
+  "  (select count(*) from pg_policies where schemaname='public' and tablename='team_feedback');"
+ ]},
+ '06':{label:"사업장 고객(법인·소상공인)",need:["business_clients"],lines:[
+  "/* APEX / 법인·사업자 컨설팅 모듈 서버 저장 (business_clients) */",
+  "/* Supabase Dashboard > SQL Editor에서 전체 실행하세요. 여러 번 실행해도 안전합니다(멱등). */",
+  "/*  */",
+  "/* 설계 메모: */",
+  "/* 컨설팅 워크시트(사업자 프로필 + 직원 명부 + AI 상담자료)를 담당자별 1행/사업자로 */",
+  "/* JSONB(data)에 보관한다. 정규화 대신 문서형을 택한 이유: */",
+  "/* - 프런트가 단일 파일(app/index.html) 로컬우선 구조라 부분동기화 버그 위험을 없애고, */",
+  "/* - 담당자별 작업 문서 성격이라 조인/집계 요구가 낮다. */",
+  "/* 행 단위 접근제어는 담당자(advisor_id) 소유 + 관리자(is_admin())로 RLS 처리한다. */",
+  "/* (is_admin() 함수는 supabase_schema.sql에서 이미 생성됨) */",
+  "",
+  "create extension if not exists pgcrypto;",
+  "",
+  "/* ============================================================ */",
+  "/* 1) 테이블 */",
+  "/* ============================================================ */",
+  "create table if not exists public.business_clients (",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  advisor_id uuid not null references public.profiles(id) on delete cascade default auth.uid(),",
+  "  name text not null default '새 사업자',",
+  "  data jsonb not null default '{}'::jsonb,  /* { profile:{...}, staff:[...], ai:{...} } */",
+  "  created_at timestamptz not null default now(),",
+  "  updated_at timestamptz not null default now()",
+  ");",
+  "",
+  "create index if not exists business_clients_advisor_idx on public.business_clients(advisor_id);",
+  "create index if not exists business_clients_updated_idx on public.business_clients(updated_at desc);",
+  "",
+  "/* ============================================================ */",
+  "/* 2) 트리거: 생성/수정 시 담당자·시간 자동 기록 */",
+  "/* ============================================================ */",
+  "create or replace function public.biz_set_created_meta()",
+  "returns trigger",
+  "language plpgsql",
+  "as $$",
+  "begin",
+  "  if new.advisor_id is null then new.advisor_id := auth.uid(); end if;",
+  "  new.created_at := now();",
+  "  new.updated_at := now();",
+  "  return new;",
+  "end;",
+  "$$;",
+  "",
+  "create or replace function public.biz_set_updated_meta()",
+  "returns trigger",
+  "language plpgsql",
+  "as $$",
+  "begin",
+  "  new.updated_at := now();",
+  "  new.advisor_id := old.advisor_id;  /* 소유자는 변경 불가 */",
+  "  new.created_at := old.created_at;",
+  "  return new;",
+  "end;",
+  "$$;",
+  "",
+  "drop trigger if exists business_clients_created_meta on public.business_clients;",
+  "create trigger business_clients_created_meta before insert on public.business_clients",
+  "for each row execute procedure public.biz_set_created_meta();",
+  "",
+  "drop trigger if exists business_clients_updated_meta on public.business_clients;",
+  "create trigger business_clients_updated_meta before update on public.business_clients",
+  "for each row execute procedure public.biz_set_updated_meta();",
+  "",
+  "/* ============================================================ */",
+  "/* 3) RLS — 담당자는 본인 사업자만, 관리자는 전체 */",
+  "/* ============================================================ */",
+  "alter table public.business_clients enable row level security;",
+  "",
+  "drop policy if exists \"business_clients_select\" on public.business_clients;",
+  "create policy \"business_clients_select\"",
+  "on public.business_clients for select",
+  "to authenticated",
+  "using (advisor_id = auth.uid() or public.is_admin());",
+  "",
+  "drop policy if exists \"business_clients_insert\" on public.business_clients;",
+  "create policy \"business_clients_insert\"",
+  "on public.business_clients for insert",
+  "to authenticated",
+  "with check (advisor_id = auth.uid() or public.is_admin());",
+  "",
+  "drop policy if exists \"business_clients_update\" on public.business_clients;",
+  "create policy \"business_clients_update\"",
+  "on public.business_clients for update",
+  "to authenticated",
+  "using (advisor_id = auth.uid() or public.is_admin())",
+  "with check (advisor_id = auth.uid() or public.is_admin());",
+  "",
+  "drop policy if exists \"business_clients_delete\" on public.business_clients;",
+  "create policy \"business_clients_delete\"",
+  "on public.business_clients for delete",
+  "to authenticated",
+  "using (advisor_id = auth.uid() or public.is_admin());",
+  "",
+  "/* 완료. 이후 앱 상단 \"관리 중 사업자\" 바에서 ☁ 저장 / ⬇ 불러오기 버튼이 활성화됩니다. */",
+  "/* (로그인 + config.js의 anon 키/URL 설정이 되어 있어야 합니다.) */"
+ ]},
+ '07':{label:"출근 현황 · 성장 점수",need:["attendance"],lines:[
+  "/* 출근(접속) 기록 테이블 — 팀원별 일자별 접속 기록 (#4 출근 달력) */",
+  "create table if not exists public.attendance (",
+  "  member_id  uuid not null references public.profiles(id) on delete cascade,",
+  "  att_date   date not null,",
+  "  first_seen timestamptz not null default now(),",
+  "  primary key (member_id, att_date)",
+  ");",
+  "/* 최근 접속시각(재실행 안전) — 있으면 건너뜀 */",
+  "alter table public.attendance add column if not exists last_seen timestamptz;",
+  "alter table public.attendance enable row level security;",
+  "",
+  "drop policy if exists attendance_select on public.attendance;",
+  "create policy attendance_select on public.attendance",
+  "  for select to authenticated using (true);",
+  "",
+  "drop policy if exists attendance_insert_own on public.attendance;",
+  "create policy attendance_insert_own on public.attendance",
+  "  for insert to authenticated with check (member_id = auth.uid());",
+  "",
+  "/* 본인 행의 최근 접속시각 갱신 허용(로그인 시각/최근 접속 표시용) */",
+  "drop policy if exists attendance_update_own on public.attendance;",
+  "create policy attendance_update_own on public.attendance",
+  "  for update to authenticated using (member_id = auth.uid()) with check (member_id = auth.uid());",
+  "",
+  "grant select, insert, update on public.attendance to authenticated;"
+ ]},
+ '09':{label:"접속 기록 · AI 사용량",need:["login_ips", "ai_usage"],lines:[
+  "/* 09: 보안 — 접속 IP 승인제 + 개인 AI 하루 한도 (모두 기본 OFF · 재실행 안전 · 기존 기능 손상 없음) */",
+  "/* 운영자가 앱 설정에서 켜기 전까지는 아무 것도 차단하지 않는다. */",
+  "",
+  "/* 관리자 판별 (운영자=admin) */",
+  "create or replace function public.is_app_admin()",
+  "returns boolean language sql stable security definer set search_path=public as $$",
+  "  select exists(select 1 from public.profiles where id=auth.uid() and role in ('admin','operator') and active=true);",
+  "$$;",
+  "grant execute on function public.is_app_admin() to authenticated;",
+  "",
+  "/* 1) 전역 설정(key-value): ip_guard(on/off), ai_daily_limit(숫자) */",
+  "create table if not exists public.app_config(",
+  "  key text primary key,",
+  "  value text,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "alter table public.app_config enable row level security;",
+  "drop policy if exists app_config_select on public.app_config;",
+  "create policy app_config_select on public.app_config for select to authenticated using (true);",
+  "drop policy if exists app_config_write on public.app_config;",
+  "create policy app_config_write on public.app_config for all to authenticated",
+  "  using (public.is_app_admin()) with check (public.is_app_admin());",
+  "grant select, insert, update on public.app_config to authenticated;",
+  "",
+  "/* 2) 로그인 IP 승인제 */",
+  "create table if not exists public.login_ips(",
+  "  member_id uuid not null references public.profiles(id) on delete cascade,",
+  "  ip text not null,",
+  "  status text not null default 'pending' check (status in ('pending','approved','blocked')),",
+  "  first_seen timestamptz not null default now(),",
+  "  last_seen timestamptz not null default now(),",
+  "  primary key (member_id, ip)",
+  ");",
+  "alter table public.login_ips enable row level security;",
+  "",
+  "/* 첫 IP(정상 기기)는 자동 승인, 이후 새 IP는 대기. status는 서버가 강제(클라이언트 위조 방지). */",
+  "create or replace function public.login_ips_ins_guard() returns trigger language plpgsql security definer set search_path=public as $$",
+  "begin",
+  "  if exists(select 1 from public.login_ips where member_id=new.member_id and status='approved') then",
+  "    new.status := 'pending';",
+  "  else",
+  "    new.status := 'approved';",
+  "  end if;",
+  "  return new;",
+  "end $$;",
+  "drop trigger if exists login_ips_ins_guard_t on public.login_ips;",
+  "create trigger login_ips_ins_guard_t before insert on public.login_ips for each row execute function public.login_ips_ins_guard();",
+  "",
+  "/* 상태(승인/차단) 변경은 운영자만. 본인은 last_seen만 갱신 가능. */",
+  "create or replace function public.login_ips_upd_guard() returns trigger language plpgsql security definer set search_path=public as $$",
+  "begin",
+  "  if new.status is distinct from old.status and not public.is_app_admin() then",
+  "    new.status := old.status;",
+  "  end if;",
+  "  return new;",
+  "end $$;",
+  "drop trigger if exists login_ips_upd_guard_t on public.login_ips;",
+  "create trigger login_ips_upd_guard_t before update on public.login_ips for each row execute function public.login_ips_upd_guard();",
+  "",
+  "drop policy if exists login_ips_select on public.login_ips;",
+  "create policy login_ips_select on public.login_ips for select to authenticated",
+  "  using (member_id=auth.uid() or public.is_app_admin());",
+  "drop policy if exists login_ips_insert on public.login_ips;",
+  "create policy login_ips_insert on public.login_ips for insert to authenticated with check (member_id=auth.uid());",
+  "drop policy if exists login_ips_update on public.login_ips;",
+  "create policy login_ips_update on public.login_ips for update to authenticated",
+  "  using (member_id=auth.uid() or public.is_app_admin()) with check (member_id=auth.uid() or public.is_app_admin());",
+  "grant select, insert, update on public.login_ips to authenticated;",
+  "",
+  "/* 3) 개인 AI 하루 한도 카운터 */",
+  "create table if not exists public.ai_usage(",
+  "  member_id uuid not null references public.profiles(id) on delete cascade,",
+  "  usage_date date not null,",
+  "  cnt int not null default 0,",
+  "  primary key (member_id, usage_date)",
+  ");",
+  "alter table public.ai_usage enable row level security;",
+  "drop policy if exists ai_usage_select on public.ai_usage;",
+  "create policy ai_usage_select on public.ai_usage for select to authenticated",
+  "  using (member_id=auth.uid() or public.is_app_admin());",
+  "drop policy if exists ai_usage_insert on public.ai_usage;",
+  "create policy ai_usage_insert on public.ai_usage for insert to authenticated with check (member_id=auth.uid());",
+  "drop policy if exists ai_usage_update on public.ai_usage;",
+  "create policy ai_usage_update on public.ai_usage for update to authenticated",
+  "  using (member_id=auth.uid()) with check (member_id=auth.uid());",
+  "grant select, insert, update on public.ai_usage to authenticated;",
+  "",
+  "/* 오늘 카운트 +1 후 새 값 반환 (원자적) */",
+  "create or replace function public.bump_ai_usage() returns int language plpgsql security definer set search_path=public as $$",
+  "declare v int;",
+  "begin",
+  "  insert into public.ai_usage(member_id,usage_date,cnt) values(auth.uid(),current_date,1)",
+  "    on conflict (member_id,usage_date) do update set cnt=public.ai_usage.cnt+1",
+  "    returning cnt into v;",
+  "  return v;",
+  "end $$;",
+  "grant execute on function public.bump_ai_usage() to authenticated;"
+ ]},
+ '10':{label:"고객 365일 상담자료 저장",need:["saved_reports"],lines:[
+  "/* 10: 고객 365일 — 상담자료 저장 + 고객 연락처 (재실행 안전 · 기존 데이터 손상 없음) */",
+  "/* 각 설계사(로그인 계정)가 자기 고객에게 AI 보장분석 · 비포&애프터 · 재무설계 스냅샷을 저장한다. */",
+  "",
+  "/* 1) 고객 연락처 컬럼 추가 (있으면 건너뜀) */",
+  "alter table public.clients add column if not exists phone text;",
+  "",
+  "/* 2) 저장 자료 테이블 — advisor_id = 로그인한 설계사 본인 */",
+  "create table if not exists public.saved_reports(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  advisor_id uuid not null references public.profiles(id) on delete cascade,",
+  "  client_id uuid references public.clients(id) on delete cascade,",
+  "  kind text not null,  /* 'bojang' | 'baba' | 'finance' | 'consult' 등 도구 탭 id */",
+  "  title text,",
+  "  content jsonb,  /* {md: \"리포트 원문\"} 또는 {inputs: {재무설계 입력값}} */",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create index if not exists saved_reports_client_idx on public.saved_reports(client_id);",
+  "create index if not exists saved_reports_advisor_idx on public.saved_reports(advisor_id);",
+  "",
+  "alter table public.saved_reports enable row level security;",
+  "",
+  "/* 본인 자료만 읽고 쓰기 (관리자는 전체 조회) */",
+  "drop policy if exists saved_reports_select on public.saved_reports;",
+  "create policy saved_reports_select on public.saved_reports",
+  "  for select to authenticated using (advisor_id = auth.uid() or public.is_admin());",
+  "",
+  "drop policy if exists saved_reports_insert on public.saved_reports;",
+  "create policy saved_reports_insert on public.saved_reports",
+  "  for insert to authenticated with check (advisor_id = auth.uid());",
+  "",
+  "drop policy if exists saved_reports_update on public.saved_reports;",
+  "create policy saved_reports_update on public.saved_reports",
+  "  for update to authenticated using (advisor_id = auth.uid()) with check (advisor_id = auth.uid());",
+  "",
+  "drop policy if exists saved_reports_delete on public.saved_reports;",
+  "create policy saved_reports_delete on public.saved_reports",
+  "  for delete to authenticated using (advisor_id = auth.uid());",
+  "",
+  "grant select, insert, update, delete on public.saved_reports to authenticated;"
+ ]},
+ '11':{label:"구독 · 결제 관리",need:["subscriptions", "payments"],lines:[
+  "/* 11: 자동결제(정기결제) + 결제 현황 (재실행 안전 · 기존 데이터 손상 없음) */",
+  "/* 토스 빌링키는 서버(service_role)만 접근합니다. 브라우저(anon)에는 billing_key 를 노출하지 않습니다. */",
+  "",
+  "/* ── 구독(자동결제) ─────────────────────────────────────────────── */",
+  "create table if not exists public.subscriptions(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  member_id uuid not null unique references public.profiles(id) on delete cascade,",
+  "  customer_key text,",
+  "  billing_key text,  /* ⚠️ service_role 전용(아래 RLS로 브라우저 차단) */",
+  "  plan text not null default 'basic',  /* basic | pro | team */",
+  "  cycle text not null default 'month',  /* month | year */",
+  "  amount int,",
+  "  status text not null default 'active',  /* active | past_due | canceled */",
+  "  card_company text,",
+  "  card_number text,",
+  "  started_at timestamptz default now(),",
+  "  last_paid_at timestamptz,",
+  "  next_billing_at timestamptz,",
+  "  last_error text,",
+  "  updated_at timestamptz default now()",
+  ");",
+  "create index if not exists subscriptions_due_idx on public.subscriptions(status, next_billing_at);",
+  "",
+  "alter table public.subscriptions enable row level security;",
+  "",
+  "/* 브라우저에서는 '내 구독' 또는 대표/관리자만 조회 (billing_key 는 아래 뷰/컬럼권한으로 보호) */",
+  "drop policy if exists subscriptions_select on public.subscriptions;",
+  "create policy subscriptions_select on public.subscriptions",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin());",
+  "",
+  "/* 쓰기는 서버(service_role)만 — authenticated 에는 insert/update/delete 정책을 두지 않는다. */",
+  "revoke all on public.subscriptions from authenticated;",
+  "grant select (id, member_id, plan, cycle, amount, status, card_company, card_number,",
+  "              started_at, last_paid_at, next_billing_at, updated_at)",
+  "  on public.subscriptions to authenticated;  /* billing_key/customer_key 는 제외(노출 금지) */",
+  "",
+  "/* ── 결제 내역 ──────────────────────────────────────────────────── */",
+  "create table if not exists public.payments(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  member_id uuid not null references public.profiles(id) on delete cascade,",
+  "  subscription_id uuid references public.subscriptions(id) on delete set null,",
+  "  order_id text,",
+  "  payment_key text,",
+  "  amount int,",
+  "  plan text,",
+  "  cycle text,",
+  "  status text not null default 'paid',  /* paid | failed | refunded */",
+  "  fail_reason text,",
+  "  paid_at timestamptz not null default now()",
+  ");",
+  "create index if not exists payments_member_idx on public.payments(member_id, paid_at desc);",
+  "",
+  "alter table public.payments enable row level security;",
+  "",
+  "drop policy if exists payments_select on public.payments;",
+  "create policy payments_select on public.payments",
+  "  for select to authenticated",
+  "  using (member_id = auth.uid() or public.is_admin());",
+  "",
+  "revoke all on public.payments from authenticated;",
+  "grant select on public.payments to authenticated;  /* 쓰기는 서버(service_role)만 */",
+  "",
+  "/* ── 대표(오너) 지정: 앱 설정에서 버튼으로도 가능 ─────────────────── */",
+  "/* 아래 한 줄의 이메일만 본인 것으로 바꿔 실행하면 그 계정만 '설정/보고서'를 볼 수 있습니다. */",
+  "/* insert into public.app_config(key,value) values('owner_email','여기에@본인이메일') */",
+  "/* on conflict (key) do update set value=excluded.value, updated_at=now(); */"
+ ]},
+ '12':{label:"대표 브리핑 보고 채널",need:["reports"],lines:[
+  "/* 12: 윤시스쿨 보고서 — 팀원이 올리고 대표만 열람 (재실행 안전) */",
+  "/* 성장 보고 · 회의 주제 · 자료 정리 · 현안 요청을 대표에게만 전달한다. */",
+  "",
+  "/* 대표(오너) 판별 함수 — app_config.owner_email 과 로그인 이메일 비교. */",
+  "/* owner_email 이 없으면(초기) 관리자(admin)를 대표로 간주해 잠기지 않게 한다. */",
+  "create or replace function public.is_owner()",
+  "returns boolean language plpgsql stable security definer set search_path=public as $$",
+  "declare oe text; me text;",
+  "begin",
+  "  select value into oe from public.app_config where key='owner_email' limit 1;",
+  "  select email into me from auth.users where id = auth.uid();",
+  "  if oe is null or oe = '' then",
+  "    return exists(select 1 from public.profiles where id=auth.uid() and role in ('admin','owner') and active=true);",
+  "  end if;",
+  "  return lower(coalesce(me,'')) = lower(oe)",
+  "      or exists(select 1 from public.profiles where id=auth.uid() and role='owner' and active=true);",
+  "end $$;",
+  "grant execute on function public.is_owner() to authenticated;",
+  "",
+  "create table if not exists public.reports(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  author_id uuid not null references public.profiles(id) on delete cascade,",
+  "  author_name text,",
+  "  kind text not null default 'growth',  /* growth | meeting | material | issue */",
+  "  title text not null,",
+  "  body text,",
+  "  read_at timestamptz,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create index if not exists reports_created_idx on public.reports(created_at desc);",
+  "create index if not exists reports_author_idx on public.reports(author_id, created_at desc);",
+  "",
+  "alter table public.reports enable row level security;",
+  "",
+  "/* 작성자 본인 + 대표만 조회 (다른 팀원에게는 보이지 않음) */",
+  "drop policy if exists reports_select on public.reports;",
+  "create policy reports_select on public.reports",
+  "  for select to authenticated",
+  "  using (author_id = auth.uid() or public.is_owner());",
+  "",
+  "/* 본인 이름으로만 제출 */",
+  "drop policy if exists reports_insert on public.reports;",
+  "create policy reports_insert on public.reports",
+  "  for insert to authenticated with check (author_id = auth.uid());",
+  "",
+  "/* 확인 처리(read_at)는 대표만 */",
+  "drop policy if exists reports_update on public.reports;",
+  "create policy reports_update on public.reports",
+  "  for update to authenticated using (public.is_owner()) with check (public.is_owner());",
+  "",
+  "/* 삭제는 대표 또는 작성자 본인 */",
+  "drop policy if exists reports_delete on public.reports;",
+  "create policy reports_delete on public.reports",
+  "  for delete to authenticated using (public.is_owner() or author_id = auth.uid());",
+  "",
+  "grant select, insert, update, delete on public.reports to authenticated;"
+ ]},
+ '13':{label:"팀 · AI 부서 보고 · 자동 백업",need:["teams", "team_members", "backups"],lines:[
+  "/* 13: 팀(그룹) · 팀 성장 대시보드 · AI 부서 보고 · 아이디어 · 자동 백업 (재실행 안전) */",
+  "",
+  "/* ── 리더 판별 ──────────────────────────────────────────────── */",
+  "create or replace function public.is_leader()",
+  "returns boolean language sql stable security definer set search_path=public as $$",
+  "  select exists(",
+  "    select 1 from public.profiles",
+  "     where id=auth.uid() and active=true",
+  "       and role in ('admin','owner','lead','manager','leader')",
+  "  ) or public.is_owner();",
+  "$$;",
+  "grant execute on function public.is_leader() to authenticated;",
+  "",
+  "/* ── 팀(그룹) ───────────────────────────────────────────────── */",
+  "create table if not exists public.teams(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  name text not null,",
+  "  color text default '#1A56DB',",
+  "  leader_id uuid references public.profiles(id) on delete set null,",
+  "  goal_note text,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create table if not exists public.team_members(",
+  "  team_id uuid not null references public.teams(id) on delete cascade,",
+  "  member_id uuid not null references public.profiles(id) on delete cascade,",
+  "  joined_at timestamptz not null default now(),",
+  "  primary key (team_id, member_id)",
+  ");",
+  "create index if not exists team_members_member_idx on public.team_members(member_id);",
+  "",
+  "alter table public.teams enable row level security;",
+  "alter table public.team_members enable row level security;",
+  "",
+  "/* 팀 구성은 모든 로그인 사용자가 조회 가능(대시보드에서 그룹을 나눠 봐야 함) */",
+  "drop policy if exists teams_select on public.teams;",
+  "create policy teams_select on public.teams for select to authenticated using (true);",
+  "drop policy if exists teams_write on public.teams;",
+  "create policy teams_write on public.teams for all to authenticated",
+  "  using (public.is_owner()) with check (public.is_owner());",
+  "",
+  "drop policy if exists team_members_select on public.team_members;",
+  "create policy team_members_select on public.team_members for select to authenticated using (true);",
+  "drop policy if exists team_members_write on public.team_members;",
+  "create policy team_members_write on public.team_members for all to authenticated",
+  "  using (public.is_owner()) with check (public.is_owner());",
+  "",
+  "grant select on public.teams, public.team_members to authenticated;",
+  "grant insert, update, delete on public.teams, public.team_members to authenticated;",
+  "",
+  "/* ── AI 부서 보고 ────────────────────────────────────────────── */",
+  "/* period: daily | weekly | monthly   dept: 부서 코드 */",
+  "create table if not exists public.ai_dept_reports(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  dept text not null,",
+  "  dept_name text,",
+  "  period text not null default 'daily',",
+  "  ref_date date not null default current_date,",
+  "  title text not null,",
+  "  body text,",
+  "  metrics jsonb default '{}'::jsonb,",
+  "  team_id uuid references public.teams(id) on delete set null,",
+  "  author_id uuid references public.profiles(id) on delete set null,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create unique index if not exists ai_dept_reports_uniq",
+  "  on public.ai_dept_reports(dept, period, ref_date, coalesce(team_id,'00000000-0000-0000-0000-000000000000'::uuid));",
+  "create index if not exists ai_dept_reports_date_idx on public.ai_dept_reports(ref_date desc, period);",
+  "",
+  "alter table public.ai_dept_reports enable row level security;",
+  "/* 대표·리더만 열람 (팀원에게는 보이지 않음) */",
+  "drop policy if exists ai_dept_reports_select on public.ai_dept_reports;",
+  "create policy ai_dept_reports_select on public.ai_dept_reports",
+  "  for select to authenticated using (public.is_leader());",
+  "drop policy if exists ai_dept_reports_write on public.ai_dept_reports;",
+  "create policy ai_dept_reports_write on public.ai_dept_reports",
+  "  for all to authenticated using (public.is_leader()) with check (public.is_leader());",
+  "grant select, insert, update, delete on public.ai_dept_reports to authenticated;",
+  "",
+  "/* ── AI 아이디어 (승인만 남고, 해지하면 삭제) ───────────────────── */",
+  "create table if not exists public.ai_ideas(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  dept text not null,",
+  "  dept_name text,",
+  "  title text not null,",
+  "  body text,",
+  "  expected_effect text,",
+  "  status text not null default 'pending',  /* pending | approved */",
+  "  decided_by uuid references public.profiles(id) on delete set null,",
+  "  decided_at timestamptz,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create index if not exists ai_ideas_status_idx on public.ai_ideas(status, created_at desc);",
+  "",
+  "alter table public.ai_ideas enable row level security;",
+  "drop policy if exists ai_ideas_select on public.ai_ideas;",
+  "create policy ai_ideas_select on public.ai_ideas",
+  "  for select to authenticated using (public.is_leader());",
+  "drop policy if exists ai_ideas_write on public.ai_ideas;",
+  "create policy ai_ideas_write on public.ai_ideas",
+  "  for all to authenticated using (public.is_leader()) with check (public.is_leader());",
+  "grant select, insert, update, delete on public.ai_ideas to authenticated;",
+  "",
+  "/* ⚠️ '해지'는 UPDATE(status='rejected')가 아니라 DELETE 로 처리한다. */",
+  "/* 승인한 아이디어만 남기고 해지한 것은 흔적을 남기지 않기 위함. */",
+  "",
+  "/* ── 자동 백업 ──────────────────────────────────────────────── */",
+  "create table if not exists public.backups(",
+  "  id uuid primary key default gen_random_uuid(),",
+  "  kind text not null default 'daily',  /* daily | manual */",
+  "  label text,",
+  "  ref_date date not null default current_date,",
+  "  rows_count int default 0,",
+  "  size_bytes int default 0,",
+  "  payload jsonb,",
+  "  created_by uuid references public.profiles(id) on delete set null,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "create unique index if not exists backups_daily_uniq on public.backups(ref_date) where kind='daily';",
+  "create index if not exists backups_created_idx on public.backups(created_at desc);",
+  "",
+  "alter table public.backups enable row level security;",
+  "drop policy if exists backups_select on public.backups;",
+  "create policy backups_select on public.backups",
+  "  for select to authenticated using (public.is_owner());",
+  "drop policy if exists backups_insert on public.backups;",
+  "create policy backups_insert on public.backups",
+  "  for insert to authenticated with check (public.is_leader());",
+  "drop policy if exists backups_delete on public.backups;",
+  "create policy backups_delete on public.backups",
+  "  for delete to authenticated using (public.is_owner());",
+  "grant select, insert, delete on public.backups to authenticated;",
+  "",
+  "/* ── 팀 성장 대시보드 열람권 ──────────────────────────────────── */",
+  "/* app_config.key = 'growth_scope' : all(전원) | leader(리더 이상) | owner(대표만) */",
+  "insert into public.app_config(key,value) values('growth_scope','all')",
+  "  on conflict (key) do nothing;"
+ ]},
+ '17':{label:"대표 계정 권한 복구",need:[],repair:true,lines:[
+  "set search_path = public;",
+  "",
+  "update public.profiles",
+  "   set role = 'admin', active = true, status = 'approved'",
+  " where id in (select id from auth.users where lower(btrim(email)) = 'asdf827258@gmail.com');",
+  "",
+  "insert into public.app_config(key, value)",
+  "values ('owner_email', 'asdf827258@gmail.com')",
+  "on conflict (key) do update set value = excluded.value, updated_at = now();",
+  "",
+  "create or replace function public.is_owner()",
+  "returns boolean language plpgsql stable security definer set search_path=public as $fn$",
+  "declare oe text; me text;",
+  "begin",
+  "  begin",
+  "    select value into oe from public.app_config where key = 'owner_email' limit 1;",
+  "  exception when others then",
+  "    oe := null;",
+  "  end;",
+  "  select email into me from auth.users where id = auth.uid();",
+  "  if oe is null or btrim(oe) = '' then",
+  "    return exists(select 1 from public.profiles where id = auth.uid() and role in ('admin','owner'));",
+  "  end if;",
+  "  return me is not null and lower(btrim(me)) = lower(btrim(oe));",
+  "end;",
+  "$fn$;",
+  "grant execute on function public.is_owner() to authenticated;",
+  "",
+  "drop policy if exists teams_insert on public.teams;",
+  "create policy teams_insert on public.teams for insert to authenticated",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists teams_update on public.teams;",
+  "create policy teams_update on public.teams for update to authenticated",
+  "  using (public.is_admin() or public.is_owner())",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists teams_delete on public.teams;",
+  "create policy teams_delete on public.teams for delete to authenticated",
+  "  using (public.is_admin() or public.is_owner());",
+  "drop policy if exists teams_write on public.teams;",
+  "",
+  "drop policy if exists team_members_insert on public.team_members;",
+  "create policy team_members_insert on public.team_members for insert to authenticated",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists team_members_delete on public.team_members;",
+  "create policy team_members_delete on public.team_members for delete to authenticated",
+  "  using (public.is_admin() or public.is_owner());",
+  "drop policy if exists team_members_write on public.team_members;",
+  "",
+  "grant insert, update, delete on public.teams, public.team_members to authenticated;",
+  "",
+  "select",
+  "  (select count(*) from public.profiles p join auth.users u on u.id = p.id",
+  "    where lower(btrim(u.email)) = 'asdf827258@gmail.com' and p.role = 'admin') as owner_role_admin,",
+  "  (select value from public.app_config where key = 'owner_email') as owner_email_set;",
+  "",
+  "notify pgrst, 'reload schema';"
+ ]},
+ '18':{label:"DB CRM · 소속 구분 컬럼 보정",need:[],repair:true,lines:[
+  "set search_path = public;",
+  "",
+  "alter table public.teams add column if not exists color text default '#1A56DB';",
+  "alter table public.teams add column if not exists leader_id uuid references public.profiles(id) on delete set null;",
+  "alter table public.teams add column if not exists goal_note text;",
+  "alter table public.teams add column if not exists created_at timestamptz not null default now();",
+  "",
+  "create table if not exists public.team_members(",
+  "  team_id uuid not null references public.teams(id) on delete cascade,",
+  "  member_id uuid not null references public.profiles(id) on delete cascade,",
+  "  joined_at timestamptz not null default now(),",
+  "  primary key (team_id, member_id)",
+  ");",
+  "",
+  "update public.profiles",
+  "   set role = 'admin', active = true, status = 'approved'",
+  " where id in (select id from auth.users where lower(btrim(email)) = 'asdf827258@gmail.com');",
+  "",
+  "insert into public.app_config(key, value)",
+  "values ('owner_email', 'asdf827258@gmail.com')",
+  "on conflict (key) do update set value = excluded.value, updated_at = now();",
+  "",
+  "create or replace function public.is_owner()",
+  "returns boolean language plpgsql stable security definer set search_path=public as $fn$",
+  "declare oe text; me text;",
+  "begin",
+  "  begin",
+  "    select value into oe from public.app_config where key = 'owner_email' limit 1;",
+  "  exception when others then",
+  "    oe := null;",
+  "  end;",
+  "  select email into me from auth.users where id = auth.uid();",
+  "  if oe is null or btrim(oe) = '' then",
+  "    return exists(select 1 from public.profiles where id = auth.uid() and role in ('admin','owner'));",
+  "  end if;",
+  "  return me is not null and lower(btrim(me)) = lower(btrim(oe));",
+  "end;",
+  "$fn$;",
+  "grant execute on function public.is_owner() to authenticated;",
+  "",
+  "alter table public.profiles drop constraint if exists profiles_role_check;",
+  "alter table public.profiles add constraint profiles_role_check",
+  "  check (role in ('admin','owner','master','manager','lead','leader','member'));",
+  "",
+  "drop policy if exists teams_insert on public.teams;",
+  "create policy teams_insert on public.teams for insert to authenticated",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists teams_update on public.teams;",
+  "create policy teams_update on public.teams for update to authenticated",
+  "  using (public.is_admin() or public.is_owner())",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists teams_delete on public.teams;",
+  "create policy teams_delete on public.teams for delete to authenticated",
+  "  using (public.is_admin() or public.is_owner());",
+  "",
+  "alter table public.team_members enable row level security;",
+  "drop policy if exists team_members_select on public.team_members;",
+  "create policy team_members_select on public.team_members for select to authenticated using (true);",
+  "drop policy if exists team_members_insert on public.team_members;",
+  "create policy team_members_insert on public.team_members for insert to authenticated",
+  "  with check (public.is_admin() or public.is_owner());",
+  "drop policy if exists team_members_delete on public.team_members;",
+  "create policy team_members_delete on public.team_members for delete to authenticated",
+  "  using (public.is_admin() or public.is_owner());",
+  "",
+  "grant select, insert, update, delete on public.teams, public.team_members to authenticated;",
+  "",
+  "create or replace function public.is_viewer_all()",
+  "returns boolean language sql stable security definer set search_path = public as $fn$",
+  "  select exists(",
+  "    select 1 from public.profiles",
+  "    where id = auth.uid() and role in ('admin','owner','master') and coalesce(active,true) = true",
+  "  );",
+  "$fn$;",
+  "grant execute on function public.is_viewer_all() to authenticated;",
+  "",
+  "drop policy if exists \"dbs_master_select\" on public.dbs;",
+  "create policy \"dbs_master_select\" on public.dbs",
+  "  for select to authenticated using (public.is_viewer_all());",
+  "drop policy if exists \"calls_master_select\" on public.calls;",
+  "create policy \"calls_master_select\" on public.calls",
+  "  for select to authenticated using (public.is_viewer_all());",
+  "",
+  "update public.profiles p",
+  "   set workspace = 'crm'",
+  "  from auth.users u",
+  " where u.id = p.id",
+  "   and lower(btrim(coalesce(u.email,''))) <> 'asdf827258@gmail.com'",
+  "   and coalesce(u.raw_user_meta_data->>'app','') <> 'apex'",
+  "   and coalesce(p.workspace,'both') <> 'apex';",
+  "",
+  "update public.profiles p",
+  "   set workspace = 'both'",
+  "  from auth.users u",
+  " where u.id = p.id",
+  "   and lower(btrim(coalesce(u.email,''))) = 'asdf827258@gmail.com';",
+  "",
+  "create or replace function public.handle_new_user()",
+  "returns trigger language plpgsql security definer set search_path=public as $fn$",
+  "begin",
+  "  insert into public.profiles(id, name, role, status, workspace)",
+  "  values (new.id,",
+  "          coalesce(nullif(new.raw_user_meta_data->>'name',''), split_part(coalesce(new.email,''),'@',1), ''),",
+  "          'member', 'pending',",
+  "          case when coalesce(new.raw_user_meta_data->>'app','') = 'apex' then 'apex' else 'crm' end)",
+  "  on conflict (id) do nothing;",
+  "  return new;",
+  "end;",
+  "$fn$;",
+  "drop trigger if exists on_auth_user_created on auth.users;",
+  "create trigger on_auth_user_created after insert on auth.users",
+  "  for each row execute function public.handle_new_user();",
+  "",
+  "select",
+  "  (select count(*) from information_schema.columns",
+  "    where table_schema='public' and table_name='teams'",
+  "      and column_name in ('color','leader_id','goal_note')) as teams_columns_3_expected,",
+  "  (select count(*) from public.profiles p join auth.users u on u.id = p.id",
+  "    where lower(btrim(u.email)) = 'asdf827258@gmail.com' and p.role = 'admin') as owner_admin_1_expected,",
+  "  (select count(*) from public.profiles where workspace = 'crm') as crm_members,",
+  "  (select count(*) from public.profiles where workspace in ('apex','both')) as apex_members;",
+  "",
+  "notify pgrst, 'reload schema';"
  ]},
  '23':{label:"조직도 서버 저장",need:["org_members"],lines:[
   "set search_path = public;",
@@ -26323,13 +27286,13 @@ var HX_SQL={
   "set search_path = public;",
   "",
   "/* ── ⓪ 사전 확인 — 권한 판별 함수가 있어야 RLS 정책을 만들 수 있다 ────────",
-  "   (없으면 migration_ALL_NOW.sql 을 먼저 실행하세요) */",
+  "   (없으면 「한 번에 전부」 SQL 을 먼저 실행하세요) */",
   "do $$",
   "begin",
   "  if to_regprocedure('public.is_admin()')  is null",
   "  or to_regprocedure('public.is_owner()')  is null",
   "  or to_regprocedure('public.is_leader()') is null then",
-  "    raise exception '권한 함수(is_admin/is_owner/is_leader)가 없습니다. migration_ALL_NOW.sql 을 먼저 실행한 뒤 이 SQL을 다시 실행하세요.';",
+  "    raise exception '권한 함수(is_admin/is_owner/is_leader)가 없습니다. 「한 번에 전부」 SQL 을 먼저 실행한 뒤 이 SQL을 다시 실행하세요.';",
   "  end if;",
   "end $$;",
   "",
@@ -26587,7 +27550,7 @@ var HX_SQL={
   "do $$",
   "begin",
   "  if to_regclass('public.invest_accounts') is null then",
-  "    raise exception 'migration_33_invest.sql 을 먼저 실행하세요 (invest_accounts 표가 없습니다).';",
+  "    raise exception '먼저 「투자·경제 — 주식·펀드 계좌 서버 저장」 SQL 을 실행하세요 (invest_accounts 표가 없습니다).';",
   "  end if;",
   "end $$;",
   "",
@@ -26783,6 +27746,39 @@ function hxSqlCopy(k){
   if(typeof copyText==='function')copyText(m.lines.join('\n'));
   toast(m.label+' SQL 을 복사했습니다 — Supabase 에 붙여넣고 RUN 하세요');
 }
+/* ── 「그 파일을 여세요」 라고 말하지 않는다 ──────────────────────
+   화면이 파일 이름을 알려 주면, 대표님께는 <b>파일을 찾아 여는 일</b>이
+   남는다. 그러면 안 하신다 — 실제로 아무도 안 했다.
+   필요한 SQL 은 이제 전부 앱 안에 있다(HX_SQL). 그러니 화면은
+   <b>무엇이 없는지</b>만 말하고 <b>누를 자리</b>를 같이 준다.
+   한 곳에서만 만든다 — 같은 말을 스무 군데 적으면 한 곳만 고치게 된다. */
+function sqlGo(k){
+  var m=HX_SQL[k];
+  if(!m){toast('필요한 SQL 을 찾지 못했습니다 — 시스템 점검에서 확인해 주세요');return;}
+  /* 순서가 중요하다. 창을 먼저 열면 이 화면이 초점을 잃어 복사가 거부된다. */
+  if(typeof copyText==='function')copyText(m.lines.join('\n'));
+  var w=null;try{w=window.open(SUPA_SQL_URL,'_blank','noopener');}catch(e){}
+  if(w)toast(m.label+' SQL 을 복사했습니다 — 붙여넣고 RUN 을 누르세요',7000);
+  else toast('복사했습니다. 새 창이 막혔으니 Supabase 를 직접 열어 붙여넣으세요',9000);
+}
+/* 알림 상자 — 화면 안에 그대로 끼워 넣는다 */
+function sqlNeedHtml(k,what){
+  var m=HX_SQL[k],lab=m?m.label:'';
+  return '<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;'+
+    'font-size:12px;line-height:1.7">'+
+    '<b>'+osEsc(what||'담을 자리')+'가 서버에 아직 없습니다.</b> 한 번만 만들면 됩니다.'+
+    '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'+
+    '<button type="button" class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" '+
+      'onclick="sqlGo(\''+k+'\')">📋 복사하고 Supabase 열기</button>'+
+    '<button type="button" class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" '+
+      'onclick="go(\'health\')">시스템 점검에서 보기</button></div>'+
+    (lab?('<div style="margin-top:7px;font-size:11px;opacity:.85">붙여넣고 RUN — 「'+osEsc(lab)+'」</div>'):'')+
+    '</div>';
+}
+/* toast 처럼 한 줄만 쓸 수 있는 자리 */
+function sqlNeedText(what){
+  return (what||'담을 자리')+'가 서버에 아직 없습니다 — 시스템 점검 → 필요한 SQL 에서 눌러 만드세요';
+}
 function hxSqlOpen(){
   var w=window.open(SUPA_SQL_URL,'_blank','noopener');
   if(!w)toast('새 창이 막혔습니다. 주소를 복사해 직접 여세요.');
@@ -26803,7 +27799,7 @@ function hxSqlDone(k){
   return true;
 }
 function hxSqlCardHtml(){
-  var ks=['00','23','24','25','26','27','28','33','39'],h='';
+  var ks=['00','06','07','09','10','11','12','13','17','18','23','24','25','26','27','28','33','39'],h='';
   h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🗂️</span>필요한 SQL</div>'+
     '<div class="card-desc">눌러서 복사하고 Supabase 에 붙여넣으면 됩니다. 파일을 따로 열지 않아도 됩니다. '+
     '몇 번을 다시 실행해도 안전합니다. <b>맨 위 하나만 실행하면 전부 끝납니다.</b></div></div><div class="card-body">'+
@@ -26992,7 +27988,7 @@ function hxServer(cb){
         var owner=ps.filter(function(x){return x.role==='owner'||x.role==='admin';});
         hxAdd(R,'팀','등급 미설정',noTier.length?'warn':'ok',
           noTier.length?(noTier.length+'명 — '+noTier.slice(0,4).map(function(x){return x.name||'?';}).join(', ')+(noTier.length>4?' 외':'')):'전원 설정됨',
-          noTier.length?'설정에서 등급을 지정하거나 migration_21 을 실행하세요':'','settings');
+          noTier.length?'설정 → 팀원 권한 관리에서 등급을 지정하세요':'','settings');
         hxAdd(R,'팀','소속 미설정',noWs.length?'warn':'ok',
           noWs.length?(noWs.length+'명'):'전원 설정됨',
           noWs.length?'설정 → 팀원 권한 관리에서 소속을 지정하세요':'','settings');
@@ -27005,12 +28001,14 @@ function hxServer(cb){
   },function(){cb([]);});
 }
 function hxSqlFor(miss){
-  var map={daily_checks:'migration_24_checks.sql',suggestions:'migration_25_ops.sql',
-    health_checks:'migration_25_ops.sql',org_members:'migration_23_org.sql'};
+  /* 파일 이름이 아니라 <b>앱 안 SQL 칸의 이름</b>을 돌려준다 —
+     대표님이 찾아 열 파일은 이제 없다. 눌러서 복사하면 된다. */
+  var map={daily_checks:'실행 체크판 · 팀 체크 현황',suggestions:'시스템 점검 · 건의함',
+    health_checks:'시스템 점검 · 건의함',org_members:'조직도 서버 저장'};
   var out={},i;
   for(i=0;i<miss.length;i++){var f=map[miss[i]];if(f)out[f]=1;}
   var ks=[];for(var k in out)if(out.hasOwnProperty(k))ks.push(k);
-  return ks.length?ks.join(' · '):'migration_ALL.sql';
+  return ks.length?ks.join(' · '):'한 번에 전부';
 }
 
 /* AI 를 실제로 한 번 불러 본다 — 버튼을 눌렀을 때만 (비용이 든다) */
@@ -27122,7 +28120,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=35;
+var SETUP_VER=36;
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
@@ -27206,7 +28204,7 @@ function setupBarHtml(){
         ? '붙여넣기(Ctrl+V) 하고 <b>RUN</b> 을 누른 뒤, 돌아와서 <b>다 됐는지 확인</b>을 눌러 주세요.'
         : '버튼을 누르면 <b>SQL 복사</b>와 <b>Supabase 열기</b>가 한 번에 됩니다. 붙여넣고 RUN 만 누르면 끝입니다.')+
       '</div></div></div>'+
-    '<div class="stp-w">이걸 하기 전까지 <b>팀 코칭 기록 저장 · 건의함 함께 보기 · 조직도 계정 연결</b>이 되지 않습니다. '+
+    '<div class="stp-w">이걸 하기 전까지 <b>팀 코칭 기록 저장 · 건의함 함께 보기 · 조직도 계정 연결 · 팀 하루 한 장 피드백 보내기</b>가 되지 않습니다. '+
       '몇 번을 다시 실행해도 안전합니다.</div>'+
     '<div class="btn-row stp-b">'+
       '<button class="btn '+(step?'btn-ghost':'btn-primary')+'" onclick="setupGo()">'+
@@ -27361,7 +28359,7 @@ function vcLoad(){
     VOICE.busy=false;
     if(r.error){
       VOICE.err=/does not exist|relation/i.test(r.error.message||'')
-        ?'건의함 표가 아직 없습니다. Supabase 에서 <b>migration_25_ops.sql</b> 을 1회 실행해 주세요.'
+        ?'__SQL25__'
         :(r.error.message||'불러오지 못했습니다');
       vcPaint();return;
     }
@@ -27470,6 +28468,8 @@ function vcInnerHtml(){
       '<span style="font-size:11px;color:var(--ink-5)">화면 이름·기기·AI 엔진이 자동으로 함께 갑니다. <b>고객 정보는 담기지 않습니다.</b></span></div>'+
     '</div></div>';
 
+  if(VOICE.err==='__SQL25__')
+    return h+'<div class="card"><div class="card-body">'+sqlNeedHtml('25','건의함')+'</div></div>';
   if(VOICE.err)return h+'<div class="card"><div class="card-body"><div class="notice">'+VOICE.err+'</div></div></div>';
 
   /* 건의함은 팀이 같이 보는 게시판이다 — 남이 올린 것도, 거기 달린 답도 같이 본다.
@@ -27605,7 +28605,7 @@ function ctLoad(){
     CT.warn=[];
     if(r[0].error){CT.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');CT.loaded=true;ctPaint();return;}
     if(r[1].error){
-      CT.err='체크 기록 테이블이 아직 없습니다. Supabase에서 <b>migration_24_checks.sql</b>을 1회 실행해 주세요.';
+      CT.err='__SQL24__';
       CT.loaded=true;ctPaint();return;
     }
     var profs=(r[0].data||[]).filter(function(x){
@@ -27738,6 +28738,8 @@ function ctRowHtml(p){
 
 function ctInnerHtml(){
   if(!CT.loaded)return '<div class="card"><div class="card-body" style="color:var(--ink-4);font-size:12.5px">불러오는 중…</div></div>';
+  if(CT.err==='__SQL24__')
+    return '<div class="card"><div class="card-body">'+sqlNeedHtml('24','체크 기록')+'</div></div>';
   if(CT.err)return '<div class="card"><div class="card-body"><div class="notice">'+CT.err+'</div></div></div>';
   var arr=ctView(),all=CT.people.filter(function(p){return !CT.team||p.team===CT.team;});
   var h='<div class="ct-sum">'+
@@ -35527,7 +36529,26 @@ function osNeedTierFor(tab){
   if(g)return osKeyReqTier(g);
   return 'free';
 }
+/* 로그인이 없어서 막힌 것과 등급이 낮아서 막힌 것은 다른 일이다.
+   섞어서 말하면 로그인만 하면 되는 사람이 결제 화면을 본다.
+   특히 폰 홈 화면 앱은 사파리와 저장 공간이 달라 <b>담은 직후엔 늘 로그아웃</b>이다. */
+function osNeedLoginHtml(){
+  return '<div class="card"><div class="card-body">'+
+    '<div style="font-size:15px;font-weight:800;color:var(--ink-1)">🔑 로그인하면 열립니다</div>'+
+    '<div style="font-size:13px;color:var(--ink-2);line-height:1.75;margin-top:8px">'+
+    '<b>결제가 아니라 로그인</b>이 필요한 화면입니다.<br>'+
+    '폰 홈 화면에 담은 앱은 사파리와 저장 공간이 따로입니다 — '+
+    '<b>앱 안에서 한 번만</b> 로그인하시면 그다음부터는 그대로 열립니다.</div>'+
+    '<div class="btn-row" style="margin-top:12px">'+
+    '<button class="btn btn-primary" onclick="osOpenModal()">로그인 / 계정</button></div>'+
+    '</div></div>';
+}
 function osBlockedPageHtml(tab){
+  if(!OS.profile)
+    return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">LOGIN</div>'+
+      '<div class="page-title">🔑 로그인하면 열립니다</div>'+
+      '<div class="page-desc">이 메뉴는 <b>결제가 아니라 로그인</b>이 필요합니다.</div></div>'+
+      osNeedLoginHtml()+'</div>';
   var need=osNeedTierFor(tab),t=osTierById(need)||{label:need},mine=osTierById(osMyTier())||{label:'무료'};
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">UPGRADE</div><div class="page-title">🔒 상위 플랜 기능입니다</div>'+
     '<div class="page-desc">이 메뉴는 <b>'+osEsc(t.label)+'</b> 이상에서 이용할 수 있습니다. 현재 내 등급: <b>'+osEsc(mine.label)+'</b></div></div>'+
@@ -35924,7 +36945,7 @@ function lgAgreeSensitive(){
     if(b){b.disabled=false;b.textContent='동의하고 계속';}
     lgCloseSensitive(true);
     if(ok)toast('동의했습니다. 하던 작업을 이어서 진행합니다.',5000);
-    else toast('동의했습니다. 하던 작업은 그대로 진행합니다. (서버 기록은 남기지 못했습니다 — migration_32_legal.sql 을 한 번 실행하세요)',9000);
+    else toast('동의했습니다. 하던 작업은 그대로 진행합니다. (서버 기록은 남기지 못했습니다 — 시스템 점검 → 필요한 SQL 에서 「한 번에 전부」 를 한 번 누르시면 남습니다)',9000);
   });
 }
 function lgSensitiveHtml(){
@@ -37204,17 +38225,17 @@ var OS_DIAG={rows:[],busy:false,done:false};
 var OS_DIAG_TABLES=[
   {t:'profiles',        need:'core', why:'로그인 · 권한 · 팀원 목록',        fix:'가입 승인 SQL'},
   {t:'clients',         need:'core', why:'고객 365일',                       fix:'기본 스키마'},
-  {t:'attendance',      need:'feat', why:'출근 현황 · 성장 점수',            fix:'migration_07'},
+  {t:'attendance',      need:'feat', why:'출근 현황 · 성장 점수',            fix:'서버 준비 SQL',sql:'07'},
   {t:'app_config',      need:'feat', why:'대표 지정 · 열람권 · 각종 설정',   fix:'복구 SQL'},
-  {t:'saved_reports',   need:'feat', why:'고객 365일 상담자료 저장',         fix:'migration_10'},
-  {t:'subscriptions',   need:'feat', why:'구독 · 결제 관리',                 fix:'migration_11'},
-  {t:'payments',        need:'feat', why:'결제 내역',                        fix:'migration_11'},
-  {t:'reports',         need:'feat', why:'대표 브리핑 보고 채널',            fix:'migration_12'},
-  {t:'teams',           need:'feat', why:'팀 구분 · 팀 성장 대시보드',       fix:'migration_13'},
-  {t:'team_members',    need:'feat', why:'팀원 배정',                        fix:'migration_13'},
-  {t:'ai_dept_reports', need:'feat', why:'AI 부서 보고',                     fix:'migration_13'},
-  {t:'ai_ideas',        need:'feat', why:'AI 아이디어 승인 · 해지',          fix:'migration_13'},
-  {t:'backups',         need:'feat', why:'자동 백업',                        fix:'migration_13'},
+  {t:'saved_reports',   need:'feat', why:'고객 365일 상담자료 저장',         fix:'서버 준비 SQL',sql:'10'},
+  {t:'subscriptions',   need:'feat', why:'구독 · 결제 관리',                 fix:'서버 준비 SQL',sql:'11'},
+  {t:'payments',        need:'feat', why:'결제 내역',                        fix:'서버 준비 SQL',sql:'11'},
+  {t:'reports',         need:'feat', why:'대표 브리핑 보고 채널',            fix:'서버 준비 SQL',sql:'12'},
+  {t:'teams',           need:'feat', why:'팀 구분 · 팀 성장 대시보드',       fix:'서버 준비 SQL',sql:'13'},
+  {t:'team_members',    need:'feat', why:'팀원 배정',                        fix:'서버 준비 SQL',sql:'13'},
+  {t:'ai_dept_reports', need:'feat', why:'AI 부서 보고',                     fix:'서버 준비 SQL',sql:'13'},
+  {t:'ai_ideas',        need:'feat', why:'AI 아이디어 승인 · 해지',          fix:'서버 준비 SQL',sql:'13'},
+  {t:'backups',         need:'feat', why:'자동 백업',                        fix:'서버 준비 SQL',sql:'13'},
   {t:'os_notices',      need:'feat', why:'공지사항',                         fix:'공지 SQL'},
   {t:'ai_usage',        need:'feat', why:'AI 사용량 집계',                   fix:'기본 스키마'},
   {t:'audit_logs',      need:'feat', why:'감사 로그',                         fix:'복구 SQL'},
@@ -37255,22 +38276,22 @@ function osDiagRun(){
 
   var jobs=OS_DIAG_TABLES.map(function(x){
     return sb.from(x.t).select('*',{count:'exact',head:true}).limit(1).then(
-      function(r){return {kind:'table',name:x.t,why:x.why,fix:x.fix,need:x.need,st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:(r&&r.count)};},
-      function(e){return {kind:'table',name:x.t,why:x.why,fix:x.fix,need:x.need,st:'deny',err:e||null,cnt:null};});
+      function(r){return {kind:'table',name:x.t,why:x.why,fix:x.fix,sql:x.sql,need:x.need,st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:(r&&r.count)};},
+      function(e){return {kind:'table',name:x.t,why:x.why,fix:x.fix,sql:x.sql,need:x.need,st:'deny',err:e||null,cnt:null};});
   }).concat([
     sb.from('profiles').select('workspace').limit(1).then(
-      function(r){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
-      function(e){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'migration_18',need:'feat',st:'none',err:e||null,cnt:null};})
+      function(r){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'서버 준비 SQL',sql:'18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
+      function(e){return {kind:'table',name:'profiles.workspace',why:'APEX/CRM 회원 소속 구분 컬럼',fix:'서버 준비 SQL',sql:'18',need:'feat',st:'none',err:e||null,cnt:null};})
     ,sb.from('teams').select('name,color,leader_id').limit(1).then(
-      function(r){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'초기 버전 teams 테이블에는 color 컬럼이 없어 팀 저장이 실패합니다',fix:'migration_18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
-      function(e){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'teams 컬럼 확인',fix:'migration_18',need:'feat',st:'broken',err:e||null,cnt:null};})
+      function(r){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'초기 버전 teams 테이블에는 color 컬럼이 없어 팀 저장이 실패합니다',fix:'서버 준비 SQL',sql:'18',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,cnt:null};},
+      function(e){return {kind:'table',name:'teams 구조(색상·리더 컬럼)',why:'teams 컬럼 확인',fix:'서버 준비 SQL',sql:'18',need:'feat',st:'broken',err:e||null,cnt:null};})
     ,sb.from('teams').insert({name:'진단용'+Date.now(),color:'#94A3B8'}).select('id').single().then(
       function(r){
         if(r&&r.data&&r.data.id){try{sb.from('teams')['delete']().eq('id',r.data.id).then(function(){},function(){});}catch(e){}}
-        if(r&&r.error)return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 에 진짜로 한 줄 써 본 결과입니다',fix:'migration_17',need:'feat',st:'broken',err:r.error,cnt:null};
+        if(r&&r.error)return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 에 진짜로 한 줄 써 본 결과입니다',fix:'서버 준비 SQL',sql:'17',need:'feat',st:'broken',err:r.error,cnt:null};
         return {kind:'probe',name:'팀 만들기 실제 테스트',why:'진단용 팀을 만들고 바로 지웠습니다 — 쓰기 권한 정상',fix:'',need:'feat',st:'ok',err:null,cnt:null};
       },
-      function(e){return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 테이블 쓰기',fix:'migration_17',need:'feat',st:'broken',err:e||null,cnt:null};})
+      function(e){return {kind:'probe',name:'팀 만들기 실제 테스트',why:'teams 테이블 쓰기',fix:'서버 준비 SQL',sql:'17',need:'feat',st:'broken',err:e||null,cnt:null};})
   ]).concat(OS_DIAG_FNS.map(function(x){
     return sb.rpc(x.f).then(
       function(r){return {kind:'fn',name:x.f+'()',why:x.why,fix:'복구 SQL',need:'feat',st:osDiagKind(r&&r.error),err:(r&&r.error)||null,val:(r&&r.data)};},
@@ -37319,7 +38340,11 @@ function osDiagRender(){
         (em?'<div style="font-size:10.5px;color:#B91C1C;margin-top:3px;word-break:break-all">'+osEsc(em)+'</div>':'')+
       '</div>'+
       '<div style="white-space:nowrap;display:flex;gap:6px;align-items:center">'+
-        (r.st==='ok'?'':'<span style="font-size:10px;color:var(--ink-5)">'+osEsc(r.fix)+'</span>')+osDiagBadge(r.st)+
+        (r.st==='ok'?'':(r.sql
+          ?('<button type="button" onclick="sqlGo(\''+r.sql+'\')" style="font-size:10px;font-weight:800;'+
+            'border:1px solid var(--primary);background:#fff;color:var(--primary);border-radius:7px;'+
+            'padding:4px 9px;cursor:pointer;font-family:inherit">📋 만들기</button>')
+          :('<span style="font-size:10px;color:var(--ink-5)">'+osEsc(r.fix)+'</span>')))+osDiagBadge(r.st)+
       '</div></div>';
   });
   h+='</div>';
@@ -38050,7 +39075,7 @@ function osMTeamAdd(){
       if(bx)bx.innerHTML='<div style="width:100%;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px">'+
         '<div style="font-size:12px;font-weight:800;color:#B91C1C">팀 생성 실패 — 서버가 돌려준 오류:</div>'+
         '<div style="font-size:11.5px;color:#B91C1C;margin-top:4px;word-break:break-all">'+osEsc(msg)+'</div>'+
-        '<div style="font-size:11px;color:#92400E;margin-top:6px">row-level security 오류라면 <b>migration_17_owner_fix.sql</b>(대표 계정 고정)을 실행하면 해결됩니다. 위 🩺 자가진단의 "팀 만들기 실제 테스트"에서도 같은 원인이 보입니다.</div></div>';
+        '<div style="font-size:11px;color:#92400E;margin-top:6px">row-level security 오류라면 <b>시스템 점검 → 필요한 SQL</b> 의 「대표 계정 권한 복구」(대표 계정 고정)을 실행하면 해결됩니다. 위 🩺 자가진단의 "팀 만들기 실제 테스트"에서도 같은 원인이 보입니다.</div></div>';
       toast('팀 생성 실패 — 아래 빨간 박스에 원인이 표시됩니다');return;
     }
     if(el)el.value='';toast('팀을 만들었습니다 — 아래 카테고리와 팀 성장 대시보드에 바로 반영됩니다');osLoadMembers();
@@ -39005,7 +40030,7 @@ function schScope(v){
 }
 function schTeamBar(){
   var mine=schMyTeams();
-  if(SCH.missing)return '<div class="osrv-warn" style="margin-bottom:12px">팀 테이블이 아직 없습니다. Supabase에서 <b>migration_13_teams_ai.sql</b>을 실행하면 팀별로 나눠 볼 수 있습니다. 지금은 전체 기준으로 보여드립니다.</div>';
+  if(SCH.missing)return sqlNeedHtml('13','팀 표')+'<div class="osrv-warn" style="margin-bottom:12px">만들기 전까지는 팀별로 나눠 볼 수 없어 <b>전체 기준</b>으로 보여드립니다.</div>';
   if(!mine.length)return '';
   if(mine.length===1&&!osIsOwner())
     return '<div style="font-size:11.5px;font-weight:800;color:var(--ink-4);margin-bottom:12px">👥 '+osEsc(mine[0].name)+' 팀 기준으로 보고 있습니다.</div>';
@@ -39274,7 +40299,7 @@ function osRepSaveToClient(kind,title,content){
   osPickClient(function(cid,nm){
     var sb=osClient();if(!sb)return;
     sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:cid,kind:kind,title:title,content:content}).then(function(r){
-      if(r.error){var m=r.error.message||'';if(/saved_reports/i.test(m))toast('저장 테이블이 아직 없습니다 — migration_10_client_saves.sql을 Supabase에서 1회 실행하세요');else toast('저장 실패: '+m);return;}
+      if(r.error){var m=r.error.message||'';if(/saved_reports/i.test(m))toast(sqlNeedText('상담자료를 담을 자리'),9000);else toast('저장 실패: '+m);return;}
       toast('💾 '+(nm||'고객')+'님 자료로 저장했습니다 — 고객 365일에서 확인하세요');
     });
   });
@@ -39292,7 +40317,7 @@ function osCliInfoLoad(){var sb=osClient();if(!sb||!OSC.current)return;
 function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
   var payload={phone:(osVal('cliPhone')||null),birth_year:(parseInt(osVal('cliBirth'),10)||null),gender:(osVal('cliGender')||null),monthly_income:(parseInt(osVal('cliIncome'),10)||null),monthly_fixed_expense:(parseInt(osVal('cliExp'),10)||null),household_notes:(osVal('cliMemo')||null)};
   sb.from('clients').update(payload).eq('id',OSC.current.id).then(function(r){
-    if(r.error){var m=r.error.message||'';toast('저장 실패: '+m+(/phone/i.test(m)?' — migration_10 SQL 실행 필요':''));return;}
+    if(r.error){var m=r.error.message||'';toast('저장 실패: '+m+(/phone/i.test(m)?' — 시스템 점검 → 필요한 SQL 의 「고객 365일 상담자료 저장」 을 한 번 누르세요':''));return;}
     /* 방금 고친 값을 손에 들고 있어야 계산기로 그 값이 간다 — 옛 값이 남으면 안 된다 */
     try{CM_BASE[OSC.current.id]={by:payload.birth_year,gd:payload.gender,inc:payload.monthly_income,exp:payload.monthly_fixed_expense};}catch(e){}
     toast('고객 정보를 저장했습니다.');
@@ -39300,7 +40325,7 @@ function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
 }
 function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.current||!host)return;
   sb.from('saved_reports').select('id,kind,title,created_at,content').eq('client_id',OSC.current.id).neq('kind',CM_KIND).order('created_at',{ascending:false}).then(function(r){
-    if(r.error){host.innerHTML='<div class="osc-empty">저장 자료 테이블이 아직 없습니다 — migration_10_client_saves.sql을 Supabase에서 1회 실행하면 켜집니다.</div>';return;}
+    if(r.error){host.innerHTML=sqlNeedHtml('10','상담자료를 담을 자리');return;}
     OSC.reps=r.data||[];
     if(!OSC.reps.length){host.innerHTML='<div class="osc-empty">아직 저장된 자료가 없습니다. AI 보장분석·비포&애프터 결과의 <b>💾 고객 365일 저장</b>, 재무설계 계산기의 <b>💾</b> 버튼으로 저장하세요.</div>';return;}
     var lbl={bojang:'📑 AI 보장분석',baba:'🔄 비포&애프터',finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
@@ -45516,7 +46541,7 @@ function invCloudPush(){
     toast('서버 저장 완료 — 팀·다른 기기에서 불러올 수 있습니다.');
   }).catch(function(e){
     var m=(e&&e.message)||'저장 실패';
-    if(/relation|does not exist|schema cache/i.test(m))toast('서버 표가 없습니다. Supabase에서 migration_33_invest.sql 을 먼저 실행하세요.');
+    if(/relation|does not exist|schema cache/i.test(m))toast(sqlNeedText('투자 계좌를 담을 자리'),9000);
     else toast('저장 실패: '+m);
   });
 }
@@ -45550,7 +46575,7 @@ function invCloudPull(){
     });
   }).catch(function(e){
     var m=(e&&e.message)||'불러오기 실패';
-    if(/relation|does not exist|schema cache/i.test(m))toast('서버 표가 없습니다. Supabase에서 migration_33_invest.sql 을 먼저 실행하세요.');
+    if(/relation|does not exist|schema cache/i.test(m))toast(sqlNeedText('투자 계좌를 담을 자리'),9000);
     else toast('불러오기 실패: '+m);
   });
 }
