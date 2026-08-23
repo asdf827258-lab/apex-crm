@@ -73,6 +73,12 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
           trk: kk, id: sec ? sec.id : '?',
           cols: t.querySelectorAll('thead th').length,
           rows: t.querySelectorAll('tbody tr').length,
+          pt: t.querySelectorAll('tbody tr.pt').length,
+          ptRow: (t.querySelector('tbody tr.pt td:first-child') || {}).textContent || '',
+          ptBar: (() => { const c = t.querySelector('tbody tr.pt td:first-child');
+                          return c ? getComputedStyle(c).boxShadow : ''; })(),
+          ptBg: (() => { const c = t.querySelector('tbody tr.pt td:last-child');
+                         return c ? getComputedStyle(c).backgroundColor : ''; })(),
           w: t.querySelectorAll('td.w').length,
           o: t.querySelectorAll('td.o').length,
           x: t.querySelectorAll('td.x').length,
@@ -108,7 +114,20 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
     is(t.x >= 1, '  ' + t.id + ' — 조심할 자리를 감추지 않는다 (' + t.x + '칸)');
   });
 
-  console.log('\n[4] 색이 무슨 뜻인지 적어 둔다');
+  console.log('\n[4] 표마다 「핵심」 한 줄이 있다');
+  /* 온 표를 골고루 칠하면 결국 아무 데도 강조가 아니다 — 고객은 색이 많은
+     표를 「알록달록하네」 하고 통째로 넘긴다. 그래서 <b>결정적인 한 줄</b>만
+     따로 세운다. 둘 이상이면 그건 다시 강조가 아니다.                 */
+  tbls.forEach(t => {
+    is(t.pt === 1, '  ' + t.id + ' — 핵심 줄이 딱 하나다 (' + t.pt + '줄' +
+       (t.ptRow ? ' · ' + t.ptRow.replace(/핵심$/, '').trim() : '') + ')');
+    is(/[1-9]/.test(t.ptBar) && t.ptBar !== 'none',
+       '  ' + t.id + ' — 핵심 줄에 눈에 띄는 표시가 붙어 있다');
+    is(!same(t.ptBg, t.ownBg),
+       '  ' + t.id + ' — 핵심 줄의 보험 칸이 나머지보다 진하다 (' + t.ptBg + ')');
+  });
+
+  console.log('\n[5] 색이 무슨 뜻인지 적어 둔다');
   tbls.forEach(t => {
     is(!!t.lgd && t.lgd.length === 3, '  ' + t.id + ' — 범례가 세 갈래다');
     if (!t.lgd) return;
@@ -117,13 +136,13 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
          '  ' + t.id + ' — 「' + word + '」 갈래를 적어 둔다'));
   });
 
-  console.log('\n[5] 색은 한 곳에서만 준다');
+  console.log('\n[6] 색은 한 곳에서만 준다');
   /* 표마다 손으로 칠하면 <b>반드시 어떤 표를 빠뜨린다</b> — 실제로 두 표가
      통째로 벌거벗어 있었다. 자리 이름만 붙이고 색은 스타일시트가 준다. */
   tbls.forEach(t => is(t.inline === 0,
     '  ' + t.id + ' — 표 안에 손으로 칠한 색이 없다' + (t.inline ? ' (' + t.inline + '곳)' : '')));
 
-  console.log('\n[6] 폰에서 표가 화면 밖으로 새지 않는다');
+  console.log('\n[7] 폰에서 표가 화면 밖으로 새지 않는다');
   const ph = await browser.newPage({ viewport: { width: 390, height: 844 } });
   ph.on('pageerror', e => errs.push('phone: ' + String(e).slice(0, 120)));
   await ph.goto(base + '/' + PAGE.split('/').map(encodeURIComponent).join('/'),
@@ -138,7 +157,7 @@ const same = (a, b) => rgb(a).every((v, i) => Math.abs(v - rgb(b)[i]) < 4);
     is(over <= 2, '  ' + k + ' 갈래 — 390px 에서 가로 밀림 ' + over + 'px');
   }
 
-  console.log('\n[7] 콘솔이 조용하다');
+  console.log('\n[8] 콘솔이 조용하다');
   is(errs.length === 0, '  오류 없음' + (errs.length ? ' — ' + errs.join(' | ') : ''));
 
   await browser.close();
