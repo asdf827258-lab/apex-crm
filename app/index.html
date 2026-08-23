@@ -11600,8 +11600,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-23 09:12';
-var APP_BUILD_NOTE='<b>이제 앱 밖으로 나가실 일이 없습니다.</b> 화면이 「그 파일을 여세요」 라고 말하던 자리를 <b>전부</b> 없앴습니다 — 저장소 SQL 아홉 벌을 앱 안으로 들여와, 막힌 자리마다 <b>「\ud83d\udccb 복사하고 Supabase 열기」</b> 한 번으로 끝납니다. <b>팀 하루 한 장 피드백</b>도 「한 번에 전부」 안에 들어가 따로 실행할 것이 없습니다. 시스템 점검의 표에서도 빠진 줄마다 <b>만들기</b> 단추가 바로 섭니다. 새 점검(<code>check-nofile</code>)이 화면 글에 파일 이름이 다시 스며드는지 지킵니다. <b>「내 폰에 설치」</b> 는 메뉴 맨 위에 상시 고정되어 있고(옛 이름 「폰에 담기」 로도 찾힙니다), 로그인 안 하신 분께는 결제 칸 대신 <b>로그인 안내</b>가 뜹니다. 폰에서는 <b>하루 한 장</b>(<code>/app/day.html</code>) 한 화면에서 오늘 걸 사람을 세우고 전화·문자하고 세 번 눌러 기록하면 그 한 줄이 <b>DB 통합 CRM 에 그대로</b> 들어갑니다. <b>고객 365일도 폰에서</b> 고칩니다 — 다음 할 일·생일. <b>팀 하루 한 장</b>(<code>/app/team.html</code>) 은 AI 가 쓴 한 줄을 <b>팀원 폰으로 바로 꽂습니다</b>.';
+var APP_BUILD='2026-08-23 10:59';
+var APP_BUILD_NOTE='<b>담아 둔 폰이 이제 바로 열립니다.</b> 로그인해 둔 폰인데도 로그인 화면이 먼저 뜨던 것을 고쳤습니다 — 원인은 둘이었습니다. ① Supabase 는 토큰이 커지면 <b>여러 칸에 쪼개</b> 담는데(<code>…auth-token.0 · .1</code>) 앱이 그것을 「로그인 안 함」 으로 읽었습니다. ② 로그인 화면을 <b>프로필·설정·접속IP 를 다 받아 온 뒤에야</b> 지웠습니다 — 서버 왕복 넷이라 폰 데이터로는 몇 초, 하나만 늦어도 계속 로그인 화면이었습니다. 이제 <b>세션이 확인되는 그 자리에서</b> 엽니다. 화면 하나하나는 여전히 권한으로 막히니 먼저 열어도 새는 곳이 없습니다. 로그인은 돼 있는데 내 정보만 못 받은 경우에는 「로그인하세요」 라고 <b>거짓말하지 않고</b> 한 번 다시 받아 본 뒤 무엇이 문제인지 그대로 말합니다. 안드로이드는 홈 아이콘을 길게 눌러 <b>DB 통합 CRM · 고객 365일 · TFA · 하루 한 장 · 팀 하루 한 장</b> 다섯 곳으로 바로 갑니다. 아이폰은 길게 누르기를 지원하지 않아 <b>「내 폰에 설치」 → 이 화면만 따로 담기</b> 로 아이콘을 따로 만드십시오.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -37392,8 +37392,23 @@ function osLoadProfile(){
     osProfileApply(sb,uid,r);
   });
 }
+/* 프로필을 못 받았을 때 한 번만 다시 해 본다 — 두 번 부르면 두 배로 부른다 */
+var OS_PROF_RETRY=0;
 function osProfileApply(sb,uid,r){
-    if(r.error||!r.data){OS.profile=null;osRenderPill();return;}
+    if(r.error||!r.data){
+      OS.profile=null;osRenderPill();
+      /* 로그인은 돼 있는데 내 정보만 못 받은 경우다. 게이트를 다시 띄우면
+         「로그인하세요」 라고 거짓말을 하게 된다 — 신호가 나빴을 뿐이다.
+         한 번 다시 해 보고, 그래도 안 되면 무엇이 문제인지 그대로 말한다. */
+      if(OS.session&&OS_PROF_RETRY<1){
+        OS_PROF_RETRY++;
+        setTimeout(function(){try{osLoadProfile();}catch(e){}},1800);
+      }else if(OS.session){
+        toast('로그인은 돼 있는데 내 정보를 못 받았습니다 — 신호를 확인하고 새로고침해 주세요.',9000);
+      }
+      return;
+    }
+    OS_PROF_RETRY=0;
     /* 가입 때 체크한 동의를 이제야 서버에 남길 수 있다 */
     try{setTimeout(function(){
       if(typeof lgFlushPending==='function')lgFlushPending();
@@ -37479,7 +37494,22 @@ function osHidePending(){var o=document.getElementById('osGateOvl');if(o)o.style
 function osGateRecheck(){var sb=osClient();if(!sb){return;}toast('승인 상태를 확인합니다…');if(OS.session)osLoadProfile();}
 function osGatePricing(){osHidePending();if(typeof go==='function')go('pricing');}
 /* ════════ 로그인 게이트 — 로그인 전에는 앱을 가리고 요금제·로그인 화면만 노출 ════════ */
-function osHasStoredSession(){try{for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&/^sb-.+-auth-token$/.test(k)&&localStorage.getItem(k))return true;}}catch(e){}return false;}
+/* 로그인해 둔 흔적이 이 브라우저에 있는가.
+
+   Supabase 는 토큰이 커지면 <b>여러 칸에 쪼개</b> 담는다 —
+   sb-<프로젝트>-auth-token 하나가 아니라 …-auth-token.0 · .1 이 된다.
+   예전 규칙은 끝이 딱 auth-token 인 것만 봐서 쪼갠 것을 못 알아봤고,
+   그래서 <b>로그인해 둔 폰에서도 로그인 화면이 먼저 떴다.</b>
+   홈 화면 아이콘으로 바로 들어가려던 것이 여기서 막혔다. */
+function osHasStoredSession(){
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(k&&/^sb-.+-auth-token(\.\d+)?$/.test(k)&&localStorage.getItem(k))return true;
+    }
+  }catch(e){}
+  return false;
+}
 /* 로그인 랜딩 — 상세 제품 투어: 두뇌·보장분석·치료비통장·상담카드·카드뉴스·블로그를 목업+상세설명으로. */
 function osLandingShowcase(){
   function section(vis,kicker,title,intro,points,outcome,rev){
@@ -39903,6 +39933,7 @@ try{osBillReturnCheck();}catch(e){}}
       var uid=(s.user&&s.user.id)||'';
       if(uid&&uid===OS_AUTH_UID&&OS.profile)return;   /* 토큰만 갱신됐다 — 화면은 그대로 둔다 */
       OS_AUTH_UID=uid;
+      osHideLoginGate();
       osLoadProfile();
     }else{
       OS_AUTH_UID='';
@@ -39911,7 +39942,15 @@ try{osBillReturnCheck();}catch(e){}}
   });
   sb.auth.getSession().then(function(r){
     OS.session=(r.data&&r.data.session)||null;
-    if(OS.session){OS_AUTH_UID=(OS.session.user&&OS.session.user.id)||'';osLoadProfile();}
+    if(OS.session){
+      /* 세션이 확인된 <b>그 자리에서</b> 연다.
+         예전에는 프로필·설정·접속IP 를 다 받아 온 <b>뒤에야</b> 게이트를 지웠다 —
+         서버 왕복 네 번이라 폰 데이터로는 몇 초, 하나만 늦어도 계속 로그인 화면이었다.
+         화면 하나하나는 여전히 OS.profile 로 막히니 먼저 열어도 새는 곳이 없다. */
+      osHideLoginGate();
+      OS_AUTH_UID=(OS.session.user&&OS.session.user.id)||'';
+      osLoadProfile();
+    }
     else{osRenderPill();osShowLoginGate();}
   });
 }
