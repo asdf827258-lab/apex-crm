@@ -721,7 +721,8 @@ function fbLoad(){
    팀원이 자기 「하루 한 장」 을 열면 — 폰이든 컴퓨터든 — 맨 위에 뜬다.
    읽으면 여기 「읽음」 으로 되돌아온다.
 
-   담는 자리는 team_feedback (migration_44_teamfb.sql).
+   담는 자리는 team_feedback — 앱의 <b>서버 준비 SQL</b>(출발 점검 · 홈 배너)에
+   들어 있다. 대표님께 파일 이름을 알려 드리지 않고 누를 자리만 알려 드린다.
    보는 잣대는 can_see_perf — 내가 리더로 있는 팀의 팀원에게만 쓸 수 있다.
    ══════════════════════════════════════════════════════════════════ */
 window.tSend=function(){
@@ -742,8 +743,10 @@ window.tSend=function(){
     FB.sending=false;
     if(r&&r.error){
       var m2=(r.error.message||'')+'';
+      /* 파일 이름을 알려 드리지 않는다 — 어디를 누르면 되는지를 알려 드린다.
+         APEX 「출발 점검」 의 <b>서버 준비 SQL</b> 줄에서 복사·열기·확인이 한 자리에 있다. */
       FB.serr=/team_feedback/.test(m2)&&/does not exist|schema cache|relation/i.test(m2)
-        ? '보낼 자리가 서버에 아직 없습니다 — migration_44_teamfb.sql 을 한 번 실행해 주세요'
+        ? '__SETUP__'
         : ('보내지 못했습니다 — '+m2.slice(0,70));
       paint();return;
     }
@@ -786,7 +789,13 @@ function vFb(){
     h+='<button type="button" class="go"'+(FB.busy?' disabled':'')+' onclick="tRun()">'+
        (FB.busy?'<span class="spin"></span>AI 가 쓰는 중…':'오늘 피드백 만들기')+'</button>';
   if(n){
-    if(FB.serr)h+='<div class="warnbox"><b>'+esc(FB.serr)+'</b></div>';
+    if(FB.serr==='__SETUP__')
+      h+='<div class="warnbox"><b>보낼 자리가 서버에 아직 없습니다.</b><br>'+
+         'APEX <b>출발 점검</b> 의 「서버 준비 SQL」 에서 <b>복사하고 Supabase 열기</b> → 붙여넣고 RUN → '+
+         '<b>다 됐는지 확인</b>. 한 번만 하면 됩니다.'+
+         '<button type="button" class="go" style="margin-top:9px" onclick="tApex(\'ready\')">'+
+         '\uD83D\uDEA6 출발 점검 열기</button></div>';
+    else if(FB.serr)h+='<div class="warnbox"><b>'+esc(FB.serr)+'</b></div>';
     var seenN=0,k2;for(k2 in FB.seen)if(FB.seen[k2])seenN++;
     h+='<div class="send">'+
        '<b>팀원 폰으로 바로 보내기</b>'+
@@ -826,7 +835,8 @@ function vFb(){
    폰에서 팀을 「보고」, APEX 에서 「손댄다」. 조직도·목표·코칭 기록은
    여기서 만들지 않는다 — 이미 APEX 에 있다. 눌러서 그리로 간다.  */
 var APEX={org:['🏢','조직도'],teamhub:['📋','실행 체크판'],growboard:['📈','성장판'],
-          airep:['🧭','TFA 업무관리'],crm:['🗄️','DB 통합 CRM'],ai_org:['🤖','AI 조직 라이브']};
+          airep:['🧭','TFA 업무관리'],crm:['🗄️','DB 통합 CRM'],ai_org:['🤖','AI 조직 라이브'],
+          ready:['🚦','출발 점검']};
 window.tApex=function(tab){
   var p=P();
   if(p&&typeof p.go==='function'){
