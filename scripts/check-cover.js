@@ -1,4 +1,10 @@
-/* 표지 다섯 장 — <b>첫 장이 고객을 붙잡는가.</b>
+/* 발표 덱의 <b>앞뒤 두 장</b> — 첫 장이 붙잡고, 마지막 장이 갈래마다 다르게 닫는가.
+
+   (마지막 장 검사는 [12] 에 있습니다. 브라우저를 한 번 더 띄우지 않으려고
+    여기 붙였습니다 — 어차피 같은 다섯 갈래를 훑습니다.)
+
+   ── 첫 장 ─────────────────────────────────────────────────────────
+   표지 다섯 장 — <b>첫 장이 고객을 붙잡는가.</b>
 
    상담은 첫 장에서 갈립니다. 설계사가 화면을 돌려 보여 주는 그 3초에
    고객이 「내 얘기네」 하고 앉거나, 「또 보험 얘기구나」 하고 폰을 봅니다.
@@ -233,7 +239,52 @@ const readCovers = page => page.evaluate(() => Object.keys(DECK).map(k => {
     is(r.over <= 2, '  ' + c.id + ' 가 1280px 에서 가로로 안 밀린다 — ' + r.over + 'px');
   }
 
-  console.log('\n[12] 폰에서도 다섯 장이 그대로 선다');
+  console.log('\n[12] 마지막 장이 갈래마다 다르게 닫는다');
+  /* 다섯 갈래가 전부 <b>공무원연금 이야기</b>로 끝나고 있었습니다. 달러
+     상담을 한 시간 하고 마지막 장에서 갑자기 공무원 얘기가 나오면 흐름이
+     거기서 끊깁니다. 갈래를 삼항으로 이어 쓰면 늘 때 반드시 하나를
+     빠뜨리므로(실제로 쿠폰 갈래만 두 번 빠졌습니다) 표 하나에서 옵니다 —
+     여기서는 <b>다섯이 실제로 다른 말을 하는지</b> 봅니다.            */
+  const CLZ = [];
+  for (const c of CV) {
+    CLZ.push(await page.evaluate(id => {
+      window.__go(Object.keys(DECK).find(k => DECK[k][0] === id));
+      const t = i => { const e = document.getElementById(i);
+                       return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; };
+      const cta = document.getElementById('closeCta');
+      return { id: id, q: t('closeQ'), lead: t('closeLead'), line: t('closeLine'),
+               way: [].map.call(document.querySelectorAll('#closeWay .st'), e => ({
+                 ti: (e.querySelector('.ti') || {}).textContent || '',
+                 de: (e.querySelector('.de') || {}).textContent || '' })),
+               cta: cta ? cta.textContent.trim() : '',
+               href: cta ? (cta.getAttribute('href') || '') : '',
+               dest: cta ? !!document.querySelector(cta.getAttribute('href') || '#none') : false,
+               last: DECK[Object.keys(DECK).find(k => DECK[k][0] === id)].slice(-1)[0] };
+    }, c.id));
+  }
+  CLZ.forEach(z => {
+    is(z.last === 'close', '  ' + z.id + ' 갈래가 마지막 장으로 끝난다 — ' + z.last);
+    is(z.q.length >= 10, '  ' + z.id + ' 갈래 마지막 물음이 있다 — ' + z.q.slice(0, 30));
+    is(z.lead.length >= 30, '  ' + z.id + ' 갈래 — 여기까지 온 이야기를 받아 준다');
+    is(z.way.length === 3, '  ' + z.id + ' 갈래 — 다음에 할 일이 세 걸음이다 (' + z.way.length + ')');
+    is(z.way.every(w => w.ti && w.de.length >= 10),
+       '  ' + z.id + ' 갈래 — 세 걸음마다 무엇을 하는지 적혀 있다');
+    is(/니다|십시오/.test(z.line) && z.line.length >= 12,
+       '  ' + z.id + ' 갈래 — 한 문장으로 닫는다: ' + z.line.slice(0, 34));
+    is(!!z.cta && z.dest,
+       '  ' + z.id + ' 갈래 단추가 실제 장으로 간다 — ' + z.cta + ' → ' + z.href);
+  });
+  /* 갈래가 늘었는데 표에 안 적으면 조용히 연금 마무리가 나온다 — 그걸 잡는다 */
+  [['q', '물음'], ['line', '한 문장']].forEach(([f, nm]) => {
+    const v = CLZ.map(z => z[f]);
+    is(new Set(v).size === v.length, '  다섯 갈래의 ' + nm + '이 서로 다르다');
+  });
+  const ways = CLZ.flatMap(z => z.way.map(w => w.ti));
+  is(new Set(ways).size === ways.length, '  세 걸음도 갈래마다 다르다 — ' + ways.length + '걸음');
+  is(!CLZ.filter(z => z.id !== 'hero').some(z => /공무원/.test(z.lead + z.line)),
+     '  연금 아닌 갈래가 공무원연금 이야기로 끝나지 않는다');
+
+  console.log('\n[13] 폰에서도 다섯 장이 그대로 선다');
   const ph = await browser.newPage({ viewport: { width: 390, height: 844 } });
   ph.on('pageerror', e => errs.push('phone: ' + String(e).slice(0, 120)));
   await ph.goto(base + '/' + PAGE.split('/').map(encodeURIComponent).join('/'),
@@ -250,7 +301,7 @@ const readCovers = page => page.evaluate(() => Object.keys(DECK).map(k => {
     is(over <= 2, '  ' + c.id + ' — 390px 에서 가로 밀림 ' + over + 'px');
   }
 
-  console.log('\n[13] 콘솔이 조용하다');
+  console.log('\n[14] 콘솔이 조용하다');
   is(errs.length === 0, '  오류 없음' + (errs.length ? ' — ' + errs.join(' | ') : ''));
 
   await browser.close();

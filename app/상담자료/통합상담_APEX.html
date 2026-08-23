@@ -115,6 +115,26 @@ h2 em.g{color:var(--gold-d)}
 .math-row{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:baseline;
   padding:17px 0;border-bottom:1px solid rgba(255,255,255,.1)}
 .math-row:last-of-type{border:0}
+
+/* ── 마지막 장 ────────────────────────────────────────────────────
+   다섯 갈래가 전부 <b>공무원연금 이야기</b>로 끝나고 있었습니다. 연금
+   상담에서는 맞는 말인데, 달러 상담을 한 시간 하고 마지막 장에서 갑자기
+   공무원 얘기가 나오면 <b>흐름이 거기서 끊깁니다.</b>
+   그래서 마지막 장은 갈래마다 다르게 세우되, 화면은 하나만 둡니다 —
+   내용은 CLOSING 표 한 곳에서 옵니다.                                */
+.cway{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:30px;text-align:left}
+@media(max-width:760px){.cway{grid-template-columns:1fr}}
+.cway .st{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);
+  border-radius:16px;padding:20px 18px}
+.cway .st .no{font-size:11.5px;font-weight:800;letter-spacing:.06em;color:#f0cf94;margin-bottom:9px}
+.cway .st .ti{font-size:16px;font-weight:800;letter-spacing:-.035em;color:#fff;line-height:1.42}
+.cway .st .de{margin-top:8px;font-size:13.5px;line-height:1.72;color:#a8bcd6;font-weight:450}
+.cline{margin-top:30px;font-size:clamp(17px,2.4vw,22px);font-weight:800;letter-spacing:-.04em;
+  line-height:1.62;color:#fff}
+.cline b{color:#f0cf94}
+.clead{margin-top:20px;color:#b9c6d8;font-size:16px;line-height:1.8;max-width:660px;
+  margin-left:auto;margin-right:auto}
+.clead b{color:#fff}
 .math-row .lbl{font-size:15.5px;color:#b9c6d8;font-weight:600}
 .math-row .val{font-size:clamp(20px,2.8vw,27px);font-weight:800;letter-spacing:-.04em}
 .math-row.minus .val{color:#7fb2ff}
@@ -3736,14 +3756,13 @@ h2 em.e{color:var(--edu-d)}
 <section id="close">
   <div class="wrap">
     <div class="math rv" style="text-align:center">
-      <div style="font-size:13px;font-weight:800;color:#f0cf94;letter-spacing:.02em;margin-bottom:16px">마지막 질문</div>
-      <h2 style="color:#fff;font-size:clamp(24px,3.8vw,38px)">그 돈은 그때,<br><em style="color:#f0cf94">어디서 나오게</em> 해 두시겠습니까?</h2>
-      <p style="margin-top:20px;color:#b9c6d8;font-size:16px;line-height:1.8;max-width:640px;margin-left:auto;margin-right:auto">
-        공무원은 <b style="color:#fff">2배를 넣고 2배의 지급률</b>을 받아 4배를 받습니다.<br>
-        우리도 그 구조를 만들 수 있습니다 &mdash; 다만 <b style="color:#fff">국가가 대신 내주지 않으니 스스로</b> 만들어야 합니다.<br>
-        <b style="color:#fff">제일 비싼 것은 미룬 시간입니다.</b>
-      </p>
-      <div style="margin-top:32px"><a class="btn btn-p" href="#fork">세 갈래 다시 보기 &uarr;</a></div>
+      <div style="font-size:13px;font-weight:800;color:#f0cf94;letter-spacing:.02em;margin-bottom:16px"
+           id="closeKick">마지막 질문</div>
+      <h2 style="color:#fff;font-size:clamp(24px,3.8vw,38px)" id="closeQ"></h2>
+      <p class="clead" id="closeLead"></p>
+      <div class="cway" id="closeWay"></div>
+      <p class="cline" id="closeLine"></p>
+      <div style="margin-top:32px"><a class="btn btn-p" id="closeCta" href="#fork"></a></div>
     </div>
 
     <div class="notes rv" style="margin-top:24px">
@@ -6920,7 +6939,90 @@ window.__apexC = {
               c:document.getElementById('trackC')};
   const FN = {w:'__renderW', d:'__renderD', t:'__renderT', e:'__renderE', c:'__renderC'};
   const START = {w:'how', d:'c1', t:'t1', e:'e1', c:'cp1'},
-        CALC  = {w:'calc', d:'dcalc', t:'tcalc', e:'ecalc', c:'cpcalc'};
+        /* t 는 'tcalc' 를 가리키고 있었는데 그런 장이 없습니다 — 「계산기로」
+           단추를 눌러도 아무 일도 안 일어났습니다. 트랙 T 에서 숫자를 직접
+           넣어 보는 자리는 tgrow(복리 계산) 입니다.                       */
+        CALC  = {w:'calc', d:'dcalc', t:'tgrow', e:'ecalc', c:'cpcalc'};
+
+  /* ── 마지막 장 ──────────────────────────────────────────────────
+     다섯 갈래가 전부 <b>공무원연금 이야기</b>로 끝나고 있었습니다.
+     연금 상담에서는 맞는 말인데, 달러 상담을 한 시간 하고 마지막 장에서
+     갑자기 공무원 얘기가 나오면 <b>흐름이 거기서 끊깁니다.</b>
+
+     갈래마다 다르게 말하되, 삼항으로 이어 쓰지 않습니다 — 그렇게 하면
+     갈래가 늘 때 <b>반드시 하나를 빠뜨립니다.</b> (실제로 쿠폰 갈래만
+     빠뜨린 적이 두 번 있었습니다.) 표 하나에 모아 두고 화면은 하나만
+     둡니다. 면책 문구는 갈래와 상관없이 같으므로 아래에 그대로 둡니다.
+
+     적는 것은 셋입니다 — <b>지금 어디까지 왔는지</b>(lead),
+     <b>다음에 무엇을 하는지</b>(way 세 걸음), 그리고 <b>한 문장</b>(line).
+     세 걸음은 그 갈래에서 실제로 보여 드린 장에서만 가져옵니다.      */
+  const CLOSING = {
+    w: { kick: '마지막 질문',
+         q: '그 돈은 그때,<br><em style="color:#f0cf94">어디서 나오게</em> 해 두시겠습니까?',
+         lead: '공무원은 <b>2배를 넣고 2배의 지급률</b>을 받아 4배를 받습니다. ' +
+               '우리도 그 구조를 만들 수 있습니다 &mdash; 다만 <b>국가가 대신 내주지 않으니 스스로</b> 만들어야 합니다.',
+         way: [['01', '있는 것부터 셉니다', '국민연금·퇴직연금으로 얼마가 들어오는지 먼저 확인합니다.'],
+               ['02', '비는 만큼만 채웁니다', '적정생활비에서 그 금액을 빼면 매달 채울 돈이 나옵니다.'],
+               ['03', '바닥이 있는 그릇에 담습니다', '시장이 나빠도 계약서에 적힌 금액 아래로는 안 내려갑니다.']],
+         line: '제일 비싼 것은 <b>미룬 시간</b>입니다.',
+         cta: '내 금액 다시 계산하기', to: 'calc' },
+
+    d: { kick: '마지막 질문',
+         q: '원화 하나에 그대로 두시겠습니까,<br><em style="color:#f0cf94">나눠</em> 두시겠습니까?',
+         lead: '고르신 적이 없는데 자산이 전부 한 통화에 들어 있습니다. ' +
+               '오늘 정하실 것은 <b>달러가 오를지 내릴지</b>가 아니라, <b>나눌지 말지</b>입니다.',
+         way: [['01', '얼마를 나눌지 정합니다', '전부가 아닙니다. 흔들리면 안 되는 몫만 옮겨 둡니다.'],
+               ['02', '어디에 담을지 정합니다', '예금·ETF·보험은 전부 다른 물건입니다. 오래 둘 돈이면 담는 곳이 달라집니다.'],
+               ['03', '언제 갈아탈지 정해 둡니다', '저축전환 시점을 미리 적어 두지 않으면 그냥 지나갑니다.']],
+         line: '환율을 <b>맞히는 일</b>이 아닙니다. 맞힐 수 없어서 <b>나누는 일</b>입니다.',
+         cta: '내 환급률 다시 보기', to: 'calc' },
+
+    t: { kick: '마지막 질문',
+         q: '수익은 다른 그릇으로 쫓으시고,<br><em style="color:#f0cf94">바닥 하나만</em> 여기 깔아 두시겠습니까?',
+         lead: '수익률로 이기려 들지 않았습니다 &mdash; 그건 주식이 더 잘합니다. ' +
+               '오늘 보신 것은 <b>수익률로는 살 수 없는 다섯 가지</b>뿐입니다.',
+         way: [['01', '수익률 경쟁은 하지 않습니다', '굴릴 돈은 그대로 굴리십시오. 그 자리를 뺏자는 이야기가 아닙니다.'],
+               ['02', '다섯 중 필요한 것을 고르십니다', '바닥 · 종신 · 건보료 · 사망보험금 · 완주 &mdash; 하나라도 걸리는 게 있으신지.'],
+               ['03', '없으면 안 하셔도 됩니다', '필요 없는 분께 권할 이유가 없습니다. 그건 불완전판매입니다.']],
+         line: '필요 없으시면 <b>안 하시면 됩니다.</b> 다만 그 다섯 가지는 <b>다른 데서 못 삽니다.</b>',
+         cta: '펀드·수익률 다시 넣어 보기', to: 'calc' },
+
+    e: { kick: '마지막 질문',
+         q: '그 돈, 이대로<br><em style="color:#f0cf94">생활비로 섞이게</em> 두시겠습니까?',
+         lead: '몰라서 못 받는 돈이 아닙니다. <b>이미 받고 계십니다.</b> ' +
+               '다만 통장에 들어오는 순간 생활비가 되고, 9년 뒤에는 <b>기억도 안 납니다.</b>',
+         way: [['01', '우리 동네 지원금을 확인합니다', '시·군·구마다 다릅니다. 고르기만 하시면 금액이 나옵니다.'],
+               ['02', '들어오는 날 그대로 나가게 해 둡니다', '손이 안 닿는 곳에 두는 것이 전부입니다. 수익률은 그다음입니다.'],
+               ['03', '쓸 때까지 굴립니다', '받는 때는 짧고 쓰는 때는 멉니다. 그 사이가 이 설계의 자리입니다.'],
+              ],
+         line: '가계에서 <b>새로 나가는 돈은 0원</b>입니다. <b>방향만</b> 바꾸는 일입니다.',
+         cta: '유학 시점 금액 다시 보기', to: 'calc' },
+
+    c: { kick: '마지막 질문',
+         q: '같은 목돈으로,<br><em style="color:#f0cf94">어느 길로</em> 가시겠습니까?',
+         lead: '어느 쪽이 낫다고 말씀드리지 않았습니다. ' +
+               '값이 오르는 것도, 대출로 키우는 것도 <b>건물에만 있습니다.</b> ' +
+               '다만 <b>다달이 들어오는 돈</b>만 원하신 거라면 길이 하나가 아닙니다.',
+         way: [['01', '원하시는 것부터 가릅니다', '건물을 갖고 싶으신 겁니까, 월세를 받고 싶으신 겁니까.'],
+               ['02', '얼마를 얼마 동안 받을지 정합니다', '짧게 많이 받을지, 길게 더 많이 받을지 &mdash; 정하실 것은 둘뿐입니다.'],
+               ['03', '요건은 전문가와 확인합니다', '세금은 이 자리에서 단정하지 않습니다. 세무 전문가와 함께 보십시오.']],
+         line: '어느 쪽이 <b>낫다</b>가 아닙니다. <b>무엇을 원하시느냐</b>입니다.',
+         cta: '두 길 다시 견줘 보기', to: 'calc' }
+  };
+  function renderClose(k){
+    const c = CLOSING[k] || CLOSING.w;
+    const set = (id, html) => { const e = document.getElementById(id); if(e) e.innerHTML = html; };
+    set('closeKick', c.kick);
+    set('closeQ', c.q);
+    set('closeLead', c.lead);
+    set('closeWay', c.way.map(w =>
+      '<div class="st"><div class="no">' + w[0] + '</div>' +
+      '<div class="ti">' + w[1] + '</div><div class="de">' + w[2] + '</div></div>').join(''));
+    set('closeLine', c.line);
+    const a = document.getElementById('closeCta');
+    if(a){ a.textContent = c.cta + ' \u2191'; a.setAttribute('href', '#' + CALC[k]); }
+  }
   let cur = 'w';
   function redraw(k){
     const fn = window[FN[k]];
@@ -6936,6 +7038,7 @@ window.__apexC = {
     // 숨겨진 동안은 컨테이너 폭이 0이라 차트 viewBox가 틀어진다 → 보이는 순간 다시 그린다.
     // requestAnimationFrame은 탭이 비활성이면 안 돌아 신뢰할 수 없으므로 동기로 호출하고,
     // 폰트 로드·스크롤바 확정 후를 위해 한 번 더 보정한다.
+    renderClose(k);
     void EL[k].offsetWidth;
     redraw(k);
     setTimeout(()=>redraw(k), 60);
