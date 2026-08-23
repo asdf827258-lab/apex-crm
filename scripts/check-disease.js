@@ -20,7 +20,9 @@
     11. 좁은 화면에서 옆으로 안 밀리는가 · 인쇄에서 안 짤리는가
     12. <b>자료를 못 읽으면 화면을 안 세우는가</b> — 일부러 끊어 보고 확인한다
     13. <b>겹쳐 받는 법</b> — 동시에 열리는 개수를 흐름에서 세는가 ·
-        그 병과 <b>상관없는 담보를 권하지 않는가</b>                                       */
+        그 병과 <b>상관없는 담보를 권하지 않는가</b>
+    14. <b>도해</b> — 색 오타로 도형이 말없이 사라지지 않는가 ·
+        새로 그린 그림이 목록에서 빠지지 않는가                                        */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8877;
@@ -667,6 +669,70 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(new Set(Object.values(seenTxt)).size === Object.keys(seenTxt).length,
      '들머리마다 <b>서로 다른 화면</b>이 열린다 — 같은 화면을 여섯 번 세지 않는다 (' +
      Object.keys(seenTxt).map(k => k + ':' + seenTxt[k]).join(' · ') + ')');
+  await page.close();
+
+
+  /* ═══ 14. 도해 — 안 보이게 깨진 그림이 없는가 ═══
+     색 값 한 글자가 깨지면 브라우저는 <b>말없이 그 도형을 안 그립니다.</b>
+     실제로 stroke="#B3A?596" 하나 때문에 뇌 주름 120줄이 통째로 사라졌고,
+     콘솔에도 아무 말이 없었습니다. 그래서 색 값을 전부 훑습니다. */
+  console.log('\n[14] 도해 — 안 보이게 깨진 그림이 없는가');
+  const vizSrc = fs.readFileSync('app/질병가이드-도해.js', 'utf8');
+
+  is(/var KEYS = Object\.keys\(V\)/.test(vizSrc),
+     '그림 목록을 <b>V 에서 바로 뽑는다</b> — 손으로 적어 두면 새 그림이 조용히 사라진다');
+
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  const vizListN = await page.evaluate(() => window.DZ_VIZ.keys.length);
+  const vizDefN = (vizSrc.match(/^\s{2}V\.[a-z_0-9]+ = \{/gm) || []).length;
+  is(vizListN === vizDefN, '그린 그림이 ' + vizDefN + '장, 목록에 선 그림이 ' + vizListN + '장 — 같다');
+
+  /* 색 값이 실제로 색인가 */
+  const badCol = [];
+  (vizSrc.match(/(?:fill|stroke|stop-color)="[^"]*"/g) || []).forEach(v => {
+    const val = v.split('="')[1].slice(0, -1);
+    if (val.indexOf("' +") >= 0 || val.indexOf('url(') === 0) return;   /* 코드로 끼워 넣는 자리 */
+    if (val === 'none' || val === 'currentColor') return;
+    if (/^#[0-9A-Fa-f]{3}$|^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{8}$/.test(val)) return;
+    if (/^(rgb|rgba|hsl)\(/.test(val)) return;
+    badCol.push(v);
+  });
+  is(badCol.length === 0, '색 값이 전부 진짜 색이다 — 오타 하나로 도형이 <b>말없이 사라지지</b> 않는다' +
+     (badCol.length ? ' — 깨짐: ' + badCol.slice(0, 4).join(' / ') : ''));
+
+  /* 그림마다 실제로 도형이 들어 있는가 — 빈 껍데기를 세우지 않는다 */
+  const thin = await page.evaluate(() => {
+    const out = [];
+    window.DZ_VIZ.keys.forEach(k => {
+      const o = window.DZ_VIZ.get(k) || {};
+      const n = ((o.html || '').match(/<(path|circle|ellipse|rect|line|polyline|polygon|text)\b/g) || []).length;
+      if (n < 15) out.push(k + '(' + n + ')');
+    });
+    return out;
+  });
+  is(thin.length === 0, '그림마다 도형이 들어 있다 — 빈 껍데기가 없다' +
+     (thin.length ? ' — 얇음: ' + thin.join(', ') : ''));
+
+  /* 뇌·심장은 <b>사실 그림</b>이 붙어야 한다 — 상담에서 가장 많이 갈리는 자리다 */
+  const deep = await page.evaluate(() => {
+    const cnt = k => {
+      const o = window.DZ_VIZ.get(k) || {};
+      return ((o.html || '').match(/<(path|circle|ellipse|rect|line|polyline|polygon)\b/g) || []).length;
+    };
+    return { heart: cnt('heart_coro'), heartDead: cnt('heart_dead'),
+             brain: cnt('brain_terr'), brainVs: cnt('brain_vs') };
+  });
+  is(deep.heart >= 300 && deep.heartDead >= 300,
+     '심장을 <b>사실 그림</b>으로 그렸다 (관상동맥 ' + deep.heart + '도형 · 막힌 자리 ' + deep.heartDead + '도형)');
+  is(deep.brain >= 300 && deep.brainVs >= 300,
+     '뇌를 <b>사실 그림</b>으로 그렸다 (구역 ' + deep.brain + '도형 · 막힘/터짐 ' + deep.brainVs + '도형)');
+
+  /* 뇌경색과 뇌출혈을 <b>한 그림에서 견주는</b> 장이 있어야 한다 */
+  const vsTxt = await page.evaluate(() => (window.DZ_VIZ.get('brain_vs') || {}).d || '');
+  is(/뇌경색/.test(vsTxt) && /뇌출혈/.test(vsTxt) && /범위/.test(vsTxt),
+     '막힌 것과 터진 것을 견주고, <b>담보 범위</b>로 이어 말한다');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */

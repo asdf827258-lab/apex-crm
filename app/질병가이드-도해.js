@@ -70,8 +70,18 @@
       (sub ? '<text x="' + (x2 + 9) + '" y="' + (y2 + 23) + '" font-size="11.8" fill="#4B5563">' + sub + '</text>' : '') +
       '</g>';
   }
+  /* 상자 너비를 t.length 로 재고 있었다. 한글은 라틴 글자보다 넓어
+     긴 문장에서 <b>상자가 글자보다 짧아 잘려 나갔다.</b> 글자마다 재어 더한다. */
+  function tw(t) {
+    var w = 0, i, c;
+    for (i = 0; i < t.length; i++) {
+      c = t.charCodeAt(i);
+      w += (c > 0x1100 && c < 0xD7FF) || (c >= 0xFF00 && c <= 0xFF60) ? 13.2 : 7.3;
+    }
+    return w;
+  }
   function note(x, y, t, color) {
-    return '<g class="lbl"><rect x="' + x + '" y="' + (y - 15) + '" width="' + (t.length * 8.2 + 18) +
+    return '<g class="lbl"><rect x="' + x + '" y="' + (y - 15) + '" width="' + (tw(t) + 18).toFixed(0) +
       '" height="23" rx="7" fill="' + (color || '#0F172A') + '" opacity=".92"/>' +
       '<text x="' + (x + 9) + '" y="' + (y + 1) + '" font-size="12.5" font-weight="800" fill="#fff">' + t + '</text></g>';
   }
@@ -763,6 +773,476 @@
     s += '</svg>';
     return s;
   }
+  /* ═══ 심장 — 관상동맥 세 갈래와, 막히면 죽는 자리 ═══════════════
+     심장은 제 밥그릇이 따로 있다. 심장 <b>겉</b>을 타고 내려가는
+     관상동맥이다. 왼쪽 주간부에서 앞내림가지(LAD)와 휘돌이가지(LCx)가
+     갈리고, 오른쪽으로 오른관상동맥(RCA)이 돈다.
+
+     중요한 것은 <b>어디가 막히면 어디가 죽는가</b> 이다. 혈관은 가지를
+     치며 내려가므로 <b>위쪽이 막힐수록 굶는 자리가 넓다.</b>
+
+     윤곽을 베지에로 어림했더니 <b>달걀</b>이 나왔다. 그래서 둘레를
+     각도·반지름으로 찍고 매끄럽게 잇는다 — 숫자 몇 개만 만지면 모양이
+     잡히고, 눈으로 보고 고칠 수 있다.
+
+     ★ 실제 비율·모양과 다르다. 갈래와 관계를 보여 주는 그림이다.          */
+
+  /* 점들을 매끄러운 닫힌 곡선으로 잇는다 (Catmull-Rom → 3차 베지에) */
+  function smoothClosed(pts) {
+    var d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1), n = pts.length, i;
+    for (i = 0; i < n; i++) {
+      var p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+      var c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+      var c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ' C' + c1x.toFixed(1) + ' ' + c1y.toFixed(1) + ',' + c2x.toFixed(1) + ' ' + c2y.toFixed(1) +
+           ',' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+    }
+    return d + ' Z';
+  }
+
+  /* 앞에서 본 심장 — 밑동은 넓고 오른위로 기울며, 꼭지는 왼아래를 향한다 */
+  var HEART_PTS = [
+    [470, 100], [558, 110], [632, 152], [674, 226], [690, 314],
+    [668, 400], [618, 472], [548, 530], [480, 566], [432, 580],
+    [400, 558], [370, 494], [344, 400], [332, 288], [356, 182], [408, 124]
+  ];
+  var HEART_D = smoothClosed(HEART_PTS);
+
+  function heartBody(occl) {
+    var R = rnd(20260824), s = '', i, a, x, y, t;
+
+    s += '<defs>' +
+      '<clipPath id="cpHeart"><path d="' + HEART_D + '"/></clipPath>' +
+      '<linearGradient id="gMyo" x1="0.1" y1="0" x2="0.9" y2="1">' +
+        '<stop offset="0" stop-color="#BE4A41"/><stop offset="0.55" stop-color="#A63A33"/>' +
+        '<stop offset="1" stop-color="#7E2823"/></linearGradient>' +
+      '<linearGradient id="gDead" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#EFE2D2"/><stop offset="1" stop-color="#CBB299"/></linearGradient>' +
+      '<linearGradient id="gAo" x1="0" y1="0" x2="1" y2="0">' +
+        '<stop offset="0" stop-color="#9E332F"/><stop offset="0.45" stop-color="#C85850"/>' +
+        '<stop offset="1" stop-color="#8E2B27"/></linearGradient>' +
+      '<linearGradient id="gPa" x1="0" y1="0" x2="1" y2="0">' +
+        '<stop offset="0" stop-color="#3F628F"/><stop offset="0.45" stop-color="#6D93C2"/>' +
+        '<stop offset="1" stop-color="#3A5C87"/></linearGradient>' +
+      '</defs>';
+
+    /* ── 큰 혈관 — 심장 뒤에서 위로 뻗어 나간다(손잡이가 아니다) ── */
+    /* 대동맥: 밑동에서 올라가 오른쪽으로 활처럼 휘어 화면 밖으로 */
+    s += '<path d="M556 150 C560 92 578 56 616 40 C664 20 712 40 726 84 C736 116 730 150 716 178" ' +
+         'fill="none" stroke="url(#gAo)" stroke-width="46" stroke-linecap="round"/>';
+    /* 대동맥에서 갈라져 나가는 목·팔 동맥 세 줄기 */
+    ['M636 40 L630 6', 'M672 34 L676 4', 'M706 54 L722 24'].forEach(function (d) {
+      s += '<path d="' + d + '" stroke="url(#gAo)" stroke-width="15" stroke-linecap="round" fill="none"/>';
+    });
+    /* 폐동맥: 밑동에서 왼위로 갈라져 나간다 */
+    s += '<path d="M470 128 C452 78 414 48 366 46 C322 44 296 72 300 108" ' +
+         'fill="none" stroke="url(#gPa)" stroke-width="40" stroke-linecap="round"/>';
+    /* 위·아래 대정맥 */
+    s += '<path d="M346 168 C330 116 328 74 340 34" fill="none" stroke="#4A6FA5" ' +
+         'stroke-width="34" stroke-linecap="round" opacity=".95"/>';
+    s += '<path d="M372 526 C360 566 356 592 360 616" fill="none" stroke="#4A6FA5" ' +
+         'stroke-width="26" stroke-linecap="round" opacity=".9"/>';
+
+    /* ── 심장 몸통 ── */
+    s += '<path d="' + HEART_D + '" fill="url(#gMyo)" stroke="#6B211D" stroke-width="3.2"/>';
+    s += '<g clip-path="url(#cpHeart)">';
+    /* 심근은 나선으로 감긴다 — 결을 그 방향으로 눕힌다 */
+    for (i = 0; i < 230; i++) {
+      x = 320 + R() * 380; y = 100 + R() * 450;
+      t = -46 + (x - 320) / 380 * 78 + (y - 100) / 450 * 26 + (R() - 0.5) * 16;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' q28 11 58 3" stroke="#93332C" ' +
+           'stroke-width="' + (1.3 + R() * 1.7).toFixed(1) + '" fill="none" opacity="' + (0.3 + R() * 0.4).toFixed(2) +
+           '" transform="rotate(' + t.toFixed(0) + ' ' + x.toFixed(0) + ' ' + y.toFixed(0) + ')"/>';
+    }
+    /* 위쪽 두 방(심방)은 결이 다르고 조금 어둡다 */
+    s += '<path d="M330 252 C364 168 412 118 468 104 C560 112 634 152 676 226 ' +
+         'C600 250 512 258 434 250 C392 246 356 248 330 252 Z" fill="#8E302A" opacity=".55"/>';
+    /* 심방귀 — 귀처럼 접혀 나온 조각 */
+    s += '<path d="M352 176 q-26 22 -14 50 q26 14 44 -12 q-6 -22 -30 -38 Z" fill="#93332D" ' +
+         'stroke="#6B211D" stroke-width="2"/>';
+    s += '<path d="M614 168 q30 20 22 50 q-28 16 -46 -10 q4 -22 24 -40 Z" fill="#93332D" ' +
+         'stroke="#6B211D" stroke-width="2"/>';
+    s += '</g>';
+
+    /* ── 고랑 — 혈관이 지나가는 홈 ── */
+    /* 방실고랑: 심방과 심실 사이를 비스듬히 두른다 */
+    var AV = 'M336 258 C400 300 480 312 566 296 C624 284 660 260 678 236';
+    /* 앞심실사이고랑: 밑동 가운데에서 꼭지까지 내려간다 */
+    var IV = 'M492 262 C476 340 462 424 448 534';
+    s += '<g clip-path="url(#cpHeart)">';
+    s += '<path d="' + AV + '" fill="none" stroke="#75241F" stroke-width="13" opacity=".45"/>';
+    s += '<path d="' + IV + '" fill="none" stroke="#75241F" stroke-width="11" opacity=".4"/>';
+    s += '</g>';
+
+    /* ── 죽은 자리 — 막힌 곳보다 아래가 창백해진다 ────────────── */
+    var DEAD = {
+      lad_hi: 'M486 268 C444 340 428 440 448 534 C512 508 560 442 574 356 C560 300 528 272 486 268 Z',
+      lad_lo: 'M462 392 C444 448 442 496 450 534 C496 512 526 468 534 414 C512 396 486 388 462 392 Z',
+      rca:    'M342 268 C352 356 382 448 436 528 C420 442 410 356 414 274 C392 266 364 264 342 268 Z'
+    };
+    if (occl && DEAD[occl]) {
+      var R2 = rnd(4242);
+      s += '<g clip-path="url(#cpHeart)">';
+      s += '<path d="' + DEAD[occl] + '" fill="url(#gDead)" opacity=".94"/>';
+      for (i = 0; i < 46; i++) {
+        x = 330 + R2() * 280; y = 260 + R2() * 270;
+        s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (1 + R2() * 2.2).toFixed(1) +
+             '" fill="#A98763" opacity=".45"/>';
+      }
+      s += '<path d="' + DEAD[occl] + '" fill="none" stroke="#8A6A4A" stroke-width="2.6" stroke-dasharray="7 5"/>';
+      s += '</g>';
+    }
+
+    /* ── 관상동맥 ─────────────────────────────────────────────── */
+    function vessel(d, w, col) {
+      return '<path d="' + d + '" fill="none" stroke="#5E1414" stroke-width="' + (w + 4).toFixed(1) +
+             '" stroke-linecap="round" opacity=".3"/>' +
+             '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w +
+             '" stroke-linecap="round"/>' +
+             '<path d="' + d + '" fill="none" stroke="#F6B3AE" stroke-width="' + (w * 0.3).toFixed(1) +
+             '" stroke-linecap="round" opacity=".5"/>';
+    }
+    var LM  = 'M600 214 C566 226 528 244 500 262';
+    var LAD = 'M500 262 C484 340 470 424 456 528';
+    var LCX = 'M500 262 C548 276 596 274 636 254 C664 292 668 348 650 400 C636 440 612 468 586 486';
+    var RCA = 'M414 224 C376 238 350 250 338 266 C346 350 376 440 428 522';
+
+    s += '<g clip-path="url(#cpHeart)">';
+    s += vessel(RCA, 13, '#C0392B');
+    s += vessel(LCX, 12, '#C0392B');
+    s += vessel(LAD, 14, '#C0392B');
+    s += vessel(LM, 17, '#C0392B');
+    /* 잔가지 — 고랑에서 근육 쪽으로 뻗는다 */
+    [['M494 302 C466 312 444 330 432 356', 6], ['M486 356 C458 368 438 388 428 412', 5.4],
+     ['M476 412 C452 424 434 442 426 464', 4.8], ['M498 300 C526 312 544 332 552 358', 5.6],
+     ['M490 358 C516 372 532 392 538 416', 5], ['M480 416 C504 430 518 448 524 468', 4.4],
+     ['M646 300 C616 312 598 332 590 358', 5.6], ['M656 350 C630 364 614 384 608 408', 4.8],
+     ['M636 424 C614 438 600 456 594 476', 4.4], ['M346 306 C372 318 390 336 398 360', 5.4],
+     ['M362 362 C386 376 402 394 408 416', 4.8], ['M382 418 C404 432 418 448 424 466', 4.2],
+     ['M596 226 C606 256 604 284 594 306', 4.6], ['M440 232 C430 260 428 286 434 308', 4.6]
+    ].forEach(function (b) { s += vessel(b[0], b[1], '#CC4B3C'); });
+    /* 정맥 — 고랑을 따라 파랗게 */
+    s += '<path d="' + AV + '" fill="none" stroke="#4A6FA5" stroke-width="9" opacity=".6" stroke-linecap="round"/>';
+    s += '<path d="M510 268 C494 344 480 428 468 528" fill="none" stroke="#4A6FA5" stroke-width="7" ' +
+         'opacity=".5" stroke-linecap="round"/>';
+    s += '</g>';
+
+    /* 막은 피떡 */
+    var OCC = { lad_hi: [494, 292], lad_lo: [474, 408], rca: [340, 288] };
+    if (occl && OCC[occl]) {
+      var ox = OCC[occl][0], oy = OCC[occl][1];
+      s += '<circle cx="' + ox + '" cy="' + oy + '" r="19" fill="#1F2937" opacity=".2"/>';
+      s += '<circle cx="' + ox + '" cy="' + oy + '" r="11.5" fill="#3B0764"/>';
+      for (i = 0; i < 10; i++) {
+        a = i * 0.63;
+        s += '<circle cx="' + (ox + Math.cos(a) * (3 + R() * 5)).toFixed(0) + '" cy="' +
+             (oy + Math.sin(a) * (3 + R() * 5)).toFixed(0) + '" r="2.1" fill="#7E22CE" opacity=".85"/>';
+      }
+      s += '<circle cx="' + ox + '" cy="' + oy + '" r="21" fill="none" stroke="#3B0764" ' +
+           'stroke-width="2.4" stroke-dasharray="5 4"/>';
+    }
+    return s;
+  }
+
+  V.heart_coro = {
+    t: '심장의 밥그릇 — 관상동맥 세 갈래',
+    d: '심장도 제 밥그릇이 따로 있습니다. 심장 <b>겉</b>을 타고 내려가는 관상동맥입니다. ' +
+       '왼쪽 주간부에서 <b>앞내림가지</b>와 <b>휘돌이가지</b>가 갈리고, 오른쪽으로 <b>오른관상동맥</b>이 돕니다. ' +
+       '이 세 갈래가 잔가지를 뻗어 심장 근육 전체를 먹여 살립니다. ' +
+       '<b>가지 하나가 막히면 그 아래 근육이 굶습니다.</b>',
+    dz: ['mi'],
+    build: function () {
+      var s = '<svg viewBox="0 0 1100 660" width="1100" height="660">' + heartBody(0);
+      s += lbl(600, 214, 762, 128, '좌주간부', '여기서 두 갈래로 갈립니다 — 가장 위쪽입니다', '#8B1A1A');
+      s += lbl(478, 350, 762, 194, '앞내림가지 (LAD)', '앞면과 꼭지를 먹입니다 — 가장 넓은 몫', '#B91C1C');
+      s += lbl(658, 330, 762, 260, '휘돌이가지 (LCx)', '왼쪽 옆·뒤를 감아 돕니다', '#B91C1C');
+      s += lbl(348, 330, 762, 326, '오른관상동맥 (RCA)', '오른쪽과 아래벽을 먹입니다', '#B91C1C');
+      s += lbl(566, 296, 762, 392, '고랑', '심방과 심실 사이의 홈 — 혈관은 이 홈을 탑니다', '#75241F');
+      s += lbl(432, 356, 762, 458, '잔가지', '갈수록 가늘어져 근육 속으로 들어갑니다', '#CC4B3C');
+      s += lbl(680, 96, 762, 524, '대동맥', '심장이 밀어낸 피가 온몸으로 나가는 길', '#9E332F');
+      s += lbl(310, 92, 96, 44, '폐동맥 · 대정맥', '허파로 가고, 몸에서 돌아오는 길', '#3F628F');
+      s += note(300, 636, '겉을 타고 내려가는 혈관이라, 위쪽이 막힐수록 굶는 자리가 넓습니다', '#0F172A');
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1100 660' });
+    }
+  };
+
+  V.heart_dead = {
+    t: '어디가 막히면 어디가 죽습니까 — 세 자리를 견줍니다',
+    d: '같은 「심근경색」이라도 <b>막힌 자리가 위냐 아래냐</b>에 따라 죽는 근육의 넓이가 다릅니다. ' +
+       '창백해진 곳이 피가 끊겨 굶는 근육이고, 보라색 덩어리가 막은 피떡입니다. ' +
+       '위쪽이 막히면 <b>그 아래 전부</b>가 한꺼번에 굶습니다. ' +
+       '그래서 같은 병명이라도 뒤에 남는 것(심부전·후유장해)이 사람마다 크게 다릅니다.',
+    dz: ['mi'],
+    build: function () {
+      var P = [
+        ['lad_hi', '① 앞내림가지 위쪽이 막힘', '앞벽과 꼭지가 통째로 — 가장 넓습니다', '#991B1B'],
+        ['lad_lo', '② 같은 가지 아래쪽이 막힘', '꼭지 부분만 — 좁습니다', '#B45309'],
+        ['rca',    '③ 오른관상동맥이 막힘', '오른쪽·아래벽 — 맥이 느려지기도 합니다', '#166534']
+      ];
+      var s = '<svg viewBox="0 0 1100 560" width="1100" height="560">';
+      P.forEach(function (p, i) {
+        var x = 24 + i * 356;
+        s += '<rect x="' + x + '" y="10" width="336" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 68) + ' 32) scale(0.3)">' + heartBody(p[0]) + '</g>';
+        s += '<text x="' + (x + 10) + '" y="248" font-size="13.5" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">' +
+        '<text x="28" y="298" font-size="14.5" font-weight="800" fill="#0D1117">' +
+        '창백한 곳 = 피가 끊긴 근육 · 보라색 덩어리 = 막은 피떡</text>' +
+        '<text x="28" y="322" font-size="12.8" fill="#4B5563">' +
+        '한 번 죽은 심장 근육은 되살아나지 않습니다 — 그래서 시간 싸움이라고 합니다.</text></g>';
+      s += '<rect x="24" y="348" width="1052" height="104" rx="14" fill="#0F172A"/>';
+      s += '<text x="48" y="382" font-size="15" font-weight="800" fill="#fff">보험에서 갈리는 자리</text>';
+      s += '<text x="48" y="408" font-size="13.2" fill="#CBD5E1">' +
+           '셋 다 진단명이 다를 수 있습니다 — 급성심근경색(I21)일 수도, 협심증(I20)일 수도 있습니다.</text>';
+      s += '<text x="48" y="430" font-size="13.2" fill="#CBD5E1">' +
+           '담보가 급성심근경색만인지 허혈성심장질환 전체인지가 지급을 가릅니다. 최종 지급은 약관과 심사가 정합니다.</text>';
+      s += '<text x="24" y="480" font-size="11.8" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 굶는 자리의 넓이 관계를 보여 주는 그림입니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1100 560' });
+    }
+  };
+
+  /* ═══ 뇌 — 위에서 내려다본 단면 (CT 로 보는 그 모양) ═════════════
+     상담에서 가장 많이 갈리는 자리가 <b>뇌경색이냐 뇌출혈이냐</b> 이다.
+     담보 이름이 「뇌출혈」 하나면 가장 흔한 뇌경색에서 한 푼도 안 나온다.
+     그 둘이 <b>그림에서 어떻게 다른지</b> 를 보여 주는 것이 이 그림의 일이다.
+
+       · 뇌경색 — 혈관이 막혀 그 아래가 <b>굶는다.</b> 창백해진다.
+       · 뇌출혈 — 혈관이 터져 피가 <b>고인다.</b> 덩어리가 되어 옆을 민다.
+
+     뇌 표면의 주름(이랑과 고랑)은 자리마다 다르지만, 여기서는 늘 같은
+     그림이 나오도록 씨앗을 고정해 그린다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  var BRAIN_PTS = [
+    [520, 92], [606, 104], [676, 140], [722, 200], [740, 274], [742, 352],
+    [724, 428], [686, 488], [624, 528], [540, 542], [456, 528], [394, 488],
+    [356, 428], [338, 352], [340, 274], [358, 200], [404, 140], [464, 104]
+  ];
+  var BRAIN_D = smoothClosed(BRAIN_PTS);
+
+  /* 뇌 한 장. mode: 0 정상 · 1 뇌경색 · 2 뇌출혈 */
+  function brainAxial(mode) {
+    var R = rnd(20260825), s = '', i, a, x, y, r;
+    var CX = 540, CY = 320;
+
+    s += '<defs>' +
+      '<clipPath id="cpBrain' + mode + '"><path d="' + BRAIN_D + '"/></clipPath>' +
+      '<radialGradient id="gGray' + mode + '" cx="0.42" cy="0.36" r="0.78">' +
+        '<stop offset="0" stop-color="#E7DCD2"/><stop offset="1" stop-color="#C9BAAC"/></radialGradient>' +
+      '<linearGradient id="gWhite' + mode + '" x1="0" y1="0" x2="0" y2="1">' +
+        '<stop offset="0" stop-color="#F3EDE6"/><stop offset="1" stop-color="#E2D8CD"/></linearGradient>' +
+      '</defs>';
+
+    /* 머리뼈 — 바깥 테 */
+    s += '<path d="' + BRAIN_D + '" fill="none" stroke="#E8E2D8" stroke-width="34" ' +
+         'transform="translate(' + CX + ' ' + CY + ') scale(1.075) translate(' + (-CX) + ' ' + (-CY) + ')"/>';
+    s += '<path d="' + BRAIN_D + '" fill="none" stroke="#B9AE9C" stroke-width="3" ' +
+         'transform="translate(' + CX + ' ' + CY + ') scale(1.075) translate(' + (-CX) + ' ' + (-CY) + ')"/>';
+    s += '<path d="' + BRAIN_D + '" fill="none" stroke="#CFC5B4" stroke-width="2.4" ' +
+         'transform="translate(' + CX + ' ' + CY + ') scale(1.13) translate(' + (-CX) + ' ' + (-CY) + ')"/>';
+
+    /* 뇌 — 회색질(겉)과 백색질(속) */
+    s += '<path d="' + BRAIN_D + '" fill="url(#gGray' + mode + ')" stroke="#9E8F80" stroke-width="2.6"/>';
+    s += '<g clip-path="url(#cpBrain' + mode + ')">';
+    s += '<path d="' + BRAIN_D + '" fill="url(#gWhite' + mode + ')" ' +
+         'transform="translate(' + CX + ' ' + CY + ') scale(0.79) translate(' + (-CX) + ' ' + (-CY) + ')"/>';
+
+    /* 이랑과 고랑 — 겉에서 안쪽으로 파고든 주름 */
+    for (i = 0; i < 88; i++) {
+      a = (i / 88) * Math.PI * 2 + 0.05;
+      var rr = 196 + 22 * Math.sin(a * 3.1) + 14 * Math.sin(a * 5.7 + 1.2);
+      var x1 = CX + Math.cos(a) * rr * 1.0, y1 = CY + Math.sin(a) * rr * 1.06;
+      var dep = 34 + R() * 30;
+      var x2 = CX + Math.cos(a + 0.06) * (rr - dep), y2 = CY + Math.sin(a + 0.06) * (rr - dep) * 1.06;
+      s += '<path d="M' + x1.toFixed(0) + ' ' + y1.toFixed(0) + ' Q' +
+           ((x1 + x2) / 2 + (R() - 0.5) * 22).toFixed(0) + ' ' + ((y1 + y2) / 2 + (R() - 0.5) * 22).toFixed(0) +
+           ' ' + x2.toFixed(0) + ' ' + y2.toFixed(0) + '" stroke="#A8998A" stroke-width="' +
+           (2.2 + R() * 2).toFixed(1) + '" fill="none" opacity="' + (0.5 + R() * 0.35).toFixed(2) + '"/>';
+    }
+    /* 겉을 도는 잔주름 */
+    for (i = 0; i < 165; i++) {
+      a = R() * Math.PI * 2; r = 150 + R() * 62;
+      x = CX + Math.cos(a) * r; y = CY + Math.sin(a) * r * 1.05;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' q12 6 24 -1" stroke="#B3A596" ' +
+           'stroke-width="1.5" fill="none" opacity=".4" transform="rotate(' +
+           (a * 180 / Math.PI + 90).toFixed(0) + ' ' + x.toFixed(0) + ' ' + y.toFixed(0) + ')"/>';
+    }
+
+    /* 가운데 금 — 대뇌낫 */
+    s += '<path d="M540 96 L540 538" stroke="#8B7D6E" stroke-width="4" opacity=".85"/>';
+    /* 앞뒤를 알려 주는 홈 */
+    s += '<path d="M540 118 q-16 26 -2 52 q16 -26 2 -52" fill="#8B7D6E" opacity=".5"/>';
+
+    /* 뇌실 — 나비 모양 */
+    var VENT_L = 'M508 246 C486 262 474 300 480 344 C486 378 500 396 512 392 C518 366 516 300 508 246 Z';
+    var VENT_R = 'M572 246 C594 262 606 300 600 344 C594 378 580 396 568 392 C562 366 564 300 572 246 Z';
+    s += '<path d="' + VENT_L + '" fill="#6E7F92" opacity=".75"/>';
+    s += '<path d="' + VENT_R + '" fill="#6E7F92" opacity=".75"/>';
+    /* 깊은 회색질 덩어리 */
+    s += '<ellipse cx="472" cy="304" rx="30" ry="46" fill="#B49E8B" opacity=".8"/>';
+    s += '<ellipse cx="608" cy="304" rx="30" ry="46" fill="#B49E8B" opacity=".8"/>';
+
+    /* ── 큰 혈관 — 바닥에서 올라와 갈라진다 ── */
+    function art2(d, w) {
+      return '<path d="' + d + '" fill="none" stroke="#8B1A1A" stroke-width="' + (w + 3) + '" opacity=".28" stroke-linecap="round"/>' +
+             '<path d="' + d + '" fill="none" stroke="#C0392B" stroke-width="' + w + '" stroke-linecap="round"/>';
+    }
+    var MCA_L = 'M508 336 C462 330 424 316 396 296 C368 276 348 258 338 240';
+    var MCA_R = 'M572 336 C618 330 656 316 684 296 C712 276 732 258 742 240';
+    var ACA_L = 'M520 330 C512 288 512 236 520 186';
+    var ACA_R = 'M560 330 C568 288 568 236 560 186';
+    var PCA_L = 'M516 350 C500 396 480 442 456 478';
+    var PCA_R = 'M564 350 C580 396 600 442 624 478';
+    s += art2(MCA_L, 11) + art2(MCA_R, 11) + art2(ACA_L, 8) + art2(ACA_R, 8) + art2(PCA_L, 8) + art2(PCA_R, 8);
+    /* 잔가지 */
+    [[ 'M420 306 C404 282 396 258 398 236', 5], ['M456 322 C444 296 440 272 444 250', 5],
+     ['M660 306 C676 282 684 258 682 236', 5], ['M624 322 C636 296 640 272 636 250', 5],
+     ['M516 250 C500 236 486 226 470 220', 4.4], ['M564 250 C580 236 594 226 610 220', 4.4],
+     ['M492 430 C476 448 462 462 446 470', 4.4], ['M588 430 C604 448 618 462 634 470', 4.4]
+    ].forEach(function (b) { s += art2(b[0], b[1]); });
+    /* 관통동맥 — 큰 혈관 줄기에서 <b>곧게 위로</b> 파고들어 깊은 회색질로
+       들어가는 가는 가지다. 고혈압에서 잘 터지는 자리가 바로 여기라,
+       이 가지들이 보여야 「여기가 터집니다」 가 그림에서 말이 된다. */
+    for (i = 0; i < 30; i++) {
+      var side = i < 15 ? 0 : 1, j2 = i % 15;
+      var px = (side ? 566 : 514) + (side ? 1 : -1) * (6 + j2 * 5.4) + (R() - 0.5) * 5;
+      var y0 = 340 + (R() - 0.5) * 10;                    /* 줄기에서 나와 */
+      var y1 = 268 - R() * 30;                            /* 깊은 회색질로 */
+      s += '<path d="M' + px.toFixed(0) + ' ' + y0.toFixed(0) + ' Q' +
+           (px + (R() - 0.5) * 12).toFixed(0) + ' ' + ((y0 + y1) / 2).toFixed(0) + ' ' +
+           (px + (R() - 0.5) * 10).toFixed(0) + ' ' + y1.toFixed(0) +
+           '" stroke="#C0392B" stroke-width="' + (1.9 + R() * 1.5).toFixed(1) +
+           '" fill="none" opacity=".8" stroke-linecap="round"/>';
+    }
+    /* 겉을 덮는 잔가지 — 짧게, 결처럼 */
+    for (i = 0; i < 44; i++) {
+      a = R() * Math.PI * 2; r = 178 + R() * 18;
+      var sx = CX + Math.cos(a) * r, sy = CY + Math.sin(a) * r * 1.04;
+      var el = 11 + R() * 12;
+      s += '<path d="M' + sx.toFixed(0) + ' ' + sy.toFixed(0) + ' L' +
+           (CX + Math.cos(a) * (r - el)).toFixed(0) + ' ' +
+           (CY + Math.sin(a) * (r - el) * 1.04).toFixed(0) +
+           '" stroke="#C0392B" stroke-width="1.7" opacity=".45" stroke-linecap="round"/>';
+    }
+    s += '</g>';
+
+    /* ── 병 ── */
+    /* 왼쪽 중간대뇌동맥 영역 (화면에서는 왼쪽 반) */
+    var TERR_MCA = 'M508 336 C452 328 402 306 366 272 C346 246 342 208 356 176 ' +
+                   'C392 232 442 274 508 288 Z';
+    var TERR_MCA_BIG = 'M512 300 C440 300 386 272 356 226 C344 268 344 330 360 386 ' +
+                       'C388 448 448 494 512 500 Z';
+    if (mode === 1) {
+      s += '<g clip-path="url(#cpBrain1)">';
+      s += '<path d="' + TERR_MCA_BIG + '" fill="#F2EDE4" opacity=".92"/>';
+      var R3 = rnd(818);
+      for (i = 0; i < 60; i++) {
+        x = 350 + R3() * 170; y = 230 + R3() * 260;
+        s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (1 + R3() * 2.4).toFixed(1) +
+             '" fill="#CFC3B2" opacity=".55"/>';
+      }
+      s += '<path d="' + TERR_MCA_BIG + '" fill="none" stroke="#9C8B76" stroke-width="2.6" stroke-dasharray="8 5"/>';
+      /* 뇌실이 병 쪽으로 조금 넓어진다 */
+      s += '</g>';
+      /* 막은 피떡 */
+      s += '<circle cx="470" cy="326" r="17" fill="#1F2937" opacity=".2"/>';
+      s += '<circle cx="470" cy="326" r="10.5" fill="#3B0764"/>';
+      for (i = 0; i < 9; i++) {
+        a = i * 0.7;
+        s += '<circle cx="' + (470 + Math.cos(a) * (3 + R() * 4)).toFixed(0) + '" cy="' +
+             (326 + Math.sin(a) * (3 + R() * 4)).toFixed(0) + '" r="2" fill="#7E22CE" opacity=".85"/>';
+      }
+    }
+    if (mode === 2) {
+      /* 피가 고여 덩어리가 되고, 가운데 금이 반대쪽으로 밀린다 */
+      s += '<g clip-path="url(#cpBrain2)">';
+      s += '<path d="M470 258 C412 268 384 320 396 378 C410 434 462 462 508 444 ' +
+           'C540 424 546 356 528 302 C516 268 496 254 470 258 Z" fill="#7A1220"/>';
+      s += '<path d="M470 258 C412 268 384 320 396 378 C410 434 462 462 508 444 ' +
+           'C540 424 546 356 528 302 C516 268 496 254 470 258 Z" fill="none" stroke="#4C0A14" stroke-width="3"/>';
+      var R4 = rnd(919);
+      for (i = 0; i < 70; i++) {
+        x = 396 + R4() * 148; y = 262 + R4() * 190;
+        s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (1.4 + R4() * 3).toFixed(1) +
+             '" fill="#9C1A2B" opacity=".55"/>';
+      }
+      /* 둘레가 붓는다 */
+      s += '<path d="M470 240 C396 254 358 322 374 392 C392 456 458 490 518 466" fill="none" ' +
+           'stroke="#C9A9A9" stroke-width="14" opacity=".45"/>';
+      /* 밀린 가운데 금 */
+      s += '<path d="M540 96 C556 200 574 300 566 400 C562 470 550 510 540 538" ' +
+           'stroke="#8B7D6E" stroke-width="4.4" fill="none"/>';
+      s += '<path d="M540 96 L540 538" stroke="#8B7D6E" stroke-width="3" opacity=".28" stroke-dasharray="6 5"/>';
+      s += '</g>';
+      /* 터진 자리 */
+      s += '<circle cx="470" cy="300" r="8" fill="#4C0A14"/>';
+    }
+    return s;
+  }
+
+  V.brain_terr = {
+    t: '뇌는 세 갈래가 나눠 먹입니다 — 어디가 막히면 어디가 죽나',
+    d: '뇌도 혈관이 <b>구역을 나눠</b> 먹입니다. 가운데를 크게 맡는 <b>중간대뇌동맥</b>, ' +
+       '앞쪽을 맡는 <b>앞대뇌동맥</b>, 뒤쪽을 맡는 <b>뒤대뇌동맥</b>입니다. ' +
+       '한 갈래가 막히면 <b>그 구역이 통째로</b> 굶습니다 — 그래서 막힌 자리에 따라 남는 장애가 다릅니다. ' +
+       '위에서 내려다본 단면이라, 병원에서 보시는 CT 와 같은 방향입니다.',
+    dz: ['stroke'],
+    build: function () {
+      var s = '<svg viewBox="0 0 1120 620" width="1120" height="620">' + brainAxial(0);
+      s += lbl(430, 300, 790, 118, '중간대뇌동맥 (MCA)', '가장 넓은 구역 — 팔·다리·말이 여기 걸립니다', '#B91C1C');
+      s += lbl(520, 220, 790, 184, '앞대뇌동맥 (ACA)', '앞쪽 안쪽 — 다리 쪽이 많이 걸립니다', '#B91C1C');
+      s += lbl(500, 430, 790, 250, '뒤대뇌동맥 (PCA)', '뒤쪽 — 보는 것이 걸립니다', '#B91C1C');
+      s += lbl(508, 320, 790, 316, '뇌실', '물(뇌척수액)이 도는 방입니다', '#4A6076');
+      s += lbl(608, 304, 790, 382, '깊은 회색질 · 관통동맥', '곧게 파고드는 가는 가지 — 여기가 잘 터집니다', '#7A6A58');
+      s += lbl(670, 160, 790, 448, '이랑과 고랑', '뇌 겉의 주름 — 겉이 회색질, 속이 백색질입니다', '#8B7D6E');
+      s += lbl(540, 120, 300, 118, '가운데 금', '좌우를 가르는 막입니다', '#8B7D6E');
+      s += note(300, 596, '한 갈래가 막히면 그 구역이 통째로 굶습니다 — 자리에 따라 남는 장애가 다릅니다', '#0F172A');
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1120 620' });
+    }
+  };
+
+  V.brain_vs = {
+    t: '막힌 것과 터진 것 — 담보 이름이 여기서 갈립니다',
+    d: '<b>뇌경색</b>은 혈관이 막혀 그 아래가 굶는 것이고, <b>뇌출혈</b>은 혈관이 터져 피가 고이는 것입니다. ' +
+       '그림에서 보시듯 <b>전혀 다른 일</b>인데, 증권에는 「뇌출혈」 하나만 적혀 있는 경우가 많습니다. ' +
+       '그러면 <b>훨씬 흔한 뇌경색에서 한 푼도 나오지 않습니다.</b> ' +
+       '담보 이름이 아니라 <b>담는 질병코드 범위</b>를 보셔야 하는 이유입니다.',
+    dz: ['stroke'],
+    build: function () {
+      var P = [
+        [0, '정상', '피가 골고루 돕니다', '#334155'],
+        [1, '뇌경색 — 막혔습니다', '그 구역이 창백해집니다 (굶습니다)', '#1D4ED8'],
+        [2, '뇌출혈 — 터졌습니다', '피가 고여 덩어리가 되고 가운데 금이 밀립니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1120 620" width="1120" height="620">';
+      P.forEach(function (p, i) {
+        var x = 24 + i * 358;
+        s += '<rect x="' + x + '" y="10" width="340" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 104) + ' 30) scale(0.335)">' + brainAxial(p[0]) + '</g>';
+        s += '<text x="' + (x + 10) + '" y="272" font-size="13.2" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<rect x="24" y="300" width="1072" height="150" rx="14" fill="#0F172A"/>';
+      s += '<text x="48" y="334" font-size="15" font-weight="800" fill="#fff">증권에서 이것만 보십시오</text>';
+      s += '<text x="48" y="362" font-size="13.2" fill="#CBD5E1">' +
+           '「뇌출혈」 만 적혀 있으면 — 가운데 그림(뇌경색)에서 나오지 않을 수 있습니다.</text>';
+      s += '<text x="48" y="386" font-size="13.2" fill="#CBD5E1">' +
+           '「뇌졸중」 이면 막힌 것과 터진 것을 함께 담고, 「뇌혈관질환」 이면 더 넓게 담습니다.</text>';
+      s += '<text x="48" y="410" font-size="13.2" fill="#93C5FD">' +
+           '다만 <tspan font-weight="800">이름이 아니라 약관의 질병코드 범위</tspan>가 정합니다. 최종 지급은 약관과 심사가 정합니다.</text>';
+      s += '<text x="24" y="480" font-size="11.8" fill="#6B7280">' +
+           '실제 비율·모양과 다릅니다. 두 병이 어떻게 다른지를 보여 주는 그림입니다.</text>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1120 500' });
+    }
+  };
+
   V.vessel = {
     t: '혈관은 이렇게 좁아지고, 이렇게 엽니다',
     d: '기름때가 쌓여 길이 좁아지다가(협심증), 그 덩어리가 터지면 피떡이 생겨 완전히 막힙니다(심근경색). ' +
@@ -1046,9 +1526,10 @@
   };
 
   /* ── 바깥에 내주는 문 ─────────────────────────────────────── */
-  var KEYS = ['skin_cross', 'skin_cancer', 'cancer_invade', 'wall_layer', 'wall_invade',
-              'artery_cross', 'artery_rupture', 'vessel', 'minor_cancer', 'brain_open',
-              'approach', 'dialysis', 'joint', 'dementia_step', 'liver_step', 'wallets'];
+  /* 목록을 손으로 적어 두었더니 <b>V 와 쌍둥이</b>가 됐다. 그림을 새로 그리고
+     목록에 안 넣으면 조용히 사라진다 — 실제로 심장 그림 두 장을 그려 놓고
+     한나절 못 찾았다. 그래서 <b>V 가 곧 목록</b>이다. 차례는 적어 놓은 차례. */
+  var KEYS = Object.keys(V);
   window.DZ_VIZ = {
     keys: KEYS,
     /* 손으로 그린 도해입니다 — 어디에 쓰든 이 말을 함께 답니다 */
