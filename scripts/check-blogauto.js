@@ -16,7 +16,10 @@
      7. 발행 게이트가 <b>잡을 것을 잡는가</b> — 단정·실명·세금 결론·빈칸
      8. <b>헛것을 안 잡는가</b> — 멀쩡한 글은 통과한다 (CLAUDE.md 8)
      9. 준법 문구를 <b>config/compliance.json</b> 에서 읽는가 (다시 안 적었나)
-    10. 홍보 글감이 <b>실제로 있는 메뉴</b>만 말하는가                  */
+    10. 홍보 글감이 <b>실제로 있는 메뉴</b>만 말하는가
+    11. 성장 글감이 <b>전체 지도</b>에서 그대로 오는가
+    12. 그림까지 나와서 <b>정말 올릴 수 있는가</b> — PNG 로 바뀌는가 ·
+        <b>없는 숫자를 그리지 않는가</b> · 못 만드는 그림을 부르면 잡는가  */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -302,6 +305,143 @@ const NEWS = [
     const n = bfGrowthSeeds().length; window.APEX_MAP = keep; return n;
   });
   is(noMap === 0, '  지도를 못 읽으면 성장 글감은 0개다 — 없는 순서를 만들지 않는다');
+
+  console.log('\n[12] 그림까지 나와서 정말 올릴 수 있는가');
+  const art = await page.evaluate(n => {
+    NLIVE.items = n;
+    localStorage.setItem('apex_blog_mine_ask', JSON.stringify([{ q: '암 진단비는 얼마가 적당한가요?', at: '2026-08-23' }]));
+    BF.perweek = 5; bfPlan();
+    const pick = k => BF.rows.filter(r => r.seed && r.kind === k)[0];
+    const draft = '## 제목 후보\n- 40대 가장이 놓치는 보장 세 가지\n\n## 왜 지금인가\n본문입니다. 보험료는 심사 결과에 따릅니다.\n\n## 무엇부터 보나\n[이미지: 8통장 구조도 | alt: 구조도]\n본문입니다.\n\n## 해시태그\n#보험\n';
+    const rows = {};
+    BF_ORDER.forEach(k => { const r = pick(k); if (r) { r.out = draft; rows[k] = r; } });
+    const built = {};
+    BF_ORDER.forEach(k => {
+      built[k] = bfArtList(k).map(id => {
+        const b = bfArtBuild(id, rows[k]);
+        return { id: id, t: BF_ART[id].t, err: b.err || '', svg: b.svg || '', alt: b.alt || '',
+                 file: b.file || '', w: b.w || 0, h: b.h || 0 };
+      });
+    });
+    return { built: built, lists: BF_ORDER.map(k => ({ k: k, art: bfArtList(k) })),
+             menu: bfArtMenu('econ'), keys: Object.keys(BF_ART) };
+  }, NEWS);
+
+  is(art.lists.every(x => x.art.length >= 2), '  갈래마다 쓸 그림이 두 장 이상 매여 있다');
+  is(art.lists.every(x => x.art.every(id => art.keys.indexOf(id) >= 0)),
+     '  갈래가 부르는 그림이 모두 그림 표에 있다 — 없는 것을 가리키지 않는다');
+  is(art.lists.every(x => x.art.indexOf('cover') >= 0), '  갈래마다 대표 이미지가 있다');
+  const arts = [];
+  Object.keys(art.built).forEach(k => art.built[k].forEach(b => arts.push(b)));
+  is(arts.every(b => b.err || (b.svg.indexOf('<svg') === 0 && b.w > 0 && b.h > 0)),
+     '  그린 것은 모두 크기를 가진 SVG 다 (' + arts.filter(b => !b.err).length + '장)');
+  is(arts.every(b => b.err || b.alt.length > 4), '  그림마다 alt 가 있다');
+  is(arts.every(b => b.err || /\.png$/.test(b.file)), '  그림마다 파일 이름이 있다');
+
+  /* 축과 눈금이 있는 그래프를 그리면 없는 숫자가 근거가 되어 버린다.
+     사람이 읽는 글자에 금액·퍼센트가 있는지 본다 — 좌표는 그림이지 글이 아니다. */
+  const drawn = await page.evaluate(() => {
+    const rows = {}; BF_ORDER.forEach(k => {
+      const r = BF.rows.filter(x => x.seed && x.kind === k)[0]; if (r) rows[k] = r; });
+    const out = [];
+    BF_ORDER.forEach(k => bfArtList(k).forEach(id => {
+      const b = bfArtBuild(id, rows[k]); if (b.err) return;
+      const txt = (b.svg.match(/<tspan[^>]*>([^<]*)<\/tspan>/g) || [])
+        .map(x => x.replace(/<[^>]+>/g, '')).join(' ');
+      out.push({ id: id, txt: txt });
+    }));
+    return out;
+  });
+  const moneyRe = /[0-9][0-9,]*\s*(원|만원|억|%|퍼센트|배)/;
+  const withMoney = drawn.filter(d => moneyRe.test(d.txt));
+  is(withMoney.length === 0, '  그림 글자에 금액·퍼센트가 없다 — 없는 숫자를 그리지 않는다'
+     + (withMoney.length ? ' — ' + withMoney[0].id + ': ' + withMoney[0].txt.slice(0, 40) : ''));
+  is(!/<line[^>]*class="axis"|눈금/.test(JSON.stringify(arts.map(b => b.svg))),
+     '  축·눈금을 그리지 않는다');
+
+  /* 8통장 이름과 alt 는 앱이 이미 가진 표에서 온다 — 여기에 다시 적어 두면 한쪽만 늙는다 */
+  const reuse = await page.evaluate(() => {
+    const w8 = bfArtBuild('w8', {});
+    const names = (typeof WALLETS !== 'undefined') ? WALLETS.map(w => w.name) : [];
+    return { svg: w8.svg || '', alt: w8.alt || '', names: names,
+             blogimg: (typeof BLOG_IMG !== 'undefined') ? BLOG_IMG.map(r => r[2]) : [] };
+  });
+  const nameHit = reuse.names.filter(nm => reuse.svg.indexOf(nm.slice(0, 4)) >= 0).length;
+  is(nameHit >= 8, '  8통장 그림이 WALLETS 의 여덟 이름을 그대로 쓴다 (' + nameHit + '/8)');
+  is(reuse.blogimg.indexOf(reuse.alt) >= 0,
+     '  alt 를 BLOG_IMG 표에서 가져온다 — 같은 그림에 alt 를 두 벌 두지 않는다');
+  is(SRC.indexOf("var BF_W8") < 0 && !/BF_ART[\s\S]{0,4000}생활 통장/.test(SRC),
+     '  여덟 칸 이름을 그림 쪽에 다시 적어 두지 않았다');
+
+  /* 뉴스 카드는 기사를 그대로 옮긴다 */
+  const card = art.built.econ.filter(b => b.id === 'news')[0];
+  is(!!card && !card.err && card.svg.indexOf('금리') >= 0,
+     '  뉴스 카드에 기사 제목이 그대로 들어간다');
+  is(!!card && /연합뉴스|이데일리/.test(card.svg) && card.svg.indexOf('2026-08-') >= 0,
+     '  언론사와 날짜가 함께 들어간다 (CLAUDE.md 9)');
+  is(!!card && /본문은 원문에서/.test(card.svg), '  기사 본문은 옮기지 않았다고 카드에 적는다');
+
+  /* 초안이 없으면 대표 이미지를 못 만든다고 말한다 — 아무 제목이나 지어내지 않는다 */
+  const noDraft = await page.evaluate(() => {
+    const r = { kind: 'econ', seed: { kind: 'econ', title: 'x', src: 'y' }, out: '' };
+    return { cover: bfArtBuild('cover', r).err || '', toc: bfArtBuild('toc', r).err || '' };
+  });
+  is(/초안을 먼저/.test(noDraft.cover) && /초안을 먼저/.test(noDraft.toc),
+     '  초안이 없으면 못 만든다고 말한다 — 빈 카드를 지어내지 않는다');
+
+  /* 못 만드는 그림을 부르면 잡고, 만들 수 있는 그림은 안 잡는다 (CLAUDE.md 8) */
+  const gate = await page.evaluate(() => ({
+    bad: bfGuard('본문 [이미지: 고객 사진 | alt: 고객] 입니다.', 'econ'),
+    good: bfGuard('본문 [이미지: 뉴스 카드 | alt: 카드] 입니다.', 'econ'),
+    loose: bfGuard('본문 [이미지: 대표이미지 | alt: 대표] 입니다.', 'econ'),
+    none: bfGuard('본문에 그림이 없습니다.', 'econ')
+  }));
+  is(gate.bad.noart.length === 1 && !gate.bad.ok, '  「고객 사진」 처럼 못 만드는 그림을 부르면 잡는다');
+  is(gate.good.noart.length === 0, '  만들 수 있는 그림은 안 잡는다');
+  is(gate.loose.noart.length === 0, '  이름이 조금 달라도 같은 그림이면 통과시킨다 — 헛것을 안 잡는다');
+  is(gate.none.noart.length === 0, '  그림을 안 부른 글을 잡지 않는다');
+
+  /* 주문서에 목록이 실려야 AI 가 없는 그림을 안 부른다 */
+  is(/뉴스 카드/.test(art.menu) && /대표 이미지/.test(art.menu), '  주문서에 실을 그림 목록이 만들어진다');
+  const sysArt = await page.evaluate(() => bfSys());
+  is(/목록에 없는 그림을 부르지 않는다/.test(sysArt), '  없는 그림을 부르지 말라고 시킨다');
+
+  /* 발행 묶음에 파일 이름·alt·올리는 순서가 함께 간다 */
+  const packed2 = await page.evaluate(() => {
+    let got = '';
+    window.copyText = function (t) { got = t; };
+    const r = BF.rows.filter(x => x.seed && x.kind === 'econ')[0];
+    r.out = '## 제목 후보\n- 금리 이야기\n\n## 본문\n보험료는 심사 결과에 따릅니다.\n\n## 무엇부터\n[이미지: 뉴스 카드 | alt: 카드]\n';
+    r.guard = bfGuard(r.out, r.kind);
+    const i = BF.rows.indexOf(r);
+    bfPack(i);
+    return { got: got, ok: r.guard.ok };
+  });
+  is(packed2.ok, '  그림까지 맞은 글은 발행 묶음이 열린다');
+  is(/함께 올릴 그림/.test(packed2.got) && /\.png/.test(packed2.got),
+     '  묶음에 그림 파일 이름이 함께 간다');
+  is(/alt:/.test(packed2.got) && /올리는 순서/.test(packed2.got),
+     '  alt 와 올리는 순서가 함께 간다 — 글만 복사해 가서 막히지 않게');
+
+  /* 마지막 — 정말 PNG 로 바뀌는가. 미리보기만 되고 안 받아지면 못 올린다. */
+  const png = await page.evaluate(async () => {
+    const r = bfArtBuild('w8', {});
+    const blob = new Blob([r.svg], { type: 'image/svg+xml;charset=utf-8' });
+    const u = URL.createObjectURL(blob);
+    const img = new Image();
+    const okLoad = await new Promise(res => { img.onload = () => res(true); img.onerror = () => res(false); img.src = u; });
+    if (!okLoad) return { ok: false, why: '그림을 못 읽었습니다' };
+    const c = document.createElement('canvas'); c.width = r.w; c.height = r.h;
+    const g = c.getContext('2d'); g.fillStyle = '#FFF'; g.fillRect(0, 0, r.w, r.h); g.drawImage(img, 0, 0);
+    const b = await new Promise(res => c.toBlob(res, 'image/png'));
+    if (!b) return { ok: false, why: 'PNG 로 안 바뀝니다' };
+    const head = new Uint8Array(await b.slice(0, 8).arrayBuffer());
+    return { ok: true, size: b.size, png: head[1] === 0x50 && head[2] === 0x4E && head[3] === 0x47,
+             w: c.width, h: c.height };
+  });
+  is(png.ok && png.png, '  SVG 가 진짜 PNG 로 바뀐다' + (png.why ? ' — ' + png.why : ''));
+  is(png.ok && png.size > 3000, '  빈 그림이 아니다 (' + (png.ok ? Math.round(png.size / 1024) + 'KB' : '?') + ')');
+  is(png.ok && png.w === 1200, '  블로그에 쓸 만한 크기다 (' + (png.ok ? png.w + '×' + png.h : '?') + ')');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
