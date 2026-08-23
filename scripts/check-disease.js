@@ -531,6 +531,21 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   await page.waitForTimeout(150);
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   is(over <= 2, '390px 에서 옆으로 안 밀린다 (' + over + 'px)');
+
+  /* 폰에서 머리와 도구줄이 화면을 다 먹으면, 설계사는 첫 화면에서 질병을
+     하나도 못 본다 — 실제로 794px 아래로 밀려 있었다. 도구줄은 붙어 다니는
+     줄이라 키가 크면 스크롤 내내 화면을 가린다. 그래서 둘 다 잰다. */
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+  const mob = await page.evaluate(() => {
+    const bar = document.querySelector('.bar'), card = document.querySelector('.dcard');
+    if (!bar || !card) return null;
+    return { bar: Math.round(bar.getBoundingClientRect().height),
+             card: Math.round(card.getBoundingClientRect().top + window.scrollY) };
+  });
+  is(!!mob, '390px 에서도 도구줄과 질병 카드가 서 있다');
+  is(!!mob && mob.bar <= 120, '붙어 다니는 도구줄이 폰 화면을 가리지 않는다 (' + (mob ? mob.bar : '?') + 'px)');
+  is(!!mob && mob.card <= 480, '폰 첫 화면에서 질병이 보인다 — 첫 카드가 ' + (mob ? mob.card : '?') + 'px 아래');
   is(/page-break-inside\s*:\s*avoid/.test(html), '인쇄에서 토막이 잘리지 않게 해 두었다');
   is(/\.dzart\.nolbl\.lbl\{display:inline;?\}/.test(html.replace(/\s+/g, '')),
      '종이에는 이름표를 켜서 인쇄한다 — 화면에서 꺼 뒀어도');
