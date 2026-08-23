@@ -51,6 +51,8 @@ let CFG = {};
 let SOURCES = {};
 try { CFG = require('../../config/market.json'); } catch (e) { CFG = {}; }
 try { SOURCES = require('../../config/sources.json'); } catch (e) { SOURCES = {}; }
+let GONGSI = {};
+try { GONGSI = require('../../config/gongsi.json'); } catch (e) { GONGSI = {}; }
 
 const P = CFG.providers || {};
 const TTL = CFG.cache_ttl || { quote: 20, index: 30, fund: 21600, econ: 21600, news: 900 };
@@ -887,6 +889,89 @@ async function fetchFeed(feed) {
     return [];                      /* 한 피드가 죽어도 나머지는 그대로 나온다 */
   } finally { clearTimeout(timer); }
 }
+/* ── 공시실에서 「상품요약서」 주소만 찾아 온다 ─────────────────────
+   원수사 자료를 우리 서버에 두지 않는다는 원칙은 그대로다 (CLAUDE.md 9).
+   그래서 <b>PDF 는 절대 받지 않는다.</b> 여기서 받는 것은 협회의 상품비교
+   공시 <b>목록 페이지</b>뿐이고, 돌려주는 것은 상품명·회사·<b>내려받기 주소</b>
+   몇 KB 짜리 JSON 이다. 실제 내려받기는 <b>브라우저가 직접</b> 한다.
+
+   브라우저가 이 목록을 스스로 못 받는 이유는 협회 서버가 「바깥에서
+   읽어도 좋다」는 표시를 안 달아 두었기 때문이다. 그 한 겹만 여기서
+   넘겨 준다.
+
+   ※ 여기 있는 것은 <b>상품요약서</b>다. 약관 원문이 아니다 —
+     약관은 각 회사 공시실에만 있다.
+   ※ 생명보험만이다. 손해보험은 협회가 다르다(kpub.knia.or.kr).       */
+function gongsiCode(name) {
+  const map = (GONGSI['생명보험']) || {};
+  if (!name) return '';
+  const n = String(name).replace(/\s/g, '');
+  /* 똑같은 이름이 있으면 그것부터. 「생명」 두 글자만 주셨을 때
+     제일 긴 회사가 잡히는 일이 없게 한다. */
+  for (const k of Object.keys(map)) if (k.replace(/\s/g, '') === n) return map[k];
+  let best = '', bl = 0;
+  for (const k of Object.keys(map)) {                  /* 그 다음은 긴 이름부터 — 「DB생명」을 다른 곳으로 잘못 잡지 않게 */
+    const kk = k.replace(/\s/g, '');
+    if ((n.indexOf(kk) >= 0 || kk.indexOf(n) >= 0) && kk.length > bl) { best = map[k]; bl = kk.length; }
+  }
+  return best;
+}
+function gongsiParse(html, cap) {
+  const HOST = 'https://pub.insure.or.kr';
+  const strip = x => String(x || '').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  /* 상품 한 건은 목록 체크박스에서 시작한다 — 거기서 다음 체크박스 전까지가 그 상품 몫 */
+  const parts = String(html).split(/<input[^>]+name="listAprChk"/);
+  const out = [];
+  for (let i = 1; i < parts.length; i++) {
+    const seg = parts[i];
+    const co = (seg.match(/id="l_memberNm_[^"]*"[^>]*>([^<]*)</) || [])[1];
+    const nm = (seg.match(/id="l_prodNm_[^"]*"[^>]*>([^<]*)</) || [])[1];
+    if (!co || !nm) continue;
+    const fd = seg.match(/fn_fileDown\('(\d+)',\s*'(\d+)'\)/);
+    const pg = (seg.match(/<a\s+href="(https?:\/\/[^"]+)"[^>]*target="_blank"/) || [])[1];
+    out.push({
+      co: strip(co), prod: strip(nm),
+      file: fd ? (HOST + '/FileDown.do?fileNo=' + fd[1] + '&seq=' + fd[2]) : null,
+      page: pg || null
+    });
+    if (out.length >= (cap || 60)) break;
+  }
+  return out;
+}
+async function gongsiList(coNm, q) {
+  const cd = gongsiCode(coNm);
+  if (!cd) {
+    const names = Object.keys((GONGSI['생명보험']) || {});
+    const e = new Error(coNm ? ('생명보험협회 공시에서 「' + coNm + '」 을(를) 못 찾았습니다.')
+                             : '어느 회사인지 알려 주세요.');
+    e.companies = names;                 /* 고를 수 있게 이름만 함께 준다 */
+    throw e;
+  }
+  const url = (GONGSI['목록주소'] || '') + '?search_memberCd=' + encodeURIComponent(cd) + '&pageUnit=200';
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 9000);     /* 10초에 끊기는 자리라 그 안에 들어온다 */
+  let html;
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!r.ok) throw new Error('협회 공시실이 ' + r.status + ' 로 답했습니다.');
+    html = await r.text();
+  } finally { clearTimeout(timer); }
+  let rows = gongsiParse(html, 200);
+  if (!rows.length) throw new Error('협회 공시실에서 목록을 읽지 못했습니다 — 페이지가 바뀐 것 같습니다.');
+  const total = rows.length;
+  /* 상품명으로 좁히는 일은 여기서 한다. 협회 검색칸은 상품명이 아니라
+     보장 내용으로 걸러서, 상품명으로 찾으면 엉뚱한 것이 딸려 온다. */
+  if (q) {
+    const key = String(q).replace(/\s/g, '');
+    const hit = rows.filter(x => x.prod.replace(/\s/g, '').indexOf(key) >= 0);
+    if (hit.length) rows = hit;
+    else return { rows: rows.slice(0, 60), total: total, matched: 0, q: q, co: coNm };
+  }
+  return { rows: rows.slice(0, 60), total: total, matched: q ? rows.length : null, q: q || '', co: coNm };
+}
+
 /* config/sources.json 에서 진짜 피드 칸만 (「_」 메모와 「키워드_」 낱말 목록은 뺀다) */
 function feedCats() {
   return Object.keys(SOURCES).filter(k => k[0] !== '_' && k.indexOf('키워드_') !== 0
@@ -1304,6 +1389,23 @@ exports.handler = async function (event) {
     if (kind === 'news') {
       const n = await news(q.cat || '');
       return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, meta: meta, news: n.items, keywords: n.keywords, cats: n.cats || feedCats() }) };
+    }
+
+    /* ── 공시실 상품요약서 주소 찾기 (PDF 는 안 받는다 — 주소만) ──────── */
+    if (kind === 'gongsi') {
+      try {
+        const g = await gongsiList(q.co || '', q.q || '');
+        return { statusCode: 200, headers: cors,
+          body: JSON.stringify({ ok: true, meta: meta, kindOf: '상품요약서',
+            note: '상품요약서입니다 — 약관 원문이 아닙니다. 약관은 각 회사 공시실에 있습니다.',
+            co: g.co, q: g.q, total: g.total, matched: g.matched, items: g.rows }) };
+      } catch (e) {
+        /* 못 찾아도 화면이 멈추지 않게 — 왜 안 됐는지 그대로 말한다 */
+        return { statusCode: 200, headers: cors,
+          body: JSON.stringify({ ok: false, meta: meta, items: [],
+            companies: (e && e.companies) || null,
+            message: (e && e.message) || '공시실에서 찾지 못했습니다.' }) };
+      }
     }
 
     /* ── 경제동향 화면 첫 로딩 — 지수·지표·뉴스·관심종목을 한 번에 ─────── */
