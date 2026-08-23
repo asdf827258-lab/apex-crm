@@ -24,7 +24,9 @@
     14. <b>도해</b> — 색 오타로 도형이 말없이 사라지지 않는가 ·
         새로 그린 그림이 목록에서 빠지지 않는가
     15. <b>전이·합병증</b> — 겁만 주고 끝내지 않는가(무엇을 하는가·담보가 붙는가) ·
-        외운 비율을 적지 않는가 · 없는 질병에 지어내 붙이지 않는가                     */
+        외운 비율을 적지 않는가 · 없는 질병에 지어내 붙이지 않는가
+    16. <b>범위 표</b> — 출처 없는 비율을 적지 않는가 · 코드를 세부별로 빠짐없이
+        폈는가 · 그 코드를 앱이 아는가 · 「약관이 정한다」 고 적는가                     */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8877;
@@ -889,6 +891,76 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(miniC === D.list.length, '질병마다 상세에 <b>합병증 한 줄</b>이 붙는다 (' + miniC + '/' + D.list.length + ')');
   is(miniS === Object.keys((SP && SP.byDz) || {}).filter(k => (SP.byDz[k] || []).length).length,
      '전이 한 줄은 <b>경로를 적어 둔 암에만</b> 붙는다 (' + miniS + '개) — 없는 질병에 지어내 붙이지 않는다');
+  await page.close();
+
+  /* ═══ 8-3. 범위 표 ═══
+     대표님이 「뇌혈관코드·심장전체코드가 세부별로 나와있지도 않은데 정확히
+     확인했니」 라고 물었을 때, 나는 확인하지 않았다. 표에는
+     「약 10% 수준」 「약 90% 이상」 같은 <b>출처 없는 비율</b>이 적혀 있었고,
+     범위로 적어 둔 I60~I69 안의 I66·I68·I69 는 앱의 KCD 표에 아예 없었다.
+     그런데 <b>범위 표를 보는 점검이 한 줄도 없었다.</b> 그래서 여기 둔다. */
+  console.log('\n[16] 범위 표 — 비율을 지어내지 않는가 · 코드를 빠짐없이 펴 두었는가');
+  const RANGED = (D.list || []).filter(d => d.range);
+  is(RANGED.length > 0, '범위 표가 있는 질병을 찾았다 — ' + RANGED.length + '종');
+
+  const rPct = [];
+  RANGED.forEach(d => {
+    if (/[0-9]+\s*(%|퍼센트)/.test(JSON.stringify(d.range))) rPct.push(d.id);
+  });
+  is(rPct.length === 0,
+     '범위 표에 <b>비율(몇 %)을 적지 않는다</b> — 확인한 출처가 없는 숫자다' +
+     (rPct.length ? ' — ' + rPct.join(' / ') : ''));
+
+  /* 앱이 AI 에게 보내는 지시문에도 같은 비율이 <b>한 벌 더</b> 있었다.
+     한쪽만 고치면 화면과 리포트가 다른 말을 한다. */
+  const brainLine = (app.match(/^.*뇌출혈 I60.*$/m) || [''])[0];
+  const heartLine = (app.match(/^.*급성심근경색 I21.*$/m) || [''])[0];
+  is(brainLine && heartLine, '앱 지시문에서도 뇌·심장 범위 줄을 찾았다');
+  is(!/[0-9]+\s*%/.test(brainLine + heartLine),
+     '앱 지시문에도 <b>같은 비율이 남아 있지 않다</b> — 쌍둥이를 함께 지웠다');
+
+  const rBad = [], rShape = [], rGap = [], rMono = [];
+  RANGED.forEach(d => {
+    const cols = d.range.cols || [], rows = d.range.rows || [];
+    if (!cols.length || !rows.length) { rShape.push(d.id + ' 빈 표'); return; }
+    let prev = null;
+    rows.forEach(r => {
+      const code = r[0];
+      if (!CODES.has(code)) rBad.push(d.id + ':' + code);
+      if (!r[1]) rShape.push(d.id + ':' + code + ' 진단명 없음');
+      if (r.length !== cols.length + 2) rShape.push(d.id + ':' + code + ' 칸 수가 담보 수와 다름');
+      /* 세부별로 <b>빠짐없이</b> 폈는가 — I60 다음이 I63 이면 가운데가 비어 있다 */
+      const n = parseInt(code.slice(1), 10);
+      if (prev !== null && n !== prev + 1) rGap.push(d.id + ':' + code.slice(0, 1) + prev + '→' + code);
+      prev = n;
+      /* 좁은 담보에서 나오는 코드는 넓은 담보에서도 나와야 한다.
+         왼쪽에서 ○ 인데 오른쪽에서 — 이면 표가 뒤집힌 것이다. */
+      for (let i = 2; i < r.length; i++) {
+        if (![0, 1, 2].includes(r[i])) rShape.push(d.id + ':' + code + ' 알 수 없는 표시 ' + r[i]);
+        if (i > 2 && r[i - 1] === 1 && r[i] !== 1) rMono.push(d.id + ':' + code);
+      }
+    });
+  });
+  is(rBad.length === 0, '범위 표의 코드가 <b>전부 앱의 KCD 표에 있다</b>' +
+     (rBad.length ? ' — 없는 코드: ' + rBad.join(' / ') : ''));
+  is(rShape.length === 0, '범위 표의 칸이 담보 수와 맞고 표시가 ○·—·△ 뿐이다' +
+     (rShape.length ? ' — ' + rShape.join(' / ') : ''));
+  is(rGap.length === 0, '코드를 <b>한 자리도 건너뛰지 않고</b> 폈다 — 「I60~I69」 라고만 적고 넘어가지 않는다' +
+     (rGap.length ? ' — 건너뛴 자리: ' + rGap.join(' / ') : ''));
+  is(rMono.length === 0, '좁은 담보에 드는 코드는 <b>넓은 담보에도 든다</b> — 표가 뒤집히지 않았다' +
+     (rMono.length ? ' — ' + rMono.join(' / ') : ''));
+
+  /* 화면에 실제로 찍히는가 — 자료만 고치고 그리는 자리를 안 고친 적이 있다 */
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.evaluate(i => open_(i), RANGED[0].id);
+  await page.waitForTimeout(150);
+  const rTxt = await page.locator('.range').innerText();
+  is(RANGED[0].range.rows.every(r => rTxt.indexOf(r[0]) >= 0),
+     '펴 둔 코드가 <b>화면에 한 줄씩 다 찍힌다</b>');
+  is(/약관/.test(rTxt) && /회사·개정회차/.test(rTxt),
+     '무엇이 지급되는지는 <b>그 상품 약관이 정한다</b>고 화면에 적는다 — 이 표를 결론으로 읽지 않게');
+  is(!/[0-9]+\s*%/.test(rTxt), '화면에 찍힌 범위 표에도 비율이 없다');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */

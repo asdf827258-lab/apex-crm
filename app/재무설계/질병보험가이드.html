@@ -106,6 +106,18 @@
   .range th{background:#FAFBFC;font-weight:800;color:var(--ink4);font-size:11px;letter-spacing:.03em;}
   .range td.c{font-family:'Menlo',monospace;font-weight:800;color:var(--blue);}
   .range .rd{font-size:12.5px;color:var(--ink3);padding:11px 14px;}
+  .range .rscroll{overflow-x:auto;}
+  .range th.m{text-align:center;width:86px;font-weight:800;}
+  .range td.m{text-align:center;width:86px;font-weight:800;font-size:17px;line-height:1;}
+  .range td.m.y{color:#047857;background:rgba(5,150,105,.11);}
+  .range td.m.n{color:#C4CAD3;background:#FCFCFD;}
+  .range td.m.q{color:#B45309;background:rgba(217,119,6,.13);}
+  .range .rlgd{font-size:11.5px;color:var(--ink4);padding:8px 14px;background:#FAFBFC;border-bottom:1px solid var(--line2);}
+  .range .rlgd span{font-size:14px;font-weight:800;vertical-align:-1px;}
+  .range .rlgd .y{color:#047857;font-weight:800;}
+  .range .rlgd .n{color:#C4CAD3;font-weight:800;}
+  .range .rlgd .q{color:#B45309;font-weight:800;}
+  .range .rwarn{font-size:12px;color:var(--ink3);padding:11px 14px;border-top:1px dashed rgba(220,38,38,.35);background:rgba(220,38,38,.04);}
 
   /* 치료 여정 */
   .path{display:flex;flex-direction:column;gap:0;}
@@ -820,13 +832,28 @@ function detailBody(d){
 
   /* 범위 함정 */
   if (d.range) {
+    /* 「몇 %」 를 적어 두었다가 대표님께 잡혔다. 확인한 출처가 없는 숫자였다.
+       비율 대신 <b>코드를 한 줄씩 펴서</b> 어느 담보가 어디까지 담는지 보인다.
+       칸 값: 1 통상 들어감 · 0 통상 빠짐 · 2 회사마다 갈림. */
+    var MARK = { 1:['y','○'], 0:['n','—'], 2:['q','△'] };
     h += '<div class="sec"><h3><em>!</em>범위가 곧 돈입니다</h3><div class="range">' +
       '<div class="rh">' + rich(d.range.t) + '</div>' +
-      '<table><tr><th>담보가 담는 말</th><th>코드 범위</th><th>차지하는 몫</th></tr>' +
+      '<div class="rscroll"><table><tr><th>코드</th><th>진단명</th>' +
+      d.range.cols.map(function(c){ return '<th class="m">' + esc(c) + '</th>'; }).join('') + '</tr>' +
       d.range.rows.map(function(r){
-        return '<tr><td><b>' + esc(r[0]) + '</b></td><td class="c">' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td></tr>';
-      }).join('') + '</table>' +
-      '<div class="rd">' + rich(d.range.d) + '</div></div></div>';
+        return '<tr><td class="c">' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td>' +
+          d.range.cols.map(function(_, i){
+            var m = MARK[r[i + 2]] || MARK[0];
+            return '<td class="m ' + m[0] + '">' + m[1] + '</td>';
+          }).join('') + '</tr>';
+      }).join('') + '</table></div>' +
+      '<div class="rlgd"><span class="y">○</span> 통상 들어갑니다 &nbsp; ' +
+        '<span class="n">—</span> 통상 빠집니다 &nbsp; <span class="q">△</span> 회사마다 갈립니다</div>' +
+      '<div class="rd">' + rich(d.range.d) + '</div>' +
+      '<div class="rwarn">이 표는 <b>통상 쓰이는 분류표</b>를 편 것입니다. 실제로 무엇이 지급되는지는 ' +
+        '<b>그 상품 약관의 분류표</b>가 정하고, 회사·개정회차마다 다릅니다. 고객 앞에서는 ' +
+        '<b>가입한 상품의 약관을 펴서</b> 확인하십시오.</div>' +
+      '</div></div>';
   }
 
   /* ② 왜 생기나 */
