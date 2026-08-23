@@ -126,6 +126,19 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .drop.hot{border-color:var(--blue);background:var(--blue-l)}
 .drop .big{font-size:30px}
 .drop b{display:block;margin-top:6px;font-size:15px}
+/* 1 · 2 · 3 단계 머리 — 하는 일이 다른 판을 눈으로 가른다 */
+.stepc{display:flex;align-items:center;gap:9px;margin:0 0 13px;font-size:16px;font-weight:800;
+  letter-spacing:-.02em;color:var(--ink)}
+.stepc>b{flex:0 0 auto;width:24px;height:24px;border-radius:8px;background:var(--blue);color:#fff;
+  font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.stepc>span{font-size:12px;font-weight:600;color:var(--mut);letter-spacing:0}
+.stepcard{border-left:3px solid var(--blue)}
+/* 이미 본 상품 · 판이 올라간 상품 */
+.gsrow.seen{opacity:.55}
+.gsbadge{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;margin-left:6px;white-space:nowrap}
+.gsbadge.old{background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0}
+.gsbadge.up{background:#FFF7ED;color:#9A3412;border:1px solid #FED7AA}
+.gsbadge.nw{background:#EEF6FF;color:#1D4ED8;border:1px solid #C7DCFF}
 .drop span{font-size:12.5px;color:var(--mut)}
 .scoreboard{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
 .sb{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center}
@@ -492,41 +505,51 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
   <div id="termResult"></div>
 </section>
 
-<!-- ============ 2.15 홍보 발췌 ============
+<!-- ============ 2.15 신상품 훑기 — 확인 · 발췌 · 홍보 ============
      상품을 찾은 다음이 비어 있었다. 「이 상품을 어떻게 홍보하나」를
      답하려면 상품설명서와 약관을 읽어야 하는데, 읽는 자리는 있어도
      <b>홍보에 쓸 대목으로 모아 주는 자리</b>가 없었다.
+
+     그리고 세 가지가 한 판에 섞여 있었다 — 공시실에서 찾기, 서재에서
+     고르기, 발췌하기. 하는 일이 다른데 나란히 놓여 있어 어디부터
+     시작하는지가 안 보였다. <b>1 · 2 · 3 으로 푼다.</b>
      원문은 이 브라우저 밖으로 나가지 않는다 (CLAUDE.md 9). -->
 <section class="page" id="p-promo">
-  <div class="phead"><h2>🎯 홍보 발췌</h2>
-  <p>서재에 쌓아 둔 <b>상품설명서·약관</b>을 읽어 <b>홍보에 쓸 대목을 원문 그대로</b> 뽑고,
-  출처(문서·조·쪽)와 <b>그대로 읽는 화법</b>을 붙입니다.
+  <div class="phead"><h2>🎯 신상품 훑기 — 확인 · 발췌 · 홍보</h2>
+  <p>회사 공시실에 들어가 <b>① 신상품을 확인</b>하고, 그 상품의 <b>② 약관·상품설명서에서 핵심을 발췌</b>하고,
+  <b>③ 어떻게 홍보할지</b>까지 한 줄로 이어 드립니다.<br>
+  <b>이미 본 상품은 다시 모으지 않습니다</b> — 상품명과 <b>판(연월)</b>까지 보고 가릅니다.
   <b>지어내지 않습니다</b> — 문서에 없으면 없다고 적습니다.</p></div>
 
-  <div class="card" style="margin-bottom:14px">
-    <div class="row">
-      <div style="flex:1 1 240px">
-        <label class="lb">상품 이름 <span class="cnt">(홍보물에 적힐 이름)</span></label>
-        <input class="inp" id="pmName" placeholder="예) 홍길동생명 든든암보험">
-      </div>
-      <div style="flex:1 1 200px">
-        <label class="lb">서재에서 찾기 <span class="cnt">(회사·상품명·파일명)</span></label>
-        <input class="inp" id="pmFind" placeholder="입력하면 아래 목록이 좁혀집니다">
-      </div>
-    </div>
-    <!-- 공시실에서 요약서 주소만 찾아 온다. PDF 는 브라우저가 직접 받는다. -->
-    <div class="row" style="margin-top:12px;align-items:flex-end">
+  <!-- ── 1단계 · 신상품 확인 ── -->
+  <div class="card stepcard" style="margin-bottom:12px">
+    <div class="stepc"><b>1</b>신상품 확인 <span>회사 공시실에서 · 이미 본 것은 건너뜁니다</span></div>
+    <div class="row" style="align-items:flex-end">
       <div style="flex:1 1 170px">
         <label class="lb">회사 <span class="cnt">(생명보험만)</span></label>
         <input class="inp" id="pmCo" placeholder="예) 삼성생명" list="pmCoList">
         <datalist id="pmCoList"></datalist>
       </div>
-      <div style="flex:0 0 auto"><button class="btn gh" id="pmFind2">🏛 공시실에서 요약서 찾기</button></div>
-      <div style="flex:1;align-self:center" class="cnt" id="pmGsMsg">회사와 상품 이름을 적고 누르시면 협회 공시에서 찾아 드립니다</div>
+      <div style="flex:1 1 200px">
+        <label class="lb">상품 이름 <span class="cnt">(일부만 적어도 됩니다)</span></label>
+        <input class="inp" id="pmName" placeholder="예) 종신 · 건강">
+      </div>
+      <div style="flex:0 0 auto"><button class="btn" id="pmFind2">🏛 공시실에서 찾기</button></div>
     </div>
+    <div class="cnt" id="pmGsMsg" style="margin-top:8px">회사를 적고 누르시면 협회 공시에서 그 회사 상품을 받아 옵니다</div>
     <div id="pmGs" style="margin-top:8px"></div>
+  </div>
 
-    <div style="margin-top:12px">
+  <!-- ── 2단계 · 핵심 발췌 ── -->
+  <div class="card stepcard" style="margin-bottom:12px">
+    <div class="stepc"><b>2</b>약관 · 상품설명서에서 핵심 발췌 <span>원문 그대로 · 출처(조·쪽)까지</span></div>
+    <div class="row" style="align-items:flex-end">
+      <div style="flex:1 1 240px">
+        <label class="lb">서재에서 찾기 <span class="cnt">(회사·상품명·파일명)</span></label>
+        <input class="inp" id="pmFind" placeholder="입력하면 아래 목록이 좁혀집니다">
+      </div>
+    </div>
+    <div style="margin-top:10px">
       <label class="lb">이 상품의 문서 고르기 <span class="cnt">상품설명서와 약관을 함께 고르면 가장 좋습니다</span></label>
       <div id="pmDocs" style="margin-top:7px"></div>
     </div>
@@ -538,7 +561,21 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
       <div style="flex:0 0 auto;align-self:center" class="cnt" id="pmState">문서를 고르세요</div>
     </div>
   </div>
-  <div id="pmOut"></div>
+
+  <!-- ── 3단계 · 어떻게 홍보할까 ── -->
+  <div class="card stepcard" style="margin-bottom:12px">
+    <div class="stepc"><b>3</b>어떻게 홍보할까 <span>핵심 컨셉 · 그대로 읽는 화법 · 반드시 같이 말할 것</span></div>
+    <!-- ㉮ 회사가 어떻게 홍보하나 — 회사가 실제로 낸 말만 옮긴다 -->
+    <div class="row" style="align-items:center;margin-bottom:8px">
+      <div style="flex:0 0 auto"><button class="btn gh sm" id="pmPushGo">🔎 회사가 미는 말 찾기</button></div>
+      <div style="flex:1;align-self:center" class="cnt" id="pmPushMsg">모아 둔 기사에서 이 회사·이 상품 이야기를 찾아 <b>그대로</b> 옮깁니다</div>
+    </div>
+    <div id="pmPush" style="margin-bottom:12px"></div>
+
+    <!-- ㉯ 우리가 쓸 말 — 약관·상품설명서에서 뽑은 것 -->
+    <div id="pmOut"><div class="tipbox">위 <b>2단계</b>에서 <b>🎯 발췌하기</b> 를 누르시면 여기에 나옵니다 —
+      <b>이 상품이 무엇인가 · 홍보에 쓸 대목 · 반드시 같이 말할 것</b> 순서로 정리됩니다.</div></div>
+  </div>
 </section>
 
 <!-- ============ 2.2 베스트 찾기 ============ -->
@@ -725,10 +762,9 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 /* ==================================================================
    미끼 레이더 · APEX      데이터 정의부
    ================================================================== */
-const TABS=[
-['start','🚀 시작'],['concept','🎭 이달의 컨셉'],['radar','📡 신상품 레이더'],['lib','📚 상품 서재'],['new','🆕 신상품 분석'],['terms','📜 약관 분석기'],['best','🏆 베스트 찾기'],['judge','⚖️ 정밀 판정'],['cust','🧾 고객 제시'],['design','🎯 미끼 설계기'],
- ['touch','🤝 접촉 엔진'],['brief','🗓 월간 브리핑'],['help','📘 사용법']
-];
+/* 칸 목록이 여기 한 벌 더 있었다. 아무도 안 쓰는데도 남아 있었고,
+   그 사이 홍보 발췌(promo)가 늘었는데 <b>이쪽에만 안 들어가</b> 두 벌이
+   어긋난 채였다. 쓰는 곳은 아래 GROUPS · SUBNAME 하나뿐이라 지운다. */
 
 /* ---------- 담보 재료 (전자책 07장 기반) ---------- */
 const COV={
@@ -2477,9 +2513,54 @@ async function filesFromDrop(dt){
   for(const r of roots)await walk(r,0);
   return out;
 }
+/* ── 폴더 고르기가 되는 기기인가 — 여기 한 곳에서만 답한다 ──────────
+   사장님 주 기기가 갤럭시탭이다. 그런데 <b>안드로이드 크롬은 폴더 고르기를
+   지원하지 않는다.</b> 속성 존재로는 못 가른다 —
+   'webkitdirectory' in input 은 <b>true 인데도</b> 실제로는 폴더가 안 열린다.
+   그래서 단추만 멀쩡히 보이고, 눌러도 아무 일이 없었다. 터치 기기에는
+   끌어다 놓기도 없으니 「폴더째로 끌어다 놓으세요」 도 할 수 없는 말이다.
+   보이는데 안 되는 것이 제일 나쁘다.
+
+   기기로 가른다. iPad 는 스스로를 Macintosh 라고 밝히므로 손가락 수까지
+   본다 — 화면을 만지는 Mac 은 없다.                                    */
+function canPickFolder(){
+  var ua=(navigator.userAgent||'');
+  if(/Android|iPhone|iPod|iPad/i.test(ua))return false;
+  /* 진짜 Mac 은 손가락이 0 이다. 하나라도 있으면 아이패드다.
+     (>1 로 뒀더니 손가락을 1 로 흉내 내는 곳에서 안 걸렸다) */
+  if(/Macintosh/i.test(ua)&&(navigator.maxTouchPoints||0)>0)return false;
+  return true;
+}
+/* 그 답에 따라 화면을 맞추는 곳도 하나다 — 부르는 자리가 여럿이라
+   각자 숨기면 한 곳만 고쳐진다. 되는 기기는 아무것도 안 건드린다. */
+function folderUiApply(){
+  if(canPickFolder())return;
+  var b=document.getElementById('btnUpDir');
+  if(b)b.style.display='none';
+  var d=document.getElementById('upDrop');
+  if(d)d.innerHTML='<div class="big">📥</div>'+
+    '<b>여기를 눌러 <u>PDF 를 여러 개</u> 골라 넣으세요</b>'+
+    '<span>내 파일 · 드라이브에서 여러 개를 한꺼번에 고르실 수 있습니다 · 이 브라우저에 계속 쌓입니다</span>';
+  var h=document.getElementById('libHint');
+  if(h)h.innerHTML=
+    '<b>쌓는 방법 · PDF 를 여러 개 한꺼번에</b> — 위 칸을 누르면 파일 고르기가 열립니다. '+
+    '<b>내 파일</b> 이나 <b>드라이브</b> 에서 <b>여러 개를 한꺼번에</b> 고르시면 '+
+    '회사·종류로 나눠 쌓습니다. 창을 닫아도 남습니다. '+
+    '<b>배치파일도, 사무실 PC 도 필요 없습니다.</b><br>'+
+    '<b>매달은 같은 것을 다시 고르시면 됩니다</b> — <b>이미 들어 있는 것은 건너뛰고 새 것만</b> 읽습니다. '+
+    '그래서 두 번째부터는 금방 끝납니다.<br>'+
+    '<b>같은 자료는 두 번 들어가지 않습니다</b> — 파일 이름을 바꾸셨어도, 회사가 다시 만들어 '+
+    '보내 이름·크기가 달라졌어도 <b>내용이 같으면 안 받습니다.</b> 무엇과 겹쳤는지 적어 드립니다.<br>'+
+    '<b>원수사 약관은 서버로 올라가지 않습니다</b> — 다른 기기로 옮기실 때만 '+
+    '<b>📤 자료 내보내기</b> → <b>📦 자료 불러오기</b> 를 쓰세요.<br>'+
+    '<b>폴더 통째로 넣기는 컴퓨터에서만 됩니다</b> — 태블릿·폰 브라우저가 폴더 고르기를 '+
+    '지원하지 않습니다. 여기서는 PDF 를 여러 개 고르시는 것이 같은 일을 합니다.';
+}
+
 (function(){
   const d=$('#upDrop'),inp=$('#upFiles'),dir=$('#upDir');
   if(!d)return;
+  folderUiApply();
   d.onclick=()=>inp.click();
   inp.onchange=e=>{uploadFiles(e.target.files);inp.value=''};
   if(dir){
@@ -2765,6 +2846,12 @@ $('#btnBriefCopy').onclick=()=>{
    6) 사용법
    ===================================================================== */
 $('#helpOut').innerHTML=`
+<div class="card" id="lockCard"><h3>🔒 잠금 — 안 쓰셔도 됩니다</h3>
+<p class="desc">이 잠금은 <b>옆 사람이 무심코 여는 것</b>을 막는 용도입니다. 자료를 지키는 자물쇠가
+아닙니다 — 파일 자체를 넘기면 우회됩니다. <b>수집한 뉴스와 약관은 이 기기 안에만</b> 있습니다.<br>
+상담 직전에 여는 화면이라 <b>기본은 안 걸려 있습니다.</b> 필요하실 때만 켜세요.</p>
+<div id="lockNow"></div></div>
+
 <div class="card"><h3>🗺 화면 지도 — 5칸이 전부입니다</h3>
 <p class="desc">하는 일이 같은 것끼리 묶었습니다. 위 칸을 고르면 아래에 안쪽 화면이 나옵니다.</p>
 <table class="tbl"><tr><th style="width:110px">칸</th><th style="width:210px">안에 있는 것</th><th>언제 쓰나</th></tr>
@@ -2875,6 +2962,33 @@ $('#helpOut').innerHTML=`
 · 거절 의사를 밝힌 상대에게 재연락 금지<br>
 · <b>판매자료 제목을 고객에게 그대로 쓰지 마세요</b> — 내부 교육용 제목이 섞여 있습니다<br>
 · 결과물은 기본이 <b>내부 검토용</b>입니다. 출처·고지 문구를 지우지 마세요</div></div>`;
+
+/* 잠금 켜고 끄기 — 저장 열쇠는 mikkiLock 한 곳만 만진다 */
+function lockPaint(){
+  const box=document.getElementById('lockNow'); if(!box||!window.mikkiLock)return;
+  const on=window.mikkiLock.has();
+  box.innerHTML = on
+    ? '<div class="okbox"><b>지금 잠겨 있습니다.</b> 다음에 여실 때 암호를 물어봅니다.'
+      + '<div class="row" style="margin-top:9px"><button class="btn gh sm" id="lockOff">잠금 끄기</button></div></div>'
+    : '<div class="row" style="align-items:flex-end;gap:8px">'
+      + '<div style="flex:1;min-width:170px"><label class="f">암호 (4자 이상)</label>'
+      + '<input type="password" class="inp" id="lockNew" placeholder="정하실 암호" autocomplete="new-password"></div>'
+      + '<div style="flex:0 0 auto"><button class="btn sm" id="lockOn">🔒 잠금 켜기</button></div></div>'
+      + '<div class="cnt" id="lockMsg" style="margin-top:7px">지금은 안 잠겨 있습니다 — 바로 열립니다.</div>';
+  const on1=document.getElementById('lockOn');
+  if(on1)on1.onclick=async function(){
+    const r=await window.mikkiLock.on(document.getElementById('lockNew').value);
+    const m=document.getElementById('lockMsg');
+    if(!r.ok){ if(m)m.innerHTML='<span style="color:var(--red)">'+r.why+'</span>'; return; }
+    toast('잠갔습니다 — 다음에 여실 때 물어봅니다'); lockPaint();
+  };
+  const off=document.getElementById('lockOff');
+  if(off)off.onclick=function(){
+    if(!confirm('잠금을 끄시겠어요?\n다음부터 암호 없이 바로 열립니다.'))return;
+    window.mikkiLock.off(); toast('잠금을 껐습니다'); lockPaint();
+  };
+}
+lockPaint();
 
 /* ---------------- 데모 약관 ---------------- */
 const DEMO_A=`[[p1]]
@@ -4197,7 +4311,26 @@ $('#btnConcept').onclick=conceptRun;
     };
     document.body.style.overflow='hidden';
   }
-  gate();
+  /* 잠금은 <b>골라 쓰는 것</b>이다.
+     전에는 처음 열 때 반드시 암호를 정해야 했다. 상담 직전에 태블릿으로
+     여는데 암호부터 물으면 그 자리에서 손이 멈춘다. 이 잠금은 원래
+     「옆 사람이 무심코 여는 것」을 막는 용도이지 자료를 지키는 자물쇠가
+     아니다 — 파일을 넘기면 우회된다.
+     그래서 <b>안 걸어 두셨으면 그냥 연다.</b> 걸어 두신 분께만 묻는다.
+     켜고 끄는 자리는 📘 사용법에 둔다. */
+  if(saved())gate();
+
+  /* 켜고 끄는 것도 여기 한 곳에서만 한다 — 저장 열쇠를 밖에서 만지면 갈라진다 */
+  window.mikkiLock={
+    has:()=>!!saved(),
+    async on(pw){
+      pw=(pw||'').trim();
+      if(pw.length<4)return {ok:false,why:'4자 이상으로 정해 주세요'};
+      try{localStorage.setItem(KEY,await hash(pw));}catch(e){return {ok:false,why:'저장하지 못했습니다'}}
+      return {ok:true};
+    },
+    off(){ try{localStorage.removeItem(KEY);}catch(e){} return {ok:true}; }
+  };
 })();
 </script>
 <style>
@@ -4524,6 +4657,62 @@ async function dbDel(id){
   return new Promise((res,rej)=>{const t=d.transaction(DB.store,'readwrite').objectStore(DB.store).delete(id);
     t.onsuccess=()=>res(true);t.onerror=()=>rej(t.error)});
 }
+
+/* ══════════ 본 상품 장부 ══════════════════════════════════════════
+   「기존에 찾은 상품명과 연도까지 확인한 뒤, 같은 상품이면 정보 수집을
+   하지 않는다」 — 회사 공시실에 들어가 보는 일은 매달 하는 일이라,
+   지난달에 이미 본 것을 또 받아 읽으면 200쪽짜리를 헛읽는다.
+
+   연도는 <b>지어내지 않는다 — 상품명 안에 이미 있다.</b>
+   협회가 주는 이름이 「삼성 더착한종신보험(2608)(무배당)」 이고,
+   그 (2608) 이 <b>2026년 8월판</b>이라는 뜻이다. 회사가 매기는 판 번호다.
+   목록 어디에도 날짜 칸이 없으므로, 없는 칸을 만들어 채우지 않는다.
+
+   같은 이름이라도 <b>판이 올라가면 다른 상품</b>이다 — 사업비도 담보도
+   바뀐다. 그래서 이름만이 아니라 판까지 보고 가른다.
+     · 같은 이름 · 같은 판  → 이미 봤다. 안 모은다
+     · 같은 이름 · 새 판    → 새 상품이다. 무엇이 올라갔는지 적어 준다
+     · 처음 보는 이름       → 새 상품이다
+
+   장부는 이 브라우저에만 남는다(서버로 안 나간다). 5-1 의 「같은 자료를
+   두 번 받지 않는다」 가 <b>파일</b>을 보는 것이라면, 이것은 <b>상품</b>을
+   본다 — 파일을 받기 전에 먼저 걸러 헛걸음을 막는다.               */
+const SEEN_KEY='mikki_seen';
+/* (2608) 처럼 넉 자리인데 뒤 두 자리가 달(01~12)이면 판 번호로 본다.
+   (1234) 는 34월이 없으므로 판이 아니다 — 아무 숫자나 연도로 읽지 않는다. */
+function prodVer(name){
+  const m=String(name||'').match(/\((\d{2})(0[1-9]|1[0-2])\)/);
+  if(!m)return {ver:'',y:0,mo:0};
+  return {ver:m[1]+m[2], y:2000+(+m[1]), mo:+m[2]};
+}
+/* 판·무배당·[○○형] 같은 꼬리를 떼고 남는 이름 — 이것이 같으면 같은 상품 줄기다 */
+function prodBase(name){
+  return String(name||'')
+    .replace(/\([^)]*\)/g,' ').replace(/\[[^\]]*\]/g,' ')
+    .replace(/무배당|배당|저해약환급금형|해약환급금|갱신형|비갱신형/g,' ')
+    .replace(/\s+/g,'').trim();
+}
+function seenAll(){
+  try{return JSON.parse(localStorage.getItem(SEEN_KEY)||'{}')||{}}catch(e){return {}}
+}
+function seenSave(o){ try{localStorage.setItem(SEEN_KEY,JSON.stringify(o))}catch(e){} }
+function seenId(co,name){ return String(co||'')+'::'+prodBase(name); }
+/* 이 상품을 전에 봤는가 — 답하는 곳은 여기 하나다 */
+function seenOf(co,name){
+  const rec=seenAll()[seenId(co,name)];
+  if(!rec)return null;
+  const v=prodVer(name).ver;
+  if(!v||!rec.ver)return {state:'same',at:rec.at,ver:rec.ver||''};   /* 판을 모르면 이름으로만 가른다 */
+  if(v===rec.ver)return {state:'same',at:rec.at,ver:rec.ver};
+  return {state:'newer',at:rec.at,old:rec.ver,now:v};
+}
+/* 모았다고 적는다. how 는 왜 적혔는지 — 나중에 사람이 되짚을 수 있게 */
+function seenMark(co,name,how){
+  const o=seenAll(), id=seenId(co,name), v=prodVer(name);
+  o[id]={co:co||'',prod:name||'',ver:v.ver,y:v.y,mo:v.mo,at:new Date().toISOString(),how:how||''};
+  seenSave(o); return o[id];
+}
+function seenForget(co,name){ const o=seenAll(); delete o[seenId(co,name)]; seenSave(o); }
 
 /* 파일 이름에서 회사·종류 알아내기 (파이썬 쪽과 같은 기준) */
 const COMPANIES=['삼성생명','삼성화재','교보생명','한화생명','한화손해보험','한화손보','신한라이프','KB생명',
@@ -5160,10 +5349,17 @@ function bindDaily(){
         'font-size:11px;color:#1D4ED8;line-height:1.7;margin-bottom:10px">'+
         '예전에 만들어 두신 폴더가 있을 때만 — 미끼레이더 밑의 <b>data</b> 폴더 하나를 고르세요.<br>'+
         '(안에 library.json · news.json · docs · products 가 들어 있는 그 폴더)</div>'+
-      '<label style="display:block;border:0;border-radius:12px;padding:13px;text-align:center;cursor:pointer;'+
-        'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-weight:800;font-size:14px">'+
-        '📂 data 폴더 고르기'+
-        '<input type="file" id="mkdPick" webkitdirectory directory multiple style="display:none"></label>'+
+      /* 여기도 폴더 고르기다 — 태블릿·폰에서는 눌러도 안 열린다.
+         같은 판정(canPickFolder)을 쓴다. 답하는 곳이 둘이면 갈라진다. */
+      ((typeof canPickFolder==='function'&&!canPickFolder())
+        ? '<div style="border:1px solid #FED7AA;background:#FFF7ED;border-radius:12px;padding:12px;'+
+          'font-size:12px;color:#7C2D12;line-height:1.7"><b>이 기기에서는 폴더를 못 고릅니다.</b><br>'+
+          '태블릿·폰 브라우저가 폴더 고르기를 지원하지 않습니다. 컴퓨터에서 한 번 넣으시거나, '+
+          '<b>📜 약관 › 서재</b> 에서 <b>PDF 를 여러 개 한꺼번에</b> 고르시면 같은 일이 됩니다.</div>'
+        : '<label style="display:block;border:0;border-radius:12px;padding:13px;text-align:center;cursor:pointer;'+
+          'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-weight:800;font-size:14px">'+
+          '📂 data 폴더 고르기'+
+          '<input type="file" id="mkdPick" webkitdirectory directory multiple style="display:none"></label>')+
       '<div id="mkdMsg" style="font-size:11.5px;color:#42506A;margin-top:10px;line-height:1.65"></div>'+
       '<div class="mkd-now" style="font-size:11px;color:#8A93A6;margin-top:8px"></div>'+
       '<div style="display:flex;gap:7px;margin-top:9px">'+
@@ -5172,7 +5368,8 @@ function bindDaily(){
         '<button type="button" id="mkdX" style="flex:1;border:0;background:transparent;color:#8A93A6;'+
           'font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
     document.body.appendChild(w);
-    document.getElementById('mkdPick').onchange=function(){importDir(this);};
+    var pick=document.getElementById('mkdPick');
+    if(pick)pick.onchange=function(){importDir(this);};   /* 태블릿에서는 아예 안 세운다 */
     document.getElementById('mkdX').onclick=function(){w.remove();};
     document.getElementById('mkdClr').onclick=function(){
       wipe().then(function(){
@@ -6047,7 +6244,7 @@ function bindDaily(){
      · 원문은 이 브라우저 밖으로 나가지 않는다 (CLAUDE.md 9)
    ════════════════════════════════════════════════════════════════ */
 (function(){
-  var PM={picked:[], res:null};
+  var PM={picked:[], res:null, page:''};
 
   function libItems(){
     var j=state.lib;
@@ -6278,17 +6475,224 @@ function bindDaily(){
     box.innerHTML='<div class="tipbox" style="margin-bottom:8px">'
       +'여기 있는 것은 <b>상품요약서</b>입니다 — <b>약관 원문이 아닙니다.</b> 약관은 각 회사 공시실에만 있습니다.<br>'
       +'받으신 파일을 📚 <b>서재</b> 에 끌어다 놓으시면 아래 목록에 나오고, 그대로 발췌됩니다.</div>'
-      +it.map(function(x){
-        return '<div class="gsrow"><b>'+esc(x.prod)+'</b>'
-          +'<span class="bd n">'+esc(x.co)+'</span>'
-          +(x.file?'<a class="dl" href="'+esc(x.file)+'" target="_blank" rel="noopener">⬇ 요약서 받기</a>':'<span class="cnt">요약서 없음</span>')
-          +(x.page?'<a class="pg" href="'+esc(x.page)+'" target="_blank" rel="noopener">회사 상품페이지</a>':'')
-          +'</div>';
-      }).join('');
+      +gsRows(it);
+    gsWire();
   }
+
+  /* 목록을 「새 것 / 판이 올라간 것 / 이미 본 것」 으로 가른다.
+     이미 본 것은 접어 둔다 — 지우지는 않는다. 사장님이 「분명히 있었는데」
+     하고 찾으실 자리를 없애면 안 된다. */
+  function gsRows(it){
+    const nw=[],up=[],old=[];
+    it.forEach(function(x){
+      const s2=(typeof seenOf==='function')?seenOf(x.co,x.prod):null;
+      const v=(typeof prodVer==='function')?prodVer(x.prod).ver:'';
+      const row=function(badge,cls){
+        return '<div class="gsrow'+(cls||'')+'"><b>'+esc(x.prod)+'</b>'
+          +'<span class="bd n">'+esc(x.co)+'</span>'+badge
+          +(x.file?'<a class="dl" href="'+esc(x.file)+'" target="_blank" rel="noopener"'
+              +' data-seen-co="'+esc(x.co)+'" data-seen-prod="'+esc(x.prod)+'">⬇ 요약서 받기</a>'
+            :'<span class="cnt">요약서 없음</span>')
+          +(x.page?'<a class="pg" href="'+esc(x.page)+'" target="_blank" rel="noopener">회사 상품페이지</a>':'')
+          +'<button type="button" class="btn sm gspick" data-co="'+esc(x.co)+'" data-prod="'+esc(x.prod)+'"'
+          +' data-page="'+esc(x.page||'')+'">이 상품으로 →</button>'
+          +'<button type="button" class="btn gh sm gsmark" data-co="'+esc(x.co)+'" data-prod="'+esc(x.prod)+'"'
+          +' data-on="'+(s2?'1':'0')+'">'+(s2?'다시 보기로':'봤음으로')+'</button>'
+          +'</div>';
+      };
+      if(!s2) nw.push(row('<span class="gsbadge nw">새 상품'+(v?' · '+v.slice(0,2)+'년 '+(+v.slice(2))+'월판':'')+'</span>',''));
+      else if(s2.state==='newer') up.push(row('<span class="gsbadge up">판 올라감 '+esc(s2.old)+' → '+esc(s2.now)+'</span>',''));
+      else old.push(row('<span class="gsbadge old">이미 봤습니다'+(s2.ver?(' · '+esc(s2.ver)+'판'):'')+'</span>',' seen'));
+    });
+    let h='';
+    if(nw.length||up.length){
+      h+='<div class="cnt" style="margin:6px 0 4px"><b>모을 것 '+(nw.length+up.length)+'건</b>'
+        +(up.length?(' — 그중 판이 올라간 것 '+up.length+'건'):'')+'</div>'+up.join('')+nw.join('');
+    }else{
+      h+='<div class="okbox" style="margin:6px 0"><b>새로 모을 것이 없습니다.</b> '
+        +'이 회사에서 받아 온 '+it.length+'건은 모두 전에 보신 것입니다 — 헛읽지 않으셔도 됩니다.</div>';
+    }
+    if(old.length){
+      h+='<details style="margin-top:8px"><summary class="cnt" style="cursor:pointer">'
+        +'이미 본 '+old.length+'건도 보기</summary><div style="margin-top:6px">'+old.join('')+'</div></details>';
+    }
+    return h;
+  }
+  /* 받기를 누르면 장부에 적는다 — 그래야 다음 달에 안 겹친다.
+     손으로도 켜고 끌 수 있게 둔다. 잘못 적혔을 때 되돌릴 자리가 없으면 안 된다. */
+  function gsWire(){
+    const box=$('#pmGs'); if(!box)return;
+    box.querySelectorAll('a[data-seen-prod]').forEach(function(a){
+      a.addEventListener('click',function(){
+        if(typeof seenMark==='function')seenMark(a.dataset.seenCo,a.dataset.seenProd,'요약서 받기');
+      });
+    });
+    /* 1단계에서 고른 상품이 2·3단계로 따라간다 — 이름을 두 번 적게 하지 않는다 */
+    box.querySelectorAll('.gspick').forEach(function(b){
+      b.onclick=function(e){
+        e.preventDefault();
+        $('#pmName').value=b.dataset.prod;
+        PM.page=b.dataset.page||'';
+        if($('#pmFind')){ $('#pmFind').value=prodWords(b.dataset.prod)[0]||''; paintDocs(); }
+        toast('이 상품으로 이어 갑니다 — 2·3단계를 보십시오');
+        pushRun();
+        const c=document.getElementById('pmDocs');
+        if(c&&c.scrollIntoView)c.scrollIntoView({behavior:'smooth',block:'center'});
+      };
+    });
+    box.querySelectorAll('.gsmark').forEach(function(b){
+      b.onclick=function(e){
+        e.preventDefault();
+        if(b.dataset.on==='1'){ seenForget(b.dataset.co,b.dataset.prod); toast('장부에서 뺐습니다'); }
+        else { seenMark(b.dataset.co,b.dataset.prod,'손으로 표시'); toast('봤음으로 적었습니다'); }
+        gsFind();
+      };
+    });
+  }
+
+  /* ══ 회사가 이 상품을 어떻게 홍보하나 ═══════════════════════════
+     약관·상품설명서는 회사가 <b>약속한 것</b>이다. 그런데 사장님이 알아야
+     하는 것은 회사가 그 상품을 <b>어떤 말로 밀고 있는가</b> 다 — 광고 문구,
+     보도자료 제목, 되풀이하는 낱말. 그것이 시장에서 그 상품이 서는 자리고,
+     우리가 맞받거나 비켜 갈 자리다.
+
+     그 말은 <b>지어낼 수 없다.</b> 회사가 실제로 낸 말만 옮긴다.
+       · 모아 둔 기사·보도자료에서 이 회사·이 상품 이야기를 찾는다
+       · 제목 · 언론사 · 날짜 · 링크를 <b>그대로</b> 옮긴다 (CLAUDE.md 9)
+       · 되풀이되는 낱말은 <b>제목에 실제로 나온 것만</b> 센다
+       · 못 찾으면 <b>못 찾았다고 적는다</b>
+       · 회사 상품페이지 본문은 앱이 대신 못 읽는다 — 회사가 바깥에서
+         읽어 가는 것을 막아 두었다. 열어 보시라고 길만 놓는다      */
+
+  /* 상품 이름에서 쓸 만한 낱말만 — 회사명·「보험」 같은 흔한 말은 뺀다.
+     안 빼면 「삼성생명」 기사가 전부 이 상품 이야기로 잡힌다. */
+  function prodWords(name){
+    return String(name||'')
+      .replace(/\([^)]*\)/g,' ').replace(/\[[^\]]*\]/g,' ')
+      .replace(/무배당|배당|저해약환급금형|해약환급금|갱신형|비갱신형/g,' ')
+      .split(/[\s·,]+/)
+      .map(function(w){return w.replace(/[^가-힣A-Za-z0-9]/g,'')})
+      .filter(function(w){return w.length>=2 && !/^(보험|생명|손해|화재|해상|라이프|손보)$/.test(w)});
+  }
+  function pushNews(){
+    const a=(typeof archLoad==='function')?archLoad():[];
+    const b=(typeof state!=='undefined'&&state.news)?state.news:[];
+    const seen={}, out=[];
+    a.concat(b).forEach(function(n){
+      const k=String(n.title||'').slice(0,28);
+      if(!k||seen[k])return; seen[k]=1; out.push(n);
+    });
+    return out;
+  }
+  /* 얼마나 확실히 맞았는지도 같이 말한다 — 「비슷한 것 같다」 를 「맞다」 로
+     내놓으면 고객 앞에서 엉뚱한 상품 이야기를 하게 된다. */
+  function pushMatch(co,prod){
+    const flat=function(t){return String(t||'').replace(/[\s·,]/g,'')};
+    const base=(typeof prodBase==='function')?prodBase(prod):flat(prod);
+    const words=prodWords(prod).filter(function(w){return co.indexOf(w)<0});
+    const hard=[],soft=[];
+    pushNews().forEach(function(n){
+      const t=String(n.title||''), f=flat(t);
+      if(base&&base.length>=4&&f.indexOf(base)>=0){hard.push(n);return}
+      if(!co)return;
+      if(f.indexOf(flat(co))<0)return;
+      const hit=words.filter(function(w){return f.indexOf(flat(w))>=0});
+      if(hit.length)soft.push({...n,_hit:hit});
+    });
+    return {hard:hard, soft:soft};
+  }
+  /* 되풀이되는 낱말 — 제목에 실제로 나온 것만 센다. 없는 말을 만들지 않는다 */
+  const PUSH_STOP=/^(보험|생명|손해|화재|해상|라이프|출시|판매|신상품|상품|고객|가입|보장|업계|시장|기자|사진|제공|것|수|등|더|올해|지난|이번|지나|개월|공개|선보|내놔|내놓|확대|강화|한다|했다|위해|통해)$/;
+  /* 조사를 뗀다 — 「유병자도 · 간편심사로」 는 「유병자 · 간편심사」 다.
+     떼고 나서 한 글자가 되면 안 뗀다(「도」 같은 것이 남으면 말이 아니다). */
+  function pushStem(w){
+    const t=w.replace(/(으로서|으로|에서|에게|까지|부터|이나|라도|이라|으로써|도|로|를|을|은|는|이|가|의|에|만|과|와)$/,'');
+    return t.length>=2 ? t : w;
+  }
+  function pushWords(list,co,prod){
+    /* 회사 이름과 상품 이름은 빼고 센다. 안 빼면 「삼성생명 2 · 건강보험 2」 처럼
+       이름만 되풀이되고, 정작 회사가 덧붙이는 말(유병자·간편심사·문턱)이 묻힌다.
+       우리가 알아야 하는 것은 <b>이름 말고 그 옆에 붙는 말</b>이다. */
+    const mine=new Set();
+    (String(co||'').match(/[가-힣]{2,}|[A-Za-z]{3,}/g)||[]).forEach(function(w){mine.add(w)});
+    prodWords(prod).forEach(function(w){mine.add(w)});
+    const c={};
+    list.forEach(function(n){
+      (String(n.title||'').match(/[가-힣]{2,}|[A-Za-z]{3,}/g)||[]).forEach(function(w0){
+        const w=pushStem(w0);
+        if(w.length<2||PUSH_STOP.test(w))return;
+        let skip=false;
+        mine.forEach(function(m){ if(w.indexOf(m)>=0||m.indexOf(w)>=0)skip=true; });
+        if(skip)return;
+        c[w]=(c[w]||0)+1;
+      });
+    });
+    /* 같은 횟수면 긴 말이 먼저 — 「간편심사」 가 「낮춰」 보다 컨셉에 가깝다 */
+    const all=Object.keys(c).map(function(w){return {w:w,n:c[w]}})
+      .sort(function(a,b){return (b.n-a.n)||(b.w.length-a.w.length)});
+    const many=all.filter(function(x){return x.n>=2});
+    /* 기사가 적으면 되풀이가 안 생긴다 — 그때는 「나온 말」 이라고 밝히고 그대로 보여 준다.
+       되풀이가 없다고 빈칸을 두면 정작 회사가 쓴 말을 못 보게 된다. */
+    return many.length ? {list:many.slice(0,10), rep:true}
+                       : {list:all.slice(0,10), rep:false};
+  }
+  function pushRow(n,why){
+    return '<div class="gsrow"><b>'+esc(n.title||'')+'</b>'
+      +(n.source?'<span class="bd n">'+esc(n.source)+'</span>':'')
+      +(n.date?'<span class="cnt">'+esc(String(n.date).slice(0,16))+'</span>':'')
+      +(why?'<span class="gsbadge nw">'+esc(why)+'</span>':'')
+      +(n.link?'<a class="pg" href="'+esc(n.link)+'" target="_blank" rel="noopener">기사 열기</a>':'')
+      +'</div>';
+  }
+  function pushRun(){
+    const box=$('#pmPush'), msg=$('#pmPushMsg');
+    if(!box)return;
+    const co=($('#pmCo').value||'').trim();
+    const prod=($('#pmName').value||'').trim();
+    if(!prod){ box.innerHTML='<div class="tipbox"><b>1단계</b>에서 상품을 고르시거나, '
+      +'위 <b>상품 이름</b> 칸에 이름을 적어 주세요.</div>'; return; }
+    const m=pushMatch(co,prod);
+    const all=m.hard.concat(m.soft);
+    const gs=PM.page||'';
+    let h='';
+    if(!all.length){
+      h='<div class="warnbox"><b>회사가 미는 말을 아직 못 찾았습니다.</b><br>'
+        +'모아 둔 기사 '+pushNews().length+'건 안에 <b>'+esc(co||'이 회사')+'</b> 의 '
+        +'<b>'+esc(prod)+'</b> 이야기가 없습니다. 없는 말을 지어내지 않습니다.<br>'
+        +'· 📡 <b>뉴스 모아 오기</b> 를 한 번 돌려 보세요 — 새 보도자료가 들어올 수 있습니다<br>'
+        +'· 상품이 갓 나왔으면 아직 기사가 없을 수 있습니다</div>';
+    }else{
+      const kw=pushWords(all,co,prod);
+      h='<div class="okbox" style="margin-bottom:8px"><b>회사가 낸 말 '+all.length+'건</b>'
+        +(m.hard.length?(' — 그중 상품 이름이 그대로 들어간 것 '+m.hard.length+'건'):'')
+        +'<br><span class="cnt">제목·언론사·날짜·링크를 <b>그대로</b> 옮겼습니다. 요약하거나 고치지 않았습니다.</span></div>';
+      if(kw.list.length){
+        h+='<div class="tipbox" style="margin-bottom:8px"><b>'
+          +(kw.rep?'회사가 되풀이하는 말':'회사가 쓴 말')+'</b> '
+          +'<span class="cnt">(회사·상품 이름은 빼고, 제목에 <b>실제로 나온</b> 낱말만'
+          +(kw.rep?' 셌습니다)':' 적었습니다 — 기사가 '+all.length+'건이라 되풀이는 아직 안 잡힙니다)')
+          +'</span><br>'
+          +kw.list.map(function(x){return '<span class="gsbadge nw pushw" style="margin:3px 4px 0 0">'
+            +esc(x.w)+(kw.rep?(' <b>'+x.n+'</b>'):'')+'</span>'}).join('')
+          +'<div class="cnt" style="margin-top:6px">이것이 <b>회사가 이 상품을 미는 자리</b>입니다 — '
+          +'맞받거나 비켜 갈 곳입니다.</div></div>';
+      }
+      h+=m.hard.map(function(n){return pushRow(n,'상품 이름 그대로')}).join('')
+        +m.soft.map(function(n){return pushRow(n,'회사 + '+esc((n._hit||[]).join(' · ')))}).join('');
+    }
+    h+='<div class="tipbox" style="margin-top:8px">'
+      +'<b>회사 상품페이지 본문은 앱이 대신 못 읽습니다</b> — 회사가 바깥에서 읽어 가는 것을 막아 두었습니다. '
+      +(gs?('<a class="pg" href="'+esc(gs)+'" target="_blank" rel="noopener">이 상품 페이지 열기</a> 로 직접 보십시오.')
+         :'1단계에서 상품을 고르시면 그 회사 상품페이지로 가는 길이 여기 뜹니다.')
+      +'</div>';
+    box.innerHTML=h;
+    if(msg)msg.innerHTML='모아 둔 기사 <b>'+pushNews().length+'</b>건에서 찾았습니다';
+  }
+  window.pmPushRun=pushRun;
 
   function boot(){
     if(!$('#pmDocs'))return;
+    $('#pmPushGo').onclick=function(e){e.preventDefault();pushRun()};
     $('#pmFind').addEventListener('input',paintDocs);
     $('#pmFind2').onclick=function(e){e.preventDefault();gsFind()};
     $('#pmRun').onclick=function(){run().catch(function(e){
