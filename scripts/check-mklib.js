@@ -43,9 +43,12 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
  const srv=serve(); const br=await chromium.launch(); const pg=await br.newPage();
  await pg.route('**/api/market**',r=>r.abort());
  await pg.goto(U,{waitUntil:'domcontentloaded',timeout:60000});
- await pg.waitForSelector('#lockPw',{timeout:20000});
- await pg.fill('#lockPw','test1234'); await pg.click('#lockGo');
- await pg.waitForSelector('#lockOv',{state:'detached',timeout:10000});
+ /* 잠금은 이제 <b>골라 쓰는 것</b>이다 — 안 걸려 있으면 그냥 열린다.
+    걸려 있을 때만 푼다. 없는 것을 기다리면 여기서 20초를 버린다. */
+ if (await pg.$('#lockPw')) {
+   await pg.fill('#lockPw', 'test1234'); await pg.click('#lockGo');
+   await pg.waitForSelector('#lockOv', { state: 'detached', timeout: 10000 });
+ }
  await pg.evaluate(()=>document.querySelector('.tab[data-t="lib"]').click());
  await pg.waitForTimeout(300);
 
@@ -176,6 +179,73 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
  const out=await pg.evaluate(()=>document.querySelector('#pmOut').innerText);
  is(/3,000/.test(out),'폴더로 넣은 상품설명서에서 보장 금액을 뽑는다');
  is(/제3조/.test(out),'폴더로 넣은 약관에서 조문 출처를 뽑는다');
+
+ console.log('\n[8] 태블릿에서는 폴더 단추를 안 보여준다');
+ /* 사장님 주 기기가 갤럭시탭이다. 그런데 <b>안드로이드 크롬은 폴더 고르기를
+    지원하지 않는다.</b> 속성 존재로는 못 가른다 — 'webkitdirectory' in input 은
+    true 인데도 실제로는 폴더가 안 열린다. 그래서 단추만 멀쩡히 보이고 눌러도
+    아무 일이 없었다. 터치 기기에는 끌어다 놓기도 없으니 「폴더째로 끌어다
+    놓으세요」 도 할 수 없는 말이다. <b>보이는데 안 되는 것이 제일 나쁘다.</b>
+
+    ※ 파일 고르기 창의 진짜 동작은 여기서 잴 수 없다. 여기서 보는 것은
+      「그 기기에서 무엇을 보여 주고 무엇을 감추는가」 뿐이다. */
+ const DEV=[
+   {n:'컴퓨터(크롬)', dir:true,  touch:false,
+    ua:'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36'},
+   {n:'갤럭시탭(안드로이드)', dir:false, touch:true,
+    ua:'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Mobile Safari/537.36'},
+   {n:'아이폰', dir:false, touch:true,
+    ua:'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17 Mobile/15E148 Safari/604.1'},
+   {n:'아이패드(스스로 Mac 이라고 함)', dir:false, touch:true,
+    ua:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17 Safari/605.1.15'}
+ ];
+ for(const d of DEV){
+   const cx=await br.newContext({userAgent:d.ua,hasTouch:d.touch,viewport:{width:1200,height:900}});
+   const p2=await cx.newPage();
+   await p2.route('**/api/market**',r=>r.abort());
+   await p2.goto(U,{waitUntil:'domcontentloaded',timeout:60000});
+   /* 잠금은 이제 <b>골라 쓰는 것</b>이다 — 안 걸려 있으면 그냥 열린다.
+      걸려 있을 때만 푼다. 없는 것을 기다리면 여기서 20초를 버린다. */
+   if (await p2.$('#lockPw')) {
+     await p2.fill('#lockPw', 'test1234'); await p2.click('#lockGo');
+     await p2.waitForSelector('#lockOv', { state: 'detached', timeout: 10000 });
+   }
+   await p2.evaluate(()=>document.querySelector('.tab[data-t="lib"]').click());
+   await p2.waitForTimeout(400);
+   const r=await p2.evaluate(()=>{
+     const b=document.getElementById('btnUpDir');
+     const drop=document.getElementById('upDrop');
+     const hint=document.getElementById('libHint');
+     const inp=document.getElementById('upFiles');
+     return {
+       can: typeof canPickFolder==='function' ? canPickFolder() : null,
+       shown: b ? getComputedStyle(b).display!=='none' : null,
+       drag: drop ? /끌어다/.test(drop.innerText) : null,
+       many: !!(inp && inp.multiple),
+       hintDir: hint ? /폴더를 그대로 끌어다/.test(hint.innerText) : null,
+       hintMany: hint ? /한꺼번에/.test(hint.innerText) : null
+     };
+   });
+   is(r.can===d.dir, d.n+' — 폴더 고르기 '+(d.dir?'되는':'안 되는')+' 기기로 본다 ('+r.can+')');
+   is(r.shown===d.dir, d.n+' — 「폴더 통째로 넣기」 단추를 '+(d.dir?'보여준다':'감춘다'));
+   is(r.drag===d.dir, d.n+' — 「끌어다 놓으세요」 를 '+(d.dir?'적는다':'안 적는다')+' (손가락으로는 못 끈다)');
+   is(r.many===true, d.n+' — PDF 를 여러 개 고르는 길은 언제나 열려 있다');
+   if(!d.dir) is(r.hintMany===true && r.hintDir===false,
+     d.n+' — 안내가 「여러 개 한꺼번에」 로 바뀐다 (폴더 이야기를 안 한다)');
+   await cx.close();
+ }
+ /* 판정이 한 곳에서만 나오는가 — 두 곳이면 한쪽만 고쳐진다 */
+ const src=fs.readFileSync(path.join(ROOT,'app/상담자료/미끼레이더/index.html'),'utf8');
+ is((src.match(/function canPickFolder\(/g)||[]).length===1,'폴더가 되는지 답하는 곳은 하나다');
+ /* 주석에는 「'webkitdirectory' in ... 로 판정하면 안 된다」 고 <b>적어 두어야</b>
+    하므로, 주석을 걷어내고 코드만 본다. 넓게 잡으면 헛것을 잡는다. */
+ const code=src.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*\/\/.*$/gm,'');
+ is(!/'webkitdirectory'\s+in\s+/.test(code),
+    '속성이 있는지로 판정하지 않는다 — 안드로이드는 속성이 있어도 폴더를 못 연다');
+ /* 칸 목록이 두 벌이면 한쪽만 늘어난다 — 실제로 promo 가 한쪽에만 있었다 */
+ is(!/\bconst TABS\s*=/.test(code),'칸 목록은 한 벌뿐이다 (GROUPS · SUBNAME)');
+ const subs=(code.match(/subs:\[([^\]]*)\]/g)||[]).join(',');
+ is(/'promo'/.test(subs),'홍보 발췌도 그 한 벌에 들어 있다');
 
  await br.close(); srv.close();
  console.log('\n──────────────────────────────');
