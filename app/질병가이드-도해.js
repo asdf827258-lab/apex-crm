@@ -421,7 +421,7 @@
        '점막은 손가락처럼 솟은 샘으로 덮여 있고, <b>혈관과 림프관은 점막하층부터</b> 나타납니다. ' +
        '바로 이 때문에 <b>점막에 머문 암은 내시경으로 벗겨 낼 수 있고(ESD), 점막하층을 넘으면 잘라 냅니다</b> — ' +
        '그 아래에 퍼져 나갈 길이 있기 때문입니다.',
-    dz: ['cancer_major'],
+    dz: ['cancer_major', 'colon', 'ibd'],
     build: function () {
       var s = '<svg viewBox="0 0 1000 470" width="1000" height="470">' + gutWall(0);
       s += lbl(360, 30, 716, 34, '속 (내강)', '음식이 지나가는 쪽입니다', '#64748B');
@@ -440,7 +440,7 @@
     d: '같은 위암·대장암이라도 <b>깊이가 다르면 하는 수술이 다릅니다.</b> ' +
        '점막에 머물면 배를 열지 않고 내시경으로 벗겨 내고, 점막하층을 넘어가면 <b>퍼져 나갈 길에 닿았기 때문에</b> 장기와 림프절을 함께 잘라 냅니다. ' +
        '보험에서도 여기가 갈립니다 — 내시경으로 끝나면 <b>수술비 담보에서 수술로 안 볼 수 있습니다.</b>',
-    dz: ['cancer_major'],
+    dz: ['cancer_major', 'colon'],
     build: function () {
       var s = '<svg viewBox="0 0 1000 470" width="1000" height="470">' + gutWall(1);
       s += note(74, 462, '① 점막에만', '#166534');
@@ -565,7 +565,7 @@
     d: '동맥을 잘라 보면 <b>안쪽부터 내막 · 중막 · 외막</b> 세 겹입니다. 내막 맨 안쪽에는 <b>내피세포가 한 줄</b>로 깔려 있어 피가 미끄러지듯 흐릅니다. ' +
        '기름때(죽상반)는 바로 <b>이 내피 아래에</b> 쌓입니다 — 혈관 안쪽에 때가 끼는 것이 아니라, <b>벽 속에</b> 쌓여 안쪽으로 부풀어 오르는 것입니다. ' +
        '확대해서 노란 지질핵과 그 위를 덮은 얇은 흰 피막을 보십시오.',
-    dz: ['mi', 'stroke', 'chronic'],
+    dz: ['mi', 'stroke', 'chronic', 'aorta'],
     build: function () {
       var R = rnd(20240517);
       var s = '<svg viewBox="0 0 1080 560" width="1080" height="560">';
@@ -594,7 +594,7 @@
     d: '「어제까지 멀쩡했는데」 라는 말이 나오는 이유입니다. 기름때는 여러 해에 걸쳐 조용히 쌓이지만, ' +
        '<b>그 위를 덮은 얇은 피막이 찢어지는 것은 한순간</b>입니다. 찢어진 자리에 피가 닿으면 몸은 상처인 줄 알고 피를 굳혀 버립니다. ' +
        '그렇게 만들어진 피떡이 남은 길마저 막습니다 — 이것이 심근경색이고 뇌경색입니다.',
-    dz: ['mi', 'stroke'],
+    dz: ['mi', 'stroke', 'aorta'],
     build: function () {
       var R = rnd(31415926);
       var s = '<svg viewBox="0 0 1080 560" width="1080" height="560">';
@@ -702,7 +702,7 @@
        '세포가 이상해지고(이형성) 층 전체가 암세포로 바뀌어도, <b>이 막 위에 머물러 있으면 퍼져 나갈 길이 없습니다</b> — 이것이 제자리암입니다. ' +
        '이 막을 뚫고 내려가는 순간 그 아래 <b>혈관과 림프관에 닿습니다</b> — 이것이 침윤암입니다. ' +
        '보험이 <b>유사암과 일반암을 가르는 자리</b>가 바로 이 한 줄입니다.',
-    dz: ['cancer_major', 'cancer_female', 'thyroid', 'skin'],
+    dz: ['cancer_major', 'cancer_female', 'thyroid', 'skin', 'colon', 'uro', 'cervix', 'braintumor'],
     build: function () {
       var R = rnd(88888), s = '';
       s = '<svg viewBox="0 0 1000 570" width="1000" height="570">';
@@ -950,7 +950,7 @@
        '왼쪽 주간부에서 <b>앞내림가지</b>와 <b>휘돌이가지</b>가 갈리고, 오른쪽으로 <b>오른관상동맥</b>이 돕니다. ' +
        '이 세 갈래가 잔가지를 뻗어 심장 근육 전체를 먹여 살립니다. ' +
        '<b>가지 하나가 막히면 그 아래 근육이 굶습니다.</b>',
-    dz: ['mi'],
+    dz: ['mi', 'hf'],
     build: function () {
       var s = '<svg viewBox="0 0 1100 660" width="1100" height="660">' + heartBody(0);
       s += lbl(600, 214, 762, 128, '좌주간부', '여기서 두 갈래로 갈립니다 — 가장 위쪽입니다', '#8B1A1A');
@@ -973,7 +973,7 @@
        '창백해진 곳이 피가 끊겨 굶는 근육이고, 보라색 덩어리가 막은 피떡입니다. ' +
        '위쪽이 막히면 <b>그 아래 전부</b>가 한꺼번에 굶습니다. ' +
        '그래서 같은 병명이라도 뒤에 남는 것(심부전·후유장해)이 사람마다 크게 다릅니다.',
-    dz: ['mi'],
+    dz: ['mi', 'hf'],
     build: function () {
       var P = [
         ['lad_hi', '① 앞내림가지 위쪽이 막힘', '앞벽과 꼭지가 통째로 — 가장 넓습니다', '#991B1B'],
@@ -1198,7 +1198,7 @@
        '앞쪽을 맡는 <b>앞대뇌동맥</b>, 뒤쪽을 맡는 <b>뒤대뇌동맥</b>입니다. ' +
        '한 갈래가 막히면 <b>그 구역이 통째로</b> 굶습니다 — 그래서 막힌 자리에 따라 남는 장애가 다릅니다. ' +
        '위에서 내려다본 단면이라, 병원에서 보시는 CT 와 같은 방향입니다.',
-    dz: ['stroke'],
+    dz: ['stroke', 'braintumor'],
     build: function () {
       var s = '<svg viewBox="0 0 1120 620" width="1120" height="620">' + brainAxial(0);
       s += lbl(430, 300, 790, 118, '중간대뇌동맥 (MCA)', '가장 넓은 구역 — 팔·다리·말이 여기 걸립니다', '#B91C1C');
@@ -1220,7 +1220,7 @@
        '그림에서 보시듯 <b>전혀 다른 일</b>인데, 증권에는 「뇌출혈」 하나만 적혀 있는 경우가 많습니다. ' +
        '그러면 <b>훨씬 흔한 뇌경색에서 한 푼도 나오지 않습니다.</b> ' +
        '담보 이름이 아니라 <b>담는 질병코드 범위</b>를 보셔야 하는 이유입니다.',
-    dz: ['stroke'],
+    dz: ['stroke', 'braintumor'],
     build: function () {
       var P = [
         [0, '정상', '피가 골고루 돕니다', '#334155'],
@@ -1359,7 +1359,7 @@
        '들어오는 혈관은 굵고 나가는 혈관은 가늘어, 그 안에서 <b>피가 눌립니다.</b> ' +
        '눌린 힘으로 물과 노폐물이 짜여 나오고, 몸에 필요한 것은 되돌려 받습니다. ' +
        '이 뭉치가 망가지면 <b>다시 자라지 않습니다</b> — 그래서 신장병은 되돌아오지 않습니다.',
-    dz: ['kidney'],
+    dz: ['kidney', 'uro', 'stone', 'gout'],
     build: function () {
       var s = '<svg viewBox="0 0 900 560" width="900" height="560">' + kidneyBody();
       s += lbl(300, 140, 640, 396, '겉껍질 (피질)', '거르는 뭉치가 여기 박혀 있습니다', '#C4675E');
@@ -1539,7 +1539,7 @@
        '<b>문맥·동맥·담관</b> 셋이 함께 지납니다. 간세포는 그 사이를 줄로 늘어서고, 줄 사이 틈으로 피가 스며 지납니다. ' +
        '술·지방·바이러스가 오래 가면 <b>지방이 끼고 → 줄 사이에 흉터가 차고 → 방이 무너져 혹이 됩니다.</b> ' +
        '마지막 걸음은 <b>되돌아오지 않습니다</b> — 그래서 앞의 두 걸음에서 잡아야 합니다.',
-    dz: ['liver', 'chronic'],
+    dz: ['liver', 'chronic', 'gallstone'],
     build: function () {
       var R = rnd(20260827);
       var P = [
@@ -1655,7 +1655,7 @@
        '그것을 질긴 <b>섬유테</b>가 겹겹이 감싸고 있습니다. 눌리는 시간이 쌓이면 테가 갈라지고 ' +
        '젤리가 <b>뒤쪽으로</b> 밀려 나옵니다. 하필 뒤에는 신경뿌리가 지납니다 — 그래서 허리가 아니라 ' +
        '<b>다리가 저립니다.</b>',
-    dz: ['joint'],
+    dz: ['joint', 'stenosis', 'osteo'],
     build: function () {
       var R = rnd(20260828);
       var P = [
@@ -1756,7 +1756,7 @@
        '백혈병은 그중 한 갈래가 <b>덜 자란 채로</b> 끝없이 불어나 공장을 가득 메우는 병입니다. ' +
        '자리를 빼앗긴 나머지가 못 만들어지니 — <b>숨차고(적혈구), 자꾸 감염되고(백혈구), 멍이 듭니다(혈소판).</b> ' +
        '덩어리를 잘라 내는 병이 아니라서 <b>수술비가 놀고, 대신 입원과 치료비가 길게 나갑니다.</b>',
-    dz: ['cancer_blood'],
+    dz: ['cancer_blood', 'osteo'],
     build: function () {
       var R = rnd(20260829);
       var s = '<svg viewBox="0 0 1120 520" width="1120" height="520">';
@@ -1875,7 +1875,7 @@
        '그래서 <b>얼마나 떼느냐</b>가 그 뒤 평생을 가릅니다 — 전부 떼면 호르몬제를 평생 드십니다. ' +
        '보험에서는 이 병이 <b>유사암(소액암)</b> 칸으로 가 감액되는 약관이 많은데, ' +
        '수술과 그 뒤는 감액되지 않습니다. 그 간극을 미리 좁혀 두지 않으면 지급 때 민원이 됩니다.',
-    dz: ['thyroid'],
+    dz: ['thyroid', 'thyroid_fn'],
     build: function () {
       var R = rnd(20260830);
       var P = [
@@ -1918,7 +1918,7 @@
        '겉의 주름이 얇아지고 고랑이 넓어지며, 뇌와 머리뼈 사이가 벌어집니다. 그 빈자리를 물이 대신 채워 ' +
        '가운데 방(뇌실)이 커집니다. ' +
        '<b>줄어든 것은 돌아오지 않습니다</b> — 그래서 이 병의 부담은 치료비가 아니라 <b>돌보는 시간</b>에 있습니다.',
-    dz: ['dementia'],
+    dz: ['dementia', 'parkinson'],
     build: function () {
       var s = '<svg viewBox="0 0 1120 600" width="1120" height="600">';
       [[0, '정상', '주름이 두껍고 뇌가 머리뼈에 닿아 있습니다', '#334155'],
@@ -2170,7 +2170,7 @@
        '카메라와 기구를 넣고, 배는 가스로 부풀려 공간을 만듭니다. ' +
        '몸에는 복강경이 훨씬 낫습니다 — 덜 아프고 빨리 나갑니다. ' +
        '다만 <b>보험에서는 흉터 크기로 정하지 않습니다.</b> 약관의 수술 분류에 드는지가 전부입니다.',
-    dz: ['surgery', 'cancer_major'],
+    dz: ['surgery', 'cancer_major', 'colon', 'cervix', 'gallstone', 'ibd'],
     build: function () {
       var R = rnd(20260901);
       var s = '<svg viewBox="0 0 1400 560" width="1400" height="560">';
@@ -2440,7 +2440,7 @@
        '그 겉을 모세혈관이 감싸 <b>얇은 벽 하나를 사이에 두고</b> 산소와 이산화탄소가 자리를 바꿉니다. ' +
        '<b>폐렴</b>은 그 주머니 <b>안이 차는</b> 병이고, <b>COPD</b>는 주머니 <b>벽이 무너지는</b> 병입니다. ' +
        '둘 다 「숨이 찬다」 고 하시지만 <b>이유가 정반대</b>라 치료도 다릅니다.',
-    dz: ['pneumonia', 'copd'],
+    dz: ['pneumonia', 'copd', 'asthma'],
     build: function () {
       var R = rnd(20260903);
       var P = [
@@ -2721,7 +2721,7 @@
        '<b>바깥으로 튀어나온 것</b>은 커도 증상이 적습니다. ' +
        '<b>자궁내막증</b>은 아예 다른 병입니다 — 안에 있어야 할 내막이 <b>밖에</b> 자리를 잡아 ' +
        '달마다 그 자리에서 피가 나고, 장기끼리 들러붙습니다.',
-    dz: ['myoma'],
+    dz: ['myoma', 'cervix'],
     build: function () {
       var R = rnd(20260905);
       var P = [
@@ -2971,7 +2971,7 @@
        '심방세동은 그 발전소 대신 <b>심방 여기저기서 제멋대로</b> 신호가 나서, 심방이 짜지지 못하고 <b>떨기만</b> 하는 병입니다. ' +
        '그러면 심방 구석에 피가 <b>고이고, 고인 피는 굳습니다.</b> 그 덩어리가 떨어지면 곧장 <b>뇌로</b> 갑니다 — ' +
        '그래서 이 병은 심장병이면서 <b>뇌경색의 원인</b>입니다.',
-    dz: ['afib'],
+    dz: ['afib', 'hf', 'valve', 'thyroid_fn'],
     build: function () {
       var R = rnd(20260907);
       var s = '<svg viewBox="0 0 1320 700" width="1320" height="700">';
@@ -3540,6 +3540,334 @@
   /* 목록을 손으로 적어 두었더니 <b>V 와 쌍둥이</b>가 됐다. 그림을 새로 그리고
      목록에 안 넣으면 조용히 사라진다 — 실제로 심장 그림 두 장을 그려 놓고
      한나절 못 찾았다. 그래서 <b>V 가 곧 목록</b>이다. 차례는 적어 놓은 차례. */
+  /* ═══ 귀 — 듣는 자리와 균형 잡는 자리가 한 집에 있습니다 ═══════
+     달팽이관 속 털세포는 <b>한 번 죽으면 다시 나지 않습니다.</b>
+     그래서 난청은 「치료」 보다 「지키는 것」 이 됩니다. 그리고 바로 옆
+     반고리관에 있어야 할 돌가루가 굴러 들어가면 세상이 돕니다.            */
+  V.ear_inner = {
+    t: '귀 속 — 소리를 듣는 자리와 균형을 잡는 자리',
+    d: '겉귀로 들어온 소리가 <b>고막</b>을 떨게 하고, 그 떨림을 뼈 세 개가 이어받아 ' +
+       '<b>달팽이관</b> 속 물로 밀어 넣습니다. 물결이 지나가면 <b>털세포</b>가 눕고, 그것이 전기가 되어 뇌로 갑니다. ' +
+       '털세포는 <b>한 번 죽으면 다시 나지 않습니다</b> — 그래서 난청은 되돌리기 어렵습니다. ' +
+       '바로 옆에 붙은 <b>반고리관</b>은 머리의 기울기를 재는데, 여기에 있어야 할 <b>돌가루가 엉뚱한 관으로</b> 굴러 들어가면 ' +
+       '고개를 돌릴 때마다 세상이 돕니다(이석증).',
+    dz: ['hearing'],
+    build: function () {
+      var R = rnd(20260924), i, j, a, x, y, s;
+      s = '<svg viewBox="0 0 1180 660" width="1180" height="660">';
+      s += '<defs>' +
+        '<linearGradient id="earSkin" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#F7DFC8"/><stop offset="1" stop-color="#EEC3A0"/></linearGradient>' +
+        '<linearGradient id="earBone" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="#FBF3E4"/><stop offset="1" stop-color="#E4D5B7"/></linearGradient>' +
+        '<linearGradient id="earFluid" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#DCEEFB"/><stop offset="1" stop-color="#B3D8F2"/></linearGradient>' +
+        '<radialGradient id="earDrum" cx=".4" cy=".4" r=".8">' +
+          '<stop offset="0" stop-color="#FDF6EC"/><stop offset="1" stop-color="#D9B98F"/></radialGradient>' +
+        '</defs>';
+      s += '<rect x="0" y="0" width="1180" height="660" fill="#FBFCFE"/>';
+
+      /* ── 머리뼈 살결 — 배경에 결을 준다 ── */
+      s += '<path d="M20 40 L560 40 L560 620 L20 620 Z" fill="url(#earSkin)" opacity=".45"/>';
+      for (i = 0; i < 60; i++) {
+        x = 24 + R() * 530; y = 46 + R() * 566;
+        s += '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' l' + (6 + R() * 14).toFixed(1) + ' ' +
+             (R() * 4 - 2).toFixed(1) + '" stroke="#D8B08C" stroke-width="1" opacity=".35" fill="none"/>';
+      }
+
+      /* ── 겉귀와 귓구멍 ── */
+      /* 귓바퀴 — 바깥 테(이륜) · 안쪽 능선(대이륜) · 귀구슬(이주) · 귓불 */
+      s += '<path d="M196 300 C204 206 168 132 116 122 C64 112 36 158 34 224 ' +
+           'C32 300 44 372 58 430 C70 480 84 520 104 540 C126 562 158 556 168 528 ' +
+           'C176 504 172 470 178 442 C184 414 192 366 196 300 Z" ' +
+           'fill="url(#earSkin)" stroke="#C08B62" stroke-width="2.8"/>';
+      /* 바깥 테 안쪽 홈 */
+      s += '<path d="M178 296 C186 214 156 152 116 144 C74 136 54 174 52 228 ' +
+           'C50 296 62 364 76 420" fill="none" stroke="#C08B62" stroke-width="2.2" opacity=".85"/>';
+      /* 대이륜 — Y 모양 능선 */
+      s += '<path d="M150 200 C122 216 112 258 118 300 C124 342 140 372 156 392" ' +
+           'fill="none" stroke="#C08B62" stroke-width="2" opacity=".75"/>';
+      s += '<path d="M150 200 C158 226 158 254 150 276" fill="none" stroke="#C08B62" stroke-width="1.8" opacity=".6"/>';
+      /* 조가비(이갑개) — 귓구멍 앞의 우묵한 곳 */
+      s += '<path d="M124 300 C130 258 150 244 168 252 C186 260 190 300 180 340 ' +
+           'C170 380 140 386 130 358 C122 336 120 318 124 300 Z" ' +
+           'fill="#EFC9A6" stroke="#C08B62" stroke-width="1.6" opacity=".9"/>';
+      /* 귀구슬(이주) */
+      s += '<path d="M172 318 C190 312 200 328 196 346 C192 362 176 366 168 354 Z" ' +
+           'fill="url(#earSkin)" stroke="#C08B62" stroke-width="1.8"/>';
+      /* 귓불 */
+      s += '<path d="M104 540 C88 520 84 486 96 470 C112 450 146 452 158 472 ' +
+           'C170 492 162 528 142 542 C128 552 114 550 104 540 Z" ' +
+           'fill="url(#earSkin)" stroke="#C08B62" stroke-width="2.2"/>';
+      /* 귓구멍(외이도) — 안쪽으로 이어지는 관 */
+      s += '<path d="M186 300 L370 300 L370 372 L186 372 Z" fill="#F3D9BE" stroke="#C99A72" stroke-width="2"/>';
+      for (i = 0; i < 26; i++) {
+        x = 192 + i * 7; y = 302;
+        s += '<path d="M' + x.toFixed(1) + ' ' + (y + 4).toFixed(1) + ' l-3 -7" stroke="#B98A5E" stroke-width="1.2" fill="none" opacity=".8"/>';
+        s += '<path d="M' + x.toFixed(1) + ' ' + (y + 68).toFixed(1) + ' l-3 7" stroke="#B98A5E" stroke-width="1.2" fill="none" opacity=".8"/>';
+      }
+      /* 소리 물결 — 밖에서 안으로 */
+      for (i = 0; i < 5; i++) {
+        s += '<path d="M' + (236 + i * 20) + ' 302 q12 34 0 68" fill="none" stroke="#2563EB" stroke-width="' +
+             (2.4 - i * 0.3).toFixed(1) + '" opacity="' + (0.72 - i * 0.11).toFixed(2) + '"/>';
+      }
+
+      /* ── 고막 ── */
+      s += '<ellipse cx="374" cy="336" rx="10" ry="40" fill="url(#earDrum)" stroke="#A9784A" stroke-width="2.4"/>';
+      for (i = 0; i < 7; i++) {
+        s += '<path d="M370 ' + (306 + i * 10) + ' q10 0 8 -4" fill="none" stroke="#B98A5E" stroke-width=".9" opacity=".7"/>';
+      }
+
+      /* ── 뼈 셋 — 망치·모루·등자 ── */
+      s += '<path d="M378 316 L404 300 L410 336 L392 350 Z" fill="url(#earBone)" stroke="#9A7F52" stroke-width="2"/>';
+      s += '<path d="M410 300 L444 296 L450 334 L414 340 Z" fill="url(#earBone)" stroke="#9A7F52" stroke-width="2"/>';
+      s += '<path d="M452 312 L480 306 L486 330 L458 336 Z" fill="url(#earBone)" stroke="#9A7F52" stroke-width="2"/>';
+      s += '<circle cx="470" cy="320" r="7" fill="none" stroke="#9A7F52" stroke-width="2"/>';
+      for (i = 0; i < 12; i++) {
+        x = 380 + R() * 100; y = 300 + R() * 46;
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (0.9 + R()).toFixed(1) +
+             '" fill="#B79A66" opacity=".55"/>';
+      }
+
+      /* ── 달팽이관 — 두 바퀴 반 ── */
+      var cx = 640, cy = 430;
+      for (i = 0; i < 150; i++) {
+        a = i / 150 * Math.PI * 5;
+        var r0 = 108 - i * 0.62;
+        var r1 = 108 - (i + 1) * 0.62;
+        var a1 = (i + 1) / 150 * Math.PI * 5;
+        s += '<path d="M' + (cx + r0 * Math.cos(a)).toFixed(1) + ' ' + (cy + r0 * Math.sin(a)).toFixed(1) +
+             ' L' + (cx + r1 * Math.cos(a1)).toFixed(1) + ' ' + (cy + r1 * Math.sin(a1)).toFixed(1) +
+             '" stroke="url(#earFluid)" stroke-width="' + (17 - i * 0.05).toFixed(1) +
+             '" stroke-linecap="round" fill="none"/>';
+      }
+      for (i = 0; i < 150; i += 3) {
+        a = i / 150 * Math.PI * 5;
+        var rr = 108 - i * 0.62;
+        s += '<circle cx="' + (cx + rr * Math.cos(a)).toFixed(1) + '" cy="' + (cy + rr * Math.sin(a)).toFixed(1) +
+             '" r="1.5" fill="#1D4ED8" opacity=".45"/>';
+      }
+      s += '<path d="M486 318 L556 372" stroke="#93C5FD" stroke-width="12" stroke-linecap="round" fill="none"/>';
+
+      /* ── 반고리관 셋 — 그중 하나에 돌가루가 굴러 들어갔다 ── */
+      var rings = [[726, 250, 74, 0], [812, 306, 68, 1], [742, 372, 60, 2]];
+      rings.forEach(function (g, k) {
+        s += '<ellipse cx="' + g[0] + '" cy="' + g[1] + '" rx="' + g[2] + '" ry="' + (g[2] * 0.62).toFixed(0) +
+             '" fill="none" stroke="' + (k === 2 ? '#DC2626' : '#60A5FA') + '" stroke-width="13" opacity=".85" ' +
+             'transform="rotate(' + (k * 42 - 30) + ' ' + g[0] + ' ' + g[1] + ')"/>';
+        s += '<ellipse cx="' + g[0] + '" cy="' + g[1] + '" rx="' + g[2] + '" ry="' + (g[2] * 0.62).toFixed(0) +
+             '" fill="none" stroke="#DBEAFE" stroke-width="5" opacity=".7" ' +
+             'transform="rotate(' + (k * 42 - 30) + ' ' + g[0] + ' ' + g[1] + ')"/>';
+      });
+      /* 굴러 들어간 돌가루 */
+      for (i = 0; i < 16; i++) {
+        a = -0.5 + R() * 1.1;
+        x = 742 + 60 * Math.cos(a); y = 372 + 37 * Math.sin(a) + 8;
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (1.6 + R() * 1.6).toFixed(1) +
+             '" fill="#7F1D1D"/>';
+      }
+      /* 있어야 할 자리 — 전정의 돌가루 더미 */
+      s += '<ellipse cx="700" cy="330" rx="30" ry="24" fill="#BFDBFE" stroke="#3B82F6" stroke-width="2.4"/>';
+      for (i = 0; i < 30; i++) {
+        x = 700 + (R() - 0.5) * 40; y = 322 + (R() - 0.5) * 22;
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (1.3 + R() * 1.4).toFixed(1) +
+             '" fill="#1E40AF" opacity=".8"/>';
+      }
+
+      /* ── 청신경 ── */
+      s += '<path d="M600 470 C670 520 780 520 880 490" fill="none" stroke="#FCD34D" stroke-width="16" stroke-linecap="round"/>';
+      s += '<path d="M600 470 C670 520 780 520 880 490" fill="none" stroke="#F59E0B" stroke-width="3" stroke-dasharray="7 8"/>';
+      for (i = 0; i < 18; i++) {
+        var t = i / 17;
+        x = 600 + (880 - 600) * t;
+        y = 470 + 46 * Math.sin(Math.PI * t) - 4 * t;
+        s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2" fill="#B45309" opacity=".6"/>';
+      }
+
+      /* ── 유스타키오관 ── */
+      s += '<path d="M396 372 C420 440 400 500 340 540" fill="none" stroke="#CBD5E1" stroke-width="11" stroke-linecap="round"/>';
+
+      /* ── 확대 상자 — 털세포 ── */
+      s += '<rect x="900" y="90" width="256" height="300" rx="14" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>';
+      s += '<text x="918" y="120" font-size="14" font-weight="800" fill="#0D1117">달팽이관 속을 더 들어가면</text>';
+      s += '<rect x="918" y="136" width="220" height="96" rx="8" fill="#EFF6FF" stroke="#93C5FD" stroke-width="1.6"/>';
+      s += '<text x="928" y="154" font-size="11.5" font-weight="800" fill="#1D4ED8">성한 털세포</text>';
+      for (i = 0; i < 15; i++) {
+        x = 932 + i * 13.6;
+        s += '<rect x="' + (x - 4).toFixed(1) + '" y="196" width="8" height="24" rx="3" fill="#BFDBFE" stroke="#3B82F6" stroke-width="1.2"/>';
+        for (j = 0; j < 4; j++) {
+          s += '<path d="M' + (x - 3 + j * 2).toFixed(1) + ' 196 l' + (j - 1.5).toFixed(1) + ' -14" stroke="#1D4ED8" stroke-width="1.5" fill="none"/>';
+        }
+      }
+      s += '<path d="M922 176 q30 10 60 0 q30 -10 60 0 q30 10 60 0" fill="none" stroke="#2563EB" stroke-width="2" opacity=".7"/>';
+      s += '<rect x="918" y="246" width="220" height="120" rx="8" fill="#FEF2F2" stroke="#FCA5A5" stroke-width="1.6"/>';
+      s += '<text x="928" y="264" font-size="11.5" font-weight="800" fill="#991B1B">죽은 털세포 — 다시 나지 않습니다</text>';
+      for (i = 0; i < 15; i++) {
+        x = 932 + i * 13.6;
+        var dead = (i % 3 === 1) || (i > 10);
+        s += '<rect x="' + (x - 4).toFixed(1) + '" y="322" width="8" height="24" rx="3" fill="' +
+             (dead ? '#FECACA' : '#BFDBFE') + '" stroke="' + (dead ? '#DC2626' : '#3B82F6') + '" stroke-width="1.2"/>';
+        if (!dead) {
+          for (j = 0; j < 4; j++) {
+            s += '<path d="M' + (x - 3 + j * 2).toFixed(1) + ' 322 l' + (j - 1.5).toFixed(1) + ' -14" stroke="#1D4ED8" stroke-width="1.5" fill="none"/>';
+          }
+        } else {
+          s += '<path d="M' + (x - 4).toFixed(1) + ' 322 l8 -6" stroke="#B91C1C" stroke-width="1.5" fill="none"/>';
+        }
+      }
+
+      /* ── 이름표 ── */
+      /* 이름표가 서로 겹쳐 글자가 뭉개졌다. 자리를 <b>층으로 나눠</b> 둔다 —
+         위쪽 줄 · 오른쪽 줄 · 아래쪽 줄. */
+      s += lbl(120, 254, 40, 80, '겉귀(귓바퀴)', '소리를 모읍니다');
+      s += lbl(280, 336, 250, 132, '귓구멍', '모은 소리가 들어가는 길');
+      s += lbl(374, 336, 372, 84, '고막', '소리에 떨립니다');
+      s += lbl(430, 316, 500, 150, '뼈 셋', '떨림을 이어받아 키웁니다');
+      s += lbl(700, 330, 590, 196, '있어야 할 자리(전정)', '돌가루가 원래 있는 방', '#1D4ED8');
+      s += lbl(778, 226, 806, 68, '반고리관 셋', '머리의 기울기를 잽니다', '#1D4ED8');
+      s += lbl(640, 430, 452, 592, '달팽이관', '떨림을 전기로 바꿉니다');
+      s += lbl(742, 396, 566, 566, '돌가루가 굴러 들어간 자리 — 이석증', '고개를 돌릴 때 세상이 돕니다', '#B91C1C');
+      s += lbl(872, 492, 912, 430, '청신경', '전기를 뇌로 보냅니다', '#B45309');
+      s += lbl(360, 470, 176, 596, '유스타키오관', '귀 안 압력을 맞춥니다');
+      s += note(686, 644, '손으로 그린 그림입니다 — 실제 비율과 다릅니다');
+      /* 날 SVG 를 그대로 돌려주면 <b>폰에서 화면 밖으로 밀려납니다.</b>
+         art() 가 확대·이름표 끄기와 함께 <b>가로 스크롤 상자</b>를 씌워 줍니다. */
+      return art({ vb: '0 0 1180 660', svg: s + '</svg>' });
+    }
+  };
+
+  /* ═══ 관절 — 닳은 것과 갉아 먹힌 것은 다릅니다 ══════════════════
+     퇴행성은 <b>연골이 닳아</b> 얇아지는 것이고, 류마티스는 관절을 싼
+     얇은 막이 부풀어 <b>연골과 뼈를 갉아 들어가는</b> 것이다. 그림에서
+     이 둘이 다르게 보여야 고객이 「파스로는 안 되는 이유」를 안다.        */
+  V.joint_syn = {
+    t: '관절 — 닳은 것(퇴행성)과 갉아 먹힌 것(류마티스)',
+    d: '관절은 뼈 두 개의 끝을 <b>매끈한 연골</b>이 덮고, 그 둘레를 <b>얇은 막(활막)</b>이 싸서 ' +
+       '미끄러운 물을 조금 담아 둔 구조입니다. <b>퇴행성</b>은 오래 써서 연골이 닳아 얇아지는 것이고, ' +
+       '<b>류마티스</b>는 내 몸의 방어군이 그 얇은 막을 적으로 잘못 보아 <b>막이 두껍게 부풀고</b>, ' +
+       '그 부푼 막이 <b>연골과 뼈를 갉아 들어가는</b> 것입니다. ' +
+       '그래서 류마티스는 파스나 물리치료로 멈추지 않습니다 — <b>갉는 것을 막는 약</b>이 있어야 합니다.',
+    dz: ['ra', 'joint'],
+    build: function () {
+      var R = rnd(20260925), i, j, x, y, s;
+      s = '<svg viewBox="0 0 1180 620" width="1180" height="620">';
+      s += '<defs>' +
+        '<linearGradient id="jbone" x1="0" y1="0" x2="1" y2="1">' +
+          '<stop offset="0" stop-color="#FCF6E8"/><stop offset="1" stop-color="#E7D9B8"/></linearGradient>' +
+        '<linearGradient id="jcart" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#F4FBFF"/><stop offset="1" stop-color="#CFE8F7"/></linearGradient>' +
+        '<linearGradient id="jsyn" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0" stop-color="#FEE2E2"/><stop offset="1" stop-color="#FCA5A5"/></linearGradient>' +
+        '</defs>';
+      s += '<rect x="0" y="0" width="1180" height="620" fill="#FBFCFE"/>';
+
+      /* 관절 한 벌을 그린다 — mode 0 성한 것, 1 퇴행성, 2 류마티스 */
+      function joint(ox, mode, title, sub, col) {
+        var t = '', k, a;
+        var gap = mode === 0 ? 34 : (mode === 1 ? 16 : 12);   /* 관절 사이 */
+        var cart = mode === 0 ? 13 : (mode === 1 ? 5 : 7);    /* 연골 두께 */
+
+        t += '<text x="' + (ox + 10) + '" y="70" font-size="17" font-weight="800" fill="' + col + '">' + title + '</text>';
+        t += '<text x="' + (ox + 10) + '" y="92" font-size="12.5" fill="#4B5563">' + sub + '</text>';
+
+        /* 위 뼈 */
+        t += '<path d="M' + (ox + 60) + ' 110 L' + (ox + 230) + ' 110 L' + (ox + 224) + ' 240 ' +
+             'C' + (ox + 220) + ' 268 ' + (ox + 190) + ' 282 ' + (ox + 145) + ' 282 ' +
+             'C' + (ox + 100) + ' 282 ' + (ox + 70) + ' 268 ' + (ox + 66) + ' 240 Z" ' +
+             'fill="url(#jbone)" stroke="#9A7F52" stroke-width="2.4"/>';
+        /* 아래 뼈 */
+        var by = 282 + gap + cart * 2;
+        t += '<path d="M' + (ox + 66) + ' ' + (by + 42) + ' C' + (ox + 70) + ' ' + (by + 14) + ' ' +
+             (ox + 100) + ' ' + by + ' ' + (ox + 145) + ' ' + by + ' ' +
+             'C' + (ox + 190) + ' ' + by + ' ' + (ox + 220) + ' ' + (by + 14) + ' ' + (ox + 224) + ' ' + (by + 42) + ' ' +
+             'L' + (ox + 230) + ' 500 L' + (ox + 60) + ' 500 Z" fill="url(#jbone)" stroke="#9A7F52" stroke-width="2.4"/>';
+
+        /* 뼈 속 해면골 — 그물 */
+        for (k = 0; k < 34; k++) {
+          x = ox + 74 + R() * 146; y = 124 + R() * 140;
+          t += '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' l' + (5 + R() * 12).toFixed(1) + ' ' +
+               (R() * 10 - 5).toFixed(1) + '" stroke="#C7B07E" stroke-width="1.1" opacity=".6" fill="none"/>';
+        }
+        for (k = 0; k < 34; k++) {
+          x = ox + 74 + R() * 146; y = by + 56 + R() * 130;
+          t += '<path d="M' + x.toFixed(1) + ' ' + y.toFixed(1) + ' l' + (5 + R() * 12).toFixed(1) + ' ' +
+               (R() * 10 - 5).toFixed(1) + '" stroke="#C7B07E" stroke-width="1.1" opacity=".6" fill="none"/>';
+        }
+
+        /* 연골 — 위아래 */
+        t += '<path d="M' + (ox + 68) + ' 268 C' + (ox + 92) + ' ' + (282 + cart) + ' ' + (ox + 198) + ' ' + (282 + cart) +
+             ' ' + (ox + 222) + ' 268 L' + (ox + 222) + ' 250 L' + (ox + 68) + ' 250 Z" ' +
+             'fill="url(#jcart)" stroke="#7FB4D6" stroke-width="1.6" opacity="' + (mode === 2 ? '.75' : '1') + '"/>';
+        t += '<path d="M' + (ox + 68) + ' ' + (by + 14) + ' C' + (ox + 92) + ' ' + (by - cart) + ' ' +
+             (ox + 198) + ' ' + (by - cart) + ' ' + (ox + 222) + ' ' + (by + 14) + ' L' + (ox + 222) + ' ' + (by + 32) +
+             ' L' + (ox + 68) + ' ' + (by + 32) + ' Z" fill="url(#jcart)" stroke="#7FB4D6" stroke-width="1.6" opacity="' +
+             (mode === 2 ? '.75' : '1') + '"/>';
+
+        /* 관절 주머니(활막) */
+        var syW = mode === 2 ? 26 : 7;
+        t += '<path d="M' + (ox + 62) + ' 250 C' + (ox + 34) + ' ' + (282 + gap / 2) + ' ' + (ox + 34) + ' ' + (282 + gap / 2) +
+             ' ' + (ox + 62) + ' ' + (by + 32) + '" fill="none" stroke="url(#jsyn)" stroke-width="' + syW + '" stroke-linecap="round"/>';
+        t += '<path d="M' + (ox + 228) + ' 250 C' + (ox + 256) + ' ' + (282 + gap / 2) + ' ' + (ox + 256) + ' ' + (282 + gap / 2) +
+             ' ' + (ox + 228) + ' ' + (by + 32) + '" fill="none" stroke="url(#jsyn)" stroke-width="' + syW + '" stroke-linecap="round"/>';
+
+        /* 관절 안 — 물과 세포 */
+        var mid = 282 + cart + gap / 2;
+        if (mode !== 2) {
+          for (k = 0; k < 12; k++) {
+            x = ox + 80 + R() * 130; y = mid + (R() - 0.5) * (gap - 6);
+            t += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (1.4 + R() * 1.4).toFixed(1) +
+                 '" fill="#7FB4D6" opacity=".7"/>';
+          }
+        } else {
+          /* 류마티스 — 부푼 막(판누스)이 안으로 밀고 들어온다 */
+          t += '<path d="M' + (ox + 70) + ' ' + (mid - 12) + ' C' + (ox + 108) + ' ' + (mid + 16) + ' ' +
+               (ox + 150) + ' ' + (mid - 18) + ' ' + (ox + 186) + ' ' + (mid + 12) + ' ' +
+               'C' + (ox + 206) + ' ' + (mid + 24) + ' ' + (ox + 218) + ' ' + (mid + 6) + ' ' + (ox + 222) + ' ' + (mid - 6) +
+               ' L' + (ox + 222) + ' ' + (mid + 34) + ' L' + (ox + 70) + ' ' + (mid + 34) + ' Z" ' +
+               'fill="#F87171" stroke="#B91C1C" stroke-width="1.8" opacity=".9"/>';
+          for (k = 0; k < 46; k++) {
+            x = ox + 74 + R() * 146; y = mid - 14 + R() * 46;
+            t += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (1.6 + R() * 2).toFixed(1) +
+                 '" fill="#7F1D1D" opacity="' + (0.5 + R() * 0.4).toFixed(2) + '"/>';
+          }
+          /* 뼈 가장자리가 갉아 먹힌 자국 */
+          [[ox + 78, 262], [ox + 212, 262], [ox + 80, by + 24], [ox + 210, by + 24]].forEach(function (e) {
+            t += '<path d="M' + e[0] + ' ' + e[1] + ' q10 -10 20 0 q-10 12 -20 0 Z" fill="#FEE2E2" stroke="#B91C1C" stroke-width="1.6"/>';
+          });
+        }
+        if (mode === 1) {
+          /* 퇴행성 — 닳아서 거칠어진 면과 가장자리 뼈 돌기 */
+          for (k = 0; k < 18; k++) {
+            x = ox + 80 + k * 7.6;
+            t += '<path d="M' + x.toFixed(1) + ' ' + (282 + cart) + ' l3 4 l3 -4" fill="none" stroke="#5B8FB0" stroke-width="1.2"/>';
+          }
+          t += '<path d="M' + (ox + 66) + ' 268 q-14 8 -4 20" fill="#E7D9B8" stroke="#9A7F52" stroke-width="1.8"/>';
+          t += '<path d="M' + (ox + 224) + ' 268 q14 8 4 20" fill="#E7D9B8" stroke="#9A7F52" stroke-width="1.8"/>';
+        }
+
+        /* 인대 */
+        t += '<path d="M' + (ox + 52) + ' 200 L' + (ox + 52) + ' ' + (by + 90) + '" stroke="#D8CBAA" stroke-width="8" stroke-linecap="round" opacity=".8"/>';
+        t += '<path d="M' + (ox + 238) + ' 200 L' + (ox + 238) + ' ' + (by + 90) + '" stroke="#D8CBAA" stroke-width="8" stroke-linecap="round" opacity=".8"/>';
+        return t;
+      }
+
+      s += joint(30, 0, '성한 관절', '연골이 두껍고, 사이가 넉넉합니다', '#0F766E');
+      s += joint(420, 1, '퇴행성 — 닳았습니다', '오래 써서 연골이 얇아지고 면이 거칠어집니다', '#92400E');
+      s += joint(810, 2, '류마티스 — 갉아 먹힙니다', '부푼 막이 연골과 뼈를 파고듭니다', '#991B1B');
+
+      /* 이름표를 아래로 내렸더니 <b>글자가 잘렸고</b>, 오른쪽 것은 화면 밖으로
+         나갔다. 상자 안에 들어오도록 자리를 다시 잡는다. */
+      s += lbl(160, 258, 46, 536, '연골', '뼈 끝을 덮은 매끈한 층');
+      s += lbl(286, 330, 246, 126, '활막', '관절을 싼 얇은 막');
+      s += lbl(560, 300, 436, 536, '닳아 얇아짐', '면이 거칠고 사이가 좁아집니다', '#92400E');
+      s += lbl(940, 322, 826, 536, '부푼 막(판누스)', '연골과 뼈를 갉아 들어갑니다', '#B91C1C');
+      s += lbl(1022, 264, 880, 132, '뼈가 패임', '갉힌 자리는 안 돌아옵니다', '#B91C1C');
+      s += note(686, 604, '손으로 그린 그림입니다 — 실제 비율과 다릅니다');
+      return art({ vb: '0 0 1180 620', svg: s + '</svg>' });
+    }
+  };
+
+
   var KEYS = Object.keys(V);
   window.DZ_VIZ = {
     keys: KEYS,
