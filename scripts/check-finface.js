@@ -217,26 +217,53 @@ const FIN = 'app/재무설계/상담자료.html';
   is(!/#sec1 [^{]*\{[^}]*Noto Serif KR/.test(fin), '이 판만 명조로 덧칠하지 않는다');
   is(!/#sec1 [^{]*\{[^}]*#B08D45/.test(fin), '이 판만 금색으로 덧칠하지 않는다');
 
-  console.log('\n[5] 나머지 장은 손대지 않았는가');
-  const O = await page.evaluate(() => {
-    const out = {};
-    ['sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) { out[id] = 'MISSING'; return; }
-      const inp = el.querySelector('.field input');
-      out[id] = {
-        radius: getComputedStyle(el).borderTopLeftRadius,
-        stepNo: el.querySelector('.step-no') ? getComputedStyle(el.querySelector('.step-no')).display : 'none',
-        inpRadius: inp ? getComputedStyle(inp).borderTopLeftRadius : '-'
-      };
-    });
-    return out;
-  });
-  ['sec3', 'sec4', 'sec5', 'sec6', 'sec7', 'sec9'].forEach(id => {
-    const v = O[id];
-    is(v !== 'MISSING' && v.stepNo !== 'none' && v.inpRadius !== '0px',
-      id + ' 은 예전 그대로다 (번호 딱지 ' + (v.stepNo || '?') + ' · 입력칸 모서리 ' + (v.inpRadius || '?') + ')');
-  });
+  console.log('\n[5] 일곱 장이 한 장으로 들어왔는가');
+  /* 자산 · 연금 · 보장 · 목표 · 걱정이 각각 다른 판이라, 고객 앞에서 일곱 번을
+     내려야 상황 하나가 정리됐다. 내려가는 동안 앞에서 적은 것이 화면에서
+     사라지니 「아까 소득이 얼마라고 하셨죠」 를 되묻게 된다.
+
+     합치면서 <b>칸을 하나라도 흘리면</b> 그 값이 들어가던 뒤쪽 슬라이드가
+     조용히 빈다 — 여기서 전수로 센다. */
+  const WANT = [
+    'f_name','f_age','f_gender','f_job','f_sname','f_sage','f_sincome',
+    'f_income','f_etc','f_living','f_house','f_edu','f_ins','f_loan','f_loanyr',
+    'f_home','f_cash','f_inv','f_dc','f_debt','f_save',
+    'r_dep','r_eq','r_us','r_va','r_pen','r_inf',
+    'f_ret','f_life','f_retspend','f_np','f_npage','f_pp',
+    'c_death','c_cancer','c_brain','c_heart','c_care','c_silson'
+  ];
+  const ONE = await page.evaluate((want) => {
+    const s1 = document.getElementById('sec1');
+    const inside = want.filter(id => { const e = document.getElementById(id); return !!(e && s1 && s1.contains(e)); });
+    const gone = want.filter(id => !document.getElementById(id));
+    const cols = s1 ? [...s1.querySelectorAll('.sec1-cols')][0] : null;
+    const h = cols ? [...cols.children].map(c => Math.round(c.getBoundingClientRect().height)) : [];
+    return {
+      still: ['sec3','sec4','sec5','sec6','sec7'].filter(id => document.getElementById(id)),
+      sec9: !!document.getElementById('sec9'),
+      inside: inside.length, gone: gone,
+      grps: [...(s1 ? s1.querySelectorAll('.sec1-grp') : [])].map(e => e.textContent.replace(/^\d/, '').trim()),
+      chips: ['goals','worries','focus'].filter(id => { const e = document.getElementById(id); return !!(e && s1 && s1.contains(e)); }).length,
+      colH: h,
+      navGo: [...document.querySelectorAll('#ffnav button')].map(b => b.dataset.go)
+    };
+  }, WANT);
+  is(ONE.still.length === 0, '자산 · 연금 · 보장 · 목표 · 걱정이 따로 서 있지 않다' +
+     (ONE.still.length ? ' — 아직 남음: ' + ONE.still.join(', ') : ''));
+  is(ONE.gone.length === 0, '칸이 하나도 안 없어졌다 (' + WANT.length + '칸)' +
+     (ONE.gone.length ? ' — 사라짐: ' + ONE.gone.join(', ') : ''));
+  is(ONE.inside === WANT.length,
+     '그 ' + WANT.length + '칸이 모두 <b>같은 한 장</b> 안에 있다 (' + ONE.inside + '칸)');
+  is(ONE.chips === 3, '목표 · 걱정 · 가장 먼저 듣고 싶은 것도 같은 장에 있다 (' + ONE.chips + '/3)');
+  is(ONE.grps.length === 5, '묶음 머리 다섯으로 나뉜다 — ' + ONE.grps.join(' / '));
+  is(/이 분은/.test(ONE.grps[0] || '') && /걱정/.test(ONE.grps[4] || ''),
+     '읽는 순서가 상담 순서다 — 누구십니까 … 무엇이 걱정이십니까');
+  is(ONE.sec9, '뉴스 · 자료는 따로 둔다 — 상담 중에 적는 것이 아니다');
+  is(ONE.navGo.length === 2 && ONE.navGo.indexOf('sec1') >= 0 && ONE.navGo.indexOf('sec9') >= 0,
+     '칸 목록이 없는 판을 안 가리킨다 (' + ONE.navGo.join(', ') + ')');
+  /* 두 칸 높이가 크게 벌어지면 한쪽 아래가 통째로 빈다 — 고객 앞에서 눈에 띈다 */
+  const gap = ONE.colH.length === 2 ? Math.abs(ONE.colH[0] - ONE.colH[1]) : 9999;
+  is(gap <= 200, '왼쪽과 오른쪽 높이가 안 벌어진다 — ' + ONE.colH.join(' vs ') + 'px (차 ' + gap + 'px)');
 
   console.log('\n[6] 고객 365일로 저장되는 길이 살아 있는가');
   /* 저장은 앱(index.html)이 한다. 이 화면은 apex:snap 으로 값을 넘긴다.
