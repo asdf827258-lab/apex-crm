@@ -686,6 +686,16 @@ a{color:inherit;text-decoration:none;}
  border-color:rgba(110,231,183,.5);}
 .sb-guide.map .sbg-t{color:#D7FBEC;}
 .sb-guide.map .sbg-go{color:rgba(215,251,236,.62);}
+/* 맨 위 · 카테고리 없이 — 폰에 담는 길은 「설정」 안에 있으면 아무도 못 찾는다.
+   한 번 담으면 다시 안 누를 칸이지만, 그 한 번을 못 찾으면 폰에서 아예 못 쓴다.
+   그래서 분류에서 빼서(TABS 에는 hide 로 남겨 둔다 — 찾기·음성·?go= 는 그대로)
+   사용가이드보다도 위에 상시 고정한다. 주황빛으로 갈라 셋이 붙어 보이지 않게. */
+.sb-guide.inst{margin-bottom:9px;border-color:rgba(253,186,116,.32);
+ background:linear-gradient(135deg,rgba(251,146,60,.22),rgba(249,115,22,.14));}
+.sb-guide.inst:hover{background:linear-gradient(135deg,rgba(251,146,60,.34),rgba(249,115,22,.24));
+ border-color:rgba(253,186,116,.56);}
+.sb-guide.inst .sbg-t{color:#FFE7CE;}
+.sb-guide.inst .sbg-go{color:rgba(255,231,206,.66);}
 .nav-allbtns{display:flex;gap:6px;padding:2px 2px 10px;}
 .nav-allbtns button{flex:1;min-height:34px;font-family:inherit;font-size:11px;font-weight:700;color:rgba(255,255,255,.5);background:rgba(255,255,255,.05);border:none;border-radius:8px;padding:8px 5px;cursor:pointer;transition:all .15s;}
 .nav-allbtns button:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);}
@@ -10334,7 +10344,9 @@ var TABS=[
    {id:'terms',icon:'📜',title:'약관·개인정보',cnt:'',ak:'구독·요금제'},
    {id:'ready',icon:'🚦',title:'출발 점검',cnt:'',ak:'홈'},
    {id:'health',icon:'🩺',title:'시스템 점검',cnt:'',ak:'시스템 점검'},
-   {id:'phone_app',icon:'📲',title:'폰에 담기',cnt:'',ak:'홈'},
+   /* 맨 위에 단추로 세워 둔다(renderNav) — 지도와 같은 이유로 여기서는 hide 로
+      눈에서만 뺀다. 지운 것이 아니라 찾기·음성·?go=phone_app 으로 그대로 열린다. */
+   {id:'phone_app',icon:'📲',title:'내 폰에 설치',cnt:'',hide:true,ak:'홈 폰에 담기 설치 앱 홈화면 추가 pwa'},
    {id:'mycal',icon:'📅',title:'내 캘린더',cnt:'',ak:'홈 달력 일정 알림 캘린더'}
  ]},
  /* 아래 셋은 메뉴에 세우지 않는다 — 다른 화면 안에서 열린다.
@@ -11129,12 +11141,15 @@ function renderPhoneApp(){
       '<b>「DB CRM」</b> · <b>「TFA」</b> 처럼 적으면 홈 화면에서 구분하기 쉽습니다.</div>'+
     '</div></div>';
 
-  return osPage('시스템','폰에 담기',
+  return osPage('설치','📲 내 폰에 설치',
     '홈 화면에 담으면 주소창 없이 앱처럼 열립니다. DB 통합 CRM 과 TFA 업무관리는 따로 담을 수 있습니다.',h);
 }
 
 function renderNav(){
   var h='<div id="osNoticeNav"></div>'+
+    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
+      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
+      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
     '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
       '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
       '<span class="sbg-go">처음이시면 여기부터</span></button>'+
@@ -11575,8 +11590,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-23 00:47';
-var APP_BUILD_NOTE='<b>폰에서 하루가 끝나게 했습니다.</b> 「하루 한 장」(<code>/app/day.html</code>) 한 화면에서 오늘 걸 사람을 세우고, 전화·문자하고, 세 번 눌러 기록합니다 — 그 한 줄이 <b>DB 통합 CRM 에 그대로</b> 들어갑니다. 지난번에 들은 말이 다음에 그 사람이 뜰 때 <b>맨 위에</b> 뜨고 오늘 첫 마디가 됩니다. <b>고객 365일도 폰에서 고칩니다</b> — 다음 할 일·생일. 팩트파인딩·가족·접촉 기록은 한 글자도 안 건드립니다. 「사람」 판에서 <b>배정 DB 와 고객 365일이 한 명단</b>으로 섭니다. 약속을 잡으면 <b>진짜 .ics</b> 가 나와 폰이 한 시간 전에 울립니다 — 앱 전체에 VEVENT 가 0건이었습니다. <b>팀 하루 한 장</b>(<code>/app/team.html</code>) 은 팀 통화·아직 0통인 사람을 폰에서 보여 주고, AI 가 전체 한 줄과 사람별 한 줄을 써서 <b>팀원 폰으로 바로 꽂습니다</b>. 고친 것 둘 — 폰 시간대가 한국이 아니면 통화 시각이 <b>아홉 시간 어긋나던 것</b>, DB 종류가 대표님이 정한 목록을 <b>안 따라가던 것</b>.';
+var APP_BUILD='2026-08-23 03:05';
+var APP_BUILD_NOTE='<b>폰에서 하루가 끝나게 했습니다.</b> 「하루 한 장」(<code>/app/day.html</code>) 한 화면에서 오늘 걸 사람을 세우고, 전화·문자하고, 세 번 눌러 기록합니다 — 그 한 줄이 <b>DB 통합 CRM 에 그대로</b> 들어갑니다. 지난번에 들은 말이 다음에 그 사람이 뜰 때 <b>맨 위에</b> 뜨고 오늘 첫 마디가 됩니다. <b>고객 365일도 폰에서 고칩니다</b> — 다음 할 일·생일. 팩트파인딩·가족·접촉 기록은 한 글자도 안 건드립니다. 「사람」 판에서 <b>배정 DB 와 고객 365일이 한 명단</b>으로 섭니다. 약속을 잡으면 <b>진짜 .ics</b> 가 나와 폰이 한 시간 전에 울립니다 — 앱 전체에 VEVENT 가 0건이었습니다. <b>팀 하루 한 장</b>(<code>/app/team.html</code>) 은 팀 통화·아직 0통인 사람을 폰에서 보여 주고, AI 가 전체 한 줄과 사람별 한 줄을 써서 <b>팀원 폰으로 바로 꽂습니다</b>. <b>「내 폰에 설치」 를 메뉴 맨 위에 상시 고정했습니다</b> — 「설정」 안에 있으면 한 번뿐인 그 한 번을 못 찾으십니다(옛 이름 「폰에 담기」 로도 그대로 찾힙니다). 로그인 안 하신 분께 <b>결제 칸 대신 로그인 안내</b>가 뜹니다 — 홈 화면에 담은 앱은 사파리와 저장 공간이 따로라 앱 안에서 한 번 로그인하시면 됩니다. 고친 것 둘 — 폰 시간대가 한국이 아니면 통화 시각이 <b>아홉 시간 어긋나던 것</b>, DB 종류가 대표님이 정한 목록을 <b>안 따라가던 것</b>.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
