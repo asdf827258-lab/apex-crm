@@ -253,6 +253,7 @@ const readCovers = page => page.evaluate(() => Object.keys(DECK).map(k => {
                        return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; };
       const cta = document.getElementById('closeCta');
       return { id: id, q: t('closeQ'), lead: t('closeLead'), line: t('closeLine'),
+               scene: t('closeScene'),
                way: [].map.call(document.querySelectorAll('#closeWay .st'), e => ({
                  ti: (e.querySelector('.ti') || {}).textContent || '',
                  de: (e.querySelector('.de') || {}).textContent || '' })),
@@ -269,13 +270,20 @@ const readCovers = page => page.evaluate(() => Object.keys(DECK).map(k => {
     is(z.way.length === 3, '  ' + z.id + ' 갈래 — 다음에 할 일이 세 걸음이다 (' + z.way.length + ')');
     is(z.way.every(w => w.ti && w.de.length >= 10),
        '  ' + z.id + ' 갈래 — 세 걸음마다 무엇을 하는지 적혀 있다');
+    /* 할 일만 적어 놓으면 숙제처럼 읽힙니다. 그 걸음을 밟으면 <b>어떤 날이
+       오는지</b>까지 그려 줘야 고객이 그 자리에 자기를 앉혀 보십니다. */
+    is(z.scene.length >= 40, '  ' + z.id + ' 갈래 — 그 뒤에 오는 날을 그려 준다');
+    /* 다만 그 그림에 <b>금액을 적으면 그건 약속</b>이 되고, 약속은 못 지킵니다.
+       미래는 말로만 그립니다 — 숫자는 계산기가 그 사람 조건으로 냅니다. */
+    is(!/[0-9][0-9,]*\s*(만원|억원|억|원|%)/.test(z.scene.replace(/(^|[^0-9])0\s*원/g, '$1')),
+       '  ' + z.id + ' 갈래 — 그림에 금액을 적어 약속하지 않는다');
     is(/니다|십시오/.test(z.line) && z.line.length >= 12,
        '  ' + z.id + ' 갈래 — 한 문장으로 닫는다: ' + z.line.slice(0, 34));
     is(!!z.cta && z.dest,
        '  ' + z.id + ' 갈래 단추가 실제 장으로 간다 — ' + z.cta + ' → ' + z.href);
   });
   /* 갈래가 늘었는데 표에 안 적으면 조용히 연금 마무리가 나온다 — 그걸 잡는다 */
-  [['q', '물음'], ['line', '한 문장']].forEach(([f, nm]) => {
+  [['q', '물음'], ['line', '한 문장'], ['scene', '그림']].forEach(([f, nm]) => {
     const v = CLZ.map(z => z[f]);
     is(new Set(v).size === v.length, '  다섯 갈래의 ' + nm + '이 서로 다르다');
   });
