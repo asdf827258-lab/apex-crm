@@ -919,30 +919,44 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(!/[0-9]+\s*%/.test(brainLine + heartLine),
      '앱 지시문에도 <b>같은 비율이 남아 있지 않다</b> — 쌍둥이를 함께 지웠다');
 
-  const rBad = [], rShape = [], rGap = [], rMono = [];
+  /* 이름을 앱 KCD 표에서 <b>그대로 가져다 견준다.</b> 외워 적었더니 여섯 자리가
+     틀려 있었다 — 「거미막밑출혈」(→거미막하출혈) · 「폐색·협착」(→폐쇄 및 협착) ·
+     「만성 허혈심장질환」(→만성 허혈심장병). 진단서에 찍히는 이름과 한 글자라도
+     다르면 설계사가 코드 검색창에서 그 병을 못 찾는다. */
+  const KNAME = new Map([...kcdBlk.matchAll(/\['([A-Z][0-9]{2})','([^']+)'/g)].map(m => [m[1], m[2]]));
+
+  /* ○ 보다 △ 가, △ 보다 — 가 좁다. 왼쪽 담보가 오른쪽보다 넓을 수는 없다. */
+  const RANK = { 0: 0, 2: 1, 1: 2 };
+
+  const rBad = [], rShape = [], rGap = [], rMono = [], rName = [];
   RANGED.forEach(d => {
     const cols = d.range.cols || [], rows = d.range.rows || [];
     if (!cols.length || !rows.length) { rShape.push(d.id + ' 빈 표'); return; }
-    let prev = null;
     rows.forEach(r => {
       const code = r[0];
       if (!CODES.has(code)) rBad.push(d.id + ':' + code);
+      else if (KNAME.get(code) !== r[1]) rName.push(d.id + ':' + code + ' 「' + r[1] + '」≠「' + KNAME.get(code) + '」');
       if (!r[1]) rShape.push(d.id + ':' + code + ' 진단명 없음');
       if (r.length !== cols.length + 2) rShape.push(d.id + ':' + code + ' 칸 수가 담보 수와 다름');
-      /* 세부별로 <b>빠짐없이</b> 폈는가 — I60 다음이 I63 이면 가운데가 비어 있다 */
-      const n = parseInt(code.slice(1), 10);
-      if (prev !== null && n !== prev + 1) rGap.push(d.id + ':' + code.slice(0, 1) + prev + '→' + code);
-      prev = n;
-      /* 좁은 담보에서 나오는 코드는 넓은 담보에서도 나와야 한다.
-         왼쪽에서 ○ 인데 오른쪽에서 — 이면 표가 뒤집힌 것이다. */
       for (let i = 2; i < r.length; i++) {
         if (![0, 1, 2].includes(r[i])) rShape.push(d.id + ':' + code + ' 알 수 없는 표시 ' + r[i]);
-        if (i > 2 && r[i - 1] === 1 && r[i] !== 1) rMono.push(d.id + ':' + code);
+        if (i > 2 && RANK[r[i - 1]] > RANK[r[i]]) rMono.push(d.id + ':' + code);
       }
     });
+    /* 세부별로 <b>빠짐없이</b> 폈는가. 줄 차례는 담보 범위 순이라 번호순이 아니다 —
+       그래서 정렬해 놓고 구멍만 본다. I60 다음이 I63 이면 가운데가 비어 있다. */
+    const ns = rows.map(r => parseInt(r[0].slice(1), 10)).sort((a, b) => a - b);
+    for (let i = 1; i < ns.length; i++) {
+      if (ns[i] === ns[i - 1]) rGap.push(d.id + ': 같은 코드가 두 줄 ' + ns[i]);
+      else if (ns[i] !== ns[i - 1] + 1) rGap.push(d.id + ':' + rows[0][0][0] + ns[i - 1] + '→' + rows[0][0][0] + ns[i]);
+    }
+    /* <b>어디서 읽었는지</b> 적혀 있는가. 이 표는 외워 적으면 안 되는 표다. */
+    if (!(d.src || []).some(x => /질병·?사인분류|KCD/.test(x[0]))) rName.push(d.id + ' KCD 출처가 src 에 없음');
   });
   is(rBad.length === 0, '범위 표의 코드가 <b>전부 앱의 KCD 표에 있다</b>' +
      (rBad.length ? ' — 없는 코드: ' + rBad.join(' / ') : ''));
+  is(rName.length === 0, '진단명이 <b>앱 KCD 표와 한 글자까지 같다</b> · 어디서 읽었는지 src 에 적었다' +
+     (rName.length ? ' — ' + rName.join(' / ') : ''));
   is(rShape.length === 0, '범위 표의 칸이 담보 수와 맞고 표시가 ○·—·△ 뿐이다' +
      (rShape.length ? ' — ' + rShape.join(' / ') : ''));
   is(rGap.length === 0, '코드를 <b>한 자리도 건너뛰지 않고</b> 폈다 — 「I60~I69」 라고만 적고 넘어가지 않는다' +
