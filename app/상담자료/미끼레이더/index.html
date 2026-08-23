@@ -725,10 +725,9 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 /* ==================================================================
    미끼 레이더 · APEX      데이터 정의부
    ================================================================== */
-const TABS=[
-['start','🚀 시작'],['concept','🎭 이달의 컨셉'],['radar','📡 신상품 레이더'],['lib','📚 상품 서재'],['new','🆕 신상품 분석'],['terms','📜 약관 분석기'],['best','🏆 베스트 찾기'],['judge','⚖️ 정밀 판정'],['cust','🧾 고객 제시'],['design','🎯 미끼 설계기'],
- ['touch','🤝 접촉 엔진'],['brief','🗓 월간 브리핑'],['help','📘 사용법']
-];
+/* 칸 목록이 여기 한 벌 더 있었다. 아무도 안 쓰는데도 남아 있었고,
+   그 사이 홍보 발췌(promo)가 늘었는데 <b>이쪽에만 안 들어가</b> 두 벌이
+   어긋난 채였다. 쓰는 곳은 아래 GROUPS · SUBNAME 하나뿐이라 지운다. */
 
 /* ---------- 담보 재료 (전자책 07장 기반) ---------- */
 const COV={
@@ -2477,9 +2476,54 @@ async function filesFromDrop(dt){
   for(const r of roots)await walk(r,0);
   return out;
 }
+/* ── 폴더 고르기가 되는 기기인가 — 여기 한 곳에서만 답한다 ──────────
+   사장님 주 기기가 갤럭시탭이다. 그런데 <b>안드로이드 크롬은 폴더 고르기를
+   지원하지 않는다.</b> 속성 존재로는 못 가른다 —
+   'webkitdirectory' in input 은 <b>true 인데도</b> 실제로는 폴더가 안 열린다.
+   그래서 단추만 멀쩡히 보이고, 눌러도 아무 일이 없었다. 터치 기기에는
+   끌어다 놓기도 없으니 「폴더째로 끌어다 놓으세요」 도 할 수 없는 말이다.
+   보이는데 안 되는 것이 제일 나쁘다.
+
+   기기로 가른다. iPad 는 스스로를 Macintosh 라고 밝히므로 손가락 수까지
+   본다 — 화면을 만지는 Mac 은 없다.                                    */
+function canPickFolder(){
+  var ua=(navigator.userAgent||'');
+  if(/Android|iPhone|iPod|iPad/i.test(ua))return false;
+  /* 진짜 Mac 은 손가락이 0 이다. 하나라도 있으면 아이패드다.
+     (>1 로 뒀더니 손가락을 1 로 흉내 내는 곳에서 안 걸렸다) */
+  if(/Macintosh/i.test(ua)&&(navigator.maxTouchPoints||0)>0)return false;
+  return true;
+}
+/* 그 답에 따라 화면을 맞추는 곳도 하나다 — 부르는 자리가 여럿이라
+   각자 숨기면 한 곳만 고쳐진다. 되는 기기는 아무것도 안 건드린다. */
+function folderUiApply(){
+  if(canPickFolder())return;
+  var b=document.getElementById('btnUpDir');
+  if(b)b.style.display='none';
+  var d=document.getElementById('upDrop');
+  if(d)d.innerHTML='<div class="big">📥</div>'+
+    '<b>여기를 눌러 <u>PDF 를 여러 개</u> 골라 넣으세요</b>'+
+    '<span>내 파일 · 드라이브에서 여러 개를 한꺼번에 고르실 수 있습니다 · 이 브라우저에 계속 쌓입니다</span>';
+  var h=document.getElementById('libHint');
+  if(h)h.innerHTML=
+    '<b>쌓는 방법 · PDF 를 여러 개 한꺼번에</b> — 위 칸을 누르면 파일 고르기가 열립니다. '+
+    '<b>내 파일</b> 이나 <b>드라이브</b> 에서 <b>여러 개를 한꺼번에</b> 고르시면 '+
+    '회사·종류로 나눠 쌓습니다. 창을 닫아도 남습니다. '+
+    '<b>배치파일도, 사무실 PC 도 필요 없습니다.</b><br>'+
+    '<b>매달은 같은 것을 다시 고르시면 됩니다</b> — <b>이미 들어 있는 것은 건너뛰고 새 것만</b> 읽습니다. '+
+    '그래서 두 번째부터는 금방 끝납니다.<br>'+
+    '<b>같은 자료는 두 번 들어가지 않습니다</b> — 파일 이름을 바꾸셨어도, 회사가 다시 만들어 '+
+    '보내 이름·크기가 달라졌어도 <b>내용이 같으면 안 받습니다.</b> 무엇과 겹쳤는지 적어 드립니다.<br>'+
+    '<b>원수사 약관은 서버로 올라가지 않습니다</b> — 다른 기기로 옮기실 때만 '+
+    '<b>📤 자료 내보내기</b> → <b>📦 자료 불러오기</b> 를 쓰세요.<br>'+
+    '<b>폴더 통째로 넣기는 컴퓨터에서만 됩니다</b> — 태블릿·폰 브라우저가 폴더 고르기를 '+
+    '지원하지 않습니다. 여기서는 PDF 를 여러 개 고르시는 것이 같은 일을 합니다.';
+}
+
 (function(){
   const d=$('#upDrop'),inp=$('#upFiles'),dir=$('#upDir');
   if(!d)return;
+  folderUiApply();
   d.onclick=()=>inp.click();
   inp.onchange=e=>{uploadFiles(e.target.files);inp.value=''};
   if(dir){
@@ -5160,10 +5204,17 @@ function bindDaily(){
         'font-size:11px;color:#1D4ED8;line-height:1.7;margin-bottom:10px">'+
         '예전에 만들어 두신 폴더가 있을 때만 — 미끼레이더 밑의 <b>data</b> 폴더 하나를 고르세요.<br>'+
         '(안에 library.json · news.json · docs · products 가 들어 있는 그 폴더)</div>'+
-      '<label style="display:block;border:0;border-radius:12px;padding:13px;text-align:center;cursor:pointer;'+
-        'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-weight:800;font-size:14px">'+
-        '📂 data 폴더 고르기'+
-        '<input type="file" id="mkdPick" webkitdirectory directory multiple style="display:none"></label>'+
+      /* 여기도 폴더 고르기다 — 태블릿·폰에서는 눌러도 안 열린다.
+         같은 판정(canPickFolder)을 쓴다. 답하는 곳이 둘이면 갈라진다. */
+      ((typeof canPickFolder==='function'&&!canPickFolder())
+        ? '<div style="border:1px solid #FED7AA;background:#FFF7ED;border-radius:12px;padding:12px;'+
+          'font-size:12px;color:#7C2D12;line-height:1.7"><b>이 기기에서는 폴더를 못 고릅니다.</b><br>'+
+          '태블릿·폰 브라우저가 폴더 고르기를 지원하지 않습니다. 컴퓨터에서 한 번 넣으시거나, '+
+          '<b>📜 약관 › 서재</b> 에서 <b>PDF 를 여러 개 한꺼번에</b> 고르시면 같은 일이 됩니다.</div>'
+        : '<label style="display:block;border:0;border-radius:12px;padding:13px;text-align:center;cursor:pointer;'+
+          'background:linear-gradient(135deg,#1A56DB,#0F3FA8);color:#fff;font-weight:800;font-size:14px">'+
+          '📂 data 폴더 고르기'+
+          '<input type="file" id="mkdPick" webkitdirectory directory multiple style="display:none"></label>')+
       '<div id="mkdMsg" style="font-size:11.5px;color:#42506A;margin-top:10px;line-height:1.65"></div>'+
       '<div class="mkd-now" style="font-size:11px;color:#8A93A6;margin-top:8px"></div>'+
       '<div style="display:flex;gap:7px;margin-top:9px">'+
@@ -5172,7 +5223,8 @@ function bindDaily(){
         '<button type="button" id="mkdX" style="flex:1;border:0;background:transparent;color:#8A93A6;'+
           'font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">닫기</button></div>';
     document.body.appendChild(w);
-    document.getElementById('mkdPick').onchange=function(){importDir(this);};
+    var pick=document.getElementById('mkdPick');
+    if(pick)pick.onchange=function(){importDir(this);};   /* 태블릿에서는 아예 안 세운다 */
     document.getElementById('mkdX').onclick=function(){w.remove();};
     document.getElementById('mkdClr').onclick=function(){
       wipe().then(function(){
