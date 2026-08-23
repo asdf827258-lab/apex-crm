@@ -22,7 +22,9 @@
     13. <b>겹쳐 받는 법</b> — 동시에 열리는 개수를 흐름에서 세는가 ·
         그 병과 <b>상관없는 담보를 권하지 않는가</b>
     14. <b>도해</b> — 색 오타로 도형이 말없이 사라지지 않는가 ·
-        새로 그린 그림이 목록에서 빠지지 않는가                                        */
+        새로 그린 그림이 목록에서 빠지지 않는가
+    15. <b>전이·합병증</b> — 겁만 주고 끝내지 않는가(무엇을 하는가·담보가 붙는가) ·
+        외운 비율을 적지 않는가 · 없는 질병에 지어내 붙이지 않는가                     */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8877;
@@ -758,6 +760,113 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const vsTxt = await page.evaluate(() => (window.DZ_VIZ.get('brain_vs') || {}).d || '');
   is(/뇌경색/.test(vsTxt) && /뇌출혈/.test(vsTxt) && /범위/.test(vsTxt),
      '막힌 것과 터진 것을 견주고, <b>담보 범위</b>로 이어 말한다');
+  await page.close();
+
+
+  /* ═══ 15. 전이와 합병증 — 지어내지 않고, 담보로 이어지는가 ═══
+     이 두 자리는 겁을 주기 가장 쉬운 자리다. 그래서 확인한다 —
+     자리마다 <b>무엇을 하는가</b>와 <b>그때 열리는 담보</b>가 붙어 있는지,
+     비율(몇 %) 같은 외운 숫자를 적지 않았는지, 그리고 담보 이름이
+     전부 말모이 안에 있는지. */
+  console.log('\n[15] 전이와 합병증');
+  const SP = D.spread, CP = D.comp;
+  is(!!SP, '전이 자료가 한 벌 있다');
+  is(!!CP, '합병증 자료가 한 벌 있다');
+  is(SP && SP.how.length >= 3, '가는 길을 ' + (SP ? SP.how.length : 0) + '가지로 나눠 적었다');
+  is(SP && SP.where.length >= 5, '전이가 잘 가는 자리가 ' + (SP ? SP.where.length : 0) + '곳 적혀 있다');
+
+  /* 겁만 주고 끝나지 않는다 — 자리마다 「무엇을 합니까」와 담보가 붙어야 한다 */
+  const spHole = (SP ? SP.where : []).filter(w =>
+    !w.why || !w.fear || !(w.sign || []).length || !(w.care || []).length ||
+    !(w.cov || []).length || !w.talk).map(w => w.k);
+  is(spHole.length === 0, '자리마다 <b>무엇을 하는가</b>와 <b>그때 열리는 담보</b>가 붙어 있다 — 겁만 주고 끝내지 않는다' +
+     (spHole.length ? ' — 빠짐: ' + spHole.join(' / ') : ''));
+
+  const covSet2 = new Set(D.cov.map(c => c.k));
+  const spCovBad = [];
+  (SP ? SP.where : []).forEach(w => (w.cov || []).forEach(k => { if (!covSet2.has(k)) spCovBad.push(w.k + ':' + k); }));
+  is(spCovBad.length === 0, '전이에서 부르는 담보가 전부 말모이 안에 있다' +
+     (spCovBad.length ? ' — ' + spCovBad.join(', ') : ''));
+
+  /* 가리키는 질병과 자리가 실재하는가 — 없는 것을 가리키면 화면이 빕니다 */
+  const whereK = new Set((SP ? SP.where : []).map(w => w.k));
+  const dzIdSet = new Set(D.list.map(d => d.id));
+  const linkBad = [];
+  Object.keys((SP && SP.byDz) || {}).forEach(id => {
+    if (!dzIdSet.has(id)) linkBad.push('없는 질병 ' + id);
+    ((SP.byDz[id]) || []).forEach(w => { if (!whereK.has(w)) linkBad.push(id + ' → 없는 자리 ' + w); });
+  });
+  is(linkBad.length === 0, '「이 암은 어디로」 가 가리키는 질병과 자리가 전부 실재한다' +
+     (linkBad.length ? ' — ' + linkBad.join(' / ') : ''));
+
+  /* 외운 숫자를 적지 않는다 — 전이율·생존율 같은 퍼센트는 자료마다 다르다 */
+  const spTxt = JSON.stringify(SP || {});
+  const pct = spTxt.match(/[0-9]+\s*(%|퍼센트)/g) || [];
+  is(pct.length === 0, '전이에 <b>비율(몇 %)을 적지 않는다</b> — 자료마다 다르고 개정된다' +
+     (pct.length ? ' — 적혀 있음: ' + pct.slice(0, 4).join(', ') : ''));
+
+  /* 합병증 — 질병 전부에 붙었는가 · 담보와 화법이 있는가 */
+  const cpMiss = D.list.filter(d => !((CP && CP.byDz) || {})[d.id]).map(d => d.name);
+  is(cpMiss.length === 0, '질병 ' + D.list.length + '종 <b>전부</b> 합병증이 붙어 있다' +
+     (cpMiss.length ? ' — 없음: ' + cpMiss.join(' / ') : ''));
+
+  let cpN = 0; const cpHole = [], cpCovBad = [];
+  Object.keys((CP && CP.byDz) || {}).forEach(id => {
+    (CP.byDz[id] || []).forEach(c => {
+      cpN++;
+      if (!c.k || !c.when || !c.why || !(c.sign || []).length || !c.say) cpHole.push(id + ':' + (c.k || '?'));
+      (c.cov || []).forEach(k => { if (!covSet2.has(k)) cpCovBad.push(id + ':' + k); });
+    });
+  });
+  is(cpN >= 30, '합병증이 ' + cpN + '가지 적혀 있다');
+  is(cpHole.length === 0, '합병증마다 <b>언제·왜·무엇이 보이면·어떻게 말하는가</b>가 다 있다' +
+     (cpHole.length ? ' — 빠짐: ' + cpHole.slice(0, 5).join(' / ') : ''));
+  is(cpCovBad.length === 0, '합병증에서 부르는 담보가 전부 말모이 안에 있다' +
+     (cpCovBad.length ? ' — ' + cpCovBad.slice(0, 5).join(', ') : ''));
+
+  /* 단정하지 않는다 */
+  is(!!(SP && /주치의|심사/.test(SP.tail)) && !!(CP && /주치의|심사/.test(CP.tail)),
+     '둘 다 <b>주치의와 심사</b>로 닫는다 — 전이도 합병증도 단정하지 않는다');
+
+  /* ── 브라우저 ── */
+  page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(200);
+
+  await page.evaluate(() => spreadOpen('cancer_major'));
+  await page.waitForTimeout(400);
+  const spTxt2 = await page.locator('#detailPane').innerText();
+  is(spTxt2.length > 2500, '전이 화면이 선다 (' + spTxt2.length + '자)');
+  is(await page.locator('.spr-w.on').count() > 0, '고른 암이 <b>잘 가는 자리</b>가 표시된다');
+  is(/이 암이 잘 가는 자리/.test(spTxt2), '그 암이 가는 자리를 그 자리에서 짚어 준다');
+
+  /* 질병을 바꾸면 짚이는 자리가 달라진다 — 한 벌에서 나온다는 증거 */
+  const onOf = async id => {
+    await page.evaluate(i => spreadOpen(i), id);
+    await page.waitForTimeout(280);
+    return (await page.locator('.spr-w.on .wh b').allInnerTexts()).join('|');
+  };
+  const a1 = await onOf('cancer_major'), a2 = await onOf('thyroid');
+  is(a1 !== a2 && a1.length > 0 && a2.length > 0, '질병을 바꾸면 <b>짚이는 자리가 실제로 달라진다</b>');
+
+  await page.evaluate(() => compOpen('chronic'));
+  await page.waitForTimeout(400);
+  const cpTxt = await page.locator('#detailPane').innerText();
+  is(await page.locator('.cmp-c').count() >= 3, '합병증 화면이 서고 여러 가지가 나온다');
+  is(/투석/.test(cpTxt), '당뇨의 종착역(투석)을 합병증에서 짚는다');
+  is(await page.locator('.cmp-c .covs .pay').count() > 0, '합병증마다 <b>그때 열리는 담보</b>를 누를 수 있다');
+
+  /* 질병 상세에 짧은 칸이 붙는가 */
+  let miniS = 0, miniC = 0;
+  for (const d of D.list) {
+    await page.evaluate(i => open_(i), d.id);
+    await page.waitForTimeout(90);
+    if (await page.locator('.spr-mini').count()) miniS++;
+    if (await page.locator('.cmp-mini').count()) miniC++;
+  }
+  is(miniC === D.list.length, '질병마다 상세에 <b>합병증 한 줄</b>이 붙는다 (' + miniC + '/' + D.list.length + ')');
+  is(miniS === Object.keys((SP && SP.byDz) || {}).filter(k => (SP.byDz[k] || []).length).length,
+     '전이 한 줄은 <b>경로를 적어 둔 암에만</b> 붙는다 (' + miniS + '개) — 없는 질병에 지어내 붙이지 않는다');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */
