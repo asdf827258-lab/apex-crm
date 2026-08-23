@@ -46,6 +46,7 @@ const no = m => { fail++; console.log('  ✗ ' + m); };
 const is = (c, m) => c ? ok(m) : no(m);
 
 const DATA = 'app/질병가이드-data.js';
+const VIZF = 'app/질병가이드-도해.js';
 const PAGE = 'app/재무설계/질병보험가이드.html';
 
 (async () => {
@@ -54,9 +55,12 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const html = fs.readFileSync(path.join(ROOT, PAGE), 'utf8');
 
   /* 자료를 그대로 읽어 온다 */
+  const vizRaw = fs.readFileSync(path.join(ROOT, VIZF), 'utf8');
   const sandbox = { window: {} };
   new Function('window', raw)(sandbox.window);
+  new Function('window', 'document', vizRaw)(sandbox.window, { querySelectorAll: function () { return []; } });
   const D = sandbox.window.DZ_DATA;
+  const VIZ = sandbox.window.DZ_VIZ;
 
   /* ═══ 1. 표가 한 벌인가 ═══ */
   console.log('\n[1] 질병 표가 한 벌인가 — 두 벌이면 한쪽만 고쳐진다');
@@ -66,6 +70,11 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/var TP_DISEASES\s*=\s*\(function/.test(app),
      '치료비 지급지도가 그 표에서 꺼내 쓴다 (질병 표를 다시 적지 않았다)');
   is(!/var TP_DISEASES\s*=\s*\[/.test(app), '앱 안에 질병 표가 다시 적혀 있지 않다');
+  is(/var CLAIM_SCENARIOS\s*=\s*\(window\.DZ_DATA/.test(app),
+     '청구·사후관리의 질병 사례도 같은 한 벌에서 온다');
+  is(!/var CLAIM_SCENARIOS\s*=\s*\[/.test(app), '앱 안에 사례 표가 다시 적혀 있지 않다');
+  is(/<script src="질병가이드-도해\.js"><\/script>|질병가이드-도해\.js/.test(html),
+     '가이드가 도해 파일을 싣는다');
   is(/<script src="apex-deck\.js">|상담자료\/apex-deck\.js/.test(html),
      '준법 문구는 상담자료 공통 덧붙임에서 온다 (여기서 따로 쓰지 않는다)');
 
@@ -144,6 +153,45 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(holes.length === 0, '빈칸 없음' + (holes.length ? ' — ' + holes.slice(0, 6).join(' / ') : ''));
   is(!!(D.disc && D.disc.med && D.disc.pay && D.disc.num), '치료·지급·숫자에 대한 꼬리표가 한 곳에 있다');
 
+  /* ═══ 4-2. 술식 ═══ */
+  console.log('\n[4-2] 수술·치료 방법이 다 채워졌는가 — 「등을 합니다」 로는 3초를 못 버틴다');
+  const opHole = [], opBad = [], dzIds = new Set((D.list || []).map(d => d.id));
+  (D.ops || []).forEach(o => {
+    if (!dzIds.has(o.dz)) opBad.push('없는 질병 ' + o.dz);
+    if (!o.n || !o.how || !o.when || !o.ins || !o.kind) opHole.push(o.n || '(이름 없음)');
+    (o.pay || []).forEach(p => { if (!VOCAB.has(p.k)) opBad.push(o.n + ' · ' + p.k); });
+  });
+  is((D.ops || []).length > 0, '술식이 있다 — ' + (D.ops || []).length + '개');
+  is(opHole.length === 0, '술식마다 어떻게·언제·보험이 다 적혀 있다' + (opHole.length ? ' — 빈칸: ' + opHole.slice(0, 5).join(' / ') : ''));
+  is(opBad.length === 0, '술식의 담보가 전부 말모이에 있다' + (opBad.length ? ' — ' + opBad.join(' / ') : ''));
+  const dzNoOp = (D.list || []).filter(d => !(D.ops || []).some(o => o.dz === d.id)).map(d => d.name);
+  is(dzNoOp.length === 0, '질병마다 술식이 하나 이상 붙어 있다' + (dzNoOp.length ? ' — 없음: ' + dzNoOp.join(' / ') : ''));
+
+  /* ═══ 4-3. 용어 ═══ */
+  console.log('\n[4-3] 용어 사전 — 진단서에 적힌 말을 풀어 두었는가');
+  const tmHole = (D.terms || []).filter(t => !t.t || !t.d || !t.g).map(t => t.t || '(이름 없음)');
+  is((D.terms || []).length >= 40, '용어가 넉넉히 있다 — ' + (D.terms || []).length + '개');
+  is(tmHole.length === 0, '용어마다 갈래와 뜻이 있다' + (tmHole.length ? ' — ' + tmHole.join(' / ') : ''));
+
+  /* ═══ 4-4. 사례 ═══ */
+  console.log('\n[4-4] 사례 — 질병과 이어져 있는가');
+  const caseIds = new Set((D.cases || []).map(c => c.id));
+  const badCase = [];
+  (D.list || []).forEach(d => (d.caseIds || []).forEach(i => { if (!caseIds.has(i)) badCase.push(d.id + ':' + i); }));
+  is((D.cases || []).length > 0, '사례가 있다 — ' + (D.cases || []).length + '건');
+  is(badCase.length === 0, '질병이 가리키는 사례가 전부 실재한다' + (badCase.length ? ' — 없는 사례: ' + badCase.join(' / ') : ''));
+
+  /* ═══ 4-5. 도해 ═══ */
+  console.log('\n[4-5] 도해 — 직접 그렸는가, 질병마다 붙었는가');
+  is(!!(VIZ && VIZ.keys && VIZ.keys.length), '도해가 읽힌다 — ' + ((VIZ && VIZ.keys) ? VIZ.keys.length : 0) + '개');
+  const dzNoViz = (D.list || []).filter(d => !VIZ.forDz(d.id).length).map(d => d.name);
+  is(dzNoViz.length === 0, '질병마다 도해가 하나 이상 붙어 있다' + (dzNoViz.length ? ' — 없음: ' + dzNoViz.join(' / ') : ''));
+  /* 남의 삽화를 갖다 붙이지 않았는가 — 직접 그린 SVG 만 쓴다 */
+  is(!/<img\s/i.test(vizRaw), '도해에 남의 그림을 갖다 붙이지 않았다 (img 없음)');
+  is(!/url\s*\(\s*['"]?https?:/i.test(vizRaw), '바깥에서 그림을 받아 오지 않는다');
+  is(/<svg/i.test(vizRaw), '직접 그린 SVG 로 되어 있다');
+  is(/직접 그린/.test(vizRaw), '「직접 그린 도식」 이라고 화면에 밝힌다');
+
   /* ═══ 5. 단정하지 않는가 ═══ */
   console.log('\n[5] 단정하지 않는가 — 지급은 약관과 심사가 정한다');
   const SAY_NO = [
@@ -197,6 +245,40 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/는 어디에서 일합니까/.test(back), '담보 되짚기 화면이 열린다');
   is(/이 질병 열기/.test(back), '되짚기에서 다시 질병으로 들어갈 수 있다');
 
+  console.log('\n[8-2] 그림 · 술식 · 사례가 화면에 서는가');
+  /* 위에서 담보 되짚기로 넘어갔으니 질병 한 장을 다시 연다 */
+  await page.evaluate(id => open_(id), D.list[0].id);
+  await page.waitForTimeout(300);
+  const vizN = await page.locator('.viz').count();
+  is(vizN > 0, '도해가 그려진다 (' + vizN + '장)');
+  is((await page.locator('.op').count()) > 0, '술식 카드가 선다 (' + (await page.locator('.op').count()) + '개)');
+  is((await page.locator('.case').count()) > 0, '사례 카드가 선다 (' + (await page.locator('.case').count()) + '건)');
+  is(/직접 그린/.test(await page.locator('#detailPane').innerText()), '도해마다 「직접 그린 도식」 이 붙는다');
+  is(/예시입니다|예시입니다\.|지급을 보장하는 숫자가 아닙니다/.test(await page.locator('#detailPane').innerText()),
+     '사례 금액이 예시라고 밝힌다');
+
+  /* 3D 를 끌면 실제로 돌아가는가 — 안 돌면 그냥 그림 한 장이다 */
+  await page.locator('.dz3d-box').first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(150);
+  const box3d = await page.locator('.dz3d-box').first().boundingBox();
+  if (box3d) {
+    const before = await page.locator('.dz3d-stage').first().evaluate(el => el.style.transform);
+    await page.mouse.move(box3d.x + box3d.width / 2, box3d.y + box3d.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box3d.x + box3d.width / 2 + 90, box3d.y + box3d.height / 2 - 40, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    const after = await page.locator('.dz3d-stage').first().evaluate(el => el.style.transform);
+    is(before !== after, '3D 도해를 끌면 실제로 돌아간다');
+    /* 돌려도 이름표는 읽혀야 한다 — 3D 에서 떼어 놓은 이유가 이것이다 */
+    const tagBox = await page.locator('.dz3d-tag').first().boundingBox();
+    const vizBox = await page.locator('.dz3d').first().boundingBox();
+    is(!!tagBox && tagBox.y >= vizBox.y - 1 && tagBox.y + tagBox.height <= vizBox.y + vizBox.height + 1,
+       '돌린 뒤에도 이름표가 그림 안에 남아 있다');
+  } else {
+    no('3D 도해를 찾지 못했다');
+  }
+
   console.log('\n[9] 담보 말모이가 화면에 서는가 — 「이 돈이 무슨 돈인지」');
   await page.locator('button.btn', { hasText: '담보 말모이' }).click();
   await page.waitForTimeout(200);
@@ -205,6 +287,14 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const shown = (D.cov || []).filter(c => dic.indexOf(c.k) >= 0).length;
   is(shown === (D.cov || []).length, '말모이 ' + (D.cov || []).length + '개가 모두 적힌다 (' + shown + '개)');
   is(/여기에서 일합니다/.test(dic), '담보마다 어느 질병에서 일하는지 적힌다');
+
+  console.log('\n[9-2] 용어 사전이 화면에 서는가');
+  await page.locator('button.btn', { hasText: '용어 사전' }).click();
+  await page.waitForTimeout(200);
+  const tm = await page.locator('#detailPane').innerText();
+  is(/용어 사전 — 진단서에 적힌 그 말/.test(tm), '용어 사전이 열린다');
+  const tmShown = (D.terms || []).filter(t => tm.indexOf(t.t) >= 0).length;
+  is(tmShown === (D.terms || []).length, '용어 ' + (D.terms || []).length + '개가 모두 적힌다 (' + tmShown + '개)');
 
   console.log('\n[10] 전부 펼쳐 인쇄 — 한 권으로 묶이는가');
   await page.evaluate(() => { window.print = function(){ window.__printed = 1; }; });
@@ -221,6 +311,9 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   is(over <= 2, '390px 에서 옆으로 안 밀린다 (' + over + 'px)');
   is(/page-break-inside\s*:\s*avoid/.test(html), '인쇄에서 토막이 잘리지 않게 해 두었다');
+  is(/\.dz3d-stage\{transform:rotateX\([0-9.]+deg\)/.test(html.replace(/\s+/g, '')) ||
+     /dz3d-stage\{transform:rotateX/.test(html.replace(/\s+/g, '')),
+     '종이에서는 3D 를 보기 좋은 각도로 고정해 인쇄한다');
   is(/@media\s+print/.test(html), '인쇄용 규칙이 있다');
   await page.close();
 
