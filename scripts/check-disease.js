@@ -28,7 +28,9 @@
     17. <b>코드로 찾기</b> — 코드 표가 한 벌인가 · 진단명과 사고 원인을 가르는가 ·
         지도가 있는 자료만 가리키는가 · 담보를 정하지 않는다고 적는가
     16. <b>범위 표</b> — 출처 없는 비율을 적지 않는가 · 코드를 세부별로 빠짐없이
-        폈는가 · 그 코드를 앱이 아는가 · 「약관이 정한다」 고 적는가                     */
+        폈는가 · 그 코드를 앱이 아는가 · 「약관이 정한다」 고 적는가
+    18. <b>얼마 듭니까</b> — 숫자마다 근거가 붙어 있는가 · 제도 숫자에 「언제 기준」이
+        붙는가 · 자료가 없는 병에 지어내지 않고 <b>없다고 적는가</b>                   */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8877;
@@ -1071,6 +1073,103 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
      '<b>이 표는 담보를 정하지 않는다</b>고 화면에 적는다');
   is(/kcdcode\.kr/.test(kAll) && /KOICD/.test(kAll),
      '어디서 받았는지와 <b>못 들어간 곳(KOICD)</b>을 화면에 적는다');
+  await page.close();
+
+  /* ═══ 8-5. 얼마 듭니까 ═══
+     고객이 정말 묻는 것은 「그 병 걸리면 얼마 드느냐」 다. 그런데 이 자리가
+     제일 지어내기 쉽다 — 그럴듯한 금액은 아무도 안 물어보고 믿는다.
+
+     그래서 여기서는 <b>숫자마다 근거가 붙어 있는가</b>를 본다. 그리고
+     <b>제도 숫자는 해마다 바뀐다</b>고 화면이 말하는지, 자료가 없는 병에는
+     <b>없다고 적는지</b>를 본다.                                            */
+  console.log('\n[18] 얼마 듭니까 — 숫자마다 근거가 붙었는가 · 없는 것을 지어내지 않는가');
+  const C = D.cost;
+  is(!!(C && C.head && C.shield && C.gap && C.byDz && C.tail && C.src),
+     '비용 자료가 여섯 토막을 다 갖췄다 (머리·막아주는것·남는셋·질병별·꼬리·출처)');
+
+  /* 출처가 <b>진짜 주소</b>인가. 제목만 적고 링크가 없으면 확인할 길이 없다 */
+  const cSrcBad = (C.src || []).filter(r => !(r && r[0] && /^https:\/\//.test(r[1] || '')));
+  is(cSrcBad.length === 0, '출처마다 <b>제목과 주소</b>가 다 있다 — ' + (C.src || []).length + '벌' +
+     (cSrcBad.length ? ' / 모자란 것 ' + cSrcBad.length : ''));
+
+  /* ★ 여기가 이 점검의 핵심이다.
+     <b>숫자가 적힌 칸에는 반드시 근거 번호(s)가 붙어야 한다.</b>
+     붙어 있지 않으면 화면에 「근거 ↗」 없이 금액만 찍힌다 — 그게 지어낸 것과
+     구별이 안 된다. 숫자가 없는 설명 칸까지 잡으면 헛것이 되므로,
+     <b>금액·기간 꼴</b>(만원 · 원 · %  · 일 · 개월)이 있는 것만 본다. */
+  const NUMY = /[0-9][0-9,]*\s*(만원|억|원|%|일|개월|년간|배)/;
+  const cNoSrc = [];
+  const srcOK = s => Number.isInteger(s) && s >= 0 && s < (C.src || []).length;
+  (C.shield || []).forEach(x => {
+    const t = (x.k || '') + (x.d || '') + (x.w || '');
+    if (NUMY.test(t) && !srcOK(x.s)) cNoSrc.push('막아주는것 · ' + x.k);
+  });
+  Object.keys(C.byDz || {}).forEach(id => (C.byDz[id] || []).forEach(r => {
+    const t = (r.v || '') + (r.n || '');
+    if (NUMY.test(t) && !srcOK(r.s)) cNoSrc.push(id + ' · ' + r.k);
+  }));
+  is(cNoSrc.length === 0, '<b>숫자가 적힌 칸마다 근거가 붙어 있다</b>' +
+     (cNoSrc.length ? ' — 근거 없는 숫자: ' + cNoSrc.join(' / ') : ''));
+
+  /* 담보 이름은 여기서도 <b>말모이에 있는 것만</b> 쓴다.
+     [2] 와 같은 잣대다 — 이 화면에서만 새 이름이 새는 일이 실제로 있었다. */
+  const cBadCov = [];
+  (C.gap || []).forEach(x => (x.cov || []).forEach(k => { if (!VOCAB.has(k)) cBadCov.push(x.k + ' · ' + k); }));
+  is(cBadCov.length === 0, '남는 셋에 붙인 담보가 <b>전부 말모이에 있다</b>' +
+     (cBadCov.length ? ' — 말모이에 없는 이름: ' + cBadCov.join(' / ') : ''));
+
+  /* 없는 질병에 숫자를 달아 두면 아무도 못 본다 — 화면에 안 나오기 때문이다 */
+  const cGhost = Object.keys(C.byDz || {}).filter(id => !kIds.has(id));
+  is(cGhost.length === 0, '질병별 숫자가 <b>있는 질병에만</b> 붙어 있다' +
+     (cGhost.length ? ' — 없는 질병: ' + cGhost.join(' / ') : ''));
+
+  /* 제도 숫자는 <b>언제 기준인지</b>가 없으면 다음 해에 거짓말이 된다 */
+  const cNoYear = (C.shield || []).filter(x => {
+    const t = (x.d || '') + (x.w || '');
+    return NUMY.test(t) && !/(20[0-9]{2}년|해마다|사업 연도|그때 확인)/.test(t);
+  }).map(x => x.k);
+  is(cNoYear.length === 0, '제도 숫자에는 <b>언제 기준인지 · 바뀐다</b>는 말이 붙어 있다' +
+     (cNoYear.length ? ' — 안 붙은 것: ' + cNoYear.join(' / ') : ''));
+  is(/해마다 바뀝니다/.test(C.tail) && /약관과 심사가 정합니다/.test(C.tail),
+     '꼬리에 <b>「해마다 바뀝니다」·「약관과 심사가 정합니다」</b>가 있다');
+
+  /* 단정하지 않는가 — 비용 화면은 특히 「이만큼 나옵니다」 로 새기 쉽다 */
+  const cTxt = JSON.stringify(C);
+  const cSure = ['무조건', '반드시 지급', '전액 보장', '걱정 없습니다'].filter(w => cTxt.indexOf(w) >= 0);
+  is(cSure.length === 0, '비용 화면이 <b>단정하지 않는다</b>' + (cSure.length ? ' — ' + cSure.join(' / ') : ''));
+
+  /* 화면에서 실제로 서는가 */
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+  await page.evaluate(() => costOpen());
+  await page.waitForTimeout(200);
+  const cT0 = await page.locator('#detailPane').innerText();
+  is(/막아 주는 것/.test(cT0) && /남는 셋/.test(cT0),
+     '<b>막아 주는 것 먼저 · 남는 셋</b> 순서로 선다');
+  is((await page.locator('.qcshield .qcs').count()) === C.shield.length &&
+     (await page.locator('.qcgap .qcg').count()) === C.gap.length,
+     '자료에 있는 만큼 그대로 그린다 — 막아주는것 ' + C.shield.length + ' · 남는셋 ' + C.gap.length);
+  is(/해마다 바뀝니다/.test(cT0), '화면이 <b>「제도 숫자는 해마다 바뀝니다」</b> 라고 적는다');
+  /* 자료에 적은 줄바꿈 태그가 <b>글자 그대로</b> 찍힌 적이 있다. 고객 앞에서 보이는 자리다. */
+  is(!/&lt;br&gt;|<br>/.test(cT0), '태그가 <b>글자로 찍히지 않는다</b> (&lt;br&gt;)');
+  is((await page.locator('#detailPane ul.src a').count()) === C.src.length,
+     '출처를 <b>화면 아래에 그대로</b> 붙인다');
+
+  await page.evaluate(() => costOpen('stroke'));
+  await page.waitForTimeout(200);
+  const cT1 = await page.locator('#detailPane').innerText();
+  is(/70\.5일/.test(cT1) && /385만/.test(cT1), '질병을 고르면 <b>확인한 숫자</b>가 나온다 (뇌졸중)');
+  is((await page.locator('.qcnr .n a').count()) >= C.byDz.stroke.length,
+     '질병별 숫자마다 <b>근거 ↗</b> 가 붙는다');
+
+  /* ★ 자료가 없는 병 — 여기서 <b>안 지어내는지</b>가 갈린다 */
+  const cEmpty = D.list.map(d => d.id).filter(id => !(C.byDz || {})[id])[0];
+  await page.evaluate(id => costOpen(id), cEmpty);
+  await page.waitForTimeout(200);
+  const cT2 = await page.locator('#detailPane').innerText();
+  is(/확인한 자료를 아직 못 붙였습니다/.test(cT2) && /지어내지 않습니다/.test(cT2),
+     '자료가 없는 병에는 <b>없다고 적는다</b> — 지어내지 않는다 (' + cEmpty + ')');
+  is((await page.locator('.qcnum').count()) === 0, '없는 병에 <b>빈 숫자 칸을 세우지 않는다</b>');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */

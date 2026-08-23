@@ -117,6 +117,35 @@
   .range .rlgd .y{color:#047857;font-weight:800;}
   .range .rlgd .n{color:#C4CAD3;font-weight:800;}
   .range .rlgd .q{color:#B45309;font-weight:800;}
+  /* 💰 얼마 듭니까 — 막아 주는 것 먼저, 남는 것 다음
+     이름 앞에 qc 를 붙인다. 처음에 .cs · .cgap 으로 지었더니 사례 화면의
+     .case .cgap 과 담보 칸의 .cs 위에 그대로 덮여 다른 화면이 물들었다. */
+  .qcshield{border:1.5px solid #A7F3D0;border-radius:14px;background:#F0FDF4;padding:14px;margin-bottom:14px;}
+  .qcshield h4{font-size:13.5px;font-weight:800;color:#065F46;margin-bottom:10px;}
+  .qcs{background:#fff;border:1px solid #A7F3D0;border-radius:11px;padding:11px 13px;margin-bottom:8px;}
+  .qcs .k{font-size:13px;font-weight:800;color:#047857;margin-bottom:5px;}
+  .qcs .d{font-size:12.8px;color:var(--ink2);line-height:1.6;}
+  .qcs .w{font-size:12px;color:#92400E;background:#FFFBEB;border-radius:8px;padding:8px 10px;margin-top:7px;line-height:1.55;}
+  .qcgap{border:1.5px solid var(--red);border-radius:14px;background:var(--red-l);padding:14px;margin-bottom:14px;}
+  .qcgap h4{font-size:13.5px;font-weight:800;color:var(--red);margin-bottom:10px;}
+  .qcg{background:#fff;border:1px solid rgba(220,38,38,.25);border-radius:11px;padding:12px 13px;margin-bottom:9px;}
+  .qcg .k{font-size:13.5px;font-weight:800;color:#991B1B;margin-bottom:5px;}
+  .qcg .d{font-size:12.8px;color:var(--ink2);line-height:1.6;}
+  .qcg .y{font-size:12.3px;color:var(--ink3);line-height:1.6;margin-top:6px;padding-top:7px;border-top:1px dashed var(--line2);}
+  .qcg .cv{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;}
+  .qcnum{border:1.5px solid var(--line);border-radius:14px;overflow:hidden;background:#fff;margin-bottom:14px;}
+  .qcnum .h{font-size:13px;font-weight:800;padding:11px 14px;background:#FAFBFC;border-bottom:1px solid var(--line2);color:var(--ink);}
+  .qcnr{display:flex;gap:12px;padding:11px 14px;border-bottom:1px solid var(--line2);align-items:flex-start;}
+  .qcnr:last-child{border-bottom:0;}
+  .qcnr .k{flex:0 0 120px;font-size:12.3px;font-weight:700;color:var(--ink4);}
+  .qcnr .v{flex:0 0 auto;font-size:15px;font-weight:800;color:var(--blue);min-width:150px;}
+  .qcnr .n{flex:1;font-size:12.3px;color:var(--ink3);line-height:1.55;}
+  .qcnone{font-size:12.5px;color:var(--ink4);padding:12px 14px;background:#FAFBFC;border:1px dashed var(--line);border-radius:11px;}
+  @media(max-width:640px){
+    .qcnr{display:block;}
+    .qcnr .k{margin-bottom:2px;}
+    .qcnr .v{min-width:0;margin-bottom:3px;}
+  }
   /* 🔍 코드로 찾기 — 진단서의 코드를 그대로 넣어 보는 자리 */
   .kcdbox{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;margin-bottom:14px;}
   .kcdbox input{width:100%;font-size:16px;font-weight:700;padding:12px 14px;border:1.5px solid var(--line);
@@ -730,6 +759,7 @@
   <button class="btn" onclick="stackOpen('')">🔗 겹쳐 받는 법</button>
   <button class="btn" onclick="drillOpen('')">🎯 설계 연습</button>
   <button class="btn" onclick="labOpen()">🧪 가상설계창</button>
+  <button class="btn" onclick="costOpen()">💰 얼마 듭니까</button>
   <button class="btn" onclick="kcdOpen()">🔍 코드로 찾기</button>
   <button class="btn" onclick="navAll()">📜 약관 어디를 보나</button>
   <button class="btn" onclick="printAll()">📚 전부 펼쳐 인쇄</button>
@@ -757,7 +787,9 @@ function esc(s){
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 /* 자료 안의 <b> 만 살린다 — 나머지 태그는 글자로 만든다 */
-function rich(s){ return esc(s).replace(/&lt;(\/?b)&gt;/g,'<$1>'); }
+/* 자료에 적힌 태그 중 <b>b · br 만</b> 살려 준다. 나머지는 글자 그대로 남는다.
+   br 를 빼 두었더니 화면에 「&lt;br&gt;」 가 글자로 찍혔다 — 고객 앞에서 보이는 자리다. */
+function rich(s){ return esc(s).replace(/&lt;(\/?b|br\s*\/?)&gt;/g, function(m, t){ return /^br/.test(t) ? '<br>' : '<' + t + '>'; }); }
 
 function payName(p){ return p.k + (p.n ? '(' + p.n + ')' : ''); }
 
@@ -1348,6 +1380,83 @@ function labOutHtml(){
   return h;
 }
 
+
+/* ══ 얼마 듭니까 ══════════════════════════════════════════════
+   여태 「이 담보가 열립니다」 만 말하고 <b>「얼마 듭니다」 를 안 말했습니다.</b>
+   그런데 고객이 실제로 묻는 것은 그쪽입니다.
+
+   여기서 가장 조심할 것은 <b>과장</b>입니다. 나라가 막아 주는 것이 꽤 큽니다.
+   그래서 순서를 뒤집었습니다 — <b>막아 주는 것부터</b> 말하고, 그러고도
+   <b>남는 셋</b>(비급여·간병·소득 공백)을 짚습니다.                        */
+function costOpen(dzId){
+  var C = D.cost;
+  if (!C) { showDetail('<div class="none"><b>아무 숫자도 만들지 않습니다.</b> 비용 자료를 읽지 못했습니다.</div>'); return; }
+  showDetail(costHtml(dzId || ''));
+}
+
+function costSrcTag(i){
+  var C = D.cost, r = C.src[i];
+  return r ? '<a href="' + esc(r[1]) + '" target="_blank" rel="noopener" style="font-size:11px;font-weight:700">근거 ↗</a>' : '';
+}
+
+function costHtml(dzId){
+  var C = D.cost;
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    '<button class="btn" onclick="window.print()">🖨 인쇄</button></div>';
+  h += '<div class="sec"><h3><em>💰</em>얼마 듭니까</h3>' +
+    '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">' + rich(C.head) + '</p>';
+
+  h += '<div class="qcshield"><h4>먼저 — 나라가 막아 주는 것</h4>' +
+    C.shield.map(function(x){
+      return '<div class="qcs"><div class="k">' + rich(x.k) + '</div>' +
+        '<div class="d">' + rich(x.d) + '</div>' +
+        (x.w ? '<div class="w">' + rich(x.w) + ' ' + costSrcTag(x.s) + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+
+  h += '<div class="qcgap"><h4>그러고도 남는 셋 — 여기가 보험의 자리입니다</h4>' +
+    C.gap.map(function(x){
+      return '<div class="qcg"><div class="k">' + rich(x.k) + '</div>' +
+        '<div class="d">' + rich(x.d) + '</div>' +
+        '<div class="y">' + rich(x.why) + '</div>' +
+        '<div class="cv">' + (x.cov || []).map(function(k){
+          /* 담보를 여는 자리는 <b>한 곳만</b> 압니다 — 합병증 화면과 같은 findCov 를 씁니다 */
+          return '<button class="pay noprint" onclick="findCov(\'' + esc(k).replace(/'/g, '') + '\')">' +
+                 esc(k) + '</button><span class="payp">' + esc(k) + '</span>';
+        }).join('') + '</div></div>';
+    }).join('') + '</div>';
+
+  /* 질병마다 확인한 숫자 — 없으면 <b>없다고 적습니다</b> */
+  var pick = dzId || (document.getElementById('q') ? '' : '');
+  h += '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin:16px 0 8px">질병마다 확인한 숫자</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px">' +
+    D.list.map(function(d){
+      var on = (d.id === pick) ? ' on' : '';
+      return '<button class="pill' + on + '" onclick="costOpen(\'' + d.id + '\')">' + esc(d.ic) + ' ' + esc(d.name) + '</button>';
+    }).join('') + '</div>';
+
+  if (pick) {
+    var rows = C.byDz[pick], d = D.list.filter(function(x){ return x.id === pick; })[0];
+    if (rows && rows.length) {
+      h += '<div class="qcnum"><div class="h">' + esc(d.ic) + ' ' + esc(d.name) + '</div>' +
+        rows.map(function(r){
+          return '<div class="qcnr"><div class="k">' + esc(r.k) + '</div>' +
+            '<div class="v">' + esc(r.v) + '</div>' +
+            '<div class="n">' + rich(r.n) + ' ' + costSrcTag(r.s) + '</div></div>';
+        }).join('') + '</div>';
+    } else {
+      h += '<div class="qcnone"><b>' + esc(d.name) + '</b> 의 실제 비용은 <b>확인한 자료를 아직 못 붙였습니다.</b><br>' +
+        '지어내지 않습니다 — 위의 <b>막아 주는 것</b>과 <b>남는 셋</b>은 모든 병에 그대로 통하니 그것으로 말씀하시고, ' +
+        '금액은 <b>「지금 기준으로 확인해 드리겠습니다」</b> 라고 하십시오.</div>';
+    }
+  }
+
+  h += '<div class="kcdwarn" style="margin-top:14px">' + rich(C.tail) + '</div>';
+  h += '<ul class="src">' + C.src.map(function(r){
+    return '<li>' + esc(r[0]) + ' — <a href="' + esc(r[1]) + '" target="_blank" rel="noopener">' + esc(r[1]) + '</a></li>';
+  }).join('') + '</ul>';
+  return h + '</div>';
+}
 
 /* ══ 코드로 찾기 ═════════════════════════════════════════════
    고객이 진단서를 내밉니다. 거기 적힌 것은 병 이름이 아니라 <b>코드</b>입니다.
@@ -2346,6 +2455,7 @@ var GOTO = {
   stack:  function(){ stackOpen(''); },
   drill: function(){ drillOpen(''); },
   lab:   function(){ labOpen(); },
+  cost:  function(){ costOpen(); },
   kcd:   function(){ kcdOpen(''); },
   nav:   function(){ navAll(); },
   cov:   function(){ covAll(); },
