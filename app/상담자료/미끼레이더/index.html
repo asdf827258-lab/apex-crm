@@ -131,6 +131,17 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
 .sb{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px;text-align:center}
 .sb .v{font-size:24px;font-weight:900;line-height:1.2}
 .sb .k{font-size:11.5px;font-weight:700;color:var(--mut)}
+.gsrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;
+ padding:9px 12px;margin-bottom:6px;background:#fff;font-size:13px}
+.gsrow b{font-weight:800;flex:1 1 240px;min-width:0;overflow-wrap:anywhere}
+.gsrow a{flex:0 0 auto;text-decoration:none;font-weight:800;font-size:12px;border-radius:8px;padding:6px 10px}
+.gsrow a.dl{background:var(--blue-l);color:var(--blue-d)}
+.gsrow a.pg{background:#F2F4F6;color:var(--sub)}
+.pmrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;
+ padding:9px 12px;margin-bottom:6px;cursor:pointer;background:#fff;font-size:13px}
+.pmrow:hover{border-color:var(--blue)}
+.pmrow.on{border-color:var(--blue);background:var(--blue-l)}
+.pmrow b{font-weight:800;flex:1 1 220px;min-width:0;overflow-wrap:anywhere}
 .find{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;padding:13px 15px;background:#fff;margin-bottom:9px}
 .find.g{border-left-color:var(--green)}
 .find.r{border-left-color:var(--red)}
@@ -392,14 +403,26 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
       <div style="flex:1;min-width:180px"><label class="f">검색</label><input class="inp" id="libQ" placeholder="상품명 일부"></div>
     </div>
     <div class="drop" id="upDrop" style="margin-top:12px;padding:18px 14px">
-      <div class="big">📥</div><b>여기에 약관 PDF 를 끌어다 놓으세요 (여러 개 한꺼번에)</b>
-      <span>클릭해서 골라도 됩니다 · 올린 약관은 이 브라우저에 계속 쌓입니다</span>
+      <div class="big">📥</div><b>여기에 <u>폴더째로</u> 끌어다 놓으세요 — 안쪽 폴더까지 훑습니다</b>
+      <span>PDF 를 여러 개 골라도 되고, 클릭하면 파일 고르기가 열립니다 · 이 브라우저에 계속 쌓입니다</span>
     </div>
     <input type="file" id="upFiles" accept=".pdf,.txt" multiple hidden>
-    <div class="cnt" id="upState" style="margin-top:9px">쌓인 약관이 많을수록 회사별 비교가 정확해집니다</div>
+    <!-- 회사가 정리해 준 폴더를 통째로. 하위 폴더까지 훑는다. -->
+    <input type="file" id="upDir" webkitdirectory directory multiple hidden>
+    <div class="row" style="margin-top:9px">
+      <div style="flex:0 0 auto"><button class="btn gh sm" id="btnUpDir">📂 폴더 통째로 넣기</button></div>
+      <div style="flex:0 0 auto"><button class="btn gh sm" id="btnUpStop" style="display:none">■ 멈추기</button></div>
+      <div style="flex:1;align-self:center" class="cnt" id="upState">쌓인 약관이 많을수록 회사별 비교가 정확해집니다</div>
+    </div>
     <div class="tipbox" style="margin-top:10px" id="libHint">
-      <b>쌓는 방법</b> · 위 칸에 약관 PDF 를 <b>여러 개 한꺼번에</b> 끌어다 놓으세요. 글자를 전부 뽑아
-      회사·종류까지 나눠 이 브라우저에 쌓습니다. 창을 닫아도 남습니다. <b>배치파일도, 사무실 PC 도 필요 없습니다.</b>
+      <b>쌓는 방법 · 회사가 정리해 준 폴더를 통째로</b> — 위 칸에 <b>폴더를 그대로 끌어다 놓거나</b>
+      <b>📂 폴더 통째로 넣기</b> 를 누르세요. 안쪽 폴더까지 훑어 <b>여러 개를 한꺼번에</b> 읽고
+      회사·종류로 나눠 쌓습니다. PDF 를 낱개로 여러 개 끌어다 놓으셔도 됩니다.
+      창을 닫아도 남습니다. <b>배치파일도, 사무실 PC 도 필요 없습니다.</b><br>
+      <b>매달은 같은 폴더를 다시 넣으시면 됩니다</b> — <b>이미 들어 있는 것은 건너뛰고 새 것만</b> 읽습니다.
+      그래서 두 번째부터는 금방 끝납니다.<br>
+      <b>같은 자료는 두 번 들어가지 않습니다</b> — 파일 이름을 바꾸셨어도, 회사가 다시 만들어
+      보내 이름·크기가 달라졌어도 <b>내용이 같으면 안 받습니다.</b> 무엇과 겹쳤는지 적어 드립니다.<br>
       <b>원수사 약관은 서버로 올라가지 않습니다</b> — 다른 기기로 옮기실 때만 <b>📤 자료 내보내기</b> → <b>📦 자료 불러오기</b> 를 쓰세요.
     </div>
   </div>
@@ -467,6 +490,55 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
     <div style="flex:0 0 auto;align-self:center" class="cnt" id="pdfState">PDF 엔진 대기</div>
   </div>
   <div id="termResult"></div>
+</section>
+
+<!-- ============ 2.15 홍보 발췌 ============
+     상품을 찾은 다음이 비어 있었다. 「이 상품을 어떻게 홍보하나」를
+     답하려면 상품설명서와 약관을 읽어야 하는데, 읽는 자리는 있어도
+     <b>홍보에 쓸 대목으로 모아 주는 자리</b>가 없었다.
+     원문은 이 브라우저 밖으로 나가지 않는다 (CLAUDE.md 9). -->
+<section class="page" id="p-promo">
+  <div class="phead"><h2>🎯 홍보 발췌</h2>
+  <p>서재에 쌓아 둔 <b>상품설명서·약관</b>을 읽어 <b>홍보에 쓸 대목을 원문 그대로</b> 뽑고,
+  출처(문서·조·쪽)와 <b>그대로 읽는 화법</b>을 붙입니다.
+  <b>지어내지 않습니다</b> — 문서에 없으면 없다고 적습니다.</p></div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="row">
+      <div style="flex:1 1 240px">
+        <label class="lb">상품 이름 <span class="cnt">(홍보물에 적힐 이름)</span></label>
+        <input class="inp" id="pmName" placeholder="예) 홍길동생명 든든암보험">
+      </div>
+      <div style="flex:1 1 200px">
+        <label class="lb">서재에서 찾기 <span class="cnt">(회사·상품명·파일명)</span></label>
+        <input class="inp" id="pmFind" placeholder="입력하면 아래 목록이 좁혀집니다">
+      </div>
+    </div>
+    <!-- 공시실에서 요약서 주소만 찾아 온다. PDF 는 브라우저가 직접 받는다. -->
+    <div class="row" style="margin-top:12px;align-items:flex-end">
+      <div style="flex:1 1 170px">
+        <label class="lb">회사 <span class="cnt">(생명보험만)</span></label>
+        <input class="inp" id="pmCo" placeholder="예) 삼성생명" list="pmCoList">
+        <datalist id="pmCoList"></datalist>
+      </div>
+      <div style="flex:0 0 auto"><button class="btn gh" id="pmFind2">🏛 공시실에서 요약서 찾기</button></div>
+      <div style="flex:1;align-self:center" class="cnt" id="pmGsMsg">회사와 상품 이름을 적고 누르시면 협회 공시에서 찾아 드립니다</div>
+    </div>
+    <div id="pmGs" style="margin-top:8px"></div>
+
+    <div style="margin-top:12px">
+      <label class="lb">이 상품의 문서 고르기 <span class="cnt">상품설명서와 약관을 함께 고르면 가장 좋습니다</span></label>
+      <div id="pmDocs" style="margin-top:7px"></div>
+    </div>
+    <div class="row" style="margin-top:13px">
+      <div style="flex:0 0 auto"><button class="btn" id="pmRun">🎯 발췌하기</button></div>
+      <div style="flex:0 0 auto"><button class="btn gh" id="pmCopy">📋 발췌 복사</button></div>
+      <div style="flex:0 0 auto"><button class="btn gh" id="pmPrint">🖨 인쇄</button></div>
+      <div style="flex:1"></div>
+      <div style="flex:0 0 auto;align-self:center" class="cnt" id="pmState">문서를 고르세요</div>
+    </div>
+  </div>
+  <div id="pmOut"></div>
 </section>
 
 <!-- ============ 2.2 베스트 찾기 ============ -->
@@ -742,32 +814,67 @@ const NEWS_RULES=[
  {tag:'노후',     kw:['연금','노후','시니어','고령','상속','증여','종신'],                       v:2},
  {tag:'저축',     kw:['저축','달러','환율','금리','공시이율','최저보증'],                        v:1},
  {tag:'디지털',   kw:['미니','앱 전용','다이렉트','간편가입','온라인 전용'],                     v:2},
- {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1},
- /* ── 여기부터는 보험 밖 주제다 ──────────────────────────────────
-    사업자 고객에게는 보험보다 자금·세금 이야기로 문이 먼저 열린다.
-    보험 기사와 섞이지 않게 이름표를 따로 달아 둔다.
-    미끼 점수는 아래 scoreNews 에서 주제에 맞게 따로 매긴다. */
- {tag:'정책자금', kw:['정책자금','정책금융','소상공인','자영업자','개인사업자','신용보증','기술보증',
-                     '신보','기보','소진공','중진공','중기부','중소벤처기업부','이차보전','저리대출',
-                     '운전자금','시설자금','경영안정자금','긴급경영안정','융자','지원사업','공모사업',
-                     '수출바우처','스마트공장','새출발기금','대환대출','상환유예','만기연장',
-                     '고용지원금','고용장려금','일자리안정자금','두루누리','노란우산공제',
-                     '전통시장','골목상권','가맹점','프랜차이즈','중소기업','벤처기업','창업'],       v:3},
- {tag:'세금',     kw:['연말정산','세액공제','소득공제','종합소득세','종소세','양도소득세','양도세',
-                     '상속세','증여세','종부세','종합부동산세','취득세','재산세','부가가치세','부가세',
-                     '법인세','세법개정','세제개편','과세표준','비과세','절세','국세청','홈택스',
-                     '세무조사','감면','공제한도','가업승계','가업상속공제','사전증여','경정청구'],   v:3},
- {tag:'부동산',   kw:['청약','분양','전세','월세','임대차','재건축','재개발','정비사업','아파트',
-                     '주택담보','주담대','LTV','DSR','공시가격','보금자리','디딤돌','버팀목',
-                     '전세사기','깡통전세','입주','매매가','집값','부동산','실거래가','규제지역',
-                     '조정대상지역','토지거래허가','분양가상한제','1주택','다주택','임대사업자',
-                     '주택연금','역모기지','경매','임대소득'],                                       v:3},
- {tag:'지원금',   kw:['지원금','보조금','바우처','장려금','수당','환급','재난지원금','근로장려금',
-                     '자녀장려금','실업급여','구직급여','육아휴직급여','기초연금','주거급여',
-                     '청년도약계좌','내일채움공제','신청 기간','접수','지급 대상'],                  v:2}
+ {tag:'주의',     kw:['불완전판매','민원','제재','과징금','소송','분쟁','거절','부지급'],        v:1}
+];
+/* ── 보험 밖 주제(정책자금·세금·부동산·지원금) ─────────────────────
+   사업자 고객에게는 보험보다 자금·세금 이야기로 문이 먼저 열린다.
+   보험 기사와 섞이지 않게 이름표를 따로 달아 둔다.
+   미끼 점수는 아래 scoreNews 에서 주제에 맞게 따로 매긴다.
+
+   낱말은 여기 적지 않는다 — config/sources.json 의 「키워드_」 칸
+   한 곳에만 둔다. 예전에는 두 벌이었고 늘어난 쪽은 sources.json
+   뿐이었다. 고칠 때 세어 보니 정책자금은 sources.json 77 개 · 여기
+   40 개, 지원금은 74 개 · 19 개였다. 그 차이만큼의 기사가 아무 말도
+   없이 keepNews 에서 버려지고 있었다. (CLAUDE.md 5)
+
+   ※ 보험 쪽 낱말은 위에 그대로 둔다. sources.json 의
+     「키워드_보험핫이슈」는 기사를 보험 칸으로 나누는 한 벌짜리
+     목록이라, 위의 태그별(실손·암·간병…) 목록과 같은 것이 아니다.
+     없는 짝을 지어내지 않는다. (CLAUDE.md 1)
+
+   ※ kw:null 은 「아직 못 읽음」이다. 빈 배열로 두면 「걸리는 낱말이
+     하나도 없다」는 뜻이 되어 네 주제 기사가 통째로 버려진다.     */
+const OUT_RULES=[
+ {tag:'정책자금', key:'키워드_정책자금',   v:3, kw:null},
+ {tag:'세금',     key:'키워드_세금',       v:3, kw:null},
+ {tag:'부동산',   key:'키워드_부동산',     v:3, kw:null},
+ {tag:'지원금',   key:'키워드_지원금혜택', v:2, kw:null}
 ];
 /* 보험 밖 주제 이름표 — 그물과 점수가 같은 목록을 본다 */
-const OUT_TAGS=['정책자금','세금','부동산','지원금'];
+const OUT_TAGS=OUT_RULES.map(r=>r.tag);
+
+/* 낱말을 sources.json 에서 <b>한 번만</b> 읽는다. 화면을 열 때마다 ·
+   기사를 받을 때마다 다시 부르지 않는다 — 약속(promise) 하나를 두고
+   모두 그것을 기다린다. (CLAUDE.md 7)
+   주소는 이 파일 기준 상대경로다. 저장소 루트가 그대로 게시되므로
+   (netlify.toml publish=".") 앱 안에서 열어도 파일로 열어도 같은 곳을 본다. */
+const OUT_KW_URL='../../../config/sources.json';
+let outKwPromise=null;
+let outKwErr=null;      /* 못 읽은 사유. null = 아직 안 해 봤거나 잘 읽었다 */
+function outKwReady(){return OUT_RULES.every(r=>Array.isArray(r.kw));}
+function loadOutKw(){
+  if(outKwPromise)return outKwPromise;
+  outKwPromise=fetch(OUT_KW_URL).then(r=>{
+    if(!r.ok)throw new Error('낱말 목록을 못 읽었습니다 — config/sources.json ('+r.status+')');
+    return r.json();
+  }).then(j=>{
+    /* 빈 칸을 0 건으로 삼키지 않는다. 하나라도 비면 못 읽은 것으로 본다. */
+    const missing=[];
+    OUT_RULES.forEach(r=>{
+      const list=j&&j[r.key];
+      if(Array.isArray(list)&&list.length)r.kw=list.slice();
+      else missing.push(r.key);
+    });
+    if(missing.length)throw new Error('config/sources.json 에 「'+missing.join('」·「')+'」 칸이 없습니다.');
+    return OUT_RULES;
+  }).then(r=>{ outKwErr=null; return r; })
+    .catch(e=>{ outKwPromise=null;                 /* 다음에 다시 해 볼 수 있게 */
+                outKwErr=(e&&e.message)||'config/sources.json 을 못 읽었습니다';
+                throw e; });
+  return outKwPromise;
+}
+/* 화면이 뜨는 동안 미리 받아 둔다 — 기사가 들어올 때 기다리지 않게 */
+try{ loadOutKw().catch(function(){}); }catch(e){}
 
 /* 태그별 화법 재료 : 오프너 / 니즈환기 질문 / 연결 */
 const TAG_TALK={
@@ -1219,6 +1326,62 @@ const TERM_RULES=[
  talk:'전쟁 같은 건 어느 보험이나 제외예요. 이건 다 똑같습니다.'}
 ];
 
+/* ==================================================================
+   상품설명서 룰엔진 — 약관에는 없고 <b>상품설명서·상품요약서에만</b>
+   있는 것만 둔다.
+   ------------------------------------------------------------------
+   위 TERM_RULES 43 개는 낱말로 찾으므로 상품설명서에도 그대로 걸린다
+   (무해지 · 간편심사 · 비갱신 · 100세 만기 …). 그래서 그것들을 여기
+   다시 적지 않는다 — 두 벌이 되면 한쪽만 고쳐진다. (CLAUDE.md 5)
+   상품설명서를 읽을 때는 <b>TERM_RULES + SPEC_RULES 를 함께</b> 돌린다.
+
+   여기 있는 것은 「얼마짜리 무엇을 파는가」 — 홍보의 알맹이인데
+   약관 조문에는 안 나오는 것들이다.
+
+   ※ 값은 <b>문서에 적힌 문장을 그대로</b> 옮긴다. 이 표에는 한도·나이·
+     보험료 같은 숫자를 적지 않는다 — 시행령·요율로 바뀌는 값을 외워
+     적으면 그게 고객 앞에서 무너지는 자리다. (CLAUDE.md 2)
+   ※ 그래서 talk 에도 숫자를 넣지 않는다. 숫자는 옆에 붙는 원문 인용이
+     말하게 두고, 화법은 그 숫자를 <b>가리키기만</b> 한다.
+   ================================================================== */
+const SPEC_RULES=[
+{id:'sp_cover',cat:'주요보장',label:'주요 보장 · 담보별 지급금액',v:'info',
+ re:/(진단비|진단\s*급여금|입원\s*일당|수술비|사망\s*보험금|후유장해)[^\n]{0,40}?(\d[\d,]{2,})\s*(만\s*원|만원|원)/,
+ why:'상품설명서에만 있는 알맹이입니다. 「무엇을 얼마나 주는가」 — 옆의 원문에 적힌 금액 그대로 쓰십시오.',
+ talk:'{name}님, 이 상품이 실제로 얼마를 주는지가 여기 적혀 있어요. 이 금액이 어떤 조건에서 나오는지까지 같이 보셔야 해요. (실제 가입금액은 심사 결과에 따릅니다)'},
+
+{id:'sp_limit',cat:'가입한도',label:'가입한도 · 가입금액 범위',v:'info',
+ re:/(가입\s*한도|가입\s*금액|최대\s*가입|가입\s*가능\s*금액)[^\n]{0,60}/,
+ why:'고객이 원하는 만큼 들 수 있는지 여기서 갈립니다. 문서에 적힌 범위 그대로 확인하십시오.',
+ talk:'들 수 있는 금액이 여기 정해져 있어요. {name}님이 생각하신 만큼 되는지 이걸로 보고 말씀드릴게요. (실제 한도는 심사 결과에 따릅니다)'},
+
+{id:'sp_prem',cat:'보험료예시',label:'보험료 예시(특정 조건 기준)',v:'warn',
+ re:/(월\s*보험료|보험료\s*예시|예시\s*보험료|기준\s*보험료)[^\n]{0,70}/,
+ why:'예시는 특정 나이·성별·조건의 값입니다. 조건을 떼고 금액만 옮기면 고객이 자기 보험료로 믿습니다 — 반드시 조건과 함께 인용하십시오.',
+ talk:'여기 적힌 보험료는 문서에 나온 조건에서의 예시예요. {name}님 나이와 조건으로는 달라지니까, 정확한 건 계산해서 따로 보여 드릴게요.'},
+
+{id:'sp_term',cat:'기간',label:'납입기간 · 보험기간 조합',v:'info',
+ re:/(\d{1,2}\s*년\s*납|전기\s*납|납입\s*기간|보험\s*기간)[^\n]{0,50}/,
+ why:'몇 년 내고 언제까지 보장받는지입니다. 고객이 제일 먼저 묻는 것이고 상품설명서에만 정리돼 있습니다.',
+ talk:'몇 년 동안 내고 언제까지 보장되는지가 여기 있어요. {name}님 은퇴 시점하고 맞춰서 고르시면 돼요.'},
+
+{id:'sp_rider',cat:'특약',label:'선택 특약 목록',v:'info',
+ re:/(선택\s*특약|부가\s*특약|특약\s*목록|추가\s*가입\s*가능[^\n]{0,20}특약)/,
+ why:'무엇을 얹을 수 있는지입니다. 얹을 것이 많다는 것 자체가 「맞춰 드린다」는 화법이 됩니다.',
+ talk:'기본만 있는 게 아니라 필요한 걸 골라 얹을 수 있어요. {name}님한테 필요한 것만 붙이고 나머지는 빼서 보험료를 낮춰 드릴게요.'},
+
+{id:'sp_disc',cat:'할인',label:'보험료 할인제도(건강체·우량체·비흡연 등)',v:'good',
+ re:/(건강체\s*할인|우량체\s*할인|비흡연\s*할인|다자녀\s*할인|할인\s*제도|보험료\s*할인|할인\s*특약)/,
+ why:'해당되면 보험료가 내려갑니다. 약관 조문에는 잘 안 나오고 상품설명서에 정리돼 있는 대목입니다.',
+ talk:'{name}님, 조건 맞으면 보험료 깎아 주는 게 있어요. 담배 안 피우시거나 건강검진 결과 괜찮으시면 해당될 수 있어요. 문서에 적힌 기준으로 확인해 드릴게요. (적용 여부는 심사 결과에 따릅니다)'},
+
+{id:'sp_pure',cat:'환급',label:'순수보장형(만기환급금 없음)',v:'warn',
+ re:/(순수\s*보장형|만기\s*환급금[이가]?\s*(없|미지급|않)|만기\s*시\s*환급[^\n.]{0,10}없)/,
+ why:'보험료가 낮은 대신 만기에 돌려받는 돈이 없습니다. 「적금처럼 생각하시면 안 된다」를 먼저 말해야 나중에 분쟁이 없습니다.',
+ talk:'이건 보장에만 쓰는 돈이라 만기에 돌려받는 게 없어요. 그래서 보험료가 낮은 거예요. 저축이 목적이시면 이건 안 맞고, 그건 따로 봐 드릴게요.'}
+];
+
+
 /* 숫자 스캔 : 요약 칩으로 뽑아내는 핵심 수치 */
 const NUM_SCAN=[
  {k:'대기기간',re:/(보장개시일|책임개시)[^\n.]{0,60}?(\d{1,3})\s*일/,fmt:m=>m[2]+'일'},
@@ -1255,13 +1418,13 @@ const state={news:LS.get('news',[]),newsAt:LS.get('newsAt',''),hook:LS.get('hook
       묶음에 안 속한 버튼은 숨기기만 한다. */
 const GROUPS=[
  {k:'g_today',n:'🚀 오늘',   subs:['start','brief'],      why:'오늘 할 일과 이번 달 요약'},
- {k:'g_new',  n:'📡 신상품', subs:['radar','concept','new'],why:'뭐가 나왔나 · 어떤 각도로 갈까'},
+ {k:'g_new',  n:'📡 신상품', subs:['radar','concept','new','promo'],why:'뭐가 나왔나 · 어떻게 홍보할까'},
  {k:'g_term', n:'📜 약관',   subs:['lib','terms','judge','best'],why:'약관 쌓고 · 판정하고 · 회사별로 줄 세우기'},
  {k:'g_cust', n:'🧾 고객',   subs:['cust','design','touch'],why:'보여줄 자료 · 설계 · 접촉 문자'},
  {k:'g_help', n:'📘 사용법', subs:['help'],               why:'쓰는 법과 지켜야 할 선'}
 ];
 const SUBNAME={start:'오늘 할 일',brief:'월간 브리핑',
- radar:'뉴스 레이더',concept:'이달의 컨셉',new:'상품 분석·브리프',
+ radar:'뉴스 레이더',concept:'이달의 컨셉',new:'상품 분석·브리프',promo:'홍보 발췌',
  lib:'서재(약관 쌓기)',terms:'약관 분석',judge:'정밀 판정',best:'베스트 찾기',
  cust:'고객 제시자료',design:'미끼 설계',touch:'접촉 문자',help:'사용법'};
 const groupOf=id=>(GROUPS.find(g=>g.subs.includes(id))||GROUPS[0]).k;
@@ -1306,7 +1469,10 @@ $('#btnPrint2').onclick=()=>window.print();
 function tagNews(title){
   const t=title.replace(/\s+/g,' ');
   const tags=[];let val=0;
-  NEWS_RULES.forEach(r=>{if(r.kw.some(k=>t.includes(k))){tags.push(r.tag);val+=r.v}});
+  /* 아직 못 읽은 규칙(kw:null)은 「안 걸렸다」 가 아니라 「모른다」 다.
+     여기서는 빼 두고, 재도 되는지는 ingest 가 먼저 따진다. */
+  const rules=NEWS_RULES.concat(OUT_RULES.filter(r=>Array.isArray(r.kw)));
+  rules.forEach(r=>{if(r.kw.some(k=>t.includes(k))){tags.push(r.tag);val+=r.v}});
   return {tags:[...new Set(tags)],val};
 }
 /* 미끼 적합도 = 전자책 '좋은 미끼 5조건' 을 점수화 */
@@ -1358,14 +1524,35 @@ function keepNews(x){
   return (x.tags||[]).some(t=>OUT_TAGS.indexOf(t)>=0);
 }
 function ingest(items){
-  const seen=new Set();let dropped=0;
+  /* 낱말을 아직 한 번도 안 받아 봤으면 받아 보고 다시 온다.
+     성공하든 실패하든 다시 들어오므로 기사가 미아가 되지 않는다. */
+  if(!outKwReady()&&!outKwErr){
+    loadOutKw().then(()=>ingest(items),()=>ingest(items));
+    return;
+  }
+  /* 여기까지 왔는데 낱말이 없으면 못 읽은 것이다. 그래도 보험 기사는
+     낱말이 필요 없으니 그대로 잰다. 다만 보험 밖 기사는 「안 걸렸다」 가
+     아니라 <b>「판단 못 함」</b> 이다 — 못 읽은 것을 0 건으로 적지
+     않는다. 따로 세어서 화면에 그대로 밝힌다. (CLAUDE.md 1) */
+  const kwOff=!outKwReady();
+  const seen=new Set();let dropped=0,held=0;
   state.news=items.map(it=>{
     const title=String(it.title||'').replace(/<[^>]+>/g,'').trim();
     const sc=scoreNews({title});
     return {title,link:it.link||'',source:it.source||'',date:it.pubDate||it.date||'',...sc}})
     .filter(x=>{const k=x.title.slice(0,28);if(!x.title||seen.has(k))return false;seen.add(k);
-      if(!keepNews(x)){dropped++;return false}return true});
+      if(!keepNews(x)){
+        if(kwOff&&!INSURANCE.test(x.title)){held++;return false}
+        dropped++;return false}
+      return true});
   if(dropped)console.info('[미끼레이더] 쓸 주제가 아니어서 제외한 것 '+dropped+'건');
+  if(held){
+    const m='낱말 목록을 못 읽어('+(outKwErr||'사유 모름')+') 보험 밖 기사 '+held+
+            '건은 <b>판단하지 못했습니다</b> — 쓸 것이 없어서 버린 것이 아닙니다.';
+    console.warn('[미끼레이더] '+m.replace(/<[^>]+>/g,''));
+    const h=$('#loadHint');
+    if(h)h.innerHTML='⚠️ '+m+' 앱 안에서 열거나 새로고침하면 다시 읽습니다.';
+  }
   state.newsAt=new Date().toLocaleString('ko-KR');
   LS.set('news',state.news);LS.set('newsAt',state.newsAt);
   /* 이번에 받은 것을 달 서랍에도 넣는다 — 다음 달에 이번 달 것을 다시 볼 수 있게 */
@@ -1633,18 +1820,31 @@ function articleAt(t,idx){
   const last=ms[ms.length-1];
   return '제'+last[1]+'조'+(last[2]?'('+last[2].trim()+')':'');
 }
-function analyzeTerms(text){
-  const t=text.replace(/\u00a0/g,' ');
-  const marks=pageMarks(t);
+/* 룰표를 받아 본문에서 찾아 낸다. 약관이든 상품설명서든 <b>기계는 하나</b>다 —
+   찾는 표만 갈아 끼운다. 발췌 기계를 두 벌 만들면 한쪽만 고쳐진다. (CLAUDE.md 5) */
+function scanRules(t,rules,marks){
+  const mk=marks||pageMarks(t);
   const finds=[];
-  TERM_RULES.forEach(r=>{
+  rules.forEach(r=>{
     const re=new RegExp(r.re.source,'m');
     const m=re.exec(t);
     if(!m)return;
     const cnt=(t.match(new RegExp(r.re.source,'gm'))||[]).length;
     const q=sentenceOf(t,m.index,m[0].length);
-    finds.push({...r,q,cnt,art:articleAt(t,m.index),page:pageAt(marks,m.index)});
+    finds.push({...r,q,cnt,art:articleAt(t,m.index),page:pageAt(mk,m.index)});
   });
+  return finds;
+}
+/* 문서 종류에 맞는 표를 고른다.
+   약관에 SPEC_RULES 를 돌리면 「보험기간」 같은 흔한 말이 죄다 걸려
+   헛것을 잡는다 — 안 잡는 것보다 나쁘다. (CLAUDE.md 8) */
+function rulesFor(kind){
+  return kind==='약관' ? TERM_RULES : TERM_RULES.concat(SPEC_RULES);
+}
+function analyzeTerms(text){
+  const t=text.replace(/\u00a0/g,' ');
+  const marks=pageMarks(t);
+  const finds=scanRules(t,TERM_RULES,marks);
   /* 상충 조정 : 즉시보장 조항이 있으면 90일 대기 경고를 낮춤 */
   if(finds.some(f=>f.id==='nowait')){const w=finds.find(f=>f.id==='wait90');if(w)w.v='info'}
   if(finds.some(f=>f.id==='nored')){const w=finds.find(f=>f.id==='red1y');if(w)w.v='info'}
@@ -2186,6 +2386,9 @@ function loadBundle(j){
     products:(j.products||[]).length,pimgs:state.pimgs?Object.keys(state.pimgs).length:0};
 }
 function libRender(){
+  /* 서재가 바뀌면 홍보 발췌의 문서 목록도 같이 고쳐 그린다 —
+     한쪽만 옛 목록을 들고 있으면 고른 문서가 어긋난다. */
+  try{ if(typeof pmRepaint==='function')setTimeout(pmRepaint,0); }catch(e){}
   const j=state.lib;
   if(!j||!j.items||!j.items.length){
     $('#libList').innerHTML='<div class="empty">아직 쌓인 자료가 없어요.<br><br>'
@@ -2243,14 +2446,58 @@ function libRender(){
     }catch(e){toast(e.message)}});
 }
 $('#btnLib').onclick=()=>libLoad(false);
+/* 폴더를 떨어뜨렸을 때 안에 있는 파일까지 꺼낸다.
+   예전에는 dataTransfer.files 만 봤다. 폴더를 떨어뜨리면 그 안이 안 보여
+   <b>「PDF 를 넣어주세요」만 뜨고 아무 일도 안 났다</b> — 회사가 회사별·
+   상품별로 나눠 준 폴더를 그대로 넣을 수 없었다.
+   ※ 브라우저가 폴더를 못 읽어 주면(구형) 평소대로 파일만 받는다. */
+async function filesFromDrop(dt){
+  const items=dt&&dt.items?[...dt.items]:[];
+  const getEntry=it=>it.webkitGetAsEntry?it.webkitGetAsEntry():null;
+  const roots=items.map(getEntry).filter(Boolean);
+  if(!roots.length)return [...(dt&&dt.files?dt.files:[])];
+  const out=[];
+  const readDir=r=>new Promise(res=>{
+    const rd=r.createReader(), got=[];
+    const step=()=>rd.readEntries(es=>{         /* 100개씩 끊어 준다 — 한 번에 다 안 온다 */
+      if(!es.length)return res(got);
+      got.push(...es);step();
+    },()=>res(got));
+    step();
+  });
+  const walk=async(e,depth)=>{
+    if(depth>6)return;                          /* 끝없이 파고들지 않게 */
+    if(e.isFile){
+      await new Promise(res=>e.file(f=>{out.push(f);res()},()=>res()));
+    }else if(e.isDirectory){
+      const es=await readDir(e);
+      for(const c of es)await walk(c,depth+1);
+    }
+  };
+  for(const r of roots)await walk(r,0);
+  return out;
+}
 (function(){
-  const d=$('#upDrop'),inp=$('#upFiles');
+  const d=$('#upDrop'),inp=$('#upFiles'),dir=$('#upDir');
   if(!d)return;
   d.onclick=()=>inp.click();
   inp.onchange=e=>{uploadFiles(e.target.files);inp.value=''};
+  if(dir){
+    $('#btnUpDir').onclick=e=>{e.preventDefault();dir.click()};
+    dir.onchange=e=>{uploadFiles(e.target.files);dir.value=''};
+  }
+  $('#btnUpStop').onclick=e=>{e.preventDefault();UP.stop=true;
+    $('#btnUpStop').textContent='멈추는 중…';};
   d.ondragover=e=>{e.preventDefault();d.classList.add('hot')};
   d.ondragleave=()=>d.classList.remove('hot');
-  d.ondrop=e=>{e.preventDefault();d.classList.remove('hot');uploadFiles(e.dataTransfer.files)};
+  d.ondrop=async e=>{
+    e.preventDefault();d.classList.remove('hot');
+    $('#upState').textContent='폴더를 훑는 중…';
+    let fs=[];
+    try{ fs=await filesFromDrop(e.dataTransfer); }
+    catch(x){ fs=[...(e.dataTransfer.files||[])]; }
+    uploadFiles(fs);
+  };
 })();
 $('#btnBundle').onclick=()=>$('#fileBundle').click();
 /* 이 기기에 쌓인 것을 파일 하나로 뽑는다 — 집·태블릿과 주고받기 위한 통로.
@@ -2522,12 +2769,49 @@ $('#helpOut').innerHTML=`
 <p class="desc">하는 일이 같은 것끼리 묶었습니다. 위 칸을 고르면 아래에 안쪽 화면이 나옵니다.</p>
 <table class="tbl"><tr><th style="width:110px">칸</th><th style="width:210px">안에 있는 것</th><th>언제 쓰나</th></tr>
 <tr><td><b>🚀 오늘</b></td><td>오늘 할 일 · 월간 브리핑</td><td><b>매일 여기서 시작</b>합니다. 루틴 3가지와 신상품 공부 카드</td></tr>
-<tr><td><b>📡 신상품</b></td><td>뉴스 레이더 · 이달의 컨셉 · 상품 분석·브리프</td><td>뭐가 나왔는지 보고, 이번 달 <b>각도</b>를 정할 때</td></tr>
+<tr><td><b>📡 신상품</b></td><td>뉴스 레이더 · 이달의 컨셉 · 상품 분석·브리프 · <b>홍보 발췌</b></td><td>뭐가 나왔는지 보고, 이번 달 <b>각도</b>를 정하고, <b>어떻게 홍보할지</b> 뽑을 때</td></tr>
 <tr><td><b>📜 약관</b></td><td>서재 · 약관 분석 · 정밀 판정 · 베스트 찾기</td><td>약관을 쌓고, 판정하고, <b>회사별로 줄 세울</b> 때</td></tr>
 <tr><td><b>🧾 고객</b></td><td>고객 제시자료 · 미끼 설계 · 접촉 문자</td><td>고객 앞에 놓을 것과 보낼 것을 만들 때</td></tr>
 <tr><td><b>📘 사용법</b></td><td>이 화면</td><td>막힐 때</td></tr></table>
 <div class="tipbox" style="margin-top:10px"><b>순서대로 갈 필요 없습니다.</b> 매일은 🚀 오늘만,
 새 약관이 생기면 📜 약관, 고객을 만나기 전에 🧾 고객. 이렇게 필요할 때만 들어가면 됩니다.</div></div>
+
+<div class="card" style="margin-top:14px"><h3>📂 자료 넣기 — 회사가 정리해 준 폴더를 그대로</h3>
+<p class="desc">약관·상품설명서는 <b>한 번은 넣어 주셔야</b> 합니다. 대신 <b>폴더째로 한 번</b>이면 끝나고,
+그 다음 달부터는 <b>새 것만</b> 들어갑니다.</p>
+
+<table class="tbl"><tr><th style="width:52px">순서</th><th>할 일</th></tr>
+<tr><td><b>1</b></td><td>회사가 준 자료 폴더를 <b>내 PC 한 곳</b>에 둡니다
+  (원드라이브·구글드라이브·네이버웍스로 <b>동기화</b>해 두시면 회사가 갱신할 때 저절로 내려옵니다)</td></tr>
+<tr><td><b>2</b></td><td>📜 약관 › <b>서재</b> 로 가서 그 폴더를 <b>통째로 끌어다 놓습니다</b>
+  (또는 <b>📂 폴더 통째로 넣기</b>). 회사별·상품별 <b>안쪽 폴더까지</b> 훑습니다</td></tr>
+<tr><td><b>3</b></td><td>글자를 뽑아 <b>회사·종류(약관/상품설명서/요약서…)</b>로 나눠 쌓습니다. 창을 닫아도 남습니다</td></tr>
+<tr><td><b>4</b></td><td><b>다음 달에는 같은 폴더를 그대로 다시</b> 끌어다 놓으세요.
+  이미 있는 것은 건너뛰고 <b>새로 생긴 것만</b> 읽습니다 — 두 번째부터는 금방 끝납니다</td></tr></table>
+
+<div class="okbox" style="margin-top:10px"><b>이게 「무조건 되는」 길입니다.</b>
+인터넷 사정·회사 사이트 개편·로그인과 상관없이 됩니다. 파일이 내 PC 에 있기만 하면 되니까요.</div>
+
+<div class="okbox" style="margin-top:10px"><b>🏛 생명보험은 앱이 요약서를 찾아 드립니다</b><br>
+📡 신상품 › <b>🎯 홍보 발췌</b> 에서 <b>회사</b>와 <b>상품 이름</b>을 적고
+<b>「공시실에서 요약서 찾기」</b> 를 누르시면, 협회 통합공시에서 그 회사 상품 목록을 받아
+<b>상품요약서 받는 단추</b>를 바로 달아 드립니다. 누르시면 파일이 내려오고,
+그걸 📚 서재에 넣으시면 발췌까지 이어집니다.<br>
+※ <b>상품요약서</b>입니다 — <b>약관 원문은 아닙니다.</b> 약관은 각 회사 공시실에만 있습니다.<br>
+※ <b>생명보험만</b>입니다. 손해보험은 협회가 달라 아직 안 됩니다 — <b>🏛 공시실 바로가기</b>를 쓰세요.</div>
+
+<div class="tipbox" style="margin-top:10px"><b>파일은 서버를 타지 않습니다</b><br>
+브라우저에는 <b>「남의 집 파일을 우리 코드가 마음대로 읽어 가지 못하게」</b> 하는 잠금장치가 있어서,
+협회 목록만은 우리 서버가 대신 받아 넘겨 줍니다 — <b>상품명·회사·주소 몇 KB</b> 뿐입니다.
+<b>PDF 는 서버가 건드리지 않습니다.</b> 받기 단추는 협회 주소로 바로 걸려 있어
+<b>사장님 브라우저가 협회에서 직접</b> 받습니다. 원수사 자료를 우리 서버에 두지 않는다는 원칙은 그대로입니다.<br>
+협회가 페이지를 바꾸면 목록을 못 받을 수 있습니다. 그때는 <b>못 받았다고 말하고</b>
+늘 쓰던 <b>🏛 공시실 바로가기</b>로 넘겨 드립니다 — 길이 끊기지는 않습니다.</div>
+
+<div class="tipbox" style="margin-top:10px"><b>다른 기기에서도 쓰시려면</b> ·
+쌓인 자료는 <b>이 브라우저 안에만</b> 있습니다(서버로 안 올라갑니다).
+집·태블릿에서도 보시려면 서재의 <b>📤 자료 내보내기</b> → 그 기기에서 <b>📦 자료 불러오기</b>.
+아니면 그 기기에서도 같은 폴더를 한 번 끌어다 놓으시면 됩니다.</div></div>
 
 <div class="card" style="margin-top:14px"><h3>📅 매일 30분 — 이게 본체입니다</h3>
 <p class="desc">한 달에 한 번 크게 돌리는 것만으로는 실력이 안 붙습니다. 매일 조금씩이 쌓입니다.</p>
@@ -2546,9 +2830,16 @@ $('#helpOut').innerHTML=`
 <table class="tbl"><tr><th style="width:56px">순서</th><th>할 일</th></tr>
 <tr><td><b>1</b></td><td>🚀 오늘 › <b>▶ 오늘 것 찾기</b> 한 번 → 뉴스 + 이달의 훅 + 약관 판정까지 한 번에</td></tr>
 <tr><td><b>2</b></td><td>📡 신상품 › <b>이달의 컨셉</b> → 이번 달 각도 1개 정하기</td></tr>
-<tr><td><b>3</b></td><td>📜 약관 › <b>베스트 찾기</b> → 담보별로 밀 상품 정하기</td></tr>
-<tr><td><b>4</b></td><td>🧾 고객 › <b>고객 제시자료</b> → 약관 원문 캡처 붙여 인쇄</td></tr>
-<tr><td><b>5</b></td><td>🚀 오늘 › <b>월간 브리핑</b> → 한 장으로 정리</td></tr></table></div>
+<tr><td><b>3</b></td><td>📡 신상품 › <b>홍보 발췌</b> → 그 상품의 상품설명서·약관을 읽어 <b>홍보에 쓸 대목을 원문 그대로</b> 뽑기</td></tr>
+<tr><td><b>4</b></td><td>📜 약관 › <b>베스트 찾기</b> → 담보별로 밀 상품 정하기</td></tr>
+<tr><td><b>5</b></td><td>🧾 고객 › <b>고객 제시자료</b> → 약관 원문 캡처 붙여 인쇄</td></tr>
+<tr><td><b>6</b></td><td>🚀 오늘 › <b>월간 브리핑</b> → 한 장으로 정리</td></tr></table>
+<div class="tipbox" style="margin-top:10px"><b>🎯 홍보 발췌는 문서를 읽어야 나옵니다.</b>
+회사별 신상품에서 상품을 찾으셨으면 <b>🏛 공시실 바로가기</b>로 그 회사에 들어가
+<b>상품설명서·약관</b>을 받아 📚 서재에 끌어다 놓으십시오.
+공시실 문서는 회사가 바깥에서 읽어 가는 것을 막아 두어 앱이 대신 받아 올 수 없습니다 —
+한 번 받아 넣어 주시면 그 다음은 앱이 다 읽습니다.
+받은 문서는 <b>이 브라우저 안에만</b> 남습니다(서버로 올라가지 않습니다).</div></div>
 
 <div class="card" style="margin-top:14px"><h3>📥 약관·자료 넣는 법</h3>
 <table class="tbl"><tr><th style="width:150px">무엇</th><th>어떻게</th></tr>
@@ -4247,9 +4538,11 @@ function sniffCo(name){const n=name.replace(/\s/g,'');
 function sniffKind(name){const k=KINDS.find(([,re])=>re.test(name));return k?k[0]:'기타'}
 
 /* PDF → 글자 + 쪽 표시. 파이썬 library_load.py 와 같은 형식이어야 한다. */
-async function pdfExtract(file,onProg){
+async function pdfExtract(file,onProg,preBuf){
   await loadPdfJs();
-  const buf=await file.arrayBuffer();
+  /* 지문 내려고 이미 읽어 둔 바이트가 있으면 그걸 쓴다 — 같은 파일을
+     디스크에서 두 번 읽지 않는다 */
+  const buf=preBuf||await file.arrayBuffer();
   const doc=await pdfjsLib.getDocument({data:buf.slice(0)}).promise;
   const n=doc.numPages;let out='';
   for(let i=1;i<=n;i++){
@@ -4264,40 +4557,134 @@ async function pdfExtract(file,onProg){
     scanned:(body.length/Math.max(n,1))<40,buf};
 }
 
+/* 넣는 중인지 · 멈추라고 했는지 (한 곳만 안다) */
+const UP={busy:false,stop:false};
 async function uploadFiles(files){
   const list=[...files].filter(f=>/\.(pdf|txt)$/i.test(f.name));
-  if(!list.length)return toast('PDF 또는 TXT 파일을 넣어주세요');
   const bar=$('#upState');
-  let ok=0,scan=[];
+  if(!list.length){
+    /* 폴더를 넣었는데 PDF 가 없을 수도 있다 — 몇 개를 봤는지 말해 준다.
+       「아무 일도 안 났다」 로 끝나지 않게. */
+    const n=[...files].length;
+    bar.textContent=n?('파일 '+n+'개를 봤지만 PDF·TXT 가 없었습니다'):'';
+    return toast(n?'그 폴더에는 PDF·TXT 가 없습니다':'PDF 또는 TXT 파일을 넣어주세요');
+  }
+  if(UP.busy)return toast('아직 넣는 중입니다');
+  UP.busy=true;UP.stop=false;
+  const stopBtn=$('#btnUpStop');
+  if(stopBtn){stopBtn.style.display='';stopBtn.textContent='■ 멈추기';}
+  let ok=0,scan=[],skip=0,fail=0;
+  /* 이미 서재에 있는 지문을 한 번에 모아 둔다 — 파일마다 DB 를 뒤지지 않게.
+     지문 → 그 문서 이름. 중복일 때 「무엇과 같은지」 말해 주기 위해서다. */
+  const seenSha={},seenTxt={};
+  let already=[];
+  try{ already=await dbAll(); }catch(e){}
+  for(const r of already){
+    const nm=r.title||r.file||r.id;
+    if(r.sha)seenSha[r.sha]=nm;
+    if(r.tsha){ seenTxt[r.tsha]=nm; continue; }
+    /* 지문을 붙이기 전에 쌓아 둔 것들 — 글자로 지문을 내 준다.
+       이걸 안 하면 예전에 넣어 둔 약관과 겹치는 파일이 한 번은 들어온다.
+       글자는 이미 손에 있으니 다시 읽지 않는다. */
+    if(r.text){ try{ const t=await textShaOf(r.text); if(t)seenTxt[t]=nm; }catch(e){} }
+  }
+  const dupOf=[];                       /* 무엇과 겹쳐서 안 받았는지 */
   for(let k=0;k<list.length;k++){
+    if(UP.stop){bar.innerHTML='■ 멈췄습니다 — '+ok+'건 넣고 '+(list.length-k)+'건 남겨 두었습니다.';break}
     const f=list[k];
     const title=f.name.replace(/\.(pdf|txt)$/i,'');
+    /* 이미 들어 있는 것은 다시 안 읽는다. 200쪽 약관 글자 뽑기가 제일
+       오래 걸리는데, 회사 폴더를 매달 다시 넣으실 때 그걸 전부 되풀이하면
+       몇 십 분이 그냥 간다. 같은 이름·같은 크기면 같은 파일로 본다. */
+    const id='u_'+await hashOf(f.name+'_'+f.size);
+    /* ① 같은 이름·같은 크기 — 제일 싼 판정 */
+    let had=null; try{ had=await dbGet(id); }catch(e){}
+    if(had){ skip++;
+      bar.innerHTML=(k+1)+'/'+list.length+' · 이미 있음 — '+esc(title.slice(0,24));
+      if(k%12===0)await new Promise(r=>setTimeout(r,0));
+      continue; }
     bar.innerHTML='<span class="spin" style="border-color:rgba(49,130,246,.3);border-top-color:var(--blue)"></span> '
       +(k+1)+'/'+list.length+' · '+esc(title.slice(0,26));
     try{
+      /* ② 바이트 지문 — 이름이 달라도 같은 파일이면 여기서 걸린다.
+         글자 뽑기 전에 거르므로 200쪽 약관을 헛읽지 않는다. */
+      const abuf=await f.arrayBuffer();
+      const sha=await shaOf(abuf);
+      if(seenSha[sha]){
+        skip++;dupOf.push(title+' = '+seenSha[sha]);
+        bar.innerHTML=(k+1)+'/'+list.length+' · 같은 문서 — '+esc(title.slice(0,20));
+        continue;
+      }
       let rec;
       if(/\.txt$/i.test(f.name)){
-        const t=await f.text();
-        rec={text:t,pages:0,chars:t.length,scanned:t.length<200,buf:null};
+        const t=new TextDecoder('utf-8').decode(abuf);
+        rec={text:t,pages:0,chars:t.length,scanned:t.length<200,buf:abuf};
       }else{
         rec=await pdfExtract(f,(i,n)=>{bar.innerHTML='<span class="spin" style="border-color:rgba(49,130,246,.3);border-top-color:var(--blue)"></span> '
-          +(k+1)+'/'+list.length+' · '+esc(title.slice(0,22))+' — '+i+'/'+n+'쪽'});
+          +(k+1)+'/'+list.length+' · '+esc(title.slice(0,22))+' — '+i+'/'+n+'쪽'},abuf);
       }
-      const id='u_'+await hashOf(f.name+'_'+f.size);
+      /* ③ 글자 지문 — 다시 만들어져 바이트는 달라도 내용이 같으면 안 받는다 */
+      const tsha=await textShaOf(rec.text);
+      if(tsha&&seenTxt[tsha]){
+        skip++;dupOf.push(title+' = '+seenTxt[tsha]);
+        bar.innerHTML=(k+1)+'/'+list.length+' · 내용이 같음 — '+esc(title.slice(0,20));
+        continue;
+      }
       await dbPut({id,title,file:f.name,co:sniffCo(title),kind:sniffKind(title),
         pages:rec.pages,chars:rec.chars,scanned:rec.scanned,text:rec.text,
+        sha:sha,tsha:tsha,
         pdf:rec.buf?new Blob([rec.buf],{type:'application/pdf'}):null,
         mtime:new Date().toISOString().slice(0,10),src:'up'});
+      seenSha[sha]=title; if(tsha)seenTxt[tsha]=title;   /* 이번 묶음 안의 중복도 막는다 */
       ok++;if(rec.scanned)scan.push(title);
     }catch(e){
+      fail++;
       bar.innerHTML='<span style="color:var(--red)">'+esc(title.slice(0,20))+' 실패: '+esc(e.message)+'</span>';
       await new Promise(r=>setTimeout(r,900));
     }
   }
+  UP.busy=false;
+  if(stopBtn)stopBtn.style.display='none';
   await libLoad(true);
-  bar.innerHTML='✅ '+ok+'건 쌓았습니다'
+  /* 넣은 것 · 이미 있던 것 · 못 읽은 것을 <b>따로</b> 센다.
+     건너뛴 것을 「넣었다」 에 섞으면 몇 건이 새로 들어왔는지 알 수 없다. */
+  /* 「쌓았습니다」 는 check-mknews 가 보고 있는 말이다 — 빼지 않는다 */
+  bar.innerHTML='✅ 새로 '+ok+'건 쌓았습니다'
+   +(skip?' · 이미 있어 건너뜀 '+skip+'건':'')
+   +(dupOf.length?' <span class="cnt">(이름만 다른 같은 문서 '+dupOf.length+'건 — '
+      +esc(dupOf.slice(0,2).join(' · ').slice(0,70))+(dupOf.length>2?' 외':'')+')</span>':'')
+   +(fail?' · <span style="color:var(--red)">못 읽음 '+fail+'건</span>':'')
    +(scan.length?' · <span style="color:var(--red)">스캔본 '+scan.length+'건은 글자가 없어 분석 불가</span>':'');
-  toast(ok+'건을 서재에 쌓았어요');
+  toast(ok?('새로 '+ok+'건 쌓았어요'+(skip?' (이미 있던 '+skip+'건은 건너뜀)':''))
+          :(skip?'전부 이미 들어 있었습니다 — 새 것이 없습니다':'넣은 것이 없습니다'));
+}
+/* ── 중복은 받지 않는다 — 이름이 아니라 <b>내용</b>으로 본다 ─────────
+   이름+크기로만 보면 회사가 파일 이름을 바꾼 순간 같은 약관이 또
+   들어온다. 서재가 부풀면 홍보 발췌에 같은 조항이 두 번 뜨고,
+   고객 앞에서 어느 것이 최신인지 알 수 없게 된다.
+
+   그래서 두 겹으로 막는다.
+     1) <b>바이트 지문</b> — 똑같은 파일이면 이름이 달라도 안 받는다.
+        글자 뽑기 <b>전에</b> 걸러 내므로 200쪽 약관을 헛읽지 않는다.
+     2) <b>글자 지문</b> — 다시 만들어져 바이트는 달라도 내용이 같으면
+        안 받는다. 이건 글자를 뽑은 뒤에야 알 수 있다.
+   지문은 16바이트(32자)까지 쓴다 — 서재가 몇 천 건이 돼도 엉키지 않게. */
+async function shaOf(buf){
+  try{
+    const b=await crypto.subtle.digest('SHA-256',buf);
+    return [...new Uint8Array(b)].slice(0,16).map(x=>x.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    /* file:// 처럼 subtle 이 없을 때 — 약하지만 없는 것보다 낫다 */
+    const v=new Uint8Array(buf);let h1=0x811c9dc5,h2=0x01000193;
+    for(let i=0;i<v.length;i++){h1=(h1^v[i])*16777619|0;h2=(h2+v[i]*31)|0;}
+    return 'f'+((h1>>>0).toString(16))+((h2>>>0).toString(16))+'_'+v.length;
+  }
+}
+/* 글자 지문은 눈에 안 보이는 차이를 지우고 잰다 — 빈칸·쪽표시·줄바꿈 */
+async function textShaOf(t){
+  const n=String(t||'').replace(/\[\[p\d+\]\]/g,' ').replace(/\s+/g,' ').trim();
+  if(n.length<40)return '';                 /* 너무 짧으면 지문으로 못 쓴다 */
+  return shaOf(new TextEncoder().encode(n).buffer);
 }
 async function hashOf(s){
   try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));
@@ -4882,7 +5269,14 @@ function bindDaily(){
     /* 예전에는 보험 칸 하나만 불렀다. 그래서 정책자금·세금·부동산 기사는
        서버에서 아예 오지도 않았다. 다섯 칸을 다 받아 온다 —
        무엇을 남길지는 위 keepNews() 가 정한다. */
-    return fetch('/api/market?kind=news&cat='+encodeURIComponent(MKN_FEEDS),{headers:h})
+    /* 낱말(config/sources.json)을 먼저 받아 둔다. 이게 있어야 ingest 가
+       기사를 그 자리에서 재고, 아래에서 남은 건수를 바로 셀 수 있다.
+       못 받아도 기사는 받는다 — 보험 기사는 낱말이 없어도 재고,
+       보험 밖 기사는 ingest 가 「판단 못 함」 으로 밝힌다. */
+    return loadOutKw().catch(function(){})
+      .then(function(){
+        return fetch('/api/market?kind=news&cat='+encodeURIComponent(MKN_FEEDS),{headers:h});
+      })
       .then(function(r){
         if(r.status===401)throw new Error('앱 안에서 열어 주세요 — 파일만 따로 열면 서버가 막습니다.');
         if(!r.ok)throw new Error('서버가 '+r.status+' 로 답했습니다.');
@@ -5478,9 +5872,14 @@ function bindDaily(){
            + (dt(a.date)?' · '+dt(a.date):'')+'</span></a>';
         });
         if(arts.length>3) h+='<div class="cnt">그 밖에 '+(arts.length-3)+'건</div>';
-        if(!unknown)
+        if(!unknown){
           h+='<button class="btn sm gh npco-go" data-co="'+esc2(co)+'" data-p="'+esc2(p)
            + '" data-t="'+esc2(first.title)+'">🆕 이 상품으로 분석</button>';
+          /* 기사는 여기까지다. 「어떻게 홍보하나」는 상품설명서·약관을
+             읽어야 나오므로, 그 자리로 바로 보낸다. */
+          h+=' <button class="btn sm gh npco-pm" data-co="'+esc2(co)+'" data-p="'+esc2(p)
+           + '">🎯 홍보 발췌</button>';
+        }
         h+='</div>';
       });
       h+='</div>';
@@ -5488,6 +5887,13 @@ function bindDaily(){
     box.innerHTML=h;
     [].forEach.call(box.querySelectorAll('.npco-go'), function(b){
       b.onclick=function(){ toAnalyze(b.dataset.co, b.dataset.p, b.dataset.t); };
+    });
+    [].forEach.call(box.querySelectorAll('.npco-pm'), function(b){
+      b.onclick=function(){
+        if(typeof window.promoFor!=='function')
+          return (typeof toast==='function')&&toast('홍보 발췌 화면이 아직 안 떴습니다');
+        window.promoFor(b.dataset.co, b.dataset.p);
+      };
     });
   }
 
@@ -5623,5 +6029,279 @@ function bindDaily(){
   window.gongsiPaint=paint;
   window.gongsiCount=function(){return {org:GS_ORG.length, co:GS_CO.length,
     ok:GS_CO.filter(function(c){return c.ok;}).length};};
+})();
+</script>
+
+<script>
+/* ══════════════════ 🎯 홍보 발췌 ══════════════════════════════════
+   상품을 찾은 다음이 비어 있었다. 「어떻게 홍보하나」의 답은 기사에
+   없고 <b>상품설명서와 약관</b>에 있다. 읽는 자리(약관 분석기)는
+   있었지만, 홍보에 쓸 대목으로 <b>모아 주는 자리</b>가 없었다.
+
+   지키는 선:
+     · 발췌는 <b>문서에 있는 문장 그대로</b>. 다듬거나 지어내지 않는다
+     · 어느 문서 · 몇 조 · 몇 쪽에서 왔는지 <b>같이 적는다</b>
+     · 못 찾으면 <b>못 찾았다고 적는다</b> — 빈 자리를 그럴듯하게 안 채운다
+     · <b>유리한 것만 뽑지 않는다.</b> 주의·독소도 같은 장에 둔다.
+       빼고 보여주면 나중에 분쟁이 된다 (고객 제시와 같은 원칙)
+     · 원문은 이 브라우저 밖으로 나가지 않는다 (CLAUDE.md 9)
+   ════════════════════════════════════════════════════════════════ */
+(function(){
+  var PM={picked:[], res:null};
+
+  function libItems(){
+    var j=state.lib;
+    return (j&&j.items)?j.items:[];
+  }
+  /* 목록 그리기 — 고른 것은 고른 채로 남는다 */
+  function paintDocs(){
+    var box=$('#pmDocs'); if(!box)return;
+    var q=($('#pmFind').value||'').trim().toLowerCase();
+    var all=libItems();
+    if(!all.length){
+      box.innerHTML='<div class="empty">서재가 비어 있습니다.<br><br>'
+        +'📚 <b>서재</b>에서 상품설명서·약관 PDF 를 끌어다 놓으시면 여기에 나옵니다.<br>'
+        +'문서는 <b>이 브라우저 안에만</b> 남습니다 — 서버로 올라가지 않습니다.</div>';
+      return;
+    }
+    var list=all.filter(function(x){
+      if(!q)return true;
+      return ((x.title||'')+' '+(x.co||'')+' '+(x.file||'')).toLowerCase().indexOf(q)>=0;
+    });
+    if(!list.length){ box.innerHTML='<div class="empty">「'+esc(q)+'」 로 찾은 문서가 없습니다.</div>'; return; }
+    box.innerHTML=list.slice(0,60).map(function(x){
+      var on=PM.picked.indexOf(x.id)>=0;
+      var warn=x.scanned?'<span class="bd r">스캔본 · 글자 없음</span>':'';
+      return '<label class="pmrow'+(on?' on':'')+'">'
+        +'<input type="checkbox" class="pmck" data-id="'+esc(x.id)+'"'+(on?' checked':'')+'>'
+        +'<b>'+esc(x.title||x.file||x.id)+'</b>'
+        +'<span class="bd n">'+esc(x.kind||'기타')+'</span>'
+        +(x.co?'<span class="bd n">'+esc(x.co)+'</span>':'')
+        +(x.pages?'<span class="cnt">'+x.pages+'쪽</span>':'')
+        +warn+'</label>';
+    }).join('')+(list.length>60?'<div class="cnt" style="margin-top:6px">…'+(list.length-60)+'건 더 있습니다. 위에서 더 좁혀 주세요.</div>':'');
+    $$('#pmDocs .pmck').forEach(function(c){
+      c.onchange=function(){
+        var id=c.dataset.id, i=PM.picked.indexOf(id);
+        if(c.checked){ if(i<0)PM.picked.push(id); } else if(i>=0)PM.picked.splice(i,1);
+        c.closest('.pmrow').classList.toggle('on',c.checked);
+        $('#pmState').textContent=PM.picked.length?PM.picked.length+'건 고름':'문서를 고르세요';
+      };
+    });
+  }
+
+  /* 발췌 — 문서마다 알맞은 표로 훑고, 어디서 왔는지 붙여 둔다 */
+  async function run(){
+    if(!PM.picked.length)return toast('먼저 문서를 고르세요');
+    var items=libItems(), out=[], skipped=[], kinds={};
+    $('#pmState').textContent='읽는 중…';
+    for(var i=0;i<PM.picked.length;i++){
+      var it=items.find(function(x){return x.id===PM.picked[i]});
+      if(!it)continue;
+      var text='';
+      try{ text=await libText(it.id); }
+      catch(e){ skipped.push({t:it.title,why:(e&&e.message)||'본문을 못 읽었습니다'}); continue; }
+      if(!text||text.replace(/\[\[p\d+\]\]/g,'').trim().length<200){
+        skipped.push({t:it.title,why:'글자가 거의 없습니다 — 스캔본(그림) 이면 발췌할 수 없습니다'});
+        continue;
+      }
+      var kind=it.kind||'기타';
+      kinds[kind]=(kinds[kind]||0)+1;
+      var t=text.replace(/\u00a0/g,' ');   /* 줄바꿈 없는 빈칸도 빈칸으로 */
+      scanRules(t, rulesFor(kind)).forEach(function(f){
+        out.push(Object.assign({},f,{doc:it.title||it.file||it.id, kind:kind}));
+      });
+    }
+    /* 같은 룰이 여러 문서에서 걸리면 한 번만 — 약관 쪽을 남긴다(원문이므로) */
+    var seen={}, finds=[];
+    out.sort(function(a,b){return (a.kind==='약관'?0:1)-(b.kind==='약관'?0:1)});
+    out.forEach(function(f){ if(seen[f.id])return; seen[f.id]=1; finds.push(f); });
+    PM.res={finds:finds, skipped:skipped, kinds:kinds};
+    render();
+    $('#pmState').textContent=finds.length+'대목 발췌';
+  }
+
+  var VL={good:['홍보에 쓸 것','g'],warn:['같이 말할 것','a'],bad:['반드시 말할 것','r'],info:['상품의 뼈대','n']};
+  function card(f,name){
+    var lab=VL[f.v]||VL.info;
+    var cl=f.v==='good'?'g':f.v==='bad'?'r':f.v==='warn'?'a':'';
+    var src='<span class="src">— '+esc(f.doc)+(f.art?' · '+esc(f.art):'')
+      +(f.page?' · '+f.page+'쪽':'')+'</span>';
+    return '<div class="find '+cl+'"><h4><span class="bd '+lab[1]+'">'+lab[0]+'</span>'
+      +esc(f.label)+'<span class="bd n">'+esc(f.cat)+'</span>'
+      +'<span class="bd n">'+esc(f.kind)+'</span>'
+      +(f.cnt>1?'<span class="cnt">본문 '+f.cnt+'회</span>':'')+'</h4>'
+      +'<p class="why">'+esc(f.why)+'</p>'
+      +'<div class="quote">…'+esc(stripPg(f.q.pre).slice(-90))+'<em>'+esc(stripPg(f.q.hit))+'</em>'
+      +esc(stripPg(f.q.post).slice(0,120))+'…'+src+'</div>'
+      +'<div class="talk">'+esc(String(f.talk).replace(/\{name\}/g,name||'고객')).replace(/\n/g,'<br>')+'</div></div>';
+  }
+
+  function render(){
+    var R=PM.res; if(!R)return;
+    var name=($('#cName')&&$('#cName').value)||'고객';
+    var pname=($('#pmName').value||'').trim();
+    var fact=R.finds.filter(function(f){return f.v==='info'});
+    var good=R.finds.filter(function(f){return f.v==='good'});
+    var care=R.finds.filter(function(f){return f.v==='warn'||f.v==='bad'});
+    var h='';
+
+    h+='<div class="card" style="margin-bottom:14px"><h3>🎯 '
+      +esc(pname||'이 상품')+' 홍보 발췌</h3>'
+      +'<p class="desc">읽은 문서 '+Object.keys(R.kinds).map(function(k){return esc(k)+' '+R.kinds[k]+'건'}).join(' · ')
+      +' · 뽑은 대목 '+R.finds.length+'개 · '+new Date().toLocaleDateString('ko-KR')+'</p>'
+      +'<div class="scoreboard">'
+      +'<div class="sb"><div class="v" style="color:var(--green)">'+good.length+'</div><div class="k">홍보에 쓸 것</div></div>'
+      +'<div class="sb"><div class="v">'+fact.length+'</div><div class="k">상품의 뼈대</div></div>'
+      +'<div class="sb"><div class="v" style="color:var(--amber)">'+care.length+'</div><div class="k">같이 말할 것</div></div>'
+      +'</div></div>';
+
+    if(R.skipped.length)
+      h+='<div class="tipbox" style="margin-bottom:12px">⚠️ 읽지 못한 문서 '+R.skipped.length+'건 — '
+        +R.skipped.map(function(x){return '<b>'+esc(x.t)+'</b>('+esc(x.why)+')'}).join(' · ')+'</div>';
+
+    /* 약관을 안 넣었으면 그렇다고 말한다 — 상품설명서만으로 보장을 말하면 무너진다 */
+    if(!R.kinds['약관'])
+      h+='<div class="tipbox" style="margin-bottom:12px">📌 <b>약관을 안 넣으셨습니다.</b> '
+        +'상품설명서는 요약이라, 면책·감액 같은 <b>실제로 못 받는 조건</b>은 약관에만 있습니다. '
+        +'약관까지 넣으셔야 고객 앞에서 안 무너집니다.</div>';
+
+    h+=sec('① 이 상품이 무엇인가 — 문서에 적힌 그대로', fact, name,
+      '상품설명서에서 주요 보장·한도·기간을 못 찾았습니다. 표(그림)로만 돼 있거나 스캔본일 수 있습니다.');
+    h+=sec('② 홍보에 쓸 대목', good, name,
+      '홍보로 내세울 만한 대목을 이 문서에서 못 찾았습니다. <b>없는 장점을 만들지 않습니다</b> — 약관을 넣어 보시거나 다른 상품과 비교해 보십시오.');
+    h+=sec('③ 반드시 같이 말할 것', care, name,
+      '주의·독소로 잡힌 대목이 없습니다. 다만 <b>없다는 뜻이 아니라 이 문서에서 안 걸렸다는 뜻</b>입니다 — 약관 원문을 함께 확인하십시오.');
+
+    h+='<div class="tipbox" style="margin-top:14px">'
+      +'· 위 인용은 <b>문서에 있는 문장을 그대로</b> 옮긴 것입니다. 앱이 지어낸 문장이 아닙니다.<br>'
+      +'· <b>보험료·가입금액·인수 여부는 심사 결과에 따릅니다.</b><br>'
+      +'· 전체 내용은 <b>약관 원문과 상품설명서</b>를 반드시 확인해 주세요.<br>'
+      +'· 세제 관련 내용은 <b>요건 충족 시</b>에 한하며, 판단은 세무 전문가에게 확인하십시오.<br>'
+      +'· 이 문서들은 <b>이 브라우저 안에만</b> 있습니다 — 서버로 올라가지 않았습니다.</div>';
+    $('#pmOut').innerHTML=h;
+  }
+  function sec(title,arr,name,none){
+    var h='<div class="sec-t"><span class="bar"></span>'+title+' <span class="cnt">'+arr.length+'개</span></div>';
+    if(!arr.length)return h+'<div class="empty" style="margin-bottom:12px">'+none+'</div>';
+    return h+arr.map(function(f){return card(f,name)}).join('');
+  }
+
+  /* 복사 — 유리한 것만 골라 담기지 않게 ③ 을 언제나 함께 넣는다 */
+  function copyOut(){
+    var R=PM.res; if(!R||!R.finds.length)return toast('먼저 발췌해 주세요');
+    var name=($('#cName')&&$('#cName').value)||'고객';
+    var pname=($('#pmName').value||'').trim()||'이 상품';
+    var L=[pname+' — 홍보 발췌',''];
+    function put(t,arr){
+      if(!arr.length){L.push(t,'  (이 문서에서 못 찾았습니다)','');return}
+      L.push(t);
+      arr.forEach(function(f){
+        L.push('· '+f.label+'  ['+f.doc+(f.art?' · '+f.art:'')+(f.page?' · '+f.page+'쪽':'')+']');
+        L.push('  “'+stripPg(f.q.hit)+'”');
+        L.push('  → '+String(f.talk).replace(/\{name\}/g,name));
+      });
+      L.push('');
+    }
+    put('① 이 상품이 무엇인가',R.finds.filter(function(f){return f.v==='info'}));
+    put('② 홍보에 쓸 대목',R.finds.filter(function(f){return f.v==='good'}));
+    put('③ 반드시 같이 말할 것',R.finds.filter(function(f){return f.v==='warn'||f.v==='bad'}));
+    L.push('※ 위 인용은 문서 원문 그대로입니다.');
+    L.push('※ 보험료·가입금액·인수 여부는 심사 결과에 따릅니다.');
+    L.push('※ 전체 내용은 약관 원문과 상품설명서를 확인해 주세요.');
+    copy(L.join('\n'),'발췌를 복사했어요 — 「같이 말할 것」도 함께 담았습니다');
+  }
+
+  /* 회사별 신상품에서 넘어올 때 쓰는 문 */
+  window.promoFor=function(co,prod){
+    var nm=((co||'')+' '+(prod||'')).trim();
+    var t=$$('.tab').find(function(x){return x.dataset.t==='promo'});
+    if(t)t.click();
+    if(nm){ $('#pmName').value=nm; $('#pmFind').value=(prod||co||''); }
+    if(co)$('#pmCo').value=co;
+    const g=$('#pmGs'); if(g)g.innerHTML='';
+    paintDocs();
+    $('#pmOut').innerHTML='';
+    PM.res=null;
+  };
+
+  /* ── 공시실에서 상품요약서 「주소만」 찾아 온다 ────────────────────
+     PDF 는 이 화면이 받지 않는다. 서버도 안 받는다. 링크를 눌러
+     <b>브라우저가 직접</b> 받는다 — 원수사 자료가 서버를 타지 않게
+     한 약속 그대로다. (CLAUDE.md 9)
+     서버가 넘겨 주는 것은 상품명·회사·주소 몇 KB 뿐이고, 한 달에
+     한 번 누르는 단추라 서버에도 미안하지 않다. (CLAUDE.md 7)       */
+  function gsToken(){
+    try{ if(window.parent&&window.parent!==window&&typeof window.parent.getAppToken==='function')
+      return window.parent.getAppToken()||''; }catch(e){}
+    return '';
+  }
+  async function gsFind(){
+    const co=($('#pmCo').value||'').trim();
+    const q=($('#pmName').value||'').trim();
+    const msg=$('#pmGsMsg'), box=$('#pmGs');
+    if(!co){msg.textContent='회사를 적어 주세요 (생명보험만)';return}
+    msg.innerHTML='<span class="spin" style="border-color:rgba(49,130,246,.3);border-top-color:var(--blue)"></span> 협회 공시에서 찾는 중…';
+    box.innerHTML='';
+    const h={},t=gsToken(); if(t)h['X-App-Token']=t;
+    let j=null;
+    try{
+      const r=await fetch('/api/market?kind=gongsi&co='+encodeURIComponent(co)
+        +(q?'&q='+encodeURIComponent(q):''),{headers:h});
+      const txt=await r.text();
+      try{ j=JSON.parse(txt); }
+      catch(x){ throw new Error('서버 창구(/api/market)가 아직 없습니다 — 배포에 함수가 올라갔는지 봐 주세요.'); }
+      if(r.status===401)throw new Error('앱 안에서 열어 주세요 — 파일만 따로 열면 서버가 막습니다.');
+    }catch(e){
+      /* 못 찾아도 길이 끊기지 않게 — 늘 쓰던 공시실 바로가기로 보낸다 */
+      msg.innerHTML='<span style="color:var(--red)">'+esc((e&&e.message)||'찾지 못했습니다')+'</span>';
+      box.innerHTML='<div class="tipbox">협회 공시에서 못 찾았습니다. '
+        +'📡 신상품 › <b>🏛 상품 공시실 바로가기</b> 로 그 회사에 직접 들어가 받으셔도 됩니다.</div>';
+      return;
+    }
+    if(j&&j.companies&&j.companies.length){
+      $('#pmCoList').innerHTML=j.companies.map(function(n){return '<option value="'+esc(n)+'">'}).join('');
+    }
+    if(!j||!j.ok){
+      msg.innerHTML='<span style="color:var(--red)">'+esc((j&&j.message)||'찾지 못했습니다')+'</span>';
+      box.innerHTML='<div class="tipbox">'
+        +(j&&j.companies?'적을 수 있는 회사 : '+esc(j.companies.join(' · ')):'')
+        +'<br>손해보험은 협회가 달라 아직 여기서 못 찾습니다 — '
+        +'📡 신상품 › <b>🏛 상품 공시실 바로가기</b> 를 쓰세요.</div>';
+      return;
+    }
+    const it=j.items||[];
+    if(!it.length){ msg.textContent='그 회사에서 받아 온 것이 없습니다.'; return; }
+    const narrowed=(j.matched!=null&&j.matched>0);
+    msg.innerHTML='<b>'+it.length+'건</b>'+(narrowed?(' (「'+esc(j.q)+'」 로 좁힘 · 회사 전체 '+j.total+'건)')
+      :(j.q?(' — 「'+esc(j.q)+'」 로는 못 찾아 회사 전체 '+j.total+'건을 보여 드립니다'):''));
+    box.innerHTML='<div class="tipbox" style="margin-bottom:8px">'
+      +'여기 있는 것은 <b>상품요약서</b>입니다 — <b>약관 원문이 아닙니다.</b> 약관은 각 회사 공시실에만 있습니다.<br>'
+      +'받으신 파일을 📚 <b>서재</b> 에 끌어다 놓으시면 아래 목록에 나오고, 그대로 발췌됩니다.</div>'
+      +it.map(function(x){
+        return '<div class="gsrow"><b>'+esc(x.prod)+'</b>'
+          +'<span class="bd n">'+esc(x.co)+'</span>'
+          +(x.file?'<a class="dl" href="'+esc(x.file)+'" target="_blank" rel="noopener">⬇ 요약서 받기</a>':'<span class="cnt">요약서 없음</span>')
+          +(x.page?'<a class="pg" href="'+esc(x.page)+'" target="_blank" rel="noopener">회사 상품페이지</a>':'')
+          +'</div>';
+      }).join('');
+  }
+
+  function boot(){
+    if(!$('#pmDocs'))return;
+    $('#pmFind').addEventListener('input',paintDocs);
+    $('#pmFind2').onclick=function(e){e.preventDefault();gsFind()};
+    $('#pmRun').onclick=function(){run().catch(function(e){
+      $('#pmState').textContent='실패';
+      toast((e&&e.message)||'발췌하지 못했습니다');});};
+    $('#pmCopy').onclick=copyOut;
+    $('#pmPrint').onclick=function(){window.print()};
+    paintDocs();
+    window.pmRepaint=paintDocs;
+    window.pmState=function(){return {picked:PM.picked.length,
+      finds:PM.res?PM.res.finds.length:0};};
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
+  else boot();
 })();
 </script>
