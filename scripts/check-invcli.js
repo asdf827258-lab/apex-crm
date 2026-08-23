@@ -243,6 +243,88 @@ function handSimp(m, annual, months) {
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 130) : ''));
 
   console.log('\n──────────────────────────────');
+
+  console.log('\n[6] 눈에 보기 쉬운가 — 탭 · 글자 · 접기');
+  /* 투자 컨설팅 한 판이 <b>7,014px</b> 이었다 — 일곱 화면이다.
+     그 위에 탭 열넷이 285px 을 먹고 있어 첫 화면이 통째로 메뉴였다.
+     그리고 본문 절반이 8~10px 이라 고객이 눈을 찌푸리셨다.        */
+  await page.evaluate(() => window.switchTab('invest'));
+  await page.waitForTimeout(700);
+  const rd = await page.evaluate(() => {
+    const t = document.querySelector('.report-tab');
+    const pane = document.getElementById('tab-invest');
+    /* 「ONE PAGE」 「RISK PROFILE」 같은 영문 꼬리표는 <b>읽는 글이 아니라
+       장식</b>이다. 한글 제목 위에 작게 얹는 것이라, 키우면 제목과 다툰다.
+       읽어야 하는 글만 센다 — 넓게 잡으면 헛것을 잡는 점검이 된다. */
+    const tiny = [...pane.querySelectorAll('*')]
+      .filter(e => e.offsetParent
+        && !e.closest('.card-tag,.sec-tag')
+        && parseFloat(getComputedStyle(e).fontSize) < 10.4).length;
+    return {
+      탭높이: Math.round(t.getBoundingClientRect().height),
+      탭묶음: Math.round((t.parentNode).getBoundingClientRect().height),
+      탭이름: parseFloat(getComputedStyle(t.querySelector('.rt-title')).fontSize),
+      판높이: pane.scrollHeight,
+      접을카드: pane.querySelectorAll('.card.fold').length,
+      펴진카드: pane.querySelectorAll('.card.fold.open').length,
+      작은글자: tiny,
+      가로밀림: document.documentElement.scrollWidth - document.documentElement.clientWidth
+    };
+  });
+  is(rd.탭묶음 <= 180, '탭 묶음이 화면을 다 먹지 않는다 — ' + rd.탭묶음 + 'px (전에 285px)');
+  is(rd.탭이름 >= 12, '탭 이름이 읽을 수 있는 크기다 — ' + rd.탭이름 + 'px (전에 11px)');
+  is(rd.접을카드 >= 3, '긴 카드가 접힌다 — ' + rd.접을카드 + '장');
+  is(rd.판높이 <= 2600, '투자 컨설팅이 한 화면 남짓이다 — ' + rd.판높이 + 'px (전에 7,014px)');
+  /* 바닥을 올려도 칸이 터지면 안 된다 — 그게 더 못 읽는 것이다 */
+  is(rd.가로밀림 <= 2, '글자를 키워도 가로로 안 밀린다 — ' + rd.가로밀림 + 'px');
+  is(rd.작은글자 === 0, '읽는 글 중 10.4px 미만이 없다 (영문 꼬리표 제외) — ' + rd.작은글자 + '개');
+
+  const fold = await page.evaluate(() => {
+    const c = document.querySelector('#tab-invest .card.fold');
+    const h0 = document.getElementById('tab-invest').scrollHeight;
+    c.querySelector('.card-hd').click();
+    const open = c.classList.contains('open');
+    const h1 = document.getElementById('tab-invest').scrollHeight;
+    let saved = null; try { saved = localStorage.getItem(foldKey(c)); } catch (e) {}
+    c.querySelector('.card-hd').click();
+    return { open: open, grew: h1 > h0, saved: saved };
+  });
+  is(fold.open && fold.grew, '머리를 누르면 펴진다');
+  is(fold.saved === '1', '편 것을 기억한다 — 다음에 열면 그대로');
+  /* 접힌 채로 인쇄하면 자료가 빈다 — 인쇄에서는 무조건 펴서 나가야 한다 */
+  await page.emulateMedia({ media: 'print' });
+  await page.waitForTimeout(200);
+  const pr = await page.evaluate(() => {
+    const c = document.querySelector('#tab-invest .card.fold');
+    c.classList.remove('open');
+    return getComputedStyle(c.querySelector('.card-body')).display;
+  });
+  await page.emulateMedia({ media: 'screen' });
+  is(pr === 'block', '인쇄에서는 접혀 있어도 다 나온다 — 자료가 비면 안 된다');
+
+  /* 투자만 짧아지면 반쪽이다 — 긴 판이 넷이었다.
+     「한 장으로」 같은 요약은 펴 두고 깊은 계산·표만 접는다.       */
+  const panes = [];
+  for (const [id, nm, cap] of [['pension','연금 시뮬레이션',2400],
+                               ['realestate','부동산·대출',2000],
+                               ['inherit','상속·증여',3000]]) {
+    await page.evaluate(x => window.switchTab(x), id);
+    await page.waitForTimeout(900);
+    panes.push(await page.evaluate(a => {
+      const p = document.getElementById('tab-' + a[0]);
+      if (!p) return { nm: a[1], miss: true };
+      return { nm: a[1], cap: a[2], h: p.scrollHeight,
+               fold: p.querySelectorAll('.card.fold').length,
+               open: p.querySelectorAll('.card.fold.open').length };
+    }, [id, nm, cap]));
+  }
+  panes.forEach(p => {
+    is(!p.miss && p.fold >= 3, '  ' + p.nm + ' — 긴 카드가 접힌다 (' + (p.fold || 0) + '장)');
+    is(!p.miss && p.h <= p.cap, '  ' + p.nm + ' — ' + p.h + 'px (' + p.cap + 'px 아래)');
+  });
+  /* 다 접어 버리면 열었을 때 빈 화면이다 — 요약 한 장은 반드시 펴 둔다 */
+  is(panes.every(p => p.miss || p.fold > p.open), '  전부 접지는 않는다 — 요약은 펴 둔다');
+
   console.log(fail === 0
     ? '투자 연동 · 복리 점검 통과 — ' + pass + '가지 다 맞습니다.'
     : '투자 연동 · 복리 점검 실패 — ' + fail + '가지 어긋납니다 (통과 ' + pass + ').');
