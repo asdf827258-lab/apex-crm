@@ -2478,6 +2478,428 @@
     }
   };
 
+  /* ═══ 전립선 — 요도를 감싼 밤톨 ══════════════════════════════
+     남성 상담에서 가장 자주 어긋나는 말이 <b>「소변 잘 나오니까 괜찮다」</b> 이다.
+     그런데 전립선은 <b>안쪽이 커지는 병(비대증)</b>과 <b>바깥쪽에 생기는 병(암)</b>이
+     자리가 다르다.
+
+       · 비대증 — <b>요도를 감싼 안쪽</b>이 커진다 → 소변 줄기가 가늘어진다(증상이 먼저)
+       · 암     — 대개 <b>바깥쪽 가장자리</b>에 생긴다 → <b>한참 동안 아무 증상이 없다</b>
+
+     그래서 소변이 잘 나오는 것은 암이 없다는 뜻이 아니다. 그리고 이 암은
+     <b>뼈로 잘 간다.</b> 그림에 그 길까지 함께 둔다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function prostate(mode, R) {
+    var s = '', i, a, x, y;
+    var PX = 250, PY = 300;
+
+    /* 방광 */
+    s += '<path d="M130 90 C130 40 370 40 370 90 C382 150 366 200 320 224 ' +
+         'C300 234 200 234 180 224 C134 200 118 150 130 90 Z" fill="#F3E8DC" stroke="#C8A183" stroke-width="3"/>';
+    for (i = 0; i < 26; i++) {
+      s += '<path d="M' + (140 + R() * 220).toFixed(0) + ' ' + (60 + R() * 150).toFixed(0) +
+           ' l' + (10 + R() * 18).toFixed(0) + ' ' + ((R() - 0.5) * 10).toFixed(0) +
+           '" stroke="#DCC3A8" stroke-width="1.8" opacity=".8"/>';
+    }
+    /* 오줌 — 차 있는 정도 */
+    var pee = mode === 1 ? 0.62 : 0.34;
+    s += '<path d="M136 ' + (224 - 150 * pee).toFixed(0) + ' C200 ' + (214 - 150 * pee).toFixed(0) +
+         ' 300 ' + (214 - 150 * pee).toFixed(0) + ' 364 ' + (224 - 150 * pee).toFixed(0) +
+         ' C360 190 340 216 320 224 C300 234 200 234 180 224 C160 216 140 190 136 ' +
+         (224 - 150 * pee).toFixed(0) + ' Z" fill="#EFDFA8" opacity=".85"/>';
+    if (mode === 1) s += note(150, 120, '다 못 비웁니다', '#B45309');
+
+    /* 요관 둘 */
+    s += '<path d="M132 96 C96 70 78 40 74 12 M368 96 C404 70 422 40 426 12" fill="none" ' +
+         'stroke="#E0C7B4" stroke-width="13" stroke-linecap="round"/>';
+
+    /* 전립선 — 밤톨 모양, 요도가 가운데를 지난다 */
+    var w = mode === 1 ? 120 : 88, hgt = mode === 1 ? 104 : 78;
+    s += '<ellipse cx="' + PX + '" cy="' + PY + '" rx="' + w + '" ry="' + hgt + '" ' +
+         'fill="#D9A98F" stroke="#A87856" stroke-width="3"/>';
+    /* 바깥쪽(주변부) — 암이 잘 생기는 자리 */
+    s += '<path d="M' + (PX - w) + ' ' + PY + ' a' + w + ' ' + hgt + ' 0 0 0 ' + (w * 2) + ' 0 Z" ' +
+         'fill="#C9927A" opacity=".85"/>';
+    /* 안쪽(이행부) — 비대증이 커지는 자리 */
+    s += '<ellipse cx="' + PX + '" cy="' + (PY - 6) + '" rx="' + (mode === 1 ? 62 : 38) + '" ry="' +
+         (mode === 1 ? 50 : 32) + '" fill="#E8C4AC" stroke="#B98A63" stroke-width="2.4"/>';
+    /* 샘 조직 알갱이 */
+    for (i = 0; i < 70; i++) {
+      a = R() * Math.PI * 2; var rr = R();
+      x = PX + Math.cos(a) * rr * (w - 12); y = PY + Math.sin(a) * rr * (hgt - 12);
+      s += '<circle cx="' + x.toFixed(0) + '" cy="' + y.toFixed(0) + '" r="' + (2.6 + R() * 2.4).toFixed(1) +
+           '" fill="#C08A6C" opacity=".55"/>';
+    }
+    /* 요도 — 전립선 가운데를 지난다. 비대증이면 눌려 좁아진다 */
+    var uw = mode === 1 ? 7 : 17;
+    s += '<path d="M' + PX + ' 226 L' + PX + ' ' + (PY - hgt + 6) + '" stroke="#E0C7B4" stroke-width="22" stroke-linecap="round"/>';
+    s += '<path d="M' + PX + ' ' + (PY - hgt + 6) + ' L' + PX + ' ' + (PY + hgt - 6) + '" stroke="#B98A63" stroke-width="24"/>';
+    s += '<path d="M' + PX + ' ' + (PY - hgt + 6) + ' L' + PX + ' ' + (PY + hgt - 6) + '" stroke="#F6E8DC" stroke-width="' + uw + '"/>';
+    s += '<path d="M' + PX + ' ' + (PY + hgt - 6) + ' C' + PX + ' 470 ' + (PX + 10) + ' 520 ' + (PX + 26) + ' 560" ' +
+         'fill="none" stroke="#E0C7B4" stroke-width="20" stroke-linecap="round"/>';
+    s += '<path d="M' + PX + ' ' + (PY + hgt - 6) + ' C' + PX + ' 470 ' + (PX + 10) + ' 520 ' + (PX + 26) + ' 560" ' +
+         'fill="none" stroke="#F6E8DC" stroke-width="9" stroke-linecap="round"/>';
+
+    /* 암 — 바깥쪽 가장자리에 */
+    if (mode === 2) {
+      s += '<circle cx="' + (PX - 52) + '" cy="' + (PY + 34) + '" r="26" fill="#3F2A55" opacity=".93"/>';
+      for (i = 0; i < 16; i++) {
+        a = R() * Math.PI * 2;
+        s += '<circle cx="' + (PX - 52 + Math.cos(a) * R() * 30).toFixed(0) + '" cy="' +
+             (PY + 34 + Math.sin(a) * R() * 30).toFixed(0) + '" r="' + (2.2 + R() * 2.6).toFixed(1) +
+             '" fill="#6D3FA0" opacity=".9"/>';
+      }
+      s += '<circle cx="' + (PX + 44) + '" cy="' + (PY + 40) + '" r="15" fill="#3F2A55" opacity=".85"/>';
+      /* 뼈로 가는 길 */
+      s += '<path d="M' + (PX + 62) + ' ' + (PY + 44) + ' C400 380 440 300 452 220" fill="none" ' +
+           'stroke="#7E22CE" stroke-width="5" stroke-dasharray="9 6"/>';
+      s += '<path d="M430 150 q40 -10 56 22 q10 40 -22 58 q-42 8 -56 -26 q-6 -38 22 -54 Z" ' +
+           'fill="#EDE3D2" stroke="#B9A98C" stroke-width="2.6"/>';
+      for (i = 0; i < 16; i++) {
+        s += '<path d="M' + (438 + R() * 46).toFixed(0) + ' ' + (162 + R() * 62).toFixed(0) +
+             ' l' + (7 + R() * 10).toFixed(0) + ' ' + ((R() - 0.5) * 8).toFixed(0) +
+             '" stroke="#C9B89A" stroke-width="1.8"/>';
+      }
+      s += '<circle cx="462" cy="196" r="13" fill="#3F2A55" opacity=".9"/>';
+      s += '<circle cx="444" cy="176" r="8" fill="#6D3FA0" opacity=".85"/>';
+    }
+    /* 정낭 */
+    s += '<path d="M' + (PX - w - 30) + ' ' + (PY - 70) + ' q-40 -14 -56 14 q14 30 56 22 Z" ' +
+         'fill="#C9927A" stroke="#A87856" stroke-width="2.4"/>';
+    s += '<path d="M' + (PX + w + 30) + ' ' + (PY - 70) + ' q40 -14 56 14 q-14 30 -56 22 Z" ' +
+         'fill="#C9927A" stroke="#A87856" stroke-width="2.4"/>';
+    /* 직장 — 손가락으로 만지는 쪽 */
+    s += '<path d="M' + (PX - 6) + ' ' + (PY + hgt + 26) + ' C160 400 150 470 150 540" fill="none" ' +
+         'stroke="#B4544C" stroke-width="30" stroke-linecap="round" opacity=".65"/>';
+    return s;
+  }
+
+  V.prostate_zone = {
+    t: '전립선 — 커지는 자리와 암이 생기는 자리가 다릅니다',
+    d: '전립선은 방광 아래에서 <b>요도를 감싸고 있는 밤톨</b>입니다. 그래서 커지면 소변 줄기가 가늘어집니다. ' +
+       '그런데 <b>커지는 자리(안쪽)</b> 와 <b>암이 생기는 자리(바깥쪽 가장자리)</b> 가 다릅니다. ' +
+       '그래서 <b>소변이 잘 나온다고 암이 없는 것이 아닙니다</b> — 이 암은 한참 동안 아무 증상이 없습니다. ' +
+       '그리고 <b>뼈로 잘 갑니다.</b>',
+    dz: ['prostate'],
+    build: function () {
+      var R = rnd(20260904);
+      var P = [
+        [0, '정상', '요도가 시원하게 지나갑니다', '#334155'],
+        [1, '전립선비대증 — 안쪽이 커짐', '요도가 눌려 <tspan font-weight="800">줄기가 가늘어지고</tspan> 다 못 비웁니다', '#B45309'],
+        [2, '전립선암 — 바깥쪽에 생김', '한참 <tspan font-weight="800">증상이 없습니다.</tspan> 그리고 뼈로 갑니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1760 700" width="1760" height="700">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 578;
+        s += '<rect x="' + x + '" y="10" width="556" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 10) + ' 44)">' + prostate(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="644" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="38" cy="674" r="9" fill="#E8C4AC" stroke="#B98A63" stroke-width="2"/>';
+      s += '<text x="56" y="679" font-size="12.5" fill="#334155">안쪽 — 비대증이 커지는 자리</text>';
+      s += '<circle cx="330" cy="674" r="9" fill="#C9927A" stroke="#A87856" stroke-width="2"/>';
+      s += '<text x="348" y="679" font-size="12.5" fill="#334155">바깥쪽 — 암이 잘 생기는 자리</text>';
+      s += '<circle cx="660" cy="674" r="9" fill="#3F2A55"/>';
+      s += '<text x="678" y="679" font-size="12.5" fill="#334155">암 · 뼈로 옮겨 간 것도 같은 색</text>';
+      s += '<text x="1020" y="679" font-size="12.5" fill="#6B7280">실제 비율·모양과 다릅니다. 자리 관계를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1760 700' });
+    }
+  };
+
+  /* ═══ 자궁 — 혹이 어디에 붙었느냐가 전부다 ═════════════════════
+     자궁근종은 <b>여성에게 매우 흔한</b> 혹이다. 그런데 상담에서 「있대요」
+     로 끝나는 이유는, <b>같은 근종이라도 붙은 자리에 따라 완전히 다른 병</b>
+     이라는 것을 말해 주지 못해서다.
+
+       · <b>점막하</b>(안쪽 방으로 튀어나옴) — 작아도 <b>출혈이 심하다.</b> 내시경으로 뗀다
+       · <b>근층내</b>(벽 속) — 가장 흔하다. 크면 누른다
+       · <b>장막하</b>(바깥으로 튀어나옴) — 커도 증상이 적다. 다른 장기를 민다
+
+     그리고 <b>자궁내막증</b>은 근종과 아예 다른 병이다 — 안쪽 방에 있어야 할
+     내막이 <b>밖에</b> 자리를 잡아 달마다 그 자리에서 피가 난다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function uterus(mode, R) {
+    var s = '', i, a, x, y;
+    var CX = 300, CY = 250;
+
+    /* 자궁 몸통 — 서양배를 거꾸로 */
+    var U = 'M' + (CX - 118) + ' ' + (CY - 60) + ' C' + (CX - 130) + ' ' + (CY + 60) + ' ' +
+            (CX - 66) + ' ' + (CY + 150) + ' ' + (CX - 34) + ' ' + (CY + 176) +
+            ' L' + (CX + 34) + ' ' + (CY + 176) + ' C' + (CX + 66) + ' ' + (CY + 150) + ' ' +
+            (CX + 130) + ' ' + (CY + 60) + ' ' + (CX + 118) + ' ' + (CY - 60) +
+            ' C' + (CX + 70) + ' ' + (CY - 128) + ' ' + (CX - 70) + ' ' + (CY - 128) + ' ' +
+            (CX - 118) + ' ' + (CY - 60) + ' Z';
+    s += '<defs><clipPath id="cpUt' + mode + '"><path d="' + U + '"/></clipPath></defs>';
+    s += '<path d="' + U + '" fill="#C9827E" stroke="#8E4C49" stroke-width="3"/>';
+    s += '<g clip-path="url(#cpUt' + mode + ')">';
+    /* 근층 — 결이 감긴다 */
+    for (i = 0; i < 150; i++) {
+      x = CX - 130 + R() * 260; y = CY - 130 + R() * 310;
+      var t = -40 + (x - CX + 130) / 260 * 80;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' q22 8 44 2" stroke="#A65E5A" ' +
+           'stroke-width="' + (1.3 + R() * 1.5).toFixed(1) + '" fill="none" opacity="' + (0.3 + R() * 0.4).toFixed(2) +
+           '" transform="rotate(' + t.toFixed(0) + ' ' + x.toFixed(0) + ' ' + y.toFixed(0) + ')"/>';
+    }
+    /* 안쪽 방과 내막 */
+    var CAV = 'M' + (CX - 58) + ' ' + (CY - 52) + ' L' + (CX + 58) + ' ' + (CY - 52) +
+              ' L' + (CX + 12) + ' ' + (CY + 96) + ' L' + (CX - 12) + ' ' + (CY + 96) + ' Z';
+    s += '<path d="' + CAV + '" fill="#F0D9D8" stroke="#C08A88" stroke-width="2.4"/>';
+    s += '<path d="' + CAV + '" fill="none" stroke="#D9564F" stroke-width="7" opacity=".7"/>';
+    s += '</g>';
+
+    /* 자궁경부와 질 */
+    s += '<path d="M' + (CX - 34) + ' ' + (CY + 176) + ' L' + (CX + 34) + ' ' + (CY + 176) +
+         ' L' + (CX + 40) + ' ' + (CY + 236) + ' L' + (CX - 40) + ' ' + (CY + 236) + ' Z" ' +
+         'fill="#B4706C" stroke="#8E4C49" stroke-width="2.6"/>';
+    s += '<path d="M' + CX + ' ' + (CY + 96) + ' L' + CX + ' ' + (CY + 232) + '" stroke="#F0D9D8" stroke-width="9"/>';
+
+    /* 난관과 난소 */
+    [-1, 1].forEach(function (sg) {
+      s += '<path d="M' + (CX + sg * 112) + ' ' + (CY - 68) + ' C' + (CX + sg * 190) + ' ' + (CY - 108) + ' ' +
+           (CX + sg * 236) + ' ' + (CY - 60) + ' ' + (CX + sg * 226) + ' ' + (CY - 14) + '" fill="none" ' +
+           'stroke="#D9A98F" stroke-width="11" stroke-linecap="round"/>';
+      /* 나팔 끝 */
+      for (i = 0; i < 6; i++) {
+        a = -0.5 + i * 0.22;
+        s += '<path d="M' + (CX + sg * 226) + ' ' + (CY - 14) + ' l' + (sg * Math.cos(a) * 22).toFixed(0) +
+             ' ' + (Math.sin(a) * 22).toFixed(0) + '" stroke="#D9A98F" stroke-width="4" stroke-linecap="round"/>';
+      }
+      s += '<ellipse cx="' + (CX + sg * 226) + '" cy="' + (CY + 34) + '" rx="34" ry="24" ' +
+           'fill="#E8CFA8" stroke="#B8975E" stroke-width="2.6"/>';
+      for (i = 0; i < 7; i++) {
+        s += '<circle cx="' + (CX + sg * 226 + (R() - 0.5) * 44).toFixed(0) + '" cy="' + (CY + 34 + (R() - 0.5) * 30).toFixed(0) +
+             '" r="' + (3 + R() * 3).toFixed(1) + '" fill="#FBF3DC" stroke="#B8975E" stroke-width="1.2"/>';
+      }
+    });
+
+    /* ② 근종 세 자리 */
+    if (mode === 1) {
+      /* 점막하 — 안쪽 방으로 */
+      s += '<circle cx="' + (CX - 16) + '" cy="' + (CY - 6) + '" r="30" fill="#E8DCC6" stroke="#A88F5E" stroke-width="3"/>';
+      s += '<text x="' + (CX - 16) + '" y="' + (CY - 1) + '" font-size="13" font-weight="800" fill="#7A6438" text-anchor="middle">①</text>';
+      /* 근층내 — 벽 속 */
+      s += '<circle cx="' + (CX + 74) + '" cy="' + (CY + 24) + '" r="34" fill="#E8DCC6" stroke="#A88F5E" stroke-width="3"/>';
+      s += '<text x="' + (CX + 74) + '" y="' + (CY + 29) + '" font-size="13" font-weight="800" fill="#7A6438" text-anchor="middle">②</text>';
+      /* 장막하 — 바깥으로 */
+      s += '<circle cx="' + (CX - 128) + '" cy="' + (CY - 84) + '" r="42" fill="#E8DCC6" stroke="#A88F5E" stroke-width="3"/>';
+      s += '<text x="' + (CX - 128) + '" y="' + (CY - 79) + '" font-size="13" font-weight="800" fill="#7A6438" text-anchor="middle">③</text>';
+      /* 내막이 밀려 출혈이 는다 */
+      s += '<path d="M' + (CX - 40) + ' ' + (CY + 40) + ' q20 26 40 44" stroke="#D9564F" stroke-width="6" fill="none" opacity=".8"/>';
+    }
+    /* ③ 자궁내막증 — 내막이 밖에 자리를 잡음 */
+    if (mode === 2) {
+      [[CX - 226, CY + 34], [CX + 226, CY + 26], [CX - 132, CY + 130], [CX + 128, CY + 138], [CX + 40, CY - 128]]
+        .forEach(function (p, k) {
+          s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (10 + (k % 3) * 5) + '" fill="#7A1220" opacity=".9"/>';
+          for (i = 0; i < 5; i++) {
+            a = R() * Math.PI * 2;
+            s += '<circle cx="' + (p[0] + Math.cos(a) * (12 + R() * 12)).toFixed(0) + '" cy="' +
+                 (p[1] + Math.sin(a) * (12 + R() * 12)).toFixed(0) + '" r="' + (2.4 + R() * 2.4).toFixed(1) +
+                 '" fill="#9C1A2B" opacity=".85"/>';
+          }
+        });
+      /* 들러붙음 */
+      s += '<path d="M' + (CX - 190) + ' ' + (CY + 70) + ' C' + (CX - 120) + ' ' + (CY + 120) + ' ' +
+           (CX + 120) + ' ' + (CY + 126) + ' ' + (CX + 190) + ' ' + (CY + 66) + '" fill="none" ' +
+           'stroke="#B98A63" stroke-width="3" stroke-dasharray="8 6" opacity=".9"/>';
+    }
+    return s;
+  }
+
+  V.uterus_myoma = {
+    t: '자궁 — 같은 혹이라도 <b>붙은 자리</b>가 다르면 다른 병입니다',
+    d: '자궁근종은 아주 흔합니다. 그래서 「있대요」 로 끝나기 쉬운데, ' +
+       '실제로는 <b>어디에 붙었느냐</b> 가 증상도 수술도 가릅니다. ' +
+       '<b>안쪽 방으로 튀어나온 것</b>은 작아도 출혈이 심하고, <b>벽 속</b>은 가장 흔하며, ' +
+       '<b>바깥으로 튀어나온 것</b>은 커도 증상이 적습니다. ' +
+       '<b>자궁내막증</b>은 아예 다른 병입니다 — 안에 있어야 할 내막이 <b>밖에</b> 자리를 잡아 ' +
+       '달마다 그 자리에서 피가 나고, 장기끼리 들러붙습니다.',
+    dz: ['myoma'],
+    build: function () {
+      var R = rnd(20260905);
+      var P = [
+        [0, '정상', '안쪽 방을 두꺼운 근육이 감싸고 있습니다', '#334155'],
+        [1, '근종 — 붙은 자리 셋', '①안쪽으로(출혈이 심함) ②벽 속(가장 흔함) ③바깥으로(커도 조용함)', '#B45309'],
+        [2, '자궁내막증', '내막이 <tspan font-weight="800">밖에</tspan> 자리를 잡아 달마다 피가 나고 들러붙습니다', '#991B1B']
+      ];
+      var s = '<svg viewBox="0 0 1900 620" width="1900" height="620">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 626;
+        s += '<rect x="' + x + '" y="10" width="600" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x - 4) + ' 44)">' + uterus(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="562" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<circle cx="38" cy="592" r="10" fill="#E8DCC6" stroke="#A88F5E" stroke-width="2.4"/>';
+      s += '<text x="58" y="597" font-size="12.5" fill="#334155">근종 (근육이 뭉친 혹)</text>';
+      s += '<path d="M330 592 l30 0" stroke="#D9564F" stroke-width="6"/>';
+      s += '<text x="372" y="597" font-size="12.5" fill="#334155">자궁내막 (달마다 헐고 다시 자라는 안쪽 막)</text>';
+      s += '<circle cx="880" cy="592" r="9" fill="#7A1220"/>';
+      s += '<text x="898" y="597" font-size="12.5" fill="#334155">밖에 자리 잡은 내막 (자궁내막증)</text>';
+      s += '<text x="1360" y="597" font-size="12.5" fill="#6B7280">실제 비율·모양과 다릅니다. 자리 관계를 보여 주는 그림입니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 1900 620' });
+    }
+  };
+
+  /* ═══ 대상포진 — 신경에 숨어 있다가 그 신경을 타고 나온다 ══════
+     상담에서 대상포진이 어려운 이유는 <b>「피부병이 아니다」</b> 는 것을
+     설명하기 어려워서다. 이 병은 <b>신경의 병</b>이다.
+
+     어릴 때 수두를 앓으면 바이러스가 없어지지 않고 <b>척수 옆 신경절</b>에
+     숨는다. 몸이 지치면 깨어나서 <b>그 신경 한 가닥을 타고</b> 피부로 나온다.
+     신경 한 가닥이 맡는 자리가 몸통을 <b>한 바퀴 감는 띠</b>라서,
+     발진도 <b>한쪽에 띠 모양</b>으로 난다 — 가운데를 넘지 않는다.
+
+     그리고 진짜 무서운 것은 발진이 아니라 <b>그 뒤에 남는 신경통</b>이다.
+     피부는 나았는데 통증만 몇 달·몇 해 남는다.
+
+     ★ 실제 비율·모양과 다르다. 관계를 보여 주는 그림이다.               */
+  function zoster(mode, R) {
+    var s = '', i, a, x, y;
+    var CX = 300, CY = 260;
+
+    /* 몸통 단면 — 배 쪽이 위, 등 쪽이 아래 */
+    s += '<ellipse cx="' + CX + '" cy="' + CY + '" rx="232" ry="168" fill="#F6E3D2" stroke="#C8A183" stroke-width="3.4"/>';
+    s += '<ellipse cx="' + CX + '" cy="' + CY + '" rx="216" ry="152" fill="#FBEFE2" stroke="#E3CBB6" stroke-width="2"/>';
+    /* 근육 띠 */
+    for (i = 0; i < 60; i++) {
+      a = R() * Math.PI * 2; var rr = 0.86 + R() * 0.12;
+      x = CX + Math.cos(a) * 216 * rr; y = CY + Math.sin(a) * 152 * rr;
+      s += '<path d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l' + (Math.cos(a + 1.57) * 16).toFixed(0) + ' ' +
+           (Math.sin(a + 1.57) * 16).toFixed(0) + '" stroke="#D8A88C" stroke-width="2.2" opacity=".7"/>';
+    }
+    /* 속 — 장기 자리 */
+    s += '<ellipse cx="' + CX + '" cy="' + (CY - 14) + '" rx="150" ry="98" fill="#F0DFCE" opacity=".8"/>';
+
+    /* 척추뼈와 척수 — 등 쪽(아래) */
+    var SX = CX, SY = CY + 116;
+    s += '<path d="M' + (SX - 46) + ' ' + (SY - 30) + ' q46 -22 92 0 q10 34 -10 58 q-36 16 -72 0 q-20 -24 -10 -58 Z" ' +
+         'fill="#EDE3D2" stroke="#B9A98C" stroke-width="3"/>';
+    s += '<circle cx="' + SX + '" cy="' + (SY + 2) + '" r="24" fill="#E8EEF2" stroke="#9DB2C0" stroke-width="2.6"/>';
+    s += '<path d="M' + (SX - 12) + ' ' + (SY - 8) + ' q12 -8 24 0 q4 18 -12 24 q-16 -6 -12 -24 Z" fill="#B8C6D2"/>';
+    s += '<path d="M' + SX + ' ' + (SY + 26) + ' l0 26 M' + (SX - 30) + ' ' + (SY + 22) + ' l-16 20 M' +
+         (SX + 30) + ' ' + (SY + 22) + ' l16 20" stroke="#CFC5B4" stroke-width="9" stroke-linecap="round"/>';
+
+    /* 신경절 — 바이러스가 숨는 곳 (한쪽만) */
+    var GX = SX - 44, GY = SY - 6;
+    var awake = mode >= 1;
+    s += '<ellipse cx="' + GX + '" cy="' + GY + '" rx="19" ry="14" fill="' + (awake ? '#7E22CE' : '#E3C878') +
+         '" stroke="' + (awake ? '#4C1D95' : '#9A6F1E') + '" stroke-width="2.6"/>';
+    if (!awake) {
+      for (i = 0; i < 5; i++) {
+        s += '<circle cx="' + (GX + (R() - 0.5) * 22).toFixed(0) + '" cy="' + (GY + (R() - 0.5) * 16).toFixed(0) +
+             '" r="2.4" fill="#7E22CE" opacity=".85"/>';
+      }
+    }
+
+    /* 신경 한 가닥 — 몸통을 감아 앞으로 */
+    var NP = 'M' + GX + ' ' + GY + ' C' + (CX - 200) + ' ' + (CY + 90) + ' ' +
+             (CX - 224) + ' ' + (CY - 60) + ' ' + (CX - 120) + ' ' + (CY - 132) +
+             ' C' + (CX - 60) + ' ' + (CY - 168) + ' ' + (CX + 20) + ' ' + (CY - 160) + ' ' +
+             (CX + 60) + ' ' + (CY - 146);
+    s += '<path d="' + NP + '" fill="none" stroke="' + (awake ? '#A855F7' : '#E3C878') + '" stroke-width="9" ' +
+         'stroke-linecap="round" opacity="' + (awake ? '1' : '.9') + '"/>';
+    if (awake) {
+      s += '<path d="' + NP + '" fill="none" stroke="#F0ABFC" stroke-width="3" stroke-linecap="round" opacity=".8"/>';
+      /* 타고 올라가는 것 */
+      for (i = 0; i < 9; i++) {
+        var t2 = i / 9;
+        s += '<circle cx="' + (GX + (CX + 60 - GX) * t2 * 0.5 - 120 * Math.sin(t2 * 3)).toFixed(0) + '" cy="' +
+             (GY - 240 * t2 + 60 * Math.sin(t2 * 3.2)).toFixed(0) + '" r="3.4" fill="#7E22CE" opacity=".75"/>';
+      }
+    }
+    /* 반대쪽 신경 — 조용하다 */
+    s += '<path d="M' + (SX + 44) + ' ' + GY + ' C' + (CX + 200) + ' ' + (CY + 90) + ' ' +
+         (CX + 224) + ' ' + (CY - 60) + ' ' + (CX + 120) + ' ' + (CY - 132) +
+         ' C' + (CX + 60) + ' ' + (CY - 168) + ' ' + (CX - 20) + ' ' + (CY - 160) + ' ' +
+         (CX - 60) + ' ' + (CY - 146) + '" fill="none" stroke="#E3C878" stroke-width="9" ' +
+         'stroke-linecap="round" opacity=".55"/>';
+    s += '<ellipse cx="' + (SX + 44) + '" cy="' + GY + '" rx="19" ry="14" fill="#E3C878" stroke="#9A6F1E" stroke-width="2.6" opacity=".65"/>';
+
+    /* 발진 — 그 신경이 맡는 띠에만, 한쪽에만 */
+    if (mode === 2 || mode === 3) {
+      var faded = mode === 3;
+      for (i = 0; i < 46; i++) {
+        var tt = R();
+        var bx = GX + (CX + 60 - GX) * tt * 0.5 - 130 * Math.sin(tt * 3) + (R() - 0.5) * 26;
+        var by = GY - 250 * tt + 62 * Math.sin(tt * 3.2) + (R() - 0.5) * 22;
+        s += '<circle cx="' + bx.toFixed(0) + '" cy="' + by.toFixed(0) + '" r="' + (3.4 + R() * 4).toFixed(1) +
+             '" fill="' + (faded ? '#D8BFB2' : '#C0392B') + '" stroke="' + (faded ? '#B49A8C' : '#7F1D1D') +
+             '" stroke-width="1.2" opacity="' + (faded ? '.7' : '.92') + '"/>';
+        if (!faded && i % 3 === 0) {
+          s += '<circle cx="' + bx.toFixed(0) + '" cy="' + (by - 1).toFixed(0) + '" r="1.8" fill="#FDE68A"/>';
+        }
+      }
+      /* 가운데를 넘지 않는다 */
+      s += '<path d="M' + CX + ' ' + (CY - 168) + ' L' + CX + ' ' + (CY + 168) + '" stroke="#334155" ' +
+           'stroke-width="2.4" stroke-dasharray="8 6" opacity=".55"/>';
+    }
+    /* 남은 통증 — 번개 */
+    if (mode === 3) {
+      for (i = 0; i < 6; i++) {
+        var tt2 = 0.15 + i * 0.14;
+        var zx = GX + (CX + 60 - GX) * tt2 * 0.5 - 130 * Math.sin(tt2 * 3);
+        var zy = GY - 250 * tt2 + 62 * Math.sin(tt2 * 3.2);
+        s += '<path d="M' + zx.toFixed(0) + ' ' + (zy - 26).toFixed(0) + ' l10 16 l-7 3 l11 17 l-16 -14 l7 -4 Z" ' +
+             'fill="#7E22CE" opacity=".9"/>';
+      }
+    }
+    return s;
+  }
+
+  V.zoster_nerve = {
+    t: '대상포진은 <b>피부병이 아니라 신경의 병</b>입니다',
+    d: '어릴 때 수두를 앓으면 바이러스가 없어지지 않고 <b>척수 옆 신경절</b>에 숨습니다. ' +
+       '몸이 지치면 깨어나 <b>그 신경 한 가닥을 타고</b> 피부로 나옵니다. ' +
+       '신경 한 가닥이 맡는 자리가 몸통을 한 바퀴 감는 <b>띠</b>라서, 발진도 <b>한쪽에 띠 모양</b>으로 나고 ' +
+       '<b>가운데를 넘지 않습니다.</b> ' +
+       '진짜 무서운 것은 발진이 아니라 <b>그 뒤에 남는 신경통</b>입니다 — 피부는 나았는데 통증만 오래 남습니다.',
+    dz: ['zoster'],
+    build: function () {
+      var R = rnd(20260906);
+      var P = [
+        [0, '숨어 있음', '수두를 앓은 뒤, 바이러스가 <tspan font-weight="800">신경절에 숨어</tspan> 지냅니다', '#334155'],
+        [1, '깨어나 신경을 탐', '몸이 지치면 깨어나 <tspan font-weight="800">그 신경 한 가닥</tspan>을 타고 올라갑니다', '#B45309'],
+        [2, '띠 모양 발진', '그 신경이 맡는 자리에만 — <tspan font-weight="800">한쪽, 가운데를 안 넘습니다</tspan>', '#991B1B'],
+        [3, '그 뒤에 남는 신경통', '피부는 나았는데 <tspan font-weight="800">통증만 남습니다</tspan>', '#6D28D9']
+      ];
+      var s = '<svg viewBox="0 0 2380 600" width="2380" height="600">';
+      P.forEach(function (p, i) {
+        var x = 20 + i * 590;
+        s += '<rect x="' + x + '" y="10" width="566" height="28" rx="9" fill="' + p[3] + '"/>';
+        s += '<text x="' + (x + 14) + '" y="29" font-size="14" font-weight="800" fill="#fff">' +
+             ['①', '②', '③', '④'][i] + ' ' + p[1] + '</text>';
+        s += '<g transform="translate(' + (x + 20) + ' 44)">' + zoster(p[0], R) + '</g>';
+        s += '<text x="' + (x + 6) + '" y="524" font-size="13" font-weight="800" fill="#0D1117">' + p[2] + '</text>';
+      });
+      s += '<g class="lbl">';
+      s += '<ellipse cx="40" cy="556" rx="16" ry="11" fill="#E3C878" stroke="#9A6F1E" stroke-width="2"/>';
+      s += '<text x="62" y="561" font-size="12.5" fill="#334155">신경절 (바이러스가 숨는 곳)</text>';
+      s += '<path d="M370 556 l34 0" stroke="#A855F7" stroke-width="8" stroke-linecap="round"/>';
+      s += '<text x="416" y="561" font-size="12.5" fill="#334155">깨어난 신경 — 이 가닥을 타고 나옵니다</text>';
+      s += '<circle cx="880" cy="556" r="8" fill="#C0392B" stroke="#7F1D1D" stroke-width="1.2"/>';
+      s += '<text x="898" y="561" font-size="12.5" fill="#334155">물집</text>';
+      s += '<path d="M990 546 l10 16 l-7 3 l11 17 l-16 -14 l7 -4 Z" fill="#7E22CE"/>';
+      s += '<text x="1016" y="561" font-size="12.5" fill="#334155">남은 신경통</text>';
+      s += '<text x="1160" y="561" font-size="12.5" fill="#6B7280">' +
+           '점선이 몸의 가운데입니다 — 발진이 이 선을 넘지 않는 것이 이 병의 표시입니다. 실제 비율·모양과 다릅니다.</text>';
+      s += '</g>';
+      s += '</svg>';
+      return art({ svg: s, vb: '0 0 2380 600' });
+    }
+  };
+
   V.vessel = {
     t: '혈관은 이렇게 좁아지고, 이렇게 엽니다',
     d: '기름때가 쌓여 길이 좁아지다가(협심증), 그 덩어리가 터지면 피떡이 생겨 완전히 막힙니다(심근경색). ' +

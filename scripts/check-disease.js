@@ -768,6 +768,28 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
      자리마다 <b>무엇을 하는가</b>와 <b>그때 열리는 담보</b>가 붙어 있는지,
      비율(몇 %) 같은 외운 숫자를 적지 않았는지, 그리고 담보 이름이
      전부 말모이 안에 있는지. */
+  /* 코드를 비워 둔 질병에서 화면이 실제로 <b>「적지 않았습니다」 라고 말하는지</b>를
+     소스가 아니라 <b>그 질병을 열어</b> 확인한다. 소스에서 낱말만 찾으면 다른 곳에
+     같은 말이 있어 늘 통과한다 — 실제로 그렇게 헛것을 잡고 있었다.
+     다만 이 점검도 「엉뚱한 코드를 끌어다 쓰지 않았는지」 까지는 못 본다.
+     다른 병의 코드도 표 안에 있는 코드이기 때문이다 — 그 판단은 사람이 한다. */
+  console.log('\n[14-2] 코드를 모르는 질병');
+  const noCodeDz = (D.list || []).filter(d => !(d.codes || []).length);
+  if (noCodeDz.length) {
+    const pg2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await pg2.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+    await pg2.evaluate(i => open_(i), noCodeDz[0].id);
+    await pg2.waitForTimeout(300);
+    const nc = await pg2.locator('.nocode').count();
+    const ncTxt = nc ? await pg2.locator('.nocode').innerText() : '';
+    is(nc === 1 && /적지 않았습니다/.test(ncTxt),
+       '코드를 비워 둔 질병(' + noCodeDz.map(d => d.name).join(' / ') + ')을 열면 ' +
+       '화면이 <b>「적지 않았습니다」 라고 말한다</b> — 빈칸으로 두지 않는다');
+    await pg2.close();
+  } else {
+    is(true, '코드를 비워 둔 질병이 없다');
+  }
+
   console.log('\n[15] 전이와 합병증');
   const SP = D.spread, CP = D.comp;
   is(!!SP, '전이 자료가 한 벌 있다');
