@@ -2172,7 +2172,12 @@ window.dGo=function(tab){
   if(p&&typeof p.go==='function'){
     try{p.go(tab);dToast((APEX[tab]?APEX[tab][1]:tab)+' 을 엽니다');return;}catch(e){}
   }
-  try{location.href='index.html?go='+encodeURIComponent(tab);}catch(e){dToast('열지 못했습니다');}
+  /* 로그인 전에 ?go=clients 로 보내면 APEX 가 「상위 요금제」 화면을 띄운다 —
+     못 여는 이유가 돈이 아니라 로그인인데도 그렇다. 그러니 로그인 먼저 시킨다.
+     폰 홈 화면 앱은 사파리와 저장 공간이 따로라, 담은 직후엔 늘 로그아웃이다. */
+  var go=(SB&&ME)?('index.html?go='+encodeURIComponent(tab)):'index.html';
+  if(go==='index.html')dToast('먼저 로그인하시면 그 화면으로 이어집니다');
+  try{location.href=go;}catch(e){dToast('열지 못했습니다');}
 };
 function goBtn(tab,label,cls){
   var a=APEX[tab]||['↗',tab];

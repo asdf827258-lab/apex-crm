@@ -832,7 +832,11 @@ window.tApex=function(tab){
   if(p&&typeof p.go==='function'){
     try{p.go(tab);tToast((APEX[tab]?APEX[tab][1]:tab)+' 을 엽니다');return;}catch(e){}
   }
-  try{location.href='index.html?go='+encodeURIComponent(tab);}catch(e){tToast('열지 못했습니다');}
+  /* 로그인 전에 ?go= 로 보내면 APEX 가 「상위 요금제」 화면을 띄운다.
+     못 여는 이유가 돈이 아니라 로그인이므로 로그인 먼저 시킨다 */
+  var go=(SB&&ME)?('index.html?go='+encodeURIComponent(tab)):'index.html';
+  if(go==='index.html')tToast('먼저 로그인하시면 그 화면으로 이어집니다');
+  try{location.href=go;}catch(e){tToast('열지 못했습니다');}
 };
 function goBar(){
   return '<div class="sec">여기서 이어서 하기 <span style="margin-left:auto;font-weight:400;font-size:10.5px">APEX 가 열립니다</span></div>'+
