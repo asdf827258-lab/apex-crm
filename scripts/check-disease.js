@@ -421,45 +421,73 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(len2 > len1, '더 많이 고르면 대본도 그만큼 두꺼워진다 (' + len1 + ' → ' + len2 + '자)');
   is(/^\d+\/\d+$/.test((await page.locator('.score .n').innerText()).replace(/\s/g, '')), '점수가 분수로 나온다');
 
-  console.log('\n[8-5] 가상설계창 — 담아 놓고 질병 열셋에 대 보는가');
+  console.log('\n[8-5] 가상설계창 — 설계안 모양인가 · 얼마 나오는지 세는가 · 어떻게 고칠지 말하는가');
   await page.evaluate(() => { try { localStorage.removeItem('apex_dz_lab'); } catch (e) {} labOpen(); });
-  await page.waitForTimeout(300);
-  const labBox = await page.locator('.lab-box input[type=checkbox]').count();
-  is(labBox === (D.cov || []).length, '말모이 ' + (D.cov || []).length + '가지를 다 담을 수 있다 (' + labBox + '칸)');
-  is((await page.locator('.cvg .row').count()) === (D.list || []).length,
-     '질병 ' + (D.list || []).length + '종이 모두 막대로 선다');
-  /* 아무것도 안 담으면 0%, 담으면 올라가야 한다 */
-  const z = await page.locator('.lab-sum .n').innerText();
-  is(/^0/.test(z), '아무것도 안 담으면 0% 다 (' + z.replace(/\s/g, '') + ')');
-  await page.evaluate(() => {
-    ['일반암진단비', '유사암진단비', '실손', '질병수술비', '입원일당'].forEach(k => { LAB.picked[k] = true; });
-    labPaintScore();
-  });
-  await page.waitForTimeout(250);
-  const z2 = await page.locator('.lab-sum .n').innerText();
-  is(parseInt(z2, 10) > 0, '담으면 덮는 비율이 올라간다 (' + z2.replace(/\s/g, '') + ')');
-  /* 막대가 실제로 칠해지는가.
-     한 번 이걸 클래스 이름(.cvg .cb i)으로 찾게 짰다가 낭패를 봤다 —
-     이름을 도구줄과 겹치는 .bar 로 되돌려 막대가 사라져도 <b>점검이 못 잡았다.</b>
-     찾을 것이 없으면 그냥 조용해지기 때문이다. 그래서 이름이 아니라
-     <b>자리(줄의 두 번째 칸, 그 안의 첫 자식)</b>로 재고, 못 찾으면 실패로 본다. */
-  const barBox = await page.locator('.cvg .row').first().evaluate(el => {
-    const cell = el.children[1], fill = cell && cell.firstElementChild;
-    if (!fill) return { w: 0, h: 0, none: 1 };
-    const r = fill.getBoundingClientRect();
-    return { w: Math.round(r.width), h: Math.round(r.height) };
-  });
-  is(!barBox.none && barBox.w > 4 && barBox.h > 4,
-     '막대가 눈에 보이게 칠해진다' + (barBox.none ? ' — 칠할 것을 못 찾았다' : ' (' + barBox.w + '×' + barBox.h + 'px)'));
-  is((await page.locator('.hole .r').count()) > 0, '가장 크게 빈 곳을 짚어 준다');
+  await page.waitForTimeout(350);
+  const sheetRows = await page.locator('.psheet tr').count();
+  is(sheetRows > (D.cov || []).length, '가입설계 표에 담보가 다 놓인다 (줄 ' + sheetRows + ')');
+  const amtBoxes = await page.locator('.psheet input.amt').count();
+  is(amtBoxes === (D.cov || []).length - 1,
+     '실손을 뺀 담보마다 가입금액 칸이 있다 (' + amtBoxes + '칸) — 실손은 금액이 아니라 담김/안 담김');
+  is((await page.locator('.wsheet input').first().inputValue()) === '홍길동', '견본 이름은 홍길동이다');
+  is(/실제 고객 이름을 넣지 마십시오/.test(await page.locator('.wnote').innerText()),
+     '실제 고객 이름을 넣지 말라고 적어 둔다');
   is(/보험료는 계산하지 않습니다/.test(await page.locator('.lab-hd').innerText()),
      '보험료를 지어내지 않는다고 적어 둔다');
-  /* 질병을 누르면 그 병에서 무엇이 열리는지 */
-  await page.evaluate(() => labShow('stroke'));
+
+  /* 아무것도 안 넣으면 합계가 없어야 한다 */
+  is((await page.locator('.paysum .n').innerText()).indexOf('—') >= 0, '가입금액을 안 넣으면 합계를 만들지 않는다');
+
+  /* 넣은 대로 셈이 맞는가 — 진단비 1회 + 일당×일수 + 치료비×횟수 */
+  await page.evaluate(() => {
+    LAB.amt = { '일반암진단비': 5000, '입원일당': 3, '암주요치료비 (급여)': 500, '실손': 1 };
+    LAB.dz = 'cancer_major'; LAB.days['cancer_major'] = 10; LAB.cnt['cancer_major'] = 4;
+    labPaintOut();
+  });
   await page.waitForTimeout(250);
-  const labShown = await page.locator('#detailPane').innerText();
-  is(/이 병이 오면 내 설계에서 무엇이 열립니까/.test(labShown), '질병을 누르면 단계별로 펼쳐진다');
-  is(/안 담으신 것 ·/.test(labShown), '그 단계에서 안 담은 담보를 짚어 준다');
+  const sum = await page.locator('.paysum .n').innerText();
+  /* 5000 + 3×10 + 500×4 = 7030만 */
+  is(sum.replace(/[^0-9]/g, '') === '7030',
+     '넣으신 금액과 일수·횟수로 정확히 센다 — 5,000 + 3×10 + 500×4 = 7,030만 (' + sum + ')');
+  const payTxt = await page.locator('#detailPane').innerText();
+  is(/3만 × 10일/.test(payTxt), '일당은 「1일당 × 일수」 로 셈을 보여 준다');
+  is(/500만 × 4회/.test(payTxt), '치료비는 「1회당 × 횟수」 로 셈을 보여 준다');
+  is(/실손은 실제 병원비에 따라 달라 합계에 넣지 않았습니다/.test(payTxt),
+     '실손은 합계에 넣지 않고 따로 적는다');
+  is(/지급을 약속하는 숫자가 아닙니다/.test(payTxt), '지급을 약속하는 값이 아니라고 밝힌다');
+
+  /* 일수를 안 넣으면 안 세고, 안 셌다고 말해야 한다 */
+  await page.evaluate(() => { LAB.days['cancer_major'] = 0; labPaintOut(); });
+  await page.waitForTimeout(200);
+  const noDay = await page.locator('#detailPane').innerText();
+  is(/일수를 안 넣으셔서 안 셌습니다/.test(noDay), '일수를 안 넣으면 세지 않고 그렇다고 말한다');
+
+  /* 어떻게 고칠지 — 없는 것은 「넣으십시오」, 기준선보다 작으면 「올리십시오」 */
+  await page.evaluate(() => {
+    LAB.amt = { '일반암진단비': 3000, '실손': 1 };
+    LAB.days = {}; LAB.cnt = {}; labPaintOut();
+  });
+  await page.waitForTimeout(250);
+  const fixTxt = await page.locator('#detailPane').innerText();
+  is((await page.locator('.fx').count()) > 0, '고칠 자리를 짚어 준다 (' + (await page.locator('.fx').count()) + '곳)');
+  is(/올리십시오/.test(fixTxt) && /기준선/.test(fixTxt),
+     '기준선보다 작으면 「올리십시오」 라고 지금 금액과 기준선을 같이 말한다');
+  is(/지금 3,000만 → 기준선 5,000만/.test(fixTxt.replace(/\s+/g, ' ')),
+     '지금 금액과 올려야 할 금액을 함께 보여 준다');
+  is(/넣으십시오/.test(fixTxt), '안 담은 자리는 「넣으십시오」 라고 말한다');
+  is(/그대로 확정하지 마십시오/.test(fixTxt), '기준선을 확정하지 말라는 말이 붙는다');
+
+  /* 앞뒤가 안 맞으면 잡는가 — 유사암이 일반암보다 큰 경우 */
+  await page.evaluate(() => { LAB.amt['유사암진단비'] = 9000; labPaintOut(); });
+  await page.waitForTimeout(200);
+  is(/뒤집혔습니다|뒤집힌 구조/.test(await page.locator('#detailPane').innerText()),
+     '유사암이 일반암보다 크면 뒤집혔다고 잡는다');
+
+  /* 단계마다 무엇이 열리고 무엇이 비는지 */
+  const stageTxt = await page.locator('#detailPane').innerText();
+  is(/단계마다 무엇이 열리고 무엇이 빕니까/.test(stageTxt), '질병 단계별로 펼쳐진다');
+  is(/안 담으신 것 ·/.test(stageTxt), '그 단계에서 안 담은 담보를 짚어 준다');
+
 
   console.log('\n[8-6] 약관 어디를 보나 — 자리를 짚어 주는가');
   await page.locator('button.btn', { hasText: '약관 어디를 보나' }).click();
