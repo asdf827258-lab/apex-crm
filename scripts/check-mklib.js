@@ -14,6 +14,10 @@
      2. 떨어뜨리면 <b>안쪽 폴더까지</b> 훑는가
      3. 넣으면 회사·종류로 나뉘는가
      4. 같은 폴더를 또 넣으면 <b>건너뛰는가</b> — 매달 하는 일
+     4-1. <b>중복은 받지 않는다 — 철칙이다.</b> 이름을 바꿔도 · 빈칸만
+          달라도 · 한 묶음 안에 두 번 있어도 · 지문 없이 예전에 쌓아 둔
+          것과 겹쳐도 <b>안 들어간다</b>. 서재가 부풀면 홍보 발췌에 같은
+          조항이 두 번 뜨고, 고객 앞에서 어느 것이 최신인지 알 수 없다
      5. 새 파일 한 개만 늘었을 때 그 한 개만 읽는가
      6. PDF 가 없으면 조용히 끝내지 않고 말하는가
      7. 넣은 것이 홍보 발췌로 그대로 이어지는가
@@ -119,6 +123,39 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
  n=await pg.evaluate(async()=>(await dbAll()).length);
  is(n===4,'서재가 4건이 됐다 ('+n+')');
 
+ console.log('\n[5-1] 중복은 받지 않는다 — 철칙');
+ const BODY='제3조(보장개시일) 보장개시일 부터 90 일이 지난 날의 다음날부터 지급합니다. '.repeat(9);
+ const put=(files)=>pg.evaluate(async fs=>{
+   await uploadFiles(fs.map(x=>new File([x.b],x.n,{type:'text/plain'})));
+   return {msg:document.querySelector('#upState').textContent,n:(await dbAll()).length};
+ },files);
+ let base=(await put([{n:'삼성생명_철칙_약관.txt',b:BODY}]));
+ is(/새로 1건/.test(base.msg),'  처음 것은 들어간다');
+ const n0=base.n;
+ let r=await put([{n:'삼성생명_철칙_약관_최종.txt',b:BODY}]);
+ is(r.n===n0,'  이름만 바꾼 같은 파일은 안 들어간다');
+ is(/이름만 다른 같은 문서/.test(r.msg),'  무엇과 같은지 밝힌다');
+ r=await put([{n:'삼성생명_철칙_약관_사본.txt',b:BODY.replace(/ /g,'  ')+'\n\n'}]);
+ is(r.n===n0,'  빈칸·줄바꿈만 다른 같은 내용도 안 들어간다');
+ r=await put([{n:'현대해상_둘.txt',b:'가입한도 는 3,000 만원. 건강체 할인. '.repeat(9)},
+              {n:'현대해상_둘(1).txt',b:'가입한도 는 3,000 만원. 건강체 할인. '.repeat(9)}]);
+ is(r.n===n0+1,'  한 묶음 안에 같은 파일이 둘이면 한 번만 들어간다');
+ /* 지문을 붙이기 전 방식으로 쌓아 둔 것과 겹쳐도 막혀야 한다 */
+ await pg.evaluate(async b=>{ await dbPut({id:'u_old_ch',title:'옛날에넣은_약관',file:'옛날에넣은_약관.txt',
+   co:'',kind:'약관',pages:0,chars:b.length,scanned:false,text:b,pdf:null,mtime:'2026-01-01',src:'up'}); },
+   '제11조 재진단암 을 보장합니다. 표적항암 약물허가치료 포함. '.repeat(9));
+ const nb=await pg.evaluate(async()=>(await dbAll()).length);
+ r=await put([{n:'이름만_다른것.txt',b:'제11조 재진단암 을 보장합니다. 표적항암 약물허가치료 포함. '.repeat(9)}]);
+ is(r.n===nb,'  지문 없이 쌓여 있던 옛 자료와 겹쳐도 안 들어간다');
+ r=await put([{n:'교보생명_진짜다른것.txt',b:'제9조 뇌혈관질환 (I60~I69) 으로 진단확정된 경우. '.repeat(9)}]);
+ is(r.n===nb+1,'  진짜 다른 문서는 그대로 들어간다 — 헛것을 막지 않는다');
+ /* 지문이 실제로 저장되는가 */
+ const hasSha=await pg.evaluate(async()=>{
+   const a=await dbAll(); const up=a.filter(x=>x.src==='up'&&x.id!=='u_old_ch');
+   return up.length&&up.every(x=>x.sha&&x.tsha);
+ });
+ is(hasSha,'  새로 넣은 것에는 바이트·글자 지문이 남는다');
+
  console.log('\n[6] PDF 가 하나도 없는 폴더');
  const st4=await pg.evaluate(async()=>{
    await uploadFiles([new File(['x'],'읽을거리.docx'),new File(['y'],'사진.png')]);
@@ -129,8 +166,11 @@ const U='http://127.0.0.1:'+PORT+'/app/%EC%83%81%EB%8B%B4%EC%9E%90%EB%A3%8C/%EB%
  console.log('\n[7] 넣은 것이 홍보 발췌로 그대로 이어지는가');
  await pg.evaluate(()=>document.querySelector('.tab[data-t="promo"]').click());
  await pg.waitForTimeout(400);
+ /* 서재에 실제로 몇 건 있는지 세어 견준다 — 숫자를 박아 두면
+    위에서 한 건 더 넣을 때마다 여기가 깨진다 */
+ const inLib=await pg.evaluate(async()=>(await dbAll()).length);
  const rows=await pg.evaluate(()=>document.querySelectorAll('#pmDocs .pmrow').length);
- is(rows===4,'서재 4건이 홍보 발췌 목록에 그대로 보인다 ('+rows+')');
+ is(rows===inLib,'서재에 있는 '+inLib+'건이 홍보 발췌 목록에 그대로 보인다 ('+rows+')');
  await pg.evaluate(()=>{document.querySelectorAll('.pmck').forEach(c=>c.click())});
  await pg.click('#pmRun'); await pg.waitForTimeout(1500);
  const out=await pg.evaluate(()=>document.querySelector('#pmOut').innerText);

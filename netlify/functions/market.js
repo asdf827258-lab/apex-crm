@@ -960,6 +960,17 @@ async function gongsiList(coNm, q) {
   } finally { clearTimeout(timer); }
   let rows = gongsiParse(html, 200);
   if (!rows.length) throw new Error('협회 공시실에서 목록을 읽지 못했습니다 — 페이지가 바뀐 것 같습니다.');
+  /* 같은 상품이 두 번 오면 받기 단추도 두 번 뜬다. 중복은 받지 않는다.
+     같은 파일을 가리키거나 회사+상품명이 같으면 한 건으로 본다. */
+  {
+    const seen = {}, uniq = [];
+    for (const r of rows) {
+      const key = (r.file || (r.co + '|' + r.prod)).trim();
+      if (seen[key]) continue;
+      seen[key] = 1; uniq.push(r);
+    }
+    rows = uniq;
+  }
   const total = rows.length;
   /* 상품명으로 좁히는 일은 여기서 한다. 협회 검색칸은 상품명이 아니라
      보장 내용으로 걸러서, 상품명으로 찾으면 엉뚱한 것이 딸려 온다. */
