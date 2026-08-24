@@ -609,6 +609,12 @@ body.form-mode{background:#fff}
   padding:3.0% 3.8%;overflow:hidden;position:relative}
 #show.wide .slide{width:100%;min-width:0;max-width:none;height:auto;overflow:visible;
   transform-origin:center center}
+/* 접이를 편 채로 장 높이를 재면 그만큼 글씨가 작아진다 — 고객 앞에서 안 보인다.
+   그래서 <b>잴 때만</b> 접어 두고, 크기는 접었을 때 기준으로 정한다. */
+#show.wide .slide.measuring .acc.on .acc-b{display:none}
+/* 편 내용이 장을 넘치면 <b>줄이지 말고 스크롤</b>한다.
+   가운데 정렬이면 넘칠 때 위아래가 같이 잘리므로 위로 붙인다. */
+#show.wide #slides.folded{overflow-y:auto;align-items:flex-start}
 #show.wide .slide.on{display:block}
 #show.wide .deckmark{position:absolute;right:28px;bottom:16px;font-size:9.5px;font-weight:800;
   letter-spacing:.18em;color:var(--gray-3);pointer-events:none}
@@ -4699,6 +4705,11 @@ function fitSlide(){
   var availH=box.clientHeight-parseFloat(cs.paddingTop||0)-parseFloat(cs.paddingBottom||0);
   var availW=box.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
   if(availH<=0||availW<=0) return;
+  /* <b>접이는 재지 않는다.</b> 펴면 장이 길어지고, 길어진 만큼 줄이면 글씨가
+     같이 작아져 고객이 못 읽는다. 접었을 때 크기로 맞추고, 편 내용은 넘치면
+     스크롤한다 — 그래야 펴도 글씨가 그대로다. */
+  var opened=el.querySelector('.acc.on');
+  if(opened) el.classList.add('measuring');
   var k=Math.max(0.95, Math.min(1.34, availW/1180));
   for(var i=0;i<4;i++){
     el.style.zoom=1; el.style.width=(100/k).toFixed(3)+'%';
@@ -4708,8 +4719,11 @@ function fitSlide(){
     if(rendered<=availH*0.995) break;
     k=Math.max(0.52, k*(availH/rendered)*0.985);
   }
+  el.classList.remove('measuring');
   el.style.zoom=k.toFixed(3);
   el.style.width=(100/k).toFixed(3)+'%';
+  /* 편 것이 있으면 넘칠 수 있으니 상자가 스크롤되게 둔다 */
+  box.classList.toggle('folded', !!opened);
 }
 var fitT=null;
 function deckScale(){ clearTimeout(fitT); fitT=setTimeout(fitSlide,16); }
