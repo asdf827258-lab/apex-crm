@@ -146,6 +146,28 @@
     .qcnr .k{margin-bottom:2px;}
     .qcnr .v{min-width:0;margin-bottom:3px;}
   }
+  /* 가까운 코드 — 「이 자료로 보시면 됩니다」 까지다 */
+  .nearc{margin-top:10px;border-top:1px dashed rgba(255,255,255,.35);padding-top:10px;}
+  .nearc .t{font-size:11.5px;font-weight:700;opacity:.92;margin-bottom:6px;}
+  .nearc .cs{display:flex;flex-wrap:wrap;gap:5px;}
+  .nearc .cs i{font-style:normal;font-size:10.8px;background:rgba(255,255,255,.16);
+    border-radius:7px;padding:3px 7px;}
+  .nearc .cs i b{font-weight:800;margin-right:4px;}
+  .nearc .w{font-size:10.8px;opacity:.8;margin-top:7px;line-height:1.5;}
+  /* 🔁 재발 */
+  .rlw{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
+  .rlw1{border:1px solid var(--line);border-radius:11px;padding:10px 12px;background:#fff;}
+  .rlw1 .k{font-size:13px;font-weight:800;color:var(--purple);margin-bottom:4px;}
+  .rlw1 .d{font-size:12.3px;color:var(--ink2);line-height:1.55;}
+  .rlw1 .w{font-size:11.8px;color:#92400E;background:#FFFBEB;border-radius:8px;
+    padding:7px 9px;margin-top:7px;line-height:1.5;}
+  .rlg{border-left:3px solid var(--purple);background:var(--purple-l);
+    border-radius:0 10px 10px 0;padding:10px 12px;margin-bottom:8px;}
+  .rlg .k{font-size:12.8px;font-weight:800;color:var(--ink);margin-bottom:4px;}
+  .rlg .d{font-size:12.3px;color:var(--ink2);line-height:1.6;}
+  .rlg .cv{margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;}
+  .gomore{margin-top:10px;}
+  @media(max-width:640px){ .rlw{grid-template-columns:1fr;} }
   /* 🔍 코드로 찾기 — 진단서의 코드를 그대로 넣어 보는 자리 */
   .kcdbox{border:1.5px solid var(--line);border-radius:14px;padding:14px;background:#fff;margin-bottom:14px;}
   .kcdbox input{width:100%;font-size:16px;font-weight:700;padding:12px 14px;border:1.5px solid var(--line);
@@ -854,6 +876,85 @@ function stageHtml(s){
     '</div></div>';
 }
 
+/* 「이 코드가 찍혀도 이 자료입니다」 — 손으로 적어 둔 코드 밖의 <b>가까운 코드</b>.
+   KCD 2,080벌에서 <b>그때그때 뽑습니다.</b> 자료에 또 적어 두면 언젠가 서로 달라집니다.
+   ★ 이건 「이 병의 코드」가 아니라 <b>「이 자료로 보시면 되는 코드」</b> 입니다.
+     그 말이 화면에서 사라지면 진단명으로 읽힙니다. */
+function dzNearHtml(d){
+  var K = window.DZ_KCD; if (!K || !K.rows) return '';
+  var have = {}; (d.codes || []).forEach(function(c){ have[c[0]] = 1; });
+  var near = K.rows.filter(function(r){ return !have[r[0]] && K.dz(r[0]) === d.id; });
+  if (!near.length) return '';
+  return '<div class="nearc"><div class="t">이 코드가 진단서에 찍혀도 <b>이 자료를 보시면 됩니다</b> — ' +
+    near.length + '벌</div><div class="cs">' +
+    near.map(function(r){ return '<i><b>' + esc(r[0]) + '</b>' + esc(r[1]) + '</i>'; }).join('') +
+    '</div><div class="w">이 목록은 <b>담보를 정하지 않습니다.</b> 「어느 자료를 보십시오」 까지입니다 — ' +
+    '지급은 그 상품 약관의 분류표가 정합니다.</div></div>';
+}
+
+/* 한 줄기 — 재발 → 전이 → 합병증 → 얼마 듭니까.
+   전이·합병증·비용은 <b>따로 있는 화면과 같은 함수</b>로 그립니다. */
+function chainHtml(d){
+  var h = '', R = D.relapse, w = spreadFor(d.id), c = compFor(d.id);
+
+  /* ⑨ 재발 — 「끝났다」 와 「끝나지 않았다」 사이 */
+  if (R) {
+    h += '<div class="sec"><h3><em>' + sn() + '</em>다시 걸리면 — 재발과 전이는 다르게 셉니다</h3>' +
+      '<p style="font-size:12.5px;color:#6B7280;margin-bottom:12px">' + rich(R.head) + '</p>' +
+      '<div class="rlw">' + R.words.map(function(x){
+        return '<div class="rlw1"><div class="k">' + esc(x.k) + '</div>' +
+          '<div class="d">' + rich(x.d) + '</div>' +
+          '<div class="w">' + rich(x.w) + '</div></div>'; }).join('') + '</div>' +
+      R.gate.map(function(g){
+        return '<div class="rlg"><div class="k">' + rich(g.k) + '</div>' +
+          '<div class="d">' + rich(g.d) + '</div>' +
+          '<div class="cv">' + (g.cov || []).map(function(k){
+            return '<button class="pay noprint" onclick="findCov(\'' + esc(k).replace(/'/g, '') + '\')">' +
+                   esc(k) + '</button><span class="payp">' + esc(k) + '</span>'; }).join('') + '</div></div>';
+      }).join('') +
+      '<div class="say"><b>이렇게 말합니다 · </b>' + rich(R.say) + '</div>' +
+      '<div class="kcdwarn" style="margin-top:11px">' + rich(R.tail) + '</div></div>';
+  }
+
+  /* ⑩ 전이 — 이 병이 가는 자리를 그 자리에 편다 */
+  if (w.length) {
+    h += '<div class="sec"><h3><em>' + sn() + '</em>전이 — 이 암은 어디로 가고, 그 자리가 왜 무섭습니까</h3>' +
+      '<div class="spr-mine"><b>' + esc(d.name) + '</b> 는 주로 이쪽으로 갑니다 — ' +
+      w.map(function(x){ return '<i>' + x.ic + ' ' + esc(x.k) + '</i>'; }).join('') + '</div>' +
+      '<p class="spr-p">널리 알려진 <b>경향</b>입니다 — 사람마다 다릅니다. 비율은 적지 않았습니다.</p>' +
+      sprWhereCards(d.id, true) +
+      '<div class="gomore noprint"><button class="btn" onclick="spreadOpen(\'' + d.id + '\')">' +
+      '🩸 가는 길 셋과 전이에서 갈리는 자리까지 →</button></div></div>';
+  }
+
+  /* ⑪ 합병증 — 뒤따라오는 것 */
+  if (c.length) {
+    h += '<div class="sec"><h3><em>' + sn() + '</em>합병증 — 그 뒤에 따라오는 것 ' + c.length + '가지</h3>' +
+      '<p style="font-size:12.5px;color:#6B7280;margin-bottom:11px">큰 병은 걸리는 순간보다 <b>그 뒤가 깁니다.</b> ' +
+      '실제로 오래 나가는 돈도 그쪽입니다.</p>' + compRows(c) + '</div>';
+  }
+
+  /* ⑫ 얼마 듭니까 — 그 병의 숫자부터, 그다음 막아 주는 것과 남는 셋 */
+  if (D.cost) {
+    h += '<div class="sec"><h3><em>' + sn() + '</em>얼마 듭니까</h3>' +
+      costNumHtml(d.id) + costShieldGap() +
+      '<div class="kcdwarn" style="margin-top:12px">' + rich(D.cost.tail) + '</div></div>';
+  }
+  return h;
+}
+
+/* 질병 상세의 <b>차례 번호는 한 곳에서 셉니다.</b>
+   손으로 ①②③… 을 박아 두었더니, 재발·전이·합병증·비용을 사이에 끼우자
+   ⑫ 다음에 ⑧ 이 나왔습니다. 전이가 없는 병에서는 번호를 건너뛰기까지 했습니다.
+   세는 자리를 하나로 두면 칸이 늘거나 빠져도 차례가 어긋날 자리가 없습니다. */
+var SECN = 0;
+function snReset(){ SECN = 0; }
+function sn(){
+  var m = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+  SECN++;
+  return SECN <= m.length ? m.charAt(SECN - 1) : String(SECN);
+}
+
 function detailHtml(d){
   return '<div class="backrow noprint">' +
     '<button class="btn" onclick="close_()">← 질병 목록</button>' +
@@ -864,6 +965,7 @@ function detailHtml(d){
 /* 한 질병의 몸통 — 화면에서 여는 것과 전부 인쇄가 <b>같은 글</b>을 쓴다 */
 function detailBody(d){
   var h = '';
+  snReset();                       /* 질병마다 ① 부터 다시 센다 */
 
   /* 표지 */
   h += '<div class="sec hero"><h2>' + d.ic + ' ' + esc(d.name) + '</h2>' +
@@ -877,10 +979,11 @@ function detailBody(d){
     h += '<div class="nocode">질병코드는 <b>적지 않았습니다</b> — 이 앱의 코드 표에 없어서입니다. ' +
          '비슷한 코드를 끌어다 쓰지 않습니다. 진단서의 코드를 그대로 보십시오.</div>';
   }
+  h += dzNearHtml(d);
   h += '</div>';
 
   /* ① 어떤 병인가 */
-  h += '<div class="sec"><h3><em>①</em>어떤 병입니까</h3>' +
+  h += '<div class="sec"><h3><em>' + sn() + '</em>어떤 병입니까</h3>' +
        (d.what || []).map(function(t){ return '<p>' + rich(t) + '</p>'; }).join('') + '</div>';
 
   /* ② 그림으로 — 말로 3분 걸리는 것을 10초에 */
@@ -913,7 +1016,7 @@ function detailBody(d){
   }
 
   /* ② 왜 생기나 */
-  h += '<div class="sec"><h3><em>③</em>왜 생깁니까</h3>' +
+  h += '<div class="sec"><h3><em>' + sn() + '</em>왜 생깁니까</h3>' +
        (d.cause.why || []).map(function(t){ return '<p>' + rich(t) + '</p>'; }).join('') +
        '<ul class="ul">' + (d.cause.risk || []).map(function(r){
          return '<li>' + rich(r) + '</li>'; }).join('') + '</ul>' +
@@ -922,7 +1025,7 @@ function detailBody(d){
        '<b>말할 때 · </b>' + rich(d.cause.say) + '</div></div>';
 
   /* ③ 치료과정 + ④ 담보 */
-  h += '<div class="sec"><h3><em>④</em>어떻게 치료하고, 그때 어떤 담보가 나옵니까</h3>' +
+  h += '<div class="sec"><h3><em>' + sn() + '</em>어떻게 치료하고, 그때 어떤 담보가 나옵니까</h3>' +
        '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">' +
        '초록 알약이 그 단계에서 열리는 담보입니다. 눌러 보시면 <b>그 담보가 다른 질병 어디에서 또 일하는지</b> 보여 드립니다.</p>' +
        '<div class="path">' + d.path.map(stageHtml).join('') + '</div>' +
@@ -931,19 +1034,22 @@ function detailBody(d){
   /* ⑤ 술식 상세 · ⑥ 사례 · ⑦ 설계사용 설계 */
   h += opsHtml(d) + casesHtml(d) + planHtml(d);
 
-  /* ⑨ 그 뒤에 따라오는 것 — 전이와 합병증 */
-  h += spreadMiniHtml(d);
+  /* ⑨ 한 줄기로 — 재발 → 전이 → 합병증 → 얼마 듭니까.
+     따로 열게 두었더니 「학습자료인데 따로 있다」 고 대표님께 잡혔습니다.
+     맞습니다 — 병 하나를 <b>이어서</b> 봐야 합니다. 그래서 여기에 폅니다.
+     그리는 것은 전이·합병증·비용 화면과 <b>같은 함수</b>입니다(두 벌로 두지 않습니다). */
+  h += chainHtml(d);
 
   /* ⑧ 막히는 자리 */
   if ((d.trap || []).length) {
-    h += '<div class="sec"><h3><em>⑧</em>여기서 자주 막힙니다</h3><div class="traps">' +
+    h += '<div class="sec"><h3><em>' + sn() + '</em>여기서 자주 막힙니다</h3><div class="traps">' +
       d.trap.map(function(t){
         return '<div class="trap"><div class="t">' + esc(t.t) + '</div><div class="d">' + rich(t.d) + '</div></div>';
       }).join('') + '</div></div>';
   }
 
   /* ⑥ 화법 */
-  h += '<div class="sec"><h3><em>⑨</em>어떻게 말합니까</h3>' +
+  h += '<div class="sec"><h3><em>' + sn() + '</em>어떻게 말합니까</h3>' +
     '<div class="talk-open">' + rich(d.talk.open) + '</div>' +
     '<div class="spin">' + (d.talk.spin || []).map(function(s){
       return '<div class="row"><div class="lb">' + esc(s[0]) + '</div><div class="tx">' + rich(s[1]) + '</div></div>';
@@ -954,7 +1060,7 @@ function detailBody(d){
     }).join('') + '</div></div>';
 
   /* ⑦ 근거 */
-  h += '<div class="sec"><h3><em>⑩</em>근거</h3>';
+  h += '<div class="sec"><h3><em>' + sn() + '</em>근거</h3>';
   if ((d.src || []).length) {
     h += '<ul class="src">' + d.src.map(function(s){
       return '<li>· ' + esc(s[0]) + ' <a href="' + esc(s[1]) + '" target="_blank" rel="noopener">원문 ↗</a></li>';
@@ -1035,7 +1141,7 @@ function vizHtml(d){
   if (!V) return '';
   var list = V.forDz(d.id);
   if (!list.length) return '';
-  return '<div class="sec"><h3><em>②</em>그림으로 보기</h3>' +
+  return '<div class="sec"><h3><em>' + sn() + '</em>그림으로 보기</h3>' +
     list.map(function(v){
       return '<div class="viz"><div class="vt">' + esc(v.t) + '</div>' +
         '<div class="vd">' + rich(v.d) + '</div>' + v.html +
@@ -1047,7 +1153,7 @@ function vizHtml(d){
 function opsHtml(d){
   var L = (D.ops || []).filter(function(o){ return o.dz === d.id; });
   if (!L.length) return '';
-  return '<div class="sec"><h3><em>⑤</em>어떻게 수술·치료합니까</h3>' +
+  return '<div class="sec"><h3><em>' + sn() + '</em>어떻게 수술·치료합니까</h3>' +
     '<p style="font-size:12.5px;color:#6B7280;margin-bottom:12px;">고객은 「어떻게 하는 건데요」 를 묻습니다. ' +
     '빨간 <b>보험</b> 줄이 <b>수술인가 시술인가</b> 를 가르는 자리입니다.</p><div class="ops">' +
     L.map(function(o){
@@ -1399,14 +1505,11 @@ function costSrcTag(i){
   return r ? '<a href="' + esc(r[1]) + '" target="_blank" rel="noopener" style="font-size:11px;font-weight:700">근거 ↗</a>' : '';
 }
 
-function costHtml(dzId){
-  var C = D.cost;
-  var h = '<div class="backrow noprint">' +
-    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
-    '<button class="btn" onclick="window.print()">🖨 인쇄</button></div>';
-  h += '<div class="sec"><h3><em>💰</em>얼마 듭니까</h3>' +
-    '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">' + rich(C.head) + '</p>';
-
+/* 「막아 주는 것 · 남는 셋」 — 모든 병에 그대로 통하는 자리다. <b>한 벌만</b> 둔다.
+   💰 화면과 질병 상세가 같은 것을 그린다. */
+function costShieldGap(){
+  var C = D.cost; if (!C) return '';
+  var h = '';
   h += '<div class="qcshield"><h4>먼저 — 나라가 막아 주는 것</h4>' +
     C.shield.map(function(x){
       return '<div class="qcs"><div class="k">' + rich(x.k) + '</div>' +
@@ -1426,16 +1529,13 @@ function costHtml(dzId){
         }).join('') + '</div></div>';
     }).join('') + '</div>';
 
-  /* 질병마다 확인한 숫자 — 없으면 <b>없다고 적습니다</b> */
-  var pick = dzId || (document.getElementById('q') ? '' : '');
-  h += '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin:16px 0 8px">질병마다 확인한 숫자</div>';
-  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px">' +
-    D.list.map(function(d){
-      var on = (d.id === pick) ? ' on' : '';
-      return '<button class="pill' + on + '" onclick="costOpen(\'' + d.id + '\')">' + esc(d.ic) + ' ' + esc(d.name) + '</button>';
-    }).join('') + '</div>';
+  return h;
+}
 
-  if (pick) {
+/* 그 병에서 <b>확인한 숫자</b>. 없으면 없다고 적는다 — 지어내지 않는다. */
+function costNumHtml(pick){
+  var C = D.cost; if (!C) return '';
+  var h = '';
     var rows = C.byDz[pick], d = D.list.filter(function(x){ return x.id === pick; })[0];
     if (rows && rows.length) {
       h += '<div class="qcnum"><div class="h">' + esc(d.ic) + ' ' + esc(d.name) + '</div>' +
@@ -1449,7 +1549,29 @@ function costHtml(dzId){
         '지어내지 않습니다 — 위의 <b>막아 주는 것</b>과 <b>남는 셋</b>은 모든 병에 그대로 통하니 그것으로 말씀하시고, ' +
         '금액은 <b>「지금 기준으로 확인해 드리겠습니다」</b> 라고 하십시오.</div>';
     }
-  }
+  return h;
+}
+
+function costHtml(dzId){
+  var C = D.cost;
+  var h = '<div class="backrow noprint">' +
+    '<button class="btn" onclick="close_()">← 질병 목록</button>' +
+    '<button class="btn" onclick="window.print()">🖨 인쇄</button></div>';
+  h += '<div class="sec"><h3><em>💰</em>얼마 듭니까</h3>' +
+    '<p style="font-size:12.5px;color:#6B7280;margin-bottom:14px;">' + rich(C.head) + '</p>';
+
+  h += costShieldGap();
+
+  /* 질병마다 확인한 숫자 — 없으면 <b>없다고 적습니다</b> */
+  var pick = dzId || (document.getElementById('q') ? '' : '');
+  h += '<div style="font-size:12.5px;font-weight:800;color:#0D1117;margin:16px 0 8px">질병마다 확인한 숫자</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px">' +
+    D.list.map(function(d){
+      var on = (d.id === pick) ? ' on' : '';
+      return '<button class="pill' + on + '" onclick="costOpen(\'' + d.id + '\')">' + esc(d.ic) + ' ' + esc(d.name) + '</button>';
+    }).join('') + '</div>';
+
+  if (pick) h += costNumHtml(pick);
 
   h += '<div class="kcdwarn" style="margin-top:14px">' + rich(C.tail) + '</div>';
   h += '<ul class="src">' + C.src.map(function(r){
@@ -1649,6 +1771,35 @@ function spreadFor(id){
   return (m[id] || []).map(spreadWhere).filter(Boolean);
 }
 
+/* 「자리마다 무슨 일이 벌어지나」 카드 — <b>한 벌만</b> 둔다.
+   전이 화면과 질병 상세가 같은 것을 그린다. 두 벌이면 한쪽만 고쳐진다.
+   only=true 면 <b>그 병이 가는 자리만</b> 추린다(질병 상세에서 쓴다). */
+function sprWhereCards(dzId, only){
+  var S = D.spread; if (!S || !S.where) return '';
+  var mineK = {};
+  if (dzId) spreadFor(dzId).forEach(function (w) { mineK[w.k] = 1; });
+  var list = only ? S.where.filter(function (w) { return mineK[w.k]; }) : S.where;
+  return list.map(function (w) {
+    var on = mineK[w.k];
+    return '<div class="spr-w' + (on ? ' on' : '') + '">' +
+      '<div class="wh"><span class="ic">' + w.ic + '</span><b>' + esc(w.k) + '</b>' +
+      (on ? '<span class="tag">이 암이 잘 가는 자리</span>' : '') + '</div>' +
+      '<div class="from">' + esc(w.from) + '</div>' +
+      '<div class="row"><span class="lb">왜 그리 갑니까</span><span class="tx">' + rich(w.why) + '</span></div>' +
+      '<div class="row fear"><span class="lb">왜 무섭습니까</span><span class="tx">' + rich(w.fear) + '</span></div>' +
+      '<div class="row"><span class="lb">이것이 보이면</span><span class="tx"><ul>' +
+      w.sign.map(function (x) { return '<li>' + rich(x) + '</li>'; }).join('') + '</ul></span></div>' +
+      '<div class="row"><span class="lb">무엇을 합니까</span><span class="tx"><ul>' +
+      w.care.map(function (x) { return '<li>' + rich(x) + '</li>'; }).join('') + '</ul></span></div>' +
+      '<div class="covs"><span class="lb">그때 열리는 담보</span><span class="cs">' +
+      w.cov.map(function (k) {
+        return '<button class="pay noprint" onclick="findCov(\'' + esc(k).replace(/'/g, '') + '\')">' +
+               esc(k) + '</button><span class="payp">' + esc(k) + '</span>'; }).join('') + '</span></div>' +
+      '<div class="say"><b>이렇게 말합니다 · </b>' + rich(w.talk) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
 function spreadPaint(){
   var S = D.spread;
   if (!S) { showDetail('<div class="none">전이 자료를 못 읽었습니다.</div>'); return; }
@@ -1701,29 +1852,8 @@ function spreadPaint(){
   }
 
   /* ③ 자리마다 — 왜 가나 · 왜 무섭나 · 무엇이 보이면 · 그때 열리는 담보 */
-  h += '<div class="sec"><h3><em>③</em>자리마다 무슨 일이 벌어집니까</h3>';
-  var mineK = {};
-  if (dz) spreadFor(dz.id).forEach(function (w) { mineK[w.k] = 1; });
-  S.where.forEach(function (w) {
-    var on = mineK[w.k];
-    h += '<div class="spr-w' + (on ? ' on' : '') + '">' +
-      '<div class="wh"><span class="ic">' + w.ic + '</span><b>' + esc(w.k) + '</b>' +
-      (on ? '<span class="tag">이 암이 잘 가는 자리</span>' : '') + '</div>' +
-      '<div class="from">' + esc(w.from) + '</div>' +
-      '<div class="row"><span class="lb">왜 그리 갑니까</span><span class="tx">' + rich(w.why) + '</span></div>' +
-      '<div class="row fear"><span class="lb">왜 무섭습니까</span><span class="tx">' + rich(w.fear) + '</span></div>' +
-      '<div class="row"><span class="lb">이것이 보이면</span><span class="tx"><ul>' +
-      w.sign.map(function (x) { return '<li>' + rich(x) + '</li>'; }).join('') + '</ul></span></div>' +
-      '<div class="row"><span class="lb">무엇을 합니까</span><span class="tx"><ul>' +
-      w.care.map(function (x) { return '<li>' + rich(x) + '</li>'; }).join('') + '</ul></span></div>' +
-      '<div class="covs"><span class="lb">그때 열리는 담보</span><span class="cs">' +
-      w.cov.map(function (k) {
-        return '<button class="pay noprint" onclick="findCov(\'' + esc(k).replace(/'/g, '') + '\')">' +
-               esc(k) + '</button><span class="payp">' + esc(k) + '</span>'; }).join('') + '</span></div>' +
-      '<div class="say"><b>이렇게 말합니다 · </b>' + rich(w.talk) + '</div>' +
-      '</div>';
-  });
-  h += '</div>';
+  h += '<div class="sec"><h3><em>③</em>자리마다 무슨 일이 벌어집니까</h3>' +
+       sprWhereCards(dz ? dz.id : '', false) + '</div>';
 
   /* ④ 전이에서 갈리는 자리 */
   h += '<div class="sec"><h3><em>④</em>전이에서 실제로 갈리는 자리</h3>';
@@ -1805,26 +1935,6 @@ function compPaint(){
 }
 
 /* 질병 상세에 들어가는 <b>짧은 칸</b> — 전이와 합병증을 그 자리에서 보여 준다 */
-function spreadMiniHtml(d){
-  var w = spreadFor(d.id), c = compFor(d.id);
-  if (!w.length && !c.length) return '';
-  var h = '<div class="sec"><h3><em>⑨</em>그 뒤에 따라오는 것 — 전이와 합병증</h3>';
-  if (w.length) {
-    h += '<div class="spr-mini"><div class="t">🩸 이 암은 주로 <b>' +
-      w.map(function (x) { return x.ic + ' ' + esc(x.k); }).join(' · ') + '</b> 로 갑니다</div>' +
-      '<div class="d">' + rich(w[0].fear) + '</div>' +
-      '<button class="btn noprint" onclick="spreadOpen(\'' + d.id + '\')">🩸 자리마다 무슨 일이 생기는지 →</button></div>';
-  }
-  if (c.length) {
-    h += '<div class="cmp-mini"><div class="t">🩹 뒤따라오는 것 <b>' + c.length + '가지</b></div>' +
-      '<div class="chips">' + c.map(function (x) {
-        return '<span class="chip">' + esc(x.k.replace(/\s*—.*$/, '')) + '</span>'; }).join('') + '</div>' +
-      '<div class="d">큰 병은 걸리는 순간보다 <b>그 뒤가 깁니다.</b> 실제로 오래 나가는 돈도 그쪽입니다.</div>' +
-      '<button class="btn noprint" onclick="compOpen(\'' + d.id + '\')">🩹 무엇이 따라오고 그때 뭐가 나오는지 →</button></div>';
-  }
-  h += '</div>';
-  return h;
-}
 
 /* ══ 🔗 겹쳐 받는 법 ═══════════════════════════════════════════
    설계사가 놓치는 것은 빠뜨린 담보보다 <b>한 사건에서 몇 개가 동시에 열리는가</b>
@@ -2227,7 +2337,7 @@ function drillCopy(){
 function planHtml(d){
   var P = d.plan;
   if (!P) return '';
-  var h = '<div class="sec pro"><h3><em>⑦</em>이렇게 설계합니다' +
+  var h = '<div class="sec pro"><h3><em>' + sn() + '</em>이렇게 설계합니다' +
     '<span class="pro-badge">설계사용 · 고객 화면 아님</span></h3>';
 
   h += '<div class="pro-why">' + (P.why || []).map(function(t){
@@ -2284,11 +2394,11 @@ function casesHtml(d){
   var ids = d.caseIds || [];
   var L = ids.map(caseById).filter(Boolean);
   if (!L.length) {
-    return '<div class="sec"><h3><em>⑥</em>이런 분이 이렇게 받으셨습니다</h3>' +
+    return '<div class="sec"><h3><em>' + sn() + '</em>이런 분이 이렇게 받으셨습니다</h3>' +
       '<p style="font-size:12.5px;color:#6B7280;">이 질병에는 <b>아직 사례를 붙이지 않았습니다.</b> ' +
       '없는 사례를 지어내지 않습니다 — 청구·사후관리 화면의 지급사례에서 비슷한 건을 찾아보십시오.</p></div>';
   }
-  return '<div class="sec"><h3><em>⑥</em>이런 분이 이렇게 받으셨습니다</h3>' +
+  return '<div class="sec"><h3><em>' + sn() + '</em>이런 분이 이렇게 받으셨습니다</h3>' +
     '<p style="font-size:12.5px;color:#6B7280;margin-bottom:12px;">위의 치료 흐름이 <b>한 사람에게 실제로 어떻게 흘러가는지</b>입니다. ' +
     '사람은 견본이고, <b>금액은 구조를 보여 주는 예시</b>입니다 — 지급을 보장하는 숫자가 아닙니다.</p><div class="cases">' +
     L.map(function(c){

@@ -888,17 +888,24 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/투석/.test(cpTxt), '당뇨의 종착역(투석)을 합병증에서 짚는다');
   is(await page.locator('.cmp-c .covs .pay').count() > 0, '합병증마다 <b>그때 열리는 담보</b>를 누를 수 있다');
 
-  /* 질병 상세에 짧은 칸이 붙는가 */
-  let miniS = 0, miniC = 0;
+  /* 질병 상세가 <b>한 줄기</b>인가 — 재발 → 전이 → 합병증 → 얼마 듭니까.
+     처음에는 짧은 칸 + 「→ 보러 가기」 단추였다. 대표님이 「학습자료인데 왜 따로
+     있느냐」 고 하셨고 맞는 말이다. 이제 <b>그 자리에 전문을 편다.</b>
+     그래서 여기서도 단추가 아니라 <b>알맹이가 실제로 있는지</b>를 본다. */
+  let miniS = 0, miniC = 0, miniR = 0, miniCost = 0;
   for (const d of D.list) {
     await page.evaluate(i => open_(i), d.id);
     await page.waitForTimeout(90);
-    if (await page.locator('.spr-mini').count()) miniS++;
-    if (await page.locator('.cmp-mini').count()) miniC++;
+    if (await page.locator('.spr-w').count()) miniS++;
+    if (await page.locator('.cmp-c').count()) miniC++;
+    if (await page.locator('.rlg').count()) miniR++;
+    if (await page.locator('.qcshield').count()) miniCost++;
   }
-  is(miniC === D.list.length, '질병마다 상세에 <b>합병증 한 줄</b>이 붙는다 (' + miniC + '/' + D.list.length + ')');
+  is(miniC === D.list.length, '질병마다 상세에 <b>합병증 전문</b>이 이어 붙는다 (' + miniC + '/' + D.list.length + ')');
+  is(miniR === D.list.length, '질병마다 상세에 <b>재발</b> 칸이 붙는다 (' + miniR + '/' + D.list.length + ')');
+  is(miniCost === D.list.length, '질병마다 상세에 <b>얼마 듭니까</b>가 붙는다 (' + miniCost + '/' + D.list.length + ')');
   is(miniS === Object.keys((SP && SP.byDz) || {}).filter(k => (SP.byDz[k] || []).length).length,
-     '전이 한 줄은 <b>경로를 적어 둔 암에만</b> 붙는다 (' + miniS + '개) — 없는 질병에 지어내 붙이지 않는다');
+     '전이는 <b>경로를 적어 둔 암에만</b> 붙는다 (' + miniS + '개) — 없는 질병에 지어내 붙이지 않는다');
   await page.close();
 
   /* ═══ 8-3. 범위 표 ═══
@@ -1170,6 +1177,87 @@ const PAGE = 'app/재무설계/질병보험가이드.html';
   is(/확인한 자료를 아직 못 붙였습니다/.test(cT2) && /지어내지 않습니다/.test(cT2),
      '자료가 없는 병에는 <b>없다고 적는다</b> — 지어내지 않는다 (' + cEmpty + ')');
   is((await page.locator('.qcnum').count()) === 0, '없는 병에 <b>빈 숫자 칸을 세우지 않는다</b>');
+  await page.close();
+
+  /* ═══ 8-6. 한 줄기 ═══
+     「암 → 재발 → 전이 를 한 번에 이어서 봐야 하는데 따로다」 — 대표님 말씀이
+     맞았다. 학습자료인데 도구줄로 흩어 놓았다. 이제 질병 상세가 한 줄기다.
+
+     ★ 차례 번호를 <b>손으로 박지 않는다.</b> 실제로 ⑫ 다음에 ⑧ 이 나왔고,
+       전이가 없는 병에서는 번호를 건너뛰었다. 세는 자리를 하나로 두면
+       칸이 늘거나 빠져도 어긋날 데가 없다 — 그것을 여기서 본다.            */
+  console.log('\n[19] 한 줄기 — 재발→전이→합병증→비용이 이어지는가 · 차례가 어긋나지 않는가');
+  const R = D.relapse;
+  is(!!(R && R.head && R.words && R.gate && R.say && R.tail),
+     '재발 자료가 다섯 토막을 다 갖췄다 (머리·세 낱말·갈리는 자리·화법·꼬리)');
+  is((R.words || []).length >= 3 && (R.gate || []).length >= 4,
+     '재발 · 전이 · 잔존을 <b>갈라 두고</b>, 지급이 갈리는 자리를 짚는다');
+
+  /* 재발은 <b>숫자를 적기 가장 쉬운 자리</b>다 — 재발률·생존율은 자료마다 다르다 */
+  const rlTxt = JSON.stringify(R);
+  const rlNum = (rlTxt.match(/[0-9]+\s*(%|퍼센트)/g) || []);
+  is(rlNum.length === 0, '재발에 <b>외운 비율을 적지 않는다</b>' + (rlNum.length ? ' — 적혀 있음: ' + rlNum.join(' / ') : ''));
+  is(/약관과 심사가 정합니다/.test(R.tail), '재발도 <b>「약관과 심사가 정합니다」</b> 로 닫는다');
+
+  /* 담보 이름은 여기서도 말모이 안의 것만 */
+  const rlBad = [];
+  (R.gate || []).forEach(g => (g.cov || []).forEach(k => { if (!VOCAB.has(k)) rlBad.push(g.k + ' · ' + k); }));
+  is(rlBad.length === 0, '재발에 붙인 담보가 <b>전부 말모이에 있다</b>' +
+     (rlBad.length ? ' — 없는 이름: ' + rlBad.join(' / ') : ''));
+
+  page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await page.goto(`http://localhost:${PORT}/${PAGE.split('/').map(encodeURIComponent).join('/')}`, { waitUntil: 'networkidle' });
+
+  /* 차례가 ①부터 하나씩, 건너뛰지도 되돌아가지도 않는가 — 질병 전부에서 */
+  const MARKS = '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+  const seqBad = [];
+  for (const d of D.list) {
+    await page.evaluate(i => open_(i), d.id);
+    await page.waitForTimeout(90);
+    const ems = await page.$$eval('#detailPane .sec h3 em', ns => ns.map(n => n.textContent));
+    const nums = ems.filter(t => MARKS.indexOf(t) >= 0);
+    const want = nums.map((_, i) => MARKS.charAt(i));
+    if (nums.join('') !== want.join('')) seqBad.push(d.id + ': ' + nums.join(''));
+  }
+  is(seqBad.length === 0, '질병 ' + D.list.length + '종 <b>차례가 ①부터 하나씩</b> 이어진다' +
+     (seqBad.length ? ' — 어긋남: ' + seqBad.slice(0, 4).join(' / ') : ''));
+
+  /* 한 줄기 — 암이면 재발 다음이 전이, 그다음 합병증, 그다음 비용 */
+  await page.evaluate(() => open_('cancer_major'));
+  await page.waitForTimeout(300);
+  const chainT = await page.$$eval('#detailPane .sec h3', ns => ns.map(n => n.innerText.replace(/\n/g, ' ')));
+  const idx = k => chainT.findIndex(t => t.indexOf(k) >= 0);
+  is(idx('다시 걸리면') >= 0 && idx('전이 —') > idx('다시 걸리면') &&
+     idx('합병증 —') > idx('전이 —') && idx('얼마 듭니까') > idx('합병증 —'),
+     '암은 <b>재발 → 전이 → 합병증 → 얼마</b> 차례로 이어진다 — 따로 열지 않는다');
+
+  /* 「보러 가기」 단추만 있고 알맹이가 없으면 안 된다 */
+  is((await page.locator('.spr-w').count()) > 0 && (await page.locator('.cmp-c').count()) > 0 &&
+     (await page.locator('.qcshield').count()) > 0,
+     '단추가 아니라 <b>알맹이가 그 자리에</b> 있다 (전이 카드 · 합병증 · 막아 주는 것)');
+
+  /* 코드 — 그 병의 코드가 다 있고, 가까운 코드는 「자료를 보시면 됩니다」 까지다 */
+  /* ★ 처음엔 화면 전체 글자에서 코드를 찾았다. 그랬더니 I66 을 자료에서 <b>빼도
+     점검이 통과</b>했다 — 「가까운 코드」 목록이 KCD 에서 그것을 도로 그려 주기
+     때문이다. 안 울리는 알람은 알람이 아니다. <b>이 병의 코드 칸(.codes)만</b> 본다. */
+  const chips = async id => {
+    await page.evaluate(i => open_(i), id);
+    await page.waitForTimeout(250);
+    return page.$$eval('.codes i b', ns => ns.map(n => n.textContent));
+  };
+  const stC = await chips('stroke');
+  const stMiss = ['I60','I61','I62','I63','I64','I65','I66','I67','I68','I69'].filter(c => stC.indexOf(c) < 0);
+  is(stMiss.length === 0, '뇌졸중 <b>이 병의 코드</b> 칸에 I60~I69 가 하나도 안 빠졌다' +
+     (stMiss.length ? ' — 빠짐: ' + stMiss.join(',') : ''));
+  const miC = await chips('mi');
+  const miMiss = ['I20','I21','I22','I23','I24','I25'].filter(c => miC.indexOf(c) < 0);
+  is(miMiss.length === 0, '허혈성심장질환 <b>이 병의 코드</b> 칸에 I20~I25 가 하나도 안 빠졌다' +
+     (miMiss.length ? ' — 빠짐: ' + miMiss.join(',') : ''));
+  await page.evaluate(() => open_('stroke'));
+  await page.waitForTimeout(250);
+  const stT = await page.locator('#detailPane').innerText();
+  is(/이 자료를 보시면 됩니다/.test(stT) && /담보를 정하지 않습니다/.test(stT),
+     '가까운 코드는 <b>「이 자료를 보시면 됩니다」</b> 까지다 — 담보를 정하지 않는다');
   await page.close();
 
   /* ═══ 9. 일부러 끊어 본다 ═══ */
