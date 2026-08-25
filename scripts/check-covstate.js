@@ -82,7 +82,47 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   /* 계약 상태(state)를 납입 상태로 쓰면 해지와 섞인다 */
   is(!/insPayStatus[\s\S]{0,300}p\.state/.test(CODE),
      '  판정에 계약 상태(state)를 끌어다 쓰지 않는다 — 해지와 섞이는 자리다');
-  is(/납입상태/.test(APP), '  화면에 「납입상태」 칸이 있다');
+  /* 「글자가 파일 어딘가에 있다」 는 알람이 아니다 — 실제로 <b>읽기 카드</b>에
+     찍히는지 본다. 브리핑·덱에만 있고 정작 설계사가 제일 먼저 보는 표에는
+     없던 자리다. */
+  const card = await page.evaluate(() => {
+    const D = [
+      '홍길동 (48세, 남자)',
+      '홍길동 님의 전체 계약리스트',
+      '1 정상 삼성생명 무배당 알파Plus보장보험 2006-05-01 월납 10 년 100 세 87,300 원',
+      '2 정상 메리츠화재 내맘같은 건강보험 2025-05-01 월납 20 년 100 세 112,400 원',
+      '3 정상 한화생명 무배당 평생보장종신보험 2015-03-01 전기납 종신 종신 154,000 원',
+      '4 정상 교보생명 무배당 실속종신보험 2012-06-01 종신납 종신 종신 210,000 원'
+    ].join(' ');
+    const sc = insScan(D);
+    if (!sc) return null;
+    const box = document.createElement('div'); box.innerHTML = insCardHtml(sc);
+    const head = [].map.call(box.querySelectorAll('.ir-tb th'), e => e.textContent.trim());
+    const rows = [].map.call(box.querySelectorAll('.ir-tb tbody tr'),
+      tr => [].map.call(tr.children, td => td.textContent.trim()));
+    return { n: sc.plans.length, head: head, rows: rows,
+             terms: sc.plans.map(p => insTermLabel(p)),
+             brief: insBrief(sc) };
+  });
+  is(!!card, '  읽기 카드를 세울 수 있다');
+  if (card) {
+    is(card.head.indexOf('납입상태') >= 0,
+       '  읽기 카드 표에 「납입상태」 칸이 있다 — ' + card.head.join(' / '));
+    is(card.rows.some(r => r.indexOf('납입완료') >= 0),
+       '  다 낸 계약이 「납입완료」 로 찍힌다');
+    is(card.rows.some(r => r.indexOf('확인필요') >= 0),
+       '  햇수를 모르는 계약은 「확인필요」 로 찍힌다 — 짐작으로 완료라 하지 않는다');
+    is(/납입상태/.test(card.brief), '  AI 에게 보내는 브리핑에도 납입상태가 간다');
+    /* ── 종신납·전기납 계약을 통째로 빠뜨리지 않는다 ──────────────────
+       납입기간 칸에 숫자만 온다고 보고 (\d{1,2})년 만 읽던 때에는 종신보험이
+       <b>계약 목록에서 아예 사라졌다.</b> 대개 제일 큰 계약이라 고객이 그
+       자리에서 「내 종신보험은요?」 라고 묻는다. */
+    is(card.n === 4, '  종신납·전기납 계약도 읽는다 — ' + card.n + '건 (넷 다)');
+    is(card.terms.indexOf('전기납 종신') >= 0 && card.terms.indexOf('종신납 종신') >= 0,
+       '  납입 조건을 적힌 그대로 적는다 — ' + card.terms.join(' / '));
+    is(!card.terms.some(t => /종신년|전기년/.test(t)),
+       '  「종신년」 처럼 없는 말을 만들지 않는다');
+  }
 
   console.log('\n[2] 뇌·심장 — 「외 N개」 에 숨기지 않는다');
   const cov = await page.evaluate(() => {
