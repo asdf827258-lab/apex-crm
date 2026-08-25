@@ -143,7 +143,9 @@
     <p>Supabase 프로젝트 주소와 공개용 anon key를 한 번 입력하면 이 브라우저에 저장됩니다.</p>
     <div class="field"><label>Project URL</label><input id="configUrl" placeholder="https://xxxxx.supabase.co"></div>
     <div class="field"><label>Anon / Publishable Key</label><textarea id="configKey" placeholder="eyJ..."></textarea></div>
+    <div id="cfgWhy" class="setup-note hidden"></div>
     <button class="btn btn-primary wide" onclick="saveConfig()">연결 저장</button>
+    <button class="btn wide" style="margin-top:8px" onclick="resetConfig()">↩ 기본 연결로 되돌리기</button>
     <div class="setup-note">이 키는 브라우저에서 사용하는 공개 키입니다. <b>service_role 키는 절대 입력하지 마세요.</b></div>
   </div>
 </section>
@@ -477,11 +479,38 @@ function isAdmin(){return canManageTeam()}
 const APEX_DEFAULT_SB={url:"https://miakdhxtqofpndtlyzxa.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU"};
 function init(){
   const fileCfg=(window.APEX_CONFIG && !String(window.APEX_CONFIG.url||"").includes("YOUR_PROJECT")) ? window.APEX_CONFIG : null;
-  const cfg=fileCfg || JSON.parse(localStorage.getItem(CONFIG_KEY)||"null") || APEX_DEFAULT_SB;
+  /* 이 브라우저에 한 번 잘못 저장된 설정이 <b>올바른 기본값을 영원히 이기고</b> 있었다.
+     되돌릴 단추도 화면에 없어서, 한 번 어긋나면 그 브라우저에서는 계속 안 열렸다.
+     쓸 수 없는 값이면 <b>없는 셈 치고</b> 기본 연결로 돌아간다 — 스스로 낫는다. */
+  let saved=null;
+  try{ saved=JSON.parse(localStorage.getItem(CONFIG_KEY)||"null"); }catch(e){ saved=null; }
+  if(!sbCfgOk(saved)) saved=null;
+  const cfg=fileCfg || saved || APEX_DEFAULT_SB;
   if(!cfg){$("configScreen").classList.remove("hidden");return}
   connect(cfg.url,cfg.key);
 }
+/* 쓸 수 있는 설정인가 — 빈 값·예시값은 설정이 아니다 */
+function sbCfgOk(c){
+  if(!c) return false;
+  const u=String(c.url||"").trim(), k=String(c.key||"").trim();
+  if(!u||!k) return false;
+  if(u.includes("YOUR_PROJECT")||u.includes("xxxxx")) return false;
+  return /^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(u);
+}
 function connect(url,key){
+  /* 라이브러리가 안 실려 왔는데 「연결 설정을 확인해 주세요」 라고 하면,
+     설정이 멀쩡한데도 <b>키를 다시 넣게</b> 만든다. 그러다 잘못 저장하면
+     그때부터 진짜로 안 열린다. 무엇이 없는지 그대로 말한다. */
+  if(typeof supabase==="undefined"||!supabase||!supabase.createClient){
+    $("configScreen").classList.remove("hidden");
+    const n=$("cfgWhy"); if(n){
+      n.classList.remove("hidden");
+      n.innerHTML="<b>설정 문제가 아닙니다.</b> 서버 연결 라이브러리를 못 받아 왔습니다 — "+
+                  "인터넷 연결을 확인하시고 <b>새로고침</b>해 주세요. 키는 다시 넣지 않으셔도 됩니다.";
+    }
+    toast("연결 라이브러리를 못 받아 왔습니다 — 새로고침해 주세요.");
+    return;
+  }
   try{sb=supabase.createClient(url,key);$("configScreen").classList.add("hidden");$("authScreen").classList.remove("hidden");
     sb.auth.onAuthStateChange((_event,s)=>{session=s;if(s)startApp();else showLogin()});
     sb.auth.getSession().then(({data})=>{session=data.session;if(session)startApp()});
