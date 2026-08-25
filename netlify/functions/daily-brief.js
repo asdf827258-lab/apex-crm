@@ -27,6 +27,15 @@ const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 const KIND = 'daily_brief';
 
+/* 팀원이 올리는 보고의 갈래. 표 한 곳에서만 답한다 — 갈래가 늘어도 빠뜨릴 자리가 없다. */
+const SUB_LABEL = { growth: '성장', meeting: '회의', material: '자료', issue: '이슈' };
+
+/* 보고 <b>글</b>은 아무나 못 본다. 앱의 규칙이 「작성자 본인 + 대표만 조회」이므로
+   (reports_select: author_id = auth.uid() or is_owner()) <b>리더 한 장에는 제목을 담지 않는다.</b>
+   이 한 장은 service_role 이 쓰므로, 여기서 담으면 RLS 를 우회해 남의 글이 새어 나간다.
+   리더에게는 <b>건수만</b> 준다 — 숫자는 글이 아니다. */
+const SUB_TEXT_OK = { all: true, team: false, self: true };
+
 /* 직책 → 어디까지 보나. 조직도 직책이 정본이고, 비어 있으면 앱 권한으로 채운다. */
 const SCOPE = {
   '사업단장': 'all',
@@ -108,6 +117,10 @@ function countFor(ids, data, today) {
     : data.aiUsage.filter(u => has[u.member_id] && u.usage_date === today)
                   .reduce((s, u) => s + (u.cnt || 0), 0);
 
+  /* 오늘 올라온 보고 — 건수는 누구나 볼 수 있다. 글은 아래에서 따로 가른다. */
+  n.subs = data.subs === null ? null
+    : data.subs.filter(r => has[r.author_id] && (r.created_at || '').slice(0, 10) === today).length;
+
   /* 사흘 넘게 아무 기척이 없는 사람 — 리더가 아침에 제일 먼저 볼 자리다.
      출근표를 못 읽었으면 「없다」고 하지 않고 모른다고 남긴다. */
   if (data.attendance === null) {
@@ -135,6 +148,8 @@ function lines(n, scope) {
   say(n.attend, v => '오늘 출근 ' + v + '명 / ' + n.people + '명', '출근');
   say(n.newClients, v => '오늘 새로 담은 고객 ' + v + '건', '고객');
   say(n.reports, v => '오늘 만든 자료 ' + v + '건', '상담자료');
+  say(n.subs, v => (v > 0 ? '오늘 올라온 보고 ' + v + '건'
+                          : '오늘 올라온 보고는 아직 없습니다'), '보고');
   if (scope !== 'self') say(n.quiet, v => (v > 0
     ? '사흘 넘게 기척 없는 사람 ' + v + '명 — 먼저 연락해 보십시오'
     : '사흘 넘게 기척 없는 사람은 없습니다'), '출근');
@@ -158,7 +173,7 @@ exports.handler = async () => {
 
   /* 표마다 딱 한 번씩만 읽는다 (7번). 30일치를 한 번에 받아 메모리에서 가른다. */
   const d30 = kstDate(29);
-  const [profs, orgs, teams, tmems, attendance, clients, saved, aiUsage] = await Promise.all([
+  const [profs, orgs, teams, tmems, attendance, clients, saved, aiUsage, subs] = await Promise.all([
     readOr('profiles?select=id,name,role,active'),
     readOr('org_members?select=member_id,rank,name'),
     readOr('teams?select=id,name,leader_id'),
@@ -167,7 +182,11 @@ exports.handler = async () => {
     readOr('clients?select=advisor_id,created_at&created_at=gte.' + d30 + 'T00:00:00'),
     readOr('saved_reports?select=advisor_id,created_at&kind=neq.' + KIND +
            '&created_at=gte.' + d30 + 'T00:00:00'),
-    readOr('ai_usage?select=member_id,usage_date,cnt&usage_date=gte.' + d30)
+    readOr('ai_usage?select=member_id,usage_date,cnt&usage_date=gte.' + d30),
+    /* body 는 받지 않는다 — 팀원이 쓴 본문에는 고객 이야기가 섞일 수 있고(3번),
+       한 장에 필요한 것은 「누가 무엇을 올렸나」 뿐이다. */
+    readOr('reports?select=author_id,author_name,kind,title,created_at&created_at=gte.' +
+           d30 + 'T00:00:00')
   ]);
 
   /* 명단을 못 읽으면 <b>아무 한 장도 세우지 않는다</b> (1번 — 값이 없으면 화면을 세우지 않는다). */
@@ -191,7 +210,7 @@ exports.handler = async () => {
     (leaderTeams[t.leader_id] = leaderTeams[t.leader_id] || []).push(t.id);
   });
 
-  const data = { attendance, clients, saved, aiUsage };
+  const data = { attendance, clients, saved, aiUsage, subs };
   const unknownRanks = {};
   const rows = [];
 
@@ -204,8 +223,22 @@ exports.handler = async () => {
     if (scope === 'self' && leaderTeams[me.id]) scope = 'team';
 
     const crew = peopleFor(scope, me, teamOf, leaderTeams, everyone);
-    const n = countFor(crew.map(p => p.id), data, today);
+    const ids = crew.map(p => p.id);
+    const n = countFor(ids, data, today);
     const L = lines(n, scope);
+
+    /* 제목은 볼 권한이 있는 사람에게만. 리더는 위 SUB_TEXT_OK 로 걸러진다. */
+    let subList = [];
+    if (SUB_TEXT_OK[scope] && subs) {
+      const mine = {};
+      ids.forEach(i => { mine[i] = 1; });
+      subList = subs
+        .filter(r => mine[r.author_id] && (r.created_at || '').slice(0, 10) === today)
+        .slice(0, 30)
+        .map(r => ({ who: r.author_name || '이름 없음',
+                     kind: SUB_LABEL[r.kind] || r.kind || '보고',
+                     title: r.title || '(제목 없음)' }));
+    }
 
     rows.push({
       advisor_id: me.id,
@@ -217,6 +250,8 @@ exports.handler = async () => {
         rank: rank || null,      /* 조직도에 직책이 없으면 <b>모름</b> — 빈 글자로 눙치지 않는다 */
         byRole: !rank,           /* 직책이 아니라 앱 권한으로 범위를 정했다는 표시 */
         nums: n,
+        subs: subList,           /* 오늘 올라온 보고 — 볼 권한이 있을 때만 채운다 */
+        subsHidden: !SUB_TEXT_OK[scope],   /* 왜 비었는지 화면이 말해 줄 수 있게 */
         see: L.see,
         miss: L.miss,            /* 못 읽은 자리를 그대로 밝힌다 */
         madeAt: new Date().toISOString(),
