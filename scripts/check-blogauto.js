@@ -1,4 +1,4 @@
-/* 블로그 공장(app/블로그.html) — <b>정말 올릴 수 있는가</b>.
+/* 블로그 공장(app/blog.html) — <b>정말 올릴 수 있는가</b>.
 
    이것은 CRM 안의 기능이 아니다. 글을 올리는 일이 주인공이라 밖으로
    떼어 놓았다. 그래서 여기서 제일 먼저 보는 것은 「기능이 있나」 가
@@ -33,7 +33,7 @@ const http = require('http'), fs = require('fs'), path = require('path'), url = 
 const ROOT = process.cwd();
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8',
                '.css':'text/css; charset=utf-8', '.json':'application/json' };
-const PAGE = 'app/블로그.html', ARTJS = 'app/블로그-그림.js';
+const PAGE = 'app/blog.html', ARTJS = 'app/blog-art.js';
 const SRC = fs.readFileSync(path.join(ROOT, PAGE), 'utf8');
 const ART_SRC = fs.readFileSync(path.join(ROOT, ARTJS), 'utf8');
 const IDX = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
@@ -93,7 +93,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   /* 앱 쪽에 같은 것이 남아 있으면 한쪽만 고쳐진다 (CLAUDE.md 5) */
   is(IDX.indexOf('function blogFactory(') < 0 && IDX.indexOf('var BF_KINDS') < 0,
      '  앱(index.html)에서 공장이 빠졌다 — 두 벌로 두지 않았다');
-  is(IDX.indexOf('블로그.html') > 0 && IDX.indexOf('function blogFactoryLink()') > 0,
+  is(IDX.indexOf('blog.html') > 0 && IDX.indexOf('function blogFactoryLink()') > 0,
      '  앱에는 여는 링크만 남았다');
   is(IDX.indexOf('function blogSeoKit()') > 0 && IDX.indexOf("id:'blog_post'") > 0,
      '  기존 상위노출 키트와 글 생성기는 그대로다 — 갈아엎지 않았다');
