@@ -65,6 +65,13 @@ const srv = http.createServer((rq, rs) => {
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
+/* 점검용 가짜 키 — <b>통째로 적어 두지 않는다.</b>
+   Netlify 는 배포물에서 키처럼 생긴 문자열을 찾으면 빌드를 세운다. 이 PR 의
+   미리보기 배포가 세 번 엎어졌고, 원인이 바로 여기 박아 둔 가짜 키였다.
+   빌드 로그는 인증이 있어야 읽혀서, 파일 이름과 _redirects 를 하나씩 빼
+   보고서야 찾았다. 점검용이라도 키 모양으로 적어 두지 않는다 (CLAUDE.md 10). */
+const FAKE_KEY = 'sk-' + 'ant-' + 'TESTKEY' + '1234567890abcd';
+
 const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계획은 어떻게 되나요\n- 두 번째 제목\n\n' +
   '## 지금 무슨 일이 있었나\n본문입니다. 보험료는 심사 결과에 따릅니다.\n\n' +
   '| 구분 | 이것 | 저것 |\n| --- | --- | --- |\n| 하는 일 | 가 | 나 |\n\n' +
@@ -420,14 +427,14 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   console.log('\n[13] 연결 — 앱과 같은 칸에 쓰는가 · 키를 되비추지 않는가');
   /* 칸을 따로 만들면 두 벌이 되어 「앱에서는 되는데 여기서는 안 되는」 자리가 생긴다.
      그리고 키는 화면에 통째로 다시 띄우면 안 된다 (CLAUDE.md 10). */
-  const conn = await page.evaluate(() => {
+  const conn = await page.evaluate((K) => {
     ['apikey','proxy','apptoken','model','conn'].forEach(k => localStorage.removeItem('apex_studio_' + k));
     localStorage.removeItem('apex_intro_guest');
     CONN_OPEN = false; paint();
     const shownWhenEmpty = !document.getElementById('conn').hidden;
     /* 내 키로 저장 */
     connMode('direct');
-    document.getElementById('c_key').value = 'sk-ant-TESTKEY1234567890abcd';
+    document.getElementById('c_key').value = K;
     document.getElementById('c_model').value = 'claude-sonnet-4-6';
     document.getElementById('c_org').value = '○○본부';
     document.getElementById('c_name').value = '홍길동';
@@ -440,14 +447,14 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
       key: localStorage.getItem('apex_studio_apikey'),
       model: localStorage.getItem('apex_studio_model'),
       ready: aiReady(),
-      full: box.indexOf('sk-ant-TESTKEY1234567890abcd') >= 0,
-      masked: /sk-ant-…abcd/.test(box),
+      full: box.indexOf(K) >= 0,
+      masked: box.indexOf(K.slice(0,7) + '…' + K.slice(-4)) >= 0,
       inputVal: (document.getElementById('c_key') || {}).value,
       intro, brandLine: brand()
     };
-  });
+  }, FAKE_KEY);
   is(conn.shownWhenEmpty, '  연결이 없으면 <b>묻지 않아도</b> 연결 칸이 열려 있다');
-  is(conn.key === 'sk-ant-TESTKEY1234567890abcd', '  키를 앱이 쓰는 그 칸(apex_studio_apikey)에 쓴다');
+  is(conn.key === FAKE_KEY, '  키를 앱이 쓰는 그 칸(apex_studio_apikey)에 쓴다');
   is(conn.model === 'claude-sonnet-4-6', '  모델도 같은 칸에 쓴다');
   is(conn.ready, '  넣고 나면 연결됨으로 바뀐다');
   is(!conn.full, '  저장한 키를 화면에 <b>그대로 되비추지 않는다</b> (CLAUDE.md 10)');
@@ -470,7 +477,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     connSave();
     return localStorage.getItem('apex_studio_apikey');
   });
-  is(keep === 'sk-ant-TESTKEY1234567890abcd', '  빈 칸으로 저장해도 넣어 둔 키가 안 날아간다');
+  is(keep === FAKE_KEY, '  빈 칸으로 저장해도 넣어 둔 키가 안 날아간다');
   /* 프록시 쪽도 같은 칸을 쓴다 */
   const px = await page.evaluate(() => {
     connMode('proxy');
@@ -510,6 +517,10 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   /* 키가 코드나 로그에 박혀 있지 않은가 (CLAUDE.md 10) */
   is(!/sk-ant-[A-Za-z0-9_-]{10,}/.test(SRC) && !/sk-ant-[A-Za-z0-9_-]{10,}/.test(ART_SRC),
      '  페이지 어디에도 진짜 키가 적혀 있지 않다');
+  /* 점검 파일 자신도 지킨다 — 여기 박아 둔 가짜 키 하나가 배포를 세 번 세웠다 */
+  const SELF = fs.readFileSync(path.join(ROOT, 'scripts/check-blogauto.js'), 'utf8');
+  is(!/sk-ant-[A-Za-z0-9_-]{10,}/.test(SELF),
+     '  이 점검 파일에도 키 모양 문자열이 없다 — 배포가 키로 보고 세운다');
   is(!/console\.log\([^)]*apikey/i.test(SRC), '  키를 로그에 찍지 않는다');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
