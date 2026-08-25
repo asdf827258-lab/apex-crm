@@ -27,7 +27,10 @@
      7. 몇 건이 유지·해지·미정인지 <b>세는 곳이 하나인가</b>
      8. 계약 목록이 비면 <b>말해 주는가</b> — 조용히 어긋나던 자리다
      9. <b>이름이 같은 계약</b>이 서로를 지우지 않는가 — 「튼튼건강보험」 은
-        회사마다 있다. 이름만 보고 접으면 둘째 계약이 통째로 사라진다        */
+        회사마다 있다. 이름만 보고 접으면 둘째 계약이 통째로 사라진다
+    10. <b>이미 없어진 계약 구간</b>을 읽지 않는가 — KB·협회 표는 뒤쪽에
+        「실효/해지계약현황」 을 붙인다. 글 전체를 훑으면 해지된 계약의 담보가
+        「기존」 에 들어간다. 자르되 <b>살아 있는 것은 하나도 안 먹어야</b> 한다   */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -311,7 +314,71 @@ const AFTER = [
      '  같은 회사 상품 두 건도 갈린다 — ' + dup.sameco.join(' / '));
   is(dup.many === 20, '  스무 건이 스무 건으로 선다 — ' + dup.many + '건');
 
-  console.log('\n[12] 콘솔이 조용하다');
+  console.log('\n[12] 이미 없어진 계약 구간은 읽지 않는다 — 정확히 잘라야 한다');
+  const cut = await page.evaluate(() => {
+    /* KB·협회 보장분석표는 뒤쪽에 「실효/해지계약현황」 을 붙여 준다.
+       글 전체를 훑으면 그 구간까지 살아 있는 보장으로 읽어, 해지된 계약의
+       담보가 「기존」 에 들어간다 — 없는 보장을 있다고 말하는 자리다. */
+    const L = '삼성화재 (무)무배당 살아있는보험  월보험료 50,000원\n  암진단비(유사암제외)   3,000만원';
+    const D = 'KB손해보험 (무)무배당 죽은보험  월보험료 30,000원\n  급성심근경색진단비     9,000만원';
+    const AFTER_LIVE = '\n\n홍길동 님의 상품별 가입담보상세\n' +
+      '현대해상 (무)무배당 뒤에있는보험  월보험료 22,400원\n  질병입원의료비         5,000만원';
+    const cases = [
+      ['뒤에 실효/해지 (KB 꼴)',   L + '\n\n홍길동 님의 실효/해지계약현황\n' + D, ['살아있는'], ['죽은']],
+      ['「님의」 없이 제목만',     L + '\n\n실효/해지계약현황\n' + D,             ['살아있는'], ['죽은']],
+      ['가운뎃점 표기',           L + '\n\n실효·해지계약현황\n' + D,             ['살아있는'], ['죽은']],
+      ['띄어 쓴 제목',            L + '\n\n실효 / 해지 계약 현황\n' + D,          ['살아있는'], ['죽은']],
+      ['해지계약현황',            L + '\n\n해지계약현황\n' + D,                  ['살아있는'], ['죽은']],
+      ['말소계약목록',            L + '\n\n말소계약목록\n' + D,                  ['살아있는'], ['죽은']],
+      ['그 뒤에 살아 있는 구간이 또',
+         L + '\n\n실효/해지계약현황\n' + D + AFTER_LIVE,            ['살아있는', '뒤에있는'], ['죽은']],
+      /* 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (CLAUDE.md 8번) */
+      ['「해지환급금」 은 제목이 아니다',
+         '삼성화재 (무)무배당 살아있는보험  월보험료 50,000원  해지환급금 없음형\n' +
+         '  암진단비(유사암제외)   3,000만원\n중도해지 시 환급금이 적을 수 있습니다.', ['살아있는'], []],
+      ['「해지 계약」 이 본문에 스쳐도',
+         L + '\n해지 계약은 보장이 종료됩니다.', ['살아있는'], []],
+      ['실효 구간이 아예 없다',    L, ['살아있는'], []]
+    ];
+    const keep = babaPlans().slice();
+    const out = cases.map(([why, t, must, never]) => {
+      BABA.cut = [];
+      const names = babaPlanScan(t).map(x => x.nm || '');
+      const sc = babaScan(t);
+      return { why: why, names: names,
+        ok: must.every(n => names.some(x => x.indexOf(n) >= 0)) &&
+            never.every(n => !names.some(x => x.indexOf(n) >= 0)),
+        mi: sc.mi ? sc.mi.won : null, hadDead: never.length > 0,
+        cut: (BABA.cut || []).map(c => c.title + '(' + c.n + '건)') };
+    });
+    BABA.plans = keep;
+    return out;
+  });
+  cut.forEach(c => {
+    is(c.ok, '  ' + c.why + ' — 읽은 계약: ' + (c.names.join(', ') || '(없음)') +
+       (c.cut.length ? ('  · 뺀 것: ' + c.cut.join(', ')) : '  · 안 뺐음'));
+    if (c.hadDead) is(c.mi === null,
+      '     해지 계약 담보(심근경색 9,000)가 기존에 안 섞인다 — ' + (c.mi === null ? '안 섞임' : c.mi));
+  });
+
+  console.log('\n[13] 무엇을 뺐는지 화면에 말한다');
+  const said = await page.evaluate(() => {
+    const keep = babaPlans().slice(), rows = BABA.rows;
+    BABA.cut = [];
+    babaPlanScan('삼성화재 (무)무배당 살아있는보험  월보험료 50,000원\n' +
+      '  암진단비(유사암제외)   3,000만원\n\n홍길동 님의 실효/해지계약현황\n' +
+      'KB손해보험 (무)무배당 죽은보험  월보험료 30,000원\n  급성심근경색진단비     9,000만원');
+    const d = document.createElement('div'); d.innerHTML = babaWhyHtml();
+    const txt = d.textContent.replace(/\s+/g, ' ');
+    BABA.plans = keep; BABA.rows = rows;
+    return txt;
+  });
+  is(/이미 없어진 계약 구간/.test(said), '  「이미 없어진 계약 구간을 빼고 읽었습니다」 라고 적는다');
+  is(/실효\/해지계약현황/.test(said), '  어느 제목을 뺐는지 적는다');
+  is(/죽은보험/.test(said), '  뺀 계약 이름을 적는다 — 조용히 버리지 않는다');
+  is(/한 줄 더해 주세요|잘못 빠졌다면/.test(said), '  잘못 잘렸을 때 무엇을 하면 되는지 말한다');
+
+  console.log('\n[14] 콘솔이 조용하다');
   is(errs.length === 0, '  오류 없음' + (errs.length ? ' — ' + errs.join(' | ') : ''));
 
   await browser.close();
