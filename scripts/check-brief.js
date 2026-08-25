@@ -14,9 +14,10 @@
         「아무도 안 나왔다」로 읽으면 그 자리에서 사고다 (1번).
      4. <b>사람마다 서버를 부르지 않는가</b>. 팀이 서른이면 서른 번이 된다 (7번).
      5. <b>고객 실명이 서버로 나가지 않는가</b> (3번).
-     6. 팀원이 올린 보고 <b>글</b>이 볼 권한 없는 사람에게 안 새는가. 앱 규칙은
-        「작성자 본인 + 대표만 조회」인데(reports_select), 이 한 장은 service_role 이
-        쓰므로 <b>여기서 담으면 RLS 를 우회한다.</b> 리더에게는 건수만 간다.
+     6. 보고 읽기 규칙(reports_select)이 <b>한 곳에만</b> 있는가. 두 곳에 적어
+        두었더니 <b>이미 갈라져</b> 있었다 — 12번 묶음은 is_owner(대표만),
+        복구용은 is_leader(리더면 <b>남의 팀까지</b>). 마지막에 돌린 쪽이 이겨
+        권한이 조용히 달라진다. 리더는 <b>자기 팀만</b> 봐야 한다.
      7. ak 가 <b>등급 열쇠를 겸한다</b> — 찾기 낱말을 늘리면 문이 조용히
         헐거워진다. 실제로 이 작업에서 basic 이 free 로 떨어졌다.            */
 
@@ -105,26 +106,28 @@ is(/c\.date\s*===\s*schToday\(\)/.test(APP_CODE),
 is(/kind=eq\.[^&]*&created_at=gte/.test(FN),
    '  같은 날 것이 이미 있으면 지우고 새로 넣는다 — 두 벌이 안 쌓인다');
 
-console.log('\n[7] 보고 글이 볼 권한 없는 사람에게 새지 않는다');
-is(/SUB_TEXT_OK/.test(FN_CODE), '  갈래마다 글을 담을지 여부를 표 한 곳에서 답한다');
-const subOk = (FN_CODE.match(/const\s+SUB_TEXT_OK\s*=\s*\{([^}]*)\}/) || [])[1] || '';
-is(/team\s*:\s*false/.test(subOk),
-   '  리더(team) 한 장에는 글을 담지 않는다 — ' + subOk.replace(/\s+/g, ' ').trim());
-is(/all\s*:\s*true/.test(subOk) && /self\s*:\s*true/.test(subOk),
-   '  대표와 본인 한 장에는 담는다');
-/* 표를 놔둔 채 담는 자리에서 안 쓰면 표가 장식이 된다.
-   글자만 세면 안 된다 — subsHidden 줄에도 같은 이름이 있어, 정작 담는 자리의
-   문을 떼어내도 통과했다. <b>목록을 채우는 그 블록</b>을 봐야 한다. */
-const subRegion = (FN_CODE.match(/let subList = \[\];([\s\S]*?)\n    \}/) || [])[1] || '';
-is(/if\s*\(\s*SUB_TEXT_OK\[scope\]/.test(subRegion),
-   '  목록을 채우기 전에 그 표를 실제로 본다');
+console.log('\n[7] 보고 읽기 규칙 — 한 곳에만 있고, 리더는 자기 팀만 본다');
+/* 규칙을 두 곳에 적으면 갈라진다. 한 곳에 두고 양쪽이 그것을 가리켜야 한다. */
+is(/var SQL_REPORTS_SELECT\s*=/.test(APP_CODE), '  규칙을 한 곳(SQL_REPORTS_SELECT)에 둔다');
+/* 그 한 곳 말고 다른 데서 또 만들면 그 순간 두 벌이 된다 */
+const madeAt = (APP.match(/create policy reports_select/g) || []).length;
+is(madeAt === 1, '  reports_select 를 만드는 자리가 하나다 — ' + madeAt + '곳');
+const pol = (APP.match(/var SQL_REPORTS_SELECT=\[([\s\S]*?)\];/) || [])[1] || '';
+is(/author_id = auth\.uid\(\)/.test(pol), '  작성자 본인은 자기 것을 본다');
+is(/is_owner\(\)/.test(pol), '  대표는 전원 것을 본다');
+/* 리더를 is_leader() 로 열면 남의 팀까지 보인다 — leads_team(팀) 으로 좁혀야 한다 */
+is(/leads_team\(/.test(pol) && /team_members/.test(pol),
+   '  리더는 team_members·leads_team 으로 <b>자기 팀만</b> 본다');
+is(!/is_leader\(\)/.test(pol),
+   '  is_leader() 로 열지 않는다 — 그러면 남의 팀까지 보인다');
+/* 규칙을 고쳤으면 다시 돌리라고 알려야 한다. 안 그러면 옛 규칙이 그대로 남는다. */
+const ver = Number((APP.match(/var SETUP_VER=(\d+)/) || [])[1] || 0);
+is(ver >= 37, '  SETUP_VER 가 올라가 다시 돌리라고 알린다 — ' + ver);
+/* 한 장이 담는 사람이 곧 볼 권한이 있는 사람이다 */
+is(/peopleFor\(scope/.test(FN_CODE), '  한 장은 그 사람이 볼 범위만 담는다');
 /* 본문은 아예 받아 오지 않는다 — 고객 이야기가 섞일 수 있다 (3번) */
 is(!/reports\?select=[^']*\bbody\b/.test(FN),
    '  보고 본문(body)은 아예 받아 오지 않는다');
-/* 리더 화면이 조용히 비면 「아무도 안 올렸다」로 읽힌다 */
-is(/subsHidden/.test(FN_CODE) && /subsHidden/.test(APP_CODE),
-   '  못 보는 것과 없는 것을 화면이 구분해 말한다');
-is(/작성자 본인과 대표만/.test(APP), '  왜 건수만 보이는지 화면이 밝힌다');
 /* 보고 갈래도 삼항 사슬로 나열하면 늘 때 빠뜨린다 */
 is(/const\s+SUB_LABEL\s*=\s*\{/.test(FN_CODE), '  보고 갈래 이름도 표 한 곳에서 온다');
 
