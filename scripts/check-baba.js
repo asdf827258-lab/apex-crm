@@ -272,7 +272,9 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     window.babaTextAll = () => Promise.resolve({ text: '', pages: 11 });   /* 글자 없는 11쪽 */
     window.babaImgRange = (f, from, to) => { calls.push([from, to]); return Promise.resolve(['img']); };
     window.aiReady = () => true;
+    window.__aiCalls = 0;
     window.callAIVision = (sys, user) => {
+      window.__aiCalls++;
       const m = user.match(/(\d+)~(\d+)쪽/);
       const from = +m[1];
       if (from === 5) return Promise.reject(new Error('한 묶음 실패'));   /* 가운데 하나를 일부러 넘어뜨린다 */
@@ -280,17 +282,22 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
       return Promise.resolve('[{"n":"뇌혈관질환진단비","won":2000},{"n":"합계보험료","won":21}]');
     };
     const steps = [];
-    const r = await babaReadFile({ name: 'scan.pdf' }, (c, t, from, to) => steps.push(c + '/' + t + ':' + from + '-' + to));
-    return { kind: r.kind, chunks: r.chunks, failed: r.failed,
+    const r = await babaReadFile({ name: 'scan.pdf' },
+      (c, t, from, to, again) => steps.push((again ? '다시 ' : '') + c + '/' + t + ':' + from + '-' + to));
+    return { kind: r.kind, chunks: r.chunks, failed: r.failed, aiCalls: window.__aiCalls,
              found: r.found, calls, steps, sys: babaAiSys(), user: babaAiUser(9, 11) };
   });
   is(deep.kind === 'scan', '  글자가 없으면 스캔본으로 본다');
   is(deep.chunks === 3, '  11쪽을 넉 장씩 3묶음으로 쪼갠다 — ' + deep.chunks + '묶음');
   is(JSON.stringify(deep.calls) === '[[1,4],[5,8],[9,11]]',
      '  1~4 · 5~8 · 9~11 쪽을 빠짐없이 훑는다 — ' + JSON.stringify(deep.calls));
-  is(deep.steps.length === 3 && /1\/3:1-4/.test(deep.steps[0]),
+  is(deep.steps.length === 4 && /1\/3:1-4/.test(deep.steps[0]),
      '  어디까지 갔는지 화면에 알린다 — ' + deep.steps.join(' · '));
-  is(deep.failed === 1, '  가운데 묶음이 넘어져도 세어 둔다 — 못 읽은 묶음 ' + deep.failed + '개');
+  /* 한 번 삐끗했다고 그 묶음을 버리지 않는다. 회사 프록시는 자주 끊긴다. */
+  is(deep.steps.filter(x => /^다시/.test(x)).length === 1,
+     '  넘어진 묶음은 <b>조용히 한 번 더</b> 시도하고, 그 사실도 알린다');
+  is(deep.aiCalls === 4, '  AI 를 4번 부른다 — 3묶음 + 넘어진 묶음 재시도 1번 (' + deep.aiCalls + '번)');
+  is(deep.failed === 1, '  두 번 다 넘어지면 그때 세어 둔다 — 못 읽은 묶음 ' + deep.failed + '개');
   is(deep.found.length === 3, '  나머지 묶음 값은 그대로 살아 있다 — ' + deep.found.length + '개');
   is(deep.found.some(x => x.won === 2000), '  9~11쪽(마지막 묶음) 값도 들어온다 — 뒤쪽을 안 버린다');
   is(/JSON 배열만/.test(deep.sys) && /지어내지 마라/.test(deep.sys),
