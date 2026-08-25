@@ -18,7 +18,10 @@
      3. 해지를 찍으면 그 계약 담보가 <b>기존에서 빠진다</b>
      4. 유지로 되돌리면 숫자가 <b>그대로 돌아온다</b> — 원본은 안 건드린다
      5. 제안서에 <b>얼마나 비는지</b>가 눈에 보이게 선다
-     6. 인쇄가 안 짤린다 — 한 쪽보다 긴 것에 「쪼개지 마라」 를 걸지 않는다  */
+     6. 인쇄가 안 짤린다 — 한 쪽보다 <b>길어질 수 있는 장</b>에는
+        「쪼개지 마라」 를 걸지 않는다. 짧은 장은 앞 장 밑에 이어 앉혀
+        쪽을 채운다 — 장마다 새 쪽으로 밀면 열한 장이 열네 쪽이 되고
+        아래 90%가 백지로 나간다.                                    */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -179,9 +182,17 @@ const ONLY = [
     return { ok: c !== 'ERR', pr: pr };
   });
   is(css.ok, '  인쇄 규칙을 만들어 낸다');
-  is(/\.bp-sec\{[^}]*break-before:page/.test(css.pr), '  장마다 새 쪽에서 시작한다');
-  is(!/\.bp-sec\{[^}]*break-inside:avoid/.test(css.pr),
-     '  장 전체에 「쪼개지 마라」 를 걸지 않는다 (한 쪽보다 길면 잘린다)');
+  is(/\.bp-break\{[^}]*break-before:page/.test(css.pr),
+     '  새 쪽에서 시작할 장(.bp-break)만 쪽을 넘긴다');
+  is(!/\.bp-sec\{[^}]*break-before:page/.test(css.pr),
+     '  장마다 새 쪽으로 밀지 않는다 — 짧은 장은 이어 앉혀 쪽을 채운다');
+  is(/\.bp-flow\{[^}]*break-inside:auto/.test(css.pr),
+     '  길어질 수 있는 장(.bp-flow)은 흘러가게 열어 둔다 (한 쪽보다 길면 잘린다)');
+  const flow = await page.evaluate(() =>
+    BABA_SECS.filter(x => [2, 5, 6, 8, 10].indexOf(x.n) >= 0 && !x.flow).map(x => x.n));
+  is(flow.length === 0,
+     '  자료에 따라 길어지는 장(계약·담보 목록)은 전부 흘러가게 표시돼 있다' +
+     (flow.length ? ' — 빠진 장 ' + flow.join(',') : ''));
   is(!/[^-]table\{[^}]*break-inside:avoid/.test(css.pr),
      '  긴 표에 「쪼개지 마라」 를 걸지 않는다');
   is(/thead\{display:table-header-group/.test(css.pr), '  표가 넘어가면 머리글을 다시 찍는다');

@@ -14,7 +14,10 @@
         「아무도 안 나왔다」로 읽으면 그 자리에서 사고다 (1번).
      4. <b>사람마다 서버를 부르지 않는가</b>. 팀이 서른이면 서른 번이 된다 (7번).
      5. <b>고객 실명이 서버로 나가지 않는가</b> (3번).
-     6. ak 가 <b>등급 열쇠를 겸한다</b> — 찾기 낱말을 늘리면 문이 조용히
+     6. 팀원이 올린 보고 <b>글</b>이 볼 권한 없는 사람에게 안 새는가. 앱 규칙은
+        「작성자 본인 + 대표만 조회」인데(reports_select), 이 한 장은 service_role 이
+        쓰므로 <b>여기서 담으면 RLS 를 우회한다.</b> 리더에게는 건수만 간다.
+     7. ak 가 <b>등급 열쇠를 겸한다</b> — 찾기 낱말을 늘리면 문이 조용히
         헐거워진다. 실제로 이 작업에서 basic 이 free 로 떨어졌다.            */
 
 const fs = require('fs');
@@ -102,7 +105,30 @@ is(/c\.date\s*===\s*schToday\(\)/.test(APP_CODE),
 is(/kind=eq\.[^&]*&created_at=gte/.test(FN),
    '  같은 날 것이 이미 있으면 지우고 새로 넣는다 — 두 벌이 안 쌓인다');
 
-console.log('\n[7] ak 는 등급 열쇠를 겸한다 — 낱말을 늘리면 문이 헐거워진다');
+console.log('\n[7] 보고 글이 볼 권한 없는 사람에게 새지 않는다');
+is(/SUB_TEXT_OK/.test(FN_CODE), '  갈래마다 글을 담을지 여부를 표 한 곳에서 답한다');
+const subOk = (FN_CODE.match(/const\s+SUB_TEXT_OK\s*=\s*\{([^}]*)\}/) || [])[1] || '';
+is(/team\s*:\s*false/.test(subOk),
+   '  리더(team) 한 장에는 글을 담지 않는다 — ' + subOk.replace(/\s+/g, ' ').trim());
+is(/all\s*:\s*true/.test(subOk) && /self\s*:\s*true/.test(subOk),
+   '  대표와 본인 한 장에는 담는다');
+/* 표를 놔둔 채 담는 자리에서 안 쓰면 표가 장식이 된다.
+   글자만 세면 안 된다 — subsHidden 줄에도 같은 이름이 있어, 정작 담는 자리의
+   문을 떼어내도 통과했다. <b>목록을 채우는 그 블록</b>을 봐야 한다. */
+const subRegion = (FN_CODE.match(/let subList = \[\];([\s\S]*?)\n    \}/) || [])[1] || '';
+is(/if\s*\(\s*SUB_TEXT_OK\[scope\]/.test(subRegion),
+   '  목록을 채우기 전에 그 표를 실제로 본다');
+/* 본문은 아예 받아 오지 않는다 — 고객 이야기가 섞일 수 있다 (3번) */
+is(!/reports\?select=[^']*\bbody\b/.test(FN),
+   '  보고 본문(body)은 아예 받아 오지 않는다');
+/* 리더 화면이 조용히 비면 「아무도 안 올렸다」로 읽힌다 */
+is(/subsHidden/.test(FN_CODE) && /subsHidden/.test(APP_CODE),
+   '  못 보는 것과 없는 것을 화면이 구분해 말한다');
+is(/작성자 본인과 대표만/.test(APP), '  왜 건수만 보이는지 화면이 밝힌다');
+/* 보고 갈래도 삼항 사슬로 나열하면 늘 때 빠뜨린다 */
+is(/const\s+SUB_LABEL\s*=\s*\{/.test(FN_CODE), '  보고 갈래 이름도 표 한 곳에서 온다');
+
+console.log('\n[8] ak 는 등급 열쇠를 겸한다 — 낱말을 늘리면 문이 헐거워진다');
 const repLine = (APP.match(/\{id:'report'[^}]*\}/) || [''])[0];
 is(!!repLine, '  대표 브리핑 메뉴 줄을 찾았다');
 if (repLine) {
@@ -114,7 +140,7 @@ if (repLine) {
   is(ak.indexOf('윤시스쿨') >= 0, '  옛 이름으로도 찾힌다');
 }
 
-console.log('\n[8] 없어진 학교 딱지가 화면에 안 남아 있다');
+console.log('\n[9] 없어진 학교 딱지가 화면에 안 남아 있다');
 is(!/YOONSI SCHOOL/.test(APP), '  YOONSI SCHOOL 딱지가 없다');
 is(!/윤시스쿨이 오늘 만들어낸|윤시스쿨 데이터를 모으는/.test(APP),
    '  화면 글에 없어진 학교 이름이 없다');
