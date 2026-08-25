@@ -30,11 +30,15 @@ const KIND = 'daily_brief';
 /* 팀원이 올리는 보고의 갈래. 표 한 곳에서만 답한다 — 갈래가 늘어도 빠뜨릴 자리가 없다. */
 const SUB_LABEL = { growth: '성장', meeting: '회의', material: '자료', issue: '이슈' };
 
-/* 보고 <b>글</b>은 아무나 못 본다. 앱의 규칙이 「작성자 본인 + 대표만 조회」이므로
-   (reports_select: author_id = auth.uid() or is_owner()) <b>리더 한 장에는 제목을 담지 않는다.</b>
-   이 한 장은 service_role 이 쓰므로, 여기서 담으면 RLS 를 우회해 남의 글이 새어 나간다.
-   리더에게는 <b>건수만</b> 준다 — 숫자는 글이 아니다. */
-const SUB_TEXT_OK = { all: true, team: false, self: true };
+/* 보고 <b>글</b>은 아무나 못 본다. 앱의 규칙(reports_select)은
+     작성자 본인 · 대표 · <b>그 사람의 팀을 이끄는 리더</b>
+   이고, 이 한 장이 담는 사람(peopleFor)이 <b>정확히 그 범위</b>다 —
+   대표는 전원, 리더는 자기 팀, 그 밖은 자기 것. 그래서 담는 사람만 맞으면
+   글을 담아도 규칙과 어긋나지 않는다.
+
+   <b>다만 이 한 장은 service_role 이 쓴다.</b> DB 규칙을 좁히면서 여기를 안 고치면
+   그 순간부터 남의 글이 새어 나간다 — 둘은 반드시 같이 움직여야 한다.
+   check-brief 가 SQL 규칙과 이 범위가 맞는지 본다. */
 
 /* 직책 → 어디까지 보나. 조직도 직책이 정본이고, 비어 있으면 앱 권한으로 채운다. */
 const SCOPE = {
@@ -227,9 +231,9 @@ exports.handler = async () => {
     const n = countFor(ids, data, today);
     const L = lines(n, scope);
 
-    /* 제목은 볼 권한이 있는 사람에게만. 리더는 위 SUB_TEXT_OK 로 걸러진다. */
+    /* 담는 사람(ids)이 곧 볼 권한이 있는 사람이라, 그 사람들 것만 담으면 된다. */
     let subList = [];
-    if (SUB_TEXT_OK[scope] && subs) {
+    if (subs) {
       const mine = {};
       ids.forEach(i => { mine[i] = 1; });
       subList = subs
@@ -250,8 +254,7 @@ exports.handler = async () => {
         rank: rank || null,      /* 조직도에 직책이 없으면 <b>모름</b> — 빈 글자로 눙치지 않는다 */
         byRole: !rank,           /* 직책이 아니라 앱 권한으로 범위를 정했다는 표시 */
         nums: n,
-        subs: subList,           /* 오늘 올라온 보고 — 볼 권한이 있을 때만 채운다 */
-        subsHidden: !SUB_TEXT_OK[scope],   /* 왜 비었는지 화면이 말해 줄 수 있게 */
+        subs: subList,           /* 오늘 올라온 보고 — 볼 권한이 있는 사람 것만 */
         see: L.see,
         miss: L.miss,            /* 못 읽은 자리를 그대로 밝힌다 */
         madeAt: new Date().toISOString(),

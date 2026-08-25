@@ -11640,7 +11640,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-25 01:30';
+var APP_BUILD='2026-08-25 02:25';
 var APP_BUILD_NOTE='<b>블로그 공장(<code>app/blog.html</code>)이 이제 혼자 섭니다.</b> 앱을 안 열어도 됩니다 — 맨 위에 <b>연결 칸</b>이 생겨서 <b>내 API 키</b>나 <b>서버 프록시 주소</b>를 거기서 바로 넣습니다. 연결이 안 돼 있으면 <b>묻지 않아도 그 칸이 열려</b> 있습니다. 다만 <b>칸을 새로 만들지 않았습니다</b> — 앱이 쓰는 그 저장칸에 그대로 씁니다. 여기서 넣으면 앱에도 들어가고, 앱에서 넣어 두셨으면 여기서 그대로 쓰입니다(두 벌이면 「앱에서는 되는데 여기서는 안 되는」 자리가 생깁니다). <b>키는 서버로 보내지 않고 이 브라우저에만</b> 남고, 저장해 둔 키는 <b>앞뒤 몇 자만</b> 보여 줍니다(<code>sk-ant-…wxyz</code>) — 어깨너머로 읽히고 캡처에 찍히기 때문입니다. 입력 칸은 저장하면 비웁니다. <b>«연결 확인»</b>은 <b>진짜로 한 번 불러 봅니다</b> — 32토큰만 써서 지갑을 안 태우고, 답이 오면 그제야 「됩니다」 라고 말합니다. <b>그림 꼬리말에 넣을 이름</b>(소속·이름·직함)도 여기서 넣고, 안 넣으시면 <b>아무것도 안 넣습니다</b>. 고친 자리 둘 — 키를 저장하면 <b>연결 칸이 닫혀 버려</b> 제대로 들어갔는지 볼 수 없던 것, 그리고 저장해 둔 초안을 <b>다시 열었을 때 준법 문구를 「못 읽었습니다」 라고 잘못 말하던 것</b>(열 때 한 번 미리 읽어 둡니다). 게이트가 막고 있으면 <b>서식 복사 단추가 아예 눌리지 않고</b> 「고칠 곳 N군데」 라고 적힙니다 — 마크다운 복사는 손으로 고치시라고 열어 둡니다. 점검이 <b>키가 화면에 되비치지 않는지</b> · 같은 칸에 쓰는지 · «연결 확인» 이 정말 부르는지까지 봅니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -25383,6 +25383,27 @@ function txCss(){
    AI 가 어디로 가는지, 한 번에 몇 장을 읽는지, 서버 표가 있는지다.
    그걸 실제로 확인하고 하루 한 번 기록으로 남긴다. */
 
+/* ── reports 읽기 규칙 — <b>여기 한 곳에서만 적는다.</b> ─────────────────
+   두 곳(12번 묶음 · OS_REPAIR_SQL)에 따로 적어 두었더니 <b>이미 갈라져</b>
+   있었다. 한쪽은 is_owner(대표만), 다른 쪽은 is_leader(리더면 전원).
+   마지막에 돌린 쪽이 이기니 <b>권한이 조용히 달라진다.</b> (CLAUDE.md 5번)
+
+   규칙: 작성자 본인 · 대표 · <b>그 사람이 속한 팀을 이끄는 리더</b>.
+   리더를 is_leader() 로 열면 <b>남의 팀까지</b> 보인다. leads_team(팀) 으로
+   좁혀 <b>자기 팀 것만</b> 열리게 한다. */
+var SQL_REPORTS_SELECT=[
+ '/* 작성자 본인 · 대표 · 그 사람의 팀을 이끄는 리더만 조회 */',
+ 'drop policy if exists reports_select on public.reports;',
+ 'create policy reports_select on public.reports',
+ '  for select to authenticated',
+ '  using (',
+ '    author_id = auth.uid()',
+ '    or public.is_owner()',
+ '    or exists(select 1 from public.team_members tm',
+ '               where tm.member_id = author_id',
+ '                 and public.leads_team(tm.team_id))',
+ '  );'
+];
 var HX_SQL={
  '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
@@ -26328,7 +26349,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '36')",
+  "values ('schema_version', '37')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -26752,11 +26773,8 @@ var HX_SQL={
   "",
   "alter table public.reports enable row level security;",
   "",
-  "/* 작성자 본인 + 대표만 조회 (다른 팀원에게는 보이지 않음) */",
-  "drop policy if exists reports_select on public.reports;",
-  "create policy reports_select on public.reports",
-  "  for select to authenticated",
-  "  using (author_id = auth.uid() or public.is_owner());",
+  ""
+ ].concat(SQL_REPORTS_SELECT).concat([
   "",
   "/* 본인 이름으로만 제출 */",
   "drop policy if exists reports_insert on public.reports;",
@@ -26774,7 +26792,7 @@ var HX_SQL={
   "  for delete to authenticated using (public.is_owner() or author_id = auth.uid());",
   "",
   "grant select, insert, update, delete on public.reports to authenticated;"
- ]},
+ ])},
  '13':{label:"팀 · AI 부서 보고 · 자동 백업",need:["teams", "team_members", "backups"],lines:[
   "/* 13: 팀(그룹) · 팀 성장 대시보드 · AI 부서 보고 · 아이디어 · 자동 백업 (재실행 안전) */",
   "",
@@ -28340,7 +28358,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=36;
+var SETUP_VER=37;   /* 37: reports 읽기 규칙 — 리더가 자기 팀 보고를 본다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
@@ -38741,11 +38759,10 @@ var OS_REPAIR_SQL=[
  ');',
  'create index if not exists reports_created_idx on public.reports(created_at desc);',
  'alter table public.reports enable row level security;',
- 'drop policy if exists reports_select on public.reports;',
  'drop policy if exists reports_insert on public.reports;',
  'drop policy if exists reports_update on public.reports;',
- 'drop policy if exists reports_delete on public.reports;',
- 'create policy reports_select on public.reports for select to authenticated using (author_id = auth.uid() or public.is_leader());',
+ 'drop policy if exists reports_delete on public.reports;'
+].concat(SQL_REPORTS_SELECT).concat([
  'create policy reports_insert on public.reports for insert to authenticated with check (author_id = auth.uid());',
  'create policy reports_update on public.reports for update to authenticated using (author_id = auth.uid() or public.is_owner()) with check (author_id = auth.uid() or public.is_owner());',
  'create policy reports_delete on public.reports for delete to authenticated using (author_id = auth.uid() or public.is_owner());',
@@ -38997,7 +39014,7 @@ var OS_REPAIR_SQL=[
  '  using (public.is_admin() or public.is_owner());',
  '',
  'notify pgrst, \'reload schema\';'
-].join('\n');
+]).join('\n');
 /* ════════ 시스템 자가진단 — 무엇이 왜 안 되는지 직접 확인 ════════
    앱이 실제로 쓰는 테이블·함수를 하나씩 두드려 보고 결과를 그대로 보여준다.
    추측하지 않고 서버가 돌려준 오류 코드를 그대로 노출한다. */
@@ -41022,9 +41039,6 @@ function schPreHtml(c){
       h+='<li><b>'+osEsc(u.who)+'</b> · '+osEsc(u.kind)+' — '+osEsc(u.title)+'</li>';
     }
     h+='</ul></div>';
-  }else if(c.subsHidden&&c.nums&&c.nums.subs>0){
-    h+='<div class="notice" style="margin-top:12px">오늘 올라온 보고 <b>'+c.nums.subs+'건</b> — '+
-       '보고 <b>글은 작성자 본인과 대표만</b> 열 수 있어 여기에는 건수만 적습니다.</div>';
   }
   /* 못 읽은 표를 그대로 밝힌다 — 조용히 빼면 「없었다」로 읽힌다 */
   if(c.miss&&c.miss.length)
