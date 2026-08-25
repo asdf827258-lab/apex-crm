@@ -163,6 +163,54 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(dict.합계 === 212400, '  「월 보험료 차이」 를 건너뛰고 <b>합계</b>를 집는다 — ' + dict.합계);
   is(dict.차이만 === null, '  차이밖에 없으면 <b>모름</b>으로 둔다 (34,400원짜리 보험을 만들지 않는다)');
 
+  console.log('\n[5-3] 글자가 한 글자씩 벌어진 PDF 도 읽는가');
+  /* pdf.js 가 글자마다 조각을 주는 문서가 실제로 있다(A+에셋 보장분석자료).
+     이름은 공백을 지우고 찾으니 다 찾는데 금액은 「3 , 0 0 0 만 원」 이 되어
+     하나도 못 읽었다 — 담보 47개를 찾아 놓고 결과가 0개였다. */
+  const spaced = await page.evaluate(() => {
+    const glyphs = (txt, x0, y) => txt.split('').map((c, i) =>
+      ({ str: c, width: 6, height: 10, transform: [1, 0, 0, 10, x0 + i * 6, y] }));
+    /* 붙어 있는 글자들 — 사이에 공백이 들어가면 안 된다 */
+    const one = pdfJoin(glyphs('암진단비3,000만원', 0, 100));
+    /* 칸이 벌어진 표 — 사이에 공백이 들어가야 한다 */
+    const two = pdfJoin(glyphs('암진단비', 0, 100).concat(glyphs('3,000만원', 200, 100)));
+    /* 줄이 바뀌면 줄바꿈 */
+    const three = pdfJoin(glyphs('암진단비', 0, 100).concat(glyphs('뇌혈관', 0, 80)));
+    return { one, two, three, 읽음: babaWon(one) };
+  });
+  is(spaced.one === '암진단비3,000만원', '  붙은 글자는 붙여서 잇는다 — ' + spaced.one);
+  is(spaced.읽음 === 3000, '  그래서 금액이 읽힌다 — ' + spaced.읽음 + '만원 (예전에는 못 읽었다)');
+  is(/암진단비 3,000만원/.test(spaced.two), '  칸이 벌어지면 띄운다 (표가 안 붙는다) — ' + spaced.two);
+  is(/\n/.test(spaced.three), '  줄이 바뀌면 줄을 바꾼다');
+
+  console.log('\n[5-4] 라벨과 금액 사이에 다른 숫자가 껴도 보험료를 읽는가');
+  const prem = await page.evaluate(() => ({
+    보장분석: babaPlanPrem('DB손보 아이러브플러스건강보험2409 2025-02-27 월납 30년 100세 126,384 원'),
+    제안서: babaPlanPrem('무배당 삼성 통합보장보험 월보험료 62,000원'),
+    원없음: babaPlanPrem('합계보험료 210,500'),
+    가입금액: babaPlanPrem('보험료 계산 기준 암진단비 5,000만원'),
+    날짜: babaPlanPrem('월납 2025-02-27 2121-02-27')
+  }));
+  is(prem.보장분석 === 126384,
+     '  「월납 30년 100세 126,384원」 — 사이에 30·100 이 껴도 읽는다 (15건 중 14건이 여기서 막혔다)');
+  is(prem.제안서 === 62000, '  라벨 바로 뒤 금액도 그대로 — ' + prem.제안서);
+  is(prem.원없음 === 210500, '  「원」 이 없어도 읽는다 — ' + prem.원없음);
+  is(prem.가입금액 === null, '  만·억이 붙었으면 가입금액이지 보험료가 아니다');
+  is(prem.날짜 === null, '  날짜만 있으면 <b>모름</b>으로 둔다');
+
+  console.log('\n[5-5] 날짜·쪽번호를 금액으로 보지 않는가');
+  const junk = await page.evaluate(() => ({
+    날짜: babaWon('2025-02-27'),
+    점날짜: babaWon('2020.07.15'),
+    쪽번호: babaWon('008 / 034'),
+    조항뒤금액: babaWon('제3조. 5,000만원'),
+    진짜: babaWon('3,000만원')
+  }));
+  is(junk.날짜 === null && junk.점날짜 === null, '  날짜는 금액이 아니다');
+  is(junk.쪽번호 === null, '  쪽번호(008 / 034)도 금액이 아니다');
+  is(junk.조항뒤금액 === 5000, '  <b>「제3조. 5,000만원」 은 그대로 읽는다</b> — 앞 글자만 보고 자르면 이게 죽는다');
+  is(junk.진짜 === 3000, '  멀쩡한 금액은 그대로');
+
   console.log('\n[6] 못 믿을 글이면 그림으로 다시 읽는 길이 있는가');
   is(/kind:'text-weak'/.test(src), '  AI 가 없으면 「글이 못 미덥다」 고 이름을 붙여 남긴다');
   is(/AI 를 연결하면 같은 파일을 그림으로 다시 읽습니다/.test(src),
