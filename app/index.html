@@ -11640,8 +11640,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-25 01:23';
-var APP_BUILD_NOTE='<b>리더도 자기 팀 보고를 봅니다.</b> 하루 한 장에서 리더에게는 건수만 나갔는데, 이제 <b>자기 팀 것만</b> 제목까지 보입니다 — 남의 팀은 그대로 안 보입니다. 고치다 보니 <b>보고 읽기 규칙이 두 곳에 적혀 있었고, 이미 갈라져</b> 있었습니다 — 설정 묶음은 「대표만」, 복구용은 「리더면 <b>남의 팀까지</b>」. 마지막에 돌린 쪽이 이기니 <b>권한이 조용히 달라지던 자리</b>였습니다. 규칙을 <b>한 곳</b>에 두고 두 곳이 그것을 가리키게 했습니다. <b>⚠ 설정 → SQL 을 다시 한 번 돌려 주십시오.</b> 규칙은 서버에 적용해야 살아납니다 — 안 돌리시면 리더 화면에 제목이 보이는데 서버는 아직 막고 있는 어긋난 상태가 됩니다. 판 번호를 올려 두었으니 설정 화면이 <b>다시 돌리라고</b> 알려 드립니다. 점검(<code>check-brief</code>)이 규칙이 다시 두 벌이 되는지, 리더가 남의 팀까지 보게 되는지를 지킵니다 — 되돌려 보고 셋 다 빨간불이 켜지는 것을 확인했습니다.';
+var APP_BUILD='2026-08-25 04:38';
+var APP_BUILD_NOTE='<b>보장분석이 상태를 제대로 말합니다.</b> 계약 표에 <b>「납입상태」 칸</b>이 생겼습니다 — <b>납입중 · 납입완료 · 확인필요</b>. 납입완료는 <b>보험료 낼 의무만 끝났고 보장은 살아 있는</b> 계약이라, 해지·실효와 <b>절대 같이 묶지 않습니다</b>. 가입일이나 납입기간을 못 읽었으면 짐작으로 붙이지 않고 <b>「확인필요」</b> 라고 적습니다 — 틀린 「납입완료」는 보험료를 안 내도 되는 줄 알게 만듭니다. <b>뇌·심장 담보가 더는 숨지 않습니다.</b> 「허혈성심장질환 <b>외 1개</b>」 로 접히면서 <b>급성심근경색 진단비가 화면에서 사라져</b> 고객이 안 들어 있는 줄 알던 자리입니다. 원인이 둘이었습니다 — 카드가 4개에서 자른 것과, 계열 표에 <b>급성심근경색 줄이 아예 없던 것</b>. 이제 뇌·심장과 순환계는 <b>있는 대로 다 펼치고</b>, 뇌졸중·뇌출혈·급성심근경색을 <b>따로</b> 잡습니다(보장 범위가 다릅니다). <b>「AI 를 연결하면…」 죽은 문구를 없앴습니다.</b> AI 가 연결돼 있으면 <b>「🤖 AI 상세분석」</b> 단추가 어디인지 짚어 주고, 안 돼 있으면 어디서 연결하는지 말합니다 — 가짜 단추는 만들지 않았습니다. <b>고객정보가 저장 뒤 되돌아가지 않습니다.</b> 전화번호만 고쳐도 <b>직업·메모가 통째로 지워지던</b> 것을 고쳤습니다 — 빈 칸을 <code>null</code> 로 덮어 보내고 있었습니다. 이제 <b>채운 칸만</b> 보내고, 저장 뒤 <b>서버에서 다시 읽고</b>, 저장 중에는 단추가 잠기며, 실패를 성공처럼 말하지 않습니다. 새 점검(<code>check-covstate</code>)이 이 넷을 지킵니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -30867,6 +30867,18 @@ var INS_SECS = ['전체 보장현황','전체 계약리스트','상품별 가입
 var INS_CAT = ['사망/장해','치매/간병','암 진단','뇌/심장 진단','실손의료비','수술/입원','운전자/기타'];
 /* 담보를 큰 틀로 묶는다. 문서가 대분류를 적어 주면 그것을 쓰고,
    안 적혀 있으면 담보 이름으로 판단한다 — 다른 양식에서도 큰 틀은 잡힌다. */
+/* 카드에 담보를 몇 개까지 펼칠까 — <b>영역마다 다르다.</b>
+   뇌·심장은 <b>줄이지 않는다.</b> 「허혈성심장질환 외 1개」 로 접히면서 급성심근경색
+   진단비가 화면에서 사라져, 고객이 <b>안 들어 있는 줄 알았다.</b> 상담에서 제일
+   위험한 오해다 — 뇌·심장은 담보 이름 하나하나가 보장 범위를 가르기 때문이다.
+   순환계 치료도 같은 이유로 펼친다(혈전용해·혈전제거·스텐트가 각각 다른 담보다).
+   표에 없는 영역은 기본 4개까지만 보이고 나머지는 「외 N개」 로 접는다. */
+var INS_AREA_SHOW_ALL = { '뇌·심장': 1, '순환계 치료': 1 };
+var INS_AREA_SHOW = 4;
+function insAreaShow(area) {
+  return INS_AREA_SHOW_ALL[area] ? Infinity : INS_AREA_SHOW;
+}
+
 var INS_AREA = [
   { k: '사망·장해',  pat: '사망\\s*\\/\\s*장해',        re: /(사망|후유장해|고도장해)/ },
   { k: '암',        pat: '암\\s*진단',                  re: /(일반암|유사암|소액암|고액암|특정암|전이암|재진단암|암진단|암\s*진단)/ },
@@ -30976,6 +30988,32 @@ function insRows(seg, state) {
 }
 
 /* ── 자동차보험 ────────────────────────────────────────────────── */
+/* ── 납입 상태 — <b>계약 상태와 절대 섞지 않는다</b> ──────────
+   「납입완료」는 <b>보험료 낼 의무만 끝났고 보장은 그대로</b>인 계약이다.
+   해지·실효와 같은 칸에 넣으면 <b>살아 있는 보장을 없는 것으로</b> 세게 되고,
+   그 자리에서 고객이 「그럼 나 지금 보장 없는 거네요」 라고 묻는다.
+   그래서 계약 상태(state: 해지·실효·만기·정상)와 <b>따로</b> 둔다.
+
+   판정은 <b>읽은 것만으로</b> 한다 (CLAUDE.md 1번).
+     가입일 + 납입기간(년) 이 둘 다 있고 그 끝이 지났으면  → 납입완료
+     끝이 아직 안 지났으면                                 → 납입중
+     둘 중 하나라도 없거나 종신·전기납처럼 해수가 아니면   → <b>확인필요</b>
+   짐작으로 「납입완료」 를 붙이지 않는다 — 틀리면 보험료를 안 내도 되는 줄 안다. */
+var INS_PAY = { PAYING: '납입중', PAID_UP: '납입완료', UNKNOWN: '확인필요' };
+function insPayStatus(p, today) {
+  if (!p) return 'UNKNOWN';
+  /* 증권에 대놓고 적혀 있으면 그 말을 그대로 믿는다 — 계산보다 우선이다 */
+  if (/납입\s*완료|완납/.test(p.name || '')) return 'PAID_UP';
+  var yrs = parseInt(('' + (p.years || '')).replace(/[^0-9]/g, ''), 10);
+  var from = ('' + (p.from || '')).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  /* 종신납·전기납은 해수가 없다. 숫자가 안 나오면 <b>모른다</b>고 한다. */
+  if (!from || !yrs || yrs <= 0) return 'UNKNOWN';
+  var end = new Date(+from[1] + yrs, +from[2] - 1, +from[3]);
+  var now = today ? new Date(today) : new Date();
+  return end <= now ? 'PAID_UP' : 'PAYING';
+}
+function insPayLabel(p, today) { return INS_PAY[insPayStatus(p, today)] || INS_PAY.UNKNOWN; }
+
 function insCars(seg) {
   if (!seg) return [];
   var out = [], seen = {};
@@ -34047,8 +34085,19 @@ var INS_KEY = [
   { k: '재진단암·전이암',           re: /(재진단암|이차암|전이암)/ },
   { k: '순환계치료비·2대질병치료비',  re: /(순환계|2대질병|이대질병)/ },
   { k: '혈전용해·혈전제거',         re: /(혈전용해|혈전제거|혈전)/ },
-  { k: '뇌혈관질환 (전체)',         re: /뇌혈관/ },
-  { k: '허혈성심장질환 (전체)',      re: /허혈성/ },
+  /* ── 뇌·심장은 <b>담보 이름이 곧 보장 범위</b>다 ──────────────────
+     뇌출혈(I60~I62) 약 10% / 뇌졸중(I60~I63) 약 50% / 뇌혈관질환(I60~I69) 90%+
+     급성심근경색(I21~I22) 약 30% / 허혈성심장질환(I20~I25) 90%+
+     그래서 <b>좁은 것과 넓은 것을 따로 센다.</b> 뇌혈관만 보고 「뇌 준비됨」 이라
+     하면 뇌출혈만 든 사람을 놓치고, 그 반대도 마찬가지다.
+     급성심근경색은 여기 아예 없어서, 증권에 있어도 이 표는 「없음」 이라고
+     말하고 있었다. 회사마다 진단비·진단금·진단 으로 끝이 갈리고 사이에 빈칸이
+     들어가기도 해서, 낱말 하나로 붙잡지 않고 <b>빈칸을 허용해</b> 잡는다. */
+  { k: '뇌혈관질환 (전체)',         re: /뇌\s*혈관/ },
+  { k: '뇌졸중',                   re: /뇌\s*졸중/ },
+  { k: '뇌출혈',                   re: /뇌\s*출혈/ },
+  { k: '허혈성심장질환 (전체)',      re: /허혈성\s*심(장)?\s*질환|허혈성/ },
+  { k: '급성심근경색',              re: /급성\s*심근\s*경색|심근\s*경색/ },
   { k: '간병인사용일당',            re: /(간병인|간호간병)/ },
   { k: '장기요양·치매',             re: /(장기요양|치매)/ }
 ];
@@ -34124,11 +34173,13 @@ function insBrief(sc) {
   }
   if (sc.plans.length) {
     L.push('');
-    L.push('■ 유효 계약 (보험사 | 상품명 | 가입일 | 납입 | 만기 | 월 보험료)');
+    L.push('■ 유효 계약 (보험사 | 상품명 | 가입일 | 납입 | 납입상태 | 만기 | 월 보험료)');
     sc.plans.forEach(function (p, i) {
+      /* 납입상태를 AI 에게도 그대로 넘긴다 — 화면만 고치면 AI 는 여전히 모른다.
+         「납입완료」를 해지로 오해하면 살아 있는 보장을 없다고 쓴다. */
       L.push('  ' + (i + 1) + '. ' + p.co + ' | ' + p.name + ' | ' + p.from + ' | ' +
-        (p.pay || '?') + (p.years ? ' ' + p.years + '년납' : '') + ' | ' + (p.till || '?') + ' | ' +
-        (p.fee > 0 ? insWon(p.fee) + '원' : '미제공'));
+        (p.pay || '?') + (p.years ? ' ' + p.years + '년납' : '') + ' | 납입상태 ' + insPayLabel(p) +
+        ' | ' + (p.till || '?') + ' | ' + (p.fee > 0 ? insWon(p.fee) + '원' : '미제공'));
     });
   }
   if (sc.lapsed.length) {
@@ -35597,6 +35648,10 @@ var BJ_RULES = [
   '[반드시 계산할 것 — 원본 표에 없다]',
   '  1 은퇴기 잔존 보장 — 고객이 60세가 되는 해를 기준선으로 담보별 잔존 금액과 감소율',
   '  2 보험료 성격 분해 — 순수보장성/자산성/연금/납입완료임박/납입완료',
+  '',
+  '[납입완료] 자료의 「납입상태」 칸을 그대로 쓴다. 납입완료는 보험료 낼 의무만 끝났고 보장은 살아 있는 계약이다.',
+  '해지·실효와 절대 같이 묶지 않는다. 납입완료 계약의 보장은 있는 보장으로 세고, 월 보험료만 0 으로 센다.',
+  '「확인필요」 로 적힌 계약은 납입완료라고 단정하지 말고 증권으로 확인하라고 적는다.',
   '  3 단기납 종신 총납입 vs 사망보험금   4 갱신형 월보험료 합계',
   '  5 중복 담보 — 정액은 중복 지급, 실손은 비례보상이라 성격별로 다르게 판정',
   '  6 확보 가능 재원 (A/B/C안별)',
@@ -35815,7 +35870,9 @@ function bjPlanSlides(sc) {
   var noG = ((sc.gaps) || []).filter(function (g) { return !g.has; });
   if (noG.length)
     cmp.push({ ic: 'r', mark: '1', title: '빈 계열을 지금 채우면 얼마인가',
-      text: noG.slice(0, 3).join(' · ') + (noG.length > 3 ? ' 외 ' + (noG.length - 3) + '개' : '') +
+      /* gaps 는 {name,has,…} 객체다. 그대로 join 하면 화면에 [object Object] 가 찍힌다. */
+      text: noG.slice(0, 3).map(function (g) { return g.name; }).join(' · ') +
+            (noG.length > 3 ? ' 외 ' + (noG.length - 3) + '개' : '') +
             ' — <b>같은 보장을 오늘 사면</b> 얼마인지 견적을 뽑아 견줍니다.' });
   cmp.push({ ic: 'b', mark: cmp.length + 1 + '', title: '유지 vs 갈아타기',
     text: '기존 계약을 <b>깨지 않고</b> 모자란 것만 얹는 쪽과, 새로 짜는 쪽을 나란히 놓고 봅니다.' });
@@ -35881,11 +35938,13 @@ function bjLocalDeck(parts, o, why, scan) {
 
     slides.push({ type: 'table', eyebrow: '계약 현황', title: '가입하신 계약',
       sub: '증권에 적힌 그대로입니다',
-      head: ['보험사', '상품', '가입일', '납입', '만기', '월 보험료'],
+      head: ['보험사', '상품', '가입일', '납입', '납입상태', '만기', '월 보험료'],
       rows: sc.plans.map(function (p) {
+        /* 납입상태는 계약 상태와 <b>다른 칸</b>이다 — 납입완료는 보장이 살아 있다 */
         return { cells: [p.co, p.name, p.from, (p.pay || '-') + (p.years ? ' ' + p.years + '년' : ''),
+          insPayLabel(p) + (/갱신/.test(p.name || '') ? ' · 갱신형' : ''),
           p.till || '-', p.fee > 0 ? insWon(p.fee) + '원' : '미제공'] };
-      }).concat([{ cells: ['합계', t.n + '건', '', '', '', insWon(t.fee) + '원'], tone: 'ok' }]),
+      }).concat([{ cells: ['합계', t.n + '건', '', '', '', '', insWon(t.fee) + '원'], tone: 'ok' }]),
       foot: t.saidN && t.saidN !== t.n ? ('※ 문서 머리글은 ' + t.saidN + '건이라고 적혀 있습니다 — 원본을 확인해 주세요.') : '' });
   }
 
@@ -35900,8 +35959,12 @@ function bjLocalDeck(parts, o, why, scan) {
           /* 느슨하게 읽은 것에는 「충분」 같은 판정을 붙이지 않는다 — 지어내는 것이 된다 */
           label: sc.loose ? (a.rows.length + '개 읽음') : (a.short ? (a.short + ' / ' + a.rows.length + ' 부족') : (a.rows.length + '개 확보')),
           title: a.area,
-          text: a.rows.slice(0, 4).map(function (d) { return d.name + ' ' + bjMoney(d.have); }).join('<br>') +
-            (a.rows.length > 4 ? '<br>외 ' + (a.rows.length - 4) + '개' : '') };
+          /* 몇 개까지 펼칠지는 insAreaShow 한 곳이 답한다 — 뇌·심장은 안 접는다 */
+          text: (function () {
+            var cap = insAreaShow(a.area);
+            var t = a.rows.slice(0, cap).map(function (d) { return d.name + ' ' + bjMoney(d.have); }).join('<br>');
+            return t + (a.rows.length > cap ? '<br>외 ' + (a.rows.length - cap) + '개' : '');
+          })() };
       }),
       note: sc.loose
         ? { tone: 'amber', title: '이 표는 판정이 아닙니다',
@@ -35998,8 +36061,19 @@ function bjLocalDeck(parts, o, why, scan) {
       { ic: 'r', mark: '4', title: '신규 승낙 전 기존 해지 금지', text: '반드시 신규 계약 승낙을 확인한 뒤 기존 계약을 정리합니다.' }
     ] });
 
-  slides.push({ type: 'cover', kicker: '마무리', title: 'AI 를 연결하면 <em>여기서 더</em> 나갑니다',
-    lead: '60세 절벽 · 치료비 정밀 진단 · 리모델링 A/B/C 3안이 함께 나옵니다.' });
+  /* 전에는 <b>AI 가 이미 연결돼 있어도</b> 「AI 를 연결하면 …」 이라고 적혀 있었다.
+     어디를 눌러야 하는지도, 지금 연결돼 있는지도 알 수 없어 <b>죽은 문구</b>였다.
+     연결돼 있으면 <b>어느 단추를 누르면 되는지</b> 말하고, 안 돼 있으면
+     <b>어디서 연결하는지</b> 말한다. 둘 다 실제로 누를 수 있는 자리다. */
+  var aiOn = (typeof aiReady === 'function') && aiReady();
+  slides.push(aiOn
+    ? { type: 'cover', kicker: '마무리', title: 'AI 상세분석으로 <em>여기서 더</em> 들어갑니다',
+        lead: '위쪽 <b>「🤖 AI 상세분석」</b> 을 누르시면 같은 자료를 AI 가 다시 읽어 ' +
+              '<b>60세 절벽 · 치료비 정밀 진단 · 리모델링 A/B/C 3안</b> 을 더해 드립니다. ' +
+              '나오는 것은 <b>상담용 참고 분석</b>이며, 해지·가입을 단정하지 않습니다.' }
+    : { type: 'cover', kicker: '마무리', title: '이 리포트는 <em>AI 없이</em> 만들었습니다',
+        lead: '증권에서 읽어 낸 것만 담았습니다. <b>설정 → AI 연결</b> 에서 열쇠를 넣으시면 ' +
+              '<b>60세 절벽 · 치료비 정밀 진단 · 리모델링 A/B/C 3안</b> 이 더해집니다.' });
 
   return {
     client: { name: sc && sc.who.name ? sc.who.name : '', age: sc && sc.who.age ? sc.who.age : 0, analysisDate: today },
@@ -36083,7 +36157,12 @@ function bjActions(id) {
     '<button class="btn btn-ghost" onclick="bjDownload(\'' + id + '\')">⬇️ HTML 저장</button>' +
     '<button class="btn btn-ghost" onclick="bjCopyJson(\'' + id + '\')">📋 JSON 복사</button>' +
     '<button class="btn btn-ghost" onclick="bjSave(\'' + id + '\')">💾 고객 365일 저장</button>' +
-    '<button class="btn btn-ghost" onclick="runPdf(\'' + id + '\')">🔄 재생성</button>' +
+    /* 「재생성」 이 실제로 AI 를 돌리는 단추다. 이름이 그걸 말하지 않아서
+       무엇을 눌러야 AI 가 도는지 아무도 몰랐다. 가짜 단추를 새로 만들지 않고
+       <b>이 단추의 이름</b>을 바로잡는다 — 같은 일을 하는 단추가 둘이면 안 된다. */
+    '<button class="btn btn-ghost" onclick="runPdf(\'' + id + '\')">' +
+      (((typeof aiReady === 'function') && aiReady()) ? '🤖 AI 상세분석' : '🔄 다시 만들기') +
+    '</button>' +
     '</div>';
 }
 
@@ -41187,13 +41266,55 @@ function osCliInfoLoad(){var sb=osClient();if(!sb||!OSC.current)return;
     try{CM_BASE[OSC.current.id]={by:d.birth_year,gd:d.gender,inc:d.monthly_income,exp:d.monthly_fixed_expense};}catch(e){}
   });
 }
+/* ── 고객정보 저장 ───────────────────────────────────────────
+   전에는 화면 칸을 전부 읽어 <b>빈 것을 null 로 만들어</b> 보냈다.
+     phone:(osVal('cliPhone')||null)
+   그래서 전화번호만 고쳐도 <b>직업·메모가 통째로 지워졌다.</b> 화면에 없는 칸,
+   아직 안 그린 칸도 똑같이 null 이 되어 날아갔다. 「일부만 고쳤는데 나머지가
+   사라진다」 가 이 자리다.
+
+   이제 <b>사람이 실제로 채운 칸만</b> 보낸다. 빈 칸은 아예 안 보내므로 서버의
+   옛 값이 그대로 남는다. <b>일부러 비우려는 것</b>과 <b>안 건드린 것</b>을
+   가르려면 칸이 화면에 있는지부터 본다 — 없는 칸은 손댄 적이 없다.
+
+   저장 뒤에는 <b>서버에서 다시 읽는다.</b> 안 읽으면 화면은 새 값인데 서버는
+   옛 값인 채로 갈리고, 새로고침하면 되돌아간 것처럼 보인다.
+   저장 중에는 단추를 잠근다 — 두 번 눌러 두 요청이 엇갈리면 나중 것이 이긴다. */
+var OSC_SAVING = false;
+function osCliInfoPayload(){
+  /* 칸이 화면에 없으면 건드린 적이 없다 — 보내지 않는다 */
+  var out = {}, e;
+  var put = function(id, key, num){
+    e = $(id); if (!e) return;
+    var v = ('' + (e.value == null ? '' : e.value)).trim();
+    if (v === '') return;                 /* 빈 칸은 안 보낸다 — 옛 값을 지우지 않는다 */
+    if (num) { var n = parseInt(v.replace(/[^0-9-]/g, ''), 10); if (!isNaN(n)) out[key] = n; return; }
+    out[key] = v;
+  };
+  put('cliPhone','phone');            put('cliBirth','birth_year',1);
+  put('cliGender','gender');          put('cliIncome','monthly_income',1);
+  put('cliExp','monthly_fixed_expense',1); put('cliMemo','household_notes');
+  return out;
+}
 function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
-  var payload={phone:(osVal('cliPhone')||null),birth_year:(parseInt(osVal('cliBirth'),10)||null),gender:(osVal('cliGender')||null),monthly_income:(parseInt(osVal('cliIncome'),10)||null),monthly_fixed_expense:(parseInt(osVal('cliExp'),10)||null),household_notes:(osVal('cliMemo')||null)};
+  if(OSC_SAVING)return;                 /* 중복 클릭 — 두 요청이 엇갈리면 나중 것이 이긴다 */
+  var payload=osCliInfoPayload();
+  if(!Object.keys(payload).length){toast('바뀐 내용이 없습니다.');return;}
+  var btn=document.querySelector('button[onclick="osCliInfoSave()"]');
+  var was=btn?btn.textContent:'';
+  OSC_SAVING=true; if(btn){btn.disabled=true;btn.textContent='저장 중…';}
+  var done=function(){OSC_SAVING=false;if(btn){btn.disabled=false;btn.textContent=was;}};
   sb.from('clients').update(payload).eq('id',OSC.current.id).then(function(r){
+    done();
     if(r.error){var m=r.error.message||'';toast('저장 실패: '+m+(/phone/i.test(m)?' — 시스템 점검 → 필요한 SQL 의 「고객 365일 상담자료 저장」 을 한 번 누르세요':''));return;}
-    /* 방금 고친 값을 손에 들고 있어야 계산기로 그 값이 간다 — 옛 값이 남으면 안 된다 */
-    try{CM_BASE[OSC.current.id]={by:payload.birth_year,gd:payload.gender,inc:payload.monthly_income,exp:payload.monthly_fixed_expense};}catch(e){}
-    toast('고객 정보를 저장했습니다.');
+    /* 서버에서 다시 읽는다 — 화면과 서버가 갈리면 새로고침에서 되돌아간 것처럼 보인다.
+       CM_BASE(계산기로 넘길 값)도 여기서 같이 새로 채워진다. */
+    osCliInfoLoad();
+    toast('고객정보가 저장되었습니다.');
+  },function(){
+    /* 네트워크가 끊겨도 성공한 것처럼 말하지 않는다 */
+    done();
+    toast('고객정보 저장에 실패했습니다. 다시 시도해주세요.');
   });
 }
 function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.current||!host)return;
