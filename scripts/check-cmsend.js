@@ -90,7 +90,20 @@ const FAKE = `(function(){
   is(ff.keys.indexOf('f_age') >= 0 && ff.keys.indexOf('f_income') >= 0, '  나이·월소득 칸도 있다');
   const html = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   is(/id="cliExp"/.test(html), '  고객 정보에도 월 생활비 칸(cliExp)이 있다');
-  is(/monthly_fixed_expense:\(parseInt\(osVal\('cliExp'\)/.test(html), '  그 칸이 서버로 저장된다');
+  /* 코드를 <b>어떻게 적었는지</b>가 아니라 <b>실제로 담기는지</b>를 본다.
+     전에는 `monthly_fixed_expense:(parseInt(osVal('cliExp')` 라는 글자를 찾았는데,
+     같은 일을 하는 다른 모양으로 고치면 멀쩡한 코드에 빨간불이 켜졌다.
+     헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (CLAUDE.md 8번). */
+  const sent = await page.evaluate(() => {
+    if (typeof osCliInfoPayload !== 'function') return null;
+    const mk = (id, v) => { let e = document.getElementById(id);
+      if (!e) { e = document.createElement('input'); e.id = id; document.body.appendChild(e); }
+      e.value = v; };
+    mk('cliExp', '250');
+    return osCliInfoPayload();
+  });
+  is(!!sent && sent.monthly_fixed_expense === 250,
+     '  그 칸이 서버로 저장된다 — 보내는 것: ' + JSON.stringify(sent || {}));
   is(/select\('phone,birth_year,gender,monthly_income,monthly_fixed_expense,household_notes'\)/.test(html),
      '  다시 열 때 그 칸도 읽어 온다');
 
