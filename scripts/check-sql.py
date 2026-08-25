@@ -54,6 +54,44 @@ for f in files:
 #   대표님이 홈 맨 위 배너에서 복사해 붙여넣는 것은 .sql 파일이 아니라
 #   app/index.html 안의 HX_SQL 이다. 정작 손으로 실행하는 그 SQL 을
 #   아무도 안 보고 있었다 — 여기서 같이 본다.
+def _unesc(r):
+    return r.replace('\\"', '"').replace("\\'", "'").replace('\\\\', '\\')
+
+
+def _quoted(txt):
+    """따옴표 안의 줄만 뽑는다. 홑따옴표로 적은 배열도 읽는다."""
+    return [_unesc(a or b) for a, b in
+            re.findall(r'"((?:[^"\\]|\\.)*)"' + r"|'((?:[^'\\]|\\.)*)'", txt)]
+
+
+def _rows(lines, src):
+    """`[...].concat(이름).concat([...])` 을 <b>차례대로</b> 펼친다.
+
+    같은 SQL 을 두 곳에 적어 두면 조용히 갈라진다(CLAUDE.md 5번). 그래서
+    한 곳에 두고 이름으로 가리키는데, 글자만 긁으면 그 이름은 안 보인다 —
+    가리키는 곳을 찾아가 그 자리에 끼워 넣어야 진짜 나갈 SQL 이 된다.
+    """
+    out, i = [], 0
+    for m in re.finditer(r'\]\s*\.concat\(', lines):
+        out += _quoted(lines[i:m.start()])
+        rest = lines[m.end():]
+        if rest.lstrip().startswith('['):
+            j = rest.index('[')
+            out += _quoted(rest[j:rest.index(']', j) + 1])
+            i = m.end() + rest.index(']', j) + 1
+            continue
+        name = re.match(r'\s*([A-Za-z_$][\w$]*)', rest)
+        if not name:
+            i = m.end()
+            continue
+        ref = re.search(r'var\s+' + re.escape(name.group(1)) + r'\s*=\s*\[(.*?)\n\];', src, re.S)
+        if ref:
+            out += _quoted(ref.group(1))
+        i = m.end() + name.end()
+    out += _quoted(lines[i:])
+    return out
+
+
 def embedded_blocks():
     """app/index.html 의 HX_SQL 을 덩이별로 뽑는다"""
     try:
@@ -67,12 +105,13 @@ def embedded_blocks():
     if end < 0:
         return []
     body, out = src[k:end], []
-    for m in re.finditer(r"'(\d+)':\{(.*?)lines:\[(.*?)\n \]\}", body, re.S):
+    """덩이 끝은 `\n ]}` 또는 `\n ])}` 다 — 같은 SQL 을 두 곳에 적지 않으려고
+       `].concat(이름)` 으로 한 곳을 가리키게 두면 닫는 모양이 달라진다.
+       여기서 그것을 못 따라가면 덩이 경계를 놓쳐 다음 묶음까지 삼킨다."""
+    for m in re.finditer(r"'(\d+)':\{(.*?)lines:\[(.*?)\n \]\)?\}", body, re.S):
         key, head, lines = m.group(1), m.group(2), m.group(3)
         lab = re.search(r'label:"([^"]*)"', head)
-        rows = re.findall(r'"((?:[^"\\]|\\.)*)"', lines)
-        sql = '\n'.join(r.replace('\\"', '"').replace("\\'", "'").replace('\\\\', '\\')
-                        for r in rows)
+        sql = '\n'.join(_rows(lines, src))
         out.append(('HX_SQL[%s] %s' % (key, lab.group(1) if lab else ''), sql))
     return out
 
