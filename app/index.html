@@ -11648,7 +11648,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-25 11:30';
+var APP_BUILD='2026-08-26 09:50';
 var APP_BUILD_NOTE='<b>블로그 공장(<code>app/blog.html</code>)이 이제 혼자 섭니다.</b> 앱을 안 열어도 됩니다 — 맨 위에 <b>연결 칸</b>이 생겨서 <b>내 API 키</b>나 <b>서버 프록시 주소</b>를 거기서 바로 넣습니다. 연결이 안 돼 있으면 <b>묻지 않아도 그 칸이 열려</b> 있습니다. 다만 <b>칸을 새로 만들지 않았습니다</b> — 앱이 쓰는 그 저장칸에 그대로 씁니다. 여기서 넣으면 앱에도 들어가고, 앱에서 넣어 두셨으면 여기서 그대로 쓰입니다(두 벌이면 「앱에서는 되는데 여기서는 안 되는」 자리가 생깁니다). <b>키는 서버로 보내지 않고 이 브라우저에만</b> 남고, 저장해 둔 키는 <b>앞뒤 몇 자만</b> 보여 줍니다(<code>sk-ant-…wxyz</code>) — 어깨너머로 읽히고 캡처에 찍히기 때문입니다. 입력 칸은 저장하면 비웁니다. <b>«연결 확인»</b>은 <b>진짜로 한 번 불러 봅니다</b> — 32토큰만 써서 지갑을 안 태우고, 답이 오면 그제야 「됩니다」 라고 말합니다. <b>그림 꼬리말에 넣을 이름</b>(소속·이름·직함)도 여기서 넣고, 안 넣으시면 <b>아무것도 안 넣습니다</b>. 고친 자리 둘 — 키를 저장하면 <b>연결 칸이 닫혀 버려</b> 제대로 들어갔는지 볼 수 없던 것, 그리고 저장해 둔 초안을 <b>다시 열었을 때 준법 문구를 「못 읽었습니다」 라고 잘못 말하던 것</b>(열 때 한 번 미리 읽어 둡니다). 게이트가 막고 있으면 <b>서식 복사 단추가 아예 눌리지 않고</b> 「고칠 곳 N군데」 라고 적힙니다 — 마크다운 복사는 손으로 고치시라고 열어 둡니다. 점검이 <b>키가 화면에 되비치지 않는지</b> · 같은 칸에 쓰는지 · «연결 확인» 이 정말 부르는지까지 봅니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -30862,12 +30862,85 @@ var INS_CO = [
   '롯데손해보험','롯데손보','흥국화재','NH농협손해보험','농협손보','MG손해보험','MG손보','예별손해보험',
   'AXA손해보험','AXA손보','하나손해보험','하나손보','캐롯손해보험','캐롯손보','AIG손해보험','AIG손보',
   '라이나손해보험','라이나손보','더케이손해보험','더케이손보','에이스손해보험','서울보증보험',
+  '농협손해보험','신한EZ손해보험','KB라이프생명','메트라이프생명',
   '삼성생명','한화생명','교보생명','신한라이프','신한생명','오렌지라이프','NH농협생명','농협생명',
   '미래에셋생명','동양생명','흥국생명','KB라이프','KB생명','메트라이프','푸본현대생명','현대라이프',
   'DB생명','iM라이프','DGB생명','AIA생명','라이나생명','처브라이프','ABL생명','알리안츠생명',
   'KDB생명','하나생명','BNP파리바카디프','카디프생명','IBK연금보험','교보라이프플래닛','푸르덴셜생명',
   '우체국보험','수협공제','신협공제','새마을금고공제'
 ];
+
+/* ── 회사 이름은 <b>사장님도 넣으실 수 있다</b> ────────────────────────
+   위 표는 코드에 박혀 있다. 그래서 새 회사가 생기거나 증권이 우리가 모르는
+   표기로 적어 오면 <b>그 계약 줄이 통째로 버려진다</b> (insRows 의
+   `if (!co) continue`). 그때마다 저를 불러 한 줄 넣으셔야 했다.
+
+   넣으신 이름은 <b>이 기기(localStorage)에만</b> 남는다 — 담보 사전
+   (babaSyn) 과 같은 자리, 같은 방식이다.
+
+   합치는 곳은 <b>여기 하나</b>다 (CLAUDE.md 5번). 보장분석(insCoRe ·
+   insLooseHeads) 도 비포&애프터(babaPlanCoFind · babaPlanScan) 도 전부
+   insCoAll() 을 부른다. 예전에 표가 <b>두 벌</b>이라 같은 증권을 두 화면이
+   다르게 읽던 자리가 바로 그것이다.                                     */
+var INS_CO_KEY = 'apex_ins_co';
+var _insCoAll = null;
+function insCoMine() {
+  try { var v = JSON.parse(localStorage.getItem(INS_CO_KEY) || '[]'); return (v && v.push) ? v : []; }
+  catch (e) { return []; }
+}
+function insCoMineSave(a) {
+  try { localStorage.setItem(INS_CO_KEY, JSON.stringify(a || [])); } catch (e) {}
+  /* 캐시를 <b>반드시</b> 버린다 — 안 버리면 넣으셔도 다음 자료에서 안 읽힌다 */
+  _insCoAll = null; _insRe = null;
+}
+/* 코드 표 + 넣으신 것. <b>긴 것부터</b> — 「삼성생명」 을 「삼성」 으로 자르면 안 된다. */
+function insCoAll() {
+  if (_insCoAll) return _insCoAll;
+  var L = INS_CO.concat(insCoMine()), seen = {}, out = [], i, n;
+  for (i = 0; i < L.length; i++) {
+    n = ('' + (L[i] || '')).replace(/\s+/g, '');
+    if (n.length < 2 || seen[n]) continue;
+    seen[n] = 1; out.push(n);
+  }
+  out.sort(function (a, b) { return b.length - a.length; });
+  _insCoAll = out; return out;
+}
+/* 넣기. 못 넣으면 <b>왜 못 넣는지</b>를 돌려준다 — 조용히 실패하지 않는다. */
+function insCoAdd(n) {
+  n = ('' + (n || '')).replace(/\s+/g, '');
+  if (n.length < 2) return '보험사 이름을 두 글자 이상 넣어 주세요';
+  if (n.length > 20) return '보험사 이름이 너무 깁니다 — 20자까지';
+  var all = insCoAll(), i;
+  for (i = 0; i < all.length; i++) if (all[i] === n) return '「' + n + '」 은 이미 읽고 있습니다';
+  var mine = insCoMine(); mine.push(n); insCoMineSave(mine);
+  return '';
+}
+function insCoDel(n) {
+  var k = ('' + (n || '')).replace(/\s+/g, '');
+  insCoMineSave(insCoMine().filter(function (x) { return ('' + x).replace(/\s+/g, '') !== k; }));
+}
+
+/* ── 회사를 못 찾아 <b>버린 줄</b>을 세어 둔다 ────────────────────────
+   insRows 는 회사 이름을 못 찾으면 그 계약 줄을 <b>통째로 버린다</b>.
+   버리는 것 자체는 옳다 — 회사를 짐작해 채우면 <b>남의 회사가</b> 고객
+   앞에 선다 (CLAUDE.md 1번). 문제는 <b>말없이</b> 버린 것이다. 계약
+   30건 중 한 건이 사라져도 아무도 모른다. 실제로 「농협손해보험」 계약이
+   그렇게 사라졌고, 견본을 만들어 세어 보고서야 찾았다.
+
+   그래서 버린 줄을 <b>원문 그대로</b> 담아 화면에 보여 준다. 회사 이름을
+   지어내 붙이지 않는다 — 원문을 보여 드리고 사장님이 그 자리에서 넣으신다. */
+var INS_DROP_KEEP = 8;
+var _insDrop = null;
+function insDropStart() { _insDrop = { n: 0, rows: [], seen: {} }; }
+function insDropAdd(s) {
+  if (!_insDrop) return;
+  var t = ('' + (s || '')).replace(/\s+/g, ' ').replace(/^ | $/g, '').slice(0, 44);
+  if (t.length < 4 || _insDrop.seen[t]) return;
+  _insDrop.seen[t] = 1;
+  _insDrop.n++;
+  if (_insDrop.rows.length < INS_DROP_KEEP) _insDrop.rows.push(t);
+}
+function insDropTake() { var d = _insDrop || { n: 0, rows: [] }; _insDrop = null; return d; }
 /* 이 문서가 쓰는 제목들 — 구간을 자르는 기준 */
 var INS_SECS = ['전체 보장현황','전체 계약리스트','상품별 가입현황','상품별 가입담보상세',
   '담보별 가입 현황','실효/해지계약현황','자동차 보험 조회','전체 담보 진단 현황',
@@ -30933,8 +31006,8 @@ function insEsc(s) { return ('' + s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 var _insRe = null;
 function insCoRe() {
   if (_insRe) return _insRe;
-  var names = INS_CO.slice().sort(function (a, b) { return b.length - a.length; });
-  _insRe = names.map(function (n) {
+  /* 긴 것부터는 insCoAll() 이 이미 맞춰 준다 — 여기서 다시 세우지 않는다 */
+  _insRe = insCoAll().map(function (n) {
     return { name: n, re: new RegExp(n.split('').map(insEsc).join('\\s*')) };
   });
   return _insRe;
@@ -30952,12 +31025,32 @@ function insFindCo(s) {
 }
 
 /* ── 제목으로 구간 자르기 ──────────────────────────────────────── */
+/* 제목 하나를 찾는 정규식.
+     named=true  — 「홍길동 님의 전체 계약리스트」 처럼 이름이 붙은 꼴. 가장 확실하다.
+     named=false — 「전체 계약리스트」 만 적힌 꼴. 회사마다 서식이 달라 이름을 안 붙이기도 한다.
+   맨 꼴은 본문 문장과 헷갈릴 수 있으므로, 뒤에 <b>조사</b>가 붙으면 제목이 아니라고 본다
+   («전체 계약리스트<b>를</b> 확인하세요» 는 안내문이다). */
+function insSecRe(w, named) {
+  var body = w.split('').map(function (c) { return /\s/.test(c) ? '\\s*' : insEsc(c); }).join('\\s*');
+  return named ? new RegExp('님\\s*의\\s*' + body, 'g')
+               : new RegExp(body + '(?!\\s*[를을은는이가에과와의도만로])', 'g');
+}
 function insSections(T) {
-  var marks = [], i, m;
+  var marks = [], i, m, re;
+  /* ── 이름이 붙은 제목이 하나라도 있으면 <b>그것만</b> 쓴다 ─────────────
+     협회 서식은 전부 「님의」 가 붙는다. 거기서 맨 제목까지 같이 잡으면
+     목차·안내문이 끼어들 여지가 생긴다. 확실한 것이 있으면 그것만 본다.
+
+     하나도 없으면 그때 맨 제목으로 다시 훑는다. 예전에는 「님의」 가 없는
+     서식(KB 등)에서 <b>구간을 하나도 못 잘라</b> insScan 이 통째로 null 을
+     냈다 — 계약도 담보도 한 줄 안 읽히고 화면이 비었다. */
+  var named = false;
+  for (i = 0; i < INS_SECS.length && !named; i++) {
+    re = insSecRe(INS_SECS[i], true);
+    if (re.test(T)) named = true;
+  }
   for (i = 0; i < INS_SECS.length; i++) {
-    var re = new RegExp('님의\\s*' + INS_SECS[i].split('').map(function (c) {
-      return /\s/.test(c) ? '\\s*' : insEsc(c);
-    }).join('\\s*'), 'g');
+    re = insSecRe(INS_SECS[i], named);
     while ((m = re.exec(T))) marks.push({ at: m.index, end: m.index + m[0].length, name: INS_SECS[i] });
   }
   marks.sort(function (a, b) { return a.at - b.at || b.end - a.end; });
@@ -30986,7 +31079,8 @@ function insRows(seg, state) {
   var re = /(\d{1,3})\s+(?:(해지|실효|만기|정상|失效)\s*\*?\s+)?(.{2,70}?)\s(\d{4})-(\d{2})-(\d{2})\s+(?:(월납|연납|3개월납|6개월납|일시납|전기납|종신납)\s+)?(\d{1,3}\s*년|종신|전기)\s+(종신|\d{2,3}\s*세)\s+(보험료\s*미제공|[\d,]{3,}\s*원)/g, m;
   while ((m = re.exec(seg))) {
     var body = m[3], co = insFindCo(body);
-    if (!co) continue;
+    /* 회사를 모르면 <b>버리되 말한다</b> — 짐작해 채우지 않는다 */
+    if (!co) { insDropAdd(body); continue; }
     var name = body.slice(co.end).replace(/^[\s\-·]+|[\s\-·]+$/g, '').replace(/\s{2,}/g, ' ');
     var from = m[4] + '-' + m[5] + '-' + m[6];
     var fee = /미제공/.test(m[10]) ? -1 : insNum(m[10]);
@@ -31531,6 +31625,55 @@ function babaDictHtml(){
       '넣으신 표기는 이 기기에 남습니다.</div></div></div>';
 }
 
+/* ── 읽는 회사 표 — 사장님이 <b>직접</b> 넣으신다 ────────────────────
+   위 담보 사전과 같은 모양이다. 다른 점이 하나 있다 — 담보 이름을 못
+   읽으면 그 담보 한 줄이 비지만, <b>회사 이름을 못 찾으면 그 계약이
+   통째로</b> 사라진다. 그래서 「읽는 담보 보기」 바로 옆에 둔다.
+
+   표는 insCoAll() 하나뿐이라, 여기서 넣으면 <b>보장분석과 비포&애프터가
+   함께</b> 읽는다 (CLAUDE.md 5번).                                    */
+var BABA_CO_ON = false;
+function babaCoToggle() { BABA_CO_ON = !BABA_CO_ON; babaCoPaint(); }
+function babaCoPaint() { var e = document.getElementById('babaCo'); if (e) e.innerHTML = babaCoHtml(); }
+function babaCoDel(n) {
+  insCoDel(n); babaCoPaint();
+  if (typeof toast === 'function') toast('「' + n + '」 을 뺐습니다 — 다음부터 이 이름은 안 읽습니다', 5000);
+}
+function babaCoHtml() {
+  if (!BABA_CO_ON) return '';
+  var mine = insCoMine(), all = insCoAll();
+  var chips = mine.map(function (n) {
+    return '<span style="display:inline-block;background:#EFF6FF;color:#1D4ED8;border-radius:99px;' +
+      'padding:2px 9px;font-size:11px;font-weight:700;margin:2px 4px 2px 0">' + esc(n) +
+      ' <span onclick="babaCoDel(\'' + esc(n).replace(/'/g, "\\'") + '\')" ' +
+      'style="cursor:pointer;color:#94A3B8">×</span></span>';
+  }).join('');
+  var base = INS_CO.slice().sort(function (a, b) { return a.localeCompare(b, 'ko'); })
+    .map(function (n) { return esc(n); }).join(' · ');
+  return '<div class="card" style="margin-bottom:12px;border-color:#C7D2FE">' +
+    '<div class="card-hd" style="background:#F5F9FF"><div class="card-title"><span class="ci">🏢</span>' +
+      '읽어내는 보험사 <b>' + all.length + '곳</b>' + (mine.length ? (' · 직접 넣으신 이름 ' + mine.length + '개') : '') + '</div>' +
+    '<div class="card-desc">증권에 적힌 <b>보험사 이름</b>을 찾아 그 계약을 읽습니다. ' +
+      '<b>모르는 이름이면 그 계약 줄을 통째로 버립니다</b> — 회사를 짐작해 채우면 ' +
+      '남의 회사가 고객 앞에 서기 때문입니다. 못 읽은 회사가 있으면 <b>여기 넣어 주세요</b>. ' +
+      '보장분석과 비포&amp;애프터가 <b>함께</b> 읽습니다.</div></div>' +
+    '<div class="card-body">' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">' +
+        '<input type="text" maxlength="20" placeholder="예: 농협손해보험" ' +
+        'style="flex:1 1 170px;min-width:0;border:1px solid #C7D2FE;border-radius:8px;padding:7px 10px;' +
+        'font-size:12.5px;font-weight:700;color:#0B1B34;background:#fff">' +
+        '<button type="button" class="btn btn-ghost" style="padding:6px 14px;font-size:11.5px" ' +
+        'onclick="insCoAddUi(this)">＋ 넣기</button></div>' +
+      (mine.length ? ('<div style="margin-bottom:9px">' + chips + '</div>')
+                   : '<div style="font-size:11px;color:var(--ink-5);margin-bottom:9px">직접 넣으신 이름은 아직 없습니다.</div>') +
+      '<div style="font-size:10.5px;font-weight:800;color:var(--ink-5);margin-bottom:4px">' +
+        '앱이 처음부터 아는 이름 ' + INS_CO.length + '개</div>' +
+      '<div style="font-size:10.5px;color:var(--ink-4);line-height:1.9;max-height:150px;overflow-y:auto;' +
+        'background:#F8FAFD;border-radius:9px;padding:9px 11px">' + base + '</div>' +
+      '<div style="font-size:11px;color:var(--ink-5);margin-top:9px;line-height:1.7">' +
+        '넣으신 이름은 <b>이 기기에만</b> 남습니다. 넣으신 뒤 <b>자료를 다시 읽어</b> 주세요.</div></div></div>';
+}
+
 /* ── PDF 가 없어도 표를 연다 ────────────────────────────────── */
 function babaBlank(){
   BABA.rows=BABA_TERMS.map(function(t){return {k:t.k,n:t.n,b:null,a:null,raw:''};});
@@ -31575,15 +31718,15 @@ function babaFeeFix(){
    ══════════════════════════════════════════════════════════════════ */
 var BABA_PLAN_KEY='apex_baba_plans';
 /* 회사 이름 — 긴 것부터 찾는다. 「삼성생명」 을 「삼성」 으로 자르면 안 된다. */
-var BABA_CO=[
- '삼성생명','한화생명','교보생명','신한라이프','NH농협생명','미래에셋생명','동양생명',
- 'KB라이프','KB라이프생명','하나생명','흥국생명','푸본현대생명','DB생명','ABL생명',
- 'AIA생명','메트라이프생명','메트라이프','라이나생명','처브라이프','IBK연금보험',
- '교보라이프플래닛','KDB생명','오렌지라이프',
- '삼성화재','DB손해보험','현대해상','KB손해보험','메리츠화재','한화손해보험',
- '롯데손해보험','흥국화재','MG손해보험','NH농협손해보험','농협손해보험',
- 'AXA손해보험','하나손해보험','캐롯손해보험','서울보증보험','신한EZ손해보험'
-];
+/* ── 회사 이름은 <b>한 표만</b> 둔다 (CLAUDE.md 5번) ──────────────────
+   예전에는 INS_CO(보장분석) 와 BABA_CO(비포&애프터) 가 <b>두 벌</b>이었고
+   서로 다르게 비어 있었다. 보장분석은 「KB손보·농협손보·iM라이프」 를 읽는데
+   비포&애프터는 못 읽었고(31개), 비포&애프터는 「농협손해보험」 을 읽는데
+   보장분석은 못 읽었다(4개). 같은 증권을 두 화면이 다르게 읽은 것이다.
+   보장분석은 회사를 못 찾으면 <b>그 계약 줄을 통째로 버린다</b> —
+   「농협손해보험」 으로 적힌 계약이 목록에서 사라졌다.
+   한 표로 모았다 — <b>insCoAll()</b> 하나뿐이다. 코드에 없는 회사는
+   사장님이 화면에서 넣으시면 그 자리에서 두 화면이 함께 읽는다. */
 /* 상품 이름 꼬리 — 이 말로 끝나는 덩어리를 상품으로 본다 */
 /* 뒤에 글자가 더 붙어 있으면 <b>거기서 끊지 않는다.</b> 짧은 꼬리(플러스)가
    긴 꼬리(보험)보다 먼저 끝나는 바람에 「라이프플러스보험」 이 「라이프플러스」 로
@@ -31600,35 +31743,43 @@ var BABA_PLAN_TAIL='(종합보험|건강보험|암보험|실손의료보험|실�
    겹치면 그때만 긴 이름을 쓴다(「삼성」 이 「삼성생명」 을 이기지 않게).
    at 을 안 주면 예전처럼 글 처음부터 가장 앞의 이름을 쓴다.            */
 function babaPlanCoFind(t,at){
-  var i,j,best=null,idx,d;
+  var CO=insCoAll(),i,j,best=null,idx,d;
   if(at===undefined||at===null)at=0;
-  for(i=0;i<BABA_CO.length;i++){
+  for(i=0;i<CO.length;i++){
     idx=-1;
     /* 같은 회사가 여러 번 나오면 <b>가장 가까운 자리</b>를 쓴다 */
-    for(j=t.indexOf(BABA_CO[i]);j>=0;j=t.indexOf(BABA_CO[i],j+1))
+    for(j=t.indexOf(CO[i]);j>=0;j=t.indexOf(CO[i],j+1))
       if(idx<0||Math.abs(j-at)<Math.abs(idx-at))idx=j;
     if(idx<0)continue;
     d=Math.abs(idx-at);
-    if(!best||d<best.d||(d===best.d&&BABA_CO[i].length>best.name.length))
-      best={name:BABA_CO[i],d:d};
+    if(!best||d<best.d||(d===best.d&&CO[i].length>best.name.length))
+      best={name:CO[i],d:d};
   }
   return best?best.name:'';
 }
+/* 한 자료에서 뽑을 계약 수 상한. 예전에는 <b>24</b> 였다 — 25건째부터
+   <b>조용히</b> 사라졌다. 자산가 고객은 20~30건이 흔하다. 넉넉히 두되
+   상한에 닿으면 화면에 말해 준다. 무한 되풀이를 막는 뒷문일 뿐이다. */
+var BABA_PLAN_MAX=200;
 /* 글에서 계약을 뽑는다. 못 뽑으면 빈 목록을 준다 — 지어내지 않는다. */
 function babaPlanScan(text){
+  /* 계약 목록도 같은 자리를 안 읽는다 — 안 그러면 해지된 계약이 목록에 뜬다 */
+  if(!_babaCutting){ var _L=babaLiveText(text); babaCutNote(_L,text); text=_L.text; }
   var T=(''+(text||'')).replace(/\s+/g,' ');
   if(T.length<10)return [];
   var out=[],m,re;
   /* ② 를 <b>먼저</b> 돈다. 이 길은 회사 이름을 <b>알고</b> 들어온다.
      예전에는 ① 이 먼저 돌아 자리를 차지하는 바람에, 회사를 아는 길이
      「중복」 으로 버려지고 <b>짐작한 회사</b>가 그대로 남았다. */
-  BABA_CO.forEach(function(co){
-    var r2=new RegExp(co+'\\s*([^,;|\\n]{2,30}?'+BABA_PLAN_TAIL+')','g'),x;
-    while((x=r2.exec(T))&&out.length<24)babaPlanPush(out,x[1],T,x.index,co);
+  insCoAll().forEach(function(co){
+    /* 사장님이 넣으신 이름에 괄호·점이 섞여 있어도 정규식이 깨지지 않게 */
+    var r2=new RegExp(insEsc(co)+'\\s*([^,;|\\n]{2,30}?'+BABA_PLAN_TAIL+')','g'),x;
+    while((x=r2.exec(T))&&out.length<BABA_PLAN_MAX)babaPlanPush(out,x[1],T,x.index,co);
   });
   /* ① (무)무배당 ○○○보험 — 회사 이름이 안 붙어 있는 자료를 여기서 줍는다 */
   re=new RegExp('\\(?무\\)?\\s*배당[^,;|\\n]{2,34}?'+BABA_PLAN_TAIL,'g');
-  while((m=re.exec(T))&&out.length<24)babaPlanPush(out,m[0],T,m.index);
+  while((m=re.exec(T))&&out.length<BABA_PLAN_MAX)babaPlanPush(out,m[0],T,m.index);
+  if(out.length>=BABA_PLAN_MAX)BABA.tooMany=BABA_PLAN_MAX;
   out.sort(function(a,b){return (a.at||0)-(b.at||0);});   /* 글에 나온 차례대로 */
   return babaPlanCov(T,babaPlanPrems(T,out));
 }
@@ -31830,7 +31981,89 @@ function babaPlanPremSum(slot,keep){
   return s;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   이미 없어진 계약은 <b>읽지 않는다</b>
+
+   KB·협회 보장분석표는 뒤쪽에 「실효/해지계약현황」 을 붙여 준다.
+   비포&애프터는 글 전체를 훑었기 때문에 <b>그 구간까지 살아 있는 보장으로
+   읽었다.</b> 실제로 해지된 옛날암보험의 급성심근경색 5,000만이 「기존」 에
+   들어갔다. <b>없는 보장을 있다고 말하는 것</b>은 숫자가 조금 틀린 것과
+   다르다 — 그 자리에서 무너진다.
+
+   그래서 제목으로 그 구간을 잘라 낸다. <b>정확히</b> 자르는 것이 전부다.
+     · 자르는 제목은 두 꼴만 인정한다
+         ① 실효+해지 가 붙은 꼴 (실효/해지계약 · 해지·실효계약)
+         ② 한 낱말 + 계약 + <b>현황·목록·내역·리스트</b> 가 반드시 뒤따르는 꼴
+       「해지환급금」·「중도해지 시」 같은 본문 낱말은 안 걸린다.
+     · 끝나는 자리는 <b>다음 살아 있는 구간 제목</b>이다. 없으면 글 끝까지.
+       살아 있는 제목 목록은 INS_SECS 한 표에서 가져온다 — 두 벌로 두지 않는다.
+     · <b>무엇을 얼마나 잘랐는지 말한다.</b> 조용히 버리면 사장님은 빠뜨린 줄 안다.
+   ══════════════════════════════════════════════════════════════════ */
+var BABA_LAPSE_WORDS=['실효','해지','해약','말소','소멸','종료'];
+var _babaLapseRe=null;
+function babaLapseRe(){
+  if(_babaLapseRe)return _babaLapseRe;
+  var sp=function(w){return w.split('').join('\\s*');};
+  var one='(?:'+BABA_LAPSE_WORDS.map(sp).join('|')+')';
+  var pair='(?:'+sp('실효')+'|'+sp('해지')+')\\s*[\\/·․ㆍ,]?\\s*(?:'+sp('실효')+'|'+sp('해지')+')';
+  var tail='(?:'+[sp('현황'),sp('목록'),sp('내역'),sp('리스트'),sp('정보')].join('|')+')';
+  var head='(?:'+sp('님')+'\\s*'+sp('의')+'\\s*)?';
+  /* ① 실효+해지 붙은 꼴 — 이것만으로도 제목이다 / ② 한 낱말 꼴 — 꼬리가 있어야 제목이다 */
+  _babaLapseRe=new RegExp(head+'(?:'+pair+'\\s*(?:'+sp('된')+')?\\s*'+sp('계약')+'\\s*'+tail+'?'+
+    '|'+one+'\\s*(?:'+sp('된')+')?\\s*'+sp('계약')+'\\s*'+tail+')','g');
+  return _babaLapseRe;
+}
+function babaLiveText(text){
+  var T=''+(text||'');
+  if(T.length<20)return {text:T,cut:[],chars:0};
+  var esc=function(c){return /\s/.test(c)?'\\s*':c.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');};
+  var live=(typeof INS_SECS!=='undefined'?INS_SECS:[]).filter(function(w){return !/실효|해지/.test(w);});
+  var stops=[],x,i;
+  live.forEach(function(w){
+    var r=new RegExp('(?:님\\s*의\\s*)?'+w.split('').map(esc).join('\\s*'),'g');
+    while((x=r.exec(T)))stops.push(x.index);
+  });
+  stops.sort(function(a,b){return a-b;});
+  var re=babaLapseRe(),cuts=[],m;
+  re.lastIndex=0;
+  while((m=re.exec(T))){
+    var from=m.index,to=T.length,j;
+    for(j=0;j<stops.length;j++)if(stops[j]>from){to=stops[j];break;}
+    if(to<=from){re.lastIndex=from+1;continue;}
+    cuts.push({at:from,to:to,title:m[0].replace(/\s+/g,' ').replace(/^님의\s*/,'').trim()});
+    re.lastIndex=to;
+  }
+  if(!cuts.length)return {text:T,cut:[],chars:0};
+  var out=T,chars=0;
+  for(i=cuts.length-1;i>=0;i--){ chars+=cuts[i].to-cuts[i].at; out=out.slice(0,cuts[i].at)+'\n'+out.slice(cuts[i].to); }
+  return {text:out,cut:cuts,chars:chars};
+}
+/* 잘라 낸 것을 적어 둔다 — 화면이 「무엇을 뺐는지」 말할 수 있게.
+   babaScan 과 babaPlanScan 이 같은 글을 두 번 지나므로 같은 자리는 한 번만 센다. */
+var _babaCutting=false;   /* 잘라 낸 자리를 다시 세는 동안에는 또 자르지 않는다 */
+function babaCutNote(r,text){
+  if(!r.cut.length||_babaCutting)return;
+  BABA.cut=BABA.cut||[];
+  r.cut.forEach(function(c){
+    var key=c.title+'|'+c.at+'|'+c.to;
+    for(var i=0;i<BABA.cut.length;i++)if(BABA.cut[i].key===key)return;
+    /* 잘라 낸 자리에 계약이 몇 건 있었는지 — 「2건을 뺐습니다」 라고 말해 주려고.
+       제목은 떼고 센다. 안 떼면 그 토막이 또 잘려 0 건이 된다. */
+    var seg=(''+text).slice(c.at,c.to),n=0,plans=[];
+    _babaCutting=true;
+    try{
+      plans=babaPlanScan(seg.replace(babaLapseRe(),' '));
+      n=plans.length;
+    }catch(e){ n=0; plans=[]; }
+    _babaCutting=false;
+    BABA.cut.push({key:key,title:c.title,chars:c.to-c.at,n:n,
+      names:plans.slice(0,6).map(function(x){return (x.co||'')+' '+(x.nm||'');})});
+  });
+}
+
 function babaScan(text){
+  /* 이미 없어진 계약 구간을 먼저 떼고 읽는다 */
+  if(!_babaCutting){ var _L=babaLiveText(text); babaCutNote(_L,text); text=_L.text; }
   var P=babaPrep(text);
   /* 빈 문서만 걸러 낸다. 기준을 높게 잡으면 담보 몇 줄짜리 짧은
      제안서를 통째로 안 읽고 넘어간다 — 그러면 표가 텅 빈 채로 뜬다. */
@@ -33284,6 +33517,24 @@ function babaWhyHtml(){
   }else if(!rows.length){
     why.push('아직 자료를 읽지 않았습니다 — PDF 를 넣고 <b>전·후 제안서 만들기</b>를 눌러 주세요.');
   }
+  /* 상한에 닿았으면 <b>조용히 버리지 않는다</b> — 예전에는 25건째부터 말없이 사라졌다 */
+  if(BABA.tooMany)
+    why.push('한 자료에서 계약을 <b>'+BABA.tooMany+'건까지</b>만 읽습니다 — 그보다 많으면 '+
+      '뒷부분이 빠집니다. 자료를 나눠 올리시거나 아래 목록에서 손으로 더해 주세요.');
+  /* ── 이미 없어진 계약 구간을 뺐으면 <b>반드시 말한다</b> ──────────────
+     조용히 버리면 사장님은 <b>빠뜨린 줄</b> 아신다. 무엇을 얼마나 뺐는지
+     이름까지 적어 드린다. 잘못 잘렸으면 그 자리에서 바로 보인다. */
+  var CUT=BABA.cut||[];
+  if(CUT.length){
+    var cn=0,cc=0,nm=[];
+    CUT.forEach(function(c){ cn+=c.n||0; cc+=c.chars||0; nm=nm.concat(c.names||[]); });
+    why.push('<b>이미 없어진 계약 구간</b>을 빼고 읽었습니다 — 「'+
+      CUT.map(function(c){return osEsc(c.title);}).join('」·「')+'」'+
+      (cn?(' 안의 계약 '+cn+'건'):'')+' ('+cc.toLocaleString()+'자)'+
+      (nm.length?(' — '+nm.map(function(x){return osEsc(x.trim());}).join(' · ')):'')+
+      '. 해지·실효된 계약은 <b>지금 보장이 없어서</b> 기존 합계에 넣지 않습니다. '+
+      '살아 있는 계약이 잘못 빠졌다면 아래 목록에서 한 줄 더해 주세요.');
+  }
   /* ── 세우기 전에 <b>유지·해지가 실제로 붙어 있는지</b> 본다 ──────────
      기존 담보는 읽혔는데 계약 목록이 비어 있으면, 유지·해지를 아무리 찍어도
      애프터에 아무 영향이 없다. 그런데 화면은 멀쩡해 보인다 — 조용히 어긋나는
@@ -33336,13 +33587,17 @@ function babaAiFill(){
          '기존 보장 합계 '+B+' / 새 설계 보장 합계 '+A];
   top.forEach(function(x){ L.push('크게 달라짐: '+x.n+' '+x.b+' → '+x.a); });
   gap.forEach(function(x){ L.push('아직 부족: '+x.n+' 권장 '+x.w+' 중 '+x.a); });
-  var sys='너는 보험 설계사가 고객에게 드릴 제안서의 <말>만 쓴다. '+
+  /* 여기서도 <b>윤시현의 말</b>이 나와야 한다. 예전에는 맨 문자열을 system 으로 써서
+     정체성도 화법도 안 실렸다 — 같은 화면에 두 사람이 말하는 꼴이었다.
+     함수 이름이 sys 와 겹치면 전역 sys() 를 가려 버리므로 이름을 달리 둔다. */
+  var task='너는 보험 설계사가 고객에게 드릴 제안서의 <말>만 쓴다. '+
     '표와 그림은 이미 만들어져 있다. 숫자를 새로 만들거나 바꾸지 않는다. '+
-    '과장·불안조장·지급 단정을 하지 않는다. 존댓말로 짧고 담백하게 쓴다. '+
+    '강점을 먼저 인정하고, 결론을 단정하지 않는다. 존댓말로 짧고 담백하게 쓴다. '+
     '반드시 아래 JSON 한 덩어리만 답한다. 다른 말은 붙이지 않는다.\n'+
     '{"head":"한 줄 요약","lines":["짚을 것 1","짚을 것 2","짚을 것 3"],"close":"맺음말 한 줄"}';
+  var head=(typeof window.sys==='function')?window.sys(task,'consult'):task;
   var usr=L.join('\n')+'\n\n위 숫자만 보고 JSON 을 채워라. head 는 40자 안, lines 는 각 60자 안, close 는 40자 안.';
-  return callAI(sys,usr,700,'baba_lines').then(function(out){
+  return callAI(head,usr,700,'baba_lines').then(function(out){
     var o=babaJson(out);
     if(!o)return false;
     BABA.ai={head:(''+(o.head||'')).slice(0,80),
@@ -33996,7 +34251,7 @@ function babaDeepRead(id){
   });
   if(!hasAny){toast('먼저 PDF 를 첨부해 주세요');return Promise.resolve(0);}
   BABA_DEEP={on:true,msg:'',done:0,total:files.length,failed:0};
-  BABA.diag=[];
+  BABA.diag=[];BABA.cut=[];BABA.tooMany=0;
   babaTossReset();      /* 이번에 버린 숫자만 세어 보여 준다 */
   var B=[],A=[],noai=0,chain=Promise.resolve(),n=0;
   files.forEach(function(it){
@@ -34063,6 +34318,7 @@ function babaRead(id){
     });
   });
   if(!hasAny){toast('먼저 PDF 를 첨부해 주세요');return;}
+  BABA.cut=[];BABA.tooMany=0;
   var g=document.getElementById('babaGrid');
   if(g)g.innerHTML='<div class="loading"><div class="spinner"></div>자료에서 담보와 금액을 찾는 중…</div>';
   Promise.all(jobs).then(function(parts){
@@ -34085,27 +34341,94 @@ function babaRead(id){
   });
 }
 /* 표를 AI 에게 줄 글로 */
+/* ── 비포&애프터를 AI 에게 넘긴다 ───────────────────────────────
+   <b>화면이 보는 값을 그대로 넘긴다.</b> 예전에는 화면이 babaRowsV()(해지를
+   반영하고 유지분을 더한 값)를 보는데 AI 에게는 BABA.rows(원본)를 넘겼다.
+   같은 자리를 두 숫자로 말하는 셈이라, AI 가 쓴 글과 옆에 선 표가 어긋났다.
+
+   숫자만 넘기지 않는다. <b>어떤 계약을 유지하고 무엇을 해지하기로 했는지</b>가
+   같이 가야 AI 가 「이 계약은 유지하시니」 라고 말할 수 있다. 그게 없으면
+   덱은 계속 「일반적인 보장분석」 이 된다.                                */
 function babaBrief(){
-  if(!BABA.rows||!BABA.rows.length)return '';
-  var used=BABA.rows.filter(function(r){return r.b!==null||r.a!==null;});
-  if(!used.length)return '';
-  var L=['[설계사가 확인한 담보 표 — 단위 만원]',
-         '아래 값은 사람이 자료에서 뽑아 눈으로 확인한 것이다.',
-         '원문과 다르게 보이더라도 <b>이 표의 숫자를 그대로 쓴다.</b>',
-         '표에 없는 담보만 원문에서 찾아 보탠다. 빈 칸은 "확인 필요" 로 적는다.',''];
-  L.push('| 담보 | 기존 | 신규 |');
-  L.push('|---|---|---|');
-  used.forEach(function(r){
-    L.push('| '+r.n+' | '+(r.b===null?'확인 필요':r.b)+' | '+(r.a===null?'확인 필요':r.a)+' |');
-  });
-  var miss=BABA.rows.length-used.length;
-  if(miss)L.push('\n(표에 없는 '+miss+'개 담보는 자료에서 못 찾았거나 해당 없음이다. 지어내지 말 것.)');
+  var V=(typeof babaRowsV==='function')?babaRowsV():(BABA.rows||[]);
+  var plans=(typeof babaPlanOf==='function')?babaPlanOf('b'):[];
+  var news =(typeof babaPlanOf==='function')?babaPlanOf('a'):[];
+  var used=V.filter(function(r){return r.b!==null&&r.b!==undefined||r.a!==null&&r.a!==undefined;});
+  if(!used.length&&!plans.length)return '';
+  var T=(typeof babaKeepTally==='function')?babaKeepTally():{all:0,keep:0,drop:0,undec:0};
+  var won=function(v){return (v===null||v===undefined)?'확인 필요':v;};
+  var L=['[설계사가 확인한 담보 표 — 비포&애프터 · 단위 만원]',
+         '아래 값은 사람이 자료에서 뽑아 <b>화면에서 확인한 것</b>이다. 화면에 찍힌 숫자와 같다.',
+         '원문과 다르게 보이더라도 <b>이 표의 숫자를 그대로 쓴다.</b> 다시 세지 않는다.',
+         '표에 없는 담보만 원문에서 찾아 보탠다. 빈 칸은 "확인 필요" 로 적는다.'];
+  if(T.all){
+    L.push('');
+    L.push('■ 계약별 결정 — 전체 '+T.all+'건 · 유지 '+T.keep+' · 해지 '+T.drop+' · 아직 안 정함 '+T.undec);
+    L.push('  「기존」 열 = 해지로 찍은 계약을 뺀 값이다.');
+    L.push('  「신규」 열 = <b>해지 안 한 기존 계약 + 새 제안서</b> 다. 유지·미정 계약은 그대로 남는다.');
+    if(T.undec)L.push('  아직 안 정한 '+T.undec+'건은 <b>지금 그대로 두는 것</b>으로 셈했다. 해지로 단정하지 말 것.');
+    L.push('');
+    L.push('| 회사 | 상품 | 월 보험료 | 어떻게 |');
+    L.push('|---|---|---|---|');
+    plans.forEach(function(x){
+      var k=(typeof BABA_KEEP!=='undefined'&&BABA_KEEP[x.keep||''])?BABA_KEEP[x.keep||''].t:'미정';
+      L.push('| '+(x.co||'확인 필요')+' | '+(x.nm||'확인 필요')+' | '+
+        ((x.prem===null||x.prem===undefined)?'확인 필요':(x.prem.toLocaleString()+'원'))+' | '+k+' |');
+    });
+  }
+  if(news.length){
+    L.push('');
+    L.push('■ 새로 제안드리는 계약');
+    news.forEach(function(x){
+      L.push('  · '+(x.co||'확인 필요')+' | '+(x.nm||'확인 필요')+' | '+
+        ((x.prem===null||x.prem===undefined)?'월 보험료 확인 필요':('월 '+x.prem.toLocaleString()+'원')));
+    });
+  }
+  if(used.length){
+    L.push('');
+    L.push('| 담보 | 기존 | 신규 |');
+    L.push('|---|---|---|');
+    /* 월 보험료는 담보가 아니다. 게다가 문서를 한 번 훑는 방식은 계약이 여럿이면
+       <b>한 계약 보험료만</b> 집는다 — 아래에서 계약 합으로 따로 적는다. */
+    used.forEach(function(r){ if(r.k!=='fee')L.push('| '+r.n+' | '+won(r.b)+' | '+won(r.a)+' |'); });
+    var miss=V.length-used.length;
+    if(miss)L.push('(표에 없는 '+miss+'개 담보는 자료에서 못 찾았거나 해당 없음이다. 지어내지 말 것.)');
+  }
+  /* ── 월 보험료는 <b>보험료를 아는 자리</b>에서 가져온다 ────────────
+     babaFeeInfo 가 표에 적힌 값·계약 합·해지 반영을 이미 다 안다.
+     여기서 따로 세면 화면과 또 갈린다 (CLAUDE.md 5번). */
+  if(typeof babaFeeInfo==='function'){
+    var F=babaFeeInfo(),money=function(v){return (v===null||v===undefined)?'확인 필요':(v.toLocaleString()+'원');};
+    if(F.b!==null||F.a!==null||F.pay!==null){
+      L.push('');
+      L.push('■ 월 보험료 (원 단위 — 위 표의 만원과 섞지 말 것)');
+      L.push('  · 지금 내시는 돈: '+money(F.b)+(F.srcB==='계약'?(' (계약 '+F.nBp+'건 합)'):(F.srcB==='표'?' (설계사가 적은 값)':'')));
+      L.push('  · 새 설계: '+money(F.a)+(F.srcA==='계약'?(' (계약 '+F.nAp+'건 합)'):(F.srcA==='표'?' (설계사가 적은 값)':'')));
+      if(F.pay!==null)
+        L.push('  · <b>해지 뒤 실제로 매달 낼 돈</b>: '+money(F.pay)+' = 남기는 보험 '+money(F.keepB||0)+' + 새 설계 '+money(F.a));
+      if(F.gap!==null)
+        L.push('  ※ 표에 적힌 값과 계약 합('+money(F.gap)+')이 어긋난다. 총액을 단정하지 말고 확인이 필요하다고 적어라.');
+      if(F.b===null||F.a===null)
+        L.push('  ※ 한쪽을 못 읽었다. 차액을 계산해 말하지 말 것.');
+    }
+  }
+  /* 해지를 찍었으면 <b>무엇이 비는지</b>를 같이 준다 — 그 자리가 상담의 핵심이다 */
+  var cut=(typeof babaDropRows==='function')?babaDropRows():[];
+  if(cut.length){
+    L.push('');
+    L.push('■ 해지하면 비는 담보 (이미 위 「기존」 에서 빠져 있다)');
+    cut.slice(0,12).forEach(function(r){
+      L.push('  · '+r.n+' '+r.b0+' → '+r.b+' (−'+r.cut+')');
+    });
+    L.push('  이 자리를 새 제안이 채우는지, 못 채우면 무엇이 남는지 반드시 짚어라.');
+  }
   return L.join('\n');
 }
 
 function insScan(text) {
   var T = ('' + (text || '')).replace(/\s+/g, ' ');
   if (T.length < 50) return null;
+  insDropStart();      /* 회사를 못 찾아 버린 줄을 여기서부터 센다 */
   var S = insSections(T);
   var live = insRows(S['전체 계약리스트'] || '', '');
   if (!live.length) live = insRows(S['상품별 가입현황'] || '', '');
@@ -34117,7 +34440,10 @@ function insScan(text) {
      상품 이름만 읽고 담보를 못 읽으면 제안서에 이름만 줄줄이 남는다. */
   var looseRiders = 0;
   if (!riders.length) { riders = insRidersLoose(T); looseRiders = riders.length ? 1 : 0; }
-  if (!live.length && !lapsed.length && !diags.length && !riders.length) return null;
+  /* 한 줄도 못 읽었더라도 <b>버린 줄이 있으면</b> 화면을 세운다 —
+     그것이 사장님이 회사 이름을 넣으실 수 있는 유일한 자리다. */
+  var drop = insDropTake();
+  if (!live.length && !lapsed.length && !diags.length && !riders.length && !drop.n) return null;
 
   var fee = 0, unknown = 0;
   live.forEach(function (p) { if (p.fee > 0) fee += p.fee; else unknown++; });
@@ -34125,7 +34451,7 @@ function insScan(text) {
   lapsed.forEach(function (p) { if (p.fee > 0) lfee += p.fee; });
   var head = insHead(S['전체 계약리스트'] || '');
 
-  return { who: insWho(T), plans: live, lapsed: lapsed, cars: cars,
+  return { who: insWho(T), plans: live, lapsed: lapsed, cars: cars, drop: drop,
     byCo: insByCo(live), diags: diags, areas: insByArea(diags),
     riders: riders, looseRiders: looseRiders,
     riderN: riders.reduce(function (t, c) { return t + c.rows.length; }, 0),
@@ -34199,7 +34525,7 @@ var INS_RNOT=/(가입금액|보험가입금액|담보명|보장내용|보험기�
 function insLooseHeads(T){
   var marks=[],seen={},m,re;
   /* 회사 이름 + 상품 이름 */
-  var co=new RegExp('('+INS_CO.join('|').replace(/[().]/g,'\\$&')+')\\s*([^|\\n]{0,30}?'+INS_RNAME+')','g');
+  var co=new RegExp('('+insCoAll().map(insEsc).join('|')+')\\s*([^|\\n]{0,30}?'+INS_RNAME+')','g');
   while((m=co.exec(T)))marks.push({at:m.index,co:m[1],name:(m[2]||'').replace(/\s{2,}/g,' ').trim()});
   /* (무)무배당 ○○보험 — 회사 이름이 멀리 있을 때 */
   re=new RegExp('\\(?무\\)?\\s*배당[^,;|\\n]{2,34}?'+INS_RNAME,'g');
@@ -34315,13 +34641,16 @@ function insGaps(riders, diags) {
    한 쪽이 통째로 한 줄이라 전부 건너뛰어 「자료에서 못 찾음」 만 나왔다.
    그래서 줄이 아니라 글 전체를 훑는다. */
 var INS_AMT = /([\d][\d,]*)\s*(억|천만|백만|만)\s*원?/;
+var INS_LOOSE_MAX = 40;   /* 큰 틀 하나에 몇 줄까지 — 예전에는 8 이었다 */
 function insLoose(text) {
   var T = ('' + (text || '')).replace(/\s+/g, ' ');
   if (T.length < 40) return null;
   var out = [], seen = {}, i, j;
   for (i = 0; i < INS_AREA.length; i++) {
     var A = INS_AREA[i], re = new RegExp(A.re.source, 'g'), m, rows = [];
-    while ((m = re.exec(T)) && rows.length < 8) {
+    /* 영역당 8줄에서 끊었다 — 담보가 서른 줄이어도 여덟 줄만 보였다.
+       다른 양식 자료는 이 길로만 읽히므로 여기서 자르면 그대로 사라진다. */
+    while ((m = re.exec(T)) && rows.length < INS_LOOSE_MAX) {
       /* 담보 이름은 찾은 낱말이 든 한 덩어리로 잡는다 */
       var st = T.lastIndexOf(' ', Math.max(0, m.index - 1)) + 1;
       var en = T.indexOf(' ', m.index + m[0].length);
@@ -34432,12 +34761,44 @@ function insBrief(sc) {
   return L.join('\n');
 }
 
+/* ── 「＋ 넣기」 — 못 읽은 <b>그 자리에서</b> 넣는다 ──────────────────
+   단추에서 옆 칸을 찾는다. id 로 찾으면 같은 카드가 두 번 그려질 때
+   (보장분석·비포&애프터가 같은 카드를 쓴다) 첫 칸만 잡힌다.          */
+function insCoAddUi(btn) {
+  var box = btn && btn.parentNode, e = box && box.querySelector('input');
+  if (!e) return;
+  var n = ('' + e.value).replace(/\s+/g, '');
+  var msg = insCoAdd(e.value);
+  if (msg) { if (typeof toast === 'function') toast(msg, 4500); return; }
+  e.value = '';
+  if (typeof babaCoPaint === 'function') babaCoPaint();
+  if (typeof toast === 'function')
+    toast('「' + n + '」 을 넣었습니다 — 자료를 다시 읽으면 이 회사 계약도 읽습니다', 6500);
+}
+
 /* ── 화면에 보여 줄 카드 — 설계사가 눈으로 검산할 수 있게 ──────── */
 function insCardHtml(sc) {
   if (!sc) return '';
   var t = sc.total;
   var h = '<div class="ins-read"><div class="ir-hd">📄 증권에서 읽어 낸 것' +
     '<span class="ir-sub">AI 가 아니라 앱이 규칙으로 읽었습니다 — 숫자가 틀리지 않습니다</span></div>';
+  /* ── 못 읽은 것을 <b>맨 먼저</b> 말한다 ────────────────────────────
+     계약 30건 중 한 건이 회사 이름 때문에 사라져도, 합계만 보면 아무도
+     모른다. 그래서 읽어 낸 것보다 <b>못 읽은 것을 위에</b> 둔다.
+     회사 이름은 지어내지 않는다 — 원문을 그대로 보여 드리고 사장님이
+     그 자리에서 넣으신다 (CLAUDE.md 1번).                             */
+  var dp = sc.drop || { n: 0, rows: [] };
+  if (dp.n) {
+    h += '<div class="ir-nc"><div class="ir-nct">⚠️ 보험사 이름을 못 찾아 <b>' + dp.n + '줄</b>을 못 읽었습니다</div>' +
+      '<div class="ir-ncb">회사를 짐작해서 채우지 않습니다 — <b>남의 회사 이름</b>이 고객 앞에 섭니다. ' +
+      '아래 원문에 있는 <b>보험사 이름을 그대로</b> 넣어 주시면 다음부터 읽습니다.</div>' +
+      (dp.rows || []).map(function (r) { return '<div class="ir-ncr">' + esc(r) + '</div>'; }).join('') +
+      (dp.n > (dp.rows || []).length ? '<div class="ir-ncr ir-ncm">… 외 ' + (dp.n - dp.rows.length) + '줄</div>' : '') +
+      '<div class="ir-nca"><input type="text" class="ir-nci" maxlength="20" placeholder="예: 농협손해보험"> ' +
+      '<button type="button" onclick="insCoAddUi(this)">＋ 넣기</button></div>' +
+      '<div class="ir-ncn">넣으신 이름은 <b>이 기기에만</b> 남습니다. 넣으신 뒤 <b>자료를 다시 읽어</b> 주세요 — ' +
+      '그때부터 보장분석과 비포&amp;애프터가 <b>함께</b> 읽습니다.</div></div>';
+  }
   h += '<div class="ir-sum"><b>' + (sc.who.name ? esc(sc.who.name) + (sc.who.age ? ' · ' + sc.who.age + '세' : '') + ' · ' : '') +
     '유효 ' + t.n + '건</b> · 월 보험료 합계 <b>' + insWon(t.fee) + '원</b>' +
     (t.unknown ? ' <span class="ir-dim">(미제공 ' + t.unknown + '건 제외)</span>' : '') +
@@ -34493,7 +34854,19 @@ function insCardHtml(sc) {
 }
 
 function insCardCss() {
-  return '.ins-read{border:1px solid #DCE7FB;background:#F7FAFF;border-radius:14px;padding:14px 16px;margin:0 0 12px;font-size:12.5px;color:#1F2937;line-height:1.6;}' +
+  return '.ir-nc{border:1px solid #F3C98B;background:#FFFBF3;border-radius:11px;padding:11px 13px;margin:0 0 11px;}' +
+    '.ir-nct{font-weight:800;color:#8A5A0B;font-size:12.5px;margin-bottom:5px;}' +
+    '.ir-ncb{font-size:11.5px;color:#7A5310;line-height:1.7;margin-bottom:7px;}' +
+    '.ir-ncr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:#5B4415;' +
+      'background:#FFF6E6;border-radius:6px;padding:3px 7px;margin:2px 0;word-break:break-all;}' +
+    '.ir-ncm{font-family:inherit;color:#A9814A;background:none;padding:2px 0;}' +
+    '.ir-nca{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}' +
+    '.ir-nci{flex:1 1 150px;min-width:0;border:1px solid #E4C48D;border-radius:8px;padding:6px 9px;' +
+      'font-size:12px;font-weight:700;color:#3B2A08;background:#fff;}' +
+    '.ir-nca button{border:1px solid #C98B14;background:#FFF3DC;color:#7A5310;border-radius:8px;' +
+      'padding:6px 13px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap;}' +
+    '.ir-ncn{font-size:10.5px;color:#9A7B45;line-height:1.7;margin-top:7px;}' +
+    '.ins-read{border:1px solid #DCE7FB;background:#F7FAFF;border-radius:14px;padding:14px 16px;margin:0 0 12px;font-size:12.5px;color:#1F2937;line-height:1.6;}' +
     '.ir-hd{font-weight:800;color:#1B3A6B;font-size:13px;margin-bottom:8px;display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;}' +
     '.ir-sub{font-size:11px;font-weight:600;color:#7A8CA6;}' +
     '.ir-sum{font-size:13px;margin-bottom:10px;line-height:1.7;}.ir-dim{color:#9AA2AD;font-weight:600;}' +
@@ -35142,6 +35515,7 @@ function renderPdfTool(p){
       '<button class="btn btn-ghost" onclick="babaDeepRead(\''+p.id+'\')">📋 값만 읽기 · 고치기</button>'+
       '<button class="btn btn-ghost" onclick="babaBlank()">✍️ 표만 열기 (손으로 적기)</button>'+
       '<button class="btn btn-ghost" onclick="babaDictToggle()">📖 읽는 담보 보기</button>'+
+      '<button class="btn btn-ghost" onclick="babaCoToggle()">🏢 읽는 회사 보기</button>'+
       '<button class="btn btn-ghost" onclick="babaChartToggle()">📈 전·후 그래프</button>'+
       '<button class="btn btn-ghost" onclick="babaBodyToggle()">🧍 인체 한 장</button>'+
       '<button class="btn btn-ghost" onclick="runPdf(\''+p.id+'\')">📄 AI 글 리포트</button>'+
@@ -35150,6 +35524,7 @@ function renderPdfTool(p){
     '<span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
   h+='<div class="result" id="pres_'+p.id+'"></div>';
   if(p.id==='baba'){
+    h+='<div id="babaCo">'+(typeof babaCoHtml==='function'?babaCoHtml():'')+'</div>';
     h+='<div id="babaDict">'+(typeof babaDictHtml==='function'?babaDictHtml():'')+'</div>';
     h+='<div id="babaGrid">'+(typeof babaGridHtml==='function'?babaGridHtml():'')+'</div>';
   }
@@ -35939,7 +36314,7 @@ var BJ_SCHEMA = [
   'plans     {"type":"plans","title":"","plans":[{"name":"A안 · 보수적","text":"","amount":"월 30~40만 확보","gray":true},',
   '           {"name":"B안 · 균형","badge":"추천","pick":true,"text":"","amount":""}]}',
   '',
-  '[슬라이드 구성 — 이 순서로 19~21장을 만든다]',
+  '[슬라이드 구성 — 이 순서로 21~23장을 만든다]',
   ' 1 cover 표지                       2 agenda 아젠다 + "새로 넣을 돈 없다" 선언',
   ' 3 divider PART 1 진입              4 lifespan 경제활동기 vs 은퇴기',
   ' 5 layers 3층 연금 진단             6 twobox 고객 고유 리스크',
@@ -35954,7 +36329,18 @@ var BJ_SCHEMA = [
   '16 twobox 경제활동기·은퇴기 분리 원칙  17 cards 부족 담보 채우기 · 노후 4축',
   '18 plans A/B/C 3안                 19 table 시뮬레이션',
   '20 list 실행 순서 (신규 승낙 확인 후 기존 정리를 반드시 포함)',
-  '21 cover 마무리',
+  '21 list 윤시현의 코멘트 — 이 고객에 대한 <b>내 판단</b>. 일반론을 쓰면 실패다.',
+  '   left 는 ic:"g" 로 <b>잘 준비하신 것</b>(강점)을 먼저 2~3개. 없으면 없다고 적되 억지로 만들지 않는다.',
+  '   right 는 ic:"r"/"a" 로 <b>지금 가장 급한 것</b> 2~3개. 겁주지 말고 우선순위 근거로 적는다.',
+  '   note 에 <b>고객에게 여쭐 확인 질문</b> 두 개를 큰따옴표 화법으로 넣는다.',
+  '22 twobox 오늘의 방향 — left(tone:"") "제가 보는 방향" = 해석, right(tone:"blue") "고객님이 정하실 것" = 선택.',
+  '   cards 에 A안 유지형 / B안 재배치형 / C안 통합형을 한 줄씩. 금액을 지어내지 않는다.',
+  '   note 에 "오늘 정하실 것은 없습니다 — 보시고 나서 정하시면 됩니다" 취지를 담는다.',
+  '23 cover 마무리',
+  '',
+  '[21·22 장은 반드시 넣는다] 이 두 장이 리포트에서 <b>사람이 말하는 자리</b>다.',
+  '숫자는 앞 장이 이미 말했다. 여기서는 강점을 먼저 인정하고, 가장 급한 하나를 짚고,',
+  '결론을 강요하지 않고 선택지를 준다. 자료에 없는 숫자·금액은 여기서도 만들지 않는다.',
   '',
   '[품질 기준] 표는 빈 칸 없이 채운다. 모르면 "확인필요"라고 쓰되 공란·물음표로 두지 않는다.',
   'cliff 의 afterPct 는 직접 계산한 값이어야 하며 원본 판정을 복사한 것이면 실패다.',
@@ -35964,8 +36350,17 @@ var BJ_SCHEMA = [
 function bjBuild(parts, o) {
   var doc = parts.map(function (p) { return '[' + p.name + ']\n' + p.text; }).join('\n\n');
   var pts = (o.points && o.points.length) ? o.points.join(', ') : '(특정 지정 없음 — 전반적으로 진단)';
+  /* ── 윤시현의 두뇌를 태운다 ─────────────────────────────────────
+     예전에는 sys(BJ_RULES) 만 불러 <b>정체성과 브랜드 톤</b>까지만 갔다.
+     8통장·치료비 이중구조·A/B/C·연령별 1순위 같은 <b>실제 상담 프레임</b>과,
+     사장님이 두뇌에 넣어 둔 <b>축적 지식</b>이 안 실렸다. 그래서 덱이
+     「누가 써도 나오는 보장분석」 이 됐다. 다른 엔진(두뇌·상담·팩트파인딩)은
+     전부 태우고 있었다 — 여기만 빠져 있었다. */
+  var kb = (typeof brainKbGet === 'function') ? brainKbGet() : '';
+  var head = (typeof sys === 'function') ? sys(BJ_RULES, 'analysis') : BJ_RULES;
+  if (kb) head += '\n\n[윤시현이 축적한 지식 — 최우선 지침으로 삼는다]\n' + kb;
   return {
-    system: (typeof sys === 'function' ? sys(BJ_RULES) : BJ_RULES),
+    system: head,
     user: '아래 보장분석·증권 자료를 심층 분석해 리포트 JSON 을 만들어라.\n' +
       '표면적인 "권장금액 대비 부족" 판정만으로는 이 퀄리티가 나오지 않는다. 규칙대로 직접 계산하라.\n\n' +
       '[설계사 집중 컨설팅 포인트]\n' + pts + '\n' +
@@ -36301,6 +36696,37 @@ function bjLocalDeck(parts, o, why, scan) {
       { ic: 'r', mark: '4', title: '신규 승낙 전 기존 해지 금지', text: '반드시 신규 계약 승낙을 확인한 뒤 기존 계약을 정리합니다.' }
     ] });
 
+  /* ── AI 가 없어도 <b>방향</b>은 나온다 ────────────────────────────
+     AI 가 붙으면 21·22 장(윤시현의 코멘트·오늘의 방향)이 이 고객에 맞춰
+     나온다. 안 붙었다고 <b>방향까지 없는</b> 리포트를 드릴 수는 없다.
+     여기서는 지어내지 않고 <b>읽어 낸 것만</b>으로 세 갈래를 적는다 —
+     금액은 한 줄도 만들지 않는다. 고르는 것은 고객이다. */
+  (function () {
+    var noG = (sc && sc.gaps) ? sc.gaps.filter(function (g) { return !g.has; }) : [];
+    var sh = (sc && sc.areas) ? sc.areas.filter(function (a) { return a.short > 0; })
+              .sort(function (a, b) { return b.short - a.short; }) : [];
+    var him = (sc && sc.who && sc.who.name) ? (sc.who.name + '님') : '고객님';
+    var one = sh.length ? sh[0].area : (noG.length ? noG[0].name : '');
+    slides.push({ type: 'twobox', eyebrow: '오늘의 방향',
+      title: '오늘 <em>정하실 것은 없습니다</em>',
+      sub: '무엇이 있고 무엇이 비어 있는지만 같이 보시는 자리입니다',
+      left: { title: '제가 보는 방향',
+        text: (one ? ('지금 가장 약한 자리는 <b>' + bjHtml(one) + '</b> 로 보입니다. ')
+                   : '읽어 낸 범위에서는 뚜렷하게 비어 있는 자리가 안 잡혔습니다. ') +
+              '다만 이건 <b>제 해석</b>이고, 실제 지급 범위는 약관에서 확인이 필요합니다.' },
+      right: { tone: 'blue', title: him + ' 이 정하실 것',
+        text: '<b>지금 채울지, 뒤로 미룰지</b> 그 하나만 정해 주시면 됩니다. ' +
+              '무조건 바꾸자는 것이 아니라, 지금 상태에서 <b>가장 약한 곳부터</b> 보는 것입니다.' },
+      cards: [
+        { label: 'A안', title: '유지형', text: '기존을 <b>최대한 그대로</b> 두고 비어 있는 자리 한두 개만 채웁니다. 바꾸는 것이 부담스러우실 때.' },
+        { label: 'B안', title: '재배치형', text: '갱신·중복을 정리해 <b>같은 돈으로 들어가는 자리</b>를 바꿉니다. 더 내시라는 말이 아닙니다.' },
+        { label: 'C안', title: '통합형', text: '은퇴·간병·상속까지 <b>시간축으로</b> 함께 봅니다. 길게 보실 때.' }
+      ],
+      note: { tone: 'amber', title: '정답은 없습니다',
+        text: '세 갈래 모두 장점과 <b>새로 생기는 단점</b>이 있습니다. 보험료·보장 금액은 ' +
+              '<b>설계와 심사 결과에 따릅니다.</b> 세금은 <b>요건을 충족할 때</b>만이며 판단은 세무 전문가께 넘깁니다.' } });
+  })();
+
   /* 전에는 <b>AI 가 이미 연결돼 있어도</b> 「AI 를 연결하면 …」 이라고 적혀 있었다.
      어디를 눌러야 하는지도, 지금 연결돼 있는지도 알 수 없어 <b>죽은 문구</b>였다.
      연결돼 있으면 <b>어느 단추를 누르면 되는지</b> 말하고, 안 돼 있으면
@@ -36447,7 +36873,7 @@ function bjShow(id, out, p, spec, parts, opts, retried) {
     var res = $('pres_' + id);
     if (res) res.innerHTML = '<div class="loading"><div class="spinner"></div>모양이 어긋나 다시 만드는 중… (한 번 더)</div>';
     return callAI(spec.system,
-      spec.user + '\n\n[다시] 방금 답이 JSON 형식을 벗어났다. 설명·인사·코드펜스 없이 { 로 시작해 } 로 끝나는 JSON 하나만 출력하라. slides 는 19장 이상이어야 한다.',
+      spec.user + '\n\n[다시] 방금 답이 JSON 형식을 벗어났다. 설명·인사·코드펜스 없이 { 로 시작해 } 로 끝나는 JSON 하나만 출력하라. slides 는 21장 이상이어야 하고, 윤시현의 코멘트·오늘의 방향 두 장을 반드시 포함한다.',
       spec.max, id).then(function (out2) {
         return bjShow(id, out2, p, spec, parts, opts, true);
       }).catch(function (e) {

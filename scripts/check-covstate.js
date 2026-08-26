@@ -124,6 +124,43 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
        '  「종신년」 처럼 없는 말을 만들지 않는다');
   }
 
+  console.log('\n[1-2] 구간 제목에 「님의」 가 없어도 읽는다');
+  /* 협회 서식은 「홍길동 님의 전체 계약리스트」 지만, 회사마다 이름을 안 붙인다.
+     예전에는 「님의」 를 반드시 요구해서, 그런 서식은 <b>구간을 하나도 못 잘라</b>
+     insScan 이 통째로 null 을 냈다 — 계약도 담보도 한 줄 안 읽히고 화면이 비었다. */
+  const secs = await page.evaluate(() => {
+    const body = (h1, h2) => [
+      '보장분석 리포트   홍길동 (48세, 남자)', h1,
+      '1 정상 삼성화재 마이헬스파트너 종합보험 2018-03-01 월납 20 년 100 세 84,300 원',
+      '2 정상 현대해상 굿앤굿실손의료비보험 2020-07-01 월납 15 년 100 세 22,400 원', h2,
+      '1 해지 KB손해보험 옛날암보험 2010-01-01 월납 20 년 80 세 33,000 원'
+    ].join('\n');
+    const run = (h1, h2) => {
+      const s = insScan(body(h1, h2));
+      return s ? { live: s.plans.length, lapsed: s.lapsed.length } : null;
+    };
+    return {
+      named: run('홍길동 님의 전체 계약리스트', '홍길동 님의 실효/해지계약현황'),
+      bare: run('전체 계약리스트', '실효/해지계약현황'),
+      mark: run('■ 전체 계약리스트', '■ 실효/해지계약현황'),
+      /* 안내문에 스친 낱말을 제목으로 삼으면 구간이 엉뚱하게 잘린다 */
+      sentence: (function () {
+        const T = '전체 계약리스트를 확인해 주세요. 홍길동 님의 전체 계약리스트 ' +
+                  '1 정상 삼성화재 마이헬스파트너 종합보험 2018-03-01 월납 20 년 100 세 84,300 원';
+        const s = insScan(T);
+        return s ? { live: s.plans.length } : null;
+      })()
+    };
+  });
+  is(!!(secs.named && secs.named.live === 2 && secs.named.lapsed === 1),
+     '  「님의」 가 붙은 꼴 — ' + JSON.stringify(secs.named));
+  is(!!(secs.bare && secs.bare.live === 2 && secs.bare.lapsed === 1),
+     '  「님의」 가 없는 꼴도 읽는다 — ' + JSON.stringify(secs.bare));
+  is(!!(secs.mark && secs.mark.live === 2 && secs.mark.lapsed === 1),
+     '  제목 앞에 기호가 붙어도 읽는다 — ' + JSON.stringify(secs.mark));
+  is(!!(secs.sentence && secs.sentence.live === 1),
+     '  「…리스트를 확인해 주세요」 같은 안내문에 안 걸린다 — ' + JSON.stringify(secs.sentence));
+
   console.log('\n[2] 뇌·심장 — 「외 N개」 에 숨기지 않는다');
   const cov = await page.evaluate(() => {
     if (typeof insAreaShow !== 'function') return null;
