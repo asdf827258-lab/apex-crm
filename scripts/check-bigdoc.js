@@ -53,16 +53,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   console.log('\n[1] 회사 이름 표는 한 벌이다');
   const co = await page.evaluate(() => {
-    const A = INS_CO.slice(), B = BABA_CO.slice();
-    const sa = new Set(A), sb = new Set(B);
-    return { same: INS_CO === BABA_CO, nA: A.length, nB: B.length,
-             onlyIns: A.filter(x => !sb.has(x)), onlyBaba: B.filter(x => !sa.has(x)) };
+    /* 예전에는 INS_CO(보장분석) 와 BABA_CO(비포&애프터) 가 <b>두 벌</b>이었다.
+       지금은 insCoAll() 하나뿐이다 — 두 번째 표가 되살아나면 여기서 걸린다. */
+    const A = insCoAll();
+    return { n: A.length, gone: typeof BABA_CO === 'undefined', re: insCoRe().length,
+             sorted: A.every((x, i) => i === 0 || A[i - 1].length >= x.length) };
   });
-  is(co.same, '  두 화면이 <b>같은 표</b>를 가리킨다 — INS_CO ' + co.nA + '개');
-  is(co.onlyIns.length === 0,
-     '  보장분석만 아는 회사가 없다' + (co.onlyIns.length ? ' — ' + co.onlyIns.join(' · ') : ''));
-  is(co.onlyBaba.length === 0,
-     '  비포&애프터만 아는 회사가 없다' + (co.onlyBaba.length ? ' — ' + co.onlyBaba.join(' · ') : ''));
+  is(co.gone, '  두 번째 표(BABA_CO)가 없다 — <b>insCoAll() 하나뿐</b> · ' + co.n + '곳');
+  is(co.re === co.n, '  보장분석이 그 표를 그대로 쓴다 — ' + co.re + '개');
+  is(co.sorted, '  긴 이름부터 찾는다 — 「삼성생명」 이 「삼성」 에 안 잘린다');
 
   console.log('\n[2] 두 화면이 같은 회사 표기를 읽는다');
   const both = await page.evaluate(() => {
