@@ -101,9 +101,12 @@ const RDOC =
     const O = {};
     localStorage.removeItem('apex_ins_fix');
 
-    const mount = (sc) => {
+    /* 고치는 표는 <b>접힘이 기본</b>이다(급한 것이 있으면 저절로 펼쳐진다).
+       표 자체를 보는 시험이라 여기서는 펼쳐 둔다 — 접힘 규칙은 [11] 이 본다. */
+    const mount = (sc, keep) => {
       const host = document.createElement('div');
       host._scan = sc;
+      if (!keep) { sc.fixOpen = 1; sc.dAll = 1; }
       host.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
       document.body.appendChild(host);
       return host;
@@ -309,6 +312,7 @@ const RDOC =
     document.body.innerHTML = '';
     if (typeof insCssMount === 'function') insCssMount();
     const sc = insScan(DOC);
+    sc.fixOpen = 1; sc.dAll = 1;
     const h = document.createElement('div');
     h.id = 'TABH'; h._scan = sc;
     h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
@@ -348,6 +352,7 @@ const RDOC =
     document.body.innerHTML = '';
     if (typeof insCssMount === 'function') insCssMount();
     const sc = insScan(RDOC);
+    sc.fixOpen = 1;
     const h = document.createElement('div');
     h.id = 'RH'; h._scan = sc;
     h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
@@ -421,6 +426,144 @@ const RDOC =
   is(RD.allShown === 4, '  펼치면 <b>전부</b> 나온다 — ' + RD.allShown + '칸');
   is(RD.clearedN === 0 && RD.clearedAmt === '/bad=1',
      '  전부 지우면 특약도 <b>함께</b> 되돌아간다 — ' + RD.clearedAmt);
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 카드가 길면 상담 중에 리포트까지 내려가는 데만 한참 걸린다. 고치는
+     표는 상담 <b>전에</b> 쓰는 것이라 접어 둔다. 그렇다고 늘 접어 두면
+     <b>붙어 보이는 칸을 못 보고 지나친다</b> — 그것이 제일 위험하다.
+     그래서 손볼 것이 하나라도 있으면 <b>펼친 채로</b> 연다.        */
+  console.log('\n[11] 상담 화면을 안 가린다 — 접어 두되 급한 것은 펼친다');
+  const P = await page.evaluate(async ({ DOC, ODD, RDOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    const put = (sc) => {
+      document.body.innerHTML = '';
+      const h = document.createElement('div');
+      h.id = 'PH'; h._scan = sc;
+      h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+      document.body.appendChild(h);
+      return h;
+    };
+    /* 멀쩡한 자료 — 접혀 있다 */
+    let h = put(insScan(DOC));
+    O.calmIn = h.querySelectorAll('.if-i').length;
+    O.calmHead = /읽은 값 고치기/.test(h.textContent);
+    O.calmCount = /담보진단 3개/.test(h.textContent);
+    O.calmHot = h.querySelectorAll('.if-ph.hot').length;
+    O.calmCta = /펼쳐서 고치기/.test(h.textContent);
+    /* 눌러서 편다 */
+    h.querySelector('.if-ph').click();
+    await new Promise(r => setTimeout(r, 0));
+    /* 펼쳐도 <b>손볼 것이 없으면 줄은 안 깐다</b> — 단추로 전체를 편다 */
+    O.openIn = document.querySelectorAll('#PH .if-i').length;
+    O.openCta = /접기/.test(document.getElementById('PH').textContent);
+    O.openNote = /붙어 보이는 칸도, 고치신 칸도 <b>없습니다/.test(document.getElementById('PH').innerHTML);
+    O.openBtn = /전체 3개 펼치기/.test(document.getElementById('PH').textContent);
+    const dbtn = [].slice.call(document.querySelectorAll('#PH .if-btn button'))
+      .filter(x => /전체 3개/.test(x.textContent))[0];
+    if (dbtn) dbtn.click();
+    await new Promise(r => setTimeout(r, 0));
+    O.dAllIn = document.querySelectorAll('#PH .if-i').length;
+    /* 다시 눌러 접는다 */
+    document.querySelector('#PH .if-ph').click();
+    await new Promise(r => setTimeout(r, 0));
+    O.shutIn = document.querySelectorAll('#PH .if-i').length;
+
+    /* 붙어 보이는 칸이 있으면 <b>저절로</b> 펼쳐진다 */
+    h = put(insScan(ODD));
+    O.oddIn = h.querySelectorAll('.if-i').length;
+    O.oddHot = h.querySelectorAll('.if-ph.hot').length;
+    O.oddHead = /붙어 보이는 칸 1개/.test(h.querySelector('.if-ph').textContent);
+    /* 특약에 붙어 보이는 칸이 있어도 마찬가지 */
+    h = put(insScan(RDOC));
+    O.rOddIn = h.querySelectorAll('.if-r .if-i').length;
+    O.rOddHead = /특약 4개/.test(h.querySelector('.if-ph').textContent);
+
+    /* ── 하나뿐인 「붙어 보이는 칸」 을 고치는 <b>그 순간</b> ──────────
+       고치고 나면 붙어 보이는 칸이 0 이 된다. 그렇다고 표가 그 자리에서
+       접혀 버리면, 사장님은 방금 적은 숫자가 어디로 갔는지 알 수 없다. */
+    h = put(insScan(ODD));
+    O.editWasOpen = h.querySelectorAll('.if-i').length > 0;
+    /* 접힘 기본이라 <b>붙어 보이는 그 줄만</b> 깔린다 — 칸이 둘뿐이다 */
+    let ins = h.querySelectorAll('.if-i');
+    O.editCells = ins.length;
+    insFixSet(ins[1], 1, 'have', '2000');    /* 하나뿐인 붙어 보이는 칸 */
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.stillOpen = document.querySelectorAll('#PH .if-i').length > 0;
+    O.stillMine = document.querySelectorAll('#PH .if-i.mine').length;
+    O.noMoreOdd = document.querySelectorAll('#PH .if-i.odd').length;
+
+    /* 다음에 다시 열면 — 손볼 것이 없으니 <b>접혀 있고</b>, 머리글이 말해 준다 */
+    const fresh = insScan(ODD);
+    h = put(fresh);
+    O.mineShut = h.querySelectorAll('.if-i').length === 0;
+    O.mineHead = /직접 적으신 칸 1개/.test(h.querySelector('.if-ph').textContent);
+    O.mineNotHot = h.querySelectorAll('.if-ph.hot').length;
+    return O;
+  }, { DOC, ODD, RDOC });
+
+  is(P.calmIn === 0 && P.calmHead && P.calmCount && P.calmCta,
+     '  손볼 것이 없으면 <b>접혀 있다</b> — 머리글에 「담보진단 3개」 만');
+  is(P.calmHot === 0, '  급한 것이 없으면 <b>노란 머리글이 아니다</b>');
+  is(P.openIn === 0 && P.openCta && P.openNote && P.openBtn,
+     '  펼쳐도 <b>손볼 것이 없으면 줄은 안 깐다</b> — 「전체 3개 펼치기」 단추만');
+  is(P.dAllIn === 6, '  그 단추를 누르면 <b>전부</b> 나온다 — ' + P.dAllIn + '칸');
+  is(P.shutIn === 0, '  다시 누르면 접힌다');
+  is(P.oddIn === 2 && P.oddHot === 1 && P.oddHead,
+     '  붙어 보이는 칸이 있으면 <b>저절로 펼쳐지고</b> 머리글이 노랗다');
+  is(P.rOddIn === 1 && P.rOddHead,
+     '  <b>특약</b>에 붙어 보이는 칸이 있어도 마찬가지 — ' + P.rOddIn + '칸');
+  is(P.editCells === 2, '  펼쳐질 때도 <b>그 줄만</b> 깔린다 — ' + P.editCells + '칸');
+  is(P.editWasOpen && P.stillOpen && P.stillMine === 1 && P.noMoreOdd === 0,
+     '  마지막 칸을 고쳐 붙어 보이는 칸이 0 이 돼도 <b>표가 안 접힌다</b>');
+  is(P.mineShut && P.mineHead && P.mineNotHot === 1,
+     '  다음에 열면 <b>접혀 있고</b> 머리글이 「직접 적으신 칸 1개」 라고 말한다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 고치는 표는 <b>우리끼리 보는 것</b>이다. 「붙어 보임 — 확인」·「원문:
+     12683400원」 이 적힌 종이가 고객 손에 가면, 우리가 숫자를 못 믿는다는
+     말을 고객이 읽는다. 인쇄에는 <b>한 글자도</b> 나가면 안 된다.     */
+  console.log('\n[12] 고치는 표가 고객 손에 인쇄돼 나가지 않는다');
+  await page.evaluate(({ ODD }) => {
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    const sc = insScan(ODD);
+    sc.fixOpen = 1; sc.dAll = 1;
+    const h = document.createElement('div');
+    h.id = 'PR'; h._scan = sc;
+    /* 실제 화면과 같은 옷을 입힌다 — bjPaint 도 report 도 no-print 로 감싼다 */
+    /* 인쇄는 <b>#printRoot 안에 있는 것만</b> 나간다(@media print). 카드는
+       그 안에 있더라도 no-print 라 빠져야 한다 — 두 겹으로 막힌 셈이다. */
+    h.innerHTML = '<div id="printRoot">' +
+      '<div class="no-print">' + insCardHtml(sc) + '</div>' +
+      '<div class="report-doc-host">고객에게 나가는 리포트 본문</div></div>';
+    document.body.appendChild(h);
+  }, { ODD });
+  const seen = async () => page.evaluate(() => {
+    /* 자기 display 만 보면 안 된다 — 부모가 no-print 로 꺼져 있어도 자식의
+       display 는 block 이다. <b>실제로 자리를 차지하는가</b>를 본다. */
+    const vis = (s) => {
+      const e = document.querySelector(s);
+      if (!e) return 'none';
+      if (!e.getClientRects().length) return 'none';
+      return getComputedStyle(e).visibility === 'hidden' ? 'none' : 'show';
+    };
+    return { card: vis('#PR .ins-read'), fix: vis('#PR .ins-fix'),
+             input: vis('#PR .if-i'), doc: vis('#PR .report-doc-host') };
+  });
+  await page.emulateMedia({ media: 'screen' });
+  const onScreen = await seen();
+  await page.emulateMedia({ media: 'print' });
+  const onPaper = await seen();
+  await page.emulateMedia({ media: 'screen' });
+  is(onScreen.card === 'show' && onScreen.fix === 'show' && onScreen.input === 'show',
+     '  화면에서는 보인다 — 카드·표·칸');
+  is(onPaper.card === 'none' && onPaper.fix === 'none' && onPaper.input === 'none',
+     '  <b>종이에는 한 글자도 안 나간다</b> — 카드 ' + onPaper.card + ' · 표 ' + onPaper.fix +
+     ' · 칸 ' + onPaper.input);
+  is(onPaper.doc === 'show',
+     '  같은 #printRoot 안이어도 <b>리포트 본문은 그대로</b> 인쇄된다 — 카드만 빠진다');
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
