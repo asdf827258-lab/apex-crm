@@ -642,7 +642,7 @@ const RDOC =
      그 사고인데, 이번엔 앱이 아니라 손이 미끄러지는 자리다. 담보 하나가
      100억을 넘는 일은 사실상 없으니 거기서 여쭌다. <b>값은 안 고친다.</b> */
   console.log('\n[14] 만원 칸에 원을 적으시면 그 자리에서 여쭌다');
-  const U = await page.evaluate(async ({ DOC }) => {
+  const U = await page.evaluate(async ({ DOC, RDOC }) => {
     const O = {};
     localStorage.removeItem('apex_ins_fix');
     document.body.innerHTML = '';
@@ -706,8 +706,31 @@ const RDOC =
     O.autoBigOpen = h2.querySelectorAll('.if-i').length > 0;
     O.autoBigCell = h2.querySelectorAll('.if-i.big').length;
     O.autoBigHot = h2.querySelectorAll('.if-ph.hot').length;
+
+    /* ── 특약에서 난 것은 <b>특약 표에만</b> 떠야 한다 ────────────────
+       담보진단 것과 섞어 세면, 담보진단 표가 「단위가 이상한 칸 1개」 라고
+       말하는데 정작 그 표에는 빨간 칸이 없다 — 찾다가 못 찾으신다. */
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const scR2 = insScan(RDOC);
+    scR2.fixOpen = 1; scR2.dAll = 1;
+    const h3 = document.createElement('div');
+    h3.id = 'UH3'; h3._scan = scR2;
+    h3.innerHTML = '<div class="no-print">' + insCardHtml(scR2) + '</div>';
+    document.body.appendChild(h3);
+    const ri = h3.querySelectorAll('.if-r .if-i');
+    insFixRSet(ri[0], 0, 1, '50000000');     /* 특약 칸에 원을 적는다 */
+    insFixDone(ri[0]);
+    await new Promise(r => setTimeout(r, 0));
+    const H3 = document.getElementById('UH3');
+    O.rBigInR = H3.querySelectorAll('.if-r .if-note.odd').length &&
+      /단위가 이상한 칸 1개/.test(H3.querySelector('.if-r').textContent) ? 1 : 0;
+    /* 담보진단 표가 없는 자료라, 있었다면 거기 안 떠야 한다는 뜻으로 0 을 본다 */
+    const dTable = H3.querySelector('.ins-fix:not(.if-r):not(.if-pan)');
+    O.rBigInD = (dTable && /단위가 이상한 칸/.test(dTable.textContent)) ? 1 : 0;
+    O.rBigHead = /단위가 이상한 칸 1개/.test(H3.querySelector('.if-ph').textContent);
     return O;
-  }, { DOC });
+  }, { DOC, RDOC });
 
   is(U.bigCell === 1 && U.bigAsk, '  <b>빨간 칸</b>과 「만원 단위가 맞습니까?」 가 붙는다');
   is(U.bigNote && U.bigHead, '  표와 <b>머리글</b> 둘 다 「단위가 이상한 칸 1개」 라고 말한다');
@@ -721,6 +744,8 @@ const RDOC =
      '  <b>우리가 읽은</b> 큰 값은 여기서 안 잡는다 (그건 「붙어 보임」 이 본다)');
   is(U.autoBigOpen && U.autoBigCell === 1 && U.autoBigHot === 1,
      '  단위가 이상한 칸이 있으면 <b>저절로 펼쳐진다</b> — 접어 두면 못 보고 지나친다');
+  is(U.rBigInR === 1 && U.rBigInD === 0 && U.rBigHead,
+     '  <b>특약</b>에서 난 것은 특약 표에만 뜬다 — 담보진단 표에 뜨면 찾다가 못 찾는다');
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');

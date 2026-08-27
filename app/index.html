@@ -11677,7 +11677,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 05:00';
+var APP_BUILD='2026-08-28 05:20';
 var APP_BUILD_NOTE='<b>보장분석과 비포&애프터, 두 화면의 고치는 칸을 같은 눈으로 다 훑었습니다.</b> ① <b>만원 칸에 원을 적으시면 만 배가 틀어집니다.</b> 「5,000만원」 을 적으려다 <code>50000000</code> 을 치면 5,000억이 됩니다. 담보 하나가 100억을 넘으면(보험료 줄은 1억원) <b>빨간 칸</b>으로 「단위가 맞습니까?」 라고 여쭙니다 — <b>값은 저희가 안 고칩니다.</b> ② <b>칸을 누르면 통째로 잡힙니다.</b> 비포&애프터는 더했습니다 — 「3,000」 이 적힌 칸에 5000 을 치면 <b>50003,000</b>, 쉼표까지 끼어 5,000억이 됐습니다. ③ <b>고치고 탭을 누르면 본문으로 튕겼습니다.</b> 두 화면 다 그랬습니다 — 담보가 스무 줄이면 한 칸마다 다시 눌러야 해서 고객 앞에서 못 씁니다. ④ <b>금액을 못 믿는다고 담보를 통째로 버리고 있었습니다.</b> 그래서 「비급여 암주요치료비 <b>✕ 없음</b>」 → <b>「표적·면역 대응 불가」</b> 라는 <b>틀린 결론</b>이 섰습니다. 이제 금액만 비우고 담보는 남깁니다. ⑤ <b>두 화면을 나란히 열면 한쪽 고친 값이 말없이 사라졌습니다.</b> 이제 자료마다 따로 담습니다(여덟 벌). ⑥ <b>고치는 표가 상담 화면을 가렸습니다</b>(4,810px·다섯 화면). 이제 머리글 한 줄로 접히고(1,270px) <b>손볼 것이 있으면 저절로 펼쳐집니다</b>. ⑦ <b>특약 목록에 고치는 칸이 생겼습니다</b> — 비급여 암주요치료비·전액본인부담·표적항암은 담보진단 37개 표에 아예 없습니다. ⑧ 못 믿는 금액은 AI 에게 <b>숫자로 주지 않고</b>, 고치는 표는 <b>종이에 한 글자도 안 나갑니다</b>. <code>check-insfix</code> 14군 73가지 · <code>check-babaread</code> 8군 · 알람 시험 <b>서른네 가지를 되돌려 전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -35386,7 +35386,7 @@ function insFixROdd(r) { return !r.fx && !!r.bad; }
    숫자가 달라진다. 사장님은 그때부터 둘 다 안 믿으신다 (CLAUDE.md 5번). */
 function insFixCount(sc) {
   var c = { odd: 0, rOdd: 0, mine: (sc && sc.fixN) || 0, rMine: (sc && sc.fixRN) || 0,
-            diag: 0, rider: 0, big: 0 };
+            diag: 0, rider: 0, big: 0, rBig: 0 };
   if (!sc) return c;
   (sc.diags || []).forEach(function (d) {
     c.diag++;
@@ -35399,10 +35399,10 @@ function insFixCount(sc) {
     (x.rows || []).forEach(function (r) {
       c.rider++;
       if (insFixROdd(r)) c.rOdd++;
-      if (r.fx && insFixBig(insFixMan(r.amount))) c.big++;
+      if (r.fx && insFixBig(insFixMan(r.amount))) c.rBig++;
     });
   });
-  c.urgent = c.odd + c.rOdd + c.mine + c.rMine + c.big;
+  c.urgent = c.odd + c.rOdd + c.mine + c.rMine + c.big + c.rBig;
   return c;
 }
 
@@ -35422,7 +35422,7 @@ function insFixOpen(sc) {
   if (sc.fixOpen === 1) return true;
   if (sc.fixOpen === 0) return false;
   var c = insFixCount(sc);
-  return (c.odd + c.rOdd + c.big) > 0;
+  return (c.odd + c.rOdd + c.big + c.rBig) > 0;
 }
 function insFixToggle(el) {
   var host = insFixHost(el), sc = host && host._scan;
@@ -35441,7 +35441,7 @@ function insFixPanelHtml(sc) {
   var urgent = [];
   if (c.odd + c.rOdd) urgent.push('⚠️ 붙어 보이는 칸 ' + (c.odd + c.rOdd) + '개');
   if (c.mine + c.rMine) urgent.push('✏️ 직접 적으신 칸 ' + (c.mine + c.rMine) + '개');
-  if (c.big) urgent.push('⚠️ 단위가 이상한 칸 ' + c.big + '개');
+  if (c.big + c.rBig) urgent.push('⚠️ 단위가 이상한 칸 ' + (c.big + c.rBig) + '개');
   return '<div class="ins-fix if-pan"><div class="if-ph' + (urgent.length ? ' hot' : '') + '" ' +
       'onclick="insFixToggle(this)" role="button" tabindex="0">' +
       '<b>' + (open ? '▾' : '▸') + ' 📋 읽은 값 고치기</b>' +
@@ -35538,6 +35538,13 @@ function insFixRHtml(sc) {
   return head +
     (odd ? ('<div class="if-note odd"><b>붙어 보이는 칸 ' + odd + '개.</b> 표에서 옆 칸 숫자가 ' +
       '붙어 버린 꼴입니다 — 아래에 <b>원문</b>을 그대로 적어 두었습니다.</div>') : '') +
+    /* 「단위가 이상한 칸」 은 <b>그 표에서 난 것만</b> 센다. 담보진단 것과
+       섞어 세면, 특약에서 난 것이 담보진단 표에 뜨고 정작 빨간 칸은
+       거기 없다 — 사장님이 찾다가 못 찾으신다 (CLAUDE.md 5번). */
+    (q.rBig ? ('<div class="if-note odd" style="background:#FEF3F2;border-color:#F8CFCB;color:#7A1F1A">' +
+      '<b>단위가 이상한 칸 ' + q.rBig + '개.</b> 담보 하나에 <b>100억이 넘습니다.</b> ' +
+      '이 칸은 <b>만원</b> 단위입니다 — 「5,000만원」 은 <b>5000</b> 입니다. ' +
+      '<b>값은 저희가 안 고칩니다</b> — 맞으면 그냥 두십시오.</div>') : '') +
     (mine ? ('<div class="if-note mine"><b>직접 적으신 특약 ' + mine + '개.</b> ' +
       '<b>다음에 만드는 리포트</b>부터 특약 상세 표와 AI 에게 그 값으로 갑니다.</div>') : '') +
     (all ? '' : '<div class="if-note plain"><b>손볼 것 ' + shown + '개</b>만 보이고 있습니다 — ' +
