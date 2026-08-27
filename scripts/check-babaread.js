@@ -308,7 +308,59 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[9] 콘솔이 조용하다');
+  /* ── 자료에는 있는데 <b>목록에 안 올라온 계약</b> ───────────────────
+     「지금 가진 보험」 목록은 상품 이름이 「…보험」·「…플랜」 으로 끝나야
+     줍는다. 안 끝나면 그 계약이 <b>목록에 아예 안 올라오고</b>, 제안서
+     에서도 통째로 빠진다. 그런데 화면은 「전체 1건」 이라고만 해서
+     아무도 모른다 — 있는 보험을 없는 것처럼 만드는 자리다.
+
+     자료가 <b>스스로 말한 건수</b>와 견준다. 두 값 다 이미 아는 것이라
+     짐작이 아니다. 이름을 지어내 채우지는 않는다 (CLAUDE.md 1번).   */
+  console.log('\n[9] 자료에는 있는데 목록에 안 올라온 계약을 말한다');
+  const gap = await page.evaluate(() => {
+    const MISS = '홍길동 님의 전체 계약리스트\n계약 건수 2건 합계보험료 780,000원\n' +
+      '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+      '2 정상 현대해상 무배당 굿앤굿어린이 2021-07-15 월납 30 년 100 세 280,000 원\n';
+    /* 상품 이름이 제대로 끝나는 자료 — 조용해야 한다 */
+    const OK = MISS.replace('굿앤굿어린이 2021', '굿앤굿어린이보험 2021');
+    const run = (t) => {
+      ['apex_baba_rows', 'apex_baba_plans', 'apex_baba_prop'].forEach(k => localStorage.removeItem(k));
+      BABA.rows = null; BABA.plans = null; BABA.planExpB = 0; babaBlank();
+      /* 자료를 읽는 자리가 실제로 부르는 <b>그 함수</b>를 부른다 — 시험이
+         값을 직접 넣어 주면 세는 코드가 사라져도 안 운다 (CLAUDE.md 8번). */
+      babaExpNote(t);
+      const got = babaPlanScan(t) || [];
+      BABA.plans = got.map((x, i) => ({ id: 'p' + i, slot: 'b', nm: x.nm, co: x.co, prem: x.prem, keep: '' }));
+      const txt = babaPlanEditHtml().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+      return { exp: BABA.planExpB, got: got.length, txt: txt };
+    };
+    const miss = run(MISS), ok = run(OK);
+    /* 읽는 자리가 <b>정말로</b> 그 함수를 부르는지 — 부르는 줄이 사라지면
+       세는 코드가 멀쩡해도 아무 값이 안 적힌다 (CLAUDE.md 8번). */
+    const calls = /babaExpNote\s*\(\s*r\.text\s*\)/.test(String(babaDeepRead));
+    return {
+      records: calls && miss.exp === 2,
+      missExp: miss.exp, missGot: miss.got,
+      missWarn: /2건인데 여기에는 1건만 올라왔습니다 — 1건이 빠졌습니다/.test(miss.txt),
+      missWhy: /제안서에서도 통째로 빠집니다/.test(miss.txt),
+      missHow: /기존 계약 더하기/.test(miss.txt),
+      missNoMake: /이름은 저희가 지어내지 않습니다/.test(miss.txt),
+      okExp: ok.exp, okGot: ok.got, okQuiet: !/건이 빠졌습니다/.test(ok.txt)
+    };
+  });
+  is(gap.okExp === 2 && gap.okGot === 2 && gap.okQuiet,
+     '  두 건을 다 주웠으면 <b>조용하다</b> — ' + gap.okGot + '/' + gap.okExp + '건');
+  is(gap.missExp === 2 && gap.missGot === 1 && gap.missWarn,
+     '  자료는 ' + gap.missExp + '건인데 ' + gap.missGot + '건만 올라오면 <b>몇 건이 빠졌는지</b> 말한다');
+  is(gap.missWhy, '  <b>왜 위험한지</b> 말한다 — 빠진 계약은 제안서에서도 통째로 빠진다');
+  is(gap.missHow, '  <b>어떻게 하면 되는지</b>까지 말한다 — 「＋ 기존 계약 더하기」');
+  is(gap.missNoMake, '  <b>이름을 지어내 채우지 않는다</b> — 몇 건이 빠졌는지만 말한다');
+  is(gap.records,
+     '  자료를 읽는 <b>그 자리에서</b> 몇 건이어야 하는지 적어 둔다 — 안 적으면 견줄 것이 없다 · ' +
+     '읽기(babaDeepRead)와 시험이 <b>같은 함수</b>를 부른다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[10] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();
