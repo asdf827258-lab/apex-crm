@@ -360,7 +360,67 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      '읽기(babaDeepRead)와 시험이 <b>같은 함수</b>를 부른다');
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[10] 콘솔이 조용하다');
+  /* ── 앞 고객의 <b>AI 문장</b>이 다음 고객 제안서에 남는다 ────────────
+     BABA.ai 는 성공했을 때만 덮어썼다. 그래서 새 고객 자료로 갈아
+     끼우고 AI 가 죽으면(끊김·한도·키), 화면은 <b>앞 고객에게 쓴 말</b>을
+     그대로 이 고객의 제안서에 실었다. 숫자는 새 고객 것인데 말은 남의
+     것이고, 아무 표시도 없다. 말 없는 제안서가 남의 말이 실린 제안서
+     보다 낫다 (CLAUDE.md 1번).
+
+     숫자를 고치신 뒤에도 마찬가지다 — 말은 옛 숫자를 가리킨다.       */
+  console.log('\n[10] 앞 고객의 AI 문장이 다음 고객 제안서에 안 남는다');
+  const ai = await page.evaluate(async () => {
+    const O = {};
+    BABA.rows = null; babaBlank();
+    BABA.ai = { head: '임꺽정 님은 암 보장이 충분합니다', lines: ['앞 고객에게 쓴 말'], close: '', sig: 'OLD' };
+    /* ① AI 가 죽는다 — aiReady 가 false 인 꼴 */
+    const ready = window.aiReady; window.aiReady = () => false;
+    const r1 = await babaAiFill();
+    window.aiReady = ready;
+    O.died = { got: r1, ai: BABA.ai, html: babaAiHtml() };
+    /* ② 빈 표를 열면(새 고객) 지워진다 */
+    BABA.ai = { head: '임꺽정 님은 암 보장이 충분합니다', lines: ['앞 고객에게 쓴 말'], sig: 'OLD' };
+    const t = window.toast; window.toast = () => {};
+    babaBlank();
+    window.toast = t;
+    O.blank = { ai: BABA.ai, html: babaAiHtml() };
+    /* ③ <b>진짜로 받아 본다</b> — 시험이 sig 를 직접 넣으면, 적어 두는
+       코드가 사라져도 안 운다 (CLAUDE.md 8번: 안 울리는 알람). */
+    const ready2 = window.aiReady, call = window.callAI, sys = window.sys;
+    window.aiReady = () => true;
+    window.sys = (t) => t;
+    window.callAI = () => Promise.resolve(
+      '{"head":"암 보장이 크게 늘었습니다","lines":["짚을 것"],"close":"맺음말"}');
+    const r2 = await babaAiFill();
+    window.aiReady = ready2; window.callAI = call; window.sys = sys;
+    O.got = { ok: r2, head: (BABA.ai || {}).head,
+              noted: !!(BABA.ai && BABA.ai.sig), sigIsNow: !!(BABA.ai && BABA.ai.sig === babaAiLines().join('\n')) };
+    /* 받은 뒤엔 조용하고, 숫자를 고치면 「옛 숫자」 라고 말한다 */
+    O.fresh = babaAiHtml();
+    babaSet(0, 'a', '1억');
+    O.after = babaAiHtml();
+    return O;
+  });
+  is(ai.died.got === false && !ai.died.ai && ai.died.html === '',
+     '  AI 가 죽으면 그 자리는 <b>빈다</b> — 앞 고객 말을 안 싣는다 · ' +
+     '「' + (ai.died.html || '(빔)').replace(/<[^>]*>/g, ' ').trim().slice(0, 40) + '」');
+  is(!ai.blank.ai && ai.blank.html === '',
+     '  <b>빈 표를 열면</b>(새 고객) 앞 고객 말이 지워진다');
+  is(ai.got.ok === true && ai.got.head === '암 보장이 크게 늘었습니다',
+     '  AI 가 살아 있으면 <b>새 말을 받아 싣는다</b> — 「' + (ai.got.head || '(빔)') + '」');
+  is(ai.got.noted && ai.got.sigIsNow,
+     '  받을 때 <b>무엇을 보고 쓴 말인지</b> 적어 둔다 — 안 적으면 뒤에 견줄 것이 없다');
+  is(!/옛 숫자|고치시기 전에/.test(ai.fresh) && /암 보장이 크게 늘었습니다/.test(ai.fresh),
+     '  방금 받은 말에는 <b>아무 말도 안 붙인다</b> — 헛알람이 없다');
+  is(/숫자를 고치시기 전에 쓴 것입니다/.test(ai.after) &&
+     /암 보장이 크게 늘었습니다/.test(ai.after),
+     '  숫자를 고치시면 <b>옛 숫자를 가리킨다</b>고 말한다 — 지우지는 않는다 ' +
+     '(사장님이 보시고 정하실 일이다)');
+  is(/다시 만들기/.test(ai.after),
+     '  <b>어떻게 하면 되는지</b>까지 말한다 — 「🔄 다시 만들기」');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[11] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();

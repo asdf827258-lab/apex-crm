@@ -11677,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 17:45';
-var APP_BUILD_NOTE='<b>고치는 칸이 단위 글자를 버리고 있었습니다 — 양쪽으로 만 배씩.</b> 담보 칸(만원)에 「1억」 을 치시면 <b>1만원</b>, 「3천만」 은 3만원이 됐습니다. 보험료 칸(원)에는 반대로 「15만」 이 <b>15원</b> 이 됐습니다 — 월 15만원짜리 계약이 목록에 <b>월 15원</b> 으로 서면 제안서의 「보험료가 이만큼 줄어듭니다」 가 통째로 거짓이 됩니다. 만 배 경고는 큰 쪽만 봐서 두 자리 다 조용했습니다. 이제 <b>쓰신 단위 그대로</b> 읽습니다. 금액 낱말(억·천만·백만·십만·만)은 제 값이 정해져 있고, 세는 낱말(천·백·십)과 맨 숫자는 <b>칸의 단위</b>를 셉니다 — 그래서 만원 칸의 「3천」 은 3,000만원, 원 칸의 「5천」 은 5,000원입니다. 「1억5천」·「1억5000」 은 둘 다 15,000만원, 「30만5천」 은 305,000원입니다. 「삼천」 같은 한글 숫자와 <b>음수</b>는 지어내지 않고 <b>못 읽었다고 말합니다</b>. 빈 칸은 지우개, <b>0</b> 은 「없음을 확인했다」 는 값 그대로입니다. 손으로 치는 칸 <b>다섯</b>(담보·특약·권장 금액·비포&애프터·보험료)이 이제 모두 같은 한 자리를 부릅니다. <code>check-insfix</code> [20] 42가지 — 열세 자리를 되돌려 전부 빨간불을 확인했습니다.';
+var APP_BUILD='2026-08-28 18:30';
+var APP_BUILD_NOTE='<b>앞 고객에게 쓴 AI 문장이 다음 고객 제안서에 그대로 남고 있었습니다.</b> AI 가 준 말은 <b>성공했을 때만</b> 덮어썼습니다. 그래서 새 고객 자료로 갈아 끼우고 AI 가 죽으면(끊김·한도·키 만료), 숫자는 새 고객 것인데 <b>말은 앞 고객 것</b>이 실렸습니다 — 아무 표시도 없이. 이제 <b>묻기 전에 지웁니다.</b> 못 받으면 그 자리는 비는 것이 맞습니다 — 말 없는 제안서가 남의 말이 실린 제안서보다 낫습니다. <b>빈 표를 여실 때</b>(새 고객)도 지웁니다. 그리고 AI 가 <b>무엇을 보고 쓴 말인지</b> 적어 두어, 뒤에 숫자를 고치시면 <b>「아래 말은 숫자를 고치시기 전에 쓴 것입니다 — 다시 만들기를 눌러 주세요」</b> 라고 그 자리에서 말합니다. 지우지는 않습니다 — 사장님이 보시고 정하실 일입니다. 방금 받은 말에는 아무 말도 안 붙습니다. <code>check-babaread</code> [10] 일곱 가지 — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -32140,6 +32140,8 @@ function babaCoHtml() {
 
 /* ── PDF 가 없어도 표를 연다 ────────────────────────────────── */
 function babaBlank(){
+  /* 빈 표는 <b>새 고객</b>이라는 뜻이다 — 앞 고객에게 쓴 AI 말을 지운다 */
+  if(typeof babaAiClear==='function')babaAiClear();
   BABA.rows=BABA_TERMS.map(function(t){return {k:t.k,n:t.n,b:null,a:null,raw:''};});
   BABA.at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
   babaSave();babaPaint();
@@ -34220,14 +34222,30 @@ function babaWhyHtml(){
 /* ── AI 는 말 세 줄만 채운다 ───────────────────────────────────────
    틀도 숫자도 앱이 갖고 있으므로, AI 가 못 오거나 이상한 것을 보내도
    제안서는 그대로 선다. 그래서 무너지지 않는다.                   */
-function babaAiFill(){
-  BABA.ai=BABA.ai||{};
-  if(!aiReady())return Promise.resolve(false);
+/* ── AI 가 본 숫자를 <b>한 곳</b>에서 만든다 ────────────────────────────
+   프롬프트에 싣는 줄과 「그때 무엇을 보고 썼나」 를 따로 만들면 한쪽만
+   고쳐진다. 같은 것을 두 곳에 두지 않는다 (CLAUDE.md 5번).          */
+function babaAiLines(){
   var B=babaSum('b'),A=babaSum('a'),top=babaTop(3),gap=babaGapHtml();
   var L=['[숫자 — 이 값만 쓴다. 새로 계산하지 않는다. 단위 만원]',
          '기존 보장 합계 '+B+' / 새 설계 보장 합계 '+A];
   top.forEach(function(x){ L.push('크게 달라짐: '+x.n+' '+x.b+' → '+x.a); });
   gap.forEach(function(x){ L.push('아직 부족: '+x.n+' 권장 '+x.w+' 중 '+x.a); });
+  return L;
+}
+/* ── 앞 고객의 <b>AI 문장</b>이 다음 고객 제안서에 남던 자리 ───────────
+   BABA.ai 는 성공했을 때만 덮어썼다. 그래서 새 고객 자료로 갈아 끼우고
+   AI 가 죽으면(끊김·한도·키), 화면은 <b>앞 고객에게 쓴 말</b>을 그대로
+   이 고객의 제안서에 실었다. 숫자는 새 고객 것인데 말은 남의 것이다 —
+   아무 표시도 없다.
+
+   그래서 <b>묻기 전에 지운다.</b> 못 받으면 그 자리는 비는 것이 맞다.
+   말 없는 제안서가, 남의 말이 실린 제안서보다 낫다 (CLAUDE.md 1번). */
+function babaAiClear(){ BABA.ai=null; }
+function babaAiFill(){
+  babaAiClear();
+  if(!aiReady())return Promise.resolve(false);
+  var L=babaAiLines();
   /* 여기서도 <b>윤시현의 말</b>이 나와야 한다. 예전에는 맨 문자열을 system 으로 써서
      정체성도 화법도 안 실렸다 — 같은 화면에 두 사람이 말하는 꼴이었다.
      함수 이름이 sys 와 겹치면 전역 sys() 를 가려 버리므로 이름을 달리 둔다. */
@@ -34243,7 +34261,10 @@ function babaAiFill(){
     if(!o)return false;
     BABA.ai={head:(''+(o.head||'')).slice(0,80),
              lines:(o.lines&&o.lines.slice?o.lines.slice(0,3):[]).map(function(x){return (''+x).slice(0,120);}),
-             close:(''+(o.close||'')).slice(0,80)};
+             close:(''+(o.close||'')).slice(0,80),
+             /* <b>무엇을 보고 쓴 말인지</b> 적어 둔다 — 뒤에 숫자를 고치시면
+                이 말은 옛 숫자를 가리킨다. 견주려면 적어 두어야 한다. */
+             sig:L.join('\n')};
     return true;
   },function(){ return false; });
 }
@@ -34258,7 +34279,13 @@ function babaJson(t){
 function babaAiHtml(){
   var a=BABA.ai||{};
   if(!a.head&&!(a.lines&&a.lines.length))return '';
+  /* 이 말을 쓴 뒤에 숫자를 고치셨으면, 이 말은 <b>옛 숫자</b>를 가리킨다.
+     지우지는 않는다 — 사장님이 보시고 다시 만드실지 정하실 일이다. */
+  var stale=(a.sig!==undefined&&a.sig!==null&&a.sig!==babaAiLines().join('\n'));
   return '<div class="bp-ai">'+
+    (stale?('<div class="bp-note" style="background:#FEF3F2;border-color:#F8CFCB;color:#7A1F1A;margin-bottom:8px">'+
+            '<b>아래 말은 숫자를 고치시기 전에 쓴 것입니다.</b> 표의 숫자는 이미 바뀌었지만 '+
+            '이 문장은 옛 숫자를 가리킵니다 — <b>「🔄 다시 만들기」</b> 를 눌러 주세요.</div>'):'')+
     (a.head?('<b>'+osEsc(a.head)+'</b>'):'')+
     ((a.lines&&a.lines.length)?('<ul>'+a.lines.map(function(x){return '<li>'+osEsc(x)+'</li>';}).join('')+'</ul>'):'')+
     '</div>';
