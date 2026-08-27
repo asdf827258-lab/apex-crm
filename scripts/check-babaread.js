@@ -1,0 +1,190 @@
+/* <b>비포&애프터가 담보를 제대로 읽는가 — 그리고 고친 값을 지키는가.</b>
+
+   사장님이 실제 화면을 보여 주셨습니다. 숫자가 이랬습니다.
+
+     기존 보장 합계 <b>49억 2,165만</b> · 교통사고처리지원 <b>11억 7,100만</b>
+     질병입원의료비 <b>3억 5,049만</b> · 항암방사선·약물 신규 <b>1,268</b>
+
+   재 보니 네 자리에서 틀리고 있었습니다.
+
+   ① <b>한 금액을 두 담보가 나눠 가졌습니다.</b>
+      「교통사고처리지원금 1억」 한 줄을 「운전자(벌금 등)」 과
+      「교통사고처리지원」 이 <b>각자 1억으로</b> 집어 합계에서 2억이 됐습니다.
+      사전 낱말이 겹치는 담보가 <b>20쌍</b>입니다.
+
+   ② <b>증권번호를 금액으로 읽었습니다.</b>
+      콤마 없는 6~9자리를 통째로 「원」 으로 받아, <b>12683400</b> 이
+      <b>1,268만원</b> 이 되어 표에 찍혔습니다 — 화면의 그 값입니다.
+      「202408」(연월) 은 20만원이 됐습니다.
+
+   ③ <b>고친 값을 앱이 도로 덮었습니다.</b>
+      기존을 5,000 으로 낮춰도 화면은 <b>4,000</b> 을 썼고(계약 합이 더
+      크면 그쪽을 쓰고 해지분을 다시 뺐다), 신규에 3,000 을 적으면
+      유지분 2,000 이 <b>또</b> 더해져 5,000 이 됐습니다.
+      고쳐도 안 따라오면 고칠 이유가 없습니다.
+
+   ④ <b>「받는 돈」 과 「한도」 를 한 통에 담았습니다.</b>
+      실손·입원의료비는 쓴 만큼 그 한도까지 돌려받는 것인데 진단비와
+      그냥 더해 <b>「보장 합계 49억」</b> 이 나왔습니다.
+
+   여기서 확인합니다.
+     1. 한 금액 자리를 <b>한 담보만</b> 가져가는가
+     2. 번호·연월을 <b>금액으로 안 읽는가</b> — 진짜 금액은 그대로 읽는가
+     3. 손으로 고친 값을 <b>그대로 쓰는가</b> · 합계가 따라오는가
+     4. 합계에 <b>의료비 한도</b>가 안 섞이는가 — 그리고 따로 말하는가
+     5. 무엇을 왜 비웠는지 <b>화면에서 말하는가</b>
+     6. <b>헛알람이 없는가</b> — 정상 자료에는 안 뜨는가                */
+
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+
+const ROOT = process.cwd();
+const srv = http.createServer((rq, rs) => {
+  let p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  let f = path.join(ROOT, p);
+  if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) f = path.join(f, 'index.html');
+  if (!fs.existsSync(f)) { rs.writeHead(404); rs.end('no'); return; }
+  rs.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  fs.createReadStream(f).pipe(rs);
+});
+
+let bad = 0;
+const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+
+(async () => {
+  await new Promise(r => srv.listen(0, r));
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e).slice(0, 180)));
+  await page.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
+                  { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2500);
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[1] 한 금액 자리는 한 담보만 가져간다');
+  const one = await page.evaluate(() => {
+    const doc = '교통사고처리지원금 1억 자동차사고변호사선임비용 5,000만 벌금 3,000만';
+    const sc = babaScan(doc);
+    const got = Object.keys(sc).map(k => k + '=' + sc[k].won);
+    const total = Object.keys(sc).reduce((n, k) => n + sc[k].won, 0);
+    return { got, total, dup: BABA_DUP.n, list: BABA_DUP.list };
+  });
+  is(one.total === 18000,
+     '  문서에 있는 만큼만 더해진다 — ' + one.total + '만원 (1억+5,000+3,000)');
+  is(one.got.indexOf('drive=10000') < 0,
+     '  「운전자(벌금 등)」 가 1억을 <b>또</b> 가져가지 않는다 — ' + one.got.join(' '));
+  is(one.dup > 0 && /운전자/.test(one.list.join(' ')),
+     '  밀린 담보를 <b>세어 둔다</b> — ' + (one.list.join(' · ') || '(없음)'));
+  /* 자리를 뺏긴 담보는 <b>다음 자리</b>를 봐야 한다. 안 그러면 같은 자리를
+     계속 집다가 빈 칸이 되어, 문서에 있는 보장이 표에서 사라진다. */
+  const next = await page.evaluate(() => {
+    const sc = babaScan('교통사고처리지원금 1억 형사합의금 2,000만');
+    return { drive: (sc.drive || {}).won || null, car: (sc.carAcc || {}).won || null };
+  });
+  is(next.car === 10000 && next.drive === 2000,
+     '  자리를 뺏긴 담보가 <b>다음 자리</b>에서 제 값을 찾는다 — ' +
+     '교통사고처리지원 ' + next.car + ' · 운전자 ' + (next.drive === null ? '(빈 칸)' : next.drive));
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[2] 번호·연월을 금액으로 읽지 않는다');
+  const num = await page.evaluate(() => {
+    const won = t => { const a = babaAmts(t, 0); return a.length ? a[0].won : null; };
+    return {
+      cert: won('항암방사선약물치료비 12683400 정액'),   /* 증권번호 꼴 */
+      ym: won('암진단비 202408 100세 20년'),             /* 연월 코드 */
+      seq: won('뇌혈관질환진단비 1234567 100세'),        /* 일련번호 */
+      real3: won('암진단비 30000000 100세'),             /* 3천만원 — 만원으로 떨어진다 */
+      real5: won('암진단비 50,000,000원 100세'),         /* 콤마 + 원 */
+      man: won('암진단비 3,000만원 100세'),              /* 단위가 붙은 정상 */
+      bare: won('뇌혈관질환진단비 2,000 100세 20년')     /* 단위 없는 가입금액 칸 */
+    };
+  });
+  is(num.cert === null, '  증권번호 <b>12683400</b> 을 안 읽는다 — 화면의 「1,268」 이 이것이었다');
+  is(num.ym === null, '  연월 <b>202408</b> 을 안 읽는다');
+  is(num.seq === null, '  일련번호 <b>1234567</b> 을 안 읽는다');
+  is(num.real3 === 30000000, '  <b>만원으로 떨어지는</b> 맨 숫자는 그대로 읽는다 — 30000000');
+  is(num.real5 === 50000000 && num.man === 30000000 && num.bare === 20000000,
+     '  단위가 붙은 금액·가입금액 칸은 <b>그대로</b> 읽는다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[3] 손으로 고친 값을 그대로 쓴다 — 합계가 따라온다');
+  const fix = await page.evaluate(() => {
+    BABA.rows = [{ k: 'cancer', n: '암 진단비(일반암)', b: 26000, a: 3000, raw: '' },
+                 { k: 'fee', n: '월 보험료', b: 600000, a: 500000, raw: '' }];
+    BABA.plans = [{ id: 'p1', slot: 'b', nm: '가', co: 'A사', keep: 'keep', cov: { cancer: 2000 } },
+                  { id: 'p2', slot: 'b', nm: '나', co: 'B사', keep: 'drop', cov: { cancer: 1000 } }];
+    const auto = { b: babaSum('b'), a: babaSum('a') };
+    babaSet(0, 'b', '5000');
+    const eb = { b: babaSum('b'), row: babaRowsV().find(x => x.k === 'cancer').b };
+    babaSet(0, 'a', '9000');
+    const ea = { a: babaSum('a'), row: babaRowsV().find(x => x.k === 'cancer').a };
+    /* 비우면 다시 「읽은 값」 으로 돌아가는가 */
+    babaSet(0, 'b', '');
+    const back = { mb: !!BABA.rows[0].mb, b: babaRowsV().find(x => x.k === 'cancer').b };
+    const mine = babaMineCount();
+    return { auto, eb, ea, back, mine, done: typeof babaSetDone === 'function' };
+  });
+  is(fix.eb.row === 5000 && fix.eb.b === 5000,
+     '  기존을 5,000 으로 고치면 화면도 <b>5,000</b> — 계약 합으로 안 덮는다 (' + fix.eb.row + ')');
+  is(fix.ea.row === 9000 && fix.ea.a === 9000,
+     '  신규를 9,000 으로 고치면 화면도 <b>9,000</b> — 유지분이 <b>또</b> 안 더해진다 (' + fix.ea.row + ')');
+  is(!fix.back.mb, '  비우면 손댐 표시가 <b>지워진다</b> — 다시 읽은 값으로 돌아간다');
+  is(fix.mine === 1, '  손으로 고친 칸을 <b>세는 곳이 하나</b>다 — ' + fix.mine + '개');
+  is(fix.done, '  칸을 벗어나면 위쪽을 <b>다시 그린다</b> (babaSetDone)');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[4] 합계에 의료비 한도를 섞지 않는다');
+  const lim = await page.evaluate(() => {
+    BABA.plans = [];
+    BABA.rows = [{ k: 'cancer', n: '암 진단비(일반암)', b: 3000, a: 5000, raw: '' },
+                 { k: 'silD', n: '질병입원의료비', b: 35049, a: 5000, raw: '' },
+                 { k: 'silA', n: '상해입원의료비', b: 8051, a: 3000, raw: '' }];
+    return { sum: babaSum('b'), limit: babaSumLimit('b'), sumA: babaSum('a'),
+             limitA: babaSumLimit('a'), note: babaLimitNote() };
+  });
+  is(lim.sum === 3000, '  「보장 합계」 는 <b>진단비만</b> — ' + lim.sum + '만원 (43,100 아님)');
+  is(lim.limit === 43100, '  의료비 한도는 <b>따로</b> 센다 — ' + lim.limit + '만원');
+  is(/의료비 한도/.test(lim.note) && /쓴 만큼/.test(lim.note),
+     '  화면이 <b>왜 뺐는지</b> 말한다');
+  is(/3억 5,049만|4억 3,100만/.test(lim.note), '  뺀 금액을 <b>숨기지 않는다</b>');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[5] 화면에서 말한다');
+  const say = await page.evaluate(() => {
+    BABA.rows = [{ k: 'cancer', n: '암 진단비(일반암)', b: 3000, a: 5000, raw: '', mb: 1 },
+                 { k: 'silD', n: '질병입원의료비', b: 5000, a: 5000, raw: '' }];
+    BABA.at = '지금';
+    BABA_DUP = { n: 2, list: ['운전자 (벌금 등) → 교통사고처리지원'] };
+    const h = babaGridHtml();
+    return { mine: /직접 적으신 칸/.test(h), tag: /직접 적으심/.test(h),
+             dup: /같은 금액 자리를 다투다/.test(h), why: /합계가 두 배로/.test(h),
+             chg: /onchange="babaSetDone\(\)"/.test(h) };
+  });
+  is(say.mine && say.tag, '  <b>직접 적으신 칸</b>이라고 적고 딱지를 붙인다');
+  is(say.dup && say.why, '  <b>같은 자리를 다투다 비운 담보</b>를 말한다 — 왜 그러는지까지');
+  is(say.chg, '  칸마다 <b>onchange</b> 가 걸려 있다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[6] 헛알람이 없다 — 정상 자료에는 안 뜬다');
+  const quiet = await page.evaluate(() => {
+    const doc = '암진단비 3,000만원 뇌혈관질환진단비 2,000만원 급성심근경색진단비 2,000만원';
+    const sc = babaScan(doc);
+    return { n: Object.keys(sc).length, dup: BABA_DUP.n,
+             cancer: (sc.cancer || {}).won, brain: (sc.brain || {}).won, mi: (sc.mi || {}).won };
+  });
+  is(quiet.cancer === 3000 && quiet.brain === 2000 && quiet.mi === 2000,
+     '  담보 셋을 <b>제 값으로</b> 읽는다 — 암 ' + quiet.cancer + ' · 뇌 ' + quiet.brain + ' · 심근 ' + quiet.mi);
+  is(quiet.dup === 0, '  밀린 담보가 <b>0</b> 이다 — 헛것을 잡지 않는다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[7] 콘솔이 조용하다');
+  is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
+
+  await browser.close();
+  srv.close();
+  console.log('\n──────────────────────────────');
+  console.log(bad ? ('✗ ' + bad + '개 — 담보를 잘못 읽거나 고친 값을 덮고 있습니다')
+                  : '✓ 한 금액은 한 담보만 · 번호를 금액으로 안 읽음 · 고친 값이 그대로 갑니다');
+  process.exit(bad ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });
