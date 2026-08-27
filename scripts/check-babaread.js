@@ -308,7 +308,119 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[9] 콘솔이 조용하다');
+  /* ── 자료에는 있는데 <b>목록에 안 올라온 계약</b> ───────────────────
+     「지금 가진 보험」 목록은 상품 이름이 「…보험」·「…플랜」 으로 끝나야
+     줍는다. 안 끝나면 그 계약이 <b>목록에 아예 안 올라오고</b>, 제안서
+     에서도 통째로 빠진다. 그런데 화면은 「전체 1건」 이라고만 해서
+     아무도 모른다 — 있는 보험을 없는 것처럼 만드는 자리다.
+
+     자료가 <b>스스로 말한 건수</b>와 견준다. 두 값 다 이미 아는 것이라
+     짐작이 아니다. 이름을 지어내 채우지는 않는다 (CLAUDE.md 1번).   */
+  console.log('\n[9] 자료에는 있는데 목록에 안 올라온 계약을 말한다');
+  const gap = await page.evaluate(() => {
+    const MISS = '홍길동 님의 전체 계약리스트\n계약 건수 2건 합계보험료 780,000원\n' +
+      '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+      '2 정상 현대해상 무배당 굿앤굿어린이 2021-07-15 월납 30 년 100 세 280,000 원\n';
+    /* 상품 이름이 제대로 끝나는 자료 — 조용해야 한다 */
+    const OK = MISS.replace('굿앤굿어린이 2021', '굿앤굿어린이보험 2021');
+    const run = (t) => {
+      ['apex_baba_rows', 'apex_baba_plans', 'apex_baba_prop'].forEach(k => localStorage.removeItem(k));
+      BABA.rows = null; BABA.plans = null; BABA.planExpB = 0; babaBlank();
+      /* 자료를 읽는 자리가 실제로 부르는 <b>그 함수</b>를 부른다 — 시험이
+         값을 직접 넣어 주면 세는 코드가 사라져도 안 운다 (CLAUDE.md 8번). */
+      babaExpNote(t);
+      const got = babaPlanScan(t) || [];
+      BABA.plans = got.map((x, i) => ({ id: 'p' + i, slot: 'b', nm: x.nm, co: x.co, prem: x.prem, keep: '' }));
+      const txt = babaPlanEditHtml().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+      return { exp: BABA.planExpB, got: got.length, txt: txt };
+    };
+    const miss = run(MISS), ok = run(OK);
+    /* 읽는 자리가 <b>정말로</b> 그 함수를 부르는지 — 부르는 줄이 사라지면
+       세는 코드가 멀쩡해도 아무 값이 안 적힌다 (CLAUDE.md 8번). */
+    const calls = /babaExpNote\s*\(\s*r\.text\s*\)/.test(String(babaDeepRead));
+    return {
+      records: calls && miss.exp === 2,
+      missExp: miss.exp, missGot: miss.got,
+      missWarn: /2건인데 여기에는 1건만 올라왔습니다 — 1건이 빠졌습니다/.test(miss.txt),
+      missWhy: /제안서에서도 통째로 빠집니다/.test(miss.txt),
+      missHow: /기존 계약 더하기/.test(miss.txt),
+      missNoMake: /이름은 저희가 지어내지 않습니다/.test(miss.txt),
+      okExp: ok.exp, okGot: ok.got, okQuiet: !/건이 빠졌습니다/.test(ok.txt)
+    };
+  });
+  is(gap.okExp === 2 && gap.okGot === 2 && gap.okQuiet,
+     '  두 건을 다 주웠으면 <b>조용하다</b> — ' + gap.okGot + '/' + gap.okExp + '건');
+  is(gap.missExp === 2 && gap.missGot === 1 && gap.missWarn,
+     '  자료는 ' + gap.missExp + '건인데 ' + gap.missGot + '건만 올라오면 <b>몇 건이 빠졌는지</b> 말한다');
+  is(gap.missWhy, '  <b>왜 위험한지</b> 말한다 — 빠진 계약은 제안서에서도 통째로 빠진다');
+  is(gap.missHow, '  <b>어떻게 하면 되는지</b>까지 말한다 — 「＋ 기존 계약 더하기」');
+  is(gap.missNoMake, '  <b>이름을 지어내 채우지 않는다</b> — 몇 건이 빠졌는지만 말한다');
+  is(gap.records,
+     '  자료를 읽는 <b>그 자리에서</b> 몇 건이어야 하는지 적어 둔다 — 안 적으면 견줄 것이 없다 · ' +
+     '읽기(babaDeepRead)와 시험이 <b>같은 함수</b>를 부른다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* ── 앞 고객의 <b>AI 문장</b>이 다음 고객 제안서에 남는다 ────────────
+     BABA.ai 는 성공했을 때만 덮어썼다. 그래서 새 고객 자료로 갈아
+     끼우고 AI 가 죽으면(끊김·한도·키), 화면은 <b>앞 고객에게 쓴 말</b>을
+     그대로 이 고객의 제안서에 실었다. 숫자는 새 고객 것인데 말은 남의
+     것이고, 아무 표시도 없다. 말 없는 제안서가 남의 말이 실린 제안서
+     보다 낫다 (CLAUDE.md 1번).
+
+     숫자를 고치신 뒤에도 마찬가지다 — 말은 옛 숫자를 가리킨다.       */
+  console.log('\n[10] 앞 고객의 AI 문장이 다음 고객 제안서에 안 남는다');
+  const ai = await page.evaluate(async () => {
+    const O = {};
+    BABA.rows = null; babaBlank();
+    BABA.ai = { head: '임꺽정 님은 암 보장이 충분합니다', lines: ['앞 고객에게 쓴 말'], close: '', sig: 'OLD' };
+    /* ① AI 가 죽는다 — aiReady 가 false 인 꼴 */
+    const ready = window.aiReady; window.aiReady = () => false;
+    const r1 = await babaAiFill();
+    window.aiReady = ready;
+    O.died = { got: r1, ai: BABA.ai, html: babaAiHtml() };
+    /* ② 빈 표를 열면(새 고객) 지워진다 */
+    BABA.ai = { head: '임꺽정 님은 암 보장이 충분합니다', lines: ['앞 고객에게 쓴 말'], sig: 'OLD' };
+    const t = window.toast; window.toast = () => {};
+    babaBlank();
+    window.toast = t;
+    O.blank = { ai: BABA.ai, html: babaAiHtml() };
+    /* ③ <b>진짜로 받아 본다</b> — 시험이 sig 를 직접 넣으면, 적어 두는
+       코드가 사라져도 안 운다 (CLAUDE.md 8번: 안 울리는 알람). */
+    const ready2 = window.aiReady, call = window.callAI, sys = window.sys;
+    window.aiReady = () => true;
+    window.sys = (t) => t;
+    window.callAI = () => Promise.resolve(
+      '{"head":"암 보장이 크게 늘었습니다","lines":["짚을 것"],"close":"맺음말"}');
+    const r2 = await babaAiFill();
+    window.aiReady = ready2; window.callAI = call; window.sys = sys;
+    O.got = { ok: r2, head: (BABA.ai || {}).head,
+              noted: !!(BABA.ai && BABA.ai.sig), sigIsNow: !!(BABA.ai && BABA.ai.sig === babaAiLines().join('\n')) };
+    /* 받은 뒤엔 조용하고, 숫자를 고치면 「옛 숫자」 라고 말한다 */
+    O.fresh = babaAiHtml();
+    babaSet(0, 'a', '1억');
+    O.after = babaAiHtml();
+    return O;
+  });
+  is(ai.died.got === false && !ai.died.ai && ai.died.html === '',
+     '  AI 가 죽으면 그 자리는 <b>빈다</b> — 앞 고객 말을 안 싣는다 · ' +
+     '「' + (ai.died.html || '(빔)').replace(/<[^>]*>/g, ' ').trim().slice(0, 40) + '」');
+  is(!ai.blank.ai && ai.blank.html === '',
+     '  <b>빈 표를 열면</b>(새 고객) 앞 고객 말이 지워진다');
+  is(ai.got.ok === true && ai.got.head === '암 보장이 크게 늘었습니다',
+     '  AI 가 살아 있으면 <b>새 말을 받아 싣는다</b> — 「' + (ai.got.head || '(빔)') + '」');
+  is(ai.got.noted && ai.got.sigIsNow,
+     '  받을 때 <b>무엇을 보고 쓴 말인지</b> 적어 둔다 — 안 적으면 뒤에 견줄 것이 없다');
+  is(!/옛 숫자|고치시기 전에/.test(ai.fresh) && /암 보장이 크게 늘었습니다/.test(ai.fresh),
+     '  방금 받은 말에는 <b>아무 말도 안 붙인다</b> — 헛알람이 없다');
+  is(/숫자를 고치시기 전에 쓴 것입니다/.test(ai.after) &&
+     /암 보장이 크게 늘었습니다/.test(ai.after),
+     '  숫자를 고치시면 <b>옛 숫자를 가리킨다</b>고 말한다 — 지우지는 않는다 ' +
+     '(사장님이 보시고 정하실 일이다)');
+  is(/다시 만들기/.test(ai.after),
+     '  <b>어떻게 하면 되는지</b>까지 말한다 — 「🔄 다시 만들기」');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[11] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();
