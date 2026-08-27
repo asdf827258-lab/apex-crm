@@ -33,7 +33,11 @@
      3. 손으로 고친 값을 <b>그대로 쓰는가</b> · 합계가 따라오는가
      4. 합계에 <b>의료비 한도</b>가 안 섞이는가 — 그리고 따로 말하는가
      5. 무엇을 왜 비웠는지 <b>화면에서 말하는가</b>
-     6. <b>헛알람이 없는가</b> — 정상 자료에는 안 뜨는가                */
+     6. <b>헛알람이 없는가</b> — 정상 자료에는 안 뜨는가
+     7. 고치는 칸에서 <b>손이 미끄러지지 않는가</b> — 만 배 · 이어 붙기 · 탭
+     8. 폰에서 <b>「기존」·「신규」 두 칸이 다 보이는가</b> — 표가 옆으로
+        밀려 「신규」 가 화면 밖이면, 비포&애프터에서 <b>애프터가 안
+        보이는</b> 셈이다. 본문은 안 밀리니 아무 점검도 울지 않았다      */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -248,7 +252,63 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      (tab < 0 ? '튕김' : (tab + 1) + '번째'));
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[8] 콘솔이 조용하다');
+  /* ── 폰에서 <b>「신규」 칸이 화면 밖</b>에 있었다 ──────────────────
+     네 칸짜리 표에 min-width 460px 이 인라인으로 박혀 있어, 390px 에서
+     표가 옆으로 밀리고 <b>「신규(만원)」 칸이 통째로 화면 밖</b>이었다 —
+     비포&애프터에서 <b>애프터가 안 보이는</b> 셈이다. 본문은 안 밀리니
+     아무 점검도 울지 않았다. 옆으로 밀 수 있다는 것을 <b>모르면 없는
+     것과 같다.</b> 좁은 화면에서는 줄 단위로 세워, 두 칸이 다 눈에
+     있어야 한다. 그리고 머리글이 사라지므로 칸마다 이름표가 붙어야
+     한다 — 없으면 「기존」 과 「신규」 를 <b>거꾸로</b> 적는다.      */
+  console.log('\n[8] 폰에서 「기존」·「신규」 두 칸이 다 보인다');
+  const small = [];
+  for (const vp of [{ n: '폰 390', w: 390 }, { n: '탭 800', w: 800 }]) {
+    const pg = await browser.newPage({ viewport: { width: vp.w, height: 1000 } });
+    await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
+                  { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(2000);
+    const m = await pg.evaluate(() => {
+      document.body.innerHTML = '<div id="babaGrid"></div>';
+      document.body.style.cssText = 'margin:0;padding:10px;background:#fff';
+      BABA.rows = [
+        { k: 'fee', n: '월 보험료', b: 500000, a: 380000 },
+        { k: 'cancer', n: '일반암진단비', b: 3000, a: 5000 },
+        { k: 'brain', n: '뇌혈관질환진단비', b: 1000, a: 3000 }
+      ];
+      BABA.at = '2026-08-28';
+      babaPaint();
+      const vw = document.documentElement.clientWidth;
+      const outside = (sel) => [].slice.call(document.querySelectorAll(sel))
+        .filter(x => x.getBoundingClientRect().width > 0)
+        .filter(x => Math.round(x.getBoundingClientRect().right) > vw + 1).length;
+      const cells = [].slice.call(document.querySelectorAll('#babaGrid .bg-c'));
+      return { vw: vw, nCell: cells.length,
+               outCell: outside('#babaGrid .bg-c'),
+               outIn: outside('#babaGrid input'),
+               bodyOver: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+               labs: cells.map(x => (getComputedStyle(x, ':before').content || '')
+                 .replace(/^"|"$/g, '').trim()).filter(t => t && t !== 'none') };
+    });
+    small.push({ vp: vp.n, w: vp.w, m });
+    await pg.close();
+  }
+  small.forEach(t => {
+    is(t.m.nCell > 0 && t.m.outCell === 0 && t.m.outIn === 0,
+       '  ' + t.vp + ' — <b>「신규(만원)」 칸이 화면 안에</b> 있다 · 밖으로 나간 칸 ' +
+       (t.m.outCell + t.m.outIn) + '개');
+    is(t.m.bodyOver === 0, '  ' + t.vp + ' — 본문이 옆으로 안 밀린다 · ' + t.m.bodyOver + 'px');
+    /* 이름표는 <b>머리글이 사라진 자리</b>에만 필요하다 — 넓은 화면까지
+       요구하면 헛알람이 된다 (CLAUDE.md 8번). */
+    if (t.w < 560) {
+      const ok = t.m.labs.filter(x => /기존|신규/.test(x)).length;
+      is(t.m.nCell > 0 && ok === t.m.nCell,
+         '  ' + t.vp + ' — 칸마다 <b>「기존」·「신규」 이름표</b>가 붙는다 (없으면 거꾸로 적는다) · ' +
+         ok + '/' + t.m.nCell + '개');
+    }
+  });
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[9] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();
