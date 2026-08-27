@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>보험 마스터 아카데미 — 신입 자가학습 과정</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="scene3d.css?v=20260827i">
+<style>
+:root{
+  /* Toss palette */
+  --blue:#3182f6; --blue-d:#1b64da; --blue-dd:#1957b8; --blue-l:#e8f3ff; --blue-ll:#f4f9ff;
+  --navy:#191f28; --navy2:#333d4b;
+  --gold:#3182f6; --gold2:#8bbdfa;            /* 기존 gold 참조를 토스 블루로 승계 */
+  --yellow:#ffc043; --yellow-l:#fff8e6;
+  --paper:#f2f4f6; --card:#ffffff;
+  --ink:#191f28; --ink2:#4e5968; --ink3:#8b95a1; --ink4:#b0b8c1;
+  --line:#e5e8eb; --line2:#f2f4f6;
+  --ok:#02a678; --ok-l:#e7f9f2;
+  --warn:#ff8a00; --warn-l:#fff4e6;
+  --red:#f04452; --red-l:#ffeff0;
+  --key:#3182f6;
+  --r:20px; --r2:14px; --r3:10px;
+  --sh:0 1px 3px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.045);
+  --sh2:0 2px 8px rgba(0,0,0,.05), 0 12px 32px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Pretendard Variable',Pretendard,-apple-system,'Malgun Gothic',sans-serif;
+  background:var(--paper);color:var(--ink);line-height:1.7;-webkit-text-size-adjust:100%;
+  font-feature-settings:'tnum';letter-spacing:-.02em;font-weight:400}
+b,strong{font-weight:700;color:var(--ink)}
+em.hl{font-style:normal;background:linear-gradient(transparent 58%,#f6e6a8 58%);font-weight:600}
+
+/* ---------- layout ---------- */
+#app{display:flex;min-height:100vh}
+#side{width:280px;flex:none;background:#fff;color:var(--ink2);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;
+  overflow-y:auto;padding:20px 0 40px}
+#main{flex:1;min-width:0;padding:34px 44px 110px;max-width:1080px}
+.brand{padding:6px 22px 18px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.brand h1{font-size:18px;font-weight:800;color:var(--ink);letter-spacing:-.02em}
+  .brand p{font-size:12px;color:var(--ink3);margin-top:3px;letter-spacing:.02em}
+.prog{padding:12px 20px 14px}
+.prog .bar{height:8px;border-radius:8px;background:var(--line2);overflow:hidden}
+.prog .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));width:0;transition:width .4s}
+.prog .lab{display:flex;justify-content:space-between;font-size:12px;color:var(--ink3);margin-bottom:6px}
+nav a{display:flex;gap:10px;align-items:flex-start;padding:10px 22px;color:var(--ink2);text-decoration:none;
+  font-size:14px;font-weight:500;border-left:3px solid transparent;transition:.15s;border-radius:0 10px 10px 0}
+nav a:hover{background:var(--blue-ll);color:var(--ink)}
+nav a.on{background:var(--blue-l);border-left-color:var(--blue);color:var(--blue-d);font-weight:700}
+nav a .lv{flex:none;width:26px;font-size:11.5px;color:var(--ink4);font-weight:700;padding-top:2px;text-align:right}
+nav a .tx{flex:1}
+nav a .dn{flex:none;font-size:11px;color:var(--ok);opacity:0;padding-top:2px}
+nav a.done .dn{opacity:1;color:var(--gold2)}
+.navsep{font-size:11px;letter-spacing:.1em;color:var(--ink4);padding:18px 22px 6px;font-weight:700}
+
+/* ---------- header ---------- */
+.hd{margin-bottom:18px}
+.hd .kick{font-size:12px;letter-spacing:.02em;color:var(--blue);font-weight:700}
+.hd h2{font-size:32px;font-weight:800;letter-spacing:-.045em;margin:6px 0 8px;line-height:1.28}
+.hd .sub{color:var(--ink3);font-size:15px;font-weight:500}
+.core{background:var(--blue-l);color:var(--blue-dd);border-radius:var(--r);
+  padding:22px 24px;margin:20px 0 26px;font-size:17px;font-weight:700;line-height:1.65;
+  border:0}
+.core span{display:block;font-size:12px;letter-spacing:0;color:var(--blue);font-weight:700;margin-bottom:7px;opacity:.9}
+
+/* ---------- tabs ---------- */
+.tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:2px solid var(--line);margin-bottom:26px}
+.tabs button{border:0;background:none;font:inherit;font-size:15px;font-weight:600;color:var(--ink3);
+  padding:12px 4px;margin-right:20px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button:hover{color:var(--ink)}
+.tabs button.on{color:var(--blue-d);border-bottom-color:var(--blue);background:transparent}
+
+/* ---------- content blocks ---------- */
+.pane{display:none}.pane.on{display:block;animation:fade .22s}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+h3.bh{font-size:22px;font-weight:800;letter-spacing:-.035em;margin:38px 0 14px;padding-left:0;
+  border-left:0;line-height:1.35;color:var(--ink)}
+h3.bh:first-child{margin-top:4px}
+p.bp{margin:0 0 14px;font-size:16px;color:var(--ink2);line-height:1.75}
+ul.bl{margin:0 0 15px;padding-left:2px;list-style:none}
+ul.bl li{position:relative;padding-left:20px;margin-bottom:9px;font-size:15.5px;color:var(--ink2);line-height:1.7}
+ul.bl li:before{content:'';position:absolute;left:4px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--blue)}
+.tw{overflow-x:auto;margin:0 0 18px;border-radius:18px;border:0;background:#fff;box-shadow:var(--sh)}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:14.5px}
+th,td{padding:13px 14px;border-bottom:1px solid var(--line2);text-align:left;vertical-align:top;color:var(--ink2)}
+th{background:var(--paper);color:var(--ink2);font-weight:700;font-size:13.5px;white-space:nowrap;border-bottom:1px solid var(--line)}
+tbody tr:nth-child(even){background:#fff}
+tbody tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;color:var(--ink)}
+.cal{border-radius:16px;padding:18px 20px;margin:0 0 18px;font-size:15.5px;border:0;line-height:1.68;font-weight:500}
+.cal.key{background:var(--blue-l);color:var(--blue-dd)}
+.cal.warn{background:var(--warn-l);color:#a35a00}
+.cal.tip{background:var(--ok-l);color:#00806a}
+.cal:before{display:block;font-size:12px;letter-spacing:0;font-weight:700;margin-bottom:7px;opacity:.72}
+.cal.key:before{content:'CHECK POINT'}
+.cal.warn:before{content:'주의'}
+.cal.tip:before{content:'TIP'}
+.svgw{background:#fff;border:0;border-radius:18px;padding:20px;margin:0 0 18px;overflow-x:auto;box-shadow:var(--sh)}
+.svgw svg{width:100%;height:auto;min-width:460px;display:block}
+.bx{fill:#fff;stroke:#e5e8eb;stroke-width:1.5}
+.bx.a{fill:#f9fafb;stroke:#b9c6dd}.bx.b{fill:#e9f0fb;stroke:#9dbbe4}
+.bx.c{fill:#fff4e6;stroke:#e9c99a}.bx.d{fill:#eaf7f0;stroke:#a4d6bd}
+.bx.e{fill:#f7ecf3;stroke:#dcb6cf}.bx.f{fill:#fdeaea;stroke:#eeb2b2}
+.tt{font:700 13.5px 'Pretendard Variable',sans-serif;fill:#333d4b;text-anchor:middle}
+.ts{font:400 11.5px 'Pretendard Variable',sans-serif;fill:#5b6a83;text-anchor:middle}
+.em{font-weight:800;fill:#ff8a00}
+.ar{stroke:#8b95a1;stroke-width:2;fill:none;marker-end:url(#mk)}
+.ln{stroke:#e5e8eb;stroke-width:3}
+.dot{fill:var(--gold)}.dot2{fill:#8b95a1}
+
+/* ---------- cost cards ---------- */
+.costs{display:grid;gap:11px;margin:0 0 20px;grid-template-columns:repeat(auto-fill,minmax(268px,1fr))}
+.cc{background:#fff;border:0;border-radius:18px;padding:18px 19px;box-shadow:var(--sh)}
+.cc .tg{font-size:11.5px;letter-spacing:0;font-weight:700;color:var(--blue);margin-bottom:4px}
+.cc h4{font-size:16.5px;font-weight:800;letter-spacing:-.035em;line-height:1.35}
+.cc .dx{font-size:12.4px;color:var(--ink3);margin:1px 0 9px}
+.cc dl{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:13px;margin-bottom:9px}
+.cc dt{color:var(--ink3)}
+.cc dd{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.cc dd.mine{color:var(--red);font-size:17px}
+.cc .key{font-size:13px;background:var(--paper);border-radius:10px;padding:9px 11px;color:var(--ink2);margin-bottom:9px;font-weight:600}
+.cc .note{font-size:13.5px;color:var(--ink3);line-height:1.65}
+.cc .rat{height:5px;border-radius:5px;background:#f2f4f6;overflow:hidden;margin-bottom:9px}
+.cc .rat i{display:block;height:100%;background:linear-gradient(90deg,#e07b6a,#f04452)}
+
+/* ---------- design / script / ask / quiz ---------- */
+.gd{counter-reset:g;margin-bottom:8px}
+.gd li{list-style:none;position:relative;padding:18px 20px 18px 56px;background:#fff;border:0;border-radius:16px;margin-bottom:10px;font-size:15.5px;color:var(--ink2);line-height:1.7;box-shadow:var(--sh)}
+.gd li:before{counter-increment:g;content:counter(g);position:absolute;left:18px;top:18px;width:26px;height:26px;border-radius:9px;background:var(--blue-l);color:var(--blue-d);font-size:13px;font-weight:800;
+  display:grid;place-items:center}
+.sc{background:#fff;border:0;border-radius:18px;padding:20px 22px;margin-bottom:11px;box-shadow:var(--sh)}
+.sc .k{display:inline-block;font-size:12px;font-weight:700;letter-spacing:0;background:var(--blue-l);color:var(--blue-d);padding:5px 12px;border-radius:999px;margin-bottom:12px}
+.sc .q{font-size:15px;color:var(--ink3);padding-left:28px;position:relative;margin-bottom:12px}
+.sc .q:before{content:'고객';position:absolute;left:0;top:0;font-size:10.5px;font-weight:800;color:var(--ink3)}
+.sc .a{font-size:16px;padding-left:28px;position:relative;line-height:1.8;color:var(--ink)}
+.sc .a:before{content:'나';position:absolute;left:0;top:3px;font-size:11.5px;font-weight:700;color:var(--blue)}
+.sc .cp{float:right;font-size:11.5px;border:1px solid var(--line);background:#fafaf7;border-radius:7px;
+  padding:3px 9px;cursor:pointer;color:var(--ink3)}
+.sc .cp:hover{border-color:var(--gold);color:var(--navy)}
+.ak li{list-style:none;background:#fff;border:0;border-radius:16px;padding:16px 20px 16px 48px;
+  margin-bottom:8px;font-size:15.5px;position:relative;box-shadow:var(--sh);color:var(--ink2)}
+.ak li:before{content:'Q';position:absolute;left:20px;top:16px;font-weight:800;color:var(--blue);font-size:14px}
+.qz{background:#fff;border:0;border-radius:18px;padding:22px 24px;margin-bottom:12px;box-shadow:var(--sh)}
+.qz .qq{font-size:17px;font-weight:700;margin-bottom:16px;line-height:1.5;letter-spacing:-.03em}
+.qz .qq i{color:var(--blue);font-style:normal;margin-right:7px}
+.qz .op{display:block;width:100%;text-align:left;font:inherit;font-size:15.5px;border:0;background:var(--paper);border-radius:14px;padding:15px 18px;margin-bottom:9px;cursor:pointer;transition:.14s;color:var(--ink2)}
+.qz .op:hover{border-color:transparent;background:var(--line)}
+.qz .op.ok{background:var(--ok-l);color:#00806a;font-weight:700;box-shadow:inset 0 0 0 2px var(--ok);border-color:transparent}
+.qz .op.no{background:var(--red-l);color:var(--red);box-shadow:inset 0 0 0 2px var(--red);border-color:transparent}
+.qz .why{display:none;font-size:14.5px;background:var(--blue-ll);border-radius:14px;padding:15px 18px;color:var(--ink2);margin-top:8px;line-height:1.7}
+.qz.ans .why{display:block}
+.ban li{list-style:none;background:#ffeff0;border:0;border-radius:16px;padding:16px 20px 16px 46px;
+  margin-bottom:8px;font-size:15.5px;position:relative;color:#c9313d;line-height:1.7}
+.ban li:before{content:'×';position:absolute;left:20px;top:16px;font-weight:800;color:var(--red)}
+
+.done-btn{margin-top:34px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-size:15px;font-weight:700;border:0;border-radius:14px;padding:14px 22px;cursor:pointer}
+.btn.p{background:var(--blue);color:#fff}.btn.p:hover{background:var(--blue-d)}
+.btn.g{background:var(--blue);color:#fff}.btn.g:hover{background:var(--blue-d)}
+.btn.o{background:var(--paper);color:var(--ink2)}.btn.o:hover{background:var(--line)}
+.hint{font-size:12.6px;color:var(--ink3)}
+
+/* ---------- cost DB screen ---------- */
+.filt{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+.filt button{font:inherit;font-size:14px;font-weight:600;border:0;background:#fff;border-radius:999px;padding:10px 18px;cursor:pointer;color:var(--ink2);box-shadow:var(--sh)}
+.filt button.on{background:var(--blue);color:#fff;border-color:transparent}
+.mini{font-size:12.8px;color:var(--ink3);margin-bottom:14px}
+
+/* ---------- case study ---------- */
+.csel{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.csel button{font:inherit;font-size:13.2px;font-weight:600;border:0;background:#fff;border-radius:16px;padding:12px 16px;cursor:pointer;color:var(--ink2);text-align:left;line-height:1.4;box-shadow:var(--sh)}
+.csel button b{display:block;font-size:14.6px;color:var(--ink);font-weight:800}
+.csel button span{font-size:11.4px;color:var(--ink3)}
+.csel button.on{background:var(--blue);border-color:transparent;color:#fff}
+.csel button.on b{color:#fff}.csel button.on span{color:var(--gold2)}
+.prof{background:#fff;border:0;border-radius:18px;padding:22px 24px;margin-bottom:16px;box-shadow:var(--sh)}
+.prof dl{display:grid;grid-template-columns:96px 1fr;gap:5px 12px;font-size:14px}
+.prof dt{color:var(--ink3);font-weight:600}
+.prof dd{color:var(--ink)}
+.brief{background:var(--ink);color:#fff;border-radius:20px;padding:22px 26px;margin-bottom:20px;font-size:16.5px;line-height:1.7;border-left:0}
+.brief b{color:var(--gold2)}
+.st{display:inline-block;width:22px;height:22px;line-height:22px;border-radius:50%;text-align:center;
+  font-size:12px;font-weight:800;color:#fff}
+.st.O{background:#02a678}.st.T{background:#c9902a}.st.X{background:#f04452}
+.hole{background:#fff;border:0;border-left:4px solid var(--red);border-radius:18px;padding:20px 22px;margin-bottom:13px;box-shadow:var(--sh)}
+.hole h4{font-size:16px;font-weight:800;letter-spacing:-.02em;margin-bottom:7px;line-height:1.45}
+.hole h4 i{font-style:normal;color:#f04452;margin-right:7px}
+.hole p{font-size:14.4px;color:var(--ink);margin-bottom:11px}
+.plans{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(258px,1fr));margin-bottom:8px}
+.pl{background:#fff;border:0;border-radius:18px;padding:20px 22px;display:flex;flex-direction:column;box-shadow:var(--sh)}
+.pl.rec{border-color:var(--gold);border-width:2px;box-shadow:0 0 0 2px var(--blue), var(--sh2);border:0}
+.pl .pn{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.pl .pf{font-size:14.6px;font-weight:800;color:#f04452;margin:3px 0 11px}
+.pl .rb{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:0;background:var(--blue);color:#fff;border-radius:999px;padding:2px 9px;margin-bottom:6px}
+.pl ul{list-style:none;margin-bottom:11px;flex:1}
+.pl li{font-size:13.5px;padding-left:15px;position:relative;margin-bottom:6px;line-height:1.55}
+.pl li:before{content:'';position:absolute;left:2px;top:9px;width:5px;height:5px;border-radius:50%;background:var(--gold)}
+.pl .pnote{font-size:13px;color:var(--ink2);background:#f7f8fb;border-radius:9px;padding:10px 12px;line-height:1.6}
+.n{font-size:10px;font-weight:800;background:#e8f3ff;color:#3182f6;border-radius:4px;padding:1px 5px;margin-left:3px}
+.kk{font-size:10px;font-weight:800;background:#fdf0e0;color:#a35a00;border-radius:4px;padding:1px 5px;margin-left:3px}
+.drill{counter-reset:d}
+.drill li{list-style:none;background:#fffbf0;border:0;border-radius:16px;padding:18px 22px 18px 52px;margin-bottom:9px;font-size:15.5px;position:relative;color:#7a5800}
+.drill li:before{counter-increment:d;content:counter(d);position:absolute;left:18px;top:18px;width:21px;height:21px;border-radius:9px;background:var(--blue);color:#fff;font-size:11.5px;font-weight:800;display:grid;place-items:center}
+
+.drill li{cursor:pointer}
+.drill li .dq{font-weight:600}
+.drill li .da{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #d9c48f;
+  font-size:14px;line-height:1.75;color:#3a2f14;font-weight:400}
+.drill li.open .da{display:block}
+.drill li .tog{float:right;font-size:11.5px;color:#8a6d1e;font-weight:700}
+/* ---------- book (통독) ---------- */
+.bkbar{position:sticky;top:0;z-index:20;background:var(--paper);padding:10px 0 12px;margin-bottom:6px;
+  border-bottom:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bkbar .hint{margin-left:auto}
+.bkch{margin:0 0 10px;padding:26px 0 0;border-top:3px solid var(--navy)}
+.bkch:first-of-type{border-top:0;padding-top:0}
+.bkch .bkkick{font-size:11px;letter-spacing:.16em;color:var(--gold);font-weight:800}
+.bkch h2{font-size:24px;font-weight:800;letter-spacing:-.03em;margin:3px 0 4px;line-height:1.3}
+.bkch .sub{color:var(--ink2);font-size:13.5px;margin-bottom:12px}
+.bksec{font-size:12px;letter-spacing:.1em;font-weight:800;color:#fff;background:var(--navy2);
+  display:inline-block;padding:4px 12px;border-radius:20px;margin:26px 0 12px}
+.toc{background:#fff;border:0;border-radius:18px;padding:24px 28px;margin-bottom:26px;box-shadow:var(--sh)}
+.toc h3{font-size:15px;font-weight:800;margin-bottom:10px}
+.toc ol{margin:0;padding-left:20px}
+.toc li{font-size:14px;margin-bottom:5px}
+.toc a{color:var(--ink);text-decoration:none}
+.toc a:hover{color:var(--gold);text-decoration:underline}
+@media print{
+  .bkbar{display:none!important}
+  .bkch{page-break-before:always}
+  .bkch:first-of-type{page-break-before:auto}
+  .drill li .da{display:block!important}
+}
+
+/* ---------- book cover / parts ---------- */
+.cover{background:linear-gradient(160deg,#3182f6 0%,#1b64da 60%,#1957b8 100%);color:#fff;border-radius:24px;padding:64px 44px 48px;margin-bottom:30px;position:relative;overflow:hidden}
+.cover:before{content:'';position:absolute;inset:16px;border:1px solid rgba(201,162,39,.35);border-radius:10px;pointer-events:none}
+.cover .cv1{font-size:12px;letter-spacing:.3em;color:var(--gold2);font-weight:800;margin-bottom:16px}
+.cover h1{font-size:40px;font-weight:800;letter-spacing:-.04em;line-height:1.22;margin-bottom:12px}
+.cover h1 em{font-style:normal;color:var(--gold2);display:block;font-size:20px;font-weight:700;margin-top:10px;letter-spacing:-.02em}
+.cover .cv2{font-size:15px;color:#d1d6db;line-height:1.8;margin:26px 0 30px;max-width:560px}
+.cover .cvmeta{display:flex;gap:26px;flex-wrap:wrap;font-size:12.5px;color:#8fa3c4;
+  border-top:1px solid rgba(255,255,255,.13);padding-top:18px}
+.cover .cvmeta b{display:block;color:var(--gold2);font-size:11px;letter-spacing:.1em;margin-bottom:3px}
+.part{background:var(--blue);color:#fff;border-radius:20px;padding:34px 30px;margin:0 0 24px;text-align:center}
+.part .pn{font-size:11.5px;letter-spacing:.28em;color:var(--gold2);font-weight:800}
+.part h2{font-size:27px;font-weight:800;letter-spacing:-.03em;margin:8px 0 6px;color:#fff}
+.part p{font-size:14px;color:#d1d6db}
+.pref{background:#fff;border:0;border-radius:18px;padding:26px 28px;margin-bottom:26px;box-shadow:var(--sh)}
+.pref h3{font-size:18px;font-weight:800;margin-bottom:12px;letter-spacing:-.02em}
+.pref p{font-size:14.8px;margin-bottom:11px;line-height:1.78}
+.pref ol{padding-left:20px;margin:0 0 11px}
+.pref li{font-size:14.6px;margin-bottom:6px}
+.colo{background:#fff;border:0;border-radius:18px;padding:24px 28px;margin-top:26px;
+  font-size:13px;color:var(--ink2);line-height:1.85;box-shadow:var(--sh)}
+.colo b{color:var(--ink)}
+.bkcase{border-top:1px solid var(--line);padding-top:24px;margin-top:26px}
+.bkcase:first-of-type{border-top:0;padding-top:0;margin-top:0}
+.bkcase>.cs-h{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px}
+.bkcase>.cs-s{font-size:13px;color:var(--ink3);margin-bottom:14px}
+@media print{
+  .cover{page-break-after:always;border-radius:0}
+  .part{page-break-before:always}
+  .bkcase{page-break-before:always}
+  .colo{page-break-before:always}
+  .toc{page-break-after:always}
+}
+
+/* ---------- 분석 · 설계 ---------- */
+.adnav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px}
+.adnav button{font:inherit;font-size:13.5px;font-weight:700;border:0;background:#fff;border-radius:14px;
+  padding:12px 16px;cursor:pointer;color:var(--ink2);text-align:left;line-height:1.4;box-shadow:var(--sh)}
+.adnav button b{display:block;font-size:11.5px;color:var(--blue);margin-bottom:2px}
+.adnav button.on{background:var(--blue);color:#fff}
+.adnav button.on b{color:#cfe4ff}
+.dgrp{font-size:12px;font-weight:700;letter-spacing:.02em;color:var(--blue);margin:30px 0 12px}
+.dgrid{display:grid;gap:11px;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));margin-bottom:8px}
+.dcard{background:#fff;border:0;border-radius:18px;padding:18px 20px;cursor:pointer;transition:.14s;box-shadow:var(--sh)}
+.dcard:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.dcard b{display:block;font-size:17px;font-weight:800;letter-spacing:-.035em;margin-bottom:5px;color:var(--ink)}
+.dcard span{font-size:13.5px;color:var(--ink3);line-height:1.55}
+.dsit{background:var(--blue-l);color:var(--blue-dd);border-radius:20px;padding:22px 24px;
+  font-size:16.5px;line-height:1.7;font-weight:600;margin-bottom:24px}
+.mustw{display:grid;gap:10px;margin-bottom:22px}
+.must{background:#fff;border-radius:16px;padding:16px 20px;box-shadow:var(--sh);
+  display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:baseline}
+.must .mn{font-size:16px;font-weight:800;color:var(--ink);letter-spacing:-.03em}
+.must .ma{font-size:15px;font-weight:800;color:var(--blue);white-space:nowrap}
+.must .mw{grid-column:1/-1;font-size:14px;color:var(--ink3);line-height:1.6}
+.pillw{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.pill{font-size:14px;font-weight:600;border-radius:999px;padding:9px 16px;background:#fff;
+  color:var(--ink2);box-shadow:var(--sh)}
+.pill.skip{background:var(--paper);color:var(--ink4);box-shadow:none;text-decoration:line-through}
+.trapw li{list-style:none;background:var(--warn-l);border-radius:16px;padding:16px 20px 16px 46px;
+  margin-bottom:9px;font-size:15.5px;position:relative;color:#a35a00;line-height:1.7}
+.trapw li:before{content:'!';position:absolute;left:22px;top:16px;font-weight:800;color:var(--warn);font-size:16px}
+.bgt{background:var(--ink);color:#fff;border-radius:16px;padding:18px 22px;font-size:16px;
+  font-weight:700;margin-bottom:22px;letter-spacing:-.02em}
+.bgt span{display:block;font-size:12px;color:var(--gold2);font-weight:700;margin-bottom:6px}
+
+/* ---------- misc ---------- */
+.foot{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);font-size:13px;color:var(--ink4);line-height:1.8}
+.mobtn{display:none;background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:16px;width:46px;height:46px;box-shadow:var(--sh)}
+@media(max-width:900px){
+  #side{position:fixed;left:-284px;top:0;z-index:50;transition:left .24s ease;box-shadow:0 0 40px rgba(0,0,0,.35)}
+  #side.open{left:0}
+  #scrim{position:fixed;inset:0;background:rgba(8,15,28,.5);z-index:45;opacity:0;pointer-events:none;transition:opacity .24s}
+  #scrim.on{opacity:1;pointer-events:auto}
+  #main{padding:64px 16px 80px}
+  .mobtn{display:flex;position:fixed;top:10px;left:10px;z-index:60;width:42px;height:42px;border-radius:11px;
+    background:var(--navy);color:#fff;border:0;align-items:center;justify-content:center;font-size:19px;cursor:pointer}
+  .hd h2{font-size:22px}
+  .costs{grid-template-columns:1fr}
+}
+@media print{
+  #side,.tabs,.mobtn,.done-btn,.filt{display:none!important}
+  .pane{display:block!important}
+  body{background:#fff}
+  #main{max-width:none;padding:0}
+}
+</style>
+</head>
+<body>
+<button class="mobtn" id="mo" aria-label="목차 열기">☰</button>
+<div class="lb" id="lb"><span class="lbx">&times;</span><img id="lbi" alt=""><div class="lbc" id="lbc"></div></div>
+<div id="scrim"></div>
+<div id="app">
+  <aside id="side">
+    <div class="brand">
+      <h1>보험 마스터 아카데미</h1>
+      <p>신입 자가학습 과정 · 10 LEVEL</p>
+    </div>
+    <div class="sbox"><input id="q" type="search" placeholder="검색 — 뇌경색, 1-7종, 협심증…" autocomplete="off"></div>
+    <div class="prog">
+      <div class="lab"><span>학습 진도</span><span id="pgt">0 / 11</span></div>
+      <div class="bar"><i id="pgb"></i></div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="navsep">부록</div>
+    <nav id="nav2"></nav>
+  </aside>
+  <main id="main"><div id="view"></div></main>
+</div>
+
+<script src="figs.js?v=20260827i"></script>
+<script src="figs2.js?v=20260827i"></script>
+<script src="costs.js?v=20260827i"></script>
+<script src="cases.js?v=20260827i"></script>
+<script src="cases2.js?v=20260827i"></script>
+<script src="terms.js?v=20260827i"></script>
+<script src="terms2.js?v=20260827i"></script>
+<script src="lesson.js?v=20260827i"></script>
+<script src="gallery.js?v=20260827i"></script>
+<script src="analysis.js?v=20260827i"></script>
+<script src="design.js?v=20260827i"></script>
+<script src="disease1.js?v=20260827i"></script>
+<script src="disease2.js?v=20260827i"></script>
+<script src="surgery.js?v=20260827i"></script>
+<script src="health.js?v=20260827i"></script>
+<script src="source.js?v=20260827i"></script>
+<script src="quiz.js?v=20260827i"></script>
+<script src="sync.js?v=20260827i"></script>
+<script src="data1.js?v=20260827i"></script>
+<script src="data2.js?v=20260827i"></script>
+<script>
+(function(){
+'use strict';
+var C = window.CURRICULUM || [], COSTS = window.COSTS || [];
+var KEY='bohum_academy_v1';
+var state = JSON.parse(localStorage.getItem(KEY)||'{}');
+state.done = state.done || {};
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+function won(n){ return n==null ? '—' : n.toLocaleString('ko-KR')+'원'; }
+
+/* ---------- nav ---------- */
+var EXTRA=[{id:'GROW',title:'성장 경로',sub:'다음에 뭘 하면 되나'},{id:'TEST',title:'테스트 · 사람별',sub:'9세트 106문항'},{id:'SRC',title:'원본 자료 검색',sub:'첨부 PPTX 187장'},{id:'HEALTH',title:'헬스케어 서비스',sub:'보험금이 못 하는 일'},{id:'SURG',title:'1~5종 수술분류표',sub:'1~72번 원문 전량'},{id:'TERMS',title:'용어 사전',sub:'검색해서 찾아보기'},{id:'CASE',title:'케이스 스터디',sub:'실전 9건'},{id:'GAL',title:'원본 자료실',sub:'이미지 전체'},{id:'BOOK',title:'전체 통독 · 인쇄',sub:'책 한 권으로'},{id:'DB',title:'실제 치료비 DB',sub:'영수증 30건'},{id:'CARD',title:'화법 전체 카드',sub:'전 레벨 모음'},{id:'GUIDE',title:'운영 · 활용 가이드',sub:'교육 담당자용'}];
+function buildNav(){
+  document.getElementById('nav').innerHTML =
+    '<a href="#LESSON" data-id="LESSON" style="background:rgba(201,162,39,.16);border-left-color:var(--gold)">'+
+    '<span class="lv">🎬</span><span class="tx"><b style="color:#fff">1교시 · 비유 수업</b><br>'+
+    '<span style="font-size:11.5px;color:#8b95a1">선생님과 3D로 시작하기</span></span></a>'+
+    '<a href="#DZ" data-id="DZ"><span class="lv">📕</span><span class="tx"><b style="color:var(--ink)">질병 백과</b><br>'+
+    '<span style="font-size:11.5px;color:var(--ink3)">3D · 원인 · 치료 · 고객 Q&amp;A</span></span></a>'+
+    '<a href="#ANALYSIS" data-id="ANALYSIS"><span class="lv">🔍</span><span class="tx"><b style="color:var(--ink)">분석편</b><br>'+
+    '<span style="font-size:11.5px;color:var(--ink3)">어떤 기준으로 볼 것인가</span></span></a>'+
+    '<a href="#DESIGN" data-id="DESIGN"><span class="lv">🧩</span><span class="tx"><b style="color:var(--ink)">설계편</b><br>'+
+    '<span style="font-size:11.5px;color:var(--ink3)">상황별 30가지</span></span></a>'+
+    '<div class="navsep">본문</div>'+
+    C.map(function(c){
+    return '<a href="#'+c.id+'" data-id="'+c.id+'" class="'+(state.done[c.id]?'done':'')+'">'+
+      '<span class="lv">L'+c.lvl+'</span><span class="tx">'+esc(c.title)+'</span><span class="dn">●</span></a>';
+  }).join('');
+  document.getElementById('nav2').innerHTML = EXTRA.map(function(e){
+    return '<a href="#'+e.id+'" data-id="'+e.id+'"><span class="lv">·</span><span class="tx">'+esc(e.title)+'</span></a>';
+  }).join('');
+  var d=0; C.forEach(function(c){ if(state.done[c.id]) d++; });
+  document.getElementById('pgt').textContent = d+' / '+C.length;
+  document.getElementById('pgb').style.width = (C.length? d/C.length*100:0)+'%';
+}
+
+/* ---------- block renderer ---------- */
+function costCard(n){
+  var x = COSTS.filter(function(c){return c.n===n;})[0]; if(!x) return '';
+  var ratio = (x.total && x.mine) ? Math.min(100, Math.round(x.mine/x.total*100)) : 0;
+  return '<div class="cc"><div class="tg">'+esc(x.cat)+' · CASE '+x.n+'</div>'+
+    '<h4>'+esc(x.name)+'</h4><div class="dx">'+esc(x.dx)+(x.period?' · '+esc(x.period):'')+' · '+esc(x.type)+'</div>'+
+    (x.total? '<dl><dt>진료비 총액</dt><dd>'+won(x.total)+'</dd>'+
+      '<dt>공단 부담</dt><dd>'+won(x.nhis)+'</dd>'+
+      '<dt>본인 부담</dt><dd class="mine">'+won(x.mine)+'</dd></dl>'+
+      '<div class="rat"><i style="width:'+ratio+'%"></i></div>'+
+      '<div class="key">본인부담 비중 '+ratio+'% · '+esc(x.key)+'</div>' : '<div class="key">'+esc(x.key)+'</div>')+
+    '<div class="note">'+esc(x.note)+'</div></div>';
+}
+/* ---------- 데이터로 그리는 도해 ---------- */
+function figDesign(d){
+  var H = window.FIGH; if(!H) return '';
+  var T=H.T, rows=[];
+  (d.must||[]).forEach(function(m){ rows.push({n:m.n, v:3, c:'B', note:m.amt}); });
+  (d.opt||[]).forEach(function(x){ rows.push({n:String(x).replace(/<[^>]+>/g,'').slice(0,22), v:2, c:'o', note:'여력 되면'}); });
+  (d.skip||[]).forEach(function(x){ rows.push({n:String(x).replace(/<[^>]+>/g,'').slice(0,22), v:1, c:'m', note:'지금은 아님'}); });
+  if(!rows.length) return '';
+  var b = H.bars(rows, {title:'담보 우선순위 — 위에서부터 채운다', max:3, x0:196, bh:26, gap:9});
+  var s = b.s;
+  s += H.tx(196, b.h+18, '반드시', {a:'start', size:10.6, w:800, fill:T.B.s});
+  s += H.tx(300, b.h+18, '여력 되면', {a:'start', size:10.6, w:800, fill:T.o.t});
+  s += H.tx(410, b.h+18, '지금은 아님', {a:'start', size:10.6, w:800, fill:H.INK3});
+  return H.wrap(b.h+30, s);
+}
+function figBudget(d){
+  var H = window.FIGH; if(!H) return '';
+  var mu=(d.must||[]).length, op=(d.opt||[]).length, sk=(d.skip||[]).length;
+  var st = H.stack([
+    {n:'반드시 ('+mu+')', v:Math.max(mu,1)*3, c:'B'},
+    {n:'여력 ('+op+')',   v:Math.max(op,1)*2, c:'o'},
+    {n:'보류 ('+sk+')',   v:Math.max(sk,1)*1, c:'m'}
+  ], {title:'예산이 줄면 오른쪽부터 사라진다'});
+  var s = st.s;
+  s += H.tx(360, st.h+18, '담보를 빼기 전에 <tspan font-weight="800">가입금액을 줄이고 기간을 줄인다</tspan> — 빠진 담보는 나중에 못 넣는다',
+            {size:11.4, w:600, fill:H.INK2});
+  return H.wrap(st.h+30, s);
+}
+function figCaseMap(c){
+  var H = window.FIGH; if(!H) return '';
+  var mp = (c.map||[]).slice(0,10);
+  if(!mp.length) return '';
+  var rows = mp.map(function(r){
+    return {n: String(r[1]).replace(/<[^>]+>/g,'').slice(0,18), v:[r[2]==='T'?'D':r[2]]};
+  });
+  var m = H.matrix(['진단'], rows, {title:'담보 지도 — 한눈에 보는 구멍', x0:250, rh:26});
+  var s = m.s;
+  var O=0,D=0,X=0;
+  mp.forEach(function(r){ if(r[2]==='O')O++; else if(r[2]==='X')X++; else D++; });
+  s += H.box(24, m.h+10, 214, 46, 'g', {r:11});
+  s += H.tx(131, m.h+40, '있다  '+O+'개', {size:13, w:800, fill:H.T.g.t});
+  s += H.box(253, m.h+10, 214, 46, 'o', {r:11});
+  s += H.tx(360, m.h+40, '부족  '+D+'개', {size:13, w:800, fill:H.T.o.t});
+  s += H.box(482, m.h+10, 214, 46, 'r', {r:11});
+  s += H.tx(589, m.h+40, '없다  '+X+'개', {size:13, w:800, fill:H.T.r.t});
+  s += H.tx(360, m.h+80, '말로 설명하지 말고 <tspan font-weight="800">이 그림을 돌려서 보여준다</tspan>', {size:11.6, w:600, fill:H.INK2});
+  return H.wrap(m.h+96, s);
+}
+function figCasePlans(c){
+  var H = window.FIGH; if(!H) return '';
+  var ks=['a','b','c'], tone={a:'m',b:'B',c:'o'}, out=[];
+  ks.forEach(function(k){ if(c.plans && c.plans[k]) out.push({k:k, p:c.plans[k]}); });
+  if(!out.length) return '';
+  var s = H.tx(360,20,'제안 3안 — 고객이 고르게 한다',{size:13.5,w:800,fill:H.INK});
+  var w = (720-28-(out.length-1)*14)/out.length;
+  out.forEach(function(o,i){
+    var x=14+i*(w+14), t=o.p.recommend?'B':tone[o.k], T=H.T[t];
+    s += H.box(x,38,w,150,t,{r:13});
+    if(o.p.recommend){
+      s += '<rect x="'+(x+w/2-30)+'" y="30" width="60" height="20" rx="10" fill="'+H.T.B.s+'"/>';
+      s += H.tx(x+w/2,44,'권장',{size:10.4,w:800,fill:'#fff'});
+    }
+    s += H.tx(x+w/2,78,String(o.p.name).replace(/<[^>]+>/g,''),{size:13,w:800,fill:T.t});
+    s += H.tx(x+w/2,108,String(o.p.fee).replace(/<[^>]+>/g,''),{size:16,w:800,fill:o.p.recommend?'#fff':H.INK});
+    s += H.tx(x+w/2,132,'담보 '+(o.p.items||[]).length+'개',{size:10.8,w:600,fill:o.p.recommend?'rgba(255,255,255,.85)':H.INK2});
+    s += H.ln(x+22,146,x+w-22,146,{w:1.2});
+    var note=String(o.p.note||'').replace(/<[^>]+>/g,'');
+    s += H.tx(x+w/2,166,note.slice(0,16),{size:10.2,w:500,fill:o.p.recommend?'rgba(255,255,255,.78)':H.INK3});
+    s += H.tx(x+w/2,180,note.slice(16,32),{size:10.2,w:500,fill:o.p.recommend?'rgba(255,255,255,.78)':H.INK3});
+  });
+  return H.wrap(204, s);
+}
+function figHcPair(Hd){
+  var H = window.FIGH; if(!H) return '';
+  var s = H.tx(360,20,'담보는 돈을 주고, 서비스는 길을 알려준다',{size:13.5,w:800,fill:H.INK});
+  (Hd.pair||[]).forEach(function(p,i){
+    var y=38+i*46;
+    s += H.box(14,y,168,38,'k',{r:10,z:4});
+    s += H.tx(98,y+24,p.n,{size:12,w:800,fill:'#fff'});
+    s += H.box(190,y,254,38,'B',{r:10,z:4});
+    s += H.tx(317,y+24,String(p.m).replace(/<[^>]+>/g,'').slice(0,22),{size:10.8,w:700,fill:'#fff'});
+    s += H.box(452,y,254,38,'G',{r:10,z:4});
+    s += H.tx(579,y+24,String(p.h).replace(/<[^>]+>/g,'').slice(0,24),{size:10.8,w:700,fill:'#fff'});
+  });
+  var y=38+(Hd.pair||[]).length*46;
+  s += H.tx(98,y+16,'담보',{size:10.6,w:800,fill:H.INK3});
+  s += H.tx(317,y+16,'돈',{size:10.6,w:800,fill:H.T.B.s});
+  s += H.tx(579,y+16,'길',{size:10.6,w:800,fill:H.T.G.s});
+  return H.wrap(y+30, s);
+}
+function svgWrap(inner){
+  return '<div class="svgw"><svg style="display:none"><defs><marker id="mk" markerWidth="9" markerHeight="9" refX="7" refY="3.2" orient="auto">'+
+    '<path d="M0,0 L8,3.2 L0,6.4 z" fill="#a8b0b8"/></marker></defs></svg>'+inner+'</div>';
+}
+function renderBlocks(bs){
+  return bs.map(function(b){
+    switch(b.t){
+      case 'h': return '<h3 class="bh">'+b.x+'</h3>';
+      case 'h3': return '<h4 class="bh3">'+b.x+'</h4>';
+      case 'p': return '<p class="bp">'+b.x+'</p>';
+      case 'list': return '<ul class="bl">'+b.x.map(function(i){return '<li>'+i+'</li>';}).join('')+'</ul>';
+      case 'table':
+        return '<div class="tw"><table><thead><tr>'+b.head.map(function(h){return '<th>'+h+'</th>';}).join('')+
+          '</tr></thead><tbody>'+b.rows.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+c+'</td>';}).join('')+'</tr>';}).join('')+
+          '</tbody></table></div>';
+      case 'callout': return '<div class="cal '+b.k+'">'+b.x+'</div>';
+      case 'fig': { var _f=(window.FIGS||{})[b.x]; return _f? svgWrap(_f()) : ''; }
+      case 'svg': return svgWrap(b.x);
+      case 'costs': return '<div class="costs">'+b.x.map(costCard).join('')+'</div>';
+      case 'img': return '<figure class="fig"><img src="img/'+b.x+'" loading="lazy" alt="" data-cap="'+String(b.cap||'').replace(/"/g,'&quot;').replace(/<[^>]+>/g,'')+'"><figcaption>'+(b.cap||'')+'</figcaption></figure>';
+      default: return '';
+    }
+  }).join('');
+}
+
+/* ---------- chapter view ---------- */
+function renderChapter(c){
+  var h = '<div class="hd"><div class="kick">LEVEL '+c.lvl+' · 학습시간 '+c.mins+'분</div>'+
+    '<h2>'+esc(c.title)+'</h2><div class="sub">'+esc(c.sub)+'</div></div>'+
+    '<div class="core"><span>이 레벨의 한 줄</span>'+esc(c.core)+'</div>'+
+    '<div class="tabs">'+
+      '<button data-p="learn" class="on">📖 학습</button>'+
+      '<button data-p="design">🎯 담보설계 방향</button>'+
+      '<button data-p="script">💬 화법</button>'+
+      '<button data-p="ask">❓ 질문지</button>'+
+      '<button data-p="quiz">✅ 셀프 체크</button>'+
+      '<button data-p="ban">🚫 금지 표현</button>'+
+    '</div>';
+
+  h += '<div class="pane on" data-p="learn">'+renderBlocks(c.blocks)+
+    '<div class="done-btn"><button class="btn '+(state.done[c.id]?'o':'g')+'" id="dbtn">'+
+    (state.done[c.id]?'● 학습 완료됨 (취소)':'이 레벨 학습 완료로 표시')+'</button>'+
+    '<span class="hint">완료 표시는 이 브라우저에 저장됩니다.</span></div></div>';
+
+  h += '<div class="pane" data-p="design"><h3 class="bh">이 레벨에서 실제로 설계에 반영할 것</h3>'+
+    '<ol class="gd">'+c.design.map(function(d){return '<li>'+d+'</li>';}).join('')+'</ol></div>';
+
+  h += '<div class="pane" data-p="script"><h3 class="bh">현장 화법 — 소리 내어 3회씩</h3>'+
+    c.scripts.map(function(s,i){
+      return '<div class="sc"><button class="cp" data-cp="'+i+'">복사</button><span class="k">'+esc(s.k)+'</span>'+
+        (s.q==='—'?'':'<div class="q">'+esc(s.q)+'</div>')+'<div class="a">'+s.a+'</div></div>';
+    }).join('')+'</div>';
+
+  h += '<div class="pane" data-p="ask"><h3 class="bh">고객에게 던질 질문 — 상담 시트</h3>'+
+    '<p class="bp">답을 받아 적는 것이 목적이 아니다. <b>고객이 스스로 결핍을 말하게</b> 만드는 것이 목적이다.</p>'+
+    '<ul class="ak">'+c.ask.map(function(a){return '<li>'+esc(a)+'</li>';}).join('')+'</ul></div>';
+
+  h += '<div class="pane" data-p="quiz"><h3 class="bh">셀프 체크 — 전부 맞을 때까지</h3>'+
+    c.quiz.map(function(q,i){
+      return '<div class="qz" data-a="'+q.a+'"><div class="qq"><i>Q'+(i+1)+'.</i>'+esc(q.q)+'</div>'+
+        q.c.map(function(o,j){return '<button class="op" data-j="'+j+'">'+esc(o)+'</button>';}).join('')+
+        '<div class="why">해설 — '+esc(q.why)+'</div></div>';
+    }).join('')+'</div>';
+
+  h += '<div class="pane" data-p="ban"><h3 class="bh">이렇게 말하면 안 된다</h3>'+
+    '<p class="bp">아래 표현은 <b>불완전판매 · 부당권유</b>로 문제가 될 수 있다. 습관이 되기 전에 지운다.</p>'+
+    '<ul class="ban">'+c.ban.map(function(b){return '<li>'+b+'</li>';}).join('')+'</ul>'+
+    '<div class="cal warn">모든 고객 대면 자료 · SNS 게시물은 <b>사전 광고심의</b> 대상이다. 심의번호 없이 배포하지 않는다. 통계는 출처와 연도를, 사례는 「개인 · 병원 · 시기에 따라 다를 수 있습니다」 문구를 함께 표기한다.</div></div>';
+
+  h += footer();
+  return h;
+}
+
+/* ---------- case study ---------- */
+var CASES = window.CASES || [];
+var ST = {O:'\u25cb', T:'\u25b3', X:'\u2715'};
+function renderCaseShell(){
+  return '<div class="hd"><div class="kick">부록 D</div><h2>케이스 스터디</h2>'+
+    '<div class="sub">증권 → 담보 지도 → 구멍 진단 → 3안 제안까지, 끝까지 푸는 실전 5건</div></div>'+
+    '<div class="cal key">가상의 고객입니다. 실존 인물 · 계약과 무관하며 보험료는 이해를 돕기 위한 <b>예시값</b>입니다. 실제 보험료는 회사 · 연령 · 성별 · 심사 결과에 따라 달라집니다.</div>'+
+    '<div class="csel" id="csel">'+CASES.map(function(c,i){
+      return '<button data-i="'+i+'" class="'+(i===0?'on':'')+'"><b>CASE '+(i+1)+'. '+esc(c.name)+'</b><span>'+esc(c.tag)+'</span></button>';
+    }).join('')+'</div><div id="cbody"></div>';
+}
+function paintCase(i){
+  var c = CASES[i]; if(!c) return;
+  Array.prototype.forEach.call(document.querySelectorAll('#csel button'), function(b,j){ b.classList.toggle('on', j===i); });
+  document.getElementById('cbody').innerHTML = caseHTML(c) + footer();
+  window.scrollTo(0,0);
+}
+function caseHTML(c){
+  var h = '<div class="brief">'+c.brief+'</div>';
+
+  h += '<h3 class="bh">1. 고객 프로필</h3><div class="prof"><dl>'+
+    '<dt>이름 · 나이</dt><dd>'+esc(c.name)+' · '+c.age+'</dd>'+
+    '<dt>직업</dt><dd>'+c.job+'</dd>'+
+    '<dt>가족</dt><dd>'+c.family+'</dd>'+
+    '<dt>소득</dt><dd>'+c.income+'</dd>'+
+    '<dt>고정지출</dt><dd>'+c.fixed+'</dd>'+
+    '<dt>병력</dt><dd>'+c.hx+'</dd>'+
+    '<dt>가족력</dt><dd>'+esc(c.famhx)+'</dd>'+
+    '<dt>예산</dt><dd>'+c.budget+'</dd></dl></div>';
+
+  h += '<h3 class="bh">2. 현재 증권</h3>';
+  if(c.policy.length){
+    h += '<div class="tw"><table><thead><tr><th>담보</th><th>가입금액</th><th>만기</th><th>납입</th><th>갱신</th></tr></thead><tbody>'+
+      c.policy.map(function(r){ return '<tr>'+r.map(function(x){return '<td>'+x+'</td>';}).join('')+'</tr>'; }).join('')+
+      '</tbody></table></div>';
+  }
+  h += '<div class="cal tip">'+c.policyNote+'</div>';
+
+  h += '<h3 class="bh">3. 담보 지도 — 진단</h3>'+ svgWrap(figCaseMap(c))+
+    '<p class="bp">있으면 <span class="st O">'+ST.O+'</span> · 부족하면 <span class="st T">'+ST.T+'</span> · 없으면 <span class="st X">'+ST.X+'</span>. <b>말로 설명하지 말고 이 표를 보여준다.</b></p>'+
+    '<div class="tw"><table><thead><tr><th>구분</th><th>담보</th><th>상태</th><th>진단</th></tr></thead><tbody>'+
+    c.map.map(function(r){
+      return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td style="text-align:center"><span class="st '+r[2]+'">'+ST[r[2]]+'</span></td><td>'+r[3]+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+
+  h += '<h3 class="bh">4. 발견된 구멍</h3>'+
+    c.holes.map(function(x,j){
+      return '<div class="hole"><h4><i>'+(j+1)+'</i>'+x.t+'</h4><p>'+x.x+'</p>'+
+        (x.costs && x.costs.length ? '<div class="costs">'+x.costs.map(costCard).join('')+'</div>' : '')+'</div>';
+    }).join('');
+
+  h += '<h3 class="bh">5. 제안 3안</h3>'+ svgWrap(figCasePlans(c))+ '<div class="plans">'+
+    ['a','b','c'].map(function(k){
+      var p = c.plans[k]; if(!p) return '';
+      return '<div class="pl'+(p.recommend?' rec':'')+'">'+(p.recommend?'<span class="rb">권장</span>':'')+
+        '<div class="pn">'+esc(p.name)+'</div><div class="pf">'+p.fee+'</div>'+
+        '<ul>'+p.items.map(function(it){return '<li>'+it+'</li>';}).join('')+'</ul>'+
+        '<div class="pnote">'+p.note+'</div></div>';
+    }).join('')+'</div>';
+
+  h += '<h3 class="bh">6. 이 케이스 전용 화법</h3>'+
+    c.script.map(function(s){
+      return '<div class="sc"><span class="k">'+esc(s.k)+'</span>'+
+        (s.q==='\u2014'?'':'<div class="q">'+esc(s.q)+'</div>')+'<div class="a">'+s.a+'</div></div>';
+    }).join('');
+
+  h += '<h3 class="bh">7. 스스로 풀어보기</h3>'+
+    '<p class="bp">답을 보지 말고 먼저 써 본다. 못 쓰면 해당 LEVEL로 돌아간다.</p>'+
+    '<ol class="drill">'+c.drill.map(function(d){
+      return '<li><span class="tog">답 보기 ▾</span><span class="dq">'+d.q+'</span><div class="da">'+d.a+'</div></li>';
+    }).join('')+'</ol>';
+
+  return h;
+}
+
+/* ---------- 질병 백과 ---------- */
+var DISEASE = window.DISEASE || [];
+function renderDzList(){
+  var cats = ['전체'].concat(DISEASE.map(function(d){return d.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;}));
+  return '<div class="hd"><div class="kick">질병 백과</div><h2>병을 알아야 담보가 보인다</h2>'+
+    '<div class="sub">'+DISEASE.length+'개 질병 · 3D 해부 → 원인 → 증상 → 검사 → 수술 진행 → 예후 → 비용 → 담보 → 고객 Q&A 10문항</div></div>'+
+    '<div class="cal warn">의학 정보는 <b>학습 참고용</b>입니다. 진단 · 치료 판단은 반드시 의료진의 몫이며, 설계사가 의학적 조언을 해서는 안 됩니다. 보장 여부는 해당 상품 <b>약관이 우선</b>합니다.</div>'+
+    svgWrap((window.FIGS['dz-overview']||function(){return '';})())+
+    '<div class="dz-nav" id="dznav">'+cats.map(function(c,i){
+      return '<button data-c="'+esc(c)+'" class="'+(i===0?'on':'')+'">'+esc(c)+'</button>';
+    }).join('')+'</div><div id="dzgrid"></div>';
+}
+function paintDzGrid(cat){
+  Array.prototype.forEach.call(document.querySelectorAll('#dznav button'), function(b){ b.classList.toggle('on', b.dataset.c===cat); });
+  document.getElementById('dzgrid').innerHTML = '<div class="dzgrid">'+DISEASE.map(function(d,i){
+    return (cat==='전체'||d.cat===cat) ?
+      '<div class="dzcard" data-i="'+i+'"><b>'+esc(d.name)+'<code>'+esc(d.code)+'</code></b><span>'+esc(d.one)+'</span></div>' : '';
+  }).join('')+'</div>';
+}
+function renderDzDetail(i){
+  var d = DISEASE[+i]; if(!d) return renderDzList();
+  var h = '<div class="hd"><div class="kick">질병 백과 · '+esc(d.cat)+'</div>'+
+    '<h2>'+esc(d.name)+'</h2><div class="sub">질병코드 '+esc(d.code)+'</div></div>'+
+    '<div class="core"><span>한 줄로</span>'+esc(d.one)+'</div>'+ d.organ;
+
+  h += '<h3 class="bh">왜 걸리나</h3><ul class="bl">'+d.cause.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+  h += '<h3 class="bh">어떤 증상이 오나</h3><ul class="bl">'+d.sign.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  h += '<h3 class="bh">어떻게 진단하나</h3><div class="tw"><table><thead><tr><th>검사</th><th>내용</th><th>급여 여부</th></tr></thead><tbody>'+
+    d.dx.map(function(x){return '<tr><td>'+x.n+'</td><td>'+x.d+'</td><td>'+esc(x.g)+'</td></tr>';}).join('')+'</tbody></table></div>';
+
+  h += '<h3 class="bh">치료 — '+esc(d.tx.title)+'</h3>'+
+    '<div class="proc3d"><div class="ph">단계를 눌러 진행을 확인하세요</div><div class="pv">'+
+    d.tx.steps.map(function(st,j){
+      return '<div class="pf'+(j===0?' on':'')+'"><div class="pt">'+st.t+'</div><div class="pd">'+st.d+'</div>'+(st.v||'')+'</div>';
+    }).join('')+'</div><div class="pn">'+
+    d.tx.steps.map(function(st,j){ return '<button data-k="'+j+'" class="'+(j===0?'on':'')+'">'+(j+1)+'</button>'; }).join('')+
+    '</div></div>';
+
+  h += '<h3 class="bh">그 뒤의 삶</h3><ul class="bl">'+d.prog.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  if(d.cost && d.cost.length)
+    h += '<h3 class="bh">실제 치료비</h3><div class="costs">'+d.cost.map(costCard).join('')+'</div>';
+
+  h += '<h3 class="bh">담보 매핑</h3><div class="tw"><table><thead><tr><th>구분</th><th>담보</th></tr></thead><tbody>'+
+    '<tr><td style="color:var(--ok)">나온다</td><td>'+d.cov.O.join(' · ')+'</td></tr>'+
+    '<tr><td style="color:var(--red)">안 나온다</td><td>'+d.cov.X.join(' · ')+'</td></tr>'+
+    '</tbody></table></div><div class="cal key">'+d.cov.tip+'</div>';
+
+  h += '<h3 class="bh">고객이 궁금해하는 것 <span style="font-size:14px;color:var(--ink3);font-weight:600">— '+d.qna.length+'문항 · 눌러서 펼치기</span></h3>'+
+    d.qna.map(function(x){ return '<div class="qa"><div class="qh">'+esc(x.q)+'</div><div class="qb">'+x.a+'</div></div>'; }).join('');
+
+  h += '<h3 class="bh">화법</h3><div class="sc"><span class="k">'+esc(d.talk.k)+'</span>'+
+    '<div class="q">'+esc(d.talk.q)+'</div><div class="a">'+d.talk.a+'</div></div>';
+
+  h += '<div class="done-btn"><a class="btn o" href="#DZ" style="text-decoration:none">← 질병 백과 목록</a></div>';
+  return h+footer();
+}
+
+/* ---------- 분석편 ---------- */
+var ANALYSIS = window.ANALYSIS || [];
+function renderAnalysisShell(){
+  return '<div class="hd"><div class="kick">분석편</div><h2>보험을 어떤 기준으로 볼 것인가</h2>'+
+    '<div class="sub">증권을 받아들고 무엇을 어떤 순서로 판정하는가 · '+ANALYSIS.length+'장</div></div>'+
+    '<div class="adnav" id="adnav">'+ANALYSIS.map(function(a,i){
+      return '<button data-i="'+i+'" class="'+(i===0?'on':'')+'"><b>'+a.n+'</b>'+esc(a.title)+'</button>';
+    }).join('')+'</div><div id="adbody"></div>';
+}
+function paintAnalysis(i){
+  var a = ANALYSIS[i]; if(!a) return;
+  Array.prototype.forEach.call(document.querySelectorAll('#adnav button'), function(b,j){ b.classList.toggle('on', j===i); });
+  var h = '<div class="hd" style="margin-bottom:14px"><div class="kick">'+a.n+' · 학습 '+a.mins+'분</div>'+
+    '<h2>'+esc(a.title)+'</h2><div class="sub">'+esc(a.sub)+'</div></div>'+
+    '<div class="core"><span>이 장의 한 줄</span>'+a.core+'</div>'+
+    renderBlocks(a.blocks)+
+    '<div class="done-btn">'+
+      (i>0?'<button class="btn o" onclick="paintAnalysis('+(i-1)+')">← 이전</button>':'')+
+      (i<ANALYSIS.length-1?'<button class="btn p" onclick="paintAnalysis('+(i+1)+')">다음 →</button>':
+        '<a class="btn p" href="#DESIGN" style="text-decoration:none;display:inline-block">설계편으로 →</a>')+
+    '</div>'+footer();
+  document.getElementById('adbody').innerHTML = h;
+  window.scrollTo(0,0);
+}
+
+/* ---------- 설계편 ---------- */
+var DESIGN = window.DESIGN || [];
+function renderDesignList(){
+  var gs = DESIGN.map(function(d){return d.g;}).filter(function(v,i,ar){return ar.indexOf(v)===i;});
+  var h = '<div class="hd"><div class="kick">설계편</div><h2>상황별 설계 가이드</h2>'+
+    '<div class="sub">'+DESIGN.length+'가지 상황 · 반드시 넣을 것과 지금은 아닌 것을 금액까지</div></div>'+
+    svgWrap((window.FIGS['ds-overview']||function(){return '';})())+
+    '<div class="cal key">보험료·금액은 <b>기준선</b>입니다. 실제 인수 조건과 요율은 회사 · 연령 · 성별 · 심사 결과에 따라 달라집니다.</div>';
+  gs.forEach(function(g){
+    h += '<div class="dgrp">'+esc(g)+'</div><div class="dgrid">'+
+      DESIGN.map(function(d,i){ return d.g===g ?
+        '<div class="dcard" data-i="'+i+'"><b>'+esc(d.title)+'</b><span>'+esc(d.sub)+'</span></div>' : '';
+      }).join('')+'</div>';
+  });
+  return h+footer();
+}
+function renderDesignDetail(i){
+  var d = DESIGN[+i]; if(!d) return renderDesignList();
+  var h = '<div class="hd"><div class="kick">설계편 · '+esc(d.g)+'</div><h2>'+esc(d.title)+'</h2>'+
+    '<div class="sub">'+esc(d.sub)+'</div></div>'+
+    '<div class="dsit">'+d.sit+'</div>';
+
+  h += svgWrap(figDesign(d));
+  h += '<h3 class="bh">핵심 리스크</h3><ul class="bl">'+d.risk.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  h += '<h3 class="bh">반드시 넣을 것</h3><div class="mustw">'+d.must.map(function(m){
+    return '<div class="must"><span class="mn">'+m.n+'</span><span class="ma">'+esc(m.amt)+'</span>'+
+      '<span class="mw">'+m.why+'</span></div>';
+  }).join('')+'</div>';
+
+  if(d.opt && d.opt.length)
+    h += '<h3 class="bh">여력이 되면</h3><div class="pillw">'+d.opt.map(function(x){return '<span class="pill">'+esc(x)+'</span>';}).join('')+'</div>';
+  if(d.skip && d.skip.length)
+    h += '<h3 class="bh">지금은 아닌 것</h3><div class="pillw">'+d.skip.map(function(x){return '<span class="pill skip">'+esc(x)+'</span>';}).join('')+'</div>';
+
+  h += svgWrap(figBudget(d));
+  h += '<div class="bgt"><span>예산 기준</span>'+d.budget+'</div>';
+
+  h += '<h3 class="bh">이 상황의 함정</h3><ul class="trapw">'+d.trap.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  h += '<h3 class="bh">화법</h3><div class="sc"><div class="q">'+esc(d.talk.q)+'</div><div class="a">'+d.talk.a+'</div></div>';
+
+  h += '<div class="done-btn"><a class="btn o" href="#DESIGN" style="text-decoration:none">← 설계편 목록</a></div>';
+  return h+footer();
+}
+
+/* ---------- 3D 수업 ---------- */
+var LESSONS = window.LESSONS || [];
+function renderLessonShell(){
+  return '<div class="hd"><div class="kick">1교시</div><h2>비유로 배우는 보험</h2>'+
+    '<div class="sub">상품 이름을 외우기 전에 · 선생님과 함께 하나씩</div></div>'+
+    '<div class="lsn-nav" id="lsnnav">'+LESSONS.map(function(l,i){
+      return '<button data-i="'+i+'" class="'+(i===0?'on':'')+'"><b>'+l.n+'</b>'+esc(l.title)+'</button>';
+    }).join('')+'</div><div id="lsnbody"></div>';
+}
+function paintLesson(i){
+  var l = LESSONS[i]; if(!l) return;
+  Array.prototype.forEach.call(document.querySelectorAll('#lsnnav button'), function(b,j){ b.classList.toggle('on', j===i); });
+  var h = '<div class="hd" style="margin-bottom:14px"><div class="kick">LESSON '+l.n+'</div>'+
+    '<h2>'+esc(l.title)+'</h2><div class="sub">'+esc(l.sub)+'</div></div>'+
+    '<div class="teach"><div class="av">👨‍🏫</div><div class="tw2"><b>선생님</b><p>'+l.hook+'</p></div></div>'+
+    l.scene+
+    '<ol class="stp">'+l.steps.map(function(x){
+      return '<li><h4>'+x.t+'</h4><p>'+x.d+'</p></li>';
+    }).join('')+'</ol>'+
+    '<div class="lsn-talk"><div class="lt">이 비유를 고객에게 그대로</div>'+
+      '<div class="lq">'+esc(l.talk.q)+'</div><div class="la">'+l.talk.a+'</div></div>'+
+    '<div class="lsn-one"><span>한 줄 정리</span>'+l.one+'</div>'+
+    '<div class="done-btn">'+
+      (i>0?'<button class="btn o" onclick="paintLesson('+(i-1)+')">← 이전</button>':'')+
+      (i<LESSONS.length-1?'<button class="btn g" onclick="paintLesson('+(i+1)+')">다음 수업 →</button>':
+        '<a class="btn p" href="#L0" style="text-decoration:none;display:inline-block">본문 LEVEL 0으로 →</a>')+
+    '</div>'+footer();
+  document.getElementById('lsnbody').innerHTML = h;
+  window.scrollTo(0,0);
+}
+
+/* 새 탭이 포커스를 가져가도 확실하게 복사되도록 동기 방식(execCommand)을 먼저 쓴다.
+   navigator.clipboard 는 비동기라 window.open 직후 포커스를 잃으면 조용히 실패한다 —
+   2026-08-27 에 실제로 이 때문에 SQL 대신 화면 안내문구가 붙여넣기 됐다. */
+function copySQL(){
+  var ta = document.createElement('textarea');
+  ta.value = SUPA_SQL;
+  ta.setAttribute('readonly','');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+  document.body.appendChild(ta);
+  ta.select(); ta.setSelectionRange(0, SUPA_SQL.length);
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch(e) { ok = false; }
+  document.body.removeChild(ta);
+  return ok;
+}
+function openSqlTab(copied){
+  var ref = (window.SYNC ? SYNC.cfg.url.split('//')[1].split('.')[0] : '');
+  window.open('https://supabase.com/dashboard/project/' + ref + '/sql/new?content=' + encodeURIComponent(SUPA_SQL),
+              '_blank', 'noopener');
+  stepDone(1);
+  setMsg('wait',
+    '새 탭이 열렸습니다.<br>'+
+    '<b>1</b> SQL 칸이 <b>이미 채워져 있으면</b> 그대로 <b>Run</b><br>'+
+    '<b>2</b> 비어 있으면 ' + (copied ? '<b>Ctrl+V</b> (복사해 뒀습니다)' : '아래 「SQL 직접 보기」 상자를 클릭 → Ctrl+C → 붙여넣기') + ' 후 <b>Run</b><br>'+
+    '<b style="color:#c0303b">붙여넣은 내용이 <code>create table…</code> 로 시작하는지 꼭 확인하세요.</b> 다른 글이 들어갔으면 지우고 다시 넣으세요.<br>'+
+    '<b>3</b> Run 이 끝나면 아래 <b>②확인</b> 을 눌러주세요.');
+}
+function setMsg(kind, html){
+  var m = document.getElementById('sqlmsg'); if(!m) return;
+  m.className = 'setupmsg ' + kind; m.innerHTML = html;
+}
+function stepDone(k){
+  var el = document.querySelector('.step[data-k="'+k+'"]'); if(el) el.classList.add('done');
+}
+var AUDIT_SQL = "select 'academy_* (CRM 소유 · 건드리지 말 것)' as grp,\n       string_agg(c.relname, ', ' order by c.relname) as tables\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'academy%'\nunion all\nselect 'bohum_* (보험 마스터 아카데미)',\n       string_agg(c.relname, ', ' order by c.relname)\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'bohum%'\nunion all\nselect '전체 테이블 수', count(*)::text\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r'\nunion all\nselect '익명(anon) 정책이 붙은 표  <<< 여기가 핵심',\n       string_agg(distinct c.relname, ', ')\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\njoin pg_policy p on p.polrelid=c.oid\njoin pg_roles  r on r.oid=any(p.polroles) and r.rolname='anon'\nwhere n.nspname='public';";
+var SUPA_SQL = "create table if not exists public.bohum_scores (\n  id bigserial primary key,\n  team text default 'APEX',\n  name text,\n  set_id text,\n  set_name text,\n  cat text,\n  score numeric,\n  max_q int,\n  pct int,\n  wrong jsonb,\n  device text,\n  created_at timestamptz default now()\n);\n\ncreate table if not exists public.bohum_progress (\n  team text default 'APEX',\n  name text,\n  done jsonb,\n  updated_at timestamptz default now(),\n  primary key (team, name)\n);\n\nalter table public.bohum_scores   enable row level security;\nalter table public.bohum_progress enable row level security;\n\ndrop policy if exists s_r  on public.bohum_scores;\ndrop policy if exists s_w  on public.bohum_scores;\ndrop policy if exists bp_r on public.bohum_progress;\ndrop policy if exists bp_w on public.bohum_progress;\ndrop policy if exists bp_u on public.bohum_progress;\n\ncreate policy s_r  on public.bohum_scores   for select to anon using (true);\ncreate policy s_w  on public.bohum_scores   for insert to anon with check (true);\ncreate policy bp_r on public.bohum_progress for select to anon using (true);\ncreate policy bp_w on public.bohum_progress for insert to anon with check (true);\ncreate policy bp_u on public.bohum_progress for update to anon using (true) with check (true);";
+
+/* ---------- 성장 경로 ---------- */
+var STAGES = [
+  {n:1, t:'입문', sub:'말이 되게 만든다', days:'1~14일',
+   need:['L0','L1','L2'], tests:[], pass:'본문 L0~L2 완료',
+   can:['보험이 무엇을 메우는 장치인지 설명할 수 있다','급여 · 비급여 · 비급여의 차이를 영수증으로 보여줄 수 있다','실손 세대를 구분하고 전환 판단을 말할 수 있다'],
+   next:'매일 40분 · 본문 1섹션 + 도해 + 화법 소리내어 3번'},
+  {n:2, t:'기본', sub:'담보를 읽는다', days:'15~40일',
+   need:['L3','L4','L5','L6','L7'], tests:['D3'], pass:'본문 L3~L7 완료 + 설계 ③ 70점',
+   can:['증권을 보고 코드 범위로 구멍을 찾을 수 있다','수술비 3종의 차이를 사례로 설명할 수 있다','<b>진단비 · 실손 · 주요치료비 · 순환계질환치료비</b>가 서로를 대체하지 못하는 이유를 말할 수 있다','간병 · 후유장해가 왜 필요한지 숫자로 말할 수 있다'],
+   next:'질병 백과 20종을 하루 2개씩 · 고객 Q&A 10문항을 소리내어'},
+  {n:3, t:'실전', sub:'설계하고 보상한다', days:'41~70일',
+   need:['L8','L9','L10'], tests:['B1','B2','B5','D1'], pass:'본문 완독 + 보상①②⑤ · 설계① 각 70점',
+   can:['고지 · 면책 · 청구 절차를 고객에게 안내할 수 있다','상황별로 반드시 넣을 것과 뺄 것을 구분한다','제안서를 5단 구성으로 만든다'],
+   next:'케이스 9건을 답 안 보고 풀기 · 지인 10명 보장분석'},
+  {n:4, t:'마스터', sub:'혼자 판단한다', days:'71일~',
+   need:[], tests:['B3','B4','D2','X1'], pass:'9세트 평균 80점 이상',
+   can:['보상 4대 쟁점을 근거 문서까지 대며 설명한다','담보별 지급 판정을 스스로 내린다','신입에게 가르칠 수 있다'],
+   next:'월 1회 전 세트 재응시 · 팀 스터디 진행 · 약점 영역만 반복'}
+];
+var WEEK = [
+  {d:'월', t:'본문 1섹션', x:'읽고 도해만 다시 보기 · 15분'},
+  {d:'화', t:'질병 백과 1종', x:'고객 Q&A 10문항 소리내어 · 20분'},
+  {d:'수', t:'화법 카드', x:'해당 레벨 화법 3번 · 10분'},
+  {d:'목', t:'케이스 1건', x:'답 보기 전에 먼저 쓰기 · 25분'},
+  {d:'금', t:'테스트 1세트', x:'점수 기록 · 오답은 링크 따라 복습 · 20분'},
+  {d:'주말', t:'약점 하나', x:'가장 낮은 점수 영역만 다시 · 30분'}
+];
+function growStat(who){
+  var doneN = 0; C.forEach(function(c){ if(state.done[c.id]) doneN++; });
+  var scores = {}, avg = 0, cnt = 0;
+  if(who){
+    QUIZ.forEach(function(s){ var b = best(s.id, who); if(b){ scores[s.id]=b.pct; avg+=b.pct; cnt++; } });
+  }
+  avg = cnt? Math.round(avg/cnt) : 0;
+  var stage = 1;
+  STAGES.forEach(function(st){
+    var okDone = st.need.every(function(id){ return state.done[id]; });
+    var okTest = st.tests.every(function(id){ return (scores[id]||0) >= (st.n===4?80:70); });
+    if(okDone && okTest) stage = Math.min(4, st.n + (st.n<4?1:0));
+  });
+  if(stage===4 && !(cnt===QUIZ.length && avg>=80)) stage = 4;
+  return {doneN:doneN, total:C.length, scores:scores, avg:avg, cnt:cnt, stage:stage};
+}
+function nextAction(who, st){
+  /* 지금 해야 할 딱 한 가지 */
+  var cur = STAGES[st.stage-1];
+  for(var i=0;i<cur.need.length;i++){
+    var id = cur.need[i];
+    if(!state.done[id]){
+      var ch = C.filter(function(x){return x.id===id;})[0];
+      return {t:'본문 '+id+' 읽기', d:ch? ch.title : '', h:'#'+id, why:'이 단계는 여기서부터다'};
+    }
+  }
+  for(var j=0;j<cur.tests.length;j++){
+    var q = cur.tests[j], sc = st.scores[q];
+    var set = null; QUIZ.forEach(function(x){ if(x.id===q) set=x; });
+    if(sc===undefined) return {t:'테스트 '+q+' 응시', d:set?set.n:'', h:'#TQ-'+q, why:'아직 안 봤다'};
+    if(sc < (st.stage===4?80:70)) return {t:'테스트 '+q+' 재응시', d:(set?set.n:'')+' · 현재 '+sc+'점', h:'#TQ-'+q, why:'통과선까지 '+((st.stage===4?80:70)-sc)+'점'};
+  }
+  /* 약점 영역 */
+  var worst=null;
+  QUIZ.forEach(function(s){ var v=st.scores[s.id]; if(v!==undefined && (!worst || v<worst.v)) worst={id:s.id, v:v, n:s.n}; });
+  if(worst && worst.v<90) return {t:'약점 보강 — '+worst.n, d:'현재 '+worst.v+'점', h:'#TQ-'+worst.id, why:'가장 낮은 영역'};
+  if(st.doneN < st.total) return {t:'남은 본문 마저 읽기', d:st.doneN+' / '+st.total+' 완료', h:'#BOOK', why:'완독까지 '+(st.total-st.doneN)+'개'};
+  return {t:'케이스 9건 다시 풀기', d:'답 보지 않고', h:'#CASE', why:'실전 감각 유지'};
+}
+function renderGrow(){
+  var who = tname(), st = growStat(who);
+  var h = '<div class="hd"><div class="kick">성장</div><h2>지금 어디까지 왔고, 다음에 뭘 하면 되나</h2>'+
+    '<div class="sub">본문 진도 · 테스트 점수를 합쳐 자동으로 판정합니다'+(who?' · '+esc(who):'')+'</div></div>';
+
+  if(!who) h += '<div class="cal warn"><b>테스트 화면에서 이름을 먼저 넣으세요.</b> 이름이 있어야 점수까지 합쳐서 단계를 판정합니다. <a href="#TEST">→ 이름 넣기</a></div>';
+
+  /* 현재 단계 */
+  var cur = STAGES[st.stage-1];
+  h += '<div class="growhero s'+st.stage+'">'+
+    '<div class="gs"><i>STAGE</i>'+st.stage+'</div>'+
+    '<div class="gd"><b>'+esc(cur.t)+'</b> — '+esc(cur.sub)+'<br>'+
+      '<span>본문 '+st.doneN+'/'+st.total+' · 테스트 '+st.cnt+'/'+QUIZ.length+'세트'+(st.cnt?' · 평균 '+st.avg+'점':'')+'</span></div>'+
+    '<div class="gp">'+STAGES.map(function(s2){
+      return '<span class="'+(s2.n<st.stage?'on':(s2.n===st.stage?'now':''))+'">'+s2.t+'</span>';
+    }).join('')+'</div></div>';
+
+  /* 다음 한 가지 */
+  var na = nextAction(who, st);
+  h += '<a class="nextone" href="'+na.h+'"><div class="nl">다음에 할 것 · 딱 하나</div>'+
+    '<div class="nt">'+esc(na.t)+'</div><div class="nd">'+esc(na.d)+'</div>'+
+    '<div class="nw">'+esc(na.why)+'</div></a>';
+
+  h += svgWrap(figGrow(st));
+
+  /* 단계표 */
+  h += '<h3 class="bh">4단계 성장 경로</h3>';
+  STAGES.forEach(function(s2){
+    var stt = s2.n<st.stage? 'done' : (s2.n===st.stage? 'now' : '');
+    h += '<div class="stagebox '+stt+'"><div class="sh"><i>'+s2.n+'</i>'+
+      '<b>'+esc(s2.t)+'</b><em>'+esc(s2.sub)+'</em><span>'+esc(s2.days)+'</span></div>'+
+      '<div class="sb"><div class="sl">이 단계를 끝내면 할 수 있는 것</div><ul class="bl">'+
+      s2.can.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+      '<div class="sreq"><b>통과 기준</b> '+esc(s2.pass)+'</div>'+
+      '<div class="snext"><b>이 단계의 학습법</b> '+esc(s2.next)+'</div></div></div>';
+  });
+
+  /* 주간 루틴 */
+  h += '<h3 class="bh">주간 루틴 — 하루 20~30분</h3><div class="weekw">'+
+    WEEK.map(function(w){
+      return '<div class="wk"><b>'+esc(w.d)+'</b><span class="wt">'+esc(w.t)+'</span><span class="wx">'+esc(w.x)+'</span></div>';
+    }).join('')+'</div>';
+
+  /* 약점 진단 */
+  if(st.cnt){
+    var rows = [];
+    QUIZ.forEach(function(s2){ if(st.scores[s2.id]!==undefined) rows.push({s:s2, v:st.scores[s2.id]}); });
+    rows.sort(function(a,b){return a.v-b.v;});
+    h += '<h3 class="bh">약점 진단 — 낮은 순</h3><div class="tw"><table><thead><tr><th>영역</th><th>점수</th><th>지금 해야 할 것</th></tr></thead><tbody>'+
+      rows.map(function(r){
+        var act = r.v>=80? '유지 — 월 1회 재응시' : (r.v>=60? '오답 해설 다시 읽고 재응시' : '해당 본문부터 다시 읽기');
+        return '<tr><td><b>'+esc(r.s.n)+'</b></td><td><span class="sc'+(r.v>=80?' g':(r.v>=60?' o':' r'))+'">'+r.v+'</span></td>'+
+          '<td>'+act+' · <a href="#TQ-'+r.s.id+'">바로가기</a></td></tr>';
+      }).join('')+'</tbody></table></div>';
+  } else {
+    h += '<div class="cal tip">테스트를 한 세트라도 보면 <b>약점 진단표</b>가 여기에 생깁니다. <a href="#TEST">→ 테스트 시작</a></div>';
+  }
+
+  /* 마일스톤 */
+  h += '<h3 class="bh">마일스톤</h3><div class="badges">'+
+    [{t:'첫 응시',ok:st.cnt>=1},{t:'본문 절반',ok:st.doneN>=Math.ceil(st.total/2)},
+     {t:'본문 완독',ok:st.doneN>=st.total},{t:'보상 5세트',ok:['B1','B2','B3','B4','B5'].every(function(x){return st.scores[x]>=70;})},
+     {t:'설계 3세트',ok:['D1','D2','D3'].every(function(x){return st.scores[x]>=70;})},
+     {t:'전 세트 응시',ok:st.cnt>=QUIZ.length},{t:'평균 80점',ok:st.avg>=80&&st.cnt>=QUIZ.length}]
+    .map(function(b){ return '<span class="bg'+(b.ok?' on':'')+'">'+(b.ok?'● ':'')+esc(b.t)+'</span>'; }).join('')+'</div>';
+
+  h += '<div class="cal key">이 판정은 <b>이 기기에 저장된 진도와 점수</b>로만 계산합니다. 팀 전체 현황은 <a href="#TEAM">팀 현황</a>에서 봅니다.</div>';
+  return h+footer();
+}
+function figGrow(st){
+  var H = window.FIGH; if(!H) return '';
+  var s = H.tx(360,20,'지금 위치',{size:13.5,w:800,fill:H.INK});
+  var W=636, x0=42, y=52;
+  s += '<rect x="'+x0+'" y="'+y+'" width="'+W+'" height="34" rx="10" fill="#f2f4f6"/>';
+  var pct = Math.max(0.02, (st.stage-1)/4 + (st.doneN/Math.max(st.total,1))/4);
+  s += '<rect x="'+x0+'" y="'+y+'" width="'+Math.round(W*Math.min(pct,1))+'" height="34" rx="10" fill="'+H.T.B.f+'"/>';
+  ['입문','기본','실전','마스터'].forEach(function(t,i){
+    var cx = x0 + W*(i+0.5)/4;
+    s += H.tx(cx, y+22, t, {size:11.6,w:800,fill: (i+1)<=st.stage? '#fff' : H.INK3});
+    if(i) s += H.ln(x0+W*i/4, y, x0+W*i/4, y+34, {c:'#fff',w:2});
+  });
+  var b = H.bars([
+    {n:'본문 진도', v:Math.round(st.doneN/Math.max(st.total,1)*100), c:'B', note:st.doneN+' / '+st.total+'개'},
+    {n:'테스트 응시', v:Math.round(st.cnt/Math.max((window.QUIZ||[]).length,1)*100), c:'g', note:st.cnt+' / '+(window.QUIZ||[]).length+'세트'},
+    {n:'평균 점수', v:st.avg, c:(st.avg>=80?'G':(st.avg>=60?'O':'R')), note:st.cnt? st.avg+'점' : '미응시'}
+  ], {max:100, x0:150, top:108, bh:28, gap:12});
+  s += b.s;
+  s += H.tx(360, b.h+14, '세 막대가 모두 80을 넘으면 <tspan font-weight="800" fill="'+H.T.g.t+'">마스터</tspan>다', {size:11.6,w:600,fill:H.INK2});
+  return H.wrap(b.h+30, s);
+}
+
+/* ---------- 원본 자료 (첨부 PPTX 4종 · 슬라이드 색인) ---------- */
+var SOURCE = window.SOURCE || [];
+var SRCDECK = {an:'암 · 뇌 · 심 필수자료', su:'수술비 교육', ch:'치료비 통장 — 개념 설립', bk:'보장분석 종합교재'};
+var SRCQ = '';
+function renderSrc(){
+  return '<div class="hd"><div class="kick">원본 자료</div><h2>첨부해주신 자료 전부</h2>'+
+    '<div class="sub">PPTX 4종 · 슬라이드 '+SOURCE.length+'장 · 제목과 키워드로 바로 검색됩니다</div></div>'+
+    '<div class="cal key">여기서 찾은 자료는 <b>원본 그대로</b>입니다. 왼쪽 위 전역 검색창에 단어를 넣어도 이 자료가 함께 나옵니다.</div>'+
+    '<div class="sgsearch"><input id="srcq" type="search" placeholder="자료 찾기 — 예: 의료자문, 백내장, 배액술, 간병인, 세액공제, 중입자"></div>'+
+    '<div class="dz-nav" id="srcnav">'+['전체','an','su','ch','bk'].map(function(k,i){
+      return '<button data-c="'+k+'" class="'+(i===0?'on':'')+'">'+(k==='전체'?'전체':esc(SRCDECK[k]))+'</button>';
+    }).join('')+'</div><div id="srcbody"></div>';
+}
+function paintSrc(deck, q){
+  if(deck!==undefined) SRCDECK.__cur = deck;
+  var cur = SRCDECK.__cur || '전체';
+  if(q!==undefined) SRCQ = q;
+  Array.prototype.forEach.call(document.querySelectorAll('#srcnav button'), function(b){ b.classList.toggle('on', b.dataset.c===cur); });
+  var kw = (SRCQ||'').trim();
+  var list = [];
+  SOURCE.forEach(function(s,i){
+    if(cur!=='전체' && s.d!==cur) return;
+    if(kw){
+      var hay = s.title+' '+(s.sec||'')+' '+(s.kw||'')+' '+(s.tx||[]).join(' ')+' '+(s.cap||[]).join(' ');
+      if(hay.indexOf(kw)<0) return;
+    }
+    list.push({s:s, i:i});
+  });
+  var el = document.getElementById('srcbody');
+  if(!list.length){ el.innerHTML = '<div class="cal warn">「'+esc(kw)+'」에 해당하는 자료가 없습니다. 다른 단어로 찾아보세요.</div>'; return; }
+  el.innerHTML = (kw?'<div class="sgcnt">'+list.length+'장</div>':'') +
+    '<div class="srcgrid">'+list.map(function(o){
+      var s=o.s, th = s.im && s.im.length ? '<img src="img/'+s.im[0]+'" loading="lazy" alt="">' : '<span class="notxt">TEXT</span>';
+      return '<a class="srccard" href="#SRC-'+o.i+'"><div class="th">'+th+'</div>'+
+        '<div class="mt"><b>'+esc(s.title)+'</b><span>'+esc(s.sec||SRCDECK[s.d])+' · 슬라이드 '+s.s+'</span></div></a>';
+    }).join('')+'</div>';
+}
+function renderSrcDetail(i){
+  var s = SOURCE[+i]; if(!s) return renderSrc();
+  var h = '<div class="hd"><div class="kick">원본 자료 · '+esc(SRCDECK[s.d]||s.d)+'</div>'+
+    '<h2>'+esc(s.title)+'</h2><div class="sub">'+esc(s.sec||'')+' · 슬라이드 '+s.s+(s.pg?' · 책 '+s.pg+'쪽':'')+'</div></div>';
+  if(s.im && s.im.length)
+    h += s.im.map(function(f,j){
+      return '<figure class="fig"><img src="img/'+f+'" loading="lazy" alt="" data-cap="'+esc(s.title)+'">'+
+        ((s.cap&&s.cap[j])?'<figcaption>'+esc(s.cap[j])+'</figcaption>':'')+'</figure>';
+    }).join('');
+  if(s.tx && s.tx.length)
+    h += '<h3 class="bh">이 슬라이드의 글</h3><div class="srctx">'+s.tx.map(function(t){return '<p>'+esc(t)+'</p>';}).join('')+'</div>';
+  if(s.kw) h += '<div class="cal tip">검색 키워드 — '+esc(s.kw)+'</div>';
+  h += '<div class="done-btn">'+
+       (i>0?'<a class="btn o" href="#SRC-'+(+i-1)+'" style="text-decoration:none">← 이전 장</a>':'')+
+       '<a class="btn o" href="#SRC" style="text-decoration:none">목록</a>'+
+       (i<SOURCE.length-1?'<a class="btn p" href="#SRC-'+(+i+1)+'" style="text-decoration:none">다음 장 →</a>':'')+
+       '</div>';
+  return h+footer();
+}
+
+/* ---------- 테스트 (사람별) ---------- */
+var QUIZ = window.QUIZ || [];
+var TKEY = 'bohum_test_v1', NKEY = 'bohum_tester';
+function tload(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'{}'); }catch(e){ return {}; } }
+function tsave(o){ try{ localStorage.setItem(TKEY, JSON.stringify(o)); }catch(e){} }
+function tname(){ try{ return localStorage.getItem(NKEY)||''; }catch(e){ return ''; } }
+function tsetname(n){ try{ localStorage.setItem(NKEY, n); }catch(e){} }
+function norm(s){ return String(s||'').toLowerCase().replace(/[\s,.\/·・\-_'"()\[\]%~:;!?→]/g,''); }
+function blankOk(v, arr){
+  var n = norm(v); if(!n) return false;
+  return arr.some(function(a){
+    var na = norm(a);
+    if(n === na) return true;
+    var toks = String(a).split(/[\s,\/·]+/).filter(Boolean).map(norm).filter(Boolean);
+    if(toks.length > 1) return toks.every(function(t){ return n.indexOf(t) >= 0; });
+    if(/^[0-9]+$/.test(na)) return new RegExp('(^|[^0-9])' + na + '([^0-9]|$)').test(n);
+    return na.length >= 2 && n.indexOf(na) >= 0;
+  });
+}
+function best(setId, who){
+  var db=(typeof TEAMDB!=='undefined' && TEAMDB) ? TEAMDB : tload(), p=db[who]; if(!p) return null;
+  var b=null; (p.attempts||[]).forEach(function(a){ if(a.id===setId && (!b||a.pct>b.pct)) b=a; });
+  return b;
+}
+function renderTest(){
+  var who = tname(), db = tload(), names = Object.keys(db);
+  var h = '<div class="hd"><div class="kick">테스트</div><h2>사람별 이해도 테스트</h2>'+
+    '<div class="sub">설계와 보상 중심 · 빈칸 채우기 · 객관식 · 서술형 · 채점하면 기록이 남습니다</div></div>';
+
+  h += '<div class="whobox"><div class="wl">응시자</div>'+
+    '<input id="whoin" type="text" placeholder="이름을 적으세요" value="'+esc(who)+'" maxlength="20">'+
+    '<button class="btn p" id="whoset">이 이름으로 시작</button></div>';
+  if(names.length)
+    h += '<div class="pillw" style="margin:-6px 0 18px">'+names.map(function(n){
+      return '<span class="pill who" data-n="'+esc(n)+'">'+esc(n)+'</span>';
+    }).join('')+'<a class="pill go" href="#TEAM">팀 현황 보기 →</a></div>';
+
+  if(!who) h += '<div class="cal warn">이름을 먼저 입력하세요. <b>사람마다 따로 기록</b>됩니다. (이 기기에만 저장됩니다)</div>';
+
+  var cats = QUIZ.map(function(s){return s.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  cats.forEach(function(c){
+    h += '<h3 class="bh">'+esc(c)+'</h3><div class="qsets">'+
+      QUIZ.map(function(s){
+        if(s.cat!==c) return '';
+        var b = who? best(s.id, who) : null;
+        return '<a class="qset'+(b?(b.pct>=80?' pass':' done'):'')+'" href="#TQ-'+s.id+'">'+
+          '<div class="qn">'+esc(s.n)+'</div><div class="qsub">'+esc(s.sub)+'</div>'+
+          '<div class="qm"><span>'+s.q.length+'문항</span><span>'+s.mins+'분</span>'+
+          (b?'<b>최고 '+b.pct+'점</b>':'<i>미응시</i>')+'</div></a>';
+      }).join('')+'</div>';
+  });
+  h += '<div class="cal tip">서술형은 <b>모범답안과 대조</b>해서 스스로 채점합니다. 정답을 보기 전에 반드시 먼저 써 보세요 — 안 쓰고 본 답은 남지 않습니다.</div>';
+  return h+footer();
+}
+function renderQuiz(id){
+  var s = null; QUIZ.forEach(function(x){ if(x.id===id) s=x; });
+  if(!s) return renderTest();
+  var who = tname();
+  if(!who) return '<div class="hd"><h2>이름을 먼저 입력하세요</h2></div><div class="cal warn">테스트는 사람별로 기록됩니다.</div><div class="done-btn"><a class="btn p" href="#TEST" style="text-decoration:none">← 테스트 목록</a></div>';
+  var h = '<div class="hd"><div class="kick">'+esc(s.cat)+' · 응시자 '+esc(who)+'</div><h2>'+esc(s.n)+'</h2>'+
+    '<div class="sub">'+esc(s.sub)+' · '+s.q.length+'문항 · 권장 '+s.mins+'분</div></div>'+
+    '<div class="cal key">전부 채운 뒤 맨 아래 <b>채점하기</b>를 누르세요. 빈칸은 <b>정확한 단어</b>로, 서술형은 <b>문장으로</b> 쓰면 됩니다.</div>'+
+    '<form id="qform" onsubmit="return false">';
+  s.q.forEach(function(q,i){
+    h += '<div class="qitem" data-i="'+i+'"><div class="qhd"><i>'+(i+1)+'</i><div class="qtx">'+q.q+'</div></div>';
+    if(q.t==='blank')
+      h += '<input class="qin" type="text" data-i="'+i+'" placeholder="답을 적으세요" autocomplete="off">';
+    else if(q.t==='choice')
+      h += '<div class="qopts">'+q.c.map(function(c,j){
+        return '<label class="qopt"><input type="radio" name="q'+i+'" value="'+j+'"><span>'+c+'</span></label>';
+      }).join('')+'</div>';
+    else if(q.t==='multi')
+      h += '<div class="qopts">'+q.c.map(function(c,j){
+        return '<label class="qopt"><input type="checkbox" name="q'+i+'" value="'+j+'"><span>'+c+'</span></label>';
+      }).join('')+'</div>';
+    else
+      h += '<textarea class="qta" data-i="'+i+'" rows="4" placeholder="문장으로 써 보세요. 다 쓰면 모범답안과 비교해 드립니다."></textarea>';
+    h += '<div class="qres"></div></div>';
+  });
+  h += '</form><div class="done-btn"><button class="btn p" id="qgrade">채점하기</button>'+
+       '<a class="btn o" href="#TEST" style="text-decoration:none">목록으로</a></div>';
+  return h+footer();
+}
+function gradeQuiz(id){
+  var s=null; QUIZ.forEach(function(x){ if(x.id===id) s=x; });
+  if(!s) return;
+  var who=tname(), got=0, max=0, wrong=[], answers={};
+  s.q.forEach(function(q,i){
+    var item = document.querySelector('.qitem[data-i="'+i+'"]');
+    var res = item.querySelector('.qres'), ok=false, part=0, mine='';
+    if(q.t==='blank'){
+      var v = item.querySelector('.qin').value; mine=v;
+      ok = blankOk(v, q.a);
+      part = ok?1:0;
+    } else if(q.t==='choice'){
+      var r = item.querySelector('input[type=radio]:checked');
+      mine = r? r.value : '';
+      ok = r && +r.value===q.a; part = ok?1:0;
+    } else if(q.t==='multi'){
+      var cs = Array.prototype.slice.call(item.querySelectorAll('input[type=checkbox]:checked')).map(function(x){return +x.value;});
+      mine = cs.join(',');
+      ok = cs.length===q.a.length && q.a.every(function(a){return cs.indexOf(a)>=0;});
+      part = ok?1:0;
+    } else {
+      var t = item.querySelector('.qta').value; mine=t;
+      if(q.self){ part = null; }
+      else {
+        var keys = q.key||[], hit = keys.filter(function(k){ return norm(t).indexOf(norm(k))>=0; }).length;
+        part = keys.length? hit/keys.length : (t.trim().length>20?1:0);
+        ok = part>=0.6;
+      }
+    }
+    answers[i]=mine;
+    if(part!==null){ max+=1; got+=part; if(part<1) wrong.push(i); }
+
+    var badge = part===null? '<span class="rb self">자유 답변</span>'
+              : (part>=1? '<span class="rb o">정답</span>'
+              : (part>0? '<span class="rb p">부분 '+Math.round(part*100)+'%</span>' : '<span class="rb x">오답</span>'));
+    var ansHtml='';
+    if(q.t==='blank') ansHtml = '<div class="ra"><b>정답</b> '+esc(q.a[0])+'</div>';
+    else if(q.t==='choice') ansHtml = '<div class="ra"><b>정답</b> '+(q.a+1)+'번 — '+q.c[q.a]+'</div>';
+    else if(q.t==='multi') ansHtml = '<div class="ra"><b>정답</b> '+q.a.map(function(a){return (a+1)+'번';}).join(' · ')+'</div>';
+    else if(!q.self) ansHtml = '<div class="ra"><b>모범답안</b> '+q.model+'</div>'+
+        ((q.key&&q.key.length)?'<div class="rk">필수 키워드 — '+q.key.map(function(k){
+          return '<span class="'+((norm(mine).indexOf(norm(k))>=0)?'hit':'miss')+'">'+esc(k)+'</span>';
+        }).join('')+'</div>':'');
+    else ansHtml = '<div class="ra"><b>참고 답안</b> '+q.model+'</div>';
+
+    res.className='qres show '+(part===null?'self':(part>=1?'ok':(part>0?'part':'no')));
+    res.innerHTML = badge + ansHtml + '<div class="rw">'+q.why+'</div>'+
+      (q.ref? '<a class="rl" href="'+q.ref+'">→ 해당 화면에서 다시 보기</a>':'');
+  });
+  var pct = max? Math.round(got/max*100) : 0;
+  var db=tload(); db[who]=db[who]||{attempts:[]};
+  db[who].attempts.push({id:s.id, n:s.n, cat:s.cat, score:Math.round(got*10)/10, max:max, pct:pct,
+                         date:new Date().toISOString().slice(0,10), wrong:wrong});
+  tsave(db);
+  if(window.SYNC) SYNC.pushScore({name:who, id:s.id, n:s.n, cat:s.cat,
+    score:Math.round(got*10)/10, max:max, pct:pct, wrong:wrong});
+  var box=document.createElement('div');
+  box.className='score '+(pct>=80?'good':(pct>=60?'mid':'bad'));
+  box.innerHTML = '<div class="sp">'+pct+'<i>점</i></div>'+
+    '<div class="sd"><b>'+esc(who)+'</b> · '+esc(s.n)+'<br>'+
+    Math.round(got*10)/10+' / '+max+' 문항'+(wrong.length?' · 틀린 문항 '+wrong.map(function(w){return (w+1);}).join(', '):' · 전부 정답')+'</div>'+
+    (pct>=80?'<div class="sm">통과 — 이 영역은 실전에서 써도 됩니다.</div>'
+     :(pct>=60?'<div class="sm">조금 더. 틀린 문항의 해설과 링크를 따라가 보세요.</div>'
+     :'<div class="sm">해당 LEVEL을 다시 읽고 재응시하세요. 점수는 최고점만 기록됩니다.</div>'));
+  var form=document.getElementById('qform');
+  form.parentNode.insertBefore(box, form);
+  window.scrollTo(0, 0);
+}
+/* 서버 결과를 로컬과 같은 모양으로 합친다 */
+var TEAMDB = null;
+function mergeTeam(rows){
+  var db = tload();
+  if(rows) rows.forEach(function(r){
+    db[r.name] = db[r.name] || {attempts:[]};
+    var dup = db[r.name].attempts.some(function(a){
+      return a.id===r.set_id && a.pct===r.pct && a.date===String(r.created_at).slice(0,10);
+    });
+    if(!dup) db[r.name].attempts.push({id:r.set_id, n:r.set_name, cat:r.cat,
+      score:r.score, max:r.max_q, pct:r.pct, date:String(r.created_at).slice(0,10), wrong:[], srv:1});
+  });
+  return db;
+}
+function loadTeam(){
+  if(!window.SYNC){ TEAMDB = tload(); route(); return; }
+  SYNC.check().then(function(ok){
+    return ok ? SYNC.pullTeam() : null;
+  }).then(function(rows){
+    TEAMDB = mergeTeam(rows);
+    if(CURHASH==='TEAM') document.getElementById('view').innerHTML = renderTeam();
+  }).catch(function(){ TEAMDB = tload(); });
+}
+function syncBadge(){
+  var st = window.SYNC ? SYNC.state : null;
+  if(!st) return '';
+  if(st.ok === true)  return '<span class="sync on">서버 연결됨 · 팀 전체 기록</span>';
+  if(st.ok === false) return '<span class="sync off">서버 미연결 · 이 기기 기록만 표시</span>'+
+    '<a class="btn p sm" href="#GUIDE" style="text-decoration:none">서버 연결하기 (버튼 3번)</a>';
+  return '<span class="sync wait">서버 확인 중…</span>';
+}
+function renderTeam(){
+  var db = TEAMDB || tload(), names=Object.keys(db);
+  var h = '<div class="hd"><div class="kick">테스트</div><h2>팀 현황</h2>'+
+    '<div class="sub">사람별 · 시험별 최고점</div></div>'+
+    '<div class="syncbar">'+syncBadge()+
+      '<button class="btn o sm" id="syncpush">이 기기 기록 서버로 올리기</button>'+
+      '<button class="btn o sm" id="syncpull">새로고침</button></div>';
+  if(!names.length) return h+'<div class="cal warn">아직 응시 기록이 없습니다.</div>'+
+    '<div class="done-btn"><a class="btn p" href="#TEST" style="text-decoration:none">← 테스트로</a></div>'+footer();
+  h += '<div class="tw"><table><thead><tr><th>이름</th>'+
+    QUIZ.map(function(s){return '<th>'+esc(s.id)+'</th>';}).join('')+'<th>평균</th></tr></thead><tbody>'+
+    names.map(function(n){
+      var sum=0, cnt=0;
+      var tds = QUIZ.map(function(s){
+        var b=best(s.id,n);
+        if(b){ sum+=b.pct; cnt++; }
+        return '<td style="text-align:center">'+(b?'<span class="sc'+(b.pct>=80?' g':(b.pct>=60?' o':' r'))+'">'+b.pct+'</span>':'<span class="sc n">–</span>')+'</td>';
+      }).join('');
+      var avg = cnt? Math.round(sum/cnt) : 0;
+      return '<tr><td><b>'+esc(n)+'</b></td>'+tds+'<td style="text-align:center"><b>'+(cnt?avg:'–')+'</b></td></tr>';
+    }).join('')+'</tbody></table></div>'+
+    '<div class="cal tip">'+QUIZ.map(function(s){return '<b>'+s.id+'</b> '+esc(s.n);}).join(' · ')+'</div>';
+  h += '<h3 class="bh">최근 응시</h3><div class="tw"><table><thead><tr><th>날짜</th><th>이름</th><th>시험</th><th>점수</th></tr></thead><tbody>';
+  var all=[]; names.forEach(function(n){ (db[n].attempts||[]).forEach(function(a){ all.push({n:n,a:a}); }); });
+  all.reverse();
+  h += all.slice(0,20).map(function(o){
+    return '<tr><td>'+esc(o.a.date)+'</td><td>'+esc(o.n)+'</td><td>'+esc(o.a.n)+'</td>'+
+      '<td><span class="sc'+(o.a.pct>=80?' g':(o.a.pct>=60?' o':' r'))+'">'+o.a.pct+'</span></td></tr>';
+  }).join('')+'</tbody></table></div>';
+  h += '<div class="done-btn"><a class="btn o" href="#TEST" style="text-decoration:none">← 테스트로</a>'+
+       '<button class="btn o" id="tclear">이 기기 기록 전부 지우기</button></div>';
+  return h+footer();
+}
+
+/* ---------- 헬스케어 서비스 ---------- */
+var HEALTH = window.HEALTH || null;
+function renderHealth(){
+  var H = HEALTH; if(!H) return '<div class="cal warn">health.js 를 불러오지 못했습니다.</div>';
+  var h = '<div class="hd"><div class="kick">부록 · 사후관리</div><h2>헬스케어 서비스</h2>'+
+    '<div class="sub">보험금은 사고가 끝난 뒤에 도착한다 · 그 사이의 시간을 메우는 장치</div></div>'+
+    '<div class="core"><span>왜 배우나</span>'+H.core+'</div>'+
+    '<div class="cal warn">부가서비스는 <b>약관상 보험금이 아닙니다</b>. 회사 · 상품 · 시기에 따라 범위가 다르고 <b>변경 · 중단될 수 있습니다</b>. 이 자료는 서비스 <b>유형</b>을 익히는 용도이며, 특정 상품의 서비스를 단정하는 데 쓰면 안 됩니다.</div>';
+
+  h += svgWrap((window.FIGS['hc-journey']||function(){return '';})());
+  h += '<h3 class="bh">왜 지금 이게 중요해졌나</h3><ul class="bl">'+
+    H.why.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  h += '<h3 class="bh">국면별 서비스 유형</h3>'+
+    H.stages.map(function(st){
+      return '<div class="hstage"><div class="hsh"><b>'+esc(st.k)+'</b><em>'+esc(st.d)+'</em></div>'+
+        '<ul class="bl">'+st.items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+        '<div class="cal tip">'+st.talk+'</div></div>';
+    }).join('');
+
+  h += '<h3 class="bh">담보와 어떻게 짝을 이루나</h3>'+ svgWrap(figHcPair(H))+
+    '<div class="cal key">담보는 <b>돈</b>을 주고, 헬스케어는 <b>길</b>을 알려준다. 둘 중 하나만 있으면 고객은 반쪽만 받는다.</div>'+
+    '<div class="tw"><table><thead><tr><th>담보</th><th>담보가 주는 것</th><th>서비스가 주는 것</th></tr></thead><tbody>'+
+    H.pair.map(function(p){
+      return '<tr><td><b>'+esc(p.n)+'</b></td><td>'+p.m+'</td><td>'+p.h+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+
+  h += '<h3 class="bh">이렇게 말하면 안 된다</h3>'+
+    '<div class="tw"><table><thead><tr><th style="width:42%">금지 표현</th><th>왜</th></tr></thead><tbody>'+
+    H.ban.map(function(b){
+      return '<tr><td style="color:var(--red)"><b>'+esc(b.x)+'</b></td><td>'+b.o+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+
+  h += '<h3 class="bh">고객이 궁금해하는 것 <span style="font-size:14px;color:var(--ink3);font-weight:600">— '+H.qna.length+'문항 · 눌러서 펼치기</span></h3>'+
+    H.qna.map(function(x){ return '<div class="qa"><div class="qh">'+esc(x.q)+'</div><div class="qb">'+x.a+'</div></div>'; }).join('');
+
+  h += '<h3 class="bh">화법</h3><div class="sc"><span class="k">'+esc(H.talk.k)+'</span>'+
+    '<div class="q">'+esc(H.talk.q)+'</div><div class="a">'+H.talk.a+'</div></div>';
+
+  h += '<h3 class="bh">실행 — 언제 무엇을 하나</h3><ul class="bl">'+
+    H.practice.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>';
+
+  return h+footer();
+}
+
+/* ---------- 1~5종 수술분류표 ---------- */
+var SURG = window.SURG || {groups:[],rules:[],quick:[],gap:[]};
+function renderSurg(){
+  var tot = SURG.groups.reduce(function(a,g){return a+g.items.length;},0);
+  var h = '<div class="hd"><div class="kick">부록 · 원문</div><h2>1~5종 수술분류표</h2>'+
+    '<div class="sub">표24 「Ⅰ. 일반 질병 및 재해 치료목적의 수술」 1~72번 전문 · 세부항목 '+tot+'행 · '+SURG.groups.length+'개 부위</div></div>'+
+    '<div class="core"><span>이 표가 전부다</span>'+SURG.note+'</div>'+
+    '<div class="cal warn">상품 · 약관에 따라 항목과 종이 다를 수 있습니다. 실제 판정은 반드시 <b>해당 상품 약관</b>을 확인하세요.</div>';
+
+  h += '<h3 class="bh">지급 규정 5가지</h3><ul class="bl">'+
+    SURG.rules.map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul>';
+
+  h += '<h3 class="bh">종별 한눈에 보기</h3>'+
+    SURG.quick.map(function(q){
+      return '<div class="sgq"><b class="k'+q.n.charAt(0)+'">'+esc(q.n)+'</b><span>'+esc(q.d)+'</span></div>';
+    }).join('');
+
+  h += '<h3 class="bh">전문 '+tot+'행 — 검색으로 바로 찾기</h3>'+
+    '<div class="sgsearch"><input id="sgq" type="search" placeholder="수술명으로 찾기 — 예: 백내장, 갑상선, 스텐트, 이식"></div>'+
+    '<div id="sgbody">'+surgTables('')+'</div>';
+
+  h += '<h3 class="bh">표에 없어서 못 받는 것들</h3>'+
+    '<div class="cal key">아래는 <b>1-5종으로는 지급되지 않는</b> 대표 처치입니다. 이 빈칸이 <b>1-7종을 함께 넣어야 하는 이유</b>입니다.</div>'+
+    '<div class="tw"><table><thead><tr><th>처치</th><th>왜 빠지나</th><th>결과</th></tr></thead><tbody>'+
+    SURG.gap.map(function(x){
+      return '<tr><td><b>'+esc(x.t)+'</b></td><td>'+x.d+'</td><td>'+esc(x.a)+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+
+  h += '<h3 class="bh">원본 자료</h3>'+
+    ['su/su_008c.jpg','su/su_008b.jpg','su/su_008.jpg','su/su_009.jpg','su/su_012.jpg'].map(function(f){
+      return '<figure class="fig"><img src="img/'+f+'" loading="lazy" alt="" data-cap="1~5종 수술분류표 원문"></figure>';
+    }).join('');
+
+  return h+footer();
+}
+function surgTables(q){
+  q = (q||'').trim();
+  var out = '', hit = 0;
+  SURG.groups.forEach(function(g){
+    var rows = g.items.filter(function(it){
+      return !q || (it.n+' '+it.t+' '+it.sub+' '+g.g).indexOf(q) >= 0;
+    });
+    if(!rows.length) return;
+    hit += rows.length;
+    out += '<div class="sggrp"><div class="sgh">'+esc(g.g)+
+      (g.note?'<em>'+esc(g.note)+'</em>':'')+'</div>'+
+      '<div class="tw"><table class="sgt"><thead><tr><th style="width:64px">번호</th><th>수술명</th><th style="width:64px">종</th></tr></thead><tbody>'+
+      rows.map(function(it){
+        return '<tr><td class="sgn">'+esc(it.n)+'</td><td><b>'+esc(it.t)+'</b>'+
+          (it.sub?'<div class="sgs">'+esc(it.sub)+'</div>':'')+'</td>'+
+          '<td><span class="sgk k'+it.k+'">'+it.k+'</span></td></tr>';
+      }).join('')+'</tbody></table></div></div>';
+  });
+  if(!hit) return '<div class="cal warn">「'+esc(q)+'」에 해당하는 항목이 표에 <b>없습니다</b>. 표에 없으면 1-5종으로는 지급되지 않습니다 — 1-7종 · 질병수술비 쪽을 확인하세요.</div>';
+  return (q?'<div class="sgcnt">'+hit+'개 항목</div>':'')+out;
+}
+
+/* ---------- 용어 사전 ---------- */
+var TERMS = (window.TERMS || []).concat(window.TERMS2 || []);
+function renderTerms(){
+  var cats = TERMS.map(function(x){return x.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;});
+  var h = '<div class="hd"><div class="kick">부록</div><h2>용어 사전</h2>'+
+    '<div class="sub">'+TERMS.length+'개 항목 · 왼쪽 위 검색창에서 바로 찾을 수 있습니다</div></div>';
+  cats.forEach(function(c){
+    h += '<h3 class="bh">'+esc(c)+'</h3><div class="tgrid">'+
+      TERMS.map(function(x,i){return x.cat===c?
+        '<div class="tcard" data-i="'+i+'"><div class="tc">'+esc(x.cat)+'</div><h4>'+esc(x.t)+'</h4><p>'+x.one+'</p></div>':'';
+      }).join('')+'</div>';
+  });
+  return h+footer();
+}
+function renderTermDetail(i){
+  var x = TERMS[+i]; if(!x) return renderTerms();
+  var h = '<div class="hd"><div class="kick">용어 사전 · '+esc(x.cat)+'</div><h2>'+esc(x.t)+'</h2></div>'+
+    '<div class="tdet"><div class="tone">'+x.one+'</div><div class="tbody">'+x.body+'</div>'+
+    '<div class="tmeta">'+
+      (x.lv?'<a class="tm" href="#'+x.lv+'" style="text-decoration:none">📖 <b>'+x.lv+'</b> 본문 보기</a>':'')+
+      (x.cov||[]).map(function(c){return '<span class="tm">담보 · <b>'+esc(c)+'</b></span>';}).join('')+
+    '</div></div>';
+  if(x.img && x.img.length){
+    h += '<h3 class="bh">원본 자료</h3>'+x.img.map(function(f){
+      return '<figure class="fig"><img src="img/'+f+'" loading="lazy" alt="" data-cap="'+esc(x.t)+'"></figure>';
+    }).join('');
+  }
+  if(x.cost && x.cost.length){
+    h += '<h3 class="bh">관련 실제 치료비</h3><div class="costs">'+x.cost.map(costCard).join('')+'</div>';
+  }
+  h += '<div class="done-btn"><a class="btn o" href="#TERMS" style="text-decoration:none">← 용어 사전으로</a></div>';
+  return h+footer();
+}
+
+/* ---------- 이미지 자료실 ---------- */
+var GAL = window.GALLERY || {};
+var GALNAME = {an:'암 · 뇌 · 심 필수자료', su:'수술비 교육', ch:'치료비 통장 · 영수증', bk:'보장분석 종합교재'};
+function renderGal(){
+  var ks = Object.keys(GAL);
+  var tot = ks.reduce(function(a,k){return a+GAL[k].length;},0);
+  var core = ks.reduce(function(a,k){return a+GAL[k].filter(function(x){return x.g==='core';}).length;},0);
+  return '<div class="hd"><div class="kick">부록</div><h2>원본 자료실</h2>'+
+    '<div class="sub">선별된 '+tot+'장 · 그중 교육 자료 '+core+'장 · 클릭하면 크게 봅니다</div></div>'+
+    '<div class="cal key">2026-08-26 <b>전수 선별</b>했습니다. 빈 배경 · 회사 로고 · 스톡 사진 · 중복 · 주제와 무관한 이미지 <b>28장을 걷어냈습니다.</b> 남은 것은 전부 이 교육에 쓰이는 자료입니다.</div>'+
+    '<div class="cal warn">원본 교육자료를 학습 참고용으로 보관한 것입니다. <b>외부 배포 · 고객 전달 금지.</b> 일부는 시판 도서 스캔본과 사내 자료를 포함합니다.</div>'+
+    '<div class="filt" id="galtab">'+ks.map(function(k,i){
+      return '<button data-g="'+k+'" class="'+(i===0?'on':'')+'">'+esc(GALNAME[k]||k)+' ('+GAL[k].length+')</button>';
+    }).join('')+'</div><div id="galbody"></div>';
+}
+function paintGal(g){
+  Array.prototype.forEach.call(document.querySelectorAll('#galtab button'), function(b){ b.classList.toggle('on', b.dataset.g===g); });
+  var list = GAL[g]||[];
+  var GN = {core:'교육 자료 — 본문에 쓰는 것', ref:'근거 · 기사 · 원문', raw:'진료비 영수증 원본'};
+  var out = '';
+  ['core','ref','raw'].forEach(function(gr){
+    var sub = list.filter(function(x){ return (x.g||'ref')===gr; });
+    if(!sub.length) return;
+    out += '<h3 class="bh">'+GN[gr]+' <span style="font-size:14px;color:var(--ink3);font-weight:600">'+sub.length+'장</span></h3>'+
+      '<div class="gal">'+sub.map(function(x){
+        return '<figure><img src="img/'+x.f+'" loading="lazy" alt="" data-cap="'+esc(x.c||'')+'"><figcaption>'+esc(x.c||('슬라이드 '+x.slide))+'</figcaption></figure>';
+      }).join('')+'</div>';
+  });
+  document.getElementById('galbody').innerHTML = out;
+}
+
+/* ---------- 전역 검색 ---------- */
+var LASTQ='', IDX=null;
+function strip(h){ return String(h).replace(/<[^>]+>/g,''); }
+function buildIndex(){
+  if(IDX) return IDX;
+  IDX=[];
+  LESSONS.forEach(function(l,i){
+    IDX.push({k:'수업',t:l.title+' — '+l.sub,b:strip(l.hook+' '+l.steps.map(function(x){return x.t+' '+x.d;}).join(' ')+' '+l.talk.a+' '+l.one),h:'#LESSON'});
+  });
+  DISEASE.forEach(function(d,i){
+    IDX.push({k:'질병',t:d.name+' ('+d.code+')',b:strip(d.one+' '+d.cat+' '+d.cause.join(' ')+' '+d.sign.join(' ')+' '+
+      d.dx.map(function(x){return x.n+' '+x.d;}).join(' ')+' '+d.tx.title+' '+
+      d.tx.steps.map(function(x){return x.t+' '+x.d;}).join(' ')+' '+d.prog.join(' ')+' '+
+      d.cov.O.join(' ')+' '+d.cov.X.join(' ')+' '+d.cov.tip+' '+
+      d.qna.map(function(x){return x.q+' '+x.a;}).join(' ')+' '+d.talk.a),h:'#DZ-'+i});
+  });
+  ANALYSIS.forEach(function(a,i){
+    IDX.push({k:'분석',t:'분석 '+a.n+' · '+a.title,b:strip(a.core+' '+a.sub+' '+a.blocks.map(function(b){
+      if(b.t==='table') return b.head.join(' ')+' '+b.rows.map(function(r){return r.join(' ');}).join(' ');
+      if(b.t==='list') return b.x.join(' ');
+      if(b.t==='svg'||b.t==='costs') return '';
+      return b.x||'';
+    }).join(' ')),h:'#ANALYSIS'});
+  });
+  DESIGN.forEach(function(d,i){
+    IDX.push({k:'설계',t:'['+d.g+'] '+d.title+' — '+d.sub,b:strip(d.sit+' '+d.risk.join(' ')+' '+
+      d.must.map(function(m){return m.n+' '+m.amt+' '+m.why;}).join(' ')+' '+(d.opt||[]).join(' ')+' '+
+      d.trap.join(' ')+' '+d.talk.a+' '+d.budget),h:'#DS-'+i});
+  });
+  Object.keys(GAL).forEach(function(dk){
+    GAL[dk].forEach(function(x){
+      if((x.g||'ref')==='raw') return;
+      IDX.push({k:'이미지',t:x.c,b:strip((x.k||'')+' '+(GALNAME[dk]||dk)),h:'#GAL'});
+    });
+  });
+  SOURCE.forEach(function(x,i){
+    IDX.push({k:'원본',t:x.title+' — '+(SRCDECK[x.d]||x.d),
+      b:strip((x.sec||'')+' '+(x.kw||'')+' '+(x.tx||[]).join(' ')+' '+(x.cap||[]).join(' ')+' 슬라이드 '+x.s),h:'#SRC-'+i});
+  });
+  QUIZ.forEach(function(q){
+    IDX.push({k:'테스트',t:q.n+' — '+q.sub,b:strip(q.cat+' '+q.q.map(function(x){return String(x.q).replace(/<[^>]+>/g,'');}).join(' ')),h:'#TQ-'+q.id});
+  });
+  if(HEALTH){
+    IDX.push({k:'서비스',t:'헬스케어 서비스 — 보험금이 못 하는 일',b:strip(HEALTH.core+' '+HEALTH.why.join(' ')+' '+
+      HEALTH.stages.map(function(x){return x.k+' '+x.d+' '+x.items.join(' ')+' '+x.talk;}).join(' ')+' '+
+      HEALTH.pair.map(function(x){return x.n+' '+x.m+' '+x.h;}).join(' ')+' '+
+      HEALTH.ban.map(function(x){return x.x+' '+x.o;}).join(' ')+' '+
+      HEALTH.qna.map(function(x){return x.q+' '+x.a;}).join(' ')+' '+HEALTH.talk.a+' '+HEALTH.practice.join(' ')),h:'#HEALTH'});
+    HEALTH.stages.forEach(function(st){
+      IDX.push({k:'서비스',t:'헬스케어 '+st.k+' '+st.d,b:strip(st.items.join(' ')+' '+st.talk),h:'#HEALTH'});
+    });
+  }
+  (SURG.groups||[]).forEach(function(g){
+    g.items.forEach(function(it){
+      IDX.push({k:'수술표',t:'['+it.k+'종] '+it.t,b:strip(g.g+' '+g.note+' '+it.n+'번 '+it.sub+' 1-5종 수술분류표'),h:'#SURG'});
+    });
+  });
+  TERMS.forEach(function(x,i){
+    IDX.push({k:'용어',t:x.t,b:strip(x.one+' '+x.body)+' '+x.k+' '+(x.cov||[]).join(' '),h:'#T-'+i});
+  });
+  C.forEach(function(c){
+    IDX.push({k:'본문',t:'LEVEL '+c.lvl+' · '+c.title,b:strip(c.core+' '+c.sub+' '+c.blocks.map(function(b){
+      if(b.t==='table') return b.head.join(' ')+' '+b.rows.map(function(r){return r.join(' ');}).join(' ');
+      if(b.t==='list') return b.x.join(' ');
+      if(b.t==='img') return b.cap||'';
+      if(b.t==='costs'||b.t==='svg'||b.t==='fig') return '';
+      return b.x;
+    }).join(' ')+' '+c.design.join(' ')),h:'#'+c.id});
+    c.scripts.forEach(function(sc){
+      IDX.push({k:'화법',t:'['+c.title+'] '+sc.k,b:strip(sc.q+' '+sc.a),h:'#'+c.id});
+    });
+  });
+  CASES.forEach(function(c,i){
+    IDX.push({k:'케이스',t:'CASE '+(i+1)+'. '+c.name+' — '+c.tag,b:strip(c.brief+' '+c.job+' '+c.hx+' '+c.famhx+' '+
+      c.holes.map(function(x){return x.t+' '+x.x;}).join(' ')+' '+c.script.map(function(x){return x.a;}).join(' ')),h:'#CASE'});
+  });
+  COSTS.forEach(function(x){
+    IDX.push({k:'치료비',t:'CASE '+x.n+'. '+x.name+' ('+x.dx+')',b:x.key+' '+x.note+' '+x.cat+' 본인부담 '+(x.mine?x.mine.toLocaleString():''),h:'#DB'});
+  });
+  return IDX;
+}
+function hl(txt,q){
+  var i = txt.toLowerCase().indexOf(q.toLowerCase());
+  if(i<0) return esc(txt.slice(0,110))+(txt.length>110?'…':'');
+  var a=Math.max(0,i-42), b=Math.min(txt.length,i+q.length+78);
+  return (a>0?'…':'')+esc(txt.slice(a,i))+'<mark>'+esc(txt.slice(i,i+q.length))+'</mark>'+esc(txt.slice(i+q.length,b))+(b<txt.length?'…':'');
+}
+function renderSearch(q){
+  q = (q||'').trim();
+  var h = '<div class="hd"><div class="kick">검색</div><h2>“'+esc(q)+'”</h2></div>';
+  if(q.length<1) return h+'<div class="snone">검색어를 입력하세요</div>';
+  var ql = q.toLowerCase();
+  var qs = ql.replace(/\s+/g,'');                     // 띄어쓰기 무시용
+  var toks = ql.split(/\s+/).filter(function(t){return t.length>0;});
+  var res = buildIndex().map(function(r){
+    var tl = r.t.toLowerCase(), bl = r.b.toLowerCase();
+    var ti = tl.indexOf(ql), bi = bl.indexOf(ql), sc = 0;
+    if(ti>=0) sc += 100-Math.min(ti,90);
+    if(bi>=0) sc += 20;
+    if(sc===0 && qs.length>1){                        // 「숨은보험금」→「숨은 보험금」
+      var tn = tl.replace(/\s+/g,''), bn = bl.replace(/\s+/g,'');
+      if(tn.indexOf(qs)>=0) sc += 80;
+      else if(bn.indexOf(qs)>=0) sc += 16;
+    }
+    if(sc===0 && toks.length>1){                      // 여러 단어를 모두 포함
+      var all = toks.every(function(t){ return tl.indexOf(t)>=0 || bl.indexOf(t)>=0; });
+      if(all) sc += 12;
+    }
+    return sc? {r:r, sc:sc} : null;
+  }).filter(Boolean).sort(function(a,b){return b.sc-a.sc;}).slice(0,60);
+  if(!res.length) return h+'<div class="snone">결과가 없습니다.<br><span style="font-size:12.5px">예: 뇌경색 · 협심증 · 1-7종 · 배액술 · 산정특례 · 유사암 · CDR</span></div>';
+  h += '<div class="mini">'+res.length+'건</div><div class="sres">'+res.map(function(o){
+    return '<a class="sr" href="'+o.r.h+'"><span class="srk '+o.r.k+'">'+o.r.k+'</span>'+
+      '<h4>'+hl(o.r.t,q)+'</h4><p>'+hl(o.r.b,q)+'</p></a>';
+  }).join('')+'</div>';
+  return h+footer();
+}
+
+/* ---------- 전체 통독 ---------- */
+function bkQuiz(qs){
+  return qs.map(function(q,i){
+    return '<div class="qz ans" style="margin-bottom:10px"><div class="qq"><i>Q'+(i+1)+'.</i>'+esc(q.q)+'</div>'+
+      q.c.map(function(o,j){return '<button class="op'+(j===q.a?' ok':'')+'">'+esc(o)+'</button>';}).join('')+
+      '<div class="why">해설 — '+esc(q.why)+'</div></div>';
+  }).join('');
+}
+function bkScripts(list){
+  return list.map(function(x){
+    return '<div class="sc"><span class="k">'+esc(x.k)+'</span>'+
+      (x.q==='\u2014'?'':'<div class="q">'+esc(x.q)+'</div>')+'<div class="a">'+x.a+'</div></div>';
+  }).join('');
+}
+function renderBook(){
+  var h = '<div class="bkbar">'+
+    '<button class="btn p" onclick="window.print()">🖨 전체 인쇄 · PDF로 저장</button>'+
+    '<span class="hint">본문 10레벨 + 케이스 9건 + 부록 전체가 한 권으로 출력됩니다</span></div>';
+
+  /* ── 표지 ── */
+  h += '<div class="cover"><div class="cv1">FOR NEW FINANCIAL PLANNERS</div>'+
+    '<h1>보험 마스터 아카데미<em>신입 설계사 90일 자가학습 과정</em></h1>'+
+    '<div class="cv2">상품을 외우기 전에 <b style="color:#fff">돈이 끊기는 순간</b>을 먼저 배운다.<br>'+
+    '10개 레벨 · 케이스 스터디 '+CASES.length+'건 · 실제 진료비 영수증 '+COSTS.length+'건으로 구성된 실무 교재.</div>'+
+    '<div class="cvmeta">'+
+      '<div><b>본문</b>10 LEVEL · 12~15시간</div>'+
+      '<div><b>케이스</b>'+CASES.length+'건 (모범답안 포함)</div>'+
+      '<div><b>화법</b>레벨 49장 + 케이스 전용</div>'+
+      '<div><b>셀프체크</b>59문항</div>'+
+      '<div><b>구분</b>내부 교육용 · 배포 금지</div>'+
+    '</div></div>';
+
+  /* ── 서문 ── */
+  h += '<div class="pref"><h3>이 책을 쓰는 법</h3>'+
+    '<p>이 교재는 읽는 책이 아니라 <b>훈련하는 책</b>이다. 순서를 지켜야 작동한다.</p>'+
+    '<ol>'+
+      '<li>레벨 본문을 정독하되 밑줄 대신 <b>숫자만</b> 옮겨 적는다.</li>'+
+      '<li>화법 카드를 <b>소리 내어 3회</b> 읽는다. 눈으로 읽으면 입에서 안 나온다.</li>'+
+      '<li>질문지 항목을 <b>실제 가족에게</b> 물어본다.</li>'+
+      '<li>셀프 체크를 전부 맞을 때까지 반복한다.</li>'+
+      '<li>그날 배운 담보 1개를 설계 프로그램에서 <b>직접 넣었다 빼본다</b>.</li>'+
+      '<li>10레벨이 끝나면 케이스 스터디 '+CASES.length+'건을 <b>답을 보지 않고</b> 풀고 모범답안과 대조한다.</li>'+
+    '</ol>'+
+    '<p>90일 뒤 다섯 가지가 되면 신입이 아니다 — ① 실손 세대를 3초 안에 판별한다 ② 뇌·심 담보 범위를 코드로 설명한다 ③ 종수술비 종형과 비급여 보상 여부를 짚는다 ④ 실제 치료비 사례 5건을 외워서 말한다 ⑤ 서명 금지 서류 3종을 즉시 답한다.</p>'+
+    '<p style="margin:0;color:var(--warn)"><b>주의</b> — 이 교재는 내부 교육용이다. 고객에게 그대로 배포하거나 SNS에 게시하면 광고 규제 위반이 될 수 있다.</p></div>';
+
+  /* ── 목차 ── */
+  h += '<div class="toc"><h3>목차</h3>'+
+    '<div style="font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:800;margin:4px 0 8px">본문</div><ol>'+
+    C.map(function(c){return '<li><a href="#BOOK-'+c.id+'">LEVEL '+c.lvl+' · '+esc(c.title)+'</a> <span style="color:var(--ink3);font-size:12.5px">— '+esc(c.sub)+'</span></li>';}).join('')+
+    '</ol>'+
+    '<div style="font-size:12px;letter-spacing:.14em;color:var(--gold);font-weight:800;margin:16px 0 8px">부록</div><ol>'+
+    '<li><a href="#BOOK-APPA">부록 A · 케이스 스터디 '+CASES.length+'건</a>'+
+      '<span style="color:var(--ink3);font-size:12.5px"> — '+CASES.map(function(c){return esc(c.name);}).join(' / ')+'</span></li>'+
+    '<li><a href="#BOOK-APPB">부록 B · 실제 치료비 데이터베이스 '+COSTS.length+'건</a></li>'+
+    '<li><a href="#BOOK-APPC">부록 C · 화법 전체 카드</a></li>'+
+    '<li><a href="#BOOK-APPD">부록 D · 컴플라이언스 · 출처 · 갱신</a></li>'+
+    '</ol></div>';
+
+  /* ── 본문 ── */
+  h += '<div class="part" id="BOOK-BODY"><div class="pn">BODY</div><h2>본문 — 10 LEVEL</h2>'+
+    '<p>사고 → 돈의 흐름 → 담보 → 상품의 순서로 배운다</p></div>';
+
+  C.forEach(function(c){
+    h += '<section class="bkch" id="BOOK-'+c.id+'">'+
+      '<div class="bkkick">LEVEL '+c.lvl+' · 학습시간 '+c.mins+'분</div>'+
+      '<h2>'+esc(c.title)+'</h2><div class="sub">'+esc(c.sub)+'</div>'+
+      '<div class="core"><span>이 레벨의 한 줄</span>'+esc(c.core)+'</div>'+
+      renderBlocks(c.blocks)+
+      '<div class="bksec">담보설계 방향</div><ol class="gd">'+c.design.map(function(d){return '<li>'+d+'</li>';}).join('')+'</ol>'+
+      '<div class="bksec">현장 화법</div>'+bkScripts(c.scripts)+
+      '<div class="bksec">고객 질문지</div><ul class="ak">'+c.ask.map(function(a){return '<li>'+esc(a)+'</li>';}).join('')+'</ul>'+
+      '<div class="bksec">셀프 체크 (정답 · 해설 포함)</div>'+bkQuiz(c.quiz)+
+      '<div class="bksec">금지 표현</div><ul class="ban">'+c.ban.map(function(b){return '<li>'+b+'</li>';}).join('')+'</ul>'+
+      '</section>';
+  });
+
+  /* ── 부록 A : 케이스 스터디 ── */
+  h += '<div class="part" id="BOOK-APPA"><div class="pn">APPENDIX A</div><h2>케이스 스터디 '+CASES.length+'건</h2>'+
+    '<p>증권 → 담보 지도 → 구멍 진단 → 3안 제안 → 모범답안</p></div>'+
+    '<div class="cal key">가상의 고객입니다. 실존 인물 · 계약과 무관하며 보험료는 이해를 돕기 위한 <b>예시값</b>입니다. 실제 보험료는 회사 · 연령 · 성별 · 심사 결과에 따라 달라집니다.</div>';
+  CASES.forEach(function(c,i){
+    h += '<section class="bkcase" id="BOOK-'+c.id+'">'+
+      '<div class="cs-h">CASE '+(i+1)+'. '+esc(c.name)+' <span style="font-size:13px;color:var(--ink3);font-weight:600">'+esc(c.age)+'</span></div>'+
+      '<div class="cs-s">'+esc(c.tag)+'</div>'+ caseHTML(c).replace(/class="tog"/g,'class="tog" hidden').replace(/<li><span class="tog"/g,'<li class="open"><span class="tog"') +'</section>';
+  });
+
+  /* ── 부록 B : 치료비 DB ── */
+  h += '<div class="part" id="BOOK-APPB"><div class="pn">APPENDIX B</div><h2>실제 치료비 데이터베이스</h2>'+
+    '<p>진료비 계산서 · 영수증 실측 '+COSTS.length+'건 (2022~2025)</p></div>'+
+    '<div class="cal warn">원본 영수증 이미지는 <b>무단배포 금지</b> 자료다. 이 표의 숫자만 인용하고, 고객 제시 시에는 「개인 · 병원 · 시기에 따라 다를 수 있습니다」를 반드시 함께 노출한다.</div>'+
+    '<div class="tw"><table><thead><tr><th>#</th><th>시술 · 검사</th><th>질병</th><th>진료비 총액</th><th>공단</th><th>본인부담</th><th>비중</th><th>비급여 핵심</th></tr></thead><tbody>'+
+    COSTS.map(function(x){
+      var rt = (x.total && x.mine) ? Math.min(100, Math.round(x.mine/x.total*100))+'%' : '—';
+      return '<tr><td>'+x.n+'</td><td>'+esc(x.name)+'</td><td>'+esc(x.dx)+'</td><td style="text-align:right">'+won(x.total)+'</td>'+
+        '<td style="text-align:right">'+won(x.nhis)+'</td><td style="text-align:right;color:#f04452;font-weight:700">'+won(x.mine)+'</td>'+
+        '<td style="text-align:right">'+rt+'</td><td>'+esc(x.key)+'</td></tr>';
+    }).join('')+'</tbody></table></div>'+
+    '<div class="bksec">사례 카드 (상담 제시용)</div>'+
+    '<div class="costs">'+COSTS.map(function(x){return costCard(x.n);}).join('')+'</div>';
+
+  /* ── 부록 C : 화법 전체 ── */
+  var totalScripts = C.reduce(function(a,c){return a+c.scripts.length;},0) + CASES.reduce(function(a,c){return a+c.script.length;},0);
+  h += '<div class="part" id="BOOK-APPC"><div class="pn">APPENDIX C</div><h2>화법 전체 카드</h2>'+
+    '<p>총 '+totalScripts+'장 · 출퇴근 암기용</p></div>';
+  C.forEach(function(c){
+    h += '<h3 class="bh">LEVEL '+c.lvl+' · '+esc(c.title)+'</h3>'+bkScripts(c.scripts);
+  });
+  CASES.forEach(function(c,i){
+    h += '<h3 class="bh">CASE '+(i+1)+' · '+esc(c.name)+' ('+esc(c.tag)+')</h3>'+bkScripts(c.script);
+  });
+
+  /* ── 부록 D : 컴플라이언스 · 출처 ── */
+  h += '<div class="part" id="BOOK-APPD"><div class="pn">APPENDIX D</div><h2>컴플라이언스 · 출처 · 갱신</h2>'+
+    '<p>이 교재를 안전하게 쓰기 위한 규칙</p></div>'+
+    '<h3 class="bh">1. 배포 전 체크리스트</h3>'+
+    '<ul class="bl">'+
+    ['이 교재는 <b>내부 교육용</b>이다. 고객 배포 · SNS 게시 금지',
+     '고객용 파생 자료는 <b>사전 광고심의 → 심의번호 표기</b>',
+     '모든 통계에 <b>기관명 + 연도</b> 표기',
+     '치료비 사례에 「개인 · 병원 · 시기에 따라 다를 수 있습니다」 문구',
+     '랜딩 · 웹 도구에서 <b>개인정보 수집 금지</b>',
+     '특정 보험사명 · 상품명 노출 시 비교광고 규제 확인',
+     '보장 내용 · 지급 기준은 <b>반드시 해당 상품의 약관이 우선</b>'
+    ].map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+    '<h3 class="bh">2. 절대 쓰지 않는 표현</h3>'+
+    '<ul class="ban">'+
+    ['\"무조건 됩니다\" · \"100% 보장\" — 단정적 표현',
+     '\"지금 아니면 못 들어요\" — 부당한 청약 유도',
+     '기존 계약을 충분한 비교 없이 해지시키는 것 — 부당 승환',
+     '고객에게 병력을 축소해 적으라고 안내하는 것',
+     '타사 상품을 근거 없이 깎아내리는 비교',
+     '세액 · 손금 인정 여부를 확정적으로 단언하는 것'
+    ].map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'+
+    '<h3 class="bh">3. 데이터 갱신 주기</h3>'+
+    '<div class="tw"><table><thead><tr><th>주기</th><th>대상</th><th>수정 위치</th></tr></thead><tbody>'+
+    '<tr><td>연 1회</td><td>통계청 생명표, 심평원 · 건보공단 발생 · 진료 통계</td><td>data1.js · data2.js</td></tr>'+
+    '<tr><td>수시</td><td>실손 제도 변경, 복지부 고시, 대법원 판례</td><td>data1.js(L2) · data2.js(L8)</td></tr>'+
+    '<tr><td>분기</td><td>실제 치료비 사례 추가 (본인 · 팀 보상 사례 익명화)</td><td>costs.js</td></tr>'+
+    '<tr><td>수시</td><td>케이스 스터디 추가 · 모범답안 보완</td><td>cases.js · cases2.js</td></tr>'+
+    '</tbody></table></div>'+
+    '<h3 class="bh">4. 출처</h3>'+
+    '<p class="bp">통계청(2019 · 2024 생명표) · 건강보험심사평가원(2021 · 2022) · 국민건강보험공단(2022) · 한국소비자원 · 한국리서치(2023) · 삼성서울병원 암교육센터 · Psycho-Oncology(Wiley) · 간병시민연대 · 전국보건의료산업노조(2023) · 보건복지부 고시(2015-73호, 2023-128호) · 보험협회 의료자문 표준내부통제기준 · 상법 662조 · 특정범죄가중처벌법 5조의13</p>'+
+    '<p class="bp">치료비 사례는 2022~2025년 실제 진료비 계산서 · 영수증 기준이며 개인 · 병원 · 시기에 따라 다를 수 있습니다.</p>';
+
+  /* ── 판권 ── */
+  h += '<div class="colo"><b>보험 마스터 아카데미 — 신입 설계사 90일 자가학습 과정</b><br>'+
+    '구성 · 본문 10 LEVEL / 케이스 스터디 '+CASES.length+'건 / 실제 치료비 '+COSTS.length+'건 / 화법 '+totalScripts+'장 / 셀프체크 59문항<br>'+
+    '구분 · <b>내부 교육용</b> — 외부 배포 및 상업적 이용 금지<br>'+
+    '문의 · 교육 담당자<br><br>'+
+    '본 교재의 보장 내용 · 지급 기준은 <b>반드시 해당 상품의 약관</b>이 우선하며, 회사 · 상품 · 가입시기에 따라 달라질 수 있습니다. '+
+    '세무 · 법무 판단이 필요한 사항은 반드시 해당 전문가에게 연계하십시오.</div>';
+
+  return h;
+}
+
+/* ---------- extra screens ---------- */
+function renderDB(){
+  var cats = ['전체'].concat(COSTS.map(function(c){return c.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;}));
+  return '<div class="hd"><div class="kick">부록 A</div><h2>실제 치료비 데이터베이스</h2>'+
+    '<div class="sub">진료비 계산서 · 영수증 실측 '+COSTS.length+'건 (2022~2025)</div></div>'+
+    '<div class="cal warn">원본 영수증 이미지는 <b>무단배포 금지</b> 자료다. 이 화면의 숫자만 인용하고, 고객 제시 시에는 「개인 · 병원 · 시기에 따라 다를 수 있습니다」를 반드시 함께 노출한다.</div>'+
+    '<div class="filt" id="filt">'+cats.map(function(c,i){return '<button data-c="'+esc(c)+'" class="'+(i===0?'on':'')+'">'+esc(c)+'</button>';}).join('')+'</div>'+
+    '<div class="mini" id="cnt"></div><div class="costs" id="cgrid"></div>'+footer();
+}
+function paintDB(cat){
+  var list = COSTS.filter(function(c){return cat==='전체'||c.cat===cat;});
+  document.getElementById('cgrid').innerHTML = list.map(function(c){return costCard(c.n);}).join('');
+  document.getElementById('cnt').textContent = list.length+'건 표시 중 · 본인부담 비중이 높은 사례일수록 붉은 막대가 길다';
+}
+function renderCards(){
+  var h='<div class="hd"><div class="kick">부록 B</div><h2>화법 전체 카드</h2>'+
+    '<div class="sub">10개 레벨의 모든 화법을 한 곳에 · 출퇴근 암기용</div></div>';
+  function scHTML(x){
+    return '<div class="sc">'+(x.k?'<span class="k">'+esc(x.k)+'</span>':'')+
+      (!x.q||x.q==='—'?'':'<div class="q">'+esc(x.q)+'</div>')+'<div class="a">'+x.a+'</div></div>';
+  }
+  var n = 0;
+  C.forEach(function(c){ n += (c.scripts||[]).length; });
+  CASES.forEach(function(c){ n += (c.script||[]).length; });
+  n += DISEASE.length + DESIGN.length + (HEALTH?1:0);
+  h = h.replace('<div class="sub">10개 레벨의 모든 화법을 한 곳에 · 출퇴근 암기용</div>',
+    '<div class="sub">본문 · 질병 · 설계 · 케이스 · 서비스 화법 '+n+'개 · 출퇴근 암기용</div>');
+  h += '<div class="cal tip">눈으로 읽으면 남지 않습니다. 한 장씩 <b>소리 내어 3번</b> 읽으세요.</div>';
+  C.forEach(function(c){
+    h += '<h3 class="bh">LEVEL '+c.lvl+' · '+esc(c.title)+'</h3>'+ (c.scripts||[]).map(scHTML).join('');
+  });
+  if(DISEASE.length)
+    h += '<h3 class="bh">질병 백과 · '+DISEASE.length+'종</h3>'+
+      DISEASE.map(function(d){ return scHTML({k:d.name+' — '+d.talk.k, q:d.talk.q, a:d.talk.a}); }).join('');
+  if(DESIGN.length)
+    h += '<h3 class="bh">설계편 · '+DESIGN.length+'가지 상황</h3>'+
+      DESIGN.map(function(d){ return scHTML({k:'['+d.g+'] '+d.title, q:d.talk.q, a:d.talk.a}); }).join('');
+  if(CASES.length)
+    h += '<h3 class="bh">케이스 스터디 · '+CASES.length+'건</h3>'+
+      CASES.map(function(c){ return (c.script||[]).map(function(x){ return scHTML({k:c.name+' — '+x.k, q:x.q, a:x.a}); }).join(''); }).join('');
+  if(HEALTH)
+    h += '<h3 class="bh">헬스케어 서비스</h3>'+ scHTML({k:HEALTH.talk.k, q:HEALTH.talk.q, a:HEALTH.talk.a});
+  return h+footer();
+}
+function renderGuide(){
+  return '<div class="hd"><div class="kick">부록 C</div><h2>운영 · 활용 가이드</h2>'+
+    '<div class="sub">교육 담당자 · 지점장용</div></div>'+
+    '<h3 class="bh">1. 이 교재의 사용 시나리오</h3>'+
+    '<div class="tw"><table><thead><tr><th>대상</th><th>운영 방식</th><th>기간</th></tr></thead><tbody>'+
+    '<tr><td>신입 (위촉 0~90일)</td><td>자가학습 → 주 1회 30분 구두 테스트(셀프체크 문항 그대로)</td><td>90일</td></tr>'+
+    '<tr><td>경력 입사자</td><td>LEVEL 2 · 3 · 5 · 8만 발췌, 코드 · 종수술비 · 보상실무 집중</td><td>2주</td></tr>'+
+    '<tr><td>전체 조회</td><td>매주 1레벨씩 「이 레벨의 한 줄」 + 화법 3개 낭독</td><td>10주 순환</td></tr>'+
+    '<tr><td>롤플레잉</td><td>화법 카드를 뽑아 고객 역할 · 설계사 역할 교대</td><td>주 1회</td></tr>'+
+    '</tbody></table></div>'+
+    '<h3 class="bh">2. 성장 관리 — 4단계로 본다</h3>'+
+    '<div class="cal key"><b>성장 경로</b> 화면이 개인별로 「지금 몇 단계인지」와 「다음에 할 것 딱 하나」를 자동으로 알려줍니다. 팀원에게는 그 화면만 보게 하세요. <a href="#GROW">→ 성장 경로</a></div>'+
+    '<div class="tw"><table><thead><tr><th>단계</th><th>기간</th><th>통과 기준</th><th>담당자가 확인할 것</th></tr></thead><tbody>'+
+    '<tr><td><b>1 입문</b></td><td>1~14일</td><td>본문 L0~L2 완료</td><td>영수증으로 급여 · 비급여를 설명하는지</td></tr>'+
+    '<tr><td><b>2 기본</b></td><td>15~40일</td><td>L3~L7 완료 + 설계③ 70점</td><td>증권을 보고 코드 범위로 구멍을 찾는지</td></tr>'+
+    '<tr><td><b>3 실전</b></td><td>41~70일</td><td>본문 완독 + 보상①② · 설계① 70점</td><td>제안서를 5단 구성으로 만드는지</td></tr>'+
+    '<tr><td><b>4 마스터</b></td><td>71일~</td><td>8세트 평균 80점</td><td>보상 4대 쟁점을 근거까지 대며 설명하는지</td></tr>'+
+    '</tbody></table></div>'+
+    '<h3 class="bh">3. 주간 운영 (권장)</h3>'+
+    '<ul class="bl"><li><b>월요일 조회</b> — 성장 경로 화면을 띄우고 각자 「다음에 할 것」을 한 줄씩 말하게 한다</li>'+
+    '<li><b>수요일</b> — 화법 카드 롤플레잉 (질병 · 설계 · 케이스 화법 159장에서 무작위)</li>'+
+    '<li><b>금요일</b> — 테스트 1세트 응시 → <b>팀 현황</b>에서 점수 확인 <a href="#TEAM">→ 팀 현황</a></li>'+
+    '<li><b>월말</b> — 평균이 가장 낮은 영역 하나를 정해 팀 스터디 주제로 삼는다</li></ul>'+
+    '<h3 class="bh">4. 반드시 지켜야 할 컴플라이언스</h3>'+
+    '<div class="cal warn">이 교재는 <b>내부 교육용</b>이다. 그대로 고객에게 배포하거나 SNS · 블로그에 게시하면 광고 규제 위반이 될 수 있다. 고객 대면용으로 파생 자료를 만들 때는 ① 사전 광고심의 ② 심의번호 표기 ③ 통계 출처 · 연도 표기 ④ 사례에 개별성 문구 ⑤ 개인정보 미수집 원칙을 지킨다.</div>'+
+    '<h3 class="bh">5. 데이터 갱신 주기</h3>'+
+    '<ul class="bl"><li><b>연 1회</b> — 통계청 생명표, 심평원 · 건보공단 발생 · 진료 통계</li>'+
+    '<li><b>수시</b> — 실손 제도 변경, 복지부 고시(전립선비대증 · 신의료기술), 대법원 판례</li>'+
+    '<li><b>분기</b> — 실제 치료비 사례 추가 (본인 · 팀 보상 사례를 익명화하여 축적)</li>'+
+    '<li>파일 수정 위치 — 통계 · 본문은 <code>data1.js</code> / <code>data2.js</code>, 치료비 사례는 <code>costs.js</code></li></ul>'+
+    '<h3 class="bh">6. 팀 점수 서버 취합 — 버튼 세 번</h3>'+
+    '<div class="cal warn">기본값은 <b>기기별 저장</b>이라 팀원이 각자 폰에서 응시하면 담당자 화면에 안 모입니다. 아래 <b>①②③</b> 을 차례로 누르면 끝납니다.</div>'+
+    '<div class="steps" id="setupsteps">'+
+      '<div class="step" data-k="1"><i>1</i><div class="sx"><b>Supabase SQL 편집기 열기</b>'+
+        '<span>새 탭이 열리고 <b>SQL 이 자동으로 입력</b>됩니다. (안 들어가 있으면 이미 복사돼 있으니 <b>Ctrl+V</b>) 그다음 오른쪽 아래 <b>Run</b> 을 누르세요.</span></div>'+
+        '<button class="btn p" id="stepOpen">열기</button></div>'+
+      '<div class="step" data-k="2"><i>2</i><div class="sx"><b>연결 확인</b>'+
+        '<span>Run 을 누른 뒤 이 버튼을 누르면 연결됐는지 바로 알려줍니다.</span></div>'+
+        '<button class="btn o" id="stepCheck">확인</button></div>'+
+      '<div class="step" data-k="3"><i>3</i><div class="sx"><b>이 기기 기록 올리기</b>'+
+        '<span>이미 이 기기에 쌓인 응시 기록을 서버로 한 번에 올립니다.</span></div>'+
+        '<button class="btn o" id="stepPush">올리기</button></div>'+
+    '</div>'+
+    '<div id="sqlmsg" class="setupmsg"></div>'+
+    '<details class="sqldet"><summary>SQL 직접 보기 · 수동 복사</summary>'+
+      '<div class="done-btn"><button class="btn o sm" id="sqlcopy">SQL 복사</button>'+
+      '<span style="font-size:12.4px;color:var(--ink3)">상자를 클릭하면 전체가 선택됩니다 — Ctrl+C</span></div>'+
+      '<textarea class="sqlbox" id="sqlbox" readonly rows="14"></textarea></details>'+
+    '<div class="done-btn" style="margin-top:10px"><button class="btn o sm" id="auditOpen">표 이름 충돌 · 익명 개방 점검</button>'+
+      '<span style="font-size:12.4px;color:var(--ink3)">Supabase 에 표를 새로 만들기 전에 눌러보세요. 결과의 <b>익명(anon) 정책이 붙은 표</b> 줄에 <b>bohum_scores · bohum_progress</b> 말고 다른 이름이 있으면 사고입니다.</span></div>'+
+    '<div class="cal key"><b>보안 메모</b> — 이 앱은 로그인이 없습니다. anon 키는 브라우저 공개용이고 위 정책은 <b>읽기 · 쓰기만</b> 허용합니다(수정 · 삭제 불가). 사내 교육 점수라 위험은 낮지만 <b>링크를 아는 사람은 점수를 넣을 수 있다</b>는 점은 감수하는 구조입니다. 개인정보 · 고객정보는 절대 넣지 마세요.</div>'+
+    '<h3 class="bh">7. 화면 안내 — 어디서 무엇을 하나</h3>'+
+    '<div class="tw"><table><thead><tr><th>화면</th><th>쓰임</th></tr></thead><tbody>'+
+    '<tr><td><a href="#GROW"><b>성장 경로</b></a></td><td>지금 단계 · 다음에 할 것 · 약점 진단 · 주간 루틴</td></tr>'+
+    '<tr><td><a href="#TEST"><b>테스트</b></a></td><td>설계 · 보상 9세트 106문항 · 사람별 기록</td></tr>'+
+    '<tr><td><a href="#TEAM"><b>팀 현황</b></a></td><td>사람 × 세트 최고점 매트릭스</td></tr>'+
+    '<tr><td><a href="#DZ"><b>질병 백과</b></a></td><td>20종 · 3D 해부 · 수술 진행 · 고객 Q&A 200문항</td></tr>'+
+    '<tr><td><a href="#SURG"><b>1~5종 분류표</b></a></td><td>수술명으로 검색 · 표에 없으면 부지급 경고</td></tr>'+
+    '<tr><td><a href="#SRC"><b>원본 자료 검색</b></a></td><td>첨부 PPTX 4종 슬라이드 184장</td></tr>'+
+    '<tr><td><a href="#CARD"><b>화법 카드</b></a></td><td>본문 · 질병 · 설계 · 케이스 화법 159장</td></tr>'+
+    '<tr><td><a href="#GAL"><b>자료실</b></a></td><td>선별 이미지 178장 (교육 자료 · 근거 · 영수증)</td></tr>'+
+    '</tbody></table></div>'+
+    '<h3 class="bh">8. 기술 메모</h3>'+
+    '<ul class="bl"><li>인터넷 없이도 동작 (글꼴만 온라인). 폴더째 복사해서 배포 가능</li>'+
+    '<li>진도 · 테스트 점수는 <code>localStorage</code> 에 저장되고, 위 6번 설정을 마치면 <b>Supabase 로도 함께 전송</b>된다 (<code>sync.js</code>)</li>'+
+    '<li>js · css 를 수정하면 <code>index.html</code>의 <code>?v=</code> 값을 반드시 올릴 것 (안 올리면 옛 파일이 계속 쓰인다)</li>'+
+    '<li>인쇄 시 모든 탭이 펼쳐진 상태로 출력되어 <b>PDF 교재</b>로 바로 쓸 수 있다</li></ul>'+
+    footer();
+}
+function footer(){
+  return '<div class="foot">본 교재는 내부 교육용 자료입니다. 보장 내용 · 지급 기준은 <b>반드시 해당 상품의 약관</b>이 우선하며, 회사 · 상품 · 가입시기에 따라 달라질 수 있습니다.<br>'+
+    '통계 출처 — 통계청(2019 · 2024), 건강보험심사평가원(2021 · 2022), 국민건강보험공단(2022), 한국소비자원, 한국리서치(2023), 삼성서울병원 암교육센터 등. 치료비 사례는 2022~2025년 실제 진료비 계산서 기준이며 개인 · 병원 · 시기에 따라 다를 수 있습니다.</div>';
+}
+
+/* ---------- router ---------- */
+function route(){
+  var id = location.hash.replace('#','') || (C[0] && C[0].id) || 'DB';
+  var v = document.getElementById('view');
+  var c = C.filter(function(x){return x.id===id;})[0];
+  if(c) v.innerHTML = renderChapter(c);
+  else if(id==='DB'){ v.innerHTML = renderDB(); paintDB('전체'); }
+  else if(id==='CASE'){ v.innerHTML = renderCaseShell(); paintCase(0); }
+  else if(id==='LESSON'){ v.innerHTML = renderLessonShell(); paintLesson(0); }
+  else if(id==='DZ'){ v.innerHTML = renderDzList(); paintDzGrid('전체'); }
+  else if(id.indexOf('DZ-')===0){ v.innerHTML = renderDzDetail(id.slice(3)); }
+  else if(id==='ANALYSIS'){ v.innerHTML = renderAnalysisShell(); paintAnalysis(0); }
+  else if(id==='DESIGN'){ v.innerHTML = renderDesignList(); }
+  else if(id.indexOf('DS-')===0){ v.innerHTML = renderDesignDetail(id.slice(3)); }
+  else if(id==='SRC'){ v.innerHTML = renderSrc(); paintSrc('전체',''); }
+  else if(id.indexOf('SRC-')===0){ v.innerHTML = renderSrcDetail(id.slice(4)); }
+  else if(id==='GROW'){ v.innerHTML = renderGrow(); }
+  else if(id==='TEST'){ v.innerHTML = renderTest(); }
+  else if(id==='TEAM'){ v.innerHTML = renderTeam(); loadTeam(); }
+  else if(id.indexOf('TQ-')===0){ QSET = id.slice(3); v.innerHTML = renderQuiz(QSET); }
+  else if(id==='HEALTH'){ v.innerHTML = renderHealth(); }
+  else if(id==='SURG'){ v.innerHTML = renderSurg(); }
+  else if(id==='TERMS'){ v.innerHTML = renderTerms(); }
+  else if(id.indexOf('T-')===0){ v.innerHTML = renderTermDetail(id.slice(2)); }
+  else if(id==='GAL'){ v.innerHTML = renderGal(); paintGal('an'); }
+  else if(id==='SEARCH'){ v.innerHTML = renderSearch(LASTQ); }
+  else if(id==='BOOK') v.innerHTML = renderBook();
+  else if(id==='CARD') v.innerHTML = renderCards();
+  else if(id==='GUIDE'){ v.innerHTML = renderGuide();
+    var _sb=document.getElementById('sqlbox');
+    if(_sb){ _sb.value = SUPA_SQL;
+      _sb.addEventListener('focus', function(){ this.select(); });
+      _sb.addEventListener('click', function(){ this.select(); }); }
+    if(window.SYNC) SYNC.check().then(function(ok){
+      if(!document.getElementById('setupsteps')) return;
+      if(ok){ stepDone(1); stepDone(2); setMsg('ok','이미 연결돼 있습니다. 팀원 점수가 자동으로 모입니다.'); }
+      else setMsg('no','아직 서버가 설정되지 않았습니다 — '+esc(SYNC.state.msg));
+    }); }
+  else { location.hash = C[0].id; return; }
+  Array.prototype.forEach.call(document.querySelectorAll('nav a'), function(a){
+    a.classList.toggle('on', a.dataset.id===id);
+  });
+  drawer(false);
+  window.scrollTo(0,0);
+  CUR = c || null;
+  CURHASH = id;
+}
+var CUR = null, QSET = null, CURHASH = '';
+function bind(){
+  var v = document.getElementById('view');
+  v.addEventListener('click', function(e){
+    var c = CUR;
+    var t = e.target;
+    // tabs
+    if(t.matches('.tabs button')){
+      Array.prototype.forEach.call(v.querySelectorAll('.tabs button'), function(b){b.classList.toggle('on', b===t);});
+      Array.prototype.forEach.call(v.querySelectorAll('.pane'), function(p){p.classList.toggle('on', p.dataset.p===t.dataset.p);});
+      return;
+    }
+    // quiz
+    if(t.matches('.qz .op')){
+      var box = t.closest('.qz'); if(box.classList.contains('ans')) return;
+      var ans = +box.dataset.a, pick = +t.dataset.j;
+      box.classList.add('ans');
+      Array.prototype.forEach.call(box.querySelectorAll('.op'), function(b,j){
+        if(j===ans) b.classList.add('ok'); else if(j===pick) b.classList.add('no');
+      });
+      return;
+    }
+    // copy script
+    if(t.matches('.cp') && c){
+      var s = c.scripts[+t.dataset.cp];
+      var txt = '['+s.k+']\n'+(s.q==='—'?'':'고객: '+s.q+'\n')+'나: '+s.a.replace(/<[^>]+>/g,'');
+      navigator.clipboard && navigator.clipboard.writeText(txt).then(function(){ t.textContent='복사됨'; setTimeout(function(){t.textContent='복사';},1200); });
+      return;
+    }
+    // done
+    if(t.id==='dbtn' && c){
+      state.done[c.id] = !state.done[c.id]; save(); buildNav();
+      if(window.SYNC && tname()) SYNC.pushProgress(tname(), state.done);
+      t.textContent = state.done[c.id] ? '● 학습 완료됨 (취소)' : '이 레벨 학습 완료로 표시';
+      t.className = 'btn '+(state.done[c.id]?'o':'g');
+      return;
+    }
+    // lightbox
+    var im = t.closest('.fig img, .gal figure');
+    if(im){
+      var el = t.tagName==='IMG' ? t : im.querySelector('img');
+      if(el){ document.getElementById('lbi').src = el.src;
+        document.getElementById('lbc').textContent = el.dataset.cap || '';
+        document.getElementById('lb').classList.add('on'); }
+      return;
+    }
+    if(t.closest('#srcnav')){ var sb=t.closest('#srcnav button'); if(sb) paintSrc(sb.dataset.c, undefined); return; }
+    if(t.id==='whoset'){ var vv=document.getElementById('whoin').value.trim(); if(vv){ tsetname(vv); route(); } return; }
+    var wp=t.closest('.pill.who');
+    if(wp){ tsetname(wp.dataset.n); route(); return; }
+    if(t.id==='qgrade'){ if(QSET) gradeQuiz(QSET); return; }
+    if(t.id==='stepOpen' || t.id==='sqlcopy'){
+      var copied = copySQL();
+      var after = copied ? Promise.resolve(true)
+        : (navigator.clipboard ? navigator.clipboard.writeText(SUPA_SQL).then(function(){return true;})
+                                  .catch(function(){return false;})
+                               : Promise.resolve(false));
+      if(t.id==='sqlcopy'){
+        after.then(function(ok){
+          setMsg(ok?'ok':'no', ok
+            ? 'SQL 이 <b>복사됐습니다</b> — Supabase SQL Editor 에 붙여넣고 Run 하세요.'
+            : '복사가 막혀 있습니다. 아래 상자를 <b>클릭하면 전체 선택</b>되니 Ctrl+C 하세요.');
+        });
+        return;
+      }
+      var det=document.querySelector('.sqldet'); if(det) det.open = true;
+      after.then(function(ok){ openSqlTab(ok); });
+      return;
+    }
+    if(t.id==='auditOpen'){
+      var ac = (function(){
+        var ta=document.createElement('textarea'); ta.value=AUDIT_SQL;
+        ta.setAttribute('readonly',''); ta.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:0';
+        document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, AUDIT_SQL.length);
+        var o=false; try{ o=document.execCommand('copy'); }catch(e){ o=false; }
+        document.body.removeChild(ta); return o;
+      })();
+      var aref = (window.SYNC ? SYNC.cfg.url.split('//')[1].split('.')[0] : '');
+      window.open('https://supabase.com/dashboard/project/' + aref + '/sql/new?content=' + encodeURIComponent(AUDIT_SQL),
+                  '_blank', 'noopener');
+      setMsg(ac?'wait':'no', ac
+        ? '점검 쿼리가 새 탭에 들어갔습니다. <b>Run</b> 을 누르세요. 비어 있으면 <b>Ctrl+V</b> (복사해 뒀습니다).<br>'+
+          '<b>익명(anon) 정책이 붙은 표</b> 줄에 <b>bohum_scores, bohum_progress</b> 둘만 있어야 정상입니다.'
+        : '새 탭은 열렸지만 자동 복사가 막혔습니다. 탭에 쿼리가 비어 있으면 <code>_audit_names.sql</code> 파일을 여세요.');
+      return;
+    }
+    if(t.id==='stepCheck'){
+      setMsg('wait','확인 중…');
+      SYNC.check().then(function(ok){
+        if(ok){ stepDone(2); setMsg('ok','서버 연결됐습니다. 이제 팀원이 어느 기기에서 응시해도 <a href="#TEAM">팀 현황</a> 에 모입니다.'); }
+        else setMsg('no','아직 미연결 — '+esc(SYNC.state.msg)+'<br>①에서 연 탭에서 <b>Run</b> 을 눌렀는지 확인하고 다시 눌러주세요.');
+      });
+      return;
+    }
+    if(t.id==='stepPush'){
+      setMsg('wait','올리는 중…');
+      SYNC.check().then(function(ok){ return ok? SYNC.pushAllLocal(tload()) : -1; })
+        .then(function(n){
+          if(n<0) setMsg('no','서버에 연결되지 않았습니다 — '+esc(SYNC.state.msg));
+          else { stepDone(3); setMsg('ok', n+'건을 서버로 올렸습니다. <a href="#TEAM">팀 현황</a> 에서 확인하세요.'); }
+        });
+      return;
+    }
+    if(t.id==='syncpull'){ loadTeam(); return; }
+    if(t.id==='syncpush'){
+      if(!window.SYNC) return;
+      t.textContent='올리는 중…';
+      SYNC.check().then(function(ok){ return ok? SYNC.pushAllLocal(tload()) : -1; })
+        .then(function(n){
+          alert(n<0 ? ('서버에 연결되지 않았습니다.\n' + SYNC.state.msg) : (n+'건을 서버로 올렸습니다.'));
+          loadTeam();
+        });
+      return;
+    }
+    if(t.id==='tclear'){ if(confirm('이 기기의 테스트 기록을 전부 지웁니다. 되돌릴 수 없습니다.')){ tsave({}); route(); } return; }
+    // disease card
+    var dzc = t.closest('.dzcard');
+    if(dzc){ location.hash = 'DZ-'+dzc.dataset.i; return; }
+    // disease category
+    if(t.closest('#dznav')){
+      var db = t.closest('#dznav button'); if(db) paintDzGrid(db.dataset.c); return;
+    }
+    // procedure step
+    if(t.closest('.proc3d .pn')){
+      var pb = t.closest('.proc3d .pn button'); if(!pb) return;
+      var box = pb.closest('.proc3d'), k = +pb.dataset.k;
+      Array.prototype.forEach.call(box.querySelectorAll('.pn button'), function(b,j){ b.classList.toggle('on', j===k); });
+      Array.prototype.forEach.call(box.querySelectorAll('.pf'), function(f,j){ f.classList.toggle('on', j===k); });
+      return;
+    }
+    // Q&A
+    var qa = t.closest('.qa .qh');
+    if(qa){ qa.parentElement.classList.toggle('open'); return; }
+    // analysis nav
+    if(t.closest('#adnav')){
+      var ab = t.closest('#adnav button'); if(ab) paintAnalysis(+ab.dataset.i); return;
+    }
+    // design card
+    var dc = t.closest('.dcard');
+    if(dc){ location.hash = 'DS-'+dc.dataset.i; return; }
+    // lesson nav
+    if(t.closest('.lsn-nav')){
+      var lb = t.closest('.lsn-nav button'); if(lb) paintLesson(+lb.dataset.i); return;
+    }
+    // term card
+    var tc = t.closest('.tcard');
+    if(tc){ location.hash = 'T-'+tc.dataset.i; return; }
+    // gallery tabs
+    if(t.closest('#galtab')){
+      var gb = t.closest('#galtab button'); if(gb) paintGal(gb.dataset.g); return;
+    }
+    // drill answer toggle
+    var dli = t.closest('.drill li');
+    if(dli){
+      dli.classList.toggle('open');
+      var tg = dli.querySelector('.tog');
+      if(tg) tg.textContent = dli.classList.contains('open') ? '접기 ▴' : '답 보기 ▾';
+      return;
+    }
+    // case selector
+    if(t.closest('#csel')){
+      var cb = t.closest('#csel button'); if(cb) paintCase(+cb.dataset.i);
+      return;
+    }
+    // db filter
+    if(t.matches('#filt button')){
+      Array.prototype.forEach.call(v.querySelectorAll('#filt button'), function(b){b.classList.toggle('on', b===t);});
+      paintDB(t.dataset.c);
+      return;
+    }
+  });
+}
+function drawer(on){
+  document.getElementById('side').classList.toggle('open', on);
+  document.getElementById('scrim').classList.toggle('on', on);
+}
+document.getElementById('mo').addEventListener('click', function(){
+  drawer(!document.getElementById('side').classList.contains('open'));
+});
+document.getElementById('scrim').addEventListener('click', function(){ drawer(false); });
+document.addEventListener('input', function(e){
+  if(e.target && e.target.id==='srcq'){ paintSrc(undefined, e.target.value); return; }
+  if(e.target && e.target.id==='sgq'){
+    var b = document.getElementById('sgbody');
+    if(b) b.innerHTML = surgTables(e.target.value);
+  }
+});
+window.addEventListener('hashchange', route);
+(function(){
+  var qi = document.getElementById('q'), tmr;
+  qi.addEventListener('input', function(){
+    clearTimeout(tmr);
+    tmr = setTimeout(function(){
+      LASTQ = qi.value;
+      if(LASTQ.trim().length>0){
+        if(location.hash==='#SEARCH') document.getElementById('view').innerHTML = renderSearch(LASTQ);
+        else location.hash = 'SEARCH';
+      }
+    }, 220);
+  });
+  qi.addEventListener('keydown', function(e){ if(e.key==='Escape'){ qi.value=''; history.back(); } });
+  var lb = document.getElementById('lb');
+  lb.addEventListener('click', function(){ lb.classList.remove('on'); document.getElementById('lbi').src=''; });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') lb.classList.remove('on'); });
+})();
+buildNav(); bind(); route();
+})();
+</script>
+</body>
+</html>
