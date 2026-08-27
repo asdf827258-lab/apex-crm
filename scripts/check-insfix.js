@@ -996,6 +996,33 @@ const RDOC =
      '  여덟 벌까지 두고 <b>제일 오래 안 쓴 것</b>부터 버린다 — ' + M.keep);
   is(M.saveFail,
      '  저장이 <b>막히면 말을 한다</b> — 조용히 삼키면 새로고침에 사라지는 걸 아무도 모른다');
+  /* 여덟 벌을 넘기면 옛 자료의 고친 값이 <b>말없이</b> 사라진다. 막을 수는
+     없지만(저장 공간이 한정돼 있다) <b>미리 말할 수는</b> 있다. 화면에
+     안 적어 두면 아홉 번째 자료부터 아무도 모르게 지워진다. */
+  const cap = await page.evaluate(async ({ DOC }) => {
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const sc = insScan(DOC);
+    const h = document.createElement('div');
+    h.id = 'CAP'; h._scan = sc; sc.fixOpen = 1; sc.dAll = 1;
+    h.innerHTML = insCardHtml(sc);
+    document.body.appendChild(h);
+    const before = h.textContent;
+    const ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '4000');
+    insFixDone(ins[1]);
+    /* 다시 그리는 것은 <b>다음 차례</b>에 일어난다 (탭이 안 튕기게) */
+    await new Promise(r => setTimeout(r, 0));
+    const after = document.getElementById('CAP').textContent.replace(/\s+/g, ' ');
+    return { quiet: !/벌까지/.test(before), said: after,
+             keep: (typeof INS_FIX_KEEP === 'number') ? INS_FIX_KEEP : -1 };
+  }, { DOC });
+  is(cap.keep === 8 && cap.said.indexOf('이 브라우저에 자료 ' + cap.keep + '벌까지') >= 0,
+     '  <b>몇 벌까지 남는지 화면에 적어 둔다</b> — 안 적으면 아홉 번째 자료부터 말없이 지워진다 · ' +
+     cap.keep + '벌');
+  is(/다시 고쳐 주셔야 합니다/.test(cap.said),
+     '  <b>그때 무엇을 해야 하는지</b>까지 적는다');
+  is(cap.quiet, '  고치기 전에는 <b>안 뜬다</b> — 손대신 뒤에 필요한 말이다');
 
   /* ─────────────────────────────────────────────────────────────── */
   /* 이 칸은 <b>만원</b> 단위다. 「5,000만원」 을 적으려다 50000000 을 치면
