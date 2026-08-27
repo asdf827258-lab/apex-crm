@@ -700,6 +700,101 @@ const RDOC =
      '  AI 에게도 <b>화면과 같은 말</b>을 한다 — 「전부 원본 판정」 이라고 하지 않는다');
 
   /* ─────────────────────────────────────────────────────────────── */
+  /* ── 「없다」 고 하신 담보가 <b>특약 목록에는 금액</b>을 달고 있을 때 ──
+     리포트 한 장에 「일반암진단비 0원 · 미가입」 과 「일반암진단비
+     3,000만」 이 나란히 선다. 고객이 그것을 먼저 본다. 어느 쪽이 맞는지는
+     우리가 모르니 <b>고치지 않고 짚어만</b> 준다 (CLAUDE.md 1번).    */
+  console.log('\n[19] 한 장에 두 숫자가 서지 않게 짚어 준다');
+  const C = await page.evaluate(async ({ RDOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    /* 담보진단과 특약에 <b>같은 이름</b>이 있는 자료를 만든다 */
+    const doc = RDOC.split('홍길동 님의 상품별')[0] +
+      '홍길동 님의 담보별 진단현황\n' +
+      '암 진단 일반암진단비 권장 5,000만 1 가입 3,000만 1 부족 -2,000만\n' +
+      '홍길동 님의 상품별' + RDOC.split('홍길동 님의 상품별')[1];
+    const sc = insScan(doc);
+    const h = document.createElement('div');
+    h.id = 'CH'; h._scan = sc;
+    sc.fixOpen = 1; sc.dAll = 1; sc.rAll = 1;
+    h.innerHTML = insCardHtml(sc);
+    document.body.appendChild(h);
+    O.diagName = sc.diags[0].name;
+    O.riderHas = (sc.riders[0].rows || []).some(r => /일반암진단비/.test(r.name));
+    /* 안 고쳤으면 조용해야 한다 */
+    O.quiet = insFixCount(sc).clashN;
+    /* 담보진단만 0 으로 못 박는다 — 특약 줄은 3,000만 그대로 */
+    const ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '0');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    const H = document.getElementById('CH');
+    const c = insFixCount(sc);
+    O.clashN = c.clashN;
+    O.clash = (c.clash[0] || {}).name + '=' + (c.clash[0] || {}).amount;
+    O.txt = H.textContent.replace(/\s+/g, ' ');
+    O.said = /서로 다른 숫자/.test(O.txt) && /특약 목록에는 금액을 달고/.test(O.txt);
+    O.noFix = /어느 쪽이 맞는지는 저희가 모릅니다/.test(O.txt);
+    O.head = /서로 다른 숫자 1개/.test((H.querySelector('.if-ph') || {}).textContent || '');
+    O.brief = insBrief(sc);
+    /* ── 금액을 <b>못 읽어 비운</b> 특약 줄은 모순이 아니다 ────────────
+       모르는 것을 「다르다」 고 하면 헛알람이다. 어젯밤 담보를 통째로
+       버리던 자리가 바로 이 빈 칸이라, 이런 줄이 흔하다 (CLAUDE.md 8번). */
+    const rr = sc.riders[0].rows.filter(r => /일반암진단비/.test(r.name))[0];
+    const keepA = rr.amount, keepNa = rr.na;
+    rr.amount = ''; rr.na = null;
+    O.emptyQuiet = insFixCount(sc).clashN;
+    rr.amount = keepA; rr.na = keepNa;
+    /* 3,000 을 그대로 두고 다시 0 이 아니게 하면 조용해져야 한다 */
+    insFixSet(H.querySelectorAll('.if-i')[1], 0, 'have', '5000');
+    O.after = insFixCount(sc).clashN;
+    return O;
+  }, { RDOC });
+  is(C.riderHas && C.quiet === 0,
+     '  안 고쳤으면 <b>조용하다</b> — 같은 이름이 두 표에 있는 것만으로는 안 울린다');
+  is(C.clashN === 1 && /일반암진단비=3,000만/.test(C.clash),
+     '  0 으로 못 박았는데 특약에 금액이 남으면 <b>세어 둔다</b> — ' + C.clash);
+  is(C.said, '  화면이 <b>무엇과 무엇이 다른지</b> 말한다');
+  is(C.noFix, '  <b>어느 쪽이 맞는지는 모른다</b>고 밝힌다 — 우리가 안 고친다');
+  is(C.head, '  머리글에도 뜬다 — 접혀 있어도 보인다');
+  is(/담보진단에서 0\(없음\)/.test(C.brief) && /두 숫자를 나란히 적지 말고/.test(C.brief),
+     '  AI 에게도 <b>미리</b> 말한다 — 안 말하면 둘 다 사실로 적는다');
+  is(C.emptyQuiet === 0,
+     '  금액을 <b>못 읽어 비운</b> 특약 줄은 안 잡는다 — 모르는 것을 「다르다」 고 하면 헛알람이다 · ' +
+     C.emptyQuiet + '개');
+  is(C.after === 0, '  0 이 아니게 고치면 <b>조용해진다</b> — ' + C.after + '개');
+
+  /* 덱은 <b>고객에게 인쇄돼 나가는 장</b>이다. 화면 카드에서 「원본이」 를
+     뺐는데 덱이 「이 표는 원본의 판정입니다」 라고 하면, 고객이 우리가
+     셈한 값을 원본으로 읽는다. 두 곳이 같은 말을 해야 한다 (5번). */
+  const D = await page.evaluate(async ({ DOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const sc = insScan(DOC);
+    const h = document.createElement('div');
+    h.id = 'DK'; h._scan = sc; sc.fixOpen = 1; sc.dAll = 1;
+    h.innerHTML = insCardHtml(sc);
+    document.body.appendChild(h);
+    const flat = (s) => bjDeckHtml(bjLocalDeck([{ name: 'a.pdf', text: DOC }], {}, 'AI 없음', s))
+      .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    O.before = flat(insScan(DOC));
+    const ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '4000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.after = flat(insScan(DOC));
+    return O;
+  }, { DOC });
+  is(/이 표는 원본의 판정입니다/.test(D.before),
+     '  안 고쳤으면 덱은 그대로 <b>「이 표는 원본의 판정입니다」</b>');
+  is(!/이 표는 원본의 판정입니다/.test(D.after) &&
+     /설계사가 확인해 고친 값이 1칸 들어 있습니다/.test(D.after) &&
+     /앱이 두 값을 견줘 다시 셈한 것/.test(D.after),
+     '  고치면 <b>덱도 화면과 같은 말</b>을 한다 — 고객이 우리 셈을 원본으로 읽지 않게');
+
+  /* ─────────────────────────────────────────────────────────────── */
   /* ── 옛 숫자인 채로 <b>밖으로 나가려</b> 할 때 여쭙는다 ─────────────
      화면 카드에는 「아래 리포트는 고치기 전 값」 이라고 크게 적어 두었다.
      그런데 그 경고는 <b>no-print</b> 라 종이에는 한 글자도 안 나간다 —
