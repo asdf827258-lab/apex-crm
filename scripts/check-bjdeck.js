@@ -398,6 +398,26 @@ async function seen(page) {
   is(mask.kept === '홍길동', '원본 리포트를 <b>망가뜨리지 않는다</b> — 저장본만 가린다');
   is(mask.md, '가린 뒤에도 저장할 글이 제대로 만들어진다');
 
+  /* ── 아무것도 못 읽었으면 <b>없는 숫자에 대고 정확하다고 하지 않는다</b> ──
+     스캔본 증권이면 글자가 거의 안 뽑혀 읽어 낸 것이 하나도 없다. 그런데
+     안내 장이 「숫자는 앱이 규칙으로 읽어 정확하지만」 이라고 적고 있었고,
+     바로 다음 장은 「담보를 읽지 못했습니다」 였다 — 한 장 안에서 두 말이다.
+     이 장은 <b>고객에게 인쇄돼 나간다</b> (CLAUDE.md 1번).            */
+  const blind = await page.evaluate(() => {
+    const t = (sc) => bjDeckHtml(bjLocalDeck([{ name: '스캔본.pdf', text: '   보험 ' }], {}, 'AI 없음', sc))
+      .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const none = t(null);
+    return { none: none,
+             money: (none.match(/[0-9][0-9,]*\s*(만원|억)/g) || []).length,
+             saysNone: /읽어 낸 숫자가 없습니다/.test(none),
+             noBrag: !/숫자는 앱이 규칙으로 읽어 정확하지만/.test(none),
+             tells: /무엇을 확인해야 하는지/.test(none) };
+  });
+  is(blind.money === 0, '  못 읽은 자료에는 <b>아무 숫자도 만들지 않는다</b> — 지어낸 금액 ' + blind.money + '개');
+  is(blind.saysNone && blind.noBrag,
+     '  <b>없는 숫자에 대고 「정확하다」 고 하지 않는다</b> — 한 장 안에서 두 말이 되면 고객이 먼저 본다');
+  is(blind.tells, '  대신 <b>무엇을 확인해야 하는지</b>를 적는다');
+
   /* ── 7 ── */
   console.log('\n[7] 좁은 화면');
   await page.setViewportSize({ width: 430, height: 900 });
