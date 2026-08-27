@@ -101,6 +101,45 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     is(hits === 0 || screened >= 1, '  ' + path.basename(f) + ' 도 tnum 을 화면에만 쓴다');
   });
 
+  /* ── 「tnum」 은 <b>철자가 둘</b>이다 ──────────────────────────────
+     <code>font-feature-settings:"tnum"</code> 과
+     <code>font-variant-numeric:tabular-nums</code> 는 <b>같은 기능</b>을 켠다.
+     글자로만 잡으면 다른 철자로 그대로 들어온다 — 실제로 보장분석
+     리포트 덱(bj-bdv·bj-civ, <b>금액 칸</b>)이 그 철자로 켜 두고
+     인쇄까지 나가고 있었다. 제안서 쪽만 지키고 있었던 것이다.
+
+     그래서 <b>글자가 아니라 결과를 잰다</b> — 인쇄 화면으로 바꿔 놓고
+     그 칸의 <b>계산된 값</b>을 본다. 철자가 몇 개든 이 자리는 못 지나간다. */
+  const num = await page.evaluate(() => {
+    if (typeof bjCssMount === 'function') bjCssMount();
+    if (typeof insCssMount === 'function') insCssMount();
+    let t = document.getElementById('TNUM');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = 'TNUM';
+      document.body.appendChild(t);
+    }
+    t.className = 'bj-deck';
+    t.innerHTML = '<div class="bj-s"><div class="bj-pg">3</div>' +
+      '<div class="bj-bdv">3억 5,719만원</div><div class="bj-civ">500,000원</div></div>';
+    return true;
+  });
+  const numOn = async () => page.evaluate(() =>
+    ['.bj-pg', '.bj-bdv', '.bj-civ'].map(s => {
+      const e = document.querySelector('#TNUM ' + s), c = getComputedStyle(e);
+      return (/tabular/.test(c.fontVariantNumeric) || /tnum/.test(c.fontFeatureSettings)) ? s : null;
+    }).filter(Boolean));
+  await page.emulateMedia({ media: 'screen' });
+  const onScreen = await numOn();
+  await page.emulateMedia({ media: 'print' });
+  const onPrint = await numOn();
+  await page.emulateMedia({ media: 'screen' });
+  is(num && onPrint.length === 0,
+     '  리포트 덱의 <b>금액 칸</b>도 종이에서는 tnum 이 꺼진다 — ' +
+     '켜져 있으면 ' + (onPrint.join(' · ') || '(없음)') + ' 에서 숫자가 유니코드를 잃는다');
+  is(onScreen.length === 3,
+     '  화면에서는 그대로 켜 둔다 — 자릿수가 맞아야 눈으로 검산이 된다 · ' + onScreen.length + '/3');
+
   console.log('\n[5] 왕복 — 우리가 뽑은 제안서를 우리가 다시 읽는가');
   const doc = await page.evaluate(() => {
     ['apex_baba_rows', 'apex_baba_plans', 'apex_baba_prop'].forEach(k => localStorage.removeItem(k));
