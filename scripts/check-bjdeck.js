@@ -364,6 +364,40 @@ async function seen(page) {
   is(css.mounted && css.len > 2000, '리포트 전용 스타일이 한 번만 심긴다');
   is(css.print, '인쇄할 때 슬라이드가 잘리지 않게 되어 있다');
 
+  /* ── 종이에는 실명, <b>서버에는 가린 이름</b> ──────────────────────
+     「고객 365일 저장」 을 누르면 리포트 글이 그대로 서버로 올라간다.
+     증권에서 읽은 <b>실명</b>이 표지에도 본문에도 들어 있어 여태 그대로
+     저장되고 있었다. 실명은 이 브라우저에만 둔다 (CLAUDE.md 3번).
+     화면과 종이는 안 건드린다 — 그 자리에는 고객 본인이 앉아 있다.  */
+  const mask = await page.evaluate(() => {
+    const DOC = '홍길동 님의 전체 계약리스트\n계약 건수 1건 합계보험료 500,000원\n' +
+      '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+      '홍길동 님의 담보별 진단현황\n' +
+      '암 진단 일반암진단비 권장 5,000만 1 가입 3,000만 1 부족 -2,000만\n';
+    const sc = insScan(DOC);
+    const deck = bjLocalDeck([{ name: 'a.pdf', text: DOC }], {}, 'AI 없음', sc);
+    document.body.insertAdjacentHTML('beforeend', '<div id="pres_mk"></div>');
+    const res = document.getElementById('pres_mk');
+    res._scan = sc; res._deck = deck;
+    res.innerHTML = '<div id="doc_pres_mk">' + bjDeckHtml(deck) + '</div>';
+    let sent = null;
+    const real = window.osRepSaveToClient;
+    window.osRepSaveToClient = function (kind, title, content) { sent = content; };
+    bjSave('mk');
+    window.osRepSaveToClient = real;
+    const j = JSON.stringify(sent || {});
+    return { real: (j.match(/홍길동/g) || []).length,
+             masked: (j.match(/홍\*동/g) || []).length,
+             screen: (bjDeckHtml(deck).match(/홍길동/g) || []).length,
+             kept: deck.client.name,
+             md: !!(sent && sent.md && sent.md.length > 200) };
+  });
+  is(mask.real === 0 && mask.masked > 0,
+     '서버로 가는 글에는 <b>실명이 한 번도 없다</b> — 가린 이름 ' + mask.masked + '군데 (실명 ' + mask.real + ')');
+  is(mask.screen > 0, '화면·종이는 <b>그대로 실명</b> — 그 자리에는 고객 본인이 앉아 있다');
+  is(mask.kept === '홍길동', '원본 리포트를 <b>망가뜨리지 않는다</b> — 저장본만 가린다');
+  is(mask.md, '가린 뒤에도 저장할 글이 제대로 만들어진다');
+
   /* ── 7 ── */
   console.log('\n[7] 좁은 화면');
   await page.setViewportSize({ width: 430, height: 900 });
