@@ -11677,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 11:40';
-var APP_BUILD_NOTE='<b>「고객 365일 저장」 이 증권에서 읽은 실명을 그대로 서버에 올리고 있었습니다.</b> 리포트를 담으면 그 글이 통째로 올라가는데, 표지에도 본문에도 <b>실명</b>이 들어 있었습니다. 실명은 이 브라우저에만 두는 것이 규칙입니다 — 서버에는 가린 이름만 갑니다. 이제 <b>나가는 것만</b> 가립니다(홍길동 → 홍*동). <b>화면과 종이는 그대로 실명</b>입니다 — 그 자리에는 고객 본인이 앉아 계십니다. 원본 리포트도 안 건드려, 인쇄하면 이름이 그대로 나옵니다. 함께: <b>「tnum」 은 철자가 둘인데 우리는 한쪽만 막고 있었습니다</b> — 리포트 덱의 <b>금액 칸</b>이 다른 철자로 켜져 인쇄에 그대로 나갔습니다. 켠 채로 PDF 로 저장하면 숫자가 유니코드를 잃어 프로그램이 「억 만원」 만 읽습니다. 이제 화면에서만 켜고, 점검도 <b>글자가 아니라 결과로</b> 잽니다. 그리고 <b>한 장에 두 숫자가 나란히 서던 자리</b>(담보진단 0 vs 특약 금액)를 짚어 주고, <b>덱도 화면과 같은 말</b>을 하게 했으며, <b>옛 숫자인 채로 인쇄·저장·내려받기</b> 하려 하면 한 번 여쭙습니다. <code>check-insfix</code> 19군 · <code>check-bjdeck</code> 47가지 · <code>check-pdfread</code> · <code>check-babaread</code> 9군 · 서른여섯 자리를 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
+var APP_BUILD='2026-08-28 12:15';
+var APP_BUILD_NOTE='<b>「고객 365일 저장」 이 실명을 그대로 서버에 올리고 있었습니다 — 여섯 도구 전부.</b> 리포트를 담으면 그 글이 통째로 올라가는데, 보장분석은 <b>증권에서 읽은 이름</b>을 표지에 싣고 AI 가 쓴 글은 인사말·맺음말에 이름을 흩뿌립니다. 실명은 이 브라우저에만 두는 것이 규칙입니다. 이제 <b>나가는 목 한 곳</b>(osRepSaveToClient)에서 가립니다 — 본문도 제목도. 도구마다 각자 가리면 새 도구가 생기는 날 그 도구만 그냥 나갑니다. <b>무엇이 이름인지 짐작하지 않습니다</b> — 사장님이 적어 두신 그 이름만 바꿉니다. 안 적어 두셨으면 아무것도 안 건드리고, 한 글자 이름으로는 안 가립니다(「김」 으로 가리면 <b>김치·김밥</b>까지 걸립니다). 새 고객을 만들 때 <b>실명을 이 브라우저에 남기게</b> 했습니다 — 안 남기면 방금 적으신 이름을 앱이 잊어 화면에도 김*수 로만 뜹니다. <b>화면과 종이는 그대로 실명</b>입니다 — 그 자리에는 고객 본인이 앉아 계십니다. 함께: <b>「tnum」 철자가 둘인데 한쪽만 막고 있어</b> 리포트 <b>금액 칸</b>이 인쇄에 그대로 나갔고(숫자가 유니코드를 잃습니다), <b>한 장에 두 숫자가 나란히 서던 자리</b>(담보진단 0 vs 특약 금액)를 짚어 주며, <b>옛 숫자인 채로 인쇄·저장·내려받기</b> 하려 하면 한 번 여쭙습니다. 새 점검 <code>check-repmask</code> 를 포함해 <b>마흔한 자리를 되돌려 전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -43130,7 +43130,12 @@ function osPickClient(cb){
     var name=(document.getElementById('osCliPickNew').value||'').replace(/^\s+|\s+$/g,'');if(!name){toast('이름을 입력하세요');return;}
     sb.from('clients').insert({advisor_id:OS.session.user.id,name_masked:osMaskName(name),consent_status:'none'}).select('id,name_masked').then(function(r){
       if(r.error){toast('고객 생성 실패: '+r.error.message);return;}
-      var c=(r.data&&r.data[0])||{};close();cb(c.id,c.name_masked||name);
+      var c=(r.data&&r.data[0])||{};
+      /* 서버에는 가린 이름만 갔고, <b>실명은 이 브라우저에</b> 둔다
+         (CLAUDE.md 3번). 안 두면 방금 적으신 이름을 앱이 잊어버려
+         화면에도 김*수 로만 뜨고, 나가는 글에서 실명을 골라낼 수도 없다. */
+      try{if(typeof cmRealSet==='function')cmRealSet(c.id,name);}catch(e){}
+      close();cb(c.id,c.name_masked||name);
     });
   };
   sb.from('clients').select('id,name_masked').order('created_at',{ascending:false}).then(function(r){
@@ -43140,9 +43145,30 @@ function osPickClient(cb){
     var bs=host.querySelectorAll('.osCliPickRow');for(var i=0;i<bs.length;i++){(function(b){b.onclick=function(){var id=b.getAttribute('data-id'),nm=b.getAttribute('data-nm');close();cb(id,nm);};})(bs[i]);}
   });
 }
+/* ── 서버에는 <b>가린 이름만</b> 간다 — 나가는 목이 하나다 ──────────
+   여섯 도구가 이 함수를 지나 saved_reports 로 글을 올린다. 그 글에
+   실명이 섞여 있으면 그대로 서버에 남는다. 실명은 이 브라우저에만
+   둔다 (CLAUDE.md 3번).
+
+   무엇이 이름인지 <b>짐작하지 않는다</b> — 사장님이 적어 두신 그
+   이름(cmRealOf)만 골라 바꾼다. 없으면 아무것도 안 한다.
+   가리는 곳이 둘이면 한쪽만 고쳐지는 날이 온다 (5번).             */
+function osRepMask(content,cid,nm){
+  var real='';
+  try{real=(typeof cmRealOf==='function')?cmRealOf(cid):'';}catch(e){}
+  if(!real||real.length<2)return content;
+  var m=nm||((typeof osMaskName==='function')?osMaskName(real):'');
+  if(!m||m===real)return content;
+  var s;
+  try{s=JSON.stringify(content);}catch(e){return content;}
+  if(s.indexOf(real)<0)return content;
+  try{return JSON.parse(s.split(real).join(m));}catch(e){return content;}
+}
 function osRepSaveToClient(kind,title,content){
   osPickClient(function(cid,nm){
     var sb=osClient();if(!sb)return;
+    content=osRepMask(content,cid,nm);
+    title=osRepMask({t:title},cid,nm).t;
     sb.from('saved_reports').insert({advisor_id:OS.session.user.id,client_id:cid,kind:kind,title:title,content:content}).then(function(r){
       if(r.error){var m=r.error.message||'';if(/saved_reports/i.test(m))toast(sqlNeedText('상담자료를 담을 자리'),9000);else toast('저장 실패: '+m);return;}
       toast('💾 '+(nm||'고객')+'님 자료로 저장했습니다 — 고객 365일에서 확인하세요');
