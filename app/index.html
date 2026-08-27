@@ -1202,6 +1202,11 @@ body.carfault-mode #carFaultScreen{display:block;}
 body.mktalk-mode .app{display:none;}
 body.mktalk-mode #mkTalkScreen{display:block;}
 #mkTalkScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 교육 운영 커리큘럼 — 미끼상품&접촉전략과 같은 틀 */
+#eduPlanScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.eduplan-mode .app{display:none;}
+body.eduplan-mode #eduPlanScreen{display:block;}
+#eduPlanScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
 #fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.fptalk-mode .app{display:none;}
@@ -1370,6 +1375,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitMkTalk()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadMkTalk()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openMkTalkNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 교육 운영 커리큘럼 -->
+<div id="eduPlanScreen">
+  <iframe id="eduPlanFrame" class="fin-frame" title="APEX 교육 운영 커리큘럼"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitEduPlan()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadEduPlan()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openEduPlanNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -10412,6 +10427,7 @@ var TABS=[
  ]},
  {group:'교육 자료',items:[
    {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
+   {id:'edu_plan',icon:'🎓',title:'교육 운영 커리큘럼',cnt:'9',ak:'업무매뉴얼 교육 신입 매니저 조회 커리큘럼 운영'},
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
       숨긴 다른 것들과 같다: 🔎 메뉴 찾기·음성·?go=apexmap 주소로 그대로 열린다. */
@@ -11302,7 +11318,7 @@ var lastTab='dashboard';
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode',
                    'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
-                   'apexmap-mode'];
+                   'eduplan-mode','apexmap-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -11363,6 +11379,13 @@ function go(tab){
     mountMkTalk();
     osFullMode('mktalk-mode');
     navMark('mikki_talk');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='edu_plan'){
+    mountEduPlan();
+    osFullMode('eduplan-mode');
+    navMark('edu_plan');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -11677,8 +11700,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 18:30';
-var APP_BUILD_NOTE='<b>앞 고객에게 쓴 AI 문장이 다음 고객 제안서에 그대로 남고 있었습니다.</b> AI 가 준 말은 <b>성공했을 때만</b> 덮어썼습니다. 그래서 새 고객 자료로 갈아 끼우고 AI 가 죽으면(끊김·한도·키 만료), 숫자는 새 고객 것인데 <b>말은 앞 고객 것</b>이 실렸습니다 — 아무 표시도 없이. 이제 <b>묻기 전에 지웁니다.</b> 못 받으면 그 자리는 비는 것이 맞습니다 — 말 없는 제안서가 남의 말이 실린 제안서보다 낫습니다. <b>빈 표를 여실 때</b>(새 고객)도 지웁니다. 그리고 AI 가 <b>무엇을 보고 쓴 말인지</b> 적어 두어, 뒤에 숫자를 고치시면 <b>「아래 말은 숫자를 고치시기 전에 쓴 것입니다 — 다시 만들기를 눌러 주세요」</b> 라고 그 자리에서 말합니다. 지우지는 않습니다 — 사장님이 보시고 정하실 일입니다. 방금 받은 말에는 아무 말도 안 붙습니다. <code>check-babaread</code> [10] 일곱 가지 — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다.';
+var APP_BUILD='2026-08-29 09:10';
+var APP_BUILD_NOTE='<b>신입을 어떻게 가르치고 매니저가 매일 무엇을 하는지가 어디에도 적혀 있지 않았습니다.</b> 12주 지식 과정은 「본인 점검란」에, 미끼 화법 스물일곱 장은 「미끼상품&amp;접촉전략」에 이미 있었지만, <b>그것을 언제 누가 확인하는지</b>는 사람 머릿속에만 있었습니다. 그래서 매니저마다 다르게 굴렀습니다. 「교육 운영 커리큘럼」을 세웠습니다 — <b>월요일·목요일 아침 조회 대본</b>(각 마흔 분, 분 단위로), 팀원이 막혔다고 말할 때 <b>그 자리에서 어느 화면을 여는지</b>(커버 처방표 여덟 줄), 매니저의 하루 일곱 칸, 신입의 하루와 한 달, 흔적으로만 판정하는 게이트 넷, 그리고 실전 세션 카드 넷(9월 3일 소식지 정리·운전자보험 역산·미끼·연금달러 계산기). <b>있는 자료를 다시 적지 않고 가리키기만 합니다</b> — 두 벌이 되면 한쪽만 낡기 때문입니다. 역산 카드에는 <b>수수료 숫자를 한 개도 적지 않았습니다</b>. 적어 두면 회사가 표를 바꿨을 때 신입이 틀린 숫자로 계산합니다 — 대신 「어디서 가져오는 값인가」만 적었습니다. <code>check-eduplan</code> 이 이것을 지킵니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12193,6 +12216,11 @@ function mountMkTalk(){var f=$('mkTalkFrame');if(!f||f._mounted)return;f.src=MKT
 function reloadMkTalk(){var f=$('mkTalkFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMkTalk,30);toast('미끼상품&접촉전략 새로고침');}}
 function openMkTalkNewTab(){var w=window.open(MKTALK_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitMkTalk(){go(lastTab||'home');}
+var EDUPLAN_URL='교육/index.html';
+function mountEduPlan(){var f=$('eduPlanFrame');if(!f||f._mounted)return;f.src=EDUPLAN_URL;f._mounted=true;}
+function reloadEduPlan(){var f=$('eduPlanFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEduPlan,30);toast('교육 운영 커리큘럼 새로고침');}}
+function openEduPlanNewTab(){var w=window.open(EDUPLAN_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitEduPlan(){go(lastTab||'home');}
 function exitMikki(){go(lastTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
@@ -15316,6 +15344,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
+  else if(document.body.classList.contains('eduplan-mode'))exitEduPlan();
   else if(document.body.classList.contains('apexmap-mode'))exitApexMap();
 });
 
