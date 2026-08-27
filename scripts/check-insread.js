@@ -437,6 +437,63 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(wired.indexOf('bojang') >= 0 && wired.indexOf('baba') >= 0 && wired.indexOf('compare') >= 0,
     '보장분석·비포애프터·제안서비교에 붙어 있다 (' + wired.join(', ') + ')');
 
+  /* ── [12] 두 사람의 자료가 <b>한 표에 섞이는</b> 자리 ────────────────
+     앞 고객 PDF 를 지우지 않고 새 것을 얹으면 글이 이어 붙는다. 그러면
+     화면이 <b>「홍길동 · 유효 2건 · 월 보험료 800,000원」</b> 이 되어
+     <b>임꺽정 님의 계약과 보험료가 홍길동 님 것으로</b> 합산된다.
+     남의 보장을 이 고객 것으로 읽어 주는 셈이고, 아무 말도 없었다.
+
+     그렇다고 「○○ 님」 을 통째로 잡으면 <b>고객님·사장님·선생님</b>에
+     걸려 늘 울린다 — 헛알람은 안 잡는 것보다 나쁘다 (CLAUDE.md 8번).
+     그래서 <b>문서가 스스로 붙인 구간 머리글</b>에서만 이름을 모은다. */
+  console.log('\n[12] 두 사람의 자료가 섞이면 말한다 — 헛알람 없이');
+  const mix = await page.evaluate(() => {
+    const A = '홍길동 님의 전체 계약리스트\n계약 건수 1건 합계보험료 500,000원\n' +
+      '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+      '홍길동 님의 담보별 진단현황\n' +
+      '암 진단 일반암진단비 권장 5,000만 1 가입 3,000만 1 부족 -2,000만\n';
+    const B = '임꺽정 님의 전체 계약리스트\n계약 건수 1건 합계보험료 300,000원\n' +
+      '1 정상 현대해상 무배당 굿앤굿 2020-05-01 월납 30 년 100 세 300,000 원\n' +
+      '임꺽정 님의 담보별 진단현황\n' +
+      '암 진단 일반암진단비 권장 5,000만 1 가입 1,000만 1 부족 -4,000만\n';
+    /* 같은 사람 자료 두 장(증권+가입설계서) · 존칭이 섞인 글 — 둘 다 조용해야 한다 */
+    const SAME = A + '\n홍길동 님의 상품별 가입담보상세\n' +
+      '삼성화재 | 가입일자 : 2018-03-01 | 무배당 튼튼종합보험 1 정액 일반암진단비 3,000만\n';
+    const POLITE = A + '\n고객님께 안내드립니다. 사장님, 선생님, 어머님께서도 확인해 주세요.\n';
+    const read = (t) => {
+      const sc = insScan(t);
+      const h = document.createElement('div');
+      h._scan = sc; h.innerHTML = insCardHtml(sc);
+      return { names: sc.whoAll || [], txt: (h.textContent || '').replace(/\s+/g, ' '),
+               brief: insBrief(sc), fee: sc.total.fee, n: sc.total.n };
+    };
+    const warned = (r) => /이름이 \d개 있습니다/.test(r.txt);
+    const one = read(A), same = read(SAME), pol = read(POLITE), two = read(A + '\n' + B);
+    return {
+      oneN: one.names.length, oneQuiet: !warned(one),
+      sameN: same.names.length, sameQuiet: !warned(same),
+      polN: pol.names.length, polQuiet: !warned(pol),
+      twoN: two.names.length, twoWarn: warned(two),
+      twoNames: two.names.join(' · '),
+      dunno: /어느 쪽이 이 고객인지는 저희가 모릅니다/.test(two.txt),
+      why: /두 사람의 계약과 보험료가 한 표에 합쳐집니다/.test(two.txt),
+      brief: /두 사람의 자료가 섞였을 수 있다/.test(two.brief),
+      briefHow: /합계를 단정해 쓰지 말고/.test(two.brief),
+      merged: two.n + '건 · ' + two.fee + '원'
+    };
+  });
+  is(mix.oneN === 1 && mix.oneQuiet, '  자료가 한 사람 것이면 <b>조용하다</b>');
+  is(mix.sameN === 1 && mix.sameQuiet,
+     '  같은 사람 자료를 <b>두 장</b> 올려도 조용하다 (증권 + 가입설계서)');
+  is(mix.polN === 1 && mix.polQuiet,
+     '  <b>고객님·사장님·선생님·어머님</b>이 섞여도 조용하다 — 헛알람은 안 잡는 것보다 나쁘다');
+  is(mix.twoN === 2 && mix.twoWarn,
+     '  두 사람 자료가 섞이면 <b>말한다</b> — ' + mix.twoNames + ' (합쳐지면 ' + mix.merged + ')');
+  is(mix.why, '  <b>왜 위험한지</b>를 적는다 — 계약과 보험료가 한 표에 합쳐진다');
+  is(mix.dunno, '  <b>어느 쪽이 이 고객인지는 모른다</b>고 밝힌다 — 우리가 고르지 않는다');
+  is(mix.brief && mix.briefHow,
+     '  AI 에게도 말하고 <b>어떻게 쓰라고</b>까지 일러 준다 — 안 말하면 합계를 그대로 쓴다');
+
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 100) : ''));
 
