@@ -1287,6 +1287,57 @@ const RDOC =
     };
   });
   is(three.viaOne, '  고치는 칸 <b>넷이 모두</b> insFixNum 하나를 부른다');
+  /* ── <b>보험료 칸은 원</b>이라 같은 일이 반대로 터졌다 ──────────────
+     「15만」 이 <b>15원</b> 이 됐다. 월 15만원짜리 계약이 목록에 월
+     15원으로 서면, 제안서의 「보험료가 이만큼 줄어듭니다」 가 통째로
+     거짓이 된다. 금액 낱말(억·만)은 제 값이 정해져 있고, 세는 낱말
+     (천·백)과 맨 숫자는 칸의 단위를 센다 — 그래서 원 칸의 「5천」 은
+     5,000원이고 만원 칸의 「3천」 은 3,000만원이다.                */
+  const WON = [
+    ['150,000', 150000, '콤마'],
+    ['150000', 150000, '맨 숫자는 칸의 단위(원)'],
+    ['15만', 150000, '<b>만</b> — 여태 15원이었다'],
+    ['15만원', 150000, '만원'],
+    ['5천', 5000, '원 칸의 「5천」 은 <b>5,000원</b> (만원 칸이면 3,000만원)'],
+    ['30만5천', 305000, '만+천'],
+    ['1억', 100000000, '억'],
+    ['0', 0, '0 은 값이다'],
+    ['', null, '빈 칸은 지우개'],
+    ['-50000', null, '음수는 모름'],
+    ['십오만', null, '한글 숫자는 모름'],
+  ];
+  const won = await page.evaluate((WON) => {
+    const real = window.toast; window.toast = () => {};
+    const got = WON.map(([t]) => insFixNum(t, 1));
+    window.toast = real;
+    return got;
+  }, WON);
+  WON.forEach(([t, want, why], i) => {
+    is(won[i] === want,
+       '  보험료 칸 「' + (t || '(빈 칸)') + '」 → <b>' +
+       (want === null ? '모름' : want.toLocaleString()) + '원</b> · ' + why +
+       (won[i] === want ? '' : ' · 실제로는 ' + (won[i] === null ? '모름' : won[i])));
+  });
+  const prem = await page.evaluate(() => {
+    ['apex_baba_plans'].forEach(k => localStorage.removeItem(k));
+    BABA.plans = null;
+    const real = window.toast; window.toast = () => {};
+    babaPlanAdd('b');
+    const id = babaPlanOf('b')[0].id;
+    babaPlanSet(id, 'prem', '15만');
+    const one = babaPlanOf('b')[0].prem;
+    babaPlanSet(id, 'prem', '');
+    const gone = babaPlanOf('b')[0].prem;
+    window.toast = real;
+    return { one: one, gone: gone, sum: (BABA.plans[0].prem === null) };
+  });
+  is(prem.one === 150000,
+     '  진짜 보험료 칸에 「15만」 → <b>150,000원</b> · ' +
+     (prem.one === null ? '모름' : prem.one.toLocaleString()));
+  is(prem.gone === null,
+     '  비우면 <b>모름</b>이다 — 0 원이 아니다 (0 이면 「공짜」 라는 뜻이 된다)');
+  is(/insFixNum\s*\(\s*v\s*,\s*1\s*\)/.test(await page.evaluate(() => String(babaPlanSet))),
+     '  보험료 칸이 <b>원 칸이라고 밝히고</b> 부른다 — 안 밝히면 만원으로 읽는다');
   is(three.ownStrip === 0,
      '  제 손으로 숫자만 뽑아 쓰는 자리가 없다 — ' + three.ownStrip + '곳 ' +
      '(있으면 「1억」 이 그 칸에서만 1만원이 된다)');
