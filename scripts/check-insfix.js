@@ -35,7 +35,9 @@
      7. 화면·AI 에 <b>고친 값이라고 밝히는가</b> · 옛 리포트를 경고하는가
      8. <b>헛알람이 없는가</b> — 안 고쳤으면 조용한가
      9. 고친 뒤에도 <b>탭이 옆 칸으로 가는가</b> — 다시 그리면서 지금 눌린
-        칸을 지워 버리면, 서른일곱 줄 표에서 한 칸마다 다시 눌러야 한다 */
+        칸을 지워 버리면, 서른일곱 줄 표에서 한 칸마다 다시 눌러야 한다
+    10. <b>특약</b>도 같은 길로 고쳐지는가 — 금액을 못 믿는다고 담보를
+        버리지 않는가 · 수백 줄을 다 깔지 않는가 · 계열 판정이 살아나는가 */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -71,6 +73,17 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
 /* 표에서 옆 칸이 붙어 버린 꼴 — 「12683400원」. 숫자로는 1,268만원이라
    멀쩡해 보여서, 표시해 주지 않으면 <b>눈으로도 못 잡는다.</b> */
 const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400원 2 부족 -2,000만');
+
+/* 특약 — 기준담보 37개 표에 <b>없는</b> 것들. 요즘 실지급을 가르는
+   비급여 암주요치료비·표적항암·전액본인부담이 여기에만 있다. */
+const RDOC =
+  '홍길동 님의 전체 계약리스트\n' +
+  '계약 건수 1건 합계보험료 500,000원\n' +
+  '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+  '홍길동 님의 상품별 가입담보상세\n' +
+  '삼성화재 | 가입일자 : 2018-03-01 | 무배당 튼튼종합보험 ' +
+  '1 정액 일반암진단비 3,000만 2 정액 비급여암주요치료비 12683400원 ' +
+  '3 정액 표적항암약물허가치료비 1,000만 4 정액 전액본인부담의료비 500만\n';
 
 (async () => {
   await new Promise(r => srv.listen(0, r));
@@ -318,6 +331,96 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
     document.querySelectorAll('#TABH .if-i.mine').length + '|' +
     (/직접 적으신 칸 1개/.test(document.body.textContent) ? 1 : 0));
   is(painted === '1|1', '  그 사이에 표는 <b>제대로 다시 그려졌다</b> — ' + painted);
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 특약은 계약 하나에 수십 개, 다 합치면 수백 줄이다. 담보진단 표는
+     <b>기준담보 37개</b>만 보므로, 요즘 실지급을 가르는 비급여 암주요치료비·
+     전액본인부담·표적항암·순환계치료비는 <b>특약에만</b> 있다. 정작 그 목록이
+     못 고치는 곳이었다.
+
+     그리고 더 큰 것이 있었다 — 금액을 못 믿으면 그 줄을 <b>통째로 버려서</b>
+     「비급여 암주요치료비 ✕ 없음」 이라는 <b>틀린 결론</b>이 고객 앞에 섰다.
+     있는 보장을 없다고 말하는 것이다.                                */
+  console.log('\n[10] 특약도 같은 길로 고친다 — 금액을 못 믿어도 담보는 남는다');
+  const RD = await page.evaluate(async ({ RDOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    const sc = insScan(RDOC);
+    const h = document.createElement('div');
+    h.id = 'RH'; h._scan = sc;
+    h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+    document.body.appendChild(h);
+
+    O.riderN = sc.riderN;
+    O.names = sc.riders[0].rows.map(r => r.name).join(',');
+    O.badRow = sc.riders[0].rows[1].name + '=' + sc.riders[0].rows[1].amount +
+      '/원문=' + (sc.riders[0].rows[1].raw || '') + '/bad=' + (sc.riders[0].rows[1].bad || 0);
+    /* 계열 판정이 살아나는가 — 이것이 고객 앞에 서는 결론이다 */
+    O.gapOn = (sc.gaps || []).filter(g => /비급여 암주요치료비/.test(g.name)).map(g => g.has)[0];
+    O.gapTxt = (sc.gaps || []).filter(g => /비급여 암주요치료비/.test(g.name)).map(g => g.found.join(''))[0];
+    /* 손볼 것만 보인다 */
+    O.shown = h.querySelectorAll('.if-r .if-i').length;
+    O.oddTag = /붙어 보임 — 확인/.test(h.textContent);
+    O.rawShown = /원문:\s*12683400원/.test(h.textContent);
+    O.onlyNote = /손볼 것 1개/.test(h.textContent);
+    /* AI 에게 숫자를 안 준다 */
+    O.briefBad = insBrief(sc).split('\n').filter(x => x.indexOf('비급여암주요치료비') >= 0)[0] || '';
+
+    /* 고친다 */
+    const ins = h.querySelectorAll('.if-r .if-i');
+    insFixRSet(ins[0], 0, 1, '3000');
+    insFixDone(ins[0]);
+    await new Promise(r => setTimeout(r, 0));
+    O.fixRN = sc.fixRN;
+    O.fixed = sc.riders[0].rows[1].amount + '/fx=' + sc.riders[0].rows[1].fx;
+    O.mine = h.querySelectorAll('.if-r .if-i.mine').length;
+    O.stale = /고치기 전 값/.test(h.textContent);
+    O.clearBtn = /고친 값 1개 전부 지우기/.test(h.textContent);
+    O.briefStar = /비급여암주요치료비.*★설계사가 고침/.test(insBrief(sc));
+    /* 「다시 만들기」 를 견딘다 */
+    const sc2 = insScan(RDOC);
+    O.reN = sc2.fixRN;
+    O.reAmt = sc2.riders[0].rows[1].amount;
+    /* 다른 고객에게는 안 붙는다 */
+    const sc3 = insScan(RDOC.replace(/홍길동/g, '이순신'));
+    O.otherN = sc3.fixRN;
+    O.otherAmt = sc3.riders[0].rows[1].amount;
+
+    /* 전체 펼치기 */
+    insFixRAll(h.querySelector('.if-r .if-btn button'));
+    await new Promise(r => setTimeout(r, 0));
+    O.allShown = h.querySelectorAll('.if-r .if-i').length;
+    /* 전부 지우면 특약도 함께 되돌아간다 */
+    insFixClear(h.querySelector('.if-btn button'));
+    await new Promise(r => setTimeout(r, 0));
+    O.clearedN = sc.fixRN;
+    O.clearedAmt = sc.riders[0].rows[1].amount + '/bad=' + (sc.riders[0].rows[1].bad || 0);
+    return O;
+  }, { RDOC });
+
+  is(RD.riderN === 4 && RD.names === '일반암진단비,비급여암주요치료비,표적항암약물허가치료비,전액본인부담의료비',
+     '  금액을 못 믿어도 <b>담보 넷이 다 남는다</b> — ' + RD.names);
+  is(RD.badRow === '비급여암주요치료비=/원문=12683400원/bad=1',
+     '  금액만 비고 <b>원문이 남는다</b> — ' + RD.badRow);
+  is(RD.gapOn === true && /금액 확인 필요/.test(RD.gapTxt || ''),
+     '  <b>「○ 비급여 암주요치료비」</b> — 있는 보장을 없다고 하지 않는다 · ' + RD.gapTxt);
+  is(RD.shown === 1 && RD.oddTag && RD.rawShown && RD.onlyNote,
+     '  <b>손볼 것 한 칸만</b> 보이고 원문이 붙는다 (수백 줄을 다 깔지 않는다)');
+  is(/확인 필요/.test(RD.briefBad) && !/1,?268/.test(RD.briefBad),
+     '  AI 에게 <b>숫자를 주지 않는다</b> — ' + RD.briefBad.trim().slice(0, 76));
+  is(RD.fixRN === 1 && RD.fixed === '3,000만원/fx=1' && RD.mine === 1,
+     '  고치면 그 자리에서 들어간다 — ' + RD.fixed);
+  is(RD.stale && RD.clearBtn && RD.briefStar,
+     '  옛 리포트 경고 · 지우기 단추 · AI 에 ★ 가 <b>모두</b> 뜬다');
+  is(RD.reN === 1 && RD.reAmt === '3,000만원',
+     '  「다시 만들기」 를 견딘다 — ' + RD.reAmt);
+  is(RD.otherN === 0 && RD.otherAmt === '',
+     '  <b>다른 고객 특약에는 안 붙는다</b> — ' + (RD.otherAmt || '(빈 칸 그대로)'));
+  is(RD.allShown === 4, '  펼치면 <b>전부</b> 나온다 — ' + RD.allShown + '칸');
+  is(RD.clearedN === 0 && RD.clearedAmt === '/bad=1',
+     '  전부 지우면 특약도 <b>함께</b> 되돌아간다 — ' + RD.clearedAmt);
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');

@@ -1439,7 +1439,10 @@ var LS={
   set:function(k,v){try{localStorage.setItem('apex_studio_'+k,v);}catch(e){}},
   del:function(k){try{localStorage.removeItem('apex_studio_'+k);}catch(e){}}
 };
-function toast(msg,ms){var t=$('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
+/* 알림 칸이 없으면 <b>조용히 물러난다.</b> 예전에는 여기서 터졌고, 알림
+   하나 때문에 부르던 쪽 일이 통째로 멈췄다 — 저장이 됐는데 안 됐다고
+   보이는 자리가 그것이다. 알림은 곁다리다. 곁다리가 본일을 죽이면 안 된다. */
+function toast(msg,ms){var t=$('toast');if(!t)return;t.textContent=msg;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove('on');},ms||1900);}
 /* 복사는 생각보다 자주 실패한다. 특히 태블릿에서, 그리고 새 창이 떠서
    이 화면이 초점을 잃었을 때. 전에는 실패해도 '복사되었습니다' 라고
    말해서, 붙여넣으면 엉뚱한 옛날 내용이 나왔다. 이제는 확인하고 말한다. */
@@ -11674,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-27 21:10';
-var APP_BUILD_NOTE='<b>보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다.</b> 비포&애프터에는 지난 판에 그 길을 냈는데 보장분석에는 없어서, <b>틀린 숫자를 보고도 손댈 방법이 없었습니다.</b> 이제 카드 맨 아래에 <b>「읽은 값 — 틀렸으면 여기서 고치세요」</b> 표가 섭니다. 담보마다 <b>권장·가입</b> 두 칸이고 단위는 <b>만원</b> 하나입니다. ① <b>고치면 그 자리에서 따라옵니다.</b> 가입을 3,000만에서 5,000만으로 올리면 판정이 <b>부족 → 충분</b> 으로 바뀌고 「부족 담보 N개」 도 함께 줄어듭니다. 그 줄에는 <b>「앱이 다시 셈」</b> 이 붙습니다 — 원본 판정이 아니라고 밝히는 것입니다. 「과다」 는 만들지 않습니다, 얼마부터 과다인지는 우리가 모릅니다. ② <b>붙어 버린 값을 노랗게 세웁니다.</b> 「12683400원」 은 표에서 옆 칸이 붙어 버린 숫자인데, 1,268만원으로 보여서 <b>눈으로도 못 잡습니다.</b> 그 칸에 「붙어 보임 — 확인」 을 달고 <b>원문을 그대로</b> 적어 둡니다 — 맞는 값을 지어내지는 않습니다. ③ <b>비우면 읽은 값으로 돌아갑니다.</b> 0 으로 채우지 않습니다 — 0 은 「보장이 없다」 는 뜻이 되어 버립니다. 덮은 <b>원문도 칸 아래 함께</b> 남겨 되짚을 수 있습니다. ④ <b>다른 고객 표에는 한 줄도 안 붙습니다.</b> 자료마다 지문을 떠서, 지문이 다르면 통째로 건너뜁니다 — 남의 보장을 읽어 드리는 것이 제일 큰 사고입니다. ⑤ <b>「다시 만들기」 를 눌러도 고친 값이 남습니다</b>, 그리고 AI 에게 <b>★ 설계사가 고침</b> 으로 넘어갑니다 — 안 밝히면 AI 가 원문 숫자를 보고 도로 되돌립니다. ⑥ 고치면 <b>「아래 리포트는 고치기 전 값입니다」</b> 경고가 뜹니다. 카드 판정은 바로 바뀌지만 리포트 본문은 AI 가 이미 쓴 글이라, <b>다시 만들기 전에는 고객에게 보이지 마십시오.</b> 고친 값은 <b>이 브라우저에만</b> 남습니다. 새 점검 <code>check-insfix</code> 가 이 전부를 지킵니다.';
+var APP_BUILD='2026-08-28 01:40';
+var APP_BUILD_NOTE='<b>특약 금액도 그 자리에서 고칩니다. 그리고 고치다 더 큰 것을 찾았습니다.</b> ① <b>금액을 못 믿는다고 담보를 통째로 버리고 있었습니다.</b> 「12683400원」 처럼 옆 칸이 붙어 버린 숫자면 그 줄을 통째로 뺐는데, 그러면 <b>담보 이름까지 사라집니다.</b> 그래서 「비급여 암주요치료비 <b>✕ 없음</b>」 이 뜨고 <b>「표적·면역 대응 불가」</b> 라는 <b>틀린 결론</b>이 고객 앞에 섰습니다 — <b>있는 보장을 없다고 말한 것</b>입니다. 이제 <b>금액만 비우고 담보는 남깁니다.</b> 계열 판정도 「○ 있음」 으로 살아납니다. ② <b>특약 목록에 고치는 칸이 생겼습니다.</b> 담보진단 표는 기준담보 37개만 봅니다 — 요즘 실지급을 가르는 <b>비급여 암주요치료비·전액본인부담·표적항암·순환계치료비</b>는 거기 아예 없고 특약에만 있는데, 정작 그 목록이 못 고치는 곳이었습니다. ③ <b>기본은 「손볼 것」 만 보여 드립니다.</b> 특약은 수백 줄이라 전부 깔면 화면이 무거워 고객 앞에서 못 엽니다. 붙어 보이는 칸과 이미 고치신 칸만 세우고, 나머지는 <b>「전체 N개 펼치기」</b> 단추 하나로 폅니다. ④ <b>못 믿는 금액은 AI 에게 숫자로 주지 않습니다.</b> 「확인 필요」 라고만 넘깁니다 — 곁에 숫자가 있으면 언젠가 그 숫자가 리포트에 실립니다. 덱의 특약 표에도 「확인 필요」 로 찍힙니다(빈 칸은 0 으로 읽힙니다). ⑤ <b>「고친 값 지우기」 는 담보진단과 특약을 함께</b> 되돌립니다 — 단추도 하나입니다. ⑥ 알림 칸이 없을 때 <code>toast</code> 가 터지던 것을 막았습니다 — 곁다리가 본일을 죽이면 안 됩니다. 새 점검 <code>check-insfix</code> 가 10군 47가지를 지키고, <b>열일곱 가지를 되돌려 전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -31262,12 +31265,18 @@ var INS_FIX_KEY = 'apex_ins_fix';
 /* 자료 지문 — <b>같은 자료인지만</b> 가른다. 읽어 낸 금액은 넣지 않는다.
    금액을 넣으면 우리가 읽는 방법을 고칠 때마다 지문이 달라져, 사장님이
    고쳐 두신 값이 <b>말없이</b> 사라진다. 그건 안 고친 것보다 나쁘다. */
-function insFixSig(who, n, fee, diags) {
-  var s = ((who && who.name) || '') + '#' + n + '#' + Math.round(fee || 0) + '#' + diags.length + '#';
-  var i, h = 0;
+function insFixSig(who, n, fee, diags, riders) {
+  var R = riders || [], rn = 0, i, h = 0;
+  for (i = 0; i < R.length; i++) rn += (R[i].rows || []).length;
+  /* 특약만 있고 담보진단 칸이 없는 자료(가입설계서)가 흔하다. 계약 수와
+     특약 줄 수까지 넣어야 그런 자료끼리도 갈린다. 특약 <b>이름</b>은 넣지
+     않는다 — 이름 하나가 달라졌다고 고쳐 두신 값이 통째로 날아가면
+     안 고친 것만 못하다.                                              */
+  var s = ((who && who.name) || '') + '#' + n + '#' + Math.round(fee || 0) +
+    '#' + diags.length + '#' + R.length + '#' + rn + '#';
   for (i = 0; i < diags.length; i++) s += (diags[i].cat || '') + diags[i].name + ',';
   for (i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
-  return diags.length + '.' + (h >>> 0).toString(36);
+  return diags.length + '.' + rn + '.' + (h >>> 0).toString(36);
 }
 function insFixKey(d) { return ((d.cat || '') + '|' + (d.name || '')).replace(/\s+/g, ''); }
 function insFixLoad() {
@@ -31323,14 +31332,67 @@ function insFixApply(diags, sig) {
   return n;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   특약 금액도 고친다 — 「상품별 가입담보상세」
+
+   담보진단 표는 <b>기준담보 37개</b>만 본다. 요즘 실지급을 가르는
+   비급여 암주요치료비·전액본인부담·표적항암·순환계치료비는 <b>거기에
+   아예 없고</b> 특약 목록에만 있다. 정작 그 목록이 못 고치는 곳이었다.
+
+   담보진단과 <b>같은 통</b>에 담는다 (지문 하나 · 저장 하나). 열쇠만
+   `r|` 로 시작한다 — 두 벌을 만들면 한쪽만 지워지는 날이 온다 (5번).
+
+   열쇠는 <b>회사·상품·담보 이름</b>이다. 줄 번호로 잡으면 읽는 방법을
+   고쳐 한 줄만 밀려도 <b>엉뚱한 담보에 금액이 앉는다.</b> 한 계약 안에
+   같은 이름이 두 번 나오면 뒤엣것에 #2 를 붙인다.                */
+function insFixRKey(co, product, name, nth) {
+  return ('r|' + (co || '') + '|' + (product || '') + '|' + (name || '') +
+    (nth > 1 ? '#' + nth : '')).replace(/\s+/g, '');
+}
+function insFixRRow(r, f) {
+  r.amount = r.ra; r.fx = 0;
+  if (f && f.a > 0) { r.amount = vizWon(f.a); r.fx = 1; }
+}
+function insFixRApply(riders, sig) {
+  var v = insFixLoad(), n = 0, ci, ri, c, r, seen;
+  /* 읽은 값과 열쇠를 <b>줄마다 붙여 둔다</b> — 화면에서 다시 셈하지
+     않게. 두 번 세면 두 곳이 갈린다. */
+  for (ci = 0; ci < riders.length; ci++) {
+    c = riders[ci]; seen = {};
+    for (ri = 0; ri < c.rows.length; ri++) {
+      r = c.rows[ri];
+      r.ra = r.amount; r.fx = 0;
+      seen[r.name] = (seen[r.name] || 0) + 1;
+      r.fk = insFixRKey(c.co, c.product, r.name, seen[r.name]);
+    }
+  }
+  if (!sig || !v.sig || v.sig !== sig) return 0;
+  for (ci = 0; ci < riders.length; ci++) {
+    c = riders[ci];
+    for (ri = 0; ri < c.rows.length; ri++) {
+      r = c.rows[ri];
+      insFixRRow(r, v.fix[r.fk]);
+      if (r.fx) n++;
+    }
+  }
+  return n;
+}
+
 /* 판정에서 나오는 것을 <b>한 곳에서</b> 다시 센다. 부족 목록과 표가
    서로 다른 말을 하면 사장님이 어느 쪽을 믿을지 알 수 없다 (5번).
    영역별 묶음(areas)은 손대지 않는다 — 그것을 쓰는 덱은 어차피
    「다시 만들기」 로 새로 읽는다. 반쯤 고친 덱이 제일 위험하다.   */
 function insFixDerive(sc) {
-  if (!sc || !sc.diags) return;
-  sc.short = sc.diags.filter(function (d) { return d.verdict === '부족' || d.verdict === '미가입'; });
-  sc.fixN = sc.diags.filter(function (d) { return d.fix; }).length;
+  if (!sc) return;
+  if (sc.diags) {
+    sc.short = sc.diags.filter(function (d) { return d.verdict === '부족' || d.verdict === '미가입'; });
+    sc.fixN = sc.diags.filter(function (d) { return d.fix; }).length;
+  }
+  var n = 0;
+  (sc.riders || []).forEach(function (c) {
+    (c.rows || []).forEach(function (r) { if (r.fx) n++; });
+  });
+  sc.fixRN = n;
 }
 
 /* ── 머리글의 합계 (계약 N건 · 월 보험료 합계) ─────────────────── */
@@ -34761,11 +34823,12 @@ function insScan(text) {
   /* 사장님이 손으로 고친 값을 <b>여기 한 곳에서</b> 덮는다. 아래 판정·
      부족 목록·계열·AI 브리핑이 전부 이 표를 보므로, 여기서 덮으면
      두 곳이 갈릴 자리가 없다 (CLAUDE.md 5번).                       */
-  var fsig = insFixSig(who, live.length, fee, diags);
+  var fsig = insFixSig(who, live.length, fee, diags, riders);
   var fixN = insFixApply(diags, fsig);
+  var fixRN = insFixRApply(riders, fsig);
 
   return { who: who, plans: live, lapsed: lapsed, cars: cars, drop: drop,
-    fixSig: fsig, fixN: fixN,
+    fixSig: fsig, fixN: fixN, fixRN: fixRN,
     byCo: insByCo(live), diags: diags, areas: insByArea(diags),
     riders: riders, looseRiders: looseRiders,
     riderN: riders.reduce(function (t, c) { return t + c.rows.length; }, 0),
@@ -34820,11 +34883,20 @@ function insRiderRows(body) {
   while ((m = re.exec(body))) {
     var nm = m[3].replace(/\s{2,}/g, ' ').replace(/^\s+|\s+$/g, '');
     if (nm.length < 2) continue;
-    if (!insAmtOk(m[4])) continue;         /* 옆 칸이 붙어 버린 숫자다 */
-    var k = nm + '|' + m[4];
+    /* ── 못 믿을 금액이어도 <b>담보는 남긴다</b> ─────────────────────
+       「12683400원」 은 표에서 옆 칸이 붙어 버린 숫자다. 예전에는 이 줄을
+       <b>통째로 버렸다.</b> 그러면 담보 이름까지 사라져 —
+         · 사장님은 무엇이 빠졌는지도 모르고
+         · 「비급여 암주요치료비 <b>✕ 없음</b>」 이라는 <b>틀린 결론</b>이
+           고객 앞에 선다. 있는 보장을 없다고 말하는 것이다.
+       금액만 「모름」 으로 비우고 원문을 남긴다 — 그래야 그 자리에서
+       고치실 수 있다 (CLAUDE.md 1번: 모름과 0 을 구분한다).          */
+    var amt = m[4].replace(/\s+/g, ''), bad = !insAmtOk(amt);
+    var k = nm + '|' + amt;
     if (seen[k]) continue;
     seen[k] = 1;
-    out.push({ kind: m[2], name: nm, amount: m[4].replace(/\s+/g, ''), area: insAreaOf(nm, '') });
+    out.push({ kind: m[2], name: nm, amount: bad ? '' : amt, raw: amt,
+      bad: bad ? 1 : 0, area: insAreaOf(nm, '') });
   }
   return out;
 }
@@ -34894,10 +34966,12 @@ function insLooseRows(body){
       if(INS_RTAIL.test(cand.replace(/\([^)]*\)\s*$/,''))&&!INS_RNOT.test(cand)){nm=cand;break;}
     }
     if(!nm||nm.length<3||nm.length>34)continue;
-    if(!insAmtOk(amt))continue;            /* 옆 칸이 붙어 버린 숫자다 */
+    /* 여기도 같다 — 못 믿을 금액이라고 <b>담보를 버리지 않는다</b>.
+       금액만 비우고 원문을 남긴다 (insRiderRows 와 같은 규칙). */
+    var bad=!insAmtOk(amt);
     var k=nm+'|'+amt;
     if(seen[k])continue; seen[k]=1;
-    out.push({kind:'', name:nm, amount:amt, area:insAreaOf(nm,'')});
+    out.push({kind:'', name:nm, amount:bad?'':amt, raw:amt, bad:bad?1:0, area:insAreaOf(nm,'')});
   }
   return out;
 }
@@ -34954,7 +35028,10 @@ function insGaps(riders, diags) {
   return INS_KEY.map(function (K) {
     var hit = pool.filter(function (x) { return K.re.test(x.t) && !(K.no && K.no.test(x.t)); });
     return { name: K.k, has: hit.length > 0, n: hit.length,
-      found: hit.slice(0, 3).map(function (x) { return x.t + ' ' + x.amount + (x.co ? ' (' + x.co + ')' : ''); }) };
+      /* 금액을 못 믿어 비워 둔 줄은 「금액 확인 필요」 라고 적는다. 그냥
+         비우면 이름 뒤에 빈칸만 남아 <b>0 원처럼</b> 읽힌다 (CLAUDE.md 1번). */
+      found: hit.slice(0, 3).map(function (x) {
+        return x.t + ' ' + (x.amount || '금액 확인 필요') + (x.co ? ' (' + x.co + ')' : ''); }) };
   });
 }
 
@@ -34999,10 +35076,10 @@ function insLoose(text) {
   /* 이 길로 읽은 표도 <b>똑같이</b> 고칠 수 있어야 한다. 서식이 낯설수록
      못 읽는 자리가 많으니, 오히려 여기가 더 자주 필요하다. */
   var w0 = insWho(T);
-  var fsig = insFixSig(w0, 0, 0, all);
+  var fsig = insFixSig(w0, 0, 0, all, []);
   var fixN = insFixApply(all, fsig);
   return { who: w0, plans: [], lapsed: [], cars: [], byCo: [],
-    diags: all, areas: out, loose: true, fixSig: fsig, fixN: fixN,
+    diags: all, areas: out, loose: true, fixSig: fsig, fixN: fixN, fixRN: 0,
     total: { n: 0, fee: 0, unknown: 0, lapsedN: 0, lapsedFee: 0, saidN: 0, saidFee: 0 },
     short: all.filter(function (d) { return d.verdict === '부족' || d.verdict === '미가입'; }) };
 }
@@ -35049,17 +35126,23 @@ function insBrief(sc) {
     L.push('■ 자동차보험');
     sc.cars.forEach(function (c) { L.push('  · ' + c.co + ' | ' + c.what + ' | ' + c.from + '~' + c.to + ' | ' + c.amount); });
   }
+  /* 고친 값이라는 것을 <b>AI 에게도</b> 밝힌다. 아래에 원문 글도 함께
+     가므로, 밝히지 않으면 AI 가 원문 숫자를 보고 <b>도로 되돌린다.</b>
+     평균으로 채운 값을 끝까지 평균이라 밝히는 것과 같은 이치다 (1번).
+     담보진단·특약 <b>어느 쪽을 고치셨든</b> 한 번 말한다 — 담보진단 칸이
+     없는 자료(가입설계서)면 저 안에 두었을 때 한 번도 안 나갔다. */
+  if (sc.fixN || sc.fixRN) {
+    L.push('');
+    L.push('■ ★ 표시 — <b>설계사가 원본을 눈으로 보고 직접 고친 값</b>이다.');
+    L.push('  · 아래 원문 글의 숫자와 다르면 <b>★ 쪽을 쓴다.</b> 다시 세지 않는다.');
+    L.push('  · ★ 가 붙은 담보진단 줄의 판정·과부족은 원본의 판정이 아니라 ' +
+           '앱이 권장·가입 두 값을 견줘 다시 센 것이다.');
+    L.push('  · 담보진단 ' + (sc.fixN || 0) + '칸 · 특약 ' + (sc.fixRN || 0) + '칸을 고쳤다.');
+  }
   if (sc.diags.length) {
     L.push('');
     L.push('■ 담보별 진단 (담보 | 권장 | 가입 | 원본 판정 | 과부족)');
     L.push('  ※ 이것은 원본 보장분석표의 판정이다. 그대로 베끼지 말고 직접 계산해 검증할 것.');
-    /* 고친 값이라는 것을 <b>AI 에게도</b> 밝힌다. 아래에 원문 글도 함께
-       가므로, 밝히지 않으면 AI 가 원문 숫자를 보고 <b>도로 되돌린다.</b>
-       평균으로 채운 값을 끝까지 평균이라 밝히는 것과 같은 이치다 (1번). */
-    if (sc.fixN)
-      L.push('  ※ ★ 표시는 <b>설계사가 원본을 눈으로 보고 직접 고친 값</b>이다. ' +
-             '아래 원문 글의 숫자와 다르면 <b>★ 쪽을 쓴다.</b> 그 줄의 판정·과부족은 ' +
-             '원본의 판정이 아니라 앱이 권장·가입 두 값을 견줘 다시 센 것이다.');
     sc.diags.forEach(function (d) {
       L.push('  · ' + (d.cat ? d.cat + ' ' : '') + d.name + ' | 권장 ' + d.want + ' | 가입 ' + d.have + ' | ' + d.verdict + (d.gap ? ' | ' + d.gap : '') +
         (d.fix ? ' | ★설계사가 고침' : ''));
@@ -35074,8 +35157,16 @@ function insBrief(sc) {
       L.push('  [' + (c.co || '회사 미상') + '] ' + c.product +
         ' — 담보 ' + c.rows.length + '개');
       c.rows.forEach(function (r) {
-        L.push('    · ' + (r.kind ? r.kind + ' | ' : '') + r.name + ' | ' + r.amount +
-          (r.area ? ' | ' + r.area : ''));
+        /* 담보진단과 <b>같은 표시</b>를 쓴다 — AI 가 두 가지 규칙을 외울
+           필요가 없게. 안 밝히면 함께 가는 원문 글을 보고 도로 되돌린다.
+           금액을 못 믿는 줄은 <b>숫자를 주지 않는다</b> — 주면 그 숫자가
+           리포트에 실린다. 담보가 있다는 것만 확실하다 (CLAUDE.md 1번). */
+        L.push('    · ' + (r.kind ? r.kind + ' | ' : '') + r.name + ' | ' +
+          /* <b>원문 숫자는 AI 에게 보내지 않는다.</b> 「이 숫자는 못 믿는다」
+             라고 적어 줘도, 곁에 숫자가 있으면 언젠가 그 숫자가 실린다.
+             원문은 사장님 눈에 필요한 것이지 AI 에게 필요한 것이 아니다. */
+          (r.amount || '확인 필요 — 앱이 못 믿을 숫자로 보고 비웠다. 금액을 적지 말고 「확인 필요」 로 둘 것') +
+          (r.area ? ' | ' + r.area : '') + (r.fx ? ' | ★설계사가 고침' : ''));
       });
     });
     if (sc.looseRiders)
@@ -35176,7 +35267,11 @@ function insFixClear(el) {
   if (!sc) return;
   insFixSave({ sig: '', fix: {} });
   var i;
-  for (i = 0; i < sc.diags.length; i++) insFixRow(sc.diags[i], null);
+  for (i = 0; i < (sc.diags || []).length; i++) insFixRow(sc.diags[i], null);
+  /* 특약도 같은 통에 있다 — 담보진단만 되돌리면 <b>반만 지워진다</b> */
+  (sc.riders || []).forEach(function (c) {
+    (c.rows || []).forEach(function (r) { insFixRRow(r, null); });
+  });
   sc.stale = 1;
   insFixDerive(sc);
   insFixPaint(host, sc);
@@ -35192,33 +35287,141 @@ function insFixOdd(d, which) {
   var txt = (which === 'want') ? d.want : d.have;
   return !mine && !!txt && typeof insAmtOk === 'function' && !insAmtOk(txt);
 }
+/* 특약은 <b>읽을 때</b> 이미 갈라 두었다(insRiderRows 의 bad). 화면에서
+   다시 판정하지 않는다 — 두 곳이 다르게 답하면 그때부터 못 믿는다 (5번). */
+function insFixROdd(r) { return !r.fx && !!r.bad; }
 
-/* 표 한 벌. 단위는 <b>만원</b> 하나로 통일한다 — 「5,000만」 과 「1억」 을
-   섞어 치면 그 자리에서 만 배가 틀어진다 (CLAUDE.md 4번).           */
+/* ── 「아래 리포트는 아직 옛 숫자」 — <b>한 곳에서만</b> 말한다 ──────
+   담보진단에서 고치든 특약에서 고치든 위험은 하나다. 두 표가 각자
+   경고를 띄우면 같은 말이 두 번 뜨고, 특약만 고치신 날엔 <b>한 번도</b>
+   안 뜬다. 카드가 한 번 말한다 (CLAUDE.md 5번).                    */
+/* 「고친 값 지우기」 는 담보진단·특약을 <b>함께</b> 되돌린다. 그러니
+   단추도 하나여야 한다 — 표마다 두면 「어느 것이 지워지나」 를 알 수 없다. */
+function insFixClearHtml(sc) {
+  var n = (sc && sc.fixN || 0) + (sc && sc.fixRN || 0);
+  if (!n) return '';
+  return '<div class="ins-fix"><div class="if-btn">' +
+    '<button type="button" onclick="insFixClear(this)">고친 값 ' + n + '개 전부 지우기</button> ' +
+    '<span class="if-sub">담보진단과 특약을 <b>함께</b> 되돌립니다.</span></div></div>';
+}
+function insFixStaleHtml(sc) {
+  if (!sc || !sc.stale) return '';
+  return '<div class="ins-fix"><div class="if-note stale">' +
+    '<b>아래 리포트는 고치기 전 값으로 만들어졌습니다.</b> ' +
+    '이 카드의 판정은 바로 바뀌었지만, <b>리포트 본문은 아직 옛 숫자</b>입니다. ' +
+    '위쪽 <b>「🤖 AI 상세분석」·「🔄 다시 만들기」·「🔄 재생성」</b> 중 있는 단추를 눌러야 ' +
+    '고치신 값으로 다시 씁니다 — <b>그 전에는 고객에게 보이지 마십시오.</b></div></div>';
+}
+
+/* ── 특약 금액 고치기 ────────────────────────────────────────────
+   특약은 계약 하나에 수십 개, 다 합치면 수백 줄이다. 전부 칸으로 깔면
+   화면이 무거워 <b>고객 앞에서 못 연다.</b> 그래서 기본은 <b>손볼 것만</b>
+   보여 준다 — 붙어 보이는 칸과 이미 고치신 칸. 나머지는 단추 하나로
+   펼친다. 숨기는 것이 아니라, 급한 것을 앞에 두는 것이다.        */
+function insFixRSet(el, ci, ri, v) {
+  var host = insFixHost(el), sc = host && host._scan;
+  if (!sc || !sc.riders || !sc.riders[ci] || !sc.riders[ci].rows[ri]) return;
+  var r = sc.riders[ci].rows[ri], t = ('' + v).replace(/[^\d.]/g, '');
+  var man = (t === '') ? 0 : Math.round(parseFloat(t) || 0);
+  var box = insFixLoad();
+  if (box.sig !== sc.fixSig) box = { sig: sc.fixSig, fix: {} };
+  if (man > 0) box.fix[r.fk] = { a: man }; else delete box.fix[r.fk];
+  insFixSave(box);
+  insFixRRow(r, box.fix[r.fk]);
+  insFixDerive(sc);
+}
+function insFixRAll(el) {
+  var host = insFixHost(el), sc = host && host._scan;
+  if (!sc) return;
+  sc.rAll = !sc.rAll;
+  insFixPaint(host, sc);
+}
+function insFixRHtml(sc) {
+  if (!sc || !sc.riders || !sc.riders.length) return '';
+  var tot = 0, odd = 0, mine = 0, ci, ri, c, r;
+  for (ci = 0; ci < sc.riders.length; ci++) {
+    c = sc.riders[ci];
+    for (ri = 0; ri < (c.rows || []).length; ri++) {
+      r = c.rows[ri]; tot++;
+      if (r.fx) mine++; else if (insFixROdd(r)) odd++;
+    }
+  }
+  if (!tot) return '';
+  var all = !!sc.rAll, body = '', shown = 0;
+  for (ci = 0; ci < sc.riders.length; ci++) {
+    c = sc.riders[ci];
+    var rows = '', k = 0;
+    for (ri = 0; ri < (c.rows || []).length; ri++) {
+      r = c.rows[ri];
+      if (!all && !r.fx && !insFixROdd(r)) continue;
+      k++; shown++;
+      rows += '<tr><td class="if-n">' + esc(r.name) +
+        ((r.kind || r.area) ? '<div class="if-cat">' + esc([r.kind, r.area].filter(Boolean).join(' · ')) + '</div>' : '') +
+        '</td>' +
+        /* 원문은 <b>언제나</b> 보여 준다 — 비워 둔 칸일수록 더 필요하다 */
+        insFixCellHtml(r.amount, r.raw || r.ra, r.fx, insFixROdd(r),
+          'oninput="insFixRSet(this,' + ci + ',' + ri + ',this.value)" onchange="insFixDone(this)"') +
+        '</tr>';
+    }
+    if (!k) continue;
+    body += '<tr><td class="if-co" colspan="2">' + esc(c.co || '회사 미상') +
+      ' <i>' + esc(('' + (c.product || '')).slice(0, 34)) + '</i>' +
+      ' <em>' + k + '/' + (c.rows || []).length + '</em></td></tr>' + rows;
+  }
+  var btn = '<div class="if-btn"><button type="button" onclick="insFixRAll(this)">' +
+    (all ? '손볼 것만 보기' : '전체 ' + tot + '개 펼치기') + '</button></div>';
+  var head = '<div class="ins-fix if-r"><div class="if-hd">📎 특약 금액 — <b>여기서도 고치실 수 있습니다</b>' +
+    '<span class="if-sub">계약 ' + sc.riders.length + '건 · 특약 <b>' + tot + '개</b>. ' +
+    '기준담보 37개 표에 <b>없는</b> 것들입니다.</span></div>';
+  if (!shown) {
+    return head + '<div class="if-note plain">붙어 보이는 칸도, 고치신 칸도 <b>없습니다.</b> ' +
+      '그래도 눈으로 맞춰 보시려면 아래에서 펼치십시오.</div>' + btn + '</div>';
+  }
+  return head +
+    (odd ? ('<div class="if-note odd"><b>붙어 보이는 칸 ' + odd + '개.</b> 표에서 옆 칸 숫자가 ' +
+      '붙어 버린 꼴입니다 — 아래에 <b>원문</b>을 그대로 적어 두었습니다.</div>') : '') +
+    (mine ? ('<div class="if-note mine"><b>직접 적으신 특약 ' + mine + '개.</b> ' +
+      '<b>다음에 만드는 리포트</b>부터 특약 상세 표와 AI 에게 그 값으로 갑니다.</div>') : '') +
+    (all ? '' : '<div class="if-note plain"><b>손볼 것 ' + shown + '개</b>만 보이고 있습니다 — ' +
+      '특약은 수백 줄이라 전부 깔면 화면이 무거워집니다.</div>') +
+    '<div class="if-tw"><table class="if-tb"><thead><tr>' +
+      '<th>특약</th><th class="r">가입금액(만원)</th>' +
+    '</tr></thead><tbody>' + body + '</tbody></table></div>' + btn + '</div>';
+}
+
+/* ── 고치는 칸 하나 — <b>담보진단도 특약도 이 칸을 쓴다</b> ──────────
+   두 표가 각자 칸을 그리면 한쪽만 고쳐지고 다른 쪽은 옛 모양으로 남는다.
+   실제로 그렇게 새 본 자리다 (CLAUDE.md 5번). 단위는 <b>만원</b> 하나로
+   통일한다 — 「5,000만」 과 「1억」 을 섞어 치면 만 배가 틀어진다 (4번).
+
+   「12683400원」 처럼 옆 칸이 붙어 버린 꼴은 노랗게 세워 둔다. 숫자로는
+   1,268만원이라 멀쩡해 보이는데 실제로는 그 금액이 아니다. <b>값을 우리가
+   고쳐 놓지는 않는다</b> — 무엇이 맞는지는 원본만 안다 (1번).        */
+function insFixCellHtml(txt, raw, mine, odd, setJs) {
+  var man = insFixMan(txt);
+  var cls = mine ? ' mine' : (odd ? ' odd' : ((man === null && !raw) ? ' none' : ''));
+  return '<td class="if-c">' +
+    '<input value="' + (man === null ? '' : man) + '" placeholder="' + (raw ? '만원' : '못 읽음') + '" ' +
+    'inputmode="numeric" class="if-i' + cls + '" ' + setJs + '>' +
+    /* 고친 칸에도 <b>원문을 함께</b> 남긴다 — 무엇을 덮었는지 보이지
+       않으면, 잘못 고친 것을 사장님도 되짚을 수 없다. */
+    (mine ? ('<div class="if-tag">직접 적으심</div>' +
+             (raw ? '<div class="if-raw">원문: ' + esc(raw) + '</div>' : ''))
+     : odd ? ('<div class="if-odd">붙어 보임 — 확인</div>' +
+              '<div class="if-raw">원문: ' + esc(raw) + '</div>')
+     /* 만원으로 못 적는 값(「3,000원」 등)은 <b>못 읽은 것이 아니다.</b>
+        빨갛게 세우면 거짓말이 된다 — 원문 그대로 쓴다고 적어 준다. */
+     : (man === null && raw) ? ('<div class="if-raw">원문 그대로 씁니다: ' + esc(raw) + '</div>')
+     : '') +
+    '</td>';
+}
+
 function insFixHtml(sc) {
   if (!sc || !sc.diags || !sc.diags.length) return '';
   var cell = function (d, i, which) {
-    var txt = (which === 'want') ? d.want : d.have;
-    var raw = (which === 'want') ? d.rw : d.rh;
-    var mine = (which === 'want') ? d.fw : d.fh;
-    var man = insFixMan(txt);
-    /* 「12683400원」 처럼 <b>옆 칸이 붙어 버린 꼴</b>은 눈에 띄게 세워 둔다.
-       숫자로는 1,268만원이라 멀쩡해 보이는데 실제로는 1,268만원이 아니다.
-       값을 우리가 고쳐 놓지는 않는다 — 무엇이 맞는지는 원본만 안다 (1번).
-       사장님 눈이 그 칸으로 가게만 한다.                              */
-    var odd = insFixOdd(d, which);
-    return '<td class="if-c">' +
-      '<input value="' + (man === null ? '' : man) + '" placeholder="못 읽음" inputmode="numeric" ' +
-      'class="if-i' + (mine ? ' mine' : (odd ? ' odd' : (man === null ? ' none' : ''))) + '" ' +
-      'oninput="insFixSet(this,' + i + ',\'' + which + '\',this.value)" onchange="insFixDone(this)">' +
-      /* 고친 칸에도 <b>원문을 함께</b> 남긴다 — 무엇을 덮었는지 보이지
-         않으면, 잘못 고친 것을 사장님도 되짚을 수 없다. */
-      (mine ? ('<div class="if-tag">직접 적으심</div>' +
-               (raw ? '<div class="if-raw">원문: ' + esc(raw) + '</div>' : ''))
-            : (odd ? ('<div class="if-odd">붙어 보임 — 확인</div>' +
-                      '<div class="if-raw">원문: ' + esc(raw) + '</div>')
-                   : (raw && man === null ? '<div class="if-raw">원문: ' + esc(raw) + '</div>' : ''))) +
-      '</td>';
+    return insFixCellHtml((which === 'want') ? d.want : d.have,
+      (which === 'want') ? d.rw : d.rh, (which === 'want') ? d.fw : d.fh, insFixOdd(d, which),
+      'oninput="insFixSet(this,' + i + ',\'' + which + '\',this.value)" onchange="insFixDone(this)"');
   };
   var body = sc.diags.map(function (d, i) {
     var v = d.verdict || '';
@@ -35245,14 +35448,9 @@ function insFixHtml(sc) {
     (n ? ('<div class="if-note mine"><b>직접 적으신 칸 ' + n + '개.</b> 이 칸은 <b>적으신 값 그대로</b> ' +
       '위 판정과 부족 목록에 들어가고, <b>다음에 만드는 리포트</b>부터 AI 에게도 그 값으로 갑니다. ' +
       '판정·과부족은 두 값을 견줘 <b>앱이 다시 셈</b>한 것입니다 — 원본 판정이 아닙니다.</div>') : '') +
-    (sc.stale ? ('<div class="if-note stale"><b>아래 리포트는 고치기 전 값으로 만들어졌습니다.</b> ' +
-      '이 카드의 판정은 바로 바뀌었지만, <b>리포트 본문은 아직 옛 숫자</b>입니다. ' +
-      '위쪽 <b>「🤖 AI 상세분석」·「🔄 다시 만들기」·「🔄 재생성」</b> 중 있는 단추를 눌러야 ' +
-      '고치신 값으로 다시 씁니다 — <b>그 전에는 고객에게 보이지 마십시오.</b></div>') : '') +
     '<div class="if-tw"><table class="if-tb"><thead><tr>' +
       '<th>담보</th><th class="r">권장(만원)</th><th class="r">가입(만원)</th><th>판정</th>' +
     '</tr></thead><tbody>' + body + '</tbody></table></div>' +
-    (n ? '<div class="if-btn"><button type="button" onclick="insFixClear(this)">고친 값 지우기</button></div>' : '') +
     '</div>';
 }
 
@@ -35332,7 +35530,7 @@ function insCardHtml(sc) {
   }
   /* 읽은 값을 고치는 표는 <b>맨 아래</b>에 둔다 — 위의 요약을 먼저 보고
      이상한 숫자를 발견한 다음 손대는 순서가 자연스럽다. */
-  h += insFixHtml(sc);
+  h += insFixStaleHtml(sc) + insFixHtml(sc) + insFixRHtml(sc) + insFixClearHtml(sc);
   return h + '</div>';
 }
 
@@ -35388,6 +35586,12 @@ function insCardCss() {
     '.if-note.mine{background:#F5F9FF;border:1px solid #C7D2FE;color:#1B3A6B;}' +
     '.if-note.stale{background:#FEF9EE;border:1px solid #F6E0B4;color:#7A5310;}' +
     '.if-note.odd{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;}' +
+    '.if-note.plain{background:#F7FAFF;border:1px solid #DCE7FB;color:#4E5968;}' +
+    /* 특약은 계약별로 묶어 준다 — 어느 상품의 담보인지 모르면 못 고친다 */
+    '.if-co{background:#EEF4FE;color:#1B3A6B;font-weight:800;font-size:11.5px;padding:6px 8px;' +
+      'border-top:1px solid #CEDDF7;}' +
+    '.if-co i{font-style:normal;font-weight:600;color:#5A7099;}' +
+    '.if-co em{font-style:normal;font-weight:700;color:#8B95A1;font-size:10.5px;float:right;}' +
     '.if-tw{overflow-x:auto;}.if-tb{width:100%;border-collapse:collapse;font-size:11.8px;min-width:430px;}' +
     '.if-tb th{background:#E9F0FB;color:#1B3A6B;padding:6px 8px;text-align:left;font-weight:700;white-space:nowrap;font-size:10.5px;}' +
     '.if-tb th.r{text-align:right;}' +
@@ -37170,7 +37374,9 @@ function bjLocalDeck(parts, o, why, scan) {
         title: c.product.split(/\s+김|\s+월납|\s+\//)[0].slice(0, 40) + ' — 특약 ' + c.rows.length + '개',
         sub: '가입일 ' + c.from + ' · 증권에 적힌 그대로입니다',
         head: ['구분', '담보', '가입금액'],
-        rows: c.rows.map(function (r) { return { cells: [r.kind, r.name, r.amount] }; }) });
+        /* 금액을 못 믿는 줄은 <b>빈 칸으로 두지 않는다</b> — 빈 칸은 「0」 으로
+           읽힌다. 「확인 필요」 라고 적어 고객 앞에서 말이 되게 한다. */
+        rows: c.rows.map(function (r) { return { cells: [r.kind, r.name, r.amount || '확인 필요'] }; }) });
     });
   }
 
