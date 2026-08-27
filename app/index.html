@@ -11677,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 08:20';
-var APP_BUILD_NOTE='<b>없는 담보를 「없다」 고 못 박을 수 있습니다 — 여태 0 은 <i>지우개</i>였습니다.</b> 고치는 칸에 <code>0</code> 을 치고 탭을 누르면 <b>말없이 읽은 값으로 되돌아갔습니다.</b> 원본이 엉뚱하게 읽어 화면에 「일반암 3,000만원 가입」 이라 찍혔는데 <b>실제로는 없는</b> 담보라면, 그것을 지울 방법이 아예 없었습니다 — 고객 앞에 서는 숫자 중에 그보다 나쁜 것이 없습니다. 이제 <b>빈 칸</b>이 지우개고, <b>0</b> 은 「증권을 보고 없다고 확인했다」 는 값입니다. 담보진단은 <b>「미가입 · -전액」</b>, 특약은 <b>「0원」</b> 이 되고, 위쪽 <b>실지급 계열 표에서도 함께 빠집니다.</b> 금액만 못 읽어 <b>비워 둔</b> 줄은 <b>그대로 「있음」</b> 입니다 — 담보는 있고 금액만 모르는 것이라, 그것까지 지우면 어젯밤 고친 사고가 되돌아옵니다. 그리고 <b>「원본이 부족·미가입으로 본 담보」 줄이 거짓말을 하고 있었습니다</b> — 사장님이 고치신 줄의 과부족은 <b>앱이 다시 셈한 값</b>인데 머리글은 「원본이」 라고 말해, 고객께 「분석표에도 이렇게 나옵니다」 라고 말씀하시게 됩니다. 고친 줄에는 <b>★</b> 를 달고 머리글을 바꿨습니다. AI 에게도 같은 말을 합니다. <code>check-insfix</code> 17군 · 여덟 자리를 일부러 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
+var APP_BUILD='2026-08-28 08:50';
+var APP_BUILD_NOTE='<b>폰에서 「판정」 칸이 화면 밖에 있었습니다 — 옆으로 밀어야 보였고, 밀 수 있다는 것을 모르면 없는 것과 같습니다.</b> 390px 에서 재 보니 담보진단 표가 옆으로 밀려 <b>「미가입」·「-5,000만원」 이 안 보였고</b>, 계약 표는 일곱 칸짜리라 <b>납입상태·만기·월 보험료</b>가 통째로 밖이었습니다 — 「납입완료」 를 못 보면 살아 있는 계약을 해지로 오해합니다. 본문은 안 밀리니 점검도 조용했습니다. 이제 좁은 화면(560px 아래)에서는 <b>표를 줄 단위로 세웁니다.</b> 담보 하나가 한 덩어리가 되고, 계약 하나가 한 장이 되어 <b>판정이 언제나 눈에 있습니다.</b> 머리글이 사라지는 자리라 칸마다 <b>「권장(만원)」·「가입(만원)」 이름표</b>를 붙였습니다 — 없으면 똑같이 생긴 빈 칸 둘이 되어 <b>거꾸로 적힙니다.</b> 넓은 화면은 표 그대로가 더 빨리 읽혀 손대지 않았습니다. 함께: <b>「원본이 부족·미가입으로 본 담보」 줄이 거짓말을 하고 있었습니다</b> — 고치신 줄의 과부족은 <b>앱이 다시 셈한 값</b>인데 머리글은 「원본이」 라고 말해, 고객께 「분석표에도 이렇게 나옵니다」 라고 말씀하시게 됩니다. 고친 줄에 <b>★</b> 를 달고 AI 에게도 같은 말을 합니다. <code>check-insfix</code> 17군 · 「칸이 화면 안에 있는가」·「이름표가 붙는가」 를 재는 점검을 새로 넣고, 열세 자리를 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -35597,7 +35597,8 @@ function insFixRHtml(sc) {
         '</td>' +
         /* 원문은 <b>언제나</b> 보여 준다 — 비워 둔 칸일수록 더 필요하다 */
         insFixCellHtml(r.na, r.raw || r.ra, r.fx, insFixROdd(r),
-          'oninput="insFixRSet(this,' + ci + ',' + ri + ',this.value)" onchange="insFixDone(this)"') +
+          'oninput="insFixRSet(this,' + ci + ',' + ri + ',this.value)" onchange="insFixDone(this)"',
+          '가입금액(만원)') +
         '</tr>';
     }
     if (!k) continue;
@@ -35642,14 +35643,17 @@ function insFixRHtml(sc) {
    「12683400원」 처럼 옆 칸이 붙어 버린 꼴은 노랗게 세워 둔다. 숫자로는
    1,268만원이라 멀쩡해 보이는데 실제로는 그 금액이 아니다. <b>값을 우리가
    고쳐 놓지는 않는다</b> — 무엇이 맞는지는 원본만 안다 (1번).        */
-function insFixCellHtml(num, raw, mine, odd, setJs) {
+function insFixCellHtml(num, raw, mine, odd, setJs, label) {
   /* 그려 놓은 글자를 도로 읽지 않고 <b>숫자를 받는다.</b> 되읽으면
      사장님이 적으신 「0」 이 빈 칸으로 보여, 적은 것이 <b>말없이 사라진</b>
      것처럼 된다 (CLAUDE.md 5번 — 같은 것을 두 곳에서 셈하지 않는다). */
   var man = (num === null || num === undefined) ? null : num;
   var big = mine && insFixBig(man);
   var cls = big ? ' big' : (mine ? ' mine' : (odd ? ' odd' : ((man === null && !raw) ? ' none' : '')));
-  return '<td class="if-c">' +
+  /* 폰에서는 표를 <b>줄 단위로 세운다</b> — 그때 머리글이 안 보이므로
+     칸마다 이름표를 달아 둔다. 「권장」 과 「가입」 을 헷갈리면 그대로
+     만 배가 아니라 <b>거꾸로</b> 적힌다.                              */
+  return '<td class="if-c" data-l="' + esc(label || '') + '">' +
     /* 누르면 <b>통째로 잡는다.</b> 안 그러면 3000 이 적힌 칸을 눌러
        5000 을 치면 <b>30005000</b> 이 된다 — 만 배가 틀어지는 바로 그 자리다.
        실제로 시험이 그 값을 만들고 있었고 아무도 못 봤다 (CLAUDE.md 4번). */
@@ -35674,7 +35678,8 @@ function insFixHtml(sc) {
   var cell = function (d, i, which) {
     return insFixCellHtml((which === 'want') ? d.nw : d.nh,
       (which === 'want') ? d.rw : d.rh, (which === 'want') ? d.fw : d.fh, insFixOdd(d, which),
-      'oninput="insFixSet(this,' + i + ',\'' + which + '\',this.value)" onchange="insFixDone(this)"');
+      'oninput="insFixSet(this,' + i + ',\'' + which + '\',this.value)" onchange="insFixDone(this)"',
+      (which === 'want') ? '권장(만원)' : '가입(만원)');
   };
   /* ── 여기도 <b>손볼 것만</b> ──────────────────────────────────────
      기준담보는 서른일곱 줄이다. 손볼 것이 하나도 없는데 서른일곱 줄을
@@ -35771,10 +35776,15 @@ function insCardHtml(sc) {
     h += '<div class="ir-tw"><table class="ir-tb"><thead><tr><th>보험사</th><th>상품</th><th>가입일</th><th>납입</th><th>납입상태</th><th>만기</th><th>월 보험료</th></tr></thead><tbody>';
     sc.plans.forEach(function (p) {
       var st = insPayStatus(p);
-      h += '<tr><td>' + esc(p.co) + '</td><td>' + esc(p.name) + '</td><td>' + esc(p.from) + '</td>' +
-        '<td>' + esc(insTermLabel(p)) + '</td>' +
-        '<td><span class="ir-pay ' + (INS_PAY_TONE[st] || 'ask') + '">' + esc(INS_PAY[st] || INS_PAY.UNKNOWN) + '</span></td>' +
-        '<td>' + esc(p.till || '-') + '</td><td class="r">' + (p.fee > 0 ? insWon(p.fee) + '원' : '<span class="ir-dim">미제공</span>') + '</td></tr>';
+      /* 폰에서는 이 표도 <b>줄 단위로 세운다</b> — 그때 머리글이 안 보이니
+         칸마다 이름표를 달아 둔다. 특히 <b>납입상태</b>가 화면 밖으로
+         나가면 「납입완료」 를 못 보고 해지로 오해한다.               */
+      h += '<tr><td>' + esc(p.co) + '</td><td>' + esc(p.name) + '</td>' +
+        '<td data-l="가입일">' + esc(p.from) + '</td>' +
+        '<td data-l="납입">' + esc(insTermLabel(p)) + '</td>' +
+        '<td data-l="납입상태"><span class="ir-pay ' + (INS_PAY_TONE[st] || 'ask') + '">' + esc(INS_PAY[st] || INS_PAY.UNKNOWN) + '</span></td>' +
+        '<td data-l="만기">' + esc(p.till || '-') + '</td>' +
+        '<td class="r" data-l="월 보험료">' + (p.fee > 0 ? insWon(p.fee) + '원' : '<span class="ir-dim">미제공</span>') + '</td></tr>';
     });
     h += '</tbody></table></div>';
   }
@@ -35926,7 +35936,45 @@ function insCardCss() {
     '.if-btn{margin-top:10px;}' +
     '.if-btn button{border:1px solid #C7D2FE;background:#fff;color:#1B3A6B;border-radius:8px;' +
       'padding:8px 14px;font-size:11.5px;font-weight:800;cursor:pointer;min-height:33px;}' +
-    '@media(max-width:720px){.ir-con{width:96px;font-size:11px}.ir-cov{width:88px;font-size:11px}}';
+    '@media(max-width:720px){.ir-con{width:96px;font-size:11px}.ir-cov{width:88px;font-size:11px}}' +
+    /* ── 폰에서는 표를 <b>줄 단위로 세운다</b> ─────────────────────────
+       390px 에서 재 보니 네 칸짜리 표가 min-width 430px 이라 옆으로 밀렸고,
+       하필 <b>맨 오른쪽 「판정」 칸</b>이 화면 밖으로 나갔다 — 「미가입」·
+       「-5,000만원」 이 안 보인다. 표 안에서만 밀리니 점검은 조용했다.
+       옆으로 밀 수 있다는 것을 <b>모르면 없는 것과 같다</b>. 그래서 좁은
+       화면에서는 한 담보를 한 덩어리로 세워, 판정이 언제나 눈에 있게
+       한다. 넓은 화면은 표 그대로가 더 빨리 읽힌다.                  */
+    '@media(max-width:560px){' +
+      '.if-tw{overflow-x:visible;}' +
+      '.if-tb{min-width:0;display:block;}' +
+      '.if-tb thead{display:none;}' +
+      '.if-tb tbody,.if-tb tr,.if-tb td{display:block;width:auto;}' +
+      '.if-tb tr{border-top:1px solid #E6EDF7;padding:7px 0 9px;}' +
+      '.if-tb td{border-top:0;padding:2px 2px;}' +
+      '.if-n{font-size:13px;padding:0 2px 4px;}' +
+      '.if-c{position:relative;padding-left:78px;}' +
+      '.if-c:before{content:attr(data-l);position:absolute;left:2px;top:9px;' +
+        'font-size:10.5px;color:#5A7099;font-weight:800;}' +
+      '.if-c[data-l=""]{padding-left:2px;}' +
+      '.if-v{padding:5px 2px 0;white-space:normal;}' +
+      '.if-v .if-g,.if-v .if-calc{display:inline-block;margin-left:7px;margin-top:0;}' +
+      '.if-co{padding:6px 8px;border-radius:7px;margin-top:4px;}' +
+      /* 계약 표도 같다 — 일곱 칸짜리라 <b>납입상태·만기·월 보험료</b>가
+         통째로 화면 밖이었다. 「납입완료」 를 못 보면 살아 있는 계약을
+         해지로 오해한다. 회사·상품은 한 줄씩, 나머지는 두 칸씩 세운다. */
+      '.ir-tw{overflow-x:visible;}' +
+      '.ir-tb{min-width:0;display:block;}' +
+      '.ir-tb thead{display:none;}' +
+      '.ir-tb tbody{display:block;}' +
+      '.ir-tb tr{display:grid;grid-template-columns:1fr 1fr;gap:1px 10px;' +
+        'border-top:1px solid #E6EDF7;padding:8px 2px;}' +
+      '.ir-tb td{display:block;border-top:0;padding:1px 2px;}' +
+      '.ir-tb td:nth-child(1){grid-column:1/-1;font-weight:800;font-size:12.5px;color:#1B3A6B;}' +
+      '.ir-tb td:nth-child(2){grid-column:1/-1;color:#4E5968;padding-bottom:3px;}' +
+      '.ir-tb td:nth-child(7){grid-column:1/-1;}' +
+      '.ir-tb td:before{content:attr(data-l) " ";font-size:10px;color:#8B95A1;font-weight:700;}' +
+      '.ir-tb td.r{text-align:left;}' +
+    '}';
 }
 function insCssMount() {
   if (document.getElementById('insReadCss')) return;

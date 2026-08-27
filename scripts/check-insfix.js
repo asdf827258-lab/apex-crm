@@ -965,12 +965,36 @@ const RDOC =
         el.childNodes.forEach(c => { if (c.nodeType === 3 && (c.textContent || '').trim()) has = true; });
         if (has && (parseFloat(getComputedStyle(el).fontSize) || 99) < 10) tiny++;
       });
+      /* ── 표 안에서만 밀리는 것도 <b>숨는 것</b>이다 ────────────────
+         390px 에서 재 보니 담보진단 표(min-width 430px)가 옆으로 밀려
+         <b>맨 오른쪽 「판정」 칸</b>이 화면 밖에 있었다 — 「미가입 ·
+         -5,000만원」 이 안 보인다. 계약 표는 일곱 칸짜리라 <b>납입상태·
+         만기·월 보험료</b>가 통째로 밖이었다. 본문이 안 밀리니 점검은
+         조용했다. 옆으로 밀 수 있다는 것을 <b>모르면 없는 것과 같다.</b>
+         그래서 「칸이 화면 안에 있는가」 를 직접 잰다.               */
+      const vw = document.documentElement.clientWidth;
+      const outside = (sel) => [].slice.call(document.querySelectorAll(sel))
+        .filter(x => x.getBoundingClientRect().width > 0)
+        .filter(x => Math.round(x.getBoundingClientRect().right) > vw + 1).length;
       return { nIn: ins.length, minIn: Math.min.apply(null, ins.concat([999])),
                nBtn: btn.length, minBtn: Math.min.apply(null, btn.concat([999])),
                over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-               tiny: tiny };
+               tiny: tiny, vw: vw,
+               nV: document.querySelectorAll('#TT .if-v').length,
+               outV: outside('#TT .if-v'),
+               outC: outside('#TT .if-c'),
+               nPlan: document.querySelectorAll('#TT .ir-tb tbody td').length,
+               outPlan: outside('#TT .ir-tb tbody td'),
+               outPay: outside('#TT .ir-pay'),
+               /* 줄 단위로 세우면 <b>머리글이 사라진다.</b> 그때 이름표가
+                  없으면 똑같이 생긴 빈 칸 두 개만 남는다 — 「권장」 과
+                  「가입」 을 거꾸로 적으면 진단이 통째로 뒤집힌다. */
+               nCell: document.querySelectorAll('#TT .if-c').length,
+               labs: [].slice.call(document.querySelectorAll('#TT .if-c'))
+                 .map(x => (getComputedStyle(x, ':before').content || '').replace(/^"|"$/g, '').trim())
+                 .filter(t => t && t !== 'none') };
     }, { ODD, RDOC });
-    touch.push({ vp: vp.n, m });
+    touch.push({ vp: vp.n, w: vp.w, m });
     await pg.close();
   }
   touch.forEach(t => {
@@ -981,6 +1005,20 @@ const RDOC =
     is(t.m.over === 0,
        '  ' + t.vp + ' — <b>본문이 옆으로 안 밀린다</b> (표는 제 안에서만 민다) · ' + t.m.over + 'px');
     is(t.m.tiny === 0, '  ' + t.vp + ' — 10px 미만 글자가 <b>없다</b>');
+    is(t.m.nV > 0 && t.m.outV === 0 && t.m.outC === 0,
+       '  ' + t.vp + ' — <b>판정 칸이 화면 안에</b> 있다 (옆으로 밀어야 보이면 못 보고 지나친다) · ' +
+       '밖으로 나간 칸 ' + (t.m.outV + t.m.outC) + '개');
+    is(t.m.nPlan > 0 && t.m.outPlan === 0 && t.m.outPay === 0,
+       '  ' + t.vp + ' — 계약 표의 <b>납입상태·만기·월 보험료</b>도 화면 안에 있다 · ' +
+       '밖으로 나간 칸 ' + t.m.outPlan + '개');
+    /* 좁은 화면에서 <b>머리글이 사라진 자리</b>에만 필요한 것이다.
+       넓은 화면까지 이름표를 요구하면 헛알람이 된다 (CLAUDE.md 8번). */
+    if (t.w < 560) {
+      var want = t.m.labs.filter(x => /권장|가입/.test(x)).length;
+      is(t.m.nCell > 0 && want === t.m.nCell,
+         '  ' + t.vp + ' — 칸마다 <b>「권장」·「가입」 이름표</b>가 붙는다 (머리글이 사라진 자리라, ' +
+         '없으면 똑같은 빈 칸 둘이 되어 거꾸로 적힌다) · ' + want + '/' + t.m.nCell + '개');
+    }
   });
 
   await browser.close(); srv.close();
