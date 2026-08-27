@@ -1224,6 +1224,109 @@ const RDOC =
     }
   });
 
+  /* ─────────────────────────────────────────────────────────────── */
+  /* ── 「1억」 이라고 치시면 <b>1억</b> 이어야 한다 ────────────────────
+     고치는 칸은 셋 다 만원 칸이다. 여태 숫자만 뽑아 써서 「1억」 은
+     <b>1만원</b>, 「3천만」 은 <b>3만원</b> 이 됐다 — 만 분의 일이다.
+     고객 앞에서 「사망보험금 1만원」 이 찍힌다. 만 배 경고는 <b>큰
+     쪽</b>만 봐서 이 자리에서는 조용했다.
+
+     칸이 만원이라 한글 수 단위가 그대로 곱이 된다 — 「3천」 은
+     3천만원이고 3,000만원이라 어느 쪽으로 읽어도 같은 값이다.
+     짐작할 자리가 없다 (CLAUDE.md 1번·4번).                        */
+  console.log('\n[20] 「1억」 이라고 치시면 1억으로 담긴다');
+  const MAN = [
+    ['3000', 3000, '단위를 안 쓰시면 칸의 단위(만원)'],
+    ['3,000', 3000, '콤마'],
+    ['3000만', 3000, '만'],
+    ['3,000만원', 3000, '만원'],
+    ['3천만', 3000, '<b>천만</b> — 여태 3만원이었다'],
+    ['3천', 3000, '천 (3천만원 = 3,000만원 · 같은 값)'],
+    ['5백만', 500, '백만'],
+    ['1억', 10000, '<b>억</b> — 여태 1만원이었다'],
+    ['1.5억', 15000, '소수 억 — 여태 2만원이었다'],
+    ['1억5천', 15000, '억+천'],
+    ['1억5000', 15000, '억+맨숫자(칸 단위)'],
+    ['0', 0, '<b>0 은 값이다</b> — 「없음을 확인했다」'],
+    ['', null, '빈 칸은 <b>지우개</b>'],
+    ['.', null, '점만'],
+    ['삼천', null, '한글 숫자는 <b>모름</b> — 지어내지 않는다'],
+    ['-500', null, '음수는 <b>모름</b> — 말없이 양수로 안 뒤집는다'],
+  ];
+  const man = await page.evaluate((MAN) => {
+    const said = [];
+    const real = window.toast; window.toast = m => { said.push(String(m)); };
+    const got = MAN.map(([t]) => { said.length = 0; return { v: insFixNum(t), said: said.slice() }; });
+    window.toast = real;
+    return got;
+  }, MAN);
+  MAN.forEach(([t, want, why], i) => {
+    const g = man[i].v;
+    is(g === want,
+       '  「' + (t || '(빈 칸)') + '」 → <b>' +
+       (want === null ? '모름' : want.toLocaleString()) + '</b> · ' + why +
+       (g === want ? '' : ' · 실제로는 ' + (g === null ? '모름' : g)));
+  });
+  /* 못 읽었으면 <b>말을 한다</b> — 빈 칸이 되고 마는 것이 제일 나쁘다.
+     지우려고 비우신 칸에는 말하지 않는다 (헛알람 · CLAUDE.md 8번). */
+  const q = i => (man[i].said.join(' ') || '');
+  is(/읽지 못했습니다/.test(q(14)) && /1억/.test(q(14)),
+     '  「삼천」 — <b>못 읽었다고 말하고</b> 어떻게 적으면 되는지 보여 준다');
+  is(/읽지 못했습니다/.test(q(15)),
+     '  「-500」 — 말없이 500 으로 바꾸지 않고 <b>말을 한다</b>');
+  is(q(12) === '' && q(11) === '' && q(0) === '',
+     '  빈 칸 · 「0」 · 「3000」 에는 <b>아무 말도 안 한다</b> — 헛알람이 없다');
+  /* 고치는 칸이 셋인데 각자 뽑아 쓰면 한 곳만 고쳐진다 (CLAUDE.md 5번) */
+  const three = await page.evaluate(() => {
+    const s = [insFixSet, insFixRSet, babaSet, babaRecSet].map(f => String(f));
+    /* <b>부르는 자리</b>를 본다 — 이름만 찾으면 주석에 적힌 이름에 걸려
+       진짜로 뽑아 쓰기 시작해도 안 운다 (CLAUDE.md 8번). */
+    return {
+      viaOne: s.every(x => /insFixNum\s*\(/.test(x)),
+      ownStrip: s.filter(x => /replace\(\s*\/\[\^\\d/.test(x)).length
+    };
+  });
+  is(three.viaOne, '  고치는 칸 <b>넷이 모두</b> insFixNum 하나를 부른다');
+  is(three.ownStrip === 0,
+     '  제 손으로 숫자만 뽑아 쓰는 자리가 없다 — ' + three.ownStrip + '곳 ' +
+     '(있으면 「1억」 이 그 칸에서만 1만원이 된다)');
+  /* <b>진짜 칸에</b> 쳐 본다 — 뽑아 읽는 것만 맞고 화면이 딴 소리를 하면
+     고객이 보시는 것은 화면이다. 판정·차액·다시 그리기까지 따라간다. */
+  const live = await page.evaluate(async (DOC) => {
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    const sc = insScan(DOC); sc.fixOpen = 1; sc.dAll = 1;
+    const h = document.createElement('div'); h.id = 'UK'; h._scan = sc;
+    h.innerHTML = insCardHtml(sc); document.body.appendChild(h);
+    const ins = h.querySelectorAll('.if-i');
+    /* 권장 5,000만 · 가입 3,000만 인 일반암 줄의 <b>가입</b> 칸에 「1억」 */
+    insFixSet(ins[1], 0, 'have', '1억'); insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    const d = sc.diags[0];
+    /* 자료를 다시 읽어도(새로고침) 그대로 붙는가 */
+    const sc2 = insScan(DOC);
+    insFixRow(sc2.diags[0], (insFixFor(sc2.fixSig) || {})[insFixKey(sc2.diags[0])]);
+    return {
+      nh: d.nh, have: d.have, verdict: d.verdict,
+      big: document.querySelectorAll('#UK .if-i.big').length,
+      again: sc2.diags[0].nh, againShown: sc2.diags[0].have,
+      onScreen: /1억|10,000/.test(document.getElementById('UK').textContent)
+    };
+  }, DOC);
+  is(live.nh === 10000,
+     '  진짜 칸에 「1억」 → <b>10,000만원</b> 으로 담긴다 · ' + live.nh);
+  is(/1억/.test(live.have || '') || /10,000/.test(live.have || ''),
+     '  화면에도 <b>1억</b> 이라 찍힌다 — 「' + live.have + '」 ' +
+     '(고객이 보시는 것은 화면이다)');
+  is(live.verdict === '충분',
+     '  판정이 따라온다 — 권장 5,000만 · 가입 1억이면 <b>충분</b> · ' + live.verdict);
+  is(live.big === 0,
+     '  <b>만 배 경고가 헛울지 않는다</b> — 1억은 정상 금액이다 · ' + live.big + '칸');
+  is(live.again === 10000,
+     '  자료를 <b>다시 읽어도</b> 1억이 그대로 붙는다 · ' + live.again +
+     ' (「' + live.againShown + '」)');
+
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('보장분석 고치기 점검 — ' + bad + '군데 어긋납니다.')
