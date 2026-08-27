@@ -35153,11 +35153,23 @@ function insFixDone(el) {
   }
   sc.stale = 1;
   insFixDerive(sc);
-  insFixPaint(host, sc);
+  /* 브라우저가 <b>다음 칸으로 자리를 옮기고 난 뒤에</b> 그린다.
+     지금 그리면 탭으로 가려던 칸이 태어나기도 전에 지워져, 탭을 눌러도
+     <b>본문으로 튕겨 나간다</b> — 37줄짜리 표에서는 한 칸마다 다시 눌러야 한다. */
+  setTimeout(function () { insFixPaint(host, sc); }, 0);
 }
 function insFixPaint(host, sc) {
-  var box = host && host.querySelector('.ins-read');
-  if (box) box.outerHTML = insCardHtml(sc);
+  if (!host) return;
+  var box = host.querySelector('.ins-read');
+  if (!box) return;
+  /* 다시 그리면 지금 눌린 칸이 사라진다 — 표에서 <b>몇 번째 칸</b>이었는지
+     세어 두었다가 그 자리로 돌려놓는다. */
+  var all = host.querySelectorAll('.if-i'), at = -1, i;
+  for (i = 0; i < all.length; i++) if (all[i] === document.activeElement) { at = i; break; }
+  box.outerHTML = insCardHtml(sc);
+  if (at < 0) return;
+  var now = host.querySelectorAll('.if-i');
+  if (now[at] && now[at].focus) now[at].focus();
 }
 function insFixClear(el) {
   var host = insFixHost(el), sc = host && host._scan;

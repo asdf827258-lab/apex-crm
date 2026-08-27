@@ -33,7 +33,9 @@
      5. <b>다른 자료에는 한 줄도 안 붙는가</b>
      6. 다시 읽어도 붙는가 (「다시 만들기」 를 견딘다)
      7. 화면·AI 에 <b>고친 값이라고 밝히는가</b> · 옛 리포트를 경고하는가
-     8. <b>헛알람이 없는가</b> — 안 고쳤으면 조용한가                */
+     8. <b>헛알람이 없는가</b> — 안 고쳤으면 조용한가
+     9. 고친 뒤에도 <b>탭이 옆 칸으로 가는가</b> — 다시 그리면서 지금 눌린
+        칸을 지워 버리면, 서른일곱 줄 표에서 한 칸마다 다시 눌러야 한다 */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -82,7 +84,7 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
 
   /* 화면을 한 벌 세우고 그 위에서 실제로 고쳐 본다.
      함수만 부르면 「화면에서 정말 고쳐지는가」 를 못 본다.  */
-  const R = await page.evaluate(({ DOC, OTHER, ODD }) => {
+  const R = await page.evaluate(async ({ DOC, OTHER, ODD }) => {
     const O = {};
     localStorage.removeItem('apex_ins_fix');
 
@@ -93,6 +95,8 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
       document.body.appendChild(host);
       return host;
     };
+    /* 다시 그리기는 브라우저가 자리를 옮기고 난 뒤다 — 한 박자 기다린다 */
+    const done = async (el) => { insFixDone(el); await new Promise(r => setTimeout(r, 0)); };
     const rowOf = (d) => d.want + '|' + d.have + '|' + d.verdict + '|' + (d.gap || '') + '|fix=' + (d.fix || 0);
 
     /* ── 1. 표가 선다 ─────────────────────────────────────────── */
@@ -119,7 +123,7 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
     /* ── 2. 고치면 그 자리에서 따라온다 ────────────────────────── */
     let ins = host.querySelectorAll('.if-i');
     insFixSet(ins[1], 0, 'have', '5000');      /* 가입 3,000만 → 5,000만 */
-    insFixDone(ins[1]);
+    await done(ins[1]);
     O.afterRow = rowOf(sc.diags[0]);
     O.afterShort = sc.short.length;
     O.afterN = sc.fixN;
@@ -133,18 +137,18 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
     /* 권장도 고쳐 본다 — 두 칸이 따로 논다 */
     ins = host.querySelectorAll('.if-i');
     insFixSet(ins[0], 0, 'want', '10000');
-    insFixDone(ins[0]);
+    await done(ins[0]);
     O.bothRow = rowOf(sc.diags[0]);
     O.bothN = sc.fixN;
 
     /* ── 3. 비우면 읽은 값으로 ─────────────────────────────────── */
     ins = host.querySelectorAll('.if-i');
     insFixSet(ins[0], 0, 'want', '');
-    insFixDone(ins[0]);
+    await done(ins[0]);
     O.halfRow = rowOf(sc.diags[0]);
     ins = host.querySelectorAll('.if-i');
     insFixSet(ins[1], 0, 'have', '');
-    insFixDone(ins[1]);
+    await done(ins[1]);
     O.emptyRow = rowOf(sc.diags[0]);
     O.emptyN = sc.fixN;
     O.emptyShort = sc.short.length;
@@ -152,7 +156,7 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
     /* ── 4·5. 다시 고친 뒤 — 다시 읽기 · 다른 자료 ─────────────── */
     ins = host.querySelectorAll('.if-i');
     insFixSet(ins[1], 0, 'have', '5000');
-    insFixDone(ins[1]);
+    await done(ins[1]);
 
     const sc2 = insScan(DOC);                   /* 「다시 만들기」 */
     O.reRow = rowOf(sc2.diags[0]);
@@ -280,6 +284,40 @@ const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400�
   is(R.shellRow === '5,000만|3,000만|부족|-2,000만|fix=0',
      '  없는 담보 앞으로 남은 값은 조용히 지나친다 — ' + R.shellRow);
   is(errs.length === 0, '  화면이 터지지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 표를 고치면 다시 그린다. 그런데 <b>지금 눌린 칸이 사라진다.</b>
+     탭으로 옆 칸에 가려던 중이면 그 칸이 태어나기도 전에 지워져
+     <b>본문으로 튕겨 나간다.</b> 담보 서른일곱 줄짜리 표에서 한 칸마다
+     다시 눌러야 하면 고객 앞에서 못 쓴다. 진짜 자판으로 눌러 본다. */
+  console.log('\n[9] 고친 뒤에도 탭이 옆 칸으로 간다');
+  await page.evaluate((DOC) => {
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    const sc = insScan(DOC);
+    const h = document.createElement('div');
+    h.id = 'TABH'; h._scan = sc;
+    h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+    document.body.appendChild(h);
+  }, DOC);
+  const where = () => page.evaluate(() => {
+    const all = [].slice.call(document.querySelectorAll('#TABH .if-i'));
+    return { i: all.indexOf(document.activeElement), n: all.length };
+  });
+  await page.locator('#TABH .if-i').nth(1).focus();
+  const w0 = await where();
+  await page.keyboard.type('5000');
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(200);
+  const w1 = await where();
+  is(w0.i === 1, '  두 번째 칸에 들어갔다');
+  is(w1.i === 2, '  값을 치고 탭 — <b>세 번째 칸</b>으로 간다 (본문으로 안 튕긴다)' +
+     (w1.i < 0 ? ' — 지금은 튕겼습니다' : ' — 지금 ' + (w1.i + 1) + '번째'));
+  const painted = await page.evaluate(() =>
+    document.querySelectorAll('#TABH .if-i.mine').length + '|' +
+    (/직접 적으신 칸 1개/.test(document.body.textContent) ? 1 : 0));
+  is(painted === '1|1', '  그 사이에 표는 <b>제대로 다시 그려졌다</b> — ' + painted);
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
