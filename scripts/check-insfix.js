@@ -764,6 +764,57 @@ const RDOC =
   is(U.rBigInR === 1 && U.rBigInD === 0 && U.rBigHead,
      '  <b>특약</b>에서 난 것은 특약 표에만 뜬다 — 담보진단 표에 뜨면 찾다가 못 찾는다');
 
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 사장님은 <b>태블릿</b>으로 고객 앞에서 여신다. 손가락으로 누르는
+     칸이 29px 이면 이 앱 자신의 기준(30px)에도 못 미쳐 옆 칸이 눌린다.
+     그리고 본문이 옆으로 밀리면 표를 보려다 화면이 통째로 움직인다 —
+     표는 <b>제 안에서만</b> 밀려야 한다. 재 보고 지킨다.            */
+  console.log('\n[15] 태블릿에서 손가락으로 쓸 수 있다');
+  const touch = [];
+  for (const vp of [{ n: '폰 390', w: 390, h: 844 }, { n: '탭 800', w: 800, h: 1280 }]) {
+    const pg = await browser.newPage({ viewport: { width: vp.w, height: vp.h } });
+    await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
+                  { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(2000);
+    const m = await pg.evaluate(({ ODD, RDOC }) => {
+      localStorage.removeItem('apex_ins_fix');
+      document.body.innerHTML = '';
+      document.body.style.cssText = 'margin:0;padding:10px;background:#fff';
+      if (typeof insCssMount === 'function') insCssMount();
+      /* 담보진단과 특약이 <b>둘 다</b> 있는 자료로 잰다 */
+      const sc = insScan(ODD + RDOC.split('\n').slice(3).join('\n'));
+      sc.fixOpen = 1; sc.dAll = 1; sc.rAll = 1;
+      const h = document.createElement('div');
+      h.id = 'TT'; h._scan = sc;
+      h.innerHTML = insCardHtml(sc);
+      document.body.appendChild(h);
+      const hgt = (sel) => [].slice.call(document.querySelectorAll(sel))
+        .map(x => Math.round(x.getBoundingClientRect().height));
+      const ins = hgt('#TT .if-i'), btn = hgt('#TT button, #TT .if-ph');
+      let tiny = 0;
+      document.querySelectorAll('#TT *').forEach(el => {
+        let has = false;
+        el.childNodes.forEach(c => { if (c.nodeType === 3 && (c.textContent || '').trim()) has = true; });
+        if (has && (parseFloat(getComputedStyle(el).fontSize) || 99) < 10) tiny++;
+      });
+      return { nIn: ins.length, minIn: Math.min.apply(null, ins.concat([999])),
+               nBtn: btn.length, minBtn: Math.min.apply(null, btn.concat([999])),
+               over: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+               tiny: tiny };
+    }, { ODD, RDOC });
+    touch.push({ vp: vp.n, m });
+    await pg.close();
+  }
+  touch.forEach(t => {
+    is(t.m.nIn > 0 && t.m.minIn >= 30,
+       '  ' + t.vp + ' — 고치는 칸이 <b>' + t.m.minIn + 'px</b> (30px 넘어야 손가락으로 눌린다)');
+    is(t.m.nBtn > 0 && t.m.minBtn >= 30,
+       '  ' + t.vp + ' — 단추·머리글이 <b>' + t.m.minBtn + 'px</b>');
+    is(t.m.over === 0,
+       '  ' + t.vp + ' — <b>본문이 옆으로 안 밀린다</b> (표는 제 안에서만 민다) · ' + t.m.over + 'px');
+    is(t.m.tiny === 0, '  ' + t.vp + ' — 10px 미만 글자가 <b>없다</b>');
+  });
+
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('보장분석 고치기 점검 — ' + bad + '군데 어긋납니다.')
