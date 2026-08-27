@@ -1377,6 +1377,33 @@ const RDOC =
   is(live.again === 10000,
      '  자료를 <b>다시 읽어도</b> 1억이 그대로 붙는다 · ' + live.again +
      ' (「' + live.againShown + '」)');
+  /* <b>특약 칸</b>도 같은 자리를 쓴다. 담보는 되는데 특약만 「1억」 이
+     1만원이 되면, 요즘 실지급을 가르는 비급여 담보가 거기 있으므로
+     제일 아픈 자리가 틀린다. 진짜 칸에 쳐 본다. */
+  const rlive = await page.evaluate(async (RDOC) => {
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    const sc = insScan(RDOC); sc.fixOpen = 1;
+    const h = document.createElement('div'); h.id = 'RK'; h._scan = sc;
+    h.innerHTML = insCardHtml(sc); document.body.appendChild(h);
+    const ins = h.querySelectorAll('.if-r .if-i');
+    if (!ins.length) return { err: '고치는 칸이 없음' };
+    insFixRSet(ins[0], 0, 1, '1억'); insFixDone(ins[0]);
+    await new Promise(r => setTimeout(r, 0));
+    const r = sc.riders[0].rows[1];
+    /* insScan 이 스스로 고친 값을 얹는다 — 「다시 만들기」 를 견디는가 */
+    const sc2 = insScan(RDOC);
+    return { na: r.na, shown: r.amount, fx: r.fx,
+             again: sc2.riders[0].rows[1].na, againShown: sc2.riders[0].rows[1].amount };
+  }, RDOC);
+  is(!rlive.err && rlive.na === 10000,
+     '  <b>특약 칸</b>에 「1억」 → 10,000만원 · ' +
+     (rlive.err || (rlive.na === null ? '모름' : rlive.na)));
+  is(/1억/.test(rlive.shown || '') || /10,000/.test(rlive.shown || ''),
+     '  특약 화면에도 <b>1억</b> 이라 찍힌다 — 「' + rlive.shown + '」');
+  is(rlive.again === 10000,
+     '  특약도 <b>다시 읽으면</b> 그대로 붙는다 · ' + rlive.again + ' (「' + rlive.againShown + '」)');
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
