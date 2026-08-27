@@ -11677,7 +11677,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 05:20';
+var APP_BUILD='2026-08-28 05:50';
 var APP_BUILD_NOTE='<b>보장분석과 비포&애프터, 두 화면의 고치는 칸을 같은 눈으로 다 훑었습니다.</b> ① <b>만원 칸에 원을 적으시면 만 배가 틀어집니다.</b> 「5,000만원」 을 적으려다 <code>50000000</code> 을 치면 5,000억이 됩니다. 담보 하나가 100억을 넘으면(보험료 줄은 1억원) <b>빨간 칸</b>으로 「단위가 맞습니까?」 라고 여쭙니다 — <b>값은 저희가 안 고칩니다.</b> ② <b>칸을 누르면 통째로 잡힙니다.</b> 비포&애프터는 더했습니다 — 「3,000」 이 적힌 칸에 5000 을 치면 <b>50003,000</b>, 쉼표까지 끼어 5,000억이 됐습니다. ③ <b>고치고 탭을 누르면 본문으로 튕겼습니다.</b> 두 화면 다 그랬습니다 — 담보가 스무 줄이면 한 칸마다 다시 눌러야 해서 고객 앞에서 못 씁니다. ④ <b>금액을 못 믿는다고 담보를 통째로 버리고 있었습니다.</b> 그래서 「비급여 암주요치료비 <b>✕ 없음</b>」 → <b>「표적·면역 대응 불가」</b> 라는 <b>틀린 결론</b>이 섰습니다. 이제 금액만 비우고 담보는 남깁니다. ⑤ <b>두 화면을 나란히 열면 한쪽 고친 값이 말없이 사라졌습니다.</b> 이제 자료마다 따로 담습니다(여덟 벌). ⑥ <b>고치는 표가 상담 화면을 가렸습니다</b>(4,810px·다섯 화면). 이제 머리글 한 줄로 접히고(1,270px) <b>손볼 것이 있으면 저절로 펼쳐집니다</b>. ⑦ <b>특약 목록에 고치는 칸이 생겼습니다</b> — 비급여 암주요치료비·전액본인부담·표적항암은 담보진단 37개 표에 아예 없습니다. ⑧ 못 믿는 금액은 AI 에게 <b>숫자로 주지 않고</b>, 고치는 표는 <b>종이에 한 글자도 안 나갑니다</b>. <code>check-insfix</code> 14군 73가지 · <code>check-babaread</code> 8군 · 알람 시험 <b>서른네 가지를 되돌려 전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -31309,7 +31309,26 @@ function insFixPut(sig, map) {
   if (map && Object.keys(map).length) { b.docs[sig] = map; b.order.push(sig); }
   else delete b.docs[sig];
   while (b.order.length > INS_FIX_KEEP) delete b.docs[b.order.shift()];
-  try { localStorage.setItem(INS_FIX_KEY, JSON.stringify(b)); } catch (e) {}
+  /* 목록에 없는 자료가 남아 있으면 영영 안 지워진다 — 함께 치운다 */
+  var k, keep = {};
+  for (i = 0; i < b.order.length; i++) keep[b.order[i]] = 1;
+  for (k in b.docs) if (b.docs.hasOwnProperty(k) && !keep[k]) delete b.docs[k];
+  try { localStorage.setItem(INS_FIX_KEY, JSON.stringify(b)); }
+  catch (e) { insSaveFail(); }
+}
+
+/* ── 저장이 막히면 <b>말없이</b> 사라진다 ────────────────────────────
+   기기 용량이 찼거나 사생활 보호 모드면 localStorage 쓰기가 막힌다.
+   여태 조용히 삼켰다 — 사장님은 고쳐 두신 줄 아시는데 새로고침하면
+   없다. 손으로 적으신 숫자를 담는 자리에서만은 <b>말을 한다.</b>
+   글자마다 부르는 자리라 한 번만 말한다.                            */
+var _insSaveWarned = false;
+function insSaveFail() {
+  if (_insSaveWarned) return;
+  _insSaveWarned = true;
+  if (typeof toast === 'function')
+    toast('고친 값을 이 기기에 <b>저장하지 못했습니다</b> — 새로고침하면 사라집니다. ' +
+          '기기 저장 공간이나 사생활 보호 모드를 확인해 주세요.', 8000);
 }
 
 /* 금액 글자 → <b>만원</b> 숫자. 못 읽으면 null — 0 이 아니다. */
@@ -31961,7 +31980,10 @@ function babaBlank(){
 /* 고친 값이 새로고침에 안 날아가게 */
 var BABA_ROW_KEY='apex_baba_rows';
 function babaSave(){
-  try{ localStorage.setItem(BABA_ROW_KEY,JSON.stringify({rows:BABA.rows,at:BABA.at})); }catch(e){}
+  /* 여기에도 <b>손으로 적으신 숫자</b>가 들어 있다. 저장이 막히면
+     새로고침에 사라지는데 여태 조용히 삼켰다 — 말을 한다 (insSaveFail). */
+  try{ localStorage.setItem(BABA_ROW_KEY,JSON.stringify({rows:BABA.rows,at:BABA.at})); }
+  catch(e){ if(typeof insSaveFail==='function')insSaveFail(); }
 }
 function babaLoad(){
   if(BABA.rows)return;

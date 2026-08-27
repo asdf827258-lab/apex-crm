@@ -623,6 +623,21 @@ const RDOC =
     const box = JSON.parse(localStorage.getItem('apex_ins_fix'));
     O.keep = box.order.length + '/' + Object.keys(box.docs).length;
     O.dropped = !box.docs.sig0 && !box.docs.sig1 && !!box.docs.sig9;
+
+    /* ── 저장이 <b>막혔을 때</b> 말을 하는가 ─────────────────────────
+       기기 용량이 찼거나 사생활 보호 모드면 쓰기가 막힌다. 조용히
+       삼키면 사장님은 고쳐 두신 줄 아시는데 새로고침하면 없다. */
+    document.body.innerHTML = '<div id="toast"></div>';
+    const real = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = function (k) {
+      if (k === 'apex_ins_fix') throw new Error('QuotaExceededError');
+      return real.apply(localStorage, arguments);
+    };
+    try {
+      _insSaveWarned = false;
+      insFixPut('sigX', { a: { h: 1 } });
+      O.saveFail = /저장하지 못했습니다/.test(document.getElementById('toast').textContent);
+    } finally { localStorage.setItem = real; }
     return O;
   }, { DOC, OTHER });
 
@@ -635,6 +650,8 @@ const RDOC =
      '  옛 판(한 벌짜리)으로 저장된 값도 <b>그대로 옮겨 온다</b> — ' + M.migrated);
   is(M.keep === '8/8' && M.dropped,
      '  여덟 벌까지 두고 <b>제일 오래 안 쓴 것</b>부터 버린다 — ' + M.keep);
+  is(M.saveFail,
+     '  저장이 <b>막히면 말을 한다</b> — 조용히 삼키면 새로고침에 사라지는 걸 아무도 모른다');
 
   /* ─────────────────────────────────────────────────────────────── */
   /* 이 칸은 <b>만원</b> 단위다. 「5,000만원」 을 적으려다 50000000 을 치면
