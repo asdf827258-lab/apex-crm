@@ -324,11 +324,16 @@ const RDOC =
   });
   await page.locator('#TABH .if-i').nth(1).focus();
   const w0 = await where();
+  /* 지우지 않고 그냥 친다 — 누를 때 통째로 잡히면 <b>덮어써야</b> 한다.
+     안 잡히면 3000 뒤에 붙어 30005000 이 된다 (만 배 사고). */
   await page.keyboard.type('5000');
+  const typed = await page.evaluate(() =>
+    document.querySelectorAll('#TABH .if-i')[1].value);
   await page.keyboard.press('Tab');
   await page.waitForTimeout(200);
   const w1 = await where();
   is(w0.i === 1, '  두 번째 칸에 들어갔다');
+  is(typed === '5000', '  누르면 <b>통째로 잡혀</b> 덮어써진다 (이어 붙지 않는다) — ' + typed);
   is(w1.i === 2, '  값을 치고 탭 — <b>세 번째 칸</b>으로 간다 (본문으로 안 튕긴다)' +
      (w1.i < 0 ? ' — 지금은 튕겼습니다' : ' — 지금 ' + (w1.i + 1) + '번째'));
   const painted = await page.evaluate(() =>
@@ -630,6 +635,92 @@ const RDOC =
      '  옛 판(한 벌짜리)으로 저장된 값도 <b>그대로 옮겨 온다</b> — ' + M.migrated);
   is(M.keep === '8/8' && M.dropped,
      '  여덟 벌까지 두고 <b>제일 오래 안 쓴 것</b>부터 버린다 — ' + M.keep);
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 이 칸은 <b>만원</b> 단위다. 「5,000만원」 을 적으려다 50000000 을 치면
+     5,000억이 되어 <b>만 배</b>가 틀어진다 — CLAUDE.md 4번이 말하는 바로
+     그 사고인데, 이번엔 앱이 아니라 손이 미끄러지는 자리다. 담보 하나가
+     100억을 넘는 일은 사실상 없으니 거기서 여쭌다. <b>값은 안 고친다.</b> */
+  console.log('\n[14] 만원 칸에 원을 적으시면 그 자리에서 여쭌다');
+  const U = await page.evaluate(async ({ DOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    if (typeof insCssMount === 'function') insCssMount();
+    /* 읽은 값이 크게 나온 것은 <b>안 잡는다</b> — 우리가 읽은 것이지
+       사장님이 적으신 것이 아니다. 그건 붙어 보이는 칸이 본다.
+       <b>아무것도 고치기 전에</b> 잰다 — 지문이 같으면 고친 값이 붙는다. */
+    O.readBig = insFixCount(insScan(DOC.replace('가입 3,000만 1 부족', '가입 50000000만 1 부족'))).big;
+
+    const sc = insScan(DOC);
+    sc.fixOpen = 1; sc.dAll = 1;
+    const h = document.createElement('div');
+    h.id = 'UH'; h._scan = sc;
+    h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+    document.body.appendChild(h);
+
+    /* 5,000만원을 적으려다 원을 친다 */
+    let ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '50000000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.bigCell = document.querySelectorAll('#UH .if-i.big').length;
+    O.bigAsk = /만원<\/b> 단위가 맞습니까/.test(document.getElementById('UH').innerHTML);
+    O.bigNote = /단위가 이상한 칸 1개/.test(document.getElementById('UH').textContent);
+    O.bigHead = /단위가 이상한 칸 1개/.test(document.querySelector('#UH .if-ph').textContent);
+    /* <b>값은 안 고친다</b> — 적으신 그대로 둔다 */
+    O.kept = sc.diags[0].have;
+    O.keptIn = document.querySelectorAll('#UH .if-i')[1].value;
+
+    /* 제대로 적으면 조용하다 */
+    ins = document.querySelectorAll('#UH .if-i');
+    insFixSet(ins[1], 0, 'have', '5000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.calmCell = document.querySelectorAll('#UH .if-i.big').length;
+    O.calmNote = /단위가 이상한 칸/.test(document.getElementById('UH').textContent);
+    O.calmMine = document.querySelectorAll('#UH .if-i.mine').length;
+    O.calmVal = sc.diags[0].have;
+
+    /* 10억(100,000만원)은 있을 수 있는 값이라 <b>안 잡는다</b> */
+    ins = document.querySelectorAll('#UH .if-i');
+    insFixSet(ins[1], 0, 'have', '100000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.tenCell = document.querySelectorAll('#UH .if-i.big').length;
+    O.tenVal = sc.diags[0].have;
+    /* 다시 크게 적어 둔다 — 아래에서 「저절로 펼쳐지는가」 를 본다 */
+    ins = document.querySelectorAll('#UH .if-i');
+    insFixSet(ins[1], 0, 'have', '50000000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+
+    /* ── 단위가 이상한 칸은 <b>저절로 펼쳐져야</b> 한다 ──────────────
+       만 배 틀어진 칸을 접어 두면 못 보고 지나친다 — 그대로 고객 앞에 선다. */
+    document.body.innerHTML = '';
+    const fresh = insScan(DOC);          /* 아까 적은 5,000억이 그대로 붙는다 */
+    const h2 = document.createElement('div');
+    h2.id = 'UH2'; h2._scan = fresh;     /* fixOpen 을 <b>안 건드린다</b> */
+    h2.innerHTML = '<div class="no-print">' + insCardHtml(fresh) + '</div>';
+    document.body.appendChild(h2);
+    O.autoBigOpen = h2.querySelectorAll('.if-i').length > 0;
+    O.autoBigCell = h2.querySelectorAll('.if-i.big').length;
+    O.autoBigHot = h2.querySelectorAll('.if-ph.hot').length;
+    return O;
+  }, { DOC });
+
+  is(U.bigCell === 1 && U.bigAsk, '  <b>빨간 칸</b>과 「만원 단위가 맞습니까?」 가 붙는다');
+  is(U.bigNote && U.bigHead, '  표와 <b>머리글</b> 둘 다 「단위가 이상한 칸 1개」 라고 말한다');
+  is(U.kept === '5000억원' && U.keptIn === '50000000',
+     '  <b>값은 안 고친다</b> — 적으신 그대로 ' + U.kept);
+  is(U.calmCell === 0 && !U.calmNote && U.calmMine === 1 && U.calmVal === '5,000만원',
+     '  제대로 적으면 <b>조용하다</b> — ' + U.calmVal);
+  is(U.tenCell === 0 && U.tenVal === '10억원',
+     '  10억은 있을 수 있는 값이라 <b>안 잡는다</b> — ' + U.tenVal);
+  is(U.readBig === 0,
+     '  <b>우리가 읽은</b> 큰 값은 여기서 안 잡는다 (그건 「붙어 보임」 이 본다)');
+  is(U.autoBigOpen && U.autoBigCell === 1 && U.autoBigHot === 1,
+     '  단위가 이상한 칸이 있으면 <b>저절로 펼쳐진다</b> — 접어 두면 못 보고 지나친다');
 
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
