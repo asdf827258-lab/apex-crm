@@ -37,7 +37,11 @@
      9. 고친 뒤에도 <b>탭이 옆 칸으로 가는가</b> — 다시 그리면서 지금 눌린
         칸을 지워 버리면, 서른일곱 줄 표에서 한 칸마다 다시 눌러야 한다
     10. <b>특약</b>도 같은 길로 고쳐지는가 — 금액을 못 믿는다고 담보를
-        버리지 않는가 · 수백 줄을 다 깔지 않는가 · 계열 판정이 살아나는가 */
+        버리지 않는가 · 수백 줄을 다 깔지 않는가 · 계열 판정이 살아나는가
+    11. <b>0 을 적을 수 있는가</b> — ④ 의 짝이다. 못 읽은 칸을 0 으로
+        채우지 않는 것과, 사장님이 <b>직접 적으신 0</b> 을 값으로 받는
+        것은 같은 규칙의 앞뒤다. 여태 0 은 지우개여서, 원본이 엉뚱하게
+        읽은 담보를 <b>「없다」 고 못 박을 방법이 없었다.</b> */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -568,6 +572,117 @@ const RDOC =
      '  글자는 있는데 못 읽어도 같다 — ' + N.row2);
   is(N.row3 === '0|확인 필요|(없음)',
      '  「0」 도 금액으로 못 읽으면 <b>지어내지 않는다</b> — ' + N.row3);
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 앞의 [16] 과 <b>짝</b>이다. 못 읽은 칸을 0 으로 채우지 않는 것과,
+     사장님이 <b>직접 적으신 0</b> 을 값으로 받는 것은 같은 규칙의 앞뒤다 —
+     「모름(null)」 과 「0」 을 구분한다 (CLAUDE.md 1번).
+
+     여태 0 은 <b>지우개</b>였다. 「0」 을 치고 탭을 누르면 말없이 읽은
+     값으로 돌아갔다. 원본이 엉뚱하게 읽어 화면에 「일반암 3,000만원
+     가입」 이라 찍혔는데 <b>실제로는 없는</b> 담보라면, 그것을 지울
+     방법이 없었다. 고객 앞에 서는 숫자 중에 그보다 나쁜 것이 없다. */
+  console.log('\n[17] 「없다」 고 못 박을 수 있다 — 0 은 지우개가 아니라 값이다');
+  const Z = await page.evaluate(async ({ DOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const sc = insScan(DOC);
+    sc.fixOpen = 1; sc.dAll = 1; sc.rAll = 1;
+    const h = document.createElement('div');
+    h.id = 'ZH'; h._scan = sc;
+    h.innerHTML = insCardHtml(sc);
+    document.body.appendChild(h);
+    O.read = sc.diags[0].have;               /* 원본이 읽은 값 */
+
+    /* ① 가입 칸에 0 — 「이 담보는 없다」 */
+    let ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '0');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    const H = document.getElementById('ZH');
+    O.row = sc.diags[0].have + '|' + sc.diags[0].verdict + '|' + (sc.diags[0].gap || '(없음)');
+    O.fix = sc.diags[0].fix;
+    O.cell = H.querySelectorAll('.if-i')[1].value;     /* 칸에 0 이 남아 있는가 */
+    O.inShort = sc.short.some(d => d.name === sc.diags[0].name);
+    O.fixN = sc.fixN;
+
+    /* ② 다시 읽어도 붙어 있는가 — 「다시 만들기」 를 견딘다 */
+    const s2 = insScan(DOC);
+    O.re = s2.diags[0].have + '|' + s2.diags[0].verdict + '|fixN=' + s2.fixN;
+
+    /* ③ 비우면 그때는 <b>읽은 값</b>으로 돌아간다 — 지우개는 빈 칸이다 */
+    const e = document.getElementById('ZH').querySelectorAll('.if-i')[1];
+    insFixSet(e, 0, 'have', '');
+    insFixDone(e);
+    await new Promise(r => setTimeout(r, 0));
+    O.cleared = sc.diags[0].have + '|' + sc.diags[0].verdict + '|fix=' + sc.diags[0].fix;
+
+    /* ④ 빈 칸은 여전히 <b>센다</b> — 담보는 있고 금액만 못 읽은 것이다.
+          그것을 버려서 「표적·면역 대응 불가」 라는 틀린 결론이 섰다. */
+    O.emptyCounts = insAmtZero('') === false && insAmtZero(null) === false;
+    O.zeroForms = ['0', '0원', '0만원', '0억'].every(insAmtZero);
+    O.notZero = !insAmtZero('0.5만원') && !insAmtZero('1,000만원') && !insAmtZero('3,000만');
+
+    /* ⑤ AI 에게 <b>0 이 무슨 뜻인지</b> 일러 준다 */
+    insFixSet(document.getElementById('ZH').querySelectorAll('.if-i')[1], 0, 'have', '0');
+    O.brief = insBrief(sc);
+    return O;
+  }, { DOC });
+
+  /* 특약도 같다 — 그리고 0 이면 위쪽 <b>계열 표</b>에서도 빠져야 한다.
+     세면 화면에 「○ 있음」 이라 찍혀, 없는 보장을 있다고 말한다.
+     특약이 있는 자료(RDOC)로 따로 본다.                            */
+  const ZR = await page.evaluate(async ({ RDOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const sc = insScan(RDOC);
+    sc.fixOpen = 1; sc.rAll = 1;
+    const h = document.createElement('div');
+    h.id = 'ZR'; h._scan = sc;
+    h.innerHTML = insCardHtml(sc);
+    document.body.appendChild(h);
+    const rows = sc.riders[0].rows;
+    let ri = -1;
+    rows.forEach((x, k) => { if (/비급여/.test(x.name)) ri = k; });
+    O.riderName = ri >= 0 ? rows[ri].name : '(못 찾음)';
+    /* 금액을 못 믿어 <b>비워 둔</b> 줄이다 — 그래도 계열 표는 「있음」 이어야
+       한다. 담보는 있고 금액만 모르는 것이다. */
+    O.readAmt = rows[ri].amount === '' ? '(비어 있음)' : rows[ri].amount;
+    const before = insScan(RDOC).gaps.filter(g => /비급여/.test(g.name))[0];
+    O.gapBefore = before ? (before.has ? '있음' : '없음') : '(표에 없음)';
+    insFixRSet(h.querySelectorAll('.if-i')[0], 0, ri, '0');
+    O.rider = rows[ri].amount + '|fx=' + rows[ri].fx + '|na=' + rows[ri].na;
+    const after = insScan(RDOC).gaps.filter(g => /비급여/.test(g.name))[0];
+    O.gapAfter = after ? (after.has ? '있음' : '없음') : '(표에 없음)';
+    /* 다른 계열은 <b>안 건드린다</b> — 하나 못 박았다고 옆이 따라 없어지면 안 된다 */
+    const tgt = insScan(RDOC).gaps.filter(g => /표적/.test(g.name))[0];
+    O.gapOther = tgt ? (tgt.has ? '있음' : '없음') : '(표에 없음)';
+    return O;
+  }, { RDOC });
+  is(Z.read !== '0원' && Z.row === '0원|미가입|-5,000만원',
+     '  가입 칸에 <b>0</b> 을 적으면 「미가입 · -전액」 — 읽은 값은 ' + Z.read + ' 였다 · ' + Z.row);
+  is(Z.cell === '0',
+     '  적으신 <b>0 이 칸에 남는다</b> — 되돌아가면 적은 것이 말없이 사라진 꼴이다 · 「' + Z.cell + '」');
+  is(Z.fix === 1 && Z.fixN === 1 && Z.inShort,
+     '  <b>고친 칸</b>으로 세고 부족 목록에도 올린다');
+  is(Z.re === '0원|미가입|fixN=1',
+     '  「다시 만들기」 를 <b>견딘다</b> — ' + Z.re);
+  is(/^3,000만\|부족\|fix=0$/.test(Z.cleared) || /부족\|fix=0$/.test(Z.cleared),
+     '  <b>비우면</b> 읽은 값으로 돌아간다 — 지우개는 0 이 아니라 <b>빈 칸</b>이다 · ' + Z.cleared);
+  is(ZR.rider === '0원|fx=1|na=0',
+     '  <b>특약</b>도 같은 길로 0 이 된다 — ' + ZR.riderName + ' · ' + ZR.rider);
+  is(ZR.readAmt === '(비어 있음)' && ZR.gapBefore === '있음',
+     '  금액을 <b>못 읽어 비운</b> 줄은 그래도 「있음」 — 담보는 있고 금액만 모른다 · ' + ZR.readAmt);
+  is(ZR.gapAfter === '없음',
+     '  0 으로 못 박으면 위쪽 <b>계열 표에서도 빠진다</b> — ' + ZR.gapBefore + ' → ' + ZR.gapAfter);
+  is(ZR.gapOther === '있음',
+     '  <b>옆 계열은 안 건드린다</b> — 표적항암 ' + ZR.gapOther);
+  is(Z.emptyCounts && Z.zeroForms && Z.notZero,
+     '  <b>빈 칸은 0 이 아니다</b> — 「0/0원/0만원/0억」 만 0 으로 보고 「0.5만원」 은 아니다');
+  is(/증권을 보고 <b>없다고 확인<\/b>한 것/.test(Z.brief) && /못 읽어서 비워 둔 칸과 다르다/.test(Z.brief),
+     '  AI 에게 <b>0 이 무슨 뜻인지</b> 일러 준다 — 안 밝히면 못 읽은 칸과 같이 다룬다');
 
   /* ─────────────────────────────────────────────────────────────── */
   /* 고치는 표는 <b>우리끼리 보는 것</b>이다. 「붙어 보임 — 확인」·「원문:

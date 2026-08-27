@@ -11677,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 07:10';
-var APP_BUILD_NOTE='<b>「없습니다」 라고 말하지 않습니다 — 우리가 아는 것은 「읽어 낸 특약 안에 없다」 뿐입니다.</b> 실지급을 가르는 계열(비급여 암주요치료비·전액본인부담·표적항암·중입자·혈전용해…)을 훑고 <b>✕</b> 를 찍을 때, 지금까지는 그것을 <b>없는 것</b>처럼 적어 AI 에게 넘겼습니다. AI 는 그대로 <b>「없습니다」</b> 라고 리포트에 쓰고 <b>고객이 그것을 읽습니다.</b> 그런데 스캔본이거나 글자가 일부만 뽑히면 <b>있는데 못 읽은 것</b>일 수 있습니다 — 어젯밤 금액을 못 믿는다고 특약을 통째로 버리던 자리가 정확히 그랬습니다. 이제 화면도 AI 에게 넘기는 글도 <b>「읽어 낸 특약 N개 안에는 없습니다 — 증권 원본으로 한 번만 맞춰 주세요」</b> 로 적고, AI 에게는 <b>「단정해 쓰지 말고 <i>확인이 필요합니다</i> 로 쓰라」</b> 고까지 일러 줍니다. 결론은 어긋나는 순간 고객 앞에서 무너지고, 요건 하나가 다르면 그 자리에서 계약이 깨집니다. <b>아는 만큼만 말합니다.</b> <code>check-insread</code> 110가지 · 세 자리를 일부러 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
+var APP_BUILD='2026-08-28 07:55';
+var APP_BUILD_NOTE='<b>없는 담보를 「없다」 고 못 박을 수 있습니다 — 여태 0 은 <i>지우개</i>였습니다.</b> 고치는 칸에 <code>0</code> 을 치고 탭을 누르면 <b>말없이 읽은 값으로 되돌아갔습니다.</b> 원본이 엉뚱하게 읽어 화면에 「일반암 3,000만원 가입」 이라 찍혔는데 <b>실제로는 없는</b> 담보라면, 그것을 지울 방법이 아예 없었습니다 — 고객 앞에 서는 숫자 중에 그보다 나쁜 것이 없습니다. 이제 <b>빈 칸</b>이 지우개고, <b>0</b> 은 「증권을 보고 없다고 확인했다」 는 값입니다. 담보진단은 <b>「미가입 · -전액」</b>, 특약은 <b>「0원」</b> 이 되고, 위쪽 <b>실지급 계열 표에서도 함께 빠집니다.</b> 금액만 못 읽어 <b>비워 둔</b> 줄은 <b>그대로 「있음」</b> 입니다 — 담보는 있고 금액만 모르는 것이라, 그것까지 지우면 어젯밤 고친 사고가 되돌아옵니다. AI 에게도 <b>0 은 못 읽은 칸과 다르다</b>고, <b>이 담보만은</b> 「없습니다」 라고 써도 된다고 일러 줍니다 — 「모름」 과 「0」 은 다른 뜻입니다. <code>check-insfix</code> 17군 · 일곱 자리를 일부러 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -31334,6 +31334,30 @@ function insSaveFail() {
 /* 금액 글자 → <b>만원</b> 숫자. 못 읽으면 null — 0 이 아니다. */
 function insFixMan(txt) { var n = prMoney(txt); return n > 0 ? n : null; }
 
+/* ── 사장님이 <b>0 을 적으실 자리</b> ──────────────────────────────
+   여태 0 은 지우개였다 — 「0」 을 치고 탭을 누르면 <b>말없이 읽은 값으로
+   되돌아갔다.</b> 사장님 뜻은 그 반대다. 원본이 엉뚱한 숫자를 읽어
+   화면에 「일반암 3,000만원 가입」 이라 찍혔는데 <b>실제로는 없는</b>
+   담보라면, 지금은 그것을 지울 방법이 없었다. 고객 앞에 서는 숫자
+   중에 그보다 나쁜 것이 없다.
+
+   이제 <b>빈 칸</b>이 지우개고, <b>0</b> 은 「없음을 확인했다」 는 값이다.
+   「모름(null)」 과 「0」 은 다른 뜻이다 (CLAUDE.md 1번).            */
+function insFixNum(v) {
+  var t = ('' + v).replace(/[^\d.]/g, '');
+  if (!/\d/.test(t)) return null;      /* 빈 칸 · 「.」 만 친 칸은 <b>모름</b> */
+  var n = Math.round(parseFloat(t) || 0);
+  return n >= 0 ? n : null;
+}
+/* 「0원」 은 <b>없다</b>는 뜻이다 — 사장님이 직접 0 이라 하신 칸만 이 꼴이
+   된다(못 읽은 칸은 <b>빈칸</b>이지 0 이 아니다). 판정하는 곳은 하나다 (5번). */
+function insAmtZero(a) {
+  var s = ('' + (a == null ? '' : a)).replace(/[\s,]/g, '');
+  /* 「0」 「0원」 「0만원」 「0억」 — 단위를 붙여도 0 은 0 이다.
+     「0.5만원」 이나 「01,000」 까지 0 으로 보면 있는 보장을 없앤다. */
+  return /^0+(?:\.0+)?(?:억|천만|백만|만)?원?$/.test(s);
+}
+
 /* ── 만원 칸에 <b>원</b>을 적으시면 만 배가 틀어진다 ────────────────
    「5,000만원」 을 적으려다 <code>50000000</code> 을 치면 5,000억이 된다.
    CLAUDE.md 4번이 말하는 바로 그 사고이고, 이번에는 앱이 아니라 손이
@@ -31349,7 +31373,10 @@ function insFixBig(man) { return man > 0 && man >= INS_FIX_BIG; }
    「과다」 는 만들지 않는다 — 얼마부터 과다인지는 자료가 정하는 것이고
    우리는 그 기준을 모른다 (CLAUDE.md 1번). 모르면 「확인 필요」 다.   */
 function insFixVerdict(d) {
-  var w = insFixMan(d.want), h = insFixMan(d.have);
+  /* 글자를 다시 읽어 셈하지 않는다 — <b>숫자를 그대로</b> 쓴다. 글자로
+     되읽으면 「0원」 이 다시 <b>모름</b>이 되어, 사장님이 없다고 하신
+     담보가 「확인 필요」 로 돌아간다 (CLAUDE.md 5번·1번). */
+  var w = (d.nw === undefined) ? null : d.nw, h = (d.nh === undefined) ? null : d.nh;
   if (w === null) { d.verdict = '확인 필요'; d.gap = ''; return; }
   /* ── 가입 칸을 못 읽으면 <b>「미가입」 이 아니다</b> ────────────────
      비어 있는 것은 <b>모름</b>이지 0 이 아니다. 「미가입 · -5,000만원」
@@ -31357,6 +31384,10 @@ function insFixVerdict(d) {
      말하게 된다 — 오늘 밤 특약에서 잡은 것과 같은 사고다 (CLAUDE.md 1번).
      모르면 <b>모른다고만</b> 하고 과부족은 적지 않는다.              */
   if (h === null) { d.verdict = '확인 필요'; d.gap = ''; return; }
+  /* 여기서만 「미가입」 을 쓴다 — 읽어서 0 이 나오는 길은 없다(못 읽으면
+     빈칸이다). 그러니 이 0 은 <b>사장님이 증권을 보고 적으신 0</b> 이고,
+     그때는 「없다」 고 말해도 지어낸 것이 아니다.                    */
+  if (h === 0) { d.verdict = '미가입'; d.gap = w > 0 ? '-' + vizWon(w) : ''; return; }
   if (h >= w) { d.verdict = '충분'; d.gap = ''; return; }
   d.verdict = '부족'; d.gap = '-' + vizWon(w - h);
 }
@@ -31366,9 +31397,12 @@ function insFixVerdict(d) {
 function insFixRow(d, f) {
   d.want = d.rw; d.have = d.rh; d.verdict = d.rv; d.gap = d.rg;
   d.fw = 0; d.fh = 0; d.fix = 0;
+  /* 칸에 <b>숫자를 함께</b> 달아 둔다. 화면도 판정도 이것을 쓴다 —
+     그려 놓은 글자를 도로 읽어 셈하면 「0원」 이 <b>모름</b>이 된다. */
+  d.nw = insFixMan(d.rw); d.nh = insFixMan(d.rh);
   if (!f) return;
-  if (f.w > 0) { d.want = vizWon(f.w); d.fw = 1; }
-  if (f.h > 0) { d.have = vizWon(f.h); d.fh = 1; }
+  if (f.w != null) { d.nw = f.w; d.want = vizWon(f.w); d.fw = 1; }
+  if (f.h != null) { d.nh = f.h; d.have = vizWon(f.h); d.fh = 1; }
   if (!d.fw && !d.fh) return;
   d.fix = 1; insFixVerdict(d);
 }
@@ -31408,8 +31442,8 @@ function insFixRKey(co, product, name, nth) {
     (nth > 1 ? '#' + nth : '')).replace(/\s+/g, '');
 }
 function insFixRRow(r, f) {
-  r.amount = r.ra; r.fx = 0;
-  if (f && f.a > 0) { r.amount = vizWon(f.a); r.fx = 1; }
+  r.amount = r.ra; r.fx = 0; r.na = insFixMan(r.ra);
+  if (f && f.a != null) { r.na = f.a; r.amount = vizWon(f.a); r.fx = 1; }
 }
 function insFixRApply(riders, sig) {
   var F = insFixFor(sig), n = 0, ci, ri, c, r, seen;
@@ -35136,8 +35170,13 @@ var INS_KEY = [
 ];
 function insGaps(riders, diags) {
   var pool = [];
-  (riders || []).forEach(function (c) { (c.rows || []).forEach(function (r) { pool.push({ t: r.name, co: c.co, amount: r.amount }); }); });
-  (diags || []).forEach(function (d) { if (d.have && d.have !== '0' && !/^0/.test(d.have)) pool.push({ t: d.name, co: '', amount: d.have }); });
+  /* 「0원」 인 줄은 <b>없는 것</b>이라 세지 않는다 — 세면 화면에 「○ 있음」
+     이라고 찍힌다. 빈 칸은 <b>센다</b>: 담보는 있고 금액만 못 읽은 것이고,
+     그것을 버려서 「표적·면역 대응 불가」 라는 틀린 결론이 섰던 자리다.
+     두 표가 <b>같은 잣대</b>를 쓴다 (CLAUDE.md 5번).                */
+  (riders || []).forEach(function (c) { (c.rows || []).forEach(function (r) {
+    if (!insAmtZero(r.amount)) pool.push({ t: r.name, co: c.co, amount: r.amount }); }); });
+  (diags || []).forEach(function (d) { if (d.have && !insAmtZero(d.have)) pool.push({ t: d.name, co: '', amount: d.have }); });
   return INS_KEY.map(function (K) {
     var hit = pool.filter(function (x) { return K.re.test(x.t) && !(K.no && K.no.test(x.t)); });
     return { name: K.k, has: hit.length > 0, n: hit.length,
@@ -35250,6 +35289,11 @@ function insBrief(sc) {
     L.push('  · 아래 원문 글의 숫자와 다르면 <b>★ 쪽을 쓴다.</b> 다시 세지 않는다.');
     L.push('  · ★ 가 붙은 담보진단 줄의 판정·과부족은 원본의 판정이 아니라 ' +
            '앱이 권장·가입 두 값을 견줘 다시 센 것이다.');
+    /* 0 만은 <b>「없습니다」 라고 써도 되는</b> 유일한 자리다 — 사람이
+       증권을 보고 못 박은 값이라 지어낸 것이 아니다. 이것을 밝히지
+       않으면 AI 는 못 읽어 비운 칸과 <b>같이</b> 다룬다 (CLAUDE.md 1번). */
+    L.push('  · ★ 가 붙은 칸의 <b>0</b> 은 「설계사가 증권을 보고 <b>없다고 확인</b>한 것」 이다 — ' +
+           '못 읽어서 비워 둔 칸과 다르다. <b>이 담보만은</b> 「없습니다」 라고 단정해 써도 된다.');
     L.push('  · 담보진단 ' + (sc.fixN || 0) + '칸 · 특약 ' + (sc.fixRN || 0) + '칸을 고쳤다.');
   }
   if (sc.diags.length) {
@@ -35337,12 +35381,12 @@ function insFixSet(el, i, which, v) {
   /* 글자를 칠 때마다 부르는 자리라 여기서는 조용히 물러난다 —
      알리는 것은 칸을 벗어날 때 insFixDone 이 한 번만 한다. */
   if (!sc || !sc.diags || !sc.diags[i]) return;
-  var d = sc.diags[i], t = ('' + v).replace(/[^\d.]/g, '');
-  var man = (t === '') ? 0 : Math.round(parseFloat(t) || 0);
+  var d = sc.diags[i], man = insFixNum(v);
   var F = insFixFor(sc.fixSig), k = insFixKey(d), w = (which === 'want');
   var f = F[k] || {};
-  if (man > 0) f[w ? 'w' : 'h'] = man; else delete f[w ? 'w' : 'h'];
-  if (f.w > 0 || f.h > 0) F[k] = f; else delete F[k];
+  /* 지우개는 <b>빈 칸</b>이다. 0 은 「없음」 이라는 값이라 그대로 담는다. */
+  if (man === null) delete f[w ? 'w' : 'h']; else f[w ? 'w' : 'h'] = man;
+  if (f.w != null || f.h != null) F[k] = f; else delete F[k];
   insFixPut(sc.fixSig, F);
   insFixRow(d, F[k]);
   insFixDerive(sc);
@@ -35424,14 +35468,14 @@ function insFixCount(sc) {
     c.diag++;
     if (insFixOdd(d, 'want')) c.odd++;
     if (insFixOdd(d, 'have')) c.odd++;
-    if (d.fw && insFixBig(insFixMan(d.want))) c.big++;
-    if (d.fh && insFixBig(insFixMan(d.have))) c.big++;
+    if (d.fw && insFixBig(d.nw)) c.big++;
+    if (d.fh && insFixBig(d.nh)) c.big++;
   });
   (sc.riders || []).forEach(function (x) {
     (x.rows || []).forEach(function (r) {
       c.rider++;
       if (insFixROdd(r)) c.rOdd++;
-      if (r.fx && insFixBig(insFixMan(r.amount))) c.rBig++;
+      if (r.fx && insFixBig(r.na)) c.rBig++;
     });
   });
   c.urgent = c.odd + c.rOdd + c.mine + c.rMine + c.big + c.rBig;
@@ -35512,10 +35556,9 @@ function insFixStaleHtml(sc) {
 function insFixRSet(el, ci, ri, v) {
   var host = insFixHost(el), sc = host && host._scan;
   if (!sc || !sc.riders || !sc.riders[ci] || !sc.riders[ci].rows[ri]) return;
-  var r = sc.riders[ci].rows[ri], t = ('' + v).replace(/[^\d.]/g, '');
-  var man = (t === '') ? 0 : Math.round(parseFloat(t) || 0);
+  var r = sc.riders[ci].rows[ri], man = insFixNum(v);
   var F = insFixFor(sc.fixSig);
-  if (man > 0) F[r.fk] = { a: man }; else delete F[r.fk];
+  if (man === null) delete F[r.fk]; else F[r.fk] = { a: man };
   insFixPut(sc.fixSig, F);
   insFixRRow(r, F[r.fk]);
   insFixDerive(sc);
@@ -35549,7 +35592,7 @@ function insFixRHtml(sc) {
         ((r.kind || r.area) ? '<div class="if-cat">' + esc([r.kind, r.area].filter(Boolean).join(' · ')) + '</div>' : '') +
         '</td>' +
         /* 원문은 <b>언제나</b> 보여 준다 — 비워 둔 칸일수록 더 필요하다 */
-        insFixCellHtml(r.amount, r.raw || r.ra, r.fx, insFixROdd(r),
+        insFixCellHtml(r.na, r.raw || r.ra, r.fx, insFixROdd(r),
           'oninput="insFixRSet(this,' + ci + ',' + ri + ',this.value)" onchange="insFixDone(this)"') +
         '</tr>';
     }
@@ -35562,7 +35605,8 @@ function insFixRHtml(sc) {
     (all ? '손볼 것만 보기' : '전체 ' + tot + '개 펼치기') + '</button></div>';
   var head = '<div class="ins-fix if-r"><div class="if-hd">📎 특약 금액 — <b>여기서도 고치실 수 있습니다</b>' +
     '<span class="if-sub">계약 ' + sc.riders.length + '건 · 특약 <b>' + tot + '개</b>. ' +
-    '기준담보 37개 표에 <b>없는</b> 것들입니다.</span></div>';
+    '기준담보 37개 표에 <b>없는</b> 것들입니다. <b>비우면</b> 읽은 값으로 돌아가고, ' +
+    '<b>0 을 적으면</b> 「없음」 이라 위쪽 계열 표에서도 빠집니다.</span></div>';
   if (!shown) {
     return head + '<div class="if-note plain">붙어 보이는 칸도, 고치신 칸도 <b>없습니다.</b> ' +
       '그래도 눈으로 맞춰 보시려면 아래에서 펼치십시오.</div>' + btn + '</div>';
@@ -35594,8 +35638,11 @@ function insFixRHtml(sc) {
    「12683400원」 처럼 옆 칸이 붙어 버린 꼴은 노랗게 세워 둔다. 숫자로는
    1,268만원이라 멀쩡해 보이는데 실제로는 그 금액이 아니다. <b>값을 우리가
    고쳐 놓지는 않는다</b> — 무엇이 맞는지는 원본만 안다 (1번).        */
-function insFixCellHtml(txt, raw, mine, odd, setJs) {
-  var man = insFixMan(txt);
+function insFixCellHtml(num, raw, mine, odd, setJs) {
+  /* 그려 놓은 글자를 도로 읽지 않고 <b>숫자를 받는다.</b> 되읽으면
+     사장님이 적으신 「0」 이 빈 칸으로 보여, 적은 것이 <b>말없이 사라진</b>
+     것처럼 된다 (CLAUDE.md 5번 — 같은 것을 두 곳에서 셈하지 않는다). */
+  var man = (num === null || num === undefined) ? null : num;
   var big = mine && insFixBig(man);
   var cls = big ? ' big' : (mine ? ' mine' : (odd ? ' odd' : ((man === null && !raw) ? ' none' : '')));
   return '<td class="if-c">' +
@@ -35621,7 +35668,7 @@ function insFixCellHtml(txt, raw, mine, odd, setJs) {
 function insFixHtml(sc) {
   if (!sc || !sc.diags || !sc.diags.length) return '';
   var cell = function (d, i, which) {
-    return insFixCellHtml((which === 'want') ? d.want : d.have,
+    return insFixCellHtml((which === 'want') ? d.nw : d.nh,
       (which === 'want') ? d.rw : d.rh, (which === 'want') ? d.fw : d.fh, insFixOdd(d, which),
       'oninput="insFixSet(this,' + i + ',\'' + which + '\',this.value)" onchange="insFixDone(this)"');
   };
@@ -35648,8 +35695,9 @@ function insFixHtml(sc) {
   var btn = '<div class="if-btn"><button type="button" onclick="insFixDAll(this)">' +
     (all ? '손볼 것만 보기' : '전체 ' + c.diag + '개 펼치기') + '</button></div>';
   var head = '<div class="ins-fix"><div class="if-hd">📋 담보진단 — <b>틀렸으면 여기서 고치세요</b>' +
-    '<span class="if-sub">기준담보 <b>' + c.diag + '개</b>. 단위는 <b>만원</b>이고, ' +
-    '비우면 다시 「읽은 값」 으로 돌아갑니다.</span></div>';
+    '<span class="if-sub">기준담보 <b>' + c.diag + '개</b>. 단위는 <b>만원</b>. ' +
+    '<b>비우면</b> 다시 「읽은 값」 으로 돌아가고, <b>0 을 적으면</b> 「미가입」 입니다 — ' +
+    '증권을 보시고 <b>없는 담보</b>는 0 으로 못 박아 주세요.</span></div>';
   if (!shown) {
     return head + '<div class="if-note plain">붙어 보이는 칸도, 고치신 칸도 <b>없습니다.</b> ' +
       '그래도 눈으로 맞춰 보시려면 아래에서 펼치십시오.</div>' + btn + '</div>';
