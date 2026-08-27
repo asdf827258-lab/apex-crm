@@ -33,7 +33,11 @@
      3. 손으로 고친 값을 <b>그대로 쓰는가</b> · 합계가 따라오는가
      4. 합계에 <b>의료비 한도</b>가 안 섞이는가 — 그리고 따로 말하는가
      5. 무엇을 왜 비웠는지 <b>화면에서 말하는가</b>
-     6. <b>헛알람이 없는가</b> — 정상 자료에는 안 뜨는가                */
+     6. <b>헛알람이 없는가</b> — 정상 자료에는 안 뜨는가
+     7. 고치는 칸에서 <b>손이 미끄러지지 않는가</b> — 만 배 · 이어 붙기 · 탭
+     8. 폰에서 <b>「기존」·「신규」 두 칸이 다 보이는가</b> — 표가 옆으로
+        밀려 「신규」 가 화면 밖이면, 비포&애프터에서 <b>애프터가 안
+        보이는</b> 셈이다. 본문은 안 밀리니 아무 점검도 울지 않았다      */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -178,7 +182,133 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(quiet.dup === 0, '  밀린 담보가 <b>0</b> 이다 — 헛것을 잡지 않는다');
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[7] 콘솔이 조용하다');
+  /* 고치는 칸에서 <b>손이 미끄러지는</b> 세 자리. 셋 다 실제로 재 보고
+     알았고, 셋 다 그대로 고객 앞에 서는 숫자를 만든다.
+
+     ① 만원 칸에 <b>원</b> — 「5,000만원」 을 적으려다 50000000 → 5,000억
+     ② 「3,000」 이 적힌 칸에 5000 을 치면 <b>50003,000</b> — 쉼표까지 끼어
+        5,000억이 된다. 누를 때 통째로 잡아야 한다
+     ③ 고치고 <b>탭</b>을 누르면 본문으로 튕긴다 — 담보가 스무 줄이면
+        한 칸마다 다시 눌러야 해서 고객 앞에서 못 쓴다                */
+  console.log('\n[7] 고치는 칸에서 손이 미끄러지지 않는다');
+  await page.evaluate(() => {
+    window.osTabAllowed = function () { return true; };
+    BABA.rows = [
+      { k: 'cancer', n: '일반암진단비', b: 3000, a: 5000 },
+      { k: 'brain', n: '뇌혈관질환진단비', b: 1000, a: 3000 },
+      { k: 'fee', n: '월 보험료', b: 150000, a: 180000 }
+    ];
+    BABA.at = '2026-08-28';
+    document.body.innerHTML = '<div id="babaGrid"></div>';
+    babaPaint();
+  });
+  const big = await page.evaluate(async () => {
+    babaSet(0, 'b', '50000000');          /* 5,000만원을 적으려다 원을 침 */
+    babaSetDone();
+    await new Promise(r => setTimeout(r, 20));
+    const g = document.getElementById('babaGrid');
+    return { kept: BABA.rows[0].b, n: babaBigN(),
+             /* 화면에 <b>적으신 그대로</b> 보여야 한다 — 우리가 몰래 깎으면
+                사장님은 고친 줄 아시고 그 값이 그대로 나간다 */
+             shown: document.querySelectorAll('#babaGrid input')[0].value,
+             ask: /만원<\/b> 단위가 맞습니까/.test(g.innerHTML),
+             note: /단위가 이상한 칸 1개/.test(g.textContent),
+             red: /border:1px solid #DC2626/.test(g.innerHTML) };
+  });
+  is(big.kept === 50000000 && big.shown === '50,000,000',
+     '  ① <b>값은 안 고친다</b> — 담아 둔 것도 화면도 ' + big.shown + ' (몰래 안 깎는다)');
+  is(big.n === 1 && big.ask && big.note && big.red,
+     '  ① <b>빨간 칸</b>과 「만원 단위가 맞습니까?」 · 위에 「단위가 이상한 칸 1개」');
+  /* 월 150만원 — 가족 묶음이면 흔한 값이다. 담보 잣대(100억=1,000,000)로
+     재면 <b>걸린다.</b> 보험료는 원 단위라 안 걸려야 한다 — 헛알람을 잡는 자리다. */
+  const feeOk = await page.evaluate(async () => {
+    babaSet(2, 'b', '1500000');
+    babaSetDone();
+    await new Promise(r => setTimeout(r, 20));
+    return { n: babaBigN(), v: BABA.rows[2].b };
+  });
+  is(feeOk.n === 1 && feeOk.v === 1500000,
+     '  ① 보험료 줄은 <b>원 단위</b>라 월 150만원에 안 뜬다 (잣대가 다르다)');
+
+  await page.evaluate(async () => {
+    babaSet(0, 'b', '3000'); delete BABA.rows[0].mb;
+    babaSetDone();
+    await new Promise(r => setTimeout(r, 20));
+  });
+  await page.locator('#babaGrid input').first().focus();
+  await page.keyboard.type('5000');       /* 지우지 않고 그냥 친다 */
+  await page.waitForTimeout(30);
+  const typed = await page.evaluate(() => ({
+    val: document.querySelectorAll('#babaGrid input')[0].value, stored: BABA.rows[0].b }));
+  is(typed.val === '5000' && typed.stored === 5000,
+     '  ② 누르면 <b>통째로 잡혀</b> 덮어써진다 — ' + typed.val + ' (이어 붙으면 50003,000)');
+  await page.keyboard.press('Tab');
+  await page.waitForTimeout(150);
+  const tab = await page.evaluate(() => {
+    const all = [].slice.call(document.querySelectorAll('#babaGrid input'));
+    return all.indexOf(document.activeElement);
+  });
+  is(tab === 1, '  ③ 고치고 탭 — <b>옆 칸</b>으로 간다 (본문으로 안 튕긴다) · 지금 ' +
+     (tab < 0 ? '튕김' : (tab + 1) + '번째'));
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* ── 폰에서 <b>「신규」 칸이 화면 밖</b>에 있었다 ──────────────────
+     네 칸짜리 표에 min-width 460px 이 인라인으로 박혀 있어, 390px 에서
+     표가 옆으로 밀리고 <b>「신규(만원)」 칸이 통째로 화면 밖</b>이었다 —
+     비포&애프터에서 <b>애프터가 안 보이는</b> 셈이다. 본문은 안 밀리니
+     아무 점검도 울지 않았다. 옆으로 밀 수 있다는 것을 <b>모르면 없는
+     것과 같다.</b> 좁은 화면에서는 줄 단위로 세워, 두 칸이 다 눈에
+     있어야 한다. 그리고 머리글이 사라지므로 칸마다 이름표가 붙어야
+     한다 — 없으면 「기존」 과 「신규」 를 <b>거꾸로</b> 적는다.      */
+  console.log('\n[8] 폰에서 「기존」·「신규」 두 칸이 다 보인다');
+  const small = [];
+  for (const vp of [{ n: '폰 390', w: 390 }, { n: '탭 800', w: 800 }]) {
+    const pg = await browser.newPage({ viewport: { width: vp.w, height: 1000 } });
+    await pg.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
+                  { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(2000);
+    const m = await pg.evaluate(() => {
+      document.body.innerHTML = '<div id="babaGrid"></div>';
+      document.body.style.cssText = 'margin:0;padding:10px;background:#fff';
+      BABA.rows = [
+        { k: 'fee', n: '월 보험료', b: 500000, a: 380000 },
+        { k: 'cancer', n: '일반암진단비', b: 3000, a: 5000 },
+        { k: 'brain', n: '뇌혈관질환진단비', b: 1000, a: 3000 }
+      ];
+      BABA.at = '2026-08-28';
+      babaPaint();
+      const vw = document.documentElement.clientWidth;
+      const outside = (sel) => [].slice.call(document.querySelectorAll(sel))
+        .filter(x => x.getBoundingClientRect().width > 0)
+        .filter(x => Math.round(x.getBoundingClientRect().right) > vw + 1).length;
+      const cells = [].slice.call(document.querySelectorAll('#babaGrid .bg-c'));
+      return { vw: vw, nCell: cells.length,
+               outCell: outside('#babaGrid .bg-c'),
+               outIn: outside('#babaGrid input'),
+               bodyOver: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+               labs: cells.map(x => (getComputedStyle(x, ':before').content || '')
+                 .replace(/^"|"$/g, '').trim()).filter(t => t && t !== 'none') };
+    });
+    small.push({ vp: vp.n, w: vp.w, m });
+    await pg.close();
+  }
+  small.forEach(t => {
+    is(t.m.nCell > 0 && t.m.outCell === 0 && t.m.outIn === 0,
+       '  ' + t.vp + ' — <b>「신규(만원)」 칸이 화면 안에</b> 있다 · 밖으로 나간 칸 ' +
+       (t.m.outCell + t.m.outIn) + '개');
+    is(t.m.bodyOver === 0, '  ' + t.vp + ' — 본문이 옆으로 안 밀린다 · ' + t.m.bodyOver + 'px');
+    /* 이름표는 <b>머리글이 사라진 자리</b>에만 필요하다 — 넓은 화면까지
+       요구하면 헛알람이 된다 (CLAUDE.md 8번). */
+    if (t.w < 560) {
+      const ok = t.m.labs.filter(x => /기존|신규/.test(x)).length;
+      is(t.m.nCell > 0 && ok === t.m.nCell,
+         '  ' + t.vp + ' — 칸마다 <b>「기존」·「신규」 이름표</b>가 붙는다 (없으면 거꾸로 적는다) · ' +
+         ok + '/' + t.m.nCell + '개');
+    }
+  });
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[9] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();

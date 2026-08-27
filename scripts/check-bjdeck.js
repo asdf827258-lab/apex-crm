@@ -364,6 +364,60 @@ async function seen(page) {
   is(css.mounted && css.len > 2000, '리포트 전용 스타일이 한 번만 심긴다');
   is(css.print, '인쇄할 때 슬라이드가 잘리지 않게 되어 있다');
 
+  /* ── 종이에는 실명, <b>서버에는 가린 이름</b> ──────────────────────
+     「고객 365일 저장」 을 누르면 리포트 글이 그대로 서버로 올라간다.
+     증권에서 읽은 <b>실명</b>이 표지에도 본문에도 들어 있어 여태 그대로
+     저장되고 있었다. 실명은 이 브라우저에만 둔다 (CLAUDE.md 3번).
+     화면과 종이는 안 건드린다 — 그 자리에는 고객 본인이 앉아 있다.  */
+  const mask = await page.evaluate(() => {
+    const DOC = '홍길동 님의 전체 계약리스트\n계약 건수 1건 합계보험료 500,000원\n' +
+      '1 정상 삼성화재 무배당 튼튼종합보험 2018-03-01 월납 20 년 100 세 500,000 원\n' +
+      '홍길동 님의 담보별 진단현황\n' +
+      '암 진단 일반암진단비 권장 5,000만 1 가입 3,000만 1 부족 -2,000만\n';
+    const sc = insScan(DOC);
+    const deck = bjLocalDeck([{ name: 'a.pdf', text: DOC }], {}, 'AI 없음', sc);
+    document.body.insertAdjacentHTML('beforeend', '<div id="pres_mk"></div>');
+    const res = document.getElementById('pres_mk');
+    res._scan = sc; res._deck = deck;
+    res.innerHTML = '<div id="doc_pres_mk">' + bjDeckHtml(deck) + '</div>';
+    let sent = null;
+    const real = window.osRepSaveToClient;
+    window.osRepSaveToClient = function (kind, title, content) { sent = content; };
+    bjSave('mk');
+    window.osRepSaveToClient = real;
+    const j = JSON.stringify(sent || {});
+    return { real: (j.match(/홍길동/g) || []).length,
+             masked: (j.match(/홍\*동/g) || []).length,
+             screen: (bjDeckHtml(deck).match(/홍길동/g) || []).length,
+             kept: deck.client.name,
+             md: !!(sent && sent.md && sent.md.length > 200) };
+  });
+  is(mask.real === 0 && mask.masked > 0,
+     '서버로 가는 글에는 <b>실명이 한 번도 없다</b> — 가린 이름 ' + mask.masked + '군데 (실명 ' + mask.real + ')');
+  is(mask.screen > 0, '화면·종이는 <b>그대로 실명</b> — 그 자리에는 고객 본인이 앉아 있다');
+  is(mask.kept === '홍길동', '원본 리포트를 <b>망가뜨리지 않는다</b> — 저장본만 가린다');
+  is(mask.md, '가린 뒤에도 저장할 글이 제대로 만들어진다');
+
+  /* ── 아무것도 못 읽었으면 <b>없는 숫자에 대고 정확하다고 하지 않는다</b> ──
+     스캔본 증권이면 글자가 거의 안 뽑혀 읽어 낸 것이 하나도 없다. 그런데
+     안내 장이 「숫자는 앱이 규칙으로 읽어 정확하지만」 이라고 적고 있었고,
+     바로 다음 장은 「담보를 읽지 못했습니다」 였다 — 한 장 안에서 두 말이다.
+     이 장은 <b>고객에게 인쇄돼 나간다</b> (CLAUDE.md 1번).            */
+  const blind = await page.evaluate(() => {
+    const t = (sc) => bjDeckHtml(bjLocalDeck([{ name: '스캔본.pdf', text: '   보험 ' }], {}, 'AI 없음', sc))
+      .replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+    const none = t(null);
+    return { none: none,
+             money: (none.match(/[0-9][0-9,]*\s*(만원|억)/g) || []).length,
+             saysNone: /읽어 낸 숫자가 없습니다/.test(none),
+             noBrag: !/숫자는 앱이 규칙으로 읽어 정확하지만/.test(none),
+             tells: /무엇을 확인해야 하는지/.test(none) };
+  });
+  is(blind.money === 0, '  못 읽은 자료에는 <b>아무 숫자도 만들지 않는다</b> — 지어낸 금액 ' + blind.money + '개');
+  is(blind.saysNone && blind.noBrag,
+     '  <b>없는 숫자에 대고 「정확하다」 고 하지 않는다</b> — 한 장 안에서 두 말이 되면 고객이 먼저 본다');
+  is(blind.tells, '  대신 <b>무엇을 확인해야 하는지</b>를 적는다');
+
   /* ── 7 ── */
   console.log('\n[7] 좁은 화면');
   await page.setViewportSize({ width: 430, height: 900 });
