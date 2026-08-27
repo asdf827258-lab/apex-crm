@@ -11677,8 +11677,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 07:55';
-var APP_BUILD_NOTE='<b>없는 담보를 「없다」 고 못 박을 수 있습니다 — 여태 0 은 <i>지우개</i>였습니다.</b> 고치는 칸에 <code>0</code> 을 치고 탭을 누르면 <b>말없이 읽은 값으로 되돌아갔습니다.</b> 원본이 엉뚱하게 읽어 화면에 「일반암 3,000만원 가입」 이라 찍혔는데 <b>실제로는 없는</b> 담보라면, 그것을 지울 방법이 아예 없었습니다 — 고객 앞에 서는 숫자 중에 그보다 나쁜 것이 없습니다. 이제 <b>빈 칸</b>이 지우개고, <b>0</b> 은 「증권을 보고 없다고 확인했다」 는 값입니다. 담보진단은 <b>「미가입 · -전액」</b>, 특약은 <b>「0원」</b> 이 되고, 위쪽 <b>실지급 계열 표에서도 함께 빠집니다.</b> 금액만 못 읽어 <b>비워 둔</b> 줄은 <b>그대로 「있음」</b> 입니다 — 담보는 있고 금액만 모르는 것이라, 그것까지 지우면 어젯밤 고친 사고가 되돌아옵니다. AI 에게도 <b>0 은 못 읽은 칸과 다르다</b>고, <b>이 담보만은</b> 「없습니다」 라고 써도 된다고 일러 줍니다 — 「모름」 과 「0」 은 다른 뜻입니다. <code>check-insfix</code> 17군 · 일곱 자리를 일부러 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
+var APP_BUILD='2026-08-28 08:20';
+var APP_BUILD_NOTE='<b>없는 담보를 「없다」 고 못 박을 수 있습니다 — 여태 0 은 <i>지우개</i>였습니다.</b> 고치는 칸에 <code>0</code> 을 치고 탭을 누르면 <b>말없이 읽은 값으로 되돌아갔습니다.</b> 원본이 엉뚱하게 읽어 화면에 「일반암 3,000만원 가입」 이라 찍혔는데 <b>실제로는 없는</b> 담보라면, 그것을 지울 방법이 아예 없었습니다 — 고객 앞에 서는 숫자 중에 그보다 나쁜 것이 없습니다. 이제 <b>빈 칸</b>이 지우개고, <b>0</b> 은 「증권을 보고 없다고 확인했다」 는 값입니다. 담보진단은 <b>「미가입 · -전액」</b>, 특약은 <b>「0원」</b> 이 되고, 위쪽 <b>실지급 계열 표에서도 함께 빠집니다.</b> 금액만 못 읽어 <b>비워 둔</b> 줄은 <b>그대로 「있음」</b> 입니다 — 담보는 있고 금액만 모르는 것이라, 그것까지 지우면 어젯밤 고친 사고가 되돌아옵니다. 그리고 <b>「원본이 부족·미가입으로 본 담보」 줄이 거짓말을 하고 있었습니다</b> — 사장님이 고치신 줄의 과부족은 <b>앱이 다시 셈한 값</b>인데 머리글은 「원본이」 라고 말해, 고객께 「분석표에도 이렇게 나옵니다」 라고 말씀하시게 됩니다. 고친 줄에는 <b>★</b> 를 달고 머리글을 바꿨습니다. AI 에게도 같은 말을 합니다. <code>check-insfix</code> 17군 · 여덟 자리를 일부러 되돌려 <b>전부 빨간불</b>을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -35299,7 +35299,11 @@ function insBrief(sc) {
   if (sc.diags.length) {
     L.push('');
     L.push('■ 담보별 진단 (담보 | 권장 | 가입 | 원본 판정 | 과부족)');
-    L.push('  ※ 이것은 원본 보장분석표의 판정이다. 그대로 베끼지 말고 직접 계산해 검증할 것.');
+    /* 고친 줄이 섞이면 <b>「전부 원본 판정」 이 아니다.</b> 화면에서 ★ 를
+       달아 밝히는 것과 <b>같은 말</b>을 AI 에게도 한다 (CLAUDE.md 5번). */
+    L.push(sc.fixN
+      ? '  ※ ★ 없는 줄은 원본 보장분석표의 판정이고, ★ 붙은 줄은 앱이 다시 센 것이다. 그대로 베끼지 말고 직접 계산해 검증할 것.'
+      : '  ※ 이것은 원본 보장분석표의 판정이다. 그대로 베끼지 말고 직접 계산해 검증할 것.');
     sc.diags.forEach(function (d) {
       L.push('  · ' + (d.cat ? d.cat + ' ' : '') + d.name + ' | 권장 ' + d.want + ' | 가입 ' + d.have + ' | ' + d.verdict + (d.gap ? ' | ' + d.gap : '') +
         (d.fix ? ' | ★설계사가 고침' : ''));
@@ -35801,9 +35805,22 @@ function insCardHtml(sc) {
     h += '</div>';
   }
   if (sc.short.length) {
-    h += '<div class="ir-short"><b>원본이 부족·미가입으로 본 담보 ' + sc.short.length + '개</b> — ' +
-      sc.short.slice(0, 14).map(function (d) { return esc(d.name) + (d.gap ? ' ' + esc(d.gap) : ''); }).join(' · ') +
-      (sc.short.length > 14 ? ' 외 ' + (sc.short.length - 14) + '개' : '') + '</div>';
+    /* ── 「원본이」 라고 적어 놓고 <b>우리가 셈한 것</b>을 섞지 않는다 ────
+       사장님이 칸을 고치시면 그 줄의 과부족은 <b>앱이 다시 셈한 값</b>이지
+       보험사 분석표의 판정이 아니다. 그런데 이 줄은 「원본이 … 본 담보」
+       라고 말한다 — 그대로 두면 사장님이 고객에게 「분석표에도 이렇게
+       나옵니다」 라고 말씀하시게 된다. 고친 줄에는 ★ 를 달고, 머리글도
+       바꾼다. 밝힐 것은 <b>끝까지</b> 밝힌다 (CLAUDE.md 1번).           */
+    var sfx = sc.short.filter(function (d) { return d.fix; }).length;
+    h += '<div class="ir-short"><b>' + (sfx ? '' : '원본이 ') + '부족·미가입으로 본 담보 ' +
+      sc.short.length + '개</b> — ' +
+      sc.short.slice(0, 14).map(function (d) {
+        return esc(d.name) + (d.gap ? ' ' + esc(d.gap) : '') + (d.fix ? ' ★' : '');
+      }).join(' · ') +
+      (sc.short.length > 14 ? ' 외 ' + (sc.short.length - 14) + '개' : '') +
+      (sfx ? ('<div class="ir-shortn"><b>★ ' + sfx + '개</b>는 고치신 값으로 <b>앱이 다시 셈</b>한 것입니다 — ' +
+        '원본 보장분석표의 판정이 아닙니다. 나머지는 원본이 본 그대로입니다.</div>') : '') +
+      '</div>';
   }
   /* 읽은 값을 고치는 표는 <b>맨 아래</b>에 둔다 — 위의 요약을 먼저 보고
      이상한 숫자를 발견한 다음 손대는 순서가 자연스럽다. */
@@ -35848,6 +35865,7 @@ function insCardCss() {
     '.ir-lap{margin-top:10px;padding:9px 11px;background:#F4F5F7;border-radius:9px;font-size:11.8px;color:#4E5968;line-height:1.6;}' +
     '.ir-lapn{color:#9AA2AD;margin-top:2px;}' +
     '.ir-short{margin-top:10px;padding-top:9px;border-top:1px solid #E6EDF7;font-size:11.8px;color:#7A1F1A;line-height:1.65;}' +
+    '.ir-shortn{margin-top:5px;font-size:11px;color:#7A5310;line-height:1.6;}' +
     '.ir-key{margin-top:11px;padding-top:10px;border-top:1px solid #E6EDF7;}' +
     '.ir-keyt{font-size:12px;font-weight:800;color:#1B3A6B;margin-bottom:6px;}' +
     '.ir-keyg{display:flex;flex-wrap:wrap;gap:5px;}' +
