@@ -526,6 +526,50 @@ const RDOC =
      '  다음에 열면 <b>접혀 있고</b> 머리글이 「직접 적으신 칸 1개」 라고 말한다');
 
   /* ─────────────────────────────────────────────────────────────── */
+  /* 권장만 고치고 가입 칸이 비면 — 「미가입 · -5,000만원」 이라고 적으면
+     <b>그 보장이 없다</b> 는 뜻이 된다. 비어 있는 것은 <b>모름</b>이지
+     0 이 아니다. 오늘 밤 특약에서 잡은 것과 같은 사고다 (CLAUDE.md 1번). */
+  console.log('\n[16] 모르는 칸을 「없다」 고 말하지 않는다');
+  const N = await page.evaluate(async ({ DOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const sc = insScan(DOC);
+    sc.fixOpen = 1; sc.dAll = 1;
+    const h = document.createElement('div');
+    h.id = 'NH'; h._scan = sc;
+    h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+    document.body.appendChild(h);
+    /* 가입 칸을 <b>비우고</b> 권장만 고친다 — 「얼마 있는지 모르겠다」 */
+    let ins = h.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '');
+    insFixSet(ins[0], 0, 'want', '10000');
+    insFixDone(ins[0]);
+    await new Promise(r => setTimeout(r, 0));
+    /* 읽은 값이 있으니 비워도 그리로 돌아간다 — 진짜 빈 칸을 만들어 본다 */
+    sc.diags[0].rh = '';
+    insFixRow(sc.diags[0], { w: 10000 });
+    O.row = sc.diags[0].have + '|' + sc.diags[0].verdict + '|' + (sc.diags[0].gap || '(없음)');
+    O.notNo = sc.diags[0].verdict !== '미가입';
+    O.noGap = !sc.diags[0].gap;
+    /* 글자는 있는데 못 읽는 경우도 같다 */
+    sc.diags[0].rh = '확인필요';
+    insFixRow(sc.diags[0], { w: 10000 });
+    O.row2 = sc.diags[0].have + '|' + sc.diags[0].verdict + '|' + (sc.diags[0].gap || '(없음)');
+    /* 진짜 0 이면 그때는 부족이다 */
+    sc.diags[0].rh = '0';
+    insFixRow(sc.diags[0], { w: 10000 });
+    O.row3 = sc.diags[0].have + '|' + sc.diags[0].verdict + '|' + (sc.diags[0].gap || '(없음)');
+    return O;
+  }, { DOC });
+  is(N.notNo && N.noGap && N.row === '|확인 필요|(없음)',
+     '  가입 칸이 비면 <b>「확인 필요」</b> — 「미가입」 도 과부족도 안 적는다 · ' + N.row);
+  is(N.row2 === '확인필요|확인 필요|(없음)',
+     '  글자는 있는데 못 읽어도 같다 — ' + N.row2);
+  is(N.row3 === '0|확인 필요|(없음)',
+     '  「0」 도 금액으로 못 읽으면 <b>지어내지 않는다</b> — ' + N.row3);
+
+  /* ─────────────────────────────────────────────────────────────── */
   /* 고치는 표는 <b>우리끼리 보는 것</b>이다. 「붙어 보임 — 확인」·「원문:
      12683400원」 이 적힌 종이가 고객 손에 가면, 우리가 숫자를 못 믿는다는
      말을 고객이 읽는다. 인쇄에는 <b>한 글자도</b> 나가면 안 된다.     */
