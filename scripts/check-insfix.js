@@ -26,12 +26,14 @@
 
    여기서 확인합니다.
      1. 표가 실제로 서는가 — 담보 수만큼 · 읽은 값이 만원으로
-     2. 고치면 <b>그 자리에서</b> 판정·부족 목록이 따라오는가
-     3. 비우면 <b>읽은 값</b>으로 돌아가는가 (0 으로 안 채운다)
-     4. <b>다른 자료에는 한 줄도 안 붙는가</b>
-     5. 다시 읽어도 붙는가 (「다시 만들기」 를 견딘다)
-     6. 화면·AI 에 <b>고친 값이라고 밝히는가</b> · 옛 리포트를 경고하는가
-     7. <b>헛알람이 없는가</b> — 안 고쳤으면 조용한가                */
+     2. <b>붙어 버린 꼴</b>(「12683400원」)을 눈에 띄게 세우는가 —
+        다만 <b>값은 안 고친다.</b> 무엇이 맞는지는 원본만 안다
+     3. 고치면 <b>그 자리에서</b> 판정·부족 목록이 따라오는가
+     4. 비우면 <b>읽은 값</b>으로 돌아가는가 (0 으로 안 채운다)
+     5. <b>다른 자료에는 한 줄도 안 붙는가</b>
+     6. 다시 읽어도 붙는가 (「다시 만들기」 를 견딘다)
+     7. 화면·AI 에 <b>고친 값이라고 밝히는가</b> · 옛 리포트를 경고하는가
+     8. <b>헛알람이 없는가</b> — 안 고쳤으면 조용한가                */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -64,6 +66,10 @@ const DOC =
 /* 「다른 고객」 — 이름만 바뀌어도 지문이 달라야 한다 */
 const OTHER = DOC.replace(/홍길동/g, '이순신');
 
+/* 표에서 옆 칸이 붙어 버린 꼴 — 「12683400원」. 숫자로는 1,268만원이라
+   멀쩡해 보여서, 표시해 주지 않으면 <b>눈으로도 못 잡는다.</b> */
+const ODD = DOC.replace('가입 1,000만 2 부족 -2,000만', '가입 12683400원 2 부족 -2,000만');
+
 (async () => {
   await new Promise(r => srv.listen(0, r));
   const browser = await chromium.launch();
@@ -76,7 +82,7 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
 
   /* 화면을 한 벌 세우고 그 위에서 실제로 고쳐 본다.
      함수만 부르면 「화면에서 정말 고쳐지는가」 를 못 본다.  */
-  const R = await page.evaluate(({ DOC, OTHER }) => {
+  const R = await page.evaluate(({ DOC, OTHER, ODD }) => {
     const O = {};
     localStorage.removeItem('apex_ins_fix');
 
@@ -98,6 +104,17 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
     O.vals = [].slice.call(host.querySelectorAll('.if-i')).map(x => x.value).join(',');
     O.read0 = rowOf(sc.diags[0]);
     O.short0 = sc.short.length;
+    O.cleanOdd = host.querySelectorAll('.if-i.odd').length;   /* 멀쩡한 표엔 없다 */
+
+    /* ── 1-2. 붙어 버린 꼴을 눈에 띄게 세운다 ─────────────────── */
+    const hostO = mount(insScan(ODD));
+    O.oddCell = hostO.querySelectorAll('.if-i.odd').length;
+    O.oddTag = /붙어 보임 — 확인/.test(hostO.textContent);
+    O.oddNote = /붙어 보이는 칸 1개/.test(hostO.textContent);
+    O.oddRaw = /원문:\s*12683400원/.test(hostO.textContent);
+    /* <b>값은 우리가 안 고친다</b> — 무엇이 맞는지는 원본만 안다 */
+    O.oddKept = hostO._scan.diags[1].have;
+    O.oddIn = [].slice.call(hostO.querySelectorAll('.if-i')).map(x => x.value)[3];
 
     /* ── 2. 고치면 그 자리에서 따라온다 ────────────────────────── */
     let ins = host.querySelectorAll('.if-i');
@@ -186,7 +203,7 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
     O.noDiagTable = scNo ? /ins-fix/.test(insCardHtml(scNo)) : true;
     O.noDiagN = scNo ? scNo.diags.length : -1;
     return O;
-  }, { DOC, OTHER });
+  }, { DOC, OTHER, ODD });
 
   /* ─────────────────────────────────────────────────────────────── */
   console.log('\n[1] 읽은 값 표가 실제로 선다');
@@ -199,7 +216,18 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
      '  담보를 하나도 못 읽었으면 <b>표를 안 세운다</b> (빈 칸을 만들지 않는다)');
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[2] 고치면 그 자리에서 판정·부족이 따라온다');
+  console.log('\n[2] 붙어 버린 꼴을 눈에 띄게 세운다 — 값은 안 고친다');
+  is(R.oddCell === 1 && R.oddTag,
+     '  「12683400원」 칸에 <b>「붙어 보임 — 확인」</b> 이 붙는다');
+  is(R.oddNote, '  위에 <b>「붙어 보이는 칸 1개」</b> 를 적는다');
+  is(R.oddRaw && R.oddIn === '1268',
+     '  <b>원문을 그대로</b> 보여 준다 — 칸에는 앱이 읽은 ' + R.oddIn + ' 이 그대로');
+  is(R.oddKept === '12683400원',
+     '  <b>값을 우리가 지어내 고치지 않는다</b> — ' + R.oddKept + ' 그대로 (CLAUDE.md 1번)');
+  is(R.cleanOdd === 0, '  멀쩡한 표에는 <b>안 붙는다</b> — 헛알람 없음');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  console.log('\n[3] 고치면 그 자리에서 판정·부족이 따라온다');
   is(R.afterRow === '5,000만|5,000만원|충분||fix=1',
      '  가입 3,000만 → 5,000만 이면 <b>부족이 충분으로</b> — ' + R.afterRow);
   is(R.short0 === 2 && R.afterShort === 1,
@@ -212,7 +240,7 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
      '  권장도 따로 고쳐진다 — ' + R.bothRow);
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[3] 비우면 읽은 값으로 돌아간다 — 0 으로 채우지 않는다');
+  console.log('\n[4] 비우면 읽은 값으로 돌아간다 — 0 으로 채우지 않는다');
   is(R.halfRow === '5,000만|5,000만원|충분||fix=1',
      '  권장만 비우면 <b>권장만</b> 읽은 값으로 — ' + R.halfRow);
   is(R.emptyRow === '5,000만|3,000만|부족|-2,000만|fix=0',
@@ -221,19 +249,19 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
      '  고친 칸 수도 부족 목록도 되돌아온다 — ' + R.emptyN + '개 · 부족 ' + R.emptyShort + '개');
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[4] 다른 자료에는 한 줄도 안 붙는다');
+  console.log('\n[5] 다른 자료에는 한 줄도 안 붙는다');
   is(R.sigDiff, '  자료가 다르면 <b>지문이 다르다</b>');
   is(R.otherN === 0 && R.otherRow === '5,000만|3,000만|부족|-2,000만|fix=0',
      '  다른 고객 표는 <b>읽은 값 그대로</b> — ' + R.otherRow);
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[5] 「다시 만들기」 를 견딘다');
+  console.log('\n[6] 「다시 만들기」 를 견딘다');
   is(R.reN === 1 && R.reRow === '5,000만|5,000만원|충분||fix=1',
      '  다시 읽어도 고친 값이 <b>그대로 붙는다</b> — ' + R.reRow);
   is(R.reShort === 1, '  부족 목록도 고친 값 기준 — ' + R.reShort + '개');
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[6] 고친 값이라고 화면에도 AI 에게도 밝힌다');
+  console.log('\n[7] 고친 값이라고 화면에도 AI 에게도 밝힌다');
   is(R.noteMine, '  화면 — 「직접 적으신 칸 N개」');
   is(R.noteStale, '  화면 — <b>「아래 리포트는 고치기 전 값」</b> 경고');
   is(R.briefStar && R.briefNote,
@@ -241,7 +269,7 @@ const OTHER = DOC.replace(/홍길동/g, '이순신');
   is(/★설계사가 고침/.test(R.briefLine), '  그 줄에 붙는다 — ' + R.briefLine);
 
   /* ─────────────────────────────────────────────────────────────── */
-  console.log('\n[7] 헛알람이 없다 — 안 고쳤으면 조용하다');
+  console.log('\n[8] 헛알람이 없다 — 안 고쳤으면 조용하다');
   is(R.quietTable === 3, '  표는 그대로 선다 — ' + R.quietTable + '줄');
   is(R.quietN === 0 && R.quietMine === 0, '  파란 칸도, 고친 칸 수도 <b>0</b>');
   is(!R.quietNote && !R.quietStale, '  「직접 적으신 칸」·「고치기 전 값」 안내가 <b>안 뜬다</b>');
