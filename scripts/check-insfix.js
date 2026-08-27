@@ -41,7 +41,13 @@
     11. <b>0 을 적을 수 있는가</b> — ④ 의 짝이다. 못 읽은 칸을 0 으로
         채우지 않는 것과, 사장님이 <b>직접 적으신 0</b> 을 값으로 받는
         것은 같은 규칙의 앞뒤다. 여태 0 은 지우개여서, 원본이 엉뚱하게
-        읽은 담보를 <b>「없다」 고 못 박을 방법이 없었다.</b> */
+        읽은 담보를 <b>「없다」 고 못 박을 방법이 없었다.</b>
+    12. 폰에서 <b>판정 칸이 화면 안에</b> 있는가 · 칸마다 이름표가 붙는가 —
+        표가 옆으로 밀려 오른쪽 칸이 화면 밖이면, 밀 수 있다는 것을
+        <b>모르는 한 없는 것과 같다.</b> 본문은 안 밀려 아무 점검도 안 울었다.
+    13. 옛 숫자인 채로 <b>종이·저장으로 나가려</b> 하면 여쭙는가 — ④ 의
+        경고는 <b>no-print</b> 라 종이에는 안 나간다. 그대로 인쇄하면
+        틀린 숫자가 <b>아무 표시 없이</b> 고객 손에 간다. 막지는 않는다. */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -692,6 +698,81 @@ const RDOC =
   is(/★ 없는 줄은 원본 보장분석표의 판정이고, ★ 붙은 줄은 앱이 다시 센 것/.test(Z.brief) &&
      !/※ 이것은 원본 보장분석표의 판정이다/.test(Z.brief),
      '  AI 에게도 <b>화면과 같은 말</b>을 한다 — 「전부 원본 판정」 이라고 하지 않는다');
+
+  /* ─────────────────────────────────────────────────────────────── */
+  /* ── 옛 숫자인 채로 <b>밖으로 나가려</b> 할 때 여쭙는다 ─────────────
+     화면 카드에는 「아래 리포트는 고치기 전 값」 이라고 크게 적어 두었다.
+     그런데 그 경고는 <b>no-print</b> 라 종이에는 한 글자도 안 나간다 —
+     그대로 인쇄하면 <b>틀린 숫자가 아무 표시 없이</b> 고객 손에 간다.
+     저장은 더 나쁘다: 고객 365일에 남아 몇 달 뒤에 다시 꺼내 쓰인다.
+     막지는 않는다 — 여쭙기만 한다 (CLAUDE.md 1번).                */
+  console.log('\n[18] 옛 숫자인 채로 종이·저장으로 나가려 하면 여쭌다');
+  const S = await page.evaluate(async ({ DOC }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '<div id="pres_bojang"></div>';
+    const res = document.getElementById('pres_bojang');
+    const sc = insScan(DOC);
+    res._scan = sc; res._deck = { slides: [{ t: 'x' }] };
+    sc.fixOpen = 1; sc.dAll = 1;
+    res.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>' +
+      '<div id="doc_pres_bojang">리포트 본문</div>';
+    /* 안 고쳤으면 <b>조용해야</b> 한다 — 매번 물으면 사장님이 안 읽고 누르신다 */
+    let asked = 0;
+    const realConfirm = window.confirm, realPrint = window.print;
+    window.confirm = function (m) { asked++; O.msg = m; return false; };
+    window.print = function () { O.printed = (O.printed || 0) + 1; };
+    bjPrint('bojang');
+    O.quietAsk = asked; O.quietPrinted = O.printed || 0;
+
+    /* 한 칸 고친다 — 이제 리포트 본문은 옛 숫자다 */
+    const ins = res.querySelectorAll('.if-i');
+    insFixSet(ins[1], 0, 'have', '1000');
+    insFixDone(ins[1]);
+    await new Promise(r => setTimeout(r, 0));
+    O.stale = !!res._scan.stale;
+
+    asked = 0; O.printed = 0;
+    bjPrint('bojang');
+    O.printAsk = asked; O.printedAfterNo = O.printed;      /* 「아니오」 면 안 찍혀야 한다 */
+
+    asked = 0;
+    let saved = 0;
+    const realSave = window.osRepSaveToClient;
+    window.osRepSaveToClient = function () { saved++; };
+    bjSave('bojang');
+    O.saveAsk = asked; O.savedAfterNo = saved;
+
+    asked = 0;
+    let dl = 0;
+    const realBlob = window.Blob;
+    window.Blob = function () { dl++; return new realBlob([''], { type: 'text/html' }); };
+    bjDownload('bojang');
+    O.dlAsk = asked; O.dlAfterNo = dl;
+
+    /* 「예」 를 누르면 <b>막지 않는다</b> — 결정은 사장님이 하신다 */
+    window.confirm = function () { return true; };
+    O.printed = 0; saved = 0;
+    bjPrint('bojang');
+    O.printedAfterYes = O.printed;
+
+    window.confirm = realConfirm; window.print = realPrint;
+    window.osRepSaveToClient = realSave; window.Blob = realBlob;
+    return O;
+  }, { DOC });
+  is(S.quietAsk === 0 && S.quietPrinted === 1,
+     '  안 고쳤으면 <b>조용히 인쇄한다</b> — 매번 물으면 안 읽고 누르시게 된다');
+  is(S.stale, '  한 칸 고치면 「리포트는 옛 숫자」 라고 표시된다');
+  is(S.printAsk === 1 && S.printedAfterNo === 0,
+     '  <b>인쇄</b> 전에 한 번 여쭙고, 「아니오」 면 안 찍는다');
+  is(S.saveAsk === 1 && S.savedAfterNo === 0,
+     '  <b>고객 365일 저장</b> 전에도 여쭌다 — 저장은 몇 달 뒤에 다시 꺼내 쓰인다');
+  is(S.dlAsk === 1 && S.dlAfterNo === 0,
+     '  <b>내려받기</b> 전에도 여쭌다 — 나가는 목 셋이 같은 말을 한다');
+  is(/AI 상세분석|다시 만들기/.test(S.msg || ''),
+     '  <b>무엇을 눌러야 하는지</b>까지 말한다 — ' + ('' + (S.msg || '')).split('\n')[0]);
+  is(S.printedAfterYes === 1,
+     '  「예」 면 <b>막지 않는다</b> — 무엇이 맞는지는 사장님이 아신다');
 
   /* ─────────────────────────────────────────────────────────────── */
   /* 고치는 표는 <b>우리끼리 보는 것</b>이다. 「붙어 보임 — 확인」·「원문:
