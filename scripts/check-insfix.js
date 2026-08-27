@@ -565,6 +565,72 @@ const RDOC =
   is(onPaper.doc === 'show',
      '  같은 #printRoot 안이어도 <b>리포트 본문은 그대로</b> 인쇄된다 — 카드만 빠진다');
 
+  /* ─────────────────────────────────────────────────────────────── */
+  /* 보장분석 결과와 AI 제안서 결과를 <b>나란히 열어 두는 일은 흔하다.</b>
+     저장 칸을 하나만 두었더니, 이쪽을 고치는 순간 저쪽 고친 값이
+     <b>말없이</b> 사라졌다 — 실제로 재 보고 알았다. 자료마다 따로 담는다. */
+  console.log('\n[13] 두 고객 표를 나란히 열어도 서로를 안 지운다');
+  const M = await page.evaluate(async ({ DOC, OTHER }) => {
+    const O = {};
+    localStorage.removeItem('apex_ins_fix');
+    document.body.innerHTML = '';
+    const put = (id, sc) => {
+      const h = document.createElement('div');
+      h.id = id; h._scan = sc; sc.fixOpen = 1; sc.dAll = 1;
+      h.innerHTML = '<div class="no-print">' + insCardHtml(sc) + '</div>';
+      document.body.appendChild(h);
+      return h;
+    };
+    const scA = insScan(DOC), scB = insScan(OTHER);
+    const A = put('MA', scA), B = put('MB', scB);
+    O.sigDiff = scA.fixSig !== scB.fixSig;
+    let ai = A.querySelectorAll('.if-i');
+    insFixSet(ai[1], 0, 'have', '5000');
+    insFixDone(ai[1]);
+    await new Promise(r => setTimeout(r, 0));
+    let bi = B.querySelectorAll('.if-i');
+    insFixSet(bi[1], 0, 'have', '7000');
+    insFixDone(bi[1]);
+    await new Promise(r => setTimeout(r, 0));
+    /* 둘 다 다시 읽어 본다 — 「다시 만들기」 를 두 번 누른 셈 */
+    const a2 = insScan(DOC), b2 = insScan(OTHER);
+    O.aKept = a2.diags[0].have + '/fixN=' + a2.fixN;
+    O.bKept = b2.diags[0].have + '/fixN=' + b2.fixN;
+    /* 한쪽만 지운다 — 옆 화면 것까지 지우면 안 된다 */
+    insFixClear(A.querySelector('.if-btn button'));
+    await new Promise(r => setTimeout(r, 0));
+    const a3 = insScan(DOC), b3 = insScan(OTHER);
+    O.aCleared = a3.diags[0].have + '/fixN=' + a3.fixN;
+    O.bStill = b3.diags[0].have + '/fixN=' + b3.fixN;
+
+    /* 옛 판(한 벌짜리)으로 저장돼 있어도 <b>그대로 옮겨 온다</b> */
+    localStorage.removeItem('apex_ins_fix');
+    const sig = insScan(DOC).fixSig;
+    const k = insFixKey(insScan(DOC).diags[0]);
+    const old = { sig: sig, fix: {} }; old.fix[k] = { h: 9000 };
+    localStorage.setItem('apex_ins_fix', JSON.stringify(old));
+    const a4 = insScan(DOC);
+    O.migrated = a4.diags[0].have + '/fixN=' + a4.fixN;
+
+    /* 자료가 아홉 벌째면 <b>제일 오래 안 쓴 것</b>부터 버린다 */
+    localStorage.removeItem('apex_ins_fix');
+    for (let i = 0; i < 10; i++) insFixPut('sig' + i, { a: { h: 100 + i } });
+    const box = JSON.parse(localStorage.getItem('apex_ins_fix'));
+    O.keep = box.order.length + '/' + Object.keys(box.docs).length;
+    O.dropped = !box.docs.sig0 && !box.docs.sig1 && !!box.docs.sig9;
+    return O;
+  }, { DOC, OTHER });
+
+  is(M.sigDiff, '  두 자료의 <b>지문이 다르다</b>');
+  is(M.aKept === '5,000만원/fixN=1' && M.bKept === '7,000만원/fixN=1',
+     '  둘 다 <b>제 값을 지킨다</b> — A ' + M.aKept + ' · B ' + M.bKept);
+  is(M.aCleared === '3,000만/fixN=0' && M.bStill === '7,000만원/fixN=1',
+     '  한쪽을 지워도 <b>옆 화면은 그대로</b> — A ' + M.aCleared + ' · B ' + M.bStill);
+  is(M.migrated === '9,000만원/fixN=1',
+     '  옛 판(한 벌짜리)으로 저장된 값도 <b>그대로 옮겨 온다</b> — ' + M.migrated);
+  is(M.keep === '8/8' && M.dropped,
+     '  여덟 벌까지 두고 <b>제일 오래 안 쓴 것</b>부터 버린다 — ' + M.keep);
+
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('보장분석 고치기 점검 — ' + bad + '군데 어긋납니다.')
