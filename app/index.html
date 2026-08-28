@@ -5146,11 +5146,13 @@ function osTossReturnCheck(){
       .catch(function(){toast('결제 승인 서버에 연결하지 못했습니다. 운영자에게 문의해 주세요.');});
   }
   var sb=osClient();
-  if(sb&&sb.auth&&sb.auth.getSession){
-    sb.auth.getSession().then(function(r){
+  if(sb&&sb.auth&&sb.auth.getSession&&typeof osWait==='function'){
+    /* 결제 뒤 돌아온 자리다. 서버가 대답을 안 하면 「승인 확인」 이 영영
+       안 끝나 사장님은 돈을 냈는지 안 냈는지 모르신다 — 시간 제한을 건다. */
+    osWait(sb.auth.getSession(),'결제 승인 확인').then(function(r){
       var s=(r&&r.data&&r.data.session)||null;if(s&&!OS.session)OS.session=s;
       doConfirm((s&&s.user&&s.user.id)||'');
-    },function(){doConfirm('');});
+    });
   }else{doConfirm((OS.session&&OS.session.user&&OS.session.user.id)||'');}
 }
 /* ── 운영자: 토스페이먼츠 연결 설정(관리자 전용) ── */
@@ -11784,8 +11786,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 02:35';
-var APP_BUILD_NOTE='<b>밤에 서버가 미리 만들던 「하루 한 장」을 껐습니다</b> — 사장님 지시대로입니다. 이제 <b>TFA 업무관리 → 대표 브리핑</b>을 여시면 <b>그 자리에서</b> 모아 세웁니다. 화면에 뜨는 숫자는 새벽에 굳어 둔 것이 아니라 <b>여신 그 순간</b>의 것입니다. 함께 <b>화면 문구도 고쳤습니다</b> — 예약만 끄고 두었더니 「아침 7시에 미리 만들어 둔 것입니다」 라는 글이 열 자리에 그대로 남아, 안 만드는데 만들었다고 <b>화면이 거짓말</b>을 하고 있었습니다. 만든 시각은 이제 적어 둔 값(<code>madeAt</code>)에서 읽고, <b>없으면 「적혀 있지 않습니다」</b> 라고 적습니다 — 시각을 지어내지 않습니다(1번). 서버 함수는 <b>지우지 않고</b> 남겨 두었습니다. 되살리고 싶으시면 <code>netlify.toml</code> 의 daily-brief 자리에 <b>네 줄</b>만 되돌리면 그날부터 다시 돕니다 — 그 방법을 그 자리에 적어 두었습니다. <code>check-brief</code> 가 <b>이 상태를 지킵니다</b> — 누가 말없이 예약을 되살리거나 화면 문구가 다시 어긋나면 그 자리에서 빨간불이 켜집니다. 열 자리를 되돌려 전부 울리는 것을 확인했습니다. <b>[main]</b> <b>조직도 반영</b>이 함께 들어왔습니다 — 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 뜹니다. 설정 → 팀원 권한 관리에서 지정하신 것이 <b>이깁니다</b>; 지정 안 된 분만 조직도의 팀으로 채우고, <b>설정에 없는 팀은 만들지 않습니다.</b>';
+var APP_BUILD='2026-08-29 05:10';
+var APP_BUILD_NOTE='<b>「로그인이 갑자기 안 된다」 — 비밀번호도 인터넷도 멀쩡했습니다.</b> 서비스 제공사 서버가 <b>응답을 아예 안 보내고</b> 있었습니다. 그러면 앱이 기다리는 약속은 성공도 실패도 하지 않고 <b>영영 매달립니다.</b> 그래서 단추는 「처리 중…」 에서 계속 돌고, 화면은 <b>한 마디도 안</b> 했습니다. 고객 앞에서 이러면 그 자리가 끝납니다. 거절(reject)은 전에 막아 두었는데, <b>「대답이 안 오는 경우」는 안 막혀</b> 있었습니다 — 둘은 다릅니다. 이제 서버를 기다리는 자리는 <b>전부 시간 제한</b>을 지납니다(12초). 지나면 기다리기를 그만두고 화면 위에 <b>붉은 띠</b>를 세웁니다 — <b>무엇을</b> 기다리다 지쳤는지 이름을 대고, <b>「비밀번호나 인터넷 문제가 아닐 수 있습니다」</b> 라고 분명히 적고, <b>다시 시도</b> 단추를 같이 줍니다(새로고침이 아니라 하던 것만 다시 해 — 쓰던 글이 안 날아갑니다). 나으면 띠가 저절로 내려갑니다. 걸린 자리는 여섯 — 로그인 · 계정 등록 · 로그인 상태 확인 · 내 정보 읽기 · 비밀번호 확인/바꾸기 · 결제 승인 확인. <b>다시 이런 일이 없게</b> 새 점검 <code>check-nohang</code> 을 CI 에 넣었습니다 — 시간 제한 없는 기다림이 하나라도 들어오면 그 자리에서 빨간불입니다. 점검이 <b>실제로 매달리게 만들어</b> 보고 화면이 풀리는지 눈으로 받습니다. 이 점검이 만들자마자 <b>제가 놓친 두 자리</b>를 잡았습니다. 열세 자리를 되돌려 전부 울리는 것을 확인했습니다. 함께 <b>조직도 점검의 헛알람</b>도 고쳤습니다 — 돌고 있는 함수 본문을 읽다가, 다른 화면이 그 함수를 감싸는 순간 겉껍질을 보고 「조직도를 안 읽는다」고 잘못 울었습니다. 앱은 멀쩡했습니다. 이제 파일 글에서 보고, 대신 <b>감싼 쪽이 원본을 부르는지</b>를 봅니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -39420,6 +39422,86 @@ gen('ext_reply','ext_reply','✳️','소상공인 AI 답글','네이버 플레�
    로그인하면 고객 보장분석 프로젝트 계층(Phase 2~)이 열린다.
    네트워크/CDN 없는 jsdom 스모크에서도 절대 부팅을 깨지 않도록 전부 방어적. */
 var OS={sb:null,session:null,profile:null};
+
+/* ════════ 서버를 기다릴 때는 반드시 시간 제한을 건다 ════════════════
+   <b>2026-08-28. 「로그인이 갑자기 안 된다」</b>
+
+   비밀번호도 인터넷도 멀쩡했습니다. 서버(제공사)가 <b>응답을 아예 안
+   보내고</b> 있었습니다. 그러면 약속(Promise)은 성공도 실패도 하지 않고
+   <b>영영 매달립니다.</b> 그래서 단추는 「처리 중…」 에서 계속 돌고,
+   화면은 아무 말도 안 했습니다. 사장님은 무엇이 잘못됐는지 알 길이
+   없었습니다 — 고객 앞에서 이러면 그 자리가 끝납니다.
+
+   거절(reject)은 이미 막아 두었습니다(osLoginErr). <b>안 막힌 것은
+   「대답이 안 오는 경우」</b> 였습니다. 둘은 다릅니다.
+
+   그래서 서버를 기다리는 자리는 <b>전부 이 함수를 지납니다.</b> 정한
+   시간이 지나면 기다리기를 그만두고 <b>거절처럼 답을 만들어 줍니다</b> —
+   부르는 쪽은 이미 오류를 다룰 줄 알므로 고칠 것이 없습니다.
+
+   그리고 <b>화면에 띠를 세웁니다.</b> 조용히 실패하면 사장님은 또 저에게
+   물어보셔야 합니다. 무엇을 기다리다 지쳤는지 이름을 대고, 다시 해 볼
+   단추를 같이 줍니다 (CLAUDE.md 1번 · 4-1번 「모든 기다림에는 시간 제한」).
+
+   <b>check-nohang 이 이것을 지킵니다</b> — 로그인·세션·프로필 가운데
+   하나라도 시간 제한 없이 서버를 기다리면 그 자리에서 빨간불입니다. */
+var OS_WAIT_MS=12000;                 /* 12초. 폰 데이터로도 이보다 오래 걸리면 서버 쪽이다 */
+var OS_DOWN={at:0,what:'',retry:null};
+function osWait(p,what,retry,ms){
+  var limit=ms||OS_WAIT_MS,t=null;
+  return new Promise(function(resolve){
+    t=setTimeout(function(){
+      t=null;
+      osServerDown(what,retry);
+      /* 「timeout」 이라는 낱말을 남긴다 — osNetDown/osLoginErr 이 이것을 보고
+         「비밀번호 문제가 아닙니다」 라고 사람 말로 바꿔 준다. */
+      resolve({data:null,error:{message:'timeout — '+(what||'서버')+' 응답이 없습니다',timeout:true}});
+    },limit);
+    Promise.resolve(p).then(function(r){
+      if(t===null)return;             /* 이미 시간 초과로 답했다 — 두 번 답하지 않는다 */
+      clearTimeout(t);t=null;resolve(r);
+    },function(e){
+      if(t===null)return;
+      clearTimeout(t);t=null;
+      resolve({data:null,error:{message:(e&&e.message)||'네트워크 오류'}});
+    });
+  });
+}
+/* 무엇을 기다리다 지쳤는지 적어 두고 띠를 세운다 */
+function osServerDown(what,retry){
+  OS_DOWN.at=Date.now();OS_DOWN.what=what||'서버';
+  if(retry)OS_DOWN.retry=retry;
+  try{osDownBar();}catch(e){}
+}
+/* 한 번이라도 제대로 받아 오면 띠를 내린다 — 안 내리면 다 나은 뒤에도 겁을 드린다 */
+function osServerOk(){
+  if(!OS_DOWN.at)return;
+  OS_DOWN.at=0;OS_DOWN.what='';
+  try{osDownBar();}catch(e){}
+}
+function osDownRetry(){
+  var f=OS_DOWN.retry;
+  osServerOk();
+  /* 새로고침하지 않는다 — 쓰던 글이 날아간다. 하던 것만 다시 해 본다. */
+  try{if(typeof f==='function')f();}catch(e){}
+}
+function osDownBar(){
+  if(typeof document==='undefined'||!document.body)return;
+  var el=document.getElementById('osDownBar');
+  if(!OS_DOWN.at){if(el&&el.parentNode)el.parentNode.removeChild(el);return;}
+  if(!el){
+    el=document.createElement('div');el.id='osDownBar';
+    el.setAttribute('style','position:fixed;left:0;right:0;top:0;z-index:9999;'+
+      'background:#7A1F1A;color:#fff;font-size:12.5px;line-height:1.6;'+
+      'padding:9px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.25)');
+    document.body.appendChild(el);
+  }
+  el.innerHTML='<b>서버가 응답하지 않습니다</b> — '+esc(OS_DOWN.what)+
+    ' 을(를) 기다리다 시간이 지났습니다. <b>비밀번호나 인터넷 문제가 아닐 수 있습니다</b>'+
+    ' (서비스 제공사 장애일 때 이렇게 됩니다). 잠시 뒤 다시 눌러 보십시오. '+
+    '<button onclick="osDownRetry()" style="margin-left:8px;padding:3px 10px;border-radius:6px;'+
+    'border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;cursor:pointer">다시 시도</button>';
+}
 function osClient(){
   if(OS.sb)return OS.sb;
   if(typeof window==='undefined')return null;
@@ -39897,14 +39979,18 @@ function osMePwSave(){
   var btn=document.getElementById('osMeSave');
   OSME.busy=true;if(btn){btn.disabled=true;btn.textContent='확인 중…';}
   var done=function(){OSME.busy=false;if(btn){btn.disabled=false;btn.textContent='비밀번호 바꾸기';}};
-  /* ① 지금 비밀번호가 맞는지 먼저 확인한다 */
-  sb.auth.signInWithPassword({email:em,password:oldPw}).then(function(r){
+  /* ① 지금 비밀번호가 맞는지 먼저 확인한다.
+     여기도 서버가 대답을 안 하면 「확인 중…」 에서 영영 멈춘다 — osWait 을 지난다. */
+  osWait(sb.auth.signInWithPassword({email:em,password:oldPw}),'비밀번호 확인',
+         function(){osMePwSave();}).then(function(r){
     if(r.error){done();osErr(osMePwErr(r.error.message));return;}
     if(btn)btn.textContent='바꾸는 중…';
     /* ② 맞으면 새 비밀번호로 교체 */
-    return sb.auth.updateUser({password:a}).then(function(r2){
+    return osWait(sb.auth.updateUser({password:a}),'비밀번호 바꾸기',
+                  function(){osMePwSave();}).then(function(r2){
       done();
       if(r2.error){osErr(osMePwErr(r2.error.message));return;}
+      osServerOk();
       if(typeof osAudit==='function')osAudit('change_password','account',null,null);
       var h=document.getElementById('osMeHint');
       if(h)h.innerHTML='<span style="color:#059669">✓ 비밀번호를 바꿨습니다</span>';
@@ -40468,23 +40554,24 @@ function osSubmit(){
     if(!t||!t.checked||!pv||!pv.checked){
       done();osErr('이용약관과 개인정보 처리에 동의해야 계정을 만들 수 있습니다.');return;}
     var name=(osVal('osName')||'').trim();
-    sb.auth.signUp({email:email,password:pw,options:{data:{name:name,app:'apex'}}}).catch(function(e){
-      return {error:{message:(e&&e.message)||'네트워크 오류'}};
-    }).then(function(r){
+    osWait(sb.auth.signUp({email:email,password:pw,options:{data:{name:name,app:'apex'}}}),
+           '계정 등록',function(){osSubmit();}).then(function(r){
       done();if(r&&r.error){osErr(osLoginErr(r.error.message));return;}
+      osServerOk();
       /* 동의 기록 — 로그인 뒤 처음 들어올 때 서버에 남긴다 */
       try{localStorage.setItem('apex_pending_consent',JSON.stringify(
         {terms:LG_TERMS_VER,privacy:LG_PRIV_VER,at:new Date().toISOString()}));}catch(e){}
       osErr('');toast('계정이 생성되었습니다. 관리자 승인 후 이용하세요.');osAuthTab('login');
     });
   }else{
-    /* .catch 를 안 달면 서버가 안 받아 줄 때 약속이 거절되어 done() 이 영영
-       안 돌고, 단추가 「처리 중…」 에 멈춘 채 아무 말도 안 나온다.
-       실제로 그렇게 멈췄다. 거절도 결과로 받아서 반드시 말해 준다. */
-    sb.auth.signInWithPassword({email:email,password:pw}).catch(function(e){
-      return {error:{message:(e&&e.message)||'네트워크 오류'}};
-    }).then(function(r){
-      done();if(r&&r.error){osErr(osLoginErr(r.error.message));return;}osCloseModal();
+    /* 거절(reject)만 막아 두었더니 <b>대답이 아예 안 오는 경우</b>에 그대로
+       매달렸다 — 단추가 「처리 중…」 에서 영영 돌고 아무 말도 안 나왔다.
+       2026-08-28 에 실제로 그랬다. 이제 osWait 이 시간 제한을 걸어 거절도
+       무응답도 <b>둘 다</b> 결과로 받아 반드시 말해 준다. */
+    osWait(sb.auth.signInWithPassword({email:email,password:pw}),'로그인',
+           function(){osSubmit();}).then(function(r){
+      done();if(r&&r.error){osErr(osLoginErr(r.error.message));return;}
+      osServerOk();osCloseModal();
     });
   }
 }
@@ -40503,12 +40590,18 @@ function osAudit(action,entity,entityId,meta){
 function osLoadProfile(){
   var sb=osClient();if(!sb||!OS.session){OS.profile=null;osRenderPill();return;}
   var uid=OS.session.user&&OS.session.user.id;
-  sb.from('profiles').select('id,name,role,active,team_id,plan,plan_until,status,workspace').eq('id',uid).single().then(function(r){
-    if(r&&r.error){
+  /* 로그인은 통과했는데 <b>내 정보를 읽는 이 자리</b>가 안 끝나면 앱이 반쯤
+     열린 채 멈춘다 — 데이터베이스만 죽어도 그렇게 된다(2026-08-28). 시간
+     제한을 걸어 아래 osProfileApply 의 「못 받았습니다」 길로 반드시 떨군다. */
+  osWait(sb.from('profiles').select('id,name,role,active,team_id,plan,plan_until,status,workspace').eq('id',uid).single(),
+         '내 정보 읽기',function(){osLoadProfile();}).then(function(r){
+    if(r&&r.error&&!r.error.timeout){
       /* 새 컬럼이 없는 경우를 대비한 하위호환 재시도 */
-      sb.from('profiles').select('id,name,role,active,team_id').eq('id',uid).single().then(function(r2){osProfileApply(sb,uid,r2);});
+      osWait(sb.from('profiles').select('id,name,role,active,team_id').eq('id',uid).single(),
+             '내 정보 읽기',function(){osLoadProfile();}).then(function(r2){osProfileApply(sb,uid,r2);});
       return;
     }
+    if(!(r&&r.error))osServerOk();
     osProfileApply(sb,uid,r);
   });
 }
@@ -43059,9 +43152,14 @@ try{osBillReturnCheck();}catch(e){}}
       OS.profile=null;osHidePending();osRenderPill();osRefreshIfClients();osShowLoginGate();
     }
   });
-  sb.auth.getSession().then(function(r){
+  /* 여기가 <b>앱이 열릴 때 제일 먼저 서버를 기다리는 자리</b>다. 대답이 안
+     오면 로그인 화면도 앱 화면도 안 서고 흰 판만 남는다 — 시간 제한을 걸고,
+     지나면 로그인 화면이라도 세운 뒤 띠로 이유를 말한다. */
+  osWait(sb.auth.getSession(),'로그인 상태 확인',function(){osBootAuth();}).then(function(r){
+    if(r&&r.error){osRenderPill();osShowLoginGate();return;}
     OS.session=(r.data&&r.data.session)||null;
     if(OS.session){
+      osServerOk();
       /* 세션이 확인된 <b>그 자리에서</b> 연다.
          예전에는 프로필·설정·접속IP 를 다 받아 온 <b>뒤에야</b> 게이트를 지웠다 —
          서버 왕복 네 번이라 폰 데이터로는 몇 초, 하나만 늦어도 계속 로그인 화면이었다.

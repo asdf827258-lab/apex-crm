@@ -95,12 +95,20 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     GB.orgFill = 0; GB.orgNoTeam = [];
     O.quiet = !/조직도/.test(gbTeamBarHtml('gbTeam'));
 
-    /* 읽는 자리 */
+    /* ── 감싸였나 ────────────────────────────────────────────────
+       String(gbLoad) 로 <b>돌고 있는 함수 본문</b>을 읽었더니, 다른 화면
+       (교재 다리)이 window.gbLoad 를 <b>감싸는</b> 순간 그 겉껍질이 잡혀
+       「조직도를 안 읽는다」로 잘못 답했다. 앱은 멀쩡한데 점검만 빨간불이
+       켜졌다 — 헛알람이다 (CLAUDE.md 8번).
+
+       그래서 <b>읽는 자리는 파일 글에서</b> 본다(아래 [7]). 여기서는 대신
+       <b>감싼 쪽이 원본을 부르는지</b>만 본다 — 안 부르면 그때는 진짜로
+       죽은 판이고, 조직도가 통째로 반영이 안 된다 (5번). */
     const src = String(gbLoad);
-    O.reads = /orgSelect\s*\(\s*sb\s*\)/.test(src);
-    O.wired = /gbOrgFill\(\s*r\[10\]\s*\)/.test(src);
-    /* 조직도를 읽는 자리를 새로 만들지 않았다 — orgSelect 하나를 쓴다 (5번) */
-    O.oneReader = (src.match(/from\('org_members'\)/g) || []).length === 0;
+    /* 지금 돌고 있는 gbLoad 가 <b>진짜 그것</b>인가. 아니면 누가 감싼 것이다.
+       (감싼 흔적을 찾으면 안 된다 — 흔적을 지우면 그대로 빠져나간다.) */
+    O.isReal = /orgSelect/.test(src);
+    O.callsThrough = O.isReal || /orig\s*\.\s*(apply|call)\s*\(|orig\s*\(/.test(src);
     return O;
   });
 
@@ -140,10 +148,28 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(R.quiet, '  조직도에서 안 가져왔으면 <b>아무 말도 안 한다</b> — 헛알람이 없다');
 
   console.log('\n[7] 읽는 자리가 실제로 있다');
-  is(R.reads && R.wired,
+  /* <b>파일 글</b>에서 본다. 돌고 있는 함수 본문을 읽으면, 누가 gbLoad 를
+     감싸는 순간 그 겉껍질이 잡혀 「안 읽는다」로 잘못 답한다 — 실제로 교재
+     다리가 감싸면서 그렇게 됐다. 앱은 멀쩡한데 점검만 울면 사람이 점검을
+     안 믿게 된다 (CLAUDE.md 8번). */
+  const APP = fs.readFileSync('app/index.html', 'utf8');
+  const at = APP.indexOf('function gbLoad(');
+  const gbSrc = at < 0 ? '' : APP.slice(at, APP.indexOf('\nfunction ', at + 1));
+  is(!!gbSrc, '  gbLoad 를 파일에서 찾았다');
+  const idx = (gbSrc.match(/gbOrgFill\(\s*r\[(\d+)\]\s*\)/) || [])[1];
+  is(/orgSelect\s*\(\s*sb\s*\)/.test(gbSrc) && idx !== undefined,
      '  gbLoad 가 <b>조직도를 읽어</b> gbOrgFill 에 넘긴다 — 안 읽으면 위 전부가 죽은 판이다');
-  is(R.oneReader,
+  /* 번호를 못 박으면 앞에 표가 하나 끼는 순간 <b>엉뚱한 것</b>을 조직도로 읽는다.
+     그래서 번호 자체가 아니라 <b>맨 끝인지</b>를 본다. */
+  const n = (gbSrc.match(/\n    q\(sb\.from|\n    \(typeof orgSelect/g) || []).length;
+  is(idx !== undefined && Number(idx) === n - 1,
+     '  조직도를 <b>맨 끝</b>에서 읽는다 — r[' + idx + '] · 모두 ' + n + '개 ' +
+     '(앞에 표가 끼면 위에서 r[3]·r[4] 로 세어 쓰는 자리가 통째로 어긋난다)');
+  is((gbSrc.match(/from\('org_members'\)/g) || []).length === 0,
      '  읽는 자리를 <b>새로 만들지 않았다</b> — 조직도가 쓰던 orgSelect 하나를 쓴다 (5번)');
+  is(R.callsThrough,
+     '  누가 gbLoad 를 <b>감쌌다면 원본을 그대로 부른다</b> — 안 부르면 조직도가 통째로 죽은 판이다' +
+     (R.isReal ? '' : ' (지금 감싸져 있습니다)'));
 
   console.log('\n[8] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
