@@ -7264,16 +7264,32 @@ function arSkillHtml(){
   for(i=0;i<GB_CUR.length;i++){
     var c=GB_CUR[i],on=!!pm[c[0]];
     if(on)n++;
-    rows.push('<div class="ar-sk'+(on?' on':'')+'" onclick="arStamp(\''+c[0]+'\')">'+
-      '<span class="bx">'+(on?'✓':'')+'</span>'+
-      '<span class="tx"><b>'+osEsc(c[1])+'</b><em>'+osEsc(c[3])+'</em>'+
+    /* 「스스로 합격을 준다」 고만 하면 <b>무엇을 읽고</b> 합격할지가 없다.
+       교재의 그 장으로 바로 가는 단추를 단다. 교재에 없는 주제는 <b>단추를
+       안 만들고</b> 없다고 적는다 — 눌러 들어가서 빈 장을 보시면 안 된다. */
+    var ac=(typeof GB_ACAD!=='undefined')?GB_ACAD[c[0]]:null;
+    var learn = ac
+      ? '<button type="button" class="ar-sk-go" onclick="event.stopPropagation();gbOpenAcad(\''+c[0]+'\')">'+
+          '📕 교재 '+osEsc(ac.l)+' · '+osEsc(ac.t)+' 열기</button>'+
+        (ac.part?'<span class="ar-sk-part">※ '+osEsc(ac.part)+'</span>':'')
+      : '<span class="ar-sk-none">교재에 이 주제로 된 장이 <b>없습니다</b> — 없는 자료로 보내 드리지 않습니다</span>';
+    rows.push('<div class="ar-sk'+(on?' on':'')+'">'+
+      '<span class="bx" onclick="arStamp(\''+c[0]+'\')">'+(on?'✓':'')+'</span>'+
+      '<span class="tx"><b onclick="arStamp(\''+c[0]+'\')">'+osEsc(c[1])+'</b>'+
+      '<em>'+osEsc(c[3])+'</em>'+
       '<span class="who">이런 고객에게 — '+osEsc(c[4])+'</span>'+
-      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span></span></div>');
+      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span>'+
+      learn+'</span></div>');
   }
+  var linked=0,j;
+  for(j=0;j<GB_CUR.length;j++)if(typeof GB_ACAD!=='undefined'&&GB_ACAD[GB_CUR[j][0]])linked++;
   return arCard('🎓','본인 역량 체크',n+' / '+GB_CUR.length+'개 합격 · 하나씩 끝내고 스스로 합격을 줍니다',
     '<div class="ar-sks">'+rows.join('')+'</div>',
     '<div class="notice" style="margin-top:11px">하루 한 장만 읽습니다. 읽고 <b>그날 한 명에게 써 봅니다.</b> '+
-    '안 써 본 화법은 상담에서 안 나옵니다.</div>');
+    '안 써 본 화법은 상담에서 안 나옵니다.<br>'+
+    '<b>📕 교재 열기</b> 를 누르면 <b>보험 마스터 아카데미</b>의 그 장으로 바로 갑니다 — '+
+    '열둘 중 <b>'+linked+'개</b>가 이어져 있습니다. 나머지는 교재에 그 주제가 없어 '+
+    '<b>일부러 비워 두었습니다.</b></div>');
 }
 function arStamp(s){
   if(typeof gbStamp==='function'){gbStamp(s);setTimeout(arPaint,60);}
@@ -8696,6 +8712,17 @@ function arCss(){
    '.ar-sk .tx b{display:block;font-size:13.5px;font-weight:900;color:#0F172A}'+
    '.ar-sk .tx em{display:block;font-style:normal;font-size:12px;color:#475569;margin-top:2px;line-height:1.55}'+
    '.ar-sk .who,.ar-sk .std{display:block;font-size:11px;color:#94A3B8;margin-top:3px;line-height:1.5}'+
+   /* 교재로 가는 단추. 칸 전체를 누르면 <b>합격 도장</b>이라 서로 다른 일이니
+      단추를 따로 세운다 — 읽으러 가려다 합격을 찍어 버리면 안 된다. */
+   '.ar-sk{cursor:default}'+                     /* 칸 전체는 이제 안 눌린다 */
+   '.ar-sk .bx,.ar-sk .tx b{cursor:pointer}'+
+   '.ar-sk-go{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 10px;'+
+     'border:1px solid #C7D2FE;background:#F5F8FF;color:#1A56DB;border-radius:7px;'+
+     'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3}'+
+   '.ar-sk-go:hover{background:#E7EEFF;border-color:#93A9F5}'+
+   '.ar-sk-part{display:block;font-size:10.5px;color:#B45309;margin-top:4px;line-height:1.5}'+
+   '.ar-sk-none{display:block;font-size:10.5px;color:#94A3B8;margin-top:7px;line-height:1.5;'+
+     'background:#F8FAFC;border:1px dashed #E2E8F0;border-radius:6px;padding:5px 8px}'+
    '.ar-lgs{display:grid;grid-template-columns:1fr 1fr;gap:12px}'+
    '@media(max-width:820px){.ar-lgs{grid-template-columns:1fr}}'+
    '.ar-lg{border:1.5px solid #EDF1F6;border-radius:12px;overflow:hidden}'+
@@ -12002,7 +12029,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-08-29 16:20';
-var APP_BUILD_NOTE='<b>공지에 「확인 요청」이 생겼습니다.</b> 공지를 올려도 <b>봤는지 안 봤는지</b>를 알 수 없었습니다. 홈 배너는 스쳐 지나가고 왼쪽 띠는 한 줄이라 안 읽힙니다. 중요한 것을 올려도 「저는 못 봤는데요」 가 나옵니다. 이제 <b>설정 → 공지사항 관리</b>에서 <b>확인을 받을 사람</b>을 고르면(모두 한 번에도 됩니다), 그 사람 화면 <b>맨 위에 붉은 띠</b>가 뜹니다 — 가로 메뉴 바로 밑이라 <b>어느 화면을 열어도 따라옵니다</b>. 본인이 <b>「확인했습니다」</b> 를 누를 때까지 안 사라집니다. <b>확인은 본인만 합니다.</b> 대신 눌러 줄 수 있으면 「확인함」이 아무 뜻이 없어지므로, 서버 규칙이 <code>member_id = auth.uid()</code> 로 못 박고 앱도 <b>지금 로그인한 사람의 id</b> 만 보냅니다. <b>서버에 못 보내면 확인한 척하지 않습니다</b> — 띠가 그대로 남고 왜 안 됐는지 적습니다(1번). 사라져 버리면 팀원은 확인했다고 알고 대표님은 안 했다고 보시게 됩니다. 대표님 화면에는 <b>「2명 중 1명이 확인했습니다」</b> 처럼 <b>이름으로</b> 갈려 보입니다. 지목 안 된 사람 · 지목 없는 공지 · 숨긴 공지 · 로그인 안 한 사람에게는 안 뜹니다. 확인 기록은 <b>한 번만</b> 읽습니다 — 여섯 번 그려도 서버는 한 번입니다(7번). 새 점검 <code>check-noticeack</code> — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 <b>둘은 처음에 헛돌았습니다</b>: 남의 id 로 찍는 시험이 <b>같은 사람 id</b> 를 넣어 안 깨졌고, 서버 아껴 쓰기는 <b>글자만 찾는</b> 점검이라 그 줄을 지워도 통과했습니다. 이제 <b>몇 번 부르는지 세어</b> 봅니다. 셋째로, 뒤 칸이 <b>앞 칸이 남긴 공지</b>를 읽고 있어 앞을 고칠 때마다 같이 무너졌습니다 — 칸마다 자기 공지를 스스로 세우게 고쳤습니다. ⚠️ <b>설정 → 공지사항 관리 → 🛢️ 확인 요청 SQL</b> 을 한 번 실행하셔야 지목이 저장됩니다. 안 하셔도 공지 자체는 그대로 올라가고, <b>지목이 빠졌다고 그 자리에서 말해 드립니다.</b> 같은 판에 <b>[main]</b> 로그아웃 화면의 <b>계정 등록</b>이 아예 안 되던 것을 고쳤습니다 — 가입 폼이 두 벌이라 큰 화면에만 동의 칸이 빠져 있었습니다. 같은 판에 <b>[main]</b> 블로그가 매일 한 편을 실제로 쓸 수 있게 되었고, 준법 문구를 회사 것으로 바꿨습니다.';
+var APP_BUILD_NOTE='<b>공지에 「확인 요청」이 생겼습니다.</b> 공지를 올려도 <b>봤는지 안 봤는지</b>를 알 수 없었습니다. 홈 배너는 스쳐 지나가고 왼쪽 띠는 한 줄이라 안 읽힙니다. 중요한 것을 올려도 「저는 못 봤는데요」 가 나옵니다. 이제 <b>설정 → 공지사항 관리</b>에서 <b>확인을 받을 사람</b>을 고르면(모두 한 번에도 됩니다), 그 사람 화면 <b>맨 위에 붉은 띠</b>가 뜹니다 — 가로 메뉴 바로 밑이라 <b>어느 화면을 열어도 따라옵니다</b>. 본인이 <b>「확인했습니다」</b> 를 누를 때까지 안 사라집니다. <b>확인은 본인만 합니다.</b> 대신 눌러 줄 수 있으면 「확인함」이 아무 뜻이 없어지므로, 서버 규칙이 <code>member_id = auth.uid()</code> 로 못 박고 앱도 <b>지금 로그인한 사람의 id</b> 만 보냅니다. <b>서버에 못 보내면 확인한 척하지 않습니다</b> — 띠가 그대로 남고 왜 안 됐는지 적습니다(1번). 사라져 버리면 팀원은 확인했다고 알고 대표님은 안 했다고 보시게 됩니다. 대표님 화면에는 <b>「2명 중 1명이 확인했습니다」</b> 처럼 <b>이름으로</b> 갈려 보입니다. 지목 안 된 사람 · 지목 없는 공지 · 숨긴 공지 · 로그인 안 한 사람에게는 안 뜹니다. 확인 기록은 <b>한 번만</b> 읽습니다 — 여섯 번 그려도 서버는 한 번입니다(7번). 새 점검 <code>check-noticeack</code> — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 <b>둘은 처음에 헛돌았습니다</b>: 남의 id 로 찍는 시험이 <b>같은 사람 id</b> 를 넣어 안 깨졌고, 서버 아껴 쓰기는 <b>글자만 찾는</b> 점검이라 그 줄을 지워도 통과했습니다. 이제 <b>몇 번 부르는지 세어</b> 봅니다. 셋째로, 뒤 칸이 <b>앞 칸이 남긴 공지</b>를 읽고 있어 앞을 고칠 때마다 같이 무너졌습니다 — 칸마다 자기 공지를 스스로 세우게 고쳤습니다. ⚠️ <b>설정 → 공지사항 관리 → 🛢️ 확인 요청 SQL</b> 을 한 번 실행하셔야 지목이 저장됩니다. 안 하셔도 공지 자체는 그대로 올라가고, <b>지목이 빠졌다고 그 자리에서 말해 드립니다.</b> 같은 판에 <b>[main]</b> 로그아웃 화면의 <b>계정 등록</b>이 아예 안 되던 것을 고쳤습니다 — 가입 폼이 두 벌이라 큰 화면에만 동의 칸이 빠져 있었습니다. 같은 판에 <b>[main]</b> 블로그가 매일 한 편을 실제로 쓸 수 있게 되었고, 준법 문구를 회사 것으로 바꿨습니다. 같은 판에 <b>[main]</b> 본인 역량 체크에서 교재로 바로 가게 되었습니다 — 열둘 중 열 개가 이어졌고 둘은 교재에 없어 일부러 비웠습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14434,6 +14461,53 @@ var GB_AX=[
  {k:'stu', n:'공부', t:12,  u:'개', w:'합격한 주제',            tab:'growboard',tn:'배워서 터치할 것',
   fix:'하루 한 장만 읽습니다. 읽고 그날 한 명에게 써 봅니다. 안 써 본 화법은 상담에서 안 나옵니다.'}
 ];
+
+/* ── 역량 하나마다 <b>교재의 어느 장</b>을 읽으면 되는가 ──────────────
+   「합격을 스스로 준다」 고만 해 두면 <b>무엇을 읽고 합격할지</b>가 없다.
+   그래서 열두 개를 교재(보험 마스터 아카데미)의 장에 잇는다.
+
+   <b>짐작으로 잇지 않았다.</b> 교재 본문에서 그 역량의 핵심 낱말이 몇 번
+   나오는지 세어, 제일 많이 나오는 장에 이었다. 세어 본 결과 —
+
+     s1 급여·비급여·정액  → L2 (107회)   s2 진단금        → L3 (11회)
+     s3 뇌출혈·뇌경색      → L3 (73회)    s4 장기요양·간병  → L6 (44회)
+     s5 부지급·면책·고지   → L8 (24회)    s6 국민연금       → L9 (8회)
+     s7 변액·최저보증      → L9 (6회)     s9 퇴직연금·IRP   → L9 (9회)
+     s10 비과세           → L9 (9회)     s11 상속·증여     → L9 (10회)
+
+   <b>두 개는 일부러 비워 두었다</b>(CLAUDE.md 1번) —
+     s8  달러·분산   : 교재에 <b>한 번도 안 나온다</b>
+     s12 거절처리    : 한 번뿐이라 「관련 자료」라 하기 어렵다
+   없는 것을 있는 척 이으면, 눌러 들어가서 아무것도 없는 장을 보시게 된다.
+
+   s6 은 이었지만 <b>「소득대체율」 은 교재에 없다</b>. 그것까지 적어 둔다. */
+var GB_ACAD={
+  s1 :{l:'L2', t:'실손의료보험 완전정복'},
+  s2 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s3 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s4 :{l:'L6', t:'입원 · 간병 · 후유장해'},
+  s5 :{l:'L8', t:'보상 실무 — 고지 · 면책 · 청구 · 분쟁'},
+  s6 :{l:'L9', t:'저축 · 연금 · 세금 기초', part:'「소득대체율」 숫자는 교재에 없습니다 — 그 부분은 따로 확인하십시오'},
+  s7 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s8 :null,   /* 교재에 없다 — 지어내지 않는다 */
+  s9 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s10:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s11:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s12:null    /* 교재에 없다 — 지어내지 않는다 */
+};
+/* 교재를 <b>그 장에서</b> 연다. 교재는 hashchange 로 장을 옮기므로
+   주소만 바꾸면 된다 — 이미 떠 있으면 다시 안 불러온다. */
+function gbOpenAcad(sid){
+  var m=GB_ACAD[sid];
+  if(!m){toast('이 주제는 교재에 아직 없습니다 — 없는 자료로 보내 드리지 않습니다');return;}
+  go('bohum');
+  setTimeout(function(){
+    var f=$('bohumFrame');if(!f)return;
+    var want=BOHUM_URL+'#'+m.l;
+    if(f._mounted){ try{ f.contentWindow.location.hash=m.l; }catch(e){ f.src=want; } }
+    else { f.src=want; f._mounted=true; }
+  },60);
+}
 
 /* 배워서 터치할 것 — 열두 개. 하나씩 끝내고 스스로 합격을 줍니다 */
 var GB_CUR=[
