@@ -16,7 +16,10 @@ jobs:
     # 검사가 56단계로 늘면서 15분에 닿았다. 빠른 날은 13분, 느린 날은 15분을
     # 넘겨 24단계에서 잘렸다 — 코드가 틀려서가 아니라 시간이 모자라서였다.
     # 여유를 준다. 진짜로 멈춘 것은 25분이면 확실히 걸린다.
-    timeout-minutes: 25
+    # 점검이 105단계로 늘었고, 여기에 그동안 CI 에 안 걸려 있던 여덟 개를
+    # 더 붙였다. 25분이면 아슬아슬하다 — 코드가 틀려서가 아니라 시간이
+    # 모자라서 잘리는 일이 전에 있었다. 여유를 준다.
+    timeout-minutes: 32
     steps:
       - name: 소스 체크아웃
         uses: actions/checkout@v4
@@ -287,7 +290,7 @@ jobs:
       - name: 상담 마지막 장 — 갈래마다 다르게 닫는가 · 면책이 그 갈래 것만 나가는가
         run: node scripts/check-closing.js
 
-      - name: 하루 한 장 — 아침 7시에 서는가 · 직책대로 갈리는가 · 모름을 0 으로 적지 않는가
+      - name: 하루 한 장 — 밤에 안 만드는가 · 여실 때 서는가 · 직책대로 갈리는가 · 모름을 0 으로 적지 않는가
         run: node scripts/check-brief.js
 
       - name: 재무설계 접이 — 펴도 글씨가 그대로인가 · 넘치면 스크롤되는가
@@ -329,5 +332,61 @@ jobs:
       - name: 손으로 치신 것이 안 담기면 말하는가 — 계약 목록·고친 값·권장 금액
         run: node scripts/check-savefail.js
 
+      - name: 아침 TFA — 대표 브리핑이 안에 있나 · 찾기가 화면 안 칸을 보나 · 동시에 도나
+        run: node scripts/check-tfamorning.js
       - name: 블로그 공장 — 글감 없이는 글을 안 만드는가 · 서식과 그림까지 올라가는가
         run: node scripts/check-blogauto.js
+
+      - name: 발표 스크롤 — 글씨를 안 줄이나 · 긴 장을 내릴 수 있나 (재무설계·미끼상품)
+        run: node scripts/check-deckscroll.js
+      - name: 미끼레이더 신상품 찾기 — 한 칸이 화면 전체를 좁히나 · 못 찾으면 공시실로 보내나
+        run: node scripts/check-radarfind.js
+
+      - name: 조직도 반영 — 설정이 이기나 · 없는 팀을 안 지어내나 · 메운 것을 말하나
+        run: node scripts/check-orgteam.js
+
+      - name: 풀리포트 — 읽어 낸 담보가 하나도 사라지지 않나 · 범위 다른 진단비를 합산하지 않나
+        run: node scripts/check-fullreport.js
+
+      - name: 교재 점수판 — 익명에게 열려 있지 않나 · 로그인해야 서버에 가나
+        run: node scripts/check-bohumrls.js
+
+      - name: 서버가 대답을 안 할 때 — 화면이 말없이 멈추지 않는가 · 이유를 말하는가
+        run: node scripts/check-nohang.js
+
+      # ── 만들어 두고 CI 에 안 걸어 두었던 점검들 ─────────────────────
+      # 8개가 저장소에만 있고 한 번도 안 돌고 있었다. 안 도는 알람은
+      # 알람이 아니다 (CLAUDE.md 8번). 특히 check-pdfread 는 4-1번이
+      # 「이 전부를 지킵니다」 라고 적어 둔 것이다.
+      - name: 우리가 뽑은 PDF 를 우리가 다시 읽는가 (tnum · 왕복)
+        run: node scripts/check-pdfread.js
+
+      - name: 치료비 — 손으로 아는 답과 맞는가
+        run: node scripts/check-treatpay.js
+
+      - name: 심의 필터 알맹이 — 걸러야 할 표현을 거르는가
+        run: node scripts/check-simcore.js
+
+      - name: 공시 시세 — 없는 값을 지어내지 않는가
+        run: node scripts/check-public-quote.js
+
+      - name: 애널리스트 — 자료 없이 단정하지 않는가
+        run: node scripts/check-analyst.js
+
+      - name: 애널리스트 AI — 키가 없어도 안 죽는가
+        run: node scripts/check-analyst-ai.js
+
+      - name: Gemini 모델 이름 — 없어진 모델을 부르지 않는가
+        run: node scripts/check-gemini-model.js
+
+      - name: 토스 중계 — 키를 브라우저에 안 흘리는가
+        run: node scripts/check-toss-relay.js
+
+      - name: 가로 메뉴 — 어디서나 위에 붙나 · 세로 메뉴와 한 칸도 안 다른가
+        run: node scripts/check-topnav.js
+
+      - name: 예외질환 · 90일 로드맵 — 남의 자료를 복제 안 하나 · 심사가 우선이라 밝히나
+        run: node scripts/check-aplusroad.js
+
+      - name: 가입 — 동의에서 막히지 않나 · 어디가 빠졌는지 짚나 · 동의는 그대로 받나
+        run: node scripts/check-signup.js

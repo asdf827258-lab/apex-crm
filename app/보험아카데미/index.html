@@ -319,6 +319,61 @@ td:first-child{font-weight:600;color:var(--ink)}
   body{background:#fff}
   #main{max-width:none;padding:0}
 }
+
+/* ── 현장 과제 ─────────────────────────────────────────── */
+.pc{border:1px solid var(--line);border-radius:14px;margin:0 0 14px;overflow:hidden;background:#fff}
+.pc.lock{opacity:.62}
+.pc.done{border-color:#BFE3C9}
+.ph{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--bg2);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pc.done .ph{background:#F1F9F3}
+.ph i{font-style:normal;font-weight:800;font-size:12px;color:#fff;background:var(--blue);
+      border-radius:6px;padding:2px 7px;letter-spacing:-.02em}
+.pc.lock .ph i{background:var(--ink4)}
+.pc.done .ph i{background:var(--ok)}
+.ph b{font-size:15.5px;letter-spacing:-.03em;flex:1;min-width:180px}
+.ph .pm{font-size:12px;color:var(--ink3)}
+.ph .pst{font-size:12.5px;font-weight:700;color:var(--ink3);
+         background:#fff;border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.pc.done .ph .pst{color:var(--ok);border-color:#BFE3C9}
+.pb{padding:14px 16px 16px}
+.pw,.pd{font-size:13.6px;line-height:1.72;color:var(--ink2);margin:0 0 9px}
+.pw b,.pd b{color:var(--ink);font-weight:700;margin-right:5px}
+.pq{background:var(--blue-ll);border-radius:10px;padding:11px 13px;font-size:13.8px;
+    line-height:1.7;color:var(--ink);margin:0 0 13px}
+.pq b{font-size:11.5px;color:var(--blue-d);letter-spacing:.02em}
+.plock{font-size:13.4px;color:var(--ink3)}
+.prl{border-top:1px dashed var(--line);padding-top:11px}
+.prr{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line2,#F2F4F6);font-size:13.4px}
+.prr .pn{flex:none;width:18px;height:18px;border-radius:50%;background:var(--ok);color:#fff;
+         font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.prr b{flex:none;min-width:64px;letter-spacing:-.02em}
+.prr .pt{flex:1;color:var(--ink2)}
+.prr .pdt{flex:none;font-size:11.5px;color:var(--ink4)}
+.pdel{flex:none;appearance:none;border:0;background:none;cursor:pointer;font-family:inherit;
+      font-size:11.5px;color:var(--ink4);padding:2px 4px}
+.pdel:hover{color:var(--red)}
+.prw{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.prw input{font-family:inherit;font-size:13.6px;border:1px solid var(--line);border-radius:9px;
+           padding:9px 11px;background:#fff;color:var(--ink)}
+.prw .pi1{flex:none;width:130px}
+.prw .pi2{flex:1;min-width:200px}
+.prw input:focus{outline:none;border-color:var(--blue)}
+.pok{margin-top:11px;font-size:13.2px;color:var(--ok);font-weight:700}
+.pracbar{display:flex;align-items:center;gap:11px;text-decoration:none;margin:0 0 18px;
+         border:1px solid var(--line);border-radius:12px;padding:13px 16px;background:#fff;color:var(--ink)}
+.pracbar:hover{border-color:var(--blue);background:var(--blue-ll)}
+.pracbar.full{border-color:#BFE3C9;background:#F1F9F3}
+.pracbar .pl{font-size:11.5px;font-weight:800;color:var(--blue-d);letter-spacing:.02em}
+.pracbar.full .pl{color:var(--ok)}
+.pracbar .pv{font-size:16px;font-weight:800;letter-spacing:-.04em}
+.pracbar .px{flex:1;font-size:13.2px;color:var(--ink2)}
+.pracbar .pgo{color:var(--ink3)}
+@media(max-width:640px){
+  .prw .pi1{width:100%}
+  .prw .pi2{width:100%}
+  .prr{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
@@ -363,6 +418,8 @@ td:first-child{font-weight:600;color:var(--ink)}
 <script src="sync.js?v=20260827i"></script>
 <script src="data1.js?v=20260827i"></script>
 <script src="data2.js?v=20260827i"></script>
+<script src="practice.js?v=20260828a"></script>
+<script src="host-link.js?v=20260827j"></script>
 <script>
 (function(){
 'use strict';
@@ -371,11 +428,41 @@ var KEY='bohum_academy_v1';
 var state = JSON.parse(localStorage.getItem(KEY)||'{}');
 state.done = state.done || {};
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ── 현장 과제 기록 ────────────────────────────────────────────────
+   고객 표시와 한 줄은 이 기기에만 남는다. 서버로는 건수와 날짜만 간다.
+   이 표에는 로그인이 없어서 링크를 아는 사람은 읽을 수 있다 — 개인정보를 올리지 않는다. */
+var PKEY = 'bohum_prac_v1';
+var PR = JSON.parse(localStorage.getItem(PKEY) || '{}');
+function psave(){ try{ localStorage.setItem(PKEY, JSON.stringify(PR)); }catch(e){} }
+function prac(id){ return (window.PRACTICE || []).filter(function(x){ return x.id === id; })[0] || null; }
+function pRows(id){ return (PR[id] && PR[id].rows) || []; }
+function pDone(id){ var t = prac(id); return !!t && pRows(id).length >= t.n; }
+/* 본문을 읽었고 과제가 아직 안 끝난 레벨 — 앞에서부터 하나 */
+function pNext(){
+  var list = window.PRACTICE || [];
+  for(var i=0;i<list.length;i++){
+    var t = list[i];
+    if(state.done[t.id] && !pDone(t.id)) return t;
+  }
+  return null;
+}
+/* 서버로는 숫자만 — p_L4 : 3 */
+function pPush(){
+  if(!(window.SYNC && tname())) return;
+  var out = {}, k;
+  for(k in state.done) if(state.done[k]) out[k] = 1;
+  (window.PRACTICE || []).forEach(function(t){
+    var n = pRows(t.id).length;
+    if(n) out['p_' + t.id] = n;
+  });
+  SYNC.pushProgress(tname(), out);
+}
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function won(n){ return n==null ? '—' : n.toLocaleString('ko-KR')+'원'; }
 
 /* ---------- nav ---------- */
-var EXTRA=[{id:'GROW',title:'성장 경로',sub:'다음에 뭘 하면 되나'},{id:'TEST',title:'테스트 · 사람별',sub:'9세트 106문항'},{id:'SRC',title:'원본 자료 검색',sub:'첨부 PPTX 187장'},{id:'HEALTH',title:'헬스케어 서비스',sub:'보험금이 못 하는 일'},{id:'SURG',title:'1~5종 수술분류표',sub:'1~72번 원문 전량'},{id:'TERMS',title:'용어 사전',sub:'검색해서 찾아보기'},{id:'CASE',title:'케이스 스터디',sub:'실전 9건'},{id:'GAL',title:'원본 자료실',sub:'이미지 전체'},{id:'BOOK',title:'전체 통독 · 인쇄',sub:'책 한 권으로'},{id:'DB',title:'실제 치료비 DB',sub:'영수증 30건'},{id:'CARD',title:'화법 전체 카드',sub:'전 레벨 모음'},{id:'GUIDE',title:'운영 · 활용 가이드',sub:'교육 담당자용'}];
+var EXTRA=[{id:'GROW',title:'성장 경로',sub:'다음에 뭘 하면 되나'},{id:'PRAC',title:'현장 과제',sub:'읽은 것을 그 주에 써 본다'},{id:'TEST',title:'테스트 · 사람별',sub:'9세트 106문항'},{id:'SRC',title:'원본 자료 검색',sub:'첨부 PPTX 187장'},{id:'HEALTH',title:'헬스케어 서비스',sub:'보험금이 못 하는 일'},{id:'SURG',title:'1~5종 수술분류표',sub:'1~72번 원문 전량'},{id:'TERMS',title:'용어 사전',sub:'검색해서 찾아보기'},{id:'CASE',title:'케이스 스터디',sub:'실전 9건'},{id:'GAL',title:'원본 자료실',sub:'이미지 전체'},{id:'BOOK',title:'전체 통독 · 인쇄',sub:'책 한 권으로'},{id:'DB',title:'실제 치료비 DB',sub:'영수증 30건'},{id:'CARD',title:'화법 전체 카드',sub:'전 레벨 모음'},{id:'GUIDE',title:'운영 · 활용 가이드',sub:'교육 담당자용'}];
 function buildNav(){
   document.getElementById('nav').innerHTML =
     '<a href="#LESSON" data-id="LESSON" style="background:rgba(201,162,39,.16);border-left-color:var(--gold)">'+
@@ -839,6 +926,31 @@ function openSqlTab(copied){
     '<b style="color:#c0303b">붙여넣은 내용이 <code>create table…</code> 로 시작하는지 꼭 확인하세요.</b> 다른 글이 들어갔으면 지우고 다시 넣으세요.<br>'+
     '<b>3</b> Run 이 끝나면 아래 <b>②확인</b> 을 눌러주세요.');
 }
+/* 「복사」 와 「① SQL 편집기 열기」 가 하는 일. <b>SQL 이 도착한 뒤에만</b>
+   불린다 — 안 그러면 「못 읽었습니다」 를 복사해 드리고, 그것을 붙여넣고
+   Run 하시면 아무 일도 안 일어난다. */
+function sqlAct(which){
+  if(!/create policy/.test(SUPA_SQL)){
+    setMsg('no','준비 SQL 을 <b>아직 못 받았습니다.</b> 인터넷을 확인하신 뒤 '+
+                '이 화면을 새로고침해 주십시오. (없는 SQL 을 지어내지 않습니다)');
+    return;
+  }
+  var copied = copySQL();
+  var after = copied ? Promise.resolve(true)
+    : (navigator.clipboard ? navigator.clipboard.writeText(SUPA_SQL).then(function(){return true;})
+                              .catch(function(){return false;})
+                           : Promise.resolve(false));
+  if(which==='sqlcopy'){
+    after.then(function(ok){
+      setMsg(ok?'ok':'no', ok
+        ? 'SQL 이 <b>복사됐습니다</b> — Supabase SQL Editor 에 붙여넣고 Run 하세요.'
+        : '복사가 막혀 있습니다. 아래 상자를 <b>클릭하면 전체 선택</b>되니 Ctrl+C 하세요.');
+    });
+    return;
+  }
+  var det=document.querySelector('.sqldet'); if(det) det.open = true;
+  after.then(function(ok){ openSqlTab(ok); });
+}
 function setMsg(kind, html){
   var m = document.getElementById('sqlmsg'); if(!m) return;
   m.className = 'setupmsg ' + kind; m.innerHTML = html;
@@ -846,8 +958,47 @@ function setMsg(kind, html){
 function stepDone(k){
   var el = document.querySelector('.step[data-k="'+k+'"]'); if(el) el.classList.add('done');
 }
-var AUDIT_SQL = "select 'academy_* (CRM 소유 · 건드리지 말 것)' as grp,\n       string_agg(c.relname, ', ' order by c.relname) as tables\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'academy%'\nunion all\nselect 'bohum_* (보험 마스터 아카데미)',\n       string_agg(c.relname, ', ' order by c.relname)\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'bohum%'\nunion all\nselect '전체 테이블 수', count(*)::text\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r'\nunion all\nselect '익명(anon) 정책이 붙은 표  <<< 여기가 핵심',\n       string_agg(distinct c.relname, ', ')\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\njoin pg_policy p on p.polrelid=c.oid\njoin pg_roles  r on r.oid=any(p.polroles) and r.rolname='anon'\nwhere n.nspname='public';";
-var SUPA_SQL = "create table if not exists public.bohum_scores (\n  id bigserial primary key,\n  team text default 'APEX',\n  name text,\n  set_id text,\n  set_name text,\n  cat text,\n  score numeric,\n  max_q int,\n  pct int,\n  wrong jsonb,\n  device text,\n  created_at timestamptz default now()\n);\n\ncreate table if not exists public.bohum_progress (\n  team text default 'APEX',\n  name text,\n  done jsonb,\n  updated_at timestamptz default now(),\n  primary key (team, name)\n);\n\nalter table public.bohum_scores   enable row level security;\nalter table public.bohum_progress enable row level security;\n\ndrop policy if exists s_r  on public.bohum_scores;\ndrop policy if exists s_w  on public.bohum_scores;\ndrop policy if exists bp_r on public.bohum_progress;\ndrop policy if exists bp_w on public.bohum_progress;\ndrop policy if exists bp_u on public.bohum_progress;\n\ncreate policy s_r  on public.bohum_scores   for select to anon using (true);\ncreate policy s_w  on public.bohum_scores   for insert to anon with check (true);\ncreate policy bp_r on public.bohum_progress for select to anon using (true);\ncreate policy bp_w on public.bohum_progress for insert to anon with check (true);\ncreate policy bp_u on public.bohum_progress for update to anon using (true) with check (true);";
+var AUDIT_SQL = "select 'academy_* (CRM 소유 · 건드리지 말 것)' as grp,\n       string_agg(c.relname, ', ' order by c.relname) as tables\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'academy%'\nunion all\nselect 'bohum_* (보험 마스터 아카데미)',\n       string_agg(c.relname, ', ' order by c.relname)\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r' and c.relname like 'bohum%'\nunion all\nselect '전체 테이블 수', count(*)::text\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\nwhere n.nspname='public' and c.relkind='r'\nunion all\nselect '익명(anon) 정책이 붙은 표  <<< 한 줄도 없어야 정상',\n       string_agg(distinct c.relname, ', ')\nfrom pg_class c join pg_namespace n on n.oid=c.relnamespace\njoin pg_policy p on p.polrelid=c.oid\njoin pg_roles  r on r.oid=any(p.polroles) and r.rolname='anon'\nwhere n.nspname='public';";
+/* ── 준비 SQL 은 <저장소의 파일 한 벌>뿐입니다 (CLAUDE.md 5번) ──────────
+   전에는 이 화면에도 SQL 을 통째로 적어 두었습니다. 그래서 같은 정책이
+   세 곳(이 파일 · 번들 · 저장소)에 있었고, 한쪽만 고치면 사장님이 어느
+   쪽을 붙여넣으셨는지 아무도 모릅니다. 보안 정책이 그러면 위험합니다.
+
+   이제 저장소의 migration_45_bohum_rls.sql 을 그대로 읽어 옵니다.
+   못 읽으면 <지어내지 않고> 그 파일을 여시라고 적습니다(1번). */
+var SUPA_SQL_FILE = '../../migration_45_bohum_rls.sql';
+var SUPA_SQL_MISS = '/* 준비 SQL 을 받아 오는 중입니다 — 잠시만 기다려 주십시오.\n'+
+  '   몇 초 뒤에도 이 글이 그대로면 인터넷이 끊긴 것이니,\n'+
+  '   연결을 확인하신 뒤 이 화면을 새로고침해 주십시오.\n'+
+  '   (없는 SQL 을 지어내지 않습니다 — 지금 붙여넣으실 것이 없습니다.) */';
+var SUPA_SQL = SUPA_SQL_MISS;
+/* ── 화면이 <b>먼저 그려지고</b> SQL 은 나중에 온다 ────────────────────
+   가이드를 주소로 바로 여시면(즐겨찾기·새로고침) 칸을 그릴 때 아직 안 와
+   있습니다. 전에는 그때 「못 읽었습니다」 를 넣고 <b>끝</b>이라, 나중에
+   도착해도 아무도 칸을 다시 안 채웠습니다. 그래서 늘 그 글만 보셨습니다 —
+   다른 화면을 거쳐 오면 되고, 바로 열면 안 되는 이상한 화면이었습니다.
+
+   이제 <b>기다릴 것을 손에 쥐고</b>(SUPA_SQL_READY) 도착하면 다시 채웁니다.
+   기다림에는 시간 제한을 겁니다 — 답이 영영 안 오면 스피너만 도는 대신
+   「못 읽었습니다」 로 <b>확실히</b> 떨어져야 합니다 (CLAUDE.md 4-1). */
+var SUPA_SQL_WAIT_MS = 12000;
+var SUPA_SQL_READY = (function(){
+  var done = function(){ return SUPA_SQL; };
+  try{
+    var got = fetch(SUPA_SQL_FILE)
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(t){ if(t && /create policy/.test(t)) SUPA_SQL = t; return SUPA_SQL; })
+      .catch(done);
+    var cap = new Promise(function(res){ setTimeout(function(){ res(SUPA_SQL); }, SUPA_SQL_WAIT_MS); });
+    return Promise.race([got, cap]);
+  }catch(e){ return Promise.resolve(SUPA_SQL); }
+})();
+/* 도착한 뒤에 칸을 채우는 곳은 <b>한 곳</b>이다 — 두 곳에서 채우면
+   한쪽만 고쳤을 때 화면마다 다른 것이 붙는다 (5번). */
+function supaSqlFill(){
+  var ta = document.getElementById('sqlbox');
+  if(ta) ta.value = SUPA_SQL;
+}
 
 /* ---------- 성장 경로 ---------- */
 var STAGES = [
@@ -895,6 +1046,16 @@ function growStat(who){
 function nextAction(who, st){
   /* 지금 해야 할 딱 한 가지 */
   var cur = STAGES[st.stage-1];
+
+  /* 읽었는데 안 써 본 것이 있으면 그게 먼저다. 다음 레벨보다 먼저.
+     진도만 빼고 현장에서 한 번도 안 써 보는 것을 막는 고리다. */
+  var pt = pNext();
+  if(pt){
+    var got = pRows(pt.id).length;
+    return {t:'현장 과제 — '+pt.t, d:pt.id+' · '+got+' / '+pt.n+' '+pt.label,
+            h:'#PRAC', why:'읽었는데 아직 안 써 봤다'};
+  }
+
   for(var i=0;i<cur.need.length;i++){
     var id = cur.need[i];
     if(!state.done[id]){
@@ -915,6 +1076,61 @@ function nextAction(who, st){
   if(st.doneN < st.total) return {t:'남은 본문 마저 읽기', d:st.doneN+' / '+st.total+' 완료', h:'#BOOK', why:'완독까지 '+(st.total-st.doneN)+'개'};
   return {t:'케이스 9건 다시 풀기', d:'답 보지 않고', h:'#CASE', why:'실전 감각 유지'};
 }
+function renderPrac(){
+  var list = window.PRACTICE || [], who = tname();
+  var doneN = 0; list.forEach(function(t){ if(pDone(t.id)) doneN++; });
+  var h = '<div class="hd"><div class="kick">현장</div><h2>읽은 것을 그 주에 써 본다</h2>'+
+    '<div class="sub">본문을 끝낸 레벨부터 열립니다 · '+doneN+' / '+list.length+' 완료'+(who?' · '+esc(who):'')+'</div></div>';
+
+  h += '<div class="cal key"><b>왜 이걸 하나</b> — 읽기만 하면 상담에서 안 나옵니다. '+
+       '한 번이라도 입 밖에 내 본 말만 실제로 쓰입니다. 과제는 전부 <b>물어보고 듣기</b>입니다 — '+
+       '권유하거나 단정하지 않습니다.</div>';
+  h += '<div class="cal warn"><b>고객 실명 · 연락처 · 병력은 적지 마세요.</b> '+
+       '「김○○」 「사무실 옆자리」 정도면 충분합니다. 적으신 내용은 <b>이 기기에만</b> 남고, '+
+       '서버로는 <b>건수와 날짜만</b> 올라갑니다.</div>';
+
+  list.forEach(function(t){
+    var open = !!state.done[t.id], rows = pRows(t.id), ok = pDone(t.id);
+    var cls = ok ? 'pc done' : (open ? 'pc' : 'pc lock');
+    h += '<div class="'+cls+'" id="P-'+t.id+'">'+
+      '<div class="ph"><i>'+t.id+'</i><b>'+esc(t.t)+'</b>'+
+        '<span class="pm">'+esc(t.mins)+' · '+t.n+esc(t.label)+'</span>'+
+        '<span class="pst">'+(ok?'● 완료':(open? rows.length+' / '+t.n : '잠김'))+'</span></div>';
+
+    if(!open){
+      h += '<div class="pb"><div class="plock">본문 <b>'+t.id+'</b> 를 먼저 끝내면 열립니다. '+
+           '<a href="#'+t.id+'">→ '+t.id+' 읽으러 가기</a></div></div></div>';
+      return;
+    }
+
+    h += '<div class="pb">'+
+      '<div class="pw"><b>왜</b> '+esc(t.why)+'</div>'+
+      '<div class="pd"><b>무엇을</b> '+t.do+'</div>'+
+      '<div class="pq"><b>이렇게 물어보세요</b><br>'+esc(t.ask)+'</div>';
+
+    h += '<div class="prl">';
+    rows.forEach(function(r, i){
+      h += '<div class="prr"><span class="pn">'+(i+1)+'</span>'+
+           '<b>'+esc(r.who||'—')+'</b><span class="pt">'+esc(r.note||'')+'</span>'+
+           '<span class="pdt">'+esc(r.at||'')+'</span>'+
+           '<button class="pdel" data-pdel="'+t.id+'" data-i="'+i+'">지우기</button></div>';
+    });
+    if(rows.length < t.n){
+      h += '<div class="prw">'+
+        '<input class="pi1" id="pw-'+t.id+'" type="text" maxlength="12" placeholder="표시 (예: 김○○)">'+
+        '<input class="pi2" id="pn-'+t.id+'" type="text" maxlength="60" placeholder="'+esc(t.ph)+'">'+
+        '<button class="btn p sm" data-padd="'+t.id+'">기록</button></div>';
+    }else{
+      h += '<div class="pok">이 과제는 끝났습니다. 다음 레벨로 가세요.</div>';
+    }
+    h += '</div></div>';
+  });
+
+  h += '<div class="cal">과제 기록은 <a href="#GROW">성장 경로</a> 의 「다음에 할 것」에 그대로 반영됩니다. '+
+       '읽었는데 안 써 본 과제가 있으면 <b>다음 레벨보다 먼저</b> 뜹니다.</div>';
+  return h;
+}
+
 function renderGrow(){
   var who = tname(), st = growStat(who);
   var h = '<div class="hd"><div class="kick">성장</div><h2>지금 어디까지 왔고, 다음에 뭘 하면 되나</h2>'+
@@ -937,6 +1153,20 @@ function renderGrow(){
   h += '<a class="nextone" href="'+na.h+'"><div class="nl">다음에 할 것 · 딱 하나</div>'+
     '<div class="nt">'+esc(na.t)+'</div><div class="nd">'+esc(na.d)+'</div>'+
     '<div class="nw">'+esc(na.why)+'</div></a>';
+
+  /* 현장 과제 — 읽은 것 중 안 써 본 것 */
+  (function(){
+    var list = window.PRACTICE || [], op = 0, dn = 0;
+    list.forEach(function(t){ if(state.done[t.id]){ op++; if(pDone(t.id)) dn++; } });
+    if(op){
+      h += '<a class="pracbar'+(dn>=op?' full':'')+'" href="#PRAC">'+
+        '<span class="pl">현장 과제</span>'+
+        '<span class="pv">'+dn+' / '+op+'</span>'+
+        '<span class="px">'+(dn>=op ? '읽은 것은 다 써 봤습니다' : '읽었는데 아직 안 써 본 것이 '+(op-dn)+'개 있습니다')+'</span>'+
+        '<span class="pgo">→</span>'+
+        '</a>';
+    }
+  })();
 
   h += svgWrap(figGrow(st));
 
@@ -1070,6 +1300,15 @@ function tload(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'{}'); }cat
 function tsave(o){ try{ localStorage.setItem(TKEY, JSON.stringify(o)); }catch(e){} }
 function tname(){ try{ return localStorage.getItem(NKEY)||''; }catch(e){ return ''; } }
 function tsetname(n){ try{ localStorage.setItem(NKEY, n); }catch(e){} }
+/* 본문 전체가 하나의 함수 안에 들어 있어서 밖에서는 아무것도 못 부른다.
+   APEX OS 안에서 열렸을 때 로그인한 이름을 받기 위해 문을 하나만 낸다. */
+window.__bohumSetWho = function(n){
+  n = String(n==null?'':n).replace(/^\s+|\s+$/g,'');
+  if(!n || n === tname()) return false;
+  tsetname(n);
+  try{ route(); }catch(e){}
+  return true;
+};
 function norm(s){ return String(s||'').toLowerCase().replace(/[\s,.\/·・\-_'"()\[\]%~:;!?→]/g,''); }
 function blankOk(v, arr){
   var n = norm(v); if(!n) return false;
@@ -1092,15 +1331,24 @@ function renderTest(){
   var h = '<div class="hd"><div class="kick">테스트</div><h2>사람별 이해도 테스트</h2>'+
     '<div class="sub">설계와 보상 중심 · 빈칸 채우기 · 객관식 · 서술형 · 채점하면 기록이 남습니다</div></div>';
 
-  h += '<div class="whobox"><div class="wl">응시자</div>'+
-    '<input id="whoin" type="text" placeholder="이름을 적으세요" value="'+esc(who)+'" maxlength="20">'+
-    '<button class="btn p" id="whoset">이 이름으로 시작</button></div>';
-  if(names.length)
-    h += '<div class="pillw" style="margin:-6px 0 18px">'+names.map(function(n){
-      return '<span class="pill who" data-n="'+esc(n)+'">'+esc(n)+'</span>';
-    }).join('')+'<a class="pill go" href="#TEAM">팀 현황 보기 →</a></div>';
-
-  if(!who) h += '<div class="cal warn">이름을 먼저 입력하세요. <b>사람마다 따로 기록</b>됩니다. (이 기기에만 저장됩니다)</div>';
+  /* APEX OS 안에서 열면 로그인한 이름을 그대로 쓴다 — 손으로 고치지 못하게 잠근다.
+     팀 현황이 「김민수」 「김민수 」 「민수」 로 갈라지는 것을 막는 게 목적이다. */
+  var hostWho = window.APEX_HOST_NAME || '';
+  if(hostWho){
+    h += '<div class="whobox"><div class="wl">응시자</div>'+
+      '<b style="font-size:16px;letter-spacing:-.02em">'+esc(hostWho)+'</b>'+
+      '<span style="font-size:12.4px;color:var(--ink3)">APEX OS 로그인 계정으로 자동 연결됨</span>'+
+      '<a class="pill go" href="#TEAM" style="margin-left:auto">팀 현황 보기 →</a></div>';
+  }else{
+    h += '<div class="whobox"><div class="wl">응시자</div>'+
+      '<input id="whoin" type="text" placeholder="이름을 적으세요" value="'+esc(who)+'" maxlength="20">'+
+      '<button class="btn p" id="whoset">이 이름으로 시작</button></div>';
+    if(names.length)
+      h += '<div class="pillw" style="margin:-6px 0 18px">'+names.map(function(n){
+        return '<span class="pill who" data-n="'+esc(n)+'">'+esc(n)+'</span>';
+      }).join('')+'<a class="pill go" href="#TEAM">팀 현황 보기 →</a></div>';
+    if(!who) h += '<div class="cal warn">이름을 먼저 입력하세요. <b>사람마다 따로 기록</b>됩니다. (이 기기에만 저장됩니다)</div>';
+  }
 
   var cats = QUIZ.map(function(s){return s.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;});
   cats.forEach(function(c){
@@ -1813,7 +2061,7 @@ function renderGuide(){
       '<span style="font-size:12.4px;color:var(--ink3)">상자를 클릭하면 전체가 선택됩니다 — Ctrl+C</span></div>'+
       '<textarea class="sqlbox" id="sqlbox" readonly rows="14"></textarea></details>'+
     '<div class="done-btn" style="margin-top:10px"><button class="btn o sm" id="auditOpen">표 이름 충돌 · 익명 개방 점검</button>'+
-      '<span style="font-size:12.4px;color:var(--ink3)">Supabase 에 표를 새로 만들기 전에 눌러보세요. 결과의 <b>익명(anon) 정책이 붙은 표</b> 줄에 <b>bohum_scores · bohum_progress</b> 말고 다른 이름이 있으면 사고입니다.</span></div>'+
+      '<span style="font-size:12.4px;color:var(--ink3)">Supabase 에 표를 새로 만들기 전에 눌러보세요. 결과의 <b>익명(anon) 정책이 붙은 표</b> 줄이 <b>비어 있어야</b> 정상입니다 — 이름이 하나라도 있으면 그 표는 로그인 안 한 사람에게 열려 있다는 뜻입니다.</span></div>'+
     '<div class="cal key"><b>보안 메모</b> — 이 앱은 로그인이 없습니다. anon 키는 브라우저 공개용이고 위 정책은 <b>읽기 · 쓰기만</b> 허용합니다(수정 · 삭제 불가). 사내 교육 점수라 위험은 낮지만 <b>링크를 아는 사람은 점수를 넣을 수 있다</b>는 점은 감수하는 구조입니다. 개인정보 · 고객정보는 절대 넣지 마세요.</div>'+
     '<h3 class="bh">7. 화면 안내 — 어디서 무엇을 하나</h3>'+
     '<div class="tw"><table><thead><tr><th>화면</th><th>쓰임</th></tr></thead><tbody>'+
@@ -1855,6 +2103,7 @@ function route(){
   else if(id==='SRC'){ v.innerHTML = renderSrc(); paintSrc('전체',''); }
   else if(id.indexOf('SRC-')===0){ v.innerHTML = renderSrcDetail(id.slice(4)); }
   else if(id==='GROW'){ v.innerHTML = renderGrow(); }
+  else if(id==='PRAC'){ v.innerHTML = renderPrac(); }
   else if(id==='TEST'){ v.innerHTML = renderTest(); }
   else if(id==='TEAM'){ v.innerHTML = renderTeam(); loadTeam(); }
   else if(id.indexOf('TQ-')===0){ QSET = id.slice(3); v.innerHTML = renderQuiz(QSET); }
@@ -1868,9 +2117,12 @@ function route(){
   else if(id==='CARD') v.innerHTML = renderCards();
   else if(id==='GUIDE'){ v.innerHTML = renderGuide();
     var _sb=document.getElementById('sqlbox');
-    if(_sb){ _sb.value = SUPA_SQL;
+    if(_sb){ supaSqlFill();
       _sb.addEventListener('focus', function(){ this.select(); });
       _sb.addEventListener('click', function(){ this.select(); }); }
+    /* 아직 안 왔으면 <b>도착할 때 다시 채운다</b> — 이 한 줄이 없으면 가이드를
+       주소로 바로 여신 분은 늘 「못 읽었습니다」 만 보신다. */
+    SUPA_SQL_READY.then(supaSqlFill);
     if(window.SYNC) SYNC.check().then(function(ok){
       if(!document.getElementById('setupsteps')) return;
       if(ok){ stepDone(1); stepDone(2); setMsg('ok','이미 연결돼 있습니다. 팀원 점수가 자동으로 모입니다.'); }
@@ -1914,10 +2166,29 @@ function bind(){
       navigator.clipboard && navigator.clipboard.writeText(txt).then(function(){ t.textContent='복사됨'; setTimeout(function(){t.textContent='복사';},1200); });
       return;
     }
+    // 현장 과제 — 기록
+    if(t.dataset && t.dataset.padd){
+      var pid = t.dataset.padd, task = prac(pid);
+      var w1 = document.getElementById('pw-'+pid), n1 = document.getElementById('pn-'+pid);
+      var wv = (w1 ? w1.value : '').trim(), nv = (n1 ? n1.value : '').trim();
+      if(!wv && !nv){ if(w1) w1.focus(); return; }
+      if(!PR[pid]) PR[pid] = {rows:[]};
+      var d = new Date();
+      PR[pid].rows.push({ who:wv || '—', note:nv,
+        at:(d.getMonth()+1)+'/'+d.getDate() });
+      psave(); pPush(); route();
+      return;
+    }
+    if(t.dataset && t.dataset.pdel){
+      var did = t.dataset.pdel, di = +t.dataset.i;
+      if(PR[did] && PR[did].rows) PR[did].rows.splice(di, 1);
+      psave(); pPush(); route();
+      return;
+    }
     // done
     if(t.id==='dbtn' && c){
       state.done[c.id] = !state.done[c.id]; save(); buildNav();
-      if(window.SYNC && tname()) SYNC.pushProgress(tname(), state.done);
+      pPush();
       t.textContent = state.done[c.id] ? '● 학습 완료됨 (취소)' : '이 레벨 학습 완료로 표시';
       t.className = 'btn '+(state.done[c.id]?'o':'g');
       return;
@@ -1937,21 +2208,11 @@ function bind(){
     if(wp){ tsetname(wp.dataset.n); route(); return; }
     if(t.id==='qgrade'){ if(QSET) gradeQuiz(QSET); return; }
     if(t.id==='stepOpen' || t.id==='sqlcopy'){
-      var copied = copySQL();
-      var after = copied ? Promise.resolve(true)
-        : (navigator.clipboard ? navigator.clipboard.writeText(SUPA_SQL).then(function(){return true;})
-                                  .catch(function(){return false;})
-                               : Promise.resolve(false));
-      if(t.id==='sqlcopy'){
-        after.then(function(ok){
-          setMsg(ok?'ok':'no', ok
-            ? 'SQL 이 <b>복사됐습니다</b> — Supabase SQL Editor 에 붙여넣고 Run 하세요.'
-            : '복사가 막혀 있습니다. 아래 상자를 <b>클릭하면 전체 선택</b>되니 Ctrl+C 하세요.');
-        });
-        return;
-      }
-      var det=document.querySelector('.sqldet'); if(det) det.open = true;
-      after.then(function(ok){ openSqlTab(ok); });
+      /* 아직 안 왔는데 누르시면 <b>「못 읽었습니다」 를 복사</b>해 드리게 된다.
+         SQL 창에 그것을 붙여넣고 Run 하시면 아무 일도 안 일어난다.
+         그래서 <b>도착한 뒤에</b> 복사한다 — SUPA_SQL_READY 는 시간 제한이
+         걸려 있어 안 와도 반드시 끝난다. */
+      SUPA_SQL_READY.then(function(){ supaSqlFill(); sqlAct(t.id); });
       return;
     }
     if(t.id==='auditOpen'){
@@ -1967,7 +2228,7 @@ function bind(){
                   '_blank', 'noopener');
       setMsg(ac?'wait':'no', ac
         ? '점검 쿼리가 새 탭에 들어갔습니다. <b>Run</b> 을 누르세요. 비어 있으면 <b>Ctrl+V</b> (복사해 뒀습니다).<br>'+
-          '<b>익명(anon) 정책이 붙은 표</b> 줄에 <b>bohum_scores, bohum_progress</b> 둘만 있어야 정상입니다.'
+          '<b>익명(anon) 정책이 붙은 표</b> 줄이 <b>비어 있어야</b> 정상입니다.'
         : '새 탭은 열렸지만 자동 복사가 막혔습니다. 탭에 쿼리가 비어 있으면 <code>_audit_names.sql</code> 파일을 여세요.');
       return;
     }

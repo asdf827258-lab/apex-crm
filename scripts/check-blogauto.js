@@ -153,6 +153,30 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   const dry = await page.evaluate(() => { S.news.items = []; return [seeds().econ.length, seeds().news.length]; });
   is(dry[0] === 0 && dry[1] === 0, '  못 받았으면 0개다 — 매일 쓰는 갈래라고 지어내지 않는다');
 
+  /* ── 못 받았을 때 <b>왜</b> 못 받았는지 화면에 남는가 ────────────────
+     전에는 실패를 toast 한 줄로만 알렸다. toast 는 몇 초 뒤 사라지고 배지는
+     「뉴스 아직 안 받음」 그대로였다 — 누른 사람은 <b>눌리지도 않은 줄</b>
+     알았다. 실제로 그래서 「블로그가 작동도 안 된다」로 보였다 (1번). */
+  const why = await page.evaluate(() => {
+    S.news = { at: '', items: [], err: '경제: 공유 토큰이 맞지 않습니다' };
+    paint();
+    const b = document.getElementById('newsWhy');
+    return { on: !!b, txt: b ? b.textContent.replace(/\s+/g, ' ') : '' };
+  });
+  is(why.on, '  못 받으면 <b>이유가 화면에 남는다</b> — toast 처럼 사라지지 않는다');
+  is(/뉴스를 못 받았습니다/.test(why.txt) && /공유 토큰/.test(why.txt),
+     '  <b>무엇 때문인지</b> 그대로 적는다 — 「' + why.txt.slice(0, 40) + '…」');
+  is(/⚙ 연결|공유 토큰에 앱과 같은 값/.test(why.txt),
+     '  <b>무엇을 하면 되는지</b>도 알려 준다 — 누를 자리를 댄다');
+  is(/지어내지 않습니다/.test(why.txt),
+     '  글감이 없으면 <b>글을 안 만든다</b>고 그 자리에서 밝힌다 (1번)');
+  const gone = await page.evaluate(() => {
+    S.news = { at: '2026-08-28 09:00', items: [{ t: 'x', u: '', s: '', d: '', cat: '경제' }], err: '' };
+    paint();
+    return !document.getElementById('newsWhy');
+  });
+  is(gone, '  받아 오면 그 알림이 <b>사라진다</b> — 다 나은 뒤에도 겁주지 않는다');
+
   console.log('\n[4] 홍보가 열에 하나인가');
   const mix = await page.evaluate(async () => {
     await pullNews();
