@@ -5038,8 +5038,19 @@ function osTabProbe(tab){
   if(tab==='hq')return renderHQ();
   if(tab==='audit')return renderAudit();
   if(tab==='manual')return renderManual();
+  if(tab==='apexmaster')return renderApexMaster();
   if(tab==='brain')return renderBrain();
   return renderToolPage(tab);
+}
+/* 화면 이름을 <b>TABS 한 곳</b>에서 읽는다. 여기서 다시 적어 두면 메뉴에서
+   이름을 고쳤을 때 이쪽만 옛 이름으로 남는다 (CLAUDE.md 5번). */
+function navTitleOf(id){
+  var i,j,it;
+  for(i=0;i<TABS.length;i++){
+    it=TABS[i].items||[];
+    for(j=0;j<it.length;j++)if(it[j].id===id)return it[j].title||id;
+  }
+  return id;
 }
 function osSelfCheck(){
   var R=[];
@@ -10762,6 +10773,7 @@ var TABS=[
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
       숨긴 다른 것들과 같다: 🔎 메뉴 찾기·음성·?go=apexmap 주소로 그대로 열린다. */
    {id:'apexmap',icon:'🗺️',title:'APEX 전체 지도',cnt:'89',hide:true,ak:'업무매뉴얼 지도 자비스 전체'},
+   {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
    {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
  ]},
  {group:'시스템',items:[
@@ -12014,6 +12026,7 @@ function go(tab){
   else if(tab==='hq'){dyn.innerHTML=renderHQ();if(typeof osHqAfterRender==='function')osHqAfterRender();}
   else if(tab==='audit'){dyn.innerHTML=renderAudit();if(typeof osAuditAfterRender==='function')osAuditAfterRender();}
   else if(tab==='manual')dyn.innerHTML=renderManual();
+  else if(tab==='apexmaster')dyn.innerHTML=renderApexMaster();
   else if(tab==='brain'){dyn.innerHTML=renderBrain();if(typeof osBrainAfterRender==='function')osBrainAfterRender();}
   else if(tab==='ins_asst'){dyn.innerHTML=renderInsAsst();if(typeof osInsAsstAfter==='function')osInsAsstAfter();}
   else if(tab==='fact_find'){dyn.innerHTML=renderFactFind();if(typeof osFactAfter==='function')osFactAfter();}
@@ -12245,8 +12258,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 17:30';
-var APP_BUILD_NOTE='<b>30일 고객관리 「화질이 깨지던」 것을 고쳤습니다 — 원인은 글꼴이 아니었습니다.</b> 그 표(<code>.cc-team</code>)의 <b>옷을 입혀 주는 함수를 이 화면이 안 불렀습니다.</b> 고객 365일과 팩트파인딩에서는 부르는데 TFA 30일 화면에서만 안 불러, <b>옷을 못 입은 표</b>가 그대로 서 있었습니다 — 칸이 안 갈리고 숫자가 뭉개집니다. CLAUDE.md 5번이 적어 둔 그 자리입니다(「클래스를 넣어 주는 xxxCss() 를 쓰는 화면은 그 화면에서도 부른다」). 표도 함께 손봤습니다 — 칸이 <b>일곱</b>인데 폰에서 옆으로 밀렸습니다. 이제 좁은 화면에서는 <b>사람별 카드</b>로 접히고 각 줄 앞에 칸 이름이 붙습니다. 글자를 키우고 숫자를 <b>자릿수 맞춰</b> 세웠으며(인쇄에는 안 나갑니다 — 4-1), 넓은 화면에서는 <b>이름 칸이 왼쪽에 붙어</b> 옆으로 밀어도 누구 줄인지 보입니다. 그리고 <b>DB 통합 CRM 에서 이미 만났는데 고객 365일에 없는 분</b>을 그 화면에 띄웁니다. 전화를 걸어 두고도 안 올리면 <b>30일 주기에서 통째로 빠집니다</b> — 상담까지 했는데 다시 연락할 날짜를 아무도 안 챙깁니다. <b>상담까지 간 분</b>이 먼저 오고, 「＋ 고객 365일에 올리기」 를 누르면 이름을 들고 넘어갑니다. <b>없는 정보는 만들지 않습니다</b> — CRM 에 적힌 것만 옮기고 보험료·생일 같은 것은 지어내지 않습니다(1번). 이름은 서버에 <b>가린 모양(김○○)</b>으로만 있어 그것끼리 견줍니다(3번). 한 번도 안 건 사람과 이미 고객 365일에 있는 분은 안 띄웁니다. 새 점검 <code>check-care30</code> — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 <b>되돌리기 자체가 안 먹어</b> 헛통과했습니다(문자열이 안 맞았습니다). 제대로 지우니 일곱 자리가 울렸습니다. 점검은 <b>새 파일을 만들지 않고</b> 이미 있던 <code>check-crmcare</code>(이 화면을 보던 열일곱 칸)에 두 칸을 더했습니다 — 같은 화면 점검이 두 벌이면 한쪽만 고칩니다(5번). 여섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 헛통과했습니다 — <b>주석에 적힌 「cmCss()」 를 읽고</b> 그 줄을 지워도 통과했습니다. 주석을 걷고 보게 고쳤습니다(8번). 같은 판에 <b>[main]</b> 본인 역량 체크에서 교재로 바로 가게 되었습니다 — 열둘 중 열 개가 이어졌고 둘은 교재에 없어 일부러 비웠습니다. 같은 판에 <b>[main]</b> 가로 메뉴가 각진 네모가 되고 마우스로 넘어가며 펴 둔 갈래가 그대로 유지됩니다. 같은 판에 <b>[main]</b> 공지에 「확인 요청」이 생겼습니다 — 지목한 사람 화면 맨 위에 뜨고 본인이 확인할 때까지 안 사라집니다.';
+var APP_BUILD='2026-08-29 19:00';
+var APP_BUILD_NOTE='<b>🎓 APEX 마스터 과정 — 하루 한 장, 만들어 보면서 익힙니다.</b> 설명서를 읽어서는 안 익습니다. 「다 배우고 시작하겠다」 하면 못 씁니다. 화면이 아흔 개인데 어디부터 손대야 할지 몰라 아무것도 안 하게 되는 자리입니다. 그래서 <b>하루에 하나씩 실제로 만들어 봅니다</b> — 열넷이면 끝납니다. 한 날에 담은 것은 셋뿐입니다: <b>어디서</b>(그 화면으로 바로 가는 단추) · <b>무엇을 만드나</b>(오늘 손으로 만들어 낼 것 하나) · <b>다 됐는지 아는 법</b>(눈으로 확인되는 것 — 「했다고 치자」 가 없게). 1일차 홈에서 오늘 걸 사람 세 명 적기부터, 14일차 전체 지도에서 막힌 것 물어보기까지. <b>오늘 할 것 한 칸만</b> 짚어 드립니다 — 열넷을 다 보고 고르라 하지 않습니다. <b>없는 화면으로 보내지 않습니다</b>(1번) — 열네 날의 화면 id 가 메뉴에 실제로 있는지 점검이 하나하나 찾아봅니다. 신입이 1일차에서 막히면 2일차는 없습니다. 단추 이름도 <b>메뉴 한 곳</b>에서 읽습니다 — 여기 다시 적어 두면 이름을 고쳤을 때 이쪽만 옛 이름으로 남습니다(5번). <b>진도는 이 기기에만</b> 남습니다 — 팀에 취합하지 않습니다. 남이 보면 「해야 하는 것」이 되고, 그러면 안 하고 <b>체크만</b> 하게 됩니다. <b>APEX 전체 지도</b>에도 넣었습니다. 새 점검 <code>check-apexmaster</code> — 여섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 <b>되돌리기 자체가 안 먹어</b> 헛통과했고(문자열이 안 맞았습니다), 제대로 지우니 울렸습니다. 만드는 중에 점검이 한 번 틀리기도 했습니다 — <code>crm</code>·<code>bohum</code> 같은 iframe 화면은 <b>일부러</b> lastTab 을 안 세우는데, 그것으로 「갔는가」 를 재려 했습니다. 앱이 맞고 잣대가 틀렸습니다. 같은 판에 <b>[main]</b> 공지에 「확인 요청」이 생겼습니다 — 지목한 사람 화면 맨 위에 뜨고 본인이 확인할 때까지 안 사라집니다. 그리고 <b>화면 점검(smoke)이 자기 목록을 따로 갖고 있던 것</b>을 고쳤습니다 — 새 화면을 만들어도 거기 안 적으면 <b>아무도 안 열어 봤습니다</b>. 터져 있어도 초록이었습니다. 이제 앱의 메뉴표를 그대로 읽습니다. <b>64개 → 92개</b> — 여태 28개 화면이 한 번도 안 열려 보고 있었습니다. 숨긴 칸도 엽니다(주소·찾기로는 그대로 열리므로). 같은 판에 <b>[main]</b> 30일 고객관리 표가 제 옷을 입고, CRM 에서 만난 분을 고객 365일에 추천합니다. 공지 확인 점검의 <b>흉내 서버가 부실해</b> CI 에서만 빨간불이 나던 것도 고쳤습니다 — 앱은 화면을 그리는 사이에 제 할 일로도 서버를 부르는데(<code>arLoad</code>), 그 사슬을 흉내 서버가 못 받아 「p.then is not a function」 으로 터졌습니다. <b>여기서는 그 호출이 먼저 끝나 통과했고 CI 에서는 뒤에 도착해 걸렸습니다</b> — 같은 코드가 초록도 되고 빨강도 되면 그것은 헛것을 잡는 점검입니다(8번). 이제 어떤 사슬이 와도 받습니다. 튼튼하게 만들면서 <b>눈이 멀지 않았는지</b> 세 자리를 되돌려 다시 확인했습니다 — 그대로 웁니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14755,6 +14768,169 @@ var GB_CUR=[
 ];
 
 /* 이번 주 리더가 할 일 — 보고 따라만 하면 됩니다 */
+/* ════════ APEX 마스터 과정 — 하루 한 장, 만들어 보면서 익힌다 ════════
+   설명서를 읽어서는 안 익습니다. 「다 배우고 시작하겠다」 하면 못 씁니다.
+   그래서 <b>하루에 하나씩 실제로 만들어 봅니다.</b> 열넷이면 끝납니다.
+
+   한 날에 담는 것은 셋뿐입니다 —
+     · <b>어디서</b> (그 화면으로 바로 가는 단추)
+     · <b>무엇을 만드나</b> (오늘 손으로 만들어 낼 것 하나)
+     · <b>다 됐는지 아는 법</b> (눈으로 확인되는 것 — 「했다고 치자」 가 없게)
+
+   ⚠ <b>없는 화면으로 보내지 않습니다</b>(CLAUDE.md 1번). 아래 id 는 모두
+     TABS 에 실제로 있는 것이고, 점검이 그것을 하나하나 확인합니다.
+   ⚠ 진도는 <b>이 브라우저</b>에 남습니다. 팀 취합은 하지 않습니다 — 남이
+     보면 「해야 하는 것」이 되고, 그러면 안 하고 체크만 하게 됩니다.        */
+var AM_KEY='apex_master_done';
+var AM_DAYS=[
+ {d:1, go:'home', t:'오늘 만날 사람과 걸 사람만 본다',
+  make:'홈을 열고 <b>오늘 걸 사람 세 명</b>의 이름을 종이에 적습니다.',
+  done:'종이에 이름 세 개가 적혀 있으면 된 것입니다.',
+  why:'APEX 는 아침에 여기서 시작합니다. 다른 화면은 다 이 뒤에 옵니다.'},
+ {d:2, go:'crm', t:'통화를 30초 안에 적는다',
+  make:'전화 한 통을 걸고, 끊자마자 <b>결과와 다음 날짜</b>를 적습니다.',
+  done:'그 줄에 「다음 연락」 날짜가 박혀 있으면 된 것입니다.',
+  why:'적지 않은 통화는 없던 일이 됩니다. 30초가 한 달을 살립니다.'},
+ {d:3, go:'clients', t:'고객 한 명을 올린다',
+  make:'어제 통화한 분을 <b>고객 365일</b>에 올립니다.',
+  done:'목록에 그분 이름이 보이면 된 것입니다.',
+  why:'여기 없으면 30일 주기 관리에서 통째로 빠집니다.'},
+ {d:4, go:'fact_find', t:'질문지를 한 장 채운다',
+  make:'그 고객의 <b>팩트파인딩</b>을 아는 데까지만 채웁니다.',
+  done:'모르는 칸은 <b>비워 둡니다</b> — 채워 넣지 않는 것이 맞습니다.',
+  why:'모르는 것을 채우면 그 숫자가 나중에 제안서까지 따라갑니다.'},
+ {d:5, go:'bojang', t:'보장분석을 한 건 돌린다',
+  make:'증권 PDF 를 넣어 <b>AI 보장분석</b>을 한 번 돌립니다.',
+  done:'담보 목록이 화면에 뜨면 된 것입니다.',
+  why:'읽은 값이 이상하면 그 자리에서 고칠 수 있습니다 — 고객 앞이 아니라.'},
+ {d:6, go:'baba', t:'비포&애프터를 만든다',
+  make:'같은 고객으로 <b>지금과 바꾼 뒤</b>를 나란히 놓아 봅니다.',
+  done:'두 칸이 나란히 보이면 된 것입니다.',
+  why:'말로 하면 안 믿습니다. 나란히 놓으면 스스로 압니다.'},
+ {d:7, go:'treatpay', t:'병에 걸리면 얼마 드는지 보여 준다',
+  make:'암 하나를 골라 <b>치료비 지급지도</b>를 띄워 봅니다.',
+  done:'금액이 화면에 뜨면 된 것입니다.',
+  why:'「보장이 부족합니다」 보다 「이만큼 듭니다」 가 셉니다.'},
+ {d:8, go:'wallets', t:'8통장으로 순서를 잡는다',
+  make:'그 고객의 돈을 <b>여덟 통장</b>으로 나눠 봅니다.',
+  done:'어느 통장이 비었는지 눈에 보이면 된 것입니다.',
+  why:'무엇부터 할지는 우리가 정하는 게 아니라 빈 통장이 정합니다.'},
+ {d:9, go:'ai_prop', t:'제안서를 하나 뽑는다',
+  make:'고른 대로 <b>AI 제안서</b>를 만들어 봅니다.',
+  done:'PDF 로 저장까지 되면 된 것입니다.',
+  why:'우리가 뽑은 종이는 우리가 다시 읽을 수 있어야 합니다.'},
+ {d:10, go:'katalk', t:'카톡으로 보낼 말까지 만든다',
+  make:'그 제안서로 <b>카톡 설명</b>을 만들어 자기 폰으로 보내 봅니다.',
+  done:'폰에서 읽어 봤을 때 말이 되면 된 것입니다.',
+  why:'보내고 나서 읽어 보면 늦습니다. 먼저 자기한테 보내 보십시오.'},
+ {d:11, go:'airep', t:'저녁에 알림을 0건으로 만든다',
+  make:'<b>TFA 업무관리</b>를 열고 오늘 뜬 것을 다 처리합니다.',
+  done:'남은 알림이 0건이면 된 것입니다.',
+  why:'쌓인 알림은 하루 지나면 안 봅니다. 그날 0으로 만드는 것이 전부입니다.'},
+ {d:12, go:'bohum', t:'교재 한 장을 읽고 한 명에게 쓴다',
+  make:'<b>보험 마스터 아카데미</b>에서 한 장을 읽고, 그날 <b>한 명에게</b> 써 봅니다.',
+  done:'실제로 말해 봤으면 된 것입니다 — 읽기만 한 것은 아직입니다.',
+  why:'안 써 본 화법은 상담에서 안 나옵니다.'},
+ {d:13, go:'blog', t:'글 한 편을 올린다',
+  make:'오늘 상담에서 나온 이야기로 <b>블로그</b> 한 편을 씁니다.',
+  done:'심의필터를 지나 발행까지 됐으면 된 것입니다.',
+  why:'한 달 하고 그만두면 안 한 것과 같습니다. 주 한 번으로라도 이어가십시오.'},
+ {d:14, go:'apexmap', t:'막혔을 때 어디를 보는지 익힌다',
+  make:'<b>전체 지도</b>에서 「지금 막힌 것」을 한 줄 적고 순서를 받아 봅니다.',
+  done:'화면 순서가 나오면 된 것입니다.',
+  why:'열넷을 다 외울 필요가 없습니다. 막히면 여기서 물어보면 됩니다.'}
+];
+function amDone(){ try{ var v=JSON.parse(localStorage.getItem(AM_KEY)||'{}'); return (v&&typeof v==='object')?v:{}; }catch(e){ return {}; } }
+function amSet(d,on){
+  var v=amDone();
+  if(on)v[d]=new Date().toISOString().slice(0,10); else delete v[d];
+  try{ localStorage.setItem(AM_KEY,JSON.stringify(v)); }catch(e){}
+  amPaint();
+}
+function amToggle(d){ var v=amDone(); amSet(d,!v[d]); }
+function amGo(id){
+  /* 없는 화면으로 보내지 않는다 — 등급으로 막혀 있으면 그렇다고 말한다 */
+  if(typeof osTabAllowed==='function'&&!osTabAllowed(id)){
+    toast('이 화면은 아직 열려 있지 않습니다 — 대표님께 문의해 주세요');return;
+  }
+  go(id);
+}
+function amNext(){
+  var v=amDone(),i;
+  for(i=0;i<AM_DAYS.length;i++)if(!v[AM_DAYS[i].d])return AM_DAYS[i];
+  return null;
+}
+function amPaint(){ var el=document.getElementById('amHost'); if(el)el.innerHTML=amBodyHtml(); }
+function amBodyHtml(){
+  var v=amDone(),i,n=0,h='';
+  for(i=0;i<AM_DAYS.length;i++)if(v[AM_DAYS[i].d])n++;
+  var nx=amNext();
+  h+='<div class="am-top">'+
+     '<div class="am-bar"><span style="width:'+Math.round(n/AM_DAYS.length*100)+'%"></span></div>'+
+     '<div class="am-cnt"><b>'+n+'</b> / '+AM_DAYS.length+'일</div></div>'+
+     (nx?('<div class="am-next">오늘은 <b>'+nx.d+'일차 — '+esc(nx.t)+'</b> 입니다. 아래에서 그 칸만 보시면 됩니다.</div>')
+        :('<div class="am-next done">열네 장을 다 하셨습니다. 이제 <b>매일 쓰시면 됩니다</b> — 아침 홈, 통화 뒤 30초, 저녁 알림 0건.</div>'));
+  for(i=0;i<AM_DAYS.length;i++){
+    var a=AM_DAYS[i],on=!!v[a.d],isNext=!!(nx&&nx.d===a.d);
+    var nm=(typeof navTitleOf==='function')?navTitleOf(a.go):a.go;
+    h+='<div class="am-d'+(on?' on':'')+(isNext?' now':'')+'">'+
+      '<div class="am-h"><span class="am-n">'+a.d+'일차</span>'+
+        '<b>'+esc(a.t)+'</b>'+(on?('<em>'+esc(v[a.d])+' 완료</em>'):'')+'</div>'+
+      '<div class="am-mk"><span class="k">만들 것</span>'+a.make+'</div>'+
+      '<div class="am-ok"><span class="k">다 됐는지</span>'+a.done+'</div>'+
+      '<div class="am-wy">'+esc(a.why)+'</div>'+
+      '<div class="am-btns">'+
+        '<button type="button" class="am-go" onclick="amGo(\''+a.go+'\')">→ '+esc(nm)+' 열기</button>'+
+        '<button type="button" class="am-ck'+(on?' on':'')+'" onclick="amToggle('+a.d+')">'+
+          (on?'✓ 했습니다':'다 했습니다')+'</button>'+
+      '</div></div>';
+  }
+  return h;
+}
+function amCss(){
+  if(document.getElementById('amCss'))return;
+  var s=document.createElement('style');s.id='amCss';
+  s.textContent=
+    '.am-top{display:flex;align-items:center;gap:11px;margin-bottom:9px}'+
+    '.am-bar{flex:1;height:8px;background:#EEF2F7;border-radius:99px;overflow:hidden}'+
+    '.am-bar span{display:block;height:100%;background:linear-gradient(90deg,#1A56DB,#38BDF8)}'+
+    '.am-cnt{flex:none;font-size:12.5px;color:var(--ink-4)}.am-cnt b{font-size:16px;color:#1A56DB}'+
+    '.am-next{font-size:12.5px;line-height:1.7;background:#F5F8FF;border:1px solid #C7D2FE;'+
+      'border-radius:9px;padding:9px 12px;margin-bottom:12px;color:var(--ink-2)}'+
+    '.am-next.done{background:#F0FDF4;border-color:#BBF7D0;color:#166534}'+
+    '.am-d{border:1.5px solid #EDF1F6;border-radius:12px;padding:13px 14px;margin-bottom:9px;background:#fff}'+
+    '.am-d.on{border-color:#BBF7D0;background:#F8FEFA}'+
+    '.am-d.now{border-color:#93A9F5;box-shadow:0 3px 14px rgba(26,86,219,.12)}'+
+    '.am-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}'+
+    '.am-n{flex:none;font-size:11px;font-weight:900;color:#1A56DB;background:#EEF3FF;'+
+      'border-radius:5px;padding:3px 8px}'+
+    '.am-h b{font-size:14.5px;font-weight:900;color:var(--ink-1)}'+
+    '.am-h em{font-style:normal;font-size:11px;color:#15803D;background:#F0FDF4;'+
+      'border-radius:5px;padding:2px 7px}'+
+    '.am-mk,.am-ok{font-size:12.5px;line-height:1.7;color:var(--ink-2);margin-bottom:3px}'+
+    '.am-mk .k,.am-ok .k{display:inline-block;min-width:64px;font-size:10.5px;font-weight:800;'+
+      'color:var(--ink-5);background:#F4F7FB;border-radius:4px;padding:2px 7px;margin-right:7px}'+
+    '.am-wy{font-size:11.5px;line-height:1.65;color:var(--ink-4);margin-top:6px;'+
+      'padding-top:6px;border-top:1px dashed #EDF1F6}'+
+    '.am-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}'+
+    '.am-go{border:1px solid #C7D2FE;background:#F5F8FF;color:#1A56DB;border-radius:8px;'+
+      'font-size:12.5px;font-weight:800;padding:7px 13px;cursor:pointer;font-family:inherit}'+
+    '.am-go:hover{background:#E7EEFF}'+
+    '.am-ck{border:1px solid var(--ink-7);background:#fff;color:var(--ink-3);border-radius:8px;'+
+      'font-size:12.5px;font-weight:800;padding:7px 13px;cursor:pointer;font-family:inherit}'+
+    '.am-ck.on{border-color:#86EFAC;background:#F0FDF4;color:#15803D}';
+  document.head.appendChild(s);
+}
+function renderApexMaster(){
+  amCss();
+  return '<div class="page-hd"><h2>🎓 APEX 마스터 과정</h2>'+
+    '<p>읽어서는 안 익습니다. <b>하루에 하나씩 실제로 만들어 봅니다</b> — 열넷이면 끝납니다.</p></div>'+
+    '<div class="card"><div class="card-body"><div id="amHost">'+amBodyHtml()+'</div></div></div>'+
+    '<div class="notice" style="margin-top:12px;font-size:11.5px;line-height:1.7">'+
+    '진도는 <b>이 기기에만</b> 남습니다 — 팀에 취합하지 않습니다. 남이 보면 「해야 하는 것」이 되고, '+
+    '그러면 안 하고 <b>체크만</b> 하게 됩니다. 하루에 하나면 충분하고, 건너뛰셔도 됩니다.</div>';
+}
+
 var GB_WEEK=[
  [1,'월','한 주를 엽니다','놓치고 있는 사람 명단을 먼저 봅니다. 그중 <b>두 명에게만</b> 오전에 전화합니다. 전부에게 하면 아무에게도 못 합니다.','miss'],
  [2,'화','같이 나갑니다','한 명과 동행합니다. 주도는 팀원이 합니다. 우리는 뒤에 앉아 있습니다. 끝나고 잘한 것 하나만 말해 줍니다.','low'],
