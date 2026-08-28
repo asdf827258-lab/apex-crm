@@ -113,7 +113,7 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   console.log('\n[2] 갈래 표가 한 곳인가 · 누가 읽나가 달려 있는가');
   const kinds = await page.evaluate(() => ORDER.map(k => ({ k, t:KINDS[k].t, reader:KINDS[k].reader,
     why:!!KINDS[k].why, order:typeof KINDS[k].order === 'function', art:(KINDS[k].art||[]).length })));
-  is(kinds.length === 6, '  갈래가 여섯이다 — ' + kinds.map(x => x.t).join(' · '));
+  is(kinds.length === 7, '  갈래가 일곱이다 — ' + kinds.map(x => x.t).join(' · '));
   is(await page.evaluate(() => ORDER.length === Object.keys(KINDS).length), '  차례표가 하나도 안 빠뜨렸다');
   is(kinds.every(x => x.why && x.order && x.art >= 2), '  갈래마다 왜·주문서·쓸 그림이 표 안에 있다');
   is(kinds.every(x => x.reader === '고객' || x.reader === '동료'), '  갈래마다 누가 읽나가 달려 있다');
@@ -187,8 +187,23 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     return { by, rd, n:S.rows.length, mix:MIX.slice(0), missing: ORDER.filter(k => !MIX.includes(k)) };
   });
   is(mix.n === 20, '  주 5편이면 한 달 20편 (' + mix.n + ')');
-  is(mix.mix.length === 10 && mix.mix.filter(x => x === 'ours').length === 1, '  열에 홍보 하나');
-  is(mix.missing.length === 0, '  여섯 갈래가 모두 비율에 있다' + (mix.missing.length ? ' — 빠짐: ' + mix.missing : ''));
+  is(mix.mix.length % 10 === 0 && mix.mix.filter(x => x === 'ours').length === mix.mix.length / 10,
+     '  열에 홍보 하나 (' + mix.mix.length + '편에 ' + mix.mix.filter(x => x === 'ours').length + '편)');
+  is(mix.missing.length === 0, '  일곱 갈래가 모두 비율에 있다' + (mix.missing.length ? ' — 빠짐: ' + mix.missing : ''));
+  /* 정보 글만 이어지면 이웃이 안 붙는다 — 사람이 보이는 글이 실제로 자주 도는가 */
+  is(mix.mix.filter(x => x === 'day').length * 4 >= mix.mix.length,
+     '  「오늘 있었던 일」 이 넷에 하나꼴로 돈다 (' + mix.mix.filter(x => x === 'day').length + '/' + mix.mix.length + ')');
+  const daily = await page.evaluate(() => { S.perweek = 7; plan();
+    return { n:S.rows.length, when:S.rows.slice(0, 3).map(r => r.when), kinds:new Set(S.rows.map(r => r.kind)).size }; });
+  is(daily.n === 28, '  «매일» 을 고르면 한 달 28편 (' + daily.n + ')');
+  is(new Set(daily.when).size === 3, '  하루에 한 편씩 날짜가 붙는다 — ' + daily.when.join(' · '));
+  is(daily.kinds === 7, '  한 달이면 일곱 갈래가 모두 한 번은 돈다');
+  /* 화면에 실제로 그 단추가 있는가 — setWeek 만 보면 눌러 볼 자리가 없어도 통과한다 */
+  const wk = await page.evaluate(() => { paint();
+    return [...document.getElementById('wk').querySelectorAll('button')].map(b => b.textContent.trim()); });
+  is(wk.indexOf('매일') >= 0, '  «매일» 단추가 화면에 있다 — ' + wk.join(' · '));
+  is(await page.evaluate(() => { setWeek(7); const n = S.rows.length; setWeek(2);
+    return n === 0 || S.perweek === 2; }), '  눌러 두면 그대로 남는다');
   is((mix.by.econ||0) >= (mix.by.news||0), '  경제뉴스가 가장 자주 돈다 (' + (mix.by.econ||0) + '편)');
   is((mix.rd['동료']||0) > 0 && (mix.rd['고객']||0) > (mix.rd['동료']||0) * 2,
      '  동료용이 들어가되 고객 글이 훨씬 많다 (고객 ' + mix.rd['고객'] + ' · 동료 ' + mix.rd['동료'] + ')');
@@ -218,14 +233,15 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   const order = await page.evaluate(async () => {
     await pullNews();
     localStorage.setItem('apex_blog_mine_ask', JSON.stringify([{ q:'암 진단비는 얼마가 적당한가요?', at:'2026-08-23' }]));
+    localStorage.setItem('apex_blog_mine_day', JSON.stringify([{ q:'청구 서류가 반려돼 병원에 다시 다녀왔다', at:'2026-08-23' }]));
     S.perweek = 5; plan();
     const s = seeds(), out = {};
     ORDER.forEach(k => { out[k] = s[k].length ? userPrompt({ kind:k, seed:s[k][0] }) : ''; });
     return { each:out, sys:sysPrompt() };
   });
   const bodies = ORDER_LIST().map(k => order.each[k]);
-  function ORDER_LIST(){ return ['econ','news','ask','ours','culture','growth']; }
-  is(bodies.every(b => b && b.length > 200), '  여섯 갈래가 모두 주문서를 만든다');
+  function ORDER_LIST(){ return ['econ','news','ask','day','ours','culture','growth']; }
+  is(bodies.every(b => b && b.length > 200), '  일곱 갈래가 모두 주문서를 만든다');
   is(new Set(bodies).size === bodies.length, '  갈래마다 주문서가 다르다');
   is(/\[근거\]/.test(order.each.econ) && /연합뉴스/.test(order.each.econ), '  기사 근거가 실린다');
   is(/\[쓸 수 있는 그림\]/.test(order.each.econ) && /뉴스 카드/.test(order.each.econ),
@@ -242,6 +258,9 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
 
   /* 앱에서 치운 두 도구(글 생성·제목 후보)가 하던 일이 여기 그대로 있는가.
      안 그러면 「일원화」가 아니라 그냥 없어진 것이다. */
+  is(/만들어 넣지 않는다/.test(order.each.day) && /이름과 알아볼 수 있는 사연/.test(order.each.day),
+     '  「오늘 있었던 일」 은 적어 두신 것 밖을 보태지 말라고 시킨다 · 이름도 빼라고 시킨다');
+  is(/\[읽는 사람\] 고객/.test(order.each.day), '  「오늘 있었던 일」 은 고객이 읽는 글이다');
   is(/## 제목 후보 \d+개/.test(order.each.econ) && /숫자형[\s\S]{0,40}질문형/.test(order.each.econ),
      '  제목 후보를 유형까지 섞어 시킨다 — 치운 «제목 후보» 가 하던 일');
   const LEN = await page.evaluate(() => {
@@ -322,6 +341,51 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   });
   is(packed.read, '  실제로 읽어 왔다');
   is(packed.ok && packed.got.indexOf(fixed) >= 0, '  통과한 글에 준법 문구가 붙어 나온다');
+
+  /* 회사 문구를 우리가 지어낼 수 없다. 넣을 자리를 만들고,
+     넣기 전까지는 <b>기본값이라고 계속 말해야</b> 한다 — 말없이 붙어 나가면
+     회사 문구인 줄 알고 그대로 올린다. (CLAUDE.md 1) */
+  const own = await page.evaluate(async () => {
+    const out = {};
+    out.defaultSays = document.getElementById('tgCmp').textContent;
+    out.defaultWarnsOnPublish = (() => { S.rows = [{ when:'1/1', kind:'ours',
+      seed:{ kind:'ours', title:'x', src:'메뉴' }, out:'보장 내용은 심사 결과에 따릅니다.', guard:null }];
+      S.rows[0].guard = guard(S.rows[0].out, 'ours'); return S.complyMine; })();
+    /* 하단 문구를 비운 채로는 저장되지 않는다 */
+    CMP_OPEN = true; paint();
+    document.getElementById('p_카드_하단_고정').value = '';
+    document.getElementById('p_org').value = '○○에셋 ○○본부';
+    cmpSave();
+    out.blankRefused = !localStorage.getItem('apex_blog_comply');
+    /* 회사 문구를 넣는다 — 심의필 번호는 일부러 비워 둔다 */
+    document.getElementById('p_카드_하단_고정').value = '○○에셋 준법감시 지침에 따른 회사 고정 문구입니다.';
+    document.getElementById('p_org').value = '○○에셋 ○○본부';
+    document.getElementById('p_gam').value = '';
+    cmpSave();
+    await comply();
+    let got = '';
+    navigator.clipboard.writeText = t => { got = t; return Promise.resolve(); };
+    await copyPlain(0);
+    out.mine = S.complyMine; out.tag = document.getElementById('tgCmp').textContent;
+    out.got = got;
+    /* 되돌리면 다시 기본값이라고 말한다 */
+    cmpReset(); await comply();
+    out.backToDefault = !S.complyMine;
+    return out;
+  });
+  is(/기본값/.test(own.defaultSays), '  회사 문구를 안 넣으면 <b>기본값이라고 딱지에 적는다</b>');
+  is(own.defaultWarnsOnPublish === false, '  기본값인 채로는 「회사 것」 이라고 말하지 않는다');
+  is(/기본 문구가 아직 기본값입니다|기본값입니다/.test(SRC), '  올리는 화면에서도 기본값이라고 말한다');
+  is(own.blankRefused, '  하단 고정 문구를 비운 채로는 저장되지 않는다 — 문구 없이 「회사 것」 이 되면 안 된다');
+  is(own.mine === true && /회사 것/.test(own.tag), '  회사 문구를 넣으면 「회사 것」 으로 바뀐다');
+  is(own.got.indexOf('○○에셋 준법감시 지침에 따른 회사 고정 문구입니다.') >= 0,
+     '  넣은 회사 문구가 실제로 글 끝에 붙어 나간다');
+  is(own.got.indexOf(fixed) < 0, '  기본 문구는 더 이상 안 붙는다 — 두 벌이 겹쳐 나가지 않는다');
+  is(own.got.indexOf('○○에셋 ○○본부') >= 0, '  적어 두신 소속이 붙는다');
+  is(own.got.indexOf('광고심의필') < 0, '  심의필 번호를 안 넣으면 <b>아무것도 안 적는다</b> — 없는 번호를 만들지 않는다');
+  is(own.backToDefault, '  되돌리면 다시 기본값이라고 말한다');
+  is(SRC.indexOf('26-') < 0 || !/광고심의필\s*['"]?\s*:\s*['"]2[0-9]-\d/.test(SRC),
+     '  심의필 번호를 코드에 적어 두지 않았다');
   is(packed.got.indexOf('세제·한도는') >= 0, '  세금 이야기에는 세제 문구가 더 붙는다');
   const blocked = await page.evaluate(async () => {
     let got = 'NONE';
@@ -571,6 +635,164 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(!/sk-ant-[A-Za-z0-9_-]{10,}/.test(SELF),
      '  이 점검 파일에도 키 모양 문자열이 없다 — 배포가 키로 보고 세운다');
   is(!/console\.log\([^)]*apikey/i.test(SRC), '  키를 로그에 찍지 않는다');
+
+  console.log('\n[14] 매일 한 편 — 아침에 누를 단추가 하나인가');
+  /* 여기 [14] 를 만들며 <b>안 울리는 알람</b>을 하나 잡았다. 「글감이 없으면 AI 를
+     안 부른다」 는 연결을 안 해 둔 채로 재면 <b>언제나 통과한다</b> — 글감이 아니라
+     연결이 없어서 안 부른 것이기 때문이다. 그래서 연결을 먼저 해 두고 잰다.
+     그리고 되돌리기는 「막는 줄을 지운다」 가 아니라 <b>「없는 글감을 지어내 채운다」</b>
+     로 해야 울린다 — 그것이 실제로 무서운 자리다. (CLAUDE.md 8) */
+  /* 매일 쓰려면 아침에 누를 것이 하나여야 한다. 다만 <b>글감이 없으면 만들지 않는다</b>. */
+  const day = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear();
+    S.rows = []; S.news = { at:'', items:[], err:'' }; S.busy = -1; S.comply = null;
+    S.perweek = 7; await pullNews(); plan();
+    out.hasToday   = todayAt();
+    out.stamped    = S.rows.every(r => /^\d{4}-\d{2}-\d{2}$/.test(r.ymd || ''));
+    out.firstIsNow = S.rows[0] && S.rows[0].ymd === ymd(0);
+    /* 오늘 줄이 없으면 그 뒤는 전부 못 한다 — 여기서 멈추고 <b>왜</b> 인지 말한다 */
+    if (out.hasToday < 0) { out.stopped = '편성표에 오늘 줄이 없다'; return out; }
+
+    /* ① 써 둔 글은 다시 편성해도 안 지워진다 — 그리고 두 벌이 되지도 않는다 */
+    S.rows[out.hasToday].out = '어제 쓴 글';
+    S.rows[out.hasToday].guard = { ok:true, hits:[], miss:[], holes:[], noart:[] };
+    S.perweek = 2; plan();
+    out.kept = S.rows.filter(r => r.out === '어제 쓴 글').length;
+    out.dupDays = S.rows.length - new Set(S.rows.map(r => r.ymd)).size;
+
+    /* ② 글감이 없으면 «오늘 것» 이 AI 를 안 부른다.
+       연결을 <b>먼저</b> 해 둔다 — 안 그러면 「연결이 없어서」 안 부른 것을
+       「글감이 없어서」 안 불렀다고 잘못 읽는다. 그러면 이 알람은 안 울린다. */
+    localStorage.setItem('apex_studio_apikey', 'x');
+    S.perweek = 7; S.rows = []; plan();
+    let i = todayAt(); S.rows[i].seed = null; S.rows[i].kind = 'day'; S.rows[i].out = '';
+    localStorage.removeItem('apex_blog_mine_day');
+    let calls = 0; const realAsk = window.ask; window.ask = () => { calls++; return Promise.resolve('x'); };
+    await today1();
+    out.noSeedCalls = calls; out.stillEmpty = !S.rows[todayAt()].out;
+
+    /* ③ 글감을 적어 두면 한 번 눌러 초안까지 간다 */
+    localStorage.setItem('apex_blog_mine_day',
+      JSON.stringify([{ q:'청구 서류가 반려돼 병원에 다시 다녀왔다', at:ymd(0) },
+                      { q:'어제 적어 둔 것', at:ymd(-1) }]));
+    await today1();
+    out.seedCalls = calls; out.drafted = !!S.rows[todayAt()].out;
+    out.boundSeed = (S.rows[todayAt()].seed || {}).title;
+    window.ask = realAsk;
+
+    /* ④ 뉴스가 어제 것이면 오늘 것으로 다시 받고 시작한다 */
+    S.rows = []; S.perweek = 7; plan();
+    i = todayAt(); S.rows[i].kind = 'econ'; S.rows[i].out = ''; S.rows[i].seed = null;
+    S.news.at = ymd(-1) + ' 07:00';
+    out.staleBefore = newsFresh();
+    window.ask = () => Promise.resolve('x');
+    await today1();
+    out.freshAfter = newsFresh();
+    window.ask = realAsk;
+
+    /* ⑤ 밀린 줄 · 이어서 며칠 */
+    S.rows = [{ ymd:ymd(-3), when:'x', kind:'econ', seed:null, out:'', guard:null, up:false },
+              { ymd:ymd(-2), when:'x', kind:'econ', seed:null, out:'', guard:null, up:true  },
+              { ymd:ymd(-1), when:'x', kind:'econ', seed:null, out:'', guard:null, up:true  },
+              { ymd:ymd(0),  when:'x', kind:'econ', seed:null, out:'', guard:null, up:false }];
+    out.late = lateRows().length; out.streakYesterday = streak();
+    S.rows[3].up = true; out.streakToday = streak();
+    paint();
+    out.rowNow  = document.querySelectorAll('#rows tr.now').length;
+    out.rowLate = document.querySelectorAll('#rows tr.late').length;
+    out.card    = document.getElementById('today').textContent;
+    return out;
+  });
+  is(day.hasToday === 0, '  편성하면 <b>오늘부터</b> 채운다 — 내일부터가 아니다' +
+     (day.stopped ? ' — ' + day.stopped : ''));
+  is(day.stamped && day.firstIsNow, '  줄마다 진짜 날짜가 붙는다 — 라벨만 보고 오늘을 다시 세지 않는다');
+  if (day.stopped) { is(false, '  오늘 줄이 없어 [14] 의 나머지를 못 봤다 — 위를 먼저 고치십시오'); }
+  is(day.kept === 1, '  다시 편성해도 <b>써 둔 글이 안 지워진다</b> — 매일 쓰면 매일 편성을 누르게 된다');
+  is(day.dupDays === 0, '  한 날짜가 <b>두 줄이 되지 않는다</b> — 오늘 것이 둘이면 어느 것을 쓸지 모른다');
+  is(day.noSeedCalls === 0 && day.stillEmpty,
+     '  글감이 없으면 «오늘 것» 이 <b>AI 를 안 부른다</b> (부른 횟수 ' + day.noSeedCalls + ')');
+  is(day.seedCalls === 1 && day.drafted, '  글감을 적어 두면 <b>한 번 눌러</b> 초안까지 간다');
+  is(day.boundSeed === '청구 서류가 반려돼 병원에 다시 다녀왔다',
+     '  <b>오늘 아침 적은 것</b>에 묶인다 — 어제 것이 아니라 (' + day.boundSeed + ')');
+  is(day.staleBefore === false && day.freshAfter === true,
+     '  뉴스가 어제 것이면 <b>오늘 것으로 다시 받고</b> 시작한다 — 날짜 틀린 글이 나가지 않게');
+  is(day.late === 1, '  밀린 줄을 센다 (' + day.late + ') — 안 올린 지난 줄만');
+  is(day.streakYesterday === 2, '  오늘 것을 안 올렸으면 <b>어제부터</b> 센다 (' + day.streakYesterday + '일)');
+  is(day.streakToday === 3, '  오늘 것을 올리면 오늘까지 센다 (' + day.streakToday + '일)');
+  is(day.rowNow === 1 && day.rowLate === 1, '  표에서 오늘 줄과 밀린 줄이 눈에 보인다');
+  is(/오늘/.test(day.card), '  오늘 칸이 맨 위에 선다');
+  /* 날짜를 여러 곳에서 다시 세면 하루가 어긋난다 (CLAUDE.md 5) */
+  is((SRC.match(/new Date\(Date\.now\(\)\s*\+\s*9\s*\*/g) || []).length === 1,
+     '  한국 시각을 세는 곳이 <b>한 곳뿐</b>이다');
+
+  console.log('\n[15] 매일 올려도 안 지겨운가 · 글감이 마르기 전에 말하는가');
+  const more = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.rows=[]; S.busy=-1; S.perweek=7; S.comply=null;
+    localStorage.setItem('apex_blog_mine_day', JSON.stringify([
+      { q:'첫째 날 일', at:ymd(0) }, { q:'둘째 날 일', at:ymd(0) }]));
+    await pullNews(); plan();
+
+    /* ① 대표 이미지가 날마다·갈래마다 다른가 — 다시 그리면 같은가 */
+    const mk = (d, k) => { const r={ ymd:d, kind:k, seed:{kind:k,title:'x',src:'y'},
+      out:'## 제목 후보\n- 오늘의 제목입니다\n\n## 본문\n글.\n' }; return build('cover', r); };
+    const a = mk(ymd(0),'day'), b = mk(ymd(1),'day'), c = mk(ymd(0),'econ'), a2 = mk(ymd(0),'day');
+    out.diffDay  = a.svg !== b.svg;
+    out.diffKind = a.svg !== c.svg;
+    out.same     = a.svg === a2.svg;
+    out.kindColor = c.svg.indexOf(KINDS.econ.c) >= 0 && a.svg.indexOf(KINDS.day.c) >= 0;
+    /* 무늬에 숫자·눈금이 섞이지 않았나 — 그림이 근거가 되면 안 된다 */
+    out.noNums = !/<text[^>]*>\s*[\d,.]+\s*</.test(a.svg);
+
+    /* ② 요 며칠 올린 제목을 주문서에 실어 「같은 이야기 그만」 이라고 시키는가 */
+    S.rows=[{ ymd:ymd(-1), when:'x', kind:'day', seed:{kind:'day',title:'어제',src:'z'},
+              out:'## 제목 후보\n- 어제 쓴 제목입니다\n\n## 본문\n글.\n', guard:null, up:true },
+            { ymd:ymd(0), when:'y', kind:'day', seed:{kind:'day',title:'오늘',src:'z'},
+              out:'', guard:null, up:false }];
+    out.recent = recentTitles(S.rows[1]);
+    out.prompt = userPrompt(S.rows[1]);
+    out.selfFree = recentTitles(S.rows[0]).indexOf('어제 쓴 제목입니다') < 0;
+
+    /* ③ 글감이 며칠치 남았나 */
+    S.rows=[]; plan();
+    out.runFull = runway().n;
+    localStorage.removeItem('apex_blog_mine_day');
+    localStorage.removeItem('apex_blog_mine_ask');
+    S.rows=[]; plan(); const R2=runway(); out.runThin=R2.n; out.dry=R2.dry;
+    paint(); out.warns = (function(){ const h=document.getElementById('today').innerHTML;
+      return /비어 있는 갈래/.test(h) && R2.dry.every(k=>h.indexOf(KINDS[k].t)>=0); })();
+
+    /* ④ 내일 것 — 글감이 없으면 역시 안 만든다 */
+    let calls=0; const realAsk=window.ask; window.ask=()=>{calls++;return Promise.resolve('x');};
+    localStorage.setItem('apex_studio_apikey','x');
+    S.rows=[]; plan();
+    const ti=S.rows.findIndex(r=>r.ymd===ymd(1));
+    S.rows[ti].kind='day'; S.rows[ti].seed=null; S.rows[ti].out='';
+    await tomorrow1(); out.tmrNoSeed=calls;
+    localStorage.setItem('apex_blog_mine_day', JSON.stringify([{ q:'내일 쓸 것', at:ymd(0) }]));
+    await tomorrow1(); out.tmrCalls=calls; out.tmrDone=!!S.rows[ti].out;
+    out.tmrIsTomorrow=S.rows[ti].ymd===ymd(1);
+    window.ask=realAsk;
+    return out;
+  });
+  is(more.diffDay,  '  대표 이미지가 <b>날마다 다르다</b> — 서른 날 같은 그림이면 죽어 보인다');
+  is(more.diffKind, '  갈래마다도 다르다');
+  is(more.same,     '  같은 글은 다시 그려도 <b>같은 그림</b>이다 — 어제 글이 딴 그림이 되면 헷갈린다');
+  is(more.kindColor,'  갈래 색을 <b>갈래 표에서</b> 읽는다 — 그림 쪽에 다시 안 적었다');
+  is(more.noNums,   '  무늬에 숫자·눈금이 없다 — 그림이 근거가 되면 안 된다 (CLAUDE.md 9)');
+  is(more.recent.indexOf('어제 쓴 제목입니다') >= 0, '  어제 올린 제목을 안다 (' + more.recent.join(' · ') + ')');
+  is(/요 며칠 이미 올린 글/.test(more.prompt) && /같은 이야기를 다시 하지 않는다/.test(more.prompt),
+     '  <b>같은 이야기를 또 하지 말라</b>고 주문서에 실어 보낸다');
+  is(more.selfFree, '  지금 쓰는 글 자신은 그 목록에서 뺀다 — 자기 제목을 피하라고 시키면 안 된다');
+  is(more.runFull > more.runThin, '  글감이 줄면 쓸 수 있는 편수도 준다 (' + more.runFull + ' → ' + more.runThin + ')');
+  is(more.dry.indexOf('day') >= 0 && more.dry.indexOf('ask') >= 0,
+     '  <b>어느 갈래가 비었는지</b> 이름으로 말한다 — ' + more.dry.join(' · '));
+  is(more.dry.indexOf('econ') < 0, '  이레치만 본다 — 차 있는 갈래를 비었다고 하지 않는다 (헛것 금지 · CLAUDE.md 8)');
+  is(more.warns, '  <b>바닥나기 전에</b> 빈 갈래를 이름으로 화면에 적는다 — 아침에 열어 보고서야 알면 그날은 못 쓴다');
+  is(more.tmrNoSeed === 0, '  «내일 것» 도 글감이 없으면 <b>AI 를 안 부른다</b>');
+  is(more.tmrCalls === 1 && more.tmrDone && more.tmrIsTomorrow,
+     '  «내일 것» 은 <b>내일 줄</b>을 만든다 — 오늘 것을 덮어쓰지 않는다');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
