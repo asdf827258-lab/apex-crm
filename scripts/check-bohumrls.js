@@ -279,6 +279,74 @@ is(wms && +wms >= 3000 && +wms <= 30000,
    '  SQL 을 기다리는 데 <b>시간 제한</b>이 있다 — ' + (wms ? wms + 'ms' : '없음') +
    ' (3~30초 사이여야 한다)');
 
+/* ── 「Run 눌렀는데 됐나?」 에 화면이 답해야 한다 ────────────────────
+   2026-08-29 에 실제로 이랬다 — 사장님이 「sql실행했다」 하셨는데 표는
+   그대로 열려 있었다. 앱에 SQL 단추가 여럿이라 다른 것을 돌리셨고,
+   <b>화면은 아무 말도 안 했다.</b> 눌러도 됐는지 모르는 단추는 알람이
+   아니다 (8번). 그래서 <b>바깥 사람인 척</b> 두드려 보는 단추를 붙였고,
+   여기서는 네 가지 상태를 다 만들어 <b>말이 달라지는지</b> 본다. */
+console.log('\n[7-2] 「지금 익명에게 열려 있는지」 를 화면이 답한다');
+let VMODE = 'nomig', vseen = [];
+const vapi = http.createServer((rq, rs) => {
+  vseen.push({ auth: rq.headers.authorization || '' });
+  const H = { 'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' };
+  /* 예비 요청(OPTIONS)에는 늘 200 — 진짜 Supabase 도 그렇게 답한다.
+     여기에 오류를 주면 앱이 아니라 <b>이 점검</b>이 틀린다. 실제로 그랬다. */
+  if (rq.method === 'OPTIONS') { rs.writeHead(200, H); rs.end(''); return; }
+  const owner = /select=owner_id/.test(rq.url);
+  if (VMODE === 'nomig' && owner) {
+    rs.writeHead(400, H);
+    rs.end(JSON.stringify({ code: '42703', message: 'column bohum_scores.owner_id does not exist' })); return;
+  }
+  if (VMODE === 'down') return;                      /* 아무 답도 안 한다 */
+  rs.writeHead(200, H);
+  rs.end(JSON.stringify(owner ? [{ owner_id: null }]
+        : (VMODE === 'open' ? [{ team: 'APEX', name: '홍길동', score: 11 }] : [])));
+});
+await new Promise(r => vapi.listen(0, r));
+const VAPI = 'http://127.0.0.1:' + vapi.address().port;
+const VWANT = {
+  nomig: [/아직 안 돌았습니다/, '안 돌았으면 <b>안 돌았다</b>고 한다 — owner_id 칸이 없다'],
+  open:  [/아직 익명에게 열려 있습니다/, '열려 있으면 <b>열렸다</b>고 한다 — 로그인 없이 읽혔다'],
+  shut:  [/닫힌 것으로 보입니다/, '닫혔으면 <b>닫힌 것으로 보인다</b>고 한다 (단정하지 않는다 — 1번)'],
+  down:  [/확인하지 못했습니다/, '못 물어봤으면 <b>모른다</b>고 한다 — 조용히 「괜찮다」 하지 않는다']
+};
+let vtok = 0;
+for (const m of ['nomig', 'open', 'shut', 'down']) {
+  VMODE = m; vseen = [];
+  const vp = await browser.newPage();
+  await vp.goto(SITE + '/' + DIR + '/index.html#GUIDE', { waitUntil: 'domcontentloaded' });
+  await vp.waitForTimeout(2200);
+  await vp.evaluate((api) => {
+    SYNC.cfg.url = api; SYNC.cfg.key = 'ANONKEY';
+    /* <b>로그인해 둔 채로</b> 눌러도 토큰을 붙이면 안 된다 — 바깥 사람 자격이라야
+       「바깥에서 보이나」를 잰다. 붙이면 늘 「안 열렸다」 로 나온다. */
+    try { localStorage.setItem('sb-127-auth-token', JSON.stringify(
+      { access_token: 'SECRET', expires_at: Math.floor(Date.now() / 1000) + 3600, user: { id: 'u1' } })); } catch (e) {}
+    document.getElementById('sqlVerifyBtn').click();
+  }, VAPI);
+  await vp.waitForTimeout(m === 'down' ? 14000 : 1600);
+  const say = await vp.evaluate(() => {
+    const b = document.getElementById('sqlmsg');
+    return { cls: b.className, t: (b.textContent || '').replace(/\s+/g, ' ').trim() };
+  });
+  await vp.close();
+  vtok += vseen.filter(s => s.auth).length;
+  is(VWANT[m][0].test(say.t), '  ' + VWANT[m][1] + ' — 「' + say.t.slice(0, 30) + '…」');
+  is(m === 'shut' ? /ok/.test(say.cls) : /no/.test(say.cls),
+     '  ' + m + ' — 색이 맞다 (' + say.cls.replace('setupmsg ', '') + ')');
+}
+is(vtok === 0,
+   '  네 판 모두 <b>로그인 토큰을 안 달고</b> 물었다 — 달면 늘 「안 열렸다」 가 나온다 · ' + vtok + '건');
+vapi.close();
+const VSRC = fs.readFileSync(DIR + '/index.html', 'utf8');
+const vms = (VSRC.match(/SQLV_WAIT_MS\s*=\s*(\d+)/) || [])[1];
+is(vms && +vms >= 3000 && +vms <= 30000,
+   '  두드리는 데 <b>시간 제한</b>이 있다 — ' + (vms ? vms + 'ms' : '없음') + ' (4-1)');
+is(!/링크를 아는 사람은 점수를 넣을 수 있다/.test(VSRC),
+   '  보안 메모가 <b>옛말을 안 한다</b> — 이제 로그인한 사람만 넣을 수 있다');
+
 console.log('\n[8] 콘솔이 조용하다');
 is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
 
