@@ -8054,10 +8054,35 @@ function arAutoRun(){
   /* 사람이 쓰고 있는 중이면 비켜 준다 */
   try{if(typeof VA!=='undefined'&&(VA.busy||VA.making))return;}catch(e){}
   try{if(typeof BR!=='undefined'&&BR.busy)return;}catch(e){}
-  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
   if(typeof callAI!=='function')return;
   if(!arDue())return;                         /* 아직 오전 8시 전 — 그때 다시 본다 */
   try{if(localStorage.getItem(arAutoKey())==='1')return;}catch(e){}
+  /* ── 기록을 <b>스스로</b> 읽어 온다 ───────────────────────────────
+     여기까지 왔으면 「오늘 만들 것이 남았다」 는 뜻이다. 그런데 여태는
+     이 자리에서 <b>「기록이 아직 안 읽혔으면 그냥 돌아간다」</b> 였다.
+
+     그 기록을 읽어 주는 유일한 자리가 <b>아침 창</b>(arBriefMaybe)인데,
+     아침 창은 <b>오늘 이미 보셨거나 꺼 두셨으면 그냥 돌아간다.</b>
+     그래서 아침 창을 닫고 앱을 <b>다시 여시면</b>, 또는 아침 창을 꺼
+     두셨으면, 10분마다 깨어나 아무것도 안 하고 돌아가기만 했다 —
+     TFA 를 손으로 열기 전까지 팀 보고가 영영 안 만들어졌다. 아무
+     말도 없이. 재 보니 실제로 그랬다.
+
+     읽는 것은 <b>하루에 이 한 번</b>이다 — 다 만들고 나면 바로 위
+     자물쇠에 걸려 다시 안 읽는다 (CLAUDE.md 7번: 서버를 아껴 쓴다). */
+  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded){
+    if(!AR.busy&&typeof arLoad==='function'){
+      arLoad();
+      /* 다 읽히면 <b>바로 이어서</b> 만든다 — 다음 10분을 기다리시게 두지 않는다 */
+      var t=0,wait=function(){
+        t++;
+        if(typeof GB!=='undefined'&&GB.loaded&&AR.loaded){try{arAutoRun();}catch(e){}return;}
+        if(t<14)setTimeout(wait,900);
+      };
+      setTimeout(wait,900);
+    }
+    return;
+  }
   var need=arAutoNeed(),lead=arIsLead();
   if(!need.length){try{localStorage.setItem(arAutoKey(),'1');}catch(e){}return;}
   try{localStorage.setItem(arAutoKey(),'1');}catch(e){}
@@ -11780,8 +11805,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 19:20';
-var APP_BUILD_NOTE='<b>아침에 출근해서 앉아 계시던 5분을 없앴습니다.</b> 팀 보고 서른두 명을 <b>한 사람씩</b> 세우고 있었습니다 — AI 한 번이 10초쯤이라 32명이면 5분이 넘고, 그동안 화면에는 「만드는 중 2 / 32」 만 돌았습니다. 서로 기다릴 이유가 없는 일이라(사람마다 따로 쓰는 보고입니다) 이제 <b>네 명씩 동시에</b> 돕니다 — 재 보니 <b>4배</b> 빨라졌고 한 사람도 안 빠집니다. 그리고 몇 명이 실패해도 <b>「팀 전원 보고가 준비됐습니다」</b> 라고 하던 것을 고쳤습니다. 이제 <b>「32명 중 30명 — 2명은 AI 가 답하지 않아 못 만들었습니다」</b> 라고 말하고, 없는 보고를 지어내지 않습니다. 함께 <b>①TFA 업무관리 안에 「📊 대표 브리핑」 칸</b>을 넣었습니다(아침 7시에 서버가 만들어 두는 그 한 장입니다). <b>②메뉴 찾기가 화면 안의 칸까지</b> 찾습니다 — 여태 「팀원 관리」·「해야 할 일」·「30일 고객관리」 처럼 TFA <b>안</b>에 있는 이름은 열두 칸 중 열한 칸이 안 찾혔습니다. 새 점검 <code>check-tfamorning</code> 24가지 — 열 자리를 되돌려 전부 빨간불을 확인했습니다.';
+var APP_BUILD='2026-08-28 20:10';
+var APP_BUILD_NOTE='<b>앱을 다시 열면 팀 보고가 저절로 안 만들어지고 있었습니다 — 아무 말도 없이.</b> 로그인하면 10분마다 깨어나 「오늘 보고를 만들까」 를 보는 자리가 있는데, 그것이 <b>기록(성장판·CRM)이 이미 읽혀 있어야만</b> 돌았습니다. 그 기록을 읽어 주는 유일한 자리가 <b>아침 창</b>인데, 아침 창은 <b>오늘 이미 보셨거나 꺼 두셨으면 그냥 돌아갑니다.</b> 그래서 아침 창을 닫고 앱을 다시 여시면, 또는 아침 창을 꺼 두셨으면, 10분마다 깨어나 아무것도 안 하고 돌아가기만 했습니다 — <b>TFA 를 손으로 열기 전까지</b> 영영 안 만들어졌습니다. 「출근해서 시작해야 된다」 의 뿌리입니다. 이제 <b>필요하면 스스로 읽어 옵니다.</b> 읽는 것은 하루에 한 번뿐이고(다 만들면 자물쇠가 걸립니다), <b>자동을 끄셨으면 안 읽습니다</b> — 끈 것을 무시하지 않습니다. 재 보니 ①처음 열 때 ②아침 창을 이미 봤을 때 ③아침 창을 꺼 두셨을 때 <b>세 경우 모두</b> 시작됩니다. <code>check-tfamorning</code> [7] 다섯 가지 — 세 자리를 되돌려 전부 빨간불을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

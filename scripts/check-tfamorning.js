@@ -196,7 +196,66 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(oneQ.own === 0,
      '  제 손으로 줄 세우는 판이 <b>안 남아 있다</b> — ' + oneQ.own + '곳');
 
-  console.log('\n[7] 콘솔이 조용하다');
+  /* ─────────────────────────────────────────────────────────────── */
+  /* ── 앱을 열면 <b>정말로</b> 저절로 시작되는가 ──────────────────────
+     로그인하면 45초 뒤·10분마다 arAutoRun 이 깨어난다. 그런데 그것은
+     <b>기록(GB·AR)이 이미 읽혀 있어야만</b> 돌았고, 읽어 주는 유일한
+     자리가 <b>아침 창</b>(arBriefMaybe)이었다. 아침 창은 오늘 이미
+     보셨거나 꺼 두셨으면 그냥 돌아간다.
+
+     그래서 아침 창을 닫고 앱을 <b>다시 여시면</b>, 또는 아침 창을 꺼
+     두셨으면, 10분마다 깨어나 아무것도 안 하고 돌아가기만 했다 —
+     TFA 를 손으로 열기 전까지 팀 보고가 영영 안 만들어졌다.
+     아무 말도 없이. 「출근해서 시작해야 된다」 의 진짜 뿌리다.       */
+  console.log('\n[7] 앱을 열면 저절로 시작된다 — 아침 창을 껐어도');
+  const auto = await page.evaluate(() => {
+    OS.profile = { name: '윤시현', role: 'owner', id: 'me' };
+    const cases = [
+      ['아침에 처음 연다', () => {}],
+      ['오늘 아침 창을 이미 봤다', () => localStorage.setItem(arBriefKey(), '1')],
+      ['아침 창을 꺼 두셨다', () => localStorage.setItem('apex_ar_brief_off', '1')]
+    ];
+    const realLoad = window.arLoad;
+    const got = cases.map(([label, setup]) => {
+      ['apex_ar_brief_off', 'apex_ar_auto_off'].forEach(k => localStorage.removeItem(k));
+      Object.keys(localStorage).filter(k => /^apex_ar_(brief|team)_/.test(k))
+        .forEach(k => localStorage.removeItem(k));
+      GB.loaded = false; GB.rows = null; AR.loaded = false; AR.busy = '';
+      let n = 0; window.arLoad = function () { n++; };
+      setup();
+      try { arBriefMaybe(); } catch (e) {}
+      try { arAutoRun(); } catch (e) {}
+      return { label, n };
+    });
+    /* 자동을 <b>끄셨으면</b> 안 읽어야 한다 — 끈 것을 무시하면 안 된다 */
+    ['apex_ar_brief_off'].forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => /^apex_ar_(brief|team)_/.test(k))
+      .forEach(k => localStorage.removeItem(k));
+    GB.loaded = false; AR.loaded = false; AR.busy = '';
+    let offN = 0; window.arLoad = function () { offN++; };
+    localStorage.setItem('apex_ar_auto_off', '1');
+    localStorage.setItem(arBriefKey(), '1');
+    try { arAutoRun(); } catch (e) {}
+    localStorage.removeItem('apex_ar_auto_off');
+    /* 오늘 <b>이미 다 만들었으면</b> 또 읽지 않는다 (CLAUDE.md 7번) */
+    Object.keys(localStorage).filter(k => /^apex_ar_brief_/.test(k)).forEach(k => localStorage.removeItem(k));
+    GB.loaded = false; AR.loaded = false; AR.busy = '';
+    let doneN = 0; window.arLoad = function () { doneN++; };
+    localStorage.setItem(arAutoKey(), '1');
+    localStorage.setItem(arBriefKey(), '1');
+    try { arAutoRun(); } catch (e) {}
+    localStorage.removeItem(arAutoKey());
+    window.arLoad = realLoad;
+    return { got, offN, doneN };
+  });
+  auto.got.forEach(g => is(g.n > 0,
+    '  ' + g.label + ' — <b>기록을 읽으러 간다</b>' + (g.n > 0 ? '' : ' · 안 간다 (TFA 를 손으로 열어야 시작된다)')));
+  is(auto.offN === 0,
+     '  <b>자동을 끄셨으면</b> 안 읽는다 — 끈 것을 무시하지 않는다 · ' + auto.offN + '번');
+  is(auto.doneN === 0,
+     '  오늘 <b>이미 다 만들었으면</b> 또 안 읽는다 — ' + auto.doneN + '번 (10분마다 서버를 부르면 안 된다)');
+
+  console.log('\n[8] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   await browser.close();
