@@ -80,6 +80,13 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
 .gate.ok{background:var(--okbg);border:1px solid #A7F3D0;color:#065F46}
 .gate.no{background:var(--badbg);border:1px solid #FECACA;color:var(--bad)}
 .gate ul{margin:6px 0 0 16px;padding:0}
+.dots{display:flex;gap:5px;align-items:center;font-size:11.5px;color:var(--sub)}
+.dots i{width:13px;height:13px;border-radius:50%;background:var(--line);display:inline-block;font-style:normal}
+.dots i.on{background:var(--ok)}
+.dots i.now{box-shadow:0 0 0 2px var(--brand)}
+tr.now>td{background:#EBF3FF}
+tr.late>td{background:#FFF7E6}
+.big{font-size:15px;padding:11px 16px}
 .art{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:9px}
 .art .t{font-size:12.5px;font-weight:800}
 .art .w{font-size:11px;color:var(--sub);margin:2px 0 7px}
@@ -118,12 +125,15 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
   <h1>🏭 블로그 <span>공장</span></h1>
   <span class="tag" id="tgAi" style="cursor:pointer" onclick="connOpen()">연결 확인 중…</span>
   <span class="tag" id="tgNews">뉴스 —</span>
+  <span class="tag" id="tgCmp" style="cursor:pointer" onclick="cmpOpen()">준법 문구 —</span>
   <span style="flex:1"></span>
   <button class="sm" onclick="location.href='index.html'">앱으로</button>
 </div></header>
 
 <div class="wrap">
   <div class="card" id="conn" hidden></div>
+  <div class="card" id="cmp" hidden></div>
+  <div class="card" id="today"></div>
 
   <div class="card">
     <h2>① 오늘 쓸 것 고르기</h2>
@@ -169,6 +179,7 @@ function toast(m, ms) { const t = $('toast'); t.textContent = m; t.classList.add
    글감 모으는 법도 · 주문서 쓰는 법도 · 쓸 그림도 여기 한 곳이 답한다. */
 const KINDS = {
  econ: { t:'매일 경제뉴스', ic:'📈', reader:'고객', cat:'경제',
+   c:'#1A56DB',
    why:'서버가 받아 온 <b>경제 칸</b> 기사입니다. 금리·환율·물가는 매일 바뀌어 매일 쓸 거리가 나옵니다.',
    empty:'아직 안 받았습니다. 위 «오늘 뉴스 받기»를 누르세요.',
    art:['cover','news','toc'],
@@ -177,6 +188,7 @@ const KINDS = {
      + '특정 상품을 권하는 글로 만들지 말고, 마지막에만 「같이 보실 분은 말씀 주세요」 정도로 닫는다.' },
 
  news: { t:'보험·정책 뉴스', ic:'📰', reader:'고객', cat:'보험,부동산,생활정책,정책자금',
+   c:'#0E7490',
    why:'보험·부동산·생활정책·정책자금 칸입니다. 제도가 바뀌면 사람들이 검색합니다.',
    empty:'아직 안 받았습니다. 위 «오늘 뉴스 받기»를 누르세요.',
    art:['cover','news','w8','toc'],
@@ -184,6 +196,7 @@ const KINDS = {
      + '이 소식이 우리 고객에게 무슨 뜻인지를 풀어 주는 글이다. 기사에 없는 숫자는 쓰지 말고 [[확인 필요: …]] 로 남긴다.' },
 
  ask: { t:'상담에서 나온 질문', ic:'💬', reader:'고객',
+   c:'#7C3AED',
    why:'고객이 실제로 물은 것입니다. 같은 질문을 검색창에도 칩니다.',
    empty:'아직 없습니다. 아래 칸에 오늘 나온 질문을 그대로 적어 두세요 — 이름은 빼고.',
    mine:{ ph:'예: 암 진단비는 얼마가 적당한가요?', label:'상담에서 나온 질문 담기 — <b>이름은 빼고 질문만</b>' },
@@ -192,12 +205,14 @@ const KINDS = {
      + '\n\n같은 것을 검색창에 치는 사람이 읽고 「내 얘기다」 싶게, 질문을 제목에 살려서 쓴다.' },
 
  ours: { t:'우리가 해 드리는 일', ic:'🏢', reader:'고객',
+   c:'#047857',
    why:'회사 홍보입니다. 자랑이 아니라 <b>무엇을 어떻게 해 드리는지</b>를 적습니다.',
    empty:'', art:['cover','w8','flow','vs','toc'],
    order: s => '우리가 하는 일을 소개하는 글 한 편을 써 줘.\n\n무엇을 하나: ' + (s.doing || s.title)
      + '\n\n자랑하지 말고, 이 일을 받으면 고객에게 무엇이 달라지는지를 적는다. 없는 실적·후기·만족도를 만들어 넣지 않는다. 마지막에 부드러운 상담 유도 한 줄.' },
 
  culture: { t:'우리가 하는 문화', ic:'🤝', reader:'동료',
+   c:'#BE185D',
    why:'<b>같이 일할 사람</b>이 읽는 글입니다. 분위기를 꾸미지 말고 <b>실제로 지키는 방식</b>을 적습니다.',
    empty:'',
    mine:{ ph:'예: 상담 끝나면 그날 안에 기록을 남깁니다', label:'우리 문화 담기 — <b>실제로 하는 것만</b> (동료 이름은 빼고)' },
@@ -207,7 +222,19 @@ const KINDS = {
      + '\n\n분위기·감성을 지어내지 말고 이 방식 하나만 구체적으로 쓴다. 「가족 같은」 「열정 넘치는」 같은 말은 쓰지 않는다. '
      + '수입·수수료·소득을 말하지 않는다 — 보장한다고 읽히면 모집 광고 규정에 걸린다. 실제 동료의 이름·사연은 쓰지 않는다.' },
 
+ day: { t:'오늘 있었던 일', ic:'📅', reader:'고객',
+   c:'#B45309',
+   why:'<b>사람이 보이는 글</b>입니다. 정보 글만 있는 블로그에는 이웃이 안 붙습니다 — 오늘 있었던 일 하나면 됩니다.',
+   empty:'아직 없습니다. 아래 칸에 오늘 있었던 일을 한 줄로 적어 두세요 — <b>이름과 알아볼 사연은 빼고</b>.',
+   mine:{ ph:'예: 청구 서류가 반려돼 병원에 다시 다녀왔다', label:'오늘 있었던 일 담기 — <b>실제로 있었던 것만</b> (이름·알아볼 사연은 빼고)' },
+   art:['cover','toc'],
+   order: s => '오늘 있었던 일을 짧은 글 한 편으로 써 줘.\n\n오늘 있었던 일: ' + s.title
+     + '\n\n일기가 아니라, 읽는 사람이 한 가지를 가져가는 글이다. 있었던 일 하나만 쓰고 거기서 알게 된 것 하나로 닫는다.\n'
+     + '<b>위에 적힌 것 밖의 장면·대화·감정·숫자를 만들어 넣지 않는다</b> — 보태는 순간 지어낸 글이 된다. 모자라면 짧게 끝낸다.\n'
+     + '고객·동료의 이름과 알아볼 수 있는 사연은 쓰지 않는다. 상품을 권하는 글로 만들지 않는다.' },
+
  growth: { t:'APEX 로 크는 법', ic:'🌱', reader:'동료',
+   c:'#4338CA',
    why:'전체 지도의 <b>순서표</b>를 그대로 씁니다. 「이 상황엔 이 순서」 가 정리돼 있어 지어낼 것이 없습니다.',
    empty:'지도(apex-map-data.js)를 못 읽었습니다. 이 갈래는 지도에서만 나옵니다 — 없으면 만들지 않습니다.',
    art:['cover','steps','toc'],
@@ -217,9 +244,13 @@ const KINDS = {
      + '\n\n위 순서와 메뉴 이름을 그대로 쓴다. 지도에 없는 기능·성과·수입을 만들어 넣지 않는다. '
      + '「이렇게 하면 얼마 번다」 로 끌지 말고, 「막히던 자리가 이 순서로 풀린다」 로 쓴다.' }
 };
-const ORDER = ['econ','news','ask','ours','culture','growth'];
-/* 열 편에 홍보 하나, 동료용 둘 */
-const MIX = ['econ','ask','news','ours','econ','ask','news','culture','econ','growth'];
+const ORDER = ['econ','news','ask','day','ours','culture','growth'];
+/* 스무 편이 한 바퀴 — 홍보는 열에 하나. 매일 올리면 스무 날에 한 바퀴 돈다.
+   정보 글만 이어지면 이웃이 안 붙어서 「오늘 있었던 일」을 넷에 하나꼴로 끼운다. */
+const MIX = ['econ','ask','day','news','ours',
+             'econ','ask','day','news','culture',
+             'econ','ask','day','news','ours',
+             'day', 'econ','ask','growth','day'];
 
 /* 홍보·문화 글감 — 우리가 <b>실제로 하는 일</b>만. 없는 일을 적으면 그 순간 지어낸 것이 된다. */
 const OURS = [
@@ -278,11 +309,11 @@ const LEN_ORDER = ['짧게','보통','길게','아주 길게'];
 function lenNow(){ return LENS[S.len] || LENS['보통']; }
 
 /* ══════════ 담아 두는 것 ══════════ */
-const S = { rows:[], perweek:2, len:'보통', busy:-1, news:{ at:'', items:[], err:'' }, comply:null };
+const S = { rows:[], perweek:7, len:'보통', busy:-1, news:{ at:'', items:[], err:'' }, comply:null, complyMine:false };
 const KEY = 'apex_blog_studio';
 const MINE = k => 'apex_blog_mine_' + k;
 function load(){ try{ const v=JSON.parse(localStorage.getItem(KEY)||'null');
-  if(v){ S.rows=v.rows||[]; S.perweek=v.perweek||2; S.len=LENS[v.len]?v.len:'보통'; S.news=v.news||S.news; } }catch(e){} }
+  if(v){ S.rows=v.rows||[]; S.perweek=v.perweek||7; S.len=LENS[v.len]?v.len:'보통'; S.news=v.news||S.news; } }catch(e){} }
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify({rows:S.rows,perweek:S.perweek,len:S.len,news:S.news})); }
   catch(e){ toast('글이 많아 다 저장하지 못했습니다. 만든 글은 복사해 두세요.'); } }
 function mine(k){ try{ const v=JSON.parse(localStorage.getItem(MINE(k))||'[]'); return v.push?v:[]; }catch(e){ return []; } }
@@ -293,10 +324,9 @@ function mineAdd(k){
   if(q.length<5){ toast('조금 더 적어 주세요.'); return; }
   const nm=names(q);
   if(nm.length){ toast('이름 같은 말이 있습니다('+nm[0]+'). 이름은 빼고 적어 주세요.'); return; }
-  const a=mine(k); a.unshift({q,at:today()}); mineSave(k,a); el.value=''; paint();
+  const a=mine(k); a.unshift({q,at:ymd(0)}); mineSave(k,a); el.value=''; paint();
 }
 function mineDel(k,i){ const a=mine(k); a.splice(i,1); mineSave(k,a); paint(); }
-const today = () => new Date(Date.now()+9*36e5).toISOString().slice(0,10);
 
 /* ══════════ 글감 ══════════ 없으면 없다고 한다 */
 function newsSeeds(kind){
@@ -327,6 +357,7 @@ function seeds(){
   return {
     econ: newsSeeds('econ'), news: newsSeeds('news'),
     ask: mineSeeds('ask','상담에서 나온 질문'),
+    day: mineSeeds('day','오늘 있었던 일로 적어 두신 것'),
     ours: listSeeds('ours',OURS,'우리가 실제로 하는 일'),
     culture: listSeeds('culture',CULTURE,'우리가 실제로 지키는 방식').concat(mineSeeds('culture','적어 두신 우리 문화')),
     growth: growthSeeds()
@@ -337,7 +368,7 @@ function seeds(){
    낱말표를 여기 다시 적지 않는다. 어느 매체가 어느 칸인지는
    config/sources.json 이 정하고, 서버가 그대로 나눠 준다. */
 async function pullNews(){
-  const b=$('btnNews'); b.disabled=true; b.innerHTML='<span class="spin"></span> 받는 중…';
+  const b=$('btnNews')||{}; b.disabled=true; if('innerHTML' in b) b.innerHTML='<span class="spin"></span> 받는 중…';
   const cats=[...new Set(ORDER.filter(k=>KINDS[k].cat).flatMap(k=>KINDS[k].cat.split(',')))];
   const items=[], errs=[];
   for (const c of cats){
@@ -357,41 +388,127 @@ async function pullNews(){
       }
     }catch(e){ errs.push(c+': '+(e.message||'실패')); }
   }
-  S.news={ at:new Date(Date.now()+9*36e5).toISOString().replace('T',' ').slice(0,16),
+  S.news={ at:kday(0).toISOString().replace('T',' ').slice(0,16),
            items, err:errs.join(' · ') };
-  save(); b.disabled=false; b.textContent='📰 오늘 뉴스 받기'; paint();
+  save(); b.disabled=false; if('textContent' in b) b.textContent='📰 오늘 뉴스 받기'; paint();
   toast(items.length ? (items.length+'건 받았습니다') : ('못 받았습니다 — '+(errs[0]||'기사가 없습니다')));
 }
 
 /* ══════════ 편성 ══════════ */
+/* ══════════ 오늘이 며칠인가 — 한 곳만 안다 ══════════
+   여러 곳에서 날짜를 다시 세면 하루가 어긋난다. 한국 시각(UTC+9) 하나로 센다. */
+function kday(plus){ return new Date(Date.now()+9*36e5+(plus||0)*864e5); }
+function ymd(plus){ return kday(plus).toISOString().slice(0,10); }
 function dlabel(plus){
-  const d=new Date(Date.now()+9*36e5+plus*864e5);
+  const d=kday(plus);
   return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'('+['일','월','화','수','목','금','토'][d.getUTCDay()]+')';
+}
+/* 오늘 쓸 줄이 몇 번째인가 — 이 답도 한 곳에서만 한다 */
+function todayAt(){ const t=ymd(0); return S.rows.findIndex(r=>r.ymd===t); }
+/* 밀린 줄 — 오늘보다 이전인데 아직 안 올린 것 */
+function lateRows(){ const t=ymd(0);
+  return S.rows.map((r,i)=>({r,i})).filter(x=>x.r.ymd && x.r.ymd<t && !x.r.up); }
+/* 뉴스가 오늘 받아 온 것인가 — 어제 기사로 「오늘의 경제」 를 쓰면 날짜가 틀린 글이 나간다 */
+function newsFresh(){ return String(S.news.at||'').slice(0,10)===ymd(0); }
+/* 오늘까지 며칠을 이어서 올렸나 — 오늘 것을 아직 안 올렸으면 어제부터 센다 */
+function streak(){
+  const up={}; S.rows.forEach(r=>{ if(r.up&&r.ymd) up[r.ymd]=1; });
+  let n=0, from=up[ymd(0)]?0:-1;
+  for(let d=from;d>-400;d--){ if(!up[ymd(d)]) break; n++; }
+  return n;
 }
 function plan(){
   const s=seeds(), used={}, rows=[];
   ORDER.forEach(k=>used[k]=0);
+  /* 이미 써 둔 것은 날짜로 찾아 그대로 옮긴다 — 다시 편성한다고 어제 쓴 글을 지우면 안 된다 */
+  const keep={}; S.rows.forEach(r=>{ if(r.ymd&&(r.out||r.up)) keep[r.ymd]=r; });
   const n=S.perweek*4, gap=Math.max(1,Math.round(7/S.perweek));
   for(let i=0;i<n;i++){
+    const day=i*gap, k2=ymd(day);
+    if(keep[k2]){ rows.push(keep[k2]); delete keep[k2]; continue; }
     const kind=MIX[i%MIX.length], pool=s[kind]||[];
     const seed=pool.length?pool[used[kind]%pool.length]:null;
     used[kind]++;
-    rows.push({ when:dlabel(i*gap+1), kind, seed, out:'', guard:null, up:false });
+    rows.push({ ymd:k2, when:dlabel(day), kind, seed, out:'', guard:null, up:false });
   }
-  S.rows=rows; save(); paint();
+  /* 편성 밖으로 밀려난 것도 안 버린다 — 지난 것이라도 쓴 글은 쓴 글이다 */
+  const left=Object.keys(keep).sort().map(d=>keep[d]);
+  S.rows=left.concat(rows); save(); paint();
   const empty=rows.filter(r=>!r.seed).length;
-  toast(empty ? (n+'편 편성 — 글감이 없어 '+empty+'줄은 비워 뒀습니다') : (n+'편을 편성했습니다'));
+  toast((empty ? (n+'편 편성 — 글감이 없어 '+empty+'줄은 비워 뒀습니다') : (n+'편을 편성했습니다'))+
+        (left.length?(' · 써 두신 '+left.length+'편은 그대로 뒀습니다'):''));
 }
 function setWeek(n){ S.perweek=n; save(); paint(); }
 function setLen(k){ if(!LENS[k]) return; S.len=k; save(); paint(); }
 
 /* ══════════ 준법 문구 — config/compliance.json ══════════ */
+/* ══════════ 준법 문구 ══════════
+   config/compliance.json 은 <b>기본값</b>이다 — 그 파일 스스로 「회사 준법감시 지침에
+   맞게 수정하세요」 라고 적어 두었다. 회사 문구를 우리가 지어낼 수는 없으므로,
+   여기에 붙여 넣을 자리를 만들고 <b>넣기 전까지는 기본값이라고 계속 말한다.</b>
+   말없이 기본 문구가 붙어 나가면, 회사 문구인 줄 알고 그대로 올리게 된다. */
+const CKEY = 'apex_blog_comply';
+const CF = [
+ { k:'카드_하단_고정', t:'게시물 하단 고정 문구', ph:'회사 준법감시 지침의 문구를 그대로 붙여 넣으세요', must:true },
+ { k:'투자상품_문구',  t:'투자성 상품이 나올 때 (변액·펀드·주식·ETF·수익률)', ph:'없으면 비워 두세요' },
+ { k:'달러보험_문구',  t:'외화보험이 나올 때 (달러·환율)', ph:'없으면 비워 두세요' },
+ { k:'세제_문구',      t:'세금이 나올 때 (세액공제·비과세·상속·증여)', ph:'없으면 비워 두세요' }
+];
+function cmpMine(){ try{ const v=JSON.parse(localStorage.getItem(CKEY)||'null');
+  return (v && v['카드_하단_고정']) ? v : null; }catch(e){ return null; } }
 async function comply(){
   if(S.comply!==null) return S.comply;
+  const own=cmpMine();
+  if(own){ S.comply=own; S.complyMine=true; return S.comply; }
+  S.complyMine=false;
   try{ const r=await fetch('../config/compliance.json'); if(!r.ok) throw 0;
        S.comply=JSON.parse(await r.text()); }
   catch(e){ S.comply=false; }
   return S.comply;
+}
+let CMP_OPEN=false;
+function cmpOpen(){ CMP_OPEN=!CMP_OPEN; paint();
+  if(CMP_OPEN) $('cmp').scrollIntoView({behavior:'smooth',block:'center'}); }
+function cmpBox(){
+  const c=S.comply||{}, own=cmpMine()||{};
+  return '<h2>🛡 준법 문구 — 회사 것으로 바꾸세요</h2>'+
+    (S.complyMine
+      ? '<div class="gate ok">회사 문구가 들어가 있습니다. 글 끝에 이 문구가 붙어 나갑니다.</div>'
+      : '<div class="gate no"><b>아직 기본 문구입니다.</b><ul>'+
+        '<li>지금 붙는 문구는 <code>config/compliance.json</code> 의 <b>견본</b>입니다 — 그 파일 스스로 「회사 준법감시 지침에 맞게 수정하세요」 라고 적혀 있습니다.</li>'+
+        '<li>회사 문구를 <b>우리가 지어낼 수 없습니다.</b> 준법감시 지침에 적힌 문장을 <b>그대로</b> 아래에 붙여 넣으세요.</li>'+
+        '</ul></div>')+
+    '<div class="desc">여기 넣은 문구는 <b>이 브라우저에만</b> 저장됩니다. 팀 전체가 같은 문구를 쓰시려면 '+
+    '<code>config/compliance.json</code> 에 넣어야 합니다 — 문구를 알려 주시면 그 파일에 넣어 드립니다.</div>'+
+    '<div class="row" style="margin-bottom:10px">'+
+      '<div style="flex:1;min-width:170px"><label>소속·회사 이름 <span style="color:var(--sub)">(비워 두면 안 넣습니다)</span></label>'+
+      '<input id="p_org" placeholder="예: ○○에셋 ○○본부" value="'+esc(own['소속']||'')+'"></div>'+
+      '<div style="flex:1;min-width:150px"><label>광고심의필 번호 <span style="color:var(--sub)">(받으셨을 때만)</span></label>'+
+      '<input id="p_gam" placeholder="예: 26-0000-0000" value="'+esc(own['광고심의필']||'')+'"></div>'+
+    '</div>'+
+    CF.map(f=>'<div style="margin-bottom:8px"><label>'+f.t+(f.must?' <b style="color:var(--bad)">— 반드시</b>':'')+'</label>'+
+      '<textarea id="p_'+f.k+'" rows="2" placeholder="'+esc(f.ph)+'" '+
+      'style="width:100%;font:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:7px;resize:vertical">'+
+      esc(own[f.k]!==undefined?own[f.k]:(c[f.k]||''))+'</textarea></div>').join('')+
+    '<div class="row" style="margin-top:4px">'+
+      '<button class="p" onclick="cmpSave()">회사 문구로 저장</button>'+
+      '<button onclick="cmpReset()">기본값으로 되돌리기</button>'+
+    '</div>'+
+    '<div class="note">저장하면 지금까지 만든 초안에도 <b>바뀐 문구가 붙어</b> 나갑니다. '+
+    '이 문구가 회사 준법감시(광고 심의)를 <b>대신하지 않습니다</b> — 게시 전 절차는 그대로 거치세요.</div>';
+}
+function cmpSave(){
+  const v={ '소속':($('p_org').value||'').trim(), '광고심의필':($('p_gam').value||'').trim() };
+  CF.forEach(f=>{ v[f.k]=($('p_'+f.k).value||'').trim(); });
+  if(!v['카드_하단_고정']){ toast('하단 고정 문구는 비워 둘 수 없습니다 — 회사 문구를 붙여 넣으세요.'); return; }
+  try{ localStorage.setItem(CKEY,JSON.stringify(v)); }
+  catch(e){ toast('저장하지 못했습니다.'); return; }
+  S.comply=null; comply().then(()=>{ paint(); toast('회사 문구로 바꿨습니다.'); });
+}
+function cmpReset(){
+  try{ localStorage.removeItem(CKEY); }catch(e){}
+  S.comply=null; CMP_OPEN=true;
+  comply().then(()=>{ paint(); toast('기본값으로 되돌렸습니다 — 회사 문구를 다시 넣어 주세요.'); });
 }
 
 /* ══════════ AI — 앱에 저장해 둔 연결을 그대로 쓴다 ══════════ */
@@ -440,11 +557,27 @@ function sysPrompt(){
   '8. 이미지 자리표시는 [쓸 수 있는 그림] 에 있는 것만 부른다. 「고객 사진」 처럼 목록에 없는 그림을 부르지 않는다 — 우리가 만들지 못해 그 자리가 빈 채로 올라간다. 형식은 [이미지: 그림 이름 | alt: 대체텍스트] 로 쓰고 이름은 목록 그대로 쓴다.\n'+
   '9. 글 끝에 「## 이 글이 딛고 선 것」 을 두고 받은 [근거] 를 그대로 옮겨 적는다.';
 }
+/* 최근에 올린 글의 제목 — <b>우리가 쓴 것</b>이라 지어낸 자료가 아니다.
+   매일 쓰면 같은 이야기가 돌아온다. 이웃은 그때 떨어진다. */
+function recentTitles(not){
+  const out=[];
+  for(let i=S.rows.length-1;i>=0&&out.length<7;i--){
+    const r=S.rows[i]; if(!r.out||r===not) continue;
+    const m=r.out.match(/##\s*제목[^\n]*\n+\s*[-*\d.)\s]*([^\n]{4,60})/);
+    const t=(m?m[1]:(r.seed&&r.seed.title)||'').replace(/^["'\u201c\u201d]|["'\u201c\u201d]$/g,'').trim();
+    if(t&&out.indexOf(t)<0) out.push(t);
+  }
+  return out;
+}
 function userPrompt(row){
-  const s=row.seed, d=KINDS[row.kind], L=lenNow();
+  const s=row.seed, d=KINDS[row.kind], L=lenNow(), rt=recentTitles(row);
   return '[근거]\n'+s.src+'\n\n[읽는 사람] '+d.reader+
     '\n\n[쓸 수 있는 그림] '+d.art.map(a=>'「'+ART[a].t+'」').join(' · ')+
-    ' — 이 이름들만 쓴다. 우리가 직접 그려 넣을 수 있는 그림이 이것뿐이다.\n\n'+d.order(s)+
+    ' — 이 이름들만 쓴다. 우리가 직접 그려 넣을 수 있는 그림이 이것뿐이다.\n\n'+
+    (rt.length?('[요 며칠 이미 올린 글]\n'+rt.map(t=>'· '+t).join('\n')+
+      '\n이것들과 <b>같은 이야기를 다시 하지 않는다.</b> 제목도 각도도 겹치지 않게 쓴다. '+
+      '겹칠 수밖에 없는 소재면 <b>지난번에 안 다룬 쪽</b>을 잡는다.\n\n'):'')+
+    d.order(s)+
     '\n\n[출력 형식 — Markdown]\n'+
     '## 제목 후보 5개\n숫자형·질문형·공감형·정보형을 섞어서 만든다. 핵심어를 앞쪽에 두되 단정·과장·최상급은 쓰지 않는다.\n'+
     '## 본문\n소제목(##) '+L.subs+'개, 소제목마다 '+L.sent+' 이상으로 충분히 풀어 쓴다. 본문 '+L.chars+' 이상을 채운다 — 중간에 요약하듯 끊으면 실패다. '+
@@ -549,6 +682,9 @@ function packText(i){
     if(/변액|펀드|주식|투자|ETF|수익률/.test(out)&&c['투자상품_문구']) tail+='\n'+c['투자상품_문구'];
     if(/달러|외화|환율/.test(out)&&c['달러보험_문구']) tail+='\n'+c['달러보험_문구'];
     if(/세액공제|비과세|절세|상속|증여|과세/.test(out)&&c['세제_문구']) tail+='\n'+c['세제_문구'];
+    /* 없는 것은 안 적는다 — 심의필 번호를 안 받으셨는데 적으면 그것이 거짓말이다 */
+    const stamp=[c['소속']||'', c['광고심의필']?('광고심의필 '+c['광고심의필']):''].filter(Boolean).join(' · ');
+    if(stamp) tail+='\n'+stamp;
   }else{
     tail='\n\n──────────\n[준법 문구를 못 읽었습니다 — config/compliance.json 을 확인하고 회사 문구를 직접 붙여 주세요]';
   }
@@ -593,6 +729,108 @@ async function downAll(i){
   }
   toast(n?(n+'장을 내려받았습니다'):'내려받을 그림이 없습니다');
 }
+/* ══════════ 오늘 한 편 ══════════
+   매일 쓰려면 아침에 <b>누를 단추가 하나</b>여야 한다. 뉴스 받기·편성·글감 찾기·초안을
+   따로 누르게 하면 사흘째에 안 열게 된다. 다만 <b>글감이 없으면 만들지 않는다</b> —
+   무엇을 어디에 적어야 하는지 말하고 그 칸으로 데려다 놓는 데서 멈춘다. (CLAUDE.md 1) */
+function freshSeed(kind){
+  const pool=(seeds()[kind]||[]); if(!pool.length) return null;
+  /* 이미 글로 쓴 글감은 건너뛴다 — 같은 이야기를 이틀 연속 올리게 된다 */
+  const done={}; S.rows.forEach(r=>{ if(r.out&&r.seed) done[r.seed.title]=1; });
+  const un=pool.filter(x=>!done[x.title]);
+  return un.length?un[0]:pool[0];   /* 담은 것은 맨 앞이 최신이다 — 오늘 아침 적은 것부터 쓴다 */
+}
+async function today1(){
+  if(S.busy>=0){ toast('한 편씩 만듭니다.'); return; }
+  if(todayAt()<0) plan();
+  let i=todayAt();
+  if(i<0){ toast('오늘 줄을 못 찾았습니다 — «한 달치 편성» 을 한 번 눌러 주세요.'); return; }
+  const row=S.rows[i], d=KINDS[row.kind];
+  /* 뉴스 갈래인데 어제 것이면 오늘 것으로 다시 받는다 — 날짜가 틀린 글이 나가면 안 된다 */
+  if(d.cat && !newsFresh()) await pullNews();
+  if(!row.out){ const sd=freshSeed(row.kind); if(sd) row.seed=sd; save(); }
+  if(!S.rows[i].seed){
+    paint();
+    toast('오늘 갈래는 「'+d.t+'」 인데 글감이 없습니다. 아래에 한 줄 적어 주세요.');
+    const box=$('mine_'+row.kind)||$('seeds');
+    box.scrollIntoView({behavior:'smooth',block:'center'}); if(box.focus) box.focus();
+    return;
+  }
+  if(!S.rows[i].out) await draft(i); else show(i);
+  const j=todayAt(); if(j>=0&&S.rows[j].out) $('view').scrollIntoView({behavior:'smooth',block:'start'});
+}
+/* 앞으로 며칠을 더 쓸 수 있나 — 글감이 바닥나는 날을 <b>바닥나기 전에</b> 말한다.
+   아침에 열어 보고서야 「없습니다」 를 만나면 그날은 못 쓴다. */
+/* 앞으로 <b>이레</b>만 본다. 한 달치를 재면 어느 갈래든 반드시 바닥나서
+   날마다 「비었습니다」 가 뜬다 — 그러면 아무도 안 읽는다. (CLAUDE.md 8) */
+const RUNDAYS = 7;
+function runway(){
+  const s=seeds(), left={}, t=ymd(0), end=ymd(RUNDAYS), dry={};
+  ORDER.forEach(k=>left[k]=(s[k]||[]).length);
+  S.rows.forEach(r=>{ if(r.out&&r.seed&&left[r.kind]) left[r.kind]--; });
+  let n=0;
+  for(const r of S.rows){
+    if(!r.ymd||r.ymd<t||r.ymd>=end||r.up||r.out) continue;
+    /* 빈 갈래 하나로 「하루밖에 못 쓴다」 고 말하지 않는다 — 그 갈래만 비었을 뿐이다.
+       대신 <b>어느 갈래가 비었는지</b>를 이름으로 말한다. */
+    if(left[r.kind]>0){ left[r.kind]--; n++; } else dry[r.kind]=1;
+  }
+  return { n, dry:ORDER.filter(k=>dry[k]) };
+}
+async function tomorrow1(){
+  const t=ymd(1), i=S.rows.findIndex(r=>r.ymd===t);
+  if(i<0){ toast('내일 줄이 없습니다 — «한 달치 편성» 을 한 번 눌러 주세요.'); return; }
+  if(S.rows[i].out){ show(i); return; }
+  if(!S.rows[i].seed) S.rows[i].seed=freshSeed(S.rows[i].kind);
+  if(!S.rows[i].seed){ toast('내일 갈래는 「'+KINDS[S.rows[i].kind].t+'」 인데 글감이 없습니다.');
+    paint(); $('seeds').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  save(); await draft(i);
+}
+function paintToday(){
+  const i=todayAt(), late=lateRows(), n=streak();
+  const dots='<span class="dots">'+[6,5,4,3,2,1,0].map(b=>{
+      const day=ymd(-b), on=S.rows.some(r=>r.ymd===day&&r.up);
+      return '<i class="'+(on?'on':'')+(b===0?' now':'')+'" title="'+day+'"></i>';
+    }).join('')+'<span style="margin-left:6px">'+(n?('이어서 <b>'+n+'일째</b>'):'아직 시작 전')+'</span></span>';
+  if(i<0){
+    $('today').innerHTML='<h2>📅 오늘 — '+dlabel(0)+'</h2>'+
+      '<div class="gate no">편성표에 <b>오늘 줄이 없습니다.</b> 아래 «한 달치 편성» 을 한 번 누르시면 오늘부터 채워집니다.</div>'+
+      '<div class="row"><button class="p big" onclick="today1()">▶ 오늘 것 한 편 만들기</button></div>'+dots;
+    return;
+  }
+  const row=S.rows[i], d=KINDS[row.kind], has=!!row.seed;
+  let st;
+  if(row.up)       st='<div class="gate ok">오늘 것은 <b>올리셨습니다</b>. 여기까지 하시면 됩니다.</div>';
+  else if(row.out) st='<div class="gate ok">오늘 초안이 <b>나와 있습니다</b>. 아래 단추로 이어서 올리세요.</div>';
+  else if(has)     st='<div class="gate ok">오늘 글감이 <b>있습니다</b> — 「'+esc(row.seed.title.slice(0,44))+'」</div>';
+  else             st='<div class="gate no"><b>오늘 글감이 없습니다.</b><ul><li>'+d.empty+'</li>'+
+                      '<li>없는 것을 만들어 쓰지 않습니다 — 한 줄만 적어 주시면 나머지는 만듭니다.</li></ul></div>';
+  $('today').innerHTML='<h2>📅 오늘 — '+dlabel(0)+' · '+d.ic+' '+esc(d.t)+' '+whoChip(d.reader)+'</h2>'+
+    st+
+    (d.cat&&!newsFresh()
+      ? '<div class="note" style="margin:0 0 9px">뉴스가 '+(S.news.at?('<b>'+esc(S.news.at)+'</b> 것입니다'):'<b>아직 없습니다</b>')+
+        ' — 누르면 오늘 것으로 다시 받고 시작합니다.</div>' : '')+
+    '<div class="row">'+
+      '<button class="p big" onclick="today1()">'+
+        (row.up?'다시 보기':row.out?'▶ 이어서 올리기':has?'▶ 오늘 것 한 편 만들기':'▶ 글감 적으러 가기')+'</button>'+
+      (row.out?'<button onclick="draft('+i+')">🔄 다시 만들기</button>':'')+
+      ((row.out||row.up)?'<button onclick="tomorrow1()">🌙 내일 것 미리 만들기</button>':'')+
+    '</div>'+
+    (function(){ const R=runway(), dry=R.dry.map(k=>KINDS[k].ic+' '+KINDS[k].t);
+      if(R.n>=4&&!dry.length)
+        return '<div class="note" style="margin-top:9px">이번 주 예정된 글은 글감이 <b>다 있습니다</b> ('+R.n+'편).</div>';
+      return '<div class="gate no" style="margin-top:9px"><b>'+
+        (R.n?('이번 주 '+R.n+'편은 글감이 있습니다.'):'이번 주 쓸 글감이 없습니다.')+'</b><ul>'+
+        (dry.length?('<li>비어 있는 갈래 — <b>'+dry.join(' · ')+'</b>. 그날이 오면 그 줄은 빈 채로 지나갑니다.</li>'):'')+
+        '<li>상담 끝나고 <b>한 줄씩</b> 아래에 담아 두세요. 아침에 적으려면 안 적게 됩니다.</li>'+
+        '<li>없는 것을 만들어 채우지 않습니다.</li></ul></div>'; })()+
+    (late.length
+      ? '<div class="note" style="margin-top:10px">밀린 것이 <b>'+late.length+'편</b> 있습니다 — '+
+        late.slice(0,3).map(x=>esc(x.r.when)+' '+KINDS[x.r.kind].ic).join(' · ')+
+        (late.length>3?' 외':'')+'. 아래 표에서 <b>노란 줄</b>입니다. 몰아 쓰지 마시고 오늘 것부터 하세요.</div>'
+      : '')+
+    '<div style="margin-top:10px">'+dots+'</div>';
+}
 function markUp(i,on){ S.rows[i].up=on; save(); paint(); if(on) toast('올린 것으로 표시했습니다'); }
 
 /* ══════════ 그리기 ══════════ */
@@ -617,13 +855,14 @@ function paintSeeds(){
     }
     return h+'</div>';
   }).join('');
-  $('wk').innerHTML=[1,2,3,5].map(n=>'<button class="sm'+(S.perweek===n?' p':'')+'" onclick="setWeek('+n+')">'+n+'편</button>').join(' ');
+  $('wk').innerHTML=[1,2,3,5,7].map(n=>'<button class="sm'+(S.perweek===n?' p':'')+'" onclick="setWeek('+n+')">'+(n===7?'매일':n+'편')+'</button>').join(' ');
   $('len').innerHTML=LEN_ORDER.map(k=>'<button class="sm'+(S.len===k?' p':'')+'" onclick="setLen(\''+k+'\')">'+
     esc(k)+' <span style="opacity:.65">'+esc(LENS[k].chars)+'</span></button>').join(' ');
   const c={}; MIX.forEach(k=>c[k]=(c[k]||0)+1);
   $('mixNote').innerHTML='열 편 도는 비율 — <b>'+ORDER.filter(k=>c[k]).map(k=>KINDS[k].ic+' '+KINDS[k].t+' '+c[k]).join(' · ')+
     '</b>. 홍보는 <b>열에 한 편</b>입니다 — 자랑만 올리는 블로그는 읽히지 않아서, 읽히는 글이 있어야 그 한 편이 읽힙니다. '+
-    '<b>동료가 읽는 글</b>(문화·성장)은 고객 글과 섞이면 둘 다 흐려집니다 — 블로그를 따로 두시거나 분류를 나눠 올리세요.';
+    '<b>동료가 읽는 글</b>(문화·성장)도 <b>같은 블로그</b>에 올립니다 — 블로그를 둘로 나누면 둘 다 안 큽니다. '+
+    '대신 네이버 <b>카테고리를 나눠</b> 올리세요(예: 「고객에게」 · 「우리가 일하는 방식」). 스무 편에 둘이라 고객 글이 묻히지 않습니다.';
 }
 function paintRows(){
   if(!S.rows.length){ $('rows').innerHTML='<div class="note">아직 편성하지 않았습니다. 위에서 «한 달치 편성»을 누르세요.</div>'; return; }
@@ -633,7 +872,9 @@ function paintRows(){
       const st=r.up?'<b style="color:var(--ok)">올림 ✓</b>'
         :r.out?(r.guard&&r.guard.ok?'<b style="color:var(--ok)">초안 ✅</b>':'<b style="color:var(--bad)">고칠 곳</b>')
         :(S.busy===i?'<span class="spin"></span> 만드는 중':'<span style="color:var(--dim)">—</span>');
-      return '<tr><td>'+esc(r.when)+'</td><td style="white-space:nowrap">'+d.ic+' '+esc(d.t)+'</td>'+
+      const t=ymd(0), cls=r.ymd===t?' class="now"':(r.ymd&&r.ymd<t&&!r.up?' class="late"':'');
+      return '<tr'+cls+'><td>'+esc(r.when)+(r.ymd===t?' <b style="color:var(--brand)">◀ 오늘</b>':'')+
+        '</td><td style="white-space:nowrap">'+d.ic+' '+esc(d.t)+'</td>'+
         '<td>'+whoChip(d.reader)+'</td>'+
         '<td>'+(r.seed?esc(r.seed.title.slice(0,40)):'<span style="color:var(--warn)">글감 없음</span>')+'</td>'+
         '<td>'+st+'</td><td style="white-space:nowrap">'+
@@ -661,6 +902,11 @@ async function show(i){
     '<h2>③ 올리기 — '+esc(row.when)+' · '+d.ic+' '+esc(d.t)+' '+whoChip(d.reader)+'</h2>'+
     '<div class="desc">이 글이 딛고 선 것 — <b>'+esc(row.seed.src.split('\n')[0])+'</b></div>'+
     gateBox(g)+
+    (S.complyMine ? '' :
+      '<div class="gate no" style="margin-top:-4px"><b>글 끝에 붙는 준법 문구가 아직 기본값입니다.</b><ul>'+
+      '<li>회사 문구가 아니라 <code>config/compliance.json</code> 의 견본입니다. '+
+      '<a onclick="cmpOpen()" style="cursor:pointer;text-decoration:underline">여기서 회사 문구로 바꾸세요</a>.</li>'+
+      '<li>막지는 않습니다 — 다만 <b>회사 문구인 줄 알고 올리시면 안 됩니다.</b></li></ul></div>')+
     '<div class="row">'+
       (g.ok
         ? '<button class="p" onclick="copyRich('+i+')">📋 서식 있는 복사 (편집기에 그대로)</button>'
@@ -792,7 +1038,7 @@ function connBox(){
 }
 
 function paint(){
-  paintSeeds(); paintRows();
+  paintSeeds(); paintRows(); paintToday();
   /* 연결이 안 돼 있으면 묻지 않아도 열어 둔다 — 여기서 막히면 아무것도 못 한다 */
   const box = $('conn'), want = CONN_OPEN || !aiReady();
   box.hidden = !want;
@@ -807,6 +1053,12 @@ function paint(){
   const n=(S.news.items||[]).length;
   $('tgNews').textContent=n?('뉴스 '+n+'건 · '+S.news.at):'뉴스 아직 안 받음';
   $('tgNews').className='tag '+(n?'on':(S.news.err?'off':''));
+  /* 회사 문구가 안 들어가 있으면 <b>기본값이라고 계속 말한다</b> — 조용히 붙어 나가면 회사 것인 줄 안다 */
+  const cbox=$('cmp'), cwant=CMP_OPEN;
+  cbox.hidden=!cwant;
+  if(cwant) cbox.innerHTML=cmpBox();
+  $('tgCmp').textContent=S.complyMine?'준법 문구 — 회사 것':'준법 문구 — 기본값입니다';
+  $('tgCmp').className='tag '+(S.complyMine?'on':'off');
   paintNewsWhy();
 }
 /* 무엇 때문에 못 받았나 · 무엇을 하면 되나 */
@@ -835,7 +1087,8 @@ function paintNewsWhy(){
     (fix?('<br>'+fix):'')+
     '<br><span style="opacity:.8">글감이 없으면 글을 만들지 않습니다 — 없는 기사를 지어내지 않습니다.</span>';
 }
-load(); paint(); comply();
+/* 준법 문구는 열 때 한 번 미리 읽어 둔다 — 읽고 나서 딱지를 다시 그린다 */
+load(); paint(); comply().then(paint);
 </script>
 </body>
 </html>
