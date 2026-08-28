@@ -36,18 +36,17 @@ window.supabase={createClient:function(){
 window.__DATA={profiles:{rows:[{id:'smoke',name:'점검',role:'owner',active:true,workspace:'both',plan:'vip'}]}};
 `;
 
-/* 그룹마다 최소 한 곳씩 — 골고루 훑는다 */
-const TABS = [
-  'home', 'brain', 'manual', 'ckboard', 'academy', 'org', 'report',
-  'assistant', 'teamx', 'growth', 'ckteam', 'sangdam', 'clients', 'fact_find',
-  'attend', 'interpret', 'wallets', 'contracts', 'endorse', 'treatpay', 'ai_prop',
-  'bojang', 'baba', 'compare', 'katalk', 'finance', 'calc', 'biz_diag', 'biz_news',
-  'ins_asst', 'cs_assist', 'cs_needs', 'cs_gso', 'claims', 'med_silbi', 'med_checkup',
-  'med_disclosure', 'branch_coach', 'hq', 'audit', 'blog', 'threads', 'insta', 'video',
-  'simui', 'calendar', 'ref_jeonsan', 'ref_kcd', 'ref_surgery', 'pricing',
-  'settings', 'health', 'voice', 'terms', 'mycoach', 'fp_talk', 'fp_deck', 'dz_guide', 'growboard', 'voiceasst',
-  'ready', 'airep', 'teamhub', 'daily', 'onecmp'
-];
+/* ── 화면 목록을 <b>여기 적어 두지 않는다</b> (CLAUDE.md 5번) ──────────
+   여태는 이 파일이 자기 목록을 따로 갖고 있었다. 그래서 <b>새 화면을
+   만들어도 여기 안 적으면 아무도 안 열어 본다</b> — 터져 있어도 초록이다.
+   실제로 「APEX 마스터 과정」을 만들었을 때 64개 그대로였다.
+
+   이제 앱의 <b>TABS 를 그대로</b> 읽는다. 화면을 늘리면 저절로 늘고,
+   지우면 저절로 준다. 목록이 두 벌이 아니다.
+
+   숨긴 칸(hide)도 연다 — 「눈에서만 뺀 것」이라 주소·찾기로 그대로 열리고,
+   터져 있으면 그때 처음 알게 된다.                                      */
+let TABS = [];
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
   '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml' };
@@ -99,6 +98,13 @@ function serve() {
     OS.cfg = { schema_version: '29' };
     window.toast = function () {};
   });
+
+  TABS = await page.evaluate(() => {
+    const out = [];
+    TABS.forEach(g => (g.items || []).forEach(i => { if (i && i.id) out.push(i.id); }));
+    return out;
+  });
+  console.log('  앱이 가진 화면 ' + TABS.length + '개를 그대로 엽니다 (목록을 따로 안 적습니다)');
 
   let bad = 0, empty = 0;
   for (const tab of TABS) {

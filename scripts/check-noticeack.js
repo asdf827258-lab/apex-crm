@@ -31,6 +31,33 @@ const http = require('http'), fs = require('fs'), path = require('path'), url = 
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
+
+/* ── 흉내 서버는 <b>어떤 사슬이 와도</b> 받아야 한다 ────────────────────
+   처음에는 select().eq().then() 만 받게 만들었다. 그런데 앱은 화면을
+   그리는 사이에 <b>제 할 일로</b> 서버를 부른다 — arLoad 는
+   select().order().limit().then() 으로 부른다. 그 사슬이 우리 흉내
+   서버에 걸리면 「p.then is not a function」 으로 터진다.
+
+   <b>이것이 시각에 따라 갈렸다.</b> 여기서는 그 호출이 우리 스텁을 설치하기
+   전에 끝나 통과했고, CI 에서는 뒤에 도착해 빨간불이 났다. 같은 코드가
+   초록도 되고 빨강도 되면 그것은 「헛것을 잡는 점검」이다 (CLAUDE.md 8번).
+
+   그래서 <b>모든 메서드가 자기를 돌려주고, 자기가 곧 약속</b>인 것을 준다.
+   무엇을 어떻게 이어 불러도 안 터진다.                                  */
+const CHAIN = `(function(rows,onPost){
+  var mk=function(tbl){
+    var a={};
+    ['select','eq','neq','gt','gte','lt','lte','is','in','not','or','order','limit',
+     'range','single','maybeSingle','filter','match','upsert','update','delete'
+    ].forEach(function(k){ a[k]=function(){ return a; }; });
+    a.insert=function(row){ if(onPost)onPost(tbl,row); return a; };
+    a.then=function(res,rej){ return Promise.resolve({data:rows||[],error:null}).then(res,rej); };
+    a.catch=function(f){ return Promise.resolve({data:rows||[],error:null}).catch(f); };
+    return a;
+  };
+  return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } };
+})`;
+
 const SRC = fs.readFileSync('app/index.html', 'utf8');
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, ' ');
 
@@ -133,26 +160,36 @@ const api = http.createServer((rq, rs) => {
 
   console.log('\n[3] 확인하면 사라지고, 서버로는 자기 id 만 간다 (4번)');
   posted = []; failNext = false;
-  const A = await page.evaluate(async (api) => {
+  const A = await page.evaluate(async ({ api, CHAIN_SRC }) => {
     OS.session = { user: { id: 'u1' } };
     OS_ACK.loaded = true; OS_ACK.ackd = {};
+    /* 사슬은 무엇이 와도 받고, <b>넣기만</b> 진짜로 보낸다 */
+    const chain = eval(CHAIN_SRC);
     window.osClient = function () {
-      return { from: function (t) {
-        return {
-          insert: function (row) {
-            return fetch(api + '/rest/v1/' + t, { method: 'POST',
-              headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) })
-              .then(function (r) { return r.ok ? {} : r.json().then(function (j) { return { error: j }; }); });
-          },
-          select: function () { return { eq: function () { return { then: function (f) { f({ data: [] }); } }; } }; }
+      const c = chain([], function (t, row) {
+        window.__last = fetch(api + '/rest/v1/' + t, { method: 'POST',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) });
+      });
+      const realFrom = c.from;
+      c.from = function (t) {
+        const a = realFrom(t), realIns = a.insert;
+        a.insert = function (row) {
+          realIns(row);
+          return { then: function (res) {
+            return (window.__last || Promise.resolve()).then(function (r) {
+              return (r && !r.ok) ? r.json().then(function (j) { return res({ error: j }); }) : res({});
+            });
+          } };
         };
-      } };
+        return a;
+      };
+      return c;
     };
     osAckPaint();
     document.getElementById('osAckBtn').click();
     await new Promise(r => setTimeout(r, 600));
     return { gone: !document.querySelector('.os-ackbar') };
-  }, API);
+  }, { api: API, CHAIN_SRC: CHAIN });
   is(A.gone, '  누르면 <b>띠가 사라진다</b>');
   const ack = posted.filter(x => /os_notice_acks/.test(x.path))[0];
   is(!!ack, '  <b>서버에 보냈다</b> — 이 기기에만 담고 끝내지 않는다');
@@ -205,23 +242,29 @@ const api = http.createServer((rq, rs) => {
      아래에 <code>OS_ACK.loaded=true</code> 가 남아 글자로는 통과한다.
      실제로 그렇게 헛돌았다 (8번). <b>몇 번 부르는지 세어</b> 본다. */
   console.log('\n[7] 되풀이해서 서버를 부르지 않는다 (7번)');
-  const C = await page.evaluate(async () => {
+  const C = await page.evaluate(async (CHAIN_SRC) => {
     let calls = 0;
     OS_ACK.loaded = false; OS_ACK.ackd = {}; OS_ACK.err = '';
     OS.session = { user: { id: 'u1' } };
     OS_NOTICE = { id: 'n7', text: '확인해 주세요', img: '', on: true, ts: '',
                   by: '윤시현', targets: ['u1'], mustAck: true };
+    const chain7 = eval(CHAIN_SRC);
     window.osClient = function () {
-      return { from: function () {
-        return { select: function () { return { eq: function () {
-          return { then: function (f) { calls++; f({ data: [] }); } }; } }; } };
-      } };
+      const c = chain7([]);
+      const realFrom = c.from;
+      c.from = function (t) {
+        const a = realFrom(t), realThen = a.then;
+        /* 확인 기록을 읽으러 온 것만 센다 — 앱이 제 할 일로 부르는 것과 섞이면 안 된다 */
+        if (t === 'os_notice_acks') a.then = function (res, rej) { calls++; return realThen(res, rej); };
+        return a;
+      };
+      return c;
     };
     /* 화면을 열 때처럼 여러 번 그린다 */
     for (let i = 0; i < 6; i++) { osAckLoad(OS_NOTICE); osAckPaint(); }
     await new Promise(r => setTimeout(r, 200));
     return calls;
-  });
+  }, CHAIN);
   is(C === 1,
      '  여섯 번 그려도 서버는 <b>한 번</b>만 부른다 — ' + C + '번' +
      (C === 1 ? '' : ' ← 무료 한도를 세 배로 넘겨 로그인까지 막힌 적이 있는 자리입니다'));
