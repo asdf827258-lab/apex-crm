@@ -216,6 +216,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
       ['아침 창을 꺼 두셨다', () => localStorage.setItem('apex_ar_brief_off', '1')]
     ];
     const realLoad = window.arLoad;
+    /* ── <b>시계를 붙잡는다.</b> ────────────────────────────────────
+       arAutoRun 은 <code>arDue()</code>(오전 8시 이후) 가 아니면 그냥
+       돌아간다. 여태 이 점검은 <b>돌리는 시각</b>에 따라 켜졌다 꺼졌다
+       했다 — 자정~오전 8시(KST)에 미는 PR 은 전부 빨간불이 났다.
+       실제로 2026-08-29 00:29 에 그렇게 막혔다. 시각으로 갈리는 점검은
+       「헛것을 잡는 점검」이다 (CLAUDE.md 8번). 그래서 여기서는 시각을
+       <b>우리가 정한다</b> — 8시 전·후를 둘 다 따로 본다. */
+    const realNowH = window.arNowH;
+    window.arNowH = function () { return AR_H; };          /* 8시가 되었다 */
     const got = cases.map(([label, setup]) => {
       ['apex_ar_brief_off', 'apex_ar_auto_off'].forEach(k => localStorage.removeItem(k));
       Object.keys(localStorage).filter(k => /^apex_ar_(brief|team)_/.test(k))
@@ -245,8 +254,16 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     localStorage.setItem(arBriefKey(), '1');
     try { arAutoRun(); } catch (e) {}
     localStorage.removeItem(arAutoKey());
+    /* <b>8시 전에는 안 읽어야 한다</b> — 새벽에 서버를 부르면 안 된다 (7번) */
+    Object.keys(localStorage).filter(k => /^apex_ar_(brief|team)_/.test(k))
+      .forEach(k => localStorage.removeItem(k));
+    GB.loaded = false; AR.loaded = false; AR.busy = '';
+    let earlyN = 0; window.arLoad = function () { earlyN++; };
+    window.arNowH = function () { return AR_H - 1; };      /* 아직 7시다 */
+    try { arAutoRun(); } catch (e) {}
+    window.arNowH = realNowH;
     window.arLoad = realLoad;
-    return { got, offN, doneN };
+    return { got, offN, doneN, earlyN };
   });
   auto.got.forEach(g => is(g.n > 0,
     '  ' + g.label + ' — <b>기록을 읽으러 간다</b>' + (g.n > 0 ? '' : ' · 안 간다 (TFA 를 손으로 열어야 시작된다)')));
@@ -254,6 +271,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      '  <b>자동을 끄셨으면</b> 안 읽는다 — 끈 것을 무시하지 않는다 · ' + auto.offN + '번');
   is(auto.doneN === 0,
      '  오늘 <b>이미 다 만들었으면</b> 또 안 읽는다 — ' + auto.doneN + '번 (10분마다 서버를 부르면 안 된다)');
+  is(auto.earlyN === 0,
+     '  <b>오전 8시 전에는 안 읽는다</b> — ' + auto.earlyN + '번 (새벽에 서버를 부르지 않는다 · 7번)');
 
   console.log('\n[8] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
