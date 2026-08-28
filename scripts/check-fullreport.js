@@ -514,17 +514,77 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const again = frFromBaba();
     M = frMaster(); T = frCounts(M);
     return { no: 0, first: first, again: again, added: T.added, report: T.report, lost: T.lost,
-             dup: dup1, teethB: teeth.bWon, teethA: teeth.aWon, teethKey: teeth.key, src: teeth.src };
+             dup: dup1, teethB: teeth.bWon, teethA: teeth.aWon, teethKey: teeth.key,
+             from: teeth.from, src: teeth.src };
   });
   is(!bridge.no, '비포&애프터 자리가 있다');
   is(bridge.teethB === 100 * 10000 && bridge.teethA === 300 * 10000,
      '<b>만원 → 원</b> 으로 바꿔 가져온다 (' + bridge.teethB + '원) — 여기서 틀리면 만 배가 틀린다');
   is(bridge.teethKey === 'etc_dental', '가져온 이름을 <b>같은 사전</b>으로 분류한다 — 열쇠 대응표를 두 벌 두지 않는다');
-  is(bridge.src === '비포&애프터', '어디서 왔는지 남긴다 — 검수 전 값이라는 사실이 사라지지 않는다');
+  is(bridge.from === '비포&애프터' && bridge.src === '',
+     '어디서 왔는지는 from 에, 원문 조각은 src 에 — <b>이름이 거짓말하지 않는다</b>');
   is(bridge.first === 2 && bridge.again === 0 && bridge.added === 2,
      '두 번 눌러도 <b>두 벌이 되지 않는다</b> (처음 ' + bridge.first + ' · 다시 ' + bridge.again + ')');
   is(bridge.lost === 0, '가져온 뒤에도 세는 자리가 맞는다');
   is(bridge.dup === 1, '이미 추출된 담보와 겹치면 <b>조용히 합치지도 버리지도 않고</b> 말한다');
+
+
+  /* ── 읽기 점검 — 못 읽은 것을 말하는가 ── */
+  console.log('\n[9-6] 읽기 점검 — 「왜 부분 추출인지」를 말하는가');
+  const rd = await page.evaluate(() => {
+    __frSeed([__pol('p1', 50000, false)],
+      [__cov('r1', 'p1', '일반암진단비', 30000000),
+       __cov('r2', 'p1', '깨끗한하늘특약', 2000000),      /* 분류 실패 */
+       __cov('r3', 'p1', '항암방사선치료비')]);
+    FR.covs[2].source_text='항암방사선치료비 확인불가';FR.covs[1].source_text='깨끗한하늘특약 200만';            /* 금액 실패 */
+    FR.pols[0].source_document_id = 'd1';
+    FR.docs = [
+      { id: 'd1', file_name: '보장분석리포트.pdf', page_count: 12, parse_status: 'partial' },
+      { id: 'd2', file_name: '스캔증권.pdf', page_count: 6, parse_status: 'failed' },
+      { id: 'd3', file_name: '아직안읽음.pdf', page_count: 3, parse_status: 'pending' }];
+    FR.runs = { d1: { document_id: 'd1', validation_errors: ['출처(page) 없는 금액 담보 4건 — 검수 필요.', '표기 월보험료와 담보 합계가 불일치 — 검수 필요.'] } };
+    FR.imgPages = 5;
+    FR.readAt = FR.cid; FR.readBusy = false; FR.readErr = '';
+    const M = frMaster(), T = frCounts(M);
+    const h = frReadHtml(M, T);
+    const t1 = frDocTally('d1');
+    return {
+      why: h.indexOf('출처(page) 없는 금액 담보 4건') >= 0,
+      mismatch: h.indexOf('표기 월보험료와 담보 합계가 불일치') >= 0,
+      failed: h.indexOf('이 문서에서는 아무것도 못 읽었습니다') >= 0,
+      pending: h.indexOf('아직 <b>담보 추출</b>을 실행하지 않았습니다') >= 0,
+      img: h.indexOf('그림으로 읽은 쪽이 5쪽') >= 0,
+      uncls: h.indexOf('분류를 못 한 담보 1건') >= 0,
+      noAmt: h.indexOf('금액을 못 읽은 담보 1건') >= 0,
+      honest: h.indexOf('모르는 것을 셀 수는 없기 때문입니다') >= 0,
+      docPols: t1.pols, docCovs: t1.covs,
+      srcBtn: (h.match(/원문보기/g) || []).length,
+      srcText: h.indexOf('항암방사선치료비 ') >= 0,
+      docs3: (h.match(/fr-rd-doc/g) || []).length
+    };
+  });
+  is(rd.why && rd.mismatch, '「부분 추출」의 <b>이유</b>를 그대로 적는다 — 저장만 되고 안 보이던 값이다');
+  is(rd.failed, '아무것도 못 읽은 문서는 <b>무엇을 해야 하는지</b>까지 말한다');
+  is(rd.pending, '아직 안 읽은 문서를 「읽었다」고 하지 않는다');
+  is(rd.img, '글자가 없어 <b>그림으로 읽은 쪽</b>이 몇 쪽인지 말한다');
+  is(rd.uncls && rd.noAmt, '분류 못 한 담보와 금액 못 읽은 담보를 <b>그 자리에서</b> 고치게 한다');
+  is(rd.honest, '<b>셀 수 없는 것</b>을 셀 수 있는 척하지 않는다 — 원문에 있는데 안 잡힌 담보');
+  is(rd.docPols === 1 && rd.docCovs === 3, '문서마다 <b>몇 건이 나왔는지</b> 센다');
+  is(rd.docs3 === 3, '문서 3건이 모두 선다 — 실패한 것도 숨기지 않는다');
+  is(rd.srcBtn >= 2, '못 읽은 담보마다 <b>원문보기</b>가 붙는다 — 원문 조각이 살아 있어야 나온다 (' + rd.srcBtn + '개)');
+
+  console.log('\n[9-7] 읽기 점검은 서버를 아껴 쓰는가 (CLAUDE.md 7번)');
+  const lazy = await page.evaluate(() => {
+    const src = frLoad.toString() + frGo.toString();
+    return {
+      notInLoad: src.indexOf('extraction_runs') < 0 && src.indexOf('document_pages') < 0,
+      lazyGuard: /read.*readAt\s*!==\s*FR\.cid/.test(frGo.toString()),
+      headCount: frReadLoad.toString().indexOf("head:true") >= 0
+    };
+  });
+  is(lazy.notInLoad, '고객을 열 때는 <b>안 부른다</b> — 안 보는 화면이 서버를 갉아먹지 않게');
+  is(lazy.lazyGuard, '탭을 여실 때 <b>한 번만</b> 부르고 그 뒤엔 담아 둔 것을 쓴다');
+  is(lazy.headCount, '그림으로 읽은 쪽은 <b>세기만</b> 한다 — 쪽 원문을 다 받아 오지 않는다');
 
 
   /* ── 인쇄 ── */
