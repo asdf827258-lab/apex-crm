@@ -73,6 +73,36 @@ is(loaderAt.length >= 1, '  그 파일을 <b>가리키는 화면</b>이 있다 �
 is(/못 읽었습니다|읽지 못했습니다/.test(fs.readFileSync(DIR + '/index.html', 'utf8')),
    '  못 읽으면 <b>지어내지 않고</b> 그 파일을 여시라고 적는다 (1번)');
 
+/* ── 한 벌로 모았으면, 그 한 벌이 <b>배포에서 실제로 열려야</b> 한다 ────────
+   _redirects 의 「/migration_*  …  404!」 가 이 파일까지 같이 막고 있었다.
+   404 뒤의 ! 는 실제 파일이 있어도 강제로 막으므로, 로컬에서는 파일이 그냥
+   열려 통과하고 <b>운영에서만 조용히 404</b> 가 난다. 실제로 그랬다 —
+   사장님이 단추를 눌러도 SQL 이 안 나왔다. 그래서 여기서는 파일이 있는지가
+   아니라 <b>Netlify 규칙을 그대로 흉내 내</b> 첫 번째로 걸리는 규칙을 본다. */
+console.log('\n[2-1] 그 한 벌이 배포에서 실제로 열린다');
+const RD = fs.readFileSync('_redirects', 'utf8');
+const RULES = RD.split('\n')
+  .map(l => l.replace(/#.*$/, '').trim()).filter(Boolean)
+  .map(l => { const p = l.split(/\s+/); return { from: p[0], to: p[1], st: p[2] || '200' }; });
+/* Netlify: 위에서 아래로, 처음 걸리는 규칙 하나만 쓴다 */
+const firstRule = p => RULES.filter(r => r.from.slice(-1) === '*'
+  ? p.indexOf(r.from.slice(0, -1)) === 0 : r.from === p)[0] || null;
+/* 화면이 부르는 상대경로를 실제 주소로 편다 — 경로가 바뀌어도 따라간다 */
+const GUIDE = fs.readFileSync(DIR + '/index.html', 'utf8');
+const relM = GUIDE.match(/SUPA_SQL_FILE\s*=\s*'([^']+)'/);
+is(!!relM, '  화면이 부르는 주소를 읽었다 — ' + ((relM && relM[1]) || '(못 읽음)'));
+if (relM) {
+  const abs = new URL(relM[1], 'http://x/' + DIR + '/').pathname;
+  const hit = firstRule(abs);
+  is(fs.existsSync(abs.slice(1)), '  그 주소에 파일이 <b>정말 있다</b> — ' + abs);
+  is(!(hit && /404/.test(hit.st)),
+     '  _redirects 가 그 주소를 <b>안 막는다</b> — ' +
+     (hit ? '걸리는 규칙 「' + hit.from + ' → ' + hit.st + '」' : '걸리는 규칙 없음(파일 그대로)') +
+     (hit && /404/.test(hit.st) ? ' ← 운영에서만 조용히 404 가 납니다' : ''));
+}
+is(!/마이그레이션 SQL 은 문자열로/.test(RD),
+   '  _redirects 주석이 <b>거짓말을 안 한다</b> — 「HTTP 로 안 부른다」 고 적혀 있으면 다음 사람이 이 예외를 지운다');
+
 console.log('\n[3] 새 규칙 — 로그인한 사람만 · 자기 이름으로만');
 /* 맨 위 주석이 <b>옛 정책을 그대로 인용</b>한다 — 걷지 않으면 그것을 읽고
    「anon 그대로네」 라고 잘못 답한다. 실제로 처음에 그렇게 틀렸다 (8번). */
