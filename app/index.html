@@ -1543,7 +1543,7 @@ function getProvider(){return LS.get('provider','claude');}
 /* 실제로 어떤 엔진이 응답했는지 추적(결과 배지·진단용). 리프 호출이 성공하면 채운다. */
 var AI_LAST={engine:'',model:'',fellback:false,note:''};
 /* 리포트·분석처럼 '품질'이 중요한 도구 — Gemini일 때 pro 모델 우선(실패 시 flash 자동 폴백) */
-var QUALITY_GEN={bojang:1,baba:1,compare:1,katalk:1,os_extract:1,os_analysis:1,os_report:1,insta_studio:1,cardnews:1,consult_script:1,blog_post:1,blog_titles:1,med_disclosure:1,med_silbi:1,med_checkup:1,threads:1,mkt_landing:1,ext_reply:1,keywords:1,lead_msg:1,ref_surgery:1,ref_underwrite:1,cs_feedback:1,contracts:1,manual:1};
+var QUALITY_GEN={bojang:1,baba:1,compare:1,katalk:1,os_extract:1,os_analysis:1,os_report:1,insta_studio:1,cardnews:1,consult_script:1,med_disclosure:1,med_silbi:1,med_checkup:1,threads:1,mkt_landing:1,ext_reply:1,keywords:1,lead_msg:1,ref_surgery:1,ref_underwrite:1,cs_feedback:1,contracts:1,manual:1};
 /* ── 거절당한 키는 이번 접속 동안 다시 부르지 않는다 ──
    키가 틀리면 구글·앤트로픽은 영어로 "API key not valid" 를 돌려준다.
    그걸 그대로 화면에 띄우면 쓰는 사람은 무엇을 해야 할지 모른다.
@@ -5684,31 +5684,6 @@ function osCapCardHtml(){
 }
 
 var GEN=[
-/* ── 블로그 ── */
-{id:'blog_post',tab:'blog',icon:'📝',title:'SEO 블로그 글 생성',desc:'네이버·티스토리 상위노출형 블로그 글을 제목·본문·태그까지 한 번에.',
- fields:[
-  {name:'topic',label:'주제 / 핵심 키워드',type:'text',ph:'예: 40대 가장 암보험 진단비 얼마가 적정한가',span:true},
-  {name:'reader',label:'타깃 독자',type:'text',ph:'예: 자녀 둔 40대 직장인 가장'},
-  {name:'tone',label:'톤',type:'chips',options:['정보형','공감형','전문가형','스토리형'],def:'공감형'},
-  {name:'length',label:'분량',type:'chips',options:['짧게(1000자)','보통(1800자)','길게(2500자)','아주 길게(3500자)'],def:'길게(2500자)'}
- ],
- build:function(v){
-  var L=v.length||'';
-  var mx=L.indexOf('아주')>=0?14000:(L.indexOf('길게')>=0?10000:(L.indexOf('짧게')>=0?4200:6500));
-  return{
-  system:sys("보험·재무 블로그 글을 작성한다. 네이버/티스토리 상위노출(SEO)과 가독성을 모두 잡는다. 도입 후킹→소제목 단락→표/체크리스트 활용→치료비 통장 관점 정리. 과장·단정·불안조장 금지(보험업법·금소법). 통계·예시는 '예시'임을 명시.\n[분량 절대 규칙] 지정된 글자 수를 반드시 채운다. 소제목 하나당 최소 6~8문장으로 충분히 풀어 쓰고, 절대 중간에 요약하듯 끊지 않는다(짧게 끝내면 실패). '보통'은 1,800자, '길게'는 2,500자, '아주 길게'는 3,500자 이상 본문을 채운다(글자 수 미달=실패). 출력이 길어져도 마지막 '메타 설명'까지 반드시 끝맺는다.\n[이미지 지침] 각 소제목마다 넣을 이미지·인포그래픽을 본문 해당 위치에 [이미지: 설명 | alt: 대체텍스트 | 캡션: 한 줄 캡션] 형태로 정확히 자리표시해, 어디에 어떤 사진을 넣고 무슨 캡션을 달지 바로 알 수 있게 한다. 가능하면 8통장·치료비 통장 구조도, 진단→치료→요양 타임라인, 실손 vs 정액 비교표, 연령별 보험료 곡선, 체크리스트 카드처럼 '캡처해서 저장하고 싶은' 인포그래픽을 제안한다.\n[시의성] 해당 주제와 관련해 최근 제도 변화·계절·이슈(예: 실손 세대개편, 연말정산, 건강검진 시즌 등) 앵글을 하나 이상 녹여 검색 유입을 높인다. 특정 뉴스의 수치·통계는 지어내지 말고, '최근 이런 흐름' 수준으로만 안전하게 쓴다(제도 수치는 공식 출처·시행일 확인 안내)."),
-  user:"아래 조건으로 블로그 글을 '완성형'으로, 분량을 가득 채워 작성해줘. 절대 중간에 끊지 말고 마지막 '메타 설명'까지 반드시 완성할 것.\n\n주제/키워드: "+v.topic+"\n타깃 독자: "+(v.reader||'일반')+"\n톤: "+v.tone+"\n분량: "+v.length+" (이 분량을 반드시 충족)\n\n[출력 형식 — Markdown 표/콜아웃/이미지자리 활용]\n## 추천 제목 5개\n- 클릭을 부르는 제목 5개(단정·과장 없이, 키워드 포함)\n\n## 본문\n(1) 도입: 독자의 상황에 공감하는 후킹 3~4문장 + [이미지: 대표 이미지 아이디어]\n(2) 소제목(##) 4~6개로 구분된 본론. 각 소제목마다 6~8문장 이상으로 충분히 설명하고, 최소 1개의 비교표와 1~2개의 > 콜아웃, 소제목마다 [이미지: 설명 | alt: … | 캡션: …] 자리표시를 넣는다.\n(3) 마무리: 치료비 통장 관점 3~4문장 정리 + 부드러운 상담 유도(CTA).\n\n## 이미지·삽화 추천\n- 소제목별로 넣을 이미지/인포그래픽 아이디어와 alt 대체텍스트를 표로.\n\n## 시의성 활용 포인트\n- 이 글을 지금 시점에 검색되게 만들 최신 앵글 2~3개(제도·계절·이슈).\n\n## 해시태그\n- 관련 태그 12개(대형+롱테일 혼합)\n\n## 메타 설명\n검색결과 노출용 2줄 요약(핵심 키워드 포함)",
-  max:mx};}
-},
-{id:'blog_titles',tab:'blog',icon:'🎯',title:'블로그 제목 후보 생성',desc:'키워드 하나로 클릭률 높은 제목 후보 12개를 유형별로.',
- fields:[
-  {name:'kw',label:'키워드 / 소재',type:'text',ph:'예: 종신보험 해지환급금',span:true}
- ],
- build:function(v){return{
-  system:sys("블로그 제목 카피라이터로서 클릭을 부르는 제목을 만든다."),
-  user:"키워드 '"+v.kw+"' 로 네이버 블로그 제목을 12개 만들어줘. 유형별로 묶어서:\n## 숫자형\n## 질문형\n## 공감/후킹형\n## 정보/혜택형\n각 유형당 3개씩. 보험광고 규정상 단정·과장 표현은 피할 것.",
-  max:2200};}
-},
 /* ── SNS ── */
 {id:'threads',tab:'sns',icon:'🧵',title:'스레드 연속글',desc:'스레드/X용 연속 포스트. 첫 글 후킹부터 마지막 CTA까지.',
  fields:[
@@ -10443,7 +10418,7 @@ var TABS=[
 var TAB_META={
  clients:{tag:'OS',title:'고객 보장분석 프로젝트',desc:'고객별 보장분석 상담을 한 곳에서. 문서 업로드·추출·검수·전후비교·리포트까지 이어집니다.'},
  cs_assist:{tag:'CONSULT',title:'AI 통합상담 어시스턴트',desc:'윤시현 「고객이익 통합상담」 방법론으로 상담 준비 브리핑과 녹취 복기를 돕습니다. 녹취는 텍스트 붙여넣기(길이 제한 없음) 또는 오디오 업로드.'},
- blog:{tag:'CONTENT',title:'블로그 콘텐츠 생성',desc:'주제·타깃을 정하면 SEO/GEO 최적화 블로그 글을 Claude가 작성합니다.'},
+ blog:{tag:'CONTENT',title:'블로그',desc:'글은 <b>블로그 공장</b>에서 씁니다 — 새 탭으로 열립니다. 여기에는 상위노출 키트만 둡니다.'},
  threads:{tag:'CONTENT',title:'Threads 생성',desc:'한 번에 여러 개의 스레드 게시글을 타깃에 맞춰 생성합니다.'},
  insta:{tag:'CONTENT',title:'인스타그램 피드',desc:'피드 캡션·해시태그를 브랜드 톤으로 생성합니다.'},
  video:{tag:'CONTENT',title:'유튜브 & 릴스',desc:'영상 포맷·길이별 제목·후킹·대본을 \'삶을 설계하다\' 톤으로.'},
@@ -11677,8 +11652,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 18:30';
-var APP_BUILD_NOTE='<b>앞 고객에게 쓴 AI 문장이 다음 고객 제안서에 그대로 남고 있었습니다.</b> AI 가 준 말은 <b>성공했을 때만</b> 덮어썼습니다. 그래서 새 고객 자료로 갈아 끼우고 AI 가 죽으면(끊김·한도·키 만료), 숫자는 새 고객 것인데 <b>말은 앞 고객 것</b>이 실렸습니다 — 아무 표시도 없이. 이제 <b>묻기 전에 지웁니다.</b> 못 받으면 그 자리는 비는 것이 맞습니다 — 말 없는 제안서가 남의 말이 실린 제안서보다 낫습니다. <b>빈 표를 여실 때</b>(새 고객)도 지웁니다. 그리고 AI 가 <b>무엇을 보고 쓴 말인지</b> 적어 두어, 뒤에 숫자를 고치시면 <b>「아래 말은 숫자를 고치시기 전에 쓴 것입니다 — 다시 만들기를 눌러 주세요」</b> 라고 그 자리에서 말합니다. 지우지는 않습니다 — 사장님이 보시고 정하실 일입니다. 방금 받은 말에는 아무 말도 안 붙습니다. <code>check-babaread</code> [10] 일곱 가지 — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다.';
+var APP_BUILD='2026-08-28 18:40';
+var APP_BUILD_NOTE='<b>블로그 글을 쓰는 문이 둘이었습니다.</b> 콘텐츠 제작 → 블로그 칸에 «SEO 블로그 글 생성»·«블로그 제목 후보» 가 있고, 그 위에 <b>블로그 공장</b>(<code>app/blog.html</code>) 을 여는 문이 또 있었습니다. 같은 일을 하는 문이 둘이면 <b>어느 쪽으로 쓴 글인지</b> 나중에 알 수 없고, 한쪽만 고쳐집니다. 그래서 <b>앱 안의 두 도구를 치웠습니다</b> — 이제 블로그 글은 <b>공장 한 곳</b>에서만 나옵니다. 다만 <b>없앤 것이 아니라 옮겼습니다</b>: 두 도구가 하던 일을 공장이 그대로 합니다. <b>글 길이</b>를 짧게(1,200자)·보통(1,800자)·길게(2,500자)·아주 길게(3,500자) 중에 고르고, 고른 길이가 주문서의 <b>소제목 수·문장 수·글자 수</b>를 바꾸며 <b>받을 자리(토큰)도 같이 넓힙니다</b> — 길게 시켜 놓고 중간에 끊기던 자리입니다. <b>제목 후보</b>도 3개에서 <b>5개</b>로 늘리고 숫자형·질문형·공감형·정보형을 섞어 달라고 시킵니다. <b>상위노출 키트</b>(월별 앵글·이미지 사양·구조 체크리스트)는 공장에 없는 내용이라 <b>그대로 둡니다</b>. 치운 도구 이름이 <b>다른 곳에 남지 않게</b>도 함께 훑었습니다 — 판독 용량을 묻던 진단 화면이 없어진 이름으로 묻고 있었습니다. <code>check-blogauto</code> 에 여덟 가지를 더했고, 네 자리를 되돌려 전부 빨간불을 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -28199,7 +28174,7 @@ function hxCollect(){
 
   /* ── 판독 용량 ── */
   if(has('aiSendLimit')){
-    var Lb=aiSendLimit('bojang'),Lc=aiSendLimit('blog_post');
+    var Lb=aiSendLimit('bojang'),Lc=aiSendLimit('threads');
     hxAdd(R,'판독 용량','고객 자료 도구',Lb.imgs>=40?'ok':'warn',
       '한 번에 '+Lb.imgs+'장 · '+Lb.who,
       Lb.imgs>=40?'':'유료 키를 설정에 넣고 유료 표시를 켜면 40장까지 늘어납니다','settings');
@@ -38416,13 +38391,15 @@ function disclosurePathMap(){
    <b>여기에는 안내만 둡니다.</b> 같은 것을 두 곳에 두면 한쪽만 고쳐집니다
    (CLAUDE.md 5). 글감·초안·그림·발행은 전부 저쪽 한 곳에 있습니다.   */
 function blogFactoryLink(){
-  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🏭</span>블로그 공장 — 따로 열립니다</div>'+
+  return '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🏭</span>블로그 글은 여기서 씁니다 — 따로 열립니다</div>'+
     '<div class="card-desc">받아 둔 뉴스·상담에서 나온 질문·우리가 하는 일에서 <b>글감이 나오고</b>, 초안과 <b>그림(PNG)</b>까지 한 화면에서 끝납니다. '+
     '올리는 일이 주인공이라 <b>앱 밖에 따로</b> 두었습니다.</div></div><div class="card-body">'+
     '<div class="btn-row"><a class="btn btn-primary" href="blog.html" target="_blank" rel="noopener">🏭 블로그 공장 열기</a></div>'+
     '<div class="notice" style="margin-top:10px;font-size:11px;line-height:1.7;color:var(--ink-4)">'+
     'AI 연결과 <b>내 소개</b>는 이 앱에 저장해 둔 것을 그대로 씁니다 — 저쪽에서 따로 설정하지 않으셔도 됩니다. '+
-    '아래 <b>상위노출 키트</b>와 <b>SEO 블로그 글 생성</b>은 그대로 두었습니다.</div></div></div>';
+    '예전에 여기 있던 <b>«SEO 블로그 글 생성»·«블로그 제목 후보»</b>는 <b>치웠습니다</b> — 같은 일을 하는 문이 둘이면 '+
+    '어느 쪽으로 쓴 글인지 나중에 알 수 없습니다. 두 가지가 하던 일(<b>분량 고르기</b>·<b>제목 후보</b>)은 공장이 그대로 합니다. '+
+    '아래 <b>상위노출 키트</b>는 공장에 없는 내용이라 그대로 둡니다.</div></div></div>';
 }
 /* 블로그 상위노출 키트 (deterministic · 키 불필요 · 항상 렌더) — "이미지와 뉴스(시의성)를 활용해 더 잘 걸리는 글" */
 var BLOG_SEASON=[
@@ -39143,11 +39120,11 @@ function upgradeContent(id){
     return spec;
   };
 }
-['blog_post','threads','insta_caption','youtube'].forEach(upgradeContent);
+['threads','insta_caption','youtube'].forEach(upgradeContent);
 
 /* ── 기존 도구 재배치(메뉴 구조에 맞춤) ── */
 function retab(id,tab){GEN.forEach(function(g){if(g.id===id)g.tab=tab;});}
-retab('threads','threads');retab('blog_titles','blog');retab('facebook','threads');retab('cardnews','insta');retab('insta_caption','insta');
+retab('threads','threads');retab('facebook','threads');retab('cardnews','insta');retab('insta_caption','insta');
 retab('consult_script','cs_assist');retab('objection','cs_assist');retab('coverage_talk','cs_assist');retab('ta_intro','cs_assist');retab('lead_msg','cs_assist');
 retab('keywords','mkt_meta');retab('copy','mkt_meta');
 retab('self_intro','mkt_landing');retab('review','mkt_landing');retab('referral','mkt_landing');

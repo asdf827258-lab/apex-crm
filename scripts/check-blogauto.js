@@ -102,8 +102,13 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  앱(index.html)에서 공장이 빠졌다 — 두 벌로 두지 않았다');
   is(IDX.indexOf('blog.html') > 0 && IDX.indexOf('function blogFactoryLink()') > 0,
      '  앱에는 여는 링크만 남았다');
-  is(IDX.indexOf('function blogSeoKit()') > 0 && IDX.indexOf("id:'blog_post'") > 0,
-     '  기존 상위노출 키트와 글 생성기는 그대로다 — 갈아엎지 않았다');
+  is(IDX.indexOf('function blogSeoKit()') > 0,
+     '  상위노출 키트는 그대로다 — 공장에 없는 내용이라 갈아엎지 않았다');
+  /* 글을 쓰는 문이 둘이면 어느 쪽으로 쓴 글인지 나중에 알 수 없다 (CLAUDE.md 5) */
+  is(!/id:'blog_post'|id:'blog_titles'/.test(IDX),
+     '  앱 안의 블로그 글 생성기·제목 후보는 치웠다 — 글 쓰는 문은 공장 하나다');
+  is(!/blog_post|blog_titles/.test(IDX),
+     '  치운 도구 이름이 다른 곳에도 안 남았다 — 없는 이름을 부르지 않는다');
 
   console.log('\n[2] 갈래 표가 한 곳인가 · 누가 읽나가 달려 있는가');
   const kinds = await page.evaluate(() => ORDER.map(k => ({ k, t:KINDS[k].t, reader:KINDS[k].reader,
@@ -210,6 +215,26 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(/실명/.test(order.sys) && /홍길동/.test(order.sys), '  실명 금지 · 견본은 홍길동');
   is(/모집 광고도 규정을 받는다/.test(order.sys), '  동료용 글에서 수입을 보장하지 말라고 시킨다');
   is(/목록에 없는 그림을 부르지 않는다/.test(order.sys), '  없는 그림을 부르지 말라고 시킨다');
+
+  /* 앱에서 치운 두 도구(글 생성·제목 후보)가 하던 일이 여기 그대로 있는가.
+     안 그러면 「일원화」가 아니라 그냥 없어진 것이다. */
+  is(/## 제목 후보 \d+개/.test(order.each.econ) && /숫자형[\s\S]{0,40}질문형/.test(order.each.econ),
+     '  제목 후보를 유형까지 섞어 시킨다 — 치운 «제목 후보» 가 하던 일');
+  const LEN = await page.evaluate(() => {
+    const out = { keys:Object.keys(LENS), order:LEN_ORDER.slice(), body:{}, max:{} };
+    const s = seeds(), row = { kind:'econ', seed:s.econ[0] };
+    LEN_ORDER.forEach(k => { setLen(k); out.body[k] = userPrompt(row); out.max[k] = lenNow().max; });
+    setLen('보통');
+    return out;
+  });
+  is(LEN.order.length === 4 && LEN.order.length === LEN.keys.length,
+     '  글 길이가 넷이다 — ' + LEN.order.join(' · '));
+  is(LEN.order.every(k => LEN.keys.indexOf(k) >= 0), '  길이 차례표가 하나도 안 빠뜨렸다');
+  is(new Set(LEN.order.map(k => LEN.body[k])).size === 4,
+     '  길이를 바꾸면 주문서가 실제로 달라진다 — 치운 «글 생성» 의 분량 고르기');
+  is(LEN.max['짧게'] < LEN.max['보통'] && LEN.max['보통'] < LEN.max['길게'] && LEN.max['길게'] < LEN.max['아주 길게'],
+     '  길수록 받을 자리도 넓어진다 — 길게 시켜 놓고 중간에 끊기지 않게');
+  is(!/\bask\([^)]*,\s*9000\s*\)/.test(SRC), '  받을 자리를 숫자로 박아 두지 않았다');
 
   console.log('\n[7] 게이트가 잡을 것을 잡는가');
   const G = await page.evaluate(() => {

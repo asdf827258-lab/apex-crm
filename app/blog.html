@@ -141,6 +141,10 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
   <div class="card">
     <h2>② 초안 — 글감에 묶여서 나옵니다</h2>
     <div class="desc">한 번에 한 편씩 만듭니다. 근거에 없는 숫자는 <b>[[확인 필요: …]]</b> 로 비워 둡니다.</div>
+    <div class="row" style="margin-bottom:10px">
+      <span style="font-size:11.5px;color:var(--sub)">글 길이</span>
+      <span id="len"></span>
+    </div>
     <div id="rows"></div>
   </div>
 
@@ -261,13 +265,25 @@ const NEED = [
    why:'보험료·보장을 말하면서 「심사 결과에 따릅니다」 가 없습니다' }
 ];
 
+/* ══════════ 글 길이 — 표 하나 ══════════
+   「짧게/길게」를 삼항 사슬로 묻지 않는다. 늘어나면 한 자리를 빠뜨린다.
+   주문서에 적을 말과 받을 토큰을 여기 한 곳이 답한다. */
+const LENS = {
+ '짧게':     { subs:'3~4', sent:'4문장',   chars:'1,200자', max:4200  },
+ '보통':     { subs:'4~5', sent:'5문장',   chars:'1,800자', max:6500  },
+ '길게':     { subs:'5~6', sent:'6~8문장', chars:'2,500자', max:10000 },
+ '아주 길게':{ subs:'6~7', sent:'8문장',   chars:'3,500자', max:14000 }
+};
+const LEN_ORDER = ['짧게','보통','길게','아주 길게'];
+function lenNow(){ return LENS[S.len] || LENS['보통']; }
+
 /* ══════════ 담아 두는 것 ══════════ */
-const S = { rows:[], perweek:2, busy:-1, news:{ at:'', items:[], err:'' }, comply:null };
+const S = { rows:[], perweek:2, len:'보통', busy:-1, news:{ at:'', items:[], err:'' }, comply:null };
 const KEY = 'apex_blog_studio';
 const MINE = k => 'apex_blog_mine_' + k;
 function load(){ try{ const v=JSON.parse(localStorage.getItem(KEY)||'null');
-  if(v){ S.rows=v.rows||[]; S.perweek=v.perweek||2; S.news=v.news||S.news; } }catch(e){} }
-function save(){ try{ localStorage.setItem(KEY,JSON.stringify({rows:S.rows,perweek:S.perweek,news:S.news})); }
+  if(v){ S.rows=v.rows||[]; S.perweek=v.perweek||2; S.len=LENS[v.len]?v.len:'보통'; S.news=v.news||S.news; } }catch(e){} }
+function save(){ try{ localStorage.setItem(KEY,JSON.stringify({rows:S.rows,perweek:S.perweek,len:S.len,news:S.news})); }
   catch(e){ toast('글이 많아 다 저장하지 못했습니다. 만든 글은 복사해 두세요.'); } }
 function mine(k){ try{ const v=JSON.parse(localStorage.getItem(MINE(k))||'[]'); return v.push?v:[]; }catch(e){ return []; } }
 function mineSave(k,a){ try{ localStorage.setItem(MINE(k),JSON.stringify(a)); }catch(e){} }
@@ -367,6 +383,7 @@ function plan(){
   toast(empty ? (n+'편 편성 — 글감이 없어 '+empty+'줄은 비워 뒀습니다') : (n+'편을 편성했습니다'));
 }
 function setWeek(n){ S.perweek=n; save(); paint(); }
+function setLen(k){ if(!LENS[k]) return; S.len=k; save(); paint(); }
 
 /* ══════════ 준법 문구 — config/compliance.json ══════════ */
 async function comply(){
@@ -424,11 +441,16 @@ function sysPrompt(){
   '9. 글 끝에 「## 이 글이 딛고 선 것」 을 두고 받은 [근거] 를 그대로 옮겨 적는다.';
 }
 function userPrompt(row){
-  const s=row.seed, d=KINDS[row.kind];
+  const s=row.seed, d=KINDS[row.kind], L=lenNow();
   return '[근거]\n'+s.src+'\n\n[읽는 사람] '+d.reader+
     '\n\n[쓸 수 있는 그림] '+d.art.map(a=>'「'+ART[a].t+'」').join(' · ')+
     ' — 이 이름들만 쓴다. 우리가 직접 그려 넣을 수 있는 그림이 이것뿐이다.\n\n'+d.order(s)+
-    '\n\n[출력 형식 — Markdown]\n## 제목 후보 3개\n## 본문\n소제목(##) 4~5개, 소제목마다 5문장 이상. 비교표 1개 이상. [쓸 수 있는 그림] 중에서 골라 [이미지: 그림 이름 | alt: 대체텍스트] 자리표시를 본문에 넣는다.\n## 해시태그\n10개(대형+롱테일)\n## 메타 설명\n2줄\n## 이 글이 딛고 선 것\n위 [근거] 를 그대로 옮겨 적는다.';
+    '\n\n[출력 형식 — Markdown]\n'+
+    '## 제목 후보 5개\n숫자형·질문형·공감형·정보형을 섞어서 만든다. 핵심어를 앞쪽에 두되 단정·과장·최상급은 쓰지 않는다.\n'+
+    '## 본문\n소제목(##) '+L.subs+'개, 소제목마다 '+L.sent+' 이상으로 충분히 풀어 쓴다. 본문 '+L.chars+' 이상을 채운다 — 중간에 요약하듯 끊으면 실패다. '+
+    '비교표 1개 이상. [쓸 수 있는 그림] 중에서 골라 [이미지: 그림 이름 | alt: 대체텍스트] 자리표시를 본문에 넣는다.\n'+
+    '## 해시태그\n10개(대형+롱테일)\n## 메타 설명\n2줄\n## 이 글이 딛고 선 것\n위 [근거] 를 그대로 옮겨 적는다.\n\n'+
+    '길이가 모자라 끊기더라도 마지막 「## 이 글이 딛고 선 것」 까지 반드시 끝맺는다.';
 }
 async function draft(i){
   const row=S.rows[i]; if(!row) return;
@@ -439,7 +461,7 @@ async function draft(i){
   S.busy=i; paint();
   try{
     await comply();
-    row.out=await ask(sysPrompt(),userPrompt(row),9000);
+    row.out=await ask(sysPrompt(),userPrompt(row),lenNow().max);
     row.guard=guard(row.out,row.kind);
     S.busy=-1; save(); paint(); show(i);
   }catch(e){ S.busy=-1; paint(); toast('만들지 못했습니다 — '+(e.message||'네트워크 오류')); }
@@ -596,6 +618,8 @@ function paintSeeds(){
     return h+'</div>';
   }).join('');
   $('wk').innerHTML=[1,2,3,5].map(n=>'<button class="sm'+(S.perweek===n?' p':'')+'" onclick="setWeek('+n+')">'+n+'편</button>').join(' ');
+  $('len').innerHTML=LEN_ORDER.map(k=>'<button class="sm'+(S.len===k?' p':'')+'" onclick="setLen(\''+k+'\')">'+
+    esc(k)+' <span style="opacity:.65">'+esc(LENS[k].chars)+'</span></button>').join(' ');
   const c={}; MIX.forEach(k=>c[k]=(c[k]||0)+1);
   $('mixNote').innerHTML='열 편 도는 비율 — <b>'+ORDER.filter(k=>c[k]).map(k=>KINDS[k].ic+' '+KINDS[k].t+' '+c[k]).join(' · ')+
     '</b>. 홍보는 <b>열에 한 편</b>입니다 — 자랑만 올리는 블로그는 읽히지 않아서, 읽히는 글이 있어야 그 한 편이 읽힙니다. '+
