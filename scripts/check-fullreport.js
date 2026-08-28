@@ -314,6 +314,59 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(dict.miss.length === 0, '요구된 담보군 ' + (dict.total) + '줄 사전이 모두 읽힌다' +
      (dict.miss.length ? ' — 못 읽음: ' + dict.miss.join(', ') : ''));
 
+  /* ── 그림 장 ── */
+  console.log('\n[9-1] 그림 — 인체도·그래프·치료 여정이 거짓말하지 않는가');
+  const pic = await page.evaluate(() => {
+    const scen = [{ id: 's1', diseaseCategory: 'CANCER', diseaseCode: 'cancer_general',
+                    scenarioName: '위암 표준', referenceTreatmentCostWon: 50000000, inpatientDays: 21,
+                    purposes: ['DIAGNOSIS', 'SURGERY', 'TREATMENT'], sourceName: '시험', active: true,
+                    treatmentSteps: [
+                      { no: '01', name: '진단', keys: ['cancer_gen', 'cancer_minor'], costWon: 5000000 },
+                      { no: '03', name: '입원', keys: ['hos_dz'], costWon: 4000000 },
+                      { no: '04', name: '항암약물치료', keys: ['anti_drug'], costWon: 20000000 }] }];
+    const covs = [__cov('c1', 'p1', '일반암진단비', 30000000),
+                  __cov('c2', 'p1', '유사암진단비', 5000000),
+                  __cov('c3', 'p1', '질병입원일당', 30000),
+                  __cov('c4', 'p1', '항암방사선치료비'),          /* 금액 못 읽음 */
+                  __cov('c5', 'p2', '항암약물치료비', 10000000),  /* 신규 제안 */
+                  __cov('c6', 'p1', '골절진단비', 1000000)];
+    const st = frBlankState(); st.pact = { p2: 'NEW' };
+    __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, st, scen);
+    const M = frMaster();
+    const body = frBodyHtml(M), charts = frChartsHtml(M), jn = frJourneyHtml(M);
+    const B = frStepCalc(frScenActive()[0], M, 'before');
+    const cancerRg = frRegion(FR_BODY.filter(x => x.k === 'CANCER')[0], M);
+    /* 담보가 하나도 없는 부위 */
+    const nur = frRegion(FR_BODY.filter(x => x.k === 'NURSING')[0], M);
+    const sc = frScenCalc(frScenActive()[0], M, 'before');
+    return {
+      bodySvg: /<svg/.test(body), dots: (body.match(/fr-dot/g) || []).length,
+      step01: B[0].coverWon, step01off: B[0].off,
+      step03: B[1].coverWon, step03daily: B[1].daily,
+      step04unk: B[2].unknown, step04pend: B[2].pend,
+      scenPend: sc.pend.length, scenUnk: sc.unknown.length,
+      cancerLump: cancerRg.bWon, cancerCover: cancerRg.rate ? cancerRg.rate.coverB : null,
+      saysBoth: frRegionSay(cancerRg).indexOf('이 사건에서 열리는 것은') >= 0,
+      offB: cancerRg.rate ? cancerRg.rate.offB : -1,
+      nurNone: frRegionSay(nur).indexOf('준비된 담보가 없습니다') >= 0,
+      nurColor: frRegionColor(nur),
+      chartsHasActual: charts.indexOf('실손') >= 0,
+      jnLen: jn.length
+    };
+  });
+  is(pic.bodySvg && pic.dots === 4, '인체 그림을 새로 그리지 않고 가져다 쓰고, 부위 점이 얹힌다 (' + pic.dots + '개)');
+  is(pic.step01 === 30000000 && pic.step01off === 1,
+     '단계 계산도 사건 자를 쓴다 — 위암 「진단」에 유사암을 더하지 않는다 (' + pic.step01 + '원)');
+  is(pic.step03 === 30000 * 21 && pic.step03daily === 1, '일당 단계는 입원일수로 환산하고 그 사실을 남긴다');
+  is(pic.step04unk === 0 && pic.step04pend === 1,
+     '신규 제안 담보를 「금액 확인 필요」가 아니라 「조정 후에만」으로 가른다');
+  is(pic.scenPend === 1 && pic.scenUnk === 1, '방어력 계산도 「못 읽음」과 「아직 없음」을 가른다');
+  is(pic.cancerLump !== pic.cancerCover && pic.saysBoth,
+     '부위 합계(' + pic.cancerLump + ')와 방어력 기준액(' + pic.cancerCover + ')이 다르면 그 말을 한다');
+  is(pic.offB === 1, '뺀 담보는 <b>그 부위 안에서만</b> 센다 — 표 전체를 세어 「14건」이라 적던 자리 (' + pic.offB + '건)');
+  is(pic.nurNone && pic.nurColor === '#CBD5E1', '담보가 없는 부위는 「준비된 담보가 없습니다」라고 말한다');
+  is(pic.jnLen > 500, '치료 여정이 실제로 그려진다');
+
   /* ── 인쇄 ── */
   console.log('\n[10] 종이 — 어긋난 채로 뽑지 않고, 우리가 다시 읽을 수 있는가');
   const print = await page.evaluate(() => {
