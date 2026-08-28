@@ -622,6 +622,48 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(/function frSay/.test(frAll), '고객 문구는 규칙(frSay)이 만든다');
   is(!/generateContent|api\/gemini|anthropic/.test(frAll), '이 모듈은 LLM API 를 새로 붙이지 않는다');
 
+  /* ── 입구를 하나로 — 메뉴에서 빼되 화면은 죽이지 않는다 ── */
+  console.log('\n[12] 비포&애프터 — 목록에서만 빠지고 화면은 사는가');
+  const menu = await page.evaluate(() => {
+    /* 목록에 서 있는가(hide 를 거른 뒤) 와 TABS 에 살아 있는가는 다른 물음이다 */
+    var listed = false, entry = null;
+    TABS.forEach(function (g) {
+      (g.items || []).forEach(function (it) {
+        if (it.id !== 'baba') return;
+        entry = { hide: !!it.hide, ak: it.ak };
+        if (!g.hide && !it.hide) listed = true;
+      });
+    });
+    /* 권한은 <b>같은 칸의 형제와 견준다.</b> 이 시험은 로그인하지 않은 free 등급이라
+       증권 분석 칸이 통째로 막혀 있다 — 절대값으로 보면 헛알람이 난다.
+       봐야 할 것은 <b>hide 가 권한을 바꾸지 않았는가</b> 다. */
+    var A = (typeof osTabAllowed === 'function');
+    var allowed = A ? osTabAllowed('baba') : null;
+    var sibling = A ? osTabAllowed('bojang') : null;
+    /* 실행 체크판이 아직 이 화면을 가리키는가 — 가리키는데 죽으면 없는 화면을 여는 단추가 된다 */
+    var ck = false;
+    try { RT_STEP.forEach(function (s) { s.rows.forEach(function (r) { if (r.tab === 'baba') ck = true; }); }); } catch (e) { }
+    try { go('baba'); } catch (e) { }
+    return { listed: listed, entry: entry, allowed: allowed, sibling: sibling, ck: ck };
+  });
+  await page.waitForTimeout(800);
+  const opened = await page.evaluate(() => {
+    var d = document.getElementById('dynPane') || document.getElementById('main');
+    var t = (d && d.innerText) || '';
+    return { shown: t.indexOf('비포') >= 0 || t.indexOf('애프터') >= 0, len: t.length, err: 0 };
+  });
+  is(menu.listed === false, '왼쪽 목록에는 안 선다 — 같은 일을 두 곳에서 묻지 않는다');
+  is(!!(menu.entry && menu.entry.hide), '<b>TABS 에 hide 로 남아 있다</b> — 지우지 않는다(teamhub 와 같은 방식). 메뉴 찾기·음성·주소로 그대로 열린다');
+  is(menu.entry && menu.entry.ak === '보장분석', '권한 열쇠(ak)를 그대로 들고 있다 — 등급·권한이 안 바뀐다');
+  is(menu.allowed === menu.sibling,
+     'hide 가 <b>권한을 바꾸지 않는다</b> — 같은 칸의 AI 보장분석과 판정이 같다 (' + menu.allowed + ')');
+  is(menu.ck === true, '실행 체크판이 아직 이 화면을 가리킨다 — 가리키는데 지우면 없는 화면을 여는 단추가 된다');
+  is(opened.len > 0 && opened.err === 0,
+     "go('baba') 가 <b>말없이 죽지 않는다</b> — 무엇이든 그려 준다 (" + opened.len + '자)');
+  is(/frOpenBaba/.test(CODE) && /frFromBaba/.test(CODE),
+     '풀리포트 안에 들어가는 길(🔄 빠른 비포&애프터)과 가져오는 길이 둘 다 있다');
+
+
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
