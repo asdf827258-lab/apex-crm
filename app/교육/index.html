@@ -129,8 +129,10 @@ ul.rl li{font-size:12.5px;line-height:1.8;margin-bottom:5px}
 (function(){
 var P = window.EDU_PLAN;
 var VIEWS = [
-  ['start','시작하기'], ['news','9월 3일'], ['mgr','매니저 하루'], ['meet','월·목 조회'],
-  ['cover','커버 처방'], ['new','신입 하루·한 달'], ['gate','게이트'], ['ses','세션 카드'], ['law','준법']
+  ['start','시작하기'], ['week','주간 미션'], ['monthly','월간 미션'],
+  ['mgr','매니저 하루'], ['meet','월·목 조회'], ['cover','커버 처방'],
+  ['newbie','신입 교육'], ['career','경력 교육'], ['study','공부'],
+  ['gate','게이트'], ['ses','세션 카드'], ['news','9월 3일'], ['law','준법']
 ];
 var cur = (location.hash||'').replace('#','') || 'start';
 if(!VIEWS.some(function(v){return v[0]===cur})) cur='start';
@@ -180,6 +182,14 @@ function vStart(){
   for(var j=0;j<P.culture.length;j++)
     h+=row('·','p',P.culture[j][0],P.culture[j][1],null);
   h+='</div></div>';
+  h+='<div class="sec-h">어디에 무엇이 있나</div><div class="card"><div class="bd">'+
+    row('매일','b','주간 미션','요일마다 하는 일이 다릅니다 — 월 명단 · 화 전화 · 수 상담 · 목 결정 · 금 정리',null)+
+    row('매달','g','월간 미션','네 주의 초점 — 채운다 · 연다 · 닫는다 · 심는다',null)+
+    row('신입','p','신입 교육','하루 시간표와 90일 게이트 넷. 지식 열두 주는 앱 안에 있습니다',null)+
+    row('경력','a','경력 교육','여덟 주. 새 지식이 아니라 <b>굳은 습관 하나</b>를 바꿉니다',null)+
+    row('공부','','공부','무엇을 · 어디서 · <b>어떻게 확인하나</b>',null)+
+    row('매니저','r','매니저 하루 · 월·목 조회 · 커버 처방','조회 대본은 분 단위로 적혀 있습니다',null)+
+    '</div></div>';
   h+='<div class="note">이 표를 고칠 때는 <code>app/교육/plan.js</code> <b>한 곳만</b> 고칩니다. 이 화면은 그것을 그리기만 합니다.</div>';
   return h;
 }
@@ -262,16 +272,113 @@ function vCover(){
   return h;
 }
 
-function vNew(){
-  var h='<div class="sec-h">신입 하루</div>'+
+function vNewbie(){
+  var h='<div class="note b">지식 열두 주는 앱 <b>「본인 점검란」</b>에 있습니다. 여기는 <b>하루를 어떻게 쓰고, 게이트가 언제 서는지</b>입니다.'+
+    gos(['academy','bohum'])+'</div>';
+  h+='<div class="sec-h">신입 하루</div>'+
     '<p class="lead">칸을 지우는 것은 실행 체크판이 합니다. 여기는 <b>시간표</b>입니다.</p><div class="card"><div class="bd">';
   for(var i=0;i<P.newDay.length;i++){var d=P.newDay[i];h+=row(d[0],'',d[1],d[2],d[3]);}
   h+='</div></div>';
-  h+='<div class="sec-h">신입 한 달</div><div class="card"><div class="bd">';
-  for(var j=0;j<P.month.length;j++){var m=P.month[j];h+=row(m[0],'p',m[1],m[2],m[3]);}
+  h+='<div class="sec-h">신입 90일 달력</div>'+
+    '<p class="lead">요일마다 할 일은 <b>주간 미션</b>, 달마다 할 일은 <b>월간 미션</b>에 있습니다. '+
+    '여기는 <b>게이트가 언제 서는가</b>만 적습니다.</p><div class="card"><div class="bd">';
+  for(var j=0;j<P.newbie90.length;j++){var m=P.newbie90[j];h+=row(m[0],'p',m[1],m[2],m[3]);}
   h+='</div></div>';
   h+='<div class="note g"><b>첫 달에 계약을 세지 않습니다.</b> 첫 달에 세는 것은 <b>기록</b>입니다. '+
      '기록이 서면 둘째 달부터 숫자가 저절로 보입니다. 기록이 없으면 잘해도 어디가 잘된 건지 아무도 모릅니다.</div>';
+  return h;
+}
+
+/* ── 주간 미션 — 요일마다 하는 일이 다르다 ── */
+function vWeek(){
+  var h='<div class="sec-h">월요일부터 금요일까지</div>'+
+    '<p class="lead">매일 똑같이 하면 한 주가 통째로 흐릅니다. 요일마다 <b>하는 일</b>과 '+
+    '<b>그날 안 하는 일</b>을 정해 둡니다. 안 하는 일이 없으면 결국 다 조금씩 하다 끝납니다.</p>';
+  for(var i=0;i<P.week.length;i++){
+    var w=P.week[i], b='';
+    for(var j=0;j<w.miss.length;j++){
+      var m=w.miss[j];
+      b+=row('☐',w.color,m[0],m[1],m[2]);
+    }
+    b+='<div class="note r" style="margin-top:10px"><b>이날 안 하는 것</b> — '+rich(w.no)+'</div>';
+    b+='<div class="note g"><b>확인</b> — '+rich(w.see)+'</div>';
+    h+='<div class="card"><div class="hd"><div class="t"><span class="chip">'+esc(w.day)+'</span>'+rich(w.head)+'</div></div>'+
+       '<div class="bd">'+b+'</div></div>';
+  }
+  h+='<div class="note">주말은 비워 둡니다. <b>쉬는 것도 루틴입니다</b> — 주말에 일한 다음 주 월요일이 제일 안 굴러갑니다.</div>';
+  return h;
+}
+
+/* ── 월간 미션 ── */
+function vMonthly(){
+  var M=P.monthly;
+  var h='<div class="sec-h">달을 여는 날</div><div class="card"><div class="bd">';
+  for(var i=0;i<M.open.length;i++) h+=row('1일','b',M.open[i][0],M.open[i][1],M.open[i][2]);
+  h+='</div></div>';
+  h+='<div class="sec-h">네 주의 초점</div>'+
+    '<p class="lead">한 달 내내 같은 일을 하면 마지막 주에 몰립니다. 주마다 <b>초점 하나</b>만 둡니다.</p>'+
+    '<div class="card"><div class="bd">';
+  for(var j=0;j<M.weeks.length;j++){
+    var w=M.weeks[j];
+    h+=row(w[0],['g','p','a','b'][j]||'',w[1]+' — '+w[2].replace(/^/,''),'',w[3]);
+  }
+  h+='</div></div>';
+  h+='<div class="sec-h">달을 닫는 날</div><div class="card"><div class="bd">';
+  for(var k=0;k<M.close.length;k++) h+=row('말일','r',M.close[k][0],M.close[k][1],M.close[k][2]);
+  h+='</div></div>';
+  h+='<div class="sec-h">팀이 한 달에 한 번</div><div class="card"><div class="bd">';
+  for(var n=0;n<M.team.length;n++) h+=row('월 1회','p',M.team[n][0],M.team[n][1],M.team[n][2]);
+  h+='</div></div>';
+  return h;
+}
+
+/* ── 공부 ── */
+function vStudy(){
+  var h='<div class="sec-h">공부 리듬</div>'+
+    '<p class="lead">「공부했습니다」는 확인이 안 됩니다. 그래서 <b>얼마나</b> 와 <b>어떻게 확인하는지</b>를 같이 적습니다.</p>'+
+    '<div class="card"><div class="bd">';
+  for(var i=0;i<P.studyRhythm.length;i++){
+    var r=P.studyRhythm[i];
+    h+=row(r[0],'b',r[1],r[2],r[3]);
+  }
+  h+='</div></div>';
+  h+='<div class="sec-h">무엇을 공부하나</div>'+
+    '<div class="tw"><table><tr><th>영역</th><th>무엇을</th><th>어디서</th><th>확인</th></tr>';
+  for(var j=0;j<P.study.length;j++){
+    var s2=P.study[j];
+    h+='<tr><td><b>'+rich(s2[0])+'</b></td><td>'+rich(s2[1])+'</td><td>'+gos(s2[2])+'</td><td>'+rich(s2[3])+'</td></tr>';
+  }
+  h+='</table></div>';
+  h+='<div class="note r"><b>외울 것은 숫자가 아니라 「어디서 확인하는가」입니다.</b> '+
+     '세법 한도·나이·개월 수는 시행령이 바뀌면 따라 바뀝니다. '+
+     '외운 숫자를 고객 앞에서 말하는 것이 이 일에서 가장 위험합니다 — 확인처를 외웁니다.</div>';
+  return h;
+}
+
+/* ── 경력 교육 ── */
+function vCareer(){
+  var h='<div class="note r">'+rich(P.careerLead)+'</div>';
+  h+='<div class="sec-h">경력이 막히는 자리 셋</div><div class="card"><div class="bd">';
+  for(var i=0;i<P.careerWhy.length;i++) h+=row('·','r',P.careerWhy[i][0],P.careerWhy[i][1],null);
+  h+='</div></div>';
+  h+='<div class="sec-h">여덟 주</div>'+
+    '<p class="lead">신입은 열두 주, 경력은 여덟 주입니다. 경력은 <b>배우는 시간</b>이 아니라 '+
+    '<b>안 하던 것을 해 보는 시간</b>이라 짧아야 합니다.</p><div class="card"><div class="bd">';
+  for(var j=0;j<P.career.length;j++){
+    var c=P.career[j];
+    h+='<div class="row"><span class="tag '+['b','g','p','a','b','g','p','a'][j%8]+'">'+c[0]+'주</span><div class="bodyt">'+
+       '<div class="n">'+rich(c[1])+' — '+rich(c[2])+'</div>'+
+       '<div class="s">'+rich(c[3])+'</div>'+
+       '<div class="s" style="margin-top:4px"><b>남길 것</b> · '+rich(c[4])+'</div>'+gos(c[5])+'</div></div>';
+  }
+  h+='</div></div>';
+  h+='<div class="sec-h">경력 게이트 둘</div><div class="tw"><table><tr><th>때</th><th>보는 것</th><th>남아 있어야 하는 흔적</th><th>왜</th></tr>';
+  for(var k=0;k<P.careerGates.length;k++){
+    var g=P.careerGates[k];
+    h+='<tr><td><b>'+esc(g[0])+'</b></td><td>'+esc(g[1])+'</td><td>'+rich(g[2])+'</td><td>'+rich(g[3])+'</td></tr>';
+  }
+  h+='</table></div>';
+  h+=rules(P.careerRules,'b');
   return h;
 }
 
@@ -287,6 +394,12 @@ function vGate(){
   h+='</table></div>';
   h+='<div class="note b"><b>졸업 판정은 앱이 합니다.</b> 「본인 점검란 → 졸업 기준」이 기준을 들고 있습니다. '+
      '여기서 다시 세지 않습니다 — 두 곳에서 세면 어느 쪽이 맞는지 아무도 모릅니다.'+gos(['academy','growboard'])+'</div>';
+  h+='<div class="sec-h">경력 게이트</div>'+
+     '<p class="lead">경력은 <b>신규를 몇 건 했느냐</b>로 보지 않습니다. 자세한 것은 「경력 교육」 칸에 있습니다.</p>'+
+     '<div class="tw"><table><tr><th>때</th><th>보는 것</th><th>흔적</th></tr>';
+  for(var n=0;n<P.careerGates.length;n++)
+    h+='<tr><td><b>'+esc(P.careerGates[n][0])+'</b></td><td>'+esc(P.careerGates[n][1])+'</td><td>'+rich(P.careerGates[n][2])+'</td></tr>';
+  h+='</table></div>';
   return h;
 }
 
@@ -333,7 +446,8 @@ function vLaw(){
   return h;
 }
 
-var RENDER={start:vStart,news:vNews,mgr:vMgr,meet:vMeet,cover:vCover,'new':vNew,gate:vGate,ses:vSes,law:vLaw};
+var RENDER={start:vStart,week:vWeek,monthly:vMonthly,mgr:vMgr,meet:vMeet,cover:vCover,
+  newbie:vNewbie,career:vCareer,study:vStudy,gate:vGate,ses:vSes,news:vNews,law:vLaw};
 
 function paint(){
   var t='';

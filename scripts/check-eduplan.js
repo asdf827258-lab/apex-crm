@@ -125,7 +125,7 @@ is((plan.cover || []).every(c => c.length >= 5 && c[4] && c[4].length),
 console.log('\n[7] 매니저·신입 루틴이 서 있는가');
 is((plan.mgrDay || []).length >= 5, '  매니저 하루가 다섯 칸 이상이다');
 is((plan.newDay || []).length >= 5, '  신입 하루가 다섯 칸 이상이다');
-is((plan.month || []).length >= 5, '  한 달 루틴이 다섯 칸 이상이다');
+is((plan.newbie90 || []).length >= 5, '  신입 90일 달력이 서 있다');
 is((plan.gates || []).length === 4, '  게이트가 넷이다 (2·4·8·12주)');
 is((plan.gates || []).every(g => g[3]), '  게이트마다 「왜 이것을 보나」가 적혀 있다');
 is((plan.sessions || []).length >= 4, '  세션 카드가 넷 이상이다');
@@ -137,6 +137,67 @@ is(!!news && /못 찾았습니다|빈칸을 채우지 않습니다/.test(flat(ne
    '  못 찾으면 못 찾았다고 적는다 — 빈 자리를 채우지 않는다');
 is(!!news && /유리한 것만/.test(flat(news).join(' ')), '  유리한 것만 뽑지 않는다가 적혀 있다');
 is(!!news && /원문/.test(flat(news).join(' ')), '  약관은 원문 그대로 뽑는다');
+
+console.log('\n[7-1] 주간 미션 — 요일마다 다른가');
+const DAYS = ['월','화','수','목','금'];
+const wk2 = plan.week || [];
+is(wk2.length === 5, '  월요일부터 금요일까지 다섯 칸이다');
+is(DAYS.every(d => wk2.some(w => w.day === d)), '  빠진 요일이 없다');
+is(wk2.every(w => (w.miss || []).length >= 3), '  요일마다 미션이 세 개 이상이다');
+/* 「이날 안 하는 것」이 없으면 결국 매일 다 조금씩 하다 끝난다 */
+is(wk2.every(w => !!w.no), '  요일마다 「이날 안 하는 것」이 있다');
+is(wk2.every(w => !!w.see), '  요일마다 무엇으로 확인하는지 있다');
+/* 요일이 서로 달라야 요일을 나눈 뜻이 있다 */
+const heads = wk2.map(w => w.head);
+is(new Set(heads).size === heads.length, '  요일마다 하는 일이 서로 다르다');
+/* 화요일은 전화, 수요일은 상담 — 뒤바뀌면 한 주가 안 돈다 */
+is(/전화/.test((wk2.find(w => w.day === '화') || {}).head || ''), '  화요일은 전화의 날이다');
+is(/상담/.test((wk2.find(w => w.day === '수') || {}).head || ''), '  수요일은 상담의 날이다');
+
+console.log('\n[7-2] 월간 미션 — 네 주의 초점이 다른가');
+const mo = plan.monthly || {};
+is((mo.open || []).length >= 3, '  달을 여는 날에 할 일이 있다');
+is((mo.weeks || []).length === 4, '  네 주가 다 있다');
+is((mo.weeks || []).every(w => w[1] && w[2]), '  주마다 초점과 까닭이 적혀 있다');
+const focus = (mo.weeks || []).map(w => w[1]);
+is(new Set(focus).size === focus.length, '  네 주의 초점이 서로 다르다' + (new Set(focus).size !== focus.length ? ' — ' + focus.join('/') : ''));
+is((mo.close || []).length >= 2, '  달을 닫는 날에 할 일이 있다');
+is(/가장 낮은 축|하나/.test(flat(mo.close).join(' ')), '  미달인 달에 축 하나만 고른다고 적혀 있다');
+is((mo.team || []).length >= 2, '  팀이 한 달에 하는 일이 있다');
+/* 하루 시간표와 요일 미션과 달 미션이 서로 베끼지 않았나 */
+const dayTxt = flat(plan.newDay).join(' ');
+const dup = flat(plan.week).filter(t => typeof t === 'string' && t.length > 25 && dayTxt.indexOf(t) >= 0);
+is(dup.length === 0, '  주간 미션이 하루 시간표를 베끼지 않았다' + (dup.length ? ' — ' + dup[0].slice(0, 24) : ''));
+
+console.log('\n[7-3] 공부 — 확인하는 방법이 붙어 있는가');
+is((plan.studyRhythm || []).length >= 4, '  공부 리듬이 네 칸 이상이다');
+is((plan.study || []).length >= 6, '  공부 영역이 여섯 개 이상이다');
+is((plan.study || []).every(x => Array.isArray(x[2]) && x[2].length), '  영역마다 <b>어디서</b> 하는지 화면이 붙어 있다');
+is((plan.study || []).every(x => x[3] && x[3].length > 4), '  영역마다 <b>어떻게 확인하는지</b>가 있다');
+is(/외우지 않습니다|확인하는지를 외웁니다|어디서 확인/.test(flat(plan.study).join(' ') + flat(plan.studyRhythm).join(' ')),
+   '  숫자를 외우지 않고 확인처를 외운다고 적혀 있다');
+
+console.log('\n[7-4] 경력 교육 — 신입 과정을 다시 시키지 않는가');
+is((plan.careerWhy || []).length >= 3, '  경력이 막히는 자리가 적혀 있다');
+is((plan.career || []).length === 8, '  경력 과정이 여덟 주다');
+is((plan.career || []).every(c => c[4] && c[4].length > 3), '  주마다 <b>남길 것</b>이 있다');
+is((plan.career || []).every(c => Array.isArray(c[5]) && c[5].length), '  주마다 여는 화면이 붙어 있다');
+is((plan.careerGates || []).length === 2, '  경력 게이트가 둘이다');
+is((plan.careerRules || []).length >= 4, '  경력을 다루는 규칙이 있다');
+is(/다시 시키지 않습니다/.test(plan.careerLead || ''), '  신입 과정을 다시 시키지 않는다고 못 박았다');
+is(!!plan.careerLead && page.indexOf(plan.careerLead) < 0, '  그 문장이 화면에 복사돼 있지 않다 — 표에서 읽는다');
+/* 경력 여덟 주가 신입 게이트를 베낀 것이면 두 과정을 나눈 뜻이 없다 */
+const gateTxt = flat(plan.gates).join(' ');
+const cdup = flat(plan.career).filter(t => typeof t === 'string' && t.length > 20 && gateTxt.indexOf(t) >= 0);
+is(cdup.length === 0, '  경력 과정이 신입 게이트를 베끼지 않았다' + (cdup.length ? ' — ' + cdup[0].slice(0, 24) : ''));
+/* 경력의 알맹이 — 보유 명부·청구·법인/상속·코칭이 빠지면 신입 과정과 다를 게 없다 */
+const cTxt = flat(plan.career).join(' ');
+[['보유|명부|식은', '보유 고객을 다시 판다'], ['청구', '청구를 자산으로 쓴다'],
+ ['사업자|법인', '법인·사업자를 다룬다'], ['상속|자산이전', '상속·자산이전을 다룬다'],
+ ['코칭|후배', '후배 코칭으로 닫는다']]
+  .forEach(([re, label]) => is(new RegExp(re).test(cTxt), '  ' + label));
+/* 상속은 결론을 말하면 안 되는 자리다 */
+is(/요건 충족 시/.test(cTxt), '  상속 주차에 「요건 충족 시」가 붙어 있다');
 
 console.log('\n[8] 인쇄가 종이로 나오는가');
 is(!/font-feature-settings/.test(page),
@@ -216,7 +277,7 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   const panes = await pg.$$eval('.pane', n => n.length);
   const plen = await pg.$eval('#pane', n => n.innerText.length);
   is(panes === tabs.length, '  인쇄본에 ' + panes + '칸이 다 담긴다 (칸 ' + tabs.length + '개)');
-  is(plen > 6000, '  내용이 충분하다 (' + plen + '자)');
+  is(plen > 12000, '  내용이 충분하다 (' + plen + '자)');
   await pg.emulateMedia({ media: 'screen' });
 
   console.log('\n[12] 앱 메뉴에서 열리고 빠져나오는가');
