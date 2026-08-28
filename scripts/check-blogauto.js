@@ -612,6 +612,96 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  이 점검 파일에도 키 모양 문자열이 없다 — 배포가 키로 보고 세운다');
   is(!/console\.log\([^)]*apikey/i.test(SRC), '  키를 로그에 찍지 않는다');
 
+  console.log('\n[14] 매일 한 편 — 아침에 누를 단추가 하나인가');
+  /* 여기 [14] 를 만들며 <b>안 울리는 알람</b>을 하나 잡았다. 「글감이 없으면 AI 를
+     안 부른다」 는 연결을 안 해 둔 채로 재면 <b>언제나 통과한다</b> — 글감이 아니라
+     연결이 없어서 안 부른 것이기 때문이다. 그래서 연결을 먼저 해 두고 잰다.
+     그리고 되돌리기는 「막는 줄을 지운다」 가 아니라 <b>「없는 글감을 지어내 채운다」</b>
+     로 해야 울린다 — 그것이 실제로 무서운 자리다. (CLAUDE.md 8) */
+  /* 매일 쓰려면 아침에 누를 것이 하나여야 한다. 다만 <b>글감이 없으면 만들지 않는다</b>. */
+  const day = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear();
+    S.rows = []; S.news = { at:'', items:[], err:'' }; S.busy = -1; S.comply = null;
+    S.perweek = 7; await pullNews(); plan();
+    out.hasToday   = todayAt();
+    out.stamped    = S.rows.every(r => /^\d{4}-\d{2}-\d{2}$/.test(r.ymd || ''));
+    out.firstIsNow = S.rows[0] && S.rows[0].ymd === ymd(0);
+    /* 오늘 줄이 없으면 그 뒤는 전부 못 한다 — 여기서 멈추고 <b>왜</b> 인지 말한다 */
+    if (out.hasToday < 0) { out.stopped = '편성표에 오늘 줄이 없다'; return out; }
+
+    /* ① 써 둔 글은 다시 편성해도 안 지워진다 — 그리고 두 벌이 되지도 않는다 */
+    S.rows[out.hasToday].out = '어제 쓴 글';
+    S.rows[out.hasToday].guard = { ok:true, hits:[], miss:[], holes:[], noart:[] };
+    S.perweek = 2; plan();
+    out.kept = S.rows.filter(r => r.out === '어제 쓴 글').length;
+    out.dupDays = S.rows.length - new Set(S.rows.map(r => r.ymd)).size;
+
+    /* ② 글감이 없으면 «오늘 것» 이 AI 를 안 부른다.
+       연결을 <b>먼저</b> 해 둔다 — 안 그러면 「연결이 없어서」 안 부른 것을
+       「글감이 없어서」 안 불렀다고 잘못 읽는다. 그러면 이 알람은 안 울린다. */
+    localStorage.setItem('apex_studio_apikey', 'x');
+    S.perweek = 7; S.rows = []; plan();
+    let i = todayAt(); S.rows[i].seed = null; S.rows[i].kind = 'day'; S.rows[i].out = '';
+    localStorage.removeItem('apex_blog_mine_day');
+    let calls = 0; const realAsk = window.ask; window.ask = () => { calls++; return Promise.resolve('x'); };
+    await today1();
+    out.noSeedCalls = calls; out.stillEmpty = !S.rows[todayAt()].out;
+
+    /* ③ 글감을 적어 두면 한 번 눌러 초안까지 간다 */
+    localStorage.setItem('apex_blog_mine_day',
+      JSON.stringify([{ q:'청구 서류가 반려돼 병원에 다시 다녀왔다', at:ymd(0) },
+                      { q:'어제 적어 둔 것', at:ymd(-1) }]));
+    await today1();
+    out.seedCalls = calls; out.drafted = !!S.rows[todayAt()].out;
+    out.boundSeed = (S.rows[todayAt()].seed || {}).title;
+    window.ask = realAsk;
+
+    /* ④ 뉴스가 어제 것이면 오늘 것으로 다시 받고 시작한다 */
+    S.rows = []; S.perweek = 7; plan();
+    i = todayAt(); S.rows[i].kind = 'econ'; S.rows[i].out = ''; S.rows[i].seed = null;
+    S.news.at = ymd(-1) + ' 07:00';
+    out.staleBefore = newsFresh();
+    window.ask = () => Promise.resolve('x');
+    await today1();
+    out.freshAfter = newsFresh();
+    window.ask = realAsk;
+
+    /* ⑤ 밀린 줄 · 이어서 며칠 */
+    S.rows = [{ ymd:ymd(-3), when:'x', kind:'econ', seed:null, out:'', guard:null, up:false },
+              { ymd:ymd(-2), when:'x', kind:'econ', seed:null, out:'', guard:null, up:true  },
+              { ymd:ymd(-1), when:'x', kind:'econ', seed:null, out:'', guard:null, up:true  },
+              { ymd:ymd(0),  when:'x', kind:'econ', seed:null, out:'', guard:null, up:false }];
+    out.late = lateRows().length; out.streakYesterday = streak();
+    S.rows[3].up = true; out.streakToday = streak();
+    paint();
+    out.rowNow  = document.querySelectorAll('#rows tr.now').length;
+    out.rowLate = document.querySelectorAll('#rows tr.late').length;
+    out.card    = document.getElementById('today').textContent;
+    return out;
+  });
+  is(day.hasToday === 0, '  편성하면 <b>오늘부터</b> 채운다 — 내일부터가 아니다' +
+     (day.stopped ? ' — ' + day.stopped : ''));
+  is(day.stamped && day.firstIsNow, '  줄마다 진짜 날짜가 붙는다 — 라벨만 보고 오늘을 다시 세지 않는다');
+  if (day.stopped) { is(false, '  오늘 줄이 없어 [14] 의 나머지를 못 봤다 — 위를 먼저 고치십시오'); }
+  is(day.kept === 1, '  다시 편성해도 <b>써 둔 글이 안 지워진다</b> — 매일 쓰면 매일 편성을 누르게 된다');
+  is(day.dupDays === 0, '  한 날짜가 <b>두 줄이 되지 않는다</b> — 오늘 것이 둘이면 어느 것을 쓸지 모른다');
+  is(day.noSeedCalls === 0 && day.stillEmpty,
+     '  글감이 없으면 «오늘 것» 이 <b>AI 를 안 부른다</b> (부른 횟수 ' + day.noSeedCalls + ')');
+  is(day.seedCalls === 1 && day.drafted, '  글감을 적어 두면 <b>한 번 눌러</b> 초안까지 간다');
+  is(day.boundSeed === '청구 서류가 반려돼 병원에 다시 다녀왔다',
+     '  <b>오늘 아침 적은 것</b>에 묶인다 — 어제 것이 아니라 (' + day.boundSeed + ')');
+  is(day.staleBefore === false && day.freshAfter === true,
+     '  뉴스가 어제 것이면 <b>오늘 것으로 다시 받고</b> 시작한다 — 날짜 틀린 글이 나가지 않게');
+  is(day.late === 1, '  밀린 줄을 센다 (' + day.late + ') — 안 올린 지난 줄만');
+  is(day.streakYesterday === 2, '  오늘 것을 안 올렸으면 <b>어제부터</b> 센다 (' + day.streakYesterday + '일)');
+  is(day.streakToday === 3, '  오늘 것을 올리면 오늘까지 센다 (' + day.streakToday + '일)');
+  is(day.rowNow === 1 && day.rowLate === 1, '  표에서 오늘 줄과 밀린 줄이 눈에 보인다');
+  is(/오늘/.test(day.card), '  오늘 칸이 맨 위에 선다');
+  /* 날짜를 여러 곳에서 다시 세면 하루가 어긋난다 (CLAUDE.md 5) */
+  is((SRC.match(/new Date\(Date\.now\(\)\s*\+\s*9\s*\*/g) || []).length === 1,
+     '  한국 시각을 세는 곳이 <b>한 곳뿐</b>이다');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

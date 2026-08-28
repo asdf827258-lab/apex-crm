@@ -80,6 +80,13 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
 .gate.ok{background:var(--okbg);border:1px solid #A7F3D0;color:#065F46}
 .gate.no{background:var(--badbg);border:1px solid #FECACA;color:var(--bad)}
 .gate ul{margin:6px 0 0 16px;padding:0}
+.dots{display:flex;gap:5px;align-items:center;font-size:11.5px;color:var(--sub)}
+.dots i{width:13px;height:13px;border-radius:50%;background:var(--line);display:inline-block;font-style:normal}
+.dots i.on{background:var(--ok)}
+.dots i.now{box-shadow:0 0 0 2px var(--brand)}
+tr.now>td{background:#EBF3FF}
+tr.late>td{background:#FFF7E6}
+.big{font-size:15px;padding:11px 16px}
 .art{border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-bottom:9px}
 .art .t{font-size:12.5px;font-weight:800}
 .art .w{font-size:11px;color:var(--sub);margin:2px 0 7px}
@@ -126,6 +133,7 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
 <div class="wrap">
   <div class="card" id="conn" hidden></div>
   <div class="card" id="cmp" hidden></div>
+  <div class="card" id="today"></div>
 
   <div class="card">
     <h2>① 오늘 쓸 것 고르기</h2>
@@ -309,10 +317,9 @@ function mineAdd(k){
   if(q.length<5){ toast('조금 더 적어 주세요.'); return; }
   const nm=names(q);
   if(nm.length){ toast('이름 같은 말이 있습니다('+nm[0]+'). 이름은 빼고 적어 주세요.'); return; }
-  const a=mine(k); a.unshift({q,at:today()}); mineSave(k,a); el.value=''; paint();
+  const a=mine(k); a.unshift({q,at:ymd(0)}); mineSave(k,a); el.value=''; paint();
 }
 function mineDel(k,i){ const a=mine(k); a.splice(i,1); mineSave(k,a); paint(); }
-const today = () => new Date(Date.now()+9*36e5).toISOString().slice(0,10);
 
 /* ══════════ 글감 ══════════ 없으면 없다고 한다 */
 function newsSeeds(kind){
@@ -354,7 +361,7 @@ function seeds(){
    낱말표를 여기 다시 적지 않는다. 어느 매체가 어느 칸인지는
    config/sources.json 이 정하고, 서버가 그대로 나눠 준다. */
 async function pullNews(){
-  const b=$('btnNews'); b.disabled=true; b.innerHTML='<span class="spin"></span> 받는 중…';
+  const b=$('btnNews')||{}; b.disabled=true; if('innerHTML' in b) b.innerHTML='<span class="spin"></span> 받는 중…';
   const cats=[...new Set(ORDER.filter(k=>KINDS[k].cat).flatMap(k=>KINDS[k].cat.split(',')))];
   const items=[], errs=[];
   for (const c of cats){
@@ -374,30 +381,55 @@ async function pullNews(){
       }
     }catch(e){ errs.push(c+': '+(e.message||'실패')); }
   }
-  S.news={ at:new Date(Date.now()+9*36e5).toISOString().replace('T',' ').slice(0,16),
+  S.news={ at:kday(0).toISOString().replace('T',' ').slice(0,16),
            items, err:errs.join(' · ') };
-  save(); b.disabled=false; b.textContent='📰 오늘 뉴스 받기'; paint();
+  save(); b.disabled=false; if('textContent' in b) b.textContent='📰 오늘 뉴스 받기'; paint();
   toast(items.length ? (items.length+'건 받았습니다') : ('못 받았습니다 — '+(errs[0]||'기사가 없습니다')));
 }
 
 /* ══════════ 편성 ══════════ */
+/* ══════════ 오늘이 며칠인가 — 한 곳만 안다 ══════════
+   여러 곳에서 날짜를 다시 세면 하루가 어긋난다. 한국 시각(UTC+9) 하나로 센다. */
+function kday(plus){ return new Date(Date.now()+9*36e5+(plus||0)*864e5); }
+function ymd(plus){ return kday(plus).toISOString().slice(0,10); }
 function dlabel(plus){
-  const d=new Date(Date.now()+9*36e5+plus*864e5);
+  const d=kday(plus);
   return (d.getUTCMonth()+1)+'/'+d.getUTCDate()+'('+['일','월','화','수','목','금','토'][d.getUTCDay()]+')';
+}
+/* 오늘 쓸 줄이 몇 번째인가 — 이 답도 한 곳에서만 한다 */
+function todayAt(){ const t=ymd(0); return S.rows.findIndex(r=>r.ymd===t); }
+/* 밀린 줄 — 오늘보다 이전인데 아직 안 올린 것 */
+function lateRows(){ const t=ymd(0);
+  return S.rows.map((r,i)=>({r,i})).filter(x=>x.r.ymd && x.r.ymd<t && !x.r.up); }
+/* 뉴스가 오늘 받아 온 것인가 — 어제 기사로 「오늘의 경제」 를 쓰면 날짜가 틀린 글이 나간다 */
+function newsFresh(){ return String(S.news.at||'').slice(0,10)===ymd(0); }
+/* 오늘까지 며칠을 이어서 올렸나 — 오늘 것을 아직 안 올렸으면 어제부터 센다 */
+function streak(){
+  const up={}; S.rows.forEach(r=>{ if(r.up&&r.ymd) up[r.ymd]=1; });
+  let n=0, from=up[ymd(0)]?0:-1;
+  for(let d=from;d>-400;d--){ if(!up[ymd(d)]) break; n++; }
+  return n;
 }
 function plan(){
   const s=seeds(), used={}, rows=[];
   ORDER.forEach(k=>used[k]=0);
+  /* 이미 써 둔 것은 날짜로 찾아 그대로 옮긴다 — 다시 편성한다고 어제 쓴 글을 지우면 안 된다 */
+  const keep={}; S.rows.forEach(r=>{ if(r.ymd&&(r.out||r.up)) keep[r.ymd]=r; });
   const n=S.perweek*4, gap=Math.max(1,Math.round(7/S.perweek));
   for(let i=0;i<n;i++){
+    const day=i*gap, k2=ymd(day);
+    if(keep[k2]){ rows.push(keep[k2]); delete keep[k2]; continue; }
     const kind=MIX[i%MIX.length], pool=s[kind]||[];
     const seed=pool.length?pool[used[kind]%pool.length]:null;
     used[kind]++;
-    rows.push({ when:dlabel(i*gap+1), kind, seed, out:'', guard:null, up:false });
+    rows.push({ ymd:k2, when:dlabel(day), kind, seed, out:'', guard:null, up:false });
   }
-  S.rows=rows; save(); paint();
+  /* 편성 밖으로 밀려난 것도 안 버린다 — 지난 것이라도 쓴 글은 쓴 글이다 */
+  const left=Object.keys(keep).sort().map(d=>keep[d]);
+  S.rows=left.concat(rows); save(); paint();
   const empty=rows.filter(r=>!r.seed).length;
-  toast(empty ? (n+'편 편성 — 글감이 없어 '+empty+'줄은 비워 뒀습니다') : (n+'편을 편성했습니다'));
+  toast((empty ? (n+'편 편성 — 글감이 없어 '+empty+'줄은 비워 뒀습니다') : (n+'편을 편성했습니다'))+
+        (left.length?(' · 써 두신 '+left.length+'편은 그대로 뒀습니다'):''));
 }
 function setWeek(n){ S.perweek=n; save(); paint(); }
 function setLen(k){ if(!LENS[k]) return; S.len=k; save(); paint(); }
@@ -674,6 +706,72 @@ async function downAll(i){
   }
   toast(n?(n+'장을 내려받았습니다'):'내려받을 그림이 없습니다');
 }
+/* ══════════ 오늘 한 편 ══════════
+   매일 쓰려면 아침에 <b>누를 단추가 하나</b>여야 한다. 뉴스 받기·편성·글감 찾기·초안을
+   따로 누르게 하면 사흘째에 안 열게 된다. 다만 <b>글감이 없으면 만들지 않는다</b> —
+   무엇을 어디에 적어야 하는지 말하고 그 칸으로 데려다 놓는 데서 멈춘다. (CLAUDE.md 1) */
+function freshSeed(kind){
+  const pool=(seeds()[kind]||[]); if(!pool.length) return null;
+  /* 이미 글로 쓴 글감은 건너뛴다 — 같은 이야기를 이틀 연속 올리게 된다 */
+  const done={}; S.rows.forEach(r=>{ if(r.out&&r.seed) done[r.seed.title]=1; });
+  const un=pool.filter(x=>!done[x.title]);
+  return un.length?un[0]:pool[0];   /* 담은 것은 맨 앞이 최신이다 — 오늘 아침 적은 것부터 쓴다 */
+}
+async function today1(){
+  if(S.busy>=0){ toast('한 편씩 만듭니다.'); return; }
+  if(todayAt()<0) plan();
+  let i=todayAt();
+  if(i<0){ toast('오늘 줄을 못 찾았습니다 — «한 달치 편성» 을 한 번 눌러 주세요.'); return; }
+  const row=S.rows[i], d=KINDS[row.kind];
+  /* 뉴스 갈래인데 어제 것이면 오늘 것으로 다시 받는다 — 날짜가 틀린 글이 나가면 안 된다 */
+  if(d.cat && !newsFresh()) await pullNews();
+  if(!row.out){ const sd=freshSeed(row.kind); if(sd) row.seed=sd; save(); }
+  if(!S.rows[i].seed){
+    paint();
+    toast('오늘 갈래는 「'+d.t+'」 인데 글감이 없습니다. 아래에 한 줄 적어 주세요.');
+    const box=$('mine_'+row.kind)||$('seeds');
+    box.scrollIntoView({behavior:'smooth',block:'center'}); if(box.focus) box.focus();
+    return;
+  }
+  if(!S.rows[i].out) await draft(i); else show(i);
+  const j=todayAt(); if(j>=0&&S.rows[j].out) $('view').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function paintToday(){
+  const i=todayAt(), late=lateRows(), n=streak();
+  const dots='<span class="dots">'+[6,5,4,3,2,1,0].map(b=>{
+      const day=ymd(-b), on=S.rows.some(r=>r.ymd===day&&r.up);
+      return '<i class="'+(on?'on':'')+(b===0?' now':'')+'" title="'+day+'"></i>';
+    }).join('')+'<span style="margin-left:6px">'+(n?('이어서 <b>'+n+'일째</b>'):'아직 시작 전')+'</span></span>';
+  if(i<0){
+    $('today').innerHTML='<h2>📅 오늘 — '+dlabel(0)+'</h2>'+
+      '<div class="gate no">편성표에 <b>오늘 줄이 없습니다.</b> 아래 «한 달치 편성» 을 한 번 누르시면 오늘부터 채워집니다.</div>'+
+      '<div class="row"><button class="p big" onclick="today1()">▶ 오늘 것 한 편 만들기</button></div>'+dots;
+    return;
+  }
+  const row=S.rows[i], d=KINDS[row.kind], has=!!row.seed;
+  let st;
+  if(row.up)       st='<div class="gate ok">오늘 것은 <b>올리셨습니다</b>. 여기까지 하시면 됩니다.</div>';
+  else if(row.out) st='<div class="gate ok">오늘 초안이 <b>나와 있습니다</b>. 아래 단추로 이어서 올리세요.</div>';
+  else if(has)     st='<div class="gate ok">오늘 글감이 <b>있습니다</b> — 「'+esc(row.seed.title.slice(0,44))+'」</div>';
+  else             st='<div class="gate no"><b>오늘 글감이 없습니다.</b><ul><li>'+d.empty+'</li>'+
+                      '<li>없는 것을 만들어 쓰지 않습니다 — 한 줄만 적어 주시면 나머지는 만듭니다.</li></ul></div>';
+  $('today').innerHTML='<h2>📅 오늘 — '+dlabel(0)+' · '+d.ic+' '+esc(d.t)+' '+whoChip(d.reader)+'</h2>'+
+    st+
+    (d.cat&&!newsFresh()
+      ? '<div class="note" style="margin:0 0 9px">뉴스가 '+(S.news.at?('<b>'+esc(S.news.at)+'</b> 것입니다'):'<b>아직 없습니다</b>')+
+        ' — 누르면 오늘 것으로 다시 받고 시작합니다.</div>' : '')+
+    '<div class="row">'+
+      '<button class="p big" onclick="today1()">'+
+        (row.up?'다시 보기':row.out?'▶ 이어서 올리기':has?'▶ 오늘 것 한 편 만들기':'▶ 글감 적으러 가기')+'</button>'+
+      (row.out?'<button onclick="draft('+i+')">🔄 다시 만들기</button>':'')+
+    '</div>'+
+    (late.length
+      ? '<div class="note" style="margin-top:10px">밀린 것이 <b>'+late.length+'편</b> 있습니다 — '+
+        late.slice(0,3).map(x=>esc(x.r.when)+' '+KINDS[x.r.kind].ic).join(' · ')+
+        (late.length>3?' 외':'')+'. 아래 표에서 <b>노란 줄</b>입니다. 몰아 쓰지 마시고 오늘 것부터 하세요.</div>'
+      : '')+
+    '<div style="margin-top:10px">'+dots+'</div>';
+}
 function markUp(i,on){ S.rows[i].up=on; save(); paint(); if(on) toast('올린 것으로 표시했습니다'); }
 
 /* ══════════ 그리기 ══════════ */
@@ -715,7 +813,9 @@ function paintRows(){
       const st=r.up?'<b style="color:var(--ok)">올림 ✓</b>'
         :r.out?(r.guard&&r.guard.ok?'<b style="color:var(--ok)">초안 ✅</b>':'<b style="color:var(--bad)">고칠 곳</b>')
         :(S.busy===i?'<span class="spin"></span> 만드는 중':'<span style="color:var(--dim)">—</span>');
-      return '<tr><td>'+esc(r.when)+'</td><td style="white-space:nowrap">'+d.ic+' '+esc(d.t)+'</td>'+
+      const t=ymd(0), cls=r.ymd===t?' class="now"':(r.ymd&&r.ymd<t&&!r.up?' class="late"':'');
+      return '<tr'+cls+'><td>'+esc(r.when)+(r.ymd===t?' <b style="color:var(--brand)">◀ 오늘</b>':'')+
+        '</td><td style="white-space:nowrap">'+d.ic+' '+esc(d.t)+'</td>'+
         '<td>'+whoChip(d.reader)+'</td>'+
         '<td>'+(r.seed?esc(r.seed.title.slice(0,40)):'<span style="color:var(--warn)">글감 없음</span>')+'</td>'+
         '<td>'+st+'</td><td style="white-space:nowrap">'+
@@ -879,7 +979,7 @@ function connBox(){
 }
 
 function paint(){
-  paintSeeds(); paintRows();
+  paintSeeds(); paintRows(); paintToday();
   /* 연결이 안 돼 있으면 묻지 않아도 열어 둔다 — 여기서 막히면 아무것도 못 한다 */
   const box = $('conn'), want = CONN_OPEN || !aiReady();
   box.hidden = !want;
