@@ -61,9 +61,10 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
       OS.cfg.fr_scenarios = scen ? JSON.stringify(scen) : '';
       return true;
     };
-    window.__cov = function (id, pid, name, amount) {
+    window.__cov = function (id, pid, name, amount, freq) {
       return { id: id, policy_id: pid, original_name: name, normalized_name: null, category: null,
-               amount: (amount === undefined ? null : amount), unit: 'KRW', payment_frequency: null,
+               amount: (amount === undefined ? null : amount), unit: 'KRW',
+               payment_frequency: (freq === undefined ? null : freq),
                renewable: null, source_page: 1, source_text: '원문', confidence: 0.9,
                verification_status: 'approved' };
     };
@@ -333,7 +334,7 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const st = frBlankState(); st.pact = { p2: 'NEW' };
     __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, st, scen);
     const M = frMaster();
-    const body = frBodyHtml(M), charts = frChartsHtml(M), jn = frJourneyHtml(M);
+    const body = frBodyHtml(M), charts = frChartsHtml(M), jn = frStepsTableHtml(frScenActive()[0], M);
     const B = frStepCalc(frScenActive()[0], M, 'before');
     const cancerRg = frRegion(FR_BODY.filter(x => x.k === 'CANCER')[0], M);
     /* 담보가 하나도 없는 부위 */
@@ -366,6 +367,87 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(pic.offB === 1, '뺀 담보는 <b>그 부위 안에서만</b> 센다 — 표 전체를 세어 「14건」이라 적던 자리 (' + pic.offB + '건)');
   is(pic.nurNone && pic.nurColor === '#CBD5E1', '담보가 없는 부위는 「준비된 담보가 없습니다」라고 말한다');
   is(pic.jnLen > 500, '치료 여정이 실제로 그려진다');
+
+  /* ── 일당인가 목돈인가 · 네 갈래 · 그때 우리 집은 ── */
+  console.log('\n[9-2] 일당을 목돈으로, 목돈을 일당으로 보지 않는가 (147억 사고)');
+  const kind = await page.evaluate(() => {
+    const covs = [__cov('k1', 'p1', '장기요양 급여', 20000000),
+                  __cov('k2', 'p1', '간병인사용일당', 100000),
+                  __cov('k3', 'p1', '질병입원일당', 30000),
+                  __cov('k4', 'p1', '질병통원비', 300000),
+                  __cov('k5', 'p1', '요양간병자금', 50000, '일당'),
+                  __cov('k6', 'p1', '치매 진단·간병비', 10000000)];
+    const scen = [{ id: 'n1', diseaseCategory: 'NURSING', diseaseCode: 'care_ltc',
+                    scenarioName: '장기요양 재가 2년', referenceTreatmentCostWon: 48000000,
+                    inpatientDays: 730, incomeGapMonths: 0,
+                    purposes: ['NURSING', 'DIAGNOSIS', 'OUTPATIENT'], treatmentSteps: [],
+                    sourceName: '시험', active: true }];
+    __frSeed([__pol('p1', 50000, false)], covs, null, scen);
+    const M = frMaster(), by = {}; M.forEach(m => by[m.id] = m);
+    const r = frScenCalc(frScenActive()[0], M, 'before');
+    return { ltc: by.k1.pay, nurse: by.k2.pay, hosp: by.k3.pay, out: by.k4.pay,
+             byFreq: by.k5.pay, dementia: by.k6.pay,
+             cover: r.coverWon, rate: Math.round(r.rate * 10) / 10 };
+  });
+  is(kind.ltc === 'LUMP', '장기요양 급여(목돈)를 일당으로 보지 않는다 — 730일을 곱해 147억이 되던 자리');
+  is(kind.dementia === 'LUMP', '치매 진단·간병비도 목돈으로 본다');
+  is(kind.nurse === 'DAILY' && kind.hosp === 'DAILY', '이름이 「일당」이라고 말하면 일당으로 본다');
+  is(kind.byFreq === 'DAILY', '추출된 지급주기가 「일당」이면 이름이 달라도 일당으로 본다');
+  is(kind.out === 'VISIT', '통원비는 1회당 한도다 — 입원일수를 곱하지 않는다');
+  /* 목돈 2건 + 일당 2건(이름으로 잡힌 것 · 지급주기로 잡힌 것) — 통원비는 빠진다 */
+  is(kind.cover === 20000000 + 10000000 + 100000 * 730 + 50000 * 730,
+     '목돈은 그대로, 일당만 일수로 환산해 더한다 (' + kind.cover + '원)');
+  is(kind.rate < 500, '준비 수준이 말이 되는 범위에 있다 (' + kind.rate + '% · 전에는 30796.9%)');
+
+  console.log('\n[9-3] 네 갈래(암·뇌·심장·간병)와 「그때 우리 집은」');
+  const care = await page.evaluate(() => {
+    const mk = (cat, code, name, cost, months) => ({
+      id: 's' + cat, diseaseCategory: cat, diseaseCode: code, scenarioName: name,
+      referenceTreatmentCostWon: cost, incomeGapMonths: months,
+      purposes: ['DIAGNOSIS', 'SURGERY', 'TREATMENT', 'NURSING'], treatmentSteps: [],
+      sourceName: '시험', sourceDate: '2026-08', active: true });
+    const scen = [mk('CANCER', 'cancer_general', '위암', 50000000, 6),
+                  mk('BRAIN', 'brain_infarct', '뇌경색', 40000000, 9),
+                  mk('HEART', 'heart_mi', '심근경색', 35000000, 3),
+                  mk('NURSING', 'care_ltc', '장기요양', 48000000, 0)];
+    const covs = [__cov('c1', 'p1', '일반암진단비', 30000000)];
+    /* ① 소득·지출·가족이 <b>없을 때</b> — 만들어 내지 않는가 */
+    const st0 = frBlankState();
+    __frSeed([__pol('p1', 50000, false)], covs, st0, scen);
+    FR.client = { birth_year: null, gender: null, monthly_income: null, monthly_fixed_expense: null };
+    const bare = frCareHtml(frMaster());
+    const r0 = frTrackCalc(FR_TRACKS[0], frMaster());
+    /* ② 소득·지출·가족이 <b>있을 때</b> — 그 값으로 푸는가 */
+    const st = frBlankState();
+    st.prof = { dependents: 3, retireAge: 65, family: [{ rel: '배우자', age: 41 }, { rel: '자녀', age: 9 }] };
+    __frSeed([__pol('p1', 50000, false)], covs, st, scen);
+    const M = frMaster(), full = frCareHtml(M), r1 = frTrackCalc(FR_TRACKS[0], M);
+    const nur = frTrackCalc(FR_TRACKS[3], M);
+    return {
+      tracks: (full.match(/치료 여정과 그때 우리 집/g) || []).length,
+      hasCare: full.indexOf('간병 · 요양 — 치료 여정') >= 0,
+      bareNoInvent: bare.indexOf('월 소득을 넣으시면') >= 0 && bare.indexOf('셈하지 않았습니다') >= 0,
+      bareMonths: r0.payMonthsB,
+      needWon: r1.needWon, living: r1.livingWon, self: r1.selfBeforeWon,
+      payMonths: Math.round(r1.payMonthsB * 10) / 10,
+      saysChild: full.indexOf('자녀</b>이 9세') >= 0 || full.indexOf('자녀 9세') >= 0,
+      saysDep: full.indexOf('부양가족 <b>3인</b>') >= 0,
+      nurZero: nur.months === 0 && full.indexOf('소득중단이 없는 것으로 설정') >= 0,
+      stagesCancer: frTrackStages(FR_TRACKS[0]).length,
+      stagesCare: frTrackStages(FR_TRACKS[3]).length
+    };
+  });
+  is(care.tracks === 4 && care.hasCare, '암·뇌·심장·간병 <b>네 갈래</b>가 모두 선다 (' + care.tracks + '장)');
+  is(care.stagesCancer >= 4 && care.stagesCare === 4,
+     '암·뇌·심장 여정은 치료비 지급지도의 것을 <b>가져다 쓰고</b>, 간병만 여기 넷을 둔다');
+  is(care.bareNoInvent && care.bareMonths === null,
+     '소득·지출이 비면 <b>셈하지 않고</b> 무엇을 넣어야 하는지 적는다');
+  is(care.living === 290 * 10000 * 6, '치료 기간의 <b>생활비</b>를 필요한 돈에 더한다 (' + care.living + '원)');
+  is(care.needWon === 50000000 + 290 * 10000 * 6, '필요한 돈 = 기준 치료비 + 그동안의 고정지출');
+  is(care.payMonths === Math.round(30000000 / 5500000 * 10) / 10,
+     '보험금을 <b>월급 몇 달치</b>로 바꿔 말한다 (' + care.payMonths + '개월)');
+  is(care.saysChild && care.saysDep, '부양가족 수와 <b>가장 어린 가족의 나이</b>를 문장에 쓴다');
+  is(care.nurZero, '소득중단 0개월인 갈래는 「0개월을 메우고도」라고 말하지 않는다');
 
   /* ── 인쇄 ── */
   console.log('\n[10] 종이 — 어긋난 채로 뽑지 않고, 우리가 다시 읽을 수 있는가');
