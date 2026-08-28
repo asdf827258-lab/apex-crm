@@ -70,8 +70,8 @@ is(sqlAt.length === 0,
 const loaderAt = files.filter(f =>
   /migration_45_bohum_rls\.sql/.test(fs.readFileSync(path.join(DIR, f), 'utf8')));
 is(loaderAt.length >= 1, '  그 파일을 <b>가리키는 화면</b>이 있다 — ' + (loaderAt.join(' · ') || '없음'));
-is(/못 읽었습니다|읽지 못했습니다/.test(fs.readFileSync(DIR + '/index.html', 'utf8')),
-   '  못 읽으면 <b>지어내지 않고</b> 그 파일을 여시라고 적는다 (1번)');
+is(/지어내지 않습니다/.test(fs.readFileSync(DIR + '/index.html', 'utf8')),
+   '  못 받으면 <b>지어내지 않는다</b>고 그 자리에 적는다 (1번)');
 
 /* ── 한 벌로 모았으면, 그 한 벌이 <b>배포에서 실제로 열려야</b> 한다 ────────
    _redirects 의 「/migration_*  …  404!」 가 이 파일까지 같이 막고 있었다.
@@ -243,6 +243,41 @@ if (sent) {
 }
 const prog = posts.filter(g => /bohum_progress/.test(g.path))[0];
 is(!!prog && /"owner_id":"u1"/.test(prog.body || ''), '  진도에도 owner_id 를 담는다');
+
+/* ── 파일이 열리는 것만으로는 부족했다 ────────────────────────────────
+   주소가 200 이어도 <b>화면 칸에 안 들어가면</b> 사장님 눈에는 똑같이
+   「못 받았습니다」다. 실제로 그랬다 — 가이드를 <b>주소로 바로</b> 여시면
+   칸을 그릴 때 SQL 이 아직 안 와 있고, 나중에 도착해도 아무도 칸을 다시
+   안 채웠다. 다른 화면을 거쳐 오면 되고 바로 열면 안 되는 화면이었다.
+   그래서 여기서는 <b>주소로 바로 여는 쪽</b>을 본다 — 안 되던 쪽이다. */
+console.log('\n[7-1] 가이드를 주소로 바로 열어도 SQL 이 칸에 들어온다');
+const g = await browser.newPage();
+const gerr = [];
+g.on('pageerror', e => gerr.push(String(e).slice(0, 140)));
+await g.goto(SITE + '/' + DIR + '/index.html#GUIDE', { waitUntil: 'domcontentloaded' });
+await g.waitForTimeout(3500);
+const G = await g.evaluate(() => {
+  const ta = document.getElementById('sqlbox');
+  const v = ta ? ta.value : '';
+  /* 파일 머리 주석이 <b>옛 정책을 그대로 인용</b>한다 — 걷지 않으면 그것을 읽고
+     「anon 그대로네」 라고 잘못 답한다. [3] 이 이미 겪은 자리다 (8번). */
+  const code = v.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  return { box: !!ta, len: v.length, pol: (code.match(/create policy/g) || []).length,
+           anon: /to anon/.test(code) };
+});
+await g.close();
+is(G.box, '  운영 가이드에 SQL 칸이 <b>있다</b>');
+is(G.pol > 0,
+   '  주소로 바로 열어도 <b>SQL 이 칸에 들어와 있다</b> — 정책 ' + G.pol + '개 · ' + G.len + '자' +
+   (G.pol ? '' : ' ← 늦게 온 SQL 을 아무도 칸에 안 넣습니다'));
+is(!G.anon, '  칸에 들어온 SQL 에 <b>익명(to anon) 정책이 없다</b> — 엉뚱한 파일을 읽지 않았다');
+is(gerr.length === 0, '  그 화면에서 터진 곳이 없다' + (gerr.length ? ' — ' + gerr[0] : ''));
+/* 기다림에는 시간 제한이 있어야 한다 — 답이 영영 안 오면 스피너만 돈다 (4-1) */
+const GUI = fs.readFileSync(DIR + '/index.html', 'utf8');
+const wms = (GUI.match(/SUPA_SQL_WAIT_MS\s*=\s*(\d+)/) || [])[1];
+is(wms && +wms >= 3000 && +wms <= 30000,
+   '  SQL 을 기다리는 데 <b>시간 제한</b>이 있다 — ' + (wms ? wms + 'ms' : '없음') +
+   ' (3~30초 사이여야 한다)');
 
 console.log('\n[8] 콘솔이 조용하다');
 is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));

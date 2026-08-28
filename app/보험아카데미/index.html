@@ -926,6 +926,31 @@ function openSqlTab(copied){
     '<b style="color:#c0303b">붙여넣은 내용이 <code>create table…</code> 로 시작하는지 꼭 확인하세요.</b> 다른 글이 들어갔으면 지우고 다시 넣으세요.<br>'+
     '<b>3</b> Run 이 끝나면 아래 <b>②확인</b> 을 눌러주세요.');
 }
+/* 「복사」 와 「① SQL 편집기 열기」 가 하는 일. <b>SQL 이 도착한 뒤에만</b>
+   불린다 — 안 그러면 「못 읽었습니다」 를 복사해 드리고, 그것을 붙여넣고
+   Run 하시면 아무 일도 안 일어난다. */
+function sqlAct(which){
+  if(!/create policy/.test(SUPA_SQL)){
+    setMsg('no','준비 SQL 을 <b>아직 못 받았습니다.</b> 인터넷을 확인하신 뒤 '+
+                '이 화면을 새로고침해 주십시오. (없는 SQL 을 지어내지 않습니다)');
+    return;
+  }
+  var copied = copySQL();
+  var after = copied ? Promise.resolve(true)
+    : (navigator.clipboard ? navigator.clipboard.writeText(SUPA_SQL).then(function(){return true;})
+                              .catch(function(){return false;})
+                           : Promise.resolve(false));
+  if(which==='sqlcopy'){
+    after.then(function(ok){
+      setMsg(ok?'ok':'no', ok
+        ? 'SQL 이 <b>복사됐습니다</b> — Supabase SQL Editor 에 붙여넣고 Run 하세요.'
+        : '복사가 막혀 있습니다. 아래 상자를 <b>클릭하면 전체 선택</b>되니 Ctrl+C 하세요.');
+    });
+    return;
+  }
+  var det=document.querySelector('.sqldet'); if(det) det.open = true;
+  after.then(function(ok){ openSqlTab(ok); });
+}
 function setMsg(kind, html){
   var m = document.getElementById('sqlmsg'); if(!m) return;
   m.className = 'setupmsg ' + kind; m.innerHTML = html;
@@ -942,18 +967,38 @@ var AUDIT_SQL = "select 'academy_* (CRM 소유 · 건드리지 말 것)' as grp,
    이제 저장소의 migration_45_bohum_rls.sql 을 그대로 읽어 옵니다.
    못 읽으면 <지어내지 않고> 그 파일을 여시라고 적습니다(1번). */
 var SUPA_SQL_FILE = '../../migration_45_bohum_rls.sql';
-var SUPA_SQL_MISS = '/* 이 화면에서 준비 SQL 을 읽지 못했습니다.\n'+
-  '   이 화면을 새로고침한 뒤 다시 눌러 주십시오.\n'+
+var SUPA_SQL_MISS = '/* 준비 SQL 을 받아 오는 중입니다 — 잠시만 기다려 주십시오.\n'+
+  '   몇 초 뒤에도 이 글이 그대로면 인터넷이 끊긴 것이니,\n'+
+  '   연결을 확인하신 뒤 이 화면을 새로고침해 주십시오.\n'+
   '   (없는 SQL 을 지어내지 않습니다 — 지금 붙여넣으실 것이 없습니다.) */';
 var SUPA_SQL = SUPA_SQL_MISS;
-(function(){
+/* ── 화면이 <b>먼저 그려지고</b> SQL 은 나중에 온다 ────────────────────
+   가이드를 주소로 바로 여시면(즐겨찾기·새로고침) 칸을 그릴 때 아직 안 와
+   있습니다. 전에는 그때 「못 읽었습니다」 를 넣고 <b>끝</b>이라, 나중에
+   도착해도 아무도 칸을 다시 안 채웠습니다. 그래서 늘 그 글만 보셨습니다 —
+   다른 화면을 거쳐 오면 되고, 바로 열면 안 되는 이상한 화면이었습니다.
+
+   이제 <b>기다릴 것을 손에 쥐고</b>(SUPA_SQL_READY) 도착하면 다시 채웁니다.
+   기다림에는 시간 제한을 겁니다 — 답이 영영 안 오면 스피너만 도는 대신
+   「못 읽었습니다」 로 <b>확실히</b> 떨어져야 합니다 (CLAUDE.md 4-1). */
+var SUPA_SQL_WAIT_MS = 12000;
+var SUPA_SQL_READY = (function(){
+  var done = function(){ return SUPA_SQL; };
   try{
-    fetch(SUPA_SQL_FILE)
+    var got = fetch(SUPA_SQL_FILE)
       .then(function(r){ return r.ok ? r.text() : null; })
-      .then(function(t){ if(t && /create policy/.test(t)) SUPA_SQL = t; })
-      .catch(function(){});
-  }catch(e){}
+      .then(function(t){ if(t && /create policy/.test(t)) SUPA_SQL = t; return SUPA_SQL; })
+      .catch(done);
+    var cap = new Promise(function(res){ setTimeout(function(){ res(SUPA_SQL); }, SUPA_SQL_WAIT_MS); });
+    return Promise.race([got, cap]);
+  }catch(e){ return Promise.resolve(SUPA_SQL); }
 })();
+/* 도착한 뒤에 칸을 채우는 곳은 <b>한 곳</b>이다 — 두 곳에서 채우면
+   한쪽만 고쳤을 때 화면마다 다른 것이 붙는다 (5번). */
+function supaSqlFill(){
+  var ta = document.getElementById('sqlbox');
+  if(ta) ta.value = SUPA_SQL;
+}
 
 /* ---------- 성장 경로 ---------- */
 var STAGES = [
@@ -2072,9 +2117,12 @@ function route(){
   else if(id==='CARD') v.innerHTML = renderCards();
   else if(id==='GUIDE'){ v.innerHTML = renderGuide();
     var _sb=document.getElementById('sqlbox');
-    if(_sb){ _sb.value = SUPA_SQL;
+    if(_sb){ supaSqlFill();
       _sb.addEventListener('focus', function(){ this.select(); });
       _sb.addEventListener('click', function(){ this.select(); }); }
+    /* 아직 안 왔으면 <b>도착할 때 다시 채운다</b> — 이 한 줄이 없으면 가이드를
+       주소로 바로 여신 분은 늘 「못 읽었습니다」 만 보신다. */
+    SUPA_SQL_READY.then(supaSqlFill);
     if(window.SYNC) SYNC.check().then(function(ok){
       if(!document.getElementById('setupsteps')) return;
       if(ok){ stepDone(1); stepDone(2); setMsg('ok','이미 연결돼 있습니다. 팀원 점수가 자동으로 모입니다.'); }
@@ -2160,21 +2208,11 @@ function bind(){
     if(wp){ tsetname(wp.dataset.n); route(); return; }
     if(t.id==='qgrade'){ if(QSET) gradeQuiz(QSET); return; }
     if(t.id==='stepOpen' || t.id==='sqlcopy'){
-      var copied = copySQL();
-      var after = copied ? Promise.resolve(true)
-        : (navigator.clipboard ? navigator.clipboard.writeText(SUPA_SQL).then(function(){return true;})
-                                  .catch(function(){return false;})
-                               : Promise.resolve(false));
-      if(t.id==='sqlcopy'){
-        after.then(function(ok){
-          setMsg(ok?'ok':'no', ok
-            ? 'SQL 이 <b>복사됐습니다</b> — Supabase SQL Editor 에 붙여넣고 Run 하세요.'
-            : '복사가 막혀 있습니다. 아래 상자를 <b>클릭하면 전체 선택</b>되니 Ctrl+C 하세요.');
-        });
-        return;
-      }
-      var det=document.querySelector('.sqldet'); if(det) det.open = true;
-      after.then(function(ok){ openSqlTab(ok); });
+      /* 아직 안 왔는데 누르시면 <b>「못 읽었습니다」 를 복사</b>해 드리게 된다.
+         SQL 창에 그것을 붙여넣고 Run 하시면 아무 일도 안 일어난다.
+         그래서 <b>도착한 뒤에</b> 복사한다 — SUPA_SQL_READY 는 시간 제한이
+         걸려 있어 안 와도 반드시 끝난다. */
+      SUPA_SQL_READY.then(function(){ supaSqlFill(); sqlAct(t.id); });
       return;
     }
     if(t.id==='auditOpen'){
