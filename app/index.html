@@ -1248,14 +1248,33 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 /* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다 */
 .tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;}
 .tn-2::-webkit-scrollbar{display:none;}
-.tn-g{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid transparent;color:rgba(255,255,255,.78);
-  font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;
-  font-family:inherit;}
-.tn-g:hover{background:rgba(255,255,255,.14);color:#fff;}
-.tn-g.on{background:#1A56DB;border-color:#3B82F6;color:#fff;}
-/* 펼친 칸들 */
-.tn-pane{display:none;background:var(--ink-1);border-top:1px solid rgba(255,255,255,.07);
-  padding:10px 12px 12px;max-height:56vh;overflow-y:auto;}
+/* 색은 <b>세로 메뉴와 같은 한 줄기</b>다 — navRamp() 가 정한 --gc/--ge/--gt/--ga/--gb
+   를 그대로 받아 쓴다. 여기서 색을 새로 정하면 위·옆이 서로 다른 색이 되어
+   같은 칸을 두 가지로 외우시게 된다 (5번). 위는 보라, 내려갈수록 남색·청록·
+   초록을 지나 끝은 금빛 — 가로에서는 <b>왼쪽에서 오른쪽</b>으로 흐른다. */
+.tn-g{flex:0 0 auto;border-radius:99px;cursor:pointer;white-space:nowrap;font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:6px 12px 6px 10px;
+  display:inline-flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .34)),
+                                    rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .92)));
+  border:1px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .40));
+  color:rgb(var(--gt,190 210 245));transition:filter .12s,box-shadow .12s;}
+.tn-g .tng-ic{font-size:12px;line-height:1;opacity:.92;}
+.tn-g .tng-n{font-size:10.5px;font-weight:800;opacity:.72;
+  background:rgb(var(--ge,90 120 200) / .30);border-radius:99px;padding:1px 5px;}
+.tn-g:hover{filter:brightness(1.28);}
+.tn-g.on{background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / .92),
+                                          rgb(var(--gc,90 120 200) / .92));
+  border-color:rgb(var(--ge,90 120 200) / 1);color:#fff;
+  box-shadow:0 0 0 1px rgb(var(--ge,90 120 200) / .45),0 2px 8px rgb(var(--gc,90 120 200) / .40);}
+.tn-g.on .tng-n{background:rgba(255,255,255,.22);opacity:.95;}
+/* 찾는 중 딱지는 갈래가 없다 — 한 줄기 색을 안 쓴다 */
+.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;color:#fff;box-shadow:none;}
+/* 펼친 칸들 — 열어 둔 갈래 색을 옅게 이어받는다(위에서 아래로 사라진다) */
+.tn-pane{display:none;max-height:56vh;overflow-y:auto;padding:10px 12px 12px;
+  background:linear-gradient(180deg,rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .34)),
+                                    rgb(var(--gc,90 120 200) / 0) 120px),var(--ink-1);
+  border-top:1px solid rgb(var(--ge,255 255 255) / calc(var(--gb,.07) * .5));}
 .tn-pane.on{display:block;}
 .tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px;}
 .tn-pane .nav-row{margin:0;}
@@ -10893,7 +10912,7 @@ function tnPaint(){
 
   /* 찾는 중에는 그룹 대신 「찾는 중」 딱지 하나만 */
   if(NAV_Q){
-    bar.innerHTML='<button type="button" class="tn-g on" onclick="navFind(\'\')">'+
+    bar.innerHTML='<button type="button" class="tn-g tn-find-on" onclick="navFind(\'\')">'+
       '🔎 「'+esc(NAV_Q)+'」 찾는 중 — 눌러서 지우기</button>';
     var rows='',n=0;
     for(i=0;i<gs.length;i++){
@@ -10909,12 +10928,28 @@ function tnPaint(){
     return;
   }
 
-  for(i=0;i<gs.length;i++)
-    h+='<button type="button" class="tn-g'+(TN_OPEN===i?' on':'')+'" onclick="tnToggle('+i+')">'+
-       esc(gs[i].group)+'</button>';
+  /* 색은 <b>세로 메뉴가 쓰는 그 함수</b>에서 그대로 받는다 — 여기서 새로
+     정하면 위·옆이 다른 색이 되고, 갈래를 늘렸을 때 한쪽만 어긋난다 (5번). */
+  for(i=0;i<gs.length;i++){
+    var c=(typeof navRamp==='function')?navRamp(i,gs.length):null;
+    var ic=(typeof NAVG_ICON!=='undefined'&&NAVG_ICON[gs[i].group])||'•';
+    h+='<button type="button" class="tn-g'+(TN_OPEN===i?' on':'')+'" onclick="tnToggle('+i+')"'+
+       (c?' style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'"':'')+
+       ' aria-expanded="'+(TN_OPEN===i?'true':'false')+'">'+
+       '<span class="tng-ic">'+ic+'</span>'+esc(gs[i].group)+
+       '<span class="tng-n">'+gs[i].items.length+'</span></button>';
+  }
   bar.innerHTML=h;
 
-  if(TN_OPEN<0||TN_OPEN>=gs.length){pane.classList.remove('on');pane.innerHTML='';return;}
+  if(TN_OPEN<0||TN_OPEN>=gs.length){
+    pane.classList.remove('on');pane.innerHTML='';
+    pane.removeAttribute('style');   /* 닫을 때 색을 남기지 않는다 */
+    return;
+  }
+  /* 펼친 칸도 <b>그 갈래 색</b>을 옅게 이어받는다 — 어느 갈래를 열어 두었는지
+     단추에서 눈을 떼도 알 수 있게. 단추와 같은 값이라 두 벌이 아니다. */
+  var co=(typeof navRamp==='function')?navRamp(TN_OPEN,gs.length):null;
+  if(co)pane.setAttribute('style','--gc:'+co.c+';--ge:'+co.e+';--gt:'+co.w+';--ga:'+co.a+';--gb:'+co.b);
   var rows2='';
   gs[TN_OPEN].items.forEach(function(it){ rows2+=navBtnHtml(it); });
   pane.innerHTML='<div class="tn-grid">'+rows2+'</div>';
@@ -11959,8 +11994,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 09:10';
-var APP_BUILD_NOTE='<b>「한장 보험료 비교」가 증권 분석에 들어왔습니다 — 보험사 전부를 담보별로 한 화면에 놓고 견줍니다.</b> 지금까지는 회사 보험료비교 화면을 따로 열어 상품을 세 개씩 골라 가며 봤습니다. 이제 <b>담보 한 줄 × 보험사 전부</b>가 한 표에 서고, 담보마다 <b>제일 싼 회사에 파란 테두리와 「최저」</b>가 붙습니다. 회사 머리에는 <b>「담보 N개 최저」</b>가 적혀 어느 회사가 몇 군데서 이기는지 한눈에 보입니다. <b>담보 고르기</b>로 고객에게 필요한 보장과 금액만 골라 그 구성 그대로 비교할 수 있고, <b>만기별</b>(20년/80·90·100세)과 <b>연령별</b>(지금·+1·+2·+5·+10세)로 「지금 가입할 때와 나중에 가입할 때」 차이를 그 자리에서 보여 줍니다. 담보 이름을 누르면 <b>보험사별 약관 원문</b>이 카드로 나란히 섭니다. <b>고객 모드</b>를 켜면 보험사명·상품명이 <b>순위</b>로 바뀝니다. 결과는 <b>카톡 카드·표 이미지</b>로 뽑거나 <b>크게 보기</b>로 그대로 보여 줄 수 있습니다. 요율은 <b>미리 받아 두지 않고</b> 조회할 때마다 회사 서버에서 그때 받아 옵니다 — 회사가 요율을 갱신하면 다음 조회부터 바로 반영됩니다. <b>처음 한 번</b> 회사에서 받은 보험료비교 링크를 붙여넣어 주십시오(그 다음부터는 기억합니다). 링크는 <b>그 브라우저에만</b> 남고 CRM 서버에는 저장되지 않습니다. 하루쯤 지나 링크가 만료되면 화면이 알아서 다시 물어봅니다. <b>[정직]</b> 담보별 가입 한도와 스코어링은 반영되지 않은 <b>단순 보험료 비교</b>이고, 실제 보험료와 가입 가능 여부는 <b>심사 결과에 따릅니다</b>. <b>[main]</b> <b>가입이 동의 칸에서 막히던 것을 고쳤습니다.</b> 동의 칸이 <b>둘</b>인데 따로 눌러야 했고, 하나만 빠져도 늘 같은 말이 떴습니다 — 「이용약관과 개인정보 처리에 동의해야…」. <b>어느 쪽이 빠졌는지를 안 알려 주니</b> 이미 하나를 누른 분은 무엇을 더 눌러야 하는지 모르고, 다시 눌러도 또 막힙니다. 고쳐서 눌러도 <b>옛 빨간 글이 그대로</b> 남아 또 막힌 줄 아셨습니다. 이제 <b>「모두 동의」 한 줄</b>이면 끝납니다. 빠지면 <b>이름을 대고</b> 말하고(「개인정보 수집·이용 동의에 체크해 주세요」), <b>그 칸만</b> 빨갛게 짚어 주고, 누르면 저절로 풀립니다. 그리고 <b>「가입 신청은 누구나 하실 수 있고, 대표 승인 뒤에 열립니다」</b> 라고 그 자리에서 알려 드립니다 — 막힌 줄 아시지 않게. <b>동의를 없애지는 않았습니다.</b> 개인정보 수집·이용과 국외 이전 동의는 법으로 받아야 하는 것이라, 없애면 그때부터 받는 모든 정보가 근거가 없습니다. 두 칸은 그대로 있고 안 누르면 여전히 못 넘어갑니다 — <b>누르기 쉽게</b> 만들었을 뿐입니다. 새 점검 <code>check-signup</code> — 폰 폭에서 실제로 눌러 봅니다. 열 자리를 되돌려 전부 빨간불을 확인했습니다. 같은 판에 <b>[main]</b> 다른 세션이 만든 <b>예외질환 인수확인</b>과 <b>신입 90일 로드맵</b>에 지키는 것이 없어 점검 <code>check-aplusroad</code> 를 붙였습니다 — 남의 자료를 앱에 복제해 두지 않는가 · 출처와 팀 내부 조회용이라 밝히는가 · 「심사 결과와 약관이 우선」 이라 적는가 · 교재에 없는 주제를 억지로 붙이지 않는가.';
+var APP_BUILD='2026-08-29 10:40';
+var APP_BUILD_NOTE='<b>「한장 보험료 비교」가 증권 분석에 들어왔습니다 — 보험사 전부를 담보별로 한 화면에 놓고 견줍니다.</b> 지금까지는 회사 보험료비교 화면을 따로 열어 상품을 세 개씩 골라 가며 봤습니다. 이제 <b>담보 한 줄 × 보험사 전부</b>가 한 표에 서고, 담보마다 <b>제일 싼 회사에 파란 테두리와 「최저」</b>가 붙습니다. 회사 머리에는 <b>「담보 N개 최저」</b>가 적혀 어느 회사가 몇 군데서 이기는지 한눈에 보입니다. <b>담보 고르기</b>로 고객에게 필요한 보장과 금액만 골라 그 구성 그대로 비교할 수 있고, <b>만기별</b>(20년/80·90·100세)과 <b>연령별</b>(지금·+1·+2·+5·+10세)로 「지금 가입할 때와 나중에 가입할 때」 차이를 그 자리에서 보여 줍니다. 담보 이름을 누르면 <b>보험사별 약관 원문</b>이 카드로 나란히 섭니다. <b>고객 모드</b>를 켜면 보험사명·상품명이 <b>순위</b>로 바뀝니다. 결과는 <b>카톡 카드·표 이미지</b>로 뽑거나 <b>크게 보기</b>로 그대로 보여 줄 수 있습니다. 요율은 <b>미리 받아 두지 않고</b> 조회할 때마다 회사 서버에서 그때 받아 옵니다 — 회사가 요율을 갱신하면 다음 조회부터 바로 반영됩니다. <b>처음 한 번</b> 회사에서 받은 보험료비교 링크를 붙여넣어 주십시오(그 다음부터는 기억합니다). 링크는 <b>그 브라우저에만</b> 남고 CRM 서버에는 저장되지 않습니다. 하루쯤 지나 링크가 만료되면 화면이 알아서 다시 물어봅니다. <b>[정직]</b> 담보별 가입 한도와 스코어링은 반영되지 않은 <b>단순 보험료 비교</b>이고, 실제 보험료와 가입 가능 여부는 <b>심사 결과에 따릅니다</b>. <b>[main]</b> <b>가로 메뉴 갈래마다 색을 입혔습니다.</b> 갈래 단추가 다 같은 회색이라 「내 고객」과 「상담 도구」가 눈으로 안 갈렸습니다. 이제 <b>세로 메뉴와 똑같은 한 줄기</b>로 흐릅니다 — 왼쪽이 짙은 보라, 오른쪽으로 가며 남색·청록·초록을 지나 끝은 옅은 금빛. 갈래 아이콘과 <b>칸 수</b>도 단추에 같이 붙였습니다. 펼친 칸도 그 갈래 색을 옅게 이어받아, 단추에서 눈을 떼도 <b>지금 어느 갈래를 열어 두었는지</b> 보입니다. <b>색을 새로 정하지 않았습니다</b> — 세로 메뉴가 쓰던 <code>navRamp()</code> 를 그대로 부릅니다. 여기서 따로 정하면 같은 「내 고객」이 위에서는 파랑, 옆에서는 초록이 되어 두 가지로 외우시게 됩니다(5번). 점검이 <b>실제로 칠해진 값</b>을 위·옆에서 읽어 <b>14갈래가 한 칸도 안 어긋나는지</b> 봅니다 — 세 자리를 되돌려 전부 빨간불을 확인했습니다. 그리고 <b>교재 준비 SQL 이 운영에서만 안 나오던 것</b>을 고쳤습니다. SQL 을 파일 한 벌로 모으면서 화면이 그것을 주소로 부르게 됐는데, <code>_redirects</code> 가 마이그레이션 주소를 통째로 막고 있었습니다. 강제 막음이라 <b>로컬에서는 열리고 운영에서만 조용히 404</b> — 단추를 눌러도 SQL 이 안 나왔습니다. 그 한 줄만 열었고, 점검이 <b>Netlify 규칙 순서를 그대로 흉내 내</b> 첫 번째로 걸리는 규칙을 봅니다. 예외 줄을 지워도, <b>아래로 옮기기만 해도</b> 빨간불이 켜집니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
