@@ -1250,37 +1250,70 @@ body.dzguide-mode #dzGuideScreen{display:block;}
   min-width:0;font-family:inherit;}
 .tn-find input::placeholder{color:rgba(255,255,255,.45);}
 .tn-find .nf-x{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;}
-/* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다 */
-.tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;}
+/* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다.
+   <b>마우스로도 넘어간다</b> — 휠을 굴리거나 끌면 옆으로 간다(tnDragWire).
+   양 끝의 옅은 그늘(.tn-2w::before/after)이 「더 있다」는 표시다. */
+.tn-2w{position:relative;}
+.tn-2w::before,.tn-2w::after{content:'';position:absolute;top:0;bottom:8px;width:26px;
+  pointer-events:none;z-index:2;opacity:0;transition:opacity .15s;}
+.tn-2w::before{left:0;background:linear-gradient(90deg,var(--ink-2),rgba(0,0,0,0));}
+.tn-2w::after{right:0;background:linear-gradient(270deg,var(--ink-2),rgba(0,0,0,0));}
+.tn-2w.can-l::before{opacity:1;}
+.tn-2w.can-r::after{opacity:1;}
+.tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;
+  scroll-behavior:smooth;cursor:grab;}
+.tn-2.drag{cursor:grabbing;scroll-behavior:auto;}
 .tn-2::-webkit-scrollbar{display:none;}
+/* 끝까지 갔는지 보여 주는 화살표 — 마우스만 쓰시는 분을 위해 */
+.tn-arw{position:absolute;top:-2px;z-index:3;width:24px;height:28px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.10);color:#fff;font-size:13px;line-height:1;border-radius:5px;
+  display:none;align-items:center;justify-content:center;font-family:inherit;}
+.tn-arw:hover{background:rgba(255,255,255,.22);}
+.tn-2w.can-l .tn-arw.l{display:flex;left:2px;}
+.tn-2w.can-r .tn-arw.r{display:flex;right:2px;}
 /* 색은 <b>세로 메뉴와 같은 한 줄기</b>다 — navRamp() 가 정한 --gc/--ge/--gt/--ga/--gb
    를 그대로 받아 쓴다. 여기서 색을 새로 정하면 위·옆이 서로 다른 색이 되어
    같은 칸을 두 가지로 외우시게 된다 (5번). 위는 보라, 내려갈수록 남색·청록·
    초록을 지나 끝은 금빛 — 가로에서는 <b>왼쪽에서 오른쪽</b>으로 흐른다. */
-.tn-g{flex:0 0 auto;border-radius:99px;cursor:pointer;white-space:nowrap;font-family:inherit;
-  font-size:12.5px;font-weight:700;padding:6px 12px 6px 10px;
+/* <b>각지고 네모나게.</b> 둥근 알약은 옆 칸과 경계가 흐려 「한눈에」 가 안
+   된다. 네모는 색 띠가 붙어 <b>한 줄기</b>로 읽힌다. 왼쪽에 짙은 세로 막대를
+   세워 어느 갈래인지 색으로 먼저 보이게 한다. */
+.tn-g{flex:0 0 auto;border-radius:3px;cursor:pointer;white-space:nowrap;font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:7px 11px 7px 9px;
   display:inline-flex;align-items:center;gap:5px;
   background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .34)),
                                     rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .92)));
   border:1px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .40));
+  border-left:3px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .95));
   color:rgb(var(--gt,190 210 245));transition:filter .12s,box-shadow .12s;}
 .tn-g .tng-ic{font-size:12px;line-height:1;opacity:.92;}
 .tn-g .tng-n{font-size:10.5px;font-weight:800;opacity:.72;
-  background:rgb(var(--ge,90 120 200) / .30);border-radius:99px;padding:1px 5px;}
+  background:rgb(var(--ge,90 120 200) / .30);border-radius:2px;padding:1px 5px;}
 .tn-g:hover{filter:brightness(1.28);}
 .tn-g.on{background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / .92),
                                           rgb(var(--gc,90 120 200) / .92));
   border-color:rgb(var(--ge,90 120 200) / 1);color:#fff;
-  box-shadow:0 0 0 1px rgb(var(--ge,90 120 200) / .45),0 2px 8px rgb(var(--gc,90 120 200) / .40);}
+  box-shadow:0 2px 8px rgb(var(--gc,90 120 200) / .40);}
 .tn-g.on .tng-n{background:rgba(255,255,255,.22);opacity:.95;}
+/* 펼친 갈래는 아래 펼침칸과 <b>이어져 보이게</b> 밑모서리를 편다 */
+.tn-g.on{border-bottom-left-radius:0;border-bottom-right-radius:0;}
 /* 찾는 중 딱지는 갈래가 없다 — 한 줄기 색을 안 쓴다 */
-.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;color:#fff;box-shadow:none;}
+.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;border-left-color:#93C5FD;color:#fff;box-shadow:none;}
 /* 펼친 칸들 — 열어 둔 갈래 색을 옅게 이어받는다(위에서 아래로 사라진다) */
 .tn-pane{display:none;max-height:56vh;overflow-y:auto;padding:10px 12px 12px;
   background:linear-gradient(180deg,rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .34)),
                                     rgb(var(--gc,90 120 200) / 0) 120px),var(--ink-1);
   border-top:1px solid rgb(var(--ge,255 255 255) / calc(var(--gb,.07) * .5));}
 .tn-pane.on{display:block;}
+/* 펼침칸 머리 — 어느 갈래를 열어 두었는지 글로도 적고, 닫는 자리를 준다.
+   펼친 채로 화면을 옮겨도 <b>그대로 유지</b>되므로 닫는 길이 꼭 있어야 한다. */
+.tn-ph{display:flex;align-items:center;gap:8px;margin:-2px 0 9px;}
+.tn-ph b{font-size:12.5px;color:#fff;letter-spacing:-.02em;}
+.tn-ph em{font-style:normal;font-size:11px;color:rgba(255,255,255,.5);}
+.tn-ph button{margin-left:auto;background:rgba(255,255,255,.10);border:none;border-radius:4px;
+  color:rgba(255,255,255,.82);font-size:11.5px;font-weight:700;padding:4px 9px;cursor:pointer;
+  font-family:inherit;}
+.tn-ph button:hover{background:rgba(255,255,255,.2);color:#fff;}
 .tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px;}
 .tn-pane .nav-row{margin:0;}
 .tn-none{font-size:12px;color:rgba(255,255,255,.55);padding:6px 2px;}
@@ -1372,9 +1405,16 @@ body.dzguide-mode #dzGuideScreen{display:block;}
       <button type="button" class="nf-x" onclick="navFind('')" aria-label="찾기 지우기">✕</button>
     </div>
   </div>
-  <div class="tn-2" id="tnGroups"></div>
+  <div class="tn-2w" id="tnGroupsWrap">
+    <button type="button" class="tn-arw l" onclick="tnNudge(-1)" aria-label="왼쪽으로">‹</button>
+    <div class="tn-2" id="tnGroups"></div>
+    <button type="button" class="tn-arw r" onclick="tnNudge(1)" aria-label="오른쪽으로">›</button>
+  </div>
   <div class="tn-pane" id="tnPane"></div>
 </div>
+<!-- 나를 지목한 공지 — 내가 확인을 누를 때까지 <b>맨 위에 그대로</b> 있다.
+     가로 메뉴 바로 밑이라 어느 화면을 열어도 따라온다. -->
+<div id="osAckBar"></div>
 <div class="scrim" id="scrim" onclick="toggleNav()"></div>
 
 <div class="app">
@@ -7280,16 +7320,32 @@ function arSkillHtml(){
   for(i=0;i<GB_CUR.length;i++){
     var c=GB_CUR[i],on=!!pm[c[0]];
     if(on)n++;
-    rows.push('<div class="ar-sk'+(on?' on':'')+'" onclick="arStamp(\''+c[0]+'\')">'+
-      '<span class="bx">'+(on?'✓':'')+'</span>'+
-      '<span class="tx"><b>'+osEsc(c[1])+'</b><em>'+osEsc(c[3])+'</em>'+
+    /* 「스스로 합격을 준다」 고만 하면 <b>무엇을 읽고</b> 합격할지가 없다.
+       교재의 그 장으로 바로 가는 단추를 단다. 교재에 없는 주제는 <b>단추를
+       안 만들고</b> 없다고 적는다 — 눌러 들어가서 빈 장을 보시면 안 된다. */
+    var ac=(typeof GB_ACAD!=='undefined')?GB_ACAD[c[0]]:null;
+    var learn = ac
+      ? '<button type="button" class="ar-sk-go" onclick="event.stopPropagation();gbOpenAcad(\''+c[0]+'\')">'+
+          '📕 교재 '+osEsc(ac.l)+' · '+osEsc(ac.t)+' 열기</button>'+
+        (ac.part?'<span class="ar-sk-part">※ '+osEsc(ac.part)+'</span>':'')
+      : '<span class="ar-sk-none">교재에 이 주제로 된 장이 <b>없습니다</b> — 없는 자료로 보내 드리지 않습니다</span>';
+    rows.push('<div class="ar-sk'+(on?' on':'')+'">'+
+      '<span class="bx" onclick="arStamp(\''+c[0]+'\')">'+(on?'✓':'')+'</span>'+
+      '<span class="tx"><b onclick="arStamp(\''+c[0]+'\')">'+osEsc(c[1])+'</b>'+
+      '<em>'+osEsc(c[3])+'</em>'+
       '<span class="who">이런 고객에게 — '+osEsc(c[4])+'</span>'+
-      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span></span></div>');
+      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span>'+
+      learn+'</span></div>');
   }
+  var linked=0,j;
+  for(j=0;j<GB_CUR.length;j++)if(typeof GB_ACAD!=='undefined'&&GB_ACAD[GB_CUR[j][0]])linked++;
   return arCard('🎓','본인 역량 체크',n+' / '+GB_CUR.length+'개 합격 · 하나씩 끝내고 스스로 합격을 줍니다',
     '<div class="ar-sks">'+rows.join('')+'</div>',
     '<div class="notice" style="margin-top:11px">하루 한 장만 읽습니다. 읽고 <b>그날 한 명에게 써 봅니다.</b> '+
-    '안 써 본 화법은 상담에서 안 나옵니다.</div>');
+    '안 써 본 화법은 상담에서 안 나옵니다.<br>'+
+    '<b>📕 교재 열기</b> 를 누르면 <b>보험 마스터 아카데미</b>의 그 장으로 바로 갑니다 — '+
+    '열둘 중 <b>'+linked+'개</b>가 이어져 있습니다. 나머지는 교재에 그 주제가 없어 '+
+    '<b>일부러 비워 두었습니다.</b></div>');
 }
 function arStamp(s){
   if(typeof gbStamp==='function'){gbStamp(s);setTimeout(arPaint,60);}
@@ -8712,6 +8768,17 @@ function arCss(){
    '.ar-sk .tx b{display:block;font-size:13.5px;font-weight:900;color:#0F172A}'+
    '.ar-sk .tx em{display:block;font-style:normal;font-size:12px;color:#475569;margin-top:2px;line-height:1.55}'+
    '.ar-sk .who,.ar-sk .std{display:block;font-size:11px;color:#94A3B8;margin-top:3px;line-height:1.5}'+
+   /* 교재로 가는 단추. 칸 전체를 누르면 <b>합격 도장</b>이라 서로 다른 일이니
+      단추를 따로 세운다 — 읽으러 가려다 합격을 찍어 버리면 안 된다. */
+   '.ar-sk{cursor:default}'+                     /* 칸 전체는 이제 안 눌린다 */
+   '.ar-sk .bx,.ar-sk .tx b{cursor:pointer}'+
+   '.ar-sk-go{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 10px;'+
+     'border:1px solid #C7D2FE;background:#F5F8FF;color:#1A56DB;border-radius:7px;'+
+     'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3}'+
+   '.ar-sk-go:hover{background:#E7EEFF;border-color:#93A9F5}'+
+   '.ar-sk-part{display:block;font-size:10.5px;color:#B45309;margin-top:4px;line-height:1.5}'+
+   '.ar-sk-none{display:block;font-size:10.5px;color:#94A3B8;margin-top:7px;line-height:1.5;'+
+     'background:#F8FAFC;border:1px dashed #E2E8F0;border-radius:6px;padding:5px 8px}'+
    '.ar-lgs{display:grid;grid-template-columns:1fr 1fr;gap:12px}'+
    '@media(max-width:820px){.ar-lgs{grid-template-columns:1fr}}'+
    '.ar-lg{border:1.5px solid #EDF1F6;border-radius:12px;overflow:hidden}'+
@@ -10912,6 +10979,18 @@ function navBtnHtml(it,star){
    찾는 중(NAV_Q)에는 그룹을 접고 <b>걸린 칸만</b> 편다 — 찾는 사람에게
    나머지 열일곱 그룹은 방해다. 사이드바와 같은 규칙이다.            */
 var TN_OPEN=-1;                   /* 지금 펴 둔 그룹 번호. -1 이면 닫힘 */
+/* ── 펴 둔 갈래는 <b>그대로 유지</b>된다 ──────────────────────────────
+   전에는 화면을 고르면 곧바로 접혔다. 그래서 「내 고객」 안에서 두 개를
+   보려면 <b>매번 다시 펴야</b> 했다. 폰에서 특히 손이 많이 간다.
+
+   이제 편 갈래를 <b>이름으로</b> 기억한다(번호가 아니다 — 등급에 따라
+   갈래 수가 달라져 번호는 어긋난다). 화면을 옮겨도, 새로고침해도 그대로
+   펴져 있다. 대신 닫는 길을 꼭 둔다 — 펼침칸 머리의 「✕ 닫기」.       */
+var TN_KEY='apex_tn_open';
+function tnOpenSave(name){
+  try{ if(name)localStorage.setItem(TN_KEY,name); else localStorage.removeItem(TN_KEY); }catch(e){}
+}
+function tnOpenLoad(){ try{ return localStorage.getItem(TN_KEY)||''; }catch(e){ return ''; } }
 /* 사이드바와 <b>똑같이</b> 거른다 — 그룹의 hide, 칸의 hide 둘 다.
    hide 는 지운 것이 아니라 「눈에서만 뺀 것」이라, 한쪽에만 걸면 같은 칸이
    위에는 있고 옆에는 없다. 두 메뉴가 서로 다른 말을 하면 안 된다 (5번). */
@@ -10926,10 +11005,14 @@ function tnGroups(){
 }
 function tnToggle(i){
   TN_OPEN=(TN_OPEN===i)?-1:i;
+  var gs=tnGroups();
+  tnOpenSave(TN_OPEN>=0&&gs[TN_OPEN]?gs[TN_OPEN].group:'');
   if(NAV_Q&&TN_OPEN>=0)navFind('');   /* 찾는 중에 그룹을 누르면 찾기를 놓는다 */
   else tnPaint();
 }
-function tnClose(){ TN_OPEN=-1; tnPaint(); }
+/* 사장님이 <b>직접</b> 닫으실 때만 기억도 지운다. go() 로 화면을 옮기는 것은
+   닫는 뜻이 아니다 — 그때도 접히면 「매번 다시 펴야」 하는 옛날로 돌아간다. */
+function tnClose(){ TN_OPEN=-1; tnOpenSave(''); tnPaint(); }
 function tnPaint(){
   var bar=$('tnGroups'),pane=$('tnPane');
   if(!bar||!pane)return;
@@ -10953,6 +11036,12 @@ function tnPaint(){
     return;
   }
 
+  /* 기억해 둔 갈래를 <b>이름으로</b> 되찾는다 — 새로고침해도 그대로 펴져 있다.
+     번호로 담아 두면 등급에 따라 갈래 수가 달라져 엉뚱한 칸이 펴진다. */
+  if(TN_OPEN<0){
+    var want=tnOpenLoad();
+    if(want)for(i=0;i<gs.length;i++)if(gs[i].group===want){TN_OPEN=i;break;}
+  }
   /* 색은 <b>세로 메뉴가 쓰는 그 함수</b>에서 그대로 받는다 — 여기서 새로
      정하면 위·옆이 다른 색이 되고, 갈래를 늘렸을 때 한쪽만 어긋난다 (5번). */
   for(i=0;i<gs.length;i++){
@@ -10977,10 +11066,63 @@ function tnPaint(){
   if(co)pane.setAttribute('style','--gc:'+co.c+';--ge:'+co.e+';--gt:'+co.w+';--ga:'+co.a+';--gb:'+co.b);
   var rows2='';
   gs[TN_OPEN].items.forEach(function(it){ rows2+=navBtnHtml(it); });
-  pane.innerHTML='<div class="tn-grid">'+rows2+'</div>';
+  /* 펼친 채로 화면을 옮겨도 그대로 있으므로 <b>닫는 길</b>이 꼭 있어야 한다 */
+  pane.innerHTML='<div class="tn-ph"><b>'+esc(gs[TN_OPEN].group)+'</b>'+
+      '<em>'+gs[TN_OPEN].items.length+'칸</em>'+
+      '<button type="button" onclick="tnClose()">✕ 닫기</button></div>'+
+    '<div class="tn-grid">'+rows2+'</div>';
   pane.classList.add('on');
   /* 새로 그린 단추에 지금 화면 강조를 다시 입힌다 — 강조를 아는 곳은 한 곳뿐이다 */
   if(typeof navMark==='function'&&typeof currentTab==='function'){try{navMark(currentTab());}catch(e){}}
+  try{tnEdges();}catch(e){}
+}
+/* ── 마우스로도 넘어가게 ──────────────────────────────────────────
+   갈래가 열넷이라 노트북에서도 띠가 넘친다. 폰은 손으로 밀면 되지만
+   마우스에는 <b>가로로 미는 방법이 없다</b> — 세로 휠만 있다. 그래서
+   ① 휠을 가로 스크롤로 바꾸고 ② 끌어서 밀 수 있게 하고
+   ③ 양 끝에 그늘과 화살표를 띄워 <b>더 있다</b>는 것을 보여 준다.       */
+function tnEdges(){
+  var w=$('tnGroupsWrap'),b=$('tnGroups');
+  if(!w||!b)return;
+  var max=b.scrollWidth-b.clientWidth;
+  w.classList.toggle('can-l',b.scrollLeft>4);
+  w.classList.toggle('can-r',max>4&&b.scrollLeft<max-4);
+}
+function tnNudge(dir){
+  var b=$('tnGroups'); if(!b)return;
+  b.scrollLeft+=dir*Math.max(120,Math.round(b.clientWidth*0.7));
+  setTimeout(tnEdges,260);
+}
+var TN_WIRED=false;
+function tnDragWire(){
+  var b=$('tnGroups'); if(!b||TN_WIRED)return; TN_WIRED=true;
+  /* 세로 휠을 가로로. 가로 휠(터치패드)은 브라우저가 알아서 하니 건드리지 않는다 */
+  b.addEventListener('wheel',function(e){
+    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX))return;
+    var max=b.scrollWidth-b.clientWidth; if(max<=0)return;
+    e.preventDefault(); b.scrollLeft+=e.deltaY; tnEdges();
+  },{passive:false});
+  var down=false,x0=0,l0=0,moved=0;
+  b.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='touch')return;       /* 손가락은 브라우저가 더 잘한다 */
+    down=true;moved=0;x0=e.clientX;l0=b.scrollLeft;b.classList.add('drag');
+  });
+  b.addEventListener('pointermove',function(e){
+    if(!down)return;
+    var d=e.clientX-x0; if(Math.abs(d)>3)moved=1;
+    b.scrollLeft=l0-d; tnEdges();
+  });
+  var up=function(e){
+    if(!down)return; down=false;b.classList.remove('drag');
+    /* 끌고 나서 손을 떼면 그 자리 단추가 눌리면 안 된다 */
+    if(moved&&e&&e.target&&e.target.closest&&e.target.closest('.tn-g')){
+      e.preventDefault();e.stopPropagation();
+    }
+  };
+  b.addEventListener('pointerup',up,true);
+  b.addEventListener('pointerleave',function(){down=false;b.classList.remove('drag');});
+  b.addEventListener('scroll',tnEdges,{passive:true});
+  window.addEventListener('resize',function(){try{tnEdges();}catch(e){}});
 }
 /* 찾기 칸이 위·옆 두 곳이라 <b>글자만</b> 서로 맞춰 준다 (값이 두 벌이 되면 안 된다) */
 function tnSyncFind(){
@@ -11609,6 +11751,8 @@ function renderNav(){
   /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
      바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
   try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
+  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
   if(!NAVG_SHUT&&typeof lastTab!=='undefined')navReveal(lastTab);
   NAVG_SHUT=false;
   if(typeof osNoticeApply==='function')osNoticeApply();
@@ -11639,8 +11783,12 @@ function osFullMode(on){
   if(on)b.classList.add(on);
 }
 function go(tab){
-  /* 골랐으면 펴 둔 가로 메뉴와 서랍은 닫는다 — 안 닫으면 고른 화면을 덮는다 */
-  try{ if(typeof tnClose==='function')tnClose(); }catch(e){}
+  /* 펴 둔 갈래는 <b>안 접는다</b> — 접으면 같은 갈래에서 두 번째 칸을 보려고
+     매번 다시 펴야 한다. 폰에서 특히 손이 많이 갔다. 닫는 것은 펼침칸 머리의
+     「✕ 닫기」 로 <b>사장님이 정하십니다.</b> 대신 고른 칸이 어디인지는
+     navMark 가 펼침칸 안에서 그대로 표시해 준다.
+     서랍(세로 메뉴)은 화면을 통째로 덮으므로 그대로 닫는다. */
+  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
   try{
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
@@ -12020,8 +12168,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 13:30';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).';
+var APP_BUILD='2026-08-29 16:30';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14454,6 +14602,53 @@ var GB_AX=[
  {k:'stu', n:'공부', t:12,  u:'개', w:'합격한 주제',            tab:'growboard',tn:'배워서 터치할 것',
   fix:'하루 한 장만 읽습니다. 읽고 그날 한 명에게 써 봅니다. 안 써 본 화법은 상담에서 안 나옵니다.'}
 ];
+
+/* ── 역량 하나마다 <b>교재의 어느 장</b>을 읽으면 되는가 ──────────────
+   「합격을 스스로 준다」 고만 해 두면 <b>무엇을 읽고 합격할지</b>가 없다.
+   그래서 열두 개를 교재(보험 마스터 아카데미)의 장에 잇는다.
+
+   <b>짐작으로 잇지 않았다.</b> 교재 본문에서 그 역량의 핵심 낱말이 몇 번
+   나오는지 세어, 제일 많이 나오는 장에 이었다. 세어 본 결과 —
+
+     s1 급여·비급여·정액  → L2 (107회)   s2 진단금        → L3 (11회)
+     s3 뇌출혈·뇌경색      → L3 (73회)    s4 장기요양·간병  → L6 (44회)
+     s5 부지급·면책·고지   → L8 (24회)    s6 국민연금       → L9 (8회)
+     s7 변액·최저보증      → L9 (6회)     s9 퇴직연금·IRP   → L9 (9회)
+     s10 비과세           → L9 (9회)     s11 상속·증여     → L9 (10회)
+
+   <b>두 개는 일부러 비워 두었다</b>(CLAUDE.md 1번) —
+     s8  달러·분산   : 교재에 <b>한 번도 안 나온다</b>
+     s12 거절처리    : 한 번뿐이라 「관련 자료」라 하기 어렵다
+   없는 것을 있는 척 이으면, 눌러 들어가서 아무것도 없는 장을 보시게 된다.
+
+   s6 은 이었지만 <b>「소득대체율」 은 교재에 없다</b>. 그것까지 적어 둔다. */
+var GB_ACAD={
+  s1 :{l:'L2', t:'실손의료보험 완전정복'},
+  s2 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s3 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s4 :{l:'L6', t:'입원 · 간병 · 후유장해'},
+  s5 :{l:'L8', t:'보상 실무 — 고지 · 면책 · 청구 · 분쟁'},
+  s6 :{l:'L9', t:'저축 · 연금 · 세금 기초', part:'「소득대체율」 숫자는 교재에 없습니다 — 그 부분은 따로 확인하십시오'},
+  s7 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s8 :null,   /* 교재에 없다 — 지어내지 않는다 */
+  s9 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s10:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s11:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s12:null    /* 교재에 없다 — 지어내지 않는다 */
+};
+/* 교재를 <b>그 장에서</b> 연다. 교재는 hashchange 로 장을 옮기므로
+   주소만 바꾸면 된다 — 이미 떠 있으면 다시 안 불러온다. */
+function gbOpenAcad(sid){
+  var m=GB_ACAD[sid];
+  if(!m){toast('이 주제는 교재에 아직 없습니다 — 없는 자료로 보내 드리지 않습니다');return;}
+  go('bohum');
+  setTimeout(function(){
+    var f=$('bohumFrame');if(!f)return;
+    var want=BOHUM_URL+'#'+m.l;
+    if(f._mounted){ try{ f.contentWindow.location.hash=m.l; }catch(e){ f.src=want; } }
+    else { f.src=want; f._mounted=true; }
+  },60);
+}
 
 /* 배워서 터치할 것 — 열두 개. 하나씩 끝내고 스스로 합격을 줍니다 */
 var GB_CUR=[
@@ -42773,6 +42968,8 @@ function osLoadMembers(){
     OSMT.rows=rows;OSMT.me=me;
     if(!rows.length){box.innerHTML='<div style="font-size:12.5px;color:var(--ink-4);padding:6px 2px">팀원이 없습니다.</div>';return;}
     box.innerHTML=osMembersHtml(rows,me);
+    /* 공지 지목 칸은 이 목록을 기다리고 있다 — 여기서 한 번 그려 준다 (5번) */
+    try{ if(typeof osAckPickPaint==='function')osAckPickPaint(); }catch(e){}
     osScrollRestore();
   },function(){box.innerHTML='<div style="font-size:12px;color:var(--ink-4)">목록을 불러오지 못했습니다.</div>';});
 }
@@ -42818,6 +43015,219 @@ var OS_NOTICE_SQL=[
 ].join('\n');
 function osNoticeLocalGet(){try{var s=localStorage.getItem('apex_notice');if(!s)return null;var o=JSON.parse(s);return (o&&typeof o==='object')?o:null;}catch(e){return null;}}
 function osNoticeLocalSet(n){try{localStorage.setItem('apex_notice',JSON.stringify(n||{}));}catch(e){}}
+
+/* ════════ 확인 요청 공지 — 사람을 지목하고, 본인이 누를 때까지 맨 위에 ════════
+   공지를 올려도 <b>봤는지 안 봤는지</b>를 알 수 없었다. 홈 배너는 스쳐
+   지나가고, 사이드바 띠는 한 줄이라 안 읽힌다. 중요한 것을 올려도
+   「저는 못 봤는데요」 가 나온다.
+
+   그래서 <b>지목</b>을 만든다.
+     · 설정에서 공지를 쓸 때 <b>이 사람에게</b> 를 고른다
+     · 지목된 사람에게만 <b>맨 위에 붉은 띠</b>가 뜬다 — 어느 화면을 열어도
+     · 그 사람이 <b>「확인했습니다」</b> 를 누를 때까지 안 사라진다
+     · 확인은 <b>본인만</b> 한다 — 서버 규칙이 owner 를 자기 자신으로 못 박는다
+     · 대표는 <b>누가 확인했고 누가 안 했는지</b> 를 이름으로 본다
+
+   ── 조심한 것 ──────────────────────────────────────────────────
+   · 대신 눌러 줄 수 없다. 남의 확인을 찍으면 확인이 <b>아무 뜻이 없어진다</b>.
+     RLS 의 <code>with check (member_id = auth.uid())</code> 가 그것을 막는다.
+   · 서버가 안 되면 <b>확인한 척하지 않는다</b>. 이 기기에만 담고,
+     띠에 「서버에 못 보냈습니다」 라고 적는다 (CLAUDE.md 1번).
+   · 되풀이해서 서버를 부르지 않는다 — 공지를 읽을 때 <b>한 번</b>만 본다 (7번). */
+var OS_ACK={list:[],ackd:{},who:{},loaded:false,err:''};
+var OS_ACK_SQL=[
+ '/* 확인 요청 공지 — 지목한 사람이 본인 손으로 확인한다 */',
+ 'alter table public.os_notices add column if not exists targets jsonb;',
+ 'alter table public.os_notices add column if not exists must_ack boolean default false;',
+ '',
+ 'create table if not exists public.os_notice_acks(',
+ '  notice_id uuid not null,',
+ '  member_id uuid not null,',
+ '  acked_at timestamptz default now(),',
+ '  primary key (notice_id, member_id)',
+ ');',
+ 'alter table public.os_notice_acks enable row level security;',
+ '',
+ 'drop policy if exists ack_r on public.os_notice_acks;',
+ 'drop policy if exists ack_w on public.os_notice_acks;',
+ '/* 읽기는 로그인한 팀원끼리 — 대표가 누가 확인했는지 봐야 한다 */',
+ 'create policy ack_r on public.os_notice_acks for select to authenticated using (true);',
+ '/* 넣기는 <자기 것만>. 이 한 줄이 「대신 눌러 주기」를 막는다 */',
+ 'create policy ack_w on public.os_notice_acks for insert to authenticated',
+ '  with check (member_id = auth.uid());',
+ '',
+ "notify pgrst, 'reload schema';",
+ '',
+ '/* 돌린 뒤 확인 — 이 두 줄이 나와야 정상입니다 */',
+ 'select polname from pg_policy where polrelid = %27public.os_notice_acks%27::regclass;'
+].join('\n').replace(/%27/g,"'");
+function osAckMe(){ try{ return (OS.session&&OS.session.user&&OS.session.user.id)||''; }catch(e){ return ''; } }
+/* targets 는 jsonb 라 배열로도 글로도 올 수 있다 — 한 곳에서 편다 */
+function osAckArr(v){
+  if(!v)return [];
+  if(Object.prototype.toString.call(v)==='[object Array]')return v;
+  try{ var a=JSON.parse(v); return (Object.prototype.toString.call(a)==='[object Array]')?a:[]; }
+  catch(e){ return []; }
+}
+/* 이 공지가 <b>나를</b> 지목했는가 */
+function osAckMine(n){
+  if(!n||!n.on||!n.mustAck)return false;
+  var me=osAckMe(); if(!me)return false;
+  var t=n.targets;
+  if(!t||!t.length)return false;          /* 아무도 안 지목했으면 확인 요청이 아니다 */
+  return t.indexOf(me)>=0;
+}
+function osAckDone(n){
+  var me=osAckMe();
+  return !!(n&&n.id&&OS_ACK.ackd[n.id]&&OS_ACK.ackd[n.id][me]);
+}
+/* 확인 기록을 <b>한 번만</b> 읽는다 — 화면마다 다시 부르면 서버를 낭비한다 (7번) */
+function osAckLoad(n,force){
+  if(!n||!n.id)return;
+  if(OS_ACK.loaded&&!force)return;
+  var sb=osClient(); if(!sb){OS_ACK.err='서버에 연결되어 있지 않습니다';osAckPaint();return;}
+  OS_ACK.loaded=true;
+  try{
+    sb.from('os_notice_acks').select('notice_id,member_id,acked_at').eq('notice_id',n.id)
+      .then(function(r){
+        if(r&&r.error){OS_ACK.err=r.error.message||'확인 기록을 못 읽었습니다';osAckPaint();return;}
+        OS_ACK.err='';OS_ACK.ackd[n.id]={};
+        (r.data||[]).forEach(function(x){OS_ACK.ackd[n.id][x.member_id]=x.acked_at||true;});
+        osAckPaint();
+      },function(){OS_ACK.err='확인 기록을 못 읽었습니다';osAckPaint();});
+  }catch(e){OS_ACK.err='확인 기록을 못 읽었습니다';osAckPaint();}
+}
+function osAckSend(){
+  var n=OS_NOTICE||osNoticeLocalGet(); var me=osAckMe();
+  if(!n||!n.id||!me){toast('로그인 뒤에 확인하실 수 있습니다');return;}
+  var b=document.getElementById('osAckBtn'); if(b){b.disabled=true;b.textContent='보내는 중…';}
+  var sb=osClient();
+  if(!sb){ OS_ACK.err='서버에 연결되어 있지 않아 <b>보내지 못했습니다</b>';osAckPaint();return; }
+  sb.from('os_notice_acks').insert({notice_id:n.id,member_id:me}).then(function(r){
+    if(r&&r.error&&!/duplicate|already exists/i.test(r.error.message||'')){
+      /* 실패를 성공처럼 말하지 않는다 (1번) */
+      OS_ACK.err='확인을 <b>서버에 못 보냈습니다</b> — '+(r.error.message||'');
+      osAckPaint();return;
+    }
+    OS_ACK.err='';
+    if(!OS_ACK.ackd[n.id])OS_ACK.ackd[n.id]={};
+    OS_ACK.ackd[n.id][me]=new Date().toISOString();
+    if(typeof osAudit==='function')osAudit('ack','notice',n.id,null);
+    toast('확인했습니다 — 대표님 화면에 표시됩니다');
+    osAckPaint();
+  },function(){ OS_ACK.err='확인을 <b>서버에 못 보냈습니다</b> — 네트워크를 확인해 주세요';osAckPaint(); });
+}
+function osAckPaint(){
+  var host=document.getElementById('osAckBar'); if(!host)return;
+  var n=OS_NOTICE||osNoticeLocalGet();
+  if(!osAckMine(n)||osAckDone(n)){host.innerHTML='';return;}
+  osAckCss();
+  var t=(''+(n.text||'')).replace(/[#>*`]/g,'').replace(/\s+/g,' ').trim();
+  if(!t)t='공지를 확인해 주세요';
+  if(t.length>70)t=t.slice(0,70)+'…';
+  host.innerHTML='<div class="os-ackbar">'+
+    '<span class="ab-tag">확인 요청</span>'+
+    '<span class="ab-tx" onclick="go(\'home\')" title="눌러서 공지 전체 보기">'+esc(t)+'</span>'+
+    '<button id="osAckBtn" class="ab-go" onclick="osAckSend()">확인했습니다</button>'+
+    (OS_ACK.err?'<span class="ab-err">'+OS_ACK.err+'</span>':'')+
+  '</div>';
+}
+function osAckSqlToggle(){var e=document.getElementById('osAckSqlBox');if(e)e.style.display=(e.style.display==='none'?'block':'none');}
+/* ── 설정: 누구에게 확인을 받을지 고르는 칸 ─────────────────────────
+   팀원 목록은 osLoadMembers 가 <b>따로</b> 불러온다. 아직 안 왔으면
+   「불러오는 중」 이라 적고, 오면 osAckPickPaint 로 그 자리만 다시 그린다.
+   여기서 목록을 또 불러오면 같은 것을 두 번 받는 것이다 (7번). */
+function osAckPickHtml(n){
+  osAckCss();
+  return '<div class="fld" style="margin-top:12px">'+
+    '<label style="font-size:11.5px;font-weight:700;color:var(--ink-2);display:block;margin-bottom:4px">'+
+      '확인을 받을 사람 <span style="font-weight:600;color:var(--ink-5)">(고르면 그 사람 화면 <b>맨 위</b>에 붉은 띠가 뜨고, 본인이 「확인했습니다」 를 누를 때까지 안 사라집니다)</span></label>'+
+    '<div id="osNoticeTargets"></div>'+
+    '<div id="osAckWho"></div></div>';
+}
+function osAckPickPaint(){
+  var box=document.getElementById('osNoticeTargets'); if(!box)return;
+  var n=OS_NOTICE||osNoticeLocalGet()||{};
+  var cur=osAckArr(n.targets),rows=(typeof OSMT!=='undefined'&&OSMT.rows)||[];
+  if(!rows.length){
+    box.innerHTML='<div style="font-size:11.5px;color:var(--ink-4);padding:4px 2px">팀원 목록을 불러오는 중입니다… (안 뜨면 위 <b>팀원 권한 관리</b>를 한 번 펴 주세요)</div>';
+    return;
+  }
+  var h='<div class="os-tg">';
+  h+='<label onclick="setTimeout(osAckAll,0)"><input type="checkbox" id="osTgAll"> <b>모두</b></label>';
+  rows.forEach(function(p){
+    var on=cur.indexOf(p.id)>=0;
+    h+='<label class="'+(on?'on':'')+'" onclick="setTimeout(osAckTgMark,0)">'+
+       '<input type="checkbox" value="'+osEsc(p.id)+'"'+(on?' checked':'')+'> '+
+       osEsc(p.name||'(이름 없음)')+'</label>';
+  });
+  box.innerHTML=h+'</div>';
+  osAckWhoPaint();
+}
+function osAckTgMark(){
+  var box=document.getElementById('osNoticeTargets'); if(!box)return;
+  var ls=box.querySelectorAll('.os-tg label'),i;
+  for(i=0;i<ls.length;i++){
+    var c=ls[i].querySelector('input');
+    ls[i].classList.toggle('on',!!(c&&c.checked&&c.id!=='osTgAll'));
+  }
+}
+function osAckAll(){
+  var all=document.getElementById('osTgAll'); if(!all)return;
+  var cs=document.querySelectorAll('#osNoticeTargets input'),i;
+  for(i=0;i<cs.length;i++)if(cs[i].id!=='osTgAll')cs[i].checked=all.checked;
+  osAckTgMark();
+}
+/* 대표 화면 — 누가 확인했고 누가 안 했나. <b>이름으로</b> 보여야 쓸모가 있다. */
+function osAckWhoPaint(){
+  var box=document.getElementById('osAckWho'); if(!box)return;
+  var n=OS_NOTICE||osNoticeLocalGet()||{};
+  var tg=osAckArr(n.targets);
+  if(!n.id||!tg.length){box.innerHTML='';return;}
+  if(!OS_ACK.loaded)osAckLoad(n);
+  var done=OS_ACK.ackd[n.id]||{};
+  var rows=(typeof OSMT!=='undefined'&&OSMT.rows)||[];
+  var nameOf={};rows.forEach(function(p){nameOf[p.id]=p.name||'(이름 없음)';});
+  var ok=0,h='';
+  tg.forEach(function(id){
+    var d=!!done[id]; if(d)ok++;
+    h+='<span class="'+(d?'ok':'no')+'">'+(d?'✓ ':'· ')+osEsc(nameOf[id]||id.slice(0,8))+'</span>';
+  });
+  box.innerHTML='<div class="os-ackwho"><div class="h">확인 현황 — <b>'+tg.length+'명 중 '+ok+'명</b>이 확인했습니다'+
+    (OS_ACK.err?' <span style="color:#B45309;font-weight:700">('+osEsc(OS_ACK.err.replace(/<[^>]*>/g,''))+')</span>':'')+
+    '</div><div class="p">'+h+'</div></div>';
+}
+function osAckCss(){
+  if(document.getElementById('osAckCss'))return;
+  var st=document.createElement('style');st.id='osAckCss';
+  st.textContent=
+    '.os-ackbar{position:sticky;top:0;z-index:118;display:flex;align-items:center;gap:10px;flex-wrap:wrap;'+
+      'background:linear-gradient(135deg,#B91C1C,#DC2626);color:#fff;padding:9px 14px;'+
+      'box-shadow:0 3px 12px rgba(185,28,28,.32)}'+
+    '.os-ackbar .ab-tag{flex:none;background:rgba(255,255,255,.22);border-radius:4px;'+
+      'font-size:10.5px;font-weight:900;letter-spacing:.3px;padding:3px 8px}'+
+    '.os-ackbar .ab-tx{flex:1;min-width:120px;font-size:12.5px;font-weight:700;line-height:1.5;cursor:pointer;'+
+      'text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(255,255,255,.45)}'+
+    '.os-ackbar .ab-go{flex:none;background:#fff;color:#B91C1C;border:none;border-radius:5px;'+
+      'font-size:12px;font-weight:900;padding:6px 13px;cursor:pointer;font-family:inherit}'+
+    '.os-ackbar .ab-go:hover{background:#FEF2F2}'+
+    '.os-ackbar .ab-go:disabled{opacity:.6;cursor:default}'+
+    '.os-ackbar .ab-err{flex:1 0 100%;font-size:11px;line-height:1.5;background:rgba(0,0,0,.22);'+
+      'border-radius:5px;padding:5px 9px}'+
+    /* 대표 화면 — 누가 확인했나 */
+    '.os-ackwho{margin-top:10px;border:1px solid #E2E8F0;border-radius:10px;padding:10px 12px;background:#FAFBFF}'+
+    '.os-ackwho .h{font-size:12px;font-weight:800;color:#0F172A;margin-bottom:7px}'+
+    '.os-ackwho .p{display:flex;flex-wrap:wrap;gap:5px}'+
+    '.os-ackwho .p span{font-size:11px;font-weight:700;border-radius:4px;padding:3px 8px;'+
+      'background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0}'+
+    '.os-ackwho .p span.ok{background:#F0FDF4;color:#15803D;border-color:#BBF7D0}'+
+    '.os-ackwho .p span.no{background:#FFFBEB;color:#B45309;border-color:#FDE68A}'+
+    '.os-tg{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}'+
+    '.os-tg label{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;'+
+      'border:1px solid #E2E8F0;border-radius:5px;padding:4px 9px;cursor:pointer;background:#fff}'+
+    '.os-tg label.on{background:#EFF6FF;border-color:#93C5FD;color:#1A56DB}';
+  document.head.appendChild(st);
+}
 /* ════════ 내 무료 AI 키 — 팀원이 직접 넣는다 ════════
    설정은 대표만 들어가므로 팀원은 자기 키를 넣을 자리가 없었다.
    공지 바로 아래와 내 계정 안에 같은 칸을 둔다.
@@ -42950,6 +43360,8 @@ function osNoticeApply(){
   var n=OS_NOTICE||osNoticeLocalGet();
   var home=document.getElementById('osNoticeHome');if(home)home.innerHTML=osNoticeHomeHtml(n);
   var nav=document.getElementById('osNoticeNav');if(nav)nav.innerHTML=osNoticeNavHtml(n);
+  /* 나를 지목한 공지면 맨 위 띠를 세운다. 확인 기록은 <b>한 번만</b> 읽는다 (7번) */
+  try{ if(osAckMine(n))osAckLoad(n); osAckPaint(); }catch(e){}
   if(typeof mykPaint==='function')mykPaint();
   if(typeof hxAuto==='function')hxAuto();
 }
@@ -42957,11 +43369,29 @@ function osNoticeLoad(){
   var sb=osClient();
   if(!sb){OS_NOTICE=osNoticeLocalGet();osNoticeApply();return;}
   try{
-    sb.from('os_notices').select('text,img,active,created_at,author').order('created_at',{ascending:false}).limit(1).then(function(r){
-      if(r&&!r.error&&r.data&&r.data.length){var row=r.data[0];OS_NOTICE={text:row.text||'',img:row.img||'',on:row.active!==false,ts:row.created_at||'',by:row.author||''};osNoticeLocalSet(OS_NOTICE);}
-      else if(!OS_NOTICE){OS_NOTICE=osNoticeLocalGet();}
-      osNoticeApply();
-    });
+    /* id·targets·must_ack 도 함께 읽는다. 옛 표에는 그 칸이 없어 400 이 나므로,
+       그때는 <b>있는 칸만</b>으로 한 번 더 읽는다 — 준비 SQL 을 안 돌리셨어도
+       공지 자체는 그대로 보여야 한다. */
+    var pick=function(cols,rich){
+      sb.from('os_notices').select(cols).order('created_at',{ascending:false}).limit(1).then(function(r){
+        if(r&&r.error){
+          if(rich){pick('text,img,active,created_at,author',false);return;}
+          if(!OS_NOTICE)OS_NOTICE=osNoticeLocalGet();
+          osNoticeApply();return;
+        }
+        if(r&&r.data&&r.data.length){
+          var row=r.data[0];
+          OS_NOTICE={id:row.id||'',text:row.text||'',img:row.img||'',on:row.active!==false,
+                     ts:row.created_at||'',by:row.author||'',
+                     targets:osAckArr(row.targets),mustAck:!!row.must_ack};
+          osNoticeLocalSet(OS_NOTICE);
+        }
+        else if(!OS_NOTICE){OS_NOTICE=osNoticeLocalGet();}
+        OS_ACK.loaded=false;                    /* 새 공지면 확인 기록도 다시 본다 */
+        osNoticeApply();
+      },function(){OS_NOTICE=osNoticeLocalGet();osNoticeApply();});
+    };
+    pick('id,text,img,active,created_at,author,targets,must_ack',true);
   }catch(e){OS_NOTICE=osNoticeLocalGet();osNoticeApply();}
 }
 function osNoticeStyleOnce(){
@@ -43125,7 +43555,11 @@ function osNoticeSave(){
   var ta=document.getElementById('osNoticeText');var text=ta?ta.value.trim():'';
   var on=document.getElementById('osNoticeActive');var active=on?!!on.checked:true;
   var imgVal=OS_NOTICE_IMGS.length?JSON.stringify(OS_NOTICE_IMGS):'';
-  var n={text:text,img:imgVal,on:active,ts:new Date().toISOString(),by:(OS.profile&&OS.profile.name)||'관리자'};
+  /* 지목한 사람 — 한 명이라도 골랐으면 「확인 요청」 공지가 된다 */
+  var tg=[],tb=document.querySelectorAll('#osNoticeTargets input:checked');
+  for(var ti=0;ti<tb.length;ti++)tg.push(tb[ti].value);
+  var n={text:text,img:imgVal,on:active,ts:new Date().toISOString(),
+         by:(OS.profile&&OS.profile.name)||'관리자',targets:tg,mustAck:tg.length>0};
   if(!text&&!imgVal){toast('공지 내용이나 이미지를 입력하세요.');return;}
   OS_NOTICE=n;osNoticeLocalSet(n);osNoticeApply();
   var kb=Math.round((n.img||'').length/1024);
@@ -43133,9 +43567,25 @@ function osNoticeSave(){
   st('<div style="font-size:11.5px;color:#1A56DB;font-weight:700">⏳ 서버에 게시하는 중…</div>');
   var sb=osClient();
   if(sb){
-    try{sb.from('os_notices').insert({text:n.text,img:n.img,active:n.on,author:n.by}).then(function(r){
+    var row={text:n.text,img:n.img,active:n.on,author:n.by};
+    if(n.targets.length){row.targets=n.targets;row.must_ack=true;}
+    try{sb.from('os_notices').insert(row).then(function(r){
       if(r&&r.error){
         var m=(r.error.message||'');
+        /* 지목 칸이 없는 옛 표면 <b>지목 없이라도</b> 올린다 — 공지가 통째로
+           안 올라가는 것이 더 나쁘다. 다만 지목이 빠졌다고 <b>말한다</b> (1번). */
+        if(/targets|must_ack/i.test(m)&&n.targets.length){
+          sb.from('os_notices').insert({text:n.text,img:n.img,active:n.on,author:n.by}).then(function(r2){
+            st('<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px">'+
+              '<div style="font-size:12px;font-weight:800;color:#B45309">⚠️ 공지는 올라갔지만 <b>지목은 빠졌습니다</b></div>'+
+              '<div style="font-size:11.5px;color:#92400E;margin-top:5px;line-height:1.6">서버에 아직 <b>확인 요청 칸</b>이 없습니다. '+
+              '아래 <b>🛢️ 확인 요청 SQL</b> 을 한 번 실행하시면 그다음부터 지목이 됩니다.'+
+              (r2&&r2.error?('<br>'+osEsc(r2.error.message||'')):'')+'</div></div>');
+            toast('공지는 올렸습니다 — 지목은 SQL 을 한 번 돌리셔야 됩니다');
+            osNoticeLoad();
+          });
+          return;
+        }
         var big=/payload|too large|value too long|string data/i.test(m)||kb>900;
         st('<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 12px">'+
           '<div style="font-size:12px;font-weight:800;color:#B91C1C">❌ 팀 전체 공유 실패 — 이 기기에만 저장되었습니다</div>'+
@@ -43186,8 +43636,14 @@ function osNoticeCardHtml(){
     '<div class="btn-row"><button class="btn btn-ghost" onclick="osNoticeImgPick()">🖼 사진 추가(여러 장)</button><button class="btn btn-ghost" onclick="osNoticeImgRemove()">사진 전부 제거</button>'+
     '<input type="file" id="osNoticeImgInput" accept="image/*" multiple style="display:none" onchange="osNoticeImgFile(this)"></div></div>'+
     '<label style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer"><input type="checkbox" id="osNoticeActive" '+(n.on!==false?'checked':'')+'> 지금 게시(체크 해제 시 숨김)</label>'+
+    osAckPickHtml(n)+
     '<div id="osNoticeStatus" style="margin-top:12px"></div>'+
-    '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="osNoticeSave()">📢 공지 게시 / 저장</button><button class="btn btn-ghost" onclick="osNoticeClear()">공지 숨기기</button><button class="btn btn-ghost" onclick="osNoticeSqlToggle()">🛢️ 공지 SQL(팀 공유)</button></div>'+
+    '<div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="osNoticeSave()">📢 공지 게시 / 저장</button><button class="btn btn-ghost" onclick="osNoticeClear()">공지 숨기기</button><button class="btn btn-ghost" onclick="osNoticeSqlToggle()">🛢️ 공지 SQL(팀 공유)</button><button class="btn btn-ghost" onclick="osAckSqlToggle()">🛢️ 확인 요청 SQL</button></div>'+
+    '<div id="osAckSqlBox" style="display:none;margin-top:12px">'+
+      '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL 을 <b>한 번만</b> 실행하면 <b>지목·확인</b>이 켜집니다. 실행 전에는 지목이 저장되지 않습니다.</div>'+
+      '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_ACK_SQL)+'</textarea>'+
+      '<div class="btn-row" style="margin-top:8px"><button class="btn btn-ghost" onclick="copyText(OS_ACK_SQL)">SQL 복사</button><a class="btn btn-ghost" href="https://supabase.com/dashboard/project/miakdhxtqofpndtlyzxa/sql/new" target="_blank" rel="noopener">SQL 편집기 열기</a></div>'+
+    '</div>'+
     '<div id="osNoticeSqlBox" style="display:none;margin-top:12px">'+
       '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL을 <b>한 번만</b> 실행하면 공지가 <b>모든 기기·모든 사용자</b>에게 공유됩니다. 실행 전에는 이 브라우저에만 저장됩니다.</div>'+
       '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_NOTICE_SQL)+'</textarea>'+

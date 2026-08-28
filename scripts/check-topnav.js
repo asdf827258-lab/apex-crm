@@ -182,6 +182,67 @@ const SIZES = [['웹 1440', 1440, 900], ['노트북 1024', 1024, 800], ['폰 390
   is(/navRamp\(/.test(gradSrc),
      '  색을 <b>navRamp() 에서 받아 쓴다</b> — 가로 띠가 색을 새로 정하지 않는다');
 
+  /* ── 「한눈에 안 들어온다」 를 실제로 고쳤는가 ────────────────────────
+     ① 둥근 알약은 옆 칸과 경계가 흐리다 → <b>각지게</b> 하고 왼쪽에 색막대
+     ② 갈래가 열넷이라 노트북에서도 넘친다. 폰은 손으로 밀면 되지만
+        <b>마우스에는 가로로 미는 방법이 없다</b> → 휠·끌기·화살표
+     ③ 화면을 고르면 곧바로 접혀 <b>같은 갈래의 두 번째 칸</b>을 보려면
+        매번 다시 펴야 했다 → 펴 둔 채로 두고, 닫는 것은 사장님이         */
+  console.log('\n[2-2] 각지게 · 마우스로 넘어가게 · 펴 둔 갈래는 그대로');
+  const M = await page.evaluate(async () => {
+    const O = {};
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'pro' };
+    renderNav();
+    const g0 = document.querySelector('#tnGroups .tn-g'), cs = getComputedStyle(g0);
+    O.radius = parseFloat(cs.borderTopLeftRadius);
+    O.leftBar = parseFloat(cs.borderLeftWidth);
+    const bar = document.getElementById('tnGroups'), wrap = document.getElementById('tnGroupsWrap');
+    O.over = bar.scrollWidth - bar.clientWidth;
+    /* 휠 — 세로로 굴리면 가로로 가야 한다 */
+    const b0 = bar.scrollLeft;
+    bar.dispatchEvent(new WheelEvent('wheel', { deltaY: 240, bubbles: true, cancelable: true }));
+    await new Promise(r => setTimeout(r, 140));
+    O.wheel = bar.scrollLeft - b0;
+    /* 「오른쪽에 더 있다」 를 보여 주는가 */
+    O.edge = wrap.className;
+    tnNudge(1); await new Promise(r => setTimeout(r, 400));
+    O.arrow = bar.scrollLeft - b0;
+    /* 펴고 → 화면을 옮겨도 그대로인가 */
+    document.querySelectorAll('#tnGroups .tn-g')[2].click();
+    await new Promise(r => setTimeout(r, 150));
+    O.openA = document.getElementById('tnPane').classList.contains('on');
+    const first = document.querySelector('#tnPane .tab-btn');
+    if (first) go(first.getAttribute('data-tab'));
+    await new Promise(r => setTimeout(r, 300));
+    O.openB = document.getElementById('tnPane').classList.contains('on');
+    O.head = ((document.querySelector('.tn-ph b') || {}).textContent || '');
+    O.saved = localStorage.getItem('apex_tn_open') || '';
+    O.marked = !!document.querySelector('#tnPane .tab-btn.on');
+    /* 닫는 길이 있는가 · 닫으면 기억도 지우는가 */
+    const x = document.querySelector('.tn-ph button');
+    O.hasX = !!x; if (x) x.click();
+    await new Promise(r => setTimeout(r, 150));
+    O.openC = document.getElementById('tnPane').classList.contains('on');
+    O.savedC = localStorage.getItem('apex_tn_open') || '';
+    return O;
+  });
+  is(M.radius <= 6, '  갈래 단추가 <b>각지다</b> — 모서리 ' + M.radius + 'px (7px 미만)');
+  is(M.leftBar >= 2, '  왼쪽에 <b>색막대</b>가 서 있다 — ' + M.leftBar + 'px · 색으로 먼저 읽힌다');
+  is(M.over > 0, '  갈래가 <b>한 화면을 넘친다</b> — ' + M.over + 'px · 그래서 넘길 수 있어야 한다');
+  is(M.wheel > 0, '  <b>휠을 굴리면 옆으로 간다</b> — ' + M.wheel + 'px' +
+     (M.wheel > 0 ? '' : ' ← 마우스만 쓰시면 넘길 방법이 없습니다'));
+  is(M.arrow > M.wheel, '  <b>화살표로도 넘어간다</b> — ' + M.arrow + 'px');
+  is(/can-r|can-l/.test(M.edge), '  <b>「더 있다」 를 표시한다</b> — 「' + M.edge + '」');
+  is(M.openA === true, '  갈래를 누르면 펴진다');
+  is(M.openB === true,
+     '  <b>화면을 골라도 그대로 펴져 있다</b>' +
+     (M.openB ? ' — 같은 갈래의 두 번째 칸을 다시 펴지 않고 누른다' : ' ← 접혔습니다'));
+  is(M.head.length > 0, '  펼침칸이 <b>어느 갈래인지 글로도</b> 적는다 — 「' + M.head + '」');
+  is(M.marked === true, '  펼침칸 안에서 <b>지금 보는 칸이 강조</b>된다 — 어디 있는지 안다');
+  is(M.saved.length > 0, '  펴 둔 갈래를 <b>기억한다</b> — 새로고침해도 그대로 (「' + M.saved + '」)');
+  is(M.hasX && M.openC === false, '  <b>닫는 길이 있다</b> — 펼침칸 머리의 ✕');
+  is(M.savedC === '', '  직접 닫으면 <b>기억도 지운다</b> — 다음에 안 펴진다');
+
   console.log('\n[3] 등급으로 가린 칸은 양쪽에서 똑같이 가려진다');
   const G = await page.evaluate(() => {
     OS.profile = null;                 /* 로그인 안 한 상태 */
@@ -199,23 +260,53 @@ const SIZES = [['웹 1440', 1440, 900], ['노트북 1024', 1024, 800], ['폰 390
      '  로그인 안 했을 때도 <b>가로 ' + G.topN + ' = 세로 ' + G.sideN + '</b> — 한쪽만 열리지 않는다');
   is(G.topN < P.topN, '  로그인 전에는 <b>덜</b> 보인다 (' + G.topN + ' < ' + P.topN + ') — 가림이 살아 있다');
 
-  console.log('\n[4] 눌러서 실제로 열린다 · 고르면 닫힌다');
+  /* 전에는 여기서 <b>「고르면 저절로 닫힌다」</b> 를 봤다. 그런데 그러면
+     같은 갈래의 두 번째 칸을 보려고 <b>매번 다시 펴야</b> 했다. 사장님이
+     「그대로 유지되도록」 이라 하셔서 뒤집었다 — 이제 펴 둔 채로 둔다.
+     대신 <b>화면을 덮으면 안 되므로</b> 그 자리를 대신 지킨다:
+     펼침칸에 높이 한도가 있고 · 닫는 단추가 있고 · 서랍은 그대로 닫힌다. */
+  console.log('\n[4] 눌러서 실제로 열린다 · 펴 둔 것은 그대로 · 화면을 덮지 않는다');
   const C = await page.evaluate(() => {
     OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'pro' };
     renderNav();
+    const sb = document.getElementById('sidebar');
+    if (sb) sb.classList.add('open');            /* 서랍을 열어 두고 */
     const gs = [...document.querySelectorAll('#tnGroups .tn-g')];
-    gs[1].click();
-    const paneOn = document.getElementById('tnPane').classList.contains('on');
+    /* <b>제일 큰 갈래</b>로 잰다. 작은 갈래로 재면 높이 한도를 없애도
+       원래 짧아서 통과한다 — 실제로 그렇게 헛돌았다 (8번). */
+    let big = 0, bigN = -1;
+    gs.forEach((g, i) => {
+      const n = parseInt((g.querySelector('.tng-n') || {}).textContent || '0', 10);
+      if (n > bigN) { bigN = n; big = i; }
+    });
+    gs[big].click();
+    const pane = document.getElementById('tnPane');
+    const paneOn = pane.classList.contains('on');
     const btn = document.querySelector('#tnPane .tab-btn');
     const want = btn.getAttribute('data-tab');
     btn.click();
+    const cs = getComputedStyle(pane);
+    const capPx = /px$/.test(cs.maxHeight) ? parseFloat(cs.maxHeight) : Infinity;
     return { paneOn, want, now: (typeof currentTab === 'function') ? currentTab() : '',
-             closed: !document.getElementById('tnPane').classList.contains('on'),
+             stillOpen: pane.classList.contains('on'),
+             cap: cs.maxHeight, capPx, bigN,
+             tall: Math.round(pane.getBoundingClientRect().height),
+             vh: window.innerHeight,
+             hasX: !!document.querySelector('.tn-ph button'),
+             drawerShut: sb ? !sb.classList.contains('open') : true,
              marked: !!document.querySelector('.tab-btn.on') };
   });
   is(C.paneOn, '  그룹을 누르면 <b>칸이 펼쳐진다</b>');
   is(C.now === C.want, '  칸을 누르면 <b>그 화면이 열린다</b> — ' + C.want + ' → ' + C.now);
-  is(C.closed, '  고르면 <b>저절로 닫힌다</b> — 고른 화면을 안 덮는다');
+  is(C.stillOpen, '  고른 뒤에도 <b>그대로 펴져 있다</b> — 두 번째 칸을 다시 펴지 않고 누른다');
+  is(C.capPx <= C.vh * 0.62,
+     '  펼침칸에 <b>높이 한도</b>가 걸려 있다 — ' + C.cap + ' / 화면 ' + C.vh + 'px' +
+     (C.capPx <= C.vh * 0.62 ? '' : ' ← 한도가 없으면 큰 갈래가 화면을 다 덮습니다'));
+  is(C.tall <= Math.round(C.vh * 0.62),
+     '  <b>제일 큰 갈래(' + C.bigN + '칸)</b>를 펴도 화면을 다 안 덮는다 — ' +
+     C.tall + 'px / ' + C.vh + 'px');
+  is(C.hasX, '  <b>닫는 단추</b>가 그 자리에 있다 — 덮는다 싶으면 바로 닫는다');
+  is(C.drawerShut, '  <b>서랍(세로 메뉴)은 닫힌다</b> — 그것은 화면을 통째로 덮는다');
   is(C.marked, '  지금 보는 화면이 <b>강조</b>된다 (navMark 한 곳에서)');
 
   console.log('\n[5] 찾기 — 도는가 · 못 찾으면 말하는가 · 커서를 안 뺏는가');
