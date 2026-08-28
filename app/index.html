@@ -6619,12 +6619,14 @@ function arGen(mid,then){
     if(!q){AR.busy='';AR.open=mid;}
     arSaveRow(mid,o);
     arPaint();
-    if(then)then();
+    if(then)then(true);
   },function(e){
     if(!q)AR.busy='';
     AR.err=(e&&e.message)||'AI 호출에 실패했습니다.';
     arPaint();
-    if(then)then();
+    /* <b>됐는지 안 됐는지 알려 준다.</b> 여태 성공과 실패가 똑같이
+       돌아와, 몇 명이 빠졌는데도 「전원 준비됐습니다」 라고 했다. */
+    if(then)then(false);
   });
 }
 /* 저장은 항상 내 이름으로 남는다 — 남의 줄에 쓰는 것은 서버가 막는다 */
@@ -6656,19 +6658,70 @@ function arLoadRid(mid){
       }
     },function(){});
 }
+/* ── 32명을 한 사람씩 세우면 <b>5분을 서서 기다리신다</b> ─────────────
+   여태 한 명 끝나야 다음 사람을 시작했다. AI 한 번이 10초쯤이라
+   32명이면 5분이 넘는다. 사장님은 출근해서 그동안 아무것도 못 하신다.
+
+   서로 <b>기다릴 이유가 없는 일</b>이다 — 사람마다 따로 쓰는 보고다.
+   그래서 <b>몇 명씩 동시에</b> 돌린다. 넷이면 5분이 1분 남짓이 된다.
+
+   왜 넷인가: 더 늘리면 AI 쪽에서 한꺼번에 막힐 수 있고, 막히면 그
+   사람 보고만 조용히 빈다. 늘리는 이득보다 <b>빠지는 사람</b>이 생기는
+   손해가 크다. 넷은 실제로 부딪히지 않는 선이다.
+
+   <b>돌리는 자리는 하나뿐이다.</b> 단추로 부를 때와 아침에 저절로 돌
+   때가 각자 제 판을 갖고 있었다 — 한쪽만 고쳐지는 자리다 (CLAUDE.md 5번). */
+var AR_LANES=4;
+/* ── <b>몇 명이 빠졌는지 말한다</b> ──────────────────────────────────
+   AI 는 가끔 답을 안 준다. 그런데 여태 실패해도 성공과 똑같이 돌아와
+   「팀 전원 보고가 준비됐습니다」 라고 했다. 사장님은 서른두 명이 다
+   된 줄 아시고 회의에 들어가시는데 두 명은 빈 칸이다.
+
+   <b>안 된 것은 안 됐다고 말한다</b> (CLAUDE.md 1번). 말하는 자리는
+   하나다 — 단추로 부를 때와 아침에 저절로 돌 때가 같은 말을 한다 (5번). */
+function arDoneMsg(got,total,fail,where){
+  if(!fail)return (total>1?('팀 '+total+'명 보고가 모두 준비됐습니다. '):'오늘 보고가 준비됐습니다. ')+
+                  'TFA 업무관리 → '+where+'에서 보세요.';
+  return '<b>'+total+'명 중 '+got+'명</b> 준비됐습니다 — <b>'+fail+'명은 AI 가 답하지 않아 못 만들었습니다.</b> '+
+         '「전원 보고 한 번에 받기」를 한 번 더 눌러 주세요. 없는 보고를 지어내지는 않습니다.';
+}
+function arRunQueue(ids,opt){
+  opt=opt||{};
+  var left=ids.slice(),done=0,live=0,fail=0,total=left.length;
+  if(!total){if(opt.empty)opt.empty();return;}
+  AR.qt=total;AR.qn=0;AR.busy='all';AR.err='';
+  if(opt.auto)AR.auto=true;
+  var tick=function(){
+    /* 끝난 수로 적는다 — 시작한 수로 적으면 「32/32」 를 띄워 놓고
+       한참 더 돈다. 사장님이 끝난 줄 아시고 닫아 버리신다. */
+    AR.qn=done;
+    AR.qmsg=done+' / '+total+(live>1?(' · '+live+'명 동시'):'');
+    arPaint();
+  };
+  var pump=function(){
+    while(live<AR_LANES&&left.length){
+      live++;
+      arGen(left.shift(),function(ok){
+        live--;done++;if(!ok)fail++;tick();
+        if(!left.length&&!live){
+          AR.busy='';AR.qmsg='';AR.auto=false;arPaint();
+          if(opt.done)opt.done(total-fail,total,fail);
+          return;
+        }
+        pump();
+      });
+    }
+    tick();
+  };
+  pump();
+}
 function arGenAll(){
   var l=arList(),ids=[],i;
   for(i=0;i<l.length;i++)ids.push(l[i].id);
-  if(!ids.length){toast('팀원이 없습니다');return;}
-  AR.qt=ids.length;AR.qn=0;AR.busy='all';AR.err='';
-  var step=function(){
-    if(!ids.length){AR.busy='';AR.qmsg='';arPaint();toast('팀 전원 보고가 준비됐습니다');return;}
-    var id=ids.shift();AR.qn++;
-    AR.qmsg=AR.qn+' / '+AR.qt+' · '+arNameOf(id);
-    arPaint();
-    arGen(id,function(){setTimeout(step,400);});
-  };
-  step();
+  arRunQueue(ids,{
+    empty:function(){toast('팀원이 없습니다');},
+    done:function(got,total,fail){toast(arDoneMsg(got,total,fail,'팀원 관리'),fail?9000:5000);}
+  });
 }
 
 /* ── 글자 다듬기 — 표 없이 읽히게 ── */
@@ -6704,7 +6757,13 @@ var AR_CAT=[
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
  ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
- ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all']
+ ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all'],
+ /* ── 「TFA 안에 대표 브리핑이 없다」 ────────────────────────────────
+    아침 7시에 서버가 만들어 두는 한 장인데, 왼쪽 큰 메뉴의 「조직 관리」
+    안에만 서 있었다. 아침에 여는 화면은 TFA 이므로 여기서 못 찾으면
+    없는 것과 같다. 화면은 <b>새로 만들지 않고</b> 원래 그리는 함수를
+    그 자리에서 부른다 — 내 코칭·본인 점검란과 같은 방식이다 (5번). */
+ ['brief','📊','대표 브리핑',   '아침 7시에 서버가 만들어 둔 오늘 한 장','all']
 ];
 function arCat(){return AR.cat||'feed';}
 function arGoCat(k){
@@ -6717,6 +6776,16 @@ function arGoCat(k){
   if(k==='acad'){
     try{if(typeof AC!=='undefined'&&!AC.data&&!AC.loading&&typeof acCrmLoad==='function'){acCrmLoad();
       setTimeout(function(){if(AR.cat==='acad'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
+  }
+  /* 대표 브리핑은 <b>미리 만들어 둔 한 장</b>을 읽어 와야 몸통이 찬다.
+     안 부르면 스피너만 돈다 — 없는 것과 같다. */
+  if(k==='brief'){
+    try{
+      if(typeof schCanView==='function'&&schCanView()&&typeof schOpen==='function'){
+        SCH.scope='all';
+        setTimeout(function(){ if(AR.cat==='brief')try{schOpen();}catch(e){} },0);
+      }
+    }catch(e){}
   }
   /* 팀원 관리를 열 때 코칭 기록도 같이 읽어 둔다 — 펼쳤을 때 이미 있어야 본다 */
   if(k==='team'){
@@ -7960,30 +8029,45 @@ function arAutoRun(){
   /* 사람이 쓰고 있는 중이면 비켜 준다 */
   try{if(typeof VA!=='undefined'&&(VA.busy||VA.making))return;}catch(e){}
   try{if(typeof BR!=='undefined'&&BR.busy)return;}catch(e){}
-  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded)return;
   if(typeof callAI!=='function')return;
   if(!arDue())return;                         /* 아직 오전 8시 전 — 그때 다시 본다 */
   try{if(localStorage.getItem(arAutoKey())==='1')return;}catch(e){}
+  /* ── 기록을 <b>스스로</b> 읽어 온다 ───────────────────────────────
+     여기까지 왔으면 「오늘 만들 것이 남았다」 는 뜻이다. 그런데 여태는
+     이 자리에서 <b>「기록이 아직 안 읽혔으면 그냥 돌아간다」</b> 였다.
+
+     그 기록을 읽어 주는 유일한 자리가 <b>아침 창</b>(arBriefMaybe)인데,
+     아침 창은 <b>오늘 이미 보셨거나 꺼 두셨으면 그냥 돌아간다.</b>
+     그래서 아침 창을 닫고 앱을 <b>다시 여시면</b>, 또는 아침 창을 꺼
+     두셨으면, 10분마다 깨어나 아무것도 안 하고 돌아가기만 했다 —
+     TFA 를 손으로 열기 전까지 팀 보고가 영영 안 만들어졌다. 아무
+     말도 없이. 재 보니 실제로 그랬다.
+
+     읽는 것은 <b>하루에 이 한 번</b>이다 — 다 만들고 나면 바로 위
+     자물쇠에 걸려 다시 안 읽는다 (CLAUDE.md 7번: 서버를 아껴 쓴다). */
+  if(typeof GB==='undefined'||!GB.loaded||!AR.loaded){
+    if(!AR.busy&&typeof arLoad==='function'){
+      arLoad();
+      /* 다 읽히면 <b>바로 이어서</b> 만든다 — 다음 10분을 기다리시게 두지 않는다 */
+      var t=0,wait=function(){
+        t++;
+        if(typeof GB!=='undefined'&&GB.loaded&&AR.loaded){try{arAutoRun();}catch(e){}return;}
+        if(t<14)setTimeout(wait,900);
+      };
+      setTimeout(wait,900);
+    }
+    return;
+  }
   var need=arAutoNeed(),lead=arIsLead();
   if(!need.length){try{localStorage.setItem(arAutoKey(),'1');}catch(e){}return;}
   try{localStorage.setItem(arAutoKey(),'1');}catch(e){}
-  AR.qt=need.length;AR.qn=0;AR.busy='all';AR.auto=true;
   if(typeof toast==='function')
-    toast('🌅 오늘 보고를 만들고 있습니다 — '+(lead?(need.length+'명'):'내 보고'),6000);
-  var step=function(){
-    if(!need.length){
-      AR.busy='';AR.qmsg='';AR.auto=false;arPaint();
-      if(typeof toast==='function')
-        toast(lead?'팀 보고가 준비됐습니다. AI 관리판 → 팀원 관리에서 보세요.'
-                  :'오늘 보고가 준비됐습니다. AI 관리판 → 피드백에서 보세요.',8000);
-      return;
-    }
-    var id=need.shift();AR.qn++;
-    AR.qmsg=AR.qn+' / '+AR.qt+' · '+arNameOf(id);
-    arPaint();
-    arGen(id,function(){setTimeout(step,500);});
-  };
-  step();
+    toast('🌅 오늘 보고를 만들고 있습니다 — '+(lead?(need.length+'명'):'내 보고')+
+          '. 그동안 다른 화면을 보셔도 됩니다.',6000);
+  arRunQueue(need,{auto:true,done:function(got,total,fail){
+    if(typeof toast==='function')
+      toast(arDoneMsg(got,total,fail,lead?'팀원 관리':'피드백'),fail?9000:8000);
+  }});
 }
 function arMorningTeam(){arAutoRun();try{if(typeof dgLoad==='function'&&!DG.loaded)dgLoad();}catch(e){}}
 /* 앱을 6시에 켜 두었어도 8시가 되면 알아서 돈다.
@@ -9542,6 +9626,14 @@ function arBodyHtml(cat){
     if(typeof mcInnerHtml!=='function')return '<div class="ar-none">내 코칭을 불러오지 못했습니다.</div>';
     return '<div id="mcPane">'+mcInnerHtml()+'</div>';
   }
+  if(cat==='brief'){
+    if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+    if(typeof schCanView!=='function'||!schCanView())
+      return '<div class="ar-none">이 브리핑은 <b>대표와 팀 리더</b>만 볼 수 있습니다. '+
+             '리더 권한은 대표가 설정 → 팀원 권한 관리에서 지정합니다.</div>';
+    if(typeof schInnerHtml!=='function')return '<div class="ar-none">대표 브리핑을 불러오지 못했습니다.</div>';
+    return schInnerHtml();
+  }
   if(cat==='acad'){
     if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
     return '<div id="acadBody">'+acBody()+'</div>';
@@ -10651,6 +10743,13 @@ function navHit(it,q,loose){
   }
   return false;
 }
+/* 찾기에서 화면 <b>안</b>의 칸을 눌렀을 때 — TFA 를 열고 그 칸을 편다.
+   go() 가 화면을 그린 뒤라야 칸이 바뀌므로 그 다음에 부른다. */
+function navGoIn(k){
+  try{ if(typeof AR!=='undefined')AR.cat=k; }catch(e){}
+  go('airep');
+  setTimeout(function(){ try{ if(typeof arGoCat==='function')arGoCat(k); }catch(e){} },0);
+}
 /* 메뉴 한 줄 — 별표를 같이 단다 */
 function navBtnHtml(it,star){
   var fav=navIsFav(it.id);
@@ -11251,7 +11350,36 @@ function renderNav(){
     items.forEach(function(it){ h+=navBtnHtml(it); });
     h+='</div></div>';
   });
-  if(NAV_Q&&!found)
+  /* ── <b>화면 안의 칸</b>도 찾아 준다 ────────────────────────────────
+     찾기가 여태 큰 메뉴(TABS) 만 봤다. 그런데 사장님이 하루에 제일 많이
+     부르는 이름은 <b>TFA 업무관리 안</b>에 있다 — 「팀원 관리」·「해야 할
+     일」·「30일 고객관리」·「대표 브리핑」. 재 보니 열두 칸 중 <b>열한
+     칸</b>이 안 찾혔다. 찾아 놓고 없다고 나오면 없는 것과 같다.
+
+     이름은 <b>AR_CAT 하나</b>에서만 가져온다 — 여기에 이름을 또 적으면
+     칸을 늘렸을 때 한쪽만 고쳐진다 (CLAUDE.md 5번). 같은 판정 함수
+     (navHit)를 그대로 쓰므로 초성·영타·오타도 똑같이 견딘다.          */
+  var inN=0;
+  if(NAV_Q&&typeof AR_CAT!=='undefined'&&typeof navHit==='function'){
+    var inH='';
+    AR_CAT.forEach(function(c){
+      var it={id:'airep',title:c[2],ak:c[3],icon:c[1]};
+      if(!navHit(it,NAV_Q,NAV_LOOSE))return;
+      inN++;
+      inH+='<div class="nav-row"><button class="tab-btn" '+
+        'onclick="navGoIn(\''+c[0]+'\')">'+
+        '<span class="ti">'+c[1]+'</span><span class="tt">'+esc(c[2])+'</span>'+
+        '<span class="tc">TFA</span></button></div>';
+    });
+    if(inH)
+      h+='<div class="nav-group" style="--gc:#1B3A6B;--ge:#5A7099;--gt:#fff;--ga:#F5F9FF;--gb:#C7D2FE">'+
+         '<button type="button" class="nav-group-label" aria-expanded="true">'+
+         '<span class="ngl-left"><span class="ngl-ic">🧭</span>'+
+         '<span class="ngl-t">TFA 업무관리 안</span></span>'+
+         '<span class="ngl-n">'+inN+'</span></button>'+
+         '<div class="nav-group-items">'+inH+'</div></div>';
+  }
+  if(NAV_Q&&!found&&!inN)
     h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 메뉴가 없습니다.<br>'+
        '이름 일부나 초성(ㄱㄱ)으로도 찾을 수 있습니다.</div>';
   $('navHost').innerHTML=h;
@@ -11652,8 +11780,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-28 21:30';
-var APP_BUILD_NOTE='<b>발표로 넘어가면 아래쪽을 못 보여 드리고 있었습니다 — 두 자료 모두, 원인은 서로 달랐습니다.</b> ① <b>재무설계 상담자료</b>는 장이 길면 한 판에 다 넣으려고 글씨를 <b>0.52배 — 절반까지</b> 줄였습니다. 48장 중 스무 장 넘게 0.9배 아래였습니다. 고객 앞에서 글씨가 반이 되면 못 읽으십니다. 이제 <b>폭에만</b> 맞추고(옆으로 안 잘리게), 높이가 넘치면 <b>내려서</b> 봅니다 — <b>글씨 크기는 그대로</b>입니다. ② <b>미끼상품&접촉전략</b>은 넘기는 클릭 자리가 <b>화면의 78%</b>를 덮고 있어 휠도 손가락도 막혔습니다 — 28장 중 <b>26장</b>이 한 화면을 넘는데 <b>0px 도 못 내렸습니다.</b> 양옆 좁은 띠만 남기고 가운데를 비웠습니다. 두 자료가 <b>같은 규칙</b>으로 움직입니다 — <b>↓·PageDown</b> 은 먼저 내리고 바닥에 닿으면 다음 장, <b>←→</b> 는 장 넘기기, <b>옆으로 밀기</b> 는 장 넘기기(위아래는 안 건드립니다). 넘치는 장에는 <b>「↓ 아래로 더 있습니다」</b> 가 뜨고 끝까지 내리면 사라집니다. 새 점검 <code>check-deckscroll</code> 22가지 — 열 자리를 되돌려 전부 빨간불을 확인했습니다.';
+var APP_BUILD='2026-08-28 22:40';
+var APP_BUILD_NOTE='<b>발표로 넘어가면 아래쪽을 못 보여 드리고 있었습니다 — 두 자료 모두, 원인은 서로 달랐습니다.</b> ① <b>재무설계 상담자료</b>는 장이 길면 한 판에 다 넣으려고 글씨를 <b>0.52배 — 절반까지</b> 줄였습니다. 48장 중 스무 장 넘게 0.9배 아래였습니다. 고객 앞에서 글씨가 반이 되면 못 읽으십니다. 이제 <b>폭에만</b> 맞추고(옆으로 안 잘리게), 높이가 넘치면 <b>내려서</b> 봅니다 — <b>글씨 크기는 그대로</b>입니다. ② <b>미끼상품&접촉전략</b>은 넘기는 클릭 자리가 <b>화면의 78%</b>를 덮고 있어 휠도 손가락도 막혔습니다 — 28장 중 <b>26장</b>이 한 화면을 넘는데 <b>0px 도 못 내렸습니다.</b> 양옆 좁은 띠만 남기고 가운데를 비웠습니다. 두 자료가 <b>같은 규칙</b>으로 움직입니다 — <b>↓·PageDown</b> 은 먼저 내리고 바닥에 닿으면 다음 장, <b>←→</b> 는 장 넘기기, <b>옆으로 밀기</b> 는 장 넘기기(위아래는 안 건드립니다). 넘치는 장에는 <b>「↓ 아래로 더 있습니다」</b> 가 뜨고 끝까지 내리면 사라집니다. 새 점검 <code>check-deckscroll</code> 22가지 — 열 자리를 되돌려 전부 빨간불을 확인했습니다. <b>[main]</b> 아침 TFA 넷(대표 브리핑을 TFA 안으로 · 찾기가 화면 안 칸까지 · 팀 보고 4배 · 다시 열어도 자동)과 미끼레이더 <b>신상품 찾기</b> 칸이 함께 들어왔습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -43015,17 +43143,25 @@ function schAgoLabel(iso){
 function renderReportPage(){
   if(!OS.profile)return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX · 하루 한 장</div><div class="page-title">대표 브리핑</div></div><div class="card"><div class="card-body"><div class="notice">🔒 로그인 후 이용할 수 있습니다.</div></div></div></div>';
   if(!schCanView())return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX · 하루 한 장</div><div class="page-title">🔒 대표·리더 전용</div><div class="page-desc">이 브리핑은 대표와 팀 리더만 볼 수 있습니다. 리더 권한은 대표가 설정 → 팀원 권한 관리에서 지정합니다.</div></div></div>';
-  var tabs='<div class="clm-tabs" style="margin-bottom:14px">'+
-    '<button class="clm-tab'+(SCH.view==='today'?' on':'')+'" onclick="schGo(\'today\')">📊 오늘의 브리핑</button>'+
-    '<button class="clm-tab'+(SCH.view==='gain'?' on':'')+'" onclick="schGo(\'gain\')">💡 이득·성과</button>'+
-    '<button class="clm-tab'+(SCH.view==='team'?' on':'')+'" onclick="schGo(\'team\')">💬 팀 소통</button></div>';
-  var body='<div id="schTeamBar"></div><div id="schBody"><div class="loading" style="padding:16px"><div class="spinner"></div>오늘 한 장을 여는 중…</div></div>';
   var own=osIsOwner();
   return '<div class="tab-pane on"><div class="page-hd"><div class="page-tag">APEX · 하루 한 장</div>'+
     '<div class="page-title">'+(own?'대표 브리핑':'팀 브리핑')+'</div><div class="page-desc">'+
     (own?'오늘 <b>우리 조직이 만들어낸 것</b>과 <b>팀원의 소통 상태</b>를 한 장으로 보고드립니다. 아침 7시에 미리 만들어 둡니다.'
         :'오늘 <b>리더님 팀이 만들어낸 것</b>과 <b>팀원의 소통 상태</b>를 한 장으로 보고드립니다. 아침 7시에 미리 만들어 둡니다.')+
-    '</div></div>'+tabs+body+'</div>';
+    '</div></div>'+schInnerHtml()+'</div>';
+}
+/* ── 몸통은 <b>한 곳</b>에서만 만든다 ──────────────────────────────
+   같은 화면을 두 자리에서 봅니다 — 왼쪽 메뉴의 「대표 브리핑」 과
+   TFA 업무관리 안의 같은 칸입니다. 각자 그리면 한쪽만 고쳐집니다
+   (CLAUDE.md 5번). 칸 이름(#schBody·#schTeamBar)도 하나뿐이라
+   schRender 가 어디서 열었든 같은 자리를 다시 그립니다.          */
+function schInnerHtml(){
+  return '<div class="clm-tabs" style="margin-bottom:14px">'+
+    '<button class="clm-tab'+(SCH.view==='today'?' on':'')+'" onclick="schGo(\'today\')">📊 오늘의 브리핑</button>'+
+    '<button class="clm-tab'+(SCH.view==='gain'?' on':'')+'" onclick="schGo(\'gain\')">💡 이득·성과</button>'+
+    '<button class="clm-tab'+(SCH.view==='team'?' on':'')+'" onclick="schGo(\'team\')">💬 팀 소통</button></div>'+
+    '<div id="schTeamBar"></div><div id="schBody">'+
+    '<div class="loading" style="padding:16px"><div class="spinner"></div>오늘 한 장을 여는 중…</div></div>';
 }
 function schGo(v){
   SCH.view=v;
