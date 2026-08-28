@@ -11780,8 +11780,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 01:55';
-var APP_BUILD_NOTE='<b>밤에 서버가 미리 만들던 「하루 한 장」을 껐습니다</b> — 사장님 지시대로입니다. 이제 <b>TFA 업무관리 → 대표 브리핑</b>을 여시면 <b>그 자리에서</b> 모아 세웁니다. 화면에 뜨는 숫자는 새벽에 굳어 둔 것이 아니라 <b>여신 그 순간</b>의 것입니다. 함께 <b>화면 문구도 고쳤습니다</b> — 예약만 끄고 두었더니 「아침 7시에 미리 만들어 둔 것입니다」 라는 글이 열 자리에 그대로 남아, 안 만드는데 만들었다고 <b>화면이 거짓말</b>을 하고 있었습니다. 만든 시각은 이제 적어 둔 값(<code>madeAt</code>)에서 읽고, <b>없으면 「적혀 있지 않습니다」</b> 라고 적습니다 — 시각을 지어내지 않습니다(1번). 서버 함수는 <b>지우지 않고</b> 남겨 두었습니다. 되살리고 싶으시면 <code>netlify.toml</code> 의 daily-brief 자리에 <b>네 줄</b>만 되돌리면 그날부터 다시 돕니다 — 그 방법을 그 자리에 적어 두었습니다. <code>check-brief</code> 가 <b>이 상태를 지킵니다</b> — 누가 말없이 예약을 되살리거나 화면 문구가 다시 어긋나면 그 자리에서 빨간불이 켜집니다. 열 자리를 되돌려 전부 울리는 것을 확인했습니다.';
+var APP_BUILD='2026-08-29 02:35';
+var APP_BUILD_NOTE='<b>밤에 서버가 미리 만들던 「하루 한 장」을 껐습니다</b> — 사장님 지시대로입니다. 이제 <b>TFA 업무관리 → 대표 브리핑</b>을 여시면 <b>그 자리에서</b> 모아 세웁니다. 화면에 뜨는 숫자는 새벽에 굳어 둔 것이 아니라 <b>여신 그 순간</b>의 것입니다. 함께 <b>화면 문구도 고쳤습니다</b> — 예약만 끄고 두었더니 「아침 7시에 미리 만들어 둔 것입니다」 라는 글이 열 자리에 그대로 남아, 안 만드는데 만들었다고 <b>화면이 거짓말</b>을 하고 있었습니다. 만든 시각은 이제 적어 둔 값(<code>madeAt</code>)에서 읽고, <b>없으면 「적혀 있지 않습니다」</b> 라고 적습니다 — 시각을 지어내지 않습니다(1번). 서버 함수는 <b>지우지 않고</b> 남겨 두었습니다. 되살리고 싶으시면 <code>netlify.toml</code> 의 daily-brief 자리에 <b>네 줄</b>만 되돌리면 그날부터 다시 돕니다 — 그 방법을 그 자리에 적어 두었습니다. <code>check-brief</code> 가 <b>이 상태를 지킵니다</b> — 누가 말없이 예약을 되살리거나 화면 문구가 다시 어긋나면 그 자리에서 빨간불이 켜집니다. 열 자리를 되돌려 전부 울리는 것을 확인했습니다. <b>[main]</b> <b>조직도 반영</b>이 함께 들어왔습니다 — 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 뜹니다. 설정 → 팀원 권한 관리에서 지정하신 것이 <b>이깁니다</b>; 지정 안 된 분만 조직도의 팀으로 채우고, <b>설정에 없는 팀은 만들지 않습니다.</b>';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14185,6 +14185,7 @@ function vaCss(){
 
 var GB={loaded:false,busy:false,err:'',warn:[],
   rows:[],teams:[],teamOf:{},team:'',face:'',open:'',
+  orgFill:0,orgNoTeam:[],          /* 조직도에서 메운 사람 수 · 설정에 없는 팀 이름 */
   notes:[],pass:{},many:false,at:''};
 
 var GB_AX=[
@@ -14259,6 +14260,42 @@ function gbFace(){
 function gbGoFace(v){GB.face=v;GB.open='';gbPaint();}
 
 /* ── 불러오기 ── */
+/* ── 조직도의 팀으로 <b>빈 자리만</b> 메운다 ─────────────────────────
+   팀이 두 곳에 적혀 있다 — 조직도(org_members.team, 팀 <b>이름</b>)와
+   설정의 팀원 권한 관리(team_members, 팀 <b>번호</b>). 이 화면은 설정
+   것만 읽어서, 조직도에 적어 두셔도 「소속 없음」 으로 떴다.
+
+   <b>설정이 이긴다.</b> 사장님이 팀원 권한 관리에서 직접 지정하신 것은
+   그대로 두고, <b>지정 안 된 사람만</b> 조직도의 팀으로 메운다. 이미
+   손으로 맞춰 두신 것이 뒤집히지 않는다.
+
+   <b>없는 팀은 지어내지 않는다</b> (CLAUDE.md 1번). 조직도에 「건우TEAM」
+   이라 적혀 있어도 설정에 그 이름의 팀이 없으면 팀을 만들지 않고,
+   <b>몇 명이 그런지 세어 둔다</b> — 화면이 그 자리에서 말한다. 조용히
+   「소속 없음」 에 섞으면 사장님은 조직도가 반영된 줄 아신다.
+
+   이름은 <b>띄어쓰기·대소문자를 털고</b> 견준다 — 조직도에 「건우 TEAM」,
+   설정에 「건우TEAM」 처럼 적히는 일이 흔하다.                        */
+function gbTeamKey(s){ return (''+(s==null?'':s)).toLowerCase().replace(/[\s·.\-_]/g,''); }
+function gbOrgFill(res){
+  GB.orgFill=0; GB.orgNoTeam=[];
+  if(!res||res.error||!res.data)return;
+  var byName={},i,t,k,rows=res.data;
+  for(i=0;i<GB.teams.length;i++){
+    k=gbTeamKey(GB.teams[i].name);
+    if(k)byName[k]=GB.teams[i].id;
+  }
+  for(i=0;i<rows.length;i++){
+    var o=rows[i],mid=o&&o.member_id;
+    if(!mid)continue;                      /* 계정이 안 이어진 줄 — 팀을 붙일 데가 없다 */
+    if(GB.teamOf[mid])continue;            /* 설정에서 이미 지정하셨다 — 그쪽이 이긴다 */
+    k=gbTeamKey(o.team);
+    if(!k)continue;                        /* 조직도에도 팀이 없다 */
+    t=byName[k];
+    if(t){ GB.teamOf[mid]=t; GB.orgFill++; }
+    else if(GB.orgNoTeam.indexOf(o.team)<0)GB.orgNoTeam.push(o.team);
+  }
+}
 function gbLoad(){
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){GB.err='서버에 연결되어 있지 않습니다.';GB.loaded=true;gbPaint();return;}
@@ -14276,7 +14313,18 @@ function gbLoad(){
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
     q(sb.from('coach_notes').select('id,member_id,body,mood,share,created_at')
-       .order('created_at',{ascending:false}).limit(300))
+       .order('created_at',{ascending:false}).limit(300)),
+    /* ── 조직도도 읽는다 ────────────────────────────────────────────────
+       팀이 <b>두 곳</b>에 적혀 있었다 — 조직도(org_members.team)와 설정의
+       팀원 권한 관리(team_members). 그런데 이 화면은 설정 것만 읽어서,
+       조직도에 「건우TEAM」 이라 적어 두셔도 <b>「소속 없음」</b> 으로 떴다.
+       같은 것을 두 곳에 적으시게 만든 자리다.
+
+       읽는 자리는 새로 만들지 않고 조직도가 쓰던 orgSelect 를 그대로
+       부른다 — member_id 칸이 없는 서버도 알아서 견딘다 (5번).
+       맨 <b>끝</b>에 붙인다: 앞 번호가 밀리면 위에서 r[3]·r[4] 로 세어
+       쓰는 자리가 통째로 어긋난다.                                    */
+    (typeof orgSelect==='function')?orgSelect(sb):Promise.resolve({data:[]})
   ]).then(function(r){
     GB.busy=false;GB.loaded=true;GB.warn=[];GB.at=new Date().toLocaleTimeString('ko-KR');
     if(r[0].error){GB.err='팀원 명단을 읽지 못했습니다 — '+(r[0].error.message||'');gbPaint();return;}
@@ -14285,6 +14333,7 @@ function gbLoad(){
     GB.teams=r[1].error?[]:(r[1].data||[]);
     GB.teamOf={};
     if(!r[2].error)(r[2].data||[]).forEach(function(m){GB.teamOf[m.member_id]=m.team_id;});
+    gbOrgFill(r[10]);
     var att=r[3].error?[]:(r[3].data||[]);
     var calls=r[4].error?null:(r[4].data||[]);
     var cli=r[5].error?null:(r[5].data||[]);
@@ -14435,6 +14484,23 @@ function gbTeamBarHtml(fn){
   else if(none)
     h+='<div class="notice" style="margin:0 0 11px">소속이 없는 사람이 <b>'+none+'명</b> 있습니다. '+
        '설정 → <b>팀원 권한 관리</b>에서 팀을 지정해 주세요.</div>';
+  /* ── 조직도에서 메운 것을 <b>말한다</b> ────────────────────────────
+     조용히 메우면 사장님이 어디서 온 소속인지 모르신다. 몇 명을
+     어디서 가져왔는지 적는다. */
+  if(GB.orgFill)
+    h+='<div class="notice" style="margin:0 0 11px;background:#F0F7FF;border-color:#C7D2FE">'+
+       '<b>'+GB.orgFill+'명</b>은 <b>조직도</b>에 적힌 팀으로 채웠습니다 — '+
+       '설정에서 따로 지정 안 하신 분들입니다. '+
+       '설정 → <b>팀원 권한 관리</b>에서 지정하시면 <b>그쪽이 이깁니다.</b></div>';
+  /* 조직도에 팀이 적혀 있는데 설정에 그 이름의 팀이 없으면 — 팀을
+     지어내지 않는다(1번). 대신 무슨 이름인지 그대로 대 준다. */
+  if(GB.orgNoTeam&&GB.orgNoTeam.length)
+    h+='<div class="notice" style="margin:0 0 11px;background:#FEF3F2;border-color:#F8CFCB;color:#7A1F1A">'+
+       '조직도에는 <b>'+osEsc(GB.orgNoTeam.slice(0,4).join(' · '))+'</b>'+
+       (GB.orgNoTeam.length>4?(' 외 '+(GB.orgNoTeam.length-4)+'개'):'')+
+       ' 팀이 적혀 있는데 <b>설정에 그 이름의 팀이 없습니다.</b> '+
+       '<b>없는 팀을 만들지는 않았습니다</b> — 설정 → <b>팀원 권한 관리</b>에서 '+
+       '팀을 만들거나 이름을 맞춰 주세요.</div>';
   return h;
 }
 /* 전체를 볼 때는 팀별로 묶는다 — 한 줄로 쭉 세우면 누가 누구 팀인지 안 보인다 */
