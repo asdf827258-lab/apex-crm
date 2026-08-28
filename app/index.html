@@ -1220,8 +1220,64 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
 
+/* ══════ 가로 메뉴 — 위에 붙는다. 폰이든 웹이든 똑같이 ══════════════
+   왼쪽 세로 메뉴는 웹에서만 보이고 폰에서는 서랍이었다. 그래서 화면
+   크기마다 <b>메뉴를 찾는 법이 달랐다.</b> 이제 어디서나 위에 가로로
+   붙는다 — 눈이 갈 자리가 하나다.
+
+   메뉴 <b>내용</b>은 새로 안 적는다. TABS 한 표에서 그대로 읽고, 칸
+   단추도 사이드바가 쓰던 navBtnHtml 을 그대로 부른다. 그래서 강조
+   (navMark)·즐겨찾기(☆)·찾기가 저절로 같이 돈다 (CLAUDE.md 5번).
+
+   세로 메뉴는 없애지 않고 <b>서랍</b>으로 남긴다 — ☰ 로 열린다.
+   즐겨찾기·최근 쓴 것·설치 안내가 거기 있고, 그것까지 가로로 옮기면
+   띠가 두 줄이 된다.                                                  */
+.topnav{position:sticky;top:0;z-index:120;background:var(--ink-2);color:#fff;
+  box-shadow:0 2px 14px rgba(0,0,0,.18);}
+.tn-1{display:flex;align-items:center;gap:10px;padding:9px 12px;}
+.tn-burger{font-size:19px;line-height:1;background:none;border:none;color:#fff;cursor:pointer;
+  padding:4px 6px;border-radius:8px;}
+.tn-burger:hover{background:rgba(255,255,255,.10);}
+.tn-logo{font-size:14px;font-weight:800;letter-spacing:-.04em;white-space:nowrap;}
+.tn-logo span{color:#60A5FA;}
+.tn-find{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.09);
+  border-radius:9px;padding:5px 9px;min-width:0;}
+.tn-find input{background:none;border:none;outline:none;color:#fff;font-size:12.5px;width:150px;
+  min-width:0;font-family:inherit;}
+.tn-find input::placeholder{color:rgba(255,255,255,.45);}
+.tn-find .nf-x{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;}
+/* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다 */
+.tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;}
+.tn-2::-webkit-scrollbar{display:none;}
+.tn-g{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid transparent;color:rgba(255,255,255,.78);
+  font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;
+  font-family:inherit;}
+.tn-g:hover{background:rgba(255,255,255,.14);color:#fff;}
+.tn-g.on{background:#1A56DB;border-color:#3B82F6;color:#fff;}
+/* 펼친 칸들 */
+.tn-pane{display:none;background:var(--ink-1);border-top:1px solid rgba(255,255,255,.07);
+  padding:10px 12px 12px;max-height:56vh;overflow-y:auto;}
+.tn-pane.on{display:block;}
+.tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px;}
+.tn-pane .nav-row{margin:0;}
+.tn-none{font-size:12px;color:rgba(255,255,255,.55);padding:6px 2px;}
+@media(max-width:520px){
+  .tn-find input{width:96px;}
+  .tn-grid{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:380px){.tn-grid{grid-template-columns:1fr;}}
+
 /* 모바일 */
 .mobile-bar{display:none;}
+/* 가로 메뉴가 생기면서 세로 메뉴는 <b>어느 크기에서나</b> 서랍이다 —
+   전에는 880px 아래에서만 그랬다. 규칙이 하나여야 헷갈리지 않는다. */
+.app{grid-template-columns:1fr;}
+.sidebar{position:fixed;left:0;top:0;width:84%;max-width:320px;z-index:200;
+  transform:translateX(-100%);transition:transform .28s var(--ease);}
+.sidebar.open{transform:none;}
+.scrim{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150;}
+.scrim.on{display:block;}
+.main{height:auto;}
 @media(max-width:880px){
   .app{grid-template-columns:1fr;}
   .sidebar{position:fixed;left:0;top:0;width:84%;max-width:300px;z-index:200;transform:translateX(-100%);transition:transform .28s var(--ease);}
@@ -1280,9 +1336,21 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 </head>
 <body>
 
-<div class="mobile-bar">
-  <button class="mh-burger" onclick="toggleNav()">☰</button>
-  <div class="mh-logo">APEX <span>YUN PRO</span></div>
+<!-- 가로 메뉴 — 폰이든 웹이든 똑같이 위에 붙는다 (내용은 TABS 한 표에서 온다) -->
+<div class="topnav" id="topnav">
+  <div class="tn-1">
+    <button class="tn-burger" onclick="toggleNav()" aria-label="세로 메뉴 열기"
+            title="즐겨찾기 · 최근 쓴 것 · 설치 안내">☰</button>
+    <div class="tn-logo">APEX <span>YUN PRO</span></div>
+    <div class="tn-find">
+      <span>🔎</span>
+      <input id="tnFind" placeholder="메뉴 찾기" autocomplete="off"
+             oninput="navFind(this.value)">
+      <button type="button" class="nf-x" onclick="navFind('')" aria-label="찾기 지우기">✕</button>
+    </div>
+  </div>
+  <div class="tn-2" id="tnGroups"></div>
+  <div class="tn-pane" id="tnPane"></div>
 </div>
 <div class="scrim" id="scrim" onclick="toggleNav()"></div>
 
@@ -10680,9 +10748,15 @@ var NAV_Q='';
 var NAV_LOOSE=false;
 function navFind(v){
   NAV_Q=(''+(v||'')).replace(/^\s+|\s+$/g,'');
+  /* 찾기 칸이 <b>둘</b>이다 — 위 가로 띠와 옆 서랍. 값은 NAV_Q 한 곳에만
+     담고 두 칸은 그것을 비출 뿐이다. 그리고 <b>지금 치고 있는 칸에서
+     손을 뺏지 않는다</b> — 옛 코드는 무조건 서랍 칸으로 focus 를 옮겨서,
+     위 칸에 치면 한 글자마다 커서가 튀었다. */
+  var was=document.activeElement,wasTop=(was&&was.id==='tnFind');
   renderNav();
   var el=document.getElementById('navFind');
-  if(el){ el.value=NAV_Q; el.focus(); }
+  if(el){ el.value=NAV_Q; if(!wasTop)el.focus(); }
+  if(typeof tnSyncFind==='function')tnSyncFind();
   if(typeof navMark==='function'&&typeof lastTab!=='undefined')navMark(lastTab);
 }
 /* ── 오타를 쳐도 찾히게 ────────────────────────────────────────
@@ -10791,6 +10865,73 @@ function navBtnHtml(it,star){
         'onclick="navFavToggle(\''+it.id+'\',event)">'+(fav?'★':'☆')+'</button>')+
   '</div>';
 }
+/* ══════════ 가로 메뉴 — 위에 붙는 띠 ══════════════════════════════
+   <b>메뉴 내용을 여기 다시 적지 않는다.</b> 그룹은 visibleTabs() 에서,
+   칸 단추는 사이드바가 쓰던 navBtnHtml 에서 그대로 온다. 그래서
+   강조(navMark)·즐겨찾기(☆)·등급 가림이 저절로 같이 돈다 (5번).
+
+   찾는 중(NAV_Q)에는 그룹을 접고 <b>걸린 칸만</b> 편다 — 찾는 사람에게
+   나머지 열일곱 그룹은 방해다. 사이드바와 같은 규칙이다.            */
+var TN_OPEN=-1;                   /* 지금 펴 둔 그룹 번호. -1 이면 닫힘 */
+/* 사이드바와 <b>똑같이</b> 거른다 — 그룹의 hide, 칸의 hide 둘 다.
+   hide 는 지운 것이 아니라 「눈에서만 뺀 것」이라, 한쪽에만 걸면 같은 칸이
+   위에는 있고 옆에는 없다. 두 메뉴가 서로 다른 말을 하면 안 된다 (5번). */
+function tnGroups(){
+  var g=(typeof visibleTabs==='function')?visibleTabs():TABS,out=[],i,items;
+  for(i=0;i<g.length;i++){
+    if(g[i].hide)continue;
+    items=g[i].items.filter(function(it){return !it.hide;});
+    if(items.length)out.push({group:g[i].group,items:items});
+  }
+  return out;
+}
+function tnToggle(i){
+  TN_OPEN=(TN_OPEN===i)?-1:i;
+  if(NAV_Q&&TN_OPEN>=0)navFind('');   /* 찾는 중에 그룹을 누르면 찾기를 놓는다 */
+  else tnPaint();
+}
+function tnClose(){ TN_OPEN=-1; tnPaint(); }
+function tnPaint(){
+  var bar=$('tnGroups'),pane=$('tnPane');
+  if(!bar||!pane)return;
+  var gs=tnGroups(),i,h='';
+
+  /* 찾는 중에는 그룹 대신 「찾는 중」 딱지 하나만 */
+  if(NAV_Q){
+    bar.innerHTML='<button type="button" class="tn-g on" onclick="navFind(\'\')">'+
+      '🔎 「'+esc(NAV_Q)+'」 찾는 중 — 눌러서 지우기</button>';
+    var rows='',n=0;
+    for(i=0;i<gs.length;i++){
+      gs[i].items.forEach(function(it){
+        if(typeof navHit==='function'&&!navHit(it,NAV_Q,NAV_LOOSE))return;
+        n++; rows+=navBtnHtml(it);
+      });
+    }
+    pane.innerHTML='<div class="tn-grid">'+rows+'</div>'+
+      (n?'':'<div class="tn-none">「'+esc(NAV_Q)+'」 로 찾은 칸이 없습니다. 이름 일부나 초성으로 찾아 보세요.</div>');
+    pane.classList.add('on');
+    if(typeof navMark==='function'&&typeof currentTab==='function'){try{navMark(currentTab());}catch(e){}}
+    return;
+  }
+
+  for(i=0;i<gs.length;i++)
+    h+='<button type="button" class="tn-g'+(TN_OPEN===i?' on':'')+'" onclick="tnToggle('+i+')">'+
+       esc(gs[i].group)+'</button>';
+  bar.innerHTML=h;
+
+  if(TN_OPEN<0||TN_OPEN>=gs.length){pane.classList.remove('on');pane.innerHTML='';return;}
+  var rows2='';
+  gs[TN_OPEN].items.forEach(function(it){ rows2+=navBtnHtml(it); });
+  pane.innerHTML='<div class="tn-grid">'+rows2+'</div>';
+  pane.classList.add('on');
+  /* 새로 그린 단추에 지금 화면 강조를 다시 입힌다 — 강조를 아는 곳은 한 곳뿐이다 */
+  if(typeof navMark==='function'&&typeof currentTab==='function'){try{navMark(currentTab());}catch(e){}}
+}
+/* 찾기 칸이 위·옆 두 곳이라 <b>글자만</b> 서로 맞춰 준다 (값이 두 벌이 되면 안 된다) */
+function tnSyncFind(){
+  var a=$('tnFind'); if(a&&a.value!==NAV_Q)a.value=NAV_Q;
+}
+
 /* 맨 위 세 줄 — 찾기 · 즐겨찾기 · 최근 */
 function navTopHtml(){
   var h='<div class="nav-find"><span class="nf-ic">🔎</span>'+
@@ -11410,6 +11551,9 @@ function renderNav(){
     h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 메뉴가 없습니다.<br>'+
        '이름 일부나 초성(ㄱㄱ)으로도 찾을 수 있습니다.</div>';
   $('navHost').innerHTML=h;
+  /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
+     바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
+  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
   if(!NAVG_SHUT&&typeof lastTab!=='undefined')navReveal(lastTab);
   NAVG_SHUT=false;
   if(typeof osNoticeApply==='function')osNoticeApply();
@@ -11440,6 +11584,12 @@ function osFullMode(on){
   if(on)b.classList.add(on);
 }
 function go(tab){
+  /* 골랐으면 펴 둔 가로 메뉴와 서랍은 닫는다 — 안 닫으면 고른 화면을 덮는다 */
+  try{ if(typeof tnClose==='function')tnClose(); }catch(e){}
+  try{
+    var _sb=$('sidebar'),_sc=$('scrim');
+    if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
+  }catch(e){}
   if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
     if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
     if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
@@ -11808,8 +11958,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 06:30';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).';
+var APP_BUILD='2026-08-29 07:20';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
