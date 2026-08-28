@@ -997,6 +997,10 @@ body.bohum-mode #bohumScreen{display:block;}
 body.mikki-mode .app{display:none;}
 body.mikki-mode #mikkiScreen{display:block;}
 #mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+#onecmpScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.onecmp-mode .app{display:none;}
+body.onecmp-mode #onecmpScreen{display:block;}
+#onecmpScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* APEX 전체 지도 (같은 패턴) */
 #apexMapScreen{display:none;position:fixed;inset:0;z-index:300;background:#EDF2FA;}
 body.apexmap-mode .app{display:none;}
@@ -1437,6 +1441,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 한장 보험료 비교 전용 화면 -->
+<div id="onecmpScreen">
+  <iframe id="onecmpFrame" class="fin-frame" title="한장 보험료 비교"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitOneCmp()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadOneCmp()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openOneCmpNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -4947,6 +4961,7 @@ function osTabProbe(tab){
   /* go()의 분기를 부작용 없이 흉내내 HTML을 반환. 실패 시 throw. finance/crm은 iframe이라 존재만 확인 */
   if(tab==='finance'){if(typeof mountFinance==='function'&&document.getElementById('finB64'))return '재무설계 모듈 존재';throw new Error('mountFinance/finB64 없음');}
   if(tab==='crm'){if(typeof mountCrm==='function')return 'CRM 모듈 존재';throw new Error('mountCrm 없음');}
+  if(tab==='onecmp'){if(typeof mountOneCmp==='function'&&document.getElementById('onecmpFrame'))return '한장 보험료 비교 모듈 존재';throw new Error('mountOneCmp/onecmpFrame 없음');}
   if(tab==='home'||tab==='dashboard')return (typeof renderHome==='function')?renderHome():renderDashboard();
   if(tab==='settings')return renderSettings();
   if(tab==='ready')return renderReady();
@@ -10483,6 +10498,7 @@ var TABS=[
    {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
    {id:'baba',icon:'🔄',title:'비포&애프터',cnt:'',ak:'보장분석'},
    {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
+   {id:'onecmp',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사'},
    {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
    {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:'',ak:'보장분석'},
    {id:'interpret',icon:'🧠',title:'보험 해석',cnt:'',ak:'보험 해석'},
@@ -11639,6 +11655,13 @@ function go(tab){
     return;
   }
 
+  if(tab==='onecmp'){
+    mountOneCmp();
+    osFullMode('onecmp-mode');
+    navMark('onecmp');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='mikki'){
     mountMikki();
     osFullMode('mikki-mode');
@@ -11972,7 +11995,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-08-29 11:10';
-var APP_BUILD_NOTE='<b>교재 준비 SQL 이 「주소로 바로 열면」 안 나오던 것을 고쳤습니다.</b> 앞 판에서 배포 막음을 풀어 파일은 열렸는데, 화면에는 여전히 「못 읽었습니다」 가 떴습니다. <b>경쟁이었습니다</b> — 가이드를 즐겨찾기나 새로고침으로 <b>바로</b> 여시면 칸을 그릴 때 SQL 이 아직 안 와 있고, 나중에 도착해도 <b>아무도 칸을 다시 안 채웠습니다</b>. 다른 화면을 거쳐 오면 되고 바로 열면 안 되는 이상한 화면이었습니다. 이제 <b>기다릴 것을 손에 쥐고</b> 도착하면 다시 채웁니다. 복사·편집기 열기 단추도 <b>도착한 뒤에</b> 돕니다 — 안 그러면 「못 읽었습니다」 를 복사해 드리고, 그것을 붙여넣고 Run 하시면 아무 일도 안 일어납니다. 기다림에는 <b>시간 제한</b>을 걸었습니다(4-1) — 답이 영영 안 오면 스피너가 도는 대신 확실히 「못 받았습니다」 로 떨어집니다. 점검이 이제 <b>안 되던 쪽</b>을 봅니다 — 가이드를 주소로 바로 열어 칸에 정책이 들어왔는지. 세 자리를 되돌려 전부 빨간불을 확인했습니다(다시 채우는 줄 지우기 · 시간 제한 없애기 · 엉뚱한 파일 읽기). 그중 하나는 처음에 <b>헛것을 잡았습니다</b> — 파일 머리 주석이 옛 정책을 인용한 것을 읽고 「익명이 남았다」 고 했습니다. 주석을 걷고 보게 고쳤습니다.';
+var APP_BUILD_NOTE='<b>교재 준비 SQL 이 「주소로 바로 열면」 안 나오던 것을 고쳤습니다.</b> 앞 판에서 배포 막음을 풀어 파일은 열렸는데, 화면에는 여전히 「못 읽었습니다」 가 떴습니다. <b>경쟁이었습니다</b> — 가이드를 즐겨찾기나 새로고침으로 <b>바로</b> 여시면 칸을 그릴 때 SQL 이 아직 안 와 있고, 나중에 도착해도 <b>아무도 칸을 다시 안 채웠습니다</b>. 다른 화면을 거쳐 오면 되고 바로 열면 안 되는 이상한 화면이었습니다. 이제 <b>기다릴 것을 손에 쥐고</b> 도착하면 다시 채웁니다. 복사·편집기 열기 단추도 <b>도착한 뒤에</b> 돕니다 — 안 그러면 「못 읽었습니다」 를 복사해 드리고, 그것을 붙여넣고 Run 하시면 아무 일도 안 일어납니다. 기다림에는 <b>시간 제한</b>을 걸었습니다(4-1) — 답이 영영 안 오면 스피너가 도는 대신 확실히 「못 받았습니다」 로 떨어집니다. 점검이 이제 <b>안 되던 쪽</b>을 봅니다 — 가이드를 주소로 바로 열어 칸에 정책이 들어왔는지. 세 자리를 되돌려 전부 빨간불을 확인했습니다(다시 채우는 줄 지우기 · 시간 제한 없애기 · 엉뚱한 파일 읽기). 그중 하나는 처음에 <b>헛것을 잡았습니다</b> — 파일 머리 주석이 옛 정책을 인용한 것을 읽고 「익명이 남았다」 고 했습니다. 주석을 걷고 보게 고쳤습니다. 같은 판에 <b>[main]</b> 다른 세션이 <b>「한장 보험료 비교」</b> 를 증권 분석에 붙였습니다 — 보험사 전부를 담보별로 한 화면에 놓고 견줍니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12465,6 +12488,17 @@ var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
 function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
 function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+
+/* ════════ 한장 보험료 비교 ════════
+   회사(A+에셋) 보험료비교 시스템을 우리 화면으로 다시 그린 것. 별도 주소에
+   올려 두고 여기서는 틀만 띄운다 — 요율은 늘 회사 서버에서 그때 받아 온다.
+   ⚠ 다른 주소이므로 이 iframe 안의 로그인(링크)은 CRM 과 따로 논다.
+      처음 한 번 회사 링크를 붙여넣어야 하고, 그 다음부터는 기억한다. */
+var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
+function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
+function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
+function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitOneCmp(){go(lastTab||'home');}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.
@@ -15676,6 +15710,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
+  else if(document.body.classList.contains('onecmp-mode'))exitOneCmp();
   else if(document.body.classList.contains('apexmap-mode'))exitApexMap();
 });
 
@@ -22051,8 +22086,8 @@ function manMap(){
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
     {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
-     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
-     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
+     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
+     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 열 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다. 부족한 담보가 나오면 한장 보험료 비교로 어느 회사가 그 담보를 제일 싸게 주는지 바로 봅니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
