@@ -93,6 +93,42 @@ ul.rl li{font-size:12.5px;line-height:1.8;margin-bottom:5px}
   font-size:11px;font-weight:800;margin-right:6px}
 .chip.w{background:var(--pur)}
 
+.tgl{flex:0 0 100%;font-size:10.5px;font-weight:800;color:#9CA3AF;letter-spacing:.06em;
+  margin:6px 0 -2px;padding-left:2px}
+.tgl:first-child{margin-top:0}
+
+/* 갈래 고르기 */
+.pick{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.pk{flex:1 1 160px;border:1.5px solid var(--line);background:#fff;border-radius:12px;padding:12px 14px;
+  text-align:left;font-family:inherit;cursor:pointer}
+.pk .t{font-size:14px;font-weight:900;color:var(--ink)}
+.pk .d{font-size:11.5px;color:var(--mut);margin-top:3px;line-height:1.6}
+.pk.on{border-color:var(--blue);background:var(--blueL);box-shadow:0 0 0 3px rgba(26,86,219,.10)}
+.pk.on .t{color:var(--blue)}
+
+/* 목표 */
+.gf{display:flex;gap:9px;align-items:center;padding:9px 0;border-top:1px solid #F1F4F8;flex-wrap:wrap}
+.gf:first-child{border-top:0}
+.gf .lb{flex:1 1 190px;min-width:0}
+.gf .lb b{display:block;font-size:13px;font-weight:800}
+.gf .lb i{display:block;font-style:normal;font-size:11.5px;color:var(--mut);line-height:1.6;margin-top:2px}
+.gf input{width:110px;border:1.5px solid var(--line);border-radius:9px;padding:8px 10px;font-size:14px;
+  font-family:inherit;font-weight:800;text-align:right;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink)}
+.gf input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(26,86,219,.12)}
+.gf .un{font-size:12px;color:var(--mut);font-weight:700;width:26px}
+.res{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.rc{flex:1 1 128px;border:1px solid #C7D7FF;background:var(--blueL);border-radius:12px;padding:11px 12px}
+.rc .k{font-size:11px;font-weight:800;color:#3B5BA9}
+.rc .v{font-size:22px;font-weight:900;color:#1E3A8A;line-height:1.25;margin-top:2px;font-variant-numeric:tabular-nums}
+.rc.big{background:#111827;border-color:#111827}
+.rc.big .k{color:#9CA3AF} .rc.big .v{color:#fff}
+.tl{display:flex;gap:0;margin:4px 0 2px}
+.tl .st{flex:1;border-top:3px solid var(--line);padding-top:9px}
+.tl .st.on{border-top-color:var(--blue)}
+.tl .st .d{font-size:11px;font-weight:900;color:var(--mut)}
+.tl .st.on .d{color:var(--blue)}
+.tl .st .h{font-size:13px;font-weight:800;margin-top:2px;line-height:1.45}
+
 /* 캘린더 */
 .calbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
 .calbar .nm{font-size:16px;font-weight:900;margin-right:auto}
@@ -164,12 +200,15 @@ ul.rl li{font-size:12.5px;line-height:1.8;margin-bottom:5px}
 (function(){
 var P = window.EDU_PLAN;
 var VIEWS = [
-  ['start','시작하기'], ['cal','📅 이번 달 캘린더'], ['week','주간 미션'], ['monthly','월간 미션'],
-  ['lead','지점장 리스트'], ['edu','교육매니저 리스트'], ['meet','월·목 조회'], ['cover','커버 처방'],
-  ['newbie','신입 교육'], ['career','경력 교육'], ['study','공부'],
-  ['gate','게이트'], ['ses','세션 카드'], ['news','9월 3일'], ['law','준법']
+  ['welcome','환영합니다','나'], ['me','나의 목표','나'], ['cal','📅 캘린더','나'],
+  ['week','주간 미션','나'], ['monthly','월간 미션','나'], ['study','공부','나'],
+  ['path','나의 과정','나'], ['gate','게이트','나'],
+  ['lead','지점장','팀을 여는 사람'], ['edu','교육매니저','팀을 여는 사람'],
+  ['meet','월·목 조회','팀을 여는 사람'], ['cover','커버 처방','팀을 여는 사람'],
+  ['ses','세션 카드','팀을 여는 사람'], ['news','9월 3일','팀을 여는 사람'],
+  ['run','이 문서를 굴리는 법','팀을 여는 사람'], ['law','준법','모두']
 ];
-var cur = (location.hash||'').replace('#','') || 'start';
+var cur = (location.hash||'').replace('#','') || 'welcome';
 if(!VIEWS.some(function(v){return v[0]===cur})) cur='start';
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
@@ -203,8 +242,10 @@ function rules(list,cls){
 }
 
 /* ── 화면들 ── */
-function vStart(){
-  var h='<div class="sec-h">이 커리큘럼이 없는 것</div>'+
+function vRun(){
+  var h='<div class="note b">새로 오신 분은 이 칸이 아니라 <b>「환영합니다」</b>부터 보십니다. '+
+    '여기는 <b>이 문서를 굴리는 사람</b>이 보는 칸입니다.</div>'+
+    '<div class="sec-h">이 커리큘럼이 없는 것</div>'+
     '<div class="note b">여기에 <b>12주 지식 과정</b>과 <b>미끼 화법 27장</b>은 없습니다. 빠뜨린 것이 아닙니다 — '+
     '이미 앱 안에 있고, 같은 것을 두 곳에 두면 <b>한쪽만 낡습니다.</b> 이 문서는 그것을 <b>언제·누가·어떻게 확인하는지</b>만 정합니다.'+
     gos(['academy','bohum','mikki_talk','fp_talk'])+'</div>';
@@ -217,15 +258,18 @@ function vStart(){
   for(var j=0;j<P.culture.length;j++)
     h+=row('·','p',P.culture[j][0],P.culture[j][1],null);
   h+='</div></div>';
+  h+='<div class="sec-h">새로 온 사람에게 이 순서로 줍니다</div><div class="card"><div class="bd">'+
+    row('첫날','g','「환영합니다」를 <b>같이</b> 엽니다','혼자 읽으라고 던지지 않습니다. 약속과 「하지 않는 일」은 옆에서 같이 읽습니다.',null)+
+    row('첫날','g','갈래를 고르고 <b>시작일을 박습니다</b>','이걸 안 하면 며칠째인지도, 게이트가 언제인지도 아무도 모릅니다.',null)+
+    row('첫 주','b','「나의 목표」 다섯 칸을 <b>같이</b> 채웁니다','수수료 값은 매니저가 회사 표를 열어 알려 줍니다 — 앱은 이 값을 모릅니다.',null)+
+    row('둘째 주','p','「주간 미션」과 「캘린더」로 넘깁니다','이때부터 혼자 굴러갑니다.',null)+
+    '</div></div>';
   h+='<div class="sec-h">어디에 무엇이 있나</div><div class="card"><div class="bd">'+
-    row('매일','b','주간 미션','요일마다 하는 일이 다릅니다 — 월 명단 · 화 전화 · 수 상담 · 목 결정 · 금 정리',null)+
+    row('본인','g','환영합니다 · 나의 목표 · 나의 과정','새로 온 사람이 <b>스스로</b> 여는 칸입니다',null)+
+    row('매일','b','주간 미션 · 캘린더','요일마다 하는 일이 다릅니다 — 월 명단 · 화 전화 · 수 상담 · 목 결정 · 금 정리',null)+
     row('매달','g','월간 미션','네 주의 초점 — 채운다 · 연다 · 닫는다 · 심는다',null)+
-    row('신입','p','신입 교육','하루 시간표와 90일 게이트 넷. 지식 열두 주는 앱 안에 있습니다',null)+
-    row('경력','a','경력 교육','여덟 주. 새 지식이 아니라 <b>굳은 습관 하나</b>를 바꿉니다',null)+
-    row('공부','','공부','무엇을 · 어디서 · <b>어떻게 확인하나</b>',null)+
     row('지점장','r','지점장 리스트','<b>숫자</b>를 봅니다 — 하루·주·달·분기, 눌러서 지웁니다',null)+
     row('교육','r','교육매니저 리스트','<b>사람과 자료</b>를 봅니다 — 지점장과 겹치지 않게 갈라 뒀습니다',null)+
-    row('달력','b','이번 달 캘린더','고정 리듬이 자동으로 깔리고, 그 위에 <b>직접 넣습니다</b>. 인쇄해 벽에.',null)+
     '</div></div>';
   h+='<div class="note">이 표를 고칠 때는 <code>app/교육/plan.js</code> <b>한 곳만</b> 고칩니다. 이 화면은 그것을 그리기만 합니다.</div>';
   return h;
@@ -469,6 +513,152 @@ function vNewbie(){
   return h;
 }
 
+/* ══ 나 — 갈래와 목표. 이 브라우저에만 남는다 ══ */
+var ME_KEY='apex_edu_me';
+function me(){var o=lsGet(ME_KEY,{});if(o.track!=='career')o.track=o.track||'';return o;}
+function meSet(k,v){var o=me();o[k]=v;lsSet(ME_KEY,o);}
+function track(){return me().track||'new';}
+function trackName(){return track()==='career'?'경력':'신입';}
+function meDays(){
+  var st=me().start; if(!st)return null;
+  var a=new Date(st+'T00:00:00'), b=new Date();
+  if(isNaN(a))return null;
+  return Math.floor((b-a)/86400000)+1;
+}
+function meGoal(k){var g=me().goal||{};var v=parseFloat(g[k]);return isFinite(v)&&v>0?v:null;}
+
+function vWelcome(){
+  var W=P.welcome, t=track(), set=!!me().track;
+  var h='<div class="card"><div class="bd" style="padding:18px 16px">'+
+    '<div style="font-size:15px;line-height:1.9">'+rich(W.line)+'</div></div></div>';
+
+  h+='<div class="sec-h">먼저, 어느 쪽이신가요</div>'+
+     '<p class="lead">'+rich(W.pick)+'</p><div class="pick">'+
+    '<button class="pk'+(set&&t==='new'?' on':'')+'" data-tk="new">'+
+      '<span class="t">🐣 신입으로 왔습니다</span><span class="d">이 일이 처음이거나, 처음에 가깝습니다 · 열두 주</span></button>'+
+    '<button class="pk'+(set&&t==='career'?' on':'')+'" data-tk="career">'+
+      '<span class="t">💼 경력으로 왔습니다</span><span class="d">해 본 일입니다 · 여덟 주 · 처음부터 다시 시키지 않습니다</span></button>'+
+    '</div>';
+  if(!set) h+='<div class="note">아직 안 고르셨습니다. 고르지 않으면 <b>신입</b> 기준으로 보여 드립니다.</div>';
+
+  h+='<div class="sec-h">우리 팀의 약속</div>'+
+     '<p class="lead">규칙이 아니라 <b>약속</b>입니다. 지키라고 드리는 것이 아니라, '+
+     '우리가 이렇게 하겠다고 드리는 말입니다.</p><div class="card"><div class="bd">';
+  for(var i=0;i<P.creed.length;i++) h+=row('약속','g',P.creed[i][0],P.creed[i][1],null);
+  h+='</div></div>';
+
+  h+='<div class="sec-h">우리가 하지 않는 일</div>'+
+     '<p class="lead">팀은 하는 일보다 <b>안 하는 일</b>로 드러납니다. 이 여섯은 예외가 없습니다.</p>'+
+     '<div class="note r"><ul class="rl">'+
+     P.never.map(function(x){return '<li>'+rich(x)+'</li>';}).join('')+'</ul></div>';
+
+  h+='<div class="sec-h">'+esc(trackName())+'으로 오신 분 — 첫 주에 할 세 가지</div>'+
+     '<p class="lead">첫 주에는 이 셋만 하시면 됩니다. 나머지는 안 하셔도 됩니다.</p><div class="card"><div class="bd">';
+  var fw=P.firstWeek[track()]||P.firstWeek['new'];
+  for(var j=0;j<fw.length;j++) h+=row(''+(j+1),'b',fw[j][0],fw[j][1],fw[j][2]);
+  h+='</div></div>';
+  h+='<div class="note b">'+rich(W.first)+'</div>';
+  return h;
+}
+
+/* ── 나의 과정 — ○일 뒤의 나 ── */
+function vPath(){
+  var t=track(), arc=P.arc[t]||P.arc['new'], d=meDays();
+  var h='<div class="sec-h">'+esc(trackName())+' — 어디로 가는가</div>'+
+    '<p class="lead">할 일 목록이 아닙니다. <b>어떤 사람이 되어 있는가</b>입니다. '+
+    '오늘 못 한 것보다 이 방향이 맞는지가 훨씬 중요합니다.</p>';
+  h+='<div class="card"><div class="bd"><div class="tl">';
+  for(var i=0;i<arc.length;i++){
+    var n=parseInt(arc[i][0],10);
+    var on=d!==null&&(isNaN(n)?d>=60:d>=n-29);
+    h+='<div class="st'+(on?' on':'')+'"><div class="d">'+esc(arc[i][0])+'</div>'+
+       '<div class="h">'+rich(arc[i][1])+'</div></div>';
+  }
+  h+='</div></div></div>';
+  for(var j=0;j<arc.length;j++)
+    h+=card(esc(arc[j][0])+' · '+rich(arc[j][1]),'',
+      '<div class="s" style="font-size:13px;line-height:1.85">'+rich(arc[j][2])+'</div>'+
+      '<div class="note g" style="margin-top:9px">'+rich(arc[j][3])+'</div>');
+  h+='<div class="sec-h">'+esc(trackName())+' 게이트</div>'+
+     '<p class="lead">시험이 아닙니다. <b>CRM 에 남은 흔적</b>으로 봅니다. '+
+     '통과 못 하면 혼나는 것이 아니라 <b>같은 것을 한 주 더</b> 합니다.</p>'+gateTable(t);
+  /* 내 갈래의 속살만 편다 — 남의 길까지 나란히 세우면 새로 온 사람이 읽다 지친다 */
+  h+=(t==='career')?vCareer():vNewbie();
+  return h;
+}
+
+function gateTable(t){
+  var g=(t==='career')?P.careerGates:P.gates;
+  var h='<div class="tw"><table><tr><th>때</th><th>보는 것</th><th>남아 있어야 하는 흔적</th><th>왜</th></tr>';
+  for(var i=0;i<g.length;i++)
+    h+='<tr><td><b>'+esc(g[i][0])+'</b></td><td>'+esc(g[i][1])+'</td><td>'+rich(g[i][2])+'</td><td>'+rich(g[i][3])+'</td></tr>';
+  return h+'</table></div>';
+}
+
+/* ── 나의 목표 — 채운 값으로만 센다. 비면 만들지 않는다 ── */
+function vMe(){
+  var m=me(), d=meDays(), t=track();
+  var h='<div class="card"><div class="hd"><div class="t">나</div>'+
+    '<div class="d">이름과 시작일은 <b>이 브라우저에만</b> 남습니다. 서버로 나가지 않습니다.</div></div><div class="bd">'+
+    '<div class="gf"><div class="lb"><b>부르는 이름</b><i>고객 이름이 아니라 <b>내 이름</b>입니다</i></div>'+
+      '<input type="text" data-me="name" value="'+osAttr(m.name||'')+'" placeholder="홍길동" style="width:130px;text-align:left"></div>'+
+    '<div class="gf"><div class="lb"><b>시작일</b><i>이 날부터 셉니다 — 게이트가 언제인지도 여기서 나옵니다</i></div>'+
+      '<input type="date" data-me="start" value="'+osAttr(m.start||'')+'" style="width:150px;text-align:left"></div>'+
+    '<div class="gf"><div class="lb"><b>갈래</b><i>「환영합니다」 칸에서 바꿉니다</i></div>'+
+      '<span class="tag '+(t==='career'?'a':'b')+'">'+esc(trackName())+'</span></div>'+
+    '</div></div>';
+
+  if(d===null) h+='<div class="note">시작일을 넣으시면 <b>며칠째인지 · 다음 게이트가 언제인지</b>가 여기 나옵니다.</div>';
+  else{
+    var wk=Math.max(1,Math.ceil(d/7));
+    var gl=(t==='career')?[4,8]:[2,4,8,12], nx=null;
+    for(var i=0;i<gl.length;i++){ if(wk<=gl[i]){nx=gl[i];break;} }
+    h+='<div class="res"><div class="rc"><div class="k">오늘</div><div class="v">'+d+'일째</div></div>'+
+      '<div class="rc"><div class="k">지금</div><div class="v">'+wk+'주차</div></div>'+
+      '<div class="rc">'+(nx?'<div class="k">다음 게이트</div><div class="v">'+nx+'주</div>'
+                            :'<div class="k">과정</div><div class="v">끝</div>')+'</div></div>';
+    if(!nx) h+='<div class="note g">과정 기간을 지났습니다. '+
+      (t==='career'?'바꾸기로 한 습관 하나가 붙었는지 매니저와 한 번 보세요.'
+                   :'<b>경력 과정 여덟 주</b>로 넘어갈 때입니다 — 졸업이 끝이 아닙니다.')+'</div>';
+  }
+
+  h+='<div class="sec-h">이번 달 나의 목표</div>'+
+     '<p class="lead">「열심히 하겠습니다」는 다음 주에 사라집니다. <b>오늘 몇 통을 걸어야 하는지</b>까지 '+
+     '내려와야 손이 나갑니다. 아래 다섯 칸을 채우면 그 숫자가 나옵니다.</p>';
+  h+='<div class="card"><div class="bd">';
+  var g=m.goal||{}, miss=[];
+  for(var k=0;k<P.goalFields.length;k++){
+    var f=P.goalFields[k], v=g[f[0]];
+    if(!(parseFloat(v)>0)) miss.push(f[1]);
+    h+='<div class="gf"><div class="lb"><b>'+rich(f[1])+'</b>'+(f[3]?'<i>'+rich(f[3])+'</i>':'')+'</div>'+
+       '<input type="number" inputmode="decimal" min="0" step="any" data-goal="'+f[0]+'" '+
+       'value="'+osAttr(v==null?'':v)+'" placeholder="—"><span class="un">'+esc(f[2])+'</span></div>';
+  }
+  h+='</div></div>';
+
+  if(miss.length){
+    h+='<div class="note r"><b>아직 숫자를 만들지 않습니다.</b> 비어 있는 칸이 있습니다 — '+
+       esc(miss.join(' · '))+'.<br>비운 채로 그럴듯한 값을 보여 드리면 그건 계획이 아니라 <b>소원</b>입니다. '+
+       '채워 넣으시면 그 자리에서 계산합니다.</div>';
+  }else{
+    var inc=meGoal('incomeMan'), per=meGoal('perMan'),
+        pc=meGoal('pc')/100, ap=meGoal('ap')/100, dy=meGoal('days');
+    var cnt=Math.ceil(inc/per), mt=Math.ceil(cnt/pc), cl=Math.ceil(mt/ap), td=Math.ceil(cl/dy);
+    h+='<div class="res">'+
+      '<div class="rc"><div class="k">필요 건수</div><div class="v">'+cnt+'건</div></div>'+
+      '<div class="rc"><div class="k">필요 상담</div><div class="v">'+mt+'건</div></div>'+
+      '<div class="rc"><div class="k">필요 통화</div><div class="v">'+cl+'통</div></div>'+
+      '<div class="rc big"><div class="k">오늘 걸 통화</div><div class="v">'+td+'통</div></div></div>';
+    h+='<div class="note b">이 숫자를 <b>실행 체크판에 적어 두세요.</b> 화면에만 있으면 내일 잊습니다. '+
+       '값이 바뀌면(수수료 표가 바뀌거나 타율이 오르면) 여기서 다시 세면 됩니다.'+gos(['ckboard','airep'])+'</div>';
+  }
+  h+=rules(P.goalRules,'');
+  h+='<div class="note g"><b>이룬 것은 여기서 세지 않습니다.</b> 실제 숫자는 <b>성장판</b>과 <b>점수판</b>이 들고 있습니다 — '+
+     '두 곳에서 세면 어느 쪽이 맞는지 아무도 모릅니다. 여기는 <b>목표만</b> 적는 자리입니다.'+gos(['growboard','airep'])+'</div>';
+  return h;
+}
+function osAttr(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
 /* ── 주간 미션 — 요일마다 하는 일이 다르다 ── */
 function vWeek(){
   var h='<div class="sec-h">월요일부터 금요일까지</div>'+
@@ -566,20 +756,11 @@ function vGate(){
   var h='<div class="sec-h">게이트 — 지식이 아니라 흔적을 봅니다</div>'+
     '<p class="lead">시험을 보지 않습니다. <b>CRM 에 남은 것</b>으로 판정합니다. '+
     '통과하지 못하면 다음 것을 얹지 않고 <b>같은 것을 한 주 더</b> 합니다.</p>';
-  h+='<div class="tw"><table><tr><th>때</th><th>보는 것</th><th>남아 있어야 하는 흔적</th><th>왜</th></tr>';
-  for(var i=0;i<P.gates.length;i++){
-    var g=P.gates[i];
-    h+='<tr><td><b>'+esc(g[0])+'</b></td><td>'+esc(g[1])+'</td><td>'+rich(g[2])+'</td><td>'+rich(g[3])+'</td></tr>';
-  }
-  h+='</table></div>';
+  h+='<div class="sec-h">신입 · 열두 주</div>'+gateTable('new');
   h+='<div class="note b"><b>졸업 판정은 앱이 합니다.</b> 「본인 점검란 → 졸업 기준」이 기준을 들고 있습니다. '+
      '여기서 다시 세지 않습니다 — 두 곳에서 세면 어느 쪽이 맞는지 아무도 모릅니다.'+gos(['academy','growboard'])+'</div>';
-  h+='<div class="sec-h">경력 게이트</div>'+
-     '<p class="lead">경력은 <b>신규를 몇 건 했느냐</b>로 보지 않습니다. 자세한 것은 「경력 교육」 칸에 있습니다.</p>'+
-     '<div class="tw"><table><tr><th>때</th><th>보는 것</th><th>흔적</th></tr>';
-  for(var n=0;n<P.careerGates.length;n++)
-    h+='<tr><td><b>'+esc(P.careerGates[n][0])+'</b></td><td>'+esc(P.careerGates[n][1])+'</td><td>'+rich(P.careerGates[n][2])+'</td></tr>';
-  h+='</table></div>';
+  h+='<div class="sec-h">경력 · 여덟 주</div>'+
+     '<p class="lead">경력은 <b>신규를 몇 건 했느냐</b>로 보지 않습니다.</p>'+gateTable('career');
   return h;
 }
 
@@ -626,21 +807,23 @@ function vLaw(){
   return h;
 }
 
-var RENDER={start:vStart,cal:vCal,week:vWeek,monthly:vMonthly,lead:vLead,edu:vEdu,
-  meet:vMeet,cover:vCover,newbie:vNewbie,career:vCareer,study:vStudy,
-  gate:vGate,ses:vSes,news:vNews,law:vLaw};
+var RENDER={welcome:vWelcome,me:vMe,path:vPath,cal:vCal,week:vWeek,monthly:vMonthly,
+  study:vStudy,gate:vGate,lead:vLead,edu:vEdu,meet:vMeet,cover:vCover,
+  ses:vSes,news:vNews,run:vRun,law:vLaw};
 
 function paint(){
-  var t='';
-  for(var i=0;i<VIEWS.length;i++)
+  var t='',g='';
+  for(var i=0;i<VIEWS.length;i++){
+    if(VIEWS[i][2]!==g){g=VIEWS[i][2];t+='<span class="tgl">'+esc(g)+'</span>';}
     t+='<button class="tb'+(VIEWS[i][0]===cur?' on':'')+'" data-v="'+VIEWS[i][0]+'">'+esc(VIEWS[i][1])+'</button>';
+  }
   document.getElementById('tabs').innerHTML=t;
   document.getElementById('pane').innerHTML='<div class="pane">'+RENDER[cur]()+'</div>';
   window.scrollTo(0,0);
 }
 /* 한 곳에서 받는다 — 전역 함수를 늘리지 않는다 */
 document.getElementById('pane').addEventListener('click',function(e){
-  var el=e.target.closest('[data-add],[data-del],[data-cal],[data-ck]');
+  var el=e.target.closest('[data-add],[data-del],[data-cal],[data-ck],[data-tk]');
   if(!el) return;
   var v;
   if((v=el.getAttribute('data-add'))) return calAdd(v);
@@ -654,7 +837,26 @@ document.getElementById('pane').addEventListener('click',function(e){
     return;
   }
   if((v=el.getAttribute('data-ck'))){var a=v.split('|');return ckTog(a[0],a[1],parseInt(a[2],10));}
+  if((v=el.getAttribute('data-tk'))){meSet('track',v);return paint();}
 });
+/* 치는 동안 담고, 손을 뗄 때 다시 그린다.
+   담기를 change 에만 걸면 칸을 채우고 탭을 옮겨 버렸을 때 <b>말없이 사라진다</b>.
+   그리기를 input 에 걸면 한 글자마다 다시 그려 커서가 튄다. 그래서 둘로 나눈다. */
+function fieldSave(el){
+  var k;
+  if(!el||!el.getAttribute) return false;
+  if((k=el.getAttribute('data-me'))){meSet(k,String(el.value||'').trim());return true;}
+  if((k=el.getAttribute('data-goal'))){
+    var o=me(); o.goal=o.goal||{};
+    var n=parseFloat(el.value);
+    if(isFinite(n)&&n>0)o.goal[k]=n; else delete o.goal[k];
+    lsSet(ME_KEY,o); return true;
+  }
+  return false;
+}
+var pane=document.getElementById('pane');
+pane.addEventListener('input',function(e){fieldSave(e.target);});
+pane.addEventListener('change',function(e){if(fieldSave(e.target))paint();});
 document.getElementById('tabs').addEventListener('click',function(e){
   var b=e.target.closest('.tb'); if(!b) return;
   cur=b.getAttribute('data-v'); try{location.hash=cur;}catch(x){}
@@ -662,7 +864,15 @@ document.getElementById('tabs').addEventListener('click',function(e){
 });
 /* 인쇄할 때는 전부 펼친다 — 한 칸만 뽑히면 종이가 반쪽이 된다 */
 window.addEventListener('beforeprint',function(){
-  var all=''; for(var i=0;i<VIEWS.length;i++) all+='<div class="pane">'+RENDER[VIEWS[i][0]]()+'</div>';
+  var all='',i;
+  for(i=0;i<VIEWS.length;i++) all+='<div class="pane">'+RENDER[VIEWS[i][0]]()+'</div>';
+  /* 종이는 팀 전체가 돌려 봅니다 — 화면에서 안 고른 갈래도 인쇄본에는 담습니다 */
+  var t=track(), other=(t==='career')?'new':'career';
+  var oa=P.arc[other], ah='';
+  for(i=0;i<oa.length;i++) ah+=row(oa[i][0],'p',oa[i][1],oa[i][2],null);
+  all+='<div class="pane"><div class="sec-h">'+(other==='career'?'경력 · 여덟 주':'신입 · 열두 주')+
+       ' — 다른 갈래</div><div class="card"><div class="bd">'+ah+'</div></div>'+
+       gateTable(other)+((other==='career')?vCareer():vNewbie())+'</div>';
   document.getElementById('pane').innerHTML=all;
 });
 window.addEventListener('afterprint',paint);

@@ -52,6 +52,45 @@ const longInPage = words.filter(w => w.length > 40 && page.indexOf(w) >= 0);
 is(longInPage.length === 0,
    '  표의 긴 문장이 화면에 복사돼 있지 않다' + (longInPage.length ? ' — 겹침: ' + longInPage[0].slice(0, 30) : ''));
 
+console.log('\n[1-1] 새로 온 사람이 여는 입구가 있는가');
+/* 이 문서의 나머지는 팀을 여는 사람이 본다. 이 칸만은 <b>새로 온 사람 본인</b>이 본다 */
+const W = plan.welcome || {};
+is(!!W.line && !!W.pick && !!W.first, '  첫 화면에 한 문장 · 갈래 고르기 · 읽는 순서가 있다');
+is((plan.creed || []).length >= 5, '  우리 팀의 약속이 다섯 이상이다');
+is((plan.creed || []).every(c => c[1] && c[1].length > 30), '  약속마다 <b>왜</b>가 붙어 있다 — 구호로 끝나지 않는다');
+is(/모릅니다/.test(flat(plan.creed).join(' ')), '  「모릅니다」라고 말해도 된다고 먼저 말한다');
+is(/혼자 두지 않습니다/.test(flat(plan.creed).join(' ')), '  혼자 두지 않는다고 적혀 있다');
+is((plan.never || []).length >= 5, '  <b>하지 않는 일</b>이 다섯 이상이다 — 팀은 안 하는 일로 드러난다');
+const nv = flat(plan.never).join(' ');
+is(/손해가 되는 계약/.test(nv), '  고객에게 손해가 되는 계약은 팔지 않는다');
+is(/자기 돈으로 계약하지 않습니다/.test(nv), '  실적 때문에 자기 돈으로 계약하지 않는다');
+is(/확정|보장|무조건/.test(nv), '  단정 표현을 쓰지 않는다');
+is(/실명/.test(nv), '  고객 실명을 밖으로 내보내지 않는다');
+/* 「매니저 관리 문화」는 매니저가 지키는 것, 「약속」은 팀원이 받는 것 — 같은 문장이면 가른 뜻이 없다 */
+const cultTxt = flat(plan.culture).join(' ');
+const creedDup = flat(plan.creed).filter(t => typeof t === 'string' && t.length > 20 && cultTxt.indexOf(t) >= 0);
+is(creedDup.length === 0, '  약속이 매니저 문화를 베끼지 않았다' + (creedDup.length ? ' — ' + creedDup[0].slice(0, 24) : ''));
+
+console.log('\n[1-2] 방향성과 목표 — 스스로 이룰 수 있게 되어 있는가');
+['new', 'career'].forEach(t => {
+  const a = (plan.arc || {})[t] || [];
+  is(a.length >= 3, '  ' + t + ' 갈래에 「○일 뒤의 나」가 셋 이상이다');
+  /* 말투를 강요하지 않는다 — 방향을 한 줄로 말해 주는가만 본다 (CLAUDE.md 8) */
+  is(a.every(x => x[3] && x[3].length > 8), '  ' + t + ' 마다 <b>어떤 사람이 되는가</b>가 한 줄로 있다');
+  is(a.every(x => x[2] && x[2].length > 30), '  ' + t + ' 마다 왜 그런지 설명이 있다');
+  is(((plan.firstWeek || {})[t] || []).length === 3, '  ' + t + ' 첫 주에 할 일이 셋이다 — 늘리지 않는다');
+});
+is(/첫 계약보다/.test(flat(plan.arc['new']).join(' ')), '  신입 첫 달은 계약이 아니라 완결을 본다');
+is((plan.goalFields || []).length >= 4, '  목표를 세우는 칸이 있다');
+is((plan.goalFields || []).every(f => f[0] && f[1] && f[2] !== undefined), '  칸마다 이름과 단위가 있다');
+/* 수수료·타율은 앱이 만들어 주지 않는다 — 어디서 가져오는지가 적혀 있어야 한다 */
+const gfTxt = flat(plan.goalFields).join(' ');
+is(/회사 수수료 표/.test(gfTxt), '  수수료 값은 회사 표에서 옮겨 적는다고 적혀 있다');
+is(/점수판|퍼널/.test(gfTxt), '  타율은 내 CRM 에서 옮겨 적는다고 적혀 있다');
+is(/한 칸이라도 비면 숫자를 만들지 않습니다/.test(flat(plan.goalRules).join(' ')),
+   '  한 칸이라도 비면 숫자를 만들지 않는다 (CLAUDE.md 1)');
+is(/성장판|점수판/.test(page), '  이룬 숫자는 성장판·점수판이 든다고 가리킨다 — 두 곳에서 세지 않는다');
+
 console.log('\n[2] 있는 자료를 다시 적지 않고 가리키는가');
 /* 12주 과정·미끼 화법은 앱 안에 이미 있다. 여기서는 화면으로 보내야 한다 */
 ['academy', 'mikki_talk', 'bohum', 'fp_talk'].forEach(id =>
@@ -310,13 +349,17 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.waitForTimeout(200);
   const panes = await pg.$$eval('.pane', n => n.length);
   const plen = await pg.$eval('#pane', n => n.innerText.length);
-  is(panes === tabs.length, '  인쇄본에 ' + panes + '칸이 다 담긴다 (칸 ' + tabs.length + '개)');
-  is(plen > 16000, '  내용이 충분하다 (' + plen + '자)');
+  is(panes === tabs.length + 1,
+     '  인쇄본에 ' + panes + '칸 — 화면 ' + tabs.length + '칸 + <b>안 고른 갈래</b> 한 칸');
+  const ptxt = await pg.$eval('#pane', n => n.innerText);
+  is(/한 바퀴를 돕니다/.test(ptxt) && /내 명부를 다시 봅니다/.test(ptxt),
+     '  종이에는 신입·경력 <b>두 갈래가 다</b> 담긴다 — 팀이 돌려 보기 때문');
+  is(plen > 20000, '  내용이 충분하다 (' + plen + '자)');
   await pg.emulateMedia({ media: 'screen' });
 
   console.log('\n[11-1] 캘린더가 실제로 굴러가는가');
   await pg.setViewportSize({ width: 1100, height: 900 });
-  await pg.click('.tb:text-is("📅 이번 달 캘린더")');
+  await pg.click('.tb:text-is("📅 캘린더")');
   await pg.waitForTimeout(200);
   const now = new Date(), pad = n => (n < 10 ? '0' : '') + n;
   const mk = d => now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(d);
@@ -336,7 +379,7 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.click('[data-add="' + D2 + '"]'); await pg.waitForTimeout(180);
   is((await pg.$$('[data-del="' + D2 + '"]')).length === 0, '  빈 글은 안 들어간다');
   await pg.reload({ waitUntil: 'networkidle' });
-  await pg.click('.tb:text-is("📅 이번 달 캘린더")'); await pg.waitForTimeout(200);
+  await pg.click('.tb:text-is("📅 캘린더")'); await pg.waitForTimeout(200);
   is((await pg.$$('[data-del="' + D1 + '"]')).length === 3, '  새로고침해도 남아 있다');
   await pg.click('[data-cal="next"]'); await pg.waitForTimeout(180);
   is((await pg.$$('.mine')).length === 0, '  다음 달은 비어 있다 — 달마다 따로 남는다');
@@ -351,19 +394,61 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
      '  비우기는 <b>내가 넣은 것만</b> 지운다 — 고정 리듬은 남는다');
 
   console.log('\n[11-2] 두 리스트가 따로 남는가');
-  await pg.click('.tb:text-is("지점장 리스트")'); await pg.waitForTimeout(200);
+  await pg.click('.tb:text-is("지점장")'); await pg.waitForTimeout(200);
   const leadN = (await pg.$$('.ck')).length;
   is(leadN >= 15, '  지점장 칸이 ' + leadN + '개 선다');
   await pg.click('.ck'); await pg.waitForTimeout(180);
   is((await pg.$$('.ck.on')).length === 1, '  찍힌다');
-  await pg.click('.tb:text-is("교육매니저 리스트")'); await pg.waitForTimeout(200);
+  await pg.click('.tb:text-is("교육매니저")'); await pg.waitForTimeout(200);
   is((await pg.$$('.ck')).length >= 12, '  교육매니저 칸이 선다');
   is((await pg.$$('.ck.on')).length === 0, '  지점장이 찍은 것이 교육매니저에 안 섞인다');
   await pg.reload({ waitUntil: 'networkidle' });
-  await pg.click('.tb:text-is("지점장 리스트")'); await pg.waitForTimeout(200);
+  await pg.click('.tb:text-is("지점장")'); await pg.waitForTimeout(200);
   is((await pg.$$('.ck.on')).length === 1, '  새로고침해도 찍힌 것이 남는다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await pg.setViewportSize({ width: 390, height: 844 });
+
+  console.log('\n[11-3] 새로 온 사람이 실제로 굴려 볼 수 있는가');
+  /* 처음 여는 사람과 같은 자리에서 잰다 — 앞 시험이 남긴 주소 뒤 이름표까지 턴다 */
+  await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
+  await pg.goto('http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + '/index.html',
+    { waitUntil: 'networkidle' });
+  is(/환영합니다/.test(await pg.$eval('.tb.on', n => n.textContent)), '  열면 <b>환영합니다</b>부터 나온다');
+  let txt = await pg.$eval('#pane', n => n.innerText);
+  is(/신입으로 오신 분/.test(txt), '  안 고르면 신입 기준으로 보여 준다');
+  await pg.click('[data-tk="career"]'); await pg.waitForTimeout(200);
+  txt = await pg.$eval('#pane', n => n.innerText);
+  is(/경력으로 오신 분/.test(txt), '  경력을 고르면 첫 주 할 일이 바뀐다');
+  await pg.click('.tb:text-is("나의 과정")'); await pg.waitForTimeout(200);
+  txt = await pg.$eval('#pane', n => n.innerText);
+  /* 각 갈래의 속살에만 있는 말로 잰다 — 방향성 문구는 둘 다 위쪽에 나오므로 잣대가 못 된다 */
+  is(/경력이 막히는 자리/.test(txt) && !/신입 90일 달력/.test(txt),
+     '  내 갈래의 길만 보인다 — 남의 길까지 읽히지 않는다');
+  await pg.click('.tb:text-is("나의 목표")'); await pg.waitForTimeout(200);
+  is(/아직 숫자를 만들지 않습니다/.test(await pg.$eval('#pane', n => n.innerText)),
+     '  칸이 비면 숫자를 만들지 않는다');
+  const G = { incomeMan: 600, perMan: 12, pc: 30, ap: 20, days: 20 };
+  for (const k in G) {
+    await pg.fill('[data-goal="' + k + '"]', String(G[k]));
+    await pg.evaluate(() => document.activeElement.blur());
+    await pg.waitForTimeout(140);
+  }
+  const cards = await pg.$$eval('.rc', n => n.map(x => x.innerText.replace(/\n/g, ' ')));
+  is(/오늘 걸 통화/.test(cards.join(' ')), '  다 채우면 <b>오늘 걸 통화</b>까지 내려온다');
+  is(/42/.test(cards.join(' ')), '  역산이 맞다 (600÷12÷0.3÷0.2÷20 = 42)');
+  await pg.fill('[data-goal="perMan"]', '');
+  await pg.evaluate(() => document.activeElement.blur());
+  await pg.waitForTimeout(200);
+  is(/아직 숫자를 만들지 않습니다/.test(await pg.$eval('#pane', n => n.innerText)),
+     '  한 칸을 비우면 <b>도로 안 만든다</b> — 남은 숫자를 그대로 두지 않는다');
+  await pg.fill('[data-me="start"]', '2026-08-03');
+  await pg.evaluate(() => document.activeElement.blur());
+  await pg.waitForTimeout(200);
+  is(/일째/.test(await pg.$eval('#pane', n => n.innerText)), '  시작일을 넣으면 며칠째인지 센다');
+  await pg.reload({ waitUntil: 'networkidle' });
+  await pg.click('.tb:text-is("환영합니다")'); await pg.waitForTimeout(200);
+  is(/경력으로 오신 분/.test(await pg.$eval('#pane', n => n.innerText)), '  새로고침해도 고른 갈래가 남는다');
+  await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 
   console.log('\n[12] 앱 메뉴에서 열리고 빠져나오는가');
   await pg.addInitScript(STUB);
