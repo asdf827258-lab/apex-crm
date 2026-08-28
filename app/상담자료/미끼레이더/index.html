@@ -330,6 +330,29 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
   <div class="phead"><h2>📡 이달의 신상품 레이더</h2>
   <p>보험 신상품·약관개정·제도변경 뉴스를 자동으로 모아서, <b>미끼로 쓸 수 있는 것만</b> 골라내고 화법까지 붙여줍니다.</p></div>
 
+  <!-- ══════ 찾기 ══════
+       여태 이 화면에는 <b>찾는 칸이 없었다.</b> 서버가 모아 주는 것만
+       위에서부터 훑어야 했고, 「삼성생명 그 암보험」 을 찾으려면 눈으로
+       스무 줄을 내려야 했다. 고객이 「그 상품 뭐예요」 하고 물으신 자리에서
+       그러고 있을 수는 없다.
+
+       한 칸이 <b>이 화면 전체</b>를 좁힌다 — 회사별 신상품 · 뉴스 목록 ·
+       공시실 바로가기 셋 다. 회사 이름을 치시면 <b>그 회사 공시실</b>이
+       맨 위로 올라온다. 기사에 없는 상품이라도 원문을 받으러 가실 수 있게. -->
+  <div class="card mkfind" style="margin-bottom:14px">
+    <div class="row" style="align-items:flex-end;gap:10px">
+      <div style="flex:1;min-width:220px">
+        <label class="f" for="radarQ">🔎 신상품 찾기</label>
+        <input class="inp" id="radarQ" autocomplete="off"
+          placeholder="회사·상품명·낱말 (예: 삼성생명 / 간편심사 / 암보험)">
+      </div>
+      <div style="flex:0 0 auto"><button class="btn sm gh" id="radarQX">✕ 지우기</button></div>
+    </div>
+    <div id="radarQMsg" class="cnt" style="margin-top:8px">
+      회사 이름이나 상품명 일부를 치시면 <b>이 화면 전체</b>가 좁혀집니다.
+      띄어 쓰면 <b>둘 다</b> 들어간 것만 남습니다.</div>
+  </div>
+
   <!-- ══════ 회사별 신상품 — 어느 회사가 무엇을 냈나 ══════
        여태 이 화면은 <b>뉴스만</b> 봤다. 「어느 회사가 지금 무엇을 파는가」는
        아무 데도 없어서, 상품 이야기는 전부 사장님이 손으로 넣어야 했다.
@@ -1795,6 +1818,40 @@ function monChipsHtml(){
   return h+'</div>';
 }
 
+/* ══════ 찾기 — <b>걸리나 안 걸리나를 답하는 자리는 하나뿐</b> ══════
+   회사별 신상품 · 뉴스 목록 · 공시실 셋이 각자 자기 잣대를 가지면, 한
+   칸에 쳤는데 화면마다 다른 것이 남는다. 사장님이 「이게 다인가」 를
+   믿을 수 없게 된다. 그래서 판정도 다시 그리기도 여기 한 곳이다
+   (CLAUDE.md 5번).
+
+   견줄 때는 <b>띄어쓰기·괄호·가운뎃점을 턴다</b> — 신문마다 「핏(Fit)테크」
+   와 「핏테크」 를 다르게 쓰고, 사장님은 둘 중 아무 쪽으로나 치신다.
+   띄어 치시면 <b>둘 다</b> 들어간 것만 남는다(그리고, 이지 또는이 아니다). */
+window.MKFIND = {
+  q: '',
+  flat: function (s) {
+    return String(s == null ? '' : s).toLowerCase()
+      .replace(/[\s()（）\[\]·・.,\-_/'"“”‘’]/g, '');
+  },
+  words: function () {
+    var self = this;
+    return String(this.q).split(/\s+/).filter(Boolean).map(function (w) { return self.flat(w); })
+      .filter(function (w) { return w.length > 0; });
+  },
+  /* 아무것도 안 치셨으면 <b>전부</b> 걸린다 — 빈 칸이 화면을 비우면 안 된다 */
+  on: function (text) {
+    var ws = this.words(); if (!ws.length) return true;
+    var h = this.flat(text), i;
+    for (i = 0; i < ws.length; i++) if (h.indexOf(ws[i]) < 0) return false;
+    return true;
+  },
+  redraw: [],                     /* 다시 그릴 자리들이 여기에 등록한다 */
+  paintAll: function () {
+    for (var i = 0; i < this.redraw.length; i++) { try { this.redraw[i](); } catch (e) {} }
+  },
+  set: function (v) { this.q = String(v == null ? '' : v); this.paintAll(); }
+};
+
 function renderNews(){
   const per=+$('#selPeriod').value, sort=$('#selSort').value;
   const now=Date.now(), lim=per*864e5;
@@ -1806,6 +1863,8 @@ function renderNews(){
        「8월을 골랐는데 아무것도 없다」 가 된다 */
     if(!state.mon&&per<9999&&n.date&&dnum(n.date)&&now-dnum(n.date)>lim)return false;
     if(state.filter.size&&!(n.tags||[]).some(t=>state.filter.has(t)))return false;
+    /* 찾는 말 — 제목·언론사·태그에서 본다 */
+    if(!MKFIND.on([n.title,n.source,(n.tags||[]).join(' ')].join(' ')))return false;
     return true});
   list.sort((a,b)=>sort==='date'?dnum(b.date)-dnum(a.date):b.score-a.score||dnum(b.date)-dnum(a.date));
   /* 태그 필터 */
@@ -1820,7 +1879,12 @@ function renderNews(){
     else state.filter.has(t)?state.filter.delete(t):state.filter.add(t);
     renderNews()});
   if(!list.length){$('#newsList').innerHTML='<div class="empty">'+
-    (state.mon?('<b>'+esc(monTxt(state.mon))+'</b> 에 모아 둔 기사가 없습니다.<br>위 <b>전체</b> 를 누르면 다 보입니다.')
+    (MKFIND.q.trim()
+       ?('<b>「'+esc(MKFIND.q)+'」</b> 로 찾은 기사가 없습니다.<br>'+
+         '기사에 안 나온 상품일 수 있습니다 — 위 <b>🏛 상품 공시실 바로가기</b> 에서 '+
+         '그 회사 원문을 받아 <b>📜 약관 분석기</b> 에 넣으십시오.<br>'+
+         '<b>없는 상품을 지어내지 않습니다.</b>')
+     :state.mon?('<b>'+esc(monTxt(state.mon))+'</b> 에 모아 둔 기사가 없습니다.<br>위 <b>전체</b> 를 누르면 다 보입니다.')
              :'뉴스가 없어요.<br>위의 <b>수집 데이터 불러오기</b> 또는 <b>직접 붙여넣기</b>를 눌러주세요.')+
     '</div>';return}
   $('#newsList').innerHTML='<div class="cnt" style="margin-bottom:8px">'+
@@ -1911,6 +1975,12 @@ $('#fileNews').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new F
   r.onload=()=>{try{const j=JSON.parse(r.result);ingest(j.items||j);toast('불러왔어요')}catch(x){toast('JSON 형식이 아니에요')}};
   r.readAsText(f,'utf-8')};
 $('#selPeriod').onchange=renderNews;$('#selSort').onchange=renderNews;
+/* ── 찾는 칸 ────────────────────────────────────────────────────────
+   뉴스 목록도 MKFIND 가 다시 그리는 자리에 <b>등록해서</b> 돈다 — 여기서
+   따로 부르면, 다른 자리를 늘렸을 때 한쪽만 고쳐진다 (CLAUDE.md 5번). */
+MKFIND.redraw.push(renderNews);
+$('#radarQ').oninput=function(){ MKFIND.set(this.value); };
+$('#radarQX').onclick=function(){ $('#radarQ').value=''; MKFIND.set(''); $('#radarQ').focus(); };
 
 /* =====================================================================
    2) 약관 분석기
@@ -6392,10 +6462,22 @@ function bindDaily(){
   function paint(){
     var box=document.getElementById('npcoList'); if(!box) return;
     if(NPC.err){ box.innerHTML='<div class="tipbox">'+esc2(NPC.err)+'</div>'; return; }
-    var items=NPC.list||[];
-    if(!items.length){
+    var all=NPC.list||[];
+    if(!all.length){
       box.innerHTML='<div class="tipbox">받아 온 기사가 없습니다. '
         +'<b>없는 상품을 지어내지 않습니다</b> — 잠시 뒤 다시 눌러 주십시오.</div>';
+      return;
+    }
+    /* 찾는 말 — 회사·상품명·제목·언론사에서 본다. 회사와 상품명은 제목에서
+       읽어 내므로 제목 하나만 봐도 셋이 다 들어간다. */
+    var items=all.filter(function(it){
+      return MKFIND.on([it.title,it.source,coOf(it.title||''),prodOf(it.title||'')].join(' '));
+    });
+    if(!items.length){
+      box.innerHTML='<div class="tipbox"><b>「'+esc2(MKFIND.q)+'」</b> 로 찾은 신상품이 없습니다 '
+        +'<span class="cnt">(받아 둔 기사 '+all.length+'건)</span><br>'
+        +'기사에 안 나온 상품일 수 있습니다 — 아래 <b>🏛 상품 공시실 바로가기</b> 에서 '
+        +'그 회사 원문을 받으십시오. <b>없는 상품을 지어내지 않습니다.</b></div>';
       return;
     }
     /* 회사 → 상품 → 기사 로 접는다. 같은 상품을 여러 신문이 쓰면 한 줄로 모인다 */
@@ -6538,8 +6620,13 @@ function bindDaily(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',mount);
   else mount();
 
+  /* 찾기가 좁힐 때 이 자리도 다시 그린다 (MKFIND 한 곳에 등록) */
+  try{ if(window.MKFIND) MKFIND.redraw.push(paint); }catch(e){}
   window.npcoPull=pull; window.npcoPaint=paint;
   window.npcoState=function(){return {n:(NPC.list||[]).length, err:NPC.err};};
+  /* 점검이 <b>표본 기사</b>를 넣어 보는 자리 — 서버를 안 부르고 그리기만 본다.
+     npcoState 와 같은 뜻으로 열어 둔다(그 함수도 점검이 쓴다). */
+  window.npcoSeed=function(list){ NPC.list=list||[]; NPC.err=''; paint(); };
   window.npcoCoOf=coOf; window.npcoProdOf=prodOf; window.npcoFlat=npFlat;
 })();
 </script>
@@ -6582,14 +6669,28 @@ function bindDaily(){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function paint(){
     var box=document.getElementById('gongsiList'); if(!box) return;
-    var h='<div class="gs-org">';
+    /* ── 회사 이름을 치시면 <b>그 회사만</b> 남긴다 ─────────────────────
+       기사에 안 나온 상품이라도 공시실에는 원문이 있다 — 「제대로
+       찾아보지도 못한다」 는 여기서 풀린다.
+
+       다만 <b>회사 이름이 아닌 말</b>(「암보험」·「간편심사」)을 치셨을 때는
+       <b>줄이지 않는다.</b> 한 곳도 안 걸리는데 카드를 비워 버리면
+       「공시실이 없어졌나」 가 된다. 걸리는 회사가 있을 때만 좁힌다. */
+    var hitCo=GS_CO.filter(function(c){return MKFIND.on(c.n);});
+    var narrow=(MKFIND.q.trim()&&hitCo.length>0);
+    var h='';
+    if(narrow)
+      h+='<div class="cnt" style="margin-bottom:8px">「<b>'+esc3(MKFIND.q)+'</b>」 로 좁혔습니다 · '
+        +'<b>'+hitCo.length+'곳</b> <span class="cnt">— 지우면 전부 다시 보입니다</span></div>';
+    h+='<div class="gs-org">';
     GS_ORG.forEach(function(o){
       h+='<a class="gs-o" href="'+esc3(o.u)+'" target="_blank" rel="noopener">'
        + '<b>'+esc3(o.n)+'</b><span>'+o.d+'</span></a>';
     });
     h+='</div>';
     [['생','생명보험'],['손','손해보험']].forEach(function(g){
-      var list=GS_CO.filter(function(c){return c.k===g[0];});
+      var list=(narrow?hitCo:GS_CO).filter(function(c){return c.k===g[0];});
+      if(narrow&&!list.length) return;
       h+='<div class="gs-h">'+g[1]+' <span class="cnt">'+list.length+'곳</span></div><div class="gs-g">';
       list.forEach(function(c){
         h+='<a class="gs-c'+(c.ok?' ok':'')+'" href="'+esc3(c.u)+'" target="_blank" rel="noopener" '
@@ -6602,6 +6703,7 @@ function bindDaily(){
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paint);
   else paint();
+  try{ if(window.MKFIND) MKFIND.redraw.push(paint); }catch(e){}
   window.gongsiPaint=paint;
   window.gongsiCount=function(){return {org:GS_ORG.length, co:GS_CO.length,
     ok:GS_CO.filter(function(c){return c.ok;}).length};};
