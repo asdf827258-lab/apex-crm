@@ -449,6 +449,84 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(care.saysChild && care.saysDep, '부양가족 수와 <b>가장 어린 가족의 나이</b>를 문장에 쓴다');
   is(care.nurZero, '소득중단 0개월인 갈래는 「0개월을 메우고도」라고 말하지 않는다');
 
+  /* ── 전후 비교 · 그 자리에서 고치기 · 비포&애프터에서 가져오기 ── */
+  console.log('\n[9-4] 전후 비교 — 그 자리에서 고치고, 고친 것을 밝히는가');
+  const ed = await page.evaluate(() => {
+    __frSeed([__pol('p1', 50000, false)],
+      [__cov('e1', 'p1', '일반암진단비', 30000000),
+       __cov('e2', 'p1', '뇌출혈진단비', 10000000)]);
+    frCellSet('e1', 'b', 50000000);
+    frCellSet('e1', 'a', 80000000);
+    let M = frMaster(), by = {}; M.forEach(m => by[m.id] = m);
+    const fixed = { b: by.e1.bWon, a: by.e1.aWon, mb: by.e1.mb, ma: by.e1.ma };
+    /* 빈 칸은 「그대로」 — 조정 후를 비우면 <b>현재 값</b>을 따라간다.
+       현재를 손으로 5,000만으로 고쳐 두었으니 그대로도 5,000만이다. */
+    frCellSet('e1', 'a', '');
+    M = frMaster(); by = {}; M.forEach(m => by[m.id] = m);
+    const blank = { a: by.e1.aWon, ma: by.e1.ma };
+    /* 현재까지 비우면 <b>추출값</b>으로 돌아온다 — 고친 것을 되돌릴 수 있어야 한다 */
+    frCellSet('e1', 'b', '');
+    M = frMaster(); by = {}; M.forEach(m => by[m.id] = m);
+    const undone = { b: by.e1.bWon, a: by.e1.aWon, mb: by.e1.mb };
+    frCellSet('e1', 'b', 50000000);   /* 아래 세는 자리 시험을 위해 되돌린다 */
+    frAddRow();
+    const st = frState(), row = st.add[st.add.length - 1];
+    frAddSet(row.id, 'name', '표적항암약물허가치료비');
+    frCellSet(row.id, 'a', 20000000);
+    M = frMaster();
+    const T = frCounts(M);
+    const added = M[M.length - 1];
+    const doc = frBaPageHtml(M, T);
+    return {
+      fixed: fixed, blank: blank, undone: undone,
+      addName: added.raw, addKey: added.key, addA: added.aWon, addB: added.bWon, hand: added.hand,
+      extracted: T.extracted, addedN: T.added, report: T.report, lost: T.lost, edited: T.edited,
+      inputs: (doc.match(/class="fr-in/g) || []).length,
+      prints: (doc.match(/class="fr-pr"/g) || []).length,
+      noSlice: doc.indexOf('상위 몇 개로 자르지 않았습니다') >= 0
+    };
+  });
+  is(ed.fixed.b === 50000000 && ed.fixed.a === 80000000, '표에서 고친 값이 <b>마지막 말</b>이다 — 앱이 덧칠하지 않는다');
+  is(ed.fixed.mb === 1 && ed.fixed.ma === 1, '고친 칸에 「손」 딱지가 붙는다 — 조용히 바뀌지 않는다');
+  is(ed.blank.a === 50000000 && ed.blank.ma === 0,
+     '조정 후를 비우면 <b>「그대로」</b> — 0 이 아니라 현재 값을 따라간다 (' + ed.blank.a + ')');
+  is(ed.undone.b === 30000000 && ed.undone.a === 30000000 && ed.undone.mb === 0,
+     '현재까지 비우면 <b>추출값으로 돌아온다</b> — 고친 것을 되돌릴 수 있다 (' + ed.undone.b + ')');
+  is(ed.addKey === 'anti_target' && ed.addA === 20000000, '손으로 더한 담보도 <b>사전으로 분류</b>된다');
+  is(ed.hand === 1 && ed.addB === null, '손으로 더한 담보는 「손으로 적음」으로 서고, 안 적은 칸은 null 이다');
+  is(ed.extracted === 2 && ed.addedN === 1 && ed.report === 3 && ed.lost === 0,
+     '추출 ' + ed.extracted + ' + 손으로 적음 ' + ed.addedN + ' = 보고서 ' + ed.report + ' (어긋남 0)');
+  is(ed.edited === 1, '손으로 고친 <b>추출값</b>만 따로 센다 (손으로 더한 줄은 안 센다)');
+  is(ed.inputs >= 6 && ed.prints >= 6, '칸마다 <b>입력칸과 인쇄용 글자</b>를 함께 낸다 — 종이에서 숫자가 살아 있어야 한다');
+  is(ed.noSlice, '전후 비교가 상위 몇 개로 자르지 않는다고 밝힌다');
+
+  console.log('\n[9-5] 비포&애프터에서 가져오기 — 만원을 원으로, 겹치면 말한다');
+  const bridge = await page.evaluate(() => {
+    __frSeed([__pol('p1', 50000, false)], [__cov('b1', 'p1', '암주요치료비', 8000000)]);
+    if (typeof BABA === 'undefined') return { no: 1 };
+    BABA.rows = [{ k: 'cantx', n: '암주요치료비', b: 1000, a: 1000 },
+                 { k: 'teeth', n: '치아·치과', b: 100, a: 300 }];
+    BABA.plans = [];
+    const first = frFromBaba();
+    let M = frMaster(), T = frCounts(M);
+    const dup1 = T.dup;
+    const teeth = M.filter(m => m.raw === '치아·치과')[0];
+    const again = frFromBaba();
+    M = frMaster(); T = frCounts(M);
+    return { no: 0, first: first, again: again, added: T.added, report: T.report, lost: T.lost,
+             dup: dup1, teethB: teeth.bWon, teethA: teeth.aWon, teethKey: teeth.key, src: teeth.src };
+  });
+  is(!bridge.no, '비포&애프터 자리가 있다');
+  is(bridge.teethB === 100 * 10000 && bridge.teethA === 300 * 10000,
+     '<b>만원 → 원</b> 으로 바꿔 가져온다 (' + bridge.teethB + '원) — 여기서 틀리면 만 배가 틀린다');
+  is(bridge.teethKey === 'etc_dental', '가져온 이름을 <b>같은 사전</b>으로 분류한다 — 열쇠 대응표를 두 벌 두지 않는다');
+  is(bridge.src === '비포&애프터', '어디서 왔는지 남긴다 — 검수 전 값이라는 사실이 사라지지 않는다');
+  is(bridge.first === 2 && bridge.again === 0 && bridge.added === 2,
+     '두 번 눌러도 <b>두 벌이 되지 않는다</b> (처음 ' + bridge.first + ' · 다시 ' + bridge.again + ')');
+  is(bridge.lost === 0, '가져온 뒤에도 세는 자리가 맞는다');
+  is(bridge.dup === 1, '이미 추출된 담보와 겹치면 <b>조용히 합치지도 버리지도 않고</b> 말한다');
+
+
   /* ── 인쇄 ── */
   console.log('\n[10] 종이 — 어긋난 채로 뽑지 않고, 우리가 다시 읽을 수 있는가');
   const print = await page.evaluate(() => {
