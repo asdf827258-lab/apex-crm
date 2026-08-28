@@ -18,179 +18,218 @@
   · 스크롤은 전용 스크롤 칸(.pane)이 맡는다. 어디에 끼워 넣어도 스크롤된다.
 -->
 <style>
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;padding:0;overflow:hidden}
-body{
-  font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
-  color:#2F2C40;background:#F6F3FF;
-  background-image:radial-gradient(90% 60% at 8% 0%,#FFEAF4 0%,rgba(255,234,244,0) 55%),
-                   radial-gradient(80% 55% at 95% 4%,#E3F0FF 0%,rgba(227,240,255,0) 58%);
-  -webkit-text-size-adjust:100%;
+/* ══ 토스 결 ══════════════════════════════════════════════════════
+   회색 바탕 위에 흰 카드, 파란 버튼 하나, 넉넉한 여백.
+   장식은 줄이고 글자 크기와 간격으로 말한다. 귀여움은 캐릭터와
+   살짝 통통한 모서리·눌림에만 남긴다.                              */
+:root{
+  --blue:#3182F6; --blue-d:#1B64DA; --blue-l:#E8F3FF; --blue-b:#C9E2FF;
+  --bg:#F2F4F6; --card:#FFFFFF; --line:#E5E8EB; --line-l:#F2F4F6;
+  --ink:#191F28; --ink2:#4E5968; --ink3:#8B95A1; --ink4:#B0B8C1;
+  --green:#00A05A; --green-l:#E8F8F0; --red:#F04452; --red-l:#FEECEE;
+  --amber:#C77700; --amber-l:#FFF6E5;
+  --r:20px; --r-s:14px;
 }
-/* ── 스크롤 칸 ────────────────────────────────────────────────
-   화면을 머리 / 탭 / 스크롤 칸 세 층으로 나눈다. 스크롤은 가운데
-   칸이 혼자 맡는다. iframe 안이든 앱 안이든 여기서 굴러간다.       */
-.shell{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;max-width:1240px;margin:0 auto;padding:0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;padding:0;overflow:hidden}
+body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  color:var(--ink);background:var(--bg);-webkit-text-size-adjust:100%;letter-spacing:-0.02em}
+/* ── 스크롤 칸 ── */
+.shell{height:100vh;height:100dvh;display:flex;flex-direction:column;min-height:0;max-width:1120px;margin:0 auto;background:var(--bg)}
 .pane{flex:1;min-height:0;overflow-y:scroll;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
-  scrollbar-width:auto;scrollbar-color:#8B7BF0 #E9E3FF;padding:16px 14px 30px;position:relative}
-.pane::-webkit-scrollbar{width:14px}
-.pane::-webkit-scrollbar-track{background:#E9E3FF;border-radius:99px;margin:8px 2px}
-.pane::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#8B7BF0,#B78CF5);border-radius:99px;border:3px solid #E9E3FF;min-height:44px}
-.pane::-webkit-scrollbar-thumb:hover{background:#7C6BE8}
-/* 화면 높이를 못 받는 곳(임베드 등)에서는 문서 스크롤로 되돌린다 */
+  scrollbar-width:auto;scrollbar-color:var(--ink4) var(--line-l);padding:16px 16px 40px;position:relative}
+.pane::-webkit-scrollbar{width:12px}
+.pane::-webkit-scrollbar-track{background:var(--line-l);border-radius:99px;margin:6px 2px}
+.pane::-webkit-scrollbar-thumb{background:var(--ink4);border-radius:99px;border:3px solid var(--line-l);min-height:44px}
+.pane::-webkit-scrollbar-thumb:hover{background:var(--ink3)}
 body.flow{overflow:auto;height:auto}
 body.flow .shell{height:auto;min-height:100vh}
 body.flow .pane{overflow:visible;flex:none;min-height:0}
-.scrollhint{position:sticky;bottom:-14px;margin:0 -14px -18px;height:44px;pointer-events:none;
-  background:linear-gradient(180deg,rgba(246,243,255,0),rgba(246,243,255,.95));display:flex;align-items:flex-end;justify-content:center;
-  font-size:11px;font-weight:800;color:#9B93BE;padding-bottom:6px;transition:opacity .2s}
+.scrollhint{position:sticky;bottom:2px;margin:12px auto -6px;width:fit-content;pointer-events:none;
+  background:rgba(25,31,40,.72);color:#fff;font-size:12px;font-weight:700;padding:7px 14px;border-radius:99px;
+  transition:opacity .2s;letter-spacing:-.02em}
 .scrollhint.off{opacity:0}
-/* ── 머리 ─────────────────────────────────────────────────── */
-.top{flex:none;display:flex;align-items:center;gap:11px;padding:12px 16px;background:rgba(255,255,255,.86);
-  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid #EAE4FB}
-.top .logo{width:38px;height:38px;border-radius:13px;background:linear-gradient(135deg,#8B7BF0,#FF9EC4);color:#fff;
-  display:flex;align-items:center;justify-content:center;font-size:19px;flex:none}
+/* ── 머리 ── */
+.top{flex:none;display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--line)}
+.top .logo{width:36px;height:36px;border-radius:12px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
 .top .ti{flex:1;min-width:0}
-.top .ti b{display:block;font-size:15px;font-weight:900;letter-spacing:-.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top .ti span{display:block;font-size:11px;color:#8C86A8;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mecard{flex:none;display:flex;align-items:center;gap:7px;background:#F4F1FF;border:1px solid #E4DDFF;border-radius:999px;
-  padding:6px 12px;font-size:11.5px;font-weight:800;color:#6F63C4;cursor:pointer;white-space:nowrap;font-family:inherit}
-.mecard.cl{background:#EAF8F3;border-color:#BFE9DA;color:#1F7A61}
-.tabs{flex:none;display:flex;gap:4px;padding:8px 12px;background:rgba(255,255,255,.7);border-bottom:1px solid #EFEAFC;overflow-x:auto;scrollbar-width:none}
+.top .ti b{display:block;font-size:15px;font-weight:800;letter-spacing:-.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .ti span{display:block;font-size:11.5px;color:var(--ink3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mecard{flex:none;display:flex;align-items:center;gap:6px;background:var(--blue-l);border:none;border-radius:10px;
+  padding:8px 12px;font-size:12px;font-weight:700;color:var(--blue-d);cursor:pointer;white-space:nowrap;font-family:inherit;transition:transform .12s}
+.mecard:active{transform:scale(.96)}
+.mecard.cl{background:var(--green-l);color:var(--green)}
+.tabs{flex:none;display:flex;gap:6px;padding:10px 12px;background:var(--card);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:none;border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:#8C86A8;
-  padding:9px 14px;border-radius:12px;cursor:pointer;white-space:nowrap}
-.tabs button.on{background:#8B7BF0;color:#fff;box-shadow:0 5px 14px rgba(139,123,240,.32)}
-.tabs button:disabled{opacity:.35;cursor:default}
-/* ── 판 ───────────────────────────────────────────────────── */
-.grid{display:grid;grid-template-columns:1fr;gap:14px;max-width:100%}
-@media(min-width:1000px){
-  .grid.hd{grid-template-columns:340px 1fr;align-items:start}
-  .grid.hd .sticky{position:sticky;top:0}
-}
-.card{background:#fff;border-radius:22px;padding:20px 18px;box-shadow:0 10px 26px rgba(112,96,190,.11),0 1px 3px rgba(112,96,190,.06)}
-.card + .card{margin-top:13px}
-h1{font-size:23px;font-weight:900;margin:0;letter-spacing:-.5px;line-height:1.35}
-h2{font-size:16px;font-weight:900;margin:0;letter-spacing:-.3px;display:flex;align-items:center;gap:7px}
-h2 .n{background:#8B7BF0;color:#fff;font-size:11px;font-weight:900;border-radius:8px;padding:3px 8px;flex:none}
-p{margin:8px 0 0;font-size:13px;line-height:1.75;color:#615C78}
-.sub{font-size:12px;color:#948FB0;line-height:1.7}
-.hr{height:1px;background:#F0ECFA;margin:14px 0}
-.btn{width:100%;border:none;border-radius:15px;padding:14px;font-size:15px;font-weight:900;font-family:inherit;cursor:pointer;
-  background:linear-gradient(135deg,#8B7BF0,#B78CF5);color:#fff;box-shadow:0 7px 16px rgba(139,123,240,.33);transition:transform .12s}
-.btn:active{transform:translateY(2px)}
-.btn.sm{padding:11px;font-size:13.5px}
-.btn.ghost{background:#F4F1FF;color:#6F63C4;box-shadow:none}
-.btn.line{background:#fff;color:#6F63C4;border:2px solid #E4DDFF;box-shadow:none}
-.btn.dark{background:linear-gradient(135deg,#3B3357,#5A4E86);box-shadow:0 7px 16px rgba(59,51,87,.28)}
-.row{display:flex;gap:9px}.row>*{flex:1}
-label{display:block;font-size:11.5px;font-weight:800;color:#8C86A8;margin:0 0 5px 3px}
-.inp,select{width:100%;border:2px solid #EDE8FC;border-radius:13px;padding:12px 13px;font-size:14.5px;font-family:inherit;
-  color:#2F2C40;background:#FCFBFF;outline:none;transition:border-color .15s}
-.inp:focus,select:focus{border-color:#B9AEFF;background:#fff}
+.tabs button{flex:none;border:none;background:var(--bg);font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink2);
+  padding:9px 15px;border-radius:99px;cursor:pointer;white-space:nowrap;transition:transform .12s,background .16s}
+.tabs button:active{transform:scale(.96)}
+.tabs button.on{background:var(--blue);color:#fff}
+.tabs button:disabled{opacity:.4;cursor:default}
+/* ── 카드 ── */
+.grid{display:grid;grid-template-columns:1fr;gap:12px;max-width:100%}
+@media(min-width:1000px){.grid.hd{grid-template-columns:340px 1fr;align-items:start}.grid.hd .sticky{position:sticky;top:0}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card{background:var(--card);border-radius:var(--r);padding:22px 20px;animation:rise .26s ease both}
+.card + .card{margin-top:12px}
+h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.045em;line-height:1.38}
+h2{font-size:17px;font-weight:800;margin:0;letter-spacing:-.04em;display:flex;align-items:center;gap:8px}
+h2 .n{background:var(--blue-l);color:var(--blue-d);font-size:11.5px;font-weight:800;border-radius:8px;padding:4px 9px;flex:none;letter-spacing:0}
+p{margin:10px 0 0;font-size:14.5px;line-height:1.65;color:var(--ink2)}
+.sub{font-size:12.5px;color:var(--ink3);line-height:1.6}
+.hr{height:1px;background:var(--line-l);margin:16px 0}
+/* ── 버튼 ── */
+.btn{width:100%;border:none;border-radius:var(--r-s);padding:15px;font-size:16px;font-weight:700;font-family:inherit;cursor:pointer;
+  background:var(--blue);color:#fff;letter-spacing:-.03em;transition:transform .12s,background .16s}
+.btn:active{transform:scale(.98);background:var(--blue-d)}
+.btn.sm{padding:12px;font-size:14px;border-radius:12px}
+.btn.ghost{background:var(--blue-l);color:var(--blue-d)}
+.btn.ghost:active{background:var(--blue-b)}
+.btn.line{background:var(--bg);color:var(--ink2)}
+.btn.line:active{background:var(--line)}
+.btn.dark{background:var(--ink)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+/* ── 입력 ── */
+label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin:0 0 8px 2px}
+.inp,select{width:100%;border:none;background:var(--bg);border-radius:12px;padding:14px 15px;font-size:15px;font-family:inherit;
+  color:var(--ink);outline:none;transition:box-shadow .16s;letter-spacing:-.02em}
+.inp:focus,select:focus{box-shadow:inset 0 0 0 2px var(--blue)}
+.inp::placeholder{color:var(--ink4)}
+textarea.inp{line-height:1.6;font-size:15px}
 .seg{display:flex;gap:6px;flex-wrap:wrap}
-.seg button{border:2px solid #EDE8FC;background:#fff;color:#7A748F;border-radius:12px;padding:9px 14px;font-size:13px;
-  font-weight:800;cursor:pointer;font-family:inherit}
-.seg button.on{background:#8B7BF0;border-color:#8B7BF0;color:#fff}
+.seg button{border:none;background:var(--bg);color:var(--ink2);border-radius:10px;padding:11px 14px;font-size:13.5px;
+  font-weight:700;cursor:pointer;font-family:inherit;transition:transform .12s}
+.seg button:active{transform:scale(.96)}
+.seg button.on{background:var(--blue);color:#fff}
 .mbtigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-@media(max-width:520px){.mbtigrid{grid-template-columns:repeat(4,1fr)}}
-.mbtigrid button{border:2px solid #EDE8FC;background:#fff;color:#6B6584;border-radius:11px;padding:9px 2px;font-size:12.5px;
-  font-weight:900;cursor:pointer;font-family:inherit}
-.mbtigrid button.on{background:#8B7BF0;border-color:#8B7BF0;color:#fff}
-/* 표 */
-.tb{width:100%;border-collapse:collapse;font-size:12.5px}
-.tb th{background:#F5F2FF;color:#6A6296;text-align:left;padding:10px 11px;font-size:11.5px;font-weight:900;white-space:nowrap}
-.tb td{padding:10px 11px;border-top:1px solid #F2EFFA;line-height:1.65;color:#4F4A66;vertical-align:top}
-.tb tbody tr:nth-child(even) td{background:#FDFCFF}
-.tbwrap{border-radius:16px;overflow:hidden;border:1px solid #F0ECFA;margin-top:11px}
+.mbtigrid button{border:none;background:var(--bg);color:var(--ink2);border-radius:10px;padding:11px 2px;font-size:13px;
+  font-weight:800;cursor:pointer;font-family:inherit;transition:transform .12s}
+.mbtigrid button:active{transform:scale(.94)}
+.mbtigrid button.on{background:var(--blue);color:#fff}
+/* ── 표 ── */
+.tb{width:100%;border-collapse:collapse;font-size:14px}
+.tb th{background:#FBFCFD;color:var(--ink3);text-align:left;padding:11px 14px;font-size:12px;font-weight:700;white-space:nowrap;letter-spacing:0}
+.tb td{padding:13px 14px;border-top:1px solid var(--line-l);line-height:1.6;color:var(--ink2);vertical-align:top}
+.tbwrap{border-radius:16px;overflow:hidden;background:var(--bg);margin-top:12px}
 .tbwrap.scrollx{overflow-x:auto}
 .tbwrap.scrollx .tb{min-width:560px}
+.tbwrap .tb tbody td{background:var(--card)}
+.tbwrap .tb tbody tr:first-child td{border-top:none}
 @media(max-width:760px){
   .stack .tb{min-width:0}
   .stack thead{display:none}
-  .stack tbody tr{display:block;padding:13px 14px;border-top:1px solid #F2EFFA}
+  .stack tbody tr{display:block;padding:16px;border-top:1px solid var(--line-l);background:var(--card)}
   .stack tbody tr:first-child{border-top:none}
-  .stack tbody tr:nth-child(even) td{background:transparent}
-  .stack td{display:flex;gap:9px;align-items:flex-start;border:none;padding:4px 0;background:transparent}
-  .stack td::before{content:attr(data-l);flex:none;width:58px;font-size:10.5px;font-weight:900;color:#A9A2C6;padding-top:2px}
-  .stack td.head{display:block;font-size:14px;font-weight:900;color:#2F2C40;padding:0 0 7px}
+  .stack td{display:flex;gap:10px;align-items:flex-start;border:none;padding:5px 0;background:transparent}
+  .stack td::before{content:attr(data-l);flex:none;width:58px;font-size:11.5px;font-weight:700;color:var(--ink3);padding-top:2px}
+  .stack td.head{display:block;font-size:15px;font-weight:800;color:var(--ink);padding:0 0 8px}
   .stack td.head::before{content:none}
   .stack td.full{display:block}
-  .stack td.full::before{display:block;width:auto;margin-bottom:3px}
+  .stack td.full::before{display:block;width:auto;margin-bottom:4px}
   .stack td.plain{display:block}
   .stack td.plain::before{content:none}
+  .compact .tb{min-width:0;font-size:13px}
 }
-.pill{display:inline-block;font-size:10.5px;font-weight:900;border-radius:999px;padding:3px 9px;white-space:nowrap}
-.bar{display:flex;align-items:center;gap:7px;margin-top:5px}
-.bar b{font-size:10px;color:#A9A2C6;width:10px;text-align:center}
-.bar .t{flex:1;min-width:50px;height:7px;border-radius:999px;background:#F0ECFA;overflow:hidden}
-.bar .t>i{display:block;height:100%;background:linear-gradient(90deg,#8B7BF0,#FF9EC4)}
-/* 사주 판 */
-.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-.pil{border-radius:16px;padding:11px 6px;text-align:center;background:#FAF8FF;border:1px solid #EFEAFC}
-.pil .lb{font-size:10.5px;font-weight:900;color:#9B93BE}
-.pil .gz{font-size:26px;font-weight:900;line-height:1.15;margin-top:5px;letter-spacing:-1px}
-.pil .kr{font-size:11.5px;font-weight:800;color:#6B6584;margin-top:3px}
-.pil .oh{font-size:10px;font-weight:800;margin-top:5px;border-radius:999px;padding:2px 7px;display:inline-block}
-.pil.day{background:linear-gradient(160deg,#F3EFFF,#FFF0F7);border-color:#DED3FF}
-.ohbars{display:flex;gap:7px;margin-top:12px}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:8px;padding:4px 9px;white-space:nowrap;letter-spacing:0}
+.bar{display:flex;align-items:center;gap:7px;margin-top:6px}
+.bar b{font-size:11px;color:var(--ink4);width:11px;text-align:center}
+.bar .t{flex:1;min-width:50px;height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar .t>i{display:block;height:100%;background:var(--blue);border-radius:99px}
+/* ── 사주 판 ── */
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.pil{border-radius:16px;padding:13px 6px;text-align:center;background:var(--bg)}
+.pil .lb{font-size:11.5px;font-weight:700;color:var(--ink3)}
+.pil .gz{font-size:27px;font-weight:800;line-height:1.14;margin-top:6px;letter-spacing:-1px;color:var(--ink)}
+.pil .kr{font-size:12px;font-weight:700;color:var(--ink2);margin-top:4px}
+.pil .oh{font-size:10.5px;font-weight:700;margin-top:6px;border-radius:6px;padding:3px 7px;display:inline-block}
+.pil.day{background:var(--blue-l)}
+.ohbars{display:flex;gap:8px;margin-top:14px}
 .ohbar{flex:1;text-align:center}
-.ohbar .t{height:74px;border-radius:11px;background:#F4F1FB;display:flex;align-items:flex-end;overflow:hidden}
-.ohbar .t>i{display:block;width:100%;border-radius:9px;transition:height .4s}
-.ohbar .lb{font-size:11px;font-weight:900;margin-top:6px}
-.ohbar .cn{font-size:10.5px;color:#948FB0;font-weight:800}
-.score{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:6px}
+.ohbar .t{height:78px;border-radius:12px;background:var(--bg);display:flex;align-items:flex-end;overflow:hidden}
+.ohbar .t>i{display:block;width:100%;border-radius:10px;transition:height .4s}
+.ohbar .lb{font-size:12px;font-weight:800;margin-top:7px}
+.ohbar .cn{font-size:11px;color:var(--ink3);font-weight:700}
+.score{display:flex;align-items:center;gap:16px;margin-top:8px}
 .ring{width:118px;height:118px;flex:none;position:relative}
-.ring .v{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ring .v b{font-size:30px;font-weight:900;line-height:1}
-.ring .v span{font-size:10.5px;color:#948FB0;font-weight:800;margin-top:2px}
-.kv{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px dashed #F0ECFA}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:11px 0;border-bottom:1px solid var(--line-l);color:var(--ink2)}
 .kv:last-child{border-bottom:none}
-.kv b{color:#2F2C40;text-align:right}
-.note{border-radius:14px;padding:11px 13px;font-size:12.5px;line-height:1.7;margin-top:11px}
-.note.warn{background:#FFF6E9;color:#9A5B0C}
-.note.bad{background:#FFF0F1;color:#BB3A54}
-.note.ok{background:#EDF9F4;color:#1F7A61}
-.note.info{background:#F1EEFF;color:#5E52A8}
-.q{text-align:center;padding:24px 16px 20px}
-.qno{display:inline-block;background:#FFF0F7;color:#FF7FB0;font-size:11.5px;font-weight:900;padding:5px 12px;border-radius:999px}
-.qtext{font-size:19px;font-weight:800;line-height:1.55;margin:13px 4px 2px;letter-spacing:-.3px;min-height:56px;display:flex;align-items:center;justify-content:center}
-.scale{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px}
-.dot{border:3px solid #D6CCFF;background:#fff;border-radius:50%;cursor:pointer;padding:0;transition:transform .12s,background .12s}
-.dot:active{transform:scale(.9)}
-.dot.on{background:#8B7BF0;border-color:#8B7BF0}
-.dot.no{border-color:#FFD3B0}.dot.no.on{background:#FFA46B;border-color:#FFA46B}
-.slab{display:flex;justify-content:space-between;margin:10px 4px 0;font-size:11.5px;font-weight:800}
-.slab .y{color:#8B7BF0}.slab .n{color:#FFA46B}
-.track{position:relative;height:9px;border-radius:999px;background:#EEE9FB;margin-top:16px}
-.track>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#8B7BF0,#FF9EC4);transition:width .3s}
+.kv b{color:var(--ink);text-align:right;font-weight:700}
+/* ── 알림 상자 ── */
+.note{border-radius:14px;padding:14px 16px;font-size:13.5px;line-height:1.6;margin-top:12px}
+.note.warn{background:var(--amber-l);color:var(--amber)}
+.note.bad{background:var(--red-l);color:var(--red)}
+.note.ok{background:var(--green-l);color:var(--green)}
+.note.info{background:var(--blue-l);color:var(--blue-d)}
+/* ── 문항 ── */
+.q{text-align:center;padding:28px 18px 22px}
+.qno{display:inline-block;background:var(--blue-l);color:var(--blue-d);font-size:12.5px;font-weight:800;padding:6px 13px;border-radius:99px}
+.qtext{font-size:21px;font-weight:800;line-height:1.5;margin:16px 4px 2px;letter-spacing:-.045em;min-height:62px;display:flex;align-items:center;justify-content:center}
+.scale{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:20px}
+.dot{border:2px solid var(--blue-b);background:var(--card);border-radius:50%;cursor:pointer;padding:0;transition:transform .14s,background .14s}
+.dot:active{transform:scale(.88)}
+.dot.on{background:var(--blue);border-color:var(--blue)}
+.dot.no{border-color:var(--ink4)}
+.dot.no.on{background:var(--ink3);border-color:var(--ink3)}
+.slab{display:flex;justify-content:space-between;margin:12px 4px 0;font-size:12.5px;font-weight:700}
+.slab .y{color:var(--blue)}.slab .n{color:var(--ink3)}
+.track{position:relative;height:8px;border-radius:99px;background:var(--line);margin-top:26px}
+.track>i{display:block;height:100%;border-radius:99px;background:var(--blue);transition:width .3s}
 .runner{position:absolute;top:-24px;transform:translateX(-50%);transition:left .3s}
-.masc{display:block;filter:drop-shadow(0 6px 10px rgba(112,96,190,.2))}
-.chiplist{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
-.chip{background:#F4F1FF;color:#6F63C4;font-size:11.5px;font-weight:800;border-radius:999px;padding:5px 11px}
-.talk{border-left:4px solid #8B7BF0;background:#FAF8FF;border-radius:0 13px 13px 0;padding:11px 13px;margin-top:9px;font-size:13px;line-height:1.75}
-.talk.bad{border-color:#FF8DA1;background:#FFF6F7}
-.talk.good{border-color:#5BC8A8;background:#F2FBF8}
-.sheet{position:fixed;inset:0;background:rgba(47,44,64,.5);display:none;align-items:flex-end;justify-content:center;z-index:60}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.masc{display:block;animation:bob 3.4s ease-in-out infinite}
+@media(max-width:520px){
+  .top{padding:11px 14px;gap:8px}
+  .top .logo{width:32px;height:32px;border-radius:10px;font-size:16px}
+  .top .ti b{font-size:14px}
+  .top .ti span{font-size:11px}
+  .mecard{padding:7px 9px;font-size:11.5px;border-radius:9px}
+  .pane{padding:14px 14px 36px}
+  .card{padding:20px 16px;border-radius:18px}
+  h1{font-size:21px}
+  .qtext{font-size:19px}
+}
+/* ── 혈액형 배지 ── */
+.bbadge{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-weight:800;
+  letter-spacing:-.04em;flex:none;line-height:1}
+/* ── 목록 ── */
+.list{margin:12px 0 0;padding:0;list-style:none}
+.list li{display:flex;gap:11px;font-size:14.5px;line-height:1.6;color:var(--ink2);padding:7px 0;align-items:flex-start}
+.list li b{color:var(--ink);font-weight:700}
+.list .ic{flex:none;width:26px;height:26px;border-radius:9px;background:var(--bg);display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:700;color:var(--ink2)}
+/* ── 조각들 ── */
+.chiplist{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{background:var(--bg);color:var(--ink2);font-size:12.5px;font-weight:700;border-radius:8px;padding:6px 11px}
+.talk{background:var(--bg);border-radius:14px;padding:14px 16px;margin-top:9px;font-size:14.5px;line-height:1.65;color:var(--ink2)}
+.talk.bad{background:var(--red-l);color:#C7303C}
+.talk.good{background:var(--green-l);color:#00794A}
+.foot{text-align:center;font-size:11.5px;color:var(--ink4);line-height:1.7;margin-top:26px}
+.agentbar{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--r);padding:14px 16px;margin-bottom:12px}
+.agentbar .av{flex:none;width:42px;height:42px;border-radius:14px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px}
+/* ── 시트 · 결제 ── */
+.sheet{position:fixed;inset:0;background:rgba(25,31,40,.45);display:none;align-items:flex-end;justify-content:center;z-index:60}
 .sheet.on{display:flex}
-.sheet > div{background:#fff;width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px 24px;max-height:88vh;overflow:auto}
-.sheethd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.sheethd b{font-size:16px;font-weight:900}
-.x{border:none;background:#F4F1FF;color:#6F63C4;width:32px;height:32px;border-radius:50%;font-size:17px;cursor:pointer;font-family:inherit}
-.pay{display:flex;align-items:center;gap:11px;width:100%;text-align:left;background:#fff;border:2px solid #F0ECFA;border-radius:16px;
-  padding:12px 14px;margin-top:8px;cursor:pointer;font-family:inherit}
-.pay .em{flex:none;width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px}
+@keyframes up{from{transform:translateY(24px)}to{transform:none}}
+.sheet > div{background:var(--card);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:20px 18px 26px;max-height:88vh;overflow:auto;animation:up .24s ease both}
+.sheethd{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.sheethd b{font-size:18px;font-weight:800;letter-spacing:-.04em}
+.x{border:none;background:var(--bg);color:var(--ink2);width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;font-family:inherit}
+.pay{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:none;border-radius:14px;
+  padding:14px 6px;margin-top:2px;cursor:pointer;font-family:inherit;border-bottom:1px solid var(--line-l);transition:background .14s}
+.pay:active{background:var(--bg)}
+.pay .em{flex:none;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px}
 .pay .tx{flex:1;min-width:0}
-.pay .tx b{display:block;font-size:14px;font-weight:900;color:#2F2C40}
-.pay .tx span{display:block;font-size:11.5px;color:#948FB0;margin-top:2px}
-.pay .ar{color:#C9C2E4;font-size:19px;font-weight:900}
-textarea.inp{line-height:1.6;font-size:14px}
-.foot{text-align:center;font-size:10.5px;color:#A9A2C6;line-height:1.8;margin-top:22px}
+.pay .tx b{display:block;font-size:15px;font-weight:700;color:var(--ink)}
+.pay .tx span{display:block;font-size:12.5px;color:var(--ink3);margin-top:3px}
+.pay .ar{color:var(--ink4);font-size:19px;font-weight:700}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:var(--ink);color:#fff;
+  font-size:14px;font-weight:600;padding:14px 20px;border-radius:12px;opacity:0;transition:opacity .2s,transform .2s;
+  z-index:90;pointer-events:none;max-width:88vw;text-align:center;letter-spacing:-.02em}
 @media print{
-  html,body{height:auto;overflow:visible}
-  .top,.tabs,.scrollhint,.btn{display:none!important}
-  .shell{height:auto}.pane{overflow:visible}
-  .card{box-shadow:none;border:1px solid #eee;break-inside:avoid}
+  html,body{height:auto;overflow:visible;background:#fff}
+  .top,.tabs,.scrollhint,.btn,.sheet,.toast{display:none!important}
+  .shell{height:auto}.pane{overflow:visible;padding:0}
+  .card{break-inside:avoid;border:1px solid var(--line)}
 }
 </style>
 </head>
@@ -206,7 +245,7 @@ textarea.inp{line-height:1.6;font-size:14px}
   <div class="pane" id="pane"><div id="view"></div><div class="scrollhint" id="hint">▼ 아래로 더 있어요</div></div>
 </div>
 <div class="sheet" id="sheet" onclick="if(event.target===this)sheetClose()"><div id="sheetBody"></div></div>
-<div class="toast" id="toast" style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(16px);background:#2F2C40;color:#fff;font-size:13px;font-weight:700;padding:11px 17px;border-radius:999px;opacity:0;transition:opacity .2s,transform .2s;z-index:90;pointer-events:none;max-width:88vw;text-align:center"></div>
+<div class="toast" id="toast"></div>
 <script>
 /* ── 성향검사 48문항 (앱과 같은 문항·같은 채점) ─────────────────── */
 var MBTI_SCALE=[{v:3,t:'매우 그래요'},{v:2,t:'그래요'},{v:1,t:'조금 그래요'},
@@ -656,20 +695,20 @@ var GAN_CHAR=[
 var YUKHAP={0:1,1:0,2:11,11:2,3:10,10:3,4:9,9:4,5:8,8:5,6:7,7:6};   /* 육합 */
 var SAMHAP=[[8,0,4],[11,3,7],[2,6,10],[5,9,1]];                       /* 삼합 */
 function jiRel(a,b){
-  if(a===b)return {k:'같음',s:8,txt:'일지가 같다 — 사는 결이 비슷하다. 편하지만 새롭지는 않다.'};
-  if(YUKHAP[a]===b)return {k:'육합',s:30,txt:'일지가 육합이다 — 처음부터 말이 잘 붙는다. 신뢰가 빨리 선다.'};
-  if((a+6)%12===b)return {k:'충',s:-24,txt:'일지가 충이다 — 속도와 방식이 부딪힌다. 말 순서를 바꾸지 않으면 어긋난다.'};
+  if(a===b)return {k:'같음',s:8,txt:'일지가 같습니다 — 사는 결이 비슷합니다. 편하지만 새롭지는 않습니다.'};
+  if(YUKHAP[a]===b)return {k:'육합',s:30,txt:'일지가 육합입니다 — 처음부터 말이 잘 붙습니다. 신뢰가 빨리 섭니다.'};
+  if((a+6)%12===b)return {k:'충',s:-24,txt:'일지가 충입니다 — 속도와 방식이 부딪힙니다. 말 순서를 바꾸지 않으면 어긋납니다.'};
   var i;for(i=0;i<SAMHAP.length;i++)if(SAMHAP[i].indexOf(a)>=0&&SAMHAP[i].indexOf(b)>=0)
-    return {k:'삼합',s:24,txt:'일지가 삼합이다 — 같은 목표를 보면 손발이 맞는다.'};
-  return {k:'무관',s:0,txt:'일지가 특별히 얽히지 않는다 — 좋지도 나쁘지도 않다. 준비한 만큼 간다.'};
+    return {k:'삼합',s:24,txt:'일지가 삼합입니다 — 같은 목표를 보면 손발이 맞습니다.'};
+  return {k:'무관',s:0,txt:'일지가 특별히 얽히지 않습니다 — 좋지도 나쁘지도 않습니다. 준비한 만큼 갑니다.'};
 }
 function ganRel(a,b){
-  if(Math.abs(a-b)===5)return {k:'천간합',s:18,txt:'일간이 합이다 — 서로 끌린다. 첫인상이 좋다.'};
-  if(GAN_OH[a]===GAN_OH[b])return {k:'같은 오행',s:9,txt:'일간이 같은 오행 — 생각의 재료가 비슷하다.'};
-  if(OH_SAENG[GAN_OH[a]]===GAN_OH[b])return {k:'내가 생함',s:11,txt:'내가 상대를 살리는 관계 — 내가 주는 쪽이 편하다.'};
-  if(OH_SAENG[GAN_OH[b]]===GAN_OH[a])return {k:'상대가 생함',s:13,txt:'상대가 나를 살리는 관계 — 상대가 먼저 마음을 연다.'};
-  if(OH_GEUK[GAN_OH[a]]===GAN_OH[b])return {k:'내가 극함',s:-8,txt:'내가 상대를 누르는 관계 — 세게 나가면 상대가 닫는다.'};
-  return {k:'상대가 극함',s:-6,txt:'상대가 나를 누르는 관계 — 끌려가기 쉽다. 기준을 먼저 정해두자.'};
+  if(Math.abs(a-b)===5)return {k:'천간합',s:18,txt:'일간이 합입니다 — 서로 끌립니다. 첫인상이 좋습니다.'};
+  if(GAN_OH[a]===GAN_OH[b])return {k:'같은 오행',s:9,txt:'일간이 같은 오행입니다 — 생각의 재료가 비슷합니다.'};
+  if(OH_SAENG[GAN_OH[a]]===GAN_OH[b])return {k:'내가 생함',s:11,txt:'내가 상대를 살리는 관계입니다 — 내가 주는 쪽이 편합니다.'};
+  if(OH_SAENG[GAN_OH[b]]===GAN_OH[a])return {k:'상대가 생함',s:13,txt:'상대가 나를 살리는 관계입니다 — 상대가 먼저 마음을 엽니다.'};
+  if(OH_GEUK[GAN_OH[a]]===GAN_OH[b])return {k:'내가 극함',s:-8,txt:'내가 상대를 누르는 관계입니다 — 세게 나가면 상대가 닫힙니다.'};
+  return {k:'상대가 극함',s:-6,txt:'상대가 나를 누르는 관계입니다 — 끌려가기 쉽습니다. 기준을 먼저 정해두세요.'};
 }
 function ohFill(mine,yours){
   var lack=[],k;
@@ -735,7 +774,7 @@ function val(id){var e=$(id);return e?e.value:'';}
 function num(v){var n=parseInt(v,10);return isNaN(n)?null:n;}
 
 /* 캐릭터 — 유형마다 다르게 그 자리에서 그린다 */
-var PAL={NT:{body:'#C9BCFF',dark:'#8B7BF0',belly:'#EFEAFF',name:'분석가'},
+var PAL={NT:{body:'#C9BCFF',dark:'#3182F6',belly:'#E8F3FF',name:'분석가'},
   NF:{body:'#A9E7D2',dark:'#4FBF9B',belly:'#E6F9F2',name:'외교관'},
   SJ:{body:'#B7D3FF',dark:'#5B8DEF',belly:'#E8F1FF',name:'관리자'},
   SP:{body:'#FFD79A',dark:'#F5A623',belly:'#FFF3DF',name:'탐험가'}};
@@ -748,15 +787,15 @@ function mascot(code,size){
   if(g==='NF')head='<path d="M70 26c-2-12 6-18 14-19 1 10-4 17-14 19z" fill="#7FD6C0"/>';
   if(g==='SJ')head='<rect x="48" y="12" width="44" height="9" rx="4" fill="'+p.dark+'"/><rect x="56" y="2" width="28" height="12" rx="5" fill="'+p.dark+'"/>';
   if(g==='SP')head='<path d="M52 28l-6-16 18 10z" fill="#FFB86B"/><path d="M88 28l6-16-18 10z" fill="#FFB86B"/>';
-  var eyes=E?'<circle cx="55" cy="70" r="8" fill="#3D3A50"/><circle cx="58" cy="67" r="2.8" fill="#fff"/><circle cx="85" cy="70" r="8" fill="#3D3A50"/><circle cx="88" cy="67" r="2.8" fill="#fff"/>'
-    :'<path d="M47 72q8-11 16 0" stroke="#3D3A50" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M77 72q8-11 16 0" stroke="#3D3A50" stroke-width="4.5" fill="none" stroke-linecap="round"/>';
-  var mouth=F?'<path d="M60 88q10 12 20 0" stroke="#3D3A50" stroke-width="4" fill="none" stroke-linecap="round"/>'
-    :'<path d="M62 90h16" stroke="#3D3A50" stroke-width="4" fill="none" stroke-linecap="round"/>';
+  var eyes=E?'<circle cx="55" cy="70" r="8" fill="#191F28"/><circle cx="58" cy="67" r="2.8" fill="#fff"/><circle cx="85" cy="70" r="8" fill="#191F28"/><circle cx="88" cy="67" r="2.8" fill="#fff"/>'
+    :'<path d="M47 72q8-11 16 0" stroke="#191F28" stroke-width="4.5" fill="none" stroke-linecap="round"/><path d="M77 72q8-11 16 0" stroke="#191F28" stroke-width="4.5" fill="none" stroke-linecap="round"/>';
+  var mouth=F?'<path d="M60 88q10 12 20 0" stroke="#191F28" stroke-width="4" fill="none" stroke-linecap="round"/>'
+    :'<path d="M62 90h16" stroke="#191F28" stroke-width="4" fill="none" stroke-linecap="round"/>';
   var blush=F?'<ellipse cx="43" cy="83" rx="8" ry="5" fill="#FFB3CE" opacity=".75"/><ellipse cx="97" cy="83" rx="8" ry="5" fill="#FFB3CE" opacity=".75"/>':'';
   var hands=J?'<circle cx="24" cy="92" r="9" fill="'+p.body+'"/><circle cx="116" cy="92" r="9" fill="'+p.body+'"/>'
     :'<circle cx="22" cy="78" r="9" fill="'+p.body+'"/><circle cx="118" cy="106" r="9" fill="'+p.body+'"/>';
   return '<svg class="masc" viewBox="0 0 140 140" width="'+s+'" height="'+s+'" role="img" aria-label="'+code+'">'+
-    '<ellipse cx="70" cy="130" rx="34" ry="6" fill="#3D3A50" opacity=".08"/>'+head+hands+
+    '<ellipse cx="70" cy="130" rx="34" ry="6" fill="#191F28" opacity=".08"/>'+head+hands+
     '<path d="M70 26c27 0 46 20 46 47 0 31-20 51-46 51S24 104 24 73c0-27 19-47 46-47z" fill="'+p.body+'"/>'+
     '<ellipse cx="70" cy="96" rx="26" ry="22" fill="'+p.belly+'"/>'+blush+eyes+mouth+'</svg>';
 }
@@ -764,11 +803,11 @@ var TYPE_LIST=['ISTJ','ISFJ','INFJ','INTJ','ISTP','ISFP','INFP','INTP','ESTP','E
 
 /* ── 성향검사 채점 ── */
 function clarity(r){
-  if(r>=0.60)return {t:'아주 뚜렷',c:'#1F7A61',bg:'#EAF8F3'};
-  if(r>=0.36)return {t:'뚜렷',c:'#6F63C4',bg:'#F1EEFF'};
-  if(r>=0.19)return {t:'보통',c:'#9A5B0C',bg:'#FFF6E9'};
-  if(r>=0.07)return {t:'약함',c:'#A5670E',bg:'#FFF8EC'};
-  return {t:'경계 · 둘 다',c:'#BB3A54',bg:'#FFF0F1'};
+  if(r>=0.60)return {t:'아주 뚜렷',c:'#00A05A',bg:'#E8F8F0'};
+  if(r>=0.36)return {t:'뚜렷',c:'#1B64DA',bg:'#E8F3FF'};
+  if(r>=0.19)return {t:'보통',c:'#C77700',bg:'#FFF6E5'};
+  if(r>=0.07)return {t:'약함',c:'#C77700',bg:'#FFF6E5'};
+  return {t:'경계 · 둘 다',c:'#F04452',bg:'#FEECEE'};
 }
 function scoreAns(ans){
   var by={},i;
@@ -793,7 +832,7 @@ function fakeRes(code){
     var letter=code.charAt(i),isA=(letter===a.a);
     return {key:a.key,a:a.a,b:a.b,an:a.an,bn:a.bn,q:a.q,sum:isA?18:-18,max:36,cnt:12,
       pctA:isA?75:25,pctB:isA?25:75,letter:letter,other:isA?a.b:a.a,ratio:.5,
-      clarity:'직접 선택',cc:'#6A6296',cbg:'#F2EFFA',border:false,tip:MBTI_TIP[letter]};
+      clarity:'직접 선택',cc:'#4E5968',cbg:'#F2F4F6',border:false,tip:MBTI_TIP[letter]};
   });
   return {axes:axes,code:code,consistency:null,pairs:[],mode:'pick'};
 }
@@ -890,8 +929,8 @@ function fitCalc(me,cl){
   mb=hasM?Math.max(8,Math.min(98,Math.round(mb))):null;
   var parts=[];if(sj!==null)parts.push(sj);if(mb!==null)parts.push(mb);if(bl!==null)parts.push(bl);
   var sc=parts.length?Math.round(parts.reduce(function(x,y){return x+y;},0)/parts.length):50;
-  var lv=sc>=80?{t:'아주 잘 맞음',c:'#1F7A61',bg:'#EAF8F3'}:sc>=65?{t:'잘 맞는 편',c:'#6F63C4',bg:'#F1EEFF'}
-    :sc>=50?{t:'보통 — 준비하면 된다',c:'#9A5B0C',bg:'#FFF6E9'}:{t:'어긋나기 쉬움 — 방식을 바꿔야 한다',c:'#BB3A54',bg:'#FFF0F1'};
+  var lv=sc>=80?{t:'아주 잘 맞음',c:'#00A05A',bg:'#E8F8F0'}:sc>=65?{t:'잘 맞는 편',c:'#1B64DA',bg:'#E8F3FF'}
+    :sc>=50?{t:'보통 — 준비하면 된다',c:'#C77700',bg:'#FFF6E5'}:{t:'어긋나기 쉬움 — 방식을 바꿔야 한다',c:'#F04452',bg:'#FEECEE'};
   return {score:sc,sajuScore:sj,mbtiScore:mb,bloodScore:bl,level:lv,items:items,jr:jr,gr:gr,fill:of1,hasS:hasS,hasM:hasM,hasB:hasB};
 }
 /* 상담 전략 — 축마다 나 / 상대 / 이대로 하면 / 이렇게 바꿔라 */
@@ -971,17 +1010,20 @@ function draw(){
   if(vb){
     vb.style.display=(S.step==='board')?'':'none';
     vb.className='mecard'+(S.view==='client'?' cl':'');
-    vb.innerHTML=(S.view==='agent'?'🔒 내 눈용':'👀 고객 화면');
+    var narrow=(window.innerWidth||1000)<520;
+    vb.innerHTML=(S.view==='agent'?(narrow?'🔒 내 눈':'🔒 내 눈용'):(narrow?'👀 고객':'👀 고객 화면'));
     vb.title=(S.view==='agent'?'누르면 고객에게 보여줄 화면으로 바뀝니다':'누르면 리스크·화법까지 보이는 내 화면으로 돌아갑니다');
   }
   $('meBtn').style.display=(S.step==='board'&&S.view==='client')?'none':'';
-  $('meBtn').innerHTML=S.me.name?('👤 '+esc(S.me.name)+(personCode(S.me)?' · '+personCode(S.me):'')):'내 카드 설정';
+  $('meBtn').innerHTML=S.me.name
+    ?('👤 '+esc(S.me.name)+((!((window.innerWidth||1000)<520)&&personCode(S.me))?' · '+personCode(S.me):''))
+    :((window.innerWidth||1000)<520?'내 카드':'내 카드 설정');
   var sub=$('topSub');
   var mm=(MODES.filter(function(x){return x.k===S.mode;})[0]||MODES[0]);
   sub.textContent=(S.step==='board'&&S.cl.name)
     ?(S.cl.name+' 님'+(personCode(S.cl)?' · '+personCode(S.cl):'')+(S.cl.blood?' · '+S.cl.blood+'형':'')+
       (S.cl.saju?' · '+gz(S.cl.saju.dg,S.cl.saju.dj)+'일주':'')+' · '+mm.n+(S.view==='client'?' · 고객 화면':''))
-    :(mm.emo+' '+mm.n+' — 생년월일과 태어난 시간, 그리고 48문항');
+    :(mm.emo+' '+mm.n+' · 48문항 성향검사');
   if(S.step==='me')v.innerHTML=viewPerson('me');
   else if(S.step==='client')v.innerHTML=viewPerson('client');
   else if(S.step==='test')v.innerHTML=viewTest();
@@ -1004,7 +1046,7 @@ function viewPerson(who){
   var hrs=[];for(var h=0;h<24;h++)hrs.push('<option value="'+h+'"'+(p.H===h?' selected':'')+'>'+('0'+h).slice(-2)+'시</option>');
   var mins=[];for(var mi=0;mi<60;mi+=10)mins.push('<option value="'+mi+'"'+(p.Mi===mi?' selected':'')+'>'+('0'+mi).slice(-2)+'분</option>');
   var intro=isMe
-    ? '<div class="card"><h1>먼저 <b style="color:#8B7BF0">내 카드</b>를 만듭니다</h1>'+
+    ? '<div class="card"><h1>먼저 <b style="color:#3182F6">내 카드</b>를 만듭니다</h1>'+
       '<p>궁합과 상담 전략은 <b>나와 고객을 비교</b>해서 나옵니다. 그래서 내 생년월일·시간·성향이 먼저 필요합니다. 한 번만 넣으면 이 기기에 저장됩니다.</p></div>'
     : '<div class="card"><h1>고객 정보</h1><p>생년월일과 <b>태어난 시간</b>을 넣으면 사주 네 기둥이 자동으로 계산됩니다. 시간을 모르면 시주만 빼고 봅니다.</p>' +
       '<div class="hr"></div><label>무엇으로 볼까요</label>' +
@@ -1025,8 +1067,8 @@ function viewPerson(who){
       ROLES.map(function(r){return '<button class="'+((p.rel||'client')===r.k?'on':'')+'" onclick="setRel(\''+r.k+'\')">'+r.emo+' '+r.n+'</button>';}).join('')+
       '</div><div class="sub" style="margin-top:6px">고객이 아니어도 됩니다 — 리더·상사·팀원·동료와의 관계도 같은 방식으로 봅니다.</div></div>')+
     '<div style="margin-top:11px"><label>혈액형 (선택)</label><div class="seg">'+
-      ['A','B','O','AB'].map(function(x){return '<button class="'+(p.blood===x?'on':'')+'" onclick="setBlood(\''+who+'\',\''+x+'\')">'+BLOOD[x].emo+' '+x+'형</button>';}).join('')+
-      '<button class="'+(!p.blood?'on':'')+'" onclick="setBlood(\''+who+'\',\'\')">모름</button></div></div>'+
+      ['A','B','O','AB'].map(function(x){return '<button class="'+(p.blood===x?'on':'')+'" onclick="setBlood(\''+who+'\',\''+x+'\')">'+x+'형</button>';}).join('')+
+      '<button onclick="setBlood(\''+who+'\',\'\')">모름</button></div></div>'+
     '<div style="margin-top:11px"><label>성별</label><div class="seg">'+
       '<button class="'+(p.gender==='M'?'on':'')+'" onclick="setG(\''+who+'\',\'M\')">남</button>'+
       '<button class="'+(p.gender==='F'?'on':'')+'" onclick="setG(\''+who+'\',\'F\')">여</button></div></div>'+
@@ -1103,7 +1145,7 @@ function viewTest(){
   var i=S.i,q=MBTI_Q[i],cur=S.ans[i],pct=Math.round(i/48*100),sz=[34,27,21,21,27,34];
   return '<div class="card">'+
     '<div class="track"><div class="runner" style="left:'+Math.max(4,pct)+'%">'+mascot('ENFP',32)+'</div><i style="width:'+pct+'%"></i></div>'+
-    '<div style="display:flex;justify-content:space-between;margin-top:9px;font-size:12px;font-weight:800;color:#8C86A8">'+
+    '<div style="display:flex;justify-content:space-between;margin-top:9px;font-size:12px;font-weight:800;color:#8B95A1">'+
       '<span>'+(S.target==='me'?'내 검사':'고객 검사')+' · '+(i+1)+' / 48</span><span>'+pct+'%</span></div></div>'+
     '<div class="card q" id="qcard"><span class="qno">Q'+(i+1)+'</span>'+
       '<div class="qtext">'+esc(q.t)+'</div>'+
@@ -1112,7 +1154,7 @@ function viewTest(){
       '<div class="slab"><span class="y">그래요 👍</span><span class="n">아니에요 👎</span></div>'+
       '<div class="row" style="margin-top:16px">'+
         '<button class="btn line sm" onclick="qPrev()"'+(i===0?' disabled style="opacity:.45"':'')+'>← 이전</button>'+
-        '<button class="btn ghost sm" onclick="qQuit()">그만두기</button></div>'+
+        '<button class="btn line sm" onclick="qQuit()">그만두기</button></div>'+
     '</div><div class="foot">정답은 없습니다. 오래 고민하지 말고 먼저 떠오르는 쪽을 고르세요.</div>';
 }
 function pick(v){
@@ -1142,7 +1184,7 @@ function finishTest(){
 function ringSvg(v,color){
   var r=52,c=2*Math.PI*r,off=c*(1-v/100);
   return '<svg viewBox="0 0 120 120" width="118" height="118">'+
-    '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="#F0ECFA" stroke-width="12"/>'+
+    '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="#F2F4F6" stroke-width="12"/>'+
     '<circle cx="60" cy="60" r="'+r+'" fill="none" stroke="'+color+'" stroke-width="12" stroke-linecap="round"'+
     ' stroke-dasharray="'+c.toFixed(1)+'" stroke-dashoffset="'+off.toFixed(1)+'" transform="rotate(-90 60 60)"/></svg>';
 }
@@ -1190,10 +1232,10 @@ function tabSum(){
     '<div style="display:flex;justify-content:center">'+(code?mascot(code,120):ohEmblem(cl,120))+'</div>'+
     '<div class="sub" style="margin-top:8px">'+esc(cl.name)+' 님 · '+(cl.gender==='F'?'여':'남')+
       (s?' · '+esc(cl.y)+'.'+esc(cl.m)+'.'+esc(cl.d)+(cl.noTime?'':' '+('0'+cl.H).slice(-2)+':'+('0'+(cl.Mi||0)).slice(-2)):'')+'</div>'+
-    (code?'<div style="font-size:32px;font-weight:900;letter-spacing:.06em;margin-top:4px;background:linear-gradient(120deg,#8B7BF0,#FF9EC4);-webkit-background-clip:text;background-clip:text;color:transparent">'+code+'</div>'+
+    (code?'<div style="font-size:34px;font-weight:800;letter-spacing:.02em;margin-top:6px;color:var(--blue)">'+code+'</div>'+
       '<div style="font-size:15px;font-weight:900">'+esc(ty.nick||'')+'</div>':
       '<div style="font-size:24px;font-weight:900;margin-top:6px">'+GAN[s.dg]+JI[s.dj]+' 일주</div>'+
-      '<div style="font-size:14px;font-weight:900;color:#6F63C4">'+dayC.n+'</div>')+
+      '<div style="font-size:14px;font-weight:900;color:#1B64DA">'+dayC.n+'</div>')+
     '<div class="chiplist" style="justify-content:center;margin-top:10px">'+
       (s?'<span class="chip">'+gz(s.dg,s.dj)+'일주</span>'+
          '<span class="chip" style="background:'+OH_META[GAN_OH[s.dg]].bg+';color:'+OH_META[GAN_OH[s.dg]].c+'">'+OH_META[GAN_OH[s.dg]].emo+' '+dayC.n+'</span>'+
@@ -1203,14 +1245,14 @@ function tabSum(){
     (s?pillarsHtml(cl):'')+
   '</div>';
   var bl=blessing(cl).slice(0,2);
-  var right='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>만나면 먼저 이 말부터</h2>'+
+  var right='<div class="card" style="background:var(--card)"><h2><span class="n">덕담</span>만나면 먼저 이 말부터</h2>'+
     bl.map(function(x){return '<div class="talk good">🌾 '+esc(x)+'</div>';}).join('')+
     '<div class="row" style="margin-top:11px"><button class="btn ghost sm" onclick="goTab(\'ice\')">덕담 더 보기 →</button>'+
     '<button class="btn ghost sm" onclick="goTab(\'life\')">인생 열 가지 운 →</button></div>'+
     '<div class="row" style="margin-top:8px"><button class="btn ghost sm" onclick="goTab(\'worry\')">💬 고민 상담 →</button>'+
     '<button class="btn ghost sm" onclick="goTab(\'rel\')">🧭 관계·매니지먼트 →</button></div></div>'+
   '<div class="card"><h2><span class="n">한 줄</span>이 사람은 이런 사람입니다</h2>'+
-    (code?'<p style="font-size:14px;color:#3B3757"><b>'+esc(ty.line||'')+'</b></p>':'')+
+    (code?'<p style="font-size:14px;color:#191F28"><b>'+esc(ty.line||'')+'</b></p>':'')+
     (s?'<p>사주로 보면 '+dayC.n+' 일간입니다. '+esc(dayC.ice)+' '+esc(dayC.work)+' 여덟 글자 중 <b>'+sip.top+'</b>이(가) 가장 두껍습니다 — '+esc(meta.mind)+'</p>':'')+
     (cb.none?'':'<div class="note '+(cb.hits>=3?'ok':'warn')+'">검사와 사주가 <b>4개 중 '+cb.hits+'개</b>에서 같은 말을 합니다. '+
       (cb.hits>=3?(S.view==='agent'?'읽히는 대로 대하면 됩니다.':'보이는 모습과 속이 같은, 한결같은 분이십니다.')
@@ -1236,7 +1278,7 @@ function tabSum(){
         (plan.opens.length?'<div class="talk good">🗣 첫마디 — '+esc(plan.opens[0])+'</div>':'')+
         (plan.avoid.length?'<div class="talk bad">🚫 피할 것 — '+esc(plan.avoid[0])+'</div>':'')+
         '<div class="row" style="margin-top:12px"><button class="btn ghost sm" onclick="goTab(\'talk\')">상담 전략 →</button>'+
-        '<button class="btn ghost sm" style="color:#BB3A54" onclick="goTab(\'risk\')">🔒 리스크 진단 →</button></div>'):'')+
+        '<button class="btn ghost sm" style="color:#F04452" onclick="goTab(\'risk\')">🔒 리스크 진단 →</button></div>'):'')+
     '</div>';
   }
   return '<div class="grid hd"><div class="sticky">'+left+'</div><div>'+right+'</div></div>'+footNote();
@@ -1247,9 +1289,9 @@ function tabTrait(){
     (res.mode==='pick'?'<div class="note warn">유형을 직접 고르셨습니다. 48문항 검사를 하면 축마다 얼마나 기울었는지까지 나옵니다.</div>':'')+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">축</th><th style="width:130px">점수</th><th style="width:70px">이 사람</th><th style="width:88px">분명도</th><th>'+(S.view==='agent'?'상담할 때':'이런 분입니다')+'</th></tr></thead><tbody>'+
     res.axes.map(function(a){
-      return '<tr><td class="head"><b>'+a.a+' '+a.an+' · '+a.b+' '+a.bn+'</b><div style="font-size:10.5px;color:#A9A2C6;font-weight:600;margin-top:2px">'+esc(a.q)+'</div></td>'+
+      return '<tr><td class="head"><b>'+a.a+' '+a.an+' · '+a.b+' '+a.bn+'</b><div style="font-size:10.5px;color:#8B95A1;font-weight:600;margin-top:2px">'+esc(a.q)+'</div></td>'+
         '<td data-l="점수">'+a.pctA+' : '+a.pctB+'<div class="bar"><b>'+a.a+'</b><span class="t"><i style="width:'+a.pctA+'%"></i></span><b>'+a.b+'</b></div></td>'+
-        '<td data-l="이 사람"><b style="font-size:16px;color:#8B7BF0">'+a.letter+'</b> '+(a.letter===a.a?a.an:a.bn)+'</td>'+
+        '<td data-l="이 사람"><b style="font-size:16px;color:#3182F6">'+a.letter+'</b> '+(a.letter===a.a?a.an:a.bn)+'</td>'+
         '<td data-l="분명도"><span class="pill" style="color:'+a.cc+';background:'+a.cbg+'">'+a.clarity+'</span></td>'+
         '<td class="full" data-l="'+(S.view==='agent'?'상담할 때':'이런 분입니다')+'">'+esc(S.view==='agent'?a.tip:(AXIS_SELF[a.letter]||''))+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
@@ -1261,7 +1303,7 @@ function tabTrait(){
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:96px">십신</th><th style="width:64px">개수</th><th style="width:120px">뜻</th><th>상담에서</th></tr></thead><tbody>'+
     ['비겁','식상','재성','관성','인성'].map(function(k){
       var m=SIP_META[k],n=sip.count[k];
-      return '<tr'+(k===sip.top?' style="background:#FAF8FF"':'')+'><td class="head"><b>'+k+'</b>'+(k===sip.top?' <span class="pill" style="background:#F1EEFF;color:#6F63C4">가장 두꺼움</span>':'')+'</td>'+
+      return '<tr'+(k===sip.top?' style="background:#F9FAFB"':'')+'><td class="head"><b>'+k+'</b>'+(k===sip.top?' <span class="pill" style="background:#E8F3FF;color:#1B64DA">가장 두꺼움</span>':'')+'</td>'+
         '<td data-l="개수">'+n+' / 7</td><td data-l="뜻">'+m.tag+'</td>'+
         '<td class="full" data-l="상담">'+esc(m.mind)+'</td></tr>';}).join('')+
     '</tbody></table></div>'+
@@ -1275,7 +1317,7 @@ function tabTrait(){
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:70px">축</th><th style="width:100px">검사</th><th style="width:170px">사주</th><th style="width:64px">일치</th><th>읽는 법</th></tr></thead><tbody>'+
     cb.rows.map(function(r){
       return '<tr><td class="head"><b>'+r.axis+'</b></td><td data-l="검사">'+esc(r.test)+'</td><td data-l="사주">'+esc(r.saju)+'</td>'+
-        '<td data-l="일치"><span class="pill" style="'+(r.hit?'color:#1F7A61;background:#EAF8F3':'color:#BB3A54;background:#FFF0F1')+'">'+(r.hit?'같음':'다름')+'</span></td>'+
+        '<td data-l="일치"><span class="pill" style="'+(r.hit?'color:#00A05A;background:#E8F8F0':'color:#F04452;background:#FEECEE')+'">'+(r.hit?'같음':'다름')+'</span></td>'+
         '<td class="full" data-l="읽는 법">'+esc(r.read)+'</td></tr>';}).join('')+
     '</tbody></table></div></div>';
   var t4=ty.str?'<div class="card"><h2><span class="n">표 4</span>강점과 조심할 점</h2>'+
@@ -1295,11 +1337,11 @@ function tabFit(){
   var me=S.me,cl=S.cl,fit=fitCalc(me,cl),mc=personCode(me),cc=personCode(cl);
   function who(p,code){
     return '<div>'+(code?mascot(code,86):ohEmblem(p,86))+'<div style="font-size:12px;font-weight:900;margin-top:2px">'+esc(p.name)+
-      '<br><span style="color:#8C86A8">'+(code||'')+(code&&p.saju?' · ':'')+(p.saju?gz(p.saju.dg,p.saju.dj):'')+'</span></div></div>';
+      '<br><span style="color:#8B95A1">'+(code||'')+(code&&p.saju?' · ':'')+(p.saju?gz(p.saju.dg,p.saju.dj):'')+'</span></div></div>';
   }
   var head='<div class="card" style="text-align:center">'+
     '<div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap">'+
-      who(me,mc)+'<div style="font-size:24px;color:#C9C2E4;font-weight:900;padding:0 4px">↔</div>'+who(cl,cc)+
+      who(me,mc)+'<div style="font-size:24px;color:#B0B8C1;font-weight:900;padding:0 4px">↔</div>'+who(cl,cc)+
     '</div>'+
     '<div class="score" style="margin-top:14px">'+ringSvg(fit.score,fit.level.c)+
       '<div style="flex:1;min-width:0;text-align:left"><div style="font-size:30px;font-weight:900;color:'+fit.level.c+'">'+fit.score+'점</div>'+
@@ -1313,9 +1355,9 @@ function tabFit(){
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">항목</th><th style="width:120px">결과</th><th style="width:60px">점수</th><th>뜻</th></tr></thead><tbody>'+
     fit.items.map(function(x){
       return '<tr><td class="head"><b>'+esc(x.k)+'</b></td><td data-l="결과">'+esc(x.v)+'</td>'+
-        '<td data-l="점수"><b style="color:'+(x.s>0?'#1F7A61':(x.s<0?'#BB3A54':'#8C86A8'))+'">'+(x.s>0?'+':'')+x.s+'</b></td>'+
+        '<td data-l="점수"><b style="color:'+(x.s>0?'#00A05A':(x.s<0?'#F04452':'#8B95A1'))+'">'+(x.s>0?'+':'')+x.s+'</b></td>'+
         '<td class="full" data-l="뜻">'+esc(x.txt)+'</td></tr>';}).join('')+
-    '<tr><td class="plain" colspan="4" style="background:#FAF8FF">'+
+    '<tr><td class="plain" colspan="4" style="background:#F9FAFB">'+
       (fit.sajuScore!==null?'<b>사주 '+fit.sajuScore+'점</b>(일지·일간·오행) ':'')+
       (fit.mbtiScore!==null?'<b>성향 '+fit.mbtiScore+'점</b>(네 축) ':'')+
       (fit.bloodScore!==null?'<b>혈액형 '+fit.bloodScore+'점</b> ':'')+
@@ -1339,9 +1381,9 @@ function tabTalk(){
   var main='<div class="card"><h2><span class="n">핵심</span>나 · 고객 · 그래서 어떻게</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:82px">항목</th><th style="width:56px">나</th><th style="width:60px">고객</th><th style="width:210px">이대로 하면</th><th>이렇게 바꿔라</th></tr></thead><tbody>'+
     plan.rows.map(function(r){
-      return '<tr'+(r.same?'':' style="background:#FFFBF4"')+'>'+
-        '<td class="head"><b>'+esc(r.label)+'</b>'+(r.same?'':' <span class="pill" style="background:#FFF0F1;color:#BB3A54">다름</span>')+'</td>'+
-        '<td data-l="나"><b>'+r.me+'</b></td><td data-l="고객"><b style="color:#8B7BF0">'+r.you+'</b></td>'+
+      return '<tr'+(r.same?'':' style="background:#FFFAF0"')+'>'+
+        '<td class="head"><b>'+esc(r.label)+'</b>'+(r.same?'':' <span class="pill" style="background:#FEECEE;color:#F04452">다름</span>')+'</td>'+
+        '<td data-l="나"><b>'+r.me+'</b></td><td data-l="고객"><b style="color:#3182F6">'+r.you+'</b></td>'+
         '<td class="full" data-l="이대로 하면">'+esc(r.risk)+'</td>'+
         '<td class="full" data-l="이렇게"><b>'+esc(r.fix)+'</b></td></tr>';}).join('')+
     '</tbody></table></div></div>';
@@ -1358,11 +1400,11 @@ function tabTalk(){
       esc(SIP_META[luck.group].want)+' 쪽에 특히 귀가 열려 있는 해입니다.</div>':'')+
   '</div>';
   var script='<div class="card"><h2><span class="n">대본</span>바로 쓰는 문장</h2>'+
-    '<div style="font-size:12.5px;font-weight:900;color:#6F63C4;margin-top:12px">🗣 첫 3분 — 이렇게 여세요</div>'+
+    '<div style="font-size:12.5px;font-weight:900;color:#1B64DA;margin-top:12px">🗣 첫 3분 — 이렇게 여세요</div>'+
     plan.opens.map(function(x){return '<div class="talk good">'+esc(x)+'</div>';}).join('')+
-    '<div style="font-size:12.5px;font-weight:900;color:#BB3A54;margin-top:16px">🚫 이 말은 하지 마세요</div>'+
+    '<div style="font-size:12.5px;font-weight:900;color:#F04452;margin-top:16px">🚫 이 말은 하지 마세요</div>'+
     plan.avoid.map(function(x){return '<div class="talk bad">'+esc(x)+'</div>';}).join('')+
-    '<div style="font-size:12.5px;font-weight:900;color:#1F7A61;margin-top:16px">🤝 마무리 — 이렇게 닫으세요</div>'+
+    '<div style="font-size:12.5px;font-weight:900;color:#00A05A;margin-top:16px">🤝 마무리 — 이렇게 닫으세요</div>'+
     plan.closes.map(function(x){return '<div class="talk">'+esc(x)+'</div>';}).join('')+
     '<button class="btn line sm" style="margin-top:16px" onclick="window.print()">🖨 이 페이지 인쇄 · PDF</button>'+
   '</div>';
@@ -1386,13 +1428,13 @@ function tabSaju(){
         '<td data-l="오행"><span class="pill" style="color:'+OH_META[oh].c+';background:'+OH_META[oh].bg+'">'+OH_META[oh].emo+' '+oh+'</span></td>'+
         '<td data-l="십신"><b>'+r.name+'</b></td>'+
         '<td class="full" data-l="뜻">'+esc(SIP10[r.name]||'')+'</td></tr>';}).join('')+
-    '<tr><td class="plain" colspan="5" style="background:#FAF8FF"><b>일간 '+GAN[s.dg]+'('+GAN_CHAR[s.dg].n+')</b> 은 이 사람 자신입니다. 나머지 글자는 모두 일간에서 본 관계입니다. 지지의 십신은 그 지지의 본기(정기)로 봤습니다.</td></tr>'+
+    '<tr><td class="plain" colspan="5" style="background:#F9FAFB"><b>일간 '+GAN[s.dg]+'('+GAN_CHAR[s.dg].n+')</b> 은 이 사람 자신입니다. 나머지 글자는 모두 일간에서 본 관계입니다. 지지의 십신은 그 지지의 본기(정기)로 봤습니다.</td></tr>'+
     '</tbody></table></div></div>';
   var oh='<div class="card"><h2><span class="n">오행</span>기운의 분포</h2>'+ohBars(cb.oh)+
     '<div class="tbwrap stack" style="margin-top:12px"><table class="tb"><tbody>'+
     ['목','화','토','금','수'].map(function(k){
       var m=OH_META[k],n=cb.oh[k];
-      return '<tr><td class="head">'+m.emo+' <b>'+k+'</b> '+n+'개'+(n===0?' <span class="pill" style="background:#FFF0F1;color:#BB3A54">없음</span>':(n>=3?' <span class="pill" style="background:#FFF6E9;color:#9A5B0C">많음</span>':''))+'</td>'+
+      return '<tr><td class="head">'+m.emo+' <b>'+k+'</b> '+n+'개'+(n===0?' <span class="pill" style="background:#FEECEE;color:#F04452">없음</span>':(n>=3?' <span class="pill" style="background:#FFF6E5;color:#C77700">많음</span>':''))+'</td>'+
         '<td class="plain">'+esc(m.mind)+'</td></tr>';}).join('')+
     '</tbody></table></div></div>';
   var how='<div class="card"><h2><span class="n">근거</span>어떻게 계산했나</h2>'+
@@ -1760,7 +1802,7 @@ function tabIce(){
       '<p>상품 이야기는 아직입니다. 사람 이야기부터 하고, 그 사람이 스스로 말하게 만드는 것이 이 화면의 목적입니다. 아래 문장은 <b>'+esc(cl.name)+'</b> 님의 사주와 성향에서 뽑은 것이라 다른 고객에게는 다른 문장이 나옵니다.</p></div>'
     : '<div class="card" style="text-align:center"><h1>'+esc(cl.name)+' 님, 반갑습니다</h1>'+
       '<p>생년월일과 태어난 시간, 그리고 답해주신 문항으로 정리했습니다. 좋은 이야기부터 보시죠.</p></div>';
-  var bless='<div class="card" style="background:linear-gradient(160deg,#FFFDF7,#FFF7FB)"><h2><span class="n">덕담</span>'+
+  var bless='<div class="card" style="background:var(--card)"><h2><span class="n">덕담</span>'+
       (S.view==='agent'?'먼저 좋은 말부터':esc(cl.name)+' 님께 드리는 말씀')+'</h2>'+
     (S.view==='agent'?'<p class="sub">아래 문장을 그대로 읽어드리세요. 사람은 자기를 알아봐 주는 사람에게 마음을 엽니다.</p>':'')+
     ib.bless.map(function(x){return '<div class="talk good">🌾 '+esc(x)+'</div>';}).join('')+
@@ -1885,7 +1927,7 @@ function tabDeep(){
     du.list.map(function(x){
       var now=(cur&&cur.age===x.age);
       var g=SIP_GROUP[x.sip];
-      return '<tr'+(now?' style="background:#F4F1FF"':'')+'><td class="head"><b>만 '+x.age+'세~</b>'+(now?' <span class="pill" style="background:#EFEAFF;color:#6F63C4">지금</span>':'')+'</td>'+
+      return '<tr'+(now?' style="background:#E8F3FF"':'')+'><td class="head"><b>만 '+x.age+'세~</b>'+(now?' <span class="pill" style="background:#E8F3FF;color:#1B64DA">지금</span>':'')+'</td>'+
         '<td data-l="대운">'+GAN[x.g]+JI[x.j]+'</td><td data-l="십신">'+x.sip+' · '+x.sipJ+'</td>'+
         '<td data-l="12운성">'+x.un+'</td>'+
         '<td class="full" data-l="이 10년">'+esc(SIP_META[g].want)+' 쪽으로 관심이 쏠리는 시기입니다. '+esc(UNSEONG_META[x.un].line)+'</td></tr>';}).join('')+
@@ -1971,7 +2013,7 @@ function lifeLuck(p){
   var sip=sipsinTable(s),cnt=sip.count,oh=ohCount(s),st=strengthOf(s),sn=sinsalOf(s);
   var names={};sn.forEach(function(x){names[x.name]=x.ji;});
   var g=p.gender||'M',out=[];
-  function lv(n,hi,mid){return n>=hi?{t:'강함',c:'#1F7A61',bg:'#EAF8F3'}:(n>=mid?{t:'보통',c:'#6F63C4',bg:'#F1EEFF'}:{t:'약함',c:'#9A5B0C',bg:'#FFF6E9'});}
+  function lv(n,hi,mid){return n>=hi?{t:'강함',c:'#00A05A',bg:'#E8F8F0'}:(n>=mid?{t:'보통',c:'#1B64DA',bg:'#E8F3FF'}:{t:'약함',c:'#C77700',bg:'#FFF6E5'});}
   var lack=[],many=[],k;
   for(k in oh){if(oh[k]===0)lack.push(k);if(oh[k]>=3)many.push(k);}
 
@@ -2003,7 +2045,7 @@ function lifeLuck(p){
   /* 3. 건강운 */
   var weak=lack.length?lack:(many.length?many:[]);
   out.push({key:'건강운',emo:'🩺',base:(lack.length?'없는 기운 '+lack.join('·'):'')+(many.length?(lack.length?' / ':'')+'많은 기운 '+many.join('·'):'')||'오행이 고른 편',
-    level:(lack.length>=2?{t:'주의',c:'#BB3A54',bg:'#FFF0F1'}:(lack.length===1?{t:'보통',c:'#9A5B0C',bg:'#FFF6E9'}:{t:'양호',c:'#1F7A61',bg:'#EAF8F3'})),
+    level:(lack.length>=2?{t:'주의',c:'#F04452',bg:'#FEECEE'}:(lack.length===1?{t:'보통',c:'#C77700',bg:'#FFF6E5'}:{t:'양호',c:'#00A05A',bg:'#E8F8F0'})),
     read:(weak.length?('<b>'+weak.join('·')+'</b> 기운이 '+(lack.length?'비어 있습니다':'한쪽으로 몰려 있습니다')+' — '+
         weak.map(function(k2){return k2+'은 '+OH_BODY[k2];}).join(', ')+' 쪽입니다. 이 자리가 먼저 지치기 쉬우니 '+
         weak.map(function(k2){return OH_SEASON_CARE[k2];}).filter(function(v,i,a2){return a2.indexOf(v)===i;}).join('·')+'에 특히 살피세요.')
@@ -2027,7 +2069,7 @@ function lifeLuck(p){
   /* 5. 자식·아랫사람운 */
   var ch=childStar(g),chn=cnt[ch];
   out.push({key:'자식·아랫사람운',emo:'🧒',base:'시주 '+(p.noTime?'(시간 모름)':GAN[s.hg]+JI[s.hj])+' · '+ch+' '+chn+'개',
-    level:p.noTime?{t:'확인 필요',c:'#9A5B0C',bg:'#FFF6E9'}:lv(chn,2,1),
+    level:p.noTime?{t:'확인 필요',c:'#C77700',bg:'#FFF6E5'}:lv(chn,2,1),
     read:(p.noTime?'태어난 시간을 모르면 자식·말년 자리를 못 봅니다. 시간을 확인하시면 이 항목이 채워집니다.'
       :'말년과 자식 자리는 <b>시주('+GAN[s.hg]+JI[s.hj]+')</b> 입니다. '+esc2(UNSEONG_META[unseong(s.dg,s.hj)].line)+' '+
         (chn===0?ch+'이 없어 자식·아랫사람과의 인연이 담백합니다. 붙잡기보다 지켜봐 주는 쪽이 잘 맞습니다.'
@@ -2047,7 +2089,7 @@ function lifeLuck(p){
 
   /* 7. 인복·귀인운 */
   out.push({key:'인복·귀인운',emo:'🍀',base:'비겁 '+bi+'개'+(names['천을귀인']?' · 천을귀인 '+names['천을귀인']:'')+(names['도화']?' · 도화 '+names['도화']:''),
-    level:(names['천을귀인']?{t:'좋음',c:'#1F7A61',bg:'#EAF8F3'}:lv(bi,2,1)),
+    level:(names['천을귀인']?{t:'좋음',c:'#00A05A',bg:'#E8F8F0'}:lv(bi,2,1)),
     read:(names['천을귀인']?'<b>천을귀인</b>이 있습니다. 사주에서 가장 좋은 별로 봅니다 — 결정적인 순간에 도와주는 분이 나타납니다. '
       :'')+(names['도화']?'<b>도화</b>가 있어 사람이 모이고 첫인상이 좋습니다. 소개가 소개를 부릅니다. '
       :'')+(bi>=3?'같은 편이 많아 사람 속에서 힘이 납니다. 다만 그만큼 나눠야 할 몫도 생깁니다.'
@@ -2066,7 +2108,7 @@ function lifeLuck(p){
 
   /* 9. 이동·해외운 */
   out.push({key:'이동·해외운',emo:'🐎',base:(names['역마']?'역마 '+names['역마']:'역마 없음')+' · 수 '+oh.수+'개',
-    level:(names['역마']?{t:'많음',c:'#6F63C4',bg:'#F1EEFF'}:{t:'적음',c:'#9A5B0C',bg:'#FFF6E9'}),
+    level:(names['역마']?{t:'많음',c:'#1B64DA',bg:'#E8F3FF'}:{t:'적음',c:'#C77700',bg:'#FFF6E5'}),
     read:(names['역마']?'<b>역마</b>가 있습니다. 한자리에 오래 머물기보다 <b>움직여야 풀리는</b> 결입니다. 이사·출장·해외·이직이 잦을 수 있고, 그 움직임이 기회가 됩니다.'
       :'한자리에서 뿌리내리는 결입니다. 자주 옮기면 오히려 힘이 빠집니다. 옮길 때는 크게 한 번만 옮기세요.'),
     care:'움직임이 많은 해에는 <b>계약서와 안전</b>을 두 번 확인하세요. 서두르다 생기는 일이 대부분입니다.',
@@ -2110,8 +2152,8 @@ function yearAhead(p,n){
   for(i=0;i<(n||12);i++){
     var y=y0+i,yi=((y-1984)%60+60)%60,g=yi%10,j=yi%12;
     var rel=jiRel(s.dj,j),sip=sipsinOf(s.dg,g),grp2=SIP_GROUP[sip];
-    var tone=(rel.k==='충')?{t:'조심',c:'#BB3A54',bg:'#FFF0F1'}
-      :((rel.k==='육합'||rel.k==='삼합')?{t:'순함',c:'#1F7A61',bg:'#EAF8F3'}:{t:'보통',c:'#6F63C4',bg:'#F1EEFF'});
+    var tone=(rel.k==='충')?{t:'조심',c:'#F04452',bg:'#FEECEE'}
+      :((rel.k==='육합'||rel.k==='삼합')?{t:'순함',c:'#00A05A',bg:'#E8F8F0'}:{t:'보통',c:'#1B64DA',bg:'#E8F3FF'});
     out.push({year:y,gz:GAN[g]+JI[j],han:GANH[g]+JIH[j],sip:sip,grp:grp2,rel:rel.k,tone:tone,
       read:(rel.k==='충'?'일지와 충하는 해입니다. 큰 변화(이사·이직·계약)를 서두르면 탈이 나기 쉬우니 <b>한 박자 늦추는 것</b>이 좋습니다. '
         :(rel.k==='육합'||rel.k==='삼합'?'일지와 합하는 해입니다. 사람과 일이 잘 붙습니다. <b>미뤄둔 일을 꺼내기 좋은 해</b>입니다. ':''))+
@@ -2152,8 +2194,8 @@ function tabLife(){
           '<td data-l="근거">'+esc(x.base)+'</td>'+
           '<td data-l="결"><span class="pill" style="color:'+x.level.c+';background:'+x.level.bg+'">'+x.level.t+'</span></td>'+
           '<td class="full" data-l="풀이">'+x.read+
-            '<div style="margin-top:7px;color:#9A5B0C">'+(S.view==='agent'?'⚠️ ':'💡 이렇게 하시면 더 좋습니다 — ')+x.care+'</div>'+
-            '<div style="margin-top:5px;color:#1F7A61">🌾 '+esc(x.bless)+'</div></td></tr>';
+            '<div style="margin-top:7px;color:#C77700">'+(S.view==='agent'?'⚠️ ':'💡 이렇게 하시면 더 좋습니다 — ')+x.care+'</div>'+
+            '<div style="margin-top:5px;color:#00A05A">🌾 '+esc(x.bless)+'</div></td></tr>';
       }).join('')+'</tbody></table></div></div>';
   }
   var stage='';
@@ -2162,7 +2204,7 @@ function tabLife(){
       '<p class="sub">년주는 초년, 월주는 청년, 일주는 중년, 시주는 말년 자리로 봅니다. 각 기둥의 글자가 그 시기의 결을 말해 줍니다.</p>'+
       '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:118px">시기</th><th style="width:74px">기둥</th><th style="width:118px">십신</th><th style="width:78px">12운성</th><th>이 시기는</th></tr></thead><tbody>'+
       stg.map(function(r){
-        return '<tr><td class="head"><b>'+r.lb+'</b><div style="font-size:10.5px;color:#A9A2C6;font-weight:600">'+r.who+'</div></td>'+
+        return '<tr><td class="head"><b>'+r.lb+'</b><div style="font-size:10.5px;color:#8B95A1;font-weight:600">'+r.who+'</div></td>'+
           '<td data-l="기둥">'+r.pil+' '+r.gz+'</td><td data-l="십신">'+r.sipG+' · '+r.sipJ+'</td>'+
           '<td data-l="12운성">'+r.un+'</td><td class="full" data-l="이 시기는">'+esc(r.read)+'</td></tr>';}).join('')+
       '</tbody></table></div>'+
@@ -2175,7 +2217,7 @@ function tabLife(){
       '<p class="sub">해마다 바뀌는 세운을 일지와 견줘 정리했습니다. <b>합</b>이면 일이 잘 붙고 <b>충</b>이면 변화가 큽니다. 좋고 나쁨이 아니라 <b>속도를 조절하는 기준</b>으로 보세요.</p>'+
       '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:96px">해</th><th style="width:84px">간지</th><th style="width:96px">일지와</th><th style="width:70px">결</th><th>이 해는</th></tr></thead><tbody>'+
       ahead.map(function(x){
-        return '<tr'+(x.rel==='충'?' style="background:#FFF8F8"':'')+'><td class="head"><b>'+x.year+'년</b></td>'+
+        return '<tr'+(x.rel==='충'?' style="background:#FFF6F7"':'')+'><td class="head"><b>'+x.year+'년</b></td>'+
           '<td data-l="간지">'+x.gz+' <span class="sub">'+x.han+'</span></td>'+
           '<td data-l="일지와">'+x.rel+' · '+x.sip+'</td>'+
           '<td data-l="결"><span class="pill" style="color:'+x.tone.c+';background:'+x.tone.bg+'">'+x.tone.t+'</span></td>'+
@@ -2257,7 +2299,7 @@ var BLOOD={
     ins:'굵은 보장 하나. 잔가지보다 핵심을 크게 가십니다.',
     manage:'용건 중심으로. 결과를 숫자로 보고드리면 신뢰하십니다.',
     bless:'앞장서서 끌어오신 자리입니다. 그 책임감이 사람을 모읍니다.'},
-  AB:{nick:'냉정한 관찰자',emo:'🆎',color:'#8B7BF0',
+  AB:{nick:'냉정한 관찰자',emo:'🆎',color:'#3182F6',
     line:'한 발 떨어져서 보십니다. 감정에 휩쓸리지 않고 객관적으로 판단하십니다.',
     str:['상황을 냉정하게 보십니다','머리 회전이 빠르십니다','불필요한 갈등을 만들지 않으십니다'],
     care:['속을 잘 안 보이십니다','관심 없는 일에는 냉담하십니다','결정을 계속 미루실 수 있습니다'],
@@ -2282,6 +2324,12 @@ var BLOOD_FIT={
   'AB|AB':'이해는 빠르지만 둘 다 결정을 미룹니다. 날짜를 못 박는 사람이 있어야 끝납니다.'
 };
 var BLOOD_ORDER=['A','B','O','AB'];
+function bloodBadge(k,size){
+  var B=BLOOD[k]; if(!B)return '';
+  var s=size||26;
+  return '<span class="bbadge" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.42)+'px;'+
+    'background:'+B.color+'22;color:'+B.color+'">'+k+'</span>';
+}
 function bloodKey(a,b){
   var ia=BLOOD_ORDER.indexOf(a),ib=BLOOD_ORDER.indexOf(b);
   return (ia<=ib)?(a+'|'+b):(b+'|'+a);
@@ -2304,7 +2352,7 @@ function riskScan(cl,me){
   var lack=[],many=[],k;
   if(oh)for(k in oh){if(oh[k]===0)lack.push(k);if(oh[k]>=3)many.push(k);}
   function add(lv,area,sig,why,todo){out.push({lv:lv,area:area,sig:sig,why:why,todo:todo});}
-  var HI={t:'높음',c:'#BB3A54',bg:'#FFF0F1'},MID={t:'보통',c:'#9A5B0C',bg:'#FFF6E9'},LO={t:'낮음',c:'#1F7A61',bg:'#EAF8F3'};
+  var HI={t:'높음',c:'#F04452',bg:'#FEECEE'},MID={t:'보통',c:'#C77700',bg:'#FFF6E5'},LO={t:'낮음',c:'#00A05A',bg:'#E8F8F0'};
 
   /* 유지(실효·해지) 리스크 */
   if(st&&st.level==='신약'&&cnt.재성>=3)
@@ -2370,7 +2418,7 @@ function tabRisk(){
   if(S.view!=='agent')return '<div class="card"><h2>이 화면은 설계사 전용입니다</h2><p>고객 화면에서는 열리지 않습니다.</p></div>';
   var cl=S.cl,rows=riskScan(cl,S.me);
   var hi=rows.filter(function(r){return r.lv.t==='높음';}).length;
-  var head='<div class="card" style="border:2px solid #FFD9DF"><h1>🔒 리스크 진단 <span class="pill" style="background:#FFF0F1;color:#BB3A54">나만 보는 화면</span></h1>'+
+  var head='<div class="card" style="background:var(--red-l)"><h1>🔒 리스크 진단 <span class="pill" style="background:#FEECEE;color:#F04452">나만 보는 화면</span></h1>'+
     '<p>좋은 말만 하면 상담은 편하지만 계약은 오래 못 갑니다. <b>어디서 깨지고, 어디서 민원이 나고, 어디서 해지가 나올지</b>를 미리 짚었습니다. '+
     '이 화면은 <b>고객 화면으로 바꾸면 사라집니다.</b></p>'+
     '<div class="chiplist">'+rows.map(function(r){return '<span class="chip" style="background:'+r.lv.bg+';color:'+r.lv.c+'">'+r.area+' '+r.lv.t+'</span>';}).join('')+'</div>'+
@@ -2379,7 +2427,7 @@ function tabRisk(){
   var tb='<div class="card"><h2><span class="n">표</span>신호 · 왜 · 미리 할 일</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:70px">구분</th><th style="width:64px">위험</th><th style="width:200px">신호</th><th style="width:230px">왜 위험한가</th><th>계약 전에 이렇게</th></tr></thead><tbody>'+
     rows.map(function(r){
-      return '<tr'+(r.lv.t==='높음'?' style="background:#FFF8F8"':'')+'><td class="head"><b>'+r.area+'</b></td>'+
+      return '<tr'+(r.lv.t==='높음'?' style="background:#FFF6F7"':'')+'><td class="head"><b>'+r.area+'</b></td>'+
         '<td data-l="위험"><span class="pill" style="color:'+r.lv.c+';background:'+r.lv.bg+'">'+r.lv.t+'</span></td>'+
         '<td class="full" data-l="신호">'+esc(r.sig)+'</td>'+
         '<td class="full" data-l="왜">'+esc(r.why)+'</td>'+
@@ -2400,8 +2448,8 @@ function tabBlood(){
   var mb=S.me&&S.me.blood?S.me.blood:'';
   var fit=mb?bloodFit(mb,b):'';
   var head='<div class="card" style="text-align:center">'+
-    '<div style="font-size:52px">'+B.emo+'</div>'+
-    '<div style="font-size:26px;font-weight:900;color:'+B.color+';margin-top:2px">'+b+'형</div>'+
+    '<div style="display:flex;justify-content:center">'+bloodBadge(b,72)+'</div>'+
+    '<div style="font-size:24px;font-weight:800;color:'+B.color+';margin-top:10px">'+b+'형</div>'+
     '<div style="font-size:15px;font-weight:900">'+esc(B.nick)+'</div>'+
     '<p>'+esc(B.line)+'</p>'+
     '<div class="talk good" style="text-align:left">🌾 '+esc(B.bless)+'</div>'+
@@ -2417,12 +2465,12 @@ function tabBlood(){
   var TYPES=['A','B','O','AB'];
   var matrix='<div class="card"><h2><span class="n">궁합</span>혈액형 궁합 한눈에</h2>'+
     '<div class="tbwrap scrollx"><table class="tb"><thead><tr><th style="width:64px">나 \\ 상대</th>'+
-    TYPES.map(function(x){return '<th style="width:110px">'+BLOOD[x].emo+' '+x+'형</th>';}).join('')+'</tr></thead><tbody>'+
+    TYPES.map(function(x){return '<th style="width:110px">'+x+'형</th>';}).join('')+'</tr></thead><tbody>'+
     TYPES.map(function(x){
-      return '<tr><td><b>'+BLOOD[x].emo+' '+x+'형</b></td>'+TYPES.map(function(y){
+      return '<tr><td>'+bloodBadge(x,24)+' <b>'+x+'형</b></td>'+TYPES.map(function(y){
         var sc=bloodScore(x,y),hi=(x===mb&&y===b)||(x===b&&y===mb);
-        var c=sc>=70?'#1F7A61':(sc>=60?'#6F63C4':'#9A5B0C');
-        return '<td'+(hi?' style="background:#F4F1FF"':'')+'><b style="color:'+c+'">'+sc+'점</b>'+(hi?' <span class="pill" style="background:#EFEAFF;color:#6F63C4">우리</span>':'')+'</td>';
+        var c=sc>=70?'#00A05A':(sc>=60?'#1B64DA':'#C77700');
+        return '<td'+(hi?' style="background:#E8F3FF"':'')+'><b style="color:'+c+'">'+sc+'점</b>'+(hi?' <span class="pill" style="background:#E8F3FF;color:#1B64DA">우리</span>':'')+'</td>';
       }).join('')+'</tr>';}).join('')+
     '</tbody></table></div>'+
     (mb?'<div class="note ok"><b>'+mb+'형(나) ↔ '+b+'형 · '+bloodScore(mb,b)+'점</b> — '+esc(fit)+'</div>':'')+
@@ -2653,16 +2701,16 @@ function setPaid(){
 }
 function payOpen(){
   var rows='';
-  if(PAY.tossKey)rows+=payRow('💳','#F1EEFF','카드 결제','토스페이먼츠 · 승인되면 바로 열립니다','payCard()');
-  if(PAY.account)rows+=payRow('🏦','#EAF8F3','계좌이체 · 무통장입금','이체 후 확인되면 열립니다','payBank()');
-  if(PAY.naver)rows+=payRow('Ⓝ','#EAF8F3','네이버페이','네이버페이로 결제','paySimple(\'naver\')');
-  if(PAY.kakao)rows+=payRow('🟡','#FFF6E9','카카오페이','카카오로 송금','paySimple(\'kakao\')');
+  if(PAY.tossKey)rows+=payRow('💳','#E8F3FF','카드 결제','토스페이먼츠 · 승인되면 바로 열립니다','payCard()');
+  if(PAY.account)rows+=payRow('🏦','#E8F8F0','계좌이체 · 무통장입금','이체 후 확인되면 열립니다','payBank()');
+  if(PAY.naver)rows+=payRow('Ⓝ','#E8F8F0','네이버페이','네이버페이로 결제','paySimple(\'naver\')');
+  if(PAY.kakao)rows+=payRow('🟡','#FFF6E5','카카오페이','카카오로 송금','paySimple(\'kakao\')');
   if(!rows)rows='<div class="note warn">아직 결제수단이 연결되지 않았습니다. '+(PAY.agent?esc(PAY.agent)+' 설계사':'담당 설계사')+'에게 문의해 주세요.</div>';
   sheet('고민 상담 리포트 결제',
     '<div class="sub">'+esc(S.cl.name||'')+' 님 · '+esc((S.worry&&S.worry.catName)||'')+'</div>'+
-    '<div style="font-size:24px;font-weight:900;color:#8B7BF0;margin:4px 0 14px">'+won(PAY.price)+'</div>'+
+    '<div style="font-size:24px;font-weight:900;color:#3182F6;margin:4px 0 14px">'+won(PAY.price)+'</div>'+
     rows+
-    '<div style="font-size:11px;color:#A9A2C6;line-height:1.7;margin-top:12px">결제 전에도 <b>요약</b>과 성향·사주 화면은 계속 무료로 보실 수 있습니다. 환불은 관련 법령과 약관을 따릅니다.</div>'+
+    '<div style="font-size:11px;color:#8B95A1;line-height:1.7;margin-top:12px">결제 전에도 <b>요약</b>과 성향·사주 화면은 계속 무료로 보실 수 있습니다. 환불은 관련 법령과 약관을 따릅니다.</div>'+
     '<button class="btn ghost sm" style="margin-top:12px" onclick="unlockAsk()">확인 코드로 열기</button>');
 }
 function payRow(em,bg,t,d,fn){
@@ -2692,12 +2740,12 @@ function payBank(){
   var line=PAY.bank+' '+PAY.account+(PAY.holder?' ('+PAY.holder+')':'');
   var msg='[고민 상담] '+(S.cl.name||'')+' 님 · '+won(PAY.price)+' 입금했습니다.';
   sheet('계좌이체 · 무통장입금',
-    '<div class="note ok"><div class="sub" style="color:#1F7A61;font-weight:800">입금 계좌</div>'+
-      '<div style="font-size:17px;font-weight:900;color:#1F7A61;margin-top:5px">'+esc(line)+'</div>'+
+    '<div class="note ok"><div class="sub" style="color:#00A05A;font-weight:800">입금 계좌</div>'+
+      '<div style="font-size:17px;font-weight:900;color:#00A05A;margin-top:5px">'+esc(line)+'</div>'+
       '<div class="kv" style="margin-top:8px"><span>입금 금액</span><b>'+won(PAY.price)+'</b></div>'+
       '<div class="kv"><span>입금자명</span><b>'+esc(S.cl.name||'검사하신 분 성함')+'</b></div></div>'+
-    (PAY.tel?'<a class="btn sm" style="margin-top:10px;display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:linear-gradient(135deg,#5BC8A8,#7FD6C0)" href="sms:'+esc(PAY.tel)+'?body='+encodeURIComponent(msg)+'">💬 입금 알리기</a>':'')+
-    '<div style="font-size:11.5px;color:#948FB0;line-height:1.7;margin-top:12px">입금이 확인되면 <b>확인 코드</b>를 받으실 수 있습니다.</div>'+
+    (PAY.tel?'<a class="btn sm" style="margin-top:10px;display:block;text-align:center;text-decoration:none;box-sizing:border-box;background:var(--green)" href="sms:'+esc(PAY.tel)+'?body='+encodeURIComponent(msg)+'">💬 입금 알리기</a>':'')+
+    '<div style="font-size:11.5px;color:#8B95A1;line-height:1.7;margin-top:12px">입금이 확인되면 <b>확인 코드</b>를 받으실 수 있습니다.</div>'+
     '<button class="btn ghost sm" style="margin-top:10px" onclick="payOpen()">← 다른 결제수단</button>');
 }
 function paySimple(kind){
@@ -2794,14 +2842,14 @@ function tabWorry(){
     (paid?'<button class="btn line sm" onclick="window.print()">🖨 인쇄 · PDF</button>':'')+'</div>'+
   '</div>';
   if(!paid){
-    return head+'<div class="card" style="text-align:center;border:2px dashed #DDD5FF;background:linear-gradient(170deg,#FFFFFF,#F6F2FF)">'+
+    return head+'<div class="card" style="text-align:center;background:var(--blue-l)">'+
       '<div style="font-size:34px">🔒</div>'+
       '<h2 style="justify-content:center;margin-top:8px">자세한 풀이는 여기서부터입니다</h2>'+
       '<ul class="list" style="text-align:left;max-width:520px;margin:12px auto 0">'+
       ['왜 이 고민이 생겼는지 — 사주 근거와 성향 근거','이번 달에 할 것 세 가지 (구체적으로)','하지 말 것 두 가지',
        '언제 움직이면 좋은지 — 앞으로 6년의 합·충','인쇄해서 두고 볼 수 있는 리포트'].map(function(x){
         return '<li><span class="ic">🔒</span><span>'+esc(x)+'</span></li>';}).join('')+'</ul>'+
-      '<div style="font-size:28px;font-weight:900;color:#8B7BF0;margin-top:14px">'+won(PAY.price)+'</div>'+
+      '<div style="font-size:28px;font-weight:900;color:#3182F6;margin-top:14px">'+won(PAY.price)+'</div>'+
       '<div class="sub">1건 · 한 번 열면 이 기기에서 계속 보실 수 있습니다</div>'+
       '<button class="btn" style="margin-top:14px" onclick="payOpen()">결제하고 전부 보기</button>'+
     '</div>'+footNote();
@@ -3002,8 +3050,8 @@ function tabRel(){
   var axis=p.rows.length?('<div class="card"><h2><span class="n">축</span>네 가지에서 무엇이 다른가</h2>'+
     '<div class="tbwrap stack"><table class="tb"><thead><tr><th style="width:82px">항목</th><th style="width:50px">나</th><th style="width:60px">'+esc(R.you)+'</th><th style="width:230px">'+esc(R.you)+'가 이 글자일 때</th><th>어긋나면</th></tr></thead><tbody>'+
     p.rows.map(function(r){
-      return '<tr'+(r.same?'':' style="background:#FFFBF4"')+'><td class="head"><b>'+esc(r.label)+'</b>'+(r.same?'':' <span class="pill" style="background:#FFF0F1;color:#BB3A54">다름</span>')+'</td>'+
-        '<td data-l="나"><b>'+r.me+'</b></td><td data-l="'+esc(R.you)+'"><b style="color:#8B7BF0">'+r.you+'</b></td>'+
+      return '<tr'+(r.same?'':' style="background:#FFFAF0"')+'><td class="head"><b>'+esc(r.label)+'</b>'+(r.same?'':' <span class="pill" style="background:#FEECEE;color:#F04452">다름</span>')+'</td>'+
+        '<td data-l="나"><b>'+r.me+'</b></td><td data-l="'+esc(R.you)+'"><b style="color:#3182F6">'+r.you+'</b></td>'+
         '<td class="full" data-l="대하는 법">'+r.tip+'</td>'+
         '<td class="full" data-l="어긋나면">'+(r.same?'같아서 편합니다.':'<b>'+esc(r.fix)+'</b>')+'</td></tr>';}).join('')+
     '</tbody></table></div></div>'):'';
