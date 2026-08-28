@@ -83,6 +83,8 @@ window.supabase={createClient:function(){
 
   const fail = [];
   const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
+  /* 화면으로만 보면 「어쩌다 다른 데서 불렸다」 를 못 가른다 — 소스도 함께 본다 */
+  const SRCX = fs.readFileSync('app/index.html', 'utf8');
 
   /* ── 밑판 깔기 ──
      이름은 「홍길동」 로 둔다. 검사 견본에 진짜 고객 이름을 쓰지 않는다. */
@@ -494,6 +496,127 @@ window.supabase={createClient:function(){
   ok(r.uid === null, '세션이 없으면 cmUid() 가 null 을 준다 — 억지로 읽지 않는다');
   ok(r.threw === '', '불러오기·저장·홈 그리기 어느 것도 터지지 않는다' + (r.threw ? (' — ' + r.threw) : ''));
   ok(errs.length === before, '뒤늦게 터지는 오류도 없다' + (errs.length > before ? (' — ' + errs[before]) : ''));
+
+  /* ══ [16-1] 표가 <b>제 옷을 입고</b> 서는가 ══════════════════════
+     「팀원별 30일 고객관리에서 화질이 좀 깨진다」 — 원인은 글꼴이 아니라
+     그 표(.cc-team)의 옷을 입혀 주는 <b>cmCss() 를 이 화면이 안 불렀던</b>
+     것이다. 고객 365일과 팩트파인딩에서는 부르는데 TFA 화면에서만 안 불러,
+     <b>옷을 못 입은 표</b>가 그대로 섰다 — 칸이 안 갈리고 숫자가 뭉개진다.
+     CLAUDE.md 5번: 「클래스를 넣어 주는 xxxCss() 를 쓰는 화면은 그 화면에서도
+     부른다」. 여기서는 <b>실제로 칠해진 값</b>을 읽어 본다.              */
+  console.log('\n[16-1] 30일 표가 제 옷을 입고 선다 (5번)');
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const DRESS = await page.evaluate(() => {
+    OS.session = { user: { id: 'u1' } };
+    /* <b>팀원</b> 자격으로 본다. 리더로 두면 arScope() 가 고른 팀에 따라
+       달라져, 표가 서는지 안 서는지가 <b>이 점검 밖의 것</b>에 좌우된다. */
+    OS.profile = { id: 'u1', name: '홍길동', role: 'member', active: true, plan: 'pro' };
+    window.__seed = function () {
+      AR.cliRows = [
+        { id: 'c1', who: 'u1', name: '홍길동', man: 120, ever: true, at: '2026-08-01', days: 28 },
+        { id: 'c2', who: 'u1', name: '홍길순', man: null, ever: false, at: '', days: 9999 }
+      ];
+    };
+    window.__seed(); AR.reco = [];
+    arCss();                                   /* 앱이 그 화면을 열 때 부르는 것 */
+    const host = document.getElementById('dynPane') || document.getElementById('main');
+    host.innerHTML = ccTeamHtml();
+    const tb = document.querySelector('.cc-team');
+    const td = tb && tb.querySelector('tbody td:first-child');
+    const num = tb && tb.querySelector('tbody td:nth-child(2)');
+    return { table: !!tb,
+             dressed: !!tb && getComputedStyle(tb).borderCollapse === 'collapse',
+             stick: td ? getComputedStyle(td).position : '',
+             num: num ? getComputedStyle(num).fontVariantNumeric : '',
+             fs: tb ? parseFloat(getComputedStyle(tb).fontSize) : 0 };
+  });
+  ok(DRESS.table, '표가 선다');
+  ok(DRESS.dressed, '옷을 입고 선다 — arCss() 가 cmCss() 를 부른다 (안 부르면 칸이 안 갈립니다)');
+  ok(DRESS.stick === 'sticky', '이름 칸이 왼쪽에 붙어 있다 — 옆으로 밀어도 누구 줄인지 보인다');
+  ok(/tabular/.test(DRESS.num), '숫자가 자릿수 맞춰 선다 (' + DRESS.num + ')');
+  ok(DRESS.fs >= 13, '글자가 ' + DRESS.fs + 'px — 12px 은 폰에서 뭉개진다');
+  {
+    /* <b>주석을 걷고</b> 본다. 이 자리를 설명하는 주석에 「cmCss()」 라고
+       적혀 있어, 걷지 않으면 그 줄을 지워도 주석을 읽고 통과한다 —
+       실제로 그렇게 헛돌았다 (CLAUDE.md 8번). */
+    const NOC = SRCX.replace(/\/\*[\s\S]*?\*\//g, ' ');
+    const arcss = NOC.match(/function arCss\([\s\S]*?document\.getElementById\('arCss'\)/);
+    ok(!!arcss && /cmCss/.test(arcss[0]),
+       'arCss() 안에서 부른다 — 다른 화면을 거쳐야만 옷이 입혀지면 안 된다');
+    ok(/@media screen[\s\S]{0,200}cc-team[\s\S]{0,80}tnum/.test(SRCX) ||
+       /@media screen\{\.cc-team[^']*tnum/.test(SRCX),
+       '자릿수 맞춤(tnum)은 @media screen 안에만 — 인쇄에 켜면 PDF 가 숫자를 잃는다 (4-1)');
+  }
+  await page.setViewportSize({ width: 390, height: 900 });
+  const FOLD = await page.evaluate(() => {
+    window.__seed(); AR.reco = [];       /* 좁은 폭에서도 밑판을 다시 깐다 */
+    arCss();
+    const host = document.getElementById('dynPane') || document.getElementById('main');
+    host.innerHTML = ccTeamHtml();
+    const tb = document.querySelector('.cc-team');
+    const td = tb.querySelector('tbody td[data-k]');
+    return { disp: getComputedStyle(tb).display,
+             label: getComputedStyle(td, ':before').content,
+             over: tb.parentElement.scrollWidth - tb.parentElement.clientWidth };
+  });
+  ok(FOLD.disp === 'block', '폰에서는 사람별 카드로 접힌다 (칸이 일곱이라 표로는 밀린다)');
+  ok(/고객/.test(FOLD.label || ''),
+     '각 줄 앞에 칸 이름이 붙는다 — ' + (FOLD.label || '(없음)') + ' (머리글이 접히므로)');
+  ok(FOLD.over === 0, '표가 옆으로 안 밀린다 (' + FOLD.over + 'px)');
+
+  /* ══ [16-2] CRM 에서 만났는데 고객 365일에 없는 분 ════════════════
+     전화를 걸어 두고도 고객 365일에 안 올리면 <b>30일 주기에서 통째로
+     빠진다</b>. 상담까지 했는데 다시 연락할 날짜를 아무도 안 챙긴다.  */
+  console.log('\n[16-2] CRM 에서 만난 분을 빠뜨리지 않는다');
+  const RECO = await page.evaluate(() => {
+    const dbs = [
+      { id: 'd1', assigned_to: 'u1', customer_name: '홍대장', region: '서울' },
+      { id: 'd2', assigned_to: 'u1', customer_name: '홍서방', region: '' },
+      { id: 'd3', assigned_to: 'u1', customer_name: '홍참판', region: '' }   /* 한 번도 안 걸었다 */
+    ];
+    const calls = [
+      { db_id: 'd1', created_by: 'u1', call_at: '2026-08-20T10:00:00', result: '상담' },
+      { db_id: 'd2', created_by: 'u1', call_at: '2026-08-10T10:00:00', result: '부재' }
+    ];
+    /* 홍대장은 이미 고객 365일에 있다 — 서버에는 가린 모양으로만 있다 */
+    const clients = [{ id: 'c1', advisor_id: 'u1', name_masked: osMaskName('홍대장') }];
+    const out = arRecoCalc(dbs, calls, clients);
+    AR.reco = [
+      { dbId: 'd1', who: 'u1', name: '홍대장', mask: '홍○○', region: '서울', n: 3, at: '2026-08-20', res: '상담', appt: true },
+      { dbId: 'd2', who: 'u1', name: '홍서방', mask: '홍○○', region: '', n: 1, at: '2026-08-10', res: '부재', appt: false }
+    ];
+    window.__seed();
+    const host = document.getElementById('dynPane') || document.getElementById('main');
+    host.innerHTML = ccTeamHtml();
+    const cards = document.querySelectorAll('.cc-rc').length;
+    const hot = document.querySelectorAll('.cc-rc.hot').length;
+    const txt = (document.querySelector('.cc-reco') || {}).textContent || '';
+    try { localStorage.removeItem('apex_cc_reco'); } catch (e) {}
+    let said = ''; const t = window.toast; window.toast = function (m) { said = m; };
+    document.querySelector('.cc-rc .go').click();
+    window.toast = t;
+    let saved = null; try { saved = JSON.parse(localStorage.getItem('apex_cc_reco') || 'null'); } catch (e) {}
+    /* 추천이 없으면 카드를 아예 안 세운다 — 빈 카드는 화면만 먹는다 */
+    AR.reco = []; window.__seed(); host.innerHTML = ccTeamHtml();
+    const emptyCard = /CRM 에서 만났는데/.test(host.textContent);
+    return { names: out.map(x => x.name), cards, hot, txt, saved, said, emptyCard,
+             tab: (typeof lastTab !== 'undefined') ? lastTab : '' };
+  });
+  ok(RECO.names.indexOf('홍참판') < 0, '한 번도 안 건 사람은 안 띄운다 — 추천이 아니라 잡음이 된다');
+  ok(RECO.names.indexOf('홍대장') < 0, '이미 고객 365일에 있는 분은 안 띄운다 (가린 모양끼리 견줘서)');
+  ok(RECO.names.length === 1, '남는 것은 ' + RECO.names.join(' · ') + ' 뿐이다');
+  ok(RECO.cards === 2, '접촉한 분이 카드로 뜬다 (' + RECO.cards + '명)');
+  ok(RECO.hot === 1, '상담까지 간 분이 갈려 보인다 (' + RECO.hot + '명)');
+  ok(/통화 3번/.test(RECO.txt), '언제 · 몇 번 통화했는지 CRM 에 있는 그대로 적는다');
+  ok(RECO.tab === 'clients', '올리기를 누르면 고객 365일로 넘어간다 (' + RECO.tab + ')');
+  ok(!!RECO.saved && RECO.saved.name === '홍대장', '이름을 그대로 들고 간다');
+  ok(!!RECO.saved && !('man' in RECO.saved) && !('bd' in RECO.saved),
+     'CRM 에 없는 값은 안 만든다 — 보험료·생일을 지어내지 않는다 (1번)');
+  ok(!RECO.emptyCard, '추천할 분이 없으면 카드를 안 세운다');
+  {
+    const rc = SRCX.replace(/\/\*[\s\S]*?\*\//g, ' ').match(/function arRecoCalc\([\s\S]*?\n\}/);
+    ok(!!rc && /osMaskName/.test(rc[0]), '견줄 때 osMaskName 을 쓴다 — 실명은 서버에 없다 (3번)');
+  }
 
   /* ══ [17] 오류 · 좁은 화면 ═══════════════════════════════════ */
   console.log('\n[17] 오류와 좁은 화면');
