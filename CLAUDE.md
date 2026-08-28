@@ -211,6 +211,7 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 | 마. 서버·소스 | `netlify/functions/` · `config/` |
 | 바. 지도 | `app/apex-map*` |
 | 사. 재무설계 자료 | `app/재무설계/` (상담자료·실전화법서) |
+| 아. 블로그 | `app/blog.html` · `app/blog-art.js` |
 
 점검은 **자기 갈래 것만** 각자 만듭니다 — 파일이 하나씩 따로라 서로 모릅니다.
 
