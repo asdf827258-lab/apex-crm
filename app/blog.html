@@ -179,6 +179,7 @@ function toast(m, ms) { const t = $('toast'); t.textContent = m; t.classList.add
    글감 모으는 법도 · 주문서 쓰는 법도 · 쓸 그림도 여기 한 곳이 답한다. */
 const KINDS = {
  econ: { t:'매일 경제뉴스', ic:'📈', reader:'고객', cat:'경제',
+   c:'#1A56DB',
    why:'서버가 받아 온 <b>경제 칸</b> 기사입니다. 금리·환율·물가는 매일 바뀌어 매일 쓸 거리가 나옵니다.',
    empty:'아직 안 받았습니다. 위 «오늘 뉴스 받기»를 누르세요.',
    art:['cover','news','toc'],
@@ -187,6 +188,7 @@ const KINDS = {
      + '특정 상품을 권하는 글로 만들지 말고, 마지막에만 「같이 보실 분은 말씀 주세요」 정도로 닫는다.' },
 
  news: { t:'보험·정책 뉴스', ic:'📰', reader:'고객', cat:'보험,부동산,생활정책,정책자금',
+   c:'#0E7490',
    why:'보험·부동산·생활정책·정책자금 칸입니다. 제도가 바뀌면 사람들이 검색합니다.',
    empty:'아직 안 받았습니다. 위 «오늘 뉴스 받기»를 누르세요.',
    art:['cover','news','w8','toc'],
@@ -194,6 +196,7 @@ const KINDS = {
      + '이 소식이 우리 고객에게 무슨 뜻인지를 풀어 주는 글이다. 기사에 없는 숫자는 쓰지 말고 [[확인 필요: …]] 로 남긴다.' },
 
  ask: { t:'상담에서 나온 질문', ic:'💬', reader:'고객',
+   c:'#7C3AED',
    why:'고객이 실제로 물은 것입니다. 같은 질문을 검색창에도 칩니다.',
    empty:'아직 없습니다. 아래 칸에 오늘 나온 질문을 그대로 적어 두세요 — 이름은 빼고.',
    mine:{ ph:'예: 암 진단비는 얼마가 적당한가요?', label:'상담에서 나온 질문 담기 — <b>이름은 빼고 질문만</b>' },
@@ -202,12 +205,14 @@ const KINDS = {
      + '\n\n같은 것을 검색창에 치는 사람이 읽고 「내 얘기다」 싶게, 질문을 제목에 살려서 쓴다.' },
 
  ours: { t:'우리가 해 드리는 일', ic:'🏢', reader:'고객',
+   c:'#047857',
    why:'회사 홍보입니다. 자랑이 아니라 <b>무엇을 어떻게 해 드리는지</b>를 적습니다.',
    empty:'', art:['cover','w8','flow','vs','toc'],
    order: s => '우리가 하는 일을 소개하는 글 한 편을 써 줘.\n\n무엇을 하나: ' + (s.doing || s.title)
      + '\n\n자랑하지 말고, 이 일을 받으면 고객에게 무엇이 달라지는지를 적는다. 없는 실적·후기·만족도를 만들어 넣지 않는다. 마지막에 부드러운 상담 유도 한 줄.' },
 
  culture: { t:'우리가 하는 문화', ic:'🤝', reader:'동료',
+   c:'#BE185D',
    why:'<b>같이 일할 사람</b>이 읽는 글입니다. 분위기를 꾸미지 말고 <b>실제로 지키는 방식</b>을 적습니다.',
    empty:'',
    mine:{ ph:'예: 상담 끝나면 그날 안에 기록을 남깁니다', label:'우리 문화 담기 — <b>실제로 하는 것만</b> (동료 이름은 빼고)' },
@@ -218,6 +223,7 @@ const KINDS = {
      + '수입·수수료·소득을 말하지 않는다 — 보장한다고 읽히면 모집 광고 규정에 걸린다. 실제 동료의 이름·사연은 쓰지 않는다.' },
 
  day: { t:'오늘 있었던 일', ic:'📅', reader:'고객',
+   c:'#B45309',
    why:'<b>사람이 보이는 글</b>입니다. 정보 글만 있는 블로그에는 이웃이 안 붙습니다 — 오늘 있었던 일 하나면 됩니다.',
    empty:'아직 없습니다. 아래 칸에 오늘 있었던 일을 한 줄로 적어 두세요 — <b>이름과 알아볼 사연은 빼고</b>.',
    mine:{ ph:'예: 청구 서류가 반려돼 병원에 다시 다녀왔다', label:'오늘 있었던 일 담기 — <b>실제로 있었던 것만</b> (이름·알아볼 사연은 빼고)' },
@@ -228,6 +234,7 @@ const KINDS = {
      + '고객·동료의 이름과 알아볼 수 있는 사연은 쓰지 않는다. 상품을 권하는 글로 만들지 않는다.' },
 
  growth: { t:'APEX 로 크는 법', ic:'🌱', reader:'동료',
+   c:'#4338CA',
    why:'전체 지도의 <b>순서표</b>를 그대로 씁니다. 「이 상황엔 이 순서」 가 정리돼 있어 지어낼 것이 없습니다.',
    empty:'지도(apex-map-data.js)를 못 읽었습니다. 이 갈래는 지도에서만 나옵니다 — 없으면 만들지 않습니다.',
    art:['cover','steps','toc'],
@@ -550,11 +557,27 @@ function sysPrompt(){
   '8. 이미지 자리표시는 [쓸 수 있는 그림] 에 있는 것만 부른다. 「고객 사진」 처럼 목록에 없는 그림을 부르지 않는다 — 우리가 만들지 못해 그 자리가 빈 채로 올라간다. 형식은 [이미지: 그림 이름 | alt: 대체텍스트] 로 쓰고 이름은 목록 그대로 쓴다.\n'+
   '9. 글 끝에 「## 이 글이 딛고 선 것」 을 두고 받은 [근거] 를 그대로 옮겨 적는다.';
 }
+/* 최근에 올린 글의 제목 — <b>우리가 쓴 것</b>이라 지어낸 자료가 아니다.
+   매일 쓰면 같은 이야기가 돌아온다. 이웃은 그때 떨어진다. */
+function recentTitles(not){
+  const out=[];
+  for(let i=S.rows.length-1;i>=0&&out.length<7;i--){
+    const r=S.rows[i]; if(!r.out||r===not) continue;
+    const m=r.out.match(/##\s*제목[^\n]*\n+\s*[-*\d.)\s]*([^\n]{4,60})/);
+    const t=(m?m[1]:(r.seed&&r.seed.title)||'').replace(/^["'\u201c\u201d]|["'\u201c\u201d]$/g,'').trim();
+    if(t&&out.indexOf(t)<0) out.push(t);
+  }
+  return out;
+}
 function userPrompt(row){
-  const s=row.seed, d=KINDS[row.kind], L=lenNow();
+  const s=row.seed, d=KINDS[row.kind], L=lenNow(), rt=recentTitles(row);
   return '[근거]\n'+s.src+'\n\n[읽는 사람] '+d.reader+
     '\n\n[쓸 수 있는 그림] '+d.art.map(a=>'「'+ART[a].t+'」').join(' · ')+
-    ' — 이 이름들만 쓴다. 우리가 직접 그려 넣을 수 있는 그림이 이것뿐이다.\n\n'+d.order(s)+
+    ' — 이 이름들만 쓴다. 우리가 직접 그려 넣을 수 있는 그림이 이것뿐이다.\n\n'+
+    (rt.length?('[요 며칠 이미 올린 글]\n'+rt.map(t=>'· '+t).join('\n')+
+      '\n이것들과 <b>같은 이야기를 다시 하지 않는다.</b> 제목도 각도도 겹치지 않게 쓴다. '+
+      '겹칠 수밖에 없는 소재면 <b>지난번에 안 다룬 쪽</b>을 잡는다.\n\n'):'')+
+    d.order(s)+
     '\n\n[출력 형식 — Markdown]\n'+
     '## 제목 후보 5개\n숫자형·질문형·공감형·정보형을 섞어서 만든다. 핵심어를 앞쪽에 두되 단정·과장·최상급은 쓰지 않는다.\n'+
     '## 본문\n소제목(##) '+L.subs+'개, 소제목마다 '+L.sent+' 이상으로 충분히 풀어 쓴다. 본문 '+L.chars+' 이상을 채운다 — 중간에 요약하듯 끊으면 실패다. '+
@@ -736,6 +759,33 @@ async function today1(){
   if(!S.rows[i].out) await draft(i); else show(i);
   const j=todayAt(); if(j>=0&&S.rows[j].out) $('view').scrollIntoView({behavior:'smooth',block:'start'});
 }
+/* 앞으로 며칠을 더 쓸 수 있나 — 글감이 바닥나는 날을 <b>바닥나기 전에</b> 말한다.
+   아침에 열어 보고서야 「없습니다」 를 만나면 그날은 못 쓴다. */
+/* 앞으로 <b>이레</b>만 본다. 한 달치를 재면 어느 갈래든 반드시 바닥나서
+   날마다 「비었습니다」 가 뜬다 — 그러면 아무도 안 읽는다. (CLAUDE.md 8) */
+const RUNDAYS = 7;
+function runway(){
+  const s=seeds(), left={}, t=ymd(0), end=ymd(RUNDAYS), dry={};
+  ORDER.forEach(k=>left[k]=(s[k]||[]).length);
+  S.rows.forEach(r=>{ if(r.out&&r.seed&&left[r.kind]) left[r.kind]--; });
+  let n=0;
+  for(const r of S.rows){
+    if(!r.ymd||r.ymd<t||r.ymd>=end||r.up||r.out) continue;
+    /* 빈 갈래 하나로 「하루밖에 못 쓴다」 고 말하지 않는다 — 그 갈래만 비었을 뿐이다.
+       대신 <b>어느 갈래가 비었는지</b>를 이름으로 말한다. */
+    if(left[r.kind]>0){ left[r.kind]--; n++; } else dry[r.kind]=1;
+  }
+  return { n, dry:ORDER.filter(k=>dry[k]) };
+}
+async function tomorrow1(){
+  const t=ymd(1), i=S.rows.findIndex(r=>r.ymd===t);
+  if(i<0){ toast('내일 줄이 없습니다 — «한 달치 편성» 을 한 번 눌러 주세요.'); return; }
+  if(S.rows[i].out){ show(i); return; }
+  if(!S.rows[i].seed) S.rows[i].seed=freshSeed(S.rows[i].kind);
+  if(!S.rows[i].seed){ toast('내일 갈래는 「'+KINDS[S.rows[i].kind].t+'」 인데 글감이 없습니다.');
+    paint(); $('seeds').scrollIntoView({behavior:'smooth',block:'center'}); return; }
+  save(); await draft(i);
+}
 function paintToday(){
   const i=todayAt(), late=lateRows(), n=streak();
   const dots='<span class="dots">'+[6,5,4,3,2,1,0].map(b=>{
@@ -764,7 +814,16 @@ function paintToday(){
       '<button class="p big" onclick="today1()">'+
         (row.up?'다시 보기':row.out?'▶ 이어서 올리기':has?'▶ 오늘 것 한 편 만들기':'▶ 글감 적으러 가기')+'</button>'+
       (row.out?'<button onclick="draft('+i+')">🔄 다시 만들기</button>':'')+
+      ((row.out||row.up)?'<button onclick="tomorrow1()">🌙 내일 것 미리 만들기</button>':'')+
     '</div>'+
+    (function(){ const R=runway(), dry=R.dry.map(k=>KINDS[k].ic+' '+KINDS[k].t);
+      if(R.n>=4&&!dry.length)
+        return '<div class="note" style="margin-top:9px">이번 주 예정된 글은 글감이 <b>다 있습니다</b> ('+R.n+'편).</div>';
+      return '<div class="gate no" style="margin-top:9px"><b>'+
+        (R.n?('이번 주 '+R.n+'편은 글감이 있습니다.'):'이번 주 쓸 글감이 없습니다.')+'</b><ul>'+
+        (dry.length?('<li>비어 있는 갈래 — <b>'+dry.join(' · ')+'</b>. 그날이 오면 그 줄은 빈 채로 지나갑니다.</li>'):'')+
+        '<li>상담 끝나고 <b>한 줄씩</b> 아래에 담아 두세요. 아침에 적으려면 안 적게 됩니다.</li>'+
+        '<li>없는 것을 만들어 채우지 않습니다.</li></ul></div>'; })()+
     (late.length
       ? '<div class="note" style="margin-top:10px">밀린 것이 <b>'+late.length+'편</b> 있습니다 — '+
         late.slice(0,3).map(x=>esc(x.r.when)+' '+KINDS[x.r.kind].ic).join(' · ')+

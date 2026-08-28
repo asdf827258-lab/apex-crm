@@ -726,6 +726,74 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is((SRC.match(/new Date\(Date\.now\(\)\s*\+\s*9\s*\*/g) || []).length === 1,
      '  한국 시각을 세는 곳이 <b>한 곳뿐</b>이다');
 
+  console.log('\n[15] 매일 올려도 안 지겨운가 · 글감이 마르기 전에 말하는가');
+  const more = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.rows=[]; S.busy=-1; S.perweek=7; S.comply=null;
+    localStorage.setItem('apex_blog_mine_day', JSON.stringify([
+      { q:'첫째 날 일', at:ymd(0) }, { q:'둘째 날 일', at:ymd(0) }]));
+    await pullNews(); plan();
+
+    /* ① 대표 이미지가 날마다·갈래마다 다른가 — 다시 그리면 같은가 */
+    const mk = (d, k) => { const r={ ymd:d, kind:k, seed:{kind:k,title:'x',src:'y'},
+      out:'## 제목 후보\n- 오늘의 제목입니다\n\n## 본문\n글.\n' }; return build('cover', r); };
+    const a = mk(ymd(0),'day'), b = mk(ymd(1),'day'), c = mk(ymd(0),'econ'), a2 = mk(ymd(0),'day');
+    out.diffDay  = a.svg !== b.svg;
+    out.diffKind = a.svg !== c.svg;
+    out.same     = a.svg === a2.svg;
+    out.kindColor = c.svg.indexOf(KINDS.econ.c) >= 0 && a.svg.indexOf(KINDS.day.c) >= 0;
+    /* 무늬에 숫자·눈금이 섞이지 않았나 — 그림이 근거가 되면 안 된다 */
+    out.noNums = !/<text[^>]*>\s*[\d,.]+\s*</.test(a.svg);
+
+    /* ② 요 며칠 올린 제목을 주문서에 실어 「같은 이야기 그만」 이라고 시키는가 */
+    S.rows=[{ ymd:ymd(-1), when:'x', kind:'day', seed:{kind:'day',title:'어제',src:'z'},
+              out:'## 제목 후보\n- 어제 쓴 제목입니다\n\n## 본문\n글.\n', guard:null, up:true },
+            { ymd:ymd(0), when:'y', kind:'day', seed:{kind:'day',title:'오늘',src:'z'},
+              out:'', guard:null, up:false }];
+    out.recent = recentTitles(S.rows[1]);
+    out.prompt = userPrompt(S.rows[1]);
+    out.selfFree = recentTitles(S.rows[0]).indexOf('어제 쓴 제목입니다') < 0;
+
+    /* ③ 글감이 며칠치 남았나 */
+    S.rows=[]; plan();
+    out.runFull = runway().n;
+    localStorage.removeItem('apex_blog_mine_day');
+    localStorage.removeItem('apex_blog_mine_ask');
+    S.rows=[]; plan(); const R2=runway(); out.runThin=R2.n; out.dry=R2.dry;
+    paint(); out.warns = (function(){ const h=document.getElementById('today').innerHTML;
+      return /비어 있는 갈래/.test(h) && R2.dry.every(k=>h.indexOf(KINDS[k].t)>=0); })();
+
+    /* ④ 내일 것 — 글감이 없으면 역시 안 만든다 */
+    let calls=0; const realAsk=window.ask; window.ask=()=>{calls++;return Promise.resolve('x');};
+    localStorage.setItem('apex_studio_apikey','x');
+    S.rows=[]; plan();
+    const ti=S.rows.findIndex(r=>r.ymd===ymd(1));
+    S.rows[ti].kind='day'; S.rows[ti].seed=null; S.rows[ti].out='';
+    await tomorrow1(); out.tmrNoSeed=calls;
+    localStorage.setItem('apex_blog_mine_day', JSON.stringify([{ q:'내일 쓸 것', at:ymd(0) }]));
+    await tomorrow1(); out.tmrCalls=calls; out.tmrDone=!!S.rows[ti].out;
+    out.tmrIsTomorrow=S.rows[ti].ymd===ymd(1);
+    window.ask=realAsk;
+    return out;
+  });
+  is(more.diffDay,  '  대표 이미지가 <b>날마다 다르다</b> — 서른 날 같은 그림이면 죽어 보인다');
+  is(more.diffKind, '  갈래마다도 다르다');
+  is(more.same,     '  같은 글은 다시 그려도 <b>같은 그림</b>이다 — 어제 글이 딴 그림이 되면 헷갈린다');
+  is(more.kindColor,'  갈래 색을 <b>갈래 표에서</b> 읽는다 — 그림 쪽에 다시 안 적었다');
+  is(more.noNums,   '  무늬에 숫자·눈금이 없다 — 그림이 근거가 되면 안 된다 (CLAUDE.md 9)');
+  is(more.recent.indexOf('어제 쓴 제목입니다') >= 0, '  어제 올린 제목을 안다 (' + more.recent.join(' · ') + ')');
+  is(/요 며칠 이미 올린 글/.test(more.prompt) && /같은 이야기를 다시 하지 않는다/.test(more.prompt),
+     '  <b>같은 이야기를 또 하지 말라</b>고 주문서에 실어 보낸다');
+  is(more.selfFree, '  지금 쓰는 글 자신은 그 목록에서 뺀다 — 자기 제목을 피하라고 시키면 안 된다');
+  is(more.runFull > more.runThin, '  글감이 줄면 쓸 수 있는 편수도 준다 (' + more.runFull + ' → ' + more.runThin + ')');
+  is(more.dry.indexOf('day') >= 0 && more.dry.indexOf('ask') >= 0,
+     '  <b>어느 갈래가 비었는지</b> 이름으로 말한다 — ' + more.dry.join(' · '));
+  is(more.dry.indexOf('econ') < 0, '  이레치만 본다 — 차 있는 갈래를 비었다고 하지 않는다 (헛것 금지 · CLAUDE.md 8)');
+  is(more.warns, '  <b>바닥나기 전에</b> 빈 갈래를 이름으로 화면에 적는다 — 아침에 열어 보고서야 알면 그날은 못 쓴다');
+  is(more.tmrNoSeed === 0, '  «내일 것» 도 글감이 없으면 <b>AI 를 안 부른다</b>');
+  is(more.tmrCalls === 1 && more.tmrDone && more.tmrIsTomorrow,
+     '  «내일 것» 은 <b>내일 줄</b>을 만든다 — 오늘 것을 덮어쓰지 않는다');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
