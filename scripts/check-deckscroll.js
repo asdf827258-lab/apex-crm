@@ -104,6 +104,12 @@ const key = (page, k) => page.evaluate(k =>
     go(tall); await new Promise(r => setTimeout(r, 250));
     const el0 = box.querySelector('.slide.on');
     const t0 = box.scrollTop;
+    /* 내려갈 수 있는 만큼과 한 번에 내리는 만큼 — 둘 중 작은 것이 정답이다.
+       화면·글꼴에 따라 넘치는 양이 달라지므로 픽셀 수를 못 박으면 흔들린다
+       (CLAUDE.md 8번: 헛알람은 안 잡는 것보다 나쁘다). */
+    const room = box.scrollHeight - box.clientHeight;
+    const step = Math.round(box.clientHeight * 0.86);
+    const want = Math.min(step, room);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await new Promise(r => setTimeout(r, 500));
     const moved = box.scrollTop - t0, same = box.querySelector('.slide.on') === el0;
@@ -132,10 +138,12 @@ const key = (page, k) => page.evaluate(k =>
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await new Promise(r => setTimeout(r, 250));
     const left = box.querySelector('.slide.on') !== el1;
-    return { moved, same, backUp, hintEnd, next, topOnNew, left, leftWhileDown };
+    return { moved, same, backUp, hintEnd, next, topOnNew, left, leftWhileDown, room, want };
   }, fp.tall);
-  is(fk.moved > 40 && fk.same,
-     '  ↓ 를 누르면 <b>' + fk.moved + 'px 내려가고</b> 장은 그대로다');
+  is(fk.moved >= fk.want - 2 && fk.moved > 0 && fk.same,
+     '  ↓ 를 누르면 <b>' + fk.moved + 'px 내려가고</b> 장은 그대로다 — ' +
+     '남은 ' + fk.room + 'px 중 내려야 할 ' + fk.want + 'px ' +
+     '(고치기 전에는 이 자리가 아예 안 열렸다)');
   is(fk.backUp, '  ↑ 를 누르면 <b>올라온다</b> — 다시 보실 수 있다');
   is(!fk.hintEnd, '  바닥에 닿으면 <b>「더 있습니다」가 사라진다</b>');
   is(fk.next, '  바닥에서 ↓ 를 누르면 <b>다음 장</b>으로 간다');
@@ -185,6 +193,8 @@ const key = (page, k) => page.evaluate(k =>
     const s = secs[tall];
     const hint = document.body.classList.contains('pvmore');
     const t0 = s.scrollTop;
+    const room = s.scrollHeight - s.clientHeight;
+    const want = Math.min(Math.round(s.clientHeight * 0.86), room);
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
     await new Promise(r => setTimeout(r, 600));
     const moved = s.scrollTop - t0, same = P.index === tall;
@@ -200,11 +210,12 @@ const key = (page, k) => page.evaluate(k =>
     const at = P.index;
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
     await new Promise(r => setTimeout(r, 200));
-    return { hint, moved, same, backUp, hintEnd, next, topOnNew, left: P.index !== at };
+    return { hint, moved, same, backUp, hintEnd, next, topOnNew, left: P.index !== at, room, want };
   }, mp.tall);
   is(mk.hint, '  넘치는 장에 <b>「더 있습니다」</b>가 뜬다');
-  is(mk.moved > 40 && mk.same,
-     '  ↓ 를 누르면 <b>' + mk.moved + 'px 내려가고</b> 장은 그대로다 ' +
+  is(mk.moved >= mk.want - 2 && mk.moved > 0 && mk.same,
+     '  ↓ 를 누르면 <b>' + mk.moved + 'px 내려가고</b> 장은 그대로다 — ' +
+     '남은 ' + mk.room + 'px 중 내려야 할 ' + mk.want + 'px ' +
      '(고치기 전에는 0px — 아예 안 내려갔다)');
   is(mk.backUp, '  ↑ 를 누르면 <b>올라온다</b>');
   is(!mk.hintEnd, '  바닥에 닿으면 <b>「더 있습니다」가 사라진다</b>');
