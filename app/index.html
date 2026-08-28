@@ -997,6 +997,10 @@ body.bohum-mode #bohumScreen{display:block;}
 body.mikki-mode .app{display:none;}
 body.mikki-mode #mikkiScreen{display:block;}
 #mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+#onecmpScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.onecmp-mode .app{display:none;}
+body.onecmp-mode #onecmpScreen{display:block;}
+#onecmpScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* APEX 전체 지도 (같은 패턴) */
 #apexMapScreen{display:none;position:fixed;inset:0;z-index:300;background:#EDF2FA;}
 body.apexmap-mode .app{display:none;}
@@ -1418,6 +1422,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 한장 보험료 비교 전용 화면 -->
+<div id="onecmpScreen">
+  <iframe id="onecmpFrame" class="fin-frame" title="한장 보험료 비교"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitOneCmp()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadOneCmp()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openOneCmpNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -4928,6 +4942,7 @@ function osTabProbe(tab){
   /* go()의 분기를 부작용 없이 흉내내 HTML을 반환. 실패 시 throw. finance/crm은 iframe이라 존재만 확인 */
   if(tab==='finance'){if(typeof mountFinance==='function'&&document.getElementById('finB64'))return '재무설계 모듈 존재';throw new Error('mountFinance/finB64 없음');}
   if(tab==='crm'){if(typeof mountCrm==='function')return 'CRM 모듈 존재';throw new Error('mountCrm 없음');}
+  if(tab==='onecmp'){if(typeof mountOneCmp==='function'&&document.getElementById('onecmpFrame'))return '한장 보험료 비교 모듈 존재';throw new Error('mountOneCmp/onecmpFrame 없음');}
   if(tab==='home'||tab==='dashboard')return (typeof renderHome==='function')?renderHome():renderDashboard();
   if(tab==='settings')return renderSettings();
   if(tab==='ready')return renderReady();
@@ -10464,6 +10479,7 @@ var TABS=[
    {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
    {id:'baba',icon:'🔄',title:'비포&애프터',cnt:'',ak:'보장분석'},
    {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
+   {id:'onecmp',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사'},
    {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
    {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:'',ak:'보장분석'},
    {id:'interpret',icon:'🧠',title:'보험 해석',cnt:'',ak:'보험 해석'},
@@ -11604,6 +11620,13 @@ function go(tab){
     return;
   }
 
+  if(tab==='onecmp'){
+    mountOneCmp();
+    osFullMode('onecmp-mode');
+    navMark('onecmp');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='mikki'){
     mountMikki();
     osFullMode('mikki-mode');
@@ -11936,8 +11959,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 07:30';
-var APP_BUILD_NOTE='<b>메뉴가 이제 어디서나 위에 가로로 붙습니다 — 폰이든 웹이든 똑같이.</b> 전에는 왼쪽 세로 메뉴가 웹에서만 늘 보이고 폰에서는 ☰ 를 눌러야 나오는 서랍이라, 같은 앱인데 <b>「메뉴가 어디 있나」의 답이 둘</b>이었습니다. 이제 위 띠에서 <b>그룹을 누르면 그 칸들이 펼쳐지고</b>, 고르면 저절로 닫힙니다. 찾기 칸도 그 자리에 있습니다. 세로 메뉴는 <b>없애지 않고</b> ☰ 서랍으로 남겼습니다 — 즐겨찾기·최근 쓴 것·설치 안내가 거기 있습니다. <b>메뉴를 두 벌로 만들지 않았습니다</b>(5번). 그룹은 <code>visibleTabs()</code> 에서, 칸 단추는 사이드바가 쓰던 <code>navBtnHtml</code> 로 그대로 만듭니다 — 그래서 강조·즐겨찾기 ☆·등급 가림이 저절로 같이 돕니다. 실제로 재 보니 <b>가로 79칸 = 세로 79칸</b>, 한쪽에만 있는 칸이 <b>하나도 없습니다.</b> 새 점검 <code>check-topnav</code> — 세 폭(폰 390 · 노트북 1024 · 웹 1440)에서 실제로 눌러 보고, <b>600px 내린 뒤에도 위에 붙어 있는지</b>까지 잽니다. 열 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 둘은 처음에 안 울려 점검을 고쳤습니다 — 맨 위에서만 재면 sticky 를 떼도 통과했고, 세로 메뉴가 <b>밀려나 있어도 격자 자리는 차지</b>하고 있었습니다. <b>[풀리포트]</b> 고객 맞춤 보장분석 풀리포트가 함께 들어옵니다 — 병이 왔을 때 <b>쓸 수 있는 돈</b>으로 뒤집어 보고, 범위가 다른 진단비를 그냥 더하지 않습니다. 붙이는 과정에서 <b>메뉴에서 사라졌던 「비포&애프터」</b>도 제자리에 되살렸습니다.';
+var APP_BUILD='2026-08-29 09:10';
+var APP_BUILD_NOTE='<b>「한장 보험료 비교」가 상담 도구에 들어왔습니다 — 보험사 전부를 담보별로 한 화면에 놓고 견줍니다.</b> 지금까지는 회사 보험료비교 화면을 따로 열어 상품을 세 개씩 골라 가며 봤습니다. 이제 <b>담보 한 줄 × 보험사 전부</b>가 한 표에 서고, 담보마다 <b>제일 싼 회사에 파란 테두리와 「최저」</b>가 붙습니다. 회사 머리에는 <b>「담보 N개 최저」</b>가 적혀 어느 회사가 몇 군데서 이기는지 한눈에 보입니다. <b>담보 고르기</b>로 고객에게 필요한 보장과 금액만 골라 그 구성 그대로 비교할 수 있고, <b>만기별</b>(20년/80·90·100세)과 <b>연령별</b>(지금·+1·+2·+5·+10세)로 「지금 가입할 때와 나중에 가입할 때」 차이를 그 자리에서 보여 줍니다. 담보 이름을 누르면 <b>보험사별 약관 원문</b>이 카드로 나란히 섭니다. <b>고객 모드</b>를 켜면 보험사명·상품명이 <b>순위</b>로 바뀝니다. 결과는 <b>카톡 카드·표 이미지</b>로 뽑거나 <b>크게 보기</b>로 그대로 보여 줄 수 있습니다. 요율은 <b>미리 받아 두지 않고</b> 조회할 때마다 회사 서버에서 그때 받아 옵니다 — 회사가 요율을 갱신하면 다음 조회부터 바로 반영됩니다. <b>처음 한 번</b> 회사에서 받은 보험료비교 링크를 붙여넣어 주십시오(그 다음부터는 기억합니다). 링크는 <b>그 브라우저에만</b> 남고 CRM 서버에는 저장되지 않습니다. 하루쯤 지나 링크가 만료되면 화면이 알아서 다시 물어봅니다. <b>[정직]</b> 담보별 가입 한도와 스코어링은 반영되지 않은 <b>단순 보험료 비교</b>이고, 실제 보험료와 가입 가능 여부는 <b>심사 결과에 따릅니다</b>.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12430,6 +12453,17 @@ var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
 function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
 function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+
+/* ════════ 한장 보험료 비교 ════════
+   회사(A+에셋) 보험료비교 시스템을 우리 화면으로 다시 그린 것. 별도 주소에
+   올려 두고 여기서는 틀만 띄운다 — 요율은 늘 회사 서버에서 그때 받아 온다.
+   ⚠ 다른 주소이므로 이 iframe 안의 로그인(링크)은 CRM 과 따로 논다.
+      처음 한 번 회사 링크를 붙여넣어야 하고, 그 다음부터는 기억한다. */
+var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
+function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
+function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
+function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitOneCmp(){go(lastTab||'home');}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.
@@ -15641,6 +15675,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
+  else if(document.body.classList.contains('onecmp-mode'))exitOneCmp();
   else if(document.body.classList.contains('apexmap-mode'))exitApexMap();
 });
 
@@ -22016,8 +22051,8 @@ function manMap(){
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
     {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
-     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
-     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
+     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
+     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 열 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다. 부족한 담보가 나오면 한장 보험료 비교로 어느 회사가 그 담보를 제일 싸게 주는지 바로 봅니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
