@@ -61,10 +61,45 @@ function brand(){
 }
 const svg = (w,h,body) => '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+
   '" viewBox="0 0 '+w+' '+h+'"><rect width="'+w+'" height="'+h+'" fill="'+SV.bg+'"/>'+body+'</svg>';
-function foot(w,h){
+function foot(w,h,c){
   const b = brand();
-  return '<rect x="0" y="'+(h-6)+'" width="'+w+'" height="6" fill="'+SV.brand+'"/>'+
+  return '<rect x="0" y="'+(h-6)+'" width="'+w+'" height="6" fill="'+(c||SV.brand)+'"/>'+
     (b ? tx([b], w-56, h-30, 20, 0, SV.sub, 700, 'end') : '');
+}
+
+/* ── 날마다 같은 그림이 나가지 않게 ──────────────────────────────
+   매일 올리기로 바꾸고 나서 생긴 문제다. 대표 이미지가 서른 날 똑같으면
+   블로그가 죽어 보인다. 그렇다고 <b>없는 것을 그려 넣지는 않는다</b> —
+   숫자도 그래프도 아니고, <b>색과 무늬만</b> 바꾼다.
+   무늬는 <b>날짜와 갈래에서</b> 나온다. 그래서 같은 글은 다시 그려도
+   같은 그림이다 — 어제 올린 글을 다시 뽑았는데 딴 그림이면 헷갈린다. */
+function seedn(row){
+  const s = String((row && row.ymd) || '') + '|' + String((row && row.kind) || '');
+  let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+/* 갈래 색 — 갈래 표(blog.html)가 답한다. 여기에 다시 적어 두지 않는다. */
+function kcolor(row){
+  try{ const c = KINDS[row.kind] && KINDS[row.kind].c; if (c) return c; }catch(e){}
+  return SV.brand;
+}
+/* 무늬 넷 — 축도 눈금도 숫자도 없다. 읽을 것이 없으니 근거가 되지 않는다. */
+function deco(n, W, H, c){
+  const o = 'opacity=".10"', a = [];
+  if (n % 4 === 0){
+    for (let i = 0; i < 6; i++)
+      a.push('<circle cx="'+(W-150-i*34)+'" cy="'+(H-140+((i%2)?26:0))+'" r="'+(90-i*11)+'" fill="none" stroke="'+c+'" stroke-width="10" '+o+'/>');
+  } else if (n % 4 === 1){
+    for (let i = 0; i < 9; i++)
+      a.push('<rect x="'+(W-120-i*46)+'" y="'+(H-60-i*22)+'" width="18" height="'+(40+i*22)+'" rx="9" fill="'+c+'" '+o+'/>');
+  } else if (n % 4 === 2){
+    for (let i = 0; i < 5; i++)
+      a.push('<path d="M '+(W-460+i*40)+' '+H+' A 230 230 0 0 1 '+(W-40)+' '+(H-420+i*40)+'" fill="none" stroke="'+c+'" stroke-width="12" '+o+'/>');
+  } else {
+    for (let i = 0; i < 7; i++)
+      a.push('<rect x="'+(W-330+i*44)+'" y="'+(H-330+i*44)+'" width="180" height="180" rx="26" fill="none" stroke="'+c+'" stroke-width="9" '+o+'/>');
+  }
+  return a.join('');
 }
 
 /* 초안에서 뽑아 쓰는 것 — 있는 줄만 가져온다 */
@@ -97,10 +132,12 @@ const ART = {
     if (!ttl) return { err:'제목을 아직 못 뽑았습니다 — 초안을 먼저 만들어 주세요.' };
     const ls = wrap(ttl, 18), size = ls.length > 3 ? 56 : 66, lh = size + 22;
     const top = Math.max(96, (H - ls.length * lh - 70) / 2);
+    const n = seedn(row), c = kcolor(row);
     return { w:W, h:H, alt:ttl, text:ttl, svg: svg(W, H,
-      '<rect x="0" y="0" width="14" height="'+H+'" fill="'+SV.brand+'"/>'+
-      tx([KINDS[row.kind].t], 72, top, 26, 0, SV.brand, 800)+
-      tx(ls, 72, top + 70 + size * 0.2, size, lh, SV.ink, 800)+ foot(W,H)) };
+      deco(n, W, H, c)+
+      '<rect x="0" y="0" width="14" height="'+H+'" fill="'+c+'"/>'+
+      tx([KINDS[row.kind].t], 72, top, 26, 0, c, 800)+
+      tx(ls, 72, top + 70 + size * 0.2, size, lh, SV.ink, 800)+ foot(W,H,c)) };
   }},
 
  news:{ t:'뉴스 카드', need:'seed',
