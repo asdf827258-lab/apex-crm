@@ -1245,37 +1245,70 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   min-width:0;font-family:inherit;}
 .tn-find input::placeholder{color:rgba(255,255,255,.45);}
 .tn-find .nf-x{background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:12px;}
-/* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다 */
-.tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;}
+/* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다.
+   <b>마우스로도 넘어간다</b> — 휠을 굴리거나 끌면 옆으로 간다(tnDragWire).
+   양 끝의 옅은 그늘(.tn-2w::before/after)이 「더 있다」는 표시다. */
+.tn-2w{position:relative;}
+.tn-2w::before,.tn-2w::after{content:'';position:absolute;top:0;bottom:8px;width:26px;
+  pointer-events:none;z-index:2;opacity:0;transition:opacity .15s;}
+.tn-2w::before{left:0;background:linear-gradient(90deg,var(--ink-2),rgba(0,0,0,0));}
+.tn-2w::after{right:0;background:linear-gradient(270deg,var(--ink-2),rgba(0,0,0,0));}
+.tn-2w.can-l::before{opacity:1;}
+.tn-2w.can-r::after{opacity:1;}
+.tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;
+  scroll-behavior:smooth;cursor:grab;}
+.tn-2.drag{cursor:grabbing;scroll-behavior:auto;}
 .tn-2::-webkit-scrollbar{display:none;}
+/* 끝까지 갔는지 보여 주는 화살표 — 마우스만 쓰시는 분을 위해 */
+.tn-arw{position:absolute;top:-2px;z-index:3;width:24px;height:28px;border:none;cursor:pointer;
+  background:rgba(255,255,255,.10);color:#fff;font-size:13px;line-height:1;border-radius:5px;
+  display:none;align-items:center;justify-content:center;font-family:inherit;}
+.tn-arw:hover{background:rgba(255,255,255,.22);}
+.tn-2w.can-l .tn-arw.l{display:flex;left:2px;}
+.tn-2w.can-r .tn-arw.r{display:flex;right:2px;}
 /* 색은 <b>세로 메뉴와 같은 한 줄기</b>다 — navRamp() 가 정한 --gc/--ge/--gt/--ga/--gb
    를 그대로 받아 쓴다. 여기서 색을 새로 정하면 위·옆이 서로 다른 색이 되어
    같은 칸을 두 가지로 외우시게 된다 (5번). 위는 보라, 내려갈수록 남색·청록·
    초록을 지나 끝은 금빛 — 가로에서는 <b>왼쪽에서 오른쪽</b>으로 흐른다. */
-.tn-g{flex:0 0 auto;border-radius:99px;cursor:pointer;white-space:nowrap;font-family:inherit;
-  font-size:12.5px;font-weight:700;padding:6px 12px 6px 10px;
+/* <b>각지고 네모나게.</b> 둥근 알약은 옆 칸과 경계가 흐려 「한눈에」 가 안
+   된다. 네모는 색 띠가 붙어 <b>한 줄기</b>로 읽힌다. 왼쪽에 짙은 세로 막대를
+   세워 어느 갈래인지 색으로 먼저 보이게 한다. */
+.tn-g{flex:0 0 auto;border-radius:3px;cursor:pointer;white-space:nowrap;font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:7px 11px 7px 9px;
   display:inline-flex;align-items:center;gap:5px;
   background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .34)),
                                     rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .92)));
   border:1px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .40));
+  border-left:3px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .95));
   color:rgb(var(--gt,190 210 245));transition:filter .12s,box-shadow .12s;}
 .tn-g .tng-ic{font-size:12px;line-height:1;opacity:.92;}
 .tn-g .tng-n{font-size:10.5px;font-weight:800;opacity:.72;
-  background:rgb(var(--ge,90 120 200) / .30);border-radius:99px;padding:1px 5px;}
+  background:rgb(var(--ge,90 120 200) / .30);border-radius:2px;padding:1px 5px;}
 .tn-g:hover{filter:brightness(1.28);}
 .tn-g.on{background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / .92),
                                           rgb(var(--gc,90 120 200) / .92));
   border-color:rgb(var(--ge,90 120 200) / 1);color:#fff;
-  box-shadow:0 0 0 1px rgb(var(--ge,90 120 200) / .45),0 2px 8px rgb(var(--gc,90 120 200) / .40);}
+  box-shadow:0 2px 8px rgb(var(--gc,90 120 200) / .40);}
 .tn-g.on .tng-n{background:rgba(255,255,255,.22);opacity:.95;}
+/* 펼친 갈래는 아래 펼침칸과 <b>이어져 보이게</b> 밑모서리를 편다 */
+.tn-g.on{border-bottom-left-radius:0;border-bottom-right-radius:0;}
 /* 찾는 중 딱지는 갈래가 없다 — 한 줄기 색을 안 쓴다 */
-.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;color:#fff;box-shadow:none;}
+.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;border-left-color:#93C5FD;color:#fff;box-shadow:none;}
 /* 펼친 칸들 — 열어 둔 갈래 색을 옅게 이어받는다(위에서 아래로 사라진다) */
 .tn-pane{display:none;max-height:56vh;overflow-y:auto;padding:10px 12px 12px;
   background:linear-gradient(180deg,rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .34)),
                                     rgb(var(--gc,90 120 200) / 0) 120px),var(--ink-1);
   border-top:1px solid rgb(var(--ge,255 255 255) / calc(var(--gb,.07) * .5));}
 .tn-pane.on{display:block;}
+/* 펼침칸 머리 — 어느 갈래를 열어 두었는지 글로도 적고, 닫는 자리를 준다.
+   펼친 채로 화면을 옮겨도 <b>그대로 유지</b>되므로 닫는 길이 꼭 있어야 한다. */
+.tn-ph{display:flex;align-items:center;gap:8px;margin:-2px 0 9px;}
+.tn-ph b{font-size:12.5px;color:#fff;letter-spacing:-.02em;}
+.tn-ph em{font-style:normal;font-size:11px;color:rgba(255,255,255,.5);}
+.tn-ph button{margin-left:auto;background:rgba(255,255,255,.10);border:none;border-radius:4px;
+  color:rgba(255,255,255,.82);font-size:11.5px;font-weight:700;padding:4px 9px;cursor:pointer;
+  font-family:inherit;}
+.tn-ph button:hover{background:rgba(255,255,255,.2);color:#fff;}
 .tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px;}
 .tn-pane .nav-row{margin:0;}
 .tn-none{font-size:12px;color:rgba(255,255,255,.55);padding:6px 2px;}
@@ -1367,7 +1400,11 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
       <button type="button" class="nf-x" onclick="navFind('')" aria-label="찾기 지우기">✕</button>
     </div>
   </div>
-  <div class="tn-2" id="tnGroups"></div>
+  <div class="tn-2w" id="tnGroupsWrap">
+    <button type="button" class="tn-arw l" onclick="tnNudge(-1)" aria-label="왼쪽으로">‹</button>
+    <div class="tn-2" id="tnGroups"></div>
+    <button type="button" class="tn-arw r" onclick="tnNudge(1)" aria-label="오른쪽으로">›</button>
+  </div>
   <div class="tn-pane" id="tnPane"></div>
 </div>
 <div class="scrim" id="scrim" onclick="toggleNav()"></div>
@@ -11017,6 +11054,18 @@ function navBtnHtml(it,star){
    찾는 중(NAV_Q)에는 그룹을 접고 <b>걸린 칸만</b> 편다 — 찾는 사람에게
    나머지 열일곱 그룹은 방해다. 사이드바와 같은 규칙이다.            */
 var TN_OPEN=-1;                   /* 지금 펴 둔 그룹 번호. -1 이면 닫힘 */
+/* ── 펴 둔 갈래는 <b>그대로 유지</b>된다 ──────────────────────────────
+   전에는 화면을 고르면 곧바로 접혔다. 그래서 「내 고객」 안에서 두 개를
+   보려면 <b>매번 다시 펴야</b> 했다. 폰에서 특히 손이 많이 간다.
+
+   이제 편 갈래를 <b>이름으로</b> 기억한다(번호가 아니다 — 등급에 따라
+   갈래 수가 달라져 번호는 어긋난다). 화면을 옮겨도, 새로고침해도 그대로
+   펴져 있다. 대신 닫는 길을 꼭 둔다 — 펼침칸 머리의 「✕ 닫기」.       */
+var TN_KEY='apex_tn_open';
+function tnOpenSave(name){
+  try{ if(name)localStorage.setItem(TN_KEY,name); else localStorage.removeItem(TN_KEY); }catch(e){}
+}
+function tnOpenLoad(){ try{ return localStorage.getItem(TN_KEY)||''; }catch(e){ return ''; } }
 /* 사이드바와 <b>똑같이</b> 거른다 — 그룹의 hide, 칸의 hide 둘 다.
    hide 는 지운 것이 아니라 「눈에서만 뺀 것」이라, 한쪽에만 걸면 같은 칸이
    위에는 있고 옆에는 없다. 두 메뉴가 서로 다른 말을 하면 안 된다 (5번). */
@@ -11031,10 +11080,14 @@ function tnGroups(){
 }
 function tnToggle(i){
   TN_OPEN=(TN_OPEN===i)?-1:i;
+  var gs=tnGroups();
+  tnOpenSave(TN_OPEN>=0&&gs[TN_OPEN]?gs[TN_OPEN].group:'');
   if(NAV_Q&&TN_OPEN>=0)navFind('');   /* 찾는 중에 그룹을 누르면 찾기를 놓는다 */
   else tnPaint();
 }
-function tnClose(){ TN_OPEN=-1; tnPaint(); }
+/* 사장님이 <b>직접</b> 닫으실 때만 기억도 지운다. go() 로 화면을 옮기는 것은
+   닫는 뜻이 아니다 — 그때도 접히면 「매번 다시 펴야」 하는 옛날로 돌아간다. */
+function tnClose(){ TN_OPEN=-1; tnOpenSave(''); tnPaint(); }
 function tnPaint(){
   var bar=$('tnGroups'),pane=$('tnPane');
   if(!bar||!pane)return;
@@ -11058,6 +11111,12 @@ function tnPaint(){
     return;
   }
 
+  /* 기억해 둔 갈래를 <b>이름으로</b> 되찾는다 — 새로고침해도 그대로 펴져 있다.
+     번호로 담아 두면 등급에 따라 갈래 수가 달라져 엉뚱한 칸이 펴진다. */
+  if(TN_OPEN<0){
+    var want=tnOpenLoad();
+    if(want)for(i=0;i<gs.length;i++)if(gs[i].group===want){TN_OPEN=i;break;}
+  }
   /* 색은 <b>세로 메뉴가 쓰는 그 함수</b>에서 그대로 받는다 — 여기서 새로
      정하면 위·옆이 다른 색이 되고, 갈래를 늘렸을 때 한쪽만 어긋난다 (5번). */
   for(i=0;i<gs.length;i++){
@@ -11082,10 +11141,63 @@ function tnPaint(){
   if(co)pane.setAttribute('style','--gc:'+co.c+';--ge:'+co.e+';--gt:'+co.w+';--ga:'+co.a+';--gb:'+co.b);
   var rows2='';
   gs[TN_OPEN].items.forEach(function(it){ rows2+=navBtnHtml(it); });
-  pane.innerHTML='<div class="tn-grid">'+rows2+'</div>';
+  /* 펼친 채로 화면을 옮겨도 그대로 있으므로 <b>닫는 길</b>이 꼭 있어야 한다 */
+  pane.innerHTML='<div class="tn-ph"><b>'+esc(gs[TN_OPEN].group)+'</b>'+
+      '<em>'+gs[TN_OPEN].items.length+'칸</em>'+
+      '<button type="button" onclick="tnClose()">✕ 닫기</button></div>'+
+    '<div class="tn-grid">'+rows2+'</div>';
   pane.classList.add('on');
   /* 새로 그린 단추에 지금 화면 강조를 다시 입힌다 — 강조를 아는 곳은 한 곳뿐이다 */
   if(typeof navMark==='function'&&typeof currentTab==='function'){try{navMark(currentTab());}catch(e){}}
+  try{tnEdges();}catch(e){}
+}
+/* ── 마우스로도 넘어가게 ──────────────────────────────────────────
+   갈래가 열넷이라 노트북에서도 띠가 넘친다. 폰은 손으로 밀면 되지만
+   마우스에는 <b>가로로 미는 방법이 없다</b> — 세로 휠만 있다. 그래서
+   ① 휠을 가로 스크롤로 바꾸고 ② 끌어서 밀 수 있게 하고
+   ③ 양 끝에 그늘과 화살표를 띄워 <b>더 있다</b>는 것을 보여 준다.       */
+function tnEdges(){
+  var w=$('tnGroupsWrap'),b=$('tnGroups');
+  if(!w||!b)return;
+  var max=b.scrollWidth-b.clientWidth;
+  w.classList.toggle('can-l',b.scrollLeft>4);
+  w.classList.toggle('can-r',max>4&&b.scrollLeft<max-4);
+}
+function tnNudge(dir){
+  var b=$('tnGroups'); if(!b)return;
+  b.scrollLeft+=dir*Math.max(120,Math.round(b.clientWidth*0.7));
+  setTimeout(tnEdges,260);
+}
+var TN_WIRED=false;
+function tnDragWire(){
+  var b=$('tnGroups'); if(!b||TN_WIRED)return; TN_WIRED=true;
+  /* 세로 휠을 가로로. 가로 휠(터치패드)은 브라우저가 알아서 하니 건드리지 않는다 */
+  b.addEventListener('wheel',function(e){
+    if(Math.abs(e.deltaY)<=Math.abs(e.deltaX))return;
+    var max=b.scrollWidth-b.clientWidth; if(max<=0)return;
+    e.preventDefault(); b.scrollLeft+=e.deltaY; tnEdges();
+  },{passive:false});
+  var down=false,x0=0,l0=0,moved=0;
+  b.addEventListener('pointerdown',function(e){
+    if(e.pointerType==='touch')return;       /* 손가락은 브라우저가 더 잘한다 */
+    down=true;moved=0;x0=e.clientX;l0=b.scrollLeft;b.classList.add('drag');
+  });
+  b.addEventListener('pointermove',function(e){
+    if(!down)return;
+    var d=e.clientX-x0; if(Math.abs(d)>3)moved=1;
+    b.scrollLeft=l0-d; tnEdges();
+  });
+  var up=function(e){
+    if(!down)return; down=false;b.classList.remove('drag');
+    /* 끌고 나서 손을 떼면 그 자리 단추가 눌리면 안 된다 */
+    if(moved&&e&&e.target&&e.target.closest&&e.target.closest('.tn-g')){
+      e.preventDefault();e.stopPropagation();
+    }
+  };
+  b.addEventListener('pointerup',up,true);
+  b.addEventListener('pointerleave',function(){down=false;b.classList.remove('drag');});
+  b.addEventListener('scroll',tnEdges,{passive:true});
+  window.addEventListener('resize',function(){try{tnEdges();}catch(e){}});
 }
 /* 찾기 칸이 위·옆 두 곳이라 <b>글자만</b> 서로 맞춰 준다 (값이 두 벌이 되면 안 된다) */
 function tnSyncFind(){
@@ -11714,6 +11826,8 @@ function renderNav(){
   /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
      바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
   try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
+  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
   if(!NAVG_SHUT&&typeof lastTab!=='undefined')navReveal(lastTab);
   NAVG_SHUT=false;
   if(typeof osNoticeApply==='function')osNoticeApply();
@@ -11744,8 +11858,12 @@ function osFullMode(on){
   if(on)b.classList.add(on);
 }
 function go(tab){
-  /* 골랐으면 펴 둔 가로 메뉴와 서랍은 닫는다 — 안 닫으면 고른 화면을 덮는다 */
-  try{ if(typeof tnClose==='function')tnClose(); }catch(e){}
+  /* 펴 둔 갈래는 <b>안 접는다</b> — 접으면 같은 갈래에서 두 번째 칸을 보려고
+     매번 다시 펴야 한다. 폰에서 특히 손이 많이 갔다. 닫는 것은 펼침칸 머리의
+     「✕ 닫기」 로 <b>사장님이 정하십니다.</b> 대신 고른 칸이 어디인지는
+     navMark 가 펼침칸 안에서 그대로 표시해 준다.
+     서랍(세로 메뉴)은 화면을 통째로 덮으므로 그대로 닫는다. */
+  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
   try{
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
@@ -12125,7 +12243,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-08-29 17:30';
-var APP_BUILD_NOTE='<b>30일 고객관리 「화질이 깨지던」 것을 고쳤습니다 — 원인은 글꼴이 아니었습니다.</b> 그 표(<code>.cc-team</code>)의 <b>옷을 입혀 주는 함수를 이 화면이 안 불렀습니다.</b> 고객 365일과 팩트파인딩에서는 부르는데 TFA 30일 화면에서만 안 불러, <b>옷을 못 입은 표</b>가 그대로 서 있었습니다 — 칸이 안 갈리고 숫자가 뭉개집니다. CLAUDE.md 5번이 적어 둔 그 자리입니다(「클래스를 넣어 주는 xxxCss() 를 쓰는 화면은 그 화면에서도 부른다」). 표도 함께 손봤습니다 — 칸이 <b>일곱</b>인데 폰에서 옆으로 밀렸습니다. 이제 좁은 화면에서는 <b>사람별 카드</b>로 접히고 각 줄 앞에 칸 이름이 붙습니다. 글자를 키우고 숫자를 <b>자릿수 맞춰</b> 세웠으며(인쇄에는 안 나갑니다 — 4-1), 넓은 화면에서는 <b>이름 칸이 왼쪽에 붙어</b> 옆으로 밀어도 누구 줄인지 보입니다. 그리고 <b>DB 통합 CRM 에서 이미 만났는데 고객 365일에 없는 분</b>을 그 화면에 띄웁니다. 전화를 걸어 두고도 안 올리면 <b>30일 주기에서 통째로 빠집니다</b> — 상담까지 했는데 다시 연락할 날짜를 아무도 안 챙깁니다. <b>상담까지 간 분</b>이 먼저 오고, 「＋ 고객 365일에 올리기」 를 누르면 이름을 들고 넘어갑니다. <b>없는 정보는 만들지 않습니다</b> — CRM 에 적힌 것만 옮기고 보험료·생일 같은 것은 지어내지 않습니다(1번). 이름은 서버에 <b>가린 모양(김○○)</b>으로만 있어 그것끼리 견줍니다(3번). 한 번도 안 건 사람과 이미 고객 365일에 있는 분은 안 띄웁니다. 새 점검 <code>check-care30</code> — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 <b>되돌리기 자체가 안 먹어</b> 헛통과했습니다(문자열이 안 맞았습니다). 제대로 지우니 일곱 자리가 울렸습니다. 점검은 <b>새 파일을 만들지 않고</b> 이미 있던 <code>check-crmcare</code>(이 화면을 보던 열일곱 칸)에 두 칸을 더했습니다 — 같은 화면 점검이 두 벌이면 한쪽만 고칩니다(5번). 여섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 헛통과했습니다 — <b>주석에 적힌 「cmCss()」 를 읽고</b> 그 줄을 지워도 통과했습니다. 주석을 걷고 보게 고쳤습니다(8번). 같은 판에 <b>[main]</b> 본인 역량 체크에서 교재로 바로 가게 되었습니다 — 열둘 중 열 개가 이어졌고 둘은 교재에 없어 일부러 비웠습니다.';
+var APP_BUILD_NOTE='<b>30일 고객관리 「화질이 깨지던」 것을 고쳤습니다 — 원인은 글꼴이 아니었습니다.</b> 그 표(<code>.cc-team</code>)의 <b>옷을 입혀 주는 함수를 이 화면이 안 불렀습니다.</b> 고객 365일과 팩트파인딩에서는 부르는데 TFA 30일 화면에서만 안 불러, <b>옷을 못 입은 표</b>가 그대로 서 있었습니다 — 칸이 안 갈리고 숫자가 뭉개집니다. CLAUDE.md 5번이 적어 둔 그 자리입니다(「클래스를 넣어 주는 xxxCss() 를 쓰는 화면은 그 화면에서도 부른다」). 표도 함께 손봤습니다 — 칸이 <b>일곱</b>인데 폰에서 옆으로 밀렸습니다. 이제 좁은 화면에서는 <b>사람별 카드</b>로 접히고 각 줄 앞에 칸 이름이 붙습니다. 글자를 키우고 숫자를 <b>자릿수 맞춰</b> 세웠으며(인쇄에는 안 나갑니다 — 4-1), 넓은 화면에서는 <b>이름 칸이 왼쪽에 붙어</b> 옆으로 밀어도 누구 줄인지 보입니다. 그리고 <b>DB 통합 CRM 에서 이미 만났는데 고객 365일에 없는 분</b>을 그 화면에 띄웁니다. 전화를 걸어 두고도 안 올리면 <b>30일 주기에서 통째로 빠집니다</b> — 상담까지 했는데 다시 연락할 날짜를 아무도 안 챙깁니다. <b>상담까지 간 분</b>이 먼저 오고, 「＋ 고객 365일에 올리기」 를 누르면 이름을 들고 넘어갑니다. <b>없는 정보는 만들지 않습니다</b> — CRM 에 적힌 것만 옮기고 보험료·생일 같은 것은 지어내지 않습니다(1번). 이름은 서버에 <b>가린 모양(김○○)</b>으로만 있어 그것끼리 견줍니다(3번). 한 번도 안 건 사람과 이미 고객 365일에 있는 분은 안 띄웁니다. 새 점검 <code>check-care30</code> — 다섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 <b>되돌리기 자체가 안 먹어</b> 헛통과했습니다(문자열이 안 맞았습니다). 제대로 지우니 일곱 자리가 울렸습니다. 점검은 <b>새 파일을 만들지 않고</b> 이미 있던 <code>check-crmcare</code>(이 화면을 보던 열일곱 칸)에 두 칸을 더했습니다 — 같은 화면 점검이 두 벌이면 한쪽만 고칩니다(5번). 여섯 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 헛통과했습니다 — <b>주석에 적힌 「cmCss()」 를 읽고</b> 그 줄을 지워도 통과했습니다. 주석을 걷고 보게 고쳤습니다(8번). 같은 판에 <b>[main]</b> 본인 역량 체크에서 교재로 바로 가게 되었습니다 — 열둘 중 열 개가 이어졌고 둘은 교재에 없어 일부러 비웠습니다. 같은 판에 <b>[main]</b> 가로 메뉴가 각진 네모가 되고 마우스로 넘어가며 펴 둔 갈래가 그대로 유지됩니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
