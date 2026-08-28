@@ -6506,6 +6506,8 @@ function arLoad(force){
       if(!lastCall[lmk]||ld>lastCall[lmk])lastCall[lmk]=ld;
     }
     AR.cliRows=arCliRows(r[2].error?[]:(r[2].data||[]),r[3].error?[]:(r[3].data||[]),lastCall);
+    /* CRM 에서 이미 만났는데 고객 365일에 없는 분 — 그대로 두면 주기 관리에서 빠진다 */
+    AR.reco=arRecoCalc(dbs,calls,r[2].error?[]:(r[2].data||[]));
     var rows=r[4].error?[]:(r[4].data||[]),i,c;
     /* 같은 사람 것이 여러 줄이면 가장 최근 것만 쓴다 */
     for(i=0;i<rows.length;i++){
@@ -6598,6 +6600,42 @@ function arCliRows(clients,metas,last){
       ever:ever,at:ever?lt:'',
       days:lt?arDaysAgo(lt):9999});
   }
+  return out;
+}
+/* ── DB 통합 CRM 에서 <b>이미 만난 분</b>인데 고객 365일에 없는 사람 ──────
+   CRM 에 전화를 걸어 두고도 고객 365일에는 안 올려 두는 일이 많다. 그러면
+   30일 주기 관리에서 <b>통째로 빠진다</b> — 상담까지 했는데 다시 연락할
+   날짜를 아무도 안 챙긴다. 이 자리에서 「이분 올릴까요」 라고 띄운다.
+
+   <b>고객 정보는 만들지 않는다</b>(CLAUDE.md 1번). CRM 에 적힌 것만 그대로
+   옮기고, 없는 칸은 비워 둔 채 넘긴다. 이름은 서버에 가린 모양(김○○)으로만
+   있으므로 그것끼리 견준다 (3번).                                       */
+function arRecoCalc(dbs,calls,clients){
+  var have={},i,k,out=[];
+  for(i=0;i<clients.length;i++){k=(''+(clients[i].name_masked||'')).replace(/\s/g,'');if(k)have[k]=1;}
+  /* 언제 · 몇 번 · 어떻게 됐는지 — DB 줄마다 모은다 */
+  var byDb={};
+  for(i=0;i<calls.length;i++){
+    var c=calls[i],id=c.db_id;if(!id)continue;
+    var o=byDb[id]||(byDb[id]={n:0,at:'',res:''});
+    o.n++;
+    var d=(''+(c.call_at||'')).slice(0,10);
+    if(d&&d>o.at){o.at=d;o.res=c.result||'';}
+    if(c.result==='상담')o.appt=1;
+  }
+  for(i=0;i<dbs.length;i++){
+    var db=dbs[i],t=byDb[db.id];
+    if(!t||!t.n)continue;                      /* 한 번도 접촉 안 했으면 추천하지 않는다 */
+    var nm=(''+(db.customer_name||'')).replace(/\s/g,'');
+    if(!nm)continue;
+    var mk=(typeof osMaskName==='function')?osMaskName(nm):nm;
+    if(have[mk])continue;                      /* 이미 고객 365일에 있다 */
+    out.push({dbId:db.id,who:db.assigned_to||'',name:nm,mask:mk,
+              region:db.region||'',n:t.n,at:t.at,res:t.res,appt:!!t.appt,
+              stage:db.stage||'',src:db.source||''});
+  }
+  /* 상담까지 간 분 먼저, 그다음 최근에 통화한 분 */
+  out.sort(function(a,b){return (b.appt?1:0)-(a.appt?1:0)||(b.at<a.at?-1:(b.at>a.at?1:0));});
   return out;
 }
 
@@ -7184,21 +7222,25 @@ function ccTeamHtml(){
     for(i=0;i<out.length;i++){
       r=out[i];
       tot.n+=r.n;tot.over+=r.over;tot.mon+=r.mon;tot.never+=r.never;tot.vip+=r.vip;tot.unk+=r.unk;
+      /* data-k = 좁은 화면에서 각 줄 앞에 붙는 칸 이름. 머리글이 접히므로
+         이것이 없으면 숫자만 줄줄이 뜬다 (위 CSS 의 td:before). */
       h+='<tr'+(r.id===me?' class="me"':'')+'>'+
         '<td>'+osEsc(r.name)+(r.id===me?' <b class="cm-mytag">나</b>':'')+'</td>'+
-        '<td>'+r.n+'</td>'+
-        '<td'+(r.over?' class="warn"':'')+'>'+r.over+(r.vipOver?(' <span style="font-size:10px">(VIP '+r.vipOver+')</span>'):'')+'</td>'+
-        '<td>'+r.vip+'</td>'+
-        '<td'+(r.never?' class="warn"':'')+'>'+r.never+'</td>'+
-        '<td>'+r.mon+'</td>'+
-        '<td class="'+(r.rate===null?'':(r.rate>=90?'good':(r.rate>=70?'':'warn')))+'">'+
+        '<td data-k="고객">'+r.n+'</td>'+
+        '<td data-k="'+cfg.days+'일 넘음"'+(r.over?' class="warn"':'')+'>'+r.over+(r.vipOver?(' <span style="font-size:10px">(VIP '+r.vipOver+')</span>'):'')+'</td>'+
+        '<td data-k="👑 VIP">'+r.vip+'</td>'+
+        '<td data-k="한 번도 없음"'+(r.never?' class="warn"':'')+'>'+r.never+'</td>'+
+        '<td data-k="이번 달 연락">'+r.mon+'</td>'+
+        '<td data-k="달성률" class="'+(r.rate===null?'':(r.rate>=90?'good':(r.rate>=70?'':'warn')))+'">'+
           (r.rate===null?'-':(r.rate+'%'))+'</td></tr>';
     }
     var trate=tot.n?Math.round(((tot.n-tot.over)/tot.n)*1000)/10:null;
     h+='</tbody><tfoot><tr style="font-weight:800">'+
-      '<td>합계</td><td>'+tot.n+'</td><td'+(tot.over?' class="warn"':'')+'>'+tot.over+'</td>'+
-      '<td>'+tot.vip+'</td><td>'+tot.never+'</td><td>'+tot.mon+'</td>'+
-      '<td class="'+(trate===null?'':(trate>=90?'good':'warn'))+'">'+
+      '<td>합계</td><td data-k="고객">'+tot.n+'</td>'+
+      '<td data-k="'+cfg.days+'일 넘음"'+(tot.over?' class="warn"':'')+'>'+tot.over+'</td>'+
+      '<td data-k="👑 VIP">'+tot.vip+'</td><td data-k="한 번도 없음">'+tot.never+'</td>'+
+      '<td data-k="이번 달 연락">'+tot.mon+'</td>'+
+      '<td data-k="달성률" class="'+(trate===null?'':(trate>=90?'good':'warn'))+'">'+
         (trate===null?'-':(trate+'%'))+'</td></tr></tfoot></table></div>';
     /* 조용히 세지 않는다 — 못 읽은 사람이 있으면 몇 명인지 적는다 */
     if(tot.unk)
@@ -7213,7 +7255,58 @@ function ccTeamHtml(){
       '<div class="ar-none" style="margin-top:10px">마지막 연락일은 <b>고객 365일 접촉 기록</b>과 '+
       '<b>DB 통합 CRM 통화 기록</b> 중 더 최근 것으로 셉니다. 한 번도 연락한 적이 없으면 '+
       '등록한 날부터 세고 「한 번도 없음」 으로 따로 적습니다.</div>')+
+    ccRecoHtml()+
     ccTeamOverHtml(out,me,lead);
+}
+/* ── CRM 에서 이미 만났는데 고객 365일에 없는 분 ───────────────────────
+   전화를 걸어 두고도 고객 365일에 안 올리면 <b>30일 주기에서 통째로 빠진다</b>.
+   상담까지 했는데 다시 연락할 날짜를 아무도 안 챙긴다. 여기서 띄운다. */
+function ccRecoHtml(){
+  var all=(typeof AR!=='undefined'&&AR.reco)?AR.reco:[];
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var lead=(typeof arIsLead==='function')?arIsLead():false;
+  var rows=[],i,ok={};
+  if(lead){
+    var sc=(typeof arScope==='function')?arScope():[],j;
+    for(j=0;j<sc.length;j++)ok[sc[j].id]=1;
+    for(i=0;i<all.length;i++)if(!sc.length||ok[all[i].who])rows.push(all[i]);
+  }else{
+    for(i=0;i<all.length;i++)if(all[i].who===me)rows.push(all[i]);
+  }
+  if(!rows.length)return '';
+  var appt=0;for(i=0;i<rows.length;i++)if(rows[i].appt)appt++;
+  var h='<div class="cc-reco">';
+  for(i=0;i<rows.length&&i<40;i++){
+    var r=rows[i];
+    h+='<div class="cc-rc'+(r.appt?' hot':'')+'">'+
+      '<div class="t"><b>'+osEsc(r.name)+'</b>'+
+        (r.region?'<em>'+osEsc(r.region)+'</em>':'')+
+        (r.appt?'<span class="tag">상담까지 감</span>':'')+'</div>'+
+      '<div class="s">'+osEsc(r.at||'날짜 없음')+' · 통화 '+r.n+'번'+
+        (r.res?' · '+osEsc(r.res):'')+
+        (lead&&typeof arNameOf==='function'?(' · '+osEsc(arNameOf(r.who))):'')+'</div>'+
+      '<button type="button" class="go" onclick="ccRecoAdd(\''+osEsc(r.dbId)+'\')">'+
+        '＋ 고객 365일에 올리기</button></div>';
+  }
+  h+='</div>';
+  if(rows.length>40)h+='<div class="ar-none" style="margin-top:8px">' +
+    (rows.length-40)+'명은 더 있습니다 — 위에서부터 정리하시면 따라 올라옵니다.</div>';
+  return arCard('📥','CRM 에서 만났는데 고객 365일에 없는 분',
+    rows.length+'명 — 이 중 <b>'+appt+'명</b>은 상담까지 갔습니다. 여기 없으면 30일 주기에서 <b>통째로 빠집니다</b>',
+    h,
+    '<div class="ar-none" style="margin-top:10px">DB 통합 CRM 에 <b>통화 기록이 하나라도 있는 분</b>만 띄웁니다. '+
+    '이름은 서버에 <b>가린 모양(김○○)</b>으로만 있어 그것끼리 견줍니다 — 실명은 이 브라우저에만 있습니다. '+
+    '<b>없는 정보는 만들지 않습니다</b>: CRM 에 적힌 것만 그대로 옮기고 빈 칸은 비운 채 넘깁니다.</div>');
+}
+/* 누르면 고객 365일로 넘어가 <b>CRM 에 적힌 것만</b> 채운 채 새 고객 칸을 연다 */
+function ccRecoAdd(dbId){
+  var all=(typeof AR!=='undefined'&&AR.reco)?AR.reco:[],i,r=null;
+  for(i=0;i<all.length;i++)if(all[i].dbId===dbId){r=all[i];break;}
+  if(!r){toast('그 줄을 못 찾았습니다 — 화면을 새로고침해 주세요');return;}
+  try{ localStorage.setItem('apex_cc_reco',JSON.stringify(
+    {name:r.name,region:r.region||'',at:r.at||'',n:r.n,from:'CRM',dbId:r.dbId})); }catch(e){}
+  go('clients');
+  toast('「'+r.name+'」 — 고객 365일에서 <b>＋ 새 고객</b>을 누르시면 이름이 채워져 있습니다');
 }
 /* 누가 밀렸는지까지 보여 준다 — 숫자만 보면 사람이 안 보인다 */
 function ccTeamOverHtml(rows,me,lead){
@@ -8653,6 +8746,12 @@ function arCss(){
   arCoachCss();
   try{if(typeof mcCss==='function')mcCss();}catch(e){}
   try{if(typeof acCss==='function')acCss();}catch(e){}
+  /* <b>「30일 고객관리 화질이 깨진다」 의 정체.</b> 그 표(.cc-team)의 옷은
+     cmCss() 가 입혀 주는데, 고객 365일과 팩트파인딩에서만 부르고 있었다.
+     이 화면에서는 <b>옷을 못 입은 표</b>가 그대로 섰다 — 칸이 안 갈리고
+     숫자가 뭉개져 보인다. 클래스를 넣어 주는 xxxCss() 를 쓰는 화면은
+     <b>그 화면에서도 부른다</b> (CLAUDE.md 5번). */
+  try{if(typeof cmCss==='function')cmCss();}catch(e){}
   if(document.getElementById('arCss'))return;
   var s=document.createElement('style');s.id='arCss';
   s.textContent=
@@ -12168,8 +12267,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 16:30';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).';
+var APP_BUILD='2026-08-29 17:40';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -46168,7 +46267,47 @@ function cmCss(){
     '.cc-home{background:#FFF7ED;border-color:#FED7AA;color:#9A3412;display:flex;gap:11px;'+
       'align-items:center;flex-wrap:wrap;font-size:13px}'+
     '.cc-hb{padding:6px 13px;font-size:12px;margin-left:auto}'+
-    '.cc-team{width:100%;border-collapse:collapse;font-size:12px}'+
+    /* ── 폰에서 <b>표가 깨져 보이던 것</b> ─────────────────────────────
+       칸이 일곱인데 글자가 12px·10.5px 이라, 폰에서는 옆으로 밀리면서
+       숫자가 뭉개져 보였다. 「화질이 깨진다」 는 그 말씀이다.
+       ① 글자를 키우고 ② 숫자를 <b>자릿수 맞춰</b> 세우고
+       ③ <b>이름 칸을 왼쪽에 붙여</b> 옆으로 밀어도 누구 줄인지 보이게 하고
+       ④ 좁은 화면에서는 표를 <b>사람별 카드</b>로 접어 아예 안 밀리게 한다.
+       ⚠ tnum(자릿수 맞춤)은 <b>화면에서만</b> 켠다 — 인쇄에 켜면 PDF 에서
+          숫자가 유니코드를 잃는다 (CLAUDE.md 4-1). */
+    '@media screen{.cc-team td,.cc-team tfoot td{font-feature-settings:"tnum";font-variant-numeric:tabular-nums}}'+
+    '.cc-team{width:100%;border-collapse:collapse;font-size:13px}'+
+    '.cc-team th:first-child,.cc-team td:first-child{position:sticky;left:0;background:#fff;z-index:1}'+
+    '.cc-team tr.me td:first-child{background:#F8FAFF}'+
+    '.cc-team tfoot td{background:#F8FAFC}'+
+    '@media(max-width:640px){'+
+      '.cc-team{display:block;font-size:13.5px}'+
+      '.cc-team thead{display:none}'+
+      '.cc-team tbody,.cc-team tfoot,.cc-team tr{display:block}'+
+      '.cc-team tr{border:1px solid #E8EDF5;border-radius:10px;padding:9px 11px;margin-bottom:8px;background:#fff}'+
+      '.cc-team tr.me{border-color:#C7D2FE;background:#F8FAFF}'+
+      '.cc-team td{display:flex;justify-content:space-between;align-items:center;gap:10px;'+
+        'text-align:right;padding:4px 0;border:none;white-space:normal;position:static!important}'+
+      '.cc-team td:first-child{position:static!important;font-size:15px;font-weight:900;'+
+        'padding-bottom:7px;margin-bottom:4px;border-bottom:1px solid #F1F5F9;display:block;text-align:left}'+
+      /* 칸 이름을 각 줄 앞에 붙여 준다 — 머리글이 없으니 이것이 없으면 숫자만 뜬다 */
+      '.cc-team td:before{content:attr(data-k);font-size:12px;font-weight:700;color:var(--ink-4);text-align:left}'+
+      '.cc-team td:first-child:before{content:none}'+
+      '.cc-team tfoot tr{border-color:#CBD5E1;background:#F8FAFC}'+
+    '}'+
+    /* CRM 에서 만났는데 고객 365일에 없는 분 */
+    '.cc-reco{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}'+
+    '.cc-rc{border:1px solid #E8EDF5;border-radius:10px;padding:10px 12px;background:#fff}'+
+    '.cc-rc.hot{border-color:#FDBA74;background:#FFF9F2}'+
+    '.cc-rc .t{display:flex;align-items:center;gap:6px;flex-wrap:wrap}'+
+    '.cc-rc .t b{font-size:14px;font-weight:900;color:var(--ink-1)}'+
+    '.cc-rc .t em{font-style:normal;font-size:11px;color:var(--ink-4)}'+
+    '.cc-rc .t .tag{font-size:10px;font-weight:800;color:#B45309;background:#FEF3C7;'+
+      'border-radius:4px;padding:2px 6px}'+
+    '.cc-rc .s{font-size:11.5px;color:var(--ink-4);margin-top:3px;line-height:1.55}'+
+    '.cc-rc .go{margin-top:8px;width:100%;border:1px solid #C7D2FE;background:#F5F8FF;color:#1A56DB;'+
+      'border-radius:7px;font-size:12px;font-weight:800;padding:6px 8px;cursor:pointer;font-family:inherit}'+
+    '.cc-rc .go:hover{background:#E7EEFF}'+
     '.cc-team th{font-size:10.5px;font-weight:800;color:var(--ink-4);text-align:right;padding:6px 7px;'+
       'border-bottom:1px solid var(--ink-7);white-space:nowrap}'+
     '.cc-team th:first-child{text-align:left}'+
