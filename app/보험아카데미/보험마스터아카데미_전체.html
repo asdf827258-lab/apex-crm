@@ -10287,7 +10287,26 @@ function setMsg(kind, html){
 function stepDone(k){
   var el = document.querySelector('.step[data-k="'+k+'"]'); if(el) el.classList.add('done');
 }
-var SUPA_SQL = "create table if not exists public.bohum_scores (\n  id bigserial primary key,\n  team text default 'APEX',\n  name text,\n  set_id text,\n  set_name text,\n  cat text,\n  score numeric,\n  max_q int,\n  pct int,\n  wrong jsonb,\n  device text,\n  created_at timestamptz default now()\n);\n\ncreate table if not exists public.bohum_progress (\n  team text default 'APEX',\n  name text,\n  done jsonb,\n  updated_at timestamptz default now(),\n  primary key (team, name)\n);\n\nalter table public.bohum_scores   enable row level security;\nalter table public.bohum_progress enable row level security;\n\ndrop policy if exists s_r  on public.bohum_scores;\ndrop policy if exists s_w  on public.bohum_scores;\ndrop policy if exists bp_r on public.bohum_progress;\ndrop policy if exists bp_w on public.bohum_progress;\ndrop policy if exists bp_u on public.bohum_progress;\n\ncreate policy s_r  on public.bohum_scores   for select to anon using (true);\ncreate policy s_w  on public.bohum_scores   for insert to anon with check (true);\ncreate policy bp_r on public.bohum_progress for select to anon using (true);\ncreate policy bp_w on public.bohum_progress for insert to anon with check (true);\ncreate policy bp_u on public.bohum_progress for update to anon using (true) with check (true);";
+/* ── 준비 SQL 은 <저장소의 파일 한 벌>뿐입니다 (CLAUDE.md 5번) ──────────
+   전에는 이 화면에도 SQL 을 통째로 적어 두었습니다. 그래서 같은 정책이
+   세 곳(이 파일 · 번들 · 저장소)에 있었고, 한쪽만 고치면 사장님이 어느
+   쪽을 붙여넣으셨는지 아무도 모릅니다. 보안 정책이 그러면 위험합니다.
+
+   이제 저장소의 migration_45_bohum_rls.sql 을 그대로 읽어 옵니다.
+   못 읽으면 <지어내지 않고> 그 파일을 여시라고 적습니다(1번). */
+var SUPA_SQL_FILE = '../../migration_45_bohum_rls.sql';
+var SUPA_SQL_MISS = '/* 이 화면에서 준비 SQL 을 읽지 못했습니다.\n'+
+  '   저장소의 migration_45_bohum_rls.sql 을 열어 그대로 붙여넣어 주십시오.\n'+
+  '   (없는 SQL 을 지어내지 않습니다.) */';
+var SUPA_SQL = SUPA_SQL_MISS;
+(function(){
+  try{
+    fetch(SUPA_SQL_FILE)
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(t){ if(t && /create policy/.test(t)) SUPA_SQL = t; })
+      .catch(function(){});
+  }catch(e){}
+})();
 
 /* ---------- 성장 경로 ---------- */
 var STAGES = [
