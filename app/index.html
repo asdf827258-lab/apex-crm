@@ -7298,16 +7298,32 @@ function arSkillHtml(){
   for(i=0;i<GB_CUR.length;i++){
     var c=GB_CUR[i],on=!!pm[c[0]];
     if(on)n++;
-    rows.push('<div class="ar-sk'+(on?' on':'')+'" onclick="arStamp(\''+c[0]+'\')">'+
-      '<span class="bx">'+(on?'✓':'')+'</span>'+
-      '<span class="tx"><b>'+osEsc(c[1])+'</b><em>'+osEsc(c[3])+'</em>'+
+    /* 「스스로 합격을 준다」 고만 하면 <b>무엇을 읽고</b> 합격할지가 없다.
+       교재의 그 장으로 바로 가는 단추를 단다. 교재에 없는 주제는 <b>단추를
+       안 만들고</b> 없다고 적는다 — 눌러 들어가서 빈 장을 보시면 안 된다. */
+    var ac=(typeof GB_ACAD!=='undefined')?GB_ACAD[c[0]]:null;
+    var learn = ac
+      ? '<button type="button" class="ar-sk-go" onclick="event.stopPropagation();gbOpenAcad(\''+c[0]+'\')">'+
+          '📕 교재 '+osEsc(ac.l)+' · '+osEsc(ac.t)+' 열기</button>'+
+        (ac.part?'<span class="ar-sk-part">※ '+osEsc(ac.part)+'</span>':'')
+      : '<span class="ar-sk-none">교재에 이 주제로 된 장이 <b>없습니다</b> — 없는 자료로 보내 드리지 않습니다</span>';
+    rows.push('<div class="ar-sk'+(on?' on':'')+'">'+
+      '<span class="bx" onclick="arStamp(\''+c[0]+'\')">'+(on?'✓':'')+'</span>'+
+      '<span class="tx"><b onclick="arStamp(\''+c[0]+'\')">'+osEsc(c[1])+'</b>'+
+      '<em>'+osEsc(c[3])+'</em>'+
       '<span class="who">이런 고객에게 — '+osEsc(c[4])+'</span>'+
-      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span></span></div>');
+      '<span class="std">합격 기준 — '+osEsc(c[5])+'</span>'+
+      learn+'</span></div>');
   }
+  var linked=0,j;
+  for(j=0;j<GB_CUR.length;j++)if(typeof GB_ACAD!=='undefined'&&GB_ACAD[GB_CUR[j][0]])linked++;
   return arCard('🎓','본인 역량 체크',n+' / '+GB_CUR.length+'개 합격 · 하나씩 끝내고 스스로 합격을 줍니다',
     '<div class="ar-sks">'+rows.join('')+'</div>',
     '<div class="notice" style="margin-top:11px">하루 한 장만 읽습니다. 읽고 <b>그날 한 명에게 써 봅니다.</b> '+
-    '안 써 본 화법은 상담에서 안 나옵니다.</div>');
+    '안 써 본 화법은 상담에서 안 나옵니다.<br>'+
+    '<b>📕 교재 열기</b> 를 누르면 <b>보험 마스터 아카데미</b>의 그 장으로 바로 갑니다 — '+
+    '열둘 중 <b>'+linked+'개</b>가 이어져 있습니다. 나머지는 교재에 그 주제가 없어 '+
+    '<b>일부러 비워 두었습니다.</b></div>');
 }
 function arStamp(s){
   if(typeof gbStamp==='function'){gbStamp(s);setTimeout(arPaint,60);}
@@ -8730,6 +8746,17 @@ function arCss(){
    '.ar-sk .tx b{display:block;font-size:13.5px;font-weight:900;color:#0F172A}'+
    '.ar-sk .tx em{display:block;font-style:normal;font-size:12px;color:#475569;margin-top:2px;line-height:1.55}'+
    '.ar-sk .who,.ar-sk .std{display:block;font-size:11px;color:#94A3B8;margin-top:3px;line-height:1.5}'+
+   /* 교재로 가는 단추. 칸 전체를 누르면 <b>합격 도장</b>이라 서로 다른 일이니
+      단추를 따로 세운다 — 읽으러 가려다 합격을 찍어 버리면 안 된다. */
+   '.ar-sk{cursor:default}'+                     /* 칸 전체는 이제 안 눌린다 */
+   '.ar-sk .bx,.ar-sk .tx b{cursor:pointer}'+
+   '.ar-sk-go{display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:5px 10px;'+
+     'border:1px solid #C7D2FE;background:#F5F8FF;color:#1A56DB;border-radius:7px;'+
+     'font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit;line-height:1.3}'+
+   '.ar-sk-go:hover{background:#E7EEFF;border-color:#93A9F5}'+
+   '.ar-sk-part{display:block;font-size:10.5px;color:#B45309;margin-top:4px;line-height:1.5}'+
+   '.ar-sk-none{display:block;font-size:10.5px;color:#94A3B8;margin-top:7px;line-height:1.5;'+
+     'background:#F8FAFC;border:1px dashed #E2E8F0;border-radius:6px;padding:5px 8px}'+
    '.ar-lgs{display:grid;grid-template-columns:1fr 1fr;gap:12px}'+
    '@media(max-width:820px){.ar-lgs{grid-template-columns:1fr}}'+
    '.ar-lg{border:1.5px solid #EDF1F6;border-radius:12px;overflow:hidden}'+
@@ -12117,7 +12144,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-08-29 14:00';
-var APP_BUILD_NOTE='<b>가로 메뉴를 각지게 하고, 마우스로도 넘어가게 하고, 펴 둔 갈래를 그대로 두었습니다.</b> ① <b>각진 네모</b> — 둥근 알약은 옆 칸과 경계가 흐려 「한눈에」 가 안 됩니다. 모서리를 3px 로 깎고 <b>왼쪽에 갈래 색 막대</b>를 세웠습니다. 글자를 읽기 전에 색으로 먼저 갈립니다. 펼친 갈래는 아래 펼침칸과 이어져 보이게 밑모서리를 폈습니다. ② <b>마우스로 넘기기</b> — 갈래가 열넷이라 노트북에서도 넘칩니다. 폰은 손으로 밀면 되지만 마우스에는 가로로 미는 방법이 없었습니다. 이제 <b>휠을 굴리면 옆으로</b> 가고, <b>끌어서</b>도 밀리고, 양 끝에 <b>그늘과 화살표</b>가 떠 「더 있다」 를 알려 줍니다. 끌고 나서 손을 떼면 그 자리 단추가 눌리지 않게 막았습니다. ③ <b>펴 둔 갈래가 그대로 유지</b> — 전에는 화면을 고르면 곧바로 접혀, 같은 갈래의 두 번째 칸을 보려고 <b>매번 다시 펴야</b> 했습니다. 이제 펴 둔 채로 있고, 새로고침해도 그대로입니다(갈래를 <b>이름으로</b> 기억합니다 — 번호로 담으면 등급에 따라 엉뚱한 칸이 펴집니다). 닫는 것은 펼침칸 머리의 <b>✕ 닫기</b> 로 사장님이 정하십니다. 펼침칸에는 높이 한도가 있어 큰 갈래를 펴도 화면을 다 덮지 않습니다. 점검에서 <b>「고르면 저절로 닫힌다」 를 뒤집었습니다</b> — 대신 그 자리를 지키던 뜻(화면을 안 덮는다)은 높이 한도 · 닫기 단추 · 서랍은 그대로 닫힘으로 옮겼습니다. 네 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 헛돌았습니다 — <b>작은 갈래로 재서</b> 높이 한도를 없애도 통과했습니다. 이제 <b>제일 큰 갈래</b>로 재고, 한도 자체도 함께 봅니다. 같은 판에 <b>[main]</b> 로그아웃 화면의 <b>계정 등록</b>이 아예 안 되던 것을 고쳤습니다 — 가입 폼이 두 벌이라 큰 화면에만 동의 칸이 빠져 있었습니다. 같은 판에 <b>[main]</b> 블로그가 매일 한 편을 실제로 쓸 수 있게 되었고, 준법 문구를 회사 것으로 바꿨습니다.';
+var APP_BUILD_NOTE='<b>가로 메뉴를 각지게 하고, 마우스로도 넘어가게 하고, 펴 둔 갈래를 그대로 두었습니다.</b> ① <b>각진 네모</b> — 둥근 알약은 옆 칸과 경계가 흐려 「한눈에」 가 안 됩니다. 모서리를 3px 로 깎고 <b>왼쪽에 갈래 색 막대</b>를 세웠습니다. 글자를 읽기 전에 색으로 먼저 갈립니다. 펼친 갈래는 아래 펼침칸과 이어져 보이게 밑모서리를 폈습니다. ② <b>마우스로 넘기기</b> — 갈래가 열넷이라 노트북에서도 넘칩니다. 폰은 손으로 밀면 되지만 마우스에는 가로로 미는 방법이 없었습니다. 이제 <b>휠을 굴리면 옆으로</b> 가고, <b>끌어서</b>도 밀리고, 양 끝에 <b>그늘과 화살표</b>가 떠 「더 있다」 를 알려 줍니다. 끌고 나서 손을 떼면 그 자리 단추가 눌리지 않게 막았습니다. ③ <b>펴 둔 갈래가 그대로 유지</b> — 전에는 화면을 고르면 곧바로 접혀, 같은 갈래의 두 번째 칸을 보려고 <b>매번 다시 펴야</b> 했습니다. 이제 펴 둔 채로 있고, 새로고침해도 그대로입니다(갈래를 <b>이름으로</b> 기억합니다 — 번호로 담으면 등급에 따라 엉뚱한 칸이 펴집니다). 닫는 것은 펼침칸 머리의 <b>✕ 닫기</b> 로 사장님이 정하십니다. 펼침칸에는 높이 한도가 있어 큰 갈래를 펴도 화면을 다 덮지 않습니다. 점검에서 <b>「고르면 저절로 닫힌다」 를 뒤집었습니다</b> — 대신 그 자리를 지키던 뜻(화면을 안 덮는다)은 높이 한도 · 닫기 단추 · 서랍은 그대로 닫힘으로 옮겼습니다. 네 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나는 처음에 헛돌았습니다 — <b>작은 갈래로 재서</b> 높이 한도를 없애도 통과했습니다. 이제 <b>제일 큰 갈래</b>로 재고, 한도 자체도 함께 봅니다. 같은 판에 <b>[main]</b> 로그아웃 화면의 <b>계정 등록</b>이 아예 안 되던 것을 고쳤습니다 — 가입 폼이 두 벌이라 큰 화면에만 동의 칸이 빠져 있었습니다. 같은 판에 <b>[main]</b> 블로그가 매일 한 편을 실제로 쓸 수 있게 되었고, 준법 문구를 회사 것으로 바꿨습니다. 같은 판에 <b>[main]</b> 본인 역량 체크에서 교재로 바로 가게 되었습니다 — 열둘 중 열 개가 이어졌고 둘은 교재에 없어 일부러 비웠습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14549,6 +14576,53 @@ var GB_AX=[
  {k:'stu', n:'공부', t:12,  u:'개', w:'합격한 주제',            tab:'growboard',tn:'배워서 터치할 것',
   fix:'하루 한 장만 읽습니다. 읽고 그날 한 명에게 써 봅니다. 안 써 본 화법은 상담에서 안 나옵니다.'}
 ];
+
+/* ── 역량 하나마다 <b>교재의 어느 장</b>을 읽으면 되는가 ──────────────
+   「합격을 스스로 준다」 고만 해 두면 <b>무엇을 읽고 합격할지</b>가 없다.
+   그래서 열두 개를 교재(보험 마스터 아카데미)의 장에 잇는다.
+
+   <b>짐작으로 잇지 않았다.</b> 교재 본문에서 그 역량의 핵심 낱말이 몇 번
+   나오는지 세어, 제일 많이 나오는 장에 이었다. 세어 본 결과 —
+
+     s1 급여·비급여·정액  → L2 (107회)   s2 진단금        → L3 (11회)
+     s3 뇌출혈·뇌경색      → L3 (73회)    s4 장기요양·간병  → L6 (44회)
+     s5 부지급·면책·고지   → L8 (24회)    s6 국민연금       → L9 (8회)
+     s7 변액·최저보증      → L9 (6회)     s9 퇴직연금·IRP   → L9 (9회)
+     s10 비과세           → L9 (9회)     s11 상속·증여     → L9 (10회)
+
+   <b>두 개는 일부러 비워 두었다</b>(CLAUDE.md 1번) —
+     s8  달러·분산   : 교재에 <b>한 번도 안 나온다</b>
+     s12 거절처리    : 한 번뿐이라 「관련 자료」라 하기 어렵다
+   없는 것을 있는 척 이으면, 눌러 들어가서 아무것도 없는 장을 보시게 된다.
+
+   s6 은 이었지만 <b>「소득대체율」 은 교재에 없다</b>. 그것까지 적어 둔다. */
+var GB_ACAD={
+  s1 :{l:'L2', t:'실손의료보험 완전정복'},
+  s2 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s3 :{l:'L3', t:'진단비 — 암 · 뇌 · 심장'},
+  s4 :{l:'L6', t:'입원 · 간병 · 후유장해'},
+  s5 :{l:'L8', t:'보상 실무 — 고지 · 면책 · 청구 · 분쟁'},
+  s6 :{l:'L9', t:'저축 · 연금 · 세금 기초', part:'「소득대체율」 숫자는 교재에 없습니다 — 그 부분은 따로 확인하십시오'},
+  s7 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s8 :null,   /* 교재에 없다 — 지어내지 않는다 */
+  s9 :{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s10:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s11:{l:'L9', t:'저축 · 연금 · 세금 기초'},
+  s12:null    /* 교재에 없다 — 지어내지 않는다 */
+};
+/* 교재를 <b>그 장에서</b> 연다. 교재는 hashchange 로 장을 옮기므로
+   주소만 바꾸면 된다 — 이미 떠 있으면 다시 안 불러온다. */
+function gbOpenAcad(sid){
+  var m=GB_ACAD[sid];
+  if(!m){toast('이 주제는 교재에 아직 없습니다 — 없는 자료로 보내 드리지 않습니다');return;}
+  go('bohum');
+  setTimeout(function(){
+    var f=$('bohumFrame');if(!f)return;
+    var want=BOHUM_URL+'#'+m.l;
+    if(f._mounted){ try{ f.contentWindow.location.hash=m.l; }catch(e){ f.src=want; } }
+    else { f.src=want; f._mounted=true; }
+  },60);
+}
 
 /* 배워서 터치할 것 — 열두 개. 하나씩 끝내고 스스로 합격을 줍니다 */
 var GB_CUR=[
