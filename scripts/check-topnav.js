@@ -136,6 +136,52 @@ const SIZES = [['웹 1440', 1440, 900], ['노트북 1024', 1024, 800], ['폰 390
   is(/navBtnHtml\(/.test(tnSrc), '  칸 단추를 <b>navBtnHtml</b> 로 만든다 — 사이드바와 같은 것');
   is(!/\{\s*id\s*:\s*'/.test(tnSrc), '  가로 띠 안에 메뉴 줄을 <b>새로 적어 두지 않았다</b>');
 
+  /* ── 색도 두 벌이면 안 된다 ────────────────────────────────────────
+     갈래를 색으로 나눠 놓고 위·옆이 <b>다른 색</b>이면, 같은 「내 고객」을
+     위에서는 파랑 · 옆에서는 초록으로 외우시게 된다. 색을 정하는 곳은
+     navRamp() 한 곳이어야 한다 (5번). 여기서는 <b>실제로 칠해진 값</b>을
+     양쪽에서 읽어 갈래 이름끼리 맞춰 본다 — 함수를 부르는지가 아니라. */
+  console.log('\n[2-1] 갈래 색이 위·옆에서 같다 — 같은 칸을 두 색으로 외우지 않게');
+  const GC = await page.evaluate(() => {
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'pro' };
+    renderNav();
+    const key = s => (s || '').replace(/[\s\d•]/g, '').replace(/[\u{1F000}-\u{1FAFF}←-➿️]/gu, '');
+    const top = {}, side = {};
+    document.querySelectorAll('#tnGroups .tn-g').forEach(b => {
+      top[key(b.textContent)] = b.style.getPropertyValue('--gc').trim();
+    });
+    document.querySelectorAll('#navHost .nav-group').forEach(g => {
+      const l = g.querySelector('.ngl-t');
+      side[key(l && l.textContent)] = g.style.getPropertyValue('--gc').trim();
+    });
+    const names = Object.keys(top);
+    return {
+      names, top, side,
+      diff: names.filter(n => !side[n] || side[n] !== top[n]),
+      blank: names.filter(n => !top[n]),
+      uniq: new Set(names.map(n => top[n])).size
+    };
+  });
+  is(GC.blank.length === 0,
+     '  갈래 <b>' + GC.names.length + '개가 모두 색을 받았다</b>' +
+     (GC.blank.length ? ' ← 색이 없는 갈래: ' + GC.blank.join(' · ') : ''));
+  is(GC.diff.length === 0,
+     '  <b>한 갈래도 색이 안 어긋난다</b> — 위에서 본 색 = 옆에서 본 색' +
+     (GC.diff.length ? ' ← 어긋난 갈래: ' +
+        GC.diff.slice(0, 4).map(n => n + '(위 ' + GC.top[n] + ' / 옆 ' + (GC.side[n] || '없음') + ')').join(' · ') : ''));
+  is(GC.uniq === GC.names.length,
+     '  갈래마다 <b>다른 색</b>이다 — ' + GC.uniq + '가지 / ' + GC.names.length + '갈래' +
+     (GC.uniq === GC.names.length ? '' : ' ← 색이 겹치면 나눈 뜻이 없다'));
+  /* 한 줄기로 흐르는가 — 위는 보라(파랑기 우세), 아래는 금빛(붉은기 우세) */
+  const rgb = s => (s || '0 0 0').split(/\s+/).map(Number);
+  const first = rgb(GC.top[GC.names[0]]), last = rgb(GC.top[GC.names[GC.names.length - 1]]);
+  is(first[2] > first[0] && last[0] > last[2],
+     '  <b>한 줄기로 흐른다</b> — 맨 위는 보라 계열(' + GC.top[GC.names[0]] +
+     ') · 맨 아래는 금빛 계열(' + GC.top[GC.names[GC.names.length - 1]] + ')');
+  const gradSrc = (SRC.match(/function tnPaint\(\)[\s\S]*?\n\}/) || [''])[0];
+  is(/navRamp\(/.test(gradSrc),
+     '  색을 <b>navRamp() 에서 받아 쓴다</b> — 가로 띠가 색을 새로 정하지 않는다');
+
   console.log('\n[3] 등급으로 가린 칸은 양쪽에서 똑같이 가려진다');
   const G = await page.evaluate(() => {
     OS.profile = null;                 /* 로그인 안 한 상태 */

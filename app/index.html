@@ -997,6 +997,10 @@ body.bohum-mode #bohumScreen{display:block;}
 body.mikki-mode .app{display:none;}
 body.mikki-mode #mikkiScreen{display:block;}
 #mikkiScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+#onecmpScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.onecmp-mode .app{display:none;}
+body.onecmp-mode #onecmpScreen{display:block;}
+#onecmpScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* APEX 전체 지도 (같은 패턴) */
 #apexMapScreen{display:none;position:fixed;inset:0;z-index:300;background:#EDF2FA;}
 body.apexmap-mode .app{display:none;}
@@ -1249,14 +1253,33 @@ body.dzguide-mode #dzGuideScreen{display:block;}
 /* 그룹 띠 — 넘치면 옆으로 민다. 줄바꿈하면 띠가 화면을 다 먹는다 */
 .tn-2{display:flex;gap:5px;padding:0 10px 8px;overflow-x:auto;scrollbar-width:none;}
 .tn-2::-webkit-scrollbar{display:none;}
-.tn-g{flex:0 0 auto;background:rgba(255,255,255,.07);border:1px solid transparent;color:rgba(255,255,255,.78);
-  font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:99px;cursor:pointer;white-space:nowrap;
-  font-family:inherit;}
-.tn-g:hover{background:rgba(255,255,255,.14);color:#fff;}
-.tn-g.on{background:#1A56DB;border-color:#3B82F6;color:#fff;}
-/* 펼친 칸들 */
-.tn-pane{display:none;background:var(--ink-1);border-top:1px solid rgba(255,255,255,.07);
-  padding:10px 12px 12px;max-height:56vh;overflow-y:auto;}
+/* 색은 <b>세로 메뉴와 같은 한 줄기</b>다 — navRamp() 가 정한 --gc/--ge/--gt/--ga/--gb
+   를 그대로 받아 쓴다. 여기서 색을 새로 정하면 위·옆이 서로 다른 색이 되어
+   같은 칸을 두 가지로 외우시게 된다 (5번). 위는 보라, 내려갈수록 남색·청록·
+   초록을 지나 끝은 금빛 — 가로에서는 <b>왼쪽에서 오른쪽</b>으로 흐른다. */
+.tn-g{flex:0 0 auto;border-radius:99px;cursor:pointer;white-space:nowrap;font-family:inherit;
+  font-size:12.5px;font-weight:700;padding:6px 12px 6px 10px;
+  display:inline-flex;align-items:center;gap:5px;
+  background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .34)),
+                                    rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .92)));
+  border:1px solid rgb(var(--ge,90 120 200) / calc(var(--gb,.5) * .40));
+  color:rgb(var(--gt,190 210 245));transition:filter .12s,box-shadow .12s;}
+.tn-g .tng-ic{font-size:12px;line-height:1;opacity:.92;}
+.tn-g .tng-n{font-size:10.5px;font-weight:800;opacity:.72;
+  background:rgb(var(--ge,90 120 200) / .30);border-radius:99px;padding:1px 5px;}
+.tn-g:hover{filter:brightness(1.28);}
+.tn-g.on{background:linear-gradient(135deg,rgb(var(--ge,90 120 200) / .92),
+                                          rgb(var(--gc,90 120 200) / .92));
+  border-color:rgb(var(--ge,90 120 200) / 1);color:#fff;
+  box-shadow:0 0 0 1px rgb(var(--ge,90 120 200) / .45),0 2px 8px rgb(var(--gc,90 120 200) / .40);}
+.tn-g.on .tng-n{background:rgba(255,255,255,.22);opacity:.95;}
+/* 찾는 중 딱지는 갈래가 없다 — 한 줄기 색을 안 쓴다 */
+.tn-g.tn-find-on{background:#1A56DB;border-color:#3B82F6;color:#fff;box-shadow:none;}
+/* 펼친 칸들 — 열어 둔 갈래 색을 옅게 이어받는다(위에서 아래로 사라진다) */
+.tn-pane{display:none;max-height:56vh;overflow-y:auto;padding:10px 12px 12px;
+  background:linear-gradient(180deg,rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .34)),
+                                    rgb(var(--gc,90 120 200) / 0) 120px),var(--ink-1);
+  border-top:1px solid rgb(var(--ge,255 255 255) / calc(var(--gb,.07) * .5));}
 .tn-pane.on{display:block;}
 .tn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:5px;}
 .tn-pane .nav-row{margin:0;}
@@ -1423,6 +1446,16 @@ body.dzguide-mode #dzGuideScreen{display:block;}
     <button class="ff-back" onclick="exitMikki()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadMikki()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openMikkiNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 한장 보험료 비교 전용 화면 -->
+<div id="onecmpScreen">
+  <iframe id="onecmpFrame" class="fin-frame" title="한장 보험료 비교"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitOneCmp()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadOneCmp()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openOneCmpNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -4946,6 +4979,7 @@ function osTabProbe(tab){
   /* go()의 분기를 부작용 없이 흉내내 HTML을 반환. 실패 시 throw. finance/crm은 iframe이라 존재만 확인 */
   if(tab==='finance'){if(typeof mountFinance==='function'&&document.getElementById('finB64'))return '재무설계 모듈 존재';throw new Error('mountFinance/finB64 없음');}
   if(tab==='crm'){if(typeof mountCrm==='function')return 'CRM 모듈 존재';throw new Error('mountCrm 없음');}
+  if(tab==='onecmp'){if(typeof mountOneCmp==='function'&&document.getElementById('onecmpFrame'))return '한장 보험료 비교 모듈 존재';throw new Error('mountOneCmp/onecmpFrame 없음');}
   if(tab==='home'||tab==='dashboard')return (typeof renderHome==='function')?renderHome():renderDashboard();
   if(tab==='settings')return renderSettings();
   if(tab==='ready')return renderReady();
@@ -10483,6 +10517,7 @@ var TABS=[
    {id:'bojang',icon:'📑',title:'AI 보장분석',cnt:'',ak:'보장분석'},
    {id:'baba',icon:'🔄',title:'비포&애프터',cnt:'',ak:'보장분석'},
    {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
+   {id:'onecmp',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사'},
    {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
    {id:'katalk',icon:'💬',title:'제안서 카톡설명',cnt:'',ak:'보장분석'},
    {id:'interpret',icon:'🧠',title:'보험 해석',cnt:'',ak:'보험 해석'},
@@ -10898,7 +10933,7 @@ function tnPaint(){
 
   /* 찾는 중에는 그룹 대신 「찾는 중」 딱지 하나만 */
   if(NAV_Q){
-    bar.innerHTML='<button type="button" class="tn-g on" onclick="navFind(\'\')">'+
+    bar.innerHTML='<button type="button" class="tn-g tn-find-on" onclick="navFind(\'\')">'+
       '🔎 「'+esc(NAV_Q)+'」 찾는 중 — 눌러서 지우기</button>';
     var rows='',n=0;
     for(i=0;i<gs.length;i++){
@@ -10914,12 +10949,28 @@ function tnPaint(){
     return;
   }
 
-  for(i=0;i<gs.length;i++)
-    h+='<button type="button" class="tn-g'+(TN_OPEN===i?' on':'')+'" onclick="tnToggle('+i+')">'+
-       esc(gs[i].group)+'</button>';
+  /* 색은 <b>세로 메뉴가 쓰는 그 함수</b>에서 그대로 받는다 — 여기서 새로
+     정하면 위·옆이 다른 색이 되고, 갈래를 늘렸을 때 한쪽만 어긋난다 (5번). */
+  for(i=0;i<gs.length;i++){
+    var c=(typeof navRamp==='function')?navRamp(i,gs.length):null;
+    var ic=(typeof NAVG_ICON!=='undefined'&&NAVG_ICON[gs[i].group])||'•';
+    h+='<button type="button" class="tn-g'+(TN_OPEN===i?' on':'')+'" onclick="tnToggle('+i+')"'+
+       (c?' style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'"':'')+
+       ' aria-expanded="'+(TN_OPEN===i?'true':'false')+'">'+
+       '<span class="tng-ic">'+ic+'</span>'+esc(gs[i].group)+
+       '<span class="tng-n">'+gs[i].items.length+'</span></button>';
+  }
   bar.innerHTML=h;
 
-  if(TN_OPEN<0||TN_OPEN>=gs.length){pane.classList.remove('on');pane.innerHTML='';return;}
+  if(TN_OPEN<0||TN_OPEN>=gs.length){
+    pane.classList.remove('on');pane.innerHTML='';
+    pane.removeAttribute('style');   /* 닫을 때 색을 남기지 않는다 */
+    return;
+  }
+  /* 펼친 칸도 <b>그 갈래 색</b>을 옅게 이어받는다 — 어느 갈래를 열어 두었는지
+     단추에서 눈을 떼도 알 수 있게. 단추와 같은 값이라 두 벌이 아니다. */
+  var co=(typeof navRamp==='function')?navRamp(TN_OPEN,gs.length):null;
+  if(co)pane.setAttribute('style','--gc:'+co.c+';--ge:'+co.e+';--gt:'+co.w+';--ga:'+co.a+';--gb:'+co.b);
   var rows2='';
   gs[TN_OPEN].items.forEach(function(it){ rows2+=navBtnHtml(it); });
   pane.innerHTML='<div class="tn-grid">'+rows2+'</div>';
@@ -11625,6 +11676,13 @@ function go(tab){
     return;
   }
 
+  if(tab==='onecmp'){
+    mountOneCmp();
+    osFullMode('onecmp-mode');
+    navMark('onecmp');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
   if(tab==='mikki'){
     mountMikki();
     osFullMode('mikki-mode');
@@ -11958,8 +12016,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-29 08:50';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).';
+var APP_BUILD='2026-08-29 10:50';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12452,6 +12510,17 @@ var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
 function reloadMikki(){var f=$('mikkiFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMikki,30);toast('미끼 레이더 새로고침');}}
 function openMikkiNewTab(){var w=window.open(MIKKI_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+
+/* ════════ 한장 보험료 비교 ════════
+   회사(A+에셋) 보험료비교 시스템을 우리 화면으로 다시 그린 것. 별도 주소에
+   올려 두고 여기서는 틀만 띄운다 — 요율은 늘 회사 서버에서 그때 받아 온다.
+   ⚠ 다른 주소이므로 이 iframe 안의 로그인(링크)은 CRM 과 따로 논다.
+      처음 한 번 회사 링크를 붙여넣어야 하고, 그 다음부터는 기억한다. */
+var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
+function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
+function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
+function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitOneCmp(){go(lastTab||'home');}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.
@@ -15790,6 +15859,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
+  else if(document.body.classList.contains('onecmp-mode'))exitOneCmp();
   else if(document.body.classList.contains('apexmap-mode'))exitApexMap();
 });
 
@@ -21838,8 +21908,8 @@ function manMap(){
      chips:[['clients','🗂️','고객 365일'],['fact_find','📝','상담카드·팩트파인딩'],['crm','🗄️','DB 통합 CRM']],
      how:'고객 365일은 담당자별로 갈라져 있고 이름으로 바로 찾습니다. CRM 에서 배정받은 DB 를 고객 365일로 넘길 수 있습니다.'},
     {no:4,ic:'🛡',cat:'증권 분석',when:'만나기 전, 혼자 뜯어볼 때',
-     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
-     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 아홉 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다.'},
+     chips:[['bojang','📑','AI 보장분석'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
+     how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 열 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다. 부족한 담보가 나오면 한장 보험료 비교로 어느 회사가 그 담보를 제일 싸게 주는지 바로 봅니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
      chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['dz_guide','🩺','질병 보험가이드'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
