@@ -52,6 +52,37 @@ const R = (json, opts) => Promise.resolve({
   ok(/TOSS_CLIENT_ID/.test(r.body.tossMessage), '토스에 무엇이 빠졌는지 알려 준다');
   ok(r.body.deeplink && r.body.deeplink.krx.indexOf('tossinvest.com/stocks/A{code}') > 0,
     '키가 없어도 토스 딥링크 주소는 내려준다');
+  /* ⚠️ health 가 기본으로 바깥을 부르면 위의 global.fetch 덫에 걸려 터진다.
+        부르지 않는다는 것 자체가 검사다 — 여기까지 왔다는 게 증거. */
+  ok(r.body.publicQuote === null, 'probe 를 안 주면 아무 데도 안 부른다');
+
+  /* probe=1 이면 공개 지연 시세가 이 서버에서 실제로 닿는지 물어본다.
+     ⚠️ 이게 없어서 '키가 없다' 와 '숫자가 안 나온다' 를 구분 못 했다.
+        키가 하나도 없어도 화면에 숫자가 뜨는 건 이 갈래 덕분인데,
+        health 는 그 갈래를 한 번도 확인하지 않았다. */
+  global.fetch = () => R({ chart: { result: [{
+    meta: { currency: 'KRW', longName: 'KOSPI Composite Index', instrumentType: 'INDEX',
+            regularMarketTime: 1787109460 },
+    indicators: { quote: [{ close: [6869.83, 6502.80] }] }
+  }] } });
+  r = await call(m, { kind: 'health', probe: '1' });
+  ok(r.body.publicQuote && r.body.publicQuote.ok === true, 'probe=1 이면 실제로 불러 본다');
+  ok(r.body.publicQuote.price === 6502.8, '받아 온 값을 그대로 보여 준다', r.body.publicQuote);
+  ok(r.body.quoteProvider === 'none',
+     '공개 지연 시세가 돼도 quoteProvider 는 none — 실시간이 아니다');
+
+  /* 막혔을 때 사유를 그대로 올려 준다. 여기서 '왜 안 되는지' 가 안 나오면
+     실서버에서 원인을 찾을 방법이 없다. */
+  global.fetch = () => Promise.resolve({
+    ok: false, status: 403, text: () => Promise.resolve('Forbidden')
+  });
+  m = freshModule();
+  r = await call(m, { kind: 'health', probe: '1' });
+  ok(r.status === 200, '공개 시세가 막혀도 health 는 200');
+  ok(r.body.publicQuote.ok === false && /403/.test(r.body.publicQuote.message),
+     '막힌 이유를 그대로 알려 준다', r.body.publicQuote);
+  global.fetch = () => { throw new Error('여기서는 아무 데도 부르면 안 된다'); };
+  m = freshModule();
 
   r = await call(m, { kind: 'quote', codes: '005930' });
   ok(r.status === 200 && r.body.ok === false, '시세 요청도 200 (앱이 안내 카드를 그릴 수 있다)');

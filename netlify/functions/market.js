@@ -1026,11 +1026,39 @@ exports.handler = async function (event) {
       else tossMsg = '미설정 — 필요한 것: ' + tossWhyNot().join(' · ');
       if (has.kis) { try { await kisToken(); kisMsg = '토큰 발급 정상'; } catch (e) { kisMsg = e.message; has.kis = false; } }
       const provider = has.toss ? 'toss' : (has.kis ? 'kis' : (has.krx ? 'krx' : 'none'));
+
+      /* ── 공개 지연 시세가 이 서버에서 실제로 닿는가 ──────────────────────
+         ⚠️ 키가 하나도 없어도 화면에 숫자가 뜨는 건 이 갈래 덕분이다.
+            그런데 health 는 '키가 있느냐' 만 보고 있어서, 정작 사람들이
+            보는 그 숫자가 어디서 오는지는 한 번도 확인하지 않았다.
+            공개 시세는 데이터센터 IP 를 막기도 한다 — 내 컴퓨터에서 된다고
+            실서버에서도 된다는 뜻이 아니다. 그러니 실서버에서 직접 물어본다.
+
+         기본값으로는 안 한다. 키가 없을 때 health 가 아무 데도 안 부르는
+         성질을 지켜야 해서(그걸 검사도 하고 있다), probe=1 일 때만 부른다. */
+      let probe = null;
+      if (String(q.probe || '') === '1') {
+        const t0 = Date.now();
+        try {
+          const one = await pubIndexOne({ id: 'kospi', name: '코스피', code: '0001' });
+          probe = { ok: one.price != null, ms: Date.now() - t0,
+                    price: one.price, changeRate: one.changeRate,
+                    message: one.price == null ? '값이 비어서 왔습니다'
+                                               : '공개 지연 시세 정상' };
+        } catch (e) {
+          probe = { ok: false, ms: Date.now() - t0,
+                    message: String((e && e.message) || e).slice(0, 200) };
+        }
+      }
+
       return {
         statusCode: 200, headers: cors,
         body: JSON.stringify({
           ok: true, meta: meta, has: has,
           quoteProvider: provider,
+          /* ⚠️ quoteProvider 는 '실시간 제공자' 를 뜻한다. 공개 지연 시세를
+                여기에 끼워 넣으면 앱이 실시간이라고 읽는다 — 건드리지 않는다. */
+          publicQuote: probe,
           realtime: provider === 'toss' || provider === 'kis',
           tossMessage: tossMsg, kisEnv: process.env.KIS_ENV || 'real', kisMessage: kisMsg,
           deeplink: (P.toss || {}).deeplink || null,
