@@ -363,6 +363,7 @@ td:first-child{font-weight:600;color:var(--ink)}
 <script src="sync.js?v=20260827i"></script>
 <script src="data1.js?v=20260827i"></script>
 <script src="data2.js?v=20260827i"></script>
+<script src="host-link.js?v=20260827j"></script>
 <script>
 (function(){
 'use strict';
@@ -1070,6 +1071,15 @@ function tload(){ try{ return JSON.parse(localStorage.getItem(TKEY)||'{}'); }cat
 function tsave(o){ try{ localStorage.setItem(TKEY, JSON.stringify(o)); }catch(e){} }
 function tname(){ try{ return localStorage.getItem(NKEY)||''; }catch(e){ return ''; } }
 function tsetname(n){ try{ localStorage.setItem(NKEY, n); }catch(e){} }
+/* 본문 전체가 하나의 함수 안에 들어 있어서 밖에서는 아무것도 못 부른다.
+   APEX OS 안에서 열렸을 때 로그인한 이름을 받기 위해 문을 하나만 낸다. */
+window.__bohumSetWho = function(n){
+  n = String(n==null?'':n).replace(/^\s+|\s+$/g,'');
+  if(!n || n === tname()) return false;
+  tsetname(n);
+  try{ route(); }catch(e){}
+  return true;
+};
 function norm(s){ return String(s||'').toLowerCase().replace(/[\s,.\/·・\-_'"()\[\]%~:;!?→]/g,''); }
 function blankOk(v, arr){
   var n = norm(v); if(!n) return false;
@@ -1092,15 +1102,24 @@ function renderTest(){
   var h = '<div class="hd"><div class="kick">테스트</div><h2>사람별 이해도 테스트</h2>'+
     '<div class="sub">설계와 보상 중심 · 빈칸 채우기 · 객관식 · 서술형 · 채점하면 기록이 남습니다</div></div>';
 
-  h += '<div class="whobox"><div class="wl">응시자</div>'+
-    '<input id="whoin" type="text" placeholder="이름을 적으세요" value="'+esc(who)+'" maxlength="20">'+
-    '<button class="btn p" id="whoset">이 이름으로 시작</button></div>';
-  if(names.length)
-    h += '<div class="pillw" style="margin:-6px 0 18px">'+names.map(function(n){
-      return '<span class="pill who" data-n="'+esc(n)+'">'+esc(n)+'</span>';
-    }).join('')+'<a class="pill go" href="#TEAM">팀 현황 보기 →</a></div>';
-
-  if(!who) h += '<div class="cal warn">이름을 먼저 입력하세요. <b>사람마다 따로 기록</b>됩니다. (이 기기에만 저장됩니다)</div>';
+  /* APEX OS 안에서 열면 로그인한 이름을 그대로 쓴다 — 손으로 고치지 못하게 잠근다.
+     팀 현황이 「김민수」 「김민수 」 「민수」 로 갈라지는 것을 막는 게 목적이다. */
+  var hostWho = window.APEX_HOST_NAME || '';
+  if(hostWho){
+    h += '<div class="whobox"><div class="wl">응시자</div>'+
+      '<b style="font-size:16px;letter-spacing:-.02em">'+esc(hostWho)+'</b>'+
+      '<span style="font-size:12.4px;color:var(--ink3)">APEX OS 로그인 계정으로 자동 연결됨</span>'+
+      '<a class="pill go" href="#TEAM" style="margin-left:auto">팀 현황 보기 →</a></div>';
+  }else{
+    h += '<div class="whobox"><div class="wl">응시자</div>'+
+      '<input id="whoin" type="text" placeholder="이름을 적으세요" value="'+esc(who)+'" maxlength="20">'+
+      '<button class="btn p" id="whoset">이 이름으로 시작</button></div>';
+    if(names.length)
+      h += '<div class="pillw" style="margin:-6px 0 18px">'+names.map(function(n){
+        return '<span class="pill who" data-n="'+esc(n)+'">'+esc(n)+'</span>';
+      }).join('')+'<a class="pill go" href="#TEAM">팀 현황 보기 →</a></div>';
+    if(!who) h += '<div class="cal warn">이름을 먼저 입력하세요. <b>사람마다 따로 기록</b>됩니다. (이 기기에만 저장됩니다)</div>';
+  }
 
   var cats = QUIZ.map(function(s){return s.cat;}).filter(function(v,i,a){return a.indexOf(v)===i;});
   cats.forEach(function(c){
