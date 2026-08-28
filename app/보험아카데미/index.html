@@ -319,6 +319,61 @@ td:first-child{font-weight:600;color:var(--ink)}
   body{background:#fff}
   #main{max-width:none;padding:0}
 }
+
+/* ── 현장 과제 ─────────────────────────────────────────── */
+.pc{border:1px solid var(--line);border-radius:14px;margin:0 0 14px;overflow:hidden;background:#fff}
+.pc.lock{opacity:.62}
+.pc.done{border-color:#BFE3C9}
+.ph{display:flex;align-items:center;gap:10px;padding:13px 16px;background:var(--bg2);
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+.pc.done .ph{background:#F1F9F3}
+.ph i{font-style:normal;font-weight:800;font-size:12px;color:#fff;background:var(--blue);
+      border-radius:6px;padding:2px 7px;letter-spacing:-.02em}
+.pc.lock .ph i{background:var(--ink4)}
+.pc.done .ph i{background:var(--ok)}
+.ph b{font-size:15.5px;letter-spacing:-.03em;flex:1;min-width:180px}
+.ph .pm{font-size:12px;color:var(--ink3)}
+.ph .pst{font-size:12.5px;font-weight:700;color:var(--ink3);
+         background:#fff;border:1px solid var(--line);border-radius:99px;padding:2px 10px}
+.pc.done .ph .pst{color:var(--ok);border-color:#BFE3C9}
+.pb{padding:14px 16px 16px}
+.pw,.pd{font-size:13.6px;line-height:1.72;color:var(--ink2);margin:0 0 9px}
+.pw b,.pd b{color:var(--ink);font-weight:700;margin-right:5px}
+.pq{background:var(--blue-ll);border-radius:10px;padding:11px 13px;font-size:13.8px;
+    line-height:1.7;color:var(--ink);margin:0 0 13px}
+.pq b{font-size:11.5px;color:var(--blue-d);letter-spacing:.02em}
+.plock{font-size:13.4px;color:var(--ink3)}
+.prl{border-top:1px dashed var(--line);padding-top:11px}
+.prr{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--line2,#F2F4F6);font-size:13.4px}
+.prr .pn{flex:none;width:18px;height:18px;border-radius:50%;background:var(--ok);color:#fff;
+         font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.prr b{flex:none;min-width:64px;letter-spacing:-.02em}
+.prr .pt{flex:1;color:var(--ink2)}
+.prr .pdt{flex:none;font-size:11.5px;color:var(--ink4)}
+.pdel{flex:none;appearance:none;border:0;background:none;cursor:pointer;font-family:inherit;
+      font-size:11.5px;color:var(--ink4);padding:2px 4px}
+.pdel:hover{color:var(--red)}
+.prw{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+.prw input{font-family:inherit;font-size:13.6px;border:1px solid var(--line);border-radius:9px;
+           padding:9px 11px;background:#fff;color:var(--ink)}
+.prw .pi1{flex:none;width:130px}
+.prw .pi2{flex:1;min-width:200px}
+.prw input:focus{outline:none;border-color:var(--blue)}
+.pok{margin-top:11px;font-size:13.2px;color:var(--ok);font-weight:700}
+.pracbar{display:flex;align-items:center;gap:11px;text-decoration:none;margin:0 0 18px;
+         border:1px solid var(--line);border-radius:12px;padding:13px 16px;background:#fff;color:var(--ink)}
+.pracbar:hover{border-color:var(--blue);background:var(--blue-ll)}
+.pracbar.full{border-color:#BFE3C9;background:#F1F9F3}
+.pracbar .pl{font-size:11.5px;font-weight:800;color:var(--blue-d);letter-spacing:.02em}
+.pracbar.full .pl{color:var(--ok)}
+.pracbar .pv{font-size:16px;font-weight:800;letter-spacing:-.04em}
+.pracbar .px{flex:1;font-size:13.2px;color:var(--ink2)}
+.pracbar .pgo{color:var(--ink3)}
+@media(max-width:640px){
+  .prw .pi1{width:100%}
+  .prw .pi2{width:100%}
+  .prr{flex-wrap:wrap}
+}
 </style>
 </head>
 <body>
@@ -363,6 +418,7 @@ td:first-child{font-weight:600;color:var(--ink)}
 <script src="sync.js?v=20260827i"></script>
 <script src="data1.js?v=20260827i"></script>
 <script src="data2.js?v=20260827i"></script>
+<script src="practice.js?v=20260828a"></script>
 <script src="host-link.js?v=20260827j"></script>
 <script>
 (function(){
@@ -372,11 +428,41 @@ var KEY='bohum_academy_v1';
 var state = JSON.parse(localStorage.getItem(KEY)||'{}');
 state.done = state.done || {};
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ── 현장 과제 기록 ────────────────────────────────────────────────
+   고객 표시와 한 줄은 이 기기에만 남는다. 서버로는 건수와 날짜만 간다.
+   이 표에는 로그인이 없어서 링크를 아는 사람은 읽을 수 있다 — 개인정보를 올리지 않는다. */
+var PKEY = 'bohum_prac_v1';
+var PR = JSON.parse(localStorage.getItem(PKEY) || '{}');
+function psave(){ try{ localStorage.setItem(PKEY, JSON.stringify(PR)); }catch(e){} }
+function prac(id){ return (window.PRACTICE || []).filter(function(x){ return x.id === id; })[0] || null; }
+function pRows(id){ return (PR[id] && PR[id].rows) || []; }
+function pDone(id){ var t = prac(id); return !!t && pRows(id).length >= t.n; }
+/* 본문을 읽었고 과제가 아직 안 끝난 레벨 — 앞에서부터 하나 */
+function pNext(){
+  var list = window.PRACTICE || [];
+  for(var i=0;i<list.length;i++){
+    var t = list[i];
+    if(state.done[t.id] && !pDone(t.id)) return t;
+  }
+  return null;
+}
+/* 서버로는 숫자만 — p_L4 : 3 */
+function pPush(){
+  if(!(window.SYNC && tname())) return;
+  var out = {}, k;
+  for(k in state.done) if(state.done[k]) out[k] = 1;
+  (window.PRACTICE || []).forEach(function(t){
+    var n = pRows(t.id).length;
+    if(n) out['p_' + t.id] = n;
+  });
+  SYNC.pushProgress(tname(), out);
+}
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 function won(n){ return n==null ? '—' : n.toLocaleString('ko-KR')+'원'; }
 
 /* ---------- nav ---------- */
-var EXTRA=[{id:'GROW',title:'성장 경로',sub:'다음에 뭘 하면 되나'},{id:'TEST',title:'테스트 · 사람별',sub:'9세트 106문항'},{id:'SRC',title:'원본 자료 검색',sub:'첨부 PPTX 187장'},{id:'HEALTH',title:'헬스케어 서비스',sub:'보험금이 못 하는 일'},{id:'SURG',title:'1~5종 수술분류표',sub:'1~72번 원문 전량'},{id:'TERMS',title:'용어 사전',sub:'검색해서 찾아보기'},{id:'CASE',title:'케이스 스터디',sub:'실전 9건'},{id:'GAL',title:'원본 자료실',sub:'이미지 전체'},{id:'BOOK',title:'전체 통독 · 인쇄',sub:'책 한 권으로'},{id:'DB',title:'실제 치료비 DB',sub:'영수증 30건'},{id:'CARD',title:'화법 전체 카드',sub:'전 레벨 모음'},{id:'GUIDE',title:'운영 · 활용 가이드',sub:'교육 담당자용'}];
+var EXTRA=[{id:'GROW',title:'성장 경로',sub:'다음에 뭘 하면 되나'},{id:'PRAC',title:'현장 과제',sub:'읽은 것을 그 주에 써 본다'},{id:'TEST',title:'테스트 · 사람별',sub:'9세트 106문항'},{id:'SRC',title:'원본 자료 검색',sub:'첨부 PPTX 187장'},{id:'HEALTH',title:'헬스케어 서비스',sub:'보험금이 못 하는 일'},{id:'SURG',title:'1~5종 수술분류표',sub:'1~72번 원문 전량'},{id:'TERMS',title:'용어 사전',sub:'검색해서 찾아보기'},{id:'CASE',title:'케이스 스터디',sub:'실전 9건'},{id:'GAL',title:'원본 자료실',sub:'이미지 전체'},{id:'BOOK',title:'전체 통독 · 인쇄',sub:'책 한 권으로'},{id:'DB',title:'실제 치료비 DB',sub:'영수증 30건'},{id:'CARD',title:'화법 전체 카드',sub:'전 레벨 모음'},{id:'GUIDE',title:'운영 · 활용 가이드',sub:'교육 담당자용'}];
 function buildNav(){
   document.getElementById('nav').innerHTML =
     '<a href="#LESSON" data-id="LESSON" style="background:rgba(201,162,39,.16);border-left-color:var(--gold)">'+
@@ -896,6 +982,16 @@ function growStat(who){
 function nextAction(who, st){
   /* 지금 해야 할 딱 한 가지 */
   var cur = STAGES[st.stage-1];
+
+  /* 읽었는데 안 써 본 것이 있으면 그게 먼저다. 다음 레벨보다 먼저.
+     진도만 빼고 현장에서 한 번도 안 써 보는 것을 막는 고리다. */
+  var pt = pNext();
+  if(pt){
+    var got = pRows(pt.id).length;
+    return {t:'현장 과제 — '+pt.t, d:pt.id+' · '+got+' / '+pt.n+' '+pt.label,
+            h:'#PRAC', why:'읽었는데 아직 안 써 봤다'};
+  }
+
   for(var i=0;i<cur.need.length;i++){
     var id = cur.need[i];
     if(!state.done[id]){
@@ -916,6 +1012,61 @@ function nextAction(who, st){
   if(st.doneN < st.total) return {t:'남은 본문 마저 읽기', d:st.doneN+' / '+st.total+' 완료', h:'#BOOK', why:'완독까지 '+(st.total-st.doneN)+'개'};
   return {t:'케이스 9건 다시 풀기', d:'답 보지 않고', h:'#CASE', why:'실전 감각 유지'};
 }
+function renderPrac(){
+  var list = window.PRACTICE || [], who = tname();
+  var doneN = 0; list.forEach(function(t){ if(pDone(t.id)) doneN++; });
+  var h = '<div class="hd"><div class="kick">현장</div><h2>읽은 것을 그 주에 써 본다</h2>'+
+    '<div class="sub">본문을 끝낸 레벨부터 열립니다 · '+doneN+' / '+list.length+' 완료'+(who?' · '+esc(who):'')+'</div></div>';
+
+  h += '<div class="cal key"><b>왜 이걸 하나</b> — 읽기만 하면 상담에서 안 나옵니다. '+
+       '한 번이라도 입 밖에 내 본 말만 실제로 쓰입니다. 과제는 전부 <b>물어보고 듣기</b>입니다 — '+
+       '권유하거나 단정하지 않습니다.</div>';
+  h += '<div class="cal warn"><b>고객 실명 · 연락처 · 병력은 적지 마세요.</b> '+
+       '「김○○」 「사무실 옆자리」 정도면 충분합니다. 적으신 내용은 <b>이 기기에만</b> 남고, '+
+       '서버로는 <b>건수와 날짜만</b> 올라갑니다.</div>';
+
+  list.forEach(function(t){
+    var open = !!state.done[t.id], rows = pRows(t.id), ok = pDone(t.id);
+    var cls = ok ? 'pc done' : (open ? 'pc' : 'pc lock');
+    h += '<div class="'+cls+'" id="P-'+t.id+'">'+
+      '<div class="ph"><i>'+t.id+'</i><b>'+esc(t.t)+'</b>'+
+        '<span class="pm">'+esc(t.mins)+' · '+t.n+esc(t.label)+'</span>'+
+        '<span class="pst">'+(ok?'● 완료':(open? rows.length+' / '+t.n : '잠김'))+'</span></div>';
+
+    if(!open){
+      h += '<div class="pb"><div class="plock">본문 <b>'+t.id+'</b> 를 먼저 끝내면 열립니다. '+
+           '<a href="#'+t.id+'">→ '+t.id+' 읽으러 가기</a></div></div></div>';
+      return;
+    }
+
+    h += '<div class="pb">'+
+      '<div class="pw"><b>왜</b> '+esc(t.why)+'</div>'+
+      '<div class="pd"><b>무엇을</b> '+t.do+'</div>'+
+      '<div class="pq"><b>이렇게 물어보세요</b><br>'+esc(t.ask)+'</div>';
+
+    h += '<div class="prl">';
+    rows.forEach(function(r, i){
+      h += '<div class="prr"><span class="pn">'+(i+1)+'</span>'+
+           '<b>'+esc(r.who||'—')+'</b><span class="pt">'+esc(r.note||'')+'</span>'+
+           '<span class="pdt">'+esc(r.at||'')+'</span>'+
+           '<button class="pdel" data-pdel="'+t.id+'" data-i="'+i+'">지우기</button></div>';
+    });
+    if(rows.length < t.n){
+      h += '<div class="prw">'+
+        '<input class="pi1" id="pw-'+t.id+'" type="text" maxlength="12" placeholder="표시 (예: 김○○)">'+
+        '<input class="pi2" id="pn-'+t.id+'" type="text" maxlength="60" placeholder="'+esc(t.ph)+'">'+
+        '<button class="btn p sm" data-padd="'+t.id+'">기록</button></div>';
+    }else{
+      h += '<div class="pok">이 과제는 끝났습니다. 다음 레벨로 가세요.</div>';
+    }
+    h += '</div></div>';
+  });
+
+  h += '<div class="cal">과제 기록은 <a href="#GROW">성장 경로</a> 의 「다음에 할 것」에 그대로 반영됩니다. '+
+       '읽었는데 안 써 본 과제가 있으면 <b>다음 레벨보다 먼저</b> 뜹니다.</div>';
+  return h;
+}
+
 function renderGrow(){
   var who = tname(), st = growStat(who);
   var h = '<div class="hd"><div class="kick">성장</div><h2>지금 어디까지 왔고, 다음에 뭘 하면 되나</h2>'+
@@ -938,6 +1089,20 @@ function renderGrow(){
   h += '<a class="nextone" href="'+na.h+'"><div class="nl">다음에 할 것 · 딱 하나</div>'+
     '<div class="nt">'+esc(na.t)+'</div><div class="nd">'+esc(na.d)+'</div>'+
     '<div class="nw">'+esc(na.why)+'</div></a>';
+
+  /* 현장 과제 — 읽은 것 중 안 써 본 것 */
+  (function(){
+    var list = window.PRACTICE || [], op = 0, dn = 0;
+    list.forEach(function(t){ if(state.done[t.id]){ op++; if(pDone(t.id)) dn++; } });
+    if(op){
+      h += '<a class="pracbar'+(dn>=op?' full':'')+'" href="#PRAC">'+
+        '<span class="pl">현장 과제</span>'+
+        '<span class="pv">'+dn+' / '+op+'</span>'+
+        '<span class="px">'+(dn>=op ? '읽은 것은 다 써 봤습니다' : '읽었는데 아직 안 써 본 것이 '+(op-dn)+'개 있습니다')+'</span>'+
+        '<span class="pgo">→</span>'+
+        '</a>';
+    }
+  })();
 
   h += svgWrap(figGrow(st));
 
@@ -1874,6 +2039,7 @@ function route(){
   else if(id==='SRC'){ v.innerHTML = renderSrc(); paintSrc('전체',''); }
   else if(id.indexOf('SRC-')===0){ v.innerHTML = renderSrcDetail(id.slice(4)); }
   else if(id==='GROW'){ v.innerHTML = renderGrow(); }
+  else if(id==='PRAC'){ v.innerHTML = renderPrac(); }
   else if(id==='TEST'){ v.innerHTML = renderTest(); }
   else if(id==='TEAM'){ v.innerHTML = renderTeam(); loadTeam(); }
   else if(id.indexOf('TQ-')===0){ QSET = id.slice(3); v.innerHTML = renderQuiz(QSET); }
@@ -1933,10 +2099,29 @@ function bind(){
       navigator.clipboard && navigator.clipboard.writeText(txt).then(function(){ t.textContent='복사됨'; setTimeout(function(){t.textContent='복사';},1200); });
       return;
     }
+    // 현장 과제 — 기록
+    if(t.dataset && t.dataset.padd){
+      var pid = t.dataset.padd, task = prac(pid);
+      var w1 = document.getElementById('pw-'+pid), n1 = document.getElementById('pn-'+pid);
+      var wv = (w1 ? w1.value : '').trim(), nv = (n1 ? n1.value : '').trim();
+      if(!wv && !nv){ if(w1) w1.focus(); return; }
+      if(!PR[pid]) PR[pid] = {rows:[]};
+      var d = new Date();
+      PR[pid].rows.push({ who:wv || '—', note:nv,
+        at:(d.getMonth()+1)+'/'+d.getDate() });
+      psave(); pPush(); route();
+      return;
+    }
+    if(t.dataset && t.dataset.pdel){
+      var did = t.dataset.pdel, di = +t.dataset.i;
+      if(PR[did] && PR[did].rows) PR[did].rows.splice(di, 1);
+      psave(); pPush(); route();
+      return;
+    }
     // done
     if(t.id==='dbtn' && c){
       state.done[c.id] = !state.done[c.id]; save(); buildNav();
-      if(window.SYNC && tname()) SYNC.pushProgress(tname(), state.done);
+      pPush();
       t.textContent = state.done[c.id] ? '● 학습 완료됨 (취소)' : '이 레벨 학습 완료로 표시';
       t.className = 'btn '+(state.done[c.id]?'o':'g');
       return;
