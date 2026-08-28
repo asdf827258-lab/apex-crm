@@ -91,7 +91,10 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
       await new Promise(r => setTimeout(r, 320));
       const opened = real();
       const on = el.querySelectorAll('.acc.on').length;
-      const scroll = box.classList.contains('folded');
+      /* 이름이 folded → scrolls 로 바뀌었다. 뜻도 넓어졌다 —
+         예전에는 「접이가 펴져 있다」 였고 지금은 「내용이 넘친다」 다.
+         접이와 상관없이 긴 장이면 스크롤이 열린다(글씨를 안 줄이니까). */
+      const scroll = box.classList.contains('scrolls');
       const over = el.scrollHeight * parseFloat(el.style.zoom || 1) > box.clientHeight;
       /* 다시 접고 잰다 — 되돌아와야 한다 */
       heads.forEach(h => h.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));

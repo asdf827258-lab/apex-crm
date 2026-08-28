@@ -614,9 +614,22 @@ body.form-mode{background:#fff}
 /* 접이를 편 채로 장 높이를 재면 그만큼 글씨가 작아진다 — 고객 앞에서 안 보인다.
    그래서 <b>잴 때만</b> 접어 두고, 크기는 접었을 때 기준으로 정한다. */
 #show.wide .slide.measuring .acc.on .acc-b{display:none}
-/* 편 내용이 장을 넘치면 <b>줄이지 말고 스크롤</b>한다.
+/* 장이 넘치면 <b>줄이지 말고 스크롤</b>한다.
    가운데 정렬이면 넘칠 때 위아래가 같이 잘리므로 위로 붙인다. */
-#show.wide #slides.folded{overflow-y:auto;align-items:flex-start}
+#show.wide #slides.scrolls{overflow-y:auto;align-items:flex-start;scroll-behavior:smooth}
+#show.wide #slides.scrolls::-webkit-scrollbar{width:8px}
+#show.wide #slides.scrolls::-webkit-scrollbar-thumb{background:#C7D2FE;border-radius:99px}
+/* ── <b>아래에 더 있다</b>고 말한다 ────────────────────────────────
+   말 안 하면 사장님이 첫 화면만 보시고 넘기신다. 고객 앞에서 못 보고
+   지나간 장이 생긴다. 끝까지 내리면 스스로 사라진다. */
+#show.wide .deckmore{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  display:none;align-items:center;gap:6px;padding:7px 15px;border-radius:99px;
+  background:rgba(27,58,107,.93);color:#fff;font-size:12px;font-weight:800;
+  letter-spacing:-.02em;box-shadow:0 4px 14px rgba(11,26,51,.24);
+  pointer-events:none;z-index:5;animation:moreB 1.6s ease-in-out infinite}
+#show.wide.hasmore .deckmore{display:inline-flex}
+@keyframes moreB{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(3px)}}
+@media(prefers-reduced-motion:reduce){#show.wide .deckmore{animation:none}}
 #show.wide .slide.on{display:block}
 #show.wide .deckmark{position:absolute;right:28px;bottom:16px;font-size:9.5px;font-weight:800;
   letter-spacing:.18em;color:var(--gray-3);pointer-events:none}
@@ -1150,7 +1163,8 @@ svg{display:block;width:100%;height:auto;overflow:visible}
     <div class="prog"><i id="progbar"></i></div>
     <div class="pgno" id="pgno">1 / 1</div>
   </div>
-  <div class="stage"><div id="slides"></div><div class="deckmark">APEX · YUNPRO</div></div>
+  <div class="stage"><div id="slides"></div><div class="deckmark">APEX · YUNPRO</div>
+    <div class="deckmore">↓ 아래로 더 있습니다</div></div>
   <div class="script" id="script"><div class="sc-h"><div class="sc-t">SCRIPT · 설계사 전용</div>
     <button class="sc-x" id="scx">✕</button></div><div id="scin"></div></div>
   <div class="drawer" id="drawer"><div class="dr-panel"><h4>목차 · 탭하면 이동합니다</h4><div id="drIn"></div></div></div>
@@ -4707,25 +4721,50 @@ function fitSlide(){
   var availH=box.clientHeight-parseFloat(cs.paddingTop||0)-parseFloat(cs.paddingBottom||0);
   var availW=box.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0);
   if(availH<=0||availW<=0) return;
-  /* <b>접이는 재지 않는다.</b> 펴면 장이 길어지고, 길어진 만큼 줄이면 글씨가
-     같이 작아져 고객이 못 읽는다. 접었을 때 크기로 맞추고, 편 내용은 넘치면
-     스크롤한다 — 그래야 펴도 글씨가 그대로다. */
-  var opened=el.querySelector('.acc.on');
-  if(opened) el.classList.add('measuring');
+  /* ── <b>높이 때문에 글씨를 줄이지 않는다</b> ──────────────────────────
+     여태는 장이 길면 한 판에 다 넣으려고 <b>절반(0.52배)까지</b> 줄였다.
+     고객 앞 화면에서 글씨가 반이 되면 못 읽으신다 — 자료를 만든 뜻이
+     없어진다. 길다고 작게 만드는 것은 답이 아니다.
+
+     그래서 <b>폭에만</b> 맞춘다. 폭은 맞춰야 옆으로 안 잘린다. 높이가
+     넘치면 <b>내려서</b> 본다 — 글씨 크기는 그대로다.
+
+     넘치는지는 <b>편 채로</b> 잰다. 접어 놓고 재면 폈을 때 넘치는 것을
+     못 보고 「더 있습니다」 를 안 띄운다.                              */
   var k=Math.max(0.95, Math.min(1.34, availW/1180));
-  for(var i=0;i<4;i++){
-    el.style.zoom=1; el.style.width=(100/k).toFixed(3)+'%';
-    var h=el.scrollHeight;
-    if(h<=0) break;
-    var rendered=h*k;
-    if(rendered<=availH*0.995) break;
-    k=Math.max(0.52, k*(availH/rendered)*0.985);
-  }
-  el.classList.remove('measuring');
   el.style.zoom=k.toFixed(3);
   el.style.width=(100/k).toFixed(3)+'%';
-  /* 편 것이 있으면 넘칠 수 있으니 상자가 스크롤되게 둔다 */
-  box.classList.toggle('folded', !!opened);
+  var over=(el.scrollHeight*k)>(availH+2);
+  box.classList.toggle('scrolls', over);
+  deckMore();
+}
+/* ── 아래에 더 있는지 · 그것을 말하는지 ──────────────────────────────
+   판정하는 자리는 <b>하나</b>다. 스크롤할 때도 장을 넘길 때도 같은
+   함수가 답한다 — 두 곳에서 세면 한쪽만 고쳐진다 (CLAUDE.md 5번). */
+function deckMore(){
+  var box=$('slides'),show=$('show'); if(!box||!show) return;
+  var more=box.classList.contains('scrolls') &&
+           (box.scrollTop+box.clientHeight)<(box.scrollHeight-4);
+  show.classList.toggle('hasmore', !!more);
+}
+/* 이 장에 <b>아직 안 보여 준 단계</b>가 남았나. 「한 번에 하나씩」 을 켜 두면
+   ↓ 는 다음 줄을 보여 주는 열쇠다 — 그것보다 스크롤을 먼저 하면 사장님이
+   기다리시는 다음 줄이 안 나온다. 판정은 여기 한 곳에서만 한다 (5번). */
+function deckHasStep(){
+  var el=$('slides').children[cur];
+  return !!(el&&el._steps&&!el.classList.contains('allon')&&el._si<el._steps.length-1);
+}
+/* 이 장을 <b>더 내릴 수 있나</b> — 키·리모컨이 이것을 보고 정한다 */
+function deckCanScroll(down){
+  var box=$('slides');
+  if(!box||!box.classList.contains('scrolls')) return false;
+  return down ? (box.scrollTop+box.clientHeight)<(box.scrollHeight-4)
+              : box.scrollTop>4;
+}
+function deckScroll(down){
+  var box=$('slides'); if(!box) return;
+  box.scrollTop += (down?1:-1)*Math.round(box.clientHeight*0.86);
+  setTimeout(deckMore,60);
 }
 var fitT=null;
 function deckScale(){ clearTimeout(fitT); fitT=setTimeout(fitSlide,16); }
@@ -4736,6 +4775,10 @@ function go(i){
   for(var k=0;k<els.length;k++) els[k].classList.remove('on');
   els[i].classList.add('on'); els[i].scrollTop=0;
   var stg=document.querySelector('.stage'); if(stg) stg.scrollTop=0;
+  /* 새 장은 <b>맨 위부터</b> — 앞 장에서 내려 둔 자리가 남으면 첫 줄을
+     못 보고 지나가신다. 부드럽게 움직이면 그 장면이 보이므로 여기서만 끈다. */
+  var _sb=$('slides');
+  if(_sb){ _sb.style.scrollBehavior='auto'; _sb.scrollTop=0; _sb.style.scrollBehavior=''; }
   cur=i;
   if(els[i]._steps&&!els[i].classList.contains('allon')) stepSet(els[i],0);
   paint();
@@ -4795,10 +4838,29 @@ $('wide').onclick=function(){
 };
 $('speed').onclick=function(){si=(si+1)%SPEEDS.length;$('speed').textContent=SPEEDS[si]+'초';if(playing)arm();};
 
+/* 스크롤이 움직이면 「더 있습니다」 를 다시 잰다 — 끝까지 내리면 사라진다 */
+$('slides').addEventListener('scroll',function(){deckMore();},{passive:true});
+
+/* ── 아래·오른쪽 키는 <b>먼저 내리고</b>, 바닥에 닿으면 다음 장 ──────
+   긴 장을 스크롤로 보게 해 놓고 키가 곧장 넘겨 버리면, 아래쪽 내용을
+   <b>한 번도 못 보고</b> 지나가신다. 리모컨(PageDown)도 같다.
+   좌우 화살표는 <b>장 넘기기</b> 그대로 둔다 — 발표 중에 장을 확실히
+   넘기는 길이 하나는 남아 있어야 한다.                              */
 document.addEventListener('keydown',function(e){
   if(!$('show').classList.contains('on')) return;
-  if(e.key==='ArrowRight'||e.key==='PageDown'||e.key==='ArrowDown'){e.preventDefault();stop();advance();}
-  else if(e.key==='ArrowLeft'||e.key==='PageUp'||e.key==='ArrowUp'){e.preventDefault();stop();back();}
+  if(e.key==='ArrowDown'||e.key==='PageDown'){
+    e.preventDefault();stop();
+    if(deckHasStep()){advance();return;}          /* ① 남은 단계를 먼저 */
+    if(deckCanScroll(true)){deckScroll(true);return;}  /* ② 아래에 더 있으면 내린다 */
+    advance();return;                             /* ③ 다 봤으면 다음 장 */
+  }
+  if(e.key==='ArrowUp'||e.key==='PageUp'){
+    e.preventDefault();stop();
+    if(deckCanScroll(false)){deckScroll(false);return;}
+    back();return;
+  }
+  if(e.key==='ArrowRight'){e.preventDefault();stop();advance();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stop();back();}
   else if(e.key==='s'||e.key==='S'){ $('script').classList.toggle('on'); }
   else if(e.key===' '){e.preventDefault();playing?stop():play();}
   else if(e.key==='Escape'){$('exit').click();}
@@ -4808,6 +4870,8 @@ var tx=0,ty=0;
 $('show').addEventListener('touchstart',function(e){tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
 $('show').addEventListener('touchend',function(e){
   var dx=e.changedTouches[0].clientX-tx, dy=e.changedTouches[0].clientY-ty;
+  /* 옆으로 그으면 장을 넘긴다. <b>위아래는 건드리지 않는다</b> — 긴 장을
+     손가락으로 내리시는 길이라, 여기서 가로채면 스크롤이 안 된다. */
   if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*2){stop();if(dx<0)advance();else back();}
 });
 </script>
