@@ -622,6 +622,36 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(/function frSay/.test(frAll), '고객 문구는 규칙(frSay)이 만든다');
   is(!/generateContent|api\/gemini|anthropic/.test(frAll), '이 모듈은 LLM API 를 새로 붙이지 않는다');
 
+  /* ── 입구를 하나로 — 메뉴에서 빼되 화면은 죽이지 않는다 ── */
+  console.log('\n[12] 비포&애프터 — 목록에서만 빠지고 화면은 사는가');
+  const menu = await page.evaluate(() => {
+    var inMenu = false;
+    TABS.forEach(function (g) { (g.items || []).forEach(function (it) { if (it.id === 'baba') inMenu = true; }); });
+    var grp = (typeof OS_TAB_GROUP !== 'undefined') ? OS_TAB_GROUP['baba'] : null;
+    var groupExists = TABS.some(function (g) { return (g.key || g.group) === grp; });
+    var allowed = (typeof osTabAllowed === 'function') ? osTabAllowed('baba') : null;
+    /* 실행 체크판이 아직 이 화면을 가리키는가 — 가리키는데 죽으면 없는 화면을 여는 단추가 된다 */
+    var ck = false;
+    try { RT_STEP.forEach(function (s) { s.rows.forEach(function (r) { if (r.tab === 'baba') ck = true; }); }); } catch (e) { }
+    try { go('baba'); } catch (e) { }
+    return { inMenu: inMenu, grp: grp, groupExists: groupExists, allowed: allowed, ck: ck };
+  });
+  await page.waitForTimeout(800);
+  const opened = await page.evaluate(() => {
+    var d = document.getElementById('dynPane') || document.getElementById('main');
+    var t = (d && d.innerText) || '';
+    return { shown: t.indexOf('비포') >= 0 || t.indexOf('애프터') >= 0, len: t.length };
+  });
+  is(menu.inMenu === false, '왼쪽 목록에서 빠졌다 — 같은 일을 두 곳에서 묻지 않는다');
+  is(menu.grp === '증권 분석' && menu.groupExists,
+     '「메뉴엔 없지만 살아 있는 화면」으로 <b>OS_TAB_GROUP</b> 에 적혀 있다 — 목록을 두 벌로 만들지 않는다');
+  is(menu.allowed === true, '권한 판정이 원래 칸을 따라 열려 있다 (osTabAllowed)');
+  is(menu.ck === true && opened.shown,
+     "실행 체크판이 가리키는 화면이 go('baba') 로 <b>실제로 열린다</b> (" + opened.len + '자)');
+  is(/frOpenBaba/.test(CODE) && /frFromBaba/.test(CODE),
+     '풀리포트 안에 들어가는 길(🔄 빠른 비포&애프터)과 가져오는 길이 둘 다 있다');
+
+
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

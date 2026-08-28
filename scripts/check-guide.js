@@ -88,7 +88,13 @@ const is = (c, m) => c ? ok(m) : no(m);
     });
     var have = {};
     TABS.forEach(function (g) { (g.items || []).forEach(function (it) { have[it.id] = 1; }); });
-    var extra = { growth: 1, teamx: 1, ckteam: 1 };
+    /* 「메뉴엔 없지만 살아 있는 화면」 목록을 <b>손으로 베껴 두지 않는다.</b>
+       앱이 OS_TAB_GROUP 에 적어 두는데 여기 따로 적어 두었더니, 앱에 한 줄이
+       늘었을 때 이 점검만 모르고 <b>멀쩡한 화면을 죽었다고</b> 했다
+       (CLAUDE.md 5번 — 표는 하나만 두고 다른 곳은 그것을 가리킨다). */
+    var extra = {};
+    if (typeof OS_TAB_GROUP !== 'undefined')
+      Object.keys(OS_TAB_GROUP).forEach(function (k) { extra[k] = 1; });
     var k;
     for (k in ids) if (ids.hasOwnProperty(k) && !have[k] && !extra[k]) dead.push(k);
     return { n: Object.keys(ids).length, dead: dead, secs: secs.length, called: Object.keys(ids) };
