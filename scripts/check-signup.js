@@ -134,6 +134,56 @@ const srv = http.createServer((rq, rs) => {
      '  안 누르면 <b>여전히 못 넘어간다</b> — 검사하는 자리가 있다');
   is(/국외 이전/.test(SRC), '  <b>국외 이전</b> 동의도 그대로 받는다');
 
+  /* ── 가입 폼은 <b>두 곳</b>에 뜬다 ────────────────────────────────
+     ① 모달(osOpenModal) ② <b>로그인 게이트 화면</b>(osLoginGateHtml) —
+     로그아웃 상태로 앱을 열면 나오는 큰 화면이다. 위까지는 ① 만 봤고,
+     ② 는 폼을 <b>따로 적어 두어 동의 칸이 통째로 빠져 있었다.</b>
+     그래서 계정 등록을 누르면 「동의에 체크해 주세요」 가 뜨는데
+     <b>체크할 칸이 화면에 없었다.</b> 2026-08-29 에 사장님이 그 화면에서
+     막히셨다 — 점검이 한쪽만 봐서 초록이었다 (CLAUDE.md 5번·8번).
+     이제 <b>실제로 그 화면을 세워</b> 같은 것을 다시 본다. */
+  console.log('\n[7-1] 로그인 게이트 화면에서도 똑같이 된다 — 폼이 두 벌이 아니다');
+  const G = await page.evaluate(() => {
+    const O = {}, F = id => document.getElementById(id);
+    window.osClient = function () {
+      return { auth: { signUp: function () { return new Promise(function () { }); } } };
+    };
+    OS.profile = null; OS.session = null;
+    const dyn = document.getElementById('dynPane') || document.getElementById('main');
+    dyn.innerHTML = osLoginGateHtml();
+    O.box = !!F('osAgreeBox'); O.all = !!F('osAgAll');
+    if (!O.box) return O;
+    F('osTabSignup').click();
+    O.shown = getComputedStyle(F('osAgreeBox')).display !== 'none';
+    O.h = Math.round(F('osAgreeBox').getBoundingClientRect().height);
+    F('osName').value = '홍길동'; F('osEmail').value = 'hong@example.com'; F('osPw').value = 'abcd1234!';
+    /* 아무것도 안 누르고 — 여기서도 <b>이름을 대고</b> 말해야 한다 */
+    osSubmit(); O.none = F('osErr').textContent;
+    /* 「모두 동의」 한 번이면 끝나야 한다 */
+    F('osAgAll').checked = true; osAgAllSet(true);
+    O.both = F('osAgTerms').checked && F('osAgPriv').checked;
+    osSubmit(); O.after = F('osErr').textContent; O.btn = F('osSubmit').textContent;
+    return O;
+  });
+  is(G.box, '  게이트 화면에 동의 상자가 <b>있다</b>' +
+     (G.box ? '' : ' ← 체크할 칸도 없이 「체크해 주세요」 만 뜹니다'));
+  is(G.all, '  <b>「모두 동의」</b> 칸도 거기 있다');
+  is(!!G.shown && G.h > 0, '  계정 등록을 고르면 <b>실제로 보인다</b> — 높이 ' + G.h + 'px');
+  is(/이용약관/.test(G.none || '') && /개인정보/.test(G.none || ''),
+     '  빠지면 여기서도 <b>이름을 대고</b> 말한다');
+  is(G.both === true, '  한 번 누르면 <b>두 칸이 같이</b> 눌린다');
+  is(G.after === '' && /처리 중/.test(G.btn || ''),
+     '  동의하면 <b>실제로 신청이 나간다</b> — 단추 「' + (G.btn || '') + '」');
+  /* 폼을 두 곳에 적어 두면 다음에 또 한쪽만 고친다 */
+  is(/function osAuthFormHtml\(/.test(SRC),
+     '  폼을 만드는 곳이 <b>한 곳</b>이다 — osAuthFormHtml()');
+  is((SRC.match(/id="osAgreeBox"/g) || []).length === 1,
+     '  동의 상자를 적어 둔 자리가 <b>딱 하나</b>다 — ' +
+     (SRC.match(/id="osAgreeBox"/g) || []).length + '군데');
+  is((SRC.match(/id="osTabSignup"/g) || []).length === 1,
+     '  계정 등록 딱지를 적어 둔 자리도 <b>하나</b>다 — ' +
+     (SRC.match(/id="osTabSignup"/g) || []).length + '군데');
+
   console.log('\n[8] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
 
