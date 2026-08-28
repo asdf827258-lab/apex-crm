@@ -199,6 +199,40 @@ const cTxt = flat(plan.career).join(' ');
 /* 상속은 결론을 말하면 안 되는 자리다 */
 is(/요건 충족 시/.test(cTxt), '  상속 주차에 「요건 충족 시」가 붙어 있다');
 
+console.log('\n[7-5] 지점장과 교육매니저가 갈려 있는가');
+const who = plan.who || {};
+is((who.axis || []).length >= 3, '  둘이 보는 축을 갈라 적었다');
+is(/같은 것을 두 사람이 챙기지 않습니다/.test(who.rule || ''), '  같은 것을 둘이 챙기지 않는다고 못 박았다');
+['week', 'month', 'quarter'].forEach(k =>
+  is(((plan.lead || {})[k] || []).length >= 3, '  지점장 ' + k + ' 목록이 있다'));
+['day', 'week', 'month', 'quarter'].forEach(k =>
+  is(((plan.edu || {})[k] || []).length >= 2, '  교육매니저 ' + k + ' 목록이 있다'));
+is((plan.leadNo || []).length >= 3, '  지점장이 <b>하지 않는 것</b>이 적혀 있다');
+is(/공부를 묻지 않습니다/.test(flat(plan.leadNo).join(' ')), '  공부는 교육매니저 몫이라고 갈라 뒀다');
+/* 두 목록이 같은 문장을 들고 있으면 가른 뜻이 없다 */
+const leadTxt = flat({ d: plan.mgrDay, l: plan.lead }).filter(t => typeof t === 'string' && t.length > 18);
+const eduTxt = flat(plan.edu).join(' ');
+const both = leadTxt.filter(t => eduTxt.indexOf(t) >= 0);
+is(both.length === 0, '  두 목록이 같은 일을 적지 않았다' + (both.length ? ' — ' + both[0].slice(0, 26) : ''));
+/* 지점장은 숫자, 교육매니저는 사람 — 알맹이가 바뀌면 가른 뜻이 없다 */
+is(/게이트/.test(eduTxt), '  교육매니저가 게이트를 본다');
+is(/롤플레이/.test(eduTxt), '  교육매니저가 롤플레이 상대가 된다');
+is(/커리큘럼 자체를 손봅니다/.test(eduTxt), '  분기마다 커리큘럼 자체를 손본다');
+is(/마감|회수/.test(flat(plan.lead).join(' ')), '  지점장이 마감·회수를 본다');
+
+console.log('\n[7-6] 캘린더 규칙');
+is((plan.calRules || []).length >= 4, '  캘린더 규칙이 있다');
+const cr = flat(plan.calRules).join(' ');
+is(/자동으로 깔립니다/.test(cr), '  고정 리듬은 자동으로 깔린다');
+is(/셋을 넘기지 않습니다/.test(cr), '  한 날에 셋을 넘기지 않는다');
+is(/실명을 적지 않습니다/.test(cr), '  고객 실명을 적지 않는다 (CLAUDE.md 3)');
+is(/이 브라우저에만/.test(cr), '  서버로 나가지 않는다고 적혀 있다');
+/* 달력이 요일 이름을 다시 적어 두면 주간 미션과 두 벌이 된다 */
+is(/wkOf\[P\.week\[i\]\.day\]/.test(page), '  달력이 요일 미션을 <b>표에서</b> 읽는다');
+is(/P\.monthly\.weeks\[wn ?- ?1\]/.test(page), '  달력이 주차 초점을 <b>표에서</b> 읽는다');
+is(!/'월','화','수','목','금'/.test(page.replace(/DOW=\[[^\]]*\]/g, '')),
+   '  달력에 요일 미션을 손으로 다시 적지 않았다');
+
 console.log('\n[8] 인쇄가 종이로 나오는가');
 is(!/font-feature-settings/.test(page),
    '  tnum 을 켜지 않았다 — 켜고 PDF 로 저장하면 숫자가 유니코드를 잃는다');
@@ -277,8 +311,59 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   const panes = await pg.$$eval('.pane', n => n.length);
   const plen = await pg.$eval('#pane', n => n.innerText.length);
   is(panes === tabs.length, '  인쇄본에 ' + panes + '칸이 다 담긴다 (칸 ' + tabs.length + '개)');
-  is(plen > 12000, '  내용이 충분하다 (' + plen + '자)');
+  is(plen > 16000, '  내용이 충분하다 (' + plen + '자)');
   await pg.emulateMedia({ media: 'screen' });
+
+  console.log('\n[11-1] 캘린더가 실제로 굴러가는가');
+  await pg.setViewportSize({ width: 1100, height: 900 });
+  await pg.click('.tb:text-is("📅 이번 달 캘린더")');
+  await pg.waitForTimeout(200);
+  const now = new Date(), pad = n => (n < 10 ? '0' : '') + n;
+  const mk = d => now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(d);
+  is((await pg.$$('.cal td')).length > 28, '  달력이 그려진다');
+  is((await pg.$$('.fx')).length > 15, '  고정 리듬이 자동으로 깔린다 (' + (await pg.$$('.fx')).length + '개)');
+  is((await pg.$$('.wkf')).length === 4, '  주차 초점 넷이 왼쪽에 선다');
+  /* 넣기 · 남기 · 지우기 */
+  const D1 = mk(3), D2 = mk(4);
+  for (let i = 1; i <= 3; i++) {
+    pg.once('dialog', d => d.accept('시험 ' + i));
+    await pg.click('[data-add="' + D1 + '"]'); await pg.waitForTimeout(180);
+  }
+  is((await pg.$$('[data-del="' + D1 + '"]')).length === 3, '  넣은 것이 그 날에 붙는다');
+  is((await pg.$$('[data-add="' + D1 + '"]')).length === 0, '  셋이 차면 더 못 넣는다');
+  is((await pg.$$('[data-add="' + D2 + '"]')).length === 1, '  다른 날은 그대로 넣을 수 있다');
+  pg.once('dialog', d => d.accept('   '));
+  await pg.click('[data-add="' + D2 + '"]'); await pg.waitForTimeout(180);
+  is((await pg.$$('[data-del="' + D2 + '"]')).length === 0, '  빈 글은 안 들어간다');
+  await pg.reload({ waitUntil: 'networkidle' });
+  await pg.click('.tb:text-is("📅 이번 달 캘린더")'); await pg.waitForTimeout(200);
+  is((await pg.$$('[data-del="' + D1 + '"]')).length === 3, '  새로고침해도 남아 있다');
+  await pg.click('[data-cal="next"]'); await pg.waitForTimeout(180);
+  is((await pg.$$('.mine')).length === 0, '  다음 달은 비어 있다 — 달마다 따로 남는다');
+  is((await pg.$$('.fx')).length > 15, '  다음 달에도 고정 리듬은 깔린다');
+  await pg.click('[data-cal="today"]'); await pg.waitForTimeout(180);
+  is((await pg.$$('.mine')).length === 3, '  이번 달로 돌아오면 그대로 있다');
+  await pg.click('.mine'); await pg.waitForTimeout(180);
+  is((await pg.$$('.mine')).length === 2, '  눌러서 지워진다');
+  pg.once('dialog', d => d.accept());
+  await pg.click('[data-cal="clear"]'); await pg.waitForTimeout(250);
+  is((await pg.$$('.mine')).length === 0 && (await pg.$$('.fx')).length > 15,
+     '  비우기는 <b>내가 넣은 것만</b> 지운다 — 고정 리듬은 남는다');
+
+  console.log('\n[11-2] 두 리스트가 따로 남는가');
+  await pg.click('.tb:text-is("지점장 리스트")'); await pg.waitForTimeout(200);
+  const leadN = (await pg.$$('.ck')).length;
+  is(leadN >= 15, '  지점장 칸이 ' + leadN + '개 선다');
+  await pg.click('.ck'); await pg.waitForTimeout(180);
+  is((await pg.$$('.ck.on')).length === 1, '  찍힌다');
+  await pg.click('.tb:text-is("교육매니저 리스트")'); await pg.waitForTimeout(200);
+  is((await pg.$$('.ck')).length >= 12, '  교육매니저 칸이 선다');
+  is((await pg.$$('.ck.on')).length === 0, '  지점장이 찍은 것이 교육매니저에 안 섞인다');
+  await pg.reload({ waitUntil: 'networkidle' });
+  await pg.click('.tb:text-is("지점장 리스트")'); await pg.waitForTimeout(200);
+  is((await pg.$$('.ck.on')).length === 1, '  새로고침해도 찍힌 것이 남는다');
+  await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
+  await pg.setViewportSize({ width: 390, height: 844 });
 
   console.log('\n[12] 앱 메뉴에서 열리고 빠져나오는가');
   await pg.addInitScript(STUB);

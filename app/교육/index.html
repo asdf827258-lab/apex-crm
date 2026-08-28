@@ -28,9 +28,8 @@ b{font-weight:800}
 .hero .sub b{color:#fff}
 
 /* 탭 */
-.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 0 12px;margin:0 -14px;padding-left:14px;padding-right:14px;
-  -webkit-overflow-scrolling:touch;scrollbar-width:none}
-.tabs::-webkit-scrollbar{display:none}
+/* 칸이 열다섯이다. 옆으로 밀어 감추면 뒤쪽 칸은 아무도 못 찾는다 — 줄을 바꿔 전부 보여 준다 */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:10px 0 12px}
 .tb{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:#4B5563;border-radius:999px;
   padding:8px 14px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
 .tb.on{background:var(--blue);border-color:var(--blue);color:#fff}
@@ -94,13 +93,49 @@ ul.rl li{font-size:12.5px;line-height:1.8;margin-bottom:5px}
   font-size:11px;font-weight:800;margin-right:6px}
 .chip.w{background:var(--pur)}
 
+/* 캘린더 */
+.calbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.calbar .nm{font-size:16px;font-weight:900;margin-right:auto}
+.cb{border:1px solid var(--line);background:#fff;color:#374151;border-radius:8px;padding:6px 11px;
+  font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+.cb.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.calw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cal{border-collapse:collapse;width:100%;min-width:620px;table-layout:fixed}
+.cal th{background:#F3F6FB;border:1px solid var(--line);padding:6px 4px;font-size:11.5px;text-align:center}
+.cal th.sun{color:var(--red)} .cal th.sat{color:var(--blue)}
+.cal td{border:1px solid var(--line);vertical-align:top;padding:4px;height:96px;background:#fff}
+.cal td.off{background:#FAFBFD}
+.cal td.wk{background:#F8FAFF;width:74px;text-align:center}
+.dn{font-size:12px;font-weight:800;color:#374151}
+.dn.sun{color:var(--red)} .dn.sat{color:var(--blue)}
+.fx{display:block;font-size:10.5px;line-height:1.5;margin-top:3px;padding:2px 5px;border-radius:5px;
+  background:var(--blueL);color:#1E3A8A;font-weight:700}
+.fx.m{background:#EEF2FF;color:#3730A3} .fx.o{background:var(--ambL);color:var(--amb)}
+.mine{display:flex;gap:3px;align-items:flex-start;font-size:10.5px;line-height:1.5;margin-top:3px;
+  padding:2px 4px;border-radius:5px;background:var(--grnL);color:#065F46;font-weight:700;cursor:pointer}
+.mine .x{margin-left:auto;color:#9CA3AF;font-weight:900}
+.add{display:block;width:100%;margin-top:3px;border:1px dashed #CBD5E1;background:transparent;color:#9CA3AF;
+  border-radius:5px;font-size:11px;font-family:inherit;padding:1px 0;cursor:pointer}
+.wkf{font-size:11px;font-weight:800;color:var(--pur);line-height:1.5}
+.wkf i{display:block;font-style:normal;font-size:10px;color:var(--mut);font-weight:600;margin-top:2px}
+
+/* 체크 목록 */
+.ck{display:flex;gap:9px;padding:9px 0;border-top:1px solid #F1F4F8;align-items:flex-start;cursor:pointer}
+.ck:first-child{border-top:0}
+.ck .bx{flex:0 0 auto;width:19px;height:19px;border:1.5px solid #CBD5E1;border-radius:5px;margin-top:2px;
+  display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;background:#fff}
+.ck.on .bx{background:var(--grn);border-color:var(--grn)}
+.ck.on .n{color:#9CA3AF;text-decoration:line-through}
+.ckmeta{font-size:11px;color:var(--mut);margin:4px 0 0}
+
 /* 인쇄 — tnum 은 쓰지 않는다. 켜고 PDF 로 저장하면 숫자가 유니코드를 잃는다 (CLAUDE.md 4-1). */
 .pbtn{position:fixed;right:14px;bottom:14px;z-index:9;border:none;background:var(--blue);color:#fff;
   border-radius:999px;padding:12px 18px;font-size:13px;font-weight:800;font-family:inherit;
   box-shadow:0 6px 18px rgba(26,86,219,.35);cursor:pointer}
 @media print{
   body{background:#fff;font-size:11pt}
-  .tabs,.pbtn,.hero{display:none!important}
+  .tabs,.pbtn,.hero,.add,.calbar .cb{display:none!important}
+  .cal{min-width:0} .cal td{height:78px}
   .wrap{max-width:none;padding:0}
   .pane{display:block!important;break-inside:auto}
   .card,.mt{break-inside:avoid;border-color:#999}
@@ -129,8 +164,8 @@ ul.rl li{font-size:12.5px;line-height:1.8;margin-bottom:5px}
 (function(){
 var P = window.EDU_PLAN;
 var VIEWS = [
-  ['start','시작하기'], ['week','주간 미션'], ['monthly','월간 미션'],
-  ['mgr','매니저 하루'], ['meet','월·목 조회'], ['cover','커버 처방'],
+  ['start','시작하기'], ['cal','📅 이번 달 캘린더'], ['week','주간 미션'], ['monthly','월간 미션'],
+  ['lead','지점장 리스트'], ['edu','교육매니저 리스트'], ['meet','월·목 조회'], ['cover','커버 처방'],
   ['newbie','신입 교육'], ['career','경력 교육'], ['study','공부'],
   ['gate','게이트'], ['ses','세션 카드'], ['news','9월 3일'], ['law','준법']
 ];
@@ -188,7 +223,9 @@ function vStart(){
     row('신입','p','신입 교육','하루 시간표와 90일 게이트 넷. 지식 열두 주는 앱 안에 있습니다',null)+
     row('경력','a','경력 교육','여덟 주. 새 지식이 아니라 <b>굳은 습관 하나</b>를 바꿉니다',null)+
     row('공부','','공부','무엇을 · 어디서 · <b>어떻게 확인하나</b>',null)+
-    row('매니저','r','매니저 하루 · 월·목 조회 · 커버 처방','조회 대본은 분 단위로 적혀 있습니다',null)+
+    row('지점장','r','지점장 리스트','<b>숫자</b>를 봅니다 — 하루·주·달·분기, 눌러서 지웁니다',null)+
+    row('교육','r','교육매니저 리스트','<b>사람과 자료</b>를 봅니다 — 지점장과 겹치지 않게 갈라 뒀습니다',null)+
+    row('달력','b','이번 달 캘린더','고정 리듬이 자동으로 깔리고, 그 위에 <b>직접 넣습니다</b>. 인쇄해 벽에.',null)+
     '</div></div>';
   h+='<div class="note">이 표를 고칠 때는 <code>app/교육/plan.js</code> <b>한 곳만</b> 고칩니다. 이 화면은 그것을 그리기만 합니다.</div>';
   return h;
@@ -219,20 +256,163 @@ function vNews(){
   return h;
 }
 
-function vMgr(){
-  var h='<div class="sec-h">매니저가 매일 하는 일</div>'+
-    '<p class="lead">순서가 중요합니다. <b>내 것을 먼저 끝낸 상태로</b> 팀을 엽니다. '+
-    '내가 안 한 것을 시키면 그날부터 아무도 안 합니다.</p><div class="card"><div class="bd">';
-  for(var i=0;i<P.mgrDay.length;i++){
-    var d=P.mgrDay[i];
-    h+=row(d[0],(i<2?'b':i>=P.mgrDay.length-2?'a':''),d[1],d[2],d[3]);
+/* ══ 저장 — 이 브라우저에만. 서버로 나가지 않는다 ══ */
+function lsGet(k,d){try{var v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}}
+
+var CAL_KEY='apex_edu_cal', CK_KEY='apex_edu_ck';
+function ymd(d){var p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function ym(d){var p=function(n){return(n<10?'0':'')+n;};return d.getFullYear()+'-'+p(d.getMonth()+1);}
+
+/* ══ 캘린더 ══
+   고정 리듬은 plan.js 에서 계산한다 — 여기에 요일 이름을 다시 적지 않는다. */
+var CAL={cur:new Date()};
+function calMine(k){var all=lsGet(CAL_KEY,{});return all[k]||[];}
+function calSet(k,list){var all=lsGet(CAL_KEY,{});all[k]=list;
+  if(!lsSet(CAL_KEY,all))alert('이 브라우저에 저장하지 못했습니다. 시크릿 창이거나 저장 공간이 막혀 있습니다.');}
+function calAdd(ds){
+  var t=prompt('무엇을 넣을까요?\n\n· 고객 실명은 적지 않습니다 — 「김○○」\n· 한 날에 셋을 넘기지 않습니다');
+  if(t===null)return; t=String(t).replace(/\s+/g,' ').trim(); if(!t)return;
+  if(t.length>40)t=t.slice(0,40);
+  var k=ym(CAL.cur), list=calMine(k);
+  if(list.filter(function(x){return x.d===ds;}).length>=3){
+    alert('이 날은 이미 셋입니다.\n넷째를 넣으면 그날은 아무것도 안 됩니다 — 다른 날로 옮기세요.');return;}
+  list.push({d:ds,t:t}); calSet(k,list); paint();
+}
+function calDel(ds,i){
+  var k=ym(CAL.cur), list=calMine(k), n=-1;
+  for(var j=0;j<list.length;j++){if(list[j].d===ds){n++;if(n===i){list.splice(j,1);break;}}}
+  calSet(k,list); paint();
+}
+function calMove(n){CAL.cur=new Date(CAL.cur.getFullYear(),CAL.cur.getMonth()+n,1);paint();}
+function calToday(){CAL.cur=new Date();paint();}
+function calClear(){
+  if(!confirm('이 달에 <내가 넣은 것>만 지웁니다. 고정 리듬은 그대로입니다. 지울까요?'.replace(/[<>]/g,'')))return;
+  calSet(ym(CAL.cur),[]); paint();
+}
+function calWeekNo(day){return Math.min(4,Math.ceil(day/7));}
+
+function vCal(){
+  var Y=CAL.cur.getFullYear(), M=CAL.cur.getMonth();
+  var first=new Date(Y,M,1), last=new Date(Y,M+1,0), lastDay=last.getDate();
+  var key=ym(CAL.cur), mine=calMine(key), today=ymd(new Date());
+  var wkOf={}; for(var i=0;i<P.week.length;i++)wkOf[P.week[i].day]=P.week[i];
+  var DOW=['일','월','화','수','목','금','토'];
+
+  var h='<div class="calbar">'+
+    '<span class="nm">'+Y+'년 '+(M+1)+'월</span>'+
+    '<button class="cb" data-cal="prev">← 지난달</button>'+
+    '<button class="cb on" data-cal="today">이번 달</button>'+
+    '<button class="cb" data-cal="next">다음 달 →</button>'+
+    '<button class="cb" data-cal="clear">내가 넣은 것 비우기</button></div>';
+
+  h+='<div class="calw"><table class="cal"><tr><th class="wk">주차</th>';
+  for(var d=0;d<7;d++) h+='<th class="'+(d===0?'sun':d===6?'sat':'')+'">'+DOW[d]+'</th>';
+  h+='</tr>';
+
+  var day=1-first.getDay(), rowShown={};
+  while(day<=lastDay){
+    /* 이 줄에 걸리는 첫 날짜로 주차를 정한다 */
+    var anchor=day; for(var a=day;a<day+7;a++){if(a>=1&&a<=lastDay){anchor=a;break;}}
+    var wn=calWeekNo(anchor), f=P.monthly.weeks[wn-1];
+    h+='<tr><td class="wk">'+(rowShown[wn]?'<span class="mini">이어서</span>':
+      '<div class="wkf">'+esc(f[0])+'<i>'+esc(f[1])+'</i></div>')+'</td>';
+    rowShown[wn]=1;
+    for(var c=0;c<7;c++,day++){
+      if(day<1||day>lastDay){h+='<td class="off"></td>';continue;}
+      var dt=new Date(Y,M,day), ds=ymd(dt), dw=DOW[dt.getDay()], w=wkOf[dw];
+      h+='<td'+(ds===today?' style="box-shadow:inset 0 0 0 2px var(--blue)"':'')+'>'+
+         '<span class="dn '+(c===0?'sun':c===6?'sat':'')+'">'+day+'</span>';
+      if(w) h+='<span class="fx">'+esc(w.head.split(' —')[0])+'</span>';
+      if(dw==='월'||dw==='목') h+='<span class="fx o">조회 40분</span>';
+      if(day===1) h+='<span class="fx m">달 열기</span>';
+      if(day===lastDay) h+='<span class="fx m">달 닫기</span>';
+      var k2=0;
+      for(var m2=0;m2<mine.length;m2++){ if(mine[m2].d!==ds) continue;
+        h+='<span class="mine" data-del="'+ds+'" data-i="'+k2+'">'+esc(mine[m2].t)+
+           '<span class="x">×</span></span>'; k2++; }
+      if(k2<3) h+='<button class="add" data-add="'+ds+'" title="이 날에 넣기">+</button>';
+      h+='</td>';
+    }
+    h+='</tr>';
   }
-  h+='</div></div>';
-  h+='<div class="note r"><b>매니저가 하지 않는 것 셋</b><ul class="rl">'+
-    '<li>팀원 대신 전화하지 않습니다 — 한 번 대신 걸면 다음에도 기다립니다. <b>옆에서 같이</b> 겁니다.</li>'+
-    '<li>숫자를 말로 묻지 않습니다 — 화면에 있습니다. 물을 시간에 화면을 띄웁니다.</li>'+
-    '<li>못 한 날을 다음 날 두 배로 시키지 않습니다 — 그날도 못 하고 <b>기록까지</b> 끊깁니다.</li>'+
-    '</ul></div>';
+  h+='</table></div>';
+
+  h+='<div class="note b"><b>파란 칸은 자동입니다</b> — 요일 미션 · 월·목 조회 · 달 열기와 닫기 · 왼쪽 주차 초점. '+
+     '「주간 미션」과 「월간 미션」 표에서 그대로 계산해 깝니다. 그 표를 고치면 이 달력도 같이 바뀝니다.'+
+     '<br><b>초록 칸은 제가 넣은 것</b>입니다. 누르면 지워집니다.</div>';
+  h+=rules(P.calRules,'');
+  h+='<div class="note g">인쇄하면 이 달력이 <b>그대로 한 장</b>으로 나옵니다. 벽에 붙이시면 됩니다.</div>';
+  return h;
+}
+
+/* ══ 체크 목록 — 하루는 날짜가 바뀌면, 주간은 월요일에, 월간은 1일에 스스로 비워진다 ══ */
+function ckStamp(scope){
+  var d=new Date();
+  if(scope==='day')return ymd(d);
+  if(scope==='week'){var t=new Date(d);t.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(t);}
+  return ym(d);
+}
+function ckState(role,scope){
+  var all=lsGet(CK_KEY,{}), k=role+'.'+scope, o=all[k];
+  if(!o||o.s!==ckStamp(scope))return {s:ckStamp(scope),on:{}};
+  return o;
+}
+function ckTog(role,scope,id){
+  var all=lsGet(CK_KEY,{}), k=role+'.'+scope, o=ckState(role,scope);
+  o.on[id]=!o.on[id]; all[k]=o; lsSet(CK_KEY,all); paint();
+}
+function ckList(role,scope,items,label){
+  var st=ckState(role,scope), done=0, h='<div class="card"><div class="hd"><div class="t">'+esc(label)+'</div>'+
+    '<div class="d" id="ckd-'+role+'-'+scope+'"></div></div><div class="bd">';
+  for(var i=0;i<items.length;i++){
+    var it=items[i], on=!!st.on[i]; if(on)done++;
+    h+='<div class="ck'+(on?' on':'')+'" data-ck="'+role+'|'+scope+'|'+i+'">'+
+       '<span class="bx">'+(on?'✓':'')+'</span><div class="bodyt">'+
+       '<div class="n"><span class="tag" style="min-width:0;padding:2px 6px;margin-right:6px">'+esc(it[0])+'</span>'+rich(it[1])+'</div>'+
+       (it[2]?'<div class="s">'+rich(it[2])+'</div>':'')+gos(it[3])+'</div></div>';
+  }
+  h+='<p class="ckmeta">'+done+' / '+items.length+' · '+
+     (scope==='day'?'날짜가 바뀌면':scope==='week'?'월요일에':scope==='month'?'1일에':'')+
+     (scope==='quarter'?'분기 항목은 스스로 비우지 않습니다 — 눌러서 끕니다':' 스스로 비워집니다')+
+     ' · 이 브라우저에만 남습니다</p></div></div>';
+  return h;
+}
+
+function vWho(){
+  var W=P.who, h='<div class="tw"><table><tr><th></th><th>지점장</th><th>교육매니저</th></tr>';
+  for(var i=0;i<W.axis.length;i++)
+    h+='<tr><td><b>'+rich(W.axis[i][0])+'</b></td><td>'+rich(W.axis[i][1])+'</td><td>'+rich(W.axis[i][2])+'</td></tr>';
+  h+='</table></div><div class="note r">'+rich(W.rule)+'</div>';
+  return h;
+}
+
+function vLead(){
+  var h='<div class="sec-h">누가 무엇을 챙기나</div>'+vWho();
+  h+='<div class="sec-h">지점장 — 하루</div>'+
+    '<p class="lead">순서가 중요합니다. <b>내 것을 먼저 끝낸 상태로</b> 팀을 엽니다. '+
+    '내가 안 한 것을 시키면 그날부터 아무도 안 합니다.</p>';
+  h+=ckList('lead','day',P.mgrDay,'오늘');
+  h+='<div class="note r"><b>지점장이 하지 않는 것</b><ul class="rl">'+
+    P.leadNo.map(function(t){return '<li>'+rich(t)+'</li>';}).join('')+'</ul></div>';
+  h+='<div class="sec-h">지점장 — 이번 주</div>'+ckList('lead','week',P.lead.week,'이번 주');
+  h+='<div class="sec-h">지점장 — 이번 달</div>'+ckList('lead','month',P.lead.month,'이번 달');
+  h+='<div class="sec-h">지점장 — 분기</div>'+ckList('lead','quarter',P.lead.quarter,'분기');
+  return h;
+}
+
+function vEdu(){
+  var h='<div class="sec-h">누가 무엇을 챙기나</div>'+vWho();
+  h+='<div class="sec-h">교육매니저 — 하루</div>'+
+    '<p class="lead">교육매니저가 보는 것은 실적이 아니라 <b>사람이 자라고 있는가</b>입니다. '+
+    '안 챙기면 이번 달이 아니라 <b>석 달 뒤</b>에 표가 납니다 — 그때는 늦습니다.</p>';
+  h+=ckList('edu','day',P.edu.day,'오늘');
+  h+='<div class="sec-h">교육매니저 — 이번 주</div>'+ckList('edu','week',P.edu.week,'이번 주');
+  h+='<div class="sec-h">교육매니저 — 이번 달</div>'+ckList('edu','month',P.edu.month,'이번 달');
+  h+='<div class="sec-h">교육매니저 — 분기</div>'+ckList('edu','quarter',P.edu.quarter,'분기');
+  h+='<div class="note g"><b>교육매니저의 성적표는 자기 실적이 아닙니다.</b> '+
+     '게이트를 제때 통과한 사람 수 · 졸업한 사람이 경력 과정으로 넘어갔는지 · '+
+     '자료에 낡은 것이 없는지 — 이 셋으로 봅니다.</div>';
   return h;
 }
 
@@ -446,8 +626,9 @@ function vLaw(){
   return h;
 }
 
-var RENDER={start:vStart,week:vWeek,monthly:vMonthly,mgr:vMgr,meet:vMeet,cover:vCover,
-  newbie:vNewbie,career:vCareer,study:vStudy,gate:vGate,ses:vSes,news:vNews,law:vLaw};
+var RENDER={start:vStart,cal:vCal,week:vWeek,monthly:vMonthly,lead:vLead,edu:vEdu,
+  meet:vMeet,cover:vCover,newbie:vNewbie,career:vCareer,study:vStudy,
+  gate:vGate,ses:vSes,news:vNews,law:vLaw};
 
 function paint(){
   var t='';
@@ -457,6 +638,23 @@ function paint(){
   document.getElementById('pane').innerHTML='<div class="pane">'+RENDER[cur]()+'</div>';
   window.scrollTo(0,0);
 }
+/* 한 곳에서 받는다 — 전역 함수를 늘리지 않는다 */
+document.getElementById('pane').addEventListener('click',function(e){
+  var el=e.target.closest('[data-add],[data-del],[data-cal],[data-ck]');
+  if(!el) return;
+  var v;
+  if((v=el.getAttribute('data-add'))) return calAdd(v);
+  if((v=el.getAttribute('data-del'))!==null&&v!==undefined&&el.hasAttribute('data-del'))
+    return calDel(v,parseInt(el.getAttribute('data-i'),10)||0);
+  if((v=el.getAttribute('data-cal'))){
+    if(v==='prev')return calMove(-1);
+    if(v==='next')return calMove(1);
+    if(v==='today')return calToday();
+    if(v==='clear')return calClear();
+    return;
+  }
+  if((v=el.getAttribute('data-ck'))){var a=v.split('|');return ckTog(a[0],a[1],parseInt(a[2],10));}
+});
 document.getElementById('tabs').addEventListener('click',function(e){
   var b=e.target.closest('.tb'); if(!b) return;
   cur=b.getAttribute('data-v'); try{location.hash=cur;}catch(x){}
