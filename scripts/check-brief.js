@@ -1,13 +1,18 @@
-/* 하루 한 장 — <b>아침 7시에 미리 서고, 직책대로 갈리고, 모르는 것을 감추지 않는가.</b>
+/* 하루 한 장 — <b>밤에 안 만들고, 여실 때 서고, 직책대로 갈리고, 모르는 것을 감추지 않는가.</b>
 
-   전에는 앱을 열어야 만들어졌다(dgAuto). 대표가 아침에 앱을 안 열면 그날
-   한 장이 없었고, 팀원은 아예 자기 것이 없었다. 그래서 시각을 사람이 아니라
-   <b>시계</b>에 맡겼다 — netlify.toml 의 schedule 로 KST 07:00 에 돈다.
+   한동안 서버가 KST 07:00 에 미리 만들어 두었다. 사장님이 껐다 —
+   「서버 밤에 안 만들게, 내가 들어가서 확인할 거고」. 이제 대표 브리핑을
+   여시면 그 자리에서 모아 세운다.
+
+   <b>끄는 것이 켜는 것보다 조용히 깨진다.</b> 예약 한 줄이면 되살아나므로
+   누가 무심코 되돌려 놓아도 아무 표시가 안 난다. 그래서 이 점검이 지킨다.
 
    이 점검이 지키는 것은 <b>이 작업에서 실제로 틀렸던 자리</b>들이다.
 
-     1. 예약이 <b>정말 아침 7시</b>인가. UTC 로 적는 자리라 9시간을 빼먹으면
-        오후 4시에 돈다 — 그러면 아침에 아무것도 없다.
+     1. 밤에 <b>정말 안 도는가</b>. 그리고 안 도는데도 화면이 「아침 7시에
+        만들어 둔 것입니다」라고 <b>거짓말하지 않는가</b> — 실제로 예약을
+        끄자 그 문구만 그대로 남아 있었다. 여실 때 앱이 <b>직접 모으는</b>
+        자리가 살아 있어야 화면이 빈 채로 서지 않는다.
      2. 범위가 <b>표 한 곳</b>에서 나오는가. 직책을 삼항 사슬로 나열하면
         늘 때 반드시 하나를 빠뜨린다 (CLAUDE.md 5번 — 쿠폰 트랙이 두 번 빠졌다).
      3. <b>모름(null)과 0 을 구분</b>하는가. 출근표를 못 읽어서 0명인 것을
@@ -36,18 +41,62 @@ const strip = s => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, 
 const FN_CODE = strip(FN);
 const APP_CODE = strip(APP);
 
-console.log('\n[1] 아침 7시에 돈다 — UTC 로 적는 자리라 9시간을 빼먹기 쉽다');
-const block = TOML.match(/\[functions\."daily-brief"\][^[]*/);
-is(!!block, '  netlify.toml 에 daily-brief 예약이 있다');
-if (block) {
-  const cron = (block[0].match(/schedule\s*=\s*"([^"]+)"/) || [])[1] || '';
-  is(!!cron, '  schedule 이 적혀 있다 — ' + (cron || '없음'));
-  const [min, hr] = cron.split(/\s+/);
-  /* KST 07:00 = UTC 22:00 (전날). 22 가 아니면 아침이 아니다. */
-  is(hr === '22' && min === '0',
-     '  UTC 22:00 = KST 07:00 이다 — 지금 "' + cron + '"' +
-     (hr === '22' ? '' : ' ← KST ' + ((Number(hr) + 9) % 24) + '시에 돕니다'));
+console.log('\n[1] 밤에 안 만든다 — 사장님이 직접 열어 확인하신다');
+/* 주석에 적어 둔 「되살리는 법」 예시까지 예약으로 세면 헛알람이 된다 (8번).
+   주석(#)을 걷은 뒤에 본다. */
+const TOML_CODE = TOML.replace(/^\s*#.*$/gm, '');
+const block = TOML_CODE.match(/\[functions\."daily-brief"\][^[]*/);
+is(!block, '  netlify.toml 에 daily-brief <b>예약이 없다</b>' +
+   (block ? ' ← 되살아났습니다: ' + (block[0].match(/schedule[^\n]*/) || [''])[0].trim() : ''));
+/* 껐다는 사실과 되살리는 법이 그 자리에 적혀 있어야 다음 사람이 헤매지 않는다.
+   <b>주석 줄만</b> 본다 — 파일 전체에서 찾으면 invest-daily 의 "0 22 * * *" 에
+   걸려 되살리는 법을 지워도 초록이 뜬다. 실제로 그랬다 (8번). */
+const TOML_NOTE = (TOML.match(/^\s*#.*$/gm) || []).join('\n');
+is(/daily-brief/.test(TOML_NOTE) && /schedule\s*=\s*"0 22 \* \* \*"/.test(TOML_NOTE),
+   '  <b>되살리는 법</b>을 주석에 적어 두었다 — UTC 22:00 = KST 07:00');
+/* 예약을 끄면 화면 문구도 같이 움직여야 한다. 안 그러면 「아침 7시에 만들어
+   둔 것입니다」만 남아 화면이 거짓말한다 — 실제로 그렇게 남아 있었다.
+
+   <b>그리는 자리만</b> 본다. 파일 전체를 보면 APP_BUILD_NOTE 가 「전에는 이렇게
+   적혀 있었습니다」 하고 옛 문구를 인용하는 것까지 잡아 헛알람이 된다 (8번). */
+const fnBody = (name) => {
+  const at = APP.indexOf('function ' + name + '(');
+  if (at < 0) return '';
+  const next = APP.indexOf('\nfunction ', at + 1);
+  return APP.slice(at, next < 0 ? at + 6000 : next);
+};
+const preSrc = fnBody('schPreHtml');
+is(!!preSrc, '  미리 만든 한 장을 그리는 자리를 찾았다 (schPreHtml)');
+is(!/아침 7시에 미리 만들어 둔 것입니다/.test(preSrc),
+   '  화면이 <b>「아침 7시에 만들어 뒀다」고 말하지 않는다</b> — 안 만드는데 그렇게 적으면 거짓말이다');
+/* ── 시각 문구는 <b>실제로 돌려 본다</b> ──────────────────────────
+   「모릅니다」 라는 글자가 파일 어딘가에 있는지만 보면, 두 갈래 중 한쪽만
+   지워도 초록이 뜬다. 실제로 그랬다. 함수를 떼어 내 세 가지를 넣어 본다. */
+const madeSrc = (APP.match(/function schMadeAt\(c\)\{[\s\S]*?\n\}/) || [])[0] || '';
+is(!!madeSrc, '  만든 시각을 <b>적어 둔 madeAt 에서 읽는</b> 함수가 있다 (schMadeAt)');
+if (madeSrc) {
+  let f = null;
+  try { f = new Function('return (' + madeSrc.replace('function schMadeAt', 'function') + ')')(); }
+  catch (e) { /* 문법이 깨졌으면 아래에서 걸린다 */ }
+  is(!!f, '  그 함수가 실제로 돈다');
+  if (f) {
+    const got = f({ madeAt: '2026-08-28T22:00:00.000Z' });
+    is(/서버가/.test(got) && /\d/.test(got),
+       '  시각이 <b>있으면</b> 그 시각을 그대로 적는다 — ' + got);
+    is(!/만든 시각이 적혀|모른/.test(got), '  있는 시각을 「모른다」로 뭉개지 않는다');
+    ['적어 두지 않았을 때', '값이 깨졌을 때'].forEach((label, i) => {
+      const out = f(i === 0 ? {} : { madeAt: '언젠가' });
+      is(/적혀 있지 않습니다/.test(out) && !/\d/.test(out),
+         '  ' + label + '는 <b>모른다고 적는다</b> — 시각을 지어내지 않는다 (1번) · ' + out);
+    });
+  }
 }
+/* 밤에 안 만들면 화면은 여실 때 직접 모아야 한다. 이 자리가 죽으면 빈 화면이다. */
+is(/function schLoad\(/.test(APP_CODE), '  여실 때 <b>직접 모으는</b> 자리(schLoad)가 살아 있다');
+is(/그 자리에서<\/b> 모읍니다/.test(APP),
+   '  화면이 <b>「여시는 그 자리에서 모읍니다」</b> 라고 말해 준다');
+/* 함수를 지우지 않았는지 — 되살리실 때 처음부터 다시 짜지 않아도 되게 */
+is(/exports\.handler|module\.exports/.test(FN), '  함수는 <b>지우지 않고</b> 남겨 두었다 — 되살리면 그대로 돈다');
 
 console.log('\n[2] 범위는 표 한 곳에서 답한다 — 삼항 사슬로 나열하지 않는다');
 is(/const\s+SCOPE\s*=\s*\{/.test(FN_CODE), '  SCOPE 표가 있다');
@@ -151,5 +200,5 @@ is(!/윤시스쿨이 오늘 만들어낸|윤시스쿨 데이터를 모으는/.te
 
 console.log('\n──────────────────────────────');
 console.log(bad ? '✗ ' + bad + '개 어긋남\n'
-                : '하루 한 장 점검 통과 — 아침 7시에 서고, 직책대로 갈리고, 모르는 것을 감추지 않습니다.\n');
+                : '하루 한 장 점검 통과 — 밤에 안 만들고, 여실 때 서고, 직책대로 갈리고, 모르는 것을 감추지 않습니다.\n');
 process.exit(bad ? 1 : 0);
