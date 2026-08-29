@@ -109,15 +109,39 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
 
   /* ─────────────────────────────────────────────────────────────── */
   /* 서른두 명을 실제로 돌린다. AI 한 번을 300ms 로 흉내내고, 다섯 번째와
-     열두 번째는 <b>일부러 실패</b>시킨다 — 실제로 AI 는 가끔 거절한다. */
+     열두 번째는 <b>일부러 실패</b>시킨다 — 실제로 AI 는 가끔 거절한다.
+
+     ── 왜 명단을 <b>못 박아 두는가</b> ────────────────────────────────
+     이 점검이 <b>CI 에서만</b> 빨간불이었다 — 여기서는 32번 다 돌고
+     CI 에서는 29번만 돌았다. 앱 잘못이 아니라 <b>점검이 서버와
+     경주하고 있었다.</b>
+
+     화면이 뜨면 성장판(<code>gbLoad</code>)이 서버에서 팀원을 읽어 와
+     <code>GB.rows</code> 를 <b>통째로 갈아 끼운다.</b> 그런데 여기 서버에는
+     팀원이 없으니 빈 명단이 들어온다. 그 답이 늦게 도착하면 —
+     느린 기계일수록 늦다 — 돌리던 중간에 명단이 사라져
+     <code>arRowOf</code> 가 남은 사람을 못 찾고, 그 사람들은
+     「AI 가 답하지 않았다」로 세어진다. 앱은 멀쩡한데 점검이 운다.
+
+     같은 코드가 초록도 되고 빨강도 되면 그것은 <b>헛것을 잡는
+     점검</b>이다 (CLAUDE.md 8번). 그래서 도는 동안에는 명단을 못 박아
+     아무도 못 갈아 끼우게 한다. 끝나면 원래대로 돌려 놓는다. */
   const run = async (failAt) => page.evaluate(async (failAt) => {
     const N = 32;
-    GB.rows = []; GB.loaded = true; GB.pass = {}; GB.notes = [];
-    for (let i = 0; i < N; i++) GB.rows.push({
+    GB.loaded = true; GB.pass = {}; GB.notes = [];
+    const fixed = [];
+    for (let i = 0; i < N; i++) fixed.push({
       id: 'm' + i, name: '홍길동' + i, role: 'member', team: 't1', total: 50 + i,
       raw: { att: 10, call: 20, cli: 3, rep: 2, run: 5, edu: 1 },
       sc: { att: 50, call: 50, cli: 50, rep: 50, run: 50, edu: 50 },
       last: '2026-08-27', lastAtt: '2026-08-27'
+    });
+    /* 늦게 도착한 서버 답이 명단을 갈아 끼우지 못하게 한다 */
+    let stolen = 0;
+    Object.defineProperty(GB, 'rows', {
+      configurable: true,
+      get: () => fixed,
+      set: () => { stolen++; }
     });
     AR.loaded = true; AR.rep = {}; AR.crm = {}; AR.cli = {}; AR.team = ''; AR.busy = '';
     OS.profile = OS.profile || { name: '윤시현', role: 'owner' };
@@ -142,12 +166,16 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     };
     const t0 = Date.now();
     const r = await new Promise(res =>
-      arRunQueue(GB.rows.map(x => x.id), { done: (got, total, fail) => res({ got, total, fail }) }));
+      arRunQueue(fixed.map(x => x.id), { done: (got, total, fail) => res({ got, total, fail }) }));
     window.arPaint = realPaint;
-    return { ms: Date.now() - t0, calls, peak, over, r,
-             made: Object.keys(AR.rep).length, busy: AR.busy, qmsg: AR.qmsg,
-             lanes: AR_LANES, serial: N * 300,
-             msg: arDoneMsg(r.got, r.total, r.fail, '팀원 관리') };
+    const out = { ms: Date.now() - t0, calls, peak, over, r, stolen,
+                  rows: GB.rows.length,
+                  made: Object.keys(AR.rep).length, busy: AR.busy, qmsg: AR.qmsg,
+                  lanes: AR_LANES, serial: N * 300,
+                  msg: arDoneMsg(r.got, r.total, r.fail, '팀원 관리') };
+    /* 못 박아 둔 것을 원래대로 — 다음 단계가 진짜 앱을 보게 */
+    delete GB.rows; GB.rows = fixed;
+    return out;
   }, failAt);
 
   console.log('\n[3] 서른두 명이 동시에 돈다 — 한 사람씩 세우면 5분이다');
@@ -165,7 +193,8 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   const badRun = await run([5, 12]);
   is(badRun.calls === 32,
      '  두 명이 막혀도 <b>서른두 명을 다 시도한다</b> — ' + badRun.calls + '번 ' +
-     '(줄이 서면 여기서 멈춘다)');
+     '(줄이 서면 여기서 멈춘다 · 명단 ' + badRun.rows + '명' +
+     (badRun.stolen ? (' · 도는 중에 서버가 명단을 ' + badRun.stolen + '번 갈아 끼우려 했고 막았다') : '') + ')');
   is(badRun.made === 30 && badRun.r.fail === 2 && badRun.r.got === 30,
      '  <b>된 것과 안 된 것을 가른다</b> — 된 ' + badRun.r.got + ' · 못한 ' + badRun.r.fail);
   is(/2명은 AI 가 답하지 않아 못 만들었습니다/.test(badRun.msg),
