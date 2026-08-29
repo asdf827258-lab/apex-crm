@@ -794,6 +794,50 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(more.tmrCalls === 1 && more.tmrDone && more.tmrIsTomorrow,
      '  «내일 것» 은 <b>내일 줄</b>을 만든다 — 오늘 것을 덮어쓰지 않는다');
 
+  console.log('\n[16] 고칠 자리로 데려다 놓는가 · 소제목을 놓치지 않는가');
+  const fix = await page.evaluate(async () => {
+    const out = {};
+    /* ① ## 도 ### 도 소제목으로 읽는다 — ### 로 쓰시면 목차 카드가 말없이 빠졌다 */
+    const mk = h => ({ ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n' + h + '\n글.\n' });
+    out.h2 = build('toc', mk('## 첫째 소제목\n글.\n\n## 둘째 소제목')).err || 'ok';
+    out.h3 = build('toc', mk('### 첫째 소제목\n글.\n\n### 둘째 소제목')).err || 'ok';
+    out.h4 = build('toc', mk('#### 너무 잘게\n글.\n\n#### 쪼갠 것')).err || 'ok';
+    out.heads = pickHeads(mk('## 하나\n글.\n\n### 둘\n글.'));
+    /* ② 목차 카드에 꼬리말이 앉을 자리가 있다 */
+    const t6 = build('toc', mk([1,2,3,4,5,6].map(n => '## 소제목 ' + n + ' 이 자리가 제법 길 때는 어떻게 되나').join('\n글.\n\n')));
+    out.tocH = t6.h; out.tocN = pickHeads(mk([1,2,3,4,5,6].map(n => '## 소제목 ' + n).join('\n글.\n\n'))).length;
+
+    /* ③ 게이트가 잡은 말을 눌러 본문의 그 자리로 */
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:'## 제목 후보\n- 제목\n\n## 본문\n이 상품은 무조건 됩니다. 보장 내용은 심사 결과에 따릅니다.\n' +
+          '[[확인 필요: 얼마인지]] 가 남아 있습니다.\n', guard:null, up:false }];
+    S.rows[0].guard = guard(S.rows[0].out, 'ours');
+    await show(0);
+    const box = document.querySelector('#view .body');
+    out.marked = box.querySelectorAll('mark.bad').length;
+    out.markText = (box.querySelector('mark.bad') || {}).textContent;
+    out.linkOk = /jumpBad\('bad_\d+'\)/.test(document.querySelector('#view .gate.no').innerHTML);
+    out.holeLink = /jumpHole\(\)/.test(document.querySelector('#view .gate.no').innerHTML);
+    /* 표·서식이 안 깨졌나 — 문자열로 다시 만지면 태그 안쪽이 상한다 */
+    out.headsKept = box.querySelectorAll('h2').length;
+    jumpBad(badId('무조건'));
+    out.flashed = !!box.querySelector('mark.bad.flash');
+    return out;
+  });
+  is(fix.h2 === 'ok', '  ## 소제목으로 목차 카드가 선다');
+  is(fix.h3 === 'ok', '  <b>### 소제목으로도</b> 선다 — 손으로 고치실 때 ### 를 쓰신다');
+  is(fix.h4 !== 'ok', '  #### 부터는 안 읽는다 — 너무 잘게 쪼갠 것까지 목차에 넣지 않는다');
+  is(fix.heads.join('·') === '하나·둘', '  ## 와 ### 를 섞어 써도 순서대로 읽는다 — ' + fix.heads.join(' · '));
+  is(fix.tocH >= 180 + fix.tocN * 78 + 40,
+     '  목차 카드에 <b>꼬리말이 앉을 자리</b>가 있다 — 마지막 소제목과 안 겹치게 (' + fix.tocH + 'px)');
+  is(fix.marked === 1 && fix.markText === '무조건',
+     '  게이트가 잡은 말이 본문에서 <b>빨갛게</b> 표시된다 (' + fix.markText + ')');
+  is(fix.linkOk, '  게이트 목록에서 <b>눌러 그 자리로</b> 갈 수 있다');
+  is(fix.holeLink, '  못 채운 자리도 눌러서 간다');
+  is(fix.headsKept >= 2, '  감싸도 본문 서식이 안 깨진다 — 제목이 그대로다 (h2 ' + fix.headsKept + '개)');
+  is(fix.flashed, '  누르면 그 자리가 잠깐 테를 두른다 — 어디인지 눈에 들어오게');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

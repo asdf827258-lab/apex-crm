@@ -104,6 +104,9 @@ tr.late>td{background:#FFF7E6}
 .ph{border:2px dashed #BFDBFE;background:#EFF6FF;border-radius:9px;padding:11px 13px;margin:11px 0;
     font-size:12.5px;color:#1D4ED8;font-weight:700}
 .hole{background:#FEF9C3;border-bottom:2px solid #CA8A04;font-weight:700;padding:0 3px}
+mark.bad{background:#FEE2E2;border-bottom:2px solid var(--bad);color:var(--bad);font-weight:700;padding:0 3px}
+.flash{outline:3px solid var(--bad);outline-offset:3px;border-radius:4px}
+.gate a{cursor:pointer;text-decoration:underline}
 .steps{font-size:12.5px;margin:8px 0 0;padding:0;list-style:none}
 .steps li{padding:5px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:flex-start}
 .steps input{width:auto;margin-top:3px}
@@ -882,13 +885,50 @@ function paintRows(){
         (r.out?'<button class="sm p" onclick="show('+i+')">올리기</button>':'')+'</td></tr>';
     }).join('')+'</tbody></table>';
 }
+/* ══════════ 고칠 자리로 데려다 놓는다 ══════════
+   「무조건 이 말이 걸렸습니다」 라고만 적어 두면, 2,000자 본문에서 그 말을
+   눈으로 찾아야 한다. 실제로 그러다 그냥 올리게 된다. 눌러서 그 자리로 간다.
+   본문은 <b>이미 그려 놓고 글자 마디만</b> 감싼다 — HTML 을 문자열로 다시
+   만지면 태그 안쪽을 건드려 표와 서식이 깨진다. */
+function badId(w){ let h=0; for(let i=0;i<w.length;i++) h=(h*31+w.charCodeAt(i))>>>0; return 'bad_'+h; }
+function markBad(words){
+  const box=document.querySelector('#view .body'); if(!box) return;
+  words.forEach(w=>{
+    if(!w||document.getElementById(badId(w))) return;
+    const walk=document.createTreeWalker(box,NodeFilter.SHOW_TEXT);
+    let n;
+    while((n=walk.nextNode())){
+      if(n.parentNode&&n.parentNode.tagName==='MARK') continue;
+      const at=n.nodeValue.indexOf(w); if(at<0) continue;
+      const mid=n.splitText(at); mid.splitText(w.length);
+      const el=document.createElement('mark');
+      el.className='bad'; el.id=badId(w); el.textContent=w;
+      mid.parentNode.replaceChild(el,mid);
+      break;
+    }
+  });
+}
+function flash(el){
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1600);
+}
+function jumpBad(id){
+  const el=document.getElementById(id);
+  if(!el){ toast('본문에서 그 자리를 못 찾았습니다 — 이미 고치셨을 수 있습니다.'); return; }
+  flash(el);
+}
+function jumpHole(){
+  const el=document.querySelector('#view .body .hole');
+  if(!el){ toast('못 채운 자리를 못 찾았습니다.'); return; }
+  flash(el);
+}
 function gateBox(g){
   if(!g) return '';
   if(g.ok) return '<div class="gate ok">✅ 1차 점검을 통과했습니다. 아래에서 <b>서식 있는 복사</b>와 <b>그림 내려받기</b>로 바로 올리시면 됩니다. 게시 전 회사 준법감시(광고 심의)는 그대로 거치세요.</div>';
-  return '<div class="gate no"><b>올리기 전에 고쳐야 합니다.</b><ul>'+
-    g.hits.slice(0,8).map(h=>'<li>「<b>'+esc(h.w)+'</b>」 — '+esc(h.why)+'</li>').join('')+
+  return '<div class="gate no"><b>올리기 전에 고쳐야 합니다.</b> <span style="font-weight:400">— 눌러 보시면 본문의 그 자리로 갑니다.</span><ul>'+
+    g.hits.slice(0,8).map(h=>'<li><a onclick="jumpBad(\''+badId(h.w)+'\')">「<b>'+esc(h.w)+'</b>」</a> — '+esc(h.why)+'</li>').join('')+
     g.miss.map(m=>'<li>'+esc(m)+'</li>').join('')+
-    (g.holes.length?'<li>AI 가 못 채운 자리가 '+g.holes.length+'군데 있습니다 — <b>'+esc(g.holes[0])+
+    (g.holes.length?'<li><a onclick="jumpHole()">AI 가 못 채운 자리가 '+g.holes.length+'군데</a> 있습니다 — <b>'+esc(g.holes[0])+
       '</b> 처럼 <span class="hole">노란 칸</span>으로 보입니다. <b>사장님이 확인해 채우셔야</b> 합니다.</li>':'')+
     '</ul></div>';
 }
@@ -938,6 +978,7 @@ async function show(i){
     '<h2 style="margin-top:18px">본문 — 붙여넣으면 이렇게 보입니다</h2>'+
     '<div class="body">'+md2html(packText(i),false)+'</div>'+
   '</div>';
+  markBad(g.hits.map(h=>h.w));
   $('view').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function pngOne(i,id){ const r=build(id,S.rows[i]); if(r.err){ toast(r.err); return; } png(r); }

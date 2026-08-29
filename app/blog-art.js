@@ -113,9 +113,12 @@ function pickTitle(row){
   return (row && row.seed && row.seed.title) || '';
 }
 const SKIPHEAD = /제목\s*후보|해시태그|메타\s*설명|딛고\s*선|본문|이미지·삽화|시의성/;
+/* 소제목은 ## 로 시켰지만, 손으로 고치실 때 ### 를 쓰시는 일이 있다.
+   그때 목차 카드가 <b>말없이 빠졌다</b> — 실제로 그래서 한 장이 안 섰다.
+   ## 도 ### 도 소제목으로 읽는다. #### 부터는 안 읽는다(너무 잘게 쪼갠 것). */
 function pickHeads(row){
   const t = (row && row.out) || '', out = []; let m;
-  const re = /^##\s+(.+)$/gm;
+  const re = /^#{2,3}\s+(.+)$/gm;
   while ((m = re.exec(t))){
     const h = m[1].trim().replace(/^\d+[.)]\s*/,'');
     if (SKIPHEAD.test(h) || out.includes(h)) continue;
@@ -249,7 +252,8 @@ const ART = {
   make(row){
     const hs = pickHeads(row);
     if (!hs.length) return { err:'초안에서 소제목을 못 찾았습니다.' };
-    const W = SV.w, H = 180 + hs.length * 78;
+    /* 꼬리말이 앉을 자리를 아래에 비워 둔다 — 안 비우면 마지막 소제목과 겹친다 */
+    const W = SV.w, H = 180 + hs.length * 78 + 46;
     let b = tx(['이 글에서 다루는 것'], 64, 104, 40, 0, SV.ink, 800);
     hs.forEach((h, i) => {
       const y = 160 + i * 78;
