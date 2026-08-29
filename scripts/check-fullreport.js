@@ -648,6 +648,78 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(lazy.headCount, '그림으로 읽은 쪽은 <b>세기만</b> 한다 — 쪽 원문을 다 받아 오지 않는다');
 
 
+  /* ── [9-8] 🔀 전 · 후 만들기 ─────────────────────────────────────
+     왼쪽에서 해지를 누르면 오른쪽이 <b>그 자리에서</b> 무엇이 비는지 말하는가.
+     그리고 금액을 못 읽은 담보가 <b>조용히 빠지지</b> 않는가.            */
+  console.log('\n[9-8] 전 · 후 만들기 — 누르면 그 자리에서 말하는가');
+  const mkS = await page.evaluate(() => {
+    const covs = [__cov('a1', 'p1', '뇌출혈진단비', 10000000),
+                  __cov('d1', 'p1', '간병인사용일당', 100000),
+                  __cov('a2', 'p1', '항암방사선치료비'),          /* 금액 못 읽음 */
+                  __cov('b1', 'p2', '일반암진단비', 30000000)];
+    __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, frBlankState(), []);
+
+    /* ① 아무것도 안 눌렀을 때 — 비는 자리는 없어야 한다 */
+    const zero = frMakeDiff(frMaster());
+
+    /* ② 계약 하나를 해지 */
+    frState().pact['p1'] = 'CANCEL';
+    const M = frMaster();
+    const D = frMakeDiff(M);
+    const html = frMakeHtml(M);
+
+    /* ③ 담보 하나만 해지 */
+    frState().pact = {};
+    frState().cact['b1'] = 'CANCEL';
+    const D2 = frMakeDiff(frMaster());
+
+    /* ④ 조정 후 금액을 직접 적으면 채우는 자리로 */
+    frState().cact = {};
+    frState().cadjWon['a1'] = 50000000;
+    const D3 = frMakeDiff(frMaster());
+    frState().cadjWon = {};
+
+    return {
+      zeroLoss: zero.loss.length, zeroGain: zero.gain.length,
+      lossN: D.loss.length, lossWon: D.loss.length ? D.loss[0].won : null,
+      unknownN: D.lostUnknown.length,
+      say: D.loss.length ? frMakeSay(D.loss[0]) : '',
+      headCount: html.indexOf('2+1건') >= 0,
+      unkNote: html.indexOf('금액을 못 읽은 담보 <b>1건</b>도 함께 사라집니다') >= 0,
+      zeroWord: html.indexOf('0원이라는 뜻이 아닙니다') >= 0,
+      covLoss: D2.loss.length, covWon: D2.loss.length ? D2.loss[0].won : null,
+      gainN: D3.gain.length, gainWon: D3.gain.length ? D3.gain[0].won : null,
+      body: html.indexOf('baba-body-grid') >= 0,
+      prem: html.indexOf('월 보험료 · 지금') >= 0,
+      /* 하루치를 목돈처럼 말하지 않는가 */
+      daily: (function(){
+        frState().cadjWon['d1'] = 150000;
+        var D = frMakeDiff(frMaster());
+        var g = D.gain.filter(function(x){return x.m.id==='d1';})[0];
+        frState().cadjWon = {};
+        return g ? frMoneyBy(g.m, g.won) : '없음';
+      })()
+    };
+  });
+  is(mkS.zeroLoss === 0 && mkS.zeroGain === 0,
+     '아무것도 안 눌렀으면 <b>비는 자리도 채우는 자리도 없다</b>');
+  is(mkS.lossN === 2 && mkS.lossWon === 10000000,
+     '계약을 해지하면 그 담보가 <b>비는 자리</b>로 선다 (' + mkS.lossWon + '원)');
+  is(mkS.say.indexOf('뇌출혈') >= 0 && mkS.say.indexOf('1,000만원') >= 0,
+     '무엇이 비는지 <b>그 자리에서 말한다</b> — ' + mkS.say.replace(/<[^>]*>/g, ''));
+  is(mkS.unknownN === 1 && mkS.unkNote && mkS.zeroWord,
+     '금액을 <b>못 읽은 담보도 사라진다고 말한다</b> — 조용히 빼지 않고, 0원이라 하지도 않는다');
+  is(mkS.headCount,
+     '「비는 자리」 머리에 <b>못 읽은 건수까지</b> 적는다 (2+1건)');
+  is(mkS.covLoss === 1 && mkS.covWon === 30000000,
+     '담보 하나만 해지해도 <b>그 담보만</b> 빈다 (' + mkS.covWon + '원)');
+  is(mkS.gainN === 1 && mkS.gainWon === 40000000,
+     '조정 후 금액을 직접 적으면 <b>채우는 자리</b>로 선다 — 1,000만 → 5,000만이면 4,000만 (' + mkS.gainWon + '원)');
+  is(mkS.daily === '하루 5만원',
+     '하루치를 <b>목돈처럼 말하지 않는다</b> — 「5만원 늘어납니다」가 아니라 「' + mkS.daily + '」');
+  is(mkS.body && mkS.prem,
+     '한 화면에 <b>월 보험료 전·후</b>와 <b>인체 한 장</b>이 같이 서서 누를 때마다 다시 그려진다');
+
   /* ── 인쇄 ── */
   console.log('\n[10] 종이 — 어긋난 채로 뽑지 않고, 우리가 다시 읽을 수 있는가');
   const print = await page.evaluate(() => {
@@ -756,7 +828,8 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
      '보던 고객이 있으면 <b>그 고객 상세</b>로 간다 (' + mk.went + '/' + mk.view1 + ')');
   is(mk.went2 === 'clients' && mk.view2 === 'list',
      '보던 고객이 없으면 <b>고객 목록</b>으로 간다 — 목록을 두 벌로 만들지 않는다');
-  is(mk.page1 === 'client', '풀리포트가 <b>고객용 리포트</b> 쪽을 편 채로 열린다');
+  /* 메뉴 이름이 「전&후 만들기」다 — 리포트가 아니라 <b>만드는 화면</b>이 열려야 한다 */
+  is(mk.page1 === 'make', '메뉴가 데려간 자리에서 <b>전·후 만들기</b> 화면이 펴져 있다');
 
   console.log('\n[13-1] 관리자 칸의 돈 — 0 을 잘못 세지 않게 읽어 주는가');
   const rd2 = await page.evaluate(() => {
