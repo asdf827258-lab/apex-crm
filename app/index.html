@@ -2468,7 +2468,70 @@ function advPushSoon(){
 }
 
 /* ── AI 제안서에서 읽은 계약을 상담자료 보장분석표로 ──
-   상담자료 안에서 증권을 다시 올릴 이유가 없다. 앱이 이미 읽었다. */
+   상담자료 안에서 증권을 다시 올릴 이유가 없다. 앱이 이미 읽었다.
+
+   ── 「보장분석 상담자료에서 보장내용을 못 읽는다」 ────────────────────
+   여태 여기서 <b>회사 · 상품 · 보험료 · 가입연도 넷만</b> 보냈다. 상담자료의
+   보장분석표는 담보를 <code>riders</code> 로 받게 되어 있는데 그 칸을 통째로
+   비워 보낸 것이다. 그래서 상품 이름만 줄줄이 서고 그 아래에
+   <b>「자료에서 담보를 못 읽었습니다 — 직접 더해 주세요」</b> 가 떴다.
+
+   <b>앱은 담보를 이미 읽어 두고 있었다</b> — <code>PR.scan.riders</code> 에
+   상품마다 담보 이름과 금액이 들어 있다. 넘겨 주는 자리에서 빠뜨린 것뿐이다.
+
+   금액이 못 믿을 값이면(표에서 옆 칸이 붙어 「12683400원」 이 된 숫자)
+   <b>빈칸으로 보낸다.</b> 틀린 금액을 고객 앞 표에 세우는 것보다 비워 두고
+   그 자리에서 고치시게 하는 편이 낫다 (CLAUDE.md 1번).                */
+function sdNorm(s){
+  return (''+(s||'')).replace(/\(무\)|\(유\)|무배당|유배당|배당/g,'').replace(/[\s()\-·ㆍ,.]/g,'');
+}
+/* 담보 종류는 <b>상담자료가 쓰는 말</b>로 맞춘다 — 그 표가 그 말로 묶는다 */
+function sdRiderKind(nm,area){
+  var s=''+(nm||'');
+  if(/실손|실비/.test(s)||area==='실손')return '실손';
+  if(/진단(비|금|급여금)/.test(s))return '진단비';
+  if(/수술/.test(s))return '수술비';
+  if(/입원|일당/.test(s))return '입원비';
+  if(/사망|장해/.test(s))return '사망보장';
+  if(/치료비|의료비/.test(s))return '치료비';
+  return '기타';
+}
+function sdRiderTarget(nm){
+  var s=''+(nm||'');
+  if(/암|유방|전립선|갑상선/.test(s))return '암';
+  if(/뇌/.test(s))return '뇌';
+  if(/심장|심근|허혈/.test(s))return '심장';
+  return null;
+}
+/* 두 상품 이름이 <b>같은 상품</b>인가.
+   「들어 있으면 같다」 로 보면 안 된다 — 「이름이전혀다른상품」 안에
+   「다른상품」 이 들어 있다. 그렇게 붙이면 <b>남의 담보가 이 계약에</b>
+   얹혀 고객 앞 표에 가입한 적 없는 담보가 선다. 점검이 실제로 그 자리를
+   잡았다. 그래서 <b>짧은 쪽이 긴 쪽의 6할은 되어야</b> 같다고 본다. */
+function sdSameName(a,b){
+  if(!a||!b)return false;
+  if(a===b)return true;
+  if(a.indexOf(b)<0&&b.indexOf(a)<0)return false;
+  var s=Math.min(a.length,b.length),l=Math.max(a.length,b.length);
+  return s>=4&&(s/l)>=0.6;
+}
+function sdRidersOf(sc,plan){
+  var G=(sc&&sc.riders)||[],i,k=sdNorm(plan.name),co=sdNorm(plan.co),hit=null,byCo=[];
+  for(i=0;i<G.length;i++){
+    var gk=sdNorm(G[i].product),gc=sdNorm(G[i].co);
+    if(sdSameName(k,gk)){hit=G[i];break;}
+    if(co&&gc&&gc===co)byCo.push(G[i]);
+  }
+  /* 이름이 안 맞으면 <b>그 회사에 묶음이 딱 하나일 때만</b> 쓴다. 둘 이상이면
+     어느 상품 것인지 <b>우리는 모른다</b> — 아무거나 붙이면 남의 보장을
+     이 계약에 얹게 된다 (CLAUDE.md 1번). */
+  if(!hit&&byCo.length===1)hit=byCo[0];
+  if(!hit)return [];
+  return (hit.rows||[]).map(function(r){
+    return {name:r.name||'',amount:r.bad?'':(r.amount||''),
+            kind:sdRiderKind(r.name,r.area),target:sdRiderTarget(r.name)};
+  }).filter(function(r){return r.name;});
+}
 function sdPlanRows(){
   var sc=(typeof PR!=='undefined'&&PR.scan)?PR.scan:null;
   if(!sc||!sc.plans||!sc.plans.length)return [];
@@ -2476,16 +2539,37 @@ function sdPlanRows(){
   return sc.plans.map(function(p){
     return {company:p.co||'',name:p.name||'',
       monthlyPayment:Math.round((p.fee||0)),
-      startYear:yr(p.from)||0};
+      startYear:yr(p.from)||0,
+      riders:sdRidersOf(sc,p)};
   }).filter(function(r){return r.company||r.name;});
 }
+function sdRiderN(rows){
+  var n=0,i;for(i=0;i<(rows||[]).length;i++)n+=((rows[i].riders)||[]).length;return n;
+}
+/* 무엇을 넘겼는지 <b>화면에 적기 위해</b> 담아 둔다 — 「넘어갔겠지」 로 두지 않는다 */
+var SD_SENT={n:0,r:0};
 function sdPushPlan(){
   var rows=sdPlanRows();
   var msg={t:'apex:insurances',rows:rows};
   advFrames().forEach(function(f){
     try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
   });
+  SD_SENT={n:rows.length,r:sdRiderN(rows)};
+  if(typeof sdSentPaint==='function')sdSentPaint();
   return rows.length;
+}
+/* 넘긴 것을 그 자리에 적는다 — 담보가 0개면 <b>0개라고</b> 말한다 */
+function sdSentHtml(){
+  var s=SD_SENT||{n:0,r:0};
+  if(!s.n)return '<span style="color:#94A3B8">아직 넘긴 계약이 없습니다 — 증권을 올리고 「AI 제안서 만들기」 를 눌러 주세요.</span>';
+  return s.r
+    ? ('<b style="color:#15803D">✅ 계약 '+s.n+'건 · 담보 '+s.r+'개</b> 를 보장분석표로 넘겼습니다.')
+    : ('<b style="color:#B45309">⚠️ 계약 '+s.n+'건은 넘겼지만 담보는 0개입니다.</b> 증권에서 담보 표를 못 읽었습니다 — '+
+       '보장분석표에서 <b>직접 더하실 수 있습니다</b>. 없는 담보를 지어내지 않습니다.');
+}
+function sdSentPaint(){
+  var el=document.getElementById('sdSent');
+  if(el)el.innerHTML=sdSentHtml();
 }
 function sdPushSoon(){
   sdPushPlan();
@@ -12265,7 +12349,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-08-30 02:30';
-var APP_BUILD_NOTE="<b>🎂 「생애재무리스크지도에서 나이를 못읽고 있어」 — 못 읽으면 조용히 50 을 쓰고 있었습니다.</b> 그 50 이 지도의 「지금」 점선이 되고, 은퇴까지 남은 해가 되고, 연금 계산의 기간이 됐습니다. <b>고객 앞 화면에 남의 나이가 찍혔고</b>, 그것이 만들어 낸 숫자라는 표시는 어디에도 없었습니다(1번). 그런데 <b>나이는 이미 앱 안에 있었습니다.</b> 증권에 「홍길동(47세, 남)」 이라 적혀 있으면 앱이 벌써 읽어 담아 두고 있었고(<code>insWho</code>), 고객 카드에는 생년이 들어 있습니다 — <b>아무도 안 봤을 뿐입니다.</b> 이제 한 곳(<code>prAgeFind</code>)에서 <b>① 직접 적으신 칸 → ② 증권 → ③ 고객 카드 생년 → ④ 문서 한 줄</b> 순으로 찾습니다. 그리고 <b>어디서 온 나이인지 화면에 밝힙니다</b> — 「지금 47세 (증권에서 읽음)」. 생년만 알 때는 <b>「생일 전이면 한 살 적습니다」</b> 라고 끝까지 적습니다(4번). <b>못 찾으면 만들지 않습니다.</b> 지도를 안 세우고 「나이를 몰라서 세우지 않았습니다」 라고 적은 뒤, 그 자리에서 바로 적어 넣을 칸을 드립니다. 적으시면 그 자리에서 그려집니다. 연금·종신 계산기도 같습니다 — 은퇴까지 몇 해인지 모르면 <b>지어낸 기간으로 계산하지 않습니다.</b> 8통장 진단지도도 같은 자리였습니다(거기도 50·65 를 조용히 썼습니다). 「0세~95세 합계」 같은 <b>부서진 숫자</b>도 이제 안 찍힙니다. 새 점검 <code>check-age</code> — 여덟 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 <b>둘은 처음에 안 울렸습니다.</b> 하나는 간트 그림이 「지금 47세」 를 <b>스스로 그려서</b>, 밝히기를 지워도 그 글자가 남아 초록이었습니다. 잣대를 출처 이름으로 바꾸니 울립니다. <b>[main]</b> 같은 판에 들어온 것: 🗑 「아이디 삭제가 안 된다. 계속 반복되네」 — 서버가 지우다 말고 있었습니다. 계정을 참조하는 기록(고객·저장한 자료·출근·체크판…)이 남아 있으면 로그인 계정 삭제가 외래키에 걸려 실패합니다. 그런데 함수는 「연결된 기록도 함께 지운다」 고 물어 놓고 정작 그…";
+var APP_BUILD_NOTE="<b>🎂 「생애재무리스크지도에서 나이를 못읽고 있어」 — 못 읽으면 조용히 50 을 쓰고 있었습니다.</b> 그 50 이 지도의 「지금」 점선이 되고, 은퇴까지 남은 해가 되고, 연금 계산의 기간이 됐습니다. <b>고객 앞 화면에 남의 나이가 찍혔고</b>, 그것이 만들어 낸 숫자라는 표시는 어디에도 없었습니다(1번). 그런데 <b>나이는 이미 앱 안에 있었습니다.</b> 증권에 「홍길동(47세, 남)」 이라 적혀 있으면 앱이 벌써 읽어 담아 두고 있었고(<code>insWho</code>), 고객 카드에는 생년이 들어 있습니다 — <b>아무도 안 봤을 뿐입니다.</b> 이제 한 곳(<code>prAgeFind</code>)에서 <b>① 직접 적으신 칸 → ② 증권 → ③ 고객 카드 생년 → ④ 문서 한 줄</b> 순으로 찾습니다. 그리고 <b>어디서 온 나이인지 화면에 밝힙니다</b> — 「지금 47세 (증권에서 읽음)」. 생년만 알 때는 <b>「생일 전이면 한 살 적습니다」</b> 라고 끝까지 적습니다(4번). <b>못 찾으면 만들지 않습니다.</b> 지도를 안 세우고 「나이를 몰라서 세우지 않았습니다」 라고 적은 뒤, 그 자리에서 바로 적어 넣을 칸을 드립니다. 적으시면 그 자리에서 그려집니다. 연금·종신 계산기도 같습니다 — 은퇴까지 몇 해인지 모르면 <b>지어낸 기간으로 계산하지 않습니다.</b> 8통장 진단지도도 같은 자리였습니다(거기도 50·65 를 조용히 썼습니다). 「0세~95세 합계」 같은 <b>부서진 숫자</b>도 이제 안 찍힙니다. 새 점검 <code>check-age</code> — 여덟 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 <b>둘은 처음에 안 울렸습니다.</b> 하나는 간트 그림이 「지금 47세」 를 <b>스스로 그려서</b>, 밝히기를 지워도 그 글자가 남아 초록이었습니다. 잣대를 출처 이름으로 바꾸니 울립니다. <b>[main]</b> 같은 판에 들어온 것: 🗑 「아이디 삭제가 안 된다. 계속 반복되네」 — 서버가 지우다 말고 있었습니다. 계정을 참조하는 기록(고객·저장한 자료·출근·체크판…)이 남아 있으면 로그인 계정 삭제가 외래키에 걸려 실패합니다. 그런데 함수는 「연결된 기록도 함께 지운다」 고 물어 놓고 정작 그… <b>[main]</b> 같은 판에 들어온 것: 📋 「AI 제안서에서 보장분석 상담자료가 보장내용을 못 읽는다」 — 넘겨 주는 자리에서 담보를 통째로 빠뜨리고 있었습니다. 상담자료의 보장분석표는 담보를 riders 로 받게 되어 있고, 못 받으면 그 자리에 「자료에서 담보를 못 읽었습니다 — 직접 더해 주세요」 를…";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18868,7 +18952,9 @@ function prSdSync(){
     wrap.innerHTML='<div class="card" style="margin-top:12px"><div class="card-hd">'+
       '<div class="card-title"><span class="ci">📋</span>보장분석 상담자료 — 이야기의 뼈대</div>'+
       '<div class="card-desc">여기서 시작해 <b>8통장 → 준비 안 하면 → 준비하면 → 연금·종신 → 근거</b> 순서로 넘어갑니다. '+
-      '자료를 넘긴 뒤 <b>바로 위 합본 브리핑</b>으로 이어 가면 고객님 숫자로 자연스럽게 넘어갑니다.</div></div>'+
+      '자료를 넘긴 뒤 <b>바로 위 합본 브리핑</b>으로 이어 가면 고객님 숫자로 자연스럽게 넘어갑니다.'+
+      /* 무엇이 넘어갔는지 <b>그 자리에</b> 적는다 — 「넘어갔겠지」 로 두지 않는다 */
+      '<div id="sdSent" style="margin-top:7px;font-size:11.5px;line-height:1.7">'+sdSentHtml()+'</div></div></div>'+
       '<div class="card-body" style="padding:0">'+
       '<iframe id="prSdFrame" title="보장분석 상담자료" '+
       'style="width:100%;height:76vh;border:0;display:block;background:#fff;border-radius:0 0 16px 16px"></iframe>'+
