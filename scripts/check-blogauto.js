@@ -991,6 +991,69 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  그림 글자가 <b>' + two.minBody + 'px 아래로 안 내려간다</b> — 폰에서 1/3 로 줄어든다' +
      (two.small.length ? ' — ' + two.small.join(' · ') : ''));
 
+  console.log('\n[18] 누가 쓰는지 · 그림에 우리가 그린 캐릭터가 있는가');
+  const who = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:'## 본문\n보장 내용은 심사 결과에 따릅니다.\n', guard:null, up:false }];
+    S.rows[0].guard = guard(S.rows[0].out, 'ours');
+    /* ① 안 적으면 아무 데도 안 넣는다 */
+    out.emptyHas = whoHas();
+    out.emptyText = packText(0).indexOf('## 글쓴이') >= 0;
+    out.emptyArt = build('cover', { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n' }).svg.indexOf('사업단장') >= 0;
+    paint();
+    out.opened = !document.getElementById('who').hidden;
+    out.tag = document.getElementById('tgWho').textContent;
+    /* ② 적으면 글과 그림 양쪽에 들어간다.
+       칸이 안 열려 있으면 여기서 멈추고 <b>왜</b> 인지 말한다 — 터지면 아무것도 못 읽는다 */
+    if (!document.getElementById('w_org')) { out.stopped = '글쓴이 칸이 안 열려 적을 자리가 없다'; return out; }
+    document.getElementById('w_org').value = '○○에셋 ○○본부';
+    document.getElementById('w_name').value = '홍길동';
+    document.getElementById('w_title').value = '사업단장';
+    document.getElementById('w_bio').value = '증권을 한 장으로 읽어 드립니다.';
+    whoSave();
+    const t = packText(0);
+    out.line = whoLine();
+    out.inText = t.indexOf('## 글쓴이') >= 0 && t.indexOf('○○에셋 ○○본부 · 홍길동 사업단장') >= 0;
+    out.bio = t.indexOf('증권을 한 장으로 읽어 드립니다.') >= 0;
+    out.beforeLaw = t.indexOf('## 글쓴이') < t.indexOf('──────────');
+    out.inArt = build('cover', { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n' }).svg.indexOf('홍길동 사업단장') >= 0;
+    out.sameBox = !!localStorage.getItem('apex_intro_guest');
+    /* ③ 준법 문구 경고가 글쓴이에 딸려 가지 않는다 */
+    S.comply = false;
+    out.lawWarn = packText(0).indexOf('준법 문구를 못 읽었습니다') >= 0;
+    S.comply = null; await comply();
+    /* ④ 그림에 우리가 그린 조각이 들어간다 — 얼굴은 안 그린다 */
+    out.pics = Object.keys(PIC).length;
+    out.w8pic = W8PIC.length;
+    const w8 = build('w8', {}), fl = build('flow', {});
+    out.w8Has = !w8.err && W8PIC.every(k => typeof PIC[k] === 'function');
+    out.flowHas = !fl.err;
+    return out;
+  });
+  is(!who.emptyHas && !who.emptyText && !who.emptyArt,
+     '  안 적으면 <b>글에도 그림에도</b> 이름이 안 들어간다 — 없는 이름을 만들지 않는다');
+  is(who.opened && /안 적으셨습니다/.test(who.tag),
+     '  안 적었으면 <b>묻지 않아도</b> 글쓴이 칸이 열린다' + (who.stopped ? ' — ' + who.stopped : ''));
+  if (who.stopped) is(false, '  글쓴이 칸이 없어 [18] 의 나머지를 못 봤다 — 위를 먼저 고치십시오');
+  is(who.line === '○○에셋 ○○본부 · 홍길동 사업단장', '  적은 그대로 한 줄이 된다 — ' + who.line);
+  is(who.inText, '  글 끝에 <b>「## 글쓴이」</b> 칸이 붙는다');
+  is(who.bio, '  한 줄 소개도 함께 들어간다');
+  is(who.beforeLaw, '  글쓴이가 준법 문구보다 <b>앞</b>에 온다 — 읽는 순서가 그렇다');
+  is(who.inArt, '  <b>그림 꼬리말</b>에도 같은 이름이 들어간다');
+  is(who.sameBox, '  앱이 쓰는 그 칸(apex_intro_)에 쓴다 — 칸을 새로 만들지 않았다');
+  is(who.lawWarn, '  준법 문구를 못 읽었을 때 경고가 <b>글쓴이와 상관없이</b> 뜬다');
+  is(who.pics >= 10 && who.w8pic === 8,
+     '  우리가 그린 그림 조각이 ' + who.pics + '개 — 여덟 칸에 하나씩 붙는다');
+  is(who.w8Has && who.flowHas, '  여덟 칸·흐름 카드가 그 조각을 쓴다');
+  is(!/eye|face|smile|mouth|눈코입을 그린다/i.test(ART_SRC),
+     '  <b>얼굴을 그리지 않는다</b> — 눈코입을 넣으면 남의 캐릭터를 닮는다 (CLAUDE.md 9)');
+  is(/직접 그립니다|우리가 그린/.test(ART_SRC),
+     '  그림을 <b>직접 그린다</b>고 파일에 적어 두었다 — 남의 삽화를 떠 오지 않는다');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

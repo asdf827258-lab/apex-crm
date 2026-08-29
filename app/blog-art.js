@@ -32,8 +32,84 @@
 const TS = { big:66, h:46, sub:36, body:34, cap:28, tiny:24 };
 const MINBODY = 32;
 
-const SV = { w:1200, ink:'#0F172A', sub:'#475569', brand:'#1A56DB', line:'#E2E8F0', soft:'#F8FAFC', bg:'#FFFFFF' };
+/* ── 보이는 결 ────────────────────────────────────────────────────
+   금융 앱들이 요즘 쓰는 결을 따릅니다 — <b>큰 글자 · 높은 대비 · 넉넉한
+   여백 · 둥근 모서리 · 옅은 회색 바탕</b>. 색만 흉내 내는 것이 아니라
+   <b>읽기 쉬운 쪽</b>이라서 그렇게 합니다.
+
+   그림(캐릭터)은 <b>직접 그립니다.</b> 남의 앱 캐릭터를 떠 오면 저작권
+   문제이고, 무엇보다 우리 것이 아닙니다. 아래 PIC 은 동그라미·모난네모·
+   선 몇 개로 우리가 그린 것이고, 얼굴을 그리지 않습니다 — 표정을 넣으면
+   그때부터 남의 것을 닮게 됩니다. (CLAUDE.md 9) */
+const SV = { w:1200, ink:'#191F28', sub:'#4E5968', dim:'#8B95A1',
+             brand:'#3182F6', line:'#E5E8EB', soft:'#F2F4F6', bg:'#FFFFFF' };
+const RAD = 24;
 const FONT = "'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif";
+
+/* ══════════ 우리가 그린 그림 조각 ══════════
+   동그라미·모난네모·선 몇 개로만 그립니다. <b>얼굴은 그리지 않습니다</b> —
+   눈코입을 넣는 순간 남의 캐릭터를 닮게 되고, 그때부터 우리 것이 아닙니다.
+   크기는 s(한 변)로 받고, 왼쪽 위 (x,y)에 놓습니다. */
+const PIC = {
+  /* 사람 — 머리 동그라미 + 어깨 */
+  person(x,y,s,c){ const r=s*0.22;
+    return '<circle cx="'+(x+s/2)+'" cy="'+(y+r+s*0.06)+'" r="'+r+'" fill="'+c+'"/>'+
+      '<path d="M '+(x+s*0.12)+' '+(y+s)+' a '+(s*0.38)+' '+(s*0.34)+' 0 0 1 '+(s*0.76)+' 0 z" fill="'+c+'"/>'; },
+  /* 종이 — 증권·서류 */
+  doc(x,y,s,c){ const w=s*0.74, h=s*0.92, X=x+(s-w)/2, Y=y+(s-h)/2, f=s*0.22;
+    return '<path d="M '+X+' '+Y+' h '+(w-f)+' l '+f+' '+f+' v '+(h-f)+' h '+(-w)+' z" fill="'+c+'" opacity=".18"/>'+
+      '<path d="M '+X+' '+Y+' h '+(w-f)+' l '+f+' '+f+' v '+(h-f)+' h '+(-w)+' z" fill="none" stroke="'+c+'" stroke-width="'+(s*0.055)+'" stroke-linejoin="round"/>'+
+      '<path d="M '+(X+w-f)+' '+Y+' v '+f+' h '+f+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.055)+'"/>'+
+      [0.44,0.6,0.76].map(k=>'<line x1="'+(X+w*0.18)+'" y1="'+(Y+h*k)+'" x2="'+(X+w*0.82)+'" y2="'+(Y+h*k)+'" stroke="'+c+'" stroke-width="'+(s*0.05)+'" stroke-linecap="round"/>').join(''); },
+  /* 지갑·통장 */
+  wallet(x,y,s,c){ const w=s*0.84, h=s*0.62, X=x+(s-w)/2, Y=y+(s-h)/2;
+    return '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" rx="'+(s*0.14)+'" fill="'+c+'" opacity=".18"/>'+
+      '<rect x="'+X+'" y="'+Y+'" width="'+w+'" height="'+h+'" rx="'+(s*0.14)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.055)+'"/>'+
+      '<circle cx="'+(X+w*0.76)+'" cy="'+(Y+h/2)+'" r="'+(s*0.08)+'" fill="'+c+'"/>'; },
+  /* 병원 — 더하기 */
+  cross(x,y,s,c){ const t=s*0.24, m=s*0.5, L=s*0.76;
+    return '<rect x="'+(x+m-t/2)+'" y="'+(y+(s-L)/2)+'" width="'+t+'" height="'+L+'" rx="'+(t*0.35)+'" fill="'+c+'"/>'+
+      '<rect x="'+(x+(s-L)/2)+'" y="'+(y+m-t/2)+'" width="'+L+'" height="'+t+'" rx="'+(t*0.35)+'" fill="'+c+'"/>'; },
+  /* 맥박 — 치료 */
+  pulse(x,y,s,c){ const m=y+s/2;
+    return '<path d="M '+(x+s*0.08)+' '+m+' h '+(s*0.2)+' l '+(s*0.1)+' '+(-s*0.26)+' l '+(s*0.16)+' '+(s*0.5)+
+      ' l '+(s*0.11)+' '+(-s*0.24)+' h '+(s*0.27)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.1)+
+      '" stroke-linecap="round" stroke-linejoin="round"/>'; },
+  /* 시계 — 쉬는 동안 */
+  clock(x,y,s,c){ const r=s*0.38, cx=x+s/2, cy=y+s/2;
+    return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+c+'" opacity=".18"/>'+
+      '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.075)+'"/>'+
+      '<path d="M '+cx+' '+(cy-r*0.52)+' V '+cy+' H '+(cx+r*0.42)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.075)+'" stroke-linecap="round" stroke-linejoin="round"/>'; },
+  /* 방패 — 가족보호 */
+  shield(x,y,s,c){ const w=s*0.68, X=x+(s-w)/2, Y=y+s*0.1, h=s*0.8;
+    const d='M '+(X+w/2)+' '+Y+' l '+(w/2)+' '+(h*0.2)+' v '+(h*0.34)+' q 0 '+(h*0.34)+' '+(-w/2)+' '+(h*0.46)+
+            ' q '+(-w/2)+' '+(-h*0.12)+' '+(-w/2)+' '+(-h*0.46)+' v '+(-h*0.34)+' z';
+    return '<path d="'+d+'" fill="'+c+'" opacity=".18"/><path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.07)+'" stroke-linejoin="round"/>'; },
+  /* 받쳐 드는 손 — 간병. 아래로 벌어진 손바닥 위에 사람을 얹는다 */
+  hand(x,y,s,c){ const cx=x+s/2, palm=y+s*0.62, r=s*0.13;
+    return '<circle cx="'+cx+'" cy="'+(y+s*0.28)+'" r="'+r+'" fill="'+c+'"/>'+
+      '<path d="M '+(cx-s*0.34)+' '+palm+' q '+(s*0.34)+' '+(s*0.3)+' '+(s*0.68)+' 0" fill="none" stroke="'+c+
+      '" stroke-width="'+(s*0.09)+'" stroke-linecap="round"/>'+
+      '<path d="M '+(cx-s*0.34)+' '+palm+' q '+(s*0.34)+' '+(s*0.3)+' '+(s*0.68)+' 0 z" fill="'+c+'" opacity=".2"/>'; },
+  /* 집 — 자산이전 */
+  home(x,y,s,c){ const w=s*0.72, X=x+(s-w)/2, Y=y+s*0.16, h=s*0.66;
+    return '<path d="M '+(X-s*0.06)+' '+(Y+h*0.34)+' L '+(X+w/2)+' '+Y+' L '+(X+w+s*0.06)+' '+(Y+h*0.34)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.075)+'" stroke-linecap="round" stroke-linejoin="round"/>'+
+      '<rect x="'+X+'" y="'+(Y+h*0.3)+'" width="'+w+'" height="'+(h*0.7)+'" rx="'+(s*0.06)+'" fill="'+c+'" opacity=".18"/>'+
+      '<rect x="'+X+'" y="'+(Y+h*0.3)+'" width="'+w+'" height="'+(h*0.7)+'" rx="'+(s*0.06)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.075)+'"/>'; },
+  /* 새싹 — 은퇴·연금 */
+  seed(x,y,s,c){ const cx=x+s/2, b=y+s*0.86;
+    return '<path d="M '+cx+' '+b+' V '+(y+s*0.42)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.075)+'" stroke-linecap="round"/>'+
+      '<path d="M '+cx+' '+(y+s*0.54)+' q '+(-s*0.3)+' '+(-s*0.06)+' '+(-s*0.3)+' '+(-s*0.3)+' q '+(s*0.3)+' 0 '+(s*0.3)+' '+(s*0.3)+' z" fill="'+c+'" opacity=".55"/>'+
+      '<path d="M '+cx+' '+(y+s*0.46)+' q '+(s*0.3)+' '+(-s*0.06)+' '+(s*0.3)+' '+(-s*0.3)+' q '+(-s*0.3)+' 0 '+(-s*0.3)+' '+(s*0.3)+' z" fill="'+c+'"/>'; },
+  /* 물음표 — 질문 */
+  ask(x,y,s,c){ const cx=x+s/2;
+    return '<circle cx="'+cx+'" cy="'+(y+s/2)+'" r="'+(s*0.42)+'" fill="'+c+'" opacity=".14"/>'+
+      '<path d="M '+(cx-s*0.13)+' '+(y+s*0.34)+' a '+(s*0.14)+' '+(s*0.14)+' 0 1 1 '+(s*0.15)+' '+(s*0.17)+
+      ' v '+(s*0.09)+'" fill="none" stroke="'+c+'" stroke-width="'+(s*0.085)+'" stroke-linecap="round"/>'+
+      '<circle cx="'+(cx+s*0.02)+'" cy="'+(y+s*0.7)+'" r="'+(s*0.055)+'" fill="'+c+'"/>'; }
+};
+/* 여덟 칸에 붙는 그림 — 지도의 칸 순서 그대로 */
+const W8PIC = ['wallet','cross','pulse','clock','shield','seed','hand','home'];
 
 const xe = s => (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;')
                 .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -178,10 +254,15 @@ const ART = {
     const top = Math.max(96, (H - ls.length * lh - 70) / 2);
     const n = seedn(row), c = kcolor(row);
     return { w:W, h:H, alt:ttl, text:ttl, svg: svg(W, H,
+      '<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="'+SV.soft+'"/>'+
       deco(n, W, H, c)+
-      '<rect x="0" y="0" width="14" height="'+H+'" fill="'+c+'"/>'+
-      tx([KINDS[row.kind].t], 72, top, 26, 0, c, 800)+
-      tx(ls, 72, top + 70 + size * 0.2, size, lh, SV.ink, 800)+ foot(W,H,c)) };
+      '<rect x="64" y="56" width="'+(W-128)+'" height="'+(H-112)+'" rx="'+RAD+'" fill="#FFFFFF"/>'+
+      '<rect x="112" y="'+(top-46)+'" width="'+(String(KINDS[row.kind].t).length * 27 + 44)+'" height="46" rx="23" fill="'+c+'"/>'+
+      tx([KINDS[row.kind].t], 134, top - 14, 26, 0, '#FFFFFF', 700)+
+      tx(ls, 112, top + 64 + size * 0.2, size, lh, SV.ink, 800)+
+      '<circle cx="'+(W-186)+'" cy="'+(H-186)+'" r="86" fill="'+c+'" opacity=".12"/>'+
+      PIC.person(W - 250, H - 250, 128, c)+
+      foot(W,H,c)) };
   }},
 
  news:{ t:'뉴스 카드', need:'seed',
@@ -192,7 +273,9 @@ const ART = {
     const ls = wrap(s.title, 20);
     return { w:W, h:H, text:s.title, alt: s.title + ' — ' + (s.paper||'') + ' 기사 소개 카드',
       svg: svg(W, H,
-      '<rect x="56" y="56" width="'+(W-112)+'" height="'+(H-112)+'" rx="20" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+      '<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="'+SV.soft+'"/>'+
+      '<rect x="64" y="56" width="'+(W-128)+'" height="'+(H-112)+'" rx="'+RAD+'" fill="#FFFFFF"/>'+
+      PIC.doc(W-260, 120, 120, SV.brand)+
       tx(['오늘의 소식'], 104, 156, TS.cap, 0, SV.brand, 800)+
       tx(ls, 104, 232, ls.length>3?46:54, ls.length>3?64:74, SV.ink, 800)+
       tx([[s.paper||'', s.when||''].filter(Boolean).join('  ·  ')], 104, H-146, TS.body, 0, SV.sub, 700)+
@@ -206,9 +289,11 @@ const ART = {
     const s = row.seed, W = SV.w, H = 630, ls = wrap(s.title, 17);
     return { w:W, h:H, text:s.title, alt: s.title + ' — 상담에서 자주 나오는 질문 카드',
       svg: svg(W, H,
-      '<text x="88" y="240" font-family="'+FONT+'" font-size="180" font-weight="800" fill="'+SV.line+'">“</text>'+
-      tx(ls, 180, 210, ls.length>3?46:56, ls.length>3?66:78, SV.ink, 800)+
-      tx(['상담에서 실제로 나온 질문입니다'], 180, H-110, TS.cap, 0, SV.brand, 800)+ foot(W,H)) };
+      '<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="'+SV.soft+'"/>'+
+      '<rect x="64" y="56" width="'+(W-128)+'" height="'+(H-112)+'" rx="'+RAD+'" fill="#FFFFFF"/>'+
+      PIC.ask(112, 116, 96, kcolor(row))+
+      tx(ls, 112, 300, ls.length>3?46:56, ls.length>3?66:78, SV.ink, 800)+
+      tx(['상담에서 실제로 나온 질문입니다'], 112, H-116, TS.cap, 0, kcolor(row), 800)+ foot(W,H,kcolor(row))) };
   }},
 
  steps:{ t:'순서 카드', need:'seed',
@@ -221,7 +306,7 @@ const ART = {
     let b = tx(wrap(s.title, 22), 64, 116, TS.h, 56, SV.ink, 800);
     for (let i = 0; i < n; i++){
       const y = 200 + i * 110, t = raw[i].replace(/^\d+\.\s*/,'');
-      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="88" rx="16" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="88" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
            '<circle cx="122" cy="'+(y+44)+'" r="30" fill="'+SV.brand+'"/>'+
            tx([String(i+1)], 122, y+56, TS.cap, 0, '#FFFFFF', 800, 'middle')+
            tx([t.slice(0,28)], 176, y+56, TS.body, 0, SV.ink, 800);
@@ -239,11 +324,10 @@ const ART = {
             tx(['칸마다 하는 일이 다릅니다. 어디가 비었는지부터 봅니다.'], 64, 162, TS.cap, 0, SV.sub, 500);
     for (let i = 0; i < 8; i++){
       const x = 64 + (i % 2) * (cw + 24), y = 220 + ((i / 2) | 0) * (ch + 22);
-      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="18" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
-           '<rect x="'+x+'" y="'+y+'" width="7" height="'+ch+'" rx="4" fill="'+SV.brand+'"/>'+
-           '<circle cx="'+(x+62)+'" cy="'+(y+ch/2)+'" r="28" fill="'+SV.brand+'"/>'+
-           tx([String(i+1)], x+62, y+ch/2+12, TS.cap, 0, '#FFFFFF', 800, 'middle')+
-           tx(wrap(ws[i], 11), x+110, y+ch/2+(ws[i].length>11?-4:12), TS.body, 42, SV.ink, 800);
+      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
+           '<rect x="'+(x+22)+'" y="'+(y+ch/2-38)+'" width="76" height="76" rx="22" fill="#FFFFFF"/>'+
+           (PIC[W8PIC[i]] ? PIC[W8PIC[i]](x+36, y+ch/2-24, 48, SV.brand) : '')+
+           tx(wrap(ws[i], 11), x+120, y+ch/2+(ws[i].length>11?-4:12), TS.body, 42, SV.ink, 800);
     }
     return { w:W, h:H, text:'', alt:'8통장으로 나눈 치료비 통장 구조 인포그래픽', svg: svg(W, H, b + foot(W,H)) };
   }},
@@ -258,9 +342,11 @@ const ART = {
     let b = tx(['병이 지나가는 동안, 어느 칸이 일하나'], 64, 108, TS.h, 0, SV.ink, 800);
     st.forEach((s, i) => {
       const x = 64 + (i % 2) * (cw + 24), y = 180 + ((i / 2) | 0) * (ch + 26);
-      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="18" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
+           '<rect x="'+(cw+x-104)+'" y="'+(y+28)+'" width="76" height="76" rx="22" fill="#FFFFFF"/>'+
+           (PIC[['pulse','cross','clock','hand'][i]] ? PIC[['pulse','cross','clock','hand'][i]](cw+x-90, y+42, 48, SV.brand) : '')+
            tx([s[0]], x+30, y+62, TS.sub, 0, SV.brand, 800)+
-           tx(wrap(s[1], 12), x+30, y+118, TS.body, 42, SV.ink, 800);
+           tx(wrap(s[1], 10), x+30, y+118, TS.body, 42, SV.ink, 800);
     });
     b += tx(['보장 내용과 지급 여부는 약관과 심사 결과에 따릅니다.'], 64, H-84, TS.cap, 0, SV.sub, 500) + foot(W,H);
     return { w:W, h:H, text:'', alt:'질병 치료 단계별 보험금 지급 흐름 타임라인', svg: svg(W, H, b) };
@@ -277,8 +363,10 @@ const ART = {
     let b = tx(['두 가지는 하는 일이 다릅니다'], 64, 108, TS.h, 0, SV.ink, 800);
     box.forEach((o, i) => {
       const x = 64 + i * ((W - 128) / 2 + 16), w = (W - 144) / 2;
-      b += '<rect x="'+x+'" y="180" width="'+w+'" height="340" rx="18" fill="'+SV.soft+
-           '" stroke="'+(i?SV.line:SV.brand)+'" stroke-width="'+(i?1:3)+'"/>'+
+      b += '<rect x="'+x+'" y="180" width="'+w+'" height="340" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
+           (i ? '' : '<rect x="'+x+'" y="180" width="'+w+'" height="340" rx="'+RAD+'" fill="none" stroke="'+SV.brand+'" stroke-width="4"/>')+
+           '<rect x="'+(x+w-104)+'" y="212" width="76" height="76" rx="22" fill="#FFFFFF"/>'+
+           (PIC[i?'pulse':'cross'] ? PIC[i?'pulse':'cross'](x+w-90, 226, 48, SV.brand) : '')+
            tx(wrap(o[0], 9), x+34, 252, TS.sub, 46, SV.ink, 800)+
            tx(wrap(o[1], 13), x+34, 352, TS.body, 44, SV.sub, 600);
     });
@@ -349,9 +437,9 @@ const ART = {
     let b = tx(['이 글에서 다루는 것'], 64, 112, TS.h, 0, SV.ink, 800);
     hs.forEach((h, i) => {
       const y = 172 + i * 96;
-      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="76" rx="14" fill="'+SV.soft+'"/>'+
-           '<rect x="64" y="'+y+'" width="8" height="76" rx="4" fill="'+SV.brand+'"/>'+
-           tx([h.slice(0,30)], 104, y+50, TS.body, 0, SV.ink, 800);
+      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="76" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
+           '<circle cx="104" cy="'+(y+38)+'" r="7" fill="'+kcolor(row)+'"/>'+
+           tx([h.slice(0,28)], 134, y+50, TS.body, 0, SV.ink, 800);
     });
     return { w:W, h:H, text:hs.join(' '), alt:'이 글에서 다루는 내용 요약 카드', svg: svg(W, H, b + foot(W,H)) };
   }}
