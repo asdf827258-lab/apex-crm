@@ -330,7 +330,8 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
                   __cov('c3', 'p1', '질병입원일당', 30000),
                   __cov('c4', 'p1', '항암방사선치료비'),          /* 금액 못 읽음 */
                   __cov('c5', 'p2', '항암약물치료비', 10000000),  /* 신규 제안 */
-                  __cov('c6', 'p1', '골절진단비', 1000000)];
+                  __cov('c6', 'p1', '골절진단비', 1000000),
+                  __cov('c8', 'p1', '질병입원의료비', 50000000)];
     const st = frBlankState(); st.pact = { p2: 'NEW' };
     __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, st, scen);
     const M = frMaster();
@@ -341,7 +342,24 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const nur = frRegion(FR_BODY.filter(x => x.k === 'NURSING')[0], M);
     const sc = frScenCalc(frScenActive()[0], M, 'before');
     return {
-      bodySvg: /<svg/.test(body), dots: (body.match(/fr-dot/g) || []).length,
+      bodySvg: /<svg/.test(body),
+      reuse: body.indexOf('baba-body-grid') >= 0,
+      cols: (body.indexOf('권장') >= 0) && (body.indexOf('기존') >= 0) && (body.indexOf('신규') >= 0),
+      man: body.indexOf('3,000') >= 0,          /* 3,000만원 — 원을 만원으로 옮겼는가 */
+      recNote: body.indexOf('권장</b> 열') >= 0,
+      /* 하루 3만원(일당)과 한도 5,000만원(실손)이 한 칸에 더해지면 5,003 이 된다 */
+      mixed: (function(){
+        /* 안내문이 아니라 <b>표 칸</b>만 본다 — 글자 뭉치째 뒤지면 내 설명글도 값으로 읽힌다.
+           body 는 아직 화면에 없으니 <b>여기서 세운다.</b> */
+        var d=document.createElement('div');d.innerHTML=body;
+        var g=d.querySelectorAll('td'),i;
+        if(!g.length)return 'td없음';
+        for(i=0;i<g.length;i++)if(g[i].textContent.indexOf('5,003')>=0)return true;
+        return false;
+      })(),
+      offNote: body.indexOf('지급 방식이 칸과 달라') >= 0,
+      slotKinds: [frBodySlotKind('inpD'), frBodySlotKind('silD'), frBodySlotKind('cancer'), frBodySlotKind('outC')].join(','),
+
       step01: B[0].coverWon, step01off: B[0].off,
       step03: B[1].coverWon, step03daily: B[1].daily,
       step04unk: B[2].unknown, step04pend: B[2].pend,
@@ -355,7 +373,15 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
       jnLen: jn.length
     };
   });
-  is(pic.bodySvg && pic.dots === 4, '인체 그림을 새로 그리지 않고 가져다 쓰고, 부위 점이 얹힌다 (' + pic.dots + '개)');
+  is(pic.bodySvg && pic.reuse,
+     '인체 그림을 <b>새로 그리지 않고</b> 비포&애프터의 것을 그대로 쓴다 (baba-body-grid)');
+  is(pic.cols, '권장 · 기존 · 신규 <b>세 열</b>이 원본 그대로 선다');
+  is(pic.man, '원을 <b>만원</b>으로 옮겨 그림에 넣는다 — 그림은 만원으로 그린다 (3,000)');
+  is(pic.recNote, '<b>권장</b> 열이 어디서 왔는지(또는 왜 비었는지) 밝힌다');
+  is(pic.slotKinds === 'DAILY,ACTUAL,LUMP,DAILY',
+     '칸마다 <b>무엇을 담는 칸인지</b>를 안다 (' + pic.slotKinds + ')');
+  is(pic.mixed === false,
+     '하루치와 목돈을 <b>한 칸에 더하지 않는다</b> — 일당 3만 + 실손 5,000만 = 「5,003만」 이 되던 자리');
   is(pic.step01 === 30000000 && pic.step01off === 1,
      '단계 계산도 사건 자를 쓴다 — 위암 「진단」에 유사암을 더하지 않는다 (' + pic.step01 + '원)');
   is(pic.step03 === 30000 * 21 && pic.step03daily === 1, '일당 단계는 입원일수로 환산하고 그 사실을 남긴다');
