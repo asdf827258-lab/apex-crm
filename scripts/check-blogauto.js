@@ -784,6 +784,23 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(more.recent.indexOf('어제 쓴 제목입니다') >= 0, '  어제 올린 제목을 안다 (' + more.recent.join(' · ') + ')');
   is(/요 며칠 이미 올린 글/.test(more.prompt) && /같은 이야기를 다시 하지 않는다/.test(more.prompt),
      '  <b>같은 이야기를 또 하지 말라</b>고 주문서에 실어 보낸다');
+  /* 「소제목 다섯, 문장 다섯」 만 시키면 <b>분량만 채운 글</b>이 나온다.
+     읽고 나서 「여긴 다르구나」 싶게 만드는 것은 길이가 아니라 이 일곱이다. */
+  const DENSE = [
+    ['첫 세 줄에 장면', /첫 세 줄에 장면/],
+    ['불리한 말을 정직하게', /파는 쪽에 불리한 말/],
+    ['혼자 해 보실 것', /혼자서도 지금 해 보실 수 있는 것/],
+    ['흔한 오해 짚기', /흔한 오해를 하나 정면으로/],
+    ['절차·준비물 구체적으로', /절차·준비물은 구체적으로/],
+    ['같은 말 두 번 안 하기', /같은 말을 두 번 하지 않는다/],
+    ['추상어 금지', /추상어를 쓰지 않는다/]
+  ];
+  const missDense = DENSE.filter(d => !d[1].test(more.prompt)).map(d => d[0]);
+  is(missDense.length === 0,
+     '  주문서가 <b>밀도</b>를 시킨다 — 장면·불리한 말·혼자 할 것·오해·절차·반복 금지·추상어 금지' +
+     (missDense.length ? ' — 빠짐: ' + missDense.join(' · ') : ''));
+  is(/지어내지 않는다|\[\[확인 필요/.test(more.prompt),
+     '  밀도를 시키면서도 <b>없는 숫자는 비우라</b>고 함께 시킨다 — 채우려다 지어내면 안 된다');
   is(more.selfFree, '  지금 쓰는 글 자신은 그 목록에서 뺀다 — 자기 제목을 피하라고 시키면 안 된다');
   is(more.runFull > more.runThin, '  글감이 줄면 쓸 수 있는 편수도 준다 (' + more.runFull + ' → ' + more.runThin + ')');
   is(more.dry.indexOf('day') >= 0 && more.dry.indexOf('ask') >= 0,
@@ -793,6 +810,249 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(more.tmrNoSeed === 0, '  «내일 것» 도 글감이 없으면 <b>AI 를 안 부른다</b>');
   is(more.tmrCalls === 1 && more.tmrDone && more.tmrIsTomorrow,
      '  «내일 것» 은 <b>내일 줄</b>을 만든다 — 오늘 것을 덮어쓰지 않는다');
+
+  console.log('\n[16] 고칠 자리로 데려다 놓는가 · 소제목을 놓치지 않는가');
+  const fix = await page.evaluate(async () => {
+    const out = {};
+    /* ① ## 도 ### 도 소제목으로 읽는다 — ### 로 쓰시면 목차 카드가 말없이 빠졌다 */
+    const mk = h => ({ ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n' + h + '\n글.\n' });
+    out.h2 = build('toc', mk('## 첫째 소제목\n글.\n\n## 둘째 소제목')).err || 'ok';
+    out.h3 = build('toc', mk('### 첫째 소제목\n글.\n\n### 둘째 소제목')).err || 'ok';
+    out.h4 = build('toc', mk('#### 너무 잘게\n글.\n\n#### 쪼갠 것')).err || 'ok';
+    out.heads = pickHeads(mk('## 하나\n글.\n\n### 둘\n글.'));
+    /* ② 목차 카드에 꼬리말이 앉을 자리가 있다 */
+    const t6 = build('toc', mk([1,2,3,4,5,6].map(n => '## 소제목 ' + n + ' 이 자리가 제법 길 때는 어떻게 되나').join('\n글.\n\n')));
+    out.tocH = t6.h; out.tocN = pickHeads(mk([1,2,3,4,5,6].map(n => '## 소제목 ' + n).join('\n글.\n\n'))).length;
+
+    /* ③ 게이트가 잡은 말을 눌러 본문의 그 자리로 */
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:'## 제목 후보\n- 제목\n\n## 본문\n이 상품은 무조건 됩니다. 보장 내용은 심사 결과에 따릅니다.\n' +
+          '[[확인 필요: 얼마인지]] 가 남아 있습니다.\n', guard:null, up:false }];
+    S.rows[0].guard = guard(S.rows[0].out, 'ours');
+    await show(0);
+    const box = document.querySelector('#view .body');
+    out.marked = box.querySelectorAll('mark.bad').length;
+    out.markText = (box.querySelector('mark.bad') || {}).textContent;
+    out.linkOk = /jumpBad\('bad_\d+'\)/.test(document.querySelector('#view .gate.no').innerHTML);
+    out.holeLink = /jumpHole\(\)/.test(document.querySelector('#view .gate.no').innerHTML);
+    /* 표·서식이 안 깨졌나 — 문자열로 다시 만지면 태그 안쪽이 상한다 */
+    out.headsKept = box.querySelectorAll('h2').length;
+    jumpBad(badId('무조건'));
+    out.flashed = !!box.querySelector('mark.bad.flash');
+    return out;
+  });
+  is(fix.h2 === 'ok', '  ## 소제목으로 목차 카드가 선다');
+  is(fix.h3 === 'ok', '  <b>### 소제목으로도</b> 선다 — 손으로 고치실 때 ### 를 쓰신다');
+  is(fix.h4 !== 'ok', '  #### 부터는 안 읽는다 — 너무 잘게 쪼갠 것까지 목차에 넣지 않는다');
+  is(fix.heads.join('·') === '하나·둘', '  ## 와 ### 를 섞어 써도 순서대로 읽는다 — ' + fix.heads.join(' · '));
+  is(fix.tocH >= 180 + fix.tocN * 78 + 40,
+     '  목차 카드에 <b>꼬리말이 앉을 자리</b>가 있다 — 마지막 소제목과 안 겹치게 (' + fix.tocH + 'px)');
+  is(fix.marked === 1 && fix.markText === '무조건',
+     '  게이트가 잡은 말이 본문에서 <b>빨갛게</b> 표시된다 (' + fix.markText + ')');
+  is(fix.linkOk, '  게이트 목록에서 <b>눌러 그 자리로</b> 갈 수 있다');
+  is(fix.holeLink, '  못 채운 자리도 눌러서 간다');
+  is(fix.headsKept >= 2, '  감싸도 본문 서식이 안 깨진다 — 제목이 그대로다 (h2 ' + fix.headsKept + '개)');
+  is(fix.flashed, '  누르면 그 자리가 잠깐 테를 두른다 — 어디인지 눈에 들어오게');
+
+  console.log('\n[17] 두 갈래로 서는가 · 심의를 기계가 먼저 보는가 · 폰에서 읽히는가');
+  const two = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.rows=[]; S.busy=-1; S.comply=null; S.perweek=7;
+    localStorage.setItem('apex_studio_apikey','x');
+
+    /* ① 두 갈래 — 표 하나가 답하고, 화면·비율·주문서가 그것을 쓴다 */
+    out.groups = GORDER.slice();
+    out.everyKind = ORDER.every(k => GROUPS[KINDS[k].g]);
+    await pullNews(); plan(); paint();
+    out.headings = [...document.querySelectorAll('#seeds .gh')].map(e => e.textContent.replace(/글감.*/,'').trim());
+    const grps = document.querySelectorAll('#seeds .grp');
+    out.cards = GORDER.map((g, i) => grps[i] ? grps[i].querySelectorAll('.seed').length : -1);
+    const gc = {}, kc = {};
+    MIX.forEach(k => { gc[KINDS[k].g] = (gc[KINDS[k].g]||0) + 1; kc[k] = (kc[k]||0) + 1; });
+    out.ours = kc.ours; out.crew = (kc.culture||0) + (kc.growth||0);
+    out.mix = gc; out.mixLen = MIX.length;
+    out.mixNote = document.getElementById('mixNote').textContent;
+
+    /* ② 자동 심의 — 빠진 것은 붙이고, 걸린 말은 AI 에게 되돌린다 */
+    out.needFix = NEED.every(n => !!n.fix);
+    const bare = '## 본문\n보험료가 궁금하실 겁니다. 세액공제도 됩니다.\n';
+    const nd = autoNeed(bare);
+    out.added = nd.added.length;
+    out.needOk = guard(nd.out).miss.length === 0;
+    out.beforeHash = (() => { const t = autoNeed('## 본문\n보장이 어떻게 되나요.\n\n## 해시태그\n#가\n').out;
+      return t.indexOf('심사 결과에 따릅니다') < t.indexOf('## 해시태그'); })();
+    /* 걸린 말은 AI 에게 되돌려 보낸다 — 우리가 지우지 않는다 */
+    let asked = [];
+    const realAsk = window.ask;
+    window.ask = (sys, user) => { asked.push(user); return Promise.resolve('## 본문\n이 상품은 좋습니다.\n'); };
+    const row = { kind:'ours', out:'## 본문\n이 상품은 무조건 됩니다.\n', seed:{kind:'ours',title:'x',src:'y'} };
+    const fixed = await autoClean(row);
+    out.rounds = asked.length; out.fixed = fixed;
+    out.toldWord = /「무조건」/.test(asked[0] || '');
+    out.toldKeep = /다른 곳은 한 글자도 건드리지 않는다/.test(asked[0] || '');
+    out.cleaned = !guard(row.out).hits.length;
+    /* 두 판까지만 — 안 고쳐지면 사람에게 넘긴다 */
+    asked = [];
+    const stub = { kind:'ours', out:'## 본문\n무조건 됩니다.\n', seed:{kind:'ours',title:'x',src:'y'} };
+    window.ask = () => Promise.resolve('## 본문\n무조건 됩니다.\n');
+    await autoClean(stub);
+    out.capped = 2;
+    out.stillBad = guard(stub.out).hits.length > 0;
+    /* 진짜로 중요한 것 — <b>draft() 가 이 둘을 실제로 부르는가.</b>
+       함수만 따로 재면, 만드는 자리에서 안 불러도 점검은 통과한다. */
+    S.rows = []; S.perweek = 7; plan();
+    const di = todayAt();
+    S.rows[di].kind = 'ours'; S.rows[di].out = '';
+    S.rows[di].seed = { kind:'ours', title:'가입해 둔 보험을 한 장으로', src:'메뉴' };
+    let round = 0;
+    window.ask = () => { round++;
+      return Promise.resolve(round === 1
+        ? '## 제목 후보\n- 제목\n\n## 본문\n이건 무조건 됩니다. 보험료가 궁금하시죠.\n\n## 해시태그\n#가\n'
+        : '## 제목 후보\n- 제목\n\n## 본문\n이건 대부분 됩니다. 보험료가 궁금하시죠.\n\n## 해시태그\n#가\n'); };
+    await draft(di);
+    const done = S.rows[di];
+    out.draftClean = !guard(done.out, 'ours').hits.length;
+    out.draftNeed  = /심사 결과에 따릅니다/.test(done.out);
+    out.draftOk    = done.guard && done.guard.ok;
+    out.draftSaid  = !!(done.auto && done.auto.fixed.length && done.auto.added.length);
+    await show(di);
+    out.draftBox   = /심의에 걸릴 자리를 먼저 손봤습니다/.test(document.getElementById('view').innerHTML);
+    window.ask = realAsk;
+    const sp = sysPrompt();
+    out.sysBan = banWords().every(w => sp.indexOf(w) >= 0);
+    out.banCount = banWords().length;
+
+    /* ③ 표 카드 · 한 문장 카드 */
+    const dr = { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n\n| 구분 | 이것 | 저것 |\n| --- | --- | --- |\n' +
+          '| 하는 일 | 돌려받는 쪽 | 정해진 금액 |\n| 언제 | 쓴 뒤 | 진단 때 |\n\n> 안 바꿔도 되면 그렇게 말씀드립니다.\n' };
+    const tb = build('table', dr), qt = build('quote', dr);
+    /* 칸을 넘어 잘리지 않는가 — 한글을 영문 폭으로 재다가 실제로 오른쪽이 잘렸다 */
+    const longest = (tb.svg.match(/<tspan[^>]*>([^<]*)<\/tspan>/g) || [])
+      .map(x => x.replace(/<[^>]*>/g,'')).reduce((a, b) => a.length >= b.length ? a : b, '');
+    out.tbCol = (1200 - 128) / 3; out.tbLine = longest.length * TS.body; out.tbLongest = longest;
+    out.fitsFactor = fits(1000, 100, 0) <= 10;
+    out.tableOk = !tb.err && tb.svg.indexOf('돌려받는 쪽') > 0 && tb.svg.indexOf('구분') > 0;
+    out.quoteOk = !qt.err && qt.text === '안 바꿔도 되면 그렇게 말씀드립니다.';
+    const noq = build('quote', { out:'## 본문\n강조가 없는 글.\n' });
+    out.quoteRefuse = !!noq.err;
+    const notb = build('table', { out:'## 본문\n표가 없는 글.\n' });
+    out.tableRefuse = !!notb.err;
+
+    /* ④ 폰에서 읽히는가 — 1200px 그림이 360px 로 줄어든다 */
+    const small = [];
+    ['cover','w8','flow','vs','toc','table','quote'].forEach(id => {
+      const r = build(id, dr); if (r.err) return;
+      let m; const re = /font-size="(\d+)"/g;
+      while ((m = re.exec(r.svg))) if (+m[1] < 24) small.push(id + ':' + m[1]);
+    });
+    out.small = small; out.minBody = MINBODY;
+    return out;
+  });
+  is(two.groups.join('·') === '고객·홍보', '  두 갈래다 — ' + two.groups.join(' · '));
+  is(two.everyKind, '  갈래마다 어느 쪽인지 <b>표에 달려 있다</b>');
+  /* SRC 는 노드 쪽에서 본다 — 페이지 안에는 없다 */
+  is(!/g\s*===\s*['"]고객['"]\s*\?[\s\S]{0,120}['"]홍보['"]\s*\?/.test(SRC),
+     '  두 갈래를 삼항 사슬로 나열하지 않았다');
+  is(two.headings.length === 2 && /고객에게 어필/.test(two.headings[0]) && /회사 홍보/.test(two.headings[1]),
+     '  글감 창고가 <b>두 칸으로</b> 선다 — ' + two.headings.join(' / '));
+  is(two.cards[0] === 4 && two.cards[1] === 3, '  어필 4갈래 · 홍보 3갈래 (' + two.cards.join(' / ') + ')');
+  is(two.ours * 10 === two.mixLen,
+     '  <b>고객에게 나가는 홍보</b>는 열에 하나다 (' + two.ours + '/' + two.mixLen + ')');
+  is(two.mix['홍보'] * 5 === two.mixLen,
+     '  회사 갈래 전체는 다섯에 하나다 — 홍보 ' + two.ours + ' + 동료용 ' + two.crew + ' (' + two.mix['홍보'] + '/' + two.mixLen + ')');
+  is(two.mix['고객'] > two.mix['홍보'] * 3,
+     '  어필 글이 회사 글보다 훨씬 많다 (' + two.mix['고객'] + ' 대 ' + two.mix['홍보'] + ')');
+  is(/고객에게 어필/.test(two.mixNote) && /회사 홍보/.test(two.mixNote), '  비율 안내도 두 갈래로 말한다');
+  is(two.needFix, '  빠지면 <b>무엇을 붙일지</b>가 같은 표에 있다 — 두 곳에 안 적었다');
+  is(two.added === 2 && two.needOk, '  빠진 필수 문구를 <b>자동으로 붙인다</b> (' + two.added + '개)');
+  is(two.beforeHash, '  해시태그 앞, 본문 끝에 붙인다 — 독자가 마지막으로 읽는 자리');
+  is(two.rounds === 1 && two.toldWord, '  걸린 말은 <b>AI 에게 되돌려</b> 고치게 한다 (' + two.fixed.join('/') + ')');
+  is(two.toldKeep, '  「다른 곳은 건드리지 마라」 를 함께 시킨다 — 우리가 지우면 뜻이 바뀐다');
+  is(two.cleaned, '  되돌린 뒤 그 말이 사라진다');
+  is(two.stillBad, '  안 고쳐지면 <b>조용히 통과시키지 않는다</b> — 사람에게 넘긴다');
+  is(two.sysBan, '  금지어 <b>' + two.banCount + '개가 모두</b> 주문서에 실린다 — 표를 늘리면 시키는 말도 같이 는다');
+  /* 만드는 자리에서 실제로 부르는가 — 함수만 따로 재면 안 불러도 통과한다 */
+  is(two.draftClean, '  <b>초안을 만들면</b> 걸린 말이 남지 않는다 — draft 가 자동 심의를 실제로 부른다');
+  is(two.draftNeed, '  <b>초안을 만들면</b> 필수 문구가 붙어 있다');
+  is(two.draftOk, '  그래서 그 자리에서 <b>게이트를 통과</b>한다 — 손볼 것 없이 올릴 수 있다');
+  is(two.draftSaid, '  무엇을 손봤는지 <b>기록으로 남는다</b>');
+  is(two.draftBox, '  올리는 화면에 <b>손본 자리를 적어 준다</b> — 말없이 고치면 AI 가 쓴 그대로인 줄 안다');
+  is(two.tableOk, '  <b>비교표 카드</b> — 초안의 표를 그대로 그린다');
+  is(two.tableRefuse, '  표가 없으면 안 그린다 — 칸을 만들어 넣지 않는다');
+  is(two.tbLine <= two.tbCol,
+     '  표 글자가 <b>칸을 안 넘는다</b> — 「' + two.tbLongest + '」 ' + Math.round(two.tbLine) +
+     'px ≤ 칸 ' + Math.round(two.tbCol) + 'px');
+  is(two.fitsFactor, '  한글 폭을 <b>글자 크기만큼</b>으로 잰다 — 영문 폭으로 재면 오른쪽이 잘린다');
+  is(two.quoteOk, '  <b>한 문장 카드</b> — &gt; 로 강조한 줄만 크게 싣는다');
+  is(two.quoteRefuse, '  강조가 없으면 안 그린다 — 아무 문장이나 대신 걸지 않는다');
+  is(two.small.length === 0,
+     '  그림 글자가 <b>' + two.minBody + 'px 아래로 안 내려간다</b> — 폰에서 1/3 로 줄어든다' +
+     (two.small.length ? ' — ' + two.small.join(' · ') : ''));
+
+  console.log('\n[18] 누가 쓰는지 · 그림에 우리가 그린 캐릭터가 있는가');
+  const who = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:'## 본문\n보장 내용은 심사 결과에 따릅니다.\n', guard:null, up:false }];
+    S.rows[0].guard = guard(S.rows[0].out, 'ours');
+    /* ① 안 적으면 아무 데도 안 넣는다 */
+    out.emptyHas = whoHas();
+    out.emptyText = packText(0).indexOf('## 글쓴이') >= 0;
+    out.emptyArt = build('cover', { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n' }).svg.indexOf('사업단장') >= 0;
+    paint();
+    out.opened = !document.getElementById('who').hidden;
+    out.tag = document.getElementById('tgWho').textContent;
+    /* ② 적으면 글과 그림 양쪽에 들어간다.
+       칸이 안 열려 있으면 여기서 멈추고 <b>왜</b> 인지 말한다 — 터지면 아무것도 못 읽는다 */
+    if (!document.getElementById('w_org')) { out.stopped = '글쓴이 칸이 안 열려 적을 자리가 없다'; return out; }
+    document.getElementById('w_org').value = '○○에셋 ○○본부';
+    document.getElementById('w_name').value = '홍길동';
+    document.getElementById('w_title').value = '사업단장';
+    document.getElementById('w_bio').value = '증권을 한 장으로 읽어 드립니다.';
+    whoSave();
+    const t = packText(0);
+    out.line = whoLine();
+    out.inText = t.indexOf('## 글쓴이') >= 0 && t.indexOf('○○에셋 ○○본부 · 홍길동 사업단장') >= 0;
+    out.bio = t.indexOf('증권을 한 장으로 읽어 드립니다.') >= 0;
+    out.beforeLaw = t.indexOf('## 글쓴이') < t.indexOf('──────────');
+    out.inArt = build('cover', { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n' }).svg.indexOf('홍길동 사업단장') >= 0;
+    out.sameBox = !!localStorage.getItem('apex_intro_guest');
+    /* ③ 준법 문구 경고가 글쓴이에 딸려 가지 않는다 */
+    S.comply = false;
+    out.lawWarn = packText(0).indexOf('준법 문구를 못 읽었습니다') >= 0;
+    S.comply = null; await comply();
+    /* ④ 그림에 우리가 그린 조각이 들어간다 — 얼굴은 안 그린다 */
+    out.pics = Object.keys(PIC).length;
+    out.w8pic = W8PIC.length;
+    const w8 = build('w8', {}), fl = build('flow', {});
+    out.w8Has = !w8.err && W8PIC.every(k => typeof PIC[k] === 'function');
+    out.flowHas = !fl.err;
+    return out;
+  });
+  is(!who.emptyHas && !who.emptyText && !who.emptyArt,
+     '  안 적으면 <b>글에도 그림에도</b> 이름이 안 들어간다 — 없는 이름을 만들지 않는다');
+  is(who.opened && /안 적으셨습니다/.test(who.tag),
+     '  안 적었으면 <b>묻지 않아도</b> 글쓴이 칸이 열린다' + (who.stopped ? ' — ' + who.stopped : ''));
+  if (who.stopped) is(false, '  글쓴이 칸이 없어 [18] 의 나머지를 못 봤다 — 위를 먼저 고치십시오');
+  is(who.line === '○○에셋 ○○본부 · 홍길동 사업단장', '  적은 그대로 한 줄이 된다 — ' + who.line);
+  is(who.inText, '  글 끝에 <b>「## 글쓴이」</b> 칸이 붙는다');
+  is(who.bio, '  한 줄 소개도 함께 들어간다');
+  is(who.beforeLaw, '  글쓴이가 준법 문구보다 <b>앞</b>에 온다 — 읽는 순서가 그렇다');
+  is(who.inArt, '  <b>그림 꼬리말</b>에도 같은 이름이 들어간다');
+  is(who.sameBox, '  앱이 쓰는 그 칸(apex_intro_)에 쓴다 — 칸을 새로 만들지 않았다');
+  is(who.lawWarn, '  준법 문구를 못 읽었을 때 경고가 <b>글쓴이와 상관없이</b> 뜬다');
+  is(who.pics >= 10 && who.w8pic === 8,
+     '  우리가 그린 그림 조각이 ' + who.pics + '개 — 여덟 칸에 하나씩 붙는다');
+  is(who.w8Has && who.flowHas, '  여덟 칸·흐름 카드가 그 조각을 쓴다');
+  is(!/eye|face|smile|mouth|눈코입을 그린다/i.test(ART_SRC),
+     '  <b>얼굴을 그리지 않는다</b> — 눈코입을 넣으면 남의 캐릭터를 닮는다 (CLAUDE.md 9)');
+  is(/직접 그립니다|우리가 그린/.test(ART_SRC),
+     '  그림을 <b>직접 그린다</b>고 파일에 적어 두었다 — 남의 삽화를 떠 오지 않는다');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
