@@ -366,7 +366,9 @@ is(!/'월','화','수','목','금'/.test(page.replace(/DOW=\[[^\]]*\]/g, '')),
    '  달력에 요일 미션을 손으로 다시 적지 않았다');
 
 console.log('\n[8] 인쇄가 종이로 나오는가');
-is(!/font-feature-settings/.test(page),
+/* 주석에 「tnum 은 켜지 않는다」라고 적어 둔 것까지 잡으면 헛것이다 — 주석을 걷고 본다 */
+const cssLive = page.replace(/\/\*[\s\S]*?\*\//g, '');
+is(!/font-feature-settings/.test(cssLive),
    '  tnum 을 켜지 않았다 — 켜고 PDF 로 저장하면 숫자가 유니코드를 잃는다');
 is(/@media print/.test(page), '  인쇄 규칙이 있다');
 is(/beforeprint/.test(page), '  인쇄할 때 모든 칸을 펼친다 — 한 칸만 뽑히지 않는다');
