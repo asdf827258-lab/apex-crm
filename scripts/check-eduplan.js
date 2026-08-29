@@ -91,6 +91,39 @@ is(/한 칸이라도 비면 숫자를 만들지 않습니다/.test(flat(plan.goa
    '  한 칸이라도 비면 숫자를 만들지 않는다 (CLAUDE.md 1)');
 is(/성장판|점수판/.test(page), '  이룬 숫자는 성장판·점수판이 든다고 가리킨다 — 두 곳에서 세지 않는다');
 
+console.log('\n[1-3] MASTER 15단계 — 도구를 쓰는 길이 서 있는가');
+const ms = plan.master || [];
+is(ms.length === 15, '  열다섯 단계가 다 있다 (' + ms.length + ')');
+is(ms.map(m => m[0]).join(',') === '00,01,02,03,04,05,06,07,08,09,10,11,12,13,14',
+   '  00 부터 14 까지 번호가 빠지거나 겹치지 않는다');
+is(ms.every(m => m[1] && m[2] && m[3] && m[4]), '  단계마다 이름 · 하는 일 · 교육목표가 있다');
+/* 「했습니다」로 넘어가지 못하게 — 흔적으로 판정한다 */
+is(ms.every(m => m[5] && m[5].length > 10), '  단계마다 <b>이러면 됐습니다</b>(남는 흔적)가 있다');
+/* 이 저장소가 아는 사고들을 그 단계에 붙여 뒀는가 — 이게 이 표의 값이다 */
+is(ms.every(m => m[6] && m[6].length > 20), '  단계마다 <b>자주 무너지는 자리</b>가 붙어 있다');
+is(ms.every(m => Array.isArray(m[7]) && m[7].length), '  단계마다 여는 화면이 붙어 있다');
+const msTxt = flat(ms).join(' ');
+[['월 보험료', '02 에 월 보험료 빈칸 경고가 있다'],
+ ['「모름」과 「0」', '03 에 모름과 0 을 가르는 말이 있다'],
+ ['검수', '04 에 검수를 건너뛰지 말라고 있다'],
+ ['새로 생기는 단점', '06 에 잃는 것도 보여 주라고 있다'],
+ ['심사 결과에 따릅니다', '07 에 심사 문구가 있다'],
+ ['만원과 원', '08 에 돈 단위 경고가 있다'],
+ ['제안서에 없는 표', '10 에 없는 표를 만들지 말라고 있다'],
+ ['평균', '10 에 평균은 평균이라 밝히라고 있다'],
+ ['다시 넣어 읽힌다', '13 에 뽑은 PDF 를 다시 읽는 왕복이 있다']]
+  .forEach(([re, label]) => is(msTxt.indexOf(re) >= 0, '  ' + label));
+is(/홍길동/.test(plan.masterHow || ''), '  견본 고객은 홍길동이다 (CLAUDE.md 3)');
+is(/한 바퀴|끊지 않고/.test(plan.masterHow || ''), '  한 고객으로 끊지 않고 관통한다');
+/* 열두 주와 축이 다르다는 것을 못 박지 않으면 두 과정이 섞인다 */
+is(/도구/.test(plan.masterVs || '') && /열두 주|여덟 주/.test(plan.masterVs || ''),
+   '  MASTER(도구)와 열두 주(영업)가 다른 축이라고 못 박았다');
+is((plan.masterDone || []).length >= 3, '  한 바퀴 뒤에 무엇을 하는지 적혀 있다');
+/* 15단계가 앱 12주 주차를 베낀 것이면 세 벌이 된다 */
+const wkTopic = (app.match(/topic:'([^']+)'/g) || []).map(x => x.slice(7, -1));
+const msDup = wkTopic.filter(t => t.length > 8 && msTxt.indexOf(t) >= 0);
+is(msDup.length === 0, '  앱의 12주 주차를 베끼지 않았다' + (msDup.length ? ' — ' + msDup[0] : ''));
+
 console.log('\n[2] 있는 자료를 다시 적지 않고 가리키는가');
 /* 12주 과정·미끼 화법은 앱 안에 이미 있다. 여기서는 화면으로 보내야 한다 */
 ['academy', 'mikki_talk', 'bohum', 'fp_talk'].forEach(id =>
@@ -354,7 +387,7 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   const ptxt = await pg.$eval('#pane', n => n.innerText);
   is(/한 바퀴를 돕니다/.test(ptxt) && /내 명부를 다시 봅니다/.test(ptxt),
      '  종이에는 신입·경력 <b>두 갈래가 다</b> 담긴다 — 팀이 돌려 보기 때문');
-  is(plen > 20000, '  내용이 충분하다 (' + plen + '자)');
+  is(plen > 25000, '  내용이 충분하다 (' + plen + '자)');
   await pg.emulateMedia({ media: 'screen' });
 
   console.log('\n[11-1] 캘린더가 실제로 굴러가는가');
@@ -448,6 +481,28 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.reload({ waitUntil: 'networkidle' });
   await pg.click('.tb:text-is("환영합니다")'); await pg.waitForTimeout(200);
   is(/경력으로 오신 분/.test(await pg.$eval('#pane', n => n.innerText)), '  새로고침해도 고른 갈래가 남는다');
+  await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
+
+  console.log('\n[11-4] MASTER 를 실제로 지워 가며 도는가');
+  await pg.click('.tb:text-is("MASTER 15단계")'); await pg.waitForTimeout(200);
+  is((await pg.$$('.ms')).length === 15, '  열다섯 칸이 선다');
+  is(/0 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)), '  처음엔 0 부터 시작한다');
+  await pg.click('.ms .mh'); await pg.waitForTimeout(200);
+  is((await pg.$$('.ms.on')).length === 1, '  눌러서 지워진다');
+  await pg.reload({ waitUntil: 'networkidle' });
+  await pg.waitForTimeout(250);
+  is((await pg.$$('.ms.on')).length === 1, '  새로고침해도 진도가 남는다');
+  is(/1 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)), '  진행 수가 맞다');
+  await pg.click('.ms .mh'); await pg.waitForTimeout(200);
+  is((await pg.$$('.ms.on')).length === 0, '  다시 누르면 풀린다 — 잘못 찍어도 되돌린다');
+  /* 진도는 하루가 지나도 안 비워진다 — 체크판과 다른 성질이다 */
+  await pg.evaluate(() => { try {
+    var o = JSON.parse(localStorage.getItem('apex_edu_me') || '{}');
+    o.master = { 0: true, 1: true }; localStorage.setItem('apex_edu_me', JSON.stringify(o));
+  } catch (e) {} });
+  await pg.reload({ waitUntil: 'networkidle' }); await pg.waitForTimeout(250);
+  is(/2 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)),
+     '  진도는 <b>스스로 비워지지 않는다</b> — 하루 체크와 다른 성질');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 
   console.log('\n[12] 앱 메뉴에서 열리고 빠져나오는가');
