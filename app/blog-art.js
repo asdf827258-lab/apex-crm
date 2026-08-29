@@ -18,6 +18,20 @@
      · 꼬리말 회사·이름은 앱에 적어 두신 <b>내 소개</b>에서 읽는다.
        안 적어 두셨으면 아무것도 안 쓴다 — 없는 이름을 만들지 않는다. */
 
+/* ── 폰에서 읽히는 크기 ─────────────────────────────────────────────
+   1200px 그림이 네이버 본문에서 폰으로 보면 <b>360px 안팎으로 줄어든다.</b>
+   본문 글자를 25px 로 그리면 그 자리에서 <b>7px</b> 가 된다 — 안 읽힌다.
+   실제로 그래서 캡처해 가도 아무것도 안 보였다. 그래서
+
+     · 본문 글자는 <b>32px 아래로 내려가지 않는다</b>(폰에서 약 10px).
+     · 칸이 모자라면 <b>칸을 줄이지 글자를 줄이지 않는다</b> —
+       네 칸을 한 줄에 넣던 것을 두 줄로 내린다.
+     · 옅은 회색 글씨를 안 쓴다. 본문은 --ink, 보조는 --sub 까지만.
+
+   check-blogauto 가 <b>32px 아래 글자가 있으면 빨간불</b>을 켠다. */
+const TS = { big:66, h:46, sub:36, body:34, cap:28, tiny:24 };
+const MINBODY = 32;
+
 const SV = { w:1200, ink:'#0F172A', sub:'#475569', brand:'#1A56DB', line:'#E2E8F0', soft:'#F8FAFC', bg:'#FFFFFF' };
 const FONT = "'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif";
 
@@ -64,7 +78,7 @@ const svg = (w,h,body) => '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'"
 function foot(w,h,c){
   const b = brand();
   return '<rect x="0" y="'+(h-6)+'" width="'+w+'" height="6" fill="'+(c||SV.brand)+'"/>'+
-    (b ? tx([b], w-56, h-30, 20, 0, SV.sub, 700, 'end') : '');
+    (b ? tx([b], w-56, h-32, 24, 0, SV.sub, 700, 'end') : '');
 }
 
 /* ── 날마다 같은 그림이 나가지 않게 ──────────────────────────────
@@ -112,6 +126,31 @@ function pickTitle(row){
   }
   return (row && row.seed && row.seed.title) || '';
 }
+/* 한 줄에 몇 글자가 들어가나. <b>한글은 글자 하나가 글자 크기만큼 넓다</b> —
+   영문 기준(0.6)으로 잡으면 칸을 넘어 오른쪽이 잘린다. 실제로 표 카드에서
+   마지막 칸이 잘려 나갔다. 넉넉히 1.02 로 잡고 좌우 여백을 뺀다. */
+function fits(w, size, pad){ return Math.max(4, Math.floor((w - (pad || 44)) / (size * 1.02))); }
+
+/* 초안의 <b>첫 비교표</b>를 그대로 가져온다. 칸을 만들어 넣지 않는다 —
+   네이버에 붙인 표는 폰에서 글자가 뭉개지고 가로로 잘린다. 그림으로 한 번 더 준다. */
+function pickTable(row){
+  const t = (row && row.out) || '';
+  const m = t.match(/(^\|[^\n]*\|\s*$\n)+/m);
+  if (!m) return null;
+  const rows = m[0].trim().split('\n')
+    .map(l => l.replace(/^\||\|$/g,'').split('|').map(c => c.trim()))
+    .filter(r => !r.every(c => /^:?-{2,}:?$/.test(c)));
+  if (rows.length < 2 || rows[0].length < 2) return null;
+  return { head: rows[0], body: rows.slice(1, 7) };
+}
+/* 초안의 <b>강조 한 줄</b>(> 로 시작하는 줄)만 가져온다. 없으면 안 그린다 —
+   본문에서 아무 문장이나 뽑아 크게 걸면, 우리가 강조한 적 없는 말이 대표가 된다. */
+function pickQuote(row){
+  const t = (row && row.out) || '';
+  const m = t.match(/^>\s*(.+)$/m);
+  const q = m ? m[1].trim() : '';
+  return (q.length >= 10 && q.length <= 90) ? q : '';
+}
 const SKIPHEAD = /제목\s*후보|해시태그|메타\s*설명|딛고\s*선|본문|이미지·삽화|시의성/;
 /* 소제목은 ## 로 시켰지만, 손으로 고치실 때 ### 를 쓰시는 일이 있다.
    그때 목차 카드가 <b>말없이 빠졌다</b> — 실제로 그래서 한 장이 안 섰다.
@@ -133,7 +172,9 @@ const ART = {
   make(row){
     const W = SV.w, H = 630, ttl = pickTitle(row);
     if (!ttl) return { err:'제목을 아직 못 뽑았습니다 — 초안을 먼저 만들어 주세요.' };
-    const ls = wrap(ttl, 18), size = ls.length > 3 ? 56 : 66, lh = size + 22;
+    let size = 66, ls = wrap(ttl, fits(SV.w - 144, size, 0));
+    if (ls.length > 3){ size = 56; ls = wrap(ttl, fits(SV.w - 144, size, 0)); }
+    const lh = size + 22;
     const top = Math.max(96, (H - ls.length * lh - 70) / 2);
     const n = seedn(row), c = kcolor(row);
     return { w:W, h:H, alt:ttl, text:ttl, svg: svg(W, H,
@@ -152,10 +193,10 @@ const ART = {
     return { w:W, h:H, text:s.title, alt: s.title + ' — ' + (s.paper||'') + ' 기사 소개 카드',
       svg: svg(W, H,
       '<rect x="56" y="56" width="'+(W-112)+'" height="'+(H-112)+'" rx="20" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
-      tx(['오늘의 소식'], 104, 148, 24, 0, SV.brand, 800)+
-      tx(ls, 104, 218, ls.length>3?42:50, ls.length>3?60:70, SV.ink, 800)+
-      tx([[s.paper||'', s.when||''].filter(Boolean).join('  ·  ')], 104, H-140, 24, 0, SV.sub, 700)+
-      tx(['기사 제목과 출처만 옮겼습니다. 본문은 원문에서 확인해 주세요.'], 104, H-104, 19, 0, SV.sub, 400)+
+      tx(['오늘의 소식'], 104, 156, TS.cap, 0, SV.brand, 800)+
+      tx(ls, 104, 232, ls.length>3?46:54, ls.length>3?64:74, SV.ink, 800)+
+      tx([[s.paper||'', s.when||''].filter(Boolean).join('  ·  ')], 104, H-146, TS.body, 0, SV.sub, 700)+
+      tx(['기사 제목과 출처만 옮겼습니다. 본문은 원문에서 확인해 주세요.'], 104, H-102, TS.tiny, 0, SV.sub, 500)+
       foot(W,H)) };
   }},
 
@@ -167,7 +208,7 @@ const ART = {
       svg: svg(W, H,
       '<text x="88" y="240" font-family="'+FONT+'" font-size="180" font-weight="800" fill="'+SV.line+'">“</text>'+
       tx(ls, 180, 210, ls.length>3?46:56, ls.length>3?66:78, SV.ink, 800)+
-      tx(['상담에서 실제로 나온 질문입니다'], 180, H-110, 22, 0, SV.brand, 700)+ foot(W,H)) };
+      tx(['상담에서 실제로 나온 질문입니다'], 180, H-110, TS.cap, 0, SV.brand, 800)+ foot(W,H)) };
   }},
 
  steps:{ t:'순서 카드', need:'seed',
@@ -176,14 +217,14 @@ const ART = {
     const s = row.seed, W = SV.w;
     const raw = String((s && s.steps) || '').split('\n').filter(Boolean);
     if (!raw.length) return { err:'이 글감에는 순서가 없습니다.' };
-    const n = Math.min(raw.length, 6), H = 200 + n * 92;
-    let b = tx(wrap(s.title, 26), 64, 110, 38, 48, SV.ink, 800);
+    const n = Math.min(raw.length, 6), H = 230 + n * 110 + 56;
+    let b = tx(wrap(s.title, 22), 64, 116, TS.h, 56, SV.ink, 800);
     for (let i = 0; i < n; i++){
-      const y = 170 + i * 92, t = raw[i].replace(/^\d+\.\s*/,'');
-      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="72" rx="14" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
-           '<circle cx="112" cy="'+(y+36)+'" r="22" fill="'+SV.brand+'"/>'+
-           tx([String(i+1)], 112, y+45, 24, 0, '#FFFFFF', 800, 'middle')+
-           tx([t.slice(0,34)], 152, y+45, 25, 0, SV.ink, 700);
+      const y = 200 + i * 110, t = raw[i].replace(/^\d+\.\s*/,'');
+      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="88" rx="16" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+           '<circle cx="122" cy="'+(y+44)+'" r="30" fill="'+SV.brand+'"/>'+
+           tx([String(i+1)], 122, y+56, TS.cap, 0, '#FFFFFF', 800, 'middle')+
+           tx([t.slice(0,28)], 176, y+56, TS.body, 0, SV.ink, 800);
     }
     return { w:W, h:H, text:s.title, alt: s.title + ' — 단계별 진행 순서 카드', svg: svg(W, H, b) };
   }},
@@ -193,15 +234,16 @@ const ART = {
   make(){
     const ws = wallets();
     if (ws.length < 8) return { err:'지도(apex-map-data.js)를 못 읽어 여덟 칸 이름이 없습니다 — 그리지 않습니다.' };
-    const W = SV.w, H = 700, cw = (W - 160) / 4, ch = 190;
-    let b = tx(['돈이 하는 일을 여덟 칸으로 나눕니다'], 64, 104, 42, 0, SV.ink, 800)+
-            tx(['칸마다 하는 일이 다릅니다. 어디가 비었는지부터 봅니다.'], 64, 148, 22, 0, SV.sub, 400);
+    const W = SV.w, cw = (W - 152) / 2, ch = 130, H = 230 + 4 * (ch + 22) + 60;
+    let b = tx(['돈이 하는 일을 여덟 칸으로 나눕니다'], 64, 108, TS.h, 0, SV.ink, 800)+
+            tx(['칸마다 하는 일이 다릅니다. 어디가 비었는지부터 봅니다.'], 64, 162, TS.cap, 0, SV.sub, 500);
     for (let i = 0; i < 8; i++){
-      const x = 64 + (i % 4) * (cw + 10), y = 200 + ((i / 4) | 0) * (ch + 24);
-      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="16" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
-           '<circle cx="'+(x+40)+'" cy="'+(y+44)+'" r="20" fill="'+SV.brand+'"/>'+
-           tx([String(i+1)], x+40, y+53, 22, 0, '#FFFFFF', 800, 'middle')+
-           tx(wrap(ws[i], 7), x+24, y+108, 25, 32, SV.ink, 800);
+      const x = 64 + (i % 2) * (cw + 24), y = 220 + ((i / 2) | 0) * (ch + 22);
+      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="18" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+           '<rect x="'+x+'" y="'+y+'" width="7" height="'+ch+'" rx="4" fill="'+SV.brand+'"/>'+
+           '<circle cx="'+(x+62)+'" cy="'+(y+ch/2)+'" r="28" fill="'+SV.brand+'"/>'+
+           tx([String(i+1)], x+62, y+ch/2+12, TS.cap, 0, '#FFFFFF', 800, 'middle')+
+           tx(wrap(ws[i], 11), x+110, y+ch/2+(ws[i].length>11?-4:12), TS.body, 42, SV.ink, 800);
     }
     return { w:W, h:H, text:'', alt:'8통장으로 나눈 치료비 통장 구조 인포그래픽', svg: svg(W, H, b + foot(W,H)) };
   }},
@@ -211,18 +253,16 @@ const ART = {
   make(){
     const ws = wallets();
     if (ws.length < 8) return { err:'지도를 못 읽어 칸 이름이 없습니다 — 그리지 않습니다.' };
-    const W = SV.w, H = 520, cw = 250, gap = (W - 128 - cw * 4) / 3;
-    const st = [['진단', ws[2]], ['치료', ws[1]], ['쉬는 동안', ws[3]], ['오래 아플 때', ws[6]]];
-    let b = tx(['병이 지나가는 동안, 어느 칸이 일하나'], 64, 104, 42, 0, SV.ink, 800);
+    const W = SV.w, cw = (W - 152) / 2, ch = 176, H = 200 + 2 * (ch + 26) + 130;
+    const st = [['① 진단', ws[2]], ['② 치료', ws[1]], ['③ 쉬는 동안', ws[3]], ['④ 오래 아플 때', ws[6]]];
+    let b = tx(['병이 지나가는 동안, 어느 칸이 일하나'], 64, 108, TS.h, 0, SV.ink, 800);
     st.forEach((s, i) => {
-      const x = 64 + i * (cw + gap), y = 180;
-      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="200" rx="16" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
-           tx([s[0]], x+24, y+56, 30, 0, SV.brand, 800)+
-           tx(wrap(s[1], 8), x+24, y+112, 24, 32, SV.ink, 700);
-      if (i < 3) b += '<path d="M '+(x+cw+8)+' '+(y+100)+' l '+(gap-16)+' 0 m -14 -9 l 14 9 l -14 9" stroke="'+
-                      SV.sub+'" stroke-width="3" fill="none"/>';
+      const x = 64 + (i % 2) * (cw + 24), y = 180 + ((i / 2) | 0) * (ch + 26);
+      b += '<rect x="'+x+'" y="'+y+'" width="'+cw+'" height="'+ch+'" rx="18" fill="'+SV.soft+'" stroke="'+SV.line+'"/>'+
+           tx([s[0]], x+30, y+62, TS.sub, 0, SV.brand, 800)+
+           tx(wrap(s[1], 12), x+30, y+118, TS.body, 42, SV.ink, 800);
     });
-    b += tx(['보장 내용과 지급 여부는 약관과 심사 결과에 따릅니다.'], 64, H-70, 20, 0, SV.sub, 400) + foot(W,H);
+    b += tx(['보장 내용과 지급 여부는 약관과 심사 결과에 따릅니다.'], 64, H-84, TS.cap, 0, SV.sub, 500) + foot(W,H);
     return { w:W, h:H, text:'', alt:'질병 치료 단계별 보험금 지급 흐름 타임라인', svg: svg(W, H, b) };
   }},
 
@@ -231,20 +271,72 @@ const ART = {
   make(){
     const ws = wallets();
     if (ws.length < 8) return { err:'지도를 못 읽어 칸 이름이 없습니다 — 그리지 않습니다.' };
-    const W = SV.w, H = 560;
+    const W = SV.w, H = 700;
     const box = [[ws[1], '쓴 병원비를 정해진 기준에 따라 돌려받는 쪽'],
                  [ws[2], '정해진 사유가 생기면 정해진 금액을 받는 쪽']];
-    let b = tx(['두 가지는 하는 일이 다릅니다'], 64, 104, 42, 0, SV.ink, 800);
+    let b = tx(['두 가지는 하는 일이 다릅니다'], 64, 108, TS.h, 0, SV.ink, 800);
     box.forEach((o, i) => {
       const x = 64 + i * ((W - 128) / 2 + 16), w = (W - 144) / 2;
-      b += '<rect x="'+x+'" y="170" width="'+w+'" height="250" rx="18" fill="'+SV.soft+
-           '" stroke="'+(i?SV.line:SV.brand)+'" stroke-width="'+(i?1:2)+'"/>'+
-           tx(wrap(o[0], 10), x+32, 232, 32, 42, SV.ink, 800)+
-           tx(wrap(o[1], 16), x+32, 320, 24, 34, SV.sub, 400);
+      b += '<rect x="'+x+'" y="180" width="'+w+'" height="340" rx="18" fill="'+SV.soft+
+           '" stroke="'+(i?SV.line:SV.brand)+'" stroke-width="'+(i?1:3)+'"/>'+
+           tx(wrap(o[0], 9), x+34, 252, TS.sub, 46, SV.ink, 800)+
+           tx(wrap(o[1], 13), x+34, 352, TS.body, 44, SV.sub, 600);
     });
-    b += tx(['어느 쪽이 더 좋다가 아니라, 하는 일이 다릅니다. 보장 내용은 약관과 심사 결과에 따릅니다.'],
-            64, H-70, 20, 0, SV.sub, 400) + foot(W,H);
+    b += tx(['어느 쪽이 더 좋다가 아니라, 하는 일이 다릅니다.',
+             '보장 내용은 약관과 심사 결과에 따릅니다.'], 64, H-112, TS.cap, 36, SV.sub, 500) + foot(W,H);
     return { w:W, h:H, text:'', alt:'실손보험과 정액보험 보장 방식 비교', svg: svg(W, H, b) };
+  }},
+
+ table:{ t:'비교표 카드', need:'draft', scan:true,
+  why:'초안의 <b>첫 비교표</b>를 그대로 그린 카드입니다. 네이버에 붙인 표는 폰에서 잘려서, 그림으로 한 번 더 줍니다.',
+  make(row){
+    const d = pickTable(row);
+    if (!d) return { err:'초안에 표가 없습니다 — 「비교표 1개 이상」 을 넣게 다시 만들어 보세요.' };
+    const W = SV.w, cols = d.head.length, pad = 64, rw = W - pad * 2;
+    const cw = rw / cols, per = fits(cw, TS.body), lh = 42, c = kcolor(row);
+    /* 줄마다 <b>가장 긴 칸에 맞춰</b> 키를 정한다 — 고정 높이로 두면 두 줄짜리가 잘린다 */
+    const cut = t => wrap(String(t == null ? '' : t), per);
+    const rows = [d.head].concat(d.body).map(r => {
+      const cells = []; let mx = 1;
+      for (let i = 0; i < cols; i++){ const ls = cut(r[i]); cells.push(ls); if (ls.length > mx) mx = ls.length; }
+      return { cells, h: 40 + mx * lh };
+    });
+    const H = 190 + rows.reduce((a, r) => a + r.h, 0) + 62;
+    let b = tx(['한눈에 견줘 보기'], pad, 112, TS.h, 0, SV.ink, 800);
+    let y = 172;
+    rows.forEach((r, j) => {
+      b += j === 0
+        ? '<rect x="'+pad+'" y="'+y+'" width="'+rw+'" height="'+r.h+'" rx="14" fill="'+c+'"/>'
+        : '<rect x="'+pad+'" y="'+y+'" width="'+rw+'" height="'+r.h+'" fill="'+(j % 2 ? SV.soft : '#FFFFFF')+'"/>'+
+          '<line x1="'+pad+'" y1="'+(y+r.h)+'" x2="'+(pad+rw)+'" y2="'+(y+r.h)+'" stroke="'+SV.line+'" stroke-width="2"/>';
+      r.cells.forEach((ls, i) => {
+        const top = y + (r.h - ls.length * lh) / 2 + TS.body;
+        b += tx(ls, pad + i * cw + 22, top, TS.body, lh,
+                j === 0 ? '#FFFFFF' : (i === 0 ? SV.ink : SV.sub), (j === 0 || i === 0) ? 800 : 600);
+      });
+      y += r.h;
+    });
+    return { w:W, h:H, per, text: d.head.concat(...d.body).join(' '),
+      alt: d.head.join(', ') + ' 를 나란히 놓고 견준 비교표',
+      svg: svg(W, H, b + foot(W, H, c)) };
+  }},
+
+ quote:{ t:'한 문장 카드', need:'draft', scan:true,
+  why:'초안에서 <b>&gt; 로 강조한 한 줄</b>만 크게 실은 카드입니다. 독자가 캡처해 가는 자리입니다.',
+  make(row){
+    const q = pickQuote(row);
+    if (!q) return { err:'초안에 강조 문장(> 로 시작하는 줄)이 없습니다 — 아무 문장이나 대신 걸지 않습니다.' };
+    const W = SV.w, c = kcolor(row);
+    let size = 62, ls = wrap(q, fits(SV.w - 232, size, 0));
+    if (ls.length > 3){ size = 52; ls = wrap(q, fits(SV.w - 232, size, 0)); }
+    const lh = size + 26;
+    const H = Math.max(560, 300 + ls.length * lh);
+    return { w:W, h:H, text:q, alt: q,
+      svg: svg(W, H,
+        '<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="'+SV.soft+'"/>'+
+        '<rect x="64" y="88" width="10" height="'+(H-232)+'" rx="5" fill="'+c+'"/>'+
+        tx(ls, 116, 88 + (H - 232 - ls.length * lh) / 2 + size, size, lh, SV.ink, 800)+
+        foot(W, H, c)) };
   }},
 
  toc:{ t:'이 글에서 다루는 것', need:'draft', scan:true,
@@ -253,13 +345,13 @@ const ART = {
     const hs = pickHeads(row);
     if (!hs.length) return { err:'초안에서 소제목을 못 찾았습니다.' };
     /* 꼬리말이 앉을 자리를 아래에 비워 둔다 — 안 비우면 마지막 소제목과 겹친다 */
-    const W = SV.w, H = 180 + hs.length * 78 + 46;
-    let b = tx(['이 글에서 다루는 것'], 64, 104, 40, 0, SV.ink, 800);
+    const W = SV.w, H = 190 + hs.length * 96 + 56;
+    let b = tx(['이 글에서 다루는 것'], 64, 112, TS.h, 0, SV.ink, 800);
     hs.forEach((h, i) => {
-      const y = 160 + i * 78;
-      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="60" rx="12" fill="'+SV.soft+'"/>'+
-           '<rect x="64" y="'+y+'" width="6" height="60" rx="3" fill="'+SV.brand+'"/>'+
-           tx([h.slice(0,36)], 96, y+39, 25, 0, SV.ink, 700);
+      const y = 172 + i * 96;
+      b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="76" rx="14" fill="'+SV.soft+'"/>'+
+           '<rect x="64" y="'+y+'" width="8" height="76" rx="4" fill="'+SV.brand+'"/>'+
+           tx([h.slice(0,30)], 104, y+50, TS.body, 0, SV.ink, 800);
     });
     return { w:W, h:H, text:hs.join(' '), alt:'이 글에서 다루는 내용 요약 카드', svg: svg(W, H, b + foot(W,H)) };
   }}

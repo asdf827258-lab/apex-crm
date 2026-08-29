@@ -838,6 +838,142 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(fix.headsKept >= 2, '  감싸도 본문 서식이 안 깨진다 — 제목이 그대로다 (h2 ' + fix.headsKept + '개)');
   is(fix.flashed, '  누르면 그 자리가 잠깐 테를 두른다 — 어디인지 눈에 들어오게');
 
+  console.log('\n[17] 두 갈래로 서는가 · 심의를 기계가 먼저 보는가 · 폰에서 읽히는가');
+  const two = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.rows=[]; S.busy=-1; S.comply=null; S.perweek=7;
+    localStorage.setItem('apex_studio_apikey','x');
+
+    /* ① 두 갈래 — 표 하나가 답하고, 화면·비율·주문서가 그것을 쓴다 */
+    out.groups = GORDER.slice();
+    out.everyKind = ORDER.every(k => GROUPS[KINDS[k].g]);
+    await pullNews(); plan(); paint();
+    out.headings = [...document.querySelectorAll('#seeds .gh')].map(e => e.textContent.replace(/글감.*/,'').trim());
+    const grps = document.querySelectorAll('#seeds .grp');
+    out.cards = GORDER.map((g, i) => grps[i] ? grps[i].querySelectorAll('.seed').length : -1);
+    const gc = {}, kc = {};
+    MIX.forEach(k => { gc[KINDS[k].g] = (gc[KINDS[k].g]||0) + 1; kc[k] = (kc[k]||0) + 1; });
+    out.ours = kc.ours; out.crew = (kc.culture||0) + (kc.growth||0);
+    out.mix = gc; out.mixLen = MIX.length;
+    out.mixNote = document.getElementById('mixNote').textContent;
+
+    /* ② 자동 심의 — 빠진 것은 붙이고, 걸린 말은 AI 에게 되돌린다 */
+    out.needFix = NEED.every(n => !!n.fix);
+    const bare = '## 본문\n보험료가 궁금하실 겁니다. 세액공제도 됩니다.\n';
+    const nd = autoNeed(bare);
+    out.added = nd.added.length;
+    out.needOk = guard(nd.out).miss.length === 0;
+    out.beforeHash = (() => { const t = autoNeed('## 본문\n보장이 어떻게 되나요.\n\n## 해시태그\n#가\n').out;
+      return t.indexOf('심사 결과에 따릅니다') < t.indexOf('## 해시태그'); })();
+    /* 걸린 말은 AI 에게 되돌려 보낸다 — 우리가 지우지 않는다 */
+    let asked = [];
+    const realAsk = window.ask;
+    window.ask = (sys, user) => { asked.push(user); return Promise.resolve('## 본문\n이 상품은 좋습니다.\n'); };
+    const row = { kind:'ours', out:'## 본문\n이 상품은 무조건 됩니다.\n', seed:{kind:'ours',title:'x',src:'y'} };
+    const fixed = await autoClean(row);
+    out.rounds = asked.length; out.fixed = fixed;
+    out.toldWord = /「무조건」/.test(asked[0] || '');
+    out.toldKeep = /다른 곳은 한 글자도 건드리지 않는다/.test(asked[0] || '');
+    out.cleaned = !guard(row.out).hits.length;
+    /* 두 판까지만 — 안 고쳐지면 사람에게 넘긴다 */
+    asked = [];
+    const stub = { kind:'ours', out:'## 본문\n무조건 됩니다.\n', seed:{kind:'ours',title:'x',src:'y'} };
+    window.ask = () => Promise.resolve('## 본문\n무조건 됩니다.\n');
+    await autoClean(stub);
+    out.capped = 2;
+    out.stillBad = guard(stub.out).hits.length > 0;
+    /* 진짜로 중요한 것 — <b>draft() 가 이 둘을 실제로 부르는가.</b>
+       함수만 따로 재면, 만드는 자리에서 안 불러도 점검은 통과한다. */
+    S.rows = []; S.perweek = 7; plan();
+    const di = todayAt();
+    S.rows[di].kind = 'ours'; S.rows[di].out = '';
+    S.rows[di].seed = { kind:'ours', title:'가입해 둔 보험을 한 장으로', src:'메뉴' };
+    let round = 0;
+    window.ask = () => { round++;
+      return Promise.resolve(round === 1
+        ? '## 제목 후보\n- 제목\n\n## 본문\n이건 무조건 됩니다. 보험료가 궁금하시죠.\n\n## 해시태그\n#가\n'
+        : '## 제목 후보\n- 제목\n\n## 본문\n이건 대부분 됩니다. 보험료가 궁금하시죠.\n\n## 해시태그\n#가\n'); };
+    await draft(di);
+    const done = S.rows[di];
+    out.draftClean = !guard(done.out, 'ours').hits.length;
+    out.draftNeed  = /심사 결과에 따릅니다/.test(done.out);
+    out.draftOk    = done.guard && done.guard.ok;
+    out.draftSaid  = !!(done.auto && done.auto.fixed.length && done.auto.added.length);
+    await show(di);
+    out.draftBox   = /심의에 걸릴 자리를 먼저 손봤습니다/.test(document.getElementById('view').innerHTML);
+    window.ask = realAsk;
+    const sp = sysPrompt();
+    out.sysBan = banWords().every(w => sp.indexOf(w) >= 0);
+    out.banCount = banWords().length;
+
+    /* ③ 표 카드 · 한 문장 카드 */
+    const dr = { ymd:ymd(0), kind:'ours', seed:{kind:'ours',title:'x',src:'y'},
+      out:'## 제목 후보\n- 제목입니다\n\n## 본문\n글.\n\n| 구분 | 이것 | 저것 |\n| --- | --- | --- |\n' +
+          '| 하는 일 | 돌려받는 쪽 | 정해진 금액 |\n| 언제 | 쓴 뒤 | 진단 때 |\n\n> 안 바꿔도 되면 그렇게 말씀드립니다.\n' };
+    const tb = build('table', dr), qt = build('quote', dr);
+    /* 칸을 넘어 잘리지 않는가 — 한글을 영문 폭으로 재다가 실제로 오른쪽이 잘렸다 */
+    const longest = (tb.svg.match(/<tspan[^>]*>([^<]*)<\/tspan>/g) || [])
+      .map(x => x.replace(/<[^>]*>/g,'')).reduce((a, b) => a.length >= b.length ? a : b, '');
+    out.tbCol = (1200 - 128) / 3; out.tbLine = longest.length * TS.body; out.tbLongest = longest;
+    out.fitsFactor = fits(1000, 100, 0) <= 10;
+    out.tableOk = !tb.err && tb.svg.indexOf('돌려받는 쪽') > 0 && tb.svg.indexOf('구분') > 0;
+    out.quoteOk = !qt.err && qt.text === '안 바꿔도 되면 그렇게 말씀드립니다.';
+    const noq = build('quote', { out:'## 본문\n강조가 없는 글.\n' });
+    out.quoteRefuse = !!noq.err;
+    const notb = build('table', { out:'## 본문\n표가 없는 글.\n' });
+    out.tableRefuse = !!notb.err;
+
+    /* ④ 폰에서 읽히는가 — 1200px 그림이 360px 로 줄어든다 */
+    const small = [];
+    ['cover','w8','flow','vs','toc','table','quote'].forEach(id => {
+      const r = build(id, dr); if (r.err) return;
+      let m; const re = /font-size="(\d+)"/g;
+      while ((m = re.exec(r.svg))) if (+m[1] < 24) small.push(id + ':' + m[1]);
+    });
+    out.small = small; out.minBody = MINBODY;
+    return out;
+  });
+  is(two.groups.join('·') === '고객·홍보', '  두 갈래다 — ' + two.groups.join(' · '));
+  is(two.everyKind, '  갈래마다 어느 쪽인지 <b>표에 달려 있다</b>');
+  /* SRC 는 노드 쪽에서 본다 — 페이지 안에는 없다 */
+  is(!/g\s*===\s*['"]고객['"]\s*\?[\s\S]{0,120}['"]홍보['"]\s*\?/.test(SRC),
+     '  두 갈래를 삼항 사슬로 나열하지 않았다');
+  is(two.headings.length === 2 && /고객에게 어필/.test(two.headings[0]) && /회사 홍보/.test(two.headings[1]),
+     '  글감 창고가 <b>두 칸으로</b> 선다 — ' + two.headings.join(' / '));
+  is(two.cards[0] === 4 && two.cards[1] === 3, '  어필 4갈래 · 홍보 3갈래 (' + two.cards.join(' / ') + ')');
+  is(two.ours * 10 === two.mixLen,
+     '  <b>고객에게 나가는 홍보</b>는 열에 하나다 (' + two.ours + '/' + two.mixLen + ')');
+  is(two.mix['홍보'] * 5 === two.mixLen,
+     '  회사 갈래 전체는 다섯에 하나다 — 홍보 ' + two.ours + ' + 동료용 ' + two.crew + ' (' + two.mix['홍보'] + '/' + two.mixLen + ')');
+  is(two.mix['고객'] > two.mix['홍보'] * 3,
+     '  어필 글이 회사 글보다 훨씬 많다 (' + two.mix['고객'] + ' 대 ' + two.mix['홍보'] + ')');
+  is(/고객에게 어필/.test(two.mixNote) && /회사 홍보/.test(two.mixNote), '  비율 안내도 두 갈래로 말한다');
+  is(two.needFix, '  빠지면 <b>무엇을 붙일지</b>가 같은 표에 있다 — 두 곳에 안 적었다');
+  is(two.added === 2 && two.needOk, '  빠진 필수 문구를 <b>자동으로 붙인다</b> (' + two.added + '개)');
+  is(two.beforeHash, '  해시태그 앞, 본문 끝에 붙인다 — 독자가 마지막으로 읽는 자리');
+  is(two.rounds === 1 && two.toldWord, '  걸린 말은 <b>AI 에게 되돌려</b> 고치게 한다 (' + two.fixed.join('/') + ')');
+  is(two.toldKeep, '  「다른 곳은 건드리지 마라」 를 함께 시킨다 — 우리가 지우면 뜻이 바뀐다');
+  is(two.cleaned, '  되돌린 뒤 그 말이 사라진다');
+  is(two.stillBad, '  안 고쳐지면 <b>조용히 통과시키지 않는다</b> — 사람에게 넘긴다');
+  is(two.sysBan, '  금지어 <b>' + two.banCount + '개가 모두</b> 주문서에 실린다 — 표를 늘리면 시키는 말도 같이 는다');
+  /* 만드는 자리에서 실제로 부르는가 — 함수만 따로 재면 안 불러도 통과한다 */
+  is(two.draftClean, '  <b>초안을 만들면</b> 걸린 말이 남지 않는다 — draft 가 자동 심의를 실제로 부른다');
+  is(two.draftNeed, '  <b>초안을 만들면</b> 필수 문구가 붙어 있다');
+  is(two.draftOk, '  그래서 그 자리에서 <b>게이트를 통과</b>한다 — 손볼 것 없이 올릴 수 있다');
+  is(two.draftSaid, '  무엇을 손봤는지 <b>기록으로 남는다</b>');
+  is(two.draftBox, '  올리는 화면에 <b>손본 자리를 적어 준다</b> — 말없이 고치면 AI 가 쓴 그대로인 줄 안다');
+  is(two.tableOk, '  <b>비교표 카드</b> — 초안의 표를 그대로 그린다');
+  is(two.tableRefuse, '  표가 없으면 안 그린다 — 칸을 만들어 넣지 않는다');
+  is(two.tbLine <= two.tbCol,
+     '  표 글자가 <b>칸을 안 넘는다</b> — 「' + two.tbLongest + '」 ' + Math.round(two.tbLine) +
+     'px ≤ 칸 ' + Math.round(two.tbCol) + 'px');
+  is(two.fitsFactor, '  한글 폭을 <b>글자 크기만큼</b>으로 잰다 — 영문 폭으로 재면 오른쪽이 잘린다');
+  is(two.quoteOk, '  <b>한 문장 카드</b> — &gt; 로 강조한 줄만 크게 싣는다');
+  is(two.quoteRefuse, '  강조가 없으면 안 그린다 — 아무 문장이나 대신 걸지 않는다');
+  is(two.small.length === 0,
+     '  그림 글자가 <b>' + two.minBody + 'px 아래로 안 내려간다</b> — 폰에서 1/3 로 줄어든다' +
+     (two.small.length ? ' — ' + two.small.join(' · ') : ''));
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
