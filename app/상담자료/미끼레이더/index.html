@@ -778,6 +778,28 @@ textarea.inp{min-height:120px;resize:vertical;line-height:1.6}
   <div id="helpOut"></div>
 </section>
 
+<!-- ============ 7. 용어 사전 ============ -->
+<section class="page" id="p-gloss">
+  <div class="phead"><h2>📖 약관 용어 사전</h2>
+  <p>직접치료·진단확정·유사암·CDR·비례보상 — 이 말을 못 풀면 설득이 안 됩니다.
+     용어마다 <b>뜻 · 어디서 갈리는지 · 고객에게 그대로 읽어 줄 문장</b>이 들어 있습니다.
+     <b>정밀 판정</b>에 약관을 올려두면 <b>그 말이 약관 어디에 있는지</b>까지 찾아 줍니다.</p></div>
+  <div class="yk-card"><div class="row"><input class="inp" id="ykQ" placeholder="용어 검색 (예: 직접치료, CDR, 유사암)" style="flex:1;min-width:200px"></div>
+    <div class="yk-chips" id="ykCats"></div>
+    <div class="yk-b" style="margin-top:8px">검색 결과 <b id="ykCount">-</b></div></div>
+  <div id="ykFindOut"></div><div id="ykList"></div>
+</section>
+
+<!-- ============ 8. 신제품 룰 보강 ============ -->
+<section class="page" id="p-newrule">
+  <div class="phead"><h2>🧩 신제품 룰 보강</h2>
+  <p>신제품이 나오면 표현이 조금씩 바뀝니다. 그때마다 정규식을 손으로 쓰는 대신,
+     <b>판정이 못 읽은 항목</b>을 약관이 알려 주게 했습니다.
+     문장을 고르고 <b>유리·불리만 누르면</b> 룰이 만들어지고, 저장 전에
+     <b>올려둔 약관 전부로 회귀 테스트</b>를 돌려 기존 판정이 망가지지 않는지 보여 드립니다.</p></div>
+  <div id="mrOut"></div>
+</section>
+
 </div>
 <div class="toast" id="toast"></div>
 
@@ -1603,13 +1625,14 @@ const state={news:LS.get('news',[]),newsAt:LS.get('newsAt',''),hook:LS.get('hook
 const GROUPS=[
  {k:'g_today',n:'🚀 오늘',   subs:['start','brief'],      why:'오늘 할 일과 이번 달 요약'},
  {k:'g_new',  n:'📡 신상품', subs:['radar','concept','new','promo'],why:'뭐가 나왔나 · 어떻게 홍보할까'},
- {k:'g_term', n:'📜 약관',   subs:['lib','terms','judge','best'],why:'약관 쌓고 · 판정하고 · 회사별로 줄 세우기'},
+ {k:'g_term', n:'📜 약관',   subs:['lib','terms','judge','best','gloss','newrule'],why:'약관 쌓고 · 판정하고 · 말 풀고 · 룰 보강하기'},
  {k:'g_cust', n:'🧾 고객',   subs:['cust','design','touch'],why:'보여줄 자료 · 설계 · 접촉 문자'},
  {k:'g_help', n:'📘 사용법', subs:['help'],               why:'쓰는 법과 지켜야 할 선'}
 ];
 const SUBNAME={start:'오늘 할 일',brief:'월간 브리핑',
  radar:'뉴스 레이더',concept:'이달의 컨셉',new:'상품 분석·브리프',promo:'홍보 발췌',
  lib:'서재(약관 쌓기)',terms:'약관 분석',judge:'정밀 판정',best:'베스트 찾기',
+ gloss:'용어 사전',newrule:'신제품 룰 보강',
  cust:'고객 제시자료',design:'미끼 설계',touch:'접촉 문자',help:'사용법'};
 const groupOf=id=>(GROUPS.find(g=>g.subs.includes(id))||GROUPS[0]).k;
 
@@ -7189,4 +7212,1065 @@ function bindDaily(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);
   else boot();
 })();
+</script>
+<style>
+/* -- 약관 용어 사전 (2026-08-28 추가) -- */
+.yk-card{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:#fff}
+.yk-t{font-size:14.5px;font-weight:800;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.yk-b{font-size:13px;color:#333;margin-top:7px;line-height:1.62}
+.yk-ap{font-size:12.8px;margin-top:8px;padding:9px 11px;border-radius:10px;background:#EAF7F0;color:#00734A}
+.yk-p{display:inline-block;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#EEF2F6;color:#4a5763}
+.yk-p.r3{background:#FDECEC;color:#C0392B}.yk-p.r2{background:#FFF4E5;color:#A15C00}
+.yk-p.ok{background:#E8F6EF;color:#00734A}.yk-p.bl{background:#EAF1FE;color:#1B58C4}
+.yk-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}
+.yk-chip{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 10px;cursor:pointer;text-align:left;font-size:12.5px}
+.yk-chip.on{border-color:#1B58C4;background:#EAF1FE;color:#1B58C4;font-weight:800}
+.yk-q{font-size:12.4px;background:#F7F9FB;border-left:3px solid #CBD5E0;padding:9px 11px;border-radius:0 8px 8px 0;margin-top:8px;line-height:1.6}
+.yk-q em{background:#FFF3B0;font-style:normal;font-weight:700}
+.yk-src{display:block;margin-top:5px;font-size:11px;color:var(--mut)}
+u.yk-g{text-decoration:underline dotted #1B58C4;text-underline-offset:3px;cursor:pointer}
+.yk-note{font-size:12.8px;border-radius:12px;padding:11px 13px;line-height:1.6;margin:10px 0}
+.yk-note.bl{background:#EAF1FE;color:#123a80}.yk-note.wn{background:#FFF4E5;color:#7a4600}
+.yk-note.rd{background:#FDECEC;color:#8e2b21}
+</style>
+<script>
+/* ==================================================================
+   약관 용어 사전
+   ------------------------------------------------------------------
+   판정은 "무엇이 불리한가"까지만 알려준다. 고객 앞에서는 그 말을
+   풀어 줘야 한다. 약관비교 프로그램의 용어를 그대로 옮겼다.
+   ※ 원본은 공백을 지운 본문에 매칭하는 규칙이었다. 미끼레이더는
+     원문 그대로 훑으므로, 낱자 사이에 \s* 를 넣어 띄어쓰기를 흡수한다.
+   ================================================================== */
+const YGLOSS = [
+
+/* ───────── 진단 · 치료 ───────── */
+{
+  t:'직접적인 치료 (직접치료)', cat:'진단·치료', risk:3,
+  alias:['직접적인치료','직접치료','직접적치료','직접적인목적'],
+  def:'질병이나 상해 그 자체를 없애거나 억제하기 위한 치료만을 뜻합니다. 몸을 회복시키는 요양, 기력을 올리는 치료, 후유증 관리는 "직접적인 치료"에 넣지 않는 것이 약관의 태도입니다.',
+  watch:'보험금 분쟁에서 가장 많이 싸우는 단어입니다. 암 약관은 대체로 「암을 제거하거나 증식을 억제하기 위한 수술·항암방사선치료·항암화학치료」를 직접치료로 정의하고, ① 의학적 안전성·유효성이 입증되지 않은 치료 ② 면역력 강화 치료 ③ 암이나 암 치료로 생긴 후유증·합병증 치료를 제외하는 구조입니다. 제외 항목이 몇 개인지, 예외의 예외가 있는지를 반드시 원문에서 확인하세요.',
+  say:'"입원했다고 다 나오는 게 아니라, 암 자체를 없애는 치료였는지를 봅니다. 그래서 요양병원 입원이 문제가 되는 겁니다."'
+},
+{
+  t:'치료', cat:'진단·치료', risk:2,
+  alias:['치료행위','치료를목적으로','치료목적'],
+  def:'의사가 질병·상해를 낫게 하려고 하는 의료행위입니다. 약관에서 "치료"는 진찰·검사·투약·처치·수술을 포함하는 넓은 말로 쓰이지만, 앞에 "직접적인"이 붙는 순간 범위가 확 좁아집니다.',
+  watch:'"치료"와 "직접적인 치료"가 같은 약관 안에서 다르게 쓰입니다. 어느 쪽 표현인지 조문마다 확인해야 합니다.',
+  say:'"약관에서 치료라는 말 앞에 무엇이 붙어 있는지가 돈을 가릅니다."'
+},
+{
+  t:'요양 / 요양 목적', cat:'진단·치료', risk:3,
+  alias:['요양을목적','요양목적','요양이필요'],
+  def:'병을 없애는 치료가 아니라, 몸을 쉬게 하고 돌보며 회복을 기다리는 것입니다.',
+  watch:'요양 목적 입원은 "직접적인 치료"가 아니라는 이유로 입원의료비·입원일당이 거절되는 대표 사유입니다. 특히 요양병원 입원이 문제가 됩니다.',
+  say:'"요양은 치료가 아니라고 보는 약관이 많습니다. 요양병원에 계실 때 보험금이 막히는 이유입니다."'
+},
+{
+  t:'요양병원', cat:'진단·치료', risk:3,
+  alias:['요양병원'],
+  def:'장기 입원 환자의 회복·재활을 담당하는 병원 종류입니다.',
+  watch:'약관이 요양병원 입원을 아예 제외하는지, 「암의 직접적인 치료를 받는 경우에 한하여」 인정하는지 확인하세요. 암 환자가 수술 후 요양병원에 입원했을 때 보험금 분쟁이 가장 많이 생기는 지점입니다.',
+  say:'"수술 끝나고 요양병원 가시는 분이 많은데, 그때 보험금이 나오는 약관인지 아닌지가 갈립니다."'
+},
+{
+  t:'진단확정', cat:'진단·치료', risk:3,
+  alias:['진단확정','진단이확정'],
+  def:'의사가 검사 결과를 근거로 병명을 최종적으로 확정한 것입니다. 보험금은 "진단"이 아니라 "진단확정"이 되어야 나옵니다.',
+  watch:'무엇으로 확정해야 하는지(조직검사만? 임상 판단도?)를 정한 문장이 지급의 관문입니다.',
+  say:'"의심된다는 말로는 안 되고, 약관이 정한 방법으로 확정이 되어야 나옵니다."'
+},
+{
+  t:'병리학적 진단 / 조직검사 (생검)', cat:'진단·치료', risk:3,
+  alias:['병리학적진단','조직검사','조직학적','생검'],
+  def:'떼어낸 조직을 현미경으로 봐서 암인지 확정하는 방법입니다. 가장 확실한 근거로 취급됩니다.',
+  watch:'환자 상태가 나쁘거나 종양 위치가 위험해서 조직검사를 못 하는 경우가 실제로 많습니다. 이때 약관에 임상학적 진단을 인정하는 문장이 있는지가 결정적입니다.',
+  say:'"조직검사를 못 하는 상황이 생깁니다. 그때도 인정해 주는 약관인지 보셔야 합니다."'
+},
+{
+  t:'임상학적 진단', cat:'진단·치료', risk:3,
+  alias:['임상학적진단','임상적진단','임상학적으로'],
+  def:'조직검사 없이, 영상검사·혈액검사·증상·진료기록을 종합해 의사가 암이라고 판단한 것입니다.',
+  watch:'「병리학적 진단이 가능하지 않은 경우에는 임상학적 진단을 암의 증거로 인정한다」 — 이 한 문장이 있으면 지급 가능성이 크게 올라갑니다. 대신 진단서에 조직검사를 못 한 이유가 적혀 있어야 실무에서 통합니다.',
+  say:'"조직검사가 불가능했다는 사실이 진단서에 적혀 있어야 합니다. 이건 제가 챙겨 드립니다."'
+},
+{
+  t:'미세바늘 흡인검사 (미세침)', cat:'진단·치료', risk:2,
+  alias:['미세바늘흡인','미세침흡인','세침검사'],
+  def:'가는 바늘로 세포를 빨아내 검사하는 방법입니다. 조직을 떼는 생검보다 간단합니다.',
+  watch:'이 검사를 진단 근거로 인정하는 약관이 더 유리합니다. 특히 갑상선·유방에서 자주 쓰입니다.',
+  say:'"바늘로 뽑아서 하는 검사도 인정하는 약관이 있습니다."'
+},
+{
+  t:'수술 / 시술', cat:'진단·치료', risk:2,
+  alias:['수술을받은','수술또는시술','시술을받은'],
+  def:'약관의 "수술"은 보통 「의사가 치료를 목적으로 기구를 사용해 생체에 절단·절제 등의 조작을 하는 것」으로 정의됩니다. "시술"은 절개하지 않고 관·바늘로 하는 처치(스텐트, 색전술 등)를 뜻합니다.',
+  watch:'약관이 "수술"만 쓰고 있으면 스텐트·색전술 같은 요즘 주된 치료가 빠질 수 있습니다. "수술 또는 시술"로 되어 있는지 확인하세요. 흡인·천자·신경차단은 수술에서 제외한다는 문장이 붙는 경우가 흔합니다.',
+  say:'"요즘은 배를 열지 않고 관을 넣어 치료합니다. 그게 수술로 인정되는 약관인지 봐야 합니다."'
+},
+{
+  t:'항암방사선 / 항암화학 / 표적항암 / 면역항암', cat:'진단·치료', risk:2,
+  alias:['항암방사선','항암화학','항암약물','표적항암','면역항암','면역관문','세포독성'],
+  def:'항암화학(세포독성)은 전통적 항암주사, 표적항암은 암세포의 특정 표적만 공격하는 약, 면역항암은 환자의 면역세포가 암을 공격하게 만드는 약입니다.',
+  watch:'표적·면역항암제는 한 달 약값이 수백만~수천만원입니다. 진단금이 아니라 여기서 돈이 터집니다. 급여만 보장하는지, 비급여·허가치료까지 보장하는지가 실질적인 차이입니다.',
+  say:'"진단금 5천만원보다, 매달 나가는 표적항암 약값을 대주는 담보가 실제로는 더 큽니다."'
+},
+{
+  t:'허가치료 / 초과치료 (off-label)', cat:'진단·치료', risk:2,
+  alias:['허가치료','허가사항','초과치료','허가범위'],
+  def:'허가치료비는 식약처가 허가한 범위대로 쓴 약값을, 초과치료비(off-label)는 허가 범위를 벗어나 쓴 약값을 보장합니다.',
+  watch:'실제 진료에서는 허가 범위를 넘겨 쓰는 경우가 적지 않습니다. 두 담보가 모두 있는지 확인하세요.',
+  say:'"허가된 대로 쓰는 경우와 벗어나 쓰는 경우가 다 있어서, 둘 다 있는 게 안전합니다."'
+},
+{
+  t:'의학적 안전성과 유효성이 입증되지 않은 치료', cat:'진단·치료', risk:3,
+  alias:['안전성과유효성','유효성이입증','안전성이입증'],
+  def:'학문적으로 효과가 검증되지 않은 치료를 말합니다. 식이요법·명상요법·고주파온열치료 등이 다툼 대상이 됩니다.',
+  watch:'암 직접치료에서 제외되는 항목으로 열거되는 경우가 많습니다. 고주파온열치료(하이푸 등)는 부지급 분쟁이 잦습니다.',
+  say:'"효과가 검증되지 않은 치료로 분류되면 안 나옵니다. 병원에서 권해도 그렇습니다."'
+},
+{
+  t:'면역력 강화 치료', cat:'진단·치료', risk:3,
+  alias:['면역력강화','면역치료를','면역증강'],
+  def:'암을 직접 없애는 게 아니라 환자의 체력·면역을 올려주는 치료입니다.',
+  watch:'암의 직접적인 치료에서 명시적으로 제외되는 항목입니다. 요양병원에서 받는 고농도 비타민·미슬토 주사 등이 여기에 걸립니다.',
+  say:'"면역 올리는 주사는 암 치료로 안 봅니다. 이 부분은 미리 아셔야 합니다."'
+},
+{
+  t:'후유증 / 합병증', cat:'진단·치료', risk:3,
+  alias:['후유증','합병증'],
+  def:'병이나 치료 때문에 뒤따라 생긴 다른 증상·질환입니다.',
+  watch:'「암 또는 암 치료로 인해 발생한 후유증·합병증의 치료는 제외한다」는 문장이 있으면, 항암 부작용 치료가 빠집니다. 다만 「치료 과정에서 발생한 합병증은 포함」처럼 되돌리는 예외가 붙기도 하니 원문을 끝까지 읽어야 합니다.',
+  say:'"항암 부작용 치료가 포함되는지 제외되는지, 이 한 줄에서 갈립니다."'
+},
+
+/* ───────── 암 ───────── */
+{
+  t:'유사암 / 소액암', cat:'암', risk:3,
+  alias:['유사암','소액암'],
+  def:'일반암보다 예후가 좋다고 보아 보험금을 크게 줄여 지급하는 암 묶음입니다. 통상 제자리암, 경계성종양, 기타피부암, 갑상선암, 대장점막내암이 들어갑니다.',
+  watch:'몇 개를 유사암으로 빼는지, 지급률이 몇 %인지가 실수령액을 결정합니다. 지급률 10%면 1억 가입에 1천만원입니다.',
+  say:'"진단금 1억이라고 들으셨을 텐데, 유사암으로 분류되면 1천만원입니다. 몇 개를 유사암으로 빼는지 보셔야 합니다."'
+},
+{
+  t:'제자리암 (상피내암)', cat:'암', risk:2,
+  alias:['제자리암','상피내암'],
+  def:'암세포가 아직 기저막을 뚫지 않고 표면(상피)에만 있는 상태입니다. 분류코드는 D00~D09입니다.',
+  watch:'거의 모든 회사가 유사암으로 분류합니다.',
+  say:'"아직 퍼지지 않은 초기 형태라 보험금이 줄어드는 쪽으로 분류됩니다."'
+},
+{
+  t:'경계성종양', cat:'암', risk:2,
+  alias:['경계성종양','행동양식불명'],
+  def:'양성인지 악성인지 경계에 있는 종양입니다. 분류코드는 D37~D48입니다.',
+  watch:'유사암으로 분류되는 것이 일반적입니다.',
+  say:'"양성과 악성 사이라 판단이 갈리는 종양입니다."'
+},
+{
+  t:'기타피부암', cat:'암', risk:2,
+  alias:['기타피부암','피부의악성'],
+  def:'흑색종을 뺀 피부의 악성신생물입니다. 분류코드는 C44입니다.',
+  watch:'유사암으로 빠집니다. 다만 흑색종(C43)은 일반암입니다.',
+  say:'"피부암은 흑색종만 일반암이고 나머지는 줄어듭니다."'
+},
+{
+  t:'갑상선암', cat:'암', risk:3,
+  alias:['갑상선암','갑상샘암'],
+  def:'분류코드 C73. 의학적으로는 악성 종양이지만 예후가 좋아 대부분의 약관이 유사암으로 분류합니다.',
+  watch:'여기서 회사 간 차이가 가장 크게 벌어집니다. 갑상선암을 일반암으로 지급하는 약관이면 결정적인 강점입니다.',
+  say:'"갑상선암을 일반암으로 주는 약관인지, 10%만 주는 약관인지 — 여기서 수천만원이 갈립니다."'
+},
+{
+  t:'대장점막내암', cat:'암', risk:2,
+  alias:['대장점막내암','점막내암'],
+  def:'대장 점막층 안에만 있는 초기 암입니다.',
+  watch:'유사암으로 빼는 회사와 일반암으로 보는 회사가 갈립니다. 대장내시경에서 흔히 발견되므로 실제 사례가 많습니다.',
+  say:'"내시경에서 자주 발견되는 형태라, 이걸 어떻게 보는지가 실제로 자주 문제가 됩니다."'
+},
+{
+  t:'원발부위 / 전이암', cat:'암', risk:3,
+  alias:['원발부위','원발암','전이암','전이된','이차성'],
+  def:'원발부위는 암이 처음 생긴 곳, 전이암은 그 암이 다른 장기로 옮겨간 것입니다. 전이암 코드는 C77~C79입니다.',
+  watch:'갑상선암이 폐로 전이됐을 때 "폐암"으로 볼지 "갑상선암(유사암)"으로 볼지에 따라 수천만원이 갈립니다. 대부분의 약관은 원발부위 기준으로 분류하지만, 문구가 불명확한 경우 다툼이 생기고 이때 약관 해석의 원칙(작성자 불이익)이 논거가 됩니다.',
+  say:'"어디로 퍼졌는지가 아니라 어디서 시작했는지로 분류합니다. 그래서 처음 생긴 곳이 중요합니다."'
+},
+{
+  t:'재진단암 / 재발 / 잔존암 / 완전관해', cat:'암', risk:3,
+  alias:['재진단암','재발암','잔존암','잔여암','완전관해'],
+  def:'재진단암은 첫 암 이후 다시 진단된 암, 잔존암은 치료 후 남아 있는 암, 완전관해는 검사상 암이 확인되지 않는 상태입니다.',
+  watch:'재진단을 몇 년 뒤부터 인정하는지(1년 vs 2년), 완전관해를 요구하는지, 잔존·전이를 포함하는지가 두 번째 보험금을 좌우합니다. 완전관해를 요구하면 치료 중 재발은 못 받습니다.',
+  say:'"암은 재발이 본체입니다. 두 번째 진단금이 언제부터 나오는지를 보셔야 합니다."'
+},
+{
+  t:'감액기간 / 감액지급', cat:'암', risk:3,
+  alias:['감액기간','감액하여','감액된','100분의50','50%를지급'],
+  def:'가입 후 일정 기간(보통 1년) 안에 진단되면 보험금을 정해진 비율(보통 50%)만 주는 조항입니다.',
+  watch:'감액이 없는 약관, 감액 기간이 짧은 약관이 유리합니다. 이건 고객이 예상하기 어려운 불이익 조항이라 가입 당시 설명의무의 핵심 대상입니다.',
+  say:'"1년 안에 진단되면 절반만 나오는 조항이 있습니다. 이걸 설명 못 들으셨다면 그 자체가 문제입니다."'
+},
+{
+  t:'책임개시일 / 보장개시일 / 면책기간(부담보기간)', cat:'암', risk:3,
+  alias:['책임개시일','보장개시일','면책기간','부담보기간','지난날의다음날'],
+  def:'보험회사가 보장을 시작하는 날입니다. 암은 통상 계약일부터 90일이 지난 날의 다음 날부터 보장이 시작되고, 그 90일 동안 진단되면 계약이 무효가 되거나 보험금이 나오지 않습니다.',
+  watch:'면책기간이 없는 약관, 유사암에는 면책을 적용하지 않는 약관이 유리합니다. 치매는 면책이 1~2년으로 길게 붙는 경우가 있습니다.',
+  say:'"가입하고 90일은 보장이 안 됩니다. 이 기간이 없거나 짧은 상품이 있습니다."'
+},
+
+/* ───────── 뇌 ───────── */
+{
+  t:'뇌혈관질환 (I60~I69)', cat:'뇌', risk:3,
+  alias:['뇌혈관질환','I6[0-9]'],
+  def:'뇌의 혈관에 생기는 질환 전체입니다. 출혈·경색·기타 혈관질환과 그 후유증까지 포함하는 가장 넓은 범위입니다.',
+  watch:'같은 "뇌 보장"이라도 범위가 뇌혈관질환(I60~I69) > 뇌졸중(I60~I63) > 뇌출혈(I60~I62) 순으로 좁아집니다. 넓을수록 유리합니다.',
+  say:'"뇌 보장이라고 다 같은 게 아닙니다. 코드 범위를 보셔야 합니다."'
+},
+{
+  t:'뇌졸중', cat:'뇌', risk:3,
+  alias:['뇌졸중'],
+  def:'뇌출혈과 뇌경색을 합친 말입니다. 통상 I60~I63과 I65~I66이 들어갑니다.',
+  watch:'기타 뇌혈관질환(I67)과 후유증(I69)은 빠집니다.',
+  say:'"뇌졸중은 출혈과 경색까지입니다. 그 밖의 뇌혈관질환은 빠집니다."'
+},
+{
+  t:'뇌출혈 / 뇌경색', cat:'뇌', risk:3,
+  alias:['뇌출혈','뇌경색','뇌내출혈'],
+  def:'뇌출혈은 혈관이 터진 것(I60~I62), 뇌경색은 혈관이 막힌 것(I63)입니다.',
+  watch:'실제 발생 빈도는 뇌경색이 뇌출혈보다 훨씬 높습니다. 뇌출혈만 보장하는 약관은 정작 잘 생기는 병을 못 잡습니다.',
+  say:'"실제로는 막히는 게 훨씬 많습니다. 터지는 것만 보장하면 반쪽입니다."'
+},
+{
+  t:'열공성 뇌경색', cat:'뇌', risk:2,
+  alias:['열공성','라쿠나'],
+  def:'뇌의 아주 작은 혈관이 막혀 생기는 작은 뇌경색입니다.',
+  watch:'증상이 가볍거나 없어 검진에서 우연히 발견되는 경우가 많습니다. 영상에서 병변이 뚜렷하지 않아 진단확정 요건과 부딪히는 대표 사례입니다.',
+  say:'"건강검진에서 우연히 발견되는 작은 뇌경색이 많습니다. 이때 인정되는지가 문제입니다."'
+},
+{
+  t:'일과성 뇌허혈 (TIA, G45)', cat:'뇌', risk:2,
+  alias:['일과성뇌허혈','일과성허혈','G45'],
+  def:'뇌혈류가 일시적으로 막혔다가 24시간 안에 증상이 사라지는 상태입니다.',
+  watch:'분류코드가 G45로 I 코드가 아니어서 뇌혈관질환 담보에서 빠지는 것이 보통입니다. 뇌경색의 강력한 경고 신호인데 보장은 안 되는 구간입니다.',
+  say:'"증상이 사라져도 뇌경색 전 단계입니다. 다만 보험 코드가 달라 보장에서 빠집니다."'
+},
+{
+  t:'뇌영상검사 (CT / MRI / MRA)', cat:'뇌', risk:3,
+  alias:['뇌영상','MRI','MRA','전산화단층','자기공명','CT검사'],
+  def:'뇌를 촬영해 병변을 확인하는 검사입니다.',
+  watch:'약관이 영상검사를 「참고자료」로 두는지 「반드시 확인되어야 한다」로 두는지가 결정적입니다. 필수 요건이면, 증상이 명백해도 영상에서 안 잡히면 부지급 다툼이 생깁니다.',
+  say:'"사진에 안 찍히는 경우가 실제로 있습니다. 그때도 인정하는 약관인지가 중요합니다."'
+},
+
+/* ───────── 심장 ───────── */
+{
+  t:'허혈성심장질환 (I20~I25)', cat:'심장', risk:3,
+  alias:['허혈성심장질환','허혈성심질환','I2[0-5]'],
+  def:'심장에 피가 제대로 안 통해 생기는 질환 전체입니다. 협심증(I20)과 급성심근경색(I21~I22)이 모두 들어갑니다.',
+  watch:'급성심근경색만 보장하는 상품과 허혈성심장질환 전체를 보장하는 상품은 지급 확률이 몇 배 차이납니다. 실제로 가장 많이 진단되는 건 협심증입니다.',
+  say:'"심장 보장이라 해도 심근경색만 나오는 게 많습니다. 협심증이 들어가는지 보셔야 합니다."'
+},
+{
+  t:'급성심근경색증 (I21~I22)', cat:'심장', risk:3,
+  alias:['급성심근경색','심근경색증','I2[12]'],
+  def:'심장 혈관이 완전히 막혀 심장 근육이 죽는 상태입니다.',
+  watch:'가장 좁은 범위입니다. 여기에만 한정된 약관이 흔하니 꼭 확인하세요.',
+  say:'"심근경색은 심장 질환 중 일부입니다. 여기에만 한정된 담보가 많습니다."'
+},
+{
+  t:'협심증 (안정 / 불안정)', cat:'심장', risk:3,
+  alias:['협심증','불안정성협심'],
+  def:'심장 혈관이 좁아져 가슴 통증이 오는 상태입니다. 아직 완전히 막히지는 않았습니다.',
+  watch:'가장 흔하게 진단되지만 급성심근경색 담보에서는 빠집니다. 스텐트를 넣는 경우도 대부분 협심증 단계입니다.',
+  say:'"가슴이 아파서 스텐트를 넣는 대부분이 협심증입니다. 이게 보장되는지가 실질적입니다."'
+},
+{
+  t:'심근효소 (CK-MB, 트로포닌)', cat:'심장', risk:3,
+  alias:['심근효소','트로포닌','CK-MB','심장효소'],
+  def:'심장 근육이 손상되면 혈액으로 흘러나오는 물질입니다. 수치가 오르면 심근 손상의 근거가 됩니다.',
+  watch:'진단확정 요건이 「특징적인 흉통 + 심근효소 상승 + 심전도 변화」 중 **몇 가지**를 요구하는지가 관문입니다. "모두 충족"이면 실제 환자 상당수가 탈락합니다. "둘 이상"이면 완화된 것입니다.',
+  say:'"세 가지를 다 만족해야 하는 약관과 두 개만 되면 인정하는 약관이 있습니다."'
+},
+{
+  t:'관상동맥우회술 (CABG) / 스텐트 (PCI)', cat:'심장', risk:2,
+  alias:['관상동맥우회','스텐트','경피적관상동맥','중재술','풍선확장'],
+  def:'CABG는 가슴을 열어 막힌 혈관을 우회로로 잇는 큰 수술, PCI(스텐트)는 혈관에 관을 넣어 넓히는 시술입니다.',
+  watch:'실제로 훨씬 많이 하는 건 스텐트입니다. 우회술만 보장하는 약관은 쓸 일이 거의 없습니다.',
+  say:'"가슴을 여는 수술만 보장하면 거의 못 씁니다. 스텐트가 들어가야 실효가 있습니다."'
+},
+
+/* ───────── 간병 · 치매 ───────── */
+{
+  t:'장기요양등급 (1~5등급, 인지지원등급)', cat:'간병·치매', risk:3,
+  alias:['장기요양','요양등급','인지지원등급','노인장기요양'],
+  def:'국민건강보험공단이 심신 상태를 점수로 평가해 매기는 등급입니다. 점수가 높을수록(상태가 나쁠수록) 등급 숫자가 낮습니다. 1등급은 사실상 거동 불가, 5등급과 인지지원등급은 치매가 있는 경우에 해당합니다.',
+  watch:'1~2등급만 보장하는 상품은 사실상 누워 계셔야 받습니다. 실제 판정이 가장 많이 나오는 3~5등급과 인지지원등급까지 포함되는지가 핵심입니다.',
+  say:'"1등급은 거의 누워 계신 상태입니다. 실제로 많이 나오는 등급까지 보장되는지 보셔야 합니다."'
+},
+{
+  t:'CDR 척도 (임상치매척도)', cat:'간병·치매', risk:3,
+  alias:['CDR','임상치매척도','치매척도'],
+  def:'치매의 정도를 재는 표준 척도입니다. 0은 정상, 0.5는 최경도, 1은 경도, 2는 중등도, 3은 중증입니다.',
+  watch:'CDR 3점을 요구하는 약관은 사실상 말기에나 지급됩니다. CDR 1점(경도) 기준이면 진단 초기에 받습니다. 이 숫자 하나가 수령 시점을 10년 이상 바꿉니다.',
+  say:'"CDR 3점은 거의 마지막 단계입니다. 1점부터 나오는 약관이라야 실제로 도움이 됩니다."'
+},
+{
+  t:'MMSE (간이정신상태검사)', cat:'간병·치매', risk:1,
+  alias:['MMSE','간이정신상태'],
+  def:'30점 만점의 인지기능 검사입니다. 치매 선별에 씁니다.',
+  watch:'CDR을 보조하는 지표로 약관에 등장합니다. MMSE 점수만으로 지급을 결정하지는 않는 것이 보통입니다.',
+  say:'"검사 점수는 참고이고, 실제 기준은 CDR입니다."'
+},
+{
+  t:'기질적 치매 / 기질적 원인', cat:'간병·치매', risk:3,
+  alias:['기질적','기질성'],
+  def:'뇌에 실제 구조적 손상이나 병변이 있는 경우를 말합니다.',
+  watch:'「뇌영상검사에서 기질적 병변이 확인되어야 한다」는 요건이 붙으면, 알츠하이머 초기처럼 영상에서 뚜렷한 이상이 안 보이는 경우 진단서가 있어도 부지급 다툼이 생깁니다.',
+  say:'"알츠하이머는 사진에 뚜렷하게 안 나오는 경우가 많습니다. 그런데 사진을 요구하는 약관이 있습니다."'
+},
+{
+  t:'재가급여 / 시설급여', cat:'간병·치매', risk:2,
+  alias:['재가급여','시설급여','요양시설','입소'],
+  def:'재가급여는 집에서 방문요양·목욕 등을 받는 것, 시설급여는 요양원에 입소하는 것입니다.',
+  watch:'시설 입소만 인정하는 약관은 집에서 모시는 경우를 보장하지 않습니다. 실제로는 집에서 모시는 기간이 훨씬 깁니다.',
+  say:'"집에서 모시는 기간이 훨씬 깁니다. 그 기간이 보장되는지 보셔야 합니다."'
+},
+
+/* ───────── 실손 · 의료비 ───────── */
+{
+  t:'급여 / 비급여', cat:'실손·의료비', risk:2,
+  alias:['급여항목','비급여','요양급여','건강보험이적용'],
+  def:'급여는 건강보험이 일부를 대주는 항목, 비급여는 건강보험이 전혀 대주지 않아 환자가 전액 부담하는 항목입니다.',
+  watch:'큰돈은 비급여에서 나갑니다. 비급여를 보장하는지, 자기부담률이 몇 %인지가 실손의 핵심입니다.',
+  say:'"건강보험이 안 대주는 항목에서 큰돈이 나갑니다. 그게 비급여입니다."'
+},
+{
+  t:'본인부담금 / 자기부담금 / 공제금액', cat:'실손·의료비', risk:2,
+  alias:['본인부담','자기부담','공제금액','공제한'],
+  def:'본인부담금은 건강보험 적용 후 환자가 내는 돈, 자기부담금(공제금액)은 그중에서도 보험회사가 빼고 주는 부분입니다.',
+  watch:'실손은 세대(1~4세대)별로 자기부담률과 통원 공제금액이 다릅니다. 어느 세대에 가입돼 있는지부터 확인해야 하며, 숫자는 반드시 해당 약관 원문에서 확인하세요.',
+  say:'"실손은 세대마다 자기부담이 다릅니다. 먼저 어느 세대인지 확인해야 합니다."'
+},
+{
+  t:'통원 / 처방조제', cat:'실손·의료비', risk:1,
+  alias:['통원','처방조제','외래'],
+  def:'입원하지 않고 병원에 다니며 치료받는 것(통원)과, 처방받아 약국에서 약을 받는 것(처방조제)입니다.',
+  watch:'통원은 1회당 한도와 연간 횟수 제한이 붙습니다. 입원과 통원은 한도가 별도로 관리됩니다.',
+  say:'"통원은 한 번에 얼마까지, 1년에 몇 번까지가 정해져 있습니다."'
+},
+{
+  t:'비례보상 / 중복보상', cat:'실손·의료비', risk:2,
+  alias:['비례보상','비례하여','중복으로','각계약의'],
+  def:'실손보험을 두 개 이상 가입했더라도 실제 쓴 의료비를 넘겨 받지는 못하고, 회사끼리 비율로 나눠 냅니다.',
+  watch:'실손은 두 개 가입해도 두 배로 받지 못합니다. 반대로 진단금(정액) 담보는 중복 가입해도 각각 다 받습니다. 이 차이를 고객이 가장 많이 오해합니다.',
+  say:'"실손은 두 개 넣어도 두 배로 안 나옵니다. 대신 진단금은 각각 다 나옵니다."'
+},
+{
+  t:'보상한도 / 연간한도 / 통산', ca:'', cat:'실손·의료비', risk:2,
+  alias:['보상한도','연간한도','한도금액','통산하여','최고한도'],
+  def:'보험회사가 주는 금액의 상한입니다. "통산"은 여러 번 받아도 합쳐서 그 금액까지라는 뜻입니다.',
+  watch:'"통산"이 붙으면 평생 한 번 그 금액까지라는 의미가 될 수 있습니다. 연간 한도인지 통산 한도인지 구분해야 합니다.',
+  say:'"1년에 그만큼인지, 평생 합쳐서 그만큼인지 — 완전히 다른 이야기입니다."'
+},
+{
+  t:'1회에 한하여 / 최초 1회', cat:'실손·의료비', risk:2,
+  alias:['1회에한','최초1회','한번만지급','1회한도'],
+  def:'보험기간 전체에서 딱 한 번만 지급한다는 제한입니다.',
+  watch:'암은 재발·전이가 본체이므로 "1회에 한하여"는 큰 제약입니다. 여러 번 지급되는 담보가 있는지 확인하세요.',
+  say:'"한 번만 나오는 담보입니다. 재발하면 더는 없습니다."'
+},
+
+/* ───────── 지급 제한 ───────── */
+{
+  t:'면책 / 보험금을 지급하지 않는 사유', cat:'지급제한', risk:3,
+  alias:['지급하지아니','지급하지않','보장하지아니','보장하지않','면책'],
+  def:'보험회사가 보험금을 주지 않아도 되는 경우를 정해 놓은 조항입니다.',
+  watch:'표준적인 면책(고의, 전쟁, 2년 내 자살)을 넘어 음주·무면허·특정 직업·취미를 추가로 빼는 약관이 있습니다. 고객의 직업·취미와 겹치는지 확인하세요.',
+  say:'"안 주는 경우를 모아 놓은 조항입니다. 여기에 손님 상황이 걸리는지 봐야 합니다."'
+},
+{
+  t:'~에 한하여 / ~만 해당', cat:'지급제한', risk:3,
+  alias:['에한하여','에한함','만해당','에限'],
+  def:'그것만 인정하고 나머지는 제외한다는 뜻의 한정 표현입니다.',
+  watch:'약관에서 가장 위험한 네 글자입니다. "에 한하여"가 붙은 문장은 전부 찾아서 무엇이 빠지는지 확인해야 합니다.',
+  say:'"이 네 글자가 붙은 자리마다 무엇이 빠지는지 확인해야 합니다."'
+},
+{
+  t:'고의 / 중대한 과실', cat:'지급제한', risk:2,
+  alias:['고의로','중대한과실','중과실'],
+  def:'일부러 한 것(고의)과, 조금만 주의했으면 막을 수 있었는데 크게 부주의한 것(중대한 과실)입니다.',
+  watch:'상법상 보험자 면책은 고의·중과실에 한정됩니다. 사망을 보험사고로 한 계약에서는 중대한 과실로 생긴 경우에도 보험금을 지급해야 합니다(상법 제732조의2). 단순 부주의를 이유로 한 부지급 주장에는 다툴 여지가 있습니다.',
+  say:'"단순한 부주의는 면책 사유가 아닙니다. 이 부분은 다툴 수 있습니다."'
+},
+{
+  t:'대위 (청구권 대위)', cat:'지급제한', risk:1,
+  alias:['대위','대위권'],
+  def:'보험회사가 보험금을 준 뒤, 사고를 낸 상대방에게 그 돈을 청구할 권리를 넘겨받는 것입니다.',
+  watch:'교통사고처럼 가해자가 있는 사고에서 나옵니다. 정액 진단금에는 대위가 적용되지 않습니다.',
+  say:'"회사가 먼저 주고 가해자에게 받아내는 구조입니다. 손님이 손해 볼 일은 아닙니다."'
+},
+
+/* ───────── 장해 ───────── */
+{
+  t:'후유장해 / 장해지급률', cat:'장해', risk:3,
+  alias:['후유장해','장해지급률','장해상태','장해분류표'],
+  def:'치료가 끝난 뒤에도 영구히 남는 신체 기능의 상실 정도를, 부위별로 0~100%로 정해 놓은 것이 장해지급률입니다.',
+  watch:'진단만으로 지급하는지, "장해지급률 몇 % 이상"을 추가로 요구하는지에 따라 수령 확률이 크게 달라집니다. 80% 이상 같은 요건은 사실상 받기 어렵습니다.',
+  say:'"진단만으로 나오는지, 장해까지 남아야 나오는지 — 전혀 다른 상품입니다."'
+},
+{
+  t:'영구장해 / 한시장해', cat:'장해', risk:2,
+  alias:['영구적으로','한시장해','5년이상'],
+  def:'영구장해는 평생 회복되지 않는 장해, 한시장해는 일정 기간만 남는 장해입니다.',
+  watch:'약관은 보통 영구장해를 기준으로 하고, 한시장해는 일정 기간(예: 5년) 이상일 때만 일부 인정합니다.',
+  say:'"평생 남는 장해가 기준이고, 한동안만 남는 건 다르게 봅니다."'
+},
+
+/* ───────── 계약 · 절차 ───────── */
+{
+  t:'계약 전 알릴 의무 (고지의무)', cat:'계약·절차', risk:3,
+  alias:['계약전알릴의무','고지의무','알릴의무'],
+  def:'가입할 때 병력·직업 등 회사가 묻는 중요한 사항을 사실대로 알려야 하는 의무입니다.',
+  watch:'위반해도 그 사실이 보험사고에 영향을 주지 않았음이 증명되면 보험금은 지급해야 합니다(상법 제655조 단서). 또한 회사는 그 사실을 안 날부터 1개월, 계약 체결일부터 3년이 지나면 해지할 수 없습니다(제651조).',
+  say:'"과거 병력을 안 알렸다고 다 끝나는 게 아닙니다. 이번 병과 관계가 없으면 받을 수 있습니다."'
+},
+{
+  t:'계약 후 알릴 의무 (통지의무)', cat:'계약·절차', risk:2,
+  alias:['계약후알릴','통지의무','직업이변경'],
+  def:'가입 후 직업·직무가 바뀌거나 위험이 커지면 회사에 알려야 하는 의무입니다.',
+  watch:'직업이 바뀌었는데 안 알리면 보험금이 깎일 수 있습니다. 이직하신 고객은 반드시 점검 대상입니다.',
+  say:'"직업이 바뀌면 알려야 합니다. 안 알리면 나중에 깎입니다."'
+},
+{
+  t:'소멸시효 (3년)', cat:'계약·절차', risk:2,
+  alias:['소멸시효','3년간행사','시효가완성'],
+  def:'보험금을 청구할 수 있는 기간입니다. 상법 제662조는 보험금청구권을 3년으로 정하고 있습니다.',
+  watch:'과거에 청구하지 않고 넘어간 진단·수술이 있으면, 3년 이내라면 지금도 청구할 수 있습니다. 기존 계약 점검의 강력한 명분입니다.',
+  say:'"3년 안에 있었던 일이면 지금이라도 청구할 수 있습니다. 지나간 것부터 찾아보겠습니다."'
+},
+{
+  t:'청약철회 / 품질보증해지', cat:'계약·절차', risk:1,
+  alias:['청약을철회','청약철회','품질보증'],
+  def:'청약철회는 마음이 바뀌어 계약을 없애는 것, 품질보증해지는 회사 쪽 잘못(약관을 안 주거나 설명하지 않거나 자필서명이 없는 경우)을 이유로 계약을 해지하고 낸 돈을 돌려받는 것입니다.',
+  watch:'각각의 행사 기간은 약관과 법령에 정해져 있으니 원문에서 확인하세요. 품질보증해지는 설명의무 위반과 직접 연결됩니다.',
+  say:'"약관을 못 받았거나 설명을 못 들었다면, 그 자체로 되돌릴 수 있는 제도가 있습니다."'
+},
+{
+  t:'부활 (효력회복) / 실효', cat:'계약·절차', risk:1,
+  alias:['부활','효력회복','계약이해지된','납입최고','독촉'],
+  def:'보험료를 못 내 계약이 해지된 것을 실효, 밀린 보험료와 이자를 내고 되살리는 것을 부활이라 합니다.',
+  watch:'부활할 때는 고지의무를 다시 이행해야 하고, 면책기간·감액기간이 다시 시작되는 경우가 있습니다. 부활이 늘 유리한 것은 아닙니다.',
+  say:'"되살릴 때 면책기간이 다시 시작되는 경우가 있습니다. 그냥 살리면 되는 게 아닙니다."'
+},
+{
+  t:'갱신형 / 비갱신형', cat:'계약·절차', risk:2,
+  alias:['갱신','비갱신','자동갱신','갱신계약'],
+  def:'갱신형은 일정 주기마다 계약을 다시 맺으며 그때 나이·위험률로 보험료가 다시 계산됩니다. 비갱신형은 처음 보험료가 끝까지 유지됩니다.',
+  watch:'갱신형은 나이가 들수록 보험료가 올라, 정작 보험이 필요한 시기에 부담 때문에 해지하게 됩니다.',
+  say:'"갱신형은 70대에 보험료가 감당이 안 돼서 깨게 됩니다. 그때가 정작 필요한 때입니다."'
+},
+{
+  t:'감액완납 / 연장정기 / 중도인출 / 자동대출납입', cat:'계약·절차', risk:1,
+  alias:['감액완납','연장정기','중도인출','자동대출납입','보험료의자동'],
+  def:'보험료를 더 내기 어려울 때 보장을 줄이거나 기간을 줄여 계약을 유지하는 방법들입니다. 자동대출납입은 해지환급금에서 보험료를 자동으로 빌려 내는 것입니다.',
+  watch:'해지하지 않고 버티는 수단입니다. 다만 자동대출납입은 이자가 붙고 환급금이 줄어 결국 실효될 수 있습니다.',
+  say:'"돈이 어려우면 깨지 말고 줄이는 방법이 있습니다. 깨는 건 마지막입니다."'
+},
+
+/* ───────── 분류코드 ───────── */
+{
+  t:'한국표준질병사인분류 (KCD)', cat:'분류코드', risk:2,
+  alias:['한국표준질병','KCD','질병분류','제[0-9]차개정'],
+  def:'질병에 코드를 붙인 국가 분류표입니다. 보험금은 병명이 아니라 이 코드로 판단됩니다. 몇 년마다 개정됩니다.',
+  watch:'개정되면 어떤 병의 분류가 바뀝니다. 「진단 당시 시행되는 분류」를 적용하는 약관이 유리하고, 「계약 당시 분류로 고정」은 불리할 수 있습니다.',
+  say:'"보험은 병명이 아니라 코드로 봅니다. 코드가 바뀔 때 어느 쪽을 쓰는지가 약관에 있습니다."'
+},
+{
+  t:'피보험자 / 보험계약자 / 보험수익자', cat:'분류코드', risk:1,
+  alias:['피보험자','보험계약자','보험수익자'],
+  def:'피보험자는 보장을 받는 사람(몸의 주인), 보험계약자는 계약을 맺고 보험료를 내는 사람, 보험수익자는 보험금을 받는 사람입니다.',
+  watch:'세 사람이 다를 수 있습니다. 사망보험금 수익자 지정은 상속·세금과 직결되므로 반드시 확인하세요.',
+  say:'"몸의 주인, 돈 내는 사람, 받는 사람이 다를 수 있습니다. 이걸 정리해 두는 게 중요합니다."'
+}
+];
+
+/* 한글 낱자 사이 공백 허용 (약관 PDF 는 띄어쓰기가 제멋대로다) */
+function ykFlex(a){
+  if(/[\\\[\]().*+?{}|^$]/.test(a))return a;      /* 정규식이 섞인 별칭은 그대로 */
+  return a.split('').join('\\s*');
+}
+let YGRE=null, YGMAP=null;
+function ykBuildRE(){
+  const parts=[];YGMAP=[];
+  const flat=[];
+  YGLOSS.forEach((g,i)=>(g.alias||[]).forEach(a=>flat.push({a,i})));
+  flat.sort((x,y)=>y.a.length-x.a.length);          /* 긴 용어 먼저 */
+  flat.forEach(f=>{parts.push('('+ykFlex(f.a)+')');YGMAP.push(f.i)});
+  YGRE=new RegExp(parts.join('|'),'g');
+}
+/* HTML 안의 글자 부분에만 밑줄을 입힌다 (태그는 건드리지 않는다) */
+function ykAnnotate(html){
+  if(!YGRE)ykBuildRE();
+  return String(html).split(/(<[^>]+>)/).map(part=>{
+    if(!part||part.charAt(0)==='<')return part;
+    YGRE.lastIndex=0;
+    return part.replace(YGRE,function(m){
+      const caps=Array.prototype.slice.call(arguments,1,1+YGMAP.length);
+      const k=caps.findIndex(v=>v!==undefined);
+      if(k<0)return m;
+      return '<u class="yk-g" data-yg="'+YGMAP[k]+'">'+m+'</u>';
+    });
+  }).join('');
+}
+const YRISK={3:'<span class="yk-p r3">지급 여부가 걸린 말</span>',
+             2:'<span class="yk-p r2">금액이 깎이는 말</span>',
+             1:'<span class="yk-p">절차·한도</span>',0:''};
+
+function ykCard(g,i,compact){
+  return '<div class="yk-card">'
+   +'<div class="yk-t">'+esc(g.t)+' <span class="yk-p bl">'+esc(g.cat)+'</span> '+(YRISK[g.risk]||'')+'</div>'
+   +'<div class="yk-b"><b>뜻</b> - '+esc(g.def)+'</div>'
+   +(g.watch?'<div class="yk-b"><b>여기서 갈립니다</b> - '+esc(g.watch)+'</div>':'')
+   +(g.say?'<div class="yk-ap">고객에게 이렇게 - '+esc(g.say)+'</div>':'')
+   +(compact?'':'<div class="yk-chips"><button class="yk-chip" data-yfind="'+i+'">이 말이 약관 어디 있는지 찾기</button>'
+     +'<button class="yk-chip" data-ycopy="'+i+'">화법 복사</button></div>')
+   +'</div>';
+}
+
+/* 지금 정밀 판정 화면에 올려둔 약관들 */
+function ykTexts(){
+  return ['A','B','C'].map(x=>({
+    nm:(($('#jCo'+x)?$('#jCo'+x).value:'')+' '+($('#jNm'+x)?$('#jNm'+x).value:'')).trim()||('상품'+x),
+    t:($('#jTa'+x)?$('#jTa'+x).value:'')||''
+  })).filter(d=>d.t.trim().length>80);
+}
+
+/* 용어가 실제로 약관 어디에 있는지 - 조·쪽까지 찍어 준다 */
+function ykFindTerm(i){
+  const g=YGLOSS[i], docs=ykTexts();
+  let h='';
+  if(!docs.length){
+    h='<div class="yk-note wn">먼저 <b>정밀 판정</b> 화면에 약관을 올려 주세요. 거기 올린 약관에서 찾습니다.</div>';
+  }else{
+    docs.forEach(d=>{
+      const t=d.t.replace(/\u00a0/g,' '), marks=pageMarks(t);
+      let found=0,body='';
+      (g.alias||[]).forEach(a=>{
+        if(found>=3)return;
+        let re;try{re=new RegExp(ykFlex(a),'g')}catch(e){return}
+        let m;
+        while(found<3&&(m=re.exec(t))!==null){
+          if(!m[0].length){re.lastIndex++;continue}
+          const q=sentenceOf(t,m.index,m[0].length);
+          body+='<div class="yk-q">'+esc(stripPg(q.pre).slice(-60))
+            +'<em>'+esc(stripPg(q.hit))+'</em>'+esc(stripPg(q.post).slice(0,90))
+            +'<span class="yk-src">'+esc(articleAt(t,m.index)||'조문 미상')
+            +(pageAt(marks,m.index)?' · '+pageAt(marks,m.index)+'쪽':'')+'</span></div>';
+          found++;
+        }
+      });
+      h+='<div class="yk-card"><div class="yk-t">'+esc(d.nm)
+        +' <span class="yk-p '+(found?'ok':'')+'">'+(found?found+'곳':'없음')+'</span></div>'
+        +(body||'<div class="yk-b">이 약관에는 이 말이 없습니다.</div>')+'</div>';
+    });
+  }
+  $('#ykFindOut').innerHTML=h;
+}
+
+/* ---------------- 용어 사전 화면 ---------------- */
+const YCATS=[...new Set(YGLOSS.map(g=>g.cat))];
+let ykCat='전체';
+function ykRender(){
+  const q=($('#ykQ').value||'').replace(/\s+/g,'');
+  $('#ykCats').innerHTML=['전체'].concat(YCATS).map(c=>
+    '<button class="yk-chip '+(ykCat===c?'on':'')+'" data-ycat="'+esc(c)+'">'+esc(c)+'</button>').join('');
+  const list=YGLOSS.map((g,i)=>({g,i})).filter(o=>{
+    if(ykCat!=='전체'&&o.g.cat!==ykCat)return false;
+    if(!q)return true;
+    return (o.g.t+o.g.def+(o.g.watch||'')+(o.g.say||'')+(o.g.alias||[]).join('')).replace(/\s+/g,'').indexOf(q)>=0;
+  }).sort((a,b)=>(b.g.risk||0)-(a.g.risk||0));
+  $('#ykList').innerHTML=list.length?list.map(o=>ykCard(o.g,o.i)).join('')
+    :'<div class="yk-note wn">해당하는 용어가 없습니다.</div>';
+  $('#ykCount').textContent=list.length+' / '+YGLOSS.length+'개';
+  $$('#ykCats [data-ycat]').forEach(b=>b.onclick=()=>{ykCat=b.dataset.ycat;ykRender()});
+  $$('#ykList [data-yfind]').forEach(b=>b.onclick=()=>ykFindTerm(+b.dataset.yfind));
+  $$('#ykList [data-ycopy]').forEach(b=>b.onclick=()=>{
+    const g=YGLOSS[+b.dataset.ycopy];
+    copy(g.t+'\n\n'+g.def+(g.watch?'\n\n[여기서 갈립니다] '+g.watch:'')+(g.say?'\n\n[이렇게 말하세요] '+g.say:''),'화법을 복사했어요');
+  });
+}
+
+/* 밑줄 그어진 용어를 누르면 사전으로 데려간다 */
+document.addEventListener('click',function(e){
+  const u=e.target.closest?e.target.closest('u.yk-g'):null;
+  if(!u)return;
+  e.preventDefault();
+  const g=YGLOSS[+u.dataset.yg];if(!g)return;
+  const tb=$$('.tab').filter(t=>t.dataset.t==='gloss')[0];
+  if(tb)tb.click();
+  $('#ykQ').value=g.t.split(' (')[0];ykCat='전체';ykRender();
+});
+
+$('#ykQ').oninput=ykRender;
+ykRender();
+</script>
+
+<script>
+/* ==================================================================
+   신제품 룰 보강  (learn by example)
+   ------------------------------------------------------------------
+   신제품이 나올 때마다 정규식을 손으로 쓰면 유지가 안 된다. 뒤집는다.
+
+     "약관을 읽어서 룰을 쓴다"  ->  "룰이 못 읽은 곳을 약관이 알려준다"
+
+   ① 판정에서 '자료에 없음'이 뜬 항목을 모은다
+   ② 그 담보 조문 안에서 관련 문장 후보를 뽑아 보여준다
+   ③ 문장을 고르고 유리/불리만 누르면 정규식이 자동으로 만들어진다
+   ④ 저장 전에 올려둔 약관 전부로 회귀 테스트를 돌려 뭐가 바뀌는지 보여준다
+
+   붙인 룰은 이 PC 브라우저에 쌓이고, 파일로 내보내
+   RUBRIC 에 영구 반영할 수 있다.
+   ================================================================== */
+
+/* 원본 룰을 '정규식 문자열'로 떠 둔다. 확장은 항상 원본 위에 다시 얹는다
+   (같은 패턴이 두 번 붙는 사고를 막는다). */
+/* 정규식은 <b>source 와 flags 를 같이</b> 떠 둔다. source 만 뜨면 지금은
+   플래그를 쓰는 룰이 하나도 없어 아무 일도 없지만, 나중에 누가 /i 룰을
+   하나 넣는 순간 되쌓을 때 조용히 사라진다 — 그날부터 다른 답을 낸다. */
+const MBASE = RUBRIC.map(r=>({
+  c:r.c, k:r.k, w:r.w, q:r.q, e:r.e,
+  g:r.g?{s:r.g.re.source,f:r.g.re.flags,t:r.g.t}:null,
+  b:r.b?{s:r.b.re.source,f:r.b.re.flags,t:r.b.t}:null,
+  m:r.m?{s:r.m.re.source,f:r.m.re.flags,t:r.m.t}:null
+}));
+
+let MEXT = LS.get('ext', {alts:[], news:[]});
+if(!MEXT.alts)MEXT.alts=[];
+if(!MEXT.news)MEXT.news=[];
+
+function mCount(){return MEXT.alts.length+MEXT.news.length}
+
+function mApply(){
+  const built = MBASE.map(o=>{
+    const r={c:o.c,k:o.k,w:o.w,q:o.q,e:o.e};
+    ['g','b','m'].forEach(side=>{
+      const add=MEXT.alts.filter(a=>a.c===o.c&&a.k===o.k&&a.side===side);
+      if(o[side]){
+        let src=o[side].s;
+        add.forEach(a=>{src+='|'+a.pat});
+        r[side]={re:new RegExp(src,o[side].f||''),t:o[side].t};
+      }else if(add.length){
+        /* 원래 그쪽 판정이 아예 없던 항목에 처음 붙이는 경우 */
+        r[side]={re:new RegExp(add.map(a=>a.pat).join('|')),t:add[0].t};
+      }
+    });
+    return r;
+  });
+  MEXT.news.forEach(n=>{
+    const r={c:n.c,k:n.k,w:n.w,q:n.q||'',e:n.e||''};
+    r[n.side]={re:new RegExp(n.pat),t:n.t};
+    built.push(r);
+  });
+  RUBRIC.length=0; built.forEach(r=>RUBRIC.push(r));
+  const badge=$('#mrBadge'); if(badge)badge.textContent=mCount();
+}
+function mSave(){LS.set('ext',MEXT);mApply()}
+
+/* ---------------- 문장·토큰 ---------------- */
+
+/* 정규식에서 한글 낱말만 뽑는다 - 그 항목이 무슨 말을 찾고 있었는지의 단서 */
+function mLits(src){
+  return (String(src).match(/[가-힣]{2,}/g)||[]).filter((v,i,a)=>a.indexOf(v)===i);
+}
+
+/* 담보 조문 안의 문장들 — 근거로 쓸 수 없는 자리는 빼거나 뒤로 미룬다.
+
+   ※ 면책인지 아닌지는 <b>mkDenyRanges 한 곳</b>만 판단한다. 여기서 다시 세지
+     않고 그 답을 가져다 쓴다 (CLAUDE.md 5번). 면책 조항을 근거로 룰을 만들면
+     「보험금을 지급하지 않는 사유」에 적힌 담보 이름을 <b>장점</b>으로 읽는
+     룰이 태어난다 — 이 저장소가 제일 경계하는 사고다. */
+function mSentences(t, cat){
+  const arts=splitArticles(t);
+  const list=(cat&&SCOPE[cat])?scopeText(arts,cat):null;
+  const src=list||arts;
+  const deny=mkDenyRanges(t), soft=mkSoftRanges(t);
+  const out=[];
+  src.forEach(a=>{
+    a.text.split(/(?<=[.\n])/).forEach(seg=>{
+      const s=seg.trim();
+      if(s.length<25)return;
+      if(/^제\s*\d{1,3}\s*조(\s*\([^)]{0,40}\))?$/.test(s))return;
+      /* 목차 줄 — 「제12조(뇌혈관질환 진단보험금) ......... 25」.
+         조 제목에 담보 이름이 그대로 있어 안 걸러내면 근거가 목차에서 나온다. */
+      if(/[.·…]{5,}\s*\d{1,3}\s*$/.test(s))return;
+      const abs=t.indexOf(s, a.s);
+      const at=abs<0?a.s:abs;
+      if(mkInDeny(deny,at))return;              /* 면책 조항은 근거가 아니다 */
+      /* 조문 이름은 splitArticles 가 준 걸 그대로 쓴다.
+         articleAt 은 그 지점 '앞'을 돌아보기 때문에, 조문 첫 문장에서는
+         한 조 앞의 이름이 잡힌다. */
+      out.push({s, abs:at, soft:mkInDeny(soft,at),
+        art:(a.no?'제'+a.no+'조':'')+(a.title?'('+a.title+')':'')});
+    });
+  });
+  return out;
+}
+
+/* 조사·어미. 여기까지 잘라내야 다른 보험사 문장에도 걸린다.
+   ("확인되어야 합니다" 로 룰을 잡으면 "확인되어야 한다" 를 못 잡는다) */
+const MTAIL=/(하여야만|하여야|해야만|해야|되어야|됩니다|합니다|한다|하는|되는|하지|않는|아니하는|아니한|입니다|이며|하며|하고|으로|로서|에서|에는|에게|한|된|을|를|이|가|은|는|의|와|과|및|에|로)$/;
+const MNUMTAIL=/(이|가|은|는|을|를|의|로|에|와|과)$/;
+function mStem(w){
+  if(/\d/.test(w)){const y=w.replace(MNUMTAIL,'');return y.length>=2?y:w}
+  let x=w;
+  for(let i=0;i<3;i++){const y=x.replace(MTAIL,'');if(y.length>=2&&y!==x)x=y;else break}
+  return x;
+}
+/* 자동 선택에서 뺄 말. 어느 약관에나 있어 골라 봐야 변별력이 없다. */
+const MSTOP=['보험','회사','계약','경우','다음','각호','이하','해당','대하여','대한','따라','따른','또는',
+ '그리고','이때','이를','그때','기준','내용','사항','정하는','정한','약관','피보험자','보험계약자','다만',
+ '봅니다','지급','보험금','아니합니다','경우에','있습니다','것으로','때에','의하여','하여','가진','이후',
+ '이내','기타','또한','중에','및','등을','등의','합니다','한다','됩니다','하며','되는','하는','이라','말합니다'];
+
+/* 공백이 살아 있는 원문으로 쪼갠다. 붙여 쓴 덩어리로 쪼개면
+   그 회사 약관에서만 걸리는 룰이 나온다. */
+function mTokens(sent, docText){
+  const seen={}, out=[];
+  sent.split(/\s+/).forEach(word=>{
+    word.split(/[^가-힣A-Za-z0-9%]+/).forEach(part=>{
+      if(!part)return;
+      const w=mStem(part);
+      if(w.length<2||seen[w])return;
+      /* 조문 번호는 회사마다 다르다. 룰에 들어가면 그 회사에서만 걸린다. */
+      if(/^제?\d{1,3}(조|항|호|목|관|절|장)/.test(w))return;
+      const at=sent.replace(/\s+/g,'').indexOf(w.replace(/\s+/g,''));
+      if(at<0)return;
+      seen[w]=1;
+      const freq=(docText.split(w).length-1);
+      out.push({w,at,freq,stop:MSTOP.indexOf(w)>=0});
+    });
+  });
+  const L=Math.max(sent.replace(/\s+/g,'').length,1);
+  out.forEach(t=>{
+    /* 조건절은 문장 뒤쪽에 온다. 앞머리 상투어보다 뒤쪽 말이 변별력이 크다. */
+    t.score=Math.min(t.w.length,8)/Math.log(t.freq+2)+(/\d/.test(t.w)?4:0)+2.5*(t.at/L)-(t.stop?99:0);
+  });
+  return out.sort((a,b)=>a.at-b.at);
+}
+/* 한글은 낱자 사이에 공백을 허용하고(약관마다 띄어쓰기가 다르다),
+   숫자는 붙여 둔다. 100 을 1\s*0\s*0 으로 풀면 130·300 에도 걸린다. */
+function mFlex(w){
+  return String(w).replace(/[\\^$.*+?()[\]{}|]/g,'\\$&')
+    .split(/(\d+)/).filter(Boolean)
+    .map(part=>/^\d+$/.test(part)?part:part.split('').join('\\s*'))
+    .join('\\s*');
+}
+function mPattern(toks,gap){
+  if(!toks.length)return '';
+  return toks.map(w=>mFlex(w)).join('[^\\n.]{0,'+gap+'}');
+}
+/* 고른 낱말들이 이 문장에서 실제로 얼마나 떨어져 있는지 재서 그만큼만 허용한다.
+   손으로 맞추게 하면 "이 약관에서조차 안 걸림"만 반복하게 된다. */
+function mAutoGap(toks,sent){
+  const flat=sent.replace(/\s+/g,'');
+  let max=0,at=-1;
+  toks.forEach((w,i)=>{
+    const b=flat.indexOf(w,at<0?0:at);
+    if(b<0)return;
+    if(i>0&&at>=0)max=Math.max(max,b-at);
+    at=b+w.length;
+  });
+  return Math.min(80,Math.max(10,Math.ceil((max+12)/5)*5));
+}
+
+/* ---------------- 상태 ---------------- */
+const MR={doc:null, rows:null, ed:null};
+
+function mDocs(){return ykTexts()}
+
+function mMissing(d){
+  const j=judgePrecise(d.t,{});
+  return j.rows.map((r,i)=>({r,i})).filter(o=>o.r.v==='none')
+    .sort((a,b)=>b.r.w-a.r.w);
+}
+
+/* 판정 스냅샷 - 회귀 테스트용 */
+function mSnap(){
+  const m={};
+  mDocs().forEach((d,di)=>{
+    /* 판정과 함께 <b>근거를 어느 조문에서 뽑았는지</b>도 남긴다.
+       고른 문장과 다른 조문이 인용될 수 있다 — 같은 말이 여러 조에 있으면
+       판정은 <b>먼저 걸린 자리</b>를 쓴다. 그것을 화면에 적어야 놀라지 않는다. */
+    judgePrecise(d.t,{}).rows.forEach(r=>{
+      m[di+'|'+r.c+'|'+r.k]=r.v+'§'+((r.ev||{}).art||'');
+    });
+  });
+  return m;
+}
+const MVLAB={good:'유리',bad:'불리',norm:'보통',mix:'혼재',none:'자료에 없음'};
+
+/* ---------------- 화면 ---------------- */
+function mRender(){
+  const out=$('#mrOut'); if(!out)return;
+  const badge=$('#mrBadge'); if(badge)badge.textContent=mCount();
+  const docs=mDocs();
+
+  if(!docs.length){
+    out.innerHTML='<div class="yk-note wn">먼저 <b>정밀 판정</b> 화면에 신제품 약관을 올려 주세요. '
+      +'올리는 순간 어떤 항목을 못 읽는지 여기에 뜹니다.</div>'+mStoreCard();
+    mBindStore(); return;
+  }
+  if(!MR.doc||!docs.some(d=>d.nm===MR.doc))MR.doc=docs[docs.length-1].nm;
+  const doc=docs.find(d=>d.nm===MR.doc)||docs[0];
+
+  let h='<div class="yk-card"><div class="yk-t">대상 약관</div>'
+   +'<div class="row" style="margin-top:10px">'
+   +'<select class="inp" id="mrDoc" style="flex:1;min-width:200px">'
+   +docs.map(d=>'<option '+(d.nm===doc.nm?'selected':'')+'>'+esc(d.nm)+'</option>').join('')
+   +'</select><button class="mini" id="mrScan">못 읽은 항목 찾기</button></div></div>';
+
+  if(MR.rows){
+    h+='<div class="yk-card"><div class="yk-t">못 읽은 항목 <span class="yk-p">'+MR.rows.length+'건</span></div>'
+     +'<div class="yk-b">판정이 <b>자료에 없음</b>으로 남은 항목입니다. 중요도 높은 것부터 붙이면 됩니다. '
+     +'그 담보가 아예 없는 상품이면 그냥 두셔도 됩니다.</div></div>';
+    h+=MR.rows.map((o,ix)=>'<div class="yk-card">'
+      +'<div class="yk-t">'+esc(o.r.c)+' - '+esc(o.r.k)
+      +' <span class="yk-p '+(o.r.w===3?'r3':(o.r.w===2?'r2':''))+'">중요도 '+o.r.w+'</span></div>'
+      +'<div class="yk-b">'+esc(o.r.q||o.r.e||'')+'</div>'
+      +'<div class="yk-chips"><button class="yk-chip" data-mrc="'+ix+'">약관에서 문장 찾기</button></div>'
+      +'</div>').join('');
+  }
+  h+='<div id="mrEd"></div>'+mStoreCard();
+  out.innerHTML=h;
+
+  $('#mrDoc').onchange=e=>{MR.doc=e.target.value;MR.rows=null;mRender()};
+  $('#mrScan').onclick=()=>{MR.rows=mMissing(doc);mRender()};
+  $$('#mrOut [data-mrc]').forEach(b=>b.onclick=()=>mCandidates(doc,MR.rows[+b.dataset.mrc].r));
+  mBindStore();
+}
+
+/* 후보 문장 고르기 */
+function mCandidates(doc,rule){
+  const lits=mLits((rule.g?rule.g.re.source:'')+'|'+(rule.b?rule.b.re.source:''));
+  const t=doc.t.replace(/\u00a0/g,' ');
+  const sents=mSentences(t,rule.c).map(o=>{
+    o.hits=lits.filter(w=>o.s.replace(/\s+/g,'').indexOf(w)>=0).length;
+    return o;
+  }).sort((a,b)=>(a.soft?1:0)-(b.soft?1:0)||b.hits-a.hits||a.abs-b.abs).slice(0,14);
+
+  const marks=pageMarks(t);
+  let h='<div class="yk-card"><div class="yk-t">'+esc(rule.c)+' - '+esc(rule.k)+'</div>'
+   +'<div class="yk-note bl">이 항목을 <b>실제로 정하고 있는 문장</b>을 고르고, '
+   +'고객에게 유리한 문구면 🟢, 지급을 막는 문구면 🔴 을 누르세요.<br>'
+   +'이 항목이 찾던 말 — <b>'+esc(lits.slice(0,10).join(', '))+'</b><br>'
+   +'<b>「보험금을 지급하지 않는 사유」 조항은 후보에서 뺐습니다</b> — 거기 적힌 담보 이름을 '
+   +'장점으로 읽는 룰이 만들어지면 없는 보장을 있다고 말하게 됩니다. 목차 줄도 뺐고, '
+   +'「용어의 정의」 조문은 버리지 않고 뒤로 미뤘습니다.</div>';
+  if(!sents.length){
+    h+='<div class="yk-b">'+esc(rule.c)+' 담보로 분류된 조문이 없습니다. 이 담보가 없는 상품입니다.</div>';
+  }else{
+    h+=sents.map((o,i)=>'<div class="yk-q">'+ykAnnotate(esc(stripPg(o.s)))
+      +'<span class="yk-src">'+esc(o.art||'조문 미상')
+      +(pageAt(marks,o.abs)?' · '+pageAt(marks,o.abs)+'쪽':'')+'</span></div>'
+      +'<div class="yk-chips" style="margin-top:4px">'
+      +'<button class="yk-chip" data-mg="'+i+'">🟢 유리</button>'
+      +'<button class="yk-chip" data-mb="'+i+'">🔴 불리</button></div>').join('');
+  }
+  h+='</div>';
+  $('#mrEd').innerHTML=h;
+  $('#mrEd').scrollIntoView({behavior:'smooth',block:'start'});
+  const open=(i,side)=>mEditor(doc,rule,stripPg(sents[i].s),side);
+  $$('#mrEd [data-mg]').forEach(b=>b.onclick=()=>open(+b.dataset.mg,'g'));
+  $$('#mrEd [data-mb]').forEach(b=>b.onclick=()=>open(+b.dataset.mb,'b'));
+}
+
+/* 패턴 편집기 */
+function mEditor(doc,rule,sent,side){
+  const toks=mTokens(sent,doc.t);
+  const auto=toks.slice().sort((a,b)=>b.score-a.score).filter(t=>!t.stop).slice(0,3).map(t=>t.w);
+  MR.ed={doc,rule,sent,side,toks,sel:auto.slice(),gap:25,gapTouched:false};
+  mDrawEditor();
+}
+function mDrawEditor(){
+  const E=MR.ed;
+  const inOrder=E.toks.filter(t=>E.sel.indexOf(t.w)>=0).map(t=>t.w);
+  if(!E.gapTouched)E.gap=mAutoGap(inOrder,E.sent);
+  const gaps=[...new Set([E.gap,0,10,25,40,60,80])].sort((a,b)=>a-b);
+  const pat=mPattern(inOrder,E.gap);
+
+  let res=null,ok=true;
+  try{const R=new RegExp(pat);
+    res=mDocs().map(d=>{
+      const tx=d.t.replace(/\u00a0/g,' ');
+      /* 판정(findIn)은 면책 구간을 건너뛴다. 여기서도 <b>같은 수</b>를 보여야
+         화면에 찍힌 숫자가 실제와 맞는다 (CLAUDE.md 4번). 뺀 것은 말없이
+         버리지 않고 따로 적는다. */
+      const dr=mkDenyRanges(tx);
+      const G=new RegExp(pat,'g');let n=0,dn=0,m,guard=0;
+      while((m=G.exec(tx))!==null){
+        if(guard++>200)break;
+        if(!m[0].length){G.lastIndex++;continue}
+        if(mkInDeny(dr,m.index))dn++;else n++;
+      }
+      return {nm:d.nm,n,dn,self:d.nm===E.doc.nm};
+    });
+  }catch(e){ok=false}
+
+  const self=res&&res.find(r=>r.self);
+  let warn='';
+  if(!ok)warn='<div class="yk-note rd">정규식으로 만들 수 없는 조합입니다. 낱말을 바꿔 주세요.</div>';
+  else if(!inOrder.length)warn='<div class="yk-note wn">낱말을 최소 1개 이상 골라 주세요.</div>';
+  else if(!self||!self.n)warn='<div class="yk-note rd">이 약관에서조차 안 걸립니다. 사이 간격을 넓히거나 낱말을 줄여 보세요.</div>';
+  else if(self.n>12)warn='<div class="yk-note wn">이 약관에서 <b>'+self.n+'곳</b>이나 걸립니다. 너무 넓은 패턴이라 엉뚱한 조문까지 잡습니다.</div>';
+  else warn='<div class="yk-note bl">이 약관 <b>'+self.n+'곳</b> 일치 — 적당합니다.</div>';
+
+  const base=E.rule[E.side];
+  $('#mrEd').innerHTML='<div class="yk-card">'
+   +'<div class="yk-t">'+esc(E.rule.c)+' - '+esc(E.rule.k)
+   +' <span class="yk-p '+(E.side==='g'?'ok':'r3')+'">'+(E.side==='g'?'유리':'불리')+'</span></div>'
+   +'<div class="yk-q">'+ykAnnotate(esc(E.sent))+'</div>'
+
+   +'<div class="yk-b" style="margin-top:14px"><b>① 이 문장에서 핵심 낱말만 고르세요</b> '
+   +'<span style="color:var(--mut)">문장을 통째로 쓰면 다른 회사 약관에서 안 걸립니다</span></div>'
+   +'<div class="yk-chips">'+E.toks.map(t=>'<button class="yk-chip '+(E.sel.indexOf(t.w)>=0?'on':'')
+     +'" data-mtok="'+esc(t.w)+'">'+esc(t.w)+'<small>약관 안 '+t.freq+'회'+(t.stop?' · 흔한말':'')+'</small></button>').join('')+'</div>'
+
+   +'<div class="row" style="margin-top:12px;align-items:center">'
+   +'<span class="yk-b" style="margin:0">낱말 사이 허용 간격</span>'
+   +'<select class="inp" id="mrGap" style="width:auto">'
+   +gaps.map(g=>'<option value="'+g+'" '+(g===E.gap?'selected':'')+'>'+(g===0?'붙어 있음':g+'자 이내')
+     +(!E.gapTouched&&g===E.gap?' · 자동':'')+'</option>').join('')+'</select></div>'
+
+   +'<div class="yk-b" style="margin-top:14px"><b>② 만들어진 룰</b></div>'
+   +'<div class="yk-q" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;word-break:break-all">'
+   +esc(pat||'(낱말을 고르세요)')+'</div>'+warn
+
+   +'<div class="yk-b" style="margin-top:12px"><b>③ 올려둔 약관에서 몇 곳 걸리나</b></div>'
+   +(res?res.map(r=>'<div class="yk-b">'+esc(r.nm)+(r.self?' <span class="yk-p bl">고른 약관</span>':'')
+      +' <span class="yk-p '+(r.n===0?'':(r.n>12?'r2':'ok'))+'">'+r.n+'곳</span>'
+      +(r.dn?' <span class="yk-p">면책 '+r.dn+'곳은 뺌</span>':'')+'</div>').join(''):'')
+
+   +'<div class="yk-note bl" style="margin-top:14px">이 룰은 <b>'+esc(base?base.t:(E.side==='g'?'유리 판정':'불리 판정'))
+   +'</b> 판정에 합쳐집니다. 같은 뜻의 다른 표현을 추가하는 것이므로 라벨은 그대로 둡니다.</div>'
+
+   +'<div class="yk-chips" style="margin-top:8px">'
+   +'<button class="yk-chip on" id="mrSave">회귀 테스트 후 저장</button>'
+   +'<button class="yk-chip" id="mrCancel">취소</button></div></div>';
+
+  $$('#mrEd [data-mtok]').forEach(b=>b.onclick=()=>{
+    const w=b.dataset.mtok,i=MR.ed.sel.indexOf(w);
+    i>=0?MR.ed.sel.splice(i,1):MR.ed.sel.push(w);
+    mDrawEditor();
+  });
+  $('#mrGap').onchange=e=>{MR.ed.gap=+e.target.value;MR.ed.gapTouched=true;mDrawEditor()};
+  $('#mrCancel').onclick=()=>{$('#mrEd').innerHTML=''};
+  $('#mrSave').onclick=()=>{
+    if(!inOrder.length||!ok)return toast('낱말을 고르고 다시 눌러 주세요');
+    const before=mSnap();
+    const rec={c:E.rule.c,k:E.rule.k,side:E.side,pat,at:new Date().toISOString()};
+    MEXT.alts.push(rec); mSave();
+    const after=mSnap();
+    mRegression(rec,before,after);
+  };
+}
+
+function mRegression(rec,before,after){
+  const docs=mDocs(), diff=[];
+  Object.keys(after).forEach(key=>{
+    const B=String(before[key]==null?'':before[key]).split('§');
+    const A=String(after[key]).split('§');
+    if(B[0]===A[0])return;                       /* 판정이 그대로면 적지 않는다 */
+    const parts=key.split('|');
+    diff.push({doc:docs[+parts[0]]?docs[+parts[0]].nm:'?', c:parts[1], k:parts[2],
+      from:MVLAB[B[0]]||B[0]||'없음', to:MVLAB[A[0]]||A[0], art:A[1]||'',
+      risky:!!B[0]&&B[0]!=='none'});
+  });
+  const risky=diff.filter(d=>d.risky);
+  $('#mrEd').innerHTML='<div class="yk-card"><div class="yk-t">회귀 테스트 결과 '
+   +'<span class="yk-p">'+diff.length+'건 변경</span></div>'
+   +'<div class="yk-note '+(risky.length?'wn':'bl')+'">룰을 저장했습니다. 올려둔 약관 '+docs.length+'건 전부에 다시 돌렸습니다.<br>'
+   +(risky.length?'<b>이미 판정이 나 있던 항목 '+risky.length+'건이 뒤집혔습니다.</b> 아래를 확인하세요 — 패턴이 너무 넓으면 엉뚱한 조문까지 잡습니다.'
+     :'기존 판정을 뒤집은 항목은 없습니다.')+'</div>'
+   +(diff.length?diff.map(d=>'<div class="yk-b">'+esc(d.doc)+' · '+esc(d.c)+' — '+esc(d.k)+' : '
+      +esc(d.from)+' → <b>'+esc(d.to)+'</b> '
+      +(d.risky?'<span class="yk-p r2">뒤집힘 · 확인 필요</span>':'<span class="yk-p ok">새로 읽음</span>')
+      +(d.art?'<br><span style="color:var(--mut)">근거로 인용되는 곳 — '+esc(d.art)
+        +(/지급하지\s*않는|면책/.test(d.art)?' <b>(면책 조항입니다 — 고객에게 보여 줄 때 확인하십시오)</b>':'')
+        +'</span>':'')+'</div>').join('')
+     :'<div class="yk-b">판정이 바뀐 항목이 없습니다. 패턴이 아무 데도 안 걸렸을 수 있으니 다시 확인해 보세요.</div>')
+   +'<div class="yk-chips" style="margin-top:12px">'
+   +'<button class="yk-chip on" id="mrOk">확인</button>'
+   +'<button class="yk-chip" id="mrUndo">이 룰 취소(되돌리기)</button></div></div>';
+  $('#mrOk').onclick=()=>{MR.rows=null;mRender()};
+  $('#mrUndo').onclick=()=>{
+    const i=MEXT.alts.indexOf(rec);if(i>=0)MEXT.alts.splice(i,1);
+    mSave();MR.rows=null;mRender();toast('되돌렸습니다');
+  };
+}
+
+/* ---------------- 보관 · 내보내기 ---------------- */
+function mStoreCard(){
+  const list=MEXT.alts.map((a,i)=>'<div class="yk-b">'+esc(a.c)+' — '+esc(a.k)
+    +' <span class="yk-p '+(a.side==='g'?'ok':'r3')+'">'+(a.side==='g'?'유리':'불리')+'</span>'
+    +'<div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;word-break:break-all;color:var(--mut)">'
+    +esc(a.pat)+'</div>'
+    +'<button class="yk-chip" data-mrm="'+i+'" style="margin-top:5px">삭제</button></div>').join('');
+  return '<div class="yk-card"><div class="yk-t">내가 붙인 룰 <span class="yk-p" id="mrBadge">'+mCount()+'</span></div>'
+   +(list||'<div class="yk-b">아직 없습니다.</div>')
+   +'<div class="yk-chips" style="margin-top:12px">'
+   +'<button class="yk-chip" id="mrExp">내 룰 내보내기 (JSON)</button>'
+   +'<button class="yk-chip" id="mrImp">불러오기</button>'
+   +'<button class="yk-chip" id="mrCode">RUBRIC 반영 코드 만들기</button>'
+   +'<button class="yk-chip" id="mrClear">전체 초기화</button></div>'
+   +'<input type="file" id="mrFile" accept=".json" style="display:none">'
+   +'<div class="yk-b" style="margin-top:8px;color:var(--mut)">브라우저 저장은 캐시를 지우면 날아갑니다. '
+   +'신제품 대응이 끝날 때마다 <b>내보내기</b>로 파일을 남기고, 쌓이면 <b>RUBRIC 반영 코드</b>로 원본에 합쳐 두세요.</div>'
+   +'<div id="mrCodeOut"></div></div>';
+}
+function mBindStore(){
+  $$('#mrOut [data-mrm]').forEach(b=>b.onclick=()=>{
+    MEXT.alts.splice(+b.dataset.mrm,1);mSave();MR.rows=null;mRender();
+  });
+  const e1=$('#mrExp'); if(e1)e1.onclick=()=>{
+    const d=new Date(),pad=n=>String(n).padStart(2,'0');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(MEXT,null,2)],{type:'application/json'}));
+    a.download='약관룰_확장_'+d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    toast('내보냈어요');
+  };
+  const e2=$('#mrImp'); if(e2)e2.onclick=()=>$('#mrFile').click();
+  const e3=$('#mrFile'); if(e3)e3.onchange=async ev=>{
+    const f=ev.target.files[0];if(!f)return;
+    try{
+      const d=JSON.parse(await f.text());
+      MEXT.alts=MEXT.alts.concat(d.alts||[]);
+      MEXT.news=MEXT.news.concat(d.news||[]);
+      mSave();MR.rows=null;mRender();toast('불러왔어요');
+    }catch(e){toast('JSON 파일을 못 읽었어요')}
+    ev.target.value='';
+  };
+  const e4=$('#mrCode'); if(e4)e4.onclick=()=>{
+    const byRule={};
+    MEXT.alts.forEach(a=>{const k=a.c+'|'+a.k+'|'+a.side;(byRule[k]=byRule[k]||[]).push(a.pat)});
+    let code='';
+    Object.keys(byRule).forEach(k=>{
+      const p=k.split('|');
+      code+='// RUBRIC 에서  c:\''+p[0]+'\', k:\''+p[1]+'\'  항목의 '+p[2]+'.re 뒤에 아래를 붙이세요\n';
+      code+='|'+byRule[k].join('|')+'\n\n';
+    });
+    if(!code)code='아직 붙인 룰이 없습니다.';
+    $('#mrCodeOut').innerHTML='<div class="yk-note bl" style="margin-top:12px">아래를 원본 HTML 의 RUBRIC 에 넣으면 '
+      +'<b>브라우저 저장에 의존하지 않는 영구 룰</b>이 됩니다. 반영한 뒤에는 [전체 초기화]로 비우세요.</div>'
+      +'<textarea class="inp" id="mrCodeTxt" style="min-height:180px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px">'
+      +esc(code)+'</textarea>'
+      +'<div class="yk-chips"><button class="yk-chip on" id="mrCopy">전체 복사</button></div>';
+    $('#mrCopy').onclick=()=>copy($('#mrCodeTxt').value,'복사했어요');
+  };
+  const e5=$('#mrClear'); if(e5)e5.onclick=()=>{
+    if(!confirm('붙여 둔 룰을 전부 지웁니다. 내보내기를 안 했다면 복구할 수 없습니다. 계속할까요?'))return;
+    MEXT={alts:[],news:[]};mSave();MR.rows=null;mRender();
+  };
+}
+
+mApply();
+mRender();
 </script>
