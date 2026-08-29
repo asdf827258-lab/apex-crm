@@ -1207,6 +1207,11 @@ body.mktalk-mode #mkTalkScreen{display:block;}
 body.eduplan-mode .app{display:none;}
 body.eduplan-mode #eduPlanScreen{display:block;}
 #eduPlanScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 전자책 — 교육 운영 커리큘럼과 같은 틀 */
+#eduBookScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.edubook-mode .app{display:none;}
+body.edubook-mode #eduBookScreen{display:block;}
+#eduBookScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 재무설계 실전화법서 · 재무설계 상담자료 전용 화면 (상담자료와 동일 패턴) */
 #fpTalkScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.fptalk-mode .app{display:none;}
@@ -1385,6 +1390,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitEduPlan()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadEduPlan()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openEduPlanNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 전자책 -->
+<div id="eduBookScreen">
+  <iframe id="eduBookFrame" class="fin-frame" title="APEX 전자책"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitEduBook()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadEduBook()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openEduBookNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -10427,6 +10442,7 @@ var TABS=[
  ]},
  {group:'교육 자료',items:[
    {id:'manual',icon:'📘',title:'APEX 사용가이드',cnt:'',ak:'업무매뉴얼'},
+   {id:'edu_book',icon:'📗',title:'전자책 · 처음 오신 분께',cnt:'12',ak:'업무매뉴얼 전자책 쉬운 교육 신입 입문 책 이북'},
    {id:'edu_plan',icon:'🎓',title:'교육 운영 커리큘럼',cnt:'30',ak:'업무매뉴얼 교육 신입 매니저 조회 커리큘럼 운영 마스터 master 플레이북'},
    /* 지도는 맨 왼쪽 위 「APEX 사용가이드」 바로 밑에 단추로 세워 두었다(renderNav).
       여기서는 hide 로 눈에서만 뺀다 — 두 번 서면 어수선하다. 지우지 않는 이유는
@@ -11318,7 +11334,7 @@ var lastTab='dashboard';
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode',
                    'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
-                   'eduplan-mode','apexmap-mode'];
+                   'eduplan-mode','edubook-mode','apexmap-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -11379,6 +11395,13 @@ function go(tab){
     mountMkTalk();
     osFullMode('mktalk-mode');
     navMark('mikki_talk');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='edu_book'){
+    mountEduBook();
+    osFullMode('edubook-mode');
+    navMark('edu_book');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -11700,8 +11723,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-30 02:30';
-var APP_BUILD_NOTE='<b>교육 커리큘럼 화면을 토스 결로 갈아입혔습니다.</b> 옅은 회색 바탕에 <b>테두리 없는 흰 칸</b>이 뜨고, 모서리를 크게 굴리고, 파랑은 한 화면에 한 군데만 씁니다. 글꼴은 <b>기기 것을 그대로</b> 씁니다 — 앱 전체가 그렇게 서 있고, 폰에서 웹글꼴이 늦게 뜨면 글자가 한 번 튑니다. 클래스 이름은 하나도 안 바꿨습니다. 보이는 것만 갈았으므로 점검이 그대로 지켜 줍니다. 갈면서 두 가지가 드러났습니다. <b>「.mt」가 조회 대본 칸과 MASTER 카드 글상자에 같이 쓰이고 있었습니다</b> — 흰 바탕이라 안 보였을 뿐, 카드 안에 칸이 하나 더 떠 있었습니다. 그리고 <b>주소 뒤 이름표(#칸이름)를 바꿔도 화면이 안 따라갔습니다</b> — 같은 문서 안 이동이라 새로 읽지 않는데 듣는 자리가 없었습니다. 이제 <b>뒤로 가기</b>와 즐겨찾기가 제대로 돕니다. 「+」 단추는 내용처럼 보이던 것을 눕혔고, 칸 고르기 줄은 화면 절반을 먹던 것을 줄였습니다.';
+var APP_BUILD='2026-08-30 07:15';
+var APP_BUILD_NOTE='<b>전자책을 냈습니다 — 처음 오신 분이 혼자 읽는 책입니다.</b> 지금까지 만든 <b>모든 내용</b>을 열두 장으로 묶었습니다. 다만 <b>사실은 다시 적지 않았습니다</b> — 커리큘럼 표를 읽어서 그립니다. 새로 만든 것은 <b>쉬운 말 한 벌</b>뿐입니다. <b>어려운 말에는 점선</b>이 그어져 있어 누르면 아래에서 뜻풀이가 올라옵니다(낱말 53개). 꼭지마다 <b>「🙋 어려워요」</b> 단추가 있어, 누르면 그 자리에서 <b>더 쉬운 말</b>로 다시 설명합니다 — 말투도 「합니다」에서 <b>「해요」</b>로 바뀌어 한눈에 구별됩니다. 어렵다고 누른 자리는 <b>맨 뒤에 모여</b>, 그 목록을 매니저에게 보여 주시면 됩니다. <b>화면은 눌러서 바로 열립니다</b>(73개 단추). 그림은 <b>손으로 그린 SVG</b> 아홉 개 — 퍼널 · 8통장 · 소득공백 · 전후비교 · 요일 · 네 주 · 쌓기 · 게이트 · 상담 흐름. 사진은 <b>우리 앱 화면</b>만 줄여서 다섯 장 넣었습니다. 그리고 <b>차근차근 쌓입니다</b> — 서른 칸이 하나씩 채워지고, 읽던 자리로 <b>이어보기</b>가 뜹니다. <code>check-edubook</code> 이 지킵니다 — 되돌려서 다섯 확인했습니다.';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -12221,6 +12244,11 @@ function mountEduPlan(){var f=$('eduPlanFrame');if(!f||f._mounted)return;f.src=E
 function reloadEduPlan(){var f=$('eduPlanFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEduPlan,30);toast('교육 운영 커리큘럼 새로고침');}}
 function openEduPlanNewTab(){var w=window.open(EDUPLAN_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitEduPlan(){go(lastTab||'home');}
+var EDUBOOK_URL='교육/book.html';
+function mountEduBook(){var f=$('eduBookFrame');if(!f||f._mounted)return;f.src=EDUBOOK_URL;f._mounted=true;}
+function reloadEduBook(){var f=$('eduBookFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountEduBook,30);toast('전자책 새로고침');}}
+function openEduBookNewTab(){var w=window.open(EDUBOOK_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitEduBook(){go(lastTab||'home');}
 function exitMikki(){go(lastTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
@@ -15345,6 +15373,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
   else if(document.body.classList.contains('eduplan-mode'))exitEduPlan();
+  else if(document.body.classList.contains('edubook-mode'))exitEduBook();
   else if(document.body.classList.contains('apexmap-mode'))exitApexMap();
 });
 
