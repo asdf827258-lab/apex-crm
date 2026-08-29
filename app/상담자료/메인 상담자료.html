@@ -6080,15 +6080,14 @@
               return neg?-n:n; }
             function fmtMoney(n){ n=Math.abs(n); if(n>=100000000){ var e=Math.floor(n/100000000), r=Math.round((n%100000000)/10000); return e+'억'+(r?' '+r.toLocaleString()+'만':''); } if(n>=10000) return Math.round(n/10000).toLocaleString()+'만'; return n.toLocaleString(); }
             var CATS=[
-              {re:/(일반암|유사암|고액암|표적|항암|암)/, ic:'♋'},
-              {re:/(뇌|허혈|심장|심근|협심|뇌졸중|뇌출혈)/, ic:'🧠'},
-              {re:/(간병|요양|치매)/, ic:'🩺'},
-              {re:/(사망|후유장해|장해)/, ic:'🛡'},
-              {re:/(실손|입원의료|통원의료)/, ic:'💊'},
-              {re:/(수술|입원일당|입원비)/, ic:'🔪'},
-              {re:/(운전|벌금|교통사고|자동차)/, ic:'🚗'}
+              {key:'암',ic:'♋',re:/암/,desc:'암 진단 시 목돈',say:'암은 진단·치료에 목돈이 크게 들어요.'},
+              {key:'뇌·심장',ic:'🧠',re:/(뇌|허혈|심장|심근|협심|졸중|출혈)/,desc:'뇌졸중·심근경색 대비',say:'뇌졸중·심근경색은 갑자기 옵니다.'},
+              {key:'간병·치매',ic:'🩺',re:/(간병|요양|치매)/,desc:'치매·요양 시 매달 드는 비용',say:'치매·요양은 몇 년씩 매달 돈이 들어요.'},
+              {key:'사망·후유장해',ic:'🛡',re:/(사망|후유장해|장해)/,desc:'남은 가족 생활비',say:'상해는 든든한데 질병 쪽이 비어 있어요.'},
+              {key:'입원·수술·병원비',ic:'💊',re:/(실손|입원|수술|통원|골절|보철|진단비)/,desc:'입원·수술·병원비',say:'병원비는 대체로 잘 갖춰져 있어요.'},
+              {key:'운전·일상',ic:'🚗',re:/(운전|벌금|교통|자동차|변호사|배상|화재)/,desc:'운전·일상 사고',say:'운전·일상 사고는 잘 준비돼 있어요.'}
             ];
-            function classify(label){ for(var i=0;i<CATS.length;i++){ if(CATS[i].re.test(label)) return CATS[i].ic; } return '•'; }
+            function catOf(l){for(var i=0;i<CATS.length;i++)if(CATS[i].re.test(l))return i;return CATS.length-1;}
             function parseBojang(items){
               var T=items.map(function(s){return (s||'').replace(/\s+/g,' ').trim();}).filter(Boolean);
               var joined=T.join(' ');
@@ -6111,7 +6110,7 @@
                 var key=label+'|'+rec+'|'+paid;
                 if(!seen[key] && (JUDGE[judge]!=null)){
                   seen[key]=1;
-                  rows.push({label:label, rec:rec, paid:paid, kind:JUDGE[judge], amt:parseKMoney(diff)});
+                  rows.push({label:label, rec:rec, paid:paid, kind:JUDGE[judge], amt:parseKMoney(diff), recN:parseKMoney(rec), paidN:parseKMoney(paid)});
                 }
               }
               return {cust:cust, rows:rows};
@@ -6119,40 +6118,38 @@
             function renderBojang(p){
               var out=document.getElementById('apexBojangOut'); if(!out) return;
               if(!p||!p.rows||!p.rows.length){ out.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;">리포트에서 「담보별 진단현황」을 찾지 못했습니다. 담보별 권장/가입/판정이 포함된 보장분석 PDF인지 확인해 주세요.</div>'; return; }
-              var weak=p.rows.filter(function(r){return r.kind==='low'||r.kind==='none';}).sort(function(a,b){return Math.abs(b.amt)-Math.abs(a.amt);});
-              var ok=p.rows.filter(function(r){return r.kind==='ok';});
-              var c=p.cust||{}; var who=(c.name||'고객')+'님'+(c.age?' ('+c.age+'세'+(c.sex?' '+c.sex:'')+')':'');
+              var rows=p.rows, c=p.cust||{};
+              var G=CATS.map(function(cc){return{c:cc,total:0,rec:0,eff:0,weak:0,worst:null};});
+              rows.forEach(function(r){var g=G[catOf(r.label)];g.total++;g.rec+=r.recN;g.eff+=Math.min(r.paidN,r.recN);var sh=r.recN-r.paidN;if(r.kind!=='ok'&&sh>0){g.weak++;if(!g.worst||sh>(g.worst.recN-g.worst.paidN))g.worst=r;}});
+              G.forEach(function(g){g.gap=Math.max(0,g.rec-g.eff);g.ratio=g.rec>0?Math.max(3,Math.min(100,Math.round(g.eff/g.rec*100))):100;g.tier=(g.gap<=0)?'ok':(g.gap<5000000?'mid':'bad');});
+              var weakCnt=rows.filter(function(r){return r.kind!=='ok';}).length, okCnt=rows.length-weakCnt;
+              var prio=G.filter(function(g){return g.tier==='bad';}).sort(function(a,b){return b.gap-a.gap;}).slice(0,3);
+              var TN={ok:'충분 ✓',mid:'조금 보완',bad:'보완 필요'}, TC={ok:'#059669',mid:'#d97706',bad:'#e5484d'}, TB={ok:'linear-gradient(90deg,#22c55e,#059669)',mid:'linear-gradient(90deg,#fbbf24,#d97706)',bad:'linear-gradient(90deg,#f0a04b,#e5484d)'};
+              var who=(c.name||'고객')+'님'+(c.age?'  '+c.age+'세'+(c.sex?' · '+c.sex:''):'');
               var h='';
-              h+='<div style="background:#172766;color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px;">';
-              h+='<div style="font-size:12px;opacity:.7;font-weight:700;letter-spacing:1px;">고객 보장 진단</div>';
-              h+='<div style="font-size:20px;font-weight:900;margin-top:2px;">'+besc(who)+'</div>';
-              h+='<div style="font-size:13px;opacity:.92;margin-top:6px;">부족·미가입 <b style="color:#ffd479;">'+weak.length+'건</b> &nbsp;·&nbsp; 충분 <b style="color:#8affc1;">'+ok.length+'건</b></div>';
+              h+='<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;"><div style="font-size:20px;font-weight:900;">'+besc(who)+'</div><div style="font-size:13px;color:var(--primary);font-weight:800;margin-left:auto;">지금 내 보장, 한눈에</div></div>';
+              h+='<div style="font-size:12.5px;color:var(--muted);margin-top:5px;font-weight:600;">큰 병·큰 사고가 왔을 때 지금 얼마나 대비돼 있는지, 쉽게 정리했어요.</div>';
+              h+='<div style="display:flex;gap:10px;margin:14px 0 16px;"><div style="flex:1;background:rgba(229,72,77,.08);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#e5484d;">'+weakCnt+'</div><div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:3px;">보완이 필요한 보장</div></div><div style="flex:1;background:rgba(5,150,105,.08);border-radius:12px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:900;color:#059669;">'+okCnt+'</div><div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-top:3px;">이미 잘 갖춰진 보장</div></div></div>';
+              h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+              G.forEach(function(g){
+                var t=g.tier, say=g.c.say;
+                if(t==='bad'&&g.worst){ say+=' 특히 <b>'+besc(g.worst.label)+'</b> — '+(g.worst.paidN?'지금 '+fmtMoney(g.worst.paidN)+'뿐이에요.':'아직 미가입이에요.'); }
+                h+='<div style="border:1px solid rgba(15,23,42,.07);border-radius:14px;padding:15px 16px;background:#fff;">';
+                h+='<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:22px;">'+g.c.ic+'</span><span style="font-size:16px;font-weight:900;">'+g.c.key+'</span><span style="margin-left:auto;font-size:11px;font-weight:800;color:#fff;background:'+TC[t]+';padding:3px 9px;border-radius:999px;">'+TN[t]+'</span></div>';
+                h+='<div style="font-size:12px;color:var(--muted);margin-top:5px;font-weight:600;">'+g.c.desc+'</div>';
+                h+='<div style="height:10px;border-radius:999px;background:#eef1f5;margin:11px 0 8px;overflow:hidden;"><div style="height:100%;border-radius:999px;width:'+g.ratio+'%;background:'+TB[t]+';"></div></div>';
+                if(t==='ok') h+='<div style="font-size:13.5px;font-weight:800;color:#059669;">✓ 충분히 준비됐어요</div>';
+                else h+='<div style="font-size:13.5px;font-weight:800;color:'+TC[t]+';">▼ 약 '+fmtMoney(g.gap)+' 부족 <span style="font-size:11px;font-weight:700;color:var(--muted);">· '+g.total+'개 중 '+g.weak+'개 보완</span></div>';
+                h+='<div style="margin-top:8px;font-size:12.5px;line-height:1.6;color:#4e5968;font-weight:600;background:#f7f9fc;border-radius:9px;padding:9px 11px;">'+say+'</div>';
+                h+='</div>';
+              });
               h+='</div>';
-              if(weak.length){
-                h+='<div style="font-size:13px;font-weight:800;color:#e5484d;margin:4px 0 8px;">🔴 우선 보강 — 부족·미가입 (큰 순)</div>';
-                weak.slice(0,10).forEach(function(r,idx){
-                  var isNone=r.kind==='none', badge=isNone?'미가입':'부족', bcol=isNone?'#e5484d':'#d97706';
-                  h+='<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid rgba(15,23,42,.08);border-left:3px solid '+bcol+';border-radius:10px;margin-bottom:8px;background:#fff;">';
-                  h+='<div style="font-size:20px;flex:none;">'+classify(r.label)+'</div>';
-                  h+='<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:800;color:var(--text);">'+(idx+1)+'. '+besc(r.label)+'</div>';
-                  h+='<div style="font-size:12px;color:var(--muted);margin-top:2px;">권장 '+besc(r.rec||'-')+' · 가입 '+besc(r.paid||'0')+'</div></div>';
-                  h+='<div style="text-align:right;flex:none;"><span style="font-size:11px;font-weight:800;color:#fff;background:'+bcol+';padding:2px 8px;border-radius:8px;">'+badge+'</span>';
-                  if(r.amt) h+='<div style="font-size:15px;font-weight:900;color:'+bcol+';margin-top:4px;">−'+fmtMoney(r.amt)+'</div>';
-                  h+='</div></div>';
-                });
-              }
-              if(ok.length){
-                h+='<div style="font-size:13px;font-weight:800;color:#059669;margin:14px 0 8px;">🟢 잘 갖춰진 보장 ('+ok.length+')</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
-                ok.forEach(function(r){ h+='<span style="font-size:12px;font-weight:700;color:#059669;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);padding:4px 10px;border-radius:999px;">✓ '+besc(r.label)+'</span>'; });
+              if(prio.length){
+                h+='<div style="margin-top:16px;background:#172766;color:#fff;border-radius:14px;padding:16px 20px;"><div style="font-size:13px;font-weight:800;opacity:.75;">🗣 상담사가 먼저 짚어드릴 — 우선 보완 '+prio.length+'가지</div>';
+                prio.forEach(function(g,i){h+='<div style="display:flex;align-items:center;gap:12px;margin-top:11px;flex-wrap:wrap;"><span style="font-size:19px;font-weight:900;color:#ffd479;width:24px;text-align:center;">'+(i+1)+'</span><span style="font-size:15px;font-weight:800;">'+g.c.ic+' '+g.c.key+'</span><span style="font-size:12px;color:#aab4d4;font-weight:600;">'+g.c.desc+'</span><span style="margin-left:auto;font-size:14px;font-weight:900;color:#ff9a9a;">'+fmtMoney(g.gap)+' 부족</span></div>';});
                 h+='</div>';
               }
-              var top=weak.slice(0,3).map(function(r){return r.label+(r.kind==='none'?' 미가입':' '+fmtMoney(r.amt)+' 부족');});
-              h+='<div style="margin-top:16px;background:rgba(49,130,246,.06);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.75;color:var(--text);">';
-              h+='<b>🗣 한 줄 낭독:</b> '+besc((c.name||'고객')+'님은 현재 ')+'<b style="color:#e5484d;">'+weak.length+'개 담보가 부족·미가입</b>입니다. ';
-              if(top.length) h+='특히 <b>'+besc(top.join(', '))+'</b> 가 취약해요. ';
-              if(ok.length) h+='다만 <b style="color:#059669;">'+besc(ok.slice(0,3).map(function(r){return r.label;}).join(', '))+'</b> 등은 잘 준비돼 있습니다. ';
-              h+='→ 위 순서대로 보강을 권합니다.';
-              h+='</div>';
+              h+='<div style="margin-top:12px;font-size:11px;color:var(--muted);text-align:center;font-weight:600;">※ 「보장분석 리포트」 권장·가입 기준 자동 계산 (초과보장은 권장까지만 반영) · 실제 보장은 약관이 정합니다</div>';
               out.innerHTML=h;
             }
             window.apexParseBojang=parseBojang; window.apexRenderBojang=renderBojang;
