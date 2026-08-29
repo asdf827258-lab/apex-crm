@@ -23,7 +23,17 @@
      6. <b>찾기</b>가 도는가 · 못 찾으면 그렇다고 말하는가 ·
         치는 중에 <b>커서를 안 뺏는가</b>
      7. 세로 메뉴가 화면을 <b>안 먹는가</b>(서랍) · ☰ 로 열리는가
-     8. 폰에서 <b>가로로 안 밀리는가</b>                                 */
+     8. 폰에서 <b>가로로 안 밀리는가</b>
+
+   ── 나중에 옮긴 것 ─────────────────────────────────────────────
+
+   위 띠에 있던 <b>「메뉴 찾기」 칸을 뺐습니다</b> — 사장님이 「메뉴검색이
+   계속 오류가 걸린다」 하셔서 그 자리를 <b>🎙 음성 비서</b>에 내줬습니다.
+   찾기는 <b>없앤 것이 아니라</b> ☰ 서랍 맨 위에 그대로 있습니다. 그래서
+   [5] 는 이제 <b>서랍의 찾기 칸</b>을 재고, [5-1] 이 그 자리에 음성 비서가
+   섰는지 · 눌러서 실제로 열리는지 · <b>여는 자리가 한 곳인지</b>를 봅니다.
+   여는 자리가 둘이 되면 한쪽만 vaBoot() 을 빠뜨려 「눌러도 아무 일이
+   없다」가 됩니다 (CLAUDE.md 5번).                                     */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -309,24 +319,65 @@ const SIZES = [['웹 1440', 1440, 900], ['노트북 1024', 1024, 800], ['폰 390
   is(C.drawerShut, '  <b>서랍(세로 메뉴)은 닫힌다</b> — 그것은 화면을 통째로 덮는다');
   is(C.marked, '  지금 보는 화면이 <b>강조</b>된다 (navMark 한 곳에서)');
 
-  console.log('\n[5] 찾기 — 도는가 · 못 찾으면 말하는가 · 커서를 안 뺏는가');
+  console.log('\n[5] 찾기 — ☰ 서랍에 그대로 있는가 · 도는가 · 커서를 안 뺏는가');
   const F = await page.evaluate(() => {
-    const fi = document.getElementById('tnFind');
+    /* 위 띠에는 이제 찾기 칸이 없다. 서랍 맨 위 칸 하나가 전부다 */
+    const noTop = !document.getElementById('tnFind');
+    const fi = document.getElementById('navFind');
+    if (!fi) return { noTop, gone: true };
     fi.focus(); fi.value = '보장분석'; fi.dispatchEvent(new Event('input', { bubbles: true }));
     const hit = document.querySelectorAll('#tnPane .tab-btn').length;
-    const kept = document.activeElement && document.activeElement.id === 'tnFind';
-    const val = document.getElementById('tnFind').value;
-    fi.value = 'zzz없는것'; fi.dispatchEvent(new Event('input', { bubbles: true }));
+    /* 다시 그린 뒤에도 치던 칸에 커서가 남아 있어야 한 글자마다 안 튄다 */
+    const kept = document.activeElement && document.activeElement.id === 'navFind';
+    const val = document.getElementById('navFind').value;
+    const fi2 = document.getElementById('navFind');
+    fi2.value = 'zzz없는것'; fi2.dispatchEvent(new Event('input', { bubbles: true }));
     const none = /찾은 칸이 없습니다/.test(document.getElementById('tnPane').textContent);
-    fi.value = ''; fi.dispatchEvent(new Event('input', { bubbles: true }));
+    const fi3 = document.getElementById('navFind');
+    fi3.value = ''; fi3.dispatchEvent(new Event('input', { bubbles: true }));
     const back = document.querySelectorAll('#tnGroups .tn-g').length;
-    return { hit, kept, val, none, back };
+    return { noTop, gone: false, hit, kept, val, none, back };
   });
+  is(F.noTop, '  위 띠에는 <b>찾기 칸이 없다</b> — 그 자리는 음성 비서에게 갔다');
+  is(!F.gone, '  찾기 칸이 <b>☰ 서랍 맨 위에 그대로 있다</b> — 없앤 것이 아니다');
   is(F.hit > 0, '  「보장분석」 으로 <b>' + F.hit + '칸</b>이 걸린다');
-  is(F.kept, '  치는 중에 <b>커서를 안 뺏는다</b> — 옆 칸으로 focus 가 안 튄다');
+  is(F.kept, '  치는 중에 <b>커서를 안 뺏는다</b> — 한 글자마다 focus 가 안 튄다');
   is(F.val === '보장분석', '  친 글자가 <b>그대로 남는다</b> — ' + JSON.stringify(F.val));
   is(F.none, '  없는 말로 찾으면 <b>없다고 말한다</b> — 빈 화면으로 두지 않는다');
   is(F.back > 1, '  지우면 <b>그룹이 돌아온다</b> (' + F.back + '개)');
+
+  console.log('\n[5-1] 그 자리의 🎙 음성 비서 — 서는가 · 눌러서 열리는가 · 여는 자리가 하나인가');
+  const V = await page.evaluate(() => {
+    const b = document.getElementById('tnVa');
+    if (!b) return { there: false };
+    const r = b.getBoundingClientRect(), tn = document.getElementById('topnav').getBoundingClientRect();
+    const inBar = r.width > 0 && r.height > 0 && r.top >= tn.top - 1 && r.bottom <= tn.bottom + 1;
+    /* 실제로 눌러 본다 — 쪽창이 뜨는가 */
+    b.click();
+    const opened = !!document.getElementById('osVaPanel');
+    /* 상태 색은 두 단추가 <b>같은 한 곳</b>에서 받는다 */
+    VA.on = true; VA.wake = false; VA.talk = false;
+    vaFabPaint();
+    const lit = b.classList.contains('on') && b.classList.contains('tn-va');
+    VA.on = false; vaFabPaint();
+    const off = !b.classList.contains('on') && b.classList.contains('tn-va');
+    /* 닫아 둔다 — 뒤 단계가 이 쪽창에 가려지지 않게 */
+    if (typeof vaPanel === 'function') vaPanel(false);
+    return { there: true, inBar, opened, lit, off, closed: !document.getElementById('osVaPanel') };
+  });
+  is(V.there, '  위 띠에 <b>🎙 음성 비서</b> 단추가 있다');
+  is(V.inBar, '  <b>가로 메뉴 띠 안</b>에 있다 — 떠 있는 동그란 단추와 다른 자리다');
+  is(V.opened, '  눌러서 <b>실제로 쪽창이 열린다</b> — 로그인 전에도 vaBoot 을 안 빠뜨린다');
+  is(V.lit, '  듣는 중이면 <b>색이 바뀐다</b> — 떠 있는 단추와 같은 한 곳에서 칠한다');
+  is(V.off, '  멈추면 <b>색이 돌아온다</b> · .tn-va 를 잃지 않는다 (className 통째 대입 안 함)');
+  is(V.closed, '  ✕ 로 <b>닫힌다</b>');
+  /* 여는 자리가 <b>한 곳</b>인가 — 위 띠도 떠 있는 단추도 vaToggle 을 부른다 */
+  const vaOpeners = (SRC.match(/vaPanel\(!VA\.open\)/g) || []).length;
+  is(vaOpeners === 1,
+     '  <b>여는 자리가 한 곳</b>이다 — vaPanel(!VA.open) 을 부르는 데가 ' +
+     vaOpeners + '군데 (vaToggle 하나여야 한다)');
+  is(/onclick="vaToggle\(\)"/.test(SRC) && /b\.onclick\s*=\s*vaToggle/.test(SRC),
+     '  위 띠 단추와 떠 있는 단추가 <b>같은 vaToggle</b> 을 부른다');
 
   console.log('\n[6] 세로 메뉴는 ☰ 로 열린다 — 없앤 것이 아니다');
   const S = await page.evaluate(() => {
