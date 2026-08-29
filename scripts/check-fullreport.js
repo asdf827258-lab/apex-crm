@@ -664,6 +664,67 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
      '풀리포트 안에 들어가는 길(🔄 빠른 비포&애프터)과 가져오는 길이 둘 다 있다');
 
 
+  /* ── 메뉴에서 바로 들어가기 · 관리자 칸의 돈 ── */
+  console.log('\n[13] 「보장분석 전&후 만들기」 — 메뉴에서 그 자리로 바로 가는가');
+  const mk = await page.evaluate(() => {
+    var it = null, grp = null;
+    TABS.forEach(function (g) {
+      (g.items || []).forEach(function (x) { if (x.id === 'frmake') { it = x; grp = g.group; } });
+    });
+    /* 고객을 보던 중이면 그 고객 상세로, 아니면 목록으로 — 둘 다 clients 화면이다 */
+    OSC.current = { id: 'c1', name_masked: '홍○동' };
+    OSC.view = 'list';
+    var went = '';
+    var realGo = window.go;
+    window.go = function (t) { went = t; };
+    try { frMakeGo(); } catch (e) { went = 'ERR:' + e.message; }
+    var view1 = OSC.view, page1 = FR.page;
+    OSC.current = null; OSC.view = 'detail';
+    var went2 = '';
+    window.go = function (t) { went2 = t; };
+    try { frMakeGo(); } catch (e) { went2 = 'ERR:' + e.message; }
+    var view2 = OSC.view;
+    window.go = realGo;
+    return { has: !!it, grp: grp, ak: it && it.ak, title: it && it.title, hide: !!(it && it.hide),
+             went: went, view1: view1, page1: page1, went2: went2, view2: view2 };
+  });
+  is(mk.has, '메뉴에 「' + (mk.title || '?') + '」 가 있다 (' + mk.grp + ' 칸)');
+  is(mk.grp === '증권 분석' && mk.hide === false, '증권 분석 칸에 <b>보이게</b> 선다');
+  is(mk.ak === '고객', "권한 열쇠는 <b>실제로 여는 화면</b>(고객) 것을 쓴다 — 못 여는 사람에게 단추만 보이지 않게");
+  is(mk.went === 'clients' && mk.view1 === 'detail',
+     '보던 고객이 있으면 <b>그 고객 상세</b>로 간다 (' + mk.went + '/' + mk.view1 + ')');
+  is(mk.went2 === 'clients' && mk.view2 === 'list',
+     '보던 고객이 없으면 <b>고객 목록</b>으로 간다 — 목록을 두 벌로 만들지 않는다');
+  is(mk.page1 === 'client', '풀리포트가 <b>고객용 리포트</b> 쪽을 편 채로 열린다');
+
+  console.log('\n[13-1] 관리자 칸의 돈 — 0 을 잘못 세지 않게 읽어 주는가');
+  const rd2 = await page.evaluate(() => {
+    OS.cfg = OS.cfg || {};
+    OS.cfg.fr_scenarios = JSON.stringify([{
+      id: 'z1', diseaseCategory: 'CANCER', diseaseCode: 'cancer_general',
+      scenarioName: '시험', referenceTreatmentCostWon: 50000000,
+      purposes: ['DIAGNOSIS'], sourceName: '시험', active: true,
+      treatmentSteps: [{ no: '01', name: '진단', keys: ['cancer_gen'], costWon: 5000000 },
+                       { no: '02', name: '수술', keys: ['surg_dz'], costWon: null }]
+    }]);
+    var h = frScenAdminHtml();
+    /* 글자만 찾으면 <b>헛통과</b>한다 — 단계 합 문구에도 「5,000만원」이 들어 있어서,
+       칸 밑의 되읽기를 떼도 그대로 지나갔다. 되읽기 칸(fr-rd)을 <b>세어야</b> 한다.
+       기준 치료비 1 + 단계 2 = 3 개 (CLAUDE.md 8번 — 안 우는 알람은 알람이 아니다). */
+    return { rdCount: (h.match(/class="fr-rd"/g) || []).length,
+             readCost: h.indexOf('5,000만원') >= 0,
+             readStep: h.indexOf('500만원') >= 0,
+             sumNote: h.indexOf('단계 합') >= 0,
+             noAuto: h.indexOf('자동으로 맞추지 않습니다') >= 0,
+             unsetNote: h.indexOf('미설정 단계 1개는 빼고 더했습니다') >= 0 };
+  });
+  is(rd2.rdCount === 3 && rd2.readCost && rd2.readStep,
+     '기준 치료비 1 + 단계 2 = <b>돈 칸 3개 모두</b> 사람이 읽는 금액으로 되읽어 준다 (' + rd2.rdCount + '개)');
+  is(rd2.sumNote && rd2.noAuto,
+     '단계 합이 기준과 다르면 말하되 <b>자동으로 맞추지 않는다</b> — 넣으신 값이 마지막 말이다');
+  is(rd2.unsetNote, '미설정 단계는 <b>0 으로 세지 않고</b> 뺀 사실을 적는다');
+
+
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();
