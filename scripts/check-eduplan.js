@@ -19,6 +19,7 @@ const fs = require('fs'), path = require('path');
 const ROOT = process.cwd();
 const PLAN = path.join(ROOT, 'app/교육/plan.js');
 const PAGE = path.join(ROOT, 'app/교육/index.html');
+const MAST = path.join(ROOT, 'app/교육/master.js');
 const APP  = path.join(ROOT, 'app/index.html');
 
 let bad = 0;
@@ -29,6 +30,7 @@ if (!fs.existsSync(PLAN) || !fs.existsSync(PAGE)) {
   process.exit(1);
 }
 const plan = require(PLAN);
+const mast = require(MAST);
 const page = fs.readFileSync(PAGE, 'utf8');
 const app  = fs.readFileSync(APP, 'utf8');
 
@@ -91,38 +93,96 @@ is(/한 칸이라도 비면 숫자를 만들지 않습니다/.test(flat(plan.goa
    '  한 칸이라도 비면 숫자를 만들지 않는다 (CLAUDE.md 1)');
 is(/성장판|점수판/.test(page), '  이룬 숫자는 성장판·점수판이 든다고 가리킨다 — 두 곳에서 세지 않는다');
 
-console.log('\n[1-3] MASTER 15단계 — 도구를 쓰는 길이 서 있는가');
-const ms = plan.master || [];
-is(ms.length === 15, '  열다섯 단계가 다 있다 (' + ms.length + ')');
-is(ms.map(m => m[0]).join(',') === '00,01,02,03,04,05,06,07,08,09,10,11,12,13,14',
-   '  00 부터 14 까지 번호가 빠지거나 겹치지 않는다');
-is(ms.every(m => m[1] && m[2] && m[3] && m[4]), '  단계마다 이름 · 하는 일 · 교육목표가 있다');
-/* 「했습니다」로 넘어가지 못하게 — 흔적으로 판정한다 */
-is(ms.every(m => m[5] && m[5].length > 10), '  단계마다 <b>이러면 됐습니다</b>(남는 흔적)가 있다');
-/* 이 저장소가 아는 사고들을 그 단계에 붙여 뒀는가 — 이게 이 표의 값이다 */
-is(ms.every(m => m[6] && m[6].length > 20), '  단계마다 <b>자주 무너지는 자리</b>가 붙어 있다');
-is(ms.every(m => Array.isArray(m[7]) && m[7].length), '  단계마다 여는 화면이 붙어 있다');
-const msTxt = flat(ms).join(' ');
-[['월 보험료', '02 에 월 보험료 빈칸 경고가 있다'],
- ['「모름」과 「0」', '03 에 모름과 0 을 가르는 말이 있다'],
- ['검수', '04 에 검수를 건너뛰지 말라고 있다'],
- ['새로 생기는 단점', '06 에 잃는 것도 보여 주라고 있다'],
- ['심사 결과에 따릅니다', '07 에 심사 문구가 있다'],
- ['만원과 원', '08 에 돈 단위 경고가 있다'],
- ['제안서에 없는 표', '10 에 없는 표를 만들지 말라고 있다'],
- ['평균', '10 에 평균은 평균이라 밝히라고 있다'],
- ['다시 넣어 읽힌다', '13 에 뽑은 PDF 를 다시 읽는 왕복이 있다']]
-  .forEach(([re, label]) => is(msTxt.indexOf(re) >= 0, '  ' + label));
-is(/홍길동/.test(plan.masterHow || ''), '  견본 고객은 홍길동이다 (CLAUDE.md 3)');
-is(/한 바퀴|끊지 않고/.test(plan.masterHow || ''), '  한 고객으로 끊지 않고 관통한다');
-/* 열두 주와 축이 다르다는 것을 못 박지 않으면 두 과정이 섞인다 */
-is(/도구/.test(plan.masterVs || '') && /열두 주|여덟 주/.test(plan.masterVs || ''),
-   '  MASTER(도구)와 열두 주(영업)가 다른 축이라고 못 박았다');
-is((plan.masterDone || []).length >= 3, '  한 바퀴 뒤에 무엇을 하는지 적혀 있다');
-/* 15단계가 앱 12주 주차를 베낀 것이면 세 벌이 된다 */
-const wkTopic = (app.match(/topic:'([^']+)'/g) || []).map(x => x.slice(7, -1));
-const msDup = wkTopic.filter(t => t.length > 8 && msTxt.indexOf(t) >= 0);
-is(msDup.length === 0, '  앱의 12주 주차를 베끼지 않았다' + (msDup.length ? ' — ' + msDup[0] : ''));
+console.log('\n[1-3] SYSTEM MASTER — 서른 장 교과과정');
+const cards = mast.cards || [];
+is(cards.length === 30, '  카드가 서른 장이다 (' + cards.length + ')');
+is(cards.map(c => c.n).join(',') === Array.from({length:30}, (_, i) => String(i+1).padStart(2,'0')).join(','),
+   '  01 부터 30 까지 번호가 빠지거나 겹치지 않는다');
+/* 규격이 같아야 찾지 않고 읽는다 — 일곱 항목 */
+const F = ['what','when','need','steps','check','pass'];
+const bad7 = cards.filter(c => F.some(k => !c[k] || !c[k].length));
+is(bad7.length === 0, '  서른 장이 <b>같은 일곱 규격</b>을 지킨다' +
+   (bad7.length ? ' — 빠짐: ' + bad7.map(c => c.n).join(',') : ''));
+is(cards.every(c => Array.isArray(c.go) && c.go.length), '  카드마다 여는 화면이 붙어 있다');
+const cardNos = new Set(cards.map(c => c.n));
+const badNext = cards.filter(c => c.next && !cardNos.has(c.next));
+is(badNext.length === 0, '  ⑦ 다음 단계가 실제 카드를 가리킨다' +
+   (badNext.length ? ' — ' + badNext.map(c => c.n).join(',') : ''));
+is(!cards[cards.length-1].next, '  마지막 장에는 다음이 없다');
+/* 사용법 교재로 만들면 아무도 안 읽는다 — 고객이 하는 말로 「언제」가 적혀야 한다 */
+const quoted = cards.filter(c => c.when.some(w => /「|」/.test(w))).length;
+is(quoted >= 20, '  스무 장 넘는 카드의 「언제 쓰는가」가 <b>고객이 한 말</b>이다 (' + quoted + '장)');
+/* 설정·도구 카드에는 고객의 말이 없는 게 맞다 — 고객을 마주하는 카드에만 건다 */
+const facing = cards.filter(c => ['04','05','07','09','11','12','16','17','19','24','28','29'].indexOf(c.n) >= 0);
+is(facing.every(c => c.when.some(w => /「/.test(w))),
+   '  고객을 마주하는 열두 장에는 <b>빠짐없이</b> 고객의 말이 있다' +
+   ' — 빠짐: ' + (facing.filter(c => !c.when.some(w => /「/.test(w))).map(c => c.n).join(',') || '없음'));
+is(/사용법 교재가 아닙니다/.test(mast.notManual || ''), '  「사용법 교재가 아니다」를 못 박았다');
+is((mast.fourUse || []).length === 4, '  하나를 만들어 네 군데에 쓴다고 적혀 있다');
+is((mast.fourParts || []).length === 4, '  과정마다 네 개(영상·카드·연습·실전과제)가 있다고 적혀 있다');
+is((mast.ways || []).length === 3, '  세 갈래로 배운다 (순서 · 상황 · 기능)');
+is((mast.steps7 || []).length === 7, '  큰 걸음이 일곱이다');
+is((mast.levels || []).length === 4, '  등급이 넷이다');
+is(/FINAL MISSION|매니저 앞에서/.test(mast.gradeRule || ''),
+   '  마지막 등급은 <b>혼자 찍어서 못 오른다</b>');
+
+console.log('\n[1-4] 카드 ⑤ — 우리가 깨져 본 자리가 그 단계에 붙어 있는가');
+/* 칸과 칸을 빈칸으로 이으면 「next:'22'」 뒤에 「세무…」가 붙어 <b>「22 세」</b>로 읽힌다.
+   헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (CLAUDE.md 8) — 이을 때 막대를 끼운다. */
+const cardTxt = flat(cards).join(' | ');
+[['월 보험료를 비우면', 'FF 에 월 보험료 빈칸 경고'],
+ ['「모름」과 「0」', '보장분석에 모름과 0 을 가르는 말'],
+ ['검수 전에는', '검수 전에는 고객에게 안 나간다'],
+ ['강점을 먼저', '강점을 먼저 말한다'],
+ ['새로 생기는 단점', '비포&애프터에 잃는 것도'],
+ ['만원과 원을 섞지', '현금흐름에 돈 단위 경고'],
+ ['제안서에 없는 표', '연금에 없는 표 금지'],
+ ['평균', '평균은 평균이라 밝힌다'],
+ ['요건 충족 시', '상속·자산에 세금 요건 문구'],
+ ['다시 넣어 읽히는지|다시 읽혀', '보고서에 PDF 왕복'],
+ ['심사 결과에 따릅니다', '제안에 심사 문구']]
+  .forEach(([re, label]) => is(new RegExp(re).test(cardTxt), '  ' + label));
+/* 숫자는 견본 고객에만 — 카드 본문에 금액이 있으면 표가 바뀌는 순간 틀린 종이가 된다 */
+const cardMoney = (cardTxt.match(/\d[\d,]*\s*(?:만원|억|원)/g) || []);
+is(cardMoney.length === 0, '  카드 본문에 금액이 없다' + (cardMoney.length ? ' — ' + cardMoney.join(' / ') : ''));
+const cardTax = (cardTxt.match(/\d+\s*(?:세|개월|년까지|년 이내)/g) || []);
+is(cardTax.length === 0, '  카드 본문에 세법 한도·나이가 없다' + (cardTax.length ? ' — ' + cardTax.join(' / ') : ''));
+
+console.log('\n[1-5] PLAYBOOK — 순서가 상황마다 다른가');
+const pb = mast.playbook || [];
+is(pb.length >= 6, '  상황이 여섯 이상이다 (' + pb.length + ')');
+const badSeq = pb.filter(x => x.seq.some(n => !cardNos.has(n)));
+is(badSeq.length === 0, '  플레이북이 부르는 카드가 전부 있다');
+is(pb.every(x => x.say && x.note), '  상황마다 <b>고객의 말</b>과 <b>왜 이 순서인가</b>가 있다');
+/* 순서가 다 같으면 상황별로 나눈 뜻이 없다 */
+const seqs = new Set(pb.map(x => x.seq.join('-')));
+is(seqs.size === pb.length, '  상황마다 순서가 서로 다르다');
+const cheap = pb.find(x => /보험료/.test(x.t));
+is(!!cheap && /TreatPay 를 처음부터 꺼내지 않습니다/.test(cheap.note),
+   '  보험료 부담 고객에게는 TreatPay 를 먼저 꺼내지 않는다');
+const cancer = pb.find(x => /암/.test(x.t));
+is(!!cancer && cancer.seq.indexOf('09') < cancer.seq.indexOf('07'),
+   '  암 걱정 고객은 <b>TreatPay 를 보장분석보다 먼저</b> 본다');
+
+console.log('\n[1-6] 연습 고객 · FINAL MISSION');
+const pr = mast.practice || [], fin = mast.final || {};
+is(pr.length >= 3, '  연습 고객이 셋 이상이다');
+is(pr.every(x => cardNos.has(x.at)), '  연습 고객이 실제 카드에 붙어 있다');
+is(pr.every(x => x.task && x.pass), '  연습마다 과제와 합격 기준이 있다');
+is(pr.every(x => x.who[0] === '홍길동') && fin.who[0] === '홍길동',
+   '  견본 이름은 전부 홍길동이다 (CLAUDE.md 3)');
+is((fin.must || []).length >= 6, '  FINAL 에 반드시 들어갈 것이 여섯 이상이다');
+is(/설명도 하지 않습니다|아무 설명/.test(fin.order || ''), '  FINAL 은 순서를 알려 주지 않는다');
+is(/순서를 스스로 고르는 것/.test(fin.note || ''), '  순서를 고르는 것이 시험이라고 적혀 있다');
+const finPass = flat(fin.pass).join(' ');
+is(/사실오류 0건/.test(finPass) && /단정 0건/.test(finPass), '  합격 기준에 사실오류·단정 0건이 있다');
+is(/매니저 승인/.test(finPass), '  매니저 승인이 있어야 끝난다');
+
+console.log('\n[1-7] 옛 초안이 남아 있지 않은가');
+is(!plan.master && !plan.masterHow, '  plan.js 의 「15단계」 초안이 지워졌다 — 두 벌을 두지 않는다');
+is(!/MASTER 15단계/.test(page), '  화면에도 옛 이름이 안 남았다');
+is(/src="master\.js"/.test(page), '  화면이 master.js 를 읽는다');
+is(!/var EDU_MASTER\s*=/.test(page), '  화면이 교과과정을 다시 만들지 않는다 — 읽어서 그리기만 한다');
 
 console.log('\n[2] 있는 자료를 다시 적지 않고 가리키는가');
 /* 12주 과정·미끼 화법은 앱 안에 이미 있다. 여기서는 화면으로 보내야 한다 */
@@ -375,6 +435,25 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   }
   is(over.length === 0, '  가로로 안 밀린다' + (over.length ? ' — ' + over.join(', ') : ''));
   is(thin.length === 0, '  빈 칸이 없다' + (thin.length ? ' — ' + thin.join(', ') : ''));
+  /* 그리다 터진 칸은 <b>앞 칸 내용이 그대로 남아</b> 글자 수가 넉넉하다 — 위 두 줄을 통과해 버린다.
+     실제로 그렇게 조용히 죽어 있었다. 그래서 칸마다 그 칸에만 있는 말이 있는지 본다. */
+  const MARK = { welcome:'우리 팀의 약속', master:'FINAL MISSION', me:'이번 달 나의 목표',
+    cal:'주차', week:'이날 안 하는 것', monthly:'네 주의 초점', lead:'지점장', edu:'교육매니저',
+    meet:'조회', cover:'커버 처방', study:'공부 리듬', path:'어디로 가는가', gate:'게이트',
+    ses:'세션 카드', news:'소식지', run:'어디에 무엇이 있나', law:'산출물' };
+  const dead = [];
+  for (const t of tabs) {
+    await pg.click('.tb:text-is("' + t + '")');
+    await pg.waitForTimeout(80);
+    const v = await pg.$eval('.tb.on', n => n.getAttribute('data-v'));
+    const mk = MARK[v];
+    if (!mk) continue;
+    const txt = await pg.$eval('#pane', n => n.innerText);
+    if (txt.indexOf(mk) < 0) dead.push(t);
+  }
+  is(dead.length === 0, '  칸마다 <b>제 내용</b>이 그려진다 — 조용히 죽어 앞 칸이 남지 않는다' +
+     (dead.length ? ' — ' + dead.join(', ') : ''));
+  is(errs.length === 0, '  칸을 다 눌러 보는 동안 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   console.log('\n[11] 인쇄하면 전부 담기는가');
   await pg.emulateMedia({ media: 'print' });
@@ -483,27 +562,51 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   is(/경력으로 오신 분/.test(await pg.$eval('#pane', n => n.innerText)), '  새로고침해도 고른 갈래가 남는다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 
-  console.log('\n[11-4] MASTER 를 실제로 지워 가며 도는가');
-  await pg.click('.tb:text-is("MASTER 15단계")'); await pg.waitForTimeout(200);
-  is((await pg.$$('.ms')).length === 15, '  열다섯 칸이 선다');
-  is(/0 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)), '  처음엔 0 부터 시작한다');
-  await pg.click('.ms .mh'); await pg.waitForTimeout(200);
+  console.log('\n[11-4] SYSTEM MASTER 를 실제로 굴려 보는가');
+  await pg.setViewportSize({ width: 1100, height: 900 });
+  await pg.click('.tb:text-is("SYSTEM MASTER")'); await pg.waitForTimeout(250);
+  is((await pg.$$('.ms')).length === 30, '  카드 서른 장이 선다');
+  is((await pg.$$('.wy')).length === 3, '  배우는 갈래가 셋 선다');
+  is(/0 \/ 30/.test(await pg.$eval('.prog .n', n => n.textContent)), '  진행이 0 부터 시작한다');
+  /* 카드를 편다 — 일곱 규격이 다 나오나 */
+  await pg.click('.ms .mh .mt'); await pg.waitForTimeout(250);
+  const cardTxt2 = await pg.$eval('.ms .mb', n => n.innerText).catch(() => '');
+  is(['언제 쓰는가', '어떤 자료', '사용 순서', '놓치면', '합격', '다음'].every(k => cardTxt2.indexOf(k) >= 0),
+     '  펴면 일곱 규격이 다 나온다');
+  /* 지운다 */
+  await pg.click('.ms .bx'); await pg.waitForTimeout(250);
   is((await pg.$$('.ms.on')).length === 1, '  눌러서 지워진다');
-  await pg.reload({ waitUntil: 'networkidle' });
-  await pg.waitForTimeout(250);
-  is((await pg.$$('.ms.on')).length === 1, '  새로고침해도 진도가 남는다');
-  is(/1 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)), '  진행 수가 맞다');
-  await pg.click('.ms .mh'); await pg.waitForTimeout(200);
-  is((await pg.$$('.ms.on')).length === 0, '  다시 누르면 풀린다 — 잘못 찍어도 되돌린다');
-  /* 진도는 하루가 지나도 안 비워진다 — 체크판과 다른 성질이다 */
-  await pg.evaluate(() => { try {
-    var o = JSON.parse(localStorage.getItem('apex_edu_me') || '{}');
-    o.master = { 0: true, 1: true }; localStorage.setItem('apex_edu_me', JSON.stringify(o));
-  } catch (e) {} });
-  await pg.reload({ waitUntil: 'networkidle' }); await pg.waitForTimeout(250);
-  is(/2 \/ 15/.test(await pg.$eval('.prog .n', n => n.textContent)),
-     '  진도는 <b>스스로 비워지지 않는다</b> — 하루 체크와 다른 성질');
+  await pg.reload({ waitUntil: 'networkidle' }); await pg.waitForTimeout(300);
+  is(/1 \/ 30/.test(await pg.$eval('.prog .n', n => n.textContent)), '  새로고침해도 진도가 남는다');
+  /* 상황으로 배우기 */
+  await pg.click('[data-way="play"]'); await pg.waitForTimeout(250);
+  is((await pg.$$('.pbc')).length >= 6, '  상황이 여섯 이상 선다');
+  is(/TreatPay 를 처음부터 꺼내지 않습니다/.test(await pg.$eval('#pane', n => n.innerText)),
+     '  보험료 부담 고객에게 TreatPay 를 먼저 꺼내지 말라고 화면에 뜬다');
+  await pg.click('.sq b'); await pg.waitForTimeout(350);
+  is((await pg.$$('.ms .mb')).length >= 1, '  플레이북 번호를 누르면 그 카드가 펴진다');
+  /* 기능으로 찾기 */
+  await pg.fill('[data-msq]', '연금');
+  await pg.waitForTimeout(600);
+  const found = (await pg.$$('.ms')).length;
+  is(found > 0 && found < 30, '  낱말로 걸러진다 (' + found + '장)');
+  is(await pg.evaluate(() => document.activeElement.hasAttribute('data-msq')),
+     '  찾는 동안 <b>커서가 칸에 남는다</b>');
+  await pg.fill('[data-msq]', 'zzz없는낱말');
+  await pg.waitForTimeout(600);
+  is(/못 찾았습니다/.test(await pg.$eval('#pane', n => n.innerText)),
+     '  못 찾으면 <b>못 찾았다고 말한다</b> — 빈 화면으로 두지 않는다');
+  await pg.fill('[data-msq]', '');
+  await pg.waitForTimeout(600);
+  is((await pg.$$('.ms')).length === 30, '  비우면 서른 장이 돌아온다');
+  /* 순서로 배우기 · FINAL */
+  await pg.click('[data-way="map"]'); await pg.waitForTimeout(300);
+  const mapTxt = await pg.$eval('#pane', n => n.innerText);
+  is((await pg.$$('.lvh')).length === 4, '  등급 넷이 선다');
+  is(/FINAL MISSION/.test(mapTxt), '  FINAL MISSION 이 마지막에 선다');
+  is(!/김APEX|김철수|이철수/.test(mapTxt), '  견본 이름이 홍길동 말고는 없다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
+  await pg.setViewportSize({ width: 390, height: 844 });
 
   console.log('\n[12] 앱 메뉴에서 열리고 빠져나오는가');
   await pg.addInitScript(STUB);
