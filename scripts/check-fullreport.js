@@ -337,9 +337,6 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
     const M = frMaster();
     const body = frBodyHtml(M), charts = frChartsHtml(M), jn = frStepsTableHtml(frScenActive()[0], M);
     const B = frStepCalc(frScenActive()[0], M, 'before');
-    const cancerRg = frRegion(FR_BODY.filter(x => x.k === 'CANCER')[0], M);
-    /* 담보가 하나도 없는 부위 */
-    const nur = frRegion(FR_BODY.filter(x => x.k === 'NURSING')[0], M);
     const sc = frScenCalc(frScenActive()[0], M, 'before');
     return {
       bodySvg: /<svg/.test(body),
@@ -387,11 +384,6 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
       step03: B[1].coverWon, step03daily: B[1].daily,
       step04unk: B[2].unknown, step04pend: B[2].pend,
       scenPend: sc.pend.length, scenUnk: sc.unknown.length,
-      cancerLump: cancerRg.bWon, cancerCover: cancerRg.rate ? cancerRg.rate.coverB : null,
-      saysBoth: frRegionSay(cancerRg).indexOf('이 사건에서 열리는 것은') >= 0,
-      offB: cancerRg.rate ? cancerRg.rate.offB : -1,
-      nurNone: frRegionSay(nur).indexOf('준비된 담보가 없습니다') >= 0,
-      nurColor: frRegionColor(nur),
       chartsHasActual: charts.indexOf('실손') >= 0,
       jnLen: jn.length
     };
@@ -423,10 +415,9 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(pic.step04unk === 0 && pic.step04pend === 1,
      '신규 제안 담보를 「금액 확인 필요」가 아니라 「조정 후에만」으로 가른다');
   is(pic.scenPend === 1 && pic.scenUnk === 1, '방어력 계산도 「못 읽음」과 「아직 없음」을 가른다');
-  is(pic.cancerLump !== pic.cancerCover && pic.saysBoth,
-     '부위 합계(' + pic.cancerLump + ')와 방어력 기준액(' + pic.cancerCover + ')이 다르면 그 말을 한다');
-  is(pic.offB === 1, '뺀 담보는 <b>그 부위 안에서만</b> 센다 — 표 전체를 세어 「14건」이라 적던 자리 (' + pic.offB + '건)');
-  is(pic.nurNone && pic.nurColor === '#CBD5E1', '담보가 없는 부위는 「준비된 담보가 없습니다」라고 말한다');
+  /* 부위 카드(frRegion·FR_BODY)는 걷어냈다 — 인체 한 장을 비포&애프터의 원본으로
+     바꾸면서 아무 데서도 안 그려지는 옛 판이 되었다. 그리지 않는 것을 점검이
+     붙들고 있으면 「보고 있다」는 착각만 남는다 (CLAUDE.md 5번). */
   is(pic.jnLen > 500, '치료 여정이 실제로 그려진다');
 
   /* ── 일당인가 목돈인가 · 네 갈래 · 그때 우리 집은 ── */
