@@ -784,6 +784,23 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(more.recent.indexOf('어제 쓴 제목입니다') >= 0, '  어제 올린 제목을 안다 (' + more.recent.join(' · ') + ')');
   is(/요 며칠 이미 올린 글/.test(more.prompt) && /같은 이야기를 다시 하지 않는다/.test(more.prompt),
      '  <b>같은 이야기를 또 하지 말라</b>고 주문서에 실어 보낸다');
+  /* 「소제목 다섯, 문장 다섯」 만 시키면 <b>분량만 채운 글</b>이 나온다.
+     읽고 나서 「여긴 다르구나」 싶게 만드는 것은 길이가 아니라 이 일곱이다. */
+  const DENSE = [
+    ['첫 세 줄에 장면', /첫 세 줄에 장면/],
+    ['불리한 말을 정직하게', /파는 쪽에 불리한 말/],
+    ['혼자 해 보실 것', /혼자서도 지금 해 보실 수 있는 것/],
+    ['흔한 오해 짚기', /흔한 오해를 하나 정면으로/],
+    ['절차·준비물 구체적으로', /절차·준비물은 구체적으로/],
+    ['같은 말 두 번 안 하기', /같은 말을 두 번 하지 않는다/],
+    ['추상어 금지', /추상어를 쓰지 않는다/]
+  ];
+  const missDense = DENSE.filter(d => !d[1].test(more.prompt)).map(d => d[0]);
+  is(missDense.length === 0,
+     '  주문서가 <b>밀도</b>를 시킨다 — 장면·불리한 말·혼자 할 것·오해·절차·반복 금지·추상어 금지' +
+     (missDense.length ? ' — 빠짐: ' + missDense.join(' · ') : ''));
+  is(/지어내지 않는다|\[\[확인 필요/.test(more.prompt),
+     '  밀도를 시키면서도 <b>없는 숫자는 비우라</b>고 함께 시킨다 — 채우려다 지어내면 안 된다');
   is(more.selfFree, '  지금 쓰는 글 자신은 그 목록에서 뺀다 — 자기 제목을 피하라고 시키면 안 된다');
   is(more.runFull > more.runThin, '  글감이 줄면 쓸 수 있는 편수도 준다 (' + more.runFull + ' → ' + more.runThin + ')');
   is(more.dry.indexOf('day') >= 0 && more.dry.indexOf('ask') >= 0,
