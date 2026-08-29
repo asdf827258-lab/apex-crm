@@ -359,6 +359,29 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
       })(),
       offNote: body.indexOf('지급 방식이 칸과 달라') >= 0,
       slotKinds: [frBodySlotKind('inpD'), frBodySlotKind('silD'), frBodySlotKind('cancer'), frBodySlotKind('outC')].join(','),
+      /* 치료 여정도 지급지도의 것을 그대로 쓰는가 */
+      /* 함수만 재면 안 된다 — <b>갈래 한 장</b>을 실제로 그려 본다 */
+      trackPage: (function(){
+        var MM = frMaster();
+        var pg = frTrackPageHtml(frTrackCalc(FR_TRACKS[0], MM), MM);
+        return { tj: pg.indexOf('tj-step') >= 0, wallet: pg.indexOf('여러 개의 지갑') >= 0 };
+      })(),
+      /* 골절진단비(100만)가 암 사건 <b>셈</b>에 섞여 들어오지 않는가 */
+      scenCoverB: frScenCalc(frScenActive()[0], frMaster(), 'before').coverWon,
+      catOff: [frCatOff('FRACTURE','CANCER'), frCatOff('SURGERY','CANCER'), frCatOff('CANCER','CANCER'), frCatOff('SILSON','BRAIN')].join(','),
+      tpReuse: (function(){
+        var r = frTrackCalc(FR_TRACKS[0], frMaster());
+        var m = frTpMapHtml(r, frMaster());
+        var d = document.createElement('div'); d.innerHTML = m;
+        var seg = m.indexOf('여러 개의 지갑') >= 0;
+        var x = frTpCov(r, frMaster(), frTpDis(FR_TRACKS[0]));
+        return { has: m.indexOf('tj-step') >= 0, wallet: seg,
+                 noSilbi: x.cov.silbi === 0, actNote: m.indexOf('금액으로 바꾸지 않았습니다') >= 0,
+                 /* 하루치를 목돈 칸에 넣지 않았는가 — 일당은 제 칸(perDay)으로 */
+                 perDay: x.cov.perDay, diag: x.cov.diag,
+                 /* 지급지도 화면은 건드리지 않았는가 */
+                 plain: tpBody().indexOf('내 보장 입력') >= 0 && tpBody().indexOf('tp-dis') >= 0 };
+      })(),
 
       step01: B[0].coverWon, step01off: B[0].off,
       step03: B[1].coverWon, step03daily: B[1].daily,
@@ -378,6 +401,18 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(pic.cols, '권장 · 기존 · 신규 <b>세 열</b>이 원본 그대로 선다');
   is(pic.man, '원을 <b>만원</b>으로 옮겨 그림에 넣는다 — 그림은 만원으로 그린다 (3,000)');
   is(pic.recNote, '<b>권장</b> 열이 어디서 왔는지(또는 왜 비었는지) 밝힌다');
+  is(pic.catOff === 'true,false,false,false',
+     '<b>큰 묶음</b>도 사건 자로 본다 — 골절진단비는 암 사건에 안 열리고, 수술·실손은 두루 열린다');
+  is(pic.scenCoverB === 30000000,
+     '방어력 셈에서 <b>골절진단비 100만원이 빠진다</b> — 암 진단비 3,000만원만 남는다 (' + pic.scenCoverB + '원)');
+  is(pic.trackPage.tj && pic.trackPage.wallet && pic.tpReuse.has,
+     '치료 여정을 <b>새로 그리지 않고</b> 치료비 지급지도의 것을 그대로 쓴다 — <b>갈래 한 장에 실제로 서는지</b>까지 본다');
+  is(pic.tpReuse.noSilbi && pic.tpReuse.actNote,
+     '실손 보전율을 <b>짐작해 넣지 않는다</b> — 몇 건인지만 말한다');
+  is(pic.tpReuse.perDay === 3 && pic.tpReuse.diag === 3000,
+     '일당은 <b>제 칸(하루 얼마)</b>으로, 목돈은 목돈 칸으로 간다 (일당 '+pic.tpReuse.perDay+'만 · 진단 '+pic.tpReuse.diag+'만)');
+  is(pic.tpReuse.plain,
+     '치료비 지급지도 화면은 <b>한 글자도 달라지지 않는다</b> — 입력칸도 질병 단추도 그대로');
   is(pic.slotKinds === 'DAILY,ACTUAL,LUMP,DAILY',
      '칸마다 <b>무엇을 담는 칸인지</b>를 안다 (' + pic.slotKinds + ')');
   is(pic.mixed === false,
