@@ -2232,6 +2232,55 @@ var ADV_FIELDS=[
   {k:'onair',   t:'방송 출연 (ON AIR · 줄바꿈으로 여러 줄)', ph:'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」', span:true, area:true, cover:true},
   {k:'team',    t:'팀 이름 (표지 왼쪽 아래)', ph:'TEAM ONTOP · INSURANCE PROFESSIONALS', span:true, cover:true}
 ];
+/* ── 「우리가 하는 일」 — 내 소개 <b>바로 뒤</b>에 서는 한 장 ──────────
+   사장님 말씀: 「내 소개 그 뒤에 … 우리가 어떻게 도울 수 있는지, 재무관리를
+   어떻게 해 주는지, 보험 약관비교부터, 보상에 왜 진심이고, 손해사정사까지
+   고용해서 함께 일하는지」.
+
+   <b>이 글은 우리가 지어내면 안 된다.</b> 회사가 실제로 하는 일에 대한
+   말이고, 그대로 고객 앞에 선다. 그래서 —
+     · 기본값은 <b>사장님이 하신 말씀 그대로</b>만 옮긴다
+     · <b>숫자·수상·자격은 한 글자도 안 넣는다</b> (몇 명, 몇 건, 몇 년…)
+     · 사장님이 고치시면 그것이 그대로 나간다
+     · 빈 칸은 <b>그 자리를 통째로 안 세운다</b> — 빈 상자를 고객에게 안 보인다
+   (CLAUDE.md 1번)                                                      */
+var ADV_WD=[
+  {k:'wdKick', t:'윗줄 딱지',  ph:'Chapter 0 · 우리가 하는 일'},
+  {k:'wdTitle',t:'큰 제목',    ph:'가입까지가 아니라, 받으실 때까지', span:true},
+  {k:'wdLead', t:'한 줄 설명', ph:'보험은 파는 순간이 아니라 받는 순간에 값이 정해집니다.', span:true},
+  {k:'wd1t',t:'① 제목', ph:'약관부터 비교합니다'},
+  {k:'wd1d',t:'① 설명', ph:'같은 이름의 보험도 약관이 다릅니다. 무엇이 되고 무엇이 안 되는지 조항으로 봅니다.', span:true, area:true},
+  {k:'wd2t',t:'② 제목', ph:'재무관리까지 함께 봅니다'},
+  {k:'wd2d',t:'② 설명', ph:'보험 하나만 보지 않습니다. 버는 돈·쓰는 돈·모을 돈 안에서 보험이 얼마여야 하는지 함께 정합니다.', span:true, area:true},
+  {k:'wd3t',t:'③ 제목', ph:'보상에 진심입니다'},
+  {k:'wd3d',t:'③ 설명', ph:'가입시켜 드리는 것으로 끝나지 않습니다. 청구할 일이 생겼을 때 옆에 있는 것이 우리가 하는 일입니다.', span:true, area:true},
+  {k:'wd4t',t:'④ 제목', ph:'손해사정사와 함께 일합니다'},
+  {k:'wd4d',t:'④ 설명', ph:'다툼이 생기는 자리는 전문가와 같이 봅니다.', span:true, area:true},
+  /* ── 사장님이 전에 만드신 자료 — <b>앱 안에 없다.</b> 지어내지 않는다 ── */
+  {k:'wdRef1t',t:'인용 ① 제목 (예: 보험금비서)', ph:'보험금비서'},
+  {k:'wdRef1b',t:'인용 ① 옮겨 놓을 글', ph:'그 자료에서 이 장에 넣을 문장을 붙여 넣어 주세요. 비워 두면 이 칸은 안 나옵니다.', span:true, area:true},
+  {k:'wdRef1u',t:'인용 ① 링크(선택)', ph:'https://', span:true},
+  {k:'wdRef2t',t:'인용 ② 제목 (예: 재무설계 홈페이지)', ph:'재무설계 홈페이지'},
+  {k:'wdRef2b',t:'인용 ② 옮겨 놓을 글', ph:'그 자료에서 이 장에 넣을 문장을 붙여 넣어 주세요. 비워 두면 이 칸은 안 나옵니다.', span:true, area:true},
+  {k:'wdRef2u',t:'인용 ② 링크(선택)', ph:'https://', span:true}
+];
+/* 안 적으신 칸은 <b>기본 문구</b>로 채운다. 다만 인용 두 칸은 기본값이 없다 —
+   우리가 못 본 자료를 우리가 써 줄 수는 없다. */
+function advWdData(){
+  var o=advGet(),out={},i,f;
+  for(i=0;i<ADV_WD.length;i++){
+    f=ADV_WD[i];
+    var v=(''+(o[f.k]||'')).replace(/^\s+|\s+$/g,'');
+    out[f.k]=v||(/^wdRef/.test(f.k)?'':f.ph);
+  }
+  return out;
+}
+function advWdPush(){
+  var msg={t:'apex:whatwedo',data:advWdData()};
+  advFrames().forEach(function(f){
+    try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
+  });
+}
 /* 표지에 쓰는 사진 세 장 — 본인 사진 하나와 방송 화면 둘 */
 var ADV_PHOTOS=[
   {k:'photo',  t:'표지 인물 사진', d:'왼쪽 전체를 채웁니다. 세로로 긴 사진이 좋습니다.'},
@@ -2335,6 +2384,12 @@ function advSave(){
     f=ADV_FIELDS[i];
     o[f.k]=(osVal('adv_'+f.k)||'').replace(/^\s+|\s+$/g,'');
   }
+  /* 「우리가 하는 일」 칸도 같은 자리에 담는다 — 저장하는 곳이 둘이면 하나만 남는다 (5번) */
+  for(i=0;i<ADV_WD.length;i++){
+    f=ADV_WD[i];
+    var el=document.getElementById('adv_'+f.k);
+    if(el)o[f.k]=(el.value||'').replace(/^\s+|\s+$/g,'');
+  }
   for(i=0;i<ADV_PHOTOS.length;i++){
     var pk=ADV_PHOTOS[i].k;
     if(window.__advPhoto&&window.__advPhoto[pk]!==undefined)o[pk]=window.__advPhoto[pk];
@@ -2417,6 +2472,20 @@ function advCardHtml(){
       }).join('')+
     '</div>'+
     '<div class="frm">'+ADV_FIELDS.filter(function(f){return !f.cover;}).map(fld).join('')+'</div>'+
+    /* ── 소개 <b>바로 뒤</b> 한 장 ── */
+    '<div style="margin:16px 0 8px;padding-top:14px;border-top:1px solid #E5E9F0">'+
+      '<div style="font-size:13px;font-weight:900;color:#0B1B34">🤝 우리가 하는 일 — 소개 <b>바로 뒤</b> 한 장</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-4);line-height:1.75;margin-top:5px">'+
+        '보장분석 상담자료에서 <b>내 소개 다음 장</b>에 섭니다 — 우리가 어떻게 돕는지, 약관을 어떻게 비교하는지, '+
+        '보상에 왜 진심인지, 손해사정사와 어떻게 함께 일하는지.<br>'+
+        '<b>기본 문구는 그대로 두셔도 됩니다.</b> 고치시면 고치신 대로 고객 앞에 나갑니다 — '+
+        '<b>숫자·수상·자격은 저희가 한 글자도 넣지 않았습니다.</b> 회사에 대한 말은 사장님 말씀이 맞습니다.</div>'+
+      '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:9px 11px;line-height:1.75;margin-top:9px">'+
+        '📌 <b>보험금비서</b>·<b>재무설계 홈페이지</b> 자료는 앱 안에서 못 찾았습니다. '+
+        '아래 <b>인용</b> 칸에 그 자료의 문장을 붙여 넣어 주시면 그대로 인용합니다. '+
+        '<b>비워 두시면 그 칸은 아예 안 나옵니다</b> — 저희가 읽지 않은 자료를 지어내지 않습니다.</div>'+
+    '</div>'+
+    '<div class="frm">'+ADV_WD.map(fld).join('')+'</div>'+
     '<div style="margin:15px 0 8px;padding-top:13px;border-top:1px solid #E5E9F0">'+
       '<div style="font-size:12.5px;font-weight:900;color:#0B1B34">🎬 표지에만 나오는 것</div>'+
       '<div style="font-size:11.5px;color:#64748B;line-height:1.65;margin-top:3px">'+
@@ -2459,6 +2528,8 @@ function advPush(){
   advFrames().forEach(function(f){
     try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
   });
+  /* 소개 바로 뒤 장도 같은 걸음에 보낸다 — 따로 보내면 한쪽만 늦는다 (5번) */
+  try{advWdPush();}catch(e){}
 }
 /* 상담자료가 다 뜬 뒤에 보내야 받는다 — 뜨자마자 한 번, 조금 뒤 한 번 더 */
 function advPushSoon(){
@@ -12264,8 +12335,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-30 01:40';
-var APP_BUILD_NOTE="<b>🗑 「아이디 삭제가 안 된다. 계속 반복되네」 — 서버가 지우다 말고 있었습니다.</b> 계정을 참조하는 기록(고객·저장한 자료·출근·체크판…)이 남아 있으면 로그인 계정 삭제가 <b>외래키에 걸려 실패</b>합니다. 그런데 함수는 「연결된 기록도 함께 지운다」 고 물어 놓고 <b>정작 그 기록을 안 지웠습니다.</b> 그래서 지워도 목록에 그대로 남았습니다. 게다가 그 실패가 <b>잠깐 뜨는 안내</b>로만 지나가, 왜 안 됐는지 모르는 채 같은 자리를 다시 누르게 됐습니다 — 그것이 「계속 반복」 입니다. 이제 ① hard 면 참조 줄을 <b>실제로 지우고</b> ② 그래도 막히면 <b>무엇이 막았는지</b> 그대로 올려 보내고 ③ 지운 뒤 <b>서버가 스스로 확인</b>하고 ④ 앱도 <b>목록을 다시 읽어</b> 정말 사라졌는지 봅니다. 서버가 「됐다」 해도 목록에 남아 있으면 <b>안 됐다고 말합니다</b>(1번). 실패는 그 줄에 <b>남습니다</b> — 닫기를 누르실 때까지. 그리고 계정 줄마다 <b>「🔍 무엇이 걸려 있나」</b>가 생겼습니다 — 어느 표에 몇 건이 붙어 있는지 이름으로 보여 줍니다. <b>더 깊은 뿌리가 하나 더 있었습니다.</b> 이 계정 SQL 이 <b>두 곳에 글자까지 똑같이</b> 적혀 있었습니다 — 조직도의 「한 번에 전부」 와 계정 화면의 준비 SQL. 한쪽만 고치면 <b>어느 화면에서 SQL 을 돌리셨느냐</b>에 따라 고친 판과 안 고친 판이 갈립니다(5번). 한 벌(<code>OS_ACCT_FN_SQL</code>)로 모았습니다. 새 점검 <code>check-acctdel</code> — 일곱 자리를 되돌려 전부 빨간불을 확인했습니다. <b>사장님이 하실 일: 설정 → 계정 찾기·중복 정리에서 준비 SQL 을 한 번 더 실행해 주십시오.</b> 서버 쪽 함수가 바뀌었습니다.";
+var APP_BUILD='2026-08-30 05:10';
+var APP_BUILD_NOTE="<b>🤝 보장분석 상담자료 — 내 소개 바로 뒤에 「우리가 하는 일」 한 장.</b> 우리가 어떻게 돕는지 · 약관을 어떻게 비교하는지 · 재무관리까지 어떻게 함께 보는지 · 보상에 왜 진심인지 · 손해사정사와 어떻게 함께 일하는지. 토스처럼 흰 바탕에 옅은 선 하나짜리 카드 넷으로 담백하게 세웠습니다. <b>글은 여기 박아 두지 않았습니다.</b> 회사가 실제로 하는 일에 대한 말이고 그대로 고객 앞에 서기 때문에, <b>설정 → 내 소개</b> 아래에서 사장님이 고치시면 그대로 나갑니다. 기본 문구는 <b>사장님이 하신 말씀만</b> 옮겼고 <b>숫자·수상·자격은 한 글자도 안 넣었습니다</b> — 점검이 그것도 셉니다(1번). <b>보험금비서 · 재무설계 홈페이지 자료는 앱 안에서 못 찾았습니다.</b> 그래서 그 두 칸은 <b>기본값이 없습니다</b> — 우리가 못 본 자료를 우리가 써 드릴 수는 없습니다. 인용 칸에 그 자료의 문장을 붙여 넣어 주시면 그때 나갑니다. <b>비워 두시면 그 칸은 아예 안 나옵니다</b> — 빈 상자를 고객에게 안 보입니다. 카드도 같습니다: 넷 중 셋만 채우시면 셋만 섭니다. <b>장을 하나 끼우는 일 자체가 위험했습니다.</b> 상담자료에는 <b>번호로 가리키는 자리</b>가 둘 있었습니다 — 목차의 idx 와 「리모델링 상담」 단추의 <code>goTo(15)</code>. 장을 하나 끼우면 그 뒤가 전부 한 칸씩 밀려 <b>목차가 엉뚱한 장으로</b> 갑니다. 목차 번호는 <b>줄 순서로 다시 매기고</b>, 단추는 <b>번호가 아니라 이름</b>으로 가게 바꿨습니다(5번). 처음에는 메뉴를 만들 때 번호를 매겼는데, <b>메뉴를 아직 안 연 사이에는 옛 번호가 그대로</b>여서 점검이 잡았습니다 — 표를 세운 그 자리에서 바로 매기도록 고쳤습니다. 새 점검 <code>check-whatwedo</code> — 열 자리를 되돌려 전부 빨간불을 확인했습니다. 그중 하나(<b>이 장을 잘라낸다</b>)는 처음에 안 울렸습니다 — 몸통만 재고 <b>위쪽 조상</b>은 안 봤기 때문입니다. 조상까지 훑도록 고치니 울립니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
