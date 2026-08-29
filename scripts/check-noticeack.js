@@ -23,7 +23,10 @@
      4. 서버로 가는 것은 <b>자기 id</b> 뿐이다 — 대신 눌러 줄 수 없다
      5. 서버에 못 보내면 <b>확인한 척하지 않는다</b> — 띠가 남고 이유를 적는다
      6. 규칙(SQL)이 <b>with check (member_id = auth.uid())</b> 로 못 박혀 있다
-     7. 되풀이해서 서버를 부르지 않는다 (7번)                              */
+     7. 되풀이해서 서버를 부르지 않는다 (7번)
+     8. <b>새 공지가 하나 더 올라와도</b> 확인 안 한 지목 공지는 안 사라진다
+     9. 설정에서 <b>「올렸는데 팀에 보이나」</b> 를 서버에 물어 답한다 —
+        이 기기에 담긴 것으로 「게시 중」 이라 답하지 않는다 (1번)         */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -43,16 +46,34 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
    초록도 되고 빨강도 되면 그것은 「헛것을 잡는 점검」이다 (CLAUDE.md 8번).
 
    그래서 <b>모든 메서드가 자기를 돌려주고, 자기가 곧 약속</b>인 것을 준다.
-   무엇을 어떻게 이어 불러도 안 터진다.                                  */
+   무엇을 어떻게 이어 불러도 안 터진다.
+
+   ── 표별로 다르게 답해야 하는 자리가 생겼다 ──────────────────────────
+   앱이 <b>같은 표를 두 가지로</b> 읽기 시작했다 — 배너에 세울 <b>최신 한
+   건</b>과, 나를 지목한 <b>미확인 공지</b>. 둘이 서로 다른 줄이라야 「새
+   공지에 밀려 사라지는가」 를 잴 수 있다. 그래서 rows 에 <b>표 이름을 키로
+   한 객체</b>를 주면 <code>.eq()</code> 조건을 실제로 걸어 준다. 예전처럼
+   배열 하나를 주면 <b>그대로 다</b> 돌려준다 — 있던 칸은 안 건드린다.  */
 const CHAIN = `(function(rows,onPost){
+  var isMap=Object.prototype.toString.call(rows)!=='[object Array]';
   var mk=function(tbl){
-    var a={};
-    ['select','eq','neq','gt','gte','lt','lte','is','in','not','or','order','limit',
+    var f=[],a={};
+    ['select','neq','gt','gte','lt','lte','is','in','not','or','order','limit',
      'range','single','maybeSingle','filter','match','upsert','update','delete'
     ].forEach(function(k){ a[k]=function(){ return a; }; });
+    a.eq=function(c,v){ f.push([c,v]); return a; };
+    var data=function(){
+      if(!isMap)return rows||[];
+      var rs=(rows&&rows[tbl])||[];
+      if(!f.length)return rs;
+      return rs.filter(function(r){
+        for(var i=0;i<f.length;i++)if(String(r[f[i][0]])!==String(f[i][1]))return false;
+        return true;
+      });
+    };
     a.insert=function(row){ if(onPost)onPost(tbl,row); return a; };
-    a.then=function(res,rej){ return Promise.resolve({data:rows||[],error:null}).then(res,rej); };
-    a.catch=function(f){ return Promise.resolve({data:rows||[],error:null}).catch(f); };
+    a.then=function(res,rej){ return Promise.resolve({data:data(),error:null}).then(res,rej); };
+    a.catch=function(fn){ return Promise.resolve({data:data(),error:null}).catch(fn); };
     return a;
   };
   return { from:mk, rpc:function(){ return Promise.resolve({data:null,error:null}); } };
@@ -294,7 +315,121 @@ const api = http.createServer((rq, rs) => {
   is(/홍길동/.test(W.t) && /김철수/.test(W.t),
      '  <b>이름으로</b> 보인다 — id 만 보면 누군지 모른다');
 
-  console.log('\n[9] 콘솔이 조용하다');
+  /* ── 새 공지가 하나 더 올라와도 <b>확인 안 한 것은 안 사라진다</b> ────
+     앱은 공지를 최신 한 건만 읽는다. 그래서 지목 공지 뒤에 다른 공지를
+     하나만 더 올려도 아직 확인 안 한 사람의 붉은 띠가 그냥 사라졌다.
+     「확인할 때까지 지워지지 않도록」 이 안 지켜지던 자리다.            */
+  console.log('\n[10] 새 공지가 덮어써도 — 확인 안 한 지목 공지는 그대로 남는다');
+  const K = await page.evaluate(async (CHAIN_SRC) => {
+    const posts = [];
+    const chain = eval(CHAIN_SRC)({
+      /* 맨 앞이 최신 — 배너에 서는 것은 지목 없는 「주간 회의」 다 */
+      os_notices: [
+        { id: 'n2', text: '주간 회의는 목요일입니다', active: true, must_ack: false,
+          targets: null, created_at: '2026-08-29T01:00:00Z', author: '윤시현' },
+        { id: 'n1', text: '수당표를 꼭 확인해 주세요', active: true, must_ack: true,
+          targets: ['u2'], created_at: '2026-08-28T01:00:00Z', author: '윤시현' }
+      ],
+      os_notice_acks: []            /* 아직 아무도 확인 안 했다 */
+    }, (t, row) => posts.push({ t, row }));
+    window.osClient = function () { return chain; };
+    OS.session = { user: { id: 'u2' } };
+    OS.profile = { id: 'u2', name: '홍길순', role: 'member', active: true, plan: 'pro' };
+    OS_NOTICE = null; OS_ACK.ackd = {}; OS_ACK.mine = []; OS_ACK.loaded = false; OS_ACK.scanned = false;
+    osNoticeLoad();
+    await new Promise(r => setTimeout(r, 700));
+    const bar = document.getElementById('osAckBar');
+    const shown = bar ? bar.textContent.replace(/\s+/g, ' ').trim() : '';
+    /* 눌러 보면 <b>띠에 뜬 그 공지</b>로 확인이 가야 한다 */
+    const b = document.getElementById('osAckBtn'); if (b) b.click();
+    await new Promise(r => setTimeout(r, 400));
+    const sent = posts.filter(p => p.t === 'os_notice_acks').map(p => p.row);
+    const after = document.getElementById('osAckBar');
+    return {
+      banner: (OS_NOTICE || {}).id || '',
+      shown, sent,
+      gone: !(after && after.textContent.replace(/\s+/g, '').length)
+    };
+  }, CHAIN);
+  is(K.banner === 'n2', '  배너에 서는 것은 <b>최신 공지</b>다 — 지금 「' + K.banner + '」');
+  is(/수당표/.test(K.shown),
+     '  그래도 띠에는 <b>확인 안 한 지목 공지</b>가 남는다 — 「' + K.shown.slice(0, 34) + '…」');
+  is(K.sent.length === 1 && K.sent[0] && K.sent[0].notice_id === 'n1' && K.sent[0].member_id === 'u2',
+     '  확인은 <b>띠에 뜬 그 공지로</b> 간다 — ' + JSON.stringify(K.sent[0] || null));
+  is(K.gone, '  확인하면 <b>사라진다</b>');
+
+  /* ── 「올렸는데 팀에 보이나」 ────────────────────────────────────────
+     여태 이 자리는 이 기기에 담긴 것을 「현재 게시 중인 공지」 라 적었다.
+     서버에 못 올라가도 초록 상자가 그대로 떠서, 다시 들어오면 올라간
+     것처럼 보였다. 실패를 성공처럼 말한 자리다 (CLAUDE.md 1번).       */
+  console.log('\n[11] 설정 — 서버에 올라갔는지를 서버에 물어 답한다');
+  const N0 = await page.evaluate(async (CHAIN_SRC) => {
+    const chain = eval(CHAIN_SRC)({ os_notices: [], os_notice_acks: [] });
+    window.osClient = function () { return chain; };
+    OS.session = { user: { id: 'u1' } };
+    OS.profile = { id: 'u1', name: '윤시현', role: 'owner', active: true, plan: 'pro' };
+    /* 이 기기에는 글이 담겨 있다 — 서버에는 없다 */
+    OS_NOTICE = { id: '', text: '이번 주 목요일 회의', img: '', on: true, ts: '', by: '윤시현',
+                  targets: [], mustAck: false };
+    OS_NSEEN.done = false; OS_NSEEN.row = null; OS_NSEEN.err = ''; OS_NSEEN.busy = false;
+    osNSeenLoad(true);
+    await new Promise(r => setTimeout(r, 500));
+    return osNSeenHtml().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  }, CHAIN);
+  is(/서버에 올라간 공지가 없습니다/.test(N0),
+     '  서버에 없으면 <b>없다고 말한다</b> — 「' + N0.slice(0, 44) + '…」');
+  is(/이 기기에만/.test(N0),
+     '  이 기기에만 있다고 <b>이름 대어</b> 말한다 — 「게시 중」 이라 안 한다');
+  is(!/게시 중인 공지/.test(N0), '  <b>안 올라간 것을 올라갔다고 말하지 않는다</b> (1번)');
+
+  const N1 = await page.evaluate(async (CHAIN_SRC) => {
+    const chain = eval(CHAIN_SRC)({
+      os_notices: [{ id: 'n9', text: '수당표를 꼭 확인해 주세요', active: true, must_ack: true,
+                     targets: ['u2', 'u3'], created_at: '2026-08-29T01:00:00Z', author: '윤시현' }],
+      os_notice_acks: [{ notice_id: 'n9', member_id: 'u2', acked_at: 'x' }]
+    });
+    window.osClient = function () { return chain; };
+    OS_ACK.loaded = false; OS_ACK.ackd = {};
+    /* 이 기기 글은 서버 것과 <b>다르다</b> — 고쳐 놓고 저장을 안 한 자리 */
+    OS_NOTICE = { id: 'n9', text: '수당표 확인 부탁드립니다(고침)', img: '', on: true, ts: '',
+                  by: '윤시현', targets: ['u2', 'u3'], mustAck: true };
+    OS_NSEEN.done = false; OS_NSEEN.row = null; OS_NSEEN.err = ''; OS_NSEEN.busy = false;
+    osNSeenLoad(true);
+    await new Promise(r => setTimeout(r, 600));
+    return osNSeenHtml().replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  }, CHAIN);
+  /* <b>화면이 실제로 이것을 쓰는가.</b> 함수만 재면, 카드가 다시 이 기기
+     것으로 「게시 중」 이라 적어도 점검은 초록이다 — 실제로 그랬다. */
+  const N2 = await page.evaluate(async (CHAIN_SRC) => {
+    const chain = eval(CHAIN_SRC)({ os_notices: [], os_notice_acks: [] });
+    window.osClient = function () { return chain; };
+    OS.session = { user: { id: 'u1' } };
+    OS.profile = { id: 'u1', name: '윤시현', role: 'owner', active: true, plan: 'pro' };
+    OS_NOTICE = { id: '', text: '이번 주 목요일 회의', img: '', on: true, ts: '', by: '윤시현',
+                  targets: [], mustAck: false };
+    OS_NSEEN.done = false; OS_NSEEN.row = null; OS_NSEEN.err = ''; OS_NSEEN.busy = false;
+    osNSeenLoad(true);
+    await new Promise(r => setTimeout(r, 500));
+    const d = document.createElement('div');
+    d.innerHTML = osNoticeCardHtml();
+    const t = d.textContent.replace(/\s+/g, ' ').trim();
+    const has = !!d.querySelector('#osNSeen');
+    d.remove();
+    return { t, has };
+  }, CHAIN);
+  is(N2.has, '  <b>설정 카드가 그 칸을 실제로 세운다</b> (#osNSeen)');
+  is(/서버에 올라간 공지가 없습니다/.test(N2.t),
+     '  <b>카드 자체가</b> 서버에 없다고 말한다 — 함수만 맞고 화면이 딴소리하면 안 된다');
+  is(!/현재 게시 중인 공지/.test(N2.t),
+     '  카드에 <b>「현재 게시 중인 공지」</b> 가 안 남아 있다 — 이 기기 것을 그렇게 부르던 자리');
+
+  is(/팀에 보입니다/.test(N1), '  올라가 있으면 <b>팀에 보인다</b>고 말한다');
+  is(/지목 2명 중 1명 확인/.test(N1),
+     '  <b>몇 명 중 몇 명이 확인</b>했는지 센다 — 「' + (N1.match(/지목[^·]*/) || [''])[0].trim() + '」');
+  is(/다릅니다/.test(N1),
+     '  이 기기 글이 서버 것과 다르면 <b>다르다고 말한다</b> — 저장을 안 하신 자리다');
+
+  console.log('\n[12] 콘솔이 조용하다');
   const real = errs.filter(e => !/limit is not a function/.test(e));
   is(real.length === 0, '  터진 곳이 없다' + (real.length ? ' — ' + real.slice(0, 2).join(' | ') : ''));
 
