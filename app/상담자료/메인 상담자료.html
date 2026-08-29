@@ -6058,6 +6058,122 @@
 
         <div class="animate-up opacity-0 delay-3" style="display:flex;flex-direction:column;gap:14px;width:100%;">
 
+          <!-- ⭐ B: 보장분석 리포트(KB·GA) → 고객 상황 자동 낭독 (AI 키 불필요, pdf.js 파싱) -->
+          <div class="s10-section" id="apex-bojang" style="background:linear-gradient(135deg,rgba(49,130,246,.06),rgba(49,130,246,.02));border:1.5px solid rgba(49,130,246,.22);border-radius:16px;padding:18px 20px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">
+              <div style="min-width:0;">
+                <div style="font-size:15px;font-weight:900;color:var(--text);">📋 보장분석 리포트 → 고객 상황 자동 낭독</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;">KB·GA 보장분석 PDF를 올리면 고객의 담보 <b>부족·미가입</b>을 큰 순서로 읽어드립니다 · AI 키 불필요</div>
+              </div>
+              <label style="cursor:pointer;background:var(--primary);color:#fff;font-weight:800;font-size:13px;padding:10px 16px;border-radius:999px;white-space:nowrap;">📎 리포트 업로드<input type="file" accept="application/pdf" onchange="apexBojangUpload(event)" style="display:none;"></label>
+            </div>
+            <div id="apexBojangOut" style="margin-top:14px;"></div>
+          </div>
+          <script>
+          (function(){
+            function besc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+            function parseKMoney(s){ if(!s) return 0; s=String(s); var neg=/-/.test(s); var n=0;
+              var eok=s.match(/([\d,]+)\s*억/), man=s.match(/([\d,]+)\s*만/);
+              if(eok) n+=parseInt(eok[1].replace(/,/g,''),10)*100000000;
+              if(man) n+=parseInt(man[1].replace(/,/g,''),10)*10000;
+              if(!eok&&!man){ var w=s.match(/([\d,]+)/); if(w) n=parseInt(w[1].replace(/,/g,''),10); }
+              return neg?-n:n; }
+            function fmtMoney(n){ n=Math.abs(n); if(n>=100000000){ var e=Math.floor(n/100000000), r=Math.round((n%100000000)/10000); return e+'억'+(r?' '+r.toLocaleString()+'만':''); } if(n>=10000) return Math.round(n/10000).toLocaleString()+'만'; return n.toLocaleString(); }
+            var CATS=[
+              {re:/(일반암|유사암|고액암|표적|항암|암)/, ic:'♋'},
+              {re:/(뇌|허혈|심장|심근|협심|뇌졸중|뇌출혈)/, ic:'🧠'},
+              {re:/(간병|요양|치매)/, ic:'🩺'},
+              {re:/(사망|후유장해|장해)/, ic:'🛡'},
+              {re:/(실손|입원의료|통원의료)/, ic:'💊'},
+              {re:/(수술|입원일당|입원비)/, ic:'🔪'},
+              {re:/(운전|벌금|교통사고|자동차)/, ic:'🚗'}
+            ];
+            function classify(label){ for(var i=0;i<CATS.length;i++){ if(CATS[i].re.test(label)) return CATS[i].ic; } return '•'; }
+            function parseBojang(items){
+              var T=items.map(function(s){return (s||'').replace(/\s+/g,' ').trim();}).filter(Boolean);
+              var joined=T.join(' ');
+              var cm=joined.match(/([가-힣]{2,5})\s*\(\s*(\d{1,3})\s*세\s*,?\s*(남자|여자|남|여)?/);
+              var cust=cm?{name:cm[1], age:parseInt(cm[2],10), sex:(cm[3]||'').charAt(0)}:null;
+              var JUDGE={'충분':'ok','부족':'low','미가입':'none'};
+              var rows=[], seen={};
+              for(var i=0;i<T.length;i++){
+                if(T[i]!=='권장') continue;
+                var gi=-1; for(var j=i+1;j<Math.min(i+8,T.length);j++){ if(T[j]==='가입'){gi=j;break;} }
+                if(gi<0) continue;
+                var ki=-1; for(var k=gi+1;k<Math.min(gi+8,T.length);k++){ if(JUDGE[T[k]]!=null){ki=k;break;} }
+                if(ki<0) continue;
+                var rec=T.slice(i+1,gi).join(' ').trim();
+                var paid=T.slice(gi+1,ki).join(' ').trim();
+                var judge=T[ki];
+                var diff=(T[ki+1]&&/^[+\-]/.test(T[ki+1]))?T[ki+1]:'';
+                var label=(T[i-1]||'').replace(/\s+/g,'');
+                if(!label) label=(T[i-2]||'').replace(/\s+/g,'');
+                var key=label+'|'+rec+'|'+paid;
+                if(!seen[key] && (JUDGE[judge]!=null)){
+                  seen[key]=1;
+                  rows.push({label:label, rec:rec, paid:paid, kind:JUDGE[judge], amt:parseKMoney(diff)});
+                }
+              }
+              return {cust:cust, rows:rows};
+            }
+            function renderBojang(p){
+              var out=document.getElementById('apexBojangOut'); if(!out) return;
+              if(!p||!p.rows||!p.rows.length){ out.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;">리포트에서 「담보별 진단현황」을 찾지 못했습니다. 담보별 권장/가입/판정이 포함된 보장분석 PDF인지 확인해 주세요.</div>'; return; }
+              var weak=p.rows.filter(function(r){return r.kind==='low'||r.kind==='none';}).sort(function(a,b){return Math.abs(b.amt)-Math.abs(a.amt);});
+              var ok=p.rows.filter(function(r){return r.kind==='ok';});
+              var c=p.cust||{}; var who=(c.name||'고객')+'님'+(c.age?' ('+c.age+'세'+(c.sex?' '+c.sex:'')+')':'');
+              var h='';
+              h+='<div style="background:#172766;color:#fff;border-radius:14px;padding:16px 18px;margin-bottom:14px;">';
+              h+='<div style="font-size:12px;opacity:.7;font-weight:700;letter-spacing:1px;">고객 보장 진단</div>';
+              h+='<div style="font-size:20px;font-weight:900;margin-top:2px;">'+besc(who)+'</div>';
+              h+='<div style="font-size:13px;opacity:.92;margin-top:6px;">부족·미가입 <b style="color:#ffd479;">'+weak.length+'건</b> &nbsp;·&nbsp; 충분 <b style="color:#8affc1;">'+ok.length+'건</b></div>';
+              h+='</div>';
+              if(weak.length){
+                h+='<div style="font-size:13px;font-weight:800;color:#e5484d;margin:4px 0 8px;">🔴 우선 보강 — 부족·미가입 (큰 순)</div>';
+                weak.slice(0,10).forEach(function(r,idx){
+                  var isNone=r.kind==='none', badge=isNone?'미가입':'부족', bcol=isNone?'#e5484d':'#d97706';
+                  h+='<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid rgba(15,23,42,.08);border-left:3px solid '+bcol+';border-radius:10px;margin-bottom:8px;background:#fff;">';
+                  h+='<div style="font-size:20px;flex:none;">'+classify(r.label)+'</div>';
+                  h+='<div style="flex:1;min-width:0;"><div style="font-size:14px;font-weight:800;color:var(--text);">'+(idx+1)+'. '+besc(r.label)+'</div>';
+                  h+='<div style="font-size:12px;color:var(--muted);margin-top:2px;">권장 '+besc(r.rec||'-')+' · 가입 '+besc(r.paid||'0')+'</div></div>';
+                  h+='<div style="text-align:right;flex:none;"><span style="font-size:11px;font-weight:800;color:#fff;background:'+bcol+';padding:2px 8px;border-radius:8px;">'+badge+'</span>';
+                  if(r.amt) h+='<div style="font-size:15px;font-weight:900;color:'+bcol+';margin-top:4px;">−'+fmtMoney(r.amt)+'</div>';
+                  h+='</div></div>';
+                });
+              }
+              if(ok.length){
+                h+='<div style="font-size:13px;font-weight:800;color:#059669;margin:14px 0 8px;">🟢 잘 갖춰진 보장 ('+ok.length+')</div><div style="display:flex;flex-wrap:wrap;gap:6px;">';
+                ok.forEach(function(r){ h+='<span style="font-size:12px;font-weight:700;color:#059669;background:rgba(5,150,105,.08);border:1px solid rgba(5,150,105,.2);padding:4px 10px;border-radius:999px;">✓ '+besc(r.label)+'</span>'; });
+                h+='</div>';
+              }
+              var top=weak.slice(0,3).map(function(r){return r.label+(r.kind==='none'?' 미가입':' '+fmtMoney(r.amt)+' 부족');});
+              h+='<div style="margin-top:16px;background:rgba(49,130,246,.06);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.75;color:var(--text);">';
+              h+='<b>🗣 한 줄 낭독:</b> '+besc((c.name||'고객')+'님은 현재 ')+'<b style="color:#e5484d;">'+weak.length+'개 담보가 부족·미가입</b>입니다. ';
+              if(top.length) h+='특히 <b>'+besc(top.join(', '))+'</b> 가 취약해요. ';
+              if(ok.length) h+='다만 <b style="color:#059669;">'+besc(ok.slice(0,3).map(function(r){return r.label;}).join(', '))+'</b> 등은 잘 준비돼 있습니다. ';
+              h+='→ 위 순서대로 보강을 권합니다.';
+              h+='</div>';
+              out.innerHTML=h;
+            }
+            window.apexParseBojang=parseBojang; window.apexRenderBojang=renderBojang;
+            window.apexBojangUpload=async function(ev){
+              var file=ev.target.files&&ev.target.files[0]; if(!file) return;
+              var out=document.getElementById('apexBojangOut');
+              out.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;">📄 리포트 읽는 중…</div>';
+              try{
+                if(typeof pdfjsLib==='undefined') throw new Error('PDF.js 로드 실패 — 새로고침 후 재시도');
+                try{ if(!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
+                var buf=await file.arrayBuffer();
+                var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+                var items=[];
+                for(var pn=1;pn<=pdf.numPages;pn++){ var pg=await pdf.getPage(pn); var tc=await pg.getTextContent(); tc.items.forEach(function(it){ if(it.str) items.push(it.str); }); }
+                renderBojang(parseBojang(items));
+              }catch(err){ out.innerHTML='<div style="padding:14px;color:#e5484d;font-size:13px;">오류: '+besc((err&&err.message)||err)+'</div>'; }
+              ev.target.value='';
+            };
+          })();
+          </script>
+
           <!-- Step 0 · API 키 -->
           <!-- Step 0 (API 키) — UI 는 숨김. 화면 좌상단 🔑 API 버튼으로 통합.
                하단 input/button 은 글로벌 버튼과 양방향 동기화용으로 DOM 에 유지 -->
