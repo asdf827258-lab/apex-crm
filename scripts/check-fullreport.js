@@ -330,42 +330,94 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
                   __cov('c3', 'p1', '질병입원일당', 30000),
                   __cov('c4', 'p1', '항암방사선치료비'),          /* 금액 못 읽음 */
                   __cov('c5', 'p2', '항암약물치료비', 10000000),  /* 신규 제안 */
-                  __cov('c6', 'p1', '골절진단비', 1000000)];
+                  __cov('c6', 'p1', '골절진단비', 1000000),
+                  __cov('c8', 'p1', '질병입원의료비', 50000000)];
     const st = frBlankState(); st.pact = { p2: 'NEW' };
     __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, st, scen);
     const M = frMaster();
     const body = frBodyHtml(M), charts = frChartsHtml(M), jn = frStepsTableHtml(frScenActive()[0], M);
     const B = frStepCalc(frScenActive()[0], M, 'before');
-    const cancerRg = frRegion(FR_BODY.filter(x => x.k === 'CANCER')[0], M);
-    /* 담보가 하나도 없는 부위 */
-    const nur = frRegion(FR_BODY.filter(x => x.k === 'NURSING')[0], M);
     const sc = frScenCalc(frScenActive()[0], M, 'before');
     return {
-      bodySvg: /<svg/.test(body), dots: (body.match(/fr-dot/g) || []).length,
+      bodySvg: /<svg/.test(body),
+      reuse: body.indexOf('baba-body-grid') >= 0,
+      cols: (body.indexOf('권장') >= 0) && (body.indexOf('기존') >= 0) && (body.indexOf('신규') >= 0),
+      man: body.indexOf('3,000') >= 0,          /* 3,000만원 — 원을 만원으로 옮겼는가 */
+      recNote: body.indexOf('권장</b> 열') >= 0,
+      /* 하루 3만원(일당)과 한도 5,000만원(실손)이 한 칸에 더해지면 5,003 이 된다 */
+      mixed: (function(){
+        /* 안내문이 아니라 <b>표 칸</b>만 본다 — 글자 뭉치째 뒤지면 내 설명글도 값으로 읽힌다.
+           body 는 아직 화면에 없으니 <b>여기서 세운다.</b> */
+        var d=document.createElement('div');d.innerHTML=body;
+        var g=d.querySelectorAll('td'),i;
+        if(!g.length)return 'td없음';
+        for(i=0;i<g.length;i++)if(g[i].textContent.indexOf('5,003')>=0)return true;
+        return false;
+      })(),
+      offNote: body.indexOf('지급 방식이 칸과 달라') >= 0,
+      slotKinds: [frBodySlotKind('inpD'), frBodySlotKind('silD'), frBodySlotKind('cancer'), frBodySlotKind('outC')].join(','),
+      /* 치료 여정도 지급지도의 것을 그대로 쓰는가 */
+      /* 함수만 재면 안 된다 — <b>갈래 한 장</b>을 실제로 그려 본다 */
+      trackPage: (function(){
+        var MM = frMaster();
+        var pg = frTrackPageHtml(frTrackCalc(FR_TRACKS[0], MM), MM);
+        return { tj: pg.indexOf('tj-step') >= 0, wallet: pg.indexOf('여러 개의 지갑') >= 0 };
+      })(),
+      /* 골절진단비(100만)가 암 사건 <b>셈</b>에 섞여 들어오지 않는가 */
+      scenCoverB: frScenCalc(frScenActive()[0], frMaster(), 'before').coverWon,
+      catOff: [frCatOff('FRACTURE','CANCER'), frCatOff('SURGERY','CANCER'), frCatOff('CANCER','CANCER'), frCatOff('SILSON','BRAIN')].join(','),
+      tpReuse: (function(){
+        var r = frTrackCalc(FR_TRACKS[0], frMaster());
+        var m = frTpMapHtml(r, frMaster());
+        var d = document.createElement('div'); d.innerHTML = m;
+        var seg = m.indexOf('여러 개의 지갑') >= 0;
+        var x = frTpCov(r, frMaster(), frTpDis(FR_TRACKS[0]));
+        return { has: m.indexOf('tj-step') >= 0, wallet: seg,
+                 noSilbi: x.cov.silbi === 0, actNote: m.indexOf('금액으로 바꾸지 않았습니다') >= 0,
+                 /* 하루치를 목돈 칸에 넣지 않았는가 — 일당은 제 칸(perDay)으로 */
+                 perDay: x.cov.perDay, diag: x.cov.diag,
+                 /* 지급지도 화면은 건드리지 않았는가 */
+                 plain: tpBody().indexOf('내 보장 입력') >= 0 && tpBody().indexOf('tp-dis') >= 0 };
+      })(),
+
       step01: B[0].coverWon, step01off: B[0].off,
       step03: B[1].coverWon, step03daily: B[1].daily,
       step04unk: B[2].unknown, step04pend: B[2].pend,
       scenPend: sc.pend.length, scenUnk: sc.unknown.length,
-      cancerLump: cancerRg.bWon, cancerCover: cancerRg.rate ? cancerRg.rate.coverB : null,
-      saysBoth: frRegionSay(cancerRg).indexOf('이 사건에서 열리는 것은') >= 0,
-      offB: cancerRg.rate ? cancerRg.rate.offB : -1,
-      nurNone: frRegionSay(nur).indexOf('준비된 담보가 없습니다') >= 0,
-      nurColor: frRegionColor(nur),
       chartsHasActual: charts.indexOf('실손') >= 0,
       jnLen: jn.length
     };
   });
-  is(pic.bodySvg && pic.dots === 4, '인체 그림을 새로 그리지 않고 가져다 쓰고, 부위 점이 얹힌다 (' + pic.dots + '개)');
+  is(pic.bodySvg && pic.reuse,
+     '인체 그림을 <b>새로 그리지 않고</b> 비포&애프터의 것을 그대로 쓴다 (baba-body-grid)');
+  is(pic.cols, '권장 · 기존 · 신규 <b>세 열</b>이 원본 그대로 선다');
+  is(pic.man, '원을 <b>만원</b>으로 옮겨 그림에 넣는다 — 그림은 만원으로 그린다 (3,000)');
+  is(pic.recNote, '<b>권장</b> 열이 어디서 왔는지(또는 왜 비었는지) 밝힌다');
+  is(pic.catOff === 'true,false,false,false',
+     '<b>큰 묶음</b>도 사건 자로 본다 — 골절진단비는 암 사건에 안 열리고, 수술·실손은 두루 열린다');
+  is(pic.scenCoverB === 30000000,
+     '방어력 셈에서 <b>골절진단비 100만원이 빠진다</b> — 암 진단비 3,000만원만 남는다 (' + pic.scenCoverB + '원)');
+  is(pic.trackPage.tj && pic.trackPage.wallet && pic.tpReuse.has,
+     '치료 여정을 <b>새로 그리지 않고</b> 치료비 지급지도의 것을 그대로 쓴다 — <b>갈래 한 장에 실제로 서는지</b>까지 본다');
+  is(pic.tpReuse.noSilbi && pic.tpReuse.actNote,
+     '실손 보전율을 <b>짐작해 넣지 않는다</b> — 몇 건인지만 말한다');
+  is(pic.tpReuse.perDay === 3 && pic.tpReuse.diag === 3000,
+     '일당은 <b>제 칸(하루 얼마)</b>으로, 목돈은 목돈 칸으로 간다 (일당 '+pic.tpReuse.perDay+'만 · 진단 '+pic.tpReuse.diag+'만)');
+  is(pic.tpReuse.plain,
+     '치료비 지급지도 화면은 <b>한 글자도 달라지지 않는다</b> — 입력칸도 질병 단추도 그대로');
+  is(pic.slotKinds === 'DAILY,ACTUAL,LUMP,DAILY',
+     '칸마다 <b>무엇을 담는 칸인지</b>를 안다 (' + pic.slotKinds + ')');
+  is(pic.mixed === false,
+     '하루치와 목돈을 <b>한 칸에 더하지 않는다</b> — 일당 3만 + 실손 5,000만 = 「5,003만」 이 되던 자리');
   is(pic.step01 === 30000000 && pic.step01off === 1,
      '단계 계산도 사건 자를 쓴다 — 위암 「진단」에 유사암을 더하지 않는다 (' + pic.step01 + '원)');
   is(pic.step03 === 30000 * 21 && pic.step03daily === 1, '일당 단계는 입원일수로 환산하고 그 사실을 남긴다');
   is(pic.step04unk === 0 && pic.step04pend === 1,
      '신규 제안 담보를 「금액 확인 필요」가 아니라 「조정 후에만」으로 가른다');
   is(pic.scenPend === 1 && pic.scenUnk === 1, '방어력 계산도 「못 읽음」과 「아직 없음」을 가른다');
-  is(pic.cancerLump !== pic.cancerCover && pic.saysBoth,
-     '부위 합계(' + pic.cancerLump + ')와 방어력 기준액(' + pic.cancerCover + ')이 다르면 그 말을 한다');
-  is(pic.offB === 1, '뺀 담보는 <b>그 부위 안에서만</b> 센다 — 표 전체를 세어 「14건」이라 적던 자리 (' + pic.offB + '건)');
-  is(pic.nurNone && pic.nurColor === '#CBD5E1', '담보가 없는 부위는 「준비된 담보가 없습니다」라고 말한다');
+  /* 부위 카드(frRegion·FR_BODY)는 걷어냈다 — 인체 한 장을 비포&애프터의 원본으로
+     바꾸면서 아무 데서도 안 그려지는 옛 판이 되었다. 그리지 않는 것을 점검이
+     붙들고 있으면 「보고 있다」는 착각만 남는다 (CLAUDE.md 5번). */
   is(pic.jnLen > 500, '치료 여정이 실제로 그려진다');
 
   /* ── 일당인가 목돈인가 · 네 갈래 · 그때 우리 집은 ── */
@@ -587,6 +639,174 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
   is(lazy.headCount, '그림으로 읽은 쪽은 <b>세기만</b> 한다 — 쪽 원문을 다 받아 오지 않는다');
 
 
+  /* ── [9-8] 🔀 전 · 후 만들기 ─────────────────────────────────────
+     왼쪽에서 해지를 누르면 오른쪽이 <b>그 자리에서</b> 무엇이 비는지 말하는가.
+     그리고 금액을 못 읽은 담보가 <b>조용히 빠지지</b> 않는가.            */
+  console.log('\n[9-8] 전 · 후 만들기 — 누르면 그 자리에서 말하는가');
+  const mkS = await page.evaluate(() => {
+    const covs = [__cov('a1', 'p1', '뇌출혈진단비', 10000000),
+                  __cov('d1', 'p1', '간병인사용일당', 100000),
+                  __cov('a2', 'p1', '항암방사선치료비'),          /* 금액 못 읽음 */
+                  __cov('b1', 'p2', '일반암진단비', 30000000)];
+    __frSeed([__pol('p1', 50000, false), __pol('p2', 30000, false)], covs, frBlankState(), []);
+
+    /* ① 아무것도 안 눌렀을 때 — 비는 자리는 없어야 한다 */
+    const zero = frMakeDiff(frMaster());
+
+    /* ② 계약 하나를 해지 */
+    frState().pact['p1'] = 'CANCEL';
+    const M = frMaster();
+    const D = frMakeDiff(M);
+    const html = frMakeHtml(M);
+
+    /* ③ 담보 하나만 해지 */
+    frState().pact = {};
+    frState().cact['b1'] = 'CANCEL';
+    const D2 = frMakeDiff(frMaster());
+
+    /* ④ 조정 후 금액을 직접 적으면 채우는 자리로 */
+    frState().cact = {};
+    frState().cadjWon['a1'] = 50000000;
+    const D3 = frMakeDiff(frMaster());
+    frState().cadjWon = {};
+
+    return {
+      zeroLoss: zero.loss.length, zeroGain: zero.gain.length,
+      lossN: D.loss.length, lossWon: D.loss.length ? D.loss[0].won : null,
+      unknownN: D.lostUnknown.length,
+      say: D.loss.length ? frMakeSay(D.loss[0]) : '',
+      headCount: html.indexOf('2+1건') >= 0,
+      unkNote: html.indexOf('금액을 못 읽은 담보 <b>1건</b>도 함께 사라집니다') >= 0,
+      zeroWord: html.indexOf('0원이라는 뜻이 아닙니다') >= 0,
+      covLoss: D2.loss.length, covWon: D2.loss.length ? D2.loss[0].won : null,
+      gainN: D3.gain.length, gainWon: D3.gain.length ? D3.gain[0].won : null,
+      body: html.indexOf('baba-body-grid') >= 0,
+      prem: html.indexOf('월 보험료 · 지금') >= 0,
+      /* 하루치를 목돈처럼 말하지 않는가 */
+      daily: (function(){
+        frState().cadjWon['d1'] = 150000;
+        var D = frMakeDiff(frMaster());
+        var g = D.gain.filter(function(x){return x.m.id==='d1';})[0];
+        frState().cadjWon = {};
+        return g ? frMoneyBy(g.m, g.won) : '없음';
+      })()
+    };
+  });
+  is(mkS.zeroLoss === 0 && mkS.zeroGain === 0,
+     '아무것도 안 눌렀으면 <b>비는 자리도 채우는 자리도 없다</b>');
+  is(mkS.lossN === 2 && mkS.lossWon === 10000000,
+     '계약을 해지하면 그 담보가 <b>비는 자리</b>로 선다 (' + mkS.lossWon + '원)');
+  is(mkS.say.indexOf('뇌출혈') >= 0 && mkS.say.indexOf('1,000만원') >= 0,
+     '무엇이 비는지 <b>그 자리에서 말한다</b> — ' + mkS.say.replace(/<[^>]*>/g, ''));
+  is(mkS.unknownN === 1 && mkS.unkNote && mkS.zeroWord,
+     '금액을 <b>못 읽은 담보도 사라진다고 말한다</b> — 조용히 빼지 않고, 0원이라 하지도 않는다');
+  is(mkS.headCount,
+     '「비는 자리」 머리에 <b>못 읽은 건수까지</b> 적는다 (2+1건)');
+  is(mkS.covLoss === 1 && mkS.covWon === 30000000,
+     '담보 하나만 해지해도 <b>그 담보만</b> 빈다 (' + mkS.covWon + '원)');
+  is(mkS.gainN === 1 && mkS.gainWon === 40000000,
+     '조정 후 금액을 직접 적으면 <b>채우는 자리</b>로 선다 — 1,000만 → 5,000만이면 4,000만 (' + mkS.gainWon + '원)');
+  is(mkS.daily === '하루 5만원',
+     '하루치를 <b>목돈처럼 말하지 않는다</b> — 「5만원 늘어납니다」가 아니라 「' + mkS.daily + '」');
+  /* ── 담보가 <b>많을 때</b> 쓸 수 있는가 ────────────────────────────
+     실물 KB 한 건이 계약 23건 · 담보 341개였다. 전부 펴 놓으면 화면이
+     수십 미터가 되어 아무것도 못 찾는다. 그렇다고 <b>접는 것이 빼는 것</b>이
+     되면 안 된다 — 접힌 담보도 리포트에는 전부 나가야 한다(21번).      */
+  const big = await page.evaluate(() => {
+    const covs = [], pols = [];
+    for (let i = 0; i < 6; i++) {
+      pols.push(__pol('bp' + i, 30000, false));
+      for (let j = 0; j < 10; j++)
+        covs.push(__cov('bc' + i + '_' + j, 'bp' + i,
+          (j === 3 ? '일반암진단비' : '기타담보' + i + '_' + j), 1000000 + j));
+    }
+    __frSeed(pols, covs, frBlankState(), []);
+    FR.mkQ = ''; FR.mkOpen = null;
+    const M = frMaster();
+    const shut = frMakeHtml(M);                 /* 60개 → 접힌 채로 서야 한다 */
+    const shutRows = (shut.match(/mk-cov/g) || []).length;
+
+    FR.mkOpen = null;
+    __frSeed(pols.slice(0, 2), covs.slice(0, 20), frBlankState(), []);
+    const M2 = frMaster();
+    const open = frMakeHtml(M2);                /* 20개 → 펴진 채로 서야 한다 */
+    const openRows = (open.match(/mk-cov/g) || []).length;
+
+    /* 접어도 <b>리포트에는 전부</b> 나가는가 */
+    __frSeed(pols, covs, frBlankState(), []);
+    FR.mkOpen = {}; FR.mkQ = '';
+    const M3 = frMaster(), T3 = frCounts(M3);
+    const doc = frDocHtml(M3, T3);
+    /* 이름은 여러 표에 되풀이해 나온다 — 세지 말고 <b>하나도 빠짐없이 있는지</b>를 본다 */
+    const missing = M3.filter(m => doc.indexOf(m.raw) < 0).map(m => m.raw);
+
+    /* 찾기 */
+    FR.mkQ = '일반암';
+    const found = frMakeHtml(M3);
+    const foundRows = (found.match(/mk-cov/g) || []).length;
+    FR.mkQ = '';
+
+    /* 「전부 유지」는 이미 정하신 것을 덮지 않는다 */
+    frState().pact['bp0'] = 'CANCEL';
+    const _t = window.toast, _p = window.frPaint, _s = window.frSaveState;
+    window.toast = function () {}; window.frPaint = function () {}; window.frSaveState = function () {};
+    frMkKeepAll();
+    window.toast = _t; window.frPaint = _p; window.frSaveState = _s;
+    const kept = JSON.stringify(frState().pact);
+
+    return { shutRows, openRows, lost: T3.lost, master: M3.length, foundRows,
+             keepKept: frState().pact['bp0'] === 'CANCEL',
+             keepFilled: frState().pact['bp1'] === 'KEEP', kept, missing: missing.length, first: missing[0] || '',
+             shutSays: shut.indexOf('빠진 것이 아닙니다') >= 0,
+             foundSays: found.indexOf('찾았습니다') >= 0 };
+  });
+  is(big.shutRows === 0 && big.shutSays,
+     '담보가 <b>많으면 접힌 채로</b> 열리고, 접힌 것이 <b>빠진 것이 아니라고</b> 말한다 (60개)');
+  is(big.openRows === 20,
+     '담보가 <b>적으면 펴진 채로</b> 열린다 — 접는 것이 도리어 일이 되지 않게 (20개)');
+  is(big.lost === 0 && big.master === 60 && big.missing === 0,
+     '<b>접어 두어도 리포트에는 60개가 전부</b> 나간다 — 접는 것과 빼는 것은 다르다' +
+     (big.missing ? (' — 빠진 것 ' + big.missing + '개: ' + big.first) : ''));
+  is(big.foundRows === 6 && big.foundSays,
+     '「일반암」으로 찾으면 <b>그 담보만</b> 선다 — 계약마다 하나씩 6개 (' + big.foundRows + ')');
+  /* ── 전 · 후 <b>한 장만</b> 뽑기 ── */
+  const one = await page.evaluate(() => {
+    __frSeed([__pol('o1', 50000, false)],
+             [__cov('oc1', 'o1', '일반암진단비', 30000000), __cov('oc2', 'o1', '뇌출혈진단비', 10000000)],
+             frBlankState(), []);
+    OSC.current = { id: 'c1', name_masked: '홍○동' };
+    const M = frMaster(), T = frCounts(M);
+    const ba = frBaOnlyHtml(M, T), full = frDocHtml(M, T);
+    /* 담보가 어긋나면 <b>한 장짜리도</b> 막아야 한다 */
+    FR.built = { M: M, T: { report: T.report, lost: 1 } };
+    let said = '';
+    const _t = window.toast; window.toast = function (m) { said = m; };
+    const root0 = document.getElementById('printRoot');
+    if (root0) root0.innerHTML = '';
+    const _pr = window.print; window.print = function () {};
+    frPrint('ba');
+    window.toast = _t; window.print = _pr;
+    const root = document.getElementById('printRoot');
+    return {
+      who: ba.indexOf('홍○동') >= 0,
+      names: M.filter(m => ba.indexOf(m.raw) < 0).length,
+      shorter: ba.length < full.length,
+      foot: ba.indexOf('fr-foot') >= 0,
+      blocked: said.indexOf('어긋나') >= 0 && (!root || !root.innerHTML)
+    };
+  });
+  is(one.who, '전·후 한 장에 <b>누구 것인지</b>가 적힌다 — 이름 없는 종이는 안 내보낸다');
+  is(one.names === 0, '한 장에도 <b>담보가 하나도 빠지지 않는다</b> (' + one.names + '개 빠짐)');
+  is(one.shorter, '풀리포트보다 <b>짧다</b> — 한 장만 뽑는 뜻이 산다');
+  is(one.foot, '무엇을 안 세었는지 밝히는 <b>꼬리</b>가 붙는다');
+  is(one.blocked, '담보가 어긋나면 <b>한 장짜리도 막는다</b> — 틀린 한 장이 더 빨리 간다');
+
+  is(big.keepKept && big.keepFilled,
+     '「전부 유지」는 <b>아직 안 정한 것만</b> 채운다 — 해지로 찍어 두신 것을 덮지 않는다');
+
+  is(mkS.body && mkS.prem,
+     '한 화면에 <b>월 보험료 전·후</b>와 <b>인체 한 장</b>이 같이 서서 누를 때마다 다시 그려진다');
+
   /* ── 인쇄 ── */
   console.log('\n[10] 종이 — 어긋난 채로 뽑지 않고, 우리가 다시 읽을 수 있는가');
   const print = await page.evaluate(() => {
@@ -662,6 +882,68 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
      "go('baba') 가 <b>말없이 죽지 않는다</b> — 무엇이든 그려 준다 (" + opened.len + '자)');
   is(/frOpenBaba/.test(CODE) && /frFromBaba/.test(CODE),
      '풀리포트 안에 들어가는 길(🔄 빠른 비포&애프터)과 가져오는 길이 둘 다 있다');
+
+
+  /* ── 메뉴에서 바로 들어가기 · 관리자 칸의 돈 ── */
+  console.log('\n[13] 「보장분석 전&후 만들기」 — 메뉴에서 그 자리로 바로 가는가');
+  const mk = await page.evaluate(() => {
+    var it = null, grp = null;
+    TABS.forEach(function (g) {
+      (g.items || []).forEach(function (x) { if (x.id === 'frmake') { it = x; grp = g.group; } });
+    });
+    /* 고객을 보던 중이면 그 고객 상세로, 아니면 목록으로 — 둘 다 clients 화면이다 */
+    OSC.current = { id: 'c1', name_masked: '홍○동' };
+    OSC.view = 'list';
+    var went = '';
+    var realGo = window.go;
+    window.go = function (t) { went = t; };
+    try { frMakeGo(); } catch (e) { went = 'ERR:' + e.message; }
+    var view1 = OSC.view, page1 = FR.page;
+    OSC.current = null; OSC.view = 'detail';
+    var went2 = '';
+    window.go = function (t) { went2 = t; };
+    try { frMakeGo(); } catch (e) { went2 = 'ERR:' + e.message; }
+    var view2 = OSC.view;
+    window.go = realGo;
+    return { has: !!it, grp: grp, ak: it && it.ak, title: it && it.title, hide: !!(it && it.hide),
+             went: went, view1: view1, page1: page1, went2: went2, view2: view2 };
+  });
+  is(mk.has, '메뉴에 「' + (mk.title || '?') + '」 가 있다 (' + mk.grp + ' 칸)');
+  is(mk.grp === '증권 분석' && mk.hide === false, '증권 분석 칸에 <b>보이게</b> 선다');
+  is(mk.ak === '고객', "권한 열쇠는 <b>실제로 여는 화면</b>(고객) 것을 쓴다 — 못 여는 사람에게 단추만 보이지 않게");
+  is(mk.went === 'clients' && mk.view1 === 'detail',
+     '보던 고객이 있으면 <b>그 고객 상세</b>로 간다 (' + mk.went + '/' + mk.view1 + ')');
+  is(mk.went2 === 'clients' && mk.view2 === 'list',
+     '보던 고객이 없으면 <b>고객 목록</b>으로 간다 — 목록을 두 벌로 만들지 않는다');
+  /* 메뉴 이름이 「전&후 만들기」다 — 리포트가 아니라 <b>만드는 화면</b>이 열려야 한다 */
+  is(mk.page1 === 'make', '메뉴가 데려간 자리에서 <b>전·후 만들기</b> 화면이 펴져 있다');
+
+  console.log('\n[13-1] 관리자 칸의 돈 — 0 을 잘못 세지 않게 읽어 주는가');
+  const rd2 = await page.evaluate(() => {
+    OS.cfg = OS.cfg || {};
+    OS.cfg.fr_scenarios = JSON.stringify([{
+      id: 'z1', diseaseCategory: 'CANCER', diseaseCode: 'cancer_general',
+      scenarioName: '시험', referenceTreatmentCostWon: 50000000,
+      purposes: ['DIAGNOSIS'], sourceName: '시험', active: true,
+      treatmentSteps: [{ no: '01', name: '진단', keys: ['cancer_gen'], costWon: 5000000 },
+                       { no: '02', name: '수술', keys: ['surg_dz'], costWon: null }]
+    }]);
+    var h = frScenAdminHtml();
+    /* 글자만 찾으면 <b>헛통과</b>한다 — 단계 합 문구에도 「5,000만원」이 들어 있어서,
+       칸 밑의 되읽기를 떼도 그대로 지나갔다. 되읽기 칸(fr-rd)을 <b>세어야</b> 한다.
+       기준 치료비 1 + 단계 2 = 3 개 (CLAUDE.md 8번 — 안 우는 알람은 알람이 아니다). */
+    return { rdCount: (h.match(/class="fr-rd"/g) || []).length,
+             readCost: h.indexOf('5,000만원') >= 0,
+             readStep: h.indexOf('500만원') >= 0,
+             sumNote: h.indexOf('단계 합') >= 0,
+             noAuto: h.indexOf('자동으로 맞추지 않습니다') >= 0,
+             unsetNote: h.indexOf('미설정 단계 1개는 빼고 더했습니다') >= 0 };
+  });
+  is(rd2.rdCount === 3 && rd2.readCost && rd2.readStep,
+     '기준 치료비 1 + 단계 2 = <b>돈 칸 3개 모두</b> 사람이 읽는 금액으로 되읽어 준다 (' + rd2.rdCount + '개)');
+  is(rd2.sumNote && rd2.noAuto,
+     '단계 합이 기준과 다르면 말하되 <b>자동으로 맞추지 않는다</b> — 넣으신 값이 마지막 말이다');
+  is(rd2.unsetNote, '미설정 단계는 <b>0 으로 세지 않고</b> 뺀 사실을 적는다');
 
 
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));

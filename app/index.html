@@ -10861,6 +10861,11 @@ var TABS=[
       비포&애프터」. hide 를 달면 목록에는 안 서지만 🔎 메뉴 찾기·음성·
       ?go=baba 주소·실행 체크판 단추로 <b>그대로 열린다</b>(위 teamhub 와 같은 방식). */
    {id:'baba',icon:'🔄',title:'비포&애프터',cnt:'',hide:true,ak:'보장분석'},
+   /* 전·후 리포트는 <b>고객 상세</b> 안에 있어서, 쓰려면 고객 365일 → 고객 →
+      아래로 내려 찾아야 했다. 상담 직전에 그 세 걸음이 길다. 이 줄은 그 자리로
+      <b>바로</b> 보낸다. 권한 열쇠(ak)는 실제로 여는 화면인 <b>고객</b> 것을 쓴다 —
+      증권 분석 칸에 서 있다고 남의 권한을 쓰면 못 여는 사람에게 단추만 보인다. */
+   {id:'frmake',icon:'🔀',title:'보장분석 전&후 만들기',cnt:'',ak:'고객'},
    {id:'compare',icon:'📊',title:'제안서 비교',cnt:'',ak:'보장분석'},
    {id:'onecmp',icon:'💯',title:'한장 보험료 비교',cnt:'',ak:'보험료 비교 담보 설계 한장 보험사'},
    {id:'ai_prop',icon:'🧾',title:'AI 제안서 생성',cnt:'',ak:'보장분석'},
@@ -12100,6 +12105,11 @@ function go(tab){
     return;
   }
 
+  /* 「보장분석 전&후 만들기」 — 화면을 새로 만들지 않고 <b>고객 화면으로 넘긴다.</b>
+     고객 목록을 여기 한 벌 더 그리면 두 곳이 서로 다른 것을 말하게 된다
+     (CLAUDE.md 5번). 보던 고객이 있으면 그 고객의 리포트 자리까지 데려간다. */
+  if(tab==='frmake'){ frMakeGo(); return; }
+
   if(tab==='onecmp'){
     mountOneCmp();
     osFullMode('onecmp-mode');
@@ -12441,8 +12451,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-30 05:20';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).';
+var APP_BUILD='2026-08-30 09:50';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21481,8 +21491,11 @@ function renderTreatPay(){
     '<div id="tpBody">'+tpBody()+'</div>');
 }
 function tpFinField(k,label,val,hint){return '<div><label>'+label+(hint?' <span style="color:#9AA2AD;font-weight:600">'+hint+'</span>':'')+'</label><input type="number" min="0" step="1" value="'+(val>0?val:(val===0?'0':''))+'" onchange="tpCovSet(\''+k+'\',this.value)" placeholder="0"></div>';}
-function tpBody(){
-  var d=tpDisease(),c=TP.cov;
+/* ctx 를 넘기면 그 자료로 그 대목만, 안 넘기면 지금 그대로 — 한 그림 두 자리 */
+function tpBody(ctx){
+  var __ro=!!(ctx&&ctx.ro);
+  var want=function(k){return !ctx||!ctx.only||ctx.only.indexOf(k)>=0;};
+  var d=(ctx&&ctx.dis)?ctx.dis:tpDisease(),c=(ctx&&ctx.cov)?ctx.cov:TP.cov;
   /* 질병 자료를 못 읽었으면 아무 숫자도 만들지 않는다 — 빈 그래프를 세우면
      상담 자리에서 없는 값을 있는 것처럼 말하게 된다. */
   if(!d)return '<div class="notice"><b>아무 숫자도 만들지 않습니다.</b> 질병 자료(app/질병가이드-data.js)를 읽지 못해 '+
@@ -21500,9 +21513,9 @@ function tpBody(){
   var coverRate=beforeSelf>0?Math.round(covered/beforeSelf*100):0;
   var extra=Math.max(0,payout-beforeSelf);
   // 질병 선택
-  var h='<div class="tp-dis">'+TP_DISEASES.map(function(x){return '<button class="'+(x.id===TP.dis?'on':'')+'" onclick="tpSetDis(\''+x.id+'\')">'+x.ic+' '+osEsc(x.name)+'</button>';}).join('')+'</div>';
+  var h=__ro?'':'<div class="tp-dis">'+TP_DISEASES.map(function(x){return '<button class="'+(x.id===TP.dis?'on':'')+'" onclick="tpSetDis(\''+x.id+'\')">'+x.ic+' '+osEsc(x.name)+'</button>';}).join('')+'</div>';
   // 담보 입력
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">1</span>내 보장 입력 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(아는 값만 · 단위 만원, 일수는 일)</span></div>'+
+  if(want(1))h+='<div class="rpt-sec"><div class="hd"><span class="n">1</span>내 보장 입력 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(아는 값만 · 단위 만원, 일수는 일)</span></div>'+
     '<div class="sub">가입한 담보 금액과 예상 치료 상황을 넣으면 아래 그래프가 즉시 바뀝니다. (이 기기에만 저장)</div>'+
     '<div class="rpt-fin">'+
     tpFinField('diag','진단비(정액)',diag,'암/뇌/심장')+
@@ -21521,7 +21534,7 @@ function tpBody(){
       '<div class="tj-pay">'+s.pay.map(function(p){return '<span>'+osEsc(p)+'</span>';}).join('')+'</div>'+
       '<div class="tj-desc">'+osEsc(s.desc)+'</div></div>';
   }).join('')+'</div>';
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">2</span>'+d.ic+' '+osEsc(d.name)+' — 치료 여정과 단계별 지급</div>'+
+  if(want(2))h+='<div class="rpt-sec"><div class="hd"><span class="n">2</span>'+d.ic+' '+osEsc(d.name)+' — 치료 여정과 단계별 지급</div>'+
     '<div class="sub">진단부터 회복까지 각 단계에서 어떤 담보가 열리는지 보여줍니다. 파란 칩이 그 단계에서 작동하는 담보입니다. (일반적 경과 예시 · 개인차 큼)</div>'+
     '<div class="viz-wrap">'+journey+'</div></div>';
   // 지급 구성 "여러 지갑"
@@ -21532,7 +21545,7 @@ function tpBody(){
   if(stayPay>0)segs.push({value:stayPay,color:'#D97706',tag:'입원일당'});
   if(chemo>0)segs.push({value:chemo,color:'#059669',tag:'항암치료비'});
   var walletCount=segs.length;
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">3</span>한 번의 사건, 여러 개의 지갑</div>'+
+  if(want(3))h+='<div class="rpt-sec"><div class="hd"><span class="n">3</span>한 번의 사건, 여러 개의 지갑</div>'+
     '<div class="sub">이번 사건에서 <b>'+walletCount+'개의 담보(지갑)</b>가 각각 열려 총 <b>'+vizWon(payout)+'</b>이 지급됩니다. 실손(병원비)과 정액(목돈)이 어떻게 겹쳐 작동하는지 보여줍니다.</div>'+
     (segs.length?'<div class="viz-wrap">'+vizStackBar([{label:'지급 구성',segs:segs,total:vizWon(payout)}],{width:580,max:payout})+'</div>'+
       '<div class="rpt-legend">'+segs.map(function(g){return '<span><i style="background:'+g.color+'"></i>'+g.tag+' '+vizWon(g.value)+'</span>';}).join('')+'</div>'
@@ -21543,7 +21556,7 @@ function tpBody(){
     {label:'보험이 없다면',segs:[{value:bill,color:'#DC2626',tag:'병원비'},{value:incomeLoss,color:'#991B1B',tag:'소득손실'}],total:vizWon(beforeSelf)},
     {label:'보험이 있다면',segs:[{value:covered,color:'#059669',tag:'보험이 낸 돈'},{value:afterSelf,color:'#DC2626',tag:afterSelf>0?'남는 실부담':''}],total:vizWon(afterSelf)+' 부담'}
   ];
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">4</span>비포 & 애프터 — 가계 부담은 이렇게 달라집니다</div>'+
+  if(want(4))h+='<div class="rpt-sec"><div class="hd"><span class="n">4</span>비포 & 애프터 — 가계 부담은 이렇게 달라집니다</div>'+
     '<div class="sub">같은 사건이라도 보험 유무에 따라 실제 내 지갑에서 나가는 돈이 달라집니다. 병원비뿐 아니라 <b>일을 못 해 끊긴 소득</b>까지 정액보험금이 메웁니다.</div>'+
     '<div class="viz-wrap">'+vizStackBar(baRows,{width:580,max:maxBA,rowH:38,gap:20})+'</div>'+
     '<div class="rpt-legend"><span><i style="background:#DC2626"></i>내 부담(병원비·실손 후 잔액)</span><span><i style="background:#991B1B"></i>소득손실</span><span><i style="background:#059669"></i>보험이 낸 돈</span></div>'+
@@ -21602,6 +21615,7 @@ function tpBody(){
             '어디서 치료받을지, 언제 복귀할지를 <b>돈이 아니라 몸 상태로</b> 정할 수 있습니다.'
           : '진단비·항암치료비를 넣으면 여기에 표시됩니다.'));
 
+  if(want(5)){
   h+='<div class="rpt-sec"><div class="hd"><span class="n">5</span>그래서 무엇이 달라집니까 — 이 한 번을 겪고 난 뒤</div>'+
     '<div class="sub">앞의 숫자를 <b>사람이 쓰는 단위</b>로 바꿔 놓은 것입니다. 새로 만든 값은 없습니다 — 위에 넣으신 금액을 달(月)과 갚는 방법으로 옮겼을 뿐입니다.</div>'+
     '<div class="tp-chgs">'+c1+c2+c3+'</div>';
@@ -21655,9 +21669,10 @@ function tpBody(){
           : '「지금 가입하신 담보 금액을 넣어 보시면, 그날 무엇이 달라지는지 이 자리에서 바로 보여 드리겠습니다.」'))+
     '</div>';
   h+='</div>';
+  }
 
   // KPI 요약 + 인쇄
-  h+='<div class="rpt-sec" id="tpRptContent"><div class="hd"><span class="n">6</span>요약</div>'+
+  if(want(6))h+='<div class="rpt-sec" id="tpRptContent"><div class="hd"><span class="n">6</span>요약</div>'+
     '<div class="rpt-kpis">'+
     '<div class="rpt-kpi"><div class="k">예상 지급 총액</div><div class="v" style="color:#1A56DB;font-size:16px">'+vizWon(payout)+'</div><div class="s">실손+정액 합산</div></div>'+
     '<div class="rpt-kpi"><div class="k">정액 목돈</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(liquid)+'</div><div class="s">진단·수술·일당·항암</div></div>'+
@@ -21719,7 +21734,7 @@ function tpBody(){
   }
   /* 복사할 때는 줄바꿈을 살린다 — 카톡으로 보내면 한 덩어리가 되면 안 읽힌다 */
   var plain=close.replace(new RegExp('<br\\s*/?>','gi'),'\n').replace(/<[^>]+>/g,'');
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">7</span>마무리 — 오늘, 이 자리에서</div>'+
+  if(want(7))h+='<div class="rpt-sec"><div class="hd"><span class="n">7</span>마무리 — 오늘, 이 자리에서</div>'+
     '<div class="sub">아래 문장은 이 화면의 숫자로 만든 것입니다. 고객께 <b>그대로 읽어 드려도</b> 되고, 종이로 드려도 됩니다.</div>'+
     '<div class="tp-close">'+close+'</div>'+
     '<div class="tp-ask"><div class="ah">오늘 정하실 것 — 딱 세 가지</div>'+
@@ -34225,10 +34240,11 @@ function babaBodySvg(){
     '<ellipse cx="100" cy="172" rx="23" ry="26" fill="#E9A075" opacity=".4"/>'+
     '</svg>';
 }
-function babaBodyTable(g,rec,edit){
+/* src 를 넘기면 그 출처로, 안 넘기면 비포&애프터의 값으로 — 한 그림 두 자료 */
+function babaBodyTable(g,rec,edit,src){
   var BL='#3182F6',INK='#191F28',GR='#8B95A1',OR='#FF9500';
   var body=g.rows.map(function(r){
-    var k=r[0],row=babaRowOf(k),b=row?row.b:null,a=row?row.a:null;
+    var k=r[0],row=(src?src(k):babaRowOf(k)),b=row?row.b:null,a=row?row.a:null;
     var rc=rec[k],dd=(b===null||a===null)?null:(a-b);
     var col=dd===null?INK:(dd>0?BL:(dd<0?OR:INK));
     var cell=function(v,c2,w){
@@ -34256,16 +34272,16 @@ function babaBodyTable(g,rec,edit){
       '<th style="background:#EAF2FF;color:#1A56DB;padding:5px 3px;font-size:10px;border:1px solid #E5E8EB;width:55px">신규</th>'+
     '</tr></thead><tbody>'+body+'</tbody></table>';
 }
-function babaBodyHtml(edit){
-  var rec=babaRec(),L=[],R=[],i;
+function babaBodyHtml(edit,src,rec2,title,sub){
+  var rec=rec2||babaRec(),L=[],R=[],i;
   for(i=0;i<BABA_BODY.length;i++)(BABA_BODY[i].side==='L'?L:R).push(BABA_BODY[i]);
   var col=function(arr){
-    return arr.map(function(g){return '<div style="margin-bottom:11px">'+babaBodyTable(g,rec,edit)+'</div>';}).join('');
+    return arr.map(function(g){return '<div style="margin-bottom:11px">'+babaBodyTable(g,rec,edit,src)+'</div>';}).join('');
   };
   return '<div class="baba-body">'+
     '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
-      '<div><div style="font-size:17px;font-weight:800;color:#191F28">주요 보장 요약 — 전 · 후</div>'+
-      '<div style="font-size:11px;color:#8B95A1;margin-top:2px">기존 계약과 새 설계를 한 장에</div></div>'+
+      '<div><div style="font-size:17px;font-weight:800;color:#191F28">'+esc(title||'주요 보장 요약 — 전 · 후')+'</div>'+
+      '<div style="font-size:11px;color:#8B95A1;margin-top:2px">'+esc(sub||'기존 계약과 새 설계를 한 장에')+'</div></div>'+
       '<div style="font-size:10.5px;color:#8B95A1;text-align:right">(단위: 만원)<br>'+esc(BABA.at||'')+'</div>'+
     '</div>'+
     '<div class="baba-body-grid">'+
@@ -48342,8 +48358,9 @@ var FR_DICT=[
  {k:'surg_open',    n:'관혈 수술비',         c:'SURGERY',p:'SURGERY',s:['관혈수술'],x:['비관혈']},
  {k:'surg_robot',   n:'로봇 수술비',         c:'SURGERY',p:'SURGERY',s:['로봇수술']},
  {k:'surg_davinci', n:'다빈치 수술비',       c:'SURGERY',p:'SURGERY',s:['다빈치']},
- {k:'surg_etc',     n:'기타 수술비',         c:'SURGERY',p:'SURGERY',s:['수술비','수술급여금','수술자금']},
+ {k:'surg_etc',     n:'기타 수술비',         c:'SURGERY',p:'SURGERY',s:['수술비','수술급여금','수술자금','기타수술']},
  /* ── 입원 · 통원 ── */
+ {k:'hos_etc',      n:'기타 입원일당',       c:'HOSPITAL',p:'HOSPITAL',s:['기타입원일당']},
  {k:'hos_dz',       n:'질병 입원일당',       c:'HOSPITAL',p:'HOSPITAL',s:['질병입원일당','질병입원']},
  {k:'hos_inj',      n:'상해 입원일당',       c:'HOSPITAL',p:'HOSPITAL',s:['상해입원일당','상해입원','재해입원']},
  {k:'hos_icu',      n:'중환자실 입원일당',   c:'HOSPITAL',p:'HOSPITAL',s:['중환자실']},
@@ -48363,6 +48380,8 @@ var FR_DICT=[
  {k:'sil_inject',   n:'비급여 주사치료',     c:'SILSON',p:'ACTUAL_EXPENSE',s:['주사치료']},
  {k:'sil_mri',      n:'비급여 MRI·MRA',      c:'SILSON',p:'ACTUAL_EXPENSE',s:['MRI','MRA','자기공명']},
  {k:'sil_nonben',   n:'비급여 의료비',       c:'SILSON',p:'ACTUAL_EXPENSE',s:['비급여']},
+ {k:'sil_in',       n:'실손 입원의료비',     c:'SILSON',p:'ACTUAL_EXPENSE',s:['입원의료비','의료비(입원+통원)','입원+통원']},
+ {k:'sil_out',      n:'실손 통원의료비',     c:'SILSON',p:'ACTUAL_EXPENSE',s:['통원의료비','외래의료비','처방조제료','외래제비용']},
  {k:'sil_base',     n:'실손의료비',          c:'SILSON',p:'ACTUAL_EXPENSE',s:['실손의료비','실손','실비']},
  /* ── 후유장해 ── */
  {k:'dis_dz',       n:'질병 후유장해',       c:'DISABILITY',p:'DISABILITY',s:['질병후유장해']},
@@ -48503,25 +48522,36 @@ function frPayLabel(k){
   return (k==='LUMP')?'정액 목돈':(k==='DAILY')?'일당(1일)':(k==='VISIT')?'1회당 한도':'실손';
 }
 /* 계약 조치 · 담보 조치 — 「해지검토」와 「해지」는 <b>완전히 다른 상태</b>다 */
-var FR_PACT=[
- ['',            '미정',    '#8B95A1','#F9FAFB'],
- ['KEEP',        '유지',    '#0F766E','#ECFDF5'],
- ['ADJUST',      '조정',    '#2563EB','#EFF6FF'],
- ['REVIEW_CANCEL','해지검토','#B45309','#FFFBEB'],
- ['CANCEL',      '해지 확정','#B91C1C','#FEF2F2'],
- ['NEW',         '신규 제안','#7C3AED','#F5F3FF'],
- ['PAID_UP',     '납입완료', '#0369A1','#F0F9FF']
-];
-var FR_CACT=[
- ['',           '—',      '#8B95A1'],
- ['KEEP',       '유지',   '#0F766E'],
- ['ADJUST',     '조정',   '#2563EB'],
- ['SUPPLEMENT', '보완',   '#2563EB'],
- ['DUPLICATE',  '중복',   '#B45309'],
- ['SHORTAGE',   '부족',   '#B91C1C'],
- ['NEW',        '신규',   '#7C3AED'],
- ['PAID_UP',    '납입완료','#0369A1']
-];
+/* ── 조치 이름과 색 — <b>한 곳</b>에만 둔다 ────────────────────────
+   계약에 쓰는 말과 담보에 쓰는 말이 다를 뿐이지, 「해지」가 두 곳에서
+   <b>다른 색</b>으로 나오면 그게 사고다. 색은 여기 하나뿐이고, 어느 자리에
+   어떤 조치를 쓸 수 있는지만 아래에서 고른다 (CLAUDE.md 5번).           */
+var FR_ACT_DEF={
+ '':            ['—',       '#8B95A1','#F9FAFB'],
+ 'KEEP':        ['유지',     '#0F766E','#ECFDF5'],
+ 'ADJUST':      ['조정',     '#2563EB','#EFF6FF'],
+ 'SUPPLEMENT':  ['보완',     '#2563EB','#EFF6FF'],
+ 'DUPLICATE':   ['중복',     '#B45309','#FFFBEB'],
+ 'SHORTAGE':    ['부족',     '#B91C1C','#FEF2F2'],
+ 'REVIEW_CANCEL':['해지검토', '#B45309','#FFFBEB'],
+ 'CANCEL':      ['해지',     '#B91C1C','#FEF2F2'],
+ 'NEW':         ['신규',     '#7C3AED','#F5F3FF'],
+ 'PAID_UP':     ['납입완료',  '#0369A1','#F0F9FF']
+};
+/* 골라 쓰기. 이름만 자리에 맞게 바꿔 쓸 수 있다 — 색은 못 바꾼다 */
+function frActList(keys){
+  var out=[],i,k,nm,d;
+  for(i=0;i<keys.length;i++){
+    k=keys[i];nm=null;
+    if(k&&k.push){nm=k[1];k=k[0];}
+    d=FR_ACT_DEF[k];
+    if(!d)continue;
+    out.push([k,nm||d[0],d[1],d[2]]);
+  }
+  return out;
+}
+var FR_PACT=frActList([['','미정'],'KEEP','ADJUST','REVIEW_CANCEL',['CANCEL','해지 확정'],['NEW','신규 제안'],'PAID_UP']);
+var FR_CACT=frActList(['','KEEP','ADJUST','SUPPLEMENT','DUPLICATE','SHORTAGE','NEW','CANCEL','PAID_UP']);
 function frPactLabel(v){for(var i=0;i<FR_PACT.length;i++)if(FR_PACT[i][0]===(v||''))return FR_PACT[i][1];return v;}
 function frCactLabel(v){for(var i=0;i<FR_CACT.length;i++)if(FR_CACT[i][0]===(v||''))return FR_CACT[i][1];return v;}
 function frPactColor(v){for(var i=0;i<FR_PACT.length;i++)if(FR_PACT[i][0]===(v||''))return FR_PACT[i][2];return '#8B95A1';}
@@ -48531,7 +48561,8 @@ var FR_STATE_KIND='fullreport_state';
 var FR_SCEN_KEY='fr_scenarios';
 var FR={cid:null,client:null,pols:[],covs:[],state:null,rid:null,busy:false,
         page:'client',open:{},built:null,err:'',
-        docs:[],runs:{},imgPages:0,readAt:null,readBusy:false,readErr:''};
+        docs:[],runs:{},imgPages:0,readAt:null,readBusy:false,readErr:'',
+        mkQ:'',mkOpen:null,kbTmp:null};
 
 /* 이 화면이 쓰는 숫자는 <b>전부 원</b>이다 (추출이 원으로 뽑는다).
    그래서 이름을 WonR 로 끝낸다 — 만원을 받는 vizWon 과 헷갈리면 만 배 틀린다
@@ -48630,6 +48661,186 @@ function frSaveState(){
    <b>어떤 이유로도 줄이 사라지지 않는다.</b> 분류 실패는 미분류로 남고,
    금액을 못 읽은 것은 null(확인 필요) 로 남는다 — 0 으로 바꾸지 않는다.
    길이는 언제나 FR.covs.length 와 같아야 한다 (frCounts 가 이것을 본다). */
+/* ── 📄 KB 보장분석 PDF 를 그대로 읽어 온다 ───────────────────────
+   증권을 서버로 보내 읽히는 길과 <b>따로</b> 있는 길이다. KB 보장분석표는
+   담보마다 KB가 정한 표준담보명과 지급형태를 이미 적어 주므로 규칙만으로
+   읽힌다. AI 를 부르지 않는다.
+
+   읽은 것은 <b>이 기기에만</b> 두지 않고 고객 상태(saved_reports)에 넣어
+   둔다 — 다른 기기에서 열어도 그대로 있어야 「전·후」를 이어서 만든다.  */
+var FR_KB_SRC='KB 보장분석';
+function frKbMerge(){
+  var kb=frState().kb;
+  if(!kb||!kb.pols||!kb.pols.length)return 0;
+  var have={},i;
+  for(i=0;i<FR.pols.length;i++)have[FR.pols[i].id]=1;
+  for(i=0;i<kb.pols.length;i++)if(!have[kb.pols[i].id])FR.pols.push(kb.pols[i]);
+  var hc={};
+  for(i=0;i<FR.covs.length;i++)hc[FR.covs[i].id]=1;
+  for(i=0;i<(kb.covs||[]).length;i++)if(!hc[kb.covs[i].id])FR.covs.push(kb.covs[i]);
+  return kb.covs?kb.covs.length:0;
+}
+/* 몇 개가 KB 에서 왔는지 — 「AI가 읽어 냈다」와 <b>섞어 말하지 않는다</b> */
+function frKbCount(){
+  var kb=frState().kb;
+  return (kb&&kb.covs)?kb.covs.length:0;
+}
+/* 읽은 것을 서버 자료와 <b>같은 모양</b>으로 바꾼다 */
+function frKbToRows(K,tag){
+  var pols=[],covs=[],i,j,ci=0;
+  for(i=0;i<K.contracts.length;i++){
+    var c=K.contracts[i],pid='kb_'+tag+'_'+i;
+    pols.push({id:pid,insurer:c.co||null,product_name:c.nm||null,
+      monthly_premium:(c.premWon===null||c.premWon===undefined)?null:c.premWon,
+      payment_term:c.payTerm||null,coverage_term:c.term||null,renewable:null,
+      source_document_id:null,policyholder:c.holder||null,insured:c.insured||null,
+      __kb:1,__paidUp:!!c.paidUp,__premNote:c.premNote||''});
+    for(j=0;j<(c.covs||[]).length;j++){
+      var v=c.covs[j];
+      covs.push({id:'kbc_'+tag+'_'+(ci++),policy_id:pid,
+        original_name:v.raw||v.std||'(이름 없음)',
+        /* KB 가 적어 준 표준담보명을 <b>버리지 않는다</b> — 이름 맞추기에 쓴다 */
+        normalized_name:v.std||null,category:null,
+        amount:(v.won===undefined?null:v.won),unit:'KRW',
+        payment_frequency:(v.kind==='실손')?'실손':null,
+        renewable:null,source_page:null,
+        source_text:v.full||'',confidence:null,
+        verification_status:'kb'});
+    }
+  }
+  return {pols:pols,covs:covs};
+}
+/* ── 화면 ── */
+function frKbPick(){
+  var el=document.getElementById('frKbFile');
+  if(el)el.click();
+}
+function frKbSet(h){
+  var el=document.getElementById('frKbBox');
+  if(el)el.innerHTML=h;
+}
+function frKbRead(input){
+  var f=input&&input.files&&input.files[0];
+  input.value='';
+  if(!f)return;
+  if(typeof extractPdfText!=='function'){frKbSet('<div class="fr-warn fr-bad">PDF 를 읽는 기능을 찾지 못했습니다.</div>');return;}
+  frKbSet('<div class="osc-loading">'+osEsc(f.name)+' 을(를) 읽는 중…</div>');
+  extractPdfText(f).then(function(txt){
+    if(!txt||txt.replace(/\s/g,'').length<200){
+      frKbSet('<div class="fr-warn">글자가 거의 안 뽑혔습니다 — <b>그림으로 된 PDF</b> 입니다. '+
+        'KB 보장분석은 홈페이지에서 <b>PDF 로 내려받은 원본</b>이어야 읽힙니다. 사진·캡처는 못 읽습니다.</div>');
+      return;
+    }
+    if(typeof kbLooks!=='function'||!kbLooks(txt)){
+      frKbSet('<div class="fr-warn">이 파일은 <b>KB 보장분석표가 아닙니다.</b> 남의 서식을 억지로 읽으면 '+
+        '담보와 금액이 어긋납니다 — <b>읽지 않고 멈췄습니다.</b></div>');
+      return;
+    }
+    var K;
+    try{ K=kbParse(txt); }catch(e){
+      frKbSet('<div class="fr-warn fr-bad">읽다가 멈췄습니다 — '+osEsc((e&&e.message)||'알 수 없는 이유')+'</div>');
+      return;
+    }
+    if(!K.ok){
+      frKbSet('<div class="fr-warn">KB 서식은 맞는데 <b>'+osEsc(K.why||'읽어 낸 것이 없습니다')+'</b>. '+
+        '쪽이 잘렸거나 다른 판일 수 있습니다 — <b>아무것도 넣지 않았습니다.</b></div>');
+      return;
+    }
+    FR.kbTmp={K:K,name:f.name};
+    frKbSet(frKbPreviewHtml(K,f.name));
+  },function(e){
+    frKbSet('<div class="fr-warn fr-bad">PDF 를 열지 못했습니다 — '+osEsc((e&&e.message)||'')+'</div>');
+  });
+}
+function frKbPreviewHtml(K,name){
+  var nCov=0,i;
+  for(i=0;i<K.contracts.length;i++)nCov+=(K.contracts[i].covs||[]).length;
+  var noAmt=K.noAmt||0;   /* 세는 자리는 kbParse 한 곳뿐이다 */
+  var h='<div class="fr-kbp"><div class="hh">📄 '+osEsc(name)+' — 읽었습니다</div>'+
+    '<div class="fr-kbn">'+
+      '<span>계약 <b>'+K.contracts.length+'건</b></span>'+
+      '<span>담보 <b>'+nCov+'개</b></span>'+
+      (noAmt?('<span class="w">금액 못 읽음 <b>'+noAmt+'개</b></span>'):'<span class="g">금액 <b>전부</b> 읽음</span>')+
+      ((K.lapsed&&K.lapsed.length)?('<span>실효·해지 <b>'+K.lapsed.length+'건</b> 뺌</span>'):'')+
+      (K.paidUp?('<span>납입완료 <b>'+K.paidUp+'건</b></span>'):'')+
+      (K.noPrem?('<span class="w">보험료 미제공 <b>'+K.noPrem+'건</b></span>'):'')+
+      (K.skipped?('<span class="w">담보를 못 붙인 계약 <b>'+K.skipped+'건</b></span>'):'')+
+    '</div>';
+  /* 같은 문서 안 두 곳을 <b>서로 대조</b>한 결과 — 조용히 맞추지 않는다 */
+  if(K.listed)
+    h+='<div class="'+(K.gap?'fr-warn':'fr-kbok')+'">문서 안 <b>두 곳</b>의 계약 목록을 맞춰 봤습니다 — '+
+      (K.gap?('<b>'+Math.abs(K.gap)+'건이 다릅니다</b>(상세 '+K.contracts.length+' · 전체목록 '+K.listed+'). '+
+              '어느 쪽이 맞는지는 <b>사장님이 보셔야</b> 합니다.')
+            :('상세 '+K.contracts.length+'건과 전체목록 '+K.listed+'건이 <b>정확히 같습니다</b>.'))+'</div>';
+  h+='<div class="fr-kbl">'+K.contracts.slice(0,8).map(function(c){
+    return '<div class="r"><b>'+osEsc(c.co||'?')+'</b> '+osEsc(c.nm||'?')+
+      '<small>담보 '+((c.covs||[]).length)+'개 · '+
+      (c.paidUp?'납입완료':(c.premWon===null||c.premWon===undefined)?'보험료 확인 필요':(frWonR(c.premWon)+'/월'))+'</small></div>';
+  }).join('')+(K.contracts.length>8?('<div class="m">그 밖에 '+(K.contracts.length-8)+'건</div>'):'')+'</div>';
+  h+='<div class="fr-kbb">'+
+    '<button class="fr-abtn" onclick="frKbApply()">이대로 넣기 — 계약 '+K.contracts.length+'건 · 담보 '+nCov+'개</button>'+
+    '<button class="fr-mini" onclick="frKbCancel()">취소</button></div>'+
+    '<div class="fr-need">여기 보이는 것은 <b>PDF 에 적힌 글자 그대로</b>입니다. 앱이 뜻을 지어내지 않았습니다. '+
+    '넣으신 뒤에도 담보마다 금액을 고치실 수 있고, <b>고치신 값이 마지막 말</b>입니다.</div></div>';
+  return h;
+}
+function frKbCancel(){FR.kbTmp=null;frKbSet(frKbIdleHtml());}
+function frKbApply(){
+  var t=FR.kbTmp;
+  if(!t){toast('읽은 자료가 없습니다');return;}
+  var tag=''+(frState().kb?((frState().kb.seq||0)+1):1);
+  var rows=frKbToRows(t.K,tag);
+  var st=frState();
+  var old=st.kb||{pols:[],covs:[],seq:0,files:[]};
+  st.kb={seq:(old.seq||0)+1,
+         at:(new Date()).toISOString().slice(0,10),
+         files:(old.files||[]).concat([t.name]),
+         person:(t.K.person&&t.K.person.name)||'',
+         pols:(old.pols||[]).concat(rows.pols),
+         covs:(old.covs||[]).concat(rows.covs)};
+  /* KB 가 「(납입완료)」라고 적어 준 계약은 보험료가 안 나간다 — 그대로 반영한다 */
+  var paid=0,z;
+  for(z=0;z<rows.pols.length;z++)if(rows.pols[z].__paidUp&&!st.pact[rows.pols[z].id]){
+    st.pact[rows.pols[z].id]='PAID_UP';paid++;
+  }
+  FR.kbTmp=null;
+  frSaveState();
+  frKbMerge();
+  toast('KB 보장분석에서 계약 '+rows.pols.length+'건 · 담보 '+rows.covs.length+'개를 넣었습니다'+
+    (paid?(' — 그중 '+paid+'건은 문서에 「납입완료」라고 적혀 있어 보험료를 0원으로 두었습니다'):''),6000);
+  frPaint();
+}
+function frKbClear(){
+  if(!confirm('KB 보장분석에서 넣은 계약을 전부 뺍니다. 서버에서 읽은 계약은 그대로 남습니다.'))return;
+  var st=frState(),kb=st.kb;
+  if(kb){
+    var pid={},cid={},i;
+    for(i=0;i<(kb.pols||[]).length;i++)pid[kb.pols[i].id]=1;
+    for(i=0;i<(kb.covs||[]).length;i++)cid[kb.covs[i].id]=1;
+    FR.pols=FR.pols.filter(function(x){return !pid[x.id];});
+    FR.covs=FR.covs.filter(function(x){return !cid[x.id];});
+  }
+  st.kb=null;frSaveState();toast('뺐습니다');frPaint();
+}
+function frKbIdleHtml(){
+  var kb=frState().kb;
+  if(kb&&kb.covs&&kb.covs.length)
+    return '<div class="fr-kbok">📄 <b>KB 보장분석</b>에서 계약 <b>'+kb.pols.length+'건</b> · 담보 <b>'+kb.covs.length+'개</b>를 '+
+      '넣어 두셨습니다 ('+osEsc(kb.at||'')+(kb.person?(' · '+osEsc(kb.person)):'')+'). '+
+      '<button class="fr-mini" onclick="frKbPick()">+ 한 부 더 올리기</button> '+
+      '<button class="fr-mini danger" onclick="frKbClear()">넣은 것 빼기</button></div>';
+  return '<div class="fr-kbi">아직 올리신 KB 보장분석이 없습니다. '+
+    '<b>KB손해보험 홈페이지에서 내려받은 「보장분석」 PDF</b>를 올리시면 계약과 담보를 <b>글자 그대로</b> 읽습니다 — '+
+    'AI 가 뜻을 지어내지 않습니다. 사진·캡처는 못 읽습니다.</div>';
+}
+function frKbHtml(){
+  return '<div class="fr-kb fr-noprint">'+
+    '<div class="hd"><b>📄 KB 보장분석 PDF 올리기</b>'+
+      '<button class="fr-abtn" onclick="frKbPick()">파일 고르기</button></div>'+
+    '<input type="file" id="frKbFile" accept="application/pdf,.pdf" style="display:none" onchange="frKbRead(this)">'+
+    '<div id="frKbBox">'+frKbIdleHtml()+'</div></div>';
+}
+
 function frMaster(){
   var st=frState(),pmap={},i;
   for(i=0;i<FR.pols.length;i++)pmap[FR.pols[i].id]=FR.pols[i];
@@ -48650,7 +48861,10 @@ function frMaster(){
     var fixB=(st.cbWon&&st.cbWon.hasOwnProperty(c.id))?st.cbWon[c.id]:undefined;
     var bWon=isNew?null:((fixB===undefined)?amt:fixB);
     var aWon;
-    if(pact==='CANCEL')aWon=null;
+    var ca=(st.cact&&st.cact[c.id])||'';
+    /* 계약을 해지해도, <b>담보 하나만</b> 해지해도 조정 후에는 없다.
+       「해지검토」는 아직 해지가 아니라 남는다 (24번). */
+    if(pact==='CANCEL'||ca==='CANCEL')aWon=null;
     else{
       var adj=(st.cadjWon&&st.cadjWon.hasOwnProperty(c.id))?st.cadjWon[c.id]:undefined;
       aWon=(adj===undefined)?((fixB===undefined)?amt:fixB):adj;
@@ -48663,7 +48877,7 @@ function frMaster(){
             key:cls.key,std:cls.std,cat:cls.cat,pur:cls.pur,dz:cls.dz,ok:cls.ok,man:cls.man?1:0,
             pay:frPayKind(cls.pur,cls.key,c.original_name,c.payment_frequency),
             amtWon:amt,bWon:bWon,aWon:aWon,
-            cact:(st.cact&&st.cact[c.id])||'',
+            cact:ca,
             mb:(fixB!==undefined)?1:0,
             ma:(st.cadjWon&&st.cadjWon.hasOwnProperty(c.id))?1:0,
             hand:0,isNew:isNew};
@@ -48798,6 +49012,13 @@ function frEcon(){
 
    더한 것과 <b>안 더한 것</b>을 둘 다 돌려준다. 「뇌출혈 진단비는 이 사건
    (뇌경색)에서는 지급되지 않아 뺐습니다」 라고 화면이 말할 수 있어야 한다.  */
+/* 제 사건에서만 열리는 큰 묶음 — 골절진단비는 암 사건에 안 열린다 */
+var FR_OWN_CATS=['CANCER','BRAIN','HEART','NURSING','FRACTURE'];
+function frCatOff(mcat,scat){
+  if(!scat)return false;
+  if(FR_OWN_CATS.indexOf(mcat)<0)return false;   /* 두루 열리는 묶음은 그대로 */
+  return mcat!==scat;
+}
 function frScenCalc(sc,M,when){
   var r={na:false,why:'',costWon:null,coverWon:0,gapWon:null,rate:null,
          used:[],offDz:[],offPur:[],actual:[],dailyNoDays:[],unknown:[],pend:[]};
@@ -48812,7 +49033,7 @@ function frScenCalc(sc,M,when){
     if(amt===null||amt===undefined){
       /* 이 사건에서 열릴 담보인데 값이 없다 — 0 으로 세지 않고 따로 적는다.
          「아직 없는 것(신규·해지)」과 「못 읽은 것」은 갈라 적는다. */
-      if(purs.indexOf(m.pur)>=0&&(!m.dz.length||m.dz.indexOf(sc.diseaseCode)>=0)){
+      if(purs.indexOf(m.pur)>=0&&(!m.dz.length||m.dz.indexOf(sc.diseaseCode)>=0)&&!frCatOff(m.cat,sc.diseaseCategory)){
         if((when!=='after'&&m.isNew)||(when==='after'&&m.pact==='CANCEL'))r.pend.push(m);
         else r.unknown.push(m);
       }
@@ -48820,6 +49041,7 @@ function frScenCalc(sc,M,when){
     }
     if(purs.indexOf(m.pur)<0){r.offPur.push(m);continue;}
     if(m.dz.length&&sc.diseaseCode&&m.dz.indexOf(sc.diseaseCode)<0){r.offDz.push(m);continue;}
+    if(frCatOff(m.cat,sc.diseaseCategory)){r.offDz.push(m);continue;}
     if(m.pay==='ACTUAL'||m.pay==='VISIT'){r.actual.push(m);continue;}   /* 금액 환산 안 함 */
     if(m.pay==='DAILY'){
       if(days===null||days<=0){r.dailyNoDays.push(m);continue;}
@@ -48843,6 +49065,7 @@ function frStepCalc(sc,M,when){
       if(!s.keys||s.keys.indexOf(m.key)<0)continue;
       /* 이 사건에서 열리지 않는 담보는 뺀다 — frScenCalc 과 같은 자다 */
       if(m.dz.length&&dz&&m.dz.indexOf(dz)<0){off++;continue;}
+      if(frCatOff(m.cat,sc&&sc.diseaseCategory)){off++;continue;}
       var amt=(when==='after')?m.aWon:m.bWon;
       if(amt===null||amt===undefined){
         if((when!=='after'&&m.isNew)||(when==='after'&&m.pact==='CANCEL'))pend++;else unk++;
@@ -49101,6 +49324,131 @@ function frCssMount(){
   '.fr-rd-doc .de{margin-top:7px;border-top:1px dashed #EEF2F7;padding-top:6px;font-size:10.5px;color:#92400E;line-height:1.7}'+
   '.fr-rd-doc .de b{color:#B45309}'+
   '.fr-rd-doc .ei{padding-left:2px}'+
+  /* ── 인체 한 장 — 원본 그림이 쓰는 칸 (비포&애프터와 같은 모양) ── */
+  /* 지급지도를 그대로 들여왔다 — 종이에서 한 대목이 반으로 갈리지 않게만 잡는다 */
+  '.fr-tpmap .rpt-sec{page-break-inside:avoid;break-inside:avoid;margin-bottom:12px}'+
+  '.fr-tpmap .tj{flex-wrap:wrap;overflow:visible}'+
+  '.fr-tpmap .tj-step{width:auto;flex:1 1 150px;min-width:140px}'+
+  '.fr-bodyold .baba-body-grid{display:grid;grid-template-columns:1fr 190px 1fr;gap:14px;align-items:start}'+
+  '.fr-bodyold .baba-body-fig{display:flex;justify-content:center;padding-top:6px}'+
+  '.fr-bodyold .baba-body-fig svg{width:100%;max-width:170px;height:auto}'+
+  '.fr-bodyold table{page-break-inside:avoid;break-inside:avoid}'+
+  '@media(max-width:860px){.fr-bodyold .baba-body-grid{grid-template-columns:1fr}'+
+    '.fr-bodyold .baba-body-fig{display:none}}'+
+  /* ── 치료 시나리오 설정 — 리포트와 같은 결 ── */
+  '.fr-adm{max-width:980px;margin:0 auto;background:#fff;border:1px solid var(--ln);border-radius:14px;'+
+    'padding:26px 28px;box-shadow:0 2px 18px rgba(15,23,42,.05)}'+
+  '.fr-adm .fr-hd{margin-bottom:18px}'+
+  '.fr-abtn{appearance:none;border:1px solid var(--bl);background:var(--bl);color:#fff;border-radius:9px;'+
+    'padding:8px 14px;font-family:inherit;font-size:12.5px;font-weight:800;cursor:pointer;min-height:34px}'+
+  '.fr-mini.danger{color:#B91C1C;border-color:#FECACA}'+
+  '.fr-scard{border:1px solid var(--ln);border-left:4px solid var(--gy);border-radius:12px;'+
+    'padding:15px 17px;margin:11px 0;background:#fff}'+
+  '.fr-scard.off{background:#FAFBFC;opacity:.82}'+
+  '.fr-scard .sh{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px}'+
+  '.fr-scard .sh b{font-size:15px;font-weight:800;color:var(--nv)}'+
+  '.fr-scard .sh em{font-style:normal;margin-left:auto;font-size:10.5px;color:var(--gy);font-weight:700}'+
+  '.fr-scard .sg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px}'+
+  '.fr-scard .sg label{display:block;font-size:10.5px;font-weight:700;color:var(--gy);margin-bottom:3px}'+
+  '.fr-scard .sg input,.fr-scard .sg select{font-family:inherit;font-size:12.5px;padding:7px 9px;width:100%;'+
+    'border:1px solid var(--ln);border-radius:8px;background:#fff;color:var(--nv);min-height:34px;box-sizing:border-box}'+
+  '.fr-scard .sg input:focus,.fr-scard .sg select:focus{outline:2px solid #BFDBFE;border-color:var(--bl)}'+
+  '.fr-scard .sgl{font-size:10.5px;font-weight:800;color:var(--gd);letter-spacing:.02em;'+
+    'margin:14px 0 7px;padding-top:11px;border-top:1px solid #F1F5F9}'+
+  '.fr-scard .sgl:first-of-type{border-top:0;padding-top:0}'+
+  '.fr-scard .shint{font-size:10.5px;color:var(--gy);line-height:1.65;padding-top:4px}'+
+  '.fr-scard .shint b{color:var(--nv)}'+
+  '.fr-scard .sb{display:flex;gap:6px;flex-wrap:wrap;margin-top:13px;padding-top:12px;border-top:1px solid #F1F5F9}'+
+  '@media(max-width:860px){.fr-adm{padding:18px 14px}.fr-scard .sg{grid-template-columns:repeat(2,1fr)}}'+
+  /* ── 📄 KB 보장분석 올리기 ── */
+  '.fr-kb{border:1px solid #C7D2FE;background:#F7FAFF;border-radius:13px;padding:13px 15px;margin-bottom:13px}'+
+  '.fr-kb .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:9px}'+
+  '.fr-kb .hd b{font-size:13.5px;font-weight:800;color:var(--nv)}'+
+  '.fr-kb .hd .fr-abtn{margin-left:auto}'+
+  '.fr-kbi{font-size:11.5px;color:var(--gy);line-height:1.7}.fr-kbi b{color:var(--nv)}'+
+  '.fr-kbok{font-size:11.5px;color:#0F766E;background:#ECFDF5;border:1px solid #A7F3D0;'+
+    'border-radius:9px;padding:9px 11px;line-height:1.7;margin-top:8px}'+
+  '.fr-kbok b{color:#065F46}'+
+  '.fr-kbp .hh{font-size:13px;font-weight:800;color:var(--nv);margin-bottom:8px}'+
+  '.fr-kbn{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}'+
+  '.fr-kbn span{font-size:11px;font-weight:700;color:var(--gy);background:#fff;border:1px solid var(--ln);'+
+    'border-radius:8px;padding:5px 9px}'+
+  '.fr-kbn span b{color:var(--nv);font-weight:800}'+
+  '.fr-kbn span.w{background:#FFFBEB;border-color:#FDE68A;color:#B45309}.fr-kbn span.w b{color:#92400E}'+
+  '.fr-kbn span.g{background:#ECFDF5;border-color:#A7F3D0;color:#0F766E}.fr-kbn span.g b{color:#065F46}'+
+  '.fr-kbl{background:#fff;border:1px solid var(--ln);border-radius:10px;padding:4px 11px;margin:8px 0}'+
+  '.fr-kbl .r{border-top:1px solid #F1F5F9;padding:7px 0;font-size:11.5px;color:var(--nv)}'+
+  '.fr-kbl .r:first-child{border-top:0}'+
+  '.fr-kbl .r b{font-weight:800}'+
+  '.fr-kbl .r small{display:block;font-size:10.5px;color:var(--gy);font-weight:700;margin-top:1px}'+
+  '.fr-kbl .m{border-top:1px solid #F1F5F9;padding:7px 0;font-size:10.5px;color:var(--gy)}'+
+  '.fr-kbb{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0}'+
+  /* ── 🔀 전 · 후 만들기 — 왼쪽에서 누르면 오른쪽이 바뀐다 ── */
+  '.fr-mk .mk-top{font-size:12px;color:var(--gy);line-height:1.7;background:#F8FAFC;border:1px solid var(--ln);'+
+    'border-radius:11px;padding:12px 14px;margin-bottom:13px}'+
+  '.fr-mk .mk-top b{color:var(--nv)}'+
+  '.fr-mk .mk-grid{display:grid;grid-template-columns:1fr 330px;gap:15px;align-items:start}'+
+  '.fr-mk .mk-r{position:sticky;top:12px;display:flex;flex-direction:column;gap:11px}'+
+  '.fr-mk .mk-card{border:1px solid var(--ln);border-radius:12px;background:#fff;padding:14px 15px}'+
+  '.fr-mk .mk-card .hh{font-size:12.5px;font-weight:800;color:var(--nv);margin-bottom:9px;display:flex;align-items:center;gap:6px}'+
+  '.fr-mk .mk-card .hh em{font-style:normal;margin-left:auto;font-size:11px;font-weight:800;color:var(--gy)}'+
+  '.fr-mk .mk-card.loss{border-left:4px solid #DC2626}.fr-mk .mk-card.gain{border-left:4px solid #059669}'+
+  '.fr-mk .mk-prem{display:flex;align-items:center;gap:9px}'+
+  '.fr-mk .mk-prem>div{flex:1}.fr-mk .mk-prem .ar{flex:0 0 auto;color:var(--gy);font-weight:800}'+
+  '.fr-mk .mk-prem span{display:block;font-size:10.5px;color:var(--gy);font-weight:700}'+
+  '.fr-mk .mk-prem b{display:block;font-size:16px;font-weight:800;color:var(--nv);margin-top:2px}'+
+  '.fr-mk .mk-prem b.up{color:#B91C1C}.fr-mk .mk-prem b.dn{color:#0F766E}'+
+  '.fr-mk .mk-note{font-size:10.5px;color:var(--gy);line-height:1.65;margin-top:8px}'+
+  '.fr-mk .mk-note b{color:var(--nv)}.fr-mk .mk-note.warn{color:#B45309}.fr-mk .mk-note.warn b{color:#92400E}'+
+  '.fr-mk .mk-empty{font-size:11px;color:var(--gy);line-height:1.6}'+
+  '.fr-mk .mk-li{border-top:1px solid #F1F5F9;padding:8px 0}'+
+  '.fr-mk .mk-li:first-of-type{border-top:0;padding-top:0}'+
+  '.fr-mk .mk-li .n{font-size:11.5px;font-weight:800;color:var(--nv)}'+
+  '.fr-mk .mk-li .n i{font-style:normal;font-size:10px;font-weight:800;color:#fff;background:var(--gy);'+
+    'border-radius:5px;padding:1px 5px;margin-left:4px}'+
+  '.fr-mk .mk-li .d{font-size:10.5px;color:var(--gy);line-height:1.6;margin-top:2px}'+
+  '.fr-mk .mk-li .d b{color:var(--nv)}'+
+  '.fr-mk .mk-more{font-size:10.5px;color:var(--gy);border-top:1px solid #F1F5F9;padding-top:7px;margin-top:7px}'+
+  '.fr-baonly{font-size:15px;font-weight:800;color:var(--nv);padding:0 0 10px;margin-bottom:12px;'+
+    'border-bottom:2px solid var(--nv)}'+
+  '.fr-baonly small{display:block;font-size:11px;font-weight:700;color:var(--gy);margin-top:3px}'+
+  '.fr-mk .mk-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:11px}'+
+  '.fr-mk .mk-q{flex:1;min-width:190px;font-family:inherit;font-size:12px;font-weight:700;color:var(--nv);'+
+    'border:1px solid var(--ln);border-radius:9px;padding:7px 11px;background:#fff;min-height:34px}'+
+  '.fr-mk .mk-saved{font-size:10.5px;color:var(--gy);margin-left:auto}'+
+  '.fr-mk .mk-saved b{color:#0F766E}'+
+  '.fr-mk .mk-fold{appearance:none;border:0;background:transparent;color:var(--gy);font-size:13px;'+
+    'cursor:pointer;padding:0 6px 0 0;line-height:1;font-family:inherit}'+
+  '.fr-mk .mk-pol .ph{display:flex;align-items:flex-start;gap:2px}'+
+  '.fr-mk .mk-pol .pt{flex:1;min-width:0}'+
+  '.fr-mk .mk-pol .pt small em{font-style:normal;color:#1B64DA;font-weight:800}'+
+  '.fr-mk .mk-shut{font-size:10.5px;color:var(--gy);background:#FAFBFC;border-radius:8px;'+
+    'padding:7px 10px;margin-top:8px;line-height:1.6}'+
+  '.fr-mk .mk-shut.top{margin:0 0 11px;background:#FFFBEB;color:#B45309}'+
+  '.fr-mk .mk-shut.top b{color:#92400E}'+
+  '.fr-mk .mk-shut b{color:var(--nv)}'+
+  '.fr-mk .mk-found{font-size:11px;color:var(--gy);background:#F8FAFC;border:1px solid var(--ln);'+
+    'border-radius:9px;padding:9px 11px;line-height:1.7}'+
+  '.fr-mk .mk-found b{color:var(--nv)}'+
+  '.fr-mk .mk-pol{border:1px solid var(--ln);border-radius:12px;background:#fff;padding:13px 14px;margin-bottom:11px}'+
+  '.fr-mk .mk-pol.off{background:#FCFCFD;opacity:.62}'+
+  '.fr-mk .mk-pol .ph{font-size:12.5px;color:var(--nv);margin-bottom:9px}'+
+  '.fr-mk .mk-pol .ph b{font-weight:800}'+
+  '.fr-mk .mk-pol .ph small{display:block;font-size:10.5px;color:var(--gy);font-weight:700;margin-top:2px}'+
+  '.fr-mk .mk-tg{display:flex;gap:5px;flex-wrap:wrap}'+
+  '.fr-mk .mk-tg button{appearance:none;border:1px solid var(--ln);background:#fff;color:var(--gy);'+
+    'border-radius:8px;padding:5px 10px;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;min-height:30px}'+
+  '.fr-mk .mk-tg button.on{background:var(--nv);border-color:var(--nv);color:#fff}'+
+  '.fr-mk .mk-tg.sm button{padding:4px 8px;font-size:10.5px;min-height:27px}'+
+  '.fr-mk .mk-cov{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #F5F6F8;padding:8px 0}'+
+  '.fr-mk .mk-cov.off{opacity:.5}'+
+  '.fr-mk .mk-cov .n{flex:1;min-width:180px;font-size:11.5px;font-weight:700;color:var(--nv)}'+
+  '.fr-mk .mk-cov .n small{display:block;font-size:10.5px;color:var(--gy);font-weight:700;margin-top:1px}'+
+  '.fr-mk .mk-cov .n small b.q{color:#B45309;font-weight:800}'+
+  '.fr-mk .mk-in{font-family:inherit;font-size:11.5px;font-weight:700;color:var(--nv);text-align:right;'+
+    'width:128px;border:1px solid var(--ln);border-radius:8px;padding:6px 8px;background:#fff;min-height:30px}'+
+  '.fr-mk .mk-body{margin-top:15px}'+
+  '@media(max-width:960px){.fr-mk .mk-grid{grid-template-columns:1fr}.fr-mk .mk-r{position:static}}'+
   /* ── 전후 비교 · 그 자리에서 고치는 칸 ── */
   '.fr-in{font-family:inherit;font-size:11px;font-weight:700;color:var(--nv);text-align:right;'+
     'width:104px;padding:3px 6px;border:1px solid var(--ln);border-radius:6px;background:#fff}'+
@@ -49157,6 +49505,10 @@ function frCssMount(){
     '.fr-tri{grid-template-columns:repeat(3,1fr)!important}'+
     '.fr-ba{grid-template-columns:1fr 1fr!important}'+
     '.fr-body{grid-template-columns:1fr 200px 1fr!important}'+
+    '.fr-tpmap .tj{display:flex!important;flex-wrap:wrap!important;overflow:visible!important}'+
+    '.fr-tpmap .tj-step:not(:last-child):before{display:none}'+
+    '.fr-bodyold .baba-body-grid{grid-template-columns:1fr 190px 1fr!important}'+
+    '.fr-bodyold .baba-body-fig{display:flex!important}'+
     '.fr-jn{grid-template-columns:repeat(5,1fr)!important}'+
     '.fr-jr{grid-template-columns:repeat(4,1fr)!important}'+
     '.fr-hcs{grid-template-columns:repeat(3,1fr)!important}'+
@@ -49211,6 +49563,8 @@ function frLoad(){
     if(!FR.state.add||!FR.state.add.push)FR.state.add=[];
     if(!FR.state.cls)FR.state.cls={};
     if(!FR.state.prof)FR.state.prof={};
+    if(!FR.state.kb)FR.state.kb=null;
+    frKbMerge();          /* KB 로 읽어 둔 계약을 서버 것 뒤에 붙인다 */
     FR.busy=false;frPaint();
   }).catch(function(e){
     FR.busy=false;FR.err=(e&&e.message)||'불러오지 못했습니다';
@@ -49218,6 +49572,26 @@ function frLoad(){
   });
 }
 function frSet(h){var el=document.getElementById('frBody');if(el)el.innerHTML=h;}
+/* 보던 고객이 있으면 그 고객의 <b>전·후 리포트</b> 자리로, 없으면 고객 목록으로.
+   목록에서 고객을 고르면 상세가 열리고 풀리포트가 저절로 실린다(osClientsAfterRender). */
+function frMakeGo(){
+  FR.page='make';                    /* 메뉴 이름이 「전·후 만들기」다 — 그 화면으로 연다 */
+  if(typeof OSC!=='undefined'&&OSC.current){
+    OSC.view='detail';
+    if(typeof go==='function')go('clients');
+    /* 그 자리까지 데려간다 — 고객 상세는 길어서 아래로 한참 내려가야 보인다 */
+    setTimeout(function(){
+      try{
+        var e=document.getElementById('frPanel');
+        if(e)e.scrollIntoView({behavior:'smooth',block:'start'});
+      }catch(x){}
+    },420);
+    return;
+  }
+  if(typeof OSC!=='undefined')OSC.view='list';
+  if(typeof go==='function')go('clients');
+  if(typeof toast==='function')toast('고객을 고르시면 그 고객의 <b>전·후 리포트</b>가 바로 열립니다',5000);
+}
 function frGo(v){
   FR.page=v;
   /* 읽기 점검은 서버를 더 부른다 — <b>탭을 여실 때 한 번만</b> 부르고 그 뒤엔 담아 둔 것을 쓴다 */
@@ -49252,6 +49626,7 @@ function frPaint(){
   var h='';
   h+=frNoticeHtml(T);
   h+='<div class="fr-top fr-noprint">'+
+    frTabBtn('make','🔀 전·후 만들기')+
     frTabBtn('client','📄 고객용 리포트')+
     frTabBtn('detail','🔎 설계사 상세')+
     frTabBtn('edit','✍ 계약·담보 조치')+
@@ -49260,10 +49635,12 @@ function frPaint(){
     '<span class="fr-do">'+
       '<button class="gh" onclick="frOpenBaba()">🔄 빠른 비포&애프터</button>'+
       '<button class="gh" onclick="frLoad()">↻ 다시 불러오기</button>'+
+      '<button class="gh" onclick="frPrint(\'ba\')">🖨 전·후 한 장만</button>'+
       '<button onclick="frPrint()">🖨 보고서 저장 (A4)</button>'+
     '</span></div>';
   if(FR.page==='read')h+=frReadHtml(M,T);
   else if(FR.page==='detail')h+=frDetailHtml(M);
+  else if(FR.page==='make')h+=frMakeHtml(M);
   else if(FR.page==='edit')h+=frEditHtml(M);
   else if(FR.page==='scen')h+=frScenAdminHtml();
   else h+='<div id="frDoc">'+frDocHtml(M,T)+'</div>';
@@ -49310,6 +49687,9 @@ function frNoticeHtml(T){
     h+='<div class="fr-warn">계약 <b>'+un+'건</b>의 조치가 아직 <b>미정</b>입니다 — 미정은 <b>「지금 그대로 두시는 것」</b>으로 셈했습니다. '+
       '해지로 찍으신 것만 조정 후에서 빠집니다.</div>';
   }
+  /* KB 로 읽은 것은 <b>AI 가 읽어 낸 것과 다른 길</b>이다 — 몇 개인지 갈라 적는다 */
+  var kbn=frKbCount();
+  if(kbn)h+='<div class="fr-kbok">그중 <b>'+kbn+'개</b>는 <b>KB 보장분석 PDF</b> 에서 규칙으로 읽은 것입니다 — AI 판단이 들어가지 않았습니다.</div>';
   return h;
 }
 
@@ -49580,182 +49960,119 @@ function frFootHtml(T){
 }
 
 
+
 /* ══════════════════════════════════════════════════════════════════════════
-   그림으로 보는 장 — 인체 한 장 · 치료 여정 · 그래프
+   인체 한 장 — <b>비포&애프터의 그림을 그대로 쓴다</b>
 
-   표만 스무 줄 세워 놓으면 고객은 <b>자기 몸 어디가 비었는지</b>를 못 본다.
-   「뇌혈관질환 진단비 2,000만원」 은 글자고, <b>머리에 켜진 회색 점</b>은 그림이다.
-   그림이 먼저 눈에 들어오고, 그 밑에 <b>그 부위를 말로 풀어</b> 준다.
+   같은 그림을 새로 그렸다가 정보가 적은 쪽을 하나 더 만들었다. 원본은
+   담보마다 <b>권장 / 기존 / 신규</b> 세 열이 있고 색 묶음이 열 개다.
+   그림은 옮기지 않는다 — babaBodyHtml 에 <b>출처만 넘겨</b> 같은 그림을
+   풀리포트 자료로 그린다 (CLAUDE.md 5번 — 표는 하나만 둔다).
 
-   <b>새 그림을 그리지 않는다.</b> 사람 몸(babaBodySvg)·막대(vizStackBar·vizBarH)·
-   도넛(vizDonut)은 이미 이 앱에 있다. 같은 것을 두 벌 두면 한쪽만 고쳐진다
-   (CLAUDE.md 5번). 여기서는 <b>가져다 쓰고 값만 얹는다.</b>
-
-   ※ 점의 색은 <b>있다·없다·늘었다</b>만 말한다. 기준 치료비가 설정된 부위
-     (암·뇌·심장)에서만 방어력 %를 함께 찍는다 — 기준이 없으면 색으로도
-     「충분/부족」을 말하지 않는다. 그건 지어내는 것이다.
+   이을 때 조심할 것 둘.
+     ① <b>단위.</b> 그림은 만원으로 그린다. 풀리포트는 원이다. 나누는 자리는
+        이 함수 안 한 곳뿐이다 (CLAUDE.md 4번).
+     ② <b>이름 대응표를 새로 만들지 않는다.</b> babaMapName() 이 이미
+        비포&애프터의 말로 이름을 옮겨 준다 — 그것을 쓴다.
    ══════════════════════════════════════════════════════════════════════════ */
-var FR_BODY=[
- {k:'BRAIN',    t:'뇌',            ic:'🧠', side:'L', cats:['BRAIN'],              dot:[100,33],  scen:'BRAIN'},
- {k:'CANCER',   t:'암',            ic:'🎗️', side:'L', cats:['CANCER'],             dot:[100,172], scen:'CANCER'},
- {k:'SURGERY',  t:'수술',          ic:'💉', side:'L', cats:['SURGERY']},
- {k:'HOSPITAL', t:'입원 · 통원',   ic:'🏥', side:'L', cats:['HOSPITAL']},
- {k:'SILSON',   t:'실손의료비',    ic:'🩺', side:'L', cats:['SILSON']},
- {k:'HEART',    t:'심장',          ic:'❤️', side:'R', cats:['HEART'],              dot:[112,116], scen:'HEART'},
- {k:'LIFE',     t:'사망 · 후유장해',ic:'🕊️', side:'R', cats:['DEATH','DISABILITY']},
- {k:'NURSING',  t:'간병 · 요양',   ic:'🧑‍⚕️', side:'R', cats:['NURSING']},
- {k:'FRACTURE', t:'골절 · 화상',   ic:'🦴', side:'R', cats:['FRACTURE'],           dot:[83,372]},
- {k:'ETC',      t:'기타 · 미분류', ic:'📎', side:'R', cats:['ETC','OTHER']}
-];
-/* 한 부위의 지금과 조정 후 — <b>목돈만</b> 더하고 일당·실손은 건수로 센다 */
-function frRegion(rg,M){
-  var r={k:rg.k,t:rg.t,ic:rg.ic,n:0,bWon:null,aWon:null,unknown:0,daily:0,actual:0,
-         dayBWon:null,dayAWon:null,
-         newN:0,gone:0,up:0,renew:0,rate:null,sc:null,rows:[]};
-  var i,m;
+function frWonToMan(won){
+  return (won===null||won===undefined||!isFinite(won))?null:Math.round(won/10000);
+}
+/* 풀리포트 담보를 <b>비포&애프터의 칸</b>에 얹는다. 한 칸에 여럿이 들어오면 더한다.
+   목돈만 더한다 — 일당·실손·1회당은 그림의 다른 칸에서 따로 말한다. */
+/* 이 칸은 무엇을 담는 칸인가 — 비포&애프터의 담보 이름에서 읽는다 */
+function frBodySlotKind(k){
+  var nm=(typeof babaNameOf==='function')?babaNameOf(k):'';
+  var s=(''+nm).replace(/\s/g,'');
+  if(s.indexOf('일당')>=0)return 'DAILY';
+  if(s.indexOf('의료비')>=0||s.indexOf('실손')>=0)return 'ACTUAL';
+  if(s.indexOf('통원')>=0)return 'VISIT';
+  return 'LUMP';
+}
+function frBodySrcMap(M){
+  var m={},i,k,x,off=0;
   for(i=0;i<M.length;i++){
-    m=M[i];
-    if(rg.cats.indexOf(m.cat)<0)continue;
-    r.n++;r.rows.push(m);
-    if(m.pay==='DAILY')r.daily++;
-    if(m.pay==='ACTUAL'||m.pay==='VISIT')r.actual++;
-    if(m.pay==='DAILY'){
-      if(m.bWon!==null)r.dayBWon=(r.dayBWon||0)+m.bWon;
-      if(m.aWon!==null)r.dayAWon=(r.dayAWon||0)+m.aWon;
-    }
-    if(m.renew===true)r.renew++;
-    if(m.bWon===null&&m.aWon===null){r.unknown++;continue;}
-    if(m.bWon===null&&m.aWon!==null)r.newN++;
-    if(m.bWon!==null&&m.aWon===null)r.gone++;
-    if(m.bWon!==null&&m.aWon!==null&&m.aWon>m.bWon)r.up++;
-    if(m.pay!=='LUMP')continue;
-    if(m.bWon!==null)r.bWon=(r.bWon||0)+m.bWon;
-    if(m.aWon!==null)r.aWon=(r.aWon||0)+m.aWon;
+    x=M[i];
+    k=(typeof babaMapName==='function')?babaMapName(x.std||x.raw):null;
+    if(!k)k=(typeof babaMapName==='function')?babaMapName(x.raw):null;
+    if(!k)continue;
+    /* 하루 3만원과 한도 5,000만원을 더하면 5,003만원이 된다 — 안 더한다 */
+    if(frBodySlotKind(k)!==x.pay){off++;continue;}
+    if(!m[k])m[k]={b:null,a:null};
+    if(x.bWon!==null&&x.bWon!==undefined)m[k].b=(m[k].b||0)+x.bWon;
+    if(x.aWon!==null&&x.aWon!==undefined)m[k].a=(m[k].a||0)+x.aWon;
   }
-  if(rg.scen){
-    var A=frScenActive(),j;
-    for(j=0;j<A.length;j++)if(A[j].diseaseCategory===rg.scen){r.sc=A[j];break;}
-    if(r.sc){
-      var B=frScenCalc(r.sc,M,'before'),Af=frScenCalc(r.sc,M,'after');
-      if(!B.na)r.rate={b:B.rate,a:Af.rate,gapB:B.gapWon,gapA:Af.gapWon,cost:B.costWon,
-                       coverB:B.coverWon,coverA:Af.coverWon,offB:0};
-      if(r.rate){
-        var q,mm;
-        for(q=0;q<r.rows.length;q++){
-          mm=r.rows[q];
-          if(mm.dz.length&&r.sc.diseaseCode&&mm.dz.indexOf(r.sc.diseaseCode)<0)r.rate.offB++;
-        }
+  /* 원 → 만원. 나누는 자리는 여기 하나뿐이다 */
+  for(k in m)if(m.hasOwnProperty(k)){
+    m[k].b=frWonToMan(m[k].b);
+    m[k].a=frWonToMan(m[k].a);
+  }
+  m.__off=off;
+  return m;
+}
+/* ── 권장 열 ──────────────────────────────────────────────────────
+   비포&애프터는 사장님이 손으로 적으신다. 풀리포트는 <b>치료 시나리오</b>에서
+   가져온다 — 한 곳에서 관리되고 출처도 같이 나가기 때문이다.
+
+   시나리오는 「이 사건에 이만큼 든다」 하나뿐이고 담보별로는 안 적혀 있다.
+   그래서 <b>단계별 기준자금을 넣어 두신 경우에만</b> 그 단계에 붙은 담보로
+   푼다. 안 넣으셨으면 그 칸은 <b>비운다.</b> 나눠 담을 근거가 없으면
+   짐작으로 채우지 않는다 (CLAUDE.md 1번). */
+function frBodyRec(){
+  var A=frScenActive(),rec={},i,j,q;
+  for(i=0;i<A.length;i++){
+    var sc=A[i],steps=sc.treatmentSteps||[];
+    for(j=0;j<steps.length;j++){
+      var st=steps[j];
+      if(st.costWon===null||st.costWon===undefined)continue;
+      if(!st.keys||!st.keys.length)continue;
+      /* 한 단계의 기준자금을 그 단계에 붙은 담보 수로 <b>고르게</b> 나눈다.
+         나눈 것이라는 사실은 화면 밑에 적는다 — 조용히 나누면 근거처럼 보인다. */
+      var per=Math.round(st.costWon/st.keys.length/10000);
+      for(q=0;q<st.keys.length;q++){
+        var fk=st.keys[q],d=null,z;
+        for(z=0;z<FR_DICT.length;z++)if(FR_DICT[z].k===fk){d=FR_DICT[z];break;}
+        if(!d)continue;
+        var bk=(typeof babaMapName==='function')?babaMapName(d.n):null;
+        if(!bk)continue;
+        /* 일당·실손 칸에 목돈 기준을 넣으면 「하루 200만원」이 된다 */
+        if(frBodySlotKind(bk)!=='LUMP')continue;
+        if(rec[bk]===undefined||rec[bk]<per)rec[bk]=per;
       }
     }
   }
-  return r;
+  return rec;
 }
-/* 점 색 — <b>있다·없다·늘었다</b>까지만 말한다 */
-function frRegionColor(r){
-  if(!r.n)return '#CBD5E1';                       /* 준비된 담보가 없다 */
-  if(r.bWon===null&&r.aWon===null&&r.unknown)return '#EA580C';   /* 금액을 못 읽었다 */
-  if(r.aWon!==null&&(r.bWon===null||r.aWon>r.bWon))return '#2563EB';  /* 조정 후 늘어난다 */
-  if(r.gone)return '#EA580C';
-  return '#16A34A';
+function frBodyRecN(){
+  var r=frBodyRec(),n=0,k;
+  for(k in r)if(r.hasOwnProperty(k))n++;
+  return n;
 }
-function frRegionMark(r){
-  if(!r.n)return '준비 없음';
-  if(r.rate)return frPct(r.rate.b)+' → '+frPct(r.rate.a);
-  if(r.aWon!==null&&(r.bWon===null||r.aWon>r.bWon))return '늘어남';
-  if(r.bWon===null&&r.unknown)return '확인 필요';
-  return '유지';
-}
-/* ── 부위를 <b>말로 푼다</b> ──────────────────────────────────────
-   규칙이 만드는 문장이다 (요구사항 27번). 겁주지 않고, 지어내지 않고,
-   지급을 약속하지 않는다. 없는 것은 <b>없다고</b> 말한다.            */
-function frRegionSay(r){
-  var L=[];
-  if(!r.n){
-    L.push('이 부위에 <b>준비된 담보가 없습니다.</b>');
-    return L.join(' ');
-  }
-  if(r.rate){
-    L.push('설정된 치료 시나리오(기준 '+frWonR(r.rate.cost)+') 대비 현재 <b>'+frPct(r.rate.b)+'</b>'+
-           (r.rate.gapB>0?(' — <b>'+frWonR(r.rate.gapB)+'</b>이 빕니다.'):' — 기준을 채웁니다.'));
-    if(r.rate.a>r.rate.b+1)
-      L.push('조정 후에는 <b>'+frPct(r.rate.a)+'</b>'+(r.rate.gapA>0?(' 로 올라가고 <b>'+frWonR(r.rate.gapA)+'</b>이 남습니다.'):' 로 기준을 채웁니다.'));
-    /* 부위 합계와 방어력이 다른 자를 쓴다 — 그 말을 반드시 한다 */
-    if(r.bWon!==null&&r.bWon!==r.rate.coverB)
-      L.push('이 부위의 목돈 '+frWonR(r.bWon)+' 중 <b>이 사건에서 열리는 것은 '+frWonR(r.rate.coverB)+'</b>입니다'+
-        (r.rate.offB?(' — 이 부위 담보 '+r.rate.offB+'건은 <b>이 사건에서는 지급되지 않아</b> 뺐습니다.'):'.'));
-  }else{
-    if(r.bWon!==null||r.aWon!==null){
-      L.push('정액 목돈이 현재 <b>'+(r.bWon===null?'확인 필요':frWonR(r.bWon))+'</b>'+
-             ', 조정 후 <b>'+(r.aWon===null?'확인 필요':frWonR(r.aWon))+'</b> 입니다.');
-    }
-    L.push('<b>기준 치료비가 설정되지 않아</b> 충분한지 여부는 말씀드리지 않습니다.');
-  }
-  if(r.newN)L.push('조정 후 <b>'+r.newN+'건</b>이 새로 생깁니다.');
-  if(r.gone)L.push('조정 후 <b>'+r.gone+'건</b>이 빠집니다.');
-  if(r.unknown)L.push('금액을 못 읽은 담보 <b>'+r.unknown+'건</b>은 <b>0 으로 세지 않고</b> 뺐습니다.');
-  if(r.daily)L.push('일당 '+r.daily+'건은 하루치라 목돈과 함께 더하지 않았습니다.');
-  if(r.actual)L.push('실손 '+r.actual+'건은 실제로 쓴 만큼이라 금액으로 바꾸지 않았습니다.');
-  if(r.renew)L.push('갱신형 '+r.renew+'건이 있어 <b>나이가 들면 보험료가 오를 수 있습니다.</b>');
-  return L.join(' ');
-}
-/* 한 줄로 「현재 → 조정 후」. 목돈이 없고 일당·실손만 있는 부위는 「—」 만 남아
-   <b>아무것도 없는 것처럼</b> 보였다 — 실은 입원일당 3만원이 있는 자리였다.
-   목돈이 없으면 <b>일당을 하루치로</b> 적고, 그것도 없으면 실손 건수를 적는다. */
-function frRegionRow(r){
-  var lump=(r.bWon!==null||r.aWon!==null);
-  if(lump){
-    return '<div class="rv"><span>현재</span><b>'+(r.bWon===null?'<span class="fr-na">확인 필요</span>':frWonR(r.bWon))+'</b>'+
-      '<span class="ar">→</span><span>조정 후</span><b class="bl">'+(r.aWon===null?'<span class="fr-na">확인 필요</span>':frWonR(r.aWon))+'</b></div>';
-  }
-  if(r.dayBWon!==null||r.dayAWon!==null){
-    return '<div class="rv"><span>1일당 현재</span><b>'+(r.dayBWon===null?'—':frWonR(r.dayBWon))+'</b>'+
-      '<span class="ar">→</span><span>조정 후</span><b class="bl">'+(r.dayAWon===null?'—':frWonR(r.dayAWon))+'</b></div>';
-  }
-  if(r.actual)return '<div class="rv"><span>실손</span><b>'+r.actual+'건 보유</b><span class="ar">·</span><span>쓴 만큼 보전</span></div>';
-  if(r.unknown)return '<div class="rv"><span>금액</span><b><span class="fr-na">확인 필요</span></b></div>';
-  return '';
-}
-function frRegionCard(r){
-  var c=frRegionColor(r);
-  return '<div class="fr-rg"><div class="rh"><i>'+r.ic+'</i><b>'+osEsc(r.t)+'</b>'+
-    '<span class="fr-tag" style="color:'+c+';background:'+c+'14">'+osEsc(frRegionMark(r))+'</span>'+
-    '<em>'+r.n+'건</em></div>'+
-    (r.n?frRegionRow(r):'')+
-    '<div class="rs">'+frRegionSay(r)+'</div></div>';
-}
-/* ── 인체 한 장 ───────────────────────────────────────────────────
-   사람 몸 그림은 <b>babaBodySvg 를 그대로 가져다 쓴다.</b> 점은 그림 위에
-   자리만 잡아 얹는다 — SVG 를 베껴 두 벌로 만들면 한쪽만 고쳐진다.       */
+/* ── 인체 한 장 (원본 그림) ── */
 function frBodyHtml(M){
-  var R=FR_BODY.map(function(rg){return frRegion(rg,M);});
-  var byK={};R.forEach(function(r){byK[r.k]=r;});
-  var dots='';
-  FR_BODY.forEach(function(rg){
-    if(!rg.dot)return;
-    var r=byK[rg.k],c=frRegionColor(r);
-    dots+='<span class="fr-dot" style="left:'+(rg.dot[0]/200*100)+'%;top:'+(rg.dot[1]/470*100)+'%;'+
-      'background:'+c+';box-shadow:0 0 0 3px '+c+'33"><i style="color:'+c+'">'+osEsc(rg.t)+'</i></span>';
-  });
-  var col=function(side){
-    return FR_BODY.filter(function(rg){return rg.side===side;})
-      .map(function(rg){return frRegionCard(byK[rg.k]);}).join('');
-  };
-  var none=R.filter(function(r){return !r.n;});
-  return '<div class="fr-sec"><h2>내 몸으로 보는 보장<small>부위마다 지금 무엇이 준비되어 있는가</small></h2>'+
-    '<div class="fr-body"><div class="cl">'+col('L')+'</div>'+
-      '<div class="cb"><div class="fr-bodywrap">'+babaBodySvg()+dots+'</div>'+
-        '<div class="lg">'+
-          '<span><i style="background:#2563EB"></i>조정 후 늘어남</span>'+
-          '<span><i style="background:#16A34A"></i>지금 그대로</span>'+
-          '<span><i style="background:#EA580C"></i>확인 필요</span>'+
-          '<span><i style="background:#CBD5E1"></i>준비 없음</span>'+
-        '</div></div>'+
-      '<div class="cr">'+col('R')+'</div></div>'+
-    (none.length?('<div class="fr-one">지금 <b>준비된 담보가 없는 부위</b>는 '+
-      none.map(function(r){return '<b>'+osEsc(r.t)+'</b>';}).join(' · ')+' 입니다. '+
-      '없다는 것을 아는 것이 먼저이고, 채울지 말지는 오늘 정하지 않으셔도 됩니다.</div>'):'')+
-  '</div>';
+  if(typeof babaBodyHtml!=='function')return '';
+  var map=frBodySrcMap(M);
+  var src=function(k){return map[k]||null;};
+  var rec=frBodyRec(),recN=0,k;
+  for(k in rec)if(rec.hasOwnProperty(k))recN++;
+  var hit=0;for(k in map)if(map.hasOwnProperty(k))hit++;
+  var body='';
+  try{
+    body=babaBodyHtml(false,src,rec,
+      '주요 보장 요약 — 전 · 후','이 고객의 계약과 조정안을 한 장에');
+  }catch(e){ return ''; }
+  var note=[];
+  note.push('담보 <b>'+hit+'칸</b>을 채웠습니다. 여기 없는 담보는 <b>뒷장 표에 전부</b> 있습니다 — 이 장은 요약입니다.');
+  if(map.__off)note.push('지급 방식이 칸과 달라 <b>'+map.__off+'건</b>은 이 그림에 안 넣었습니다 — '+
+    '하루 얼마와 목돈은 같은 자로 못 잽니다. 그 담보들도 <b>뒷장 표에는 그대로</b> 있습니다.');
+  if(recN)note.push('<b>권장</b> 열은 ⚙ 치료 시나리오의 <b>단계별 기준자금</b>을 그 단계 담보 수로 <b>고르게 나눈</b> 값입니다 — 담보별로 정해 둔 값이 아닙니다.');
+  else note.push('<b>권장</b> 열이 비어 있습니다 — ⚙ 치료 시나리오에 <b>단계별 기준자금</b>을 넣으시면 채워집니다. <b>짐작으로 채우지 않습니다.</b>');
+  /* 원본이 자기 제목을 들고 있다 — 여기서 또 붙이면 두 번 선다 */
+  return '<div class="fr-sec">'+
+    '<div class="fr-bodyold">'+body+'</div>'+
+    '<div class="fr-need">'+note.join(' ')+'</div></div>';
 }
+
 
 /* ── 그래프 ───────────────────────────────────────────────────────
    앱에 이미 있는 막대·도넛을 가져다 쓴다. 단위는 <b>만원</b>으로 넘긴다
@@ -49983,6 +50300,56 @@ function frTrackCalc(tr,M){
   }
   return r;
 }
+/* ── 지급지도로 넘길 값 ── */
+function frTpMan(won){ return (won===null||won===undefined||!isFinite(won))?0:Math.round(won/10000); }
+function frTpDis(tr){
+  if(!tr.tp||typeof TP_DISEASES==='undefined')return null;
+  for(var i=0;i<TP_DISEASES.length;i++)if(TP_DISEASES[i].id===tr.tp)return TP_DISEASES[i];
+  return null;
+}
+function frTpCov(r,M,dis){
+  var sc=r.sc,dz=sc&&sc.diseaseCode,days=frNumOrNull(sc&&sc.inpatientDays);
+  var g={diag:0,surg:0,perDay:0,chemo:0,act:0,unk:0,off:0},i;
+  for(i=0;i<M.length;i++){
+    var m=M[i];
+    /* 이 사건에서 열리지 않는 담보는 뺀다 — frScenCalc 과 같은 자다 */
+    if(m.dz.length&&dz&&m.dz.indexOf(dz)<0)continue;
+    if(frCatOff(m.cat,sc&&sc.diseaseCategory)){g.off++;continue;}
+    var amt=m.bWon;
+    if(amt===null||amt===undefined){g.unk++;continue;}
+    if(m.pay==='ACTUAL'||m.pay==='VISIT'){g.act++;continue;}   /* 실손·통원은 금액으로 안 바꾼다 */
+    if(m.pay==='DAILY'){g.perDay+=amt;continue;}
+    if(m.pur==='DIAGNOSIS')g.diag+=amt;
+    else if(m.pur==='SURGERY')g.surg+=amt;
+    else if(m.pur==='TREATMENT')g.chemo+=amt;
+    else g.off++;
+  }
+  var H=r.H||(typeof frHome==='function'?frHome():{});
+  return {g:g,cov:{
+    diag:frTpMan(g.diag), surg:frTpMan(g.surg), perDay:frTpMan(g.perDay),
+    days:(days!==null&&days>0)?days:(dis?dis.inpat:0),
+    chemo:frTpMan(g.chemo),
+    bill:frTpMan(sc?sc.referenceTreatmentCostWon:null),
+    silbi:0,                                   /* 짐작하지 않는다 */
+    income:frTpMan(H.incomeWon),
+    off:(r.months!==null&&r.months!==undefined)?r.months:(dis?dis.off:0),
+    rate:0, prem:0, years:0
+  }};
+}
+/* 이 고객 자료로 <b>지급지도의 그림</b>을 그린다 */
+function frTpMapHtml(r,M){
+  var dis=frTpDis(r.tr);
+  if(!dis||typeof tpBody!=='function')return '';
+  var x=frTpCov(r,M,dis),body='';
+  try{ body=tpBody({dis:dis,cov:x.cov,ro:true,only:r.ok?[2,3]:[2]}); }catch(e){ return ''; }
+  if(!body)return '';
+  var note=[];
+  if(x.g.act)note.push('실손·통원 <b>'+x.g.act+'건</b>은 <b>금액으로 바꾸지 않았습니다</b> — 실제로 쓴 병원비만큼 나오는 담보라 미리 얼마라고 말할 수 없습니다. 그래서 지갑 그림에 실손 칸이 없습니다.');
+  if(x.g.unk)note.push('금액을 못 읽은 담보 <b>'+x.g.unk+'건</b>은 <b>0으로 세지 않고 빼 두었습니다.</b>');
+  if(x.g.off)note.push('이 그림의 네 갈래(진단·수술·치료·입원)에 안 들어가는 담보 <b>'+x.g.off+'건</b>이 있습니다 — <b>뒷장 표에는 그대로</b> 있습니다.');
+  note.push('그림의 금액은 <b>이 고객의 현재 계약</b>에서 가져온 것입니다. 치료 과정은 <b>일반적 경과 예시</b>입니다.');
+  return '<div class="fr-tpmap">'+body+'<div class="fr-need">'+note.join(' ')+'</div></div>';
+}
 /* ── 여정 카드 ── */
 function frStageHtml(stages){
   if(!stages.length)return '';
@@ -50081,10 +50448,16 @@ function frTrackPageHtml(r,M){
     frSubHeadHtml(tr.ic+' '+tr.t+' — 치료 여정과 그때 우리 집',
       r.ok?('기준 치료 시나리오 '+frWonR(r.B.costWon)+' · 현재 준비 '+frPct(r.B.rate)+' → 조정 후 '+frPct(r.A.rate))
           :'기준 치료비가 설정되지 않아 금액은 셈하지 않았습니다. 치료 과정만 보여 드립니다.');
-  var stages=frTrackStages(tr);
-  if(stages.length){
-    h+='<div class="fr-sec"><h2>치료 과정 — 각 단계에서 어떤 담보가 열리는가'+
-      '<small>일반적 경과 예시 · 개인차가 큽니다</small></h2>'+frStageHtml(stages)+'</div>';
+  /* 여정은 <b>치료비 지급지도의 것</b>을 그대로 쓴다. 간병처럼 지급지도에
+     짝이 없는 갈래만 여기서 그린다 — 같은 그림을 두 벌 두지 않는다 */
+  var tpmap=frTpMapHtml(r,M);
+  if(tpmap){
+    h+=tpmap;
+  }else{
+    var stages=frTrackStages(tr);
+    if(stages.length)
+      h+='<div class="fr-sec"><h2>치료 과정 — 각 단계에서 어떤 담보가 열리는가'+
+        '<small>일반적 경과 예시 · 개인차가 큽니다</small></h2>'+frStageHtml(stages)+'</div>';
   }
   if(!r.ok){
     h+='<div class="fr-sec"><div class="fr-need">이 갈래는 <b>기준 치료비가 설정되지 않았습니다.</b> '+
@@ -50363,6 +50736,231 @@ function frFromBaba(){
   return added;
 }
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   KB 보장분석 리더 — <b>규칙으로 읽는다. AI 를 부르지 않는다.</b>
+
+   KB 보장분석 PDF 는 서식이 아주 고르다. 그리고 무엇보다 —
+   <b>KB 가 표준담보명과 지급형태를 이미 적어 준다.</b>
+
+       1 정액 일반상해사망(경증간편가입)(기본계약) 상해사망(유병자) 100만
+       └번호 └지급형태 └원문담보명                  └KB표준담보명    └금액
+
+   그래서 이 문서는 <b>추측할 것이 없다.</b> AI 로 뽑으면 오히려 못 읽거나
+   지어낼 자리가 생긴다. 여기서는 한 글자도 짐작하지 않는다.
+
+   읽지 <b>않아야</b> 할 것도 표시가 분명하다 — 이것을 안 빼면 없는 보장을
+   있다고 말하게 된다.
+     · 「실효/해지계약현황」 구간 (해지* 표가 붙어 있다)
+     · 쪽 머리글 「…사업단 | …지점/윤시현(6080652)/010-… 13/60」
+     · 「※ 기준담보/권장금액 : 기본형(37개)/표준형」
+     · 쪽마다 되풀이되는 「○○○(40세 ,여자) 님의 …」 제목과 그 밑 숫자들
+
+   ※ 이 리더는 <b>KB 서식일 때만</b> 돈다. 아니면 스스로 물러난다(kbLooks).
+     남의 서식을 억지로 읽으면 조용히 틀린 값이 들어온다.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* 「9억 6,410만」·「1,000만」·「48,728원」 → 원. 못 읽으면 null 이다(0 이 아니다). */
+function kbWonR(t){
+  t=(''+(t==null?'':t)).replace(/\s+/g,'');
+  if(!t||t==='-')return null;
+  var m=t.match(/^(?:([0-9,]+)억)?(?:([0-9,]+)만)?(?:([0-9,]+)원?)?$/);
+  if(!m)return null;
+  var eok=m[1]?parseInt(m[1].replace(/,/g,''),10):0;
+  var man=m[2]?parseInt(m[2].replace(/,/g,''),10):0;
+  var won=m[3]?parseInt(m[3].replace(/,/g,''),10):0;
+  if(!m[1]&&!m[2]&&!m[3])return null;
+  return eok*100000000+man*10000+won;
+}
+/* 이 글이 KB 보장분석인가 — 아니면 <b>손대지 않는다</b> */
+function kbLooks(text){
+  var t=''+(text||'');
+  var hit=0;
+  if(/님의\s*상품별\s*가입담보상세/.test(t))hit++;
+  if(/님의\s*전체\s*계약리스트/.test(t))hit++;
+  if(/기준담보\s*\/\s*권장금액/.test(t))hit++;
+  if(/\|\s*가입일자\s*:/.test(t))hit++;
+  if(/^\s*\d+\s+(정액|실손)\s+\S/m.test(t))hit++;
+  return hit>=3;
+}
+/* 쪽마다 되풀이되는 것을 걷어 낸다 — 담보로 오해할 자리를 먼저 없앤다 */
+function kbStrip(text){
+  return (''+(text||''))
+    .replace(/^.*?\|\s*[^|\n]*지점[^\n]*\d+\s*\/\s*\d+\s*$/gm,'')   /* 쪽 머리글 */
+    .replace(/^\s*※\s*기준담보[^\n]*$/gm,'')
+    .replace(/^\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s*$/gm,'')  /* 뽑은 시각 */
+    .replace(/^[^\n]*님의\s*[가-힣/ ·]*\s*$/gm,'');                  /* 쪽 제목 */
+}
+/* 실효·해지 구간은 <b>통째로 뺀다.</b> 없어진 보장을 있다고 말하면 그 자리에서 무너진다.
+   대신 몇 건을 뺐는지 세어 돌려준다 — 조용히 버리면 빠뜨린 줄 안다. */
+function kbCutLapsed(text){
+  var t=''+(text||'');
+  var m=t.match(/[^\n]*실효\s*\/\s*해지계약현황[\s\S]*/);
+  if(!m)return {text:t,lapsed:[],cut:0};
+  var seg=m[0],head=t.slice(0,m.index);
+  /* 다음 「님의 …」 제목이 나오면 거기서 끝난다 */
+  var nx=seg.slice(60).search(/[^\n]*님의\s*[가-힣]/);
+  var tail='';
+  if(nx>=0){tail=seg.slice(60+nx);seg=seg.slice(0,60+nx);}
+  var L=seg.split(/\r?\n/),i,out=[];
+  for(i=0;i<L.length;i++){
+    var r=L[i].match(/^\s*\d+\s*해지\*?\s*(.+)$/);
+    if(r)out.push(r[1].replace(/\s+/g,' ').trim().slice(0,80));
+  }
+  return {text:head+tail,lapsed:out,cut:seg.length};
+}
+/* 담보 한 줄 — 원문명과 KB표준명 사이를 가른다.
+   가르는 자리는 <b>마지막 「) 」 뒤</b>, 없으면 <b>마지막 공백</b>이다.
+   갈라도 <b>원문 전체는 그대로 들고 간다</b> — 잘못 갈라도 잃는 것이 없게. */
+function kbSplitName(blob){
+  var b=(''+blob).replace(/\s+/g,' ').trim();
+  var at=b.lastIndexOf(') ');
+  if(at>0)return {raw:b.slice(0,at+1),std:b.slice(at+2).trim()};
+  var sp=b.lastIndexOf(' ');
+  if(sp>0)return {raw:b.slice(0,sp),std:b.slice(sp+1)};
+  return {raw:b,std:''};
+}
+/* 「전체 계약리스트」 — 대조용 두 번째 출처.
+   「1 KB손보 (무)KB 슬기로운 …(22.04) 2022-04-13 월납 20년 100세 48,728원」 */
+function kbListSection(text){
+  var t=''+(text||''),out=[];
+  var m=t.match(/님의[\s\S]{0,12}전체[\s\S]{0,4}계약리스트[\s\S]*/);
+  if(!m)return out;
+  var seg=m[0],nx=seg.slice(40).search(/님의[\s\S]{0,12}(전체[\s\S]{0,4}담보|담보별|상품별)/);
+  if(nx>=0)seg=seg.slice(0,40+nx);
+  var L2=seg.split(/\r?\n/),i,buf='';
+  for(i=0;i<L2.length;i++){
+    var ln=(L2[i]||'').trim();
+    if(!ln)continue;
+    /* 새 계약이 시작되는 줄인가 — <b>번호는 세 자리를 넘지 않는다.</b>
+       상품명 안의 「2504」 같은 숫자를 계약 번호로 보면 한 계약이 둘로 쪼개지고,
+       그러면 대조가 거짓말을 한다 (한화 시그니처 여성 건강보험3.0 무배당 2504). */
+    var isNew=/^[0-9]{1,3}([ 	]|$)/.test(ln)&&parseInt(ln,10)<=200;
+    if(isNew){ if(buf)kbListPush(out,buf); buf=ln; }
+    else if(buf) buf+=' '+ln;
+  }
+  if(buf)kbListPush(out,buf);
+  return out;
+}
+function kbListPush(out,ln){
+  var m=ln.replace(/[ \t]+/g,' ').match(/^([0-9]+) (.+?) ([0-9]{4}-[0-9]{2}-[0-9]{2}) (.+)$/);
+  if(!m)return;
+  /* 회사 이름 자리에 한글이 없으면 계약 줄이 아니다 (쪽 머리 숫자) */
+  if(!/[가-힣]/.test(m[2]))return;
+  var am=m[4].match(/([0-9,]+)[ ]?원[ ]*$/);
+  out.push({no:parseInt(m[1],10),head:m[2].slice(0,60),issue:m[3],
+            premWon:am?kbWonR(am[1]+'원'):null});
+}
+/* ── 통째로 읽는다 ────────────────────────────────────────────────
+   돌려주는 것은 <b>있는 그대로</b>다. 못 읽은 것은 null 로 두고 세어서 말한다. */
+function kbParse(text){
+  var raw=''+(text||'');
+  var out={ok:false,why:'',person:{name:'',age:null,sex:''},contracts:[],lapsed:[],
+            rows:0,skipped:0,noAmt:0};
+  if(!kbLooks(raw)){out.why='KB 보장분석 서식이 아닙니다';return out;}
+  var cut=kbCutLapsed(raw);
+  out.lapsed=cut.lapsed;
+  var t=kbStrip(cut.text);
+  /* 사람 — 「이여린(40세 ,여자) 님의」 */
+  var pm=raw.match(/([가-힣A-Za-z○\*]{2,12})\s*\(\s*(\d{1,3})\s*세\s*,?\s*(남자|여자)?\s*\)\s*님의/);
+  if(pm){out.person.name=pm[1];out.person.age=parseInt(pm[2],10);
+         out.person.sex=(pm[3]==='남자')?'M':(pm[3]==='여자'?'F':'');}
+  var L=t.split(/\r?\n/),i,cur=null;
+  for(i=0;i<L.length;i++){
+    var ln=(L[i]||'').replace(/ /g,' ').trim();
+    if(!ln)continue;
+    /* 계약 머리 — 「KB손보 | 가입일자 : 2022-04-13 |」 */
+    var hm=ln.match(/^(.{2,20}?)\s*\|\s*가입일자\s*:\s*(\d{4}-\d{2}-\d{2})\s*\|?/);
+    if(hm){
+      cur={co:hm[1].trim(),issue:hm[2],nm:'',holder:'',insured:'',
+           payWay:'',payTerm:'',term:'',from:'',to:'',premWon:null,premNote:'',
+           paidUp:false,covs:[]};
+      out.contracts.push(cur);
+      continue;
+    }
+    if(!cur)continue;
+    /* 담보 줄 — 번호 · 지급형태 · 이름들 · 금액 */
+    var cm=ln.match(/^(\d{1,3})\s+(정액|실손)\s+(.+?)\s+([0-9,]+(?:억|만|원)?(?:\s*[0-9,]+만)?)$/);
+    if(cm){
+      var nmx=kbSplitName(cm[3]);
+      var won=kbWonR(cm[4]);
+      if(won===null)out.noAmt++;
+      cur.covs.push({no:parseInt(cm[1],10),kind:cm[2],raw:nmx.raw,std:nmx.std,
+                     full:cm[3].replace(/\s+/g,' ').trim(),won:won});
+      out.rows++;
+      continue;
+    }
+    /* 계약자/피보험자 · 납입 — 「이여린/이여린 월납/20년/100세만기」 */
+    var pm2=ln.match(/^([^\/\s]{1,14})\s*\/\s*([^\/\s]{1,14})\s+([^\/\s]{1,8})\s*\/\s*([^\/\s]{1,10})\s*\/\s*(.{1,14})$/);
+    if(pm2&&!cur.payWay){
+      cur.holder=pm2[1];cur.insured=pm2[2];cur.payWay=pm2[3];cur.payTerm=pm2[4];cur.term=pm2[5].trim();
+      continue;
+    }
+    /* 기간과 보험료 — 「2022-04-13~2086-04-13 48,728원」 */
+    /* 날짜 뒤에 오는 것은 세 가지뿐이다 (실물 17건 전수 확인)
+         2022-04-13~2086-04-13 48,728원           ← 보통
+         2004-03-05~9999-12-31 (납입완료)136,200원  ← 납입완료
+         2025-01-06~9999-12-31 보험료미제공         ← 안 알려 준 것
+       「보험료미제공」을 0 으로 적으면 <b>공짜 보험</b>이 된다 — null 이다.
+       그리고 <b>(납입완료)는 KB 가 직접 알려 주는 상태</b>다. 우리가 짐작하던
+       것을 문서가 말해 준다 — 보험료 0 · 보장 유지로 그대로 이어진다. */
+    var dm=ln.match(/^(\d{4}-\d{2}-\d{2})\s*~\s*(\d{4}-\d{2}-\d{2})\s*(.*)$/);
+    if(dm){
+      cur.from=dm[1];cur.to=dm[2];
+      var tailx=(dm[3]||'').replace(/[ \t]+/g,'');
+      if(tailx.indexOf('납입완료')>=0)cur.paidUp=true;
+      if(tailx.indexOf('보험료미제공')>=0){cur.premWon=null;cur.premNote='보험료 미제공';}
+      else{
+        var am=tailx.match(/([0-9,]+)원/);
+        cur.premWon=am?kbWonR(am[1]+'원'):null;
+        if(!am)cur.premNote='보험료를 못 읽었습니다';
+      }
+      continue;
+    }
+    /* 상품명 — 위 어느 것도 아니고 담보가 아직 없으면 이름의 한 조각이다.
+       KB 는 긴 상품명을 여러 줄로 쪼갠다. 이어 붙인다. */
+    if(!cur.covs.length&&!cur.from&&ln.length<=60&&!/^\d+$/.test(ln))
+      cur.nm=(cur.nm?(cur.nm+' '):'')+ln;
+  }
+  /* 쪽이 넘어가 쪼개진 같은 계약을 합친다 — 「(1/2)」·「(2/2)」 */
+  var byKey={},merged=[];
+  for(i=0;i<out.contracts.length;i++){
+    var c=out.contracts[i];
+    /* 쪽이 넘어가 쪼개진 것은 KB 가 이름 끝에 (1/2)(2/2) 로 적어 준다.
+       그 표가 있을 때만 합친다 — 같은 회사·상품·가입일이어도 표가 없으면
+       <b>다른 계약</b>이다. 합치면 있는 계약이 없어진다. */
+    var part=(c.nm||'').match(/\(\s*(\d)\s*\/\s*(\d)\s*\)\s*$/);
+    c.nm=(c.nm||'').replace(/\s*\(\s*\d\s*\/\s*\d\s*\)\s*$/,'').trim();
+    c.part=part?(part[1]+'/'+part[2]):'';
+    var key=c.part?(c.co+'|'+c.nm+'|'+c.issue):('@'+merged.length);
+    if(byKey[key]){
+      var p=byKey[key];
+      c.covs.forEach(function(x){p.covs.push(x);});
+      if(p.premWon===null)p.premWon=c.premWon;
+      if(!p.premNote)p.premNote=c.premNote;
+      if(c.paidUp)p.paidUp=true;
+      if(!p.payWay){p.payWay=c.payWay;p.payTerm=c.payTerm;p.term=c.term;}
+      continue;
+    }
+    byKey[key]=c;merged.push(c);
+  }
+  out.contracts=merged;
+  /* 담보가 하나도 없는 계약은 읽다 만 것이다 — 버리지 않고 세어 말한다 */
+  for(i=0;i<out.contracts.length;i++)if(!out.contracts[i].covs.length)out.skipped++;
+  /* 같은 문서 안 「전체 계약리스트」가 계약을 한 번 더 적어 준다.
+     한 곳만 믿지 않는다 — 어긋나면 그 자리에서 말한다. 고치지는 않는다. */
+  out.listed=kbListSection(cut.text).length;
+  out.gap=out.listed?(out.listed-out.contracts.length):0;
+  out.paidUp=0;out.noPrem=0;
+  for(i=0;i<out.contracts.length;i++){
+    if(out.contracts[i].paidUp)out.paidUp++;
+    if(out.contracts[i].premWon===null)out.noPrem++;
+  }
+  out.ok=(out.contracts.length>0&&out.rows>0);
+  if(!out.ok)out.why='계약이나 담보를 한 건도 읽지 못했습니다';
+  return out;
+}
+
 /* ── PAGE 2+ — 전체 보험계약 및 담보 상세 (요구사항 21번) ─────────
    <b>담보가 100개면 100개 모두 나온다.</b> slice·상위 N개로 줄이지 않는다.  */
 function frAppendixHtml(M,T){
@@ -50498,6 +51096,234 @@ function frSrc(id){
 }
 
 /* ── 계약 · 담보 조치 (요구사항 24번·25번) ───────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   🔀 전 · 후 만들기 — <b>한 화면에서</b>
+
+   지금까지는 조치는 「✍ 계약·담보 조치」에서 하고, 결과는 리포트로 넘어가
+   봐야 했다. 그래서 <b>해지를 눌렀을 때 무엇이 비는지</b>를 그 자리에서
+   말해 줄 수 없었다. 이 화면은 셋을 나란히 둔다.
+
+     왼쪽   기존 보험 — 계약마다 <b>유지 / 해지</b>, 담보마다 조정 후 금액
+     오른쪽 지금 이 순간의 전 · 후 — 월 보험료, <b>비는 자리</b>, 채우는 자리
+     아래   인체 한 장 — 누를 때마다 다시 그려진다
+
+   셈은 새로 만들지 않는다. 리포트가 쓰는 frMaster() 그대로다 — 여기서
+   보이는 값과 리포트에 찍히는 값이 <b>다를 수 없다</b> (CLAUDE.md 5번).
+   ══════════════════════════════════════════════════════════════════════════ */
+/* 이번 조치로 <b>비는 자리</b>와 <b>채우는 자리</b> */
+function frMakeDiff(M){
+  var loss=[],gain=[],lostUnknown=[],i,m,b,aa;
+  for(i=0;i<M.length;i++){
+    m=M[i];b=m.bWon;aa=m.aWon;
+    if(b!==null&&b!==undefined&&(aa===null||aa===undefined)){
+      /* 후에 값이 없다 — <b>해지라서 없는 것</b>과 <b>원래 못 읽은 것</b>을 가른다 */
+      if(m.cact==='CANCEL'||m.pact==='CANCEL')loss.push({m:m,won:b,why:'해지'});
+      continue;
+    }
+    if(b===null||b===undefined){
+      /* 해지인데 금액을 못 읽었다 — 금액에는 못 넣지만 <b>사라지는 것은 사실</b>이다 */
+      if(m.cact==='CANCEL'||m.pact==='CANCEL'){lostUnknown.push(m);continue;}
+      if(aa!==null&&aa!==undefined)gain.push({m:m,won:aa,why:m.isNew?'신규':'새로 넣음'});
+      continue;
+    }
+    if(aa<b)loss.push({m:m,won:b-aa,why:'감액'});
+    else if(aa>b)gain.push({m:m,won:aa-b,why:'증액'});
+  }
+  loss.sort(function(x,y){return y.won-x.won;});
+  gain.sort(function(x,y){return y.won-x.won;});
+  return {loss:loss,gain:gain,lostUnknown:lostUnknown};
+}
+function frDzName(code){
+  if(typeof FR_DZ==='undefined')return '';
+  for(var i=0;i<FR_DZ.length;i++)if(FR_DZ[i][0]===code)return FR_DZ[i][1];
+  return '';
+}
+function frCatName(cat){
+  if(typeof FR_CATS==='undefined')return '';
+  for(var i=0;i<FR_CATS.length;i++)if(FR_CATS[i][0]===cat)return FR_CATS[i][1];
+  return '';
+}
+/* 「이 담보가 비면 무슨 일이 생기는가」 — 담보에 <b>적혀 있는 것</b>으로만 말한다.
+   사건 이름을 모르면 그 말을 안 한다. 지어내지 않는다 (CLAUDE.md 1번). */
+/* 금액을 <b>말로 옮기는 자리</b> — 하루치는 「하루」를, 실손은 「한도」를 앞에 붙인다 */
+function frMoneyBy(m,won){
+  var t=frWonR(won);
+  if(m.pay==='DAILY')return '하루 '+t;
+  if(m.pay==='VISIT')return '1회 '+t;
+  if(m.pay==='ACTUAL')return '한도 '+t;
+  return t;
+}
+function frMakeSay(x){
+  var m=x.m,dz=(m.dz&&m.dz.length===1)?frDzName(m.dz[0]):'';
+  var what=dz||frCatName(m.cat)||'';
+  if(x.why==='해지')
+    return what?('<b>'+osEsc(what)+'</b> 자리에서 나오던 <b>'+frMoneyBy(m,x.won)+'</b>이 없어집니다.')
+               :('<b>'+frMoneyBy(m,x.won)+'</b>이 없어집니다.');
+  if(x.why==='감액')
+    return what?('<b>'+osEsc(what)+'</b> 자리가 <b>'+frMoneyBy(m,x.won)+'</b>만큼 줄어듭니다.')
+               :('<b>'+frMoneyBy(m,x.won)+'</b>만큼 줄어듭니다.');
+  return '';
+}
+/* 유지 / 해지를 <b>단추 한 번</b>으로 — 목록에서 고르는 것보다 빠르고, 지금 무엇인지 보인다 */
+function frPactBtns(pid,act){
+  var use=[['KEEP','유지'],['REVIEW_CANCEL','해지검토'],['CANCEL','해지'],['NEW','신규'],['PAID_UP','납입완료']];
+  return '<div class="mk-tg">'+use.map(function(o){
+    return '<button class="'+(act===o[0]?'on':'')+'" onclick="frPact(\'' + pid + '\',\'' + o[0] + '\')">'+o[1]+'</button>';
+  }).join('')+'</div>';
+}
+function frCactBtns(cid,act){
+  var use=[['','—'],['KEEP','유지'],['CANCEL','해지']];
+  return '<div class="mk-tg sm">'+use.map(function(o){
+    return '<button class="'+((act||'')===o[0]?'on':'')+'" onclick="frCact(\'' + cid + '\',\'' + o[0] + '\')">'+o[1]+'</button>';
+  }).join('')+'</div>';
+}
+/* ── 전·후 만들기 도구 ── */
+function frMkFind(v){
+  FR.mkQ=v||'';
+  frPaint();
+  /* 글을 치던 자리로 돌려보낸다 — 한 글자마다 칸이 튀면 못 친다 */
+  try{var el=document.getElementById('frMkQ');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}catch(e){}
+}
+function frMkFold(pid){
+  if(FR.mkOpen&&FR.mkOpen.__all){
+    /* 전부 펴 둔 상태에서 하나를 접으면, 그 하나만 접는다 */
+    var o={},i;
+    for(i=0;i<FR.pols.length;i++)o[FR.pols[i].id]=1;
+    delete o[pid];FR.mkOpen=o;
+  }else{
+    FR.mkOpen=FR.mkOpen||{};
+    if(FR.mkOpen[pid])delete FR.mkOpen[pid];else FR.mkOpen[pid]=1;
+  }
+  frPaint();
+}
+function frMkAll(on){
+  if(on)FR.mkOpen={__all:1};
+  else FR.mkOpen={};
+  frPaint();
+}
+/* 「전부 유지」는 <b>아직 안 정한 것만</b> 채운다 — 이미 정하신 것을 덮지 않는다 */
+function frMkKeepAll(){
+  var st=frState(),i,c=0;
+  for(i=0;i<FR.pols.length;i++){
+    var id=FR.pols[i].id;
+    if(!st.pact[id]){st.pact[id]='KEEP';c++;}
+  }
+  if(!c){toast('이미 다 정해 두셨습니다');return;}
+  frSaveState();toast('아직 안 정한 계약 '+c+'건을 「유지」로 두었습니다');frPaint();
+}
+function frMkReset(){
+  if(!confirm('계약·담보 조치와 조정 후 금액을 전부 지웁니다. 읽어 온 계약과 담보는 그대로 남습니다.'))return;
+  var st=frState();
+  st.pact={};st.cact={};st.cadjWon={};
+  frSaveState();toast('조치를 지웠습니다');frPaint();
+}
+
+function frMakeHtml(M){
+  var st=frState(),D=frMakeDiff(M),pr=frPrem(),h='<div class="fr-wrap fr-mk">';
+  if(!FR.pols.length&&!(st.add||[]).length)
+    return h+frKbHtml()+'<div class="fr-warn">아직 불러온 계약이 없습니다. 위에 <b>KB 보장분석 PDF</b> 를 올리시거나, 「증권 분석」에서 보험증권을 읽히시면 이 자리에 계약이 섭니다.</div></div>';
+
+  /* ── 오른쪽: 지금 이 순간의 전 · 후 ── */
+  var right='<div class="mk-r"><div class="mk-card"><div class="hh">지금 이 순간</div>';
+  right+='<div class="mk-prem"><div><span>월 보험료 · 지금</span><b>'+frWonR(pr.beforeWon)+'</b></div>'+
+    '<div class="ar">→</div>'+
+    '<div><span>조정 후</span><b class="'+(pr.diffWon>0?'up':(pr.diffWon<0?'dn':''))+'">'+frWonR(pr.afterWon)+'</b></div></div>';
+  if(pr.diffWon!==0)
+    right+='<div class="mk-note">'+(pr.diffWon>0?('매달 <b>'+frWonR(pr.diffWon)+'</b> 더 나갑니다.'):('매달 <b>'+frWonR(-pr.diffWon)+'</b> 덜 나갑니다.'))+'</div>';
+  if(pr.unknownB||pr.unknownA)
+    right+='<div class="mk-note warn">보험료를 못 읽은 계약이 있어 <b>이 합계에 안 들어갔습니다</b>(지금 '+pr.unknownB+'건 · 조정 후 '+pr.unknownA+'건). <b>0원으로 세지 않습니다.</b></div>';
+  if(pr.paidUp)
+    right+='<div class="mk-note">납입완료 <b>'+pr.paidUp+'건</b>은 보험료가 전·후 모두 0원입니다 — <b>보장은 그대로 남습니다.</b></div>';
+  right+='</div>';
+
+  right+='<div class="mk-card loss"><div class="hh">비는 자리 <em>'+(D.lostUnknown.length?(D.loss.length+'+'+D.lostUnknown.length+'건'):(D.loss.length+'건'))+'</em></div>';
+  if(!D.loss.length)right+='<div class="mk-empty">아직 해지하거나 줄인 담보가 없습니다.</div>';
+  else right+=D.loss.slice(0,12).map(function(x){
+    return '<div class="mk-li"><div class="n">'+osEsc(x.m.raw)+' <i>'+osEsc(x.why)+'</i></div><div class="d">'+frMakeSay(x)+'</div></div>';
+  }).join('')+(D.loss.length>12?('<div class="mk-more">여기 <b>12건</b>만 보였습니다 — 나머지 <b>'+(D.loss.length-12)+'건</b>은 리포트 뒷장 표에 전부 있습니다.</div>'):'');
+  if(D.lostUnknown.length)
+    right+='<div class="mk-note warn">금액을 못 읽은 담보 <b>'+D.lostUnknown.length+'건</b>도 함께 사라집니다 — '+
+      '얼마인지 몰라 <b>위 금액에는 못 넣었습니다.</b> 0원이라는 뜻이 아닙니다: '+
+      D.lostUnknown.map(function(m){return osEsc(m.raw);}).join(' · ')+'</div>';
+  right+='</div>';
+
+  right+='<div class="mk-card gain"><div class="hh">채우는 자리 <em>'+D.gain.length+'건</em></div>';
+  if(!D.gain.length)right+='<div class="mk-empty">아직 늘리거나 새로 넣은 담보가 없습니다. 왼쪽 <b>조정 후 금액</b> 칸에 적으시면 여기에 섭니다.</div>';
+  else right+=D.gain.slice(0,12).map(function(x){
+    return '<div class="mk-li"><div class="n">'+osEsc(x.m.raw)+' <i>'+osEsc(x.why)+'</i></div><div class="d"><b>'+frMoneyBy(x.m,x.won)+'</b> 늘어납니다.</div></div>';
+  }).join('')+(D.gain.length>12?('<div class="mk-more">여기 <b>12건</b>만 보였습니다 — 나머지 <b>'+(D.gain.length-12)+'건</b>은 리포트 뒷장 표에 전부 있습니다.</div>'):'');
+  right+='</div>';
+  right+='<div class="mk-card"><button class="fr-abtn" style="width:100%" onclick="frGo(\'client\')">📄 이대로 고객용 리포트 보기</button>'+
+    '<button class="fr-mini" style="width:100%;margin-top:6px" onclick="frPrint(\'ba\')">🖨 전·후 한 장만 뽑기</button>'+
+    '<div class="mk-note">여기서 누른 조치가 <b>그대로</b> 리포트에 들어갑니다 — 따로 옮겨 적지 않습니다.</div></div></div>';
+
+  h+=frKbHtml();
+  h+='<div class="mk-top">기존 보험을 <b>유지할지 해지할지</b> 고르시고, 새로 만들 금액은 <b>조정 후 금액</b> 칸에 직접 적으시면 됩니다. '+
+    '오른쪽이 <b>누를 때마다</b> 다시 셉니다. <b>없는 금액을 0으로 만들지 않습니다</b> — 못 읽은 담보는 「확인 필요」로 남습니다.</div>';
+  /* ── 왼쪽: 기존 보험 ── */
+  var q=frClean(FR.mkQ||''),byPol={},i,j;
+  for(i=0;i<M.length;i++){(byPol[M[i].polId]=byPol[M[i].polId]||[]).push(M[i]);}
+  /* 계약이 몇 건 안 되면 그냥 펴 둔다 — 접는 것이 도리어 일이다 */
+  /* 접는 기준은 <b>담보 수</b>다 — 계약이 다섯이어도 담보가 스무 개면 펴 두는 게 낫다 */
+  if(FR.mkOpen===null||FR.mkOpen===undefined)FR.mkOpen=(M.length<=40)?{__all:1}:{};
+  var shownPol=0,shownCov=0,hidPol=0;
+  var left='<div class="mk-l">';
+  left+='<div class="mk-tools">'+
+    '<input class="mk-q" id="frMkQ" type="search" placeholder="담보·상품 이름으로 찾기" value="'+osEsc(FR.mkQ||'')+'" '+
+      'oninput="frMkFind(this.value)">'+
+    '<button class="fr-mini" onclick="frMkAll(1)">전부 펴기</button>'+
+    '<button class="fr-mini" onclick="frMkAll(0)">전부 접기</button>'+
+    '<button class="fr-mini" onclick="frMkKeepAll()">전부 「유지」로</button>'+
+    '<button class="fr-mini danger" onclick="frMkReset()">조치 지우기</button>'+
+    '<button class="fr-mini" onclick="frAddRow()">+ 담보 손으로 더하기</button>'+
+    '<span class="mk-saved">고치시면 <b>바로 저장</b>됩니다</span>'+
+  '</div>';
+  if(!FR.mkOpen.__all&&!q)
+    left+='<div class="mk-shut top">접어 둔 계약의 담보도 <b>빠진 것이 아닙니다</b> — 리포트에는 전부 나갑니다. 계약 이름을 누르면 펴집니다.</div>';
+  for(i=0;i<FR.pols.length;i++){
+    var p=FR.pols[i],list=byPol[p.id]||[],act=(st.pact&&st.pact[p.id])||'';
+    /* 찾는 중이면 <b>맞는 것이 있는 계약만</b> 세운다 — 없는 계약은 접은 게 아니라 안 맞는 것이다 */
+    var hit=list,polHit=true;
+    if(q){
+      polHit=(frClean((p.insurer||'')+(p.product_name||'')).indexOf(q)>=0);
+      hit=list.filter(function(m){return frClean(m.raw+' '+m.std).indexOf(q)>=0;});
+      if(!polHit&&!hit.length){hidPol++;continue;}
+      if(polHit&&!hit.length)hit=list;
+    }
+    shownPol++;shownCov+=hit.length;
+    var open=q?true:(FR.mkOpen.__all||FR.mkOpen[p.id]);
+    left+='<div class="mk-pol'+(act==='CANCEL'?' off':'')+'">'+
+      '<div class="ph"><button class="mk-fold" onclick="frMkFold(\''+p.id+'\')">'+(open?'▾':'▸')+'</button>'+
+      '<div class="pt"><b>'+osEsc(p.insurer||'보험사 확인 필요')+'</b> '+osEsc(p.product_name||'상품명 확인 필요')+
+      '<small>담보 '+list.length+'개'+(q&&hit.length!==list.length?(' · 찾은 것 '+hit.length+'개'):'')+
+      ' · 월 '+((p.monthly_premium===null||p.monthly_premium===undefined)?'확인 필요':frWonR(p.monthly_premium))+
+      (p.__kb?' · <em>KB 보장분석</em>':'')+'</small></div></div>'+
+      frPactBtns(p.id,act);
+    if(open){
+      for(j=0;j<hit.length;j++){
+        var m=hit[j],adj=(st.cadjWon&&st.cadjWon.hasOwnProperty(m.id))?st.cadjWon[m.id]:'';
+        left+='<div class="mk-cov'+((m.cact==='CANCEL'||act==='CANCEL')?' off':'')+'">'+
+          '<div class="n">'+osEsc(m.raw)+'<small>'+osEsc(frPayLabel(m.pay))+' · 지금 '+(m.bWon===null?'<b class="q">확인 필요</b>':frWonR(m.bWon))+
+          ' → 후 '+(m.aWon===null?'<b class="q">없음</b>':frWonR(m.aWon))+'</small></div>'+
+          frCactBtns(m.id,m.cact)+
+          '<input class="mk-in" type="number" placeholder="조정 후 금액(원)" value="'+(adj===''||adj===null?'':adj)+'" onchange="frAdjSet(\''+m.id+'\',this.value)"/>'+
+        '</div>';
+      }
+    }else if(list.length){
+      left+='<div class="mk-shut">담보 '+list.length+'개 — 누르면 펴집니다</div>';
+    }
+    left+='</div>';
+  }
+  if(q)left+='<div class="mk-found">「'+osEsc(FR.mkQ)+'」으로 계약 <b>'+shownPol+'건</b> · 담보 <b>'+shownCov+'개</b>를 찾았습니다'+
+    (hidPol?(' · 안 맞는 계약 '+hidPol+'건은 접어 두었습니다'):'')+
+    ' <button class="fr-mini" onclick="frMkFind(\'\')">찾기 지우기</button></div>';
+  left+='</div>';
+  h+='<div class="mk-grid">'+left+right+'</div>';
+
+  h+='<div class="mk-body">'+frBodyHtml(M)+'</div>';
+  return h+'</div>';
+}
+
 function frEditHtml(M){
   var st=frState(),h='<div class="fr-wrap">';
   h+='<div class="fr-ed"><div class="h">고객 정보 — 추출로는 알 수 없는 것</div>'+
@@ -50777,65 +51603,156 @@ function frReadHtml(M,T){
   return h+'</div>';
 }
 
-/* ── 치료 시나리오 관리 (요구사항 10번·28번 · 관리자 전용) ──────── */
+/* ── 치료 시나리오 설정 — 리포트와 <b>같은 결</b>로 ──────────────────
+   이 화면만 다른 앱처럼 보였다. 리포트는 네이비 제목에 금색 구분선인데
+   여기는 회색 상자에 칸만 늘어놓았다. 같은 제품이면 같은 얼굴이어야 한다.
+
+   그리고 <b>지금 상태를 맨 위에서 말한다.</b> 「시나리오 3건」 만으로는
+   쓸 수 있는 상태인지 알 수 없다 — 기준 치료비가 비면 고객 리포트에서
+   방어력이 안 나오고, 출처가 비면 「공식 치료비가 아닙니다」가 찍힌다.
+   그 둘을 세어 맨 위에 적는다.                                        */
+function frScenReady(){
+  var L=frScenarios(),t={all:L.length,cost:0,src:0,on:0,used:{},i:0};
+  for(t.i=0;t.i<L.length;t.i++){
+    var s=L[t.i];
+    if(s.active!==false)t.on++;
+    if(s.referenceTreatmentCostWon!==null&&s.referenceTreatmentCostWon!==undefined)t.cost++;
+    if((s.sourceName||'').replace(/\s/g,''))t.src++;
+    /* 묶음마다 첫 활성 시나리오만 고객 리포트에 쓰인다 */
+    if(s.active!==false&&!t.used[s.diseaseCategory])t.used[s.diseaseCategory]=s.id;
+  }
+  t.usedN=0;
+  for(var k in t.used)if(t.used.hasOwnProperty(k))t.usedN++;
+  return t;
+}
+var FR_SCEN_COLOR={CANCER:'#EA580C',BRAIN:'#2563EB',HEART:'#DC2626',NURSING:'#0F766E'};
+function frScenColor(c){return FR_SCEN_COLOR[c]||'#64748B';}
 function frScenAdminHtml(){
-  var L=frScenarios(),h='<div class="fr-wrap">';
-  h+='<div class="fr-warn">여기 넣은 값이 <b>모든 고객의 리포트</b>에 쓰입니다. <b>출처와 기준일을 반드시 적어 주세요</b> — '+
-    '출처가 없는 값은 리포트에서 「공식 치료비가 아닙니다」라고 밝힙니다. 기준 치료비를 비워 두면 그 질병은 <b>「기준 치료비 미설정」</b>으로 나가고 방어력을 계산하지 않습니다.</div>';
-  var bc=frBandCfg();
-  h+='<div class="fr-ed"><div class="h">보험료 부담 기준 (선택)</div>'+
-    '<div class="s">넣으시면 리포트에 「양호·주의·부담」이 표시됩니다. <b>비워 두시면 사실만</b>(월소득 대비 8.8%) 적습니다.</div>'+
-    '<div class="fr-grid4">'+
-      '<div><label>양호 상한 (%)</label><input id="frBandGood" type="number" step="0.1" value="'+(bc?bc.good:'')+'" placeholder="미설정"/></div>'+
-      '<div><label>주의 상한 (%)</label><input id="frBandWarn" type="number" step="0.1" value="'+(bc?bc.warn:'')+'" placeholder="미설정"/></div>'+
-      '<div><label>대출 금리 (% · 가정)</label><input id="frLoanRate" type="number" step="0.1" value="'+(frLoanRate()===null?'':frLoanRate())+'" placeholder="미설정"/></div>'+
-      '<div><label>근거 · 출처</label><input id="frBandSrc" type="text" value="'+osEsc(bc?bc.src:'')+'" placeholder="예: 사내 상담기준 2026-08"/></div>'+
-    '</div><div style="margin-top:9px"><button class="fr-mini" onclick="frBandSave()">💾 저장</button> '+
-    '<button class="fr-mini" onclick="frBandClear()">기준 지우기</button></div></div>';
-  h+='<div class="fr-ed"><div class="h">치료 시나리오 '+L.length+'건</div>'+
-    '<div class="s">질병 묶음(암·뇌·심장)마다 <b>첫 활성 시나리오</b>가 고객 리포트의 3대질병 카드에 쓰입니다.</div>'+
-    '<button class="fr-mini" onclick="frScenAdd()">+ 새 시나리오</button></div>';
-  for(var i=0;i<L.length;i++){
-    var s=L[i];
-    h+='<div class="fr-ed"><div class="h">'+osEsc(s.scenarioName||'(이름 없음)')+' '+
-      '<span class="fr-tag" style="color:#2563EB;background:#EFF6FF">'+osEsc(frCatLabel(s.diseaseCategory))+'</span>'+
-      (s.active===false?'<span class="fr-tag" style="color:#94A3B8;background:#F1F5F9">꺼짐</span>':'')+'</div>'+
-      '<div class="fr-grid4">'+
+  var L=frScenarios(),T=frScenReady(),i;
+  var h='<div class="fr-wrap"><div class="fr-adm">';
+  /* ── 머리 ── */
+  h+='<div class="fr-hd"><div class="ey">APEX YUN PRO · 치료 시나리오 설정</div>'+
+    '<h1>치료 시나리오</h1>'+
+    '<p>여기 넣은 값이 <b>모든 고객의 리포트</b>에 쓰입니다. 고객 리포트의 3대질병·간병 카드와 「그때 우리 집은」이 이 값으로 계산됩니다.</p></div>';
+  /* ── 지금 상태 ── */
+  h+='<div class="fr-sec"><h2>지금 상태<small>고객 리포트가 쓸 수 있는가</small></h2><div class="fr-prof">'+
+    frProfCell('시나리오',T.all+'건')+
+    frProfCell('켜 둔 것',T.on+'건')+
+    frProfCell('기준 치료비 있음',T.cost+' / '+T.all+'건',(T.all&&T.cost===T.all)?'gn':'og')+
+    frProfCell('출처 적힌 것',T.src+' / '+T.all+'건',(T.all&&T.src===T.all)?'gn':'og')+
+  '</div>';
+  if(!T.all)
+    h+='<div class="fr-need">아직 시나리오가 하나도 없습니다. 아래 <b>+ 새 시나리오</b>로 시작하세요. '+
+       '없으면 고객 리포트의 네 갈래가 모두 <b>「기준 치료비 미설정」</b>으로 나갑니다.</div>';
+  else if(T.cost<T.all)
+    h+='<div class="fr-need"><b>'+(T.all-T.cost)+'건</b>에 기준 치료비가 비어 있습니다 — 그 질병은 고객 리포트에서 '+
+       '<b>방어력을 계산하지 않습니다</b>. 임의의 숫자를 만들지 않기 때문입니다.</div>';
+  if(T.all&&T.src<T.all)
+    h+='<div class="fr-need"><b>'+(T.all-T.src)+'건</b>에 출처가 비어 있습니다 — 고객 리포트에 '+
+       '<b>「공식 치료비가 아닙니다」</b>라고 찍힙니다.</div>';
+  h+='<div style="margin-top:11px"><button class="fr-abtn" onclick="frScenAdd()">+ 새 시나리오</button></div></div>';
+  /* ── 시나리오마다 ── */
+  for(i=0;i<L.length;i++){
+    var s=L[i],c=frScenColor(s.diseaseCategory);
+    var noCost=(s.referenceTreatmentCostWon===null||s.referenceTreatmentCostWon===undefined);
+    var noSrc=!((s.sourceName||'').replace(/\s/g,''));
+    var off=(s.active===false);
+    var used=(!off&&T.used[s.diseaseCategory]===s.id);
+    h+='<div class="fr-scard'+(off?' off':'')+'" style="border-left-color:'+c+'">'+
+      '<div class="sh"><b>'+osEsc(s.scenarioName||'(이름 없음)')+'</b>'+
+        '<span class="fr-tag" style="color:'+c+';background:'+c+'14">'+osEsc(frCatLabel(s.diseaseCategory))+'</span>'+
+        (used?'<span class="fr-tag" style="color:#16A34A;background:#F0FDF4">고객 리포트에 쓰임</span>':'')+
+        (off?'<span class="fr-tag" style="color:#94A3B8;background:#F1F5F9">꺼짐</span>':'')+
+        (noCost?'<span class="fr-tag" style="color:#B45309;background:#FFFBEB">기준 치료비 없음</span>':'')+
+        (noSrc?'<span class="fr-tag" style="color:#B45309;background:#FFFBEB">출처 없음</span>':'')+
+        '<em>'+((s.treatmentSteps&&s.treatmentSteps.length)?(s.treatmentSteps.length+'단계'):'단계 없음')+'</em>'+
+      '</div>'+
+      '<div class="sg">'+
         frScenF(s,'scenarioName','시나리오 이름','text')+
         frScenSelCat(s)+
         frScenSelDz(s)+
         frScenF(s,'scenarioLevel','수준(표준·중증 등)','text')+
-        frScenF(s,'referenceTreatmentCostWon','기준 치료비 (원)','number')+
+      '</div>'+
+      '<div class="sgl">이 값으로 <b>계산</b>합니다</div>'+
+      '<div class="sg">'+
+        frScenF(s,'referenceTreatmentCostWon','기준 치료비 (원)','number',1)+
         frScenF(s,'inpatientDays','예상 입원일수 (일 · 선택)','number')+
         frScenF(s,'incomeGapMonths','소득중단 개월 (선택)','number')+
+        '<div><label>&nbsp;</label><div class="shint">입원일수를 넣으셔야 <b>일당</b>이 금액으로 환산됩니다. 소득중단 개월은 「그때 우리 집은」에 쓰입니다.</div></div>'+
+      '</div>'+
+      '<div class="sgl">이 값은 <b>출처로 밝힙니다</b></div>'+
+      '<div class="sg">'+
         frScenF(s,'sourceName','출처 이름','text')+
         frScenF(s,'sourceDate','기준일 (예: 2026-01)','text')+
         frScenF(s,'sourceUrl','출처 주소','text')+
         frScenF(s,'description','설명','text')+
       '</div>'+
-      '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap">'+
+      '<div class="sb">'+
         '<button class="fr-mini" onclick="frScenSteps(\''+s.id+'\')">암 10단계 틀 넣기 (금액은 비움)</button>'+
-        '<button class="fr-mini" onclick="frScenToggle(\''+s.id+'\')">'+(s.active===false?'켜기':'끄기')+'</button>'+
-        '<button class="fr-mini" onclick="frScenDel(\''+s.id+'\')">삭제</button>'+
+        '<button class="fr-mini" onclick="frScenToggle(\''+s.id+'\')">'+(off?'켜기':'끄기')+'</button>'+
+        '<button class="fr-mini danger" onclick="frScenDel(\''+s.id+'\')">삭제</button>'+
       '</div>';
     if(s.treatmentSteps&&s.treatmentSteps.length){
-      h+='<div class="fr-scroll" style="margin-top:9px"><table class="fr-tb"><thead><tr><th>단계</th><th class="r">기준 필요자금 (원)</th></tr></thead><tbody>';
+      h+='<div class="sgl">단계별 필요자금</div>'+
+        '<div class="fr-scroll"><table class="fr-tb"><thead><tr><th>단계</th><th>이 단계에서 열리는 담보</th><th class="r">기준 필요자금 (원)</th></tr></thead><tbody>';
       for(var j=0;j<s.treatmentSteps.length;j++){
-        var t=s.treatmentSteps[j];
-        h+='<tr><td>'+osEsc(t.no)+' '+osEsc(t.name)+'</td><td class="r">'+
-          '<input type="number" style="width:140px" value="'+(t.costWon===null||t.costWon===undefined?'':t.costWon)+'" placeholder="미설정" '+
-          'onchange="frScenStepSet(\''+s.id+'\','+j+',this.value)"/></td></tr>';
+        var t=s.treatmentSteps[j],names=[],q;
+        for(q=0;q<FR_DICT.length;q++)if(t.keys&&t.keys.indexOf(FR_DICT[q].k)>=0)names.push(FR_DICT[q].n);
+        h+='<tr><td><b>'+osEsc(t.no)+'</b> '+osEsc(t.name)+'</td>'+
+          '<td><span class="sub">'+(names.length?osEsc(names.slice(0,3).join(' · ')+(names.length>3?(' 외 '+(names.length-3)):'')):'없음')+'</span></td>'+
+          '<td class="r"><span class="fr-cell">'+
+          '<input class="fr-in" type="number" value="'+(t.costWon===null||t.costWon===undefined?'':t.costWon)+'" placeholder="미설정" '+
+          'onchange="frScenStepSet(\''+s.id+'\','+j+',this.value)"/>'+
+          '<em class="fr-rd">'+((t.costWon===null||t.costWon===undefined)?'미설정':frWonR(t.costWon))+'</em>'+
+          '</span></td></tr>';
+      }
+      /* 단계 합이 기준 치료비와 달라도 <b>고치지 않는다</b> — 넣으신 그대로 쓰고, 다르다는 것만 말한다 */
+      var sum=0,setN=0,q2;
+      for(q2=0;q2<s.treatmentSteps.length;q2++){
+        var cw=s.treatmentSteps[q2].costWon;
+        if(cw!==null&&cw!==undefined){sum+=cw;setN++;}
       }
       h+='</tbody></table></div>';
+      if(setN)h+='<div class="fr-need">단계 합 <b>'+frWonR(sum)+'</b>'+
+        ((s.referenceTreatmentCostWon!==null&&s.referenceTreatmentCostWon!==undefined)
+          ? (sum===s.referenceTreatmentCostWon?' — 기준 치료비와 같습니다.'
+             :(' · 기준 치료비 <b>'+frWonR(s.referenceTreatmentCostWon)+'</b> 와 <b>'+frWonR(Math.abs(sum-s.referenceTreatmentCostWon))+'</b> 다릅니다 — <b>자동으로 맞추지 않습니다.</b> 넣으신 그대로 씁니다.'))
+          : ' · 기준 치료비가 비어 있어 견줄 것이 없습니다.')+
+        (setN<s.treatmentSteps.length?(' 미설정 단계 '+(s.treatmentSteps.length-setN)+'개는 빼고 더했습니다.'):'')+'</div>';
     }
     h+='</div>';
   }
-  return h+'</div>';
+  /* ── 보험료 부담 기준 ── */
+  var bc=frBandCfg();
+  h+='<div class="fr-sec"><h2>보험료 부담 기준<small>선택 · 비워 두면 사실만 적습니다</small></h2>'+
+    '<div class="fr-scard" style="border-left-color:#B68A35">'+
+    '<div class="sh"><b>몇 %면 「양호」라고 할 것인가</b>'+
+      (bc?'<span class="fr-tag" style="color:#16A34A;background:#F0FDF4">설정됨</span>'
+         :'<span class="fr-tag" style="color:#94A3B8;background:#F1F5F9">미설정 — 사실만 적습니다</span>')+'</div>'+
+    '<div class="sg">'+
+      '<div><label>양호 상한 (%)</label><input id="frBandGood" type="number" step="0.1" value="'+(bc?bc.good:'')+'" placeholder="미설정"/></div>'+
+      '<div><label>주의 상한 (%)</label><input id="frBandWarn" type="number" step="0.1" value="'+(bc?bc.warn:'')+'" placeholder="미설정"/></div>'+
+      '<div><label>대출 금리 (% · 가정)</label><input id="frLoanRate" type="number" step="0.1" value="'+(frLoanRate()===null?'':frLoanRate())+'" placeholder="미설정"/></div>'+
+      '<div><label>근거 · 출처</label><input id="frBandSrc" type="text" value="'+osEsc(bc?bc.src:'')+'" placeholder="예: 사내 상담기준 2026-08"/></div>'+
+    '</div>'+
+    '<div class="shint">비워 두시면 리포트가 <b>「월소득 대비 8.8%」</b> 처럼 <b>사실만</b> 적습니다 — 몇 %가 적정한지는 가구마다 다르므로 앱이 정하지 않습니다. '+
+    '대출 금리는 「그때 우리 집은」의 <b>가정</b>값이고, 비우면 그 줄을 안 그립니다.</div>'+
+    '<div class="sb"><button class="fr-abtn" onclick="frBandSave()">💾 저장</button>'+
+    '<button class="fr-mini" onclick="frBandClear()">기준 지우기</button></div></div></div>';
+  return h+'</div></div>';
 }
-function frScenF(s,k,label,type){
+
+/* ── 돈 칸은 <b>읽어 준다</b> ──────────────────────────────────────
+   기준 치료비를 50000000 이라는 생숫자로 넣는다. 0 을 하나 더 치면 <b>5억</b>이
+   되는데 생숫자만 보고는 아무도 못 센다. 게다가 이 값은 <b>모든 고객의 리포트</b>에
+   퍼진다 — 고객마다 고치는 표보다 여기가 더 위험하다. 그래서 칸 밑에 사람이
+   읽는 금액을 적는다 (CLAUDE.md 4번). */
+function frScenF(s,k,label,type,money){
   var v=s[k];
   return '<div><label>'+osEsc(label)+'</label><input type="'+type+'" value="'+osEsc(v===null||v===undefined?'':v)+'" placeholder="미입력" '+
-    'onchange="frScenSet(\''+s.id+'\',\''+k+'\',this.value)"/></div>';
+    'onchange="frScenSet(\''+s.id+'\',\''+k+'\',this.value)"/>'+
+    (money?('<em class="fr-rd" style="text-align:left">'+((v===null||v===undefined||v==='')?'미설정':frWonR(v))+'</em>'):'')+
+    '</div>';
 }
 function frScenSelCat(s){
   return '<div><label>질병 묶음</label><select onchange="frScenSet(\''+s.id+'\',\'diseaseCategory\',this.value)">'+
@@ -50903,7 +51820,21 @@ function frBandClear(){osCfgSet('fr_prem_bands','',function(){frPaint();});}
    그림으로 찍지 않는다 — <b>글자가 살아 있는</b> print CSS 로 뽑는다.
    그래야 우리가 뽑은 종이를 우리가 다시 읽을 수 있다 (CLAUDE.md 4-1번).
    담보가 어긋난 상태로는 <b>뽑지 않는다.</b>                            */
-function frPrint(){
+/* 전 · 후 <b>한 장</b> — 머리(누구 것인지)와 꼬리(무엇을 안 세었는지)는 반드시 붙는다 */
+function frBaOnlyHtml(M,T){
+  /* <b>누구 것인지</b> 없는 종이는 안 내보낸다. 고객 앞에 놓이는 한 장이다 */
+  var who=OSC.current||{};
+  var nm=(typeof cmName==='function')?cmName(who):(who.name_masked||'고객');
+  var kb=frKbCount();
+  var head='<div class="fr-baonly">'+osEsc(nm)+' 님 · 보장 전후 비교'+
+    '<small>'+(new Date()).toISOString().slice(0,10)+' · 담보 '+T.report+'건 전부를 견주었습니다'+
+    (kb?(' · 그중 '+kb+'개는 KB 보장분석 PDF 에서 읽었습니다'):'')+'</small></div>';
+  return head+frBaPageHtml(M,T)+
+    '<div class="fr-a4 fr-break">'+frSubHeadHtml('내 몸으로 보는 보장','같은 조정을 그림으로')+
+    frBodyHtml(M)+frFootHtml(T)+'</div>';
+}
+
+function frPrint(only){
   var b=FR.built;
   if(!b||!FR.pols.length){toast('먼저 자료를 불러와 주세요');return;}
   if(b.T.lost!==0){
@@ -50914,7 +51845,8 @@ function frPrint(){
   var root=document.getElementById('printRoot');
   if(!root){root=document.createElement('div');root.id='printRoot';document.body.appendChild(root);}
   root.className='fr-wrap';
-  root.innerHTML=frDocHtml(b.M,b.T);
+  /* 「한 장만」도 <b>같은 함수</b>로 그린다 — 두 벌을 두면 한쪽만 고쳐진다 */
+  root.innerHTML=(only==='ba')?frBaOnlyHtml(b.M,b.T):frDocHtml(b.M,b.T);
   window.print();
 }
 
