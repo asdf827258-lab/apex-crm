@@ -1,0 +1,165 @@
+/* <b>「리더 할일 간소화 · 교육매니저 · 스케줄 달력 · 챗지피티로 가져가기」</b>
+
+   ① TFA 「스케줄 관리」 에 달력이 선다 — 그리고 그 달력은 <b>내 캘린더와
+      같은 것</b>이다. 두 벌을 만들면 한쪽에만 약속이 뜬다 (5번).
+   ② 달력에 <b>약속</b>(DB 통합 CRM)이 찍힌다 — 여태 고객 365일 쪽만
+      있어서 「몇 시에 누구를 만나는지」 가 빠져 있었다.
+   ③ 「교육매니저 할 일」 이 있다. 여태 역할 이름만 있고 할 일이 없었다.
+      · 모든 줄은 <b>앱에 실제로 있는 화면</b>으로 간다 (없는 화면 금지)
+      · 리더 할 일과 <b>id 가 겹치지 않는다</b> — 겹치면 한쪽을 체크할 때
+        다른 쪽이 같이 켜진다 (체크는 id 하나로 저장된다)
+      · 체크는 교육매니저만, 보기는 누구나
+   ④ 챗지피티로 가져가는 글이 <b>앱이 실제로 쓰는 지침</b>이다. 그리고
+      <b>열쇠는 빼고</b> 나간다 (10번).                                */
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+
+let bad = 0;
+const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+const ROOT = process.cwd();
+const srv = http.createServer((rq, rs) => {
+  let p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  let f = path.join(ROOT, p);
+  if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { rs.writeHead(404); rs.end('404'); return; }
+  rs.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  fs.createReadStream(f).pipe(rs);
+});
+
+(async () => {
+  await new Promise(r => srv.listen(0, r));
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e).slice(0, 150)));
+  await page.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
+                  { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2600);
+
+  console.log('\n[1] 스케줄 관리에 달력이 선다 — 내 캘린더와 같은 것');
+  const A = await page.evaluate(() => {
+    /* 견본 사람은 홍길동 (CLAUDE.md 3번) */
+    const t = mcalToday();
+    AR.db = [{ id: 'd1', who: 'me', name: '홍길동', name_masked: '홍○동',
+               appt: t + 'T14:00:00', region: '강남' }];
+    AR.cliRows = [];
+    const one = mcalCardHtml({ title: '이번 달 한눈에' });
+    const sch = arSchedHtml();
+    return { one: one.length, inSched: sch.indexOf('이번 달 한눈에') >= 0,
+             grid: (sch.match(/mcal-hd/g) || []).length,
+             my: (renderMyCal().match(/mcal-hd/g) || []).length,
+             phone: sch.indexOf('폰 기본 달력에 넣기') >= 0 };
+  });
+  is(A.inSched && A.grid === 1, '  스케줄 관리에 달력이 <b>한 벌</b> 선다');
+  is(A.my === 1, '  내 캘린더도 같은 달력을 <b>한 벌</b>만 그린다');
+  is(!A.phone, '  스케줄 관리에는 <b>폰 내보내기 칸을 또 붙이지 않는다</b> — 그건 내 캘린더 자리다');
+
+  console.log('\n[2] 약속(DB 통합 CRM)이 달력에 찍힌다');
+  const B = await page.evaluate(() => {
+    const t = mcalToday();
+    AR.db = [{ id: 'd1', who: 'me', name: '홍길동', name_masked: '홍○동',
+               appt: t + 'T14:00:00', region: '강남' },
+             { id: 'd2', who: 'me', name: '홍길순', name_masked: '홍○순',
+               appt: '2000-01-01T09:00:00', region: '' }];
+    const it = mcalItems();
+    const today = (it[t] || []).filter(x => x.k === 'appt');
+    const all = Object.keys(it).reduce((n, k) => n + it[k].filter(x => x.k === 'appt').length, 0);
+    return { today: today.length, all, t: today[0] ? today[0].t : '', s: today[0] ? today[0].s : '',
+             kind: !!MCAL_KIND.appt };
+  });
+  is(B.today === 1 && B.kind, '  오늘 약속이 오늘 자리에 찍힌다 — 「' + B.t + ' ' + B.s + '」');
+  is(/○/.test(B.t), '  달력에는 <b>가린 이름</b>으로 찍힌다 (3번)');
+  is(B.all === 1, '  <b>지나간 약속을 오늘로 끌어오지 않는다</b> — 없는 일정을 만들지 않는다 (1번)');
+
+  console.log('\n[3] 교육매니저 할 일');
+  const C = await page.evaluate(() => {
+    const ids = [], seen = {}, dup = [];
+    ['a','b','c','d'].forEach(k => CK_EDU[k].forEach(r => {
+      ids.push(r[0]); if (seen[r[0]]) dup.push(r[0]); seen[r[0]] = 1;
+    }));
+    const ldr = [];
+    ['a','b','c','d','week','month'].forEach(k => (CK_LDR[k]||[]).forEach(r => ldr.push(r[0])));
+    const mem = [];
+    ['day','week'].forEach(k => (CK_ITEMS[k]||[]).forEach(r => mem.push(r[0])));
+    const clash = ids.filter(x => ldr.indexOf(x) >= 0 || mem.indexOf(x) >= 0);
+    /* 가리키는 화면이 진짜 있나 */
+    const tabs = [];
+    TABS.forEach(g => (g.items || []).forEach(x => tabs.push(x.id)));
+    const ghost = [];
+    ['a','b','c','d'].forEach(k => CK_EDU[k].forEach(r => {
+      if (r[4] && tabs.indexOf(r[4]) < 0) ghost.push(r[1] + ' → ' + r[4]);
+    }));
+    /* 그려지나 · 메뉴에 있나 */
+    const html = arEduHtml();
+    const inMenu = AR_CAT.filter(c => c[0] === 'edu').length;
+    /* arBodyHtml 은 기록을 다 읽기 전에는 「불러오는 중」 을 낸다 —
+       길만 보는 자리라 다 읽은 것으로 두고 잰다 */
+    const was = GB.loaded; GB.loaded = true;
+    const body = arBodyHtml('edu').indexOf('교육매니저 할 일') >= 0;
+    GB.loaded = was;
+    return { n: ids.length, dup, clash, ghost, inMenu,
+             drawn: html.indexOf('교육매니저 할 일') >= 0 && html.indexOf('ar-lk') >= 0,
+             body: body };
+  });
+  is(C.n >= 8 && !C.dup.length, '  할 일이 ' + C.n + '개 · id 가 안 겹친다');
+  is(!C.clash.length,
+     '  리더·설계사 목록과 <b>id 가 안 부딪힌다</b>' + (C.clash.length ? ' — ' + C.clash.join(',') : ''));
+  is(!C.ghost.length,
+     '  <b>없는 화면을 가리키지 않는다</b>' + (C.ghost.length ? ' — ' + C.ghost.join(' / ') : ''));
+  is(C.inMenu === 1 && C.drawn && C.body, '  왼쪽 메뉴에 한 칸 서고 실제로 그려진다');
+
+  console.log('\n[4] 체크는 교육매니저만 · 보기는 누구나');
+  const D = await page.evaluate(() => {
+    let said = ''; const rt = window.toast; window.toast = m => { said += m; };
+    OS.profile = { id: 'u1', role: 'member' };
+    const asMember = arEduHtml();
+    arEduTog('day', 'g1');
+    const memberChecked = !!ckLoad('day').g1;
+    OS.profile = { id: 'u1', role: 'education_manager' };
+    const asEdu = arEduHtml();
+    arEduTog('day', 'g1');
+    const eduChecked = !!ckLoad('day').g1;
+    ckToggle('day', 'g1');
+    window.toast = rt;
+    return { said, memberChecked, eduChecked,
+             memberSees: asMember.indexOf('교육매니저 할 일') >= 0,
+             memberRo: asMember.indexOf('보기만') >= 0,
+             eduRo: asEdu.indexOf('보기만') >= 0 };
+  });
+  is(!D.memberChecked && /교육매니저만/.test(D.said), '  설계사는 <b>체크가 안 되고</b> 이유를 말한다');
+  is(D.eduChecked, '  교육매니저는 <b>체크된다</b>');
+  is(D.memberSees && D.memberRo && !D.eduRo, '  설계사도 <b>보이기는 한다</b> — 「보기만」 이라고 적힌다');
+
+  console.log('\n[5] 챗지피티로 가져가기');
+  const E = await page.evaluate(() => {
+    const real = brainKbGet();
+    /* 열쇠와 전화번호가 섞인 지식을 일부러 넣어 본다 */
+    brainKbSet('내 상담 원칙.\n키 sk-abcdefghijklmnop1234567890\n홍길동 010-1234-5678');
+    const t = bgptText();
+    const risk = bgptRisk(t);
+    const card = bgptCardHtml();
+    brainKbSet(real);
+    const clean = bgptText();
+    return { has: t.indexOf('내 상담 원칙') >= 0,
+             key: /sk-abcdefghijklmnop/.test(t),
+             masked: t.indexOf('열쇠는 빼고 내보냈습니다') >= 0,
+             risk: risk.join(' · '),
+             warn: card.indexOf('그 회사 서버로 나갑니다') >= 0,
+             same: clean.indexOf(brainSys().slice(0, 120)) >= 0,
+             btn: card.indexOf('bgptCopy()') >= 0 && card.indexOf('bgptSave()') >= 0 };
+  });
+  is(E.has, '  두뇌에 넣어 둔 지식이 <b>함께 나간다</b>');
+  is(!E.key && E.masked, '  <b>열쇠는 빼고</b> 나간다 (10번)');
+  is(/전화번호처럼/.test(E.risk), '  전화번호가 섞였으면 <b>말해 준다</b> — 「' + E.risk + '」');
+  is(E.warn, '  <b>붙여 넣으면 밖으로 나간다</b>고 적는다');
+  is(E.same, '  앱이 실제로 쓰는 지침 <b>그대로</b>다 — 따로 짓지 않는다 (5번)');
+  is(E.btn, '  복사·파일 저장 단추가 있다');
+
+  console.log('\n[6] 콘솔이 조용하다');
+  is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
+
+  await browser.close(); srv.close();
+  console.log('\n──────────────────────────────');
+  console.log(bad ? ('✗ ' + bad + '가지 어긋납니다')
+                  : '✓ 달력 한 벌 · 약속까지 · 교육매니저 할 일 · 지침 내보내기 다 섭니다');
+  process.exit(bad ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });
