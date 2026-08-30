@@ -88,6 +88,11 @@ const DOC = [
   '2025-04-30~2086-04-30 66,434원',
   '',
   '1 실손 질병입원의료비 질병입원의료비 8,000만',
+  /* KB 는 괄호를 끼워 적는다 — 사전이 「질병입원의료비」만 알면 실손이 통째로 미분류가 된다 */
+  '2 실손 상해(일반상해,전체상해를 의미) 상해(일반상해,전체상해를 의미)입원의료비 5,000만',
+  '3 실손 질병(전체질병을 의미) 질병(전체질병을 의미)통원의료비 30만',
+  '4 정액 치주질환수술보험금 기타수술 20만',
+  '5 정액 턱관절장애입원보험금(1일이상) 기타입원일당 3만',
   '',
   '삼성생명 | 가입일자 : 2004-03-05 |',
   '',
@@ -214,7 +219,7 @@ const NOTKB = '어떤 보험사 보장분석\n담보명 가입금액\n일반암�
   is(r.covNames.indexOf('해지된보험의암진단비') < 0,
      '해지 구간의 담보를 <b>살아 있는 보장으로 읽지 않는다</b>');
   is(r.names.filter(n => /^\d/.test(n)).length === 0, '쪽 머리 숫자를 계약으로 세지 않는다');
-  is(r.covs === 8, '담보는 8개 — 쪽 머리글·안내문을 담보로 세지 않는다 (' + r.covs + ')');
+  is(r.covs === 12, '담보는 12개 — 쪽 머리글·안내문을 담보로 세지 않는다 (' + r.covs + ')');
 
   console.log('\n[6] 두 곳에서 읽어 견준다');
   is(r.listed === 6, '「전체 계약리스트」에서도 6건을 읽는다 (' + r.listed + ')');
@@ -244,6 +249,68 @@ const NOTKB = '어떤 보험사 보장분석\n담보명 가입금액\n일반암�
   is(seg.length > 500, 'KB 리더 구간을 찾을 수 있다');
   is(!/callAI\s*\(|callAIVision\s*\(|generateContent/.test(seg),
      'KB 리더 안에서 <b>AI 를 부르지 않는다</b> — 짐작할 것이 없는 문서다');
+
+  /* ── 읽은 것이 <b>실제로 화면까지</b> 가는가 ────────────────────────
+     글자를 읽는 것과, 그것이 계약·담보가 되어 전·후에 서는 것은 다른 일이다.
+     읽어만 놓고 안 실리면 「읽었다」는 말만 남는다.                      */
+  console.log('\n읽은 것이 전 · 후 만들기까지 가는가');
+  const flow = await page.evaluate((t) => {
+    const K = kbParse(t);
+    FR.state = frBlankState(); FR.pols = []; FR.covs = []; FR.cid = 'c1'; FR.client = {};
+    FR.kbTmp = { K: K, name: 't.pdf' };
+    var _toast = window.toast, _paint = window.frPaint, _save = window.frSaveState;
+    window.toast = function(){}; window.frPaint = function(){}; window.frSaveState = function(){};
+    frKbApply();                       /* 사장님이 「이대로 넣기」를 누른 것과 같은 길 */
+    window.toast = _toast; window.frPaint = _paint; window.frSaveState = _save;
+    const merged = FR.covs.length;
+    const M = frMaster(), T = frCounts(M);
+    /* 두 번 눌러도 두 번 들어가지 않아야 한다 */
+    frKbMerge();
+    const M2 = frMaster();
+    const mk = frMakeHtml(M);
+    const idle = frKbIdleHtml();
+    const std = (nm) => { const r = M.filter(m => m.raw.indexOf(nm) >= 0)[0]; return r ? r.std : '없음'; };
+    return {
+      merged, pols: FR.pols.length, covs: FR.covs.length,
+      master: M.length, lost: T.lost, twice: M2.length, kbCount: frKbCount(),
+      /* 담보가 제 계약에 붙었는가 */
+      orphan: M.filter(m => !m.pol || !m.pol.id).length,
+      /* 지급 방식 */
+      actual: M.filter(m => m.pay === 'ACTUAL').length,
+      daily: M.filter(m => m.pay === 'DAILY').length,
+      /* KB 표준담보명으로 알아본 것들 — 괄호가 껴도 놓치지 않는가 */
+      silIn: std('상해(일반상해'), silOut: std('질병(전체질병'),
+      surgEtc: std('치주질환수술'), hosEtc: std('턱관절장애입원'),
+      silson: M.filter(m => m.cat === 'SILSON').length,
+      /* 납입완료 계약의 보험료가 전·후 모두 0 인가 */
+      premB: frPrem().beforeWon,
+      /* 화면 */
+      onScreen: mk.indexOf('KB 보장분석') >= 0,
+      idleSays: idle.indexOf('넣어 두셨습니다') >= 0,
+      canClear: idle.indexOf('frKbClear') >= 0,
+      preview: frKbPreviewHtml(K, 't.pdf')
+    };
+  }, DOC);
+  is(flow.merged === 12 && flow.covs === 12 && flow.pols === 6,
+     'KB 로 읽은 계약 <b>' + flow.pols + '건</b> · 담보 <b>' + flow.covs + '개</b>가 그대로 얹힌다');
+  is(flow.lost === 0 && flow.master === 12,
+     '읽은 담보가 <b>하나도 사라지지 않는다</b> — 표에 ' + flow.master + '개가 전부 선다');
+  is(flow.twice === flow.master,
+     '두 번 얹어도 <b>두 벌이 되지 않는다</b> (' + flow.twice + ')');
+  is(flow.orphan === 0,
+     '담보가 <b>제 계약에 붙는다</b> — 떠도는 담보 ' + flow.orphan + '개');
+  is(flow.actual === 3 && flow.daily === 2,
+     '실손(' + flow.actual + ') · 일당(' + flow.daily + ')을 <b>갈라 본다</b> — 하루치를 목돈으로 세지 않는다');
+  is(flow.silIn === '실손 입원의료비' && flow.silOut === '실손 통원의료비',
+     'KB 표준담보명에 <b>괄호가 껴도</b> 실손을 알아본다 — 「상해(일반상해…)입원의료비」 → ' + flow.silIn);
+  is(flow.surgEtc === '기타 수술비' && flow.hosEtc === '기타 입원일당',
+     'KB 가 「기타수술」·「기타입원일당」이라 적어 준 것도 <b>알아듣는다</b>');
+  is(flow.premB === 48728 + 66434 + 500000 + 500000,
+     '납입완료 계약(삼성 136,200원)과 보험료미제공은 <b>합계에 안 넣는다</b> (' + flow.premB + '원)');
+  is(flow.onScreen && flow.idleSays && flow.canClear,
+     '전 · 후 만들기 화면에 <b>서고</b>, 넣은 것을 <b>도로 뺄 수</b> 있다');
+  is(flow.preview.indexOf('정확히 같습니다') >= 0 || flow.preview.indexOf('건이 다릅니다') >= 0,
+     '넣기 전에 <b>두 출처를 맞춰 본 결과</b>를 보여 준다');
 
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
 
