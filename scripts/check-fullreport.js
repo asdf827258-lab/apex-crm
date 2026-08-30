@@ -708,6 +708,70 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
      '조정 후 금액을 직접 적으면 <b>채우는 자리</b>로 선다 — 1,000만 → 5,000만이면 4,000만 (' + mkS.gainWon + '원)');
   is(mkS.daily === '하루 5만원',
      '하루치를 <b>목돈처럼 말하지 않는다</b> — 「5만원 늘어납니다」가 아니라 「' + mkS.daily + '」');
+  /* ── 담보가 <b>많을 때</b> 쓸 수 있는가 ────────────────────────────
+     실물 KB 한 건이 계약 23건 · 담보 341개였다. 전부 펴 놓으면 화면이
+     수십 미터가 되어 아무것도 못 찾는다. 그렇다고 <b>접는 것이 빼는 것</b>이
+     되면 안 된다 — 접힌 담보도 리포트에는 전부 나가야 한다(21번).      */
+  const big = await page.evaluate(() => {
+    const covs = [], pols = [];
+    for (let i = 0; i < 6; i++) {
+      pols.push(__pol('bp' + i, 30000, false));
+      for (let j = 0; j < 10; j++)
+        covs.push(__cov('bc' + i + '_' + j, 'bp' + i,
+          (j === 3 ? '일반암진단비' : '기타담보' + i + '_' + j), 1000000 + j));
+    }
+    __frSeed(pols, covs, frBlankState(), []);
+    FR.mkQ = ''; FR.mkOpen = null;
+    const M = frMaster();
+    const shut = frMakeHtml(M);                 /* 60개 → 접힌 채로 서야 한다 */
+    const shutRows = (shut.match(/mk-cov/g) || []).length;
+
+    FR.mkOpen = null;
+    __frSeed(pols.slice(0, 2), covs.slice(0, 20), frBlankState(), []);
+    const M2 = frMaster();
+    const open = frMakeHtml(M2);                /* 20개 → 펴진 채로 서야 한다 */
+    const openRows = (open.match(/mk-cov/g) || []).length;
+
+    /* 접어도 <b>리포트에는 전부</b> 나가는가 */
+    __frSeed(pols, covs, frBlankState(), []);
+    FR.mkOpen = {}; FR.mkQ = '';
+    const M3 = frMaster(), T3 = frCounts(M3);
+    const doc = frDocHtml(M3, T3);
+    /* 이름은 여러 표에 되풀이해 나온다 — 세지 말고 <b>하나도 빠짐없이 있는지</b>를 본다 */
+    const missing = M3.filter(m => doc.indexOf(m.raw) < 0).map(m => m.raw);
+
+    /* 찾기 */
+    FR.mkQ = '일반암';
+    const found = frMakeHtml(M3);
+    const foundRows = (found.match(/mk-cov/g) || []).length;
+    FR.mkQ = '';
+
+    /* 「전부 유지」는 이미 정하신 것을 덮지 않는다 */
+    frState().pact['bp0'] = 'CANCEL';
+    const _t = window.toast, _p = window.frPaint, _s = window.frSaveState;
+    window.toast = function () {}; window.frPaint = function () {}; window.frSaveState = function () {};
+    frMkKeepAll();
+    window.toast = _t; window.frPaint = _p; window.frSaveState = _s;
+    const kept = JSON.stringify(frState().pact);
+
+    return { shutRows, openRows, lost: T3.lost, master: M3.length, foundRows,
+             keepKept: frState().pact['bp0'] === 'CANCEL',
+             keepFilled: frState().pact['bp1'] === 'KEEP', kept, missing: missing.length, first: missing[0] || '',
+             shutSays: shut.indexOf('빠진 것이 아닙니다') >= 0,
+             foundSays: found.indexOf('찾았습니다') >= 0 };
+  });
+  is(big.shutRows === 0 && big.shutSays,
+     '담보가 <b>많으면 접힌 채로</b> 열리고, 접힌 것이 <b>빠진 것이 아니라고</b> 말한다 (60개)');
+  is(big.openRows === 20,
+     '담보가 <b>적으면 펴진 채로</b> 열린다 — 접는 것이 도리어 일이 되지 않게 (20개)');
+  is(big.lost === 0 && big.master === 60 && big.missing === 0,
+     '<b>접어 두어도 리포트에는 60개가 전부</b> 나간다 — 접는 것과 빼는 것은 다르다' +
+     (big.missing ? (' — 빠진 것 ' + big.missing + '개: ' + big.first) : ''));
+  is(big.foundRows === 6 && big.foundSays,
+     '「일반암」으로 찾으면 <b>그 담보만</b> 선다 — 계약마다 하나씩 6개 (' + big.foundRows + ')');
+  is(big.keepKept && big.keepFilled,
+     '「전부 유지」는 <b>아직 안 정한 것만</b> 채운다 — 해지로 찍어 두신 것을 덮지 않는다');
+
   is(mkS.body && mkS.prem,
      '한 화면에 <b>월 보험료 전·후</b>와 <b>인체 한 장</b>이 같이 서서 누를 때마다 다시 그려진다');
 

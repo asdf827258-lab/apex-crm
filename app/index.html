@@ -48713,7 +48713,8 @@ var FR_STATE_KIND='fullreport_state';
 var FR_SCEN_KEY='fr_scenarios';
 var FR={cid:null,client:null,pols:[],covs:[],state:null,rid:null,busy:false,
         page:'client',open:{},built:null,err:'',
-        docs:[],runs:{},imgPages:0,readAt:null,readBusy:false,readErr:''};
+        docs:[],runs:{},imgPages:0,readAt:null,readBusy:false,readErr:'',
+        mkQ:'',mkOpen:null,kbTmp:null};
 
 /* 이 화면이 쓰는 숫자는 <b>전부 원</b>이다 (추출이 원으로 뽑는다).
    그래서 이름을 WonR 로 끝낸다 — 만원을 받는 vizWon 과 헷갈리면 만 배 틀린다
@@ -49560,6 +49561,24 @@ function frCssMount(){
   '.fr-mk .mk-li .d{font-size:10.5px;color:var(--gy);line-height:1.6;margin-top:2px}'+
   '.fr-mk .mk-li .d b{color:var(--nv)}'+
   '.fr-mk .mk-more{font-size:10.5px;color:var(--gy);border-top:1px solid #F1F5F9;padding-top:7px;margin-top:7px}'+
+  '.fr-mk .mk-tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:11px}'+
+  '.fr-mk .mk-q{flex:1;min-width:190px;font-family:inherit;font-size:12px;font-weight:700;color:var(--nv);'+
+    'border:1px solid var(--ln);border-radius:9px;padding:7px 11px;background:#fff;min-height:34px}'+
+  '.fr-mk .mk-saved{font-size:10.5px;color:var(--gy);margin-left:auto}'+
+  '.fr-mk .mk-saved b{color:#0F766E}'+
+  '.fr-mk .mk-fold{appearance:none;border:0;background:transparent;color:var(--gy);font-size:13px;'+
+    'cursor:pointer;padding:0 6px 0 0;line-height:1;font-family:inherit}'+
+  '.fr-mk .mk-pol .ph{display:flex;align-items:flex-start;gap:2px}'+
+  '.fr-mk .mk-pol .pt{flex:1;min-width:0}'+
+  '.fr-mk .mk-pol .pt small em{font-style:normal;color:#1B64DA;font-weight:800}'+
+  '.fr-mk .mk-shut{font-size:10.5px;color:var(--gy);background:#FAFBFC;border-radius:8px;'+
+    'padding:7px 10px;margin-top:8px;line-height:1.6}'+
+  '.fr-mk .mk-shut.top{margin:0 0 11px;background:#FFFBEB;color:#B45309}'+
+  '.fr-mk .mk-shut.top b{color:#92400E}'+
+  '.fr-mk .mk-shut b{color:var(--nv)}'+
+  '.fr-mk .mk-found{font-size:11px;color:var(--gy);background:#F8FAFC;border:1px solid var(--ln);'+
+    'border-radius:9px;padding:9px 11px;line-height:1.7}'+
+  '.fr-mk .mk-found b{color:var(--nv)}'+
   '.fr-mk .mk-pol{border:1px solid var(--ln);border-radius:12px;background:#fff;padding:13px 14px;margin-bottom:11px}'+
   '.fr-mk .mk-pol.off{background:#FCFCFD;opacity:.62}'+
   '.fr-mk .mk-pol .ph{font-size:12.5px;color:var(--nv);margin-bottom:9px}'+
@@ -51306,6 +51325,47 @@ function frCactBtns(cid,act){
     return '<button class="'+((act||'')===o[0]?'on':'')+'" onclick="frCact(\'' + cid + '\',\'' + o[0] + '\')">'+o[1]+'</button>';
   }).join('')+'</div>';
 }
+/* ── 전·후 만들기 도구 ── */
+function frMkFind(v){
+  FR.mkQ=v||'';
+  frPaint();
+  /* 글을 치던 자리로 돌려보낸다 — 한 글자마다 칸이 튀면 못 친다 */
+  try{var el=document.getElementById('frMkQ');if(el){el.focus();el.setSelectionRange(el.value.length,el.value.length);}}catch(e){}
+}
+function frMkFold(pid){
+  if(FR.mkOpen&&FR.mkOpen.__all){
+    /* 전부 펴 둔 상태에서 하나를 접으면, 그 하나만 접는다 */
+    var o={},i;
+    for(i=0;i<FR.pols.length;i++)o[FR.pols[i].id]=1;
+    delete o[pid];FR.mkOpen=o;
+  }else{
+    FR.mkOpen=FR.mkOpen||{};
+    if(FR.mkOpen[pid])delete FR.mkOpen[pid];else FR.mkOpen[pid]=1;
+  }
+  frPaint();
+}
+function frMkAll(on){
+  if(on)FR.mkOpen={__all:1};
+  else FR.mkOpen={};
+  frPaint();
+}
+/* 「전부 유지」는 <b>아직 안 정한 것만</b> 채운다 — 이미 정하신 것을 덮지 않는다 */
+function frMkKeepAll(){
+  var st=frState(),i,c=0;
+  for(i=0;i<FR.pols.length;i++){
+    var id=FR.pols[i].id;
+    if(!st.pact[id]){st.pact[id]='KEEP';c++;}
+  }
+  if(!c){toast('이미 다 정해 두셨습니다');return;}
+  frSaveState();toast('아직 안 정한 계약 '+c+'건을 「유지」로 두었습니다');frPaint();
+}
+function frMkReset(){
+  if(!confirm('계약·담보 조치와 조정 후 금액을 전부 지웁니다. 읽어 온 계약과 담보는 그대로 남습니다.'))return;
+  var st=frState();
+  st.pact={};st.cact={};st.cadjWon={};
+  frSaveState();toast('조치를 지웠습니다');frPaint();
+}
+
 function frMakeHtml(M){
   var st=frState(),D=frMakeDiff(M),pr=frPrem(),h='<div class="fr-wrap fr-mk">';
   if(!FR.pols.length&&!(st.add||[]).length)
@@ -51345,30 +51405,65 @@ function frMakeHtml(M){
     '<div class="mk-note">여기서 누른 조치가 <b>그대로</b> 리포트에 들어갑니다 — 따로 옮겨 적지 않습니다.</div></div></div>';
 
   /* ── 왼쪽: 기존 보험 ── */
-  var left='<div class="mk-l">',byPol={},i,j;
+  var q=frClean(FR.mkQ||''),byPol={},i,j;
   for(i=0;i<M.length;i++){(byPol[M[i].polId]=byPol[M[i].polId]||[]).push(M[i]);}
+  /* 계약이 몇 건 안 되면 그냥 펴 둔다 — 접는 것이 도리어 일이다 */
+  /* 접는 기준은 <b>담보 수</b>다 — 계약이 다섯이어도 담보가 스무 개면 펴 두는 게 낫다 */
+  if(FR.mkOpen===null||FR.mkOpen===undefined)FR.mkOpen=(M.length<=40)?{__all:1}:{};
+  var shownPol=0,shownCov=0,hidPol=0;
+  var left='<div class="mk-l">';
+  left+='<div class="mk-tools">'+
+    '<input class="mk-q" id="frMkQ" type="search" placeholder="담보·상품 이름으로 찾기" value="'+osEsc(FR.mkQ||'')+'" '+
+      'oninput="frMkFind(this.value)">'+
+    '<button class="fr-mini" onclick="frMkAll(1)">전부 펴기</button>'+
+    '<button class="fr-mini" onclick="frMkAll(0)">전부 접기</button>'+
+    '<button class="fr-mini" onclick="frMkKeepAll()">전부 「유지」로</button>'+
+    '<button class="fr-mini danger" onclick="frMkReset()">조치 지우기</button>'+
+    '<button class="fr-mini" onclick="frAddRow()">+ 담보 손으로 더하기</button>'+
+    '<span class="mk-saved">고치시면 <b>바로 저장</b>됩니다</span>'+
+  '</div>';
+  if(!FR.mkOpen.__all&&!q)
+    left+='<div class="mk-shut top">접어 둔 계약의 담보도 <b>빠진 것이 아닙니다</b> — 리포트에는 전부 나갑니다. 계약 이름을 누르면 펴집니다.</div>';
   for(i=0;i<FR.pols.length;i++){
     var p=FR.pols[i],list=byPol[p.id]||[],act=(st.pact&&st.pact[p.id])||'';
+    /* 찾는 중이면 <b>맞는 것이 있는 계약만</b> 세운다 — 없는 계약은 접은 게 아니라 안 맞는 것이다 */
+    var hit=list,polHit=true;
+    if(q){
+      polHit=(frClean((p.insurer||'')+(p.product_name||'')).indexOf(q)>=0);
+      hit=list.filter(function(m){return frClean(m.raw+' '+m.std).indexOf(q)>=0;});
+      if(!polHit&&!hit.length){hidPol++;continue;}
+      if(polHit&&!hit.length)hit=list;
+    }
+    shownPol++;shownCov+=hit.length;
+    var open=q?true:(FR.mkOpen.__all||FR.mkOpen[p.id]);
     left+='<div class="mk-pol'+(act==='CANCEL'?' off':'')+'">'+
-      '<div class="ph"><b>'+osEsc(p.insurer||'보험사 확인 필요')+'</b> '+osEsc(p.product_name||'상품명 확인 필요')+
-      '<small>담보 '+list.length+'건 · 월 '+((p.monthly_premium===null||p.monthly_premium===undefined)?'확인 필요':frWonR(p.monthly_premium))+'</small></div>'+
+      '<div class="ph"><button class="mk-fold" onclick="frMkFold(\''+p.id+'\')">'+(open?'▾':'▸')+'</button>'+
+      '<div class="pt"><b>'+osEsc(p.insurer||'보험사 확인 필요')+'</b> '+osEsc(p.product_name||'상품명 확인 필요')+
+      '<small>담보 '+list.length+'개'+(q&&hit.length!==list.length?(' · 찾은 것 '+hit.length+'개'):'')+
+      ' · 월 '+((p.monthly_premium===null||p.monthly_premium===undefined)?'확인 필요':frWonR(p.monthly_premium))+
+      (p.__kb?' · <em>KB 보장분석</em>':'')+'</small></div></div>'+
       frPactBtns(p.id,act);
-    for(j=0;j<list.length;j++){
-      var m=list[j],adj=(st.cadjWon&&st.cadjWon.hasOwnProperty(m.id))?st.cadjWon[m.id]:'';
-      left+='<div class="mk-cov'+((m.cact==='CANCEL'||act==='CANCEL')?' off':'')+'">'+
-        '<div class="n">'+osEsc(m.raw)+'<small>'+osEsc(frPayLabel(m.pay))+' · 지금 '+(m.bWon===null?'<b class="q">확인 필요</b>':frWonR(m.bWon))+
-        ' → 후 '+(m.aWon===null?'<b class="q">없음</b>':frWonR(m.aWon))+'</small></div>'+
-        frCactBtns(m.id,m.cact)+
-        '<input class="mk-in" type="number" placeholder="조정 후 금액(원)" value="'+(adj===''||adj===null?'':adj)+'" onchange="frAdjSet(\'' + m.id + '\',this.value)"/>'+
-      '</div>';
+    if(open){
+      for(j=0;j<hit.length;j++){
+        var m=hit[j],adj=(st.cadjWon&&st.cadjWon.hasOwnProperty(m.id))?st.cadjWon[m.id]:'';
+        left+='<div class="mk-cov'+((m.cact==='CANCEL'||act==='CANCEL')?' off':'')+'">'+
+          '<div class="n">'+osEsc(m.raw)+'<small>'+osEsc(frPayLabel(m.pay))+' · 지금 '+(m.bWon===null?'<b class="q">확인 필요</b>':frWonR(m.bWon))+
+          ' → 후 '+(m.aWon===null?'<b class="q">없음</b>':frWonR(m.aWon))+'</small></div>'+
+          frCactBtns(m.id,m.cact)+
+          '<input class="mk-in" type="number" placeholder="조정 후 금액(원)" value="'+(adj===''||adj===null?'':adj)+'" onchange="frAdjSet(\''+m.id+'\',this.value)"/>'+
+        '</div>';
+      }
+    }else if(list.length){
+      left+='<div class="mk-shut">담보 '+list.length+'개 — 누르면 펴집니다</div>';
     }
     left+='</div>';
   }
+  if(q)left+='<div class="mk-found">「'+osEsc(FR.mkQ)+'」으로 계약 <b>'+shownPol+'건</b> · 담보 <b>'+shownCov+'개</b>를 찾았습니다'+
+    (hidPol?(' · 안 맞는 계약 '+hidPol+'건은 접어 두었습니다'):'')+
+    ' <button class="fr-mini" onclick="frMkFind(\'\')">찾기 지우기</button></div>';
   left+='</div>';
-  h+=frKbHtml();
-  h+='<div class="mk-top">기존 보험을 <b>유지할지 해지할지</b> 고르시고, 새로 만들 금액은 <b>조정 후 금액</b> 칸에 직접 적으시면 됩니다. '+
-    '오른쪽이 <b>누를 때마다</b> 다시 셉니다. <b>없는 금액을 0으로 만들지 않습니다</b> — 못 읽은 담보는 「확인 필요」로 남습니다.</div>';
   h+='<div class="mk-grid">'+left+right+'</div>';
+
   h+='<div class="mk-body">'+frBodyHtml(M)+'</div>';
   return h+'</div>';
 }
