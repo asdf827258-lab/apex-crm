@@ -129,6 +129,64 @@ const srv = http.createServer((rq, rs) => {
   is(D.eduChecked, '  교육매니저는 <b>체크된다</b>');
   is(D.memberSees && D.memberRo && !D.eduRo, '  설계사도 <b>보이기는 한다</b> — 「보기만」 이라고 적힌다');
 
+  console.log('\n[4-2] 리더 할 일 — 앱이 아는 것은 앱이 답한다');
+  const G2 = await page.evaluate(() => {
+    const t = arToday();
+    /* 견본 사람은 홍길동 (CLAUDE.md 3번) */
+    const mk = (id, nm, lastAtt, last) => ({ id, name: nm, role: 'member', team: '',
+      raw: {}, sc: { call: 99 }, total: 50, last, lastAtt, days: 9, any: true });
+    const was = GB.rows, wasT = GB.team, wasL = GB.loaded;
+    GB.loaded = true; GB.team = ''; GB.notes = [];
+    OS.profile = { id: 'boss', role: 'leader' };
+
+    /* ① 아직 못 읽었으면 — <b>답한 척하지 않는다</b> */
+    GB.rows = [];
+    const unknown = arLeadFact('att');
+
+    /* ② 안 찍힌 사람이 있으면 이름을 댄다 */
+    GB.rows = [mk('u1', '홍길동', t, t), mk('u2', '홍길순', '2020-01-01', t),
+               mk('u3', '홍판서', '2020-01-01', '2020-01-01')];
+    const att = arLeadFact('att'), noact = arLeadFact('noact');
+    const boxSome = arCkBox('☀️', '아침', '20분', CK_LDR.a, true, 'arLeadTog');
+
+    /* ③ 다 찍혔으면 그 줄은 접힌다 */
+    GB.rows = [mk('u1', '홍길동', t, t), mk('u2', '홍길순', t, t)];
+    const att0 = arLeadFact('att');
+    const boxNone = arCkBox('☀️', '아침', '20분', CK_LDR.a, true, 'arLeadTog');
+    const undone = arUndone('day', CK_LDR.a).map(r => r[0]);
+
+    GB.rows = was; GB.team = wasT; GB.loaded = wasL;
+    return { unknown, attN: att.who.length, attWho: att.who.join('·'),
+             noactN: noact.who.length, att0: att0.who.length,
+             someShows: boxSome.indexOf('출근 안 찍힌 2명') >= 0,
+             noneFolds: boxNone.indexOf('앱이 확인했습니다') >= 0
+                     && boxNone.indexOf('출근 안 찍힌') < 0,
+             undone };
+  });
+  is(G2.unknown === null, '  아직 <b>못 읽었으면 답한 척하지 않는다</b> — 예전처럼 손으로 체크 (1번)');
+  is(G2.attN === 2 && /홍길순/.test(G2.attWho),
+     '  안 찍힌 사람을 <b>이름으로</b> 댄다 — ' + G2.attN + '명 · ' + G2.attWho);
+  is(G2.someShows, '  그 줄에 <b>답이 그대로</b> 뜬다 — 「출근 안 찍힌 2명 — …」');
+  is(G2.noactN === 1, '  오늘 기록 없는 사람도 센다 — ' + G2.noactN + '명');
+  is(G2.att0 === 0 && G2.noneFolds,
+     '  다 찍힌 날은 그 줄이 <b>접히고, 접었다고 말한다</b>');
+  is(G2.undone.indexOf('a2') < 0,
+     '  접힌 줄은 <b>빨간 숫자에도 안 들어간다</b> — 다 됐는데 숫자가 남으면 숫자를 안 믿는다');
+
+  console.log('\n[4-3] 리더 할 일 — 자리 정리');
+  const G3 = await page.evaluate(() => {
+    const day = ['a','b','c','d'].reduce((n, k) => n + CK_LDR[k].length, 0);
+    const ids = k => (CK_LDR[k] || []).map(r => r[0]);
+    return { day, week: ids('week'),
+             c: ids('c'), d: ids('d'),
+             c3: (CK_LDR.c.find(r => r[0] === 'c3') || [])[1] || '' };
+  });
+  is(G3.week.indexOf('c4') >= 0 && G3.c.indexOf('c4') < 0,
+     '  「금요일 전에 한 번」 인 c4 가 <b>주간으로</b> 갔다');
+  is(G3.c.indexOf('c5') < 0 && /먼저 볼 사람/.test(G3.c3),
+     '  같은 질문을 두 번 묻던 c5·c3 이 <b>한 줄</b>이 됐다 — 「' + G3.c3 + '」');
+  is(G3.day === 13, '  매일 줄이 15 → <b>' + G3.day + '줄</b>');
+
   console.log('\n[5] 챗지피티로 가져가기');
   const E = await page.evaluate(() => {
     const real = brainKbGet();
