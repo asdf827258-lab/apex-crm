@@ -3177,7 +3177,7 @@
           <div class="ch-title">국민이 못 받는 보험금<br><span class="gradient-text">매년 1조 원</span></div>
         </div>
         <div class="animate-up opacity-0 delay-3">
-          <div class="ch-desc">그중 가입자 1인 평균 <strong style="color:#d97706;">850만 원</strong> — 보험사는 알려주지 않습니다. 우리가 찾아드립니다.</div>
+          <div class="ch-desc">그중 가입자 1인 평균 <strong style="color:#d97706;">850만 원</strong> — 보험사는 알려주지 않습니다. 우리가 찾아드립니다.<br><span style="font-size:12px;color:var(--muted);font-weight:400;">※ 미청구·숨은 보험금 관련 업계·감독당국 자료 기준</span></div>
         </div>
         <div class="animate-up opacity-0 delay-4">
           <div class="ch-sections">
@@ -4137,7 +4137,7 @@
                   style="background:rgba(26,115,232,.07);border:1px solid rgba(26,115,232,.2);border-radius:12px;padding:14px 16px;">
                   <div
                     style="font-size:11px;color:var(--primary);font-weight:800;letter-spacing:1px;margin-bottom:4px;">
-                    KOSDAQ 상장법인</div>
+                    코스피 상장법인</div>
                   <div style="font-size:20px;font-weight:900;margin-bottom:4px;">A+에셋</div>
                   <div style="font-size:13px;color:var(--muted);margin-bottom:8px;">전국 네트워크 · 전 보험사 비교</div>
                   <div style="font-size:13px;color:#22c55e;font-weight:700;">✅ 네이버 프로필 검색 가능</div>
@@ -4153,7 +4153,7 @@
                 </div>
               </div>
               <div style="margin-top:10px;font-size:14px;color:#22c55e;font-weight:700;text-align:center;">
-                🤝 两 기관이 함께 — 보험 + 자산관리를 한 번에
+                🤝 두 기관이 함께 — 보험 + 자산관리를 한 번에
               </div>
             </div>
 
@@ -6138,7 +6138,7 @@
 
       <div class="slide-content" style="display:flex;flex-direction:column;gap:0;align-items:stretch;">
         <div class="animate-up opacity-0 delay-1">
-          <span class="slide-label">Chapter 4 · 보장 분석</span>
+          <span class="slide-label">Chapter 2 · 보장 분석</span>
         </div>
         <div class="animate-up opacity-0 delay-2" style="margin-bottom:20px;">
           <div class="slide-title">📋 보장분석표<br><span class="gradient-text">AI 자동 생성</span></div>
@@ -6146,6 +6146,122 @@
         </div>
 
         <div class="animate-up opacity-0 delay-3" style="display:flex;flex-direction:column;gap:14px;width:100%;">
+
+          <!-- ⭐ B: 보장분석 리포트(KB·GA) → 고객 상황 자동 낭독 (AI 키 불필요, pdf.js 파싱) -->
+          <div class="s10-section" id="apex-bojang" style="background:#fff;border:1px solid #e5e8eb;border-radius:20px;padding:22px 24px;">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;">
+              <div style="min-width:0;">
+                <div style="font-size:15px;font-weight:900;color:var(--text);">📋 보장분석 리포트 → 고객 상황 자동 낭독</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;">KB·GA 보장분석 PDF를 올리면 고객의 담보 <b>부족·미가입</b>을 큰 순서로 읽어드립니다 · AI 키 불필요</div>
+              </div>
+              <label style="cursor:pointer;background:var(--primary);color:#fff;font-weight:800;font-size:13px;padding:10px 16px;border-radius:999px;white-space:nowrap;">📎 리포트 업로드<input type="file" accept="application/pdf" onchange="apexBojangUpload(event)" style="display:none;"></label>
+            </div>
+            <div id="apexBojangOut" style="margin-top:14px;"></div>
+          </div>
+          <script>
+          (function(){
+            function besc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];}); }
+            function parseKMoney(s){ if(!s) return 0; s=String(s); var neg=/-/.test(s); var n=0;
+              var eok=s.match(/([\d,]+)\s*억/), man=s.match(/([\d,]+)\s*만/);
+              if(eok) n+=parseInt(eok[1].replace(/,/g,''),10)*100000000;
+              if(man) n+=parseInt(man[1].replace(/,/g,''),10)*10000;
+              if(!eok&&!man){ var w=s.match(/([\d,]+)/); if(w) n=parseInt(w[1].replace(/,/g,''),10); }
+              return neg?-n:n; }
+            function fmtMoney(n){ n=Math.abs(n); if(n>=100000000){ var e=Math.floor(n/100000000), r=Math.round((n%100000000)/10000); return e+'억'+(r?' '+r.toLocaleString()+'만':''); } if(n>=10000) return Math.round(n/10000).toLocaleString()+'만'; return n.toLocaleString(); }
+            var CATS=[
+              {key:'암',ic:'♋',re:/암/,desc:'암 진단 시 목돈',say:'암은 진단·치료에 목돈이 크게 들어요.'},
+              {key:'뇌·심장',ic:'🧠',re:/(뇌|허혈|심장|심근|협심|졸중|출혈)/,desc:'뇌졸중·심근경색 대비',say:'뇌졸중·심근경색은 갑자기 옵니다.'},
+              {key:'간병·치매',ic:'🩺',re:/(간병|요양|치매)/,desc:'치매·요양 시 매달 드는 비용',say:'치매·요양은 몇 년씩 매달 돈이 들어요.'},
+              {key:'사망·후유장해',ic:'🛡',re:/(사망|후유장해|장해)/,desc:'남은 가족 생활비',say:'상해는 든든한데 질병 쪽이 비어 있어요.'},
+              {key:'입원·수술·병원비',ic:'💊',re:/(실손|입원|수술|통원|골절|보철|진단비)/,desc:'입원·수술·병원비',say:'병원비는 대체로 잘 갖춰져 있어요.'},
+              {key:'운전·일상',ic:'🚗',re:/(운전|벌금|교통|자동차|변호사|배상|화재)/,desc:'운전·일상 사고',say:'운전·일상 사고는 잘 준비돼 있어요.'}
+            ];
+            function catOf(l){for(var i=0;i<CATS.length;i++)if(CATS[i].re.test(l))return i;return CATS.length-1;}
+            function parseBojang(items){
+              var T=items.map(function(s){return (s||'').replace(/\s+/g,' ').trim();}).filter(Boolean);
+              var joined=T.join(' ');
+              var cm=joined.match(/([가-힣]{2,5})\s*\(\s*(\d{1,3})\s*세\s*,?\s*(남자|여자|남|여)?/);
+              var cust=cm?{name:cm[1], age:parseInt(cm[2],10), sex:(cm[3]||'').charAt(0)}:null;
+              var JUDGE={'충분':'ok','부족':'low','미가입':'none'};
+              var rows=[], seen={};
+              for(var i=0;i<T.length;i++){
+                if(T[i]!=='권장') continue;
+                var gi=-1; for(var j=i+1;j<Math.min(i+8,T.length);j++){ if(T[j]==='가입'){gi=j;break;} }
+                if(gi<0) continue;
+                var ki=-1; for(var k=gi+1;k<Math.min(gi+8,T.length);k++){ if(JUDGE[T[k]]!=null){ki=k;break;} }
+                if(ki<0) continue;
+                var rec=T.slice(i+1,gi).join(' ').trim();
+                var paid=T.slice(gi+1,ki).join(' ').trim();
+                var judge=T[ki];
+                var diff=(T[ki+1]&&/^[+\-]/.test(T[ki+1]))?T[ki+1]:'';
+                var label=(T[i-1]||'').replace(/\s+/g,'');
+                if(!label) label=(T[i-2]||'').replace(/\s+/g,'');
+                var key=label+'|'+rec+'|'+paid;
+                if(!seen[key] && (JUDGE[judge]!=null)){
+                  seen[key]=1;
+                  rows.push({label:label, rec:rec, paid:paid, kind:JUDGE[judge], amt:parseKMoney(diff), recN:parseKMoney(rec), paidN:parseKMoney(paid)});
+                }
+              }
+              return {cust:cust, rows:rows};
+            }
+            function renderBojang(p){
+              var out=document.getElementById('apexBojangOut'); if(!out) return;
+              if(!p||!p.rows||!p.rows.length){ out.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;">리포트에서 「담보별 진단현황」을 찾지 못했습니다. 담보별 권장/가입/판정이 포함된 보장분석 PDF인지 확인해 주세요.</div>'; return; }
+              var rows=p.rows, c=p.cust||{};
+              var G=CATS.map(function(cc){return{c:cc,total:0,rec:0,eff:0,weak:0,worst:null};});
+              rows.forEach(function(r){var g=G[catOf(r.label)];g.total++;g.rec+=r.recN;g.eff+=Math.min(r.paidN,r.recN);var sh=r.recN-r.paidN;if(r.kind!=='ok'&&sh>0){g.weak++;if(!g.worst||sh>(g.worst.recN-g.worst.paidN))g.worst=r;}});
+              G.forEach(function(g){g.gap=Math.max(0,g.rec-g.eff);g.ratio=g.rec>0?Math.max(3,Math.min(100,Math.round(g.eff/g.rec*100))):100;g.tier=(g.gap<=0)?'ok':(g.gap<5000000?'mid':'bad');});
+              var weakCnt=rows.filter(function(r){return r.kind!=='ok';}).length, okCnt=rows.length-weakCnt;
+              var prio=G.filter(function(g){return g.tier==='bad';}).sort(function(a,b){return b.gap-a.gap;}).slice(0,3);
+              var TN={ok:'충분',mid:'조금 보완',bad:'보완 필요'};
+              var PC={ok:'background:rgba(21,196,126,.12);color:#0aa267;',mid:'background:rgba(255,138,0,.12);color:#e07b00;',bad:'background:rgba(240,68,82,.1);color:#f04452;'};
+              var GC={ok:'#15c47e',mid:'#ff8a00',bad:'#f04452'};
+              var who=(c.name||'고객')+'님'+(c.age?' <span style="font-size:15px;color:#8b95a1;font-weight:600;letter-spacing:-.01em;">'+c.age+'세'+(c.sex?' · '+c.sex:'')+'</span>':'');
+              var h='';
+              h+='<div style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#3182f6;font-weight:700;background:rgba(49,130,246,.09);padding:5px 11px;border-radius:999px;margin-bottom:12px;">📋 보장분석 리포트 · 자동 요약</div>';
+              h+='<div style="font-size:24px;font-weight:800;letter-spacing:-.03em;">'+who+'</div>';
+              h+='<div style="font-size:14px;color:#4e5968;margin-top:7px;font-weight:500;">큰 병·큰 사고가 왔을 때 지금 얼마나 대비돼 있는지, 한눈에 정리했어요.</div>';
+              h+='<div style="display:flex;gap:10px;margin:18px 0;"><div style="flex:1;background:#f2f4f6;border-radius:16px;padding:16px 18px;"><div style="font-size:28px;font-weight:800;letter-spacing:-.03em;color:#f04452;">'+weakCnt+'</div><div style="font-size:12.5px;font-weight:600;color:#4e5968;margin-top:5px;">보완이 필요한 보장</div></div><div style="flex:1;background:#f2f4f6;border-radius:16px;padding:16px 18px;"><div style="font-size:28px;font-weight:800;letter-spacing:-.03em;color:#15c47e;">'+okCnt+'</div><div style="font-size:12.5px;font-weight:600;color:#4e5968;margin-top:5px;">이미 잘 갖춰진 보장</div></div></div>';
+              h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">';
+              G.forEach(function(g){
+                var t=g.tier, say=g.c.say;
+                if(t==='bad'&&g.worst){ say+=' 특히 <b style="color:#191f28;font-weight:700;">'+besc(g.worst.label)+'</b> — '+(g.worst.paidN?'지금 '+fmtMoney(g.worst.paidN)+'뿐이에요.':'아직 미가입이에요.'); }
+                h+='<div style="background:#fff;border:1px solid #f2f4f6;border-radius:18px;padding:20px;">';
+                h+='<div style="display:flex;align-items:center;gap:9px;"><span style="font-size:19px;width:36px;height:36px;border-radius:11px;background:#f2f4f6;display:inline-flex;align-items:center;justify-content:center;flex:none;">'+g.c.ic+'</span><span style="font-size:17px;font-weight:800;letter-spacing:-.02em;">'+g.c.key+'</span><span style="margin-left:auto;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:999px;'+PC[t]+'">'+TN[t]+'</span></div>';
+                h+='<div style="font-size:12.5px;color:#8b95a1;margin-top:8px;font-weight:500;">'+g.c.desc+'</div>';
+                h+='<div style="height:8px;border-radius:999px;background:#f2f4f6;margin:13px 0 11px;overflow:hidden;"><div style="height:100%;border-radius:999px;width:'+g.ratio+'%;background:'+GC[t]+';"></div></div>';
+                if(t==='ok') h+='<div style="font-size:15px;font-weight:800;color:#15c47e;letter-spacing:-.02em;">충분히 준비됐어요</div>';
+                else h+='<div style="font-size:15px;font-weight:800;color:'+GC[t]+';letter-spacing:-.02em;">약 '+fmtMoney(g.gap)+' 부족<span style="font-size:12px;font-weight:600;color:#8b95a1;margin-left:6px;">· '+g.total+'개 중 '+g.weak+'개</span></div>';
+                h+='<div style="margin-top:11px;font-size:13px;line-height:1.6;color:#4e5968;font-weight:500;">'+say+'</div>';
+                h+='</div>';
+              });
+              h+='</div>';
+              if(prio.length){
+                h+='<div style="margin-top:18px;background:#191f28;color:#fff;border-radius:20px;padding:22px 26px;"><div style="font-size:13.5px;font-weight:700;color:rgba(255,255,255,.6);">먼저 챙기면 좋은 '+prio.length+'가지</div>';
+                prio.forEach(function(g,i){h+='<div style="display:flex;align-items:center;gap:14px;margin-top:15px;flex-wrap:wrap;"><span style="font-size:14px;font-weight:800;color:#0f1420;background:#ffd479;width:24px;height:24px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;flex:none;">'+(i+1)+'</span><span style="font-size:16px;font-weight:700;letter-spacing:-.02em;">'+g.c.ic+' '+g.c.key+'</span><span style="font-size:12.5px;color:rgba(255,255,255,.5);font-weight:500;">'+g.c.desc+'</span><span style="margin-left:auto;font-size:15px;font-weight:800;color:#ff8a92;letter-spacing:-.02em;">'+fmtMoney(g.gap)+' 부족</span></div>';});
+                h+='</div>';
+              }
+              h+='<div style="margin-top:16px;font-size:11.5px;color:#8b95a1;text-align:center;font-weight:500;line-height:1.5;">「보장분석 리포트」 권장·가입 기준 자동 계산 · 초과보장은 권장까지만 반영 · 실제 보장은 약관이 정합니다</div>';
+              out.innerHTML=h;
+            }
+            window.apexParseBojang=parseBojang; window.apexRenderBojang=renderBojang;
+            window.apexBojangUpload=async function(ev){
+              var file=ev.target.files&&ev.target.files[0]; if(!file) return;
+              var out=document.getElementById('apexBojangOut');
+              out.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;">📄 리포트 읽는 중…</div>';
+              try{
+                if(typeof pdfjsLib==='undefined') throw new Error('PDF.js 로드 실패 — 새로고침 후 재시도');
+                try{ if(!pdfjsLib.GlobalWorkerOptions.workerSrc) pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }catch(e){}
+                var buf=await file.arrayBuffer();
+                var pdf=await pdfjsLib.getDocument({data:buf}).promise;
+                var items=[];
+                for(var pn=1;pn<=pdf.numPages;pn++){ var pg=await pdf.getPage(pn); var tc=await pg.getTextContent(); tc.items.forEach(function(it){ if(it.str) items.push(it.str); }); }
+                renderBojang(parseBojang(items));
+              }catch(err){ out.innerHTML='<div style="padding:14px;color:#e5484d;font-size:13px;">오류: '+besc((err&&err.message)||err)+'</div>'; }
+              ev.target.value='';
+            };
+          })();
+          </script>
 
           <!-- Step 0 · API 키 -->
           <!-- Step 0 (API 키) — UI 는 숨김. 화면 좌상단 🔑 API 버튼으로 통합.
@@ -8637,6 +8753,7 @@ ${JSON.stringify(insurances.map(i => ({
               평생 <span style="font-family:'Montserrat',sans-serif;color:#ef4444;">9,000만원</span> 을 보험사에 냅니다
             </div>
             <div style="margin-top:14px;font-size:13px;color:var(--muted);">— 정작 노후에 가장 필요한 그때, <strong style="color:#e5484d;">해약 압박</strong>으로 보장이 사라집니다</div>
+            <div style="margin-top:10px;font-size:11px;color:var(--muted);font-style:italic;">※ 갱신형 보험료 인상을 가정한 예시 — 실제는 상품·가입시점·인상률에 따라 달라집니다</div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:780px;margin:18px auto 0;">
             <div style="background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.32);border-radius:12px;padding:14px 12px;text-align:center;">
@@ -10495,7 +10612,7 @@ ${JSON.stringify(insurances.map(i => ({
       if (!v) return;
       presenterName = v;
       profileData.name = v;
-      try { localStorage.setItem('s6_profile', JSON.stringify(profileData)); } catch (e) {}
+      try { localStorage.setItem(profileKey(), JSON.stringify(profileData)); } catch (e) {}
       applyProfile();
       closeNameModal();
     }
@@ -10546,6 +10663,22 @@ ${JSON.stringify(insurances.map(i => ({
     document.getElementById('apiModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeApiModal(); });
     updateApiBtnLabel(); // 초기 라벨
 
+    // ── 로그인 사용자 컨텍스트 (APEX OS 안 same-origin iframe이면 부모에서 읽음) ──
+    function osUser() {
+      try {
+        var P = window.parent;
+        if (P && P !== window && P.OS && P.OS.profile && P.OS.profile.id) {
+          return { id: String(P.OS.profile.id), name: String(P.OS.profile.name || '').trim() };
+        }
+      } catch (e) {}
+      return null;
+    }
+    /** 프로필 저장 키 — OS 로그인 시 사용자별 분리(s6_profile_<id>), 단독 실행 시 공용(s6_profile) */
+    function profileKey() {
+      var u = osUser();
+      return u ? ('s6_profile_' + u.id) : 's6_profile';
+    }
+
     // ── Slide 7 담당 컨설턴트 프로필 ──
     /* 기본값에 <b>한 사람의 이름·사진</b>이 박혀 있었다. 그래서 다른
        설계사가 이 자료를 열면 고객 앞 첫 화면에 <b>남의 얼굴과 남의
@@ -10562,7 +10695,13 @@ ${JSON.stringify(insurances.map(i => ({
 
     /** localStorage 에서 프로필 로드 후 카드에 반영 (옛 단일 photo 키도 마이그레이션) */
     function loadProfile() {
-      const saved = localStorage.getItem('s6_profile');
+      const _u = osUser();
+      const saved = localStorage.getItem(profileKey());
+      // OS 안에서 이 사용자가 처음 여는 경우: 로그인 이름으로 기본값 자동 세팅 (공용 이동엽 사진·이름 제거)
+      if (!saved && _u) {
+        if (_u.name) profileData.name = _u.name;
+        profileData.photos = [null, null, null];
+      }
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -10703,7 +10842,7 @@ ${JSON.stringify(insurances.map(i => ({
       profileData.bio = document.getElementById('pBio').value.trim();
       profileData.specialties = document.getElementById('pSpecialties').value.trim();
       try {
-        localStorage.setItem('s6_profile', JSON.stringify(profileData));
+        localStorage.setItem(profileKey(), JSON.stringify(profileData));
       } catch (e) { /* localStorage full or disabled — 무시 */ }
       applyProfile();
       closeProfileModal();
