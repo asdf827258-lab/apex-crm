@@ -274,6 +274,42 @@ async function run(page, hang, prof, ms) {
   is(/osCheckApproval\(sb,uid,function\(gate,extra\)\{[\s\S]*?\},prof\);/.test(SRC),
      '  읽어 온 줄을 <b>실제로 넘겨 준다</b>');
 
+  console.log('\n[8-1] 느린 서버에서 포기하기 전에 더 기다린다');
+  /* 서비스 제공사가 죽는 대신 <b>느려지는</b> 장애일 때(2026-08-27 부터),
+     12초에서 자르면 14초면 왔을 답을 버리고 사람을 못 들어가게 한다. */
+  await page.close(); page = await freshPage();
+  const H = await page.evaluate(async () => {
+    const waits = [];
+    /* osWait 이 받은 <b>기다림 길이</b>를 그대로 적어 둔다 */
+    const realWait = window.osWait;
+    window.osWait = function (p, what, retry, ms) { waits.push({ what: what, ms: ms }); return realWait.apply(this, arguments); };
+    const never = () => new Promise(() => {});
+    const mk = () => { const a = {};
+      ['select', 'eq', 'neq', 'order', 'limit', 'single', 'maybeSingle', 'in', 'is', 'not',
+       'or', 'filter', 'match', 'range', 'gt', 'gte', 'lt', 'lte', 'insert', 'update', 'upsert', 'delete']
+        .forEach(k => { a[k] = () => a; });
+      a.then = () => never(); a.catch = () => never(); return a; };
+    const chain = { from: mk, rpc: () => Promise.resolve({ data: null, error: null }),
+                    auth: { signOut: () => Promise.resolve({}) } };
+    window.osClient = () => chain; OS.sb = chain;
+    OS.session = { user: { id: 'u1', email: 'hong@example.com' } };
+    OS.profile = null; OS.cfg = {}; OS_PROF_RETRY = 0; OS_DOWN.at = 0;
+    const rt = window.toast; let said = ''; window.toast = (m) => { said += ' | ' + m; };
+    osLoadProfile();
+    /* 12 + 1.8 + 20 + 1.8 + 30 초를 다 기다리지 않는다 — 늘어나는지만 본다 */
+    await new Promise(r => setTimeout(r, 15500));
+    window.osWait = realWait; window.toast = rt;
+    const mine = waits.filter(w => /내 정보 읽기/.test(w.what));
+    return { first: mine[0] && mine[0].ms, second: mine[1] && mine[1].ms,
+             tries: mine.length, label: (mine[1] && mine[1].what) || '',
+             max: OS_PROF_MAX, said: said.replace(/\s+/g, ' ').trim() };
+  });
+  is(H.tries >= 2, '  한 번 실패해도 <b>또 해 본다</b> — ' + H.tries + '번째까지 갔다');
+  is(H.second > H.first,
+     '  다시 할 때 <b>더 오래 기다린다</b> — ' + (H.first / 1000) + '초 → ' + (H.second / 1000) + '초');
+  is(/2번째/.test(H.label), '  <b>몇 번째인지</b> 띠에 적는다 — 「' + H.label + '」');
+  is(H.max >= 3, '  포기하기 전에 <b>' + H.max + '번</b>까지 해 본다');
+
   console.log('\n[9] 막힌 분이 있으면 사장님 화면에서 먼저 말한다');
   /* 접속 IP 승인제를 켜면 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그 뒤에
      바뀐 자리는 「대기」 다. 그래서 <b>어떤 분만</b> 갑자기 못 들어온다. */
