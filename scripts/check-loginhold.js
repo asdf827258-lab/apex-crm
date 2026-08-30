@@ -274,7 +274,69 @@ async function run(page, hang, prof, ms) {
   is(/osCheckApproval\(sb,uid,function\(gate,extra\)\{[\s\S]*?\},prof\);/.test(SRC),
      '  읽어 온 줄을 <b>실제로 넘겨 준다</b>');
 
-  console.log('\n[8] 콘솔이 조용하다');
+  console.log('\n[9] 막힌 분이 있으면 사장님 화면에서 먼저 말한다');
+  /* 접속 IP 승인제를 켜면 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그 뒤에
+     바뀐 자리는 「대기」 다. 그래서 <b>어떤 분만</b> 갑자기 못 들어온다. */
+  await page.close(); page = await freshPage();
+  const G = await page.evaluate(async () => {
+    const rows = [
+      { member_id: 'u1', ip: '1.2.3.4', status: 'approved', last_seen: '2026-08-30T01:00:00Z' },
+      { member_id: 'u2', ip: '5.6.7.8', status: 'pending',  last_seen: '2026-08-30T02:00:00Z' },
+      { member_id: 'u3', ip: '9.9.9.9', status: 'pending',  last_seen: '2026-08-30T03:00:00Z' }
+    ];
+    /* 견본 사람은 홍길동 (CLAUDE.md 3번) */
+    const nm = { u1: '홍길동', u2: '홍길순', u3: '홍판서' };
+    const out = {};
+    OS.cfg = { ip_guard: 'on' };
+    out.on = osIpWaitHtml(rows.slice(), nm).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    out.onWait = OS_IP_WAIT.length;
+    OS.cfg = { ip_guard: 'off' };
+    out.off = osIpWaitHtml(rows.slice(), nm).replace(/\s+/g, ' ').trim();
+    /* 목록 그림 — 막힌 줄이 맨 위로 오나 */
+    const upd = [];
+    const mk = () => { const a = {};
+      ['select', 'order', 'update', 'eq', 'neq', 'limit', 'in', 'is', 'not', 'or', 'filter',
+       'match', 'range', 'gt', 'gte', 'lt', 'lte', 'insert', 'upsert', 'delete', 'single', 'maybeSingle']
+        .forEach(k => { a[k] = (...v) => { if (k === 'update') upd.push(v[0]); return a; }; });
+      a.then = (res) => Promise.resolve({ data: [], error: null }).then(res); return a; };
+    OS.cfg = { ip_guard: 'on' };
+    window.osClient = () => ({ from: (t) => {
+      const a = mk();
+      a.then = (res) => Promise.resolve({ data: t === 'login_ips' ? rows.slice()
+        : [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '홍길순' }, { id: 'u3', name: '홍판서' }], error: null }).then(res);
+      return a; } });
+    const host = document.createElement('div'); host.id = 'osIpList'; document.body.appendChild(host);
+    osIpLoadList();
+    await new Promise(r => setTimeout(r, 400));
+    /* 함수가 글을 <b>돌려주는 것</b>과 목록에 <b>실제로 붙는 것</b>은 다르다 —
+       붙이는 자리를 빼도 안 울렸다. 그려진 것을 본다. */
+    out.inList = /못 들어오고 있습니다/.test(host.textContent);
+    /* 차례는 <b>표 안에서만</b> 잰다 — 띠에도 이름이 있어 통째로 세면
+       정렬을 빼도 통과해 버린다 */
+    const tr = host.querySelectorAll('tbody tr');
+    out.firstRow = tr.length ? (tr[0].cells[0].textContent || '').trim() : '';
+    /* 모두 승인 — 실제로 서버에 보내나 */
+    window.osClient = () => ({ from: () => mk() });
+    let said = ''; const rt = window.toast; window.toast = (m) => { said += ' | ' + m; };
+    osIpApproveAll();
+    await new Promise(r => setTimeout(r, 400));
+    window.toast = rt; host.remove();
+    out.sent = upd.length; out.said = said.replace(/\s+/g, ' ').trim();
+    return out;
+  });
+  is(/2분/.test(G.on) && /홍길순/.test(G.on) && /홍판서/.test(G.on),
+     '  <b>몇 분이 못 들어오는지</b> 이름까지 말한다 — 「' + G.on.slice(0, 42) + '…」');
+  is(/승인제/.test(G.on) && /휴대폰 데이터/.test(G.on),
+     '  <b>왜 막혔는지</b> 말한다 — 자리가 바뀌면 막힌다');
+  is(G.onWait === 2 && !G.off,
+     '  승인제가 <b>꺼져 있으면 아무 말도 안 한다</b> — 헛알람 금지 (8번)');
+  is(G.inList, '  그 말이 <b>목록에 실제로 붙는다</b> — 함수만 만들고 안 붙이면 소용없다');
+  is(G.firstRow === '홍길순',
+     '  막힌 분이 <b>표 맨 위</b>로 온다 — 지금 맨 위: 「' + G.firstRow + '」');
+  is(G.sent === 2 && /2건 승인했습니다/.test(G.said),
+     '  「모두 승인」 이 <b>실제로 2건을 보낸다</b> — ' + G.sent + '건 · 「' + G.said.slice(0, 30) + '…」');
+
+  console.log('\n[10] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
 
   await browser.close(); srv.close();

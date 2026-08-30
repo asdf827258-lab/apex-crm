@@ -2773,13 +2773,59 @@ function osIpSelfApprove(cb){
   },function(){if(cb)cb();})['catch'](function(){if(cb)cb();});}catch(e){if(cb)cb();}
 }
 function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)||v<0)v=0;osCfgSet('ai_daily_limit',v);}
+/* ── 승인을 기다리는 접속은 <b>맨 위에서 먼저 말한다</b> ──────────────
+   접속 IP 승인제를 켜 두면, 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그
+   뒤에 바뀐 자리는 전부 「대기」 가 된다(login_ips_ins_guard). 휴대폰 데이터,
+   공유기 재접속, 다른 사무실 — 자리는 수시로 바뀐다. 그래서 <b>어떤 분은
+   갑자기 못 들어오고 옆 사람은 멀쩡한</b> 일이 생긴다.
+   여태 이것을 알려면 목록을 열어 상태 칸을 하나씩 읽어야 했다. 그러면 막힌
+   분은 <b>전화를 걸 때까지 막혀 있다.</b> 그 자리에서 세어 먼저 말한다. */
+var OS_IP_WAIT=[];
+function osIpWaitHtml(rows,nm){
+  OS_IP_WAIT=[];
+  /* 승인제가 꺼져 있으면 아무도 안 막힌다 — 옛 대기 줄을 두고 겁주지 않는다 (8번) */
+  if(!osIpGuardOn())return '';
+  for(var i=0;i<rows.length;i++)if(rows[i].status==='pending')OS_IP_WAIT.push(rows[i]);
+  if(!OS_IP_WAIT.length)return '';
+  var who=[],seen={};
+  for(var j=0;j<OS_IP_WAIT.length;j++){
+    var n=nm[OS_IP_WAIT[j].member_id]||'이름을 못 찾은 분';
+    if(!seen[n]){seen[n]=1;who.push(n);}
+  }
+  return '<div style="border:1px solid #F0B4AE;background:#FDF3F2;border-radius:10px;padding:11px 13px;margin-bottom:10px">'+
+    '<div style="font-size:13px;font-weight:800;color:#7A1F1A;line-height:1.6">'+
+      '⚠️ 지금 <b>'+who.length+'분</b>이 못 들어오고 있습니다 — <b>'+osEsc(who.join(' · '))+'</b></div>'+
+    '<div style="font-size:11.5px;color:#7A1F1A;line-height:1.7;margin-top:5px">'+
+      '접속 IP 승인제가 켜져 있어, <b>처음 쓰던 자리가 아닌 곳</b>에서 들어오면 막힙니다. '+
+      '휴대폰 데이터·공유기 재접속·다른 사무실이면 자리가 바뀝니다. 승인하시면 바로 들어옵니다.</div>'+
+    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" style="padding:5px 12px;font-size:12px" '+
+      'onclick="osIpApproveAll()">'+OS_IP_WAIT.length+'건 모두 승인</button></div></div>';
+}
+function osIpApproveAll(){
+  var sb=osClient();if(!sb||!OS_IP_WAIT.length)return;
+  var list=OS_IP_WAIT.slice(),left=list.length,bad=0;
+  var fin=function(){
+    if(--left>0)return;
+    /* 못 한 것을 한 것처럼 말하지 않는다 (1번) */
+    if(bad)toast(list.length+'건 중 '+bad+'건은 승인하지 못했습니다 — 아래 목록에서 하나씩 눌러 주세요.',8000);
+    else toast(list.length+'건 승인했습니다. 그분들은 새로고침하면 들어옵니다.',6000);
+    osIpLoadList();
+  };
+  for(var i=0;i<list.length;i++){(function(r){
+    sb.from('login_ips').update({status:'approved'}).eq('member_id',r.member_id).eq('ip',r.ip)
+      .then(function(x){if(x&&x.error)bad++;fin();},function(){bad++;fin();});
+  })(list[i]);}
+}
 function osIpLoadList(){
   var host=document.getElementById('osIpList');if(!host)return;var sb=osClient();if(!sb){host.innerHTML='';return;}
   Promise.all([sb.from('login_ips').select('member_id,ip,status,last_seen').order('last_seen',{ascending:false}),sb.from('profiles').select('id,name')]).then(function(res){
     if(res[0]&&res[0].error){host.innerHTML=sqlNeedHtml('09','접속 기록');return;}
     var rows=(res[0]&&res[0].data)||[],profs=(res[1]&&res[1].data)||[],nm={};for(var i=0;i<profs.length;i++)nm[profs[i].id]=profs[i].name;
     if(!rows.length){host.innerHTML='<div style="font-size:12px;color:var(--ink-5);padding:8px">아직 기록된 접속 IP가 없습니다.</div>';return;}
-    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
+    /* 막혀 있는 분을 맨 위로 — 밑으로 내려가면 못 본다 */
+    rows.sort(function(a,b){return (a.status==='pending'?0:1)-(b.status==='pending'?0:1);});
+    var wait=osIpWaitHtml(rows,nm);
+    var h=wait+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
     for(var k=0;k<rows.length;k++){var r=rows[k];
       var b=r.status==='approved'?'<span class="badge green">승인</span>':(r.status==='blocked'?'<span class="badge red">차단</span>':'<span class="badge">대기</span>');
       var act=r.status==='approved'?'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'blocked\')">차단</button>':'<button class="btn btn-primary" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'approved\')">승인</button>';
