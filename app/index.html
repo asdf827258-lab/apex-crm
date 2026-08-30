@@ -2232,6 +2232,55 @@ var ADV_FIELDS=[
   {k:'onair',   t:'방송 출연 (ON AIR · 줄바꿈으로 여러 줄)', ph:'NBN 「보험 불만제로」\n서울경제TV 「인생설계 원픽」', span:true, area:true, cover:true},
   {k:'team',    t:'팀 이름 (표지 왼쪽 아래)', ph:'TEAM ONTOP · INSURANCE PROFESSIONALS', span:true, cover:true}
 ];
+/* ── 「우리가 하는 일」 — 내 소개 <b>바로 뒤</b>에 서는 한 장 ──────────
+   사장님 말씀: 「내 소개 그 뒤에 … 우리가 어떻게 도울 수 있는지, 재무관리를
+   어떻게 해 주는지, 보험 약관비교부터, 보상에 왜 진심이고, 손해사정사까지
+   고용해서 함께 일하는지」.
+
+   <b>이 글은 우리가 지어내면 안 된다.</b> 회사가 실제로 하는 일에 대한
+   말이고, 그대로 고객 앞에 선다. 그래서 —
+     · 기본값은 <b>사장님이 하신 말씀 그대로</b>만 옮긴다
+     · <b>숫자·수상·자격은 한 글자도 안 넣는다</b> (몇 명, 몇 건, 몇 년…)
+     · 사장님이 고치시면 그것이 그대로 나간다
+     · 빈 칸은 <b>그 자리를 통째로 안 세운다</b> — 빈 상자를 고객에게 안 보인다
+   (CLAUDE.md 1번)                                                      */
+var ADV_WD=[
+  {k:'wdKick', t:'윗줄 딱지',  ph:'Chapter 0 · 우리가 하는 일'},
+  {k:'wdTitle',t:'큰 제목',    ph:'가입까지가 아니라, 받으실 때까지', span:true},
+  {k:'wdLead', t:'한 줄 설명', ph:'보험은 파는 순간이 아니라 받는 순간에 값이 정해집니다.', span:true},
+  {k:'wd1t',t:'① 제목', ph:'약관부터 비교합니다'},
+  {k:'wd1d',t:'① 설명', ph:'같은 이름의 보험도 약관이 다릅니다. 무엇이 되고 무엇이 안 되는지 조항으로 봅니다.', span:true, area:true},
+  {k:'wd2t',t:'② 제목', ph:'재무관리까지 함께 봅니다'},
+  {k:'wd2d',t:'② 설명', ph:'보험 하나만 보지 않습니다. 버는 돈·쓰는 돈·모을 돈 안에서 보험이 얼마여야 하는지 함께 정합니다.', span:true, area:true},
+  {k:'wd3t',t:'③ 제목', ph:'보상에 진심입니다'},
+  {k:'wd3d',t:'③ 설명', ph:'가입시켜 드리는 것으로 끝나지 않습니다. 청구할 일이 생겼을 때 옆에 있는 것이 우리가 하는 일입니다.', span:true, area:true},
+  {k:'wd4t',t:'④ 제목', ph:'손해사정사와 함께 일합니다'},
+  {k:'wd4d',t:'④ 설명', ph:'다툼이 생기는 자리는 전문가와 같이 봅니다.', span:true, area:true},
+  /* ── 사장님이 전에 만드신 자료 — <b>앱 안에 없다.</b> 지어내지 않는다 ── */
+  {k:'wdRef1t',t:'인용 ① 제목 (예: 보험금비서)', ph:'보험금비서'},
+  {k:'wdRef1b',t:'인용 ① 옮겨 놓을 글', ph:'그 자료에서 이 장에 넣을 문장을 붙여 넣어 주세요. 비워 두면 이 칸은 안 나옵니다.', span:true, area:true},
+  {k:'wdRef1u',t:'인용 ① 링크(선택)', ph:'https://', span:true},
+  {k:'wdRef2t',t:'인용 ② 제목 (예: 재무설계 홈페이지)', ph:'재무설계 홈페이지'},
+  {k:'wdRef2b',t:'인용 ② 옮겨 놓을 글', ph:'그 자료에서 이 장에 넣을 문장을 붙여 넣어 주세요. 비워 두면 이 칸은 안 나옵니다.', span:true, area:true},
+  {k:'wdRef2u',t:'인용 ② 링크(선택)', ph:'https://', span:true}
+];
+/* 안 적으신 칸은 <b>기본 문구</b>로 채운다. 다만 인용 두 칸은 기본값이 없다 —
+   우리가 못 본 자료를 우리가 써 줄 수는 없다. */
+function advWdData(){
+  var o=advGet(),out={},i,f;
+  for(i=0;i<ADV_WD.length;i++){
+    f=ADV_WD[i];
+    var v=(''+(o[f.k]||'')).replace(/^\s+|\s+$/g,'');
+    out[f.k]=v||(/^wdRef/.test(f.k)?'':f.ph);
+  }
+  return out;
+}
+function advWdPush(){
+  var msg={t:'apex:whatwedo',data:advWdData()};
+  advFrames().forEach(function(f){
+    try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
+  });
+}
 /* 표지에 쓰는 사진 세 장 — 본인 사진 하나와 방송 화면 둘 */
 var ADV_PHOTOS=[
   {k:'photo',  t:'표지 인물 사진', d:'왼쪽 전체를 채웁니다. 세로로 긴 사진이 좋습니다.'},
@@ -2335,6 +2384,12 @@ function advSave(){
     f=ADV_FIELDS[i];
     o[f.k]=(osVal('adv_'+f.k)||'').replace(/^\s+|\s+$/g,'');
   }
+  /* 「우리가 하는 일」 칸도 같은 자리에 담는다 — 저장하는 곳이 둘이면 하나만 남는다 (5번) */
+  for(i=0;i<ADV_WD.length;i++){
+    f=ADV_WD[i];
+    var el=document.getElementById('adv_'+f.k);
+    if(el)o[f.k]=(el.value||'').replace(/^\s+|\s+$/g,'');
+  }
   for(i=0;i<ADV_PHOTOS.length;i++){
     var pk=ADV_PHOTOS[i].k;
     if(window.__advPhoto&&window.__advPhoto[pk]!==undefined)o[pk]=window.__advPhoto[pk];
@@ -2417,6 +2472,20 @@ function advCardHtml(){
       }).join('')+
     '</div>'+
     '<div class="frm">'+ADV_FIELDS.filter(function(f){return !f.cover;}).map(fld).join('')+'</div>'+
+    /* ── 소개 <b>바로 뒤</b> 한 장 ── */
+    '<div style="margin:16px 0 8px;padding-top:14px;border-top:1px solid #E5E9F0">'+
+      '<div style="font-size:13px;font-weight:900;color:#0B1B34">🤝 우리가 하는 일 — 소개 <b>바로 뒤</b> 한 장</div>'+
+      '<div style="font-size:11.5px;color:var(--ink-4);line-height:1.75;margin-top:5px">'+
+        '보장분석 상담자료에서 <b>내 소개 다음 장</b>에 섭니다 — 우리가 어떻게 돕는지, 약관을 어떻게 비교하는지, '+
+        '보상에 왜 진심인지, 손해사정사와 어떻게 함께 일하는지.<br>'+
+        '<b>기본 문구는 그대로 두셔도 됩니다.</b> 고치시면 고치신 대로 고객 앞에 나갑니다 — '+
+        '<b>숫자·수상·자격은 저희가 한 글자도 넣지 않았습니다.</b> 회사에 대한 말은 사장님 말씀이 맞습니다.</div>'+
+      '<div style="font-size:11.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:9px;padding:9px 11px;line-height:1.75;margin-top:9px">'+
+        '📌 <b>보험금비서</b>·<b>재무설계 홈페이지</b> 자료는 앱 안에서 못 찾았습니다. '+
+        '아래 <b>인용</b> 칸에 그 자료의 문장을 붙여 넣어 주시면 그대로 인용합니다. '+
+        '<b>비워 두시면 그 칸은 아예 안 나옵니다</b> — 저희가 읽지 않은 자료를 지어내지 않습니다.</div>'+
+    '</div>'+
+    '<div class="frm">'+ADV_WD.map(fld).join('')+'</div>'+
     '<div style="margin:15px 0 8px;padding-top:13px;border-top:1px solid #E5E9F0">'+
       '<div style="font-size:12.5px;font-weight:900;color:#0B1B34">🎬 표지에만 나오는 것</div>'+
       '<div style="font-size:11.5px;color:#64748B;line-height:1.65;margin-top:3px">'+
@@ -2459,6 +2528,8 @@ function advPush(){
   advFrames().forEach(function(f){
     try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
   });
+  /* 소개 바로 뒤 장도 같은 걸음에 보낸다 — 따로 보내면 한쪽만 늦는다 (5번) */
+  try{advWdPush();}catch(e){}
 }
 /* 상담자료가 다 뜬 뒤에 보내야 받는다 — 뜨자마자 한 번, 조금 뒤 한 번 더 */
 function advPushSoon(){
@@ -2468,7 +2539,70 @@ function advPushSoon(){
 }
 
 /* ── AI 제안서에서 읽은 계약을 상담자료 보장분석표로 ──
-   상담자료 안에서 증권을 다시 올릴 이유가 없다. 앱이 이미 읽었다. */
+   상담자료 안에서 증권을 다시 올릴 이유가 없다. 앱이 이미 읽었다.
+
+   ── 「보장분석 상담자료에서 보장내용을 못 읽는다」 ────────────────────
+   여태 여기서 <b>회사 · 상품 · 보험료 · 가입연도 넷만</b> 보냈다. 상담자료의
+   보장분석표는 담보를 <code>riders</code> 로 받게 되어 있는데 그 칸을 통째로
+   비워 보낸 것이다. 그래서 상품 이름만 줄줄이 서고 그 아래에
+   <b>「자료에서 담보를 못 읽었습니다 — 직접 더해 주세요」</b> 가 떴다.
+
+   <b>앱은 담보를 이미 읽어 두고 있었다</b> — <code>PR.scan.riders</code> 에
+   상품마다 담보 이름과 금액이 들어 있다. 넘겨 주는 자리에서 빠뜨린 것뿐이다.
+
+   금액이 못 믿을 값이면(표에서 옆 칸이 붙어 「12683400원」 이 된 숫자)
+   <b>빈칸으로 보낸다.</b> 틀린 금액을 고객 앞 표에 세우는 것보다 비워 두고
+   그 자리에서 고치시게 하는 편이 낫다 (CLAUDE.md 1번).                */
+function sdNorm(s){
+  return (''+(s||'')).replace(/\(무\)|\(유\)|무배당|유배당|배당/g,'').replace(/[\s()\-·ㆍ,.]/g,'');
+}
+/* 담보 종류는 <b>상담자료가 쓰는 말</b>로 맞춘다 — 그 표가 그 말로 묶는다 */
+function sdRiderKind(nm,area){
+  var s=''+(nm||'');
+  if(/실손|실비/.test(s)||area==='실손')return '실손';
+  if(/진단(비|금|급여금)/.test(s))return '진단비';
+  if(/수술/.test(s))return '수술비';
+  if(/입원|일당/.test(s))return '입원비';
+  if(/사망|장해/.test(s))return '사망보장';
+  if(/치료비|의료비/.test(s))return '치료비';
+  return '기타';
+}
+function sdRiderTarget(nm){
+  var s=''+(nm||'');
+  if(/암|유방|전립선|갑상선/.test(s))return '암';
+  if(/뇌/.test(s))return '뇌';
+  if(/심장|심근|허혈/.test(s))return '심장';
+  return null;
+}
+/* 두 상품 이름이 <b>같은 상품</b>인가.
+   「들어 있으면 같다」 로 보면 안 된다 — 「이름이전혀다른상품」 안에
+   「다른상품」 이 들어 있다. 그렇게 붙이면 <b>남의 담보가 이 계약에</b>
+   얹혀 고객 앞 표에 가입한 적 없는 담보가 선다. 점검이 실제로 그 자리를
+   잡았다. 그래서 <b>짧은 쪽이 긴 쪽의 6할은 되어야</b> 같다고 본다. */
+function sdSameName(a,b){
+  if(!a||!b)return false;
+  if(a===b)return true;
+  if(a.indexOf(b)<0&&b.indexOf(a)<0)return false;
+  var s=Math.min(a.length,b.length),l=Math.max(a.length,b.length);
+  return s>=4&&(s/l)>=0.6;
+}
+function sdRidersOf(sc,plan){
+  var G=(sc&&sc.riders)||[],i,k=sdNorm(plan.name),co=sdNorm(plan.co),hit=null,byCo=[];
+  for(i=0;i<G.length;i++){
+    var gk=sdNorm(G[i].product),gc=sdNorm(G[i].co);
+    if(sdSameName(k,gk)){hit=G[i];break;}
+    if(co&&gc&&gc===co)byCo.push(G[i]);
+  }
+  /* 이름이 안 맞으면 <b>그 회사에 묶음이 딱 하나일 때만</b> 쓴다. 둘 이상이면
+     어느 상품 것인지 <b>우리는 모른다</b> — 아무거나 붙이면 남의 보장을
+     이 계약에 얹게 된다 (CLAUDE.md 1번). */
+  if(!hit&&byCo.length===1)hit=byCo[0];
+  if(!hit)return [];
+  return (hit.rows||[]).map(function(r){
+    return {name:r.name||'',amount:r.bad?'':(r.amount||''),
+            kind:sdRiderKind(r.name,r.area),target:sdRiderTarget(r.name)};
+  }).filter(function(r){return r.name;});
+}
 function sdPlanRows(){
   var sc=(typeof PR!=='undefined'&&PR.scan)?PR.scan:null;
   if(!sc||!sc.plans||!sc.plans.length)return [];
@@ -2476,16 +2610,37 @@ function sdPlanRows(){
   return sc.plans.map(function(p){
     return {company:p.co||'',name:p.name||'',
       monthlyPayment:Math.round((p.fee||0)),
-      startYear:yr(p.from)||0};
+      startYear:yr(p.from)||0,
+      riders:sdRidersOf(sc,p)};
   }).filter(function(r){return r.company||r.name;});
 }
+function sdRiderN(rows){
+  var n=0,i;for(i=0;i<(rows||[]).length;i++)n+=((rows[i].riders)||[]).length;return n;
+}
+/* 무엇을 넘겼는지 <b>화면에 적기 위해</b> 담아 둔다 — 「넘어갔겠지」 로 두지 않는다 */
+var SD_SENT={n:0,r:0};
 function sdPushPlan(){
   var rows=sdPlanRows();
   var msg={t:'apex:insurances',rows:rows};
   advFrames().forEach(function(f){
     try{f.contentWindow.postMessage(msg,location.origin);}catch(e){}
   });
+  SD_SENT={n:rows.length,r:sdRiderN(rows)};
+  if(typeof sdSentPaint==='function')sdSentPaint();
   return rows.length;
+}
+/* 넘긴 것을 그 자리에 적는다 — 담보가 0개면 <b>0개라고</b> 말한다 */
+function sdSentHtml(){
+  var s=SD_SENT||{n:0,r:0};
+  if(!s.n)return '<span style="color:#94A3B8">아직 넘긴 계약이 없습니다 — 증권을 올리고 「AI 제안서 만들기」 를 눌러 주세요.</span>';
+  return s.r
+    ? ('<b style="color:#15803D">✅ 계약 '+s.n+'건 · 담보 '+s.r+'개</b> 를 보장분석표로 넘겼습니다.')
+    : ('<b style="color:#B45309">⚠️ 계약 '+s.n+'건은 넘겼지만 담보는 0개입니다.</b> 증권에서 담보 표를 못 읽었습니다 — '+
+       '보장분석표에서 <b>직접 더하실 수 있습니다</b>. 없는 담보를 지어내지 않습니다.');
+}
+function sdSentPaint(){
+  var el=document.getElementById('sdSent');
+  if(el)el.innerHTML=sdSentHtml();
 }
 function sdPushSoon(){
   sdPushPlan();
@@ -16832,7 +16987,7 @@ function osScoreGrade(t){t=t||0;if(t>=90)return['APEX PRO','#059669'];if(t>=80)r
    PDF·이미지(증권/제안서)를 올리면 윤시현의 두뇌가 판독해 고객용 설명서를 만든다.
    전(현재 가입) + 후(새 제안)를 같이 올리면 전후 비교 제안서가 나온다.
    결과는 고객 365일로 저장한다. */
-var PR={plan:null,i:0,view:'deck',busy:false,mode:'explain',files:{before:[],after:[]},refEdit:false};
+var PR={plan:null,i:0,view:'deck',busy:false,mode:'explain',files:{before:[],after:[]},refEdit:false,age:0};
 
 /* ════════ 제안서 근거 데이터 · 차트 엔진 ════════
    투자보고서처럼 "숫자 + 출처 + 기준시점"을 함께 보여 준다.
@@ -17724,6 +17879,64 @@ function prEnsurePlanSlides(p,sc){
   p.slides=(p.slides||[]).slice(0,at).concat(add,(p.slides||[]).slice(at));
   return p;
 }
+/* ── 「준비하지 않으면 · 준비하면 · 연금 종신 내용이 하나도 없다」 ─────
+   이 세 칸은 <b>AI 가 쓴 것만</b> 담고 있었다. 여섯 조각을 동시에 시키는데
+   그중 <code>real</code>·<code>plan</code> 조각이 시간초과나 형식 오류로
+   빠지면 이 세 칸이 통째로 「(없음)」 이 됐다. 8통장과 문서는 앱이 채워
+   주는데 <b>이 세 칸만 채우는 자리가 없었다.</b>
+
+   그렇다고 없는 숫자를 만들 수는 없다. 그래서 <b>둘로 나눈다</b> —
+     · 숫자가 아닌 것(어떤 일이 벌어지는가)은 앱이 채우고, <b>「일반
+       설명이고 고객님 숫자가 아닙니다」 라고 화면에 못 박는다</b> (1번)
+     · 숫자(그때 드는 돈·연금 부족액)는 <b>「확인 필요」</b> 로 둔다
+   그리고 <b>그 조각만 다시 만드는 단추</b>를 준다 — 여섯 개를 다 다시
+   돌리면 시간도 비용도 여섯 배다.                                      */
+var PR_LOCAL_TAG='앱이 채운 일반 설명';
+function prLocalReality(){
+  var mk=function(h,s){return {headline:h,story:s,cost:'확인 필요',imgPrompt:'',_local:1};};
+  return [
+    mk('큰 병 — 진단부터 회복까지 몇 해가 걸립니다',
+       '암은 진단으로 끝나지 않습니다. 수술과 항암, 그다음 회복까지 이어지는 동안 '+
+       '병원비보다 먼저 <b>생활비</b>가 샙니다. 일을 쉬는 동안에도 대출 이자와 학비, 관리비는 그대로 나갑니다. '+
+       '실손은 병원에 낸 돈을 돌려주지만, 그 기간의 생활비를 대신 벌어 주지는 않습니다.'),
+    mk('갑작스러운 사고 · 뇌심 — 며칠 만에 벌어집니다',
+       '뇌졸중이나 심근경색은 예고가 없습니다. 그런데 보험금이 갈리는 자리는 따로 있습니다 — '+
+       '<b>수술이 아니라 시술로 끝나면</b> 수술비 담보에서 안 나오는 경우가 있고, '+
+       '진단 코드가 담보가 정한 범위에 안 들어가면 진단비가 안 나옵니다. '+
+       '실제 지급 여부는 약관과 보험사 심사가 최종 기준입니다.'),
+    mk('소득이 끊기는 기간 — 가족의 하루가 바뀝니다',
+       '치료보다 무서운 것이 소득 단절입니다. 벌이가 멈춰도 월세·대출·학비는 그대로입니다. '+
+       '모아 둔 돈으로 몇 달을 버티고 나면 그다음부터는 가족이 쓰던 것을 줄이기 시작합니다. '+
+       '이 구간을 메우는 것이 진단비와 소득보상 담보의 원래 목적입니다.'),
+    mk('오래 사는 위험 — 간병과 노후는 20~30년입니다',
+       '오래 사는 것은 좋은 일이지만 <b>돈이 드는 좋은 일</b>입니다. 60대 이후 20~30년 동안 '+
+       '생활비가 계속 나가고, 그 끝에 간병 기간이 붙습니다. 간병은 병원비와 달리 '+
+       '실손으로 돌려받는 돈이 아니라 <b>매달 나가는 돈</b>입니다.')
+  ];
+}
+/* 준비 전후는 <b>증권에서 읽은 것</b>으로만 만든다 — 금액은 안 만든다 */
+function prLocalBenefit(sc){
+  if(!sc)return null;
+  var AR=[['실손','병원비 통장'],['암','치료비 통장'],['수술·입원','소득공백 통장'],
+          ['사망·장해','가족보호 통장'],['치매·간병','간병 통장']];
+  var pre=[],un=[],i,r;
+  for(i=0;i<AR.length;i++){
+    r=prAreaRows(sc,AR[i][0]);
+    if(r.n)pre.push({label:AR[i][1],value:'담보 '+r.n+'개'+(r.short?(' (그중 '+r.short+'개는 기준 미달)'):''),
+                     note:'증권에서 읽었습니다'});
+    else un.push({label:AR[i][1],value:'읽어낸 담보 없음',note:'이 목적의 돈이 아직 없습니다'});
+  }
+  if(!pre.length&&!un.length)return null;
+  return {summary:'',prepared:pre,unprepared:un,_local:1};
+}
+/* 「AI 가 못 준 조각」 이라고 화면에 붙이는 띠 — 끝까지 밝힌다 (1번·4번) */
+function prLocalBanner(what){
+  return '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:11px;padding:11px 13px;'+
+    'margin-bottom:12px;font-size:11.5px;line-height:1.75;color:#92400E">'+
+    '<b>⚠️ 이 칸은 AI 가 못 써서 앱이 채웠습니다.</b> '+osEsc(what)+
+    ' <b>고객님의 숫자가 아닙니다</b> — 금액 자리는 「확인 필요」 로 두었습니다. '+
+    '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="prRetryPart(\'real\')">이 조각만 다시 만들기</span></div>';
+}
 function prLocalFill(plan,sc,mode){
   var p=plan||{};
   if(!p.title)p.title=(mode==='compare')?'보험 전후 비교':'내 보험 한눈에 보기';
@@ -17739,6 +17952,11 @@ function prLocalFill(plan,sc,mode){
     :'첨부에서 읽어낸 내용이 없습니다. 고객 정보만으로 정리했습니다.';
   if(!(p.wallets&&p.wallets.length)&&sc)p.wallets=prLocalWallets(sc);
   if(!(p.slides&&p.slides.length))p.slides=prLocalSlides(sc);
+  /* 이 세 칸이 통째로 비던 자리 — 앱이 채우되 <b>일반 설명이라고 밝힌다</b> */
+  if(!(p.reality&&p.reality.length))p.reality=prLocalReality();
+  if(!((p.benefit&&((p.benefit.prepared||[]).length||(p.benefit.unprepared||[]).length)))){
+    var _b=prLocalBenefit(sc); if(_b)p.benefit=_b;
+  }
   prEnsurePlanSlides(p,sc);
   if(!(p.risks&&p.risks.length))p.risks=[
     '이 문서는 첨부한 증권에서 읽어낸 내용을 정리한 것입니다. 실제 보장 여부와 금액은 약관이 정합니다.',
@@ -17938,6 +18156,7 @@ function prGen(){
     if(textBlock)user+='\n\n[첨부 문서에서 추출한 텍스트]'+textBlock;
     if(!textBlock&&!nImgs)user+='\n\n(첨부 문서 없음 — 위 고객 정보만으로 작성한다.)';
     user+='\n\n지정한 JSON 형식만 출력한다.';
+    PR._user=user;   /* 조각 하나만 다시 만들 때 이 주문을 그대로 쓴다 */
 
     if(nImgs){
       return aiFitImagesFair(parts,'proposal').then(function(fit){
@@ -18170,6 +18389,10 @@ function prPaint(){
     (p.coreBenefit?'<div style="font-size:13px;font-weight:700;color:#065F46;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:11px;padding:11px 14px;line-height:1.65;margin-top:10px">🎯 '+osEsc(p.coreBenefit)+'</div>':'')+
     (p.readDocs?'<div style="font-size:12px;color:#4B5A70;background:#F8FAFD;border:1px solid #EDF1F7;border-radius:11px;padding:10px 13px;line-height:1.7;margin-top:8px"><b style="color:#1D4ED8">🧠 두뇌가 읽은 내용</b><br>'+osEsc(p.readDocs)+'</div>':'')+
     note+
+    /* 고객 앞에서는 <b>발표모드</b>로 — 한 화면에 한 장, 안 잘린다 */
+    '<div class="btn-row" style="margin-top:11px">'+
+      '<button class="btn btn-primary" onclick="prShowOpen()">🖥 발표모드 — 고객 앞에서 이 화면으로</button>'+
+    '</div>'+
     '<div class="acad-tabs" style="margin:12px 0 0">'+
       /* 상담자료가 먼저다 — 이야기의 뼈대를 세우고 이 고객의 숫자로 넘어간다 */
       '<button class="acad-tab'+(PR.view==='sangdam'?' on':'')+'" onclick="prView(\'sangdam\')">📋 상담자료</button>'+
@@ -18240,14 +18463,81 @@ function prMoney(t){
   if(!hit){m=s.match(/(\d{5,})/);if(m){man=Math.round(parseFloat(m[1])/10000);hit=man>0;}}
   return hit?Math.round(man):0;
 }
-function prAgeNow(){
-  var v=parseInt((osVal('prAge')||'').replace(/[^\d]/g,''),10);
-  if(isFinite(v)&&v>=20&&v<=90)return v;
-  var m=(''+((PR.plan&&PR.plan.clientLine)||'')).match(/(\d{2})\s*세/);
-  if(m&&+m[1]>=20&&+m[1]<=90)return +m[1];
-  return 50;
+/* ── 나이는 <b>지어내지 않는다</b> ────────────────────────────────────
+   여태 이 함수는 못 찾으면 <b>50</b> 을 돌려줬다. 그 50 이 생애 재무
+   리스크 지도의 「지금」 점선이 되고, 은퇴까지 남은 해가 되고, 연금
+   계산의 기간이 됐다. <b>고객 앞 화면에 남의 나이가 찍혔다</b> — 그리고
+   아무도 그것이 만들어 낸 숫자라는 것을 알 수 없었다 (CLAUDE.md 1번).
+
+   그런데 나이는 <b>이미 앱 안에 있었다.</b> 증권에 「홍길동(47세, 남)」
+   이라 적혀 있으면 <code>insWho</code> 가 읽어 <code>PR.scan.who.age</code>
+   에 담아 둔다. 고객 카드에는 생년이 들어 있다. <b>아무도 안 봤을 뿐이다.</b>
+
+   이제 <b>한 곳</b>에서 순서대로 찾고, 못 찾으면 <b>모른다고 답한다</b>(0).
+   어디서 온 나이인지도 함께 돌려준다 — 화면에 밝히기 위해서다 (4번).   */
+var PR_AGE_MIN=1,PR_AGE_MAX=100;
+function prAgeOk(n){return isFinite(n)&&n>=PR_AGE_MIN&&n<=PR_AGE_MAX;}
+/* 생년만 알 때 — 생일이 지났는지는 모른다. 그래서 <b>그렇게 밝힌다</b> */
+function prAgeFromClient(){
+  try{
+    var id=(typeof OSC!=='undefined'&&OSC.current&&OSC.current.id)||'';
+    if(!id||typeof CM_BASE==='undefined'||!CM_BASE[id])return 0;
+    var y=parseInt(CM_BASE[id].by,10);
+    if(!isFinite(y)||y<1900||y>2100)return 0;
+    return (new Date()).getFullYear()-y;
+  }catch(e){return 0;}
 }
-function prAgeRet(){var n=prAgeNow();return Math.max(n+1,65);}
+function prAgeFind(){
+  var n,m;
+  /* ① 사장님이 직접 적으신 것이 가장 세다 */
+  n=parseInt((osVal('prAge')||'').replace(/[^\d]/g,''),10);
+  if(prAgeOk(n))return {age:n,src:'직접 적으신 나이'};
+  if(prAgeOk(PR.age))return {age:PR.age,src:'직접 적으신 나이'};
+  /* ② 증권에 적혀 있던 것 — 「홍길동(47세, 남)」 */
+  try{n=(PR.scan&&PR.scan.who&&PR.scan.who.age)||0;
+      if(prAgeOk(n))return {age:n,src:'증권에서 읽음'};}catch(e){}
+  /* ③ 고객 카드의 생년 */
+  n=prAgeFromClient();
+  if(prAgeOk(n))return {age:n,src:'고객 카드의 생년으로 계산 — 생일 전이면 한 살 적습니다'};
+  /* ④ 문서 한 줄에 적힌 나이 */
+  try{m=(''+((PR.plan&&PR.plan.clientLine)||'')).match(/(\d{1,3})\s*세/);
+      if(m&&prAgeOk(+m[1]))return {age:+m[1],src:'문서에 적힌 나이'};}catch(e){}
+  return null;                       /* <b>모른다.</b> 만들지 않는다 */
+}
+function prAgeNow(){var a=prAgeFind();return a?a.age:0;}   /* 0 = 모름 */
+function prAgeSrc(){var a=prAgeFind();return a?a.src:'';}
+/* 은퇴 나이는 <b>가정</b>이다 — 나이를 모르면 이것도 답하지 않는다 */
+function prAgeRet(){var n=prAgeNow();return n?Math.max(n+1,65):0;}
+/* 나이를 모를 때 세우는 칸 — 아무 숫자도 만들지 않고, 무엇을 채워야 하는지 말한다 */
+function prAgeAskHtml(what){
+  return '<div class="card" style="margin-bottom:12px;border-left:4px solid #D97706"><div class="card-body">'+
+    '<div style="font-size:13.5px;font-weight:800;color:#92400E">🎂 나이를 몰라서 '+osEsc(what)+'를 세우지 않았습니다</div>'+
+    '<div style="font-size:12px;color:#A16207;line-height:1.85;margin-top:7px">'+
+      '이 자리는 <b>나이가 가로축</b>입니다. 모르는 채로 그리면 <b>남의 나이로 그린 그림</b>이 고객님 앞에 섭니다. '+
+      '그래서 아무 숫자도 만들지 않았습니다.<br>'+
+      '증권에 <b>「홍길동(47세, 남)」</b> 처럼 적혀 있으면 앱이 저절로 읽습니다. 없으면 여기에 적어 주세요.</div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-top:11px;flex-wrap:wrap">'+
+      '<input id="prAgeQuick" type="number" min="1" max="100" placeholder="예: 47" '+
+        'style="width:120px;font-size:15px;font-weight:800;border:1px solid var(--ink-7);border-radius:9px;padding:8px 11px">'+
+      '<button class="btn btn-primary" onclick="prAgeSet()">이 나이로 세우기</button>'+
+    '</div></div></div>';
+}
+function prAgeSet(){
+  var el=document.getElementById('prAgeQuick');
+  var n=parseInt((el&&el.value||'').replace(/[^\d]/g,''),10);
+  if(!prAgeOk(n)){toast('나이를 숫자로 적어 주세요');return;}
+  PR.age=n;
+  var f=document.getElementById('prAge');
+  if(f)f.value=''+n;                 /* 폼 칸이 떠 있으면 거기에도 비춘다 */
+  prPaint();
+  toast(n+'세로 세웠습니다');
+}
+/* 「지금 47세 (증권에서 읽음)」 — 어디서 온 숫자인지 끝까지 밝힌다 (4번) */
+function prAgeNote(){
+  var a=prAgeFind();
+  if(!a)return '';
+  return ' <span style="color:#64748B;font-weight:700">지금 '+a.age+'세 ('+osEsc(a.src)+')</span>';
+}
 
 /* ── 8통장 — 도넛 · 막대 · 생애 지도 · 우선순위 ── */
 var PR_W_ORDER=['생활','병원비','치료비','소득공백','가족보호','은퇴·연금','간병','자산'];
@@ -18319,9 +18609,12 @@ function prWalletHtml(){
     var b=band(r.w.name);
     return {label:prWShort(r.w.name),start:b[0],end:b[1],color:r.lv.c,op:(r.lv.k==='na'?0.5:1),tag:(r.lv.k==='na'?'':r.lv.t)};
   });
-  h+='<div class="rpt-sec"><div class="hd"><span class="n">03</span>생애 재무 리스크 지도</div>'+
+  /* <b>나이를 모르면 이 그림을 안 세운다.</b> 가로축이 나이라 모르는 채로
+     그리면 남의 나이로 그린 그림이 고객 앞에 선다 (CLAUDE.md 1번). */
+  if(!now)h+=prAgeAskHtml('생애 재무 리스크 지도');
+  else h+='<div class="rpt-sec"><div class="hd"><span class="n">03</span>생애 재무 리스크 지도</div>'+
     '<div class="sub">가로축은 나이입니다. 각 통장이 삶의 <b>어느 구간</b>을 지켜주는지, 그 준비가 지금 충분한지(색)를 함께 봅니다. '+
-    '검은 점선이 지금 나이, 보라 점선이 은퇴 시점입니다.</div>'+
+    '검은 점선이 지금 나이, 보라 점선이 은퇴 시점입니다.'+prAgeNote()+'</div>'+
     '<div class="viz-wrap">'+vizPhaseStrip(MIN,MAX,now,ret)+vizGantt(gRows,{min:MIN,max:MAX,now:now,retire:ret})+'</div>'+
     '<div class="rpt-legend"><span><i style="background:#0D1117"></i>지금('+now+'세)</span>'+
     '<span><i style="background:#7C3AED"></i>은퇴('+ret+'세)</span><span>막대 색 = 준비 수준</span></div></div>';
@@ -18362,10 +18655,12 @@ function prWalletHtml(){
 function prRealityHtml(){
   var p=PR.plan,R=p.reality||[];
   if(!R.length)return '<div class="acad-note">현실 사례 데이터가 없습니다.</div>';
+  var localTag=R.some(function(x){return x&&x._local;})
+    ?prLocalBanner('상담 현장에서 반복해서 보는 네 가지를 일반 설명으로 적었습니다.'):'';
   var costs=R.map(function(x){return prMoney(x.cost);});
   var anyCost=costs.some(function(v){return v>0;});
   var maxC=Math.max.apply(null,costs.concat([1]));
-  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>준비하지 않으면 이런 일이 생깁니다</div>'+
+  var h=localTag+'<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>준비하지 않으면 이런 일이 생깁니다</div>'+
     '<div class="card-desc">겁을 주려는 게 아닙니다. 상담 현장에서 <b>반복해서 보는 상황</b>을 그대로 보여 드립니다.</div></div>'+
     '<div class="card-body">';
 
@@ -18415,7 +18710,8 @@ function prBenefitHtml(){
   var p=PR.plan,B=p.benefit||{};
   var pre=B.prepared||[],un=B.unprepared||[];
   if(!pre.length&&!un.length)return '<div class="acad-note">비교 데이터가 없습니다.</div>';
-  var h='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💰</span>준비하면 이렇게 달라집니다</div>'+
+  var h=(B._local?prLocalBanner('증권에서 읽어낸 담보 유무만으로 만든 표입니다.'):'')+
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">💰</span>준비하면 이렇게 달라집니다</div>'+
     '<div class="card-desc">같은 상황이 벌어졌을 때, 준비한 경우와 안 한 경우를 나란히 놓았습니다.</div></div><div class="card-body">'+
     (B.summary?'<div style="font-size:15px;font-weight:800;color:#0B1B34;line-height:1.7;padding:15px 19px;border-left:5px solid #1D4ED8;background:#F6F9FF;border-radius:0 13px 13px 0;margin-bottom:13px">'+osEsc(B.summary)+'</div>':'');
 
@@ -18646,9 +18942,13 @@ function prPlanHtml(){
     PRC.init=true;
     PRC.estate=prMoney(wl.liquidity)||prMoney(wl.amount)||0;
     PRC.mon=prMoney(pen.planMonthly)||30;
-    PRC.yrs=Math.max(1,ret-now);
+    /* 나이를 모르면 <b>남은 해</b>도 모른다 — 65-50=15 같은 숫자를 만들지 않는다 */
+    PRC.yrs=now?Math.max(1,ret-now):0;
   }
   var h='';
+  /* 연금·종신 계산기는 <b>은퇴까지 몇 해</b>가 있어야 돈다. 나이를 모르면
+     계산을 세우지 않고 무엇을 채워야 하는지만 말한다 (CLAUDE.md 1번). */
+  if(!now)h+=prAgeAskHtml('연금 · 종신 계산');
 
   /* ── 연금 ── */
   var need=prMoney(pen.needMonthly),have=prMoney(pen.haveMonthly),gap=prMoney(pen.gapMonthly);
@@ -18681,13 +18981,15 @@ function prPlanHtml(){
       ],{width:580,max:Math.max(need,have,1)})+'</div>'+
       (gap>0?('<div class="rpt-kpis" style="margin-top:8px">'+
         '<div class="rpt-kpi"><div class="k">매달 부족</div><div class="v" style="color:#DC2626">'+fmt(gap)+'<small> 만원</small></div><div class="s">필요 − 준비</div></div>'+
-        '<div class="rpt-kpi"><div class="k">'+ret+'세~95세 합계</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(gap*12*Math.max(0,95-ret))+'</div><div class="s">물가 미반영 개략치</div></div>'+
+        /* 은퇴 나이를 모르면 <b>「0세~95세 합계」</b> 가 찍힌다. 그 칸은 안 세운다 (1번) */
+        (ret?('<div class="rpt-kpi"><div class="k">'+ret+'세~95세 합계</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(gap*12*Math.max(0,95-ret))+'</div><div class="s">물가 미반영 개략치</div></div>'):'')+
         '</div>'):'')+
       '</div>';
   }
 
   /* 이율이 결과를 가른다 — 예전 연금이 좋았던 이유를 산수로 */
-  var mon=PRC.mon||30,yrs=PRC.yrs||Math.max(1,ret-now);
+  var mon=PRC.mon||30,yrs=PRC.yrs||(now?Math.max(1,ret-now):0);
+  if(!yrs)return h;   /* 나이를 모르면 여기서 멈춘다 — 지어낸 기간으로 계산하지 않는다 */
   var rates=[0.02,0.04,0.06,0.08];
   var fvRows=rates.map(function(r,i){
     var v=prFV(mon,yrs,r);
@@ -18802,7 +19104,9 @@ function prSdSync(){
     wrap.innerHTML='<div class="card" style="margin-top:12px"><div class="card-hd">'+
       '<div class="card-title"><span class="ci">📋</span>보장분석 상담자료 — 이야기의 뼈대</div>'+
       '<div class="card-desc">여기서 시작해 <b>8통장 → 준비 안 하면 → 준비하면 → 연금·종신 → 근거</b> 순서로 넘어갑니다. '+
-      '자료를 넘긴 뒤 <b>바로 위 합본 브리핑</b>으로 이어 가면 고객님 숫자로 자연스럽게 넘어갑니다.</div></div>'+
+      '자료를 넘긴 뒤 <b>바로 위 합본 브리핑</b>으로 이어 가면 고객님 숫자로 자연스럽게 넘어갑니다.'+
+      /* 무엇이 넘어갔는지 <b>그 자리에</b> 적는다 — 「넘어갔겠지」 로 두지 않는다 */
+      '<div id="sdSent" style="margin-top:7px;font-size:11.5px;line-height:1.7">'+sdSentHtml()+'</div></div></div>'+
       '<div class="card-body" style="padding:0">'+
       '<iframe id="prSdFrame" title="보장분석 상담자료" '+
       'style="width:100%;height:76vh;border:0;display:block;background:#fff;border-radius:0 0 16px 16px"></iframe>'+
@@ -19188,13 +19492,56 @@ var PR_ALL=[
   {k:'plan',   t:'연금 · 종신',       ic:'🏦', has:function(p){return (p.pension&&p.pension.needMonthly)||(p.wholelife&&p.wholelife.purpose)?1:0;}, fn:function(){return prPlanHtml();}},
   {k:'evid',   t:'국가혜택 · 근거',   ic:'📊', has:function(){return 1;},                             fn:function(){return prEvidenceHtml();}}
 ];
-function prMissHtml(t,why){
+/* ── 한 조각만 다시 만든다 ────────────────────────────────────────────
+   여태 빈 칸에서 할 수 있는 것은 <b>「다시 만들기」</b> 하나뿐이었다. 그것은
+   여섯 조각을 통째로 다시 돌린다 — 시간도 비용도 여섯 배고, 잘 나온 조각까지
+   버린다. 그래서 <b>그 조각만</b> 다시 시킨다. 처음 만들 때 쓴 주문을
+   그대로 다시 쓴다(<code>PR._user</code>).                              */
+var PR_PART_OF={reality:'real',benefit:'real',plan:'plan',wallet:'diag',evid:'fact'};
+function prRetryPart(k){
+  var P=null,i;
+  for(i=0;i<PR_PART.length;i++)if(PR_PART[i].k===k)P=PR_PART[i];
+  if(!P){toast('다시 만들 조각을 못 찾았습니다');return;}
+  if(!PR._user){toast('먼저 「AI 제안서 만들기」 로 한 번 만들어 주세요');return;}
+  if(PR.busy){toast('아직 만드는 중입니다');return;}
+  if(typeof aiReady==='function'&&!aiReady()){toast('설정에서 AI 연결을 먼저 구성하세요');return;}
+  PR.busy=true;PR.retry=k;prPaint();
+  toast(P.label+' 조각만 다시 만듭니다…');
+  callAI(prSys(P.k),PR._user,P.tok,'proposal').then(function(t){
+    var info={},obj=prJson(t,info);
+    PR.busy=false;PR.retry='';
+    if(!obj){toast('형식을 읽지 못했습니다 — 한 번 더 눌러 주세요');prPaint();return;}
+    var kk;
+    for(kk in obj){
+      if(!Object.prototype.hasOwnProperty.call(obj,kk))continue;
+      if(obj[kk]==null||obj[kk]==='')continue;
+      if(kk==='slides')continue;                 /* 문서 장은 여기서 안 건드린다 */
+      PR.plan[kk]=obj[kk];                       /* 앱이 채운 것을 진짜 것으로 덮는다 */
+    }
+    /* 다시 만든 조각은 이제 「앱이 채운 것」 이 아니다 */
+    if(PR.plan.reality)PR.plan.reality.forEach(function(x){if(x)delete x._local;});
+    if(PR.plan.benefit)delete PR.plan.benefit._local;
+    toast(P.label+' 을 다시 만들었습니다'+(info.cut?' (뒤가 잘렸습니다)':''));
+    prPaint();
+  },function(e){
+    PR.busy=false;PR.retry='';
+    toast('다시 만들지 못했습니다 — '+prShortErr(e));
+    prPaint();
+  });
+}
+function prMissHtml(t,why,part){
+  var p=PR_PART_OF[part||'']||'';
   return '<div class="card"><div class="card-body">'+
     '<div style="font-size:13px;font-weight:800;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;'+
     'border-radius:12px;padding:13px 16px;line-height:1.8">📭 <b>'+osEsc(t)+'</b> 는 아직 없습니다.<br>'+
     '<span style="font-weight:600;color:#A16207">'+why+'</span>'+
-    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" '+
-    'onclick="prGen()">🔄 다시 만들기</button></div></div></div></div>';
+    ((PR.fails&&PR.fails.length)?('<br><span style="font-weight:600;color:#A16207">못 받은 조각: <b>'+
+      osEsc(PR.fails.join(' · '))+'</b></span>'):'')+
+    '<div class="btn-row" style="margin-top:9px">'+
+    (p?('<button class="btn btn-primary" style="padding:6px 12px;font-size:11.5px" '+
+        'onclick="prRetryPart(\''+p+'\')">🔁 이 조각만 다시 만들기</button>'):'')+
+    '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" '+
+    'onclick="prGen()">🔄 전부 다시 만들기</button></div></div></div></div>';
 }
 function prAllHtml(){
   var p=PR.plan||{},h='',i,S;
@@ -19220,10 +19567,10 @@ function prAllHtml(){
     if(S.has(p)){
       var body='';
       /* 한 자리가 터져도 나머지는 계속 이어진다 — 여기서 멈추면 뒤가 흰 화면이 된다 */
-      try{body=S.fn();}catch(e){body=prMissHtml(S.t,'그리다가 문제가 생겼습니다: '+osEsc((e&&e.message)||''));}
+      try{body=S.fn();}catch(e){body=prMissHtml(S.t,'그리다가 문제가 생겼습니다: '+osEsc((e&&e.message)||''),S.k);}
       h+=body;
     }else{
-      h+=prMissHtml(S.t,'AI 가 이 조각을 못 썼거나 첨부에서 읽어내지 못했습니다. 다시 만들면 대개 채워집니다.');
+      h+=prMissHtml(S.t,'AI 가 이 조각을 못 썼거나 첨부에서 읽어내지 못했습니다. 다시 만들면 대개 채워집니다.',S.k);
     }
     h+='</div>';
   }
@@ -19234,6 +19581,129 @@ function prJumpTo(k){
   if(el&&el.scrollIntoView)el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+/* ════════ 발표모드 — 한 화면에 한 장, <b>절대 안 잘린다</b> ════════
+   고객 앞에서 노트북을 돌려 놓고 보여 주는 자리다. 그동안은 앱 화면을
+   그대로 보여 드렸는데, 메뉴·단추·다른 카드가 같이 보여 어디를 봐야
+   하는지 흐려졌다.
+
+   <b>「절대로 내용이 짤리지 않도록」</b> 이 여기서 제일 중요한 규칙이다.
+   발표 화면을 만들 때 흔히 하는 실수가 <code>overflow:hidden</code> 으로
+   한 장을 화면에 맞추는 것이다. 그러면 <b>글이 길어지면 아랫부분이
+   말없이 사라진다.</b> 고객은 그 문단이 있는 줄도 모른다.
+
+   그래서 여기서는
+     · 한 장의 몸통은 <b>언제나 스스로 스크롤</b>한다(overflow:auto)
+     · 높이를 고정하지 않는다 — 길면 긴 대로 다 나온다
+     · 글자 크기는 방 크기에 맞춰 <b>사장님이</b> 키우고 줄인다
+     · 넘기기는 ← → · 화면 단추 · 손가락 쓸기, 닫기는 ESC              */
+var PRS={on:false,i:0,zoom:1,wired:false};
+function prShowCss(){
+  if(document.getElementById('prShowCss'))return;
+  var st=document.createElement('style');st.id='prShowCss';
+  st.textContent=
+    '#prShow{position:fixed;inset:0;z-index:4200;background:#0B1B34;display:flex;flex-direction:column}'+
+    '#prShow .ps-hd{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;color:#fff;'+
+      'background:linear-gradient(90deg,#0B1B34,#12294F)}'+
+    '#prShow .ps-t{font-size:14.5px;font-weight:900;letter-spacing:-.3px;flex:1;'+
+      'overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '#prShow .ps-n{font-size:11.5px;font-weight:800;color:#93C5FD;white-space:nowrap}'+
+    '#prShow .ps-b{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:#fff;'+
+      'border-radius:8px;padding:6px 11px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}'+
+    '#prShow .ps-b:hover{background:rgba(255,255,255,.24)}'+
+    /* <b>여기가 핵심</b> — 몸통은 언제나 스스로 스크롤한다. hidden 을 쓰지 않는다 */
+    '#prShow .ps-body{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;'+
+      'background:#F7F9FC;padding:16px 14px 60px}'+
+    '#prShow .ps-in{max-width:1120px;margin:0 auto}'+
+    '#prShow .ps-ft{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 14px;'+
+      'background:#0B1B34;border-top:1px solid rgba(255,255,255,.12)}'+
+    '#prShow .ps-dot{flex:1;display:flex;gap:5px;flex-wrap:wrap}'+
+    '#prShow .ps-dot span{width:9px;height:9px;border-radius:2px;background:rgba(255,255,255,.28);cursor:pointer}'+
+    '#prShow .ps-dot span.on{background:#60A5FA;width:20px}'+
+    '@media(max-width:520px){#prShow .ps-t{font-size:12.5px}#prShow .ps-b{padding:6px 9px;font-size:11px}}'+
+    '@media print{#prShow{position:static;background:#fff}#prShow .ps-hd,#prShow .ps-ft{display:none}'+
+      '#prShow .ps-body{overflow:visible;background:#fff}}';
+  document.head.appendChild(st);
+}
+/* 세울 수 있는 장만 모은다 — 「(없음)」 을 발표에 세우지 않는다 */
+function prShowList(){
+  var p=PR.plan||{},out=[],i;
+  for(i=0;i<PR_ALL.length;i++)if(PR_ALL[i].has(p))out.push(PR_ALL[i]);
+  return out;
+}
+function prShowOpen(){
+  if(!PR.plan){toast('먼저 「AI 제안서 만들기」 로 이 고객의 숫자를 만들어 주세요');return;}
+  var L=prShowList();
+  if(!L.length){toast('발표에 세울 장이 아직 없습니다');return;}
+  prShowCss();
+  var el=document.getElementById('prShow');
+  if(!el){el=document.createElement('div');el.id='prShow';document.body.appendChild(el);}
+  PRS.on=true;PRS.i=Math.min(PRS.i,L.length-1);
+  try{document.body.style.overflow='hidden';}catch(e){}
+  prShowWire();prShowPaint();
+}
+function prShowClose(){
+  PRS.on=false;
+  var el=document.getElementById('prShow');
+  if(el&&el.parentNode)el.parentNode.removeChild(el);
+  try{document.body.style.overflow='';}catch(e){}
+}
+function prShowGo(d){
+  var L=prShowList();if(!L.length)return;
+  PRS.i=Math.max(0,Math.min(L.length-1,PRS.i+d));
+  prShowPaint();
+  var b=document.querySelector('#prShow .ps-body');if(b)b.scrollTop=0;
+}
+function prShowAt(i){PRS.i=i;prShowPaint();var b=document.querySelector('#prShow .ps-body');if(b)b.scrollTop=0;}
+function prShowZoom(d){
+  PRS.zoom=Math.max(0.8,Math.min(1.6,Math.round((PRS.zoom+d)*100)/100));
+  var b=document.querySelector('#prShow .ps-in');
+  if(b)b.style.fontSize=(PRS.zoom*100)+'%';
+  var z=document.getElementById('psZoom');if(z)z.textContent=Math.round(PRS.zoom*100)+'%';
+}
+function prShowPaint(){
+  var el=document.getElementById('prShow');if(!el)return;
+  var L=prShowList(),S=L[PRS.i]||L[0],i,dots='';
+  for(i=0;i<L.length;i++)dots+='<span class="'+(i===PRS.i?'on':'')+'" title="'+osEsc(L[i].t)+'" onclick="prShowAt('+i+')"></span>';
+  var body='';
+  /* 한 장이 터져도 발표가 안 멈춘다 — 흰 화면을 고객 앞에 두지 않는다 */
+  try{body=S.fn();}catch(e){body=prMissHtml(S.t,'그리다가 문제가 생겼습니다: '+osEsc((e&&e.message)||''),S.k);}
+  el.innerHTML=
+    '<div class="ps-hd">'+
+      '<span class="ps-t">'+S.ic+' '+osEsc(S.t)+'</span>'+
+      '<span class="ps-n">'+(PRS.i+1)+' / '+L.length+'</span>'+
+      '<button type="button" class="ps-b" onclick="prShowZoom(-0.1)">가−</button>'+
+      '<span class="ps-n" id="psZoom">'+Math.round(PRS.zoom*100)+'%</span>'+
+      '<button type="button" class="ps-b" onclick="prShowZoom(0.1)">가+</button>'+
+      '<button type="button" class="ps-b" onclick="prShowClose()">✕ 닫기</button>'+
+    '</div>'+
+    '<div class="ps-body"><div class="ps-in" style="font-size:'+(PRS.zoom*100)+'%">'+body+'</div></div>'+
+    '<div class="ps-ft">'+
+      '<button type="button" class="ps-b" onclick="prShowGo(-1)">◀ 이전</button>'+
+      '<div class="ps-dot">'+dots+'</div>'+
+      '<button type="button" class="ps-b" onclick="prShowGo(1)">다음 ▶</button>'+
+    '</div>';
+}
+/* 키·손가락은 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 겹겹이 쌓인다 */
+function prShowWire(){
+  if(PRS.wired)return;PRS.wired=true;
+  document.addEventListener('keydown',function(e){
+    if(!PRS.on)return;
+    if(e.key==='Escape'){prShowClose();return;}
+    if(e.key==='ArrowRight'||e.key==='PageDown'){prShowGo(1);e.preventDefault();}
+    if(e.key==='ArrowLeft'||e.key==='PageUp'){prShowGo(-1);e.preventDefault();}
+  },false);
+  var x0=0,y0=0;
+  document.addEventListener('touchstart',function(e){
+    if(!PRS.on||!e.touches||!e.touches.length)return;
+    x0=e.touches[0].clientX;y0=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!PRS.on||!e.changedTouches||!e.changedTouches.length)return;
+    var dx=e.changedTouches[0].clientX-x0,dy=e.changedTouches[0].clientY-y0;
+    /* 세로로 읽는 중이면 넘기지 않는다 — 글이 길어 스크롤하는 중일 수 있다 */
+    if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.8)prShowGo(dx<0?1:-1);
+  },{passive:true});
+}
 function prSangdamHtml(){
   var p=PR.plan||{};
   var n=(p.wallets||[]).length,r=(p.reality||[]).length;
@@ -20702,8 +21172,8 @@ function vizStackBar(rows,o){
 /* ── 8통장 시각 리포트 (deterministic) ── */
 var WA_LV={ok:{p:88,c:'#059669',t:'충분'},mid:{p:55,c:'#D97706',t:'보통'},low:{p:24,c:'#DC2626',t:'미흡'}};
 function waShort(n){return ({1:'생활',2:'병원비',3:'치료비',4:'소득공백',5:'가족보호',6:'은퇴·연금',7:'간병·요양',8:'자산·상속'})[n]||'';}
-function waSetAge(v){var n=parseInt(v,10);if(isFinite(n)&&n>=20&&n<=90)WA.age=n;waSaveMeta();waRerender();}
-function waSetRet(v){var n=parseInt(v,10);if(isFinite(n)&&n>=40&&n<=95)WA.retire=n;waSaveMeta();waRerender();}
+function waSetAge(v){var n=parseInt(v,10);WA.age=(isFinite(n)&&n>=1&&n<=100)?n:0;waSaveMeta();waRerender();}
+function waSetRet(v){var n=parseInt(v,10);WA.retire=(isFinite(n)&&n>=40&&n<=95)?n:0;waSaveMeta();waRerender();}
 function waFinSet(k,v){if(!WA.fin)WA.fin={};WA.fin[k]=v;waSaveMeta();waRerender();}
 function waFinField(k,label,val){return '<div><label>'+label+'</label><input type="number" min="0" step="1" value="'+(val>0?val:'')+'" onchange="waFinSet(\''+k+'\',this.value)" placeholder="0"></div>';}
 function waReport(){
@@ -20719,10 +21189,18 @@ function waReport(){
   var okN=0,midN=0,lowN=0,naN=0;
   WALLETS.forEach(function(w){var d=WA.diag[w.n];if(d==='ok')okN++;else if(d==='mid')midN++;else if(d==='low')lowN++;else naN++;});
   var dt=new Date(),ds=dt.getFullYear()+'.'+('0'+(dt.getMonth()+1)).slice(-2)+'.'+('0'+dt.getDate()).slice(-2);
-  var now=parseInt(WA.age,10)||50,ret=parseInt(WA.retire,10)||65;if(ret<=now)ret=now+1;
+  /* <b>나이를 지어내지 않는다.</b> 여태 안 적으시면 조용히 50세로 그렸다 —
+     그 50 이 「지금」 점선이 되어 고객 앞에 남의 나이가 찍혔다 (CLAUDE.md 1번).
+     적어 두신 것이 없으면 제안서 쪽에서 찾아보고(증권·고객 카드), 그래도
+     모르면 <b>모른다</b>. 0 은 「모름」 이지 「0세」 가 아니다. */
+  var now=parseInt(WA.age,10)||0,ret=parseInt(WA.retire,10)||0;
+  var waSrc='';
+  if(!now&&typeof prAgeFind==='function'){var _a=prAgeFind();if(_a){now=_a.age;waSrc=_a.src;}}
+  if(now&&!ret)ret=Math.max(now+1,65);
+  if(now&&ret<=now)ret=now+1;
   var tb='<div class="rpt-tools">'+
-    '<span class="ageip">현재 나이 <input type="number" min="20" max="90" value="'+now+'" onchange="waSetAge(this.value)"></span>'+
-    '<span class="ageip">은퇴 나이 <input type="number" min="40" max="95" value="'+ret+'" onchange="waSetRet(this.value)"></span>'+
+    '<span class="ageip">현재 나이 <input type="number" min="1" max="100" placeholder="모름" value="'+(now||'')+'" onchange="waSetAge(this.value)"></span>'+
+    '<span class="ageip">은퇴 나이 <input type="number" min="40" max="95" placeholder="모름" value="'+(ret||'')+'" onchange="waSetRet(this.value)"></span>'+
     '<button class="pr" onclick="waReportPrint()">🖨 인쇄 · PDF 저장</button>'+
     '<button onclick="waView(\'diag\')">← 진단 수정</button></div>';
   var C='<div id="waRptContent" class="rpt">';
@@ -20748,9 +21226,14 @@ function waReport(){
     '<div class="rpt-legend"><span><i style="background:#059669"></i>충분</span><span><i style="background:#D97706"></i>보통</span><span><i style="background:#DC2626"></i>미흡</span><span><i style="background:#CBD5E1"></i>미진단</span></div></div>';
   var MIN=30,MAX=95;
   var bands={1:[MIN,MAX],2:[MIN,MAX],3:[Math.max(MIN,40),Math.min(MAX,85)],4:[now,ret],5:[MIN,Math.min(MAX,65)],6:[ret,MAX],7:[Math.max(MIN,75),MAX],8:[Math.max(MIN,80),MAX]};
+  var ageAsk='<div class="rpt-sec"><div class="hd"><span class="n">03</span>생애 재무 리스크 지도</div>'+
+    '<div class="sub"><b>나이를 몰라서 이 지도를 세우지 않았습니다.</b> 가로축이 나이라, 모르는 채로 그리면 '+
+    '<b>남의 나이로 그린 그림</b>이 고객님 앞에 섭니다. 위 <b>「현재 나이」</b> 칸에 적어 주시면 바로 그려집니다.</div></div>';
   var gRows=WALLETS.map(function(w){var d=WA.diag[w.n],lv=d&&WA_LV[d],b=bands[w.n];return {label:waShort(w.n),start:b[0],end:b[1],color:lv?lv.c:'#CBD5E1',op:lv?1:0.5,tag:lv?lv.t:''};});
-  C+='<div class="rpt-sec"><div class="hd"><span class="n">03</span>생애 재무 리스크 지도</div>'+
-    '<div class="sub">가로축은 나이입니다. 각 통장이 삶의 어느 구간을 지켜주는지, 그리고 그 준비가 지금 충분한지(색)를 함께 보여줍니다. 검은 점선이 현재 나이, 보라 점선이 은퇴 시점입니다.</div>'+
+  if(!now)C+=ageAsk;
+  else C+='<div class="rpt-sec"><div class="hd"><span class="n">03</span>생애 재무 리스크 지도</div>'+
+    '<div class="sub">가로축은 나이입니다. 각 통장이 삶의 어느 구간을 지켜주는지, 그리고 그 준비가 지금 충분한지(색)를 함께 보여줍니다. 검은 점선이 현재 나이, 보라 점선이 은퇴 시점입니다.'+
+    (waSrc?(' <span style="color:#64748B;font-weight:700">지금 '+now+'세 ('+osEsc(waSrc)+')</span>'):'')+'</div>'+
     '<div class="viz-wrap">'+vizPhaseStrip(MIN,MAX,now,ret)+vizGantt(gRows,{min:MIN,max:MAX,now:now,retire:ret})+'</div>'+
     '<div class="rpt-legend"><span><i style="background:#0D1117"></i>지금('+now+'세)</span><span><i style="background:#7C3AED"></i>은퇴('+ret+'세)</span><span>막대 색 = 준비 수준(초록·주황·빨강·회색)</span></div></div>';
   var order={low:0,mid:1,na:2,ok:3};
@@ -20773,7 +21256,10 @@ function waFinSection(now,ret){
   function g(k){var v=parseFloat(f[k]);return isFinite(v)?v:0;}
   var income=g('income'),fixed=g('fixed'),emg=g('emergency'),rneed=g('retireNeed'),pen=g('pension');
   var hasAny=income||fixed||emg||rneed||pen;
-  var months=fixed>0?(emg/fixed):0,rgap=Math.max(0,rneed-pen),years=Math.max(0,95-ret),total=rgap*12*years,save=income-fixed;
+  /* 은퇴 나이를 모르면 <b>95-0=95년</b> 이 되어 어마어마한 합계가 찍힌다.
+     모르면 그 칸을 안 세운다 (CLAUDE.md 1번). */
+  var months=fixed>0?(emg/fixed):0,rgap=Math.max(0,rneed-pen);
+  var years=ret?Math.max(0,95-ret):0,total=rgap*12*years,save=income-fixed;
   var h='<div class="rpt-sec"><div class="hd"><span class="n">05</span>핵심 수치 진단 <span style="font-size:10.5px;font-weight:700;color:#9AA2AD">(선택 입력 · 단위 만원)</span></div>'+
     '<div class="sub">아는 값만 입력해도 됩니다. 입력하면 비상자금 여력과 은퇴 준비 상태를 실제 숫자로 계산합니다. (입력값은 이 기기에만 저장 · 물가·수익률 미반영 개략치)</div>'+
     '<div class="rpt-fin">'+
@@ -20784,7 +21270,8 @@ function waFinSection(now,ret){
       '<div class="rpt-kpi"><div class="k">비상자금 여력</div><div class="v" style="color:'+mColor+'">'+(fixed>0?vizN(months):'—')+'<small> 개월</small></div><div class="s">소득 중단 시 버티는 기간</div></div>'+
       '<div class="rpt-kpi"><div class="k">월 저축 여력</div><div class="v" style="color:'+(save>=0?'#1A56DB':'#DC2626')+'">'+fmt(Math.round(save))+'<small> 만원</small></div><div class="s">월소득 − 고정지출</div></div>'+
       '<div class="rpt-kpi"><div class="k">은퇴 월 부족액</div><div class="v" style="color:'+(rgap>0?'#DC2626':'#059669')+'">'+fmt(Math.round(rgap))+'<small> 만원</small></div><div class="s">희망 − 예상연금</div></div>'+
-      '<div class="rpt-kpi"><div class="k">은퇴 총 부족(개략)</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(total)+'</div><div class="s">'+ret+'세~95세 · 물가 미반영</div></div></div>';
+      (ret?('<div class="rpt-kpi"><div class="k">은퇴 총 부족(개략)</div><div class="v" style="color:#7C3AED;font-size:16px">'+vizWon(total)+'</div><div class="s">'+ret+'세~95세 · 물가 미반영</div></div>')
+       :'<div class="rpt-kpi"><div class="k">은퇴 총 부족(개략)</div><div class="v" style="color:#94A3B8;font-size:14px">—</div><div class="s">은퇴 나이를 적으시면 계산합니다</div></div>')+'</div>';
     if(rneed>0){
       var rr=[{label:'희망 생활비',value:rneed,color:'#1A56DB',valLabel:fmt(Math.round(rneed))+'만'},{label:'예상 연금',value:pen,color:'#059669',valLabel:fmt(Math.round(pen))+'만'},{label:'부족액',value:rgap,color:'#DC2626',valLabel:fmt(Math.round(rgap))+'만'}];
       h+='<div class="viz-wrap" style="margin-top:8px">'+vizBarH(rr,{width:580,max:Math.max(rneed,pen,1),valW:74})+'</div>';
@@ -23108,6 +23595,261 @@ var ORG_KEY='apex_org_chart';
    않았다. 서버(org_members)를 정본으로 두되, 기기에 있던 내용을 말없이 덮어쓰지 않는다.
    · 한 명 추가·수정·삭제 → 그 한 줄만 서버에 반영 (다른 사람 기록을 건드리지 않는다)
    · 통째로 맞추기(가져오기·올리기) → 대표가 버튼을 눌렀을 때만 */
+/* 계정 함수 SQL 은 이 한 배열에만 있다 — 두 곳이 각자 갖고 있던 것을 모았다 (5번) */
+var OS_ACCT_FN_SQL=[
+ "/* ══════ 팀원 계정 찾기 · 중복 정리 · 계정 삭제 — SQL 한 벌 ══════",
+ "   <b>여기 한 곳에만 적는다.</b> 예전에는 이 블록이 그대로 두 곳에",
+ "   있었다 — 조직도 SQL(ORG_SQL)과 계정 SQL(OS_ACCT_SQL). 글자까지",
+ "   똑같았다. 그래서 한쪽만 고치면, 사장님이 <b>어느 화면에서 SQL 을",
+ "   돌리셨느냐</b>에 따라 고친 판과 안 고친 판이 갈렸다. 계정 삭제가",
+ "   실제로 그 자리였다 (CLAUDE.md 5번). */",
+ "alter table public.profiles add column if not exists status text;",
+ "alter table public.profiles add column if not exists plan text;",
+ "alter table public.profiles add column if not exists workspace text default 'both';",
+ "alter table public.profiles add column if not exists active boolean default true;",
+ "create extension if not exists pgcrypto;",
+ "create or replace function public.admin_user_list()",
+ "returns table(",
+ "  id uuid,",
+ "  email text,",
+ "  name text,",
+ "  role text,",
+ "  status text,",
+ "  plan text,",
+ "  workspace text,",
+ "  active boolean,",
+ "  created_at timestamptz,",
+ "  last_sign_in_at timestamptz,",
+ "  confirmed boolean",
+ ")",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 계정 목록을 볼 수 있습니다';",
+ "  end if;",
+ "  return query",
+ "  select u.id,",
+ "         u.email::text,",
+ "         coalesce(nullif(btrim(p.name), ''), split_part(coalesce(u.email, ''), '@', 1))::text,",
+ "         coalesce(p.role, 'member')::text,",
+ "         coalesce(p.status, 'approved')::text,",
+ "         p.plan::text,",
+ "         coalesce(p.workspace, 'both')::text,",
+ "         coalesce(p.active, true),",
+ "         u.created_at,",
+ "         u.last_sign_in_at,",
+ "         (u.email_confirmed_at is not null)",
+ "    from auth.users u",
+ "    left join public.profiles p on p.id = u.id",
+ "   order by u.created_at desc;",
+ "end",
+ "$fn$;",
+ "create or replace function public.admin_account_refs(target uuid)",
+ "returns integer",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  t text;",
+ "  c text;",
+ "  n integer;",
+ "  total integer := 0;",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 확인할 수 있습니다';",
+ "  end if;",
+ "  for t, c in",
+ "    select k.table_name, k.column_name",
+ "      from information_schema.columns k",
+ "     where k.table_schema = 'public'",
+ "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
+ "  loop",
+ "    begin",
+ "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
+ "      total := total + coalesce(n, 0);",
+ "    exception when others then",
+ "      null;",
+ "    end;",
+ "  end loop;",
+ "  return total;",
+ "end",
+ "$fn$;",
+ "create or replace function public.admin_set_temp_password(target uuid, newpw text)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth, extensions",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "begin",
+ "  if not public.is_owner() then",
+ "    raise exception '대표만 임시 비밀번호를 발급할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 비밀번호는 로그인 화면의 비밀번호 재설정으로 바꾸세요';",
+ "  end if;",
+ "  if length(coalesce(newpw, '')) < 8 then",
+ "    raise exception '임시 비밀번호는 8자 이상이어야 합니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  update auth.users",
+ "     set encrypted_password = crypt(newpw, gen_salt('bf', 10)),",
+ "         email_confirmed_at = coalesce(email_confirmed_at, now()),",
+ "         updated_at = now()",
+ "   where id = target;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "create or replace function public.admin_set_active(target uuid, v boolean)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 변경할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 계정은 여기서 잠글 수 없습니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  update public.profiles",
+ "     set active = v,",
+ "         status = case when v then 'approved' else 'blocked' end",
+ "   where id = target;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "/* 참조하는 기록이 무엇인지 표 이름과 건수로 돌려준다.",
+ "   여태 총합만 알려줘서, 삭제가 막혔을 때 무엇이 걸렸는지 알 수 없었다. */",
+ "create or replace function public.admin_account_refs_detail(target uuid)",
+ "returns jsonb",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  t text;",
+ "  c text;",
+ "  n integer;",
+ "  res jsonb := '[]'::jsonb;",
+ "begin",
+ "  if not (public.is_admin() or public.is_owner()) then",
+ "    raise exception '관리자만 확인할 수 있습니다';",
+ "  end if;",
+ "  for t, c in",
+ "    select k.table_name, k.column_name",
+ "      from information_schema.columns k",
+ "     where k.table_schema = 'public'",
+ "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
+ "  loop",
+ "    begin",
+ "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
+ "      if coalesce(n, 0) > 0 then",
+ "        res := res || jsonb_build_object('t', t, 'c', c, 'n', n);",
+ "      end if;",
+ "    exception when others then",
+ "      null;",
+ "    end;",
+ "  end loop;",
+ "  return res;",
+ "end",
+ "$fn$;",
+ "create or replace function public.admin_delete_account(target uuid, hard boolean default false)",
+ "returns text",
+ "language plpgsql",
+ "security definer",
+ "set search_path = public, auth",
+ "as $fn$",
+ "declare",
+ "  em text;",
+ "  oe text;",
+ "  refs integer;",
+ "  t text;",
+ "  c text;",
+ "begin",
+ "  if not public.is_owner() then",
+ "    raise exception '대표만 계정을 삭제할 수 있습니다';",
+ "  end if;",
+ "  if target = auth.uid() then",
+ "    raise exception '본인 계정은 삭제할 수 없습니다';",
+ "  end if;",
+ "  select u.email into em from auth.users u where u.id = target;",
+ "  if em is null then",
+ "    raise exception '없는 계정입니다';",
+ "  end if;",
+ "  select value into oe from public.app_config where key = 'owner_email' limit 1;",
+ "  if oe is not null and lower(btrim(em)) = lower(btrim(oe)) then",
+ "    raise exception '대표 계정은 삭제할 수 없습니다';",
+ "  end if;",
+ "  refs := public.admin_account_refs(target);",
+ "  if refs > 0 and not hard then",
+ "    raise exception '이 계정에 연결된 기록이 %건 있습니다. 삭제하면 그 기록이 함께 사라집니다', refs;",
+ "  end if;",
+ "  /* 연결된 기록을 <실제로> 지운다.",
+ "     여태 이 걸음이 없어서, 기록이 남은 계정은 auth.users 삭제가 외래키에",
+ "     걸려 실패했다. 화면에는 잠깐 뜨는 안내만 지나가고 목록에는 그 계정이",
+ "     그대로 남아, 지워도 지워도 다시 보이는 것처럼 됐다. */",
+ "  if hard then",
+ "    for t, c in",
+ "      select k.table_name, k.column_name",
+ "        from information_schema.columns k",
+ "       where k.table_schema = 'public'",
+ "         and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
+ "    loop",
+ "      begin",
+ "        execute format('delete from public.%I where %I = $1', t, c) using target;",
+ "      exception when others then",
+ "        null;",
+ "      end;",
+ "    end loop;",
+ "  end if;",
+ "  delete from public.profiles where id = target;",
+ "  /* 그래도 막히면 <무엇이 막았는지> 그대로 올려 보낸다 — 조용히 실패하지 않는다 */",
+ "  begin",
+ "    delete from auth.users where id = target;",
+ "  exception when foreign_key_violation then",
+ "    raise exception '이 계정을 참조하는 기록이 남아 있어 로그인 계정을 지우지 못했습니다 (%)', SQLERRM;",
+ "  end;",
+ "  /* 정말 지워졌는지 <서버가> 확인하고 답한다 */",
+ "  if exists (select 1 from auth.users where id = target) then",
+ "    raise exception '지우지 못했습니다 — 계정이 그대로 남아 있습니다';",
+ "  end if;",
+ "  return em;",
+ "end",
+ "$fn$;",
+ "revoke execute on function public.admin_user_list() from public;",
+ "revoke execute on function public.admin_account_refs(uuid) from public;",
+ "revoke execute on function public.admin_account_refs_detail(uuid) from public;",
+ "revoke execute on function public.admin_set_temp_password(uuid, text) from public;",
+ "revoke execute on function public.admin_set_active(uuid, boolean) from public;",
+ "revoke execute on function public.admin_delete_account(uuid, boolean) from public;",
+ "grant execute on function public.admin_user_list() to authenticated;",
+ "grant execute on function public.admin_account_refs(uuid) to authenticated;",
+ "grant execute on function public.admin_account_refs_detail(uuid) to authenticated;",
+ "grant execute on function public.admin_set_temp_password(uuid, text) to authenticated;",
+ "grant execute on function public.admin_set_active(uuid, boolean) to authenticated;",
+ "grant execute on function public.admin_delete_account(uuid, boolean) to authenticated;",
+ "select",
+ "  (select count(*) from auth.users) as auth_users,",
+ "  (select count(*) from public.profiles) as profiles,",
+ "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
+];
+
 var ORG_SQL=[
  "set search_path = public;",
  "",
@@ -26988,188 +27730,8 @@ var HX_SQL={
   "create trigger team_plans_touch before update on public.team_plans",
   "  for each row execute function public.touch_updated_at();",
   "",
-  "/* ══════ 팀원 계정 찾기 · 중복 정리 · 계정 삭제 ══════",
-  "   설정의 「계정 찾기·중복 정리」 가 쓰는 함수들이다. 이게 없으면",
-  "   목록도 안 뜨고 중복 아이디 삭제도 안 된다. */",
-  "alter table public.profiles add column if not exists status text;",
-  "alter table public.profiles add column if not exists plan text;",
-  "alter table public.profiles add column if not exists workspace text default 'both';",
-  "alter table public.profiles add column if not exists active boolean default true;",
-  "create extension if not exists pgcrypto;",
-  "create or replace function public.admin_user_list()",
-  "returns table(",
-  "  id uuid,",
-  "  email text,",
-  "  name text,",
-  "  role text,",
-  "  status text,",
-  "  plan text,",
-  "  workspace text,",
-  "  active boolean,",
-  "  created_at timestamptz,",
-  "  last_sign_in_at timestamptz,",
-  "  confirmed boolean",
-  ")",
-  "language plpgsql",
-  "security definer",
-  "set search_path = public, auth",
-  "as $fn$",
-  "begin",
-  "  if not (public.is_admin() or public.is_owner()) then",
-  "    raise exception '관리자만 계정 목록을 볼 수 있습니다';",
-  "  end if;",
-  "  return query",
-  "  select u.id,",
-  "         u.email::text,",
-  "         coalesce(nullif(btrim(p.name), ''), split_part(coalesce(u.email, ''), '@', 1))::text,",
-  "         coalesce(p.role, 'member')::text,",
-  "         coalesce(p.status, 'approved')::text,",
-  "         p.plan::text,",
-  "         coalesce(p.workspace, 'both')::text,",
-  "         coalesce(p.active, true),",
-  "         u.created_at,",
-  "         u.last_sign_in_at,",
-  "         (u.email_confirmed_at is not null)",
-  "    from auth.users u",
-  "    left join public.profiles p on p.id = u.id",
-  "   order by u.created_at desc;",
-  "end",
-  "$fn$;",
-  "create or replace function public.admin_account_refs(target uuid)",
-  "returns integer",
-  "language plpgsql",
-  "security definer",
-  "set search_path = public, auth",
-  "as $fn$",
-  "declare",
-  "  t text;",
-  "  c text;",
-  "  n integer;",
-  "  total integer := 0;",
-  "begin",
-  "  if not (public.is_admin() or public.is_owner()) then",
-  "    raise exception '관리자만 확인할 수 있습니다';",
-  "  end if;",
-  "  for t, c in",
-  "    select k.table_name, k.column_name",
-  "      from information_schema.columns k",
-  "     where k.table_schema = 'public'",
-  "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
-  "  loop",
-  "    begin",
-  "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
-  "      total := total + coalesce(n, 0);",
-  "    exception when others then",
-  "      null;",
-  "    end;",
-  "  end loop;",
-  "  return total;",
-  "end",
-  "$fn$;",
-  "create or replace function public.admin_set_temp_password(target uuid, newpw text)",
-  "returns text",
-  "language plpgsql",
-  "security definer",
-  "set search_path = public, auth, extensions",
-  "as $fn$",
-  "declare",
-  "  em text;",
-  "begin",
-  "  if not public.is_owner() then",
-  "    raise exception '대표만 임시 비밀번호를 발급할 수 있습니다';",
-  "  end if;",
-  "  if target = auth.uid() then",
-  "    raise exception '본인 비밀번호는 로그인 화면의 비밀번호 재설정으로 바꾸세요';",
-  "  end if;",
-  "  if length(coalesce(newpw, '')) < 8 then",
-  "    raise exception '임시 비밀번호는 8자 이상이어야 합니다';",
-  "  end if;",
-  "  select u.email into em from auth.users u where u.id = target;",
-  "  if em is null then",
-  "    raise exception '없는 계정입니다';",
-  "  end if;",
-  "  update auth.users",
-  "     set encrypted_password = crypt(newpw, gen_salt('bf', 10)),",
-  "         email_confirmed_at = coalesce(email_confirmed_at, now()),",
-  "         updated_at = now()",
-  "   where id = target;",
-  "  return em;",
-  "end",
-  "$fn$;",
-  "create or replace function public.admin_set_active(target uuid, v boolean)",
-  "returns text",
-  "language plpgsql",
-  "security definer",
-  "set search_path = public, auth",
-  "as $fn$",
-  "declare",
-  "  em text;",
-  "begin",
-  "  if not (public.is_admin() or public.is_owner()) then",
-  "    raise exception '관리자만 변경할 수 있습니다';",
-  "  end if;",
-  "  if target = auth.uid() then",
-  "    raise exception '본인 계정은 여기서 잠글 수 없습니다';",
-  "  end if;",
-  "  select u.email into em from auth.users u where u.id = target;",
-  "  if em is null then",
-  "    raise exception '없는 계정입니다';",
-  "  end if;",
-  "  update public.profiles",
-  "     set active = v,",
-  "         status = case when v then 'approved' else 'blocked' end",
-  "   where id = target;",
-  "  return em;",
-  "end",
-  "$fn$;",
-  "create or replace function public.admin_delete_account(target uuid, hard boolean default false)",
-  "returns text",
-  "language plpgsql",
-  "security definer",
-  "set search_path = public, auth",
-  "as $fn$",
-  "declare",
-  "  em text;",
-  "  oe text;",
-  "  refs integer;",
-  "begin",
-  "  if not public.is_owner() then",
-  "    raise exception '대표만 계정을 삭제할 수 있습니다';",
-  "  end if;",
-  "  if target = auth.uid() then",
-  "    raise exception '본인 계정은 삭제할 수 없습니다';",
-  "  end if;",
-  "  select u.email into em from auth.users u where u.id = target;",
-  "  if em is null then",
-  "    raise exception '없는 계정입니다';",
-  "  end if;",
-  "  select value into oe from public.app_config where key = 'owner_email' limit 1;",
-  "  if oe is not null and lower(btrim(em)) = lower(btrim(oe)) then",
-  "    raise exception '대표 계정은 삭제할 수 없습니다';",
-  "  end if;",
-  "  refs := public.admin_account_refs(target);",
-  "  if refs > 0 and not hard then",
-  "    raise exception '이 계정에 연결된 기록이 %건 있습니다. 삭제하면 그 기록이 함께 사라집니다', refs;",
-  "  end if;",
-  "  delete from public.profiles where id = target;",
-  "  delete from auth.users where id = target;",
-  "  return em;",
-  "end",
-  "$fn$;",
-  "revoke execute on function public.admin_user_list() from public;",
-  "revoke execute on function public.admin_account_refs(uuid) from public;",
-  "revoke execute on function public.admin_set_temp_password(uuid, text) from public;",
-  "revoke execute on function public.admin_set_active(uuid, boolean) from public;",
-  "revoke execute on function public.admin_delete_account(uuid, boolean) from public;",
-  "grant execute on function public.admin_user_list() to authenticated;",
-  "grant execute on function public.admin_account_refs(uuid) to authenticated;",
-  "grant execute on function public.admin_set_temp_password(uuid, text) to authenticated;",
-  "grant execute on function public.admin_set_active(uuid, boolean) to authenticated;",
-  "grant execute on function public.admin_delete_account(uuid, boolean) to authenticated;",
-  "select",
-  "  (select count(*) from auth.users) as auth_users,",
-  "  (select count(*) from public.profiles) as profiles,",
-  "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
+  /* 계정 함수는 OS_ACCT_FN_SQL 한 곳에만 있다 (5번) */
+  ].concat(OS_ACCT_FN_SQL).concat([
   "",
   "",
   "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
@@ -27364,7 +27926,7 @@ var HX_SQL={
   "union all select",
   "  '팀 하루 한 장 피드백', to_regclass('public.team_feedback') is not null,",
   "  (select count(*) from pg_policies where schemaname='public' and tablename='team_feedback');"
- ]},
+ ])},
  '06':{label:"사업장 고객(법인·소상공인)",need:["business_clients"],lines:[
   "/* APEX / 법인·사업자 컨설팅 모듈 서버 저장 (business_clients) */",
   "/* Supabase Dashboard > SQL Editor에서 전체 실행하세요. 여러 번 실행해도 안전합니다(멱등). */",
@@ -42567,205 +43129,14 @@ function osTierPreviewCardHtml(){
     '<div class="notice" style="margin-top:11px;font-size:11px;line-height:1.7">숫자가 <b>0개</b>인 칸은 그 등급·직급 조합이 <b>빈 화면</b>을 본다는 뜻입니다. 위 <b>도구 접근 권한</b>에서 그룹별 요구 등급을 낮추거나, 해당 회원의 등급을 올리세요. 관리자·대표는 항상 전체를 봅니다.</div>'+
     '</div></div>';
 }
-var OS_ACCT_SQL=[
- "set search_path = public;",
- "",
- "alter table public.profiles add column if not exists status text;",
- "alter table public.profiles add column if not exists plan text;",
- "alter table public.profiles add column if not exists workspace text default 'both';",
- "alter table public.profiles add column if not exists active boolean default true;",
- "",
- "create extension if not exists pgcrypto;",
- "",
- "create or replace function public.admin_user_list()",
- "returns table(",
- "  id uuid,",
- "  email text,",
- "  name text,",
- "  role text,",
- "  status text,",
- "  plan text,",
- "  workspace text,",
- "  active boolean,",
- "  created_at timestamptz,",
- "  last_sign_in_at timestamptz,",
- "  confirmed boolean",
- ")",
- "language plpgsql",
- "security definer",
- "set search_path = public, auth",
- "as $fn$",
- "begin",
- "  if not (public.is_admin() or public.is_owner()) then",
- "    raise exception '관리자만 계정 목록을 볼 수 있습니다';",
- "  end if;",
- "  return query",
- "  select u.id,",
- "         u.email::text,",
- "         coalesce(nullif(btrim(p.name), ''), split_part(coalesce(u.email, ''), '@', 1))::text,",
- "         coalesce(p.role, 'member')::text,",
- "         coalesce(p.status, 'approved')::text,",
- "         p.plan::text,",
- "         coalesce(p.workspace, 'both')::text,",
- "         coalesce(p.active, true),",
- "         u.created_at,",
- "         u.last_sign_in_at,",
- "         (u.email_confirmed_at is not null)",
- "    from auth.users u",
- "    left join public.profiles p on p.id = u.id",
- "   order by u.created_at desc;",
- "end",
- "$fn$;",
- "",
- "create or replace function public.admin_account_refs(target uuid)",
- "returns integer",
- "language plpgsql",
- "security definer",
- "set search_path = public, auth",
- "as $fn$",
- "declare",
- "  t text;",
- "  c text;",
- "  n integer;",
- "  total integer := 0;",
- "begin",
- "  if not (public.is_admin() or public.is_owner()) then",
- "    raise exception '관리자만 확인할 수 있습니다';",
- "  end if;",
- "  for t, c in",
- "    select k.table_name, k.column_name",
- "      from information_schema.columns k",
- "     where k.table_schema = 'public'",
- "       and k.column_name in ('advisor_id', 'author_id', 'member_id', 'user_id', 'owner_id', 'created_by', 'assignee_id')",
- "  loop",
- "    begin",
- "      execute format('select count(*) from public.%I where %I = $1', t, c) into n using target;",
- "      total := total + coalesce(n, 0);",
- "    exception when others then",
- "      null;",
- "    end;",
- "  end loop;",
- "  return total;",
- "end",
- "$fn$;",
- "",
- "create or replace function public.admin_set_temp_password(target uuid, newpw text)",
- "returns text",
- "language plpgsql",
- "security definer",
- "set search_path = public, auth, extensions",
- "as $fn$",
- "declare",
- "  em text;",
- "begin",
- "  if not public.is_owner() then",
- "    raise exception '대표만 임시 비밀번호를 발급할 수 있습니다';",
- "  end if;",
- "  if target = auth.uid() then",
- "    raise exception '본인 비밀번호는 로그인 화면의 비밀번호 재설정으로 바꾸세요';",
- "  end if;",
- "  if length(coalesce(newpw, '')) < 8 then",
- "    raise exception '임시 비밀번호는 8자 이상이어야 합니다';",
- "  end if;",
- "  select u.email into em from auth.users u where u.id = target;",
- "  if em is null then",
- "    raise exception '없는 계정입니다';",
- "  end if;",
- "  update auth.users",
- "     set encrypted_password = crypt(newpw, gen_salt('bf', 10)),",
- "         email_confirmed_at = coalesce(email_confirmed_at, now()),",
- "         updated_at = now()",
- "   where id = target;",
- "  return em;",
- "end",
- "$fn$;",
- "",
- "create or replace function public.admin_set_active(target uuid, v boolean)",
- "returns text",
- "language plpgsql",
- "security definer",
- "set search_path = public, auth",
- "as $fn$",
- "declare",
- "  em text;",
- "begin",
- "  if not (public.is_admin() or public.is_owner()) then",
- "    raise exception '관리자만 변경할 수 있습니다';",
- "  end if;",
- "  if target = auth.uid() then",
- "    raise exception '본인 계정은 여기서 잠글 수 없습니다';",
- "  end if;",
- "  select u.email into em from auth.users u where u.id = target;",
- "  if em is null then",
- "    raise exception '없는 계정입니다';",
- "  end if;",
- "  update public.profiles",
- "     set active = v,",
- "         status = case when v then 'approved' else 'blocked' end",
- "   where id = target;",
- "  return em;",
- "end",
- "$fn$;",
- "",
- "create or replace function public.admin_delete_account(target uuid, hard boolean default false)",
- "returns text",
- "language plpgsql",
- "security definer",
- "set search_path = public, auth",
- "as $fn$",
- "declare",
- "  em text;",
- "  oe text;",
- "  refs integer;",
- "begin",
- "  if not public.is_owner() then",
- "    raise exception '대표만 계정을 삭제할 수 있습니다';",
- "  end if;",
- "  if target = auth.uid() then",
- "    raise exception '본인 계정은 삭제할 수 없습니다';",
- "  end if;",
- "  select u.email into em from auth.users u where u.id = target;",
- "  if em is null then",
- "    raise exception '없는 계정입니다';",
- "  end if;",
- "  select value into oe from public.app_config where key = 'owner_email' limit 1;",
- "  if oe is not null and lower(btrim(em)) = lower(btrim(oe)) then",
- "    raise exception '대표 계정은 삭제할 수 없습니다';",
- "  end if;",
- "  refs := public.admin_account_refs(target);",
- "  if refs > 0 and not hard then",
- "    raise exception '이 계정에 연결된 기록이 %건 있습니다. 삭제하면 그 기록이 함께 사라집니다', refs;",
- "  end if;",
- "  delete from public.profiles where id = target;",
- "  delete from auth.users where id = target;",
- "  return em;",
- "end",
- "$fn$;",
- "",
- "revoke execute on function public.admin_user_list() from public;",
- "revoke execute on function public.admin_account_refs(uuid) from public;",
- "revoke execute on function public.admin_set_temp_password(uuid, text) from public;",
- "revoke execute on function public.admin_set_active(uuid, boolean) from public;",
- "revoke execute on function public.admin_delete_account(uuid, boolean) from public;",
- "",
- "grant execute on function public.admin_user_list() to authenticated;",
- "grant execute on function public.admin_account_refs(uuid) to authenticated;",
- "grant execute on function public.admin_set_temp_password(uuid, text) to authenticated;",
- "grant execute on function public.admin_set_active(uuid, boolean) to authenticated;",
- "grant execute on function public.admin_delete_account(uuid, boolean) to authenticated;",
- "",
- "select",
- "  (select count(*) from auth.users) as auth_users,",
- "  (select count(*) from public.profiles) as profiles,",
- "  (select count(*) from auth.users u left join public.profiles p on p.id = u.id where p.id is null) as missing_profile;",
- "",
- "notify pgrst, 'reload schema';"
-];
+var OS_ACCT_SQL=['set search_path = public;','']
+  .concat(OS_ACCT_FN_SQL)
+  .concat(['',"notify pgrst, 'reload schema';"]);
 
 /* ════════ 팀원 계정 찾기 · 중복 정리 ════════
    비밀번호는 서버에 암호화되어 저장되므로 누구도 원문을 되돌려 볼 수 없다.
    그래서 '찾아주기'는 ① 아이디(이메일) 알려주기 ② 임시 비밀번호 새로 발급 두 가지로 푼다. */
-var OSAC={rows:[],q:'',loaded:false,err:'',pw:null,busy:''};
+var OSAC={rows:[],q:'',loaded:false,err:'',pw:null,busy:'',note:null};
 
 function osAcSqlText(){return OS_ACCT_SQL.join('\n');}
 function osAcCopySql(){
@@ -42885,11 +43256,70 @@ function osAcActive(id,v,name){
     osAcLoad(true);if(typeof osLoadMembers==='function')osLoadMembers();
   });
 }
+/* ── 「아이디 삭제가 안 된다. 계속 반복되네」 ────────────────────────
+   두 가지가 겹쳐 있었다.
+
+   ① 서버가 <b>지우다 말았다.</b> 계정을 참조하는 기록(고객·저장한 자료·
+      출근·체크판…)이 남아 있으면 <code>auth.users</code> 삭제가 외래키에
+      걸려 실패한다. 「연결된 기록도 함께 지운다」 고 물어 놓고 실제로는
+      그 기록을 안 지웠다. 그래서 지워도 목록에 그대로 남았다.
+
+   ② 그 실패가 <b>잠깐 뜨는 안내</b>로만 지나갔다. 사장님은 왜 안 됐는지
+      모르시니 같은 자리를 다시 누르신다 — 그것이 「계속 반복」 이다.
+
+   이제 실패는 <b>그 자리에 남는다</b>. 무엇이 막았는지 표 이름과 건수까지
+   보여 주고, 지운 뒤에는 <b>정말 사라졌는지 목록을 다시 읽어 확인</b>한다.
+   실패를 성공처럼 말하지 않는다 (CLAUDE.md 1번).                       */
+function osAcSay(id,kind,html){
+  OSAC.note={id:id,kind:kind,html:html};
+  if(typeof osAcRepaint==='function')osAcRepaint();
+}
+function osAcNoteHtml(id){
+  var n=OSAC.note;
+  if(!n||n.id!==id)return '';
+  var C={err:['#FECACA','#FEF2F2','#B91C1C'],ok:['#A7F3D0','#ECFDF5','#065F46'],
+         info:['#BFDBFE','#EFF6FF','#1E40AF']}[n.kind]||['#FDE68A','#FFFBEB','#92400E'];
+  return '<div style="margin-top:9px;border:1px solid '+C[0]+';background:'+C[1]+';border-radius:10px;'+
+    'padding:10px 12px;font-size:11.5px;line-height:1.75;color:'+C[2]+'">'+n.html+
+    '<div style="margin-top:7px"><span style="cursor:pointer;text-decoration:underline;font-weight:800" '+
+    'onclick="osAcSay(\'\',\'\',\'\')">닫기</span></div></div>';
+}
+/* 무엇이 이 계정을 붙잡고 있는지 — 표 이름과 건수로 */
+function osAcRefs(id){
+  var sb=osClient();if(!sb)return;
+  osAcSay(id,'info','⏳ 무엇이 걸려 있는지 확인하는 중…');
+  sb.rpc('admin_account_refs_detail',{target:id}).then(function(r){
+    if(r&&r.error){
+      osAcSay(id,'err','<b>확인하지 못했습니다</b> — '+osEsc(r.error.message||'')+
+        '<br>서버에 이 기능이 아직 없으면 아래 <b>준비 SQL</b> 을 한 번 더 실행해 주세요.');
+      return;
+    }
+    var a=r&&r.data;
+    if(!a||!a.length){
+      osAcSay(id,'ok','<b>이 계정을 붙잡고 있는 기록이 없습니다.</b> 바로 지울 수 있습니다.');
+      return;
+    }
+    var h='<b>이 계정에 붙어 있는 기록</b><br>',i,tot=0;
+    for(i=0;i<a.length;i++){h+='· '+osEsc(a[i].t)+' — '+a[i].n+'건<br>';tot+=(+a[i].n||0);}
+    h+='합계 <b>'+tot+'건</b>. 삭제하면 이 기록도 <b>함께 사라집니다.</b> 남기시려면 「잠그기」 를 쓰십시오.';
+    osAcSay(id,'info',h);
+  },function(e){
+    osAcSay(id,'err','<b>확인하지 못했습니다</b> — '+osEsc((e&&e.message)||'네트워크 오류'));
+  });
+}
 function osAcDelete(id,email,name){
   if(typeof osIsOwner==='function'&&!osIsOwner()){toast('계정 삭제는 대표만 할 수 있습니다.');return;}
   var sb=osClient();if(!sb)return;
+  var fail=function(m){
+    var need=/admin_delete_account|admin_account_refs|function|schema cache|does not exist|찾을 수 없/i.test(m||'');
+    osAcSay(id,'err','<b>지우지 못했습니다.</b><br>서버가 한 말: '+osEsc(m||'알 수 없는 오류')+
+      (need?'<br><br>서버에 이 기능이 아직 없거나 옛 판입니다. 아래 <b>준비 SQL</b> 을 <b>한 번 더</b> 실행하신 뒤 다시 눌러 주세요.'
+           :'<br><br>「무엇이 걸려 있나」 를 눌러 이 계정에 붙은 기록을 먼저 보십시오.'));
+    toast('삭제 실패 — 이유를 그 자리에 적어 뒀습니다');
+  };
   sb.rpc('admin_account_refs',{target:id}).then(function(r){
-    var refs=(r&&!r.error&&typeof r.data==='number')?r.data:0;
+    if(r&&r.error){fail(r.error.message||'');return;}
+    var refs=(r&&typeof r.data==='number')?r.data:0;
     var msg=name+' ('+email+')\n\n';
     msg+=refs>0
       ? '⚠ 이 계정에 연결된 기록이 '+refs+'건 있습니다.\n삭제하면 그 기록도 함께 사라집니다.\n\n기록을 남기고 싶다면 취소하고 "잠금"을 쓰세요.\n\n'
@@ -42898,13 +43328,35 @@ function osAcDelete(id,email,name){
     if(!confirm(msg))return;
     var t=prompt('마지막 확인 — 지울 계정의 이메일을 그대로 입력하세요.\n\n'+email,'');
     if(osAcNorm(t)!==osAcNorm(email)){toast('입력이 일치하지 않아 취소했습니다.');return;}
+    osAcSay(id,'info','⏳ 지우는 중…');
     sb.rpc('admin_delete_account',{target:id,hard:refs>0}).then(function(r2){
-      if(r2.error){toast('삭제 실패: '+(r2.error.message||''));return;}
+      if(r2&&r2.error){fail(r2.error.message||'');return;}
       if(typeof osAudit==='function')osAudit('delete_account','profile',id,email);
-      toast('✅ 계정을 삭제했습니다 — '+email);
-      osAcLoad(true);if(typeof osLoadMembers==='function')osLoadMembers();
-    },function(e){toast('삭제 실패: '+((e&&e.message)||''));});
-  },function(){toast('확인 실패 — 준비 SQL이 실행됐는지 확인하세요.');});
+      /* <b>정말 사라졌는지 목록을 다시 읽어 확인한다.</b> 서버가 「됐다」 해도
+         목록에 남아 있으면 사장님께는 안 된 것이다. */
+      osAcSay(id,'info','⏳ 지웠습니다 — 목록에서 정말 사라졌는지 확인하는 중…');
+      sb.rpc('admin_user_list').then(function(r3){
+        if(r3&&!r3.error){
+          OSAC.rows=r3.data||[];OSAC.loaded=true;OSAC.err='';
+          var i,still=false;
+          for(i=0;i<OSAC.rows.length;i++)if(OSAC.rows[i].id===id)still=true;
+          if(still){
+            osAcSay(id,'err','<b>서버는 지웠다고 했는데 목록에 그대로 있습니다.</b> '+
+              '아래 <b>준비 SQL</b> 을 한 번 더 실행하신 뒤 다시 눌러 주세요.');
+            toast('지워지지 않았습니다 — 목록에 그대로 있습니다');
+            return;
+          }
+        }
+        osAcSay('','','');
+        toast('✅ 계정을 지웠습니다 — '+email+' (목록에서 사라진 것을 확인했습니다)');
+        if(typeof osAcRepaint==='function')osAcRepaint();
+        if(typeof osLoadMembers==='function')osLoadMembers();
+      },function(){
+        osAcSay(id,'info','지웠습니다. 다만 목록을 다시 읽지 못해 <b>정말 사라졌는지는 확인하지 못했습니다.</b> '+
+          '「다시 불러오기」 를 눌러 확인해 주세요.');
+      });
+    },function(e){fail((e&&e.message)||'네트워크 오류');});
+  },function(e){fail((e&&e.message)||'준비 SQL이 실행됐는지 확인하세요.');});
 }
 function osAcSearch(v){OSAC.q=v||'';osAcRepaint();}
 function osAcRepaint(){var b=document.getElementById('osAcList');if(b)b.innerHTML=osAcListHtml();}
@@ -42937,8 +43389,10 @@ function osAcRowHtml(p,note){
     '<div class="btn-row" style="margin-top:7px;gap:5px">'+
       (owner&&!isMe?'<button class="btn btn-primary" style="padding:5px 11px;font-size:10.5px"'+(busy?' disabled':'')+' onclick="osAcTempPw(\''+p.id+'\',\''+osEsc(p.name||'')+'\',\''+osEsc(p.email||'')+'\')">'+(busy?'발급 중…':'🔑 임시 비밀번호 발급')+'</button>':'')+
       (!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcActive(\''+p.id+'\','+(p.active===false?'true':'false')+',\''+osEsc(p.name||'')+'\')">'+(p.active===false?'🔓 잠금 해제':'🔒 잠그기')+'</button>':'')+
+      (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px" onclick="osAcRefs(\''+p.id+'\')">🔍 무엇이 걸려 있나</button>':'')+
       (owner&&!isMe?'<button class="btn btn-ghost" style="padding:5px 10px;font-size:10.5px;color:#B91C1C" onclick="osAcDelete(\''+p.id+'\',\''+osEsc(p.email||'')+'\',\''+osEsc(p.name||'')+'\')">🗑 계정 삭제</button>':'')+
     '</div>'+
+    osAcNoteHtml(p.id)+
     (OSAC.pw&&OSAC.pw.id===p.id
       ? '<div style="margin-top:9px;border:1px solid #A7F3D0;background:#ECFDF5;border-radius:10px;padding:11px 13px">'+
         '<div style="font-size:11.5px;font-weight:800;color:#065F46;margin-bottom:6px">✅ 임시 비밀번호가 발급되었습니다</div>'+
