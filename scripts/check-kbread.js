@@ -285,7 +285,13 @@ const NOTKB = '어떤 보험사 보장분석\n담보명 가입금액\n일반암�
       /* 납입완료 계약의 보험료가 전·후 모두 0 인가 */
       premB: frPrem().beforeWon,
       /* 화면 */
-      onScreen: mk.indexOf('KB 보장분석') >= 0,
+      onScreen: mk.indexOf('id="frKbFile"') >= 0 && mk.indexOf('frKbPick()') >= 0,
+      /* 계약이 하나도 없을 때도 <b>올릴 수는</b> 있어야 한다 */
+      emptyHas: (function(){ var sp=FR.pols, sc=FR.covs, ss=FR.state;
+        FR.pols=[]; FR.covs=[]; FR.state=frBlankState();
+        var e=frMakeHtml([]);
+        FR.pols=sp; FR.covs=sc; FR.state=ss;
+        return e.indexOf('id="frKbFile"') >= 0; })(),
       idleSays: idle.indexOf('넣어 두셨습니다') >= 0,
       canClear: idle.indexOf('frKbClear') >= 0,
       preview: frKbPreviewHtml(K, 't.pdf')
@@ -307,6 +313,8 @@ const NOTKB = '어떤 보험사 보장분석\n담보명 가입금액\n일반암�
      'KB 가 「기타수술」·「기타입원일당」이라 적어 준 것도 <b>알아듣는다</b>');
   is(flow.premB === 48728 + 66434 + 500000 + 500000,
      '납입완료 계약(삼성 136,200원)과 보험료미제공은 <b>합계에 안 넣는다</b> (' + flow.premB + '원)');
+  is(flow.emptyHas,
+     '계약이 <b>하나도 없을 때도</b> 올리는 칸이 선다 — 올릴 데가 없으면 시작을 못 한다');
   is(flow.onScreen && flow.idleSays && flow.canClear,
      '전 · 후 만들기 화면에 <b>서고</b>, 넣은 것을 <b>도로 뺄 수</b> 있다');
   is(flow.preview.indexOf('정확히 같습니다') >= 0 || flow.preview.indexOf('건이 다릅니다') >= 0,
