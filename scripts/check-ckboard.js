@@ -27,7 +27,18 @@ const dnum = +today.slice(8, 10);
 function ds(n) { return ym + '-' + ('0' + n).slice(-2); }
 
 /* 지난 날짜 몇 개를 심는다 — 다 한 날 · 덜 한 날 · 안 한 날 */
-const ALL = ['a3','a1','a2','b1','b2','b5','b3','c1','c2','c5','c3','c4','b4','e1','e2'];
+/* ── 리더 할 일 목록을 <b>여기 또 적지 않는다</b> ─────────────────────
+   여태 id 열다섯 개를 손으로 베껴 두고 있었다. 그래서 앱에서 줄 하나를
+   주간으로 옮기고 둘을 합치자, 앱은 멀쩡한데 <b>점검이 빨간불</b>이 됐다 —
+   틀린 쪽은 베낀 목록이었다. 「같은 것을 두 곳에 두지 않는다」(5번)는
+   점검에도 그대로 적용된다. 이제 앱에서 그대로 읽는다.            */
+const APP_SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+const CK_LDR = (function () {
+  const m = APP_SRC.match(/var CK_LDR=(\{[\s\S]*?\n\});/);
+  if (!m) { console.error('CK_LDR 을 못 찾았습니다 — 이름이 바뀌었나 봅니다'); process.exit(1); }
+  return eval('(' + m[1] + ')');
+})();
+const ALL = ['a', 'b', 'c', 'd'].reduce((o, k) => o.concat((CK_LDR[k] || []).map(r => r[0])), []);
 const rows = [];
 const seeded = { full: [], part: [], none: [] };
 for (let d = 1; d < dnum; d++) {

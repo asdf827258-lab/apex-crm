@@ -3723,7 +3723,81 @@ function brainAsk(q,opt){if(BRAIN.busy)return;opt=opt||{};var ta=$('brainQ');q=(
 /* 묻고 나서 답이 오면 그대로 발표자료까지. 주제를 다시 칠 일이 없다. */
 function brainAskPpt(q){brainAsk(q,{ppt:true});}
 function brainRenderThread(){var el=$('brainThread');if(!el)return;var h='';BRAIN.hist.forEach(function(t,i){h+='<div style="margin:0 0 6px;display:flex;justify-content:flex-end"><div style="max-width:86%;background:#1A56DB;color:#fff;padding:10px 14px;border-radius:14px 14px 4px 14px;font-size:13.5px;line-height:1.6;white-space:pre-wrap">'+esc(t.q)+'</div></div>';if(t.a===null){h+='<div style="margin:0 0 16px"><div class="loading" style="padding:12px"><div class="spinner"></div>두뇌가 생각하는 중…</div></div>';}else if(typeof t.a==='string'&&t.a.indexOf('__ERR__')===0){h+='<div style="margin:0 0 16px"><div class="err-box">⚠️ '+esc(t.a.slice(7))+' — 잠시 후 다시 시도하거나 <a style="color:#1A56DB;font-weight:800;text-decoration:underline;cursor:pointer" onclick="go(\'settings\')">설정</a>에서 연결을 확인하세요.</div></div>';}else{h+='<div style="margin:0 0 16px"><div style="background:#fff;border:1px solid #E5E9F0;border-radius:14px 14px 14px 4px;overflow:hidden"><div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#F5F9FF;border-bottom:1px solid #E5E9F0"><span style="font-size:11px;font-weight:800;color:#1A56DB">🧠 윤시현의 두뇌</span><span style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'+(t.eng||'')+'<button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="copyText((BRAIN.hist['+i+']||{}).a||\'\')">📋 복사</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportWord('+i+')">📄 Word</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainExportPpt('+i+')">📊 PPT</button><button class="btn btn-ghost" style="padding:3px 8px;font-size:10.5px" onclick="brainStar('+i+')" title="이 답의 결을 다음부터 따라 쓰게 합니다">⭐ 이렇게</button></span></div>'+(t.note||'')+'<div class="result-body" style="padding:12px 14px">'+renderMd(t.a)+'</div></div></div>';}});el.innerHTML=h;el.scrollTop=el.scrollHeight;}
-function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none"><div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">제2의 두뇌 · SECOND BRAIN</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🧠 윤시현의 두뇌</div><div style="font-size:12.5px;opacity:.9;margin-top:8px;line-height:1.6">상담·세일즈·화법·마케팅·팀관리·자기경영 — 무엇이든 물어보세요. 윤시현의 관점·전략·화법으로 바로 쓸 수 있게 답합니다. 아래 <b>두뇌에 지식 추가</b>에 평소 쓰던 프롬프트·노하우를 넣을수록 더 당신처럼 답합니다.</div></div>';var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:10.5px;color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:13.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-primary" id="bdAsk" style="background:#0F172A" onclick="brainAskPpt()">📊 물어보고 발표자료까지</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:10.5px;color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','당신의 관점·전략·화법을 담은 제2의 두뇌입니다. 무엇이든 물어보세요. 답을 그대로 발표자료(.pptx)로도 만듭니다.',hero+bcrCardHtml()+renderConsult()+kb+bxCardHtml()+ask+bdCardHtml());}
+/* ════════ 챗지피티·다른 AI 로 가져가기 ═════════════════════════════
+   「클로드코드에 매번 물어서 방법을 찾는 것 말고, 지금 알고 있는 걸
+   챗지피티와도 의논하고 싶다」 — 그러려면 이 두뇌가 무엇을 알고 어떤
+   원칙으로 답하는지가 <b>글로 나와야</b> 합니다.
+
+   뽑는 글은 이 앱이 실제로 AI 에게 보내는 지침 <b>그대로</b>입니다
+   (brainSys). 여기서 따로 짓지 않습니다 — 따로 지으면 앱이 답하는 것과
+   챗지피티가 답하는 것이 달라집니다 (5번).
+
+   ★ 나가는 글이니 두 가지를 반드시 지킵니다.
+     · <b>열쇠는 빼고 내보낸다</b> — 붙여 넣는 순간 남의 서버로 갑니다 (10번)
+     · <b>고객 실명·전화가 섞였으면 말해 준다</b> — 사장님이 두뇌 지식에
+       손으로 적어 두셨을 수 있습니다. 지우지는 않고 <b>몇 군데인지</b>
+       알려 드립니다. 지울지는 사장님이 정하실 일입니다 (3번)      */
+function bgptText(){
+  var t='';
+  try{ t=(typeof brainSys==='function')?brainSys():''; }catch(e){ t=''; }
+  if(!t)return '';
+  /* 열쇠처럼 생긴 것은 <b>빼고</b> 내보낸다 */
+  t=t.replace(/\b(sk-[A-Za-z0-9_\-]{16,}|AIza[A-Za-z0-9_\-]{20,}|eyJ[A-Za-z0-9_\-]{20,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,})/g,
+              '〔열쇠는 빼고 내보냈습니다〕');
+  return '『APEX YUN PRO — 윤시현의 두뇌』가 쓰는 지침입니다.\n'+
+    '아래를 새 대화 맨 처음에 붙여 넣으시면, 그 AI 도 같은 관점·원칙으로 답합니다.\n'+
+    '뽑은 날: '+(new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10)+'\n'+
+    '─────────────────────────────────────────────\n\n'+t+
+    '\n\n─────────────────────────────────────────────\n'+
+    '[여기까지가 지침입니다. 이제 물어보십시오.]\n';
+}
+/* 나가면 안 되는 것이 섞였나 — 지우지 않고 <b>세어서 말한다</b> */
+function bgptRisk(t){
+  var out=[],m;
+  m=(''+t).match(/0\d{1,2}[- ]?\d{3,4}[- ]?\d{4}/g);        if(m)out.push('전화번호처럼 보이는 것 '+m.length+'군데');
+  m=(''+t).match(/\b\d{6}\s?[-–]\s?[1-4]\d{6}\b/g);          if(m)out.push('주민번호처럼 보이는 것 '+m.length+'군데');
+  m=(''+t).match(/〔열쇠는 빼고 내보냈습니다〕/g);            if(m)out.push('열쇠 '+m.length+'개는 <b>빼고</b> 내보냅니다');
+  return out;
+}
+function bgptCopy(){
+  var t=bgptText();
+  if(!t){toast('내보낼 지침을 만들지 못했습니다');return;}
+  if(typeof copyText==='function')copyText(t);
+}
+function bgptSave(){
+  var t=bgptText();
+  if(!t){toast('내보낼 지침을 만들지 못했습니다');return;}
+  if(typeof osDownloadBlob==='function')
+    osDownloadBlob('APEX_두뇌지침_'+(typeof osStamp==='function'?osStamp():'')+'.txt',t,'text/plain;charset=utf-8');
+}
+function bgptCardHtml(){
+  var t=bgptText(),n=t.length,risk=bgptRisk(t);
+  return '<div class="card" style="margin-top:14px"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">🤖</span>챗지피티·다른 AI 로 가져가기</div>'+
+    '<div class="card-desc">이 두뇌가 <b>실제로 쓰는 지침 그대로</b>를 글로 뽑습니다. '+
+    '챗지피티·제미나이 <b>새 대화 맨 처음</b>에 붙여 넣으시면 거기서도 같은 관점으로 답합니다. '+
+    '매번 여기 와서 물으실 필요가 없습니다.</div></div>'+
+    '<div class="card-body">'+
+    (n?('<div class="btn-row"><button class="btn btn-primary" onclick="bgptCopy()">📋 지침 복사</button>'+
+        '<button class="btn btn-ghost" onclick="bgptSave()">💾 파일로 저장(.txt)</button>'+
+        '<span style="font-size:11px;color:var(--ink-5)">'+n.toLocaleString()+'자 · '+
+        '두뇌에 넣어 두신 지식이 함께 나갑니다</span></div>'+
+        '<textarea readonly style="width:100%;min-height:150px;margin-top:10px;font-size:11.5px;'+
+        'line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;'+
+        'box-sizing:border-box;background:#F8FAFC">'+osEsc(t)+'</textarea>')
+       :'<div class="ar-none">지침을 만들지 못했습니다.</div>')+
+    '<div class="notice" style="margin-top:12px;background:#FFF7ED;border-color:#FED7AA;color:#7C2D12">'+
+      '⚠️ 붙여 넣는 순간 <b>그 회사 서버로 나갑니다.</b> 그래서 '+
+      '<b>고객 이름·전화·병력과 API 열쇠는 넣지 않습니다</b> — 나가는 것은 '+
+      '답하는 원칙과 사장님이 「두뇌에 지식 추가」 에 넣어 두신 글뿐입니다.'+
+      (risk.length?('<div style="margin-top:7px;font-weight:800">다만 넣어 두신 글에 이런 것이 보입니다 — '+
+        risk.join(' · ')+'. 지우지 않았습니다. 빼실지는 사장님이 정하십시오.</div>'):'')+
+      '</div>'+
+    '<div class="osc-note" style="margin-top:10px">지침을 고치고 싶으시면 위 '+
+      '<b>「두뇌에 지식 추가」</b> 에 넣으십시오 — 여기서 뽑는 글에도 그대로 따라 나갑니다.</div>'+
+    '</div></div>';
+}
+function renderBrain(){var chips=['오늘 상담 예정 고객, 어떤 순서로 상담할까?','기존 보험 해지 안 하려는 고객 반론 처리 화법','치료비 통장을 40대 가장에게 쉽게 설명하는 스크립트','종신보험 vs 정기보험, 자산가에게 어떻게 제안?','건강검진 앞둔 고객에게 보낼 카톡 문구','신입 팀원 1주차 코칭 계획','블로그 글감 10개 뽑아줘','상속·증여 관심 고객 첫 상담 질문 리스트'];var chipH=chips.map(function(c){return '<button type="button" class="chip-opt" onclick="brainAsk(this.textContent)">'+esc(c)+'</button>';}).join('');var hero='<div class="osc-panel" style="margin-top:4px;background:linear-gradient(135deg,#0F172A 0%,#1A56DB 64%,#38BDF8 100%);color:#fff;border:none"><div style="font-size:11.5px;font-weight:800;letter-spacing:.4px;opacity:.9">제2의 두뇌 · SECOND BRAIN</div><div style="font-size:19px;font-weight:800;margin-top:6px;line-height:1.35">🧠 윤시현의 두뇌</div><div style="font-size:12.5px;opacity:.9;margin-top:8px;line-height:1.6">상담·세일즈·화법·마케팅·팀관리·자기경영 — 무엇이든 물어보세요. 윤시현의 관점·전략·화법으로 바로 쓸 수 있게 답합니다. 아래 <b>두뇌에 지식 추가</b>에 평소 쓰던 프롬프트·노하우를 넣을수록 더 당신처럼 답합니다.</div></div>';var kb='<div class="card" style="margin-top:14px"><div class="card-hd" style="cursor:pointer" onclick="brainKbToggle()"><div class="card-title"><span class="ci">📚</span>두뇌에 지식 추가 <span id="brainKbState">'+brainKbBadge()+'</span></div><div class="card-desc">평소 쓰던 프롬프트·상담 노하우·자주 쓰는 문구를 저장하면 답변에 반영됩니다 (이 기기에만 저장)</div></div><div class="card-body" id="brainKbBox" style="display:none"><textarea id="brainKb" style="width:100%;min-height:160px;font-size:12.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 나의 상담 철학, 자주 쓰는 반론 처리 스크립트, 상품 설명 화법, 고객 유형별 접근법, 나만의 카톡 어투 샘플 등">'+osEsc(brainKbGet())+'</textarea><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainSaveKb()">💾 지식 저장</button><button class="btn btn-ghost" onclick="brainSetLogoPick()">🖼 내보내기 로고</button><input type="file" id="brainLogoInput" accept="image/*" style="display:none" onchange="brainSetLogoFile(this)"><span style="font-size:10.5px;color:var(--ink-5)">여러 번 나눠 추가해도 됩니다. 저장한 지식은 모든 답변의 최우선 지침이 됩니다. 로고를 넣으면 Word·PPT 문서 상단에 표시됩니다.</span></div></div></div>';var ask='<div class="card" style="margin-top:14px"><div class="card-body"><div id="brainThread" style="max-height:52vh;overflow-y:auto;margin-bottom:12px"></div><div class="fld span2"><textarea id="brainQ" style="width:100%;min-height:76px;font-size:13.5px;line-height:1.6;border:1px solid var(--ink-7);border-radius:10px;padding:11px;box-sizing:border-box" placeholder="예) 오늘 만나는 50대 사업가 고객, 첫 마디를 어떻게 열까?" onkeydown="if((event.ctrlKey||event.metaKey)&&event.key===\'Enter\')brainAsk()"></textarea></div><div class="btn-row" style="margin-top:10px"><button class="btn btn-primary" onclick="brainAsk()">🧠 두뇌에게 물어보기</button><button class="btn btn-primary" id="bdAsk" style="background:#0F172A" onclick="brainAskPpt()">📊 물어보고 발표자료까지</button><button class="btn btn-ghost" onclick="BRAIN.hist=[];brainRenderThread();toast(\'대화를 비웠습니다\')">🗑 대화 비우기</button><span style="font-size:10.5px;color:var(--ink-5)">Ctrl+Enter로 전송</span></div><div style="font-size:10.5px;font-weight:700;color:var(--ink-3);margin:14px 0 7px">빠른 질문</div><div class="chips">'+chipH+'</div></div></div>';bxCss();return osPage('두뇌','윤시현의 두뇌','당신의 관점·전략·화법을 담은 제2의 두뇌입니다. 무엇이든 물어보세요. 답을 그대로 발표자료(.pptx)로도 만듭니다.',hero+bcrCardHtml()+renderConsult()+kb+bgptCardHtml()+bxCardHtml()+ask+bdCardHtml());}
 function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread();if(typeof bdPaint==='function')bdPaint();if(typeof bcrEnsure==='function')bcrEnsure();}
 /* ════════ 두뇌 → DB 통합 CRM — 뇌를 따라가면 우리 DB 가 열린다 ════════
    두뇌는 잘 답했다. 그런데 그 답이 늘 허공에 떴다. 오늘 누구에게 걸어야
@@ -7210,6 +7284,7 @@ var AR_CAT=[
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
  ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
+ ['edu',  '🎓','교육매니저 할 일','누구나 봅니다 · 교육매니저가 체크합니다','all'],
  ['team', '👀','팀원 관리',     '팀원 전원을 한눈에',              'all'],
  /* ── 「TFA 안에 대표 브리핑이 없다」 ────────────────────────────────
     아침에 여는 화면은 TFA 인데 이 한 장은 왼쪽 큰 메뉴의 「조직 관리」
@@ -7340,8 +7415,15 @@ function arAppt(who){
 function arToday(){return (new Date(Date.now()+9*3600*1000)).toISOString().slice(0,10);}
 /* 오늘 체크판에서 아직 안 누른 것 */
 function arUndone(sc,list){
-  var m=(typeof ckLoad==='function')?ckLoad(sc):{},out=[],i;
-  for(i=0;i<list.length;i++)if(!m[list[i][0]])out.push(list[i]);
+  var m=(typeof ckLoad==='function')?ckLoad(sc):{},out=[],i,f;
+  for(i=0;i<list.length;i++){
+    if(m[list[i][0]])continue;
+    /* 앱이 「오늘은 할 것 없다」 고 답한 줄은 빨간 숫자에 안 넣는다 —
+       안 그러면 다 됐는데도 숫자가 남아 사람이 숫자를 안 믿게 된다 */
+    f=(sc==='day'&&typeof arLeadAuto==='function')?arLeadAuto(list[i]):null;
+    if(f&&!f.who.length)continue;
+    out.push(list[i]);
+  }
   return out;
 }
 function arStudyLeft(){
@@ -7365,6 +7447,8 @@ function arCatN(k){
   }
   if(k==='lead')return (typeof CK_LDR!=='undefined'&&arIsLead())
     ? arUndone('day',CK_LDR.a.concat(CK_LDR.b,CK_LDR.c,CK_LDR.d)).length : 0;
+  if(k==='edu')return (typeof CK_EDU!=='undefined'&&arIsEdu())
+    ? arUndone('day',CK_EDU.a.concat(CK_EDU.b,CK_EDU.c,CK_EDU.d)).length : 0;
   if(k==='team'){var l=arScope(),i,n=0;for(i=0;i<l.length;i++)if(!AR.rep[l[i].id])n++;return n;}
   return 0;
 }
@@ -7602,7 +7686,15 @@ function arSchedHtml(){
   var wk=(typeof CK_ITEMS!=='undefined')?arUndone('week',CK_ITEMS.week):[];
   var wrows=[];
   for(i=0;i<wk.length;i++)wrows.push(arLine('📆',osEsc(wk[i][1]),osEsc(wk[i][2]||''),'',false,"go('ckboard')"));
-  return arCard('📅','오늘 · 앞으로 잡힌 약속','고객과 잡아 둔 시간입니다. 시간이 지난 것은 붉게 뜹니다',
+  /* 달력을 맨 위에 — 목록만 세 덩이 있으면 「오늘 뭘 해야 하나」 가 한눈에
+     안 들어온다. 달력은 <b>내 캘린더와 같은 것</b>을 그대로 부른다 (5번). */
+  var cal=(typeof mcalCardHtml==='function')
+    ? mcalCardHtml({title:'이번 달 한눈에',
+        desc:'<b>약속</b>(DB 통합 CRM) · <b>연락할 분 · 다음 할 일 · 생일</b>(고객 365일) · '+
+             '<b>도와줄 것</b>을 한 달력에 모았습니다. 날짜를 누르면 그날 것만 아래에 폅니다.'})
+    : '';
+  return cal+
+    arCard('📅','오늘 · 앞으로 잡힌 약속','고객과 잡아 둔 시간입니다. 시간이 지난 것은 붉게 뜹니다',
       arRowsHtml(rows,'잡혀 있는 약속이 없습니다. DB 통합 CRM 에서 상담을 잡으면 여기에 뜹니다.'))+
     arCard('🗓','다음에 할 일 — 날짜순','고객 365일에 적어 둔 것입니다',
       arRowsHtml(drows,'적어 둔 다음 할 일이 없습니다. 만나고 나면 한 줄씩 적어 두세요.'))+
@@ -8246,31 +8338,105 @@ function arLeadGo(t){
     go(t);
   }catch(e){}
 }
-function arLeadHtml(){
-  var can=arIsLead(),g,i,h='';
-  if(typeof CK_LDR==='undefined')
-    return arCard('🧑‍🏫','리더 할 일','','<div class="ar-none">리더 목록을 불러오지 못했습니다.</div>');
-  var box=function(icon,title,when,list){
-    var m=(typeof ckLoad==='function')?ckLoad('day'):{},rows='',j,r,on;
+/* ── 앱이 아는 것은 <b>앱이 답한다</b> ───────────────────────────────
+   「출근 체크 ☐」 는 <b>질문</b>입니다. 그런데 그 답은 앱이 이미 알고
+   있습니다. 지점장이 화면을 열어 눈으로 세고 네모를 치는 동안, 앱은
+   가만히 있었습니다.
+
+   이제 그 줄들은 <b>답을 들고</b> 섭니다 — 「출근 안 찍힌 2명 — 홍길동 ·
+   홍길순」. 그리고 <b>0명이면 그 줄은 접힙니다.</b> 할 일이 없는 날은
+   안 보이는 것이 맞습니다.
+
+   ★ <b>모르면 답한 척하지 않습니다</b>(1번). 기록을 아직 못 읽었으면
+     null 을 돌려주고, 그 줄은 <b>예전 그대로</b> 손으로 체크하는 줄이
+     됩니다. 「0명」 과 「모름」 을 섞으면 안 봐도 될 것을 안 보게 됩니다.
+   ★ 접은 줄은 <b>접었다고 말합니다</b> — 말없이 지우면 빠뜨린 줄 압니다. */
+function arLeadFact(k){
+  try{ return arLeadFactRaw(k); }
+  /* 세다가 터지면 <b>화면이 통째로 안 그려진다</b> — 이 함수는 그리는 길 한복판에서
+     불린다(arUndone → arCatN → arInnerHtml). 못 세면 조용히 「모른다」로 물러나고,
+     그 줄은 예전처럼 손으로 체크하는 줄이 된다. 곁다리가 본일을 죽이면 안 된다. */
+  catch(e){ return null; }
+}
+function arLeadFactRaw(k){
+  var rs=(typeof arScope==='function')?arScope():[];
+  if(!rs.length)return null;                       /* 아직 못 읽었다 — 모른다 */
+  var t=arToday(),who=[],i,r;
+  if(k==='att'){
+    for(i=0;i<rs.length;i++){r=rs[i];if(r.lastAtt!==t)who.push(r.name);}
+    return {who:who,zero:'오늘은 다 찍혔습니다',one:'출근 안 찍힌'};
+  }
+  if(k==='noact'){
+    for(i=0;i<rs.length;i++){r=rs[i];if(r.last!==t)who.push(r.name);}
+    return {who:who,zero:'오늘 모두 기록을 남겼습니다',one:'오늘 기록이 없는'};
+  }
+  if(k==='miss'){
+    if(typeof gbMiss!=='function')return null;
+    var ms=gbMiss(rs);
+    for(i=0;i<ms.length;i++)who.push(ms[i].r.name);
+    return {who:who,zero:'놓치고 있는 사람이 없습니다',one:'먼저 볼'};
+  }
+  return null;
+}
+/* 사람 이름을 셋까지만 — 열 명을 늘어놓으면 한 줄이 아니다 */
+function arLeadWho(w){
+  if(!w.length)return '';
+  return w.slice(0,3).join(' · ')+(w.length>3?(' 외 '+(w.length-3)+'명'):'');
+}
+/* 이 줄은 앱이 답했고, 답이 0 인가 — 그러면 오늘 할 일이 아니다 */
+function arLeadAuto(r){
+  if(!r||!r[5])return null;
+  var f=arLeadFact(r[5]);
+  return f?f:null;
+}
+/* ── 체크 묶음 한 덩이 ─────────────────────────────────────────────
+   리더 할 일과 교육매니저 할 일이 <b>같은 모양</b>을 씁니다. 그리는 자리를
+   둘로 두면 한쪽만 고쳐져 어긋납니다 (5번).
+     can — 체크할 수 있는 사람인가 · tog — 누를 때 부를 함수 이름         */
+function arCkBox(icon,title,when,list,can,tog){
+    var m=(typeof ckLoad==='function')?ckLoad('day'):{},rows='',j,r,on,folded=[];
     for(j=0;j<list.length;j++){
       r=list[j];on=!!m[r[0]];
+      /* 앱이 답할 수 있는 줄 */
+      var f=(typeof arLeadAuto==='function')?arLeadAuto(r):null;
+      var sub2=r[2];
+      if(f){
+        if(!f.who.length){folded.push(r[1]);continue;}   /* 오늘 할 일이 아니다 — 접는다 */
+        sub2=f.one+' '+f.who.length+'명 — '+arLeadWho(f.who);
+      }
       /* 체크만 하고 끝나면 아무 일도 안 일어난다. 그 일을 하는 화면으로
          바로 넘어갈 수 있어야 체크가 실제 행동이 된다.
          왼쪽 네모는 체크, 오른쪽 화살표는 그 화면으로 — 따로 눌린다. */
       var go4=r[4]||arLeadTab(r[0]),go3=r[3]||arLeadTabName(go4);
       /* 줄 아무 데나 누르면 체크. 오른쪽 단추만 따로 — 눌러도 체크는 안 바뀐다. */
       rows+='<div class="ar-lk'+(on?' on':'')+(can?'':' ro')+'"'+
-        (can?(' onclick="arLeadTog(\'day\',\''+r[0]+'\')"'):'')+'>'+
+        (can?(' onclick="'+tog+'(\'day\',\''+r[0]+'\')"'):'')+'>'+
         '<span class="bx">'+(on?'✓':'')+'</span>'+
-        '<span class="tx"><b>'+osEsc(r[1])+'</b>'+(r[2]?('<em>'+osEsc(r[2])+'</em>'):'')+'</span>'+
+        '<span class="tx"><b>'+osEsc(r[1])+'</b>'+
+          (sub2?('<em'+(f?' style="color:#B42318;font-weight:800"':'')+'>'+osEsc(sub2)+'</em>'):'')+
+        '</span>'+
         (go4?('<button type="button" class="ar-lkg" '+
           'onclick="event.stopPropagation();arLeadGo(\''+go4+'\')" '+
           'title="'+osEsc(go3)+' 열기">'+osEsc(go3)+' ↗</button>'):'')+
         '</div>';
     }
+    /* 접은 줄은 <b>접었다고 말한다</b> — 말없이 지우면 빠뜨린 줄 안다 (1번) */
+    if(folded.length)
+      /* 「ro」 는 <b>잠겼다</b>는 뜻이다 — 이 줄은 잠긴 게 아니라 <b>다 된</b> 줄이다.
+         같은 딱지를 붙이면 「지점장인데 왜 잠겼지」 로 읽힌다. 따로 준다. */
+      rows+='<div class="ar-lkdone">'+
+        '<span class="bx" style="color:#15803D">✓</span>'+
+        '<span class="tx"><b style="color:#15803D">앱이 확인했습니다 — '+folded.length+'줄은 오늘 할 일이 없습니다</b>'+
+        '<em>'+osEsc(folded.join(' · '))+'</em></span></div>';
+    if(!rows)return '';
     return '<div class="ar-lg"><div class="hd">'+icon+' '+osEsc(title)+
       '<span>'+osEsc(when)+'</span></div>'+rows+'</div>';
-  };
+}
+function arLeadHtml(){
+  var can=arIsLead(),g,i,h='';
+  if(typeof CK_LDR==='undefined')
+    return arCard('🧑‍🏫','리더 할 일','','<div class="ar-none">리더 목록을 불러오지 못했습니다.</div>');
+  var box=function(icon,title,when,list){return arCkBox(icon,title,when,list,can,'arLeadTog');};
   h+='<div class="ar-lgs">'+
     box('☀️','아침 · 출근 시간','20분',CK_LDR.a)+
     box('👤','오전 · 사람에게 물어서','전화나 얼굴 보고',CK_LDR.b)+
@@ -8295,6 +8461,44 @@ function arLeadHtml(){
 function arLeadTog(sc,id){
   if(!arIsLead()){toast('지점장만 체크할 수 있습니다');return;}
   if(typeof ckToggle==='function'){ckToggle(sc,id);arPaint();}
+}
+/* 교육매니저인가 — 대표·관리자·본부장도 대신 체크할 수 있다 */
+function arIsEdu(){
+  var r=(typeof osRole==='function')?osRole():'member';
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  return ['education_manager','branch_manager','admin','owner'].indexOf(r)>=0;
+}
+function arEduTog(sc,id){
+  if(!arIsEdu()){toast('교육매니저만 체크할 수 있습니다');return;}
+  if(typeof ckToggle==='function'){ckToggle(sc,id);arPaint();}
+}
+function arEduHtml(){
+  var can=arIsEdu(),h='';
+  if(typeof CK_EDU==='undefined')
+    return arCard('🎓','교육매니저 할 일','','<div class="ar-none">교육 목록을 불러오지 못했습니다.</div>');
+  var box=function(icon,title,when,list){return arCkBox(icon,title,when,list,can,'arEduTog');};
+  h+='<div class="ar-lgs">'+
+    box('☀️','아침 · 오늘 배울 것','10분',CK_EDU.a)+
+    box('👤','오전 · 사람에게','한 명씩',CK_EDU.b)+
+    box('📚','오후 · 자료에서','최신인지',CK_EDU.c)+
+    box('🌙','마감 · 오늘 남기기','5분',CK_EDU.d)+
+    '</div>';
+  return arCard('🎓','교육매니저 할 일',
+    can?'왼쪽을 누르면 체크됩니다. 오른쪽 단추를 누르면 그 일을 하는 화면으로 바로 넘어갑니다'
+       :'교육매니저가 챙기는 목록입니다. 무엇을 보고 계신지 아시라고 열어 두었습니다',
+    h,
+    (can?'':'<div class="notice" style="margin-top:12px">이 칸은 <b>보기만</b> 됩니다. '+
+      '체크는 교육매니저가 합니다.</div>')+
+    '<div class="notice" style="margin-top:12px">이 목록은 <b>고치시라고</b> 만든 초안입니다. '+
+    '사업단에서 실제로 하시는 것과 다르면 말씀해 주십시오 — 줄이거나 바꿔 드립니다.</div>'+
+    '<div class="card" style="margin-top:14px;box-shadow:none;border:1.5px solid #FEE2E2">'+
+    '<div class="card-hd"><div class="card-title"><span class="ci">⚠️</span>하지 않는 것</div></div>'+
+    '<div class="card-body"><div style="font-size:12.5px;color:var(--ink-3);line-height:1.9">'+
+    '<b>진도만 나가기</b> — 한 번도 안 써 본 것은 아직 배운 게 아닙니다<br>'+
+    '<b>자료만 쌓기</b> — 오늘 쓸 한 장이 지난달 열 장보다 낫습니다<br>'+
+    '<b>잘하는 사람만 시연</b> — 막힌 사람이 말할 자리가 없어집니다<br>'+
+    '<b>지점장 일까지 하기</b> — 숫자 독려는 지점장이 합니다'+
+    '</div></div></div>');
 }
 
 /* ── 아침 비서 ── */
@@ -9133,6 +9337,10 @@ function arCss(){
      'border-bottom:1px solid #EDF1F6;display:flex;justify-content:space-between;align-items:center}'+
    '.ar-lg .hd span{font-size:11px;color:#94A3B8;font-weight:700}'+
    '.ar-lk{display:flex;gap:9px;padding:10px 13px;border-bottom:1px solid #F5F7FA;cursor:pointer}'+
+   /* 앱이 대신 확인해 준 줄 — <b>체크 줄이 아니다.</b> 그래서 .ar-lk 를 안 붙인다.
+      붙이면 「눌러야 하는 줄」로 세어져, 팀원 화면에서 「하나가 안 잠겼다」로 읽힌다. */
+   '.ar-lkdone{display:flex;gap:9px;padding:10px 13px;border-bottom:1px solid #F5F7FA;'+
+     'cursor:default;background:#F0FDF4}'+
    '.ar-lk:last-child{border:0}'+
    '.ar-lk.ro{cursor:default;opacity:.74}'+
    '.ar-lk .bx{flex:none;width:18px;height:18px;border-radius:5px;border:2px solid #CBD5E1;'+
@@ -10187,6 +10395,7 @@ function arBodyHtml(cat){
   if(cat==='touch')return arTouchHtml();
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
+  if(cat==='edu')return arEduHtml();
   if(cat==='team'){
     /* 리더의 사업계획서와 지점 총괄이 팀원 목록보다 <b>위</b>에 온다.
        계획을 세우고 나서 사람을 보는 순서다. */
@@ -11662,9 +11871,22 @@ function mcalItems(){
     if(!H[i]||H[i].done||!H[i].due)continue;
     add(H[i].due,{k:'help',t:((H[i].who?H[i].who+' ':'')+(H[i].what||'')).slice(0,60)});
   }
+  /* <b>잡아 둔 약속</b>(DB 통합 CRM)도 같은 달력에 찍는다.
+     여태 달력에는 고객 365일 쪽만 있었다 — 정작 <b>몇 시에 누구를 만나는지</b>가
+     빠져 있으니 「오늘 할 일을 한눈에」 가 반쪽이었다.
+     약속은 이미 잡힌 시간이라 지난 것을 오늘로 끌어오지 않는다 — 지나간
+     약속을 오늘 자리에 세우면 없는 일정을 만들어 내는 것이다 (1번). */
+  var D=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
+  for(i=0;i<D.length;i++){
+    var r=D[i];if(!r||!r.appt)continue;
+    var ds=(''+r.appt).slice(0,10);if(ds<TD)continue;
+    (out[ds]=out[ds]||[]).push({k:'appt',t:(r.name_masked||r.name||'고객'),
+      s:(''+r.appt).slice(11,16)+(r.region?(' · '+r.region):'')});
+  }
   return out;
 }
-var MCAL_KIND={touch:{e:'☎️',t:'연락',c:'#1B64DA'},next:{e:'▶',t:'할 일',c:'#0F766E'},
+var MCAL_KIND={appt:{e:'📌',t:'약속',c:'#DC2626'},
+             touch:{e:'☎️',t:'연락',c:'#1B64DA'},next:{e:'▶',t:'할 일',c:'#0F766E'},
              bd:{e:'🎂',t:'생일',c:'#B45309'},help:{e:'🤝',t:'도와줄 것',c:'#7C3AED'}};
 
 /* ── ics ── 폰 기본 달력이 읽는 글. 여기서 틀리면 달력이 통째로 안 받는다.
@@ -11841,19 +12063,24 @@ function mcalDayHtml(){
         (x.vip?'<span class="vip">👑</span>':'')+'</button>';
     }).join('')+'</div>';
 }
-function renderMyCal(){
-  var c=mcalCfg(),items=mcalItems(),today=mcalToday(),tn=(items[today]||[]).length;
-  var apps=(typeof PWA_APPS!=='undefined')?PWA_APPS:[];
-  var h='<div class="card"><div class="card-hd"><div class="card-title">'+
-      '<span class="ci">📅</span>내 캘린더</div>'+
-    '<div class="card-desc">오늘 연락할 분과 할 일이 <b>날짜에 찍힙니다.</b> '+
-      '폰 기본 달력에 넣으면 앱을 안 열어도 <b>달력이 대신 울려 줍니다.</b></div></div>'+
+/* ── 달력 <b>한 벌</b> ──────────────────────────────────────────────
+   같은 달력을 두 곳에서 봅니다 — 「내 캘린더」와 TFA 업무관리의
+   「스케줄 관리」. 그래서 그리는 자리는 <b>여기 하나</b>입니다. 두 벌을
+   만들면 한쪽에만 약속이 뜨는 일이 생깁니다 (5번).
+     apps  — 위쪽 바로가기 단추를 붙일지 (내 캘린더에서만)          */
+function mcalCardHtml(opt){
+  var o=opt||{},c=mcalCfg(),items=mcalItems(),today=mcalToday(),tn=(items[today]||[]).length;
+  var apps=(o.apps&&typeof PWA_APPS!=='undefined')?PWA_APPS:[];
+  return '<div class="card"><div class="card-hd"><div class="card-title">'+
+      '<span class="ci">📅</span>'+osEsc(o.title||'내 캘린더')+'</div>'+
+    '<div class="card-desc">'+(o.desc||('오늘 연락할 분과 할 일이 <b>날짜에 찍힙니다.</b> '+
+      '폰 기본 달력에 넣으면 앱을 안 열어도 <b>달력이 대신 울려 줍니다.</b>'))+'</div></div>'+
     '<div class="card-body">'+
-    '<div class="mcal-apps">'+apps.map(function(x){
+    (apps.length?('<div class="mcal-apps">'+apps.map(function(x){
       return '<button type="button" class="mcal-app" onclick="go(\''+x.id+'\')">'+
         '<span class="ic">'+x.ic+'</span><b>'+osEsc(x.t)+'</b>'+
         '<span>'+osEsc(x.d)+'</span></button>';
-    }).join('')+'</div>'+
+    }).join('')+'</div>'):'')+
     '<div class="mcal-hd">'+
       '<button type="button" class="mcal-mv" onclick="mcalYmShift(-1)">‹</button>'+
       '<b>'+mcalYm().replace('-','년 ')+'월</b>'+
@@ -11865,7 +12092,11 @@ function renderMyCal(){
       return '<span><i style="background:'+MCAL_KIND[k].c+'"></i>'+MCAL_KIND[k].e+' '+MCAL_KIND[k].t+'</span>';
     }).join('')+'</div>'+
     mcalDayHtml()+
-    '</div></div>'+
+    '</div></div>';
+}
+function renderMyCal(){
+  var c=mcalCfg();
+  var h=mcalCardHtml({apps:true})+
 
     '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📲</span>폰 기본 달력에 넣기</div>'+
@@ -12524,8 +12755,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-30 12:00';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).';
+var APP_BUILD='2026-08-30 14:10';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -15514,7 +15745,9 @@ function gbMiss(list){
     if(!r.last&&ag<=3)why.push('출근은 하는데 활동 기록이 한 건도 없습니다');
     else if(!r.last)why.push('활동 기록이 한 건도 없습니다');
     else if(gap>=7)why.push(gap+'일째 활동 기록이 없습니다'+(ag<=3?' (출근은 하고 있습니다)':''));
-    if(r.sc.call<40)why.push('전화가 거의 없습니다');
+    /* sc(점수)가 아직 안 매겨진 줄이 섞여 들어올 수 있다 — 여기서 터지면
+       부르는 화면이 통째로 안 그려진다. 점수가 없으면 「신호 없음」으로 본다. */
+    if((r.sc||{}).call<40)why.push('전화가 거의 없습니다');
     if(r.days<5)why.push('체크판을 거의 안 씁니다');
     var fb=gbLastNote(r.id);
     if(!fb)why.push('피드백을 한 번도 준 적이 없습니다');
@@ -24528,7 +24761,7 @@ var CK_LDR={
   a:[
     ['a3','어제 못 끝낸 도와줄 것 먼저','달력에서 빨간 날을 봅니다','',''],
     ['a1','네이버 캘린더 활동 독려','오늘 일정이 빈 사람부터','',''],
-    ['a2','출근 체크','안 찍힌 사람은 바로 연락','출근 현황','attend']
+    ['a2','출근 체크','안 찍힌 사람은 바로 연락','출근 현황','attend','att']
   ],
   b:[
     ['b1','보험 컨셉 준비 상태 확인','오늘 만나는 고객에 맞는 컨셉인지','',''],
@@ -24539,16 +24772,20 @@ var CK_LDR={
   c:[
     ['c1','DB 통합 CRM 확인','통화 결과가 그날 들어갔는지','DB 통합 CRM','crm'],
     ['c2','고객 365일 팩트파인딩 확인','만난 사람 기록이 남았는지','고객 365일','clients'],
-    ['c5','팀 코칭 신호 확인','오늘 먼저 볼 사람 3명','팀 코칭','branch_coach'],
-    ['c3','성장판 — 놓치고 있는 사람','오늘 먼저 볼 사람','성장판','growboard'],
-    ['c4','성장판 — 팀원별 여섯 축','금요일 전에 한 번','성장판','growboard']
+    /* c5(팀 코칭 신호)와 c3(성장판 놓치고 있는 사람)은 <b>같은 질문</b>이었다 —
+       「오늘 먼저 볼 사람이 누구냐」. 오후에 두 번 물을 이유가 없어 한 줄로 합쳤다.
+       세는 것은 성장판이 이미 뽑아 주는 gbMiss 그대로다 (5번). */
+    ['c3','오늘 먼저 볼 사람','성장판·팀 코칭이 같은 사람을 가리킵니다','성장판','growboard','miss']
   ],
   d:[
     ['b4','적어 둔 도와줄 것 모두 완료','오늘 안에','',''],
     ['e1','내일 상담 있는 사람 자료 확인','비어 있으면 지금 알려 줍니다','보장분석 상담자료','sangdam'],
-    ['e2','오늘 아무 기록도 없는 사람 한 명 연락','내일 아침이면 늦습니다','성장판','growboard']
+    ['e2','오늘 아무 기록도 없는 사람 연락','내일 아침이면 늦습니다','성장판','growboard','noact']
   ],
   week:[
+    /* 「금요일 전에 한 번」 이라고 적혀 있으면서 <b>매일 목록</b>에 있었다 —
+       주 4일은 까닭 없이 「안 한 일」로 남아 빨간 숫자만 키웠다. 제자리로 옮긴다. */
+    ['c4','성장판 — 팀원별 여섯 축','금요일 전에 한 번','성장판','growboard'],
     ['q1','주간 숫자 취합','전화·약속·상담·계약','',''],
     ['q2','전환율 확인','어느 단계에서 새는지','',''],
     ['q3','2주 연속 약속 0건인 사람 1:1','30분','',''],
@@ -24559,6 +24796,40 @@ var CK_LDR={
     ['m1','성과 면담','듣기 → 숫자 → 한 곳 → 약속 하나','',''],
     ['m2','잘 된 상담 1건 공유','녹취 분석과 함께','',''],
     ['m3','다음 달 교육 주제','','','']
+  ]
+};
+
+/* ── 🎓 교육매니저 할 일 ───────────────────────────────────────────
+   여태 「교육매니저」 는 <b>역할 이름만</b> 있었습니다. 권한은 주는데
+   무엇을 챙기는 자리인지가 앱 어디에도 없었습니다.
+
+   지점장이 <b>오늘의 숫자</b>를 챙긴다면, 교육매니저는 <b>배운 것이
+   실제로 쓰이는지</b>를 챙깁니다. 그래서 리더 할 일과 겹치지 않게,
+   교육 쪽만 봅니다.
+
+   ★ 모든 줄은 <b>앱에 실제로 있는 화면</b>으로 갑니다. 없는 화면을
+     가리키면 눌러도 아무 일이 안 일어나 목록 전체를 안 믿게 됩니다.
+   ★ 이 목록은 <b>고치라고 만든 것</b>입니다 — 사업단 운영에 맞게
+     줄이거나 바꾸십시오. 여기 적힌 것은 앱이 가진 화면으로 짠 초안입니다. */
+var CK_EDU={
+  a:[
+    ['g1','오늘 커리큘럼 한 줄 올리기','팀원이 아침에 볼 것','APEX 본인 점검란','academy'],
+    ['g2','어제 공부 안 남긴 사람 확인','성장판의 학습 축','성장판','growboard'],
+    ['g3','출발 점검 안 끝낸 신입','첫 주가 제일 잘 샙니다','출발 점검','ready']
+  ],
+  b:[
+    ['h1','오늘 시연할 사람 한 명 정하기','조회 3분','',''],
+    ['h2','신입 1:1 — 이번 주 한 명','무엇이 막혔는지만 듣습니다','팀 코칭','branch_coach'],
+    ['h3','역량 체크 안 한 사람 독려','열두 개 중 어디가 빈지','APEX 마스터 과정','apexmaster']
+  ],
+  c:[
+    ['i1','화법서 · 상담자료 최신인지','바뀐 상품이 반영됐는지','재무설계 실전화법서','fp_talk'],
+    ['i2','아카데미 새 자료 올리기','오늘 배운 것을 오늘','보험 마스터 아카데미','bohum'],
+    ['i3','배운 것을 실제로 쓴 사람 찾기','한 명이면 충분합니다','성장판','growboard']
+  ],
+  d:[
+    ['j1','오늘 교육 한 줄 기록','무엇을·누가·어땠는지','',''],
+    ['j2','내일 교육 준비물 확인','비어 있으면 지금','APEX 본인 점검란','academy']
   ]
 };
 
