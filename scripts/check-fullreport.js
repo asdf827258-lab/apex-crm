@@ -769,6 +769,38 @@ const CODE = APP.replace(/\/\*[\s\S]*?\*\//g, ' ');
      (big.missing ? (' — 빠진 것 ' + big.missing + '개: ' + big.first) : ''));
   is(big.foundRows === 6 && big.foundSays,
      '「일반암」으로 찾으면 <b>그 담보만</b> 선다 — 계약마다 하나씩 6개 (' + big.foundRows + ')');
+  /* ── 전 · 후 <b>한 장만</b> 뽑기 ── */
+  const one = await page.evaluate(() => {
+    __frSeed([__pol('o1', 50000, false)],
+             [__cov('oc1', 'o1', '일반암진단비', 30000000), __cov('oc2', 'o1', '뇌출혈진단비', 10000000)],
+             frBlankState(), []);
+    OSC.current = { id: 'c1', name_masked: '홍○동' };
+    const M = frMaster(), T = frCounts(M);
+    const ba = frBaOnlyHtml(M, T), full = frDocHtml(M, T);
+    /* 담보가 어긋나면 <b>한 장짜리도</b> 막아야 한다 */
+    FR.built = { M: M, T: { report: T.report, lost: 1 } };
+    let said = '';
+    const _t = window.toast; window.toast = function (m) { said = m; };
+    const root0 = document.getElementById('printRoot');
+    if (root0) root0.innerHTML = '';
+    const _pr = window.print; window.print = function () {};
+    frPrint('ba');
+    window.toast = _t; window.print = _pr;
+    const root = document.getElementById('printRoot');
+    return {
+      who: ba.indexOf('홍○동') >= 0,
+      names: M.filter(m => ba.indexOf(m.raw) < 0).length,
+      shorter: ba.length < full.length,
+      foot: ba.indexOf('fr-foot') >= 0,
+      blocked: said.indexOf('어긋나') >= 0 && (!root || !root.innerHTML)
+    };
+  });
+  is(one.who, '전·후 한 장에 <b>누구 것인지</b>가 적힌다 — 이름 없는 종이는 안 내보낸다');
+  is(one.names === 0, '한 장에도 <b>담보가 하나도 빠지지 않는다</b> (' + one.names + '개 빠짐)');
+  is(one.shorter, '풀리포트보다 <b>짧다</b> — 한 장만 뽑는 뜻이 산다');
+  is(one.foot, '무엇을 안 세었는지 밝히는 <b>꼬리</b>가 붙는다');
+  is(one.blocked, '담보가 어긋나면 <b>한 장짜리도 막는다</b> — 틀린 한 장이 더 빨리 간다');
+
   is(big.keepKept && big.keepFilled,
      '「전부 유지」는 <b>아직 안 정한 것만</b> 채운다 — 해지로 찍어 두신 것을 덮지 않는다');
 
