@@ -340,6 +340,38 @@ async function run(page, hang, prof, ms) {
      '  <b>깨끗이 「줄 없음」 이라 답하면</b> 그만 부른다 — ' + I.reads + '번 (7번)');
   is(/못 받았습니다/.test(I.said), '  그리고 <b>못 받았다고 말한다</b> — 조용히 넘어가지 않는다');
 
+  /* 지쳤을 때 <b>정말 세 번</b> 하는지 세어 본다. 실제 기다림(12+20+30초)을
+     다 기다리면 한 경우에 65초가 걸리므로, 기다림만 짧게 줄이고 <b>몇 번
+     하는가</b>를 본다 — 재는 것은 「얼마나 기다리나」 가 아니라 「몇 번 하나」다.
+     (길이가 늘어나는 것은 바로 위에서 따로 쟀다.) */
+  await page.close(); page = await freshPage();
+  const J = await page.evaluate(async () => {
+    OS_PROF_WAITS = [300, 300, 300];
+    let hung = 0;
+    const never = () => new Promise(() => {});
+    const mk = (tbl) => { const a = {};
+      ['select', 'eq', 'neq', 'order', 'limit', 'single', 'maybeSingle', 'in', 'is', 'not',
+       'or', 'filter', 'match', 'range', 'gt', 'gte', 'lt', 'lte', 'insert', 'update', 'upsert', 'delete']
+        .forEach(k => { a[k] = () => a; });
+      a.then = (res) => { if (tbl === 'profiles') { hung++; return never(); }
+        return Promise.resolve({ data: [], error: null }).then(res); };
+      a.catch = () => never(); return a; };
+    const chain = { from: mk, rpc: () => Promise.resolve({ data: null, error: null }),
+                    auth: { signOut: () => Promise.resolve({}) } };
+    window.osClient = () => chain; OS.sb = chain;
+    OS.session = { user: { id: 'u1', email: 'hong@example.com' } };
+    OS.profile = null; OS.cfg = {}; OS_PROF_RETRY = 0; OS_DOWN.at = 0;
+    const rt = window.toast; let said = ''; window.toast = (m) => { said += ' | ' + m; };
+    osLoadProfile();
+    await new Promise(r => setTimeout(r, 8000));   /* 0.3초 × 3 + 1.8초 간격 두 번이면 넉넉하다 */
+    window.toast = rt; OS_PROF_WAITS = [12000, 20000, 30000];
+    return { tries: hung, said: said.replace(/\s+/g, ' ').trim() };
+  });
+  is(J.tries >= 3, '  <b>지쳤을 때는 세 번</b> 해 본다 — ' + J.tries + '번 했다');
+  /* 처음 한 번 + 되시도 세 번 = <b>네 번</b>. 말과 실제가 같아야 한다 (1번) */
+  is(/4번 해 봤습니다/.test(J.said),
+     '  그러고 나서 <b>몇 번 했는지 그대로</b> 말한다 — 「' + J.said.slice(0, 44) + '…」');
+
   console.log('\n[9] 막힌 분이 있으면 사장님 화면에서 먼저 말한다');
   /* 접속 IP 승인제를 켜면 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그 뒤에
      바뀐 자리는 「대기」 다. 그래서 <b>어떤 분만</b> 갑자기 못 들어온다. */
