@@ -16,6 +16,7 @@ const fs = require('fs'), path = require('path');
 const ROOT = process.cwd();
 const EASY = path.join(ROOT, 'app/교육/easy.js');
 const BOOK = path.join(ROOT, 'app/교육/book.html');
+const MENT = path.join(ROOT, 'app/교육/ment.js');
 const APP  = path.join(ROOT, 'app/index.html');
 
 let bad = 0;
@@ -28,7 +29,10 @@ if (!fs.existsSync(EASY) || !fs.existsSync(BOOK)) {
 const E = require(EASY);
 const P = require(path.join(ROOT, 'app/교육/plan.js'));
 const M = require(path.join(ROOT, 'app/교육/master.js'));
+const N = require(MENT);
 const book = fs.readFileSync(BOOK, 'utf8');
+/* 주석을 걷은 CSS — 「tnum 은 켜지 않는다」 같은 설명까지 잡으면 헛것이다 */
+const css = book.replace(/\/\*[\s\S]*?\*\//g, '');
 const app = fs.readFileSync(APP, 'utf8');
 
 function flat(v, o) { o = o || [];
@@ -119,6 +123,45 @@ Object.keys(E.pics || {}).forEach(k => {
 });
 is(heavy.length === 0, '  사진이 무겁지 않다' + (heavy.length ? ' — ' + heavy.join(',') : ''));
 
+console.log('\n[5-1] 고객에게 하는 말');
+const withSay = M.cards.filter(c => c.say);
+is(Object.keys(N).length === withSay.length,
+   '  말이 있는 카드마다 짝이 있다 (' + Object.keys(N).length + '/' + withSay.length + ')');
+is(withSay.every(c => N[c.n]), '  빠진 카드가 없다');
+is(Object.keys(N).every(k => (N[k].alt || []).length >= 2), '  카드마다 <b>다른 결</b>이 둘 이상이다');
+is(Object.keys(N).every(k => N[k].why && N[k].sit), '  왜 그렇게 말하는지와 상황이 있다');
+/* 지금 쓰는 말은 master.js 에만 있어야 한다 — 여기 또 적으면 두 벌이다 */
+const nz = x => String(x || '').replace(/<[^>]*>/g, '').replace(/[「」\s]/g, '');
+const dupSay = Object.keys(N).filter(k => {
+  const cur = nz((withSay.filter(c => c.n === k)[0] || {}).say);
+  return (N[k].alt || []).some(a => nz(a[1]) === cur);
+});
+is(dupSay.length === 0, '  다른 결이 <b>지금 쓰는 말을 되풀이하지 않는다</b>' +
+   (dupSay.length ? ' — ' + dupSay.join(',') : ''));
+/* 고객 앞에서 하는 말이다 — 단정하는 표현이 섞이면 사고다 */
+const sayTxt = [].concat(...Object.keys(N).map(k => (N[k].alt || []).map(a => a[1])));
+const hard = sayTxt.filter(t => /무조건|확정|보장해|반드시 나옵|100%|틀림없/.test(t));
+is(hard.length === 0, '  단정하는 표현이 없다' + (hard.length ? ' — ' + hard[0] : ''));
+is(Object.keys(N).filter(k => N[k].law).length >= 8, '  준법이 걸리는 자리에 표시가 붙어 있다');
+is(/V\.ment\s*=/.test(book), '  책에 「고객에게 하는 말」 장이 있다');
+
+console.log('\n[5-2] 읽기 편한가');
+is(/--fs:/.test(book), '  글자 크기를 바꿀 수 있다');
+is(/data-fs="l"/.test(book) && /data-fs="xl"/.test(book), '  크게 · 아주 크게가 있다');
+is(/word-break:keep-all/.test(book), '  낱말이 줄 끝에서 안 쪼개진다 — 한글은 이게 없으면 읽기가 나빠진다');
+is(/max-width:41em/.test(book), '  한 줄이 서른 몇 자에서 끊긴다 — 한글이 제일 편한 폭');
+is(/line-height:1\.9|line-height:2/.test(book), '  줄 사이가 넉넉하다');
+
+console.log('\n[5-3] 인쇄 — 종이는 다른 물건이다');
+is(/@page\{size:A4/.test(css), '  A4 판이 잡혀 있다');
+is(/\.ch\{break-before:page/.test(css), '  장마다 새 쪽에서 시작한다');
+is(/\.cov[\s\S]{0,200}break-after:page/.test(css), '  표지가 한 장으로 선다');
+is(/break-inside:avoid/.test(css), '  칸이 두 쪽에 걸쳐 잘리지 않는다');
+is(/var PRINTING/.test(book) && /PRINTING\?true:/.test(book),
+   '  <b>접어 둔 쉬운 말도 종이에는 펴서</b> 찍는다');
+is(/beforeprint/.test(book) && /afterprint/.test(book),
+   '  Ctrl+P 로 들어와도 같게 나온다');
+
 console.log('\n[6] 차근차근 쌓이는가');
 is(/class="stack"/.test(book), '  쌓이는 것이 눈에 보인다');
 is(/이어보기|첫 장부터/.test(book), '  읽던 자리로 <b>이어보기</b>가 있다');
@@ -134,7 +177,6 @@ is(/'edubook-mode'/.test(app) && /OS_FULL_MODES=[\s\S]{0,240}edubook-mode/.test(
 is(/edubook-mode'\)\)exitEduBook\(\)/.test(app), '  Esc 로 빠져나온다');
 
 console.log('\n[8] 인쇄');
-const css = book.replace(/\/\*[\s\S]*?\*\//g, '');
 is(!/font-feature-settings/.test(css),
    '  tnum 을 켜지 않았다 — 켜고 PDF 로 저장하면 숫자가 유니코드를 잃는다');
 is(/@media print/.test(css), '  인쇄 규칙이 있다');
@@ -181,6 +223,24 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   is(thin.length === 0, '  빈 장이 없다' + (thin.length ? ' — ' + thin.join(', ') : ''));
   is(nofig >= 6, '  그림이 실제로 그려진다 (' + nofig + ')');
   is(nopic >= 3, '  사진이 실제로 뜬다 (' + nopic + ')');
+
+  console.log('\n[9-1] 글자 크기 · 멘트 장');
+  const fsM = await pg.evaluate(() => getComputedStyle(document.body).fontSize);
+  await pg.click('.fsb[data-fs="xl"]');
+  await pg.waitForTimeout(250);
+  const fsX = await pg.evaluate(() => getComputedStyle(document.body).fontSize);
+  is(parseFloat(fsX) > parseFloat(fsM), '  「가」를 누르면 글자가 커진다 (' + fsM + ' → ' + fsX + ')');
+  await pg.reload({ waitUntil: 'networkidle' });
+  await pg.waitForTimeout(300);
+  is((await pg.evaluate(() => getComputedStyle(document.body).fontSize)) === fsX,
+     '  새로고침해도 그 크기가 남는다');
+  await pg.click('.fsb[data-fs="m"]');
+  await pg.waitForTimeout(200);
+  await pg.goto(U + '#ment', { waitUntil: 'domcontentloaded' });
+  await pg.waitForTimeout(350);
+  is((await pg.$$('.sec')).length >= 20, '  멘트 장에 꼭지가 다 선다');
+  is((await pg.$$('.good')).length === withSay.length,
+     '  <b>지금 쓰는 말</b>이 카드마다 한 번씩 뜬다');
 
   console.log('\n[10] 어려운 말을 눌러 보면');
   await pg.goto(U + '#mast', { waitUntil: 'networkidle' });
@@ -229,6 +289,22 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   is((await pg.$$('.tci.done')).length === 1, '  목차에 읽은 표시가 남는다');
   is(/이어보기/.test(await pg.$eval('#pane', n => n.innerText)), '  <b>이어보기</b>가 뜬다');
   is((await pg.$$('.stack i')).length === M.cards.length, '  쌓기 칸이 서른 개다');
+  console.log('\n[13] 인쇄하면 한 권이 되는가');
+  await pg.emulateMedia({ media: 'print' });
+  await pg.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
+  await pg.waitForTimeout(900);
+  const chN = (await pg.$$('.ch')).length;
+  is(chN >= 10, '  장이 ' + chN + '개 다 담긴다');
+  const ptxt = await pg.$eval('#pane', n => n.innerText);
+  is(ptxt.length > 30000, '  내용이 다 들어간다 (' + ptxt.length + '자)');
+  is(/고객에게 하는 말/.test(ptxt), '  멘트 장도 종이에 담긴다');
+  is((await pg.$$('.easy')).length >= 40, '  접어 둔 쉬운 말이 <b>전부 펴져서</b> 나온다');
+  is((await pg.$$eval('.hardb', n => n.filter(x => x.offsetParent !== null).length)) === 0,
+     '  누르는 단추는 종이에 안 나온다');
+  await pg.emulateMedia({ media: 'screen' });
+  await pg.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+  await pg.waitForTimeout(300);
+  is((await pg.$$('.ch')).length <= 1, '  인쇄가 끝나면 화면이 제자리로 돌아온다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   is(errs.length === 0, '  중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 

@@ -8,6 +8,7 @@
 <script src="plan.js"></script>
 <script src="master.js"></script>
 <script src="easy.js"></script>
+<script src="ment.js"></script>
 <style>
 :root{
   --blue:#3182F6;--blue-d:#1B64DA;--blue-l:#E8F3FF;
@@ -21,12 +22,17 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* 읽기 편한 크기는 사람마다 다릅니다 — 위에서 「가 가 가」로 바꾸면 이 값이 바뀝니다.
+   한글은 한 줄에 <b>서른다섯에서 마흔 자</b>가 제일 편합니다. 단 너비를 그 폭에 맞춰 둡니다. */
+html{--fs:17px}
+html[data-fs="l"]{--fs:19px}
+html[data-fs="xl"]{--fs:21px}
 body{background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo",Pretendard,system-ui,"Malgun Gothic",sans-serif;
-  font-size:16px;line-height:1.85;letter-spacing:-.3px;-webkit-text-size-adjust:100%;
-  -webkit-font-smoothing:antialiased}
+  font-size:var(--fs);line-height:1.95;letter-spacing:-.25px;-webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:break-word}
 b{font-weight:700}
-.wrap{max-width:660px;margin:0 auto;padding:0 18px 120px}
+.wrap{max-width:41em;margin:0 auto;padding:0 18px 130px}
 
 /* 위 띠 */
 .top{position:sticky;top:0;z-index:20;background:rgba(242,244,246,.92);backdrop-filter:blur(8px);
@@ -38,6 +44,11 @@ b{font-weight:700}
 .mini-b{border:0;background:var(--card);color:var(--ink-3);border-radius:999px;padding:7px 13px;
   font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:var(--sh)}
 .mini-b.on{background:var(--ink);color:#fff}
+.fsg{display:inline-flex;background:var(--card);border-radius:999px;padding:3px;box-shadow:var(--sh)}
+.fsb{border:0;background:transparent;color:var(--ink-4);border-radius:999px;padding:3px 9px;
+  font-family:inherit;font-weight:800;cursor:pointer;line-height:1.4}
+.fsb:nth-child(1){font-size:12px}.fsb:nth-child(2){font-size:14px}.fsb:nth-child(3){font-size:16.5px}
+.fsb.on{background:var(--ink);color:#fff}
 
 /* 표지 */
 .cov{background:var(--card);border-radius:var(--r-lg);padding:44px 26px 34px;margin:14px 0 10px;
@@ -65,24 +76,24 @@ b{font-weight:700}
 .ch{margin-top:26px}
 .chh{display:flex;gap:10px;align-items:baseline;margin-bottom:6px}
 .chh .cn{font-size:12px;font-weight:800;color:var(--blue);letter-spacing:0}
-.chh h2{font-size:25px;font-weight:800;letter-spacing:-1.1px;margin:0;line-height:1.35;text-wrap:balance}
-.chl{font-size:16px;color:var(--ink-3);margin:6px 0 16px;line-height:1.8}
+.chh h2{font-size:1.65em;font-weight:800;letter-spacing:-1.1px;margin:0;line-height:1.35;text-wrap:balance}
+.chl{font-size:1em;color:var(--ink-3);margin:8px 0 18px;line-height:1.9}
 
 /* 꼭지 */
-.sec{background:var(--card);border-radius:var(--r-lg);padding:22px;margin-bottom:10px;box-shadow:var(--sh)}
-.sec>h3{font-size:19px;font-weight:800;letter-spacing:-.7px;margin:0 0 4px;line-height:1.4}
-.sec .body{font-size:16px;line-height:1.9;color:var(--ink-2)}
-.sec .body p{margin:12px 0}
+.sec{background:var(--card);border-radius:var(--r-lg);padding:26px 24px;margin-bottom:12px;box-shadow:var(--sh)}
+.sec>h3{font-size:1.22em;font-weight:800;letter-spacing:-.7px;margin:0 0 4px;line-height:1.45}
+.sec .body{font-size:1em;line-height:2;color:var(--ink-2)}
+.sec .body p{margin:1.05em 0}
 .sec .body ul{margin:10px 0;padding-left:20px}
-.sec .body li{margin-bottom:8px}
+.sec .body li{margin-bottom:.6em}
 .hd-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
 .hd-row>h3{flex:1 1 auto;margin:0}
 .hardb{flex:0 0 auto;border:0;background:var(--bg);color:var(--ink-3);border-radius:999px;
   padding:7px 12px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
 .hardb:hover{background:var(--amb-l);color:#8A6206}
 .hardb.on{background:var(--amb);color:#fff}
-.easy{background:var(--amb-l);color:#7A5600;border-radius:var(--r);padding:16px 17px;margin-top:12px;
-  font-size:15.5px;line-height:1.85}
+.easy{background:var(--amb-l);color:#7A5600;border-radius:var(--r);padding:18px;margin-top:14px;
+  font-size:1em;line-height:1.95}
 .easy .lb{display:block;font-size:12px;font-weight:800;color:#B47C0A;margin-bottom:5px}
 
 /* 어려운 낱말 */
@@ -142,15 +153,15 @@ tr:last-child td{border-bottom:0}
 .li .bul.g{background:var(--grn-l);color:#0A9D63} .li .bul.r{background:var(--red-l);color:#D93B48}
 .li .bul.p{background:var(--pur-l);color:#6242E0} .li .bul.a{background:var(--amb-l);color:#B47C0A}
 .li .tx{flex:1 1 auto;min-width:0}
-.li .tx b.h{display:block;font-size:16px;font-weight:700;letter-spacing:-.4px;line-height:1.5}
-.li .tx .d{font-size:15px;color:var(--ink-3);margin-top:4px;line-height:1.8}
-.warn{background:var(--red-l);color:#B4323D;border-radius:var(--r);padding:15px 16px;margin-top:12px;
-  font-size:15px;line-height:1.8}
-.good{background:var(--grn-l);color:#08825A;border-radius:var(--r);padding:15px 16px;margin-top:12px;
-  font-size:15px;line-height:1.8}
-.quo{background:var(--blue-l);color:var(--blue-d);border-radius:var(--r);padding:14px 16px;
-  margin:10px 0;font-size:16px;font-weight:600;line-height:1.75}
-.kv{font-size:12px;font-weight:800;color:var(--ink-4);margin-top:14px}
+.li .tx b.h{display:block;font-size:1em;font-weight:700;letter-spacing:-.4px;line-height:1.6}
+.li .tx .d{font-size:.95em;color:var(--ink-3);margin-top:5px;line-height:1.9}
+.warn{background:var(--red-l);color:#B4323D;border-radius:var(--r);padding:16px 18px;margin-top:14px;
+  font-size:.97em;line-height:1.9}
+.good{background:var(--grn-l);color:#08825A;border-radius:var(--r);padding:16px 18px;margin-top:14px;
+  font-size:.97em;line-height:1.9}
+.quo{background:var(--blue-l);color:var(--blue-d);border-radius:var(--r);padding:16px 18px;
+  margin:14px 0;font-size:1.04em;font-weight:600;line-height:1.85}
+.kv{font-size:.76em;font-weight:800;color:var(--ink-4);margin-top:1.3em;letter-spacing:0}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
 .chips span{background:var(--bg);border-radius:var(--r-xs);padding:5px 11px;font-size:13px;
   font-weight:600;color:var(--ink-3)}
@@ -173,14 +184,46 @@ tr:last-child td{border-bottom:0}
   cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.24)}
 .empty{color:var(--ink-4);font-size:15px}
 
+/* ══ 인쇄 ══
+   화면과 종이는 다른 물건입니다. 종이에는 접힌 것이 없어야 하고(어려워요는 전부 펴서),
+   장마다 새 쪽에서 시작해야 하고, 한 칸이 두 쪽에 걸쳐 잘리면 안 됩니다.
+   쪽 번호는 브라우저 인쇄 창의 「머리글·바닥글」로 넣습니다 — CSS 로는 못 넣습니다. */
+@page{size:A4;margin:18mm 15mm 20mm}
 @media print{
-  .top,.prt,.foot,.sheet,.scrim,.hardb,.toc{display:none!important}
-  body{background:#fff;font-size:11pt}
+  html{--fs:10.5pt}
+  body{background:#fff;line-height:1.75;color:#000}
+  .top,.prt,.sheet,.scrim,.hardb,.foot,.stack,.stkm,.opens,.opl{display:none!important}
   .wrap{max-width:none;padding:0}
-  .sec,.cov{box-shadow:none;border:1px solid #DDD;break-inside:avoid}
-  .ch{break-before:page}
+  /* 표지 · 목차는 각각 한 장 */
+  .cov{box-shadow:none;border:0;padding:60mm 0 0;text-align:center;break-after:page}
+  .cov .em{font-size:34pt}
+  .cov h1{font-size:30pt;letter-spacing:-1pt}
+  .cov .s{font-size:12pt;margin-top:10mm}
+  .cov .who{background:none;color:#555;font-size:10pt;padding:0;margin-top:14mm;display:block}
+  .toc{box-shadow:none;border:0;padding:0;break-after:page}
+  .toc::before{content:"차례";display:block;font-size:20pt;font-weight:800;margin:0 0 6mm}
+  .tci{border-top:1px solid #DDD;padding:3.2mm 0;border-radius:0}
+  .tci .no{background:none;color:#888;width:auto;font-size:9pt}
+  .tci .tn{display:none}
+  /* 장마다 새 쪽에서 */
+  .ch{break-before:page;margin-top:0}
+  .chh{border-bottom:2px solid #111;padding-bottom:3mm;margin-bottom:5mm}
+  .chh .cn{color:#666}
+  /* 칸이 두 쪽에 걸쳐 잘리지 않게 */
+  .sec{box-shadow:none;border:0;border-top:1px solid #DDD;border-radius:0;
+       padding:5mm 0 3mm;margin:0;break-inside:avoid}
+  .sec>h3,.hd-row>h3{break-after:avoid}
+  figure{background:none;padding:0;border:1px solid #E5E5E5;break-inside:avoid}
+  figure img{max-height:95mm;object-fit:contain}
+  figure svg{max-height:70mm}
+  .quo,.warn,.good,.easy,.pbn,.prac{break-inside:avoid;border:1px solid #DDD}
+  .quo{background:#F6F8FC;color:#123} .warn{background:#FDF4F4;color:#611}
+  .good{background:#F3FBF6;color:#052} .easy{background:#FFFBF0;color:#543}
   .tm{border-bottom:1px dotted #999}
-  .easy{background:#fff;border:1px solid #DDD}
+  table{background:none} th{background:#F2F2F2}
+  th,td{border:1px solid #DDD}
+  /* 종이에는 접힌 것이 없습니다 — 쉬운 말을 전부 펴서 찍습니다 */
+  .easy{display:block!important}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -190,6 +233,11 @@ tr:last-child td{border-bottom:0}
 <div class="wrap">
   <div class="top"><div class="tbar">
     <span class="bk" id="bk">APEX 전자책</span>
+    <span class="fsg" role="group" aria-label="글자 크기">
+      <button class="fsb" data-fs="m" title="보통">가</button>
+      <button class="fsb" data-fs="l" title="크게">가</button>
+      <button class="fsb" data-fs="xl" title="아주 크게">가</button>
+    </span>
     <button class="mini-b" id="tocb">목차</button>
     <button class="mini-b" id="hardl">어려웠던 곳</button>
   </div><div class="pgs"><i id="pgi"></i></div></div>
@@ -374,12 +422,13 @@ function opens(ids,label){
 }
 
 /* 꼭지 하나 — 「어려워요」 단추가 붙는다 */
+var PRINTING=false;
 function sec(key,title,body){
-  var o=st(), on=!!o.hard[key];
+  var o=st(), on=PRINTING?true:!!o.hard[key];
   var note=E.notes[key];
   return '<div class="sec" id="sec-'+key+'">'+
     (title?('<div class="hd-row"><h3>'+R(title)+'</h3>'+
-      (note?'<button class="hardb'+(on?' on':'')+'" data-hard="'+esc(key)+'">'+
+      (note&&!PRINTING?'<button class="hardb'+(on?' on':'')+'" data-hard="'+esc(key)+'">'+
         (on?'✓ 표시함':'🙋 어려워요')+'</button>':'')+'</div>'):'')+
     '<div class="body">'+body+figOf(key)+picOf(key)+'</div>'+
     (on&&note?'<div class="easy"><span class="lb">쉽게 말하면요</span>'+rich(note)+'</div>':'')+
@@ -402,6 +451,7 @@ var CH=[
  {k:'stu', t:'무엇을 공부하나요'},
  {k:'lead',t:'팀을 여는 분들'},
  {k:'ses', t:'세션 카드'},
+ {k:'ment',t:'고객에게 하는 말 23줄'},
  {k:'law', t:'꼭 지키는 것'},
  {k:'dict',t:'어려운 말 사전'},
  {k:'mine',t:'내가 어려워한 곳'}
@@ -609,6 +659,37 @@ V.ses=function(){
   });
   return h;
 };
+V.ment=function(){
+  var N=window.EDU_MENT||{}, s={};
+  var h='<div class="chl">MASTER 카드에서 <b>고객에게 실제로 하는 말</b>만 모았습니다. '+
+    '<b>외우지 마세요.</b> 소리 내어 세 번 읽고, 그날 한 분에게 써 보시면 그때부터 입에 붙습니다.</div>';
+  h+=sec('','결이 셋 있습니다',
+    '<div class="li"><span class="bul">1</span><div class="tx"><b class="h">담백</b>'+
+      '<div class="d">짧게, 사실만. 처음 만난 자리에서 안전해요.</div></div></div>'+
+    '<div class="li"><span class="bul g">2</span><div class="tx"><b class="h">공감</b>'+
+      '<div class="d">고객 걱정에 먼저 붙습니다. 방어가 풀려요.</div></div></div>'+
+    '<div class="li"><span class="bul p">3</span><div class="tx"><b class="h">짚기</b>'+
+      '<div class="d">핵심을 한 번 세게. 이미 편해진 사이에서 씁니다.</div></div></div>'+
+    '<p>어느 것이 맞다 틀리다가 아니라 <b>그 자리에 맞는 것</b>이 있습니다.</p>');
+  M.cards.filter(function(c){return c.say;}).forEach(function(c){
+    var m=N[c.n]||{}, q={};
+    var b='<div class="quo">'+R(m.sit||c.when[0],q)+'</div>'+
+      '<div class="kv">지금 쓰는 말</div><div class="good">'+R(c.say,q)+'</div>';
+    if(m.alt&&m.alt.length){
+      b+='<div class="kv">이렇게도 말할 수 있어요</div>';
+      m.alt.forEach(function(a){
+        b+='<div class="li"><span class="bul '+(a[0]==='공감'?'g':a[0]==='짚기'?'p':'')+'">'+
+          esc(a[0].charAt(0))+'</span><div class="tx"><b class="h">「'+esc(a[1])+'」</b>'+
+          '<div class="d">'+esc(a[0])+'</div></div></div>';
+      });
+    }
+    if(m.why) b+='<div class="kv">왜 이렇게 말하나</div><p>'+R(m.why,q)+'</p>';
+    if(m.law) b+='<div class="warn"><b>이건 꼭</b> · '+R(m.law,q)+'</div>';
+    b+=opens(c.go,'이 말을 하는 화면');
+    h+=sec('mt'+c.n,c.n+'. '+c.kr,b);
+  });
+  return h;
+};
 V.law=function(){
   var s={};
   return '<div class="chl">'+rich(E.lead.c8)+'</div>'+
@@ -646,6 +727,10 @@ function nameOf(k){
   if(/^m\d\d$/.test(k)){
     var c=M.cards.filter(function(x){return x.n===k.slice(1);})[0];
     return 'MASTER '+k.slice(1)+' · '+(c?c.kr:'');
+  }
+  if(/^mt\d\d$/.test(k)){
+    var mc=M.cards.filter(function(x){return x.n===k.slice(2);})[0];
+    return '멘트 '+k.slice(2)+' · '+(mc?mc.kr:'');
   }
   var map={creed:'우리 팀의 약속',never:'우리가 하지 않는 일',arc:'신입 — 어디로 가는지',
    career:'경력 — 어디로 가는지',first:'첫 주에 할 세 가지',gate:'게이트',master:'서른 장이 하는 일',
@@ -717,14 +802,45 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeSheet()
 document.getElementById('tocb').addEventListener('click',function(){cur='cover';try{location.hash='cover';}catch(x){}paint();});
 document.getElementById('hardl').addEventListener('click',function(){cur='mine';try{location.hash='mine';}catch(x){}paint();});
 document.getElementById('prt').addEventListener('click',function(){
-  /* 인쇄는 전부 폅니다 — 종이는 처음부터 끝까지 읽는 물건입니다 */
-  var all=''; CH.forEach(function(c,i){
+  /* 종이는 처음부터 끝까지 읽는 물건입니다 — 전부 펴고, 접어 둔 쉬운 말도 같이 찍습니다 */
+  PRINTING=true;
+  var all='';
+  CH.forEach(function(c,i){
     all+=(i?'<div class="ch"><div class="chh"><span class="cn">'+i+'장</span><h2>'+esc(c.t)+'</h2></div></div>':'')+
       ((V[c.k]||function(){return '';})());
   });
   document.getElementById('pane').innerHTML=all;
-  setTimeout(function(){window.print();setTimeout(paint,300);},60);
+  setTimeout(function(){
+    window.print();
+    setTimeout(function(){PRINTING=false;paint();},400);
+  },80);
 });
+/* 브라우저 인쇄(Ctrl+P)로 들어와도 같게 나오도록 */
+window.addEventListener('beforeprint',function(){
+  if(PRINTING)return;
+  PRINTING=true;
+  var all='';
+  CH.forEach(function(c,i){
+    all+=(i?'<div class="ch"><div class="chh"><span class="cn">'+i+'장</span><h2>'+esc(c.t)+'</h2></div></div>':'')+
+      ((V[c.k]||function(){return '';})());
+  });
+  document.getElementById('pane').innerHTML=all;
+});
+window.addEventListener('afterprint',function(){PRINTING=false;paint();});
+
+/* 글자 크기 — 이 기기에만 남습니다 */
+function fsGet(){var o=st();return o.fs||'m';}
+function fsSet(v){var o=st();o.fs=v;save(o);fsApply();}
+function fsApply(){
+  var v=fsGet();
+  document.documentElement.setAttribute('data-fs',v==='m'?'':v);
+  document.querySelectorAll('.fsb').forEach(function(b){
+    b.classList.toggle('on',b.getAttribute('data-fs')===v);});
+}
+document.querySelector('.fsg').addEventListener('click',function(e){
+  var b=e.target.closest('.fsb'); if(b)fsSet(b.getAttribute('data-fs'));
+});
+fsApply();
 window.addEventListener('hashchange',function(){
   var h=(location.hash||'').replace('#','');
   if(h&&h!==cur&&CH.some(function(c){return c.k===h;})){cur=h;paint();}
