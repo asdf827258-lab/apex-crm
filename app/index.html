@@ -8333,6 +8333,13 @@ function arLeadGo(t){
      됩니다. 「0명」 과 「모름」 을 섞으면 안 봐도 될 것을 안 보게 됩니다.
    ★ 접은 줄은 <b>접었다고 말합니다</b> — 말없이 지우면 빠뜨린 줄 압니다. */
 function arLeadFact(k){
+  try{ return arLeadFactRaw(k); }
+  /* 세다가 터지면 <b>화면이 통째로 안 그려진다</b> — 이 함수는 그리는 길 한복판에서
+     불린다(arUndone → arCatN → arInnerHtml). 못 세면 조용히 「모른다」로 물러나고,
+     그 줄은 예전처럼 손으로 체크하는 줄이 된다. 곁다리가 본일을 죽이면 안 된다. */
+  catch(e){ return null; }
+}
+function arLeadFactRaw(k){
   var rs=(typeof arScope==='function')?arScope():[];
   if(!rs.length)return null;                       /* 아직 못 읽었다 — 모른다 */
   var t=arToday(),who=[],i,r;
@@ -15709,7 +15716,9 @@ function gbMiss(list){
     if(!r.last&&ag<=3)why.push('출근은 하는데 활동 기록이 한 건도 없습니다');
     else if(!r.last)why.push('활동 기록이 한 건도 없습니다');
     else if(gap>=7)why.push(gap+'일째 활동 기록이 없습니다'+(ag<=3?' (출근은 하고 있습니다)':''));
-    if(r.sc.call<40)why.push('전화가 거의 없습니다');
+    /* sc(점수)가 아직 안 매겨진 줄이 섞여 들어올 수 있다 — 여기서 터지면
+       부르는 화면이 통째로 안 그려진다. 점수가 없으면 「신호 없음」으로 본다. */
+    if((r.sc||{}).call<40)why.push('전화가 거의 없습니다');
     if(r.days<5)why.push('체크판을 거의 안 씁니다');
     var fb=gbLastNote(r.id);
     if(!fb)why.push('피드백을 한 번도 준 적이 없습니다');

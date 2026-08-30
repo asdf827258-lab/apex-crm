@@ -173,6 +173,27 @@ const srv = http.createServer((rq, rs) => {
   is(G2.undone.indexOf('a2') < 0,
      '  접힌 줄은 <b>빨간 숫자에도 안 들어간다</b> — 다 됐는데 숫자가 남으면 숫자를 안 믿는다');
 
+  /* 세는 일이 그리는 길 한복판에서 불린다(arUndone → arCatN → arInnerHtml).
+     여기서 터지면 <b>화면이 통째로</b> 안 그려진다 — 실제로 그랬다. */
+  const G2b = await page.evaluate(() => {
+    const was = GB.rows, wasL = GB.loaded;
+    GB.loaded = true;
+    /* 점수(sc)가 안 매겨진 줄 — 실제로 이런 줄이 섞여 들어왔다 */
+    GB.rows = [{ id: 'u9', name: '홍길동', role: 'member', team: '', raw: {},
+                 last: '', lastAtt: '', days: 0, any: true }];
+    let threw = '', fact = 'x', drew = 0;
+    try { fact = arLeadFact('miss'); } catch (e) { threw = String(e).slice(0, 90); }
+    try { drew = arInnerHtml().length; } catch (e) { threw = threw || String(e).slice(0, 90); }
+    GB.rows = was; GB.loaded = wasL;
+    return { threw, drew, fact: fact && fact.who ? { who: fact.who } : null };
+  });
+  is(!G2b.threw, '  점수 없는 줄이 섞여도 <b>안 터진다</b>' + (G2b.threw ? ' — ' + G2b.threw : ''));
+  is(G2b.drew > 500, '  그래도 <b>화면은 그려진다</b> — 곁다리가 본일을 죽이지 않는다');
+  /* 안 터지기만 하면 되는 게 아니다 — <b>세기는 세야</b> 한다. try/catch 로 삼키고
+     null 을 돌려주면 「안 터졌다」는 통과하는데 답이 조용히 사라진다. */
+  is(G2b.fact && G2b.fact.who && G2b.fact.who.length === 1,
+     '  그리고 <b>세기는 센다</b> — 점수가 없다고 답을 버리지 않는다');
+
   console.log('\n[4-3] 리더 할 일 — 자리 정리');
   const G3 = await page.evaluate(() => {
     const day = ['a','b','c','d'].reduce((n, k) => n + CK_LDR[k].length, 0);
