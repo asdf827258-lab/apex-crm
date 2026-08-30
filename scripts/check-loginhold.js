@@ -310,6 +310,36 @@ async function run(page, hang, prof, ms) {
   is(/2번째/.test(H.label), '  <b>몇 번째인지</b> 띠에 적는다 — 「' + H.label + '」');
   is(H.max >= 3, '  포기하기 전에 <b>' + H.max + '번</b>까지 해 본다');
 
+  /* 그런데 <b>깨끗이 답한 빈손</b>은 다시 물어도 같은 답이다 — 그 자리에서
+     세 번 더 부르면 서버만 축낸다(7번). 실제로 이것 때문에 재무 플랜 점검이
+     빨간불이 됐다: 서버가 즉시 「줄 없음」 으로 답하는데도 계속 다시 물었다. */
+  await page.close(); page = await freshPage();
+  const I = await page.evaluate(async () => {
+    let reads = 0;
+    const mk = (tbl) => { const a = {};
+      ['select', 'eq', 'neq', 'order', 'limit', 'single', 'maybeSingle', 'in', 'is', 'not',
+       'or', 'filter', 'match', 'range', 'gt', 'gte', 'lt', 'lte', 'insert', 'update', 'upsert', 'delete']
+        .forEach(k => { a[k] = () => a; });
+      /* 오류 없이 <b>빈손</b> — 「그런 줄이 없다」 는 깨끗한 대답이다 */
+      /* profiles <b>만</b> 센다 — 다른 표까지 세면 앱의 딴 일이 섞여 20번이 넘는다 */
+      a.then = (res) => { if (tbl === 'profiles') reads++;
+        return Promise.resolve({ data: null, error: null }).then(res); };
+      a.catch = () => Promise.resolve(); return a; };
+    const chain = { from: mk, rpc: () => Promise.resolve({ data: null, error: null }),
+                    auth: { signOut: () => Promise.resolve({}) } };
+    window.osClient = () => chain; OS.sb = chain;
+    OS.session = { user: { id: 'u1', email: 'hong@example.com' } };
+    OS.profile = null; OS.cfg = {}; OS_PROF_RETRY = 0; OS_DOWN.at = 0;
+    const rt = window.toast; let said = ''; window.toast = (m) => { said += ' | ' + m; };
+    osLoadProfile();
+    await new Promise(r => setTimeout(r, 9000));   /* 1.8초 간격이면 세 번은 벌써 다 돌았다 */
+    window.toast = rt;
+    return { reads: reads, said: said.replace(/\s+/g, ' ').trim() };
+  });
+  is(I.reads <= 4,
+     '  <b>깨끗이 「줄 없음」 이라 답하면</b> 그만 부른다 — ' + I.reads + '번 (7번)');
+  is(/못 받았습니다/.test(I.said), '  그리고 <b>못 받았다고 말한다</b> — 조용히 넘어가지 않는다');
+
   console.log('\n[9] 막힌 분이 있으면 사장님 화면에서 먼저 말한다');
   /* 접속 IP 승인제를 켜면 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그 뒤에
      바뀐 자리는 「대기」 다. 그래서 <b>어떤 분만</b> 갑자기 못 들어온다. */

@@ -42114,11 +42114,19 @@ function osProfileApply(sb,uid,r){
       /* 로그인은 돼 있는데 내 정보만 못 받은 경우다. 게이트를 다시 띄우면
          「로그인하세요」 라고 거짓말을 하게 된다 — 신호가 나빴을 뿐이다.
          한 번 다시 해 보고, 그래도 안 되면 무엇이 문제인지 그대로 말한다. */
-      if(OS.session&&OS_PROF_RETRY<OS_PROF_MAX){
+      /* <b>다시 해 볼 값어치가 있는 실패인가.</b>
+         서버가 <b>지쳤거나 끊긴</b> 것이면 더 기다려 가며 세 번까지 해 본다 —
+         느려진 장애에서는 그 기다림이 곧 들어가느냐 마느냐다.
+         그런데 서버가 <b>제대로 답했는데 내 줄이 없는</b> 것이면(오류 없이
+         빈손) 다시 물어도 같은 답이다. 그 자리에서 세 번 더 부르는 것은
+         서버만 축낸다(7번) — 예전처럼 한 번만 해 보고 말한다. */
+      var slow=!!r.error;
+      var cap=slow?OS_PROF_MAX:1;
+      if(OS.session&&OS_PROF_RETRY<cap){
         OS_PROF_RETRY++;
         setTimeout(function(){try{osLoadProfile();}catch(e){}},1800);
       }else if(OS.session){
-        toast('로그인은 돼 있는데 내 정보를 못 받았습니다 — '+OS_PROF_MAX+'번 다시 해 봤습니다. '+
+        toast('로그인은 돼 있는데 내 정보를 못 받았습니다 — '+(OS_PROF_RETRY+1)+'번 해 봤습니다. '+
               '로그인 화면의 「서버 상태 확인」 을 눌러 보시면 서버 탓인지 바로 나옵니다.',12000);
       }
       return;
