@@ -2665,11 +2665,35 @@ function osByokCardHtml(){
 }
 /* ════════ 보안: 전역설정 + 접속 IP 승인제 + 개인 AI 하루 한도 (기본 OFF · 서버=Supabase · 실패 시 통과) ════════ */
 function osCfgGet(k,def){var v=(OS.cfg&&OS.cfg[k]!=null)?OS.cfg[k]:null;return (v==null||v==='')?def:v;}
+/* ── 이 자리가 <b>로그인을 통째로 붙잡고 있었다</b> ────────────────────
+   로그인 문턱은 이렇게 이어진다.
+
+     내 정보 읽기 → 승인 확인 → <b>설정 읽기</b> → IP 확인 → 문 열기
+
+   앞의 「내 정보 읽기」 에는 시간 제한이 걸려 있었는데(2026-08-28 에 배웠다)
+   <b>뒤의 둘에는 없었다.</b> 서버가 대답을 안 하면 여기서 그대로 매달렸고,
+   <code>osHideLoginGate()</code> 가 영영 안 불려 <b>로그인 화면이 그대로
+   남았다.</b> 붉은 띠도, 안내도, 콘솔 오류도 없었다 — 사장님 눈에는
+   「눌렀는데 아무 일도 안 일어난다」 였다.
+
+   실제로 그랬다: 2026-08-30, Supabase 가 <b>522</b> 로 스무 초씩 답을
+   안 주는 동안 이 자리에서 멈췄다.
+
+   이제 <code>osWait</code> 이 시간 제한을 걸고, 지나면 <b>붉은 띠를 세운
+   뒤 있는 설정으로 문을 연다.</b> 설정은 잠금이 아니다 — 못 읽었다고
+   사람을 못 들어오게 하면 서버가 흔들릴 때마다 다 못 쓴다.
+   (CLAUDE.md 4-1: 모든 기다림에는 시간 제한을 겁니다)                */
 function osCfgLoad(cb){
   var sb=osClient();OS.cfg=OS.cfg||{};
   if(!sb){if(cb)cb();return;}
-  try{sb.from('app_config').select('key,value').then(function(r){OS.cfg={};if(r&&r.data){for(var i=0;i<r.data.length;i++)OS.cfg[r.data[i].key]=r.data[i].value;}if(cb)cb();},function(){if(cb)cb();});}
-  catch(e){if(cb)cb();}
+  var done=false,fin=function(){if(done)return;done=true;if(cb)cb();};
+  try{
+    osWait(sb.from('app_config').select('key,value'),'설정 읽기').then(function(r){
+      if(r&&!r.error&&r.data){OS.cfg={};for(var i=0;i<r.data.length;i++)OS.cfg[r.data[i].key]=r.data[i].value;}
+      fin();
+    });
+  }
+  catch(e){fin();}
 }
 function osCfgSet(k,v,cb){
   var sb=osClient();if(!sb){toast('서버 연결이 필요합니다');return;}
@@ -2697,7 +2721,10 @@ function osIpGuardCheck(cb){
   if(!osIpGuardOn()){cb(true);return;}
   var sb=osClient(),uid=OS.profile&&OS.profile.id;
   if(!sb||!uid){cb(true);return;}
-  if(osRole()==='admin'){cb(true);return;}
+  /* 화면에 「운영자는 예외」 라고 적어 두고 코드는 admin 만 뺐었다.
+     대표가 자기 앱에서 잠기는 자리다 — 적힌 대로 맞춘다. */
+  if(osRole()==='admin'||osRole()==='owner')  {cb(true);return;}
+  if(typeof osIsOwner==='function'&&osIsOwner()){cb(true);return;}
   var done=false,to,fin=function(v){if(done)return;done=true;clearTimeout(to);cb(v);};
   to=setTimeout(function(){fin(true);},6000);
   try{
@@ -2746,13 +2773,59 @@ function osIpSelfApprove(cb){
   },function(){if(cb)cb();})['catch'](function(){if(cb)cb();});}catch(e){if(cb)cb();}
 }
 function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)||v<0)v=0;osCfgSet('ai_daily_limit',v);}
+/* ── 승인을 기다리는 접속은 <b>맨 위에서 먼저 말한다</b> ──────────────
+   접속 IP 승인제를 켜 두면, 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그
+   뒤에 바뀐 자리는 전부 「대기」 가 된다(login_ips_ins_guard). 휴대폰 데이터,
+   공유기 재접속, 다른 사무실 — 자리는 수시로 바뀐다. 그래서 <b>어떤 분은
+   갑자기 못 들어오고 옆 사람은 멀쩡한</b> 일이 생긴다.
+   여태 이것을 알려면 목록을 열어 상태 칸을 하나씩 읽어야 했다. 그러면 막힌
+   분은 <b>전화를 걸 때까지 막혀 있다.</b> 그 자리에서 세어 먼저 말한다. */
+var OS_IP_WAIT=[];
+function osIpWaitHtml(rows,nm){
+  OS_IP_WAIT=[];
+  /* 승인제가 꺼져 있으면 아무도 안 막힌다 — 옛 대기 줄을 두고 겁주지 않는다 (8번) */
+  if(!osIpGuardOn())return '';
+  for(var i=0;i<rows.length;i++)if(rows[i].status==='pending')OS_IP_WAIT.push(rows[i]);
+  if(!OS_IP_WAIT.length)return '';
+  var who=[],seen={};
+  for(var j=0;j<OS_IP_WAIT.length;j++){
+    var n=nm[OS_IP_WAIT[j].member_id]||'이름을 못 찾은 분';
+    if(!seen[n]){seen[n]=1;who.push(n);}
+  }
+  return '<div style="border:1px solid #F0B4AE;background:#FDF3F2;border-radius:10px;padding:11px 13px;margin-bottom:10px">'+
+    '<div style="font-size:13px;font-weight:800;color:#7A1F1A;line-height:1.6">'+
+      '⚠️ 지금 <b>'+who.length+'분</b>이 못 들어오고 있습니다 — <b>'+osEsc(who.join(' · '))+'</b></div>'+
+    '<div style="font-size:11.5px;color:#7A1F1A;line-height:1.7;margin-top:5px">'+
+      '접속 IP 승인제가 켜져 있어, <b>처음 쓰던 자리가 아닌 곳</b>에서 들어오면 막힙니다. '+
+      '휴대폰 데이터·공유기 재접속·다른 사무실이면 자리가 바뀝니다. 승인하시면 바로 들어옵니다.</div>'+
+    '<div class="btn-row" style="margin-top:9px"><button class="btn btn-primary" style="padding:5px 12px;font-size:12px" '+
+      'onclick="osIpApproveAll()">'+OS_IP_WAIT.length+'건 모두 승인</button></div></div>';
+}
+function osIpApproveAll(){
+  var sb=osClient();if(!sb||!OS_IP_WAIT.length)return;
+  var list=OS_IP_WAIT.slice(),left=list.length,bad=0;
+  var fin=function(){
+    if(--left>0)return;
+    /* 못 한 것을 한 것처럼 말하지 않는다 (1번) */
+    if(bad)toast(list.length+'건 중 '+bad+'건은 승인하지 못했습니다 — 아래 목록에서 하나씩 눌러 주세요.',8000);
+    else toast(list.length+'건 승인했습니다. 그분들은 새로고침하면 들어옵니다.',6000);
+    osIpLoadList();
+  };
+  for(var i=0;i<list.length;i++){(function(r){
+    sb.from('login_ips').update({status:'approved'}).eq('member_id',r.member_id).eq('ip',r.ip)
+      .then(function(x){if(x&&x.error)bad++;fin();},function(){bad++;fin();});
+  })(list[i]);}
+}
 function osIpLoadList(){
   var host=document.getElementById('osIpList');if(!host)return;var sb=osClient();if(!sb){host.innerHTML='';return;}
   Promise.all([sb.from('login_ips').select('member_id,ip,status,last_seen').order('last_seen',{ascending:false}),sb.from('profiles').select('id,name')]).then(function(res){
     if(res[0]&&res[0].error){host.innerHTML=sqlNeedHtml('09','접속 기록');return;}
     var rows=(res[0]&&res[0].data)||[],profs=(res[1]&&res[1].data)||[],nm={};for(var i=0;i<profs.length;i++)nm[profs[i].id]=profs[i].name;
     if(!rows.length){host.innerHTML='<div style="font-size:12px;color:var(--ink-5);padding:8px">아직 기록된 접속 IP가 없습니다.</div>';return;}
-    var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
+    /* 막혀 있는 분을 맨 위로 — 밑으로 내려가면 못 본다 */
+    rows.sort(function(a,b){return (a.status==='pending'?0:1)-(b.status==='pending'?0:1);});
+    var wait=osIpWaitHtml(rows,nm);
+    var h=wait+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="color:var(--ink-5)"><th style="text-align:left;padding:5px">담당자</th><th style="text-align:left;padding:5px">IP</th><th style="text-align:center;padding:5px">상태</th><th style="text-align:right;padding:5px">최근</th><th></th></tr></thead><tbody>';
     for(var k=0;k<rows.length;k++){var r=rows[k];
       var b=r.status==='approved'?'<span class="badge green">승인</span>':(r.status==='blocked'?'<span class="badge red">차단</span>':'<span class="badge">대기</span>');
       var act=r.status==='approved'?'<button class="btn btn-ghost" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'blocked\')">차단</button>':'<button class="btn btn-primary" style="padding:3px 8px;font-size:11px" onclick="osIpSet(\''+r.member_id+'\',\''+osEsc(r.ip)+'\',\'approved\')">승인</button>';
@@ -12429,8 +12502,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-08-30 09:30';
-var APP_BUILD_NOTE="<b>📄 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만듭니다.</b> 읽는 부분은 있었는데 <b>부르는 데가 없었습니다</b> — 이제 「🔀 전·후 만들기」 맨 위에 올리는 자리가 있습니다. KB 보장분석표는 담보마다 <b>KB가 정한 표준담보명과 지급형태</b>를 이미 적어 주므로 규칙만으로 읽습니다. <b>AI 를 부르지 않습니다.</b> 읽은 계약은 서버에서 읽은 계약과 <b>같은 그릇</b>에 담고 출처만 딱지로 남깁니다 — 따로 담으면 리포트·전후·인쇄가 저마다 「KB 것도 봐야 한다」를 기억해야 하고 언젠가 한 곳이 잊습니다(5번). 새 표는 안 만들었습니다. 실물 KB 한 부(계약 23건 · 담보 341개)로 돌려 보고 <b>셋을 고쳤습니다.</b> ① <b>실손이 통째로 미분류</b>였습니다 — KB 는 「질병(전체질병을 의미)입원의료비」처럼 괄호를 끼워 적는데 사전에는 「질병입원의료비」만 있었습니다. 실손이 안 보이면 전후 비교가 거짓말을 합니다. 사전을 채워 미분류 51 → 40 으로 줄였습니다(남은 것은 출산지원금·자동차사고·골프처럼 <b>치료 밖의 담보</b>라 미분류가 맞습니다). ② KB 가 <b>「(납입완료)」</b>라 적어 준 계약의 보험료가 「매달 나가는 돈」 합계에 들어가 있었습니다 — 지금 내는 돈이 실제보다 많게 보였습니다. ③ 읽은 결과의 실효계약은 <b>목록</b>이고 사람은 <b>묶음</b>인데 숫자·글자로 쓰고 있어, 화면에 「[object Object]」가 찍힐 자리였습니다. <b>🔎 담보가 341개여도 쓸 수 있게</b> 했습니다. 전부 펴 놓으면 화면이 수십 미터가 됩니다. 담보가 40개를 넘으면 <b>접힌 채로</b> 열리고, 담보·상품 이름으로 <b>찾으면</b> 맞는 계약만 섭니다. 「전부 유지」는 <b>아직 안 정한 것만</b> 채워 이미 정하신 것을 덮지 않습니다. <b>접는 것은 빼는 것이 아닙니다</b> — 접힌 계약의 담보도 리포트에는 전부 나갑니다(21번). 그 자리를 점검에 못으로 박았습니다. <b>🖨 전·후 한 장만</b> 뽑을 수 있습니다. 「이거 해지하면 뭐가 달라지느냐」 한 마디에 필요한 것은 40장이 아니라 <b>한 장</b>입니다. 셈은 나누지 않았습니다 — 같은 표, 같은 함수입니다. 한 장에도 <b>누구 것인지</b>가 적히고, 담보가 어긋나면 <b>한 장짜리도 막습니다</b>. 틀린 한 장이 오히려 더 빨리 고객에게 갑니다. <b>🔀 「전 · 후 만들기」 한 화면</b>은 왼쪽에서 계약을 유지·해지로 찍고 담보마다 조정 후 금액을 <b>직접 적으면</b>, 오른쪽이 <b>누를 때마다</b> 다시 셉니다 — 월 보험료 전→후, 비는 자리, 채우는 자리. 「뇌출혈 자리에서 나오던 <b>1,000만원</b>이 없어집니다」처럼 <b>담보에 적혀 있는 말로만</b> 말합니다. <b>담보 하나를 해지로 찍어도 조정 후에 그대로 남아 있었습니다.</b> 조정 후에서 빠지는 것은 계약 단위 해지뿐이었습니다. 해지해 놓고 리포트에는 살아 있던 자리입니다. 「해지검토」는 여전히 해지가 아닙니다. 또 <b>해지하면 4건이 빈다</b>고 했는데 실은 5건이었습니다 — 금액을 못 읽은 담보가 조용히 빠져 있었습니다. 이제 「4+1건」이라 적고 이름을 대며 <b>0원이라는 뜻이 아니라고</b> 밝힙니다. <b>🧍 그림을 두 벌 그리지 않습니다.</b> 인체 한 장도 치료 여정도, 이미 잘 도는 것이 있는데 풀리포트가 같은 그림을 새로 그리고 있었습니다. 이제 비포&애프터의 인체도와 치료비 지급지도를 <b>그대로</b> 씁니다 — 두 화면은 한 글자도 안 바뀝니다. 잇는 자리에서 <b>「질병입원일당 5,003만원」</b>(하루 3만원 + 실손 5,000만원)과 <b>위암에 섞인 골절진단비 100만원</b>이 나와 둘 다 막았습니다. 점검을 <b>스물세 자리</b> 새로 넣고 <b>열넷을 되돌려</b> 빨간불을 확인했습니다. 그 과정에서 <b>제 점검이 네 번 헛통과</b>했습니다 — 화면에 세우지도 않은 표를 뒤졌고, 제가 쓴 설명글 속 「5,003」을 값으로 읽었고, 함수만 재느라 화면이 바뀐 것을 못 봤고, KB 점검이 「이대로 넣기」를 안 눌러 봐 납입완료 반영을 못 봤습니다. 넷 다 <b>실제 길을 타고</b> 재도록 고쳤습니다(8번).";
+var APP_BUILD='2026-08-30 09:05';
+var APP_BUILD_NOTE="<b>🔐 「로그인이 갑자기 안 되는 분들이 있다」 — 원인을 찾았습니다. 우리 잘못이 아니고, 우리가 할 몫은 다 했습니다.</b> <b>원인 ①: 서비스 제공사(Supabase) 자체 장애입니다.</b> 상태 페이지에 <b>「Increased response times for requests」</b> 가 <b>8월 27일부터 지금까지 열려</b> 있습니다(영향도 major, 아직 해결 안 됨 · status.supabase.com). 열쇠 없이 부르면 앞단이 0.2초에 답하는데 <b>우리 프로젝트까지 들어가면 20초 뒤 522</b> 가 납니다 — 열한 번 재서 열한 번 다 그랬습니다. <b>죽은 게 아니라 느려진 장애</b>라, 어떤 분은 되고 어떤 분은 안 되는 것입니다. 앱이나 배포 문제가 아닙니다. <b>그래서 앱이 할 수 있는 것을 다 했습니다.</b> 로그인 문턱은 <b>내 정보 읽기 → 승인 확인 → 설정 읽기 → IP 확인 → 문 열기</b> 인데, 맨 앞 하나에만 시간 제한이 있어 뒤에서 매달리면 <b>붉은 띠도 안내도 없이</b> 로그인 화면이 그대로 남았습니다 — 「눌렀는데 아무 일도 안 일어난다」. 이제 <b>모든 기다림에 제한</b>이 걸리고, 어느 자리에서 지쳤는지 <b>이름을 대고</b>, <b>비밀번호 탓이 아닐 수 있다</b>고 먼저 말합니다. <b>느린 서버에서는 포기하기 전에 더 기다립니다</b> — 12초 → 20초 → 30초로 세 번. 12초에서 자르면 14초면 왔을 답을 버리고 사람을 못 들어가게 합니다. <b>잠금이 아닌 것으로 막지 않습니다</b> — 설정 읽기나 (승인 칸이 없는 옛 표에서의) 승인 확인이 지쳐도 문은 열립니다. <b>헛되이 한 번 더 부르던 것</b>도 없앴습니다(7번) — 승인 확인이 바로 위에서 이미 읽어 온 줄을 또 읽고 있었습니다. <b>로그인 화면에 「서버 상태 확인」 단추</b>를 넣었습니다. 팀원분들께 눌러 보시라고 하시면 <b>「서버는 정상입니다 — 그러면 비밀번호 쪽입니다」</b> 인지 <b>「서버가 오류로 답합니다(522) — 앱도 비밀번호도 문제가 아닙니다」</b> 인지 그 자리에서 갈라 줍니다. <b>원인 ②: 접속 IP 승인제입니다 — 이건 켜져 있으면 「어떤 분만」 막는 자리입니다.</b> 각자 <b>맨 처음 쓴 자리 한 곳만</b> 자동 승인되고, 그 뒤에 바뀐 자리는 전부 「대기」 가 됩니다. 휴대폰 데이터·공유기 재접속·다른 사무실이면 자리가 바뀝니다. 여태 이걸 알려면 목록을 열어 상태 칸을 하나씩 읽어야 했고, 그동안 막힌 분은 <b>전화를 걸 때까지 막혀 있었습니다.</b> 이제 <b>설정 → 보안</b> 카드에 <b>「지금 N분이 못 들어오고 있습니다 — 이름」</b> 이 먼저 뜨고 <b>「모두 승인」</b> 한 번이면 풀립니다. 막힌 줄은 표 맨 위로 올라옵니다. 승인제가 꺼져 있으면 아무 말도 안 합니다(헛알람 금지). <b>승인제를 켤지 끌지는 사장님이 정하실 일이라 제가 바꾸지 않았습니다.</b> 관리자·소유자는 IP 잠금에서 빼 뒀습니다 — 자기 자신을 잠그면 풀 자리가 없습니다. 새 점검 <code>check-loginhold</code> (열한 마당) — <b>열네 자리를 되돌려 열네 번 다 빨간불</b>을 확인했습니다. 만드는 동안 제 점검이 <b>네 번 거짓 초록불</b>을 켰고 넷 다 고쳤습니다: 앞 경우의 되시도 타이머가 다음 경우를 밀었고(경우마다 새 판), 띠가 서고 내려가는 게 몇 밀리초 차이라 놓쳤고(「지쳤다」 적는 자리를 붙잡음), 함수가 돌려주는 글만 재고 <b>화면에 붙는지</b>는 안 봤고, 차례를 표가 아니라 화면 전체로 재고 있었습니다(띠에도 이름이 있어 정렬을 빼도 통과했습니다). <b>서버가 낫는 것은 여전히 제공사 몫입니다</b> — 다만 이제 앱이 숨기지 않고, 느려도 버티고, 막힌 분은 한 번에 풀립니다. <b>[main]</b> 같은 판에 들어온 것: 📄 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만듭니다. 읽는 부분은 있었는데 부르는 데가 없었습니다 — 이제 「🔀 전·후 만들기」 맨 위에 올리는 자리가 있습니다. KB 보장분석표는 담보마다 KB가 정한 표준담보명과 지급형태를 이미 적어 주므로 규칙만으…";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -40756,7 +40829,13 @@ function osWait(p,what,retry,ms){
     },limit);
     Promise.resolve(p).then(function(r){
       if(t===null)return;             /* 이미 시간 초과로 답했다 — 두 번 답하지 않는다 */
-      clearTimeout(t);t=null;resolve(r);
+      clearTimeout(t);t=null;
+      /* 한 자리가 지쳐 띠가 섰어도 <b>다른 자리가 제대로 받아 오면 내린다.</b>
+         띠를 내리는 자리는 여기 하나다 — 부르는 곳마다 따로 적으면 빠뜨린다(5번).
+         실제로 「승인 확인」 이 한 번 지친 뒤 다 나았는데도 붉은 띠가 그대로
+         남아 있었다. */
+      if(!(r&&r.error))osServerOk();
+      resolve(r);
     },function(e){
       if(t===null)return;
       clearTimeout(t);t=null;
@@ -41815,7 +41894,77 @@ function osAuthFormHtml(inModal){
         '<b>국외 이전</b>에 동의합니다 <a onclick="'+openTerms+'">보기</a></label>'+
     '</div>'+
     '<div class="os-err" id="osErr"></div>'+
-    '<button class="os-btn" id="osSubmit" onclick="osSubmit()">로그인</button>';
+    '<button class="os-btn" id="osSubmit" onclick="osSubmit()">로그인</button>'+
+    /* 「갑자기 로그인이 안 된다」 — 서버 탓인지 비밀번호 탓인지 <b>본인이</b>
+       그 자리에서 알 수 있어야 한다. 안 그러면 물어볼 데가 대표님뿐이다. */
+    '<div style="margin-top:10px;text-align:center">'+
+      '<button type="button" id="osNetBtn" onclick="osNetTest()" '+
+        'style="background:none;border:none;color:#64748B;font-size:11.5px;font-weight:700;'+
+        'text-decoration:underline;cursor:pointer;font-family:inherit">'+
+        '로그인이 안 되나요? 서버 상태 확인</button>'+
+      '<div id="osNetOut" style="margin-top:8px;font-size:11.5px;line-height:1.75"></div>'+
+    '</div>';
+}
+/* ── 서버가 살아 있나 — <b>그 자리에서</b> 답한다 ─────────────────────
+   2026-08-30 에 Supabase 가 <b>522</b> 로 스무 초씩 답을 안 주는 일이
+   있었다. 그때 화면은 아무 말도 안 했고, 「비밀번호를 잘못 넣었나」 하고
+   여러 번 다시 치게 됐다.
+
+   이제 눌러 보면 셋 중 하나로 답한다 —
+     · 서버가 정상이다 → 그러면 아이디·비밀번호 쪽이다
+     · 서버가 대답을 안 한다 → <b>앱도 비밀번호도 문제가 아니다</b>
+     · 인터넷이 끊겼다 → 그것부터
+   기다림에는 반드시 시간 제한을 건다 (CLAUDE.md 4-1).               */
+var OS_NET_MS=9000;
+function osNetOut(html){var e=document.getElementById('osNetOut');if(e)e.innerHTML=html;}
+function osNetBox(bd,bg,fg,html){
+  return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:10px;padding:9px 11px;color:'+fg+'">'+html+'</div>';
+}
+function osNetTest(){
+  var b=document.getElementById('osNetBtn');
+  if(b){b.disabled=true;b.textContent='확인하는 중…';}
+  var back=function(){if(b){b.disabled=false;b.textContent='로그인이 안 되나요? 서버 상태 확인';}};
+  if(typeof navigator!=='undefined'&&navigator.onLine===false){
+    back();
+    osNetOut(osNetBox('#FDE68A','#FFFBEB','#92400E',
+      '📶 <b>인터넷이 끊겨 있습니다.</b> 와이파이나 데이터를 확인해 주세요.'));
+    return;
+  }
+  /* 서버 주소는 이 파일이 쓰는 그 이름으로 — osClient 가 보는 곳과 같아야 한다 (5번) */
+  var c=(typeof window!=='undefined'&&window.APEX_SB)||{};
+  if(!c.url||!c.key){
+    back();
+    osNetOut(osNetBox('#FDE68A','#FFFBEB','#92400E','서버 주소를 못 읽었습니다 — 새로고침해 주세요.'));
+    return;
+  }
+  var done=false,to;
+  var fin=function(html){if(done)return;done=true;clearTimeout(to);back();osNetOut(html);};
+  to=setTimeout(function(){
+    fin(osNetBox('#FECACA','#FEF2F2','#B91C1C',
+      '⛔ <b>서버가 '+(OS_NET_MS/1000)+'초 안에 답하지 않습니다.</b><br>'+
+      '<b>앱도 비밀번호도 문제가 아닙니다.</b> 데이터베이스가 멈춘 것입니다 — '+
+      '조금 뒤 다시 해 보시고, 계속 이러면 대표님께 알려 주세요.'));
+  },OS_NET_MS);
+  try{
+    fetch(c.url+'/auth/v1/health',{headers:{apikey:c.key}}).then(function(r){
+      if(r.status>=200&&r.status<400){
+        fin(osNetBox('#BBF7D0','#F0FDF4','#166534',
+          '✅ <b>서버는 정상입니다.</b> 그러면 아이디나 비밀번호 쪽입니다 — '+
+          '이메일 철자를 보시고, 그래도 안 되면 대표님께 <b>임시 비밀번호</b>를 받으세요.'));
+        return;
+      }
+      fin(osNetBox('#FECACA','#FEF2F2','#B91C1C',
+        '⛔ <b>서버가 오류로 답합니다 ('+r.status+').</b><br>'+
+        '<b>앱도 비밀번호도 문제가 아닙니다.</b> 데이터베이스 쪽 장애입니다 — 대표님께 알려 주세요.'));
+    },function(){
+      fin(osNetBox('#FECACA','#FEF2F2','#B91C1C',
+        '⛔ <b>서버에 닿지 못했습니다.</b><br>인터넷은 되는데 이 말이 나오면 <b>서버 쪽 장애</b>입니다.'));
+    })['catch'](function(){
+      fin(osNetBox('#FECACA','#FEF2F2','#B91C1C','⛔ <b>서버에 닿지 못했습니다.</b>'));
+    });
+  }catch(e){
+    fin(osNetBox('#FECACA','#FEF2F2','#B91C1C','⛔ <b>서버에 닿지 못했습니다.</b>'));
+  }
 }
 function osModalHtml(){
   return '<div class="os-modal">'+
@@ -41955,31 +42104,46 @@ function osLoadProfile(){
   /* 로그인은 통과했는데 <b>내 정보를 읽는 이 자리</b>가 안 끝나면 앱이 반쯤
      열린 채 멈춘다 — 데이터베이스만 죽어도 그렇게 된다(2026-08-28). 시간
      제한을 걸어 아래 osProfileApply 의 「못 받았습니다」 길로 반드시 떨군다. */
+  var what='내 정보 읽기'+(OS_PROF_RETRY?' ('+(OS_PROF_RETRY+1)+'번째)':'');
   osWait(sb.from('profiles').select('id,name,role,active,team_id,plan,plan_until,status,workspace').eq('id',uid).single(),
-         '내 정보 읽기',function(){osLoadProfile();}).then(function(r){
+         what,function(){osLoadProfile();},osProfMs()).then(function(r){
     if(r&&r.error&&!r.error.timeout){
       /* 새 컬럼이 없는 경우를 대비한 하위호환 재시도 */
       osWait(sb.from('profiles').select('id,name,role,active,team_id').eq('id',uid).single(),
-             '내 정보 읽기',function(){osLoadProfile();}).then(function(r2){osProfileApply(sb,uid,r2);});
+             what,function(){osLoadProfile();},osProfMs()).then(function(r2){osProfileApply(sb,uid,r2);});
       return;
     }
-    if(!(r&&r.error))osServerOk();
-    osProfileApply(sb,uid,r);
+    osProfileApply(sb,uid,r);         /* 띠 내리기는 osWait 이 한다 */
   });
 }
-/* 프로필을 못 받았을 때 한 번만 다시 해 본다 — 두 번 부르면 두 배로 부른다 */
-var OS_PROF_RETRY=0;
+/* ── 내 정보 읽기는 <b>못 읽으면 못 들어가는</b> 유일한 자리다 ────────────
+   그래서 여기만은 <b>포기하기 전에 더 기다려 준다.</b> 서비스 제공사가
+   아주 죽는 대신 <b>느려지는</b> 장애(2026-08-27 부터 「Increased response
+   times」)일 때, 12초에서 자르면 14초면 왔을 답을 버리고 사람을 못 들어가게
+   한다. 그래서 다시 할 때마다 <b>기다림을 늘린다</b>.
+   되풀이해서 부르는 것이 아니다 — 로그인 한 번에 최대 세 번이고, 되면 멈춘다(7번). */
+var OS_PROF_RETRY=0,OS_PROF_MAX=3,OS_PROF_WAITS=[12000,20000,30000];
+function osProfMs(){return OS_PROF_WAITS[Math.min(OS_PROF_RETRY,OS_PROF_WAITS.length-1)];}
 function osProfileApply(sb,uid,r){
     if(r.error||!r.data){
       OS.profile=null;osRenderPill();
       /* 로그인은 돼 있는데 내 정보만 못 받은 경우다. 게이트를 다시 띄우면
          「로그인하세요」 라고 거짓말을 하게 된다 — 신호가 나빴을 뿐이다.
          한 번 다시 해 보고, 그래도 안 되면 무엇이 문제인지 그대로 말한다. */
-      if(OS.session&&OS_PROF_RETRY<1){
+      /* <b>다시 해 볼 값어치가 있는 실패인가.</b>
+         서버가 <b>지쳤거나 끊긴</b> 것이면 더 기다려 가며 세 번까지 해 본다 —
+         느려진 장애에서는 그 기다림이 곧 들어가느냐 마느냐다.
+         그런데 서버가 <b>제대로 답했는데 내 줄이 없는</b> 것이면(오류 없이
+         빈손) 다시 물어도 같은 답이다. 그 자리에서 세 번 더 부르는 것은
+         서버만 축낸다(7번) — 예전처럼 한 번만 해 보고 말한다. */
+      var slow=!!r.error;
+      var cap=slow?OS_PROF_MAX:1;
+      if(OS.session&&OS_PROF_RETRY<cap){
         OS_PROF_RETRY++;
         setTimeout(function(){try{osLoadProfile();}catch(e){}},1800);
       }else if(OS.session){
-        toast('로그인은 돼 있는데 내 정보를 못 받았습니다 — 신호를 확인하고 새로고침해 주세요.',9000);
+        toast('로그인은 돼 있는데 내 정보를 못 받았습니다 — '+(OS_PROF_RETRY+1)+'번 해 봤습니다. '+
+              '로그인 화면의 「서버 상태 확인」 을 눌러 보시면 서버 탓인지 바로 나옵니다.',12000);
       }
       return;
     }
@@ -41992,6 +42156,7 @@ function osProfileApply(sb,uid,r){
     if(r.data.active===false){toast('비활성화된 계정입니다. 관리자에게 문의하세요.');sb.auth.signOut();return;}
     var prof=r.data;
     /* 승인 게이트: status 컬럼이 있을 때만 작동(없으면 하위호환으로 통과). 관리자·거절 우회 없음 */
+    /* 이미 읽은 줄을 그대로 넘겨 준다 — 같은 것을 두 번 읽지 않는다 (7번) */
     osCheckApproval(sb,uid,function(gate,extra){
       if(gate&&prof.role!=='admin'){OS.profile=null;osRenderPill();osShowPending(gate,(OS.session&&OS.session.user&&OS.session.user.email)||'',extra);return;}
       OS.profile=prof;
@@ -42008,10 +42173,21 @@ function osProfileApply(sb,uid,r){
           try{advFromServer();}catch(e){}
         });
       });
-    });
+    },prof);
 }
-/* status/plan을 별도 best-effort 조회 — 컬럼이 없으면 조용히 통과(로그인을 절대 깨지 않음) */
-function osCheckApproval(sb,uid,cb){
+/* ── 승인 확인 — <b>이미 읽은 줄로 답한다</b> ─────────────────────────
+   바로 위 <code>osLoadProfile</code> 이 <code>status·workspace·plan·
+   plan_until</code> 을 <b>벌써 읽어 왔다.</b> 그런데 여기서 같은 표를
+   <b>한 번 더</b> 읽고 있었다. 그래서
+
+     · 서버를 로그인마다 한 번씩 헛되이 더 불렀고 (CLAUDE.md 7번)
+     · 그 한 번이 안 끝나면 <b>로그인이 통째로 멈췄다</b> — 시간 제한이
+       없었으므로 영영. 붉은 띠도 안 떴다.
+
+   이제 손에 있는 값으로 판단하고, <b>옛 표라 그 칸이 없을 때만</b> 한 번
+   더 읽는다. 그 한 번에도 시간 제한을 건다 — 지나면 예전 실패 처리와
+   똑같이 통과시킨다(그 표에는 승인 칸 자체가 없다는 뜻이므로).       */
+function osCheckApproval(sb,uid,cb,have){
   function decide(d){
     var st=d.status;
     if(st==='pending'){
@@ -42026,15 +42202,22 @@ function osCheckApproval(sb,uid,cb){
     if(st==='rejected'){cb('rejected',d);return;}
     cb(null,d);
   }
+  /* 이미 읽은 줄에 답이 다 있으면 <b>다시 안 읽는다</b> (5번·7번) */
+  if(have&&Object.prototype.hasOwnProperty.call(have,'status')
+         &&Object.prototype.hasOwnProperty.call(have,'workspace')){decide(have);return;}
+  if(!sb){cb(null,null);return;}
   try{
-    sb.from('profiles').select('status,plan,plan_until,workspace').eq('id',uid).single().then(function(r){
-      if(!r.error&&r.data){decide(r.data);return;}
+    osWait(sb.from('profiles').select('status,plan,plan_until,workspace').eq('id',uid).single(),
+           '승인 상태 확인').then(function(r){
+      if(r&&!r.error&&r.data){decide(r.data);return;}
+      if(r&&r.error&&r.error.timeout){cb(null,null);return;}   /* 지쳤다 — 띠는 이미 섰다 */
       /* workspace 컬럼이 아직 없으면(migration_16 전) 기존 방식으로 */
-      sb.from('profiles').select('status,plan,plan_until').eq('id',uid).single().then(function(r2){
-        if(r2.error||!r2.data){cb(null,null);return;}
+      osWait(sb.from('profiles').select('status,plan,plan_until').eq('id',uid).single(),
+             '승인 상태 확인').then(function(r2){
+        if(!r2||r2.error||!r2.data){cb(null,null);return;}
         decide(r2.data);
-      },function(){cb(null,null);});
-    },function(){cb(null,null);});
+      });
+    });
   }catch(e){cb(null,null);}
 }
 /* 가입 승인 대기/거절 전체화면 — 로그인은 됐지만 아직 입장 불가 상태 안내 */
