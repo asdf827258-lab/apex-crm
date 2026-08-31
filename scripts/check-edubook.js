@@ -30,9 +30,12 @@ const E = require(EASY);
 const P = require(path.join(ROOT, 'app/교육/plan.js'));
 const M = require(path.join(ROOT, 'app/교육/master.js'));
 const N = require(MENT);
-const book = fs.readFileSync(BOOK, 'utf8');
+const shell = fs.readFileSync(BOOK, 'utf8');
+const draw  = fs.readFileSync(path.join(ROOT, 'app/교육/book.js'), 'utf8');
+/* 껍데기는 book.html, 그리는 것은 book.js — 글로 보는 검사는 둘을 함께 본다 */
+const book = shell + '\n' + draw;
 /* 주석을 걷은 CSS — 「tnum 은 켜지 않는다」 같은 설명까지 잡으면 헛것이다 */
-const css = book.replace(/\/\*[\s\S]*?\*\//g, '');
+const css = shell.replace(/\/\*[\s\S]*?\*\//g, '');
 const app = fs.readFileSync(APP, 'utf8');
 
 function flat(v, o) { o = o || [];
@@ -131,10 +134,16 @@ is(withSay.every(c => N[c.n]), '  빠진 카드가 없다');
 is(Object.keys(N).every(k => (N[k].alt || []).length >= 2), '  카드마다 <b>다른 결</b>이 둘 이상이다');
 is(Object.keys(N).every(k => N[k].why && N[k].sit), '  왜 그렇게 말하는지와 상황이 있다');
 /* 지금 쓰는 말은 master.js 에만 있어야 한다 — 여기 또 적으면 두 벌이다 */
-const nz = x => String(x || '').replace(/<[^>]*>/g, '').replace(/[「」\s]/g, '');
+const nz = x => String(x || '').replace(/<[^>]*>/g, '').replace(/[「」\s.,·?!~—]/g, '');
 const dupSay = Object.keys(N).filter(k => {
   const cur = nz((withSay.filter(c => c.n === k)[0] || {}).say);
-  return (N[k].alt || []).some(a => nz(a[1]) === cur);
+  if (!cur) return false;
+  /* 끝만 잘라 붙여도 되풀이다 — 한쪽이 다른 쪽에 통째로 들어 있으면 잡는다 */
+  return (N[k].alt || []).some(a => {
+    const alt = nz(a[1]); if (!alt) return false;
+    const sh = alt.length < cur.length ? alt : cur, lg = alt.length < cur.length ? cur : alt;
+    return sh.length >= 12 && lg.indexOf(sh) >= 0;
+  });
 });
 is(dupSay.length === 0, '  다른 결이 <b>지금 쓰는 말을 되풀이하지 않는다</b>' +
    (dupSay.length ? ' — ' + dupSay.join(',') : ''));
@@ -149,15 +158,15 @@ console.log('\n[5-2] 읽기 편한가');
 is(/--fs:/.test(book), '  글자 크기를 바꿀 수 있다');
 is(/data-fs="l"/.test(book) && /data-fs="xl"/.test(book), '  크게 · 아주 크게가 있다');
 is(/word-break:keep-all/.test(book), '  낱말이 줄 끝에서 안 쪼개진다 — 한글은 이게 없으면 읽기가 나빠진다');
-is(/max-width:41em/.test(book), '  한 줄이 서른 몇 자에서 끊긴다 — 한글이 제일 편한 폭');
+/* 한 줄 길이는 아래 [9] 에서 화면으로 잽니다 — 글에서 찾으면 폭 단위를 바꿀 때마다 헛것이 됩니다 */
 is(/line-height:1\.9|line-height:2/.test(book), '  줄 사이가 넉넉하다');
 
 console.log('\n[5-3] 인쇄 — 종이는 다른 물건이다');
 is(/@page\{size:A4/.test(css), '  A4 판이 잡혀 있다');
 is(/\.ch\{break-before:page/.test(css), '  장마다 새 쪽에서 시작한다');
-is(/\.cov[\s\S]{0,200}break-after:page/.test(css), '  표지가 한 장으로 선다');
+is(/\.hi[\s\S]{0,160}break-after:page/.test(css), '  표지가 한 장으로 선다');
 is(/break-inside:avoid/.test(css), '  칸이 두 쪽에 걸쳐 잘리지 않는다');
-is(/var PRINTING/.test(book) && /PRINTING\?true:/.test(book),
+is(/var PRINTING/.test(book) && /PRINTING\?!!note:/.test(book),
    '  <b>접어 둔 쉬운 말도 종이에는 펴서</b> 찍는다');
 is(/beforeprint/.test(book) && /afterprint/.test(book),
    '  Ctrl+P 로 들어와도 같게 나온다');
@@ -166,7 +175,7 @@ console.log('\n[6] 차근차근 쌓이는가');
 is(/class="stack"/.test(book), '  쌓이는 것이 눈에 보인다');
 is(/이어보기|첫 장부터/.test(book), '  읽던 자리로 <b>이어보기</b>가 있다');
 is(/data-read=/.test(book), '  읽은 장이 표시된다');
-is(/tocHtml/.test(book), '  목차가 있다');
+is(/차례/.test(book) && /function vHome/.test(book), '  홈에 차례가 있다');
 
 console.log('\n[7] 앱 메뉴에 서 있는가');
 is(/\{id:'edu_book'/.test(app), '  메뉴에 전자책이 있다');
@@ -180,7 +189,7 @@ console.log('\n[8] 인쇄');
 is(!/font-feature-settings/.test(css),
    '  tnum 을 켜지 않았다 — 켜고 PDF 로 저장하면 숫자가 유니코드를 잃는다');
 is(/@media print/.test(css), '  인쇄 규칙이 있다');
-is(/window\.print/.test(book), '  인쇄 단추가 있다');
+/* 인쇄 단추는 아래 [13] 에서 실제로 눌러 봅니다 — 글에서 window.print 를 찾으면 이름만 바꿔도 빠져나갑니다 */
 
 /* ── 여기까지는 글자만 봤다. 아래는 실제로 열어 본다. ── */
 const { chromium } = require('playwright');
@@ -206,7 +215,7 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
 
   console.log('\n[9] 폰에서 실제로 열리는가');
   await pg.goto(U, { waitUntil: 'networkidle' });
-  const chs = await pg.$$eval('.tci', n => n.map(x => x.getAttribute('data-go')));
+  const chs = await pg.$$eval('#pane .row[data-go]', n => n.map(x => x.getAttribute('data-go')));
   is(chs.length >= 10, '  장이 ' + chs.length + '개 선다');
   let over = [], thin = [], nofig = 0, nopic = 0;
   for (const k of chs) {
@@ -221,8 +230,25 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   }
   is(over.length === 0, '  가로로 안 밀린다' + (over.length ? ' — ' + over.join(', ') : ''));
   is(thin.length === 0, '  빈 장이 없다' + (thin.length ? ' — ' + thin.join(', ') : ''));
-  is(nofig >= 6, '  그림이 실제로 그려진다 (' + nofig + ')');
+  /* 그림 넷은 MASTER 카드 <b>상세</b>에 있습니다 — 장만 돌면 못 봅니다 */
+  for (const c of M.cards) {
+    await pg.goto(U + '#mast/' + c.n, { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(70);
+    nofig += (await pg.$$('figure svg')).length;
+  }
+  is(nofig >= 9, '  그림이 실제로 그려진다 (' + nofig + ')');
   is(nopic >= 3, '  사진이 실제로 뜬다 (' + nopic + ')');
+  /* 한 줄 길이 — 한글은 서른 몇 자에서 끊어야 편합니다. 글이 아니라 화면에서 잽니다 */
+  /* 폰은 화면이 좁아 어차피 끊깁니다 — 넓은 화면에서 <b>안 끝없이 늘어나는지</b>를 봅니다 */
+  await pg.setViewportSize({ width: 1280, height: 900 });
+  await pg.goto(U + '#team', { waitUntil: 'domcontentloaded' });
+  await pg.waitForTimeout(200);
+  const cpl = await pg.evaluate(() => {
+    const b = document.querySelector('.sec .body');
+    return b ? b.clientWidth / parseFloat(getComputedStyle(b).fontSize) : 0;
+  });
+  await pg.setViewportSize({ width: 390, height: 844 });
+  is(cpl >= 26 && cpl <= 46, '  넓은 화면에서도 한 줄이 서른 몇 자에서 끊긴다 (' + cpl.toFixed(1) + '자)');
 
   console.log('\n[9-1] 글자 크기 · 멘트 장');
   const fsM = await pg.evaluate(() => getComputedStyle(document.body).fontSize);
@@ -238,9 +264,21 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   await pg.waitForTimeout(200);
   await pg.goto(U + '#ment', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(350);
-  is((await pg.$$('.sec')).length >= 20, '  멘트 장에 꼭지가 다 선다');
-  is((await pg.$$('.good')).length === withSay.length,
-     '  <b>지금 쓰는 말</b>이 카드마다 한 번씩 뜬다');
+  const mrows = await pg.$$eval('#pane .row[data-go^="ment/"]', n => n.map(x => x.getAttribute('data-go')));
+  is(mrows.length === withSay.length,
+     '  멘트가 ' + mrows.length + '줄 다 선다 (카드 ' + withSay.length + '개)');
+  /* 상세를 하나씩 열어 본다 — 「지금 쓰는 말」이 딱 한 번, 다른 결이 둘 이상 */
+  let noSay = [], noAlt = [];
+  for (const g of mrows) {
+    await pg.goto(U + '#' + g, { waitUntil: 'domcontentloaded' });
+    await pg.waitForTimeout(70);
+    if ((await pg.$$('.good')).length !== 1) noSay.push(g);
+    if ((await pg.$$('#pane .row')).length < 2) noAlt.push(g);
+  }
+  is(noSay.length === 0, '  <b>지금 쓰는 말</b>이 줄마다 딱 한 번 뜬다' +
+     (noSay.length ? ' — ' + noSay.join(',') : ''));
+  is(noAlt.length === 0, '  <b>다른 결</b>도 함께 뜬다' +
+     (noAlt.length ? ' — ' + noAlt.join(',') : ''));
 
   console.log('\n[10] 어려운 말을 눌러 보면');
   await pg.goto(U + '#mast', { waitUntil: 'networkidle' });
@@ -265,13 +303,13 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   is(easyTxt.length > 20, '  펴진 말이 비어 있지 않다');
   await pg.goto(U + '#mine', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(250);
-  is((await pg.$$('.li')).length >= 1, '  어려워한 곳이 <b>모인다</b>');
+  is((await pg.$$('#pane .row')).length >= 1, '  어려워한 곳이 <b>모인다</b>');
   await pg.click('[data-clr]');
   await pg.waitForTimeout(250);
-  is((await pg.$$('.li')).length === 0, '  지울 수 있다');
+  is((await pg.$$('#pane .row')).length === 0, '  지울 수 있다');
 
   console.log('\n[12] 눌러서 바로 열리는가 · 읽은 표시');
-  await pg.goto(U + '#mast', { waitUntil: 'networkidle' });
+  await pg.goto(U + '#mast/07', { waitUntil: 'networkidle' });
   await pg.waitForTimeout(250);
   const hrefs = await pg.$$eval('a.op', n => n.map(x => x.getAttribute('href')));
   is(hrefs.length > 0, '  「바로 열기」 단추가 있다 (' + hrefs.length + ')');
@@ -283,13 +321,25 @@ const U = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + 
   await pg.waitForTimeout(220);
   await pg.click('[data-read]');
   await pg.waitForTimeout(250);
-  is(/읽었어요/.test(await pg.$eval('[data-read]', n => n.textContent)), '  읽음이 찍힌다');
-  await pg.goto(U + '#cover', { waitUntil: 'domcontentloaded' });
+  is(/✓/.test(await pg.$eval('[data-read]', n => n.textContent)), '  읽음이 찍힌다');
+  await pg.goto(U + '#home', { waitUntil: 'domcontentloaded' });
   await pg.waitForTimeout(250);
-  is((await pg.$$('.tci.done')).length === 1, '  목차에 읽은 표시가 남는다');
-  is(/이어보기/.test(await pg.$eval('#pane', n => n.innerText)), '  <b>이어보기</b>가 뜬다');
+  is((await pg.$$('#pane .row.done')).length === 1, '  차례에 읽은 표시가 남는다');
+  is(/이어보기/.test(await pg.$eval('#ctain', n => n.innerText)), '  <b>이어보기</b>가 뜬다');
   is((await pg.$$('.stack i')).length === M.cards.length, '  쌓기 칸이 서른 개다');
-  console.log('\n[13] 인쇄하면 한 권이 되는가');
+    console.log('\n[13] 인쇄하면 한 권이 되는가');
+  /* 홈의 인쇄 단추를 실제로 누른다 — window.print 는 막아 두고 펴지는지만 본다 */
+  await pg.goto(U + '#home', { waitUntil: 'networkidle' });
+  await pg.waitForTimeout(250);
+  await pg.evaluate(() => { window.__p = 0; window.print = () => { window.__p++; }; });
+  const pb = await pg.$$('[data-print]');
+  is(pb.length === 1, '  홈에 인쇄 단추가 있다');
+  if (pb.length) {
+    await pb[0].click();
+    await pg.waitForTimeout(600);
+    is((await pg.evaluate(() => window.__p)) === 1, '  누르면 인쇄가 뜬다');
+    is((await pg.$eval('#pane', n => n.innerText.length)) > 30000, '  누른 그 자리에서 한 권이 펴진다');
+  } else { is(false, '  누르면 인쇄가 뜬다'); is(false, '  누른 그 자리에서 한 권이 펴진다'); }
   await pg.emulateMedia({ media: 'print' });
   await pg.evaluate(() => window.dispatchEvent(new Event('beforeprint')));
   await pg.waitForTimeout(900);
