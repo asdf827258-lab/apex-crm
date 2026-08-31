@@ -408,6 +408,9 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   onAuthStateChange:function(){return {data:{subscription:{unsubscribe:function(){}}}}},
   signOut:function(){return Promise.resolve({})}}};}};`;
 
+/* 칸 띠가 없어졌습니다 — 주소 뒤 이름표로 옮겨 갑니다 */
+async function goV(pg, v) { await pg.evaluate(v => { location.hash = v; }, v); }
+
 (async () => {
   const br = await chromium.launch();
   const pg = await br.newPage({ viewport: { width: 390, height: 844 } });
@@ -424,12 +427,14 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   console.log('\n[10] 좁은 화면에서 실제로 열리는가');
   await pg.goto('http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + '/index.html',
     { waitUntil: 'networkidle' });
-  const tabs = await pg.$$eval('.tb', n => n.map(x => x.textContent));
-  is(tabs.length >= 8, '  칸이 ' + tabs.length + '개 섰다');
+  /* 칸 띠를 없애고 홈에서 눌러 들어가게 바꿨습니다 — 차례는 홈의 줄입니다 */
+  const tabs = await pg.$$eval('#pane .nrow[data-v]', n => n.map(x => x.getAttribute('data-v')));
+  is(tabs.length >= 8, '  차례가 ' + tabs.length + '줄 섰다');
+  const U2 = 'http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + '/index.html#';
   let over = [], thin = [];
   for (const t of tabs) {
-    await pg.click('.tb:text-is("' + t + '")');
-    await pg.waitForTimeout(90);
+    await pg.evaluate(t => { location.hash = t; }, t);
+    await pg.waitForTimeout(120);
     const w = await pg.evaluate(() => document.documentElement.scrollWidth);
     const len = await pg.$eval('#pane', n => n.innerText.length);
     if (w > 392) over.push(t + '(' + w + ')');
@@ -444,18 +449,49 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
     meet:'조회', cover:'커버 처방', study:'공부 리듬', path:'어디로 가는가', gate:'게이트',
     ses:'세션 카드', news:'소식지', run:'어디에 무엇이 있나', law:'산출물' };
   const dead = [];
-  for (const t of tabs) {
-    await pg.click('.tb:text-is("' + t + '")');
-    await pg.waitForTimeout(80);
-    const v = await pg.$eval('.tb.on', n => n.getAttribute('data-v'));
+  for (const v of tabs) {
+    await pg.evaluate(v => { location.hash = v; }, v);
+    await pg.waitForTimeout(110);
     const mk = MARK[v];
     if (!mk) continue;
     const txt = await pg.$eval('#pane', n => n.innerText);
-    if (txt.indexOf(mk) < 0) dead.push(t);
+    if (txt.indexOf(mk) < 0) dead.push(v);
   }
   is(dead.length === 0, '  칸마다 <b>제 내용</b>이 그려진다 — 조용히 죽어 앞 칸이 남지 않는다' +
      (dead.length ? ' — ' + dead.join(', ') : ''));
   is(errs.length === 0, '  칸을 다 눌러 보는 동안 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
+
+  console.log('\n[10-1] 표를 옆으로 밀지 않는가 (CLAUDE.md 5 · 폰에서 표는 못 읽는다)');
+  /* 네 칸짜리 표는 마지막 칸이 화면 밖으로 나가 <b>안 보입니다.</b>
+     실제로 커버 처방표의 「매니저가 그 자리에서 하는 것」이 그랬습니다. */
+  let wide = [];
+  for (const v of tabs) {
+    await pg.evaluate(v => { location.hash = v; }, v);
+    await pg.waitForTimeout(110);
+    const t = await pg.$$eval('table', n => n.map(x => ({
+      cal: x.classList.contains('cal'),
+      over: x.scrollWidth > x.parentElement.clientWidth + 2
+    })));
+    /* 달력만 예외입니다 — 그것은 진짜 격자입니다 */
+    if (t.some(x => !x.cal && x.over)) wide.push(v);
+  }
+  is(wide.length === 0, '  달력 말고는 옆으로 미는 표가 없다' +
+     (wide.length ? ' — ' + wide.join(', ') : ''));
+  await pg.evaluate(() => { location.hash = 'cover'; });
+  await pg.waitForTimeout(200);
+  const cv = await pg.$eval('#pane', n => n.innerText);
+  is(/그 자리에서/.test(cv), '  커버 처방의 <b>매니저가 하는 것</b>이 화면 안에 있다');
+
+  console.log('\n[10-2] 홈에서 눌러 들어가고 ‹ 로 나오는가');
+  await pg.evaluate(() => { location.hash = 'cover'; });
+  await pg.waitForTimeout(180);
+  is((await pg.$eval('#nt', n => n.textContent)).length > 0, '  위 띠가 지금 어디인지 말한다');
+  is((await pg.$eval('#bk', n => getComputedStyle(n).visibility)) === 'visible', '  나가는 ‹ 가 보인다');
+  await pg.click('#bk');
+  await pg.waitForTimeout(220);
+  is((await pg.$$('#pane .nrow')).length === tabs.length, '  ‹ 를 누르면 차례로 돌아온다');
+  is((await pg.$eval('#bk', n => getComputedStyle(n).visibility)) === 'hidden', '  차례에서는 ‹ 가 없다');
+  is((await pg.$$('#ctain .big')).length >= 1, '  다음 할 일이 아래에 하나 있다');
 
   console.log('\n[11] 인쇄하면 전부 담기는가');
   await pg.emulateMedia({ media: 'print' });
@@ -473,7 +509,7 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
 
   console.log('\n[11-1] 캘린더가 실제로 굴러가는가');
   await pg.setViewportSize({ width: 1100, height: 900 });
-  await pg.click('.tb:text-is("📅 캘린더")');
+  await goV(pg, 'cal');
   await pg.waitForTimeout(200);
   const now = new Date(), pad = n => (n < 10 ? '0' : '') + n;
   const mk = d => now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(d);
@@ -493,7 +529,7 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.click('[data-add="' + D2 + '"]'); await pg.waitForTimeout(180);
   is((await pg.$$('[data-del="' + D2 + '"]')).length === 0, '  빈 글은 안 들어간다');
   await pg.reload({ waitUntil: 'networkidle' });
-  await pg.click('.tb:text-is("📅 캘린더")'); await pg.waitForTimeout(200);
+  await goV(pg, 'cal'); await pg.waitForTimeout(200);
   is((await pg.$$('[data-del="' + D1 + '"]')).length === 3, '  새로고침해도 남아 있다');
   await pg.click('[data-cal="next"]'); await pg.waitForTimeout(180);
   is((await pg.$$('.mine')).length === 0, '  다음 달은 비어 있다 — 달마다 따로 남는다');
@@ -508,16 +544,16 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
      '  비우기는 <b>내가 넣은 것만</b> 지운다 — 고정 리듬은 남는다');
 
   console.log('\n[11-2] 두 리스트가 따로 남는가');
-  await pg.click('.tb:text-is("지점장")'); await pg.waitForTimeout(200);
+  await goV(pg, 'lead'); await pg.waitForTimeout(200);
   const leadN = (await pg.$$('.ck')).length;
   is(leadN >= 15, '  지점장 칸이 ' + leadN + '개 선다');
   await pg.click('.ck'); await pg.waitForTimeout(180);
   is((await pg.$$('.ck.on')).length === 1, '  찍힌다');
-  await pg.click('.tb:text-is("교육매니저")'); await pg.waitForTimeout(200);
+  await goV(pg, 'edu'); await pg.waitForTimeout(200);
   is((await pg.$$('.ck')).length >= 12, '  교육매니저 칸이 선다');
   is((await pg.$$('.ck.on')).length === 0, '  지점장이 찍은 것이 교육매니저에 안 섞인다');
   await pg.reload({ waitUntil: 'networkidle' });
-  await pg.click('.tb:text-is("지점장")'); await pg.waitForTimeout(200);
+  await goV(pg, 'lead'); await pg.waitForTimeout(200);
   is((await pg.$$('.ck.on')).length === 1, '  새로고침해도 찍힌 것이 남는다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await pg.setViewportSize({ width: 390, height: 844 });
@@ -527,18 +563,19 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await pg.goto('http://127.0.0.1:' + PORT + '/app/' + encodeURIComponent('교육') + '/index.html',
     { waitUntil: 'networkidle' });
-  is(/환영합니다/.test(await pg.$eval('.tb.on', n => n.textContent)), '  열면 <b>환영합니다</b>부터 나온다');
+  is((await pg.$$('#pane .nrow')).length >= 8, '  열면 <b>차례</b>부터 나온다');
+  await goV(pg, 'welcome'); await pg.waitForTimeout(220);
   let txt = await pg.$eval('#pane', n => n.innerText);
   is(/신입으로 오신 분/.test(txt), '  안 고르면 신입 기준으로 보여 준다');
   await pg.click('[data-tk="career"]'); await pg.waitForTimeout(200);
   txt = await pg.$eval('#pane', n => n.innerText);
   is(/경력으로 오신 분/.test(txt), '  경력을 고르면 첫 주 할 일이 바뀐다');
-  await pg.click('.tb:text-is("나의 과정")'); await pg.waitForTimeout(200);
+  await goV(pg, 'path'); await pg.waitForTimeout(200);
   txt = await pg.$eval('#pane', n => n.innerText);
   /* 각 갈래의 속살에만 있는 말로 잰다 — 방향성 문구는 둘 다 위쪽에 나오므로 잣대가 못 된다 */
   is(/경력이 막히는 자리/.test(txt) && !/신입 90일 달력/.test(txt),
      '  내 갈래의 길만 보인다 — 남의 길까지 읽히지 않는다');
-  await pg.click('.tb:text-is("나의 목표")'); await pg.waitForTimeout(200);
+  await goV(pg, 'me'); await pg.waitForTimeout(200);
   is(/아직 숫자를 만들지 않습니다/.test(await pg.$eval('#pane', n => n.innerText)),
      '  칸이 비면 숫자를 만들지 않는다');
   const G = { incomeMan: 600, perMan: 12, pc: 30, ap: 20, days: 20 };
@@ -560,13 +597,13 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   await pg.waitForTimeout(200);
   is(/일째/.test(await pg.$eval('#pane', n => n.innerText)), '  시작일을 넣으면 며칠째인지 센다');
   await pg.reload({ waitUntil: 'networkidle' });
-  await pg.click('.tb:text-is("환영합니다")'); await pg.waitForTimeout(200);
+  await goV(pg, 'welcome'); await pg.waitForTimeout(200);
   is(/경력으로 오신 분/.test(await pg.$eval('#pane', n => n.innerText)), '  새로고침해도 고른 갈래가 남는다');
   await pg.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
 
   console.log('\n[11-4] SYSTEM MASTER 를 실제로 굴려 보는가');
   await pg.setViewportSize({ width: 1100, height: 900 });
-  await pg.click('.tb:text-is("SYSTEM MASTER")'); await pg.waitForTimeout(250);
+  await goV(pg, 'master'); await pg.waitForTimeout(250);
   is((await pg.$$('.ms')).length === 30, '  카드 서른 장이 선다');
   is((await pg.$$('.wy')).length === 3, '  배우는 갈래가 셋 선다');
   is(/0 \/ 30/.test(await pg.$eval('.prog .n', n => n.textContent)), '  진행이 0 부터 시작한다');
@@ -618,8 +655,8 @@ const STUB = `window.supabase={createClient:function(){var mk=function(){var a={
   const fr = pg.frames().find(f => /%EA%B5%90%EC%9C%A1/.test(f.url()));
   is(!!fr, '  액자에 커리큘럼이 붙는다');
   if (fr) {
-    await fr.waitForSelector('.tb', { timeout: 8000 }).catch(() => {});
-    is((await fr.$$('.tb')).length >= 8, '  앱 안에서도 칸이 다 선다');
+    await fr.waitForSelector('.nrow', { timeout: 8000 }).catch(() => {});
+    is((await fr.$$('.nrow')).length >= 8, '  앱 안에서도 차례가 다 선다');
   }
   await pg.keyboard.press('Escape');
   await pg.waitForTimeout(600);
