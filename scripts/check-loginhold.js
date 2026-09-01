@@ -287,7 +287,9 @@ async function run(page, hang, prof, ms) {
     return { ref, restart: /Restart project/.test(fix),
              link: fix.indexOf('/project/miakdhxtqofpndtlyzxa/settings/general') >= 0,
              other: fix2.indexOf('/project/otherproj/settings/general') >= 0,
-             safe: none.indexOf('supabase.com/dashboard') >= 0,
+    /* 주소를 못 읽었으면 <b>/project// 같은 깨진 링크</b>를 주면 안 된다 —
+       「supabase.com/dashboard」 가 들어 있는지만 보면 깨진 것도 통과한다 */
+             safe: none.indexOf('supabase.com/dashboard') >= 0 && none.indexOf('/project/') < 0,
              status: fix.indexOf('status.supabase.com') >= 0,
              inErr: /Restart project/.test(out) };
   });
