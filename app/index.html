@@ -11585,8 +11585,8 @@ function tnPaint(){
     g=tnFavGrp(it.id);
     h+=tnFavBtn(it,g?g.i:0,g?g.n:1); n++;
   }
-  if(!n)h='<span class="tn-fnone">⭐ ☰ 메뉴에서 칸 옆의 <b>☆</b> 를 누르면'+
-          '<span class="tnf-long"> 여기 위에 늘 떠 있습니다</span></span>';
+  if(!n)h='<span class="tn-fnone">⭐ ☰ 메뉴에서 칸 옆의 <b>☆</b> 를 누르면 '+
+          '<span class="tnf-long">여기 위에 늘 떠 있습니다</span></span>';
   h+='<button type="button" class="tn-more" onclick="toggleNav()">☰ 메뉴 전체</button>';
   bar.innerHTML=h;
   /* 새로 그린 단추에 지금 화면 강조를 다시 입힌다 — 강조를 아는 곳은 한 곳뿐이다 */
@@ -12462,7 +12462,11 @@ function go(tab){
       if(OS.profile&&typeof cmUid==='function'&&cmUid()&&
          typeof OSC!=='undefined'&&!(OSC.list&&OSC.list.length)&&typeof osLoadClients==='function')
         try{osLoadClients();}catch(e){}
-    }}
+    }
+    /* ✅ 팀 할 일 — 먼저 <b>담고 있는 것</b>을 그리고, 아직 안 읽었으면
+       그때 한 번 읽는다. 홈에 올 때마다 부르지 않는다 (7번). */
+    try{ if(typeof tdoPaint==='function'){tdoPaint();tdoLoad();} }catch(e){}
+    }
   else if(tab==='phone_app'){dyn.innerHTML=renderPhoneApp();}
   else if(tab==='mycal'){dyn.innerHTML='<div id="mycalHost">'+renderMyCal()+'</div>';}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
@@ -12845,8 +12849,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-01 19:40';
-var APP_BUILD_NOTE="<b>📌 보고 계신 화면에서 허락 없이 벗어나지 않습니다 · 🔐 team_overview 뷰가 새던 것.</b> <b>① 화면이 혼자 홈으로 넘어가던 자리 — 찾았습니다.</b> 「지금 어느 화면인가」를 <b>화면에서 다시 세어</b> 답하고 있었습니다(<code>currentTab</code>). 그런데 메뉴를 다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 <b>켜진 단추가 없습니다.</b> 그때 이 함수가 <b>「home」 을 돌려줬고</b>, 그 값을 받은 쪽이 그대로 <code>go('home')</code> 을 불렀습니다. 토큰이 갱신되거나 다시 로그인될 때마다 <b>보던 화면이 홈으로 튕겼습니다.</b> 답은 이미 <code>lastTab</code> 이 갖고 있습니다 — 화면을 옮길 때마다 적어 두는 그 값입니다. 이제 <b>그 한 곳만 답합니다</b>(5번 — 「지금 어느 화면인가」는 한 곳만 안다). <b>그러다 더 깊은 자리를 찾았습니다</b> — 화면을 옮기는 <code>go()</code> 안에 갈래별 빠른 길이 여럿인데, <b>계산기·CRM·지도·한장비교·미끼레이더·과실비교·미끼화법</b> 갈래는 「지금 어디」를 <b>아예 안 적고</b> 있었습니다. 그래서 그 화면들에 있는 동안에는 답이 옛것이었습니다. 적는 자리를 <b>go() 맨 앞 한 곳</b>으로 모았습니다. <b>그러자 이번엔 「나가기」가 깨졌습니다</b> — 계산기에서 나가기를 누르면 제자리로 돌았습니다. 「지금 어디」 하나로 <b>「그 전에 어디」</b>까지 시키고 있었기 때문입니다(예전에는 안 적어서 우연히 맞았습니다). 둘로 나눠 적습니다. CI 가 「뒤로 나오면 닫힌다」 에서 잡아 줬습니다. <b>③ 「한장 보험료 비교」 에서 「← 워크스페이스」 가 안 먹던 것도 여기서 나왔습니다.</b> 전체화면 껍데기를 벗기는 목록(<code>OS_FULL_MODES</code>)에 <b>한장 보험료 비교만 이름이 빠져</b> 있었습니다. 그래서 눌러도 껍데기가 안 벗겨지고 계속 덮고 있었습니다 — 뒤에서는 워크스페이스가 멀쩡히 떠 있는데 눈에는 안 보였습니다. 이름을 넣었고, 점검이 이제 <b>CSS 에 있는 전체화면 열한 가지가 목록에 다 있는지</b> 셉니다 — 다음에 칸을 만들며 또 빠뜨리면 잡힙니다. 그리고 <b>정말 모를 때는 「홈」 이라고 지어내지 않고 「모른다」고 답하며, 모르면 화면을 안 옮깁니다</b>(1번). 계산기처럼 쓰던 글이 있는 화면은 <b>아예 안 건드립니다.</b> <b>② Supabase 린터가 잡아 준 <code>public.team_overview</code>.</b> 뷰에 <code>security_invoker</code> 를 안 켜면 <b>만든 사람 권한</b>으로 돕니다(SECURITY DEFINER) — 밑에 있는 표(profiles·org_members)에 걸어 둔 행 보안이 <b>이 뷰를 지나 새 나갑니다.</b> 같은 뷰가 <b>네 곳</b>에 적혀 있어서 한 곳만 고치면 나머지가 그대로 샙니다 — <b>네 곳 다</b> 켰습니다. 두 표 모두 로그인 사용자 읽기를 이미 허용하므로 <b>팀 화면이 비지 않습니다.</b> <b>대표님이 하실 일:</b> 설정의 준비 SQL 을 <b>한 번 더 실행</b>해 주십시오 — 서버에 이미 만들어진 뷰는 그 문장을 다시 돌려야 바뀝니다. 몇 번을 다시 실행해도 안전합니다. 새 점검 <code>check-stayput</code> — <b>다섯 자리를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다. 뷰는 <b>적힌 자리를 전부 찾아</b> 하나씩 봅니다(한 곳만 고치고 넘어가는 것을 막습니다). <b>― 아래는 같은 날 다른 자리에서 올라온 판입니다 ―</b> <b>🛟 서버가 죽었을 때 「무엇을 하면 되는지」를 앱이 그 자리에 적어 줍니다</b>(다른 자리에서 올라온 판도 함께 실었습니다). <b>🗺 이제 고객 정보를 넣으면 「어떤 흐름으로 상담할지」까지 나옵니다.</b> 같은 진단이어도 <b>여력이 있는 40대</b>와 <b>빠듯한 50대</b>는 흐름이 다릅니다 — 여력이 있으면 <b>한 번에 정하고</b>, 빠듯하면 <b>쪼개서</b> 가고, 범위가 문제면 <b>배서 중심</b>, 60대면 <b>지키기 중심</b>입니다. 1·2차로 나눠 <b>칸마다 몇 분 · 무엇을 말하고 · 어느 화면을 보여주고 · 이 칸의 목표가 무엇인지</b>를 적었습니다. <b>이 흐름에서 조심할 것</b>도 함께 나옵니다. <b>👤 고객 화면 맨 앞에 「이 제안이 왜 나에게 맞는가」</b>를 넣었습니다. 고객은 <b>남의 표준</b>을 보고 정하지 않습니다 — 나이·가족·소득·지금 계약에서 나온 이유만 적었고, <b>일부러 안 바꾼 것</b>과 <b>이미 잘 되어 있는 것</b>도 함께 말합니다. 위에는 <b>「지금 어디까지 온 상담인가」</b> 네 칸을 세웠습니다 — 어디까지 왔는지 모르면 불안해서 못 정합니다. 「한 줄이라도 사실과 다르면 말씀해 주십시오 — 그 줄이 바뀌면 제안도 바뀝니다」 라고 적어 두었습니다. <b>🔀 「보장분석 전&후 만들기」를 누르면 이제 <u>새 화면</u>이 바로 뜹니다.</b> 화면 넷을 옮겨 다니며 만들던 것을 <b>한 자리</b>로 모았습니다 — 기존 보험(유지·배서·해지) · 추가 보험 · 표준 담보표 · 치료 기준이 한 화면에 있고, 「👤 고객에게 보여주기」 한 번으로 <b>고객 화면</b>이 됩니다. <b>보험만 넣으면 저절로 진단합니다.</b> 사장님 엑셀(3.보험 전후 비교자료)의 <b>담보 목록 · 3단 계층 · 표준금액 · 괄호 %</b>를 그대로 뼈대로 썼습니다. 괄호의 %는 <b>그 사건이 왔을 때 이 담보가 열릴 확률</b>입니다 — 뇌혈관질환(100%) · 뇌졸중(67%) · 뇌출혈(9%). 그래서 <b>「다 열렸을 때」와 「확률을 반영한 평균」</b>을 둘 다 보여 줍니다. 담보는 <b>59가지</b>로 늘렸습니다(암 치료비 10 · 순환계 5 신설). <b>적정 금액을 이 집의 숫자로 다시 셉니다.</b> 「표준 5,000만원」은 모두에게 같은 값이지만 월 생활비 200만원인 집과 500만원인 집의 필요액은 다릅니다. <b>셈하는 식을 화면에 그대로</b> 적었고, 가정치(사망 생활비 반영률 · 후유장해 기간 · 요양 월 비용 등 <b>일곱 가지</b>)를 <b>직접 고치실 수 있습니다.</b> 「적정 5억」 같은 값은 가정에서 나오는데, 그 가정을 숨기면 숫자가 <b>사실처럼</b> 보입니다. <b>월 보험료가 아니라 「앞으로 낼 돈」</b>을 함께 보여 줍니다. 엑셀에 <b>월 보험료는 +17,639원 올랐는데 총 보험료는 −473,220원 줄어든</b> 사례가 그대로 있었습니다 — 납입이 끝나가는 계약을 정리했기 때문이고, 월 보험료만 봐서는 절대 안 보이는 자리입니다. 계약마다 <b>가입시기 · 납입기간</b>을 적으면 이미 낸 것과 앞으로 낼 것이 갈립니다. <b>🧠 윤시현의 두뇌</b> — 진단 결과를 읽어 <b>이 고객에게 걸리는 말</b>을 앞에 세웁니다. 「지금 <b>뇌졸중 진단 2,000만원</b>을 들고 계신데 이 담보는 뇌 사건의 <b>67%</b>에서만 열립니다」처럼 <b>숫자가 문장 안에</b> 들어갑니다. 아이스브레이킹은 <b>가족 상황</b>에서 나옵니다 — 자녀 8살이면 아이 이야기로, 자녀 없는 50대면 부모님 간병 이야기로. <b>📄 KB 보장분석 PDF</b> 를 올리면 계약과 담보를 <b>글자 그대로</b> 읽습니다. AI 를 부르지 않습니다. 실물 KB 파일 17개로 맞춰 봤고 <b>금액을 못 읽은 담보는 0개</b>였습니다. <b>저장은 고객 365일에</b> 합니다. 새 표를 만들지 않고 이미 있는 saved_reports 를 쓰며, <b>한 고객에 한 줄</b>입니다 — 저장할 때마다 쌓지 않습니다. 제목은 <b>가린 이름</b>으로 올립니다. 파일 하나로도 열려서, 워크스페이스 밖에서도 그대로 쓰실 수 있습니다. 점검 <code>check-bamake</code> 를 새로 넣고 <b>셋을 되돌려</b> 빨간불을 확인했습니다. 그중 하나는 <b>남의 창이 보낸 쪽지로 고객 파일에 글이 써지지 않는지</b> 보는 자리입니다 — 재무설계에서 한 번 겪은 자리라 같은 자물쇠를 달았습니다.";
+var APP_BUILD='2026-09-01 21:30';
+var APP_BUILD_NOTE="<b>📌 ⭐ 즐겨찾기만 위에 <u>늘</u> 떠 있습니다 · ✅ 홈에 「팀 할 일」 이 생겼습니다 · 🔀 「한장 보험료 비교 → 워크스페이스」 가 고쳐졌습니다.</b> <b>① 메뉴 위의 가로 갈래 띠를 걷어냈습니다.</b> 갈래 열넷을 늘어놓고 <b>눌러서 펴는</b> 방식이었는데, 매번 펴야 했고 편 칸이 화면의 절반을 덮었습니다. 하루에 쓰는 칸은 몇 개뿐입니다 — 그 몇 개를 <b>늘 띄워 두는 편</b>이 언제나 빠릅니다. 이제 위 띠에는 <b>사장님이 ☆ 로 고른 칸만</b> 상시 고정으로 섭니다. ☆ 를 누르면 <b>그 자리에서</b> 올라오고, 띠의 딱지에 붙은 <b>✕</b> 로 서랍을 안 열고도 뺍니다. 갈래 전부와 <b>메뉴 찾기</b>는 ☰ 서랍에 <b>그대로</b> 있습니다 — 없앤 것이 아닙니다. 띠 맨 끝의 <b>「☰ 메뉴 전체」</b> 가 그리로 데려갑니다. 걷어내면서 두 자리를 더 찾았습니다 — <b>갈래를 세는 곳이 두 곳</b>이라 같은 칸이 위·옆에서 <b>다른 색</b>이 될 수 있었고(<code>navVisGroups</code> 한 곳으로 모았습니다), 접힌 칸을 펴 주는 자리가 <b>서랍 맨 위 즐겨찾기 줄</b>을 먼저 집어 <b>즐겨찾기에 올린 칸일수록 갈래가 안 펴지고</b> 있었습니다. <b>② 홈 화면에 「✅ 팀 할 일」.</b> 사장님 말씀 그대로입니다 — <b>모두가 보고, 확인은 담당자만</b>. 올리기는 <b>지점장급 이상</b>(설정에서도, 홈에서도 바로), 담당자를 고르면 그 사람 화면에 <b>내 할 일</b>로 뜹니다. 남의 줄은 <b>잠겨</b> 보이고, 눌러도 <b>서버로 안 갑니다.</b> 중요한 것은 <b>화면에서만 막지 않았다</b>는 점입니다 — 화면만 막으면 개발자 도구로 눌러 버리면 그만이고, 그러면 「확인」 이 아무 뜻이 없어집니다. 그래서 <b>서버 방아쇠</b>가 확인 칸이 바뀌는 순간 담당자 본인인지 다시 봅니다. 지점장은 내용·담당자·기한을 고칠 수 있지만 <b>남의 확인은 대신 못 찍습니다.</b> 서버가 거절하면 <b>확인한 척하지 않고</b> 이유를 그대로 적습니다(1번). 고객 <b>실명은 적지 마시라</b>고 그 자리에 적어 두었고, <b>주민등록번호</b>가 섞이면 아예 안 올라갑니다(3번). 목록은 홈에 들어올 때 <b>한 번</b>만 읽습니다 — 나갔다 다시 들어와도 또 안 부릅니다(7번). <b>대표님이 하실 일:</b> 설정의 <b>준비 SQL</b> 을 한 번 더 실행해 주십시오 — 팀 할 일 표가 그때 만들어집니다. 몇 번을 다시 실행해도 안전합니다. <b>③ 「한장 보험료 비교」 에서 「← 워크스페이스」</b> 가 안 먹던 것 — 앞선 판에 이어 그대로 들어 있습니다. 새 점검 둘: <code>check-topnav</code> 를 다시 쓰고 <b>열 자리를 되돌려 열 번</b>, <code>check-teamdo</code> 는 <b>열다섯 자리를 되돌려 열다섯 번</b> 빨간불을 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -16956,6 +16960,8 @@ function renderHome(){
     '<div id="osNfKeyHome"></div>'+
     '<div id="osNoticeHome"></div>'+
     (OS.profile?'<div id="ccHomeLine"></div>':'')+
+    /* ✅ 팀 할 일 — 홈에서 바로. 그리는 함수는 홈·설정이 같은 것을 쓴다 (5번) */
+    (OS.profile?'<div id="tdoHome"></div>':'')+
     (OS.profile?'<div id="osMyKeyHome"></div>':'')+
     (osIsOwner()&&typeof owLeft==='function'&&owLeft()
       ?('<div class="notice" style="margin:14px 0 0;background:#FFF7ED;border-color:#FED7AA;color:#9A3412;'+
@@ -27562,8 +27568,90 @@ var SQL_REPORTS_SELECT=[
  '                 and public.leads_team(tm.team_id))',
  '  );'
 ];
+/* ══════ 팀 할 일 — 모두가 보고, 확인은 담당자만 ══════════════════
+   이 SQL 은 <b>한 곳에만</b> 적는다. HX_SQL['00'] 이 이것을 이어 붙이고,
+   설정의 「팀 할 일」 카드도 이것을 그대로 보여 준다. 두 벌이 되면 한쪽만
+   고쳐져 「돌렸는데 안 됩니다」 가 된다 (CLAUDE.md 5번).               */
+var OS_TODO_SQL=[
+  "/* ── 팀 할 일 — 지점장급 이상이 적고, 담당자를 정한다 ─────────────",
+  "   모두가 본다. 확인(체크)은 담당자 본인만 한다.",
+  "   정책만으로는 「어느 칸을 고쳤는지」 를 가릴 수 없다 — 리더에게 고치기를",
+  "   열어 주면 리더가 남의 확인까지 대신 찍을 수 있고, 그러면 확인이 아무",
+  "   뜻이 없어진다. 그래서 방아쇠가 done 칸의 변경을 담당자에게만 허락한다. */",
+  "create table if not exists public.team_todos(",
+  "  id          uuid primary key default gen_random_uuid(),",
+  "  body        text not null,",
+  "  assignee    uuid,",
+  "  assignee_nm text default '',",
+  "  due         date,",
+  "  done        boolean not null default false,",
+  "  done_at     timestamptz,",
+  "  created_by  uuid not null,",
+  "  created_nm  text default '',",
+  "  created_at  timestamptz not null default now(),",
+  "  updated_at  timestamptz not null default now()",
+  ");",
+  "create index if not exists team_todos_open_idx",
+  "  on public.team_todos(done, created_at desc);",
+  "create index if not exists team_todos_mine_idx",
+  "  on public.team_todos(assignee, done);",
+  "",
+  "alter table public.team_todos enable row level security;",
+  "grant select, insert, update, delete on public.team_todos to authenticated;",
+  "",
+  "/* 읽기 — 로그인한 팀원 모두. 누가 무엇을 맡았는지 다 보인다 */",
+  "drop policy if exists team_todos_read on public.team_todos;",
+  "create policy team_todos_read on public.team_todos",
+  "  for select to authenticated using (true);",
+  "",
+  "/* 넣기 — 지점장급 이상만. 올린 사람은 반드시 나 */",
+  "drop policy if exists team_todos_insert on public.team_todos;",
+  "create policy team_todos_insert on public.team_todos",
+  "  for insert to authenticated",
+  "  with check ((public.is_leader() or public.is_admin() or public.is_owner())",
+  "              and created_by = auth.uid());",
+  "",
+  "/* 고치기 — 담당자(확인) 또는 지점장급 이상(내용·담당자 바꾸기) */",
+  "drop policy if exists team_todos_update_mine on public.team_todos;",
+  "create policy team_todos_update_mine on public.team_todos",
+  "  for update to authenticated",
+  "  using (assignee = auth.uid()) with check (assignee = auth.uid());",
+  "drop policy if exists team_todos_update_lead on public.team_todos;",
+  "create policy team_todos_update_lead on public.team_todos",
+  "  for update to authenticated",
+  "  using (public.is_leader() or public.is_admin() or public.is_owner())",
+  "  with check (public.is_leader() or public.is_admin() or public.is_owner());",
+  "",
+  "/* 지우기 — 올린 사람 또는 지점장급 이상 */",
+  "drop policy if exists team_todos_delete on public.team_todos;",
+  "create policy team_todos_delete on public.team_todos",
+  "  for delete to authenticated",
+  "  using (created_by = auth.uid() or public.is_leader()",
+  "         or public.is_admin() or public.is_owner());",
+  "",
+  "/* 확인은 담당자만 — 이 한 자리가 그것을 지킨다.",
+  "   done 이 바뀌는 순간, 그 줄의 담당자가 지금 누른 사람인지 본다. */",
+  "create or replace function public.team_todos_guard()",
+  "returns trigger language plpgsql set search_path = public as $fn$",
+  "begin",
+  "  if new.done is distinct from old.done then",
+  "    if old.assignee is null or auth.uid() is distinct from old.assignee then",
+  "      raise exception '확인은 담당자 본인만 할 수 있습니다';",
+  "    end if;",
+  "    new.done_at := case when new.done then now() else null end;",
+  "  end if;",
+  "  new.updated_at := now();",
+  "  return new;",
+  "end;",
+  "$fn$;",
+  "drop trigger if exists team_todos_guard_t on public.team_todos;",
+  "create trigger team_todos_guard_t before update on public.team_todos",
+  "  for each row execute function public.team_todos_guard();",
+  "",
+  "notify pgrst, 'reload schema';"
+];
 var HX_SQL={
- '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
+ '00':{label:"한 번에 전부 — 이것만 실행하면 됩니다",need:["org_members","daily_checks","health_checks","suggestions","coach_logs","night_briefs","coach_notes","legal_consents","tool_access","monthly_perf","team_plans","계정 찾기·중복 정리","advisor_intro","terms_verdicts","team_feedback","team_todos"],all:true,when:"아래 항목을 하나로 합친 것입니다. 이것 하나만 실행하면 전부 끝납니다.",lines:[
   "set search_path = public;",
   "",
   "create or replace function public.is_admin()",
@@ -28189,8 +28277,8 @@ var HX_SQL={
   "create trigger team_plans_touch before update on public.team_plans",
   "  for each row execute function public.touch_updated_at();",
   "",
-  /* 계정 함수는 OS_ACCT_FN_SQL 한 곳에만 있다 (5번) */
-  ].concat(OS_ACCT_FN_SQL).concat([
+  /* 계정 함수는 OS_ACCT_FN_SQL 한 곳에만, 팀 할 일은 OS_TODO_SQL 한 곳에만 (5번) */
+  ].concat(OS_ACCT_FN_SQL).concat(OS_TODO_SQL).concat([
   "",
   "",
   "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
@@ -31733,6 +31821,7 @@ function renderSettings(){
     '</div><div class="set-sec" data-sec="check">'+
 
     osNoticeCardHtml()+
+    tdoSetCardHtml()+
 
     '</div><div class="set-sec" data-sec="pay">'+
 
@@ -43633,6 +43722,8 @@ function osSettingsAfterRender(){
     /* 「올렸는데 팀에 보이나」 — 이 화면을 여실 때마다 서버에 한 번 물어본다.
        되풀이해서 부르는 것이 아니라 <b>열 때 한 번</b>이다 (7번). */
     if(typeof osNSeenLoad==='function'&&document.getElementById('osNSeen'))osNSeenLoad(true);}
+  /* ✅ 팀 할 일 — 담고 있는 것을 먼저 그리고, 아직 안 읽었으면 한 번 읽는다 (7번) */
+  try{ if(typeof tdoPaint==='function'){tdoPaint();tdoLoad();} }catch(e){}
   if(typeof osIsOwner==='function'&&osIsOwner()){if(typeof osBackupLoad==='function')osBackupLoad();}}
 function osLoadApprovals(){
   var box=document.getElementById('osApprovalList');if(!box)return;
@@ -45350,6 +45441,308 @@ function osNoticeCardHtml(){
     '</div>'+
     '<div class="notice" style="margin-top:12px;font-size:11px;line-height:1.65">이미지는 <b>400KB 이하</b>를 권장합니다(팀 전체 공유 로딩 속도). 게시 전 준법감시 확인을 권장합니다.</div>'+
     '</div></div>';
+}
+/* ════════ 팀 할 일 — 모두가 보고, 확인은 담당자만 ════════════════
+   사장님 말씀 그대로입니다 — 「투두리스트를 만들어서 팀원들이 체크할수
+   있도록. 담당자를 내가 정하면 그 사람이 확인하도록, 다만 모든 사람들이
+   다 볼수 있도록. <b>확인만 담당자가 하는거야.</b>」
+
+   ── 그래서 세 가지를 나눠 둡니다 ────────────────────────────────
+   · <b>보기</b>   — 로그인한 팀원 <b>모두</b>. 누가 무엇을 맡았는지 다 보입니다.
+   · <b>올리기</b> — 지점장급 이상만(<code>is_leader</code>).
+   · <b>확인</b>   — <b>담당자 본인만</b>. 화면에서도 막고, 서버 방아쇠가 다시 막습니다.
+
+   화면에서만 막으면 막은 것이 아닙니다 — 개발자 도구로 눌러 버리면 그만이고,
+   그러면 「확인」 이 아무 뜻이 없어집니다. 그래서 done 칸이 바뀌는 순간
+   <b>서버가</b> 담당자인지 다시 봅니다 (OS_TODO_SQL).
+
+   ── 서버를 아껴 씁니다 (7번) ───────────────────────────────────
+   되풀이해 부르지 않습니다. 홈을 열 때 <b>한 번</b> 읽고, 그 뒤로는 무언가
+   바뀐 뒤에만 다시 읽습니다. 「새로고침」 단추는 사장님이 직접 누르실 때만
+   돕니다.                                                              */
+var TDO={list:[],loaded:false,busy:'',err:'',missing:false,openForm:false};
+var TDO_MAX=60;                    /* 한 번에 받는 줄 수 — 다 받아 두지 않는다 (7번) */
+var TDOW={rows:[],loaded:false,busy:false,err:''};   /* 담당자로 고를 사람 목록 */
+/* 주민등록번호는 <b>절대</b> 올라가면 안 된다 — 팀 전체가 보는 자리다 (3번).
+   확실한 모양만 막는다. 넓게 잡으면 멀쩡한 글이 막혀 아무도 안 쓰게 된다 (8번). */
+var TDO_RRN=/(^|[^0-9])\d{6}\s*[-–]\s*[1-4]\d{6}([^0-9]|$)/;
+function tdoMe(){ try{ return (OS.session&&OS.session.user&&OS.session.user.id)||''; }catch(e){ return ''; } }
+function tdoMyName(){ return (OS.profile&&OS.profile.name)||''; }
+/* 올릴 수 있는 사람 — <b>지점장급 이상</b>. 판정은 이미 있는 것을 그대로 쓴다 (5번) */
+function tdoCanAdd(){
+  try{ return !!((typeof osIsLead==='function'&&osIsLead())||(typeof osIsOwner==='function'&&osIsOwner())); }
+  catch(e){ return false; }
+}
+function tdoCss(){
+  if(document.getElementById('tdoCss'))return;
+  var st=document.createElement('style');st.id='tdoCss';
+  st.textContent=
+    '.tdo-wrap{margin-top:14px;border:1px solid var(--ink-7);border-radius:12px;background:#fff;overflow:hidden}'+
+    '.tdo-hd{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 13px;'+
+      'background:linear-gradient(135deg,#EEF2FF,#F8FAFF);border-bottom:1px solid var(--ink-7)}'+
+    '.tdo-hd .h{font-size:13px;font-weight:900;color:#0F172A;letter-spacing:-.02em}'+
+    '.tdo-hd .n{font-size:10.5px;font-weight:900;border-radius:4px;padding:2px 7px;background:#1A56DB;color:#fff}'+
+    '.tdo-hd .n.zero{background:#E2E8F0;color:#64748B}'+
+    '.tdo-hd .sp{margin-left:auto;display:flex;gap:6px}'+
+    '.tdo-hd button{background:#fff;border:1px solid var(--ink-7);border-radius:6px;font-family:inherit;'+
+      'font-size:11.5px;font-weight:800;color:#334155;padding:5px 10px;cursor:pointer}'+
+    '.tdo-hd button:hover{background:#F1F5F9}'+
+    '.tdo-row{display:flex;gap:10px;align-items:flex-start;padding:10px 13px;border-bottom:1px solid #F1F5F9}'+
+    '.tdo-row:last-child{border-bottom:none}'+
+    '.tdo-row.mine{background:#FFFBEB}'+
+    '.tdo-row.done{background:#F8FAFC}'+
+    '.tdo-ck{flex:none;width:26px;height:26px;border-radius:7px;border:2px solid #CBD5E1;background:#fff;'+
+      'font-size:14px;line-height:1;cursor:pointer;font-family:inherit;color:#15803D}'+
+    '.tdo-ck.on{background:#16A34A;border-color:#16A34A;color:#fff}'+
+    '.tdo-ck.ro{cursor:not-allowed;opacity:.45}'+
+    '.tdo-bd{flex:1;min-width:0}'+
+    '.tdo-bd .t{font-size:13px;font-weight:700;color:#0F172A;line-height:1.55;word-break:break-word}'+
+    '.tdo-row.done .tdo-bd .t{color:#94A3B8;text-decoration:line-through}'+
+    '.tdo-bd .m{font-size:11px;color:#64748B;margin-top:3px;line-height:1.6}'+
+    '.tdo-bd .m b{color:#1A56DB}'+
+    '.tdo-bd .m .due{color:#B45309;font-weight:800}'+
+    '.tdo-bd .m .late{color:#B91C1C;font-weight:900}'+
+    '.tdo-x{flex:none;background:none;border:none;color:#CBD5E1;font-size:13px;cursor:pointer;font-family:inherit;padding:2px 4px}'+
+    '.tdo-x:hover{color:#B91C1C}'+
+    '.tdo-none{padding:14px 13px;font-size:12px;color:var(--ink-4);line-height:1.7}'+
+    '.tdo-err{margin:10px 13px;font-size:11.5px;line-height:1.65;background:#FEF2F2;border:1px solid #FECACA;'+
+      'color:#991B1B;border-radius:8px;padding:8px 10px}'+
+    '.tdo-form{padding:11px 13px;background:#F8FAFF;border-top:1px solid var(--ink-7)}'+
+    '.tdo-form textarea,.tdo-form select,.tdo-form input{width:100%;font-family:inherit;font-size:12.5px;'+
+      'border:1px solid var(--ink-7);border-radius:8px;padding:8px 10px;box-sizing:border-box;background:#fff}'+
+    '.tdo-form textarea{min-height:60px;line-height:1.6}'+
+    '.tdo-form .two{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}'+
+    '.tdo-form .two>div{flex:1;min-width:140px}'+
+    '.tdo-form label{display:block;font-size:11px;font-weight:800;color:#475569;margin-bottom:4px}'+
+    '.tdo-form .warn{font-size:11px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;'+
+      'border-radius:7px;padding:6px 9px;margin-top:8px;line-height:1.6}';
+  document.head.appendChild(st);
+}
+/* ── 읽기 — <b>한 번만</b> (7번) ─────────────────────────────────── */
+function tdoLoad(force){
+  if(TDO.busy==='load')return;
+  if(TDO.loaded&&!force)return;
+  var me=tdoMe(); if(!me){TDO.loaded=false;return;}      /* 로그인 전에는 서버를 안 부른다 */
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){TDO.err='서버에 연결되어 있지 않습니다.';TDO.loaded=true;tdoPaint();return;}
+  TDO.busy='load';
+  sb.from('team_todos')
+    .select('id,body,assignee,assignee_nm,due,done,done_at,created_by,created_nm,created_at')
+    .order('done',{ascending:true}).order('created_at',{ascending:false}).limit(TDO_MAX)
+    .then(function(r){
+      TDO.busy='';TDO.loaded=true;
+      if(r&&r.error){
+        var m=r.error.message||'', c=r.error.code||'';
+        /* 표가 아직 없는 것과 <b>권한이 막힌 것</b>은 다른 이야기다. 섞어서
+           말하면 사장님이 엉뚱한 것을 고치신다 (1번). */
+        TDO.missing=(c==='42P01'||c==='PGRST205'||/team_todos/.test(m)&&/does not exist|찾을 수 없/.test(m));
+        TDO.err=(c?'['+c+'] ':'')+m;
+        tdoPaint();return;
+      }
+      TDO.missing=false;TDO.err='';TDO.list=(r&&r.data)||[];
+      tdoPaint();
+    },function(){ TDO.busy='';TDO.loaded=true;TDO.err='서버에 닿지 못했습니다. 잠시 뒤 「새로고침」 을 눌러 주세요.';tdoPaint(); });
+}
+/* 담당자로 고를 사람 — <b>고를 때</b> 한 번만 받는다. 미리 안 받아 둔다 (7번).
+   설정에서 이미 받아 둔 것이 있으면 <b>그것을 쓴다</b> — 같은 것을 두 번 받지 않는다. */
+function tdoWhoLoad(){
+  if(TDOW.busy)return;
+  if(typeof OSMT!=='undefined'&&OSMT.rows&&OSMT.rows.length){
+    TDOW.rows=OSMT.rows;TDOW.loaded=true;TDOW.err='';tdoPaint();return;
+  }
+  if(TDOW.loaded)return;
+  var sb=(typeof osClient==='function')?osClient():null; if(!sb)return;
+  TDOW.busy=true;
+  sb.from('profiles').select('id,name,role,active').order('name').then(function(r){
+    TDOW.busy=false;TDOW.loaded=true;
+    if(r&&r.error){TDOW.err=r.error.message||'팀원 목록을 읽지 못했습니다';TDOW.rows=[];tdoPaint();return;}
+    TDOW.err='';TDOW.rows=(r&&r.data)||[];tdoPaint();
+  },function(){TDOW.busy=false;TDOW.loaded=true;TDOW.err='팀원 목록을 읽지 못했습니다';tdoPaint();});
+}
+/* 그리는 자리는 둘이지만 <b>그리는 함수는 하나</b>다 — 홈과 설정이 서로
+   다른 목록을 보이면 「올렸는데 홈에 없다」 가 된다 (5번). */
+function tdoPaint(){
+  var a=document.getElementById('tdoHome'); if(a)a.innerHTML=tdoHtml('home');
+  var b=document.getElementById('tdoSet');  if(b)b.innerHTML=tdoHtml('set');
+}
+function tdoDue(t){
+  var d=(t.due||'').slice(0,10); if(!d)return '';
+  var today=(typeof osToday==='function')?osToday():new Date().toISOString().slice(0,10);
+  var late=!t.done&&d<today;
+  return ' · <span class="'+(late?'late':'due')+'">'+osEsc(d)+(late?' 지났습니다':' 까지')+'</span>';
+}
+function tdoRowHtml(t,mode){
+  var me=tdoMe(),mine=!!(t.assignee&&t.assignee===me),done=!!t.done;
+  var who=(t.assignee_nm||'').replace(/^\s+|\s+$/g,'');
+  var canX=tdoCanAdd()||(t.created_by&&t.created_by===me);
+  return '<div class="tdo-row'+(mine&&!done?' mine':'')+(done?' done':'')+'">'+
+    '<button type="button" class="tdo-ck'+(done?' on':'')+(mine?'':' ro')+'" '+
+      'title="'+(mine?(done?'확인을 되돌립니다':'확인합니다'):'확인은 담당자 본인만 누릅니다')+'" '+
+      'aria-label="'+(mine?'확인':'담당자만 확인할 수 있습니다')+'" '+
+      'onclick="tdoToggle(\''+osEsc(t.id)+'\')">'+(done?'✓':'')+'</button>'+
+    '<div class="tdo-bd">'+
+      '<div class="t">'+osEsc(t.body||'')+'</div>'+
+      '<div class="m">'+
+        (who?('담당 <b>'+osEsc(who)+'</b>'):'<b style="color:#B45309">담당자 미정</b> — 정해야 확인할 수 있습니다')+
+        tdoDue(t)+
+        (t.created_nm?(' · 올린 사람 '+osEsc(t.created_nm)):'')+
+        (done?(' · <b style="color:#15803D">확인함</b>'+(t.done_at?(' '+osEsc((t.done_at||'').slice(0,10))):'')):'')+
+        (mine&&!done?' · <b>내 할 일입니다</b>':'')+
+      '</div>'+
+    '</div>'+
+    (canX&&mode==='set'?('<button type="button" class="tdo-x" title="지웁니다" aria-label="지웁니다" '+
+      'onclick="tdoDel(\''+osEsc(t.id)+'\')">✕</button>'):'')+
+  '</div>';
+}
+function tdoFormHtml(){
+  if(!tdoCanAdd())return '';
+  if(!TDO.openForm)
+    return '<div class="tdo-form"><button type="button" class="btn btn-primary" style="font-size:12px;padding:7px 14px" '+
+           'onclick="tdoFormOpen()">＋ 할 일 올리기</button></div>';
+  var opts='<option value="">담당자를 고르십시오</option>',i;
+  var rows=TDOW.rows||[];
+  for(i=0;i<rows.length;i++){
+    if(rows[i].active===false)continue;
+    opts+='<option value="'+osEsc(rows[i].id)+'">'+osEsc(rows[i].name||'(이름 없음)')+'</option>';
+  }
+  return '<div class="tdo-form">'+
+    '<label>할 일</label>'+
+    '<textarea id="tdoBody" placeholder="예) 이번 주 신규 DB 다섯 분께 첫 통화 — 통화 뒤 CRM 에 기록"></textarea>'+
+    '<div class="two">'+
+      '<div><label>담당자 <span style="font-weight:600;color:#94A3B8">(이 사람만 확인을 누릅니다)</span></label>'+
+        (TDOW.busy?'<div style="font-size:11.5px;color:#64748B;padding:6px 2px">팀원 목록을 불러오는 중…</div>':
+         (rows.length?('<select id="tdoWho">'+opts+'</select>'):
+          ('<div style="font-size:11.5px;color:#B45309;line-height:1.6;padding:4px 2px">팀원 목록을 못 읽었습니다'+
+           (TDOW.err?(' <span style="color:#94A3B8">('+osEsc(TDOW.err)+')</span>'):'')+
+           '<br>설정 → <b>팀원 권한 관리</b> 를 한 번 열어 주신 뒤 다시 시도해 주십시오.</div>')))+
+      '</div>'+
+      '<div><label>언제까지 <span style="font-weight:600;color:#94A3B8">(비워 두셔도 됩니다)</span></label>'+
+        '<input type="date" id="tdoDue"></div>'+
+    '</div>'+
+    '<div class="warn">고객 <b>실명</b>은 적지 마십시오 — 팀 전체가 보는 자리입니다. <b>김○○</b> 처럼 가려 적으십시오.</div>'+
+    '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-primary" onclick="tdoAdd()"'+(TDO.busy==='add'?' disabled':'')+'>'+
+        (TDO.busy==='add'?'올리는 중…':'올리기')+'</button>'+
+      '<button class="btn btn-ghost" onclick="tdoFormClose()">취소</button></div>'+
+  '</div>';
+}
+function tdoFormOpen(){ TDO.openForm=true; tdoPaint(); tdoWhoLoad(); }
+function tdoFormClose(){ TDO.openForm=false; tdoPaint(); }
+/* 화면 하나 — 홈과 설정이 <b>같은 것</b>을 그린다 */
+function tdoHtml(mode){
+  tdoCss();
+  var me=tdoMe();
+  if(!me)return '';                                   /* 로그인 전에는 세우지 않는다 */
+  var list=TDO.list||[],i,open=0,mine=0;
+  for(i=0;i<list.length;i++){ if(!list[i].done){open++; if(list[i].assignee===me)mine++;} }
+  var rows='';
+  for(i=0;i<list.length;i++)rows+=tdoRowHtml(list[i],mode);
+  var body;
+  if(TDO.busy==='load'&&!TDO.loaded)
+    body='<div class="tdo-none">불러오는 중…</div>';
+  else if(TDO.missing)
+    body='<div class="tdo-none">아직 <b>서버에 자리가 없습니다.</b> 설정 → <b>준비 SQL</b> 을 한 번 실행하시면 그때부터 팀이 같이 씁니다.'+
+         (typeof osIsOwner==='function'&&osIsOwner()
+           ?' <span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="go(\'settings\')">설정 열기 →</span>':'')+
+         '</div>';
+  else if(TDO.err)
+    body='<div class="tdo-err"><b>목록을 읽지 못했습니다.</b> '+osEsc(TDO.err)+'</div>';
+  else if(!list.length)
+    body='<div class="tdo-none">아직 올라온 할 일이 없습니다.'+
+         (tdoCanAdd()?' 아래에서 올리시면 담당자 화면에 바로 뜹니다.':' 지점장급 이상이 올리면 여기에 뜹니다.')+'</div>';
+  else body=rows;
+  return '<div class="tdo-wrap">'+
+    '<div class="tdo-hd"><span class="h">✅ 팀 할 일</span>'+
+      '<span class="n'+(mine?'':' zero')+'">내 몫 '+mine+'</span>'+
+      '<span style="font-size:11px;color:#64748B;font-weight:700">남은 '+open+'건</span>'+
+      '<span class="sp">'+
+        '<button type="button" onclick="tdoLoad(true)"'+(TDO.busy==='load'?' disabled':'')+'>새로고침</button>'+
+        (mode==='home'&&typeof osIsOwner==='function'&&osIsOwner()
+          ?'<button type="button" onclick="go(\'settings\')">설정에서 관리</button>':'')+
+      '</span></div>'+
+    body+
+    tdoFormHtml()+
+  '</div>';
+}
+/* ── 확인 — <b>담당자 본인만</b> ──────────────────────────────────
+   화면에서 막고, 서버 방아쇠가 다시 막는다. 그리고 <b>서버가 받아 준 뒤에</b>
+   화면을 바꾼다 — 먼저 칠해 두면 실패했을 때 「확인한 척」 이 된다 (1번). */
+function tdoToggle(id){
+  var me=tdoMe(),t=null,i;
+  for(i=0;i<TDO.list.length;i++)if(TDO.list[i].id===id)t=TDO.list[i];
+  if(!t)return;
+  if(!(t.assignee&&t.assignee===me)){
+    toast(t.assignee_nm?('확인은 담당자 '+t.assignee_nm+'님만 누릅니다'):'담당자가 정해져야 확인할 수 있습니다');
+    return;
+  }
+  if(TDO.busy)return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버에 연결되어 있지 않습니다');return;}
+  TDO.busy='save';
+  var want=!t.done;
+  sb.from('team_todos').update({done:want}).eq('id',id).then(function(r){
+    TDO.busy='';
+    if(r&&r.error){toast('저장하지 못했습니다 — '+(r.error.message||'권한을 확인해 주세요'));return;}
+    t.done=want;t.done_at=want?new Date().toISOString():null;
+    tdoPaint();
+    toast(want?'확인했습니다':'확인을 되돌렸습니다');
+  },function(){TDO.busy='';toast('서버에 닿지 못했습니다');});
+}
+function tdoAdd(){
+  if(!tdoCanAdd()){toast('할 일은 지점장급 이상이 올립니다');return;}
+  if(TDO.busy)return;
+  var bEl=document.getElementById('tdoBody'),wEl=document.getElementById('tdoWho'),dEl=document.getElementById('tdoDue');
+  var body=((bEl&&bEl.value)||'').replace(/^\s+|\s+$/g,'');
+  var who=(wEl&&wEl.value)||'',due=(dEl&&dEl.value)||'';
+  if(!body){toast('할 일을 적어 주십시오');return;}
+  if(TDO_RRN.test(body)){toast('주민등록번호는 적지 마십시오 — 팀 전체가 보는 자리입니다');return;}
+  if(!who){toast('담당자를 고르십시오 — 확인을 누를 사람이 있어야 합니다');return;}
+  var nm='',rows=TDOW.rows||[],i;
+  for(i=0;i<rows.length;i++)if(rows[i].id===who)nm=rows[i].name||'';
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버에 연결되어 있지 않습니다');return;}
+  TDO.busy='add';tdoPaint();
+  var row={body:body,assignee:who,assignee_nm:nm,created_by:tdoMe(),created_nm:tdoMyName()};
+  if(due)row.due=due;
+  sb.from('team_todos').insert(row).then(function(r){
+    TDO.busy='';
+    if(r&&r.error){tdoPaint();toast('올리지 못했습니다 — '+(r.error.message||'권한을 확인해 주세요'));return;}
+    TDO.openForm=false;
+    toast('올렸습니다 — '+(nm||'담당자')+'님 화면에 뜹니다');
+    tdoLoad(true);                       /* 올린 뒤에 <b>한 번</b> 다시 읽는다 */
+  },function(){TDO.busy='';tdoPaint();toast('서버에 닿지 못했습니다');});
+}
+function tdoDel(id){
+  if(TDO.busy)return;
+  if(!confirm('이 할 일을 지웁니다. 되돌릴 수 없습니다.'))return;
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){toast('서버에 연결되어 있지 않습니다');return;}
+  TDO.busy='save';
+  sb.from('team_todos').delete().eq('id',id).then(function(r){
+    TDO.busy='';
+    if(r&&r.error){toast('지우지 못했습니다 — '+(r.error.message||'권한을 확인해 주세요'));return;}
+    toast('지웠습니다');tdoLoad(true);
+  },function(){TDO.busy='';toast('서버에 닿지 못했습니다');});
+}
+/* 설정 카드 — 관리하는 자리. 목록·올리기는 홈과 <b>같은 함수</b>가 그린다 */
+function tdoSetCardHtml(){
+  if(!tdoMe())return '';
+  return '<div class="card set-card" style="border-color:#C7D2FE"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">✅</span>팀 할 일 '+
+      (tdoCanAdd()?'<span class="badge">올리기 가능</span>':'<span class="badge">보기</span>')+'</div>'+
+    '<div class="card-desc">홈 화면 맨 위에 그대로 뜹니다. <b>모두가 보고</b>, 확인(체크)은 <b>담당자 본인만</b> 누릅니다 — 서버에서도 그렇게 막습니다.</div>'+
+    '</div><div class="card-body"><div id="tdoSet">'+tdoHtml('set')+'</div>'+
+    '<div class="btn-row" style="margin-top:12px">'+
+      '<button class="btn btn-ghost" onclick="tdoSqlToggle()">🛢️ 팀 할 일 SQL</button></div>'+
+    '<div id="tdoSqlBox" style="display:none;margin-top:12px">'+
+      '<div style="font-size:11px;color:var(--ink-3);line-height:1.7;margin-bottom:8px">아래 SQL 을 <b>한 번만</b> 실행하면 팀 할 일이 켜집니다. 여러 번 실행해도 안전합니다. 위의 <b>준비 SQL</b>(한 번에 전부)에도 이미 들어 있습니다.</div>'+
+      '<textarea readonly style="width:100%;min-height:150px;font-family:monospace;font-size:10px;line-height:1.5;border:1px solid var(--ink-7);border-radius:8px;padding:10px;box-sizing:border-box" onclick="this.select()">'+osEsc(OS_TODO_SQL.join('\n'))+'</textarea>'+
+      '<div class="btn-row" style="margin-top:8px"><a class="btn btn-ghost" href="'+SUPA_SQL_URL+'" target="_blank" rel="noopener">SQL 편집기 열기</a></div>'+
+    '</div></div></div>';
+}
+function tdoSqlToggle(){
+  var b=document.getElementById('tdoSqlBox'); if(!b)return;
+  b.style.display=(b.style.display==='none')?'block':'none';
 }
 /* ═══════════ 빠른 시작 가이드 — 플로팅 버튼 + 첫 로그인 시 1회 자동 안내 ═══════════ */
 /* 「다시 안 보기」 를 눌러 둔 사람은 새 기능이 들어와도 영영 못 본다.
