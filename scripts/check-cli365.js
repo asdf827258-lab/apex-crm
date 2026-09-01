@@ -66,7 +66,7 @@ const SEED = `
     const m = cliMission(), html = cliMissionHtml();
     return { due: m.due.map(x => x.c.name_masked), done: m.done, total: m.total,
              first: m.due[0] ? m.due[0].c.name_masked : '',
-             says: /오늘 챙길 분 2명/.test(html),
+             says: /밀린 분 2명|오늘 몫 2명|오늘 챙길 분 2명/.test(html),
              name: html.indexOf('홍○동') >= 0 && html.indexOf('홍○순') >= 0,
              opens: html.indexOf("osOpenClient('k1')") >= 0,
              doneSaid: /오늘 연락한 분 <b>1명<\\/b>/.test(html) };
@@ -76,13 +76,77 @@ const SEED = `
   is(B.done === 1 && B.doneSaid, '  오늘 이미 연락한 분은 <b>미션에서 빠지고 따로 센다</b>');
   is(B.says && B.name && B.opens, '  화면에 이름이 뜨고 <b>누르면 그 고객 카드</b>가 열린다');
 
+  console.log('\n[2-2] 이번 달 목표를 하루 몫으로 나눈다');
+  const B2 = await page.evaluate(new Function(SEED + `
+    const raw = localStorage.getItem(CC_CFG_KEY);
+    /* ① 목표를 안 정하면 = 맡으신 고객 <b>전원</b> */
+    localStorage.removeItem(CC_CFG_KEY);
+    const auto = cliMonth();
+    /* ② 목표를 2명으로 정하면 그 수로 */
+    const c = ccCfg(); c.goal = 2;
+    localStorage.setItem(CC_CFG_KEY, JSON.stringify(c));
+    const set = cliMonth();
+    const setHtml = cliMonthHtml();
+    localStorage.removeItem(CC_CFG_KEY);
+    const html = cliMissionHtml();
+    if (raw) localStorage.setItem(CC_CFG_KEY, raw);
+    /* 이번 달에 연락한 사람 수를 <b>시험이 따로</b> 센다 — 오늘이 1일이면
+       「어제」 는 지난달이다. 달 경계에 흔들리는 기대값을 쓰면 안 된다. */
+    const ym = t.slice(0, 7);
+    const expDone = Object.keys(CC.calls)
+      .filter(k => (CC.calls[k] || '').slice(0, 7) === ym).length;
+    /* 이달에 남은 <b>날 수</b> — 이레가 넘으면 그 안에 주말이 반드시 있다.
+       그러니 영업일은 날 수보다 <b>적어야</b> 한다. 앱의 셈을 여기서 그대로
+       베껴 견주면 둘 다 틀려도 통과한다 — 성질로 잰다. */
+    const y = +t.slice(0, 4), mo = +t.slice(5, 7), dd = +t.slice(8, 10);
+    const lastD = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+    const daysLeft = lastD - dd + 1;
+    return { daysLeft, expDone, autoGoal: auto.goal, total: auto.total, done: auto.done, left: auto.left,
+             biz: auto.biz, quota: auto.quota,
+             math: auto.quota === Math.ceil(auto.left / auto.biz),
+             setGoal: set.goal, setSaid: /이번 달 2명 중/.test(setHtml),
+             autoSaid: /맡으신 고객 전원/.test(cliMonthHtml()),
+             inMission: /오늘 몫/.test(html) && /남은 영업일/.test(html) };
+  `));
+  is(B2.autoGoal === B2.total && B2.autoSaid,
+     '  목표를 안 정하면 <b>맡으신 고객 전원</b> — ' + B2.autoGoal + '명');
+  is(B2.done === B2.expDone && B2.left === B2.autoGoal - B2.done,
+     '  이번 달에 이미 연락한 분은 <b>몫에서 뺀다</b> — 한 분 ' + B2.done + '명 · 남은 ' + B2.left + '명');
+  is(B2.math && B2.biz >= 1,
+     '  <b>남은 사람 ÷ 남은 영업일</b> = 오늘 몫 — ' + B2.left + ' ÷ ' + B2.biz + ' → ' + B2.quota + '명');
+  is(B2.daysLeft < 7 || B2.biz < B2.daysLeft,
+     '  <b>주말은 빼고</b> 센다 — 남은 날 ' + B2.daysLeft + '일 중 영업일 ' + B2.biz + '일');
+  is(B2.setGoal === 2 && B2.setSaid, '  목표를 정하면 <b>그 수</b>로 센다 — 2명');
+  is(B2.inMission, '  미션 칸에 <b>오늘 몫</b>이 함께 뜬다');
+
+  console.log('\n[2-3] 몫이 밀린 분보다 많으면 — 다음으로 오래된 분으로 잇는다');
+  const B3 = await page.evaluate(new Function(SEED + `
+    /* 밀린 분은 하나뿐인데 몫이 더 큰 자리.
+       남은 영업일은 달마다 달라 몫이 흔들린다 — 여기서는 <b>1일로 고정</b>해
+       「몫이 밀린 분보다 클 때」 만 본다. 영업일 계산 자체는 [2-2] 에서 따로 잰다. */
+    CC.calls = { k1: ago(95), k2: ago(3), k3: ago(4), k4: ago(5) };
+    const realBiz = window.cliBizLeft; window.cliBizLeft = function(){ return 1; };
+    const m = cliMission(), mm = cliMonth(), html = cliMissionHtml();
+    window.cliBizLeft = realBiz;
+    return { due: m.due.length, rest: m.rest.length, quota: mm.quota,
+             shown: (html.match(/osOpenClient/g) || []).length,
+             says: /아직 안 밀렸습니다/.test(html) };
+  `));
+  is(B3.due === 1 && B3.quota > 1, '  밀린 분 ' + B3.due + '명 · 오늘 몫 ' + B3.quota + '명');
+  is(B3.shown >= Math.min(B3.quota, 1 + B3.rest),
+     '  <b>몫만큼 줄이 선다</b> — ' + B3.shown + '명이 떴다');
+  is(B3.says, '  이어 붙인 분에게는 <b>「아직 안 밀렸습니다」</b>라고 적는다 (1번)');
+
   console.log('\n[3] 다 돌았으면 그렇게 말한다 — 겁주지 않는다 (8번)');
   const C = await page.evaluate(new Function(SEED + `
     CC.calls = { k1: t, k2: t, k3: t, k4: t };
-    const m = cliMission(), html = cliMissionHtml();
-    return { due: m.due.length, ok: /오늘 챙길 분이 없습니다/.test(html) };
+    const m = cliMission(), mm = cliMonth(), html = cliMissionHtml();
+    return { due: m.due.length, quota: mm.quota,
+             ok: /오늘 챙길 분이 없습니다/.test(html),
+             month: /이번 달 몫을 다 채우셨습니다/.test(html) };
   `));
   is(C.due === 0 && C.ok, '  「오늘 챙길 분이 없습니다」 라고 말한다');
+  is(C.quota === 0 && C.month, '  이번 달 몫도 <b>다 채웠다</b>고 말한다');
 
   console.log('\n[4] 이번 달 달력이 고객 365일 맨 위에 선다 — 그리고 한 벌이다');
   const D = await page.evaluate(new Function(SEED + `
