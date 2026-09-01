@@ -246,21 +246,31 @@ async function run(page, hang, prof, ms) {
     window.fetch = function () { return Promise.resolve({ status: 522 }); };
     osNetTest(); await new Promise(r => setTimeout(r, 250));
     const err = out();
-    /* ③ 아예 대답이 없다 */
+    /* ③ 아예 대답이 없다 — <b>9초에는 결론을 내면 안 된다.</b>
+       한참 쉬었다 부르는 첫 한 번이 10초 넘게 걸리는 것을 실제로 쟀다.
+       거기서 「죽었다」 고 하면 멀쩡한 서버를 다시 시작하시게 된다 (8번). */
     window.fetch = function () { return new Promise(function () {}); };
-    osNetTest(); await new Promise(r => setTimeout(r, OS_NET_MS + 700));
+    osNetTest(); await new Promise(r => setTimeout(r, OS_NET_MS + 900));
+    const waiting = out();
+    /* 그리고 20초까지 기다린 <b>뒤에</b> 결론을 낸다 */
+    await new Promise(r => setTimeout(r, OS_NET_MAX - OS_NET_MS + 900));
     const dead = out();
     const btnBack = document.getElementById('osNetBtn').textContent;
     d.remove();
-    return { hasBtn, hasOut, ok, err, dead, btnBack };
+    return { hasBtn, hasOut, ok, err, waiting, dead, btnBack,
+             netMs: OS_NET_MS, netMax: OS_NET_MAX };
   });
   is(F.hasBtn && F.hasOut, '  로그인 화면에 <b>「서버 상태 확인」</b> 이 있다');
   is(/서버는 정상입니다/.test(F.ok) && /비밀번호/.test(F.ok),
      '  정상이면 <b>「그러면 비밀번호 쪽입니다」</b> — 「' + F.ok.slice(0, 40) + '…」');
   is(/522/.test(F.err) && /비밀번호도 문제가 아닙니다/.test(F.err),
      '  오류로 답하면 <b>번호를 그대로</b> 보여 준다 — 「' + F.err.slice(0, 40) + '…」');
+  is(/더 기다려/.test(F.waiting) && !/답하지 않습니다/.test(F.waiting),
+     '  ' + (F.netMs / 1000) + '초에는 <b>결론을 안 낸다</b> — 「' + F.waiting.slice(0, 46) + '…」' +
+     (/더 기다려/.test(F.waiting) ? '' : ' ← 깨어나는 데 10초 걸리는 서버를 죽었다고 합니다'));
   is(/답하지 않습니다/.test(F.dead) && /비밀번호도 문제가 아닙니다/.test(F.dead),
-     '  대답이 없으면 <b>기다리다 말한다</b> — 「' + F.dead.slice(0, 40) + '…」');
+     '  ' + (F.netMax / 1000) + '초까지 기다린 뒤에 <b>그때 말한다</b> — 「' + F.dead.slice(0, 40) + '…」');
+  is(F.netMax > F.netMs, '  기다림에는 <b>끝이 있다</b> — ' + (F.netMax / 1000) + '초 (4-1번)');
   is(/서버 상태 확인/.test(F.btnBack), '  단추가 <b>다시 눌리게</b> 돌아온다');
 
   console.log('\n[6-1] 서버가 죽었을 때 — 무엇을 하면 되는지 그 자리에 적는다');
@@ -470,6 +480,65 @@ async function run(page, hang, prof, ms) {
      '  막힌 분이 <b>표 맨 위</b>로 온다 — 지금 맨 위: 「' + G.firstRow + '」');
   is(G.sent === 2 && /2건 승인했습니다/.test(G.said),
      '  「모두 승인」 이 <b>실제로 2건을 보낸다</b> — ' + G.sent + '건 · 「' + G.said.slice(0, 30) + '…」');
+
+  /* ── 서버는 대답하는데 <b>내 표만</b> 안 받아 줄 때 ──────────────────
+     2026-08-31 부터 제공사에 열려 있는 장애가 이것이다 —
+     「401 errors due to JWT rejections」. 이때 supabase-js 는 <b>말없이</b>
+     세션을 지우고, 화면은 그냥 로그인 칸으로 돌아간다. 쓰던 사람에게는
+     「갑자기 로그아웃됐다 · 서버가 응답하지 않는다」 로 보인다.
+
+     여태 앱은 이 경우를 ① 비밀번호 틀림 ② 서버 죽음 <b>둘 중 하나로</b>
+     밀어 넣었다. 둘 다 틀린 안내다 — 하나는 멀쩡한 비밀번호를 바꾸게 하고,
+     하나는 멀쩡한 서버를 다시 시작하게 한다.                          */
+  console.log('\n[9-1] 내가 안 눌렀는데 로그아웃됐다 — 그 이유를 말한다');
+  await page.close(); page = await freshPage();
+  const K = await page.evaluate(async () => {
+    const out = {};
+    /* 로그인 칸을 세워 둔다 — 적을 자리(#osErr)가 거기 있다 */
+    const d = document.createElement('div'); d.innerHTML = osAuthFormHtml(false);
+    document.body.appendChild(d);
+    const read = () => (document.getElementById('osErr') || {}).textContent || '';
+    /* ① 서버가 밀어낸 경우 — onAuthStateChange 가 null 로 불린다 */
+    let cb = null;
+    OS.sb = { auth: { onAuthStateChange: (f) => { cb = f; return { data: {} }; },
+                      getSession: () => new Promise(() => {}) } };
+    window.osClient = () => OS.sb;
+    OS.profile = { id: 'u1', name: '홍길동' };
+    osBootAuth();
+    document.getElementById('osErr').textContent = '';
+    if (cb) cb('SIGNED_OUT', null);
+    out.kicked = read();
+    /* ② 내가 누른 로그아웃 — 겁주지 않는다 */
+    OS.profile = { id: 'u1', name: '홍길동' };
+    document.getElementById('osErr').textContent = '';
+    osByeMine();
+    if (cb) cb('SIGNED_OUT', null);
+    out.mine = read();
+    /* ③ 로그인할 때 서버가 표를 거절하면 — 사람 말로 */
+    out.jwt = osLoginErr('AuthApiError: invalid claim: missing sub claim (JWT)');
+    out.refresh = osLoginErr('Invalid Refresh Token: Refresh Token Not Found');
+    /* ④ 그렇다고 <b>비밀번호 틀림</b>이 토큰 이야기로 둔갑하면 안 된다.
+       실제로 오가는 글에는 <b>401 이 같이 적혀 오는 일</b>이 있다 —
+       그때도 「비밀번호」 여야 한다. 이것이 순서를 지키는 이유다 (8번). */
+    out.pw = osLoginErr('Invalid login credentials');
+    out.pw401 = osLoginErr('AuthApiError: Invalid login credentials (401)');
+    /* ⑤ 서버가 아예 안 답하는 것과도 섞이면 안 된다 */
+    out.down = osLoginErr('Failed to fetch');
+    d.remove();
+    return out;
+  });
+  is(/거절/.test(K.kicked) && /비밀번호 문제가 아닙니다/.test(K.kicked),
+     '  밀려나면 <b>이유를 적는다</b> — 「' + K.kicked.slice(0, 44) + '…」');
+  is(K.mine === '', '  <b>내가 누른</b> 로그아웃에는 겁주지 않는다 — 「' + K.mine + '」');
+  is(/거절/.test(K.jwt) && /거절/.test(K.refresh),
+     '  로그인할 때 표가 거절되면 <b>사람 말</b>로 바꾼다');
+  is(/비밀번호가 올바르지 않습니다/.test(K.pw),
+     '  <b>비밀번호 틀림</b>은 그대로 비밀번호 이야기다 — 헛알람 금지 (8번)');
+  is(/비밀번호가 올바르지 않습니다/.test(K.pw401),
+     '  <b>401 이 같이 적혀 와도</b> 비밀번호 틀림은 비밀번호 이야기다 — 「' + K.pw401.slice(0, 26) + '…」');
+  is(/서버가 응답하지 않습니다/.test(K.down),
+     '  <b>서버가 안 답하는 것</b>과도 안 섞인다 — 셋을 따로 말한다');
+  is(K.kicked === K.jwt, '  같은 말을 <b>한 곳</b>에서 가져다 쓴다 (5번)');
 
   console.log('\n[10] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
