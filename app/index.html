@@ -12372,6 +12372,7 @@ function renderNav(){
 
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
+var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 돌아갈 곳 */
 /* ── 전체화면은 한 번에 하나만 ────────────────────────────────
    화면을 통째로 덮는 칸이 아홉이다 — 계산기 · CRM · 보장분석 상담자료 ·
    재무설계 상담자료 · 실전화법서 · 미끼 레이더 · 미끼상품&접촉전략 ·
@@ -12387,7 +12388,14 @@ var lastTab='dashboard';
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode',
                    'fpdeck-mode','fptalk-mode','dzguide-mode','mikki-mode','mktalk-mode','carfault-mode',
-                   'apexmap-mode'];
+                   'apexmap-mode',
+                   /* <b>「한장 보험료 비교」 만 여기 이름이 빠져 있었다.</b>
+                      그래서 「← 워크스페이스」 를 눌러도 껍데기가 안 벗겨지고
+                      한장비교가 계속 화면을 덮고 있었다 — 뒤에서는 워크스페이스가
+                      멀쩡히 떠 있는데 눈에는 안 보인다. 바로 위 주석이 「여기 이름만
+                      적으면 된다」 고 적어 두었는데, 칸을 만들면서 그 한 줄을
+                      빠뜨린 것이다. check-stayput 이 이제 이것을 센다. */
+                   'onecmp-mode'];
 function osFullMode(on){
   var b=document.body,i;
   for(i=0;i<OS_FULL_MODES.length;i++)
@@ -12405,11 +12413,30 @@ function go(tab){
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
   }catch(e){}
-  if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
-    if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
-    if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
+  /* ── 「지금 어디」를 <b>여기 한 곳에서</b> 적는다 (CLAUDE.md 5번) ────
+     아래에 갈래별 빠른 return 이 여럿이다 — 막힌 화면·계산기·CRM·지도·
+     한장비교·미끼레이더·과실비교·미끼화법. 그 갈래들은 navMark 만 부르고
+     <b>lastTab 을 안 적고 있었다.</b> 그래서 「지금 어느 화면인가」의 답이
+     두 벌이 되어 서로 어긋났고, currentTab() 이 옛 화면을 답했다.
+
+     <b>「지금 어디」와 「그 전에 어디」는 다른 것이다.</b> 전체화면에서
+     「나가기」 는 <b>그 전 화면</b>으로 돌아가야 한다. 예전에는 이 갈래들이
+     lastTab 을 안 적었기 때문에 그 값이 우연히 「그 전 화면」 노릇을 해서
+     나가기가 됐다 — 제대로 적기 시작하자 나가기가 제자리로 돌았다.
+     하나로 두 가지를 시키면 둘 다 틀린다. 둘로 나눠 적는다.
+
+     설정·출발 점검은 <b>막히면 옮기지 않고</b> 그 자리에서 돌아간다 —
+     그 둘만 이 줄 앞에서 빠져나간다. */
+  var _ok=(typeof osTabAllowed!=='function')||osTabAllowed(tab);
+  if(!_ok&&(tab==='settings'||tab==='ready')){
+    toast(tab==='settings'?'설정은 대표만 이용할 수 있습니다.':'출발 점검은 대표만 이용할 수 있습니다.');
+    return;
+  }
+  if(tab!==lastTab)prevTab=lastTab;
+  lastTab=tab;
+  try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
+  if(!_ok){
     osFullMode('');
-    lastTab=tab;
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
     $('main').scrollTop=0;
@@ -12488,8 +12515,6 @@ function go(tab){
     return;
   }
   osFullMode('');
-  lastTab=tab;
-  try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   /* 어제 쓴 것을 오늘 또 88칸에서 찾지 않게 */
   if(typeof navRecAdd==='function')navRecAdd(tab);
   navMark(tab);
@@ -12569,7 +12594,7 @@ function go(tab){
   try{if(window.history&&history.replaceState)history.replaceState(null,'','#'+tab);}catch(e){}
   if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
 }
-function exitFinance(){go(lastTab||'home');}
+function exitFinance(){go(prevTab||'home');}
 
 /* ════════ 재무설계 모듈 (iframe) ════════ */
 function b64ToUtf8(b64){
@@ -12888,8 +12913,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-01 18:30';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).<br><b>그리고 고객 365일을 열면 「오늘의 미션」과 「이번 달 달력」이 맨 위에 섭니다</b>(#331).<br><b>그리고 이번 달 목표를 하루 몫으로 나눠 오늘 몇 건을 하면 되는지 보입니다</b>(#333).<br><b>그리고 서버가 죽었을 때 무엇을 하면 되는지 앱이 그 자리에 적어 줍니다</b>(#334).<br><b>그리고 「보장분석 전&amp;후 만들기」를 누르면 새 화면이 바로 뜨고 고객 365일에 저장됩니다</b>(#332).';
+var APP_BUILD='2026-09-01 19:50';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).<br><b>그리고 고객 365일을 열면 「오늘의 미션」과 「이번 달 달력」이 맨 위에 섭니다</b>(#331).<br><b>그리고 이번 달 목표를 하루 몫으로 나눠 오늘 몇 건을 하면 되는지 보입니다</b>(#333).<br><b>그리고 서버가 죽었을 때 무엇을 하면 되는지 앱이 그 자리에 적어 줍니다</b>(#334).<br><b>그리고 「보장분석 전&amp;후 만들기」를 누르면 새 화면이 바로 뜨고 고객 365일에 저장됩니다</b>(#332).<br><b>그리고 보던 화면에서 허락 없이 벗어나지 않고, 한장 보험료 비교에서 나가기가 됩니다</b>(#335).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13266,7 +13291,7 @@ function openCrmNewTab(){
   var w=window.open(CRM_URL,'_blank','noopener');
   if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
 }
-function exitCrm(){go(lastTab||'home');}
+function exitCrm(){go(prevTab||'home');}
 /* ════════ DB 통합 CRM 사용 안내 — 캡처와 함께 접기/펴기로 한눈에 ════════ */
 var CRMG_SECS=[
  {ic:'🚪',t:'시작하기 — 로그인은 APEX 하나',open:true,img:'',steps:[
@@ -13351,7 +13376,7 @@ function mountSangdam(){
 }
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitSangdam(){go(lastTab||'home');}
+function exitSangdam(){go(prevTab||'home');}
 
 /* ════════ 보험 마스터 아카데미 교재 (앱 폴더에 번들: app/보험아카데미/index.html) ════════
    신입 자가학습 전자책. 진도·테스트 점수는 교재 쪽에서 스스로 저장한다(Supabase bohum_*).
@@ -13363,7 +13388,7 @@ function mountBohum(){
 }
 function reloadBohum(){var f=$('bohumFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountBohum,30);toast('보험 마스터 아카데미 새로고침');}}
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitBohum(){go(lastTab||'home');}
+function exitBohum(){go(prevTab||'home');}
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
    약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
 /* ════════ APEX 전체 지도 (같은 폴더의 정적 파일) ════════
@@ -13376,7 +13401,7 @@ var APEXMAP_URL='apex-map.html';
 function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;f.src=APEXMAP_URL;f._mounted=true;}
 function reloadApexMap(){var f=$('apexMapFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountApexMap,30);toast('전체 지도 새로고침');}}
 function openApexMapNewTab(){var w=window.open(APEXMAP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitApexMap(){go(lastTab||'home');}
+function exitApexMap(){go(prevTab||'home');}
 
 var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
@@ -13392,7 +13417,7 @@ var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
 function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
 function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
 function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitOneCmp(){go(lastTab||'home');}
+function exitOneCmp(){go(prevTab||'home');}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.
@@ -13405,7 +13430,7 @@ var CARFAULT_URL='상담자료/자동차사고_과실분석.html';
 function mountCarFault(){var f=$('carFaultFrame');if(!f||f._mounted)return;f.src=CARFAULT_URL;f._mounted=true;}
 function reloadCarFault(){var f=$('carFaultFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCarFault,30);toast('자동차사고 과실·보상 새로고침');}}
 function openCarFaultNewTab(){var w=window.open(CARFAULT_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitCarFault(){go(lastTab||'home');}
+function exitCarFault(){go(prevTab||'home');}
 
 /* ════════ 미끼상품&접촉전략 (같은 폴더의 정적 문서) ════════
    27장짜리 화법서다. 바깥으로 나가는 것은 글꼴뿐이고 서버에 묻는 것이
@@ -13414,8 +13439,8 @@ var MKTALK_URL='상담자료/미끼상품_접촉전략.html';
 function mountMkTalk(){var f=$('mkTalkFrame');if(!f||f._mounted)return;f.src=MKTALK_URL;f._mounted=true;}
 function reloadMkTalk(){var f=$('mkTalkFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMkTalk,30);toast('미끼상품&접촉전략 새로고침');}}
 function openMkTalkNewTab(){var w=window.open(MKTALK_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitMkTalk(){go(lastTab||'home');}
-function exitMikki(){go(lastTab||'home');}
+function exitMkTalk(){go(prevTab||'home');}
+function exitMikki(){go(prevTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.
@@ -27717,7 +27742,10 @@ var HX_SQL={
   "end",
   "$blk$;",
   "",
-  "create or replace view public.team_overview as",
+  "/* security_invoker — 이 뷰를 부르는 사람의 권한(RLS)으로 본다.",
+  "   안 켜면 만든 사람 권한으로 도는 SECURITY DEFINER 가 되어 행 보안이 샌다. */",
+  "create or replace view public.team_overview",
+  "  with (security_invoker = on) as",
   "select",
   "  p.id                                as member_id,",
   "  coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,",
@@ -29179,7 +29207,10 @@ var HX_SQL={
   "end",
   "$blk$;",
   "",
-  "create or replace view public.team_overview as",
+  "/* security_invoker — 이 뷰를 부르는 사람의 권한(RLS)으로 본다.",
+  "   안 켜면 만든 사람 권한으로 도는 SECURITY DEFINER 가 되어 행 보안이 샌다. */",
+  "create or replace view public.team_overview",
+  "  with (security_invoker = on) as",
   "select",
   "  p.id                                as member_id,",
   "  coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,",
@@ -38319,7 +38350,23 @@ function dropSlot(toolId,s){
 }
 function setPdfMode(id,m){PDFMODE[id]=m;document.querySelectorAll('[data-pmode^="'+id+':"]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pmode')===id+':'+m);});}
 function setPdfSlots(id,n){PDFSLOTS[id]=n;go(currentTab());}
-function currentTab(){var b=document.querySelector('.tab-btn.on');return b?b.getAttribute('data-tab'):'home';}
+/* ── 「지금 어느 화면인가」는 <b>한 곳만 안다</b> (CLAUDE.md 5번) ──────
+   이 함수는 화면(DOM)에서 <b>다시 세어</b> 답하고 있었다. 그런데 메뉴를
+   다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 켜진 단추가
+   없다. 그때 <b>'home' 을 돌려줬다.</b>
+
+   그 값을 <code>osRefreshIfClients</code> 가 받아 <code>go('home')</code> 을
+   불렀다 — 그래서 <b>보고 있던 화면이 허락 없이 홈으로 넘어갔다.</b>
+   토큰이 갱신되거나 다시 로그인될 때마다 그랬다.
+
+   답은 이미 <code>lastTab</code> 이 갖고 있다 — <code>go()</code> 가 옮길
+   때마다 적어 두는 그 값이다. 여기서는 <b>그것을 그대로 돌려준다.</b>
+   화면을 다시 세지 않는다.                                            */
+function currentTab(){
+  if(typeof lastTab==='string'&&lastTab)return lastTab;
+  var b=document.querySelector('.tab-btn.on');
+  return b?b.getAttribute('data-tab'):'';   /* 모르면 <b>모른다</b> — 홈이라고 하지 않는다 */
+}
 /* 딥링크: URL 해시(#treatpay 등)로 특정 도구를 바로 열 수 있게 한다(공유·북마크용). 안전하게 알파벳/언더스코어만 허용. */
 function bootTab(){
   /* 폰 홈 화면에 따로 담은 아이콘은 ?go=crm 처럼 들어온다.
@@ -45255,10 +45302,13 @@ function osOnLogin(){if(typeof osVerPaint==='function')osVerPaint();osAudit('log
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
-  var t=(typeof currentTab==='function')?currentTab():'home';
+  var t=(typeof currentTab==='function')?currentTab():'';
   if(typeof renderNav==='function')renderNav();
   var refresh={home:1,dashboard:1,assistant:1,growth:1,clients:1,branch_coach:1,hq:1,audit:1,interpret:1,contracts:1,claims:1,academy:1,manual:1,wallets:1};
-  if(refresh[t]&&typeof go==='function'){go(t);return;}
+  /* <b>어디 있는지 모르면 옮기지 않는다.</b> 예전에는 모를 때 'home' 이 와서
+     그대로 홈으로 보냈다 — 보고 있던 화면에서 허락 없이 벗어나는 자리였다.
+     모를 때는 메뉴 표시만 되살리고 화면은 그대로 둔다. */
+  if(t&&refresh[t]&&typeof go==='function'){go(t);return;}
   /* 역할 비민감 탭(도구·계산기 등): 작성 중 내용은 보존하고 사이드바 강조만 복원 */
   try{navMark(t);}catch(e){}
 }
