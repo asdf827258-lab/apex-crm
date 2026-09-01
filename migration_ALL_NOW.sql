@@ -308,7 +308,13 @@ begin
 end
 $blk$;
 
-create or replace view public.team_overview as
+/* security_invoker — 이 뷰를 부르는 사람의 권한(RLS)으로 본다.
+   안 켜면 만든 사람 권한으로 도는 SECURITY DEFINER 가 되어, 아래 두 표에
+   걸어 둔 행 보안이 이 뷰를 지나 새 나간다(Supabase 린터가 잡아 준 자리).
+   profiles·org_members 둘 다 authenticated 읽기를 이미 허용하므로
+   켜도 팀 화면이 비지 않는다. */
+create or replace view public.team_overview
+  with (security_invoker = on) as
 select
   p.id                                as member_id,
   coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,

@@ -12748,8 +12748,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-01 15:20';
-var APP_BUILD_NOTE="<b>🛟 서버가 죽었을 때 「무엇을 하면 되는지」를 앱이 그 자리에 적어 줍니다.</b> 8월 30일과 9월 1일, 같은 일이 두 번 났습니다. 앞단은 0.4초에 답하는데 <b>우리 프로젝트만 20초 뒤 522</b> — 제공사(Supabase)가 API 엔진(PostgREST)을 갈아 끼우거나 되돌린 뒤에 이렇게 됩니다. 실제로 제공사 상태 페이지에 <b>「PostgREST 14.17 에서도 JWT 거부가 계속돼 14.5 로 롤백했다」</b>고 적혀 있고(8/31 19:52 UTC), 제공사가 직접 안내한 해결책이 <b>프로젝트 재시작</b>입니다. 두 번 다 그것으로 살아났습니다. <b>그런데 그걸 아는 사람이 한 명뿐이면 다음에도 그 사람을 불러야 합니다.</b> 그래서 화면에 적어 둡니다. 로그인 화면의 <b>「서버 상태 확인」</b>이 「서버 탓」이라고 답하면, 그 밑에 <b>「대표님이 하실 일 — 2분이면 됩니다」</b> 와 ① Supabase 설정 열기 ② 맨 아래 <b>Restart project</b> ③ 1~2분 뒤 새로고침 세 줄, 그리고 <b>대시보드로 바로 가는 단추</b>와 <b>제공사 장애 확인</b> 단추가 붙습니다. 위쪽 붉은 띠에도 <b>「고치는 법」</b> 단추를 넣었습니다. <b>장애 때는 아무도 로그인이 안 됩니다</b> — 그래서 「관리자에게만 보여 주기」 는 뜻이 없습니다. 대신 <b>「대표님이 하실 일」</b> 이라 이름을 붙여, 팀원이 보면 그대로 전할 수 있게 했습니다. <b>대시보드 주소는 지금 쓰는 서버 주소에서 뽑습니다</b> — 프로젝트 이름을 여기 또 적으면 서버를 옮겼을 때 엉뚱한 곳으로 보냅니다(5번). 주소를 못 읽어도 <b>깨진 링크 대신</b> 대시보드까지는 보내 줍니다. <code>check-loginhold</code> 에 [6-1] 을 더해 <b>네 자리를 되돌려 네 번 다 빨간불</b>을 확인했습니다. 만드는 중에 알람 시험이 중간에 끊겨 <b>고친 판이 작업 파일에 그대로 남는 일</b>이 있었습니다 — 무슨 일이 있어도 되돌리도록 걸어 두었고, 되살린 뒤 다시 확인했습니다.";
+var APP_BUILD='2026-09-01 17:10';
+var APP_BUILD_NOTE="<b>📌 보고 계신 화면에서 허락 없이 벗어나지 않습니다 · 🔐 team_overview 뷰가 새던 것.</b> <b>① 화면이 혼자 홈으로 넘어가던 자리 — 찾았습니다.</b> 「지금 어느 화면인가」를 <b>화면에서 다시 세어</b> 답하고 있었습니다(<code>currentTab</code>). 그런데 메뉴를 다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 <b>켜진 단추가 없습니다.</b> 그때 이 함수가 <b>「home」 을 돌려줬고</b>, 그 값을 받은 쪽이 그대로 <code>go('home')</code> 을 불렀습니다. 토큰이 갱신되거나 다시 로그인될 때마다 <b>보던 화면이 홈으로 튕겼습니다.</b> 답은 이미 <code>lastTab</code> 이 갖고 있습니다 — 화면을 옮길 때마다 적어 두는 그 값입니다. 이제 <b>그 한 곳만 답합니다</b>(5번 — 「지금 어느 화면인가」는 한 곳만 안다). 그리고 <b>정말 모를 때는 「홈」 이라고 지어내지 않고 「모른다」고 답하며, 모르면 화면을 안 옮깁니다</b>(1번). 계산기처럼 쓰던 글이 있는 화면은 <b>아예 안 건드립니다.</b> <b>② Supabase 린터가 잡아 준 <code>public.team_overview</code>.</b> 뷰에 <code>security_invoker</code> 를 안 켜면 <b>만든 사람 권한</b>으로 돕니다(SECURITY DEFINER) — 밑에 있는 표(profiles·org_members)에 걸어 둔 행 보안이 <b>이 뷰를 지나 새 나갑니다.</b> 같은 뷰가 <b>네 곳</b>에 적혀 있어서 한 곳만 고치면 나머지가 그대로 샙니다 — <b>네 곳 다</b> 켰습니다. 두 표 모두 로그인 사용자 읽기를 이미 허용하므로 <b>팀 화면이 비지 않습니다.</b> <b>대표님이 하실 일:</b> 설정의 준비 SQL 을 <b>한 번 더 실행</b>해 주십시오 — 서버에 이미 만들어진 뷰는 그 문장을 다시 돌려야 바뀝니다. 몇 번을 다시 실행해도 안전합니다. 새 점검 <code>check-stayput</code> — <b>다섯 자리를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다. 뷰는 <b>적힌 자리를 전부 찾아</b> 하나씩 봅니다(한 곳만 고치고 넘어가는 것을 막습니다).";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -27777,7 +27777,10 @@ var HX_SQL={
   "end",
   "$blk$;",
   "",
-  "create or replace view public.team_overview as",
+  "/* security_invoker — 이 뷰를 부르는 사람의 권한(RLS)으로 본다.",
+  "   안 켜면 만든 사람 권한으로 도는 SECURITY DEFINER 가 되어 행 보안이 샌다. */",
+  "create or replace view public.team_overview",
+  "  with (security_invoker = on) as",
   "select",
   "  p.id                                as member_id,",
   "  coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,",
@@ -29239,7 +29242,10 @@ var HX_SQL={
   "end",
   "$blk$;",
   "",
-  "create or replace view public.team_overview as",
+  "/* security_invoker — 이 뷰를 부르는 사람의 권한(RLS)으로 본다.",
+  "   안 켜면 만든 사람 권한으로 도는 SECURITY DEFINER 가 되어 행 보안이 샌다. */",
+  "create or replace view public.team_overview",
+  "  with (security_invoker = on) as",
   "select",
   "  p.id                                as member_id,",
   "  coalesce(nullif(btrim(p.name), ''), '이름 없음') as name,",
@@ -38369,7 +38375,23 @@ function dropSlot(toolId,s){
 }
 function setPdfMode(id,m){PDFMODE[id]=m;document.querySelectorAll('[data-pmode^="'+id+':"]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pmode')===id+':'+m);});}
 function setPdfSlots(id,n){PDFSLOTS[id]=n;go(currentTab());}
-function currentTab(){var b=document.querySelector('.tab-btn.on');return b?b.getAttribute('data-tab'):'home';}
+/* ── 「지금 어느 화면인가」는 <b>한 곳만 안다</b> (CLAUDE.md 5번) ──────
+   이 함수는 화면(DOM)에서 <b>다시 세어</b> 답하고 있었다. 그런데 메뉴를
+   다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 켜진 단추가
+   없다. 그때 <b>'home' 을 돌려줬다.</b>
+
+   그 값을 <code>osRefreshIfClients</code> 가 받아 <code>go('home')</code> 을
+   불렀다 — 그래서 <b>보고 있던 화면이 허락 없이 홈으로 넘어갔다.</b>
+   토큰이 갱신되거나 다시 로그인될 때마다 그랬다.
+
+   답은 이미 <code>lastTab</code> 이 갖고 있다 — <code>go()</code> 가 옮길
+   때마다 적어 두는 그 값이다. 여기서는 <b>그것을 그대로 돌려준다.</b>
+   화면을 다시 세지 않는다.                                            */
+function currentTab(){
+  if(typeof lastTab==='string'&&lastTab)return lastTab;
+  var b=document.querySelector('.tab-btn.on');
+  return b?b.getAttribute('data-tab'):'';   /* 모르면 <b>모른다</b> — 홈이라고 하지 않는다 */
+}
 /* 딥링크: URL 해시(#treatpay 등)로 특정 도구를 바로 열 수 있게 한다(공유·북마크용). 안전하게 알파벳/언더스코어만 허용. */
 function bootTab(){
   /* 폰 홈 화면에 따로 담은 아이콘은 ?go=crm 처럼 들어온다.
@@ -45289,10 +45311,13 @@ function osOnLogin(){if(typeof osVerPaint==='function')osVerPaint();osAudit('log
 /* 로그인/로그아웃 후: 역할 메뉴 갱신 + 역할·데이터 민감 화면만 재렌더(작성 중 도구는 보존) */
 function osRefreshIfClients(){
   /* 현재 탭을 renderNav()가 .on을 지우기 전에 먼저 읽는다(부팅·복원 탭 보존). */
-  var t=(typeof currentTab==='function')?currentTab():'home';
+  var t=(typeof currentTab==='function')?currentTab():'';
   if(typeof renderNav==='function')renderNav();
   var refresh={home:1,dashboard:1,assistant:1,growth:1,clients:1,branch_coach:1,hq:1,audit:1,interpret:1,contracts:1,claims:1,academy:1,manual:1,wallets:1};
-  if(refresh[t]&&typeof go==='function'){go(t);return;}
+  /* <b>어디 있는지 모르면 옮기지 않는다.</b> 예전에는 모를 때 'home' 이 와서
+     그대로 홈으로 보냈다 — 보고 있던 화면에서 허락 없이 벗어나는 자리였다.
+     모를 때는 메뉴 표시만 되살리고 화면은 그대로 둔다. */
+  if(t&&refresh[t]&&typeof go==='function'){go(t);return;}
   /* 역할 비민감 탭(도구·계산기 등): 작성 중 내용은 보존하고 사이드바 강조만 복원 */
   try{navMark(t);}catch(e){}
 }
