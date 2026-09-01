@@ -77,6 +77,30 @@ const srv = http.createServer((rq, rs) => {
   is(A.t1 === 'crm', '  켜진 단추가 없어도 <b>보던 화면</b>을 답한다 — 「' + A.t1 + '」');
   is(A.t2 !== 'home', '  정말 모를 때도 <b>「홈」 이라고 지어내지 않는다</b> — 「' + A.t2 + '」 (1번)');
 
+  console.log('\n[2-2] 어느 갈래로 가도 「지금 어디」가 따라온다');
+  /* go() 안에는 갈래별 빠른 return 이 여럿이다 — 계산기·CRM·지도·미끼레이더…
+     그 갈래들은 navMark 만 부르고 lastTab 을 안 적고 있었다. 그래서
+     「지금 어느 화면인가」의 답이 두 벌이 되어 서로 어긋났다. */
+  const A2 = await page.evaluate(async () => {
+    const out = {};
+    for (const t of ['bohum', 'clients', 'growboard', 'apexmaster']) {
+      try { go(t); } catch (e) {}
+      await new Promise(r => setTimeout(r, 120));
+      out[t] = currentTab();
+    }
+    return out;
+  });
+  const off = Object.keys(A2).filter(k => A2[k] !== k);
+  is(!off.length,
+     '  갈래마다 <b>제 이름</b>을 답한다' +
+     (off.length ? ' — 어긋남: ' + off.map(k => k + '→' + A2[k]).join(', ') : ''));
+  /* 적는 자리가 <b>하나</b>인가 — 갈래마다 적으면 또 빠뜨린다 */
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const goSrc = (SRC.match(/\nfunction go\(tab\)\{[\s\S]*?\n\}/) || [''])[0];
+  const marks = (goSrc.match(/\blastTab\s*=\s*tab\b/g) || []).length;
+  is(marks <= 2,
+     '  <b>go() 안에서 적는 자리가 둘 이하</b>다 — 지금 ' + marks + '곳 (막힌 화면 + 본길)');
+
   console.log('\n[3] 다시 로그인돼도 보던 화면에서 안 벗어난다');
   const B = await page.evaluate(async () => {
     const went = [];
