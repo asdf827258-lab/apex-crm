@@ -174,7 +174,16 @@ window.supabase={createClient:function(){
     document.getElementById('hpWhat').value = '증권 판독 같이 보기';
     document.getElementById('hpDue').value = t;
     hpAdd();
-  }, ds(Math.max(1, dnum - 3)));
+  }, (function () {
+    /* <b>이번 달 안에서</b> 사흘 전을 찾으면 1일에는 사흘 전이 없다 —
+       max(1, 1-3) 이 오늘이 되어, 「지난 날」 이 지난 날이 아니게 된다.
+       그래서 매달 1일마다 이 점검이 코드와 상관없이 빨간불이었다.
+       달을 넘겨 <b>진짜 사흘 전</b>을 쓴다. (CLAUDE.md 8번 — 헛것을 잡는
+       점검은 안 잡는 점검보다 나쁘다) */
+    const d = new Date(Date.now() + 9 * 3600 * 1000);
+    d.setUTCDate(d.getUTCDate() - 3);
+    return d.toISOString().slice(0, 10);
+  })());
   await page.waitForTimeout(400);
 
   const hp = await page.evaluate(() => ({
