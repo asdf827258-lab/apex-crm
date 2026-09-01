@@ -101,6 +101,28 @@ const srv = http.createServer((rq, rs) => {
   is(marks <= 2,
      '  <b>go() 안에서 적는 자리가 둘 이하</b>다 — 지금 ' + marks + '곳 (막힌 화면 + 본길)');
 
+  console.log('\n[2-3] 「지금 어디」와 「그 전에 어디」는 다른 것이다');
+  /* lastTab 하나로 두 가지를 시키면 둘 다 틀린다. 갈래별 빠른 길이
+     lastTab 을 안 적던 시절에는 그 값이 우연히 「그 전 화면」 노릇을 해서
+     나가기가 됐다 — 제대로 적기 시작하자 <b>나가기가 제자리로</b> 갔다.
+     실제로 CI 가 「뒤로 나오면 닫힌다」 에서 잡았다. */
+  const A3 = await page.evaluate(async () => {
+    const went = [];
+    const realGo = window.go;
+    /* 진짜 go 로 옮긴 뒤, 나가기가 <b>어디를 부르는지</b>만 가로챈다 */
+    go('home'); await new Promise(r => setTimeout(r, 80));
+    go('finance'); await new Promise(r => setTimeout(r, 200));
+    const nowIn = currentTab();
+    window.go = function (t) { went.push(t); };
+    exitFinance();
+    window.go = realGo;
+    return { nowIn, back: went[0] || '' };
+  });
+  is(A3.nowIn === 'finance', '  계산기에 들어가면 <b>계산기라고</b> 답한다 — 「' + A3.nowIn + '」');
+  is(A3.back === 'home',
+     '  나가기는 <b>그 전 화면</b>으로 간다 — 「' + A3.back + '」 (제자리로 돌면 안 닫힌다)');
+  is(A3.back !== A3.nowIn, '  나가기가 <b>자기 자신</b>을 부르지 않는다');
+
   console.log('\n[3] 다시 로그인돼도 보던 화면에서 안 벗어난다');
   const B = await page.evaluate(async () => {
     const went = [];

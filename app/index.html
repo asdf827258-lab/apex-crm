@@ -12335,6 +12335,7 @@ function renderNav(){
 
 /* ════════ 페이지 렌더 ════════ */
 var lastTab='dashboard';
+var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 돌아갈 곳 */
 /* ── 전체화면은 한 번에 하나만 ────────────────────────────────
    화면을 통째로 덮는 칸이 아홉이다 — 계산기 · CRM · 보장분석 상담자료 ·
    재무설계 상담자료 · 실전화법서 · 미끼 레이더 · 미끼상품&접촉전략 ·
@@ -12368,25 +12369,35 @@ function go(tab){
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
   }catch(e){}
-  if(typeof osTabAllowed==='function'&&!osTabAllowed(tab)){
-    if(tab==='settings'){toast('설정은 대표만 이용할 수 있습니다.');return;}
-    if(tab==='ready'){toast('출발 점검은 대표만 이용할 수 있습니다.');return;}
+  /* ── 「지금 어디」를 <b>여기 한 곳에서</b> 적는다 (CLAUDE.md 5번) ────
+     아래에 갈래별 빠른 return 이 여럿이다 — 막힌 화면·계산기·CRM·지도·
+     한장비교·미끼레이더·과실비교·미끼화법. 그 갈래들은 navMark 만 부르고
+     <b>lastTab 을 안 적고 있었다.</b> 그래서 「지금 어느 화면인가」의 답이
+     두 벌이 되어 서로 어긋났고, currentTab() 이 옛 화면을 답했다.
+
+     <b>「지금 어디」와 「그 전에 어디」는 다른 것이다.</b> 전체화면에서
+     「나가기」 는 <b>그 전 화면</b>으로 돌아가야 한다. 예전에는 이 갈래들이
+     lastTab 을 안 적었기 때문에 그 값이 우연히 「그 전 화면」 노릇을 해서
+     나가기가 됐다 — 제대로 적기 시작하자 나가기가 제자리로 돌았다.
+     하나로 두 가지를 시키면 둘 다 틀린다. 둘로 나눠 적는다.
+
+     설정·출발 점검은 <b>막히면 옮기지 않고</b> 그 자리에서 돌아간다 —
+     그 둘만 이 줄 앞에서 빠져나간다. */
+  var _ok=(typeof osTabAllowed!=='function')||osTabAllowed(tab);
+  if(!_ok&&(tab==='settings'||tab==='ready')){
+    toast(tab==='settings'?'설정은 대표만 이용할 수 있습니다.':'출발 점검은 대표만 이용할 수 있습니다.');
+    return;
+  }
+  if(tab!==lastTab)prevTab=lastTab;
+  lastTab=tab;
+  try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
+  if(!_ok){
     osFullMode('');
-    lastTab=tab;
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
     document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('on');});
     $('main').scrollTop=0;
     return;
   }
-  /* ── 「지금 어느 화면인가」를 <b>여기 한 곳에서</b> 적는다 (5번) ──────
-     아래에 갈래별 빠른 return 이 여럿이다 — 계산기·CRM·지도·한장비교·
-     미끼레이더·과실비교·미끼화법. 그 갈래들은 navMark 만 부르고
-     <b>lastTab 을 안 적고 있었다.</b> 그래서 「지금 어느 화면인가」의 답이
-     두 벌이 되어 서로 어긋났고, currentTab() 이 옛 화면을 답했다.
-     여기까지 왔으면 <b>반드시 옮긴다</b> — 위 두 갈래(설정·출발 점검)는
-     안 옮기고 그 자리에서 돌아갔다. */
-  lastTab=tab;
-  try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
   if(tab==='finance'){
     mountFinance();
     osFullMode('finance-mode');
@@ -12538,7 +12549,7 @@ function go(tab){
   try{if(window.history&&history.replaceState)history.replaceState(null,'','#'+tab);}catch(e){}
   if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
 }
-function exitFinance(){go(lastTab||'home');}
+function exitFinance(){go(prevTab||'home');}
 
 /* ════════ 재무설계 모듈 (iframe) ════════ */
 function b64ToUtf8(b64){
@@ -12756,7 +12767,7 @@ function owCss(){
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
 var APP_BUILD='2026-09-01 17:10';
-var APP_BUILD_NOTE="<b>📌 보고 계신 화면에서 허락 없이 벗어나지 않습니다 · 🔐 team_overview 뷰가 새던 것.</b> <b>① 화면이 혼자 홈으로 넘어가던 자리 — 찾았습니다.</b> 「지금 어느 화면인가」를 <b>화면에서 다시 세어</b> 답하고 있었습니다(<code>currentTab</code>). 그런데 메뉴를 다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 <b>켜진 단추가 없습니다.</b> 그때 이 함수가 <b>「home」 을 돌려줬고</b>, 그 값을 받은 쪽이 그대로 <code>go('home')</code> 을 불렀습니다. 토큰이 갱신되거나 다시 로그인될 때마다 <b>보던 화면이 홈으로 튕겼습니다.</b> 답은 이미 <code>lastTab</code> 이 갖고 있습니다 — 화면을 옮길 때마다 적어 두는 그 값입니다. 이제 <b>그 한 곳만 답합니다</b>(5번 — 「지금 어느 화면인가」는 한 곳만 안다). <b>그러다 더 깊은 자리를 찾았습니다</b> — 화면을 옮기는 <code>go()</code> 안에 갈래별 빠른 길이 여럿인데, <b>계산기·CRM·지도·한장비교·미끼레이더·과실비교·미끼화법</b> 갈래는 「지금 어디」를 <b>아예 안 적고</b> 있었습니다. 그래서 그 화면들에 있는 동안에는 답이 옛것이었습니다. 적는 자리를 <b>go() 맨 앞 한 곳</b>으로 모았습니다. 그리고 <b>정말 모를 때는 「홈」 이라고 지어내지 않고 「모른다」고 답하며, 모르면 화면을 안 옮깁니다</b>(1번). 계산기처럼 쓰던 글이 있는 화면은 <b>아예 안 건드립니다.</b> <b>② Supabase 린터가 잡아 준 <code>public.team_overview</code>.</b> 뷰에 <code>security_invoker</code> 를 안 켜면 <b>만든 사람 권한</b>으로 돕니다(SECURITY DEFINER) — 밑에 있는 표(profiles·org_members)에 걸어 둔 행 보안이 <b>이 뷰를 지나 새 나갑니다.</b> 같은 뷰가 <b>네 곳</b>에 적혀 있어서 한 곳만 고치면 나머지가 그대로 샙니다 — <b>네 곳 다</b> 켰습니다. 두 표 모두 로그인 사용자 읽기를 이미 허용하므로 <b>팀 화면이 비지 않습니다.</b> <b>대표님이 하실 일:</b> 설정의 준비 SQL 을 <b>한 번 더 실행</b>해 주십시오 — 서버에 이미 만들어진 뷰는 그 문장을 다시 돌려야 바뀝니다. 몇 번을 다시 실행해도 안전합니다. 새 점검 <code>check-stayput</code> — <b>다섯 자리를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다. 뷰는 <b>적힌 자리를 전부 찾아</b> 하나씩 봅니다(한 곳만 고치고 넘어가는 것을 막습니다).";
+var APP_BUILD_NOTE="<b>📌 보고 계신 화면에서 허락 없이 벗어나지 않습니다 · 🔐 team_overview 뷰가 새던 것.</b> <b>① 화면이 혼자 홈으로 넘어가던 자리 — 찾았습니다.</b> 「지금 어느 화면인가」를 <b>화면에서 다시 세어</b> 답하고 있었습니다(<code>currentTab</code>). 그런데 메뉴를 다시 그린 직후·서랍이 접힌 폰·메뉴에 안 세운 화면에서는 <b>켜진 단추가 없습니다.</b> 그때 이 함수가 <b>「home」 을 돌려줬고</b>, 그 값을 받은 쪽이 그대로 <code>go('home')</code> 을 불렀습니다. 토큰이 갱신되거나 다시 로그인될 때마다 <b>보던 화면이 홈으로 튕겼습니다.</b> 답은 이미 <code>lastTab</code> 이 갖고 있습니다 — 화면을 옮길 때마다 적어 두는 그 값입니다. 이제 <b>그 한 곳만 답합니다</b>(5번 — 「지금 어느 화면인가」는 한 곳만 안다). <b>그러다 더 깊은 자리를 찾았습니다</b> — 화면을 옮기는 <code>go()</code> 안에 갈래별 빠른 길이 여럿인데, <b>계산기·CRM·지도·한장비교·미끼레이더·과실비교·미끼화법</b> 갈래는 「지금 어디」를 <b>아예 안 적고</b> 있었습니다. 그래서 그 화면들에 있는 동안에는 답이 옛것이었습니다. 적는 자리를 <b>go() 맨 앞 한 곳</b>으로 모았습니다. <b>그러자 이번엔 「나가기」가 깨졌습니다</b> — 계산기에서 나가기를 누르면 제자리로 돌았습니다. 「지금 어디」 하나로 <b>「그 전에 어디」</b>까지 시키고 있었기 때문입니다(예전에는 안 적어서 우연히 맞았습니다). 둘로 나눠 적습니다. CI 가 「뒤로 나오면 닫힌다」 에서 잡아 줬습니다. 그리고 <b>정말 모를 때는 「홈」 이라고 지어내지 않고 「모른다」고 답하며, 모르면 화면을 안 옮깁니다</b>(1번). 계산기처럼 쓰던 글이 있는 화면은 <b>아예 안 건드립니다.</b> <b>② Supabase 린터가 잡아 준 <code>public.team_overview</code>.</b> 뷰에 <code>security_invoker</code> 를 안 켜면 <b>만든 사람 권한</b>으로 돕니다(SECURITY DEFINER) — 밑에 있는 표(profiles·org_members)에 걸어 둔 행 보안이 <b>이 뷰를 지나 새 나갑니다.</b> 같은 뷰가 <b>네 곳</b>에 적혀 있어서 한 곳만 고치면 나머지가 그대로 샙니다 — <b>네 곳 다</b> 켰습니다. 두 표 모두 로그인 사용자 읽기를 이미 허용하므로 <b>팀 화면이 비지 않습니다.</b> <b>대표님이 하실 일:</b> 설정의 준비 SQL 을 <b>한 번 더 실행</b>해 주십시오 — 서버에 이미 만들어진 뷰는 그 문장을 다시 돌려야 바뀝니다. 몇 번을 다시 실행해도 안전합니다. 새 점검 <code>check-stayput</code> — <b>다섯 자리를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다. 뷰는 <b>적힌 자리를 전부 찾아</b> 하나씩 봅니다(한 곳만 고치고 넘어가는 것을 막습니다).";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13133,7 +13144,7 @@ function openCrmNewTab(){
   var w=window.open(CRM_URL,'_blank','noopener');
   if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');
 }
-function exitCrm(){go(lastTab||'home');}
+function exitCrm(){go(prevTab||'home');}
 /* ════════ DB 통합 CRM 사용 안내 — 캡처와 함께 접기/펴기로 한눈에 ════════ */
 var CRMG_SECS=[
  {ic:'🚪',t:'시작하기 — 로그인은 APEX 하나',open:true,img:'',steps:[
@@ -13218,7 +13229,7 @@ function mountSangdam(){
 }
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitSangdam(){go(lastTab||'home');}
+function exitSangdam(){go(prevTab||'home');}
 
 /* ════════ 보험 마스터 아카데미 교재 (앱 폴더에 번들: app/보험아카데미/index.html) ════════
    신입 자가학습 전자책. 진도·테스트 점수는 교재 쪽에서 스스로 저장한다(Supabase bohum_*).
@@ -13230,7 +13241,7 @@ function mountBohum(){
 }
 function reloadBohum(){var f=$('bohumFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountBohum,30);toast('보험 마스터 아카데미 새로고침');}}
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitBohum(){go(lastTab||'home');}
+function exitBohum(){go(prevTab||'home');}
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
    약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
 /* ════════ APEX 전체 지도 (같은 폴더의 정적 파일) ════════
@@ -13243,7 +13254,7 @@ var APEXMAP_URL='apex-map.html';
 function mountApexMap(){var f=$('apexMapFrame');if(!f||f._mounted)return;f.src=APEXMAP_URL;f._mounted=true;}
 function reloadApexMap(){var f=$('apexMapFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountApexMap,30);toast('전체 지도 새로고침');}}
 function openApexMapNewTab(){var w=window.open(APEXMAP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitApexMap(){go(lastTab||'home');}
+function exitApexMap(){go(prevTab||'home');}
 
 var MIKKI_URL='상담자료/미끼레이더/index.html';
 function mountMikki(){var f=$('mikkiFrame');if(!f||f._mounted)return;f.src=MIKKI_URL;f._mounted=true;}
@@ -13259,7 +13270,7 @@ var ONECMP_URL='https://apex-hb-onecompare.netlify.app/';
 function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONECMP_URL;f._mounted=true;}
 function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
 function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitOneCmp(){go(lastTab||'home');}
+function exitOneCmp(){go(prevTab||'home');}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.
@@ -13272,7 +13283,7 @@ var CARFAULT_URL='상담자료/자동차사고_과실분석.html';
 function mountCarFault(){var f=$('carFaultFrame');if(!f||f._mounted)return;f.src=CARFAULT_URL;f._mounted=true;}
 function reloadCarFault(){var f=$('carFaultFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCarFault,30);toast('자동차사고 과실·보상 새로고침');}}
 function openCarFaultNewTab(){var w=window.open(CARFAULT_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitCarFault(){go(lastTab||'home');}
+function exitCarFault(){go(prevTab||'home');}
 
 /* ════════ 미끼상품&접촉전략 (같은 폴더의 정적 문서) ════════
    27장짜리 화법서다. 바깥으로 나가는 것은 글꼴뿐이고 서버에 묻는 것이
@@ -13281,8 +13292,8 @@ var MKTALK_URL='상담자료/미끼상품_접촉전략.html';
 function mountMkTalk(){var f=$('mkTalkFrame');if(!f||f._mounted)return;f.src=MKTALK_URL;f._mounted=true;}
 function reloadMkTalk(){var f=$('mkTalkFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountMkTalk,30);toast('미끼상품&접촉전략 새로고침');}}
 function openMkTalkNewTab(){var w=window.open(MKTALK_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
-function exitMkTalk(){go(lastTab||'home');}
-function exitMikki(){go(lastTab||'home');}
+function exitMkTalk(){go(prevTab||'home');}
+function exitMikki(){go(prevTab||'home');}
 /* ════════ 음성 비서 — 불러서 시키면 한다 ════════
    화면이 여든 개다. 운전 중이거나 손이 바쁠 때는 그 중 하나를 찾아 누를 수가 없다.
    이름을 부르고 말로 시키면 되게 한다.
