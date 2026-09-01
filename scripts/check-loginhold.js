@@ -263,6 +263,43 @@ async function run(page, hang, prof, ms) {
      '  대답이 없으면 <b>기다리다 말한다</b> — 「' + F.dead.slice(0, 40) + '…」');
   is(/서버 상태 확인/.test(F.btnBack), '  단추가 <b>다시 눌리게</b> 돌아온다');
 
+  console.log('\n[6-1] 서버가 죽었을 때 — 무엇을 하면 되는지 그 자리에 적는다');
+  /* 2026-08-30 과 09-01, 같은 일이 두 번 났다. 고치는 법을 아는 사람이
+     한 명뿐이면 다음에도 그 사람을 불러야 한다. */
+  await page.close(); page = await freshPage();
+  const N = await page.evaluate(async () => {
+    window.APEX_SB = { url: 'https://miakdhxtqofpndtlyzxa.supabase.co', key: 'k' };
+    const ref = osSupaRef();
+    const fix = osDownFixHtml();
+    /* 주소를 여기 또 적지 않고 <b>쓰는 서버에서 뽑는가</b> */
+    window.APEX_SB = { url: 'https://otherproj.supabase.co', key: 'k' };
+    const fix2 = osDownFixHtml();
+    window.APEX_SB = { url: '', key: '' };
+    const none = osDownFixHtml();
+    window.APEX_SB = { url: 'https://x.example', key: 'k' };
+    /* 서버가 오류로 답할 때 실제로 붙는가 */
+    const d = document.createElement('div'); d.innerHTML = osAuthFormHtml(false);
+    document.body.appendChild(d);
+    window.fetch = () => Promise.resolve({ status: 522 });
+    osNetTest(); await new Promise(r => setTimeout(r, 300));
+    const out = document.getElementById('osNetOut').innerHTML;
+    d.remove();
+    return { ref, restart: /Restart project/.test(fix),
+             link: fix.indexOf('/project/miakdhxtqofpndtlyzxa/settings/general') >= 0,
+             other: fix2.indexOf('/project/otherproj/settings/general') >= 0,
+    /* 주소를 못 읽었으면 <b>/project// 같은 깨진 링크</b>를 주면 안 된다 —
+       「supabase.com/dashboard」 가 들어 있는지만 보면 깨진 것도 통과한다 */
+             safe: none.indexOf('supabase.com/dashboard') >= 0 && none.indexOf('/project/') < 0,
+             status: fix.indexOf('status.supabase.com') >= 0,
+             inErr: /Restart project/.test(out) };
+  });
+  is(N.ref === 'miakdhxtqofpndtlyzxa' && N.link,
+     '  대시보드 주소를 <b>쓰는 서버에서 뽑는다</b> — 여기 또 안 적는다 (5번)');
+  is(N.other, '  서버를 옮기면 <b>따라간다</b> — 엉뚱한 곳으로 안 보낸다');
+  is(N.safe, '  주소를 못 읽어도 <b>대시보드까지는</b> 보내 준다');
+  is(N.restart && N.status, '  <b>Restart project</b> 하는 법과 제공사 장애 확인 자리를 알려 준다');
+  is(N.inErr, '  서버가 오류로 답할 때 <b>실제로 그 자리에 붙는다</b>');
+
   console.log('\n[7] 문턱에 시간 제한 없는 기다림이 안 남아 있다');
   const SRC = fs.readFileSync('app/index.html', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ');
   const cfg = (SRC.match(/function osCfgLoad\(cb\)\{[\s\S]*?\n\}/) || [''])[0];
