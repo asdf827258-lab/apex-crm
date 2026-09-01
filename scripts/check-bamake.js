@@ -67,6 +67,22 @@ const srv = http.createServer((rq, rs) => {
   });
   is(opened.on && opened.src === 'ba.html', '누르면 <b>바로</b> 전용 화면이 뜬다 (' + opened.src + ')');
   is(opened.cid === 'c-test', '보던 고객을 <b>들고</b> 연다');
+  /* 「바로」 라는 말은 <b>싣기를 기다리지 않는다</b>는 뜻이다 */
+  const fast = await page.evaluate(() => {
+    document.getElementById('baScreen').classList.remove('on');
+    const f = document.getElementById('baFrame');
+    f._mounted = false; f.removeAttribute('src');
+    openBa();
+    /* 부른 <b>그 순간</b> 화면이 이미 서 있어야 한다 */
+    return { on: document.getElementById('baScreen').classList.contains('on'),
+             hash: location.hash };
+  });
+  is(fast.on, '누른 <b>그 순간</b> 화면이 선다 — 싣기를 기다리지 않는다');
+  is(fast.hash === '#frmake', '주소가 <b>#frmake</b> 로 남아 새로고침해도 돌아온다');
+  const boot = await page.evaluate(() => (typeof baBoot === 'function') && /frmake/.test(String(baBoot)));
+  is(boot, '주소로 바로 들어와도 <b>그 화면</b>이 뜬다 (baBoot)');
+  const keep = await page.evaluate(() => /_mounted/.test(String(exitBa)) === false);
+  is(keep, '나갔다 들어와도 <b>틀을 안 내린다</b> — 두 번째부터는 즉시 뜨고 적은 것도 안 사라진다');
 
   await page.waitForTimeout(2200);
   const fr = page.frames().filter(f => /ba\.html/.test(f.url()))[0];
