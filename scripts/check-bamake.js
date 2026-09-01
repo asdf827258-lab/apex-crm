@@ -34,7 +34,8 @@ const srv = http.createServer((rq, rs) => {
    ['인체 해부도', 'function anatSvg('], ['납입 보험료', 'function premCalc('],
    ['표준 담보표', 'function stBody('], ['KB 보장분석 읽기', 'function kbParse('],
    ['셈하는 기준(가정치)', 'function assumeHtml('], ['더 넣을 것', 'function needList('],
-   ['옛 자료 되살리기', 'function migrate(']
+   ['옛 자료 되살리기', 'function migrate('],
+   ['상담 흐름', 'function flowCalc('], ['왜 나에게 맞는가', 'function whyHtml(']
   ].forEach(function (x) { is(BA.indexOf(x[1]) >= 0, x[0] + ' 이 들어 있다'); });
   is(/AI\s*를 부르지 않는다|AI 판단/.test(BA), 'AI 를 부르지 않는다고 적혀 있다');
   is(!/callAI\s*\(|generateContent|api\.openai/.test(BA), '실제로 <b>AI 를 부르지 않는다</b>');
