@@ -123,6 +123,36 @@ const srv = http.createServer((rq, rs) => {
      '  나가기는 <b>그 전 화면</b>으로 간다 — 「' + A3.back + '」 (제자리로 돌면 안 닫힌다)');
   is(A3.back !== A3.nowIn, '  나가기가 <b>자기 자신</b>을 부르지 않는다');
 
+  console.log('\n[2-4] 전체화면 껍데기가 빠짐없이 벗겨진다');
+  /* 「한장 보험료 비교」 만 OS_FULL_MODES 에 이름이 빠져 있었다. 그래서
+     「← 워크스페이스」 를 눌러도 껍데기가 안 벗겨지고 계속 덮고 있었다 —
+     뒤에서는 워크스페이스가 멀쩡히 떠 있는데 눈에는 안 보인다.
+     CSS 에 body.○○-mode 를 만들면 그 이름을 목록에도 적어야 한다. */
+  const M = await page.evaluate(() => {
+    const css = [];
+    /* 이 파일이 실제로 쓰는 모드 이름을 <b>스타일에서</b> 긁어 온다 */
+    return { known: OS_FULL_MODES.slice() };
+  });
+  const SRC2 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const inCss = Array.from(new Set(
+    (SRC2.match(/body\.[a-z_]+-mode/g) || []).map(x => x.replace('body.', ''))));
+  const missing = inCss.filter(m => M.known.indexOf(m) < 0);
+  is(inCss.length >= 11, '  전체화면이 <b>' + inCss.length + '가지</b> 있다');
+  is(!missing.length,
+     '  <b>하나도 빠짐없이</b> 목록에 있다' + (missing.length ? ' — 빠진 것: ' + missing.join(', ') : ''));
+  /* 실제로 벗겨지는지 눌러 본다 */
+  const X = await page.evaluate(async () => {
+    OS.profile = { id: 'me', role: 'owner', name: '윤시현', plan: 'team', active: true };
+    go('clients'); await new Promise(r => setTimeout(r, 150));
+    go('onecmp'); await new Promise(r => setTimeout(r, 250));
+    const inn = document.body.className.indexOf('onecmp-mode') >= 0;
+    exitOneCmp(); await new Promise(r => setTimeout(r, 250));
+    return { inn, out: document.body.className.indexOf('onecmp-mode') >= 0, landed: lastTab };
+  });
+  is(X.inn, '  한장 보험료 비교가 <b>열린다</b>');
+  is(!X.out && X.landed === 'clients',
+     '  「← 워크스페이스」 를 누르면 <b>정말 나온다</b> — 도착 「' + X.landed + '」');
+
   console.log('\n[3] 다시 로그인돼도 보던 화면에서 안 벗어난다');
   const B = await page.evaluate(async () => {
     const went = [];
