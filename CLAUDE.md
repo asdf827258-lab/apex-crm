@@ -21,7 +21,14 @@ node scripts/lane.js             # 밀기 전 — 다른 세션과 부딪히나 
 
 앞의 둘은 브라우저를 안 띄워 **몇 초**면 끝납니다. 고치는 중에 계속 돌리십시오.
 
-CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
+CI 전체는 **5~7분** 걸립니다 — 점검 133가지를 여섯 갈래로 나눠 동시에 돕니다.
+문법이 깨졌으면 **30초** 만에 빨간불이 뜹니다(빠른 갈래가 먼저 돕니다).
+
+```bash
+node scripts/run-checks.js --group fast     # 브라우저 없는 것만 — 몇 초
+node scripts/run-checks.js --shard 3/6      # CI 의 3번 갈래만 그대로
+node scripts/run-checks.js --only nav,공지   # 이름에 그 글자가 든 것만
+```
 
 ---
 
@@ -172,7 +179,9 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 - **헛것을 잡는 점검은 안 잡는 점검보다 나쁘다.** 사람이 점검을 안 믿게 된다.
   넓게 잡지 말고 확실한 것만 잡고, 예외는 코드에 한 줄 적어 빠져나가게 한다.
   (예: 「상증법 제18조」의 18 을 금액으로 착각하지 않기)
-- 새 점검은 `.github/workflows/check.yml` 에 단계로 넣는다.
+- 새 점검은 **`scripts/checks.tsv` 맨 끝에 한 줄**만 붙인다.
+  `갈래<탭>이름<탭>명령` — 갈래는 `fast`(브라우저 없음) 나 `web`.
+  **`.github/workflows/check.yml` 은 안 건드린다** — 거기서 매번 부딪혔다.
 - **이미 있는 파일 이름을 확인하고 만든다.** `check-tofin.js` 를 덮어써
   기존 점검을 지운 적이 있습니다.
 
@@ -220,8 +229,9 @@ CI 전체(`.github/workflows/check.yml`)는 12~13분 걸립니다.
 1. **`APP_BUILD` · `APP_BUILD_NOTE` 두 줄.** PR 마다 고치는 규칙이라, 세션이
    여럿이면 거의 매번 부딪힙니다. 충돌해도 잃을 것이 없으니 **나중 것으로
    덮으십시오.**
-2. **`.github/workflows/check.yml`.** 새 점검 단계는 **파일 맨 끝에만**
-   붙입니다. 순서는 상관없습니다 — 전부 따로 돕니다.
+2. **`scripts/checks.tsv`.** 새 점검은 **맨 끝에 한 줄**만 붙입니다.
+   순서는 상관없습니다 — CI 가 알아서 나눠 돕니다. 한 줄짜리라 부딪혀도
+   눈으로 바로 풀립니다. (`check.yml` 은 이제 안 건드립니다.)
 
 그 밖에는 안 부딪힙니다.
 
@@ -263,7 +273,7 @@ node scripts/check-twins.js && node scripts/check-sane.js        # ⑤ 붙인 �
 
 > `app/finance.html` 만 만지십시오. 다른 갈래 파일은 열지 마시고, `APP_BUILD`
 > 두 줄도 건드리지 마십시오. 새 점검은 `scripts/check-<새이름>.js` 로 만들고
-> `.github/workflows/check.yml` **맨 끝에** 단계를 붙이십시오. 시작 전에
+> `scripts/checks.tsv` **맨 끝에** 한 줄을 붙이십시오. 시작 전에
 > `git fetch origin main && git checkout -B <브랜치> origin/main`, 밀기 전에
 > `node scripts/lane.js`, 끝나면 바로 미십시오.
 
@@ -271,9 +281,27 @@ node scripts/check-twins.js && node scripts/check-sane.js        # ⑤ 붙인 �
 
 ### 값
 
-PR 하나에 CI 12~13분. 세 세션이면 PR 셋이 **동시에** 돌아 시계로는 13분입니다.
+PR 하나에 CI **5~7분**(전에는 22분이었습니다 — 점검을 여섯 갈래로 나눴습니다).
+세 세션이면 PR 셋이 **동시에** 돌아 시계로는 그대로 5~7분입니다.
 다만 병합은 한 줄로 서므로, 두 번째부터는 `git merge origin/main` 뒤 CI 를
-한 판 더 돕니다.
+한 판 더 돕니다 — 그래도 예전 한 판보다 짧습니다.
+
+### 한 파일 안에서 갈래를 더 쪼갠다 — <b>이름 접두사</b>
+
+`app/index.html` 은 57,000줄이라 「가. 본체」 하나로 묶으면 세션이 다 거기
+모입니다. git 은 줄이 멀면 알아서 붙여 주지만, **같은 함수를 둘이 만지면**
+못 잡아 줍니다. 그래서 파일이 아니라 **이름**으로 나눕니다.
+
+| 세션 | 만지는 이름 | 화면 |
+|---|---|---|
+| 공지 | `osNtc*` · `osAck*` | 홈 공지 칸 · 설정 |
+| 팀 할 일 | `tdo*` | 홈 |
+| 메뉴 | `nav*` · `tn*` | 서랍 · 위 띠 |
+| 가이드 | `man*` | 사용가이드 |
+| 보장분석 | `baba*` · `ba*` | 비포&애프터 · 전·후 만들기 |
+
+**새 함수는 자기 접두사로 만듭니다.** 그러면 이름이 겹칠 일이 없고,
+`check-html` 이 이름 중복을 잡아 주므로 실수해도 CI 에서 걸립니다.
 
 ---
 
