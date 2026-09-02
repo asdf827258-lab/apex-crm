@@ -134,8 +134,12 @@ const srv = http.createServer((rq, rs) => {
     return { known: OS_FULL_MODES.slice() };
   });
   const SRC2 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  /* <b>주석은 빼고 본다.</b> 주석에 「body.xxx-mode」 라고 설명을 적어 두면
+     점검이 그것을 진짜 화면으로 세어 <b>없는 것이 빠졌다</b>고 울린다 —
+     헛알람은 안 잡는 알람보다 나쁘다 (CLAUDE.md 8번). */
+  const SRC2C = SRC2.replace(/\/\*[\s\S]*?\*\//g, ' ');
   const inCss = Array.from(new Set(
-    (SRC2.match(/body\.[a-z_]+-mode/g) || []).map(x => x.replace('body.', ''))));
+    (SRC2C.match(/body\.[a-z_]+-mode/g) || []).map(x => x.replace('body.', ''))));
   const missing = inCss.filter(m => M.known.indexOf(m) < 0);
   is(inCss.length >= 11, '  전체화면이 <b>' + inCss.length + '가지</b> 있다');
   is(!missing.length,
@@ -152,6 +156,58 @@ const srv = http.createServer((rq, rs) => {
   is(X.inn, '  한장 보험료 비교가 <b>열린다</b>');
   is(!X.out && X.landed === 'clients',
      '  「← 워크스페이스」 를 누르면 <b>정말 나온다</b> — 도착 「' + X.landed + '」');
+
+  /* ── 덮개는 <b>제 차례에만</b> 덮는다 ────────────────────────────────
+     2026-09-02, 앱이 통째로 <b>하얗게</b> 떴습니다. 로그인해도 흰 판만
+     보이고 메뉴도 본문도 없었습니다.
+
+     원인은 CSS 한 줄이었습니다. <code>body.finance-mode #financeScreen
+     {display:block}</code> 의 <b>한가운데에</b> 다른 화면 규칙을 끼워 넣으면서
+     앞의 <code>body.finance-mode</code> 가 떨어져 나가,
+     <code>#financeScreen{display:block}</code> 만 남았습니다. 그러자 흰 껍데기가
+     z-index 300 으로 <b>늘</b> 앱 위를 덮었습니다.
+
+     여기서 재는 것은 <b>모양이 아니라 결과</b>입니다 — 「아무 화면도 안 열었을
+     때, 화면을 덮고 있는 것이 있는가」. 이렇게 재야 CSS 를 어떻게 쓰든 잡힙니다
+     (CLAUDE.md 8번). */
+  console.log('\n[2-5] 아무 화면도 안 열었을 때 — 덮고 있는 것이 없다');
+  const CV = await page.evaluate(async () => {
+    OS.profile = { id: 'me', role: 'owner', name: '홍길동', plan: 'team', active: true };
+    /* 로그인 칸은 <b>일부러</b> 내린다 — 그것이 덮는 것은 이 자리 이야기가
+       아니다(로그인은 check-loginhold 가 본다). 안 내리면 무엇을 재는지
+       모르는 헛알람이 된다 (8번). */
+    try { osHideLoginGate(); } catch (e) {}
+    osFullMode('');                       /* 어떤 전체화면도 아니다 */
+    go('home');
+    await new Promise(r => setTimeout(r, 400));
+    const W = window.innerWidth, H = window.innerHeight;
+    /* 화면 <b>한가운데</b>에서 위에 있는 것이 무엇인가 — 눈에 보이는 그대로 */
+    const top = document.elementFromPoint(Math.round(W / 2), Math.round(H / 2));
+    const chain = []; let e = top;
+    while (e && e !== document.body) { chain.push(e.id || ('.' + (e.className || '').split(' ')[0])); e = e.parentElement; }
+    /* 덮개들이 실제로 접혀 있는가 */
+    const covers = [...document.querySelectorAll('body > div[id$="Screen"]')]
+      .filter(x => getComputedStyle(x).display !== 'none')
+      .map(x => x.id);
+    const tn = document.getElementById('topnav');
+    const tnTop = tn ? document.elementFromPoint(30, Math.round(tn.getBoundingClientRect().height / 2)) : null;
+    return { chain, covers, bodyClass: document.body.className,
+             tnReach: !!(tnTop && (tnTop.id === 'topnav' || tnTop.closest('#topnav'))) };
+  });
+  is(CV.covers.length === 0,
+     '  전체화면 껍데기가 <b>하나도 안 펴져 있다</b>' +
+     (CV.covers.length ? ' ← 덮고 있는 것: ' + CV.covers.join(', ') : ''));
+  is(CV.chain.indexOf('financeScreen') < 0 && CV.chain.indexOf('crmScreen') < 0,
+     '  화면 한가운데를 눌렀을 때 <b>덮개가 안 잡힌다</b> — 「' + (CV.chain[0] || '?') + '」');
+  is(CV.tnReach, '  위 띠가 <b>손에 닿는다</b> — 덮개에 안 가려진다');
+  is(CV.bodyClass.indexOf('-mode') < 0, '  몸에 전체화면 표시가 <b>안 남아 있다</b>');
+  /* CSS 에서도 본다 — 덮개를 펴는 규칙은 <b>반드시 body.○○-mode 를 달고</b> 있어야 한다 */
+  const openers = (SRC2C.match(/(^|\n)\s*(body\.[a-z_]+-mode\s+)?#[A-Za-z]+Screen\s*\{[^}]*display\s*:\s*block[^}]*\}/g) || []);
+  const naked = openers.filter(r => !/body\.[a-z_]+-mode/.test(r));
+  is(openers.length > 5, '  덮개를 펴는 규칙이 ' + openers.length + '가지다');
+  is(naked.length === 0,
+     '  <b>모두 body.○○-mode 를 달고 있다</b> — 조건 없이 펴는 규칙이 없다' +
+     (naked.length ? ' ← ' + naked.map(x => x.trim().split('{')[0]).join(', ') : ''));
 
   console.log('\n[3] 다시 로그인돼도 보던 화면에서 안 벗어난다');
   const B = await page.evaluate(async () => {
