@@ -125,7 +125,30 @@ const srv = http.createServer((rq, rs) => {
     const seg = src.slice(src.indexOf('function baSave('), src.indexOf('function baAskSave('));
     is(/kind:'ba_state'/.test(seg), '저장은 <b>이미 있는 표</b>(saved_reports)에 한다 — 새 표를 안 만든다');
     is(/BA\.rid[\s\S]{0,200}update\(/.test(seg), '두 번 저장해도 <b>한 고객에 한 줄</b>이다 — 쌓지 않는다');
-    is(/osRepMask/.test(seg), '제목은 <b>가린 이름</b>으로 저장한다 — 실명을 서버에 안 올린다');
+    is(/osRepMask/.test(seg), '제목은 <b>가린 이름</b>으로 저장한다');
+    /* ── 실명이 <b>정말</b> 안 나가는지 서버로 가는 것을 잡아 본다 ──
+       osRepMask 는 CRM 이 아는 이름만 가린다. 화면에 손으로 적은 이름은
+       모르니 그대로 나갔다 — 「홍철호 보장 전·후」 가 실제로 찍혔다.  */
+    const leak = await page.evaluate(async () => {
+      const bak = { p: OS.profile, s: OS.session };
+      OS.profile = { id:'x', role:'advisor' }; OS.session = { user:{ id:'adv-1' } };
+      BA.cid='c-test'; BA.name=''; BA.rid=null;
+      let sent=null; const rc=window.osClient, rt=window.toast;
+      window.osClient=function(){ return { from:function(t){ return {
+        insert:function(row){ sent={t:t,row:row}; return { select:function(){ return Promise.resolve({data:[{id:'r1'}]}); } }; },
+        update:function(row){ sent={t:t,row:row}; return { eq:function(){ return Promise.resolve({}); } }; },
+        select:function(){ const o={eq:function(){return o;},order:function(){return o;},limit:function(){return Promise.resolve({data:[]});}}; return o; }
+      }; } }; };
+      window.toast=function(){};
+      baSave({ title:'홍철호 보장 전·후', state:{ v:3, who:{ name:'홍철호', age:'45' } }, sum:{ name:'홍철호' } });
+      await new Promise(r=>setTimeout(r,400));
+      window.osClient=rc; window.toast=rt; OS.profile=bak.p; OS.session=bak.s;
+      if(!sent)return { none:true };
+      const str=JSON.stringify(sent.row);
+      return { real: str.indexOf('홍철호')>=0, title: sent.row.title, name:(sent.row.content.state.who||{}).name };
+    });
+    is(!leak.none && leak.real === false,
+       '화면에 <b>손으로 적은 실명</b>도 서버로 안 나간다 — 제목 「' + (leak.title||'?') + '」 · 자료 안 「' + (leak.name||'?') + '」');
   }
 
   sec('[4] 혼자서도 열리는가 — 파일을 그냥 열었을 때');
