@@ -1,19 +1,21 @@
-/* 메뉴 — 하루 동선대로 열두 칸, 접어 두고 눌러서 편다.
+/* 메뉴 — 하루 동선대로 묶고, <b>늘 펴 둔다.</b>
 
-   화면이 예순 개가 넘는다. 다 펼쳐 두면 스크롤만 한참 내리다 길을 잃는다.
-   그래서 카테고리로 크게 묶어 평소엔 접어 두기로 했다.
+   화면이 예순 개가 넘어서 예전에는 카테고리로 묶어 <b>평소엔 접어</b> 뒀다.
+   그런데 접힌 칸은 <b>없어진 것처럼</b> 보인다 — 「메뉴가 안 보인다」 는 말이
+   여기서 나왔다. 접혀 있는 줄 모르면 아무리 찾아도 못 찾는다.
+   그래서 접기를 <b>통째로</b> 걷어냈다.
 
-   접는 것도, 다시 묶는 것도 위험한 변경이다. 잘못하면 화면이 아예 안
-   보이거나 — 더 나쁘게는 — 요금제 문이 조용히 따라 움직인다.
-   그래서 여기서 직접 눌러 보고 확인한다.
+   메뉴를 건드리는 것은 위험하다. 잘못하면 화면이 아예 안 보이거나 —
+   더 나쁘게는 — 요금제 문이 조용히 따라 움직인다. 그래서 여기서 직접
+   눌러 보고 확인한다.
 
      · 칸이 다 나오는가, 메뉴가 한 개도 안 빠졌는가
      · 메뉴마다 원래 구분(ak)을 달고 다니는가 — 이게 없으면 유료 문이 움직인다
-     · 접힌 칸의 메뉴는 정말 안 보이는가
-     · 눌러서 펴면 보이는가, 다시 누르면 접히는가
-     · 새로고침해도 펴 둔 칸이 그대로인가
+     · <b>모든 칸이 펴져 있는가</b> — 안 보이는 메뉴 단추가 하나도 없는가
+     · 접는 장치가 <b>코드에도</b> 안 남아 있는가 (죽은 판이 돌면 안 된다 · 5번)
+     · 칸 이름이 <b>눌러도 되는 것처럼</b> 안 보이는가 (단추가 아니라 이름표)
      · 위에서 아래로 색이 한 줄기로 옅어지는가, 글씨가 배경에 안 묻는가
-     · 접힌 칸 안에 있는 화면으로 건너뛰면 그 칸이 자동으로 펴지는가
+     · 다른 데서 건너뛴 화면도 메뉴에서 바로 보이는가
      · 좁은 화면에서 이름이 안 잘리고 옆으로 안 밀리는가                 */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
@@ -96,7 +98,7 @@ async function boot(page) {
   await page.addInitScript(STUB);
   await boot(page);
 
-  const booted = await page.evaluate(() => typeof renderNav === 'function' && typeof navToggle === 'function');
+  const booted = await page.evaluate(() => typeof renderNav === 'function' && typeof navMark === 'function');
   if (!booted) {
     console.log('✗ 앱이 뜨지 않았습니다.');
     errs.slice(0, 4).forEach(m => console.log('    ' + m));
@@ -121,7 +123,7 @@ async function boot(page) {
           icon: ic ? ic.textContent : '',
           tint: el.style.getPropertyValue('--gc'),
           items: el.querySelectorAll('.tab-btn').length,
-          collapsed: el.classList.contains('collapsed')
+          collapsed: el.classList.contains('collapsed')   /* 이제는 늘 false 여야 한다 */
         };
       })
     };
@@ -255,10 +257,9 @@ async function boot(page) {
       tints.push(ratio(bg, page));
     });
     /* 「아래에서 위로 갈수록 진해진다」 — 눈이 아니라 숫자로 확인한다.
-       펼쳐 둔 칸은 일부러 한 톤 더 진하니 흐름 판정에서 뺀다. */
+       이제 칸은 다 같은 상태(늘 펴짐)라 전부 견줄 수 있다. */
     var depth = [];
     [].slice.call(document.querySelectorAll('#navHost .nav-group')).forEach(function (g) {
-      if (!g.classList.contains('collapsed')) return;
       depth.push(lum(over(px(getComputedStyle(g.querySelector('.nav-group-label')).backgroundColor), page)));
     });
     var back = 0, i;
@@ -276,135 +277,77 @@ async function boot(page) {
   is(contrast.span >= 1.8,
     '맨 위와 맨 아래가 뚜렷이 다르다 (' + contrast.span + '배)');
 
-  /* ── 3) 접힌 칸은 정말 안 보이는가 ── */
-  console.log('\n[3] 접고 펴기');
-  const shut = groups.got.filter(g => g.collapsed).length;
-  is(shut >= groups.got.length - 1, '평소엔 접혀 있다 (' + shut + '/' + groups.got.length + '칸)');
-
-  const target = groups.got.find(g => g.collapsed);
-  const hiddenH = await page.evaluate(new Function('name', `
+  /* ── 3) 왼쪽 메뉴는 <b>늘 펴져 있다</b> ────────────────────────────
+     예전에는 칸 이름을 눌러 접었다 폈다 했다. 그런데 접힌 칸은 <b>없어진
+     것처럼</b> 보인다 — 「메뉴가 안 보인다」 는 말이 여기서 나왔다.
+     그래서 접기를 통째로 걷어냈다. 여기서 재는 것은 <b>결과</b>다:
+     「지금 이 순간, 메뉴 단추가 눈에 보이는가」. 어떻게 만들든 이 질문에
+     답하면 된다 (CLAUDE.md 8번). */
+  console.log('\n[3] 왼쪽 메뉴가 늘 펴져 있다 — 접히지 않는다');
+  const alwaysOpen = await page.evaluate(new Function(`
     var visH=${VIS_H};
     var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) {
-        var box = els[i].querySelector('.nav-group-items');
-        var b = els[i].querySelector('.tab-btn');
-        return { h: box ? box.getBoundingClientRect().height : -1, btnH: b ? visH(b) : -1 };
-      }
-    }
-    return { h: -1, btnH: -1 };
-  `), target ? target.name : '');
-  is(hiddenH.h === 0, '접힌 칸의 메뉴는 높이가 0 이다 (' + hiddenH.h + 'px)');
-  is(hiddenH.btnH === 0, '접힌 칸의 메뉴 버튼은 눈에 안 보인다');
-
-  /* 눌러서 편다 — 진짜 클릭으로 */
-  await page.evaluate(name => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) { els[i].querySelector('.nav-group-label').click(); return; }
-    }
-  }, target ? target.name : '');
-  await page.waitForTimeout(450);
-  const openedH = await page.evaluate(name => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) {
-        var box = els[i].querySelector('.nav-group-items');
-        return { h: box ? box.getBoundingClientRect().height : -1, cls: els[i].classList.contains('collapsed') };
-      }
-    }
-    return { h: -1, cls: true };
-  }, target ? target.name : '');
-  is(openedH.h > 20, '눌렀더니 「' + (target ? target.name : '') + '」 칸이 펼쳐졌다 (' + Math.round(openedH.h) + 'px)');
-  is(openedH.cls === false, '펼친 칸에는 접힘 표시가 없다');
-
-  /* 새로고침해도 그대로인가 */
-  await boot(page);
-  const kept = await page.evaluate(name => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) return !els[i].classList.contains('collapsed');
-    }
-    return false;
-  }, target ? target.name : '');
-  is(kept === true, '새로고침해도 펴 둔 칸이 그대로다');
-
-  /* 다시 눌러 접는다 */
-  await page.evaluate(name => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) { els[i].querySelector('.nav-group-label').click(); return; }
-    }
-  }, target ? target.name : '');
-  await page.waitForTimeout(400);
-  const reshut = await page.evaluate(name => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    for (var i = 0; i < els.length; i++) {
-      var t = els[i].querySelector('.ngl-t');
-      if (t && t.textContent === name) return els[i].classList.contains('collapsed');
-    }
-    return false;
-  }, target ? target.name : '');
-  is(reshut === true, '다시 누르면 접힌다');
-
-  /* ── 4) 모두 펴기 · 모두 접기 ── */
-  console.log('\n[4] 모두 펴기 · 모두 접기');
-  const allBtns = await page.evaluate(() => document.querySelectorAll('#navHost .nav-allbtns button').length);
-  is(allBtns === 2, '「모두 펴기」「모두 접기」 두 개가 있다');
-  await page.evaluate(() => navAllSet(true));
-  await page.waitForTimeout(420);
-  const allOpen = await page.evaluate(() => {
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    return { n: els.length, shut: els.filter(function (e) { return e.classList.contains('collapsed'); }).length,
-      seen: [].slice.call(document.querySelectorAll('#navHost .tab-btn')).filter(function (b) { return b.getBoundingClientRect().height > 0; }).length };
-  });
-  is(allOpen.shut === 0, '모두 펴기 — 접힌 칸이 없다');
-  is(allOpen.seen >= 60, '모두 펴기 — 메뉴가 다 보인다 (' + allOpen.seen + '개)');
-
-  await page.evaluate(() => navAllSet(false));
-  await page.waitForTimeout(420);
-  const allShut = await page.evaluate(new Function(`
-    var visH=${VIS_H};
-    var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
-    return { shut: els.filter(function (e) { return e.classList.contains('collapsed'); }).length, n: els.length,
-      seen: [].slice.call(document.querySelectorAll('#navHost .nav-group-items .tab-btn')).filter(function (b) { return visH(b) > 0; }).length,
-      /* 즐겨찾기·최근은 그룹 밖에 있고 접어도 남는다 — 그러라고 만든 지름길이다 */
-      pin: [].slice.call(document.querySelectorAll('#navHost .nav-pin .tab-btn')).length };
+    var shortest = 1e9, shortName = '', hidden = 0;
+    els.forEach(function (g) {
+      var box = g.querySelector('.nav-group-items');
+      var h = box ? box.getBoundingClientRect().height : -1;
+      if (h < shortest) { shortest = h; shortName = (g.querySelector('.ngl-t') || {}).textContent || ''; }
+      [].slice.call(g.querySelectorAll('.tab-btn')).forEach(function (b) { if (visH(b) <= 0) hidden++; });
+    });
+    return { n: els.length, shortest: Math.round(shortest), shortName: shortName, hidden: hidden,
+      seen: [].slice.call(document.querySelectorAll('#navHost .nav-group-items .tab-btn'))
+              .filter(function (b) { return visH(b) > 0; }).length,
+      /* 접는 장치가 <b>코드에도</b> 안 남아 있어야 한다 — 죽은 판이 돌면 안 된다 (5번) */
+      hasToggle: typeof window.navToggle === 'function',
+      hasAllSet: typeof window.navAllSet === 'function',
+      hasReveal: typeof window.navReveal === 'function',
+      allBtns: document.querySelectorAll('#navHost .nav-allbtns button').length,
+      carets: document.querySelectorAll('#navHost .ngl-caret').length,
+      collapsed: document.querySelectorAll('#navHost .nav-group.collapsed').length };
   `));
-  is(allShut.shut === allShut.n, '모두 접기 — 다 접혔다 (' + allShut.shut + '/' + allShut.n + ')');
-  is(allShut.seen === 0, '모두 접기 — 그룹 안 메뉴가 하나도 안 보인다');
-  is(allShut.pin >= 0, '즐겨찾기·최근은 접어도 남는다 (' + allShut.pin + '개) — 지름길이니 접히면 안 된다');
-  /* 접어도 카테고리 자체는 남아 있어야 길을 잃지 않는다 */
-  const stillThere = await page.evaluate(() =>
-    [].slice.call(document.querySelectorAll('#navHost .nav-group-label')).filter(function (e) { return e.getBoundingClientRect().height > 0; }).length);
-  is(stillThere === allShut.n, '접어도 카테고리 이름은 다 보인다 (' + stillThere + '칸)');
+  is(alwaysOpen.collapsed === 0,
+     '접힌 칸이 <b>하나도 없다</b> (' + alwaysOpen.collapsed + '/' + alwaysOpen.n + ')');
+  is(alwaysOpen.shortest > 20,
+     '가장 짧은 칸도 <b>속이 보인다</b> — 「' + alwaysOpen.shortName + '」 ' + alwaysOpen.shortest + 'px');
+  is(alwaysOpen.hidden === 0,
+     '눈에 안 보이는 메뉴 단추가 <b>없다</b>' + (alwaysOpen.hidden ? ' ← ' + alwaysOpen.hidden + '개' : ''));
+  is(alwaysOpen.seen >= 60, '메뉴가 다 보인다 (' + alwaysOpen.seen + '개)');
 
-  /* ── 5) 접힌 칸 안으로 건너뛰면 ── */
-  console.log('\n[5] 접힌 칸 안의 화면으로 건너뛸 때');
-  const jump = await page.evaluate(() => {
+  /* ── 4) 접는 장치가 <b>아예 없다</b> ── */
+  console.log('\n[4] 접는 장치가 남아 있지 않다');
+  is(alwaysOpen.allBtns === 0, '「모두 펴기 / 모두 접기」 단추가 <b>없다</b>');
+  is(alwaysOpen.carets === 0, '접힘 화살표(▾)가 <b>없다</b>');
+  const alive = [alwaysOpen.hasToggle && 'navToggle', alwaysOpen.hasAllSet && 'navAllSet',
+                 alwaysOpen.hasReveal && 'navReveal'].filter(Boolean);
+  is(alive.length === 0,
+     '접기 함수(navToggle · navAllSet · navReveal)가 <b>안 남아 있다</b>' +
+     (alive.length ? ' ← 아직 있습니다: ' + alive.join(', ') : ''));
+  /* 칸 이름은 <b>눌러도 아무 일이 없는</b> 이름표다 — 눌러 보고 「고장 났나」 하시면 안 된다 */
+  const labelKind = await page.evaluate(() => {
+    var L = [].slice.call(document.querySelectorAll('#navHost .nav-group-label'));
+    return { n: L.length, btn: L.filter(function (e) { return e.tagName === 'BUTTON'; }).length,
+             ptr: L.filter(function (e) { return getComputedStyle(e).cursor === 'pointer'; }).length };
+  });
+  is(labelKind.btn === 0 && labelKind.ptr === 0,
+     '칸 이름은 <b>이름표</b>다 — 누르는 것처럼 안 보인다 (단추 ' + labelKind.btn +
+     '개 · 손가락 커서 ' + labelKind.ptr + '개)');
+  is(labelKind.n >= 10, '카테고리 이름은 다 보인다 (' + labelKind.n + '칸)');
+
+  /* ── 5) 어느 화면으로 건너뛰어도 그 메뉴가 바로 보인다 ── */
+  console.log('\n[5] 다른 데서 건너뛴 화면도 메뉴에서 바로 보인다');
+  const jump = await page.evaluate(new Function(`
+    var visH=${VIS_H};
     go('bojang');
     var b = document.querySelector('#navHost .tab-btn[data-tab="bojang"]');
     var g = b ? b.parentElement : null;
     while (g && !(g.classList && g.classList.contains('nav-group'))) g = g.parentElement;
-    return {
-      marked: !!(b && b.classList.contains('on')),
-      opened: !!(g && !g.classList.contains('collapsed')),
-      group: g ? (g.querySelector('.ngl-t') || {}).textContent : ''
-    };
-  });
+    return { marked: !!(b && b.classList.contains('on')), h: b ? visH(b) : 0,
+             group: g ? ((g.querySelector('.ngl-t') || {}).textContent || '') : '' };
+  `));
   await page.waitForTimeout(350);
   is(jump.marked === true, 'go(\'bojang\') 하면 그 메뉴에 눌린 표시가 붙는다');
-  is(jump.opened === true, '그 메뉴가 든 「' + jump.group + '」 칸이 자동으로 펴진다');
-  const seenNow = await page.evaluate(() => {
-    var b = document.querySelector('#navHost .tab-btn[data-tab="bojang"]');
-    return b ? b.getBoundingClientRect().height : 0;
-  });
-  is(seenNow > 10, '펴진 뒤 그 메뉴가 눈에 보인다 (' + Math.round(seenNow) + 'px)');
+  is(jump.h > 10,
+     '그 메뉴가 <b>그냥 눈에 보인다</b> — 「' + jump.group + '」 칸 안 (' + Math.round(jump.h) + 'px)');
 
   /* 눌린 표시는 하나뿐이어야 한다 */
   const onCount = await page.evaluate(() => document.querySelectorAll('#navHost .tab-btn.on').length);
@@ -412,8 +355,6 @@ async function boot(page) {
 
   /* ── 6) 눌러서 화면이 실제로 바뀌는가 ── */
   console.log('\n[6] 눌러서 화면이 바뀌는가');
-  await page.evaluate(() => navAllSet(true));
-  await page.waitForTimeout(400);
   const clicked = await page.evaluate(() => {
     var b = document.querySelector('#navHost .tab-btn[data-tab="clients"]');
     if (!b) return { ok: false, why: '메뉴를 못 찾음' };

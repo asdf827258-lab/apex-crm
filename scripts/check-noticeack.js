@@ -293,27 +293,34 @@ const api = http.createServer((rq, rs) => {
   is(!/osClient\(|\.from\(/.test(PAINTF),
      '  <b>그릴 때는 서버를 안 부른다</b> — 그리기는 자주 일어난다');
 
-  console.log('\n[8] 대표는 누가 확인했는지 이름으로 본다');
+  /* 확인 현황은 이제 <b>칸마다</b> 나온다 — 공지가 「칸의 목록」이 되면서
+     「맨 위 하나의 현황」 이라는 자리 자체가 없어졌다. 그래서 여기서도
+     칸 목록(#osNtcAdmin)을 세워 놓고 <b>그 칸의</b> 현황을 본다. */
+  console.log('\n[8] 대표는 칸마다 누가 확인했는지 이름으로 본다');
   const W = await page.evaluate(() => {
     OS.profile = { id: 'u1', name: '윤시현', role: 'owner', active: true, plan: 'pro' };
     OSMT.rows = [{ id: 'u1', name: '홍길동' }, { id: 'u2', name: '김철수' }];
     /* <b>이 칸이 쓸 공지를 여기서 세운다.</b> 앞 칸이 남긴 것을 그냥 읽으면
        앞 칸을 고칠 때마다 여기가 같이 무너진다 — 실제로 그랬다. */
-    OS_NOTICE = { id: 'n1', text: '확인해 주세요', img: '', on: true, ts: '',
-                  by: '윤시현', targets: ['u1', 'u2'], mustAck: true };
+    OS_NTC.list = [{ id: 'n1', text: '확인해 주세요', img: '', on: true, ts: '2026-09-02',
+                     by: '윤시현', targets: ['u1', 'u2'], mustAck: true }];
+    OS_NTC.loaded = true; OS_NTC.busy = false; OS_NTC.err = '';
+    OS_NOTICE = OS_NTC.list[0];
     OS_ACK.loaded = true; OS_ACK.ackd = { n1: { u1: 'x' } }; OS_ACK.err = '';
-    const d = document.createElement('div'); d.id = 'osAckWho';
+    const d = document.createElement('div'); d.id = 'osNtcAdmin';
     document.body.appendChild(d);
     osAckWhoPaint();
     const t = d.textContent.replace(/\s+/g, ' ').trim();
     const ok = d.querySelectorAll('.p span.ok').length, no = d.querySelectorAll('.p span.no').length;
+    const hide = /osNtcHide/.test(d.innerHTML);
     d.remove();
-    return { t, ok, no };
+    return { t, ok, no, hide };
   });
   is(/2명 중 1명/.test(W.t), '  <b>몇 명 중 몇 명</b>인지 센다 — 「' + W.t.slice(0, 30) + '…」');
   is(W.ok === 1 && W.no === 1, '  확인한 사람과 <b>안 한 사람</b>이 갈려 보인다 — ✓' + W.ok + ' · ·' + W.no);
   is(/홍길동/.test(W.t) && /김철수/.test(W.t),
      '  <b>이름으로</b> 보인다 — id 만 보면 누군지 모른다');
+  is(W.hide, '  칸마다 <b>「이 칸만 내리기」</b> 가 있다 — 나머지는 그대로 둔다');
 
   /* ── 새 공지가 하나 더 올라와도 <b>확인 안 한 것은 안 사라진다</b> ────
      앱은 공지를 최신 한 건만 읽는다. 그래서 지목 공지 뒤에 다른 공지를

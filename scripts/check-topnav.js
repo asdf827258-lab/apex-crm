@@ -88,17 +88,24 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
         on: !!tn && getComputedStyle(tn).display !== 'none',
         top0, top1,
         favs: document.querySelectorAll('#tnFav .tn-fi .tab-btn').length,
-        /* 세로 메뉴가 <b>격자 칸을 차지하면</b> 화면을 먹는다 — 밀려나 있어도
-           자리는 남는다. 실제로 그 자리로 뚫렸다. 칸 수까지 본다. */
-        sbOut: sb ? Math.round(sb.getBoundingClientRect().right) <= 0 : false,
+        /* 왼쪽 메뉴는 <b>넓은 화면에서 기둥으로 서고</b>, 좁은 화면에서는
+           서랍으로 밀려나 있어야 한다. 좁은데 자리를 차지하면 본문이 먹히고,
+           넓은데 밀려나 있으면 ☰ 를 누르기 전엔 메뉴가 아예 안 보인다. */
+        vw: innerWidth,
+        sbRight: sb ? Math.round(sb.getBoundingClientRect().right) : 0,
         cols: app ? getComputedStyle(app).gridTemplateColumns.trim().split(/\s+/).length : 0
       };
     }, OWNER);
     is(R.on && R.top0 === 0, '  ' + label + ' — 맨 위에 붙어 있다 (top=' + R.top0 + ')');
     is(R.top1 === 0, '  ' + label + ' — <b>내려도 그대로 위에 있다</b> (600px 내린 뒤 top=' + R.top1 + ')');
     is(R.favs === 3, '  ' + label + ' — ⭐ 즐겨찾기 ' + R.favs + '칸이 띠에 서 있다');
-    is(R.sbOut, '  ' + label + ' — 세로 메뉴는 <b>서랍</b>이라 밀려나 있다');
-    is(R.cols === 1, '  ' + label + ' — 세로 메뉴가 <b>자리를 안 차지한다</b> (본문 칸 ' + R.cols + '개)');
+    if (R.vw > 1100) {
+      is(R.sbRight > 200, '  ' + label + ' — 왼쪽 메뉴가 <b>기둥으로 서 있다</b> (오른쪽 끝 ' + R.sbRight + 'px)');
+      is(R.cols === 2, '  ' + label + ' — 본문과 <b>나란히</b> 선다 (격자 칸 ' + R.cols + '개)');
+    } else {
+      is(R.sbRight <= 0, '  ' + label + ' — 좁은 화면이라 <b>서랍</b>으로 밀려나 있다 (오른쪽 끝 ' + R.sbRight + 'px)');
+      is(R.cols === 1, '  ' + label + ' — 세로 메뉴가 <b>자리를 안 차지한다</b> (본문 칸 ' + R.cols + '개)');
+    }
   }
 
   const page = pages['웹 1440'];
@@ -392,40 +399,72 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
   is(/onclick="vaToggle\(\)"/.test(SRC) && /b\.onclick\s*=\s*vaToggle/.test(SRC),
      '  위 띠 단추와 떠 있는 단추가 <b>같은 vaToggle</b> 을 부른다');
 
-  console.log('\n[11] 세로 메뉴는 ☰ 로 열린다 — 없앤 것이 아니다');
+  /* ── 왼쪽 메뉴는 <b>넓은 화면에서 늘 서 있다</b> ──────────────────────
+     한동안 어느 크기에서나 서랍이라, ☰ 를 누르기 전에는 메뉴가 아예 안
+     보였습니다 — 「메뉴가 없어졌다」 는 말이 여기서 나왔습니다.
+     이제 넓은 화면에서는 <b>기둥으로 세워</b> 둡니다. 폰에서는 서랍 그대로
+     입니다 — 320px 기둥을 세우면 390px 화면에 본문이 70px 만 남습니다.
+
+     그래서 여기서 재는 것은 <b>「지금 눈에 보이는가」</b> 입니다. 어떻게
+     만들든 이 질문에 답하면 됩니다 (CLAUDE.md 8번). */
+  console.log('\n[11] 왼쪽 메뉴 — 넓은 화면에서는 늘 서 있고, 폰에서는 ☰ 로 연다');
   const S = await page.evaluate((prof) => {
     OS.profile = prof; renderNav();
+    /* 로그인 칸은 <b>일부러</b> 내린다 — 그것이 화면을 덮는 것은 이 자리
+       이야기가 아니다(로그인은 check-loginhold 가 본다). 안 내리면
+       「메뉴가 잡히나」 를 물었는데 <b>로그인 칸이 잡혀</b> 헛알람이 된다 (8번). */
+    document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove());
+    window.scrollTo(0, 0);
     const sb = document.getElementById('sidebar');
-    /* 띠의 <b>「☰ 메뉴 전체」</b> 딱지로 연다 — 그 길이 실제로 도는지 */
-    const more = document.querySelector('#tnFav .tn-more');
-    if (more) more.click();
-    const opened = sb.classList.contains('open');
-    const has = sb.querySelectorAll('.tab-btn').length;
-    /* ── 띠로 옮긴 화면이 서랍에서도 <b>펴져 보여야</b> 한다 ─────────────
-       띠에는 이제 같은 data-tab 단추가 있다. 접힌 칸을 펴 주는 navReveal 이
-       <b>서랍 안에서</b> 찾지 않으면 띠의 단추가 먼저 걸려, 서랍을 열었을 때
-       내가 있는 칸이 접힌 채로 숨는다. */
-    navAllSet(false);                                  /* 모두 접어 두고 */
-    /* 설정·출발 점검은 <b>대표만</b>이라 막히면 옮기지도 않는다 — 그 둘로
-       재면 무엇을 재는지 모르게 된다. 평범한 칸 하나로 잰다. */
-    const deep = [...document.querySelectorAll('#navHost .nav-group')]
-      .map(g => g.querySelector('.tab-btn')).filter(Boolean)
-      .filter(b => ['settings', 'ready', 'home', 'dashboard'].indexOf(b.getAttribute('data-tab')) < 0).pop();
-    const deepId = deep.getAttribute('data-tab');
-    if (!navIsFav(deepId)) navFavToggle(deepId);        /* 띠에도 올려 두고 */
-    document.querySelector('#tnFav .tab-btn[data-tab="' + deepId + '"]').click();
-    const grp = [...document.querySelectorAll('#navHost .nav-group')]
-      .find(g => g.querySelector('.tab-btn[data-tab="' + deepId + '"]'));
-    const revealed = !!grp && !grp.classList.contains('collapsed');
-    /* 화면을 고르면 서랍도 닫힌다 */
-    go('home');
-    return { hadMore: !!more, opened, has, deepId, revealed, closed: !sb.classList.contains('open') };
+    const r = sb.getBoundingClientRect();
+    /* 메뉴 한가운데를 눌렀을 때 <b>메뉴가 잡히는가</b> — 눈에 보이는 그대로 */
+    const hit = document.elementFromPoint(Math.round(r.left + r.width / 2),
+                                          Math.round(Math.max(r.top, 0) + Math.min(r.height, innerHeight) / 2));
+    return { w: Math.round(r.width), left: Math.round(r.left), vw: innerWidth,
+             mine: !!(hit && hit.closest && hit.closest('#sidebar')),
+             hitWas: hit ? (hit.id || ('.' + (hit.className || '').toString().split(' ')[0])) : '없음',
+             has: sb.querySelectorAll('.tab-btn').length,
+             burger: (function () { const b = document.querySelector('.tn-burger');
+               return !!(b && b.getBoundingClientRect().height > 0); })(),
+             scrim: (function () { const s = document.getElementById('scrim');
+               return !!(s && getComputedStyle(s).display !== 'none'); })(),
+             /* 기둥이 <b>화면 밖으로 넘치지 않는가</b> — 넘치면 맨 밑이 잘린다 */
+             bottom: Math.round(r.bottom), vh: innerHeight };
   }, OWNER);
-  is(S.hadMore && S.opened, '  띠의 <b>「☰ 메뉴 전체」</b> 로 열린다');
+  is(S.left >= 0 && S.w > 200,
+     '  넓은 화면(' + S.vw + 'px)에서 <b>기둥으로 서 있다</b> — 왼쪽 ' + S.left + 'px · 폭 ' + S.w + 'px');
+  is(S.mine, '  그 자리를 누르면 <b>메뉴가 잡힌다</b> — 숨어 있지 않다' +
+     (S.mine ? '' : ' ← 잡힌 것: ' + S.hitWas));
   is(S.has > 40, '  안에 칸이 그대로 있다 (' + S.has + '칸) — 즐겨찾기·최근도 거기 있다');
-  is(S.revealed,
-     '  띠로 옮긴 화면이 서랍에서 <b>접힌 채로 숨지 않는다</b> — 「' + S.deepId + '」 칸이 펴진다');
-  is(S.closed, '  화면을 고르면 <b>서랍도 닫힌다</b>');
+  is(!S.burger, '  기둥으로 서 있으면 <b>☰ 가 없다</b> — 눌러도 아무 일이 없는 단추를 두지 않는다');
+  is(!S.scrim, '  화면을 어둡게 덮는 막이 <b>안 뜬다</b>');
+  is(S.bottom <= S.vh + 2,
+     '  기둥이 <b>화면 밖으로 안 넘친다</b> — 밑이 ' + S.bottom + 'px (화면 ' + S.vh + 'px)');
+  /* 폰에서는 <b>서랍</b>이라야 한다 — 기둥을 세우면 본문이 안 남는다 */
+  const SM = await page.evaluate(() => {
+    const sb = document.getElementById('sidebar');
+    return { drawer: !!(sb && sb.className.indexOf('sidebar') >= 0) };
+  });
+  const ph = pages['폰 390'] || pages['폰'] || null;
+  if (ph) {
+    const PH = await ph.evaluate((prof) => {
+      OS.profile = prof; renderNav();
+      const sb = document.getElementById('sidebar');
+      const before = Math.round(sb.getBoundingClientRect().left);
+      const more = document.querySelector('#tnFav .tn-more');
+      if (more) more.click();
+      const opened = sb.classList.contains('open');
+      go('home');
+      return { before: before, opened: opened, hadMore: !!more,
+               closed: !sb.classList.contains('open') };
+    }, OWNER);
+    is(PH.before < 0, '  폰에서는 <b>서랍</b>이다 — 평소엔 화면 밖(' + PH.before + 'px)');
+    is(PH.hadMore && PH.opened, '  폰에서 띠의 <b>「☰ 메뉴 전체」</b> 로 열린다');
+    is(PH.closed, '  폰에서 화면을 고르면 <b>서랍도 닫힌다</b>');
+  } else {
+    is(false, '  폰 화면을 못 찾았습니다 — SIZES 를 확인하십시오');
+  }
+  void SM;
 
   console.log('\n[12] 폰에서 가로로 안 밀린다');
   for (const label of ['폰 390', '노트북 1024']) {
