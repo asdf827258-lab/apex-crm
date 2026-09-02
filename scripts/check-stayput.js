@@ -201,6 +201,37 @@ const srv = http.createServer((rq, rs) => {
      '  화면 한가운데를 눌렀을 때 <b>덮개가 안 잡힌다</b> — 「' + (CV.chain[0] || '?') + '」');
   is(CV.tnReach, '  위 띠가 <b>손에 닿는다</b> — 덮개에 안 가려진다');
   is(CV.bodyClass.indexOf('-mode') < 0, '  몸에 전체화면 표시가 <b>안 남아 있다</b>');
+
+  /* ── 한 번 연 껍데기가 <b>따라다니지</b> 않는가 ──────────────────────
+     「보장분석 전·후 만들기」 껍데기(#baScreen)는 몸에 이름을 안 붙이고
+     자기 .on 으로 덮는다. 그래서 모드 목록만 지우는 것으로는 <b>안 벗겨졌고</b>,
+     한 번 열고 나면 다른 화면으로 옮겨도 계속 덮고 있었다 — 제안서 비교·
+     AI 제안서·카톡설명·보험 해석·치료비 지급지도·8통장·AI 상담 어시스턴트
+     <b>일곱 화면이 가려져</b> 있었다. 열어 보고, 나와 보고, 진짜 벗겨지는지 본다. */
+  const BA = await page.evaluate(async () => {
+    OS.profile = { id: 'me', role: 'owner', name: '홍길동', plan: 'team', active: true };
+    try { osHideLoginGate(); } catch (e) {}
+    /* <b>전체화면에서 넘어와야</b> 앞 화면 이름이 남는지 잴 수 있다 —
+       평지에서 열면 남을 것이 없어 아무것도 안 잡힌다 (8번) */
+    go('crm'); await new Promise(r => setTimeout(r, 300));
+    go('frmake'); await new Promise(r => setTimeout(r, 350));
+    const on1 = document.getElementById('baScreen').classList.contains('on');
+    const mode1 = document.body.className;
+    go('interpret'); await new Promise(r => setTimeout(r, 350));
+    const on2 = document.getElementById('baScreen').classList.contains('on');
+    const W = innerWidth, H = innerHeight;
+    const mid = document.elementFromPoint(W >> 1, Math.round(H * 0.6));
+    let chain = [], e = mid;
+    while (e && e !== document.body) { chain.push(e.id || ''); e = e.parentElement; }
+    return { on1, on2, mode1, covered: chain.indexOf('baScreen') >= 0,
+             vis: document.body.innerText.replace(/\s+/g, ' ').trim().length };
+  });
+  is(BA.on1, '  「보장분석 전·후」 를 열면 <b>그 껍데기가 뜬다</b>');
+  is(BA.mode1.indexOf('-mode') < 0,
+     '  열 때 <b>앞 화면 이름이 몸에 안 남는다</b> — 「' + (BA.mode1 || '없음') + '」');
+  is(!BA.on2 && !BA.covered,
+     '  거기서 <b>다른 화면으로 가면 벗겨진다</b>' + (BA.on2 || BA.covered ? ' ← 아직 덮고 있습니다' : ''));
+  is(BA.vis > 120, '  옮겨 간 화면의 글이 <b>보인다</b> — ' + BA.vis + '자');
   /* CSS 에서도 본다 — 덮개를 펴는 규칙은 <b>반드시 body.○○-mode 를 달고</b> 있어야 한다 */
   const openers = (SRC2C.match(/(^|\n)\s*(body\.[a-z_]+-mode\s+)?#[A-Za-z]+Screen\s*\{[^}]*display\s*:\s*block[^}]*\}/g) || []);
   const naked = openers.filter(r => !/body\.[a-z_]+-mode/.test(r));
