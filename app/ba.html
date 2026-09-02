@@ -3664,6 +3664,21 @@ document.addEventListener('drop',function(e){var d=document.getElementById('kbDr
 
    저장하는 곳 — 새 표를 만들지 않는다. 이미 있는 saved_reports 를 쓴다.
    보내는 것은 <b>이 화면의 자료 한 덩이</b>뿐이고, 저장은 <b>바깥</b>이 한다. */
+/* 알림 한 줄 — 이 화면에는 <b>없던 것</b>이다.
+   저장이 되어도 안쪽에서 오류가 나 <b>아무 말도 안 떴다</b>. 여기서 만든다. */
+function toast(msg,ms){
+  var t=document.getElementById("baToast");
+  if(!t){
+    t=document.createElement("div"); t.id="baToast";
+    t.style.cssText="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);"+
+      "max-width:min(90vw,520px);padding:12px 18px;border-radius:12px;background:#191F28;"+
+      "color:#fff;font-size:14px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.25);"+
+      "z-index:9999;opacity:0;transition:opacity .18s;pointer-events:none;text-align:center";
+    document.body.appendChild(t);
+  }
+  t.textContent=msg; t.style.opacity="1";
+  clearTimeout(t._t); t._t=setTimeout(function(){ t.style.opacity="0"; }, ms||2600);
+}
 var INFRAME=(function(){try{return window.parent&&window.parent!==window;}catch(e){return false;}})();
 var HOST={ready:false,client:'',name:''};
 function baPost(m){ try{ if(INFRAME)window.parent.postMessage(m,'*'); }catch(e){} }
