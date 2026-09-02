@@ -240,6 +240,64 @@ const srv = http.createServer((rq, rs) => {
      '  <b>모두 body.○○-mode 를 달고 있다</b> — 조건 없이 펴는 규칙이 없다' +
      (naked.length ? ' ← ' + naked.map(x => x.trim().split('{')[0]).join(', ') : ''));
 
+  /* ── 껍데기가 <b>화면을 꽉 채우는가</b> ──────────────────────────────
+     2026-09-02, 「보장분석 전·후 만들기」를 누르면 ba.html 이 왼쪽 위에
+     <b>304×154 짜리 우표만 하게</b> 박혔습니다. 나머지는 온통 회색이었고,
+     사장님은 그 화면에 지금 자료를 넣고 계셨습니다.
+
+     원인은 <b>없는 CSS 한 줄</b>이었습니다. 열두 껍데기 중 열하나에는
+     <code>#○○Screen .fin-frame{position:absolute;inset:0;…}</code> 가 있는데
+     <code>#baScreen</code> 것만 없어, 상자가 iframe <b>기본 크기</b>로 섰습니다.
+     게다가 z-index 가 혼자 70 이라 위 띠(120)가 그 위를 덮고 있었습니다.
+
+     앞의 [2-5] 도 bacheck 도 이것을 <b>못 봤습니다</b> — 둘 다 「열리나 · 글이
+     있나」만 쟀기 때문입니다. 글은 다 있었습니다, 300px 안에 우겨넣어져서.
+     그래서 여기서는 <b>자로 잽니다</b> (CLAUDE.md 8번). */
+  console.log('\n[2-6] 전용 화면 상자가 화면을 꽉 채운다 — 자로 잰다');
+  const FR = await page.evaluate(() => {
+    const vw = innerWidth;
+    const out = [];
+    document.querySelectorAll('.fin-frame').forEach(f => {
+      let sc = f.parentElement;
+      while (sc && !/Screen$/.test(sc.id || '')) sc = sc.parentElement;
+      const cs = getComputedStyle(f);
+      /* 껍데기가 접혀 있어도 <b>선언된 값</b>은 읽힌다 — 100%/absolute 면 입은 것 */
+      const dressed = cs.position === 'absolute' &&
+                      (cs.width === '100%' || Math.abs(parseFloat(cs.width) - vw) < 2);
+      out.push({ id: sc ? sc.id : '?', dressed: dressed, w: cs.width, pos: cs.position,
+                 z: sc ? getComputedStyle(sc).zIndex : '?' });
+    });
+    return out;
+  });
+  const bare = FR.filter(x => !x.dressed);
+  is(FR.length >= 12, '  전용 화면 상자가 ' + FR.length + '개다');
+  is(bare.length === 0,
+     '  <b>모두 칸 모양을 입고 있다</b> — 기본 크기로 서는 것이 없다' +
+     (bare.length ? ' ← ' + bare.map(x => x.id + '(' + x.pos + ' ' + x.w + ')').join(', ') : ''));
+  /* 껍데기끼리 z-index 가 <b>같아야</b> 한다 — 하나만 낮으면 위 띠가 올라온다 */
+  const zs = [...new Set(FR.map(x => x.z))];
+  const tnZ = await page.evaluate(() => {
+    const t = document.getElementById('topnav');
+    return t ? parseInt(getComputedStyle(t).zIndex, 10) || 0 : 0;
+  });
+  is(zs.length === 1, '  껍데기 z-index 가 <b>다 같다</b> — ' + zs.join(' / ') +
+     (zs.length > 1 ? ' ← 하나만 낮으면 그 화면만 위 띠에 덮입니다' : ''));
+  is(FR.every(x => (parseInt(x.z, 10) || 0) > tnZ),
+     '  껍데기가 위 띠(' + tnZ + ')<b>보다 위</b>에 있다 — 머리가 안 잘린다');
+
+  /* 그리고 <b>실제로 열어</b> 재 본다 — 선언만 보면 무엇에 가려지는지 모른다 */
+  const BW = await page.evaluate(async () => {
+    go('frmake'); await new Promise(r => setTimeout(r, 400));
+    const r = document.getElementById('baFrame').getBoundingClientRect();
+    const topHit = document.elementFromPoint(innerWidth >> 1, 24);
+    return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight,
+             topIn: !!(topHit && topHit.closest && topHit.closest('#baScreen')) };
+  });
+  is(BW.w >= BW.vw - 2 && BW.h >= BW.vh - 2,
+     '  열어 보면 <b>화면만 하다</b> — ' + BW.w + '×' + BW.h + ' (화면 ' + BW.vw + '×' + BW.vh + ')');
+  is(BW.topIn, '  <b>맨 윗줄까지</b> 이 화면이다 — 위 띠가 안 올라온다');
+  await page.evaluate(() => { try { exitBa(); } catch (e) {} });
+
   console.log('\n[3] 다시 로그인돼도 보던 화면에서 안 벗어난다');
   const B = await page.evaluate(async () => {
     const went = [];
