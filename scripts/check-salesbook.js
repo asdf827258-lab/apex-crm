@@ -9,22 +9,30 @@
 
      1. <b>혼자 선다</b> — 밖에서 글꼴·그림·스크립트를 불러오지 않는다.
         옮기거나 메일로 보내도 그대로 열려야 합니다.
-     2. <b>여덟 장이 다 선다</b>, 그리고 차례의 링크가 <b>있는 자리</b>를
+     2. <b>읽히는가.</b> 이 책은 신입이 처음부터 끝까지 읽는 물건이라
+        가독성이 곧 쓸모입니다. 그래서 <b>재서</b> 봅니다 —
+        · 굵은 글씨가 <b>12%</b>를 넘지 않는가. 다섯 글자 중 하나가 굵으면
+          그건 강조가 아니라 소음이고, 눈이 쉴 곳이 없어집니다.
+          (한 번 18%까지 갔던 자리입니다)
+        · 본문 한 줄이 <b>45자</b>를 넘지 않는가. 줄이 길면 눈이 다음 줄
+          첫 글자를 못 찾아 같은 줄을 두 번 읽습니다. 폭 제한을 걷어내면
+          쉰 자가 되므로, 문턱을 쉰 자로 두면 <b>알람이 안 울립니다</b>.
+     3. <b>여덟 장이 다 선다</b>, 그리고 차례의 링크가 <b>있는 자리</b>를
         가리킨다 — 죽은 앵커 0.
-     3. <b>tnum 을 인쇄에 켜지 않았다</b> (CLAUDE.md 4-1). 켜고 PDF 로
+     4. <b>tnum 을 인쇄에 켜지 않았다</b> (CLAUDE.md 4-1). 켜고 PDF 로
         저장하면 숫자 글자가 유니코드를 잃어, 우리가 뽑은 종이를 우리 앱이
         못 읽습니다.
-     4. <b>그림을 직접 그렸다</b> (9번) — 인라인 SVG 다.
-     5. <b>견본 사람이 홍길동이다</b> (3번) — 실제 고객 이름이 없다.
-     6. <b>한장 보험료 비교의 출처 네 가지</b>가 적혀 있다. 사장님이 콕
+     5. <b>그림을 직접 그렸다</b> (9번) — 인라인 SVG 다.
+     6. <b>견본 사람이 홍길동이다</b> (3번) — 실제 고객 이름이 없다.
+     7. <b>한장 보험료 비교의 출처 네 가지</b>가 적혀 있다. 사장님이 콕
         집어 넣으라고 한 자리다 — 이것이 빠지면 비교표가 「그냥 우리가
         싸다는 종이」 가 됩니다.
-     7. <b>준법 문구가 빠지지 않았다</b> — 심사 결과 · 요건 충족 시 ·
+     8. <b>준법 문구가 빠지지 않았다</b> — 심사 결과 · 요건 충족 시 ·
         준법감시 · 실제 기사만.
-     8. <b>인쇄에서 안 잘린다</b> — 인쇄 CSS 가 위 띠와 차례를 걷어내고,
+     9. <b>인쇄에서 안 잘린다</b> — 인쇄 CSS 가 위 띠와 차례를 걷어내고,
         표·그림이 페이지 사이에서 안 쪼개진다. 그리고 화면이 <b>가로로
         안 넘친다.</b>
-     9. 콘솔이 조용하다.                                              */
+    10. 콘솔이 조용하다.                                              */
 
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -63,7 +71,19 @@ const srv = http.createServer((rq, rs) => {
   is(imgs.length === 0,
      '밖에서 <b>이미지를 끌어오지 않는다</b>' + (imgs.length ? ' ← ' + imgs.length + '개' : ''));
 
-  sec('[2] tnum 을 인쇄에 켜 두지 않았는가 (4-1)');
+  sec('[2] 읽히는가 — 굵은 글씨가 소음이 되지 않았는가');
+  /* 몸통만 본다. 머리(주석·CSS)의 <b> 까지 세면 헛것을 잡는다 (8번). */
+  const BODY = BK.slice(BK.indexOf('<body>'));
+  const plain = (h) => h.replace(/<[^>]+>/g, '').replace(/\s+/g, '');
+  const allN = plain(BODY).length;
+  const boldN = plain((BODY.match(/<b>[\s\S]*?<\/b>/g) || []).join('')).length;
+  const pct = allN ? Math.round(boldN / allN * 1000) / 10 : 0;
+  is(pct <= 12,
+     '굵은 글씨가 <b>' + pct + '%</b> — 열두 자에 한 자를 넘지 않는다' +
+     (pct > 12 ? ' ← 강조가 너무 많으면 눈이 쉴 곳이 없습니다' : ''));
+  is(allN > 9000, '글이 실려 있다 — ' + allN + '자');
+
+  sec('[3] tnum 을 인쇄에 켜 두지 않았는가 (4-1)');
   /* 켜 두었으면 <b>@media screen 안</b>이어야 한다. 여기서는 아예 안 쓴다.
      주석은 걷어내고 본다 — 「쓰지 말자」 고 적어 둔 주석까지 세면 <b>헛것을
      잡는 점검</b>이 되고, 그러면 사람이 점검을 안 믿게 된다 (8번). */
@@ -73,18 +93,18 @@ const srv = http.createServer((rq, rs) => {
      '숫자 글꼴 설정(font-feature-settings)을 <b>쓰지 않았다</b>' +
      (tnum ? ' ← ' + tnum + '군데 — 켜고 PDF 로 저장하면 숫자가 유니코드를 잃습니다' : ''));
 
-  sec('[3] 그림을 직접 그렸는가 (9번)');
+  sec('[4] 그림을 직접 그렸는가 (9번)');
   const svgN = (BK.match(/<svg/g) || []).length;
   is(svgN >= 2, '인라인 SVG 로 직접 그렸다 — ' + svgN + '장');
 
-  sec('[4] 견본 사람이 홍길동인가 (3번)');
+  sec('[5] 견본 사람이 홍길동인가 (3번)');
   is(/홍길동/.test(BK), '견본 이름으로 <b>홍길동</b>을 쓴다');
   is(/홍○/.test(BK), '가려진 이름(홍○○)도 보여 준다 — 서버에는 마스킹만 올라간다');
   const realish = ['김철수', '이영희', '박민수', '김영수', '최지우'].filter(n => BK.indexOf(n) >= 0);
   is(realish.length === 0,
      '다른 사람 이름을 견본으로 쓰지 않았다' + (realish.length ? ' ← ' + realish.join(', ') : ''));
 
-  sec('[5] 한장 보험료 비교 — 출처를 적으라고 말하는가');
+  sec('[6] 한장 보험료 비교 — 출처를 적으라고 말하는가');
   is(/한장 보험료 비교/.test(BK), '한장 보험료 비교를 다룬다');
   is(/apex-hb-onecompare/.test(BK), '이 화면이 <b>밖에 있는 도구</b>라는 것을 밝힌다');
   [['기준일', /기준일/], ['설계 조건', /설계 조건/], ['산출 주체', /산출 주체/],
@@ -93,7 +113,7 @@ const srv = http.createServer((rq, rs) => {
   });
   is(/심사 결과에 따릅니다/.test(BK), '  <b>「심사 결과에 따릅니다」</b>를 빼지 않았다');
 
-  sec('[6] 준법 문구');
+  sec('[7] 준법 문구');
   [['요건 충족 시', /요건 충족 시/], ['준법감시', /준법감시/],
    ['약관', /약관/], ['실제 기사만', /실제 기사만/],
    ['해지 방어', /감액완납/]].forEach(([nm, re]) => {
@@ -114,7 +134,7 @@ const srv = http.createServer((rq, rs) => {
                   { waitUntil: 'domcontentloaded', timeout: 60000 });
   await page.waitForTimeout(500);
 
-  sec('[7] 여덟 장이 다 서는가 · 차례가 있는 자리를 가리키는가');
+  sec('[8] 여덟 장이 다 서는가 · 차례가 있는 자리를 가리키는가');
   const got = await page.evaluate(() => {
     const secs = [].slice.call(document.querySelectorAll('section[id]')).map(s => s.id);
     const links = [].slice.call(document.querySelectorAll('.toc a'))
@@ -138,7 +158,35 @@ const srv = http.createServer((rq, rs) => {
   is(got.chars > 9000, '  글이 실려 있다 — ' + got.chars + '자');
   is(got.overflow <= 1, '  화면이 <b>가로로 안 넘친다</b> (' + got.overflow + 'px)');
 
-  sec('[8] 인쇄에서 안 잘리는가');
+  /* 한 줄에 몇 글자가 들어가나 — 한글은 한 글자가 대략 글씨 크기만 하다.
+     본문 문단을 <b>실제로 재서</b> 본다. CSS 에 --measure 가 있는지 글자로
+     찾으면, 값을 늘려 놓아도 그대로 통과한다.
+
+     <b>넓은 화면에서 잰다.</b> 1280 에서 재면 창 자체가 좁아 글줄이 저절로
+     쉰 자 언저리로 잘리고, 폭 제한을 통째로 걷어내도 <b>알람이 안 울린다</b>.
+     사장님이 큰 모니터로 여시면 그때 한 줄이 여든 자가 됩니다 — 그 화면에서
+     재야 알람이 알람 노릇을 합니다 (8번). */
+  await page.setViewportSize({ width: 1680, height: 950 });
+  await page.waitForTimeout(200);
+  const line = await page.evaluate(() => {
+    const ps = [].slice.call(document.querySelectorAll('section p'))
+      .filter(el => !el.classList.contains('sub') && el.textContent.trim().length > 60);
+    let worst = 0;
+    ps.forEach(el => {
+      const w = el.getBoundingClientRect().width;
+      const f = parseFloat(getComputedStyle(el).fontSize) || 15;
+      worst = Math.max(worst, Math.round(w / f));
+    });
+    return { worst, n: ps.length };
+  });
+  is(line.n > 5, '  잰 문단이 ' + line.n + '개 있다');
+  is(line.worst <= 45,
+     '  본문 한 줄이 <b>' + line.worst + '자</b> — 마흔다섯 자를 안 넘는다' +
+     (line.worst > 45 ? ' ← 줄이 길면 같은 줄을 두 번 읽게 됩니다' : '') +
+     ' (1680px 화면에서 잼)');
+  await page.setViewportSize({ width: 1280, height: 950 });
+
+  sec('[9] 인쇄에서 안 잘리는가');
   await page.emulateMedia({ media: 'print' });
   await page.waitForTimeout(200);
   const pr = await page.evaluate(() => {
@@ -158,7 +206,7 @@ const srv = http.createServer((rq, rs) => {
   is(pr.chars > 9000, '  인쇄본에도 <b>모든 장이 담긴다</b> — ' + pr.secN + '장 · ' + pr.chars + '자');
   await page.emulateMedia({ media: 'screen' });
 
-  sec('[9] 콘솔이 조용한가');
+  sec('[10] 콘솔이 조용한가');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
 
   await browser.close(); srv.close();
