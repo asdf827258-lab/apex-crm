@@ -192,23 +192,50 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   is(k1.shown.length === 1 && k1.shown[0] === want, '보이는 장도 ' + want + ' 하나다');
   await pg.evaluate(() => { setView('full'); });
 
-  head('[10] 눈에 들어오나 — 한 장이 너무 길지 않고, 그림으로 말하나');
-  /* 고객 앞에서 한 장이 다섯 화면이면 넘기는 뜻이 없다. 담보표 한 장이
-     실제로 4.9화면이었다 — 표 열 개가 한 장에 들어 있었다. */
+  head('[10] 한 장이 <PPT 한 장>이다 — 16:9 · 720px 안에 들어간다');
+  /* 고객 앞에 세우는 것은 세로로 긴 문서가 아니라 <b>가로 한 장</b>이다.
+     한 장이 720 을 넘으면 그건 한 장이 아니라 두 장이고, 그 순간
+     「발표」가 아니라 「문서 읽기」가 된다. */
+  const stage = await pg.evaluate(() => {
+    /* <b>줄이기 전</b>의 크기를 잰다 — getBoundingClientRect 는 줄인 뒤 크기라
+       나누어 되돌리면 소수점이 흘러 1280 이 안 나온다. offsetWidth 는 원래 크기다. */
+    var box = document.querySelector('#app .show');
+    var k = 1, m = (box.style.transform || '').match(/scale\(([\d.]+)\)/);
+    if (m) k = parseFloat(m[1]);
+    return { w: box.offsetWidth, h: box.offsetHeight, k: k,
+             wrap: !!document.getElementById('deckWrap') };
+  });
+  is(stage.w === 1280 && stage.h === 720,
+     '무대가 <1280 × 720>(16:9) 이다 — 지금 ' + stage.w + ' × ' + stage.h);
+  is(stage.wrap, '화면에 맞게 통째로 줄여 앉히는 자리가 있다 (지금 ' + stage.k.toFixed(2) + '배)');
   const dense = await pg.evaluate(() => {
-    var vh = window.innerHeight;
     return [].slice.call(document.querySelectorAll('#app .show > section')).map(function (s) {
       var was = s.className; s.classList.add('cur');
       var h = s.scrollHeight, tbl = s.querySelectorAll('table').length;
       s.className = was;
-      return { id: s.id, pages: h / vh, tbl: tbl, nm: s.getAttribute('data-nm') || '' };
+      return { id: s.id, h: h, pages: h / 720, tbl: tbl, nm: s.getAttribute('data-nm') || '' };
     });
   });
-  const fat = dense.filter(d => d.pages > 2.2);
-  is(fat.length === 0, fat.length ? ('한 장이 두 화면을 크게 넘는다 — ' +
-      fat.map(f => f.id + ' ' + f.pages.toFixed(1) + '쪽').join(' / ')) :
-     '장 ' + dense.length + '개 모두 두 화면 안쪽이다 (제일 긴 장 ' +
-       Math.max.apply(null, dense.map(d => d.pages)).toFixed(1) + '쪽)');
+  const fat = dense.filter(d => d.h > 722);
+  is(fat.length === 0, fat.length ? ('한 장에 안 들어가는 장 — ' +
+      fat.map(f => f.id + ' ' + f.h + 'px').join(' / ')) :
+     '장 ' + dense.length + '개 <전부> 한 장(720px) 안에 들어간다 (제일 긴 장 ' +
+       Math.max.apply(null, dense.map(d => d.h)) + 'px)');
+  /* 그대로 읽는 말이 장마다 있는가 — 「읽어만 줘도 되게」의 알맹이다 */
+  const says = await pg.evaluate(() => {
+    var out = [];
+    [].slice.call(document.querySelectorAll('#app .show > section')).forEach(function (s) {
+      var p = s.querySelector(':scope > .say');
+      out.push({ id: s.id, has: !!p, len: p ? (p.textContent || '').trim().length : 0 });
+    });
+    return out;
+  });
+  const noSay = says.filter(x => !x.has).map(x => x.id);
+  is(noSay.length === 0, noSay.length ? ('읽는 말이 없는 장 — ' + noSay.join(' ')) :
+     '장 ' + says.length + '개 모두 <그대로 읽는 한 문장>을 달고 있다');
+  const longSay = says.filter(x => x.len > 130).map(x => x.id + '(' + x.len + '자)');
+  is(longSay.length === 0, longSay.length ? ('읽는 말이 너무 길다 — ' + longSay.join(' ')) :
+     '읽는 말이 모두 한 호흡이다 (제일 긴 것 ' + Math.max.apply(null, says.map(x => x.len)) + '자)');
   /* 「표가 몰렸나」 를 개수 문턱으로만 재면, 되돌린 판이 아예 안 그려졌을 때도
      통과한다. 그래서 <b>세어야 할 수</b>를 앱에서 직접 가져와 견준다. */
   const st = await pg.evaluate(() => {
