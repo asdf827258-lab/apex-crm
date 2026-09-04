@@ -335,6 +335,28 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
+  /* 치료 경로 — 「암이 오면」을 <b>한 번에 끝나는 일</b>로 듣지 않게, 진단
+     → 수술 → 항암 → 통원을 줄로 세우고 <b>지금 보는 자리만</b> 켠다.
+     그리고 그림은 <b>직접 그린 것</b>이어야 한다 — 남의 자료 삽화를
+     옮기지 않는다 (9번). 사진(<img>)이 한 장이라도 있으면 걸린다. */
+  const flow = await pg.evaluate(() => {
+    var secs = [].slice.call(document.querySelectorAll('#app .show > section'))
+      .filter(function (s) { return /^s4_/.test(s.id) && s.querySelector('.flow'); });
+    var bad = [];
+    secs.forEach(function (s) {
+      var all = s.querySelectorAll('.flow .fl').length;
+      var on = s.querySelectorAll('.flow .fl.on').length;
+      if (!all || !on || on >= all) bad.push(s.id + ' 단계' + all + '개 중 ' + on + '개 켜짐');
+    });
+    return { n: secs.length, bad: bad,
+             steps: secs.length ? secs[0].querySelectorAll('.flow .fl').length : 0,
+             img: document.querySelectorAll('#app img').length };
+  });
+  is(flow.n > 0 && flow.bad.length === 0,
+     flow.bad.length ? ('치료 경로가 어긋난 장 — ' + flow.bad.join(' / ')) :
+     '「이 병이 오면」 ' + flow.n + '장에 <치료 경로 ' + flow.steps + '단계>가 서고, 지금 보는 자리만 켜져 있다');
+  is(flow.img === 0,
+     '그림을 <직접 그렸다> — 남의 자료 사진(<img>)이 ' + flow.img + '장이다 (9번)');
   /* 「더 넣을 것」은 <세어서> 본다 — 옛 문구를 찾으면 문구를 바꾸는 날 알람이 죽는다 */
   const need = await pg.evaluate(() => {
     S.view = 'full'; save(); render();

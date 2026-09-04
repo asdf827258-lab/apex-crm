@@ -829,6 +829,39 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
  font-size:12.5px;font-weight:700;min-width:0;margin-bottom:3px}
 .tocs a b{color:var(--gy2);flex:none}
 .tocs a>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── 치료 경로 한 줄 — 직접 그린 것이다 (9번) ────────────────────── */
+.flow{display:flex;align-items:flex-start;gap:6px;margin-bottom:11px}
+.fl{flex:1 1 0;min-width:0;text-align:center;opacity:.42}
+.fl.on{opacity:1}
+.fi{width:38px;height:38px;border-radius:50%;margin:0 auto 5px;position:relative;
+ background:#fff;border:2px solid var(--ln);display:flex;align-items:center;justify-content:center;font-size:17px}
+.fl.on .fi{border-color:var(--bl);box-shadow:0 3px 12px rgba(11,123,255,.2)}
+.fi em{position:absolute;top:-6px;left:-6px;font-style:normal;font-size:9.5px;font-weight:800;
+ background:var(--gy2);color:#fff;border-radius:50%;width:17px;height:17px;
+ display:flex;align-items:center;justify-content:center}
+.fl.on .fi em{background:var(--bl)}
+.fn{font-size:12px;font-weight:800;letter-spacing:-.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fd{font-size:10.5px;font-weight:700;color:var(--gy2);margin-top:1px}
+.fd b{color:var(--gy)}
+.fa{flex:0 0 auto;width:14px;height:38px;display:flex;align-items:center;justify-content:center}
+.fa::before{content:'';width:6px;height:6px;border-top:2px solid var(--ln);border-right:2px solid var(--ln);
+ transform:rotate(45deg)}
+/* 경로 띠가 단계 이름과 아이콘을 이미 말한다 — 줄마다 붙던 <b>동그라미는
+   접고</b> 이름만 남긴다. 그 자리에 경로가 들어와 한 장에 그대로 앉는다. */
+.show.deck>section.cur .simst{padding:8px 15px}
+.show.deck>section.cur .simst .sb{margin-bottom:2px}
+.show.deck>section.cur .simhd{padding:8px 15px}
+.show.deck>section.cur .simst .si{display:none}
+.show.deck>section.cur .simst .sl{width:96px;text-align:left}
+.show.deck>section.cur .sp2{margin-top:5px;gap:4px}
+.show.deck>section.cur .sp2 span{font-size:10px;padding:1px 6px}
+.show.deck>section.cur.simsec>.say{font-size:20px;padding:14px 20px}
+.show.deck>section.cur .flow{gap:8px;margin-bottom:13px;flex:none}
+.show.deck>section.cur .fi{width:46px;height:46px;font-size:21px;margin-bottom:6px}
+.show.deck>section.cur .fn{font-size:15px}
+.show.deck>section.cur .fd{font-size:12.5px}
+.show.deck>section.cur .fa{height:46px;width:18px}
+.show.deck>section.cur .fa::before{width:8px;height:8px}
 /* ── 클로징 — 근거 있는 안심 ─────────────────────────────────────
    좋은 것만 골라 적지 않는다. <b>넘는 자리와 모자란 자리를 같이</b> 세운다. */
 .clz{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;margin-bottom:11px}
@@ -2306,6 +2339,22 @@ function simStepHtml(x, mx, C) {
       '<div class="sd2">' + st.say + '</div>' +
     '</div></div>';
 }
+/* ── 치료 경로 한 줄 ───────────────────────────────────────────────
+   「암이 오면」이라고만 하면 고객은 <b>한 번에 끝나는 일</b>로 듣는다.
+   진단 → 수술·입원 → 항암 → 통원까지 <b>줄로 세워</b> 보여 주고, 지금
+   보고 있는 자리를 <b>켜 둔다.</b> 어디쯤 왔는지가 눈에 보인다.
+
+   ■ 그림은 <b>직접 그린다.</b> 남의 자료 삽화를 옮기지 않는다 (9번).
+   ■ 단계 이름 · 기간 · 비중은 <b>앱이 이미 들고 있는 값</b>이다.
+     여기서 지어내는 값은 하나도 없다 (1번).                       */
+function simFlow(o,from,to){
+  return '<div class="flow">'+o.steps.map(function(x,i){
+    var on=(i>=from&&i<to);
+    return '<div class="fl'+(on?' on':'')+'"><div class="fi"><em>'+(i+1)+'</em>'+x.st.ic+'</div>'+
+      '<div class="fn">'+esc(x.st.k)+'</div>'+
+      '<div class="fd">'+esc(x.st.dur)+' · 이 단계 <b>'+Math.round(x.st.w*100)+'%</b></div></div>';
+  }).join('<div class="fa"></div>')+'</div>';
+}
 function simHtml(C){
   /* 머리(제목 · 설명 · 사건 고르기)는 <b>한 번만</b> 적고 장마다 쓴다 */
   function head(sub){
@@ -2339,8 +2388,9 @@ function simHtml(C){
       var nm=seg.map(function(x){return x.st.k;}).join(' · ');
       var sNeed=0,sB=0,sA=0;
       seg.forEach(function(x){sNeed+=x.need;sB+=x.b;sA+=x.a;});
-      out+='<section id="s4_'+ev.k+'_'+p+'" data-nm="'+esc(ev.ic+' '+ev.t+(parts>1?(' · '+seg[0].st.k):''))+'" data-grp="이 일이 생기면">'+
+      out+='<section id="s4_'+ev.k+'_'+p+'" class="simsec" data-nm="'+esc(ev.ic+' '+ev.t+(parts>1?(' · '+seg[0].st.k):''))+'" data-grp="이 일이 생기면">'+
         head(esc(ev.t)+' · '+esc(nm)+(parts>1?(' ('+(p+1)+'/'+parts+' 단계)'):''))+
+        simFlow(o,p*SIM_PER,p*SIM_PER+seg.length)+
         '<div class="sim"><div class="simhd">'+ev.ic+' <b>'+esc(ev.t)+'</b>'+
           '<span>기준 치료비 <b>'+won(o.cost)+'</b>'+(o.days?(' · 입원 '+o.days+'일'):'')+'</span></div>'+
         seg.map(function(x){return simStepHtml(x,mx,C);}).join('')+
