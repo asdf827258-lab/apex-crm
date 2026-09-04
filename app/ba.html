@@ -677,7 +677,11 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 /* 목차는 <b>늘 맨 위</b>다. DOM 에서는 표지 뒤에 있어, 세로로 세운 뒤
    순서만 앞으로 당긴다 — 안 그러면 표지 장에서만 목차가 밑으로 내려간다. */
 .show.deck{display:flex;flex-direction:column;padding-bottom:26px;min-height:calc(100vh - 250px)}
-.show.deck>.toc{order:-1}
+/* 목차는 <b>한 줄</b>로 눕힌다 — 스물한 칸이 세 줄로 접히면 장마다 위에
+   130px 이 깔려, 정작 보여 드릴 자리가 밀린다. 옆으로 밀어 보신다. */
+.show.deck>.toc{order:-1;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
+ scrollbar-width:thin;padding:9px 11px}
+.show.deck>.toc a{flex:none}
 .show.deck>section{display:none}
 .show.deck>section.cur{display:block;animation:dkin .18s cubic-bezier(.2,.7,.3,1)}
 @keyframes dkin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
@@ -689,6 +693,63 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .show.deck>#sHd.cur p{font-size:14px}
 .toc a.on{background:var(--nv);border-color:var(--nv);color:#fff}
 .toc a.on b{background:#fff;color:var(--nv)}
+/* ── 한 장씩 볼 때의 글자 — <b>멀리서 본다</b> ─────────────────────
+   고객은 설계사 어깨 너머로 본다. 책상에서 읽는 크기로는 안 보인다.
+   여백을 늘리고 글자를 키운다 — 토스 화면이 그렇게 생겼다. */
+.show.deck>section.cur{font-size:16px;line-height:1.75}
+.show.deck>section.cur>h3{font-size:27px;letter-spacing:-.035em;margin-bottom:6px}
+.show.deck>section.cur>h3 small{font-size:14px}
+.show.deck>section.cur>.sd{font-size:14px;line-height:1.85;margin-bottom:18px;max-width:70ch}
+.show.deck>section.cur .st{margin-bottom:20px}
+.show.deck>section.cur table{font-size:14px}
+.show.deck>section.cur td{padding:9px 11px}
+.show.deck>section.cur .dsc{font-size:11.5px}
+.show.deck>section.cur .talk p{font-size:17px;line-height:1.95}
+.show.deck>section.cur .big2 .c b{font-size:26px}
+/* 첫 장의 큰 숫자 — 궁금한 것 하나만 크게 */
+.hero{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#F8FAFC;
+ border-radius:18px;padding:22px 24px;margin-bottom:10px}
+.hero .hn{flex:1;min-width:150px}
+.hero .hn span{display:block;font-size:12.5px;font-weight:700;color:var(--gy2)}
+.hero .hn b{display:block;font-size:32px;font-weight:800;letter-spacing:-.04em;margin-top:3px}
+.hero .hn.on b{color:var(--bl)}
+.hero .hn b.up{color:var(--rd)}.hero .hn b.dn{color:var(--gr)}
+.hero .ha{font-size:24px;font-weight:800;color:var(--gy2);flex:none}
+.hsub{font-size:14px;color:var(--gy);margin-bottom:14px}
+.hsub b{font-size:16px}.hsub b.up{color:var(--rd)}.hsub b.dn{color:var(--gr)}
+.show.deck>section.cur .hero{padding:30px 32px}
+.show.deck>section.cur .hero .hn b{font-size:40px}
+.show.deck>section.cur .hsub{font-size:16px}
+/* 보험료 셋을 길이로 */
+.pbars{background:#F8FAFC;border-radius:14px;padding:15px 17px;margin-bottom:13px}
+.pbk{display:flex;gap:13px;margin-bottom:9px}
+.pbk span{font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:5px;color:var(--gy)}
+.pbk span::before{content:'';width:11px;height:11px;border-radius:3px;background:#94A3B8}
+.pbk span.a::before{background:var(--bl)}
+.pbr{margin-bottom:11px}.pbr:last-child{margin-bottom:0}
+.pbn{font-size:12.5px;font-weight:800;color:var(--gy);margin-bottom:5px}
+.pbg{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.pbg i{display:block;height:14px;border-radius:4px;background:#94A3B8;flex:none;min-width:2px}
+.pbg i.a{background:var(--bl)}
+.pbg span{font-size:12.5px;font-weight:800;white-space:nowrap}
+/* 묶음이 표준 대비 얼마나 찼나 */
+.cmpb{background:#F8FAFC;border-radius:14px;padding:15px 17px;margin-bottom:13px}
+.cbl{font-size:12.5px;font-weight:800;color:var(--gy);margin-bottom:10px}
+.cbr{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cbr:last-of-type{margin-bottom:0}
+.cbn{font-size:12.5px;font-weight:800;width:56px;flex:none;color:var(--gy)}
+.cbg{flex:1;position:relative;height:16px;border-radius:5px;background:var(--ln);overflow:hidden;min-width:60px}
+.cbg i{display:block;height:100%;border-radius:5px;background:#94A3B8}
+.cbg i.a{background:var(--bl)}
+.cbg u{position:absolute;top:0;bottom:0;width:2px;background:var(--nv);opacity:.45}
+.cbt{font-size:12.5px;font-weight:800;white-space:nowrap;flex:none;text-align:right;min-width:96px}
+.cbt em{font-style:normal;color:var(--gy2);font-weight:700;margin-left:5px}
+.cbt.none{color:var(--gy2);font-weight:700}
+.cbf{font-size:11px;color:var(--gy2);margin-top:9px}
+/* 모자란 담보가 얼마나 찼나 */
+.nfill{height:7px;border-radius:4px;background:var(--ln);overflow:hidden;margin:7px 0 6px}
+.nfill i{display:block;height:100%;border-radius:4px;background:var(--bl)}
+.nd.none .nfill i{background:var(--rd)}
 .deckbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;align-items:center;gap:10px;
  padding:9px 14px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--ln)}
 .deckbar:empty{display:none}
@@ -1812,7 +1873,7 @@ function editHtml(){
 
 /* ── 「이 병이 오면」 시뮬레이션 ── */
 function simHtml(C){
-  var h='<section id="s4"><h3>이 병이 오면 — 단계마다 얼마가 들고, 얼마가 나오는가'+
+  var h='<section id="s4" data-nm="병이 오면"><h3>이 병이 오면 — 단계마다 얼마가 들고, 얼마가 나오는가'+
     '<small>기준 치료비를 단계 비중으로 나눈 값입니다</small></h3>'+
     '<p class="sd">병은 <b>한 번에</b> 오지 않고 <b>단계로</b> 옵니다. 단계마다 드는 돈이 다르고, 그때 열리는 지갑도 다릅니다. '+
     '아래는 각 단계에서 <b>지금(전)</b> 얼마가 나오고 <b>조정 후</b> 얼마가 나오는지입니다.</p>'+
@@ -1860,11 +1921,18 @@ function setSim(k){S.sim=k;save();render();}
 /* ── 지금 더 넣으셔야 할 것 ── */
 function needHtml(C){
   var L=needList(C);
-  if(!L.length)return '<section id="s6"><h3>지금 더 넣으셔야 할 것</h3>'+
+  if(!L.length)return '<section id="s6" data-nm="더 넣을 것"><h3>지금 더 넣으셔야 할 것</h3>'+
     '<div class="note g">표준 기준으로 <b>모자란 담보가 없습니다.</b></div></section>';
-  var top=S.printAll?L:L.slice(0,(S.view==='senior')?6:14);
+  /* ── 자르지 않는다 ────────────────────────────────────────────
+     서른두 개 중 열네 개만 세우고 「그 밖에 18개」 라고 적어 두었다.
+     고객은 그 열넷이 전부인 줄 안다. 담보표가 묶음마다 한 장으로
+     나뉘었으니 이 장도 <b>전부</b> 세운다 — 길면 내려서 보면 된다.
+     시니어 간소화는 <b>일부러 줄이는 판</b>이라 그대로 두되, 몇 개를
+     왜 줄였는지 화면에 적는다.                                     */
+  var senior=(S.view==='senior'&&!S.printAll);
+  var top=senior?L.slice(0,6):L;
   var sum=0;top.forEach(function(x){if(UNIT[x.k]==='L')sum+=x.need;});
-  var h='<section id="s6"><h3>지금 더 넣으셔야 할 것<small>표준 기준으로 모자란 담보 '+L.length+'개</small></h3>'+
+  var h='<section id="s6" data-nm="더 넣을 것"><h3>지금 더 넣으셔야 할 것<small>표준 기준으로 모자란 담보 '+L.length+'개</small></h3>'+
     '<p class="sd">아래는 <b>표준(권장) 금액에 못 미치는 담보</b>입니다. 급한 순서(사건에 바로 걸리는 것 → 목돈 → 나머지)로 세웠습니다. '+
     '<b>없는 것</b>과 <b>모자란 것</b>을 갈라 적었습니다.</p><div class="needs">';
   top.forEach(function(x){
@@ -1874,10 +1942,13 @@ function needHtml(C){
         '<b class="'+(x.none?'r':'o')+'">'+(x.none?'없음':('모자람 '+amt(x.k,x.need)))+'</b></div>'+
       '<div class="nb"><span>지금 '+(x.none?'—':amt(x.k,x.have))+'</span>'+
         '<span class="ar">→</span><span class="tg2">표준 '+amt(x.k,x.std)+'</span></div>'+
+        /* 「모자람 2,000만원」만으로는 얼마나 모자란지 안 보인다 — 채운 길이로 */
+        '<div class="nfill"><i style="width:'+Math.max(0,Math.min(100,Math.round((x.have||0)/(x.std||1)*100)))+'%"></i></div>'+
       '<div class="ndz">'+(ROW[x.k].d||'')+'</div></div>';
   });
   h+='</div>';
-  if(L.length>top.length)h+='<div class="note i">그 밖에 <b>'+(L.length-top.length)+'개</b>가 더 있습니다 — 표에 전부 있습니다.</div>';
+  if(L.length>top.length)h+='<div class="note i"><b>어르신 화면</b>이라 급한 <b>'+top.length+'개</b>만 세웠습니다. '+
+    '나머지 <b>'+(L.length-top.length)+'개</b>는 <b>담보표 장</b>에 전부 있습니다 — 위 「🔍 전체 담보 비교」 를 누르시면 여기에도 다 섭니다.</div>';
   if(sum>0)h+='<div class="note w">위 목돈 담보를 표준까지 채우면 <b>'+won(sum)+'</b>이 더 필요합니다. '+
     '한 번에 다 하실 필요는 없습니다 — <b>급한 순서</b>대로 놓았습니다.</div>';
   return h+'</section>';
@@ -3199,7 +3270,7 @@ function pinHtml(pt,C){
 function togglePin(p){S.pin=(S.pin===p)?'':p;save();render();}
 function anatHtml(C){
   var L=PARTS.filter(function(p){return p.side==='L';}),R=PARTS.filter(function(p){return p.side==='R';});
-  return '<section id="s5"><h3>내 몸 어디에 얼마가 나오는가<small>부위를 누르면 담보 하나하나가 펴집니다</small></h3>'+
+  return '<section id="s5" data-nm="내 몸 어디에"><h3>내 몸 어디에 얼마가 나오는가<small>부위를 누르면 담보 하나하나가 펴집니다</small></h3>'+
     '<p class="sd">사건이 <b>몸 어디에서</b> 일어나느냐에 따라 열리는 지갑이 다릅니다. 파란 점은 <b>늘어난 부위</b>, 붉은 점은 <b>줄어든 부위</b>, '+
     '회색 점은 <b>아직 아무것도 없는 부위</b>입니다.</p>'+
     '<div class="anat"><div>'+L.map(function(p){return pinHtml(p,C);}).join('')+'</div>'+
@@ -3210,11 +3281,11 @@ function anatHtml(C){
 function lifeHtml(C){
   var L=lifeCalc(C);
   if(!L.ok)
-    return '<section id="s7"><h3>경제활동기 — 언제까지 벌고, 언제부터 쓰는가</h3>'+
+    return '<section id="s7" data-nm="경제활동기"><h3>경제활동기 — 언제까지 벌고, 언제부터 쓰는가</h3>'+
       '<div class="note w">나이 · 은퇴 예정 · 월 생활비를 넣으시면 이 그래프가 그려집니다. <b>없는 값을 만들지 않습니다.</b></div></section>';
   var a0=L.age,a1=L.life,span=Math.max(1,a1-a0);
   function x(age){return ((age-a0)/span*100);}
-  var h='<section id="s7"><h3>경제활동기 — 언제까지 벌고, 언제부터 쓰는가'+
+  var h='<section id="s7" data-nm="경제활동기"><h3>경제활동기 — 언제까지 벌고, 언제부터 쓰는가'+
     '<small>지금 '+a0+'세 · 은퇴 '+L.ret+'세 · '+a1+'세까지</small></h3>'+
     '<p class="sd">보험은 <b>돈의 크기</b>만이 아니라 <b>버티는 기간</b>의 문제입니다. 아래는 이 집이 <b>얼마나 오래 버티는가</b>를 그린 것입니다.</p>'+
     '<div class="life"><div class="tl">'+
@@ -3267,32 +3338,89 @@ function lifeHtml(C){
   return h;
 }
 /* ═══════════════ 표준 담보표 (고객용) ═══════════════ */
+/* ── 그림 하나로 말한다 — 전 · 후 막대 ────────────────────────────
+   고객은 숫자 네 개를 나란히 놓아 주면 <b>안 읽는다.</b> 길이가 다른 막대
+   둘이면 설명 없이 읽는다. 그리는 자리는 <b>여기 하나</b>다 — 장마다
+   따로 그리면 색이나 눈금이 어긋나 같은 자료가 달라 보인다.
+
+   ■ 눈금은 <b>둘 중 큰 것</b>에 맞춘다. 각자 100%로 그리면 작은 쪽이
+     꽉 찬 것처럼 보여 그림이 거짓말을 한다.
+   ■ 값이 없으면 막대를 안 그린다. 0 으로 그리면 「없다」가 아니라
+     「0 이다」로 읽힌다 (1번).                                       */
+function cmpBar(lb,pb,pa,tb,ta){
+  if(pb===null&&pa===null)return '';
+  var max=Math.max(100,pb||0,pa||0);
+  function row(nm,p,t,cls){
+    if(p===null||p===undefined)return '<div class="cbr"><span class="cbn">'+nm+'</span>'+
+      '<span class="cbt none">아직 안 적었습니다</span></div>';
+    return '<div class="cbr"><span class="cbn">'+nm+'</span>'+
+      '<span class="cbg"><i class="'+cls+'" style="width:'+Math.max(1,Math.round(p/max*100))+'%"></i>'+
+      (max>100?('<u style="left:'+Math.round(100/max*100)+'%"></u>'):'')+'</span>'+
+      '<span class="cbt">'+esc(t||'')+'<em>'+p+'%</em></span></div>';
+  }
+  return '<div class="cmpb"><div class="cbl">'+esc(lb)+'</div>'+
+    row('지금',pb,tb,'b')+row('조정 후',pa,ta,'a')+
+    /* 눈금이 100 을 넘을 때만 세로줄이 그어진다 — 안 그은 줄을 설명하지 않는다 */
+    (max>100?'<div class="cbf">가는 세로줄이 <b>표준(권장) 100%</b> 자리입니다.</div>':
+             '<div class="cbf">막대 끝이 <b>표준(권장) 100%</b> 입니다.</div>')+'</div>';
+}
+/* ── 담보표를 <b>묶음마다 한 장</b>으로 ────────────────────────────
+   한 장에 표 열 개를 넣었더니 그 한 장이 <b>다섯 화면</b>이 됐다. 넘기는
+   판에서 한 장이 다섯 화면이면 넘기는 뜻이 없고, 고객은 어디를 보는지
+   모른다. 큰 갈래(병원비·3대질병·생활)로만 나눠 봤더니 3대질병 하나가
+   <b>네 화면</b>이라 그대로였다 — 그 안에 묶음이 여섯이기 때문이다.
+
+   그래서 <b>묶음(암·뇌·심장·수술비…)마다 한 장</b>으로 나눈다. 한 장이
+   반 화면쯤이라 고객이 한눈에 본다. 위 목차에서 바로 건너뛴다.
+
+   <b>숨기는 게 아니라 나누는 것</b>이다 — 담보는 하나도 안 빠지고,
+   인쇄하면 전부 이어서 나온다.
+
+   장은 STD 를 <b>세어서</b> 만든다. 여기 또 적으면 묶음을 하나 늘릴 때
+   그 장이 안 생긴다.                                                */
+/* 묶음 하나가 <b>표준 대비 얼마나 찼나</b> — 표를 읽기 전에 보는 그림 */
+function stFill(C,g){
+  var std=0,b=0,a=0,got=false;
+  g.rows.forEach(function(r){
+    /* 목돈(L)만 더한다 — 하루·매달·한도는 같은 자로 잴 수 없다 */
+    if(UNIT[r.k]!=='L'||!r.std)return;
+    std+=r.std;got=true;
+    if(C.b[r.k]!==undefined)b+=C.b[r.k];
+    if(C.a[r.k]!==undefined)a+=C.a[r.k];
+  });
+  if(!got||!std)return null;
+  return {std:std,b:b,a:a,pb:Math.round(b/std*100),pa:Math.round(a/std*100)};
+}
 function stShow(C){
-  var h='<section id="s8"><h3>표준 담보표 — 전 · 후<small>사장님 기준표 그대로</small></h3>'+
-    '<p class="sd">「표준」은 <b>일반적으로 권하는 기준</b>, 「전」은 지금, 「후」는 조정 후입니다. '+
-    '지급 방식이 다른 담보(<b>목돈 · 하루 · 매달 · 한도</b>)는 <b>같은 자로 재지 않습니다.</b></p>';
-  STD.forEach(function(g){
+  var out='';
+  STD.forEach(function(g,gi){
     var rows=g.rows.filter(function(r){
       if(S.view!=='senior'||S.printAll)return true;
       return C.b[r.k]!==undefined||C.a[r.k]!==undefined;
     });
     if(!rows.length)return;
-    h+='<div class="st"><div class="sh"><span class="dot" style="background:'+g.c+'"></span>'+
-      '<span class="big">'+esc(g.big)+'</span>'+g.ic+' '+esc(g.mid)+'</div>'+
-      '<table><tr><th>담보</th><th>표준</th><th>전</th><th>후</th><th>결과</th></tr>';
+    var f=stFill(C,g);
+    out+='<section id="s8_'+gi+'" data-nm="'+esc(g.ic+' '+g.mid)+'">'+
+      '<h3>'+g.ic+' '+esc(g.mid)+'<small>'+esc(g.big)+' · 담보 '+rows.length+'개</small></h3>';
+    if(f)out+=cmpBar('목돈 담보 합계 · 표준 대비',f.pb,f.pa,won(f.b),won(f.a));
+    out+='<div class="st"><table><tr><th>담보</th><th>표준</th><th>전</th><th>후</th><th>결과</th></tr>';
     rows.forEach(function(r){
       var b=C.b[r.k],a=C.a[r.k],d=((a||0)-(b||0));
       var res=(a===undefined&&b===undefined)?'':(d>0?'⏫ 보장UP':(d<0?'⏬ 줄어듦':(b?'유지':'')));
-      h+='<tr><td>'+esc(r.n)+(r.cov?('<span class="cov">'+r.cov+'%</span>'):'')+
+      out+='<tr><td>'+esc(r.n)+(r.cov?('<span class="cov">'+r.cov+'%</span>'):'')+
         (r.d?('<div class="dsc">'+r.d+'</div>'):'')+'</td>'+
         '<td class="std">'+(r.std?man(r.std):'—')+'</td>'+
         '<td style="color:var(--gy);font-weight:800">'+(b===undefined?'—':man(b))+'</td>'+
         '<td style="font-weight:800;color:'+(d>0?'var(--bl)':(d<0?'var(--rd)':'var(--nv)'))+'">'+(a===undefined?'—':man(a))+'</td>'+
         '<td class="rd '+(d>0?'up':(d<0?'no':'mid'))+'">'+res+'</td></tr>';
     });
-    h+='</table></div>';
+    out+='</table></div>'+
+      '<p class="sd">「표준」은 <b>일반적으로 권하는 기준</b>, 「전」은 지금, 「후」는 조정 후입니다. '+
+      (f?'위 막대는 <b>목돈으로 나오는 담보만</b> 더한 것입니다 — 하루·매달·한도로 나오는 담보는 <b>같은 자로 잴 수 없어</b> 뺐습니다. 표에는 그대로 있습니다.':
+         '이 묶음은 <b>목돈이 아닌 방식</b>(하루·매달·한도)으로 나와, 하나로 더해 재지 않았습니다.')+'</p>'+
+      '</section>';
   });
-  return h+'</section>';
+  return out;
 }
 function evHtml(ev,C){
   var r=evCalc(ev,C);
@@ -3382,17 +3510,35 @@ function talkHtml(C){
   /* ④ 안 센 것 */
   var no=EVENTS.filter(function(e){return num(S.scen[e.k].cost)===null;}).map(function(e){return e.t;});
   if(no.length)p.push('<b>'+esc(no.join(', '))+'</b>은 기준 금액을 아직 안 정해서 <b>세지 않았습니다.</b>');
-  return '<section id="s3"><h3>한 줄로 말씀드리면</h3>'+
+  return '<section id="s3" data-nm="한 줄 요약"><h3>한 줄로 말씀드리면</h3>'+
     '<p class="sd">아래 문장은 <b>위에서 센 숫자를 그대로 옮긴 것</b>입니다 — 새로 만든 값이 없습니다.</p>'+
     '<div class="talk">'+p.map(function(x){return '<p>'+x+'</p>';}).join('')+'</div></section>';
 }
 
 /* 고객 화면 — 납입 보험료가 어떻게 달라지는가 */
+/* 보험료 셋을 <b>길이</b>로 — 두 값을 같은 자로 재야 뜻이 있다 */
+function premBars(P){
+  var rows=[['월 납입',P.monB,P.monA],['앞으로 낼 돈',P.leftB,P.leftA],['총 납입',P.totB,P.totA]];
+  var out='';
+  rows.forEach(function(r){
+    var b=r[1],a=r[2];
+    if(b===null||a===null||!isFinite(b)||!isFinite(a))return;
+    var max=Math.max(b,a,1);
+    out+='<div class="pbr"><div class="pbn">'+esc(r[0])+'</div>'+
+      '<div class="pbg"><i class="b" style="width:'+Math.max(2,Math.round(b/max*100))+'%"></i>'+
+      '<span>'+fee(b)+'</span></div>'+
+      '<div class="pbg"><i class="a" style="width:'+Math.max(2,Math.round(a/max*100))+'%"></i>'+
+      '<span>'+fee(a)+'</span></div></div>';
+  });
+  return out?('<div class="pbars"><div class="pbk"><span class="b">지금</span><span class="a">조정 후</span></div>'+out+'</div>'):'';
+}
 function premShow(){
   var P=premCalc();
   if(!P.rows.length)return '';
-  var h='<section id="s2"><h3>보험료는 이렇게 달라집니다<small>월 · 앞으로 낼 돈 · 총 납입</small></h3>'+
+  var h='<section id="s2" data-nm="보험료 변화"><h3>보험료는 이렇게 달라집니다<small>월 · 앞으로 낼 돈 · 총 납입</small></h3>'+
     '<p class="sd">월 보험료만 보면 절반만 보는 것입니다. <b>앞으로 낼 돈</b>이 실제로 통장에서 더 나갈 금액입니다.</p>'+
+    /* 숫자만 놓으면 「4,200원 차이」가 큰지 작은지 안 보인다 — 길이로 보여 준다 */
+    premBars(P)+
     '<div class="pgrid">'+
       premBox('월 납입 보험료','매달 나가는 돈',P.monB,P.monA,P.monD,true)+
       premBox('앞으로 낼 돈','오늘부터 납입 끝까지',P.leftB,P.leftA,P.leftD,false)+
@@ -3407,10 +3553,13 @@ function premShow(){
    여기는 <b>장의 짧은 이름표</b>만 든다. 「어떤 장이 실제로 섰는가」는
    이 표가 아니라 <b>화면</b>이 안다(deckList) — 자료가 없어 안 그려진 장이
    있기 때문이다. 표로 세면 빈 장이 목차에 남는다.                       */
-var SECS=[["sHd","표지"],["s1","한눈에"],["s0","왜 나에게 맞는가"],["s2","보험료 변화"],["s3","한 줄 요약"],
-          ["s4","병이 오면"],["s5","내 몸 어디에"],["s6","더 넣을 것"],["s7","경제활동기"],["s8","담보표"],
-          ["s9","준비 수준"],["sEnd","마무리"]];
-function secName(id){var i;for(i=0;i<SECS.length;i++)if(SECS[i][0]===id)return SECS[i][1];return '';}
+/* 장의 <b>짧은 이름</b>은 그 장이 스스로 들고 있다(data-nm). 따로 표를
+   두면 장을 하나 늘릴 때마다 표에 적는 것을 잊고, 목차에 「제 8 장」 같은
+   말이 뜬다. 실제로 담보표를 셋으로 쪼개면서 그 자리가 생겼다. */
+function secName(el){
+  if(!el)return '';
+  return el.getAttribute('data-nm')||'';
+}
 
 /* ══ 고객이 보는 「왜 나에게 맞는가」 ═══════════════════════════════
    고객은 <b>남의 표준</b>을 보고 정하지 않는다. 「이게 <b>왜 나한테</b>
@@ -3481,7 +3630,7 @@ function whyHtml(){
   var W=whyCalc(),o=W.o;
   if(!W.rows.length)return '';
   var nm=S.who.name?esc(S.who.name)+' 님':'고객님';
-  var h='<section id="s0"><h3>이 제안이 '+nm+'께 맞는 이유'+
+  var h='<section id="s0" data-nm="왜 나에게 맞는가"><h3>이 제안이 '+nm+'께 맞는 이유'+
     '<small>남의 기준이 아니라 이 집의 숫자에서 나왔습니다</small></h3>'+
     '<p class="sd">아래는 <b>'+nm+'의 나이 · 가족 · 소득 · 지금 들고 계신 계약</b>에서 나온 것입니다. '+
     '한 줄이라도 사실과 다르면 <b>말씀해 주십시오</b> — 그 줄이 바뀌면 제안도 바뀝니다.</p>';
@@ -3514,18 +3663,28 @@ function showHtml(){
     '<button class="mini'+(S.deck?' on':'')+'" onclick="setDeck(true)">🖥 한 장씩 넘기기</button>'+
     (S.deck?'<button class="mini go" onclick="deckShow(true)">🔳 발표 시작 — 화면 가득</button>':'')+
     '<span class="ch">'+(S.deck?'← → 또는 화면을 쓸어서 넘깁니다 · 위 목차를 눌러 바로 갑니다 — 인쇄하면 전부 나옵니다':'전체를 죽 내려 보기 — 설계사가 혼자 훑을 때')+'</span></div>';
-  h+='<div class="show'+(S.view==='senior'?' senior':'')+'"><section id="sHd" class="hd">'+
+  h+='<div class="show'+(S.view==='senior'?' senior':'')+'"><section id="sHd" class="hd" data-nm="표지">'+
     '<div class="ey">APEX YUN PRO · COVERAGE BEFORE &amp; AFTER</div>'+
     '<h1>'+who+' — 보장 전 · 후</h1>'+
     '<p>'+today+' · 담보 <b>'+nB+'개</b>를 하나씩 견주었습니다'+
     (S.who.age?(' · '+esc(S.who.age)+'세'):'')+(S.who.sex?(' '+esc(S.who.sex)):'')+'</p></section>';
   /* 목차는 <b>다 그린 뒤</b> 채운다 — 실제로 선 장만 세기 위해서다(deckPaint) */
   h+='<div class="toc noprint" id="baToc"></div>';
-  h+='<section id="s1"><h3>한눈에</h3><div class="big2">'+
-    '<div class="c"><span>월 보험료 · 지금</span><b>'+fee(C.premB)+'</b></div><div class="ar">→</div>'+
-    '<div class="c"><span>조정 후</span><b class="'+(d>0?'up':(d<0?'dn':''))+'">'+fee(C.premA)+'</b></div>'+
+  /* ── 첫 장은 <b>한 가지만</b> ──────────────────────────────────────
+     숫자를 넷 나란히 놓으면 고객은 어느 것을 볼지 몰라 <b>아무것도</b>
+     안 본다. 제일 궁금한 것(매달 얼마)을 크게 하나 세우고, 나머지는
+     밑에 작게 둔다.                                                */
+  var dTxt=(d===0)?'매달 나가는 돈은 <b>그대로</b>입니다':
+    ('매달 <b class="'+(d>0?'up':'dn')+'">'+fee(Math.abs(d))+'</b> '+(d>0?'더':'덜')+' 나갑니다');
+  h+='<section id="s1" data-nm="한눈에"><h3>한눈에</h3>'+
+    '<div class="hero"><div class="hn"><span>월 보험료 · 지금</span><b>'+fee(C.premB)+'</b></div>'+
+    '<div class="ha">→</div>'+
+    '<div class="hn on"><span>조정 후</span><b class="'+(d>0?'up':(d<0?'dn':''))+'">'+fee(C.premA)+'</b></div></div>'+
+    '<div class="hsub">'+dTxt+'</div>'+
+    '<div class="big2">'+
     '<div class="c"><span>비는 자리</span><b>'+D.loss.length+'건</b></div>'+
-    '<div class="c"><span>채우는 자리</span><b>'+D.gain.length+'건</b></div></div></section>';
+    '<div class="c"><span>채우는 자리</span><b>'+D.gain.length+'건</b></div>'+
+    '<div class="c"><span>견준 담보</span><b>'+nB+'개</b></div></div></section>';
   h+=whyHtml();
   h+=premShow();
   h+=talkHtml(C);
@@ -3534,13 +3693,13 @@ function showHtml(){
   h+=needHtml(C);
   h+=lifeHtml(C);
   h+=stShow(C);
-  h+='<section id="s9"><h3>이 일이 오면 얼마가 준비돼 있는가<small>기준 치료비 대비</small></h3>'+
+  h+='<section id="s9" data-nm="준비 수준"><h3>이 일이 오면 얼마가 준비돼 있는가<small>기준 치료비 대비</small></h3>'+
     '<p class="sd">그 사건에서 <b>열리는 담보만</b> 더했습니다. 다른 사건에서 열리는 담보는 <b>빼고</b> 셌습니다.</p>'+
     '<div class="evs">'+EVENTS.map(function(ev){return evHtml(ev,C);}).join('')+'</div></section>';
   /* 치료 여정은 시뮬레이션이 이미 하는 일이다 — 같은 것을 두 번 두지 않는다 */
   var noScen=EVENTS.filter(function(e){return num(S.scen[e.k].cost)===null;}).map(function(e){return e.t;});
   var nMan=0;for(k in S.man.b)nMan++;for(k in S.man.a)nMan++;
-  h+='<section id="sEnd" class="foot">'+
+  h+='<section id="sEnd" class="foot" data-nm="마무리">'+
     '담보 목록·표준금액·괄호 % 는 <b>사장님 기준표</b>를 따랐습니다. 괄호 % 는 그 사건에서 <b>이 담보가 열릴 확률</b>입니다.<br>'+
     '기준 치료비 출처 — '+(S.src?esc(S.src):'<b>적혀 있지 않습니다. 공식 치료비가 아닙니다.</b>')+'<br>'+
     (noScen.length?('<b>'+esc(noScen.join(' · '))+'</b> 은 기준 치료비가 없어 <b>계산하지 않았습니다.</b> 빈칸을 0 으로 만들지 않았습니다.<br>'):'')+
@@ -3591,17 +3750,21 @@ function deckPaint(){
     if(on&&i===cur)L[i].classList.add('cur');else L[i].classList.remove('cur');
   }
   toc=document.getElementById('baToc');
-  if(toc)toc.innerHTML=L.map(function(el,i){
+  if(toc){toc.innerHTML=L.map(function(el,i){
     return '<a href="#'+el.id+'"'+(on&&i===cur?' class="on"':'')+' onclick="return deckJump('+i+')">'+
-      '<b>'+(i+1)+'</b>'+esc(secName(el.id)||('제 '+(i+1)+' 장'))+'</a>';
-  }).join('');
+      '<b>'+(i+1)+'</b>'+esc(secName(el)||('제 '+(i+1)+' 장'))+'</a>';
+    }).join('');
+    /* 한 줄로 누웠으니 <b>지금 장</b>이 눈에 들어오게 밀어 준다 */
+    if(on){var cc=toc.children[cur];
+      if(cc&&cc.offsetLeft!==undefined)toc.scrollLeft=Math.max(0,cc.offsetLeft-toc.clientWidth/2+cc.offsetWidth/2);}
+  }
   bar=document.getElementById('deckBar');
   /* 띠에는 <b>어디쯤인지</b>만 둔다. 「몇 번째 장으로」 는 위 목차가 이미
      하는 일이라, 여기에 또 두면 같은 것이 두 곳이 된다 (5번). */
   if(bar)bar.innerHTML=(!on||!L.length)?'':(
     '<button class="dnav" onclick="deckMove(-1)"'+(cur<=0?' disabled':'')+' aria-label="앞 장">◀</button>'+
     '<div class="dbar"><i style="width:'+Math.round((cur+1)/L.length*100)+'%"></i></div>'+
-    '<span class="dt">'+esc(secName(L[cur].id))+'</span>'+
+    '<span class="dt">'+esc(secName(L[cur]))+'</span>'+
     '<span class="dn"><b>'+(cur+1)+'</b> / '+L.length+'</span>'+
     '<button class="dnav" onclick="deckMove(1)"'+(cur>=L.length-1?' disabled':'')+' aria-label="다음 장">▶</button>'+
     (DECK_SHOW?'<button class="dnav x" onclick="deckShow(false)" aria-label="발표 끝내기">✕</button>':''));

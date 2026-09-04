@@ -192,7 +192,69 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   is(k1.shown.length === 1 && k1.shown[0] === want, '보이는 장도 ' + want + ' 하나다');
   await pg.evaluate(() => { setView('full'); });
 
-  head('[10] 조용한가');
+  head('[10] 눈에 들어오나 — 한 장이 너무 길지 않고, 그림으로 말하나');
+  /* 고객 앞에서 한 장이 다섯 화면이면 넘기는 뜻이 없다. 담보표 한 장이
+     실제로 4.9화면이었다 — 표 열 개가 한 장에 들어 있었다. */
+  const dense = await pg.evaluate(() => {
+    var vh = window.innerHeight;
+    return [].slice.call(document.querySelectorAll('#app .show > section')).map(function (s) {
+      var was = s.className; s.classList.add('cur');
+      var h = s.scrollHeight, tbl = s.querySelectorAll('table').length;
+      s.className = was;
+      return { id: s.id, pages: h / vh, tbl: tbl, nm: s.getAttribute('data-nm') || '' };
+    });
+  });
+  const fat = dense.filter(d => d.pages > 2.2);
+  is(fat.length === 0, fat.length ? ('한 장이 두 화면을 크게 넘는다 — ' +
+      fat.map(f => f.id + ' ' + f.pages.toFixed(1) + '쪽').join(' / ')) :
+     '장 ' + dense.length + '개 모두 두 화면 안쪽이다 (제일 긴 장 ' +
+       Math.max.apply(null, dense.map(d => d.pages)).toFixed(1) + '쪽)');
+  /* 「표가 몰렸나」 를 개수 문턱으로만 재면, 되돌린 판이 아예 안 그려졌을 때도
+     통과한다. 그래서 <b>세어야 할 수</b>를 앱에서 직접 가져와 견준다. */
+  const st = await pg.evaluate(() => {
+    var C = calc(), want = 0;
+    STD.forEach(function (g) {
+      var rows = g.rows.filter(function (r) {
+        if (S.view !== 'senior' || S.printAll) return true;
+        return C.b[r.k] !== undefined || C.a[r.k] !== undefined;
+      });
+      if (rows.length) want++;
+    });
+    var got = [].slice.call(document.querySelectorAll('#app .show > section'))
+      .filter(function (s) { return /^s8_/.test(s.id); });
+    return { want: want, got: got.length, tbl: got.map(function (s) { return s.querySelectorAll('table').length; }) };
+  });
+  is(st.got === st.want && st.want > 0,
+     '담보 묶음 ' + st.want + '개가 <각각 제 장>으로 섰다 (지금 ' + st.got + '장)');
+  is(st.tbl.length > 0 && st.tbl.every(n => n === 1),
+     '담보표 장마다 표가 <하나씩>이다 — 한 장에 몰지 않는다 (' + st.tbl.join(',') + ')');
+  const named = dense.filter(d => !d.nm).map(d => d.id);
+  is(named.length === 0, named.length ? ('이름표(data-nm)가 없는 장 — ' + named.join(' ')) :
+     '장마다 <스스로> 짧은 이름을 달고 있다 — 늘려도 목차에서 안 빠진다');
+  /* 그림은 <어느 장에> 있는지까지 본다 — 총 개수만 세면 한 종류를 걷어내도 안 운다 */
+  const pics = await pg.evaluate(() => ({
+    cmpb: document.querySelectorAll('#app .cmpb').length,
+    st8: [].slice.call(document.querySelectorAll('#app .show > section'))
+      .filter(function (s) { return /^s8_/.test(s.id) && s.querySelector('.cmpb'); }).length,
+    pbars: document.querySelectorAll('#app .pbars').length,
+    nfill: document.querySelectorAll('#app .nfill').length,
+    svg: document.querySelectorAll('#app svg').length
+  }));
+  is(pics.st8 >= 1 && pics.cmpb >= 1, '담보표 장 ' + pics.st8 + '개에 <표준 대비 막대>가 서 있다');
+  is(pics.pbars >= 1, '보험료 장에 <길이로 견주는 막대>가 있다');
+  is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
+  is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
+  /* 「더 넣을 것」은 <세어서> 본다 — 옛 문구를 찾으면 문구를 바꾸는 날 알람이 죽는다 */
+  const need = await pg.evaluate(() => {
+    S.view = 'full'; save(); render();
+    var C = calc();
+    return { want: needList(C).length, got: document.querySelectorAll('#s6 .nd').length };
+  });
+  await pg.waitForTimeout(200);
+  is(need.got === need.want && need.want > 0,
+     '「더 넣을 것」이 ' + need.want + '개 <전부> 서 있다 (지금 ' + need.got + '개) — 잘라 놓으면 나머지는 없는 것이 된다');
+
+  head('[11] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 
   console.log('\n──────────────────────────────');
