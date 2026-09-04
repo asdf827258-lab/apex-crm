@@ -632,9 +632,9 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .simtab button{appearance:none;border:1px solid var(--ln);background:#fff;color:var(--gy);border-radius:999px;padding:6px 14px;font-size:12px;font-weight:800}
 .simtab button.on{background:var(--nv);border-color:var(--nv);color:#fff}
 .sim{border:1px solid var(--ln);border-radius:14px;overflow:hidden;margin-bottom:12px}
-.simhd{background:#0F172A;color:#fff;padding:11px 15px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.simhd{background:var(--dkb);color:#fff;padding:11px 15px;font-size:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .simhd b{font-weight:800}.simhd span{margin-left:auto;font-size:12px;opacity:.85;font-weight:700}
-.simhd span b{color:#93C5FD}
+.simhd span b{color:#BFDCFF}
 .simst{display:flex;gap:13px;padding:13px 15px;border-bottom:1px solid #F1F3F5}
 .simst:last-of-type{border-bottom:0}
 .simst .sl{width:132px;flex:0 0 auto;text-align:center}
@@ -778,6 +778,8 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur>.sd{display:none}
 /* 자세한 것은 <b>접는다</b> — 한 장에 안 들어가는 것은 죽 이어서·인쇄에서 본다 */
 .show.deck>section.cur .deep{display:none}
+/* 단계마다 붙은 잔글·꼬리말은 <b>읽는 말이 대신</b> 한다. 종이에는 그대로 나온다. */
+.show.deck>section.cur .sd2,.show.deck>section.cur .simft{display:none}
 /* 표지 — 가운데에 크게 */
 .show.deck>#sHd.cur{justify-content:center;align-items:flex-start;border:0;
  padding:0 84px 92px;background:var(--dkb)}
@@ -937,7 +939,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .pbn{font-size:15px}
 .show.deck>section.cur .pbg i{height:20px}
 .show.deck>section.cur .pbars>span{font-size:16px}
-.show.deck>section.cur .st{max-height:none;margin:0}
+.show.deck>section.cur .st,.show.deck>section.cur .sim{max-height:none;margin:0;flex:none}
 .show.deck>section.cur .dl{max-height:none}
 /* 첫 장의 큰 숫자 — 궁금한 것 하나만 크게 */
 .hero{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#F8FAFC;
@@ -1016,7 +1018,8 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
  .show.deck>section.cur .deep{display:block!important}
  .show.deck>section.cur .dsc{display:block!important}
  .show.deck>section.cur .wsteps,.show.deck>section.cur .pgrid,
- .show.deck>section.cur .ndz,.show.deck>section.cur>.sd{display:block!important}
+ .show.deck>section.cur .ndz,.show.deck>section.cur>.sd,
+ .show.deck>section.cur .sd2,.show.deck>section.cur .simft{display:block!important}
  .show.deck>section.cur .whys>.wh1,.show.deck>section.cur .needs>.nd{display:block!important}
  .only-deck{display:none!important}
  .show.deck>#sHd.cur{padding:0!important;background:none!important}
@@ -2154,57 +2157,88 @@ function editHtml(){
 }
 
 
-/* ── 「이 병이 오면」 시뮬레이션 ── */
+/* ── 「이 병이 오면」 시뮬레이션 ─────────────────────────────────────
+   한 사건에 단계가 <b>넷</b>이다. 이것을 한 장에 밀어 넣으면 <b>두 단계
+   반이 카드에 잘려 아예 안 보인다</b> — 「항암·표적치료」와 「통원·추적
+   관찰」이 화면에 없는 것이 되어 있었다. 장 높이는 720 을 안 넘으니
+   높이를 재는 점검도 못 봤다(잘린 것은 카드 <b>안쪽</b>이라서다).
+
+   그래서 <b>두 단계씩 한 장</b>으로 나눈다. 「한 장에 안 들어가면 그건
+   한 장이 아니라 두 장이라는 뜻이다」 — 무대 규칙 그대로다.        */
+var SIM_PER = 2;   /* 한 장에 세우는 단계 수 */
+function simStepHtml(x, mx, C) {
+  var st = x.st;
+  return '<div class="simst">' +
+    '<div class="sl"><div class="si">' + st.ic + '</div>' +
+      '<div class="sn"><b>' + esc(st.k) + '</b><em>' + esc(st.dur) + ' · 이 단계 ' + Math.round(st.w * 100) + '%</em></div></div>' +
+    '<div class="sm">' +
+      '<div class="sb"><span>드는 돈</span><div class="t"><i style="width:' + (x.need / mx * 100) + '%;background:#334155"></i></div><b>' + won(x.need) + '</b></div>' +
+      '<div class="sb"><span>지금 나옴</span><div class="t"><i style="width:' + (x.b / mx * 100) + '%;background:#94A3B8"></i></div><b style="color:var(--gy)">' + (x.b ? won(x.b) : '없음') + '</b></div>' +
+      '<div class="sb"><span>조정 후</span><div class="t"><i style="width:' + (x.a / mx * 100) + '%;background:' + (x.a >= x.need ? 'var(--gr)' : 'var(--bl)') + '"></i></div><b style="color:' + (x.a >= x.need ? 'var(--gr)' : 'var(--bl)') + '">' + (x.a ? won(x.a) : '없음') + '</b></div>' +
+      '<div class="sg">' +
+        (x.gapB > 0 ? ('지금은 <b class="r">' + won(x.gapB) + '</b>이 모자랍니다. ') : '지금도 <b class="o">이 단계는 됩니다.</b> ') +
+        (x.gapA > 0 ? ('조정 후에도 <b class="r">' + won(x.gapA) + '</b>이 빕니다.') : '조정 후에는 <b class="o">이 단계가 메워집니다.</b>') +
+      '</div>' +
+      '<div class="sp2">' + st.pay.map(function (k) {
+        var hb = (C.b[k] !== undefined), ha = (C.a[k] !== undefined);
+        var cl = ha ? (hb ? '' : ' up') : ' no';
+        return '<span class="' + cl.trim() + '">' + esc(NAME[k] || k) + (ha ? (hb ? '' : ' 새로') : ' 없음') + '</span>';
+      }).join('') + (x.act ? ('<span class="ac">실손 ' + x.act + '건은 쓴 만큼 — 금액 안 셈</span>') : '') + '</div>' +
+      '<div class="sd2">' + st.say + '</div>' +
+    '</div></div>';
+}
 function simHtml(C){
-  var h='<section id="s4" data-nm="병이 오면"><h3>이 병이 오면 — 단계마다 얼마가 들고, 얼마가 나오는가'+
-    '<small>기준 치료비를 단계 비중으로 나눈 값입니다</small></h3>'+
-    '<p class="sd">병은 <b>한 번에</b> 오지 않고 <b>단계로</b> 옵니다. 단계마다 드는 돈이 다르고, 그때 열리는 지갑도 다릅니다. '+
-    '아래는 각 단계에서 <b>지금(전)</b> 얼마가 나오고 <b>조정 후</b> 얼마가 나오는지입니다.</p>'+
-    '<div class="simtab noprint">'+EVENTS.map(function(e){
-      return '<button class="'+(S.sim===e.k?'on':'')+'" onclick="setSim(\''+e.k+'\')">'+e.ic+' '+esc(e.t)+'</button>';
-    }).join('')+'</div>';
+  /* 머리(제목 · 설명 · 사건 고르기)는 <b>한 번만</b> 적고 장마다 쓴다 */
+  function head(sub){
+    return '<h3>이 병이 오면 — 단계마다 얼마가 들고, 얼마가 나오는가'+
+      '<small>'+sub+'</small></h3>'+
+      '<p class="sd">병은 <b>한 번에</b> 오지 않고 <b>단계로</b> 옵니다. 단계마다 드는 돈이 다르고, 그때 열리는 지갑도 다릅니다. '+
+      '아래는 각 단계에서 <b>지금(전)</b> 얼마가 나오고 <b>조정 후</b> 얼마가 나오는지입니다.</p>'+
+      '<div class="simtab noprint">'+EVENTS.map(function(e){
+        return '<button class="'+(S.sim===e.k?'on':'')+'" onclick="setSim(\''+e.k+'\')">'+e.ic+' '+esc(e.t)+'</button>';
+      }).join('')+'</div>';
+  }
+  var out='';
   var list=(S.view==='senior'&&!S.printAll)?[EVENTS.filter(function(e){return e.k===S.sim;})[0]||EVENTS[0]]:EVENTS;
   list.forEach(function(ev){
     if(S.view!=='senior'&&ev.k!==S.sim&&!S.printAll)return;
     var o=simCalc(ev,C);
     if(o.cost===null||!(o.cost>0)){
-      h+='<div class="note w">'+ev.ic+' '+esc(ev.t)+' — 기준 치료비가 없어 <b>그리지 않았습니다.</b></div>';return;
+      out+='<section id="s4_'+ev.k+'" data-nm="'+esc(ev.ic+' '+ev.t)+'">'+head('기준 치료비가 없는 사건입니다')+
+        '<div class="note w">'+ev.ic+' '+esc(ev.t)+' — 기준 치료비가 없어 <b>그리지 않았습니다.</b> '+
+        '<b>아무 숫자도 만들지 않았습니다</b> — 만들기 화면에서 기준 치료비를 적어 주시면 그때 셈합니다.</div>'+
+        sayLine(esc(ev.t)+'은 기준 치료비가 <b>적혀 있지 않아</b> 셈하지 않았습니다. 빈칸을 0 으로 만들지 않았습니다.')+
+        '</section>';
+      return;
     }
+    /* 막대 길이는 <b>사건 전체</b>의 제일 큰 값으로 잰다 — 장마다 다시
+       재면 뒷장 막대가 갑자기 길어져 「더 큰 돈」처럼 보인다. */
     var mx=1;o.steps.forEach(function(x){mx=Math.max(mx,x.need,x.b,x.a);});
-    h+='<div class="sim"><div class="simhd">'+ev.ic+' <b>'+esc(ev.t)+'</b>'+
-      '<span>기준 치료비 <b>'+won(o.cost)+'</b>'+(o.days?(' · 입원 '+o.days+'일'):'')+'</span></div>';
-    o.steps.forEach(function(x,i){
-      var st=x.st;
-      h+='<div class="simst">'+
-        '<div class="sl"><div class="si">'+st.ic+'</div>'+
-          '<div class="sn"><b>'+esc(st.k)+'</b><em>'+esc(st.dur)+' · 이 단계 '+Math.round(st.w*100)+'%</em></div></div>'+
-        '<div class="sm">'+
-          '<div class="sb"><span>드는 돈</span><div class="t"><i style="width:'+(x.need/mx*100)+'%;background:#111827"></i></div><b>'+won(x.need)+'</b></div>'+
-          '<div class="sb"><span>지금 나옴</span><div class="t"><i style="width:'+(x.b/mx*100)+'%;background:#94A3B8"></i></div><b style="color:var(--gy)">'+(x.b?won(x.b):'없음')+'</b></div>'+
-          '<div class="sb"><span>조정 후</span><div class="t"><i style="width:'+(x.a/mx*100)+'%;background:'+(x.a>=x.need?'#0F766E':'#3182F6')+'"></i></div><b style="color:'+(x.a>=x.need?'var(--gr)':'var(--bl)')+'">'+(x.a?won(x.a):'없음')+'</b></div>'+
-          '<div class="sg">'+
-            (x.gapB>0?('지금은 <b class="r">'+won(x.gapB)+'</b>이 모자랍니다. '):'지금도 <b class="o">이 단계는 됩니다.</b> ')+
-            (x.gapA>0?('조정 후에도 <b class="r">'+won(x.gapA)+'</b>이 빕니다.'):'조정 후에는 <b class="o">이 단계가 메워집니다.</b>')+
-          '</div>'+
-          '<div class="sp2">'+st.pay.map(function(k){
-            var hb=(C.b[k]!==undefined),ha=(C.a[k]!==undefined);
-            var cl=ha?(hb?'':' up'):' no';
-            return '<span class="'+cl.trim()+'">'+esc(NAME[k]||k)+(ha?(hb?'':' 새로'):' 없음')+'</span>';
-          }).join('')+(x.act?('<span class="ac">실손 '+x.act+'건은 쓴 만큼 — 금액 안 셈</span>'):'')+'</div>'+
-          '<div class="sd2">'+st.say+'</div>'+
-        '</div></div>';
-    });
-    h+='<div class="simft">이 사건에서 지금 <b>'+won(o.totB)+'</b> → 조정 후 <b style="color:var(--bl)">'+won(o.totA)+'</b> 이 나옵니다. '+
-      '단계 금액은 기준 치료비 <b>'+won(o.cost)+'</b> 를 <b>비중으로 나눈 값</b>입니다 — 실제 청구서가 아닙니다. '+
-      (o.days?('입원일당은 <b>그 단계 몫의 일수</b>만큼만 셌습니다.'):'')+'</div></div>';
+    var parts=Math.ceil(o.steps.length/SIM_PER),p;
+    for(p=0;p<parts;p++){
+      var seg=o.steps.slice(p*SIM_PER,(p+1)*SIM_PER),last=(p===parts-1);
+      var nm=seg.map(function(x){return x.st.k;}).join(' · ');
+      var sNeed=0,sB=0,sA=0;
+      seg.forEach(function(x){sNeed+=x.need;sB+=x.b;sA+=x.a;});
+      out+='<section id="s4_'+ev.k+'_'+p+'" data-nm="'+esc(ev.ic+' '+ev.t+(parts>1?(' · '+seg[0].st.k):''))+'">'+
+        head(esc(ev.t)+' · '+esc(nm)+(parts>1?(' ('+(p+1)+'/'+parts+' 단계)'):''))+
+        '<div class="sim"><div class="simhd">'+ev.ic+' <b>'+esc(ev.t)+'</b>'+
+          '<span>기준 치료비 <b>'+won(o.cost)+'</b>'+(o.days?(' · 입원 '+o.days+'일'):'')+'</span></div>'+
+        seg.map(function(x){return simStepHtml(x,mx,C);}).join('')+
+        (last?('<div class="simft">이 사건에서 지금 <b>'+won(o.totB)+'</b> → 조정 후 <b style="color:var(--bl)">'+won(o.totA)+'</b> 이 나옵니다. '+
+          '단계 금액은 기준 치료비 <b>'+won(o.cost)+'</b> 를 <b>비중으로 나눈 값</b>입니다 — 실제 청구서가 아닙니다. '+
+          (o.days?('입원일당은 <b>그 단계 몫의 일수</b>만큼만 셌습니다.'):'')+'</div>'):'')+
+        '</div>'+
+        /* 읽는 말은 <b>이 장에 선 단계</b>의 숫자로만 만든다 (1번) */
+        sayLine(last?
+          (esc(ev.t)+'이 오면 단계마다 돈이 <b>따로</b> 듭니다. 다 합치면 지금은 <b>'+won(o.totB)+'</b>, '+
+           '조정하면 <b>'+won(o.totA)+'</b>이 나오는 자리입니다.')
+          :('여기 <b>'+seg.length+'단계</b>만 해도 <b>'+won(sNeed)+'</b>이 듭니다. 지금은 <b>'+(sB?won(sB):'없음')+'</b>, '+
+            '조정하면 <b>'+(sA?won(sA):'없음')+'</b>이 나오는 자리입니다.'))+
+        '</section>';
+    }
   });
-  /* 읽는 말은 <b>지금 고른 사건</b>의 숫자로 만든다 — 값이 없으면 안 세운다 */
-  var _e=EVENTS.filter(function(e){return e.k===S.sim;})[0]||EVENTS[0],_o=_e?simCalc(_e,C):null;
-  h+=sayLine((_o&&_o.cost)?
-    (esc(_e.t)+'이 오면 단계마다 돈이 <b>따로</b> 듭니다. 지금은 <b>'+won(_o.totB)+'</b>이 나오고, '+
-     '조정하면 <b>'+won(_o.totA)+'</b>이 나오는 자리입니다.')
-    :'병은 <b>한 번에</b> 오지 않고 <b>단계로</b> 옵니다 — 단계마다 드는 돈도, 그때 열리는 지갑도 다릅니다.');
-  return h+'</section>';
+  return out;
 }
 function setSim(k){S.sim=k;save();render();}
 /* ── 지금 더 넣으셔야 할 것 ── */
@@ -3757,6 +3791,10 @@ function stFill(C,g){
   if(!got||!std)return null;
   return {std:std,b:b,a:a,pb:Math.round(b/std*100),pa:Math.round(a/std*100)};
 }
+/* 한 장에 세우는 담보 줄 수. 여덟 줄부터 카드가 눌려 <b>안 보이는 줄</b>이
+   생긴다. 넘치면 <b>숨기는 게 아니라 장을 나눈다</b> — 담보는 하나도 안
+   빠지고, 나누는 자리도 5·5 처럼 <b>고르게</b> 나눈다. */
+var ST_MAXR=7;
 function stShow(C){
   var out='';
   STD.forEach(function(g,gi){
@@ -3766,11 +3804,16 @@ function stShow(C){
     });
     if(!rows.length)return;
     var f=stFill(C,g);
-    out+='<section id="s8_'+gi+'" data-nm="'+esc(g.ic+' '+g.mid)+'">'+
-      '<h3>'+g.ic+' '+esc(g.mid)+'<small>'+esc(g.big)+' · 담보 '+rows.length+'개</small></h3>';
+    var parts=Math.ceil(rows.length/ST_MAXR),per=Math.ceil(rows.length/parts),p;
+    for(p=0;p<parts;p++)stPart(rows.slice(p*per,(p+1)*per),p);
+    function stPart(seg,p){
+    var from=p*per+1,to=p*per+seg.length,many=(parts>1);
+    out+='<section id="s8_'+gi+(many?('_'+p):'')+'" data-nm="'+esc(g.ic+' '+g.mid+(many?(' '+(p+1)+'/'+parts):''))+'">'+
+      '<h3>'+g.ic+' '+esc(g.mid)+'<small>'+esc(g.big)+' · 담보 '+rows.length+'개'+
+      (many?(' 중 <b>'+from+'–'+to+'번째</b>'):'')+'</small></h3>';
     if(f)out+=cmpBar('목돈 담보 합계 · 표준 대비',f.pb,f.pa,won(f.b),won(f.a));
     out+='<div class="st"><table><tr><th>담보</th><th>표준</th><th>전</th><th>후</th><th>결과</th></tr>';
-    rows.forEach(function(r){
+    seg.forEach(function(r){
       var b=C.b[r.k],a=C.a[r.k],d=((a||0)-(b||0));
       var res=(a===undefined&&b===undefined)?'':(d>0?'⏫ 보장UP':(d<0?'⏬ 줄어듦':(b?'유지':'')));
       out+='<tr><td>'+esc(r.n)+(r.cov?('<span class="cov">'+r.cov+'%</span>'):'')+
@@ -3781,13 +3824,16 @@ function stShow(C){
         '<td class="rd '+(d>0?'up':(d<0?'no':'mid'))+'">'+res+'</td></tr>';
     });
     out+='</table></div>'+
-      sayLine(f?('이 묶음은 표준의 <b>'+f.pb+'%</b>가 채워져 있고, 조정하면 <b>'+f.pa+'%</b>가 됩니다.'+
+      sayLine((f?('이 묶음은 표준의 <b>'+f.pb+'%</b>가 채워져 있고, 조정하면 <b>'+f.pa+'%</b>가 됩니다.'+
                  (f.pa>=100?' 이 자리는 <span class="o">채워집니다.</span>':' 표에서 어느 담보가 비었는지 같이 보시죠.')):
                 '이 묶음은 목돈이 아니라 <b>하루·매달·한도</b>로 나오는 자리라, 하나로 더해 재지 않았습니다.')+
+              (many?(' (담보 '+rows.length+'개 중 '+from+'–'+to+'번째)'):''))+
       '<p class="sd deep">「표준」은 <b>일반적으로 권하는 기준</b>, 「전」은 지금, 「후」는 조정 후입니다. '+
       (f?'위 막대는 <b>목돈으로 나오는 담보만</b> 더한 것입니다 — 하루·매달·한도로 나오는 담보는 <b>같은 자로 잴 수 없어</b> 뺐습니다. 표에는 그대로 있습니다.':
-         '이 묶음은 <b>목돈이 아닌 방식</b>(하루·매달·한도)으로 나와, 하나로 더해 재지 않았습니다.')+'</p>'+
+         '이 묶음은 <b>목돈이 아닌 방식</b>(하루·매달·한도)으로 나와, 하나로 더해 재지 않았습니다.')+
+      (many?(' 이 묶음은 담보가 <b>'+rows.length+'개</b>라 <b>'+parts+'장</b>으로 나눠 세웠습니다 — 빠진 담보는 없습니다.'):'')+'</p>'+
       '</section>';
+    }
   });
   return out;
 }

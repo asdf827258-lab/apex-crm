@@ -221,6 +221,27 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
       fat.map(f => f.id + ' ' + f.h + 'px').join(' / ')) :
      '장 ' + dense.length + '개 <전부> 한 장(720px) 안에 들어간다 (제일 긴 장 ' +
        Math.max.apply(null, dense.map(d => d.h)) + 'px)');
+  /* 장 높이만 재면 <b>카드 안쪽에서 잘리는 것</b>을 못 본다. 세로 flex 의
+     자식은 자리가 모자라면 눌리고, overflow:hidden 이 눌린 만큼을 <b>소리
+     없이</b> 잘라 버린다 — 장 높이는 720 그대로다. 실제로 「병이 오면」이
+     네 단계 중 두 단계 반을, 「암 치료비」가 열 줄 중 네 줄을 이렇게
+     잘라 버리고 있었다. 잘린 담보는 고객에게 <b>없는 담보</b>다. */
+  const clip = await pg.evaluate(() => {
+    var out = [];
+    [].slice.call(document.querySelectorAll('#app .show > section')).forEach(function (sec) {
+      var was = sec.className; sec.classList.add('cur');
+      [].slice.call(sec.querySelectorAll('*')).forEach(function (el) {
+        var cs = getComputedStyle(el);
+        if (cs.overflowY !== 'hidden' && cs.overflowX !== 'hidden') return;
+        var d = el.scrollHeight - el.clientHeight;
+        if (d > 2) out.push(sec.id + '·' + String(el.className || el.tagName).split(' ')[0] + ' ' + d + 'px');
+      });
+      sec.className = was;
+    });
+    return out;
+  });
+  is(clip.length === 0, clip.length ? ('카드 안에서 잘려 안 보이는 것 — ' + clip.join(' / ')) :
+     '어느 장도 <카드 안에서 몰래 자르지> 않는다 — 잘린 담보는 없는 담보가 된다');
   /* 그대로 읽는 말이 장마다 있는가 — 「읽어만 줘도 되게」의 알맹이다 */
   const says = await pg.evaluate(() => {
     var out = [];
@@ -239,20 +260,31 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   /* 「표가 몰렸나」 를 개수 문턱으로만 재면, 되돌린 판이 아예 안 그려졌을 때도
      통과한다. 그래서 <b>세어야 할 수</b>를 앱에서 직접 가져와 견준다. */
   const st = await pg.evaluate(() => {
-    var C = calc(), want = 0;
+    var C = calc(), want = 0, rowsWant = 0;
     STD.forEach(function (g) {
       var rows = g.rows.filter(function (r) {
         if (S.view !== 'senior' || S.printAll) return true;
         return C.b[r.k] !== undefined || C.a[r.k] !== undefined;
       });
-      if (rows.length) want++;
+      if (rows.length) { want++; rowsWant += rows.length; }
     });
     var got = [].slice.call(document.querySelectorAll('#app .show > section'))
       .filter(function (s) { return /^s8_/.test(s.id); });
-    return { want: want, got: got.length, tbl: got.map(function (s) { return s.querySelectorAll('table').length; }) };
+    /* 줄이 많은 묶음은 여러 장으로 나뉜다 — 장 수가 아니라 <b>묶음</b>과
+       <b>담보 줄</b>을 센다. 나누는 것은 괜찮고, 빠지는 것은 안 된다. */
+    var grp = {}, rowsGot = 0;
+    got.forEach(function (s) {
+      grp[s.id.split('_')[1]] = 1;
+      rowsGot += Math.max(0, s.querySelectorAll('.st table tr').length - 1);
+    });
+    return { want: want, got: got.length, grp: Object.keys(grp).length,
+             rowsWant: rowsWant, rowsGot: rowsGot,
+             tbl: got.map(function (s) { return s.querySelectorAll('table').length; }) };
   });
-  is(st.got === st.want && st.want > 0,
-     '담보 묶음 ' + st.want + '개가 <각각 제 장>으로 섰다 (지금 ' + st.got + '장)');
+  is(st.grp === st.want && st.want > 0,
+     '담보 묶음 ' + st.want + '개가 <하나도 안 빠지고> 섰다 (' + st.got + '장에 나눠서)');
+  is(st.rowsGot === st.rowsWant && st.rowsWant > 0,
+     '담보 줄 ' + st.rowsWant + '개가 <한 줄도 안 빠지고> 섰다 (지금 ' + st.rowsGot + '줄) — 나누는 건 되고, 빠지는 건 안 된다');
   is(st.tbl.length > 0 && st.tbl.every(n => n === 1),
      '담보표 장마다 표가 <하나씩>이다 — 한 장에 몰지 않는다 (' + st.tbl.join(',') + ')');
   const named = dense.filter(d => !d.nm).map(d => d.id);
