@@ -2026,6 +2026,11 @@ function kbHtml(){
 function kbDoneHtml(k){
   return '<div class="note g">📄 <b>'+esc(k.file)+'</b> 에서 계약 <b>'+k.pols+'건</b> · 담보 <b>'+k.covs+'개</b>를 넣었습니다'+
     (k.person?(' · '+esc(k.person)+' 님'):'')+(k.no?(' · 못 알아본 담보 <b>'+k.no+'개</b>'):'')+'. '+
+    '가입일자와 납입기간도 함께 읽어 <b>「앞으로 낼 돈」·「총 납입 보험료」</b>가 섭니다. '+
+    (k.derived?('그중 <b>'+k.derived+'건</b>은 「전기납·세납」이라 <b>만기와 나이에서 셈했습니다</b> — 다르면 고쳐 주십시오. '):'')+
+    (k.noTerm?('<b>'+k.noTerm+'건</b>은 납입기간을 못 읽어 <b>빈칸</b>입니다 — 적어 주시면 그때 셈합니다. '):'')+
+    (k.noStart?('<b>'+k.noStart+'건</b>은 가입일자를 못 읽었습니다. '):'')+
+    (k.lump?('<b>'+k.lump+'건</b>은 <b>일시납</b>이라 월 보험료 칸을 <b>비워</b> 두었습니다 — 매달 내는 돈이 아닙니다. '):'')+
     '<button class="mini" onclick="showPanel(\'raw\')">📋 읽은 값 표로</button> '+
     '<button class="mini" onclick="kbPick()">+ 한 부 더</button> '+
     '<button class="mini d" onclick="kbClear()">넣은 것 빼기</button></div>';
@@ -2035,8 +2040,37 @@ function kbSet(h){var e=document.getElementById('kbBox');if(e)e.innerHTML=h;}
 function kbClear(){if(!confirm('KB 에서 넣은 계약을 뺍니다.'))return;
   S.before=S.before.filter(function(p){return !p.kb;});S.kbInfo=null;S.kbRaw=null;save();render();}
 function kbMan(w){return (w===null||w===undefined||!isFinite(w))?null:Math.round(w/10000);}
+/* ── KB 가 적어 준 <b>납입기간</b>을 연 수로 ────────────────────────
+   「앞으로 낼 돈」·「총 납입 보험료」는 <b>월 보험료 × 납입기간</b>이다.
+   납입기간이 없으면 둘 다 셈이 안 되고 화면에 못 뜬다 — 실제로 KB 에서
+   읽어 넣은 계약이 <b>전부</b> 그랬다. 파서는 이미 읽고 있었는데
+   <b>계약에 안 넣고 버리고</b> 있었다.
+
+   ■ 「20년납」 은 <b>그대로 읽은 값</b>이다.
+   ■ 「70세납」·「전기납」 은 <b>나이·만기에서 뺀 값</b>이다 — 지어낸 것이
+     아니라 KB 가 적어 준 두 값으로 셈한 것이고, 사장님이 고칠 수 있다.
+   ■ <b>못 읽으면 빈칸으로 둔다.</b> 0 으로 채우면 「낼 돈이 없다」가 된다. */
+function kbYears(payTerm,term,age){
+  /* KB 는 <b>종신</b>을 「9999세만기」로 적는다. 그대로 빼면 9,959년이 된다 —
+     사람이 낼 수 있는 햇수를 넘으면 <b>모름</b>으로 둔다. */
+  function ok(v){return (v>0&&v<=60)?v:null;}
+  var t=(''+(payTerm||'')).replace(/\s/g,'');
+  var m=t.match(/(\d+)\s*년/);
+  if(m)return ok(+m[1]);              /* 「0년」(일시납)도 여기서 모름이 된다 */
+  var sm=t.match(/(\d+)\s*세/);
+  if(sm&&age)return ok(+sm[1]-age);
+  if(/전기|만기납|종신납/.test(t)){
+    var w=(''+(term||'')).replace(/\s/g,'');
+    var a=w.match(/(\d+)\s*세/);
+    if(a&&age)return ok(+a[1]-age);
+    var b=w.match(/(\d+)\s*년/);
+    if(b)return ok(+b[1]);
+  }
+  return null;
+}
 function kbApply(K,fname){
-  var added=0,pols=0,no=0,i,j;
+  var added=0,pols=0,no=0,noTerm=0,noStart=0,derived=0,lump=0,i,j;
+  var age=(K.person&&K.person.age)||null;
   for(i=0;i<K.contracts.length;i++){
     var c=K.contracts[i],cov={},n=0;
     for(j=0;j<(c.covs||[]).length;j++){
@@ -2045,11 +2079,21 @@ function kbApply(K,fname){
       var m=kbMan(v.won);if(m===null)continue;
       cov[key]=(num(cov[key])||0)+m;n++;
     }
+    /* 가입일자와 납입기간을 <b>넣는다</b> — 이게 없으면 「앞으로 낼 돈」이 안 선다 */
+    var yrs=kbYears(c.payTerm,c.term,age),st=(c.issue||'').slice(0,7);
+    if(yrs===null)noTerm++;else if(!/\d+\s*년/.test(''+(c.payTerm||'')))derived++;
+    if(!st)noStart++;
+    /* <b>일시납</b>은 매달 내는 돈이 아니다. 그 금액을 월 보험료 칸에 넣으면
+       「매달 3,400만원」이 되어 버린다 — <b>비워 두고 몇 건인지 말한다.</b> */
+    var once=/일시/.test(''+(c.payWay||''));
+    if(once)lump++;
     S.before.push({id:nid(),co:c.co||'',nm:c.nm||'',term:(c.payTerm||'')+(c.term?(' '+c.term):''),
-      premMan:c.paidUp?'0':(kbMan(c.premWon)===null?'':kbMan(c.premWon)),premMan2:'',act:'keep',kb:true,cov:cov,cov2:{}});
+      start:st,years:(yrs===null?'':String(yrs)),
+      premMan:once?'':(c.paidUp?'0':(kbMan(c.premWon)===null?'':kbMan(c.premWon))),premMan2:'',act:'keep',kb:true,cov:cov,cov2:{}});
     added+=n;pols++;
   }
-  S.kbRaw=K;S.kbInfo={file:fname,pols:pols,covs:added,no:no,person:(K.person&&K.person.name)||''};
+  S.kbRaw=K;S.kbInfo={file:fname,pols:pols,covs:added,no:no,noTerm:noTerm,noStart:noStart,derived:derived,lump:lump,
+    person:(K.person&&K.person.name)||''};
   save();render();
 }
 function showPanel(p){S.panel=(S.panel===p)?'':p;save();render();}
