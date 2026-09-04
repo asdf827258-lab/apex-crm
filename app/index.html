@@ -11439,19 +11439,15 @@ function navItemOf(id){
 var NAV_Q='';
 /* 엄하게 찾아 하나도 없을 때만 켠다 — 오타를 봐 주는 판 */
 var NAV_LOOSE=false;
+/* 찾기 칸은 <b>하나</b>다 — ☰ 서랍 맨 위. 값은 NAV_Q 한 곳에만 담는다.
+
+   여기서 <b>칸을 다시 그리지 않는다.</b> 목록(#navBody)만 다시 그린다.
+   예전에는 renderNav() 로 서랍을 통째로 다시 그렸고, 그때 찾기 칸이
+   지워졌다 새로 생겨 한글 조합이 깨졌다 (navFixHtml 위 설명 참고). */
 function navFind(v){
   NAV_Q=(''+(v||'')).replace(/^\s+|\s+$/g,'');
-  /* 찾기 칸은 <b>하나</b>다 — ☰ 서랍 맨 위. 위 가로 띠에도 칸이 있던 때는
-     한 글자마다 커서가 서로 튀어 오타가 났다. 값은 NAV_Q 한 곳에만 담고
-     칸은 그것을 비출 뿐이다.
-     renderNav() 가 서랍을 다시 그리므로 <b>치던 중이었으면</b> 커서를
-     그 자리에 돌려 놓는다. 치던 중이 아니면(예: 위 띠의 「지우기」 딱지를
-     눌렀을 때) 손대지 않는다 — 닫힌 서랍으로 커서를 끌고 가면 폰에서
-     자판이 혼자 올라온다. */
-  var was=document.activeElement,wasFind=(was&&was.id==='navFind');
-  renderNav();
-  var el=document.getElementById('navFind');
-  if(el){ el.value=NAV_Q; if(wasFind)el.focus(); }
+  var fx=document.getElementById('navFindX'); if(fx)fx.hidden=!NAV_Q;
+  navPaintBody();
   if(typeof navMark==='function'&&typeof lastTab!=='undefined')navMark(lastTab);
 }
 /* ── 오타를 쳐도 찾히게 ────────────────────────────────────────
@@ -11662,13 +11658,60 @@ function tnDragWire(){
   b.addEventListener('scroll',tnEdges,{passive:true});
   window.addEventListener('resize',function(){try{tnEdges();}catch(e){}});
 }
-/* 맨 위 세 줄 — 찾기 · 즐겨찾기 · 최근 */
-function navTopHtml(){
-  var h='<div class="nav-find"><span class="nf-ic">🔎</span>'+
-    '<input id="navFind" placeholder="메뉴 찾기 (이름·초성)" value="'+esc(NAV_Q)+'" '+
-      'oninput="navFind(this.value)" autocomplete="off">'+
-    (NAV_Q?'<button type="button" class="nf-x" onclick="navFind(\'\')" aria-label="찾기 지우기">✕</button>':'')+
+/* ── 찾기 칸은 <b>다시 그리지 않는다</b> ─────────────────────────────
+   여태 한 글자 칠 때마다 서랍 전체를 다시 그렸고, 그때 찾기 칸이
+   <b>지워졌다 새로 생겼습니다.</b> 영타는 그래도 버티는데 <b>한글은
+   무너집니다</b> — 한글은 자판을 여러 번 눌러 한 글자를 만드는 「조합」
+   이라, 조합 도중에 칸이 바뀌면 그 글자가 확정 안 된 채 남고 새 칸에
+   또 들어갑니다. 실제로 「고객」 을 치면 이렇게 됐습니다:
+
+     조합 「ㄱ」   → 칸에 「고객ㄱ」
+     조합 「고」   → 칸에 「고고객ㄱ」
+     조합 「고객」 → 칸에 「고객고개곡고고객ㄱ」   ← 찾힌 메뉴 0개
+
+   그래서 서랍을 <b>두 칸</b>으로 나눕니다.
+     #navFix  — 공지·안내 단추·찾기 칸. <b>한 번만</b> 그린다.
+     #navBody — 즐겨찾기·최근·갈래 목록. 찾을 때마다 다시 그린다.
+   찾기 칸이 살아 있으니 조합이 안 끊기고 커서도 안 튑니다.
+   거기에 더해 <b>조합 중에는 아예 찾지 않습니다</b>(compositionstart/end). */
+function navFixHtml(){
+  return '<div id="osNoticeNav"></div>'+
+    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
+      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
+      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
+    '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
+      '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
+      '<span class="sbg-go">처음이시면 여기부터</span></button>'+
+    '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
+      '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
+      '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
+    '<div class="nav-find"><span class="nf-ic">🔎</span>'+
+      '<input id="navFind" placeholder="메뉴 찾기 (이름·초성)" autocomplete="off">'+
+      '<button type="button" class="nf-x" id="navFindX" hidden '+
+        'onclick="navFindClear()" aria-label="찾기 지우기">✕</button>'+
     '</div>';
+}
+/* 듣는 것은 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 겹겹이 쌓인다 */
+var NAV_IME=false;                  /* 지금 한글을 조합하는 중인가 */
+function navFindWire(){
+  var el=document.getElementById('navFind'); if(!el||el._wired)return;
+  el._wired=true;
+  el.addEventListener('compositionstart',function(){ NAV_IME=true; });
+  el.addEventListener('compositionend',function(){ NAV_IME=false; navFind(el.value); });
+  el.addEventListener('input',function(){
+    /* 조합 중에는 아직 글자가 덜 됐다 — 끝난 뒤에 한 번만 찾는다 */
+    if(NAV_IME)return;
+    navFind(el.value);
+  });
+}
+function navFindClear(){
+  var el=document.getElementById('navFind');
+  if(el){ el.value=''; el.focus(); }
+  navFind('');
+}
+/* 맨 위 두 줄 — 즐겨찾기 · 최근 (찾는 중에는 접는다) */
+function navTopHtml(){
+  var h='';
   if(NAV_Q)return h;   /* 찾는 중에는 아래를 접어 둔다 — 찾는 것만 보이게 */
 
   var fav=navFav(),i,it,rows='';
@@ -12234,18 +12277,31 @@ function renderPhoneApp(){
     '홈 화면에 담으면 주소창 없이 앱처럼 열립니다. DB 통합 CRM 과 TFA 업무관리는 따로 담을 수 있습니다.',h);
 }
 
+/* 서랍을 통째로 세운다 — <b>찾기 칸은 이미 있으면 그대로 둔다.</b>
+   여기서 다시 만들면 치던 한글이 그 자리에서 깨진다. */
 function renderNav(){
-  var h='<div id="osNoticeNav"></div>'+
-    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
-      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
-      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
-    '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
-      '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
-      '<span class="sbg-go">처음이시면 여기부터</span></button>'+
-    '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
-      '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
-      '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
-    navTopHtml();
+  var host=$('navHost'); if(!host)return;
+  if(!document.getElementById('navFix')){
+    host.innerHTML='<div id="navFix">'+navFixHtml()+'</div><div id="navBody"></div>';
+    navFindWire();
+  }
+  /* 칸에 손대는 것은 <b>치고 있지 않을 때만</b> — 치는 중에 값을 밀어 넣으면
+     커서가 맨 뒤로 튀고 조합이 끊긴다 */
+  var fi=document.getElementById('navFind');
+  if(fi&&document.activeElement!==fi&&fi.value!==NAV_Q)fi.value=NAV_Q;
+  var fx=document.getElementById('navFindX'); if(fx)fx.hidden=!NAV_Q;
+  navPaintBody();
+  /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
+     바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
+  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
+  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
+  if(typeof osNoticeApply==='function')osNoticeApply();
+}
+/* 목록만 다시 그린다 — 찾을 때마다 도는 자리다 */
+function navPaintBody(){
+  var body=document.getElementById('navBody'); if(!body)return;
+  var h=navTopHtml();
   var vis=navVisGroups();   /* 갈래를 세는 곳은 한 곳 (5번) */
   /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
      처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
@@ -12311,13 +12367,7 @@ function renderNav(){
   if(NAV_Q&&!found&&!inN)
     h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 메뉴가 없습니다.<br>'+
        '이름 일부나 초성(ㄱㄱ)으로도 찾을 수 있습니다.</div>';
-  $('navHost').innerHTML=h;
-  /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
-     바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
-  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
-  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
-  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
-  if(typeof osNoticeApply==='function')osNoticeApply();
+  body.innerHTML=h;
 }
 
 /* ════════ 페이지 렌더 ════════ */
@@ -12896,8 +12946,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-03 02:40';
-var APP_BUILD_NOTE="<b>왼쪽 메뉴가 늘 서 있습니다 · 공지를 「칸」으로 하나씩 · 사용가이드를 상황별로.</b> ① <b>왼쪽 메뉴</b> — 여태 ☰ 를 눌러야 나오는 <b>서랍</b>이었고, 칸도 접혀 있었습니다. 그래서 「메뉴가 안 보인다」 는 말이 나왔습니다. 이제 넓은 화면에서는 <b>기둥으로 늘 서 있고</b>, 칸도 <b>접히지 않습니다</b> — 14칸 · 메뉴 81개가 그냥 보입니다. 접기 장치(모두 펴기/접기 · ▾ 화살표 · 기억해 두던 자리)는 <b>코드에서도</b> 걷어냈습니다. 폰에서는 서랍 그대로입니다 — 기둥을 세우면 본문이 안 남습니다. 함께, 기둥이 위 띠 높이만큼 <b>화면 밖으로 넘쳐</b> 맨 밑이 잘리던 것도 고쳤습니다. ② <b>공지사항</b> — 한 벌이던 것을 <b>칸의 목록</b>으로 바꿨습니다. 새 칸을 올려도 <b>앞 칸이 그대로</b> 남습니다. 칸마다 <b>담당자</b>를 고르면 그 사람 화면 맨 위에 붉은 띠가 뜨고, <b>본인이</b> 「확인했습니다」 를 누를 때까지 안 사라집니다 — 대신 눌러 줄 수 없습니다(서버 규칙이 못 박습니다). 대표님은 칸마다 <b>누가 찍었고 누가 안 찍었는지</b> 이름으로 보시고, 다 쓴 칸은 <b>그 칸만</b> 내리십니다. ③ <b>사용가이드</b> — 맨 앞에 <b>「이럴 때는 이렇게」</b> 를 깔았습니다. 기능 이름을 모르셔도 됩니다. 「증권을 받았다」 · 「보험을 정리하고 싶다고 한다」 · 「고객이 아프다」 같은 <b>상황 12가지</b> 중 하나를 누르면 무엇부터 하는지 <b>1·2·3</b> 으로 나오고, 그 화면을 <b>바로 여는 단추</b>와 <b>5분이면 해 보실 수 있는 연습</b>이 함께 나옵니다. ④ <b>전용 화면 열두 개</b>를 하나씩 열어 자로 재고 사진으로 확인했습니다 — 열둘 다 정상입니다. 점검: <code>check-ntcbox</code> 를 새로 만들고(32가지), <code>check-nav</code> · <code>check-topnav</code> · <code>check-guidemap</code> 을 새 사실대로 다시 썼습니다. 되돌려 보는 <b>빨간불 시험</b>도 전부 통과했습니다 — 메뉴 4/4 · 공지 8/8 · 가이드 6/6.";
+var APP_BUILD='2026-09-03 09:20';
+var APP_BUILD_NOTE="<b>메뉴 찾기에 한글을 치면 글자가 겹겹이 쌓이던 것 — 고쳤습니다.</b> 「고객」 을 치면 칸에 <b>「고객고개곡고고객ㄱ」</b> 이 남고 찾힌 메뉴가 <b>0개</b>였습니다. 원인은 <b>한 글자 칠 때마다 서랍을 통째로 다시 그린 것</b>입니다 — 그때 찾기 칸이 <b>지워졌다 새로 생겼습니다.</b> 영타는 그래도 버티는데 한글은 무너집니다. 한글은 자판을 여러 번 눌러 한 글자를 만드는 <b>조합</b>이라, 도중에 칸이 바뀌면 그 글자가 확정 안 된 채 남고 새 칸에 <b>또</b> 들어가기 때문입니다. 이제 서랍을 두 칸으로 나눕니다 — <code>#navFix</code>(공지·안내 단추·<b>찾기 칸</b>)는 <b>한 번만</b> 그리고, <code>#navBody</code>(즐겨찾기·최근·갈래 목록)만 찾을 때마다 다시 그립니다. 찾기 칸이 살아 있으니 조합이 안 끊기고 커서도 안 튑니다. 거기에 더해 <b>조합하는 동안에는 아예 찾지 않습니다</b> — 글자가 덜 된 채로 찾으면 헛것이 나옵니다. 고친 뒤 「고객」 을 치면 칸에 <b>「고객」</b> 이 남고 <b>10칸</b>이 찾힙니다. 점검(<code>check-topnav</code> [9])도 고쳤습니다 — 여태 「값이 맞는가」 만 봐서 이 버그를 <b>못 봤습니다</b>(다시 그린 뒤 값을 되돌려 놓아 맞아 보였습니다). 이제 <b>칸이 그대로 살아 있는지</b>를 재고, 조합 중에 안 찾는지도 잽니다. 예전 방식으로 되돌려 <b>빨간불 3/3</b> 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
