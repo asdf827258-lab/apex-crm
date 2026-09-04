@@ -25,6 +25,7 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .btn.d{background:#fff;border-color:#FECACA;color:var(--rd)}
 .mini{appearance:none;border:1px solid var(--ln);background:#fff;color:var(--gy);border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700}
 .mini.on{background:var(--nv);border-color:var(--nv);color:#fff}.mini.d{border-color:#FECACA;color:var(--rd)}
+.mini.go{background:var(--bl);border-color:var(--bl);color:#fff}
 .grid{display:grid;grid-template-columns:1fr 340px;gap:15px;align-items:start}
 .side{position:sticky;top:66px;display:flex;flex-direction:column;gap:11px}
 @media(max-width:1180px){.grid{grid-template-columns:1fr}.side{position:static}}
@@ -644,8 +645,47 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .dl th{position:sticky;top:0;background:#F8FAFC;font-size:10.5px;font-weight:800;color:var(--gy2);padding:7px 9px;border-bottom:1px solid var(--ln);text-align:left;white-space:nowrap}
 .dl td{font-size:12px;padding:6px 9px;border-bottom:1px solid #F5F6F8;vertical-align:top}
 .dl td.r{text-align:right;white-space:nowrap;font-weight:800}.dl td.no{color:var(--rd);font-weight:800}
+/* ── 한 장씩 넘겨 보기 ── */
+.showctl{max-width:980px;margin:0 auto 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.showctl .cl{font-size:12px;font-weight:800;color:var(--gy)}
+.showctl .ch{font-size:12px;color:var(--gy2)}
+/* 목차는 <b>늘 맨 위</b>다. DOM 에서는 표지 뒤에 있어, 세로로 세운 뒤
+   순서만 앞으로 당긴다 — 안 그러면 표지 장에서만 목차가 밑으로 내려간다. */
+.show.deck{display:flex;flex-direction:column;padding-bottom:26px;min-height:calc(100vh - 250px)}
+.show.deck>.toc{order:-1}
+.show.deck>section{display:none}
+.show.deck>section.cur{display:block;animation:dkin .18s cubic-bezier(.2,.7,.3,1)}
+@keyframes dkin{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+/* 표지는 <b>표지답게</b> — 남는 자리를 다 쓰고 가운데에 크게 선다 */
+.show.deck>#sHd.cur{display:flex;flex-direction:column;justify-content:center;
+ flex:1 1 auto;border-bottom:0;text-align:center;margin-bottom:0}
+.show.deck>#sHd.cur h1{font-size:38px;margin:10px 0 8px}
+.show.deck>#sHd.cur .ey{font-size:12px}
+.show.deck>#sHd.cur p{font-size:14px}
+.toc a.on{background:var(--nv);border-color:var(--nv);color:#fff}
+.toc a.on b{background:#fff;color:var(--nv)}
+.deckbar{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;align-items:center;gap:10px;
+ padding:9px 14px;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid var(--ln)}
+.deckbar:empty{display:none}
+.deckbar .dnav{appearance:none;border:1px solid var(--ln);background:#fff;border-radius:10px;
+ width:40px;height:36px;font-size:13px;font-weight:800;color:var(--nv);flex:none}
+.deckbar .dnav:disabled{color:var(--ln);cursor:default}
+.deckbar .dnav.x{color:var(--gy)}
+.deckbar .dbar{flex:1;min-width:40px;height:5px;border-radius:3px;background:var(--ln);overflow:hidden}
+.deckbar .dbar i{display:block;height:100%;background:var(--nv);border-radius:3px;transition:width .2s}
+.deckbar .dt{font-size:12.5px;font-weight:800;white-space:nowrap;flex:none}
+.deckbar .dn{font-size:11.5px;font-weight:700;color:var(--gy2);white-space:nowrap;flex:none}
+.deckbar .dn b{color:var(--nv);font-size:13px}
+@media(max-width:560px){.deckbar .dt{display:none}}
+/* 발표 — 설계사 도구를 치우고 자료만 남긴다 */
+body.presenting .bar,body.presenting .showctl{display:none!important}
+body.presenting .wrap{padding:8px 14px 74px}
+body.presenting .show{border:0;box-shadow:none}
+body.presenting .show.deck{min-height:calc(100vh - 100px)}
 @media print{body{background:#fff}.bar,.noprint{display:none!important}.wrap{max-width:none;padding:0}
  .show{border:0;border-radius:0;padding:0;max-width:none}.show section{page-break-inside:avoid}
+ /* 한 장씩 보던 중에 뽑아도 <b>전부</b> 나온다 — 접힌 것을 뺀 것처럼 두지 않는다 */
+ .show.deck{min-height:0}.show.deck>section{display:block!important}
  .anat{grid-template-columns:1fr 300px 1fr!important}.tj{display:flex!important}.st,.life{page-break-inside:avoid}}
 </style>
 </head>
@@ -904,6 +944,9 @@ function blank(){
     assume:{deathPct:'70',depAge:'22',disabPct:'25',disabYears:'20',
             careMon:'150',careMonths:'24',premPct:'30'},
     src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},brainMore:false,mode:'edit',view:'full',
+    /* 고객에게 보여주는 판은 <b>한 장씩</b>이 기본이다 — 스크롤을 내리면
+       고객 눈이 아직 설명 안 한 숫자로 먼저 달아난다. 위 단추로 바꾸신다. */
+    deck:true,slide:'sHd',
     panel:'',pin:'',sim:'cancer',scenOpen:false,kbInfo:null,kbRaw:null};
 }
 /* ── 예전에 저장된 자료에 <b>새 칸이 없어</b> 화면이 통째로 안 뜨던 자리 ──
@@ -1218,6 +1261,8 @@ function renderIn(){
   document.getElementById('tabEdit').className='tab'+(S.mode==='edit'?' on':'');
   document.getElementById('tabShow').className='tab'+(S.mode==='show'?' on':'');
   document.getElementById('app').innerHTML=(S.mode==='show')?showHtml():editHtml();
+  /* 목차·넘기는 띠는 <b>다 그린 뒤</b>에 센다 — 실제로 선 장만 세기 위해서다 */
+  deckPaint();
 }
 function side(){var e=document.getElementById('sideBox');if(e)e.innerHTML=sideHtml();}
 function stOnly(){var e=document.getElementById('stBox');if(e)e.innerHTML=stBody();side();}
@@ -3274,14 +3319,14 @@ function premShow(){
   return h+'</section>';
 }
 
-/* 아홉 장이 이어진다 — <b>어디에 무엇이 있는지</b> 먼저 보여 준다 */
-var SECS=[["s1","한눈에"],["s0","왜 나에게 맞는가"],["s2","보험료 변화"],["s3","한 줄 요약"],["s4","병이 오면"],
-          ["s5","내 몸 어디에"],["s6","더 넣을 것"],["s7","경제활동기"],["s8","담보표"],["s9","준비 수준"]];
-function tocHtml(){
-  return '<div class="toc noprint">'+SECS.map(function(x,i){
-    return '<a href="#'+x[0]+'"><b>'+(i+1)+'</b>'+esc(x[1])+'</a>';
-  }).join('')+'</div>';
-}
+/* 장이 이어진다 — <b>어디에 무엇이 있는지</b> 먼저 보여 준다.
+   여기는 <b>장의 짧은 이름표</b>만 든다. 「어떤 장이 실제로 섰는가」는
+   이 표가 아니라 <b>화면</b>이 안다(deckList) — 자료가 없어 안 그려진 장이
+   있기 때문이다. 표로 세면 빈 장이 목차에 남는다.                       */
+var SECS=[["sHd","표지"],["s1","한눈에"],["s0","왜 나에게 맞는가"],["s2","보험료 변화"],["s3","한 줄 요약"],
+          ["s4","병이 오면"],["s5","내 몸 어디에"],["s6","더 넣을 것"],["s7","경제활동기"],["s8","담보표"],
+          ["s9","준비 수준"],["sEnd","마무리"]];
+function secName(id){var i;for(i=0;i<SECS.length;i++)if(SECS[i][0]===id)return SECS[i][1];return '';}
 
 /* ══ 고객이 보는 「왜 나에게 맞는가」 ═══════════════════════════════
    고객은 <b>남의 표준</b>을 보고 정하지 않는다. 「이게 <b>왜 나한테</b>
@@ -3374,17 +3419,24 @@ function showHtml(){
   for(k in C.b)nB++;
   var who=S.who.name?esc(S.who.name)+' 님':'고객';
   var today=(new Date()).toISOString().slice(0,10);
-  var h='<div class="noprint" style="max-width:980px;margin:0 auto 12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">'+
-    '<span style="font-size:12px;font-weight:800;color:var(--gy)">분석 모드</span>'+
+  var h='<div class="noprint showctl">'+
+    '<span class="cl">분석 모드</span>'+
     '<button class="mini'+(S.view==='full'?' on':'')+'" onclick="setView(\'full\')">🔍 전체 담보 비교</button>'+
     '<button class="mini'+(S.view==='senior'?' on':'')+'" onclick="setView(\'senior\')">👵 시니어 간소화</button>'+
-    '<span style="font-size:12px;color:var(--gy2)">'+(S.view==='senior'?'적힌 담보만 큰 글씨로 — 어르신·자녀 설명용':'표준 담보 전부 — 설계사·꼼꼼한 고객용')+'</span></div>';
-  h+='<div class="show'+(S.view==='senior'?' senior':'')+'"><div class="hd">'+
+    '<span class="ch">'+(S.view==='senior'?'적힌 담보만 큰 글씨로 — 어르신·자녀 설명용':'표준 담보 전부 — 설계사·꼼꼼한 고객용')+'</span></div>';
+  h+='<div class="noprint showctl">'+
+    '<span class="cl">보는 방식</span>'+
+    '<button class="mini'+(S.deck?'':' on')+'" onclick="setDeck(false)">📜 죽 이어서</button>'+
+    '<button class="mini'+(S.deck?' on':'')+'" onclick="setDeck(true)">🖥 한 장씩 넘기기</button>'+
+    (S.deck?'<button class="mini go" onclick="deckShow(true)">🔳 발표 시작 — 화면 가득</button>':'')+
+    '<span class="ch">'+(S.deck?'← → 또는 화면을 쓸어서 넘깁니다 · 위 목차를 눌러 바로 갑니다 — 인쇄하면 전부 나옵니다':'전체를 죽 내려 보기 — 설계사가 혼자 훑을 때')+'</span></div>';
+  h+='<div class="show'+(S.view==='senior'?' senior':'')+'"><section id="sHd" class="hd">'+
     '<div class="ey">APEX YUN PRO · COVERAGE BEFORE &amp; AFTER</div>'+
     '<h1>'+who+' — 보장 전 · 후</h1>'+
     '<p>'+today+' · 담보 <b>'+nB+'개</b>를 하나씩 견주었습니다'+
-    (S.who.age?(' · '+esc(S.who.age)+'세'):'')+(S.who.sex?(' '+esc(S.who.sex)):'')+'</p></div>';
-  h+=tocHtml();
+    (S.who.age?(' · '+esc(S.who.age)+'세'):'')+(S.who.sex?(' '+esc(S.who.sex)):'')+'</p></section>';
+  /* 목차는 <b>다 그린 뒤</b> 채운다 — 실제로 선 장만 세기 위해서다(deckPaint) */
+  h+='<div class="toc noprint" id="baToc"></div>';
   h+='<section id="s1"><h3>한눈에</h3><div class="big2">'+
     '<div class="c"><span>월 보험료 · 지금</span><b>'+fee(C.premB)+'</b></div><div class="ar">→</div>'+
     '<div class="c"><span>조정 후</span><b class="'+(d>0?'up':(d<0?'dn':''))+'">'+fee(C.premA)+'</b></div>'+
@@ -3404,19 +3456,159 @@ function showHtml(){
   /* 치료 여정은 시뮬레이션이 이미 하는 일이다 — 같은 것을 두 번 두지 않는다 */
   var noScen=EVENTS.filter(function(e){return num(S.scen[e.k].cost)===null;}).map(function(e){return e.t;});
   var nMan=0;for(k in S.man.b)nMan++;for(k in S.man.a)nMan++;
-  h+='<div class="foot">'+
+  h+='<section id="sEnd" class="foot">'+
     '담보 목록·표준금액·괄호 % 는 <b>사장님 기준표</b>를 따랐습니다. 괄호 % 는 그 사건에서 <b>이 담보가 열릴 확률</b>입니다.<br>'+
     '기준 치료비 출처 — '+(S.src?esc(S.src):'<b>적혀 있지 않습니다. 공식 치료비가 아닙니다.</b>')+'<br>'+
     (noScen.length?('<b>'+esc(noScen.join(' · '))+'</b> 은 기준 치료비가 없어 <b>계산하지 않았습니다.</b> 빈칸을 0 으로 만들지 않았습니다.<br>'):'')+
     (nMan?('금액 <b>'+nMan+'칸</b>은 설계사가 <b>직접 정한 값</b>입니다.<br>'):'')+
     '실손·통원처럼 <b>쓴 만큼</b> 나오는 담보는 미리 얼마라고 말할 수 없어 <b>금액 합계에 넣지 않았습니다.</b> 표에는 그대로 있습니다.<br>'+
     '치료 과정은 <b>일반적 경과 예시</b>이며 실제 지급은 개인 상태·약관·보험사 심사에 따라 달라집니다.<br>'+
-    '이 자료는 <b>보험 가입 권유를 위한 참고자료</b>이며 계약의 내용은 약관을 따릅니다.</div>';
-  h+='<div class="noprint" style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap">'+
+    '이 자료는 <b>보험 가입 권유를 위한 참고자료</b>이며 계약의 내용은 약관을 따릅니다.</section>';
+  /* 설계사 단추는 <b>장 밖</b>에 둔다 — 장 안에 두면 표지 밑에 붙어 고객이 먼저 본다 */
+  h+='</div><div class="noprint showctl" style="margin-top:16px">'+
     '<button class="btn n" onclick="go(\'edit\')">← 만들기로 돌아가기</button>'+
     '<button class="btn" onclick="window.print()">🖨 인쇄 · PDF 로 저장</button></div>';
-  return h+'</div>';
+  /* 넘기는 띠도 <b>다 그린 뒤</b> 채운다 — 몇 장인지 화면을 세어야 알기 때문이다 */
+  return h+'<div class="deckbar noprint" id="deckBar"></div>';
 }
+/* ══ 한 장씩 넘겨 보기 — 고객 앞에서 ═══════════════════════════════
+   고객 앞에서 스크롤을 내리면 <b>고객 눈이 아래 문단으로 먼저 달아난다.</b>
+   지금 말하는 자리를 놓치고, 아직 설명 안 한 숫자를 먼저 본다. 그래서
+   한 장씩 넘기는 판을 따로 둔다. 설계사가 혼자 훑을 때는 죽 이어서.
+
+   ■ 장 목록은 <b>화면에 실제로 선 것</b>에서 센다. 미리 적어 둔 표로 세면,
+     자료가 없어 안 그려진 장(왜 나에게 맞는가·보험료 변화는 빈 글을
+     돌려준다)까지 세어 <b>빈 장</b>이 생기고 「7 / 12」 가 거짓말이 된다.
+   ■ 지금 몇 번째인가는 <b>id 하나로</b> 든다. 번호로 들고 있으면 장 하나가
+     빠질 때 엉뚱한 장이 열린다.
+   ■ <b>인쇄하면 전부 나온다.</b> 접힌 것을 뺀 것처럼 보이게 두지 않는다
+     — 아래 printAllOn 과 같은 이유다. @media print 에서 되살린다.
+   ■ 손은 <b>한 번만</b> 단다. 그릴 때마다 달면 겹겹이 쌓여 한 번 눌러도
+     여러 장이 넘어간다.                                                */
+function deckList(){
+  var box=document.querySelector('#app .show'),out=[],i,ns;
+  if(!box)return out;
+  ns=box.children;
+  for(i=0;i<ns.length;i++)if(ns[i].tagName==='SECTION')out.push(ns[i]);
+  return out;
+}
+function deckAt(L){
+  var i;for(i=0;i<L.length;i++)if(L[i].id===S.slide)return i;
+  return -1;
+}
+function deckPaint(){
+  var box=document.querySelector('#app .show');
+  if(!box)return;
+  var L=deckList(),cur=deckAt(L),i,on=!!S.deck,toc,bar;
+  /* 보던 장이 사라졌으면 첫 장으로 — 빈 화면을 세우지 않는다 */
+  if(cur<0){cur=0;S.slide=L.length?L[0].id:'';save();}
+  if(on)box.classList.add('deck');else box.classList.remove('deck');
+  for(i=0;i<L.length;i++){
+    if(on&&i===cur)L[i].classList.add('cur');else L[i].classList.remove('cur');
+  }
+  toc=document.getElementById('baToc');
+  if(toc)toc.innerHTML=L.map(function(el,i){
+    return '<a href="#'+el.id+'"'+(on&&i===cur?' class="on"':'')+' onclick="return deckJump('+i+')">'+
+      '<b>'+(i+1)+'</b>'+esc(secName(el.id)||('제 '+(i+1)+' 장'))+'</a>';
+  }).join('');
+  bar=document.getElementById('deckBar');
+  /* 띠에는 <b>어디쯤인지</b>만 둔다. 「몇 번째 장으로」 는 위 목차가 이미
+     하는 일이라, 여기에 또 두면 같은 것이 두 곳이 된다 (5번). */
+  if(bar)bar.innerHTML=(!on||!L.length)?'':(
+    '<button class="dnav" onclick="deckMove(-1)"'+(cur<=0?' disabled':'')+' aria-label="앞 장">◀</button>'+
+    '<div class="dbar"><i style="width:'+Math.round((cur+1)/L.length*100)+'%"></i></div>'+
+    '<span class="dt">'+esc(secName(L[cur].id))+'</span>'+
+    '<span class="dn"><b>'+(cur+1)+'</b> / '+L.length+'</span>'+
+    '<button class="dnav" onclick="deckMove(1)"'+(cur>=L.length-1?' disabled':'')+' aria-label="다음 장">▶</button>'+
+    (DECK_SHOW?'<button class="dnav x" onclick="deckShow(false)" aria-label="발표 끝내기">✕</button>':''));
+}
+function deckJump(i){
+  var L=deckList();
+  if(!L[i])return true;
+  S.slide=L[i].id;save();
+  /* 죽 이어서 볼 때는 <b>그 자리로 내려간다</b> — 앵커를 그대로 살린다 */
+  if(!S.deck)return true;
+  deckPaint();
+  try{window.scrollTo(0,0);}catch(e){}
+  return false;
+}
+function deckMove(d){
+  var L=deckList(),cur=deckAt(L);
+  if(cur<0)cur=0;
+  /* 처음·끝의 마개는 <b>deckJump 한 곳</b>이 든다 — 없는 장이면 안 움직인다.
+     여기서 또 자르면 마개가 두 곳이 되고, 한쪽만 고치는 날이 온다 (5번). */
+  deckJump(cur+d);
+}
+function setDeck(on){
+  S.deck=!!on;save();render();
+  /* 한 장씩 → 죽 이어서 로 바꾸면 <b>보던 장</b> 자리에서 이어 준다 */
+  if(!S.deck&&S.slide){
+    try{var el=document.getElementById(S.slide);if(el)el.scrollIntoView();}catch(e){}
+  }else{try{window.scrollTo(0,0);}catch(e){}}
+}
+/* ── 발표 — 설계사 도구를 치우고 화면을 자료로 채운다 ────────────────
+   고객 앞에 「만들기 / 예시 채우기 / 전부 지우기」 가 떠 있으면 그건
+   <b>작업 화면</b>이지 자료가 아니다. 전체화면은 <b>되면 좋은 것</b>일 뿐
+   — 워크스페이스 안(iframe)에서는 막힐 수 있어, 막혀도 도구는 치운다.
+   그래서 <b>브라우저에 묻지 않고</b> 우리가 아는 값으로 든다.        */
+var DECK_SHOW=false;
+function deckShow(on){
+  DECK_SHOW=!!on;
+  if(DECK_SHOW)document.body.classList.add('presenting');
+  else document.body.classList.remove('presenting');
+  try{
+    var el=document.documentElement;
+    if(DECK_SHOW){if(el.requestFullscreen)el.requestFullscreen();else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();}
+    else if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen();
+  }catch(e){}
+  deckPaint();
+  try{window.scrollTo(0,0);}catch(e){}
+}
+/* 브라우저 쪽에서 빠져나갔을 때(Esc·F11)도 도구를 되돌려 놓는다 */
+document.addEventListener('fullscreenchange',function(){
+  if(!document.fullscreenElement&&DECK_SHOW)deckShow(false);
+});
+/* 넘기는 손 — 리스너는 한 번만 단다 */
+document.addEventListener('keydown',function(e){
+  if(S.mode!=='show'||!S.deck)return;
+  var t=e.target||{},tag=(''+(t.tagName||'')).toUpperCase();
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||t.isContentEditable)return;
+  if(e.altKey||e.ctrlKey||e.metaKey)return;
+  var k=e.key,L;
+  if(k==='ArrowRight'||k==='PageDown'||k===' '||k==='Spacebar'){deckMove(1);e.preventDefault();}
+  else if(k==='ArrowLeft'||k==='PageUp'){deckMove(-1);e.preventDefault();}
+  else if(k==='Home'){deckJump(0);e.preventDefault();}
+  else if(k==='End'){L=deckList();deckJump(L.length-1);e.preventDefault();}
+  else if(k==='Escape'&&DECK_SHOW){deckShow(false);e.preventDefault();}
+});
+/* 폰·태블릿에서 쓸어 넘기기. <b>가로로 스크롤되는 상자</b>(담보표·치료
+   여정) 안에서 시작한 것은 장을 넘기지 않는다 — 표를 옆으로 미는 손이다. */
+var _swX=null,_swY=null;
+function deckNoSwipe(el){
+  while(el&&el.nodeType===1){
+    if(el.className&&(''+el.className).split(/\s+/).indexOf('dl')>=0)return true;
+    if(el.className&&(''+el.className).split(/\s+/).indexOf('tj')>=0)return true;
+    el=el.parentNode;
+  }
+  return false;
+}
+document.addEventListener('touchstart',function(e){
+  _swX=null;
+  if(S.mode!=='show'||!S.deck)return;
+  if(!e.touches||e.touches.length!==1)return;
+  if(deckNoSwipe(e.target))return;
+  _swX=e.touches[0].clientX;_swY=e.touches[0].clientY;
+},true);
+document.addEventListener('touchend',function(e){
+  if(_swX===null)return;
+  var t=(e.changedTouches||[])[0],dx,dy;
+  if(!t){_swX=null;return;}
+  dx=t.clientX-_swX;dy=t.clientY-_swY;_swX=null;
+  /* 세로로 더 움직였으면 <b>스크롤</b>이다 */
+  if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.4)return;
+  deckMove(dx<0?1:-1);
+},true);
+
 /* ── 인쇄하면 <b>접힌 것도 전부</b> 나온다 ──────────────────────
    화면에서 접은 것은 <b>자리를 아끼려고</b> 접은 것이지 뺀 것이 아니다.
    접힌 채로 인쇄되면 「없는 것」처럼 보여 그게 거짓말이 된다.       */
