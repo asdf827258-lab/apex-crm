@@ -281,7 +281,86 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   is(need.got === need.want && need.want > 0,
      '「더 넣을 것」이 ' + need.want + '개 <전부> 서 있다 (지금 ' + need.got + '개) — 잘라 놓으면 나머지는 없는 것이 된다');
 
-  head('[11] 조용한가');
+  /* ── [11] 테마 「플러스 블루」 ──────────────────────────────────────
+     사장님이 주신 발표 자료의 결로 세운다. 여기서 재는 것은 <b>화면에
+     실제로 선 모양</b>이지, CSS 에 그렇게 적혀 있는지가 아니다.
+
+     글씨체만은 <b>선언</b>을 본다 — 파일은 CDN 에서 받아 오므로, 못 받은
+     자리에서 알람이 울리면 그건 <b>헛것을 잡는 점검</b>이 된다 (8번).
+     못 받으면 조용히 Pretendard 로 서는 것이 <b>맞는 동작</b>이다.     */
+  head('[11] 테마 — 파랑 머리띠 · 장 번호 · 오른쪽 알약, 그리고 종이에서는 걷힌다');
+  await pg.evaluate(() => { doSample(); S.view = 'full'; S.deck = true; S.slide = 'sHd'; go('show'); });
+  await pg.waitForTimeout(400);
+  const th = await pg.evaluate(() => {
+    var box = document.querySelector('#app .show');
+    var L = [].slice.call(document.querySelectorAll('#app .show > section'));
+    /* 내용 장 하나를 실제로 세워 잰다 — 안 보이는 장은 크기가 0 이다 */
+    /* 파랑 전면은 <b>지금 보이는 장</b>에만 입는다 — 재려면 잠깐 세워야 한다 */
+    function cur(el, k) { var w = el.className; el.classList.add('cur');
+      var v = getComputedStyle(el)[k]; el.className = w; return v; }
+    var body = L.filter(function (s) { return s.querySelector(':scope > h3'); })[0];
+    var was = body.className; body.classList.add('cur');
+    var h3 = body.querySelector(':scope > h3');
+    var st = document.querySelector('#app .show > section.cur .st') ||
+             (function () { var t = L.filter(function (s) { return s.querySelector('.st'); })[0]; return t ? t.querySelector('.st') : null; })();
+    var stIn = null;
+    if (st) { var sec = st.closest('section'), w2 = sec.className; sec.classList.add('cur'); stIn = st.offsetLeft; sec.className = w2; }
+    var r = {
+      fam: getComputedStyle(box).fontFamily,
+      badge: box.getAttribute('data-badge') || '',
+      badgeShown: getComputedStyle(box, '::after').content,
+      bandBg: getComputedStyle(h3).backgroundColor,
+      bandFg: getComputedStyle(h3).color,
+      bandPic: getComputedStyle(h3).backgroundImage,
+      no: L.map(function (s) { return (s.style.getPropertyValue('--no') || '').trim(); }),
+      hdBg: cur(document.getElementById('sHd'), 'backgroundColor'),
+      endBg: cur(document.getElementById('sEnd'), 'backgroundColor'),
+      stIn: stIn, name: (S.who.name || '')
+    };
+    body.className = was;
+    return r;
+  });
+  is(/^['"]?GmarketSans/.test(th.fam),
+     '무대 글씨체가 <G마켓 산스>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
+  is(th.bandBg === 'rgb(11, 123, 255)' && th.bandFg === 'rgb(255, 255, 255)',
+     '제목이 <파랑 머리띠> 위에 흰 글씨로 선다 — ' + th.bandBg + ' / ' + th.bandFg);
+  is(th.bandPic.indexOf('svg') > 0, '머리띠 왼쪽 위에 <직접 그린 「+」> 가 있다 (남의 그림을 안 쓴다)');
+  is(th.no[0] === '""' && th.no[1] === '"01."' &&
+     th.no[th.no.length - 1] === '"' + String(th.no.length - 1).padStart(2, '0') + '."',
+     '제목 앞 번호가 <표지는 없이 01. 부터> 붙는다 — 지금 ' + th.no.slice(0, 3).join(' ') + ' … ' + th.no[th.no.length - 1]);
+  is(th.badge.indexOf(th.name) >= 0 && th.badge.indexOf('+') === 0 && th.badgeShown.indexOf(th.name) >= 0,
+     '오른쪽 위 알약이 <이 고객의 자료>라고 말한다 — 「' + th.badge + '」');
+  is(th.hdBg === 'rgb(11, 123, 255)' && th.endBg === 'rgb(11, 123, 255)',
+     '표지와 마무리는 <파랑 전면>이다');
+  is(th.stIn !== null && th.stIn >= 30,
+     '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
+  /* 종이에서는 <b>테마를 걷는다</b> — 파랑을 그대로 뽑으면 잉크만 먹고
+     글씨는 더 안 읽힌다. 사장님이 뽑아 고객에게 드리는 것은 <b>문서</b>다. */
+  /* 재는 것은 <b>지금 보이는 장</b>의 머리띠다. 표지에는 제목이 없어,
+     제목이 있는 장으로 옮겨 놓고 종이 모드로 바꾼다. */
+  await pg.evaluate(() => {
+    var L = deckList(), i;
+    for (i = 0; i < L.length; i++) if (L[i].querySelector(':scope > h3')) { deckJump(i); return; }
+  });
+  await pg.waitForTimeout(250);
+  await pg.emulateMedia({ media: 'print' });
+  await pg.waitForTimeout(250);
+  const thP = await pg.evaluate(() => {
+    var box = document.querySelector('#app .show');
+    var h3 = document.querySelector('#app .show > section.cur > h3');
+    return { bandBg: getComputedStyle(h3).backgroundColor, bandFg: getComputedStyle(h3).color,
+             badge: getComputedStyle(box, '::after').display,
+             endBg: (function(){ var e=document.getElementById('sEnd'),w=e.className;
+               e.classList.add('cur'); var v=getComputedStyle(e).backgroundColor; e.className=w; return v; })() };
+  });
+  await pg.emulateMedia({ media: 'screen' });
+  await pg.waitForTimeout(200);
+  is(thP.bandBg === 'rgba(0, 0, 0, 0)' && thP.bandFg === 'rgb(25, 31, 40)',
+     '인쇄하면 머리띠를 걷고 <검은 글씨>로 돌아온다 — ' + thP.bandBg + ' / ' + thP.bandFg);
+  is(thP.badge === 'none' && thP.endBg === 'rgba(0, 0, 0, 0)',
+     '인쇄에는 알약도, 파랑 전면도 안 나온다');
+
+  head('[12] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 
   console.log('\n──────────────────────────────');
