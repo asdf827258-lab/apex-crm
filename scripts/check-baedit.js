@@ -206,7 +206,90 @@ const head = (t) => console.log('\n' + t);
   is(F.h < 8000, '계약 6건 · 화면 높이 ' + F.h + 'px (' + (F.h / 900).toFixed(1) + '화면) — 예전 8,462px(9.4화면)보다 짧다');
   is(F.side === 'sticky', '옆 요약 칸은 <붙박이>라 내려도 따라온다');
 
-  head('[11] 조용한가');
+  head('[11] 자동 보장분석이 다섯 칸으로 나뉜다 — 인쇄하면 전부 나온다');
+  await pg.evaluate(() => { localStorage.clear(); doSample(); showPanel('fit'); go('edit'); });
+  await pg.waitForTimeout(500);
+  const fit = await pg.evaluate(() => ({
+    tabs: [].slice.call(document.querySelectorAll('.ftb')).map(b => (b.textContent || '').replace(/\s+/g, ' ').trim()),
+    secs: document.querySelectorAll('.fitsec').length,
+    open: [].slice.call(document.querySelectorAll('.fitsec')).filter(x => x.offsetParent !== null).length,
+    keys: [].slice.call(document.querySelectorAll('.fitsec')).map(x => x.getAttribute('data-k'))
+  }));
+  is(fit.tabs.length >= 5, '칸이 ' + fit.tabs.length + '개 서 있다 — ' + fit.tabs.map(t => t.slice(0, 8)).join(' / '));
+  is(fit.secs === fit.tabs.length, '칸 수와 구역 수가 같다 (' + fit.tabs.length + ' / ' + fit.secs + ') — 단추만 있고 내용이 없는 칸이 없다');
+  is(fit.open === 1, '한 번에 <한 칸>만 보인다 (지금 ' + fit.open + '칸)');
+  const jump = await pg.evaluate(() => {
+    fitTab('cap');
+    return [].slice.call(document.querySelectorAll('.fitsec')).filter(x => x.offsetParent !== null)
+      .map(x => x.getAttribute('data-k'));
+  });
+  await pg.waitForTimeout(300);
+  is(jump.length === 1 && jump[0] === 'cap', '4번을 누르니 그 칸만 열린다 — ' + jump.join(','));
+  await pg.emulateMedia({ media: 'print' });
+  await pg.waitForTimeout(250);
+  const fp = await pg.evaluate(() => [].slice.call(document.querySelectorAll('.fitsec'))
+    .filter(x => getComputedStyle(x).display !== 'none').length);
+  is(fp === fit.secs, '인쇄하면 다섯 칸이 <전부> 나온다 (' + fp + '/' + fit.secs + ') — 진단서는 통째로 드리는 종이다');
+  await pg.emulateMedia({ media: 'screen' });
+  await pg.waitForTimeout(200);
+
+  head('[12] 윤시현의 두뇌 — 되받아침까지 주고받는 대본이 있다 · 겁주지 않는다');
+  await pg.evaluate(() => { showPanel('brain'); });
+  await pg.waitForTimeout(500);
+  const rp = await pg.evaluate(() => {
+    var cards = document.querySelectorAll('.bn').length;
+    var deck = document.querySelectorAll('.brp').length;
+    var turns = document.querySelectorAll('.brp .brc').length;
+    /* 고객에게 그대로 하는 말에서 <b>겁주는 말투</b>가 빠졌는지 */
+    var you = [].slice.call(document.querySelectorAll('.byou')).map(function (x) { return x.textContent; }).join(' ');
+    var hard = (you.match(/한 푼도 안 나옵니다|그냥 사라집니다|아무도 안 냅니다|아예 없으십니다|정리 대상이 아닙니다/g) || []);
+    return { cards: cards, deck: deck, turns: turns, hard: hard, you: you.length };
+  });
+  is(rp.deck >= 5, '카드 ' + rp.cards + '개 가운데 ' + rp.deck + '개에 롤플레잉 대본이 붙어 있다');
+  is(rp.turns >= rp.deck * 2, '되받아침이 모두 ' + rp.turns + '번 — 한 방향 대본이 아니다');
+  is(rp.hard.length === 0, rp.hard.length ? ('아직 겁주는 말이 남아 있다 — ' + rp.hard.join(' / ')) :
+     '「이 고객에게」 에서 겁주는 말투가 빠졌다 (글자 ' + rp.you + '자)');
+  const soft = await pg.evaluate(() => {
+    var t = [].slice.call(document.querySelectorAll('.byou')).map(function (x) { return x.textContent; }).join(' ');
+    return { keep: /안 열리는|맡는 자리가 아닙니다|두시는 편이|들어오지 않습니다/.test(t) };
+  });
+  is(soft.keep, '같은 사실을 <부드러운 말>로 옮겨 두었다');
+
+  head('[13] 추가 보험은 부위별로만 — 기존 보험은 전부 보기가 그대로');
+  await pg.evaluate(() => {
+    closePanel();
+    S.polOpen = {}; S.after.forEach(function (p) { S.polOpen[p.id] = true; });
+    S.before.forEach(function (p) { S.polOpen[p.id] = true; });
+    S.padOpen['after0'] = true; S.padOpen['before0'] = true; save(); render();
+  });
+  await pg.waitForTimeout(500);
+  const part = await pg.evaluate(() => {
+    function selOf(pol) {
+      var g = pol.querySelector('.gsel');
+      if (!g) return null;
+      return {
+        all: [].slice.call(g.querySelectorAll('button')).filter(function (b) { return /전부 보기/.test(b.textContent); }).length,
+        parts: g.querySelectorAll('button').length,
+        pads: pol.querySelectorAll('.pad').length,
+        note: pol.querySelectorAll('.gnote').length
+      };
+    }
+    var pols = [].slice.call(document.querySelectorAll('.pol'));
+    var b = null, a = null;
+    pols.forEach(function (p) {
+      var s = selOf(p); if (!s) return;
+      if (p.classList.contains('new')) { if (!a) a = s; } else if (!b) b = s;
+    });
+    return { before: b, after: a, groups: STD.length };
+  });
+  is(part.after && part.after.all === 0, '추가 보험에는 「전부 보기」 단추가 없다');
+  is(part.after && part.after.parts === part.groups,
+     '부위 단추가 ' + (part.after ? part.after.parts : 0) + '개 — 묶음 ' + part.groups + '개 전부다. 고를 자리가 안 빠진다');
+  is(part.after && part.after.pads === 1, '한 번에 <부위 하나>만 펴진다 (지금 ' + (part.after ? part.after.pads : 0) + '개)');
+  is(part.after && part.after.note === 1, '안 보이는 담보가 <다른 부위 칸에 있다>고 적어 둔다 — 없어진 것이 아니다');
+  is(part.before && part.before.all === 1, '기존 보험에는 「전부 보기」가 그대로 있다 — 읽어 온 것을 훑는 자리다');
+
+  head('[14] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 
   console.log('\n──────────────────────────────');
