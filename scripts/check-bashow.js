@@ -260,33 +260,41 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   /* 「표가 몰렸나」 를 개수 문턱으로만 재면, 되돌린 판이 아예 안 그려졌을 때도
      통과한다. 그래서 <b>세어야 할 수</b>를 앱에서 직접 가져와 견준다. */
   const st = await pg.evaluate(() => {
-    var C = calc(), want = 0, rowsWant = 0;
+    var C = calc(), rowsWant = 0;
     STD.forEach(function (g) {
       var rows = g.rows.filter(function (r) {
         if (S.view !== 'senior' || S.printAll) return true;
         return C.b[r.k] !== undefined || C.a[r.k] !== undefined;
       });
-      if (rows.length) { want++; rowsWant += rows.length; }
+      rowsWant += rows.length;
     });
     var got = [].slice.call(document.querySelectorAll('#app .show > section'))
       .filter(function (s) { return /^s8_/.test(s.id); });
-    /* 줄이 많은 묶음은 여러 장으로 나뉜다 — 장 수가 아니라 <b>묶음</b>과
-       <b>담보 줄</b>을 센다. 나누는 것은 괜찮고, 빠지는 것은 안 된다. */
-    var grp = {}, rowsGot = 0;
+    /* 장 수가 아니라 <b>담보 줄</b>을 센다. 묶고 나누는 것은 괜찮고,
+       빠지는 것은 안 된다. 표가 두 칸이면 머리줄도 두 개다. */
+    var rowsGot = 0;
     got.forEach(function (s) {
-      grp[s.id.split('_')[1]] = 1;
-      rowsGot += Math.max(0, s.querySelectorAll('.st table tr').length - 1);
+      rowsGot += s.querySelectorAll('.st table tr').length - s.querySelectorAll('.st table').length;
     });
-    return { want: want, got: got.length, grp: Object.keys(grp).length,
-             rowsWant: rowsWant, rowsGot: rowsGot,
-             tbl: got.map(function (s) { return s.querySelectorAll('table').length; }) };
+    /* STD 의 묶음이 <b>STD_DECK 에 꼭 한 번씩</b> 들어 있는가 — 묶음을
+       하나 늘리고 여기 안 적으면 그 담보는 화면에서 <b>통째로</b> 사라진다. */
+    var seen = {}, dup = [], miss = [];
+    STD_DECK.forEach(function (g) { g.of.forEach(function (m) {
+      if (seen[m]) dup.push(m); seen[m] = 1; }); });
+    STD.forEach(function (g) { if (!seen[g.mid]) miss.push(g.mid); });
+    return { deck: STD_DECK.length, got: got.length,
+             rowsWant: rowsWant, rowsGot: rowsGot, dup: dup, miss: miss,
+             two: got.filter(function (s) { return s.querySelectorAll('.st table').length > 1; }).length,
+             tbl: got.map(function (s) { return s.querySelectorAll('.st table').length; }) };
   });
-  is(st.grp === st.want && st.want > 0,
-     '담보 묶음 ' + st.want + '개가 <하나도 안 빠지고> 섰다 (' + st.got + '장에 나눠서)');
+  is(st.miss.length === 0 && st.dup.length === 0,
+     (st.miss.length ? ('무대에 안 세운 담보 묶음 — ' + st.miss.join(' · ')) :
+      st.dup.length ? ('두 번 세운 묶음 — ' + st.dup.join(' · ')) :
+      'STD 의 담보 묶음이 <꼭 한 번씩> 무대에 선다 — ' + st.deck + '장으로 묶었다'));
   is(st.rowsGot === st.rowsWant && st.rowsWant > 0,
-     '담보 줄 ' + st.rowsWant + '개가 <한 줄도 안 빠지고> 섰다 (지금 ' + st.rowsGot + '줄) — 나누는 건 되고, 빠지는 건 안 된다');
-  is(st.tbl.length > 0 && st.tbl.every(n => n === 1),
-     '담보표 장마다 표가 <하나씩>이다 — 한 장에 몰지 않는다 (' + st.tbl.join(',') + ')');
+     '담보 줄 ' + st.rowsWant + '개가 <한 줄도 안 빠지고> 섰다 (지금 ' + st.rowsGot + '줄) — 묶는 건 되고, 빠지는 건 안 된다');
+  is(st.got === st.deck,
+     '한 장에 <한 묶음만> 선다 — ' + st.got + '장 (칸을 둘로 나눈 장 ' + st.two + '개)');
   const named = dense.filter(d => !d.nm).map(d => d.id);
   is(named.length === 0, named.length ? ('이름표(data-nm)가 없는 장 — ' + named.join(' ')) :
      '장마다 <스스로> 짧은 이름을 달고 있다 — 늘려도 목차에서 안 빠진다');
@@ -344,6 +352,45 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      글씨체만은 <b>선언</b>을 본다 — 파일은 CDN 에서 받아 오므로, 못 받은
      자리에서 알람이 울리면 그건 <b>헛것을 잡는 점검</b>이 된다 (8번).
      못 받으면 조용히 Pretendard 로 서는 것이 <b>맞는 동작</b>이다.     */
+  /* ── [10-1] 발표 중에 <b>사건을 바꿔도</b> 그 자리에 있는다 ──────────
+     장 이름이 s4_cancer_0 → s4_heart_0 으로 바뀌니, 그냥 다시 그리면
+     보던 장이 사라져 <b>표지로 튕긴다.</b> 고객 앞에서 탭을 눌렀더니
+     표지가 떴다. 화면 가득도 그대로 유지돼야 한다.                  */
+  head('[10-1] 화면 가득 발표 중에 사건 탭을 눌러도 <표지로 안 튕긴다>');
+  await pg.evaluate(() => { doSample(); S.view = 'full'; S.deck = true; go('show'); });
+  await pg.waitForTimeout(400);
+  await pg.evaluate(() => deckShow(true));
+  await pg.waitForTimeout(300);
+  const simBefore = await pg.evaluate(() => {
+    var L = deckList(), i;
+    for (i = 0; i < L.length; i++) if (L[i].id.indexOf('s4_') === 0) { deckJump(i); return L[i].id; }
+    return null;
+  });
+  await pg.waitForTimeout(250);
+  is(!!simBefore, '「이 병이 오면」 장으로 옮겨 놓았다 — ' + simBefore);
+  const tabN = await pg.evaluate(() =>
+    [].slice.call(document.querySelectorAll('.simtab button')).filter(b => b.offsetParent !== null).length);
+  is(tabN >= 2, '발표 중에도 사건 <탭이 보인다> (' + tabN + '개) — 안 보이면 바꿀 수가 없다');
+  await pg.evaluate(() => {
+    var b = [].slice.call(document.querySelectorAll('.simtab button')).filter(x => x.offsetParent !== null);
+    (b[b.length - 1] || b[0]).click();
+  });
+  await pg.waitForTimeout(450);
+  const simAfter = await pg.evaluate(() => ({
+    slide: S.slide, sim: S.sim,
+    shown: [].slice.call(document.querySelectorAll('#app .show > section'))
+      .filter(s => s.offsetParent !== null).map(s => s.id),
+    presenting: document.body.className.indexOf('presenting') >= 0,
+    x: !!document.querySelector('#deckBar .dnav.x')
+  }));
+  is(simAfter.slide.indexOf('s4_' + simAfter.sim) === 0,
+     '탭을 누르면 <그 사건의 장>이 열린다 — ' + simBefore + ' → ' + simAfter.slide);
+  is(simAfter.shown.length === 1 && simAfter.shown[0] === simAfter.slide,
+     '보이는 장도 그 장 하나다 — ' + simAfter.shown.join(' '));
+  is(simAfter.presenting && simAfter.x, '<화면 가득>이 그대로 유지된다 — 발표가 안 끊긴다');
+  await pg.keyboard.press('Escape');
+  await pg.waitForTimeout(300);
+
   head('[11] 테마 — 파랑 머리띠 · 장 번호 · 오른쪽 알약, 그리고 종이에서는 걷힌다');
   await pg.evaluate(() => { doSample(); S.view = 'full'; S.deck = true; S.slide = 'sHd'; go('show'); });
   await pg.waitForTimeout(400);
