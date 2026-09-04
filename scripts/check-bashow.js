@@ -269,6 +269,30 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   }));
   is(pics.st8 >= 1 && pics.cmpb >= 1, '담보표 장 ' + pics.st8 + '개에 <표준 대비 막대>가 서 있다');
   is(pics.pbars >= 1, '보험료 장에 <길이로 견주는 막대>가 있다');
+  /* 막대 옆 금액이 <b>카드 밖으로 밀려나면</b> 「30,731,600원」이
+     「30,731,6」 으로 잘려 보인다 — 고객에게는 그 값이 <b>없는 것</b>이 된다.
+     여섯 줄이 <b>같은 폭</b>의 막대 자리를 쓰는지도 같이 본다. 줄마다 다르면
+     길이를 서로 견줄 수 없어 막대가 <b>거짓말</b>을 한다. */
+  const pb = await pg.evaluate(() => {
+    var sec = document.getElementById('s2'); if (!sec) return null;
+    var w = sec.className; sec.classList.add('cur');
+    var card = sec.querySelector('.pbars'), R = card.getBoundingClientRect().right;
+    /* 글자가 <b>칸 밖으로 넘쳐도</b> 칸 자체는 안에 있을 수 있다. 칸이 아니라
+       <b>글자</b>를 잰다(Range) — 잘려 보이는 것은 글자이지 칸이 아니다. */
+    var out = [].slice.call(card.querySelectorAll(':scope > span')).map(function (s) {
+      var g = document.createRange(); g.selectNodeContents(s);
+      return { t: (s.textContent || '').trim(), over: Math.round(g.getBoundingClientRect().right - R) };
+    });
+    var tw = [].slice.call(card.querySelectorAll('.pbg')).map(function (g) { return Math.round(g.getBoundingClientRect().width); });
+    sec.className = w;
+    return { out: out, tw: tw };
+  });
+  const cut = pb ? pb.out.filter(x => x.over > -2) : [];
+  is(pb && cut.length === 0, !pb ? '보험료 장이 없다' : (cut.length ?
+     ('금액이 카드 밖으로 밀려났다 — ' + cut.map(x => x.t + '(' + x.over + 'px)').join(' / ')) :
+     '막대 옆 금액 ' + pb.out.length + '개가 <전부 카드 안에> 있다 — 잘려 보이면 없는 값이 된다'));
+  is(pb && pb.tw.length > 1 && pb.tw.every(w => w === pb.tw[0]),
+     pb ? ('막대 자리 ' + pb.tw.length + '줄이 <같은 폭>이다 (' + pb.tw[0] + 'px) — 달라지면 길이를 못 견준다') : '—');
   is(pics.nfill >= 3, '모자란 담보마다 <얼마나 찼는지> 막대가 있다 (' + pics.nfill + '개)');
   is(pics.svg >= 1, '직접 그린 그림(SVG)이 ' + pics.svg + '개 있다');
   /* 「더 넣을 것」은 <세어서> 본다 — 옛 문구를 찾으면 문구를 바꾸는 날 알람이 죽는다 */
@@ -334,6 +358,26 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      '표지와 마무리는 <파랑 전면>이다');
   is(th.stIn !== null && th.stIn >= 30,
      '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
+  /* 「오늘 순서」는 <b>화면에 선 장</b>에서 그린다. 손으로 적어 두면 장을
+     하나 늘리는 날 순서가 어긋나고, 고객은 <b>없는 장</b>을 기다린다.
+     그래서 <b>줄 수</b>와 <b>번호</b>를 장 자신과 맞대어 본다. */
+  const toc2 = await pg.evaluate(() => {
+    var L = [].slice.call(document.querySelectorAll('#app .show > section'));
+    var a = [].slice.call(document.querySelectorAll('#deckToc a'));
+    return {
+      n: a.length, want: L.length - 2,
+      /* 목차에 적힌 번호가 그 장이 제 이마에 달고 있는 번호와 같은가 */
+      same: a.every(function (x, k) {
+        var el = document.querySelector(x.getAttribute('href'));
+        return el && (el.style.getPropertyValue('--no') || '').trim() ===
+          '"' + x.querySelector('b').textContent + '."';
+      }),
+      first: a.length ? a[0].textContent : ''
+    };
+  });
+  is(toc2.n === toc2.want && toc2.n > 0,
+     '「오늘 순서」가 <선 장에서> 그려진다 — ' + toc2.n + '줄 (표지·목차 자신을 뺀 ' + toc2.want + '개)');
+  is(toc2.same, '목차의 번호가 <그 장이 달고 있는 번호>와 같다 — 첫 줄 「' + toc2.first + '」');
   /* 종이에서는 <b>테마를 걷는다</b> — 파랑을 그대로 뽑으면 잉크만 먹고
      글씨는 더 안 읽힌다. 사장님이 뽑아 고객에게 드리는 것은 <b>문서</b>다. */
   /* 재는 것은 <b>지금 보이는 장</b>의 머리띠다. 표지에는 제목이 없어,

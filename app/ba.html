@@ -781,7 +781,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 /* 표지 — 가운데에 크게 */
 .show.deck>#sHd.cur{justify-content:center;align-items:flex-start;border:0;
  padding:0 84px 92px;background:var(--dkb)}
-.show.deck>#sHd.cur>*,.show.deck>#sEnd.cur>*{margin-left:0;margin-right:0}
+.show.deck>#sHd.cur>*,.show.deck>#sEnd.cur>*,.show.deck>#sToc.cur>*{margin-left:0;margin-right:0}
 /* 「+」 격자 — 오른쪽 위. 직접 그린 SVG 다 (9번) */
 .show.deck>#sHd.cur::before{content:'';position:absolute;right:-30px;top:-18px;
  width:560px;height:470px;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg stroke='%23ffffff' stroke-opacity='.28' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/g%3E%3C/svg%3E");z-index:0}
@@ -801,11 +801,28 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>#sEnd.cur{justify-content:flex-end;font-size:13.5px;line-height:1.8;border:0;
  padding:56px 72px 44px;background:var(--dkb);color:rgba(255,255,255,.84);border-top:0}
 .show.deck>#sEnd.cur b{color:#fff;font-weight:700}
-/* 마무리 장의 제목 — 무대에서는 크게 희게, 종이·죽 이어서는 <b>작은 회색</b>.
-   안 보이게 숨기지는 않는다. 숨기면 종이에서 이 장이 <b>제목 없는 잔글</b>이 된다. */
+/* 파랑 전면 장(오늘 순서 · 마무리)의 제목 — 무대에서는 크게 희게,
+   종이·죽 이어서는 <b>작은 회색</b>. 안 보이게 숨기지는 않는다.
+   숨기면 종이에서 그 장이 <b>제목 없는 잔글</b>이 된다. */
 .fh{font-size:13px;font-weight:800;color:var(--gy);margin-bottom:6px}
-.show.deck>#sEnd.cur .fh{font-size:46px;font-weight:700;color:#fff;letter-spacing:-.04em;
+.show.deck>section.cur .fh{font-size:46px;font-weight:700;color:#fff;letter-spacing:-.04em;
  line-height:1.2;margin-bottom:18px}
+/* ── 오늘 순서 — 주신 자료의 목차 장 자리 ─────────────────────── */
+.tocs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px 24px;align-content:start}
+.tocs a{display:flex;gap:8px;align-items:baseline;text-decoration:none;color:var(--nv);
+ font-size:12.5px;font-weight:700;min-width:0}
+.tocs a b{color:var(--gy2);flex:none}
+.tocs a>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.show.deck>#sToc.cur{background:var(--dkb);padding:54px 72px 38px;justify-content:flex-start}
+/* 「+」 격자는 <b>목록 아래</b>로 — 위에 두면 글자 뒤에 깔려 읽기가 흐려진다 */
+.show.deck>#sToc.cur::before{content:'';position:absolute;right:-24px;top:330px;
+ width:340px;height:260px;background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cg stroke='%23ffffff' stroke-opacity='.28' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M12 3v18M3 12h18'/%3E%3C/g%3E%3C/svg%3E");z-index:0}
+.show.deck>#sToc.cur>*{position:relative;z-index:1}
+.show.deck>#sToc.cur .fh{font-size:52px}
+.show.deck>#sToc.cur .tocs{gap:10px 30px;max-width:1010px}
+.show.deck>#sToc.cur .tocs a{font-size:17.5px;font-weight:400;color:rgba(255,255,255,.95);
+ letter-spacing:-.02em}
+.show.deck>#sToc.cur .tocs a b{color:rgba(255,255,255,.58);font-weight:700}
 .show.deck>#sEnd.cur .fx{max-width:1040px}
 .show.deck>#sEnd.cur::before{content:'';position:absolute;left:56px;top:26px;width:386px;height:22px;
  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='386' height='22'%3E%3Cg stroke='%23ffffff' stroke-opacity='.4' stroke-width='3' stroke-linecap='round' fill='none'%3E%3Cpath d='M11 3v16M3 11h16M77 3v16M69 11h16M143 3v16M135 11h16M209 3v16M201 11h16M275 3v16M267 11h16M341 3v16M333 11h16'/%3E%3C/g%3E%3C/svg%3E");z-index:0}
@@ -825,14 +842,16 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
  border-left:7px solid var(--dkb);padding:18px 24px 18px 24px;margin-bottom:0;
  box-shadow:0 5px 18px rgba(10,45,95,.07);font-size:23.5px;line-height:1.5}
 .show.deck>section.cur>.say::before,.show.deck>section.cur>.say::after{color:#BBD5F5}
-#sHd .say,#sEnd .say{display:none}
-.show.deck>#sHd.cur .say,.show.deck>#sEnd.cur .say{display:block;border-top:0;
+#sHd .say,#sEnd .say,#sToc .say{display:none}
+.show.deck>#sHd.cur .say,.show.deck>#sEnd.cur .say,.show.deck>#sToc.cur .say{display:block;border-top:0;
  background:#fff;color:var(--nv);border-radius:16px;border-left:7px solid var(--dkm);
  padding:18px 24px;margin-top:26px;font-size:22px;line-height:1.5;
  box-shadow:0 6px 22px rgba(5,30,70,.16)}
 .show.deck>#sEnd.cur .say{margin-top:20px;max-width:1000px}
+.show.deck>#sToc.cur .say{margin-top:auto;max-width:1000px}
 .show.deck>#sHd.cur .say{max-width:880px}
-.show.deck>#sHd.cur .say b,.show.deck>#sEnd.cur .say b{color:var(--dkb)}
+.show.deck>#sHd.cur .say b,.show.deck>#sEnd.cur .say b,
+.show.deck>#sToc.cur .say b{color:var(--dkb)}
 /* 목차 — 무대 밖 한 줄 */
 .show.deck+.x,.toc{max-width:1280px}
 .deck-on .toc{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
@@ -917,7 +936,7 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .cbg{height:22px}
 .show.deck>section.cur .pbn{font-size:15px}
 .show.deck>section.cur .pbg i{height:20px}
-.show.deck>section.cur .pbg span{font-size:16px}
+.show.deck>section.cur .pbars>span{font-size:16px}
 .show.deck>section.cur .st{max-height:none;margin:0}
 .show.deck>section.cur .dl{max-height:none}
 /* 첫 장의 큰 숫자 — 궁금한 것 하나만 크게 */
@@ -937,17 +956,19 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .hero .ha{font-size:34px}
 .show.deck>section.cur .hsub{font-size:19px;margin-bottom:0}
 /* 보험료 셋을 길이로 */
-.pbars{background:#F8FAFC;border-radius:14px;padding:15px 17px;margin-bottom:13px}
-.pbk{display:flex;gap:13px;margin-bottom:9px}
+/* 막대와 금액이 <b>한 격자</b>다 — 금액 칸(max-content)을 여섯 줄이
+   같이 쓰므로, 막대 길이를 서로 견줄 수 있고 금액이 안 잘린다. */
+.pbars{background:#F8FAFC;border-radius:14px;padding:15px 17px;margin-bottom:13px;
+ display:grid;grid-template-columns:minmax(0,1fr) max-content;gap:5px 10px;align-items:center}
+.pbk{grid-column:1/-1;display:flex;gap:13px;margin-bottom:2px}
 .pbk span{font-size:11.5px;font-weight:800;display:flex;align-items:center;gap:5px;color:var(--gy)}
 .pbk span::before{content:'';width:11px;height:11px;border-radius:3px;background:#94A3B8}
 .pbk span.a::before{background:var(--bl)}
-.pbr{margin-bottom:11px}.pbr:last-child{margin-bottom:0}
-.pbn{font-size:12.5px;font-weight:800;color:var(--gy);margin-bottom:5px}
-.pbg{display:flex;align-items:center;gap:8px;margin-bottom:4px}
-.pbg i{display:block;height:14px;border-radius:4px;background:#94A3B8;flex:none;min-width:2px}
+.pbn{grid-column:1/-1;font-size:12.5px;font-weight:800;color:var(--gy);margin-top:7px}
+.pbg{min-width:0}
+.pbg i{display:block;height:14px;border-radius:4px;background:#94A3B8;min-width:2px}
 .pbg i.a{background:var(--bl)}
-.pbg span{font-size:12.5px;font-weight:800;white-space:nowrap}
+.pbars>span{font-size:12.5px;font-weight:800;white-space:nowrap}
 /* 묶음이 표준 대비 얼마나 찼나 */
 .cmpb{background:#F8FAFC;border-radius:14px;padding:15px 17px;margin-bottom:13px}
 .cbl{font-size:12.5px;font-weight:800;color:var(--gy);margin-bottom:10px}
@@ -1007,9 +1028,13 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
     종이에서는 검은 글씨가 제일 잘 읽힌다. */
  .show.deck::after,.show.deck>#sHd.cur::before,.show.deck>#sHd.cur::after,
  .show.deck>#sEnd.cur::before{display:none!important}
+ .show.deck>#sToc.cur{background:none!important;padding:0!important}
+ .show.deck>#sToc.cur::before{display:none!important}
+ .show.deck>#sToc.cur .tocs a{color:#191F28!important;font-size:12px!important;font-weight:700!important}
+ .show.deck>#sToc.cur .tocs a b{color:#8B95A1!important}
+ .show.deck>section.cur .fh{font-size:13px!important;color:#6B7684!important;margin-bottom:6px!important}
  .show.deck>#sEnd.cur{background:none!important;color:#8B95A1!important}
  .show.deck>#sEnd.cur b{color:#6B7684!important}
- .show.deck>#sEnd.cur .fh{font-size:13px!important;color:#6B7684!important;margin-bottom:6px!important}
  .show.deck>section.cur>*{margin-left:0!important;margin-right:0!important}
  .show.deck>section.cur>h3{font-size:16px!important;background:none!important;
   color:#191F28!important;padding:0!important;margin:0 0 6px!important}
@@ -3871,11 +3896,11 @@ function premBars(P){
     var b=r[1],a=r[2];
     if(b===null||a===null||!isFinite(b)||!isFinite(a))return;
     var max=Math.max(b,a,1);
-    out+='<div class="pbr"><div class="pbn">'+esc(r[0])+'</div>'+
-      '<div class="pbg"><i class="b" style="width:'+Math.max(2,Math.round(b/max*100))+'%"></i>'+
-      '<span>'+fee(b)+'</span></div>'+
-      '<div class="pbg"><i class="a" style="width:'+Math.max(2,Math.round(a/max*100))+'%"></i>'+
-      '<span>'+fee(a)+'</span></div></div>';
+    out+='<div class="pbn">'+esc(r[0])+'</div>'+
+      '<div class="pbg"><i class="b" style="width:'+Math.max(2,Math.round(b/max*100))+'%"></i></div>'+
+      '<span>'+fee(b)+'</span>'+
+      '<div class="pbg"><i class="a" style="width:'+Math.max(2,Math.round(a/max*100))+'%"></i></div>'+
+      '<span>'+fee(a)+'</span>';
   });
   return out?('<div class="pbars"><div class="pbk"><span class="b">지금</span><span class="a">조정 후</span></div>'+out+'</div>'):'';
 }
@@ -4040,6 +4065,13 @@ function showHtml(){
     '<h1>'+who+' — 보장 전 · 후</h1>'+
     '<p>'+headInfo+'</p>'+
     sayLine('오늘은 '+who+'이 지금 들고 계신 보험을 <b>담보 하나하나</b>까지 같이 보고, 무엇이 비어 있는지만 짚어 드리겠습니다.')+
+    '</section>'+
+    /* 오늘 순서 — 속은 <b>비워 둔다.</b> 무엇이 서 있는지는 화면이 안다(deckPaint).
+       여기에 손으로 적으면 장을 하나 늘릴 때마다 어긋난다 (5번). */
+    '<section id="sToc" data-nm="오늘 순서">'+
+    '<div class="fh">오늘 순서</div>'+
+    '<div class="tocs" id="deckToc"></div>'+
+    sayLine('오늘은 이 순서로 보시겠습니다. <b>중간에 궁금한 것</b>이 생기면 그 자리에서 말씀해 주십시오.')+
     '</section>';
   /* ── 첫 장은 <b>한 가지만</b> ──────────────────────────────────────
      숫자를 넷 나란히 놓으면 고객은 어느 것을 볼지 몰라 <b>아무것도</b>
@@ -4161,6 +4193,14 @@ function deckPaint(){
   if(toc){toc.innerHTML=L.map(function(el,i){
     return '<a href="#'+el.id+'"'+(on&&i===cur?' class="on"':'')+' onclick="return deckJump('+i+')">'+
       '<b>'+(i+1)+'</b>'+esc(secName(el)||('제 '+(i+1)+' 장'))+'</a>';
+    }).join('');
+    /* 무대 안 「오늘 순서」도 <b>같은 목록</b>에서 그린다 — 두 곳에 두지 않는다.
+       자기 자신과 표지는 뺀다(제 이름을 제 목차에 적지 않는다). */
+    var tin=document.getElementById('deckToc');
+    if(tin)tin.innerHTML=L.map(function(el,i){
+      if(i===0||el.id==='sToc')return '';
+      return '<a href="#'+el.id+'" onclick="return deckJump('+i+')">'+
+        '<b>'+(i<10?'0':'')+i+'</b><span>'+esc(secName(el)||('제 '+i+' 장'))+'</span></a>';
     }).join('');
     /* 한 줄로 누웠으니 <b>지금 장</b>이 눈에 들어오게 밀어 준다 */
     if(on){var cc=toc.children[cur];
