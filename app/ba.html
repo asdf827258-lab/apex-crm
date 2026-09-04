@@ -43,11 +43,36 @@ button,input,select{font-family:inherit;font-size:inherit;color:inherit}button{c
 .f input:focus,.f select:focus{outline:2px solid #BFDBFE;border-color:var(--bl)}
 .f .u{position:relative}.f .u input{padding-right:36px;text-align:right}
 .f .u i{position:absolute;right:10px;bottom:10px;font-style:normal;font-size:12px;font-weight:700;color:var(--gy2);pointer-events:none}
-.pol{border:1px solid var(--ln);border-radius:13px;padding:13px 14px;margin-bottom:10px;background:#fff}
-.pol.new{border-color:#DDD6FE;background:#FDFCFF}
-.pol.off{background:#FAFBFC;opacity:.6}
-.pol.endo{border-color:#FDE68A;background:#FFFDF6}
-.pol .ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+/* ── 계약 한 줄 ── 왼쪽 색 띠로 유지·배서·해지를 <b>글자 없이</b> 센다 */
+.pol{border:1px solid var(--ln);border-left:4px solid var(--ln);border-radius:13px;
+ padding:11px 13px;margin-bottom:8px;background:#fff}
+.pol.keep{border-left-color:var(--gr)}
+.pol.new{border-color:#DDD6FE;border-left-color:var(--pu);background:#FDFCFF}
+.pol.off{background:#FAFBFC;opacity:.6;border-left-color:var(--rd)}
+.pol.endo{border-color:#FDE68A;border-left-color:var(--or);background:#FFFDF6}
+.pol.open{padding:13px 14px}
+.pol .ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pol.open .ph{margin-bottom:10px}
+.pcar{appearance:none;border:0;background:#F2F4F6;color:var(--gy);border-radius:7px;
+ width:24px;height:24px;font-size:11px;font-weight:800;flex:none;padding:0}
+.pcar:hover{background:var(--ln);color:var(--nv)}
+/* 접힌 줄에는 <b>돈 둘</b>만 — 다섯을 늘어놓으면 어느 것이 중요한지 안 보인다 */
+.paym{display:flex;gap:5px;flex-wrap:wrap}
+.paym span{font-size:12px;font-weight:700;color:var(--gy);background:#F8FAFC;
+ border:1px solid var(--ln);border-radius:7px;padding:3px 8px;white-space:nowrap}
+.paym span b{color:var(--nv);font-weight:800}
+.paym span.w{background:var(--or2);border-color:#FDE68A;color:var(--or)}.paym span.w b{color:#92400E}
+.paym span.g{background:var(--gr2);border-color:#A7F3D0;color:var(--gr)}.paym span.g b{color:#065F46}
+.paym span.q{color:var(--gy2)}.paym span.q b{color:var(--gy2)}
+/* 위 띠 — 자주 쓰는 것만 세우고 나머지는 <b>⋯ 더보기</b> 안에 */
+.moreWrap{position:relative}
+.moreBox{display:none;position:absolute;right:0;top:calc(100% + 6px);z-index:70;min-width:210px;
+ background:#fff;border:1px solid var(--ln);border-radius:12px;padding:6px;
+ box-shadow:0 12px 30px rgba(0,0,0,.13);flex-direction:column;gap:4px}
+.moreBox.on{display:flex}
+.moreBox button{width:100%;text-align:left}
+/* 옆 칸의 목록은 <b>자르지 않고</b> 이 안에서 굴린다 */
+.sum .lis{max-height:340px;overflow-y:auto;overscroll-behavior:contain}
 .pol .ph b{font-size:14px;font-weight:800}.pol .ph .sub{font-size:12px;color:var(--gy);font-weight:700}
 .pol .ph .rt{margin-left:auto;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .tg{display:flex;gap:4px}
@@ -695,18 +720,25 @@ body.presenting .show.deck{min-height:calc(100vh - 100px)}
     <div class="lg">보장 <em>전 · 후</em> 만들기</div>
     <button class="tab on" id="tabEdit" onclick="go('edit')">✍ 만들기</button>
     <button class="tab" id="tabShow" onclick="go('show')">👤 고객에게 보여주기</button>
+    <!-- 위 띠에 열한 개가 늘어서 있어 <b>어느 것이 오늘 쓰는 것인지</b>
+         안 보였다. 자주 쓰는 것만 세우고 나머지는 「⋯ 더보기」 안으로. -->
     <div class="sp">
       <button class="btn" onclick="showPanel('fit');go('edit')">📋 자동 보장분석</button>
       <button class="btn" onclick="showPanel('brain');go('edit')">🧠 윤시현의 두뇌</button>
-      <button class="btn g" onclick="showPanel('guide');go('edit')">📘 사용방법</button>
-      <button class="btn n" onclick="showPanel('study');go('edit')">🎓 보장분석 기준</button>
-      <button class="btn n" onclick="showPanel('age');go('edit')">👥 연령대별 기준</button>
-      <button class="btn n" onclick="doSample()">예시 채우기</button>
-      <button class="btn n" onclick="doReset()">전부 지우기</button>
-      <button class="btn n" onclick="document.getElementById('loadFile').click()">📂 불러오기</button>
       <button class="btn g" id="baSaveBtn" style="display:none" onclick="baSaveToClient()">💾 고객 365일에 저장</button>
       <button class="btn g" onclick="doSave()">💾 파일로 저장</button>
       <button class="btn" onclick="window.print()">🖨 인쇄 · PDF</button>
+      <div class="moreWrap">
+        <button class="btn n" id="barMoreBtn" onclick="barMore()" aria-expanded="false">⋯ 더보기</button>
+        <div class="moreBox" id="barMoreBox">
+          <button class="btn g" onclick="barMore(false);showPanel('guide');go('edit')">📘 사용방법</button>
+          <button class="btn n" onclick="barMore(false);showPanel('study');go('edit')">🎓 보장분석 기준</button>
+          <button class="btn n" onclick="barMore(false);showPanel('age');go('edit')">👥 연령대별 기준</button>
+          <button class="btn n" onclick="barMore(false);document.getElementById('loadFile').click()">📂 불러오기</button>
+          <button class="btn n" onclick="barMore(false);doSample()">예시 채우기</button>
+          <button class="btn n" onclick="barMore(false);doReset()">전부 지우기</button>
+        </div>
+      </div>
     </div>
   </div>
   <div id="app"></div>
@@ -943,7 +975,7 @@ function blank(){
     /* 적정 금액을 셈할 때 쓰는 <b>가정치</b> — 전부 고치실 수 있다 */
     assume:{deathPct:'70',depAge:'22',disabPct:'25',disabYears:'20',
             careMon:'150',careMonths:'24',premPct:'30'},
-    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},brainMore:false,mode:'edit',view:'full',
+    src:'APEX 기본 시나리오 (평균 예시)',pick:{},open:{},padOpen:{},polOpen:{},brainMore:false,mode:'edit',view:'full',
     /* 고객에게 보여주는 판은 <b>한 장씩</b>이 기본이다 — 스크롤을 내리면
        고객 눈이 아직 설명 안 한 숫자로 먼저 달아난다. 위 단추로 바꾸신다. */
     deck:true,slide:'sHd',
@@ -1301,8 +1333,12 @@ function beforeHtml(){
     '<p><b>유지</b>는 담보가 그대로 후에 남고, <b>배서</b>는 계약은 두고 <b>담보만</b> 바꾸며(후 칸이 열립니다), '+
     '<b>해지</b>는 후에서 통째로 빠집니다. 이 셋만 누르시면 <b>후는 저절로</b> 만들어집니다.</p>'+kbHtml();
   if(!S.before.length&&!S.after.length)
-    h+='<div class="note g" style="margin-bottom:11px">👋 <b>처음이시면</b> 위 띠의 <b>「📘 사용방법」</b> 을 먼저 보십시오 — <b>3분</b>이면 한 건이 끝납니다. '+
-      '지금 어떻게 도는지만 보시려면 <b>「예시 채우기」</b> 를 누르십시오.</div>';
+    /* 「위 띠의 📘 사용방법을 보십시오」 라고 적어 두면, 그 단추를 「⋯ 더보기」
+       안으로 옮기는 날 이 글이 <b>거짓말</b>이 된다. 여기에 단추를 놓는다. */
+    h+='<div class="note g" style="margin-bottom:11px">👋 <b>처음이시면</b> 먼저 보십시오 — <b>3분</b>이면 한 건이 끝납니다.'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
+      '<button class="btn g" onclick="showPanel(\'guide\')">📘 사용방법 보기</button>'+
+      '<button class="btn n" onclick="doSample()">예시 채워서 둘러보기</button></div></div>';
   if(!S.before.length)h+='<div class="note i">아직 기존 보험이 없습니다. 위에 <b>KB 보장분석 PDF</b> 를 올리시거나 <b>「+ 손으로 적기」</b> 를 누르세요.</div>';
   else h+=S.before.map(function(p,i){return polHtml(p,'before',i);}).join('');
   return h+'</div>';
@@ -1317,21 +1353,42 @@ function afterHtml(){
   else h+=S.after.map(function(p,i){return polHtml(p,'after',i);}).join('');
   return h+'</div>';
 }
+/* ── 계약은 <b>접혀 있는 것이 기본</b>이다 ─────────────────────────
+   계약 여섯 건이면 만들기 화면이 <b>아홉 화면</b>이 됐다. 그런데 사장님이
+   여기서 제일 많이 하는 일은 <b>유지·배서·해지를 누르는 것</b>이다. 그 셋을
+   누르려고 여섯 번을 내려야 했다.
+
+   그래서 접어 두고 <b>한 줄</b>에 세운다 — 상품명·회사·담보 수·<b>돈 둘</b>·
+   유지/배서/해지. 손볼 때만 편다. 접혀도 <b>아무것도 안 숨긴다</b> —
+   담보 수가 그대로 적히고, 펴면 전부 그대로 있다.
+
+   ■ 왼쪽 <b>색 띠</b>로 유지·배서·해지를 구분한다. 여섯 건을 훑을 때
+     글자를 읽지 않고 색으로 센다.
+   ■ 접힘·펼침은 <b>계약 id</b> 로 기억한다. 번호로 들면 하나를 지웠을 때
+     엉뚱한 계약이 펴진다.                                            */
+function polFold(id){S.polOpen[id]=!S.polOpen[id];save();render();}
 function polHtml(p,sd,i){
-  var isB=(sd==='before'),act=p.act||'keep',n=0,k;
+  var isB=(sd==='before'),act=p.act||'keep',n=0,k,key=p.id||(sd+i);
   for(k in p.cov)if(p.cov.hasOwnProperty(k)&&num(p.cov[k])!==null)n++;
-  var cls=isB?(act==='cancel'?' off':(act==='endo'?' endo':'')):' new';
-  var h='<div class="pol'+cls+'">'+
-    '<div class="ph"><b>'+esc(p.nm||(isB?'계약 '+(i+1):'새 제안 '+(i+1)))+'</b>'+
+  var cls=isB?(act==='cancel'?' off':(act==='endo'?' endo':' keep')):' new';
+  var open=!!S.polOpen[key];
+  var h='<div class="pol'+cls+(open?' open':'')+'">'+
+    '<div class="ph">'+
+      '<button class="pcar" onclick="polFold(\''+key+'\')" aria-expanded="'+(open?'true':'false')+'" '+
+        'title="'+(open?'접기':'펼쳐서 고치기')+'">'+(open?'▾':'▸')+'</button>'+
+      '<b onclick="polFold(\''+key+'\')" style="cursor:pointer">'+esc(p.nm||(isB?'계약 '+(i+1):'새 제안 '+(i+1)))+'</b>'+
       (p.co?('<span class="sub">'+esc(p.co)+'</span>'):'')+'<span class="sub">담보 '+n+'개</span>'+
       (p.kb?'<span class="tag kb">KB에서 읽음</span>':'<span class="tag hand">손으로 적음</span>')+
+      payLine(p,sd,i,true)+
       '<span class="rt">'+
         (isB?('<span class="tg">'+
           '<button class="k'+(act==='keep'?' on':'')+'" onclick="setAct('+i+',\'keep\')">유지</button>'+
           '<button class="e'+(act==='endo'?' on':'')+'" onclick="setAct('+i+',\'endo\')">배서</button>'+
           '<button class="c'+(act==='cancel'?' on':'')+'" onclick="setAct('+i+',\'cancel\')">해지</button></span>'):'')+
-        '<button class="mini d" onclick="delPol(\''+sd+'\','+i+')">삭제</button></span></div>'+
-    '<div class="f c6">'+
+        '<button class="mini d" onclick="delPol(\''+sd+'\','+i+')">삭제</button></span></div>';
+  /* 접혀 있으면 여기서 끝 — 펴면 아래가 <b>그대로</b> 나온다 */
+  if(!open)return h+'</div>';
+  h+='<div class="f c6">'+
       '<div><label>보험사</label><input value="'+esc(p.co)+'" placeholder="예) KB손해보험" oninput="setPol(\''+sd+'\','+i+',\'co\',this.value)"></div>'+
       '<div><label>상품명</label><input value="'+esc(p.nm)+'" placeholder="예) 무배당 건강보험" oninput="setPol(\''+sd+'\','+i+',\'nm\',this.value)"></div>'+
       '<div><label>가입 시기</label><input value="'+esc(p.start||'')+'" placeholder="예) 2019-04" oninput="setPol(\''+sd+'\','+i+',\'start\',this.value)"></div>'+
@@ -1349,9 +1406,19 @@ function polHtml(p,sd,i){
   return h+'</div>';
 }
 
-/* 계약 한 줄 아래 <b>납입이 어떻게 되는가</b>를 바로 보여 준다 */
-function payLine(pol,sd,i){
+/* 계약 한 줄 아래 <b>납입이 어떻게 되는가</b>를 바로 보여 준다.
+   mini 면 <b>둘만</b> — 매달 나가는 돈과 앞으로 낼 돈. 다섯을 늘어놓으면
+   어느 것이 중요한지 안 보인다. 세는 자리는 payCalc 하나뿐이라,
+   접힌 줄과 펼친 줄이 <b>다른 숫자를 말할 수 없다.</b>                */
+function payLine(pol,sd,i,mini){
   var c=payCalc(pol,(sd==='before')?'before':'after');
+  if(mini){
+    var m='<span>월 <b>'+(c.prem===null?'미입력':fee(c.prem))+'</b></span>';
+    if(c.done)m+='<span class="g"><b>납입완료</b></span>';
+    else if(c.left!==null)m+='<span class="w">앞으로 <b>'+fee(c.left)+'</b></span>';
+    else m+='<span class="q">앞으로 낼 돈 <b>—</b></span>';
+    return '<span class="paym">'+m+'</span>';
+  }
   if(c.prem===null&&c.mTot===null)
     return '<div class="payl none">가입 시기와 납입기간을 적으시면 <b>총 납입 보험료</b>와 <b>앞으로 낼 돈</b>이 여기 나옵니다.</div>';
   var b=[];
@@ -1410,14 +1477,22 @@ function padSum(bag){
   for(k in bag)if(bag.hasOwnProperty(k)&&num(bag[k])!==null&&ROW[k])
     out.push({k:k,v:num(bag[k]),u:UNIT[k]});
   out.sort(function(x,y){return ((x.u==='L')?0:1)-((y.u==='L')?0:1)||(y.v-x.v);});
-  return out.slice(0,10).map(function(o){
+  /* ── <b>「외 N개」 로 자르지 않는다</b> ─────────────────────────────
+     열 개에서 잘라 놓으니, 금액이 작다는 이유로 <b>뇌·심장 담보가 그 뒤에
+     숨었다.</b> 사장님이 「없나 보다」 하고 고객 앞에서 말하면 그 자리에서
+     끝난다. 칩은 한 줄에 여러 개 들어가니 <b>다 세운다.</b>          */
+  return out.map(function(o){
     return '<span>'+esc(NAME[o.k])+' <b>'+amt(o.k,o.v)+'</b></span>';
-  }).join('')+((out.length>10)?('<span class="more">외 '+(out.length-10)+'개</span>'):'');
+  }).join('');
 }
 function padOpen(k){S.padOpen[k]=!S.padOpen[k];save();render();}
 function setPick(k,g){S.pick[k]=g;save();render();}
-function addPol(sd){S[sd].push({id:nid(),co:'',nm:'',term:'',start:'',years:'',
-  premMan:'',premMan2:'',act:'keep',kb:false,cov:{},cov2:{}});save();render();}
+function addPol(sd){
+  /* 방금 만든 계약은 <b>펴 놓는다</b> — 적으려고 누른 것이라, 접혀 있으면
+     한 번 더 눌러야 한다. */
+  var p={id:nid(),co:'',nm:'',term:'',start:'',years:'',
+    premMan:'',premMan2:'',act:'keep',kb:false,cov:{},cov2:{}};
+  S[sd].push(p);S.polOpen[p.id]=true;save();render();}
 function delPol(sd,i){if(!confirm('이 계약을 목록에서 뺍니다.'))return;S[sd].splice(i,1);save();render();}
 function setPol(sd,i,k,v){S[sd][i][k]=v;save();stOnly();}
 function setAct(i,a){
@@ -1677,6 +1752,25 @@ function dictHtml(){
 }
 
 /* ── 붙박이 ── */
+/* ── 비는 자리 · 채우는 자리 ─────────────────────────────────────
+   <b>자르지 않는다.</b> 예전에는 둘 다 일곱 건에서 잘라 「그 밖에 10건」
+   이라고만 적었다. 안 보이는 열 건은 사장님에게 <b>없는 것</b>이 되고,
+   고객 앞에서 「이게 다입니다」 라고 말하게 된다. 길면 이 칸 안에서
+   굴린다 — 굴려서 보이는 것과 잘라 낸 것은 다르다.
+
+   두 목록이 거의 같아 <b>한 곳</b>에서 그린다. 두 벌로 두었더니 실제로
+   둘 다 slice(0,7) 인 채로 남아 있었다 (5번).                        */
+function sideList(kind,rows){
+  var loss=(kind==='loss');
+  if(!rows.length)return '<div class="empty">'+(loss?'아직 해지·배서로 줄인 담보가 없습니다.':'아직 늘린 담보가 없습니다.')+'</div>';
+  return '<div class="lis">'+rows.map(function(x){
+    var gone=loss?(x.a===0):(x.b===0);
+    return '<div class="li"><div class="n">'+esc(NAME[x.k])+
+      '<i>'+(loss?(gone?'없어짐':'줄어듦'):(gone?'새로':'늘림'))+'</i></div>'+
+      '<div class="d"><b>'+amt(x.k,x.v)+'</b>'+
+      (loss?(gone?'이 없어집니다.':'만큼 줄어듭니다.'):' 늘어납니다.')+'</div></div>';
+  }).join('')+'</div>';
+}
 function sideHtml(){
   var C=calc(),D=diff(C),T=tally(),d=C.premA-C.premB,h='';
   h+='<div class="sum"><div class="hh">지금 이 순간</div><div class="prem">'+
@@ -1687,18 +1781,8 @@ function sideHtml(){
   h+='<div class="chips" style="margin-top:9px"><span>유지 <b>'+T.keep+'</b></span><span>배서 <b>'+T.endo+'</b></span>'+
     '<span>해지 <b>'+T.cancel+'</b></span><span>담보 <b>'+T.rows+'</b></span>'+
     (T.no?('<span class="w">못 알아봄 <b>'+T.no+'</b></span>'):'')+'</div></div>';
-  h+='<div class="sum loss"><div class="hh">비는 자리 <em>'+D.loss.length+'건</em></div>'+
-    (D.loss.length?D.loss.slice(0,7).map(function(x){
-      return '<div class="li"><div class="n">'+esc(NAME[x.k])+'<i>'+(x.a===0?'없어짐':'줄어듦')+'</i></div>'+
-        '<div class="d"><b>'+amt(x.k,x.v)+'</b>'+(x.a===0?'이 없어집니다.':'만큼 줄어듭니다.')+'</div></div>';
-    }).join('')+(D.loss.length>7?('<div class="li"><div class="d">그 밖에 '+(D.loss.length-7)+'건</div></div>'):'')
-    :'<div class="empty">아직 해지·배서로 줄인 담보가 없습니다.</div>')+'</div>';
-  h+='<div class="sum gain"><div class="hh">채우는 자리 <em>'+D.gain.length+'건</em></div>'+
-    (D.gain.length?D.gain.slice(0,7).map(function(x){
-      return '<div class="li"><div class="n">'+esc(NAME[x.k])+'<i>'+(x.b===0?'새로':'늘림')+'</i></div>'+
-        '<div class="d"><b>'+amt(x.k,x.v)+'</b> 늘어납니다.</div></div>';
-    }).join('')+(D.gain.length>7?('<div class="li"><div class="d">그 밖에 '+(D.gain.length-7)+'건</div></div>'):'')
-    :'<div class="empty">아직 늘린 담보가 없습니다.</div>')+'</div>';
+  h+='<div class="sum loss"><div class="hh">비는 자리 <em>'+D.loss.length+'건</em></div>'+sideList('loss',D.loss)+'</div>';
+  h+='<div class="sum gain"><div class="hh">채우는 자리 <em>'+D.gain.length+'건</em></div>'+sideList('gain',D.gain)+'</div>';
   h+='<div class="sum"><button class="btn" style="width:100%" onclick="go(\'show\')">👤 고객에게 보여주기</button>'+
     '<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">'+
       '<button class="mini'+(S.panel==='raw'?' on':'')+'" onclick="showPanel(\'raw\')">📋 읽은 값 표로</button>'+
@@ -3618,6 +3702,23 @@ function printAllOff(){S.printAll=0;if(_wasSim!==null)S.sim=_wasSim;if(_wasPin!=
 window.addEventListener("beforeprint",printAllOn);
 window.addEventListener("afterprint",printAllOff);
 function setView(v){S.view=v;save();render();window.scrollTo(0,0);}
+/* ── 위 띠의 「⋯ 더보기」 ────────────────────────────────────────
+   여는 자리는 여기 하나다. 밖을 누르거나 Esc 를 치면 닫힌다 — 열어 둔 채로
+   두면 아래 화면이 가려진 줄 모르고 헤맨다. */
+function barMore(on){
+  var box=document.getElementById('barMoreBox'),b=document.getElementById('barMoreBtn');
+  if(!box)return;
+  var next=(on===undefined)?!box.classList.contains('on'):!!on;
+  if(next)box.classList.add('on');else box.classList.remove('on');
+  if(b)b.setAttribute('aria-expanded',next?'true':'false');
+}
+document.addEventListener('click',function(e){
+  var box=document.getElementById('barMoreBox');
+  if(!box||!box.classList.contains('on'))return;
+  if(e.target&&e.target.closest&&e.target.closest('.moreWrap'))return;
+  barMore(false);
+});
+document.addEventListener('keydown',function(e){ if(e.key==='Escape')barMore(false); });
 /* ═══════════════ 파일 ═══════════════ */
 function doSave(){
   var b=new Blob([JSON.stringify(S,null,1)],{type:'application/json'});
