@@ -890,6 +890,43 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .fd{font-size:12.5px}
 .show.deck>section.cur .fa{height:46px;width:18px}
 .show.deck>section.cur .fa::before{width:8px;height:8px}
+/* ── 연령대별 담보안 ──────────────────────────────────────────────
+   접힌 것도 <b>DOM 에는 늘 있습니다.</b> 그래야 인쇄에 전부 나옵니다 —
+   종이는 접을 수가 없습니다. */
+.apwrap{margin-bottom:14px}
+.aptabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.aptb{appearance:none;border:1px solid var(--ln);background:#fff;border-radius:99px;
+ padding:7px 13px;font:inherit;font-size:12.5px;font-weight:800;color:var(--gy);cursor:pointer}
+.aptb.on{color:#fff}
+.aptb.pr{margin-left:auto;border-color:#CFE0FE;background:var(--bl2);color:var(--bl)}
+.aphd{border:1px solid var(--ln);border-radius:16px;padding:14px 16px;margin-bottom:11px;background:#fff}
+.aph1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.aph1 b{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.aph1 span{font-size:12px;font-weight:700;color:var(--gy2)}
+.aph2{font-size:13.5px;color:var(--gy);line-height:1.7;margin-top:5px}
+.aph3{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--gy);line-height:1.7}
+.aph3 b{color:var(--gy2);font-size:11px;margin-right:3px}
+.apf{border:1px solid var(--ln);border-radius:13px;background:#fff;margin-bottom:8px;overflow:hidden}
+.apf.on{border-color:#CFE0FE}
+.apb{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;
+ padding:11px 14px;cursor:pointer;text-align:left;font:inherit;flex-wrap:wrap}
+.app{font-size:11px;font-weight:800;border-radius:99px;padding:3px 9px;white-space:nowrap}
+.apb b{font-size:14px;font-weight:800;color:var(--nv);letter-spacing:-.02em}
+.apb em{flex:1;font-style:normal;font-size:12px;color:var(--gy2);font-weight:700}
+.apb em u{text-decoration:none;color:var(--bl)}
+.apb i{font-style:normal;font-size:11.5px;font-weight:800;color:var(--bl)}
+.api{display:none;padding:0 14px 13px}
+.apf.on .api{display:block}
+.apwhy{font-size:13px;color:var(--nv);line-height:1.75;background:var(--bl2);
+ border:1px solid #CFE0FE;border-radius:10px;padding:9px 12px;margin-bottom:9px}
+.apt{width:100%;border-collapse:collapse}
+.apt th{background:#F8FAFC;font-size:11px;font-weight:800;color:var(--gy2);text-align:left;
+ padding:6px 10px;border:1px solid #EEF0F3}
+.apt td{font-size:12.5px;padding:6px 10px;border:1px solid #EEF0F3}
+.apt td.a{text-align:right;white-space:nowrap;width:110px}
+.apt td.s{color:var(--gy2);font-weight:700}
+.apt td.v{font-weight:800;color:var(--bl)}
+.apt td i{font-style:normal;font-size:11px;color:var(--gy2);font-weight:700}
 /* ── 이 나이대는 이렇게 봅니다 ─────────────────────────────────── */
 .fage{border:1px solid var(--ln);border-radius:16px;background:#fff;padding:15px 17px;margin-bottom:14px}
 .fah{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:11px}
@@ -1297,7 +1334,15 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 body.presenting .bar,body.presenting .showctl,body.presenting .toc{display:none!important}
 body.presenting .wrap{padding:8px 14px 74px;max-width:none}
 body.presenting .show:not(.deck){border:0;box-shadow:none}
-@media print{body{background:#fff}.bar,.noprint{display:none!important}.wrap{max-width:none;padding:0}
+@media print{
+ /* <b>색이 날아가던 자리.</b> 브라우저는 인쇄할 때 배경색을 기본으로 안 찍는다
+    — 그래서 파랑 머리띠도, 초록·빨강 칸도 하얗게 나오고 글자만 남아 있었다.
+    이 한 줄이 없어서 뽑을 때마다 종이가 무너졌다. */
+ *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ body{background:#fff}.bar,.noprint{display:none!important}.wrap{max-width:none;padding:0}
+ /* 접어 둔 것은 <b>종이에 전부</b> 편다 — 종이는 접을 수가 없다 */
+ .api,.nhi{display:block!important}
+ .apf,.nhf,.fage{break-inside:avoid;page-break-inside:avoid}
  .show{border:0;border-radius:0;padding:0;max-width:none}.show section{page-break-inside:avoid}
  /* 한 장씩 보던 중에 뽑아도 <b>전부</b> 나온다 — 접힌 것을 뺀 것처럼 두지 않는다.
     무대(16:9)를 걷고 세로 문서로 돌아간다. */
@@ -3078,12 +3123,171 @@ var DESIGN_ORDER=[
  {n:5,t:'간병 · 장기요양',d:'<b>끝나는 날이 없는</b> 유일한 지출입니다. 50대부터 실제로 필요합니다.'},
  {n:6,t:'운전자 · 배상책임',d:'보험료가 <b>아주 싼데</b> 쓸 일이 잦습니다. 마지막에 얹습니다.'}
 ];
+/* ══ 연령대별 담보안 ═══════════════════════════════════════════════
+   표준 담보는 <b>59가지</b>입니다. 그런데 스물아홉과 예순다섯에게
+   같은 표를 내밀면, 고객은 <b>어디부터 봐야 할지</b> 모릅니다.
+
+   그래서 나이대마다 <b>순위와 금액</b>을 매기고, <b>왜 그런지</b>를 접이식으로
+   같이 답니다. 고객 만나러 가시기 전에 그 나이대 한 장만 뽑아 가시면 됩니다.
+
+   ■ 담보 59가지를 <b>여섯 번 손으로 적지 않습니다.</b> 여기 적는 것은
+     <b>묶음 열 개 × 나이대 여섯 = 예순 줄</b>뿐이고, 담보는 STD 에서 옵니다.
+     그래야 담보가 하나 늘어도 여섯 군데를 고칠 일이 없습니다 (5번).
+   ■ 금액은 <b>표준 × 배수</b>로 셈하고, 배수를 화면에 그대로 적습니다.
+     어디서 나온 숫자인지 모르게 두지 않습니다.
+   ■ 표준이 안 정해진 담보(비급여의료비 등)는 <b>「—」</b> 로 둡니다.
+     배수를 곱해 없는 숫자를 만들지 않습니다 (1번).
+   ■ 이 표는 <b>상담 기준</b>입니다. 법정 기준도 통계도 아닙니다 —
+     사장님이 고치시면 그것이 이 도구의 기준이 됩니다.
+
+   순위 : 1 지금 바로 · 2 그다음 · 3 나중에 · 0 이 나이엔 굳이         */
+var AGE_PRI=[
+ {p:1,t:'지금 바로',c:'#DC2626',b:'#FEF2F2'},
+ {p:2,t:'그다음',  c:'#2563EB',b:'#EFF6FF'},
+ {p:3,t:'나중에',  c:'#B45309',b:'#FFFBEB'},
+ {p:0,t:'이 나이엔 굳이',c:'#8B95A1',b:'#F2F4F6'}
+];
+var AGE_PLAN={
+ '20':{
+  '실손의료비':{p:1,m:1.0,why:'제일 먼저입니다. <b>값이 가장 쌀 때</b> 들어 두고 평생 유지합니다.'},
+  '암':{p:1,m:0.7,why:'지금 넣으면 <b>비갱신으로 굳습니다.</b> 금액보다 <b>범위</b>를 넓게 잡고 금액은 나중에 올립니다.'},
+  '암 치료비':{p:2,m:0.6,why:'치료비는 <b>실제로 쓸 때</b> 커집니다. 진단비를 먼저 잡고 그다음입니다.'},
+  '뇌':{p:1,m:0.7,why:'이 나이엔 드물지만 <b>가장 쌉니다.</b> 넓은 범위로 걸어 두는 자리입니다.'},
+  '심장':{p:1,m:0.7,why:'뇌와 같습니다 — 쌀 때 <b>범위를 넓게</b> 걸어 둡니다.'},
+  '순환계 (뇌+심장)':{p:1,m:0.7,why:'뇌·심장을 <b>한 담보로</b> 덮는 상품이면 이쪽이 낫습니다.'},
+  '수술비':{p:1,m:0.8,why:'가장 <b>자주</b> 쓰는 담보입니다. 젊을수록 상해·수술 청구가 잦습니다.'},
+  '입원 · 간병':{p:3,m:0.5,why:'간병은 아직 이릅니다. <b>입원일당만</b> 얹어 둡니다.'},
+  '사망 · 장해':{p:3,m:0.4,why:'지킬 사람이 아직 없으면 <b>장해</b> 위주로 최소만 잡습니다.'},
+  '배상 · 운전자':{p:2,m:1.0,why:'차가 있으시면 <b>바로</b> 넣습니다. 값이 아주 쌉니다.'}},
+ '30':{
+  '실손의료비':{p:1,m:1.0,why:'유지가 전부입니다. <b>절대 해지하지 않습니다.</b>'},
+  '암':{p:1,m:0.9,why:'여기서 <b>본격</b>으로 잡습니다. 대출·자녀가 겹쳐 소득이 끊기면 바로 흔들립니다.'},
+  '암 치료비':{p:2,m:0.8,why:'표적항암은 <b>실손으로 다 안 됩니다.</b> 진단비 다음으로 넣습니다.'},
+  '뇌':{p:1,m:0.9,why:'범위 넓은 쪽으로 <b>지금</b> 잡아 둡니다. 40대에 들면 값이 다릅니다.'},
+  '심장':{p:1,m:0.9,why:'뇌와 같이 잡습니다 — 둘 중 하나만 있으면 반쪽입니다.'},
+  '순환계 (뇌+심장)':{p:1,m:0.9,why:'한 담보로 둘을 덮으면 <b>빠뜨릴 자리가 없습니다.</b>'},
+  '수술비':{p:1,m:0.9,why:'청구 건수의 대부분이 여기서 나옵니다.'},
+  '입원 · 간병':{p:2,m:0.7,why:'입원일당은 <b>일 못 나가는 날</b>의 생활비입니다. 간병은 아직 뒤로 둡니다.'},
+  '사망 · 장해':{p:1,m:1.0,why:'<b>남은 대출 + 막내 독립까지</b>가 기준입니다. 이 나이에 가장 커집니다.'},
+  '배상 · 운전자':{p:2,m:1.0,why:'싼데 쓸 일이 잦습니다. 마지막에 얹습니다.'}},
+ '40':{
+  '실손의료비':{p:1,m:1.0,why:'유지합니다. 갈아타면 <b>지금 몸으로</b> 다시 심사받습니다.'},
+  '암':{p:1,m:1.0,why:'표준 그대로 잡습니다. 발병이 <b>실제로 시작되는</b> 구간입니다.'},
+  '암 치료비':{p:1,m:1.0,why:'<b>여기서 넣습니다.</b> 표적·면역은 비급여라 진단비만으로는 안 됩니다.'},
+  '뇌':{p:1,m:1.0,why:'<b>옛 담보의 범위</b>부터 확인합니다. 뇌출혈만이면 열 건 중 한 건도 안 열립니다.'},
+  '심장':{p:1,m:1.0,why:'급성심근경색만 있으면 <b>좁습니다.</b> 허혈성까지 봅니다.'},
+  '순환계 (뇌+심장)':{p:1,m:1.0,why:'범위를 한 번에 넓히는 가장 싼 길입니다.'},
+  '수술비':{p:1,m:1.0,why:'1~5종으로 넓게 잡습니다.'},
+  '입원 · 간병':{p:2,m:0.8,why:'간병을 <b>50대 전에 미리</b> 잡아 둡니다. 나중에는 심사가 어렵습니다.'},
+  '사망 · 장해':{p:1,m:1.0,why:'책임이 가장 큰 구간입니다. 부양 기간으로 셈합니다.'},
+  '배상 · 운전자':{p:2,m:1.0,why:'그대로 둡니다.'}},
+ '50':{
+  '실손의료비':{p:1,m:1.0,why:'<b>유지가 최우선</b>입니다. 새로 갈아타면 지금 몸으로 심사받습니다.'},
+  '암':{p:1,m:1.1,why:'발병률이 <b>급격히 오르는</b> 구간입니다. 표준보다 조금 위로 잡습니다.'},
+  '암 치료비':{p:1,m:1.1,why:'치료가 길어집니다 — 진단비 한 번보다 <b>치료비 여러 번</b>이 큽니다.'},
+  '뇌':{p:1,m:1.1,why:'<b>범위를 넓히는 것</b>이 이 구간의 일입니다. 금액보다 먼저입니다.'},
+  '심장':{p:1,m:1.1,why:'뇌와 같이 넓힙니다.'},
+  '순환계 (뇌+심장)':{p:1,m:1.1,why:'둘을 한 번에 넓힐 수 있으면 이쪽입니다.'},
+  '수술비':{p:1,m:1.0,why:'특정질병 수술까지 봅니다.'},
+  '입원 · 간병':{p:1,m:1.2,why:'<b>여기서부터 실제로</b> 필요합니다. 끝나는 날이 없는 유일한 지출입니다.'},
+  '사망 · 장해':{p:2,m:0.8,why:'부양이 끝나가면 <b>줄여도 됩니다.</b> 늘릴 자리가 아닙니다.'},
+  '배상 · 운전자':{p:2,m:1.0,why:'그대로 둡니다.'}},
+ '60':{
+  '실손의료비':{p:1,m:1.0,why:'<b>지키는 것</b>이 전부입니다. 해지하면 다시 못 듭니다.'},
+  '암':{p:2,m:0.8,why:'새로 크게 드는 자리가 아닙니다. <b>있는 것을 살리는</b> 쪽이 실익이 큽니다.'},
+  '암 치료비':{p:2,m:0.8,why:'되는 자리면 넣되, <b>심사부터</b> 확인합니다.'},
+  '뇌':{p:2,m:0.8,why:'설계를 다 해 놓고 심사에서 막히면 상담이 통째로 돌아갑니다.'},
+  '심장':{p:2,m:0.8,why:'뇌와 같이 심사부터 봅니다.'},
+  '순환계 (뇌+심장)':{p:2,m:0.8,why:'한 담보로 되는 상품이 있으면 그쪽이 낫습니다.'},
+  '수술비':{p:2,m:0.9,why:'실제 청구가 가장 잦은 자리입니다 — 되면 넣습니다.'},
+  '입원 · 간병':{p:1,m:1.2,why:'이 구간의 <b>중심</b>입니다. 요양·치매가 실제로 시작됩니다.'},
+  '사망 · 장해':{p:2,m:0.6,why:'<b>상속·정리</b> 목적이면 남기고, 소득 대체 목적이면 줄입니다.'},
+  '배상 · 운전자':{p:2,m:1.0,why:'운전을 계속하시면 <b>그대로</b> 둡니다.'}},
+ '70':{
+  '실손의료비':{p:1,m:1.0,why:'<b>가능한 한 유지</b>합니다. 이 나이에 새로 드는 어떤 것보다 큽니다.'},
+  '암':{p:0,m:0.6,why:'새 진단비는 <b>대부분 실익이 없습니다.</b> 낼 보험료가 받을 보장을 넘어섭니다.'},
+  '암 치료비':{p:0,m:0.6,why:'같은 이유로 권하지 않습니다.'},
+  '뇌':{p:0,m:0.6,why:'대부분 심사에서 막히거나 <b>보험료를 감당하기 어렵습니다.</b>'},
+  '심장':{p:0,m:0.6,why:'뇌와 같습니다.'},
+  '순환계 (뇌+심장)':{p:0,m:0.6,why:'같은 이유입니다.'},
+  '수술비':{p:2,m:0.8,why:'되는 자리면 넣습니다 — 실제로 가장 자주 씁니다.'},
+  '입원 · 간병':{p:1,m:1.0,why:'<b>낙상 · 요양</b>이 이 나이의 실제 사건입니다.'},
+  '사망 · 장해':{p:2,m:0.6,why:'<b>수익자와 상속</b>을 정리하는 자리입니다. 금액보다 정리가 먼저입니다.'},
+  '배상 · 운전자':{p:2,m:0.8,why:'운전을 그만두셨으면 <b>정리 대상</b>입니다.'}}
+};
+function agePriOf(p){var i;for(i=0;i<AGE_PRI.length;i++)if(AGE_PRI[i].p===p)return AGE_PRI[i];return AGE_PRI[3];}
+/* 표준 × 배수 — 자릿수에 맞게 <b>읽히는 수</b>로 맞춘다.
+   표준이 없는 담보(0)는 <b>「—」</b> 다. 없는 숫자를 만들지 않는다 (1번). */
+function agePlanAmt(std,m){
+  if(!(std>0))return null;
+  var v=std*m;
+  if(v>=1000)return Math.round(v/100)*100;
+  if(v>=100) return Math.round(v/10)*10;
+  return Math.round(v);
+}
 function ageBand(){
   var a=num(S.who.age);
   if(a===null)return null;
   for(var i=0;i<AGE_GUIDE.length;i++)
     if(a>=AGE_GUIDE[i].range[0]&&a<=AGE_GUIDE[i].range[1])return AGE_GUIDE[i];
   return null;
+}
+function agePlanPick(k){S.agePlan=k;save();render();window.scrollTo(0,0);}
+function agePlanFold(k){S.apOpen=(S.apOpen===k?'':k);save();render();}
+/* 한 나이대 담보안 — 고객 만나러 가시기 전에 <b>이 한 장</b>만 뽑아 가십니다.
+   접힌 것도 <b>인쇄에는 전부</b> 나옵니다 — 종이는 접을 수가 없습니다. */
+function agePlanHtml(){
+  var k=S.agePlan||((ageBand()||{}).k)||'40';
+  var g=null,i;
+  for(i=0;i<AGE_GUIDE.length;i++)if(AGE_GUIDE[i].k===k)g=AGE_GUIDE[i];
+  if(!g)return '';
+  var P=AGE_PLAN[k]||{};
+  var h='<div class="apwrap">'+
+    '<div class="aptabs noprint">'+AGE_GUIDE.map(function(x){
+      return '<button class="aptb'+(x.k===k?' on':'')+'" onclick="agePlanPick(\''+x.k+'\')"'+
+        (x.k===k?(' style="background:'+x.c+';border-color:'+x.c+'"'):'')+'>'+x.ic+' '+esc(x.t)+'</button>';
+    }).join('')+
+    '<button class="aptb pr" onclick="window.print()">🖨 이 담보안 인쇄</button></div>'+
+    '<div class="aphd" style="border-color:'+g.c+'44">'+
+      '<div class="aph1">'+g.ic+' <b style="color:'+g.c+'">'+esc(g.t)+' 담보안</b>'+
+        '<span>표준 담보 '+STD.reduce(function(a,x){return a+x.rows.length;},0)+'가지를 이 나이대 기준으로</span></div>'+
+      '<div class="aph2">'+g.one+'</div>'+
+      '<div class="aph3">'+
+        '<span><b>금액</b> '+g.amt+'</span>'+
+        '<span><b>납입</b> '+g.term+'</span>'+
+        '<span><b>보험료</b> '+g.prem+'</span></div>'+
+    '</div>';
+  /* 순위대로 — 급한 것이 위로 온다 */
+  var list=STD.map(function(gr){
+    var pl=P[gr.mid]||{p:2,m:1,why:''};
+    return {gr:gr,pl:pl};
+  }).sort(function(a,b){
+    var pa=(a.pl.p===0?9:a.pl.p),pb=(b.pl.p===0?9:b.pl.p);
+    return pa-pb;
+  });
+  h+='<div class="apl">'+list.map(function(x){
+    var gr=x.gr,pl=x.pl,pr=agePriOf(pl.p),open=(S.apOpen===gr.mid);
+    var rows=gr.rows.map(function(r){
+      var v=agePlanAmt(r.std,pl.m);
+      return '<tr><td>'+esc(r.n)+'</td>'+
+        '<td class="a s">'+(r.std>0?amt(r.k,r.std):'—')+'</td>'+
+        '<td class="a v">'+(v===null?'<i>표준 없음</i>':amt(r.k,v))+'</td></tr>';
+    }).join('');
+    return '<div class="apf'+(open?' on':'')+'">'+
+      '<button class="apb" onclick="agePlanFold(\''+gr.mid.replace(/'/g,"\\'")+'\')">'+
+        '<span class="app" style="color:'+pr.c+';background:'+pr.b+'">'+esc(pr.t)+'</span>'+
+        '<b>'+gr.ic+' '+esc(gr.mid)+'</b>'+
+        '<em>담보 '+gr.rows.length+'개 · 표준의 <u>'+Math.round(pl.m*100)+'%</u></em>'+
+        '<i>'+(open?'접기 ▴':'왜 그런지 ▾')+'</i></button>'+
+      '<div class="api">'+
+        '<div class="apwhy">'+(pl.why||'—')+'</div>'+
+        '<table class="apt"><tr><th>담보</th><th>표준</th><th>이 나이대 권장</th></tr>'+rows+'</table>'+
+      '</div></div>';
+  }).join('')+'</div>';
+  h+='<div class="note i"><b>권장 금액은 「표준 × 배수」로 셈한 값</b>이며, 배수는 칸마다 적어 두었습니다. '+
+     '표준이 안 정해진 담보는 <b>「표준 없음」</b> 으로 두었습니다 — 없는 숫자를 만들지 않습니다. '+
+     '이 표는 <b>상담 기준</b>이며 법정 기준도 통계도 아닙니다. 실제 보험료·보장은 <b>보험사 심사 결과에 따릅니다.</b></div>';
+  return h+'</div>';
 }
 function ageHtml(){
   var me=ageBand(),a=num(S.who.age);
@@ -3099,6 +3303,10 @@ function ageHtml(){
     return '<div class="ord"><div class="on2">'+o.n+'</div><div class="ot"><b>'+esc(o.t)+'</b><em>'+o.d+'</em></div></div>';
   }).join('')+'</div>'+
   '<div class="note i">이 순서는 <b>나이와 상관없이</b> 같습니다. 나이는 <b>어디에 무게를 두느냐</b>를 바꿉니다.</div>';
+  /* 담보안 — 고객 만나러 가시기 전에 <b>이 한 장</b>을 뽑아 가십니다 */
+  h+='<div class="ghd">📋 이 나이대 <b>담보안</b> '+
+     '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 표준 담보를 나이대 기준으로 · 왜 그런지는 눌러서 폅니다 · <b>인쇄하면 전부 나옵니다</b></span></div>'+
+     agePlanHtml();
   /* 연령대 카드 */
   h+='<div class="ages">'+AGE_GUIDE.map(function(g){
     var on=(me&&me.k===g.k);
