@@ -34,6 +34,7 @@ const srv = http.createServer((rq, rs) => {
   fs.createReadStream(f).pipe(rs);
 });
 
+const TOSS = 'rgb(49, 130, 246)';   /* 토스 블루 #3182F6 */
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 const head = (t) => console.log('\n' + t);
@@ -440,14 +441,25 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
       no: L.map(function (s) { return (s.style.getPropertyValue('--no') || '').trim(); }),
       hdBg: cur(document.getElementById('sHd'), 'backgroundColor'),
       endBg: cur(document.getElementById('sEnd'), 'backgroundColor'),
-      stIn: stIn, name: (S.who.name || '')
+      stIn: stIn, name: (S.who.name || ''),
+      /* 본문 파랑은 <b>실제로 칠해 보고</b> 잰다 — 토큰 글자를 읽으면
+         「CSS 에 그렇게 적혀 있다」를 확인할 뿐이다 */
+      appBl: (function () {
+        var d = document.createElement('div');
+        d.style.cssText = 'position:absolute;left:-9999px;width:2px;height:2px;background:var(--bl)';
+        document.body.appendChild(d);
+        var v = getComputedStyle(d).backgroundColor; d.remove(); return v;
+      })()
     };
     body.className = was;
     return r;
   });
   is(/^['"]?GmarketSans/.test(th.fam),
      '무대 글씨체가 <G마켓 산스>로 적혀 있다 — 「' + th.fam.split(',')[0] + '」');
-  is(th.bandBg === 'rgb(11, 123, 255)' && th.bandFg === 'rgb(255, 255, 255)',
+  /* 토스 블루 <b>한 가지</b>다 — 무대와 본문이 다른 파랑을 쓰면 같은 화면에서
+     색이 두 번 튄다. 값을 그대로 적어 둔다(토큰을 읽어 견주면 「CSS 가 그렇게
+     적혀 있다」를 확인할 뿐이라 아무것도 안 잡는다). */
+  is(th.bandBg === TOSS && th.bandFg === 'rgb(255, 255, 255)',
      '제목이 <파랑 머리띠> 위에 흰 글씨로 선다 — ' + th.bandBg + ' / ' + th.bandFg);
   is(th.bandPic.indexOf('svg') > 0, '머리띠 왼쪽 위에 <직접 그린 「+」> 가 있다 (남의 그림을 안 쓴다)');
   is(th.no[0] === '""' && th.no[1] === '"01."' &&
@@ -455,8 +467,8 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      '제목 앞 번호가 <표지는 없이 01. 부터> 붙는다 — 지금 ' + th.no.slice(0, 3).join(' ') + ' … ' + th.no[th.no.length - 1]);
   is(th.badge.indexOf(th.name) >= 0 && th.badge.indexOf('+') === 0 && th.badgeShown.indexOf(th.name) >= 0,
      '오른쪽 위 알약이 <이 고객의 자료>라고 말한다 — 「' + th.badge + '」');
-  is(th.hdBg === 'rgb(11, 123, 255)' && th.endBg === 'rgb(11, 123, 255)',
-     '표지와 마무리는 <파랑 전면>이다');
+  is(th.hdBg === TOSS && th.endBg === TOSS, '표지와 마무리는 <파랑 전면>이다');
+  is(th.appBl === TOSS, '무대 파랑이 <본문 파랑과 같다> — 한 화면에 파랑이 두 번 안 튄다 (' + th.appBl + ')');
   is(th.stIn !== null && th.stIn >= 30,
      '담보표가 <가장자리로 벌어지지 않는다> — 안쪽 여백 ' + th.stIn + 'px (0 이면 표만 화면 끝까지 벌어진다)');
   /* 「오늘 순서」는 <b>화면에 선 장</b>에서 그린다. 손으로 적어 두면 장을
@@ -511,6 +523,52 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
      낼 돈 0원」이라고 말하고 설계사는 고객 앞에서 그대로 읽는다 — 새빨간
      거짓말이다. 모름은 <b>—</b> 이어야 하고, <b>무엇을 채우면 되는지</b>를
      그 자리에 적어야 한다 (1번).                                      */
+  /* ── [11-1] 표지 ────────────────────────────────────────────────
+     표지는 고객이 <b>맨 처음 보는 화면</b>이다. 여기서 세 가지가 어긋나면
+     그 뒤로 무엇을 말해도 반쯤만 듣는다 —
+
+       ① 안 적힌 것을 <b>「0 건」</b>이라 적으면 「없다」는 뜻이 된다 (1번).
+       ② 캐릭터는 <b>직접 그린 SVG</b> 여야 한다. 남의 삽화를 가져다 쓰면
+          안 되고, 사진은 인쇄에서 뭉갠다 (9번).
+       ③ 알약·흰 칸·아래 띠가 <b>같은 값을 세 번</b> 적으면 한 화면에서
+          같은 글자를 세 번 읽게 된다 (5번). 그래서 <b>알약에는 숫자를
+          두지 않는다</b> — 숫자는 흰 칸이, 날짜는 아래 띠가 든다.      */
+  head('[11-1] 표지 — 흰 칸 · 직접 그린 캐릭터 · 같은 값을 두 곳에 안 적는다');
+  const cov = await pg.evaluate(() => {
+    doSample(); S.deck = true; S.slide = 'sHd'; go('show');
+    var hd = document.getElementById('sHd'); if (!hd) return null;
+    var was = hd.className; hd.classList.add('cur');
+    var f = hd.querySelector('svg.hdfig');
+    var r = {
+      cards: hd.querySelectorAll('.hdks .hdk').length,
+      fig: !!f, figShown: f ? getComputedStyle(f).display : '없음',
+      img: hd.querySelectorAll('img').length,
+      bg: [].slice.call(hd.querySelectorAll('*')).filter(function (el) {
+        return /url\((?!["']?data:image\/svg)/.test(getComputedStyle(el).backgroundImage); }).length,
+      pill: ((hd.querySelector('p') || {}).textContent || '').trim(),
+      ft: ((hd.querySelector('.hdft') || {}).textContent || '').trim()
+    };
+    hd.className = was; return r;
+  });
+  await pg.waitForTimeout(200);
+  is(!!cov && cov.cards === 3, '표지에 <흰 칸 셋>이 선다 — 이 종이가 무엇을 담고 있는지');
+  is(!!cov && cov.fig && cov.img === 0 && cov.bg === 0,
+     '캐릭터가 <직접 그린 SVG> 다 — 남의 삽화도 사진도 안 쓴다 (9번)');
+  is(!!cov && cov.figShown === 'block', '그 캐릭터가 무대에서 <실제로 보인다>');
+  is(!!cov && !/\d/.test(cov.pill),
+     '알약에 <숫자가 없다> — 숫자는 흰 칸이, 날짜는 아래 띠가 든다 (「' + ((cov && cov.pill) || '').slice(0, 34) + '…」)');
+  is(!!cov && /\d{4}-\d{2}-\d{2}/.test(cov.ft),
+     '아래 띠가 <언제·누구>를 든다 — 「' + ((cov && cov.ft) || '').slice(0, 40) + '」');
+  /* 아무것도 안 적혔을 때 — <b>0 건</b>이라 적으면 「보험이 없다」가 된다 */
+  const cov0 = await pg.evaluate(() => {
+    localStorage.clear(); S = blank(); save(); S.deck = true; go('show');
+    var k = document.querySelector('#sHd .hdks');
+    return { txt: k ? (k.textContent || '').replace(/\s+/g, ' ') : '(칸이 없음)' };
+  });
+  await pg.waitForTimeout(200);
+  is(/아직 안 적음/.test(cov0.txt) && !/\b0\s*[건개]/.test(cov0.txt),
+     '안 적힌 것은 <「아직 안 적음」> 이다 — 「0건」이라 적으면 「없다」는 뜻이 된다 (1번) · 「' + cov0.txt.slice(0, 52) + '」');
+
   head('[12] 못 센 돈을 <0원>이라 적지 않는다 — 모름은 모름이라고 말한다');
   const money = await pg.evaluate(() => {
     function run(mode) {
