@@ -9,6 +9,11 @@
    ② 그날 잡힌 약속들을 지도에 올려 놓고, 어느 순서로 돌면 길에서
       버리는 시간이 가장 적은지 본다.
 
+   ③ 그러려면 지역이 갈라지면 안 됩니다. 「순천」·「순천시」·「전남 순천시」
+      가 서로 다른 지역이 되면 ①에 사람이 덜 뜨고 ②의 지역 목록이 두 번
+      뜹니다. 그래서 지역은 카카오가 정한 이름과 법정동 코드로 잡습니다.
+      손으로 적은 옛 자료도 regionText() 로 같은 지역으로 봅니다.
+
    db-crm.html 은 한 줄(<script src>)만 늘었습니다. 나머지는 전부
    여기서 원래 함수를 감싸는 방식으로 붙습니다 — 그래야 같은 파일을
    고치는 다른 작업과 부딪히지 않습니다.
@@ -32,6 +37,7 @@ function say(m,ms){ try{ toast(m,ms) }catch(e){ console.log(m) } }
 /* ── 상태 ───────────────────────────────────────────────────────── */
 var HAS_DB=false;        /* dbs 에 addr/lat/lng 칸이 있나 */
 var HAS_CALL=false;      /* calls 에 appt_place 칸이 있나 */
+var HAS_STD=false;       /* dbs 에 region_code/sigungu 칸이 있나 (migration_47) */
 var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
@@ -42,6 +48,35 @@ var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 
 
 /* ── 자잘한 셈 ──────────────────────────────────────────────────── */
 function norm(s){return String(s==null?"":s).replace(/\s+/g,"").toLowerCase()}
+
+/* ── 지역 이름을 하나로 모은다 ──────────────────────────────────
+   지역이 자유 입력이라 「순천」·「순천시」·「전남 순천시」가 서로 다른
+   지역으로 갈라졌습니다. 갈라지면 「이 지역 열 명」에 사람이 덜 뜨고,
+   지도 지역 목록에 같은 데가 두 번 뜹니다.
+
+   그래서 비교는 언제나 이 「맨 이름」으로 합니다. 시·도 이름을 떼고,
+   끝의 시/군/구를 뗍니다. 서버의 region_key() 와 같은 규칙입니다.
+   시·도 이름밖에 없으면(「광주」) 그대로 둡니다 — 지우면 빈칸이 됩니다. */
+var SIDO_RE=/^(서울특별시|서울|부산광역시|부산|대구광역시|대구|인천광역시|인천|광주광역시|대전광역시|대전|울산광역시|울산|세종특별자치시|세종|경기도|경기|강원특별자치도|강원도|강원|충청북도|충북|충청남도|충남|전북특별자치도|전라북도|전북|전라남도|전남|경상북도|경북|경상남도|경남|제주특별자치도|제주도|제주)/;
+function strip(s,re){ var t=s.replace(re,""); return t?t:s }
+function regionText(s){
+  s=String(s==null?"":s).replace(/\s+/g,"");
+  if(!s)return "";
+  s=strip(s,SIDO_RE);
+  s=strip(s,/(특별자치시|특별자치도|특별시|광역시|자치시|자치구|자치도)$/);
+  s=strip(s,/(시|군|구)$/);
+  return s.toLowerCase();
+}
+/* 두 사람이 같은 지역인가 — 코드가 둘 다 있으면 코드로, 아니면 이름으로 */
+function sameRegion(a,b){
+  var ca=a&&a.region_code?String(a.region_code).slice(0,5):"";
+  var cb=b&&b.region_code?String(b.region_code).slice(0,5):"";
+  if(ca&&cb)return ca===cb;
+  var ta=regionText(a&&a.region), tb=regionText(b&&b.region);
+  return !!ta&&ta===tb;
+}
+/* 화면에 보여 줄 이름 — 카카오가 준 표준 이름이 있으면 그것을 쓴다 */
+function regionName(d){ return (d&&(d.sigungu||d.region))||"" }
 function myId(){ try{ return profile&&profile.id }catch(e){ return null } }
 function findDb(id){ try{ return dbs.filter(function(d){return d.id===id})[0] }catch(e){ return null } }
 
@@ -148,6 +183,145 @@ function geo(text,region){
   }).catch(function(){ return null });
 }
 
+/* ── 좌표 → 행정구역 ────────────────────────────────────────────
+   카카오가 「전라남도 / 순천시 / 조례동」과 법정동 코드를 돌려줍니다.
+   지역 이름을 사람이 적는 대신 이 값을 씁니다 — 오타도 없고 갈라지지도
+   않습니다. 세종처럼 시·군·구가 없는 데는 시·도 이름을 시군구로 씁니다. */
+var RCACHE={}; try{ RCACHE=JSON.parse(localStorage.getItem("apexRegionCacheV1")||"{}") }catch(e){ RCACHE={} }
+function region2(lat,lng){
+  if(lat==null||lng==null)return Promise.resolve(null);
+  var k=(+lat).toFixed(4)+","+(+lng).toFixed(4);
+  if(RCACHE[k])return Promise.resolve(RCACHE[k]);
+  return sdk().then(function(){
+    return new Promise(function(res){
+      var done=false, t=setTimeout(function(){ if(!done){done=true;res(null)} },7000);
+      GC.coord2RegionCode(+lng,+lat,function(r,st){
+        if(done)return; done=true; clearTimeout(t);
+        if(st!==kakao.maps.services.Status.OK||!r||!r.length)return res(null);
+        /* 법정동(B)을 먼저 쓴다 — 코드가 안 바뀌는 쪽입니다 */
+        var b=null,i;
+        for(i=0;i<r.length;i++){ if(r[i].region_type==="B"){ b=r[i]; break } }
+        if(!b)b=r[0];
+        var v={ sido:b.region_1depth_name||"",
+                sigungu:b.region_2depth_name||b.region_1depth_name||"",
+                dong:b.region_3depth_name||"",
+                region_code:b.code||"" };
+        RCACHE[k]=v;
+        try{ localStorage.setItem("apexRegionCacheV1",JSON.stringify(RCACHE)) }catch(e){}
+        res(v);
+      });
+    });
+  }).catch(function(){ return null });
+}
+
+/* 적어 놓은 글자 하나로 좌표와 행정구역을 한꺼번에 얻는다 */
+function resolvePlace(text,hint){
+  return geo(text,hint).then(function(p){
+    if(!p)return null;
+    return region2(p.lat,p.lng).then(function(r){
+      return {lat:p.lat,lng:p.lng,label:p.label,
+              sido:(r&&r.sido)||"",sigungu:(r&&r.sigungu)||"",
+              dong:(r&&r.dong)||"",region_code:(r&&r.region_code)||""};
+    });
+  });
+}
+
+/* ── 주소 찾기 창 ───────────────────────────────────────────────
+   손으로 적으면 「순천」·「순천시」·「순천 조례」가 다 달라집니다.
+   여기서 고르면 카카오가 정한 이름과 코드가 그대로 들어갑니다. */
+var pickCb=null;
+function pickModal(){
+  styles();
+  if(q("rtPick"))return;
+  var m=document.createElement("div");
+  m.className="modal"; m.id="rtPick";
+  m.innerHTML=
+    '<div class="modal-box" style="width:min(620px,100%)">'+
+      '<div class="modal-head"><h3 id="rtPickT">주소 찾기</h3><button class="close" id="rtPickX">×</button></div>'+
+      '<div class="modal-body">'+
+        '<div class="field"><label>주소나 건물 이름을 적고 <b>찾기</b></label>'+
+          '<div style="display:flex;gap:6px">'+
+            '<input id="rtPickQ" placeholder="순천시 조례동 / 조례동 스타벅스 / 중앙로 100" style="flex:1;min-width:0">'+
+            '<button class="btn btn-primary" id="rtPickGo" style="flex:none">찾기</button>'+
+          '</div></div>'+
+        '<div id="rtPickR"></div>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(m);
+  q("rtPickX").onclick=function(){ m.classList.remove("open"); pickCb=null };
+  q("rtPickGo").onclick=pickRun;
+  q("rtPickQ").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); pickRun() } });
+}
+function pickOpen(title,seed,cb){
+  if(!KEY){ say("지도 키가 아직 없어 주소 찾기를 쓸 수 없습니다 — 🗺️ 지역 동선 → 키 설정",5000); return }
+  pickModal();
+  pickCb=cb;
+  q("rtPickT").textContent=title||"주소 찾기";
+  q("rtPickQ").value=seed||"";
+  q("rtPickR").innerHTML='<div class="notice">찾을 말을 적고 <b>찾기</b> 를 누르세요. '+
+    '동 이름만 적어도 됩니다 — 「조례동」.</div>';
+  q("rtPick").classList.add("open");
+  setTimeout(function(){ try{ q("rtPickQ").focus() }catch(e){} },80);
+}
+function pickRun(){
+  var kw=(q("rtPickQ").value||"").trim();
+  if(!kw){ say("찾을 말을 적어 주세요."); return }
+  q("rtPickR").innerHTML='<div class="notice">찾는 중입니다…</div>';
+  sdk().then(function(){
+    var got=[], waiting=2;
+    function done(){
+      if(--waiting>0)return;
+      if(!got.length){
+        q("rtPickR").innerHTML='<div class="empty">못 찾았습니다. '+
+          '「순천시 조례동」 처럼 시·군 이름을 앞에 붙여 보세요.</div>';
+        return;
+      }
+      q("rtPickR").innerHTML='<div class="rt-h">찾은 곳 '+got.length+'개 — 맞는 것을 누르세요</div>'+
+        '<div class="rt-card">'+got.map(function(g,i){
+          return '<div class="rt-row rt-hit" data-pick="'+i+'">'+
+            '<div class="rt-who"><b>'+(g.kind==="주소"?"📮 ":"📍 ")+E(g.title)+'</b>'+
+            '<small>'+E(g.sub||"")+'</small></div></div>';
+        }).join("")+'</div>';
+      Array.prototype.forEach.call(q("rtPickR").querySelectorAll("[data-pick]"),function(el){
+        el.onclick=function(){ pickTake(got[+el.getAttribute("data-pick")]) };
+      });
+    }
+    GC.addressSearch(kw,function(r,st){
+      if(st===kakao.maps.services.Status.OK&&r){
+        r.slice(0,8).forEach(function(a){
+          got.push({kind:"주소",title:a.address_name,
+            sub:(a.road_address&&a.road_address.address_name)||"지번 주소",
+            lat:+a.y,lng:+a.x});
+        });
+      }
+      done();
+    });
+    PS.keywordSearch(kw,function(r,st){
+      if(st===kakao.maps.services.Status.OK&&r){
+        r.slice(0,8).forEach(function(p){
+          got.push({kind:"장소",title:p.place_name,
+            sub:(p.road_address_name||p.address_name||"")+(p.phone?" · "+p.phone:""),
+            lat:+p.y,lng:+p.x});
+        });
+      }
+      done();
+    });
+  }).catch(function(){
+    q("rtPickR").innerHTML='<div class="empty">지도를 못 불렀습니다 — 키와 도메인 등록을 확인하세요.</div>';
+  });
+}
+function pickTake(g){
+  q("rtPickR").innerHTML='<div class="notice">행정구역을 확인하는 중입니다…</div>';
+  region2(g.lat,g.lng).then(function(r){
+    var out={lat:g.lat,lng:g.lng,label:g.title,detail:g.sub,
+      sido:(r&&r.sido)||"",sigungu:(r&&r.sigungu)||"",
+      dong:(r&&r.dong)||"",region_code:(r&&r.region_code)||""};
+    q("rtPick").classList.remove("open");
+    var cb=pickCb; pickCb=null;
+    if(cb)cb(out);
+  });
+}
+
 /* ── 서버에 칸이 있는지 한 번만 물어본다 ─────────────────────────
    없으면 위치 기능만 접어 두고, 원래 화면은 그대로 돌아갑니다. */
 function probe(){
@@ -155,7 +329,9 @@ function probe(){
     sb.from("dbs").select("id,addr,lat,lng,next_appt_place,next_appt_lat,next_appt_lng").limit(1)
       .then(function(r){ HAS_DB=!r.error }).catch(function(){ HAS_DB=false }),
     sb.from("calls").select("id,appt_place,appt_lat,appt_lng").limit(1)
-      .then(function(r){ HAS_CALL=!r.error }).catch(function(){ HAS_CALL=false })
+      .then(function(r){ HAS_CALL=!r.error }).catch(function(){ HAS_CALL=false }),
+    sb.from("dbs").select("id,region_code,sido,sigungu,dong").limit(1)
+      .then(function(r){ HAS_STD=!r.error }).catch(function(){ HAS_STD=false })
   ]);
 }
 
@@ -189,22 +365,74 @@ function withPatch(table,extra,run){
 /* ── 입력 칸 두 개를 원래 창에 끼워 넣는다 ───────────────────────
    ① DB 등록 창 : 지역 밑에 「동네·상세위치」
    ② 통화 기록 창 : 상담 약속일시 밑에 「만날 장소」 */
+var PICKED={db:null,call:null};
+
+/* 지금까지 쓰인 지역 이름 — 오타로 새 지역이 생기지 않게 골라 쓰게 한다.
+   같은 곳이 두 이름으로 적혀 있으면 카카오가 준 표준 이름 쪽만 남깁니다. */
+function regionList(){
+  var by={};
+  dbs.forEach(function(d){
+    var k=regionText(d.region); if(!k)return;
+    var nm=regionName(d);
+    if(!by[k]||(d.sigungu&&!by[k].std)) by[k]={name:nm,std:!!d.sigungu};
+  });
+  return Object.keys(by).sort().map(function(k){ return by[k].name });
+}
+function fillRegionList(){
+  var dl=q("rtRegions");
+  if(!dl){ dl=document.createElement("datalist"); dl.id="rtRegions"; document.body.appendChild(dl) }
+  dl.innerHTML=regionList().map(function(n){ return '<option value="'+E(n)+'">' }).join("");
+}
+
 function injectFields(){
   var rg=q("region");
+  if(rg&&!rg.getAttribute("list")){
+    rg.setAttribute("list","rtRegions");
+    rg.setAttribute("placeholder","순천시 — 아래 「주소로 찾기」로 고르면 정확합니다");
+  }
   if(HAS_DB&&rg&&!q("dbAddr")){
     var f=document.createElement("div");
     f.className="field";
     f.innerHTML='<label>동네·상세위치 <small style="font-weight:600;color:#8b95a1">지도·동선에 씁니다</small></label>'+
-      '<input id="dbAddr" placeholder="조례동 / 순천시 조례동 한아름아파트">';
+      '<div style="display:flex;gap:6px">'+
+        '<input id="dbAddr" placeholder="조례동 / 순천시 조례동 한아름아파트" style="flex:1;min-width:0">'+
+        '<button type="button" class="btn btn-light" id="dbAddrFind" style="flex:none;white-space:nowrap">📍 주소로 찾기</button>'+
+      '</div><div id="dbAddrTag" style="margin-top:5px"></div>';
     rg.parentNode.parentNode.insertBefore(f,rg.parentNode.nextSibling);
+    q("dbAddrFind").onclick=function(){
+      pickOpen("고객이 사는 곳 찾기",(q("dbAddr").value||q("region").value||"").trim(),function(p){
+        var txt=p.label+(p.dong&&p.label.indexOf(p.dong)<0?" ("+p.dong+")":"");
+        q("dbAddr").value=txt;
+        if(p.sigungu) q("region").value=p.sigungu;
+        PICKED.db=Object.assign({text:txt},p);
+        addrTag(p);
+      });
+    };
+    q("dbAddr").addEventListener("input",function(){
+      if(!PICKED.db||PICKED.db.text!==q("dbAddr").value){ PICKED.db=null; addrTag(null) }
+    });
   }
   var af=q("appointmentField");
   if(HAS_CALL&&af&&!q("apptPlace")){
     var g=document.createElement("div");
     g.className="field hidden"; g.id="apptPlaceField";
     g.innerHTML='<label>만날 장소 <small style="font-weight:600;color:#8b95a1">지도에 이 점이 찍힙니다</small></label>'+
-      '<input id="apptPlace" placeholder="조례동 스타벅스 / 고객 자택">';
+      '<div style="display:flex;gap:6px">'+
+        '<input id="apptPlace" placeholder="조례동 스타벅스 / 고객 자택" style="flex:1;min-width:0">'+
+        '<button type="button" class="btn btn-light" id="apptFind" style="flex:none;white-space:nowrap">📍 찾기</button>'+
+      '</div>';
     af.parentNode.insertBefore(g,af.nextSibling);
+    q("apptFind").onclick=function(){
+      var d=findDb(((q("callDbId")||{}).value)||"");
+      pickOpen("만날 곳 찾기",(q("apptPlace").value||regionName(d)||"").trim(),function(p){
+        q("apptPlace").value=p.label;
+        PICKED.call=Object.assign({text:p.label},p);
+        say("만날 곳을 "+(p.sigungu||"")+" "+(p.dong||"")+" 로 잡았습니다.",2600);
+      });
+    };
+    q("apptPlace").addEventListener("input",function(){
+      if(!PICKED.call||PICKED.call.text!==q("apptPlace").value)PICKED.call=null;
+    });
   }
   var ta=document.querySelector(".top-actions");
   if(ta&&!q("rtBtn")){
@@ -213,6 +441,11 @@ function injectFields(){
     b.onclick=function(){ routeOpen() };
     ta.insertBefore(b,ta.firstChild);
   }
+}
+function addrTag(p){
+  var t=q("dbAddrTag"); if(!t)return;
+  t.innerHTML=p?('<span class="badge green">카카오 확인 · '+E([p.sido,p.sigungu,p.dong].filter(Boolean).join(" "))+'</span>')
+                :'';
 }
 
 /* 상담을 고르면 장소 칸도 같이 열린다 */
@@ -231,9 +464,14 @@ var origOpenDb=window.openDb;
 if(typeof origOpenDb==="function"){
   window.openDb=function(id){
     var r=origOpenDb.apply(this,arguments);
-    injectFields();
+    injectFields(); fillRegionList();
     var d=id?findDb(id):null;
     if(q("dbAddr")) q("dbAddr").value=(d&&d.addr)||"";
+    PICKED.db=(d&&d.addr&&d.lat&&d.lng)
+      ? {text:d.addr,lat:+d.lat,lng:+d.lng,label:d.addr,
+         sido:d.sido||"",sigungu:d.sigungu||"",dong:d.dong||"",region_code:d.region_code||""}
+      : null;
+    addrTag(PICKED.db&&PICKED.db.region_code?PICKED.db:null);
     return r;
   };
 }
@@ -244,8 +482,28 @@ if(typeof origSaveDb==="function"){
     if(!HAS_DB||!q("dbAddr")) return origSaveDb.apply(self,args);
     var t=(q("dbAddr").value||"").trim(), region=((q("region")||{}).value||"").trim();
     var extra={addr:t||null,lat:null,lng:null};
-    return (t?geo(t,region):Promise.resolve(null)).then(function(p){
-      if(p){ extra.lat=p.lat; extra.lng=p.lng }
+    if(HAS_STD) Object.assign(extra,{region_code:null,sido:null,sigungu:null,dong:null});
+    /* 창에서 골라 둔 것이 그대로면 다시 묻지 않는다 */
+    var pre=(PICKED.db&&PICKED.db.text===t)?Promise.resolve(PICKED.db)
+           :(t?resolvePlace(t,region):Promise.resolve(null));
+    return pre.then(function(p){
+      if(p){
+        extra.lat=p.lat; extra.lng=p.lng;
+        /* 지역 칸이 비었으면 카카오가 준 이름으로 채워 준다 */
+        if(p.sigungu&&!region&&q("region")){ q("region").value=p.sigungu; region=p.sigungu }
+        var clash=!!(p.sigungu&&region&&regionText(region)!==regionText(p.sigungu));
+        if(HAS_STD&&!clash){
+          extra.region_code=p.region_code||null; extra.sido=p.sido||null;
+          extra.sigungu=p.sigungu||null; extra.dong=p.dong||null;
+        }
+        /* 적어 둔 지역과 주소가 다른 데를 가리키면 — 좌표만 넣고 행정구역은
+           비워 둡니다. 여기서 남의 지역 코드를 적어 버리면 그 사람이 통째로
+           다른 지역 사람으로 세어집니다. */
+        if(clash){
+          say("지역은 「"+region+"」인데 주소는 "+p.sigungu+" 입니다. "+
+              "행정구역은 비워 두었습니다 — 📍 주소로 찾기 로 다시 잡아 주세요.",8000);
+        }
+      }
       return withPatch("dbs",extra,function(){ return origSaveDb.apply(self,args) });
     });
   };
@@ -259,6 +517,10 @@ if(typeof origOpenCall==="function"){
     injectFields();
     var d=findDb(id);
     if(q("apptPlace")) q("apptPlace").value=(d&&d.next_appt_place)||(d&&d.addr)||"";
+    PICKED.call=(d&&d.next_appt_place&&d.next_appt_lat&&d.next_appt_lng)
+      ? {text:d.next_appt_place,lat:+d.next_appt_lat,lng:+d.next_appt_lng}
+      : ((d&&d.addr&&d.lat&&d.lng&&!d.next_appt_place)
+          ? {text:d.addr,lat:+d.lat,lng:+d.lng} : null);
     if(window.toggleAppointment) window.toggleAppointment();
     return r;
   };
@@ -275,7 +537,8 @@ if(typeof origSaveCall==="function"){
     var d=findDb(dbId);
     if(HAS_CALL&&res==="상담"){
       extra.appt_place=place||null; extra.appt_lat=null; extra.appt_lng=null;
-      if(place) pre=geo(place,(d&&d.region)||"");
+      if(place) pre=(PICKED.call&&PICKED.call.text===place)
+        ? Promise.resolve(PICKED.call) : geo(place,regionName(d));
     }
     return pre.then(function(p){
       if(p){ extra.appt_lat=p.lat; extra.appt_lng=p.lng }
@@ -296,11 +559,11 @@ if(typeof origSaveCall==="function"){
 /* 누구부터 걸까 — 오래 방치된 사람 · 덜 걸어본 사람 · 가까운 사람 순.
    이미 약속이 있거나, 거절했거나, 계약까지 끝난 사람은 뺍니다. */
 function candidates(d0,when,limit){
-  var rg=norm(d0.region), now=Date.now(), p0=ptOf(d0), out=[];
-  if(!rg)return out;
+  var rg=regionText(d0.region), now=Date.now(), p0=ptOf(d0), out=[];
+  if(!rg&&!d0.region_code)return out;
   dbs.forEach(function(d){
     if(d.id===d0.id)return;
-    if(norm(d.region)!==rg)return;
+    if(!sameRegion(d0,d))return;
     if(d.assigned_to!==d0.assigned_to)return;
     var s=stageOf(d);
     if(s==="계약완료"||s==="증권전달")return;
@@ -342,7 +605,7 @@ function talk(cand,d0,when,kind){
   var s=slots(when), t1=ampm(s[0]), t2=s[1]?ampm(s[1]):null;
   var me=""; try{ me=profile.name||"" }catch(e){}
   var nm=(cand.customer_name||"고객"), who=nm+"님";
-  var area=(d0.region||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
+  var area=(regionName(d0)||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
   var ask=t2?(josa(t1,"이나","나")+" "+t2+" 중에 어느 쪽이 편하실까요?")
             :(josa(t1,"이","가")+" 편하실까요?");
   if(kind==="sms"){
@@ -370,6 +633,7 @@ function tCard(t,body){
 }
 
 function nearModal(){
+  styles();
   if(q("rtNear"))return;
   var m=document.createElement("div");
   m.className="modal"; m.id="rtNear";
@@ -393,17 +657,18 @@ function nearOpen(dbId,when){
   nearModal();
   var list=candidates(d0,when,10);
   var a=new Date(when), day=(a.getMonth()+1)+"월 "+a.getDate()+"일("+wday(a)+") "+hm(a);
-  q("rtNearT").innerHTML="📍 "+E(d0.region||"지역")+" — "+E(day)+" 약속이 잡혔습니다";
+  q("rtNearT").innerHTML="📍 "+E(regionName(d0)||"지역")+" — "+E(day)+" 약속이 잡혔습니다";
   var head=
     '<div class="notice" style="margin-bottom:14px">'+
-      '<b>'+E(d0.customer_name)+'</b> 님 한 건 때문에 '+E(d0.region||"그 지역")+'까지 갑니다. '+
+      '<b>'+E(d0.customer_name)+'</b> 님 한 건 때문에 '+E(regionName(d0)||"그 지역")+'까지 갑니다. '+
       '가는 김에 <b>2~3명만 더</b> 붙이면 하루가 채워집니다.<br>'+
       '아래는 같은 지역에서 <b>아직 약속이 없고 · 거절하지 않은</b> 사람을 '+
       '오래 방치된 순 · 덜 걸어본 순 · 가까운 순으로 섞어 뽑은 열 명입니다.'+
     '</div>';
   if(!list.length){
     q("rtNearB").innerHTML=head+'<div class="empty">같은 지역에 아직 걸 사람이 없습니다.<br>'+
-      'DB 등록 창의 <b>지역</b> 칸을 「'+E(d0.region||"순천")+'」로 맞춰 두면 여기에 모입니다.</div>';
+      'DB 등록 창의 <b>지역</b> 칸을 「'+E(regionName(d0)||"순천시")+'」로 맞춰 두면 여기에 모입니다.<br>'+
+      '<b>📍 주소로 찾기</b> 로 고르면 이름이 갈라지지 않습니다.</div>';
   }else{
     var rows=list.map(function(c,i){
       var d=c.d, tel=(d.phone||"").replace(/[^0-9+]/g,"");
@@ -447,7 +712,7 @@ function nearOpen(dbId,when){
   }
   q("rtNearMap").onclick=function(){
     q("rtNear").classList.remove("open");
-    routeOpen(dayKey(when),d0.region);
+    routeOpen(dayKey(when),regionName(d0));
   };
   q("rtNear").classList.add("open");
 }
@@ -499,6 +764,8 @@ function styles(){
   ".rt-act{display:flex;gap:5px;flex-wrap:wrap}",
   ".rt-act .btn{text-decoration:none}",
   ".rt-talk{width:100%;margin-top:8px}",
+  ".rt-hit{cursor:pointer;border-radius:10px;padding-left:9px;padding-right:9px}",
+  ".rt-hit:hover{background:#eef6ff}",
   ".rt-t{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:7px}",
   ".rt-th{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:var(--navy);margin-bottom:6px}",
   ".rt-tb{font-size:13px;line-height:1.65;color:var(--text);white-space:normal}",
@@ -524,6 +791,7 @@ function wrap(){
         '<option value="60">상담 60분</option><option value="90">상담 90분</option></select>'+
       '<button class="btn btn-light btn-sm" id="rtHome">🏠 출발지</button>'+
       '<button class="btn btn-light btn-sm" id="rtFill">📍 좌표 채우기</button>'+
+      '<button class="btn btn-light btn-sm" id="rtTidy">🏷 지역 정리</button>'+
       '<span class="rt-sp"></span>'+
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
@@ -539,6 +807,7 @@ function wrap(){
     try{ localStorage.setItem("apexRouteStayV1",STAY) }catch(e){} render() };
   q("rtHome").onclick=setHome;
   q("rtFill").onclick=fillCoords;
+  q("rtTidy").onclick=tidyRegions;
   q("rtKey").onclick=function(){ keyPanel(true) };
   document.addEventListener("keydown",function(e){
     if(e.key==="Escape"&&w.classList.contains("on")) w.classList.remove("on");
@@ -552,7 +821,7 @@ function stopsOf(dateStr,region,owner){
     var a=nextAppt(d); if(!a)return;
     if(dayKey(a)!==dateStr)return;
     if(owner&&d.assigned_to!==owner)return;
-    if(region&&norm(d.region)!==norm(region))return;
+    if(region&&regionText(d.region)!==regionText(region))return;
     out.push({d:d,at:new Date(a),pt:ptOf(d)});
   });
   out.sort(function(a,b){return a.at-b.at});
@@ -563,7 +832,7 @@ function pool(region,owner){
   var out=[];
   dbs.forEach(function(d){
     if(owner&&d.assigned_to!==owner)return;
-    if(region&&norm(d.region)!==norm(region))return;
+    if(region&&regionText(d.region)!==regionText(region))return;
     var s=stageOf(d);
     if(s==="계약완료"||s==="증권전달")return;
     if(nextAppt(d))return;
@@ -658,12 +927,23 @@ function fitIn(stops,c){
 
 /* ── 화면 ───────────────────────────────────────────────────────── */
 function fillPickers(){
-  var rs={}, sel=q("rtRegion"), keep=sel.value;
-  dbs.forEach(function(d){ if(d.region&&String(d.region).trim())rs[String(d.region).trim()]=1 });
-  var names=Object.keys(rs).sort();
-  sel.innerHTML='<option value="">지역 전체</option>'+names.map(function(n){
-    return '<option value="'+E(n)+'">'+E(n)+'</option>' }).join("");
-  if(keep&&names.indexOf(keep)>=0)sel.value=keep;
+  /* 「순천」과 「순천시」가 목록에 두 번 뜨지 않게 맨 이름으로 묶는다 */
+  var by={}, sel=q("rtRegion"), keep=sel.value;
+  dbs.forEach(function(d){
+    var k=regionText(d.region); if(!k)return;
+    if(!by[k])by[k]={name:regionName(d),n:0,split:{},std:!!d.sigungu};
+    by[k].n++;
+    by[k].split[String(d.region||"").trim()]=1;
+    if(d.sigungu&&!by[k].std){ by[k].name=d.sigungu; by[k].std=true }
+  });
+  var keys=Object.keys(by).sort(), names=keys.map(function(k){return by[k].name});
+  sel.innerHTML='<option value="">지역 전체</option>'+keys.map(function(k){
+    var g=by[k], dup=Object.keys(g.split).length>1?" ⚠":"";
+    return '<option value="'+E(g.name)+'">'+E(g.name)+' ('+g.n+')'+dup+'</option>' }).join("");
+  if(keep){
+    Array.prototype.forEach.call(sel.options,function(o){
+      if(regionText(o.value)===regionText(keep))sel.value=o.value });
+  }
 
   var os=q("rtOwner"), keep2=os.value, me=myId(), opts=[];
   try{ profiles.forEach(function(p){ opts.push('<option value="'+E(p.id)+'">'+E(p.name||"담당자")+'</option>') }) }catch(e){}
@@ -679,6 +959,23 @@ function render(){
   var stops=stopsOf(date,region,owner);
   var L=legs(stops);
   var side=[];
+
+  /* 지역이 두 이름으로 갈라져 있으면 먼저 알려 준다 — 여기서 사람이 샙니다 */
+  var split={};
+  dbs.forEach(function(d){
+    if(owner&&d.assigned_to!==owner)return;
+    var k=regionText(d.region); if(!k)return;
+    (split[k]=split[k]||{})[String(d.region||"").trim()]=1;
+  });
+  var bad=Object.keys(split).filter(function(k){ return Object.keys(split[k]).length>1 });
+  if(bad.length){
+    side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;color:#a8730f;font-size:13px">'+
+      '<b>지역 이름이 '+bad.length+'곳에서 갈라져 있습니다.</b><br>'+
+      bad.slice(0,3).map(function(k){ return E(Object.keys(split[k]).join(" / ")) }).join("<br>")+
+      (bad.length>3?"<br>…":"")+
+      '<br><br>지금은 같은 지역으로 <b>보고 세고 있습니다</b>. 다만 원래 CRM 화면의 지역 칸에는 갈라진 채로 보입니다 — '+
+      '위의 <b>🏷 지역 정리</b> 를 누르면 카카오가 정한 한 이름으로 모읍니다.</div>');
+  }
 
   var dt=new Date(date+"T00:00:00");
   side.push('<div class="rt-h">'+E((dt.getMonth()+1)+"월 "+dt.getDate()+"일("+wday(dt)+")")+
@@ -893,26 +1190,185 @@ function fillCoords(){
   var todo=[];
   dbs.forEach(function(d){
     if(owner&&d.assigned_to!==owner)return;
-    if(region&&norm(d.region)!==norm(region))return;
+    if(region&&regionText(d.region)!==regionText(region))return;
     if(d.addr&&!(d.lat&&d.lng))todo.push({d:d,text:d.addr,kind:"home"});
     if(d.next_appt_place&&!(d.next_appt_lat&&d.next_appt_lng))todo.push({d:d,text:d.next_appt_place,kind:"appt"});
   });
   if(!todo.length){ say("좌표를 채울 것이 없습니다. 동네나 만날 장소를 먼저 적어 주세요.",3500); return }
   say("주소 "+todo.length+"건을 좌표로 바꾸는 중입니다…",4000);
-  var i=0, ok=0;
+  var i=0, ok=0, mism=0;
   (function step(){
     if(i>=todo.length){
-      say("좌표 "+ok+"건을 채웠습니다.",3000);
+      say("좌표 "+ok+"건을 채웠습니다."+
+        (mism?" "+mism+"건은 적힌 지역과 주소가 달라 좌표만 넣었습니다 — 📍 주소로 찾기 로 확인하세요.":""),
+        mism?8000:3000);
       if(window.loadAll) Promise.resolve(loadAll()).then(render); else render();
       return;
     }
     var t=todo[i++];
-    geo(t.text,t.d.region||"").then(function(p){
+    resolvePlace(t.text,regionName(t.d)).then(function(p){
       if(!p)return null;
-      var patch=t.kind==="home"?{lat:p.lat,lng:p.lng}:{next_appt_lat:p.lat,next_appt_lng:p.lng};
+      var patch;
+      if(t.kind==="home"){
+        patch={lat:p.lat,lng:p.lng};
+        /* 사는 곳이면 행정구역까지 같이 적어 둔다 — 지역이 다시 갈라지지 않게.
+           다만 적힌 지역과 다른 시·군이 나오면 좌표만 넣습니다. 한꺼번에 도는
+           작업이라 잘못 들어가면 어디가 틀렸는지 찾기 어렵습니다. */
+        if(HAS_STD&&p.region_code&&p.sigungu&&
+           regionText(p.sigungu)===regionText(t.d.region)){
+          patch.region_code=p.region_code; patch.sido=p.sido||null;
+          patch.sigungu=p.sigungu||null;   patch.dong=p.dong||null;
+        }else if(p.sigungu&&regionText(p.sigungu)!==regionText(t.d.region)){
+          mism++;
+        }
+      }else{
+        patch={next_appt_lat:p.lat,next_appt_lng:p.lng};
+      }
       return sb.from("dbs").update(patch).eq("id",t.d.id).then(function(r){ if(!r.error)ok++ });
     }).catch(function(){}).then(function(){ setTimeout(step,220) });
   })();
+}
+
+/* ── 지역 이름 정리 ─────────────────────────────────────────────
+   「순천」·「순천시」로 갈라져 적힌 것을 카카오가 정한 한 이름으로 모읍니다.
+   바꾸기 전에 무엇이 어떻게 바뀌는지 먼저 보여 주고, 누르면 그때 씁니다.
+   지금 고른 담당자의 것만 건드립니다. */
+function tidyRegions(){
+  if(!KEY){ keyPanel(true); return }
+  var owner=q("rtOwner").value||"";
+  var rows=[];
+  dbs.forEach(function(d){
+    if(owner&&d.assigned_to!==owner)return;
+    if(!regionText(d.region))return;
+    rows.push(d);
+  });
+  if(!rows.length){ say("정리할 지역이 없습니다."); return }
+
+  var groups={};
+  rows.forEach(function(d){
+    var k=regionText(d.region), nm=String(d.region||"").trim();
+    if(!groups[k])groups[k]={key:k,rows:[],names:{},std:"",sido:"",why:""};
+    var g=groups[k];
+    g.rows.push(d);
+    g.names[nm]=(g.names[nm]||0)+1;
+    /* 이미 카카오로 확인된 줄이 있으면 그 이름을 쓴다 — 단, 같은 지역일 때만 */
+    if(d.sigungu&&!g.std&&regionText(d.sigungu)===k){ g.std=d.sigungu; g.sido=d.sido||"" }
+  });
+
+  var keys=Object.keys(groups), i=0;
+  say("지역 "+keys.length+"곳을 카카오에 확인하는 중입니다…",5000);
+  (function step(){
+    if(i>=keys.length)return show();
+    var g=groups[keys[i++]];
+    if(g.std)return step();
+    /* 가장 많이 쓰인 표기로 물어본다 */
+    var seed=Object.keys(g.names).sort(function(a,b){return g.names[b]-g.names[a]})[0];
+    resolvePlace(seed,"").then(function(p){
+      /* ★ 여기가 중요합니다 — 카카오가 돌려준 시·군·구가 원래 적힌 지역과
+         다른 데를 가리키면 <b>절대 바꾸지 않습니다.</b> 「학동」처럼 전국에
+         여러 개인 이름을 넣으면 엉뚱한 시가 나옵니다. 이 도구는 표기만
+         통일하는 것이지 지역 자체를 바꾸는 것이 아닙니다. */
+      if(p&&p.sigungu){
+        if(regionText(p.sigungu)===g.key){ g.std=p.sigungu; g.sido=p.sido||"" }
+        else g.why="카카오는 「"+p.sigungu+"」라고 답했습니다 — 적힌 지역과 달라서 그대로 둡니다";
+      }else{
+        g.why="카카오가 이 이름을 못 찾았습니다";
+      }
+    }).catch(function(){ g.why="확인하지 못했습니다" })
+      .then(function(){ setTimeout(step,220) });
+  })();
+
+  function show(){
+    var plan=[], skip=[];
+    keys.forEach(function(k){
+      var g=groups[k];
+      if(!g.std){ if(g.why)skip.push(g); return }
+      var chg=g.rows.filter(function(d){
+        if(String(d.region||"").trim()!==g.std)return true;
+        return HAS_STD&&!d.sigungu;
+      });
+      if(chg.length)plan.push({g:g,rows:chg});
+    });
+    tidyModal();
+    var who=owner?(function(){try{return pname(owner)}catch(e){return "선택한 담당자"}})():"전체 담당자";
+    var tail=skip.length
+      ? '<div class="rt-h">그대로 두는 것</div><div class="rt-card">'+skip.map(function(g){
+          return '<div class="rt-row"><div class="rt-no">✋</div>'+
+            '<div class="rt-who"><b>'+E(Object.keys(g.names).join(" · "))+'</b>'+
+            '<small>'+E(g.why)+'</small></div>'+
+            '<div class="rt-act"><span class="badge gray">'+g.rows.length+'건</span></div></div>';
+        }).join("")+'</div>'+
+        '<div class="rt-card" style="font-size:12.5px;color:var(--muted);line-height:1.6">'+
+        '이 도구는 <b>같은 지역의 표기만</b> 통일합니다. 적힌 지역과 다른 데가 나오면 손대지 않습니다 — '+
+        '「학동」처럼 전국에 여러 개인 이름은 엉뚱한 시로 바뀔 수 있기 때문입니다. '+
+        '이런 줄은 DB 등록 창에서 <b>📍 주소로 찾기</b> 로 한 건씩 잡아 주세요.</div>'
+      : "";
+    if(!plan.length){
+      q("rtTidyB").innerHTML='<div class="notice">바꿀 것이 없습니다 — '+E(who)+
+        ' 의 지역 이름은 이미 하나로 맞아 있습니다.</div>'+tail;
+      q("rtTidyGo").classList.add("hidden");
+    }else{
+      var total=plan.reduce(function(a,p){return a+p.rows.length},0);
+      q("rtTidyB").innerHTML=
+        '<div class="notice" style="margin-bottom:12px"><b>'+E(who)+'</b> 의 DB '+total+'건의 <b>지역</b> 칸을 '+
+        '아래 이름으로 바꿉니다. 고객 정보·단계·약속은 건드리지 않습니다.</div>'+
+        '<div class="rt-card">'+plan.map(function(p){
+          var froms=Object.keys(p.g.names).filter(function(n){return n!==p.g.std});
+          return '<div class="rt-row">'+
+            '<div class="rt-no">🏷</div>'+
+            '<div class="rt-who"><b>'+E(froms.length?froms.join(" · "):p.g.std)+'</b>'+
+              '<small>지역 칸에 「<b>'+E(p.g.std)+'</b>」'+(jong(p.g.std)?" 이":" 가")+' 들어갑니다'+
+              (p.g.sido?' · '+E(p.g.sido):"")+'</small></div>'+
+            '<div class="rt-act"><span class="badge blue">'+p.rows.length+'건</span></div></div>';
+        }).join("")+'</div>'+tail;
+      q("rtTidyGo").classList.remove("hidden");
+      q("rtTidyGo").onclick=function(){ apply(plan) };
+    }
+    q("rtTidy2").classList.add("open");
+  }
+
+  function apply(plan){
+    var jobs=[];
+    plan.forEach(function(p){
+      p.rows.forEach(function(d){
+        var patch={region:p.g.std};
+        if(HAS_STD){ patch.sigungu=p.g.std; if(p.g.sido)patch.sido=p.g.sido }
+        jobs.push({id:d.id,patch:patch});
+      });
+    });
+    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="바꾸는 중…";
+    var j=0, ok=0, no=0;
+    (function run(){
+      if(j>=jobs.length){
+        q("rtTidy2").classList.remove("open");
+        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
+        say(ok+"건을 정리했습니다."+(no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),5000);
+        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
+        else render();
+        return;
+      }
+      var t=jobs[j++];
+      sb.from("dbs").update(t.patch).eq("id",t.id).then(function(r){
+        if(r&&r.error)no++; else ok++;
+      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
+    })();
+  }
+}
+function tidyModal(){
+  styles();
+  if(q("rtTidy2"))return;
+  var m=document.createElement("div");
+  m.className="modal"; m.id="rtTidy2";
+  m.innerHTML=
+    '<div class="modal-box" style="width:min(620px,100%)">'+
+      '<div class="modal-head"><h3>지역 이름 정리</h3><button class="close" id="rtTidyX">×</button></div>'+
+      '<div class="modal-body" id="rtTidyB"></div>'+
+      '<div class="modal-foot"><button class="btn btn-light" id="rtTidyC">그만두기</button>'+
+        '<button class="btn btn-primary hidden" id="rtTidyGo">이대로 바꾸기</button></div>'+
+    '</div>';
+  document.body.appendChild(m);
+  var c=function(){ m.classList.remove("open") };
+  q("rtTidyX").onclick=c; q("rtTidyC").onclick=c;
 }
 
 /* ── 열기 ───────────────────────────────────────────────────────── */
@@ -921,7 +1377,7 @@ function routeOpen(dateStr,region){
   q("rtDate").value=dateStr||q("rtDate").value||todayKey();
   if(region!==undefined&&region!==null){
     var s=q("rtRegion"), hit=false;
-    Array.prototype.forEach.call(s.options,function(o){ if(norm(o.value)===norm(region)){s.value=o.value;hit=true} });
+    Array.prototype.forEach.call(s.options,function(o){ if(regionText(o.value)===regionText(region)){s.value=o.value;hit=true} });
     if(!hit)s.value="";
   }
   q("rtStay").value=String(STAY);
@@ -936,6 +1392,9 @@ function boot(){
     injectFields();
     if(!HAS_DB&&!HAS_CALL){
       console.log("[apex-route] 서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 실행하면 켜집니다.");
+    }else if(!HAS_STD){
+      console.log("[apex-route] 지역 표준화 칸이 없습니다 — migration_47_region_std.sql 을 실행하면 켜집니다. "+
+                  "(그전에도 「순천」과 「순천시」는 같은 지역으로 봅니다)");
     }
   });
 }
