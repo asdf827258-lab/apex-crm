@@ -890,6 +890,21 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .show.deck>section.cur .fd{font-size:12.5px}
 .show.deck>section.cur .fa{height:46px;width:18px}
 .show.deck>section.cur .fa::before{width:8px;height:8px}
+/* ── 칸마다 공부하기 ─────────────────────────────────────────────
+   화면에서는 <b>눌러서 켜고</b>, 종이에는 <b>늘 나옵니다</b> — 진단서를
+   들고 공부하실 수 있게. */
+.fst{display:none;border:1px solid #CFE0FE;background:var(--bl2);border-radius:14px;
+ padding:13px 15px;margin-bottom:13px}
+.fst.on{display:block}
+.fst>div{font-size:12.5px;line-height:1.75;color:var(--nv);padding:7px 0;
+ border-top:1px solid rgba(49,130,246,.16)}
+.fst>div:first-child{border-top:0;padding-top:0}
+.fst span{display:block;font-size:11px;font-weight:800;color:var(--bl);margin-bottom:2px}
+.fst .fsn span{color:var(--rd)}
+.fst .fse span{color:var(--or)}
+.fst .fss span{color:var(--gr)}
+.fst .fss{font-weight:700}
+@media print{.fst{display:block!important}}
 /* ── 연령대별 담보안 ──────────────────────────────────────────────
    접힌 것도 <b>DOM 에는 늘 있습니다.</b> 그래야 인쇄에 전부 나옵니다 —
    종이는 접을 수가 없습니다. */
@@ -927,6 +942,25 @@ body.presenting .deck-fit{height:calc(100vh - 96px);align-items:center}
 .apt td.s{color:var(--gy2);font-weight:700}
 .apt td.v{font-weight:800;color:var(--bl)}
 .apt td i{font-style:normal;font-size:11px;color:var(--gy2);font-weight:700}
+/* 사장님이 고친 자리 — 어느 것이 사장님 값인지 <b>보여야</b> 한다 */
+.apmine{font-size:10.5px;font-weight:800;color:var(--gr);background:var(--gr2);
+ border:1px solid #A7F3D0;border-radius:99px;padding:1px 8px;margin-left:4px}
+.apeo{appearance:none;border:1px dashed var(--ln);background:none;border-radius:10px;
+ padding:6px 12px;font:inherit;font-size:12px;font-weight:800;color:var(--gy2);
+ cursor:pointer;margin-top:9px}
+.apeo:hover{border-color:var(--bl);color:var(--bl)}
+.apedit{border:1px solid #CFE0FE;background:var(--bl2);border-radius:12px;padding:12px 14px;margin-top:9px}
+.aper{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:9px}
+.apedit label{font-size:11.5px;font-weight:800;color:var(--bl);display:flex;
+ flex-direction:column;gap:4px}
+.apedit select,.apedit input,.apedit textarea{font:inherit;font-size:13px;font-weight:700;
+ color:var(--nv);border:1px solid var(--ln);border-radius:9px;padding:7px 10px;background:#fff}
+.apedit input{width:110px}
+.apedit label span{font-size:11px;font-weight:700;color:var(--gy2)}
+.apew{display:block!important}
+.apedit textarea{width:100%;resize:vertical;line-height:1.7}
+.apeb{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px}
+.apeb span{font-size:11.5px;color:var(--gy2);font-weight:700}
 /* ── 이 나이대는 이렇게 봅니다 ─────────────────────────────────── */
 .fage{border:1px solid var(--ln);border-radius:16px;background:#fff;padding:15px 17px;margin-bottom:14px}
 .fah{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-bottom:11px}
@@ -3215,6 +3249,50 @@ var AGE_PLAN={
   '사망 · 장해':{p:2,m:0.6,why:'<b>수익자와 상속</b>을 정리하는 자리입니다. 금액보다 정리가 먼저입니다.'},
   '배상 · 운전자':{p:2,m:0.8,why:'운전을 그만두셨으면 <b>정리 대상</b>입니다.'}}
 };
+/* ── 사장님이 고치는 기준 ─────────────────────────────────────────
+   위 표(AGE_PLAN)는 <b>처음 값</b>일 뿐입니다. 현장에서 맞는 기준은
+   사장님이 압니다 — 고치시면 <b>그것이 이 도구의 기준</b>이 됩니다.
+
+   ■ 고친 값은 <b>이 브라우저에만</b> 남습니다(localStorage). 서버로 안 갑니다.
+   ■ 고친 자리는 <b>고쳤다고 표시</b>합니다. 어느 것이 사장님 값이고 어느 것이
+     처음 값인지 모르면, 나중에 왜 그 숫자인지 아무도 설명 못 합니다.
+   ■ <b>되돌리기</b>를 항상 둡니다. 되돌릴 수 없는 편집은 무섭습니다.
+   ■ 「지금 이 나이대·이 묶음의 기준이 무엇인가」는 <b>여기 한 곳</b>만 답합니다
+     — 화면도 인쇄도 이 함수를 부릅니다 (5번).                        */
+function agePlanOf(k,mid){
+  var base=(AGE_PLAN[k]||{})[mid]||{p:2,m:1,why:''};
+  var mine=((S.apEdit||{})[k]||{})[mid];
+  if(!mine)return {p:base.p,m:base.m,why:base.why,mine:false,base:base};
+  return {p:(mine.p===undefined?base.p:mine.p),
+          m:(mine.m===undefined?base.m:mine.m),
+          why:(mine.why===undefined?base.why:mine.why),
+          mine:true,base:base};
+}
+function apEditOpen(mid){S.apEditing=(S.apEditing===mid?'':mid);save();render();}
+function apEditSave(k,mid){
+  var p=document.getElementById('apeP'),m=document.getElementById('apeM'),w=document.getElementById('apeW');
+  if(!p||!m||!w)return;
+  var mv=parseFloat(m.value);
+  if(!(mv>0)||mv>3){toast('배수는 0 보다 크고 3 이하로 적어 주십시오 — 표준의 100% 는 1 입니다',6000);return;}
+  if(!S.apEdit)S.apEdit={};
+  if(!S.apEdit[k])S.apEdit[k]={};
+  S.apEdit[k][mid]={p:parseInt(p.value,10),m:mv,why:w.value};
+  S.apEditing='';save();render();
+  toast('고치셨습니다 — 이제 이 값이 이 도구의 기준입니다');
+}
+function apEditReset(k,mid){
+  if(S.apEdit&&S.apEdit[k])delete S.apEdit[k][mid];
+  S.apEditing='';save();render();toast('처음 값으로 되돌렸습니다');
+}
+function apEditResetAll(k){
+  if(S.apEdit)delete S.apEdit[k];
+  S.apEditing='';save();render();toast('이 나이대를 처음 값으로 되돌렸습니다');
+}
+function apEditCount(k){
+  var o=(S.apEdit||{})[k],c=0,x;
+  if(o)for(x in o)if(o.hasOwnProperty(x))c++;
+  return c;
+}
 function agePriOf(p){var i;for(i=0;i<AGE_PRI.length;i++)if(AGE_PRI[i].p===p)return AGE_PRI[i];return AGE_PRI[3];}
 /* 표준 × 배수 — 자릿수에 맞게 <b>읽히는 수</b>로 맞춘다.
    표준이 없는 담보(0)는 <b>「—」</b> 다. 없는 숫자를 만들지 않는다 (1번). */
@@ -3248,6 +3326,9 @@ function agePlanHtml(){
         (x.k===k?(' style="background:'+x.c+';border-color:'+x.c+'"'):'')+'>'+x.ic+' '+esc(x.t)+'</button>';
     }).join('')+
     '<button class="aptb pr" onclick="window.print()">🖨 이 담보안 인쇄</button></div>'+
+    (apEditCount(k)?('<div class="note w noprint"><b>이 나이대에서 '+apEditCount(k)+'곳을 고치셨습니다.</b> '+
+      '고친 값이 화면과 인쇄에 그대로 쓰입니다. '+
+      '<button class="mini" onclick="apEditResetAll(\''+k+'\')">이 나이대 전부 처음 값으로</button></div>'):'')+
     '<div class="aphd" style="border-color:'+g.c+'44">'+
       '<div class="aph1">'+g.ic+' <b style="color:'+g.c+'">'+esc(g.t)+' 담보안</b>'+
         '<span>표준 담보 '+STD.reduce(function(a,x){return a+x.rows.length;},0)+'가지를 이 나이대 기준으로</span></div>'+
@@ -3259,8 +3340,7 @@ function agePlanHtml(){
     '</div>';
   /* 순위대로 — 급한 것이 위로 온다 */
   var list=STD.map(function(gr){
-    var pl=P[gr.mid]||{p:2,m:1,why:''};
-    return {gr:gr,pl:pl};
+    return {gr:gr,pl:agePlanOf(k,gr.mid)};   /* 기준은 <b>한 곳</b>이 답한다 */
   }).sort(function(a,b){
     var pa=(a.pl.p===0?9:a.pl.p),pb=(b.pl.p===0?9:b.pl.p);
     return pa-pb;
@@ -3277,14 +3357,32 @@ function agePlanHtml(){
       '<button class="apb" onclick="agePlanFold(\''+gr.mid.replace(/'/g,"\\'")+'\')">'+
         '<span class="app" style="color:'+pr.c+';background:'+pr.b+'">'+esc(pr.t)+'</span>'+
         '<b>'+gr.ic+' '+esc(gr.mid)+'</b>'+
-        '<em>담보 '+gr.rows.length+'개 · 표준의 <u>'+Math.round(pl.m*100)+'%</u></em>'+
+        '<em>담보 '+gr.rows.length+'개 · 표준의 <u>'+Math.round(pl.m*100)+'%</u>'+
+          (pl.mine?' <b class="apmine">사장님이 고침</b>':'')+'</em>'+
         '<i>'+(open?'접기 ▴':'왜 그런지 ▾')+'</i></button>'+
       '<div class="api">'+
         '<div class="apwhy">'+(pl.why||'—')+'</div>'+
+        (S.apEditing===gr.mid
+          ? ('<div class="apedit noprint"><div class="aper">'+
+              '<label>순위<select id="apeP">'+AGE_PRI.map(function(q){
+                return '<option value="'+q.p+'"'+(q.p===pl.p?' selected':'')+'>'+esc(q.t)+'</option>';
+              }).join('')+'</select></label>'+
+              '<label>배수<input id="apeM" type="number" step="0.1" min="0.1" max="3" value="'+pl.m+'"><span>1 = 표준 그대로</span></label>'+
+             '</div>'+
+             '<label class="apew">왜 그런지<textarea id="apeW" rows="3">'+esc((pl.why||'').replace(/<[^>]+>/g,''))+'</textarea></label>'+
+             '<div class="apeb">'+
+               '<button class="btn" onclick="apEditSave(\''+k+'\',\''+gr.mid.replace(/'/g,"\\'")+'\')">저장</button>'+
+               (pl.mine?('<button class="btn n" onclick="apEditReset(\''+k+'\',\''+gr.mid.replace(/'/g,"\\'")+'\')">처음 값으로</button>'):'')+
+               '<button class="btn n" onclick="apEditOpen(\'\')">그만두기</button>'+
+               '<span>고친 값은 <b>이 브라우저에만</b> 남습니다 — 서버로 안 갑니다.</span>'+
+             '</div></div>')
+          : ('<button class="apeo noprint" onclick="apEditOpen(\''+gr.mid.replace(/'/g,"\\'")+'\')">✏️ 이 기준 고치기</button>'))+
         '<table class="apt"><tr><th>담보</th><th>표준</th><th>이 나이대 권장</th></tr>'+rows+'</table>'+
       '</div></div>';
   }).join('')+'</div>';
   h+='<div class="note i"><b>권장 금액은 「표준 × 배수」로 셈한 값</b>이며, 배수는 칸마다 적어 두었습니다. '+
+     '<b>「✏️ 이 기준 고치기」</b> 로 순위 · 배수 · 이유를 바꾸시면 <b>그것이 이 도구의 기준</b>이 됩니다 — '+
+     '고친 자리는 <b>「사장님이 고침」</b> 으로 표시되고, 언제든 처음 값으로 되돌릴 수 있습니다. '+
      '표준이 안 정해진 담보는 <b>「표준 없음」</b> 으로 두었습니다 — 없는 숫자를 만들지 않습니다. '+
      '이 표는 <b>상담 기준</b>이며 법정 기준도 통계도 아닙니다. 실제 보험료·보장은 <b>보험사 심사 결과에 따릅니다.</b></div>';
   return h+'</div>';
@@ -3957,6 +4055,84 @@ var FIT_TABS=[
  {k:'easy',n:'6',ic:'\u{1F4AC}',t:'쉬운 말로',  s:'급여·비급여부터'}
 ];
 function fitTab(k){S.fitTab=k;save();render();window.scrollTo(0,0);}
+function fitStudyOpen(){S.fitStudy=!S.fitStudy;save();render();}
+/* ── 칸마다 「공부하기」 ────────────────────────────────────────────
+   진단서는 <b>답</b>을 보여 줍니다. 그런데 답만 보면 고객이 되물을 때
+   막힙니다 — 「이 숫자 어디서 나왔어요?」
+
+   그래서 칸마다 다섯 줄을 답니다.
+     · 이 칸은 <b>무엇을 보는가</b>
+     · <b>어떻게 셈했는가</b> — 숫자의 출처
+     · <b>신입이 자주 틀리는 것</b>
+     · <b>경력자도 놓치는 것</b>
+     · 고객에게 <b>이렇게 말합니다</b>
+
+   ■ 이 글은 <b>한 벌</b>입니다. 칸을 하나 늘리면 여기 한 줄만 더합니다 (5번).
+   ■ 「공부하기」는 <b>한 번 누르면 여섯 칸 전부</b> 펴집니다 — 칸마다
+     따로 누르게 하면 사장님이 어디를 봤는지 헷갈립니다.               */
+var FIT_STUDY={
+ sum:{w:'이 집이 지금 <b>몇 점</b>인지 한 눈금으로 봅니다.',
+  h:'항목마다 <b>(지금 보장 ÷ 이 집 적정) × 100</b> 을 내고 그 <b>평균</b>을 냅니다. '+
+    '100 을 넘어도 <b>100 으로 자릅니다</b> — 넘치는 것을 자랑하지 않습니다. 실손이 없으면 20점 깎습니다.',
+  n:'점수를 <b>고객에게 먼저</b> 말하는 것. 「60점이시네요」로 열면 고객은 <b>방어부터</b> 합니다. '+
+    '점수는 설계사가 방향을 잡는 눈금이지 설득하는 도구가 아닙니다.',
+  e:'넘치는 항목이 평균을 끌어올려 <b>빈 자리를 가리는</b> 것. 그래서 100 에서 자릅니다 — '+
+    '그래도 평균은 평균이라, 반드시 <b>항목별</b>로 내려가 봐야 합니다.',
+  s:'"점수는 참고만 하시고요, <b>어디가 비었는지</b>만 같이 보시죠."'},
+ row:{w:'사건마다 <b>이 집에 필요한 금액</b>과 <b>지금 보장</b>을 견줍니다.',
+  h:'적정 금액은 이 집의 <b>소득 · 생활비 · 부양 기간</b>으로 셉니다. 칸마다 '+
+    '<b>「어떻게 셈했나」</b> 가 그대로 적혀 있습니다 — 근거 없는 「적정」은 두지 않습니다.',
+  n:'적정 금액을 <b>표준(권장)</b> 과 헷갈리는 것. 표준은 <b>모두에게 같은 값</b>이고, '+
+    '적정은 <b>이 집 숫자</b>에서 나온 값입니다. 둘을 섞어 말하면 고객이 「누구 기준이냐」고 묻습니다.',
+  e:'<b>열릴 확률</b>까지 본 값과 안 본 값을 섞어 말하는 것. 「지금 5,000만원」이 '+
+    '어느 쪽 숫자인지 스스로 알고 말해야 합니다.',
+  s:'"이 금액은 남의 기준이 아니라 <b>이 집 숫자</b>에서 나온 겁니다."'},
+ has:{w:'금액을 따지기 <b>전에</b>, 담보가 <b>있느냐 없느냐</b>를 봅니다.',
+  h:'표준 담보 가운데 <b>값이 안 적힌 것</b>을 없는 것으로 셉니다. '+
+    '<b>모르는 것</b>과 <b>0원</b>은 다릅니다 — 모르면 모른다고 둡니다.',
+  n:'안 적힌 것을 <b>0원</b>으로 적는 것. 0원은 「보장이 <b>없다</b>」는 뜻이라, '+
+    '「아직 못 읽었다」와 <b>완전히 다른 말</b>입니다.',
+  e:'이름이 비슷한 담보를 <b>있는 것으로</b> 세는 것. <b>뇌출혈은 뇌혈관질환이 아닙니다</b> — '+
+    '이름 한 글자가 열 건 중 아홉 건을 가릅니다.',
+  s:'"금액보다 <b>있느냐 없느냐</b>가 먼저입니다."'},
+ cap:{w:'이 보험료를 <b>끝까지 낼 수 있는지</b> 봅니다.',
+  h:'<b>소득 − 고정지출</b> 안에서 보험료가 차지하는 자리를 봅니다. '+
+    '월소득 대비가 아니라 <b>쓰고 남는 돈</b> 기준입니다.',
+  n:'소득 대비 <b>%만</b> 보고 <b>납입이 몇 살에 끝나는지</b>를 안 보는 것. '+
+    '지금 감당돼도 은퇴 후까지 내는 설계면 그건 감당이 아닙니다.',
+  e:'지금 여력만 보고 <b>은퇴 뒤 여력</b>을 안 보는 것. 중간에 못 내면 '+
+    '<b>그때까지 낸 돈이 사라집니다</b> — 보장을 키운 것이 아니라 잃은 것이 됩니다.',
+  s:'"보장을 키우는 것보다 <b>끝까지 유지되는 것</b>이 먼저입니다."'},
+ plan:{w:'<b>무엇부터</b> 할지, 그리고 <b>이 나이대는 어떻게 보는지</b>.',
+  h:'비는 금액이 큰 순서에, <b>나이대 순위</b>를 얹어 정합니다. '+
+    '나이대 기준은 「🎓 연령대별 기준」 한 곳에 있고 여기서는 그것을 가져다 씁니다.',
+  n:'<b>다 채우려</b> 드는 것. 오늘 다 정하시라는 게 아닙니다 — '+
+    '한 번에 다 제안하면 여력을 넘고, 여력을 넘으면 <b>중간에 못 냅니다</b>.',
+  e:'<b>순서를 바꾸는 것.</b> 범위를 납득시키기 전에 금액을 꺼내면 안 먹힙니다. '+
+    '「금액보다 범위」를 먼저 넘긴 다음에 돈 이야기로 갑니다.',
+  s:'"오늘 다 정하시라는 게 아닙니다. 제일 급한 <b>한 자리</b>부터 같이 보시죠."'},
+ easy:{w:'숫자를 말하기 <b>전에</b> 넘어야 하는 자리 — 급여와 비급여.',
+  h:'구조만 적습니다. <b>비율·한도·기간 같은 숫자는 안 외웁니다</b> — 고시로 바뀌고, '+
+    '외운 숫자를 고객 앞에서 말하는 것이 이 자리에서 가장 위험합니다.',
+  n:'「<b>실손 있으니 병원비는 다 됩니다</b>」라고 말하는 것. 비급여는 나라가 한 푼도 안 내고, '+
+    '실손이 있어도 내 몫과 한도가 남습니다.',
+  e:'특례를 <b>좋은 소식으로만</b> 말하는 것. 특례를 받는 병일수록 <b>비급여가 큽니다</b> — '+
+    '그 말이 정확히 거꾸로 돌아옵니다.',
+  s:'"국가가 <b>왼쪽</b>은 많이 덜어 줍니다. 그래서 저희는 <b>오른쪽</b>만 보시면 됩니다."'}
+};
+function fitStudyHtml(k){
+  var x=FIT_STUDY[k];
+  if(!x)return '';
+  /* 꺼 두어도 <b>DOM 에는 늘 있습니다.</b> 안 그리면 종이에도 안 나옵니다 —
+     「인쇄하면 늘 나옵니다」가 거짓말이 됩니다. */
+  return '<div class="fst'+(S.fitStudy?' on':'')+'">'+
+    '<div class="fsw"><span>이 칸은</span>'+x.w+'</div>'+
+    '<div class="fsh"><span>어떻게 셈했나</span>'+x.h+'</div>'+
+    '<div class="fsn"><span>신입이 자주 틀리는 것</span>'+x.n+'</div>'+
+    '<div class="fse"><span>경력자도 놓치는 것</span>'+x.e+'</div>'+
+    '<div class="fss"><span>이렇게 말합니다</span>'+x.s+'</div>'+
+    '</div>';
+}
 function fitTabsHtml(){
   var cur=S.fitTab||FIT_TABS[0].k;
   return '<div class="ftabs noprint">'+FIT_TABS.map(function(x){
@@ -3967,7 +4143,9 @@ function fitTabsHtml(){
 /* 칸 하나를 감싸는 자리 - 여는 자리는 여기 하나다 */
 function fitSec(k,inner){
   var cur=S.fitTab||FIT_TABS[0].k;
-  return '<div class="fitsec'+(cur===k?' on':'')+'" data-k="'+k+'">'+inner+'</div>';
+  /* 공부 칸은 <b>여기 한 곳</b>에서 얹는다 — 칸마다 손으로 붙이면
+     칸을 하나 늘리는 날 한 군데를 빠뜨린다 (5번). */
+  return '<div class="fitsec'+(cur===k?' on':'')+'" data-k="'+k+'">'+fitStudyHtml(k)+inner+'</div>';
 }
 /* 쉬운 말로 — 고객이 <b>「급여가 뭐예요」</b> 에서 막히면 그 뒤 숫자는
    아무 뜻이 없습니다. 그래서 진단서 안에 이 칸을 같이 둡니다.
@@ -4011,6 +4189,11 @@ function fitHtml(){
     '「표준 5,000만원」은 모두에게 같은 값이지만, <b>월 생활비 200만원인 집과 500만원인 집</b>의 필요액은 다릅니다. '+
     '아래 <b>'+FIT_TABS.length+'칸</b>을 눌러 하나씩 보십시오 — <b>인쇄하면 '+FIT_TABS.length+'칸이 전부 나옵니다.</b> '+
     '숫자가 어려우시면 <b>맨 끝 「쉬운 말로」</b> 부터 보십시오.</p>'+
+    '<div class="noprint" style="margin:0 0 11px">'+
+      '<button class="mini'+(S.fitStudy?' on':'')+'" onclick="fitStudyOpen()">'+
+        (S.fitStudy?'📖 공부하기 켜짐 — 끄기':'📖 공부하기 — 이 칸이 무엇인지 · 어떻게 셈했는지')+'</button>'+
+      '<span style="font-size:12px;font-weight:700;color:var(--gy2);margin-left:8px">'+
+        '신입부터 경력자까지 <b>혼자 보면서</b> 익히는 자리입니다 — <b>인쇄하면 늘 나옵니다</b></span></div>'+
     fitTabsHtml();
   if(o.need.length)
     h+='<div class="note w">아직 <b>'+esc(o.need.join(' · '))+'</b>을 안 적으셨습니다 — 넣으시면 <b>이 집에 맞는 금액</b>이 나옵니다. 지금은 셈할 수 있는 것만 셌습니다.</div>';
