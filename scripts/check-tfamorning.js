@@ -95,8 +95,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const none = /로 찾은 메뉴가 없습니다/.test(document.getElementById('navHost').textContent);
     navFind('');
     return { got, drawn, cat, none,
-             /* 이름을 여기에 또 적으면 칸이 늘 때 한쪽만 고쳐진다 (5번) */
-             oneList: /AR_CAT/.test(String(renderNav)) };
+             /* 이름을 여기에 또 적으면 칸이 늘 때 한쪽만 고쳐진다 (5번).
+                <b>함수 이름 하나를 찍어 보지 않는다</b> — 서랍을 그리는 자리가
+                renderNav 에서 navPaintBody 로 갈리면서 이 줄이 빨개졌다.
+                코드가 옮겨간 것이지 규칙이 깨진 것이 아니었다. 그래서
+                <b>서랍을 그리는 자리 전부</b>를 보고, 그중 하나라도 AR_CAT 을
+                읽으면 통과다. */
+             oneList: ['renderNav', 'navPaintBody', 'navTopHtml']
+               .filter(function (n) { return typeof window[n] === 'function'; })
+               .some(function (n) { return /AR_CAT/.test(String(window[n])); }) };
   });
   const missed = find.got.filter(g => !g.t.length).map(g => g.q);
   is(!missed.length,

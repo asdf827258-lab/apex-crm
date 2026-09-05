@@ -974,6 +974,45 @@ a{color:inherit;text-decoration:none;}
 /* z-index 는 <b>300</b> — 다른 열한 껍데기와 같은 값이다. 70 으로 두었더니
    위 띠(.topnav 120)와 서랍(.sidebar 200)이 <b>이 화면 위로 올라와</b> ba.html
    머리가 검은 띠에 잘려 있었다. 껍데기끼리 값을 다르게 두지 않는다 (5번). */
+/* ── 고객에게 보내기 (카톡 문구) — 토스 모양 ── */
+.kk-ovl{position:fixed;inset:0;z-index:400;background:rgba(15,22,32,.5);
+ display:flex;align-items:center;justify-content:center;padding:20px}
+.kk-ovl[hidden]{display:none}
+.kk-box{width:100%;max-width:560px;max-height:88vh;overflow:auto;background:#fff;
+ border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+.kk-hd{display:flex;align-items:center;padding:16px 18px 12px;border-bottom:1px solid #E5E8EB}
+.kk-hd b{font-size:16px;font-weight:800;letter-spacing:-.03em;color:#191F28}
+.kk-x{margin-left:auto;appearance:none;border:0;background:#F2F4F6;color:#6B7684;
+ width:28px;height:28px;border-radius:9px;font-size:13px;font-weight:800;cursor:pointer}
+.kk-body{padding:14px 18px 18px}
+.kk-l{display:block;font-size:12px;font-weight:800;color:#191F28;margin:0 0 5px}
+.kk-l em{font-style:normal;font-weight:600;color:#8B95A1;margin-left:5px}
+.kk-in{width:100%;box-sizing:border-box;border:1px solid #E5E8EB;border-radius:11px;
+ padding:10px 12px;font-family:inherit;font-size:13px;line-height:1.6;color:#191F28;resize:vertical}
+.kk-in:focus{outline:none;border-color:#3182F6}
+.kk-in.one{resize:none}
+.kk-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+@media(max-width:520px){.kk-row{grid-template-columns:1fr}}
+.kk-actrow{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+.kk-out{font-size:11.5px;line-height:1.65}
+.kk-m{color:#8B95A1}.kk-m b{color:#6B7684}
+.kk-g{color:#0F766E}.kk-g b{color:#065F46}
+.kk-e{color:#DC2626}
+.kk-w{color:#B45309}
+/* 카톡 말풍선 미리보기 */
+.kk-prev{background:#B2C7DA;border-radius:14px;padding:14px}
+.kk-bub{background:#fff;border-radius:4px 16px 16px 16px;padding:12px 14px;max-width:100%;
+ max-height:280px;overflow:auto}
+.kk-bub pre{margin:0;font-family:inherit;font-size:13px;line-height:1.75;color:#191F28;
+ white-space:pre-wrap;word-break:break-all}
+.kk-tail{font-size:11px;color:#33485E;margin-top:9px;line-height:1.6}
+.kk-tail b{color:#1B2B3C}
+.kk-btns{display:flex;gap:8px;margin-top:14px}
+.kk-btn{flex:1;appearance:none;border:1px solid #E5E8EB;background:#fff;color:#191F28;
+ border-radius:12px;padding:11px 14px;font-family:inherit;font-size:13.5px;font-weight:800;cursor:pointer}
+.kk-btn.go{background:#3182F6;border-color:#3182F6;color:#fff}
+.kk-btn.n{flex:none}
+.kk-btn:disabled{color:#C6CDD5;cursor:default}
 #baScreen{display:none;position:fixed;inset:0;z-index:300;background:#F2F4F6}
 #baScreen.on{display:block}
 /* 안쪽 상자는 <b>화면을 꽉 채운다</b>. 열두 껍데기 중 이 한 줄만 빠져 있어서
@@ -1493,7 +1532,9 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 
 <!-- 보장분석 전·후 만들기 전용 화면 — 재무설계와 같은 방식(별도 파일 + iframe) -->
 <div id="baScreen">
-  <iframe id="baFrame" class="fin-frame" title="보장분석 전·후 만들기"></iframe>
+  <!-- allow="fullscreen" 이 있어야 안쪽 「발표 — 화면 가득」 이 진짜 전체화면으로 간다.
+       없어도 설계사 도구는 치워지지만, 브라우저 주소창까지는 안 사라진다. -->
+  <iframe id="baFrame" class="fin-frame" title="보장분석 전·후 만들기" allow="fullscreen"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitBa()">← 워크스페이스</button>
     <button class="ff-ico" onclick="baAskSave()" title="고객 365일에 저장">💾</button>
@@ -1551,10 +1592,14 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   <iframe id="onecmpFrame" class="fin-frame" title="한장 보험료 비교"></iframe>
   <div class="fin-float">
     <button class="ff-back" onclick="exitOneCmp()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="kkOpen()" title="고객에게 카톡으로 보내기">💬</button>
     <button class="ff-ico" onclick="reloadOneCmp()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openOneCmpNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
+
+<!-- 고객에게 보내기 — 카톡 문구를 토스 모양으로 다듬는다 -->
+<div id="kkOvl" class="kk-ovl" hidden><div class="kk-box" id="kkBox"></div></div>
 
 <!-- 자동차사고 과실·보상 분석기 -->
 <div id="carFaultScreen">
@@ -11439,19 +11484,15 @@ function navItemOf(id){
 var NAV_Q='';
 /* 엄하게 찾아 하나도 없을 때만 켠다 — 오타를 봐 주는 판 */
 var NAV_LOOSE=false;
+/* 찾기 칸은 <b>하나</b>다 — ☰ 서랍 맨 위. 값은 NAV_Q 한 곳에만 담는다.
+
+   여기서 <b>칸을 다시 그리지 않는다.</b> 목록(#navBody)만 다시 그린다.
+   예전에는 renderNav() 로 서랍을 통째로 다시 그렸고, 그때 찾기 칸이
+   지워졌다 새로 생겨 한글 조합이 깨졌다 (navFixHtml 위 설명 참고). */
 function navFind(v){
   NAV_Q=(''+(v||'')).replace(/^\s+|\s+$/g,'');
-  /* 찾기 칸은 <b>하나</b>다 — ☰ 서랍 맨 위. 위 가로 띠에도 칸이 있던 때는
-     한 글자마다 커서가 서로 튀어 오타가 났다. 값은 NAV_Q 한 곳에만 담고
-     칸은 그것을 비출 뿐이다.
-     renderNav() 가 서랍을 다시 그리므로 <b>치던 중이었으면</b> 커서를
-     그 자리에 돌려 놓는다. 치던 중이 아니면(예: 위 띠의 「지우기」 딱지를
-     눌렀을 때) 손대지 않는다 — 닫힌 서랍으로 커서를 끌고 가면 폰에서
-     자판이 혼자 올라온다. */
-  var was=document.activeElement,wasFind=(was&&was.id==='navFind');
-  renderNav();
-  var el=document.getElementById('navFind');
-  if(el){ el.value=NAV_Q; if(wasFind)el.focus(); }
+  var fx=document.getElementById('navFindX'); if(fx)fx.hidden=!NAV_Q;
+  navPaintBody();
   if(typeof navMark==='function'&&typeof lastTab!=='undefined')navMark(lastTab);
 }
 /* ── 오타를 쳐도 찾히게 ────────────────────────────────────────
@@ -11662,13 +11703,60 @@ function tnDragWire(){
   b.addEventListener('scroll',tnEdges,{passive:true});
   window.addEventListener('resize',function(){try{tnEdges();}catch(e){}});
 }
-/* 맨 위 세 줄 — 찾기 · 즐겨찾기 · 최근 */
-function navTopHtml(){
-  var h='<div class="nav-find"><span class="nf-ic">🔎</span>'+
-    '<input id="navFind" placeholder="메뉴 찾기 (이름·초성)" value="'+esc(NAV_Q)+'" '+
-      'oninput="navFind(this.value)" autocomplete="off">'+
-    (NAV_Q?'<button type="button" class="nf-x" onclick="navFind(\'\')" aria-label="찾기 지우기">✕</button>':'')+
+/* ── 찾기 칸은 <b>다시 그리지 않는다</b> ─────────────────────────────
+   여태 한 글자 칠 때마다 서랍 전체를 다시 그렸고, 그때 찾기 칸이
+   <b>지워졌다 새로 생겼습니다.</b> 영타는 그래도 버티는데 <b>한글은
+   무너집니다</b> — 한글은 자판을 여러 번 눌러 한 글자를 만드는 「조합」
+   이라, 조합 도중에 칸이 바뀌면 그 글자가 확정 안 된 채 남고 새 칸에
+   또 들어갑니다. 실제로 「고객」 을 치면 이렇게 됐습니다:
+
+     조합 「ㄱ」   → 칸에 「고객ㄱ」
+     조합 「고」   → 칸에 「고고객ㄱ」
+     조합 「고객」 → 칸에 「고객고개곡고고객ㄱ」   ← 찾힌 메뉴 0개
+
+   그래서 서랍을 <b>두 칸</b>으로 나눕니다.
+     #navFix  — 공지·안내 단추·찾기 칸. <b>한 번만</b> 그린다.
+     #navBody — 즐겨찾기·최근·갈래 목록. 찾을 때마다 다시 그린다.
+   찾기 칸이 살아 있으니 조합이 안 끊기고 커서도 안 튑니다.
+   거기에 더해 <b>조합 중에는 아예 찾지 않습니다</b>(compositionstart/end). */
+function navFixHtml(){
+  return '<div id="osNoticeNav"></div>'+
+    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
+      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
+      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
+    '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
+      '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
+      '<span class="sbg-go">처음이시면 여기부터</span></button>'+
+    '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
+      '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
+      '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
+    '<div class="nav-find"><span class="nf-ic">🔎</span>'+
+      '<input id="navFind" placeholder="메뉴 찾기 (이름·초성)" autocomplete="off">'+
+      '<button type="button" class="nf-x" id="navFindX" hidden '+
+        'onclick="navFindClear()" aria-label="찾기 지우기">✕</button>'+
     '</div>';
+}
+/* 듣는 것은 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 겹겹이 쌓인다 */
+var NAV_IME=false;                  /* 지금 한글을 조합하는 중인가 */
+function navFindWire(){
+  var el=document.getElementById('navFind'); if(!el||el._wired)return;
+  el._wired=true;
+  el.addEventListener('compositionstart',function(){ NAV_IME=true; });
+  el.addEventListener('compositionend',function(){ NAV_IME=false; navFind(el.value); });
+  el.addEventListener('input',function(){
+    /* 조합 중에는 아직 글자가 덜 됐다 — 끝난 뒤에 한 번만 찾는다 */
+    if(NAV_IME)return;
+    navFind(el.value);
+  });
+}
+function navFindClear(){
+  var el=document.getElementById('navFind');
+  if(el){ el.value=''; el.focus(); }
+  navFind('');
+}
+/* 맨 위 두 줄 — 즐겨찾기 · 최근 (찾는 중에는 접는다) */
+function navTopHtml(){
+  var h='';
   if(NAV_Q)return h;   /* 찾는 중에는 아래를 접어 둔다 — 찾는 것만 보이게 */
 
   var fav=navFav(),i,it,rows='';
@@ -12234,18 +12322,31 @@ function renderPhoneApp(){
     '홈 화면에 담으면 주소창 없이 앱처럼 열립니다. DB 통합 CRM 과 TFA 업무관리는 따로 담을 수 있습니다.',h);
 }
 
+/* 서랍을 통째로 세운다 — <b>찾기 칸은 이미 있으면 그대로 둔다.</b>
+   여기서 다시 만들면 치던 한글이 그 자리에서 깨진다. */
 function renderNav(){
-  var h='<div id="osNoticeNav"></div>'+
-    '<button type="button" class="sb-guide inst" onclick="go(\'phone_app\')">'+
-      '<span class="sbg-ic">📲</span><span class="sbg-t">내 폰에 설치</span>'+
-      '<span class="sbg-go">홈 화면에 앱처럼</span></button>'+
-    '<button type="button" class="sb-guide" onclick="go(\'manual\')">'+
-      '<span class="sbg-ic">📘</span><span class="sbg-t">APEX 사용가이드</span>'+
-      '<span class="sbg-go">처음이시면 여기부터</span></button>'+
-    '<button type="button" class="sb-guide map" onclick="go(\'apexmap\')">'+
-      '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
-      '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
-    navTopHtml();
+  var host=$('navHost'); if(!host)return;
+  if(!document.getElementById('navFix')){
+    host.innerHTML='<div id="navFix">'+navFixHtml()+'</div><div id="navBody"></div>';
+    navFindWire();
+  }
+  /* 칸에 손대는 것은 <b>치고 있지 않을 때만</b> — 치는 중에 값을 밀어 넣으면
+     커서가 맨 뒤로 튀고 조합이 끊긴다 */
+  var fi=document.getElementById('navFind');
+  if(fi&&document.activeElement!==fi&&fi.value!==NAV_Q)fi.value=NAV_Q;
+  var fx=document.getElementById('navFindX'); if(fx)fx.hidden=!NAV_Q;
+  navPaintBody();
+  /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
+     바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
+  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
+  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
+  if(typeof osNoticeApply==='function')osNoticeApply();
+}
+/* 목록만 다시 그린다 — 찾을 때마다 도는 자리다 */
+function navPaintBody(){
+  var body=document.getElementById('navBody'); if(!body)return;
+  var h=navTopHtml();
   var vis=navVisGroups();   /* 갈래를 세는 곳은 한 곳 (5번) */
   /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
      처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
@@ -12311,13 +12412,7 @@ function renderNav(){
   if(NAV_Q&&!found&&!inN)
     h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 메뉴가 없습니다.<br>'+
        '이름 일부나 초성(ㄱㄱ)으로도 찾을 수 있습니다.</div>';
-  $('navHost').innerHTML=h;
-  /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
-     바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
-  try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
-  /* 휠·끌기는 <b>한 번만</b> 건다 — 다시 그릴 때마다 걸면 같은 것이 겹겹이 쌓인다 */
-  try{ if(typeof tnDragWire==='function')tnDragWire(); }catch(e){}
-  if(typeof osNoticeApply==='function')osNoticeApply();
+  body.innerHTML=h;
 }
 
 /* ════════ 페이지 렌더 ════════ */
@@ -12896,8 +12991,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-03 02:40';
-var APP_BUILD_NOTE="<b>왼쪽 메뉴가 늘 서 있습니다 · 공지를 「칸」으로 하나씩 · 사용가이드를 상황별로.</b> ① <b>왼쪽 메뉴</b> — 여태 ☰ 를 눌러야 나오는 <b>서랍</b>이었고, 칸도 접혀 있었습니다. 그래서 「메뉴가 안 보인다」 는 말이 나왔습니다. 이제 넓은 화면에서는 <b>기둥으로 늘 서 있고</b>, 칸도 <b>접히지 않습니다</b> — 14칸 · 메뉴 81개가 그냥 보입니다. 접기 장치(모두 펴기/접기 · ▾ 화살표 · 기억해 두던 자리)는 <b>코드에서도</b> 걷어냈습니다. 폰에서는 서랍 그대로입니다 — 기둥을 세우면 본문이 안 남습니다. 함께, 기둥이 위 띠 높이만큼 <b>화면 밖으로 넘쳐</b> 맨 밑이 잘리던 것도 고쳤습니다. ② <b>공지사항</b> — 한 벌이던 것을 <b>칸의 목록</b>으로 바꿨습니다. 새 칸을 올려도 <b>앞 칸이 그대로</b> 남습니다. 칸마다 <b>담당자</b>를 고르면 그 사람 화면 맨 위에 붉은 띠가 뜨고, <b>본인이</b> 「확인했습니다」 를 누를 때까지 안 사라집니다 — 대신 눌러 줄 수 없습니다(서버 규칙이 못 박습니다). 대표님은 칸마다 <b>누가 찍었고 누가 안 찍었는지</b> 이름으로 보시고, 다 쓴 칸은 <b>그 칸만</b> 내리십니다. ③ <b>사용가이드</b> — 맨 앞에 <b>「이럴 때는 이렇게」</b> 를 깔았습니다. 기능 이름을 모르셔도 됩니다. 「증권을 받았다」 · 「보험을 정리하고 싶다고 한다」 · 「고객이 아프다」 같은 <b>상황 12가지</b> 중 하나를 누르면 무엇부터 하는지 <b>1·2·3</b> 으로 나오고, 그 화면을 <b>바로 여는 단추</b>와 <b>5분이면 해 보실 수 있는 연습</b>이 함께 나옵니다. ④ <b>전용 화면 열두 개</b>를 하나씩 열어 자로 재고 사진으로 확인했습니다 — 열둘 다 정상입니다. 점검: <code>check-ntcbox</code> 를 새로 만들고(32가지), <code>check-nav</code> · <code>check-topnav</code> · <code>check-guidemap</code> 을 새 사실대로 다시 썼습니다. 되돌려 보는 <b>빨간불 시험</b>도 전부 통과했습니다 — 메뉴 4/4 · 공지 8/8 · 가이드 6/6.";
+var APP_BUILD='2026-09-06 00:35';
+var APP_BUILD_NOTE="<b>보장분석 발표의 표지를 다시 세웠습니다 — 토스 톤 · 캐릭터 · 흰 칸.</b> 표지는 고객이 <b>맨 처음 보는 화면</b>이라 여기서 「믿을 만한 자리구나」가 정해집니다. <b>흰 칸 셋</b>에 <b>지금 들고 계신 계약 · 하나씩 견준 담보 · 오늘 내는 새 설계</b>를 숫자로 세웠고, 안 적힌 것은 <b>「아직 안 적음」</b>이라고 씁니다 — 「0건」이라 적으면 <b>「보험이 없다」</b>는 뜻이 되기 때문입니다. 오른쪽에는 <b>직접 그린 SVG 캐릭터</b>를 세웠습니다(남의 삽화도 사진도 쓰지 않습니다). 알약·흰 칸·아래 띠가 <b>서로 다른 말</b>을 하도록 나눴습니다 — 전에는 날짜와 담보 수가 한 화면에 <b>두 번</b> 찍혀 있었습니다. 무대 파랑을 <b>토스 블루(본문과 같은 파랑)</b> 한 가지로 모았습니다 — 한 화면에서 파랑이 두 번 튀지 않습니다. 점검 <b>[11-1] 표지</b> 를 넣고 <b>여덟 가지를 되돌려 8/8</b> 빨간불을 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13401,6 +13496,136 @@ function mountOneCmp(){var f=$('onecmpFrame');if(!f||f._mounted)return;f.src=ONE
 function reloadOneCmp(){var f=$('onecmpFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountOneCmp,30);toast('한장 보험료 비교 새로고침');}}
 function openOneCmpNewTab(){var w=window.open(ONECMP_URL,'_blank');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitOneCmp(){go(prevTab||'home');}
+
+/* ══════ 고객에게 보내기 — 카톡 문구를 토스 모양으로 ══════════════════
+   「한장 보험료 비교」가 만들어 주는 고객 링크는 비교한 자료를 통째로
+   주소 안(# 뒤)에 담는다. 그래서 <b>수백~수천 글자</b>가 되고, 카톡에
+   그냥 붙이면 그 주소가 한 화면을 덮는다. 고객이 그것부터 본다.
+
+   여기서 하는 일은 둘이다.
+     ① 주소를 <b>맨 마지막 한 줄</b>로 내리고 그 앞에 <b>무엇을 보냈는지</b>를
+        짧게 적는다. 카톡은 마지막 줄의 주소를 링크 딱지로 접어 준다.
+     ② 눌러 주시면 <b>짧은 주소</b>로 바꾼다. 이때만 자료가 우리 서버에
+        담긴다 — 안 누르시면 아무것도 안 남는다. 그래서 무엇을 맞바꾸는지
+        화면에 적어 두고, 누르는 것은 사장님이 정하신다.
+
+   ■ <b>고객 이름은 이 브라우저에만</b> 둔다(3번). 문구에 이름을 넣어도
+     서버로는 안 간다 — 짧은 주소에 담기는 것은 <b>주소뿐</b>이다.
+   ■ 안 되면 <b>안 됐다고</b> 말한다. 긴 주소는 그대로 쓸 수 있으니
+     실패해도 보내는 일이 막히지 않는다.                              */
+var KK={link:'',name:'',note:'',short:'',busy:false,err:''};
+function kkOpen(){
+  KK.err='';KK.short='';KK.busy=false;
+  var o=$('kkOvl');if(!o)return;
+  o.hidden=false;kkPaint();
+  setTimeout(function(){var e=$('kkLink');if(e)e.focus();},60);
+}
+function kkClose(){var o=$('kkOvl');if(o)o.hidden=true;}
+function kkSet(k,v){KK[k]=v;if(k==='link')KK.short='';kkPaintMsg();}
+/* 카톡에 그대로 붙일 글 — <b>주소는 맨 마지막 한 줄</b>이어야 딱지로 접힌다 */
+function kkText(){
+  var nm=(KK.name||'').replace(/^\s+|\s+$/g,'');
+  var url=(KK.short||KK.link||'').replace(/^\s+|\s+$/g,'');
+  var L=[];
+  L.push((nm?(osEsc?nm:nm)+' 고객님, ':'고객님, ')+'안녕하세요 😊');
+  L.push('말씀 주신 보험료 비교, 한 장으로 정리해서 보내 드립니다.');
+  L.push('');
+  L.push('📊 담보별로 회사마다 얼마인지 나란히 보실 수 있습니다');
+  L.push('🔒 보험사 이름은 A · B · C 로만 표시됩니다');
+  L.push('💡 금액을 바꿔 보시면 그 자리에서 다시 계산됩니다');
+  if((KK.note||'').replace(/^\s+|\s+$/g,'')){L.push('');L.push(KK.note.replace(/^\s+|\s+$/g,''));}
+  L.push('');
+  L.push('아래를 눌러 보세요 👇');
+  L.push(url||'(주소를 넣어 주세요)');
+  return L.join('\n');
+}
+function kkPaintMsg(){
+  var e=$('kkMsg');if(e)e.textContent=kkText();
+  var b=$('kkShortBtn');if(b)b.disabled=KK.busy||!/^https:\/\//.test(KK.link||'');
+  var s=$('kkShortOut');if(s)s.innerHTML=kkShortHtml();
+  /* 주소가 몇 글자인지 <b>세어서</b> 적는다 — 「길다」는 말보다 숫자가 빠르다 */
+  var n=$('kkLen'),u=(KK.short||KK.link||'');
+  if(n)n.innerHTML=!u?'':(KK.short
+    ? ('주소 <b>'+KK.short.length+'자</b> — 카톡에서 한 줄로 접힙니다.')
+    : ('주소 <b>'+u.length+'자</b>'+(u.length>120?(' — 카톡에서 <b>이만큼</b> 차지합니다. 위에서 줄이시면 <b>40자쯤</b>이 됩니다.'):'')));
+}
+function kkShortHtml(){
+  if(KK.busy)return '<span class="kk-w">짧게 만드는 중…</span>';
+  if(KK.err)return '<span class="kk-e">✗ '+osEsc(KK.err)+'</span>';
+  if(KK.short)return '<span class="kk-g">✓ 짧은 주소로 바꿨습니다 — <b>'+osEsc(KK.short)+'</b> (90일 뒤 자동으로 닫힙니다)</span>';
+  return '<span class="kk-m">긴 주소 그대로 보내셔도 됩니다. 눌러서 줄이면 그때 <b>비교 자료가 서버에 담깁니다</b>(이름·연락처는 애초에 안 들어 있습니다).</span>';
+}
+function kkShorten(){
+  var u=(KK.link||'').replace(/^\s+|\s+$/g,'');
+  if(!/^https:\/\//.test(u)){KK.err='먼저 고객 링크를 붙여넣어 주세요.';kkPaintMsg();return;}
+  KK.busy=true;KK.err='';kkPaintMsg();
+  var h={'Content-Type':'application/json'};
+  try{var t=getAppToken();if(t)h['X-App-Token']=t;}catch(e){}
+  fetch('/.netlify/functions/shortlink',{method:'POST',headers:h,body:JSON.stringify({url:u})})
+    /* 서버가 JSON 이 아닌 것을 돌려줄 때가 있다(배포 전·프록시 오류).
+       그때 <b>브라우저 말</b>을 그대로 띄우면 사장님은 무슨 소린지 모른다. */
+    .then(function(r){return r.text().then(function(t){
+      var j=null;try{j=JSON.parse(t);}catch(e){}
+      return {ok:r.ok,status:r.status,j:j};});})
+    .then(function(x){
+      KK.busy=false;
+      if(x.ok&&x.j&&x.j.ok&&x.j.code){
+        KK.short=location.origin+'/s/'+x.j.code;
+        if(typeof toast==='function')toast('짧은 주소를 만들었습니다');
+      }else if(x.j&&x.j.reason){
+        KK.err=x.j.reason+' — 긴 주소는 그대로 쓰실 수 있습니다.';
+      }else{
+        KK.err='서버가 대답을 안 했습니다('+x.status+') — 긴 주소는 그대로 쓰실 수 있습니다.';
+      }
+      kkPaintMsg();
+    },function(){
+      KK.busy=false;
+      KK.err='서버에 못 닿았습니다 — 긴 주소는 그대로 쓰실 수 있습니다.';
+      kkPaintMsg();
+    });
+}
+function kkCopy(){
+  var t=kkText();
+  if(!/^https:\/\//.test(KK.short||KK.link||'')){if(typeof toast==='function')toast('먼저 고객 링크를 붙여넣어 주세요');return;}
+  if(typeof copyText==='function')copyText(t);
+  else if(navigator.clipboard)navigator.clipboard.writeText(t);
+  if(typeof toast==='function')toast('카톡에 붙여넣으시면 됩니다');
+}
+function kkPaint(){
+  var b=$('kkBox');if(!b)return;
+  b.innerHTML=
+    '<div class="kk-hd"><b>💬 고객에게 보내기</b>'+
+      '<button class="kk-x" onclick="kkClose()" aria-label="닫기">✕</button></div>'+
+    '<div class="kk-body">'+
+      '<label class="kk-l">고객 링크 <em>한장 보험료 비교에서 「고객 링크」를 눌러 복사한 주소</em></label>'+
+      '<textarea id="kkLink" class="kk-in" rows="3" placeholder="https://… 붙여넣기" '+
+        'oninput="kkSet(\'link\',this.value)"></textarea>'+
+      '<div class="kk-row">'+
+        '<div><label class="kk-l">고객 이름 <em>이 브라우저에만 남습니다</em></label>'+
+          '<input id="kkName" class="kk-in one" placeholder="예) 홍○○" oninput="kkSet(\'name\',this.value)"></div>'+
+        '<div><label class="kk-l">덧붙일 한 줄 <em>안 쓰셔도 됩니다</em></label>'+
+          '<input id="kkNote" class="kk-in one" placeholder="예) 편하실 때 보시고 연락 주세요" oninput="kkSet(\'note\',this.value)"></div>'+
+      '</div>'+
+      '<div class="kk-actrow">'+
+        '<button class="kk-btn n" id="kkShortBtn" onclick="kkShorten()" disabled>🔗 주소 짧게 만들기</button>'+
+        '<span id="kkShortOut" class="kk-out"></span>'+
+      '</div>'+
+      '<label class="kk-l" style="margin-top:14px">보낼 글 <em>그대로 붙여넣으시면 됩니다</em></label>'+
+      '<div class="kk-prev"><div class="kk-bub"><pre id="kkMsg"></pre></div>'+
+        '<div class="kk-tail" id="kkLen"></div>'+
+        '<div class="kk-tail">주소를 <b>맨 마지막 줄</b>에 둡니다 — 카톡이 링크 딱지로 접어 줍니다.</div></div>'+
+      '<div class="kk-btns">'+
+        '<button class="kk-btn go" onclick="kkCopy()">📋 이대로 복사</button>'+
+        '<button class="kk-btn n" onclick="kkClose()">닫기</button>'+
+      '</div>'+
+    '</div>';
+  /* 다시 그릴 때 <b>적어 두신 것</b>을 되돌려 놓는다 — 안 그러면 칸은 비었는데
+     미리보기에는 아까 주소가 남아 있어, 뭘 보내는지 알 수 없게 된다. */
+  var a=$('kkLink');if(a)a.value=KK.link||'';
+  var b2=$('kkName');if(b2)b2.value=KK.name||'';
+  var c=$('kkNote');if(c)c.value=KK.note||'';
+  kkPaintMsg();
+}
 /* ════════ 자동차사고 과실·보상 분석기 ════════
    손해보험협회 과실비율 인정기준 도표로 과실을 계산하고, 담보·청구·보상금·
    처리 절차·법령·안내문까지 한 화면에서 낸다.

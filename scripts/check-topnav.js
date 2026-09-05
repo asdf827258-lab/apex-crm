@@ -356,7 +356,42 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
     const fi3 = document.getElementById('navFind');
     fi3.value = ''; fi3.dispatchEvent(new Event('input', { bubbles: true }));
     const back = document.querySelectorAll('#navHost .nav-group').length;
-    return { noTop, gone: false, hit, kept, val, none, back };
+
+    /* ── 한 글자 칠 때마다 <b>같은 칸</b>이어야 한다 ─────────────────────
+       예전에는 한 글자마다 서랍을 통째로 다시 그렸고, 그때 찾기 칸이
+       지워졌다 새로 생겼다. 영타는 버티는데 <b>한글은 무너진다</b> —
+       한글은 자판을 여러 번 눌러 한 글자를 만드는 「조합」이라, 도중에
+       칸이 바뀌면 그 글자가 확정 안 된 채 남고 새 칸에 또 들어간다.
+       실제로 「고객」 을 치면 「고객고개곡고고객ㄱ」 이 됐다.
+
+       그래서 <b>칸이 그대로 살아 있는지</b> 를 잰다. 살아 있으면 조합이
+       안 끊긴다. 값이 맞는지만 보면 이 버그를 못 잡는다 — 값은 다시
+       그린 뒤에 되돌려 놓았기 때문에 맞아 보였다 (8번). */
+    const mark = document.getElementById('navFind');
+    mark.__same = 1;
+    mark.value = '보'; mark.dispatchEvent(new Event('input', { bubbles: true }));
+    const same1 = !!(document.getElementById('navFind') || {}).__same;
+    const m2 = document.getElementById('navFind');
+    m2.value = '보장'; m2.dispatchEvent(new Event('input', { bubbles: true }));
+    const same2 = !!(document.getElementById('navFind') || {}).__same;
+
+    /* 조합 중(compositionstart~end)에는 <b>찾지 않는다</b> — 글자가 덜 됐다 */
+    const el = document.getElementById('navFind');
+    el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    el.value = 'ㄱ'; el.dispatchEvent(new Event('input', { bubbles: true }));
+    const midQ = (typeof NAV_Q !== 'undefined') ? NAV_Q : '?';   /* 아직 '' 이어야 한다 */
+    el.value = '고객';
+    el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '고객' }));
+    const endQ = (typeof NAV_Q !== 'undefined') ? NAV_Q : '?';   /* 이제 '고객' */
+    const endHit = document.querySelectorAll('#navBody .nav-group .tab-btn').length;
+    el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true }));
+
+    return { noTop, gone: false, hit, kept, val, none, back,
+             same1, same2, midQ, endQ, endHit,
+             /* 찾기 칸이 <b>다시 그리는 칸 밖</b>에 있는가 — 구조로도 본다 */
+             outside: !!(document.querySelector('#navFix #navFind')) &&
+                      !document.querySelector('#navBody #navFind') };
   });
   is(F.noTop, '  위 띠에는 <b>찾기 칸이 없다</b> — 그 자리는 음성 비서에게 갔다');
   is(!F.gone, '  찾기 칸이 <b>☰ 서랍 맨 위에 그대로 있다</b> — 없앤 것이 아니다');
@@ -365,6 +400,13 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
   is(F.val === '보장분석', '  친 글자가 <b>그대로 남는다</b> — ' + JSON.stringify(F.val));
   is(F.none, '  없는 말로 찾으면 <b>없다고 말한다</b> — 빈 화면으로 두지 않는다');
   is(F.back > 1, '  지우면 <b>갈래가 돌아온다</b> (' + F.back + '개)');
+  is(F.same1 && F.same2,
+     '  한 글자 칠 때마다 <b>같은 칸</b>이다 — 지웠다 새로 만들면 한글이 깨진다' +
+     (F.same1 && F.same2 ? '' : ' ← 칸이 새로 생겼습니다'));
+  is(F.outside, '  찾기 칸이 <b>다시 그리는 자리 밖</b>에 있다 (#navFix)');
+  is(F.midQ === '', '  <b>조합 중에는 안 찾는다</b> — 글자가 덜 됐다 (지금 「' + F.midQ + '」)');
+  is(F.endQ === '고객' && F.endHit > 0,
+     '  <b>조합이 끝나면</b> 그 글자로 찾는다 — 「' + F.endQ + '」 로 ' + F.endHit + '칸');
 
   console.log('\n[10] 그 자리의 🎙 음성 비서 — 서는가 · 눌러서 열리는가 · 여는 자리가 하나인가');
   const V = await page.evaluate(() => {

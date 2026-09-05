@@ -322,6 +322,80 @@ const NOTKB = '어떤 보험사 보장분석\n담보명 가입금액\n일반암�
 
   is(errs.length === 0, '화면을 여는 동안 오류가 나지 않는다' + (errs.length ? ' — ' + errs[0] : ''));
 
+  /* ── [6] 「보장 전·후 만들기」도 <b>가입일자·납입기간</b>을 읽는다 ──────
+     「앞으로 낼 돈」·「총 납입 보험료」는 <b>월 보험료 × 납입기간</b>이다.
+     납입기간이 없으면 둘 다 셈이 안 되고 화면에 <b>아예 안 뜬다.</b>
+     실제로 KB 에서 읽어 넣은 계약이 전부 그랬다 — 파서는 읽고 있었는데
+     계약에 <b>안 넣고 버리고</b> 있었다. 여기서 그것을 못 박는다.       */
+  console.log('\n[6] 보장 전·후 만들기 — 가입일자·납입기간을 버리지 않는다');
+  const p2 = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errs2 = [];
+  p2.on('pageerror', e => errs2.push(String(e).slice(0, 160)));
+  await p2.goto('http://127.0.0.1:' + srv.address().port + '/app/ba.html',
+                { waitUntil: 'domcontentloaded' });
+  await p2.waitForTimeout(900);
+  const ba = await p2.evaluate((t) => {
+    localStorage.clear();
+    S = blank(); save();
+    var K = kbParse(t);
+    var _r = window.render; window.render = function(){};
+    kbApply(K, 't.pdf');
+    window.render = _r;
+    var P = premCalc();
+    return {
+      pols: S.before.length,
+      /* 계약마다 가입일자·납입기간이 들어갔는가 */
+      start: S.before.map(function (x) { return x.start || ''; }),
+      years: S.before.map(function (x) { return x.years || ''; }),
+      leftB: P.leftB, totB: P.totB, monB: P.monB,
+      noTermB: P.noTermB,
+      info: S.kbInfo,
+      /* 납입기간 글자를 연 수로 — 못 읽으면 null 이어야 한다 */
+      y20: kbYears('20년납', '100세만기', 40),
+      y70: kbYears('70세납', '100세만기', 40),
+      yAll: kbYears('전기납', '100세만기', 40),
+      yNo: kbYears('일시납', '종신', 40),
+      /* KB 는 종신을 「9999세만기」로 적는다 — 그대로 빼면 9,959년이 된다 */
+      y9999: kbYears('전기납', '9999세만기', 40),
+      /* 일시납은 매달 내는 돈이 아니다 — 월 보험료 칸이 비어 있어야 한다.
+         견본 PDF 의 일시납 계약은 상세에 금액이 없어 그대로는 갈리지 않는다.
+         그래서 <b>금액이 있는 일시납</b>을 하나 지어 넣어 본다 — 3,400만원이
+         월 보험료 칸에 들어가면 「매달 3,400만원」이 된다. */
+      lumpPrem: (function () {
+        var keep = S.before.slice(), out;
+        S.before = [];
+        var _r2 = window.render; window.render = function () {};
+        kbApply({ person: { age: 40 }, contracts: [{ co: '메트', nm: '달러연금', issue: '2025-01-06',
+          payWay: '일시납', payTerm: '0년', term: '9999세만기', premWon: 34000000, covs: [] }] }, 'x.pdf');
+        window.render = _r2;
+        out = S.before.length ? S.before[0].premMan : '(없음)';
+        S.before = keep;
+        return out;
+      })(),
+      lump: S.kbInfo && S.kbInfo.lump
+    };
+  }, DOC);
+  is(ba.pols > 0, 'KB 로 계약 ' + ba.pols + '건이 들어왔다');
+  is(ba.start.filter(Boolean).length === ba.pols,
+     '계약마다 <b>가입일자</b>가 들어간다 (' + ba.start.filter(Boolean).length + '/' + ba.pols + ') — ' + ba.start.join(' '));
+  is(ba.years.filter(Boolean).length >= ba.pols - 1,
+     '계약마다 <b>납입기간</b>이 들어간다 (' + ba.years.filter(Boolean).length + '/' + ba.pols + ') — ' + ba.years.join(' '));
+  is(ba.leftB > 0 && ba.totB > 0,
+     '「앞으로 낼 돈」 ' + ba.leftB + '만원 · 「총 납입 보험료」 ' + ba.totB + '만원이 <b>실제로 선다</b> (0 이면 화면에 못 뜬다)');
+  is(ba.totB >= ba.leftB,
+     '총 납입은 앞으로 낼 돈보다 <b>작지 않다</b> — 이미 낸 것이 들어 있다');
+  is(ba.y20 === 20 && ba.y70 === 30 && ba.yAll === 60,
+     '「20년납」→20 · 「70세납」→30 · 「전기납(100세만기)」→60 (' + ba.y20 + '·' + ba.y70 + '·' + ba.yAll + ')');
+  is(ba.yNo === null,
+     '못 읽는 납입기간은 <b>null</b> 이다 — 0 으로 채우면 「낼 돈이 없다」가 된다 (' + ba.yNo + ')');
+  is(ba.y9999 === null,
+     '「9999세만기」(종신)를 <b>9,959년</b>으로 셈하지 않는다 — 사람이 낼 수 있는 햇수를 넘으면 모름이다 (' + ba.y9999 + ')');
+  is(ba.lumpPrem === '',
+     '<b>일시납</b> 3,400만원을 월 보험료 칸에 넣지 않는다 — 넣으면 「매달 3,400만원」이 된다 (지금 「' + ba.lumpPrem + '」)');
+  is(!!ba.info && typeof ba.info.noTerm === 'number' && typeof ba.info.derived === 'number',
+     '못 읽은 건수·셈해서 채운 건수를 <b>세어 둔다</b> (못 읽음 ' + (ba.info && ba.info.noTerm) + ' · 셈함 ' + (ba.info && ba.info.derived) + ')');
+  is(errs2.length === 0, '전·후 만들기 화면도 조용하다' + (errs2.length ? ' — ' + errs2[0] : ''));
+
   await browser.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '군데가 걸렸습니다.')
