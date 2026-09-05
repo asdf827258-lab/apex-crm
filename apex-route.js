@@ -479,7 +479,20 @@ var origSaveDb=window.saveDb;
 if(typeof origSaveDb==="function"){
   window.saveDb=function(){
     var self=this, args=arguments;
-    if(!HAS_DB||!q("dbAddr")) return origSaveDb.apply(self,args);
+    /* 단계가 AP·PC·CS 로 올라갔는지 — 저장 전에 기억해 둔다 */
+    var _id=((q("dbId")||{}).value)||"";
+    var _was=_id?(((findDb(_id)||{}).stage)||""):"";
+    var _now=((q("dbStage")||{}).value)||"";
+    var _nm=((q("customerName")||{}).value||"").trim();
+    var _ph=((q("phone")||{}).value||"").trim();
+    var body=function(){ return origSaveDb.apply(self,args) };
+    if(HAS_DB&&q("dbAddr")) body=function(){ return saveDbGeo(self,args) };
+    return Promise.resolve().then(body).then(function(v){
+      afterStage(_id,_was,_now,_nm,_ph);
+      return v;
+    });
+  };
+  function saveDbGeo(self,args){
     var t=(q("dbAddr").value||"").trim(), region=((q("region")||{}).value||"").trim();
     var extra={addr:t||null,lat:null,lng:null};
     if(HAS_STD) Object.assign(extra,{region_code:null,sido:null,sigungu:null,dong:null});
@@ -506,7 +519,33 @@ if(typeof origSaveDb==="function"){
       }
       return withPatch("dbs",extra,function(){ return origSaveDb.apply(self,args) });
     });
-  };
+  }
+}
+
+/* ── 단계가 올라가면 그 지역 열 명 ──────────────────────────────
+   AP 만이 아니라 PC·CS 에서도 똑같이 뜹니다. 어느 단계든 <b>그 지역에
+   갈 일이 생긴 것</b>은 같기 때문입니다. */
+var STAGE_HIT={AP:1,PC:1,CS:1};
+function guessNew(nm,ph){
+  if(!nm)return null;
+  var hit=null;
+  try{
+    dbs.forEach(function(d){
+      if(d.customer_name!==nm)return;
+      if(ph&&(d.phone||"")!==ph)return;
+      if(!hit||String(d.updated_at||"")>String(hit.updated_at||""))hit=d;
+    });
+  }catch(e){}
+  return hit;
+}
+function afterStage(id,was,now,nm,ph){
+  if(!STAGE_HIT[now]||now===was)return;
+  var closed=q("dbModal")&&!q("dbModal").classList.contains("open");
+  if(!closed)return;                      /* 저장이 안 됐으면 창이 열려 있다 */
+  setTimeout(function(){
+    var d=id?findDb(id):guessNew(nm,ph);
+    if(d)nearOpen(d.id,nextAppt(d),now);
+  },320);
 }
 
 /* ── 통화 저장 — 장소를 같이 넣고, AP 면 바로 「이 지역 열 명」 ── */
@@ -546,7 +585,7 @@ if(typeof origSaveCall==="function"){
     }).then(function(v){
       /* 저장이 실제로 끝났으면 창이 닫혀 있습니다 */
       var closed=q("callModal")&&!q("callModal").classList.contains("open");
-      if(res==="상담"&&app&&closed&&d) setTimeout(function(){ nearOpen(dbId,app) },300);
+      if(res==="상담"&&app&&closed&&d) setTimeout(function(){ nearOpen(dbId,app,"AP") },300);
       return v;
     });
   };
@@ -644,6 +683,7 @@ function nearModal(){
       '<div class="modal-body" id="rtNearB"></div>'+
       '<div class="modal-foot">'+
         '<button class="btn btn-light" id="rtNearL">나중에</button>'+
+        '<button class="btn btn-light hidden" id="rtNearCare">📋 계약 후 관리 미리보기</button>'+
         '<button class="btn btn-dark" id="rtNearMap">🗺️ 이날 동선 보기</button>'+
       '</div>'+
     '</div>';
@@ -652,18 +692,47 @@ function nearModal(){
   q("rtNearX").onclick=close; q("rtNearL").onclick=close;
 }
 
-function nearOpen(dbId,when){
+/* 단계마다 그 지역에 가는 이유가 다릅니다 — 고객에게 할 말은 같지만,
+   나에게 보이는 안내는 달라야 합니다. */
+var WHY={
+  AP:{tag:"약속",  line:"님 <b>약속 한 건</b> 때문에 "},
+  PC:{tag:"상담",  line:"님을 <b>상담</b>하러 "},
+  CS:{tag:"클로징",line:"님 <b>계약 자리</b> 때문에 "}
+};
+/* 날짜가 없을 때 — 내일 오후 2시부터 잡아 둔다. 화면에서 고칠 수 있습니다. */
+function defWhen(){
+  var d=new Date(); d.setDate(d.getDate()+1); d.setHours(14,0,0,0); return d;
+}
+function localVal(d){
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+/* 지금 창에 적힌 날짜 — 화법과 「이날 동선」이 이것을 씁니다 */
+function curWhen(){
+  var el=q("rtNearWhen");
+  var v=el&&el.value?new Date(el.value):null;
+  return (v&&!isNaN(v))?v:defWhen();
+}
+
+function nearOpen(dbId,when,why){
   var d0=findDb(dbId); if(!d0)return;
   nearModal();
-  var list=candidates(d0,when,10);
-  var a=new Date(when), day=(a.getMonth()+1)+"월 "+a.getDate()+"일("+wday(a)+") "+hm(a);
-  q("rtNearT").innerHTML="📍 "+E(regionName(d0)||"지역")+" — "+E(day)+" 약속이 잡혔습니다";
+  var w=when?new Date(when):null;
+  if(!w||isNaN(w)){ var na=nextAppt(d0); w=na?new Date(na):defWhen() }
+  var W=WHY[why]||WHY.AP;
+  var list=candidates(d0,w,10);
+  var day=(w.getMonth()+1)+"월 "+w.getDate()+"일("+wday(w)+") "+hm(w);
+  q("rtNearT").innerHTML="📍 "+E(regionName(d0)||"지역")+" — "+E(day)+" "+E(W.tag)+" 잡혔습니다";
   var head=
     '<div class="notice" style="margin-bottom:14px">'+
-      '<b>'+E(d0.customer_name)+'</b> 님 한 건 때문에 '+E(regionName(d0)||"그 지역")+'까지 갑니다. '+
+      '<b>'+E(d0.customer_name)+'</b> '+W.line+E(regionName(d0)||"그 지역")+'까지 갑니다. '+
       '가는 김에 <b>2~3명만 더</b> 붙이면 하루가 채워집니다.<br>'+
       '아래는 같은 지역에서 <b>아직 약속이 없고 · 거절하지 않은</b> 사람을 '+
       '오래 방치된 순 · 덜 걸어본 순 · 가까운 순으로 섞어 뽑은 열 명입니다.'+
+    '</div>'+
+    '<div class="field" style="margin-bottom:14px">'+
+      '<label>그 지역에 가는 날 <small style="font-weight:600;color:#8b95a1">'+
+        '이 날짜로 화법이 만들어집니다 — 고쳐도 됩니다</small></label>'+
+      '<input type="datetime-local" id="rtNearWhen" value="'+E(localVal(w))+'">'+
     '</div>';
   if(!list.length){
     q("rtNearB").innerHTML=head+'<div class="empty">같은 지역에 아직 걸 사람이 없습니다.<br>'+
@@ -695,9 +764,10 @@ function nearOpen(dbId,when){
         var i=+b.getAttribute("data-talk"), box=q("rtTalk"+i), c=list[i];
         if(box.getAttribute("data-on")==="1"){ box.classList.add("hidden"); box.setAttribute("data-on","0"); return }
         box.setAttribute("data-on","1"); box.classList.remove("hidden");
-        box.innerHTML=tCard("전화 — 가는 김에",talk(c.d,d0,when,"a"))+
-                      tCard("전화 — 못 받은 보험금",talk(c.d,d0,when,"b"))+
-                      tCard("문자로 보낼 때",talk(c.d,d0,when,"sms"));
+        var W2=curWhen();
+        box.innerHTML=tCard("전화 — 가는 김에",talk(c.d,d0,W2,"a"))+
+                      tCard("전화 — 못 받은 보험금",talk(c.d,d0,W2,"b"))+
+                      tCard("문자로 보낼 때",talk(c.d,d0,W2,"sms"));
         Array.prototype.forEach.call(box.querySelectorAll("[data-copy]"),function(cb){
           cb.onclick=function(){ copyText(cb.getAttribute("data-copy")) };
         });
@@ -710,9 +780,27 @@ function nearOpen(dbId,when){
       };
     });
   }
+  /* 클로징 자리면, 계약 뒤에 무엇을 챙기게 되는지 미리 보여 준다.
+     계약 자리에서 이 이야기를 해 두면 뒤에 전화하기가 쉬워집니다. */
+  var care=q("rtNearCare");
+  if(care){
+    var can=(why==="CS"&&typeof window.apexCarePreview==="function");
+    care.classList.toggle("hidden",!can);
+    care.onclick=can?function(){ window.apexCarePreview(d0.id) }:null;
+  }
   q("rtNearMap").onclick=function(){
     q("rtNear").classList.remove("open");
-    routeOpen(dayKey(when),regionName(d0));
+    routeOpen(dayKey(curWhen()),regionName(d0));
+  };
+  /* 날짜를 고치면 이미 펼쳐 둔 화법은 접는다 — 옛 날짜가 남아 있으면 안 됩니다 */
+  var wi=q("rtNearWhen");
+  if(wi)wi.onchange=function(){
+    Array.prototype.forEach.call(q("rtNearB").querySelectorAll(".rt-talk"),function(b){
+      b.classList.add("hidden"); b.setAttribute("data-on","0"); b.innerHTML="";
+    });
+    var t=curWhen();
+    q("rtNearT").innerHTML="📍 "+E(regionName(d0)||"지역")+" — "+
+      E((t.getMonth()+1)+"월 "+t.getDate()+"일("+wday(t)+") "+hm(t))+" "+E(W.tag)+" 잡혔습니다";
   };
   q("rtNear").classList.add("open");
 }
