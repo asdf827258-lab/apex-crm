@@ -505,7 +505,106 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   is(thP.badge === 'none' && thP.endBg === 'rgba(0, 0, 0, 0)',
      '인쇄에는 알약도, 파랑 전면도 안 나온다');
 
-  head('[12] 조용한가');
+  /* ── [12] 「앞으로 낼 돈 0원」 — 못 센 것을 0 으로 적지 않는다 ────────
+     「앞으로 낼 돈」·「총 납입」은 <b>월 보험료 × 납입기간</b>이다. 납입기간을
+     안 적으면 셈이 안 되는데, 그때 <b>0 을 적고</b> 있었다. 화면은 「앞으로
+     낼 돈 0원」이라고 말하고 설계사는 고객 앞에서 그대로 읽는다 — 새빨간
+     거짓말이다. 모름은 <b>—</b> 이어야 하고, <b>무엇을 채우면 되는지</b>를
+     그 자리에 적어야 한다 (1번).                                      */
+  head('[12] 못 센 돈을 <0원>이라 적지 않는다 — 모름은 모름이라고 말한다');
+  const money = await pg.evaluate(() => {
+    function run(mode) {
+      localStorage.clear(); doSample();
+      if (mode === 'one') S.before[1].years = '';
+      if (mode === 'none') { S.before.forEach(function (p) { p.years = ''; }); S.after.forEach(function (p) { p.years = ''; }); }
+      save(); S.deck = true; S.mode = 'show'; render();
+      var P = premCalc();
+      var box = [].slice.call(document.querySelectorAll('#s2 .pbox'));
+      return { leftB: P.leftB, totB: P.totB, monB: P.monB, noTerm: P.noTermB + P.noTermA,
+               unk: box.filter(function (x) { return x.className.indexOf('unk') >= 0; }).length,
+               /* <b>모름 칸의 글자만</b> 본다. 다른 칸의 「129,900원」에도
+                  「0원」이 들어 있어, 통째로 훑으면 헛것을 잡는다 (8번). */
+               unkTxt: box.filter(function (x) { return x.className.indexOf('unk') >= 0; })
+                 .map(function (x) { return (x.textContent || '').replace(/\s+/g, ' '); }).join(' | '),
+               txt: box.map(function (x) { return (x.textContent || '').replace(/\s+/g, ' '); }).join(' | '),
+               save: !!document.getElementById('sSave') };
+    }
+    return { ok: run(''), one: run('one'), none: run('none') };
+  });
+  is(money.ok.leftB > 0 && money.ok.totB > 0,
+     '납입기간이 적혀 있으면 「앞으로 낼 돈」 ' + money.ok.leftB + '만원 · 「총 납입」 ' + money.ok.totB + '만원이 <실제로 선다>');
+  is(money.none.leftB === null && money.none.totB === null,
+     '납입기간이 하나도 없으면 <0 이 아니라 모름(null)>이다 — 지금 ' + money.none.leftB + ' / ' + money.none.totB);
+  is(money.none.unk >= 2 && !/\d\s*원/.test(money.none.unkTxt) && /—/.test(money.none.unkTxt),
+     '그때 그 칸에 <숫자 대신 —>을 세운다 — 모름 칸 ' + money.none.unk + '개' +
+       (/\d\s*원/.test(money.none.unkTxt) ? ' (그런데 금액이 찍혀 있다!)' : ''));
+  is(/납입기간/.test(money.none.txt) && /적어 주시면/.test(money.none.txt),
+     '<무엇을 채우면 되는지> 그 자리에 적는다 — 「가입 시기와 납입기간을 적어 주시면…」');
+  is(money.none.save === false,
+     '값이 없으면 「이 돈이 무엇이 되는가」 장을 <안 세운다> — 0 으로 세우면 거짓말이 된다');
+  is(money.one.leftB > 0 && money.one.noTerm > 0 && /빼고/.test(money.one.txt),
+     '한 건만 빠지면 값은 주되 <「N건 빼고」>라고 적는다 (' + money.one.noTerm + '건)');
+
+  /* ── [12-1] 가족에게 남는 것 — <b>안심의 근거는 나눗셈 하나</b> ──────
+     「가족은 걱정 안 하셔도 됩니다」를 말로만 하면 아무것도 아니다.
+     남는 목돈 ÷ 월 생활비 = 몇 달을 사는가. 그 값이 <b>화면의 두 숫자에서
+     나온 것</b>인지, 모자랄 때 <b>모자란다고</b> 적는지, 값이 없으면
+     <b>장을 안 세우는지</b>를 본다.                                    */
+  head('[12-1] 가족에게 남는 것 — 근거가 화면의 두 숫자에서 나온다');
+  const fam = await pg.evaluate(() => {
+    function run(mut) {
+      /* 앞 판이 남지 않게 <b>완전히</b> 비우고 시작한다 — doSample 만으로는
+         who 같은 칸이 그대로 남아 다음 판을 오염시킨다. */
+      localStorage.clear(); S = blank(); save(); doSample();
+      if (mut) mut();
+      save(); S.deck = true; S.mode = 'show'; render();
+      var el = document.getElementById('sFam');
+      /* 무대에서는 지금 장만 보인다 — 재려면 잠깐 세운다 */
+      var wasCls = el ? el.className : ''; if (el) el.classList.add('cur');
+      var C = calc(), L = lifeCalc(C), g = null, i;
+      for (i = 0; i < STD.length; i++) if (STD[i].mid === '사망 · 장해') g = STD[i];
+      var a = 0; g.rows.forEach(function (r) { if (UNIT[r.k] === 'L' && C.a[r.k] !== undefined) a += C.a[r.k]; });
+      var yr = el ? document.getElementById('famYr') : null;
+      /* 「그냥 나눈 값」이라는 말이 <b>실제로 보이는지</b>까지 본다 —
+         접혀 있으면 고객은 그 햇수를 <b>보장된 것</b>으로 듣는다. */
+      var cav = el ? el.querySelector('.fam u') : null;
+      var out = { has: !!el, exp: L.exp, lump: a,
+               want: (L.exp > 0) ? Math.floor(Math.floor(a / L.exp) / 12) : null,
+               yr: yr ? (yr.textContent || '').replace(/\s+/g, ' ').trim() : '',
+               cav: cav ? (cav.textContent || '') : '',
+               cavShown: !!(cav && cav.offsetParent !== null),
+               txt: el ? (el.textContent || '').replace(/\s+/g, ' ') : '' };
+      if (el) el.className = wasCls;
+      return out;
+    }
+    return {
+      ok: run(null),
+      /* 생활비를 지우면 나눌 수가 없다 — 장을 안 세워야 한다 */
+      noExp: run(function () { S.who.expMan = ''; }),
+      /* 사망 보장을 크게 깎으면 「모자랍니다」가 나와야 한다 */
+      thin: run(function () {
+        S.after.forEach(function (p) { ['deathD','deathA','disabD','disabA'].forEach(function (k) { delete p.cov[k]; delete (p.cov2||{})[k]; }); });
+        S.before.forEach(function (p) { ['deathD','deathA','disabD','disabA'].forEach(function (k) {
+          if (p.cov && p.cov[k] !== undefined) p.cov[k] = 2000; }); });
+      })
+    };
+  });
+  is(fam.ok.has, '가족과 생활비가 적혀 있으면 <가족에게 남는 것> 장이 선다');
+  is(fam.ok.has && fam.ok.yr.indexOf('→ ' + fam.ok.want + '년') === 0,
+     '「몇 년을 지낼 수 있는가」가 <남는 목돈 ÷ 월 생활비>와 같다 — 셈하면 ' +
+       fam.ok.want + '년, 화면은 「' + fam.ok.yr + '」');
+  is(fam.ok.txt.indexOf('막내가') >= 0 && /독립할 때까지 \d+년/.test(fam.ok.txt),
+     '<막내가 독립할 때까지>와 견준다 — 적어 두신 가족에서 가져온다');
+  is(fam.ok.cavShown && /이자/.test(fam.ok.cav) && /물가/.test(fam.ok.cav),
+     '<이자·물가는 안 셈했다>고 그 숫자 <b>바로 밑에</b>, 발표 화면에서도 보이게 적는다 — ' +
+       (fam.ok.cavShown ? ('「' + fam.ok.cav + '」') : '(접혀 있어 고객은 못 본다)'));
+  is(fam.noExp.has === false,
+     '월 생활비가 없으면 이 장을 <안 세운다> — 나눌 수가 없는데 세우면 지어내는 것이 된다');
+  is(fam.thin.has, '사망 보장을 줄여도 이 장은 <그대로 선다> — 모자란 자리를 말해야 하기 때문이다');
+  is(fam.thin.has && /빕니다/.test(fam.thin.txt) && !/덮습니다/.test(fam.thin.txt),
+     '덮지 못하면 <「N년이 빕니다」>라고만 적는다 — 좋은 쪽만 적으면 그 일이 왔을 때 무너진다');
+
+  head('[13] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 
   console.log('\n──────────────────────────────');
