@@ -604,6 +604,30 @@ const SHOWN = `[].slice.call(document.querySelectorAll('#app .show > section'))`
   is(fam.thin.has && /빕니다/.test(fam.thin.txt) && !/덮습니다/.test(fam.thin.txt),
      '덮지 못하면 <「N년이 빕니다」>라고만 적는다 — 좋은 쪽만 적으면 그 일이 왔을 때 무너진다');
 
+  /* ── [12-2] <b>마지막 장</b>이 무엇인가 ──────────────────────────────
+     고객이 <b>맨 마지막에 보는 것</b>이 면책 잔글이면, 발표가 「그래서
+     어떻게 하시겠습니까」로 안 끝나고 <b>주의사항으로</b> 끝난다.
+     마지막은 클로징이어야 하고, 거기에는 <b>오늘 정하면 얼마인지</b>와
+     <b>「심사 결과에 따릅니다」</b>가 같이 있어야 한다 (2번).           */
+  head('[12-2] 마지막 장이 <클로징>이다 — 면책으로 끝나지 않는다');
+  const last = await pg.evaluate(() => {
+    localStorage.clear(); S = blank(); save(); doSample();
+    S.deck = true; S.mode = 'show'; render();
+    var L = [].slice.call(document.querySelectorAll('#app .show > section'));
+    var el = L[L.length - 1], was = el.className; el.classList.add('cur');
+    var t = (el.textContent || '').replace(/\s+/g, ' ');
+    el.className = was;
+    return { id: el.id, ids: L.map(function (x) { return x.id; }).slice(-3), txt: t };
+  });
+  is(last.id === 'sClose',
+     '마지막 장이 <클로징>이다 — 지금 ' + last.ids.join(' → '));
+  is(/오늘 정하시면/.test(last.txt) && /매달/.test(last.txt),
+     '거기에 <오늘 정하면 매달 얼마인지>가 숫자로 적혀 있다');
+  is(/심사 결과에 따릅니다/.test(last.txt),
+     '<「보험료·보장은 심사 결과에 따릅니다」>를 빼지 않는다 (2번)');
+  is(/앞으로 이렇게 봐 드리겠습니다/.test(last.txt),
+     '보험에서 끝내지 않는다 — <앞으로의 재무관리>까지 적는다');
+
   head('[13] 조용한가');
   is(errs.length === 0, errs.length ? ('콘솔 에러 — ' + errs.join(' / ')) : '콘솔에 에러가 없다');
 

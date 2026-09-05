@@ -4544,6 +4544,18 @@ function showHtml(){
     if(r.rateA===null)return;
     (r.rateA>=100?okEv:noEv).push({t:ev.t,ic:ev.ic,b:r.rateB,a:r.rateA,gap:r.gapA});
   });
+  h+='<section id="sEnd" data-grp="정리" class="foot" data-nm="적어 둘 것">'+
+    '<div class="fh">적어 둘 것</div><div class="fx">'+
+    '담보 목록·표준금액·괄호 % 는 <b>사장님 기준표</b>를 따랐습니다. 괄호 % 는 그 사건에서 <b>이 담보가 열릴 확률</b>입니다.<br>'+
+    '기준 치료비 출처 — '+(S.src?esc(S.src):'<b>적혀 있지 않습니다. 공식 치료비가 아닙니다.</b>')+'<br>'+
+    (noScen.length?('<b>'+esc(noScen.join(' · '))+'</b> 은 기준 치료비가 없어 <b>계산하지 않았습니다.</b> 빈칸을 0 으로 만들지 않았습니다.<br>'):'')+
+    (nMan?('금액 <b>'+nMan+'칸</b>은 설계사가 <b>직접 정한 값</b>입니다.<br>'):'')+
+    '「앞으로 낼 돈」은 <b>월 보험료 × 남은 납입기간</b>이며, 납입기간을 안 적은 계약은 <b>안 들어갔습니다.</b><br>'+
+    '실손·통원처럼 <b>쓴 만큼</b> 나오는 담보는 미리 얼마라고 말할 수 없어 <b>금액 합계에 넣지 않았습니다.</b> 표에는 그대로 있습니다.<br>'+
+    '치료 과정은 <b>일반적 경과 예시</b>이며 실제 지급은 개인 상태·약관·보험사 심사에 따라 달라집니다.<br>'+
+    '이 자료는 <b>보험 가입 권유를 위한 참고자료</b>이며 계약의 내용은 약관을 따릅니다.</div>'+
+    sayLine('여기 적힌 것은 <b>어떻게 셈했는지</b>입니다. 한 줄이라도 다르면 말씀해 주십시오 — 그 줄이 바뀌면 결과도 바뀝니다.')+
+    '</section>';
   h+='<section id="sClose" data-grp="정리" data-nm="이제 달라지는 것">'+
     '<h3>이제 무엇이 달라집니까<small>조정 후 · 기준 치료비 대비 준비율</small></h3>';
   if(okEv.length||noEv.length){
@@ -4562,6 +4574,13 @@ function showHtml(){
   }else{
     h+='<div class="note w">기준 치료비가 적혀 있지 않아 <b>준비율을 셈하지 않았습니다.</b> 아무 숫자도 만들지 않았습니다.</div>';
   }
+  /* 마지막 장은 <b>「그래서 무엇을 하시겠습니까」</b>여야 한다. 숫자는
+     화면에 이미 있는 것만 쓴다 — 새 값을 만들지 않는다 (1번). */
+  var PC=premCalc();
+  if(PC.monA!==null)
+    h+='<div class="note g"><b>오늘 정하시면</b> 매달 <b>'+fee(PC.monA)+'</b>'+
+       ((PC.leftA!==null)?(', 앞으로 낼 돈은 <b>'+won(PC.leftA)+'</b>'):'')+
+       '입니다. 보장은 <b>가입한 날부터</b> 기간이 세어지고, <b>보험료·보장은 심사 결과에 따릅니다.</b></div>';
   h+='<div class="nxt"><div class="nxh">여기서 끝이 아닙니다 — 앞으로 이렇게 봐 드리겠습니다</div>'+
     '<div class="nxr"><b>해마다 한 번</b><span>이 표를 다시 열어 나이·소득·가족이 달라진 만큼 <b>다시 맞춥니다.</b></span></div>'+
     '<div class="nxr"><b>일이 생기면</b><span>어느 담보가 열리는지 <b>제가 먼저</b> 찾아 청구까지 같이 갑니다.</span></div>'+
@@ -4572,22 +4591,14 @@ function showHtml(){
         ('조정하시면 <b>'+esc(okEv[0].t)+'</b>은 기준을 넘고, 남은 자리는 <b>다음에</b> 같이 보시죠. 오늘 다 정하시라는 게 아닙니다.')
         :'오늘 다 정하시라는 게 아닙니다. <b>제일 급한 한 자리</b>부터 같이 보시죠.'))+
     '</section>';
-  h+='<section id="sEnd" data-grp="정리" class="foot" data-nm="적어 둘 것">'+
-    '<div class="fh">적어 둘 것</div><div class="fx">'+
-    '담보 목록·표준금액·괄호 % 는 <b>사장님 기준표</b>를 따랐습니다. 괄호 % 는 그 사건에서 <b>이 담보가 열릴 확률</b>입니다.<br>'+
-    '기준 치료비 출처 — '+(S.src?esc(S.src):'<b>적혀 있지 않습니다. 공식 치료비가 아닙니다.</b>')+'<br>'+
-    (noScen.length?('<b>'+esc(noScen.join(' · '))+'</b> 은 기준 치료비가 없어 <b>계산하지 않았습니다.</b> 빈칸을 0 으로 만들지 않았습니다.<br>'):'')+
-    (nMan?('금액 <b>'+nMan+'칸</b>은 설계사가 <b>직접 정한 값</b>입니다.<br>'):'')+
-    '「앞으로 낼 돈」은 <b>월 보험료 × 남은 납입기간</b>이며, 납입기간을 안 적은 계약은 <b>안 들어갔습니다.</b><br>'+
-    '실손·통원처럼 <b>쓴 만큼</b> 나오는 담보는 미리 얼마라고 말할 수 없어 <b>금액 합계에 넣지 않았습니다.</b> 표에는 그대로 있습니다.<br>'+
-    '치료 과정은 <b>일반적 경과 예시</b>이며 실제 지급은 개인 상태·약관·보험사 심사에 따라 달라집니다.<br>'+
-    '이 자료는 <b>보험 가입 권유를 위한 참고자료</b>이며 계약의 내용은 약관을 따릅니다.</div>'+
-    sayLine('여기 적힌 것은 <b>어떻게 셈했는지</b>입니다. 한 줄이라도 다르면 말씀해 주십시오 — 그 줄이 바뀌면 결과도 바뀝니다.')+
-    '</section>';
   /* 설계사 단추는 <b>무대 밖</b>에 둔다 — 무대 안에 두면 표지 밑에 붙어 고객이 먼저 본다 */
   h+='</div></div><div class="noprint showctl" style="margin-top:16px">'+
     '<button class="btn n" onclick="go(\'edit\')">← 만들기로 돌아가기</button>'+
-    '<button class="btn" onclick="window.print()">🖨 인쇄 · PDF 로 저장</button></div>';
+    '<button class="btn" onclick="window.print()">🖨 인쇄 · PDF 로 저장</button>'+
+    /* 발표가 끝난 <b>그 자리에서</b> 고객 카드에 남긴다 — 화면을 나갔다
+       들어오면 그 사이에 잊는다. 워크스페이스 밖에서는 안 보인다. */
+    (INFRAME?'<button class="btn g" onclick="baSaveToClient()">💾 고객 365일에 저장</button>':'')+
+    '</div>';
   /* 넘기는 띠도 <b>다 그린 뒤</b> 채운다 — 몇 장인지 화면을 세어야 알기 때문이다 */
   return h+'<div class="deckbar noprint" id="deckBar"></div>';
 }
