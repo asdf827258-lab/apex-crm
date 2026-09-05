@@ -85,17 +85,20 @@ const head = (t) => console.log('\n' + t);
   });
   await pg.waitForTimeout(300);
   is(brain.folds === 5, '공부방이 <다섯 칸>으로 선다 (지금 ' + brain.folds + '칸)');
-  is(/왜 정확히 알아야/.test(brain.txt), '<왜 정확히 알아야 하는지>부터 적는다');
+  is(/모르면 무슨 일이 생기나요/.test(brain.txt),
+     '<「이걸 모르면 무슨 일이 생기나요」>부터 적는다 — 제도 설명보다 이게 먼저다');
   const open = await pg.evaluate(() => {
     nhOpen('shield');
     var t = (document.querySelector('.nhf.on .nhi') || {}).textContent || '';
     return t.replace(/\s+/g, ' ');
   });
   await pg.waitForTimeout(300);
-  is(/산정특례/.test(open) && /덮습니다/.test(open) && /안 덮습니다/.test(open),
-     '펴면 <산정특례>의 「덮는 것 · 안 덮는 것」이 나란히 선다');
+  is(/산정특례/.test(open) && /여기는 깎아 줍니다/.test(open) && /여기는 안 깎아 줍니다/.test(open),
+     '펴면 <산정특례>의 「깎아 주는 것 · 안 깎아 주는 것」이 나란히 선다');
   /* 「등록」 한 글자로 찾으면 「덮는 것」 칸에도 있어 <b>늘 통과</b>한다.
      못 박아야 하는 것은 <b>「자동이 아니다」</b> 라는 말 그 자체다. */
+  is(await pg.evaluate(() => document.querySelectorAll('.nhf.on .nt1').length) >= 3,
+     '제도마다 <「한마디로」 한 줄>이 맨 위에 선다 — 바쁘실 때 이 줄만 읽으시면 된다');
   is(/자동.{0,6}아닙니다/.test(open) && /등록을 해야/.test(open),
      '<「암이면 자동이 아니다 — 등록을 해야 한다」>를 적는다 — 제일 많이 틀리는 자리');
 
