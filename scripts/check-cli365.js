@@ -122,12 +122,29 @@ const SEED = `
   console.log('\n[2-3] 몫이 밀린 분보다 많으면 — 다음으로 오래된 분으로 잇는다');
   const B3 = await page.evaluate(new Function(SEED + `
     /* 밀린 분은 하나뿐인데 몫이 더 큰 자리.
-       남은 영업일은 달마다 달라 몫이 흔들린다 — 여기서는 <b>1일로 고정</b>해
-       「몫이 밀린 분보다 클 때」 만 본다. 영업일 계산 자체는 [2-2] 에서 따로 잰다. */
-    CC.calls = { k1: ago(95), k2: ago(3), k3: ago(4), k4: ago(5) };
+
+       ★ <b>오늘 날짜를 고정한다.</b> 예전에는 ago(3)·ago(4)·ago(5) 를 썼는데,
+       오늘이 그 달 6일만 지나도 그 셋이 <b>전부 이번 달</b>이 되어 「이번 달
+       이미 한 사람」으로 세어졌다. 그러면 남은 사람이 1명이 되어 몫도 1이
+       되고, 이 마디가 재려던 상황(몫 &gt; 밀린 사람) 자체가 안 만들어진다.
+       초순에는 지난달이라 통과하고 중순부터 빨간불 — <b>달마다 열흘쯤 켜졌다
+       꺼지는 알람</b>이었다. 그런 점검은 안 잡는 것보다 나쁘다 (8번).
+
+       그래서 날짜를 못 박고, 마지막 통화를 <b>20~25일 전</b>으로 둔다.
+       기준(30일)보다 짧아 밀리지 않았고, 20일 이상이면 어떤 달이든
+       <b>이번 달이 아니다</b> — 오늘이 며칠이든 같은 상황이 선다. */
+    const T0 = '2030-06-20';
+    /* 오늘을 아는 자리가 <b>두 곳</b>이다 — 달 계산은 mcalToday(), 밀림
+       계산은 ccToday(). 하나만 못 박으면 「95일 전」이 미래가 되어 밀린
+       사람이 0명이 된다. 실제로 그렇게 한 번 헛짚었다. */
+    const realToday = window.mcalToday; window.mcalToday = function(){ return T0; };
+    const realCcToday = window.ccToday; window.ccToday = function(){ return T0; };
+    const back = function(n){ const d = new Date(T0 + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() - n); return d.toISOString().slice(0, 10); };
+    CC.calls = { k1: back(95), k2: back(20), k3: back(22), k4: back(25) };
     const realBiz = window.cliBizLeft; window.cliBizLeft = function(){ return 1; };
     const m = cliMission(), mm = cliMonth(), html = cliMissionHtml();
-    window.cliBizLeft = realBiz;
+    window.cliBizLeft = realBiz; window.mcalToday = realToday; window.ccToday = realCcToday;
     return { due: m.due.length, rest: m.rest.length, quota: mm.quota,
              shown: (html.match(/osOpenClient/g) || []).length,
              says: /아직 안 밀렸습니다/.test(html) };
