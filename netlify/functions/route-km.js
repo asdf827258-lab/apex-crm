@@ -27,15 +27,30 @@ const json = (code, body) => ({
   body: JSON.stringify(body)
 });
 
+/* 카카오가 거절하면 <b>이유를 그대로 들고 온다.</b> 「안 됩니다」만 적으면
+   열 번을 눌러도 열 번 같다 — 지도 키 때 이미 겪은 자리다.
+   다만 <b>키는 절대 담지 않는다</b> — 이 답은 화면까지 그대로 간다. */
+let LAST_WHY = '';
 async function one(leg) {
   const u = API + '?origin=' + leg.ox + ',' + leg.oy +
             '&destination=' + leg.dx + ',' + leg.dy +
             '&priority=RECOMMEND&car_fuel=GASOLINE';
   const r = await fetch(u, { headers: { Authorization: 'KakaoAK ' + KEY } });
-  if (!r.ok) return null;
+  if (!r.ok) {
+    let msg = '';
+    try { msg = (await r.text()).slice(0, 300); } catch (e) {}
+    /* 혹시 키가 그대로 되돌아와도 화면에 안 나가게 지운다 */
+    if (KEY) msg = msg.split(KEY).join('(키)');
+    LAST_WHY = 'HTTP ' + r.status + (msg ? ' · ' + msg : '');
+    return null;
+  }
   const j = await r.json();
   const s = j && j.routes && j.routes[0] && j.routes[0].summary;
-  if (!s || typeof s.distance !== 'number') return null;
+  if (!s || typeof s.distance !== 'number') {
+    LAST_WHY = '길을 못 찾았습니다' + (j && j.routes && j.routes[0] && j.routes[0].result_msg
+      ? ' · ' + String(j.routes[0].result_msg).slice(0, 120) : '');
+    return null;
+  }
   /* 카카오는 미터·초로 답한다 */
   return { km: Math.round(s.distance / 100) / 10, min: Math.max(1, Math.round(s.duration / 60)) };
 }
@@ -54,9 +69,13 @@ exports.handler = async (event) => {
   if (bad) return json(400, { ok: false, why: 'BADLEG' });
 
   try {
+    LAST_WHY = '';
     const out = [];
     for (const l of legs) out.push(await one(l).catch(() => null));
-    return json(200, { ok: true, legs: out });
+    const got = out.filter(Boolean).length;
+    /* 하나도 못 받았으면 성공이라고 하지 않는다 — 이유를 같이 돌려준다 */
+    if (!got) return json(200, { ok: false, why: LAST_WHY || 'EMPTY' });
+    return json(200, { ok: true, legs: out, why: (got < out.length ? LAST_WHY : '') });
   } catch (e) {
     /* 실패를 성공처럼 말하지 않는다 — 화면은 어림으로 되돌아간다 */
     return json(200, { ok: false, why: 'UPSTREAM' });
