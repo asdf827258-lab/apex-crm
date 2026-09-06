@@ -62,7 +62,9 @@ var CALLS=[{id:'c1',db_id:'d5',created_by:'u1',result:'부재',call_at:'2026-09-
            {id:'c2',db_id:'d3',created_by:'u1',result:'부재',call_at:'2026-08-20T02:00:00Z',appointment_at:null,memo:''}];
 if(MIG)CALLS.forEach(function(c){ c.appt_place=null;c.appt_lat=null;c.appt_lng=null });
 var T={profiles:[{id:'u1',name:'홍길동',role:'admin',active:true}],dbs:DBS,calls:CALLS,
-       attendance:[],teams:[],team_members:[],app_config:[],clients:[]};
+       attendance:[],teams:[],team_members:[],
+       /* 키가 <b>있는</b> 서버 — 카카오가 거절했을 때 화면이 이유를 적는지 보려면 필요하다 */
+       app_config:[{key:'kakao_js_key',value:'00000000000000000000000000000000'}],clients:[]};
 /* 칸이 없는 서버 흉내 — 없는 칸을 고르면 에러를 돌려준다 */
 var NEW={dbs:['addr','lat','lng','next_appt_place','next_appt_lat','next_appt_lng',
               'region_code','sido','sigungu','dong','followup'],
@@ -251,6 +253,27 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(CS.care && !PC.care, 'CS 에서만 <「계약 후 관리 미리보기」>가 뜬다');
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[9] 카카오가 <거절하면 이유를 적는다> — 단추가 안 먹는 것처럼 보이던 자리');
+  /* 견본 서버에 키는 있지만 우리 라우팅이 dapi.kakao.com 을 막아 두었으므로
+     SDK 로드는 반드시 실패한다 — 실제 사장님 화면에서 난 일과 같은 꼴이다
+     (401 domain mismatched). 그때 화면이 <b>왜</b> 안 되는지 말해야 한다. */
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  /* <b>빨간 상자만</b> 본다. 화면 전체를 보면 아래 발급 안내문에 있는 같은
+     낱말에 걸려, 상자가 비어도 통과해 버린다 — 안 울리는 알람이 된다 (8번). */
+  const nokey = await pg.waitForFunction(() => {
+    const e = document.getElementById('rtNokey');
+    if (!e || e.classList.contains('hidden')) return null;
+    const box = e.querySelector('.rt-card');
+    return box && box.innerText.length > 0 ? box.innerText : null;
+  }, { timeout: 20000 }).then(h => h.jsonValue(), () => '');
+  is(/카카오가 거절/.test(nokey), '「키는 들어갔는데 <카카오가 거절했습니다>」라고 적는다');
+  is(nokey.includes(new URL(pg.url()).origin),
+     '등록해야 할 <이 주소>를 그대로 보여 준다 — 외워서 옮겨 적지 않게');
+  is(/카카오맵/.test(nokey) && /사용함/.test(nokey),
+     '막히는 자리 <둘>을 짚는다 — 도메인 등록 · 카카오맵 켜기');
+  is(!/키를 다시 만/.test(nokey) || /다시 만들 필요는 없/.test(nokey),
+     '<키를 다시 만들라고 하지 않는다> — 키는 멀쩡한데 헛수고를 시키는 자리다');
 
   await ctx.close(); await br.close(); srv.close();
   console.log('\n──────────────────────────────');

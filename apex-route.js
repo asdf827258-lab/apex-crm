@@ -1223,14 +1223,35 @@ function drawMap(stops,cands){
     }
     if(any) MAP.setBounds(bounds,60,60,60,60);
     setTimeout(function(){ try{ MAP.relayout(); if(any)MAP.setBounds(bounds,60,60,60,60) }catch(e){} },120);
-  }).catch(function(){ keyPanel(false) });
+  }).catch(function(e){ keyPanel(false,e) });
 }
 
 /* ── 키가 없을 때 안내 ──────────────────────────────────────────── */
-function keyPanel(force){
+/* 왜 안 됐는지 <b>화면에 적는다.</b> 카카오는 이유를 또박또박 말해 줍니다 —
+   「domain mismatched! caller=… check out registered web domains」. 그런데
+   그 답은 <script> 태그로 받아 오는 것이라 브라우저가 본문을 못 읽고
+   (CORS 허용이 없습니다) onerror 만 옵니다. 예전에는 그 자리에서 아무 말
+   없이 이 화면으로 되돌아왔습니다 — 사장님 눈에는 <b>단추가 안 먹는</b>
+   것으로 보였습니다. 이유를 모르면 열 번을 눌러도 열 번 똑같습니다.
+   그래서 「키는 넣었는데 카카오가 거절했다」를 따로 적고, 막히는 자리
+   둘(도메인 등록 · 카카오맵 켜기)을 지금 이 주소와 함께 보여 줍니다. */
+function keyPanel(force,err){
   var box=q("rtNokey"); if(!box)return;
   box.classList.remove("hidden");
-  box.innerHTML=
+  var why="";
+  if(KEY&&err&&String(err.message||err)!=="NOKEY"){
+    why='<div class="rt-card" style="background:#fff1f0;border-color:#ffccc7;color:#a8071a;'+
+        'margin-bottom:14px;line-height:1.7">'+
+        '<b>키는 들어갔는데 카카오가 거절했습니다.</b><br>'+
+        '거의 언제나 아래 <b>둘 중 하나</b>입니다 — 키를 다시 만들 필요는 없습니다.'+
+        '<ol style="margin:8px 0 0;padding-left:18px">'+
+        '<li><b>이 주소가 등록돼 있지 않다</b> — 카카오 콘솔의 Web 플랫폼에 '+
+          '<code style="background:#fff;padding:1px 5px;border-radius:5px">'+E(location.origin)+'</code> '+
+          '를 그대로 넣으세요. 끝에 <b>/</b> 를 붙이지 마십시오.</li>'+
+        '<li><b>카카오맵을 아직 안 켰다</b> — 제품 설정 → 카카오맵 → <b>사용함</b>.</li>'+
+        '</ol></div>';
+  }
+  box.innerHTML=why+
     '<div style="max-width:520px">'+
     '<h3 style="margin:0 0 8px;color:var(--navy)">지도를 켜려면 카카오 키가 한 번 필요합니다</h3>'+
     '<p style="color:var(--muted);line-height:1.65;margin:0 0 14px">무료입니다. '+
@@ -1239,7 +1260,7 @@ function keyPanel(force){
     '<li><a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">developers.kakao.com</a> 접속 → 카카오 계정 로그인</li>'+
     '<li><b>애플리케이션 추가하기</b> → 앱 이름 「APEX」, 회사명 아무거나 → 저장</li>'+
     '<li>만든 앱 → <b>앱 키</b> 에서 <b>JavaScript 키</b> 를 복사</li>'+
-    '<li>같은 앱 → <b>플랫폼 → Web</b> → 사이트 도메인에 아래 두 줄을 등록<br>'+
+    '<li>같은 앱 → <b>일반</b>(또는 <b>플랫폼</b>) → <b>Web</b> → 사이트 도메인에 아래 주소를 등록<br>'+
       '<code style="font-size:12px;background:#f1f4f7;padding:2px 6px;border-radius:6px">'+
       E(location.origin)+'</code></li>'+
     '<li>카카오맵 → <b>제품 설정 → 카카오맵</b> 에서 <b>사용함</b> 으로 켜기</li>'+
