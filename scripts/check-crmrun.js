@@ -50,19 +50,28 @@ function D(id,rg,st,ex){
   for(var k in (ex||{}))d[k]=ex[k]; return d;
 }
 var DBS=[D('d1','순천','TA'),D('d2','순천시','미접촉'),D('d3','전남 순천시','TA'),
- D('d4','전라남도 순천시','AP'),D('d5','여수','TA'),D('d6','여수시','미접촉'),
+ D('d4','전라남도 순천시','AP',{lat:34.95,lng:127.49,addr:'순천시 조례동'}),D('d5','여수','TA'),D('d6','여수시','미접촉'),
  D('d7','광양시','계약완료',{contracted_at:'2026-08-05'}),
  D('d8','광양','증권전달',{contracted_at:'2025-09-05',policy_sent_at:'2025-09-20'}),
  D('d9','','계약완료'),D('d10','서울특별시 강남구','TA'),
- D('d11','순천시','계약완료',{contracted_at:'2026-08-25'})];
-if(MIG)DBS.forEach(function(d){ d.addr='';d.lat=null;d.lng=null;
+ D('d11','순천시','계약완료',{contracted_at:'2026-08-25'}),
+ /* 지역 칸에 주소가 통째로 든 줄 — 지금은 자기 도시에 안 뜬다 */
+ D('d12','여수시 조례동 343 근처(자택)','TA'),
+ D('d13','학동 근처(자택)','TA'),            /* 「동구」로 바뀌려 하는 자리 — 손대면 안 된다 */
+ D('d14','순천시 생목동','TA',{addr:'이미 적어 둔 동네'}),
+ D('d15','동구 어딘가(자택)','TA'),        /* 한 글자 가드만 막는 자리 — 맨 앞이긴 하다 */
+ D('d16','조례동 순천 시청 앞(자택)','TA')]; /* 맨 앞 가드만 막는 자리 — 이름은 두 글자다 */
+if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';
+  if(d.lat===undefined){d.lat=null;d.lng=null}
   d.next_appt_place=null;d.next_appt_lat=null;d.next_appt_lng=null;
   d.region_code=null;d.sido=null;d.sigungu=null;d.dong=null;d.followup=null });
 var CALLS=[{id:'c1',db_id:'d5',created_by:'u1',result:'부재',call_at:'2026-09-01T01:00:00Z',appointment_at:null,memo:''},
            {id:'c2',db_id:'d3',created_by:'u1',result:'부재',call_at:'2026-08-20T02:00:00Z',appointment_at:null,memo:''}];
 if(MIG)CALLS.forEach(function(c){ c.appt_place=null;c.appt_lat=null;c.appt_lng=null });
 var T={profiles:[{id:'u1',name:'홍길동',role:'admin',active:true}],dbs:DBS,calls:CALLS,
-       attendance:[],teams:[],team_members:[],app_config:[],clients:[]};
+       attendance:[],teams:[],team_members:[],
+       /* 키가 <b>있는</b> 서버 — 카카오가 거절했을 때 화면이 이유를 적는지 보려면 필요하다 */
+       app_config:[{key:'kakao_js_key',value:'00000000000000000000000000000000'}],clients:[]};
 /* 칸이 없는 서버 흉내 — 없는 칸을 고르면 에러를 돌려준다 */
 var NEW={dbs:['addr','lat','lng','next_appt_place','next_appt_lat','next_appt_lng',
               'region_code','sido','sigungu','dong','followup'],
@@ -79,10 +88,22 @@ function B(tbl){
      if(k==='in'&&f&&rows.length&&f in rows[0])rows=rows.filter(function(r){return (v||[]).indexOf(r[f])>=0});
      return b } });
   b.single=b.maybeSingle=function(){ one=true; return b };
+  /* <b>쓰면 실제로 바뀐다.</b> 안 그러면 「누르기 전에는 안 바뀐다」 같은
+     단정을 아예 잴 수 없다 — 미리 바꿔 버려도 화면이 똑같아 알람이
+     안 울린다 (8번). rows 는 원본 객체를 가리키므로 고치면 남는다. */
+  var op='', pay=null;
   ['insert','update','upsert','delete'].forEach(function(k){ b[k]=function(p){
-    err=miss(tbl,p?Object.keys(Array.isArray(p)?(p[0]||{}):p):[]); return b } });
-  b.then=function(res,rej){ return Promise.resolve(
-    err?{data:null,error:err}:{data:one?(rows[0]||null):rows,error:null}).then(res,rej) };
+    err=miss(tbl,p?Object.keys(Array.isArray(p)?(p[0]||{}):p):[]);
+    op=k; pay=p; return b } });
+  b.then=function(res,rej){
+    if(!err&&op==='update'&&pay){ rows.forEach(function(r){ for(var k in pay)r[k]=pay[k] }) }
+    if(!err&&(op==='upsert'||op==='insert')&&pay&&!Array.isArray(pay)){
+      var all=T[tbl]||(T[tbl]=[]), hit=null;
+      all.forEach(function(r){ if(r.key!==undefined&&r.key===pay.key)hit=r });
+      if(hit){ for(var k2 in pay)hit[k2]=pay[k2] } else all.push(pay);
+    }
+    return Promise.resolve(
+      err?{data:null,error:err}:{data:one?(rows[0]||null):rows,error:null}).then(res,rej) };
   b.catch=function(f){ return b.then(function(x){return x},f) };
   return b;
 }
@@ -104,6 +125,46 @@ window.supabase={createClient:function(){ return {
 }}};
 })();`;
 
+
+/* ── 카카오 지도 견본 ─────────────────────────────────────────────
+   진짜 dapi.kakao.com 은 이 통에서 못 닿습니다. 그런데 <b>가드가 실제로
+   도는지</b>는 카카오가 무어라 답하는지에 달려 있어, 안 세우면 그 자리를
+   못 잽니다. 그래서 답을 우리가 정하는 견본을 세웁니다.
+
+     「여수시 …」  → 카카오도 여수시   (글 안에 이름이 있다 → 받아들임)
+     「학동」      → 카카오는 광주 동구 (글 안에 없다 → 손대면 안 됨)      */
+const KAKAO_STUB = `
+window.kakao=window.kakao||{};kakao.maps=kakao.maps||{};
+kakao.maps.load=function(cb){cb&&cb()};
+kakao.maps.services={
+  Status:{OK:'OK',ZERO_RESULT:'ZERO_RESULT'},
+  Geocoder:function(){
+    this.addressSearch=function(q,cb){
+      var t=String(q||'').replace(/\\s+/g,'');
+      if(t.indexOf('여수')>=0)  return cb([{y:34.760,x:127.662,address_name:q}],'OK');\n      if(t.indexOf('동구')>=0)  return cb([{y:35.146,x:126.923,address_name:q}],'OK');
+      if(t.indexOf('학동')>=0)  return cb([{y:35.146,x:126.923,address_name:q}],'OK');
+      if(t.indexOf('순천')>=0)  return cb([{y:34.950,x:127.487,address_name:q}],'OK');
+      return cb([],'ZERO_RESULT');
+    };
+    this.coord2RegionCode=function(lng,lat,cb){
+      var v;
+      if(Math.abs(lat-34.760)<0.01) v={region_1depth_name:'전라남도',region_2depth_name:'여수시',region_3depth_name:'조례동',code:'4613010100'};
+      else if(Math.abs(lat-35.146)<0.01) v={region_1depth_name:'광주광역시',region_2depth_name:'동구',region_3depth_name:'학동',code:'2911010700'};
+      else v={region_1depth_name:'전라남도',region_2depth_name:'순천시',region_3depth_name:'생목동',code:'4615010600'};
+      v.region_type='B'; cb([v],'OK');
+    };
+  },
+  Places:function(){ this.keywordSearch=function(q,cb){ cb([],'ZERO_RESULT') } }
+};
+kakao.maps.Map=function(el,o){this.setBounds=function(){};this.relayout=function(){};
+  var c=(o&&o.center)||{a:34.760,b:127.662};
+  this.getCenter=function(){return {getLat:function(){return c.a},getLng:function(){return c.b}}}};
+kakao.maps.LatLng=function(a,b){this.a=a;this.b=b};
+kakao.maps.LatLngBounds=function(){this.extend=function(){}};
+kakao.maps.CustomOverlay=function(){this.setMap=function(){}};
+kakao.maps.Polyline=function(){this.setMap=function(){}};
+`;
+
 /* 우리가 낸 에러만 셉니다 — 견본이 막아 둔 바깥 주소는 에러가 아닙니다 */
 const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|204/i.test(x));
 
@@ -119,7 +180,9 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   const P = srv.address().port;
   const br = await chromium.launch();
 
-  const open = async (mig) => {
+  /* kakao=false 면 카카오가 거절한 것과 같은 꼴이 된다 — [9] 가 그것을 잰다.
+     kakao=true 면 견본 SDK 가 붙어 지오코딩이 실제로 돈다 — [10] 이 그것을 쓴다. */
+  const open = async (mig, kakao) => {
     const ctx = await br.newContext(), pg = await ctx.newPage();
     const errs = [], logs = [];
     pg.on('pageerror', e => errs.push(String(e.message || e)));
@@ -128,7 +191,8 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
       const u = r.request().url();
       if (/supabase-js@2/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: STUB });
       if (/pretendard/.test(u))   return r.fulfill({ contentType: 'text/css', body: '' });
-      if (/dapi\.kakao\.com/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: '' });
+      if (/dapi\.kakao\.com/.test(u)) return kakao ? r.fulfill({ contentType: 'text/javascript', body: KAKAO_STUB })
+                                                    : r.fulfill({ status: 401, contentType: 'application/json', body: '{"errorType":"AccessDeniedError"}' });
       if (u.startsWith('http://localhost:' + P)) return r.continue();
       if (/^https?:/.test(u)) return r.fulfill({ status: 204, body: '' });
       return r.continue();
@@ -146,7 +210,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
     sel, { timeout: 15000 });
 
   /* ─── 마이그레이션을 안 돌린 서버 ─────────────────────────── */
-  let { ctx, pg, errs, logs } = await open(false);
+  let { ctx, pg, errs, logs } = await open(false, false);
 
   head('[1] 마이그레이션을 <안 돌린> 상태에서도 원래 화면이 그대로 돈다');
   const g = await pg.evaluate(() => { const v = n => { try { return eval(n) } catch (e) { return null } };
@@ -220,7 +284,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   await ctx.close();
 
   /* ─── 마이그레이션을 돌린 서버 ────────────────────────────── */
-  ({ ctx, pg, errs, logs } = await open(true));
+  ({ ctx, pg, errs, logs } = await open(true, false));
 
   head('[7] 마이그레이션을 <돌린> 뒤에는 스스로 켠다');
   is(!logs.some(l => /칸이 없습니다/.test(l)), '「칸이 없습니다」를 <더는 안 적는다>');
@@ -249,6 +313,158 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
      : ('안 떠는 단계 — ' + [!PC.on ? 'PC' : '', !CS.on ? 'CS' : ''].filter(Boolean).join(' · ')));
   is(PC.t !== CS.t, '단계마다 <다른 말>이 나온다 — 삼항 사슬이 아니라 표 하나로 갈린다');
   is(CS.care && !PC.care, 'CS 에서만 <「계약 후 관리 미리보기」>가 뜬다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[9] 카카오가 <거절하면 이유를 적는다> — 단추가 안 먹는 것처럼 보이던 자리');
+  /* 견본 서버에 키는 있지만 우리 라우팅이 dapi.kakao.com 을 막아 두었으므로
+     SDK 로드는 반드시 실패한다 — 실제 사장님 화면에서 난 일과 같은 꼴이다
+     (401 domain mismatched). 그때 화면이 <b>왜</b> 안 되는지 말해야 한다. */
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  /* <b>빨간 상자만</b> 본다. 화면 전체를 보면 아래 발급 안내문에 있는 같은
+     낱말에 걸려, 상자가 비어도 통과해 버린다 — 안 울리는 알람이 된다 (8번). */
+  const nokey = await pg.waitForFunction(() => {
+    const e = document.getElementById('rtNokey');
+    if (!e || e.classList.contains('hidden')) return null;
+    const box = e.querySelector('.rt-card');
+    return box && box.innerText.length > 0 ? box.innerText : null;
+  }, { timeout: 20000 }).then(h => h.jsonValue(), () => '');
+  is(/카카오가 거절/.test(nokey), '「키는 들어갔는데 <카카오가 거절했습니다>」라고 적는다');
+  is(nokey.includes(new URL(pg.url()).origin),
+     '등록해야 할 <이 주소>를 그대로 보여 준다 — 외워서 옮겨 적지 않게');
+  is(/카카오맵/.test(nokey) && /사용함/.test(nokey),
+     '막히는 자리 <둘>을 짚는다 — 도메인 등록 · 카카오맵 켜기');
+  is(!/키를 다시 만/.test(nokey) || /다시 만들 필요는 없/.test(nokey),
+     '<키를 다시 만들라고 하지 않는다> — 키는 멀쩡한데 헛수고를 시키는 자리다');
+
+  await ctx.close();
+
+  /* ─── 카카오가 답하는 서버 ─────────────────────────────────── */
+  ({ ctx, pg, errs, logs } = await open(true, true));
+
+  head('[10] 지역 칸에 든 <주소를 살린다> — 지우지 않고 옮긴다');
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => !!document.getElementById('rtAddr'), { timeout: 20000 });
+  const before = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const f = id => (v('dbs') || []).filter(d => d.id === id)[0] || {};
+    return { d12: f('d12'), d13: f('d13'), d14: f('d14') };
+  });
+  await pg.evaluate(() => document.getElementById('rtAddr').click());
+  const plan = await pg.waitForFunction(() => {
+    const m = document.getElementById('rtTidy2');
+    if (!m || !m.classList.contains('open')) return null;
+    const b = document.getElementById('rtTidyB');
+    return b && b.innerText.length > 0 ? b.innerText : null;
+  }, { timeout: 25000 }).then(h => h.jsonValue(), () => '');
+
+  is(/여수시 조례동/.test(plan), '지역 칸에 <주소가 든 줄>을 찾아냈다');
+  is(/여수시/.test(plan.split('그대로 두는 것')[0] || ''),
+     '카카오가 답한 <「여수시」로 지역을 바로잡겠다>고 미리 보여 준다');
+  /* ★ 여수가 순천시로 바뀌려 했던 그 가드 — 「학동」은 전국에 여러 개다 */
+  const kept = plan.split('그대로 두는 것')[1] || '';
+  is(/학동/.test(kept) && /동구/.test(kept),
+     '<「학동 근처」를 손대지 않는다> — 「동구」는 광역시마다 있어 한 글자로 겹치면 다 통과해 버린다');
+  is(!/생목동/.test(plan),
+     '<이미 동네 칸이 적힌 줄은 건드리지 않는다> — 사람이 적어 둔 것을 안 덮는다');
+  /* 가드 둘을 <b>따로</b> 잰다. 한 자리만 재면 다른 가드가 대신 막아 주어,
+     하나를 빼도 빨간불이 안 켜진다 — 안 울리는 알람이 된다 (8번). */
+  is(/동구 어딘가/.test(kept) && /여러 시에 다 있는/.test(kept),
+     '① <한 글자 이름은 안 쓴다> — 「동구」는 광역시마다 있다');
+  is(/조례동 순천/.test(kept) && /시작하지 않습니다/.test(kept),
+     '② <맨 앞에 있어야 이름이다> — 가운데서 겹친 글자는 도시 이름이 아니다');
+
+  const after = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    return ((v('dbs') || []).filter(d => d.id === 'd12')[0] || {}).addr || '';
+  });
+  is(!after && !before.d12.addr,
+     '<누르기 전에는 아무것도 안 바뀐다> — 먼저 보여 주고, 누르면 그때 씁니다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[11] 위치는 <한 글자도 안 치고> 잡힌다 — 타이핑이 병목이었다');
+  await pg.evaluate(() => { const m = document.getElementById('rtNear'); if (m) m.classList.remove('open') });
+  await pg.evaluate(() => openDb('d1'));
+  await seen(pg, '#dbModal.open');
+  await pg.evaluate(() => document.getElementById('dbAddrFind').click());
+  await seen(pg, '#rtPick.open');
+  /* 손을 얹는 것은 80ms 뒤다. 그 전에 재면 얹든 안 얹든 똑같이 보여
+     이 자리를 아예 못 잰다 — 안 울리는 알람이 된다 (8번). */
+  await pg.waitForTimeout(400);
+  const ways = await pg.evaluate(() => {
+    const m = document.getElementById('rtPick');
+    return { here: !!document.getElementById('rtPickHere'),
+             map: !!document.getElementById('rtPickMapBtn'),
+             /* 폰에서 키보드가 먼저 올라오면 타이핑을 없앤 뜻이 없다 */
+             focused: document.activeElement && document.activeElement.id === 'rtPickQ',
+             t: m.innerText };
+  });
+  is(ways.here && ways.map, '<안 쳐도 되는 길 둘>이 창에 있다 — 📍 지금 여기 · 🗺️ 지도에서 찍기');
+  is(!ways.focused, '<글칸에 손을 안 얹는다> — 폰에서 키보드가 화면 절반을 먹지 않게');
+  is(/지금 계신 곳/.test(ways.t) || /만난 자리/.test(ways.t),
+     '「지금 여기」가 <무엇을 적는 것인지> 밝힌다 — 사무실에서 누르면 사무실이 적힌다');
+
+  /* 지도에서 찍기 — 한 글자도 안 치고 동네 이름까지 들어오는가 */
+  await pg.evaluate(() => document.getElementById('rtPickMapBtn').click());
+  await pg.waitForFunction(() => {
+    const b = document.getElementById('rtPickMapBox');
+    return b && !b.classList.contains('hidden');
+  }, { timeout: 15000 });
+  await pg.evaluate(() => document.getElementById('rtPickMapGo').click());
+  const pick = await pg.waitForFunction(() => {
+    const v = document.getElementById('dbAddr');
+    return v && v.value ? { addr: v.value, region: (document.getElementById('region') || {}).value } : null;
+  }, { timeout: 15000 }).then(h => h.jsonValue(), () => null);
+  is(!!pick, '지도에서 찍으니 <동네 칸이 채워졌다> — 친 글자 0개');
+  /* 지도는 출발지(없으면 순천)에서 열린다 — 거기서 찍으면 순천이 나오는 것이 맞다 */
+  is(!!pick && /순천시/.test(pick.addr) && /생목동/.test(pick.addr),
+     '카카오가 답한 <시·군·구 + 동>이 그대로 들어왔다 (' + (pick ? pick.addr : '') + ')');
+  is(!!pick && pick.region === '순천시',
+     '<지역 칸도 같이> 맞춰졌다 — 다시 갈라지지 않게 (' + (pick ? pick.region : '') + ')');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[12] 그 목록에서 <바로 찍고 바로 내비> — 따로 정리하는 시간을 없앤다');
+  await pg.evaluate(() => { const m = document.getElementById('rtPick'); if (m) m.classList.remove('open') });
+  await pg.evaluate(() => { const m = document.getElementById('dbModal'); if (m) m.classList.remove('open') });
+  /* 순천 사람으로 연다 — 견본 지도가 순천에서 열리므로, 찍은 자리와
+     적힌 지역이 같은 시가 되어 행정구역까지 들어가는 길을 잴 수 있다.
+     다른 시가 나오는 길(좌표만 넣고 행정구역은 비움)은 [10] 이 잰다. */
+  const near12 = await stageSave('d2', 'AP');
+  is(near12.on, '단계를 올리니 <그 지역 사람들이> 다시 떴다');
+  const row = await pg.evaluate(() => {
+    const b = document.getElementById('rtNearB');
+    const pin = [...b.querySelectorAll('[data-pin]')].map(e => e.getAttribute('data-pin'));
+    const nav = [...b.querySelectorAll('a[href*="map.kakao.com/link/to"]')].map(e => e.getAttribute('href'));
+    return { pin: pin, nav: nav, t: b.innerText };
+  });
+  is(row.pin.length > 0, '위치를 모르는 사람 줄에 <📍 동네> 단추가 있다 (' + row.pin.join(',') + ')');
+  is(/동네 모름/.test(row.t), '<「동네 모름」>이라고 적어 준다 — 왜 거리가 안 뜨는지 알 수 있게');
+  /* 링크만 보면 딱지가 「x」로 바뀌어도 통과한다. 눌러야 할 것인지
+     알아볼 수 있어야 단추다 — 글자도 같이 잰다 (8번). */
+  is(row.nav.length > 0 && /34\.95/.test(row.nav.join(' ')) && /🧭 내비/.test(row.t),
+     '좌표가 있는 사람은 <🧭 내비> 로 바로 넘어간다 — 그 사람의 실제 좌표로');
+  is(!row.pin.includes('d4'), '좌표가 <이미 있는 사람에게는> 📍 를 안 띄운다');
+
+  /* 눌러서 실제로 저장되는가 — 견본 서버가 쓰기를 반영하므로 잴 수 있다 */
+  await pg.evaluate(() => document.querySelector('#rtNearB [data-pin]').click());
+  await seen(pg, '#rtPick.open');
+  await pg.evaluate(() => document.getElementById('rtPickMapBtn').click());
+  await pg.waitForFunction(() => {
+    const b = document.getElementById('rtPickMapBox');
+    return b && !b.classList.contains('hidden');
+  }, { timeout: 15000 });
+  const who = row.pin[0];
+  await pg.evaluate(() => document.getElementById('rtPickMapGo').click());
+  const saved = await pg.waitForFunction(id => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const d = (v('dbs') || []).filter(x => x.id === id)[0];
+    return d && d.lat ? { addr: d.addr, lat: d.lat, sigungu: d.sigungu, region: d.region } : null;
+  }, who, { timeout: 20000 }).then(h => h.jsonValue(), () => null);
+  is(!!saved, '목록에서 찍으니 <그 사람에게 좌표가 저장됐다> — 창을 옮겨 다니지 않는다');
+  is(!!saved && saved.sigungu === '순천시',
+     '<행정구역까지 같이> 들어갔다 — 적힌 지역과 같은 시라서 (' + (saved ? saved.sigungu : '') + ')');
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 

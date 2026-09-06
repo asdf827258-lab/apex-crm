@@ -61,15 +61,19 @@ end
 $blk$;
 
 /* ── 확인 ─────────────────────────────────────────────────────── */
+/* contracted_at 은 timestamptz 다. ::date 로 내리지 않으면
+   「current_date - contracted_at」 이 interval 이 되어 숫자와 못 견준다
+   (42883: operator does not exist: interval >= integer).
+   실제로 이 줄에서 터져 확인 쿼리가 안 돌았다. */
 select customer_name,
-       contracted_at                                   as 계약일,
-       (current_date - contracted_at)                   as 지난날,
+       contracted_at::date                              as 계약일,
+       (current_date - contracted_at::date)             as 지난날,
        case
-         when contracted_at is null                       then '계약일 없음'
-         when current_date - contracted_at >= 365         then '1년'
-         when current_date - contracted_at >= 180         then '6개월'
-         when current_date - contracted_at >= 90          then '3개월'
-         when current_date - contracted_at >= 30          then '1개월'
+         when contracted_at is null                        then '계약일 없음'
+         when current_date - contracted_at::date >= 365    then '1년'
+         when current_date - contracted_at::date >= 180    then '6개월'
+         when current_date - contracted_at::date >= 90     then '3개월'
+         when current_date - contracted_at::date >= 30     then '1개월'
          else '아직'
        end                                              as 지금단계,
        followup                                         as 챙긴기록

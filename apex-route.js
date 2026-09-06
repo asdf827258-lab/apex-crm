@@ -42,6 +42,7 @@ var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
 var MAP=null, OVERLAY=[];
+var PMAP=null;           /* 위치 고르는 창의 지도 — 동선 지도(MAP)와 다른 판이다 */
 var CACHE={}; try{ CACHE=JSON.parse(localStorage.getItem("apexGeoCacheV1")||"{}") }catch(e){ CACHE={} }
 var HOME=null;  try{ HOME=JSON.parse(localStorage.getItem("apexRouteHomeV1")||"null") }catch(e){}
 var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 쓰는 시간(분) */
@@ -239,7 +240,17 @@ function pickModal(){
     '<div class="modal-box" style="width:min(620px,100%)">'+
       '<div class="modal-head"><h3 id="rtPickT">주소 찾기</h3><button class="close" id="rtPickX">×</button></div>'+
       '<div class="modal-body">'+
-        '<div class="field"><label>주소나 건물 이름을 적고 <b>찾기</b></label>'+
+        /* 타이핑이 병목이라 <b>안 쳐도 되는 길</b>을 먼저 둔다.
+           만나고 나서 차에서 단추 하나 — 그게 제일 빠르다. */
+        '<div class="rt-ways">'+
+          '<button class="btn btn-dark" id="rtPickHere">📍 지금 여기</button>'+
+          '<button class="btn btn-light" id="rtPickMapBtn">🗺️ 지도에서 찍기</button>'+
+        '</div>'+
+        '<div class="rt-pmap hidden" id="rtPickMapBox"><div id="rtPickMap"></div>'+
+          '<div class="rt-cross">📍</div></div>'+
+        '<div class="hidden" id="rtPickMapGoBox" style="margin:10px 0">'+
+          '<button class="btn btn-primary" id="rtPickMapGo" style="width:100%">가운데 이 자리로 하겠습니다</button></div>'+
+        '<div class="field"><label>또는 주소·건물 이름을 적고 <b>찾기</b></label>'+
           '<div style="display:flex;gap:6px">'+
             '<input id="rtPickQ" placeholder="순천시 조례동 / 조례동 스타벅스 / 중앙로 100" style="flex:1;min-width:0">'+
             '<button class="btn btn-primary" id="rtPickGo" style="flex:none">찾기</button>'+
@@ -250,6 +261,9 @@ function pickModal(){
   document.body.appendChild(m);
   q("rtPickX").onclick=function(){ m.classList.remove("open"); pickCb=null };
   q("rtPickGo").onclick=pickRun;
+  q("rtPickHere").onclick=pickHere;
+  q("rtPickMapBtn").onclick=pickMapOpen;
+  q("rtPickMapGo").onclick=pickMapTake;
   q("rtPickQ").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); pickRun() } });
 }
 function pickOpen(title,seed,cb){
@@ -258,11 +272,69 @@ function pickOpen(title,seed,cb){
   pickCb=cb;
   q("rtPickT").textContent=title||"주소 찾기";
   q("rtPickQ").value=seed||"";
-  q("rtPickR").innerHTML='<div class="notice">찾을 말을 적고 <b>찾기</b> 를 누르세요. '+
+  var mb=q("rtPickMapBox"); if(mb){ mb.classList.add("hidden"); q("rtPickMapGoBox").classList.add("hidden") }
+  q("rtPickR").innerHTML='<div class="notice">'+
+    '<b>📍 지금 여기</b> 는 고객을 만난 자리에서 누르면 한 글자도 안 치고 끝납니다. '+
+    '<b>🗺️ 지도에서 찍기</b> 는 지도를 움직여 가운데에 맞추면 됩니다.<br>'+
     '동 이름만 적어도 됩니다 — 「조례동」.</div>';
   q("rtPick").classList.add("open");
-  setTimeout(function(){ try{ q("rtPickQ").focus() }catch(e){} },80);
+  /* 글칸에 <b>손을 얹지 않습니다.</b> 폰에서 손이 얹히면 키보드가 올라와
+     화면 절반을 먹는데, 정작 눌러야 할 두 단추가 그 밑에 깔립니다.
+     타이핑을 없애려고 만든 창이니 키보드를 먼저 띄우면 앞뒤가 안 맞습니다.
+
+     처음에는 「이미 적힌 것이 있을 때만 얹자」로 두었는데, 씨앗에 지역
+     칸이 들어가 <b>거의 언제나 참</b>이었습니다 — 결국 늘 올라옵니다.
+     쓸 사람은 칸을 누르면 됩니다. */
 }
+/* ── ① 지금 여기 ────────────────────────────────────────────────
+   제일 빠른 길입니다. 고객을 만나고 나서 차에서 단추 하나면 끝납니다 —
+   <b>한 글자도 안 칩니다.</b> 폰이 아는 좌표를 그대로 쓰고, 동네 이름은
+   카카오가 붙여 줍니다.
+
+   다만 이것은 <b>지금 계신 곳</b>입니다. 사무실에 앉아 누르면 사무실이
+   그 고객 자리로 적힙니다. 그래서 무엇을 적는지 화면에 먼저 밝힙니다. */
+function pickHere(){
+  if(!navigator.geolocation){ say("이 브라우저는 위치를 알려 주지 않습니다. 지도에서 찍어 주세요.",5000); return }
+  q("rtPickR").innerHTML='<div class="notice"><b>지금 계신 곳</b>을 찾는 중입니다… '+
+    '폰이 물어보면 <b>허용</b>을 눌러 주세요.</div>';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var c=pos.coords;
+    pickTake({lat:c.latitude,lng:c.longitude,title:"",
+      sub:"지금 계신 곳 (오차 약 "+Math.round(c.accuracy||0)+"m)"});
+  },function(e){
+    /* 왜 안 됐는지 말한다. 「안 됩니다」만 적으면 열 번을 눌러도 열 번 같다 */
+    var why=e&&e.code===1?"위치 권한이 막혀 있습니다 — 브라우저 주소창의 자물쇠에서 위치를 허용해 주세요."
+           :e&&e.code===3?"시간이 너무 걸립니다 — 건물 안이면 창가로 나가 보시거나, 지도에서 찍어 주세요."
+           :"지금 계신 곳을 못 찾았습니다 — 지도에서 찍어 주세요.";
+    q("rtPickR").innerHTML='<div class="empty">'+E(why)+'</div>';
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+}
+
+/* ── ② 지도에서 찍기 ────────────────────────────────────────────
+   지도를 움직여 <b>가운데 십자</b>에 맞춥니다. 핀을 손가락으로 집는 것보다
+   폰에서 훨씬 쉽고, 손가락에 가려지지도 않습니다. */
+function pickMapOpen(){
+  var box=q("rtPickMapBox");
+  q("rtPickR").innerHTML="";
+  sdk().then(function(){
+    box.classList.remove("hidden");
+    q("rtPickMapGoBox").classList.remove("hidden");
+    var c=(HOME&&HOME.lat)?HOME:{lat:34.9506,lng:127.4872};   /* 출발지, 없으면 순천 */
+    if(!PMAP){
+      PMAP=new kakao.maps.Map(q("rtPickMap"),
+        {center:new kakao.maps.LatLng(c.lat,c.lng),level:4});
+    }
+    setTimeout(function(){ try{ PMAP.relayout() }catch(e){} },80);
+  }).catch(function(){
+    q("rtPickR").innerHTML='<div class="empty">지도를 못 켰습니다 — 🗺️ 지역 동선 에서 키와 도메인을 확인해 주세요.</div>';
+  });
+}
+function pickMapTake(){
+  if(!PMAP)return;
+  var c=PMAP.getCenter();
+  pickTake({lat:c.getLat(),lng:c.getLng(),title:"",sub:"지도에서 찍은 자리"});
+}
+
 function pickRun(){
   var kw=(q("rtPickQ").value||"").trim();
   if(!kw){ say("찾을 말을 적어 주세요."); return }
@@ -313,7 +385,10 @@ function pickRun(){
 function pickTake(g){
   q("rtPickR").innerHTML='<div class="notice">행정구역을 확인하는 중입니다…</div>';
   region2(g.lat,g.lng).then(function(r){
-    var out={lat:g.lat,lng:g.lng,label:g.title,detail:g.sub,
+    /* 이름을 안 주고 좌표만 온 길(지금 여기 · 지도에서 찍기)이 있다.
+       그때는 카카오가 답한 <b>동네 이름</b>을 그대로 쓴다 — 사람이 칠 것이 없다. */
+    var nm=g.title||[(r&&r.sigungu)||"",(r&&r.dong)||""].filter(Boolean).join(" ");
+    var out={lat:g.lat,lng:g.lng,label:nm,detail:g.sub,
       sido:(r&&r.sido)||"",sigungu:(r&&r.sigungu)||"",
       dong:(r&&r.dong)||"",region_code:(r&&r.region_code)||""};
     q("rtPick").classList.remove("open");
@@ -744,6 +819,12 @@ function nearOpen(dbId,when,why){
       var bg=c.n===0?'<span class="badge yellow">한 번도 안 걺</span>'
                     :'<span class="badge gray">'+c.n+'회 접촉</span>';
       var far=c.km!=null?'<span class="badge blue" style="margin-left:4px">'+kmTxt(c.km)+'</span>':"";
+      /* 위치를 모르는 사람은 <b>여기서 바로</b> 찍게 한다. 이 목록을 볼 때
+         사장님은 이미 이 열 명을 보고 계신다 — 전화 걸면서 「아, ○○동
+         사세요?」 하는 그 순간이 자료가 들어오는 제일 싼 자리다.
+         따로 시간 내서 정리하는 일을 아예 없앤다. */
+      var noPt=!ptOf(d);
+      if(noPt) far+='<span class="badge yellow" style="margin-left:4px">동네 모름</span>';
       return '<div class="rt-row">'+
         '<div class="rt-no">'+(i+1)+'</div>'+
         '<div class="rt-who"><b>'+E(d.customer_name)+'</b>'+
@@ -753,12 +834,17 @@ function nearOpen(dbId,when,why){
         '<div class="rt-act">'+
           (tel?'<a class="btn btn-primary btn-sm" href="tel:'+E(tel)+'">📞 전화</a>':"")+
           '<button class="btn btn-light btn-sm" data-talk="'+i+'">📋 화법</button>'+
+          (noPt?'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>'
+               :'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭 내비</a>')+
           '<button class="btn btn-dark btn-sm" data-call="'+E(d.id)+'">약속 잡기</button>'+
         '</div>'+
         '<div class="rt-talk hidden" id="rtTalk'+i+'"></div>'+
       '</div>';
     }).join("");
     q("rtNearB").innerHTML=head+'<div class="rt-list">'+rows+'</div>';
+    Array.prototype.forEach.call(q("rtNearB").querySelectorAll("[data-pin]"),function(b){
+      b.onclick=function(){ pinOne(b.getAttribute("data-pin")) };
+    });
     Array.prototype.forEach.call(q("rtNearB").querySelectorAll("[data-talk]"),function(b){
       b.onclick=function(){
         var i=+b.getAttribute("data-talk"), box=q("rtTalk"+i), c=list[i];
@@ -853,6 +939,13 @@ function styles(){
   ".rt-act .btn{text-decoration:none}",
   ".rt-talk{width:100%;margin-top:8px}",
   ".rt-hit{cursor:pointer;border-radius:10px;padding-left:9px;padding-right:9px}",
+  ".rt-ways{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}",
+  ".rt-ways .btn{flex:1;min-width:150px}",
+  ".rt-pmap{position:relative;height:320px;border-radius:12px;overflow:hidden;border:1px solid var(--line,#e5e8eb)}",
+  ".rt-pmap>div{width:100%;height:100%}",
+  /* 지도를 움직여 가운데 십자에 맞춘다 — 손가락으로 핀을 집는 것보다 폰에서 훨씬 쉽다 */
+  ".rt-cross{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-26px 0 0 -13px;",
+  "pointer-events:none;z-index:5;font-size:26px;line-height:26px;text-align:center}",
   ".rt-hit:hover{background:#eef6ff}",
   ".rt-t{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:7px}",
   ".rt-th{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:var(--navy);margin-bottom:6px}",
@@ -880,6 +973,7 @@ function wrap(){
       '<button class="btn btn-light btn-sm" id="rtHome">🏠 출발지</button>'+
       '<button class="btn btn-light btn-sm" id="rtFill">📍 좌표 채우기</button>'+
       '<button class="btn btn-light btn-sm" id="rtTidy">🏷 지역 정리</button>'+
+      '<button class="btn btn-light btn-sm" id="rtAddr">📮 주소를 동네 칸으로</button>'+
       '<span class="rt-sp"></span>'+
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
@@ -896,6 +990,7 @@ function wrap(){
   q("rtHome").onclick=setHome;
   q("rtFill").onclick=fillCoords;
   q("rtTidy").onclick=tidyRegions;
+  q("rtAddr").onclick=addrMove;
   q("rtKey").onclick=function(){ keyPanel(true) };
   document.addEventListener("keydown",function(e){
     if(e.key==="Escape"&&w.classList.contains("on")) w.classList.remove("on");
@@ -1087,8 +1182,8 @@ function render(){
       }
       var bad=l.bad?'<span class="rt-bad">앞 약속과 '+Math.round((x.at-stops[i-1].at)/60000)+
         '분 차이인데 상담 '+STAY+'분 + 이동 '+l.min+'분이 필요합니다 — <b>'+l.bad+'분 늦습니다</b></span>':"";
-      var nav=x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="https://map.kakao.com/link/to/'+
-        encodeURIComponent((x.d.customer_name||"약속"))+','+x.pt.lat+','+x.pt.lng+'">길찾기</a>':"";
+      var nav=x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+
+        naviUrl(x.d)+'">🧭 내비</a>':"";
       return '<div class="rt-stop"><div class="rt-t0">'+hm(x.at)+'<small>'+(i+1)+'번째</small></div>'+
         '<div class="rt-i"><b>'+E(x.d.customer_name)+'</b>'+
         '<small>'+E(placeOf(x.d)||"장소 미정")+(x.d.phone?" · "+E(x.d.phone):"")+'</small>'+
@@ -1223,14 +1318,35 @@ function drawMap(stops,cands){
     }
     if(any) MAP.setBounds(bounds,60,60,60,60);
     setTimeout(function(){ try{ MAP.relayout(); if(any)MAP.setBounds(bounds,60,60,60,60) }catch(e){} },120);
-  }).catch(function(){ keyPanel(false) });
+  }).catch(function(e){ keyPanel(false,e) });
 }
 
 /* ── 키가 없을 때 안내 ──────────────────────────────────────────── */
-function keyPanel(force){
+/* 왜 안 됐는지 <b>화면에 적는다.</b> 카카오는 이유를 또박또박 말해 줍니다 —
+   「domain mismatched! caller=… check out registered web domains」. 그런데
+   그 답은 <script> 태그로 받아 오는 것이라 브라우저가 본문을 못 읽고
+   (CORS 허용이 없습니다) onerror 만 옵니다. 예전에는 그 자리에서 아무 말
+   없이 이 화면으로 되돌아왔습니다 — 사장님 눈에는 <b>단추가 안 먹는</b>
+   것으로 보였습니다. 이유를 모르면 열 번을 눌러도 열 번 똑같습니다.
+   그래서 「키는 넣었는데 카카오가 거절했다」를 따로 적고, 막히는 자리
+   둘(도메인 등록 · 카카오맵 켜기)을 지금 이 주소와 함께 보여 줍니다. */
+function keyPanel(force,err){
   var box=q("rtNokey"); if(!box)return;
   box.classList.remove("hidden");
-  box.innerHTML=
+  var why="";
+  if(KEY&&err&&String(err.message||err)!=="NOKEY"){
+    why='<div class="rt-card" style="background:#fff1f0;border-color:#ffccc7;color:#a8071a;'+
+        'margin-bottom:14px;line-height:1.7">'+
+        '<b>키는 들어갔는데 카카오가 거절했습니다.</b><br>'+
+        '거의 언제나 아래 <b>둘 중 하나</b>입니다 — 키를 다시 만들 필요는 없습니다.'+
+        '<ol style="margin:8px 0 0;padding-left:18px">'+
+        '<li><b>이 주소가 등록돼 있지 않다</b> — 카카오 콘솔의 Web 플랫폼에 '+
+          '<code style="background:#fff;padding:1px 5px;border-radius:5px">'+E(location.origin)+'</code> '+
+          '를 그대로 넣으세요. 끝에 <b>/</b> 를 붙이지 마십시오.</li>'+
+        '<li><b>카카오맵을 아직 안 켰다</b> — 제품 설정 → 카카오맵 → <b>사용함</b>.</li>'+
+        '</ol></div>';
+  }
+  box.innerHTML=why+
     '<div style="max-width:520px">'+
     '<h3 style="margin:0 0 8px;color:var(--navy)">지도를 켜려면 카카오 키가 한 번 필요합니다</h3>'+
     '<p style="color:var(--muted);line-height:1.65;margin:0 0 14px">무료입니다. '+
@@ -1239,7 +1355,7 @@ function keyPanel(force){
     '<li><a href="https://developers.kakao.com/console/app" target="_blank" rel="noopener">developers.kakao.com</a> 접속 → 카카오 계정 로그인</li>'+
     '<li><b>애플리케이션 추가하기</b> → 앱 이름 「APEX」, 회사명 아무거나 → 저장</li>'+
     '<li>만든 앱 → <b>앱 키</b> 에서 <b>JavaScript 키</b> 를 복사</li>'+
-    '<li>같은 앱 → <b>플랫폼 → Web</b> → 사이트 도메인에 아래 두 줄을 등록<br>'+
+    '<li>같은 앱 → <b>일반</b>(또는 <b>플랫폼</b>) → <b>Web</b> → 사이트 도메인에 아래 주소를 등록<br>'+
       '<code style="font-size:12px;background:#f1f4f7;padding:2px 6px;border-radius:6px">'+
       E(location.origin)+'</code></li>'+
     '<li>카카오맵 → <b>제품 설정 → 카카오맵</b> 에서 <b>사용함</b> 으로 켜기</li>'+
@@ -1315,6 +1431,160 @@ function fillCoords(){
       return sb.from("dbs").update(patch).eq("id",t.d.id).then(function(r){ if(!r.error)ok++ });
     }).catch(function(){}).then(function(){ setTimeout(step,220) });
   })();
+}
+
+/* ── 내비로 넘기는 주소 ───────────────────────────────────────────
+   폰에서는 카카오맵·카카오내비가 받아 그대로 길안내가 시작됩니다.
+   PC 에서는 카카오맵 웹이 열립니다.
+
+   경유지를 <b>한 번에 밀어 넣는</b> 길도 있습니다(카카오내비 SDK). 다만
+   한 번에 몇 곳까지 받는지가 우리가 정하는 값이 아니라서, 넘겼는데 뒤가
+   잘리면 <b>안 간 곳을 갔다고 믿게 됩니다.</b> 그래서 여기서는 구간마다
+   하나씩 넘깁니다 — 현장에서도 어차피 한 구간씩 갑니다.
+   주소를 만드는 자리는 여기 <b>한 곳</b>뿐입니다 (5번). */
+function naviUrl(d){
+  var p=ptOf(d); if(!p)return "";
+  return "https://map.kakao.com/link/to/"+
+    encodeURIComponent(d.customer_name||"약속")+","+p.lat+","+p.lng;
+}
+
+/* ── 그 자리에서 한 사람 동네 찍기 ────────────────────────────── */
+function pinOne(id){
+  var d=findDb(id); if(!d)return;
+  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
+  pickOpen(E(d.customer_name||"고객")+" 님 동네",(d.addr||regionName(d)||"").trim(),function(p){
+    var txt=p.label+(p.dong&&p.label.indexOf(p.dong)<0?" ("+p.dong+")":"");
+    var patch={addr:txt,lat:p.lat,lng:p.lng};
+    /* 적힌 지역과 다른 시·군이 나오면 좌표만 넣습니다 — 여수가 순천시로
+       바뀌려 했던 그 가드를 여기서도 씁니다. */
+    var clash=!!(p.sigungu&&d.region&&regionText(p.sigungu)!==regionText(d.region));
+    if(HAS_STD&&!clash){
+      patch.region_code=p.region_code||null; patch.sido=p.sido||null;
+      patch.sigungu=p.sigungu||null; patch.dong=p.dong||null;
+    }
+    sb.from("dbs").update(patch).eq("id",d.id).then(function(r){
+      if(r&&r.error){ say("저장하지 못했습니다: "+(r.error.message||""),6000); return }
+      say(txt+" 로 적었습니다."+(clash?" 지역이 「"+d.region+"」인데 주소는 "+p.sigungu+" 라 행정구역은 비워 두었습니다.":""),
+          clash?8000:3000);
+      if(window.loadAll)Promise.resolve(loadAll()).then(render); else render();
+    });
+  });
+}
+
+/* ── 지역 칸에 주소가 통째로 들어간 줄을 살린다 ──────────────────
+   지역 칸은 자유 입력이라 「여수시 ○○동 343 ○○ 근처(자택)」 처럼
+   <b>주소를 통째로</b> 적어 둔 줄이 있습니다. 그 사람들은 지금 두 번
+   손해를 봅니다 —
+
+     ① 「이 지역 열 명」에 <b>안 뜹니다.</b> 맨 이름이 「여수」가 아니라
+        「여수시○○동343…」 이라 여수 사람으로 안 세어집니다.
+     ② 그러면서 <b>주소는 이미 갖고 있습니다.</b> 제일 좋은 자료를
+        엉뚱한 칸에 넣어 두고 못 쓰고 있는 것입니다.
+
+   그래서 지우지 않고 <b>옮깁니다.</b> 적힌 글을 동네(addr) 칸으로 복사해
+   두면 📍 좌표 채우기가 그때부터 그 줄을 집어 갑니다.
+
+   ★ 지역 칸은 <b>확인된 것만</b> 바꿉니다. 카카오가 답한 시·군·구의 맨
+   이름이 <b>적힌 글 안에 실제로 들어 있을 때만</b> 씁니다. 「여수시 ○○동」
+   에 카카오가 「여수시」라고 답하면 글 안에 「여수」가 있으니 받아들이고,
+   「학동」처럼 전국에 여러 개인 이름은 카카오가 무어라 답하든 <b>손대지
+   않습니다.</b> 여수가 순천시로 바뀌려 했던 그 자리를 여기서도 막습니다.
+
+   이미 동네 칸이 채워진 줄은 건드리지 않습니다 — 사람이 적어 둔 것을
+   덮어쓰지 않습니다. */
+function looksAddr(t){
+  var k=regionText(t);
+  return !!k && (k.length>4 || /[0-9()]/.test(k));
+}
+function addrMove(){
+  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
+  if(!KEY){ keyPanel(true); return }
+  var owner=q("rtOwner").value||"";
+  var rows=dbs.filter(function(d){
+    if(owner&&d.assigned_to!==owner)return false;
+    if(String(d.addr||"").trim())return false;      /* 사람이 적어 둔 것을 안 덮는다 */
+    return looksAddr(d.region);
+  });
+  if(!rows.length){ say("지역 칸에 주소가 들어간 줄이 없습니다.",3500); return }
+
+  say("주소 "+rows.length+"건을 카카오에 확인하는 중입니다…",6000);
+  var i=0, plan=[], skip=[];
+  (function step(){
+    if(i>=rows.length)return show();
+    var d=rows[i++], txt=String(d.region||"").trim();
+    resolvePlace(txt,"").then(function(p){
+      var std="", why="";
+      if(p&&p.sigungu){
+        /* 카카오가 말한 시·군·구가 <b>적힌 글 맨 앞에</b> 실제로 있는가.
+           두 가지를 못 박습니다 —
+             ① 한 글자짜리는 안 씁니다. 「동구」의 맨 이름은 「동」이라,
+                글 아무 데나 「동」이 있으면 다 통과해 버립니다. 「학동
+                근처」가 「동구」로 바뀝니다. 광역시마다 동구·중구·남구가
+                있어 이것이 제일 위험합니다.
+             ② 맨 앞이어야 합니다. 도시 이름은 주소 앞에 옵니다 —
+                가운데서 우연히 겹친 글자는 이름이 아닙니다. */
+        var kk=regionText(p.sigungu);
+        if(kk.length<2) why="「"+p.sigungu+"」는 여러 시에 다 있는 이름이라 쓰지 않습니다";
+        else if(regionText(txt).indexOf(kk)===0) std=p.sigungu;
+        else why="카카오는 「"+p.sigungu+"」라고 답했는데 적힌 글이 그 이름으로 시작하지 않습니다";
+      }else if(!p){ why="카카오가 이 주소를 못 찾았습니다" }
+      else { why="시·군·구를 알 수 없습니다" }
+      plan.push({d:d,txt:txt,std:std,sido:(p&&p.sido)||"",why:why});
+    }).catch(function(){ plan.push({d:d,txt:txt,std:"",sido:"",why:"확인하지 못했습니다"}) })
+      .then(function(){ setTimeout(step,220) });
+  })();
+
+  function show(){
+    tidyModal();
+    q("rtTidyT").textContent="주소를 동네 칸으로";
+    var moved=plan.filter(function(x){return x.std}), kept=plan.filter(function(x){return !x.std});
+    var tail=kept.length
+      ? '<div class="rt-h">동네 칸에만 넣고 지역은 그대로 두는 것</div><div class="rt-card">'+
+        kept.map(function(x){
+          return '<div class="rt-row"><div class="rt-no">✋</div>'+
+            '<div class="rt-who"><b>'+E(x.txt)+'</b><small>'+E(x.why)+'</small></div></div>';
+        }).join("")+'</div>'+
+        '<div class="rt-card" style="font-size:12.5px;color:var(--muted);line-height:1.6">'+
+        '이 줄들도 <b>동네 칸에는 주소가 들어갑니다</b> — 좌표는 채워집니다. '+
+        '다만 지역 칸은 함부로 안 바꿉니다. DB 등록 창의 <b>📍 주소로 찾기</b> 로 한 건씩 잡아 주세요.</div>'
+      : "";
+    q("rtTidyB").innerHTML=
+      '<div class="notice" style="margin-bottom:12px">지역 칸에 적힌 <b>주소를 지우지 않고 동네 칸으로 옮깁니다</b>. '+
+      '그러면 <b>📍 좌표 채우기</b> 가 이 줄들을 집어 갑니다. 고객 정보·단계·약속은 건드리지 않습니다.</div>'+
+      (moved.length
+        ? '<div class="rt-h">지역 칸까지 바로잡히는 것 '+moved.length+'건</div><div class="rt-card">'+
+          moved.map(function(x){
+            return '<div class="rt-row"><div class="rt-no">📮</div>'+
+              '<div class="rt-who"><b>'+E(x.txt)+'</b>'+
+              '<small>동네 칸으로 옮기고, 지역은 「<b>'+E(x.std)+'</b>」'+(jong(x.std)?" 으":" 로")+'로 바꿉니다'+
+              (x.sido?' · '+E(x.sido):"")+'</small></div></div>';
+          }).join("")+'</div>'
+        : '')+tail;
+    q("rtTidyGo").classList.remove("hidden");
+    q("rtTidyGo").onclick=function(){ apply() };
+    q("rtTidy2").classList.add("open");
+  }
+
+  function apply(){
+    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="옮기는 중…";
+    var j=0, ok=0, no=0;
+    (function run(){
+      if(j>=plan.length){
+        q("rtTidy2").classList.remove("open");
+        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
+        say(ok+"건을 동네 칸으로 옮겼습니다. 이제 <b>📍 좌표 채우기</b> 를 누르세요."+
+            (no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),8000);
+        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
+        else render();
+        return;
+      }
+      var x=plan[j++], patch={addr:x.txt};
+      if(x.std){ patch.region=x.std; if(HAS_STD){ patch.sigungu=x.std; if(x.sido)patch.sido=x.sido } }
+      sb.from("dbs").update(patch).eq("id",x.d.id).then(function(r){
+        if(r&&r.error)no++; else ok++;
+      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
+    })();
+  }
 }
 
 /* ── 지역 이름 정리 ─────────────────────────────────────────────
@@ -1449,7 +1719,7 @@ function tidyModal(){
   m.className="modal"; m.id="rtTidy2";
   m.innerHTML=
     '<div class="modal-box" style="width:min(620px,100%)">'+
-      '<div class="modal-head"><h3>지역 이름 정리</h3><button class="close" id="rtTidyX">×</button></div>'+
+      '<div class="modal-head"><h3 id="rtTidyT">지역 이름 정리</h3><button class="close" id="rtTidyX">×</button></div>'+
       '<div class="modal-body" id="rtTidyB"></div>'+
       '<div class="modal-foot"><button class="btn btn-light" id="rtTidyC">그만두기</button>'+
         '<button class="btn btn-primary hidden" id="rtTidyGo">이대로 바꾸기</button></div>'+
