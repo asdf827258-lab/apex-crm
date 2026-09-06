@@ -819,6 +819,12 @@ function nearOpen(dbId,when,why){
       var bg=c.n===0?'<span class="badge yellow">한 번도 안 걺</span>'
                     :'<span class="badge gray">'+c.n+'회 접촉</span>';
       var far=c.km!=null?'<span class="badge blue" style="margin-left:4px">'+kmTxt(c.km)+'</span>':"";
+      /* 위치를 모르는 사람은 <b>여기서 바로</b> 찍게 한다. 이 목록을 볼 때
+         사장님은 이미 이 열 명을 보고 계신다 — 전화 걸면서 「아, ○○동
+         사세요?」 하는 그 순간이 자료가 들어오는 제일 싼 자리다.
+         따로 시간 내서 정리하는 일을 아예 없앤다. */
+      var noPt=!ptOf(d);
+      if(noPt) far+='<span class="badge yellow" style="margin-left:4px">동네 모름</span>';
       return '<div class="rt-row">'+
         '<div class="rt-no">'+(i+1)+'</div>'+
         '<div class="rt-who"><b>'+E(d.customer_name)+'</b>'+
@@ -828,12 +834,17 @@ function nearOpen(dbId,when,why){
         '<div class="rt-act">'+
           (tel?'<a class="btn btn-primary btn-sm" href="tel:'+E(tel)+'">📞 전화</a>':"")+
           '<button class="btn btn-light btn-sm" data-talk="'+i+'">📋 화법</button>'+
+          (noPt?'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>'
+               :'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭 내비</a>')+
           '<button class="btn btn-dark btn-sm" data-call="'+E(d.id)+'">약속 잡기</button>'+
         '</div>'+
         '<div class="rt-talk hidden" id="rtTalk'+i+'"></div>'+
       '</div>';
     }).join("");
     q("rtNearB").innerHTML=head+'<div class="rt-list">'+rows+'</div>';
+    Array.prototype.forEach.call(q("rtNearB").querySelectorAll("[data-pin]"),function(b){
+      b.onclick=function(){ pinOne(b.getAttribute("data-pin")) };
+    });
     Array.prototype.forEach.call(q("rtNearB").querySelectorAll("[data-talk]"),function(b){
       b.onclick=function(){
         var i=+b.getAttribute("data-talk"), box=q("rtTalk"+i), c=list[i];
@@ -1171,8 +1182,8 @@ function render(){
       }
       var bad=l.bad?'<span class="rt-bad">앞 약속과 '+Math.round((x.at-stops[i-1].at)/60000)+
         '분 차이인데 상담 '+STAY+'분 + 이동 '+l.min+'분이 필요합니다 — <b>'+l.bad+'분 늦습니다</b></span>':"";
-      var nav=x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="https://map.kakao.com/link/to/'+
-        encodeURIComponent((x.d.customer_name||"약속"))+','+x.pt.lat+','+x.pt.lng+'">길찾기</a>':"";
+      var nav=x.pt?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+
+        naviUrl(x.d)+'">🧭 내비</a>':"";
       return '<div class="rt-stop"><div class="rt-t0">'+hm(x.at)+'<small>'+(i+1)+'번째</small></div>'+
         '<div class="rt-i"><b>'+E(x.d.customer_name)+'</b>'+
         '<small>'+E(placeOf(x.d)||"장소 미정")+(x.d.phone?" · "+E(x.d.phone):"")+'</small>'+
@@ -1420,6 +1431,44 @@ function fillCoords(){
       return sb.from("dbs").update(patch).eq("id",t.d.id).then(function(r){ if(!r.error)ok++ });
     }).catch(function(){}).then(function(){ setTimeout(step,220) });
   })();
+}
+
+/* ── 내비로 넘기는 주소 ───────────────────────────────────────────
+   폰에서는 카카오맵·카카오내비가 받아 그대로 길안내가 시작됩니다.
+   PC 에서는 카카오맵 웹이 열립니다.
+
+   경유지를 <b>한 번에 밀어 넣는</b> 길도 있습니다(카카오내비 SDK). 다만
+   한 번에 몇 곳까지 받는지가 우리가 정하는 값이 아니라서, 넘겼는데 뒤가
+   잘리면 <b>안 간 곳을 갔다고 믿게 됩니다.</b> 그래서 여기서는 구간마다
+   하나씩 넘깁니다 — 현장에서도 어차피 한 구간씩 갑니다.
+   주소를 만드는 자리는 여기 <b>한 곳</b>뿐입니다 (5번). */
+function naviUrl(d){
+  var p=ptOf(d); if(!p)return "";
+  return "https://map.kakao.com/link/to/"+
+    encodeURIComponent(d.customer_name||"약속")+","+p.lat+","+p.lng;
+}
+
+/* ── 그 자리에서 한 사람 동네 찍기 ────────────────────────────── */
+function pinOne(id){
+  var d=findDb(id); if(!d)return;
+  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
+  pickOpen(E(d.customer_name||"고객")+" 님 동네",(d.addr||regionName(d)||"").trim(),function(p){
+    var txt=p.label+(p.dong&&p.label.indexOf(p.dong)<0?" ("+p.dong+")":"");
+    var patch={addr:txt,lat:p.lat,lng:p.lng};
+    /* 적힌 지역과 다른 시·군이 나오면 좌표만 넣습니다 — 여수가 순천시로
+       바뀌려 했던 그 가드를 여기서도 씁니다. */
+    var clash=!!(p.sigungu&&d.region&&regionText(p.sigungu)!==regionText(d.region));
+    if(HAS_STD&&!clash){
+      patch.region_code=p.region_code||null; patch.sido=p.sido||null;
+      patch.sigungu=p.sigungu||null; patch.dong=p.dong||null;
+    }
+    sb.from("dbs").update(patch).eq("id",d.id).then(function(r){
+      if(r&&r.error){ say("저장하지 못했습니다: "+(r.error.message||""),6000); return }
+      say(txt+" 로 적었습니다."+(clash?" 지역이 「"+d.region+"」인데 주소는 "+p.sigungu+" 라 행정구역은 비워 두었습니다.":""),
+          clash?8000:3000);
+      if(window.loadAll)Promise.resolve(loadAll()).then(render); else render();
+    });
+  });
 }
 
 /* ── 지역 칸에 주소가 통째로 들어간 줄을 살린다 ──────────────────

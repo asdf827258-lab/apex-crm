@@ -50,7 +50,7 @@ function D(id,rg,st,ex){
   for(var k in (ex||{}))d[k]=ex[k]; return d;
 }
 var DBS=[D('d1','순천','TA'),D('d2','순천시','미접촉'),D('d3','전남 순천시','TA'),
- D('d4','전라남도 순천시','AP'),D('d5','여수','TA'),D('d6','여수시','미접촉'),
+ D('d4','전라남도 순천시','AP',{lat:34.95,lng:127.49,addr:'순천시 조례동'}),D('d5','여수','TA'),D('d6','여수시','미접촉'),
  D('d7','광양시','계약완료',{contracted_at:'2026-08-05'}),
  D('d8','광양','증권전달',{contracted_at:'2025-09-05',policy_sent_at:'2025-09-20'}),
  D('d9','','계약완료'),D('d10','서울특별시 강남구','TA'),
@@ -61,7 +61,8 @@ var DBS=[D('d1','순천','TA'),D('d2','순천시','미접촉'),D('d3','전남 �
  D('d14','순천시 생목동','TA',{addr:'이미 적어 둔 동네'}),
  D('d15','동구 어딘가(자택)','TA'),        /* 한 글자 가드만 막는 자리 — 맨 앞이긴 하다 */
  D('d16','조례동 순천 시청 앞(자택)','TA')]; /* 맨 앞 가드만 막는 자리 — 이름은 두 글자다 */
-if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';d.lat=null;d.lng=null;
+if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';
+  if(d.lat===undefined){d.lat=null;d.lng=null}
   d.next_appt_place=null;d.next_appt_lat=null;d.next_appt_lng=null;
   d.region_code=null;d.sido=null;d.sigungu=null;d.dong=null;d.followup=null });
 var CALLS=[{id:'c1',db_id:'d5',created_by:'u1',result:'부재',call_at:'2026-09-01T01:00:00Z',appointment_at:null,memo:''},
@@ -421,6 +422,47 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
      '카카오가 답한 <시·군·구 + 동>이 그대로 들어왔다 (' + (pick ? pick.addr : '') + ')');
   is(!!pick && pick.region === '순천시',
      '<지역 칸도 같이> 맞춰졌다 — 다시 갈라지지 않게 (' + (pick ? pick.region : '') + ')');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[12] 그 목록에서 <바로 찍고 바로 내비> — 따로 정리하는 시간을 없앤다');
+  await pg.evaluate(() => { const m = document.getElementById('rtPick'); if (m) m.classList.remove('open') });
+  await pg.evaluate(() => { const m = document.getElementById('dbModal'); if (m) m.classList.remove('open') });
+  /* 순천 사람으로 연다 — 견본 지도가 순천에서 열리므로, 찍은 자리와
+     적힌 지역이 같은 시가 되어 행정구역까지 들어가는 길을 잴 수 있다.
+     다른 시가 나오는 길(좌표만 넣고 행정구역은 비움)은 [10] 이 잰다. */
+  const near12 = await stageSave('d2', 'AP');
+  is(near12.on, '단계를 올리니 <그 지역 사람들이> 다시 떴다');
+  const row = await pg.evaluate(() => {
+    const b = document.getElementById('rtNearB');
+    const pin = [...b.querySelectorAll('[data-pin]')].map(e => e.getAttribute('data-pin'));
+    const nav = [...b.querySelectorAll('a[href*="map.kakao.com/link/to"]')].map(e => e.getAttribute('href'));
+    return { pin: pin, nav: nav, t: b.innerText };
+  });
+  is(row.pin.length > 0, '위치를 모르는 사람 줄에 <📍 동네> 단추가 있다 (' + row.pin.join(',') + ')');
+  is(/동네 모름/.test(row.t), '<「동네 모름」>이라고 적어 준다 — 왜 거리가 안 뜨는지 알 수 있게');
+  is(row.nav.length > 0 && /34\.95/.test(row.nav.join(' ')),
+     '좌표가 있는 사람은 <🧭 내비> 로 바로 넘어간다 — 그 사람의 실제 좌표로');
+  is(!row.pin.includes('d4'), '좌표가 <이미 있는 사람에게는> 📍 를 안 띄운다');
+
+  /* 눌러서 실제로 저장되는가 — 견본 서버가 쓰기를 반영하므로 잴 수 있다 */
+  await pg.evaluate(() => document.querySelector('#rtNearB [data-pin]').click());
+  await seen(pg, '#rtPick.open');
+  await pg.evaluate(() => document.getElementById('rtPickMapBtn').click());
+  await pg.waitForFunction(() => {
+    const b = document.getElementById('rtPickMapBox');
+    return b && !b.classList.contains('hidden');
+  }, { timeout: 15000 });
+  const who = row.pin[0];
+  await pg.evaluate(() => document.getElementById('rtPickMapGo').click());
+  const saved = await pg.waitForFunction(id => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const d = (v('dbs') || []).filter(x => x.id === id)[0];
+    return d && d.lat ? { addr: d.addr, lat: d.lat, sigungu: d.sigungu, region: d.region } : null;
+  }, who, { timeout: 20000 }).then(h => h.jsonValue(), () => null);
+  is(!!saved, '목록에서 찍으니 <그 사람에게 좌표가 저장됐다> — 창을 옮겨 다니지 않는다');
+  is(!!saved && saved.sigungu === '순천시',
+     '<행정구역까지 같이> 들어갔다 — 적힌 지역과 같은 시라서 (' + (saved ? saved.sigungu : '') + ')');
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 
