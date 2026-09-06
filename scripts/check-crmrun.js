@@ -155,7 +155,9 @@ kakao.maps.services={
   },
   Places:function(){ this.keywordSearch=function(q,cb){ cb([],'ZERO_RESULT') } }
 };
-kakao.maps.Map=function(){this.setBounds=function(){};this.relayout=function(){}};
+kakao.maps.Map=function(el,o){this.setBounds=function(){};this.relayout=function(){};
+  var c=(o&&o.center)||{a:34.760,b:127.662};
+  this.getCenter=function(){return {getLat:function(){return c.a},getLng:function(){return c.b}}}};
 kakao.maps.LatLng=function(a,b){this.a=a;this.b=b};
 kakao.maps.LatLngBounds=function(){this.extend=function(){}};
 kakao.maps.CustomOverlay=function(){this.setMap=function(){}};
@@ -377,6 +379,45 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   });
   is(!after && !before.d12.addr,
      '<누르기 전에는 아무것도 안 바뀐다> — 먼저 보여 주고, 누르면 그때 씁니다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[11] 위치는 <한 글자도 안 치고> 잡힌다 — 타이핑이 병목이었다');
+  await pg.evaluate(() => { const m = document.getElementById('rtNear'); if (m) m.classList.remove('open') });
+  await pg.evaluate(() => openDb('d1'));
+  await seen(pg, '#dbModal.open');
+  await pg.evaluate(() => document.getElementById('dbAddrFind').click());
+  await seen(pg, '#rtPick.open');
+  const ways = await pg.evaluate(() => {
+    const m = document.getElementById('rtPick');
+    return { here: !!document.getElementById('rtPickHere'),
+             map: !!document.getElementById('rtPickMapBtn'),
+             /* 폰에서 키보드가 먼저 올라오면 타이핑을 없앤 뜻이 없다 */
+             focused: document.activeElement && document.activeElement.id === 'rtPickQ',
+             t: m.innerText };
+  });
+  is(ways.here && ways.map, '<안 쳐도 되는 길 둘>이 창에 있다 — 📍 지금 여기 · 🗺️ 지도에서 찍기');
+  is(!ways.focused, '<글칸에 손을 안 얹는다> — 폰에서 키보드가 화면 절반을 먹지 않게');
+  is(/지금 계신 곳/.test(ways.t) || /만난 자리/.test(ways.t),
+     '「지금 여기」가 <무엇을 적는 것인지> 밝힌다 — 사무실에서 누르면 사무실이 적힌다');
+
+  /* 지도에서 찍기 — 한 글자도 안 치고 동네 이름까지 들어오는가 */
+  await pg.evaluate(() => document.getElementById('rtPickMapBtn').click());
+  await pg.waitForFunction(() => {
+    const b = document.getElementById('rtPickMapBox');
+    return b && !b.classList.contains('hidden');
+  }, { timeout: 15000 });
+  await pg.evaluate(() => document.getElementById('rtPickMapGo').click());
+  const pick = await pg.waitForFunction(() => {
+    const v = document.getElementById('dbAddr');
+    return v && v.value ? { addr: v.value, region: (document.getElementById('region') || {}).value } : null;
+  }, { timeout: 15000 }).then(h => h.jsonValue(), () => null);
+  is(!!pick, '지도에서 찍으니 <동네 칸이 채워졌다> — 친 글자 0개');
+  /* 지도는 출발지(없으면 순천)에서 열린다 — 거기서 찍으면 순천이 나오는 것이 맞다 */
+  is(!!pick && /순천시/.test(pick.addr) && /생목동/.test(pick.addr),
+     '카카오가 답한 <시·군·구 + 동>이 그대로 들어왔다 (' + (pick ? pick.addr : '') + ')');
+  is(!!pick && pick.region === '순천시',
+     '<지역 칸도 같이> 맞춰졌다 — 다시 갈라지지 않게 (' + (pick ? pick.region : '') + ')');
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 

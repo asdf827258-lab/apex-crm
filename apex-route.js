@@ -42,6 +42,7 @@ var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
 var MAP=null, OVERLAY=[];
+var PMAP=null;           /* 위치 고르는 창의 지도 — 동선 지도(MAP)와 다른 판이다 */
 var CACHE={}; try{ CACHE=JSON.parse(localStorage.getItem("apexGeoCacheV1")||"{}") }catch(e){ CACHE={} }
 var HOME=null;  try{ HOME=JSON.parse(localStorage.getItem("apexRouteHomeV1")||"null") }catch(e){}
 var STAY=+(localStorage.getItem("apexRouteStayV1")||60);   /* 한 건 상담에 쓰는 시간(분) */
@@ -239,7 +240,17 @@ function pickModal(){
     '<div class="modal-box" style="width:min(620px,100%)">'+
       '<div class="modal-head"><h3 id="rtPickT">주소 찾기</h3><button class="close" id="rtPickX">×</button></div>'+
       '<div class="modal-body">'+
-        '<div class="field"><label>주소나 건물 이름을 적고 <b>찾기</b></label>'+
+        /* 타이핑이 병목이라 <b>안 쳐도 되는 길</b>을 먼저 둔다.
+           만나고 나서 차에서 단추 하나 — 그게 제일 빠르다. */
+        '<div class="rt-ways">'+
+          '<button class="btn btn-dark" id="rtPickHere">📍 지금 여기</button>'+
+          '<button class="btn btn-light" id="rtPickMapBtn">🗺️ 지도에서 찍기</button>'+
+        '</div>'+
+        '<div class="rt-pmap hidden" id="rtPickMapBox"><div id="rtPickMap"></div>'+
+          '<div class="rt-cross">📍</div></div>'+
+        '<div class="hidden" id="rtPickMapGoBox" style="margin:10px 0">'+
+          '<button class="btn btn-primary" id="rtPickMapGo" style="width:100%">가운데 이 자리로 하겠습니다</button></div>'+
+        '<div class="field"><label>또는 주소·건물 이름을 적고 <b>찾기</b></label>'+
           '<div style="display:flex;gap:6px">'+
             '<input id="rtPickQ" placeholder="순천시 조례동 / 조례동 스타벅스 / 중앙로 100" style="flex:1;min-width:0">'+
             '<button class="btn btn-primary" id="rtPickGo" style="flex:none">찾기</button>'+
@@ -250,6 +261,9 @@ function pickModal(){
   document.body.appendChild(m);
   q("rtPickX").onclick=function(){ m.classList.remove("open"); pickCb=null };
   q("rtPickGo").onclick=pickRun;
+  q("rtPickHere").onclick=pickHere;
+  q("rtPickMapBtn").onclick=pickMapOpen;
+  q("rtPickMapGo").onclick=pickMapTake;
   q("rtPickQ").addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); pickRun() } });
 }
 function pickOpen(title,seed,cb){
@@ -258,11 +272,67 @@ function pickOpen(title,seed,cb){
   pickCb=cb;
   q("rtPickT").textContent=title||"주소 찾기";
   q("rtPickQ").value=seed||"";
-  q("rtPickR").innerHTML='<div class="notice">찾을 말을 적고 <b>찾기</b> 를 누르세요. '+
+  var mb=q("rtPickMapBox"); if(mb){ mb.classList.add("hidden"); q("rtPickMapGoBox").classList.add("hidden") }
+  q("rtPickR").innerHTML='<div class="notice">'+
+    '<b>📍 지금 여기</b> 는 고객을 만난 자리에서 누르면 한 글자도 안 치고 끝납니다. '+
+    '<b>🗺️ 지도에서 찍기</b> 는 지도를 움직여 가운데에 맞추면 됩니다.<br>'+
     '동 이름만 적어도 됩니다 — 「조례동」.</div>';
   q("rtPick").classList.add("open");
-  setTimeout(function(){ try{ q("rtPickQ").focus() }catch(e){} },80);
+  /* 폰에서 글칸에 손을 대면 <b>키보드가 올라와 화면 절반을 먹습니다.</b>
+     타이핑을 없애려고 만든 창인데 키보드부터 띄우면 앞뒤가 안 맞습니다.
+     그래서 <b>이미 적힌 것이 있을 때만</b> 손을 얹습니다 — 고칠 것이 있어
+     연 경우입니다. */
+  if((seed||"").trim()) setTimeout(function(){ try{ q("rtPickQ").focus() }catch(e){} },80);
 }
+/* ── ① 지금 여기 ────────────────────────────────────────────────
+   제일 빠른 길입니다. 고객을 만나고 나서 차에서 단추 하나면 끝납니다 —
+   <b>한 글자도 안 칩니다.</b> 폰이 아는 좌표를 그대로 쓰고, 동네 이름은
+   카카오가 붙여 줍니다.
+
+   다만 이것은 <b>지금 계신 곳</b>입니다. 사무실에 앉아 누르면 사무실이
+   그 고객 자리로 적힙니다. 그래서 무엇을 적는지 화면에 먼저 밝힙니다. */
+function pickHere(){
+  if(!navigator.geolocation){ say("이 브라우저는 위치를 알려 주지 않습니다. 지도에서 찍어 주세요.",5000); return }
+  q("rtPickR").innerHTML='<div class="notice"><b>지금 계신 곳</b>을 찾는 중입니다… '+
+    '폰이 물어보면 <b>허용</b>을 눌러 주세요.</div>';
+  navigator.geolocation.getCurrentPosition(function(pos){
+    var c=pos.coords;
+    pickTake({lat:c.latitude,lng:c.longitude,title:"",
+      sub:"지금 계신 곳 (오차 약 "+Math.round(c.accuracy||0)+"m)"});
+  },function(e){
+    /* 왜 안 됐는지 말한다. 「안 됩니다」만 적으면 열 번을 눌러도 열 번 같다 */
+    var why=e&&e.code===1?"위치 권한이 막혀 있습니다 — 브라우저 주소창의 자물쇠에서 위치를 허용해 주세요."
+           :e&&e.code===3?"시간이 너무 걸립니다 — 건물 안이면 창가로 나가 보시거나, 지도에서 찍어 주세요."
+           :"지금 계신 곳을 못 찾았습니다 — 지도에서 찍어 주세요.";
+    q("rtPickR").innerHTML='<div class="empty">'+E(why)+'</div>';
+  },{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+}
+
+/* ── ② 지도에서 찍기 ────────────────────────────────────────────
+   지도를 움직여 <b>가운데 십자</b>에 맞춥니다. 핀을 손가락으로 집는 것보다
+   폰에서 훨씬 쉽고, 손가락에 가려지지도 않습니다. */
+function pickMapOpen(){
+  var box=q("rtPickMapBox");
+  q("rtPickR").innerHTML="";
+  sdk().then(function(){
+    box.classList.remove("hidden");
+    q("rtPickMapGoBox").classList.remove("hidden");
+    var c=(HOME&&HOME.lat)?HOME:{lat:34.9506,lng:127.4872};   /* 출발지, 없으면 순천 */
+    if(!PMAP){
+      PMAP=new kakao.maps.Map(q("rtPickMap"),
+        {center:new kakao.maps.LatLng(c.lat,c.lng),level:4});
+    }
+    setTimeout(function(){ try{ PMAP.relayout() }catch(e){} },80);
+  }).catch(function(){
+    q("rtPickR").innerHTML='<div class="empty">지도를 못 켰습니다 — 🗺️ 지역 동선 에서 키와 도메인을 확인해 주세요.</div>';
+  });
+}
+function pickMapTake(){
+  if(!PMAP)return;
+  var c=PMAP.getCenter();
+  pickTake({lat:c.getLat(),lng:c.getLng(),title:"",sub:"지도에서 찍은 자리"});
+}
+
 function pickRun(){
   var kw=(q("rtPickQ").value||"").trim();
   if(!kw){ say("찾을 말을 적어 주세요."); return }
@@ -313,7 +383,10 @@ function pickRun(){
 function pickTake(g){
   q("rtPickR").innerHTML='<div class="notice">행정구역을 확인하는 중입니다…</div>';
   region2(g.lat,g.lng).then(function(r){
-    var out={lat:g.lat,lng:g.lng,label:g.title,detail:g.sub,
+    /* 이름을 안 주고 좌표만 온 길(지금 여기 · 지도에서 찍기)이 있다.
+       그때는 카카오가 답한 <b>동네 이름</b>을 그대로 쓴다 — 사람이 칠 것이 없다. */
+    var nm=g.title||[(r&&r.sigungu)||"",(r&&r.dong)||""].filter(Boolean).join(" ");
+    var out={lat:g.lat,lng:g.lng,label:nm,detail:g.sub,
       sido:(r&&r.sido)||"",sigungu:(r&&r.sigungu)||"",
       dong:(r&&r.dong)||"",region_code:(r&&r.region_code)||""};
     q("rtPick").classList.remove("open");
@@ -853,6 +926,13 @@ function styles(){
   ".rt-act .btn{text-decoration:none}",
   ".rt-talk{width:100%;margin-top:8px}",
   ".rt-hit{cursor:pointer;border-radius:10px;padding-left:9px;padding-right:9px}",
+  ".rt-ways{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}",
+  ".rt-ways .btn{flex:1;min-width:150px}",
+  ".rt-pmap{position:relative;height:320px;border-radius:12px;overflow:hidden;border:1px solid var(--line,#e5e8eb)}",
+  ".rt-pmap>div{width:100%;height:100%}",
+  /* 지도를 움직여 가운데 십자에 맞춘다 — 손가락으로 핀을 집는 것보다 폰에서 훨씬 쉽다 */
+  ".rt-cross{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-26px 0 0 -13px;",
+  "pointer-events:none;z-index:5;font-size:26px;line-height:26px;text-align:center}",
   ".rt-hit:hover{background:#eef6ff}",
   ".rt-t{background:#f7f9fc;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:7px}",
   ".rt-th{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:900;color:var(--navy);margin-bottom:6px}",
