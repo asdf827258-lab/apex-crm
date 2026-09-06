@@ -441,7 +441,9 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   });
   is(row.pin.length > 0, '위치를 모르는 사람 줄에 <📍 동네> 단추가 있다 (' + row.pin.join(',') + ')');
   is(/동네 모름/.test(row.t), '<「동네 모름」>이라고 적어 준다 — 왜 거리가 안 뜨는지 알 수 있게');
-  is(row.nav.length > 0 && /34\.95/.test(row.nav.join(' ')),
+  /* 링크만 보면 딱지가 「x」로 바뀌어도 통과한다. 눌러야 할 것인지
+     알아볼 수 있어야 단추다 — 글자도 같이 잰다 (8번). */
+  is(row.nav.length > 0 && /34\.95/.test(row.nav.join(' ')) && /🧭 내비/.test(row.t),
      '좌표가 있는 사람은 <🧭 내비> 로 바로 넘어간다 — 그 사람의 실제 좌표로');
   is(!row.pin.includes('d4'), '좌표가 <이미 있는 사람에게는> 📍 를 안 띄운다');
 
