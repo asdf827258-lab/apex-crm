@@ -1270,6 +1270,11 @@ body.fptalk-mode #fpTalkScreen{display:block;}
 body.fpdeck-mode .app{display:none;}
 body.fpdeck-mode #fpDeckScreen{display:block;}
 #fpDeckScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 질병 보험가이드 — 화법서와 같은 틀 */
+#dzGuideScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.dzguide-mode .app{display:none;}
+body.dzguide-mode #dzGuideScreen{display:block;}
+#dzGuideScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 상담자료는 화면 아래에 자기 버튼이 있다 — 그 위로 올린다 */
 #fpDeckScreen .fin-float{bottom:88px;}
 @media(max-width:880px){#fpDeckScreen .fin-float{bottom:96px;}}
@@ -1650,6 +1655,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   </div>
 </div>
 
+<!-- 질병 보험가이드 -->
+<div id="dzGuideScreen">
+  <iframe id="dzGuideFrame" class="fin-frame" title="질병 보험가이드"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitDzGuide()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="dzGuideReload()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="dzGuideNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
 <!-- 재무설계 상담자료 (고객 앞에서 여는 화면) -->
 <div id="fpDeckScreen">
   <iframe id="fpDeckFrame" class="fin-frame" title="재무설계 상담자료"></iframe>
@@ -1672,6 +1687,9 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 <!-- 전체 지도가 아는 것을 음성 비서에게도 물려준다 —
      상황별 순서표와 「화면 안쪽 칸」. 없어도 앱은 그대로 돈다(있으면 더 알아듣는다). -->
 <script src="apex-map-data.js"></script>
+<script src="질병가이드-data.js"></script>
+<script src="질병가이드-코드.js"></script>
+
 <!-- 교재 ↔ 성장판 다리 — 응시자 이름 자동 연결 + 「공부」 축을 실제 테스트 점수로.
      index.html 을 여러 군데 고치지 않으려고 전부 저 파일 안에서 처리한다.
      이 줄을 지우면 앱은 원래대로 돌아간다. -->
@@ -5437,6 +5455,7 @@ function osTabProbe(tab){
   if(tab==='growboard')return renderGrowBoard();
   if(tab==='voiceasst')return renderVoiceAsst();
   if(tab==='fp_talk')return renderFpTalk();
+  if(tab==='dz_guide')return renderDzGuide();
   if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
   if(tab==='teamx')return renderTeamX();
@@ -11245,6 +11264,7 @@ var TABS=[
    {id:'bohum',icon:'📕',title:'보험 마스터 아카데미',cnt:'11',ak:'교재 신입 교육 자가학습 아카데미 보험마스터 질병백과 수술분류 치료비 테스트 화법'},
    {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
+   {id:'dz_guide',icon:'🩺',title:'질병 보험가이드',cnt:'',ak:'고객'},
    {id:'mikki_talk',icon:'🎣',title:'미끼상품&접촉전략',cnt:'27',ak:'고객'},
    {id:'finance',icon:'📊',title:'재무설계 계산기',cnt:'',ak:'재무설계'},
    {id:'calc',icon:'🧮',title:'실무 계산기',cnt:'7',ak:'재무설계'}
@@ -11357,6 +11377,7 @@ var TAB_META={
  video:{tag:'CONTENT',title:'유튜브 & 릴스',desc:'영상 포맷·길이별 제목·후킹·대본을 \'삶을 설계하다\' 톤으로.'},
  simui:{tag:'CONTENT',title:'외부글 심의필터',desc:'작성한 글의 보험광고 규정 위반 소지를 점검하고 교정안을 제시합니다.'},
  calendar:{tag:'CONTENT',title:'콘텐츠 캘린더',desc:'한 달치 발행 일정과 주제를 자동 편성합니다(로컬 저장).'},
+ dz_guide:{tag:'CONSULT',title:'질병 보험가이드',desc:'질병마다 원인·치료과정·그 단계에서 열리는 담보·화법을 한 자리에 모아 둔 자료입니다. 담보 이름은 보장분석이 쓰는 이름 그대로입니다.'},
  treatpay:{tag:'ANALYSIS',title:'치료비 지급지도',desc:'질병별 치료 여정과 단계별 보장 지급, 보험 유무에 따른 가계 부담 차이를 그래프로 보여주는 상담자료입니다.'},
  endorse:{tag:'CONTRACT',title:'배서 안내서 생성',desc:'계약 변경(배서) 유형을 고르고 변경 전·후를 입력하면 필요서류·유의사항·고객 안내문을 한 번에 만들어 줍니다. 실제 배서 접수·심사는 보험사 기준을 따릅니다.'},
  bojang:{tag:'ANALYSIS',title:'AI 보장분석',desc:'보장분석 리포트 PDF를 올리면 1:1 맞춤 상담 리포트로 변환합니다.'},
@@ -12432,7 +12453,7 @@ var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 �
    칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
 var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode',
-                   'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
+                   'fpdeck-mode','fptalk-mode','dzguide-mode','mikki-mode','mktalk-mode','carfault-mode',
                    'apexmap-mode',
                    /* <b>「한장 보험료 비교」 만 여기 이름이 빠져 있었다.</b>
                       그래서 「← 워크스페이스」 를 눌러도 껍데기가 안 벗겨지고
@@ -12616,6 +12637,7 @@ function go(tab){
   else if(tab==='growboard'){dyn.innerHTML=renderGrowBoard();if(typeof osGrowBoardAfterRender==='function')osGrowBoardAfterRender();}
   else if(tab==='voiceasst'){dyn.innerHTML=renderVoiceAsst();if(typeof osVoiceAsstAfterRender==='function')osVoiceAsstAfterRender();}
   else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
+  else if(tab==='dz_guide'){dyn.innerHTML=renderDzGuide();if(typeof osDzGuideAfterRender==='function')osDzGuideAfterRender();}
   else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
@@ -12991,8 +13013,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-06 21:30';
-var APP_BUILD_NOTE="<b>지도에 내 고객이 전부 뜹니다 — 시(市)로 골라 보고, 단계 색으로 한눈에.</b> 담당자(설계사) 기준으로 내 고객을 <b>전부</b> 점으로 찍고, 색은 <b>DB 통합 CRM 의 단계 색</b>을 그대로 씁니다 (미접촉 회색 · TA 노랑 · AP·PC·CS 파랑 · 계약 초록). 색 규약을 새로 만들면 두 화면이 같은 단계를 다른 색으로 그립니다. 옆에는 <b>시(市)별 칩</b>이 섭니다 — 「순천시 208명 · 위치 12」. 누르면 그 시만 남고, 그 자리에서 <b>「추가로 연락 드릴 고객님」</b>이 뜹니다(약속이 없어도 오래 방치된 순으로). 줄마다 <b>📍 동네</b>·<b>🧭 내비</b>가 있어 폰에서 전화 걸면서 그 자리에서 위치를 채우실 수 있습니다. <b>좌표를 모르는 사람은 지도에 안 찍습니다</b> — 시청 좌표라도 찍어 두면 다 같은 점에 모여 「0분 거리」가 나오고, 그걸 믿고 짠 하루가 깨집니다. 대신 시마다 <b>위치를 아는 사람이 몇인지</b> 적어 무엇을 채워야 하는지 보이게 했습니다. 그리고 <b>실제 길찾기 거리</b>를 받을 서버 함수(route-km)를 만들었습니다 — 카카오 REST 키를 Netlify 에 넣으면 켜지고, <b>없으면 「어림」이라고 그대로 말합니다.</b> 한 번 잰 구간은 브라우저에 적어 두고 다시 안 묻습니다(7번).";
+var APP_BUILD='2026-09-06 21:40';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).<br><b>그리고 고객 365일을 열면 「오늘의 미션」과 「이번 달 달력」이 맨 위에 섭니다</b>(#331).<br><b>그리고 이번 달 목표를 하루 몫으로 나눠 오늘 몇 건을 하면 되는지 보입니다</b>(#333).<br><b>그리고 서버가 죽었을 때 무엇을 하면 되는지 앱이 그 자리에 적어 줍니다</b>(#334).<br><b>그리고 「보장분석 전&amp;후 만들기」를 누르면 새 화면이 바로 뜨고 고객 365일에 저장됩니다</b>(#332).<br><b>그리고 보던 화면에서 허락 없이 벗어나지 않고, 한장 보험료 비교에서 나가기가 됩니다</b>(#335).<br><b>그리고 위 띠가 ⭐ 즐겨찾기만 상시 고정으로 바뀌고 홈에 「팀 할 일」이 생겼으며, 표가 거절돼 밀려난 로그아웃을 말없이 넘기지 않습니다</b>(#336·#337).<br><b>그리고 로그인해도 앱이 통째로 하얗게 뜨던 것을 고쳤습니다 — 덮개 규칙에서 조건이 떨어져 나가 흰 껍데기가 앱 위를 덮고 있었습니다</b>(#338).<br><b>그리고 한 번 연 껍데기가 다른 화면까지 덮던 것을 고쳤습니다 — 일곱 화면이 가려져 있었습니다</b>(#339).<br><b>그리고 보장 전·후 만들기에서 손으로 적은 실명이 서버로 나가던 것을 막았습니다</b>(#340).<br><b>그리고 보장분석 전·후 만들기가 우표만 하게 뜨던 것을 고쳤습니다 — 칸 모양 CSS 한 줄이 그 화면에만 없었습니다</b>(#341).<br><b>그리고 왼쪽 메뉴가 기둥으로 상시 고정되고, 공지가 칸으로 하나씩 서며, 사용가이드가 상황별로 바뀌었습니다</b>(#343).<br><b>그리고 CI 를 여섯 갈래로 나눠 22분 25초가 5분 16초가 됐습니다 — 새 점검은 이제 scripts/checks.tsv 맨 끝에 한 줄만 붙입니다</b>(#344).<br><b>…main 소식…</b> 보장분석 발표를 한 벌로 — 표지·클로징·가입설계 요청서, 메뉴 찾기 한글 조합(#345).<br><b>…main 소식…</b> 급여와 비급여를 사람 말로 — 병원비 공부방, 한 장씩 카톡으로, 가로 16:9 인쇄(#347).<br><b>…main 소식…</b> 지역 동선과 계약 후 관리(#346), 상담 흐름에 대사와 20~70대 나이대 가이드(#348).<br><b>…main 소식…</b> 얹은 기능이 조용히 사라지지 않게 — 감싼 이름을 지키고 브라우저로 눌러 봅니다(#349).<br><b>…main 소식…</b> 지역 동선을 실제로 쓸 수 있게 — 서버 칸, 카카오 거절 이유, 한 글자도 안 치는 위치 잡기(#350).<br><b>…main 소식…</b> 내 고객이 지도에 전부, 시로 골라 보기, 단추 셋을 하나로, 길찾기 거리 받을 자리(#351).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14861,6 +14883,7 @@ var VA_ALIAS={
  '성장판':'growboard','팀':'growboard','팀원':'growboard','성장':'growboard',
  '두뇌':'brain','윤시현의두뇌':'brain','뇌':'brain',
  '화법서':'fp_talk','화법':'fp_talk','실전화법서':'fp_talk',
+ '질병가이드':'dz_guide','보험가이드':'dz_guide','질병':'dz_guide','질병보험가이드':'dz_guide','치료과정':'dz_guide',
  '재무설계상담자료':'fp_deck','재무상담':'fp_deck','생애설계':'fp_deck',
  '보장분석상담자료':'sangdam','상담자료':'sangdam',
  '보험마스터아카데미':'bohum','마스터아카데미':'bohum','교재':'bohum','아카데미교재':'bohum','신입교육':'bohum','자가학습':'bohum','질병백과':'bohum','수술분류표':'bohum',
@@ -16752,6 +16775,7 @@ function renderFpTalk(){
     '<div class="card"><div class="card-body">'+
       '<div class="btn-row"><button class="btn btn-primary" onclick="fpTalkOpen(\'\')">화법서 열기</button>'+
       '<button class="btn btn-ghost" onclick="go(\'fp_deck\')">재무설계 상담자료</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'dz_guide\')">질병 보험가이드</button>'+
       '<button class="btn btn-ghost" onclick="fpTalkNewTab()">새 탭에서</button></div>'+
       '<div class="fp-tod"><b>오늘 이 장</b>'+osEsc(t[1])+
         '<span>'+osEsc(t[3])+'</span>'+
@@ -16772,6 +16796,131 @@ function renderFpTalk(){
       '(금융소비자보호법상 설명의무·부당권유 금지)</div></div></div>');
 }
 function osFpTalkAfterRender(){}
+
+/* ════════ 질병 보험가이드 — 질병·원인·치료과정·담보·화법 한 벌 ════════
+   자료는 app/질병가이드-data.js 한 곳에만 있다. 이 화면도, 치료비 지급지도도
+   그 한 벌을 읽는다. 여기에 질병 표를 다시 적지 않는다 — 두 벌이 되는 순간
+   한쪽만 고쳐지고, 화면마다 다른 말이 나온다.
+
+   자료를 못 읽으면 <b>화면을 세우지 않는다.</b> 빈 표를 그럴듯하게 세우면
+   상담 자리에서 없는 것을 있는 것처럼 말하게 된다.                        */
+var DZ_URL='재무설계/질병보험가이드.html';
+var DZG={ready:false,jump:''};
+
+function dzList(){
+  var D=window.DZ_DATA;
+  return (D&&D.list&&D.list.length)?D.list:[];
+}
+function dzFrame(){return document.getElementById('dzGuideFrame');}
+function dzGuideMount(){var f=dzFrame();if(!f||f._mounted)return;f.src=DZ_URL;f._mounted=true;}
+function dzGuideOpen(to){
+  dzGuideMount();
+  osFullMode('dzguide-mode');
+  if(to){ if(DZG.ready)dzJumpNow(to); else DZG.jump=to; }
+  if(window.innerWidth<=880){var sb=$('sidebar'),sc=$('scrim');if(sb)sb.classList.remove('open');if(sc)sc.classList.remove('on');}
+}
+function dzJumpNow(to){
+  var f=dzFrame();
+  if(!f||!f.contentWindow)return;
+  try{f.contentWindow.postMessage({t:'apex:jump',to:to},location.origin);}catch(e){}
+}
+function dzGuideReload(){
+  var f=dzFrame();
+  if(f){f._mounted=false;DZG.ready=false;f.src='about:blank';setTimeout(dzGuideMount,40);toast('질병 보험가이드 새로고침');}
+}
+function dzGuideNewTab(){var w=window.open(DZ_URL,'_blank','noopener');if(!w)toast('팝업이 막혔습니다. 허용 후 다시 시도하세요.',6000);}
+function exitDzGuide(){document.body.classList.remove('dzguide-mode');}
+
+/* 가이드가 「준비됐다」 고 알려 오면 그때 원하던 질병으로 넘긴다 */
+window.addEventListener('message',function(ev){
+  if(ev.origin!==location.origin)return;
+  var m=ev.data,f=dzFrame();
+  if(!m||typeof m!=='object'||m.t!=='apex:guide')return;
+  if(!f||ev.source!==f.contentWindow)return;
+  if(m.act==='ready'){
+    DZG.ready=true;
+    if(DZG.jump){var to=DZG.jump;DZG.jump='';setTimeout(function(){dzJumpNow(to);},200);}
+  }
+});
+
+function dzGuideCss(){
+  if(document.getElementById('dzGuideCss'))return;
+  var st=document.createElement('style');st.id='dzGuideCss';
+  st.textContent=
+   '.dz-gp{font-size:12px;font-weight:800;color:var(--ink-4);letter-spacing:.02em;margin:16px 0 8px;display:flex;align-items:baseline;gap:8px}'+
+   '.dz-gp em{font-style:normal;font-weight:700;color:var(--ink-5);font-size:11px}'+
+   '.dz-row{display:flex;align-items:center;gap:12px;padding:11px 13px;border:1px solid var(--ink-7);border-radius:12px;margin-bottom:7px;background:#fff}'+
+   '.dz-row .di{font-size:19px;flex:0 0 auto}'+
+   '.dz-row .dx{flex:1;min-width:0}'+
+   '.dz-row .dn{font-size:13.5px;font-weight:800;color:var(--ink-1)}'+
+   '.dz-row .dd{font-size:11.5px;color:var(--ink-4);margin-top:2px;line-height:1.5}'+
+   '.dz-row .dg{font-size:10.5px;font-weight:800;color:#1A56DB;background:#EFF4FF;border-radius:6px;padding:2px 7px;white-space:nowrap}'+
+   '.dz-go{font-family:inherit;font-size:11.5px;font-weight:800;padding:7px 12px;border-radius:9px;border:1px solid var(--ink-7);background:#fff;color:var(--ink-2);cursor:pointer;white-space:nowrap}'+
+   '.dz-go:hover{border-color:#1A56DB;color:#1A56DB}';
+  document.head.appendChild(st);
+}
+
+function dzRowHtml(d){
+  var n=(d.path||[]).length,t=(d.trap||[]).length;
+  return '<div class="dz-row"><span class="di">'+d.ic+'</span>'+
+    '<span class="dx"><span class="dn">'+osEsc(d.name)+'</span>'+
+    '<div class="dd">'+osEsc((d.one||'').replace(/<[^>]+>/g,''))+'</div></span>'+
+    '<span class="dg">치료 '+n+'단계 · 함정 '+t+'</span>'+
+    '<button type="button" class="dz-go" onclick="dzGuideOpen(\''+d.id+'\')">열기 →</button></div>';
+}
+
+function dzGuideBodyHtml(){
+  var L=dzList(),D=window.DZ_DATA,h='',i,j,rows;
+  if(!L.length){
+    return '<div class="card"><div class="card-body"><div class="notice">'+
+      '<b>아무 자료도 만들지 않습니다.</b> 질병 자료(app/질병가이드-data.js)를 읽지 못했습니다. '+
+      '없는 것을 그럴듯하게 채우지 않으려고 화면을 세우지 않습니다. '+
+      '자료 파일이 함께 올라갔는지 확인해 주세요.</div></div></div>';
+  }
+  h+='<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🩺</span>어떤 병입니까'+
+     '<span class="badge green">'+L.length+'종</span></div>'+
+     '<div class="card-desc">질병마다 <b>원인 · 치료과정 · 그 단계에서 열리는 담보 · 화법</b>이 한 자리에 있습니다. '+
+     '담보 이름은 보장분석이 쓰는 이름 그대로라, 증권에서 바로 찾아보실 수 있습니다.</div></div>'+
+     '<div class="card-body">';
+  for(i=0;i<D.grp.length;i++){
+    rows=[];
+    for(j=0;j<L.length;j++)if(L[j].grp===D.grp[i].k)rows.push(L[j]);
+    if(!rows.length)continue;
+    h+='<div class="dz-gp">'+D.grp[i].ic+' '+osEsc(D.grp[i].k)+' <em>'+osEsc(D.grp[i].d)+'</em></div>';
+    for(j=0;j<rows.length;j++)h+=dzRowHtml(rows[j]);
+  }
+  h+='</div></div>';
+  return h;
+}
+
+function renderDzGuide(){
+  dzGuideCss();
+  return osPage('가이드','질병 보험가이드',
+    '고객이 묻는 다섯 가지 — 무슨 병인지, 왜 생기는지, 어떻게 치료하는지, 그때 어떤 담보가 나오는지, 그 말을 어떻게 꺼낼지.',
+    '<div class="card"><div class="card-body">'+
+      '<div class="btn-row"><button class="btn btn-primary" onclick="dzGuideOpen(\'\')">가이드 열기</button>'+
+      '<button class="btn btn-primary" onclick="dzGuideOpen(\'stack\')">🔗 겹쳐 받는 법</button>'+
+      '<button class="btn btn-primary" onclick="dzGuideOpen(\'drill\')">🎯 설계 연습</button>'+
+      '<button class="btn btn-primary" onclick="dzGuideOpen(\'lab\')">🧪 가상설계창</button>'+
+      '<button class="btn btn-ghost" onclick="dzGuideOpen(\'nav\')">📜 약관 어디를 보나</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'treatpay\')">치료비 지급지도</button>'+
+      '<button class="btn btn-ghost" onclick="go(\'fp_talk\')">실전화법서</button>'+
+      '<button class="btn btn-ghost" onclick="dzGuideNewTab()">새 탭에서</button></div>'+
+      '<div class="notice" style="margin-bottom:10px"><b>설계 연습</b> — 질병 하나를 놓고 넣을 담보를 체크하면 '+
+      '<b>빠뜨린 자리</b>와 함께 그 설계를 고객에게 설명하는 <b>대본</b>이 나옵니다. 체크가 달라지면 대본도 달라집니다.<br>'+
+      '<b>가상설계창</b> — <b>가입설계서 모양</b>으로 담보와 가입금액을 넣으면 ① 이 설계로 그 병이 왔을 때 <b>얼마가 나오는지</b> '+
+      '(일당은 1일당×일수, 치료비는 1회당×횟수로 셈까지 보여 줍니다) ② <b>어디를 어떻게 고쳐야 하는지</b> — '+
+      '「지금 3,000만 → 기준선 5,000만 이상으로」 처럼 짚어 드립니다. '+
+      '보험료는 계산하지 않습니다 — 회사·나이·요율이 있어야 나오는 값이라 여기서 만들면 지어내는 것이 됩니다.<br>'+
+      '<b>약관 어디를 보나</b> — 「이 담보가 뇌경색도 담나」 같은 질문마다 <b>펴야 할 자리</b>와 자주 틀리는 곳을 적어 두었습니다. '+
+      '목차 이름만 있고 <b>약관 원문은 없습니다.</b></div>'+
+      '<div class="notice">치료 과정은 <b>일반적인 흐름의 예시</b>이며 실제 치료는 주치의 판단에 따릅니다. '+
+      '어떤 담보가 나오는지는 <b>가입한 약관</b>이 정하고, 최종 지급은 <b>보험사 심사 결과에 따릅니다.</b> '+
+      '이 화면의 숫자는 출처가 있는 것만 적었습니다 — 확인하지 못한 값은 적지 않았습니다.</div>'+
+    '</div></div>'+
+    dzGuideBodyHtml());
+}
+function osDzGuideAfterRender(){}
 
 /* ── 상담자료 화면 ── */
 function fpDeckMount(){var f=fpFrame('deck');if(!f||f._mounted)return;f.src=FP_DECK_URL;f._mounted=true;}
@@ -21997,53 +22146,44 @@ function waReportPrint(){
   setTimeout(function(){try{w.focus();w.print();}catch(e){}},500);
 }
 /* ════════ 치료비 지급지도 — 치료 여정 · 보장 지급 시뮬레이터 (deterministic · AI 불필요) ════════ */
-var TP_DISEASES=[
- {id:'cancer_major',name:'고액암(위·폐·간·췌)',ic:'🎗️',inpat:21,off:6,bill:2000,chemo:3000,
-  stages:[
-   {ic:'🔬',k:'진단·확진',dur:'1~2주',pay:['암진단비','실손(검사)'],desc:'조직검사·CT/MRI/PET로 확진. 확진되면 암진단비(정액)가 목돈으로 즉시 지급되어 치료 방법을 돈 걱정 없이 고를 수 있게 한다.'},
-   {ic:'💉',k:'수술·입원',dur:'2~3주',pay:['수술비','입원일당','실손(입원)'],desc:'절제 수술과 입원. 한 번의 수술에 수술비·입원일당·실손이 각각 열린다(한 사건, 여러 지갑).'},
-   {ic:'💊',k:'항암·표적치료',dur:'3~6개월',pay:['항암치료비','실손(통원)'],desc:'보조·표적·면역 항암은 고가이고 반복된다. 항암치료비 특약과 실손이 가계의 핵심 방어선이 된다.'},
-   {ic:'🚶',k:'통원·추적관찰',dur:'~5년',pay:['실손(통원)'],desc:'정기 추적검사와 재발 감시. 실손이 장기간의 통원비를 보전한다.'}
-  ]},
- {id:'stroke',name:'뇌졸중(뇌출혈·뇌경색)',ic:'🧠',inpat:18,off:5,bill:1500,chemo:0,
-  stages:[
-   {ic:'🚑',k:'발병·응급',dur:'48시간',pay:['뇌혈관진단비','실손(응급)'],desc:'골든타임 응급처치. 가입한 특약이 뇌혈관 "전체"인지, 뇌출혈만인지에 따라 지급 여부가 갈린다(범위가 곧 돈).'},
-   {ic:'🏥',k:'입원·시술',dur:'2~4주',pay:['수술비','입원일당','실손(입원)'],desc:'혈전제거술·개두술 등. 수술비·입원일당·실손이 함께 작동한다.'},
-   {ic:'🧑‍⚕️',k:'재활치료',dur:'3~12개월',pay:['실손(재활)','입원일당'],desc:'마비·언어 재활은 장기전이다. 통원·입원 재활비를 실손과 일당이 보전한다.'},
-   {ic:'♿',k:'후유장해·간병',dur:'장기',pay:['후유장해','간병자금'],desc:'후유장해가 남으면 장해보험금과 간병자금이 끊긴 소득과 돌봄비를 메운다.'}
-  ]},
- {id:'mi',name:'급성심근경색',ic:'❤️',inpat:10,off:3,bill:1200,chemo:0,
-  stages:[
-   {ic:'🚑',k:'발병·응급',dur:'수 시간',pay:['허혈성심장진단비','실손(응급)'],desc:'응급 스텐트 삽입이 골든타임을 가른다. 허혈성심장질환 "전체" 보장인지, 급성심근경색만인지 범위가 지급을 가른다.'},
-   {ic:'💉',k:'시술·입원',dur:'1~2주',pay:['수술비','입원일당','실손(입원)'],desc:'관상동맥 중재술(스텐트). 수술비·입원일당·실손이 동시에 작동한다.'},
-   {ic:'💊',k:'약물·관리',dur:'평생',pay:['실손(통원)'],desc:'항혈소판제 등 평생 관리가 필요하다. 통원 실손이 지속적으로 보전한다.'},
-   {ic:'🚶',k:'재발예방·추적',dur:'장기',pay:['실손(통원)'],desc:'재발 위험 관리와 정기검사가 이어진다.'}
-  ]},
- {id:'thyroid',name:'갑상선암(유사암)',ic:'🦋',inpat:5,off:1,bill:500,chemo:0,
-  stages:[
-   {ic:'🔬',k:'진단·확진',dur:'1~2주',pay:['유사암진단비','실손(검사)'],desc:'유사암은 일반암 대비 진단비가 작게 책정된 경우가 많다. 유사암 한도 점검이 핵심.'},
-   {ic:'💉',k:'수술·입원',dur:'3~5일',pay:['수술비','입원일당','실손(입원)'],desc:'갑상선 절제술. 수술비·일당·실손이 함께 작동한다.'},
-   {ic:'💊',k:'방사성요오드',dur:'수 일',pay:['실손(치료)'],desc:'방사성요오드 치료와 호르몬 관리.'},
-   {ic:'🚶',k:'통원·추적',dur:'장기',pay:['실손(통원)'],desc:'정기 추적관찰. 경과는 대체로 양호하나 관리가 필요하다.'}
-  ]},
- {id:'surgery',name:'일반 질병수술(담낭·맹장)',ic:'🔪',inpat:5,off:1,bill:400,chemo:0,
-  stages:[
-   {ic:'🔬',k:'진단',dur:'1~3일',pay:['실손(검사)'],desc:'복통 등으로 내원해 검사로 질병을 확인한다.'},
-   {ic:'💉',k:'수술·입원',dur:'3~7일',pay:['질병수술비','입원일당','실손(입원)'],desc:'복강경 수술과 단기 입원. 수술비 특약·입원일당·실손이 함께 작동한다.'},
-   {ic:'🚶',k:'회복·통원',dur:'2~4주',pay:['실손(통원)'],desc:'경과 관찰과 통원. 대체로 회복이 양호하다.'}
-  ]}
-];
+/* 질병 표는 <b>한 벌만</b> 둔다 — app/질병가이드-data.js.
+   질병 보험가이드와 이 지급지도가 같은 표를 읽는다. 예전에는 두 곳에
+   따로 적혀 있어 한쪽만 고쳐지곤 했다. 여기서는 그 표에서 치료 단계와
+   단계별 담보를 그대로 꺼내 쓰고, 이 화면에 필요한 숫자(입원일수·공백
+   개월·병원비·항암비)는 그 표의 sim 칸에서 가져온다.
+
+   sim 칸이 없는 질병은 시뮬레이터에 세우지 않는다 — 넣을 숫자가 없는데
+   화면을 세우면 없는 값을 지어내게 된다. 그 질병들은 가이드에서 본다. */
+function dzPayLabel(p){return p.k+(p.n?'('+p.n+')':'');}
+var TP_DISEASES=(function(){
+  var L=(window.DZ_DATA&&window.DZ_DATA.list)||[],out=[],i;
+  for(i=0;i<L.length;i++){
+    var d=L[i];
+    if(!d.sim)continue;
+    out.push({id:d.id,name:d.name,ic:d.ic,
+      inpat:d.sim.inpat,off:d.sim.off,bill:d.sim.bill,chemo:d.sim.chemo,
+      stages:(d.path||[]).map(function(s){
+        return {ic:s.ic,k:s.k,dur:s.dur,desc:s.desc,
+                pay:(s.pay||[]).map(dzPayLabel)};
+      })});
+  }
+  return out;
+})();
 var TP={dis:'cancer_major',cov:{diag:5000,surg:300,perDay:10,days:21,chemo:3000,bill:2000,silbi:80,income:400,off:6,
         rate:6,prem:0,years:0}};
-function tpDisease(){for(var i=0;i<TP_DISEASES.length;i++){if(TP_DISEASES[i].id===TP.dis)return TP_DISEASES[i];}return TP_DISEASES[0];}
+function tpDisease(){for(var i=0;i<TP_DISEASES.length;i++){if(TP_DISEASES[i].id===TP.dis)return TP_DISEASES[i];}return TP_DISEASES[0]||null;}
 function tpLoad(){try{var m=JSON.parse(localStorage.getItem('apex_treatpay')||'{}');if(m.dis)TP.dis=m.dis;if(m.cov){for(var k in m.cov){if(m.cov.hasOwnProperty(k))TP.cov[k]=m.cov[k];}}}catch(e){}}
 function tpSave(){try{localStorage.setItem('apex_treatpay',JSON.stringify({dis:TP.dis,cov:TP.cov}));}catch(e){}}
-function tpSetDis(id){TP.dis=id;var d=tpDisease();TP.cov.days=d.inpat;TP.cov.off=d.off;TP.cov.bill=d.bill;TP.cov.chemo=d.chemo;tpSave();tpRerender();}
+function tpSetDis(id){TP.dis=id;var d=tpDisease();if(!d){tpRerender();return;}TP.cov.days=d.inpat;TP.cov.off=d.off;TP.cov.bill=d.bill;TP.cov.chemo=d.chemo;tpSave();tpRerender();}
 function tpCovSet(k,v){var n=parseFloat(v);TP.cov[k]=isFinite(n)?n:0;tpSave();tpRerender();}
 function tpRerender(){var b=$('tpBody');if(b)b.innerHTML=tpBody();}
 function renderTreatPay(){
   tpLoad();
   return osPage('치료비 지급지도','치료 여정 · 보장 지급 시뮬레이터','질병을 고르고 보유 담보 금액을 넣으면, 진단→수술→치료→통원 각 단계에서 어떤 담보가 지급되는지와, 보험이 있을 때/없을 때 가계 부담이 어떻게 달라지는지를 그래프로 보여줍니다. (일반적 경과 예시이며 실제 치료·지급은 개인·약관·보험사 심사에 따라 다릅니다)',
+    '<div class="card"><div class="card-body"><div class="btn-row" style="margin:0">'+
+      '<button class="btn btn-ghost" onclick="go(\'dz_guide\')">🩺 질병 보험가이드 — 원인·치료과정·화법까지</button>'+
+      '</div><div class="notice" style="margin-top:10px">여기 나오는 치료 단계와 담보는 <b>질병 보험가이드와 같은 표</b>에서 옵니다. '+
+      '왜 그 단계에서 그 담보가 열리는지, 고객에게 어떻게 말할지는 가이드에 있습니다.</div></div></div>'+
     '<div id="tpBody">'+tpBody()+'</div>');
 }
 function tpFinField(k,label,val,hint){return '<div><label>'+label+(hint?' <span style="color:#9AA2AD;font-weight:600">'+hint+'</span>':'')+'</label><input type="number" min="0" step="1" value="'+(val>0?val:(val===0?'0':''))+'" onchange="tpCovSet(\''+k+'\',this.value)" placeholder="0"></div>';}
@@ -22052,6 +22192,10 @@ function tpBody(ctx){
   var __ro=!!(ctx&&ctx.ro);
   var want=function(k){return !ctx||!ctx.only||ctx.only.indexOf(k)>=0;};
   var d=(ctx&&ctx.dis)?ctx.dis:tpDisease(),c=(ctx&&ctx.cov)?ctx.cov:TP.cov;
+  /* 질병 자료를 못 읽었으면 아무 숫자도 만들지 않는다 — 빈 그래프를 세우면
+     상담 자리에서 없는 값을 있는 것처럼 말하게 된다. */
+  if(!d)return '<div class="notice"><b>아무 숫자도 만들지 않습니다.</b> 질병 자료(app/질병가이드-data.js)를 읽지 못해 '+
+    '치료 단계와 기준값을 세울 수 없습니다. 자료 파일이 함께 올라갔는지 확인해 주세요.</div>';
   function num(x){x=parseFloat(x);return isFinite(x)?x:0;}
   var diag=num(c.diag),surg=num(c.surg),perDay=num(c.perDay),days=num(c.days),chemo=num(c.chemo),bill=num(c.bill),silbi=Math.max(0,Math.min(100,num(c.silbi))),income=num(c.income),off=num(c.off);
   var stayPay=perDay*days;
@@ -22533,6 +22677,7 @@ function clmBody(){
   return h+clmLibraryView();
 }
 function clmDiseaseRef(){
+  if(!CLAIM_SCENARIOS.length)return '';
   var rows=CLAIM_SCENARIOS.slice(0,6).map(function(s){
     var chips=(s.payout||[]).map(function(p){return '<span class="clm-dref-cov" style="border-color:'+p.color+';color:'+p.color+'">'+osEsc(p.tag)+' '+fmt(p.value)+'만</span>';}).join('');
     return '<div class="clm-dref-row"><div class="clm-dref-dz">'+(s.ic||'🩺')+' <b>'+osEsc(s.name)+'</b><span class="cd">'+osEsc(s.code||'')+'</span></div><div class="clm-dref-covs">'+chips+'</div></div>';
@@ -22681,337 +22826,11 @@ function clmIntakeRun(btn){
 /* ── 질병별 치료→지급 시나리오 (deterministic · AI 불필요 · 항상 렌더) ──
    실제 존재하는 질병의 일반적 치료경과와, 한 사건에서 실손·정액 담보가 단계별로 어떻게 지급되는지를
    '예시 금액'으로 시각화한다. 모든 금액은 예시이며 지급 보장이 아니다(약관·심사 최종). */
-var CLAIM_SCENARIOS=[
-  {id:'stomach',ic:'🩺',name:'위암(조기·내시경절제)',code:'C16',
-   who:'52세 남 · 자영업 · 실손 + 암진단비 3,000만 + 수술비 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'검진·위내시경',dur:'검진일',pay:['실손(검사)'],desc:'건강검진 위내시경에서 점막 병변을 발견해 조직검사를 시행합니다.'},
-     {ic:'🧬',k:'조직검사·확진',dur:'약 1주',pay:['암진단비'],desc:'조기 위암(C16) 확진. 진단 확정으로 암진단비(정액)가 열립니다.'},
-     {ic:'🏥',k:'입원·ESD 시술',dur:'2~3일',pay:['실손(비급여)','수술비','입원일당'],desc:'내시경 점막하박리술(ESD)로 병변을 절제하고 단기 입원합니다.'},
-     {ic:'🌱',k:'회복·추적관찰',dur:'수주~',pay:['정액=소득공백'],desc:'절제 후 정기 추적. 자영업 회복기 소득공백을 정액 목돈이 메웁니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:3000},{tag:'질병수술비',color:'#7C3AED',value:200},{tag:'실손(비급여)',color:'#0891B2',value:180},{tag:'입원일당',color:'#D97706',value:15}],
-   gap:'조기암이라 항암은 없었지만, 자영업자에게는 2~4주 회복기 소득공백이 실제 부담입니다. 정액 진단비가 "병원비"가 아니라 "쉬는 동안의 매출"을 대신합니다.',
-   lesson:'조기암·소액 수술이라도 암진단비 정액이 소득공백을 메운다 — "작은 수술, 큰 목돈."'},
-  {id:'breast',ic:'🎗️',name:'유방암(부분절제+표적항암)',code:'C50',
-   who:'47세 여 · 직장인 · 실손 + 암진단비 5,000만 + 항암·표적항암치료비 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'검진 이상·정밀검사',dur:'1~2주',pay:['실손(검사)'],desc:'검진에서 이상 소견 → 초음파·조직검사로 확진 절차를 밟습니다.'},
-     {ic:'🧬',k:'유방암 확진',dur:'—',pay:['암진단비'],desc:'유방암(C50) 확진으로 암진단비(정액) 5,000만이 지급됩니다.'},
-     {ic:'🏥',k:'부분절제 수술·입원',dur:'3~5일',pay:['실손','수술비','입원일당'],desc:'유방보존(부분절제)술 후 입원. 실손과 정액 수술비가 함께 작동합니다.'},
-     {ic:'💉',k:'항암·표적·방사선',dur:'약 6개월',pay:['항암치료비','표적항암치료비','실손(통원)'],desc:'표적항암(허가치료)·방사선 병행. 표적항암 특약이 큰 목돈을 만듭니다.'},
-     {ic:'🌱',k:'통원 추적·회복',dur:'수개월~',pay:['정액=생활보전'],desc:'장기 통원. 소득공백·교통·부대비용을 정액 목돈으로 감당합니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:5000},{tag:'표적항암치료비',color:'#059669',value:3000},{tag:'실손',color:'#0891B2',value:1200},{tag:'항암·방사선치료비',color:'#10B981',value:500},{tag:'질병수술비',color:'#7C3AED',value:300},{tag:'입원일당',color:'#D97706',value:35}],
-   gap:'6개월 항암 동안 소득공백·가발·통원교통 등 병원비 밖 지출이 큽니다. 정액이 병원비를 넘어 생활을 보전합니다.',
-   lesson:'표적항암약물허가치료비 특약 유무가 수천만원을 가른다 — "한 사건, 여러 지갑"의 대표 사례.'},
-  {id:'mi',ic:'❤️‍🩹',name:'급성심근경색(스텐트 시술)',code:'I21',
-   who:'58세 남 · 실손 + 급성심근경색진단비 2,000만 + 시술·수술비 + 입원일당',
-   stages:[
-     {ic:'🚑',k:'흉통·응급실',dur:'당일',pay:['실손(응급)'],desc:'심한 흉통으로 응급실 내원, 심전도·효소검사로 의심을 확인합니다.'},
-     {ic:'🩻',k:'관상동맥조영',dur:'당일',pay:['실손(검사)'],desc:'관상동맥 조영술로 막힌 혈관을 확인합니다.'},
-     {ic:'🫀',k:'스텐트 삽입술(PCI)',dur:'시술',pay:['시술·수술비','진단비'],desc:'급성심근경색(I21) 확진 + 스텐트 삽입. 진단비와 시술 담보가 열립니다.'},
-     {ic:'🏥',k:'CCU 입원·안정',dur:'약 1주',pay:['실손(비급여)','입원일당'],desc:'중환자실 관찰 후 일반병실. 스텐트 등 비급여를 실손이 보전합니다.'},
-     {ic:'🌱',k:'약물·재활',dur:'수개월',pay:['정액=소득공백'],desc:'항혈소판제 복용·심장재활. 회복기 소득공백을 정액이 메웁니다.'}
-   ],
-   payout:[{tag:'급성심근경색진단비',color:'#1A56DB',value:2000},{tag:'시술·수술비',color:'#7C3AED',value:500},{tag:'실손(비급여)',color:'#0891B2',value:600},{tag:'입원일당',color:'#D97706',value:21}],
-   gap:'재발·재시술 위험과 재활기 소득공백이 남습니다. 스텐트는 약관상 "수술"이 아닐 수 있어 시술 담보 확인이 중요합니다.',
-   lesson:'"급성심근경색만" vs "허혈성심장질환 전체" 담보 범위 차이를 반드시 확인 — 진단 코드가 지급을 가른다.'},
-  {id:'stroke',ic:'🧠',name:'뇌졸중(뇌경색·혈전제거)',code:'I63',
-   who:'61세 · 실손 + 뇌혈관질환진단비 2,000만 + 수술비 + 입원일당 + 후유장해',
-   stages:[
-     {ic:'🚑',k:'편마비·응급',dur:'당일',pay:['실손(응급)'],desc:'한쪽 마비·언어장애로 응급 내원, 골든타임 내 처치를 시작합니다.'},
-     {ic:'🩻',k:'뇌 MRI·확진',dur:'당일',pay:['뇌혈관진단비'],desc:'뇌경색(I63) 확진. 담보 범위(뇌출혈만/뇌혈관 전체)에 따라 지급이 갈립니다.'},
-     {ic:'🫀',k:'혈전제거술',dur:'시술',pay:['수술비','실손'],desc:'혈전제거·용해 시술로 막힌 혈관을 재개통합니다.'},
-     {ic:'🏥',k:'입원·재활',dur:'2~4주+',pay:['실손(비급여)','입원일당'],desc:'입원 재활치료. 장기 입원일당이 누적 지급됩니다.'},
-     {ic:'♿',k:'후유장해 평가',dur:'6개월~',pay:['후유장해','정액=간병'],desc:'지급률 표에 따라 후유장해 보험금이 산정됩니다(예: 지급률 25%).'}
-   ],
-   payout:[{tag:'뇌혈관진단비',color:'#1A56DB',value:2000},{tag:'후유장해(예시)',color:'#BE123C',value:1000},{tag:'수술비',color:'#7C3AED',value:300},{tag:'실손(비급여)',color:'#0891B2',value:500},{tag:'입원일당',color:'#D97706',value:60}],
-   gap:'장기 재활·간병·소득상실이 가장 큰 부담입니다. 후유장해·간병(장기요양) 담보가 핵심 역할을 합니다.',
-   lesson:'"뇌출혈만" 담보인지 "뇌경색 포함"인지 확인하라 — 뇌경색은 별도 담보가 없으면 부지급될 수 있다. 후유장해는 지급률 표를 따른다.'},
-  {id:'polyp',ic:'🔬',name:'대장 용종절제(내시경·소액)',code:'D12',
-   who:'45세 · 건강검진 대장내시경 · 실손 + 질병수술비',
-   stages:[
-     {ic:'🔎',k:'대장내시경',dur:'당일',pay:['실손(검사)'],desc:'건강검진 대장내시경 중 용종을 발견합니다.'},
-     {ic:'✂️',k:'용종절제(폴립절제)',dur:'당일',pay:['수술비','실손(비급여)'],desc:'내시경 중 즉시 용종을 절제. 약관 수술분류에 따라 소액 수술비가 나올 수 있습니다.'},
-     {ic:'🧫',k:'조직검사',dur:'약 1주',pay:['실손'],desc:'절제한 용종의 조직검사(양성 확인)를 진행합니다.'},
-     {ic:'🏠',k:'당일 귀가',dur:'—',pay:['—'],desc:'대개 당일 또는 1박으로 마무리됩니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:15},{tag:'실손(비급여)',color:'#0891B2',value:25}],
-   gap:'큰 사건은 아니지만, "작은 사건도 실손과 정액이 각각 작동"함을 보여줍니다. 놓치기 쉬운 소액 청구를 챙기는 것이 사후관리의 신뢰를 만듭니다.',
-   lesson:'대장 용종절제도 약관 수술분류에 따라 수술비 정액이 나올 수 있다 — 소액도 챙기는 사후관리가 재계약을 만든다.'},
-  {id:'fracture',ic:'🦴',name:'상해 골절(낙상·대퇴골 수술)',code:'S72',
-   who:'68세 · 실손 + 상해수술비 + 골절진단비 + 입원일당',
-   stages:[
-     {ic:'⚠️',k:'낙상 사고',dur:'당일',pay:['실손(응급)'],desc:'미끄러짐 낙상으로 응급실 내원, X-ray로 골절을 확인합니다.'},
-     {ic:'🩻',k:'대퇴골 골절 진단',dur:'당일',pay:['골절진단비'],desc:'대퇴골 골절(S72) 진단으로 골절진단비(정액)가 열립니다.'},
-     {ic:'🔩',k:'관혈적 정복술',dur:'수술',pay:['상해수술비','실손(비급여)'],desc:'금속 고정 수술(관혈적 정복술)을 시행합니다. 상해수술비 정액이 지급됩니다.'},
-     {ic:'🏥',k:'입원·재활',dur:'2~4주+',pay:['입원일당','실손'],desc:'입원 후 보행 재활. 고령일수록 재활기간이 길어집니다.'},
-     {ic:'🌱',k:'재활·간병',dur:'수개월',pay:['정액=간병'],desc:'회복기 간병·돌봄 부담이 남습니다(재수술=금속제거 가능성).'}
-   ],
-   payout:[{tag:'상해수술비',color:'#7C3AED',value:300},{tag:'실손(비급여)',color:'#0891B2',value:400},{tag:'입원일당',color:'#D97706',value:60},{tag:'골절진단비',color:'#1A56DB',value:30}],
-   gap:'고령의 재활 지연·간병 부담이 큽니다. 상해는 질병과 별개 담보이므로, 골절·깁스·후유장해 세분화를 확인해야 합니다.',
-   lesson:'상해담보는 질병담보와 별개다 — 골절진단비·상해수술비·입원일당이 각각 작동한다. 고령 고객엔 간병 공백을 함께 짚어라.'},
-  {id:'thyroid',ic:'🦋',name:'갑상선암(반절제·소액암)',code:'C73',cat:'암',sev:'소',
-   who:'44세 여 · 실손 + 암진단비(일반 3,000만, 소액암 감액형) + 수술비',
-   stages:[
-     {ic:'🔎',k:'초음파·세침검사',dur:'1~2주',pay:['실손(검사)'],desc:'목 초음파에서 결절 발견 → 세침흡인검사로 악성 여부를 확인합니다.'},
-     {ic:'🧬',k:'갑상선암 확진',dur:'—',pay:['암진단비(감액)'],desc:'갑상선암(C73)은 상당수 약관에서 "소액암/유사암"으로 분류돼 진단비가 감액(예: 10~20%) 지급될 수 있습니다.'},
-     {ic:'🏥',k:'반절제 수술·입원',dur:'2~3일',pay:['실손','수술비','입원일당'],desc:'갑상선 반절제(또는 전절제) 후 단기 입원. 실손·수술비 정액이 작동합니다.'},
-     {ic:'💊',k:'호르몬제·추적',dur:'장기',pay:['실손(통원)'],desc:'전절제 시 갑상선호르몬제를 장기 복용하며 정기 추적합니다.'}
-   ],
-   payout:[{tag:'암진단비(감액)',color:'#1A56DB',value:450},{tag:'질병수술비',color:'#7C3AED',value:200},{tag:'실손(비급여)',color:'#0891B2',value:120},{tag:'입원일당',color:'#D97706',value:9}],
-   gap:'"암 진단이면 3,000만"으로 오해하기 쉽지만, 갑상선암은 소액암 감액으로 실제 진단비가 크게 줄 수 있습니다. 가입 약관의 소액암 분류·감액률 확인이 핵심입니다.',
-   lesson:'갑상선암·유사암(소액암) 감액 조항을 반드시 확인하라 — "암=풀지급"이 아니다. 고객 기대와 약관의 간극을 미리 좁혀야 민원이 없다.'},
-  {id:'insitu',ic:'🔬',name:'제자리암·경계성종양(상피내암)',code:'D05·D37~48',cat:'암',sev:'소',
-   who:'49세 · 실손 + 암진단비 + 유사암(제자리암/경계성) 진단비',
-   stages:[
-     {ic:'🔎',k:'검진·조직검사',dur:'1~2주',pay:['실손(검사)'],desc:'검진·내시경에서 병변 발견 후 조직검사를 시행합니다.'},
-     {ic:'🧬',k:'상피내암/경계성 확진',dur:'—',pay:['유사암 진단비'],desc:'제자리암(상피내암, D05 등)·경계성종양은 일반암이 아니라 유사암으로 분류돼 별도(감액) 진단비가 지급됩니다.'},
-     {ic:'🏥',k:'절제 수술',dur:'당일~수일',pay:['수술비','실손'],desc:'병변을 절제하고 필요 시 단기 입원합니다.'},
-     {ic:'🌱',k:'추적관찰',dur:'정기',pay:['실손(통원)'],desc:'재발 여부를 정기적으로 추적합니다.'}
-   ],
-   payout:[{tag:'유사암 진단비',color:'#1A56DB',value:600},{tag:'질병수술비',color:'#7C3AED',value:150},{tag:'실손(비급여)',color:'#0891B2',value:90}],
-   gap:'상피내암·경계성종양은 "일반암 진단비"가 아니라 "유사암 진단비"로 지급됩니다. 유사암 담보가 없으면 진단비가 아예 없을 수 있어, 담보 유무 확인이 먼저입니다.',
-   lesson:'일반암·유사암(제자리암·경계성·소액암)·전이암의 분류 차이를 가르쳐라 — 같은 "암"이라도 지급 담보와 금액이 다르다.'},
-  {id:'colon',ic:'🎗️',name:'대장암(복강경 절제+항암)',code:'C18',cat:'암',sev:'중',
-   who:'56세 남 · 실손 + 암진단비 4,000만 + 항암치료비 + 수술비 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'대장내시경·조직검사',dur:'1~2주',pay:['실손(검사)'],desc:'혈변·검진 이상으로 대장내시경 → 조직검사로 확진 절차를 밟습니다.'},
-     {ic:'🧬',k:'대장암 확진·병기',dur:'—',pay:['암진단비'],desc:'대장암(C18) 확진. 병기(스테이지)에 따라 치료 계획이 정해집니다.'},
-     {ic:'🏥',k:'복강경 절제술·입원',dur:'5~7일',pay:['실손','수술비','입원일당'],desc:'복강경 대장절제술 후 입원. 실손과 정액 수술비가 함께 작동합니다.'},
-     {ic:'💉',k:'보조 항암',dur:'약 6개월',pay:['항암치료비','실손(통원)'],desc:'병기에 따라 보조항암(FOLFOX 등)을 시행합니다.'},
-     {ic:'🌱',k:'추적·회복',dur:'수년',pay:['정액=소득공백'],desc:'정기 추적과 회복. 치료기 소득공백을 정액이 보전합니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:4000},{tag:'항암치료비',color:'#059669',value:1000},{tag:'실손',color:'#0891B2',value:900},{tag:'질병수술비',color:'#7C3AED',value:300},{tag:'입원일당',color:'#D97706',value:49}],
-   gap:'6개월 항암 동안 자영업·직장 소득공백과 통원 부대비용이 큽니다. 항암치료비 특약과 진단비가 생활을 보전합니다.',
-   lesson:'대장암은 병기·항암 여부로 치료비가 크게 갈린다 — 항암치료비·통원 담보 유무를 확인하라. 조기발견(검진)의 가치를 함께 설명.'},
-  {id:'lung',ic:'🫁',name:'폐암(표적·면역항암)',code:'C34',cat:'암',sev:'대',
-   who:'62세 · 실손 + 암진단비 5,000만 + 표적항암약물허가치료비 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'영상·조직검사',dur:'1~2주',pay:['실손(검사)'],desc:'흉부CT 이상 → 기관지내시경·조직검사로 확진합니다.'},
-     {ic:'🧬',k:'폐암 확진·유전자검사',dur:'—',pay:['암진단비'],desc:'폐암(C34) 확진. 유전자변이 검사로 표적치료 대상 여부를 판단합니다.'},
-     {ic:'💉',k:'표적·면역항암',dur:'장기',pay:['표적항암치료비','실손(통원)'],desc:'표적·면역항암(고가 약제)을 장기간 시행합니다.'},
-     {ic:'🏥',k:'수술·방사선(선택)',dur:'경우별',pay:['수술비','입원일당'],desc:'병기에 따라 수술·방사선을 병행할 수 있습니다.'},
-     {ic:'🌱',k:'장기 치료·관리',dur:'수년',pay:['정액=생활보전'],desc:'장기 치료로 소득공백·간병 부담이 큽니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:5000},{tag:'표적항암치료비',color:'#059669',value:4000},{tag:'실손',color:'#0891B2',value:1500},{tag:'질병수술비',color:'#7C3AED',value:300},{tag:'입원일당',color:'#D97706',value:70}],
-   gap:'고가 표적·면역항암은 비급여 비중이 크고 장기화됩니다. 표적항암약물허가치료비 특약 유무가 수천만원을 가릅니다.',
-   lesson:'고액암(폐·췌장 등)은 표적·면역항암 특약이 핵심 — "진단비만"으론 부족하다. 장기 치료기 소득·간병 공백을 함께 설계하라.'},
-  {id:'angina',ic:'💓',name:'협심증(허혈성·약물/시술 전)',code:'I20',cat:'뇌·심장·혈관',sev:'중',
-   who:'55세 남 · 실손 + 허혈성심장질환진단비 + 시술·수술비',
-   stages:[
-     {ic:'🫀',k:'흉통·검사',dur:'수일',pay:['실손(검사)'],desc:'운동 시 흉통으로 내원, 심전도·운동부하·CT조영 검사를 합니다.'},
-     {ic:'🩻',k:'협심증 진단',dur:'—',pay:['허혈성심장질환진단비'],desc:'협심증(I20) 진단. "급성심근경색만" 담보면 부지급, "허혈성심장질환" 담보면 지급될 수 있습니다.'},
-     {ic:'💊',k:'약물치료·관상동맥조영',dur:'경우별',pay:['실손','시술비(해당 시)'],desc:'약물치료 또는 필요 시 관상동맥조영·스텐트를 검토합니다.'},
-     {ic:'🌱',k:'생활관리·추적',dur:'장기',pay:['실손(통원)'],desc:'금연·약물·운동으로 관리하며 재발을 예방합니다.'}
-   ],
-   payout:[{tag:'허혈성심장질환진단비',color:'#1A56DB',value:1000},{tag:'시술·수술비',color:'#7C3AED',value:300},{tag:'실손(비급여)',color:'#0891B2',value:300}],
-   gap:'"급성심근경색진단비"만 있으면 협심증은 부지급될 수 있습니다. 담보 범위(급성심근경색만 vs 허혈성심장질환 전체)가 지급을 가릅니다.',
-   lesson:'심장 담보는 "범위"가 핵심 — 급성심근경색만/허혈성 전체/특정심장질환을 구분해 가르쳐라. 진단코드가 지급을 결정한다.'},
-  {id:'arrhythmia',ic:'💗',name:'부정맥·심방세동(전극도자절제)',code:'I48',cat:'뇌·심장·혈관',sev:'중',
-   who:'59세 · 실손 + 질병수술비 + 입원일당',
-   stages:[
-     {ic:'🫀',k:'두근거림·검사',dur:'수일',pay:['실손(검사)'],desc:'두근거림·어지럼으로 내원, 심전도·홀터검사로 부정맥을 확인합니다.'},
-     {ic:'🩻',k:'심방세동 진단',dur:'—',pay:['실손'],desc:'심방세동(I48) 진단. 뇌졸중 예방을 위한 항응고 치료를 병행할 수 있습니다.'},
-     {ic:'🔌',k:'전극도자절제술',dur:'시술·1~2일',pay:['질병수술비','실손(비급여)','입원일당'],desc:'전극도자절제술(고주파절제)을 시행합니다. 약관 수술분류 확인이 필요합니다.'},
-     {ic:'🌱',k:'약물·추적',dur:'장기',pay:['실손(통원)'],desc:'재발 여부를 추적하며 항응고·항부정맥제를 관리합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:500},{tag:'실손(비급여)',color:'#0891B2',value:600},{tag:'입원일당',color:'#D97706',value:14}],
-   gap:'시술이 "수술"로 인정되는지, 진단비 담보가 있는지에 따라 지급이 갈립니다. 심방세동은 뇌졸중 위험을 높여 뇌혈관 담보와도 연결됩니다.',
-   lesson:'"시술=수술" 여부는 약관 수술분류표로 확인하라. 부정맥→뇌졸중 위험 연결로 뇌혈관 담보 점검까지 이어가라.'},
-  {id:'appendix',ic:'🩹',name:'급성 충수염(맹장수술)',code:'K35',cat:'소화기·간담',sev:'소',
-   who:'33세 · 실손 + 질병수술비 + 입원일당',
-   stages:[
-     {ic:'⚠️',k:'복통·응급실',dur:'당일',pay:['실손(응급)'],desc:'우하복부 통증으로 응급실 내원, CT로 충수염을 확인합니다.'},
-     {ic:'🔪',k:'복강경 충수절제',dur:'당일~1일',pay:['질병수술비','실손(비급여)'],desc:'복강경 충수절제술을 시행합니다. 정액 수술비가 지급됩니다.'},
-     {ic:'🏥',k:'단기 입원',dur:'2~3일',pay:['입원일당','실손'],desc:'단기 입원 후 회복합니다.'},
-     {ic:'🏠',k:'퇴원·회복',dur:'1~2주',pay:['—'],desc:'대부분 큰 후유증 없이 회복합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:100},{tag:'실손(비급여)',color:'#0891B2',value:120},{tag:'입원일당',color:'#D97706',value:9}],
-   gap:'큰 사건은 아니지만 "실손+수술비+입원일당"이 각각 작동하는 대표적 소액 청구입니다. 놓치기 쉬운 정액 수술비를 챙기는 게 사후관리의 신뢰입니다.',
-   lesson:'가장 흔한 응급수술도 3개 담보가 각각 열린다 — 소액이라도 빠짐없이 청구하는 사후관리가 재계약을 만든다.'},
-  {id:'gallstone',ic:'🫗',name:'담석·담낭염(담낭절제)',code:'K80',cat:'소화기·간담',sev:'소',
-   who:'48세 · 실손 + 질병수술비 + 입원일당',
-   stages:[
-     {ic:'⚠️',k:'우상복부 통증',dur:'수일',pay:['실손(검사)'],desc:'기름진 음식 후 우상복부 통증으로 내원, 초음파·CT로 담석을 확인합니다.'},
-     {ic:'🩻',k:'담석·담낭염 진단',dur:'—',pay:['실손'],desc:'담석(K80)·담낭염 진단으로 담낭절제가 권고됩니다.'},
-     {ic:'🔪',k:'복강경 담낭절제',dur:'1~3일',pay:['질병수술비','실손(비급여)','입원일당'],desc:'복강경 담낭절제술을 시행하고 단기 입원합니다.'},
-     {ic:'🌱',k:'식이·회복',dur:'수주',pay:['실손(통원)'],desc:'지방식 조절 등 식이관리로 회복합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:150},{tag:'실손(비급여)',color:'#0891B2',value:200},{tag:'입원일당',color:'#D97706',value:14}],
-   gap:'담낭절제는 흔한 수술이지만 수술분류·비급여(복강경 재료 등)에 따라 지급이 달라집니다. 중대질병은 아니어도 실손·정액이 함께 작동합니다.',
-   lesson:'흔한 복강경 수술도 약관 수술분류(1~5종)에 따라 정액이 달라진다 — 수술명·분류를 확인해 정확히 청구하라.'},
-  {id:'disc',ic:'🦴',name:'추간판탈출(허리디스크 수술)',code:'M51',cat:'근골격·상해',sev:'중',
-   who:'46세 · 실손 + 질병수술비 + 입원일당',
-   stages:[
-     {ic:'⚠️',k:'요통·하지방사통',dur:'수주',pay:['실손(검사)'],desc:'허리·다리 저림으로 내원, MRI로 추간판탈출을 확인합니다.'},
-     {ic:'💉',k:'보존치료(주사·물리)',dur:'수주~',pay:['실손(통원)'],desc:'신경차단술·물리치료 등 보존치료를 먼저 시행합니다(비급여 주사 한도 주의).'},
-     {ic:'🔧',k:'수술(현미경·내시경)',dur:'입원 3~5일',pay:['질병수술비','실손(비급여)','입원일당'],desc:'보존치료 실패 시 디스크 제거 수술을 시행합니다. "수술 인정" 여부 확인이 중요합니다.'},
-     {ic:'🌱',k:'재활·복귀',dur:'수개월',pay:['정액=소득공백'],desc:'재활 후 일상 복귀. 재발 예방 관리가 필요합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:200},{tag:'실손(비급여)',color:'#0891B2',value:350},{tag:'입원일당',color:'#D97706',value:28}],
-   gap:'비수술적 시술(신경성형술 등)이 약관상 "수술"이 아닐 수 있어 수술비 부지급 가능성이 있습니다. 도수·비급여주사 실손 한도(4세대) 확인도 필요합니다.',
-   lesson:'척추 "시술 vs 수술" 인정 여부와 비급여 실손 한도를 반드시 확인하라 — 디스크는 청구 분쟁이 잦은 대표 항목이다.'},
-  {id:'acl',ic:'🦵',name:'십자인대 파열(재건술·상해)',code:'S83',cat:'근골격·상해',sev:'소',
-   who:'29세 · 운동 중 부상 · 실손 + 상해수술비 + 입원일당',
-   stages:[
-     {ic:'⚠️',k:'스포츠 손상',dur:'당일',pay:['실손(응급)'],desc:'축구·스키 등 운동 중 무릎이 꺾이며 통증·부종이 발생합니다.'},
-     {ic:'🩻',k:'MRI·인대파열 진단',dur:'수일',pay:['상해 진단','실손'],desc:'MRI로 전방십자인대 파열(S83)을 확인합니다(상해 담보).'},
-     {ic:'🔧',k:'관절경 재건술',dur:'입원 2~4일',pay:['상해수술비','실손(비급여)','입원일당'],desc:'관절경하 인대재건술을 시행합니다. 상해수술비 정액이 지급됩니다.'},
-     {ic:'🌱',k:'재활',dur:'수개월',pay:['정액=소득공백'],desc:'장기 재활로 일상·운동에 복귀합니다.'}
-   ],
-   payout:[{tag:'상해수술비',color:'#7C3AED',value:200},{tag:'실손(비급여)',color:'#0891B2',value:300},{tag:'입원일당',color:'#D97706',value:21}],
-   gap:'질병이 아닌 "상해" 담보로 청구됩니다. 상해수술비·상해입원 담보가 없으면 실손만 나올 수 있어, 상해/질병 담보 분리 확인이 필요합니다.',
-   lesson:'상해는 질병과 별개 담보다 — 젊은 고객일수록 스포츠 상해(십자인대·반월상연골)에 상해수술비의 역할을 설명하라.'},
-  {id:'myoma',ic:'🌸',name:'자궁근종(색전술·근종절제)',code:'D25',cat:'여성·비뇨·신장',sev:'소',
-   who:'42세 여 · 실손 + 질병수술비 + 여성특약',
-   stages:[
-     {ic:'🔎',k:'초음파·진단',dur:'수일',pay:['실손(검사)'],desc:'생리과다·골반통으로 내원, 초음파·MRI로 자궁근종을 확인합니다.'},
-     {ic:'🩻',k:'자궁근종 진단',dur:'—',pay:['실손'],desc:'자궁근종(D25) 진단. 크기·증상에 따라 치료를 결정합니다.'},
-     {ic:'🔧',k:'색전술/근종절제',dur:'입원 1~3일',pay:['질병수술비','실손(비급여)','입원일당'],desc:'자궁동맥색전술 또는 복강경 근종절제술을 시행합니다.'},
-     {ic:'🌱',k:'회복·추적',dur:'수주',pay:['실손(통원)'],desc:'회복 후 정기 추적으로 재발을 관리합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:150},{tag:'실손(비급여)',color:'#0891B2',value:200},{tag:'입원일당',color:'#D97706',value:9}],
-   gap:'양성질환이라 진단비는 없지만 실손·수술비가 작동합니다. 시술(색전술)이 "수술" 인정인지, 여성 특약이 있는지 확인이 필요합니다.',
-   lesson:'여성 양성질환(자궁근종·난소낭종)도 수술분류·시술 인정 여부로 지급이 갈린다 — 여성 특화 담보를 함께 점검하라.'},
-  {id:'kidney',ic:'💧',name:'요로결석(체외충격파쇄석술)',code:'N20',cat:'여성·비뇨·신장',sev:'소',
-   who:'38세 남 · 실손 + 질병수술비(해당 시)',
-   stages:[
-     {ic:'⚠️',k:'옆구리 통증',dur:'당일',pay:['실손(응급)'],desc:'극심한 옆구리 통증으로 응급실 내원, CT로 요로결석을 확인합니다.'},
-     {ic:'🩻',k:'요로결석 진단',dur:'—',pay:['실손'],desc:'요로결석(N20) 진단. 크기·위치에 따라 치료를 결정합니다.'},
-     {ic:'⚡',k:'체외충격파쇄석술(ESWL)',dur:'외래·반복',pay:['질병수술비(해당 시)','실손'],desc:'체외충격파쇄석술을 시행합니다. 약관상 "수술" 인정 여부 확인이 중요합니다.'},
-     {ic:'🌱',k:'배출·수분관리',dur:'수일',pay:['실손(통원)'],desc:'결석 배출을 돕고 재발을 예방합니다.'}
-   ],
-   payout:[{tag:'질병수술비(해당 시)',color:'#7C3AED',value:30},{tag:'실손(비급여)',color:'#0891B2',value:60}],
-   gap:'체외충격파쇄석술이 약관상 "수술"로 인정되지 않으면 수술비가 부지급될 수 있습니다. 반복 시술 시 실손 통원 한도도 확인해야 합니다.',
-   lesson:'ESWL 등 비침습 시술의 "수술 인정" 여부가 핵심 — 소액이라도 약관 수술분류표로 확인해 분쟁을 예방하라.'},
-  {id:'prostate',ic:'🚹',name:'전립선비대(경요도 수술)',code:'N40',cat:'여성·비뇨·신장',sev:'소',
-   who:'64세 남 · 실손 + 질병수술비 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'배뇨장애·검사',dur:'수일',pay:['실손(검사)'],desc:'빈뇨·잔뇨감으로 내원, PSA·초음파 검사를 합니다(PSA 상승 시 암 감별).'},
-     {ic:'🩻',k:'전립선비대 진단',dur:'—',pay:['실손'],desc:'전립선비대(N40) 진단. 약물치료 또는 수술을 결정합니다.'},
-     {ic:'🔧',k:'경요도절제술(TURP)',dur:'입원 2~4일',pay:['질병수술비','실손(비급여)','입원일당'],desc:'경요도전립선절제술 등을 시행합니다.'},
-     {ic:'🌱',k:'회복·추적',dur:'수주',pay:['실손(통원)'],desc:'배뇨기능 회복을 관리하며 정기 추적합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:150},{tag:'실손(비급여)',color:'#0891B2',value:200},{tag:'입원일당',color:'#D97706',value:14}],
-   gap:'양성질환이라 진단비는 없지만 실손·수술비가 작동합니다. PSA 상승 시 전립선암 감별이 필요하며, 암 확진이면 진단비 담보로 이어집니다.',
-   lesson:'남성 노년 흔한 질환 — 양성이면 수술·실손, 암이면 진단비로 담보가 달라진다. 검사 단계에서 감별 필요성을 설명하라.'},
-  {id:'pneumonia',ic:'🫁',name:'폐렴(입원치료)',code:'J18',cat:'호흡기·감염',sev:'소',
-   who:'71세 · 실손 + 입원일당 + 질병입원',
-   stages:[
-     {ic:'⚠️',k:'발열·기침·호흡곤란',dur:'수일',pay:['실손(검사)'],desc:'고열·기침·호흡곤란으로 내원, 흉부X-ray로 폐렴을 확인합니다.'},
-     {ic:'🏥',k:'입원·항생제 치료',dur:'5~10일',pay:['실손(비급여)','입원일당'],desc:'입원해 항생제·수액 치료를 받습니다. 고령일수록 입원이 길어집니다.'},
-     {ic:'🌱',k:'회복·재활',dur:'수주',pay:['실손(통원)'],desc:'회복 후 체력 재활과 재감염 예방(백신)을 관리합니다.'}
-   ],
-   payout:[{tag:'입원일당',color:'#D97706',value:70},{tag:'실손(비급여)',color:'#0891B2',value:150}],
-   gap:'수술은 없지만 고령의 장기 입원으로 입원일당이 누적됩니다. 진단·수술 담보가 없어도 실손·입원일당이 실질 보전을 만듭니다.',
-   lesson:'"수술 없는 입원"의 가치를 보여주는 사례 — 입원일당은 고령·만성질환에서 실질적 현금흐름이 된다.'},
-  {id:'cataract',ic:'👁️',name:'백내장(인공수정체 수술)',code:'H25',cat:'안·이비인후·기타',sev:'소',
-   who:'66세 · 실손(세대별 상이) + 질병수술비',
-   stages:[
-     {ic:'🔎',k:'시야흐림·검사',dur:'수일',pay:['실손(검사)'],desc:'시야가 뿌옇게 흐려져 안과 내원, 세극등·정밀검사로 백내장을 확인합니다.'},
-     {ic:'🩻',k:'백내장 진단',dur:'—',pay:['실손'],desc:'백내장(H25) 진단. 인공수정체 종류(단초점/다초점)를 결정합니다.'},
-     {ic:'🔧',k:'수정체 유화·인공렌즈',dur:'양안 각 당일',pay:['질병수술비','실손(제한적)'],desc:'초음파 유화술 후 인공수정체를 삽입합니다. 다초점렌즈 비용은 실손에서 제외/제한될 수 있습니다.'},
-     {ic:'🌱',k:'회복·추적',dur:'수주',pay:['실손(통원)'],desc:'시력 회복을 확인하며 정기 추적합니다.'}
-   ],
-   payout:[{tag:'질병수술비',color:'#7C3AED',value:30},{tag:'실손(급여 위주)',color:'#0891B2',value:40}],
-   gap:'다초점렌즈(노안교정) 비용은 실손 보상에서 제외되거나 제한될 수 있고, 실손 세대(1~4세대)·판례에 따라 통원/입원 인정도 달라집니다. "다 나온다"는 오해가 잦습니다.',
-   lesson:'백내장은 실손 분쟁의 단골 — 다초점렌즈 비급여·통원 인정 한도를 미리 설명해 기대와 약관의 간극을 좁혀라.'},
-  {id:'dialysis',ic:'🩸',name:'당뇨→말기신부전(혈액투석·반복)',code:'E11·N18',cat:'여성·비뇨·신장',sev:'대',
-   who:'59세 남 · 자영업 · 실손 + 질병입원 + 성인병(당뇨)진단비 + 질병후유장해',
-   stages:[
-     {ic:'🩺',k:'당뇨 진단·관리',dur:'수년',pay:['실손(통원)','당뇨진단비(해당 시)'],desc:'경증 단계. 당뇨(E11)로 진단돼 약물·식이로 관리하지만 조절이 점차 어려워집니다.'},
-     {ic:'⚠️',k:'합병증 진행',dur:'수년',pay:['실손(통원)'],desc:'신장·망막·신경 합병증이 진행됩니다. 경증에서 중증으로 넘어가는 분기점입니다.'},
-     {ic:'🏥',k:'말기신부전·투석 시작',dur:'—',pay:['진단비(중증)','질병후유장해'],desc:'만성신장병 말기(N18)로 혈액투석을 시작합니다. 중증 진단·장해 담보가 열립니다.'},
-     {ic:'🔁',k:'주 2~3회 투석(반복·장기)',dur:'평생',pay:['실손(반복 통원)','입원일당(입원 시)'],desc:'투석을 장기 반복합니다. 실손 통원이 매번 반복 청구됩니다.'},
-     {ic:'🌱',k:'이식 대기·소득상실',dur:'장기',pay:['정액=소득공백·간병'],desc:'신장이식 대기와 근로능력 저하로 소득상실이 큽니다.'}
-   ],
-   payout:[{tag:'중증질환진단비',color:'#1A56DB',value:2000},{tag:'질병후유장해',color:'#BE123C',value:1500},{tag:'실손(반복 통원)',color:'#0891B2',value:1200},{tag:'입원일당',color:'#D97706',value:42}],
-   gap:'투석은 평생 반복되는 치료로, 한 번의 목돈보다 "반복 청구·장기 소득상실"이 핵심 부담입니다. 실손 통원이 매번 작동하고, 장해·소득보장이 생활을 지탱합니다.',
-   lesson:'경증(당뇨)에서 중증(투석)으로 가는 길목을 보여줘라 — 진단비 한 번이 아니라 "반복 청구+장해+소득보장"의 합이 진짜 방어막이다.'},
-  {id:'liver',ic:'🫀',name:'B형간염→간경변→간암(3단계 진행)',code:'B18·K74·C22',cat:'소화기·간담',sev:'대',
-   who:'54세 남 · 실손 + 암진단비 4,000만 + 항암치료비 + 입원일당',
-   stages:[
-     {ic:'🩺',k:'만성 B형간염 관리',dur:'수년',pay:['실손(통원)'],desc:'경증. 만성 B형간염(B18)으로 항바이러스제를 복용하며 정기 추적합니다.'},
-     {ic:'⚠️',k:'간경변 진행',dur:'수년',pay:['실손(통원)'],desc:'간섬유화가 진행돼 간경변(K74)으로 넘어갑니다. 중증으로 가는 분기점입니다.'},
-     {ic:'🧬',k:'간세포암 확진',dur:'—',pay:['암진단비'],desc:'추적 중 간세포암(C22)을 조기 발견해 확진합니다. 암진단비가 열립니다.'},
-     {ic:'🏥',k:'색전술/절제·항암',dur:'반복',pay:['수술비','항암치료비','실손(비급여)'],desc:'경동맥화학색전술(TACE)을 반복하거나 절제·표적치료를 시행합니다.'},
-     {ic:'🌱',k:'장기 추적·재발관리',dur:'수년',pay:['정액=소득공백'],desc:'간암은 재발이 잦아 장기 추적·반복 치료가 필요합니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:4000},{tag:'항암치료비',color:'#059669',value:1200},{tag:'실손(반복)',color:'#0891B2',value:1500},{tag:'질병수술비',color:'#7C3AED',value:300},{tag:'입원일당',color:'#D97706',value:56}],
-   gap:'"간염→간경변→간암"은 수년에 걸쳐 진행됩니다. 조기의 정기 추적(실손), 진단 시 목돈(진단비), 반복되는 색전술(수술·실손)이 단계마다 다르게 작동합니다.',
-   lesson:'만성질환이 암으로 진행하는 경로를 보여줘라 — 경증 단계의 꾸준한 관리와 중증 전환 시 진단비·반복 치료비의 역할을 단계별로 설명하라.'},
-  {id:'pancreas',ic:'🎗️',name:'췌장암(고액암·표적/완화)',code:'C25',cat:'암',sev:'대',
-   who:'63세 · 실손 + 암진단비 5,000만 + 고액암진단비 + 표적항암치료비',
-   stages:[
-     {ic:'🔎',k:'황달·체중감소·검사',dur:'1~2주',pay:['실손(검사)'],desc:'황달·체중감소·복통으로 내원, CT·MRI·조직검사로 확진 절차를 밟습니다.'},
-     {ic:'🧬',k:'췌장암 확진',dur:'—',pay:['암진단비','고액암진단비'],desc:'췌장암(C25) 확진. 다수 약관에서 "고액암"으로 분류돼 진단비가 가중 지급될 수 있습니다.'},
-     {ic:'🏥',k:'수술(가능 시)·항암',dur:'장기',pay:['수술비','항암치료비','실손(비급여)'],desc:'절제 가능하면 수술, 대개 항암(FOLFIRINOX 등)·표적치료를 장기 시행합니다.'},
-     {ic:'🌱',k:'완화·통증·영양관리',dur:'장기',pay:['정액=생활·간병'],desc:'장기 치료와 통증·영양 관리로 간병·소득공백 부담이 큽니다.'}
-   ],
-   payout:[{tag:'암진단비',color:'#1A56DB',value:5000},{tag:'고액암진단비',color:'#4338CA',value:2000},{tag:'표적항암치료비',color:'#059669',value:2500},{tag:'실손',color:'#0891B2',value:1500},{tag:'입원일당',color:'#D97706',value:63}],
-   gap:'췌장암은 고가·장기 치료가 이어지고 소득상실이 큽니다. "고액암 진단비" 가중 담보와 표적항암 특약 유무가 수천만원을 가릅니다.',
-   lesson:'고액암(췌장·식도·뇌·혈액 등) 가중 진단비 담보의 가치를 보여줘라 — 일반암과 지급액이 크게 다르다. 큰 목돈이 필요한 대표 사례.'},
-  {id:'leukemia',ic:'🩸',name:'백혈병(조혈모세포이식·장기입원)',code:'C92',cat:'암',sev:'대',
-   who:'35세 · 실손 + 혈액암진단비(고액암) 5,000만 + 이식·항암 + 입원일당',
-   stages:[
-     {ic:'🔎',k:'빈혈·출혈·혈액검사',dur:'수일',pay:['실손(검사)'],desc:'멍·출혈·피로로 내원, 혈액검사·골수검사로 확진 절차를 밟습니다.'},
-     {ic:'🧬',k:'백혈병 확진',dur:'—',pay:['혈액암진단비(고액암)'],desc:'백혈병(C92) 확진. 혈액암은 다수 약관에서 고액암으로 가중 지급됩니다.'},
-     {ic:'💉',k:'관해유도 항암',dur:'수개월',pay:['항암치료비','실손(비급여)','입원일당'],desc:'관해유도·공고 항암을 시행하며 무균실 장기 입원이 필요합니다.'},
-     {ic:'🧫',k:'조혈모세포이식',dur:'입원 장기',pay:['이식 관련 수술·실손','입원일당'],desc:'조혈모세포(골수)이식을 시행합니다. 장기 입원으로 입원일당이 크게 누적됩니다.'},
-     {ic:'🌱',k:'이식 후 관리·합병증',dur:'수년',pay:['정액=소득·간병'],desc:'이식편대숙주병 등 합병증 관리와 장기 소득상실 부담이 큽니다.'}
-   ],
-   payout:[{tag:'혈액암진단비(고액암)',color:'#4338CA',value:5000},{tag:'항암치료비',color:'#059669',value:2000},{tag:'실손',color:'#0891B2',value:2500},{tag:'입원일당(장기)',color:'#D97706',value:300}],
-   gap:'장기 무균실 입원으로 입원일당이 크게 누적되고, 이식·합병증 관리로 소득상실이 장기화됩니다. 고액암 진단비+입원일당+실손의 합이 생존을 지탱합니다.',
-   lesson:'장기 입원의 힘을 보여줘라 — 입원일당이 수백만~수천만원으로 누적된다. 젊은 고객에게도 고액암·장기입원 대비가 필요함을 설명하라.'},
-  {id:'brainhemo',ic:'🧠',name:'뇌출혈(개두술·중증 후유장해·간병)',code:'I61',cat:'뇌·심장·혈관',sev:'대',
-   who:'57세 · 실손 + 뇌혈관진단비 2,000만 + 수술비 + 후유장해 + 간병',
-   stages:[
-     {ic:'🚑',k:'의식저하·응급',dur:'당일',pay:['실손(응급)'],desc:'심한 두통·의식저하로 응급 내원, CT로 뇌출혈을 확인합니다.'},
-     {ic:'🩻',k:'뇌내출혈 확진',dur:'당일',pay:['뇌혈관진단비'],desc:'뇌내출혈(I61) 확진. 뇌출혈은 대부분 약관 뇌혈관질환 담보에 포함됩니다.'},
-     {ic:'🔧',k:'개두술·혈종제거',dur:'수술',pay:['수술비','실손(비급여)'],desc:'개두술로 혈종을 제거하고 중환자실에서 관리합니다.'},
-     {ic:'🏥',k:'장기 입원·재활',dur:'수개월',pay:['입원일당','실손'],desc:'장기 입원 재활로 입원일당이 크게 누적됩니다.'},
-     {ic:'♿',k:'중증 후유장해·간병',dur:'평생',pay:['후유장해(고지급률)','정액=간병'],desc:'편마비·인지장애 등 중증 후유장해가 남아(예: 지급률 50~100%) 장기 간병이 필요합니다.'}
-   ],
-   payout:[{tag:'후유장해(고지급률 예시)',color:'#BE123C',value:4000},{tag:'뇌혈관진단비',color:'#1A56DB',value:2000},{tag:'수술비',color:'#7C3AED',value:400},{tag:'실손(비급여)',color:'#0891B2',value:900},{tag:'입원일당(장기)',color:'#D97706',value:120}],
-   gap:'중증 뇌출혈의 진짜 부담은 "치료비"가 아니라 "평생 간병·소득상실"입니다. 후유장해(지급률)와 간병·장기요양 담보가 핵심입니다.',
-   lesson:'후유장해는 지급률 표에 따라 수천만원이 갈린다 — 중증일수록 진단비보다 "장해+간병"이 가계를 지킨다. 간병·장기요양 통장을 반드시 함께 설계하라.'},
-  {id:'relapse',ic:'🔁',name:'암 재발·원격전이(2차 진단·항암 지속)',code:'C79',cat:'암',sev:'대',
-   who:'50세 여 · 최초 유방암 관해 후 · 실손 + 암진단비 + 항암치료비',
-   stages:[
-     {ic:'🌱',k:'1차 치료 후 관해',dur:'수년',pay:['실손(추적)'],desc:'최초 암 치료 후 관해 상태로 정기 추적하며 지냅니다.'},
-     {ic:'⚠️',k:'추적 중 이상 소견',dur:'검진',pay:['실손(검사)'],desc:'정기 추적에서 이상 소견이 발견돼 정밀검사를 시행합니다.'},
-     {ic:'🧬',k:'원격전이 확진',dur:'—',pay:['암진단비(재진단·전이)'],desc:'뼈·간·폐 등 원격전이(C79) 확진. 재진단암·전이암 담보가 있으면 2차 진단비가 지급됩니다.'},
-     {ic:'💉',k:'2차 항암·표적 지속',dur:'장기',pay:['항암치료비','표적항암치료비','실손'],desc:'전이 병소에 대한 2차 항암·표적치료를 장기 시행합니다.'},
-     {ic:'🌱',k:'장기 치료·완화',dur:'장기',pay:['정액=생활·간병'],desc:'장기 치료로 소득상실·간병 부담이 이어집니다.'}
-   ],
-   payout:[{tag:'재진단암 진단비',color:'#1A56DB',value:3000},{tag:'표적항암치료비',color:'#059669',value:3000},{tag:'실손(반복)',color:'#0891B2',value:1800},{tag:'입원일당',color:'#D97706',value:70}],
-   gap:'"완치=끝"이 아닙니다. 재발·전이 시 2차 진단비(재진단암)와 지속 항암치료비가 다시 필요합니다. 재진단암 담보 유무가 관해 후 재무방어를 가릅니다.',
-   lesson:'재진단암·전이암 담보의 가치를 가르쳐라 — 첫 진단비만으론 재발을 못 막는다. "한 번 암을 겪은 고객"에게 재진단 담보 점검이 핵심 사후관리다.'},
-  {id:'burn',ic:'🔥',name:'중증 화상(피부이식·반복 수술)',code:'T31',cat:'근골격·상해',sev:'대',
-   who:'41세 · 작업 중 화상 · 실손 + 상해수술비 + 화상진단비 + 입원일당',
-   stages:[
-     {ic:'🚑',k:'화상 사고·응급',dur:'당일',pay:['실손(응급)','화상진단비(해당 시)'],desc:'작업·주방 사고로 2~3도 화상을 입고 응급 내원합니다(상해 담보).'},
-     {ic:'🏥',k:'화상 집중치료·입원',dur:'수주',pay:['실손(비급여)','입원일당'],desc:'화상전문 병동에서 드레싱·감염관리로 장기 입원합니다.'},
-     {ic:'🔧',k:'피부이식 반복 수술',dur:'여러 차례',pay:['상해수술비(반복)','실손'],desc:'범위에 따라 피부이식·재건 수술을 여러 차례 반복 시행합니다.'},
-     {ic:'🌱',k:'흉터·재활·기능회복',dur:'장기',pay:['정액=소득공백'],desc:'흉터 성형·재활이 장기화되고 근로 복귀가 늦어집니다.'}
-   ],
-   payout:[{tag:'상해수술비(반복)',color:'#7C3AED',value:900},{tag:'화상진단비',color:'#1A56DB',value:1000},{tag:'실손(비급여)',color:'#0891B2',value:1200},{tag:'입원일당(장기)',color:'#D97706',value:98}],
-   gap:'중증 화상은 한 번의 수술이 아니라 이식·재건을 여러 차례 반복합니다. 상해수술비가 수술마다 작동하고, 장기 입원일당이 누적됩니다.',
-   lesson:'"반복 수술"의 가치를 보여줘라 — 상해수술비는 수술 횟수만큼 열린다. 산재와 별개로 민영 상해담보가 소득·재활 공백을 메운다는 점을 설명하라.'},
-  {id:'ra',ic:'🖐️',name:'류마티스관절염(생물학적제제·장기 반복)',code:'M06',cat:'근골격·상해',sev:'중',
-   who:'45세 여 · 실손 + 질병통원 + 산정특례',
-   stages:[
-     {ic:'🔎',k:'관절통·부종·검사',dur:'수주',pay:['실손(검사)'],desc:'여러 관절의 통증·아침 강직으로 내원, 혈액·영상 검사로 확진 절차를 밟습니다.'},
-     {ic:'🩻',k:'류마티스관절염 진단',dur:'—',pay:['실손','산정특례(등록)'],desc:'류마티스관절염(M06) 확진. 중증 등록 시 산정특례로 본인부담이 경감됩니다.'},
-     {ic:'💉',k:'생물학적제제 장기 투여',dur:'반복·수년',pay:['실손(반복 통원)'],desc:'고가 생물학적제제(주사)를 정기적으로 장기 반복 투여합니다.'},
-     {ic:'🌱',k:'관절 보호·기능 유지',dur:'평생',pay:['실손(통원)'],desc:'관절 변형을 늦추며 일상 기능을 유지·관리합니다.'}
-   ],
-   payout:[{tag:'실손(반복 통원·수년)',color:'#0891B2',value:1600},{tag:'질병입원(악화 시)',color:'#D97706',value:21}],
-   gap:'수술·진단 목돈은 작지만 "장기 반복되는 고가 통원치료"가 핵심입니다. 실손 통원이 수년간 반복 작동하며, 산정특례·4세대 실손 한도 확인이 중요합니다.',
-   lesson:'만성 자가면역질환은 "반복 통원"이 재무 핵심 — 진단비형만 보지 말고 실손 통원의 반복 가치를 설명하라. 산정특례 등록으로 본인부담을 함께 낮춰라.'}
-];
+/* 질병 사례도 <b>한 벌만</b> 둔다 — app/질병가이드-data.js 의 cases.
+   질병 보험가이드와 이 화면이 같은 사례를 보여 준다. 예전에는 여기에만 있어
+   가이드에서 다시 적을 뻔했다. 자료를 못 읽으면 빈 배열이고, 아래 화면들은
+   「아무 사례도 만들지 않습니다」 라고 적는다 — 지어내지 않는다. */
+var CLAIM_SCENARIOS=(window.DZ_DATA&&window.DZ_DATA.cases)||[];
 /* 질병 분류(카테고리)·중증도(소→중→대) — 기존 6개 시나리오 메타 + 정렬 규칙 */
 var SCEN_META={stomach:{cat:'암',sev:'중'},breast:{cat:'암',sev:'대'},mi:{cat:'뇌·심장·혈관',sev:'대'},stroke:{cat:'뇌·심장·혈관',sev:'대'},polyp:{cat:'소화기·간담',sev:'소'},fracture:{cat:'근골격·상해',sev:'대'}};
 var SCEN_CAT_ORDER=['암','뇌·심장·혈관','소화기·간담','근골격·상해','여성·비뇨·신장','호흡기·감염','안·이비인후·기타'];
@@ -23019,10 +22838,13 @@ var SEV_ORDER={'소':0,'중':1,'대':2};
 var SEV_COLOR={'소':'#059669','중':'#D97706','대':'#DC2626'};
 function scCat(x){return x.cat||(SCEN_META[x.id]&&SCEN_META[x.id].cat)||'기타';}
 function scSev(x){return x.sev||(SCEN_META[x.id]&&SCEN_META[x.id].sev)||'중';}
-function clmScen(){for(var i=0;i<CLAIM_SCENARIOS.length;i++)if(CLAIM_SCENARIOS[i].id===CLM.scen)return CLAIM_SCENARIOS[i];return CLAIM_SCENARIOS[0];}
+function clmScen(){for(var i=0;i<CLAIM_SCENARIOS.length;i++)if(CLAIM_SCENARIOS[i].id===CLM.scen)return CLAIM_SCENARIOS[i];return CLAIM_SCENARIOS[0]||null;}
 function clmSetScen(id){CLM.scen=id;var b=$('clmBody');if(b)b.innerHTML=clmBody();var m=$('main');if(m)m.scrollTop=0;}
 function clmScenarioView(){
   var s=clmScen();
+  /* 사례 자료를 못 읽었으면 아무것도 지어내지 않는다 */
+  if(!s)return '<div class="notice"><b>아무 사례도 만들지 않습니다.</b> 질병 사례 자료(app/질병가이드-data.js)를 읽지 못했습니다. '+
+    '자료 파일이 함께 올라갔는지 확인해 주세요.</div>';
   var total=0,silbi=0;s.payout.forEach(function(p){total+=p.value;if(/실손/.test(p.tag))silbi+=p.value;});
   var liquid=total-silbi;
   var h='<div class="clm-disc">아래는 <b>실제 존재하는 질병의 일반적 치료경과</b>와, 한 사건에서 <b>실손·정액 담보가 단계별로 어떻게 지급되는지</b>를 보여주는 <b>예시</b>입니다. 금액은 이해를 돕기 위한 예시이며 <b>지급을 보장하지 않습니다</b>(담보명·지급은 약관마다 다르고, 최종은 보험사 심사).</div>';
@@ -23936,7 +23758,7 @@ var MAN_MAP=[
      chips:[['bojang','📑','AI 보장분석'],['frmake','🔀','보장분석 전&후 만들기'],['baba','🔄','비포&애프터'],['compare','📊','제안서 비교'],['onecmp','💯','한장 보험료 비교'],['ai_prop','🧾','AI 제안서 생성'],['katalk','💬','제안서 카톡설명'],['interpret','🧠','보험 해석'],['treatpay','💉','치료비 지급지도'],['wallets','🗺️','8통장 진단지도'],['sangdam','📋','보장분석 상담자료']],
      how:'증권을 받아서 분석하고 제안서까지 만드는 전 과정입니다. 열 개가 한 칸에 모여 있어 왔다 갔다 하지 않습니다. 부족한 담보가 나오면 한장 보험료 비교로 어느 회사가 그 담보를 제일 싸게 주는지 바로 봅니다.'},
     {no:5,ic:'💬',cat:'상담 도구',when:'고객 앞에서 쓸 때',
-     chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기'],['bohum','📕','보험 마스터 아카데미']],
+     chips:[['cs_assist','💬','AI 상담 어시스턴트'],['cs_needs','⚡','니즈 시뮬레이터'],['ins_asst','🩺','보험 비서'],['cs_gso','🤖','금소법 AI'],['fp_deck','📊','재무설계 상담자료'],['fp_talk','🗣️','재무설계 실전화법서'],['dz_guide','🩺','질병 보험가이드'],['mikki_talk','🎣','미끼상품&접촉전략'],['finance','📊','재무설계 계산기'],['calc','🧮','실무 계산기'],['bohum','📕','보험 마스터 아카데미']],
      how:'혼자 준비하는 것(3번)과 고객 앞에서 쓰는 것(4번)을 나눴습니다. 화법서·상담자료·계산기가 한 줄로 이어집니다.'},
     {no:6,ic:'📈',cat:'투자·경제',when:'투자 이야기가 나올 때',
      chips:[['inv_stock','📈','주식관리'],['inv_fund','💠','펀드관리'],['inv_perf','📐','성과·자산배분'],['inv_econ','🌡️','경제동향 실시간']],
@@ -37824,8 +37646,15 @@ var INS_KEY = [
   { k: '순환계치료비·2대질병치료비',  re: /(순환계|2대질병|이대질병)/ },
   { k: '혈전용해·혈전제거',         re: /(혈전용해|혈전제거|혈전)/ },
   /* ── 뇌·심장은 <b>담보 이름이 곧 보장 범위</b>다 ──────────────────
-     뇌출혈(I60~I62) 약 10% / 뇌졸중(I60~I63) 약 50% / 뇌혈관질환(I60~I69) 90%+
-     급성심근경색(I21~I22) 약 30% / 허혈성심장질환(I20~I25) 90%+
+     좁은 것부터 넓은 것까지 이렇게 겹쳐 있다 —
+       뇌출혈 ⊂ 뇌졸중 ⊂ 뇌혈관질환 (통상 I60~I62 ⊂ ~I63 ⊂ ~I69)
+       급성심근경색 ⊂ 허혈성심장질환 (통상 I21~I22 ⊂ I20~I25)
+     ★ <b>「몇 %를 담는다」 는 숫자는 여기 적지 않는다.</b> 한때 담보마다 비율이
+       적혀 있었는데 <b>확인한 출처가 없는 숫자</b>였다(점검이 잡으므로 다시 적지 마시라).
+       주석이라 화면에는 안 나오지만, 다음 사람이 사실로 옮겨 적으면 그때는
+       고객 앞에 나간다. 실제로 질병 가이드에서 같은 숫자를 지웠다.
+       어디까지 담는지는 <b>그 상품 약관의 분류표</b>가 정하고 회사·개정회차마다
+       다르다 — 코드를 한 줄씩 편 표는 질병 보험가이드의 「범위가 곧 돈입니다」 에 있다.
      그래서 <b>좁은 것과 넓은 것을 따로 센다.</b> 뇌혈관만 보고 「뇌 준비됨」 이라
      하면 뇌출혈만 든 사람을 놓치고, 그 반대도 마찬가지다.
      급성심근경색은 여기 아예 없어서, 증권에 있어도 이 표는 「없음」 이라고
@@ -37837,7 +37666,10 @@ var INS_KEY = [
   { k: '허혈성심장질환 (전체)',      re: /허혈성\s*심(장)?\s*질환|허혈성/ },
   { k: '급성심근경색',              re: /급성\s*심근\s*경색|심근\s*경색/ },
   { k: '간병인사용일당',            re: /(간병인|간호간병)/ },
-  { k: '장기요양·치매',             re: /(장기요양|치매)/ }
+  { k: '장기요양·치매',             re: /(장기요양|치매)/ },
+  /* 요즘 상품에는 신장 계열이 따로 붙는다 — 당뇨·고혈압 고객의 종착역이라
+     빠지면 그대로 빈다. 이름이 회사마다 달라 넓게 잡는다. */
+  { k: '만성신부전·투석',           re: /(신부전|인공신장|투석)/ }
 ];
 function insGaps(riders, diags) {
   var pool = [];
@@ -40070,8 +39902,9 @@ var BJ_RULES = [
   '재진단암·전이암 담보 유무를 반드시 확인한다 — 첫 진단만 보장되면 2차 치료비가 통으로 빈다. 감액기간도 본다.',
   '',
   '[뇌·심장] 상품명이 아니라 보장 범위로 판단한다. 이것이 가장 큰 함정이다.',
-  '  뇌출혈 I60~I62 약 10% / 뇌졸중 I60~I63 약 50% / 뇌혈관질환 I60~I69 약 90%+',
-  '  급성심근경색 I21~I22 약 30% / 허혈성심장질환 I20~I25 약 90%+',
+  '  뇌출혈 I60~I62 / 뇌졸중 +I63(상품에 따라 I65·I66) / 뇌혈관질환 +I64·I67·I68·I69 — 뒤로 갈수록 담는 코드가 늘어난다.',
+  '  급성심근경색 I21·I22·I23 / 허혈성심장질환 +I20·I24·I25 — 가장 흔한 협심증(I20)은 뒤쪽에만 있다.',
+  '  각 담보가 몇 %를 차지하는지는 적지 않는다 — 확인된 출처가 없는 숫자다. 범위는 그 상품 약관의 분류표가 정한다.',
   '뇌혈관질환·허혈성심장질환 각 3,000만 이상이 기준. 뇌출혈 5,000만이 있어도 뇌혈관질환이 0이면 "준비 안 된 것"이다.',
   '',
   '[암 치료비] 진단비와 치료비는 완전히 다른 담보다. 진단비는 진단 확정만으로, 치료비는 실제 치료 행위가 있어야 지급된다.',
@@ -41520,7 +41353,7 @@ var KCD_DATA=[
  // 눈·귀 H
  ['H25','노년성 백내장','눈'],['H26','기타 백내장','눈'],['H33','망막박리·파열','눈'],['H35','기타 망막장애','눈'],['H40','녹내장','눈'],['H90','전음성·감각신경성 난청','귀'],['H81','전정기능장애(어지럼)','귀'],
  // 순환기 I
- ['I10','본태성(원발성) 고혈압','순환기'],['I11','고혈압성 심장병','순환기'],['I20','협심증','순환기'],['I21','급성 심근경색증','순환기'],['I22','후속 심근경색증','순환기'],['I25','만성 허혈성 심장병','순환기'],['I26','폐색전증','순환기'],['I34','비류마티스성 승모판 장애','순환기'],['I35','대동맥판 장애','순환기'],['I48','심방세동 및 조동','순환기'],['I50','심부전','순환기'],['I60','거미막밑출혈','뇌혈관'],['I61','뇌내출혈','뇌혈관'],['I62','기타 비외상성 두개내출혈','뇌혈관'],['I63','뇌경색증','뇌혈관'],['I64','상세불명 뇌졸중','뇌혈관'],['I65','뇌경색 유발 뇌전동맥 폐색','뇌혈관'],['I67','기타 뇌혈관질환','뇌혈관'],['I70','죽상경화증(동맥경화)','순환기'],['I71','대동맥류 및 박리','순환기'],['I73','기타 말초혈관질환','순환기'],['I80','정맥염 및 혈전정맥염','순환기'],['I83','하지정맥류','순환기'],
+ ['I10','본태성(원발성) 고혈압','순환기'],['I11','고혈압성 심장병','순환기'],['I20','협심증','순환기'],['I21','급성 심근경색증','순환기'],['I22','후속심근경색증','순환기'],['I23','급성 심근경색증 후 특정 현존 합병증','순환기'],['I24','기타 급성 허혈심장질환','순환기'],['I25','만성 허혈심장병','순환기'],['I26','폐색전증','순환기'],['I34','비류마티스성 승모판 장애','순환기'],['I35','대동맥판 장애','순환기'],['I48','심방세동 및 조동','순환기'],['I50','심부전','순환기'],['I60','거미막하출혈','뇌혈관'],['I61','뇌내출혈','뇌혈관'],['I62','기타 비외상성 두개내출혈','뇌혈관'],['I63','뇌경색증','뇌혈관'],['I64','출혈 또는 경색증으로 명시되지 않은 뇌졸중','뇌혈관'],['I65','뇌경색증을 유발하지 않은 뇌전동맥의 폐쇄 및 협착','뇌혈관'],['I66','뇌경색증을 유발하지 않은 대뇌동맥의 폐쇄 및 협착','뇌혈관'],['I67','기타 뇌혈관질환','뇌혈관'],['I68','달리 분류된 질환에서의 뇌혈관장애','뇌혈관'],['I69','뇌혈관질환의 후유증','뇌혈관'],['I70','죽상경화증(동맥경화)','순환기'],['I71','대동맥류 및 박리','순환기'],['I73','기타 말초혈관질환','순환기'],['I80','정맥염 및 혈전정맥염','순환기'],['I83','하지정맥류','순환기'],
  // 호흡기 J
  ['J18','상세불명 병원체 폐렴','호흡기'],['J44','기타 만성 폐쇄성 폐질환(COPD)','호흡기'],['J45','천식','호흡기'],['J34','코 및 부비동 장애','호흡기'],['J35','편도 및 아데노이드 만성질환','호흡기'],['J93','기흉','호흡기'],
  // 소화기 K
@@ -41536,7 +41369,10 @@ var KCD_DATA=[
  // 손상·중독 S/T
  ['S06','머리내부 손상(뇌진탕 등)','손상'],['S22','늑골·흉추 골절','손상'],['S32','요추·골반 골절','손상'],['S42','어깨·상완 골절','손상'],['S52','아래팔 골절','손상'],['S62','손목·손 골절','손상'],['S72','대퇴골 골절','손상'],['S82','아래다리 골절(발목 포함)','손상'],['S92','발 골절','손상'],['S13','경추 관절·인대 탈구·염좌','손상'],['S83','무릎 관절·인대 손상','손상'],['T14','상세불명 부위 손상','손상'],
  // 증상·기타 R/Z
+ ['D01','기타 및 상세불명의 소화기관의 제자리암종','제자리암'],['D12','결장, 직장, 항문 및 항문관의 양성 신생물','양성종양'],['D33','뇌 및 중추신경계통의 기타 부분의 양성 신생물','양성종양'],['G21','이차성 파킨슨증','신경'],['H83','내이의 기타 질환','귀'],['H93','달리 분류되지 않은 귀의 기타 장애','귀'],['R42','어지럼증 및 어지럼','증상'],['M05','혈청검사양성 류마티스관절염','근골격'],['M06','기타 류마티스관절염','근골격'],['M10','통풍','근골격'],['K63','장의 기타 질환','소화기'],['K83','담도의 기타 질환','소화기'],['N13','폐색성 및 역류성 요로병증','비뇨생식'],
  ['R07','인후·흉부 통증','증상'],['R10','복부·골반 통증','증상'],['R51','두통','증상'],['Z34','정상임신 관리','건강관리'],['Z38','출생아','건강관리']
+ // 질병 가이드가 쓰는 코드를 마저 들여왔습니다 — 이름은 KCD 표 원문 그대로입니다
+ ['C19','직장구불결장접합부의 악성 신생물','암'],['C21','항문 및 항문관의 악성 신생물','암'],['C65','신우의 악성 신생물','암'],['C66','요관의 악성 신생물','암'],['C68','기타 및 상세불명의 비뇨기관의 악성 신생물','암'],['C72','척수, 뇌신경 및 중추 신경계통의 기타 부분의 악성 신생물','암'],['D32','수막의 양성 신생물','양성종양'],['E07','갑상선의 기타 장애','내분비'],['F02','달리 분류된 기타 질환에서의 치매','정신'],['G22','달리 분류된 질환에서의 파킨슨증','신경'],['G23','기저핵의 기타 퇴행성 질환','신경'],['G31','달리 분류되지 않은 신경계통의 기타 퇴행성 질환','신경'],['H27','수정체의 기타 장애','눈'],['I36','비류마티스성 삼첨판장애','순환기'],['I37','폐동맥판장애','순환기'],['I38','상세불명 판막의 심내막염','순환기'],['I47','발작성 빈맥','순환기'],['I49','기타 심장부정맥','순환기'],['I51','심장병의 불명확한 기록 및 합병증','순환기'],['I72','기타 동맥류 및 박리','순환기'],['I74','동맥색전증 및 혈전증','순환기'],['I82','기타 정맥의 색전증 및 혈전증','순환기'],['K20','식도염','소화기'],['K22','식도의 기타 질환','소화기'],['M07','건선성 및 장병성 관절병증','근골격'],['M08','연소성 관절염','근골격'],['M11','기타 결정 관절병증','근골격'],['M83','성인골연화증','근골격'],['M84','골연속성의 장애','근골격'],['N17','급성 신부전','비뇨생식'],['N19','상세불명의 신부전','비뇨생식'],['N21','하부요로의 결석','비뇨생식'],['N22','달리 분류된 질환에서의 요로의 결석','비뇨생식'],['N41','전립선의 염증성 질환','비뇨생식'],['N42','전립선의 기타 장애','비뇨생식'],
 ];
 function kcdSearch(){
   var box=$('kcd_res');if(!box)return;
@@ -41550,9 +41386,21 @@ function kcdSearch(){
     if(code.indexOf(qn)>=0||name.indexOf(qn)>=0||c[1].indexOf(q)>=0){hits.push(c);}
     if(hits.length>=60)break;
   }
+  /* 여기 181개는 <b>상담에서 자주 쓰는 것만 골라 둔</b> 것이다. 못 찾았다고
+     「없는 코드」 가 아니다 — 질병가이드가 들여온 <b>KCD 3자리 전체</b>에서 이어 찾는다.
+     이름은 그쪽이 받아 온 원문 그대로다(사람이 타이핑하지 않았다). */
+  var wide=0;
+  if(hits.length<8 && window.DZ_KCD){
+    var got={};for(var w=0;w<hits.length;w++)got[hits[w][0]]=1;
+    var K=window.DZ_KCD,more=K.find(q,60-hits.length);
+    for(var m=0;m<more.length;m++){
+      if(got[more[m][0]])continue;
+      hits.push([more[m][0],more[m][1],K.area(more[m][0])||K.kind(more[m][0])]);wide++;
+    }
+  }
   box.classList.add('on');
   if(!hits.length){
-    box.innerHTML='<div style="padding:10px 2px;font-size:12px;color:var(--ink-4)">일치하는 코드가 없습니다. 전체·최신 코드는 <a href="https://www.koicd.kr" target="_blank" rel="noopener" style="color:var(--primary)">KOICD 공식 검색 ↗</a> 을 이용하세요.</div>';
+    box.innerHTML='<div style="padding:10px 2px;font-size:12px;color:var(--ink-4)">일치하는 코드가 없습니다. 없는 코드를 <b>지어내지 않습니다</b> — 진단서의 코드를 그대로 보시고, 전체·최신 코드는 <a href="https://www.koicd.kr" target="_blank" rel="noopener" style="color:var(--primary)">KOICD 공식 검색 ↗</a> 에서 확인하세요.</div>';
     return;
   }
   var rows=hits.map(function(c){
