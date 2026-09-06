@@ -94,6 +94,43 @@ function hav(a,b){
    실제 길찾기가 아니라 어림입니다 — 직선의 1.35배를 시속 28km 로 달리고,
    주차하고 걸어 들어가는 데 4분을 더합니다. 화면에도 어림이라고 적습니다. */
 function mins(km){ if(km==null)return null; return Math.max(5, Math.round(km*1.35/28*60)+4) }
+
+/* ── 실제 길찾기 거리 ────────────────────────────────────────────
+   서버(netlify/functions/route-km)가 카카오에 물어 줍니다. 길찾기 API 는
+   브라우저에서 못 부르고, REST 키는 화면에 나오면 안 되기 때문입니다.
+
+   키가 없으면 서버가 <b>없다고 답합니다.</b> 그때는 예전처럼 어림으로
+   갑니다 — <b>지어낸 숫자를 쓰지 않습니다.</b> 화면의 「어림」 딱지도
+   실제로 무엇을 쓰고 있는지에 따라 붙였다 뗍니다.
+
+   한 번 잰 구간은 브라우저에 적어 둡니다 — 같은 길을 다시 안 묻습니다
+   (7번). 소수점 넷째 자리로 묶어, 몇 미터 차이로 새로 묻지 않습니다. */
+var RKM={}, RKM_OFF=false, RENDERING=false;   /* 다시 그리다 무한히 돌지 않게 */
+try{ RKM=JSON.parse(localStorage.getItem("apexRouteKmV1")||"{}") }catch(e){ RKM={} }
+function rkKey(a,b){ return [a.lat,a.lng,b.lat,b.lng].map(function(v){return (+v).toFixed(4)}).join(",") }
+function realKm(pairs){
+  /* pairs: [{a:{lat,lng},b:{lat,lng}}, …] → 같은 차례의 {km,min}|null 배열 */
+  var out=pairs.map(function(x){ return RKM[rkKey(x.a,x.b)]||null });
+  if(RKM_OFF)return Promise.resolve(out);
+  var need=[], idx=[];
+  pairs.forEach(function(x,i){ if(!out[i]){ need.push({ox:+x.a.lng,oy:+x.a.lat,dx:+x.b.lng,dy:+x.b.lat}); idx.push(i) } });
+  if(!need.length)return Promise.resolve(out);
+  return fetch("/.netlify/functions/route-km",{method:"POST",
+      headers:{"content-type":"application/json"},body:JSON.stringify({legs:need})})
+    .then(function(r){ return r.json() })
+    .then(function(j){
+      if(!j||!j.ok){ RKM_OFF=true; return out }   /* 키가 없다 — 다시 안 묻는다 */
+      (j.legs||[]).forEach(function(v,k){
+        if(!v)return;
+        out[idx[k]]=v; RKM[rkKey(pairs[idx[k]].a,pairs[idx[k]].b)]=v;
+      });
+      try{ localStorage.setItem("apexRouteKmV1",JSON.stringify(RKM)) }catch(e){}
+      return out;
+    })
+    .catch(function(){ RKM_OFF=true; return out });
+}
+/* 지금 화면이 <b>무엇으로</b> 재고 있는지 — 딱지를 붙일지 말지 여기서 답한다 */
+function kmSource(){ return RKM_OFF?"어림":(Object.keys(RKM).length?"길찾기":"어림") }
 function kmTxt(km){ return km==null?"-":(km<1?Math.round(km*1000)+"m":km.toFixed(1)+"km") }
 function pad(n){return (n<10?"0":"")+n}
 function hm(d){ return pad(d.getHours())+":"+pad(d.getMinutes()) }
@@ -952,6 +989,18 @@ function styles(){
   ".rt-tb{font-size:13px;line-height:1.65;color:var(--text);white-space:normal}",
   ".rt-pin{background:var(--blue);color:#fff;border-radius:999px;min-width:24px;height:24px;padding:0 7px;display:grid;place-items:center;font-weight:900;font-size:12px;box-shadow:0 3px 9px rgba(0,0,0,.28);border:2px solid #fff}",
   ".rt-pin.c{background:#8b95a1;width:16px;height:16px;min-width:16px;font-size:0;padding:0}",
+  /* 내 고객 전부를 작은 점으로 찍는다 — 색은 <b>DB 통합 CRM 의 단계 색</b>을
+     그대로 쓴다. 규약을 여기서 새로 만들면 두 화면이 서로 다른 색으로
+     같은 단계를 그린다 (5번). */
+  ".rt-dot{width:11px;height:11px;border-radius:999px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}",
+  ".rt-dot.gray{background:#8B95A1}", ".rt-dot.yellow{background:#FFC043}",
+  ".rt-dot.blue{background:#3182F6}", ".rt-dot.green{background:#12B886}",
+  ".rt-leg{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}",
+  ".rt-leg i{width:9px;height:9px;border-radius:999px;display:inline-block;margin-right:4px}",
+  ".rt-city{display:flex;flex-wrap:wrap;gap:6px}",
+  ".rt-city button{border:1px solid var(--line,#e5e8eb);background:#fff;border-radius:999px;padding:6px 11px;font-size:13px;cursor:pointer;font-weight:700;color:var(--text,#191f28)}",
+  ".rt-city button.on{background:var(--blue,#3182f6);color:#fff;border-color:transparent}",
+  ".rt-city button small{font-weight:600;opacity:.75;margin-left:4px}",
   ".rt-pin.h{background:var(--navy)}",
   "@media(max-width:860px){.rt-body{flex-direction:column}.rt-side{width:auto;max-width:none;max-height:52%;border-right:0;border-bottom:1px solid var(--line)}}"
   ].join("");
@@ -1054,10 +1103,19 @@ function tour(pts,start){
   return {order:order,km:total(order)};
 }
 
+/* 실제로 잰 값이 손에 있으면 그것을 쓰고, 없으면 어림으로 간다.
+   <b>둘을 섞어 쓰되 무엇으로 쟀는지는 화면이 밝힌다</b> — 어림을 길찾기라고
+   말하면, 산을 낀 구간에서 사장님이 늦습니다 (1번). */
+function legOf(a,b){
+  if(!a||!b)return {km:hav(a,b),min:mins(hav(a,b)),real:false};
+  var v=RKM[rkKey(a,b)];
+  if(v)return {km:v.km,min:v.min,real:true};
+  var d=hav(a,b); return {km:d,min:mins(d),real:false};
+}
 function legs(stops){
   var out=[], prev=HOME?{lat:HOME.lat,lng:HOME.lng}:null, km=0, late=0, unknown=0;
   stops.forEach(function(s,i){
-    var d=hav(prev,s.pt), m=mins(d);
+    var L0=legOf(prev,s.pt), d=L0.km, m=L0.min;
     if(d==null&&s.pt==null)unknown++;
     if(d!=null)km+=d;
     var bad=null;
@@ -1065,7 +1123,7 @@ function legs(stops){
       var gap=(s.at-stops[i-1].at)/60000, need=STAY+(m||0);
       if(m!=null&&gap<need){ bad=Math.round(need-gap); late++ }
     }
-    out.push({s:s,km:d,min:m,bad:bad});
+    out.push({s:s,km:d,min:m,bad:bad,real:L0.real});
     prev=s.pt||prev;
   });
   return {list:out,km:km,late:late,unknown:unknown};
@@ -1138,6 +1196,35 @@ function render(){
   var stops=stopsOf(date,region,owner);
   var L=legs(stops);
   var side=[];
+
+  /* ── 시(市)별로 한 줄 ────────────────────────────────────────
+     지역 전체를 한꺼번에 보면 복잡합니다. 시 하나를 누르면 그 시만
+     남습니다. 옆에 <b>「위치 N」</b>을 같이 적습니다 — 지도에 안 뜨는
+     사람이 몇인지 그 자리에서 보여야, 무엇을 채워야 하는지 압니다. */
+  var city={};
+  dbs.forEach(function(d){
+    if(owner&&d.assigned_to!==owner)return;
+    var k=regionText(d.region); if(!k)return;
+    if(!city[k])city[k]={key:k,name:regionName(d),n:0,pt:0};
+    city[k].n++; if(ptOf(d))city[k].pt++;
+    if(d.sigungu&&regionText(d.sigungu)===k)city[k].name=d.sigungu;
+  });
+  var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n});
+  if(ck.length){
+    var cur=regionText(region);
+    side.push('<div class="rt-h">내 고객 '+ck.reduce(function(a,k){return a+city[k].n},0)+'명 — 시(市)로 골라 보기</div>'+
+      '<div class="rt-card"><div class="rt-city">'+
+      '<button data-city="" class="'+(cur?"":"on")+'">전체</button>'+
+      ck.map(function(k){ var g=city[k];
+        return '<button data-city="'+E(g.name)+'" class="'+(cur===k?"on":"")+'">'+E(g.name)+
+          '<small>'+g.n+'명 · 위치 '+g.pt+'</small></button>' }).join("")+
+      '</div>'+
+      '<div class="rt-leg"><span><i style="background:#8B95A1"></i>미접촉</span>'+
+      '<span><i style="background:#FFC043"></i>TA</span>'+
+      '<span><i style="background:#3182F6"></i>AP·PC·CS</span>'+
+      '<span><i style="background:#12B886"></i>계약</span>'+
+      '<span>· 위치를 아는 사람만 지도에 뜹니다</span></div></div>');
+  }
 
   /* 지역이 두 이름으로 갈라져 있으면 먼저 알려 준다 — 여기서 사람이 샙니다 */
   var split={};
@@ -1231,10 +1318,12 @@ function render(){
     return a.fit?-1:(b.fit?1:0);
   });
   var top=cands.slice(0,8);
-  side.push('<div class="rt-h">여기 더 넣을 수 있는 사람 '+
-    (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>':"")+'</div>');
+  side.push('<div class="rt-h">추가로 연락 드릴 고객님 '+
+    (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>'
+                 :'<small style="font-weight:700;color:var(--muted)">— 오래 방치된 순</small>')+'</div>');
   if(!top.length){
-    side.push('<div class="rt-card" style="color:var(--muted)">이 지역에 아직 걸 사람이 없습니다.</div>');
+    side.push('<div class="rt-card" style="color:var(--muted)">'+
+      (region?('「'+E(region)+'」에 아직 걸 분이 없습니다.'):'걸 분이 없습니다. 위의 <b>시</b>를 하나 골라 보세요.')+'</div>');
   }else{
     var anchor=stops[0];
     side.push('<div class="rt-card">'+top.map(function(c,i){
@@ -1250,18 +1339,45 @@ function render(){
         '<div style="margin-top:5px">'+tag+'</div></div>'+
         '<div class="rt-act">'+
           (tel?'<a class="btn btn-primary btn-sm" href="tel:'+E(tel)+'">📞</a>':"")+
+          /* 위치를 모르면 그 자리에서 찍고, 알면 그 자리에서 내비로 —
+             전화 걸면서 「아, ○○동 사세요?」 하는 그 순간이 자료가
+             들어오는 제일 싼 자리다. 창을 옮겨 다니지 않는다. */
+          (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭</a>'
+                  :'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>')+
           (anchor?'<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 화법</button>':"")+
           '<button class="btn btn-dark btn-sm" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
         '</div><div class="rt-talk hidden" id="rtRT'+i+'"></div></div>';
     }).join("")+'</div>');
   }
 
+  /* 무엇으로 쟀는지 <b>있는 그대로</b> 적는다. 어림을 길찾기라고 말하면
+     산을 낀 구간에서 늦고, 길찾기를 어림이라 말하면 안 믿게 된다. */
+  var realN=L.list.filter(function(x){return x.real}).length;
   side.push('<div class="rt-card" style="font-size:12px;color:var(--muted);line-height:1.6">'+
-    '이동시간은 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 달린 셈으로 셉니다. '+
-    '실제 출발 전에는 <b>길찾기</b> 를 한 번 눌러 확인하십시오.</div>');
+    (realN
+      ? ('이동시간 '+realN+'구간은 <b>카카오 길찾기</b>로 잰 실제 거리입니다.'+
+         (realN<L.list.length?(' 나머지는 아직 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 셉니다.'):''))
+      : ('이동시간은 <b>어림</b>입니다 — 직선거리를 1.35배 해서 시속 28km 로 달린 셈으로 셉니다.'+
+         (RKM_OFF?' 길찾기 키가 아직 없습니다.':'')))+
+    ' 실제 출발 전에는 <b>🧭 내비</b> 를 한 번 눌러 확인하십시오.</div>');
 
   q("rtSide").innerHTML=side.join("");
 
+  /* 시 칩 — 누르면 그 시만 남는다. 「지금 어느 지역인가」를 아는 자리는
+     지역 고르는 칸 하나뿐이다. 칩은 그 칸을 바꾸고 다시 그릴 뿐이다 (5번). */
+  Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-city]"),function(b){
+    b.onclick=function(){
+      var v=b.getAttribute("data-city"), sel=q("rtRegion"), hit=false;
+      Array.prototype.forEach.call(sel.options,function(o){
+        if(regionText(o.value)===regionText(v)){ sel.value=o.value; hit=true } });
+      if(!hit)sel.value="";
+      render();
+    };
+  });
+
+  Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-pin]"),function(b){
+    b.onclick=function(){ pinOne(b.getAttribute("data-pin")) };
+  });
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-rcall]"),function(b){
     b.onclick=function(){ q("rtWrap").classList.remove("on");
       if(window.openCall) window.openCall(b.getAttribute("data-rcall")) };
@@ -1281,6 +1397,19 @@ function render(){
   });
 
   drawMap(stops,top);
+
+  /* 그날 구간을 <b>한 번에</b> 물어 온다 — 구간마다 따로 부르면 왕복이
+     대여섯 번이 된다 (7번). 새로 받은 것이 있을 때만 다시 그린다. */
+  var pairs=[], prev=HOME?{lat:HOME.lat,lng:HOME.lng}:null;
+  stops.forEach(function(s){ if(prev&&s.pt)pairs.push({a:prev,b:s.pt}); if(s.pt)prev=s.pt });
+  var missing=pairs.filter(function(x){ return !RKM[rkKey(x.a,x.b)] }).length;
+  if(pairs.length&&missing&&!RKM_OFF&&!RENDERING){
+    RENDERING=true;
+    realKm(pairs).then(function(){ RENDERING=false;
+      var still=pairs.filter(function(x){ return !RKM[rkKey(x.a,x.b)] }).length;
+      if(still!==missing)render();     /* 뭔가 새로 들어왔을 때만 */
+    }).catch(function(){ RENDERING=false });
+  }
 }
 
 /* ── 지도 ───────────────────────────────────────────────────────── */
@@ -1303,6 +1432,25 @@ function drawMap(stops,cands){
       var ov=new kakao.maps.CustomOverlay({position:ll,content:el,yAnchor:.5,zIndex:z||3});
       ov.setMap(MAP); OVERLAY.push(ov); bounds.extend(ll); any=true; return ll;
     }
+    /* 내 고객을 <b>전부</b> 찍는다 — 담당자 기준. 색은 단계 색이다.
+       좌표가 없는 사람은 <b>안 찍는다.</b> 시청 좌표라도 찍어 두면 지도는
+       채워지지만 「몇 분 거리」가 전부 거짓말이 된다 — 다 같은 점에 모여
+       0분이 나오고, 그걸 믿고 짠 하루가 깨진다. 없는 것은 없다고 두고,
+       몇 명이 비었는지는 옆 칸에 숫자로 적는다 (1번). */
+    var owner=q("rtOwner").value||"", region=q("rtRegion").value||"";
+    var seen={};
+    stops.forEach(function(s){ seen[s.d.id]=1 });
+    dbs.forEach(function(d){
+      if(seen[d.id])return;
+      if(owner&&d.assigned_to!==owner)return;
+      if(region&&regionText(d.region)!==regionText(region))return;
+      var p=ptOf(d); if(!p)return;
+      var ll=new kakao.maps.LatLng(p.lat,p.lng);
+      var el=document.createElement("div"); el.className="rt-dot "+stageCol(d);
+      el.title=(d.customer_name||"")+" · "+(function(){try{return stageOf(d)}catch(e){return ""}})();
+      var ov=new kakao.maps.CustomOverlay({position:ll,content:el,yAnchor:.5,zIndex:1});
+      ov.setMap(MAP); OVERLAY.push(ov); bounds.extend(ll); any=true;
+    });
     if(HOME) pin(HOME,"🏠","h",4);
     stops.forEach(function(s,i){ if(s.pt) path.push(pin(s.pt,String(i+1),"",5)) });
     cands.forEach(function(c){ var p=ptOf(c.d); if(p) pin(p,"","c",2) });
@@ -1366,6 +1514,14 @@ function keyPanel(force,err){
     if(!v){ say("키를 붙여 넣어 주세요."); return }
     keySave(v).then(function(){ sdkP=null; say("저장했습니다."); render() });
   };
+}
+
+/* 그 사람의 단계 색 — <b>DB 통합 CRM 의 규약을 그대로</b> 쓴다.
+   STAGE_C 는 db-crm.html 에 한 벌 있고, 여기서는 읽기만 한다. */
+function stageCol(d){
+  var s="";
+  try{ s=stageOf(d) }catch(e){ s=(d&&d.stage)||"" }
+  try{ return (typeof STAGE_C!=="undefined"&&STAGE_C[s])||"gray" }catch(e){ return "gray" }
 }
 
 /* ── 🏠 출발지 ──────────────────────────────────────────────────

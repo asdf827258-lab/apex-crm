@@ -161,7 +161,14 @@ kakao.maps.Map=function(el,o){this.setBounds=function(){};this.relayout=function
   this.getCenter=function(){return {getLat:function(){return c.a},getLng:function(){return c.b}}}};
 kakao.maps.LatLng=function(a,b){this.a=a;this.b=b};
 kakao.maps.LatLngBounds=function(){this.extend=function(){}};
-kakao.maps.CustomOverlay=function(){this.setMap=function(){}};
+/* 진짜 카카오는 오버레이 내용을 <b>지도 안에 DOM 으로</b> 넣는다.
+   견본이 안 넣으면 핀이 몇 개 떴는지 아예 못 잰다 — 화면에 없는 것을
+   본 셈이 된다. 그래서 여기서도 넣는다. */
+kakao.maps.CustomOverlay=function(o){var el=o&&o.content;
+  this.setMap=function(m){var box=document.getElementById('rtMap');
+    if(!el)return;
+    if(m&&box){ if(el.parentNode!==box)box.appendChild(el) }
+    else if(el.parentNode)el.parentNode.removeChild(el); }};
 kakao.maps.Polyline=function(){this.setMap=function(){}};
 `;
 
@@ -182,7 +189,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
 
   /* kakao=false 면 카카오가 거절한 것과 같은 꼴이 된다 — [9] 가 그것을 잰다.
      kakao=true 면 견본 SDK 가 붙어 지오코딩이 실제로 돈다 — [10] 이 그것을 쓴다. */
-  const open = async (mig, kakao) => {
+  const open = async (mig, kakao, navi) => {
     const ctx = await br.newContext(), pg = await ctx.newPage();
     const errs = [], logs = [];
     pg.on('pageerror', e => errs.push(String(e.message || e)));
@@ -191,6 +198,8 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
       const u = r.request().url();
       if (/supabase-js@2/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: STUB });
       if (/pretendard/.test(u))   return r.fulfill({ contentType: 'text/css', body: '' });
+      if (/route-km/.test(u)) return r.fulfill({ contentType: 'application/json',
+        body: JSON.stringify(navi ? { ok: true, legs: [{ km: 12.3, min: 27 }] } : { ok: false, why: 'NOKEY' }) });
       if (/dapi\.kakao\.com/.test(u)) return kakao ? r.fulfill({ contentType: 'text/javascript', body: KAKAO_STUB })
                                                     : r.fulfill({ status: 401, contentType: 'application/json', body: '{"errorType":"AccessDeniedError"}' });
       if (u.startsWith('http://localhost:' + P)) return r.continue();
@@ -473,6 +482,60 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(!!saved, '목록에서 찍으니 <그 사람에게 좌표가 저장됐다> — 창을 옮겨 다니지 않는다');
   is(!!saved && saved.sigungu === '순천시',
      '<행정구역까지 같이> 들어갔다 — 적힌 지역과 같은 시라서 (' + (saved ? saved.sigungu : '') + ')');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[13] 내 고객이 <시(市)별로> 갈리고, 지도에 <단계 색>으로 뜬다');
+  await pg.evaluate(() => { const m = document.getElementById('rtNear'); if (m) m.classList.remove('open') });
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => {
+    const e = document.querySelector('#rtSide .rt-city'); return !!(e && e.children.length > 1);
+  }, { timeout: 20000 });
+  const cty = await pg.evaluate(() => {
+    const w = document.getElementById('rtSide');
+    return { chips: [...w.querySelectorAll('[data-city]')].map(b => b.textContent),
+             t: w.innerText,
+             dots: document.querySelectorAll('.rt-dot').length,
+             cols: [...document.querySelectorAll('.rt-dot')].map(e => e.className.replace('rt-dot ', '')) };
+  });
+  is(cty.chips.some(c => /순천/.test(c)) && cty.chips.some(c => /여수/.test(c)),
+     '<시(市)로> 갈라 보여 준다 — 지역 전체를 한꺼번에 안 본다');
+  is(cty.chips.some(c => /위치 \d/.test(c)),
+     '시마다 <위치를 아는 사람이 몇인지> 같이 적는다 — 무엇을 채워야 하는지 보이게');
+  is(/추가로 연락 드릴 고객님/.test(cty.t), '<「추가로 연락 드릴 고객님」>이 그 자리에 선다');
+  is(cty.dots > 0, '내 고객이 <지도에 점으로> 뜬다 (' + cty.dots + '개)');
+  is(cty.cols.some(c => c && c !== 'gray'),
+     '점 색이 <단계마다 다르다> — DB 통합 CRM 의 색 규약 그대로 (' + [...new Set(cty.cols)].join(',') + ')');
+
+  /* 시를 누르면 그 시만 남는가 */
+  await pg.evaluate(() => {
+    const b = [...document.querySelectorAll('[data-city]')].filter(x => /여수/.test(x.textContent))[0];
+    if (b) b.click();
+  });
+  await pg.waitForTimeout(600);
+  const only = await pg.evaluate(() => ({
+    region: document.getElementById('rtRegion').value,
+    dots: document.querySelectorAll('.rt-dot').length }));
+  is(/여수/.test(only.region), '시를 누르니 <그 시로 걸렸다> (' + only.region + ')');
+  is(only.dots < cty.dots, '<그 시 사람만> 지도에 남았다 — ' + cty.dots + '개 → ' + only.dots + '개');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+
+  head('[14] 길찾기 키가 <없으면 어림이라고 말한다> — 지어낸 거리를 안 쓴다');
+  const t14 = await pg.evaluate(() => document.getElementById('rtSide').innerText);
+  is(/어림/.test(t14), '<「어림」>이라고 적는다 — 직선거리로 셈한다는 것을 밝힌다');
+  is(!/카카오 길찾기로 잰 실제 거리/.test(t14),
+     '키가 없는데 <「실제 거리」라고 하지 않는다> — 실패를 성공처럼 말하지 않는다');
+  await ctx.close();
+
+  /* ─── 길찾기가 답하는 서버 ─────────────────────────────────── */
+  ({ ctx, pg, errs, logs } = await open(true, true, true));
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => !!document.querySelector('#rtSide .rt-city'), { timeout: 20000 });
+  await pg.waitForTimeout(1200);
+  const t14b = await pg.evaluate(() => document.getElementById('rtSide').innerText);
+  is(!/길찾기 키가 아직 없습니다/.test(t14b),
+     '키가 있으면 <「키가 없습니다」를 안 적는다>');
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 
