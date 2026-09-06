@@ -342,15 +342,20 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   /* ─── 카카오가 답하는 서버 ─────────────────────────────────── */
   ({ ctx, pg, errs, logs } = await open(true, true));
 
-  head('[10] 지역 칸에 든 <주소를 살린다> — 지우지 않고 옮긴다');
+  head('[10] <단추 하나>로 위치를 정리한다 — 셋을 한 화면에서');
   await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
-  await pg.waitForFunction(() => !!document.getElementById('rtAddr'), { timeout: 20000 });
+  await pg.waitForFunction(() => !!document.getElementById('rtFix'), { timeout: 20000 });
+  /* 예전에는 단추가 셋이었다(좌표 채우기·지역 정리·주소를 동네 칸으로).
+     어느 것을 어느 순서로 눌러야 하는지 아무도 몰랐다 — 순서를 틀리면
+     「채울 것이 없습니다」만 뜨고 아무 일도 안 일어났다. 이제 하나다. */
+  const gone = await pg.evaluate(() => ['rtFill', 'rtTidy', 'rtAddr'].filter(i => !!document.getElementById(i)));
+  is(gone.length === 0, gone.length ? ('아직 남은 옛 단추 — ' + gone.join(' · ')) : '옛 단추 셋이 <사라지고 하나>만 남았다');
   const before = await pg.evaluate(() => {
     const v = n => { try { return eval(n) } catch (e) { return [] } };
     const f = id => (v('dbs') || []).filter(d => d.id === id)[0] || {};
     return { d12: f('d12'), d13: f('d13'), d14: f('d14') };
   });
-  await pg.evaluate(() => document.getElementById('rtAddr').click());
+  await pg.evaluate(() => document.getElementById('rtFix').click());
   const plan = await pg.waitForFunction(() => {
     const m = document.getElementById('rtTidy2');
     if (!m || !m.classList.contains('open')) return null;
@@ -361,6 +366,9 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(/여수시 조례동/.test(plan), '지역 칸에 <주소가 든 줄>을 찾아냈다');
   is(/여수시/.test(plan.split('그대로 두는 것')[0] || ''),
      '카카오가 답한 <「여수시」로 지역을 바로잡겠다>고 미리 보여 준다');
+  /* 한 화면에 세 가지가 다 서는가 — 이것이 「쉽게」의 실체다 */
+  is(/동네 칸으로/.test(plan) && /좌표를 채웁니다/.test(plan) && /하나로/.test(plan),
+     '<세 가지를 한 화면에> 보여 준다 — 주소 옮기기 · 좌표 채우기 · 이름 모으기');
   /* ★ 여수가 순천시로 바뀌려 했던 그 가드 — 「학동」은 전국에 여러 개다 */
   const kept = plan.split('그대로 두는 것')[1] || '';
   is(/학동/.test(kept) && /동구/.test(kept),

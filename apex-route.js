@@ -971,9 +971,7 @@ function wrap(){
       '<select id="rtStay"><option value="30">상담 30분</option><option value="45">상담 45분</option>'+
         '<option value="60">상담 60분</option><option value="90">상담 90분</option></select>'+
       '<button class="btn btn-light btn-sm" id="rtHome">🏠 출발지</button>'+
-      '<button class="btn btn-light btn-sm" id="rtFill">📍 좌표 채우기</button>'+
-      '<button class="btn btn-light btn-sm" id="rtTidy">🏷 지역 정리</button>'+
-      '<button class="btn btn-light btn-sm" id="rtAddr">📮 주소를 동네 칸으로</button>'+
+      '<button class="btn btn-light btn-sm" id="rtFix">📍 위치 정리하기</button>'+
       '<span class="rt-sp"></span>'+
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
@@ -988,9 +986,7 @@ function wrap(){
   q("rtStay").onchange=function(){ STAY=+q("rtStay").value||60;
     try{ localStorage.setItem("apexRouteStayV1",STAY) }catch(e){} render() };
   q("rtHome").onclick=setHome;
-  q("rtFill").onclick=fillCoords;
-  q("rtTidy").onclick=tidyRegions;
-  q("rtAddr").onclick=addrMove;
+  q("rtFix").onclick=fixAll;
   q("rtKey").onclick=function(){ keyPanel(true) };
   document.addEventListener("keydown",function(e){
     if(e.key==="Escape"&&w.classList.contains("on")) w.classList.remove("on");
@@ -1372,7 +1368,12 @@ function keyPanel(force,err){
   };
 }
 
-/* ── 출발지 · 좌표 채우기 ───────────────────────────────────────── */
+/* ── 🏠 출발지 ──────────────────────────────────────────────────
+   아침에 어디서 나서는지. 이것이 있어야 「몇 시에 나서야 하는지」가
+   나옵니다. 예전에는 이 함수가 「좌표 채우기」와 주석을 같이 쓰고
+   있어서, 그쪽을 지울 때 <b>같이 딸려 나갔습니다</b> — 화면은 멀쩡한데
+   🏠 출발지만 죽었습니다. 점검이 잡아 줬습니다. 이제 자기 주석을
+   따로 갖습니다. */
 function setHome(){
   var cur=HOME?HOME.label:"";
   var t=prompt("아침에 출발하는 곳을 적어 주세요 (사무실·집 주소)",cur||"");
@@ -1387,50 +1388,172 @@ function setHome(){
   });
 }
 
-function fillCoords(){
+/* ── 📍 위치 정리하기 — 한 단추, 한 화면, 한 번 누르기 ────────────
+   예전에는 단추가 셋이었습니다 — 「좌표 채우기」·「지역 정리」·「주소를
+   동네 칸으로」. 셋 다 결국 <b>같은 일</b>을 나눠 하던 것인데, 어느 것을
+   어느 순서로 눌러야 하는지 아무도 몰랐습니다. 순서를 틀리면 「채울 것이
+   없습니다」만 뜨고 아무 일도 안 일어났습니다.
+
+   이제 한 단추입니다. 한 번 훑어 <b>세 가지를 한꺼번에</b> 계획하고,
+   무엇이 어떻게 바뀌는지 한 화면에 보여 준 뒤, 누르면 그때 씁니다.
+
+     ① 지역 칸에 주소가 통째로 든 줄 → 동네 칸으로 옮기고 좌표까지
+     ② 동네는 적혔는데 좌표가 없는 줄 → 좌표를 채우고
+     ③ 같은 시인데 이름이 갈라진 줄 → 한 이름으로 모은다
+
+   ★ 가드는 그대로입니다. 카카오가 <b>적힌 지역과 다른 데</b>를 가리키면
+   좌표만 넣고 <b>행정구역은 손대지 않습니다.</b> 시험에서 「여수」가
+   「순천시」로 바뀌려 했던 자리입니다 — 「학동」처럼 전국에 여러 개인
+   이름을 넣으면 엉뚱한 시가 나옵니다. 사람이 적어 둔 동네도 안 덮습니다. */
+/* 지역 칸에 <b>주소가 통째로</b> 들어간 줄인가 — 「여수시 ○○동 343
+   ○○ 근처(자택)」 같은 것. 맨 이름이 길거나 숫자·괄호가 섞였으면
+   도시 이름이 아니라 주소다. */
+function looksAddr(t){
+  var k=regionText(t);
+  return !!k && (k.length>4 || /[0-9()]/.test(k));
+}
+function fixAll(){
   if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
   if(!KEY){ keyPanel(true); return }
-  var region=q("rtRegion").value||"", owner=q("rtOwner").value||"";
-  var todo=[];
-  dbs.forEach(function(d){
-    if(owner&&d.assigned_to!==owner)return;
-    if(region&&regionText(d.region)!==regionText(region))return;
-    if(d.addr&&!(d.lat&&d.lng))todo.push({d:d,text:d.addr,kind:"home"});
-    if(d.next_appt_place&&!(d.next_appt_lat&&d.next_appt_lng))todo.push({d:d,text:d.next_appt_place,kind:"appt"});
+  var owner=q("rtOwner").value||"";
+  var mine=dbs.filter(function(d){ return !owner||d.assigned_to===owner });
+  if(!mine.length){ say("정리할 고객이 없습니다."); return }
+
+  /* ③ 을 위해 같은 시끼리 먼저 묶어 둔다 */
+  var by={};
+  mine.forEach(function(d){
+    var k=regionText(d.region); if(!k||looksAddr(d.region))return;
+    if(!by[k])by[k]={key:k,rows:[],names:{},std:""};
+    by[k].rows.push(d); by[k].names[String(d.region||"").trim()]=1;
+    if(d.sigungu&&!by[k].std&&regionText(d.sigungu)===k)by[k].std=d.sigungu;
   });
-  if(!todo.length){ say("좌표를 채울 것이 없습니다. 동네나 만날 장소를 먼저 적어 주세요.",3500); return }
-  say("주소 "+todo.length+"건을 좌표로 바꾸는 중입니다…",4000);
-  var i=0, ok=0, mism=0;
+
+  /* 카카오에 물어볼 것 — 한 줄에 한 번만 묻는다 (7번) */
+  var jobs=[];
+  mine.forEach(function(d){
+    if(looksAddr(d.region)&&!String(d.addr||"").trim())
+      jobs.push({kind:"addr",d:d,text:String(d.region||"").trim()});
+    else if(String(d.addr||"").trim()&&!(d.lat&&d.lng))
+      jobs.push({kind:"geo",d:d,text:String(d.addr).trim()});
+    if(String(d.next_appt_place||"").trim()&&!(d.next_appt_lat&&d.next_appt_lng))
+      jobs.push({kind:"appt",d:d,text:String(d.next_appt_place).trim()});
+  });
+  Object.keys(by).forEach(function(k){
+    var g=by[k];
+    if(Object.keys(g.names).length<2)return;      /* 안 갈라졌으면 둘 일이 없다 */
+    if(g.std)return;                              /* 이미 카카오가 준 이름이 있다 */
+    var seed=Object.keys(g.names).sort()[0];
+    jobs.push({kind:"name",g:g,text:seed});
+  });
+
+  if(!jobs.length){ say("정리할 것이 없습니다 — 위치가 이미 다 맞아 있습니다.",4000); return }
+
+  say("카카오에 "+jobs.length+"건을 확인하는 중입니다…",8000);
+  var i=0, plan=[], skip=[];
   (function step(){
-    if(i>=todo.length){
-      say("좌표 "+ok+"건을 채웠습니다."+
-        (mism?" "+mism+"건은 적힌 지역과 주소가 달라 좌표만 넣었습니다 — 📍 주소로 찾기 로 확인하세요.":""),
-        mism?8000:3000);
-      if(window.loadAll) Promise.resolve(loadAll()).then(render); else render();
-      return;
-    }
-    var t=todo[i++];
-    resolvePlace(t.text,regionName(t.d)).then(function(p){
-      if(!p)return null;
-      var patch;
-      if(t.kind==="home"){
-        patch={lat:p.lat,lng:p.lng};
-        /* 사는 곳이면 행정구역까지 같이 적어 둔다 — 지역이 다시 갈라지지 않게.
-           다만 적힌 지역과 다른 시·군이 나오면 좌표만 넣습니다. 한꺼번에 도는
-           작업이라 잘못 들어가면 어디가 틀렸는지 찾기 어렵습니다. */
-        if(HAS_STD&&p.region_code&&p.sigungu&&
-           regionText(p.sigungu)===regionText(t.d.region)){
-          patch.region_code=p.region_code; patch.sido=p.sido||null;
-          patch.sigungu=p.sigungu||null;   patch.dong=p.dong||null;
-        }else if(p.sigungu&&regionText(p.sigungu)!==regionText(t.d.region)){
-          mism++;
-        }
-      }else{
-        patch={next_appt_lat:p.lat,next_appt_lng:p.lng};
+    if(i>=jobs.length)return show();
+    var j=jobs[i++];
+    resolvePlace(j.text,(j.kind==="name")?"":regionName(j.d||{})).then(function(p){
+      if(!p){ skip.push({t:j.text,why:"카카오가 이 주소를 못 찾았습니다"}); return }
+      var kk=p.sigungu?regionText(p.sigungu):"";
+      if(j.kind==="name"){
+        if(kk&&kk===j.g.key)plan.push({kind:"name",g:j.g,std:p.sigungu,sido:p.sido||""});
+        else skip.push({t:Object.keys(j.g.names).join(" · "),
+          why:p.sigungu?("카카오는 「"+p.sigungu+"」라고 답했습니다 — 적힌 지역과 다릅니다")
+                       :"시·군·구를 알 수 없습니다"});
+        return;
       }
-      return sb.from("dbs").update(patch).eq("id",t.d.id).then(function(r){ if(!r.error)ok++ });
-    }).catch(function(){}).then(function(){ setTimeout(step,220) });
+      /* 적힌 지역과 다른 데면 좌표만 — 행정구역은 안 건드린다.
+         <b>왜 그대로 두는지 갈라서 적는다.</b> 두 가드에 같은 말을 적으면
+         하나를 빼도 화면이 똑같아 아무도 못 알아챈다 (8번). */
+      var same=false, why="";
+      if(j.kind==="addr"){
+        if(kk.length<2) why="「"+p.sigungu+"」는 여러 시에 다 있는 이름이라 쓰지 않습니다";
+        else if(regionText(j.text).indexOf(kk)!==0)
+          why="카카오는 「"+p.sigungu+"」라고 답했는데 적힌 글이 그 이름으로 시작하지 않습니다";
+        else same=true;
+      }else{
+        if(kk&&regionText(j.d.region)===kk) same=true;
+        else if(p.sigungu&&j.kind!=="appt")
+          why="카카오는 「"+p.sigungu+"」라고 답했습니다 — 적힌 지역과 다릅니다";
+      }
+      plan.push({kind:j.kind,d:j.d,text:j.text,p:p,same:same});
+      if(why) skip.push({t:j.text,why:why+" (좌표만 넣습니다)"});
+    }).catch(function(){ skip.push({t:j.text,why:"확인하지 못했습니다"}) })
+      .then(function(){ setTimeout(step,220) });
   })();
+
+  function show(){
+    tidyModal();
+    q("rtTidyT").textContent="위치 정리하기";
+    var A=plan.filter(function(x){return x.kind==="addr"}),
+        G=plan.filter(function(x){return x.kind==="geo"||x.kind==="appt"}),
+        N=plan.filter(function(x){return x.kind==="name"});
+    function card(t,rows){ return rows.length
+      ? '<div class="rt-h">'+t+' '+rows.length+'건</div><div class="rt-card">'+rows.join("")+'</div>' : "" }
+    var h='<div class="notice" style="margin-bottom:12px">'+
+      '<b>한 번에 정리합니다.</b> 고객 정보·단계·약속은 건드리지 않습니다. '+
+      '카카오가 <b>적힌 지역과 다른 데</b>를 가리키면 좌표만 넣고 행정구역은 비워 둡니다.</div>';
+    h+=card("주소를 동네 칸으로 옮기고 좌표까지",A.map(function(x){
+      return '<div class="rt-row"><div class="rt-no">📮</div><div class="rt-who"><b>'+E(x.text)+'</b>'+
+        '<small>'+(x.same?('지역은 「<b>'+E(x.p.sigungu)+'</b>」로 바로잡습니다'):'좌표만 넣습니다')+'</small></div></div>' }));
+    h+=card("좌표를 채웁니다",G.map(function(x){
+      return '<div class="rt-row"><div class="rt-no">📍</div><div class="rt-who"><b>'+E(x.d.customer_name)+'</b>'+
+        '<small>'+E(x.text)+(x.kind==="appt"?" · 만날 장소":"")+'</small></div></div>' }));
+    h+=card("갈라진 지역 이름을 하나로",N.map(function(x){
+      return '<div class="rt-row"><div class="rt-no">🏷</div><div class="rt-who"><b>'+
+        E(Object.keys(x.g.names).join(" · "))+'</b><small>「<b>'+E(x.std)+'</b>」로 모읍니다 · '+
+        x.g.rows.length+'건</small></div></div>' }));
+    if(skip.length)h+='<div class="rt-h">그대로 두는 것</div><div class="rt-card">'+
+      skip.map(function(x){ return '<div class="rt-row"><div class="rt-no">✋</div>'+
+        '<div class="rt-who"><b>'+E(x.t)+'</b><small>'+E(x.why)+'</small></div></div>' }).join("")+'</div>';
+    if(!plan.length){
+      h+='<div class="notice">바꿀 것이 없습니다.</div>';
+      q("rtTidyGo").classList.add("hidden");
+    }else q("rtTidyGo").classList.remove("hidden");
+    q("rtTidyB").innerHTML=h;
+    q("rtTidyGo").onclick=function(){ apply() };
+    q("rtTidy2").classList.add("open");
+  }
+
+  function apply(){
+    var jobs2=[];
+    plan.forEach(function(x){
+      if(x.kind==="name"){
+        x.g.rows.forEach(function(d){
+          var pa={region:x.std};
+          if(HAS_STD){ pa.sigungu=x.std; if(x.sido)pa.sido=x.sido }
+          jobs2.push({id:d.id,patch:pa});
+        });
+        return;
+      }
+      if(x.kind==="appt"){ jobs2.push({id:x.d.id,patch:{next_appt_lat:x.p.lat,next_appt_lng:x.p.lng}}); return }
+      var pa={lat:x.p.lat,lng:x.p.lng};
+      if(x.kind==="addr")pa.addr=x.text;
+      if(x.same){
+        if(x.kind==="addr")pa.region=x.p.sigungu;
+        if(HAS_STD){ pa.region_code=x.p.region_code||null; pa.sido=x.p.sido||null;
+                     pa.sigungu=x.p.sigungu||null; pa.dong=x.p.dong||null }
+      }
+      jobs2.push({id:x.d.id,patch:pa});
+    });
+    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="정리하는 중…";
+    var j=0, ok=0, no=0;
+    (function run(){
+      if(j>=jobs2.length){
+        q("rtTidy2").classList.remove("open");
+        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
+        say(ok+"건을 정리했습니다."+(no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),6000);
+        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
+        else render();
+        return;
+      }
+      var t=jobs2[j++];
+      sb.from("dbs").update(t.patch).eq("id",t.id).then(function(r){
+        if(r&&r.error)no++; else ok++;
+      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
+    })();
+  }
 }
 
 /* ── 내비로 넘기는 주소 ───────────────────────────────────────────
@@ -1471,247 +1594,6 @@ function pinOne(id){
   });
 }
 
-/* ── 지역 칸에 주소가 통째로 들어간 줄을 살린다 ──────────────────
-   지역 칸은 자유 입력이라 「여수시 ○○동 343 ○○ 근처(자택)」 처럼
-   <b>주소를 통째로</b> 적어 둔 줄이 있습니다. 그 사람들은 지금 두 번
-   손해를 봅니다 —
-
-     ① 「이 지역 열 명」에 <b>안 뜹니다.</b> 맨 이름이 「여수」가 아니라
-        「여수시○○동343…」 이라 여수 사람으로 안 세어집니다.
-     ② 그러면서 <b>주소는 이미 갖고 있습니다.</b> 제일 좋은 자료를
-        엉뚱한 칸에 넣어 두고 못 쓰고 있는 것입니다.
-
-   그래서 지우지 않고 <b>옮깁니다.</b> 적힌 글을 동네(addr) 칸으로 복사해
-   두면 📍 좌표 채우기가 그때부터 그 줄을 집어 갑니다.
-
-   ★ 지역 칸은 <b>확인된 것만</b> 바꿉니다. 카카오가 답한 시·군·구의 맨
-   이름이 <b>적힌 글 안에 실제로 들어 있을 때만</b> 씁니다. 「여수시 ○○동」
-   에 카카오가 「여수시」라고 답하면 글 안에 「여수」가 있으니 받아들이고,
-   「학동」처럼 전국에 여러 개인 이름은 카카오가 무어라 답하든 <b>손대지
-   않습니다.</b> 여수가 순천시로 바뀌려 했던 그 자리를 여기서도 막습니다.
-
-   이미 동네 칸이 채워진 줄은 건드리지 않습니다 — 사람이 적어 둔 것을
-   덮어쓰지 않습니다. */
-function looksAddr(t){
-  var k=regionText(t);
-  return !!k && (k.length>4 || /[0-9()]/.test(k));
-}
-function addrMove(){
-  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
-  if(!KEY){ keyPanel(true); return }
-  var owner=q("rtOwner").value||"";
-  var rows=dbs.filter(function(d){
-    if(owner&&d.assigned_to!==owner)return false;
-    if(String(d.addr||"").trim())return false;      /* 사람이 적어 둔 것을 안 덮는다 */
-    return looksAddr(d.region);
-  });
-  if(!rows.length){ say("지역 칸에 주소가 들어간 줄이 없습니다.",3500); return }
-
-  say("주소 "+rows.length+"건을 카카오에 확인하는 중입니다…",6000);
-  var i=0, plan=[], skip=[];
-  (function step(){
-    if(i>=rows.length)return show();
-    var d=rows[i++], txt=String(d.region||"").trim();
-    resolvePlace(txt,"").then(function(p){
-      var std="", why="";
-      if(p&&p.sigungu){
-        /* 카카오가 말한 시·군·구가 <b>적힌 글 맨 앞에</b> 실제로 있는가.
-           두 가지를 못 박습니다 —
-             ① 한 글자짜리는 안 씁니다. 「동구」의 맨 이름은 「동」이라,
-                글 아무 데나 「동」이 있으면 다 통과해 버립니다. 「학동
-                근처」가 「동구」로 바뀝니다. 광역시마다 동구·중구·남구가
-                있어 이것이 제일 위험합니다.
-             ② 맨 앞이어야 합니다. 도시 이름은 주소 앞에 옵니다 —
-                가운데서 우연히 겹친 글자는 이름이 아닙니다. */
-        var kk=regionText(p.sigungu);
-        if(kk.length<2) why="「"+p.sigungu+"」는 여러 시에 다 있는 이름이라 쓰지 않습니다";
-        else if(regionText(txt).indexOf(kk)===0) std=p.sigungu;
-        else why="카카오는 「"+p.sigungu+"」라고 답했는데 적힌 글이 그 이름으로 시작하지 않습니다";
-      }else if(!p){ why="카카오가 이 주소를 못 찾았습니다" }
-      else { why="시·군·구를 알 수 없습니다" }
-      plan.push({d:d,txt:txt,std:std,sido:(p&&p.sido)||"",why:why});
-    }).catch(function(){ plan.push({d:d,txt:txt,std:"",sido:"",why:"확인하지 못했습니다"}) })
-      .then(function(){ setTimeout(step,220) });
-  })();
-
-  function show(){
-    tidyModal();
-    q("rtTidyT").textContent="주소를 동네 칸으로";
-    var moved=plan.filter(function(x){return x.std}), kept=plan.filter(function(x){return !x.std});
-    var tail=kept.length
-      ? '<div class="rt-h">동네 칸에만 넣고 지역은 그대로 두는 것</div><div class="rt-card">'+
-        kept.map(function(x){
-          return '<div class="rt-row"><div class="rt-no">✋</div>'+
-            '<div class="rt-who"><b>'+E(x.txt)+'</b><small>'+E(x.why)+'</small></div></div>';
-        }).join("")+'</div>'+
-        '<div class="rt-card" style="font-size:12.5px;color:var(--muted);line-height:1.6">'+
-        '이 줄들도 <b>동네 칸에는 주소가 들어갑니다</b> — 좌표는 채워집니다. '+
-        '다만 지역 칸은 함부로 안 바꿉니다. DB 등록 창의 <b>📍 주소로 찾기</b> 로 한 건씩 잡아 주세요.</div>'
-      : "";
-    q("rtTidyB").innerHTML=
-      '<div class="notice" style="margin-bottom:12px">지역 칸에 적힌 <b>주소를 지우지 않고 동네 칸으로 옮깁니다</b>. '+
-      '그러면 <b>📍 좌표 채우기</b> 가 이 줄들을 집어 갑니다. 고객 정보·단계·약속은 건드리지 않습니다.</div>'+
-      (moved.length
-        ? '<div class="rt-h">지역 칸까지 바로잡히는 것 '+moved.length+'건</div><div class="rt-card">'+
-          moved.map(function(x){
-            return '<div class="rt-row"><div class="rt-no">📮</div>'+
-              '<div class="rt-who"><b>'+E(x.txt)+'</b>'+
-              '<small>동네 칸으로 옮기고, 지역은 「<b>'+E(x.std)+'</b>」'+(jong(x.std)?" 으":" 로")+'로 바꿉니다'+
-              (x.sido?' · '+E(x.sido):"")+'</small></div></div>';
-          }).join("")+'</div>'
-        : '')+tail;
-    q("rtTidyGo").classList.remove("hidden");
-    q("rtTidyGo").onclick=function(){ apply() };
-    q("rtTidy2").classList.add("open");
-  }
-
-  function apply(){
-    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="옮기는 중…";
-    var j=0, ok=0, no=0;
-    (function run(){
-      if(j>=plan.length){
-        q("rtTidy2").classList.remove("open");
-        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
-        say(ok+"건을 동네 칸으로 옮겼습니다. 이제 <b>📍 좌표 채우기</b> 를 누르세요."+
-            (no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),8000);
-        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
-        else render();
-        return;
-      }
-      var x=plan[j++], patch={addr:x.txt};
-      if(x.std){ patch.region=x.std; if(HAS_STD){ patch.sigungu=x.std; if(x.sido)patch.sido=x.sido } }
-      sb.from("dbs").update(patch).eq("id",x.d.id).then(function(r){
-        if(r&&r.error)no++; else ok++;
-      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
-    })();
-  }
-}
-
-/* ── 지역 이름 정리 ─────────────────────────────────────────────
-   「순천」·「순천시」로 갈라져 적힌 것을 카카오가 정한 한 이름으로 모읍니다.
-   바꾸기 전에 무엇이 어떻게 바뀌는지 먼저 보여 주고, 누르면 그때 씁니다.
-   지금 고른 담당자의 것만 건드립니다. */
-function tidyRegions(){
-  if(!KEY){ keyPanel(true); return }
-  var owner=q("rtOwner").value||"";
-  var rows=[];
-  dbs.forEach(function(d){
-    if(owner&&d.assigned_to!==owner)return;
-    if(!regionText(d.region))return;
-    rows.push(d);
-  });
-  if(!rows.length){ say("정리할 지역이 없습니다."); return }
-
-  var groups={};
-  rows.forEach(function(d){
-    var k=regionText(d.region), nm=String(d.region||"").trim();
-    if(!groups[k])groups[k]={key:k,rows:[],names:{},std:"",sido:"",why:""};
-    var g=groups[k];
-    g.rows.push(d);
-    g.names[nm]=(g.names[nm]||0)+1;
-    /* 이미 카카오로 확인된 줄이 있으면 그 이름을 쓴다 — 단, 같은 지역일 때만 */
-    if(d.sigungu&&!g.std&&regionText(d.sigungu)===k){ g.std=d.sigungu; g.sido=d.sido||"" }
-  });
-
-  var keys=Object.keys(groups), i=0;
-  say("지역 "+keys.length+"곳을 카카오에 확인하는 중입니다…",5000);
-  (function step(){
-    if(i>=keys.length)return show();
-    var g=groups[keys[i++]];
-    if(g.std)return step();
-    /* 가장 많이 쓰인 표기로 물어본다 */
-    var seed=Object.keys(g.names).sort(function(a,b){return g.names[b]-g.names[a]})[0];
-    resolvePlace(seed,"").then(function(p){
-      /* ★ 여기가 중요합니다 — 카카오가 돌려준 시·군·구가 원래 적힌 지역과
-         다른 데를 가리키면 <b>절대 바꾸지 않습니다.</b> 「학동」처럼 전국에
-         여러 개인 이름을 넣으면 엉뚱한 시가 나옵니다. 이 도구는 표기만
-         통일하는 것이지 지역 자체를 바꾸는 것이 아닙니다. */
-      if(p&&p.sigungu){
-        if(regionText(p.sigungu)===g.key){ g.std=p.sigungu; g.sido=p.sido||"" }
-        else g.why="카카오는 「"+p.sigungu+"」라고 답했습니다 — 적힌 지역과 달라서 그대로 둡니다";
-      }else{
-        g.why="카카오가 이 이름을 못 찾았습니다";
-      }
-    }).catch(function(){ g.why="확인하지 못했습니다" })
-      .then(function(){ setTimeout(step,220) });
-  })();
-
-  function show(){
-    var plan=[], skip=[];
-    keys.forEach(function(k){
-      var g=groups[k];
-      if(!g.std){ if(g.why)skip.push(g); return }
-      var chg=g.rows.filter(function(d){
-        if(String(d.region||"").trim()!==g.std)return true;
-        return HAS_STD&&!d.sigungu;
-      });
-      if(chg.length)plan.push({g:g,rows:chg});
-    });
-    tidyModal();
-    var who=owner?(function(){try{return pname(owner)}catch(e){return "선택한 담당자"}})():"전체 담당자";
-    var tail=skip.length
-      ? '<div class="rt-h">그대로 두는 것</div><div class="rt-card">'+skip.map(function(g){
-          return '<div class="rt-row"><div class="rt-no">✋</div>'+
-            '<div class="rt-who"><b>'+E(Object.keys(g.names).join(" · "))+'</b>'+
-            '<small>'+E(g.why)+'</small></div>'+
-            '<div class="rt-act"><span class="badge gray">'+g.rows.length+'건</span></div></div>';
-        }).join("")+'</div>'+
-        '<div class="rt-card" style="font-size:12.5px;color:var(--muted);line-height:1.6">'+
-        '이 도구는 <b>같은 지역의 표기만</b> 통일합니다. 적힌 지역과 다른 데가 나오면 손대지 않습니다 — '+
-        '「학동」처럼 전국에 여러 개인 이름은 엉뚱한 시로 바뀔 수 있기 때문입니다. '+
-        '이런 줄은 DB 등록 창에서 <b>📍 주소로 찾기</b> 로 한 건씩 잡아 주세요.</div>'
-      : "";
-    if(!plan.length){
-      q("rtTidyB").innerHTML='<div class="notice">바꿀 것이 없습니다 — '+E(who)+
-        ' 의 지역 이름은 이미 하나로 맞아 있습니다.</div>'+tail;
-      q("rtTidyGo").classList.add("hidden");
-    }else{
-      var total=plan.reduce(function(a,p){return a+p.rows.length},0);
-      q("rtTidyB").innerHTML=
-        '<div class="notice" style="margin-bottom:12px"><b>'+E(who)+'</b> 의 DB '+total+'건의 <b>지역</b> 칸을 '+
-        '아래 이름으로 바꿉니다. 고객 정보·단계·약속은 건드리지 않습니다.</div>'+
-        '<div class="rt-card">'+plan.map(function(p){
-          var froms=Object.keys(p.g.names).filter(function(n){return n!==p.g.std});
-          return '<div class="rt-row">'+
-            '<div class="rt-no">🏷</div>'+
-            '<div class="rt-who"><b>'+E(froms.length?froms.join(" · "):p.g.std)+'</b>'+
-              '<small>지역 칸에 「<b>'+E(p.g.std)+'</b>」'+(jong(p.g.std)?" 이":" 가")+' 들어갑니다'+
-              (p.g.sido?' · '+E(p.g.sido):"")+'</small></div>'+
-            '<div class="rt-act"><span class="badge blue">'+p.rows.length+'건</span></div></div>';
-        }).join("")+'</div>'+tail;
-      q("rtTidyGo").classList.remove("hidden");
-      q("rtTidyGo").onclick=function(){ apply(plan) };
-    }
-    q("rtTidy2").classList.add("open");
-  }
-
-  function apply(plan){
-    var jobs=[];
-    plan.forEach(function(p){
-      p.rows.forEach(function(d){
-        var patch={region:p.g.std};
-        if(HAS_STD){ patch.sigungu=p.g.std; if(p.g.sido)patch.sido=p.g.sido }
-        jobs.push({id:d.id,patch:patch});
-      });
-    });
-    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="바꾸는 중…";
-    var j=0, ok=0, no=0;
-    (function run(){
-      if(j>=jobs.length){
-        q("rtTidy2").classList.remove("open");
-        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
-        say(ok+"건을 정리했습니다."+(no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),5000);
-        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
-        else render();
-        return;
-      }
-      var t=jobs[j++];
-      sb.from("dbs").update(t.patch).eq("id",t.id).then(function(r){
-        if(r&&r.error)no++; else ok++;
-      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
-    })();
-  }
-}
 function tidyModal(){
   styles();
   if(q("rtTidy2"))return;
