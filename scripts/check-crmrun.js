@@ -54,8 +54,14 @@ var DBS=[D('d1','순천','TA'),D('d2','순천시','미접촉'),D('d3','전남 �
  D('d7','광양시','계약완료',{contracted_at:'2026-08-05'}),
  D('d8','광양','증권전달',{contracted_at:'2025-09-05',policy_sent_at:'2025-09-20'}),
  D('d9','','계약완료'),D('d10','서울특별시 강남구','TA'),
- D('d11','순천시','계약완료',{contracted_at:'2026-08-25'})];
-if(MIG)DBS.forEach(function(d){ d.addr='';d.lat=null;d.lng=null;
+ D('d11','순천시','계약완료',{contracted_at:'2026-08-25'}),
+ /* 지역 칸에 주소가 통째로 든 줄 — 지금은 자기 도시에 안 뜬다 */
+ D('d12','여수시 조례동 343 근처(자택)','TA'),
+ D('d13','학동 근처(자택)','TA'),            /* 「동구」로 바뀌려 하는 자리 — 손대면 안 된다 */
+ D('d14','순천시 생목동','TA',{addr:'이미 적어 둔 동네'}),
+ D('d15','동구 어딘가(자택)','TA'),        /* 한 글자 가드만 막는 자리 — 맨 앞이긴 하다 */
+ D('d16','조례동 순천 시청 앞(자택)','TA')]; /* 맨 앞 가드만 막는 자리 — 이름은 두 글자다 */
+if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';d.lat=null;d.lng=null;
   d.next_appt_place=null;d.next_appt_lat=null;d.next_appt_lng=null;
   d.region_code=null;d.sido=null;d.sigungu=null;d.dong=null;d.followup=null });
 var CALLS=[{id:'c1',db_id:'d5',created_by:'u1',result:'부재',call_at:'2026-09-01T01:00:00Z',appointment_at:null,memo:''},
@@ -81,10 +87,22 @@ function B(tbl){
      if(k==='in'&&f&&rows.length&&f in rows[0])rows=rows.filter(function(r){return (v||[]).indexOf(r[f])>=0});
      return b } });
   b.single=b.maybeSingle=function(){ one=true; return b };
+  /* <b>쓰면 실제로 바뀐다.</b> 안 그러면 「누르기 전에는 안 바뀐다」 같은
+     단정을 아예 잴 수 없다 — 미리 바꿔 버려도 화면이 똑같아 알람이
+     안 울린다 (8번). rows 는 원본 객체를 가리키므로 고치면 남는다. */
+  var op='', pay=null;
   ['insert','update','upsert','delete'].forEach(function(k){ b[k]=function(p){
-    err=miss(tbl,p?Object.keys(Array.isArray(p)?(p[0]||{}):p):[]); return b } });
-  b.then=function(res,rej){ return Promise.resolve(
-    err?{data:null,error:err}:{data:one?(rows[0]||null):rows,error:null}).then(res,rej) };
+    err=miss(tbl,p?Object.keys(Array.isArray(p)?(p[0]||{}):p):[]);
+    op=k; pay=p; return b } });
+  b.then=function(res,rej){
+    if(!err&&op==='update'&&pay){ rows.forEach(function(r){ for(var k in pay)r[k]=pay[k] }) }
+    if(!err&&(op==='upsert'||op==='insert')&&pay&&!Array.isArray(pay)){
+      var all=T[tbl]||(T[tbl]=[]), hit=null;
+      all.forEach(function(r){ if(r.key!==undefined&&r.key===pay.key)hit=r });
+      if(hit){ for(var k2 in pay)hit[k2]=pay[k2] } else all.push(pay);
+    }
+    return Promise.resolve(
+      err?{data:null,error:err}:{data:one?(rows[0]||null):rows,error:null}).then(res,rej) };
   b.catch=function(f){ return b.then(function(x){return x},f) };
   return b;
 }
@@ -106,6 +124,44 @@ window.supabase={createClient:function(){ return {
 }}};
 })();`;
 
+
+/* ── 카카오 지도 견본 ─────────────────────────────────────────────
+   진짜 dapi.kakao.com 은 이 통에서 못 닿습니다. 그런데 <b>가드가 실제로
+   도는지</b>는 카카오가 무어라 답하는지에 달려 있어, 안 세우면 그 자리를
+   못 잽니다. 그래서 답을 우리가 정하는 견본을 세웁니다.
+
+     「여수시 …」  → 카카오도 여수시   (글 안에 이름이 있다 → 받아들임)
+     「학동」      → 카카오는 광주 동구 (글 안에 없다 → 손대면 안 됨)      */
+const KAKAO_STUB = `
+window.kakao=window.kakao||{};kakao.maps=kakao.maps||{};
+kakao.maps.load=function(cb){cb&&cb()};
+kakao.maps.services={
+  Status:{OK:'OK',ZERO_RESULT:'ZERO_RESULT'},
+  Geocoder:function(){
+    this.addressSearch=function(q,cb){
+      var t=String(q||'').replace(/\\s+/g,'');
+      if(t.indexOf('여수')>=0)  return cb([{y:34.760,x:127.662,address_name:q}],'OK');\n      if(t.indexOf('동구')>=0)  return cb([{y:35.146,x:126.923,address_name:q}],'OK');
+      if(t.indexOf('학동')>=0)  return cb([{y:35.146,x:126.923,address_name:q}],'OK');
+      if(t.indexOf('순천')>=0)  return cb([{y:34.950,x:127.487,address_name:q}],'OK');
+      return cb([],'ZERO_RESULT');
+    };
+    this.coord2RegionCode=function(lng,lat,cb){
+      var v;
+      if(Math.abs(lat-34.760)<0.01) v={region_1depth_name:'전라남도',region_2depth_name:'여수시',region_3depth_name:'조례동',code:'4613010100'};
+      else if(Math.abs(lat-35.146)<0.01) v={region_1depth_name:'광주광역시',region_2depth_name:'동구',region_3depth_name:'학동',code:'2911010700'};
+      else v={region_1depth_name:'전라남도',region_2depth_name:'순천시',region_3depth_name:'생목동',code:'4615010600'};
+      v.region_type='B'; cb([v],'OK');
+    };
+  },
+  Places:function(){ this.keywordSearch=function(q,cb){ cb([],'ZERO_RESULT') } }
+};
+kakao.maps.Map=function(){this.setBounds=function(){};this.relayout=function(){}};
+kakao.maps.LatLng=function(a,b){this.a=a;this.b=b};
+kakao.maps.LatLngBounds=function(){this.extend=function(){}};
+kakao.maps.CustomOverlay=function(){this.setMap=function(){}};
+kakao.maps.Polyline=function(){this.setMap=function(){}};
+`;
+
 /* 우리가 낸 에러만 셉니다 — 견본이 막아 둔 바깥 주소는 에러가 아닙니다 */
 const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|204/i.test(x));
 
@@ -121,7 +177,9 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   const P = srv.address().port;
   const br = await chromium.launch();
 
-  const open = async (mig) => {
+  /* kakao=false 면 카카오가 거절한 것과 같은 꼴이 된다 — [9] 가 그것을 잰다.
+     kakao=true 면 견본 SDK 가 붙어 지오코딩이 실제로 돈다 — [10] 이 그것을 쓴다. */
+  const open = async (mig, kakao) => {
     const ctx = await br.newContext(), pg = await ctx.newPage();
     const errs = [], logs = [];
     pg.on('pageerror', e => errs.push(String(e.message || e)));
@@ -130,7 +188,8 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
       const u = r.request().url();
       if (/supabase-js@2/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: STUB });
       if (/pretendard/.test(u))   return r.fulfill({ contentType: 'text/css', body: '' });
-      if (/dapi\.kakao\.com/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: '' });
+      if (/dapi\.kakao\.com/.test(u)) return kakao ? r.fulfill({ contentType: 'text/javascript', body: KAKAO_STUB })
+                                                    : r.fulfill({ status: 401, contentType: 'application/json', body: '{"errorType":"AccessDeniedError"}' });
       if (u.startsWith('http://localhost:' + P)) return r.continue();
       if (/^https?:/.test(u)) return r.fulfill({ status: 204, body: '' });
       return r.continue();
@@ -148,7 +207,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
     sel, { timeout: 15000 });
 
   /* ─── 마이그레이션을 안 돌린 서버 ─────────────────────────── */
-  let { ctx, pg, errs, logs } = await open(false);
+  let { ctx, pg, errs, logs } = await open(false, false);
 
   head('[1] 마이그레이션을 <안 돌린> 상태에서도 원래 화면이 그대로 돈다');
   const g = await pg.evaluate(() => { const v = n => { try { return eval(n) } catch (e) { return null } };
@@ -222,7 +281,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   await ctx.close();
 
   /* ─── 마이그레이션을 돌린 서버 ────────────────────────────── */
-  ({ ctx, pg, errs, logs } = await open(true));
+  ({ ctx, pg, errs, logs } = await open(true, false));
 
   head('[7] 마이그레이션을 <돌린> 뒤에는 스스로 켠다');
   is(!logs.some(l => /칸이 없습니다/.test(l)), '「칸이 없습니다」를 <더는 안 적는다>');
@@ -274,6 +333,52 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
      '막히는 자리 <둘>을 짚는다 — 도메인 등록 · 카카오맵 켜기');
   is(!/키를 다시 만/.test(nokey) || /다시 만들 필요는 없/.test(nokey),
      '<키를 다시 만들라고 하지 않는다> — 키는 멀쩡한데 헛수고를 시키는 자리다');
+
+  await ctx.close();
+
+  /* ─── 카카오가 답하는 서버 ─────────────────────────────────── */
+  ({ ctx, pg, errs, logs } = await open(true, true));
+
+  head('[10] 지역 칸에 든 <주소를 살린다> — 지우지 않고 옮긴다');
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => !!document.getElementById('rtAddr'), { timeout: 20000 });
+  const before = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const f = id => (v('dbs') || []).filter(d => d.id === id)[0] || {};
+    return { d12: f('d12'), d13: f('d13'), d14: f('d14') };
+  });
+  await pg.evaluate(() => document.getElementById('rtAddr').click());
+  const plan = await pg.waitForFunction(() => {
+    const m = document.getElementById('rtTidy2');
+    if (!m || !m.classList.contains('open')) return null;
+    const b = document.getElementById('rtTidyB');
+    return b && b.innerText.length > 0 ? b.innerText : null;
+  }, { timeout: 25000 }).then(h => h.jsonValue(), () => '');
+
+  is(/여수시 조례동/.test(plan), '지역 칸에 <주소가 든 줄>을 찾아냈다');
+  is(/여수시/.test(plan.split('그대로 두는 것')[0] || ''),
+     '카카오가 답한 <「여수시」로 지역을 바로잡겠다>고 미리 보여 준다');
+  /* ★ 여수가 순천시로 바뀌려 했던 그 가드 — 「학동」은 전국에 여러 개다 */
+  const kept = plan.split('그대로 두는 것')[1] || '';
+  is(/학동/.test(kept) && /동구/.test(kept),
+     '<「학동 근처」를 손대지 않는다> — 「동구」는 광역시마다 있어 한 글자로 겹치면 다 통과해 버린다');
+  is(!/생목동/.test(plan),
+     '<이미 동네 칸이 적힌 줄은 건드리지 않는다> — 사람이 적어 둔 것을 안 덮는다');
+  /* 가드 둘을 <b>따로</b> 잰다. 한 자리만 재면 다른 가드가 대신 막아 주어,
+     하나를 빼도 빨간불이 안 켜진다 — 안 울리는 알람이 된다 (8번). */
+  is(/동구 어딘가/.test(kept) && /여러 시에 다 있는/.test(kept),
+     '① <한 글자 이름은 안 쓴다> — 「동구」는 광역시마다 있다');
+  is(/조례동 순천/.test(kept) && /시작하지 않습니다/.test(kept),
+     '② <맨 앞에 있어야 이름이다> — 가운데서 겹친 글자는 도시 이름이 아니다');
+
+  const after = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    return ((v('dbs') || []).filter(d => d.id === 'd12')[0] || {}).addr || '';
+  });
+  is(!after && !before.d12.addr,
+     '<누르기 전에는 아무것도 안 바뀐다> — 먼저 보여 주고, 누르면 그때 씁니다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 
   await ctx.close(); await br.close(); srv.close();
   console.log('\n──────────────────────────────');

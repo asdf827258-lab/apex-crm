@@ -880,6 +880,7 @@ function wrap(){
       '<button class="btn btn-light btn-sm" id="rtHome">🏠 출발지</button>'+
       '<button class="btn btn-light btn-sm" id="rtFill">📍 좌표 채우기</button>'+
       '<button class="btn btn-light btn-sm" id="rtTidy">🏷 지역 정리</button>'+
+      '<button class="btn btn-light btn-sm" id="rtAddr">📮 주소를 동네 칸으로</button>'+
       '<span class="rt-sp"></span>'+
       '<button class="btn btn-light btn-sm" id="rtKey">키 설정</button>'+
       '<button class="btn btn-dark btn-sm" id="rtX">닫기</button>'+
@@ -896,6 +897,7 @@ function wrap(){
   q("rtHome").onclick=setHome;
   q("rtFill").onclick=fillCoords;
   q("rtTidy").onclick=tidyRegions;
+  q("rtAddr").onclick=addrMove;
   q("rtKey").onclick=function(){ keyPanel(true) };
   document.addEventListener("keydown",function(e){
     if(e.key==="Escape"&&w.classList.contains("on")) w.classList.remove("on");
@@ -1338,6 +1340,122 @@ function fillCoords(){
   })();
 }
 
+/* ── 지역 칸에 주소가 통째로 들어간 줄을 살린다 ──────────────────
+   지역 칸은 자유 입력이라 「여수시 ○○동 343 ○○ 근처(자택)」 처럼
+   <b>주소를 통째로</b> 적어 둔 줄이 있습니다. 그 사람들은 지금 두 번
+   손해를 봅니다 —
+
+     ① 「이 지역 열 명」에 <b>안 뜹니다.</b> 맨 이름이 「여수」가 아니라
+        「여수시○○동343…」 이라 여수 사람으로 안 세어집니다.
+     ② 그러면서 <b>주소는 이미 갖고 있습니다.</b> 제일 좋은 자료를
+        엉뚱한 칸에 넣어 두고 못 쓰고 있는 것입니다.
+
+   그래서 지우지 않고 <b>옮깁니다.</b> 적힌 글을 동네(addr) 칸으로 복사해
+   두면 📍 좌표 채우기가 그때부터 그 줄을 집어 갑니다.
+
+   ★ 지역 칸은 <b>확인된 것만</b> 바꿉니다. 카카오가 답한 시·군·구의 맨
+   이름이 <b>적힌 글 안에 실제로 들어 있을 때만</b> 씁니다. 「여수시 ○○동」
+   에 카카오가 「여수시」라고 답하면 글 안에 「여수」가 있으니 받아들이고,
+   「학동」처럼 전국에 여러 개인 이름은 카카오가 무어라 답하든 <b>손대지
+   않습니다.</b> 여수가 순천시로 바뀌려 했던 그 자리를 여기서도 막습니다.
+
+   이미 동네 칸이 채워진 줄은 건드리지 않습니다 — 사람이 적어 둔 것을
+   덮어쓰지 않습니다. */
+function looksAddr(t){
+  var k=regionText(t);
+  return !!k && (k.length>4 || /[0-9()]/.test(k));
+}
+function addrMove(){
+  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
+  if(!KEY){ keyPanel(true); return }
+  var owner=q("rtOwner").value||"";
+  var rows=dbs.filter(function(d){
+    if(owner&&d.assigned_to!==owner)return false;
+    if(String(d.addr||"").trim())return false;      /* 사람이 적어 둔 것을 안 덮는다 */
+    return looksAddr(d.region);
+  });
+  if(!rows.length){ say("지역 칸에 주소가 들어간 줄이 없습니다.",3500); return }
+
+  say("주소 "+rows.length+"건을 카카오에 확인하는 중입니다…",6000);
+  var i=0, plan=[], skip=[];
+  (function step(){
+    if(i>=rows.length)return show();
+    var d=rows[i++], txt=String(d.region||"").trim();
+    resolvePlace(txt,"").then(function(p){
+      var std="", why="";
+      if(p&&p.sigungu){
+        /* 카카오가 말한 시·군·구가 <b>적힌 글 맨 앞에</b> 실제로 있는가.
+           두 가지를 못 박습니다 —
+             ① 한 글자짜리는 안 씁니다. 「동구」의 맨 이름은 「동」이라,
+                글 아무 데나 「동」이 있으면 다 통과해 버립니다. 「학동
+                근처」가 「동구」로 바뀝니다. 광역시마다 동구·중구·남구가
+                있어 이것이 제일 위험합니다.
+             ② 맨 앞이어야 합니다. 도시 이름은 주소 앞에 옵니다 —
+                가운데서 우연히 겹친 글자는 이름이 아닙니다. */
+        var kk=regionText(p.sigungu);
+        if(kk.length<2) why="「"+p.sigungu+"」는 여러 시에 다 있는 이름이라 쓰지 않습니다";
+        else if(regionText(txt).indexOf(kk)===0) std=p.sigungu;
+        else why="카카오는 「"+p.sigungu+"」라고 답했는데 적힌 글이 그 이름으로 시작하지 않습니다";
+      }else if(!p){ why="카카오가 이 주소를 못 찾았습니다" }
+      else { why="시·군·구를 알 수 없습니다" }
+      plan.push({d:d,txt:txt,std:std,sido:(p&&p.sido)||"",why:why});
+    }).catch(function(){ plan.push({d:d,txt:txt,std:"",sido:"",why:"확인하지 못했습니다"}) })
+      .then(function(){ setTimeout(step,220) });
+  })();
+
+  function show(){
+    tidyModal();
+    q("rtTidyT").textContent="주소를 동네 칸으로";
+    var moved=plan.filter(function(x){return x.std}), kept=plan.filter(function(x){return !x.std});
+    var tail=kept.length
+      ? '<div class="rt-h">동네 칸에만 넣고 지역은 그대로 두는 것</div><div class="rt-card">'+
+        kept.map(function(x){
+          return '<div class="rt-row"><div class="rt-no">✋</div>'+
+            '<div class="rt-who"><b>'+E(x.txt)+'</b><small>'+E(x.why)+'</small></div></div>';
+        }).join("")+'</div>'+
+        '<div class="rt-card" style="font-size:12.5px;color:var(--muted);line-height:1.6">'+
+        '이 줄들도 <b>동네 칸에는 주소가 들어갑니다</b> — 좌표는 채워집니다. '+
+        '다만 지역 칸은 함부로 안 바꿉니다. DB 등록 창의 <b>📍 주소로 찾기</b> 로 한 건씩 잡아 주세요.</div>'
+      : "";
+    q("rtTidyB").innerHTML=
+      '<div class="notice" style="margin-bottom:12px">지역 칸에 적힌 <b>주소를 지우지 않고 동네 칸으로 옮깁니다</b>. '+
+      '그러면 <b>📍 좌표 채우기</b> 가 이 줄들을 집어 갑니다. 고객 정보·단계·약속은 건드리지 않습니다.</div>'+
+      (moved.length
+        ? '<div class="rt-h">지역 칸까지 바로잡히는 것 '+moved.length+'건</div><div class="rt-card">'+
+          moved.map(function(x){
+            return '<div class="rt-row"><div class="rt-no">📮</div>'+
+              '<div class="rt-who"><b>'+E(x.txt)+'</b>'+
+              '<small>동네 칸으로 옮기고, 지역은 「<b>'+E(x.std)+'</b>」'+(jong(x.std)?" 으":" 로")+'로 바꿉니다'+
+              (x.sido?' · '+E(x.sido):"")+'</small></div></div>';
+          }).join("")+'</div>'
+        : '')+tail;
+    q("rtTidyGo").classList.remove("hidden");
+    q("rtTidyGo").onclick=function(){ apply() };
+    q("rtTidy2").classList.add("open");
+  }
+
+  function apply(){
+    q("rtTidyGo").disabled=true; q("rtTidyGo").textContent="옮기는 중…";
+    var j=0, ok=0, no=0;
+    (function run(){
+      if(j>=plan.length){
+        q("rtTidy2").classList.remove("open");
+        q("rtTidyGo").disabled=false; q("rtTidyGo").textContent="이대로 바꾸기";
+        say(ok+"건을 동네 칸으로 옮겼습니다. 이제 <b>📍 좌표 채우기</b> 를 누르세요."+
+            (no?" "+no+"건은 권한이 없어 넘어갔습니다.":""),8000);
+        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
+        else render();
+        return;
+      }
+      var x=plan[j++], patch={addr:x.txt};
+      if(x.std){ patch.region=x.std; if(HAS_STD){ patch.sigungu=x.std; if(x.sido)patch.sido=x.sido } }
+      sb.from("dbs").update(patch).eq("id",x.d.id).then(function(r){
+        if(r&&r.error)no++; else ok++;
+      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
+    })();
+  }
+}
+
 /* ── 지역 이름 정리 ─────────────────────────────────────────────
    「순천」·「순천시」로 갈라져 적힌 것을 카카오가 정한 한 이름으로 모읍니다.
    바꾸기 전에 무엇이 어떻게 바뀌는지 먼저 보여 주고, 누르면 그때 씁니다.
@@ -1470,7 +1588,7 @@ function tidyModal(){
   m.className="modal"; m.id="rtTidy2";
   m.innerHTML=
     '<div class="modal-box" style="width:min(620px,100%)">'+
-      '<div class="modal-head"><h3>지역 이름 정리</h3><button class="close" id="rtTidyX">×</button></div>'+
+      '<div class="modal-head"><h3 id="rtTidyT">지역 이름 정리</h3><button class="close" id="rtTidyX">×</button></div>'+
       '<div class="modal-body" id="rtTidyB"></div>'+
       '<div class="modal-foot"><button class="btn btn-light" id="rtTidyC">그만두기</button>'+
         '<button class="btn btn-primary hidden" id="rtTidyGo">이대로 바꾸기</button></div>'+
