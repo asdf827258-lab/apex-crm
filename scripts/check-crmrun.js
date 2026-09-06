@@ -388,6 +388,9 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   await seen(pg, '#dbModal.open');
   await pg.evaluate(() => document.getElementById('dbAddrFind').click());
   await seen(pg, '#rtPick.open');
+  /* 손을 얹는 것은 80ms 뒤다. 그 전에 재면 얹든 안 얹든 똑같이 보여
+     이 자리를 아예 못 잰다 — 안 울리는 알람이 된다 (8번). */
+  await pg.waitForTimeout(400);
   const ways = await pg.evaluate(() => {
     const m = document.getElementById('rtPick');
     return { here: !!document.getElementById('rtPickHere'),
