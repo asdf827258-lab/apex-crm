@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>APEX DB · 업적관리 (교육매니저)</title>
+<title>APEX DB · 업적관리</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --blue:#3182F6; --blue-d:#1B64DA; --blue-l:#E8F3FF;
   --tx:#191F28; --tx2:#4E5968; --tx3:#8B95A1; --tx4:#B0B8C1;
-  --bg:#F9FAFB; --card:#fff; --grey:#F2F4F6; --grey2:#E5E8EB;
+  --bg:#F9FAFB; --grey:#F2F4F6; --grey2:#E5E8EB;
   --red:#F04452; --red-l:#FFEBEE; --green:#00B26B; --green-l:#E5F8F0;
-  --amber:#FF9500; --amber-l:#FFF4E0; --purple:#7C3AED; --purple-l:#F3EDFF;
-  --r:20px; --r2:14px; --r3:10px;
-  --sh:0 1px 3px rgba(0,0,0,.04); --sh2:0 6px 24px rgba(0,0,0,.08);
+  --amber:#FF9500; --amber-l:#FFF4E0; --purple:#7C3AED;
+  --r:18px; --r2:13px; --r3:10px; --sh:0 1px 3px rgba(0,0,0,.04);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -22,45 +22,36 @@ body{background:var(--bg);color:var(--tx);
   font-size:15px;line-height:1.5;letter-spacing:-.3px;-webkit-font-smoothing:antialiased}
 @media screen{body{font-feature-settings:"tnum"}}
 button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit;letter-spacing:-.3px}
-h1,h2,h3{letter-spacing:-.6px}
-
-header{background:#fff;padding:0 22px;height:60px;display:flex;align-items:center;gap:14px;
-  position:sticky;top:0;z-index:50;border-bottom:1px solid var(--grey)}
-header h1{margin:0;font-size:17px;font-weight:800;display:flex;align-items:center;gap:10px;white-space:nowrap}
-header h1 .mk{width:30px;height:30px;border-radius:9px;background:var(--blue);color:#fff;
-  display:grid;place-items:center;font-size:12px;font-weight:800}
-header h1 small{font-weight:500;color:var(--tx3);font-size:13px}
-header .sp{flex:1}
-header .today{font-size:13px;color:var(--tx3);font-weight:600}
+h2{letter-spacing:-.6px}
 
 nav{background:#fff;display:flex;gap:4px;padding:10px 14px;position:sticky;top:0;z-index:49;
-  border-bottom:1px solid var(--grey);overflow-x:auto;scrollbar-width:none}
+  border-bottom:1px solid var(--grey);overflow-x:auto;scrollbar-width:none;align-items:center}
 nav::-webkit-scrollbar{display:none}
-nav button{background:none;border:0;color:var(--tx3);padding:8px 14px;cursor:pointer;font-weight:700;font-size:14.5px;
+nav button.t{background:none;border:0;color:var(--tx3);padding:8px 14px;cursor:pointer;font-weight:700;font-size:14.5px;
   border-radius:10px;white-space:nowrap;transition:.12s}
-nav button:hover{background:var(--grey);color:var(--tx2)}
-nav button.on{background:var(--tx);color:#fff}
+nav button.t:hover{background:var(--grey);color:var(--tx2)}
+nav button.t.on{background:var(--tx);color:#fff}
+nav .sp{flex:1}
+nav .who{font-size:12.5px;color:var(--tx3);font-weight:600;white-space:nowrap}
 
 main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .page{display:none}.page.on{display:block;animation:fade .18s}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:20px;margin-bottom:14px}
-.card>h2{margin:0 0 14px;font-size:17px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:18px;margin-bottom:14px}
+.card>h2{margin:0 0 13px;font-size:16.5px;font-weight:800;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .card>h2 .sub{font-size:13px;font-weight:500;color:var(--tx3)}
 .card>h2 .sp{flex:1}
 
-/* KPI */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin-bottom:14px}
-.kpi{background:#fff;border-radius:var(--r2);padding:15px 16px;box-shadow:var(--sh)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border-radius:var(--r2);padding:14px 15px;box-shadow:var(--sh)}
 .kpi .l{font-size:12.5px;color:var(--tx3);font-weight:600}
-.kpi .v{font-size:23px;font-weight:800;margin-top:3px;letter-spacing:-1px}
-.kpi .v small{font-size:13px;font-weight:600;color:var(--tx3);margin-left:2px}
+.kpi .v{font-size:22px;font-weight:800;margin-top:2px;letter-spacing:-1px}
+.kpi .v small{font-size:12.5px;font-weight:600;color:var(--tx3);margin-left:2px}
 .kpi.pri{background:linear-gradient(135deg,#3182F6,#1B64DA);color:#fff}
 .kpi.pri .l{color:#cfe3ff}
 .kpi.warn .v{color:var(--red)} .kpi.ok .v{color:var(--green)}
 
-/* 버튼 */
 .btn{background:var(--grey);border:0;border-radius:var(--r3);padding:9px 14px;font-weight:700;font-size:14px;
   cursor:pointer;color:var(--tx2);transition:.12s;white-space:nowrap}
 .btn:hover{background:var(--grey2)}
@@ -68,538 +59,462 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .btn.dark{background:var(--tx);color:#fff}.btn.dark:hover{background:#000}
 .btn.gh{background:#fff;border:1px solid var(--grey2)}
 .btn.sm{padding:6px 10px;font-size:13px;border-radius:8px}
-.btn.red{background:var(--red-l);color:var(--red)}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
-/* 필터 */
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .filters select,.filters input[type=text]{background:#fff;border:1px solid var(--grey2);border-radius:10px;
   padding:8px 11px;font-weight:600;font-size:14px;outline:none}
 .filters select:focus,.filters input:focus{border-color:var(--blue)}
 .filters .sp{flex:1}
 
-/* 그리드(엑셀형) */
 .tw{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--grey2);background:#fff}
-table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1400px;font-size:14px}
+table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1340px;font-size:14px}
 table.gx th{background:var(--grey);color:var(--tx2);font-weight:700;font-size:12.5px;text-align:left;
-  padding:9px 10px;border-bottom:1px solid var(--grey2);position:sticky;top:0;z-index:5;white-space:nowrap}
+  padding:9px 10px;border-bottom:1px solid var(--grey2);white-space:nowrap}
 table.gx td{border-bottom:1px solid #F0F2F4;padding:0;vertical-align:middle}
 table.gx tr.tm td{background:linear-gradient(90deg,#EAF2FF,#F7FAFF);padding:9px 12px;font-weight:800;font-size:14.5px;
   color:var(--blue-d);border-bottom:1px solid #D8E6FF;border-top:1px solid #D8E6FF}
 table.gx tr.mb td{background:#FBFCFD;padding:7px 12px;font-weight:700;color:var(--tx);border-bottom:1px solid var(--grey2)}
-table.gx tr.mb .mname{font-size:14.5px}
 table.gx tr.mb .msum{font-weight:600;color:var(--tx3);font-size:12.5px;margin-left:8px}
 table.gx tr.r:hover td{background:#FAFCFF}
-table.gx tr.r.dim td{background:#FCFCFD;opacity:.62}
-table.gx tr.r.today td{background:#FFFBF0}
+table.gx tr.r.dim td{background:#FCFCFD;opacity:.6}
+table.gx tr.r.ro td{background:#FCFCFD}
 table.gx td input,table.gx td select{width:100%;border:0;background:transparent;padding:9px 10px;outline:none;
-  font-size:14px;font-weight:500;border-radius:0}
+  font-size:14px;font-weight:500}
 table.gx td input:focus,table.gx td select:focus{background-color:#EAF2FF;box-shadow:inset 0 0 0 2px var(--blue)}
+table.gx td input:disabled,table.gx td select:disabled{color:var(--tx2);opacity:1;-webkit-text-fill-color:var(--tx2)}
 table.gx td.n input{text-align:right;font-weight:700}
-table.gx td select{font-weight:700;cursor:pointer;appearance:none;text-align:left;padding-right:20px;
+table.gx td select{font-weight:700;cursor:pointer;appearance:none;padding-right:20px;
   background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23B0B8C1' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 7px center}
-select.s-진행중{color:var(--blue)} select.s-청약{color:var(--amber)} select.s-계약{color:var(--green)}
-select.s-보류{color:var(--tx3)} select.s-무산{color:var(--red)}
+table.gx td select:disabled{background-image:none;cursor:default}
+select.st-미접촉{color:var(--tx3)} select.st-TA{color:var(--amber)} select.st-AP{color:var(--blue)}
+select.st-PC{color:var(--blue)} select.st-CS{color:var(--blue-d)}
+select.st-계약완료{color:var(--green)} select.st-증권전달{color:var(--green)}
+select.cl-{color:var(--tx4)} select.cl-보류{color:var(--tx3)} select.cl-무산{color:var(--red)}
 select.f-소개받음,select.f-상담예약{color:var(--purple)} select.f-계약연결{color:var(--green)}
 select.f-미요청{color:var(--tx4)} select.f-요청함{color:var(--tx2)}
-select.p-전달완료{color:var(--green)} select.p-대기{color:var(--red)} select.p-해당없음{color:var(--tx4)}
-td.act{white-space:nowrap;padding:0 8px;text-align:right}
-td.act button{background:none;border:0;color:var(--tx4);cursor:pointer;font-size:13px;padding:6px 5px;font-weight:700;border-radius:6px}
-td.act button:hover{color:var(--red);background:var(--red-l)}
+select.dbt{color:#6D28D9;font-weight:700}
 tr.addr td{padding:6px 12px;background:#fff}
 tr.addr button{background:none;border:1px dashed var(--grey2);border-radius:8px;color:var(--tx3);
   padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
 tr.addr button:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-l)}
+.lock{color:var(--tx4);font-size:11px;font-weight:700;margin-left:6px}
 .dday{display:inline-block;font-size:11px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:2px}
 .dday.t{background:var(--amber-l);color:var(--amber)} .dday.o{background:var(--red-l);color:var(--red)}
 .empty{padding:40px;text-align:center;color:var(--tx3);font-weight:600;background:#fff;border-radius:var(--r2)}
 
-table.gx td select.dbt{color:#6D28D9;font-weight:700}
-.card>h2 .mnav{display:inline-flex;align-items:center;gap:2px;background:var(--grey);border-radius:11px;padding:3px}
-.card>h2 .mnav button{background:none;border:0;width:28px;height:28px;border-radius:8px;cursor:pointer;
-  color:var(--tx2);font-size:15px;font-weight:800}
-.card>h2 .mnav button:hover{background:#fff;color:var(--blue)}
-.card>h2 .mnav input{background:transparent;border:0;font-weight:800;width:112px;outline:none;text-align:center;font-size:15px}
 table.cx{width:100%;border-collapse:collapse;font-size:13.5px}
 table.cx th{background:var(--grey);color:var(--tx2);font-weight:700;font-size:12px;padding:8px 9px;
   border-bottom:1px solid var(--grey2);white-space:nowrap;text-align:right}
 table.cx th:first-child{text-align:left}
+table.cx.lt th{text-align:left} table.cx.lt th.n{text-align:right}
 table.cx td{padding:8px 9px;border-bottom:1px solid #F2F4F6;text-align:right;white-space:nowrap}
 table.cx td:first-child{text-align:left;font-weight:700}
 table.cx tr.sub td{background:#FBFCFD;color:var(--blue-d);font-weight:800;font-size:12.5px}
 table.cx tr.tot td{background:#F7F9FC;font-weight:800;border-top:1px solid var(--grey2)}
-table.cx.lt th{text-align:left}
-table.cx.lt th.n{text-align:right}
-table.cx .z{color:#D1D6DB}
-table.cx .g{color:var(--green);font-weight:800;font-size:12px}
-.bar{height:6px;border-radius:3px;background:var(--grey2);overflow:hidden;min-width:60px;display:inline-block;vertical-align:middle}
+table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-size:12px}
+.bar{height:6px;border-radius:3px;background:var(--grey2);overflow:hidden;display:inline-block;vertical-align:middle}
 .bar i{display:block;height:100%;background:var(--blue);border-radius:3px}
 
-/* 공유 */
+.mnav{display:inline-flex;align-items:center;gap:2px;background:var(--grey);border-radius:11px;padding:3px}
+.mnav button{background:none;border:0;width:28px;height:28px;border-radius:8px;cursor:pointer;color:var(--tx2);font-size:15px;font-weight:800}
+.mnav button:hover{background:#fff;color:var(--blue)}
+.mnav input{background:transparent;border:0;font-weight:800;width:112px;outline:none;text-align:center;font-size:15px}
+
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{background:#fff;border:1px solid var(--grey2);border-radius:999px;padding:8px 15px;font-weight:700;
   font-size:14px;cursor:pointer;transition:.12s;color:var(--tx2)}
 .chip:hover{border-color:var(--blue);color:var(--blue)}
 .chip.on{background:var(--tx);border-color:var(--tx);color:#fff}
-.prevbox{background:var(--grey);border-radius:var(--r2);padding:18px;display:flex;justify-content:center;overflow:auto}
-.prevbox canvas{max-width:100%;height:auto;box-shadow:var(--sh2);border-radius:12px;background:#fff}
+.prevbox{background:var(--grey);border-radius:var(--r2);padding:16px;display:flex;justify-content:center;overflow:auto}
+.prevbox canvas{max-width:100%;height:auto;box-shadow:0 6px 24px rgba(0,0,0,.08);border-radius:10px;background:#fff}
 .opt{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--tx2);font-weight:600}
 .opt label{display:flex;align-items:center;gap:6px;cursor:pointer}
 .opt input{width:17px;height:17px;accent-color:var(--blue)}
-
-/* 폼 */
-.f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-.f label{font-size:12.5px;font-weight:700;color:var(--tx2)}
-.f input,.f select,.f textarea{background:var(--grey);border:1px solid transparent;border-radius:10px;padding:10px 12px;
-  outline:none;font-weight:600}
-.f input:focus,.f select:focus,.f textarea:focus{background:#fff;border-color:var(--blue)}
-.f2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
-textarea{min-height:150px;resize:vertical;font-size:13.5px;line-height:1.6}
+.help{background:var(--blue-l);border-radius:var(--r2);padding:13px 15px;font-size:13.5px;color:var(--blue-d);
+  font-weight:600;line-height:1.65;margin-bottom:13px}
 .mut{color:var(--tx3);font-size:13px}
-.tbl{width:100%;border-collapse:collapse;font-size:14px}
-.tbl th{text-align:left;color:var(--tx3);font-size:12.5px;font-weight:700;padding:8px 10px;border-bottom:1px solid var(--grey2)}
-.tbl td{padding:10px;border-bottom:1px solid #F2F4F6}
-.tag{display:inline-block;background:var(--blue-l);color:var(--blue-d);font-size:12px;font-weight:800;
-  padding:2px 8px;border-radius:6px}
-
-/* 모달·토스트 */
-#mask{position:fixed;inset:0;background:rgba(0,0,0,.42);display:none;place-items:center;z-index:100;padding:20px}
-#mask.on{display:grid}
-#mbox{background:#fff;border-radius:var(--r);max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:24px;box-shadow:var(--sh2)}
-#mbox h3{margin:0 0 16px;font-size:18px}
-#mfoot{display:flex;gap:8px;justify-content:flex-end;margin-top:18px}
-#toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);background:var(--tx);color:#fff;
-  padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.22s;z-index:200}
+#toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--tx);color:#fff;
+  padding:11px 19px;border-radius:12px;font-weight:700;font-size:14px;opacity:0;pointer-events:none;transition:.22s;z-index:200}
 #toast.on{opacity:1;transform:translate(-50%,0)}
-.help{background:var(--blue-l);border-radius:var(--r2);padding:14px 16px;font-size:13.5px;color:var(--blue-d);
-  font-weight:600;line-height:1.65;margin-bottom:14px}
-.help b{font-weight:800}
+#gate{padding:60px 20px;text-align:center;color:var(--tx3);font-weight:600}
+#gate b{color:var(--tx)}
 </style>
 </head>
 <body>
 
-<!-- CRM 안에서는 바깥 화면이 제목을 그린다 — 자체 헤더 없음 -->
+<div id="gate">불러오는 중입니다…</div>
 
+<div id="app" style="display:none">
 <nav>
-  <button id="tab-board" class="on">현황판</button>
-  <button id="tab-db">DB 배정</button>
-  <button id="tab-share">카톡 보내기</button>
-  <button id="tab-team">팀 · 팀원</button>
-  <button id="tab-data">데이터</button>
+  <button class="t on" id="tab-board">현황판</button>
+  <button class="t" id="tab-db">DB 배정</button>
+  <button class="t" id="tab-share">카톡 보내기</button>
+  <div class="sp"></div>
+  <span class="who" id="who"></span>
+  <button class="btn gh sm" id="b-reload">↻ 새로 읽기</button>
 </nav>
 
 <main>
-
-<!-- ═══ 현황판 ═══ -->
 <section id="p-board" class="page on">
   <div class="kpis" id="kpis"></div>
   <div class="filters">
     <select id="f-month"></select>
     <select id="f-team"></select>
     <select id="f-mem"></select>
-    <select id="f-status">
-      <option value="">전체 상태</option>
-      <option value="진행중">진행중</option>
-      <option value="청약">청약</option>
-      <option value="계약">계약</option>
-      <option value="보류">보류</option>
-      <option value="무산">무산</option>
-      <option value="__live">진행중 + 청약 (살아있는 건)</option>
-      <option value="__policy">증권 미전달만</option>
+    <select id="f-stage">
+      <option value="">전체 단계</option>
+      <option value="__live">살아있는 건 (계약 전)</option>
+      <option value="__done">계약 이상</option>
+      <option value="__policy">증권 미전달</option>
+      <option value="__off">보류 · 무산</option>
     </select>
-    <input type="text" id="f-q" placeholder="고객명 · 지역 · 비고 검색" style="width:210px">
+    <input type="text" id="f-q" placeholder="이름 · 지역 · 비고 검색" style="width:200px">
     <div class="sp"></div>
-    <button class="btn pri" id="b-add">+ 진행건 추가</button>
     <button class="btn gh" id="b-xls">엑셀 내보내기</button>
   </div>
   <div id="board"></div>
 </section>
 
-<!-- ═══ DB 배정 (월별) ═══ -->
 <section id="p-db" class="page">
   <div class="card">
     <h2>
-      <span class="mnav">
-        <button id="db-prev" title="이전 달">&lsaquo;</button>
-        <input type="month" id="db-month">
-        <button id="db-next" title="다음 달">&rsaquo;</button>
-      </span>
-      <span class="sub">DB 배정일 기준</span>
-      <span class="sp"></span>
+      <span class="mnav"><button id="db-prev">&lsaquo;</button><input type="month" id="db-month"><button id="db-next">&rsaquo;</button></span>
+      <span class="sub">DB 배정일 기준</span><span class="sp"></span>
       <button class="btn gh" id="b-db-xls">이 달 엑셀 내보내기</button>
-      <button class="btn gh" id="b-db-txt">텍스트 복사</button>
     </h2>
     <div class="kpis" id="db-kpi" style="margin-bottom:0"></div>
   </div>
-  <div class="card">
-    <h2>팀원 &times; DB종류 <span class="sub">배정 건수 · 괄호는 계약 성사</span></h2>
-    <div id="db-cross"></div>
-  </div>
-  <div class="card">
-    <h2>DB종류별 성과</h2>
-    <div id="db-bytype"></div>
-  </div>
-  <div class="card">
-    <h2>명단 <span class="sub">이 달 배정된 DB 전체</span></h2>
-    <div id="db-list"></div>
-  </div>
+  <div class="card"><h2>팀원 &times; DB종류 <span class="sub">배정 건수 · 괄호는 계약</span></h2><div id="db-cross"></div></div>
+  <div class="card"><h2>DB종류별 성과</h2><div id="db-bytype"></div></div>
+  <div class="card"><h2>명단 <span class="sub">이 달 배정된 DB 전체</span></h2><div id="db-list"></div></div>
 </section>
 
-<!-- ═══ 카톡 보내기 ═══ -->
 <section id="p-share" class="page">
   <div class="card">
     <h2>팀 선택 <span class="sub">팀장에게 보낼 팀을 고르세요</span></h2>
     <div class="chips" id="share-chips"></div>
-    <div style="height:14px"></div>
+    <div style="height:12px"></div>
     <div class="opt">
-      <label><input type="checkbox" id="o-dead"> 무산·보류 포함</label>
-      <label><input type="checkbox" id="o-db"> DB종류 표시</label>
-      <label><input type="checkbox" id="o-memo" checked> 비고 칸 표시</label>
+      <label><input type="checkbox" id="o-off"> 보류·무산 포함</label>
+      <label><input type="checkbox" id="o-db" checked> DB종류 표시</label>
+      <label><input type="checkbox" id="o-memo" checked> 비고 표시</label>
       <label><input type="checkbox" id="o-money" checked> 예상업적 표시</label>
       <label><input type="checkbox" id="o-empty"> 진행건 없는 팀원도 표시</label>
     </div>
   </div>
-
   <div class="card">
-    <h2>미리보기
-      <span class="sp"></span>
+    <h2>미리보기<span class="sp"></span>
       <button class="btn dark" id="b-copy">📋 이미지 복사 → 카톡 붙여넣기</button>
       <button class="btn gh" id="b-png">PNG 저장</button>
       <button class="btn gh" id="b-txt">텍스트 복사</button>
-      <button class="btn gh" id="b-all">전체 팀 PNG 저장</button>
     </h2>
-    <div class="help">
-      <b>카톡 보내는 법</b> — [이미지 복사]를 누르고 카카오톡 대화창에서 <b>Ctrl+V</b> 후 Enter.
-      복사가 막히면 [PNG 저장] → 다운로드 폴더 파일을 카톡 창에 끌어다 놓으세요.
-    </div>
+    <div class="help"><b>카톡 보내는 법</b> — [이미지 복사]를 누르고 카카오톡 대화창에서 <b>Ctrl+V</b> 후 Enter.
+      복사가 막히면 [PNG 저장] 후 그 파일을 카톡 창에 끌어다 놓으세요.</div>
     <div class="prevbox" id="prev"></div>
   </div>
 </section>
-
-<!-- ═══ 팀 · 팀원 ═══ -->
-<section id="p-team" class="page">
-  <div class="card">
-    <h2>팀 <span class="sp"></span>
-      <button class="btn pri sm" id="b-team-add">+ 팀 추가</button>
-    </h2>
-    <div id="team-list"></div>
-  </div>
-  <div class="card">
-    <h2>팀원 <span class="sp"></span>
-      <button class="btn gh sm" id="b-import-mem">팀업적관리에서 불러오기</button>
-      <button class="btn gh sm" id="b-mem-bulk">명단 한번에 넣기</button>
-      <button class="btn pri sm" id="b-mem-add">+ 팀원 추가</button>
-    </h2>
-    <div id="mem-list"></div>
-  </div>
-  <div class="card">
-    <h2>DB 종류 <span class="sub">현황판·DB배정 탭에서 고르는 목록</span><span class="sp"></span>
-      <button class="btn pri sm" id="b-dbt-edit">종류 편집</button>
-    </h2>
-    <div class="chips" id="dbt-list"></div>
-  </div>
-</section>
-
-<!-- ═══ 데이터 ═══ -->
-<section id="p-data" class="page">
-  <div class="card">
-    <h2>엑셀에서 붙여넣기 <span class="sub">엑셀에서 범위 복사 → 아래에 Ctrl+V → [가져오기]</span></h2>
-    <div class="help">
-순서 : <b>팀원 · DB배정일 · DB종류 · 지역 · 이름 · 날짜 · 예상업적 · 계약유무 · 가족소개진행 · 증권전달 · 비고</b><br>
-      첫 줄에 제목이 있으면 <b>제목을 읽어서 순서가 달라도 맞춰 넣습니다</b>(팀원·배정일·DB·지역·이름·날짜·예상·계약·소개·증권·비고).
-      없는 팀원 이름은 첫 번째 팀에 자동 등록됩니다.
-    </div>
-    <textarea id="paste" placeholder="김상담	2026-09-02	보장분석 랜딩	성남 분당	박○○	2026-09-10	150000	진행중	요청함	대기	소개 2명 예정"></textarea>
-    <div class="row" style="margin-top:10px">
-      <button class="btn pri" id="b-import">가져오기</button>
-      <button class="btn gh" id="b-sample">예시 데이터 넣어보기</button>
-    </div>
-  </div>
-  <div class="card">
-    <h2>백업 · 복원</h2>
-    <div class="row">
-      <button class="btn gh" id="b-backup">백업 파일 저장 (.json)</button>
-      <button class="btn gh" id="b-restore">백업 파일 불러오기</button>
-      <button class="btn gh" id="b-xls2">엑셀 내보내기 (.csv)</button>
-      <div class="sp" style="flex:1"></div>
-      <button class="btn gh" id="b-clear-rows">진행건만 비우기</button>
-      <button class="btn red" id="b-clear">전체 삭제</button>
-    </div>
-    <div class="mut" style="margin-top:10px">데이터는 이 PC 브라우저에 저장됩니다. 다른 PC로 옮길 땐 백업 파일을 쓰세요.</div>
-  </div>
-</section>
-
 </main>
+</div>
 
-<div id="mask"><div id="mbox"><h3 id="mtitle"></h3><div id="mbody"></div><div id="mfoot"></div></div></div>
 <div id="toast"></div>
-<input type="file" id="filepick" accept=".json" style="display:none">
 
 <script>
 /* ============================================================
-   APEX 계약진행 관리 — 단일 파일
+   APEX DB · 업적관리 — dbs 표를 그대로 읽고 씁니다.
+   자료는 서버에 있습니다. 누가 열어도 같은 것을 봅니다.
+   권한은 서버(RLS)가 정합니다 — 이 화면은 그 결과를 보여줄 뿐입니다.
    ============================================================ */
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const uid = () => Math.random().toString(36).slice(2, 9);
 const won = n => (+n || 0).toLocaleString('ko-KR');
-const KEY = 'apex_pipeline_v1';
+const ym = d => (d || '').slice(0, 7);
 
-const STATUS = ['진행중', '청약', '계약', '보류', '무산'];
+const SB_URL = 'https://miakdhxtqofpndtlyzxa.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU';
+
+const STAGES = ['미접촉', 'TA', 'AP', 'PC', 'CS', '계약완료', '증권전달'];
+const CLOSED = ['', '보류', '무산'];
 const FAMILY = ['미요청', '요청함', '소개받음', '상담예약', '계약연결'];
-const POLICY = ['해당없음', '대기', '전달완료'];
-const DBTYPES0 = ['개인개척', '소개', '기존고객', '보장분석 랜딩', '보험금비서 랜딩', '리크루팅',
-  '인바운드', '온라인DB', 'TM DB', '제휴 · 이벤트', '기타'];
+const ADMINS = ['admin', 'owner', 'master'];
 
-let DB = { teams: [], members: [], rows: [], dbtypes: null };
-let FILTER = { month: '', team: '', mem: '', status: '', q: '' };
-let SHARE = { team: '' };
-let DBM = '';   /* DB 배정 탭 기준 월 */
+let sb = null;
+let ME = { id: '', name: '', role: 'member', team_id: null };
+let TEAMS = [], MEMBERS = [], ROWS = [];
+let FILTER = { month: '', team: '', mem: '', stage: '', q: '' };
+let SHARE = { team: '' }, DBM = '';
 
-function load() {
-  try { const r = localStorage.getItem(KEY); if (r) DB = Object.assign(DB, JSON.parse(r)); } catch (e) { }
-  if (!DB.teams.length) DB.teams = [{ id: 't1', name: '1팀', leader: '' }];
-  if (!DB.dbtypes || !DB.dbtypes.length) DB.dbtypes = DBTYPES0.slice();
-  DB.members.forEach(m => { if (!DB.teams.some(t => t.id === m.tid)) m.tid = DB.teams[0].id; });
-  DB.rows.forEach(r => { if (r.dbtype == null) r.dbtype = DB.dbtypes[0]; if (r.dbdate == null) r.dbdate = ''; });
-}
-function save() { try { localStorage.setItem(KEY, JSON.stringify(DB)); } catch (e) { toast('저장 실패 · 용량 확인'); } }
-
-const team = id => DB.teams.find(t => t.id === id);
-const mem = id => DB.members.find(m => m.id === id);
-const teamName = id => (team(id) || {}).name || '미배정';
-const memName = id => (mem(id) || {}).name || '(삭제됨)';
-const memsOf = tid => DB.members.filter(m => m.tid === tid);
-
-/* ── 날짜 ── */
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const TODAY_S = iso(TODAY);
+/* next_appt 는 timestamptz 라 UTC 문자열로 옵니다. 앞 10글자를 그냥 자르면
+   밤 9시 이후 약속이 하루 앞당겨집니다 — 이 PC 시간으로 바꿔서 읽습니다. */
+function tsDate(ts) { if (!ts) return ''; const d = new Date(ts); return isNaN(d) ? '' : iso(d); }
 function dnum(s) { if (!s) return null; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : Math.round((d - TODAY) / 86400000); }
-function dLabel(s) { const n = dnum(s); if (n === null) return ''; if (n === 0) return '오늘'; if (n < 0) return `${-n}일 지남`; return `D-${n}`; }
 function weekEnd() { const d = new Date(TODAY); d.setDate(d.getDate() + (7 - (d.getDay() || 7))); return iso(d); }
 
-/* ── UI 유틸 ── */
 let toastT;
-function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
-function modal(title, body, onOk, okLabel) {
-  $('#mtitle').textContent = title; $('#mbody').innerHTML = body;
-  $('#mfoot').innerHTML = `<button class="btn gh" id="m-no">${onOk ? '취소' : '닫기'}</button>` +
-    (onOk ? `<button class="btn pri" id="m-ok">${okLabel || '저장'}</button>` : '');
-  $('#mask').classList.add('on');
-  $('#m-no').onclick = closeModal;
-  if (onOk) $('#m-ok').onclick = () => { if (onOk() !== false) closeModal(); };
-  const f = $('#mbody').querySelector('input,select,textarea'); if (f) setTimeout(() => f.focus(), 60);
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
+
+/* ── 판정 ── */
+const isAdmin = () => ADMINS.indexOf(ME.role) >= 0;
+const isLead = () => ME.role === 'leader';
+const isDone = r => !r.closed && (r.stage === '계약완료' || r.stage === '증권전달');
+const isLive = r => !r.closed && !isDone(r);
+const mem = id => MEMBERS.find(m => m.id === id);
+const memName = id => (mem(id) || {}).name || '(모름)';
+const teamOf = id => (mem(id) || {}).tid || '__none';
+const teamName = tid => (TEAMS.find(t => t.id === tid) || {}).name || '미배정';
+const memsOf = tid => MEMBERS.filter(m => m.tid === tid);
+/* 서버 규칙과 같은 판정 — 안 맞으면 저장할 때 서버가 막습니다 */
+function canEdit(r) {
+  if (isAdmin()) return true;
+  if (r.mid === ME.id) return true;
+  if (isLead() && ME.team_id && teamOf(r.mid) === ME.team_id) return true;
+  return false;
 }
-function closeModal() { $('#mask').classList.remove('on'); }
-$('#mask').onclick = e => { if (e.target.id === 'mask') closeModal(); };
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+/* 「보장분석 3DB」와 「보장분석3DB」를 한 덩어리로 묶는다 — 손으로 적어서 갈린 것뿐이다 */
+const srcKey = s => String(s || '').replace(/\s+/g, '');
 
 /* ============================================================
-   탭
+   불러오기
    ============================================================ */
-const PAGES = ['board', 'db', 'share', 'team', 'data'];
-function go(p) {
-  PAGES.forEach(x => {
-    $('#tab-' + x).classList.toggle('on', x === p);
-    $('#p-' + x).classList.toggle('on', x === p);
-  });
-  if (p === 'board') renderBoard();
-  if (p === 'db') renderDb();
-  if (p === 'share') renderShare();
-  if (p === 'team') renderTeams();
+function fromDb(d) {
+  return {
+    id: d.id, mid: d.assigned_to, dbdate: d.assigned_date || '', dbtype: d.source || '',
+    region: d.region || '', client: d.customer_name || '', date: tsDate(d.next_appt),
+    expect: d.expect_premium || 0, stage: STAGES.indexOf(d.stage) >= 0 ? d.stage : '미접촉',
+    closed: d.closed_reason || '', family: FAMILY.indexOf(d.family_intro) >= 0 ? d.family_intro : '미요청',
+    memo: d.memo || ''
+  };
 }
-PAGES.forEach(p => $('#tab-' + p).onclick = () => go(p));
+async function boot() {
+  if (typeof supabase === 'undefined' || !supabase.createClient) {
+    $('#gate').innerHTML = '<b>서버 연결 파일을 못 받았습니다.</b><br>인터넷이 끊겼거나 사내망이 막고 있습니다.'; return;
+  }
+  sb = supabase.createClient(SB_URL, SB_KEY);
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    $('#gate').innerHTML = '<b>로그인 후 볼 수 있습니다.</b><br>APEX OS 에 로그인한 뒤 이 칸을 다시 열어 주세요.'; return;
+  }
+  ME.id = session.user.id;
+  const [pf, tm, db] = await Promise.all([
+    sb.from('profiles').select('id,name,role,active,team_id'),
+    sb.from('teams').select('id,name,leader_id'),
+    sb.from('dbs').select('id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,expect_premium,family_intro,closed_reason')
+      .order('assigned_date', { ascending: false })
+  ]);
+  if (db.error) {
+    $('#gate').innerHTML = '<b>자료를 못 읽었습니다.</b><br><span class="mut">' + esc(db.error.message) + '</span>'; return;
+  }
+  const profs = (pf.data || []).filter(p => p.active !== false);
+  const meP = profs.find(p => p.id === ME.id) || {};
+  ME.name = meP.name || '나'; ME.role = meP.role || 'member'; ME.team_id = meP.team_id || null;
+
+  TEAMS = (tm.data || []).map(t => ({ id: t.id, name: t.name, leader: (profs.find(p => p.id === t.leader_id) || {}).name || '' }));
+  ROWS = (db.data || []).map(fromDb);
+  /* 화면에 세울 사람 = 이 화면에서 실제로 볼 수 있는 건의 담당자들 */
+  const seen = {}; ROWS.forEach(r => seen[r.mid] = 1); seen[ME.id] = 1;
+  MEMBERS = profs.filter(p => seen[p.id]).map(p => ({ id: p.id, name: p.name || '(이름없음)', tid: p.team_id || '__none' }))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  if (MEMBERS.some(m => m.tid === '__none')) TEAMS.push({ id: '__none', name: '팀 미배정', leader: '' });
+  TEAMS = TEAMS.filter(t => MEMBERS.some(m => m.tid === t.id));
+
+  $('#gate').style.display = 'none'; $('#app').style.display = '';
+  $('#who').textContent = `${ME.name} · ${isAdmin() ? '전체' : isLead() ? '우리 팀' : '내 것'} ${ROWS.length}건`;
+  renderBoard();
+}
+async function reload() {
+  const { data, error } = await sb.from('dbs')
+    .select('id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,expect_premium,family_intro,closed_reason')
+    .order('assigned_date', { ascending: false });
+  if (error) { toast('새로 읽지 못했습니다'); return; }
+  ROWS = (data || []).map(fromDb);
+  toast(`${ROWS.length}건 새로 읽었습니다`);
+  renderBoard();
+}
+$('#b-reload').onclick = reload;
+
+/* ============================================================
+   저장 — 진행 칸만 고치는 문(pipeline_save)으로 나갑니다
+   ============================================================ */
+const F2COL = {
+  region: 'region', client: 'customer_name', dbtype: 'source', dbdate: 'assigned_date',
+  stage: 'stage', family: 'family_intro', closed: 'closed_reason', memo: 'memo'
+};
+const pend = {};
+let saveT;
+function queueSave(r, field) {
+  const p = pend[r.id] || (pend[r.id] = {});
+  if (field === 'expect') p.expect_premium = String(r.expect || '');
+  else if (field === 'date') p.next_appt = r.date ? r.date + 'T00:00:00+09:00' : '';
+  else if (F2COL[field]) p[F2COL[field]] = r[field] == null ? '' : String(r[field]);
+  if (field === 'stage') {
+    p.contracted_at = (r.stage === '계약완료' || r.stage === '증권전달') ? new Date().toISOString() : '';
+    p.policy_sent_at = (r.stage === '증권전달') ? new Date().toISOString() : '';
+  }
+  clearTimeout(saveT); saveT = setTimeout(flush, 700);
+}
+async function flush() {
+  const ids = Object.keys(pend); if (!ids.length) return;
+  let ok = 0, bad = '';
+  for (const id of ids) {
+    const patch = pend[id]; delete pend[id];
+    const { error } = await sb.rpc('pipeline_save', { p_id: id, p: patch });
+    if (error) bad = error.message; else ok++;
+  }
+  if (bad) toast('저장 실패 — ' + bad);
+  else if (ok) toast(`${ok}건 저장했습니다`);
+}
+window.addEventListener('beforeunload', () => { if (Object.keys(pend).length) flush(); });
 
 /* ============================================================
    현황판
    ============================================================ */
-const ym = d => (d || '').slice(0, 7);
 function monthsUsed() {
-  const set = {};
-  DB.rows.forEach(r => { if (ym(r.dbdate)) set[ym(r.dbdate)] = 1; });
-  return Object.keys(set).sort().reverse();
+  const s = {}; ROWS.forEach(r => { if (ym(r.dbdate)) s[ym(r.dbdate)] = 1; });
+  return Object.keys(s).sort().reverse();
 }
 function rowsFiltered() {
-  let L = DB.rows.slice();
+  let L = ROWS.slice();
   if (FILTER.month) L = L.filter(r => ym(r.dbdate) === FILTER.month);
-  if (FILTER.team) L = L.filter(r => (mem(r.mid) || {}).tid === FILTER.team);
+  if (FILTER.team) L = L.filter(r => teamOf(r.mid) === FILTER.team);
   if (FILTER.mem) L = L.filter(r => r.mid === FILTER.mem);
-  if (FILTER.status === '__live') L = L.filter(r => r.status === '진행중' || r.status === '청약');
-  else if (FILTER.status === '__policy') L = L.filter(r => r.status === '계약' && r.policy !== '전달완료');
-  else if (FILTER.status) L = L.filter(r => r.status === FILTER.status);
-  if (FILTER.q) {
-    const q = FILTER.q.toLowerCase();
-    L = L.filter(r => `${r.client} ${r.region} ${r.memo} ${memName(r.mid)}`.toLowerCase().includes(q));
-  }
+  if (FILTER.stage === '__live') L = L.filter(isLive);
+  else if (FILTER.stage === '__done') L = L.filter(isDone);
+  else if (FILTER.stage === '__policy') L = L.filter(r => !r.closed && r.stage === '계약완료');
+  else if (FILTER.stage === '__off') L = L.filter(r => r.closed);
+  else if (FILTER.stage) L = L.filter(r => r.stage === FILTER.stage);
+  if (FILTER.q) { const q = FILTER.q.toLowerCase(); L = L.filter(r => `${r.client} ${r.region} ${r.memo} ${memName(r.mid)}`.toLowerCase().includes(q)); }
   return L;
 }
 function sortRows(L) {
   return L.sort((a, b) => {
-    const sa = STATUS.indexOf(a.status), sb = STATUS.indexOf(b.status);
-    const da = a.status === '무산' || a.status === '보류', db = b.status === '무산' || b.status === '보류';
-    if (da !== db) return da ? 1 : -1;
-    if ((a.date || '9999') !== (b.date || '9999')) return (a.date || '9999') < (b.date || '9999') ? -1 : 1;
-    return sa - sb;
+    if (!!a.closed !== !!b.closed) return a.closed ? 1 : -1;
+    const ad = a.date || '9999', bd = b.date || '9999';
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    return (b.dbdate || '').localeCompare(a.dbdate || '');
   });
 }
-
 function renderFilters() {
-  const mths = monthsUsed();
+  const ms = monthsUsed();
   $('#f-month').innerHTML = `<option value="">전체 배정월</option>` +
-    mths.map(m => `<option value="${m}"${FILTER.month === m ? ' selected' : ''}>${m.replace('-', '.')} 배정</option>`).join('');
+    ms.map(m => `<option value="${m}"${FILTER.month === m ? ' selected' : ''}>${m.replace('-', '.')} 배정</option>`).join('');
   $('#f-team').innerHTML = `<option value="">전체 팀</option>` +
-    DB.teams.map(t => `<option value="${t.id}"${FILTER.team === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
-  const ms = FILTER.team ? memsOf(FILTER.team) : DB.members;
+    TEAMS.map(t => `<option value="${t.id}"${FILTER.team === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
+  const mm = FILTER.team ? memsOf(FILTER.team) : MEMBERS;
   $('#f-mem').innerHTML = `<option value="">전체 팀원</option>` +
-    ms.map(m => `<option value="${m.id}"${FILTER.mem === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
-  $('#f-status').value = FILTER.status;
-  $('#f-q').value = FILTER.q;
+    mm.map(m => `<option value="${m.id}"${FILTER.mem === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
+  $('#f-stage').value = FILTER.stage; $('#f-q').value = FILTER.q;
 }
 $('#f-month').onchange = e => { FILTER.month = e.target.value; renderBoard(); };
 $('#f-team').onchange = e => { FILTER.team = e.target.value; FILTER.mem = ''; renderBoard(); };
 $('#f-mem').onchange = e => { FILTER.mem = e.target.value; renderBoard(); };
-$('#f-status').onchange = e => { FILTER.status = e.target.value; renderBoard(); };
-let qT; $('#f-q').oninput = e => { FILTER.q = e.target.value; clearTimeout(qT); qT = setTimeout(renderBoard, 220); };
+$('#f-stage').onchange = e => { FILTER.stage = e.target.value; renderBoard(); };
+let qT; $('#f-q').oninput = e => { FILTER.q = e.target.value; clearTimeout(qT); qT = setTimeout(renderBoard, 240); };
 
 function renderKpi() {
   const L = rowsFiltered();
-  const live = L.filter(r => r.status === '진행중' || r.status === '청약');
-  const sum = live.reduce((s, r) => s + (+r.expect || 0), 0);
-  const done = L.filter(r => r.status === '계약');
-  const doneSum = done.reduce((s, r) => s + (+r.expect || 0), 0);
+  const live = L.filter(isLive), done = L.filter(isDone), off = L.filter(r => r.closed);
   const we = weekEnd();
   const wk = live.filter(r => r.date && r.date >= TODAY_S && r.date <= we).length;
   const late = live.filter(r => r.date && r.date < TODAY_S).length;
-  const pol = done.filter(r => r.policy !== '전달완료').length;
+  const pol = L.filter(r => !r.closed && r.stage === '계약완료').length;
   const fam = L.filter(r => r.family && r.family !== '미요청').length;
   $('#kpis').innerHTML = `
-    <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(sum)}<small>원</small></div></div>
-    <div class="kpi"><div class="l">진행중 건수</div><div class="v">${live.length}<small>건</small></div></div>
-    <div class="kpi ok"><div class="l">계약 완료</div><div class="v">${done.length}<small>건 · ${won(doneSum)}원</small></div></div>
-    <div class="kpi"><div class="l">이번주 예정</div><div class="v">${wk}<small>건</small></div></div>
-    <div class="kpi ${late ? 'warn' : ''}"><div class="l">날짜 지남</div><div class="v">${late}<small>건</small></div></div>
+    <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>
+    <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
+    <div class="kpi ok"><div class="l">계약 이상</div><div class="v">${done.length}<small>건 · ${won(done.reduce((a, r) => a + (+r.expect || 0), 0))}원</small></div></div>
+    <div class="kpi"><div class="l">이번주 약속</div><div class="v">${wk}<small>건</small></div></div>
+    <div class="kpi ${late ? 'warn' : ''}"><div class="l">약속일 지남</div><div class="v">${late}<small>건</small></div></div>
     <div class="kpi ${pol ? 'warn' : ''}"><div class="l">증권 미전달</div><div class="v">${pol}<small>건</small></div></div>
-    <div class="kpi"><div class="l">가족소개 진행</div><div class="v">${fam}<small>건</small></div></div>`;
+    <div class="kpi"><div class="l">가족소개 진행</div><div class="v">${fam}<small>건</small></div></div>
+    <div class="kpi"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>`;
 }
-
-function selDbt(val) {
-  const L = DB.dbtypes.includes(val) || !val ? DB.dbtypes : DB.dbtypes.concat([val]);
-  return `<select data-f="dbtype" class="dbt">` +
-    L.map(o => `<option${o === val ? ' selected' : ''}>${esc(o)}</option>`).join('') + `</select>`;
-}
-function sel(field, val, list, pre) {
-  return `<select data-f="${field}" class="${pre}${esc(val)}">` +
-    list.map(o => `<option${o === val ? ' selected' : ''}>${o}</option>`).join('') + `</select>`;
+function selOf(field, val, list, pre, dis, labels) {
+  return `<select data-f="${field}" class="${pre}${esc(val)}"${dis ? ' disabled' : ''}>` +
+    list.map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(labels ? (labels[o] || o) : o)}</option>`).join('') + `</select>`;
 }
 function rowHTML(r) {
-  const n = dnum(r.date);
-  const cls = (r.status === '무산' || r.status === '보류') ? ' dim' : (n === 0 ? ' today' : '');
-  const dd = (r.status === '진행중' || r.status === '청약') && n !== null
+  const n = dnum(r.date), ro = !canEdit(r), d = ro ? ' disabled' : '';
+  const cls = r.closed ? ' dim' : (ro ? ' ro' : '');
+  const dd = isLive(r) && n !== null
     ? (n === 0 ? `<span class="dday t">오늘</span>` : n < 0 ? `<span class="dday o">${-n}일↑</span>` : '') : '';
   return `<tr class="r${cls}" data-id="${r.id}">
-    <td style="white-space:nowrap"><input type="date" data-f="dbdate" value="${esc(r.dbdate || '')}" style="width:auto"></td>
-    <td>${selDbt(r.dbtype)}</td>
-    <td><input data-f="region" value="${esc(r.region)}" placeholder="지역"></td>
-    <td><input data-f="client" value="${esc(r.client)}" placeholder="고객명"></td>
-    <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto">${dd}</td>
-    <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"></td>
-    <td>${sel('status', r.status, STATUS, 's-')}</td>
-    <td>${sel('family', r.family, FAMILY, 'f-')}</td>
-    <td>${sel('policy', r.policy, POLICY, 'p-')}</td>
-    <td><input data-f="memo" value="${esc(r.memo)}" placeholder="-"></td>
-    <td class="act"><button data-act="dup" title="복제">복제</button><button data-act="del" title="삭제">✕</button></td>
+    <td style="white-space:nowrap"><input type="date" data-f="dbdate" value="${esc(r.dbdate)}" style="width:auto"${d}></td>
+    <td><input data-f="dbtype" value="${esc(r.dbtype)}" class="dbt" style="font-weight:700;color:#6D28D9" placeholder="DB종류"${d}></td>
+    <td><input data-f="region" value="${esc(r.region)}" placeholder="지역"${d}></td>
+    <td><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}></td>
+    <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto"${d}>${dd}</td>
+    <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"${d}></td>
+    <td>${selOf('stage', r.stage, STAGES, 'st-', ro)}</td>
+    <td>${selOf('closed', r.closed, CLOSED, 'cl-', ro, { '': '진행' })}</td>
+    <td>${selOf('family', r.family, FAMILY, 'f-', ro)}</td>
+    <td><input data-f="memo" value="${esc(r.memo)}" placeholder="-"${d}>${ro ? '<span class="lock">🔒</span>' : ''}</td>
   </tr>`;
 }
-function memSumHTML(mid) {
-  const L = DB.rows.filter(r => r.mid === mid);
-  const live = L.filter(r => r.status === '진행중' || r.status === '청약');
-  const done = L.filter(r => r.status === '계약');
-  const s = live.reduce((a, r) => a + (+r.expect || 0), 0);
-  return `진행 ${live.length}건 · 예상 ${won(s)}원${done.length ? ` · 계약 ${done.length}건` : ''}`;
+function memSum(mid) {
+  const L = ROWS.filter(r => r.mid === mid);
+  const live = L.filter(isLive), done = L.filter(isDone);
+  return `진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원${done.length ? ` · 계약 ${done.length}건` : ''}`;
 }
-function teamSumHTML(tid) {
+function teamSum(tid) {
   const ids = memsOf(tid).map(m => m.id);
-  const L = DB.rows.filter(r => ids.includes(r.mid));
-  const live = L.filter(r => r.status === '진행중' || r.status === '청약');
-  const done = L.filter(r => r.status === '계약');
-  const pol = done.filter(r => r.policy !== '전달완료').length;
-  return `진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원` +
-    ` · 계약 ${done.length}건${pol ? ` · <span style="color:#F04452">증권 미전달 ${pol}</span>` : ''}`;
+  const L = ROWS.filter(r => ids.includes(r.mid));
+  const live = L.filter(isLive), done = L.filter(isDone);
+  const pol = L.filter(r => !r.closed && r.stage === '계약완료').length;
+  return `진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원 · 계약 ${done.length}건` +
+    (pol ? ` · <span style="color:#F04452">증권 미전달 ${pol}</span>` : '');
 }
-
 function renderBoard() {
   renderFilters(); renderKpi();
   const L = rowsFiltered();
-  const teams = FILTER.team ? DB.teams.filter(t => t.id === FILTER.team) : DB.teams;
-  if (!DB.members.length) {
-    $('#board').innerHTML = `<div class="empty">먼저 <b>팀 · 팀원</b> 탭에서 팀원을 등록하세요.<br><br>
-      <button class="btn pri" onclick="go('team')">팀원 등록하러 가기</button></div>`;
-    return;
-  }
-  let html = `<div class="tw"><table class="gx">
-    <thead><tr>
-      <th style="width:152px">DB 배정일</th><th style="width:132px">DB종류</th>
-      <th style="width:118px">지역</th><th style="width:126px">이름(고객)</th><th style="width:158px">날짜</th>
-      <th style="width:118px;text-align:right">예상업적</th><th style="width:104px">계약유무</th>
-      <th style="width:120px">가족소개진행</th><th style="width:110px">증권전달</th>
-      <th>비고</th><th style="width:82px"></th>
-    </tr></thead><tbody>`;
+  const teams = FILTER.team ? TEAMS.filter(t => t.id === FILTER.team) : TEAMS;
+  let html = `<div class="tw"><table class="gx"><thead><tr>
+    <th style="width:150px">DB 배정일</th><th style="width:140px">DB종류</th><th style="width:112px">지역</th>
+    <th style="width:118px">이름</th><th style="width:154px">다음 약속</th>
+    <th style="width:114px;text-align:right">예상업적</th><th style="width:104px">진행단계</th>
+    <th style="width:96px">상태</th><th style="width:118px">가족소개</th><th>비고</th>
+  </tr></thead><tbody>`;
   let any = false;
   teams.forEach(t => {
     const ms = memsOf(t.id).filter(m => !FILTER.mem || m.id === FILTER.mem);
     if (!ms.length) return;
-    html += `<tr class="tm"><td colspan="11">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
-      <span style="float:right;font-weight:600;font-size:12.5px;color:#8B95A1" data-tsum="${t.id}">${teamSumHTML(t.id)}</span></td></tr>`;
+    html += `<tr class="tm"><td colspan="10">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
+      <span style="float:right;font-weight:600;font-size:12.5px;color:#8B95A1">${teamSum(t.id)}</span></td></tr>`;
     ms.forEach(m => {
       const rs = sortRows(L.filter(r => r.mid === m.id));
-      any = any || rs.length > 0;
-      html += `<tr class="mb"><td colspan="11"><span class="mname">${esc(m.name)}</span>${m.region ? `<span class="msum">${esc(m.region)}</span>` : ''}<span class="msum" data-sum="${m.id}">${memSumHTML(m.id)}</span></td></tr>`;
+      if (rs.length) any = true;
+      html += `<tr class="mb"><td colspan="10">${esc(m.name)}<span class="msum">${memSum(m.id)}</span></td></tr>`;
       html += rs.map(rowHTML).join('');
-      html += `<tr class="addr"><td colspan="11"><button data-addmid="${m.id}">+ ${esc(m.name)} 진행건 추가</button></td></tr>`;
+      if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="10"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
     });
   });
   html += `</tbody></table></div>`;
-  $('#board').innerHTML = html;
-  if (!any && !DB.rows.length) {
-    $('#board').insertAdjacentHTML('afterbegin',
-      `<div class="help">아직 진행건이 없습니다. 팀원 아래 <b>[+ 진행건 추가]</b>를 누르거나, <b>데이터</b> 탭에서 엑셀을 붙여넣으세요.</div>`);
-  }
+  $('#board').innerHTML = (TEAMS.length ? html : `<div class="empty">볼 수 있는 자료가 없습니다.</div>`);
+  if (!any && !ROWS.length) $('#board').insertAdjacentHTML('afterbegin',
+    `<div class="help">아직 배정된 DB 가 없습니다. <b>DB 통합 CRM</b> 에서 DB 를 배정하면 이 자리에 뜹니다.</div>`);
 }
 
-/* 셀 편집 (리렌더 없이 즉시 저장) */
 const board = $('#board');
-function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? DB.rows.find(r => r.id === tr.dataset.id) : null; }
-function refreshSums() {
-  $$('[data-sum]').forEach(e => e.innerHTML = memSumHTML(e.dataset.sum));
-  $$('[data-tsum]').forEach(e => e.innerHTML = teamSumHTML(e.dataset.tsum));
-  renderKpi();
-}
+function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? ROWS.find(r => r.id === tr.dataset.id) : null; }
 board.addEventListener('input', e => {
   const el = e.target; if (!el.dataset.f) return;
   const r = rowOf(el); if (!r) return;
-  if (el.dataset.f === 'expect') { r.expect = +String(el.value).replace(/[^\d]/g, '') || 0; }
+  if (el.dataset.f === 'expect') r.expect = +String(el.value).replace(/[^\d]/g, '') || 0;
   else r[el.dataset.f] = el.value;
-  save(); if (el.dataset.f === 'expect') refreshSums();
+  queueSave(r, el.dataset.f);
 });
 board.addEventListener('change', e => {
   const el = e.target; if (!el.dataset.f) return;
   const r = rowOf(el); if (!r) return;
   r[el.dataset.f] = el.value;
   if (el.tagName === 'SELECT') {
-    const pre = { status: 's-', family: 'f-', policy: 'p-' }[el.dataset.f];
-    el.className = pre + el.value;
-    if (el.dataset.f === 'status' && el.value === '계약' && r.policy === '해당없음') {
-      r.policy = '대기';
-      const ps = el.closest('tr').querySelector('[data-f="policy"]');
-      if (ps) { ps.value = '대기'; ps.className = 'p-대기'; }
-    }
-    const tr = el.closest('tr');
-    tr.classList.toggle('dim', r.status === '무산' || r.status === '보류');
+    el.className = { stage: 'st-', closed: 'cl-', family: 'f-' }[el.dataset.f] + el.value;
+    el.closest('tr').classList.toggle('dim', !!r.closed);
   }
-  save(); refreshSums();
+  queueSave(r, el.dataset.f); renderKpi();
 });
 board.addEventListener('blur', e => {
   const el = e.target;
@@ -609,209 +524,36 @@ board.addEventListener('focus', e => {
   const el = e.target;
   if (el.dataset && el.dataset.f === 'expect') { const r = rowOf(el); if (r) el.value = r.expect || ''; }
 }, true);
-board.addEventListener('click', e => {
-  const add = e.target.closest('[data-addmid]');
-  if (add) { addRow(add.dataset.addmid); return; }
-  const b = e.target.closest('[data-act]'); if (!b) return;
-  const r = rowOf(b); if (!r) return;
-  if (b.dataset.act === 'del') {
-    if (!confirm(`[${r.client || '이름없음'}] 진행건을 삭제할까요?`)) return;
-    DB.rows = DB.rows.filter(x => x.id !== r.id); save(); renderBoard();
-  } else {
-    const c = Object.assign({}, r, { id: uid(), client: r.client + ' (복제)' });
-    DB.rows.push(c); save(); renderBoard();
-  }
-});
-/* Enter = 아래 칸으로 */
 board.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target.dataset.f) return;
   e.preventDefault();
-  const f = e.target.dataset.f, tr = e.target.closest('tr');
-  let n = tr.nextElementSibling;
+  const f = e.target.dataset.f; let n = e.target.closest('tr').nextElementSibling;
   while (n && !n.dataset.id) n = n.nextElementSibling;
-  if (n) { const t = n.querySelector(`[data-f="${f}"]`); if (t) { t.focus(); t.select && t.select(); } }
-  else { const btn = tr.parentElement.querySelector(`[data-addmid]`); if (btn) e.target.blur(); }
+  if (n) { const t = n.querySelector(`[data-f="${f}"]`); if (t && !t.disabled) { t.focus(); t.select && t.select(); } }
 });
-
-function addRow(mid) {
-  const m = mem(mid);
-  const r = {
-    id: uid(), mid, dbdate: (FILTER.month ? FILTER.month + '-01' : TODAY_S), dbtype: DB.dbtypes[0],
-    region: (m && m.region) || '', client: '', date: TODAY_S, expect: 0,
-    status: '진행중', family: '미요청', policy: '해당없음', memo: ''
-  };
-  DB.rows.push(r); save(); renderBoard();
-  setTimeout(() => {
-    const el = document.querySelector(`tr[data-id="${r.id}"] [data-f="client"]`);
-    if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-  }, 40);
-}
-$('#b-add').onclick = () => {
-  if (!DB.members.length) { toast('팀원을 먼저 등록하세요'); go('team'); return; }
-  const mid = FILTER.mem || (FILTER.team ? (memsOf(FILTER.team)[0] || {}).id : DB.members[0].id);
-  if (!mid) { toast('이 팀에 팀원이 없습니다'); return; }
-  addRow(mid);
-};
-
-/* ============================================================
-   팀 · 팀원
-   ============================================================ */
-function renderTeams() {
-  $('#team-list').innerHTML = DB.teams.length ? `<table class="tbl">
-    <thead><tr><th>팀 이름</th><th>팀장</th><th>팀원</th><th>진행건</th><th style="width:120px"></th></tr></thead><tbody>
-    ${DB.teams.map(t => {
-    const ms = memsOf(t.id), ids = ms.map(m => m.id);
-    const live = DB.rows.filter(r => ids.includes(r.mid) && (r.status === '진행중' || r.status === '청약')).length;
-    return `<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.leader || '-')}</td><td>${ms.length}명</td>
-      <td>${live}건</td>
-      <td style="text-align:right"><button class="btn gh sm" onclick="editTeam('${t.id}')">수정</button>
-      <button class="btn gh sm" onclick="delTeam('${t.id}')">삭제</button></td></tr>`;
-  }).join('')}</tbody></table>` : `<div class="empty">팀이 없습니다.</div>`;
-
-  renderDbt();
-  $('#mem-list').innerHTML = DB.members.length ? `<table class="tbl">
-    <thead><tr><th>이름</th><th>팀</th><th>담당 지역</th><th>진행건</th><th>예상업적</th><th style="width:120px"></th></tr></thead><tbody>
-    ${DB.members.map(m => {
-    const L = DB.rows.filter(r => r.mid === m.id && (r.status === '진행중' || r.status === '청약'));
-    return `<tr><td><b>${esc(m.name)}</b></td><td><span class="tag">${esc(teamName(m.tid))}</span></td>
-      <td>${esc(m.region || '-')}</td><td>${L.length}건</td><td>${won(L.reduce((a, r) => a + (+r.expect || 0), 0))}원</td>
-      <td style="text-align:right"><button class="btn gh sm" onclick="editMem('${m.id}')">수정</button>
-      <button class="btn gh sm" onclick="delMem('${m.id}')">삭제</button></td></tr>`;
-  }).join('')}</tbody></table>` : `<div class="empty">팀원이 없습니다. <b>+ 팀원 추가</b>를 누르세요.</div>`;
-}
-function editTeam(id) {
-  const t = id ? team(id) : { name: '', leader: '' };
-  modal(id ? '팀 수정' : '팀 추가', `
-    <div class="f"><label>팀 이름 *</label><input id="t-name" value="${esc(t.name)}" placeholder="예) 1팀 / 강남지점"></div>
-    <div class="f"><label>팀장 이름</label><input id="t-lead" value="${esc(t.leader || '')}" placeholder="카톡으로 받을 팀장"></div>`,
-    () => {
-      const n = $('#t-name').value.trim(); if (!n) { toast('팀 이름을 입력하세요'); return false; }
-      const o = { name: n, leader: $('#t-lead').value.trim() };
-      if (id) Object.assign(team(id), o); else DB.teams.push(Object.assign({ id: uid() }, o));
-      save(); renderTeams();
-    });
-}
-function delTeam(id) {
-  const ms = memsOf(id);
-  if (DB.teams.length <= 1) { toast('팀은 최소 1개 필요합니다'); return; }
-  if (!confirm(`[${teamName(id)}]을 삭제할까요?` + (ms.length ? `\n팀원 ${ms.length}명은 ${DB.teams.find(t => t.id !== id).name}(으)로 옮겨집니다.` : ''))) return;
-  const to = DB.teams.find(t => t.id !== id).id;
-  ms.forEach(m => m.tid = to);
-  DB.teams = DB.teams.filter(t => t.id !== id);
-  if (FILTER.team === id) FILTER.team = '';
-  save(); renderTeams();
-}
-function editMem(id) {
-  const m = id ? mem(id) : { name: '', tid: DB.teams[0].id, region: '' };
-  modal(id ? '팀원 수정' : '팀원 추가', `
-    <div class="f2">
-      <div class="f"><label>이름 *</label><input id="m-name" value="${esc(m.name)}"></div>
-      <div class="f"><label>팀 *</label><select id="m-tid">${DB.teams.map(t => `<option value="${t.id}"${m.tid === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('')}</select></div>
-    </div>
-    <div class="f"><label>담당 지역 <span class="mut">(진행건 추가할 때 자동으로 채워집니다)</span></label>
-      <input id="m-reg" value="${esc(m.region || '')}" placeholder="예) 성남 분당"></div>`,
-    () => {
-      const n = $('#m-name').value.trim(); if (!n) { toast('이름을 입력하세요'); return false; }
-      const o = { name: n, tid: $('#m-tid').value, region: $('#m-reg').value.trim() };
-      if (id) Object.assign(mem(id), o); else DB.members.push(Object.assign({ id: uid() }, o));
-      save(); renderTeams();
-    });
-}
-function delMem(id) {
-  const n = DB.rows.filter(r => r.mid === id).length;
-  if (!confirm(`[${memName(id)}] 팀원을 삭제할까요?` + (n ? `\n진행건 ${n}건도 함께 삭제됩니다.` : ''))) return;
-  DB.members = DB.members.filter(m => m.id !== id);
-  DB.rows = DB.rows.filter(r => r.mid !== id);
-  save(); renderTeams();
-}
-function renderDbt() {
-  $('#dbt-list').innerHTML = DB.dbtypes.map(t => {
-    const c = DB.rows.filter(r => r.dbtype === t).length;
-    return `<span class="chip" style="cursor:default">${esc(t)}${c ? ` <b style="color:#3182F6">${c}</b>` : ''}</span>`;
-  }).join('');
-}
-$('#b-dbt-edit').onclick = () => {
-  modal('DB 종류 편집', `
-    <div class="f"><label>한 줄에 하나씩 (위에서부터 순서대로 나옵니다)</label>
-      <textarea id="dbt-t" style="min-height:230px">${esc(DB.dbtypes.join('\n'))}</textarea></div>
-    <div class="mut">이미 쓰고 있는 종류를 지워도 기존 자료의 값은 그대로 남습니다.</div>`,
-    () => {
-      const L = $('#dbt-t').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
-      if (!L.length) { toast('최소 1개는 있어야 합니다'); return false; }
-      DB.dbtypes = [...new Set(L)]; save(); renderDbt(); toast('저장했습니다');
-    });
-};
-$('#b-mem-bulk').onclick = () => {
-  modal('팀원 명단 한번에 넣기', `
-    <div class="help" style="margin:0 0 12px">
-      한 줄에 한 명씩. <b>팀 / 이름 / 담당지역</b> 순서로 쓰고 <b>탭·쉼표·슬래시</b> 아무거나로 나누세요.<br>
-      이름만 써도 됩니다(첫 번째 팀에 들어갑니다). 없는 팀 이름은 <b>자동으로 새 팀</b>이 됩니다.
-    </div>
-    <div class="f"><textarea id="bulk-t" style="min-height:220px" placeholder="1팀, 김상담, 성남 분당
-1팀, 박설계, 용인 수지
-2팀, 최보장, 수원 영통
-2팀, 남신입"></textarea></div>
-    <label style="display:flex;gap:7px;align-items:center;font-weight:700;font-size:13.5px;color:#F04452;cursor:pointer">
-      <input type="checkbox" id="bulk-reset" style="width:17px;height:17px;accent-color:#F04452">
-      기존 팀원·진행건을 <b>모두 지우고</b> 새로 넣기
-    </label>`,
-    () => {
-      const lines = $('#bulk-t').value.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
-      if (!lines.length) { toast('명단이 비어 있습니다'); return false; }
-      const reset = $('#bulk-reset').checked;
-      if (reset && !confirm(`기존 팀원 ${DB.members.length}명과 진행건 ${DB.rows.length}건을 모두 지우고 새로 넣습니다.\n계속할까요?`)) return false;
-      if (reset) { DB.members = []; DB.rows = []; DB.teams = []; }
-      let add = 0, skip = 0;
-      lines.forEach(l => {
-        const c = l.split(/\t|,|\/|\|/).map(x => x.trim()).filter(x => x !== '');
-        if (!c.length) return;
-        if (/^(팀|팀명)$/.test(c[0]) && /이름|성명/.test(c[1] || '')) return;   /* 제목줄 */
-        let tname = '', name = '', region = '';
-        if (c.length === 1) { name = c[0]; }
-        else { tname = c[0]; name = c[1]; region = c.slice(2).join(' '); }
-        if (!name) return;
-        let t = tname ? DB.teams.find(x => x.name === tname) : DB.teams[0];
-        if (!t) { t = { id: uid(), name: tname || '1팀', leader: '' }; DB.teams.push(t); }
-        const ex = DB.members.find(x => x.name === name);
-        if (ex) { ex.tid = t.id; if (region) ex.region = region; skip++; return; }
-        DB.members.push({ id: uid(), name, tid: t.id, region });
-        add++;
-      });
-      if (!DB.teams.length) DB.teams = [{ id: uid(), name: '1팀', leader: '' }];
-      save(); FILTER = { month: '', team: '', mem: '', status: '', q: '' }; DBM = '';
-      renderTeams();
-      toast(`팀원 ${add}명 등록${skip ? ` · 기존 ${skip}명은 팀·지역만 갱신` : ''}`);
-    }, '등록');
-};
-$('#b-team-add').onclick = () => editTeam('');
-$('#b-mem-add').onclick = () => editMem('');
-$('#b-import-mem').onclick = () => {
-  let src = null;
-  try { src = JSON.parse(localStorage.getItem('apex_team_perf_v1') || 'null'); } catch (e) { }
-  if (!src || !src.members || !src.members.length) { toast('팀업적관리 데이터를 찾지 못했습니다'); return; }
-  const names = src.members.map(m => m.name).filter(n => !DB.members.some(x => x.name === n));
-  if (!names.length) { toast('이미 모두 등록되어 있습니다'); return; }
-  modal('팀업적관리에서 불러오기', `
-    <div class="f"><label>어느 팀으로 넣을까요?</label>
-      <select id="i-tid">${DB.teams.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('')}</select></div>
-    <div class="mut">새로 등록될 팀원 ${names.length}명 : ${esc(names.join(', '))}</div>`,
-    () => { const tid = $('#i-tid').value; names.forEach(n => DB.members.push({ id: uid(), name: n, tid, region: '' })); save(); renderTeams(); toast(`${names.length}명 등록했습니다`); },
-    '불러오기');
-};
+board.addEventListener('click', async e => {
+  const add = e.target.closest('[data-addmid]'); if (!add) return;
+  const mid = add.dataset.addmid;
+  const name = prompt('고객 이름을 적어 주세요 (전화번호는 DB 통합 CRM 에서)');
+  if (name == null) return;
+  const { data, error } = await sb.rpc('pipeline_new', {
+    p_to: mid, p: { customer_name: name.trim() || '이름없음', assigned_date: FILTER.month ? FILTER.month + '-01' : TODAY_S, source: '개척', stage: '미접촉' }
+  });
+  if (error) { toast('만들지 못했습니다 — ' + error.message); return; }
+  toast('새 건을 만들었습니다'); await reload();
+  const el = document.querySelector(`tr[data-id="${data}"] [data-f="region"]`);
+  if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
+});
 
 /* ============================================================
    DB 배정 (월별)
    ============================================================ */
-function dbRows(mth) { return DB.rows.filter(r => ym(r.dbdate) === mth); }
-const isDone = r => r.status === '계약';
-const isLive = r => r.status === '진행중' || r.status === '청약';
-
+const dbRows = m => ROWS.filter(r => ym(r.dbdate) === m);
 function renderDb() {
-  if (!DBM) DBM = (monthsUsed()[0] || TODAY_S.slice(0, 7));
+  if (!DBM) DBM = monthsUsed()[0] || TODAY_S.slice(0, 7);
   $('#db-month').value = DBM;
   const L = dbRows(DBM);
-  const done = L.filter(isDone), live = L.filter(isLive);
-  const lost = L.filter(r => r.status === '무산');
+  const done = L.filter(isDone), live = L.filter(isLive), off = L.filter(r => r.closed);
   const cvr = L.length ? Math.round(done.length / L.length * 1000) / 10 : 0;
   const who = [...new Set(L.map(r => r.mid))].length;
   $('#db-kpi').innerHTML = `
@@ -819,164 +561,85 @@ function renderDb() {
     <div class="kpi ok"><div class="l">계약 성사</div><div class="v">${done.length}<small>건</small></div></div>
     <div class="kpi"><div class="l">계약 전환율</div><div class="v">${cvr}<small>%</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
-    <div class="kpi ${lost.length ? 'warn' : ''}"><div class="l">무산</div><div class="v">${lost.length}<small>건</small></div></div>
+    <div class="kpi ${off.length ? 'warn' : ''}"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>
     <div class="kpi"><div class="l">계약 업적</div><div class="v">${won(done.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>
-    <div class="kpi"><div class="l">진행중 예상업적</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>`;
-
+    <div class="kpi"><div class="l">진행중 예상</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>`;
   if (!L.length) {
-    const e = `<div class="empty">${DBM.replace('-', '.')} 에 배정된 DB가 없습니다.<br>
-      <span class="mut">현황판에서 <b>DB 배정일</b>과 <b>DB종류</b>를 채우면 이 달로 모입니다.</span></div>`;
-    $('#db-cross').innerHTML = e; $('#db-bytype').innerHTML = ''; $('#db-list').innerHTML = '';
-    return;
+    $('#db-cross').innerHTML = `<div class="empty">${DBM.replace('-', '.')} 에 배정된 DB 가 없습니다.</div>`;
+    $('#db-bytype').innerHTML = ''; $('#db-list').innerHTML = ''; return;
   }
-
-  /* ── 팀원 × DB종류 ── */
-  const types = DB.dbtypes.filter(t => L.some(r => r.dbtype === t))
-    .concat([...new Set(L.map(r => r.dbtype))].filter(t => !DB.dbtypes.includes(t)));
+  const types = [...new Set(L.map(r => srcKey(r.dbtype)))].sort((a, b) =>
+    L.filter(r => srcKey(r.dbtype) === b).length - L.filter(r => srcKey(r.dbtype) === a).length);
+  const cell = rs => rs.length ? `<td>${rs.length}${rs.filter(isDone).length ? ` <span class="g">(${rs.filter(isDone).length})</span>` : ''}</td>` : `<td class="z">·</td>`;
   let h = `<div class="tw" style="border:0"><table class="cx"><thead><tr><th>팀원</th>` +
-    types.map(t => `<th>${esc(t)}</th>`).join('') +
-    `<th>배정 계</th><th>계약</th><th>전환율</th></tr></thead><tbody>`;
-  const cell = (rs) => {
-    if (!rs.length) return `<td class="z">·</td>`;
-    const d = rs.filter(isDone).length;
-    return `<td>${rs.length}${d ? ` <span class="g">(${d})</span>` : ''}</td>`;
-  };
-  DB.teams.forEach(t => {
+    types.map(t => `<th>${esc(t)}</th>`).join('') + `<th>배정 계</th><th>계약</th><th>전환율</th></tr></thead><tbody>`;
+  TEAMS.forEach(t => {
     const ms = memsOf(t.id).filter(m => L.some(r => r.mid === m.id));
     if (!ms.length) return;
     h += `<tr class="sub"><td colspan="${types.length + 4}">${esc(t.name)}</td></tr>`;
     ms.forEach(m => {
-      const mr = L.filter(r => r.mid === m.id);
-      const d = mr.filter(isDone).length;
-      h += `<tr><td>${esc(m.name)}</td>` + types.map(t2 => cell(mr.filter(r => r.dbtype === t2))).join('') +
-        `<td><b>${mr.length}</b></td><td class="g">${d || '<span class="z">·</span>'}</td>` +
-        `<td>${mr.length ? Math.round(d / mr.length * 100) : 0}%</td></tr>`;
+      const mr = L.filter(r => r.mid === m.id), d = mr.filter(isDone).length;
+      h += `<tr><td>${esc(m.name)}</td>` + types.map(t2 => cell(mr.filter(r => srcKey(r.dbtype) === t2))).join('') +
+        `<td><b>${mr.length}</b></td><td class="g">${d || '<span class="z">·</span>'}</td><td>${Math.round(d / mr.length * 100)}%</td></tr>`;
     });
   });
-  const dAll = L.filter(isDone).length;
-  h += `<tr class="tot"><td>합계</td>` + types.map(t2 => {
-    const rs = L.filter(r => r.dbtype === t2), d = rs.filter(isDone).length;
-    return `<td>${rs.length}${d ? ` <span class="g">(${d})</span>` : ''}</td>`;
-  }).join('') + `<td>${L.length}</td><td class="g">${dAll}</td><td>${cvr}%</td></tr>`;
-  h += `</tbody></table></div>`;
+  h += `<tr class="tot"><td>합계</td>` + types.map(t2 => cell(L.filter(r => srcKey(r.dbtype) === t2))).join('') +
+    `<td>${L.length}</td><td class="g">${done.length}</td><td>${cvr}%</td></tr></tbody></table></div>`;
   $('#db-cross').innerHTML = h;
 
-  /* ── 종류별 성과 ── */
-  const mx = Math.max(...types.map(t => L.filter(r => r.dbtype === t).length), 1);
-  $('#db-bytype').innerHTML = `<div class="tw" style="border:0"><table class="cx">
-    <thead><tr><th>DB종류</th><th>배정</th><th></th><th>진행중</th><th>계약</th><th>무산</th><th>전환율</th>
-      <th>계약 업적</th><th>진행중 예상</th></tr></thead><tbody>` +
+  const mx = Math.max(...types.map(t => L.filter(r => srcKey(r.dbtype) === t).length), 1);
+  $('#db-bytype').innerHTML = `<div class="tw" style="border:0"><table class="cx"><thead><tr>
+    <th>DB종류</th><th>배정</th><th></th><th>진행중</th><th>계약</th><th>보류·무산</th><th>전환율</th>
+    <th>계약 업적</th><th>진행중 예상</th></tr></thead><tbody>` +
     types.map(t => {
-      const rs = L.filter(r => r.dbtype === t);
-      const d = rs.filter(isDone), lv = rs.filter(isLive), ls = rs.filter(r => r.status === '무산');
-      const p = Math.round(d.length / rs.length * 100);
+      const rs = L.filter(r => srcKey(r.dbtype) === t);
+      const d = rs.filter(isDone), lv = rs.filter(isLive), of = rs.filter(r => r.closed);
       return `<tr><td>${esc(t)}</td><td><b>${rs.length}</b></td>
-        <td style="width:110px"><span class="bar" style="width:100px"><i style="width:${Math.round(rs.length / mx * 100)}%"></i></span></td>
+        <td style="width:118px"><span class="bar" style="width:104px"><i style="width:${Math.round(rs.length / mx * 100)}%"></i></span></td>
         <td>${lv.length || '<span class="z">·</span>'}</td><td class="g">${d.length || '<span class="z">·</span>'}</td>
-        <td>${ls.length || '<span class="z">·</span>'}</td><td>${p}%</td>
+        <td>${of.length || '<span class="z">·</span>'}</td><td>${Math.round(d.length / rs.length * 100)}%</td>
         <td>${won(d.reduce((a, r) => a + (+r.expect || 0), 0))}</td>
         <td>${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}</td></tr>`;
     }).join('') + `</tbody></table></div>`;
 
-  /* ── 명단 ── */
-  const sorted = L.slice().sort((a, b) => (a.dbdate || '').localeCompare(b.dbdate || '') ||
-    teamName((mem(a.mid) || {}).tid).localeCompare(teamName((mem(b.mid) || {}).tid)));
-  $('#db-list').innerHTML = `<div class="tw" style="border:0"><table class="cx lt">
-    <thead><tr><th>배정일</th><th>팀</th><th>팀원</th><th>DB종류</th><th>이름</th><th>지역</th>
-      <th>진행일</th><th>계약유무</th><th class="n">예상업적</th><th>가족소개</th><th>증권</th><th>비고</th></tr></thead><tbody>` +
-    sorted.map(r => {
-      const m = mem(r.mid) || {};
-      const c = { '계약': 'color:#00B26B', '무산': 'color:#F04452', '보류': 'color:#8B95A1', '청약': 'color:#FF9500' }[r.status] || 'color:#3182F6';
-      return `<tr><td style="text-align:left">${(r.dbdate || '').slice(5).replace('-', '.')}</td>
-        <td style="text-align:left">${esc(teamName(m.tid))}</td><td style="text-align:left">${esc(m.name || '-')}</td>
-        <td style="text-align:left;color:#6D28D9;font-weight:700">${esc(r.dbtype || '-')}</td>
-        <td style="text-align:left;font-weight:700">${esc(r.client || '-')}</td>
-        <td style="text-align:left">${esc(r.region || '-')}</td>
-        <td style="text-align:left">${r.date ? r.date.slice(5).replace('-', '.') : '-'}</td>
-        <td style="text-align:left;font-weight:800;${c}">${esc(r.status)}</td>
-        <td>${r.expect ? won(r.expect) : '<span class="z">·</span>'}</td>
-        <td style="text-align:left">${r.family === '미요청' ? '<span class="z">·</span>' : esc(r.family)}</td>
-        <td style="text-align:left">${r.policy === '해당없음' ? '<span class="z">·</span>' : esc(r.policy)}</td>
-        <td style="text-align:left;color:#8B95A1">${esc(r.memo || '')}</td></tr>`;
+  $('#db-list').innerHTML = `<div class="tw" style="border:0"><table class="cx lt"><thead><tr>
+    <th>배정일</th><th>팀</th><th>팀원</th><th>DB종류</th><th>이름</th><th>지역</th><th>다음약속</th>
+    <th>단계</th><th>상태</th><th class="n">예상업적</th><th>가족소개</th><th>비고</th></tr></thead><tbody>` +
+    L.slice().sort((a, b) => (a.dbdate || '').localeCompare(b.dbdate || '')).map(r => {
+      const c = r.closed ? 'color:#F04452' : isDone(r) ? 'color:#00B26B' : 'color:#3182F6';
+      return `<tr><td>${(r.dbdate || '').slice(5).replace('-', '.')}</td><td>${esc(teamName(teamOf(r.mid)))}</td>
+        <td>${esc(memName(r.mid))}</td><td style="color:#6D28D9;font-weight:700">${esc(r.dbtype || '-')}</td>
+        <td style="font-weight:700">${esc(r.client || '-')}</td><td>${esc(r.region || '-')}</td>
+        <td>${r.date ? r.date.slice(5).replace('-', '.') : '-'}</td>
+        <td style="font-weight:800;${c}">${esc(r.stage)}</td><td>${r.closed ? `<b style="color:#F04452">${esc(r.closed)}</b>` : '<span class="z">·</span>'}</td>
+        <td style="text-align:right">${r.expect ? won(r.expect) : '<span class="z">·</span>'}</td>
+        <td>${r.family === '미요청' ? '<span class="z">·</span>' : esc(r.family)}</td>
+        <td style="color:#8B95A1">${esc(r.memo || '')}</td></tr>`;
     }).join('') + `</tbody></table></div>`;
 }
 function shiftMonth(d) {
-  const [y, m] = DBM.split('-').map(Number);
-  const x = new Date(y, m - 1 + d, 1);
-  DBM = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`;
-  renderDb();
+  const [y, m] = DBM.split('-').map(Number), x = new Date(y, m - 1 + d, 1);
+  DBM = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; renderDb();
 }
 $('#db-prev').onclick = () => shiftMonth(-1);
 $('#db-next').onclick = () => shiftMonth(1);
 $('#db-month').onchange = e => { if (e.target.value) { DBM = e.target.value; renderDb(); } };
-$('#b-db-xls').onclick = () => {
-  const L = dbRows(DBM);
-  if (!L.length) { toast('이 달 자료가 없습니다'); return; }
-  dl(new Blob([csv(L)], { type: 'text/csv;charset=utf-8' }), `APEX_DB배정_${DBM.replace('-', '')}.csv`);
-  toast('엑셀 파일을 저장했습니다');
-};
-$('#b-db-txt').onclick = () => {
-  const L = dbRows(DBM);
-  if (!L.length) { toast('이 달 자료가 없습니다'); return; }
-  const done = L.filter(isDone);
-  const T = [`[${DBM.replace('-', '.')} DB 배정 현황]`,
-  `총 ${L.length}건 · 계약 ${done.length}건 (전환율 ${Math.round(done.length / L.length * 100)}%)`, ''];
-  DB.teams.forEach(t => {
-    memsOf(t.id).forEach(m => {
-      const mr = L.filter(r => r.mid === m.id); if (!mr.length) return;
-      T.push(`▶ ${t.name} ${m.name} — ${mr.length}건 / 계약 ${mr.filter(isDone).length}건`);
-      mr.forEach(r => T.push(`   · ${(r.dbdate || '').slice(5).replace('-', '.')} ${r.dbtype} / ${r.client || '이름없음'} / ${r.region || '-'} / ${r.status}`));
-    });
-  });
-  T.push('', '※ 내부 관리용');
-  navigator.clipboard.writeText(T.join('\n')).then(() => toast('텍스트를 복사했습니다'))
-    .catch(() => modal('DB 배정 현황', `<textarea style="min-height:320px">${esc(T.join('\n'))}</textarea>`, null));
-};
 
 /* ============================================================
-   카톡 보내기 — 캔버스 이미지
+   카톡 카드 — 캔버스에 직접 그립니다 (바깥 라이브러리 없음)
    ============================================================ */
-function shareOpts() {
-  return {
-    dead: $('#o-dead').checked, memo: $('#o-memo').checked, db: $('#o-db').checked,
-    money: $('#o-money').checked, empty: $('#o-empty').checked
-  };
-}
-function renderShare() {
-  if (!DB.teams.some(t => t.id === SHARE.team)) SHARE.team = (DB.teams[0] || {}).id || '';
-  $('#share-chips').innerHTML = DB.teams.map(t =>
-    `<button class="chip${SHARE.team === t.id ? ' on' : ''}" data-t="${t.id}">${esc(t.name)}${t.leader ? ` · ${esc(t.leader)}` : ''}</button>`).join('');
-  drawPreview();
-}
-$('#share-chips').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; SHARE.team = c.dataset.t; renderShare(); };
-['#o-dead', '#o-memo', '#o-money', '#o-empty', '#o-db'].forEach(s => $(s).onchange = drawPreview);
-
-function teamData(tid, o) {
-  const ms = memsOf(tid);
-  const out = [];
-  ms.forEach(m => {
-    let rs = DB.rows.filter(r => r.mid === m.id);
-    if (!o.dead) rs = rs.filter(r => r.status !== '무산' && r.status !== '보류');
-    rs = sortRows(rs);
-    if (rs.length || o.empty) out.push({ m, rs });
-  });
-  return out;
-}
-
-/* ── 캔버스 그리기 ── */
-const CO = { blue: '#3182F6', blueD: '#1B64DA', tx: '#191F28', tx2: '#4E5968', tx3: '#8B95A1', line: '#E5E8EB', line2: '#F0F2F4' };
+const CO = { tx: '#191F28', tx2: '#4E5968', tx3: '#8B95A1', line: '#E5E8EB', line2: '#F0F2F4', blueD: '#1B64DA' };
 const PILL = {
-  '진행중': ['#E8F3FF', '#1B64DA'], '청약': ['#FFF4E0', '#C97A00'], '계약': ['#E5F8F0', '#00874F'],
-  '보류': ['#F2F4F6', '#8B95A1'], '무산': ['#FFEBEE', '#F04452'],
+  '미접촉': ['#F2F4F6', '#8B95A1'], 'TA': ['#FFF4E0', '#C97A00'], 'AP': ['#E8F3FF', '#1B64DA'],
+  'PC': ['#E8F3FF', '#1B64DA'], 'CS': ['#DCEBFF', '#134FB0'], '계약완료': ['#E5F8F0', '#00874F'],
+  '증권전달': ['#D6F5E7', '#00713F'], '보류': ['#F2F4F6', '#8B95A1'], '무산': ['#FFEBEE', '#F04452'],
   '미요청': ['#F7F8FA', '#B0B8C1'], '요청함': ['#F2F4F6', '#4E5968'], '소개받음': ['#F3EDFF', '#6D28D9'],
-  '상담예약': ['#F3EDFF', '#6D28D9'], '계약연결': ['#E5F8F0', '#00874F'],
-  '해당없음': ['#F7F8FA', '#B0B8C1'], '대기': ['#FFEBEE', '#F04452'], '전달완료': ['#E5F8F0', '#00874F']
+  '상담예약': ['#F3EDFF', '#6D28D9'], '계약연결': ['#E5F8F0', '#00874F']
 };
 const FONT = '"Pretendard Variable",Pretendard,"Malgun Gothic",sans-serif';
 const f = (w, s) => `${w} ${s}px ${FONT}`;
 function rr(c, x, y, w, h, r) {
-  c.beginPath();
-  c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
+  c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y); c.quadraticCurveTo(x + w, y, x + w, y + r);
   c.lineTo(x + w, y + h - r); c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
   c.lineTo(x + r, y + h); c.quadraticCurveTo(x, y + h, x, y + h - r);
   c.lineTo(x, y + r); c.quadraticCurveTo(x, y, x + r, y); c.closePath();
@@ -992,65 +655,58 @@ function pill(c, x, y, h, txt, cx) {
   c.font = f(700, 13);
   const w = Math.min(c.measureText(txt).width + 16, cx);
   c.fillStyle = p[0]; rr(c, x, y, w, h, h / 2); c.fill();
-  c.fillStyle = p[1]; c.textAlign = 'center'; c.textBaseline = 'middle';
-  c.fillText(txt, x + w / 2, y + h / 2 + .5); c.textAlign = 'left';
+  c.fillStyle = p[1]; c.textAlign = 'center'; c.fillText(txt, x + w / 2, y + h / 2 + .5); c.textAlign = 'left';
 }
-
+function shareOpts() {
+  return { off: $('#o-off').checked, db: $('#o-db').checked, memo: $('#o-memo').checked, money: $('#o-money').checked, empty: $('#o-empty').checked };
+}
+function teamData(tid, o) {
+  const out = [];
+  memsOf(tid).forEach(m => {
+    let rs = ROWS.filter(r => r.mid === m.id);
+    if (!o.off) rs = rs.filter(r => !r.closed);
+    rs = sortRows(rs);
+    if (rs.length || o.empty) out.push({ m, rs });
+  });
+  return out;
+}
 function buildCanvas(tid) {
-  const o = shareOpts(), t = team(tid), data = teamData(tid, o);
-  const S = 2, W = 1080, PAD = 26;
-  const CW = W - PAD * 2;
-
-  /* 컬럼 구성 */
+  const o = shareOpts(), t = TEAMS.find(x => x.id === tid) || { name: '팀' }, data = teamData(tid, o);
+  const S = 2, W = 1080, PAD = 26, CW = W - PAD * 2;
   let cols = [
-    { k: 'dbtype', t: 'DB종류', w: 104 },
-    { k: 'region', t: '지역', w: 92 },
-    { k: 'client', t: '이름', w: 118 },
-    { k: 'date', t: '날짜', w: 96 },
-    { k: 'expect', t: '예상업적', w: 112, r: 1 },
-    { k: 'status', t: '계약', w: 82 },
-    { k: 'family', t: '가족소개', w: 100 },
-    { k: 'policy', t: '증권', w: 92 },
-    { k: 'memo', t: '비고', w: 0 }
+    { k: 'dbtype', t: 'DB종류', w: 108 }, { k: 'region', t: '지역', w: 88 }, { k: 'client', t: '이름', w: 112 },
+    { k: 'date', t: '약속', w: 88 }, { k: 'expect', t: '예상업적', w: 110, r: 1 },
+    { k: 'stage', t: '단계', w: 92 }, { k: 'family', t: '가족소개', w: 100 }, { k: 'memo', t: '비고', w: 0 }
   ];
   if (!o.db) cols = cols.filter(c => c.k !== 'dbtype');
   if (!o.money) cols = cols.filter(c => c.k !== 'expect');
   if (!o.memo) cols = cols.filter(c => c.k !== 'memo');
-  const fixed = cols.reduce((a, c) => a + c.w, 0);
-  const flex = cols.find(c => c.w === 0);
+  const fixed = cols.reduce((a, c) => a + c.w, 0), flex = cols.find(c => c.w === 0);
   if (flex) flex.w = Math.max(140, CW - fixed);
-  else { const extra = (CW - fixed) / cols.length; cols.forEach(c => c.w += extra); }
+  else { const ex = (CW - fixed) / cols.length; cols.forEach(c => c.w += ex); }
 
   const HDR = 108, KPI = 66, MH = 40, TH = 32, RH = 38, GAP = 14, FOOT = 46;
   let h = HDR + KPI + 16;
-  data.forEach(g => { h += MH + TH + Math.max(g.rs.length, 1) * RH + GAP; });
+  data.forEach(g => h += MH + TH + Math.max(g.rs.length, 1) * RH + GAP);
   h += FOOT + 10;
   if (!data.length) h = HDR + KPI + 120;
 
   const cv = document.createElement('canvas');
   cv.width = W * S; cv.height = Math.round(h) * S;
-  const c = cv.getContext('2d'); c.scale(S, S);
-  c.textBaseline = 'middle';
+  const c = cv.getContext('2d'); c.scale(S, S); c.textBaseline = 'middle';
   c.fillStyle = '#fff'; c.fillRect(0, 0, W, h);
 
-  /* 헤더 */
   const g = c.createLinearGradient(0, 0, W, HDR);
   g.addColorStop(0, '#1B64DA'); g.addColorStop(1, '#3182F6');
   c.fillStyle = g; c.fillRect(0, 0, W, HDR);
   c.fillStyle = 'rgba(255,255,255,.18)'; rr(c, PAD, 26, 44, 44, 13); c.fill();
-  c.fillStyle = '#fff'; c.font = f(800, 17); c.textAlign = 'center';
-  c.fillText('A+', PAD + 22, 49); c.textAlign = 'left';
-  c.font = f(800, 26);
-  c.fillText(`${t.name} 진행현황`, PAD + 58, 44);
+  c.fillStyle = '#fff'; c.font = f(800, 17); c.textAlign = 'center'; c.fillText('A+', PAD + 22, 49); c.textAlign = 'left';
+  c.font = f(800, 26); c.fillText(`${t.name} 진행현황`, PAD + 58, 44);
   c.font = f(600, 14); c.fillStyle = '#CFE3FF';
-  const sub = `${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')} · 팀원 ${data.length}명`;
-  c.fillText(sub, PAD + 58, 70);
+  c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')} · 팀원 ${data.length}명`, PAD + 58, 70);
 
-  /* KPI 스트립 */
-  const all = data.flatMap(x => x.rs);
-  const live = all.filter(r => r.status === '진행중' || r.status === '청약');
-  const done = all.filter(r => r.status === '계약');
-  const pol = done.filter(r => r.policy !== '전달완료').length;
+  const all = data.flatMap(x => x.rs), live = all.filter(isLive), done = all.filter(isDone);
+  const pol = all.filter(r => !r.closed && r.stage === '계약완료').length;
   const fam = all.filter(r => r.family && r.family !== '미요청').length;
   let ky = HDR + 12;
   c.fillStyle = '#F7F9FC'; rr(c, PAD, ky, CW, 46, 12); c.fill();
@@ -1058,8 +714,7 @@ function buildCanvas(tid) {
   ['계약', `${done.length}건`], ['가족소개', `${fam}건`], ['증권 미전달', `${pol}건`]];
   const kw = CW / kp.length;
   kp.forEach((k, i) => {
-    const x = PAD + kw * i + kw / 2;
-    c.textAlign = 'center';
+    const x = PAD + kw * i + kw / 2; c.textAlign = 'center';
     c.font = f(600, 12); c.fillStyle = CO.tx3; c.fillText(k[0], x, ky + 15);
     c.font = f(800, 16); c.fillStyle = (k[0] === '증권 미전달' && pol) ? '#F04452' : CO.tx; c.fillText(k[1], x, ky + 33);
     if (i) { c.strokeStyle = '#E9EDF2'; c.beginPath(); c.moveTo(PAD + kw * i, ky + 10); c.lineTo(PAD + kw * i, ky + 36); c.stroke(); }
@@ -1069,15 +724,10 @@ function buildCanvas(tid) {
   let y = HDR + KPI + 16;
   if (!data.length) {
     c.font = f(700, 16); c.fillStyle = CO.tx3; c.textAlign = 'center';
-    c.fillText('표시할 진행건이 없습니다', W / 2, y + 40); c.textAlign = 'left';
-    return cv;
+    c.fillText('표시할 진행건이 없습니다', W / 2, y + 40); c.textAlign = 'left'; return cv;
   }
-
   data.forEach(grp => {
-    const L = grp.rs;
-    const lv = L.filter(r => r.status === '진행중' || r.status === '청약');
-    const dn = L.filter(r => r.status === '계약');
-    /* 팀원 헤더 */
+    const L = grp.rs, lv = L.filter(isLive), dn = L.filter(isDone);
     c.fillStyle = '#EEF4FF'; rr(c, PAD, y, CW, MH, 10); c.fill();
     c.font = f(800, 17); c.fillStyle = CO.blueD; c.fillText(grp.m.name, PAD + 14, y + MH / 2);
     const nw = c.measureText(grp.m.name).width;
@@ -1085,11 +735,9 @@ function buildCanvas(tid) {
     c.fillText(`진행 ${lv.length}건${dn.length ? ` · 계약 ${dn.length}건` : ''}`, PAD + 22 + nw, y + MH / 2 + 1);
     if (o.money) {
       c.textAlign = 'right'; c.font = f(800, 15); c.fillStyle = CO.tx;
-      c.fillText(`${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`, PAD + CW - 14, y + MH / 2);
-      c.textAlign = 'left';
+      c.fillText(`${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`, PAD + CW - 14, y + MH / 2); c.textAlign = 'left';
     }
     y += MH;
-    /* 표 머리 */
     c.fillStyle = '#FAFBFC'; c.fillRect(PAD, y, CW, TH);
     c.strokeStyle = CO.line; c.lineWidth = 1;
     c.beginPath(); c.moveTo(PAD, y + TH - .5); c.lineTo(PAD + CW, y + TH - .5); c.stroke();
@@ -1101,32 +749,27 @@ function buildCanvas(tid) {
       x += col.w;
     });
     y += TH;
-    /* 행 */
-    if (!L.length) {
-      c.font = f(600, 13.5); c.fillStyle = CO.tx4 || '#B0B8C1';
-      c.fillStyle = '#B0B8C1'; c.fillText('진행중인 건 없음', PAD + 12, y + RH / 2);
-      y += RH;
-    }
+    if (!L.length) { c.font = f(600, 13.5); c.fillStyle = '#B0B8C1'; c.fillText('진행중인 건 없음', PAD + 12, y + RH / 2); y += RH; }
     L.forEach((r, i) => {
       if (i % 2) { c.fillStyle = '#FCFDFE'; c.fillRect(PAD, y, CW, RH); }
-      const dead = r.status === '무산' || r.status === '보류';
+      const dead = !!r.closed;
       let x2 = PAD;
       cols.forEach(col => {
         const cx = col.w - 20;
-        if (col.k === 'status' || col.k === 'family' || col.k === 'policy') {
-          pill(c, x2 + 10, y + (RH - 24) / 2, 24, r[col.k] || '-', cx + 6);
-        } else if (col.k === 'expect') {
-          c.font = f(700, 14); c.fillStyle = dead ? '#B0B8C1' : CO.tx;
-          c.textAlign = 'right'; c.fillText(r.expect ? won(r.expect) : '-', x2 + col.w - 12, y + RH / 2); c.textAlign = 'left';
+        if (col.k === 'stage') pill(c, x2 + 10, y + (RH - 24) / 2, 24, dead ? r.closed : r.stage, cx + 6);
+        else if (col.k === 'family') pill(c, x2 + 10, y + (RH - 24) / 2, 24, r.family || '-', cx + 6);
+        else if (col.k === 'expect') {
+          c.font = f(700, 14); c.fillStyle = dead ? '#B0B8C1' : CO.tx; c.textAlign = 'right';
+          c.fillText(r.expect ? won(r.expect) : '-', x2 + col.w - 12, y + RH / 2); c.textAlign = 'left';
         } else if (col.k === 'date') {
           c.font = f(600, 13.5); c.fillStyle = dead ? '#B0B8C1' : CO.tx2;
-          const dl = ((r.status === '진행중' || r.status === '청약') && r.date) ? dLabel(r.date) : '';
           const txt = r.date ? r.date.slice(5).replace('-', '.') : '-';
           c.fillText(txt, x2 + 12, y + RH / 2);
-          if (dl && (dl === '오늘' || dl.includes('지남'))) {
+          const n = dnum(r.date);
+          if (isLive(r) && n !== null && n <= 0) {
             const bw = c.measureText(txt).width;
-            c.font = f(800, 11); c.fillStyle = dl === '오늘' ? '#FF9500' : '#F04452';
-            c.fillText(dl, x2 + 18 + bw, y + RH / 2);
+            c.font = f(800, 11); c.fillStyle = n === 0 ? '#FF9500' : '#F04452';
+            c.fillText(n === 0 ? '오늘' : `${-n}일 지남`, x2 + 18 + bw, y + RH / 2);
           }
         } else if (col.k === 'client') {
           c.font = f(700, 14.5); c.fillStyle = dead ? '#B0B8C1' : CO.tx;
@@ -1142,219 +785,111 @@ function buildCanvas(tid) {
     });
     y += GAP;
   });
-
-  /* 푸터 */
   c.strokeStyle = CO.line; c.beginPath(); c.moveTo(PAD, y + 6); c.lineTo(PAD + CW, y + 6); c.stroke();
   c.font = f(600, 12.5); c.fillStyle = '#B0B8C1';
-  c.fillText('APEX 계약진행 관리 · 내부 관리용 예상치 (대외 배포 금지)', PAD, y + 26);
+  c.fillText('APEX DB · 업적관리 · 내부 관리용 (대외 배포 금지)', PAD, y + 26);
   c.textAlign = 'right';
   c.fillText(new Date().toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' 기준', PAD + CW, y + 26);
   c.textAlign = 'left';
   return cv;
 }
-
+function renderShare() {
+  if (!TEAMS.some(t => t.id === SHARE.team)) SHARE.team = (TEAMS[0] || {}).id || '';
+  $('#share-chips').innerHTML = TEAMS.map(t =>
+    `<button class="chip${SHARE.team === t.id ? ' on' : ''}" data-t="${t.id}">${esc(t.name)}${t.leader ? ` · ${esc(t.leader)}` : ''}</button>`).join('');
+  drawPreview();
+}
+$('#share-chips').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; SHARE.team = c.dataset.t; renderShare(); };
+['#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty'].forEach(s => $(s).onchange = () => drawPreview());
 let PREV = null;
 async function drawPreview() {
-  if (!SHARE.team) { $('#prev').innerHTML = `<div class="empty">팀을 먼저 만드세요.</div>`; return; }
+  if (!SHARE.team) { $('#prev').innerHTML = `<div class="empty">보여 줄 팀이 없습니다.</div>`; return; }
   try { await document.fonts.ready; } catch (e) { }
   PREV = buildCanvas(SHARE.team);
-  $('#prev').innerHTML = '';
-  PREV.style.width = Math.min(PREV.width / 2, 1080) + 'px';
+  $('#prev').innerHTML = ''; PREV.style.width = Math.min(PREV.width / 2, 1080) + 'px';
   $('#prev').appendChild(PREV);
 }
-function fileName() { return `APEX_${teamName(SHARE.team)}_진행현황_${TODAY_S.replace(/-/g, '')}.png`; }
-
-$('#b-copy').onclick = async () => {
+const fileName = () => `APEX_${teamName(SHARE.team)}_진행현황_${TODAY_S.replace(/-/g, '')}.png`;
+function dl(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+$('#b-copy').onclick = () => {
   if (!PREV) return;
   PREV.toBlob(async b => {
     try {
-      if (navigator.canShare && navigator.canShare({ files: [new File([b], fileName(), { type: 'image/png' })] })) {
-        await navigator.share({ files: [new File([b], fileName(), { type: 'image/png' })], title: `${teamName(SHARE.team)} 진행현황` });
-        return;
-      }
+      const fl = [new File([b], fileName(), { type: 'image/png' })];
+      if (navigator.canShare && navigator.canShare({ files: fl })) { await navigator.share({ files: fl }); return; }
     } catch (e) { }
-    try {
-      await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]);
-      toast('이미지를 복사했습니다 · 카톡에서 Ctrl+V');
-    } catch (e) {
-      dl(b, fileName()); toast('복사가 막혀 PNG로 저장했습니다');
-    }
+    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': b })]); toast('이미지를 복사했습니다 · 카톡에서 Ctrl+V'); }
+    catch (e) { dl(b, fileName()); toast('복사가 막혀 PNG 로 저장했습니다'); }
   });
 };
-function dl(blob, name) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-}
-$('#b-png').onclick = () => { if (PREV) PREV.toBlob(b => { dl(b, fileName()); toast('저장했습니다 (다운로드 폴더)'); }); };
-$('#b-all').onclick = async () => {
-  try { await document.fonts.ready; } catch (e) { }
-  let i = 0;
-  DB.teams.forEach(t => {
-    const cv = buildCanvas(t.id);
-    setTimeout(() => cv.toBlob(b => dl(b, `APEX_${t.name}_진행현황_${TODAY_S.replace(/-/g, '')}.png`)), 350 * i++);
-  });
-  toast(`${DB.teams.length}개 팀 이미지를 저장합니다`);
-};
+$('#b-png').onclick = () => { if (PREV) PREV.toBlob(b => { dl(b, fileName()); toast('저장했습니다'); }); };
 $('#b-txt').onclick = () => {
-  const o = shareOpts(), t = team(SHARE.team), data = teamData(SHARE.team, o);
+  const o = shareOpts(), t = TEAMS.find(x => x.id === SHARE.team) || {}, data = teamData(SHARE.team, o);
   const L = [`[${t.name} 진행현황] ${TODAY_S.replace(/-/g, '.')}`, ''];
   data.forEach(g => {
-    const lv = g.rs.filter(r => r.status === '진행중' || r.status === '청약');
+    const lv = g.rs.filter(isLive);
     L.push(`▶ ${g.m.name} — 진행 ${lv.length}건 · 예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`);
     if (!g.rs.length) L.push('   (진행건 없음)');
     g.rs.forEach(r => {
-      const bits = [];
-      if (o.db && r.dbtype) bits.push(r.dbtype);
-      bits.push(r.region, r.client, r.date ? r.date.slice(5).replace('-', '.') : '', r.status);
-      if (o.money && r.expect) bits.push(won(r.expect) + '원');
-      if (r.family && r.family !== '미요청') bits.push('소개 ' + r.family);
-      if (r.status === '계약') bits.push('증권 ' + r.policy);
-      if (o.memo && r.memo) bits.push(r.memo);
-      L.push('   · ' + bits.filter(Boolean).join(' / '));
+      const b = [];
+      if (o.db && r.dbtype) b.push(r.dbtype);
+      b.push(r.region, r.client, r.date ? r.date.slice(5).replace('-', '.') : '', r.closed || r.stage);
+      if (o.money && r.expect) b.push(won(r.expect) + '원');
+      if (r.family && r.family !== '미요청') b.push('소개 ' + r.family);
+      if (o.memo && r.memo) b.push(r.memo);
+      L.push('   · ' + b.filter(Boolean).join(' / '));
     });
     L.push('');
   });
-  L.push('※ 내부 관리용 예상치');
-  const txt = L.join('\n');
-  navigator.clipboard.writeText(txt).then(() => toast('텍스트를 복사했습니다'))
-    .catch(() => modal('카톡용 텍스트', `<textarea style="min-height:320px">${esc(txt)}</textarea>`, null));
+  L.push('※ 내부 관리용');
+  navigator.clipboard.writeText(L.join('\n')).then(() => toast('텍스트를 복사했습니다')).catch(() => toast('복사하지 못했습니다'));
 };
 
 /* ============================================================
-   데이터 — 엑셀 붙여넣기 / 내보내기 / 백업
+   엑셀
    ============================================================ */
-function pick(v, list, def) {
-  v = String(v || '').trim();
-  const hit = list.find(x => x === v) || list.find(x => v && x.includes(v)) || null;
-  return hit || def;
-}
-$('#b-import').onclick = () => {
-  const raw = $('#paste').value.trim();
-  if (!raw) { toast('붙여넣을 내용이 없습니다'); return; }
-  const cut = l => (l.indexOf('\t') >= 0 ? l.split('\t') : l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/))
-    .map(x => x.replace(/^"|"$/g, '').replace(/""/g, '"').trim());
-  let lines = raw.split(/\r?\n/).filter(l => l.trim());
-  /* 제목줄이 있으면 제목을 읽어 순서를 맞춘다 */
-  const HMAP = [[/팀원|담당|설계사/, 'mid'], [/배정/, 'dbdate'], [/db|종류|유입|경로/i, 'dbtype'],
-  [/지역/, 'region'], [/이름|고객/, 'client'], [/날짜|예정|진행일|상담/, 'date'],
-  [/예상|업적|월납|보험료|금액/, 'expect'], [/계약/, 'status'], [/가족|소개/, 'family'],
-  [/증권/, 'policy'], [/비고|메모/, 'memo']];
-  let ORDER = ['mid', 'dbdate', 'dbtype', 'region', 'client', 'date', 'expect', 'status', 'family', 'policy', 'memo'];
-  if (/팀원|담당|설계사/.test(lines[0]) && /지역|이름|고객|날짜|DB/i.test(lines[0])) {
-    ORDER = cut(lines[0]).map(hd => { const hit = HMAP.find(x => x[0].test(hd)); return hit ? hit[1] : null; });
-    lines.shift();
-  }
-  const nd = v => {
-    let d = String(v || '').replace(/[.\/]/g, '-').replace(/-(\d)(?!\d)/g, '-0$1').replace(/-$/, '');
-    if (/^\d{1,2}-\d{1,2}$/.test(d)) d = TODAY.getFullYear() + '-' + d.split('-').map(x => x.padStart(2, '0')).join('-');
-    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
-  };
-  let add = 0, newMem = [];
-  const tid = DB.teams[0].id;
-  lines.forEach(l => {
-    const c = cut(l), o = {};
-    ORDER.forEach((k, i) => { if (k && o[k] == null) o[k] = c[i]; });
-    const name = (o.mid || '').trim(); if (!name) return;
-    let m = DB.members.find(x => x.name === name);
-    if (!m) { m = { id: uid(), name, tid, region: '' }; DB.members.push(m); newMem.push(name); }
-    const dbt = (o.dbtype || '').trim();
-    if (dbt && !DB.dbtypes.includes(dbt)) DB.dbtypes.push(dbt);
-    DB.rows.push({
-      id: uid(), mid: m.id, dbdate: nd(o.dbdate), dbtype: dbt || DB.dbtypes[0],
-      region: o.region || '', client: o.client || '', date: nd(o.date),
-      expect: +String(o.expect || '').replace(/[^\d]/g, '') || 0,
-      status: pick(o.status, STATUS, '진행중'), family: pick(o.family, FAMILY, '미요청'),
-      policy: pick(o.policy, POLICY, '해당없음'), memo: o.memo || ''
-    });
-    add++;
-  });
-  save(); $('#paste').value = '';
-  toast(`${add}건 등록${newMem.length ? ` · 신규 팀원 ${newMem.length}명` : ''}`);
-  go('board');
-};
-$('#b-sample').onclick = () => {
-  if (DB.rows.length && !confirm('예시 데이터를 추가할까요? (기존 자료는 그대로 둡니다)')) return;
-  if (DB.teams.length < 2) DB.teams.push({ id: uid(), name: '2팀', leader: '이팀장' });
-  if (!DB.teams[0].leader) DB.teams[0].leader = '김팀장';
-  const t1 = DB.teams[0].id, t2 = DB.teams[1].id;
-  const S = [['김상담', t1, '성남 분당'], ['박설계', t1, '용인 수지'], ['최보장', t2, '수원 영통']];
-  const ms = S.map(s => { let m = DB.members.find(x => x.name === s[0]); if (!m) { m = { id: uid(), name: s[0], tid: s[1], region: s[2] }; DB.members.push(m); } return m; });
-  const d = n => { const x = new Date(TODAY); x.setDate(x.getDate() + n); return iso(x); };
-  [[0, '성남 분당', '박○○', d(1), 180000, '진행중', '요청함', '해당없음', '자녀 2명 · 소개 예정', d(-6), '보장분석 랜딩'],
-  [0, '성남 수정', '김○○', d(-2), 120000, '청약', '소개받음', '해당없음', '동생 소개받음', d(-11), '온라인DB'],
-  [0, '성남 분당', '이○○', d(-9), 240000, '계약', '계약연결', '대기', '증권 이번주 방문', d(-20), '소개'],
-  [1, '용인 수지', '정○○', d(3), 90000, '진행중', '미요청', '해당없음', '', d(-4), '보험금비서 랜딩'],
-  [1, '용인 기흥', '한○○', d(-1), 150000, '보류', '요청함', '해당없음', '배우자 상의중', d(-13), '온라인DB'],
-  [2, '수원 영통', '오○○', d(2), 200000, '청약', '상담예약', '해당없음', '지인 2명 상담예약', d(-8), '개인개척'],
-  [2, '수원 광교', '유○○', d(-14), 310000, '계약', '소개받음', '전달완료', '', d(-25), '보장분석 랜딩'],
-  [1, '용인 수지', '문○○', d(-3), 0, '무산', '미요청', '해당없음', '결번', d(-10), '온라인DB'],
-  [2, '수원 권선', '남○○', d(5), 110000, '진행중', '요청함', '해당없음', '', d(-2), 'TM DB']]
-    .forEach(r => DB.rows.push({
-      id: uid(), mid: ms[r[0]].id, region: r[1], client: r[2], date: r[3], expect: r[4],
-      status: r[5], family: r[6], policy: r[7], memo: r[8], dbdate: r[9], dbtype: r[10]
-    }));
-  save(); toast('예시 데이터를 넣었습니다'); go('board');
-};
-
 function csv(only) {
-  const head = ['팀', '팀원', 'DB배정월', 'DB배정일', 'DB종류', '지역', '이름(고객)', '날짜',
-    '예상업적', '계약유무', '가족소개진행', '증권전달', '비고'];
+  const head = ['팀', '팀원', 'DB배정월', 'DB배정일', 'DB종류', '지역', '이름', '다음약속',
+    '예상업적', '진행단계', '상태', '가족소개진행', '비고'];
   const q = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
-  const src = only || DB.rows;
+  const src = only || ROWS;
   const L = [head.map(q).join(',')];
-  DB.teams.forEach(t => memsOf(t.id).forEach(m => sortRows(src.filter(r => r.mid === m.id)).forEach(r => {
+  TEAMS.forEach(t => memsOf(t.id).forEach(m => sortRows(src.filter(r => r.mid === m.id)).forEach(r => {
     L.push([t.name, m.name, ym(r.dbdate), r.dbdate, r.dbtype, r.region, r.client, r.date,
-      r.expect || 0, r.status, r.family, r.policy, r.memo].map(q).join(','));
+      r.expect || 0, r.stage, r.closed || '진행', r.family, r.memo].map(q).join(','));
   })));
   return '﻿' + L.join('\r\n');
 }
-function exportCsv() {
-  if (!DB.rows.length) { toast('내보낼 자료가 없습니다'); return; }
-  dl(new Blob([csv()], { type: 'text/csv;charset=utf-8' }), `APEX_계약진행_${TODAY_S.replace(/-/g, '')}.csv`);
+$('#b-xls').onclick = () => {
+  const L = rowsFiltered();
+  if (!L.length) { toast('내보낼 자료가 없습니다'); return; }
+  dl(new Blob([csv(L)], { type: 'text/csv;charset=utf-8' }), `APEX_진행관리_${TODAY_S.replace(/-/g, '')}.csv`);
   toast('엑셀 파일을 저장했습니다');
-}
-$('#b-xls').onclick = exportCsv; $('#b-xls2').onclick = exportCsv;
-$('#b-backup').onclick = () => {
-  dl(new Blob([JSON.stringify(DB, null, 1)], { type: 'application/json' }), `APEX_계약진행_백업_${TODAY_S.replace(/-/g, '')}.json`);
-  toast('백업했습니다');
 };
-$('#b-restore').onclick = () => $('#filepick').click();
-$('#filepick').onchange = e => {
-  const f2 = e.target.files[0]; if (!f2) return;
-  const rd = new FileReader();
-  rd.onload = () => {
-    try {
-      const o = JSON.parse(rd.result);
-      if (!o.teams || !o.members) throw 0;
-      if (!confirm('현재 자료를 백업 파일로 덮어쓸까요?')) return;
-      DB = Object.assign({ teams: [], members: [], rows: [] }, o); save();
-      toast('복원했습니다'); go('board'); renderTeams();
-    } catch (x) { toast('백업 파일이 아닙니다'); }
-  };
-  rd.readAsText(f2); e.target.value = '';
-};
-$('#b-clear-rows').onclick = () => {
-  if (!DB.rows.length) { toast('지울 진행건이 없습니다'); return; }
-  if (!confirm(`진행건 ${DB.rows.length}건을 모두 지웁니다.\n팀·팀원 명단과 DB종류는 그대로 남습니다.\n계속할까요?`)) return;
-  DB.rows = []; save();
-  FILTER = { month: '', team: '', mem: '', status: '', q: '' }; DBM = '';
-  go('board'); toast('진행건을 비웠습니다');
-};
-$('#b-clear').onclick = () => {
-  if (!confirm('모든 팀 · 팀원 · 진행건을 삭제할까요?\n되돌릴 수 없습니다.')) return;
-  if (!confirm('정말 삭제합니다. 계속할까요?')) return;
-  DB = { teams: [{ id: 't1', name: '1팀', leader: '' }], members: [], rows: [], dbtypes: DBTYPES0.slice() };
-  save(); FILTER = { month: '', team: '', mem: '', status: '', q: '' }; DBM = ''; go('board'); renderTeams();
+$('#b-db-xls').onclick = () => {
+  const L = dbRows(DBM);
+  if (!L.length) { toast('이 달 자료가 없습니다'); return; }
+  dl(new Blob([csv(L)], { type: 'text/csv;charset=utf-8' }), `APEX_DB배정_${DBM.replace('-', '')}.csv`);
+  toast('엑셀 파일을 저장했습니다');
 };
 
 /* ============================================================
-   시작
+   탭
    ============================================================ */
-load();
-try { $('#todayLabel').textContent = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }); } catch (e) { }
-renderBoard();
-window.go = go; window.editTeam = editTeam; window.delTeam = delTeam; window.editMem = editMem; window.delMem = delMem;
+['board', 'db', 'share'].forEach(p => $('#tab-' + p).onclick = () => {
+  ['board', 'db', 'share'].forEach(x => {
+    $('#tab-' + x).classList.toggle('on', x === p);
+    $('#p-' + x).classList.toggle('on', x === p);
+  });
+  if (p === 'board') renderBoard();
+  if (p === 'db') renderDb();
+  if (p === 'share') renderShare();
+});
+
+boot();
 </script>
 </body>
 </html>
