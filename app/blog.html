@@ -743,6 +743,15 @@ function names(t){
     if(!out.includes(w)) out.push(w); }
   return out;
 }
+/* 초안이 부른 이름과 우리가 만든 그림 이름을 맞춘다. <b>게이트가 쓰는 그 자</b>를
+   그대로 쓴다(공백을 지우고 서로 포함하면 같은 것) — 두 벌로 두면 게이트는 통과시키는데
+   붙여넣기에서는 빠지는 자리가 생긴다. (CLAUDE.md 5) */
+function pickPng(pngs,name){
+  const a=String(name||'').replace(/\s+/g,'').replace(/[「」'"]/g,'');
+  for(const k in pngs){ const b=k.replace(/\s+/g,'');
+    if(a===b||a.includes(b)||b.includes(a)) return pngs[k]; }
+  return '';
+}
 function artAsked(t){
   const out=[]; let m; const re=/\[이미지\s*:\s*([^\]|]+)/g;
   while((m=re.exec(t))){ const n=m[1].replace(/\s+/g,'').replace(/[「」'"]/g,'');
@@ -770,7 +779,7 @@ function guard(t,kind){
 /* ══════════ 마크다운 → 보이는 글 ══════════
    네이버 편집기는 마크다운을 모른다. 「##」 이 글자 그대로 보인다.
    그래서 여기서 HTML 로 만들고, <b>서식 있는 복사</b>로 넘긴다. */
-function md2html(md,forPaste){
+function md2html(md,forPaste,pngs){
   const lines=String(md||'').split('\n');
   let h='', inTable=false, tRows=[], inList='';
   const inline = s => esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')
@@ -791,8 +800,13 @@ function md2html(md,forPaste){
     if(!s){ flushList(); continue; }
     const img=s.match(/^\[이미지\s*:\s*([^\]|]+)(?:\|\s*alt\s*:\s*([^\]]*))?\]$/);
     if(img){ flushList();
-      h+='<div class="ph">🖼️ 여기에 <b>'+esc(img[1].trim())+'</b> 그림을 넣으세요'+
-         (img[2]?' <span style="font-weight:400">(alt: '+esc(img[2].trim())+')</span>':'')+'</div>'; continue; }
+      const nm=img[1].trim(), alt=(img[2]||'').trim();
+      /* 그림을 손에 들고 있으면 <b>그림 자체</b>를 넣는다 — 붙여넣기 한 번으로 끝난다.
+         못 만든 자리만 「여기에 넣으세요」 파란 칸으로 남긴다. */
+      const u=pngs&&pickPng(pngs,nm);
+      if(u){ h+='<img src="'+u+'" alt="'+esc(alt||nm)+'" style="max-width:100%;height:auto;display:block;margin:14px 0">'; continue; }
+      h+='<div class="ph">🖼️ 여기에 <b>'+esc(nm)+'</b> 그림을 넣으세요'+
+         (alt?' <span style="font-weight:400">(alt: '+esc(alt)+')</span>':'')+'</div>'; continue; }
     let m;
     if((m=s.match(/^###\s+(.*)$/))){ flushList(); h+='<h3>'+inline(m[1])+'</h3>'; continue; }
     if((m=s.match(/^##\s+(.*)$/))){ flushList(); h+='<h2>'+inline(m[1])+'</h2>'; continue; }
@@ -833,19 +847,52 @@ function packText(i){
 }
 /* 서식 있는 복사 — 붙이면 제목·표·인용이 그대로 선다.
    안 되는 브라우저에서는 글자만이라도 넘어가게 한다. */
+/* SVG 한 장을 PNG 로 바꿔 글자(dataURL)로 돌려준다. 내려받기와 <b>같은 길</b>을 쓴다 —
+   흰 바탕을 깔고 캔버스에 그린다. 못 만들면 빈 글자를 돌려주고, 그 자리는 파란 칸으로 남는다. */
+function svgPng(r){
+  return new Promise(res=>{
+    try{
+      const img=new Image();
+      const u=URL.createObjectURL(new Blob([r.svg],{type:'image/svg+xml;charset=utf-8'}));
+      let done=false; const fin=v=>{ if(done) return; done=true; try{URL.revokeObjectURL(u);}catch(e){} res(v); };
+      /* 시간 제한을 건다 — 안 걸면 한 장이 안 그려질 때 복사가 영영 안 끝난다 (CLAUDE.md 4-1) */
+      setTimeout(()=>fin(''),8000);
+      img.onload=()=>{ try{
+        const c=document.createElement('canvas'); c.width=r.w; c.height=r.h;
+        const g=c.getContext('2d'); g.fillStyle='#FFFFFF'; g.fillRect(0,0,r.w,r.h); g.drawImage(img,0,0);
+        fin(c.toDataURL('image/png'));
+      }catch(e){ fin(''); } };
+      img.onerror=()=>fin('');
+      img.src=u;
+    }catch(e){ res(''); }
+  });
+}
+async function artPngs(i){
+  const row=S.rows[i], d=KINDS[row.kind], out={};
+  for(const id of d.art){
+    const r=build(id,row); if(r.err||!r.svg) continue;
+    const u=await svgPng(r); if(u) out[r.t]=u;
+  }
+  return out;
+}
 async function copyRich(i){
   const row=S.rows[i];
   if(!row.guard||!row.guard.ok){ toast('고칠 곳이 남아 있습니다. 위 빨간 칸을 먼저 처리해 주세요.'); return; }
   await comply();          /* 저장해 둔 글을 다시 열었을 때도 준법 문구가 붙게 */
   const text=packText(i);
-  const html='<div style="font-family:sans-serif;line-height:1.7">'+md2html(text,true)+'</div>';
+  const b=$('cpBtn'); if(b){ b.disabled=true; b.innerHTML='<span class="spin"></span> 그림까지 담는 중…'; }
+  let pngs={};
+  try{ pngs=await artPngs(i); }catch(e){}
+  if(b){ b.disabled=false; b.textContent='📋 서식 있는 복사 (편집기에 그대로)'; }
+  const n=Object.keys(pngs).length;
+  const html='<div style="font-family:sans-serif;line-height:1.7">'+md2html(text,true,pngs)+'</div>';
   try{
     if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
       await navigator.clipboard.write([new ClipboardItem({
         'text/html': new Blob([html],{type:'text/html'}),
         'text/plain': new Blob([text],{type:'text/plain'})
       })]);
-      toast('서식까지 복사했습니다 — 편집기에 그대로 붙여넣으세요');
+      toast(n?('그림 '+n+'장까지 담았습니다 — 편집기에 한 번만 붙여넣으세요'):'서식까지 복사했습니다 — 편집기에 그대로 붙여넣으세요');
       return;
     }
     throw new Error('no clipboarditem');
@@ -1111,23 +1158,25 @@ async function show(i){
       '<li>막지는 않습니다 — 다만 <b>회사 문구인 줄 알고 올리시면 안 됩니다.</b></li></ul></div>')+
     '<div class="row">'+
       (g.ok
-        ? '<button class="p" onclick="copyRich('+i+')">📋 서식 있는 복사 (편집기에 그대로)</button>'
+        ? '<button class="p" id="cpBtn" onclick="copyRich('+i+')">📋 서식 있는 복사 (편집기에 그대로)</button>'
         : '<button disabled title="위 빨간 칸을 먼저 고쳐 주세요">📋 서식 있는 복사 — 고칠 곳 '+
           (g.hits.length+g.miss.length+g.holes.length)+'군데</button>')+
       '<button onclick="copyPlain('+i+')">마크다운으로 복사</button>'+
-      '<button onclick="downAll('+i+')">⬇ 그림 '+okArts.length+'장 모두 내려받기</button>'+
+      '<button onclick="downAll('+i+')">⬇ 그림 '+okArts.length+'장 따로 받기</button>'+
       '<button onclick="draft('+i+')">🔄 다시 만들기</button>'+
       (row.up?'<button onclick="markUp('+i+',false)">올림 표시 지우기</button>'
              :'<button onclick="markUp('+i+',true)">✓ 올렸음으로 표시</button>')+
     '</div>'+
     '<ol class="steps">'+
-      ['그림을 모두 내려받습니다','«서식 있는 복사»를 누릅니다','편집기에 붙여넣습니다 — 제목·표가 그대로 섭니다',
-       '파란 자리마다 이름이 같은 그림을 끌어다 넣고 그 안내 줄은 지웁니다',
+      ['«서식 있는 복사»를 누릅니다 — <b>그림까지 같이 담깁니다</b>',
+       '편집기에 <b>한 번</b> 붙여넣습니다 — 제목·표·그림이 그대로 섭니다',
+       '<b>파란 칸이 남아 있으면</b> 그 자리만 아래에서 PNG 를 내려받아 끌어다 넣습니다',
        '해시태그·메타 설명을 옮깁니다','회사 준법감시(광고 심의)를 거쳐 발행합니다']
       .map(s=>'<li><input type="checkbox" onchange="this.parentNode.classList.toggle(\'done\',this.checked)"><span>'+s+'</span></li>').join('')+
     '</ol>'+
     '<div class="note">마크다운을 그대로 붙이면 네이버 편집기에는 <b>## 이 글자 그대로</b> 보입니다. '+
-      '그래서 <b>서식 있는 복사</b>를 씁니다 — 제목·표·인용이 그대로 섭니다. '+
+      '그래서 <b>서식 있는 복사</b>를 씁니다 — 제목·표·인용이 그대로 서고, <b>그림도 글 안에 담겨</b> 한 번에 붙습니다. '+
+      '편집기가 붙여넣은 그림을 안 받아 주면 그 자리는 <b>파란 칸</b>으로 남습니다 — 그때만 아래에서 PNG 를 내려받아 끌어다 넣으세요. '+
       '<span class="hole">노란 칸</span>은 <b>AI 가 채우지 못한 자리</b>입니다. 비운 채로 올리지 마십시오.</div>'+
     '<h2 style="margin-top:18px">그림 — 직접 그린 것입니다</h2>'+
     '<div class="desc">남의 삽화를 떠 오지 않습니다. <b>축과 눈금이 있는 그래프는 그리지 않습니다</b> — 그 숫자가 우리에게 없어서, 그리면 그것이 근거가 되어 버립니다.</div>'+

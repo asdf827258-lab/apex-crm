@@ -60,7 +60,8 @@ var DBS=[D('d1','순천','TA'),D('d2','순천시','미접촉'),D('d3','전남 �
  D('d13','학동 근처(자택)','TA'),            /* 「동구」로 바뀌려 하는 자리 — 손대면 안 된다 */
  D('d14','순천시 생목동','TA',{addr:'이미 적어 둔 동네'}),
  D('d15','동구 어딘가(자택)','TA'),        /* 한 글자 가드만 막는 자리 — 맨 앞이긴 하다 */
- D('d16','조례동 순천 시청 앞(자택)','TA')]; /* 맨 앞 가드만 막는 자리 — 이름은 두 글자다 */
+ D('d16','조례동 순천 시청 앞(자택)','TA'), /* 맨 앞 가드만 막는 자리 — 이름은 두 글자다 */
+ D('d17','광주','TA'),D('d18','광주','미접촉')]; /* 광주광역시·경기 광주시 둘 다 있다 — 짐작 금지 */
 if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';
   if(d.lat===undefined){d.lat=null;d.lng=null}
   d.next_appt_place=null;d.next_appt_lat=null;d.next_appt_lng=null;
@@ -375,9 +376,13 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(/여수시 조례동/.test(plan), '지역 칸에 <주소가 든 줄>을 찾아냈다');
   is(/여수시/.test(plan.split('그대로 두는 것')[0] || ''),
      '카카오가 답한 <「여수시」로 지역을 바로잡겠다>고 미리 보여 준다');
-  /* 한 화면에 세 가지가 다 서는가 — 이것이 「쉽게」의 실체다 */
-  is(/동네 칸으로/.test(plan) && /좌표를 채웁니다/.test(plan) && /하나로/.test(plan),
-     '<세 가지를 한 화면에> 보여 준다 — 주소 옮기기 · 좌표 채우기 · 이름 모으기');
+  /* 한 화면에 세 가지가 다 서는가 — 이것이 「쉽게」의 실체다.
+     「갈라진 이름 모으기」는 없어졌다 — cityOf() 가 카카오를 안 부르고
+     그 자리에서 묶으므로, 물어볼 일 자체가 사라졌다. 대신 <b>시 채우기</b>다. */
+  is(/동네 칸으로/.test(plan) && /좌표를 채웁니다/.test(plan) && /시\(市\)를 채웁니다/.test(plan),
+     '<세 가지를 한 화면에> 보여 준다 — 주소 옮기기 · 좌표 채우기 · 시 채우기');
+  is(/카카오 안 부릅니다/.test(plan),
+     '시 채우기는 <카카오를 안 부른다>고 적는다 — 서버를 아껴 쓴다 (7번)');
   /* ★ 여수가 순천시로 바뀌려 했던 그 가드 — 「학동」은 전국에 여러 개다 */
   const kept = plan.split('그대로 두는 것')[1] || '';
   is(/학동/.test(kept) && /동구/.test(kept),
@@ -539,7 +544,103 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
 
-  await ctx.close(); await br.close(); srv.close();
+  await ctx.close();
+
+  /* ═══ [15] 시(市)로 분류 ═══════════════════════════════════════
+     지역 칸이 자유 입력이라 1,002명이 176가지 글자로 갈라져 있었습니다.
+     「지역 전체」가 무슨 뜻인지도 알 수 없었습니다. 이제 <b>시</b>로 묶습니다. */
+  ({ ctx, pg, errs, logs } = await open(true, true, false));
+  head('[15] 지역 칸을 <시(市)로> 묶는다 — 176가지가 몇 개로 줄었나');
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => !!document.querySelector('#rtSide .rt-city'), { timeout: 20000 });
+
+  const opts = await pg.evaluate(() => Array.prototype.map.call(
+    document.getElementById('rtRegion').options, o => o.value + '|' + o.textContent));
+  /* 순천 넷(순천 · 순천시 · 전남 순천시 · 전라남도 순천시)이 한 줄이어야 한다 */
+  const sun = opts.filter(o => /순천/.test(o));
+  is(sun.length === 1 && /^순천시\|/.test(sun[0]),
+     sun.length === 1 ? ('네 가지로 적힌 순천이 <한 줄「' + sun[0].split('|')[1] + '」>로 묶였다')
+                      : ('순천이 아직 ' + sun.length + '줄로 갈라져 있다 — ' + sun.join(' / ')));
+  is(/시 전체/.test(opts[0] || ''), '맨 위가 <「시 전체 · N명」> — 「지역 전체」가 무슨 뜻인지 몰랐던 자리');
+  is(opts.some(o => /시 모름/.test(o)),
+     '<「⚠ 시 모름」>이 목록에 있다 — 못 정한 사람을 숨기지 않는다');
+
+  /* 「광주」는 두 곳에 다 있다 — 짐작해서 넣었으면 여기서 걸린다 */
+  const gj = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    return (v('dbs') || []).filter(d => d.id === 'd17' || d.id === 'd18')
+      .map(d => (window.__cityProbe ? '' : '') + (d.sigungu || '(안 정함)')).join(',');
+  });
+  is(gj === '(안 정함),(안 정함)', gj === '(안 정함),(안 정함)'
+     ? '<「광주」를 짐작해서 넣지 않았다> — 광주광역시와 경기 광주시 둘 다 있다'
+     : ('「광주」에 시를 넣어 버렸다 — ' + gj));
+
+  const side15 = await pg.evaluate(() => document.getElementById('rtSide').innerText);
+  is(/시를 못 정한 고객이 \d+명/.test(side15), '<몇 명이 못 정했는지> 숫자로 말한다');
+  is(/짐작해서 넣지 않았습니다/.test(side15), '<왜 비워 뒀는지> 그 자리에 적는다');
+
+  /* ── 한 번 골라 여러 명을 한꺼번에 ── */
+  is(await pg.evaluate(() => !!document.getElementById('rtCityFix')), '<🏷 시 정해 주기> 단추가 그 자리에 있다');
+  await pg.evaluate(() => document.getElementById('rtCityFix').click());
+  const fixB = await pg.waitForFunction(() => {
+    const m = document.getElementById('rtTidy2');
+    if (!m || !m.classList.contains('open')) return null;
+    const b = document.getElementById('rtTidyB');
+    return b && /광주/.test(b.innerText) ? b.innerHTML : null;
+  }, { timeout: 20000 }).then(h => h.jsonValue(), () => '');
+  is(/두 곳에 다 있는 이름입니다/.test(fixB) && /경기 광주시/.test(fixB),
+     '<후보 둘을 들고> 온다 — 광주광역시 또는 경기 광주시');
+  is(/<select data-cfix/.test(fixB),
+     '<치는 칸이 아니라 고르는 칸>이다 — 치면 또 갈라진다');
+  is(/value="경기 광주시"/.test(fixB),
+     '목록에 <「경기 광주시」도 있다> — 없으면 고를 방법이 아예 없다');
+
+  /* 안 고르면 아무것도 안 바뀐다 */
+  await pg.evaluate(() => document.getElementById('rtTidyGo').click());
+  await pg.waitForTimeout(400);
+  const still = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    return ((v('dbs') || []).filter(d => d.id === 'd17')[0] || {}).sigungu || '(안 정함)';
+  });
+  is(still === '(안 정함)', '<고르지 않은 줄은 그대로> 둔다');
+
+  /* 한 번 고르니 두 명이 같이 정해진다 */
+  await pg.evaluate(() => {
+    const el = document.querySelector('#rtTidyB [data-cfix]');
+    el.value = '광주광역시';
+    document.getElementById('rtTidyGo').click();
+  });
+  await pg.waitForFunction(() => {
+    const v = (() => { try { return dbs } catch (e) { return [] } })();
+    return (v.filter(d => d.id === 'd18')[0] || {}).sigungu === '광주광역시';
+  }, { timeout: 15000 }).then(() => 1, () => 0);
+  const both = await pg.evaluate(() => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    return (v('dbs') || []).filter(d => d.id === 'd17' || d.id === 'd18')
+      .map(d => (d.sigungu || '-') + '/' + (d.sido || '-')).join(' ');
+  });
+  is(both === '광주광역시/광주 광주광역시/광주',
+     both === '광주광역시/광주 광주광역시/광주'
+       ? '<한 번 고르니 두 명이 같이> 정해졌다 — 한 명씩 누를 일이 아니다'
+       : ('한 번에 안 됐다 — ' + both));
+
+  /* ── 등록 창에도 고르는 칸 ── */
+  await pg.evaluate(() => { const m = document.getElementById('rtWrap'); if (m) m.classList.remove('on') });
+  await pg.evaluate(() => openDb('d1'));
+  await pg.waitForFunction(() => !!document.getElementById('dbCity'), { timeout: 15000 }).then(() => 1, () => 0);
+  const modal = await pg.evaluate(() => {
+    const c = document.getElementById('dbCity');
+    return { tag: c ? c.tagName : '(없음)', val: c ? c.value : '',
+             rg: (document.getElementById('region') || {}).placeholder || '' };
+  });
+  is(modal.tag === 'SELECT', '등록·수정 창의 시 칸이 <고르는 칸(select)>이다');
+  is(modal.val === '순천시', '적힌 「순천」을 <표준 이름으로 미리 골라> 둔다 — ' + modal.val);
+  is(!/순천시/.test(modal.rg), '옛 「지역」 칸은 <동네·메모로> 바뀌었다 — 분류에 안 쓴다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+  await ctx.close();
+
+  await br.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ CRM 실행 점검 통과 — 원래 화면은 그대로, 얹은 것은 실제로 돕니다.');
   process.exit(bad ? 1 : 0);
