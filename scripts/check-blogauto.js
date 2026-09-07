@@ -516,8 +516,10 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
     return { steps:(document.querySelectorAll('.steps li')||[]).length, txt:t };
   });
   is(steps.steps >= 5, '  올리는 순서가 체크할 수 있게 나온다 (' + steps.steps + '단계)');
-  is(/서식 있는 복사/.test(steps.txt) && /모두 내려받기/.test(steps.txt),
-     '  «서식 있는 복사» 와 «그림 모두 내려받기» 가 한자리에 있다');
+  is(/서식 있는 복사/.test(steps.txt) && /따로 받기/.test(steps.txt),
+     '  «서식 있는 복사» 와 «그림 따로 받기» 가 한자리에 있다');
+  is(/그림까지 같이 담깁니다/.test(steps.txt) && /한<\/b>? ?번 붙여넣습니다|한 번<\/b> 붙여넣습니다|한 번 붙여넣습니다/.test(steps.txt),
+     '  순서가 <b>한 번 붙여넣는 것</b>으로 적혀 있다');
   is(/준법감시/.test(steps.txt), '  마지막에 준법감시를 거치라고 적혀 있다');
 
   console.log('\n[12] 자료를 여기에 다시 적어 두지 않았는가');
@@ -1053,6 +1055,63 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
      '  <b>얼굴을 그리지 않는다</b> — 눈코입을 넣으면 남의 캐릭터를 닮는다 (CLAUDE.md 9)');
   is(/직접 그립니다|우리가 그린/.test(ART_SRC),
      '  그림을 <b>직접 그린다</b>고 파일에 적어 두었다 — 남의 삽화를 떠 오지 않는다');
+
+  console.log('\n[19] 붙여넣기 한 번으로 끝나는가 — 그림이 글 안에 담겨 나가는가');
+  const one = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    localStorage.setItem('apex_intro_guest',
+      JSON.stringify({ org:'○○본부', name:'홍길동', title:'사업단장', at:Date.now() }));
+    const draft = '## 제목 후보\n- 제목입니다\n\n## 본문\n글입니다. 보장 내용은 심사 결과에 따릅니다.\n\n' +
+      '[이미지: 8통장 구조도 | alt: 여덟 칸으로 나눈 보장 구조]\n\n글.\n\n' +
+      '[이미지: 고객 사진 | alt: 우리가 못 만드는 그림]\n';
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:draft, guard:null, up:false }];
+    S.rows[0].guard = { ok:true, hits:[], miss:[], holes:[], noart:[] };
+    /* ① 그림이 진짜 PNG 로 만들어지는가 */
+    const pngs = await artPngs(0);
+    out.made = Object.keys(pngs).length;
+    const first = pngs['8통장 구조도'] || '';
+    out.isPng = first.indexOf('data:image/png;base64,') === 0 && first.length > 2000;
+    /* ② 이름이 조금 달라도 같은 그림이면 찾아 쓴다 — 게이트와 같은 자 */
+    out.loose = !!first && pickPng(pngs, '8통장 구조도 카드') === first
+                        && pickPng(pngs, '8통장') === first;
+    out.none  = !pickPng(pngs, '고객 사진');
+    /* ③ 붙여넣을 글에 <img> 로 들어가고, 못 만든 자리만 파란 칸으로 남는다 */
+    const html = md2html(packText(0), true, pngs);
+    out.imgs = (html.match(/<img /g) || []).length;
+    out.dataUri = /<img src="data:image\/png;base64,/.test(html);
+    out.alt = /alt="여덟 칸으로 나눈 보장 구조"/.test(html);
+    out.leftBox = (html.match(/class="ph"/g) || []).length;
+    out.leftName = /고객 사진/.test(html);
+    /* ④ 그림 없이 부르면 예전처럼 파란 칸만 — 옛 자리가 안 깨진다 */
+    const plain = md2html(packText(0), true);
+    out.plainBoxes = (plain.match(/class="ph"/g) || []).length;
+    out.plainImgs = (plain.match(/<img /g) || []).length;
+    /* ⑤ 실제로 복사하면 그 그림이 클립보드 HTML 에 실린다 */
+    let got = null;
+    window.ClipboardItem = function(o){ this.o = o; };
+    navigator.clipboard.write = async items => {
+      got = await items[0].o['text/html'].text(); return; };
+    await copyRich(0);
+    out.clipImgs = got ? (got.match(/<img src="data:image\/png;base64,/g) || []).length : -1;
+    out.clipBig  = got ? got.length : 0;
+    return out;
+  });
+  is(one.made >= 2, '  카드가 진짜 PNG 로 만들어진다 (' + one.made + '장)');
+  is(one.isPng, '  <b>진짜 PNG 글자</b>다 — 내려받기와 같은 길로 굽는다');
+  is(one.loose, '  이름이 <b>길거나 짧아도</b> 같은 그림이면 찾아 쓴다 — 게이트와 <b>같은 자</b>');
+  is(one.none, '  우리가 못 만드는 그림은 안 찾아 온다');
+  is(one.imgs >= 1 && one.dataUri, '  붙여넣을 글에 <b>그림이 통째로</b> 들어간다');
+  is(one.alt, '  alt 가 그대로 실린다 — 검색과 화면 낭독에 쓰인다');
+  is(one.leftBox === 1 && one.leftName,
+     '  <b>못 만든 자리만</b> 파란 칸으로 남는다 (' + one.leftBox + '군데)');
+  is(one.plainBoxes === 2 && one.plainImgs === 0,
+     '  그림 없이 부르면 예전처럼 파란 칸만 — 옛 자리가 안 깨진다');
+  is(one.clipImgs >= 1, '  <b>실제로 복사하면</b> 클립보드에 그림이 실린다 (' + one.clipImgs + '장)');
+  is(one.clipBig > 20000, '  글자만 가는 것이 아니다 (' + Math.round(one.clipBig/1024) + 'KB)');
+  is(/setTimeout\(\(\)=>fin\(''\)/.test(SRC),
+     '  한 장이 안 그려져도 <b>복사가 멈추지 않는다</b> — 시간 제한을 건다 (CLAUDE.md 4-1)');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
