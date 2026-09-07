@@ -5437,6 +5437,7 @@ function osTabProbe(tab){
   if(tab==='growboard')return renderGrowBoard();
   if(tab==='voiceasst')return renderVoiceAsst();
   if(tab==='fp_talk')return renderFpTalk();
+  if(tab==='utphoto')return renderUtPhoto();
   if(tab==='fp_deck')return renderFpDeck();
   if(tab==='ckteam')return renderCkTeam();
   if(tab==='teamx')return renderTeamX();
@@ -11242,6 +11243,7 @@ var TABS=[
    {id:'ins_asst',icon:'🩺',title:'보험 비서',cnt:'',ak:'상담 AI 코치'},
    {id:'cs_gso',icon:'🤖',title:'금소법 AI',cnt:'',ak:'상담 AI 코치'},
    {id:'sangdam',icon:'📋',title:'보장분석 상담자료',cnt:'',ak:'고객'},
+   {id:'utphoto',icon:'📸',title:'비대면 상담사진·멘트',cnt:'',ak:'고객'},
    {id:'bohum',icon:'📕',title:'보험 마스터 아카데미',cnt:'11',ak:'교재 신입 교육 자가학습 아카데미 보험마스터 질병백과 수술분류 치료비 테스트 화법'},
    {id:'fp_deck',icon:'📊',title:'재무설계 상담자료',cnt:'',ak:'고객'},
    {id:'fp_talk',icon:'🗣️',title:'재무설계 실전화법서',cnt:'',ak:'고객'},
@@ -12616,6 +12618,7 @@ function go(tab){
   else if(tab==='growboard'){dyn.innerHTML=renderGrowBoard();if(typeof osGrowBoardAfterRender==='function')osGrowBoardAfterRender();}
   else if(tab==='voiceasst'){dyn.innerHTML=renderVoiceAsst();if(typeof osVoiceAsstAfterRender==='function')osVoiceAsstAfterRender();}
   else if(tab==='fp_talk'){dyn.innerHTML=renderFpTalk();if(typeof osFpTalkAfterRender==='function')osFpTalkAfterRender();}
+  else if(tab==='utphoto'){dyn.innerHTML=renderUtPhoto();if(typeof utpAfterRender==='function')utpAfterRender();}
   else if(tab==='fp_deck'){dyn.innerHTML=renderFpDeck();if(typeof osFpDeckAfterRender==='function')osFpDeckAfterRender();}
   else if(tab==='ckteam'){dyn.innerHTML=renderCkTeam();if(typeof osCkTeamAfterRender==='function')osCkTeamAfterRender();}
   else if(tab==='teamx'){dyn.innerHTML=renderTeamX();if(typeof osTeamXAfterRender==='function')osTeamXAfterRender();}
@@ -12991,8 +12994,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-07 12:10';
-var APP_BUILD_NOTE="<b>지역 칸을 시(市)로 묶었습니다 — 손으로 치는 칸에서 고르는 칸으로.</b> 지역이 자유 입력이라 고객 <b>1,002명이 176가지 글자</b>로 갈라져 있었습니다 — 「순천」·「순천시」·「전남순천」·「순천(하나로마트)」가 서로 다른 지역이 되어, 「이 지역 열 명」에 사람이 덜 뜨고 목록에 같은 데가 여러 번 떴습니다. 이제 <b>시·군은 닫힌 목록</b>으로 잡습니다(나라에 있는 것이 전부라 늘지 않습니다). 실제 자료로 돌려 보니 <b>975명(97.3%)이 저절로</b> 정해지고 27명만 남았습니다. <b>카카오를 안 부릅니다</b> — 물어볼 것이 없는 일이라 서버도 안 씁니다(7번). 등록·수정 창의 시 칸은 <b>고르는 칸</b>이 되었습니다 — 치면 또 갈라지기 때문입니다. 옛 「지역」 칸은 <b>동네·메모</b>로 남습니다(적어 두신 「중마동」·「하나로마트 앞」을 지우지 않습니다). <b>못 정하는 것은 짐작하지 않습니다.</b> 「광주」는 광주광역시와 경기 광주시 둘 다 있어 그대로 비워 두고, 「🏷 시 정해 주기」에서 <b>한 줄에 한 번 고르면 그 줄 사람이 모두</b> 같이 정해집니다. 엉뚱한 시에 넣으면 그 사람이 통째로 다른 지역 사람이 되기 때문입니다. 지역 고르는 칸 맨 위는 <b>「시 전체 · N명」</b>으로 바꿨습니다 — 「지역 전체」가 무슨 뜻인지 알 수 없다는 말씀이 옳았습니다. 다만 <b>지도에 점을 찍으려면 주소가 있어야 합니다</b> — 지금 좌표까지 낼 수 있는 분은 91명뿐이고, 884명은 시 이름만 적혀 있습니다. 없는 좌표를 지어내지 않습니다.";
+var APP_BUILD='2026-09-07 15:40';
+var APP_BUILD_NOTE="<b>비대면 상담사진·멘트가 상담 도구에 들어왔습니다.</b> 대면 상담은 옆에 앉아 화면을 같이 보지만, 비대면은 그게 안 됩니다 — <b>사진 한 장을 보내고, 그 사진이 무슨 말인지 글로 적어</b> 보내야 합니다. 그런데 사진은 사진첩에 있고 할 말은 머릿속에 있어서, 사진만 덜렁 보내고 「보셨어요?」로 끝나는 상담이 됐습니다. 이제 <b>도해 177장이 사진과 보낼 말을 한 카드에</b> 달고 섭니다. 「📋 말 복사」를 누르고 카톡에 붙여 넣으시면 됩니다. 주제 27가지로 골라 보고, 제목·보낼 말에서 찾고, <b>보낼 순서대로 담아</b> 두면 말을 한 번에 복사하실 수 있습니다. 설계사 참고는 <b>접어서 따로</b> 둡니다 — 고객에게 갈 말과 섞이면 안 되기 때문입니다. 자료는 상담사진 사이트가 갖고 있고 <b>여기로 베껴 오지 않습니다</b> — 베끼면 두 벌이 되어, 저쪽에서 멘트를 고쳐도 여기는 옛말을 고객에게 보냅니다. 열 때 <b>한 번만</b> 읽습니다(7번). <b>교재 캡처(타사 자료·도서·영수증)는 담지 않았습니다</b> — 고객에게 보내면 안 되는 자료라, 「보내기」가 달린 화면에 있으면 언젠가 눌립니다. 그건 원본 사이트에서 띄워 놓고 말로만 쓰십시오. 자료를 못 받아오면 <b>「못 받아왔습니다」라고 그대로 적고 아무 문장도 지어내지 않습니다</b> — 지어낸 멘트는 그대로 고객에게 가기 때문입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14863,6 +14866,7 @@ var VA_ALIAS={
  '화법서':'fp_talk','화법':'fp_talk','실전화법서':'fp_talk',
  '재무설계상담자료':'fp_deck','재무상담':'fp_deck','생애설계':'fp_deck',
  '보장분석상담자료':'sangdam','상담자료':'sangdam',
+ '비대면':'utphoto','비대면상담':'utphoto','상담사진':'utphoto','사진':'utphoto','멘트':'utphoto','카톡멘트':'utphoto','도해':'utphoto',
  '보험마스터아카데미':'bohum','마스터아카데미':'bohum','교재':'bohum','아카데미교재':'bohum','신입교육':'bohum','자가학습':'bohum','질병백과':'bohum','수술분류표':'bohum',
  '보장분석':'bojang','증권':'bojang','증권분석':'bojang',
  '고객':'clients','고객365일':'clients','고객카드':'clients','고객삼육오':'clients',
@@ -16958,6 +16962,208 @@ var FP_CLOSE=[
  ['오늘 정할 것 하나만 고릅니다','전부 하자고 하면 전부 미룹니다. 첫 한 가지만'],
  ['헤어지고 24시간 안에 정리 글을 보냅니다','화법서 29장 그대로. 가족에게 보여 줄 때 이 글이 대신 설명합니다']
 ];
+/* ══════════════════════════════════════════════════════════════════
+   비대면 상담사진·멘트 (utp*)
+
+   대면 상담은 옆에 앉아 화면을 같이 봅니다. 비대면은 그게 안 됩니다 —
+   <b>사진 한 장을 보내고, 그 사진이 무슨 말인지 글로 적어</b> 보내야 합니다.
+   그런데 그 둘이 늘 따로 있었습니다. 사진은 사진첩에, 할 말은 머릿속에.
+   그래서 사진만 덜렁 보내고 「보셨어요?」로 끝나는 상담이 됐습니다.
+
+   여기서는 <b>사진과 보낼 말을 한 카드에</b> 둡니다. 복사 → 카톡 붙여넣기.
+
+   자료는 상담사진 사이트(apex-sangdam-photo)가 갖고 있습니다.
+   <b>여기로 베껴 오지 않습니다.</b> 베끼면 두 벌이 되어, 저쪽에서 멘트를
+   고쳐도 여기는 옛말을 그대로 고객에게 보냅니다 (5-1번).
+   화면을 열 때 <b>한 번만</b> 읽고, 그 뒤로는 다시 안 부릅니다 (7번).
+   그림도 원본 자리에서 그대로 씁니다 — 옮겨 두면 그것도 두 벌입니다 (9번).
+
+   <b>교재 캡처(타사·도서)는 여기 담지 않습니다.</b> 그것은 전송 금지
+   자료라, 「보내기」가 달린 화면에 있으면 언젠가 눌립니다. 원본 사이트에서
+   띄워 놓고 말로만 쓰십시오 — 아래 단추로 갑니다.
+   ══════════════════════════════════════════════════════════════════ */
+var UTP_SITE='https://apex-sangdam-photo.netlify.app/';
+var UTP={state:'idle',err:'',items:[],cats:[],cat:'',q:'',bag:[]};
+
+/* 그림 주소를 만드는 자리는 여기 하나뿐입니다 (5번) */
+function utpImg(n){ return UTP_SITE+encodeURIComponent('상담사진')+'/'+encodeURIComponent('도해')+'/'+encodeURIComponent(n)+'.png'; }
+
+function utpBagLoad(){ try{ UTP.bag=JSON.parse(localStorage.getItem('utp_bag')||'[]')||[]; }catch(e){ UTP.bag=[]; } }
+function utpBagSave(){ try{ localStorage.setItem('utp_bag',JSON.stringify(UTP.bag)); }catch(e){} }
+
+/* 자료를 한 번만 읽어 온다. 실패하면 <b>왜 못 읽었는지 그대로</b> 적는다 —
+   여기서 그럴듯한 예시를 지어 넣으면 그 말이 고객에게 그대로 갑니다 (1번). */
+function utpLoad(after){
+  if(UTP.state==='ok'||UTP.state==='loading'){ if(after)after(); return; }
+  if(window.DOHAE&&window.DOHAE.length){ utpTake(); if(after)after(); return; }
+  UTP.state='loading'; UTP.err='';
+  var s=document.createElement('script');
+  s.src=UTP_SITE+encodeURIComponent('상담사진')+'/'+encodeURIComponent('도해목록')+'.js';
+  s.async=true;
+  s.onload=function(){
+    if(window.DOHAE&&window.DOHAE.length)utpTake();
+    else{ UTP.state='fail'; UTP.err='자료 파일은 받았는데 그림 목록이 비어 있습니다.'; }
+    if(after)after();
+  };
+  s.onerror=function(){
+    UTP.state='fail';
+    UTP.err='상담사진 사이트에서 목록을 못 받았습니다. 인터넷이 끊겼거나 사이트가 잠시 내려간 것입니다.';
+    if(after)after();
+  };
+  document.head.appendChild(s);
+}
+function utpTake(){
+  var out=[], by={};
+  (window.DOHAE||[]).forEach(function(d){
+    if(!d||!d.n)return;
+    var it={n:d.n,t:d.t||d.n,c:d.c||'그 밖',unit:d.unit||'',sec:d.sec||'',
+            cust:(d.cust||'').replace(/\r/g,''),say:(d.say||[])};
+    out.push(it); by[it.c]=(by[it.c]||0)+1;
+  });
+  UTP.items=out;
+  UTP.cats=Object.keys(by).sort(function(a,b){ return by[b]-by[a]||(a<b?-1:1) });
+  UTP.catN=by;
+  UTP.state=out.length?'ok':'fail';
+  if(!out.length)UTP.err='그림 목록이 비어 있습니다.';
+}
+
+function utpFind(n){ for(var i=0;i<UTP.items.length;i++)if(UTP.items[i].n===n)return UTP.items[i]; return null; }
+
+/* 지금 보여 줄 것 — 고른 주제와 검색어를 한 곳에서만 판단한다 (5번) */
+function utpShown(){
+  var q=(UTP.q||'').replace(/\s+/g,'').toLowerCase();
+  return UTP.items.filter(function(x){
+    if(UTP.cat&&x.c!==UTP.cat)return false;
+    if(!q)return true;
+    return ((x.t+x.c+x.unit+x.sec+x.cust).replace(/\s+/g,'').toLowerCase()).indexOf(q)>=0;
+  });
+}
+
+function renderUtPhoto(){
+  return '<div class="card" id="utpWrap">'+
+    '<h2 style="margin:0 0 4px">📸 비대면 상담사진 · 멘트</h2>'+
+    '<div class="sub" style="margin-bottom:12px">사진 한 장과 <b>그 사진을 보내면서 할 말</b>을 한 자리에. '+
+      '말을 복사해 카톡에 붙여 넣고, 사진은 열어서 저장해 보내십시오.</div>'+
+    '<div id="utpBody"><div class="sub">상담사진 자료를 읽는 중입니다…</div></div></div>';
+}
+
+function utpAfterRender(){
+  utpBagLoad();
+  utpLoad(function(){ utpFill(); });
+  if(UTP.state==='ok')utpFill();
+}
+
+function utpFill(){
+  var b=document.getElementById('utpBody'); if(!b)return;
+  if(UTP.state==='loading'){ b.innerHTML='<div class="sub">상담사진 자료를 읽는 중입니다…</div>'; return; }
+  if(UTP.state!=='ok'){
+    /* 못 읽었으면 못 읽었다고 적는다. 예시를 지어 채우지 않는다 (1번). */
+    b.innerHTML='<div class="notice" style="background:#fff4e6;border-color:#ffd8a8;color:#a8730f">'+
+      '<b>상담사진 자료를 못 받아왔습니다.</b><br>'+osEsc(UTP.err||'까닭을 알 수 없습니다.')+'<br><br>'+
+      '<b>아무 사진도 지어내지 않았습니다.</b> 아래 단추로 원본 사이트를 직접 여실 수 있습니다.'+
+      '<div style="margin-top:10px"><a class="btn" target="_blank" rel="noopener" href="'+UTP_SITE+'">🔗 상담사진 사이트 열기</a> '+
+      '<button class="btn btn-light" onclick="UTP.state=\'idle\';utpAfterRender()">다시 시도</button></div></div>';
+    return;
+  }
+
+  var list=utpShown(), h='';
+
+  /* ── 담아 둔 것 ── */
+  if(UTP.bag.length){
+    h+='<div class="card" style="background:#EEF6FF;border-color:#BBD9FF;margin-bottom:12px">'+
+      '<b>보낼 순서에 '+UTP.bag.length+'장 담았습니다.</b> '+
+      '<span class="sub">담은 순서대로 보내시면 됩니다.</span>'+
+      '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
+      '<button class="btn" onclick="utpBagCopy()">📋 보낼 말 전부 복사</button>'+
+      '<button class="btn btn-light" onclick="utpBagOpen()">🖼 사진 전부 열기</button>'+
+      '<button class="btn btn-light" onclick="utpBagClear()">비우기</button></div>'+
+      '<div style="margin-top:8px;font-size:12.5px;color:#4E5968">'+
+      UTP.bag.map(function(n,i){ var x=utpFind(n);
+        return (i+1)+'. '+osEsc(x?x.t:n); }).join('<br>')+'</div></div>';
+  }
+
+  /* ── 주제 고르기 ── */
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+    '<button class="btn '+(UTP.cat?'btn-light':'')+'" onclick="utpCat(\'\')">전체 '+UTP.items.length+'</button>'+
+    UTP.cats.map(function(c){
+      return '<button class="btn '+(UTP.cat===c?'':'btn-light')+'" onclick="utpCat('+utpQ(c)+')">'+
+        osEsc(c)+' '+UTP.catN[c]+'</button>'; }).join('')+'</div>';
+
+  h+='<input id="utpQ" placeholder="제목·보낼 말에서 찾기 (예: 스텐트, 급여)" '+
+     'style="width:100%;padding:9px 11px;margin-bottom:12px" value="'+osEsc(UTP.q)+'" oninput="utpSearch(this.value)">';
+
+  h+='<div class="sub" style="margin-bottom:10px">'+list.length+'장'+
+     (UTP.cat?(' · '+osEsc(UTP.cat)):'')+
+     ' · 이 그림은 <b>직접 그린 것</b>이라 고객에게 보내셔도 됩니다.</div>';
+
+  if(!list.length)h+='<div class="notice">찾는 사진이 없습니다.</div>';
+
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">'+
+    list.map(function(x){
+      var inBag=UTP.bag.indexOf(x.n)>=0;
+      return '<div class="card" style="padding:10px">'+
+        /* 눈에 들어올 때만 받습니다 — 177장을 한꺼번에 받지 않게 (7번) */
+        '<img src="'+utpImg(x.n)+'" alt="'+osEsc(x.t)+'" loading="lazy" decoding="async" '+
+          'style="width:100%;border-radius:8px;background:#F2F4F6;cursor:zoom-in" '+
+          'onclick="utpOpen('+utpQ(x.n)+')">'+
+        '<div style="font-weight:700;font-size:13.5px;margin:8px 0 2px">'+osEsc(x.t)+'</div>'+
+        '<div class="sub" style="font-size:11.5px">'+osEsc(x.c)+(x.unit?(' · '+osEsc(x.unit)):'')+'</div>'+
+        (x.cust
+          ? ('<div style="margin-top:8px;background:#F9FAFB;border-radius:8px;padding:8px;'+
+             'font-size:12.5px;white-space:pre-wrap;max-height:110px;overflow:auto">'+osEsc(x.cust)+'</div>')
+          : '<div class="sub" style="margin-top:8px;font-size:12px">이 그림에는 <b>보낼 말이 적혀 있지 않습니다</b> — 지어내지 않았습니다.</div>')+
+        (x.say&&x.say.length
+          ? ('<details style="margin-top:6px"><summary style="font-size:12px;cursor:pointer;color:#4E5968">설계사 참고</summary>'+
+             '<div style="font-size:12px;color:#4E5968;margin-top:4px;white-space:pre-wrap">'+osEsc(x.say.join('\n'))+'</div></details>')
+          : '')+
+        '<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+
+          (x.cust?'<button class="btn" onclick="utpCopy('+utpQ(x.n)+')">📋 말 복사</button>':'')+
+          '<button class="btn btn-light" onclick="utpOpen('+utpQ(x.n)+')">🖼 사진</button>'+
+          '<button class="btn btn-light" onclick="utpBagToggle('+utpQ(x.n)+')">'+(inBag?'− 뺀다':'＋ 담기')+'</button>'+
+        '</div></div>';
+    }).join('')+'</div>';
+
+  /* ── 여기 없는 것 ── */
+  h+='<div class="notice" style="margin-top:14px">'+
+    '<b>교재 캡처(타사 자료·도서·영수증)는 여기 없습니다.</b> 그것은 <b>고객에게 보내면 안 되는</b> 자료라, '+
+    '「보내기」가 달린 이 화면에 두지 않았습니다. 화면에 띄워 놓고 말로만 쓰실 때는 원본 사이트에서 여십시오. '+
+    '상담 흐름 세트·증권 점검표도 그쪽에 있습니다.<br>'+
+    '<div style="margin-top:8px"><a class="btn btn-light" target="_blank" rel="noopener" href="'+UTP_SITE+'">🔗 상담사진 사이트 열기</a></div></div>';
+
+  b.innerHTML=h;
+}
+
+/* 따옴표가 든 제목이 onclick 을 깨뜨리지 않게 — 감싸는 자리 하나 */
+function utpQ(s){ return "'"+String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'&quot;')+"'"; }
+
+function utpCat(c){ UTP.cat=(UTP.cat===c)?'':c; utpFill(); }
+function utpSearch(v){
+  UTP.q=v; utpFill();
+  var el=document.getElementById('utpQ');
+  if(el){ el.focus(); try{ el.setSelectionRange(el.value.length,el.value.length); }catch(e){} }
+}
+function utpCopy(n){
+  var x=utpFind(n); if(!x||!x.cust){ toast('이 그림에는 보낼 말이 없습니다.'); return; }
+  copyText(x.cust);
+}
+function utpOpen(n){ window.open(utpImg(n),'_blank','noopener'); }
+function utpBagToggle(n){
+  var i=UTP.bag.indexOf(n);
+  if(i>=0)UTP.bag.splice(i,1); else UTP.bag.push(n);
+  utpBagSave(); utpFill();
+}
+function utpBagClear(){ UTP.bag=[]; utpBagSave(); utpFill(); }
+function utpBagCopy(){
+  var t=UTP.bag.map(function(n){ var x=utpFind(n); return x&&x.cust?x.cust:''; })
+        .filter(Boolean).join('\n\n───────\n\n');
+  if(!t){ toast('담은 것 중에 보낼 말이 있는 그림이 없습니다.'); return; }
+  copyText(t);
+}
+function utpBagOpen(){
+  /* 한꺼번에 열면 브라우저가 막습니다 — 한 장씩 사이를 둡니다 */
+  UTP.bag.forEach(function(n,i){ setTimeout(function(){ utpOpen(n); }, i*350); });
+}
+
 function renderFpDeck(){
   fpCss();
   var h='<div class="card"><div class="card-body">'+
