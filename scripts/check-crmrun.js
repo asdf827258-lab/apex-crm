@@ -69,7 +69,12 @@ if(MIG)DBS.forEach(function(d){ if(d.addr===undefined)d.addr='';
 var CALLS=[{id:'c1',db_id:'d5',created_by:'u1',result:'부재',call_at:'2026-09-01T01:00:00Z',appointment_at:null,memo:''},
            {id:'c2',db_id:'d3',created_by:'u1',result:'부재',call_at:'2026-08-20T02:00:00Z',appointment_at:null,memo:''}];
 if(MIG)CALLS.forEach(function(c){ c.appt_place=null;c.appt_lat=null;c.appt_lng=null });
-var T={profiles:[{id:'u1',name:'홍길동',role:'admin',active:true}],dbs:DBS,calls:CALLS,
+/* u3 는 <b>고객이 하나도 배정되지 않은 대표</b>입니다. 실제 서버가 그
+   모양입니다 — 고객 1,049명이 팀원 26명에게 배정돼 있고 대표 앞으로는
+   0명입니다. 그런데 화면이 열자마자 담당자를 「나」로 골라 버려서, 시를
+   눌러도 아무도 안 떴습니다. [16] 이 그 자리를 잽니다. */
+var T={profiles:[{id:'u1',name:'홍길동',role:'admin',active:true},
+                 {id:'u3',name:'대표',role:'admin',active:true}],dbs:DBS,calls:CALLS,
        attendance:[],teams:[],team_members:[],
        /* 키가 <b>있는</b> 서버 — 카카오가 거절했을 때 화면이 이유를 적는지 보려면 필요하다 */
        app_config:[{key:'kakao_js_key',value:'00000000000000000000000000000000'}],clients:[]};
@@ -111,7 +116,10 @@ function B(tbl){
 /* 몇 건인지는 여기 한 곳만 안다 — 점검 쪽에 또 적으면 견본을 늘릴 때마다
    두 곳을 고쳐야 하고, 한 곳을 잊으면 멀쩡한데 빨간불이 켜진다 (5번) */
 window.__STUB__={dbs:DBS.length,calls:CALLS.length};
-var U={id:'u1',email:'hong@example.com'}, S={user:U,access_token:'stub'};
+/* 누구로 로그인했는지는 <b>주소</b>로 받습니다(?me=u3). 밖에서 window.profile
+   을 덮어써 봐야 앱 안의 변수는 그대로라, 흉내만 내면 헛것을 재게 됩니다. */
+var ME=(new URLSearchParams(location.search)).get('me')||'u1';
+var U={id:ME,email:ME+'@example.com'}, S={user:U,access_token:'stub'};
 window.supabase={createClient:function(){ return {
   from:function(t){return B(t)},
   auth:{ onAuthStateChange:function(cb){ setTimeout(function(){cb('SIGNED_IN',S)},0);
@@ -190,7 +198,7 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
 
   /* kakao=false 면 카카오가 거절한 것과 같은 꼴이 된다 — [9] 가 그것을 잰다.
      kakao=true 면 견본 SDK 가 붙어 지오코딩이 실제로 돈다 — [10] 이 그것을 쓴다. */
-  const open = async (mig, kakao, navi) => {
+  const open = async (mig, kakao, navi, me) => {
     const ctx = await br.newContext(), pg = await ctx.newPage();
     const errs = [], logs = [];
     pg.on('pageerror', e => errs.push(String(e.message || e)));
@@ -207,7 +215,8 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
       if (/^https?:/.test(u)) return r.fulfill({ status: 204, body: '' });
       return r.continue();
     });
-    await pg.goto('http://localhost:' + P + '/db-crm.html?mig=' + (mig ? 1 : 0), { waitUntil: 'domcontentloaded' });
+    await pg.goto('http://localhost:' + P + '/db-crm.html?mig=' + (mig ? 1 : 0) + (me ? '&me=' + me : ''),
+                  { waitUntil: 'domcontentloaded' });
     /* 자료가 들어올 때까지 — 시간이 아니라 조건으로 기다린다 */
     await pg.waitForFunction(() => { try { return (eval('dbs') || []).length > 0 } catch (e) { return false } },
                              { timeout: 30000 });
@@ -636,6 +645,76 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   is(modal.tag === 'SELECT', '등록·수정 창의 시 칸이 <고르는 칸(select)>이다');
   is(modal.val === '순천시', '적힌 「순천」을 <표준 이름으로 미리 골라> 둔다 — ' + modal.val);
   is(!/순천시/.test(modal.rg), '옛 「지역」 칸은 <동네·메모로> 바뀌었다 — 분류에 안 쓴다');
+  is(hardErr(errs).length === 0, hardErr(errs).length
+     ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
+  await ctx.close();
+
+  /* ═══ [16] 대표 계정 — 배정된 고객이 0명일 때 ════════════════════
+     실제로 사장님 화면이 이랬습니다. 고객 1,049명이 팀원 26명에게 배정돼
+     있고 대표 앞으로는 0명인데, 화면이 열자마자 담당자를 「나」로 골라
+     빈 화면이 됐습니다. 시를 눌러도 아무도 안 떴습니다. */
+  ({ ctx, pg, errs, logs } = await open(true, true, false, 'u3'));
+  head('[16] 배정된 고객이 <0명인 대표>로 열어도 빈 화면이 아니다');
+  is(await pg.evaluate(() => { try { return profile.id } catch (e) { return '' } }) === 'u3',
+     '대표(u3)로 <실제로 로그인돼> 있다 — 흉내가 아니다');
+  await pg.evaluate(() => { const b = document.getElementById('rtBtn'); if (b) b.click() });
+  await pg.waitForFunction(() => !!document.querySelector('#rtSide .rt-city'), { timeout: 20000 })
+    .then(() => 1, () => 0);
+
+  const own = await pg.evaluate(() => {
+    const o = document.getElementById('rtOwner');
+    return { val: o.value, has3: Array.prototype.some.call(o.options, x => x.value === 'u3') };
+  });
+  is(own.has3, '담당자 목록에 <대표도 있다> — 있는데 고객이 0명인 것이 함정이었다');
+  is(own.val === '', own.val === '' ? '고객이 0명이면 <「담당자 전체」로> 연다'
+                                    : ('아직 「나」로 걸러 열립니다 — ' + own.val));
+
+  const side16 = await pg.evaluate(() => document.getElementById('rtSide').innerText);
+  is(/내 고객 \d+명/.test(side16) && !/내 고객 0명/.test(side16),
+     '시(市) 칩에 <사람이 실제로 있다> — 자료가 있는데 빈 화면을 안 보여 준다');
+  is(/팀 전체를 보고 있습니다/.test(side16) && /직접 배정된 고객이 없어서/.test(side16),
+     '<왜 전체로 열었는지> 화면에 적는다 — 조용히 바꾸면 그것도 못 믿는다');
+
+  /* 시를 누르면 그 시 고객이 실제로 뜬다 — 사장님이 겪은 그 자리 */
+  await pg.evaluate(() => {
+    const b = Array.prototype.filter.call(
+      document.querySelectorAll('#rtSide [data-city]'), x => /순천시/.test(x.textContent))[0];
+    if (b) b.click();
+  });
+  await pg.waitForTimeout(500);
+  const picked = await pg.evaluate(() => ({
+    sel: document.getElementById('rtRegion').value,
+    txt: document.getElementById('rtSide').innerText
+  }));
+  is(picked.sel === '순천시', '시를 누르니 <그 시로 걸렸다> — ' + picked.sel);
+  is(!/에 아직 걸 분이 없습니다/.test(picked.txt),
+     '<그 시의 고객이 목록에 뜬다> — 눌러도 아무도 안 뜨던 자리');
+  is(/추가로 연락 드릴 고객님/.test(picked.txt), '「추가로 연락 드릴 고객님」이 선다');
+
+  head('[16-1] 폰에서 <그 줄 하나로> 끝난다 — 전화 · 문자 · 멘트');
+  const acts = await pg.evaluate(() => document.getElementById('rtSide').innerHTML);
+  is(/href="tel:\d{7,}"/.test(acts) && /📞 전화/.test(acts),
+     '<📞 전화>가 번호까지 물고 있다 — 폰에서 누르면 바로 걸린다');
+  is(/href="sms:\d{7,}\?body=/.test(acts) && /💬 문자/.test(acts),
+     '<💬 문자>가 보낼 글까지 담아 연다 — 받는 사람도 내용도 이미 들어 있다');
+  const body = (acts.match(/href="sms:[^"]*"/) || [''])[0];
+  is(/body=[^"]{40,}/.test(body), '문자에 담긴 글이 <빈 글이 아니다>');
+  is(/%EB%8B%98/.test(body), '문자 글이 <「○○님」으로> 시작한다 — 이름을 부른다');
+
+  /* 약속이 하나도 없는 날에도 멘트가 나와야 한다 — 정작 그날이 필요한 날이다 */
+  is(/data-rtalk=/.test(acts), '<📋 멘트>가 약속이 없는 날에도 뜬다');
+  const talkTxt = await pg.evaluate(() => {
+    const b = document.querySelector('#rtSide [data-rtalk]');
+    b.click();
+    return document.getElementById('rtRT' + b.getAttribute('data-rtalk')).innerText;
+  });
+  is(/전화로 말할 때/.test(talkTxt) && /문자·카톡으로 보낼 때/.test(talkTxt),
+     '멘트가 <전화용·문자용 두 가지로> 나온다');
+  is(/순천시/.test(talkTxt), '멘트가 <고른 시를> 그대로 쓴다 — 「순천시 쪽에 갈 일이」');
+  is(/오전과 오후 중/.test(talkTxt) && !/시\s*이나\s*.*시\s*중에/.test(talkTxt),
+     '약속이 없으면 <시각을 지어내지 않는다> — 오전·오후만 여쭙는다 (1번)');
+  is(/복사/.test(talkTxt), '<복사> 단추가 있다 — 문자 앱이 안 열려도 카톡에 붙일 수 있다');
+
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
   await ctx.close();
