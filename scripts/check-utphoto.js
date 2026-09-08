@@ -66,11 +66,11 @@ window.supabase={createClient:function(){
 `;
 /* 견본 — 실제 자료가 아니라 같은 모양으로 새로 지은 것입니다 (3번) */
 const FIX = `window.DOHAE=[
- {n:"t-guyeo",t:"급여와 비급여, 지갑에서 나가는 돈이 다르다",c:"의료비 현실",
+ {n:"l1-guyeo",t:"급여와 비급여, 지갑에서 나가는 돈이 다르다",c:"의료비 현실",
   unit:"LEVEL 1 · 견본",sec:"견본 대목",
   say:["견본 메모 — 영수증은 총액이 아니라 환자부담을 본다"],
   cust:"병원비가 왜 사람마다 다른지 그림 하나 보내드려요.\\n\\n(견본 문장입니다)"},
- {n:"t-stent",t:"좁아진 혈관에 스텐트를 넣는다",c:"심장",unit:"",sec:"",say:[],
+ {n:"art-stent",t:"좁아진 혈관에 스텐트를 넣는다",c:"심장",unit:"",sec:"",say:[],
   cust:"심장 혈관 그림 보내드립니다.\\n\\n(견본 문장입니다)"},
  {n:"t-nosay",t:"보낼 말이 아직 안 적힌 그림",c:"심장",unit:"",sec:"",say:[],cust:""}
 ];`;
@@ -129,9 +129,25 @@ async function open(br, withData) {
     return b && /장 담았습니다|장 ·|찾는 사진|못 받아왔습니다/.test(b.innerText);
   }, { timeout: 20000 }).then(() => 1, () => 0);
 
+  head('[4-1] 기본 화면이 <상담 흐름>이다 — 원본의 테마 그대로');
+  const flows = await pg.evaluate(() => document.getElementById('utpBody').innerText);
+  is(/상담 순서대로 묶어 둔/.test(flows), '흐름부터 보여 준다 — 주제 스물일곱 개를 늘어놓지 않는다');
+  is(/첫 상담 · 왜 필요한가/.test(flows) && /심장 — 그림부터 담보까지/.test(flows),
+     '원본의 <흐름 이름 그대로>다 (첫 상담 · 심장 …)');
+  const nSet = await pg.evaluate(() => UTP_SETS.length);
+  is(nSet === 27, '흐름이 <27가지> 다 있다 — ' + nSet);
+  is(/주제로 찾기/.test(flows), '흐름에 없는 사진도 <주제로 찾을> 길이 있다');
+
   head('[5] 사진과 <보낼 말>이 한 자리에 있나 — 비대면의 전부');
+  /* 흐름 하나를 열어야 사진이 뜬다 — 「첫 상담 · 왜 필요한가」 */
+  await pg.evaluate(() => utpSet(0));
   const body = await pg.evaluate(() => document.getElementById('utpBody').innerHTML);
-  is(/apex-sangdam-photo\.netlify\.app.*t-guyeo/.test(body.replace(/&#?\w+;/g, '')),
+  const b5 = await pg.evaluate(() => document.getElementById('utpBody').innerText);
+  is(/1번째로 보냅니다/.test(b5), '흐름 안에서는 <보낼 차례>를 적는다');
+  is(/원본에 없습니다/.test(b5),
+     '흐름이 가리키는데 <원본에 없는 사진은 없다고> 적는다 — 조용히 줄면 모른다');
+  is(/이 흐름 통째로 담기/.test(b5), '흐름을 <통째로 담을> 수 있다');
+  is(/apex-sangdam-photo\.netlify\.app.*l1-guyeo/.test(body.replace(/&#?\w+;/g, '')),
      '그림이 <원본 주소로> 걸린다');
   is(/병원비가 왜 사람마다 다른지/.test(body), '그 그림의 <보낼 말>이 같은 카드에 있다');
   /* 「설계사 참고」라는 <b>글자가 있나</b>가 아니라, 그 메모가 <b>접힌 칸 안에</b>
@@ -145,15 +161,20 @@ async function open(br, withData) {
   });
   is(fold.has && !fold.open && fold.inside && !fold.seen,
      '<설계사 참고>가 접힌 칸에 <b>닫힌 채로</b> 있다 — 펴기 전에는 눈에 안 보인다');
-  is(/보낼 말이 적혀 있지 않습니다/.test(body) && /지어내지 않았습니다/.test(body),
+  const noSay = await pg.evaluate(() => {
+    utpSet(-1); UTP.more = true; UTP.cat = ''; UTP.q = ''; utpFill();
+    return document.getElementById('utpBody').innerText;
+  });
+  is(/보낼 말이 적혀 있지 않습니다/.test(noSay) && /지어내지 않았습니다/.test(noSay),
      '말이 <없는 그림은 없다고> 적는다 — 그럴듯한 문장을 만들지 않는다 (1번)');
+  await pg.evaluate(() => { utpSet(0) });
   const txt5 = await pg.evaluate(() => document.getElementById('utpBody').innerText);
   is(/교재 캡처/.test(txt5) && /보내면 안 되는/.test(txt5),
      '전송 금지 자료가 <왜 여기 없는지> 화면에 적는다 — 없으면 빠뜨린 줄 안다 (9번)');
   is(/상담사진 사이트 열기/.test(txt5), '띄워만 놓고 쓸 때 갈 <원본 사이트> 길이 있다');
 
   head('[6] 복사가 <실제로 그 말을> 담나');
-  const cp = await pg.evaluate(() => { utpCopy('t-guyeo'); return window.__copied; });
+  const cp = await pg.evaluate(() => { utpCopy('l1-guyeo'); return window.__copied; });
   is(/병원비가 왜 사람마다 다른지/.test(cp) && /견본 문장/.test(cp),
      '카톡에 붙일 <그 말 그대로> 복사된다');
   /* 빈 글자를 복사한 것과 <b>아예 안 부른 것</b>은 붙여넣기 결과가 똑같다.
@@ -163,22 +184,28 @@ async function open(br, withData) {
 
   head('[7] 순서대로 담아 <한 번에> 보낼 수 있나');
   const bag = await pg.evaluate(() => {
-    utpBagClear(); utpBagToggle('t-guyeo'); utpBagToggle('t-stent');
+    utpBagClear(); utpBagToggle('l1-guyeo'); utpBagToggle('art-stent');
     window.__copied = ''; utpBagCopy();
     return { n: UTP.bag.length, order: UTP.bag.join(','), txt: window.__copied };
   });
-  is(bag.n === 2 && bag.order === 't-guyeo,t-stent', '<담은 순서가 그대로> 남는다');
+  is(bag.n === 2 && bag.order === 'l1-guyeo,art-stent', '<담은 순서가 그대로> 남는다');
   is(/병원비가 왜/.test(bag.txt) && /심장 혈관 그림/.test(bag.txt),
      '담은 것의 말이 <전부> 복사된다');
   await pg.evaluate(() => utpBagClear());
 
   head('[8] 주제로 <골라 보기>');
   const cat = await pg.evaluate(() => {
+    utpSet(-1); UTP.more = true; utpBagClear();
     utpCat('심장');
     const b = document.getElementById('utpBody').innerText;
-    return { sel: UTP.cat, has: /스텐트/.test(b), gone: !/급여와 비급여/.test(b) };
+    /* 흐름 이름 중에도 「급여와 비급여」가 있습니다. 흐름 제목에 걸려 헛것을
+       잡지 않도록, <b>사진 제목에만 있는 글</b>로 잽니다. */
+    return { sel: UTP.cat, has: /스텐트를 넣는다/.test(b),
+             gone: !/지갑에서 나가는 돈이 다르다/.test(b) };
   });
-  is(cat.sel === '심장' && cat.has && cat.gone, '주제를 누르면 <그 주제만> 남는다');
+  is(cat.sel === '심장' && cat.has && cat.gone,
+     (cat.sel === '심장' && cat.has && cat.gone) ? '주제를 누르면 <그 주제만> 남는다'
+       : ('주제로 안 걸러집니다 — sel=' + cat.sel + ' has=' + cat.has + ' gone=' + cat.gone));
   await pg.evaluate(() => utpCat('심장'));
   is((await pg.evaluate(() => UTP.cat)) === '', '다시 누르면 <전체로> 돌아온다');
 

@@ -38,6 +38,7 @@ function say(m,ms){ try{ toast(m,ms) }catch(e){ console.log(m) } }
 var HAS_DB=false;        /* dbs 에 addr/lat/lng 칸이 있나 */
 var HAS_CALL=false;      /* calls 에 appt_place 칸이 있나 */
 var HAS_STD=false;       /* dbs 에 region_code/sigungu 칸이 있나 (migration_47) */
+var MINE_N=0;            /* 내 이름으로 배정된 고객이 몇 명인가 — 0이면 전체로 연다 */
 var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
@@ -977,16 +978,36 @@ function slots(when){
   return out;
 }
 
+/* 「어디 쪽에 간다」고 말할 곳. 잡힌 약속이 있으면 그 사람 동네, 없으면
+   지금 고른 시. 정하는 자리는 여기 하나뿐입니다 (5번). */
+function talkArea(d0,region){
+  if(d0)return (regionName(d0)||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
+  var r=String(region||"");
+  return (r&&r!==CITY_NONE)?r:"그쪽";
+}
 /* 화법 — 없는 마감·없는 혜택을 만들지 않고, 안 바꿔도 된다는 말을 남깁니다.
-   (원래 화면의 TA 스크립트가 지키는 것 셋과 같은 기준입니다) */
-function talk(cand,d0,when,kind){
+   (원래 화면의 TA 스크립트가 지키는 것 셋과 같은 기준입니다)
+
+   d0(그날 잡힌 약속)가 없어도 <b>화법은 나옵니다.</b> 예전에는 약속이
+   하나도 없는 날이면 「📋 화법」 단추 자체가 안 떴습니다 — 그런데 정작
+   화법이 제일 필요한 날은 <b>약속이 없는 날</b>입니다.
+
+   ★ 약속이 없으면 <b>시간을 지어내지 않습니다.</b> 앞뒤로 비는 시간이란
+     것이 없으니 「오전·오후 중 어느 쪽」만 여쭙습니다. 없는 일정에서
+     「3시나 5시」를 만들어 보내면 고객이 그 시각을 비워 둡니다. */
+function talk(cand,d0,when,kind,region){
   var a=new Date(when), day=(a.getMonth()+1)+"월 "+a.getDate()+"일 "+wday(a)+"요일";
-  var s=slots(when), t1=ampm(s[0]), t2=s[1]?ampm(s[1]):null;
   var me=""; try{ me=profile.name||"" }catch(e){}
   var nm=(cand.customer_name||"고객"), who=nm+"님";
-  var area=(regionName(d0)||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
-  var ask=t2?(josa(t1,"이나","나")+" "+t2+" 중에 어느 쪽이 편하실까요?")
-            :(josa(t1,"이","가")+" 편하실까요?");
+  var area=talkArea(d0,region);
+  var ask;
+  if(d0){
+    var s=slots(when), t1=ampm(s[0]), t2=s[1]?ampm(s[1]):null;
+    ask=t2?(josa(t1,"이나","나")+" "+t2+" 중에 어느 쪽이 편하실까요?")
+          :(josa(t1,"이","가")+" 편하실까요?");
+  }else{
+    ask="그날 오전과 오후 중에 어느 쪽이 편하실까요?";
+  }
   if(kind==="sms"){
     return who+" 안녕하세요, APEX "+me+"입니다.\n"+
       day+"에 "+area+" 쪽에 갈 일이 있어 연락드립니다. 가는 길에 잠깐 뵙고, "+
@@ -1397,8 +1418,18 @@ function fillPickers(){
   var os=q("rtOwner"), keep2=os.value, me=myId(), opts=[];
   try{ profiles.forEach(function(p){ opts.push('<option value="'+E(p.id)+'">'+E(p.name||"담당자")+'</option>') }) }catch(e){}
   os.innerHTML='<option value="">담당자 전체</option>'+opts.join("");
-  os.value=keep2||me||"";
-  if(os.value!==(keep2||me||""))os.value="";
+
+  /* ★ 내 이름으로 배정된 고객이 <b>하나도 없으면 「담당자 전체」로</b> 엽니다.
+     대표·본부장은 직접 배정받은 고객이 없습니다 — 실제로 고객 1,049명이
+     팀원 26명에게 배정돼 있고 대표 앞으로는 0명이었습니다. 그런데 화면은
+     열자마자 담당자를 「나」로 골라 버려서, 시를 눌러도 <b>아무도 안 떴습니다.</b>
+     자료가 멀쩡한데 빈 화면이 뜨면 고장난 줄 압니다. 왜 전체로 열었는지는
+     아래에서 화면에 적습니다 — 조용히 바꾸면 그것도 못 믿을 일이 됩니다. */
+  MINE_N=0;
+  try{ if(me)dbs.forEach(function(d){ if(d.assigned_to===me)MINE_N++ }) }catch(e){}
+  var want=keep2||(MINE_N?me:"")||"";
+  os.value=want;
+  if(os.value!==want)os.value="";
   var owner=os.value||"";
 
   /* 「순천」·「순천시」·「전남순천」·「순천(하나로마트)」가 목록에 네 번 뜨지
@@ -1441,6 +1472,13 @@ function render(){
     if(!city[c])city[c]={n:0,pt:0};
     city[c].n++; if(ptOf(d))city[c].pt++;
   });
+  /* 내 앞으로 배정된 고객이 없어 팀 전체를 보고 있다면 <b>그렇다고 적습니다.</b>
+     이 줄이 없으면 「왜 남의 고객이 뜨지?」 하고 한참을 헤맵니다. */
+  if(!MINE_N&&!owner&&cityAll){
+    side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8">'+
+      '<b>팀 전체를 보고 있습니다.</b> 사장님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
+      '위 <b>담당자</b> 칸에서 한 사람을 고르면 그 사람 고객만 남습니다.</div>');
+  }
   var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n||(a<b?-1:1)});
   if(ck.length||cityNone){
     var cur=region;
@@ -1554,9 +1592,13 @@ function render(){
     side.push('<div class="rt-card" style="color:var(--muted)">'+
       (region?('「'+E(region)+'」에 아직 걸 분이 없습니다.'):'걸 분이 없습니다. 위의 <b>시</b>를 하나 골라 보세요.')+'</div>');
   }else{
-    var anchor=stops[0];
     side.push('<div class="rt-card">'+top.map(function(c,i){
-      var d=c.d, tel=(d.phone||"").replace(/[^0-9+]/g,"");
+      var d=c.d;
+      /* 폰에서 이 줄 하나로 끝나야 합니다 — 전화를 걸든, 문자를 보내든.
+         번호가 없으면 <b>없다고 적습니다</b>. 안 되는 단추를 띄워 두면
+         눌러 보고 나서야 압니다. */
+      var _w=stops[0]?stops[0].at:(q("rtDate").value+"T10:00:00"), _d0=stops[0]?stops[0].d:null;
+      var sms=smsHref(d,talk(d,_d0,_w,"sms",region));
       var tag;
       if(!c.fit) tag='<span class="badge gray">위치 모름</span>';
       else if(c.fit.ok) tag='<span class="badge green">'+E(c.fit.where)+' · 여유 '+c.fit.slack+'분</span>'+
@@ -1567,13 +1609,15 @@ function render(){
         '<small>'+E(placeOf(d)||"동네 미입력")+(d.phone?" · "+E(d.phone):"")+'</small>'+
         '<div style="margin-top:5px">'+tag+'</div></div>'+
         '<div class="rt-act">'+
-          (tel?'<a class="btn btn-primary btn-sm" href="tel:'+E(tel)+'">📞</a>':"")+
+          (telHref(d)?('<a class="btn btn-primary btn-sm" href="'+E(telHref(d))+'">📞 전화</a>'+
+                       '<a class="btn btn-light btn-sm" href="'+E(sms)+'">💬 문자</a>')
+                    :'<span class="badge gray">번호 없음</span>')+
           /* 위치를 모르면 그 자리에서 찍고, 알면 그 자리에서 내비로 —
              전화 걸면서 「아, ○○동 사세요?」 하는 그 순간이 자료가
              들어오는 제일 싼 자리다. 창을 옮겨 다니지 않는다. */
           (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭</a>'
                   :'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>')+
-          (anchor?'<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 화법</button>':"")+
+          '<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 멘트</button>'+
           '<button class="btn btn-dark btn-sm" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
         '</div><div class="rt-talk hidden" id="rtRT'+i+'"></div></div>';
     }).join("")+'</div>');
@@ -1617,11 +1661,13 @@ function render(){
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-rtalk]"),function(b){
     b.onclick=function(){
       var i=+b.getAttribute("data-rtalk"), box=q("rtRT"+i), c=top[i], a=stops[0];
-      if(!a)return;
+      if(!c)return;
       if(box.getAttribute("data-on")==="1"){ box.classList.add("hidden"); box.setAttribute("data-on","0"); return }
       box.setAttribute("data-on","1"); box.classList.remove("hidden");
-      box.innerHTML=tCard("전화 — 가는 김에",talk(c.d,a.d,a.at,"a"))+
-                    tCard("문자로 보낼 때",talk(c.d,a.d,a.at,"sms"));
+      /* 약속이 없으면 날짜만 잡고 시간은 안 만듭니다 (talk 안에서 갈립니다) */
+      var w=a?a.at:(q("rtDate").value+"T10:00:00"), d0=a?a.d:null;
+      box.innerHTML=tCard("전화로 말할 때",talk(c.d,d0,w,"a",region))+
+                    tCard("문자·카톡으로 보낼 때",talk(c.d,d0,w,"sms",region));
       Array.prototype.forEach.call(box.querySelectorAll("[data-copy]"),function(cb){
         cb.onclick=function(){ copyText(cb.getAttribute("data-copy")) };
       });
@@ -1953,6 +1999,21 @@ function fixAll(){
    잘리면 <b>안 간 곳을 갔다고 믿게 됩니다.</b> 그래서 여기서는 구간마다
    하나씩 넘깁니다 — 현장에서도 어차피 한 구간씩 갑니다.
    주소를 만드는 자리는 여기 <b>한 곳</b>뿐입니다 (5번). */
+/* 문자 앱을 글까지 채워서 연다. 폰에서 누르면 받는 사람과 내용이 이미
+   들어간 채로 열립니다 — 「바로 보낼 수 있게」가 이것입니다.
+
+   다만 문자 앱마다 받아들이는 모양이 조금씩 다릅니다. <b>안 열릴 수도
+   있어서</b> 옆에 「📋 복사」를 늘 같이 둡니다 — 그쪽은 어디서나 됩니다. */
+function smsHref(d,body){
+  var tel=String(d&&d.phone||"").replace(/[^0-9+]/g,"");
+  if(!tel)return "";
+  return "sms:"+tel+"?body="+encodeURIComponent(body||"");
+}
+function telHref(d){
+  var tel=String(d&&d.phone||"").replace(/[^0-9+]/g,"");
+  return tel?("tel:"+tel):"";
+}
+
 function naviUrl(d){
   var p=ptOf(d); if(!p)return "";
   return "https://map.kakao.com/link/to/"+
