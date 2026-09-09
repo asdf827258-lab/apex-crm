@@ -67,7 +67,7 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .filters .sp{flex:1}
 
 .tw{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--grey2);background:#fff}
-table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1340px;font-size:14px}
+table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1660px;font-size:14px}
 table.gx th{background:var(--grey);color:var(--tx2);font-weight:700;font-size:12.5px;text-align:left;
   padding:9px 10px;border-bottom:1px solid var(--grey2);white-space:nowrap}
 table.gx td{border-bottom:1px solid #F0F2F4;padding:0;vertical-align:middle}
@@ -94,6 +94,9 @@ select.cl-{color:var(--tx4)} select.cl-보류{color:var(--tx3)} select.cl-무산
 select.f-소개받음,select.f-상담예약{color:var(--purple)} select.f-계약연결{color:var(--green)}
 select.f-미요청{color:var(--tx4)} select.f-요청함{color:var(--tx2)}
 select.dbt{color:#6D28D9;font-weight:700}
+select.p-전달완료{color:var(--green)} select.p-대기{color:var(--red)} select.p-해당없음{color:var(--tx4)}
+table.gx td input.con{color:var(--green);font-weight:800}
+table.gx td input.intro{color:var(--purple);font-weight:800}
 tr.addr td{padding:6px 12px;background:#fff}
 tr.addr button{background:none;border:1px dashed var(--grey2);border-radius:8px;color:var(--tx3);
   padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}
@@ -163,6 +166,7 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
     <select id="f-team"></select>
     <select id="f-mem"></select>
     <select id="f-stage">
+      <option value="__appc">AP · PC (상담 진행중)</option>
       <option value="">전체 단계</option>
       <option value="__live">살아있는 건 (계약 전)</option>
       <option value="__done">계약 이상</option>
@@ -198,6 +202,7 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
     <div class="opt">
       <label><input type="checkbox" id="o-off"> 보류·무산 포함</label>
       <label><input type="checkbox" id="o-db" checked> DB종류 표시</label>
+      <label><input type="checkbox" id="o-pol" checked> 증권전달 표시</label>
       <label><input type="checkbox" id="o-memo" checked> 비고 표시</label>
       <label><input type="checkbox" id="o-money" checked> 예상업적 표시</label>
       <label><input type="checkbox" id="o-empty"> 진행건 없는 팀원도 표시</label>
@@ -237,12 +242,21 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const STAGES = ['미접촉', 'TA', 'AP', 'PC', 'CS', '계약완료', '증권전달'];
 const CLOSED = ['', '보류', '무산'];
 const FAMILY = ['미요청', '요청함', '소개받음', '상담예약', '계약연결'];
+const POLICY = ['해당없음', '대기', '전달완료'];
+/* 증권전달은 따로 저장하지 않는다 — 단계(stage)가 곧 증권 상태다.
+   두 곳에 적으면 반드시 어긋난다. 여기서는 단계를 읽어 보여 주고,
+   고치면 단계를 옮긴다. */
+const policyOf = r => r.stage === '증권전달' ? '전달완료' : (r.stage === '계약완료' ? '대기' : '해당없음');
 const ADMINS = ['admin', 'owner', 'master'];
+const DB_COLS = 'id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,' +
+  'expect_premium,contract_premium,family_intro,intro_count,closed_reason';
 
 let sb = null;
 let ME = { id: '', name: '', role: 'member', team_id: null };
-let TEAMS = [], MEMBERS = [], ROWS = [];
-let FILTER = { month: '', team: '', mem: '', stage: '', q: '' };
+let TEAMS = [], MEMBERS = [], ROWS = [], ORG_MISS = [];
+/* 이 화면은 AP·PC 를 밀도 있게 보는 자리다 — 처음부터 그 눈으로 연다.
+   위 「전체 단계」로 언제든 넓힐 수 있다. */
+let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
 let SHARE = { team: '' }, DBM = '';
 
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
@@ -268,10 +282,11 @@ const teamOf = id => (mem(id) || {}).tid || '__none';
 const teamName = tid => (TEAMS.find(t => t.id === tid) || {}).name || '미배정';
 const memsOf = tid => MEMBERS.filter(m => m.tid === tid);
 /* 서버 규칙과 같은 판정 — 안 맞으면 저장할 때 서버가 막습니다 */
+const CAN_LEAD = ['leader', 'branch_manager', 'master', 'owner', 'admin'];
 function canEdit(r) {
   if (isAdmin()) return true;
   if (r.mid === ME.id) return true;
-  if (isLead() && ME.team_id && teamOf(r.mid) === ME.team_id) return true;
+  if (CAN_LEAD.indexOf(ME.role) >= 0 && ME.team_id && teamOf(r.mid) === ME.team_id) return true;
   return false;
 }
 /* 「보장분석 3DB」와 「보장분석3DB」를 한 덩어리로 묶는다 — 손으로 적어서 갈린 것뿐이다 */
@@ -284,7 +299,8 @@ function fromDb(d) {
   return {
     id: d.id, mid: d.assigned_to, dbdate: d.assigned_date || '', dbtype: d.source || '',
     region: d.region || '', client: d.customer_name || '', date: tsDate(d.next_appt),
-    expect: d.expect_premium || 0, stage: STAGES.indexOf(d.stage) >= 0 ? d.stage : '미접촉',
+    expect: d.expect_premium || 0, contract: d.contract_premium || 0, introN: d.intro_count || 0,
+    stage: STAGES.indexOf(d.stage) >= 0 ? d.stage : '미접촉',
     closed: d.closed_reason || '', family: FAMILY.indexOf(d.family_intro) >= 0 ? d.family_intro : '미요청',
     memo: d.memo || ''
   };
@@ -299,25 +315,48 @@ async function boot() {
     $('#gate').innerHTML = '<b>로그인 후 볼 수 있습니다.</b><br>APEX OS 에 로그인한 뒤 이 칸을 다시 열어 주세요.'; return;
   }
   ME.id = session.user.id;
-  const [pf, tm, db] = await Promise.all([
-    sb.from('profiles').select('id,name,role,active,team_id'),
+  const [pf, tm, db, tmem, org] = await Promise.all([
+    sb.from('profiles').select('id,name,role,active,team_id,workspace'),
     sb.from('teams').select('id,name,leader_id'),
-    sb.from('dbs').select('id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,expect_premium,family_intro,closed_reason')
-      .order('assigned_date', { ascending: false })
+    sb.from('dbs').select(DB_COLS).order('assigned_date', { ascending: false }),
+    sb.from('team_members').select('team_id,member_id'),
+    sb.from('org_members').select('member_id,team')
   ]);
   if (db.error) {
     $('#gate').innerHTML = '<b>자료를 못 읽었습니다.</b><br><span class="mut">' + esc(db.error.message) + '</span>'; return;
   }
-  const profs = (pf.data || []).filter(p => p.active !== false);
+  const profs = (pf.data || []).filter(p => p.active !== false &&
+    (p.workspace == null || p.workspace === 'both' || p.workspace === 'apex'));
   const meP = profs.find(p => p.id === ME.id) || {};
-  ME.name = meP.name || '나'; ME.role = meP.role || 'member'; ME.team_id = meP.team_id || null;
+  ME.name = meP.name || '나'; ME.role = meP.role || 'member';
 
   TEAMS = (tm.data || []).map(t => ({ id: t.id, name: t.name, leader: (profs.find(p => p.id === t.leader_id) || {}).name || '' }));
   ROWS = (db.data || []).map(fromDb);
+
+  /* ── 누가 어느 팀인가 ────────────────────────────────────────────
+     팀이 세 곳에 적혀 있다. 설정 → 팀원 권한 관리(team_members)가 이기고,
+     거기 없는 사람만 조직도(org_members.team, 팀 이름)로 메운다.
+     profiles.team_id 는 2026-07 에 멈춘 옛 자리라 읽지 않는다 —
+     그것을 읽어서 팀 분류가 몇 달 전으로 굳어 있었다.
+     이름은 띄어쓰기·대소문자를 털고 견준다(「건우 TEAM」 = 「건우TEAM」).
+     없는 팀은 지어내지 않는다. */
+  const teamOf = {};
+  ((tmem && tmem.data) || []).forEach(x => { if (x.member_id && x.team_id) teamOf[x.member_id] = x.team_id; });
+  const tkey = v => String(v == null ? '' : v).toLowerCase().replace(/[\s·.\-_]/g, '');
+  const byName = {}; TEAMS.forEach(t => { const k = tkey(t.name); if (k) byName[k] = t.id; });
+  ORG_MISS = [];
+  ((org && org.data) || []).forEach(o => {
+    if (!o.member_id || teamOf[o.member_id]) return;
+    const k = tkey(o.team); if (!k) return;
+    if (byName[k]) teamOf[o.member_id] = byName[k];
+    else if (ORG_MISS.indexOf(o.team) < 0) ORG_MISS.push(o.team);
+  });
+
   /* 화면에 세울 사람 = 이 화면에서 실제로 볼 수 있는 건의 담당자들 */
   const seen = {}; ROWS.forEach(r => seen[r.mid] = 1); seen[ME.id] = 1;
-  MEMBERS = profs.filter(p => seen[p.id]).map(p => ({ id: p.id, name: p.name || '(이름없음)', tid: p.team_id || '__none' }))
+  MEMBERS = profs.filter(p => seen[p.id]).map(p => ({ id: p.id, name: p.name || '(이름없음)', tid: teamOf[p.id] || '__none' }))
     .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  ME.team_id = teamOf[ME.id] || null;
   if (MEMBERS.some(m => m.tid === '__none')) TEAMS.push({ id: '__none', name: '팀 미배정', leader: '' });
   TEAMS = TEAMS.filter(t => MEMBERS.some(m => m.tid === t.id));
 
@@ -327,8 +366,7 @@ async function boot() {
 }
 async function reload() {
   const { data, error } = await sb.from('dbs')
-    .select('id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,expect_premium,family_intro,closed_reason')
-    .order('assigned_date', { ascending: false });
+    .select(DB_COLS).order('assigned_date', { ascending: false });
   if (error) { toast('새로 읽지 못했습니다'); return; }
   ROWS = (data || []).map(fromDb);
   toast(`${ROWS.length}건 새로 읽었습니다`);
@@ -343,16 +381,23 @@ const F2COL = {
   region: 'region', client: 'customer_name', dbtype: 'source', dbdate: 'assigned_date',
   stage: 'stage', family: 'family_intro', closed: 'closed_reason', memo: 'memo'
 };
+const NUMF = { expect: 'expect_premium', contract: 'contract_premium', introN: 'intro_count' };
 const pend = {};
 let saveT;
 function queueSave(r, field) {
   const p = pend[r.id] || (pend[r.id] = {});
-  if (field === 'expect') p.expect_premium = String(r.expect || '');
+  if (NUMF[field]) p[NUMF[field]] = String(r[field] || '');
   else if (field === 'date') p.next_appt = r.date ? r.date + 'T00:00:00+09:00' : '';
   else if (F2COL[field]) p[F2COL[field]] = r[field] == null ? '' : String(r[field]);
   if (field === 'stage') {
+    p.stage = r.stage;
     p.contracted_at = (r.stage === '계약완료' || r.stage === '증권전달') ? new Date().toISOString() : '';
     p.policy_sent_at = (r.stage === '증권전달') ? new Date().toISOString() : '';
+    /* 체결되면 예상업적을 계약업적에 한 번 옮겨 적어 둔다 — 손이 한 번 덜 간다.
+       이미 적어 두셨으면 건드리지 않는다. */
+    if ((r.stage === '계약완료' || r.stage === '증권전달') && !r.contract && r.expect) {
+      r.contract = r.expect; p.contract_premium = String(r.contract);
+    }
   }
   clearTimeout(saveT); saveT = setTimeout(flush, 700);
 }
@@ -381,7 +426,8 @@ function rowsFiltered() {
   if (FILTER.month) L = L.filter(r => ym(r.dbdate) === FILTER.month);
   if (FILTER.team) L = L.filter(r => teamOf(r.mid) === FILTER.team);
   if (FILTER.mem) L = L.filter(r => r.mid === FILTER.mem);
-  if (FILTER.stage === '__live') L = L.filter(isLive);
+  if (FILTER.stage === '__appc') L = L.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC'));
+  else if (FILTER.stage === '__live') L = L.filter(isLive);
   else if (FILTER.stage === '__done') L = L.filter(isDone);
   else if (FILTER.stage === '__policy') L = L.filter(r => !r.closed && r.stage === '계약완료');
   else if (FILTER.stage === '__off') L = L.filter(r => r.closed);
@@ -389,12 +435,13 @@ function rowsFiltered() {
   if (FILTER.q) { const q = FILTER.q.toLowerCase(); L = L.filter(r => `${r.client} ${r.region} ${r.memo} ${memName(r.mid)}`.toLowerCase().includes(q)); }
   return L;
 }
+/* 배정일 최신 → 과거. 끝난 건(보류·무산)만 아래로 내린다. */
 function sortRows(L) {
   return L.sort((a, b) => {
     if (!!a.closed !== !!b.closed) return a.closed ? 1 : -1;
-    const ad = a.date || '9999', bd = b.date || '9999';
-    if (ad !== bd) return ad < bd ? -1 : 1;
-    return (b.dbdate || '').localeCompare(a.dbdate || '');
+    const d = (b.dbdate || '').localeCompare(a.dbdate || '');
+    if (d) return d;
+    return (a.date || '9999').localeCompare(b.date || '9999');
   });
 }
 function renderFilters() {
@@ -422,14 +469,19 @@ function renderKpi() {
   const late = live.filter(r => r.date && r.date < TODAY_S).length;
   const pol = L.filter(r => !r.closed && r.stage === '계약완료').length;
   const fam = L.filter(r => r.family && r.family !== '미요청').length;
+  const intro = L.reduce((a, r) => a + (+r.introN || 0), 0);
+  const appc = L.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length;
+  const cSum = done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   $('#kpis').innerHTML = `
     <div class="kpi pri"><div class="l">진행중 예상업적</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>
+    <div class="kpi"><div class="l">AP · PC</div><div class="v">${appc}<small>건</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
-    <div class="kpi ok"><div class="l">계약 이상</div><div class="v">${done.length}<small>건 · ${won(done.reduce((a, r) => a + (+r.expect || 0), 0))}원</small></div></div>
+    <div class="kpi ok"><div class="l">계약업적</div><div class="v">${won(cSum)}<small>원 · ${done.length}건</small></div></div>
+    <div class="kpi"><div class="l">받은 소개</div><div class="v">${intro}<small>명</small></div></div>
     <div class="kpi"><div class="l">이번주 약속</div><div class="v">${wk}<small>건</small></div></div>
     <div class="kpi ${late ? 'warn' : ''}"><div class="l">약속일 지남</div><div class="v">${late}<small>건</small></div></div>
     <div class="kpi ${pol ? 'warn' : ''}"><div class="l">증권 미전달</div><div class="v">${pol}<small>건</small></div></div>
-    <div class="kpi"><div class="l">가족소개 진행</div><div class="v">${fam}<small>건</small></div></div>
+    <div class="kpi"><div class="l">소개 진행</div><div class="v">${fam}<small>건</small></div></div>
     <div class="kpi"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>`;
 }
 function selOf(field, val, list, pre, dis, labels) {
@@ -448,16 +500,24 @@ function rowHTML(r) {
     <td><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}></td>
     <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto"${d}>${dd}</td>
     <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"${d}></td>
+    <td class="n"><input data-f="contract" inputmode="numeric" class="con" value="${r.contract ? won(r.contract) : ''}" placeholder="-"${d}></td>
     <td>${selOf('stage', r.stage, STAGES, 'st-', ro)}</td>
+    <td>${selOf('policy', policyOf(r), POLICY, 'p-', ro)}</td>
     <td>${selOf('closed', r.closed, CLOSED, 'cl-', ro, { '': '진행' })}</td>
     <td>${selOf('family', r.family, FAMILY, 'f-', ro)}</td>
+    <td class="n"><input data-f="introN" inputmode="numeric" class="intro" value="${r.introN || ''}" placeholder="-"${d}></td>
     <td><input data-f="memo" value="${esc(r.memo)}" placeholder="-"${d}>${ro ? '<span class="lock">🔒</span>' : ''}</td>
   </tr>`;
 }
 function memSum(mid) {
   const L = ROWS.filter(r => r.mid === mid);
   const live = L.filter(isLive), done = L.filter(isDone);
-  return `진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원${done.length ? ` · 계약 ${done.length}건` : ''}`;
+  const appc = live.filter(r => r.stage === 'AP' || r.stage === 'PC').length;
+  const cSum = done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
+  const intro = L.reduce((a, r) => a + (+r.introN || 0), 0);
+  return `AP·PC ${appc}건 · 진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원` +
+    (done.length ? ` · <b style="color:#00B26B">계약 ${done.length}건 ${won(cSum)}원</b>` : '') +
+    (intro ? ` · <b style="color:#7C3AED">소개 ${intro}명</b>` : '');
 }
 function teamSum(tid) {
   const ids = memsOf(tid).map(m => m.id);
@@ -472,23 +532,25 @@ function renderBoard() {
   const L = rowsFiltered();
   const teams = FILTER.team ? TEAMS.filter(t => t.id === FILTER.team) : TEAMS;
   let html = `<div class="tw"><table class="gx"><thead><tr>
-    <th style="width:150px">DB 배정일</th><th style="width:140px">DB종류</th><th style="width:112px">지역</th>
-    <th style="width:118px">이름</th><th style="width:154px">다음 약속</th>
-    <th style="width:114px;text-align:right">예상업적</th><th style="width:104px">진행단계</th>
-    <th style="width:96px">상태</th><th style="width:118px">가족소개</th><th>비고</th>
+    <th style="width:150px">DB 배정일</th><th style="width:132px">DB종류</th><th style="width:106px">지역</th>
+    <th style="width:112px">이름</th><th style="width:154px">다음 약속</th>
+    <th style="width:110px;text-align:right">예상업적</th><th style="width:110px;text-align:right">계약업적</th>
+    <th style="width:100px">진행단계</th><th style="width:104px">증권전달</th>
+    <th style="width:92px">상태</th><th style="width:114px">소개진행</th>
+    <th style="width:78px;text-align:right">소개수</th><th>비고</th>
   </tr></thead><tbody>`;
   let any = false;
   teams.forEach(t => {
     const ms = memsOf(t.id).filter(m => !FILTER.mem || m.id === FILTER.mem);
     if (!ms.length) return;
-    html += `<tr class="tm"><td colspan="10">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
+    html += `<tr class="tm"><td colspan="13">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
       <span style="float:right;font-weight:600;font-size:12.5px;color:#8B95A1">${teamSum(t.id)}</span></td></tr>`;
     ms.forEach(m => {
       const rs = sortRows(L.filter(r => r.mid === m.id));
       if (rs.length) any = true;
-      html += `<tr class="mb"><td colspan="10">${esc(m.name)}<span class="msum">${memSum(m.id)}</span></td></tr>`;
+      html += `<tr class="mb"><td colspan="13">${esc(m.name)}<span class="msum">${memSum(m.id)}</span></td></tr>`;
       html += rs.map(rowHTML).join('');
-      if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="10"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
+      if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="13"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
     });
   });
   html += `</tbody></table></div>`;
@@ -502,27 +564,55 @@ function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? ROWS.find
 board.addEventListener('input', e => {
   const el = e.target; if (!el.dataset.f) return;
   const r = rowOf(el); if (!r) return;
-  if (el.dataset.f === 'expect') r.expect = +String(el.value).replace(/[^\d]/g, '') || 0;
+  if (NUMF[el.dataset.f]) r[el.dataset.f] = +String(el.value).replace(/[^\d]/g, '') || 0;
   else r[el.dataset.f] = el.value;
   queueSave(r, el.dataset.f);
 });
 board.addEventListener('change', e => {
-  const el = e.target; if (!el.dataset.f) return;
+  const el = e.target, tr = el.closest('tr'); if (!el.dataset.f) return;
   const r = rowOf(el); if (!r) return;
+  /* 증권전달은 제 칸이 없다 — 단계를 옮겨서 표시한다 */
+  if (el.dataset.f === 'policy') {
+    const v = el.value;
+    if (v === '전달완료') r.stage = '증권전달';
+    else if (v === '대기') r.stage = '계약완료';
+    else if (r.stage === '계약완료' || r.stage === '증권전달') {
+      toast('계약된 건은 증권 상태를 「해당없음」으로 둘 수 없습니다');
+      el.value = policyOf(r); el.className = 'p-' + el.value; return;
+    }
+    el.className = 'p-' + v;
+    const st = tr.querySelector('[data-f="stage"]');
+    if (st) { st.value = r.stage; st.className = 'st-' + r.stage; }
+    queueSave(r, 'stage');
+    const cf = tr.querySelector('[data-f="contract"]');
+    if (cf && r.contract) cf.value = won(r.contract);
+    renderKpi(); return;
+  }
   r[el.dataset.f] = el.value;
   if (el.tagName === 'SELECT') {
     el.className = { stage: 'st-', closed: 'cl-', family: 'f-' }[el.dataset.f] + el.value;
-    el.closest('tr').classList.toggle('dim', !!r.closed);
+    tr.classList.toggle('dim', !!r.closed);
   }
-  queueSave(r, el.dataset.f); renderKpi();
+  if (el.dataset.f === 'stage') {
+    const pf = tr.querySelector('[data-f="policy"]');
+    if (pf) { pf.value = policyOf(r); pf.className = 'p-' + pf.value; }
+  }
+  queueSave(r, el.dataset.f);
+  if (el.dataset.f === 'stage') {
+    const cf = tr.querySelector('[data-f="contract"]');
+    if (cf && r.contract) cf.value = won(r.contract);
+  }
+  renderKpi();
 });
 board.addEventListener('blur', e => {
   const el = e.target;
-  if (el.dataset && el.dataset.f === 'expect') { const r = rowOf(el); if (r) el.value = r.expect ? won(r.expect) : ''; }
+  if (el.dataset && NUMF[el.dataset.f]) {
+    const r = rowOf(el); if (r) el.value = r[el.dataset.f] ? (el.dataset.f === 'introN' ? r.introN : won(r[el.dataset.f])) : '';
+  }
 }, true);
 board.addEventListener('focus', e => {
   const el = e.target;
-  if (el.dataset && el.dataset.f === 'expect') { const r = rowOf(el); if (r) el.value = r.expect || ''; }
+  if (el.dataset && NUMF[el.dataset.f]) { const r = rowOf(el); if (r) el.value = r[el.dataset.f] || ''; }
 }, true);
 board.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || !e.target.dataset.f) return;
@@ -562,7 +652,7 @@ function renderDb() {
     <div class="kpi"><div class="l">계약 전환율</div><div class="v">${cvr}<small>%</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
     <div class="kpi ${off.length ? 'warn' : ''}"><div class="l">보류 · 무산</div><div class="v">${off.length}<small>건</small></div></div>
-    <div class="kpi"><div class="l">계약 업적</div><div class="v">${won(done.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>
+    <div class="kpi"><div class="l">계약 업적</div><div class="v">${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}<small>원</small></div></div>
     <div class="kpi"><div class="l">진행중 예상</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>`;
   if (!L.length) {
     $('#db-cross').innerHTML = `<div class="empty">${DBM.replace('-', '.')} 에 배정된 DB 가 없습니다.</div>`;
@@ -589,31 +679,37 @@ function renderDb() {
 
   const mx = Math.max(...types.map(t => L.filter(r => srcKey(r.dbtype) === t).length), 1);
   $('#db-bytype').innerHTML = `<div class="tw" style="border:0"><table class="cx"><thead><tr>
-    <th>DB종류</th><th>배정</th><th></th><th>진행중</th><th>계약</th><th>보류·무산</th><th>전환율</th>
-    <th>계약 업적</th><th>진행중 예상</th></tr></thead><tbody>` +
+    <th>DB종류</th><th>배정</th><th></th><th>AP·PC</th><th>계약</th><th>보류·무산</th><th>전환율</th>
+    <th>계약업적</th><th>받은 소개</th></tr></thead><tbody>` +
     types.map(t => {
       const rs = L.filter(r => srcKey(r.dbtype) === t);
       const d = rs.filter(isDone), lv = rs.filter(isLive), of = rs.filter(r => r.closed);
       return `<tr><td>${esc(t)}</td><td><b>${rs.length}</b></td>
         <td style="width:118px"><span class="bar" style="width:104px"><i style="width:${Math.round(rs.length / mx * 100)}%"></i></span></td>
-        <td>${lv.length || '<span class="z">·</span>'}</td><td class="g">${d.length || '<span class="z">·</span>'}</td>
+        <td>${rs.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length || '<span class="z">·</span>'}</td>
+        <td class="g">${d.length || '<span class="z">·</span>'}</td>
         <td>${of.length || '<span class="z">·</span>'}</td><td>${Math.round(d.length / rs.length * 100)}%</td>
-        <td>${won(d.reduce((a, r) => a + (+r.expect || 0), 0))}</td>
-        <td>${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}</td></tr>`;
+        <td>${won(d.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}</td>
+        <td>${rs.reduce((a, r) => a + (+r.introN || 0), 0) || '<span class="z">·</span>'}</td></tr>`;
     }).join('') + `</tbody></table></div>`;
 
   $('#db-list').innerHTML = `<div class="tw" style="border:0"><table class="cx lt"><thead><tr>
     <th>배정일</th><th>팀</th><th>팀원</th><th>DB종류</th><th>이름</th><th>지역</th><th>다음약속</th>
-    <th>단계</th><th>상태</th><th class="n">예상업적</th><th>가족소개</th><th>비고</th></tr></thead><tbody>` +
+    <th>단계</th><th>증권</th><th>상태</th><th class="n">예상업적</th><th class="n">계약업적</th>
+    <th>소개진행</th><th class="n">소개수</th><th>비고</th></tr></thead><tbody>` +
     L.slice().sort((a, b) => (a.dbdate || '').localeCompare(b.dbdate || '')).map(r => {
       const c = r.closed ? 'color:#F04452' : isDone(r) ? 'color:#00B26B' : 'color:#3182F6';
       return `<tr><td>${(r.dbdate || '').slice(5).replace('-', '.')}</td><td>${esc(teamName(teamOf(r.mid)))}</td>
         <td>${esc(memName(r.mid))}</td><td style="color:#6D28D9;font-weight:700">${esc(r.dbtype || '-')}</td>
         <td style="font-weight:700">${esc(r.client || '-')}</td><td>${esc(r.region || '-')}</td>
         <td>${r.date ? r.date.slice(5).replace('-', '.') : '-'}</td>
-        <td style="font-weight:800;${c}">${esc(r.stage)}</td><td>${r.closed ? `<b style="color:#F04452">${esc(r.closed)}</b>` : '<span class="z">·</span>'}</td>
+        <td style="font-weight:800;${c}">${esc(r.stage)}</td>
+        <td>${policyOf(r) === '해당없음' ? '<span class="z">·</span>' : `<b style="color:${policyOf(r) === '전달완료' ? '#00B26B' : '#F04452'}">${policyOf(r)}</b>`}</td>
+        <td>${r.closed ? `<b style="color:#F04452">${esc(r.closed)}</b>` : '<span class="z">·</span>'}</td>
         <td style="text-align:right">${r.expect ? won(r.expect) : '<span class="z">·</span>'}</td>
+        <td style="text-align:right;color:#00B26B;font-weight:700">${r.contract ? won(r.contract) : '<span class="z" style="color:#D1D6DB">·</span>'}</td>
         <td>${r.family === '미요청' ? '<span class="z">·</span>' : esc(r.family)}</td>
+        <td style="text-align:right;color:#7C3AED;font-weight:700">${r.introN || '<span class="z" style="color:#D1D6DB">·</span>'}</td>
         <td style="color:#8B95A1">${esc(r.memo || '')}</td></tr>`;
     }).join('') + `</tbody></table></div>`;
 }
@@ -658,7 +754,8 @@ function pill(c, x, y, h, txt, cx) {
   c.fillStyle = p[1]; c.textAlign = 'center'; c.fillText(txt, x + w / 2, y + h / 2 + .5); c.textAlign = 'left';
 }
 function shareOpts() {
-  return { off: $('#o-off').checked, db: $('#o-db').checked, memo: $('#o-memo').checked, money: $('#o-money').checked, empty: $('#o-empty').checked };
+  return { off: $('#o-off').checked, db: $('#o-db').checked, memo: $('#o-memo').checked,
+    money: $('#o-money').checked, empty: $('#o-empty').checked, pol: $('#o-pol').checked };
 }
 function teamData(tid, o) {
   const out = [];
@@ -675,11 +772,13 @@ function buildCanvas(tid) {
   const S = 2, W = 1080, PAD = 26, CW = W - PAD * 2;
   let cols = [
     { k: 'dbtype', t: 'DB종류', w: 108 }, { k: 'region', t: '지역', w: 88 }, { k: 'client', t: '이름', w: 112 },
-    { k: 'date', t: '약속', w: 88 }, { k: 'expect', t: '예상업적', w: 110, r: 1 },
-    { k: 'stage', t: '단계', w: 92 }, { k: 'family', t: '가족소개', w: 100 }, { k: 'memo', t: '비고', w: 0 }
+    { k: 'date', t: '약속', w: 84 }, { k: 'expect', t: '업적', w: 106, r: 1 },
+    { k: 'stage', t: '단계', w: 88 }, { k: 'policy', t: '증권', w: 88 },
+    { k: 'family', t: '소개', w: 104 }, { k: 'memo', t: '비고', w: 0 }
   ];
   if (!o.db) cols = cols.filter(c => c.k !== 'dbtype');
   if (!o.money) cols = cols.filter(c => c.k !== 'expect');
+  if (!o.pol) cols = cols.filter(c => c.k !== 'policy');
   if (!o.memo) cols = cols.filter(c => c.k !== 'memo');
   const fixed = cols.reduce((a, c) => a + c.w, 0), flex = cols.find(c => c.w === 0);
   if (flex) flex.w = Math.max(140, CW - fixed);
@@ -707,11 +806,13 @@ function buildCanvas(tid) {
 
   const all = data.flatMap(x => x.rs), live = all.filter(isLive), done = all.filter(isDone);
   const pol = all.filter(r => !r.closed && r.stage === '계약완료').length;
-  const fam = all.filter(r => r.family && r.family !== '미요청').length;
   let ky = HDR + 12;
   c.fillStyle = '#F7F9FC'; rr(c, PAD, ky, CW, 46, 12); c.fill();
-  const kp = [['진행중', `${live.length}건`], ['예상업적', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
-  ['계약', `${done.length}건`], ['가족소개', `${fam}건`], ['증권 미전달', `${pol}건`]];
+  const intro = all.reduce((a, r) => a + (+r.introN || 0), 0);
+  const appc = all.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length;
+  const kp = [['AP · PC', `${appc}건`], ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
+  ['계약업적', `${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}원`],
+  ['받은 소개', `${intro}명`], ['증권 미전달', `${pol}건`]];
   const kw = CW / kp.length;
   kp.forEach((k, i) => {
     const x = PAD + kw * i + kw / 2; c.textAlign = 'center';
@@ -734,8 +835,19 @@ function buildCanvas(tid) {
     c.font = f(600, 13); c.fillStyle = CO.tx2;
     c.fillText(`진행 ${lv.length}건${dn.length ? ` · 계약 ${dn.length}건` : ''}`, PAD + 22 + nw, y + MH / 2 + 1);
     if (o.money) {
-      c.textAlign = 'right'; c.font = f(800, 15); c.fillStyle = CO.tx;
-      c.fillText(`${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`, PAD + CW - 14, y + MH / 2); c.textAlign = 'left';
+      const cs = dn.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
+      c.textAlign = 'right';
+      if (cs) {
+        c.font = f(800, 15); c.fillStyle = '#00874F';
+        c.fillText(`계약 ${won(cs)}원`, PAD + CW - 14, y + MH / 2);
+        const w2 = c.measureText(`계약 ${won(cs)}원`).width;
+        c.font = f(700, 13.5); c.fillStyle = CO.tx2;
+        c.fillText(`예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원 ·`, PAD + CW - 22 - w2, y + MH / 2);
+      } else {
+        c.font = f(800, 15); c.fillStyle = CO.tx;
+        c.fillText(`예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`, PAD + CW - 14, y + MH / 2);
+      }
+      c.textAlign = 'left';
     }
     y += MH;
     c.fillStyle = '#FAFBFC'; c.fillRect(PAD, y, CW, TH);
@@ -757,10 +869,21 @@ function buildCanvas(tid) {
       cols.forEach(col => {
         const cx = col.w - 20;
         if (col.k === 'stage') pill(c, x2 + 10, y + (RH - 24) / 2, 24, dead ? r.closed : r.stage, cx + 6);
-        else if (col.k === 'family') pill(c, x2 + 10, y + (RH - 24) / 2, 24, r.family || '-', cx + 6);
-        else if (col.k === 'expect') {
-          c.font = f(700, 14); c.fillStyle = dead ? '#B0B8C1' : CO.tx; c.textAlign = 'right';
-          c.fillText(r.expect ? won(r.expect) : '-', x2 + col.w - 12, y + RH / 2); c.textAlign = 'left';
+        else if (col.k === 'policy') pill(c, x2 + 10, y + (RH - 24) / 2, 24, policyOf(r), cx + 6);
+        else if (col.k === 'family') {
+          pill(c, x2 + 10, y + (RH - 24) / 2, 24, r.family || '-', cx - 14);
+          if (r.introN) {
+            c.font = f(800, 12); c.fillStyle = '#7C3AED'; c.textAlign = 'right';
+            c.fillText(r.introN + '명', x2 + col.w - 8, y + RH / 2); c.textAlign = 'left';
+          }
+        } else if (col.k === 'expect') {
+          /* 체결된 건은 계약업적을, 아직인 건은 예상업적을 보여 준다.
+             둘을 한 칸에 섞어 놓으면 합계가 무엇의 합인지 알 수 없으므로
+             체결된 것은 초록으로 구분한다. */
+          const won2 = isDone(r) ? (r.contract || r.expect) : r.expect;
+          c.font = f(isDone(r) ? 800 : 700, 14);
+          c.fillStyle = dead ? '#B0B8C1' : (isDone(r) ? '#00874F' : CO.tx); c.textAlign = 'right';
+          c.fillText(won2 ? won(won2) : '-', x2 + col.w - 12, y + RH / 2); c.textAlign = 'left';
         } else if (col.k === 'date') {
           c.font = f(600, 13.5); c.fillStyle = dead ? '#B0B8C1' : CO.tx2;
           const txt = r.date ? r.date.slice(5).replace('-', '.') : '-';
@@ -800,7 +923,7 @@ function renderShare() {
   drawPreview();
 }
 $('#share-chips').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; SHARE.team = c.dataset.t; renderShare(); };
-['#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty'].forEach(s => $(s).onchange = () => drawPreview());
+['#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty', '#o-pol'].forEach(s => $(s).onchange = () => drawPreview());
 let PREV = null;
 async function drawPreview() {
   if (!SHARE.team) { $('#prev').innerHTML = `<div class="empty">보여 줄 팀이 없습니다.</div>`; return; }
@@ -837,8 +960,9 @@ $('#b-txt').onclick = () => {
       const b = [];
       if (o.db && r.dbtype) b.push(r.dbtype);
       b.push(r.region, r.client, r.date ? r.date.slice(5).replace('-', '.') : '', r.closed || r.stage);
-      if (o.money && r.expect) b.push(won(r.expect) + '원');
-      if (r.family && r.family !== '미요청') b.push('소개 ' + r.family);
+      if (o.money) { const v = isDone(r) ? (r.contract || r.expect) : r.expect; if (v) b.push((isDone(r) ? '계약 ' : '') + won(v) + '원'); }
+      if (o.pol && policyOf(r) !== '해당없음') b.push('증권 ' + policyOf(r));
+      if (r.family && r.family !== '미요청') b.push('소개 ' + r.family + (r.introN ? ` ${r.introN}명` : ''));
       if (o.memo && r.memo) b.push(r.memo);
       L.push('   · ' + b.filter(Boolean).join(' / '));
     });
@@ -853,13 +977,14 @@ $('#b-txt').onclick = () => {
    ============================================================ */
 function csv(only) {
   const head = ['팀', '팀원', 'DB배정월', 'DB배정일', 'DB종류', '지역', '이름', '다음약속',
-    '예상업적', '진행단계', '상태', '가족소개진행', '비고'];
+    '예상업적', '계약업적', '진행단계', '증권전달', '상태', '소개진행', '소개수', '비고'];
   const q = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
   const src = only || ROWS;
   const L = [head.map(q).join(',')];
   TEAMS.forEach(t => memsOf(t.id).forEach(m => sortRows(src.filter(r => r.mid === m.id)).forEach(r => {
     L.push([t.name, m.name, ym(r.dbdate), r.dbdate, r.dbtype, r.region, r.client, r.date,
-      r.expect || 0, r.stage, r.closed || '진행', r.family, r.memo].map(q).join(','));
+      r.expect || 0, r.contract || 0, r.stage, policyOf(r), r.closed || '진행',
+      r.family, r.introN || 0, r.memo].map(q).join(','));
   })));
   return '﻿' + L.join('\r\n');
 }
