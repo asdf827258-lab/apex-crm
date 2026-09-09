@@ -24,11 +24,19 @@
    건우TEAM 4명 중 직할이 아닌 사람은 안 보입니다. 화면을 아무리 고쳐도
    서버가 그렇게 답하면 소용이 없습니다.
 
-   <b>아래 ② 블록은 기본으로 꺼 두었습니다.</b> dbs 뿐 아니라 이 함수를
-   쓰는 화면 전부의 보이는 범위가 같이 바뀌기 때문입니다. 사장님이
-   「설정한 대로 보이게 하라」 하시면 그때 주석을 벗기고 실행하십시오.
-   ①만 실행해도 이 화면은 정상으로 돕니다 — 화면 쪽은 이미 team_members
-   를 먼저 읽도록 고쳤습니다.
+   <b>사장님이 「설정한 대로 보이게 하라」 하셔서 ② 도 켰습니다.</b>
+   이 함수는 dbs 말고도 clients(고객) · calls(통화) · coaching_records(코칭)
+   의 열람 범위를 함께 정합니다. 켠 뒤 실제로 이렇게 바뀌었습니다.
+
+     박세빈  세빈TEAM   dbs 334 → 246건
+     심상빈  상빈TEAM   dbs 446 → 132건
+     윤건우  건우TEAM   dbs 446 → 222건
+     한현준  현준TEAM   dbs 446 → 124건
+     이동엽  로이지점   dbs 154 → 301건   ← 여기만 넓어집니다
+
+   앞의 넷은 「APEX 직할·상승지점」 으로 뭉쳐 보이던 것이 각자 팀으로
+   좁아진 것이고, 이동엽 팀장은 설정에 로이지점 9명이 들어 있어 넓어집니다.
+   둘 다 설정에 적어 두신 그대로입니다.
 
    Supabase → SQL Editor 에 붙여 넣고 한 번 실행하십시오.
    여러 번 실행해도 안전합니다.
@@ -53,9 +61,9 @@ $blk$;
 /* 진행 칸만 고치는 문 — 새 칸 둘을 목록에 더한다.
    여기 없는 칸은 이 문으로 못 고친다(phone·assigned_to 는 계속 막힌다).
 
-   그리고 「내 팀원인가」를 <b>team_members(설정)</b> 로 본다.
-   is_my_teammate() 는 옛 profiles.team_id 를 보므로 여기서는 안 쓴다 —
-   사장님이 설정에서 지정하신 그대로 움직이게 한다. */
+   「내 팀원인가」는 team_members(설정) 를 본다. is_my_teammate() 도 아래 ②
+   에서 같은 자리를 보게 고쳤지만, 그쪽은 <b>role='leader' 만</b> 통과시킨다.
+   대신 적어 주는 사람에는 본부장·마스터도 있어서 여기서는 따로 본다. */
 create or replace function public.pipeline_can_edit(p_owner uuid)
 returns boolean
 language sql
@@ -163,15 +171,19 @@ grant execute on function public.pipeline_new(uuid, jsonb)  to authenticated;
 
 
 /* ════════════════════════════════════════════════════════════════
-   ② 보이는 범위도 설정을 따르게 하기 — <b>기본 꺼 둠</b>
+   ② 보이는 범위도 설정을 따르게 한다
 
-   아래를 실행하면 is_my_teammate() 가 team_members(설정) 를 봅니다.
-   dbs 뿐 아니라 이 함수를 쓰는 다른 화면의 보이는 범위도 같이 바뀝니다.
-   대체로 <b>좁아집니다</b> — 윤건우 팀장은 APEX 직할 11명이 아니라
-   건우TEAM 4명을 보게 됩니다. 그것이 설정에 적어 두신 그대로입니다.
+   is_my_teammate() 가 team_members(설정) 를 봅니다.
+   되돌리려면 아래 [옛 정의] 로 다시 만들면 됩니다.
 
-   되돌리려면 profiles.team_id 를 보던 옛 정의로 다시 만들면 됩니다.
-   ────────────────────────────────────────────────────────────────
+     [옛 정의 — profiles.team_id, 2026-07-23 에 멈춘 자리]
+     select exists(
+       select 1 from public.profiles me
+       join public.profiles t on t.team_id = me.team_id
+       where me.id = auth.uid()
+         and me.role = 'leader' and me.active = true and me.team_id is not null
+         and t.id = target);
+   ════════════════════════════════════════════════════════════════ */
 create or replace function public.is_my_teammate(target uuid)
 returns boolean
 language sql
@@ -190,4 +202,3 @@ as $fn$
       and his.member_id = target
   );
 $fn$;
-   ════════════════════════════════════════════════════════════════ */
