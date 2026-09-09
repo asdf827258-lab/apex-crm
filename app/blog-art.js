@@ -206,6 +206,12 @@ function pickTitle(row){
    영문 기준(0.6)으로 잡으면 칸을 넘어 오른쪽이 잘린다. 실제로 표 카드에서
    마지막 칸이 잘려 나갔다. 넉넉히 1.02 로 잡고 좌우 여백을 뺀다. */
 function fits(w, size, pad){ return Math.max(4, Math.floor((w - (pad || 44)) / (size * 1.02))); }
+/* 한 줄에 다 못 담으면 <b>말줄임을 붙여</b> 자른다. 말없이 자르면
+   「대개 같은 자리가 비어 있」 처럼 문장이 끊긴 채 카드에 박혀 나간다 — 실제로 그랬다. */
+function clip(t, n){
+  const s = String(t == null ? '' : t);
+  return s.length <= n ? s : s.slice(0, Math.max(1, n - 1)).replace(/[\s,·—-]+$/, '') + '…';
+}
 
 /* 초안의 <b>첫 비교표</b>를 그대로 가져온다. 칸을 만들어 넣지 않는다 —
    네이버에 붙인 표는 폰에서 글자가 뭉개지고 가로로 잘린다. 그림으로 한 번 더 준다. */
@@ -217,7 +223,8 @@ function pickTable(row){
     .map(l => l.replace(/^\||\|$/g,'').split('|').map(c => c.trim()))
     .filter(r => !r.every(c => /^:?-{2,}:?$/.test(c)));
   if (rows.length < 2 || rows[0].length < 2) return null;
-  return { head: rows[0], body: rows.slice(1, 7) };
+  /* 떠 온 토막(src)도 함께 돌려준다 — 이 표를 그림으로 내보내면 글에서는 빼야 한다. */
+  return { head: rows[0], body: rows.slice(1, 7), src: m[0] };
 }
 /* 초안의 <b>강조 한 줄</b>(> 로 시작하는 줄)만 가져온다. 없으면 안 그린다 —
    본문에서 아무 문장이나 뽑아 크게 걸면, 우리가 강조한 적 없는 말이 대표가 된다. */
@@ -225,9 +232,46 @@ function pickQuote(row){
   const t = (row && row.out) || '';
   const m = t.match(/^>\s*(.+)$/m);
   const q = m ? m[1].trim() : '';
-  return (q.length >= 10 && q.length <= 90) ? q : '';
+  return (q.length >= 10 && q.length <= 90) ? { q, src: m[0] } : { q:'', src:'' };
 }
-const SKIPHEAD = /제목\s*후보|해시태그|메타\s*설명|딛고\s*선|본문|이미지·삽화|시의성/;
+/* 카드가 <b>초안에서 떠 온</b> 토막을 돌려준다. 떠 오는 자가 여기 하나뿐이니
+   (pickTable·pickQuote), 무엇을 떠 왔는지도 여기서만 답한다 (CLAUDE.md 5).
+   실제로 붙여넣어 보니 같은 표가 <b>글로 한 번, 그림으로 또 한 번</b> 나왔다. */
+function artSource(id, text){
+  const row = { out: text };
+  if (id === 'table'){ const d = pickTable(row); return d ? d.src : ''; }
+  if (id === 'quote') return pickQuote(row).src;
+  return '';
+}
+/* 초안에는 사장님이 보시는 «작업란»이 섞여 있다 — 제목 후보·메타 설명 같은 것.
+   골라 쓰시라고 화면에는 보여 드리지만 <b>블로그에 나가면 안 된다.</b>
+   실제로 네이버에 붙여넣어 보니 「제목 후보 5개」가 글 맨 위에 그대로 실렸다.
+   해시태그는 여기 없다 — 그것은 <b>진짜 글의 일부</b>라 나가야 하고, 목차에만 안 넣는다. */
+const DESKLABEL = ['본문'];                    /* 칸 이름만 빼고 안에 든 글은 그대로 둔다 */
+const DESKONLY  = ['제목\\s*후보','메타\\s*설명','딛고\\s*선','이미지·삽화','시의성'];  /* 통째로 뺀다 */
+const SKIPHEAD = new RegExp(DESKLABEL.concat(DESKONLY).join('|') + '|해시태그');
+/* 작업란을 걷어 낸 글을 돌려준다 — 이것이 <b>독자가 읽는 글</b>이다. */
+function deskCut(md){
+  const only  = new RegExp('^#{1,3}[^\\n]*(?:' + DESKONLY.join('|') + ')'),
+        label = new RegExp('^#{1,3}\\s*(?:' + DESKLABEL.join('|') + ')\\s*$'),
+        head  = /^#{1,3}\s+/, out = [];
+  let skip = false;
+  for (const l of String(md || '').split('\n')){
+    if (head.test(l)){ skip = only.test(l); if (skip || label.test(l)) continue; }
+    if (!skip) out.push(l);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').replace(/^\n+/, '');
+}
+/* 작업란에서 <b>사장님이 골라 쓰실 것</b>만 뽑아 온다 — 제목 후보와 메타 설명.
+   버리는 것이 아니라 <b>다른 칸에 넣으실 것</b>이라 따로 드린다. */
+function deskPick(md){
+  const t = String(md || ''), grab = re => { const m = t.match(re); return m ? m[1] : ''; };
+  const block = nm => grab(new RegExp('(?:^|\\n)#{1,3}[^\\n]*' + nm + '[^\\n]*\\n([\\s\\S]*?)(?:\\n#{1,3}\\s|$)')).trim();
+  return {
+    titles: block('제목\\s*후보').split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean),
+    meta: block('메타\\s*설명').replace(/\n+/g, ' ').trim()
+  };
+}
 /* 소제목은 ## 로 시켰지만, 손으로 고치실 때 ### 를 쓰시는 일이 있다.
    그때 목차 카드가 <b>말없이 빠졌다</b> — 실제로 그래서 한 장이 안 섰다.
    ## 도 ### 도 소제목으로 읽는다. #### 부터는 안 읽는다(너무 잘게 쪼갠 것). */
@@ -412,7 +456,7 @@ const ART = {
  quote:{ t:'한 문장 카드', need:'draft', scan:true,
   why:'초안에서 <b>&gt; 로 강조한 한 줄</b>만 크게 실은 카드입니다. 독자가 캡처해 가는 자리입니다.',
   make(row){
-    const q = pickQuote(row);
+    const q = pickQuote(row).q;
     if (!q) return { err:'초안에 강조 문장(> 로 시작하는 줄)이 없습니다 — 아무 문장이나 대신 걸지 않습니다.' };
     const W = SV.w, c = kcolor(row);
     let size = 62, ls = wrap(q, fits(SV.w - 232, size, 0));
@@ -439,7 +483,7 @@ const ART = {
       const y = 172 + i * 96;
       b += '<rect x="64" y="'+y+'" width="'+(W-128)+'" height="76" rx="'+RAD+'" fill="'+SV.soft+'"/>'+
            '<circle cx="104" cy="'+(y+38)+'" r="7" fill="'+kcolor(row)+'"/>'+
-           tx([h.slice(0,28)], 134, y+50, TS.body, 0, SV.ink, 800);
+           tx([clip(h, fits(W - 198, TS.body, 0))], 134, y+50, TS.body, 0, SV.ink, 800);
     });
     return { w:W, h:H, text:hs.join(' '), alt:'이 글에서 다루는 내용 요약 카드', svg: svg(W, H, b + foot(W,H)) };
   }}

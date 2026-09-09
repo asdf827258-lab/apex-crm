@@ -76,6 +76,10 @@ th{font-size:11px;color:var(--sub);font-weight:700;background:var(--soft)}
 .who{display:inline-block;border-radius:20px;padding:1px 8px;font-size:10.5px;font-weight:800}
 .who.c{background:#EFF6FF;color:#1D4ED8}
 .who.t{background:#FFF7ED;color:#9A3412}
+.tt{font-size:11px;font-weight:800;color:var(--dim);margin:12px 0 5px;letter-spacing:.02em}
+.pick{border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:6px;font-size:13px;
+  line-height:1.6;cursor:pointer;background:#fff}
+.pick:hover{border-color:var(--brand);background:var(--soft)}
 .gate{border-radius:9px;padding:9px 11px;font-size:12px;margin:10px 0}
 .gate.ok{background:var(--okbg);border:1px solid #A7F3D0;color:#065F46}
 .gate.no{background:var(--badbg);border:1px solid #FECACA;color:var(--bad)}
@@ -779,8 +783,23 @@ function guard(t,kind){
 /* ══════════ 마크다운 → 보이는 글 ══════════
    네이버 편집기는 마크다운을 모른다. 「##」 이 글자 그대로 보인다.
    그래서 여기서 HTML 로 만들고, <b>서식 있는 복사</b>로 넘긴다. */
+/* 그림으로 나간 카드가 <b>초안에서 떠 온</b> 토막을 글에서 뺀다.
+   안 빼면 같은 표가 글로 한 번·그림으로 또 한 번 나와 독자가 세 줄을 두 번 읽는다.
+   실제로 네이버에 붙여넣어 보고 나온 자리다. 이름 맞추는 자는 pickPng 하나를 그대로 쓴다. */
+function cutTaken(md,pngs){
+  if(!pngs||typeof artSource!=='function') return md;
+  let out=md, m; const re=/^\[이미지\s*:\s*([^\]|]+)(?:\|[^\]]*)?\]$/gm;
+  while((m=re.exec(md))){
+    const nm=m[1].trim(); if(!pickPng(pngs,nm)) continue;
+    for(const id in ART){
+      const one={}; one[ART[id].t]=1; if(!pickPng(one,nm)) continue;
+      const b=artSource(id,md); if(b) out=out.replace(b,'');
+    }
+  }
+  return out;
+}
 function md2html(md,forPaste,pngs){
-  const lines=String(md||'').split('\n');
+  const lines=cutTaken(String(md||''),pngs).split('\n');
   let h='', inTable=false, tRows=[], inList='';
   const inline = s => esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>')
     .replace(/\[\[확인\s*필요([^\]]*)\]\]/g, forPaste?'[확인 필요$1]':'<span class="hole">[[확인 필요$1]]</span>');
@@ -824,7 +843,9 @@ function md2html(md,forPaste,pngs){
 
 /* ══════════ 올리기 ══════════ 이 화면의 이유 */
 function packText(i){
-  const row=S.rows[i], c=S.comply, out=row.out;
+  /* 작업란(제목 후보·메타 설명)은 <b>독자가 읽을 글이 아니다</b> — 걷어 내고 나간다.
+     사장님이 쓰실 것은 ③ 올리기의 «제목·설명» 칸에서 따로 복사하십니다. */
+  const row=S.rows[i], c=S.comply, out=deskCut(row.out);
   let tail='';
   if(c){
     tail='\n\n──────────\n'+(c['카드_하단_고정']||'');
@@ -1140,6 +1161,29 @@ function gateBox(g){
       '</b> 처럼 <span class="hole">노란 칸</span>으로 보입니다. <b>사장님이 확인해 채우셔야</b> 합니다.</li>':'')+
     '</ul></div>';
 }
+/* 제목 후보와 메타 설명은 <b>본문 칸에 들어갈 것이 아니다</b> — 네이버의 다른 칸에 들어간다.
+   그래서 글에서는 빼고(deskCut) 여기서 눌러 복사하시게 한다. 버리는 것이 아니다. */
+function deskBox(i){
+  const d=deskPick(S.rows[i].out);
+  if(!d.titles.length&&!d.meta) return '';
+  return '<div class="card in"><h2 style="margin:0 0 6px">제목·설명 — <b>본문과 다른 칸</b>에 들어갑니다</h2>'+
+    '<div class="desc">이것을 본문에 같이 붙이면 독자가 «제목 후보 5개»를 읽게 됩니다. 그래서 글에서는 뺐습니다.</div>'+
+    (d.titles.length?'<div class="tt">제목 — 하나를 눌러 복사하세요</div>'+
+      d.titles.map((t,k)=>'<div class="pick" onclick="deskCopy('+i+','+k+')">'+esc(t)+
+        ' <span style="color:var(--dim)">('+t.length+'자)</span></div>').join(''):'')+
+    (d.meta?'<div class="tt">글 설명(메타) — 검색 결과에 뜨는 두 줄</div>'+
+      '<div class="pick" onclick="deskCopy('+i+',-1)">'+esc(d.meta)+
+      ' <span style="color:var(--dim)">('+d.meta.length+'자)</span></div>':'')+
+  '</div>';
+}
+function deskCopy(i,k){
+  const d=deskPick(S.rows[i].out), t=k<0?d.meta:d.titles[k];
+  if(!t) return;
+  navigator.clipboard.writeText(t).then(
+    ()=>toast(k<0?'글 설명을 복사했습니다 — 네이버 «글 설명» 칸에 붙이세요'
+                 :'제목을 복사했습니다 — 네이버 «제목» 칸에 붙이세요'),
+    ()=>toast('복사하지 못했습니다'));
+}
 async function show(i){
   const row=S.rows[i]; if(!row||!row.out) return;
   await comply();          /* 아래 미리보기에도 준법 문구가 제대로 보이게 */
@@ -1167,11 +1211,14 @@ async function show(i){
       (row.up?'<button onclick="markUp('+i+',false)">올림 표시 지우기</button>'
              :'<button onclick="markUp('+i+',true)">✓ 올렸음으로 표시</button>')+
     '</div>'+
+    deskBox(i)+
     '<ol class="steps">'+
-      ['«서식 있는 복사»를 누릅니다 — <b>그림까지 같이 담깁니다</b>',
-       '편집기에 <b>한 번</b> 붙여넣습니다 — 제목·표·그림이 그대로 섭니다',
+      ['<b>제목</b>을 골라 눌러 복사하고, 네이버 <b>제목 칸</b>에 붙입니다',
+       '«서식 있는 복사»를 누릅니다 — <b>그림까지 같이 담깁니다</b>',
+       '<b>본문 칸</b>에 <b>한 번</b> 붙여넣습니다 — 제목·표·그림이 그대로 섭니다',
        '<b>파란 칸이 남아 있으면</b> 그 자리만 아래에서 PNG 를 내려받아 끌어다 넣습니다',
-       '해시태그·메타 설명을 옮깁니다','회사 준법감시(광고 심의)를 거쳐 발행합니다']
+       '«설명 복사»를 눌러 네이버 <b>글 설명</b> 칸에 붙입니다',
+       '회사 준법감시(광고 심의)를 거쳐 발행합니다']
       .map(s=>'<li><input type="checkbox" onchange="this.parentNode.classList.toggle(\'done\',this.checked)"><span>'+s+'</span></li>').join('')+
     '</ol>'+
     '<div class="note">마크다운을 그대로 붙이면 네이버 편집기에는 <b>## 이 글자 그대로</b> 보입니다. '+

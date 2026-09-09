@@ -829,7 +829,9 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
 
     /* ③ 게이트가 잡은 말을 눌러 본문의 그 자리로 */
     S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
-      out:'## 제목 후보\n- 제목\n\n## 본문\n이 상품은 무조건 됩니다. 보장 내용은 심사 결과에 따릅니다.\n' +
+      /* 「제목 후보」·「본문」은 이제 글에서 걷어 내니(작업란), 진짜 소제목을 둘 넣어 둔다 */
+      out:'## 제목 후보\n- 제목\n\n## 본문\n이 상품은 무조건 됩니다. 보장 내용은 심사 결과에 따릅니다.\n\n' +
+          '## 첫째 소제목\n글입니다.\n\n## 둘째 소제목\n' +
           '[[확인 필요: 얼마인지]] 가 남아 있습니다.\n', guard:null, up:false }];
     S.rows[0].guard = guard(S.rows[0].out, 'ours');
     await show(0);
@@ -1112,6 +1114,72 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(one.clipBig > 20000, '  글자만 가는 것이 아니다 (' + Math.round(one.clipBig/1024) + 'KB)');
   is(/setTimeout\(\(\)=>fin\(''\)/.test(SRC),
      '  한 장이 안 그려져도 <b>복사가 멈추지 않는다</b> — 시간 제한을 건다 (CLAUDE.md 4-1)');
+
+  console.log('\n[20] 붙여넣은 글이 <b>독자가 읽을 글</b>인가 — 작업란과 겹말이 안 나가는가');
+  const pub = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    localStorage.setItem('apex_intro_guest',
+      JSON.stringify({ org:'○○본부', name:'홍길동', title:'사업단장', at:Date.now() }));
+    const draft =
+      '## 제목 후보 5개\n- 고른 제목입니다\n- 안 고른 제목입니다\n\n' +
+      '## 본문\n첫 문단입니다. 보장 내용은 심사 결과에 따릅니다.\n\n' +
+      '> 이 한 줄만 크게 걸어 주십시오\n\n' +
+      '[이미지: 한 문장 카드 | alt: 강조 한 줄]\n\n' +
+      '| 순서 | 무엇을 보나 |\n| --- | --- |\n| 하나 | 겹치는 보장 |\n| 둘 | 비어 있는 보장 |\n\n' +
+      '[이미지: 비교표 카드 | alt: 세 가지를 정리한 표]\n\n' +
+      '## 해시태그\n#보장분석 #보험점검\n\n' +
+      '## 메타 설명\n검색 결과에 뜨는 두 줄입니다.\n\n' +
+      '## 이 글이 딛고 선 것\n우리가 실제로 하는 일\n';
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:draft, guard:null, up:false }];
+    S.rows[0].guard = { ok:true, hits:[], miss:[], holes:[], noart:[] };
+
+    /* ① 작업란은 안 나간다 — 독자가 「제목 후보 5개」를 읽으면 안 된다 */
+    const t = packText(0);
+    out.noTitles  = !/제목\s*후보/.test(t) && !/안 고른 제목/.test(t);
+    out.noMeta    = !/메타\s*설명/.test(t) && !/검색 결과에 뜨는/.test(t);
+    out.noStood   = !/딛고\s*선/.test(t);
+    out.noLabel   = !/^##\s*본문\s*$/m.test(t);
+    /* ② 그러나 진짜 글은 한 글자도 안 잃는다 */
+    out.keptBody  = /첫 문단입니다/.test(t);
+    out.keptTag   = /#보장분석/.test(t);
+    out.keptLaw   = /심사 결과에 따릅니다/.test(t);
+    out.keptWho   = /홍길동/.test(t);
+    /* ③ 버린 것이 아니다 — 눌러 복사하시라고 따로 드린다 */
+    const d = deskPick(S.rows[0].out);
+    out.pickTitles = d.titles.length === 2 && d.titles[0] === '고른 제목입니다';
+    out.pickMeta   = d.meta === '검색 결과에 뜨는 두 줄입니다.';
+    await show(0);
+    out.boxUp = /제목·설명/.test($('view').innerHTML) && /고른 제목입니다/.test($('view').innerHTML);
+    /* ④ 그림으로 나간 카드가 떠 온 토막은 글에서 <b>한 번만</b> 나온다 */
+    const pngs = await artPngs(0);
+    const html = md2html(packText(0), true, pngs);
+    out.oneTable = (html.match(/<table/g) || []).length === 0 &&
+                   (html.match(/겹치는 보장/g) || []).length === 0;
+    out.oneQuote = (html.match(/이 한 줄만 크게 걸어/g) || []).length === 0;
+    out.imgs = (html.match(/<img /g) || []).length;
+    /* ⑤ 그림 없이 부르면 표와 인용이 <b>그대로 남는다</b> — 유일한 사본을 지우지 않는다 */
+    const plain = md2html(packText(0), true);
+    out.keepTable = (plain.match(/<table/g) || []).length === 1;
+    out.keepQuote = /이 한 줄만 크게 걸어/.test(plain);
+    return out;
+  });
+  is(pub.noTitles, '  「제목 후보」가 <b>글에 안 실린다</b> — 독자가 읽을 것이 아니다');
+  is(pub.noMeta && pub.noStood && pub.noLabel,
+     '  메타 설명·딛고 선 것·「본문」 딱지도 안 실린다');
+  is(pub.keptBody && pub.keptTag, '  진짜 글과 해시태그는 <b>그대로</b> 남는다 — 걷어 내다 본문을 먹지 않는다');
+  is(pub.keptLaw && pub.keptWho, '  준법 문구와 글쓴이도 그대로 남는다');
+  is(pub.pickTitles && pub.pickMeta,
+     '  <b>버린 것이 아니다</b> — 제목 후보와 메타 설명을 따로 뽑아 드린다');
+  is(pub.boxUp, '  ③ 올리기에 <b>«제목·설명» 칸</b>이 서서 눌러 복사하실 수 있다');
+  is(pub.oneTable, '  표를 그림으로 내보내면 글에서는 <b>빠진다</b> — 같은 표를 두 번 읽히지 않는다');
+  is(pub.oneQuote, '  강조 한 줄도 마찬가지다 — 글로 한 번, 그림으로 또 한 번이 아니다');
+  is(pub.imgs === 2, '  그 자리에 그림 두 장이 대신 선다 (' + pub.imgs + '장)');
+  is(pub.keepTable && pub.keepQuote,
+     '  <b>그림을 못 만들었으면 그대로 둔다</b> — 하나뿐인 사본을 지우지 않는다');
+  is(/…/.test(String(ART_SRC.match(/function clip\([\s\S]{0,300}/) || '')),
+     '  카드 글자가 넘치면 <b>말줄임</b>을 붙여 자른다 — 문장이 끊긴 채 안 나간다');
 
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
