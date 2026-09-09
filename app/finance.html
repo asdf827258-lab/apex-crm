@@ -1402,16 +1402,16 @@ a { color: inherit; text-decoration: none; }
       </div>
       <div class="sb-body">
         <div class="sf2">
-          <div class="sf"><label>비상금 적립/월</label><input type="number" id="s_emerg" value="20" oninput="render()"></div>
-          <div class="sf"><label>연금저축/월</label><input type="number" id="s_pension" value="34" oninput="render()"></div>
+          <div class="sf"><label>비상금 적립/월(만원)</label><input type="number" id="s_emerg" value="20" oninput="render()"></div>
+          <div class="sf"><label>연금저축/월(만원)</label><input type="number" id="s_pension" value="34" oninput="render()"></div>
         </div>
         <div class="sf2">
-          <div class="sf"><label>IRP/월</label><input type="number" id="s_irp" value="25" oninput="render()"></div>
-          <div class="sf"><label>ISA/월</label><input type="number" id="s_isa" value="30" oninput="render()"></div>
+          <div class="sf"><label>IRP/월(만원)</label><input type="number" id="s_irp" value="25" oninput="render()"></div>
+          <div class="sf"><label>ISA/월(만원)</label><input type="number" id="s_isa" value="30" oninput="render()"></div>
         </div>
         <div class="sf2">
-          <div class="sf"><label>달러/변액(비과세)/월</label><input type="number" id="s_taxfree" value="30" oninput="render()"></div>
-          <div class="sf"><label>일반 투자/월</label><input type="number" id="s_general" value="10" oninput="render()"></div>
+          <div class="sf"><label>달러·변액(비과세)/월(만원) <small style="font-weight:600;color:#94A3B8">원화로 넣으세요</small></label><input type="number" id="s_taxfree" value="30" oninput="render()"></div>
+          <div class="sf"><label>일반 투자/월(만원)</label><input type="number" id="s_general" value="10" oninput="render()"></div>
         </div>
       </div>
     </div>
@@ -1457,9 +1457,10 @@ a { color: inherit; text-decoration: none; }
           <div class="sf"><label>비과세 유지(년)</label><input type="number" id="d_tax_year" value="10" oninput="render()"></div>
         </div>
         <div class="sf2">
-          <div class="sf"><label>현재 원/달러</label><input type="number" id="d_rate_now" value="1380" oninput="render()"></div>
-          <div class="sf"><label>예상 환율</label><input type="number" id="d_rate_target" value="1500" oninput="render()"></div>
+          <div class="sf"><label>지금 원/달러</label><input type="number" id="d_rate_now" oninput="fxSet(this.value,null);fxSync();render()"></div>
+          <div class="sf"><label>예상 환율</label><input type="number" id="d_rate_target" oninput="fxSet(null,this.value);fxSync();render()"></div>
         </div>
+        <div id="d_fx_note"></div>
         <div class="sf"><label>환급율(%) — 해지 시 납입 대비 수령</label><input type="number" id="d_refund_rate" value="85" step="1" oninput="render()"></div>
         <div class="sb-note">환차익은 현재→예상 환율로 자동 계산됩니다. 환급율은 해지 시 납입보험료 대비 수령 비율이며, 10년 이상 유지 시 비과세가 적용됩니다.</div>
       </div>
@@ -1913,6 +1914,55 @@ a { color: inherit; text-decoration: none; }
 /* ═══════════════════════════════════════════
    헬퍼 함수
 ═══════════════════════════════════════════ */
+/* ══ 지금 환율은 여기 한 곳만 안다 (5번) ═══════════════════════════
+   여태 1,380 이라는 숫자가 <b>다섯 곳</b>에 따로 박혀 있었습니다. 한 곳을
+   고쳐도 나머지 넷이 옛 환율로 계산해, 같은 화면 안에서 숫자가 갈렸습니다.
+
+   ★ 더 나쁜 것은 <b>「현재 원/달러」라고 적어 둔 것</b>입니다. 실제로는
+     코드에 박아 둔 값이라 오늘 환율이 아닙니다. 지어낸 값을 사실처럼
+     적으면 고객이 그것을 사실로 믿습니다 (1번). 그래서 사장님이 넣기
+     전에는 <b>「아직 안 넣은 기본값」이라고 화면에 밝힙니다.</b>
+   ── 넣은 날짜도 같이 적습니다. 두 달 전 환율인 줄 모르는 것이 더 위험합니다. */
+var FX_KEY='apex_fx';
+var FX_SEED={now:1380,tgt:1500};   /* 안 넣었을 때만 쓰는 자리표 — 사실이 아님 */
+function fxGet(){
+  try{ var o=JSON.parse(localStorage.getItem(FX_KEY)||'null');
+       if(o&&+o.now>0)return o; }catch(e){}
+  return null;
+}
+function fxNow(){ var o=fxGet(); return (o&&+o.now>0)?+o.now:FX_SEED.now; }
+function fxTgt(){ var o=fxGet(); return (o&&+o.tgt>0)?+o.tgt:FX_SEED.tgt; }
+function fxSeeded(){ return !fxGet(); }              /* 아직 사장님이 안 넣었나 */
+function fxWhen(){ var o=fxGet(); return (o&&o.at)?o.at:''; }
+function fxSet(now,tgt){
+  var o=fxGet()||{}, n=parseFloat(now), t=parseFloat(tgt);
+  if(isFinite(n)&&n>0)o.now=n;
+  if(isFinite(t)&&t>0)o.tgt=t;
+  o.at=new Date().toISOString().slice(0,10);
+  try{ localStorage.setItem(FX_KEY,JSON.stringify(o)); }catch(e){}
+  try{ if(window.VC){ VC.usd=fxNow(); VC.usdt=fxTgt(); } }catch(e){}
+  return o;
+}
+/* 환율을 쓰는 화면마다 <b>어디서 온 값인지</b> 한 줄로 밝힌다 */
+function fxNoteHtml(){
+  return fxSeeded()
+    ? '<div class="sb-note" style="color:#a8730f"><b>환율은 아직 안 넣으신 기본값</b>('+
+      fxNow().toLocaleString()+'원)입니다 — 오늘 환율로 바꿔 주세요. '+
+      '이 값으로 계산한 환차익은 <b>사실이 아닙니다.</b></div>'
+    : '<div class="sb-note">지금 환율 <b>'+fxNow().toLocaleString()+'원</b>'+
+      (fxWhen()?(' · '+fxWhen()+'에 넣으신 값'):'')+' — 한 곳에서 고치면 모든 화면이 같이 바뀝니다.</div>';
+}
+
+/* 환율 칸을 지금 값으로 채우고, 어디서 온 값인지 한 줄 적는다 */
+function fxSync(){
+  var a=document.getElementById('d_rate_now'), b=document.getElementById('d_rate_target');
+  if(a&&document.activeElement!==a)a.value=fxNow();
+  if(b&&document.activeElement!==b)b.value=fxTgt();
+  var n=document.getElementById('d_fx_note');
+  if(n)n.innerHTML=fxNoteHtml();
+  try{ if(window.VC){ VC.usd=fxNow(); VC.usdt=fxTgt(); } }catch(e){}
+}
+
 const $ = id => document.getElementById(id);
 const n = id => parseFloat($('s_'+id) ? $('s_'+id).value : 0) || 0;
 const fmt = v => Math.round(v).toLocaleString();
@@ -2507,6 +2557,7 @@ function sevPensionOf(severanceMan, retRatePct){
 }
 
 function render() {
+  fxSync();   /* 환율 칸을 지금 값으로 맞추고, 어디서 온 값인지 적는다 */
   const name = ($('s_name')||{value:'고객님'}).value || '고객님';
   const age  = n('age') || 35;
   const rage = n('rage') || 65;
@@ -3775,7 +3826,7 @@ var IC_ASSUME={etf:7,va:6,usd:3.5,dep:2.5,tax:15.4,
   usdEarly:7,usdEarlyY:5,usdDrag:0.3}; /* 달러보험: 동일 개념 */
 var IC={pay:400,age:38,fam:1,years:20,risk:'중립형',job:'직장가입자',goal:'노후자금',cash:0,save:0,fee:5};
 var VC={pay:50,add:0,years:20,rate:6,fee:5,efee:12,eyrs:7,addfee:2,arate:0.7,
-        dpay:35,dyrs:10,dtot:20,dret:118,usd:1380,usdt:1500,move:10};
+        dpay:35,dyrs:10,dtot:20,dret:118,usd:0,usdt:0,move:10};  /* 환율은 fxNow()/fxTgt() 가 채운다 */
 var IC_VIEW='bal', VC_VIEW='sim';
 
 /* ── 공통 유틸 ── */
@@ -4871,8 +4922,8 @@ function dkSetBar(kind){
       '<div><label>월 납입(만원)</label><input type="number" value="'+dkNum('d_pay',50)+'" oninput="dkSet(\'d_pay\',this.value,\'dollar\')"></div>'+
       '<div><label>납입 기간(년)</label><input type="number" value="'+dkNum('d_payy',10)+'" oninput="dkSet(\'d_payy\',this.value,\'dollar\')"></div>'+
       '<div><label>거치 기간(년)</label><input type="number" value="'+dkNum('d_waity',10)+'" oninput="dkSet(\'d_waity\',this.value,\'dollar\')"></div>'+
-      '<div><label>현재 환율</label><input type="number" value="'+dkNum('d_rate_now',1380)+'" oninput="dkSet(\'d_rate_now\',this.value,\'dollar\')"></div>'+
-      '<div><label>예상 환율</label><input type="number" value="'+dkNum('d_rate_target',1500)+'" oninput="dkSet(\'d_rate_target\',this.value,\'dollar\')"></div>'+
+      '<div><label>지금 환율</label><input type="number" value="'+dkNum('d_rate_now',fxNow())+'" oninput="fxSet(this.value,null);dkSet(\'d_rate_now\',this.value,\'dollar\')"></div>'+
+      '<div><label>예상 환율</label><input type="number" value="'+dkNum('d_rate_target',fxTgt())+'" oninput="fxSet(null,this.value);dkSet(\'d_rate_target\',this.value,\'dollar\')"></div>'+
     '</div>';
   }
   return '<div class="dk-setbar">'+
@@ -5042,7 +5093,7 @@ function dkPastRow(label,yrs,m,color){
 /* ═══════ 달러 프레젠테이션 ═══════ */
 function dkDollarCalc(){
   var pay=Math.max(1,dkNum('d_pay',50)), payy=Math.max(1,dkNum('d_payy',10)), waity=Math.max(0,dkNum('d_waity',10));
-  var now=Math.max(1,dkNum('d_rate_now',1380)), tgt=Math.max(1,dkNum('d_rate_target',1500));
+  var now=Math.max(1,dkNum('d_rate_now',fxNow())), tgt=Math.max(1,dkNum('d_rate_target',fxTgt()));
   var total=payy+waity;
   var prinKrw=pay*payy*12;
   var usdMonthly=pay*10000/now;
@@ -5063,8 +5114,7 @@ function dkDollarSlides(){
   var c=dkDollarCalc();
   /* 달러만 적으면 고객이 크기를 못 가늠한다 — 원화를 나란히 적는다 */
   var usd=function(v){
-    var u=Math.round(v||0), r=(typeof fxRate==='function')?fxRate():1380;
-    return '$'+u.toLocaleString()+' (₩'+Math.round(u*r/10000).toLocaleString()+'만)';
+    return usdKrw(v,'short');   /* 원화 먼저 · 달러는 따로 — 만드는 자리는 하나뿐 (5번) */
   };
   var rows='',i,ds=[-100,0,100,200,300];
   for(i=0;i<ds.length;i++){
@@ -6056,8 +6106,8 @@ function renderCardif() {
 /* 달러보험 프레젠테이션 — 고객 설명용 (상담 화면에서 그대로 사용) */
 function renderDollarWhy(){
   if(!$('dollar-why'))return;
-  const rateNow = parseFloat($('d_rate_now')?.value||1380)||1380;
-  const rateTgt = parseFloat($('d_rate_target')?.value||1500)||1500;
+  const rateNow = parseFloat($('d_rate_now')?.value||0)||fxNow();
+  const rateTgt = parseFloat($('d_rate_target')?.value||0)||fxTgt();
   const dPay    = parseFloat($('d_pay')?.value||50)||50;
   const dPayY   = parseFloat($('d_payy')?.value||10)||10;
   const prin    = Math.round(dPay*dPayY*12);
@@ -6113,8 +6163,8 @@ function renderDollarUpgrade() {
   const dWaitY  = parseFloat($('d_waity')?.value||10)||10;
   const dRate   = 0; /* 수익률 가정 제거 — 환율·환급·비과세 중심 */
   const dEx     = (parseFloat($('d_ex')?.value||10)||10)/100;
-  const rateNow = parseFloat($('d_rate_now')?.value||1380)||1380;
-  const rateTgt = parseFloat($('d_rate_target')?.value||1500)||1500;
+  const rateNow = parseFloat($('d_rate_now')?.value||0)||fxNow();
+  const rateTgt = parseFloat($('d_rate_target')?.value||0)||fxTgt();
   const refRate = parseFloat($('d_refund_rate')?.value||85)||85;
   const taxYear = parseFloat($('d_tax_year')?.value||10)||10;
   const taxRate = 0.154; // 보험차익 세율 (배당소득세 15.4%)
@@ -8957,7 +9007,7 @@ function apxPen(o){
 function apxVD(m, years, opt){
   opt=opt||{};
   var V={rate:6, fee:5, efee:12, eyrs:7, drag:0.7};      /* 변액 */
-  var D={rate:3.5, fee:3, efee:7, eyrs:5, drag:0.3, usd:1380, usdt:1500}; /* 달러 */
+  var D={rate:3.5, fee:3, efee:7, eyrs:5, drag:0.3, usd:fxNow(), usdt:fxTgt()}; /* 달러 */
   var bankRate = opt.bank!=null ? opt.bank : 2.8;
   try{ if(window.VC){ V.rate=VC.rate; V.fee=VC.fee; V.efee=VC.efee; V.eyrs=VC.eyrs; V.drag=VC.arate;
                       /* 달러는 이제 공시 환급률에서 되푼 실질 이율을 쓴다.
@@ -10086,19 +10136,19 @@ var APEX_TRACK_NAME = {w:'₩ 연금', d:'$ 달러', t:'📈 투자·세금', e:
    고객은 달러 금액만 보면 크기를 못 가늠한다. \$120,000 이 얼마인지
    머릿속에서 환산하는 사이 설명이 지나간다. 그래서 달러를 쓰는 자리마다
    원화를 함께 적는다. 환율은 계산기가 쓰는 값(VC.usd) 을 그대로 쓴다. */
-function fxRate(){
-  try{ if(window.VC && +VC.usd>0) return +VC.usd; }catch(e){}
-  var e=document.getElementById('s_usd');
-  var v=e?parseFloat(e.value):0;
-  return v>0?v:1380;
-}
-/* 달러 금액(달러 단위) → "\$120,000 (약 1억 6,560만원)" */
+function fxRate(){ return fxNow(); }   /* 환율을 아는 곳은 fxNow() 하나뿐 (5번) */
+/* 달러 금액 → <b>원화 먼저</b>, 달러는 그 옆에 따로.
+   여태는 「$120,000 (약 1억 6,560만원)」였습니다. 고객은 앞 숫자를 먼저
+   읽는데 그것이 달러라, 크기를 가늠하는 사이 설명이 지나갔습니다.
+   사장님 말씀대로 <b>원화로 보고 달러는 따로</b> 봅니다. */
 function usdKrw(usdAmt,opt){
   var u=Math.round(+usdAmt||0), r=fxRate();
   var man=Math.round(u*r/10000);
-  var head='$'+u.toLocaleString();
-  if(opt==='short') return head+' (₩'+man.toLocaleString()+'만)';
-  return head+' <span class="fx-krw">≈ '+icMan(man)+'원</span>';
+  /* <b>원화가 앞</b>입니다. 여태는 「$120,000 (약 1억 6,560만원)」이라
+     달러를 먼저 적었는데, 고객은 앞 숫자를 먼저 읽습니다. 그 숫자가
+     달러면 크기를 가늠하는 사이 설명이 지나갑니다. */
+  if(opt==='short') return man.toLocaleString()+'만원 <span class="fx-krw">($'+u.toLocaleString()+')</span>';
+  return icMan(man)+'원 <span class="fx-krw">≈ $'+u.toLocaleString()+'</span>';
 }
 /* 원화(만원) → "1억 6,560만원 (\$120,000)" — 원화가 주인 자리에서 */
 function krwUsd(manAmt){
@@ -11108,11 +11158,7 @@ var DOL = {
   addRate: 200           /* 추가납입 한도 = 기본보험료의 200% */
 };
 function dolUsd(v,d){ return '$'+(Math.round(v*(d===2?100:1))/(d===2?100:1)).toLocaleString(undefined,{minimumFractionDigits:(d===2?2:0),maximumFractionDigits:(d===2?2:0)}); }
-function dolKrw(usd){
-  var r=(typeof fxRate==='function')?fxRate():1380;
-  var man=Math.round(usd*r/10000);
-  return man.toLocaleString()+'만원';
-}
+function dolKrw(usd){ return Math.round(usd*fxRate()/10000).toLocaleString()+'만원'; }
 function dolPair(usd,dec){ return dolUsd(usd,dec)+' <span style="font-size:11px;color:var(--ink-5);font-weight:600">≈ '+dolKrw(usd)+'</span>'; }
 /* 표 칸 안 — 옆에 붙이면 칸이 터지므로 아랫줄에 적는다 */
 function dolPairB(usd,dec){ return dolUsd(usd,dec)+'<span style="display:block;font-size:10px;color:var(--ink-5);font-weight:600">≈ '+dolKrw(usd)+'</span>'; }
@@ -11148,7 +11194,7 @@ function czSet(k,v){
   if(k==='mode'||k==='cp')CZ[k]=v; else CZ[k]=parseFloat(v)||0;
   czPaint();
 }
-function czFx(){ try{ return (typeof fxRate==='function')?fxRate():1380; }catch(e){ return 1380; } }
+function czFx(){ return fxRate(); }
 /* ※ czWon 은 <b>만원 단위 숫자</b>를 받는다. 원 단위를 그대로 넣으면
    50만원이 「50억」 으로 찍힌다 — 고객 앞에서 가장 창피한 종류의 오류다.
    원 단위 값은 czWonR 로 넣는다.                                     */
