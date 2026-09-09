@@ -108,12 +108,17 @@ const FAKE = `(function(plan){
   const F = await page.evaluate(async (FAKE_SRC) => {
     const chain = eval(FAKE_SRC)({
       admin_account_refs: { data: 12, error: null },
+      admin_account_refs_json: { data: [], error: null },
       admin_delete_account: { data: null, error: { message: 'update or delete on table "users" violates foreign key constraint' } }
     });
     window.osClient = function () { return chain; };
     OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'pro' };
     OSAC.note = null;
     osAcDelete('u9', 'hong@example.com', '홍길순');
+    /* 이제 누르면 <b>고르는 판</b>이 먼저 뜬다 — 고객을 어디로 보낼지 정한 뒤
+       「지웁니다」를 눌러야 실제로 지운다. 점검도 그 두 걸음을 그대로 밟는다. */
+    await new Promise(r => setTimeout(r, 300));
+    osAcDelGo();
     await new Promise(r => setTimeout(r, 400));
     const n = OSAC.note;
     const d = document.createElement('div');
@@ -130,6 +135,7 @@ const FAKE = `(function(plan){
   const G = await page.evaluate(async (FAKE_SRC) => {
     const chain = eval(FAKE_SRC)({
       admin_account_refs: { data: 0, error: null },
+      admin_account_refs_json: { data: [], error: null },
       admin_delete_account: { data: 'hong@example.com', error: null },
       /* 지웠다는데 목록에는 그대로 있다 */
       admin_user_list: { data: [{ id: 'u9', email: 'hong@example.com', name: '홍길순' }], error: null }
@@ -137,6 +143,9 @@ const FAKE = `(function(plan){
     window.osClient = function () { return chain; };
     OSAC.note = null;
     osAcDelete('u9', 'hong@example.com', '홍길순');
+    /* 고르는 판이 먼저 뜬다 — 정한 뒤 「지웁니다」를 눌러야 실제로 지운다 */
+    await new Promise(r => setTimeout(r, 300));
+    osAcDelGo();
     await new Promise(r => setTimeout(r, 600));
     const d = document.createElement('div'); d.innerHTML = osAcNoteHtml('u9');
     return { kind: OSAC.note && OSAC.note.kind, t: d.textContent.replace(/\s+/g, ' ').trim() };
@@ -148,6 +157,7 @@ const FAKE = `(function(plan){
   const H = await page.evaluate(async (FAKE_SRC) => {
     const chain = eval(FAKE_SRC)({
       admin_account_refs: { data: 3, error: null },
+      admin_account_refs_json: { data: [], error: null },
       admin_delete_account: { data: 'hong@example.com', error: null },
       admin_user_list: { data: [{ id: 'u1', email: 'me@example.com', name: '홍길동' }], error: null }
     });
@@ -156,6 +166,9 @@ const FAKE = `(function(plan){
     let said = '';
     const realToast = window.toast; window.toast = function (m) { said += ' ' + m; };
     osAcDelete('u9', 'hong@example.com', '홍길순');
+    /* 고르는 판이 먼저 뜬다 — 정한 뒤 「지웁니다」를 눌러야 실제로 지운다 */
+    await new Promise(r => setTimeout(r, 300));
+    osAcDelGo();
     await new Promise(r => setTimeout(r, 600));
     window.toast = realToast;
     return { note: OSAC.note && OSAC.note.id, said: said.replace(/\s+/g, ' ').trim(), rows: OSAC.rows.length };
@@ -195,11 +208,17 @@ const FAKE = `(function(plan){
   const N = await page.evaluate(async (FAKE_SRC) => {
     const chain = eval(FAKE_SRC)({
       admin_account_refs: { data: null,
-        error: { message: 'Could not find the function public.admin_account_refs in the schema cache' } }
+        error: { message: 'Could not find the function public.admin_account_refs in the schema cache' } },
+      admin_account_refs_json: { data: null,
+        error: { message: 'Could not find the function public.admin_account_refs_json in the schema cache' } }
     });
     window.osClient = function () { return chain; };
     OSAC.note = null;
     osAcDelete('u9', 'hong@example.com', '홍길순');
+    /* 이제 누르면 <b>고르는 판</b>이 먼저 뜬다 — 고객을 어디로 보낼지 정한 뒤
+       「지웁니다」를 눌러야 실제로 지운다. 점검도 그 두 걸음을 그대로 밟는다. */
+    await new Promise(r => setTimeout(r, 300));
+    osAcDelGo();
     await new Promise(r => setTimeout(r, 400));
     const d = document.createElement('div'); d.innerHTML = osAcNoteHtml('u9');
     return d.textContent.replace(/\s+/g, ' ').trim();

@@ -625,7 +625,15 @@ a{color:inherit;text-decoration:none;}
 
 /* ── 사이드바 ── */
 .sidebar{background:var(--ink-2);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,.04);box-shadow:2px 0 24px rgba(0,0,0,.12);}
-.sb-top{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+.sb-top{position:relative;padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+/* ── 메뉴 접기 ────────────────────────────────────────────────────
+   메뉴는 <b>늘 서 있는 것이 원칙</b>입니다. 예전에 숨겨 뒀더니 있는 화면을
+   못 찾았습니다. 다만 자료를 넓게 볼 때가 있어 <b>접을 수 있게만</b> 둡니다.
+   접어도 위 띠의 ☰ 가 되살아나므로 <b>돌아올 길이 늘 보입니다.</b> */
+.nav-fold-btn{position:absolute;right:10px;top:14px;width:26px;height:26px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border-radius:8px;
+  font-size:13px;line-height:1;font-family:inherit;}
+.nav-fold-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
 .sb-logo{font-size:15px;font-weight:800;letter-spacing:-.05em;color:var(--white);}
 .sb-logo span{color:#60A5FA;}
 .sb-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;letter-spacing:.01em;}
@@ -1404,6 +1412,12 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 @media(min-width:1101px){
   .tn-burger{display:none!important;}
   .scrim{display:none!important;}
+  .app{transition:grid-template-columns .22s var(--ease);}
+  /* 접었을 때 — 기둥을 0으로 접고, 위 띠의 ☰ 를 <b>되살린다.</b>
+     되살리지 않으면 접은 뒤 펼 방법이 없어 갇힙니다. */
+  body.nav-fold .app{grid-template-columns:0 1fr;}
+  body.nav-fold .sidebar{width:0;min-width:0;overflow:hidden;border-right:0;box-shadow:none;visibility:hidden;}
+  body.nav-fold .tn-burger{display:inline-block!important;}
   /* ── 기둥이 <b>화면 밖으로 넘치지 않게</b> ───────────────────────────
      .app 와 .sidebar 는 100vh 인데 <b>위 띠 밑에서</b> 시작한다. 그래서
      띠 높이(약 88px)만큼 아래가 화면 밖으로 나가, 서랍 맨 밑의 API 키 줄과
@@ -1506,6 +1520,8 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   <!-- 사이드바 -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-top">
+      <button type="button" class="nav-fold-btn" id="navFoldBtn" onclick="navFoldToggle()"
+              aria-label="메뉴 접기" aria-expanded="true" title="메뉴 접기 — 다시 펴려면 위 띠의 ☰">⟨</button>
       <div class="sb-logo"><svg viewBox="0 0 240 220" fill="#fff" aria-hidden="true" style="width:19px;height:18px;vertical-align:-2px;margin-right:8px"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>APEX <span>YUN PRO</span></div>
       <div class="sb-sub">재무설계 + AI 콘텐츠 통합 워크스페이스</div>
     </div>
@@ -1730,7 +1746,62 @@ function copyText(t,onFail){
   }
   fb();
 }
-function toggleNav(){$('sidebar').classList.toggle('open');$('scrim').classList.toggle('on');}
+/* ══ 메뉴 접기 (nav*) ═══════════════════════════════════════════════
+   메뉴는 <b>늘 서 있는 것이 원칙</b>입니다. 예전에 숨겨 뒀더니 있는 화면을
+   못 찾으셨습니다. 그래서 <b>기본은 펼침</b>이고, 접는 것은 고르셨을 때만
+   입니다. 접힌 상태는 이 브라우저에만 남습니다 — 팀원 화면은 안 건드립니다.
+
+   ★ 접어도 <b>위 띠의 ☰ 가 되살아납니다.</b> 되돌아올 길이 안 보이면
+     접힌 것이 아니라 없어진 것입니다.
+
+   「지금 넓은 화면인가」를 아는 자리는 navWide() <b>하나뿐</b>입니다 (5번).
+   좁은 화면(1100px 이하)에서는 기둥이 아니라 서랍이라, 같은 단추가
+   「서랍 닫기」로 움직입니다. */
+var NAV_FOLD_KEY='apex_nav_fold';
+function navWide(){
+  try{ return window.matchMedia('(min-width:1101px)').matches }catch(e){ return window.innerWidth>1100 }
+}
+function navFolded(){
+  try{ return localStorage.getItem(NAV_FOLD_KEY)==='1' }catch(e){ return false }
+}
+function navFoldApply(){
+  /* 좁은 화면에서는 접힘을 안 씌웁니다 — 거기서는 서랍이 이미 닫혀 있습니다 */
+  var on=navWide()&&navFolded();
+  document.body.classList.toggle('nav-fold',on);
+  var b=$('navFoldBtn');
+  if(b){
+    b.setAttribute('aria-expanded',on?'false':'true');
+    b.setAttribute('aria-label',on?'메뉴 펴기':'메뉴 접기');
+    b.title=on?'메뉴 펴기':'메뉴 접기 — 다시 펴려면 위 띠의 ☰';
+  }
+}
+function navFoldSet(on){
+  try{ localStorage.setItem(NAV_FOLD_KEY,on?'1':'0') }catch(e){}
+  navFoldApply();
+}
+function navFoldToggle(){
+  if(!navWide()){
+    /* 좁은 화면에서 「접기」는 서랍을 닫는 것입니다 */
+    $('sidebar').classList.remove('open');$('scrim').classList.remove('on');
+    return;
+  }
+  navFoldSet(!navFolded());
+}
+function toggleNav(){
+  /* 넓은 화면에서 ☰ 는 <b>접힌 기둥을 펴는</b> 단추입니다 —
+     거기서는 서랍이 없어 .open 을 켜 봐야 아무 일도 안 일어납니다. */
+  if(navWide()){ navFoldSet(false); return; }
+  $('sidebar').classList.toggle('open');$('scrim').classList.toggle('on');
+}
+/* 화면 폭이 바뀌면 다시 맞춥니다 — 좁은 데서 접힌 채로 넘어가면
+   서랍이 안 열리는 것처럼 보입니다 */
+(function(){
+  try{
+    var m=window.matchMedia('(min-width:1101px)');
+    if(m.addEventListener)m.addEventListener('change',navFoldApply);
+    else if(m.addListener)m.addListener(navFoldApply);
+  }catch(e){ window.addEventListener('resize',navFoldApply); }
+})();
 
 /* ════════ 설정값 ════════ */
 /* ╔══════════════════════════════════════════════════════════════╗
@@ -13021,8 +13092,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-09 20:00';
-var APP_BUILD_NOTE="<b>DB · 업적관리 — 지울 수 있게 하고, 월 목표를 여기서 바로 적습니다.</b> ① <b>지우기</b> — 줄 맨 오른쪽 ✕ 입니다. 다만 이 줄은 <b>DB 통합 CRM 의 그 고객</b>이라 통화 기록과 배정 이력도 같이 사라집니다. 그래서 지우기 전에 한 번 묻고, <b>안 된 건이라면 지우지 마시고 상태를 「무산」으로</b> 두시라고 말씀드립니다 — 결번·허수도 몇 건이었는지 남아야 다음 달 DB 를 몇 개 받을지 말할 수 있습니다. ② <b>월 목표업적</b> — 팀원 이름 옆에 「09월 목표」 칸이 섰습니다. <b>새로 만든 자리가 아닙니다</b> — 「내 업적 · 월간보고」의 <b>목표 월초보험료</b> 그 자리를 그대로 읽고 씁니다. 여기서 고치면 그쪽에서도 바뀝니다. 같은 것을 두 곳에 적으시게 하지 않습니다. 옆에 <b>체결 000원 · 00%</b> 가 붙고, 팀 줄에는 팀 목표 합계와 팀 달성률이 섭니다. 달성은 <b>체결일 기준</b>으로 셉니다 — 자료를 보니 체결된 15건 중 8건이 배정월과 다른 달이었습니다. 배정월로 세면 절반 넘게 엉뚱한 달에 잡힙니다. 먼저 <b>migration_51_pipeline3.sql</b> 을 Supabase 에서 한 번 실행하십시오.";
+var APP_BUILD='2026-09-09 22:40';
+var APP_BUILD_NOTE="<b>메뉴는 늘 서 있고, 접을 수 있습니다.</b> 왼쪽 기둥 오른쪽 위의 <b>⟨</b> 로 접고, 접히면 위 띠에 <b>☰</b> 가 되살아나 다시 폅니다 — 돌아올 길이 안 보이면 접힌 게 아니라 없어진 것이라 ☰ 가 반드시 같이 뜹니다. <b>기본은 펼침</b>입니다(예전에 숨겨 뒀더니 있는 화면을 못 찾으셨습니다). 접어 두신 것은 이 브라우저에만 남고, 좁은 화면은 원래대로 서랍이라 접힘을 안 씌웁니다. 그리고 <b>「키를 넣으세요」가 홈에서 사라졌습니다.</b> AI 는 앱이 켜질 때 회사 서버로 <b>저절로 붙는데도</b> 가이드가 그것과 상관없이 매번 키를 넣으라고 했습니다 — 이미 되는 것을 또 하라고 하면 안 되는 줄 아십니다. 이제 붙어 있으면 <b>「AI 는 이미 연결돼 있습니다 · 따로 키를 넣지 않으셔도 됩니다」</b>라고 적고, 정말 안 붙었을 때만 넣으시라고 합니다. <b>계정 삭제도 이제 실제로 됩니다.</b> 여태 안 지워진 건 화면이 아니라 서버 탓이었습니다 — 고객 1,049명이 매달린 칸을 포함해 34개 표가 계정을 붙잡고 있어 외래키가 막고 있었습니다. 이제 지우기 전에 <b>무엇이 몇 건 매달렸는지 표별로</b> 보여 드리고 <b>고객·통화·상담을 누구에게 넘길지</b> 고르게 합니다 — 넘기면 고객 자료는 하나도 안 없어집니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -33673,6 +33744,9 @@ function calcInherit(){
 /* ════════ 초기화 ════════ */
 applyEmbeddedConfig();
 renderNav();
+/* 접어 두셨던 대로 세웁니다 — 안 부르면 새로고침마다 도로 펴집니다.
+   <b>기본은 펼침</b>이라, 고르신 적이 없으면 늘 서 있습니다. */
+try{navFoldApply();}catch(e){}
 updateKeyPill();
 osVerPaint();
 go('home');
@@ -44712,7 +44786,7 @@ var OS_ACCT_SQL=['set search_path = public;','']
 /* ════════ 팀원 계정 찾기 · 중복 정리 ════════
    비밀번호는 서버에 암호화되어 저장되므로 누구도 원문을 되돌려 볼 수 없다.
    그래서 '찾아주기'는 ① 아이디(이메일) 알려주기 ② 임시 비밀번호 새로 발급 두 가지로 푼다. */
-var OSAC={rows:[],q:'',loaded:false,err:'',pw:null,busy:'',note:null};
+var OSAC={rows:[],q:'',loaded:false,err:'',pw:null,busy:'',note:null,del:null};
 
 function osAcSqlText(){return OS_ACCT_SQL.join('\n');}
 function osAcCopySql(){
@@ -44883,56 +44957,118 @@ function osAcRefs(id){
     osAcSay(id,'err','<b>확인하지 못했습니다</b> — '+osEsc((e&&e.message)||'네트워크 오류'));
   });
 }
+/* ══ 계정 삭제 — 매달린 기록을 먼저 어디로 보낼지 정한다 ══════════
+   여태 「삭제」를 눌러도 지워지지 않았습니다. 서버 함수가 profiles 를
+   지우려 했는데, <b>34개 표가 그 계정을 가리키고</b> 있었고 그중 다섯은
+   비울 수 없는 필수 칸이었습니다 (dbs.assigned_to 에 고객 1,049명).
+   외래키가 막아 언제나 실패했습니다.
+
+   이제 <b>무엇을 어디로 보낼지 먼저 고르고</b> 지웁니다. 두 갈래입니다.
+
+     ① 넘기고 지우기 (권함) — 고객·통화·상담을 고른 사람에게 옮깁니다.
+        <b>고객 자료는 하나도 안 없어집니다.</b>
+     ② 통째로 지우기 — 그 사람의 고객·통화까지 같이 지웁니다.
+        되돌릴 수 없습니다. 그래서 <b>따로 골라야</b> 실행됩니다.
+
+   ★ 「누가 했는가」를 적는 칸(audit_logs 처럼)은 남에게 안 넘깁니다.
+     남이 한 일을 다른 사람이 한 것처럼 만들면 그 기록이 거짓이 됩니다. */
 function osAcDelete(id,email,name){
   if(typeof osIsOwner==='function'&&!osIsOwner()){toast('계정 삭제는 대표만 할 수 있습니다.');return;}
   var sb=osClient();if(!sb)return;
-  var fail=function(m){
-    var need=/admin_delete_account|admin_account_refs|function|schema cache|does not exist|찾을 수 없/i.test(m||'');
-    osAcSay(id,'err','<b>지우지 못했습니다.</b><br>서버가 한 말: '+osEsc(m||'알 수 없는 오류')+
-      (need?'<br><br>서버에 이 기능이 아직 없거나 옛 판입니다. 아래 <b>준비 SQL</b> 을 <b>한 번 더</b> 실행하신 뒤 다시 눌러 주세요.'
-           :'<br><br>「무엇이 걸려 있나」 를 눌러 이 계정에 붙은 기록을 먼저 보십시오.'));
-    toast('삭제 실패 — 이유를 그 자리에 적어 뒀습니다');
-  };
-  sb.rpc('admin_account_refs',{target:id}).then(function(r){
-    if(r&&r.error){fail(r.error.message||'');return;}
-    var refs=(r&&typeof r.data==='number')?r.data:0;
-    var msg=name+' ('+email+')\n\n';
-    msg+=refs>0
-      ? '⚠ 이 계정에 연결된 기록이 '+refs+'건 있습니다.\n삭제하면 그 기록도 함께 사라집니다.\n\n기록을 남기고 싶다면 취소하고 "잠금"을 쓰세요.\n\n'
-      : '연결된 기록은 없습니다. 안전하게 지울 수 있습니다.\n\n';
-    msg+='이 작업은 되돌릴 수 없습니다. 계속할까요?';
-    if(!confirm(msg))return;
-    var t=prompt('마지막 확인 — 지울 계정의 이메일을 그대로 입력하세요.\n\n'+email,'');
-    if(osAcNorm(t)!==osAcNorm(email)){toast('입력이 일치하지 않아 취소했습니다.');return;}
-    osAcSay(id,'info','⏳ 지우는 중…');
-    sb.rpc('admin_delete_account',{target:id,hard:refs>0}).then(function(r2){
-      if(r2&&r2.error){fail(r2.error.message||'');return;}
-      if(typeof osAudit==='function')osAudit('delete_account','profile',id,email);
-      /* <b>정말 사라졌는지 목록을 다시 읽어 확인한다.</b> 서버가 「됐다」 해도
-         목록에 남아 있으면 사장님께는 안 된 것이다. */
-      osAcSay(id,'info','⏳ 지웠습니다 — 목록에서 정말 사라졌는지 확인하는 중…');
-      sb.rpc('admin_user_list').then(function(r3){
-        if(r3&&!r3.error){
-          OSAC.rows=r3.data||[];OSAC.loaded=true;OSAC.err='';
-          var i,still=false;
-          for(i=0;i<OSAC.rows.length;i++)if(OSAC.rows[i].id===id)still=true;
-          if(still){
-            osAcSay(id,'err','<b>서버는 지웠다고 했는데 목록에 그대로 있습니다.</b> '+
-              '아래 <b>준비 SQL</b> 을 한 번 더 실행하신 뒤 다시 눌러 주세요.');
-            toast('지워지지 않았습니다 — 목록에 그대로 있습니다');
-            return;
-          }
+  osAcSay(id,'info','⏳ 이 계정에 무엇이 매달려 있는지 세는 중…');
+  sb.rpc('admin_account_refs_json',{target:id}).then(function(r){
+    if(r&&r.error){ osAcDelFail(id,r.error.message||''); return; }
+    OSAC.del={id:id,email:email,name:name,refs:(r&&r.data)||[]};
+    osAcSay(id,'warn',osAcDelPanel());
+  },function(e){ osAcDelFail(id,(e&&e.message)||'네트워크 오류'); });
+}
+function osAcDelFail(id,m){
+  var need=/admin_delete_account|admin_account_refs|function|schema cache|does not exist|찾을 수 없/i.test(m||'');
+  osAcSay(id,'err','<b>지우지 못했습니다.</b><br>서버가 한 말: '+osEsc(m||'알 수 없는 오류')+
+    (need?'<br><br>서버에 이 기능이 아직 없거나 옛 판입니다. 아래 <b>준비 SQL</b> 을 <b>한 번 더</b> 실행하신 뒤 다시 눌러 주세요.':''));
+  toast('삭제 실패 — 이유를 그 자리에 적어 뒀습니다');
+}
+/* 무엇이 몇 건 걸렸는지 · 어디로 보낼지 — 한 화면에 */
+function osAcDelPanel(){
+  var d=OSAC.del; if(!d)return '';
+  var must=[], soft=[], i, n=0;
+  for(i=0;i<d.refs.length;i++){
+    var x=d.refs[i]; n+=(+x.n||0);
+    (x.req?must:soft).push(osEsc(x.t)+' <b>'+x.n+'건</b>');
+  }
+  var me=(OS.profile&&OS.profile.id)||'';
+  var opts='';
+  for(i=0;i<OSAC.rows.length;i++){
+    var p=OSAC.rows[i];
+    if(p.id===d.id)continue;
+    opts+='<option value="'+osEsc(p.id)+'"'+(p.id===me?' selected':'')+'>'+
+      osEsc(p.name||'(이름 없음)')+' · '+osEsc(p.email||'')+'</option>';
+  }
+  var h='<b>'+osEsc(d.name)+' ('+osEsc(d.email)+') 를 지웁니다.</b><br>';
+  h+= n? ('이 계정에 매달린 기록이 <b>'+n+'건</b> 있습니다.<br>') : '매달린 기록이 없습니다.<br>';
+  if(must.length)h+='<div style="margin-top:6px">· <b>옮겨야 하는 것</b> — '+must.join(' · ')+'</div>';
+  if(soft.length)h+='<div style="margin-top:4px;opacity:.8">· 비워도 되는 것 — '+soft.join(' · ')+'</div>';
+  h+='<div style="margin-top:10px;padding-top:10px;border-top:1px dashed rgba(0,0,0,.15)">';
+  if(must.length){
+    h+='<div style="font-weight:800;margin-bottom:5px">고객·통화·상담을 누구에게 넘길까요?</div>'+
+       '<select id="osAcHeir" style="width:100%;padding:7px 9px;font-size:12px">'+opts+'</select>'+
+       '<div style="margin-top:5px;opacity:.85">고른 사람에게 옮기고 계정만 지웁니다 — <b>고객 자료는 안 없어집니다.</b></div>'+
+       '<label style="display:block;margin-top:9px;font-weight:800;color:#B91C1C">'+
+       '<input type="checkbox" id="osAcPurge" style="margin-right:5px">'+
+       '넘기지 않고 <b>고객·통화까지 통째로 지우겠습니다</b> (되돌릴 수 없음)</label>';
+  }else{
+    h+='<div>옮길 것이 없어 바로 지울 수 있습니다.</div>';
+  }
+  h+='<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">'+
+     '<button class="btn btn-danger" style="padding:6px 12px;font-size:11.5px" onclick="osAcDelGo()">🗑 지웁니다</button>'+
+     '<button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px" onclick="OSAC.del=null;osAcSay(\'\',\'\',\'\')">취소</button>'+
+     '</div></div>';
+  return h;
+}
+function osAcDelGo(){
+  var d=OSAC.del; if(!d)return;
+  var sb=osClient(); if(!sb)return;
+  var heirEl=document.getElementById('osAcHeir');
+  var purge=!!(document.getElementById('osAcPurge')||{}).checked;
+  var heir=(!purge&&heirEl)?heirEl.value:null;
+  var hasMust=false,i;
+  for(i=0;i<d.refs.length;i++)if(d.refs[i].req)hasMust=true;
+  if(hasMust&&!purge&&!heir){ toast('넘겨받을 사람을 고르거나, 통째로 지우기를 고르십시오.'); return; }
+  var t=prompt((purge?'⚠ 고객·통화까지 함께 지웁니다. 되돌릴 수 없습니다.\n\n':'')+
+    '마지막 확인 — 지울 계정의 이메일을 그대로 입력하세요.\n\n'+d.email,'');
+  if(osAcNorm(t)!==osAcNorm(d.email)){toast('입력이 일치하지 않아 취소했습니다.');return;}
+  osAcSay(d.id,'info','⏳ 지우는 중…');
+  sb.rpc('admin_delete_account',{target:d.id,hard:purge,heir:heir}).then(function(r2){
+    if(r2&&r2.error){ osAcDelFail(d.id,r2.error.message||''); return; }
+    if(typeof osAudit==='function')osAudit('delete_account','profile',d.id,d.email);
+    /* <b>정말 사라졌는지 목록을 다시 읽어 확인한다.</b> 서버가 「됐다」 해도
+       목록에 남아 있으면 사장님께는 안 된 것이다. */
+    osAcSay(d.id,'info','⏳ 지웠습니다 — 목록에서 정말 사라졌는지 확인하는 중…');
+    sb.rpc('admin_user_list').then(function(r3){
+      if(r3&&!r3.error){
+        OSAC.rows=r3.data||[];OSAC.loaded=true;OSAC.err='';
+        var j,still=false;
+        for(j=0;j<OSAC.rows.length;j++)if(OSAC.rows[j].id===d.id)still=true;
+        if(still){
+          osAcSay(d.id,'err','<b>서버는 지웠다고 했는데 목록에 그대로 있습니다.</b> '+
+            '아래 <b>준비 SQL</b> 을 한 번 더 실행하신 뒤 다시 눌러 주세요.');
+          toast('지워지지 않았습니다 — 목록에 그대로 있습니다');
+          return;
         }
-        osAcSay('','','');
-        toast('✅ 계정을 지웠습니다 — '+email+' (목록에서 사라진 것을 확인했습니다)');
-        if(typeof osAcRepaint==='function')osAcRepaint();
-        if(typeof osLoadMembers==='function')osLoadMembers();
-      },function(){
-        osAcSay(id,'info','지웠습니다. 다만 목록을 다시 읽지 못해 <b>정말 사라졌는지는 확인하지 못했습니다.</b> '+
-          '「다시 불러오기」 를 눌러 확인해 주세요.');
-      });
-    },function(e){fail((e&&e.message)||'네트워크 오류');});
-  },function(e){fail((e&&e.message)||'준비 SQL이 실행됐는지 확인하세요.');});
+      }
+      /* 「목록에서 사라진 것을 확인했습니다」를 빼지 않는다 — 이 말이
+         있어야 <b>정말 지워졌다</b>는 뜻이 된다. 서버가 「됐다」 한 것과
+         목록에서 사라진 것은 다른 일이다. */
+      var moved=heir?' · 고객·기록은 넘겼습니다':(purge?' · 기록까지 함께 지웠습니다':'');
+      OSAC.del=null; osAcSay('','','');
+      toast('✅ 계정을 지웠습니다 — '+d.email+' (목록에서 사라진 것을 확인했습니다)'+moved);
+      if(typeof osAcRepaint==='function')osAcRepaint();
+      if(typeof osLoadMembers==='function')osLoadMembers();
+    },function(){
+      osAcSay(d.id,'info','지웠습니다. 다만 목록을 다시 읽지 못해 <b>정말 사라졌는지는 확인하지 못했습니다.</b> '+
+        '「다시 불러오기」 를 눌러 확인해 주세요.');
+    });
+  },function(e){ osAcDelFail(d.id,(e&&e.message)||'네트워크 오류'); });
 }
 function osAcSearch(v){OSAC.q=v||'';osAcRepaint();}
 function osAcRepaint(){var b=document.getElementById('osAcList');if(b)b.innerHTML=osAcListHtml();}
@@ -46807,7 +46943,19 @@ function tdoSqlToggle(){
 var OS_GUIDE_KEY='apex_guide_seen_v2';
 function osGuideSeen(){try{return localStorage.getItem(OS_GUIDE_KEY)==='1';}catch(e){return false;}}
 function osGuideDontToggle(cb){try{localStorage.setItem(OS_GUIDE_KEY,cb.checked?'1':'0');}catch(e){}}
-function osGuideRows(arr){return arr.map(function(s){return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9"><span style="flex:none;font-size:21px;line-height:1.3">'+s[0]+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A">'+osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.6;margin-top:3px">'+osEsc(s[2])+'</div></div></div>';}).join('');}
+/* 설명 줄에는 <b> 로 힘을 줄 수 있게 합니다 — 제목은 그대로 씻습니다.
+   설명은 우리가 쓴 글이라 밖에서 들어오지 않습니다. */
+function osGuideRows(arr){return arr.map(function(s){return '<div style="display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-bottom:1px solid #F1F5F9"><span style="flex:none;font-size:21px;line-height:1.3">'+s[0]+'</span><div><div style="font-size:14px;font-weight:800;color:#0F172A">'+osEsc(s[1])+'</div><div style="font-size:12.5px;color:#4B5563;line-height:1.6;margin-top:3px">'+String(s[2]).replace(/&/g,'&amp;').replace(/</g,'\u0001').replace(/\u0001b>/g,'<b>').replace(/\u0001\/b>/g,'</b>').replace(/\u0001/g,'&lt;')+'</div></div></div>';}).join('');}
+/* AI 가 지금 붙어 있나 — 가이드에 넣을 한 줄을 여기서만 정한다 (5번) */
+function osGuideAiRow(){
+  var on=false, auto=false;
+  try{ on=(typeof aiReady==='function')&&aiReady(); }catch(e){}
+  try{ auto=(typeof isAutoConnected==='function')&&isAutoConnected(); }catch(e){}
+  if(on)return ['✅','AI 는 이미 연결돼 있습니다',
+    (auto?'앱이 켜질 때 회사 서버로 저절로 붙습니다. ':'')+
+    '<b>따로 키를 넣지 않으셔도 됩니다.</b> 공용 한도를 자주 넘기신다면 그때만 설정 → 「내 API 키」에 넣어 두시면 됩니다.'];
+  return ['🔑','AI 연결이 필요합니다','설정 → 「내 API 키」에 키를 넣으시면 AI 도구가 열립니다.'];
+}
 function osQuickGuideBody(){
   var admin=osIsAppAdmin();
   var member=[
@@ -46818,7 +46966,15 @@ function osQuickGuideBody(){
     ['📊','재무설계 계산기','은퇴자금·필요보장액을 즉석 계산 → "숫자로" 니즈를 확정.'],
     ['🃏','카드뉴스·블로그','이미지만 넣으면 5장 카드뉴스, 주제만 넣으면 SEO 블로그가 자동.'],
     ['💳','결제·구독','요금제 → 구독 시작 → 카드·계좌이체·네이버·카카오. 카드는 결제 즉시 자동 개방.'],
-    ['🔑','한도 백업 키','설정 → "내 API 키"를 넣으면 공용 한도가 차도 내 키로 자동 이어갑니다.']
+    /* ── 키 안내는 <b>정말 필요할 때만</b> ──────────────────────────
+       AI 는 앱이 켜질 때 회사 프록시로 <b>저절로 붙습니다</b>(applyEmbeddedConfig).
+       그런데 이 줄은 그것과 상관없이 늘 떠서, 이미 되는 것을 또 하라고
+       했습니다. 홈에서 매번 뜨니 「자꾸 키를 넣으라 한다」가 됩니다.
+
+       이제 붙어 있으면 <b>붙어 있다고</b> 말하고, 정말 안 붙었을 때만
+       넣으시라고 합니다. 「실패를 성공처럼」의 반대편 — 되는 것을 안 되는
+       것처럼 말하지도 않습니다 (1번). */
+    (osGuideAiRow())
   ];
   var adminArr=[
     ['✅','가입 승인 + 등급','설정 → 팀원 권한 관리에서 신규 승인 + 카테고리(무료~VIP) 지정.'],
