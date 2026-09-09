@@ -45,6 +45,7 @@
     .split{grid-template-columns:1.25fr .75fr}.section{padding:20px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
     .section-head h3{margin:0;color:var(--navy);font-size:18px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{width:auto;min-width:145px}
+    .findn{font-size:12px;font-weight:800;color:#4e5968;margin:-6px 0 12px 2px}
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
     th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;white-space:nowrap}
     td{padding:12px;border-bottom:1px solid #edf0f2;font-size:13px;vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
@@ -210,8 +211,8 @@
       <section class="page" id="page-db">
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
-          <div class="toolbar"><input id="search" placeholder="고객·연락처 검색" oninput="renderDb()"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option><option value="__nopol__">증권 미전달만</option></select></div>
-          <div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
+          <div class="toolbar"><input id="search" type="search" autocomplete="off" placeholder="찾기 — 이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모" oninput="renderDb()" style="min-width:280px;flex:1"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option><option value="__nopol__">증권 미전달만</option></select></div>
+          <div id="dbFindN" class="findn"></div><div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
           <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
         <div class="card section hidden" id="srcAdminCard">
@@ -713,10 +714,50 @@ function renderDashAttendance(){
   }).join("")||`<tr><td colspan="4" class="empty">등록된 팀원이 없습니다.</td></tr>`;
   if(sub)sub.textContent=`오늘 ${present}/${mem.length}명 접속 · 로그인 시각 자동 기록`;
 }
+/* ── 찾기 ──
+   이름과 번호만 보고 있었다. 1,049건이 쌓인 뒤로는 「광주 사는 누구」·
+   「박서준이 맡은 것」·「소개로 온 것」을 못 찾아 눈으로 훑어야 했다.
+   이름 · 초성 · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모까지 본다.
+
+   ※ 초성 푸는 것은 고객 365일(cmCho)과 같은 규칙이지만, 이 화면은
+     app/index.html 과 <b>스크립트를 한 줄도 같이 쓰지 않는</b> 다른 문서라
+     불러 쓸 수가 없다. 규칙이 바뀌면 두 곳을 같이 고쳐야 한다.          */
+const DB_CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
+function dbCho(v){
+  let o="";v=String(v??"");
+  for(let i=0;i<v.length;i++){
+    const c=v.charCodeAt(i);
+    o+=(c>=0xAC00&&c<=0xD7A3)?DB_CHO[Math.floor((c-0xAC00)/588)]:v.charAt(i);
+  }
+  return o;
+}
+function dbOnlyCho(v){v=String(v??"");return !!v&&[...v].every(ch=>DB_CHO.includes(ch));}
+function dbPool(d){
+  const who=pname(d.assigned_to),c=(typeof cityOf==="function")?cityOf(d):"";
+  return [d.customer_name||"",d.region||"",c||"",who==="-"?"":who,
+          srcOf(d),d.report_name||"",lastCall(d)?.memo||""];
+}
+function dbHit(d,q){
+  if(!q)return true;
+  q=String(q).replace(/\s/g,"");
+  const pool=dbPool(d);
+  if(dbOnlyCho(q))return pool.some(v=>v&&dbCho(v).includes(q));
+  const lq=q.toLowerCase();
+  if(pool.some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq)))return true;
+  /* 숫자를 쳤으면 연락처 뒷자리. 하이픈을 <b>친 쪽에서도</b> 뺀다 —
+     사장님은 「010-2222-3456」 을 통째로 붙여 넣으십니다.               */
+  const num=q.replace(/[^0-9]/g,"");
+  if(num.length>=2&&!/[^0-9\-]/.test(q)){
+    const v=String(d.phone||"").replace(/\D/g,"");
+    if(v&&v.includes(num))return true;
+  }
+  return false;
+}
 function renderDb(){
-  const q=($("search")?.value||"").toLowerCase(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
+  const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
   const gf=$("stageFilter")?.value||"";
-  const rows=dbs.filter(d=>(d.customer_name+" "+(d.phone||"")).toLowerCase().includes(q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf)&&(!gf||(gf==="__nopol__"?needPolicy(d):stageOf(d)===gf)));
+  const rows=dbs.filter(d=>dbHit(d,q)&&(!owner||d.assigned_to===owner)&&(!rf||result(d)===rf)&&(!sf||srcOf(d)===sf)&&(!gf||(gf==="__nopol__"?needPolicy(d):stageOf(d)===gf)));
+  dbFindNote(q,rows.length);
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
@@ -727,8 +768,14 @@ function renderDb(){
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="13" class="empty">조회할 DB가 없습니다.</td></tr>`;
+  </tr>`}).join("")||`<tr><td colspan="13" class="empty">${q?`「${esc(q)}」 로 찾은 DB 가 없습니다.<br><small>이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모로 찾을 수 있습니다.</small>`:"조회할 DB가 없습니다."}</td></tr>`;
   bulkBarUpd();
+}
+/* 몇 건이 걸렸는지 그 자리에 적는다 — 걸러 놓고 말을 안 하면
+   사장님은 자료가 사라진 줄 안다 */
+function dbFindNote(q,n){
+  const el=$("dbFindN");if(!el)return;
+  el.textContent=q?`「${q}」 로 ${n}건`:`전체 ${n}건`;
 }
 function bulkChecked(){return Array.from(document.querySelectorAll(".dbck:checked")).map(x=>x.value)}
 function bulkBarUpd(){
