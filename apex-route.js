@@ -38,6 +38,7 @@ function say(m,ms){ try{ toast(m,ms) }catch(e){ console.log(m) } }
 var HAS_DB=false;        /* dbs 에 addr/lat/lng 칸이 있나 */
 var HAS_CALL=false;      /* calls 에 appt_place 칸이 있나 */
 var HAS_STD=false;       /* dbs 에 region_code/sigungu 칸이 있나 (migration_47) */
+var MINE_N=0;            /* 내 이름으로 배정된 고객이 몇 명인가 — 0이면 전체로 연다 */
 var KEY="";              /* 카카오 JavaScript 키 */
 var KEY_TEAM=false;      /* 팀이 같이 쓰는 키인가(app_config) */
 var GC=null, PS=null;    /* 카카오 주소검색 · 장소검색 */
@@ -78,6 +79,229 @@ function sameRegion(a,b){
 }
 /* 화면에 보여 줄 이름 — 카카오가 준 표준 이름이 있으면 그것을 쓴다 */
 function regionName(d){ return (d&&(d.sigungu||d.region))||"" }
+
+/* ══ 시(市)로 묶는다 — 「이 사람은 어느 시인가」는 여기서만 답한다 ══
+   지역 칸이 자유 입력이라 1,002명이 176가지 글자로 갈라져 있었습니다.
+   「순천」·「순천시」·「전남순천」·「순천(하나로마트)」가 전부 다른 지역이
+   되어, 「이 지역 열 명」에 사람이 덜 뜨고 목록에 같은 데가 여러 번 떴습니다.
+
+   그래서 <b>닫힌 목록</b>으로 잡습니다. 시·군·구는 나라에 있는 것이 전부라
+   늘지 않습니다. 목록에 없는 글자는 <b>짐작하지 않고</b> 「시 모름」으로
+   둡니다 — 엉뚱한 시로 넣으면 그 사람이 통째로 다른 지역 사람이 됩니다.
+
+   실제 자료 176가지로 돌려 보면 170가지(975명)가 저절로 정해지고,
+   6가지(27명)만 사람이 골라야 합니다. */
+var CITY_SGG={
+  목포:["전남","목포시"],여수:["전남","여수시"],순천:["전남","순천시"],나주:["전남","나주시"],
+  광양:["전남","광양시"],담양:["전남","담양군"],곡성:["전남","곡성군"],구례:["전남","구례군"],
+  고흥:["전남","고흥군"],보성:["전남","보성군"],화순:["전남","화순군"],장흥:["전남","장흥군"],
+  강진:["전남","강진군"],해남:["전남","해남군"],영암:["전남","영암군"],무안:["전남","무안군"],
+  함평:["전남","함평군"],영광:["전남","영광군"],장성:["전남","장성군"],완도:["전남","완도군"],
+  진도:["전남","진도군"],신안:["전남","신안군"],
+  전주:["전북","전주시"],군산:["전북","군산시"],익산:["전북","익산시"],정읍:["전북","정읍시"],
+  남원:["전북","남원시"],김제:["전북","김제시"],완주:["전북","완주군"],진안:["전북","진안군"],
+  무주:["전북","무주군"],장수:["전북","장수군"],임실:["전북","임실군"],순창:["전북","순창군"],
+  고창:["전북","고창군"],부안:["전북","부안군"],
+  천안:["충남","천안시"],공주:["충남","공주시"],보령:["충남","보령시"],아산:["충남","아산시"],
+  서산:["충남","서산시"],논산:["충남","논산시"],계룡:["충남","계룡시"],당진:["충남","당진시"],
+  금산:["충남","금산군"],부여:["충남","부여군"],서천:["충남","서천군"],청양:["충남","청양군"],
+  홍성:["충남","홍성군"],예산:["충남","예산군"],태안:["충남","태안군"],
+  청주:["충북","청주시"],충주:["충북","충주시"],제천:["충북","제천시"],보은:["충북","보은군"],
+  옥천:["충북","옥천군"],영동:["충북","영동군"],증평:["충북","증평군"],진천:["충북","진천군"],
+  괴산:["충북","괴산군"],음성:["충북","음성군"],단양:["충북","단양군"],
+  창원:["경남","창원시"],진주:["경남","진주시"],통영:["경남","통영시"],사천:["경남","사천시"],
+  김해:["경남","김해시"],밀양:["경남","밀양시"],거제:["경남","거제시"],양산:["경남","양산시"],
+  의령:["경남","의령군"],함안:["경남","함안군"],창녕:["경남","창녕군"],남해:["경남","남해군"],
+  하동:["경남","하동군"],산청:["경남","산청군"],함양:["경남","함양군"],거창:["경남","거창군"],
+  합천:["경남","합천군"],
+  포항:["경북","포항시"],경주:["경북","경주시"],김천:["경북","김천시"],안동:["경북","안동시"],
+  구미:["경북","구미시"],영주:["경북","영주시"],영천:["경북","영천시"],상주:["경북","상주시"],
+  문경:["경북","문경시"],경산:["경북","경산시"],
+  춘천:["강원","춘천시"],원주:["강원","원주시"],강릉:["강원","강릉시"],동해:["강원","동해시"],
+  속초:["강원","속초시"],삼척:["강원","삼척시"],홍천:["강원","홍천군"],평창:["강원","평창군"],
+  수원:["경기","수원시"],성남:["경기","성남시"],용인:["경기","용인시"],고양:["경기","고양시"],
+  부천:["경기","부천시"],안산:["경기","안산시"],안양:["경기","안양시"],평택:["경기","평택시"],
+  화성:["경기","화성시"],남양주:["경기","남양주시"],의정부:["경기","의정부시"],시흥:["경기","시흥시"],
+  파주:["경기","파주시"],김포:["경기","김포시"],광명:["경기","광명시"],군포:["경기","군포시"],
+  하남:["경기","하남시"],오산:["경기","오산시"],구리:["경기","구리시"],이천:["경기","이천시"],
+  안성:["경기","안성시"],양주:["경기","양주시"],포천:["경기","포천시"],여주:["경기","여주시"],
+  서귀포:["제주","서귀포시"],
+  유성:["대전","대전광역시"]   /* 유성구는 나라에 하나뿐이라 대전으로 굳는다 */
+};
+/* 광역시·특별시는 「시」 하나로 묶습니다 — 구로 안 쪼갭니다.
+   사장님이 도는 단위가 「대전」이지 「대전 중구」가 아니기 때문입니다. */
+var CITY_GWANG={서울:"서울특별시",부산:"부산광역시",대구:"대구광역시",인천:"인천광역시",
+                대전:"대전광역시",울산:"울산광역시",세종:"세종특별자치시"};
+/* 이름이 두 곳에 있어 혼자서는 못 정하는 것 — 짐작하지 않고 물어봅니다 */
+var CITY_AMBIG={광주:["광주광역시","경기 광주시"],고성:["경남 고성군","강원 고성군"]};
+/* 도 접두 — 긴 것부터 떼야 「전북특별자치도」가 「전북」에 먼저 걸리지 않습니다 */
+var CITY_SIDO=[["전라남도","전남"],["전라북도","전북"],["전북특별자치도","전북"],
+  ["충청남도","충남"],["충청북도","충북"],["경상남도","경남"],["경상북도","경북"],
+  ["강원특별자치도","강원"],["강원도","강원"],["경기도","경기"],["제주특별자치도","제주"],
+  ["전남","전남"],["전북","전북"],["충남","충남"],["충북","충북"],["경남","경남"],
+  ["경북","경북"],["경기","경기"],["강원","강원"],["제주","제주"]];
+
+/* 적힌 글자 하나로 시를 정한다.
+   {ok:true, city:"순천시", sido:"전남"}  또는
+   {ok:false, why:"두곳"|"모름"|"빈칸", cand:[...]}  — 짐작은 하지 않는다 */
+function cityGuess(raw){
+  var s=String(raw==null?"":raw).replace(/\s+/g,"");
+  if(!s)return {ok:false,why:"빈칸"};
+
+  /* ① 광역시가 맨 앞이면 거기서 끝난다 */
+  if(s.indexOf("광주광역시")===0)return {ok:true,city:"광주광역시",sido:"광주"};
+  for(var g in CITY_GWANG){ if(s.indexOf(g)===0)return {ok:true,city:CITY_GWANG[g],sido:g} }
+
+  /* ② 도 접두를 뗀다 — 뗀 도는 기억해 둔다(같은 이름이 두 도에 있을 때 쓴다) */
+  var sido="";
+  for(var i=0;i<CITY_SIDO.length;i++){
+    if(s.indexOf(CITY_SIDO[i][0])===0&&s.length>CITY_SIDO[i][0].length){
+      sido=CITY_SIDO[i][1]; s=s.slice(CITY_SIDO[i][0].length); break;
+    }
+  }
+
+  /* ③ 맨 앞이 아는 시·군 이름으로 시작하는가 */
+  var head="";
+  for(var k in CITY_SGG){
+    if(s.indexOf(k)===0&&(!sido||CITY_SGG[k][0]===sido)){ head=k; break }
+  }
+  if(!head){
+    for(var a in CITY_AMBIG){ if(s.indexOf(a)===0)return {ok:false,why:"두곳",cand:CITY_AMBIG[a]} }
+    return {ok:false,why:"모름"};
+  }
+
+  /* ④ 「순천광양」처럼 <b>남은 글자가 통째로</b> 또 다른 시 이름일 때만
+        「두 곳이 적혔다」고 본다. 「고창군 아산면」의 아산, 「광영동」 속의
+        영동까지 잡으면 헛것이 된다 — 안 잡는 것보다 나쁘다(8번). */
+  var rest=s.slice(head.length);
+  if(CITY_SGG[rest])return {ok:false,why:"두곳적힘",cand:[CITY_SGG[head][1],CITY_SGG[rest][1]]};
+
+  return {ok:true,city:CITY_SGG[head][1],sido:CITY_SGG[head][0]};
+}
+
+/* 이 사람은 어느 시인가 — <b>화면·지도·목록이 전부 이것만 부른다.</b>
+   서버에 표준 이름이 이미 있으면 그것이 먼저다(사장님이 고른 값).
+   없으면 적힌 글자로 정하고, 못 정하면 빈 글자를 돌려준다 — 짐작 없음. */
+function cityOf(d){
+  if(!d)return "";
+  if(d.sigungu)return String(d.sigungu);
+  var g=cityGuess(d.region);
+  return g.ok?g.city:"";
+}
+/* 아직 못 정한 사람인가 (확인 목록에 올릴 사람) */
+function cityUnknown(d){ return !cityOf(d) }
+/* 목록에서 「시 모름」을 고를 때 쓰는 값 — 시 이름과 안 겹치게 */
+var CITY_NONE="(시 모름)";
+/* 고른 시에 이 사람이 드는가 — 거르는 자리가 넷이라 여기 하나만 둔다 */
+function cityMatch(d,sel){
+  if(!sel)return true;
+  var c=cityOf(d);
+  return sel===CITY_NONE?!c:c===sel;
+}
+/* 두 곳에 있는 이름은 <b>도까지 적어</b> 고를 수 있게 한다. 목록에 없으면
+   사장님이 「경기 광주시」를 고를 방법이 아예 없어진다. */
+var CITY_EXTRA=[["경기","경기 광주시"],["강원","강원 고성군"],["경남","경남 고성군"]];
+
+/* 시 고르는 칸에 넣을 목록.
+   ① 내 고객이 이미 사는 시가 맨 위 — 매일 쓰는 것이 위에 있어야 한다
+   ② 그 아래 전국을 도별로. 손으로 치지 않으니 갈라질 수가 없다. */
+function cityOptions(sel){
+  var mine={}, out=[], seen={};
+  try{ dbs.forEach(function(d){ var c=cityOf(d); if(c)mine[c]=(mine[c]||0)+1 }) }catch(e){}
+  var used=Object.keys(mine).sort(function(a,b){ return mine[b]-mine[a]||(a<b?-1:1) });
+  function opt(v,t){ seen[v]=1; return '<option value="'+E(v)+'"'+(sel===v?" selected":"")+'>'+E(t)+'</option>' }
+  out.push('<option value=""'+(sel?"":" selected")+'>— 고르지 않음 —</option>');
+  if(used.length)out.push('<optgroup label="내 고객이 있는 시">'+
+    used.map(function(c){ return opt(c,c+" · "+mine[c]+"명") }).join("")+'</optgroup>');
+  var byS={"광역시·특별시":{}};
+  byS["광역시·특별시"]["광주광역시"]=1;
+  for(var g in CITY_GWANG)byS["광역시·특별시"][CITY_GWANG[g]]=1;
+  for(var k in CITY_SGG){ var v=CITY_SGG[k]; (byS[v[0]]=byS[v[0]]||{})[v[1]]=1 }
+  CITY_EXTRA.forEach(function(e){ (byS[e[0]]=byS[e[0]]||{})[e[1]]=1 });
+  Object.keys(byS).forEach(function(sd){
+    out.push('<optgroup label="'+E(sd)+'">'+Object.keys(byS[sd]).sort().map(function(c){
+      return opt(c,c) }).join("")+'</optgroup>');
+  });
+  /* 이미 저장된 이름이 목록에 없으면 그것도 넣어 준다 — 안 그러면 열었다
+     닫기만 해도 그 사람 시가 조용히 지워진다 */
+  if(sel&&!seen[sel])out.splice(1,0,'<option value="'+E(sel)+'" selected>'+E(sel)+'</option>');
+  return out.join("");
+}
+
+/* 표준 시 이름으로 도를 찾는다 — 찾는 자리가 둘이 되지 않게 여기 하나만 */
+function cityStdSido(city){
+  if(!city)return "";
+  if(city==="광주광역시")return "광주";
+  for(var k in CITY_GWANG)if(CITY_GWANG[k]===city)return k;
+  for(var k2 in CITY_SGG)if(CITY_SGG[k2][1]===city)return CITY_SGG[k2][0];
+  for(var i=0;i<CITY_EXTRA.length;i++)if(CITY_EXTRA[i][1]===city)return CITY_EXTRA[i][0];
+  return "";
+}
+
+/* ── 시를 못 정한 사람들 — 한 줄씩 골라서 한 번에 저장 ──────────
+   「광주」 스물두 명이 한 줄로 뜹니다. 한 번 고르면 스물두 명이 같이
+   정해집니다 — 한 명씩 스물두 번 누를 일이 아닙니다. */
+function cityFixOpen(){
+  if(!HAS_STD){ say("서버에 시 칸이 없습니다 — migration_47_region_std.sql 을 한 번 실행하세요.",7000); return }
+  var owner=q("rtOwner").value||"";
+  var by={};
+  dbs.forEach(function(d){
+    if(owner&&d.assigned_to!==owner)return;
+    if(cityOf(d))return;
+    var t=String(d.region||"").trim()||"(지역 칸이 비어 있음)";
+    if(!by[t])by[t]={text:t,rows:[],cand:(cityGuess(d.region).cand||[])};
+    by[t].rows.push(d);
+  });
+  var G=Object.keys(by).map(function(t){return by[t]})
+         .sort(function(a,b){ return b.rows.length-a.rows.length||(a.text<b.text?-1:1) });
+  if(!G.length){ say("시를 못 정한 고객이 없습니다.",3500); return }
+
+  tidyModal();
+  q("rtTidyT").textContent="시(市) 정해 주기";
+  var h='<div class="notice" style="margin-bottom:12px">'+
+    '<b>적힌 글자만으로는 어느 시인지 정할 수 없는 분들입니다.</b> '+
+    '「광주」처럼 두 곳에 다 있는 이름이거나, 시 이름이 안 적혀 있습니다. '+
+    '한 줄에서 한 번 고르면 <b>그 줄의 사람이 모두 같이</b> 정해집니다. '+
+    '고르지 않은 줄은 그대로 둡니다 — 짐작해서 넣지 않습니다.</div>';
+  h+='<div class="rt-card">'+G.map(function(g,i){
+    var hint=g.cand.length?('두 곳에 다 있는 이름입니다 — '+g.cand.join(" 또는 ")):'시 이름이 안 적혀 있습니다';
+    return '<div class="rt-row"><div class="rt-no">'+g.rows.length+'</div>'+
+      '<div class="rt-who" style="flex:1;min-width:0"><b>'+E(g.text)+'</b><small>'+E(hint)+'</small>'+
+      '<select data-cfix="'+i+'" style="width:100%;margin-top:6px">'+
+        cityOptions(g.cand.length===1?g.cand[0]:"")+'</select></div></div>';
+  }).join("")+'</div>';
+  q("rtTidyB").innerHTML=h;
+  q("rtTidyGo").classList.remove("hidden");
+  q("rtTidyGo").textContent="고른 것만 저장";
+  q("rtTidyGo").onclick=function(){
+    var jobs=[];
+    Array.prototype.forEach.call(q("rtTidyB").querySelectorAll("[data-cfix]"),function(el){
+      var v=el.value; if(!v)return;
+      var g=G[+el.getAttribute("data-cfix")];
+      var sd=cityStdSido(v);
+      g.rows.forEach(function(d){ jobs.push({id:d.id,patch:{sigungu:v,sido:sd||null}}) });
+    });
+    if(!jobs.length){ say("고른 줄이 없습니다.",3000); return }
+    var b=q("rtTidyGo"); b.disabled=true; b.textContent="저장하는 중…";
+    var i=0, ok=0, no=0;
+    (function run(){
+      if(i>=jobs.length){
+        q("rtTidy2").classList.remove("open");
+        b.disabled=false; b.textContent="이대로 바꾸기";
+        say(ok+"명의 시를 정했습니다."+(no?" "+no+"명은 권한이 없어 넘어갔습니다.":""),6000);
+        if(window.loadAll)Promise.resolve(loadAll()).then(function(){ fillPickers(); render() });
+        else render();
+        return;
+      }
+      var t=jobs[i++];
+      sb.from("dbs").update(t.patch).eq("id",t.id).then(function(r){
+        if(r&&r.error)no++; else ok++;
+      }).catch(function(){ no++ }).then(function(){ setTimeout(run,60) });
+    })();
+  };
+  q("rtTidy2").classList.add("open");
+}
+
 function myId(){ try{ return profile&&profile.id }catch(e){ return null } }
 function findDb(id){ try{ return dbs.filter(function(d){return d.id===id})[0] }catch(e){ return null } }
 
@@ -479,28 +703,25 @@ function withPatch(table,extra,run){
    ② 통화 기록 창 : 상담 약속일시 밑에 「만날 장소」 */
 var PICKED={db:null,call:null};
 
-/* 지금까지 쓰인 지역 이름 — 오타로 새 지역이 생기지 않게 골라 쓰게 한다.
-   같은 곳이 두 이름으로 적혀 있으면 카카오가 준 표준 이름 쪽만 남깁니다. */
-function regionList(){
-  var by={};
-  dbs.forEach(function(d){
-    var k=regionText(d.region); if(!k)return;
-    var nm=regionName(d);
-    if(!by[k]||(d.sigungu&&!by[k].std)) by[k]={name:nm,std:!!d.sigungu};
-  });
-  return Object.keys(by).sort().map(function(k){ return by[k].name });
-}
-function fillRegionList(){
-  var dl=q("rtRegions");
-  if(!dl){ dl=document.createElement("datalist"); dl.id="rtRegions"; document.body.appendChild(dl) }
-  dl.innerHTML=regionList().map(function(n){ return '<option value="'+E(n)+'">' }).join("");
-}
-
 function injectFields(){
   var rg=q("region");
-  if(rg&&!rg.getAttribute("list")){
-    rg.setAttribute("list","rtRegions");
-    rg.setAttribute("placeholder","순천시 — 아래 「주소로 찾기」로 고르면 정확합니다");
+  /* 시(市)는 <b>고르는 칸</b>입니다. 손으로 치면 「순천」·「순천시」·
+     「전남순천」으로 갈라지고, 실제로 1,002명이 176가지로 갈라졌습니다.
+     고르게 하면 갈라질 자리가 없습니다. */
+  if(rg&&!q("dbCity")){
+    var cf=document.createElement("div");
+    cf.className="field";
+    cf.innerHTML='<label>시(市) <small style="font-weight:600;color:#8b95a1">지도·지역동선이 이걸로 묶습니다</small></label>'+
+      '<select id="dbCity" style="width:100%"></select>';
+    rg.parentNode.parentNode.insertBefore(cf,rg.parentNode);
+  }
+  if(rg&&rg.getAttribute("placeholder")!=="조례동 / 하나로마트 앞 — 적어 두실 말 (선택)"){
+    /* 시 이름을 <b>자동완성해 주면 안 됩니다</b> — 이 칸에 「순천시」를 또
+       적게 되어 방금 없앤 갈라짐이 그대로 되살아납니다. */
+    rg.removeAttribute("list");
+    rg.setAttribute("placeholder","조례동 / 하나로마트 앞 — 적어 두실 말 (선택)");
+    var lb=rg.parentNode&&rg.parentNode.querySelector("label");
+    if(lb)lb.innerHTML='동네·메모 <small style="font-weight:600;color:#8b95a1">분류에는 안 씁니다</small>';
   }
   if(HAS_DB&&rg&&!q("dbAddr")){
     var f=document.createElement("div");
@@ -576,8 +797,11 @@ var origOpenDb=window.openDb;
 if(typeof origOpenDb==="function"){
   window.openDb=function(id){
     var r=origOpenDb.apply(this,arguments);
-    injectFields(); fillRegionList();
+    injectFields();
     var d=id?findDb(id):null;
+    /* 이미 정해진 시가 있으면 그것을, 없으면 적힌 글자로 정해 미리 골라 둔다.
+       새 고객이면 비워 둔다 — 「순천」이 기본값이면 아무도 안 고치고 넘어간다. */
+    if(q("dbCity")) q("dbCity").innerHTML=cityOptions(d?cityOf(d):"");
     if(q("dbAddr")) q("dbAddr").value=(d&&d.addr)||"";
     PICKED.db=(d&&d.addr&&d.lat&&d.lng)
       ? {text:d.addr,lat:+d.lat,lng:+d.lng,label:d.addr,
@@ -608,6 +832,10 @@ if(typeof origSaveDb==="function"){
     var t=(q("dbAddr").value||"").trim(), region=((q("region")||{}).value||"").trim();
     var extra={addr:t||null,lat:null,lng:null};
     if(HAS_STD) Object.assign(extra,{region_code:null,sido:null,sigungu:null,dong:null});
+    /* 사장님이 고른 시가 <b>가장 셉니다.</b> 카카오가 다른 답을 줘도
+       고른 것을 덮지 않습니다 — 고른 값을 기계가 뒤집으면 아무도 못 믿습니다. */
+    var picked=((q("dbCity")||{}).value||"").trim();
+    if(HAS_STD&&picked){ extra.sigungu=picked; extra.sido=cityStdSido(picked)||null }
     /* 창에서 골라 둔 것이 그대로면 다시 묻지 않는다 */
     var pre=(PICKED.db&&PICKED.db.text===t)?Promise.resolve(PICKED.db)
            :(t?resolvePlace(t,region):Promise.resolve(null));
@@ -618,8 +846,9 @@ if(typeof origSaveDb==="function"){
         if(p.sigungu&&!region&&q("region")){ q("region").value=p.sigungu; region=p.sigungu }
         var clash=!!(p.sigungu&&region&&regionText(region)!==regionText(p.sigungu));
         if(HAS_STD&&!clash){
-          extra.region_code=p.region_code||null; extra.sido=p.sido||null;
-          extra.sigungu=p.sigungu||null; extra.dong=p.dong||null;
+          extra.region_code=p.region_code||null; extra.dong=p.dong||null;
+          /* 고른 시가 있으면 그대로 둡니다 (위에서 이미 넣었습니다) */
+          if(!picked){ extra.sido=p.sido||null; extra.sigungu=p.sigungu||null }
         }
         /* 적어 둔 지역과 주소가 다른 데를 가리키면 — 좌표만 넣고 행정구역은
            비워 둡니다. 여기서 남의 지역 코드를 적어 버리면 그 사람이 통째로
@@ -749,16 +978,36 @@ function slots(when){
   return out;
 }
 
+/* 「어디 쪽에 간다」고 말할 곳. 잡힌 약속이 있으면 그 사람 동네, 없으면
+   지금 고른 시. 정하는 자리는 여기 하나뿐입니다 (5번). */
+function talkArea(d0,region){
+  if(d0)return (regionName(d0)||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
+  var r=String(region||"");
+  return (r&&r!==CITY_NONE)?r:"그쪽";
+}
 /* 화법 — 없는 마감·없는 혜택을 만들지 않고, 안 바꿔도 된다는 말을 남깁니다.
-   (원래 화면의 TA 스크립트가 지키는 것 셋과 같은 기준입니다) */
-function talk(cand,d0,when,kind){
+   (원래 화면의 TA 스크립트가 지키는 것 셋과 같은 기준입니다)
+
+   d0(그날 잡힌 약속)가 없어도 <b>화법은 나옵니다.</b> 예전에는 약속이
+   하나도 없는 날이면 「📋 화법」 단추 자체가 안 떴습니다 — 그런데 정작
+   화법이 제일 필요한 날은 <b>약속이 없는 날</b>입니다.
+
+   ★ 약속이 없으면 <b>시간을 지어내지 않습니다.</b> 앞뒤로 비는 시간이란
+     것이 없으니 「오전·오후 중 어느 쪽」만 여쭙습니다. 없는 일정에서
+     「3시나 5시」를 만들어 보내면 고객이 그 시각을 비워 둡니다. */
+function talk(cand,d0,when,kind,region){
   var a=new Date(when), day=(a.getMonth()+1)+"월 "+a.getDate()+"일 "+wday(a)+"요일";
-  var s=slots(when), t1=ampm(s[0]), t2=s[1]?ampm(s[1]):null;
   var me=""; try{ me=profile.name||"" }catch(e){}
   var nm=(cand.customer_name||"고객"), who=nm+"님";
-  var area=(regionName(d0)||"그쪽")+(placeOf(d0)?" "+String(placeOf(d0)).split(" ")[0]:"");
-  var ask=t2?(josa(t1,"이나","나")+" "+t2+" 중에 어느 쪽이 편하실까요?")
-            :(josa(t1,"이","가")+" 편하실까요?");
+  var area=talkArea(d0,region);
+  var ask;
+  if(d0){
+    var s=slots(when), t1=ampm(s[0]), t2=s[1]?ampm(s[1]):null;
+    ask=t2?(josa(t1,"이나","나")+" "+t2+" 중에 어느 쪽이 편하실까요?")
+          :(josa(t1,"이","가")+" 편하실까요?");
+  }else{
+    ask="그날 오전과 오후 중에 어느 쪽이 편하실까요?";
+  }
   if(kind==="sms"){
     return who+" 안녕하세요, APEX "+me+"입니다.\n"+
       day+"에 "+area+" 쪽에 갈 일이 있어 연락드립니다. 가는 길에 잠깐 뵙고, "+
@@ -1049,7 +1298,7 @@ function stopsOf(dateStr,region,owner){
     var a=nextAppt(d); if(!a)return;
     if(dayKey(a)!==dateStr)return;
     if(owner&&d.assigned_to!==owner)return;
-    if(region&&regionText(d.region)!==regionText(region))return;
+    if(region&&!cityMatch(d,region))return;
     out.push({d:d,at:new Date(a),pt:ptOf(d)});
   });
   out.sort(function(a,b){return a.at-b.at});
@@ -1060,7 +1309,7 @@ function pool(region,owner){
   var out=[];
   dbs.forEach(function(d){
     if(owner&&d.assigned_to!==owner)return;
-    if(region&&regionText(d.region)!==regionText(region))return;
+    if(region&&!cityMatch(d,region))return;
     var s=stageOf(d);
     if(s==="계약완료"||s==="증권전달")return;
     if(nextAppt(d))return;
@@ -1164,29 +1413,42 @@ function fitIn(stops,c){
 
 /* ── 화면 ───────────────────────────────────────────────────────── */
 function fillPickers(){
-  /* 「순천」과 「순천시」가 목록에 두 번 뜨지 않게 맨 이름으로 묶는다 */
-  var by={}, sel=q("rtRegion"), keep=sel.value;
-  dbs.forEach(function(d){
-    var k=regionText(d.region); if(!k)return;
-    if(!by[k])by[k]={name:regionName(d),n:0,split:{},std:!!d.sigungu};
-    by[k].n++;
-    by[k].split[String(d.region||"").trim()]=1;
-    if(d.sigungu&&!by[k].std){ by[k].name=d.sigungu; by[k].std=true }
-  });
-  var keys=Object.keys(by).sort(), names=keys.map(function(k){return by[k].name});
-  sel.innerHTML='<option value="">지역 전체</option>'+keys.map(function(k){
-    var g=by[k], dup=Object.keys(g.split).length>1?" ⚠":"";
-    return '<option value="'+E(g.name)+'">'+E(g.name)+' ('+g.n+')'+dup+'</option>' }).join("");
-  if(keep){
-    Array.prototype.forEach.call(sel.options,function(o){
-      if(regionText(o.value)===regionText(keep))sel.value=o.value });
-  }
-
+  /* 담당자를 먼저 정한다 — 시 목록의 인원수가 그 담당자 것이어야 하기
+     때문입니다. 「순천 215명」이라 해 놓고 목록엔 내 고객만 뜨면 안 됩니다. */
   var os=q("rtOwner"), keep2=os.value, me=myId(), opts=[];
   try{ profiles.forEach(function(p){ opts.push('<option value="'+E(p.id)+'">'+E(p.name||"담당자")+'</option>') }) }catch(e){}
   os.innerHTML='<option value="">담당자 전체</option>'+opts.join("");
-  os.value=keep2||me||"";
-  if(os.value!==(keep2||me||""))os.value="";
+
+  /* ★ 내 이름으로 배정된 고객이 <b>하나도 없으면 「담당자 전체」로</b> 엽니다.
+     대표·본부장은 직접 배정받은 고객이 없습니다 — 실제로 고객 1,049명이
+     팀원 26명에게 배정돼 있고 대표 앞으로는 0명이었습니다. 그런데 화면은
+     열자마자 담당자를 「나」로 골라 버려서, 시를 눌러도 <b>아무도 안 떴습니다.</b>
+     자료가 멀쩡한데 빈 화면이 뜨면 고장난 줄 압니다. 왜 전체로 열었는지는
+     아래에서 화면에 적습니다 — 조용히 바꾸면 그것도 못 믿을 일이 됩니다. */
+  MINE_N=0;
+  try{ if(me)dbs.forEach(function(d){ if(d.assigned_to===me)MINE_N++ }) }catch(e){}
+  var want=keep2||(MINE_N?me:"")||"";
+  os.value=want;
+  if(os.value!==want)os.value="";
+  var owner=os.value||"";
+
+  /* 「순천」·「순천시」·「전남순천」·「순천(하나로마트)」가 목록에 네 번 뜨지
+     않게 <b>시로 묶습니다</b>. 묶는 규칙은 cityOf() 한 곳에만 있습니다. */
+  var by={}, none=0, tot=0, sel=q("rtRegion"), keep=sel.value;
+  dbs.forEach(function(d){
+    if(owner&&d.assigned_to!==owner)return;
+    tot++;
+    var c=cityOf(d);
+    if(!c){ none++; return }
+    by[c]=(by[c]||0)+1;
+  });
+  var keys=Object.keys(by).sort(function(a,b){ return by[b]-by[a]||(a<b?-1:1) });
+  sel.innerHTML='<option value="">시 전체 · '+tot+'명</option>'+
+    keys.map(function(c){ return '<option value="'+E(c)+'">'+E(c)+' '+by[c]+'명</option>' }).join("")+
+    (none?'<option value="'+E(CITY_NONE)+'">⚠ 시 모름 '+none+'명</option>':'');
+  if(keep){
+    Array.prototype.forEach.call(sel.options,function(o){ if(o.value===keep)sel.value=keep });
+  }
 }
 
 function render(){
@@ -1201,23 +1463,33 @@ function render(){
      지역 전체를 한꺼번에 보면 복잡합니다. 시 하나를 누르면 그 시만
      남습니다. 옆에 <b>「위치 N」</b>을 같이 적습니다 — 지도에 안 뜨는
      사람이 몇인지 그 자리에서 보여야, 무엇을 채워야 하는지 압니다. */
-  var city={};
+  var city={}, cityNone=0, cityAll=0;
   dbs.forEach(function(d){
     if(owner&&d.assigned_to!==owner)return;
-    var k=regionText(d.region); if(!k)return;
-    if(!city[k])city[k]={key:k,name:regionName(d),n:0,pt:0};
-    city[k].n++; if(ptOf(d))city[k].pt++;
-    if(d.sigungu&&regionText(d.sigungu)===k)city[k].name=d.sigungu;
+    cityAll++;
+    var c=cityOf(d);
+    if(!c){ cityNone++; return }
+    if(!city[c])city[c]={n:0,pt:0};
+    city[c].n++; if(ptOf(d))city[c].pt++;
   });
-  var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n});
-  if(ck.length){
-    var cur=regionText(region);
-    side.push('<div class="rt-h">내 고객 '+ck.reduce(function(a,k){return a+city[k].n},0)+'명 — 시(市)로 골라 보기</div>'+
+  /* 내 앞으로 배정된 고객이 없어 팀 전체를 보고 있다면 <b>그렇다고 적습니다.</b>
+     이 줄이 없으면 「왜 남의 고객이 뜨지?」 하고 한참을 헤맵니다. */
+  if(!MINE_N&&!owner&&cityAll){
+    side.push('<div class="rt-card" style="background:#EEF6FF;border-color:#BBD9FF;font-size:12.5px;color:#245ea8">'+
+      '<b>팀 전체를 보고 있습니다.</b> 사장님 이름으로 <b>직접 배정된 고객이 없어서</b>입니다 — '+
+      '위 <b>담당자</b> 칸에서 한 사람을 고르면 그 사람 고객만 남습니다.</div>');
+  }
+  var ck=Object.keys(city).sort(function(a,b){return city[b].n-city[a].n||(a<b?-1:1)});
+  if(ck.length||cityNone){
+    var cur=region;
+    side.push('<div class="rt-h">내 고객 '+cityAll+'명 — 시(市)로 골라 보기</div>'+
       '<div class="rt-card"><div class="rt-city">'+
       '<button data-city="" class="'+(cur?"":"on")+'">전체</button>'+
       ck.map(function(k){ var g=city[k];
-        return '<button data-city="'+E(g.name)+'" class="'+(cur===k?"on":"")+'">'+E(g.name)+
+        return '<button data-city="'+E(k)+'" class="'+(cur===k?"on":"")+'">'+E(k)+
           '<small>'+g.n+'명 · 위치 '+g.pt+'</small></button>' }).join("")+
+      (cityNone?('<button data-city="'+E(CITY_NONE)+'" class="'+(cur===CITY_NONE?"on":"")+
+        '">⚠ 시 모름<small>'+cityNone+'명</small></button>'):"")+
       '</div>'+
       '<div class="rt-leg"><span><i style="background:#8B95A1"></i>미접촉</span>'+
       '<span><i style="background:#FFC043"></i>TA</span>'+
@@ -1227,20 +1499,15 @@ function render(){
   }
 
   /* 지역이 두 이름으로 갈라져 있으면 먼저 알려 준다 — 여기서 사람이 샙니다 */
-  var split={};
-  dbs.forEach(function(d){
-    if(owner&&d.assigned_to!==owner)return;
-    var k=regionText(d.region); if(!k)return;
-    (split[k]=split[k]||{})[String(d.region||"").trim()]=1;
-  });
-  var bad=Object.keys(split).filter(function(k){ return Object.keys(split[k]).length>1 });
-  if(bad.length){
+  /* 갈라진 이름(「순천」·「순천시」·「전남순천」)은 cityOf 가 이미 한 시로
+     묶습니다. 그러니 남는 것은 <b>시를 못 정한 사람</b>뿐이고, 그것만 말합니다.
+     「이름이 갈라졌습니다」고만 적으면 무엇을 해야 하는지 알 수 없었습니다. */
+  if(cityNone){
     side.push('<div class="rt-card" style="background:#fff4e6;border-color:#ffd8a8;color:#a8730f;font-size:13px">'+
-      '<b>지역 이름이 '+bad.length+'곳에서 갈라져 있습니다.</b><br>'+
-      bad.slice(0,3).map(function(k){ return E(Object.keys(split[k]).join(" / ")) }).join("<br>")+
-      (bad.length>3?"<br>…":"")+
-      '<br><br>지금은 같은 지역으로 <b>보고 세고 있습니다</b>. 다만 원래 CRM 화면의 지역 칸에는 갈라진 채로 보입니다 — '+
-      '위의 <b>🏷 지역 정리</b> 를 누르면 카카오가 정한 한 이름으로 모읍니다.</div>');
+      '<b>시를 못 정한 고객이 '+cityNone+'명 있습니다.</b><br>'+
+      '「광주」처럼 두 곳에 다 있는 이름이거나, 시 이름이 안 적힌 분들입니다. '+
+      '<b>짐작해서 넣지 않았습니다</b> — 엉뚱한 시에 넣으면 그 사람이 통째로 다른 지역 사람이 됩니다.'+
+      '<div style="margin-top:8px"><button type="button" class="rt-mini" id="rtCityFix">🏷 시 정해 주기 · '+cityNone+'명</button></div></div>');
   }
 
   var dt=new Date(date+"T00:00:00");
@@ -1325,9 +1592,13 @@ function render(){
     side.push('<div class="rt-card" style="color:var(--muted)">'+
       (region?('「'+E(region)+'」에 아직 걸 분이 없습니다.'):'걸 분이 없습니다. 위의 <b>시</b>를 하나 골라 보세요.')+'</div>');
   }else{
-    var anchor=stops[0];
     side.push('<div class="rt-card">'+top.map(function(c,i){
-      var d=c.d, tel=(d.phone||"").replace(/[^0-9+]/g,"");
+      var d=c.d;
+      /* 폰에서 이 줄 하나로 끝나야 합니다 — 전화를 걸든, 문자를 보내든.
+         번호가 없으면 <b>없다고 적습니다</b>. 안 되는 단추를 띄워 두면
+         눌러 보고 나서야 압니다. */
+      var _w=stops[0]?stops[0].at:(q("rtDate").value+"T10:00:00"), _d0=stops[0]?stops[0].d:null;
+      var sms=smsHref(d,talk(d,_d0,_w,"sms",region));
       var tag;
       if(!c.fit) tag='<span class="badge gray">위치 모름</span>';
       else if(c.fit.ok) tag='<span class="badge green">'+E(c.fit.where)+' · 여유 '+c.fit.slack+'분</span>'+
@@ -1338,13 +1609,15 @@ function render(){
         '<small>'+E(placeOf(d)||"동네 미입력")+(d.phone?" · "+E(d.phone):"")+'</small>'+
         '<div style="margin-top:5px">'+tag+'</div></div>'+
         '<div class="rt-act">'+
-          (tel?'<a class="btn btn-primary btn-sm" href="tel:'+E(tel)+'">📞</a>':"")+
+          (telHref(d)?('<a class="btn btn-primary btn-sm" href="'+E(telHref(d))+'">📞 전화</a>'+
+                       '<a class="btn btn-light btn-sm" href="'+E(sms)+'">💬 문자</a>')
+                    :'<span class="badge gray">번호 없음</span>')+
           /* 위치를 모르면 그 자리에서 찍고, 알면 그 자리에서 내비로 —
              전화 걸면서 「아, ○○동 사세요?」 하는 그 순간이 자료가
              들어오는 제일 싼 자리다. 창을 옮겨 다니지 않는다. */
           (ptOf(d)?'<a class="btn btn-light btn-sm" target="_blank" rel="noopener" href="'+naviUrl(d)+'">🧭</a>'
                   :'<button class="btn btn-light btn-sm" data-pin="'+E(d.id)+'">📍 동네</button>')+
-          (anchor?'<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 화법</button>':"")+
+          '<button class="btn btn-light btn-sm" data-rtalk="'+i+'">📋 멘트</button>'+
           '<button class="btn btn-dark btn-sm" data-rcall="'+E(d.id)+'">약속 잡기</button>'+
         '</div><div class="rt-talk hidden" id="rtRT'+i+'"></div></div>';
     }).join("")+'</div>');
@@ -1365,11 +1638,14 @@ function render(){
 
   /* 시 칩 — 누르면 그 시만 남는다. 「지금 어느 지역인가」를 아는 자리는
      지역 고르는 칸 하나뿐이다. 칩은 그 칸을 바꾸고 다시 그릴 뿐이다 (5번). */
+  if(q("rtCityFix"))q("rtCityFix").onclick=cityFixOpen;
+
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-city]"),function(b){
     b.onclick=function(){
       var v=b.getAttribute("data-city"), sel=q("rtRegion"), hit=false;
+      /* 칩과 목록이 같은 표준 이름을 쓰므로 글자 그대로 맞춰 본다 */
       Array.prototype.forEach.call(sel.options,function(o){
-        if(regionText(o.value)===regionText(v)){ sel.value=o.value; hit=true } });
+        if(o.value===v){ sel.value=v; hit=true } });
       if(!hit)sel.value="";
       render();
     };
@@ -1385,11 +1661,13 @@ function render(){
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-rtalk]"),function(b){
     b.onclick=function(){
       var i=+b.getAttribute("data-rtalk"), box=q("rtRT"+i), c=top[i], a=stops[0];
-      if(!a)return;
+      if(!c)return;
       if(box.getAttribute("data-on")==="1"){ box.classList.add("hidden"); box.setAttribute("data-on","0"); return }
       box.setAttribute("data-on","1"); box.classList.remove("hidden");
-      box.innerHTML=tCard("전화 — 가는 김에",talk(c.d,a.d,a.at,"a"))+
-                    tCard("문자로 보낼 때",talk(c.d,a.d,a.at,"sms"));
+      /* 약속이 없으면 날짜만 잡고 시간은 안 만듭니다 (talk 안에서 갈립니다) */
+      var w=a?a.at:(q("rtDate").value+"T10:00:00"), d0=a?a.d:null;
+      box.innerHTML=tCard("전화로 말할 때",talk(c.d,d0,w,"a",region))+
+                    tCard("문자·카톡으로 보낼 때",talk(c.d,d0,w,"sms",region));
       Array.prototype.forEach.call(box.querySelectorAll("[data-copy]"),function(cb){
         cb.onclick=function(){ copyText(cb.getAttribute("data-copy")) };
       });
@@ -1443,7 +1721,7 @@ function drawMap(stops,cands){
     dbs.forEach(function(d){
       if(seen[d.id])return;
       if(owner&&d.assigned_to!==owner)return;
-      if(region&&regionText(d.region)!==regionText(region))return;
+      if(region&&!cityMatch(d,region))return;
       var p=ptOf(d); if(!p)return;
       var ll=new kakao.maps.LatLng(p.lat,p.lng);
       var el=document.createElement("div"); el.className="rt-dot "+stageCol(d);
@@ -1570,21 +1848,24 @@ function looksAddr(t){
 }
 function fixAll(){
   if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
-  if(!KEY){ keyPanel(true); return }
   var owner=q("rtOwner").value||"";
   var mine=dbs.filter(function(d){ return !owner||d.assigned_to===owner });
   if(!mine.length){ say("정리할 고객이 없습니다."); return }
 
-  /* ③ 을 위해 같은 시끼리 먼저 묶어 둔다 */
-  var by={};
-  mine.forEach(function(d){
-    var k=regionText(d.region); if(!k||looksAddr(d.region))return;
-    if(!by[k])by[k]={key:k,rows:[],names:{},std:""};
-    by[k].rows.push(d); by[k].names[String(d.region||"").trim()]=1;
-    if(d.sigungu&&!by[k].std&&regionText(d.sigungu)===k)by[k].std=d.sigungu;
+  /* ① 시(市) 채우기 — <b>카카오를 안 부릅니다.</b> 시·군은 닫힌 목록이라
+     물어볼 것이 없습니다. 「전남여수」·「여수시」·「여수(돌산읍)」가 전부
+     여기서 「여수시」가 됩니다. 못 정하는 것은 그냥 둡니다 — 짐작 안 함. */
+  var cityPlan={};
+  if(HAS_STD) mine.forEach(function(d){
+    if(d.sigungu)return;                       /* 이미 정해진 것은 안 건드린다 */
+    var g=cityGuess(d.region); if(!g.ok)return;
+    if(!cityPlan[g.city])cityPlan[g.city]={city:g.city,sido:g.sido,rows:[]};
+    cityPlan[g.city].rows.push(d);
   });
+  var CP=Object.keys(cityPlan).map(function(k){return cityPlan[k]})
+           .sort(function(a,b){ return b.rows.length-a.rows.length });
 
-  /* 카카오에 물어볼 것 — 한 줄에 한 번만 묻는다 (7번) */
+  /* ② 카카오에 물어볼 것 — 주소·좌표뿐. 한 줄에 한 번만 묻는다 (7번) */
   var jobs=[];
   mine.forEach(function(d){
     if(looksAddr(d.region)&&!String(d.addr||"").trim())
@@ -1594,15 +1875,11 @@ function fixAll(){
     if(String(d.next_appt_place||"").trim()&&!(d.next_appt_lat&&d.next_appt_lng))
       jobs.push({kind:"appt",d:d,text:String(d.next_appt_place).trim()});
   });
-  Object.keys(by).forEach(function(k){
-    var g=by[k];
-    if(Object.keys(g.names).length<2)return;      /* 안 갈라졌으면 둘 일이 없다 */
-    if(g.std)return;                              /* 이미 카카오가 준 이름이 있다 */
-    var seed=Object.keys(g.names).sort()[0];
-    jobs.push({kind:"name",g:g,text:seed});
-  });
-
-  if(!jobs.length){ say("정리할 것이 없습니다 — 위치가 이미 다 맞아 있습니다.",4000); return }
+  if(!jobs.length&&!CP.length){ say("정리할 것이 없습니다 — 이미 다 맞아 있습니다.",4000); return }
+  /* 주소를 물어볼 것이 있을 때만 키가 필요합니다. 시만 채울 때는
+     키가 없어도 그대로 됩니다 — 여기서 막으면 975명이 못 정해집니다. */
+  if(jobs.length&&!KEY){ keyPanel(true); return }
+  if(!jobs.length)return show();
 
   say("카카오에 "+jobs.length+"건을 확인하는 중입니다…",8000);
   var i=0, plan=[], skip=[];
@@ -1644,7 +1921,7 @@ function fixAll(){
     q("rtTidyT").textContent="위치 정리하기";
     var A=plan.filter(function(x){return x.kind==="addr"}),
         G=plan.filter(function(x){return x.kind==="geo"||x.kind==="appt"}),
-        N=plan.filter(function(x){return x.kind==="name"});
+        N=CP;
     function card(t,rows){ return rows.length
       ? '<div class="rt-h">'+t+' '+rows.length+'건</div><div class="rt-card">'+rows.join("")+'</div>' : "" }
     var h='<div class="notice" style="margin-bottom:12px">'+
@@ -1656,14 +1933,16 @@ function fixAll(){
     h+=card("좌표를 채웁니다",G.map(function(x){
       return '<div class="rt-row"><div class="rt-no">📍</div><div class="rt-who"><b>'+E(x.d.customer_name)+'</b>'+
         '<small>'+E(x.text)+(x.kind==="appt"?" · 만날 장소":"")+'</small></div></div>' }));
-    h+=card("갈라진 지역 이름을 하나로",N.map(function(x){
-      return '<div class="rt-row"><div class="rt-no">🏷</div><div class="rt-who"><b>'+
-        E(Object.keys(x.g.names).join(" · "))+'</b><small>「<b>'+E(x.std)+'</b>」로 모읍니다 · '+
-        x.g.rows.length+'건</small></div></div>' }));
+    h+=card("시(市)를 채웁니다 — 카카오 안 부릅니다",N.map(function(x){
+      var ex={}, k=0;
+      x.rows.forEach(function(d){ var t=String(d.region||"").trim(); if(t&&!ex[t]&&k<4){ex[t]=1;k++} });
+      return '<div class="rt-row"><div class="rt-no">🏷</div><div class="rt-who"><b>'+E(x.city)+
+        '</b><small>'+x.rows.length+'명 · '+E(Object.keys(ex).join(" / "))+
+        (k<Object.keys(ex).length?" …":"")+'</small></div></div>' }));
     if(skip.length)h+='<div class="rt-h">그대로 두는 것</div><div class="rt-card">'+
       skip.map(function(x){ return '<div class="rt-row"><div class="rt-no">✋</div>'+
         '<div class="rt-who"><b>'+E(x.t)+'</b><small>'+E(x.why)+'</small></div></div>' }).join("")+'</div>';
-    if(!plan.length){
+    if(!plan.length&&!CP.length){
       h+='<div class="notice">바꿀 것이 없습니다.</div>';
       q("rtTidyGo").classList.add("hidden");
     }else q("rtTidyGo").classList.remove("hidden");
@@ -1674,15 +1953,14 @@ function fixAll(){
 
   function apply(){
     var jobs2=[];
+    /* 시는 <b>적힌 글자(region)를 안 건드리고</b> sigungu 칸에만 넣습니다.
+       원문은 사장님이 적어 둔 메모라 지우면 안 됩니다 (1번). */
+    CP.forEach(function(x){
+      x.rows.forEach(function(d){
+        jobs2.push({id:d.id,patch:{sigungu:x.city,sido:x.sido||null}});
+      });
+    });
     plan.forEach(function(x){
-      if(x.kind==="name"){
-        x.g.rows.forEach(function(d){
-          var pa={region:x.std};
-          if(HAS_STD){ pa.sigungu=x.std; if(x.sido)pa.sido=x.sido }
-          jobs2.push({id:d.id,patch:pa});
-        });
-        return;
-      }
       if(x.kind==="appt"){ jobs2.push({id:x.d.id,patch:{next_appt_lat:x.p.lat,next_appt_lng:x.p.lng}}); return }
       var pa={lat:x.p.lat,lng:x.p.lng};
       if(x.kind==="addr")pa.addr=x.text;
@@ -1721,6 +1999,21 @@ function fixAll(){
    잘리면 <b>안 간 곳을 갔다고 믿게 됩니다.</b> 그래서 여기서는 구간마다
    하나씩 넘깁니다 — 현장에서도 어차피 한 구간씩 갑니다.
    주소를 만드는 자리는 여기 <b>한 곳</b>뿐입니다 (5번). */
+/* 문자 앱을 글까지 채워서 연다. 폰에서 누르면 받는 사람과 내용이 이미
+   들어간 채로 열립니다 — 「바로 보낼 수 있게」가 이것입니다.
+
+   다만 문자 앱마다 받아들이는 모양이 조금씩 다릅니다. <b>안 열릴 수도
+   있어서</b> 옆에 「📋 복사」를 늘 같이 둡니다 — 그쪽은 어디서나 됩니다. */
+function smsHref(d,body){
+  var tel=String(d&&d.phone||"").replace(/[^0-9+]/g,"");
+  if(!tel)return "";
+  return "sms:"+tel+"?body="+encodeURIComponent(body||"");
+}
+function telHref(d){
+  var tel=String(d&&d.phone||"").replace(/[^0-9+]/g,"");
+  return tel?("tel:"+tel):"";
+}
+
 function naviUrl(d){
   var p=ptOf(d); if(!p)return "";
   return "https://map.kakao.com/link/to/"+
@@ -1772,8 +2065,11 @@ function routeOpen(dateStr,region){
   wrap(); fillPickers();
   q("rtDate").value=dateStr||q("rtDate").value||todayKey();
   if(region!==undefined&&region!==null){
+    /* 넘어오는 것은 「순천」처럼 <b>적힌 그대로</b>일 수 있다. 목록은 표준
+       이름(「순천시」)이라, 시로 바꿔서 고른다 — 바꾸는 규칙은 cityOf 하나뿐. */
+    var want=region?(cityOf({region:region})||""):"";
     var s=q("rtRegion"), hit=false;
-    Array.prototype.forEach.call(s.options,function(o){ if(regionText(o.value)===regionText(region)){s.value=o.value;hit=true} });
+    Array.prototype.forEach.call(s.options,function(o){ if(want&&o.value===want){s.value=want;hit=true} });
     if(!hit)s.value="";
   }
   q("rtStay").value=String(STAY);
