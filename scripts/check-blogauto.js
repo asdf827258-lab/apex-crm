@@ -1181,6 +1181,39 @@ const DRAFT = '## 제목 후보\n- 금리가 내려간다는데 내 노후 계�
   is(/…/.test(String(ART_SRC.match(/function clip\([\s\S]{0,300}/) || '')),
      '  카드 글자가 넘치면 <b>말줄임</b>을 붙여 자른다 — 문장이 끊긴 채 안 나간다');
 
+  /* 단추가 멀쩡해 보이는데 클립보드에는 아직 아까 것이 든 순간이 있으면,
+     그 틈에 편집기로 넘어가 Ctrl+V 를 치신다. 실제로 그 자리에서 빈손으로 왔다. */
+  const wait = await page.evaluate(async () => {
+    const out = {};
+    localStorage.clear(); S.comply = null; await comply();
+    S.rows = [{ ymd:ymd(0), when:'1/1', kind:'ours', seed:{kind:'ours',title:'x',src:'메뉴'},
+      out:'## 본문\n글입니다. 보장 내용은 심사 결과에 따릅니다.\n', guard:null, up:false }];
+    S.rows[0].guard = { ok:true, hits:[], miss:[], holes:[], noart:[] };
+    await show(0);
+    const b = document.getElementById('cpBtn');
+    out.hasBtn = !!b;
+    if (!b) return out;
+    /* 클립보드가 <b>아직 안 실린</b> 동안 단추가 어떤 꼴인지 본다 */
+    let mid = null, done = false;
+    window.ClipboardItem = function(o){ this.o = o; };
+    navigator.clipboard.write = () => new Promise(res => setTimeout(() => {
+      mid = { disabled: b.disabled, text: b.textContent }; done = true; res();
+    }, 300));
+    const p = copyRich(0);
+    /* copyRich 는 먼저 comply() 를 기다린다 — 그 앞에서 재면 아직 안 잠겨 있다 */
+    await new Promise(r => setTimeout(r, 60));
+    out.duringDisabled = b.disabled;          /* 굽는 동안 */
+    await p;
+    out.wrote = done;
+    out.atWriteDisabled = mid && mid.disabled; /* 클립보드에 <b>실리는 그 순간</b> */
+    out.afterDisabled = b.disabled;            /* 다 끝난 뒤 — 다시 눌러야 하니 풀려야 한다 */
+    return out;
+  });
+  is(wait.hasBtn && wait.duringDisabled, '  그림을 굽는 동안 단추가 잠긴다');
+  is(wait.wrote && wait.atWriteDisabled,
+     '  <b>클립보드에 다 실릴 때까지</b> 잠겨 있다 — 먼저 풀면 아직 아까 것이 든 채로 붙이신다');
+  is(!wait.afterDisabled, '  다 끝나면 다시 눌리게 풀린다');
+
   is(errs.length === 0, '\n화면에 터진 오류가 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close(); srv.close();

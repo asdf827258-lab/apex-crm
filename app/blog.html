@@ -902,24 +902,30 @@ async function copyRich(i){
   await comply();          /* 저장해 둔 글을 다시 열었을 때도 준법 문구가 붙게 */
   const text=packText(i);
   const b=$('cpBtn'); if(b){ b.disabled=true; b.innerHTML='<span class="spin"></span> 그림까지 담는 중…'; }
-  let pngs={};
-  try{ pngs=await artPngs(i); }catch(e){}
-  if(b){ b.disabled=false; b.textContent='📋 서식 있는 복사 (편집기에 그대로)'; }
-  const n=Object.keys(pngs).length;
-  const html='<div style="font-family:sans-serif;line-height:1.7">'+md2html(text,true,pngs)+'</div>';
   try{
-    if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
-      await navigator.clipboard.write([new ClipboardItem({
-        'text/html': new Blob([html],{type:'text/html'}),
-        'text/plain': new Blob([text],{type:'text/plain'})
-      })]);
-      toast(n?('그림 '+n+'장까지 담았습니다 — 편집기에 한 번만 붙여넣으세요'):'서식까지 복사했습니다 — 편집기에 그대로 붙여넣으세요');
-      return;
+    let pngs={};
+    try{ pngs=await artPngs(i); }catch(e){}
+    const n=Object.keys(pngs).length;
+    const html='<div style="font-family:sans-serif;line-height:1.7">'+md2html(text,true,pngs)+'</div>';
+    try{
+      if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+        await navigator.clipboard.write([new ClipboardItem({
+          'text/html': new Blob([html],{type:'text/html'}),
+          'text/plain': new Blob([text],{type:'text/plain'})
+        })]);
+        toast(n?('그림 '+n+'장까지 담았습니다 — 편집기에 한 번만 붙여넣으세요'):'서식까지 복사했습니다 — 편집기에 그대로 붙여넣으세요');
+        return;
+      }
+      throw new Error('no clipboarditem');
+    }catch(e){
+      try{ await navigator.clipboard.writeText(text); toast('글자만 복사했습니다 (이 브라우저는 서식 복사를 못 합니다)'); }
+      catch(e2){ toast('복사하지 못했습니다 — 아래 글을 직접 끌어서 복사해 주세요'); }
     }
-    throw new Error('no clipboarditem');
-  }catch(e){
-    try{ await navigator.clipboard.writeText(text); toast('글자만 복사했습니다 (이 브라우저는 서식 복사를 못 합니다)'); }
-    catch(e2){ toast('복사하지 못했습니다 — 아래 글을 직접 끌어서 복사해 주세요'); }
+  }finally{
+    /* 단추는 <b>클립보드에 다 실린 뒤에</b> 되돌린다. 먼저 되돌리면 단추가 멀쩡해진 것을
+       보고 편집기로 넘어가 Ctrl+V 를 치시는데, 그때 클립보드에는 <b>아직 아까 것</b>이
+       들어 있다. 실제로 시험 도구가 그 자리에서 세 번에 한 번씩 빈손으로 왔다. */
+    if(b){ b.disabled=false; b.textContent='📋 서식 있는 복사 (편집기에 그대로)'; }
   }
 }
 async function copyPlain(i){
