@@ -134,11 +134,29 @@ const srv = http.createServer((rq, rs) => {
       OS.profile = { id:'x', role:'advisor' }; OS.session = { user:{ id:'adv-1' } };
       BA.cid='c-test'; BA.name=''; BA.rid=null;
       let sent=null; const rc=window.osClient, rt=window.toast;
-      window.osClient=function(){ return { from:function(t){ return {
-        insert:function(row){ sent={t:t,row:row}; return { select:function(){ return Promise.resolve({data:[{id:'r1'}]}); } }; },
-        update:function(row){ sent={t:t,row:row}; return { eq:function(){ return Promise.resolve({}); } }; },
-        select:function(){ const o={eq:function(){return o;},order:function(){return o;},limit:function(){return Promise.resolve({data:[]});}}; return o; }
-      }; } }; };
+      /* 가짜 서버는 <b>진짜 클라이언트만큼</b> 갖춰야 한다. 이 창이 열려 있는
+         동안 앱은 표 열여덟 개를 건드린다 — 출근표·오늘 점검·설정값·통화…
+         메서드가 하나라도 빠지면 그 배경 쓰기가 터지고, 재려는 것과 아무
+         상관 없는 자리에서 [5] 「오류가 없다」 가 빨개진다. 어느 표에 쓰기가
+         떨어지는지는 타이밍이라 판마다 켜졌다 꺼졌다 했다 — 그런 알람은
+         안 잡는 것보다 나쁘다 (CLAUDE.md 8).
+         그리고 <b>재는 표만</b> 기록한다. 배경 쓰기가 sent 에 들어앉으면
+         엉뚱한 줄을 놓고 「실명이 안 나갔다」 고 답하게 된다. */
+      const fake=function(val){
+        const q=val||{data:[],error:null};
+        const o={ then:function(f,g){ return Promise.resolve(q).then(f,g); },
+                  catch:function(f){ return Promise.resolve(q).catch(f); } };
+        ['select','eq','neq','in','is','gt','gte','lt','lte','like','ilike','or','not',
+         'order','limit','range','single','maybeSingle'].forEach(function(k){ o[k]=function(){ return o; }; });
+        return o;
+      };
+      window.osClient=function(){ return { from:function(t){
+        const put=function(row){ if(t==='saved_reports') sent={t:t,row:row};
+                                 return fake({data:[{id:'r1'}],error:null}); };
+        const o=fake();
+        o.insert=put; o.update=put; o.upsert=put; o.delete=function(){ return fake(); };
+        return o;
+      } }; };
       window.toast=function(){};
       baSave({ title:'홍철호 보장 전·후', state:{ v:3, who:{ name:'홍철호', age:'45' } }, sum:{ name:'홍철호' } });
       await new Promise(r=>setTimeout(r,400));
