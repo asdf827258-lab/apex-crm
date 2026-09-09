@@ -625,7 +625,15 @@ a{color:inherit;text-decoration:none;}
 
 /* ── 사이드바 ── */
 .sidebar{background:var(--ink-2);display:flex;flex-direction:column;height:100vh;overflow:hidden;border-right:1px solid rgba(255,255,255,.04);box-shadow:2px 0 24px rgba(0,0,0,.12);}
-.sb-top{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+.sb-top{position:relative;padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0;}
+/* ── 메뉴 접기 ────────────────────────────────────────────────────
+   메뉴는 <b>늘 서 있는 것이 원칙</b>입니다. 예전에 숨겨 뒀더니 있는 화면을
+   못 찾았습니다. 다만 자료를 넓게 볼 때가 있어 <b>접을 수 있게만</b> 둡니다.
+   접어도 위 띠의 ☰ 가 되살아나므로 <b>돌아올 길이 늘 보입니다.</b> */
+.nav-fold-btn{position:absolute;right:10px;top:14px;width:26px;height:26px;border:0;cursor:pointer;
+  background:rgba(255,255,255,.07);color:rgba(255,255,255,.55);border-radius:8px;
+  font-size:13px;line-height:1;font-family:inherit;}
+.nav-fold-btn:hover{background:rgba(255,255,255,.16);color:#fff;}
 .sb-logo{font-size:15px;font-weight:800;letter-spacing:-.05em;color:var(--white);}
 .sb-logo span{color:#60A5FA;}
 .sb-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:3px;letter-spacing:.01em;}
@@ -1404,6 +1412,12 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 @media(min-width:1101px){
   .tn-burger{display:none!important;}
   .scrim{display:none!important;}
+  .app{transition:grid-template-columns .22s var(--ease);}
+  /* 접었을 때 — 기둥을 0으로 접고, 위 띠의 ☰ 를 <b>되살린다.</b>
+     되살리지 않으면 접은 뒤 펼 방법이 없어 갇힙니다. */
+  body.nav-fold .app{grid-template-columns:0 1fr;}
+  body.nav-fold .sidebar{width:0;min-width:0;overflow:hidden;border-right:0;box-shadow:none;visibility:hidden;}
+  body.nav-fold .tn-burger{display:inline-block!important;}
   /* ── 기둥이 <b>화면 밖으로 넘치지 않게</b> ───────────────────────────
      .app 와 .sidebar 는 100vh 인데 <b>위 띠 밑에서</b> 시작한다. 그래서
      띠 높이(약 88px)만큼 아래가 화면 밖으로 나가, 서랍 맨 밑의 API 키 줄과
@@ -1506,6 +1520,8 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
   <!-- 사이드바 -->
   <aside class="sidebar" id="sidebar">
     <div class="sb-top">
+      <button type="button" class="nav-fold-btn" id="navFoldBtn" onclick="navFoldToggle()"
+              aria-label="메뉴 접기" aria-expanded="true" title="메뉴 접기 — 다시 펴려면 위 띠의 ☰">⟨</button>
       <div class="sb-logo"><svg viewBox="0 0 240 220" fill="#fff" aria-hidden="true" style="width:19px;height:18px;vertical-align:-2px;margin-right:8px"><path d="M120 26 212 190 168 190 120 104 72 190 28 190Z"/><path d="M120 120 176 214 146 214 120 168 94 214 64 214Z"/></svg>APEX <span>YUN PRO</span></div>
       <div class="sb-sub">재무설계 + AI 콘텐츠 통합 워크스페이스</div>
     </div>
@@ -1730,7 +1746,62 @@ function copyText(t,onFail){
   }
   fb();
 }
-function toggleNav(){$('sidebar').classList.toggle('open');$('scrim').classList.toggle('on');}
+/* ══ 메뉴 접기 (nav*) ═══════════════════════════════════════════════
+   메뉴는 <b>늘 서 있는 것이 원칙</b>입니다. 예전에 숨겨 뒀더니 있는 화면을
+   못 찾으셨습니다. 그래서 <b>기본은 펼침</b>이고, 접는 것은 고르셨을 때만
+   입니다. 접힌 상태는 이 브라우저에만 남습니다 — 팀원 화면은 안 건드립니다.
+
+   ★ 접어도 <b>위 띠의 ☰ 가 되살아납니다.</b> 되돌아올 길이 안 보이면
+     접힌 것이 아니라 없어진 것입니다.
+
+   「지금 넓은 화면인가」를 아는 자리는 navWide() <b>하나뿐</b>입니다 (5번).
+   좁은 화면(1100px 이하)에서는 기둥이 아니라 서랍이라, 같은 단추가
+   「서랍 닫기」로 움직입니다. */
+var NAV_FOLD_KEY='apex_nav_fold';
+function navWide(){
+  try{ return window.matchMedia('(min-width:1101px)').matches }catch(e){ return window.innerWidth>1100 }
+}
+function navFolded(){
+  try{ return localStorage.getItem(NAV_FOLD_KEY)==='1' }catch(e){ return false }
+}
+function navFoldApply(){
+  /* 좁은 화면에서는 접힘을 안 씌웁니다 — 거기서는 서랍이 이미 닫혀 있습니다 */
+  var on=navWide()&&navFolded();
+  document.body.classList.toggle('nav-fold',on);
+  var b=$('navFoldBtn');
+  if(b){
+    b.setAttribute('aria-expanded',on?'false':'true');
+    b.setAttribute('aria-label',on?'메뉴 펴기':'메뉴 접기');
+    b.title=on?'메뉴 펴기':'메뉴 접기 — 다시 펴려면 위 띠의 ☰';
+  }
+}
+function navFoldSet(on){
+  try{ localStorage.setItem(NAV_FOLD_KEY,on?'1':'0') }catch(e){}
+  navFoldApply();
+}
+function navFoldToggle(){
+  if(!navWide()){
+    /* 좁은 화면에서 「접기」는 서랍을 닫는 것입니다 */
+    $('sidebar').classList.remove('open');$('scrim').classList.remove('on');
+    return;
+  }
+  navFoldSet(!navFolded());
+}
+function toggleNav(){
+  /* 넓은 화면에서 ☰ 는 <b>접힌 기둥을 펴는</b> 단추입니다 —
+     거기서는 서랍이 없어 .open 을 켜 봐야 아무 일도 안 일어납니다. */
+  if(navWide()){ navFoldSet(false); return; }
+  $('sidebar').classList.toggle('open');$('scrim').classList.toggle('on');
+}
+/* 화면 폭이 바뀌면 다시 맞춥니다 — 좁은 데서 접힌 채로 넘어가면
+   서랍이 안 열리는 것처럼 보입니다 */
+(function(){
+  try{
+    var m=window.matchMedia('(min-width:1101px)');
+    if(m.addEventListener)m.addEventListener('change',navFoldApply);
+    else if(m.addListener)m.addListener(navFoldApply);
+  }catch(e){ window.addEventListener('resize',navFoldApply); }
+})();
 
 /* ════════ 설정값 ════════ */
 /* ╔══════════════════════════════════════════════════════════════╗
@@ -13021,8 +13092,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-09 16:35';
-var APP_BUILD_NOTE="<b>DB · 업적관리 — AP·PC 를 밀도 있게 보게 고쳤습니다.</b> ① <b>팀 분류가 몇 달 전에 멈춰 있던 것</b> — 팀이 세 곳에 적혀 있었습니다. 설정 → 팀원 권한 관리(team_members)가 현재이고, 이 화면이 읽던 자리는 7월에 멈춘 옛 자리였습니다. 이제 <b>설정이 이깁니다</b>. 설정에 없는 사람만 조직도의 팀으로 메우고, 설정에 없는 팀 이름은 지어내지 않습니다. ② <b>배정일 최신 → 과거</b> 순으로 섭니다. 끝난 건(보류·무산)만 아래로 내려갑니다. ③ 열면 <b>AP · PC 만</b> 먼저 보입니다 — 상담이 돌고 있는 사람들입니다. 위에서 「전체 단계」로 언제든 넓힙니다. ④ <b>계약업적 · 소개수 · 증권전달</b> 세 칸이 생겼습니다. 예상업적과 계약업적을 <b>따로</b> 둡니다 — 한 칸에 덮어쓰면 다음 달 예측도 이번 달 업적도 둘 다 잃습니다. 단계를 계약완료로 옮기면 예상업적을 계약업적에 한 번 옮겨 적어 드립니다. 증권전달은 따로 저장하지 않고 <b>단계를 옮겨</b> 표시합니다 — 두 곳에 적으면 반드시 어긋납니다. 카톡 카드에도 계약업적·증권·소개 인원이 함께 나갑니다. 먼저 <b>migration_50_pipeline2.sql</b> 을 Supabase 에서 한 번 실행하십시오.";
+var APP_BUILD='2026-09-09 11:20';
+var APP_BUILD_NOTE="<b>메뉴는 늘 서 있고, 접을 수 있습니다.</b> 왼쪽 기둥 오른쪽 위의 <b>⟨</b> 를 누르면 접히고, 접히면 위 띠에 <b>☰</b> 가 되살아나 다시 폅니다 — 돌아올 길이 안 보이면 그건 접힌 게 아니라 없어진 것이라, ☰ 가 반드시 같이 뜹니다. <b>기본은 펼침</b>입니다. 예전에 메뉴를 숨겨 뒀더니 있는 화면을 못 찾으셨기 때문입니다. 접어 두신 것은 이 브라우저에만 남아 새로고침해도 그대로이고, 팀원 화면은 안 건드립니다. 좁은 화면(1100px 이하)은 원래대로 <b>서랍</b>이라 접힘을 안 씌웁니다 — 거기서 접힘이 남으면 서랍이 안 열리는 것처럼 보입니다. 그리고 <b>계정 삭제가 이제 실제로 됩니다.</b> 여태 눌러도 안 지워졌던 것은 화면이 아니라 서버 탓이었습니다 — 고객 1,049명이 매달린 칸을 포함해 34개 표가 계정을 붙잡고 있어 외래키가 막고 있었습니다. 이제 지우기 전에 <b>무엇이 몇 건 매달렸는지 표별로</b> 보여 드리고, <b>고객·통화·상담을 누구에게 넘길지</b> 고르게 합니다. 넘기면 <b>고객 자료는 하나도 안 없어집니다.</b> 정말 다 지우실 때만 「통째로 지우기」를 따로 체크하십시오.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -33673,6 +33744,9 @@ function calcInherit(){
 /* ════════ 초기화 ════════ */
 applyEmbeddedConfig();
 renderNav();
+/* 접어 두셨던 대로 세웁니다 — 안 부르면 새로고침마다 도로 펴집니다.
+   <b>기본은 펼침</b>이라, 고르신 적이 없으면 늘 서 있습니다. */
+try{navFoldApply();}catch(e){}
 updateKeyPill();
 osVerPaint();
 go('home');

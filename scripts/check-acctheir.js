@@ -17,12 +17,12 @@
 const fs = require('fs'), path = require('path');
 const R = process.cwd();
 const SRC = fs.readFileSync(path.join(R, 'app/index.html'), 'utf8');
-const MIG = path.join(R, 'migration_49_acct_delete.sql');
+const MIG = path.join(R, 'migration_51_acct_delete.sql');
 let bad = 0, n = 0;
 const is = (ok, m) => { n++; console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
 
 console.log('\n[1] 서버 쪽 준비 SQL');
-is(fs.existsSync(MIG), 'migration_49_acct_delete.sql 이 있다');
+is(fs.existsSync(MIG), 'migration_51_acct_delete.sql 이 있다');
 const S = fs.existsSync(MIG) ? fs.readFileSync(MIG, 'utf8') : '';
 is(/create or replace function public\.admin_delete_account\(\s*\n?\s*target uuid, hard boolean default false, heir uuid default null\)/.test(S),
    '삭제 함수가 <b>넘겨받을 사람(heir)</b>을 받는다');
