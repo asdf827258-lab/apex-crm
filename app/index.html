@@ -13181,8 +13181,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-10 00:45';
-var APP_BUILD_NOTE="<b>팀원 관리와 DB 통합 CRM 에서 찾으면 뜹니다.</b> 팀원 관리는 스물여섯 명이 팀별로 접혀 있고 점수가 낮은 사람이 위로 올라오게 줄이 다시 서므로, 어제 본 자리에 오늘은 그 사람이 없었습니다 — 이제 목록 위 칸에 <b>이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책</b> 어느 것으로 쳐도 그 사람만 남습니다. 위 칩 숫자도 찾은 사람 안에서 다시 세어, 칩과 목록이 어긋나지 않습니다. DB 통합 CRM 찾기는 이름과 전화번호만 보던 것을 <b>지역 · 시 · 담당자 · 종류 · 통화 메모</b>까지 넓혔고, 초성과 번호 뒷자리로도 찾힙니다(<b>010-2222-3456</b> 처럼 통째로 붙여 넣으셔도 됩니다). 찾을 때마다 <b>몇 건이 걸렸는지</b> 칸 옆에 적고, 못 찾으면 못 찾았다고 적습니다. 그리고 <b>서랍 아래 딱지가 「미설정」이라고 먼저 단정하지 않습니다.</b> AI 는 앱이 켜질 때 회사 서버로 저절로 붙는데, 붙는 그 잠깐 동안 딱지가 「API 키 미설정」이라고 적혀 있어 화면을 열 때마다 키를 넣으라는 말이 스쳤습니다. 이제 <b>「AI 연결 확인 중…」</b>으로 서 있다가 붙으면 <b>「프록시 연결됨」</b>이 되고, 정말 붙을 길이 없을 때만 <b>「AI 연결 필요」</b>라고 말합니다 — 모르는 것을 「없다」로 적지 않습니다.";
+var APP_BUILD='2026-09-10 01:40';
+var APP_BUILD_NOTE="<b>계약 마디 접점이 생겼습니다 — 1 · 3 · 6 · 9 · 12개월.</b> 계약을 하고 나면 그 다음이 사람 머리에만 있었습니다. 증권만 전하고 조용해지다가, 한참 뒤에 「해지할까 하는데요」로 다시 만납니다. 이제 고객 카드에 <b>계약일</b>을 넣으시면 고객 365일 맨 위에 <b>한 달 뒤, 그 뒤로는 석 달마다</b> 마디가 서고, 그 자리에서 <b>보낼 말이 그대로 복사</b>됩니다. 「보냈습니다」를 누르면 다음 마디로 넘어갑니다. 기사는 <b>지어내지 않습니다</b> — 「🌐 고객에게 전할 뉴스」가 실제 신문에서 받아 둔 것에서만 골라 <b>제목·언론사·주소를 그대로</b> 붙이고, 받아 둔 것이 없으면 <b>없다고 적습니다</b>. <b>계약일이 없는 분은 세우지 않고, 몇 분이 비었는지 적습니다</b> — 날짜를 짐작해 채우면 틀린 날에 연락하게 되고 고객이 먼저 압니다. 연말정산 마디에는 <b>한도·공제율 같은 숫자를 적지 않고</b> 판단은 세무 전문가에게 넘깁니다. 함께, 고객 카드의 칸 목록이 <b>한 곳(CM_FIELDS)</b>으로 모였습니다 — 예전에는 세 곳에 따로 적혀 있어 칸을 하나 더 만들면 저장이 조용히 빠뜨렸습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -48017,7 +48017,52 @@ function cmName(c){
 }
 
 /* ── 서버에 두는 것 ── */
-function cmBlank(){return {fp:{},fam:'',rel:'',next:null,touch:[],bd:'',up:0};}
+/* ── 고객 한 사람에 붙는 칸 ──
+   <b>여기 한 곳</b>에만 적습니다. 예전에는 빈 칸 만들기(cmBlank) ·
+   읽기(cmLoadAll) · 저장(cmSave) 세 곳에 같은 이름이 따로 적혀 있어,
+   칸을 하나 더 만들면 <b>저장이 조용히 빠뜨렸습니다</b> — 화면에는
+   보이는데 새로고침하면 없어집니다 (5번).                              */
+var CM_FIELDS=[
+ ['fp',   'obj'],   /* 재무설계 답 */
+ ['fam',  'str'],   /* 가족 이름 — 묶는 열쇠 */
+ ['rel',  'str'],   /* 이 사람의 자리 */
+ ['next', 'any'],   /* 다음 할 일 */
+ ['touch','arr'],   /* 접촉 기록 — 최근 60건만 */
+ ['bd',   'str'],   /* 생일 MM-DD */
+ ['cd',   'str'],   /* 계약일 YYYY-MM-DD — 마디 접점이 이것으로 선다 */
+ ['up',   'num']
+];
+function cmFieldBlank(t){
+  return t==='obj'?{}:(t==='arr'?[]:(t==='num'?0:(t==='any'?null:'')));
+}
+function cmBlank(){
+  var m={},i;
+  for(i=0;i<CM_FIELDS.length;i++)m[CM_FIELDS[i][0]]=cmFieldBlank(CM_FIELDS[i][1]);
+  return m;
+}
+/* 서버에서 읽어 온 한 줄을 칸에 담는다 — 없는 칸은 빈 값으로 */
+function cmRead(c){
+  var m=cmBlank(),i,k,t,v;
+  c=c||{};
+  for(i=0;i<CM_FIELDS.length;i++){
+    k=CM_FIELDS[i][0];t=CM_FIELDS[i][1];v=c[k];
+    if(t==='obj')      m[k]=(v&&typeof v==='object')?v:{};
+    else if(t==='arr') m[k]=(v&&v.push)?v:[];
+    else if(t==='num') m[k]=v||0;
+    else if(t==='any') m[k]=(v===undefined)?null:v;
+    else               m[k]=v||'';
+  }
+  return m;
+}
+/* 서버로 보낼 꼴 — 접촉 기록만 최근 것으로 자른다 */
+function cmBody(m){
+  var b={},i,k,t;
+  for(i=0;i<CM_FIELDS.length;i++){
+    k=CM_FIELDS[i][0];t=CM_FIELDS[i][1];
+    b[k]=(t==='arr')?((m[k]||[]).slice(0,60)):(m[k]===undefined?cmFieldBlank(t):m[k]);
+  }
+  return b;
+}
 function cmOf(id){
   var m=CM.meta[id];
   if(m)return m;
@@ -48034,9 +48079,7 @@ function cmLoadAll(then){
     CM.meta={};
     for(i=0;i<rows.length;i++){
       c=rows[i].content||{};
-      m=cmBlank();
-      m.fp=c.fp||{};m.fam=c.fam||'';m.rel=c.rel||'';m.next=c.next||null;
-      m.touch=(c.touch&&c.touch.push)?c.touch:[];m.bd=c.bd||'';m.up=c.up||0;
+      m=cmRead(c);
       m._rid=rows[i].id;
       CM.meta[rows[i].client_id]=m;
     }
@@ -48049,8 +48092,7 @@ function cmSave(id,patch,then){
   var m=cmOf(id),k;
   for(k in patch)m[k]=patch[k];
   m.up=new Date().getTime();
-  var body={fp:m.fp||{},fam:m.fam||'',rel:m.rel||'',next:m.next||null,
-            touch:(m.touch||[]).slice(0,60),bd:m.bd||'',up:m.up};
+  var body=cmBody(m);
   var bad=function(r){
     var msg=(r&&r.error&&r.error.message)||'';
     toast('저장하지 못했습니다'+(msg?(' — '+msg.slice(0,60)):''),6000);
@@ -49060,6 +49102,19 @@ function cmBdSave(id){
   if(bd&&!/^\d{2}-\d{2}$/.test(bd)){toast('생일은 MM-DD 로 적어 주세요. 예) 03-15');return;}
   cmSave(id,{bd:bd},function(){toast(bd?('생일을 '+bd+' 로 저장했습니다'):'생일을 지웠습니다');cmDetailPaint(id);});
 }
+/* 계약일 — 마디 접점(1·3·6·9·12개월)이 <b>오직 이것</b>으로 섭니다.
+   없으면 그 고객은 마디에 안 세우고 「계약일을 넣어 주세요」로 셉니다.
+   날짜를 짐작해 채우지 않습니다 (1번).                                 */
+function cmCdSave(id){
+  var cd=(osVal('cmCd')||'').replace(/^\s+|\s+$/g,'');
+  if(cd&&!/^\d{4}-\d{2}-\d{2}$/.test(cd)){toast('계약일은 2026-03-15 처럼 적어 주세요');return;}
+  if(cd&&cd>mstToday()){toast('계약일이 오늘보다 뒤입니다. 다시 보아 주세요');return;}
+  cmSave(id,{cd:cd},function(){
+    toast(cd?('계약일을 '+cd+' 로 저장했습니다 — 마디 접점이 이 날짜로 섭니다'):'계약일을 지웠습니다');
+    cmDetailPaint(id);
+    if(typeof cli365TopPaint==='function')try{cli365TopPaint();}catch(e){}
+  });
+}
 function cmRealSaveNow(id){
   cmRealSet(id,osVal('cmReal')||'');
   toast('실명을 이 기기에만 저장했습니다 — 이제 그 이름으로 찾을 수 있습니다');
@@ -49353,6 +49408,8 @@ function cmFamHtml(id){
       '<input id="cmRel" type="text" value="'+osEsc(m.rel||'')+'" placeholder="예) 본인 · 배우자 · 자녀"></div>'+
     '<div class="fld"><label>생일 (MM-DD)</label>'+
       '<input id="cmBd" type="text" value="'+osEsc(m.bd||'')+'" placeholder="03-15" maxlength="5"></div>'+
+    '<div class="fld"><label>계약일 (YYYY-MM-DD)</label>'+
+      '<input id="cmCd" type="date" value="'+osEsc(m.cd||'')+'"></div>'+
     '<div class="fld"><label>실명 <span style="color:#D97706">이 기기에만 저장</span></label>'+
       '<input id="cmReal" type="text" value="'+osEsc(cmRealOf(id))+'" placeholder="예) 김철수" maxlength="20"></div>'+
     '</div>';
@@ -49363,6 +49420,7 @@ function cmFamHtml(id){
   h+='<div class="btn-row" style="margin-top:10px">'+
     '<button class="btn btn-primary" onclick="cmFamSave(\''+id+'\')">💾 가족·자리 저장</button>'+
     '<button class="btn btn-ghost" onclick="cmBdSave(\''+id+'\')">🎂 생일 저장</button>'+
+    '<button class="btn btn-ghost" onclick="cmCdSave(\''+id+'\')">📄 계약일 저장</button>'+
     '<button class="btn btn-ghost" onclick="cmRealSaveNow(\''+id+'\')">🔎 실명 저장</button></div>'+
     '<div class="osc-note" style="margin-top:10px">서버에는 지금까지처럼 <b>'+osEsc((OSC.current&&OSC.current.name_masked)||'김○○')+
       '</b> 형태로만 저장됩니다. 실명은 <b>이 브라우저 안에만</b> 두고 찾기에만 씁니다 — '+
@@ -49785,6 +49843,263 @@ function cliMission(){
   for(i=0;i<rest.length;i++)if(ccBand(rest[i].c).soon)soon++;
   return {due:due,rest:rest,soon:soon,done:done,total:mine.length};
 }
+/* ══════════════════════════════════════════════════════════════════
+   계약 마디 접점 (mst*) — 1 · 3 · 6 · 9 · 12개월
+
+   계약을 하고 나면 그 다음이 사람 머리에만 있었습니다. 증권만 전하고
+   조용해지다가, 한참 뒤에 「해지할까 하는데요」 로 다시 만납니다.
+
+   그래서 계약일에서 <b>1개월 · 그 뒤로 석 달마다(3·6·9·12)</b> 마디를
+   세우고, 그 자리에서 <b>바로 보낼 말</b>과 <b>실제 기사</b>를 함께 놓습니다.
+
+   못 박는 것 넷 —
+
+     ① <b>계약일이 있는 고객만</b> 세운다. 없으면 세지 않고, 몇 분이
+        비었는지 적어 「계약일을 넣어 주세요」로 안내한다. 날짜를 짐작해
+        채우지 않습니다 (1번).
+     ② 보낼 말은 <b>우리가 쓰는 말</b>입니다 — 사실을 단정하지 않습니다.
+        세금 이야기는 「요건 충족 시」를 빼지 않고, <b>한도·나이·개월 수
+        같은 숫자는 적지 않습니다</b> (2번).
+     ③ 기사는 <b>지어내지 않습니다.</b> 「🌐 고객에게 전할 뉴스」가 실제
+        신문에서 받아 둔 것(NLIVE)에서 골라 <b>제목·언론사·주소 그대로</b>
+        옮깁니다. 받아 온 것이 없으면 <b>없다고 적습니다</b> (9번).
+     ④ 이름은 넣지 않습니다 — 문구는 「고객님」으로 나갑니다 (3번).      */
+var MST_KEY='apex_mst_done';
+/* 마디 표 — <b>여기 한 곳</b>에만 적는다. 삼항 사슬로 늘어놓지 않는다 (5번).
+   cat 은 「고객에게 전할 뉴스」의 칸 이름과 <b>같은 글자</b>를 쓴다. */
+var MST_STEPS=[
+ {m:1, ic:'📄', t:'증권 전달 · 첫 확인', cat:'ins',
+  why:'받으신 증권을 한 번 같이 열어 보는 자리입니다. 이때 안 하면 서랍에 그대로 들어갑니다.',
+  say:'고객님, 안녕하세요. 지난달 준비해 드린 보험 증권은 잘 받아 보셨는지요.\n' +
+      '내용 중에 다시 짚어 드릴 부분이 있으면 편하게 말씀해 주세요.\n' +
+      '보험금 청구하실 일이 생기면 저에게 먼저 연락 주시면 제가 챙기겠습니다.'},
+ {m:3, ic:'💬', t:'석 달 — 빠져나가는 날 확인', cat:'econ',
+  why:'첫 자동이체가 두세 번 돌았을 때입니다. 날짜가 불편하면 지금 바꾸는 것이 쉽습니다.',
+  say:'고객님, 안녕하세요. 보험료 빠져나가는 날짜는 불편하지 않으신지요.\n' +
+      '날짜나 계좌를 바꾸고 싶으시면 말씀만 주시면 제가 처리해 드리겠습니다.\n' +
+      '그동안 달라진 일(이사·직업·가족)이 있으면 그것도 같이 알려 주세요.'},
+ {m:6, ic:'🩺', t:'반년 — 바뀐 것이 있는지', cat:'ins',
+  why:'반년이면 가족·직업·건강이 바뀝니다. 바뀐 것을 늦게 알면 보장이 어긋납니다.',
+  say:'고객님, 안녕하세요. 가입하신 지 반년이 되었습니다.\n' +
+      '그사이 직업이나 가족, 건강에 달라진 점이 있으면 알려 주세요.\n' +
+      '달라진 내용에 따라 챙겨 드릴 것이 있는지 제가 확인해 보겠습니다.\n' +
+      '보장 내용이나 보험료는 회사의 심사 결과에 따릅니다.'},
+ {m:9, ic:'🧾', t:'아홉 달 — 연말 채비', cat:'tax',
+  why:'연말정산 서류를 그때 찾으면 늦습니다. 미리 챙겨 드리면 그 자체가 접점입니다.',
+  say:'고객님, 안녕하세요. 연말정산 준비하실 때가 다가옵니다.\n' +
+      '보험료 납입증명서가 필요하시면 제가 미리 챙겨서 보내 드리겠습니다.\n' +
+      '공제가 되는지와 얼마나 되는지는 요건과 그해 세법에 따라 달라지므로,\n' +
+      '정확한 것은 세무 전문가나 국세청에 확인하시는 것이 좋습니다.'},
+ {m:12,ic:'🎉', t:'한 해 — 보장 점검 · 소개', cat:'help',
+  why:'일 년이 채워진 자리입니다. 고맙다는 말이 가장 자연스럽게 나가고, 소개도 여기서 나옵니다.',
+  say:'고객님, 안녕하세요. 함께한 지 벌써 일 년이 되었습니다. 늘 감사드립니다.\n' +
+      '한 해 동안 달라진 것들을 기준으로 보장을 한 번 같이 살펴보면 좋겠습니다.\n' +
+      '편하신 때에 잠깐 시간 내주시면 정리해서 보여 드리겠습니다.'}
+];
+function mstToday(){ return new Date().toISOString().slice(0,10); }
+/* 계약일에서 n개월 뒤 — 말일이 넘치면 그달 말일로 당깁니다
+   (1월 31일 + 1개월 = 2월 28일. 3월 3일로 튀면 그 달을 건너뜁니다). */
+function mstAdd(cd,n){
+  var p=String(cd||'').split('-');
+  if(p.length!==3)return '';
+  var y=+p[0],mo=+p[1]-1,d=+p[2];
+  if(!y||isNaN(mo)||!d)return '';
+  var t=new Date(Date.UTC(y,mo+n,1));
+  var last=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth()+1,0)).getUTCDate();
+  t.setUTCDate(Math.min(d,last));
+  return t.toISOString().slice(0,10);
+}
+function mstDays(a,b){
+  if(!a||!b)return null;
+  var x=Date.parse(a+'T00:00:00Z'),y=Date.parse(b+'T00:00:00Z');
+  if(isNaN(x)||isNaN(y))return null;
+  return Math.round((y-x)/86400000);
+}
+function mstStep(m){
+  var i;
+  for(i=0;i<MST_STEPS.length;i++)if(MST_STEPS[i].m===m)return MST_STEPS[i];
+  return null;
+}
+/* 「했다」 표시는 이 브라우저에만 둡니다 — 서버를 더 부르지 않습니다 (7번) */
+function mstDone(){
+  try{ return JSON.parse(localStorage.getItem(MST_KEY)||'{}')||{}; }catch(e){ return {}; }
+}
+function mstIsDone(id,m){ return !!mstDone()[id+':'+m]; }
+function mstMark(id,m,on){
+  var d=mstDone(),k=id+':'+m;
+  if(on)d[k]=mstToday(); else delete d[k];
+  try{ localStorage.setItem(MST_KEY,JSON.stringify(d)); }catch(e){}
+}
+/* 한 고객의 <b>다음 마디</b> — 아직 안 지난 것 중 가장 가까운 것.
+   지난 마디는 「지났습니다」로 남겨 둡니다: 놓친 것을 조용히 지우면
+   사장님은 챙긴 줄 아십니다.                                          */
+function mstOf(c){
+  var m=(typeof cmOf==='function')?cmOf(c.id):null;
+  var cd=(m&&m.cd)||'';
+  if(!cd)return null;
+  var today=mstToday(),i,at,d,out=[];
+  for(i=0;i<MST_STEPS.length;i++){
+    at=mstAdd(cd,MST_STEPS[i].m);
+    if(!at)continue;
+    d=mstDays(today,at);
+    out.push({step:MST_STEPS[i],at:at,d:d,done:mstIsDone(c.id,MST_STEPS[i].m)});
+  }
+  var due=null,next=null;
+  for(i=0;i<out.length;i++){
+    if(out[i].done)continue;
+    if(out[i].d<=0){ if(!due||out[i].d>due.d)due=out[i]; }   /* 지난 것 중 가장 최근 */
+    else if(!next||out[i].d<next.d)next=out[i];              /* 아직 안 온 것 중 가장 가까운 */
+  }
+  return {cd:cd,all:out,due:due,next:next};
+}
+
+/* ── 이 마디에 붙일 <b>실제</b> 기사 ──
+   「🌐 고객에게 전할 뉴스」가 신문에서 받아 둔 것(NLIVE)에서만 고릅니다.
+   제목·언론사·주소를 <b>그대로</b> 옮기고, 받아 온 것이 없으면 없다고
+   적습니다 — 기사를 지어내지 않습니다 (9번).                          */
+function mstNews(cat,n){
+  if(typeof nlLoad==='function'&&(typeof NLIVE==='undefined'||!NLIVE.items||!NLIVE.items.length))
+    try{nlLoad();}catch(e){}
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[],out=[],i;
+  for(i=0;i<L.length&&out.length<(n||3);i++)
+    if((L[i].cats||[]).indexOf(cat)>=0)out.push(L[i]);
+  return out;
+}
+function mstNewsHtml(cat){
+  var L=mstNews(cat,3),i,h='';
+  if(!L.length)
+    return '<div class="mst-nonews">받아 둔 기사가 <b>아직 없습니다.</b> 지어내지 않습니다 — '+
+      '<button type="button" class="mst-lk" onclick="go(\'news_live\')">🌐 고객에게 전할 뉴스</button> '+
+      '에서 먼저 모아 주시면 이 자리에 <b>그 기사 그대로</b> 붙습니다.</div>';
+  h='<div class="mst-news"><div class="mst-nh">붙일 만한 기사 — 제목·언론사·주소 그대로입니다</div>';
+  for(i=0;i<L.length;i++)
+    h+='<a class="mst-ni" href="'+osEsc(L[i].link||'#')+'" target="_blank" rel="noopener">'+
+       '<b>'+osEsc(L[i].title||'제목 없음')+'</b>'+
+       '<span>'+osEsc(L[i].source||'언론사 미상')+(L[i].d?(' · '+osEsc(String(L[i].d).slice(0,10))):'')+'</span></a>';
+  return h+'</div>';
+}
+/* 보낼 말 — 기사를 고르셨으면 제목·주소를 <b>그대로</b> 뒤에 붙입니다 */
+function mstSay(id,m){
+  var st=mstStep(m);
+  if(!st)return '';
+  var t=st.say,L=mstNews(st.cat,1);
+  if(L.length&&L[0].link)
+    t+='\n\n[읽어 보실 만한 기사]\n'+(L[0].title||'')+
+       (L[0].source?(' — '+L[0].source):'')+'\n'+L[0].link;
+  return t;
+}
+function mstCopy(id,m){
+  var t=mstSay(id,m);
+  if(!t){toast('보낼 말을 못 만들었습니다');return;}
+  if(typeof copyText!=='function'){toast('복사를 못 했습니다');return;}
+  copyText(t);
+  toast('보낼 말을 복사했습니다 — 문자·카톡에 그대로 붙이시면 됩니다');
+}
+function mstToggle(id,m){
+  mstMark(id,m,!mstIsDone(id,m));
+  if(typeof cli365TopPaint==='function')try{cli365TopPaint();}catch(e){}
+  if(typeof cmDetailPaint==='function'&&OSC.view==='detail')try{cmDetailPaint(id);}catch(e){}
+}
+/* ── 고객 365일 맨 위 판 ──
+   계약일을 아는 분만 세웁니다. 모르는 분은 <b>몇 분인지 적어</b>
+   계약일을 넣어 달라고 말합니다 — 조용히 빠뜨리지 않습니다 (1번).    */
+function mstDueList(){
+  var all=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[],i,c,r,due=[],soon=[],none=0;
+  for(i=0;i<all.length;i++){
+    c=all[i];r=mstOf(c);
+    if(!r){none++;continue;}
+    if(r.due)due.push({c:c,hit:r.due});
+    else if(r.next&&r.next.d<=14)soon.push({c:c,hit:r.next});
+  }
+  due.sort(function(a,b){return a.hit.d-b.hit.d;});
+  soon.sort(function(a,b){return a.hit.d-b.hit.d;});
+  return {due:due,soon:soon,none:none,total:all.length};
+}
+function mstRowHtml(x,over){
+  var c=x.c,st=x.hit.step,nm=(typeof cmName==='function'?cmName(c):'')||c.name_masked||'고객';
+  return '<div class="mst-row">'+
+    '<div class="mst-rh">'+
+      '<span class="mst-ic">'+st.ic+'</span>'+
+      '<button type="button" class="mst-nm" onclick="osOpenClient(\''+c.id+'\')">'+osEsc(nm)+'</button>'+
+      '<span class="mst-tag">'+st.m+'개월</span>'+
+      '<span class="mst-when'+(over?' over':'')+'">'+osEsc(x.hit.at)+' · '+
+        (over?((-x.hit.d)+'일 지났습니다'):('D-'+x.hit.d))+'</span>'+
+    '</div>'+
+    '<div class="mst-t">'+osEsc(st.t)+'</div>'+
+    '<div class="mst-why">'+osEsc(st.why)+'</div>'+
+    '<div class="mst-btns">'+
+      '<button type="button" class="mst-b p" onclick="mstCopy(\''+c.id+'\','+st.m+')">📋 보낼 말 복사</button>'+
+      '<button type="button" class="mst-b" onclick="mstToggle(\''+c.id+'\','+st.m+')">✅ 보냈습니다</button>'+
+    '</div>'+
+    mstNewsHtml(st.cat)+
+    '</div>';
+}
+function mstCardHtml(){
+  mstCss();
+  var L=mstDueList(),i,h='';
+  var head='<div class="card"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">📆</span>계약 마디 접점'+
+    '<span class="ar-n">'+MST_STEPS.map(function(s){return s.m;}).join(' · ')+'개월</span></div>'+
+    '<div class="card-desc">계약하고 <b>한 달</b> 뒤, 그 뒤로는 <b>석 달마다</b> 한 번씩 '+
+    '먼저 연락하는 자리입니다. 보낼 말은 그대로 복사되고, 기사는 '+
+    '<b>「고객에게 전할 뉴스」에서 실제로 받아 둔 것</b>만 붙습니다.</div></div><div class="card-body">';
+  /* 계약일이 없으면 이 판은 아직 설 수 없다 — 그렇다고 조용히 숨지 않는다 */
+  if(!L.total)return '';
+  if(L.none===L.total)
+    return head+'<div class="ar-none"><b>계약일을 아직 아무에게도 안 넣으셨습니다.</b><br>'+
+      '고객 이름을 누르고 <b>계약일</b> 칸에 날짜를 넣으시면, 그날부터 '+
+      MST_STEPS.map(function(s){return s.m+'개월';}).join(' · ')+' 마디가 여기 섭니다.<br>'+
+      '<span class="mst-no">날짜를 짐작해서 채우지 않습니다 — 틀린 날짜로 연락하면 고객이 먼저 압니다.</span>'+
+      '</div></div></div>';
+  if(!L.due.length&&!L.soon.length)
+    h='<div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;color:#15803D">'+
+      '✅ <b>지금 돌아온 마디가 없습니다.</b> 다음 마디가 오면 여기 뜹니다.</div>';
+  for(i=0;i<L.due.length&&i<8;i++)h+=mstRowHtml(L.due[i],true);
+  if(L.soon.length){
+    h+='<div class="mst-sep">곧 돌아옵니다 — 2주 안</div>';
+    for(i=0;i<L.soon.length&&i<5;i++)h+=mstRowHtml(L.soon[i],false);
+  }
+  if(L.none)
+    h+='<div class="mst-no"><b>계약일을 아직 안 넣은 분이 '+L.none+'명</b> 있습니다 — '+
+       '그분들은 이 판에 안 섭니다. 이름을 눌러 <b>계약일</b> 칸을 채워 주시면 같이 섭니다. '+
+       '날짜를 짐작해서 채우지 않습니다.</div>';
+  return head+h+'</div></div>';
+}
+function mstCss(){
+  if(document.getElementById('mstCss'))return;
+  var s=document.createElement('style');s.id='mstCss';
+  s.textContent=
+   '.mst-row{border:1.5px solid #E2E8F0;border-radius:13px;padding:13px 15px;margin-bottom:11px;background:#fff}'+
+   '.mst-rh{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px}'+
+   '.mst-ic{font-size:17px}'+
+   '.mst-nm{border:0;background:none;font-family:inherit;font-size:15px;font-weight:800;'+
+     'color:#0F172A;cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}'+
+   '.mst-tag{background:#EFF6FF;color:#1A56DB;font-size:11.5px;font-weight:800;'+
+     'border-radius:99px;padding:3px 9px}'+
+   '.mst-when{margin-left:auto;font-size:12px;font-weight:700;color:#64748B}'+
+   '.mst-when.over{color:#B42318}'+
+   '.mst-t{font-size:13.5px;font-weight:800;color:#0F172A;margin-bottom:3px}'+
+   '.mst-why{font-size:12.5px;color:#64748B;line-height:1.65;margin-bottom:10px}'+
+   '.mst-btns{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}'+
+   '.mst-b{border:1.5px solid #E2E8F0;background:#fff;border-radius:9px;padding:7px 13px;'+
+     'font-size:12.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
+   '.mst-b.p{background:#1A56DB;border-color:#1A56DB;color:#fff}'+
+   '.mst-news{background:#F8FAFC;border-radius:10px;padding:10px 12px}'+
+   '.mst-nh{font-size:11.5px;font-weight:800;color:#64748B;margin-bottom:7px}'+
+   '.mst-ni{display:block;text-decoration:none;padding:6px 0;border-top:1px solid #E2E8F0}'+
+   '.mst-ni:first-of-type{border-top:0}'+
+   '.mst-ni b{display:block;font-size:12.8px;font-weight:700;color:#1A56DB;line-height:1.5}'+
+   '.mst-ni span{font-size:11px;color:#94A3B8;font-weight:600}'+
+   '.mst-nonews{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;'+
+     'font-size:12.3px;color:#92400E;line-height:1.7}'+
+   '.mst-lk{border:0;background:none;color:#B45309;font-weight:800;font-family:inherit;'+
+     'font-size:12.3px;cursor:pointer;padding:0;text-decoration:underline}'+
+   '.mst-sep{font-size:12px;font-weight:800;color:#64748B;margin:14px 0 9px;'+
+     'padding-top:11px;border-top:1px dashed #E2E8F0}'+
+   '.mst-no{display:block;font-size:12.2px;color:#92400E;background:#FFFBEB;'+
+     'border:1px solid #FDE68A;border-radius:10px;padding:10px 12px;line-height:1.7;margin-top:10px}';
+  document.head.appendChild(s);
+}
 function cliMissionHtml(){
   var m=cliMission();
   if(!m)return '';
@@ -49834,7 +50149,7 @@ function cliMissionHtml(){
 function cli365TopPaint(){
   var e=document.getElementById('cli365Top');
   if(!e)return;
-  e.innerHTML=cliMissionHtml()+
+  e.innerHTML=cliMissionHtml()+mstCardHtml()+
     (typeof mcalCardHtml==='function'
       ? mcalCardHtml({title:'이번 달 고객 관리',
           desc:'<b>연락할 분 · 다음 할 일 · 생일</b>과 <b>약속</b>이 날짜에 찍힙니다. '+
@@ -49853,7 +50168,7 @@ function renderClientsPage(){
   cmCss();
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
   return '<div class="osc-wrap">'+
-    '<div id="cli365Top">'+cliMissionHtml()+
+    '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
       (typeof mcalCardHtml==='function'
         ? mcalCardHtml({title:'이번 달 고객 관리',
             desc:'<b>연락할 분 · 다음 할 일 · 생일</b>과 <b>약속</b>이 날짜에 찍힙니다. '+
