@@ -33,6 +33,8 @@ nav button.t:hover{background:var(--grey);color:var(--tx2)}
 nav button.t.on{background:var(--tx);color:#fff}
 nav .sp{flex:1}
 nav .who{font-size:12.5px;color:var(--tx3);font-weight:600;white-space:nowrap}
+nav .mlab{font-size:12.5px;color:var(--tx3);font-weight:700;white-space:nowrap}
+nav .mnav{margin-left:10px}
 
 main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .page{display:none}.page.on{display:block;animation:fade .18s}
@@ -165,6 +167,12 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
   <button class="t on" id="tab-board">현황판</button>
   <button class="t" id="tab-db">DB 배정</button>
   <button class="t" id="tab-share">카톡 보내기</button>
+  <span class="mnav" title="목표 · 달성 · DB 배정 집계가 모두 이 달을 따릅니다">
+    <button id="m-prev" type="button">&lsaquo;</button>
+    <input type="month" id="m-cur">
+    <button id="m-next" type="button">&rsaquo;</button>
+  </span>
+  <span class="mlab">기준 월</span>
   <div class="sp"></div>
   <span class="who" id="who"></span>
   <button class="btn gh sm" id="b-reload">↻ 새로 읽기</button>
@@ -174,7 +182,6 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
 <section id="p-board" class="page on">
   <div class="kpis" id="kpis"></div>
   <div class="filters">
-    <select id="f-month"></select>
     <select id="f-team"></select>
     <select id="f-mem"></select>
     <select id="f-stage">
@@ -195,8 +202,8 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
 <section id="p-db" class="page">
   <div class="card">
     <h2>
-      <span class="mnav"><button id="db-prev">&lsaquo;</button><input type="month" id="db-month"><button id="db-next">&rsaquo;</button></span>
-      <span class="sub">DB 배정일 기준</span><span class="sp"></span>
+      <span id="db-title">DB 배정</span>
+      <span class="sub">맨 위 기준 월의 배정일 기준</span><span class="sp"></span>
       <button class="btn gh" id="b-db-xls">이 달 엑셀 내보내기</button>
     </h2>
     <div class="kpis" id="db-kpi" style="margin-bottom:0"></div>
@@ -271,11 +278,28 @@ let TEAMS = [], MEMBERS = [], ROWS = [], ORG_MISS = [];
    화면에 낼 때 10,000 을 곱하고, 적을 때 나눈다. 같은 것을 두 곳에
    적으시게 만들면 반드시 어긋난다. */
 let GOALS = {};                 /* {팀원id: 만원} */
-const goalMonth = () => FILTER.month || TODAY_S.slice(0, 7);
+const goalMonth = () => MONTH;
+/* <input type="month"> 는 연도를 여섯 자리까지 받는다. 연도 칸에 숫자를
+   더 치면 「202605년」이 되고, 그대로 쓰면 화면이 통째로 빈다. 막는다. */
+function setMonth(v, redraw) {
+  if (!MRE.test(v || '')) { $('#m-cur').value = MONTH; toast('기준 월은 2000-01 부터 2100-12 까지입니다'); return false; }
+  const y = +v.slice(0, 4);
+  if (y < 2000 || y > 2100) { $('#m-cur').value = MONTH; toast('기준 월은 2000-01 부터 2100-12 까지입니다'); return false; }
+  MONTH = v; $('#m-cur').value = MONTH;
+  if (redraw !== false) { loadGoals().then(() => { renderBoard(); if ($('#p-db').classList.contains('on')) renderDb(); }); }
+  return true;
+}
 /* 이 화면은 AP·PC 를 밀도 있게 보는 자리다 — 처음부터 그 눈으로 연다.
    위 「전체 단계」로 언제든 넓힐 수 있다. */
-let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
-let SHARE = { team: '' }, DBM = '';
+let FILTER = { team: '', mem: '', stage: '__appc', q: '' };
+let SHARE = { team: '' };
+/* 달 기준은 <b>하나</b>다. 예전에는 현황판의 「배정월」과 DB 배정 탭의
+   「기준 월」이 따로 돌아서, 같은 화면에서 두 달을 보고 있는 일이 생겼다.
+   목표 · 달성 · DB 배정 집계가 모두 이 달 하나를 따른다.
+   현황판에 서는 줄은 달로 자르지 않는다 — 지난달에 받은 DB 도 아직
+   상담이 돌고 있으면 오늘 할 일이다. 좁히려면 단계 · 팀원으로 좁힌다. */
+let MONTH = '';
+const MRE = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -380,6 +404,11 @@ async function boot() {
   if (MEMBERS.some(m => m.tid === '__none')) TEAMS.push({ id: '__none', name: '팀 미배정', leader: '' });
   TEAMS = TEAMS.filter(t => MEMBERS.some(m => m.tid === t.id));
 
+  /* 자료가 있는 가장 최근 달로 연다. 없으면 이번 달. */
+  MONTH = monthsUsed()[0] || TODAY_S.slice(0, 7);
+  if (!MRE.test(MONTH)) MONTH = TODAY_S.slice(0, 7);
+  $('#m-cur').value = MONTH;
+  $('#m-cur').min = '2000-01'; $('#m-cur').max = '2100-12';
   await loadGoals();
   $('#gate').style.display = 'none'; $('#app').style.display = '';
   $('#who').textContent = `${ME.name} · ${isAdmin() ? '전체' : isLead() ? '우리 팀' : '내 것'} ${ROWS.length}건`;
@@ -460,7 +489,6 @@ function monthsUsed() {
 }
 function rowsFiltered() {
   let L = ROWS.slice();
-  if (FILTER.month) L = L.filter(r => ym(r.dbdate) === FILTER.month);
   if (FILTER.team) L = L.filter(r => teamOf(r.mid) === FILTER.team);
   if (FILTER.mem) L = L.filter(r => r.mid === FILTER.mem);
   if (FILTER.stage === '__appc') L = L.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC'));
@@ -482,9 +510,6 @@ function sortRows(L) {
   });
 }
 function renderFilters() {
-  const ms = monthsUsed();
-  $('#f-month').innerHTML = `<option value="">전체 배정월</option>` +
-    ms.map(m => `<option value="${m}"${FILTER.month === m ? ' selected' : ''}>${m.replace('-', '.')} 배정</option>`).join('');
   $('#f-team').innerHTML = `<option value="">전체 팀</option>` +
     TEAMS.map(t => `<option value="${t.id}"${FILTER.team === t.id ? ' selected' : ''}>${esc(t.name)}</option>`).join('');
   const mm = FILTER.team ? memsOf(FILTER.team) : MEMBERS;
@@ -492,7 +517,6 @@ function renderFilters() {
     mm.map(m => `<option value="${m.id}"${FILTER.mem === m.id ? ' selected' : ''}>${esc(m.name)}</option>`).join('');
   $('#f-stage').value = FILTER.stage; $('#f-q').value = FILTER.q;
 }
-$('#f-month').onchange = async e => { FILTER.month = e.target.value; await loadGoals(); renderBoard(); };
 $('#f-team').onchange = e => { FILTER.team = e.target.value; FILTER.mem = ''; renderBoard(); };
 $('#f-mem').onchange = e => { FILTER.mem = e.target.value; renderBoard(); };
 $('#f-stage').onchange = e => { FILTER.stage = e.target.value; renderBoard(); };
@@ -732,7 +756,7 @@ board.addEventListener('click', async e => {
   const name = prompt('고객 이름을 적어 주세요 (전화번호는 DB 통합 CRM 에서)');
   if (name == null) return;
   const { data, error } = await sb.rpc('pipeline_new', {
-    p_to: mid, p: { customer_name: name.trim() || '이름없음', assigned_date: FILTER.month ? FILTER.month + '-01' : TODAY_S, source: '개척', stage: '미접촉' }
+    p_to: mid, p: { customer_name: name.trim() || '이름없음', assigned_date: TODAY_S, source: '개척', stage: '미접촉' }
   });
   if (error) { toast('만들지 못했습니다 — ' + error.message); return; }
   toast('새 건을 만들었습니다'); await reload();
@@ -745,14 +769,12 @@ board.addEventListener('click', async e => {
    ============================================================ */
 const dbRows = m => ROWS.filter(r => ym(r.dbdate) === m);
 function renderDb() {
-  if (!DBM) DBM = monthsUsed()[0] || TODAY_S.slice(0, 7);
-  $('#db-month').value = DBM;
-  const L = dbRows(DBM);
+  const L = dbRows(MONTH);
   const done = L.filter(isDone), live = L.filter(isLive), off = L.filter(r => r.closed);
   const cvr = L.length ? Math.round(done.length / L.length * 1000) / 10 : 0;
   const who = [...new Set(L.map(r => r.mid))].length;
   $('#db-kpi').innerHTML = `
-    <div class="kpi pri"><div class="l">${DBM.replace('-', '.')} 배정</div><div class="v">${L.length}<small>건 · ${who}명</small></div></div>
+    <div class="kpi pri"><div class="l">${MONTH.replace('-', '.')} 배정</div><div class="v">${L.length}<small>건 · ${who}명</small></div></div>
     <div class="kpi ok"><div class="l">계약 성사</div><div class="v">${done.length}<small>건</small></div></div>
     <div class="kpi"><div class="l">계약 전환율</div><div class="v">${cvr}<small>%</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
@@ -760,7 +782,7 @@ function renderDb() {
     <div class="kpi"><div class="l">계약 업적</div><div class="v">${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}<small>원</small></div></div>
     <div class="kpi"><div class="l">진행중 예상</div><div class="v">${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}<small>원</small></div></div>`;
   if (!L.length) {
-    $('#db-cross').innerHTML = `<div class="empty">${DBM.replace('-', '.')} 에 배정된 DB 가 없습니다.</div>`;
+    $('#db-cross').innerHTML = `<div class="empty">${MONTH.replace('-', '.')} 에 배정된 DB 가 없습니다.</div>`;
     $('#db-bytype').innerHTML = ''; $('#db-list').innerHTML = ''; return;
   }
   const types = [...new Set(L.map(r => srcKey(r.dbtype)))].sort((a, b) =>
@@ -820,12 +842,12 @@ function renderDb() {
     }).join('') + `</tbody></table></div>`;
 }
 function shiftMonth(d) {
-  const [y, m] = DBM.split('-').map(Number), x = new Date(y, m - 1 + d, 1);
-  DBM = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`; renderDb();
+  const [y, m] = MONTH.split('-').map(Number), x = new Date(y, m - 1 + d, 1);
+  setMonth(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`);
 }
-$('#db-prev').onclick = () => shiftMonth(-1);
-$('#db-next').onclick = () => shiftMonth(1);
-$('#db-month').onchange = e => { if (e.target.value) { DBM = e.target.value; renderDb(); } };
+$('#m-prev').onclick = () => shiftMonth(-1);
+$('#m-next').onclick = () => shiftMonth(1);
+$('#m-cur').onchange = e => setMonth(e.target.value);
 
 /* ============================================================
    카톡 카드 — 캔버스에 직접 그립니다 (바깥 라이브러리 없음)
@@ -1107,9 +1129,9 @@ $('#b-xls').onclick = () => {
   toast('엑셀 파일을 저장했습니다');
 };
 $('#b-db-xls').onclick = () => {
-  const L = dbRows(DBM);
+  const L = dbRows(MONTH);
   if (!L.length) { toast('이 달 자료가 없습니다'); return; }
-  dl(new Blob([csv(L)], { type: 'text/csv;charset=utf-8' }), `APEX_DB배정_${DBM.replace('-', '')}.csv`);
+  dl(new Blob([csv(L)], { type: 'text/csv;charset=utf-8' }), `APEX_DB배정_${MONTH.replace('-', '')}.csv`);
   toast('엑셀 파일을 저장했습니다');
 };
 
