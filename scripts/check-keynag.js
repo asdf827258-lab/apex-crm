@@ -93,6 +93,46 @@ function serve() {
   is(off.ic === '🔑' && /필요/.test(off.t), '안 붙었을 때는 <b>🔑 · 「연결이 필요합니다」</b> — ' + off.t);
   is(/설정/.test(off.d) && /넣으시면|넣으면/.test(off.d), '<b>어디서 무엇을</b> 하면 되는지 적는다');
 
+  head('[1-1] 알약은 <b>확인하기 전에</b> 「미설정」이라고 단정하지 않는다');
+  /* 서랍 아래 알약은 <b>모든 화면</b>에 서 있습니다. 첫 그림에서 「API 키
+     미설정」 이라고 박아 두면, 붙는 데 걸리는 그 잠깐 동안 매번 그 말이
+     스칩니다 — 사장님이 「자꾸 키 넣으라고 뜬다」 고 하신 자리입니다.
+     아직 모르는 것을 「없다」 로 적으면 안 됩니다 (1번).               */
+  is(!/id="keyPillTxt">[^<]*미설정/.test(SRC),
+     'HTML 에 <b>「미설정」이 박혀 있지 않다</b> — 확인 전에는 단정하지 않는다');
+  is(/id="keyPillTxt">[^<]*확인 중/.test(SRC),
+     '처음에는 <b>「확인 중」</b>으로 선다 — 사장님이 하실 일이 없는 동안 재촉하지 않는다');
+
+  /* 붙는 중(자동 연결이 걸려 있으나 아직 대답 전)에도 재촉하지 않는다 */
+  const mid = await pg.evaluate(() => {
+    const rc = claudeReady, rg = geminiReady;
+    window.claudeReady = function () { return false };
+    window.geminiReady = function () { return false };
+    updateKeyPill();
+    const t = (document.getElementById('keyPillTxt') || {}).textContent;
+    window.claudeReady = rc; window.geminiReady = rg;
+    updateKeyPill();
+    return { mid: t, back: (document.getElementById('keyPillTxt') || {}).textContent };
+  });
+  is(/확인 중/.test(mid.mid),
+     '저절로 붙는 중이면 <b>「확인 중」</b>이라 적는다 — 재촉하지 않는다 (' + mid.mid + ')');
+  is(/연결됨/.test(mid.back), '붙고 나면 <b>다시 「연결됨」</b>으로 돌아온다 — ' + mid.back);
+
+  /* 자동 연결이 아예 없으면 그때는 <b>넣으시라고</b> 말해야 한다 — 숨기면 안 된다 */
+  const noAuto = await pg.evaluate(() => {
+    const rc = claudeReady, rg = geminiReady, ia = isAutoConnected;
+    window.claudeReady = function () { return false };
+    window.geminiReady = function () { return false };
+    window.isAutoConnected = function () { return false };
+    updateKeyPill();
+    const t = (document.getElementById('keyPillTxt') || {}).textContent;
+    window.claudeReady = rc; window.geminiReady = rg; window.isAutoConnected = ia;
+    updateKeyPill();
+    return t;
+  });
+  is(/필요/.test(noAuto || ''),
+     '붙을 길이 아예 없으면 <b>「연결 필요」</b>라고 말한다 — 숨기지 않는다 (' + noAuto + ')');
+
   head('[4] 「지금 붙어 있나」를 답하는 자리가 하나다 (5번)');
   ['osGuideAiRow', 'aiReady', 'isAutoConnected'].forEach(f => {
     const c = (SRC.match(new RegExp('function\\s+' + f + '\\s*\\(', 'g')) || []).length;
