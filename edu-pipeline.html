@@ -67,7 +67,7 @@ main{max-width:1560px;margin:0 auto;padding:16px 14px 40px}
 .filters .sp{flex:1}
 
 .tw{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--grey2);background:#fff}
-table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1660px;font-size:14px}
+table.gx{border-collapse:separate;border-spacing:0;width:100%;min-width:1810px;font-size:14px}
 table.gx th{background:var(--grey);color:var(--tx2);font-weight:700;font-size:12.5px;text-align:left;
   padding:9px 10px;border-bottom:1px solid var(--grey2);white-space:nowrap}
 table.gx td{border-bottom:1px solid #F0F2F4;padding:0;vertical-align:middle}
@@ -106,6 +106,7 @@ select.f-소개받음,select.f-상담예약{color:var(--purple)} select.f-계약
 select.f-미요청{color:var(--tx4)} select.f-요청함{color:var(--tx2)}
 select.dbt{color:#6D28D9;font-weight:700}
 select.p-전달완료{color:var(--green)} select.p-대기{color:var(--red)} select.p-해당없음{color:var(--tx4)}
+table.gx td input.tgt{color:var(--amber);font-weight:800}
 table.gx td input.con{color:var(--green);font-weight:800}
 table.gx td input.intro{color:var(--purple);font-weight:800}
 tr.addr td{padding:6px 12px;background:#fff}
@@ -260,7 +261,7 @@ const POLICY = ['해당없음', '대기', '전달완료'];
 const policyOf = r => r.stage === '증권전달' ? '전달완료' : (r.stage === '계약완료' ? '대기' : '해당없음');
 const ADMINS = ['admin', 'owner', 'master'];
 const DB_COLS = 'id,assigned_to,assigned_date,source,region,customer_name,next_appt,stage,memo,' +
-  'expect_premium,contract_premium,family_intro,intro_count,closed_reason,contracted_at';
+  'target_premium,expect_premium,contract_premium,family_intro,intro_count,closed_reason,contracted_at';
 
 let sb = null;
 let ME = { id: '', name: '', role: 'member', team_id: null };
@@ -316,7 +317,8 @@ function fromDb(d) {
   return {
     id: d.id, mid: d.assigned_to, dbdate: d.assigned_date || '', dbtype: d.source || '',
     region: d.region || '', client: d.customer_name || '', date: tsDate(d.next_appt),
-    expect: d.expect_premium || 0, contract: d.contract_premium || 0, introN: d.intro_count || 0,
+    target: d.target_premium || 0, expect: d.expect_premium || 0,
+    contract: d.contract_premium || 0, introN: d.intro_count || 0,
     stage: STAGES.indexOf(d.stage) >= 0 ? d.stage : '미접촉',
     cdate: tsDate(d.contracted_at),
     closed: d.closed_reason || '', family: FAMILY.indexOf(d.family_intro) >= 0 ? d.family_intro : '미요청',
@@ -407,7 +409,14 @@ const F2COL = {
   region: 'region', client: 'customer_name', dbtype: 'source', dbdate: 'assigned_date',
   stage: 'stage', family: 'family_intro', closed: 'closed_reason', memo: 'memo'
 };
-const NUMF = { expect: 'expect_premium', contract: 'contract_premium', introN: 'intro_count' };
+/* 돈 칸 셋은 세우는 순서대로다 — 목표 → 예상 → 계약.
+   목표는 「이 건에서 이만큼 올리자」, 예상은 「지금 설계로는 이만큼」,
+   계약은 「실제로 이만큼 됐다」. 한 칸에 뭉치면 셋 다 잃는다.
+   사람별 월 목표(monthly_perf.goal_prem)와는 다른 것이다. */
+const NUMF = {
+  target: 'target_premium', expect: 'expect_premium',
+  contract: 'contract_premium', introN: 'intro_count'
+};
 const pend = {};
 let saveT;
 function queueSave(r, field) {
@@ -505,6 +514,7 @@ function renderKpi() {
     <div class="kpi"><div class="l">AP · PC</div><div class="v">${appc}<small>건</small></div></div>
     <div class="kpi"><div class="l">진행중</div><div class="v">${live.length}<small>건</small></div></div>
     <div class="kpi ok"><div class="l">계약업적</div><div class="v">${won(cSum)}<small>원 · ${done.length}건</small></div></div>
+    <div class="kpi"><div class="l">건별 목표 합계</div><div class="v">${won(L.filter(r => !r.closed).reduce((a, r) => a + (+r.target || 0), 0))}<small>원</small></div></div>
     <div class="kpi"><div class="l">받은 소개</div><div class="v">${intro}<small>명</small></div></div>
     <div class="kpi"><div class="l">이번주 약속</div><div class="v">${wk}<small>건</small></div></div>
     <div class="kpi ${late ? 'warn' : ''}"><div class="l">약속일 지남</div><div class="v">${late}<small>건</small></div></div>
@@ -527,6 +537,7 @@ function rowHTML(r) {
     <td><input data-f="region" value="${esc(r.region)}" placeholder="지역"${d}></td>
     <td><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}></td>
     <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto"${d}>${dd}</td>
+    <td class="n"><input data-f="target" inputmode="numeric" class="tgt" value="${r.target ? won(r.target) : ''}" placeholder="-"${d}></td>
     <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"${d}></td>
     <td class="n"><input data-f="contract" inputmode="numeric" class="con" value="${r.contract ? won(r.contract) : ''}" placeholder="-"${d}></td>
     <td>${selOf('stage', r.stage, STAGES, 'st-', ro)}</td>
@@ -552,7 +563,7 @@ function goalHTML(mid, ro) {
   const got = monthDone(mid).reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   const pct = g ? Math.round(got / g * 100) : 0;
   const col = pct >= 100 ? '#00B26B' : pct >= 60 ? '#FF9500' : '#8B95A1';
-  return `<span class="goal">${goalMonth().slice(5)}월 목표
+  return `<span class="goal">${goalMonth().slice(5)}월 <b>월목표</b>
     <input data-goal="${mid}" inputmode="numeric" value="${g ? won(g) : ''}" placeholder="0"${ro ? ' disabled' : ''}>원</span>` +
     (g ? `<span class="gpct" style="color:${col}" title="${goalMonth().replace('-', '.')} 에 체결한 계약업적 합계입니다">체결 ${won(got)}원 · ${pct}%</span>` : '');
 }
@@ -562,7 +573,10 @@ function memSum(mid) {
   const appc = live.filter(r => r.stage === 'AP' || r.stage === 'PC').length;
   const cSum = done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   const intro = L.reduce((a, r) => a + (+r.introN || 0), 0);
-  return `AP·PC ${appc}건 · 진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원` +
+  const tgt = L.filter(r => !r.closed).reduce((a, r) => a + (+r.target || 0), 0);
+  return `AP·PC ${appc}건 · 진행 ${live.length}건` +
+    (tgt ? ` · <b style="color:#C97A00">건별목표 ${won(tgt)}원</b>` : '') +
+    ` · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원` +
     (done.length ? ` · <b style="color:#00B26B">계약 ${done.length}건 ${won(cSum)}원</b>` : '') +
     (intro ? ` · <b style="color:#7C3AED">소개 ${intro}명</b>` : '');
 }
@@ -590,7 +604,8 @@ function renderBoard() {
   let html = `<div class="tw"><table class="gx"><thead><tr>
     <th style="width:150px">DB 배정일</th><th style="width:132px">DB종류</th><th style="width:106px">지역</th>
     <th style="width:112px">이름</th><th style="width:154px">다음 약속</th>
-    <th style="width:110px;text-align:right">예상업적</th><th style="width:110px;text-align:right">계약업적</th>
+    <th style="width:104px;text-align:right">목표업적</th>
+    <th style="width:104px;text-align:right">예상업적</th><th style="width:106px;text-align:right">계약업적</th>
     <th style="width:100px">진행단계</th><th style="width:104px">증권전달</th>
     <th style="width:92px">상태</th><th style="width:114px">소개진행</th>
     <th style="width:78px;text-align:right">소개수</th><th>비고</th><th style="width:44px"></th>
@@ -599,14 +614,14 @@ function renderBoard() {
   teams.forEach(t => {
     const ms = memsOf(t.id).filter(m => !FILTER.mem || m.id === FILTER.mem);
     if (!ms.length) return;
-    html += `<tr class="tm"><td colspan="14">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
+    html += `<tr class="tm"><td colspan="15">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
       <span style="float:right;font-weight:600;font-size:12.5px;color:#8B95A1">${teamGoal(t.id)}${teamSum(t.id)}</span></td></tr>`;
     ms.forEach(m => {
       const rs = sortRows(L.filter(r => r.mid === m.id));
       if (rs.length) any = true;
-      html += `<tr class="mb"><td colspan="14">${esc(m.name)}${goalHTML(m.id, !canEdit({ mid: m.id }))}<span class="msum">${memSum(m.id)}</span></td></tr>`;
+      html += `<tr class="mb"><td colspan="15">${esc(m.name)}${goalHTML(m.id, !canEdit({ mid: m.id }))}<span class="msum">${memSum(m.id)}</span></td></tr>`;
       html += rs.map(rowHTML).join('');
-      if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="14"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
+      if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="15"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
     });
   });
   html += `</tbody></table></div>`;
@@ -785,7 +800,7 @@ function renderDb() {
 
   $('#db-list').innerHTML = `<div class="tw" style="border:0"><table class="cx lt"><thead><tr>
     <th>배정일</th><th>팀</th><th>팀원</th><th>DB종류</th><th>이름</th><th>지역</th><th>다음약속</th>
-    <th>단계</th><th>증권</th><th>상태</th><th class="n">예상업적</th><th class="n">계약업적</th>
+    <th>단계</th><th>증권</th><th>상태</th><th class="n">목표업적</th><th class="n">예상업적</th><th class="n">계약업적</th>
     <th>소개진행</th><th class="n">소개수</th><th>비고</th></tr></thead><tbody>` +
     L.slice().sort((a, b) => (a.dbdate || '').localeCompare(b.dbdate || '')).map(r => {
       const c = r.closed ? 'color:#F04452' : isDone(r) ? 'color:#00B26B' : 'color:#3182F6';
@@ -796,6 +811,7 @@ function renderDb() {
         <td style="font-weight:800;${c}">${esc(r.stage)}</td>
         <td>${policyOf(r) === '해당없음' ? '<span class="z">·</span>' : `<b style="color:${policyOf(r) === '전달완료' ? '#00B26B' : '#F04452'}">${policyOf(r)}</b>`}</td>
         <td>${r.closed ? `<b style="color:#F04452">${esc(r.closed)}</b>` : '<span class="z">·</span>'}</td>
+        <td style="text-align:right;color:#C97A00;font-weight:700">${r.target ? won(r.target) : '<span class="z" style="color:#D1D6DB">·</span>'}</td>
         <td style="text-align:right">${r.expect ? won(r.expect) : '<span class="z">·</span>'}</td>
         <td style="text-align:right;color:#00B26B;font-weight:700">${r.contract ? won(r.contract) : '<span class="z" style="color:#D1D6DB">·</span>'}</td>
         <td>${r.family === '미요청' ? '<span class="z">·</span>' : esc(r.family)}</td>
@@ -973,7 +989,13 @@ function buildCanvas(tid) {
           const won2 = isDone(r) ? (r.contract || r.expect) : r.expect;
           c.font = f(isDone(r) ? 800 : 700, 14);
           c.fillStyle = dead ? '#B0B8C1' : (isDone(r) ? '#00874F' : CO.tx); c.textAlign = 'right';
-          c.fillText(won2 ? won(won2) : '-', x2 + col.w - 12, y + RH / 2); c.textAlign = 'left';
+          c.fillText(won2 ? won(won2) : '-', x2 + col.w - 12, y + RH / 2);
+          /* 아직 안 된 건은 목표를 작게 곁들인다 — 얼마를 보고 가는 건지 */
+          if (!isDone(r) && !dead && r.target) {
+            c.font = f(700, 10.5); c.fillStyle = '#C97A00';
+            c.fillText('목표 ' + won(r.target), x2 + col.w - 12, y + RH / 2 + 13);
+          }
+          c.textAlign = 'left';
         } else if (col.k === 'date') {
           c.font = f(600, 13.5); c.fillStyle = dead ? '#B0B8C1' : CO.tx2;
           const txt = r.date ? r.date.slice(5).replace('-', '.') : '-';
@@ -1067,13 +1089,13 @@ $('#b-txt').onclick = () => {
    ============================================================ */
 function csv(only) {
   const head = ['팀', '팀원', 'DB배정월', 'DB배정일', 'DB종류', '지역', '이름', '다음약속',
-    '예상업적', '계약업적', '진행단계', '증권전달', '상태', '소개진행', '소개수', '비고'];
+    '목표업적', '예상업적', '계약업적', '진행단계', '증권전달', '상태', '소개진행', '소개수', '비고'];
   const q = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
   const src = only || ROWS;
   const L = [head.map(q).join(',')];
   TEAMS.forEach(t => memsOf(t.id).forEach(m => sortRows(src.filter(r => r.mid === m.id)).forEach(r => {
     L.push([t.name, m.name, ym(r.dbdate), r.dbdate, r.dbtype, r.region, r.client, r.date,
-      r.expect || 0, r.contract || 0, r.stage, policyOf(r), r.closed || '진행',
+      r.target || 0, r.expect || 0, r.contract || 0, r.stage, policyOf(r), r.closed || '진행',
       r.family, r.introN || 0, r.memo].map(q).join(','));
   })));
   return '﻿' + L.join('\r\n');
