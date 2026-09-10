@@ -88,10 +88,18 @@ const setup = async (pg) => {
 
 /* 칸에 <b>사람처럼</b> 친다 — value 를 대입하면 커서 이야기를 못 잰다 */
 /* 로그인마다 저절로 열리는 판들(빠른 가이드 · 대표 브리핑 · 달력 알림)을
-   치웁니다. 이 점검이 보려는 것은 그 판들이 아니라 <b>그 밑의 칸</b>입니다. */
-const clearOvl = pg => pg.evaluate(() => {
-  document.querySelectorAll('#osLoginGate,#osGuide,[id$="Ovl"],[id$="Pop"]').forEach(x => x.remove());
-});
+   치웁니다. 이 점검이 보려는 것은 그 판들이 아니라 <b>그 밑의 칸</b>입니다.
+   한 번 지우고 마는 것으로는 모자랍니다 — 예약된 것이 <b>뒤늦게 또</b>
+   열려 칸을 덮습니다. 그래서 지켜보다 뜨는 족족 치우게 둡니다.          */
+const SEL = '#osLoginGate,#osGuide,[id$="Ovl"],[id$="Pop"]';
+const clearOvl = pg => pg.evaluate(sel => {
+  const wipe = () => document.querySelectorAll(sel).forEach(x => x.remove());
+  wipe();
+  if (!window.__ovlWatch) {
+    window.__ovlWatch = new MutationObserver(wipe);
+    window.__ovlWatch.observe(document.body, { childList: true, subtree: false });
+  }
+}, SEL);
 const type = async (pg, txt) => {
   await clearOvl(pg);
   await pg.click('#arFind');
@@ -197,12 +205,17 @@ const type = async (pg, txt) => {
 
   /* ─────────────────────────────────────────────────────────── */
   head('[5] 위 칩 숫자와 아래 목록이 <b>어긋나지 않는다</b>');
+  /* ★ 여기는 <b>글자를 친 직후</b>를 재야 합니다. 저절로 도는 다시 그리기
+     (arPaint 예약)가 사이에 끼면, 칩이 스스로 안 따라오는 판도 그 김에
+     맞아 버려 알람이 안 울립니다 — CI 에서 실제로 그렇게 새어 나갔습니다.
+     그래서 예약된 다시 그리기를 잠깐 끄고, 친 직후 그대로 잽니다.        */
+  await pg.evaluate(() => { window.__arPaint = arPaint; window.arPaint = function () {}; });
   await type(pg, '광양');
   const chip = await pg.evaluate(() => {
-    /* 목록과 <b>같은 칸 안</b>의 칩을 본다 — 화면에 .ar-fc 를 쓰는 판이
-       여럿이라, 문서에서 첫 번째를 집으면 엉뚱한 것을 재게 된다 */
-    const box = (document.getElementById('arTeamList') || {}).parentElement;
-    const c = box ? box.querySelector('.ar-fs .ar-fc') : null;
+    /* 팀원 관리의 칩 칸만 본다 — 화면에 .ar-fc 를 쓰는 판이 여럿이라,
+       문서에서 첫 번째를 집으면 엉뚱한 것을 재게 된다 */
+    const box = document.getElementById('arFilterRow');
+    const c = box ? box.querySelector('.ar-fc') : null;
     const s = c ? c.querySelector('span') : null;
     return { lbl: c ? c.textContent : '', n: s ? parseInt(s.textContent, 10) : -1,
              note: (document.getElementById('arFindN') || {}).textContent || '' };
@@ -212,26 +225,67 @@ const type = async (pg, txt) => {
      ' (' + chip.lbl + ')');
   is(/3/.test(chip.note), '몇 명 찾았는지 <b>칸 옆에도</b> 적는다 — 「' + chip.note + '」');
 
+  await pg.evaluate(() => { if (window.__arPaint) window.arPaint = window.__arPaint; });
+
   head('[5-1] 찾는 중에도 <b>다른 거르개가 같이 듣는다</b>');
   await pg.evaluate(() => arFilterSet('norep'));
   await pg.waitForTimeout(120);
   got = await names(pg);
   is(got.length === 3 && got.indexOf('홍길동') < 0,
      '「광양」 + 「보고 없음」 = 셋 — 보고가 있는 홍길동은 원래 순천지점이라 안 걸린다');
+  /* 거르개를 누르면 판이 통째로 다시 섭니다. 그때 <b>친 글자가 그대로인데</b>
+     지우는 단추가 사라지면, 되돌릴 길이 안 보입니다.                    */
+  const xKeep = await pg.evaluate(() => {
+    const b = document.getElementById('arFindX');
+    return { q: AR.q, seen: !!(b && !b.hidden && b.getBoundingClientRect().width > 0) };
+  });
+  is(xKeep.q === '광양' && xKeep.seen,
+     '칩을 눌러 판이 다시 서도 <b>지우는 단추가 그대로 있다</b> — 친 글자가 남아 있으니까');
   await pg.evaluate(() => { arFilterSet('all'); });
   await pg.waitForTimeout(80);
 
   /* ─────────────────────────────────────────────────────────── */
   head('[6] 지우면 <b>전부 돌아온다</b>');
-  const hasX = await pg.evaluate(() => !!document.querySelector('.ar-findx'));
-  is(hasX, '찾는 중에는 <b>지우는 단추</b>가 보인다');
+  /* 단추는 늘 자리에 있고 <b>숨었다 나왔다</b> 합니다 — 칸(input)을 다시
+     세우면 커서를 잃기 때문입니다. 그래서 「있나」로 재면 숨어 있어도
+     통과합니다. <b>보이나</b>로, 그리고 <b>글자를 친 직후</b>에 잽니다 —
+     판 전체를 다시 그리는 일이 끼면 그 김에 맞아 버립니다.             */
+  const xState = () => pg.evaluate(() => {
+    const b = document.getElementById('arFindX');
+    return { there: !!b, seen: !!(b && !b.hidden && b.getBoundingClientRect().width > 0),
+             rows: document.querySelectorAll('#arTeamList .ar-nmx').length,
+             q: AR.q, v: (document.getElementById('arFind') || {}).value };
+  });
+
+  /* ① 빈 칸에서 시작한다 — 전체 다시 그리기로 확실히 비운다 */
+  await pg.evaluate(() => { arQClear(); });
+  await pg.waitForTimeout(150);
+  let X = await xState();
+  is(X.there && !X.seen, '아무것도 안 쳤을 때는 <b>지우는 단추가 숨어 있다</b>');
+
+  /* ② 치면 그 자리에서 나온다 — 여기서 재야 「따라오나」를 잰다 */
+  await type(pg, '광양');
+  X = await xState();
+  is(X.seen, '글자를 치면 <b>그 자리에서 단추가 나온다</b> — 다음 다시 그리기를 기다리지 않는다');
+  is(X.rows === 3, '그 사이 목록은 셋 — ' + X.rows + '명');
+
+  /* ③ 지우개로 비워도 그 자리에서 숨는다 — 사장님이 실제로 쓰시는 길 */
+  await pg.click('#arFind');
+  await pg.keyboard.press('Control+A');
+  await pg.keyboard.press('Backspace');
+  await pg.waitForTimeout(150);
+  X = await xState();
+  is(!X.seen, '지우개로 비우면 <b>그 자리에서 단추가 숨는다</b>');
+  is(X.rows === 6, '지우개로 다 지우면 <b>여섯 명이 돌아온다</b> — ' + X.rows + '명');
+
+  /* ④ 단추로 지우는 길도 그대로 된다 */
+  await type(pg, '광양');
   await clearOvl(pg);
-  await pg.evaluate(() => { const b = document.querySelector('.ar-findx'); if (b) b.click(); });
+  await pg.evaluate(() => { const b = document.getElementById('arFindX'); if (b) b.click(); });
   await pg.waitForTimeout(200);
-  got = await names(pg);
-  const q = await pg.evaluate(() => ({ q: AR.q, v: (document.getElementById('arFind') || {}).value }));
-  is(got.length === 6, '여섯 명이 <b>전부 돌아왔다</b> — ' + got.length + '명');
-  is(q.q === '' && q.v === '', '칸도 같이 비었다 — 지웠는데 글자가 남으면 다음에 또 걸린다');
+  X = await xState();
+  is(X.rows === 6, '단추로 지워도 <b>여섯 명이 전부 돌아왔다</b> — ' + X.rows + '명');
+  is(X.q === '' && X.v === '', '칸도 같이 비었다 — 지웠는데 글자가 남으면 다음에 또 걸린다');
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));
