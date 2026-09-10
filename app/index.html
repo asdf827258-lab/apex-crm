@@ -1528,7 +1528,7 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <div class="sb-scroll" id="navHost"></div>
     <div class="sb-foot">
       <div class="key-pill" id="keyPill" onclick="go('settings')">
-        <span class="dot"></span><span id="keyPillTxt">API 키 미설정 — 클릭</span>
+        <span class="dot"></span><span id="keyPillTxt">AI 연결 확인 중…</span>
       </div>
       <button type="button" class="sb-say" onclick="go('voice')">
         <span>💬</span>건의함 · 불편한 점
@@ -6842,7 +6842,7 @@ function rdCss(){
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
 var AR={memo:'',face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
-        rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:''};
+        rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:'',q:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
  ['act', '활동 보고',  '📋','최근 30일 무엇을 했는지 — 숫자로'],
@@ -6891,9 +6891,32 @@ function arTeam(id){
   arPaint();
 }
 /* 리더 화면에 세울 사람들 — 점수가 낮은 사람이 위로 온다 */
+/* ── 팀원 찾기 ──
+   스물여섯 명이 팀별로 접혀 있어 한 사람을 보려면 눈으로 훑어야 했다.
+   이름·초성·팀 이름·직책 어느 것으로 쳐도 그 사람이 뜨게 한다.
+   초성 푸는 것은 <b>고객 365일이 쓰는 cmCho 를 그대로 부른다</b> —
+   같은 표를 두 벌 두지 않는다(5번). 아직 안 실린 화면에서도 터지지
+   않게 없으면 초성만 건너뛴다.                                        */
+function arQ(){return AR.q||'';}
+function arHit(r,q){
+  if(!q)return true;
+  q=(''+q).replace(/\s/g,'');
+  var pool=[r.name||'',arRoleKo(r.role),
+            (typeof gbTeamName==='function'?(gbTeamName(r.team)||''):'')],i;
+  if(typeof cmOnlyCho==='function'&&typeof cmCho==='function'&&cmOnlyCho(q)){
+    for(i=0;i<pool.length;i++)if(pool[i]&&cmCho(pool[i]).indexOf(q)>=0)return true;
+    return false;
+  }
+  for(i=0;i<pool.length;i++)if(pool[i]&&(''+pool[i]).replace(/\s/g,'').indexOf(q)>=0)return true;
+  return false;
+}
 function arList(){
-  var l=arScope().slice(),f=AR.f||'all',out=[],i,r,cl;
+  var l=arScope().slice(),f=AR.f||'all',q=arQ(),out=[],i,r,cl;
   l.sort(function(a,b){return (a.total||0)-(b.total||0);});
+  if(q){
+    for(i=0,r=[];i<l.length;i++)if(arHit(l[i],q))r.push(l[i]);
+    l=r;
+  }
   if(f==='all')return l;
   for(i=0;i<l.length;i++){
     r=l[i];
@@ -9049,8 +9072,11 @@ function arTopHtml(){
 }
 var AR_F=[['all','전체'],['norep','보고 없음'],['stop','멈춘 사람'],['due','밀린 할 일']];
 function arFilterSet(k){AR.f=k;AR.open='';arPaint();}
-function arFilterHtml(){
-  var i,h='',cur=AR.f||'all',c={},l=arScope(),j;
+function arFilterChips(){
+  var i,h='',cur=AR.f||'all',c={},l=arScope(),j,q=arQ();
+  /* 찾는 중이면 <b>찾은 사람 안에서</b> 센다 — 칩 숫자와 목록이 어긋나면
+     사장님이 어느 쪽을 믿어야 할지 모른다 */
+  if(q){var kept=[];for(j=0;j<l.length;j++)if(arHit(l[j],q))kept.push(l[j]);l=kept;}
   for(j=0;j<l.length;j++){
     if(!AR.rep[l[j].id])c.norep=(c.norep||0)+1;
     if(!l[j].last||arDaysAgo(l[j].last)>=3)c.stop=(c.stop||0)+1;
@@ -9060,7 +9086,13 @@ function arFilterHtml(){
   for(i=0;i<AR_F.length;i++)
     h+='<button type="button" class="ar-fc'+(cur===AR_F[i][0]?' on':'')+'" onclick="arFilterSet(\''+
       AR_F[i][0]+'\')">'+osEsc(AR_F[i][1])+'<span>'+(c[AR_F[i][0]]||0)+'</span></button>';
-  return '<div class="ar-fs">'+h+'</div>';
+  return h;
+}
+/* 칩을 감싸는 칸은 이름을 갖는다 — 글자를 칠 때 <b>이 안만</b> 갈아 끼워야
+   칩 숫자가 목록을 따라온다. 안 그러면 다음 전체 다시 그리기까지 옛 숫자가
+   남아, 「전체 6」 아래에 세 줄만 서 있는 판이 된다.                    */
+function arFilterHtml(){
+  return '<div class="ar-fs" id="arFilterRow">'+arFilterChips()+'</div>';
 }
 /* 여섯 축 막대 — 숫자를 세지 않고도 어디가 비었는지 보이게 */
 function arNumsHtml(r){
@@ -9125,15 +9157,9 @@ function arMeHtml(){
       '<b>AI 보고 받기</b> 를 누르면 30초 안에 다섯 칸이 채워집니다.</div>')+
     '</div></div>';
 }
-function arTeamHtml(){
-  if(typeof GB==='undefined'||!GB.loaded)
-    return '<div class="card"><div class="card-body"><div class="ar-none">팀 기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
-  var all=arScope();
-  if(!all.length)
-    return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
-      '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
-  var l=arList(),i,r,o,h='',me=arMyId(),done=0,gi,g,cur='';
-  for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
+/* 줄만 따로 그린다 — 글자를 칠 때 이 칸만 갈아 끼우면 커서를 안 잃는다 */
+function arTeamRowsHtml(){
+  var l=arList(),i,r,o,h='',me=arMyId(),gi,g,cur='';
   /* 팀별로 줄을 나눈다 — 누가 누구 팀인지 보이지 않으면 팀 관리가 안 된다 */
   g=(typeof gbByTeam==='function')?gbByTeam(l):[{id:'',name:'',rows:l}];
   var flat=[];
@@ -9177,7 +9203,20 @@ function arTeamHtml(){
     }
     h+='</div>';
   }
-  if(!l.length)h='<div class="ar-none">고른 조건에 맞는 사람이 없습니다.</div>';
+  if(!l.length)h=arQ()
+    ?('<div class="ar-none">「'+osEsc(arQ())+'」 로 찾은 팀원이 없습니다.<br>'+
+      '<b>이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책</b>으로 찾을 수 있습니다.</div>')
+    :'<div class="ar-none">고른 조건에 맞는 사람이 없습니다.</div>';
+  return h;
+}
+function arTeamHtml(){
+  if(typeof GB==='undefined'||!GB.loaded)
+    return '<div class="card"><div class="card-body"><div class="ar-none">팀 기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
+  var all=arScope(),i,done=0;
+  if(!all.length)
+    return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
+      '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
+  for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
   return arTopHtml()+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
     '<span class="ar-n">'+done+' / '+all.length+'명</span></div>'+
@@ -9193,10 +9232,49 @@ function arTeamHtml(){
     '</div>'+
     (arIsLead()?'':'<div class="notice" style="margin-bottom:12px">보기만 됩니다. '+
       '보고를 만드는 것은 지점장이 합니다.</div>')+
+    arFindHtml()+
     arFilterHtml()+
     (AR.err?('<div class="ar-err">'+osEsc(AR.err)+'</div>'):'')+
-    '<div class="ar-list">'+h+'</div>'+
+    '<div class="ar-list" id="arTeamList">'+arTeamRowsHtml()+'</div>'+
     '</div></div>'+arSumHtml(all);
+}
+/* ── 찾는 칸 ──
+   글자를 칠 때 <b>줄만</b> 갈아 끼운다. 판 전체를 다시 그리면 칸이 새로
+   서면서 커서를 잃어 한 글자마다 다시 눌러야 했다 — 고객 365일이 목록만
+   갈아 끼우는 것과 같은 방식이다.                                      */
+function arFindHtml(){
+  return '<div class="ar-find">'+
+    '<input id="arFind" class="ar-findi" type="search" autocomplete="off" '+
+      'placeholder="팀원 찾기 — 이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책" '+
+      'oninput="arQSet(this.value)" value="'+osEsc(arQ())+'">'+
+    '<button type="button" class="ar-findx" id="arFindX" onclick="arQClear()" '+
+      (arQ()?'':'hidden ')+'aria-label="찾기 지우기" title="찾기 지우기">✕</button>'+
+    '<span class="ar-findn" id="arFindN">'+arFindNote()+'</span>'+
+    '</div>';
+}
+function arFindNote(){
+  var n=arList().length;
+  if(!arQ())return n?(n+'명'):'';
+  return n?('찾음 '+n+'명'):'없음';
+}
+function arQSet(v){
+  AR.q=v||'';AR.open='';
+  var el=document.getElementById('arTeamList');
+  if(!el){arPaint();return;}
+  /* 칸(input)만 그대로 두고 나머지를 다시 그린다 — 칸까지 새로 세우면
+     한 글자마다 커서를 잃어 아무도 안 씁니다.                          */
+  el.innerHTML=arTeamRowsHtml();
+  var f=document.getElementById('arFilterRow');
+  if(f)f.innerHTML=arFilterChips();
+  var n=document.getElementById('arFindN');
+  if(n)n.textContent=arFindNote();
+  var x=document.getElementById('arFindX');
+  if(x)x.hidden=!AR.q;
+}
+function arQClear(){
+  AR.q='';AR.open='';arPaint();
+  var el=document.getElementById('arFind');
+  if(el)try{el.focus();}catch(e){}
 }
 /* 리더가 먼저 볼 네 줄 — 오늘 누구에게 전화할지만 정하면 된다 */
 function arSumHtml(l){
@@ -9398,6 +9476,17 @@ function arCss(){
    '.ar-tl.warn .v{color:#B91C1C}'+
    '@media(max-width:900px){.ar-top{grid-template-columns:1fr 1fr 1fr}}'+
    '@media(max-width:520px){.ar-top{grid-template-columns:1fr 1fr}}'+
+   '.ar-find{position:relative;display:flex;align-items:center;gap:9px;margin-bottom:11px}'+
+   '.ar-findi{flex:1;min-width:0;border:1.5px solid #E2E8F0;border-radius:11px;padding:11px 14px;'+
+     'font-size:14px;font-weight:700;color:#0F172A;font-family:inherit;background:#fff;'+
+     '-webkit-appearance:none;appearance:none}'+
+   '.ar-findi:focus{outline:none;border-color:#1A56DB;background:#F8FAFF}'+
+   '.ar-findi::placeholder{color:#94A3B8;font-weight:600}'+
+   '.ar-findx{position:absolute;right:64px;top:50%;transform:translateY(-50%);width:24px;height:24px;'+
+     'border:0;border-radius:50%;background:#E2E8F0;color:#475569;font-size:12px;font-weight:800;'+
+     'cursor:pointer;font-family:inherit;line-height:1;padding:0}'+
+   '.ar-findn{flex:0 0 auto;font-size:12px;font-weight:800;color:#64748B;min-width:52px;text-align:right}'+
+   '@media(max-width:520px){.ar-findx{right:58px}}'+
    '.ar-fs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}'+
    '.ar-fc{border:1.5px solid #E2E8F0;background:#fff;border-radius:99px;padding:7px 13px;'+
      'font-size:12.5px;font-weight:800;color:#475569;cursor:pointer;font-family:inherit}'+
@@ -13092,8 +13181,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-09 22:40';
-var APP_BUILD_NOTE="<b>메뉴는 늘 서 있고, 접을 수 있습니다.</b> 왼쪽 기둥 오른쪽 위의 <b>⟨</b> 로 접고, 접히면 위 띠에 <b>☰</b> 가 되살아나 다시 폅니다 — 돌아올 길이 안 보이면 접힌 게 아니라 없어진 것이라 ☰ 가 반드시 같이 뜹니다. <b>기본은 펼침</b>입니다(예전에 숨겨 뒀더니 있는 화면을 못 찾으셨습니다). 접어 두신 것은 이 브라우저에만 남고, 좁은 화면은 원래대로 서랍이라 접힘을 안 씌웁니다. 그리고 <b>「키를 넣으세요」가 홈에서 사라졌습니다.</b> AI 는 앱이 켜질 때 회사 서버로 <b>저절로 붙는데도</b> 가이드가 그것과 상관없이 매번 키를 넣으라고 했습니다 — 이미 되는 것을 또 하라고 하면 안 되는 줄 아십니다. 이제 붙어 있으면 <b>「AI 는 이미 연결돼 있습니다 · 따로 키를 넣지 않으셔도 됩니다」</b>라고 적고, 정말 안 붙었을 때만 넣으시라고 합니다. <b>계정 삭제도 이제 실제로 됩니다.</b> 여태 안 지워진 건 화면이 아니라 서버 탓이었습니다 — 고객 1,049명이 매달린 칸을 포함해 34개 표가 계정을 붙잡고 있어 외래키가 막고 있었습니다. 이제 지우기 전에 <b>무엇이 몇 건 매달렸는지 표별로</b> 보여 드리고 <b>고객·통화·상담을 누구에게 넘길지</b> 고르게 합니다 — 넘기면 고객 자료는 하나도 안 없어집니다.";
+var APP_BUILD='2026-09-10 00:45';
+var APP_BUILD_NOTE="<b>팀원 관리와 DB 통합 CRM 에서 찾으면 뜹니다.</b> 팀원 관리는 스물여섯 명이 팀별로 접혀 있고 점수가 낮은 사람이 위로 올라오게 줄이 다시 서므로, 어제 본 자리에 오늘은 그 사람이 없었습니다 — 이제 목록 위 칸에 <b>이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책</b> 어느 것으로 쳐도 그 사람만 남습니다. 위 칩 숫자도 찾은 사람 안에서 다시 세어, 칩과 목록이 어긋나지 않습니다. DB 통합 CRM 찾기는 이름과 전화번호만 보던 것을 <b>지역 · 시 · 담당자 · 종류 · 통화 메모</b>까지 넓혔고, 초성과 번호 뒷자리로도 찾힙니다(<b>010-2222-3456</b> 처럼 통째로 붙여 넣으셔도 됩니다). 찾을 때마다 <b>몇 건이 걸렸는지</b> 칸 옆에 적고, 못 찾으면 못 찾았다고 적습니다. 그리고 <b>서랍 아래 딱지가 「미설정」이라고 먼저 단정하지 않습니다.</b> AI 는 앱이 켜질 때 회사 서버로 저절로 붙는데, 붙는 그 잠깐 동안 딱지가 「API 키 미설정」이라고 적혀 있어 화면을 열 때마다 키를 넣으라는 말이 스쳤습니다. 이제 <b>「AI 연결 확인 중…」</b>으로 서 있다가 붙으면 <b>「프록시 연결됨」</b>이 되고, 정말 붙을 길이 없을 때만 <b>「AI 연결 필요」</b>라고 말합니다 — 모르는 것을 「없다」로 적지 않습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -33016,10 +33105,23 @@ function aiDiagnose(){
   });
 }
 
+/* ── 알약은 <b>확인한 것만</b> 말한다 ──
+   붙기 전 첫 그림에서 「API 키 미설정」 이라고 단정하면, 회사 서버로
+   저절로 붙는 사람에게도 <b>매번 키를 넣으라는 말이 스칩니다.</b> 아직
+   모르는 것을 「없다」 로 적으면 안 됩니다 (1번). 그래서 처음에는
+   「확인 중」 으로 서 있다가, 붙으면 붙었다고, 정말 안 붙었을 때만
+   넣으시라고 합니다.
+
+   ※ 「저절로 붙는 중」 인 동안에도 재촉하지 않습니다 — 프록시가 아직
+     대답을 안 했을 뿐이지 사장님이 하실 일은 없습니다.               */
 function updateKeyPill(){
-  var ok=aiReady();var p=$('keyPill');
+  var ok=aiReady(),p=$('keyPill'),t=$('keyPillTxt');
+  if(!p||!t)return;
   p.classList.toggle('ok',ok);
-  $('keyPillTxt').textContent=ok?(getConn()==='proxy'?'프록시 연결됨':'API 연결됨'):'AI 연결 필요 — 클릭';
+  if(ok){ t.textContent=(getConn()==='proxy')?'프록시 연결됨':'API 연결됨'; return; }
+  var trying=false;
+  try{ trying=(typeof isAutoConnected==='function')&&isAutoConnected(); }catch(e){}
+  t.textContent=trying?'AI 연결 확인 중…':'AI 연결 필요 — 클릭';
 }
 
 /* ════════ 계산기 (CALC · 키 불필요) ════════ */
