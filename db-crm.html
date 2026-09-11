@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>APEX DB CRM</title>
   <script src="config.js"></script>
+  <!-- 고객 한 장 — 고객 365일(app/index.html)과 <b>같은 카드</b>를 세운다.
+       초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 있다(5번). -->
+  <script src="/app/apex-cusone.js?v=1"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
@@ -49,6 +52,8 @@
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
     th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;white-space:nowrap}
     td{padding:12px;border-bottom:1px solid #edf0f2;font-size:13px;vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
+    .cus-open{background:none;border:0;padding:0;font:inherit;color:#1D4ED8;font-weight:800;cursor:pointer;text-align:left}
+    .cus-open:hover{text-decoration:underline}
     .badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:900}.green{background:var(--greenbg);color:#087f5b}.red{background:var(--redbg);color:var(--red)}
     .yellow{background:var(--yellowbg);color:#ad6900}.blue{background:#e8f3ff;color:var(--blue2)}.gray{background:#eef1f4;color:#66717f}
     .actions{display:flex;gap:5px}.empty{text-align:center;padding:42px;color:var(--muted)}.notice{background:#eef6ff;color:#245ea8;padding:14px;border-radius:13px;line-height:1.55;font-size:13px}
@@ -310,6 +315,13 @@
   <div class="modal-foot"><button class="btn btn-light" onclick="closeModal('dbModal')">취소</button><button class="btn btn-primary" onclick="saveDb()">저장</button></div>
 </div></div>
 
+<!-- 고객 한 장 — DB 관리에서 이름을 누르면 열린다 -->
+<div class="modal" id="cusModal"><div class="modal-box">
+  <div class="modal-head"><h3>고객 한 장<small style="display:block;font-size:11px;font-weight:600;color:#94A3B8;margin-top:2px">고객 365일과 같은 카드입니다</small></h3><button class="close" onclick="closeModal('cusModal')">×</button></div>
+  <div class="modal-body" id="cusBody"></div>
+  <div class="modal-foot"><button class="btn btn-light" onclick="closeModal('cusModal')">닫기</button></div>
+</div></div>
+
 <div class="modal" id="callModal"><div class="modal-box">
   <div class="modal-head"><h3>TA 결과 기록<small style="display:block;font-size:11px;font-weight:600;color:#94A3B8;margin-top:2px">판 CRM-2026-08-15 13:10</small></h3><button class="close" onclick="closeModal('callModal')">×</button></div>
   <div class="modal-body"><input type="hidden" id="callDbId"><div class="notice" id="callSummary" style="margin-bottom:15px"></div>
@@ -478,6 +490,27 @@ function isAdmin(){return canManageTeam()}
 /* APEX YUN PRO 앱과 동일한 Supabase 프로젝트(공개 anon 키) — 같은 계정으로 로그인되도록 통일.
    별도 설정을 하지 않아도 앱과 CRM이 같은 auth·profiles를 공유합니다. (필요 시 아래 설정에서 덮어쓰기 가능) */
 const APEX_DEFAULT_SB={url:"https://miakdhxtqofpndtlyzxa.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU"};
+/* ── 홈 「고객 찾기」에서 넘어온 말 ────────────────────────────────
+   홈 한 칸에서 찾은 사람이 아직 365 에 없으면 여기로 보냅니다. 이름만
+   넘어오고 사람은 또 눈으로 훑어야 하면 한 칸으로 찾은 뜻이 없습니다.
+   주소의 find= 로 오거나(처음 뜰 때), 이미 떠 있으면 말로 옵니다. */
+let cusFindDone=false;
+function cusFindTake(q){
+  q=(q||"").trim();
+  if(!q)return;
+  const el=$("search");
+  if(!el)return;
+  el.value=q;
+  goPage("db");
+  try{renderDb()}catch(e){}
+  try{el.scrollIntoView({block:"center"})}catch(e){}
+  toast(`「${q}」 로 찾았습니다.`);
+}
+window.addEventListener("message",e=>{
+  const d=e&&e.data;
+  if(d&&d.type==="apexCrmFind")cusFindTake(d.q);
+});
+
 function init(){
   const fileCfg=(window.APEX_CONFIG && !String(window.APEX_CONFIG.url||"").includes("YOUR_PROJECT")) ? window.APEX_CONFIG : null;
   /* 이 브라우저에 한 번 잘못 저장된 설정이 <b>올바른 기본값을 영원히 이기고</b> 있었다.
@@ -571,6 +604,12 @@ async function loadAll(){
   dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
   cliKeys={};((cl&&!cl.error&&cl.data)||[]).forEach(x=>{cliKeys[(x.advisor_id||"")+"|"+(x.name_masked||"")]=1});
   fillProfiles();fillSources();renderAll();
+  /* 홈 「고객 찾기」에서 이름을 들고 왔으면 <b>한 번만</b> 그 사람을 찾아 세운다.
+     자료가 다 온 뒤라야 찾을 수 있어 여기서 한다. */
+  if(!cusFindDone){
+    cusFindDone=true;
+    try{ cusFindTake(new URLSearchParams(location.search).get("find")||"") }catch(e){}
+  }
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
@@ -719,19 +758,12 @@ function renderDashAttendance(){
    「박서준이 맡은 것」·「소개로 온 것」을 못 찾아 눈으로 훑어야 했다.
    이름 · 초성 · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모까지 본다.
 
-   ※ 초성 푸는 것은 고객 365일(cmCho)과 같은 규칙이지만, 이 화면은
-     app/index.html 과 <b>스크립트를 한 줄도 같이 쓰지 않는</b> 다른 문서라
-     불러 쓸 수가 없다. 규칙이 바뀌면 두 곳을 같이 고쳐야 한다.          */
-const DB_CHO=["ㄱ","ㄲ","ㄴ","ㄷ","ㄸ","ㄹ","ㅁ","ㅂ","ㅃ","ㅅ","ㅆ","ㅇ","ㅈ","ㅉ","ㅊ","ㅋ","ㅌ","ㅍ","ㅎ"];
-function dbCho(v){
-  let o="";v=String(v??"");
-  for(let i=0;i<v.length;i++){
-    const c=v.charCodeAt(i);
-    o+=(c>=0xAC00&&c<=0xD7A3)?DB_CHO[Math.floor((c-0xAC00)/588)]:v.charAt(i);
-  }
-  return o;
-}
-function dbOnlyCho(v){v=String(v??"");return !!v&&[...v].every(ch=>DB_CHO.includes(ch));}
+   ※ 초성 푸는 것은 고객 365일과 <b>같은 파일</b>(/app/apex-cusone.js)을
+     불러 쓴다. 여기와 저기에 표가 두 벌 있어 한쪽만 고쳐지던 자리다(5번).
+     파일을 못 실으면 초성 찾기만 쉬고, 나머지 찾기는 그대로 돈다.       */
+const DB_CHO=(typeof CUS_CHO!=="undefined")?CUS_CHO:[];
+function dbCho(v){return (typeof cusCho==="function")?cusCho(v):String(v??"")}
+function dbOnlyCho(v){return (typeof cusOnlyCho==="function")?cusOnlyCho(v):false}
 function dbPool(d){
   const who=pname(d.assigned_to),c=(typeof cityOf==="function")?cityOf(d):"";
   return [d.customer_name||"",d.region||"",c||"",who==="-"?"":who,
@@ -739,19 +771,11 @@ function dbPool(d){
 }
 function dbHit(d,q){
   if(!q)return true;
-  q=String(q).replace(/\s/g,"");
-  const pool=dbPool(d);
-  if(dbOnlyCho(q))return pool.some(v=>v&&dbCho(v).includes(q));
-  const lq=q.toLowerCase();
-  if(pool.some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq)))return true;
-  /* 숫자를 쳤으면 연락처 뒷자리. 하이픈을 <b>친 쪽에서도</b> 뺀다 —
-     사장님은 「010-2222-3456」 을 통째로 붙여 넣으십니다.               */
-  const num=q.replace(/[^0-9]/g,"");
-  if(num.length>=2&&!/[^0-9\-]/.test(q)){
-    const v=String(d.phone||"").replace(/\D/g,"");
-    if(v&&v.includes(num))return true;
-  }
-  return false;
+  /* 견주는 셈은 /app/apex-cusone.js 한 벌을 쓴다 — 고객 365일(cmHit)과
+     거의 같은 것을 따로 갖고 있었다(5번). 못 실은 판에서는 글자만 견준다. */
+  if(typeof cusHit==="function")return cusHit(dbPool(d),q,d.phone);
+  const lq=String(q).replace(/\s/g,"").toLowerCase();
+  return dbPool(d).some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq));
 }
 function renderDb(){
   const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
@@ -761,7 +785,7 @@ function renderDb(){
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
-    <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
+    <td>${fmt(d.assigned_date)}</td><td class="name"><button type="button" class="cus-open" onclick="cusOpen('${d.id}')" title="고객 한 장 — 고객 365일과 같은 카드">${esc(d.customer_name)}</button><br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
     <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
@@ -950,12 +974,13 @@ async function saveDb(){
 
    실명은 서버로 보내지 않는다. 서버에는 김○○ 마스킹만 올리고,
    실명은 넘긴 사람 기기 안(고객 365일의 이름 메모)에만 남긴다. */
+/* 이름 가리기도 apex-cusone.js 한 벌을 부른다 — 고객 365일(osMaskName)과
+   다르게 가리면 <b>같은 사람이 두 사람으로</b> 보여 365 로 두 번 넘어간다.
+   못 실은 판에서는 더 세게 가린다(이름을 흘리느니 성만 남긴다). */
 function crmMask(name){
+  if(typeof cusMask==="function")return cusMask(name);
   const t=(''+(name||'')).trim();
-  if(t.length<=1)return t;
-  if(t.length===2)return t.charAt(0)+'*';
-  let mid='';for(let i=1;i<t.length-1;i++)mid+='*';
-  return t.charAt(0)+mid+t.charAt(t.length-1);
+  return t?(t.charAt(0)+'○○'):'';
 }
 /* 같은 창(앱) 안에서 열렸으면 실명을 이 기기에만 적어 둔다 */
 function crmPutReal(cid,real,ownerId){
@@ -1024,6 +1049,83 @@ async function toClient(id){
   renderDb();
   toast(`${real} 님을 고객 365일로 넘겼습니다.`+(local?" 앱 → 고객 365일에서 실명 그대로 보입니다.":" 앱 → 고객 365일에서 확인하세요."));
 }
+/* ══ 고객 한 장 (cus*) ═══════════════════════════════════════════
+   이름을 누르면 <b>고객 365일과 같은 카드</b>가 열린다. 그리는 일은
+   /app/apex-cusone.js 가 한다 — 두 화면이 같은 그림을 내려면 카드를
+   한 벌만 둬야 한다(5번).
+
+   이 화면이 아는 것과 모르는 것을 갈라 적는다.
+     아는 것  배정·단계·지역·약속·증권번호·계약 월납·통화
+     안 읽는 것 출생년도·성별·소득·생활비·문서 → 고객 365일에 있다
+   안 읽는 것을 「모름」으로 적으면 저쪽에 적어 둔 값까지 없는 것처럼
+   보인다(1번). 그래서 <b>「고객 365일에 있습니다」</b>라고 적는다.
+
+   이름은 <b>가려서</b> 띄운다. 이 카드는 새로 만든 화면이고, 새 화면은
+   마스킹이 기본이다(계획서 규칙 ③). 보려면 한 번 더 누른다.          */
+const CUS_SHOW={};
+/* 앱(고객 365일) 안에서 열렸으면 그쪽 값을 같이 본다 — 없으면 없는 대로 */
+function cusApp(){
+  try{const P=window.parent;return (P&&P!==window&&typeof P.cmOf==="function")?P:null}catch(e){return null}
+}
+function cusAppMeta(d){
+  const P=cusApp();if(!P)return null;
+  try{
+    const masked=crmMask((d.customer_name||"").trim());
+    const list=(P.OSC&&P.OSC.list)||[];
+    for(const c of list){
+      if((c.advisor_id||"")===(d.assigned_to||"")&&(c.name_masked||"")===masked)return {c,m:P.cmOf(c.id)||{}};
+    }
+  }catch(e){}
+  return null;
+}
+function cusView(d){
+  const show=!!CUS_SHOW[d.id];
+  const real=(d.customer_name||"").trim();
+  const hit=cusAppMeta(d),m=hit?hit.m:null;
+  const nul=v=>(v===undefined||v===null||v==="")?null:v;
+  return {
+    name:show?real:crmMask(real),
+    real:show,
+    tag:show?"팀이 함께 보는 이름":"가려 둡니다 · 이름 보기를 누르면 뜹니다",
+    phone:nul(d.phone),
+    region:nul(d.region)||nul(d.sigungu),
+    birth:null,gender:null,
+    owner:pname(d.assigned_to),
+    stage:stageOf(d),
+    nextAppt:nextAppt(d),
+    incomeMan:null,expenseMan:null,
+    policy:{no:nul(d.policy_no),premiumWon:nul(d.contract_premium),
+            contractedAt:nul(d.contracted_at),sentAt:nul(d.policy_sent_at)},
+    fam:m?{key:m.fam||"",rel:m.rel||"",linked:[],members:m.fams||[]}:{linked:[],members:[]},
+    log:(typeof cusLog==="function")?cusLog(getCalls(d.id),m?(m.touch||[]):[]):[],
+    docs:null,
+    where:"crm",
+    elsewhere:"고객 365일에 있습니다"
+  };
+}
+function cusOpen(id){
+  const d=(dbs||[]).find(x=>x.id===id);
+  if(!d){toast("DB 를 찾지 못했습니다.");return}
+  if(typeof cusCardHtml!=="function"){toast("고객 한 장을 불러오지 못했습니다. 새로고침해 보세요.");return}
+  if(typeof cusCss==="function")cusCss();
+  const hit=cusAppMeta(d);
+  $("cusBody").innerHTML=cusCardHtml(cusView(d))+
+    `<div class="notice" style="margin-top:12px;line-height:1.7">`+
+      `${hit?"고객 365일에 있는 <b>가족·접촉기록</b>도 이 카드에 같이 섰습니다."
+            :"이 사람은 <b>고객 365일에 아직 없습니다.</b> 넘기면 가족·팩트파인딩·문서가 붙습니다."}<br>`+
+      `출생년도·소득·생활비·문서는 이 화면에서 <b>읽지 않습니다</b> — 고객 365일에 있습니다.`+
+    `</div>`+
+    `<div class="actions" style="margin-top:12px;gap:8px;flex-wrap:wrap">`+
+      `<button class="btn btn-light btn-sm" onclick="cusShow('${d.id}')">${CUS_SHOW[d.id]?"🙈 이름 가리기":"👁 이름 보기"}</button>`+
+      `<button class="btn btn-light btn-sm" onclick="closeModal('cusModal');openCall('${d.id}')">📞 접촉 남기기</button>`+
+      (canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="closeModal('cusModal');openDb('${d.id}')">✏️ 수정</button>`:"")+
+      (canEditDb(d)&&!inClients(d)?`<button class="btn btn-primary btn-sm" onclick="closeModal('cusModal');toClient('${d.id}')">365 로 넘기기</button>`:"")+
+    `</div>`;
+  $("cusModal").classList.add("open");
+}
+/* 이름은 누를 때만 뜬다. 모달을 닫으면 잊는다 — 켜 둔 채 다음 사람을 열지 않는다 */
+function cusShow(id){CUS_SHOW[id]=!CUS_SHOW[id];cusOpen(id)}
+
 async function removeDb(id){
   const d=(dbs||[]).find(x=>x.id===id);
   const nm=d?(d.customer_name||"이름 없음"):"이 DB";
@@ -1156,7 +1258,7 @@ async function saveCall(){
 }
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
-function closeModal(id){$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}
+function closeModal(id){if(id==="cusModal")for(const k in CUS_SHOW)delete CUS_SHOW[k];$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}
 function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast("문구를 복사했습니다.")).catch(()=>prompt("복사하세요.",t))}
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
 /* ═══════════ v2 — 오늘의 알림 · KPI · 통계 · AI 피드백 · 사용 안내 ═══════════ */

@@ -1688,6 +1688,10 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 <!-- 전체 지도가 아는 것을 음성 비서에게도 물려준다 —
      상황별 순서표와 「화면 안쪽 칸」. 없어도 앱은 그대로 돈다(있으면 더 알아듣는다). -->
 <script src="apex-map-data.js"></script>
+<!-- 고객 한 장 — 고객 365일과 DB 통합 CRM 이 <b>같은 카드</b>를 세운다.
+     초성 표·이름 가리기·연락기록 섞기도 여기 한 벌만 둔다(5번).
+     db-crm.html 도 같은 파일을 싣는다 — /app/apex-cusone.js -->
+<script src="apex-cusone.js?v=1"></script>
 <!-- 교재 ↔ 성장판 다리 — 응시자 이름 자동 연결 + 「공부」 축을 실제 테스트 점수로.
      index.html 을 여러 군데 고치지 않으려고 전부 저 파일 안에서 처리한다.
      이 줄을 지우면 앱은 원래대로 돌아간다. -->
@@ -9259,21 +9263,19 @@ function arFindNote(){
 }
 function arQSet(v){
   AR.q=v||'';AR.open='';
-  var el=document.getElementById('arTeamList');
-  if(!el){arPaint();return;}
   /* 칸(input)만 그대로 두고 나머지를 다시 그린다 — 칸까지 새로 세우면
-     한 글자마다 커서를 잃어 아무도 안 씁니다.                          */
-  el.innerHTML=arTeamRowsHtml();
-  var f=document.getElementById('arFilterRow');
-  if(f)f.innerHTML=arFilterChips();
-  var n=document.getElementById('arFindN');
-  if(n)n.textContent=arFindNote();
-  var x=document.getElementById('arFindX');
-  if(x)x.hidden=!AR.q;
+     한 글자마다 커서를 잃어 아무도 안 씁니다. 줄이 아직 없으면 판부터 세운다. */
+  if(!arRowsSwap())arPaint();
 }
 function arQClear(){
-  AR.q='';AR.open='';arPaint();
+  AR.q='';AR.open='';
+  /* <b>칸도 같이 비운다.</b> 판을 통째로 다시 세우면 칸이 새로 서면서 저절로
+     비워지지만, 치던 중이라 줄만 갈아 끼우는 길로 가면 글자가 남는다 —
+     그러면 「지웠는데 글자가 남아」 다음에 또 걸린다. */
   var el=document.getElementById('arFind');
+  if(el)el.value='';
+  arPaint();
+  el=document.getElementById('arFind');
   if(el)try{el.focus();}catch(e){}
 }
 /* 리더가 먼저 볼 네 줄 — 오늘 누구에게 전화할지만 정하면 된다 */
@@ -10701,9 +10703,29 @@ function arInnerHtml(){
     '</div></div>';
   return h;
 }
+/* ── 판을 다시 세울 때 <b>치던 글자를 뺏지 않는다</b> ─────────────
+   자료가 늦게 오면 1.8초·4.2초 뒤에 판이 다시 섭니다(osAiRepAfterRender).
+   그런데 판 안에 <b>찾는 칸</b>이 들어 있어, 그 사이에 팀원을 찾고 있으면
+   칸이 새로 서면서 <b>커서와 치던 글자를 잃었습니다.</b> 느린 기계일수록
+   잘 겹칩니다 — CI 에서 실제로 그 자리가 걸렸습니다.
+
+   #361 이 「칠 때는 줄만 갈아 끼운다」로 고친 것은 <b>치는 그 순간</b>뿐이고,
+   예약된 다시 그리기가 남아 있었습니다. 이제 둘이 같은 길을 씁니다. */
+function arRowsSwap(){
+  var el=document.getElementById('arTeamList');
+  if(!el)return false;
+  el.innerHTML=arTeamRowsHtml();
+  var f=document.getElementById('arFilterRow'); if(f)f.innerHTML=arFilterChips();
+  var n=document.getElementById('arFindN');     if(n)n.textContent=arFindNote();
+  var x=document.getElementById('arFindX');     if(x)x.hidden=!AR.q;
+  return true;
+}
 function arPaint(){
   var el=document.getElementById('arPane');
-  if(el)el.innerHTML=arInnerHtml();
+  var f=document.getElementById('arFind');
+  /* 사람이 찾는 칸에 손을 올려 두고 있으면 판을 통째로 세우지 않는다.
+     줄·칩·「몇 명」만 갈아 끼우면 그 사람이 보는 것은 똑같고, 치던 것은 남는다. */
+  if(!(f&&document.activeElement===f&&arRowsSwap())&&el)el.innerHTML=arInnerHtml();
   var m=document.getElementById('ckArMini');
   if(m)m.innerHTML=arMiniHtml(m.getAttribute('data-face')||'me');
 }
@@ -11715,7 +11737,7 @@ function nfJamo(s){
     c = s.charCodeAt(i);
     if (c >= 0xAC00 && c <= 0xD7A3){
       n = c - 0xAC00;
-      o += CM_CHO[Math.floor(n / 588)] + NF_JUNG[Math.floor((n % 588) / 28)] + NF_JONG[n % 28];
+      o += (CM_CHO[Math.floor(n / 588)] || '') + NF_JUNG[Math.floor((n % 588) / 28)] + NF_JONG[n % 28];
     } else o += s.charAt(i);
   }
   return o;
@@ -13181,8 +13203,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-10 00:45';
-var APP_BUILD_NOTE="<b>팀원 관리와 DB 통합 CRM 에서 찾으면 뜹니다.</b> 팀원 관리는 스물여섯 명이 팀별로 접혀 있고 점수가 낮은 사람이 위로 올라오게 줄이 다시 서므로, 어제 본 자리에 오늘은 그 사람이 없었습니다 — 이제 목록 위 칸에 <b>이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책</b> 어느 것으로 쳐도 그 사람만 남습니다. 위 칩 숫자도 찾은 사람 안에서 다시 세어, 칩과 목록이 어긋나지 않습니다. DB 통합 CRM 찾기는 이름과 전화번호만 보던 것을 <b>지역 · 시 · 담당자 · 종류 · 통화 메모</b>까지 넓혔고, 초성과 번호 뒷자리로도 찾힙니다(<b>010-2222-3456</b> 처럼 통째로 붙여 넣으셔도 됩니다). 찾을 때마다 <b>몇 건이 걸렸는지</b> 칸 옆에 적고, 못 찾으면 못 찾았다고 적습니다. 그리고 <b>서랍 아래 딱지가 「미설정」이라고 먼저 단정하지 않습니다.</b> AI 는 앱이 켜질 때 회사 서버로 저절로 붙는데, 붙는 그 잠깐 동안 딱지가 「API 키 미설정」이라고 적혀 있어 화면을 열 때마다 키를 넣으라는 말이 스쳤습니다. 이제 <b>「AI 연결 확인 중…」</b>으로 서 있다가 붙으면 <b>「프록시 연결됨」</b>이 되고, 정말 붙을 길이 없을 때만 <b>「AI 연결 필요」</b>라고 말합니다 — 모르는 것을 「없다」로 적지 않습니다.";
+var APP_BUILD='2026-09-11 18:40';
+var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 막았습니다</b> — 자료가 늦게 오면 1.8초·4.2초 뒤에 판이 다시 서는데 그 판 안에 찾는 칸이 들어 있어, 느린 기계에서 찾는 중이면 <b>커서와 치던 글자를 잃었습니다.</b> 이제 치고 계시는 동안에는 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -13428,7 +13450,15 @@ function mountCrm(){
   var f=$('crmFrame');if(!f||f._mounted)return;
   /* 주소에 판 번호를 붙인다. 안 붙이면 브라우저가 지난번에 받아 둔 CRM 을
      그대로 다시 쓴다 — 새 기능을 넣어도 「안 보인다」가 된다. */
-  f.src=CRM_URL+'?v='+encodeURIComponent(APP_BUILD);f._mounted=true;
+  f.src=CRM_URL+'?v='+encodeURIComponent(APP_BUILD)+
+        (CUSF.want?('&find='+encodeURIComponent(CUSF.want)):'');
+  f._mounted=true;
+}
+/* 이미 떠 있는 CRM 에게 「이 사람을 찾아 달라」고 말한다 — 다시 싣지 않는다 */
+function cusCrmTell(q){
+  var f=$('crmFrame');
+  if(!f||!f._mounted||!f.contentWindow)return false;
+  try{f.contentWindow.postMessage({type:'apexCrmFind',q:q},'*');return true;}catch(e){return false;}
 }
 function reloadCrm(){var f=$('crmFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountCrm,30);toast('DB CRM 새로고침');}}
 
@@ -17734,6 +17764,7 @@ function renderHome(){
     '<p>'+sub+'</p>'+
     '<div class="hero-chips"><span>🤖 AI 비서</span><span>🧠 보험해석</span><span>📈 100점 성장</span><span>🗂️ 고객365일</span><span>🎓 교육</span></div>'+
     loginBtn+'</div>'+
+    (OS.profile?cusFindHtml():'')+
     '<div id="osSetupHome"></div>'+
     '<div id="osNfKeyHome"></div>'+
     '<div id="osNoticeHome"></div>'+
@@ -47701,6 +47732,9 @@ function osRepSaveGen(id,title){var el=$('res_'+id);var raw=(el&&el._raw)||'';if
 function osCliInfoLoad(){var sb=osClient();if(!sb||!OSC.current)return;
   sb.from('clients').select('phone,birth_year,gender,monthly_income,monthly_fixed_expense,household_notes').eq('id',OSC.current.id).single().then(function(r){
     if(r.error||!r.data)return;var d=r.data;var set=function(id,v){var e=$(id);if(e)e.value=(v==null?'':v);};
+    CUS.info=d;                       /* 한 장 카드가 읽는다 */
+    if(typeof cusPaint==='function')cusPaint();
+    if(typeof cusCrmLoad==='function')cusCrmLoad(true);  /* 연락처를 알고 나서 한 번 더 */
     set('cliPhone',d.phone);set('cliBirth',d.birth_year);set('cliIncome',d.monthly_income);
     set('cliExp',d.monthly_fixed_expense);set('cliMemo',d.household_notes);var g=$('cliGender');if(g)g.value=d.gender||'';
     try{CM_BASE[OSC.current.id]={by:d.birth_year,gd:d.gender,inc:d.monthly_income,exp:d.monthly_fixed_expense};}catch(e){}
@@ -47761,6 +47795,7 @@ function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.curren
   sb.from('saved_reports').select('id,kind,title,created_at,content').eq('client_id',OSC.current.id).neq('kind',CM_KIND).order('created_at',{ascending:false}).then(function(r){
     if(r.error){host.innerHTML=sqlNeedHtml('10','상담자료를 담을 자리');return;}
     OSC.reps=r.data||[];
+    CUS.repN=OSC.reps.length;if(typeof cusPaint==='function')cusPaint();
     if(!OSC.reps.length){host.innerHTML='<div class="osc-empty">아직 저장된 자료가 없습니다. AI 보장분석·비포&애프터 결과의 <b>💾 고객 365일 저장</b>, 재무설계 계산기의 <b>💾</b> 버튼으로 저장하세요.</div>';return;}
     var lbl={bojang:'📑 AI 보장분석',baba:'🔄 비포&애프터',finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
     host.innerHTML=OSC.reps.map(function(x,i){var k=lbl[x.kind]||('📄 '+(x.kind||'자료'));
@@ -48017,7 +48052,10 @@ function cmName(c){
 }
 
 /* ── 서버에 두는 것 ── */
-function cmBlank(){return {fp:{},fam:'',rel:'',next:null,touch:[],bd:'',up:0};}
+/* fams — <b>가족을 줄로</b> 적는 자리(배우자·자녀…). fam 은 고객으로
+   등록된 사람끼리 묶는 열쇠라 서로 다른 것이다. 표는 안 고친다 —
+   saved_reports 의 JSON 안이라 칸을 더해도 서버가 그대로다. */
+function cmBlank(){return {fp:{},fam:'',rel:'',next:null,touch:[],bd:'',up:0,fams:[]};}
 function cmOf(id){
   var m=CM.meta[id];
   if(m)return m;
@@ -48037,6 +48075,7 @@ function cmLoadAll(then){
       m=cmBlank();
       m.fp=c.fp||{};m.fam=c.fam||'';m.rel=c.rel||'';m.next=c.next||null;
       m.touch=(c.touch&&c.touch.push)?c.touch:[];m.bd=c.bd||'';m.up=c.up||0;
+      m.fams=(c.fams&&c.fams.push)?c.fams:[];
       m._rid=rows[i].id;
       CM.meta[rows[i].client_id]=m;
     }
@@ -48050,7 +48089,8 @@ function cmSave(id,patch,then){
   for(k in patch)m[k]=patch[k];
   m.up=new Date().getTime();
   var body={fp:m.fp||{},fam:m.fam||'',rel:m.rel||'',next:m.next||null,
-            touch:(m.touch||[]).slice(0,60),bd:m.bd||'',up:m.up};
+            touch:(m.touch||[]).slice(0,60),bd:m.bd||'',up:m.up,
+            fams:(m.fams||[]).slice(0,12)};
   var bad=function(r){
     var msg=(r&&r.error&&r.error.message)||'';
     toast('저장하지 못했습니다'+(msg?(' — '+msg.slice(0,60)):''),6000);
@@ -48073,18 +48113,12 @@ function cmSave(id,patch,then){
 /* ── 찾기 ──
    사람은 "김철수" 라고 치지 "김○○" 라고 치지 않는다.
    실명·마스킹 이름·초성·연락처 뒷자리·가족 이름 어느 것으로도 찾히게 한다. */
-var CM_CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
-function cmCho(s){
-  var o='',i,c;s=''+(s||'');
-  for(i=0;i<s.length;i++){
-    c=s.charCodeAt(i);
-    if(c>=0xAC00&&c<=0xD7A3)o+=CM_CHO[Math.floor((c-0xAC00)/588)];
-    else o+=s.charAt(i);
-  }
-  return o;
-}
-function cmOnlyCho(s){var i;s=''+(s||'');if(!s)return false;
-  for(i=0;i<s.length;i++)if(CM_CHO.indexOf(s.charAt(i))<0)return false;return true;}
+/* 초성 표는 <b>apex-cusone.js 한 곳</b>에만 둔다. 여기서 또 적으면
+   DB 통합 CRM 과 두 벌이 되던 그 자리가 다시 생긴다(5번).
+   이름(CM_CHO·cmCho)은 부르는 데가 많아 그대로 두고, 속만 넘긴다. */
+var CM_CHO=(typeof CUS_CHO!=='undefined')?CUS_CHO:[];
+function cmCho(s){return (typeof cusCho==='function')?cusCho(s):(''+(s||''));}
+function cmOnlyCho(s){return (typeof cusOnlyCho==='function')?cusOnlyCho(s):false;}
 function cmHit(c,q){
   if(!q)return true;
   q=(''+q).replace(/\s/g,'');
@@ -48092,18 +48126,13 @@ function cmHit(c,q){
   /* 담당자 이름으로도 찾힌다 — "박서준" 이라고 치면 그 사람이 맡은 고객이 나온다 */
   var pool=[c.name_masked||'',real,m.fam||'',(m.fp&&m.fp.f_job)||'',
             (typeof cmWhoName==='function'?cmWhoName(c):'')];
-  var i,v;
-  /* 초성만 쳤으면 초성으로 견준다 */
-  if(cmOnlyCho(q)){
-    for(i=0;i<pool.length;i++)if(pool[i]&&cmCho(pool[i]).indexOf(q)>=0)return true;
-    return false;
-  }
+  /* 견주는 셈은 apex-cusone.js 한 벌을 쓴다 — DB 통합 CRM 의 dbHit 과
+     거의 같은 것을 따로 갖고 있었다. 한쪽만 고쳐지면 「여기선 찾히는데
+     저기선 안 찾힌다」가 된다(5번). 이제 「010-2222-3456」 을 통째로
+     붙여 넣어도 걸린다. */
+  if(typeof cusHit==='function')return cusHit(pool,q,c.phone);
+  var i;
   for(i=0;i<pool.length;i++)if(pool[i]&&(''+pool[i]).replace(/\s/g,'').indexOf(q)>=0)return true;
-  /* 숫자를 쳤으면 연락처 뒷자리 */
-  if(/^\d{2,}$/.test(q)){
-    v=(''+(c.phone||'')).replace(/\D/g,'');
-    if(v&&v.indexOf(q)>=0)return true;
-  }
   return false;
 }
 
@@ -49280,6 +49309,8 @@ function cmFamGroupHtml(rows){
 function cmDetailPaint(id){
   var el=document.getElementById('cmPanels');
   if(el)el.innerHTML=cmPanelsHtml(id);
+  /* 한 장 카드도 같이 — 접촉을 남겼는데 위 카드가 옛것이면 두 곳이 갈린다 */
+  if(typeof cusPaint==='function')cusPaint();
 }
 function cmPanelsHtml(id){
   return cmRelHtml(id)+cmFamHtml(id)+cmFfPanelHtml(id);
@@ -49871,7 +49902,8 @@ function osClientsAfterRender(){
   if(!OS.profile)return;
   if(OSC.view==='list'){osLoadClients();return;}
   if(OSC.view==='detail'&&OSC.current){
-    osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();osCallsLoad();frLoad();
+    if(typeof cusCss==='function')cusCss();
+    osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();cusCrmLoad();frLoad();
     if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
   }
 }
@@ -49943,7 +49975,14 @@ function osRenderList(){
 function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
 function osClientsFilter(v){OSC.q=v;osRenderList();}
 function osConsentLabel(cs){return {none:'동의 전',requested:'동의 요청',granted:'동의 완료',revoked:'동의 철회'}[cs]||cs;}
-function osMaskName(name){var s=(''+name).trim();if(s.length<=1)return s;if(s.length===2)return s.charAt(0)+'*';var mid='';for(var i=1;i<s.length-1;i++)mid+='*';return s.charAt(0)+mid+s.charAt(s.length-1);}
+/* 이름 가리기도 apex-cusone.js 한 벌을 부른다 — CRM(crmMask)과 다르게
+   가리면 같은 사람이 두 사람으로 보인다. 못 싣는 판에서는 <b>더 세게</b>
+   가린다(이름을 그대로 흘리느니 성만 남긴다). */
+function osMaskName(name){
+  if(typeof cusMask==='function')return cusMask(name);
+  var s=(''+(name==null?'':name)).replace(/^\s+|\s+$/g,'');
+  return s?(s.charAt(0)+'○○'):'';
+}
 function osFmtDate(iso){if(!iso)return '';var d=new Date(iso);if(isNaN(d))return '';function p(n){return (n<10?'0':'')+n;}return d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate());}
 
 function osNewClient(){
@@ -49983,9 +50022,12 @@ function osOpenClient(id){
   var c=null;for(var i=0;i<OSC.list.length;i++){if(OSC.list[i].id===id){c=OSC.list[i];break;}}
   if(!c)return;
   cmRecentAdd(c);
+  /* 한 장 카드가 쥐고 있던 <b>앞 고객 것</b>을 비운다. 안 비우면 다음 사람
+     카드에 남의 통화가 잠깐 서 있다 — 고객 앞에서 제일 위험한 그림이다. */
+  cusReset();
   OSC.current=c;OSC.view='detail';go('clients');
 }
-function osBackToList(){OSC.view='list';OSC.current=null;go('clients');}
+function osBackToList(){OSC.view='list';OSC.current=null;cusReset();go('clients');}
 function osClientDetailHtml(c){
   var nm=cmName(c);var cs=c.consent_status||'none';
   return '<div class="osc-wrap">'+
@@ -49993,6 +50035,12 @@ function osClientDetailHtml(c){
     '<div class="osc-bar"><div><div class="osc-title" style="font-size:20px;font-weight:800">'+osEsc(nm)+'</div>'+
       '<div class="osc-sub" style="font-size:12px;color:#6B7280;margin-top:3px">'+osFmtDate(c.created_at)+' 등록 · <span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span></div></div>'+
     '</div>'+
+    /* ── 고객 한 장 ──
+       여기 위에 있던 것들(고객정보·가족·접촉기록·통화이력)은 <b>그대로</b>
+       아래 남아 있다. 이 카드는 그 흩어진 것을 한 장으로 모아 <b>맨 먼저</b>
+       보여 줄 뿐이다. 자료는 새로 안 만든다 — 표도 안 고친다. */
+    '<div id="cusCard">'+cusAppCardHtml(c)+'</div>'+
+    cusFamPanelHtml(c.id)+
     '<div class="osc-panel" style="margin-bottom:16px">'+
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">고객 정보 <span style="font-size:11px;font-weight:600;color:#9CA3AF">(내 계정에만 저장)</span></h3>'+
       '<div class="frm cols2">'+
@@ -50031,11 +50079,10 @@ function osClientDetailHtml(c){
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">저장된 상담 자료 <span style="font-size:11px;font-weight:600;color:#9CA3AF">AI 보장분석 · 비포&애프터 · 재무설계</span></h3>'+
       '<div id="oscReps"><div class="osc-loading">저장 자료를 불러오는 중…</div></div>'+
     '</div>'+
-    '<div class="osc-panel" style="margin-top:16px">'+
-      '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">DB 통합 CRM 통화 이력 '+
-        '<span style="font-size:11px;font-weight:600;color:#9CA3AF">이 고객에게 언제 어떻게 걸었나</span></h3>'+
-      '<div id="oscCalls"><div class="osc-loading">통화 기록을 찾는 중…</div></div>'+
-    '</div>'+
+    /* 여기 있던 「DB 통합 CRM 통화 이력」 칸은 <b>맨 위 한 장</b>으로 옮겼다.
+       통화와 접촉을 두 곳에서 따로 세면 「몇 번 연락했나」가 갈린다(규칙 ④). */
+    '<div class="btn-row" style="margin-top:4px">'+
+      '<button class="btn btn-ghost" onclick="go(\'crm\')">🗄️ DB 통합 CRM 에서 보기</button></div>'+
   '</div>';
 }
 
@@ -50043,59 +50090,305 @@ function osClientDetailHtml(c){
    같은 사람인데 두 화면에 따로 있으면 상담 전에 양쪽을 다 열어 봐야 한다.
    CRM 에는 마스킹 이름이 없으므로 담당자 + 이름으로 맞춘다 —
    그 사람의 실명은 이 기기에만 있으니 서버로는 아무것도 안 나간다. */
-function osCallsLoad(){
-  var sb=osClient(),host=document.getElementById('oscCalls'),c=OSC.current;
-  if(!sb||!host||!c)return;
-  var real=cmRealOf(c.id);
-  sb.from('dbs').select('id,customer_name,region,source,assigned_date,assigned_to')
-    .eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'').then(function(r){
-    if(r&&r.error){host.innerHTML='<div class="osc-empty">통화 기록을 불러오지 못했습니다.</div>';return;}
-    var rows=(r&&r.data)||[],hit=[],i,nm;
+/* ══════════ 고객 한 장 — 고객 365일 쪽 (cus*) ══════════════════════
+   그리는 일은 <b>apex-cusone.js</b> 가 한다(DB 통합 CRM 과 같은 파일).
+   여기서는 <b>흩어진 값을 모아</b> 그 카드에 넘기기만 한다.
+
+   모으는 곳이 넷이다 —
+     clients      연락처·출생년도·성별·소득·생활비   (osCliInfoLoad)
+     dbs          지역·단계·증권번호·계약 월납        (cusCrmLoad)
+     calls        통화                                (cusCrmLoad)
+     saved_reports 가족·접촉기록                       (cmOf)
+
+   <b>없는 값은 null 로 넘긴다.</b> 0 으로 넘기면 카드가 「0원」이라고
+   적고, 그것은 「없다」는 말이 된다(CLAUDE.md 1번).                   */
+var CUS={db:null,calls:[],info:null,docN:null,repN:null,crmTried:false};
+function cusReset(){CUS={db:null,calls:[],info:null,docN:null,repN:null,crmTried:false};}
+
+/* 지금 열려 있는 고객의 카드만 다시 그린다 */
+function cusPaint(){
+  var el=document.getElementById('cusCard');
+  if(!el||!OSC.current)return;
+  el.innerHTML=cusAppCardHtml(OSC.current);
+}
+function cusAppCardHtml(c){
+  if(typeof cusCardHtml!=='function'){
+    /* 파일을 못 실었다. 조용히 빈 자리를 두지 않는다 — 아래 칸들은 그대로 돈다 */
+    return '<div class="osc-note">고객 한 장(apex-cusone.js)을 불러오지 못했습니다. '+
+           '아래 칸에서 그대로 보실 수 있습니다.</div>';
+  }
+  if(typeof cusCss==='function')cusCss();
+  return cusCardHtml(cusAppView(c));
+}
+function cusAppView(c){
+  var m=(typeof cmOf==='function')?cmOf(c.id):{},info=CUS.info||{},db=CUS.db;
+  var real=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
+  var linked=[],mem=(m.fam&&typeof cmFamOf==='function')?cmFamOf(m.fam):[],i,x;
+  for(i=0;i<mem.length;i++){
+    x=mem[i];
+    if(!x||x.id===c.id)continue;
+    linked.push({id:x.id,name:cmName(x),rel:(cmOf(x.id).rel||'')});
+  }
+  var nul=function(v){return (v===undefined||v===null||v==='')?null:v;};
+  return {
+    name:real||c.name_masked||'(이름 없음)',
+    real:!!real,
+    phone:nul(info.phone)||nul(c.phone)||null,
+    region:db?(nul(db.region)||nul(db.sigungu)||null):null,
+    birth:nul(info.birth_year),
+    gender:nul(info.gender),
+    owner:(typeof cmWhoName==='function')?(cmWhoName(c)||''):'',
+    stage:db?nul(db.stage):null,
+    nextAppt:nul(c.next_appt)||(db?nul(db.next_appt):null)||null,
+    incomeMan:nul(info.monthly_income),
+    expenseMan:nul(info.monthly_fixed_expense),
+    policy:db?{no:nul(db.policy_no),premiumWon:nul(db.contract_premium),
+               contractedAt:nul(db.contracted_at),sentAt:nul(db.policy_sent_at)}:{},
+    fam:{key:m.fam||'',rel:m.rel||'',linked:linked,members:(m.fams||[])},
+    log:(typeof cusLog==='function')?cusLog(CUS.calls,m.touch||[]):[],
+    docs:{n:CUS.docN,reports:CUS.repN},
+    where:'app',
+    act:{open:'osOpenClient'}
+  };
+}
+
+/* ══════════ 홈에서 한 칸으로 찾기 (2단계) ══════════════════════════
+   여태 고객을 찾으려면 <b>어느 화면에 있는 사람인지</b>를 먼저 알아야
+   했습니다. 고객 365일로 넘긴 사람은 거기서, 아직 안 넘긴 사람은 DB
+   통합 CRM 에서 — 둘 중 어디인지는 찾기 전에는 모릅니다.
+
+   그래서 홈 맨 위에 <b>한 칸</b>을 둡니다. 이름·초성·번호 뒷자리·지역
+   어느 것으로 쳐도 두 곳을 함께 훑고, 누르면 <b>같은 한 장 카드</b>로
+   갑니다(고객 365일에 있으면 바로, 아직 없으면 CRM 에서).
+
+   ■ 견주는 셈은 <b>따로 만들지 않습니다</b> — 고객 365일이 쓰는 cmHit
+     과 apex-cusone.js 의 cusHit 을 그대로 부릅니다(5번).
+   ■ 배정 DB 는 <b>글자를 칠 때 한 번만</b> 읽습니다. 홈에 올 때마다
+     부르지 않습니다(7번). 한 번 읽으면 담아 두고 다시 안 부릅니다.
+   ■ 글자를 칠 때 <b>결과 줄만</b> 갈아 끼웁니다. 홈을 통째로 다시
+     그리면 커서를 잃어 한 글자마다 다시 눌러야 합니다.              */
+var CUSF={q:'',dbs:null,busy:false,want:''};
+function cusFindHtml(){
+  return '<div class="card" id="cusFindBox" style="margin:14px 0 0">'+
+    '<div class="card-hd" style="padding-bottom:8px"><div class="card-title">'+
+      '<span class="ci">🔎</span>고객 찾기</div>'+
+      '<div class="card-desc">이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 어느 것으로 쳐도 됩니다. '+
+      '<b>고객 365일과 DB 통합 CRM 을 함께</b> 훑습니다.</div></div>'+
+    '<div class="card-body" style="padding-top:0">'+
+      '<div class="cm-nrow"><input id="cusFindQ" type="search" autocomplete="off" '+
+        'placeholder="고객 찾기 — 홍길동 · ㅎㄱㄷ · 3456 · 순천" '+
+        'oninput="cusFindSet(this.value)" value="'+osEsc(CUSF.q)+'"></div>'+
+      '<div id="cusFindRows">'+cusFindRowsHtml()+'</div>'+
+    '</div></div>';
+}
+function cusFindSet(v){
+  CUSF.q=v;
+  if((v||'').replace(/\s/g,'').length>=1)cusFindLoadDbs();
+  cusFindRepaint();
+}
+function cusFindRepaint(){
+  var el=document.getElementById('cusFindRows');
+  if(el)el.innerHTML=cusFindRowsHtml();
+}
+/* 배정 DB 를 <b>한 번만</b> 읽는다 — 내가 맡은 것만, 찾는 데 쓸 칸만 */
+function cusFindLoadDbs(){
+  var sb=osClient(),uid=(OS.profile&&OS.profile.id)||'';
+  if(!sb||!uid||CUSF.dbs||CUSF.busy)return;
+  CUSF.busy=true;
+  sb.from('dbs').select('id,customer_name,phone,region,sigungu,stage,assigned_date')
+    .eq('assigned_to',uid).order('assigned_date',{ascending:false}).limit(400).then(function(r){
+    CUSF.busy=false;
+    CUSF.dbs=(r&&!r.error&&r.data)?r.data:[];
+    cusFindRepaint();
+  },function(){CUSF.busy=false;CUSF.dbs=[];cusFindRepaint();});
+}
+function cusFindRowsHtml(){
+  var q=(CUSF.q||'').replace(/^\s+|\s+$/g,'');
+  if(!q)return '';
+  var list=(typeof OSC!=='undefined'&&OSC.list)||[],cli=[],db=[],i,c,d,seen={};
+  for(i=0;i<list.length;i++){
+    c=list[i];
+    if(typeof cmHit==='function'&&cmHit(c,q)){cli.push(c);seen[(c.name_masked||'')]=1;}
+  }
+  var D=CUSF.dbs||[];
+  for(i=0;i<D.length;i++){
+    d=D[i];
+    if(typeof cusHit!=='function')break;
+    if(!cusHit([d.customer_name||'',d.region||'',d.sigungu||''],q,d.phone))continue;
+    /* 365 로 이미 넘어간 사람은 한 번만 세운다 — 같은 사람이 두 줄로 서면
+       어느 것을 눌러야 할지 그 자리에서 멈칫한다 */
+    if(seen[osMaskName((''+(d.customer_name||'')).replace(/\s/g,''))])continue;
+    db.push(d);
+  }
+  var h='',n=cli.length+db.length;
+  if(!n){
+    return '<div class="cm-none" style="margin-top:8px">「'+osEsc(q)+'」 로 찾은 고객이 없습니다.'+
+      (CUSF.dbs===null?' 배정 DB 를 읽는 중입니다…':'')+
+      '<br>실명·초성·연락처 뒷자리·지역으로 찾을 수 있습니다.</div>';
+  }
+  h+='<div class="cm-lab" style="margin:9px 0 6px">'+n+'명 찾았습니다'+
+     (db.length?(' · 그중 '+db.length+'명은 아직 고객 365일에 없습니다'):'')+'</div>';
+  for(i=0;i<cli.length&&i<8;i++){
+    c=cli[i];
+    h+='<button type="button" class="cus-frow" style="width:100%;text-align:left;cursor:pointer;margin-bottom:5px;background:#fff" '+
+      'onclick="cusFindOpen(\''+c.id+'\')">'+
+      '<span class="rel">365</span><span><b>'+osEsc(cmName(c))+'</b></span>'+
+      '<span style="color:#64748B;font-size:11.5px">'+osEsc((typeof cmWhoName==='function'?cmWhoName(c):'')||'')+'</span>'+
+      '<span style="margin-left:auto;color:#1D4ED8;font-weight:800;font-size:11.5px">한 장 열기 →</span></button>';
+  }
+  for(i=0;i<db.length&&i<8;i++){
+    d=db[i];
+    h+='<button type="button" class="cus-frow" style="width:100%;text-align:left;cursor:pointer;margin-bottom:5px;background:#fff" '+
+      /* <b>이름을 단추에 박지 않는다.</b> 화면 글자는 가려 놓고 onclick 에
+         실명을 적으면, 가린 뜻이 없다 — 번호만 넘기고 이름은 담아 둔 것에서
+         찾아 쓴다(규칙 ③). */
+      'onclick="cusFindCrm(\''+osEsc(d.id)+'\')">'+
+      '<span class="rel" style="color:#B45309">DB</span>'+
+      '<span><b>'+osEsc(osMaskName(d.customer_name||''))+'</b></span>'+
+      '<span style="color:#64748B;font-size:11.5px">'+osEsc(d.region||'')+(d.stage?(' · '+osEsc(d.stage)):'')+'</span>'+
+      '<span style="margin-left:auto;color:#B45309;font-weight:800;font-size:11.5px">CRM 에서 열기 →</span></button>';
+  }
+  if(cli.length>8||db.length>8)h+='<div class="cm-none">여덟 명씩만 보여 드립니다 — 더 치시면 좁혀집니다.</div>';
+  return h;
+}
+function cusFindOpen(id){
+  if(typeof osOpenClient==='function')osOpenClient(id);
+}
+/* 아직 365 에 없는 사람 — CRM 으로 보내되 <b>찾을 말을 들려</b> 보낸다.
+   이름만 넘어가고 사람은 또 훑어야 하면 한 칸으로 찾은 뜻이 없다. */
+function cusFindCrm(id){
+  var D=CUSF.dbs||[],i,nm='';
+  for(i=0;i<D.length;i++)if(D[i].id===id){nm=(''+(D[i].customer_name||'')).replace(/^\s+|\s+$/g,'');break;}
+  if(!nm){toast('그 사람을 못 찾았습니다. DB 통합 CRM 에서 찾아 주세요.');go('crm');return;}
+  CUSF.want=nm;
+  go('crm');
+  setTimeout(function(){ if(typeof cusCrmTell==='function')cusCrmTell(CUSF.want); },900);
+}
+
+
+/* ── 가족을 <b>줄로</b> ────────────────────────────────────────────
+   여태 가족은 「같은 가족 이름으로 묶기」뿐이었다. 그것은 <b>고객으로
+   등록된 사람</b>끼리만 묶인다. 배우자·아이는 등록되어 있지 않으니
+   적을 자리가 없어, 상담 때마다 다시 물었다.
+
+   여기 적는 줄은 <b>서버에 저장된다</b>(saved_reports 의 JSON). 그래서
+   실명을 적지 말라고 화면에 적어 둔다(CLAUDE.md 3번).               */
+function cusFamPanelHtml(id){
+  return '<div class="osc-panel" style="margin-bottom:16px">'+
+    '<h3 style="font-size:15px;font-weight:800;margin-bottom:4px">가족 — 줄로 적습니다</h3>'+
+    '<p style="font-size:12.5px;color:#6B7280;line-height:1.6;margin-bottom:10px">'+
+      '배우자·자녀처럼 <b>고객으로 등록되지 않은 가족</b>을 여기 적습니다. 위 한 장 카드에 그대로 섭니다. '+
+      '고객으로 등록된 가족은 아래 <b>가족으로 묶기</b>로 묶으면 카드에 같이 뜹니다.</p>'+
+    '<div id="cusFamRows">'+cusFamRowsHtml(id)+'</div>'+
+    '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-ghost" onclick="cusFamAdd(\''+id+'\')">＋ 한 줄 더</button>'+
+      '<button class="btn btn-primary" onclick="cusFamSave(\''+id+'\')">💾 가족 줄 저장</button></div>'+
+    '<div class="osc-note" style="margin-top:10px">이 줄은 <b>서버에 저장</b>됩니다 — '+
+      '<b>실명은 적지 마십시오.</b> 「배우자 · 1985년생」, 「첫째 · 2014년생」처럼 '+
+      '자리와 나이만으로 상담에는 충분합니다.</div>'+
+  '</div>';
+}
+function cusFamRowsHtml(id){
+  var L=(cmOf(id).fams||[]),h='',i,r;
+  if(!L.length)return '<div class="cm-none">아직 적은 가족이 없습니다. <b>＋ 한 줄 더</b> 로 시작하세요.</div>';
+  for(i=0;i<L.length;i++){
+    r=L[i]||{};
+    h+='<div class="cm-nrow" style="margin-bottom:6px">'+
+      '<input id="cusFamRel'+i+'" type="text" style="max-width:110px" placeholder="자리 — 배우자·첫째" value="'+osEsc(r.rel||'')+'" maxlength="10">'+
+      '<input id="cusFamNm'+i+'" type="text" style="max-width:120px" placeholder="부르는 말(선택)" value="'+osEsc(r.name||'')+'" maxlength="12">'+
+      '<input id="cusFamBy'+i+'" type="number" style="max-width:110px" placeholder="출생년도" value="'+osEsc(r.by||'')+'">'+
+      '<input id="cusFamNt'+i+'" type="text" placeholder="한 줄 메모 — 직장인 · 학생" value="'+osEsc(r.note||'')+'" maxlength="30">'+
+      '<button type="button" class="btn btn-ghost" onclick="cusFamDel(\''+id+'\','+i+')">&times;</button></div>';
+  }
+  return h;
+}
+/* 화면에 떠 있는 것을 읽는다 — 칸이 없으면 저장해 둔 것을 그대로 쓴다 */
+function cusFamRead(id){
+  var L=(cmOf(id).fams||[]),out=[],i,g=function(k,i){var e=$(k+i);return e?(''+(e.value==null?'':e.value)).replace(/^\s+|\s+$/g,''):null;};
+  for(i=0;i<L.length;i++){
+    var rel=g('cusFamRel',i),nm=g('cusFamNm',i),by=g('cusFamBy',i),nt=g('cusFamNt',i);
+    if(rel===null&&nm===null&&by===null&&nt===null){out.push(L[i]);continue;}
+    out.push({rel:rel||'',name:nm||'',by:by||'',note:nt||''});
+  }
+  return out;
+}
+function cusFamRepaint(id){
+  var el=document.getElementById('cusFamRows');
+  if(el)el.innerHTML=cusFamRowsHtml(id);
+}
+function cusFamAdd(id){
+  var m=cmOf(id);
+  m.fams=cusFamRead(id);          /* 치던 것을 잃지 않는다 */
+  if(m.fams.length>=12){toast('가족 줄은 12줄까지입니다.');return;}
+  m.fams.push({rel:'',name:'',by:'',note:''});
+  cusFamRepaint(id);
+}
+function cusFamDel(id,i){
+  var m=cmOf(id);
+  m.fams=cusFamRead(id);
+  m.fams.splice(i,1);
+  cusFamRepaint(id);
+}
+function cusFamSave(id){
+  var rows=cusFamRead(id),keep=[],i,r;
+  for(i=0;i<rows.length;i++){
+    r=rows[i]||{};
+    if(!(r.rel||r.name||r.by||r.note))continue;    /* 빈 줄은 안 담는다 */
+    keep.push({rel:(r.rel||'').slice(0,10),name:(r.name||'').slice(0,12),
+               by:(''+(r.by||'')).slice(0,4),note:(r.note||'').slice(0,30)});
+  }
+  cmSave(id,{fams:keep},function(){
+    toast(keep.length?('가족 '+keep.length+'줄을 저장했습니다'):'가족 줄을 비웠습니다');
+    cusFamRepaint(id);cusPaint();
+  });
+}
+
+/* ── DB 통합 CRM 쪽 값 가져오기 ────────────────────────────────────
+   지역·단계·증권번호·계약 월납은 dbs 에 있고, 통화는 calls 에 있다.
+   여기 있던 osCallsLoad 가 하던 일이다 — 그리기만 카드로 옮겼다.
+
+   이름으로 잇는다. <b>clients 에는 실명이 없어</b> 연락처가 있으면
+   연락처로, 없으면 마스킹 이름으로 견준다. 짐작으로 잇는 자리를
+   늘리지 않는다 — 서버에 못 박는 것은 3단계에서 한다(계획서 규칙 ②). */
+function cusCrmLoad(again){
+  var sb=osClient(),c=OSC.current;
+  if(!sb||!c)return;
+  /* 두 번 부른다 — 처음은 화면이 뜰 때, 다음은 <b>연락처를 알고 나서</b>.
+     연락처로 맞히는 편이 이름보다 정확한데, 그 값은 늦게 온다.
+     이미 찾았으면 다시 안 부른다 — 서버를 되풀이해 부르지 않는다(7번). */
+  if(CUS.crmTried&&!(again&&!CUS.db))return;
+  CUS.crmTried=true;
+  var real=(typeof cmRealOf==='function')?cmRealOf(c.id):'';
+  var cols='id,customer_name,phone,region,sigungu,source,stage,next_appt,'+
+           'policy_no,contract_premium,contracted_at,policy_sent_at,assigned_date,assigned_to';
+  var pick=function(rows){
+    var hit=[],i,nm,ph,myPh=(''+(c.phone||(CUS.info&&CUS.info.phone)||'')).replace(/[^0-9]/g,'');
     for(i=0;i<rows.length;i++){
       nm=(''+(rows[i].customer_name||'')).replace(/\s/g,'');
+      ph=(''+(rows[i].phone||'')).replace(/[^0-9]/g,'');
+      if(myPh&&ph&&myPh===ph){hit.push(rows[i]);continue;}
       if(!nm)continue;
-      /* 실명을 알면 실명으로, 모르면 마스킹의 성·끝 글자로 견준다 */
       if(real){ if(nm===real.replace(/\s/g,''))hit.push(rows[i]); }
       else if(osMaskName(nm)===(c.name_masked||''))hit.push(rows[i]);
     }
-    if(!hit.length){
-      host.innerHTML='<div class="osc-empty">이 고객은 DB 통합 CRM 에 없습니다. '+
-        'CRM 에서 <b>365</b> 단추로 넘긴 고객이면 여기에 통화 이력이 같이 보입니다.</div>';
-      return;
-    }
-    var ids=hit.map(function(x){return x.id;});
+    return hit;
+  };
+  sb.from('dbs').select(cols)
+    .eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'').then(function(r){
+    if(r&&r.error){cusPaint();return;}
+    var hit=pick((r&&r.data)||[]),ids,i;
+    if(!hit.length){cusPaint();return;}
+    /* 같은 사람이 여러 건이면 <b>가장 최근 배정</b>을 카드에 세운다 */
+    hit.sort(function(a,b){return (''+(b.assigned_date||''))<(''+(a.assigned_date||''))?-1:1;});
+    CUS.db=hit[0];
+    ids=[];for(i=0;i<hit.length;i++)ids.push(hit[i].id);
+    cusPaint();
     sb.from('calls').select('db_id,call_at,result,memo,appointment_at')
       .in('db_id',ids).order('call_at',{ascending:false}).limit(60).then(function(r2){
-      var cs=(r2&&!r2.error&&r2.data)||[];
-      osCallsPaint(host,hit,cs);
-    },function(){osCallsPaint(host,hit,[]);});
-  },function(){host.innerHTML='<div class="osc-empty">통화 기록을 불러오지 못했습니다.</div>';});
-}
-function osCallsPaint(host,dbs,calls){
-  var BG={'상담':'#059669','거절':'#DC2626','부재':'#D97706'};
-  var head=dbs.map(function(d){
-    return '<span class="cm-wt" style="margin:0 6px 0 0">'+osEsc((d.source||'일반'))+'</span>'+
-      '<span style="font-size:11.5px;color:#94A3B8">'+osEsc(d.region||'')+' · '+osFmtDate(d.assigned_date)+' 배정</span>';
-  }).join('<br>');
-  if(!calls.length){
-    host.innerHTML='<div style="margin-bottom:8px">'+head+'</div>'+
-      '<div class="osc-empty">아직 통화 기록이 없습니다. CRM 에서 접촉을 남기면 여기에 쌓입니다.</div>';
-    return;
-  }
-  var h='<div style="margin-bottom:9px">'+head+'</div>'+
-    '<div class="cm-lab" style="margin:0 0 7px">통화 '+calls.length+'건 · 가장 최근이 위</div><div class="ar-tks">';
-  var i,x,ap;
-  for(i=0;i<calls.length&&i<30;i++){
-    x=calls[i];
-    ap=x.appointment_at?(' · 약속 '+(''+x.appointment_at).slice(0,10)):'';
-    h+='<div class="cm-call"><span class="d">'+osEsc((''+(x.call_at||'')).slice(0,10))+'</span>'+
-      '<span class="r" style="background:'+(BG[x.result]||'#64748B')+'">'+osEsc(x.result||'-')+'</span>'+
-      '<span class="m">'+osEsc(vaCut(x.memo||'메모 없음',60))+osEsc(ap)+'</span></div>';
-  }
-  h+='</div>';
-  if(calls.length>30)h+='<div class="cm-lab" style="margin-top:7px">가장 최근 30건만 보여 줍니다</div>';
-  h+='<div class="btn-row" style="margin-top:10px"><button class="btn btn-ghost" onclick="go(\'crm\')">DB 통합 CRM 에서 보기</button></div>';
-  host.innerHTML=h;
+      CUS.calls=(r2&&!r2.error&&r2.data)||[];
+      cusPaint();
+    },function(){cusPaint();});
+  },function(){cusPaint();});
 }
 
 /* ── Phase 2b: 문서 업로드 ─────────────────────────────────────────────── */
@@ -50113,7 +50406,7 @@ function osLoadDocs(){
   sb.from('documents').select('id,file_name,kind,storage_path,checksum,page_count,parse_status,created_at')
     .eq('client_id',OSC.current.id).order('created_at',{ascending:false}).then(function(r){
     if(r.error){osSetDocs('<div class="osc-empty">문서를 불러오지 못했습니다: '+osEsc(r.error.message)+'</div>');return;}
-    OSC.docs=r.data||[];osRenderDocs();
+    OSC.docs=r.data||[];CUS.docN=OSC.docs.length;if(typeof cusPaint==='function')cusPaint();osRenderDocs();
   });
 }
 function osSetDocs(html){var el=document.getElementById('oscDocs');if(el)el.innerHTML=html;}
