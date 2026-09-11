@@ -56,6 +56,35 @@
     return true;
   }
 
+  /* ── 찾기 — <b>견주는 규칙도 한 벌</b> ────────────────────────
+     고객 365일(cmHit)과 DB 통합 CRM(dbHit)이 거의 같은 셈을 따로
+     갖고 있었습니다. 한쪽만 고쳐지면 「고객 365일에서는 찾히는데
+     CRM 에서는 안 찾힌다」가 됩니다.
+
+       pool  견줄 글자들 (이름·지역·담당자·메모…)
+       q     사람이 친 것
+       phone 연락처. 숫자를 쳤으면 <b>뒷자리</b>로도 견준다.
+             「010-2222-3456」 을 통째로 붙여 넣어도 걸리게 친 쪽의
+             하이픈도 턴다 — 사장님이 실제로 그렇게 붙여 넣으십니다. */
+  function cusHit(pool, q, phone) {
+    if (!q) return true;
+    q = ('' + q).replace(/\s/g, '');
+    var i, v, lq = q.toLowerCase();
+    if (cusOnlyCho(q)) {
+      for (i = 0; i < pool.length; i++) if (pool[i] && cusCho(pool[i]).indexOf(q) >= 0) return true;
+      return false;
+    }
+    for (i = 0; i < pool.length; i++) {
+      if (pool[i] && ('' + pool[i]).replace(/\s/g, '').toLowerCase().indexOf(lq) >= 0) return true;
+    }
+    var num = q.replace(/[^0-9]/g, '');
+    if (num.length >= 2 && !/[^0-9\-]/.test(q) && phone) {
+      v = ('' + phone).replace(/\D/g, '');
+      if (v && v.indexOf(num) >= 0) return true;
+    }
+    return false;
+  }
+
   /* ── 이름 가리기 — 김철수 → 김*수 ────────────────────────────
      고객 365일(osMaskName)과 CRM(crmMask)이 각자 갖고 있던 것을
      여기 한 벌로 모읍니다. 두 곳이 다르게 가리면 같은 사람이 다른
@@ -89,9 +118,17 @@
     var n = Math.round(+won);
     if (isNaN(n)) return null;
     if (n === 0) return '0원';
-    if (Math.abs(n) < 10000) return n.toLocaleString() + '원';
-    var man = Math.round(n / 10000);
-    return cusWon(man);            /* 원단위OK — 만원으로 바꿔 넘긴다 */
+    /* <b>반올림하지 않는다.</b> 187,000원을 「19만원」으로 적으면 그 자리에서
+       틀린 숫자다. 억·만·원을 그대로 끊어 적는다 — 「18만 7,000원」. */
+    var neg = n < 0, a = Math.abs(n), out = [];
+    var eok = Math.floor(a / 100000000);
+    var man = Math.floor((a % 100000000) / 10000);
+    var won1 = a % 10000;
+    if (eok) out.push(eok.toLocaleString() + '억');
+    if (man) out.push(man.toLocaleString() + '만');
+    if (won1) out.push(won1.toLocaleString() + '원');
+    else if (out.length) out[out.length - 1] += '원';   /* 15만 → 15만원 */
+    return (neg ? '-' : '') + out.join(' ');
   }
   function cusDate(v) {
     if (!v) return '';
@@ -321,6 +358,7 @@
   w.cusCho = cusCho;
   w.cusOnlyCho = cusOnlyCho;
   w.cusMask = cusMask;
+  w.cusHit = cusHit;
   w.cusWon = cusWon;
   w.cusWonR = cusWonR;
   w.CUS_CHO = CUS_CHO;

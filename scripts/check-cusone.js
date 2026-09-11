@@ -18,7 +18,9 @@
      5. 아직 담을 자리가 없는 칸(보험사·설계번호·납입수단·납입일·
         청약철회)은 <b>빈 칸으로도 그리지 않는다</b> — 적으면 사라진다
      6. 이름은 <b>가린 것이 기본</b>이다. CRM 카드에서 보려면 한 번 더
-        누른다 (3번 · 계획서 규칙 ③)                                   */
+        누른다 (3번 · 계획서 규칙 ③)
+     7. (2단계) 홈에서 <b>한 칸</b>으로 찾으면 두 곳을 함께 훑고, 누르면
+        같은 카드로 간다. 견주는 셈도 한 벌이다                          */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
 
@@ -49,6 +51,11 @@ function twins() {
   const maskLit = t => (t.match(/mid\s*\+=\s*['"]\*['"]/g) || []).length;
   is(maskLit(mod) === 1, '이름 가리기도 한 벌 (' + maskLit(mod) + '개)');
   is(maskLit(idx) === 0 && maskLit(crm) === 0, '두 화면에는 가리는 셈이 남아 있지 않다');
+  /* 찾는 셈 — 연락처 뒷자리를 견주는 줄이 두 화면에 다시 생기면 안 된다 */
+  const hitLit = t => (t.match(/num\.length\s*>=\s*2/g) || []).length;
+  is(hitLit(mod) === 1 && hitLit(idx) === 0 && hitLit(crm) === 0,
+     '찾는 셈(번호 뒷자리)도 한 벌 — 두 화면에는 없다');
+  is(/cusHit\(/.test(idx) && /cusHit\(/.test(crm), '두 화면이 같은 찾기를 부른다');
   is(/apex-cusone\.js/.test(idx) && /apex-cusone\.js/.test(crm), '두 화면이 같은 파일을 싣는다');
 }
 
@@ -102,6 +109,11 @@ function twins() {
   is(/CRM 통화/.test(A.html) && /접촉/.test(A.html), '어디서 온 기록인지 줄마다 적는다');
   is(/15만원/.test(A.html), '계약 월납 150,000원을 15만원으로 읽는다 (만 배 사고 없음)');
   is(!/15억/.test(A.html) && !/1,500,000/.test(A.html), '만 배로 부풀지 않았다');
+  /* 반올림해서 적으면 그 자리에서 틀린 숫자가 된다 — 187,000원은 19만원이 아니다 */
+  const W = await page.evaluate(() => [cusWonR(187000), cusWonR(150000), cusWonR(350000000), cusWonR(5000)]);
+  is(W[0] === '18만 7,000원', '187,000원을 「18만 7,000원」으로 — 반올림하지 않는다 (' + W[0] + ')');
+  is(W[1] === '15만원' && W[3] === '5,000원', '딱 떨어지면 딱 떨어지게 적는다');
+  is(W[2] === '3억 5,000만원', '큰 금액은 억으로 끊어 적는다 (' + W[2] + ')');
   is(/월 생활비<\/b><span><span class="cus-unk">모름/.test(A.html.replace(/\s+/g, ' ')) ||
      /모름/.test(A.html), '안 적은 값은 「모름」 — 0 으로 적지 않는다');
   is(/배우자/.test(A.html) && /1985년생/.test(A.html) && /첫째/.test(A.html),
@@ -154,7 +166,41 @@ function twins() {
   is(/고객 365일에 있습니다/.test(C.body), '안 읽는 값은 「모름」이 아니라 어디 있는지 적는다');
   is(/상담/.test(C.body) && /보장분석 약속/.test(C.body), '통화가 연락기록으로 선다');
 
-  console.log('\n[5] 화면이 터지지 않았나');
+  console.log('\n[5] 홈에서 한 칸으로 찾기 (2단계)');
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2400);
+  const D = await page.evaluate(() => {
+    OS.profile = { id: 'me', role: 'member', name: '윤시현' };
+    CM.loaded = true; CM.who = { me: '윤시현' }; CM.meta = {};
+    OSC.list = [{ id: 'k1', advisor_id: 'me', name_masked: '홍*동',
+                  created_at: '2026-01-05T00:00:00Z', phone: '010-1234-5678' }];
+    /* 배정 DB 에만 있는 사람 — 아직 365 로 안 넘긴 사람이다 */
+    CUSF.dbs = [{ id: 'd9', customer_name: '홍판서', phone: '010-9999-3456',
+                  region: '순천', stage: 'TA', assigned_date: '2026-09-01' },
+                { id: 'd1', customer_name: '홍길동', phone: '010-1234-5678',
+                  region: '광주', stage: 'AP', assigned_date: '2026-08-01' }];
+    cmRealSet('k1', '홍길동');
+    const box = cusFindHtml();
+    cusFindSet('홍');           const both = cusFindRowsHtml();
+    cusFindSet('ㅎㄱㄷ');        const cho  = cusFindRowsHtml();
+    cusFindSet('010-9999-3456'); const num  = cusFindRowsHtml();
+    cusFindSet('없는사람');      const none = cusFindRowsHtml();
+    cusFindSet('');
+    cmRealSet('k1', '');
+    return { box, both, cho, num, none, home: renderHome() };
+  });
+  is(/id="cusFindQ"/.test(D.box), '홈에 찾는 칸이 한 개 선다');
+  is(/id="cusFindQ"/.test(D.home), '홈을 그리면 그 칸이 맨 위에 있다');
+  is(/2명 찾았습니다/.test(D.both), '두 곳을 함께 훑는다 — 365 와 배정 DB');
+  is(/아직 고객 365일에 없습니다/.test(D.both), '아직 안 넘긴 사람은 그렇다고 말한다');
+  is(/한 장 열기/.test(D.both) && /CRM 에서 열기/.test(D.both), '어디로 가는지 줄마다 적는다');
+  is(/홍길동/.test(D.both) && !/홍판서/.test(D.both), '배정 DB 이름도 가려서 세운다 (규칙 ③)');
+  is(/찾았습니다/.test(D.cho), '초성(ㅎㄱㄷ)으로도 찾힌다');
+  is(/찾았습니다/.test(D.num), '「010-9999-3456」 을 통째로 붙여 넣어도 찾힌다');
+  is(/찾은 고객이 없습니다/.test(D.none), '못 찾으면 못 찾았다고 적는다');
+  is(!/2명 찾았습니다/.test(D.none), '없는데 있는 척하지 않는다');
+
+  console.log('\n[6] 화면이 터지지 않았나');
   const mine = errs.filter(e => /cus|Cus/.test(e));
   is(mine.length === 0, '고객 한 장에서 나온 오류 없음' + (mine.length ? (' — ' + mine[0]) : ''));
 

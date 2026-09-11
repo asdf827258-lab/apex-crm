@@ -490,6 +490,27 @@ function isAdmin(){return canManageTeam()}
 /* APEX YUN PRO 앱과 동일한 Supabase 프로젝트(공개 anon 키) — 같은 계정으로 로그인되도록 통일.
    별도 설정을 하지 않아도 앱과 CRM이 같은 auth·profiles를 공유합니다. (필요 시 아래 설정에서 덮어쓰기 가능) */
 const APEX_DEFAULT_SB={url:"https://miakdhxtqofpndtlyzxa.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pYWtkaHh0cW9mcG5kdGx5enhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNzA5NDIsImV4cCI6MjA5OTc0Njk0Mn0.Rodj7B8brXLiIP3g4kLJl4oCzMKlbYzy1SgwSAFhzOU"};
+/* ── 홈 「고객 찾기」에서 넘어온 말 ────────────────────────────────
+   홈 한 칸에서 찾은 사람이 아직 365 에 없으면 여기로 보냅니다. 이름만
+   넘어오고 사람은 또 눈으로 훑어야 하면 한 칸으로 찾은 뜻이 없습니다.
+   주소의 find= 로 오거나(처음 뜰 때), 이미 떠 있으면 말로 옵니다. */
+let cusFindDone=false;
+function cusFindTake(q){
+  q=(q||"").trim();
+  if(!q)return;
+  const el=$("search");
+  if(!el)return;
+  el.value=q;
+  goPage("db");
+  try{renderDb()}catch(e){}
+  try{el.scrollIntoView({block:"center"})}catch(e){}
+  toast(`「${q}」 로 찾았습니다.`);
+}
+window.addEventListener("message",e=>{
+  const d=e&&e.data;
+  if(d&&d.type==="apexCrmFind")cusFindTake(d.q);
+});
+
 function init(){
   const fileCfg=(window.APEX_CONFIG && !String(window.APEX_CONFIG.url||"").includes("YOUR_PROJECT")) ? window.APEX_CONFIG : null;
   /* 이 브라우저에 한 번 잘못 저장된 설정이 <b>올바른 기본값을 영원히 이기고</b> 있었다.
@@ -583,6 +604,12 @@ async function loadAll(){
   dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
   cliKeys={};((cl&&!cl.error&&cl.data)||[]).forEach(x=>{cliKeys[(x.advisor_id||"")+"|"+(x.name_masked||"")]=1});
   fillProfiles();fillSources();renderAll();
+  /* 홈 「고객 찾기」에서 이름을 들고 왔으면 <b>한 번만</b> 그 사람을 찾아 세운다.
+     자료가 다 온 뒤라야 찾을 수 있어 여기서 한다. */
+  if(!cusFindDone){
+    cusFindDone=true;
+    try{ cusFindTake(new URLSearchParams(location.search).get("find")||"") }catch(e){}
+  }
 }
 function fillProfiles(){
   const members=profiles.filter(p=>p.active!==false);
@@ -744,19 +771,11 @@ function dbPool(d){
 }
 function dbHit(d,q){
   if(!q)return true;
-  q=String(q).replace(/\s/g,"");
-  const pool=dbPool(d);
-  if(dbOnlyCho(q))return pool.some(v=>v&&dbCho(v).includes(q));
-  const lq=q.toLowerCase();
-  if(pool.some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq)))return true;
-  /* 숫자를 쳤으면 연락처 뒷자리. 하이픈을 <b>친 쪽에서도</b> 뺀다 —
-     사장님은 「010-2222-3456」 을 통째로 붙여 넣으십니다.               */
-  const num=q.replace(/[^0-9]/g,"");
-  if(num.length>=2&&!/[^0-9\-]/.test(q)){
-    const v=String(d.phone||"").replace(/\D/g,"");
-    if(v&&v.includes(num))return true;
-  }
-  return false;
+  /* 견주는 셈은 /app/apex-cusone.js 한 벌을 쓴다 — 고객 365일(cmHit)과
+     거의 같은 것을 따로 갖고 있었다(5번). 못 실은 판에서는 글자만 견준다. */
+  if(typeof cusHit==="function")return cusHit(dbPool(d),q,d.phone);
+  const lq=String(q).replace(/\s/g,"").toLowerCase();
+  return dbPool(d).some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq));
 }
 function renderDb(){
   const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
