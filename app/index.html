@@ -9263,21 +9263,19 @@ function arFindNote(){
 }
 function arQSet(v){
   AR.q=v||'';AR.open='';
-  var el=document.getElementById('arTeamList');
-  if(!el){arPaint();return;}
   /* 칸(input)만 그대로 두고 나머지를 다시 그린다 — 칸까지 새로 세우면
-     한 글자마다 커서를 잃어 아무도 안 씁니다.                          */
-  el.innerHTML=arTeamRowsHtml();
-  var f=document.getElementById('arFilterRow');
-  if(f)f.innerHTML=arFilterChips();
-  var n=document.getElementById('arFindN');
-  if(n)n.textContent=arFindNote();
-  var x=document.getElementById('arFindX');
-  if(x)x.hidden=!AR.q;
+     한 글자마다 커서를 잃어 아무도 안 씁니다. 줄이 아직 없으면 판부터 세운다. */
+  if(!arRowsSwap())arPaint();
 }
 function arQClear(){
-  AR.q='';AR.open='';arPaint();
+  AR.q='';AR.open='';
+  /* <b>칸도 같이 비운다.</b> 판을 통째로 다시 세우면 칸이 새로 서면서 저절로
+     비워지지만, 치던 중이라 줄만 갈아 끼우는 길로 가면 글자가 남는다 —
+     그러면 「지웠는데 글자가 남아」 다음에 또 걸린다. */
   var el=document.getElementById('arFind');
+  if(el)el.value='';
+  arPaint();
+  el=document.getElementById('arFind');
   if(el)try{el.focus();}catch(e){}
 }
 /* 리더가 먼저 볼 네 줄 — 오늘 누구에게 전화할지만 정하면 된다 */
@@ -10705,9 +10703,29 @@ function arInnerHtml(){
     '</div></div>';
   return h;
 }
+/* ── 판을 다시 세울 때 <b>치던 글자를 뺏지 않는다</b> ─────────────
+   자료가 늦게 오면 1.8초·4.2초 뒤에 판이 다시 섭니다(osAiRepAfterRender).
+   그런데 판 안에 <b>찾는 칸</b>이 들어 있어, 그 사이에 팀원을 찾고 있으면
+   칸이 새로 서면서 <b>커서와 치던 글자를 잃었습니다.</b> 느린 기계일수록
+   잘 겹칩니다 — CI 에서 실제로 그 자리가 걸렸습니다.
+
+   #361 이 「칠 때는 줄만 갈아 끼운다」로 고친 것은 <b>치는 그 순간</b>뿐이고,
+   예약된 다시 그리기가 남아 있었습니다. 이제 둘이 같은 길을 씁니다. */
+function arRowsSwap(){
+  var el=document.getElementById('arTeamList');
+  if(!el)return false;
+  el.innerHTML=arTeamRowsHtml();
+  var f=document.getElementById('arFilterRow'); if(f)f.innerHTML=arFilterChips();
+  var n=document.getElementById('arFindN');     if(n)n.textContent=arFindNote();
+  var x=document.getElementById('arFindX');     if(x)x.hidden=!AR.q;
+  return true;
+}
 function arPaint(){
   var el=document.getElementById('arPane');
-  if(el)el.innerHTML=arInnerHtml();
+  var f=document.getElementById('arFind');
+  /* 사람이 찾는 칸에 손을 올려 두고 있으면 판을 통째로 세우지 않는다.
+     줄·칩·「몇 명」만 갈아 끼우면 그 사람이 보는 것은 똑같고, 치던 것은 남는다. */
+  if(!(f&&document.activeElement===f&&arRowsSwap())&&el)el.innerHTML=arInnerHtml();
   var m=document.getElementById('ckArMini');
   if(m)m.innerHTML=arMiniHtml(m.getAttribute('data-face')||'me');
 }
@@ -13185,8 +13203,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-11 18:05';
-var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다.";
+var APP_BUILD='2026-09-11 18:40';
+var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 막았습니다</b> — 자료가 늦게 오면 1.8초·4.2초 뒤에 판이 다시 서는데 그 판 안에 찾는 칸이 들어 있어, 느린 기계에서 찾는 중이면 <b>커서와 치던 글자를 잃었습니다.</b> 이제 치고 계시는 동안에는 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
