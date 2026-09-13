@@ -11864,6 +11864,90 @@ function navGoIn(k){
   go('airep');
   setTimeout(function(){ try{ if(typeof arGoCat==='function')arGoCat(k); }catch(e){} },0);
 }
+/* ══ 한 칸에서 <b>사람까지</b> 찾는다 ═══════════════════════════════
+   찾기가 여태 <b>화면 이름</b>만 봤습니다. 그런데 사장님이 제일 자주
+   떠올리시는 말은 <b>사람 이름</b>입니다 — 「홍길동 어디 있더라」.
+   지금 그걸 치면 「찾은 메뉴가 없습니다」 가 떠서 <b>없는 것처럼</b>
+   보였습니다. 실제로는 고객 365일에 그대로 계십니다.
+
+   지키는 것 셋.
+     ① <b>서버를 새로 부르지 않습니다</b> (7번). 이미 읽어 둔 것만 봅니다.
+        글자 하나 칠 때마다 서버를 부르면 한도가 바로 넘습니다.
+     ② <b>안 읽은 것을 「없다」 라고 하지 않습니다</b> (1번). 아직 목록을
+        안 읽었으면 <b>어디를 한 번 열면 되는지</b> 말합니다.
+     ③ <b>판정은 navHit 하나로</b> 합니다 (5번). 초성·영타·오타를 메뉴와
+        똑같이 견딥니다. 여기서 따로 견주면 한쪽만 고쳐집니다.
+
+   실명은 이 브라우저에만 있습니다 (3번) — 찾기도 이 안에서만 돕니다.
+   아무 데도 보내지 않습니다.                                          */
+var NAV_PPL_MAX=8;            /* 서랍이 이름으로 가득 차지 않게 */
+function navCliRows(){ return (typeof OSC!=='undefined'&&OSC.list&&OSC.list.length)?OSC.list:null; }
+function navTeamRows(){ return (typeof GB!=='undefined'&&GB.rows&&GB.rows.length)?GB.rows:null; }
+/* 견줄 때 <b>id 는 빼고</b> 넘깁니다. 고객 id 는 긴 무작위 글자라, 그것까지
+   보면 「3」 한 글자에 엉뚱한 분이 우수수 걸립니다 — 헛것을 잡는 찾기는
+   안 잡느니만 못합니다 (8번). */
+function navPplItem(nm,sub){ return {id:'',title:nm||'',ak:sub||''}; }
+function navPeopleFind(q,loose){
+  var out={cli:[],team:[],cliRead:false,teamRead:false},rows,i,nm,sub;
+  rows=navCliRows();
+  if(rows){
+    out.cliRead=true;
+    for(i=0;i<rows.length;i++){
+      nm=(typeof cmName==='function')?cmName(rows[i]):(rows[i].name_masked||'');
+      if(nm&&navHit(navPplItem(nm,''),q,loose))out.cli.push({id:rows[i].id,nm:nm});
+    }
+  }
+  rows=navTeamRows();
+  if(rows){
+    out.teamRead=true;
+    for(i=0;i<rows.length;i++){
+      nm=rows[i].name||'';
+      sub=((typeof arRoleKo==='function')?arRoleKo(rows[i].role):'')+' '+
+          ((typeof gbTeamName==='function')?(gbTeamName(rows[i].team)||''):'');
+      sub=sub.replace(/^\s+|\s+$/g,'');
+      if(nm&&navHit(navPplItem(nm,sub),q,loose))out.team.push({id:rows[i].id,nm:nm,sub:sub});
+    }
+  }
+  return out;
+}
+/* 이름이 아니라 <b>id 로</b> 넘깁니다 — 이름에 따옴표가 들어 있으면
+   onclick 이 그 자리에서 깨집니다. */
+function navGoCli(id){
+  if(typeof osOpenClient==='function')osOpenClient(id);
+  else go('clients');
+}
+function navGoTeam(id){
+  var rows=navTeamRows(),i,nm='';
+  if(rows)for(i=0;i<rows.length;i++)if(rows[i].id===id){nm=rows[i].name||'';break;}
+  /* 팀원 관리의 <b>찾는 칸에 그 이름을 넣어 둡니다</b> — 열자마자 그 사람만
+     서 있어야 합니다. 찾아 놓고 다시 훑게 하면 찾은 것이 아닙니다. */
+  try{ if(typeof AR!=='undefined')AR.q=nm; }catch(e){}
+  navGoIn('team');
+}
+function navPplGrpHtml(ic,name,list,tag,fn,go2,goT){
+  var h='',i,x,more=list.length-NAV_PPL_MAX;
+  h+='<div class="nav-group" style="--gc:#0F766E;--ge:#5EAAA4;--gt:#fff;--ga:#F0FBF9;--gb:#99F6E4">'+
+     '<div class="nav-group-label"><span class="ngl-left"><span class="ngl-ic">'+ic+'</span>'+
+     '<span class="ngl-t">'+esc(name)+'</span></span>'+
+     '<span class="ngl-n">'+list.length+'</span></div><div class="nav-group-items">';
+  for(i=0;i<list.length&&i<NAV_PPL_MAX;i++){
+    x=list[i];
+    h+='<div class="nav-row"><button class="tab-btn" onclick="'+fn+'(\''+esc(x.id)+'\')">'+
+       '<span class="ti">'+ic+'</span><span class="tt">'+esc(x.nm)+
+       (x.sub?(' <em style="opacity:.62;font-style:normal">'+esc(x.sub)+'</em>'):'')+'</span>'+
+       '<span class="tc">'+esc(tag)+'</span></button></div>';
+  }
+  if(more>0)
+    h+='<div class="nav-row"><button class="tab-btn" onclick="'+go2+'">'+
+       '<span class="ti">⋯</span><span class="tt">외 '+more+'명 — '+esc(goT)+'에서 보기</span></button></div>';
+  return h+'</div></div>';
+}
+function navPeopleHtml(q,loose){
+  var p=navPeopleFind(q,loose),h='';
+  if(p.cli.length)h+=navPplGrpHtml('🧑','고객',p.cli,'고객 365일','navGoCli',"go('clients')",'고객 365일');
+  if(p.team.length)h+=navPplGrpHtml('👥','팀원',p.team,'팀원 관리','navGoTeam',"navGoIn('team')",'팀원 관리');
+  return {h:h,n:p.cli.length+p.team.length,cliRead:p.cliRead,teamRead:p.teamRead};
+}
 /* 메뉴 한 줄 — 별표를 같이 단다 */
 function navBtnHtml(it,star){
   var fav=navIsFav(it.id);
@@ -12008,7 +12092,7 @@ function navFixHtml(){
       '<span class="sbg-ic">🗺️</span><span class="sbg-t">APEX 전체 지도</span>'+
       '<span class="sbg-go">화면 89개 · 자비스</span></button>'+
     '<div class="nav-find"><span class="nf-ic">🔎</span>'+
-      '<input id="navFind" placeholder="메뉴 찾기 (이름·초성)" autocomplete="off">'+
+      '<input id="navFind" placeholder="찾기 — 화면 · 고객 · 팀원 (초성도 됩니다)" autocomplete="off">'+
       '<button type="button" class="nf-x" id="navFindX" hidden '+
         'onclick="navFindClear()" aria-label="찾기 지우기">✕</button>'+
     '</div>';
@@ -12709,8 +12793,16 @@ function navPaintBody(){
     vis.forEach(function(g){
       g.items.forEach(function(it){ if(navHit(it,NAV_Q,false))hitN++; });
     });
+    /* 메뉴가 하나도 안 걸렸어도 <b>사람이 걸렸으면</b> 넓히지 않습니다.
+       「홍길동」 을 치셨는데 한 글자 틀린 메뉴까지 올라오면, 정작 찾으신
+       분이 그 아래로 밀립니다. */
+    if(!hitN){ var p0=navPeopleFind(NAV_Q,false); hitN=p0.cli.length+p0.team.length; }
     NAV_LOOSE=(hitN===0);
   }
+  /* <b>사람을 맨 위에</b> 세웁니다 — 이름을 치신 것이면 그게 답입니다 */
+  var ppl=NAV_Q?navPeopleHtml(NAV_Q,NAV_LOOSE)
+               :{h:'',n:0,cliRead:true,teamRead:true};
+  h+=ppl.h;
   var found=0;
   vis.forEach(function(g,i){
     var c=navRamp(i,vis.length),name=g.group;
@@ -12762,9 +12854,17 @@ function navPaintBody(){
          '<span class="ngl-n">'+inN+'</span></div>'+
          '<div class="nav-group-items">'+inH+'</div></div>';
   }
-  if(NAV_Q&&!found&&!inN)
-    h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 메뉴가 없습니다.<br>'+
-       '이름 일부나 초성(ㄱㄱ)으로도 찾을 수 있습니다.</div>';
+  /* <b>안 읽은 것을 「없다」 라고 적지 않습니다</b> (1번). 고객 목록·팀
+     명단을 아직 한 번도 안 읽었으면, 없는 것이 아니라 <b>아직 모르는</b>
+     것입니다 — 어디를 한 번 열면 되는지 말해 드립니다. */
+  if(NAV_Q&&!found&&!inN&&!ppl.n)
+    h+='<div class="nav-none">「'+esc(NAV_Q)+'」 로 찾은 것이 없습니다.<br>'+
+       '화면 이름·고객 이름·팀원 이름을 초성(ㄱㄱ)으로도 찾을 수 있습니다.'+
+       (ppl.cliRead?'':'<br><b>고객 목록은 아직 안 읽었습니다</b> — 고객 365일을 '+
+        '한 번 열면 여기서도 이름으로 찾힙니다.')+
+       (ppl.teamRead?'':'<br><b>팀 명단은 아직 안 읽었습니다</b> — TFA 업무관리를 '+
+        '한 번 열면 여기서도 이름으로 찾힙니다.')+
+       '</div>';
   body.innerHTML=h;
 }
 
@@ -13347,8 +13447,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-13 18:20';
-var APP_BUILD_NOTE="<b>홈이 순서를 정해 드립니다.</b> 그동안 홈은 바로가기 카드밭이라 무엇부터 할지는 사장님이 정하셔야 했습니다. 이제 맨 위에 <b>「오늘 챙길 것 N건입니다」</b> 가 서고, 그 아래 <b>①②③</b> 이 붙은 줄을 위에서부터 누르시면 됩니다 — 시간이 정해진 <b>약속</b>이 맨 위, 그다음 <b>계약 마디 · 연락할 분 · 할 일 · 생일 · 도와줄 것</b> 차례입니다. <b>없는 갈래는 줄을 안 세웁니다</b> — 0 을 늘어놓으면 아무것도 안 보입니다. 숫자는 <b>새로 세지 않고</b> 달력이 이미 센 것을 그대로 씁니다. 그리고 <b>달력이 홈에 올라왔습니다.</b> 위 <b>주 / 월</b> 로 넘기시면 되고, <b>주간</b>에서는 점이 아니라 <b>무엇이 있는지가 글자로</b> 보입니다 — 눌러 보지 않아도 이번 주가 읽힙니다. 달력은 <b>한 벌</b>이라 홈에서 주로 바꾸면 <b>내 캘린더 · TFA 스케줄 관리 · 고객 365일</b> 도 같이 주가 됩니다. 날짜를 누르면 그날 것이 아래에 펴집니다. 함께, <b>소식에서 카드뉴스까지 길이 안 끊깁니다</b> — 정책·상품 뉴스 줄마다 <b>「🎨 카드뉴스로」</b> 가 붙고, 올리면 그 화면으로 데려가 바로 캐러셀을 만듭니다. 넘기는 것은 <b>제목·갈래·출처</b>뿐입니다. 끝으로 <b>팀원 관리에서 글자를 치다 커서를 잃던 것</b>을 잡았습니다 — 화면이 스스로 다시 그릴 때 <b>찾던 칸·친 글자·찾아 둔 줄</b>이 통째로 「불러오는 중」으로 돌아가곤 했습니다. 이제 <b>다시 읽어도 보시던 것은 그대로</b> 있고, 다시 읽는 중이라는 말만 숫자 옆에 붙습니다.";
+var APP_BUILD='2026-09-13 21:30';
+var APP_BUILD_NOTE="<b>찾기 한 칸에서 사람까지 찾힙니다.</b> ☰ 서랍 맨 위 찾는 칸이 여태 <b>화면 이름</b>만 봤습니다. 그런데 제일 자주 떠올리시는 말은 <b>사람 이름</b>입니다 — 「홍길동 어디 있더라」. 그걸 치면 「찾은 메뉴가 없습니다」 가 떠서 <b>없는 것처럼</b> 보였습니다. 이제 한 칸에서 <b>화면 · 고객 · 팀원</b>이 같이 걸리고 <b>사람이 맨 위에</b> 섭니다. 고객을 누르면 <b>그 분 카드가 바로</b>, 팀원을 누르면 팀원 관리가 <b>그 이름이 들어간 채</b> 열립니다. <b>초성(ㅎㄱㄷ)·영타·한 글자 오타</b>는 메뉴와 똑같이 견딥니다. 그리고 <b>안 읽은 것을 「없다」 라고 하지 않습니다</b> — 고객 목록을 아직 안 읽었으면 어디를 한 번 열면 되는지 적습니다. 글자를 쳐도 <b>서버는 새로 안 부릅니다.</b> 함께, <b>증권 PDF 를 끌어다 놓을 수 있는 자리가 넷으로 늘었습니다</b> — 여태 미끼 도구와 고객 365일 문서만 받았고, <b>AI 제안서 첨부</b>와 <b>재무설계 KB PDF</b> 는 「파일 고르기」 를 눌러 폴더를 다시 찾아 들어가야 했습니다. 이제 넷 다 <b>끌어다 놓으시면</b> 됩니다. 떨어뜨린 PDF 를 <b>탭이 그냥 열어 보시던 화면이 날아가는 일</b>도 한 곳에서 막습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18891,6 +18991,34 @@ function prEvidenceHtml(){
 
 
 /* ── 첨부 관리 ── */
+/* ══ 파일을 <b>끌어다 놓는</b> 자리 — 플러밍은 한 곳 ════════════════
+   증권 PDF 를 창에 끌어다 놓으면 받는 자리가 여럿인데, 자리마다
+   dragover/drop 을 따로 적어 두면 한 곳을 고칠 때 나머지가 그대로
+   남습니다 (5번). 무엇보다 <b>브라우저 기본 동작을 막는 것</b>을 한
+   군데서만 신경 쓰면 됩니다 — 안 막으면 떨어뜨린 PDF 를 탭이 그냥
+   열어 버려서 <b>보시던 화면이 통째로 날아갑니다.</b> 실제로 그게
+   제일 놀라는 자리입니다.                                            */
+function osDragOver(e,el,on){
+  e.preventDefault();
+  if(el&&el.classList)el.classList.toggle('drag',!!on);
+}
+/* 받는 쪽은 원래 &lt;input type=file&gt; 을 그대로 쓰던 함수들입니다. 그
+   함수들을 고치지 않고 <b>같은 모양의 껍데기</b>를 만들어 넘깁니다 —
+   고치면 「파일 고르기」 쪽이 같이 흔들립니다.
+   삼항 사슬로 늘어놓지 않고 <b>표 하나</b>로 둡니다 — 받는 자리가 늘어도
+   빠뜨릴 곳이 없습니다 (5번). */
+function osDropShim(files){ return {files:files,value:''}; }
+var OS_DROP_TO={
+  pr:  function(files,slot){ if(typeof prAdd==='function')prAdd(slot,osDropShim(files)); },
+  frkb:function(files){ if(typeof frKbRead==='function')frKbRead(osDropShim(files)); },
+  cli: function(files){ if(typeof osHandleFiles==='function')osHandleFiles(files); }
+};
+function osDropTo(e,to,arg){
+  osDragOver(e,e.currentTarget,0);
+  var dt=e.dataTransfer,fn=OS_DROP_TO[to];
+  if(!fn||!dt||!dt.files||!dt.files.length)return;
+  fn(dt.files,arg);
+}
 function prPick(slot){var el=document.getElementById('prFile_'+slot);if(el)el.click();}
 function prAdd(slot,input){
   var fs=input&&input.files?input.files:null;if(!fs||!fs.length)return;
@@ -18928,7 +19056,11 @@ function prSlotBox(slot,title,desc,color){
     '<div style="font-size:13px;font-weight:800;color:#0B1B34">'+title+'</div>'+
     '<div style="font-size:11.5px;color:#7A8698;line-height:1.6;margin:3px 0 9px">'+desc+'</div>'+
     '<input type="file" id="prFile_'+slot+'" accept=".pdf,image/*" multiple style="display:none" onchange="prAdd(\''+slot+'\',this)">'+
-    '<button class="btn btn-ghost" onclick="prPick(\''+slot+'\')">📎 파일 첨부 (PDF · 이미지)</button>'+
+    '<div class="dropzone" onclick="prPick(\''+slot+'\')" '+
+      'ondragover="osDragOver(event,this,1)" ondragleave="osDragOver(event,this,0)" '+
+      'ondrop="osDropTo(event,\'pr\',\''+slot+'\')">'+
+      '<div class="dz-ic">📎</div><div class="dz-t">클릭 또는 <b>끌어다 놓기</b></div>'+
+      '<div class="dz-s">PDF · 이미지 · 최대 '+PDF_MAX_MB+'MB</div></div>'+
     '<div style="margin-top:9px">'+prFileList(slot)+'</div></div>';
 }
 
@@ -39754,7 +39886,7 @@ function extractPdfSmart(file){
 /* ── 업로드 상태 ── */
 var PDFSTORE={},PDFMODE={},PDFSLOTS={};
 function pdfPick(key,multi){var inp=document.createElement('input');inp.type='file';inp.accept='application/pdf,.pdf';if(multi)inp.multiple=true;inp.onchange=function(){pdfAdd(key,inp.files,multi);};inp.click();}
-function pdfDrag(e,el,on){e.preventDefault();el.classList.toggle('drag',!!on);}
+function pdfDrag(e,el,on){osDragOver(e,el,on);}
 function pdfDrop(e,key,multi){e.preventDefault();e.currentTarget.classList.remove('drag');pdfAdd(key,e.dataTransfer.files,multi);}
 function pdfAdd(key,list,multi){
   if(!PDFSTORE[key])PDFSTORE[key]=[];
@@ -50672,11 +50804,14 @@ function osCallsPaint(host,dbs,calls){
 function osPickFile(){var f=document.getElementById('oscFile');if(f)f.click();}
 function osBindDrop(){
   var z=document.getElementById('oscDrop');if(!z||z.__bound)return;z.__bound=true;
-  var stop=function(e){e.preventDefault();e.stopPropagation();};
-  z.addEventListener('dragover',function(e){stop(e);z.classList.add('drag');});
-  z.addEventListener('dragleave',function(e){stop(e);z.classList.remove('drag');});
-  z.addEventListener('drop',function(e){stop(e);z.classList.remove('drag');
-    var dt=e.dataTransfer;if(dt&&dt.files&&dt.files.length)osHandleFiles(dt.files);});
+  /* 플러밍도 받는 자리도 <b>한 곳</b>을 거칩니다 (5번) — 여기만 따로
+     적어 두면 기본 동작 막는 것을 여기서만 빠뜨리게 됩니다. */
+  z.addEventListener('dragover',function(e){osDragOver(e,z,1);});
+  z.addEventListener('dragleave',function(e){osDragOver(e,z,0);});
+  z.addEventListener('drop',function(e){
+    osDragOver(e,z,0);
+    var dt=e.dataTransfer;if(dt&&dt.files&&dt.files.length)OS_DROP_TO.cli(dt.files);
+  });
 }
 function osLoadDocs(){
   var sb=osClient();if(!sb||!OSC.current)return;
@@ -52086,6 +52221,11 @@ function frKbHtml(){
     '<div class="hd"><b>📄 KB 보장분석 PDF 올리기</b>'+
       '<button class="fr-abtn" onclick="frKbPick()">파일 고르기</button></div>'+
     '<input type="file" id="frKbFile" accept="application/pdf,.pdf" style="display:none" onchange="frKbRead(this)">'+
+    '<div class="dropzone fr-noprint" onclick="frKbPick()" '+
+      'ondragover="osDragOver(event,this,1)" ondragleave="osDragOver(event,this,0)" '+
+      'ondrop="osDropTo(event,\'frkb\')">'+
+      '<div class="dz-ic">📄</div><div class="dz-t">클릭 또는 <b>끌어다 놓기</b></div>'+
+      '<div class="dz-s">KB 보장분석 PDF</div></div>'+
     '<div id="frKbBox">'+frKbIdleHtml()+'</div></div>';
 }
 

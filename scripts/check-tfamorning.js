@@ -90,9 +90,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const btn = [...host.querySelectorAll('.tab-btn')].filter(x => /팀원 관리/.test(x.textContent))[0];
     if (btn) btn.click();
     const cat = AR.cat;
-    /* 없는 말에는 예전처럼 「없습니다」 — 아무거나 올리면 더 못 찾으신다 */
+    /* 없는 말에는 「없습니다」 — 아무거나 올리면 더 못 찾으신다.
+       ★ 글자 그대로를 박아 두지 않는다. 찾기가 사람(고객·팀원)까지 보게
+         되면서 「찾은 <b>메뉴</b>가 없습니다」 는 도리어 거짓말이 됐다.
+         재는 것은 <b>없다고 말하는가</b> 와 <b>한 줄도 안 올리는가</b>
+         둘이다 — 뜻이 그대로면 문구는 바뀌어도 된다 (8번). */
     navFind('zzzz없는것zzzz');
-    const none = /로 찾은 메뉴가 없습니다/.test(document.getElementById('navHost').textContent);
+    const nHost = document.getElementById('navHost');
+    const none = /없습니다/.test(nHost.textContent) &&
+                 nHost.querySelectorAll('.nav-group .tab-btn').length === 0;
     navFind('');
     return { got, drawn, cat, none,
              /* 이름을 여기에 또 적으면 칸이 늘 때 한쪽만 고쳐진다 (5번).
