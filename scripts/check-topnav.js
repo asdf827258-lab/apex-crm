@@ -352,7 +352,12 @@ const OWNER = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 
     const val = document.getElementById('navFind').value;
     const fi2 = document.getElementById('navFind');
     fi2.value = 'zzz없는것'; fi2.dispatchEvent(new Event('input', { bubbles: true }));
-    const none = /찾은 메뉴가 없습니다/.test(document.getElementById('navHost').textContent);
+    /* 글자 그대로를 박아 두지 않는다 — 찾기가 사람까지 보게 되면서
+       「찾은 <b>메뉴</b>가 없습니다」 는 도리어 거짓말이 됐다(화면만 본다는
+       뜻이 되므로). 재는 것은 <b>빈 화면으로 두지 않는가</b> 와
+       <b>어떻게 찾으면 되는지 알려 주는가</b> 둘이다 (8번). */
+    const nText = document.getElementById('navHost').textContent;
+    const none = /없습니다/.test(nText) && /초성/.test(nText);
     const fi3 = document.getElementById('navFind');
     fi3.value = ''; fi3.dispatchEvent(new Event('input', { bubbles: true }));
     const back = document.querySelectorAll('#navHost .nav-group').length;
