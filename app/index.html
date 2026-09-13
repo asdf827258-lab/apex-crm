@@ -13181,8 +13181,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-10 00:45';
-var APP_BUILD_NOTE="<b>팀원 관리와 DB 통합 CRM 에서 찾으면 뜹니다.</b> 팀원 관리는 스물여섯 명이 팀별로 접혀 있고 점수가 낮은 사람이 위로 올라오게 줄이 다시 서므로, 어제 본 자리에 오늘은 그 사람이 없었습니다 — 이제 목록 위 칸에 <b>이름 · 초성(ㄱㅊㅅ) · 팀 이름 · 직책</b> 어느 것으로 쳐도 그 사람만 남습니다. 위 칩 숫자도 찾은 사람 안에서 다시 세어, 칩과 목록이 어긋나지 않습니다. DB 통합 CRM 찾기는 이름과 전화번호만 보던 것을 <b>지역 · 시 · 담당자 · 종류 · 통화 메모</b>까지 넓혔고, 초성과 번호 뒷자리로도 찾힙니다(<b>010-2222-3456</b> 처럼 통째로 붙여 넣으셔도 됩니다). 찾을 때마다 <b>몇 건이 걸렸는지</b> 칸 옆에 적고, 못 찾으면 못 찾았다고 적습니다. 그리고 <b>서랍 아래 딱지가 「미설정」이라고 먼저 단정하지 않습니다.</b> AI 는 앱이 켜질 때 회사 서버로 저절로 붙는데, 붙는 그 잠깐 동안 딱지가 「API 키 미설정」이라고 적혀 있어 화면을 열 때마다 키를 넣으라는 말이 스쳤습니다. 이제 <b>「AI 연결 확인 중…」</b>으로 서 있다가 붙으면 <b>「프록시 연결됨」</b>이 되고, 정말 붙을 길이 없을 때만 <b>「AI 연결 필요」</b>라고 말합니다 — 모르는 것을 「없다」로 적지 않습니다.";
+var APP_BUILD='2026-09-13 09:20';
+var APP_BUILD_NOTE="<b>소식에서 카드뉴스까지 길이 안 끊깁니다.</b> 「고객에게 전할 뉴스」에서는 예전부터 <b>🎨 이 소식으로 카드뉴스</b> 로 인스타 캐러셀까지 한 번에 갔는데, <b>정책·상품 뉴스에 올린 뒤에는 길이 끊겼습니다</b> — 올렸다는 말만 하고 끝나서, 카드뉴스로 가려면 인스타 칸으로 옮겨 가 제목을 손으로 다시 적어야 했습니다. 이제 ① 정책·상품 뉴스의 <b>줄마다 「🎨 카드뉴스로」</b> 가 붙었고, ② <b>올리면 그 화면으로 데려갑니다</b> — 맨 위 줄에서 바로 누르시면 주제가 저절로 채워지고 캐러셀이 만들어집니다. 넘기는 것은 <b>제목 · 갈래 · 출처</b>뿐입니다 — 기사 본문은 안 옮깁니다(남의 글입니다). 글은 우리 관점에서 새로 씁니다. 넘기는 자리는 <b>한 곳(newsToCard)</b>으로 모았습니다 — 두 화면이 같은 하나를 부르므로, 한쪽만 고쳐 놓고 다 고친 줄 아는 일이 없습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -55557,6 +55557,7 @@ function bizNewsExtraHtml(){
       '<span class="biz-news-tag '+bizNewsTag(it.tag)+'">'+osEsc(it.tag||'새소식')+'</span>'+
       '<span class="dt">'+osEsc(it.date||'')+'</span><span class="ti">'+osEsc(it.title||'')+'</span></div>'+
       '<div class="ds">'+osEsc(it.desc||'')+'</div>'+
+      '<button type="button" class="btn btn-primary biz-news-card" onclick="bizNewsToCard('+i+')">🎨 카드뉴스로</button>'+
       (it.url?('<a class="btn btn-ghost" href="'+osEsc(it.url)+'" target="_blank" rel="noopener">출처·자세히 ↗</a>'):'')+
       (bizNewsCanEdit()?('<button type="button" class="btn btn-ghost" onclick="bizNewsDel('+i+')">지우기</button>'):'')+
       '</div>';
@@ -55816,7 +55817,13 @@ function nlToBiz(i){
   list.unshift({cat:cat,tag:'새소식',date:(it.d||'').slice(0,10)||
     (new Date(Date.now()+9*3600*1000)).toISOString().slice(0,7),
     title:it.t,desc:'출처: '+(it.s||'')+' · 원문에서 숫자와 시행일을 확인하고 쓰세요.',url:it.u||''});
-  bizNewsSaveAll(list,function(){toast('정책·상품 뉴스에 올렸습니다. 팀 전체에 바로 보입니다.',5000);nlPaint();});
+  /* 올려 두고 <b>그 화면으로 데려갑니다.</b> 예전에는 올렸다는 말만 하고
+     끝나서, 카드뉴스로 가려면 인스타 칸에서 제목을 손으로 다시 적어야
+     했습니다. 이제 맨 위 줄에서 「🎨 카드뉴스로」를 바로 누르시면 됩니다. */
+  bizNewsSaveAll(list,function(){
+    toast('정책·상품 뉴스에 올렸습니다 — 맨 위 줄의 「🎨 카드뉴스로」를 누르면 바로 캐러셀이 만들어집니다',7000);
+    go('biz_news');
+  });
 }
 
 function nlChipsHtml(){
@@ -55871,20 +55878,44 @@ function nlItemsHtml(){
 
    기사 본문은 안 옮긴다 — 남의 글이다. 제목과 출처만 「소재」 로 건네고,
    글은 우리 관점(치료비 통장·8통장)에서 새로 쓴다. */
+/* ── 소식 하나 → 카드뉴스 ──
+   <b>여기 한 곳</b>만 「어떻게 넘기는지」를 압니다. 고객에게 전할 뉴스도,
+   정책·상품 뉴스도 이 하나를 부릅니다 — 두 곳에 같은 것을 두지 않습니다 (5번).
+
+   넘기는 것은 <b>제목 · 갈래 · 출처</b> 뿐입니다. 기사 본문은 안 옮깁니다 —
+   남의 글이라서요 (9번). 글은 우리 관점(치료비 통장·8통장)에서 새로 씁니다.  */
+function newsToCard(o){
+  o=o||{};
+  var title=(''+(o.t||'')).replace(/^\s+|\s+$/g,'');
+  if(!title){toast('그 소식을 찾지 못했습니다');return;}
+  var catName=o.cat||'';
+  var topic=title+(catName?(' — '+catName+' 소식'):'')+'을 우리 고객 눈높이로 풀어 주세요'+
+            (o.s?(' (출처 '+o.s+')'):'');
+  try{ sessionStorage.setItem('apex_nl_topic',topic); }catch(e){}
+  if(typeof NLIVE!=='undefined')NLIVE.toCard=topic;
+  go('insta');
+  /* 인스타 칸이 그려진 뒤에 채웁니다. 한 번에 안 되면 몇 번 더 봅니다 —
+     칸이 늦게 그려지면 조용히 아무 일도 안 일어나는 것이 제일 나쁩니다. */
+  nlFillTopic(0);
+}
 function nlToCard(i){
   var it=(NLIVE.items||[])[i];
   if(!it){toast('그 소식을 찾지 못했습니다');return;}
-  var cat=nlCatOf((it.cats||[])[0]||'ins');
-  /* AI 에게 건네는 것은 「무엇에 대해 쓸지」 한 줄이다 */
-  var topic=it.t+' — '+cat.t+' 소식을 우리 고객 눈높이로 풀어 주세요'+
-            (it.s?(' (출처 '+it.s+')'):'');
-  try{ sessionStorage.setItem('apex_nl_topic',topic); }catch(e){}
-  NLIVE.toCard=topic;
-  go('insta');
-  /* 인스타 칸이 그려진 뒤에 채운다. 한 번에 안 되면 몇 번 더 본다 —
-     칸이 늦게 그려지면 조용히 아무 일도 안 일어나는 것이 제일 나쁘다. */
-  nlFillTopic(0);
+  newsToCard({t:it.t,s:it.s,cat:nlCatOf((it.cats||[])[0]||'ins').t});
 }
+/* 정책·상품 뉴스에 올려 둔 소식에서도 <b>그 자리에서</b> 카드뉴스로 갑니다.
+   예전에는 올리고 나면 길이 끊겨, 인스타 칸으로 가서 제목을 손으로 다시
+   적어야 했습니다.                                                      */
+function bizNewsToCard(i){
+  var it=bizNewsExtra()[i];
+  if(!it){toast('그 소식을 찾지 못했습니다');return;}
+  /* desc 에 「출처: OOO · …」 로 적어 두었으므로 거기서 언론사만 도로 뽑습니다 */
+  var m=(''+(it.desc||'')).match(/출처:\s*([^·\n]+)/);
+  newsToCard({t:it.title,s:m?m[1].replace(/\s+$/,''):'',cat:bizNewsCatName(it.cat)});
+}
+/* 칸 이름은 표에서 읽습니다 — 삼항 사슬로 늘어놓지 않습니다 (5번) */
+var BIZ_CAT_NAME={finance:'금융·보험',saving:'저축·세금',welfare:'정부지원',health:'건강·의료'};
+function bizNewsCatName(c){ return BIZ_CAT_NAME[c]||''; }
 function nlFillTopic(n){
   var t=NLIVE.toCard;
   if(!t){try{t=sessionStorage.getItem('apex_nl_topic')||'';}catch(e){}}
@@ -56797,6 +56828,8 @@ function renderBizNews(){
    '.biz-news-item .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px}',
    '.biz-news-item .dt{font-size:11px;color:#9AA2AD;font-weight:700}.biz-news-item .ti{font-size:13px;font-weight:800;color:#1C2434}',
    '.biz-news-item .ds{font-size:12px;color:#4B5563;line-height:1.6;margin-bottom:8px}',
+   '.biz-news-item .btn{padding:6px 12px;font-size:11.5px;margin-right:6px}',
+   '.biz-news-card{white-space:nowrap}',
    '.biz-news-tag{font-size:10px;font-weight:800;border-radius:6px;padding:2px 7px;white-space:nowrap}',
    '.biz-news-tag.r{background:#FEF2F2;color:#B91C1C}.biz-news-tag.a{background:#FFFBEB;color:#B45309}.biz-news-tag.g{background:#F0FDF4;color:#15803D}.biz-news-tag.n{background:#F1F5F9;color:#475569}'
   ].join('');
