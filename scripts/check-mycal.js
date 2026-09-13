@@ -149,7 +149,24 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   console.log('\n[5] 화면이 선다');
   const html = await page.evaluate(() => renderMyCal());
   is(/내 캘린더/.test(html), '  칸 이름이 「내 캘린더」 다');
-  is(/mcalYmShift\(-1\)/.test(html) && /mcalYmShift\(1\)/.test(html), '  달을 앞뒤로 넘긴다');
+  /* 함수 <b>이름</b>을 박아 두면, 이름만 바뀌어도 빨간불이 뜬다 — 실제로는
+     멀쩡한데 사람이 점검을 안 믿게 된다. 홈에도 같은 달력을 세우면서 앞뒤
+     단추가 mcalYmShift 에서 mcalMove(주/월을 같이 옮긴다)로 바뀌었다.
+     그래서 이름이 아니라 <b>실제로 달이 넘어가는지</b>로 잰다.          */
+  const mv = await page.evaluate(() => {
+    const box = document.createElement('div');
+    box.innerHTML = renderMyCal();
+    const ons = Array.from(box.querySelectorAll('button'))
+      .map(b => b.getAttribute('onclick') || '')
+      .filter(s => /^mcal[A-Za-z]*\(\s*-?1\s*\)$/.test(s));
+    if (ons.length !== 2) return { ok: false, why: '앞뒤로 넘기는 단추가 ' + ons.length + '개' };
+    /* MCAL.ym 은 아직 비어 있을 수 있다 — 화면이 실제로 쓰는 mcalYm() 으로 잰다 */
+    const start = mcalYm(), seen = [];
+    ons.forEach(s => { try { (0, eval)(s); } catch (e) {} seen.push(mcalYm()); });
+    return { ok: seen[0] !== start && seen[1] === start,
+             why: start + ' → ' + seen.join(' → ') };
+  });
+  is(mv.ok, '  달을 앞뒤로 넘긴다 — ' + mv.why);
   is((html.match(/class="mcal-d/g) || []).length >= 28, '  한 달치 날이 다 그려진다');
   is(/mcalDownload\('daily'\)/.test(html), '  🔔 매일 아침 알림 받기');
   is(/mcalDownload\('today'\)/.test(html), '  📅 오늘 것 넣기');

@@ -234,14 +234,60 @@ const type = async (pg, txt) => {
   is(got.length === 3 && got.indexOf('홍길동') < 0,
      '「광양」 + 「보고 없음」 = 셋 — 보고가 있는 홍길동은 원래 순천지점이라 안 걸린다');
   /* 거르개를 누르면 판이 통째로 다시 섭니다. 그때 <b>친 글자가 그대로인데</b>
-     지우는 단추가 사라지면, 되돌릴 길이 안 보입니다.                    */
-  const xKeep = await pg.evaluate(() => {
-    const b = document.getElementById('arFindX');
-    return { q: AR.q, seen: !!(b && !b.hidden && b.getBoundingClientRect().width > 0) };
-  });
+     지우는 단추가 사라지면, 되돌릴 길이 안 보입니다.
+
+     ★ 한 순간만 재면 안 됩니다. 이 화면은 <b>스스로 예약해 둔 다시 그리기</b>가
+       1.8초·2.4초·4.2초에 돕니다. 한 번 찍어 맞으면, 그 사이에 단추가
+       사라졌다 돌아와도 통과해 버립니다 — CI 에서 실제로 이 한 순간이
+       어긋나 빨간불이 떴고, 로컬에서는 재는 시각이 달라 늘 통과했습니다.
+       그래서 <b>1.8초 내내</b> 지켜보고, 한 번이라도 사라지면 언제 그랬는지
+       시간선을 찍습니다.                                              */
+  const xKeep = await pg.evaluate(() => new Promise(done => {
+    const t0 = Date.now(), tl = [];
+    const tick = () => {
+      const b = document.getElementById('arFindX');
+      tl.push([Date.now() - t0,
+               b ? (b.hidden ? '숨' : Math.round(b.getBoundingClientRect().width)) : '없',
+               AR.q, document.querySelectorAll('#arTeamList .ar-nmx').length]);
+      if (Date.now() - t0 >= 1800) {
+        const gone = tl.filter(r => r[1] === '없' || r[1] === '숨' || r[1] === 0);
+        done({ q: AR.q, seen: gone.length === 0, gone: gone.slice(0, 4),
+               last: tl[tl.length - 1] });
+      } else setTimeout(tick, 30);
+    };
+    tick();
+  }));
   is(xKeep.q === '광양' && xKeep.seen,
-     '칩을 눌러 판이 다시 서도 <b>지우는 단추가 그대로 있다</b> — 친 글자가 남아 있으니까');
+     '칩을 눌러 판이 다시 서도 <b>지우는 단추가 1.8초 내내 그대로 있다</b> — 친 글자가 남아 있으니까' +
+     (xKeep.seen ? '' : ' — 사라진 자리 ' + JSON.stringify(xKeep.gone) + ' · 끝 ' + JSON.stringify(xKeep.last)));
   await pg.evaluate(() => { arFilterSet('all'); });
+  await pg.waitForTimeout(80);
+
+  /* ─────────────────────────────────────────────────────────────
+     ★ 「새로 읽기」를 누르거나 조직도를 반영하면 팀 기록을 다시 읽습니다.
+       그동안 판을 통째로 「불러오는 중」으로 돌려 버리면 <b>찾던 칸과 친
+       글자가 같이 사라집니다.</b> 이미 세워 둔 사람이 있으면 그대로 두고
+       읽어야 합니다.                                                  */
+  head('[5-2] 다시 읽는 중에도 <b>찾던 칸이 안 사라진다</b>');
+  await type(pg, '광양');
+  const reread = await pg.evaluate(() => {
+    GB.loaded = false;                 /* 앱이 다시 읽을 때 실제로 하는 일 */
+    arPaint();
+    const f = document.getElementById('arFind'), x = document.getElementById('arFindX');
+    const out = { box: !!f, v: f ? f.value : '', q: AR.q,
+                  x: !!(x && !x.hidden && x.getBoundingClientRect().width > 0),
+                  rows: document.querySelectorAll('#arTeamList .ar-nmx').length,
+                  note: (document.querySelector('.ar-n') || {}).textContent || '' };
+    GB.loaded = true; arPaint();
+    return out;
+  });
+  is(reread.box && reread.v === '광양' && reread.q === '광양',
+     '다시 읽는 중에도 <b>찾는 칸과 친 글자가 그대로다</b> — 「' + reread.v + '」');
+  is(reread.rows === 3, '찾아 둔 세 줄도 <b>안 사라진다</b> — ' + reread.rows + '명');
+  is(reread.x, '지우는 단추도 <b>그대로 있다</b>');
+  is(/다시 읽는 중/.test(reread.note),
+     '다시 읽는 중이라고 <b>말은 한다</b> — 옛 숫자를 조용히 보여 주지 않는다');
+  await pg.evaluate(() => { arQClear(); });
   await pg.waitForTimeout(80);
 
   /* ─────────────────────────────────────────────────────────── */

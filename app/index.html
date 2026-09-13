@@ -9277,16 +9277,20 @@ function arTeamRowsHtml(){
   return h;
 }
 function arTeamHtml(){
-  if(typeof GB==='undefined'||!GB.loaded)
-    return '<div class="card"><div class="card-body"><div class="ar-none">팀 기록을 불러오는 중입니다. 잠시만요.</div></div></div>';
-  var all=arScope(),i,done=0;
+  /* <b>다시 읽는 중이라고 이미 세워 둔 목록을 지우지 않는다.</b> 지우면
+     찾는 칸까지 같이 사라져, 글자를 치던 사장님이 커서와 친 글자를 잃는다.
+     새로 읽기·조직도 반영은 GB.loaded 를 잠깐 내리는데, 그 사이에 예약된
+     다시 그리기가 끼면 화면이 통째로 「불러오는 중」으로 돌아갔다.
+     보여 줄 것이 <b>아직 아무것도 없을 때만</b> 불러오는 중을 세운다. */
+  var all=arScope(),i,done=0,ready=(typeof GB!=='undefined')&&GB.loaded;
   if(!all.length)
-    return '<div class="card"><div class="card-body"><div class="ar-none">팀원이 없습니다.<br>'+
-      '설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.</div></div></div>';
+    return '<div class="card"><div class="card-body"><div class="ar-none">'+
+      (ready?'팀원이 없습니다.<br>설정 → 팀원 권한 관리에서 소속 팀을 지정해 주세요.'
+            :'팀 기록을 불러오는 중입니다. 잠시만요.')+'</div></div></div>';
   for(i=0;i<all.length;i++)if(AR.rep[all[i].id])done++;
   return arTopHtml()+
     '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">👥</span>팀 전체 보고'+
-    '<span class="ar-n">'+done+' / '+all.length+'명</span></div>'+
+    '<span class="ar-n">'+done+' / '+all.length+'명'+(ready?'':' · 다시 읽는 중')+'</span></div>'+
     '<div class="card-desc">팀별로 묶어 보여 줍니다. 점수가 낮은 사람이 위에 옵니다. '+
     '이름을 누르면 그 사람 보고가 펼쳐집니다</div></div>'+
     '<div class="card-body">'+
@@ -10696,7 +10700,12 @@ function dbpHtml(){
     'loading="lazy" style="display:block;width:100%;height:78vh;min-height:560px;border:0"></iframe></div>';
 }
 function arBodyHtml(cat){
-  if(typeof GB==='undefined'||!GB.loaded)
+  /* 다시 읽는 중이라고 <b>보고 있던 판을 통째로 지우지 않는다.</b> 지우면
+     찾던 칸·친 글자·펼쳐 둔 사람이 한꺼번에 사라진다. 새로 읽기·조직도
+     반영·늦게 도착한 첫 읽기가 모두 이 길로 들어와, 화면이 멀쩡히 서 있다가
+     스스로 「불러오는 중」으로 돌아가곤 했다.
+     <b>아직 아무것도 못 읽었을 때만</b> 불러오는 중을 세운다. */
+  if(typeof GB==='undefined'||(!GB.loaded&&!(GB.rows&&GB.rows.length)))
     return '<div class="ar-none">기록을 불러오는 중입니다. 잠시만요.</div>';
   if(cat==='sched')return arSchedHtml();
   if(cat==='skill')return arSkillHtml();
@@ -10770,7 +10779,19 @@ function arInnerHtml(){
 }
 function arPaint(){
   var el=document.getElementById('arPane');
-  if(el)el.innerHTML=arInnerHtml();
+  if(el){
+    /* 판을 통째로 다시 그리면 찾는 칸이 <b>새로 서면서 커서가 날아간다.</b>
+       예약된 다시 그리기(1.8초·2.4초·4.2초)가 글자 치는 중에 끼면 한 자
+       칠 때마다 칸을 다시 눌러야 한다 — 화면은 멀쩡한데 쓸 수가 없다.
+       어디까지 쳤는지 담아 두고 그대로 되돌린다. */
+    var f=document.getElementById('arFind'),keep=null,g;
+    if(f&&document.activeElement===f)keep={s:f.selectionStart,e:f.selectionEnd};
+    el.innerHTML=arInnerHtml();
+    if(keep){
+      g=document.getElementById('arFind');
+      if(g){try{g.focus();g.setSelectionRange(keep.s,keep.e);}catch(e3){}}
+    }
+  }
   var m=document.getElementById('ckArMini');
   if(m)m.innerHTML=arMiniHtml(m.getAttribute('data-face')||'me');
 }
@@ -13326,8 +13347,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-13 10:40';
-var APP_BUILD_NOTE="<b>홈이 순서를 정해 드립니다.</b> 그동안 홈은 바로가기 카드밭이라 무엇부터 할지는 사장님이 정하셔야 했습니다. 이제 맨 위에 <b>「오늘 챙길 것 N건입니다」</b> 가 서고, 그 아래 <b>①②③</b> 이 붙은 줄을 위에서부터 누르시면 됩니다 — 시간이 정해진 <b>약속</b>이 맨 위, 그다음 <b>계약 마디 · 연락할 분 · 할 일 · 생일 · 도와줄 것</b> 차례입니다. <b>없는 갈래는 줄을 안 세웁니다</b> — 0 을 늘어놓으면 아무것도 안 보입니다. 숫자는 <b>새로 세지 않고</b> 달력이 이미 센 것을 그대로 씁니다. 그리고 <b>달력이 홈에 올라왔습니다.</b> 위 <b>주 / 월</b> 로 넘기시면 되고, <b>주간</b>에서는 점이 아니라 <b>무엇이 있는지가 글자로</b> 보입니다 — 눌러 보지 않아도 이번 주가 읽힙니다. 달력은 <b>한 벌</b>이라 홈에서 주로 바꾸면 <b>내 캘린더 · TFA 스케줄 관리 · 고객 365일</b> 도 같이 주가 됩니다. 날짜를 누르면 그날 것이 아래에 펴집니다. 함께, <b>소식에서 카드뉴스까지 길이 안 끊깁니다</b> — 정책·상품 뉴스 줄마다 <b>「🎨 카드뉴스로」</b> 가 붙고, 올리면 그 화면으로 데려가 바로 캐러셀을 만듭니다. 넘기는 것은 <b>제목·갈래·출처</b>뿐입니다.";
+var APP_BUILD='2026-09-13 18:20';
+var APP_BUILD_NOTE="<b>홈이 순서를 정해 드립니다.</b> 그동안 홈은 바로가기 카드밭이라 무엇부터 할지는 사장님이 정하셔야 했습니다. 이제 맨 위에 <b>「오늘 챙길 것 N건입니다」</b> 가 서고, 그 아래 <b>①②③</b> 이 붙은 줄을 위에서부터 누르시면 됩니다 — 시간이 정해진 <b>약속</b>이 맨 위, 그다음 <b>계약 마디 · 연락할 분 · 할 일 · 생일 · 도와줄 것</b> 차례입니다. <b>없는 갈래는 줄을 안 세웁니다</b> — 0 을 늘어놓으면 아무것도 안 보입니다. 숫자는 <b>새로 세지 않고</b> 달력이 이미 센 것을 그대로 씁니다. 그리고 <b>달력이 홈에 올라왔습니다.</b> 위 <b>주 / 월</b> 로 넘기시면 되고, <b>주간</b>에서는 점이 아니라 <b>무엇이 있는지가 글자로</b> 보입니다 — 눌러 보지 않아도 이번 주가 읽힙니다. 달력은 <b>한 벌</b>이라 홈에서 주로 바꾸면 <b>내 캘린더 · TFA 스케줄 관리 · 고객 365일</b> 도 같이 주가 됩니다. 날짜를 누르면 그날 것이 아래에 펴집니다. 함께, <b>소식에서 카드뉴스까지 길이 안 끊깁니다</b> — 정책·상품 뉴스 줄마다 <b>「🎨 카드뉴스로」</b> 가 붙고, 올리면 그 화면으로 데려가 바로 캐러셀을 만듭니다. 넘기는 것은 <b>제목·갈래·출처</b>뿐입니다. 끝으로 <b>팀원 관리에서 글자를 치다 커서를 잃던 것</b>을 잡았습니다 — 화면이 스스로 다시 그릴 때 <b>찾던 칸·친 글자·찾아 둔 줄</b>이 통째로 「불러오는 중」으로 돌아가곤 했습니다. 이제 <b>다시 읽어도 보시던 것은 그대로</b> 있고, 다시 읽는 중이라는 말만 숫자 옆에 붙습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
