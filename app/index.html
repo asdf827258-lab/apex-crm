@@ -1055,6 +1055,11 @@ body.sangdam-mode #sangdamScreen{display:block;}
 body.bohum-mode .app{display:none;}
 body.bohum-mode #bohumScreen{display:block;}
 #bohumScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* 증권 전달 (상담자료와 동일 패턴) */
+#pdelScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.pdel-mode .app{display:none;}
+body.pdel-mode #pdelScreen{display:block;}
+#pdelScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 미끼 레이더 전용 화면 (상담자료와 동일 패턴) */
 #mikkiScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.mikki-mode .app{display:none;}
@@ -1772,6 +1777,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitSangdam()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadSangdam()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openSangdamNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- 증권 전달 (앱 폴더에 번들: app/증권전달/) -->
+<div id="pdelScreen">
+  <iframe id="pdelFrame" class="fin-frame" title="증권 전달"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitPdel()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadPdel()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openPdelNewTab()" title="새 탭">⧉</button>
   </div>
 </div>
 
@@ -11552,6 +11567,7 @@ var TABS=[
    {id:'inv_econ',icon:'🌡️',title:'경제동향 실시간',cnt:'',ak:'투자·경제'}
  ]},
  {group:'계약·청구',items:[
+   {id:'pdel',icon:'📮',title:'증권 전달',cnt:'',ak:'계약관리 증권전달 속지 안내장 담보풀이 보험사연락처 전달화법 사후관리'},
    {id:'contracts',icon:'📜',title:'계약관리 판단',cnt:'17',ak:'계약관리'},
    {id:'endorse',icon:'✍️',title:'배서 안내서',cnt:'',ak:'계약관리'},
    {id:'claims',icon:'🧾',title:'청구·사후관리',cnt:'',ak:'청구·사후관리'},
@@ -13117,7 +13133,7 @@ var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 �
 
    칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
-var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode',
+var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-mode',
                    'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
                    'apexmap-mode',
                    /* <b>「한장 보험료 비교」 만 여기 이름이 빠져 있었다.</b>
@@ -13243,6 +13259,13 @@ function go(tab){
     mountSangdam();
     osFullMode('sangdam-mode');
     navMark('sangdam');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='pdel'){
+    mountPdel();
+    osFullMode('pdel-mode');
+    navMark('pdel');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -14123,6 +14146,21 @@ function mountSangdam(){
 function reloadSangdam(){var f=$('sangdamFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountSangdam,30);toast('보장분석 상담자료 새로고침');}}
 function openSangdamNewTab(){var w=window.open(SANGDAM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitSangdam(){go(prevTab||'home');}
+
+/* ════════ 증권 전달 (앱 폴더에 번들: app/증권전달/index.html) ════════
+   계약이 성립된 뒤 증권을 고객에게 전하는 자리에서 쓰는 한 벌.
+   ① 전략 매뉴얼(전화로 약속 잡기 → 30분 대본 → 소개) ② 고객에게 드리는 속지·안내장
+   ③ 상황별 상담 도구 ④ 혼자 익히는 학습(화법 카드·점검).
+   원본은 Desktop\코드\증권전달\증권전달_APEX.html — 고칠 일이 있으면 거기서 고치고
+   이 폴더로 다시 복사한다(번들 사본에는 CRM 전용 블록 한 개가 더 붙어 있다). */
+var PDEL_URL='증권전달/index.html';
+function mountPdel(){
+  var f=$('pdelFrame');if(!f||f._mounted)return;
+  f.src=PDEL_URL;f._mounted=true;
+}
+function reloadPdel(){var f=$('pdelFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountPdel,30);toast('증권 전달 새로고침');}}
+function openPdelNewTab(){var w=window.open(PDEL_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitPdel(){go(prevTab||'home');}
 
 /* ════════ 보험 마스터 아카데미 교재 (앱 폴더에 번들: app/보험아카데미/index.html) ════════
    신입 자가학습 전자책. 진도·테스트 점수는 교재 쪽에서 스스로 저장한다(Supabase bohum_*).
@@ -15532,6 +15570,7 @@ var VA_ALIAS={
  '재무설계상담자료':'fp_deck','재무상담':'fp_deck','생애설계':'fp_deck',
  '보장분석상담자료':'sangdam','상담자료':'sangdam',
  '비대면':'utphoto','비대면상담':'utphoto','상담사진':'utphoto','사진':'utphoto','멘트':'utphoto','카톡멘트':'utphoto','도해':'utphoto',
+ '증권전달':'pdel','증권전달하기':'pdel','증권드리기':'pdel','증권속지':'pdel','속지':'pdel','안내장':'pdel','담보풀이':'pdel','보험사연락처':'pdel','고객센터번호':'pdel',
  '보험마스터아카데미':'bohum','마스터아카데미':'bohum','교재':'bohum','아카데미교재':'bohum','신입교육':'bohum','자가학습':'bohum','질병백과':'bohum','수술분류표':'bohum',
  '보장분석':'bojang','증권':'bojang','증권분석':'bojang',
  '고객':'clients','고객365일':'clients','고객카드':'clients','고객삼육오':'clients',
@@ -18048,6 +18087,7 @@ document.addEventListener('keydown',function(e){
   if(document.body.classList.contains('finance-mode'))exitFinance();
   else if(document.body.classList.contains('crm-mode'))exitCrm();
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
+  else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
