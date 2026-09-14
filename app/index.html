@@ -1118,7 +1118,27 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-ar{flex:0 0 auto;color:var(--ink-5);font-size:15px}
 .hm-done{margin-top:13px;background:#F0FDF4;border:1px solid #BBF7D0;color:#15803D;
   border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.7}
-@media(max-width:520px){.hm-big{font-size:21px}.hm-m span{display:none}}
+/* ── 지금 이것 하세요 — 한 건만 크게 ── */
+.hm-now{margin-top:13px;border:1.5px solid var(--primary);background:var(--primary-pale);
+  border-radius:15px;padding:14px 15px}
+.hm-now-k{font-size:11.5px;font-weight:800;color:#1B64DA;letter-spacing:-.01em}
+.hm-now-k b{font-variant-numeric:tabular-nums}
+.hm-now-m{display:flex;align-items:center;gap:11px;margin-top:9px}
+.hm-now-m .e{flex:0 0 auto;font-size:24px}
+.hm-now-m .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hm-now-m .m b{font-size:18px;font-weight:900;color:var(--ink-1);letter-spacing:-.03em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hm-now-m .m span{font-size:12.5px;color:var(--ink-3);font-weight:600;line-height:1.5}
+.hm-now-b{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.hm-go,.hm-ok{appearance:none;border:0;font-family:inherit;font-size:14px;font-weight:800;
+  border-radius:11px;padding:11px 18px;cursor:pointer;flex:1 1 140px}
+.hm-go{background:#fff;color:#1B64DA;border:1px solid #BBD3FA}
+.hm-go:hover{background:#EEF5FF}
+.hm-ok{background:var(--primary);color:#fff}
+.hm-ok:hover{filter:brightness(1.06)}
+.hm-now-n{font-size:11.3px;color:var(--ink-4);line-height:1.65;margin-top:9px}
+.hm-now-n b{color:var(--ink-2)}
+@media(max-width:520px){.hm-big{font-size:21px}.hm-m span{display:none}.hm-now-m .m b{font-size:16px}}
 /* ── 내 고객 — 홈에서 사람부터 보인다 ── */
 .hmc-card{margin:14px 0 0}
 .hmc-n{margin-left:8px;font-size:11.5px;font-weight:800;color:#1B64DA;background:#E8F2FF;
@@ -12366,31 +12386,141 @@ function mcalMyKey(){
   try{ who=(OS.profile&&OS.profile.id)||(OS.session&&OS.session.user&&OS.session.user.id)||''; }catch(e){}
   return 'apex_mcal_my_'+(who||'me');
 }
-function mcalMyAll(){
+/* ── 서버에 자리가 생겼습니다 ────────────────────────────────────────
+   여태 이 브라우저에만 담겨서 사무실 PC 에서 넣은 것이 폰에서 안 보였습니다.
+   이제 my_plans 표에 담아 <b>같은 아이디면 어느 기기에서든</b> 같이 봅니다.
+   나만 봅니다 — 정책이 owner_id = auth.uid() 하나로 묶여 있습니다.
+
+   ★ <b>서버를 아껴 씁니다</b> (7번). 화면을 열 때 <b>한 번</b> 읽고, 넣거나
+     지운 뒤에만 다시 읽습니다. 글자 칠 때마다 부르지 않습니다.
+   ★ <b>자리가 아직 없으면 멈추지 않습니다.</b> 준비 SQL 을 안 돌리셨으면
+     이 브라우저에 담고 <b>그렇다고 적습니다</b> — 폰과 같이 본다고 해 놓고
+     안 되면 그게 제일 나쁩니다 (1번).
+   ★ 자리가 생기면 브라우저에 있던 것을 <b>한 번 올려 보내고</b> 비웁니다.
+     안 그러면 어제까지 적어 두신 것이 그대로 묻힙니다.                */
+var MYP={rows:[],loaded:false,busy:'',err:'',missing:false,up:false};
+function mypLocal(){
   try{ var v=JSON.parse(localStorage.getItem(mcalMyKey())||'[]'); return (v&&v.push)?v:[]; }
   catch(e){ return []; }
 }
-function mcalMySave(L){
+function mypLocalSet(L){
   try{ localStorage.setItem(mcalMyKey(),JSON.stringify(L.slice(0,400))); }catch(e){}
 }
+/* 지금 무엇을 보고 있나 — <b>한 곳</b>만 압니다 (5번). 서버가 준비됐으면
+   서버 줄, 아니면 이 브라우저 줄. 두 곳에서 각자 정하면 화면과 저장이
+   서로 다른 것을 보게 됩니다. */
+function mcalMyAll(){
+  return (MYP.loaded&&!MYP.missing)?(MYP.rows||[]):mypLocal();
+}
+function mypOn(){ return MYP.loaded&&!MYP.missing; }
+function mypGone(m){ return /relation|does not exist|schema cache|42P01|PGRST205/i.test(''+(m||'')); }
+function mcalMyLoad(force){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ MYP.loaded=true;MYP.missing=true;MYP.err='';return; }
+  if(MYP.loaded&&!force)return;
+  if(MYP.busy==='load')return;
+  MYP.busy='load';
+  sb.from('my_plans').select('id,d,hm,t').order('d',{ascending:true}).limit(400)
+    .then(function(r){
+      MYP.busy='';MYP.loaded=true;
+      if(r&&r.error){
+        MYP.missing=mypGone(r.error.message);
+        MYP.err=MYP.missing?'':(r.error.message||'읽지 못했습니다');
+        mcalPaint();return;
+      }
+      MYP.missing=false;MYP.err='';
+      MYP.rows=(r.data||[]).map(function(x){
+        return {id:x.id,d:(''+(x.d||'')).slice(0,10),hm:x.hm||'',t:x.t||''};
+      });
+      mypPushUp(sb);
+      mcalPaint();
+    },function(e){
+      MYP.busy='';MYP.loaded=true;
+      MYP.missing=mypGone(e&&e.message);
+      MYP.err=MYP.missing?'':'서버에 닿지 못했습니다';
+      mcalPaint();
+    });
+}
+/* 브라우저에 있던 것을 <b>한 번만</b> 올려 보낸다 */
+function mypPushUp(sb){
+  if(MYP.up)return;
+  MYP.up=true;
+  var L=mypLocal();
+  if(!L.length)return;
+  sb.from('my_plans').insert(L.map(function(x){return {d:x.d,hm:x.hm||'',t:x.t};}))
+    .then(function(r){
+      if(r&&r.error)return;                    /* 실패하면 그대로 둡니다 — 지우지 않습니다 */
+      mypLocalSet([]);
+      mcalMyLoad(true);
+      toast('이 브라우저에 있던 일정 '+L.length+'건을 서버로 옮겼습니다 — 이제 폰에서도 보입니다',7000);
+    },function(){});
+}
+/* 적으신 글을 <b>씻어서</b> 봅니다 — 주민번호가 서버로 올라가면 안 됩니다 (10번) */
+var MYP_RRN=/(^|[^0-9])\d{6}\s*[-–]\s*[1-4]\d{6}([^0-9]|$)/;
 function mcalMyAdd(ds,hm,t){
   t=(''+(t||'')).replace(/^\s+|\s+$/g,'');
   if(!ds||!/^\d{4}-\d{2}-\d{2}$/.test(ds)){toast('날짜를 먼저 골라 주세요');return false;}
   if(!t){toast('무엇을 하는 일정인지 한 줄만 적어 주세요');return false;}
   hm=(''+(hm||'')).replace(/^\s+|\s+$/g,'');
   if(hm&&!/^\d{2}:\d{2}$/.test(hm)){toast('시각은 14:00 처럼 적어 주세요');return false;}
-  var L=mcalMyAll();
-  L.push({id:'m'+(new Date()).getTime()+Math.floor(Math.random()*1000),
-          d:ds,hm:hm,t:t.slice(0,80)});
-  mcalMySave(L);
+  if(MYP_RRN.test(t)){toast('주민등록번호는 적지 마세요 — 서버에 올라갑니다');return false;}
+  t=t.slice(0,80);
+  if(mypOn()){
+    var sb=(typeof osClient==='function')?osClient():null;
+    if(!sb){toast('서버에 연결되어 있지 않습니다');return false;}
+    /* 넣자마자 화면에 세웁니다 — 서버 대답을 기다리면 눌러도 아무 일이
+       없는 것처럼 보입니다. 실패하면 도로 뺍니다 (실패를 성공처럼 X) */
+    var tmp={id:'tmp'+(new Date()).getTime(),d:ds,hm:hm,t:t};
+    MYP.rows=(MYP.rows||[]).concat([tmp]);
+    sb.from('my_plans').insert({d:ds,hm:hm,t:t}).then(function(r){
+      if(r&&r.error){
+        MYP.rows=MYP.rows.filter(function(x){return x.id!==tmp.id;});
+        mcalPaint();
+        toast('넣지 못했습니다 — '+((r.error.message||'').slice(0,60)));
+        return;
+      }
+      mcalMyLoad(true);
+    },function(){
+      MYP.rows=MYP.rows.filter(function(x){return x.id!==tmp.id;});
+      mcalPaint();
+      toast('서버에 닿지 못했습니다');
+    });
+    return true;
+  }
+  var L=mypLocal();
+  L.push({id:'m'+(new Date()).getTime()+Math.floor(Math.random()*1000),d:ds,hm:hm,t:t});
+  mypLocalSet(L);
   return true;
 }
 function mcalMyDel(id){
-  var L=mcalMyAll(),o=[],i;
+  if(mypOn()){
+    var sb=(typeof osClient==='function')?osClient():null;
+    if(!sb){toast('서버에 연결되어 있지 않습니다');return;}
+    var keep=MYP.rows;
+    MYP.rows=(MYP.rows||[]).filter(function(x){return x.id!==id;});
+    mcalPaint();
+    sb.from('my_plans')['delete']().eq('id',id).then(function(r){
+      if(r&&r.error){MYP.rows=keep;mcalPaint();toast('지우지 못했습니다');return;}
+      toast('지웠습니다');
+    },function(){MYP.rows=keep;mcalPaint();toast('서버에 닿지 못했습니다');});
+    return;
+  }
+  var L=mypLocal(),o=[],i;
   for(i=0;i<L.length;i++)if(L[i].id!==id)o.push(L[i]);
-  mcalMySave(o);
+  mypLocalSet(o);
   mcalPaint();
   toast('지웠습니다');
+}
+/* 지금 어디에 담기는지 <b>한 줄로</b> 말합니다 — 폰과 같이 본다고 해 놓고
+   안 되면 그게 제일 나쁩니다 (1번) */
+function mypWhereTxt(){
+  if(!MYP.loaded)return '담기는 곳을 확인하는 중입니다…';
+  if(MYP.missing)
+    return '<b>이 브라우저에만</b> 담깁니다 — 서버에 자리가 아직 없어 다른 기기에서는 안 보입니다. '+
+           '설정 → <b>준비 SQL</b> 을 한 번 돌리시면 그때부터 폰과 같이 보이고, 여기 적어 두신 것도 같이 올라갑니다.';
+  if(MYP.err)
+    return '<b>서버에서 못 읽었습니다</b> — '+osEsc(MYP.err)+'. 지금은 이 브라우저 것만 보입니다.';
+  return '<b>서버에 담깁니다</b> — 같은 아이디로 들어가시면 <b>폰에서도 그대로</b> 보입니다. 나만 봅니다.';
 }
 var MCAL_KIND={my:{e:'✏️',t:'내 일정',c:'#475569'},
              appt:{e:'📌',t:'약속',c:'#DC2626'},
@@ -12599,9 +12729,9 @@ function mcalMyFormHtml(ds){
       '<input id="mcalMyH" class="mcal-add-h" type="time" aria-label="시각 (안 적으셔도 됩니다)">'+
       '<button type="button" class="mcal-add-b" onclick="mcalMyPut()">넣기</button>'+
     '</div>'+
-    '<div class="mcal-add-n">시각은 <b>안 적으셔도</b> 됩니다. 이 일정은 '+
-      '<b>이 브라우저에만</b> 담깁니다 — 서버로 보내지 않으므로 다른 기기에서는 '+
-      '안 보입니다. 폰 달력으로는 「📅 오늘 것 넣기」 에 같이 실립니다.</div>'+
+    '<div class="mcal-add-n">시각은 <b>안 적으셔도</b> 됩니다. '+mypWhereTxt()+
+      ' 폰 달력으로는 「📅 오늘 것 넣기」 에 같이 실립니다. '+
+      '고객 이름은 <b>「홍○동」 처럼</b> 적어 주세요 — 실명은 서버에 안 올리는 것이 규칙입니다.</div>'+
     '</div>';
 }
 function mcalMyPut(){
@@ -12660,6 +12790,11 @@ function mcalTitle(){
          (a.slice(0,7)===b.slice(0,7)?((+b.slice(8,10))+'일'):f(b));
 }
 function mcalCardHtml(opt){
+  /* 내 일정을 <b>여기 한 곳</b>에서 읽어 옵니다 (5번). 달력을 세우는 자리가
+     여기뿐이라 홈·내 캘린더·TFA 스케줄·고객 365일 넷이 저절로 같이 얻습니다.
+     화면마다 따로 걸면 한 곳을 빠뜨려 「폰에서 넣은 것이 여기만 안 보인다」
+     가 됩니다. mcalMyLoad 가 스스로 <b>한 번만</b> 돌게 막습니다 (7번). */
+  try{ if(typeof mcalMyLoad==='function'&&typeof OS!=='undefined'&&OS.profile)mcalMyLoad(); }catch(e0){}
   var o=opt||{},c=mcalCfg(),items=mcalItems(),today=mcalToday(),tn=(items[today]||[]).length;
   var apps=(o.apps&&typeof PWA_APPS!=='undefined')?PWA_APPS:[];
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
@@ -13544,8 +13679,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 09:40';
-var APP_BUILD_NOTE="<b>홈이 고객 관리 한 장이 됐습니다.</b> 그동안 홈은 역할 바로가기 · 전체 도구 · 설정 안내 · 열쇠 안내가 한 화면에 다 있어서, 정작 <b>오늘 누구를 챙길지</b>가 그 사이에 묻혔습니다. 이제 위에서 아래로 <b>따라만 가면 되는 한 장</b>입니다 — <b>①오늘 챙길 것 → ②이번 주·이번 달 달력 → ③내 고객 → ④30일 고객관리 → ⑤공지사항</b>. <b>공지사항은 맨 아래</b>로 내렸습니다. 읽을 것이지 할 것이 아니라, 위에 있으면 매일 아침 그것부터 지나가야 합니다. <b>내 고객</b> 칸이 새로 생겨 최근에 보신 분이 맨 위에 서고, 이름을 누르면 그 분 카드가 바로 열립니다. 걷어낸 칸들은 없앤 것이 아니라 <b>☰ 서랍에 그대로</b> 있고, 찾기 한 칸에서 화면·고객·팀원이 다 걸립니다. 그리고 <b>달력에 직접 일정을 넣으실 수 있습니다.</b> 날짜를 누르면 그 자리에 적는 칸이 서고, 시각은 안 적으셔도 됩니다. 잘못 넣은 줄은 ✕ 로 지웁니다. 이 일정은 <b>이 브라우저에만</b> 담깁니다 — 서버로 보내지 않으므로 다른 기기에서는 안 보이고, 대신 <b>폰 달력으로는</b> 「📅 오늘 것 넣기」 에 같이 실립니다. 달력은 한 벌이라 홈에서 넣은 것이 내 캘린더·TFA 스케줄·고객 365일에도 그대로 섭니다. 끝으로 <b>「서버 열쇠가 아직 없습니다」 재촉을 걷어냈습니다</b> — 그 판정이 이 브라우저의 딱지 하나만 보고 서버가 실제로 도는지는 안 보고 단정했습니다. 밤일이 정말 안 돌 때는 그때 말합니다. <b>팀 할 일</b>과 <b>교육매니저 할 일</b>은 걷어냈습니다.";
+var APP_BUILD='2026-09-14 11:20';
+var APP_BUILD_NOTE="<b>「지금 이것 하세요」 한 건이 맨 위에 섭니다.</b> 갈래별 건수만 세워 두면 「연락할 분 3건」 을 보고도 <b>누구부터인지 또 고르셔야</b> 했습니다. 아침에 제일 힘든 것이 그 고르는 일입니다. 이제 맨 위에 <b>딱 한 건</b>이 큼직하게 섭니다 — 누구를, 무엇을, 그리고 <b>「열기」·「했습니다」</b> 두 단추. 끝내면 다음 한 건이 올라옵니다. 차례는 약속 → 계약 마디 → 연락할 분 → 할 일 → 생일 → 도와줄 것 → 내 일정입니다. <b>기록으로 남는 것과 아닌 것을 구분해 적습니다</b> — <b>연락</b>은 실제 접촉 기록이 남아 그 분 주기가 오늘부터 다시 세고, <b>계약 마디</b>는 그 마디를 끝냈다고 적힙니다. 나머지는 앱이 알 길이 없어 <b>오늘 하루 표시</b>일 뿐이라고 그 자리에 밝힙니다. 그리고 <b>달력에 넣으신 일정이 이제 폰과 같이 보입니다.</b> 서버에 <b>내 일정</b> 자리를 만들어 같은 아이디로 들어가시면 사무실 PC 에서 넣은 것이 폰에서도 그대로 섭니다. <b>나만 봅니다</b> — 팀도 대표도 못 봅니다. ⚠️ <b>설정 → 준비 SQL 을 한 번 돌려 주셔야</b> 켜집니다. 안 돌리셨으면 예전처럼 이 브라우저에 담기고 <b>그렇다고 화면에 적습니다</b> — 돌리시는 순간 담겨 있던 것이 같이 올라갑니다. 고객 이름은 <b>「홍○동」 처럼</b> 적어 주세요, 주민번호는 받지 않습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18078,6 +18213,118 @@ function hmTodayLabel(){
   var d=mcalNow(),w=['일','월','화','수','목','금','토'][d.getUTCDay()];
   return (d.getUTCMonth()+1)+'월 '+d.getUTCDate()+'일 '+w+'요일';
 }
+/* ══ 「지금 이것 하세요」 ═══════════════════════════════════════════
+   갈래별 건수만 세워 두면 <b>여전히 고르셔야 합니다</b> — 「연락할 분 3건」
+   을 보고도 누구부터인지는 눌러 들어가 다시 고릅니다. 아침에 제일 힘든
+   것이 그 고르는 일입니다.
+
+   그래서 맨 위에 <b>딱 한 건</b>을 세웁니다. 누구를, 무엇을, 그리고
+   누르면 무엇이 되는지까지. 끝내면 다음 한 건이 올라옵니다.
+
+   ★ <b>기록으로 남는 것과 아닌 것을 구분해 적습니다</b> (1번). 연락은
+     ccMark 가 실제 접촉 기록을 남겨 주기가 다시 돕니다. 계약 마디는
+     mstMark 가 그 마디를 끝냈다고 적습니다. 나머지(약속·할 일·생일·
+     도와줄 것·내 일정)는 앱이 알 길이 없어 <b>오늘 하루 표시</b>일
+     뿐입니다 — 기록이 남는 것처럼 말하지 않습니다.
+   ★ 하는 일은 <b>원래 화면이 쓰던 함수를 그대로</b> 부릅니다 (5번).
+     여기서 따로 적으면 한쪽만 고쳐집니다.                            */
+var HM_DONE_KEY='apex_hm_done';
+function hmDoneAll(){
+  try{ var v=JSON.parse(localStorage.getItem(HM_DONE_KEY)||'{}'); return (v&&typeof v==='object')?v:{}; }
+  catch(e){ return {}; }
+}
+/* 오늘 것만 남깁니다 — 어제 찍은 표시가 오늘까지 따라오면 안 됩니다 */
+function hmDoneToday(){
+  var o=hmDoneAll(),t=mcalToday();
+  return (o.d===t&&o.k&&o.k.push)?o.k:[];
+}
+function hmDoneMark(key){
+  var L=hmDoneToday();
+  if(L.indexOf(key)<0)L.push(key);
+  try{ localStorage.setItem(HM_DONE_KEY,JSON.stringify({d:mcalToday(),k:L})); }catch(e){}
+}
+function hmIsDone(key){ return hmDoneToday().indexOf(key)>=0; }
+/* 오늘 것을 <b>한 줄씩</b> 폅니다. 세는 곳(hmCount)과 같은 샘을 씁니다 (5번) */
+function hmSteps(){
+  var out=[],items=(typeof mcalItems==='function')?(mcalItems()[mcalToday()]||[]):[],i;
+  /* 계약 마디 — 마디가 이미 센 것을 그대로 가져옵니다 */
+  var md=(typeof mstDueList==='function')?mstDueList():null;
+  if(md&&md.due&&md.due.length){
+    for(i=0;i<md.due.length;i++){
+      var q=md.due[i],qc=q.c||{},st=(q.hit&&q.hit.step)||{};
+      out.push({k:'madi',id:qc.id||'',m:st.m||0,
+        t:((typeof cmName==='function')?cmName(qc):'')||qc.name_masked||'고객',
+        s:(st.m?(st.m+'개월 마디'):'계약 마디')+(st.t?(' · '+st.t):'')});
+    }
+  }
+  for(i=0;i<items.length;i++){
+    var x=items[i];
+    out.push({k:x.k,id:x.id||'',my:x.my||'',t:x.t||'',s:x.s||''});
+  }
+  /* HM_ORD 가 정한 차례를 그대로 따릅니다 — 순서를 두 곳에서 정하면 갈립니다 */
+  var rank={},j;
+  for(j=0;j<HM_ORD.length;j++)rank[HM_ORD[j].k]=j;
+  rank.my=HM_ORD.length;            /* 내 일정은 맨 뒤 — 앱이 시킨 것이 먼저입니다 */
+  out.sort(function(a,b){ return (rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]); });
+  for(j=0;j<out.length;j++)out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||'');
+  return out;
+}
+/* 무엇을 하면 되는지 — <b>표 하나</b>로 둡니다. 삼항 사슬로 늘어놓으면
+   갈래를 늘릴 때 반드시 하나를 빠뜨립니다 (5번). */
+var HM_ACT={
+ madi :{e:'📮',t:'계약 마디',  go:'clients', b:'보냈습니다',       real:true},
+ appt :{e:'📌',t:'약속',      go:'crm',     b:'만났습니다',       real:false},
+ touch:{e:'☎️',t:'연락할 분',  go:'clients', b:'☎️ 전화했습니다',  real:true},
+ next :{e:'▶', t:'할 일',      go:'clients', b:'했습니다',         real:false},
+ bd   :{e:'🎂',t:'생일',      go:'clients', b:'축하 보냈습니다',   real:false},
+ help :{e:'🤝',t:'도와줄 것',  go:'airep',   b:'했습니다',         real:false},
+ my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false}
+};
+function hmNext(){
+  var L=hmSteps(),i;
+  for(i=0;i<L.length;i++)if(!hmIsDone(L[i].key))return {x:L[i],i:i,n:L.length};
+  return {x:null,i:L.length,n:L.length};
+}
+/* 열기 — 고객이 붙은 것은 <b>그 분 카드</b>로, 아니면 그 화면으로 */
+function hmOpen(key){
+  var L=hmSteps(),i,x=null;
+  for(i=0;i<L.length;i++)if(L[i].key===key){x=L[i];break;}
+  if(!x)return;
+  var A=HM_ACT[x.k]||{go:'clients'};
+  if(x.id&&typeof navGoCli==='function'){navGoCli(x.id);return;}
+  go(A.go);
+}
+/* 끝냈습니다 — 기록이 남는 갈래는 <b>원래 함수</b>를 그대로 부릅니다 (5번) */
+function hmDid(key){
+  var L=hmSteps(),i,x=null;
+  for(i=0;i<L.length;i++)if(L[i].key===key){x=L[i];break;}
+  if(!x)return;
+  hmDoneMark(key);
+  if(x.k==='touch'&&x.id&&typeof ccMark==='function'){ ccMark(x.id,'전화'); hmPaint(); return; }
+  if(x.k==='madi'&&x.id&&x.m&&typeof mstMark==='function'){ mstMark(x.id,x.m,true); }
+  else toast('오늘 한 것으로 표시했습니다');
+  hmPaint();
+}
+function hmNowHtml(){
+  var r=hmNext();
+  if(!r.n)return '';
+  if(!r.x)
+    return '<div class="hm-done">✅ <b>오늘 챙길 것을 다 하셨습니다.</b> '+r.n+'건 모두 끝냈습니다.</div>';
+  var x=r.x,A=HM_ACT[x.k]||{e:'•',t:'',go:'clients',b:'했습니다',real:false};
+  return '<div class="hm-now">'+
+    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(A.t)+'</div>'+
+    '<div class="hm-now-m"><span class="e">'+A.e+'</span>'+
+      '<span class="m"><b>'+osEsc(x.t||A.t)+'</b>'+
+      (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
+    '<div class="hm-now-b">'+
+      '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
+      '<button type="button" class="hm-ok" onclick="hmDid(\''+osEsc(x.key)+'\')">'+osEsc(A.b)+'</button>'+
+    '</div>'+
+    '<div class="hm-now-n">'+(A.real
+      ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
+      : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
+    '</div>';
+}
 function hmTodayHtml(){
   if(!OS.profile)return '';
   var c=hmCount(),i,rows='',no=1;
@@ -18097,11 +18344,13 @@ function hmTodayHtml(){
       ? ('오늘 챙길 것 <em>'+c.total+'건</em>입니다')
       : '오늘 챙길 것이 <em>없습니다</em>')+'</h2>'+
     '<p class="hm-sub">'+(c.total
-      ? '위에서부터 하나씩 누르시면 됩니다. 순서는 저희가 정해 드립니다.'
+      ? '<b>맨 위 한 건</b>만 보시면 됩니다. 끝내면 다음 한 건이 올라옵니다.'
       : '주기가 돌아오거나 약속이 잡히면 이 자리에 뜹니다.')+'</p>';
   if(!c.total)
     return head+'<div class="hm-done">✅ <b>비어 있습니다.</b> 아래 달력에서 이번 주와 이번 달을 미리 보실 수 있습니다.</div></div></div>';
-  return head+'<div class="hm-rows">'+rows+'</div></div></div>';
+  /* 「지금 이것」 을 맨 앞에 — 갈래별 줄은 그 아래에 그대로 둡니다.
+     한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다. */
+  return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div></div></div>';
 }
 /* 홈에서도 <b>같은 달력 한 벌</b>을 봅니다 — 주간·월간을 여기서 바로 넘깁니다 */
 function hmCalHtml(){
@@ -28963,6 +29212,44 @@ var SQL_REPORTS_SELECT=[
    이 SQL 은 <b>한 곳에만</b> 적는다. HX_SQL['00'] 이 이것을 이어 붙이고,
    설정의 「팀 할 일」 카드도 이것을 그대로 보여 준다. 두 벌이 되면 한쪽만
    고쳐져 「돌렸는데 안 됩니다」 가 된다 (CLAUDE.md 5번).               */
+/* ── 내 일정 — <b>나만 보고, 폰과 같이 본다</b> ─────────────────────
+   달력에 직접 넣는 일정입니다. 여태 이 브라우저에만 담겨서 사무실 PC 에서
+   넣은 것이 폰에서 안 보였습니다. 서버에 자리를 만들어 <b>같은 아이디면
+   어느 기기에서든</b> 같이 보이게 합니다.
+
+   ★ <b>나만 봅니다.</b> 팀도 대표도 못 봅니다 — 남의 일정을 여는 것은
+     이 앱이 할 일이 아닙니다. 정책을 owner_id = auth.uid() 하나로 걸어
+     읽기·쓰기·지우기가 모두 본인으로 묶입니다.
+   ★ owner_id 는 <b>서버가 채웁니다</b>(default auth.uid()). 앱이 보내는
+     값을 믿으면 남의 이름으로 넣을 수 있습니다.                        */
+var OS_PLAN_SQL=[
+  "create table if not exists public.my_plans(",
+  "  id        uuid primary key default gen_random_uuid(),",
+  "  owner_id  uuid not null default auth.uid(),",
+  "  d         date not null,",
+  "  hm        text default '',",
+  "  t         text not null,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "alter table public.my_plans enable row level security;",
+  "create index if not exists my_plans_owner_d on public.my_plans(owner_id, d);",
+  "",
+  "/* 나만 — 읽기·넣기·고치기·지우기 모두 본인으로 묶는다 */",
+  "drop policy if exists my_plans_select on public.my_plans;",
+  "create policy my_plans_select on public.my_plans",
+  "  for select to authenticated using (owner_id = auth.uid());",
+  "drop policy if exists my_plans_insert on public.my_plans;",
+  "create policy my_plans_insert on public.my_plans",
+  "  for insert to authenticated with check (owner_id = auth.uid());",
+  "drop policy if exists my_plans_update on public.my_plans;",
+  "create policy my_plans_update on public.my_plans",
+  "  for update to authenticated using (owner_id = auth.uid())",
+  "  with check (owner_id = auth.uid());",
+  "drop policy if exists my_plans_delete on public.my_plans;",
+  "create policy my_plans_delete on public.my_plans",
+  "  for delete to authenticated using (owner_id = auth.uid());",
+  ""
+];
 var OS_TODO_SQL=[
   "/* ── 팀 할 일 — 지점장급 이상이 적고, 담당자를 정한다 ─────────────",
   "   모두가 본다. 확인(체크)은 담당자 본인만 한다.",
@@ -29669,7 +29956,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   /* 계정 함수는 OS_ACCT_FN_SQL 한 곳에만, 팀 할 일은 OS_TODO_SQL 한 곳에만 (5번) */
-  ].concat(OS_ACCT_FN_SQL).concat(OS_TODO_SQL).concat([
+  ].concat(OS_ACCT_FN_SQL).concat(OS_TODO_SQL).concat(OS_PLAN_SQL).concat([
   "",
   "",
   "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
@@ -29809,7 +30096,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '37')",
+  "values ('schema_version', '38')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -31821,7 +32108,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=37;   /* 37: reports 읽기 규칙 — 리더가 자기 팀 보고를 본다 */
+var SETUP_VER=38;   /* 38: 내 일정(my_plans) — 폰과 같이 본다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false};
 
 function setupVer(){
