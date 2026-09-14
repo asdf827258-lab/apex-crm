@@ -213,7 +213,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     SETUP.hide = false; RD.rows = null; RD.ms = 0;
     const bk = () => window.__q.filter(t => t === 'backups').length;   /* rdLoad 만 읽는 표 */
 
-    go('home'); await new Promise(r => setTimeout(r, 700));
+    /* <b>다 읽을 때까지</b> 기다린다. 고정 시간으로 기다리면 느린 CI 에서
+       아직 안 들어온 것을 「안 불렀다」 로 읽어 <b>헛알람</b>이 된다 —
+       실제로 CI 에서만 「0번」 으로 빨간불이 났다 (8번). */
+    go('home');
+    for (let t = 0; t < 80 && !RD.rows; t++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 150));
     const first = bk();
     const card = document.querySelector('.hm-rdy');
     const O = {
@@ -258,6 +263,24 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(rd.first === 1, '  홈을 열 때 서버는 <b>한 번</b>만 — ' + rd.first + '번');
   is(rd.again === 0, '  다섯 번 더 열어도 <b>안 부른다</b> — ' + rd.again + '번 (7번)');
   is(!rd.member, '  팀원에게는 <b>안 뜬다</b> — 못 고칠 일을 매일 아침 보여 드리지 않는다');
+  /* ── <b>고치신 직후에 옛말을 하지 않는가</b> ─────────────────────────
+     홈에 막이를 걸면서 <b>출발 점검까지</b> 막아 버린 적이 있습니다.
+     사장님은 SQL 을 돌리거나 조직도를 고친 <b>직후에</b> 이 화면을 여시는데,
+     그때 10분 막이에 걸려 「아직 안 됐습니다」 라고 옛말을 했습니다 —
+     방금 하신 일을 안 했다고 말하는 것입니다 (1번). check-ready 가
+     잡아 주었습니다. 여기서도 못 박아 둡니다.                          */
+  const fresh = await page.evaluate(async () => {
+    window.__q = [];
+    const bk = () => window.__q.filter(t => t === 'backups').length;
+    /* 방금 읽은 참이다 — 막이가 살아 있는 한가운데 */
+    RD.ms = Date.now();
+    const a0 = bk();
+    osReadyAfterRender();
+    for (let t = 0; t < 80 && bk() === a0; t++) await new Promise(r => setTimeout(r, 50));
+    return bk() - a0;
+  });
+  is(fresh >= 1, '  <b>출발 점검을 열면 기다리지 않고 다시 읽는다</b> — ' + fresh +
+     '번 (고치신 직후에 여시는 화면이라, 막으면 방금 하신 일을 안 했다고 말하게 된다)');
   /* <b>쌍둥이가 아닌가</b> — 홈이 제 목록·제 줄그리기를 따로 만들지 않았는가 (5번) */
   const H = SRC2.slice(SRC2.indexOf('function hmReadyRows('), SRC2.indexOf('var HM_CLI_DOOR'));
   is(/rdAuto\(\)/.test(H) && /rdRowHtml\(/.test(SRC2.slice(SRC2.indexOf('function hmReadyHtml('), SRC2.indexOf('function hmReadyCss('))),
