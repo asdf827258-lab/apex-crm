@@ -3096,7 +3096,7 @@ function osSecurityCardsHtml(){
     '<div class="frm"><div class="fld"><label>하루 한도 (회) · 0=무제한</label><input type="number" id="osAiLimitInput" value="'+lim+'" min="0" style="max-width:160px"/></div></div>'+
     '<div class="btn-row"><button class="btn btn-primary" onclick="osAiLimitSave()">한도 저장</button><span style="font-size:11px;color:var(--ink-5)">현재: '+(lim?(lim+'회/일'):'무제한')+'</span></div>'+
     '</div></div>';
-  return ipCard+limCard;
+  return ipCard+limCard+tdoSetHtml();
 }
 function osIpGuardSet(on){
   if(on){osIpSelfApprove(function(){osCfgSet('ip_guard','on',function(){osSetReload();});});}
@@ -3110,6 +3110,73 @@ function osIpSelfApprove(cb){
   },function(){if(cb)cb();})['catch'](function(){if(cb)cb();});}catch(e){if(cb)cb();}
 }
 function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)||v<0)v=0;osCfgSet('ai_daily_limit',v);}
+/* ══ 「며칠 지나면 다시」 를 <b>사장님이</b> 정하신다 ══════════════════
+   여태 이 숫자는 arTouch() 의 if 사슬 안에 박혀 있었습니다. 회사마다
+   팀마다 다른 값인데 <b>코드에 박아 두면 그것이 거짓말</b>이 됩니다.
+   여기서 고치시면 그 값이 이기고, 비우시면 기본값으로 돌아갑니다 —
+   <b>지운 값을 0 으로 쓰지 않습니다</b> (1번). 값은 서버에 담기므로
+   팀 전체가 같은 기준으로 움직입니다. */
+function tdoSetHtml(){
+  var K=tdoOrder(),h,i,k,m,cur,def;
+  h='<div class="card set-card"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">📇</span>고객 상태 — 며칠 지나면 다시</div>'+
+    '<div class="card-desc">홈 <b>「지금 이것 하세요」</b> 와 TFA <b>「오늘 손댈 사람」</b> 이 '+
+    '이 기준으로 사람을 고릅니다. <b>비우면 기본값</b>으로 돌아갑니다. '+
+    '서버에 담기므로 <b>팀 전체가 같은 기준</b>으로 움직입니다.</div></div><div class="card-body">'+
+    '<div class="tdo-set">';
+  for(i=0;i<K.length;i++){
+    k=K[i];m=TDO[k];def=m.wait;cur=tdoWait(k);
+    h+='<div class="tdo-row"><div class="tdo-h"><b>'+osEsc(m.t)+'</b>'+
+        (m.st?('<span class="tdo-st">'+osEsc(m.st)+'</span>'):'')+
+        (tdoOn(k)?'<span class="tdo-ch">고치셨습니다</span>':'')+'</div>'+
+      '<div class="tdo-do">'+osEsc(tdoSample(k))+'</div>'+
+      '<div class="tdo-in"><input type="number" min="0" id="tdoW_'+k+'" value="'+cur+'"/>'+
+        '<span>일 지나면 · 기본 '+def+'일</span></div></div>';
+  }
+  return h+'</div><div class="btn-row" style="margin-top:12px">'+
+    '<button class="btn btn-primary" onclick="tdoSetSave()">기준 저장</button>'+
+    '<button class="btn btn-ghost" onclick="tdoSetReset()">기본값으로 되돌리기</button></div>'+
+    '</div></div>';
+}
+function tdoSetSave(){
+  var K=tdoOrder(),i,k,el,v,n=0,left;
+  left=K.length;
+  for(i=0;i<K.length;i++){
+    k=K[i];el=document.getElementById('tdoW_'+k);
+    v=el?(''+el.value).replace(/\s/g,''):'';
+    var num=parseInt(v,10);
+    /* 숫자가 아니거나 음수면 <b>손대지 않습니다</b> — 잘못 적은 것을
+       0 으로 담아 두면 그날부터 모두가 오늘 걸어야 할 사람이 됩니다. */
+    if(v===''||isNaN(num)||num<0){ osCfgSet('tdo_wait_'+k,''); }
+    else { osCfgSet('tdo_wait_'+k,num); n++; }
+  }
+  toast(n+'개 기준을 저장했습니다 — 비운 것은 기본값으로 돌아갑니다');
+  if(typeof hmPaint==='function')try{hmPaint();}catch(e){}
+  if(typeof arPaint==='function')try{arPaint();}catch(e2){}
+}
+function tdoSetReset(){
+  var K=tdoOrder(),i;
+  for(i=0;i<K.length;i++)osCfgSet('tdo_wait_'+K[i],'');
+  toast('기본값으로 되돌렸습니다');
+  if(typeof osSetReload==='function')try{osSetReload();}catch(e){}
+}
+function tdoSetCss(){
+  if(document.getElementById('tdoSetCss'))return;
+  var st=document.createElement('style');st.id='tdoSetCss';
+  st.textContent='.tdo-set{display:flex;flex-direction:column;gap:9px}'+
+   '.tdo-row{border:1px solid var(--ink-7);border-radius:10px;padding:10px 12px;background:var(--bg-1)}'+
+   '.tdo-h{display:flex;align-items:center;gap:7px;font-size:13px;letter-spacing:-.02em}'+
+   '.tdo-st{font-size:10px;font-weight:800;color:var(--ink-5);background:var(--ink-8);'+
+     'border-radius:99px;padding:1px 8px}'+
+   '.tdo-ch{font-size:10px;font-weight:800;color:#fff;background:var(--primary);'+
+     'border-radius:99px;padding:1px 8px}'+
+   '.tdo-do{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin:5px 0 7px}'+
+   '.tdo-in{display:flex;align-items:center;gap:8px}'+
+   '.tdo-in input{width:88px;padding:6px 9px;border:1px solid var(--ink-7);border-radius:8px;'+
+     'font-size:13px;font-family:inherit}'+
+   '.tdo-in span{font-size:11.5px;color:var(--ink-5)}';
+  document.head.appendChild(st);
+}
 /* ── 승인을 기다리는 접속은 <b>맨 위에서 먼저 말한다</b> ──────────────
    접속 IP 승인제를 켜 두면, 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그
    뒤에 바뀐 자리는 전부 「대기」 가 된다(login_ips_ins_guard). 휴대폰 데이터,
@@ -4130,7 +4197,8 @@ function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread
      셋  · 두뇌에게 물을 때 그 숫자를 함께 넘긴다.
             넘기는 것은 숫자뿐이다 — 고객 이름·연락처는 넘기지 않는다.        */
 var BCR={all:false};
-var BCR_ORD=['run','no','rej','new','old','bd','pol','won'];
+/* 차례는 TDO 표에서 센다 — 여기 또 적으면 갈린다 (5번) */
+function bcrOrd(){ return (typeof tdoOrder==='function')?tdoOrder():[]; }
 function bcrLead(){try{return (typeof arIsLead==='function')&&arIsLead();}catch(e){return false;}}
 function bcrWho(){var me=(typeof arMyId==='function')?arMyId():null;return (BCR.all&&bcrLead())?'':me;}
 function bcrReady(){return (typeof AR!=='undefined')&&!!AR.db;}
@@ -4167,8 +4235,9 @@ function bcrBodyHtml(){
   if(!c||!c.all)
     return '<div class="bcr-none">오늘 손댈 사람이 없습니다. 배정된 DB 가 생기면 여기 올라옵니다.</div>';
   h+='<div class="bcr-chips">';
-  for(i=0;i<BCR_ORD.length;i++){
-    k=BCR_ORD[i];if(!c[k])continue;
+  var ORD=bcrOrd();
+  for(i=0;i<ORD.length;i++){
+    k=ORD[i];if(!c[k])continue;
     h+='<button type="button" class="bcr-c '+(AR_TKC[k]||'')+'" '+
        'onclick="bcrGo(\''+((k==='bd'||k==='old')?'clients':'crm')+'\')">'+
        '<b>'+c[k]+'</b>'+osEsc(AR_TKL[k]||k)+'</button>';
@@ -8327,38 +8396,44 @@ function arTouch(who){
     if(r.stage==='증권전달'){
       /* 증권을 보낸 지 얼마 안 된 사람만. 이때가 소개를 받을 수 있는 유일한 때다 */
       var pd=r.pAt?arDaysAgo(r.pAt):9999;
-      if(pd<=30)out.push({k:'won',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:1,
+      if(pd<=tdoWait('won'))out.push({k:'won',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:1,
                           d:pd,st:r.stage});
       continue;
     }
     if(r.res==='상담'){
       var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)?((''+r.appt).slice(0,10)+' '+(''+r.appt).slice(11,16)):'';
-      if(ap||r.days<=45)
+      if(ap||r.days<=tdoWait('run'))
         out.push({k:'run',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,ap:ap,who:r.who,go:'crm',
                   st:r.stage,ord:ap?0:1});
       continue;
     }
     if(r.n===0){
-      if(r.days>=3)out.push({k:'new',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:2});
+      if(r.days>=tdoWait('new'))out.push({k:'new',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:2});
       continue;
     }
     if(r.res==='거절'){
-      if(r.days>=14)out.push({k:'rej',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:5});
+      if(r.days>=tdoWait('rej'))out.push({k:'rej',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:5});
       continue;
     }
-    if(r.days>=7)out.push({k:'no',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:3});
+    if(r.days>=tdoWait('no'))out.push({k:'no',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:3});
   }
   var cl=AR.cliRows||[];
   for(i=0;i<cl.length;i++){
     c=cl[i];
     if(who&&c.who!==who)continue;
     var bd=arBdIn(c.bd);
-    if(bd>=0&&bd<=7){
+    if(bd>=0&&bd<=tdoWait('bd')){
       out.push({k:'bd',id:c.id,nm:c.name,sub:'',d:bd,who:c.who,go:'clients',ord:0});
       continue;
     }
-    if(c.days>=90||!c.plan)
+    if(c.days>=tdoWait('old')||!c.plan)
       out.push({k:'old',id:c.id,nm:c.name,sub:'',d:c.days,plan:c.plan,who:c.who,go:'clients',ord:4});
+  }
+  /* <b>차례도 표에서</b>. 줄마다 손으로 적으면 표를 고쳐도 안 따라옵니다 (5번).
+     약속이 잡힌 진행중만은 그날 시간이 있어 맨 위로 올립니다. */
+  for(i=0;i<out.length;i++){
+    var mm=TDO[out[i].k];
+    out[i].ord=(mm?mm.ord:99)-((out[i].k==='run'&&out[i].ap)?0.5:0);
   }
   out.sort(function(a,b){return a.ord-b.ord||b.d-a.d;});
   for(i=0;i<out.length;i++)out[i].todo=arTodoOf(out[i]);
@@ -8369,17 +8444,92 @@ function arTkCount(who){
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
 }
-var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일',pol:'증권',won:'계약'};
-var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb',pol:'red',won:'grn'};
+/* ══ 오늘 무엇을 — <b>표 하나</b> ═══════════════════════════════════════
+   사장님 말씀 그대로 — 「고객의 상태에 따라서 오늘 해야 할 일을 찾아주고
+   정리해 줘」.
+
+   여태 이 앱은 <b>세기만</b> 했습니다. 「부재 12 · 거절 5 · 진행중 3」 은
+   나오는데 <b>그래서 오늘 뭘 하라</b>는 말이 없었습니다. 숫자는 보고용이고
+   행동이 아닙니다.
+
+   그리고 여기 있던 것이 <b>쌍둥이 셋</b>이었습니다 — 이름표(AR_TKL) ·
+   색(AR_TKC) · 차례(BCR_ORD) 가 따로 있고, <b>며칠 지나면 다시 거는지</b>
+   는 arTouch() 의 if 사슬 안에 숫자로 박혀 있었습니다. 늘릴 때마다 한
+   곳을 빠뜨릴 자리였고, 사장님이 고치실 수도 없었습니다 (5번).
+
+   그래서 <b>한 표</b>로 모읍니다. 이름표·색·차례·기준일·무엇을 하는지가
+   한 줄에 같이 있습니다.
+
+     t    화면에 보이는 이름
+     st   사장님이 쓰시는 단계 말 (TA · AP · PC · CS …)
+     c    색
+     ord  차례 — 급한 것이 위로
+     wait <b>며칠 지나면 다시</b>. 사장님이 설정에서 고치실 수 있습니다.
+          여기 적힌 것은 <b>기본값</b>이고, 고치시면 그 값이 이깁니다.
+     go   눌렀을 때 가는 화면
+
+   <b>「오늘 무엇을」 은 여기 안 적습니다.</b> arTodoOf() 가 이미 그 일을
+   하고 있고, 그쪽이 <b>경과일과 단계까지</b> 봅니다 — 「계약하고 17일째
+   증권을 못 보냈습니다」 처럼. 여기 또 적으면 두 글이 갈려, 화면마다
+   다른 말을 하게 됩니다 (5번). 이 표는 <b>누구를 고를지</b>만 정합니다. */
+var TDO={
+ run :{t:'진행중',  st:'AP · PC',  c:'grn', ord:1, wait:45, go:'crm'},
+ bd  :{t:'생일',    st:'',         c:'amb', ord:0, wait:7,  go:'clients'},
+ pol :{t:'계약',    st:'계약완료', c:'red', ord:2, wait:0,  go:'crm'},
+ won :{t:'증권',    st:'증권전달', c:'grn', ord:3, wait:30, go:'crm'},
+ 'new':{t:'미진행', st:'미접촉',   c:'grn', ord:4, wait:3,  go:'crm'},
+ no  :{t:'부재',    st:'TA',       c:'amb', ord:5, wait:7,  go:'crm'},
+ rej :{t:'거절',    st:'',         c:'red', ord:6, wait:14, go:'crm'},
+ old :{t:'기고객',  st:'',         c:'red', ord:7, wait:90, go:'clients'}
+};
+/* 차례는 표에서 <b>세어</b> 뽑습니다 — 따로 적어 두면 갈립니다 (5번) */
+function tdoOrder(){
+  var k,a=[];
+  for(k in TDO)if(TDO.hasOwnProperty(k))a.push(k);
+  a.sort(function(x,y){return TDO[x].ord-TDO[y].ord;});
+  return a;
+}
+/* <b>며칠 지나면 다시</b> — 사장님이 고치신 값이 있으면 그것이 이깁니다.
+   숫자가 아니거나 음수면 기본값으로 돌아갑니다 (모르는 값을 0 으로 쓰지 않습니다). */
+function tdoWait(k){
+  var d=(TDO[k]&&TDO[k].wait)||0,v;
+  try{ v=(typeof osCfgGet==='function')?osCfgGet('tdo_wait_'+k,''):''; }catch(e){ v=''; }
+  if(v===''||v==null)return d;
+  var n=parseInt(v,10);
+  return (isNaN(n)||n<0)?d:n;
+}
+function tdoOn(k){ return !!(TDO[k]&&(''+((typeof osCfgGet==='function')?osCfgGet('tdo_wait_'+k,''):''))!==''); }
+/* 그 무리에 <b>실제로 하는 말</b> 하나를 보여 준다 — 설정 화면에서
+   「이 무리는 이런 말을 듣습니다」 를 적기 위해서다. 글을 여기서 만들지
+   않고 <b>arTodoOf 를 그대로 불러</b> 온다. 그래야 설정에 적힌 말과
+   실제로 뜨는 말이 안 갈린다 (5번). */
+function tdoSample(k){
+  var w=tdoWait(k);
+  try{ return arTodoOf({k:k,d:w,ap:'',st:'',plan:''})||''; }catch(e){ return ''; }
+}
+function tdoLabel(k){ return (TDO[k]&&TDO[k].t)||k||''; }
+function tdoColor(k){ return (TDO[k]&&TDO[k].c)||''; }
+/* 예전 이름 — 부르던 자리가 많아 <b>표를 가리키게</b>만 한다 (5번) */
+var AR_TKL={},AR_TKC={};
+(function(){var k;for(k in TDO)if(TDO.hasOwnProperty(k)){AR_TKL[k]=TDO[k].t;AR_TKC[k]=TDO[k].c;}})();
+/* <b>오늘 무엇을</b> 은 <b>반드시 씻는다</b>. arTodoOf 는 「적어 둔 일부터 —
+   ○○」 처럼 <b>사장님이 손으로 적으신 메모</b>를 그 글에 섞어 넣는다.
+   안 씻으면 메모에 꺾쇠가 들어간 순간 화면이 깨진다 (3번).
+   경고선은 <b>기준의 두 배</b>다 — 숫자를 또 박아 두면 사장님이 기준을
+   고치셔도 색만 옛 기준으로 남는다 (5번). */
+function tdoOver(x){
+  var w=tdoWait(x&&x.k);
+  return !!(w&&x&&x.d>=w*2&&x.d<9000);
+}
 function arTkRow(x,own){
-  return '<div class="ar-tk'+(((x.k==='no'&&x.d>=14)||(x.k==='old'&&x.d>=90))?' warn':'')+'" '+
+  return '<div class="ar-tk'+(tdoOver(x)?' warn':'')+'" '+
     'onclick="go(\''+x.go+'\')">'+
     '<span class="ar-bg '+AR_TKC[x.k]+'">'+AR_TKL[x.k]+'</span>'+
     '<span class="nm">'+(own?('<b class="own">'+osEsc(arNameOf(x.who))+'</b>'):'')+
       osEsc(x.nm)+(x.src?('<i class="src">'+osEsc(x.src)+'</i>'):'')+
       (x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
     '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
-    '<span class="do">'+osEsc(x.todo)+'</span></div>';
+    '<span class="do">'+osEsc(x.todo||'')+'</span></div>';
 }
 /* 팀원 한 사람을 펼쳤을 때 그 사람이 오늘 터치할 사람들 */
 function arTouchMini(who,n){
@@ -13758,8 +13908,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 19:25';
-var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).<br><b>그리고 고객 365일을 열면 「오늘의 미션」과 「이번 달 달력」이 맨 위에 섭니다</b>(#331).<br><b>그리고 이번 달 목표를 하루 몫으로 나눠 오늘 몇 건을 하면 되는지 보입니다</b>(#333).<br><b>그리고 서버가 죽었을 때 무엇을 하면 되는지 앱이 그 자리에 적어 줍니다</b>(#334).<br><b>그리고 「보장분석 전&amp;후 만들기」를 누르면 새 화면이 바로 뜨고 고객 365일에 저장됩니다</b>(#332).<br><b>그리고 보던 화면에서 허락 없이 벗어나지 않고, 한장 보험료 비교에서 나가기가 됩니다</b>(#335).<br><b>그리고 위 띠가 ⭐ 즐겨찾기만 상시 고정으로 바뀌고 홈에 「팀 할 일」이 생겼으며, 표가 거절돼 밀려난 로그아웃을 말없이 넘기지 않습니다</b>(#336·#337).<br><b>그리고 로그인해도 앱이 통째로 하얗게 뜨던 것을 고쳤습니다 — 덮개 규칙에서 조건이 떨어져 나가 흰 껍데기가 앱 위를 덮고 있었습니다</b>(#338).<br><b>그리고 한 번 연 껍데기가 다른 화면까지 덮던 것을 고쳤습니다 — 일곱 화면이 가려져 있었습니다</b>(#339).<br><b>그리고 보장 전·후 만들기에서 손으로 적은 실명이 서버로 나가던 것을 막았습니다</b>(#340).<br><b>그리고 보장분석 전·후 만들기가 우표만 하게 뜨던 것을 고쳤습니다 — 칸 모양 CSS 한 줄이 그 화면에만 없었습니다</b>(#341).<br><b>그리고 왼쪽 메뉴가 기둥으로 상시 고정되고, 공지가 칸으로 하나씩 서며, 사용가이드가 상황별로 바뀌었습니다</b>(#343).<br><b>그리고 CI 를 여섯 갈래로 나눠 22분 25초가 5분 16초가 됐습니다 — 새 점검은 이제 scripts/checks.tsv 맨 끝에 한 줄만 붙입니다</b>(#344).<br><b>…main 소식…</b> 보장분석 발표를 한 벌로 — 표지·클로징·가입설계 요청서, 메뉴 찾기 한글 조합(#345).<br><b>…main 소식…</b> 급여와 비급여를 사람 말로 — 병원비 공부방, 한 장씩 카톡으로, 가로 16:9 인쇄(#347).<br><b>…main 소식…</b> 지역 동선과 계약 후 관리(#346), 상담 흐름에 대사와 20~70대 나이대 가이드(#348).<br><b>…main 소식…</b> 얹은 기능이 조용히 사라지지 않게 — 감싼 이름을 지키고 브라우저로 눌러 봅니다(#349).<br><b>…main 소식…</b> 지역 동선을 실제로 쓸 수 있게 — 서버 칸, 카카오 거절 이유, 한 글자도 안 치는 위치 잡기(#350).<br><b>…main 소식…</b> 내 고객이 지도에 전부, 시로 골라 보기, 단추 셋을 하나로, 길찾기 거리 받을 자리(#351).<br><b>…main 소식…</b> 블로그 붙여넣기 한 번으로 그림까지(#353), 지역 칸을 시로 묶고 비대면 상담사진을 상담 도구에(#354).<br><b>…main 소식…</b> 지역 동선이 비어 있던 것 · 상담사진을 흐름으로 · 환율을 한 곳으로(#355).<br><b>…main 소식…</b> 배정한 DB 가 계약까지 갔는지 한 판에 — TFA 업무관리의 DB·업적관리(#352).<br><b>…main 소식…</b> 팀 분류가 7월에 멈춰 있던 것 · AP·PC 먼저 · 계약업적·소개수·증권 칸(#358).<br><b>…main 소식…</b> 블로그 — 실제로 붙여넣어 보고 나온 네 자리 · 낡은 점검 둘(#356).<br><b>…main 소식…</b> 지울 수 있게 · 월 목표업적을 여기서 바로(#359).<br><b>…main 소식…</b> 계정 삭제가 실제로 되게 · 메뉴 접기 · 홈에서 키 안내 걷어내기(#360).<br><b>…main 소식…</b> 찾으면 뜬다 — 팀원 관리 · DB 통합 CRM 찾기 · 키 딱지(#361).<br><b>…main 소식…</b> 홈 한 장 · 계약 마디 · 소식 → 카드뉴스(#363).<br><b>…main 소식…</b> 한 칸에서 사람까지 찾기 · 증권 PDF 끌어다 놓기(#366).<br><b>…main 소식…</b> 홈은 고객 관리 한 장으로 · 달력에 직접 넣기 · 열쇠 재촉 걷어내기(#367).<br><b>…main 소식…</b> 내 일정을 폰과 같이 · 「지금 이것 하세요」 한 건(#368).<br><b>…main 소식…</b> 계약·청구에 「증권 전달」(#369).<br><b>…main 소식…</b> TFA 업무관리를 홈으로 — 하루가 한 장에서(#370).<br><b>…main 소식…</b> 공지를 홈 열 때마다 다시 읽지 않는다(#371).<br><b>…main 소식…</b> 「서버 준비 SQL」 이 홈에서 사라져 있던 것을 되돌림(#372).<br><b>…main 소식…</b> 막혀 있는 것을 홈에서 그 자리에서 푼다(#373).<br><b>…main 소식…</b> 준비 SQL 이 시간 초과로 끊길 때 나눠서 돌리기(#374).';
+var APP_BUILD='2026-09-14 21:45';
+var APP_BUILD_NOTE='<b>병 하나를 한 줄기로 봅니다 — 재발 → 전이 → 합병증 → 얼마.</b> 「암·재발·전이를 한 번에 이어서 봐야 하는데 따로다, 학습자료인데」 하셔서 고쳤습니다. 맞는 말씀입니다. 전에는 질병을 열면 짧은 칸 하나에 <b>「보러 가기」 단추</b>가 있고, 진짜 내용은 도구줄의 딴 화면에 있었습니다. 이제 <b>그 자리에 전문을 폅니다</b> — 질병 상세가 ①어떤 병 → ②그림 → ③왜 → ④치료와 담보 → ⑤술식 → ⑥사례 → ⑦설계 → <b>⑧다시 걸리면 → ⑨전이 → ⑩합병증 → ⑪얼마 듭니까</b> → ⑫막히는 자리 → ⑬화법 → ⑭근거 로 <b>끊기지 않고</b> 이어집니다. <b>🔁 재발</b>을 새로 넣었습니다 — 고객이 가장 무서워하는 자리인데 설계에서 가장 자주 비어 있습니다. <b>재발 · 전이 · 잔존</b>을 갈라 두고(대장암이 간으로 간 것은 간암이 아니라 원발입니다), 지급이 갈리는 다섯 자리를 짚습니다 — 그 담보가 재발을 인정하는가 · 사이에 두어야 하는 기간 · 몇 번까지 · 치료가 길어지면 무엇으로 · 암이 아닌 병의 두 번째 사건. <b>재발률 같은 비율은 적지 않았습니다.</b> <b>질병코드도 다 채웠습니다</b> — 뇌졸중에 <b>I66·I68·I69</b>가, 허혈성심장에 <b>I23·I24</b>가 빠져 있었습니다. 질병 41자리에 <b>코드 41벌</b>을 더해 245벌이 됐고, 이름은 KCD 표 원문 그대로입니다. 질병마다 <b>「이 코드가 찍혀도 이 자료를 보시면 됩니다」</b> 칸이 새로 붙습니다 — KCD 2,080벌에서 그때그때 뽑습니다. 그리고 <b>차례 번호를 한 곳에서 세게</b> 했습니다 — 손으로 박아 두었더니 ⑫ 다음에 ⑧ 이 나오고, 전이가 없는 병은 번호를 건너뛰었습니다. 점검 241 → <b>254곳</b>. [19] 를 다섯 번 되돌려 확인했고, 그중 <b>하나는 제 점검이 헛것</b>이었습니다 — 화면 전체 글자에서 코드를 찾는 바람에 I66 을 빼도 통과했습니다(가까운 코드가 도로 그려 줍니다). 코드 칸만 보게 고쳤습니다. 그리고 <b>재무설계 상담자료에서 접이를 펴도 글씨가 그대로입니다</b> — 고객 앞에서 근거를 펴면 글씨가 반토막 나던 것을 고쳤습니다(#275). 그리고 <b>하루 한 장에 팀원이 올린 보고까지</b> 담기고(#277), <b>상담 숫자</b>가 한 곳으로 모였습니다(#278). 또 <b>리더도 자기 팀 보고를 봅니다</b>(#279). 그리고 <b>실제 서류 26건으로 못 읽던 다섯 자리</b>를 고쳤고(#280), <b>보장분석이 상태를 제대로 말하고 DB 통합 CRM 이 스스로 낫습니다</b>(#281).<br><b>담보 말모이가 36 → 39가지</b>가 됐습니다 — 보장분석이 새로 아는 <b>뇌졸중 · 뇌출혈 · 급성심근경색</b> 세 계열이 가이드 말모이에 없었습니다(#281 을 받아 붙이며 점검이 잡았습니다). 「뇌출혈」 하나만 든 증권은 <b>가장 흔한 뇌경색에서 안 열리고</b>, 「급성심근경색」 하나만 든 증권은 <b>가장 흔한 협심증에서 안 열립니다</b> — 그 말을 말모이에 적어 두었습니다.<br><b>담보 이름표 옆에 남아 있던 출처 없는 비율을 지웠습니다.</b> 질병 가이드에서는 대표님이 잡아 지웠는데, 앱의 INS_KEY 주석에는 그대로 있었습니다. 주석이라 화면에는 안 나오지만 <b>다음 사람이 사실로 옮겨 적으면 그때는 고객 앞에 나갑니다.</b> 비율 대신 <b>좁은 것 ⊂ 넓은 것</b> 관계만 남기고, 어디까지 담는지는 「그 상품 약관의 분류표가 정한다」 로 닫았습니다. 점검 254 → <b>255곳</b> — 그 블록 안만 좁게 보아 「100분의100」 같은 멀쩡한 것은 안 잡습니다. 되돌려 확인했고, <b>이 점검은 경고하려고 그 숫자를 인용해 둔 제 주석부터 잡았습니다</b> — 인용이든 주장이든 위험은 같아 맞는 판정이었습니다. 그리고 <b>유지한 보험이 애프터에서 사라지지 않고, 종신보험이 계약 목록에 섭니다</b>(#282).<br><b>그리고 자료가 많아도 끝까지 읽습니다</b> — 회사 이름 표가 두 벌이라 사라지던 계약, 25건째부터 말없이 잘리던 계약 목록, 8줄에서 끊기던 다른 양식을 고쳤습니다(#283).<br><b>그리고 모르는 보험사 때문에 계약이 말없이 사라지지 않습니다</b> — 못 읽은 줄을 원문 그대로 보여 드리고, 그 자리에서 회사 이름을 넣으시면 보장분석과 비포&애프터가 함께 읽습니다(#284).<br><b>그리고 미끼 레이더가 면책 조항을 장점으로 읽지 않습니다</b> — 「지급하지 않는 사유」 안의 뇌혈관·허혈성심장 코드를 「전체 보장·유리」로 읽던 자리를 뒤집어, 「면책 조항에서만 나옴」 이라고 알려 줍니다(#285).<br><b>그리고 신입 교재가 상담 도구 안으로 들어왔습니다</b> — 「보장분석 상담자료」 바로 밑에 섭니다(#286).<br><b>그리고 비포&애프터가 담보를 잘못 읽던 네 자리를 잡았고</b>(#287), <b>왼쪽 메뉴 건수 딱지가 10px 로 커져 폰 점검이 다시 초록불</b>이 됐습니다 — main 이 그날부터 빨간불이던 자리입니다.<br><b>그리고 보장분석 담보 읽기가 옆 칸을 삼키지 않고, 번호를 금액으로 읽지 않습니다</b>(#288).<br><b>그리고 보장분석에서 읽은 값을 그 자리에서 고칠 수 있습니다</b>(#289).<br><b>그리고 고객 앞에서 숫자가 말없이 틀어지던 자리 열두 군데를 잡았습니다</b>(#290).<br><b>그리고 말없이 사라지거나 말없이 틀리던 자리 다섯을 잡았습니다</b>(#291).<br><b>그리고 블로그 글을 쓰는 문이 하나로 모였습니다 — 블로그 공장</b>(#276).<br><b>그리고 미끼 레이더에서 신상품을 이름으로 찾습니다</b>(#294) — 회사별 신상품·뉴스·공시실 셋을 한 칸이 함께 좁힙니다.<br><b>그리고 아침에 앉아 기다리시던 자리 넷이 빨라졌습니다</b>(#292).<br><b>그리고 발표에서 아래쪽이 잘리거나 글씨가 반토막 나던 자리 둘을 고쳤습니다</b>(#293).<br><b>그리고 조직도에 적어 두신 팀이 성장판·TFA 에 그대로 반영됩니다</b>(#295).<br><b>그리고 「하루 한 장」을 밤에 미리 만들지 않고 여실 때 그 자리에서 세웁니다</b>(#298).<br><b>그리고 예외질환 인수확인에 실제 보험사 기준이 붙고, 공부 축이 자기신고에서 실제 점수로 바뀌었습니다</b>(#296·#299).<br><b>그리고 교재 점수판이 인터넷에 열려 있던 것을 닫았고</b>(#300), <b>서버가 대답을 안 해도 화면이 말없이 멈추지 않습니다</b>(#302). <b>90일 로드맵과 교재도 한 길로 이어졌습니다</b>(#301).<br><b>그리고 블로그가 왜 안 되는지 화면이 말해 주고, 안 돌던 점검 여덟 개가 CI 에 걸렸습니다</b>(#303).<br><b>그리고 메뉴가 위에 가로로 서서 폰이든 웹이든 같아졌습니다</b>(#304).<br><b>그리고 고객 맞춤 보장분석 풀리포트가 생겼습니다 — 병이 왔을 때 쓸 수 있는 돈으로 뒤집어 봅니다</b>(#297). 예외질환·90일 로드맵에도 점검이 붙었습니다(#305).<br><b>그리고 가입이 동의 칸에서 막히던 것을 고쳤습니다 — 누구나 신청은 됩니다</b>(#306).<br><b>그리고 증권 분석에 「한장 보험료 비교」가 붙었고</b>(#308), <b>갈래마다 색이 입혀져 가로 메뉴도 세로 메뉴와 한 줄기가 됐습니다</b>(#307).<br><b>그리고 주소로 바로 열어도 준비 SQL 이 그 칸에 들어옵니다</b>(#309).<br><b>그리고 비포&애프터가 왼쪽 목록에서 숨겨졌습니다 — 화면은 그대로 살아 있습니다</b>(#311).<br><b>그리고 블로그로 매일 한 편을 실제로 쓸 수 있게 되고 준법 문구가 회사 것으로 바뀌었습니다</b>(#310). <b>계정 등록이 아예 안 되던 것도 고쳤습니다 — 가입 폼을 한 벌로</b>(#312).<br><b>그리고 공지에 「확인 요청」이 생겨 지목한 분께 맨 위에 뜨고 본인이 누를 때까지 남습니다</b>(#315). 가로 메뉴가 각지고 마우스로 넘어가며(#313), 본인 역량 체크에서 교재로 바로 갑니다(#314).<br><b>그리고 30일 고객관리 표가 제 옷을 못 입어 깨져 보이던 것을 고쳤습니다</b>(#316).<br><b>그리고 APEX 마스터 과정이 생기고 전체지도가 이어졌으며, 화면 점검이 64개만 열던 것을 고쳤습니다</b>(#317) — 이제 목록을 따로 안 적고 앱의 TABS 를 그대로 읽습니다.<br><b>그리고 위 띠의 「메뉴 찾기」 자리에 🎙 음성 비서가 들어왔습니다</b>(#318).<br><b>그리고 「공지 다 했는데」 서버에는 안 올라가 있던 자리를 고쳤습니다</b>(#319).<br><b>그리고 아이디 삭제가 안 되고 되풀이되던 것을 고쳤습니다 — 서버가 지우다 말고 있었습니다</b>(#321).<br><b>그리고 상담자료 보장분석표가 담보를 통째로 빠뜨리던 것을 고쳤습니다</b>(#325).<br><b>그리고 「준비하지 않으면·준비하면·연금 종신」이 통째로 비던 것과 발표모드를 고쳤고</b>(#324), <b>나이를 못 읽으면 조용히 50 을 쓰던 자리도 잡았습니다</b>(#323).<br><b>그리고 상담자료 내 소개 바로 뒤에 「우리가 하는 일」 한 장이 붙었고</b>(#326), <b>블로그가 두 갈래·자동 심의·폰에서 읽히는 카드·글쓴이로 정리됐습니다</b>(#322).<br><b>그리고 KB 보장분석 PDF 를 올리면 그 자리에서 전·후를 만들고, 관리자 돈 칸이 사람이 읽는 금액으로 되읽어 줍니다</b>(#329).<br><b>그리고 로그인이 멈출 때 앱이 아무 말도 안 하던 것을 고쳤습니다 — 문턱의 모든 기다림에 시간 제한</b>(#327).<br><b>그리고 리더 할 일을 앱이 답하고, 스케줄에 달력이 붙고, 교육매니저 할 일이 생겼습니다</b>(#330).<br><b>그리고 고객 365일을 열면 「오늘의 미션」과 「이번 달 달력」이 맨 위에 섭니다</b>(#331).<br><b>그리고 이번 달 목표를 하루 몫으로 나눠 오늘 몇 건을 하면 되는지 보입니다</b>(#333).<br><b>그리고 서버가 죽었을 때 무엇을 하면 되는지 앱이 그 자리에 적어 줍니다</b>(#334).<br><b>그리고 「보장분석 전&amp;후 만들기」를 누르면 새 화면이 바로 뜨고 고객 365일에 저장됩니다</b>(#332).<br><b>그리고 보던 화면에서 허락 없이 벗어나지 않고, 한장 보험료 비교에서 나가기가 됩니다</b>(#335).<br><b>그리고 위 띠가 ⭐ 즐겨찾기만 상시 고정으로 바뀌고 홈에 「팀 할 일」이 생겼으며, 표가 거절돼 밀려난 로그아웃을 말없이 넘기지 않습니다</b>(#336·#337).<br><b>그리고 로그인해도 앱이 통째로 하얗게 뜨던 것을 고쳤습니다 — 덮개 규칙에서 조건이 떨어져 나가 흰 껍데기가 앱 위를 덮고 있었습니다</b>(#338).<br><b>그리고 한 번 연 껍데기가 다른 화면까지 덮던 것을 고쳤습니다 — 일곱 화면이 가려져 있었습니다</b>(#339).<br><b>그리고 보장 전·후 만들기에서 손으로 적은 실명이 서버로 나가던 것을 막았습니다</b>(#340).<br><b>그리고 보장분석 전·후 만들기가 우표만 하게 뜨던 것을 고쳤습니다 — 칸 모양 CSS 한 줄이 그 화면에만 없었습니다</b>(#341).<br><b>그리고 왼쪽 메뉴가 기둥으로 상시 고정되고, 공지가 칸으로 하나씩 서며, 사용가이드가 상황별로 바뀌었습니다</b>(#343).<br><b>그리고 CI 를 여섯 갈래로 나눠 22분 25초가 5분 16초가 됐습니다 — 새 점검은 이제 scripts/checks.tsv 맨 끝에 한 줄만 붙입니다</b>(#344).<br><b>…main 소식…</b> 보장분석 발표를 한 벌로 — 표지·클로징·가입설계 요청서, 메뉴 찾기 한글 조합(#345).<br><b>…main 소식…</b> 급여와 비급여를 사람 말로 — 병원비 공부방, 한 장씩 카톡으로, 가로 16:9 인쇄(#347).<br><b>…main 소식…</b> 지역 동선과 계약 후 관리(#346), 상담 흐름에 대사와 20~70대 나이대 가이드(#348).<br><b>…main 소식…</b> 얹은 기능이 조용히 사라지지 않게 — 감싼 이름을 지키고 브라우저로 눌러 봅니다(#349).<br><b>…main 소식…</b> 지역 동선을 실제로 쓸 수 있게 — 서버 칸, 카카오 거절 이유, 한 글자도 안 치는 위치 잡기(#350).<br><b>…main 소식…</b> 내 고객이 지도에 전부, 시로 골라 보기, 단추 셋을 하나로, 길찾기 거리 받을 자리(#351).<br><b>…main 소식…</b> 블로그 붙여넣기 한 번으로 그림까지(#353), 지역 칸을 시로 묶고 비대면 상담사진을 상담 도구에(#354).<br><b>…main 소식…</b> 지역 동선이 비어 있던 것 · 상담사진을 흐름으로 · 환율을 한 곳으로(#355).<br><b>…main 소식…</b> 배정한 DB 가 계약까지 갔는지 한 판에 — TFA 업무관리의 DB·업적관리(#352).<br><b>…main 소식…</b> 팀 분류가 7월에 멈춰 있던 것 · AP·PC 먼저 · 계약업적·소개수·증권 칸(#358).<br><b>…main 소식…</b> 블로그 — 실제로 붙여넣어 보고 나온 네 자리 · 낡은 점검 둘(#356).<br><b>…main 소식…</b> 지울 수 있게 · 월 목표업적을 여기서 바로(#359).<br><b>…main 소식…</b> 계정 삭제가 실제로 되게 · 메뉴 접기 · 홈에서 키 안내 걷어내기(#360).<br><b>…main 소식…</b> 찾으면 뜬다 — 팀원 관리 · DB 통합 CRM 찾기 · 키 딱지(#361).<br><b>…main 소식…</b> 홈 한 장 · 계약 마디 · 소식 → 카드뉴스(#363).<br><b>…main 소식…</b> 한 칸에서 사람까지 찾기 · 증권 PDF 끌어다 놓기(#366).<br><b>…main 소식…</b> 홈은 고객 관리 한 장으로 · 달력에 직접 넣기 · 열쇠 재촉 걷어내기(#367).<br><b>…main 소식…</b> 내 일정을 폰과 같이 · 「지금 이것 하세요」 한 건(#368).<br><b>…main 소식…</b> 계약·청구에 「증권 전달」(#369).<br><b>…main 소식…</b> TFA 업무관리를 홈으로 — 하루가 한 장에서(#370).<br><b>…main 소식…</b> 공지를 홈 열 때마다 다시 읽지 않는다(#371).<br><b>…main 소식…</b> 「서버 준비 SQL」 이 홈에서 사라져 있던 것을 되돌림(#372).<br><b>…main 소식…</b> 막혀 있는 것을 홈에서 그 자리에서 푼다(#373).<br><b>…main 소식…</b> 준비 SQL 이 시간 초과로 끊길 때 나눠서 돌리기(#374).<br><b>…main 소식…</b> 고객 상태에 맞는 오늘 할 일 — 세기만 하던 것을 시키는 것으로(#375).';
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18415,6 +18565,7 @@ function renderDashboard(){
 var HM_ORD=[
  {k:'appt', e:'📌', t:'약속',        s:'시간이 정해진 것부터', go:'crm'},
  {k:'madi', e:'📮', t:'계약 마디',   s:'계약하고 한 달 · 그 뒤 석 달마다', go:'clients'},
+ {k:'db',   e:'📇', t:'DB 고객',     s:'상태에 맞게 오늘 할 것',  go:'crm'},
  {k:'touch',e:'☎️', t:'연락할 분',   s:'주기가 돌아왔습니다',   go:'clients'},
  {k:'next', e:'▶',  t:'할 일',       s:'고객에게 약속한 것',    go:'clients'},
  {k:'bd',   e:'🎂', t:'생일',        s:'축하 문자 먼저',        go:'clients'},
@@ -18422,13 +18573,17 @@ var HM_ORD=[
 ];
 /* 오늘 몫을 <b>한 번만</b> 셉니다 — 카드도 띠도 이것을 봅니다 */
 function hmCount(){
-  var out={appt:0,touch:0,next:0,bd:0,help:0,madi:0,total:0},i,k;
-  try{
-    var day=(mcalItems()[mcalToday()]||[]);
-    for(i=0;i<day.length;i++){ k=day[i].k; if(out[k]!==undefined)out[k]++; }
-  }catch(e){}
-  /* 계약 마디는 달력에 안 찍습니다 — 따로 셉니다 */
-  try{ if(typeof mstDueList==='function')out.madi=(mstDueList().due||[]).length; }catch(e){}
+  /* <b>세는 곳과 세우는 곳이 같아야 합니다.</b> 예전에는 카드가 달력을 따로
+     세고 목록은 hmSteps 가 따로 만들어, 오늘 약속이 잡힌 분을 목록에서
+     빼자 <b>카드만 7, 목록은 6</b> 이 됐습니다. 어느 쪽이 맞는지 알 수
+     없는 숫자는 없느니만 못합니다. 그래서 <b>hmSteps 를 세어</b> 답합니다 (5번).
+
+     갈래도 손으로 적지 않습니다 — HM_ORD 에서 뽑습니다. 손으로 적으면
+     줄을 하나 늘릴 때 여기를 빠뜨려 그 갈래만 0 으로 남습니다. */
+  var out={total:0},i,k,L=[];
+  for(i=0;i<HM_ORD.length;i++)out[HM_ORD[i].k]=0;
+  try{ L=hmSteps(); }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++){ k=L[i].k; if(out[k]!==undefined)out[k]++; }
   for(i=0;i<HM_ORD.length;i++)out.total+=out[HM_ORD[i].k]||0;
   return out;
 }
@@ -18484,12 +18639,39 @@ function hmSteps(){
     var x=items[i];
     out.push({k:x.k,id:x.id||'',my:x.my||'',t:x.t||'',s:x.s||''});
   }
+  /* ── <b>고객 상태에 맞는 오늘 할 일</b> ────────────────────────────
+     미접촉·TA·AP·PC·CS·거절·부재마다 무엇을 할지는 <b>TDO 표</b>가 압니다.
+     고르는 것은 arTouch 가 이미 하고 있으므로 <b>그대로 가져옵니다</b> —
+     여기서 다시 고르면 TFA 화면과 갈립니다 (5번).
+     이름표와 할 말은 줄에 실어 보냅니다. 달력 갈래(HM_ACT)와 고객 상태
+     (TDO)는 서로 다른 것이라 표가 둘인 것이 맞습니다.                 */
+  try{
+    if(typeof arTouch==='function'&&typeof arMyId==='function'){
+      var db=arTouch(arMyId()),today=mcalToday();
+      for(i=0;i<db.length;i++){
+        var y=db[i];
+        /* <b>오늘 약속이 잡힌 분은 여기 또 세우지 않습니다.</b> 달력이 이미
+           그 시간과 함께 세워 두었습니다. 두 번 서면 한쪽을 끝내도 다른
+           쪽이 남아, 「다 했는데 안 줄어든다」 가 됩니다 (5번).
+           시간이 안 정해진 상태(부재·거절·미진행·계약·증권…)만 여기 섭니다. */
+        if(y.k==='run'&&y.ap&&(''+y.ap).slice(0,10)===today)continue;
+        out.push({k:'db',tk:y.k,id:y.id||'',t:y.nm||'',s:y.todo||'',gox:y.go||'crm',
+                  e:'📇',kt:tdoLabel(y.k)+(TDO[y.k]&&TDO[y.k].st?(' · '+TDO[y.k].st):''),
+                  ord2:(TDO[y.k]?TDO[y.k].ord:99)});
+      }
+    }
+  }catch(e1){}
   /* HM_ORD 가 정한 차례를 그대로 따릅니다 — 순서를 두 곳에서 정하면 갈립니다 */
   var rank={},j;
   for(j=0;j<HM_ORD.length;j++)rank[HM_ORD[j].k]=j;
   rank.my=HM_ORD.length;            /* 내 일정은 맨 뒤 — 앱이 시킨 것이 먼저입니다 */
-  out.sort(function(a,b){ return (rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]); });
-  for(j=0;j<out.length;j++)out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||'');
+  out.sort(function(a,b){
+    var d=(rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]);
+    if(d)return d;
+    return (a.ord2===undefined?0:a.ord2)-(b.ord2===undefined?0:b.ord2);
+  });
+  for(j=0;j<out.length;j++)
+    out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||out[j].tk||'');
   return out;
 }
 /* 무엇을 하면 되는지 — <b>표 하나</b>로 둡니다. 삼항 사슬로 늘어놓으면
@@ -18501,7 +18683,8 @@ var HM_ACT={
  next :{e:'▶', t:'할 일',      go:'clients', b:'했습니다',         real:false},
  bd   :{e:'🎂',t:'생일',      go:'clients', b:'축하 보냈습니다',   real:false},
  help :{e:'🤝',t:'도와줄 것',  go:'airep',   b:'했습니다',         real:false},
- my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false}
+ my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false},
+ db   :{e:'📇',t:'DB 고객',    go:'crm',     b:'했습니다',         real:false}
 };
 function hmNext(){
   var L=hmSteps(),i;
@@ -18514,6 +18697,15 @@ function hmOpen(key){
   for(i=0;i<L.length;i++)if(L[i].key===key){x=L[i];break;}
   if(!x)return;
   var A=HM_ACT[x.k]||{go:'clients'};
+  /* <b>어디로 보낼지는 그 줄이 안다.</b> 같은 「DB 고객」 줄이라도 배정 DB
+     에서 온 사람(부재·거절·진행중·계약·증권)은 <b>CRM</b> 으로, 고객 365일
+     에서 온 사람(기고객·생일)은 <b>그분 카드</b>로 가야 한다. 배정 DB 의
+     id 로 고객 카드를 열면 엉뚱한 사람이 뜨거나 아무것도 안 열린다.
+     그래서 arTouch 가 붙여 준 go 를 그대로 따른다 (5번). */
+  if(x.k==='db'){
+    if(x.gox==='clients'&&x.id&&typeof navGoCli==='function'){navGoCli(x.id);return;}
+    go(x.gox||'crm');return;
+  }
   if(x.id&&typeof navGoCli==='function'){navGoCli(x.id);return;}
   go(A.go);
 }
@@ -18534,10 +18726,14 @@ function hmNowHtml(){
   if(!r.x)
     return '<div class="hm-done">✅ <b>오늘 챙길 것을 다 하셨습니다.</b> '+r.n+'건 모두 끝냈습니다.</div>';
   var x=r.x,A=HM_ACT[x.k]||{e:'•',t:'',go:'clients',b:'했습니다',real:false};
+  /* 줄이 <b>제 이름표를 들고 오면</b> 그것을 먼저 씁니다 — 고객 상태(TDO)가
+     「부재 · TA」 처럼 갈래보다 정확히 말해 줍니다. 이름도 할 말도 <b>전부
+     씻습니다</b> — 할 말에는 사장님이 적으신 메모가 섞여 들어옵니다 (3번). */
+  var kt=x.kt||A.t, ee=x.e||A.e;
   return '<div class="hm-now">'+
-    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(A.t)+'</div>'+
-    '<div class="hm-now-m"><span class="e">'+A.e+'</span>'+
-      '<span class="m"><b>'+osEsc(x.t||A.t)+'</b>'+
+    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(kt)+'</div>'+
+    '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
+      '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
     '<div class="hm-now-b">'+
       '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
@@ -45574,6 +45770,7 @@ function osDiagCardHtml(){
 }
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){
+  try{ if(typeof tdoSetCss==='function')tdoSetCss(); }catch(e0){}
   if(typeof osSetCss==='function')osSetCss();
   if(typeof osSetSecApply==='function')setTimeout(osSetSecApply,0);
   try{osFoldApply();}catch(e){}
