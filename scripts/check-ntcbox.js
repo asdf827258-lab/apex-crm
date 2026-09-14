@@ -106,7 +106,9 @@ const SEED = `
   if (!document.getElementById('osNoticeHome')) {
     var d = document.createElement('div'); d.id = 'osNoticeHome'; document.body.appendChild(d);
   }
-  osNoticeLoad();`;
+  /* 씨앗이 <b>서버 내용을 갈아 끼운 뒤</b>라 force 로 읽습니다 — 실제로도
+     공지를 올리거나 내린 뒤에는 이렇게 다시 읽습니다. */
+  osNoticeLoad(true);`;
 
 (async () => {
   const browser = await chromium.launch();
@@ -232,11 +234,17 @@ const SEED = `
   /* ── 6) 「이 칸만 내리기」 ── */
   console.log('\n[6] 「이 칸만 내리기」 는 그 칸만 내린다');
   const F = await page.evaluate(async () => {
-    window.__wrote = [];
+    window.__wrote = []; window.__calls = [];
+    /* 「맨 위 한 줄」 을 보는 osNSeenLoad 도 같은 표를 읽어, 그냥 세면
+       <b>둘이 섞여</b> force 를 빼도 1 이 남는다 — 그러면 안 울리는 알람이
+       된다 (8번). 재는 동안만 그쪽을 재워 <b>목록 읽기</b>만 센다. */
+    const keep = window.osNSeenLoad; window.osNSeenLoad = function () {};
     osNtcHide('n2');
     await new Promise(r => setTimeout(r, 240));
+    window.osNSeenLoad = keep;
     const w = window.__wrote.filter(x => x.tbl === 'os_notices');
-    return { w: w, ops: w.map(x => x.op) };
+    return { w: w, ops: w.map(x => x.op),
+             reread: window.__calls.filter(c => c === 'os_notices.select').length };
   });
   is(F.w.length === 1 && F.ops[0] === 'update',
      '  <b>그 줄을 고친다</b> — 새 줄을 쌓지 않는다 (' + (F.ops.join(',') || '없음') + ')');
@@ -244,6 +252,11 @@ const SEED = `
      '  <b>active=false</b> 로 내린다');
   is(F.w.length === 1 && F.w[0].where === 'id=n2',
      '  <b>그 칸만</b> 짚어서 내린다 — ' + ((F.w[0] || {}).where || '어디도 안 짚음'));
+  /* 내리고 나면 <b>목록을 다시 읽어야</b> 한다 — 안 읽으면 내렸는데도
+     화면에 그대로 남아, 사장님은 버튼이 고장 난 것으로 보십니다.
+     (8-1 의 「안 읽는다」 와 짝입니다 — 막긴 것을 force 로 뚫는 자리) */
+  is(F.reread >= 1,
+     '  내린 뒤에는 <b>목록을 다시 읽는다</b> — ' + F.reread + '번 (안 읽으면 내렸는데 그대로 남아 보인다)');
 
   /* ── 7) 올린 뒤 쓰던 칸이 비워진다 ── */
   console.log('\n[7] 칸을 올리면 쓰던 자리가 비워진다');
@@ -283,6 +296,42 @@ const SEED = `
   });
   is(H.first === 1, '  칸 셋의 확인 기록을 <b>한 번에</b> 읽는다 — ' + H.first + '번');
   is(H.after === 1, '  여섯 번 더 그려도 <b>안 더 부른다</b> — ' + H.after + '번');
+
+  /* ── 8-1) <b>홈을 열 때마다 공지를 다시 읽지 않는다</b> (7번) ──
+     홈은 하루에 제일 많이 여는 화면입니다. go('home') 이 osNoticeLoad 를
+     부르는데 막는 자리가 없어 <b>열 때마다</b> os_notices 를 읽었고, 그
+     대답이 확인 기록 표시(OS_ACK.scanned)를 되돌려 <b>한 번 더</b> 읽게
+     했습니다 — 홈 한 번에 두 번. 무료 한도를 세 배로 넘겨 로그인까지
+     막힌 적이 있습니다.
+     다만 <b>진짜로 바뀐 뒤에는 다시 읽어야</b> 합니다 — 올리고도 안 뜨면
+     그게 더 나쁩니다. 그래서 둘 다 잽니다.                             */
+  console.log('\n[8-1] 홈을 여러 번 열어도 공지를 다시 안 읽는다 (7번)');
+  const J = await page.evaluate(async () => {
+    const cnt = () => window.__calls.filter(c => c === 'os_notices.select').length;
+    OS_NTC.loaded = false; OS_NTC.busy = false;
+    const a0 = cnt();
+    osNoticeLoad();                       /* 처음 — 읽어야 한다 */
+    await new Promise(r => setTimeout(r, 250));
+    const first = cnt() - a0;
+    let i; for (i = 0; i < 5; i++) { osNoticeLoad(); }
+    await new Promise(r => setTimeout(r, 300));
+    const again = cnt() - a0 - first;
+    /* 새 공지를 올린 뒤에는 다시 읽어야 한다 */
+    osNoticeLoad(true);
+    await new Promise(r => setTimeout(r, 250));
+    const forced = cnt() - a0 - first - again;
+    return { first, again, forced };
+  });
+  is(J.first >= 1, '  처음에는 <b>읽는다</b> — ' + J.first + '번');
+  is(J.again === 0, '  다섯 번 더 열어도 <b>안 읽는다</b> — ' + J.again + '번 ' +
+     '(하루에 수십 번 여는 화면이라 여기서 새면 그대로 요금이 된다)');
+  is(J.forced >= 1, '  <b>올리거나 내린 뒤에는 다시 읽는다</b> — ' + J.forced +
+     '번 (안 읽으면 올리고도 안 떠서 그게 더 나쁘다)');
+  /* 부르는 쪽이 아니라 <b>읽는 함수가</b> 막는가 (5번) */
+  const NSRC = require('fs').readFileSync(require('path').join(process.cwd(), 'app/index.html'), 'utf8');
+  const nfn = NSRC.slice(NSRC.indexOf('function osNoticeLoad('), NSRC.indexOf('function osNoticeLoad(') + 1400);
+  is(/OS_NTC\.loaded&&!force/.test(nfn.replace(/\s/g, '')),
+     '  막는 자리가 <b>읽는 함수 안</b>에 있다 — 부르는 쪽에 두면 곳마다 빠뜨린다 (5번)');
 
   /* ── 9) 이름을 모르면 지어내지 않는다 (1번) ── */
   console.log('\n[9] 이름을 아직 못 받았으면 지어내지 않는다 (1번)');

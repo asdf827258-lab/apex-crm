@@ -13714,8 +13714,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 13:10';
-var APP_BUILD_NOTE="<b>TFA 업무관리가 홈으로 들어왔습니다 — 하루가 홈 한 장에서 끝납니다.</b> 그동안 고객은 홈에서, 내 일과 팀 일은 TFA 에서 봤습니다. 아침에 홈을 보고 또 건너가야 했습니다. 이제 홈 아래에 <b>TFA 판이 그대로</b> 섭니다 — 피드백 · 스케줄 관리 · 해야 할 일 · 오늘 터치할 사람 · 30일 고객관리 · 리더 할 일 · 팀원 관리 · 대표 브리핑까지 <b>열세 칸 전부</b>. 왼쪽에서 칸을 고르면 <b>홈을 떠나지 않고</b> 그 자리에서 바뀝니다. 넓게 보고 싶으시면 <b>「전체 화면으로」</b>. <b>새로 만든 것이 아니라 같은 판</b>입니다 — TFA 화면과 글자 하나 다르지 않고, 한쪽만 고쳐질 일이 없습니다. <b>서버도 더 안 부릅니다</b> — 홈을 하루에 수십 번 여셔도 읽는 것은 한 번입니다. 함께, <b>달력이 한 화면에 둘 있어도 둘 다 따라 넘어갑니다.</b> 홈 달력과 「스케줄 관리」 칸의 달력이 같이 서는데, 예전 방식이었다면 한쪽만 넘어가고 다른 쪽은 그대로 남았을 자리입니다 — 눌리는데 안 바뀌면 고장 난 것으로 보입니다. 이제 <b>있는 자리는 모두</b> 그립니다. 홈 차례는 <b>오늘 챙길 것 → 달력 → 내 고객 → 30일 고객관리 → TFA 업무관리 → 공지사항</b>입니다.";
+var APP_BUILD='2026-09-14 14:35';
+var APP_BUILD_NOTE="<b>홈을 열 때마다 서버를 다시 부르던 자리를 막았습니다.</b> 홈은 하루에 제일 많이 여는 화면입니다. 그런데 홈을 열 때마다 <b>공지 목록을 서버에서 다시 읽고</b> 있었습니다 — 그 대답이 「누가 확인했나」 표시를 되돌려 <b>한 번 더</b> 읽게 해서, 홈 한 번에 <b>두 번</b>이었습니다. 이미 읽은 것을 다시 읽는 것이라 화면에 보이는 것은 하나도 달라지지 않고, <b>요금만</b> 나갔습니다. 무료 한도를 세 배로 넘겨 로그인까지 막힌 적이 있는 자리입니다. 이제 <b>읽는 함수가 스스로</b> 「이미 읽었나」 를 압니다 — 홈을 몇 번을 다시 여셔도 <b>0번</b>입니다. 막는 자리를 부르는 쪽이 아니라 <b>읽는 쪽</b>에 둔 것은, 부르는 곳마다 두면 언젠가 한 곳을 빠뜨리기 때문입니다. <b>새 공지를 올리거나 내리거나 「다시 읽기」 를 누르시면 그때는 진짜로 다시 읽습니다</b> — 올리고도 안 뜨면 그게 더 나쁘기 때문입니다. 점검(<b>check-ntcbox</b>)이 <b>둘 다</b> 잽니다: 다섯 번 더 열어도 안 읽는가, 그리고 내린 뒤에는 다시 읽는가. 첫 화면이 뜰 때 부르는 횟수도 <b>66 → 59</b> 로 줄었습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -47033,9 +47033,22 @@ function osNtcPaint(){
   var home=document.getElementById('osNoticeHome');if(home)home.innerHTML=osNoticeHomeHtml();
   var box=document.getElementById('osNtcAdmin');if(box)box.innerHTML=osNtcAdminHtml();
 }
-function osNoticeLoad(){
+function osNoticeLoad(force){
   var sb=osClient();
   if(!sb){OS_NOTICE=osNoticeLocalGet();OS_NTC.err='서버에 연결되어 있지 않습니다';osNoticeApply();return;}
+  /* ── <b>이미 읽은 공지를 홈 열 때마다 다시 읽지 않는다</b> (7번) ────
+     홈은 하루에 제일 많이 여는 화면입니다. go('home') 이 이것을 부르는데
+     막는 자리가 없어 <b>열 때마다</b> os_notices 를 읽었고, 그 대답이
+     확인 기록 표시(OS_ACK.scanned)를 되돌려 <b>한 번 더</b> 읽게 했습니다 —
+     홈 한 번에 두 번입니다. 무료 한도를 세 배로 넘겨 로그인까지 막힌
+     적이 있습니다.
+
+     막는 자리를 <b>부르는 쪽</b>에 두면 부르는 곳마다 빠뜨립니다 (5번).
+     그래서 <b>읽는 함수가 스스로</b> 압니다. 새 공지를 올리거나 내리거나
+     「다시 읽기」 를 누르실 때는 force 로 부릅니다 — 그때는 진짜로 바뀐
+     뒤라 다시 읽는 것이 맞습니다.                                      */
+  if(OS_NTC.loaded&&!force)return;
+  if(OS_NTC.busy)return;
   OS_NTC.busy=true;
   try{
     /* id·targets·must_ack 도 함께 읽는다. 옛 표에는 그 칸이 없어 400 이 나므로,
@@ -47329,7 +47342,7 @@ function osNoticeSave(){
               '아래 <b>🛢️ 확인 요청 SQL</b> 을 한 번 실행하시면 그다음부터 지목이 됩니다.'+
               (r2&&r2.error?('<br>'+osEsc(r2.error.message||'')):'')+'</div></div>');
             toast('공지는 올렸습니다 — 지목은 SQL 을 한 번 돌리셔야 됩니다');
-            osNoticeLoad();osNSeenLoad(true);
+            osNoticeLoad(true);osNSeenLoad(true);
           });
           return;
         }
@@ -47349,7 +47362,7 @@ function osNoticeSave(){
           '<button class="btn btn-ghost" style="margin-top:8px;padding:6px 12px;font-size:11.5px" onclick="go(\'home\')">홈에서 확인하기 →</button></div>');
         toast('✅ 칸을 올렸습니다');
         osNtcFormClear();          /* 다음 칸을 바로 쓰실 수 있게 비운다 */
-        osNoticeLoad();osNSeenLoad(true);
+        osNoticeLoad(true);osNSeenLoad(true);
       }
     },function(){st('<div style="font-size:11.5px;color:#B91C1C">❌ 네트워크 오류 — 이 기기에만 저장되었습니다</div>');});}
     catch(e){st('<div style="font-size:11.5px;color:#B91C1C">❌ 저장 실패 — 이 기기에만 저장되었습니다</div>');}
@@ -47469,7 +47482,7 @@ function osNtcHide(id){
       }
       say('<div style="font-size:11.5px;color:#15803D;font-weight:700">✅ 그 칸만 내렸습니다 — 나머지는 그대로 있습니다</div>');
       toast('그 칸을 내렸습니다');
-      osNoticeLoad();osNSeenLoad(true);
+      osNoticeLoad(true);osNSeenLoad(true);
     },function(){say('<div style="font-size:11.5px;color:#B91C1C;font-weight:700">❌ 네트워크 오류 — 내리지 못했습니다</div>');});
   }catch(e){say('<div style="font-size:11.5px;color:#B91C1C;font-weight:700">❌ 내리지 못했습니다</div>');}
 }
@@ -47480,7 +47493,7 @@ function osNtcAdminHtml(){
   if(OS_NTC.err)
     return '<div style="border:1px solid #FDE68A;background:#FFFBEB;border-radius:10px;padding:10px 12px;font-size:11.5px;color:#92400E;line-height:1.7">'+
       '<b>칸 목록을 못 읽었습니다</b> — '+osEsc(OS_NTC.err)+'<br>못 읽었다는 뜻이지, 없다는 뜻은 아닙니다. '+
-      '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="osNoticeLoad()">다시 읽기</span></div>';
+      '<span style="cursor:pointer;text-decoration:underline;font-weight:800" onclick="osNoticeLoad(true)">다시 읽기</span></div>';
   if(!L.length)
     return '<div style="font-size:11.5px;color:var(--ink-4);padding:6px 2px">아직 올린 칸이 없습니다. 아래에 적고 <b>＋ 칸 올리기</b>를 누르십시오.</div>';
   var nm=osNtcNameMap();
