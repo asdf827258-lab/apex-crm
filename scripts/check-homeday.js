@@ -80,7 +80,10 @@ const SEED = `(function(){
   window.__seed[d3]=[{k:'next',t:'장길산',s:'서류 보내기'}];
   window.mcalItems=function(){ return window.__seed; };
   /* 계약 마디는 따로 셉니다 */
-  window.mstDueList=function(){ return {due:[{},{}],soon:[],none:0,total:2}; };
+  window.mstDueList=function(){ return {due:[
+    {c:{id:'c9',name_masked:'홍○판'},hit:{d:0,step:{m:3,ic:'📮',t:'석 달째 인사'}}},
+    {c:{id:'c8',name_masked:'김○돌'},hit:{d:0,step:{m:6,ic:'📮',t:'반년 점검'}}}
+  ],soon:[],none:0,total:2}; };
 })();`;
 
 (async () => {
@@ -237,6 +240,86 @@ const SEED = `(function(){
   });
   is(moved.after !== moved.before, '주를 보고 있으면 ‹ › 가 <b>주를 옮긴다</b> — ' +
      moved.before + ' → ' + moved.after);
+
+  /* ══════════════════════════════════════════════════════════════
+     [6-1] 「지금 이것 하세요」 — <b>따라만 가면 되는가</b>
+
+     갈래별 건수만 세워 두면 <b>여전히 고르셔야 합니다</b> — 「연락할 분
+     3건」 을 보고도 누구부터인지는 눌러 들어가 다시 고릅니다. 아침에
+     제일 힘든 것이 그 고르는 일입니다. 그래서 맨 위에 <b>딱 한 건</b>을
+     세웁니다.                                                        */
+  head('[6-1] 「지금 이것」 — <b>한 건씩 따라가면 된다</b>');
+  await pg.evaluate(() => { try { localStorage.removeItem('apex_hm_done'); } catch (e) {} go('home'); });
+  await pg.waitForTimeout(500);
+  await clearOvl(pg);
+  const now = await pg.evaluate(() => {
+    const d = document.querySelector('.hm-now');
+    const rows = document.querySelector('.hm-rows');
+    return { there: !!d, txt: d ? d.textContent.replace(/\s+/g, ' ') : '',
+             nm: (d && d.querySelector('.hm-now-m b')) ? d.querySelector('.hm-now-m b').textContent : '',
+             btn: d ? d.querySelectorAll('.hm-now-b button').length : 0,
+             first: !!(d && rows && (d.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING)),
+             n: hmSteps().length };
+  });
+  is(now.there && now.btn === 2, '<b>한 건</b>이 크게 서고 단추가 둘이다 (열기 · 했습니다)');
+  is(now.first, '갈래별 줄보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다');
+  is(/1번째/.test(now.txt), '<b>몇 번째인지</b> 적는다 — 「' + (now.txt.match(/\d+건 중 \S+번째[^·]*/) || [''])[0].trim() + '」');
+  /* 차례는 <b>HM_ORD 가 정한 그대로</b>입니다 — 시간이 정해진 약속이 맨 위,
+     그다음이 계약 마디. 여기서 차례를 따로 적으면 갈라집니다 (5번). */
+  is(now.nm === '홍길동' && /약속/.test(now.txt),
+     '차례대로 <b>약속부터</b> 선다 — 시간이 정해진 것이 먼저다 (지금 「' + now.nm + '」)');
+
+  head('[6-2] <b>기록으로 남는 것과 아닌 것을 구분해 말한다</b> (1번)');
+  const said = await pg.evaluate(() => {
+    const out = {};
+    /* 연락 차례까지 넘겨 가며 무엇이라 적는지 본다 */
+    const L = hmSteps();
+    out.kinds = L.map(x => x.k);
+    const A = window.HM_ACT;
+    out.real = Object.keys(A).filter(k => A[k].real).sort().join(',');
+    out.fake = Object.keys(A).filter(k => !A[k].real).sort().join(',');
+    out.txtNow = (document.querySelector('.hm-now-n') || {}).textContent || '';
+    return out;
+  });
+  is(said.real === 'madi,touch',
+     '<b>기록이 남는 것은 연락과 계약 마디뿐</b>이라고 표에 적혀 있다 — ' + said.real);
+  is(/기록으로 남습니다/.test(said.txtNow) || /오늘 하루 표시/.test(said.txtNow),
+     '지금 이 건이 <b>어느 쪽인지</b> 그 자리에 적는다 — 「' + said.txtNow.replace(/\s+/g, ' ').slice(0, 46) + '」');
+
+  head('[6-3] 끝내면 <b>다음 한 건</b>이 올라온다');
+  const walk = await pg.evaluate(async () => {
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      const r = hmNext();
+      if (!r.x) break;
+      seen.push(r.x.k + ':' + r.x.t);
+      hmDoneMark(r.x.key);          /* 실제 누르는 것과 같은 표시 */
+    }
+    hmPaint();
+    await new Promise(r => setTimeout(r, 120));
+    return { seen, left: hmNext().x ? hmNext().x.k : '',
+             txt: (document.querySelector('.hm-now') || {}).textContent || '' };
+  });
+  is(walk.seen.length === 4 && walk.seen[0] !== walk.seen[1],
+     '누를 때마다 <b>다른 건</b>이 올라온다 — ' + walk.seen.slice(0, 3).join(' → '));
+  is(walk.seen[0].indexOf('appt:') === 0 && walk.seen[1].indexOf('madi:') === 0,
+     'HM_ORD 가 정한 <b>그 차례</b>로 나온다 — 약속 → 계약 마디');
+  const fin = await pg.evaluate(async () => {
+    let guard = 0;
+    while (hmNext().x && guard++ < 40) hmDoneMark(hmNext().x.key);
+    hmPaint();
+    await new Promise(r => setTimeout(r, 120));
+    return (document.querySelector('.hm-card') || {}).textContent || '';
+  });
+  is(/다 하셨습니다/.test(fin), '<b>다 하면 다 하셨다고</b> 말한다 — 빈 칸으로 두지 않는다');
+
+  head('[6-4] <b>어제 찍은 표시가 오늘 따라오지 않는다</b>');
+  const stale = await pg.evaluate(() => {
+    const k = hmSteps()[0].key;
+    try { localStorage.setItem('apex_hm_done', JSON.stringify({ d: '2020-01-01', k: [k] })); } catch (e) {}
+    return { done: hmIsDone(k), first: hmNext().x ? hmNext().x.key : '' };
+  });
+  is(!stale.done && stale.first, '어제 것으로 찍혀 있어도 <b>오늘은 다시 섭니다</b> — 날짜가 바뀌면 처음부터');
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));
