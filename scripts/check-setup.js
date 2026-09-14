@@ -210,15 +210,18 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     window.osClient = () => ({ from: mk, rpc: () => Promise.resolve({ data: null, error: null }) });
     OS.session = { user: { id: 'u1' } };
     OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
-    SETUP.hide = false; RD.rows = null; RD.ms = 0;
+    /* <b>busy 도 내려놓는다.</b> CI 에는 네트워크가 있어 앞 절의 go('home')
+       이 띄운 <b>진짜</b> 요청이 아직 날고 있을 수 있다. 그러면 RD.busy 가
+       true 라 여기서 부른 것이 통째로 막혀, 「안 불렀다」 로 읽힌다 —
+       실제로 CI 에서만 「0번」 빨간불이 났다 (8번). */
+    SETUP.hide = false; RD.rows = null; RD.ms = 0; RD.busy = false;
     const bk = () => window.__q.filter(t => t === 'backups').length;   /* rdLoad 만 읽는 표 */
 
-    /* <b>다 읽을 때까지</b> 기다린다. 고정 시간으로 기다리면 느린 CI 에서
-       아직 안 들어온 것을 「안 불렀다」 로 읽어 <b>헛알람</b>이 된다 —
-       실제로 CI 에서만 「0번」 으로 빨간불이 났다 (8번). */
+    /* <b>우리가 센 것이 들어올 때까지</b> 기다린다. RD.rows 를 기다리면
+       날고 있던 진짜 요청이 먼저 채워 넣어 일찍 빠져나온다. */
     go('home');
-    for (let t = 0; t < 80 && !RD.rows; t++) await new Promise(r => setTimeout(r, 50));
-    await new Promise(r => setTimeout(r, 150));
+    for (let t = 0; t < 200 && bk() < 1; t++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 200));
     const first = bk();
     const card = document.querySelector('.hm-rdy');
     const O = {
@@ -256,8 +259,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   });
   is(rd.shown, '  막혀 있는 것이 <b>홈에 뜬다</b> — ' + rd.title);
   is(rd.rows >= 1 && rd.rows <= 3, '  <b>위에서 셋만</b> 세운다 — ' + rd.rows + '줄 (매일 여는 화면을 덮지 않는다)');
-  is(rd.acts >= rd.rows, '  줄마다 <b>누를 것</b>이 있다 — ' + rd.acts + '개 (「어디로 가세요」 로 끝나지 않는다)');
-  is(!rd.dupSql, '  배너가 서 있는 동안은 <b>SQL 을 여기 또 적지 않는다</b> (5번)');
+  /* 칸이 아예 없으면 이 둘은 <b>0 이라서</b> 그냥 통과한다 — 그러면 무엇도
+     안 잡는 알람이다. 실제로 CI 에서 카드가 안 섰는데 이 둘만 초록이었다.
+     <b>칸이 섰다는 것</b>을 같이 걸어 둔다 (8번).                        */
+  is(rd.shown && rd.acts >= rd.rows && rd.acts >= 1,
+     '  줄마다 <b>누를 것</b>이 있다 — ' + rd.acts + '개 (「어디로 가세요」 로 끝나지 않는다)');
+  is(rd.shown && !rd.dupSql, '  배너가 서 있는 동안은 <b>SQL 을 여기 또 적지 않는다</b> (5번)');
   is(rd.afterLater, '  배너를 <b>「나중에」 로 닫으면 이 칸으로 내려온다</b> — 어디에도 안 뜨면 돌릴 길이 사라진다');
   is(rd.laterAct, '  그때 <b>복사하고 Supabase 열기</b> 가 그 줄에 그대로 있다');
   is(rd.first === 1, '  홈을 열 때 서버는 <b>한 번</b>만 — ' + rd.first + '번');
