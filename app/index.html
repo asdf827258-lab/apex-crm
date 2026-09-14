@@ -1055,6 +1055,11 @@ body.sangdam-mode #sangdamScreen{display:block;}
 body.bohum-mode .app{display:none;}
 body.bohum-mode #bohumScreen{display:block;}
 #bohumScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
+/* A+본부자료실 (상담자료와 동일 패턴) */
+#hqarcScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
+body.hqarc-mode .app{display:none;}
+body.hqarc-mode #hqarcScreen{display:block;}
+#hqarcScreen .fin-frame{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#fff;}
 /* 증권 전달 (상담자료와 동일 패턴) */
 #pdelScreen{display:none;position:fixed;inset:0;z-index:300;background:#fff;}
 body.pdel-mode .app{display:none;}
@@ -1803,6 +1808,16 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <button class="ff-back" onclick="exitBohum()">← 워크스페이스</button>
     <button class="ff-ico" onclick="reloadBohum()" title="새로고침">↺</button>
     <button class="ff-ico" onclick="openBohumNewTab()" title="새 탭에서 열기">↗</button>
+  </div>
+</div>
+
+<!-- A+본부자료실 (앱 폴더에 번들: app/본부자료실/) -->
+<div id="hqarcScreen">
+  <iframe id="hqarcFrame" class="fin-frame" title="A+본부자료실"></iframe>
+  <div class="fin-float">
+    <button class="ff-back" onclick="exitHqArc()">← 워크스페이스</button>
+    <button class="ff-ico" onclick="reloadHqArc()" title="새로고침">↺</button>
+    <button class="ff-ico" onclick="openHqArcNewTab()" title="새 탭에서 열기">↗</button>
   </div>
 </div>
 
@@ -11665,6 +11680,10 @@ var TABS=[
    {id:'apexmap',icon:'🗺️',title:'APEX 전체 지도',cnt:'89',hide:true,ak:'업무매뉴얼 지도 자비스 전체'},
    {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
    {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
+   /* 본부에서 카톡으로 흩어져 오던 운영자료를 한 곳에 모은 것. 파일만 쌓아 둔 것이
+      아니라 각 자료의 <b>실제 절차·기준</b>을 본문으로 옮겨 적어 두었다 —
+      그래서 파일을 안 열어도 「어디로 들어가 무엇을 누르는지」 가 바로 읽힌다. */
+   {id:'hqarc',icon:'🏛️',title:'A+본부자료실',cnt:'22',ak:'업무매뉴얼 본부 자료실 운영자료 교육신청 DB신청 환수율 장학금 상조 전산 토요특강'},
  ]},
  {group:'시스템',items:[
    {id:'settings',icon:'⚙️',title:'설정',cnt:'',ak:'시스템 설정'},
@@ -13167,7 +13186,7 @@ var prevTab='home';   /* 전체화면에서 「나가기」 를 눌렀을 때 �
 
    칸을 하나 더 만들 때마다 남의 목록을 고쳐야 하는 구조를 없앤다.
    여기 이름만 적으면 나머지는 저절로 꺼진다. */
-var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','pdel-mode',
+var OS_FULL_MODES=['finance-mode','crm-mode','sangdam-mode','bohum-mode','hqarc-mode','pdel-mode',
                    'fpdeck-mode','fptalk-mode','mikki-mode','mktalk-mode','carfault-mode',
                    'apexmap-mode',
                    /* <b>「한장 보험료 비교」 만 여기 이름이 빠져 있었다.</b>
@@ -13307,6 +13326,13 @@ function go(tab){
     mountBohum();
     osFullMode('bohum-mode');
     navMark('bohum');
+    if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
+    return;
+  }
+  if(tab==='hqarc'){
+    mountHqArc();
+    osFullMode('hqarc-mode');
+    navMark('hqarc');
     if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
     return;
   }
@@ -13736,8 +13762,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 19:10';
-var APP_BUILD_NOTE="<b>준비 SQL 이 시간 초과로 끊길 때 — 나눠서 돌릴 수 있습니다.</b> 준비 SQL 은 <b>297개 문장 · 46,000자</b> 를 한 번에 보냅니다. 그 안에 잠금이 필요한 것(정책 104개 · 표 고치기 49개 · 트리거 7개)이 많아, 한 자리에서 걸리면 Supabase 편집기가 <b>「연결 타임아웃으로 인해 연결이 종료됨」</b> 으로 통째로 끊습니다. 이제 배너에 <b>「⏱ 시간 초과가 났어요 — 나눠서」</b> 가 있습니다. 누르시면 <b>7조각</b>으로 나뉘고, 위에서부터 <b>복사 → 붙여넣기 → RUN</b> 을 되풀이하시면 됩니다. 중간에 끊겨도 <b>그 조각만</b> 다시 하시면 됩니다 — 몇 번을 다시 실행해도 안전합니다. <b>새 SQL 을 만든 것이 아니라 있던 것을 자르기만</b> 했습니다 — 합치면 한 글자도 다르지 않습니다. 자를 때 <b>함수 몸통($fn$) 안</b>이나 <b>문장 한가운데</b>는 절대 건드리지 않습니다. 조각마다 <code>lock_timeout</code> 을 걸어, 잠금에 걸리면 <b>영영 기다리지 않고</b> 어디서 걸렸는지 말하고 끝납니다. 「복사함」 표시는 <b>복사했다는 뜻일 뿐</b>입니다 — 실제로 들어갔는지는 「✅ 다 됐는지 확인」 이 서버에 물어서 답합니다. 점검(<b>check-setup</b>)에 <b>열다섯 자리</b>를 넣었습니다. 그중 셋은 <b>견본</b>으로 규칙 자체를 겨눕니다 — 지금 SQL 은 우연히 안전한 자리에서만 잘려서, 규칙을 지워도 빨간불이 안 켜졌기 때문입니다.";
+var APP_BUILD='2026-09-14 23:55';
+var APP_BUILD_NOTE="<b>A+본부자료실 — 본부 운영자료 22건이 앱 안으로 들어왔습니다.</b> 교육신청 절차, DB 신청·사은품, 환수율표, 전산 매뉴얼, 토요특강 경로, 장학금·상조 같은 <b>본부 자료가 그동안 카톡으로 흩어져</b> 필요할 때마다 대화방을 거슬러 올라가야 했습니다. 이제 왼쪽 <b>교육 자료 → 🏛️ A+본부자료실</b> 한 곳에서 열립니다. 파일만 쌓아 둔 것이 아닙니다 — 자료마다 <b>실제 절차와 기준을 본문으로 옮겨 적어</b> 두어, 파일을 열지 않아도 「어디로 들어가 무엇을 누르는지」 가 바로 읽힙니다. <b>검색은 제목·태그뿐 아니라 본문 속까지</b> 찾습니다(예: 「환수율」, 「주차지원」). <b>원본 파일 20개</b>는 눌러서 바로 열립니다. 강의용 PPT 두 개(무경력 CIS 275MB · 간편추천 플러스 42MB)는 용량이 커서 담지 않았습니다 — 화면에 이름은 그대로 서고 <b>본부 카톡 원본을 받으시라</b>고 적힙니다. <b>새 SQL 은 없습니다.</b> 서버에 묻는 것도 없어 로그인 없이 바로 뜹니다. 자료를 고치실 때는 <b>app/본부자료실/자료.js 한 파일</b>만 고치시면 되고, 환수율표는 달마다 <b>환수율_202608.js</b> 를 통째로 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -14207,6 +14233,29 @@ function mountBohum(){
 function reloadBohum(){var f=$('bohumFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountBohum,30);toast('보험 마스터 아카데미 새로고침');}}
 function openBohumNewTab(){var w=window.open(BOHUM_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
 function exitBohum(){go(prevTab||'home');}
+
+/* ════════ A+본부자료실 (앱 폴더에 번들: app/본부자료실/index.html) ════════
+   본부에서 카톡으로 흩어져 오던 운영자료 22건을 항목별로 모으고, 각 자료의
+   <b>실제 절차·기준</b>을 본문으로 옮겨 적은 것. 파일을 안 열어도 「어디로 들어가
+   무엇을 누르는지」 가 읽힌다. 서버에 묻는 것이 하나도 없다 — 글꼴만 밖에서 온다.
+
+   고칠 곳은 <b>app/본부자료실/자료.js 한 파일</b>이다. 화면(index.html)은 그 파일을
+   그리기만 한다. 환수율표는 달마다 바뀌므로 환수율_202608.js 를 통째로 갈아 끼운다.
+   원본은 Desktop\코드\본부자료실 — 거기서 고치고 이 폴더로 복사한다.
+
+   ⚠ 원본 파일 22개 중 <b>20개만</b> 담았다. 강의용 PPT 두 개(무경력 CIS 275MB,
+      간편추천 플러스 42MB)는 저장소가 무거워지고 눌러도 몇 분씩 받아야 해서 뺐다.
+      화면에는 파일 이름이 그대로 서고 「본부 카톡 원본을 받으십시오」 라고 적힌다
+      (본부자료실 쪽 NOFILE 목록). */
+var HQARC_URL='본부자료실/index.html';
+function mountHqArc(){
+  var f=$('hqarcFrame');if(!f||f._mounted)return;
+  f.src=HQARC_URL;f._mounted=true;
+}
+function reloadHqArc(){var f=$('hqarcFrame');if(f){f._mounted=false;f.src='about:blank';setTimeout(mountHqArc,30);toast('A+본부자료실 새로고침');}}
+function openHqArcNewTab(){var w=window.open(HQARC_URL,'_blank','noopener');if(!w)toast('팝업이 차단되었습니다. 팝업 허용 후 다시 시도하세요.');}
+function exitHqArc(){go(prevTab||'home');}
+
 /* ════════ 미끼 레이더 (같은 폴더의 정적 파일) ════════
    약관·판매자료는 서버에 올리지 않는다. 화면 안에서 직접 올려 브라우저(IndexedDB)에 쌓는 구조. */
 /* ════════ APEX 전체 지도 (같은 폴더의 정적 파일) ════════
@@ -15606,6 +15655,7 @@ var VA_ALIAS={
  '비대면':'utphoto','비대면상담':'utphoto','상담사진':'utphoto','사진':'utphoto','멘트':'utphoto','카톡멘트':'utphoto','도해':'utphoto',
  '증권전달':'pdel','증권전달하기':'pdel','증권드리기':'pdel','증권속지':'pdel','속지':'pdel','안내장':'pdel','담보풀이':'pdel','보험사연락처':'pdel','고객센터번호':'pdel',
  '보험마스터아카데미':'bohum','마스터아카데미':'bohum','교재':'bohum','아카데미교재':'bohum','신입교육':'bohum','자가학습':'bohum','질병백과':'bohum','수술분류표':'bohum',
+ 'A+본부자료실':'hqarc','에이플러스본부자료실':'hqarc','본부자료실':'hqarc','자료실':'hqarc','본부자료':'hqarc','운영자료':'hqarc','환수율':'hqarc','환수율표':'hqarc','교육신청':'hqarc','DB신청':'hqarc','토요특강':'hqarc','장학금':'hqarc','상조':'hqarc',
  '보장분석':'bojang','증권':'bojang','증권분석':'bojang',
  '고객':'clients','고객365일':'clients','고객카드':'clients','고객삼육오':'clients',
  '씨알엠':'crm','시알엠':'crm','디비':'crm','디비씨알엠':'crm','crm':'crm',
@@ -18123,6 +18173,7 @@ document.addEventListener('keydown',function(e){
   else if(document.body.classList.contains('sangdam-mode'))exitSangdam();
   else if(document.body.classList.contains('pdel-mode'))exitPdel();
   else if(document.body.classList.contains('bohum-mode'))exitBohum();
+  else if(document.body.classList.contains('hqarc-mode'))exitHqArc();
   else if(document.body.classList.contains('fptalk-mode'))exitFpTalk();
   else if(document.body.classList.contains('fpdeck-mode'))exitFpDeck();
   else if(document.body.classList.contains('mikki-mode'))exitMikki();
