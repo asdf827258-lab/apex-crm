@@ -343,6 +343,12 @@ const api = http.createServer((rq, rs) => {
     OS.session = { user: { id: 'u2' } };
     OS.profile = { id: 'u2', name: '홍길순', role: 'member', active: true, plan: 'pro' };
     OS_NOTICE = null; OS_ACK.ackd = {}; OS_ACK.mine = []; OS_ACK.loaded = false; OS_ACK.scanned = false;
+    /* 이 브라우저는 <b>이미 한 번 읽은 뒤</b>다(OS_NTC.loaded). 새 공지는 그
+       뒤에 올라왔다 — 그러니 「시간이 지났다」 를 만들어 준다. 이것이 실제
+       배달 길이다: 대표가 올리고, 시간이 지나고, 팀원 홈이 다시 읽는다.
+       <b>영영 안 읽는 막이를 걸면 여기서 빨간불이 켜진다.</b>            */
+    OS_NTC.loaded = true; OS_NTC.busy = false;
+    OS_NTC.at = Date.now() - (OS_NTC_TTL + 60000);
     osNoticeLoad();
     await new Promise(r => setTimeout(r, 700));
     const bar = document.getElementById('osAckBar');

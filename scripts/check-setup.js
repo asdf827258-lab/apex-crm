@@ -129,9 +129,61 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(gd && /최고 권한/.test(gd.t), 'service_role 경고가 있다 — 대화창에 붙이지 말라고');
   is(gd && /Clear cache and deploy/.test(gd.t), '재배포해야 열쇠가 들어간다는 것을 적었다');
 
-  /* 「한 번 되면 접힌다 · 안 되면 다시 뜬다 · 팀원에게는 안 보인다」 는
-     홈 배너를 재던 자리였습니다. 배너가 없어졌으므로 같이 뗍니다 —
-     없는 것을 재는 점검은 사람이 점검을 안 믿게 만듭니다 (8번). */
+  /* ── 4) <b>준비 SQL 이 실제로 홈 맨 위에 서는가</b> ─────────────────
+     여기 있던 배너 점검을 한 번 뗐다가 그대로 사고가 났습니다. 사장님이
+     없애라신 것은 <b>「서버 열쇠가 아직 없습니다」 재촉</b>([3])이었는데,
+     <b>「서버 준비 SQL」 배너</b>까지 한 덩어리로 보고 같이 뗐습니다.
+     그 뒤 홈을 다시 만들면서 osSetupHome 자리가 사라졌고 — 점검이 없으니
+     <b>아무도 몰랐습니다.</b> 앱은 띄우려 하는데(setupShow=true, 809자)
+     놓일 자리가 없어 아무 데도 안 떴고, 여러 화면이 「홈 맨 위 서버 준비
+     SQL」 이라고 가리키는 곳이 <b>빈 자리</b>였습니다.
+
+     그래서 <b>말과 화면이 어긋나지 않는가</b>까지 잽니다. 「홈 맨 위」 라고
+     적어 두었으면 홈에 그 자리가 실제로 있어야 합니다 (5번).           */
+  console.log('\n[4] 준비 SQL 이 <b>실제로 홈 맨 위에</b> 선다');
+  const sb = await page.evaluate(() => {
+    OS.session = { user: { id: 'u1' } };
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
+    SETUP.hide = false;
+    const realCfg = window.osCfgGet;
+    /* ① 아직 안 돌린 대표 */
+    window.osCfgGet = function (k, d) { return k === 'schema_version' ? '0' : realCfg(k, d); };
+    go('home');
+    const pane = document.getElementById('dynPane');
+    const bar = pane.querySelector('.stp');
+    const cli = document.getElementById('hmCliHost');
+    const O = {
+      shown: !!bar,
+      text: bar ? bar.textContent.replace(/\s+/g, ' ').trim() : '',
+      /* 고객 칸보다 <b>위</b>에 있어야 「맨 위」 다 */
+      aboveCli: !!(bar && cli && (bar.compareDocumentPosition(cli) & Node.DOCUMENT_POSITION_FOLLOWING)),
+      btn: bar ? Array.from(bar.querySelectorAll('button')).map(x => x.textContent.trim()) : []
+    };
+    /* ② 다 돌린 대표 — 안 떠야 한다 */
+    window.osCfgGet = function (k, d) { return k === 'schema_version' ? String(SETUP_VER) : realCfg(k, d); };
+    go('home');
+    O.afterDone = !!document.getElementById('dynPane').querySelector('.stp');
+    /* ③ 팀원 — 할 수 없는 일이라 안 떠야 한다 */
+    window.osCfgGet = function (k, d) { return k === 'schema_version' ? '0' : realCfg(k, d); };
+    OS.profile.role = 'member';
+    go('home');
+    O.member = !!document.getElementById('dynPane').querySelector('.stp');
+    OS.profile.role = 'owner'; window.osCfgGet = realCfg;
+    return O;
+  });
+  is(sb.shown, '  아직 안 돌리셨으면 홈에 <b>실제로 뜬다</b> — 앱이 띄우려 해도 자리가 없으면 안 뜬다');
+  is(sb.aboveCli, '  <b>고객 칸보다 위</b>에 있다 — 「홈 맨 위」 라고 말하는 곳이 여럿이다');
+  is(sb.btn.some(t => /Supabase/.test(t)), '  <b>복사하고 Supabase 열기</b> 단추가 있다 — ' + sb.btn.join(' · '));
+  is(sb.btn.some(t => /확인/.test(t)), '  <b>다 됐는지 확인</b> 단추가 있다 — 돌린 뒤 배너가 스스로 사라지는 길');
+  is(!sb.afterDone, '  다 돌리신 뒤에는 <b>안 뜬다</b> — 끝난 일이 고객 관리를 가리면 안 된다');
+  is(!sb.member, '  팀원에게는 <b>안 뜬다</b> — 팀원은 SQL 을 돌릴 수 없다');
+  /* 「홈 맨 위」 라고 <b>말하는</b> 곳이 있으면, 홈에 그 자리가 있어야 한다 (5번) */
+  const SRC2 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const says = (SRC2.match(/홈 맨 위/g) || []).length;
+  const home = SRC2.slice(SRC2.indexOf('function renderHome('), SRC2.indexOf('function osPage('));
+  is(says === 0 || /id="osSetupHome"/.test(home),
+     '  「홈 맨 위」 라고 <b>말하는 곳이 ' + says + '군데</b>인데, 홈에 그 자리가 실제로 있다 (5번)');
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('점검 실패 — '+bad+'가지'):'점검 통과 — 다 맞습니다.');
