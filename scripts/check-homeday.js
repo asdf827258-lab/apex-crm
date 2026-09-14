@@ -163,10 +163,35 @@ const SEED = `(function(){
   head('[3] 숫자를 <b>새로 세지 않는다</b> (5번)');
   is((SRC.match(/function hmCount\s*\(/g) || []).length === 1, 'hmCount() 가 한 곳에 있다');
   const cnt = SRC.slice(SRC.indexOf('function hmCount('), SRC.indexOf('function hmCount(') + 900);
-  is(/mcalItems\(\)/.test(cnt), '달력 한 벌(mcalItems)이 <b>이미 센 것</b>을 읽는다');
-  is(/mstDueList/.test(cnt), '계약 마디는 <b>마디가 센 것</b>을 읽는다');
   is(!/OSC\.list/.test(cnt) && !/cmOf\(/.test(cnt),
      '고객 목록을 <b>여기서 다시 훑지 않는다</b> — 두 곳에서 세면 두 숫자가 달라진다');
+  /* <b>글자 모양이 아니라 결과를 잽니다.</b> 예전에는 「hmCount 안에 mcalItems
+     라고 적혀 있나」 를 봤습니다. 그러면 세는 길이 한 겹 깊어지기만 해도
+     멀쩡한 코드에 빨간불이 켜지고, 정작 <b>카드와 목록이 어긋나는 것</b>은
+     못 잡습니다. 실제로 오늘 「카드 7 · 목록 6」 이 났습니다 (8번). */
+  const agree = await pg.evaluate(() => {
+    /* <b>DB 고객을 한 사람 심어야</b> 이 자리가 물립니다. 안 심으면 둘 다
+       0 이라, 카드를 따로 세게 만들어도 빨간불이 안 켜집니다 (8번). */
+    const keepDb = AR.db;
+    AR.db = [{ id:'q1', who:(OS.session&&OS.session.user&&OS.session.user.id)||'me',
+               name:'홍말순', region:'광주', src:'일반', stage:'TA', res:'부재',
+               appt:'', days:40, n:1, cAt:'', pAt:'' }];
+    AR.loaded = true; AR.busy = false;
+    const c = hmCount(), L = hmSteps(), bad = [];
+    AR.db = keepDb;
+    HM_ORD.forEach(o => {
+      const n = L.filter(x => x.k === o.k).length;
+      if ((c[o.k] || 0) !== n) bad.push(o.k + ' 카드' + (c[o.k] || 0) + '·목록' + n);
+    });
+    return { bad, total: c.total, db: c.db||0,
+             len: L.filter(x => HM_ORD.some(o => o.k === x.k)).length };
+  });
+  is(agree.bad.length === 0, '<b>카드 숫자와 목록이 갈래마다 같다</b>'+
+     (agree.bad.length ? (' ← ' + agree.bad.join(' / ')) : '') +
+     ' (다르면 어느 쪽이 맞는지 알 수 없다)');
+  is(agree.total === agree.len, '<b>합계도 같다</b> — 카드 '+agree.total+' · 목록 '+agree.len);
+  is(agree.db === 1, '심어 둔 <b>DB 고객 한 사람</b>이 실제로 세어진다 — '+agree.db+
+     '명 (안 세어지면 위 두 자리가 0 대 0 이라 아무것도 안 잡는다)');
   is((SRC.match(/var HM_ORD\s*=/g) || []).length === 1,
      '순서 표가 <b>한 곳</b>에만 있다 — 삼항 사슬로 늘어놓지 않았다');
 
