@@ -1,21 +1,23 @@
 #!/usr/bin/env node
 /* ══════════════════════════════════════════════════════════════════
-   달력에 <b>내가 직접</b> 일정을 넣을 수 있는가
+   달력에 <b>내가 직접</b> 넣는 일정 — 폰과 같이 보는가
 
-   달력이 여태 <b>앱이 만든 것</b>만 찍었습니다 — 고객 연락 주기 · 약속 ·
-   생일 · 할 일. 그래서 「목요일 2시 지점 회의」 같은 <b>내 일정</b>은 적을
-   데가 없어, 결국 폰 달력을 따로 켜야 했습니다. 두 군데를 보면 한 군데는
-   반드시 안 보게 됩니다.
+   달력이 여태 <b>앱이 만든 것</b>만 찍었고, 직접 넣은 일정은 <b>이 브라우저</b>
+   에만 담겼습니다. 사무실 PC 에서 넣은 것이 폰에서 안 보여서, 결국 폰 달력을
+   따로 켜게 됩니다. 두 군데를 보면 한 군데는 반드시 안 보게 됩니다.
+   이제 서버(my_plans)에 담아 <b>같은 아이디면 어느 기기에서든</b> 봅니다.
 
-   여기서 못 박는 것은 여섯입니다.
+   여기서 못 박는 것은 여덟입니다.
 
      ① 날짜를 고르면 <b>그 자리에서</b> 적는다 — 다른 화면으로 안 보낸다
-     ② 넣으면 <b>달력에 바로</b> 찍히고, <b>잘못 넣은 것은 지울 수 있다</b>
-     ③ 달력은 <b>한 벌</b>이라 홈에서 넣은 것이 내 캘린더에도 있다 (5번)
-     ④ <b>서버를 안 부른다</b> (7번) — 글자를 넣어도 바깥으로 나가지 않는다
-     ⑤ <b>이 브라우저에만 담긴다고 화면에 적는다</b> (1번) — 다른 기기에서
-        안 보이는데 보인다고 하면 거짓말이다
-     ⑥ <b>빈 줄·엉뚱한 시각을 안 받는다</b> — 받으면 달력에 빈 칸이 남는다
+     ② 넣으면 <b>기다리지 않고</b> 화면에 서고, <b>서버에도</b> 들어간다
+     ③ 서버가 거절하면 <b>도로 뺀다</b> — 실패를 성공처럼 말하지 않는다
+     ④ 달력은 <b>한 벌</b>이라 홈에도 그대로 있다 (5번)
+     ⑤ <b>서버 자리가 없으면 멈추지 않는다</b> — 이 브라우저로 버티고
+        <b>그렇다고 적는다</b> (1번). 자리가 생기면 담겨 있던 것을 올려 보낸다
+     ⑥ <b>나만 본다</b> — SQL 정책이 owner_id = auth.uid() 하나로 묶인다
+     ⑦ <b>서버를 아껴 부른다</b> (7번) — 화면을 여러 번 열어도 한 번만 읽는다
+     ⑧ 빈 줄·엉뚱한 시각·<b>주민번호</b>를 안 받는다
 
    견본은 <b>홍길동</b> 계열입니다 (3번).
    ══════════════════════════════════════════════════════════════════ */
@@ -29,14 +31,43 @@ const head = t => console.log('\n' + t);
 
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
                '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
+/* ── my_plans 를 <b>진짜 표처럼</b> 흉내 냅니다 ──────────────────────
+   빈 배열만 돌려주는 흉내로는 「넣으면 서버에도 들어가는가」 를 못 잽니다.
+   줄을 담아 두고 select 때 돌려줘야 진짜로 오간 것을 볼 수 있습니다. */
 const STUB = `
+window.__plan={rows:[],sel:0,ins:0,del:0,missing:false};
 window.supabase={createClient:function(){
- var mk=function(){var a={select:function(){return a},eq:function(){return a},order:function(){return a},
-  limit:function(){return a},single:function(){return a},in:function(){return a},gte:function(){return a},
-  lte:function(){return a},is:function(){return a},neq:function(){return a},not:function(){return a},
-  range:function(){return a},insert:function(){return a},update:function(){return a},upsert:function(){return a},
-  then:function(r){return Promise.resolve({data:[],error:null}).then(r)}};a['delete']=function(){return a};return a};
- return {from:mk,rpc:function(){return Promise.resolve({data:null,error:null})},
+ var q=function(tbl){
+  var st={eq:null,lim:0};
+  var a={
+   select:function(){st.op='select';return a},
+   order:function(){return a},limit:function(){return a},single:function(){return a},
+   in:function(){return a},gte:function(){return a},lte:function(){return a},
+   is:function(){return a},neq:function(){return a},not:function(){return a},range:function(){return a},
+   eq:function(k,v){st.eq=[k,v];return a},
+   insert:function(v){st.op='insert';st.val=v;return a},
+   update:function(){st.op='update';return a},upsert:function(){st.op='upsert';return a},
+   then:function(res,rej){
+     var P=window.__plan;
+     if(tbl!=='my_plans')return Promise.resolve({data:[],error:null}).then(res,rej);
+     if(P.missing)return Promise.resolve({data:null,error:{message:'relation "public.my_plans" does not exist'}}).then(res,rej);
+     if(st.op==='select'){P.sel++;return Promise.resolve({data:P.rows.slice(),error:null}).then(res,rej);}
+     if(st.op==='insert'){
+       P.ins++;
+       var L=(st.val&&st.val.push)?st.val:[st.val];
+       L.forEach(function(x){P.rows.push({id:'s'+(P.rows.length+1),d:x.d,hm:x.hm||'',t:x.t});});
+       return Promise.resolve({data:null,error:null}).then(res,rej);
+     }
+     if(st.op==='delete'){
+       P.del++;
+       if(st.eq)P.rows=P.rows.filter(function(x){return String(x[st.eq[0]])!==String(st.eq[1]);});
+       return Promise.resolve({data:null,error:null}).then(res,rej);
+     }
+     return Promise.resolve({data:[],error:null}).then(res,rej);
+   }};
+  a['delete']=function(){st.op='delete';return a};
+  return a};
+ return {from:q,rpc:function(){return Promise.resolve({data:null,error:null})},
   storage:{from:function(){return {upload:function(){return Promise.resolve({})},getPublicUrl:function(){return {data:{publicUrl:''}}}}}},
   auth:{getSession:function(){return Promise.resolve({data:{session:{user:{id:'u1',email:'u1@example.com'}}}})},
    getUser:function(){return Promise.resolve({data:{user:{id:'u1'}}})},
@@ -60,136 +91,205 @@ const clearOvl = pg => pg.evaluate(sel => {
     window.__ovlWatch.observe(document.body, { childList: true, subtree: false });
   }
 }, SEL);
+const open = async (pg) => {
+  await pg.goto('http://127.0.0.1:' + PORT + '/app/index.html#mycal', { waitUntil: 'domcontentloaded', timeout: 90000 });
+  await pg.waitForFunction(() => typeof mcalMyAdd === 'function' && typeof mcalItems === 'function' &&
+                                 typeof go === 'function', { timeout: 60000 });
+  await clearOvl(pg);
+  await pg.evaluate(() => { OS.profile = { id: 'u1', name: '윤시현', role: 'owner' }; go('mycal'); });
+  /* ★ 「900밀리초 기다렸으니 다 읽었겠지」 로 재지 않습니다. 읽기는 서버를
+     오가는 일이라 느린 기계에서는 그 사이에 안 끝납니다. 그러면 화면은
+     멀쩡한데 점검만 웁니다 (8번). <b>실제로 끝났는지</b>를 기다립니다. */
+  await pg.waitForFunction(() => typeof MYP !== 'undefined' && MYP.loaded === true, { timeout: 20000 });
+  await pg.evaluate(() => { MCAL.sel = mcalToday(); mcalPaint(); });
+  await pg.waitForSelector('.mcal-add', { timeout: 20000 });
+  await clearOvl(pg);
+};
 
 (async () => {
   const srv = serve(), br = await chromium.launch();
   const ctx = await br.newContext({ viewport: { width: 1280, height: 1100 } });
-  /* 페이지가 처음 뜰 때 받는 글꼴·라이브러리까지 세면 <b>엉뚱한 것을</b>
-     잡습니다. 재려는 것은 「일정을 넣고 지우는 동안 서버를 부르는가」 뿐이라,
-     화면이 다 선 뒤부터 셉니다 (8번 — 헛것을 잡는 점검은 안 잡느니만 못하다). */
-  let out = 0, watch = false;
-  const outUrls = [];
-  await ctx.route('**://**', r => {
-    const u = r.request().url();
-    if (u.indexOf('127.0.0.1:' + PORT) >= 0) return r.continue();
-    if (watch) { out++; outUrls.push(u.slice(0, 60)); }
-    return r.abort();
-  });
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
   const pg = await ctx.newPage();
   const errs = [];
   pg.on('pageerror', e => errs.push(String(e.message || e)));
   pg.on('console', m => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
   await pg.addInitScript(STUB);
   await pg.addInitScript(() => { try { localStorage.setItem('apex_guide_seen_v2', '1'); } catch (e) {} });
-  await pg.goto('http://127.0.0.1:' + PORT + '/app/index.html#mycal', { waitUntil: 'domcontentloaded', timeout: 90000 });
-  await pg.waitForFunction(() => typeof mcalMyAdd === 'function' && typeof mcalItems === 'function' &&
-                                 typeof go === 'function', { timeout: 60000 });
-  await clearOvl(pg);
-  await pg.evaluate(() => { OS.profile = { id: 'u1', name: '윤시현', role: 'owner' }; go('mycal'); });
-  await pg.waitForTimeout(700);
-  await clearOvl(pg);
-  watch = true;                 /* 여기서부터 센다 — 화면은 이미 다 섰다 */
 
   /* ─────────────────────────────────────────────────────────── */
   head('[1] 넣는 자리가 <b>한 곳</b>이다 (5번)');
-  ['mcalMyAll', 'mcalMyAdd', 'mcalMyDel', 'mcalMyPut', 'mcalMyFormHtml', 'mcalMySave'].forEach(f => {
+  ['mcalMyAll', 'mcalMyAdd', 'mcalMyDel', 'mcalMyPut', 'mcalMyFormHtml',
+   'mcalMyLoad', 'mypWhereTxt', 'mypOn'].forEach(f => {
     const c = (SRC.match(new RegExp('function\\s+' + f + '\\s*\\(', 'g')) || []).length;
     is(c === 1, f + '() 가 ' + c + '곳에 있다');
   });
-  is(/my:\{e:'✏️'/.test(SRC.replace(/\s/g, '')) || /my:\s*\{\s*e:\s*'✏️'/.test(SRC),
-     '갈래 표(MCAL_KIND)에 <b>내 일정</b>이 한 줄로 들어가 있다 — 삼항 사슬이 아니다');
+  is((SRC.match(/function mcalMyAll\(\)\{[\s\S]{0,200}?mypOn\(\)|MYP\.loaded&&!MYP\.missing/) || []).length > 0,
+     '<b>어디에 담기는지</b>를 한 곳(mcalMyAll)만 안다 — 두 곳에서 정하면 화면과 저장이 어긋난다');
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[2] 날짜를 고르면 <b>그 자리에서</b> 적는다');
-  const form = await pg.evaluate(() => {
+  head('[2] <b>나만 본다</b> — 서버 정책 (6번)');
+  const sql = (SRC.match(/var OS_PLAN_SQL=\[[\s\S]*?\];/) || [''])[0];
+  is(/create table if not exists public\.my_plans/.test(sql), 'my_plans 표를 만든다');
+  is(/enable row level security/.test(sql), '<b>행 잠금(RLS)을 켠다</b> — 안 켜면 정책이 있어도 다 보인다');
+  ['select', 'insert', 'update', 'delete'].forEach(k =>
+    is(new RegExp('my_plans_' + k).test(sql) , '  ' + k + ' 정책이 있다'));
+  is((sql.match(/owner_id = auth\.uid\(\)/g) || []).length >= 4,
+     '읽기·넣기·고치기·지우기가 <b>모두 본인</b>으로 묶인다');
+  is(/owner_id  uuid not null default auth\.uid\(\)/.test(sql),
+     'owner_id 를 <b>서버가 채운다</b> — 앱이 보내는 값을 믿으면 남의 이름으로 넣을 수 있다');
+  is((SRC.match(/var OS_PLAN_SQL=/g) || []).length === 1 &&
+     /concat\(OS_PLAN_SQL\)/.test(SRC), '준비 SQL 에 <b>한 곳</b>에서만 붙는다 (5번)');
+  const ver = (SRC.match(/var SETUP_VER=(\d+)/) || [])[1];
+  const stamp = (SRC.match(/'schema_version', '(\d+)'/) || [])[1];
+  is(ver === stamp, '앱이 기다리는 판 번호와 SQL 이 남기는 번호가 <b>같다</b> — 앱 ' + ver + ' · SQL ' + stamp);
+
+  /* ══ 서버에 자리가 있을 때 ══════════════════════════════════ */
+  await open(pg);
+  head('[3] 서버에 담기고, <b>그렇다고 말한다</b>');
+  const say = await pg.evaluate(() => {
     const d = document.querySelector('.mcal-add');
-    return { there: !!d, t: !!document.getElementById('mcalMyT'),
-             h: !!document.getElementById('mcalMyH'),
-             w: d ? Math.round(d.getBoundingClientRect().width) : 0,
-             txt: d ? d.textContent.replace(/\s+/g, ' ') : '' };
+    return { there: !!d, txt: d ? d.textContent.replace(/\s+/g, ' ') : '', on: mypOn() };
   });
-  is(form.there && form.t && form.w > 100, '고른 날 아래에 <b>적는 칸</b>이 서 있다 — 폭 ' + form.w + 'px');
-  is(form.h, '시각 칸이 <b>따로</b> 있다 — 안 적어도 되는 것이라 제목과 나눈다');
-  is(/이 브라우저에만/.test(form.txt),
-     '<b>이 브라우저에만 담긴다고 적는다</b> (1번) — 다른 기기에서 안 보이는데 보인다고 하면 거짓말이다');
-  is(/폰 달력/.test(form.txt), '폰 달력으로는 나간다고 <b>같이</b> 알려 준다');
+  is(say.there && say.on, '적는 칸이 서고 <b>서버 자리를 찾았다</b>');
+  is(/서버에 담깁니다/.test(say.txt) && /폰에서도/.test(say.txt),
+     '<b>「폰에서도 그대로 보입니다」</b> 라고 적는다 — 「' + (say.txt.match(/서버에 담깁니다[^.]*\./) || [''])[0] + '」');
+  is(/홍○동/.test(say.txt), '고객 이름은 <b>가려 적으라</b>고 그 자리에 말한다 (3번)');
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[3] 넣으면 <b>달력에 바로</b> 찍힌다');
-  const put = await pg.evaluate(() => {
+  head('[4] 넣으면 <b>기다리지 않고</b> 서고, 서버에도 들어간다');
+  const put = await pg.evaluate(async () => {
     const t = mcalToday();
-    MCAL.sel = t;
-    mcalPaint();
-    document.getElementById('mcalMyT').value = '지점 회의 — 홍길동 건';
+    MCAL.sel = t; mcalPaint();
+    document.getElementById('mcalMyT').value = '지점 회의 — 홍○동 건';
     document.getElementById('mcalMyH').value = '14:00';
+    const ins0 = window.__plan.ins;
     mcalMyPut();
-    const items = (mcalItems()[t] || []).filter(x => x.k === 'my');
-    const row = document.querySelector('.mcal-it.my');
-    return { n: items.length, t: items[0] ? items[0].t : '', s: items[0] ? items[0].s : '',
-             shown: !!row, txt: row ? row.textContent.replace(/\s+/g, ' ') : '',
-             x: !!(row && row.querySelector('.mcal-x')),
-             box: (document.getElementById('mcalMyT') || {}).value };
+    const now = (mcalItems()[t] || []).filter(x => x.k === 'my').length;   /* 곧바로 */
+    await new Promise(r => setTimeout(r, 400));
+    return { now, ins: window.__plan.ins - ins0, srv: window.__plan.rows.length,
+             after: (mcalItems()[t] || []).filter(x => x.k === 'my').length,
+             t: window.__plan.rows[0] ? window.__plan.rows[0].t : '',
+             hm: window.__plan.rows[0] ? window.__plan.rows[0].hm : '' };
   });
-  is(put.n === 1 && /지점 회의/.test(put.t), '넣은 일정이 <b>그날에 담긴다</b> — 「' + put.t + '」');
-  is(put.s === '14:00', '적은 <b>시각이 그대로</b> 간다 — ' + put.s);
-  is(put.shown && /지점 회의/.test(put.txt), '<b>그 자리에서 바로 보인다</b> — 다시 그릴 때까지 안 기다린다');
-  is(put.x, '<b>지우는 단추</b>가 붙는다 — 잘못 적은 줄이 영영 남으면 안 된다');
+  is(put.now === 1, '<b>누른 그 순간</b> 화면에 선다 — 서버 대답을 안 기다린다');
+  is(put.ins === 1 && put.srv === 1, '<b>서버에도 한 줄</b> 들어갔다 — ' + put.srv + '건');
+  is(put.t === '지점 회의 — 홍○동 건' && put.hm === '14:00', '적은 그대로 간다 — 「' + put.t + ' ' + put.hm + '」');
+  is(put.after === 1, '다시 읽은 뒤에도 <b>한 줄</b>이다 — 두 번 세지 않는다');
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[4] 달력은 <b>한 벌</b>이다 (5번)');
+  head('[5] 서버가 거절하면 <b>도로 뺀다</b>');
+  const fail = await pg.evaluate(async () => {
+    const t = mcalToday();
+    window.__plan.missing = true;                 /* 넣는 순간만 막는다 */
+    const said = []; const rt = window.toast; window.toast = m => said.push(String(m));
+    document.getElementById('mcalMyT').value = '들어가면 안 되는 줄';
+    mcalMyPut();
+    await new Promise(r => setTimeout(r, 400));
+    window.__plan.missing = false; window.toast = rt;
+    return { n: (mcalItems()[t] || []).filter(x => x.k === 'my').length, said: said.join(' ') };
+  });
+  is(fail.n === 1, '<b>화면에서 도로 빠진다</b> — 안 들어갔는데 들어간 척하지 않는다 (' + fail.n + '건)');
+  is(/넣지 못했습니다/.test(fail.said), '<b>왜 안 됐는지</b> 말한다 — 「' + fail.said.slice(0, 40) + '」');
+
+  head('[6] 달력은 <b>한 벌</b>이다 (5번)');
   const cross = await pg.evaluate(() => {
     go('home');
-    return new Promise(r => setTimeout(() => {
-      const t = mcalToday();
-      const inHome = (mcalItems()[t] || []).filter(x => x.k === 'my').length;
-      r({ inHome, host: !!document.getElementById('hmCalHost') });
-    }, 900));
+    return new Promise(r => setTimeout(() => r({
+      host: !!document.getElementById('hmCalHost'),
+      n: (mcalItems()[mcalToday()] || []).filter(x => x.k === 'my').length
+    }), 900));
   });
-  is(cross.host && cross.inHome === 1, '내 캘린더에서 넣은 것이 <b>홈 달력에도</b> 있다 — ' + cross.inHome + '건');
+  is(cross.host && cross.n === 1, '내 캘린더에서 넣은 것이 <b>홈 달력에도</b> 있다 — ' + cross.n + '건');
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[5] <b>빈 줄·엉뚱한 시각을 안 받는다</b>');
-  const guard = await pg.evaluate(() => {
-    const said = [];
-    const rt = window.toast; window.toast = m => said.push(String(m));
-    const t = mcalToday();
-    const a = mcalMyAdd(t, '', '   ');            /* 빈 제목 */
-    const b = mcalMyAdd(t, '25시', '회의');        /* 엉뚱한 시각 */
-    const c = mcalMyAdd('', '', '회의');           /* 날짜 없음 */
-    const d = mcalMyAdd(t, '', '시각 없이도 됩니다');
-    window.toast = rt;
-    return { a, b, c, d, said, n: (mcalItems()[t] || []).filter(x => x.k === 'my').length };
-  });
-  is(!guard.a && /한 줄만/.test(guard.said.join(' ')), '<b>빈 줄은 안 받는다</b> — 무엇을 하는지 적어 달라고 말한다');
-  is(!guard.b && /14:00/.test(guard.said.join(' ')), '<b>엉뚱한 시각은 안 받는다</b> — 어떻게 적는지 보여 준다');
-  is(!guard.c, '<b>날짜 없이는 안 받는다</b>');
-  is(guard.d === true && guard.n === 2, '시각은 <b>안 적어도 들어간다</b> — ' + guard.n + '건');
-
-  /* ─────────────────────────────────────────────────────────── */
-  head('[6] 지우면 <b>사라진다</b>');
-  const del = await pg.evaluate(() => {
+  head('[7] 지우면 <b>서버에서도</b> 빠진다');
+  const del = await pg.evaluate(async () => {
     const t = mcalToday();
     const first = (mcalItems()[t] || []).filter(x => x.k === 'my')[0];
     mcalMyDel(first.my);
-    return (mcalItems()[t] || []).filter(x => x.k === 'my').length;
+    await new Promise(r => setTimeout(r, 400));
+    return { n: (mcalItems()[t] || []).filter(x => x.k === 'my').length,
+             srv: window.__plan.rows.length, del: window.__plan.del };
   });
-  is(del === 1, '지운 줄이 <b>달력에서 빠진다</b> — ' + del + '건 남음');
+  is(del.n === 0 && del.srv === 0 && del.del === 1, '달력에서도 서버에서도 빠진다 — 화면 ' + del.n + ' · 서버 ' + del.srv);
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[7] 폰 달력으로도 <b>같이 나간다</b>');
+  head('[8] <b>서버를 아껴 부른다</b> (7번)');
+  const thrift = await pg.evaluate(async () => {
+    const s0 = window.__plan.sel;
+    go('mycal');   await new Promise(r => setTimeout(r, 350));
+    go('home');    await new Promise(r => setTimeout(r, 350));
+    go('mycal');   await new Promise(r => setTimeout(r, 350));
+    return window.__plan.sel - s0;
+  });
+  is(thrift === 0, '화면을 세 번 더 열어도 <b>다시 안 읽는다</b> — ' + thrift + '번 (하루에 수십 번 여는 화면이다)');
+
+  head('[9] 빈 줄·엉뚱한 시각·<b>주민번호</b>를 안 받는다');
+  const guard = await pg.evaluate(() => {
+    const said = []; const rt = window.toast; window.toast = m => said.push(String(m));
+    const t = mcalToday();
+    const a = mcalMyAdd(t, '', '   ');
+    const b = mcalMyAdd(t, '25시', '회의');
+    const c = mcalMyAdd('', '', '회의');
+    const d = mcalMyAdd(t, '', '홍○동 800101-1234567 확인');
+    window.toast = rt;
+    return { a, b, c, d, said: said.join(' ') };
+  });
+  is(!guard.a && /한 줄만/.test(guard.said), '<b>빈 줄은 안 받는다</b>');
+  is(!guard.b && /14:00/.test(guard.said), '<b>엉뚱한 시각은 안 받는다</b> — 어떻게 적는지 보여 준다');
+  is(!guard.c, '<b>날짜 없이는 안 받는다</b>');
+  is(!guard.d && /주민등록번호/.test(guard.said),
+     '<b>주민번호는 안 받는다</b> — 서버에 올라가면 안 된다 (10번)');
+
+  /* ══ 서버에 자리가 <b>아직 없을 때</b> ═══════════════════════ */
+  head('[10] 자리가 없으면 <b>멈추지 않고 사실대로 말한다</b> (1번)');
+  const pg2 = await ctx.newPage();
+  pg2.on('pageerror', e => errs.push(String(e.message || e)));
+  await pg2.addInitScript(STUB);
+  await pg2.addInitScript(() => { try { localStorage.setItem('apex_guide_seen_v2', '1'); } catch (e) {} });
+  /* ★ 「자리 없음」 은 <b>앱이 돌기 전에</b> 걸어야 합니다. 첫 화면이 뜨는
+     순간 이미 한 번 읽어 버리므로, 뒤늦게 걸면 안 걸립니다. */
+  await pg2.addInitScript(() => { window.__plan.missing = true; });
+  await open(pg2);
+  const off = await pg2.evaluate(async () => {
+    const t = mcalToday();
+    MCAL.sel = t; mcalPaint();
+    const txt = (document.querySelector('.mcal-add') || {}).textContent || '';
+    document.getElementById('mcalMyT').value = '자리 없어도 적힙니다';
+    mcalMyPut();
+    await new Promise(r => setTimeout(r, 300));
+    let ls = [];
+    try { ls = JSON.parse(localStorage.getItem(mcalMyKey()) || '[]'); } catch (e) {}
+    return { on: mypOn(), txt: txt.replace(/\s+/g, ' '),
+             n: (mcalItems()[t] || []).filter(x => x.k === 'my').length, ls: ls.length,
+             DBG: { host: !!document.getElementById('mycalHost'), tab: (typeof lastTab!=='undefined'?lastTab:'?'),
+                    add: !!document.querySelector('.mcal-add'), inp: !!document.getElementById('mcalMyT'),
+                    loaded: MYP.loaded, missing: MYP.missing, err: MYP.err } };
+  });
+  is(!off.on && off.n === 1 && off.ls === 1, '<b>이 브라우저에 담고 화면에 선다</b> — 멈추지 않는다');
+  is(/이 브라우저에만/.test(off.txt) && /준비 SQL/.test(off.txt),
+     '<b>왜 그런지와 무엇을 하면 되는지</b> 적는다 — 「' + (off.txt.match(/이 브라우저에만[^.]*\./) || [''])[0] + '」');
+  is(!/폰에서도 그대로/.test(off.txt), '되지도 않는데 <b>폰에서 보인다고 안 한다</b>');
+  /* 자리가 생기면 담겨 있던 것을 <b>올려 보낸다</b> */
+  const up = await pg2.evaluate(async () => {
+    window.__plan.missing = false;
+    MYP.loaded = false; MYP.up = false;
+    mcalMyLoad(true);
+    for (let i = 0; i < 60 && !(MYP.loaded && !MYP.missing); i++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 400));
+    let ls = [];
+    try { ls = JSON.parse(localStorage.getItem(mcalMyKey()) || '[]'); } catch (e) {}
+    return { srv: window.__plan.rows.length, ls: ls.length, on: mypOn() };
+  });
+  is(up.on && up.srv === 1 && up.ls === 0,
+     '자리가 생기면 <b>담겨 있던 것을 올려 보내고</b> 브라우저를 비운다 — 서버 ' + up.srv + ' · 남은 것 ' + up.ls);
+
+  head('[11] 폰 달력으로도 <b>같이 나간다</b>');
   const ics = await pg.evaluate(() => {
+    mcalMyAdd(mcalToday(), '', '폰에도 나갑니다');
     const evs = mcalTodayEvents();
-    return { any: evs.some(e => /시각 없이도 됩니다/.test(e.title || '')),
-             ics: /시각 없이도 됩니다/.test(icsBuild('x', evs)) };
+    return { any: evs.some(e => /폰에도 나갑니다/.test(e.title || '')),
+             ics: /폰에도 나갑니다/.test(icsBuild('x', evs)) };
   });
   is(ics.any && ics.ics, '직접 넣은 일정이 <b>폰 달력 글에 실린다</b>');
 
-  /* ─────────────────────────────────────────────────────────── */
-  head('[8] <b>서버를 안 부른다</b> (7번)');
-  is(out === 0, '일정을 넣고 지우는 동안 바깥으로 나간 요청 ' + out + '건' +
-     (out ? ' — ' + outUrls.slice(0, 3).join(' / ') : ''));
-
-  head('[9] 이 길을 도는 동안 <b>터진 곳이 없다</b>');
+  head('[12] 이 길을 도는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));
   is(real.length === 0, '콘솔 에러 0건' + (real.length ? ' — ' + real.slice(0, 3).join(' / ') : ''));
 
