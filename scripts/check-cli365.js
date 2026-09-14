@@ -185,17 +185,21 @@ const SEED = `
     document.body.appendChild(host);
     cli365TopPaint();
     const before = host.innerHTML.length;
-    /* MCAL.ym 은 비어 있을 수 있다 — 달을 계산해 주는 것은 mcalYm() 이다 */
-    const other = mcalYm() + '-15';
+    /* MCAL.ym 은 비어 있을 수 있다 — 달을 계산해 주는 것은 mcalYm() 이다.
+       <b>오늘이 아닌 날</b>을 골라야 한다. 오늘을 고르면 화면이 「오늘」 이라고
+       적지 「15일」 이라고 안 적어서, <b>매달 15일에만</b> 빨간불이 났다.
+       날짜를 박아 두는 점검은 언젠가 반드시 그날이 온다 (8번). */
+    const dd = (mcalToday().slice(8) === '15') ? '16' : '15';
+    const other = mcalYm() + '-' + dd;
     MCAL.sel = ''; mcalPick(other);
     const sel = MCAL.sel;
     const after = host.innerHTML;
-    const shows = after.indexOf('15일') >= 0;
+    const shows = after.indexOf(dd + '일') >= 0;
     MCAL.sel = ''; host.remove();
-    return { sel, shows, before, len: after.length };
+    return { sel, shows, dd, before, len: after.length };
   `));
   is(E.sel, '  누른 날이 <b>골라진다</b>');
-  is(E.shows, '  그리고 <b>그 자리가 다시 그려진다</b> — 그날 것이 아래에 뜬다');
+  is(E.shows, '  그리고 <b>그 자리가 다시 그려진다</b> — 그날 것이 아래에 뜬다 (고른 날 '+E.dd+'일)');
 
   console.log('\n[6] 콘솔이 조용하다');
   is(errs.length === 0, '  터진 곳이 없다' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));
