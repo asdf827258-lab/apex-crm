@@ -71,19 +71,42 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const stamped=(sql.match(/'schema_version',\s*'(\d+)'/)||[])[1];
   is(stamped!==undefined,'SQL 이 끝나면 서버에 판 번호를 남긴다 — '+stamped);
   is(+stamped===r.ver,'그 번호가 앱이 기다리는 번호와 같다 — SQL '+stamped+' · 앱 '+r.ver);
-  console.log('\n[3] 서버 열쇠 — 들어가면 바로 보이고, 순서대로 알려 주는가');
+  console.log('\n[3] 서버 열쇠 — 안내는 그대로, <b>재촉은 안 한다</b>');
+  /* ★ 홈의 「서버 열쇠가 아직 없습니다」 재촉은 걷어냈습니다. 그 판정이
+     <b>이 브라우저에 담아 둔 딱지 하나</b>만 보고 서버가 실제로 도는지는
+     안 보고 단정했기 때문입니다 — 밤일이 멀쩡히 도는데도 매일 아침
+     열쇠를 넣으라고 했습니다 (1번 · 아직 모르는 것을 없다고 적은 자리).
+
+     그래서 재는 것을 뒤집습니다 — <b>안 뜨는가</b>를 잽니다. 그리고
+     알림을 없앤 것이 아니라는 것도 같이 못 박습니다: 밤일이 정말 안 돌면
+     nwBoxHtml() 이 그때 말합니다. 그것은 딱지가 아니라 <b>서버에 물어본
+     결과</b>(NW.ok)라서, 되는데 뜨거나 안 되는데 조용할 일이 없습니다. */
   const kb = await page.evaluate(() => {
     OS.profile = OS.profile || {}; OS.profile.role = 'owner';
     try { localStorage.removeItem('apex_nf_keys'); } catch (e) {}
     const g = document.getElementById('osLoginGate'); if (g) g.style.display = 'none';
-    go('home'); nfKeyPaint();
-    const el = document.getElementById('osNfKeyHome');
-    return { has: !!el, n: el ? el.querySelectorAll('button').length : 0,
-             t: el ? el.textContent.replace(/\s+/g, ' ') : '' };
+    go('home');
+    const pane = document.getElementById('dynPane') || document.body;
+    return { slot: !!document.getElementById('osNfKeyHome'),
+             nag: /서버 열쇠가 아직 없습니다/.test(pane.textContent),
+             fn: typeof window.nfKeyBarHtml === 'function',
+             guide: typeof window.nfGuide === 'function' };
   });
-  is(kb.has && kb.n === 2, '홈에 열쇠 배너가 단추 두 개와 함께 뜬다');
-  is(/서버 열쇠가 아직 없습니다/.test(kb.t), '무엇이 없는지 한 줄로 말한다');
-  is(/새벽 5시/.test(kb.t), '안 넣으면 무엇이 멈추는지 적혀 있다');
+  is(!kb.slot && !kb.nag, '홈에 <b>열쇠 재촉이 안 뜬다</b> — 딱지 하나로 「없다」 고 단정하지 않는다 (1번)');
+  is(!kb.fn, '그 판을 그리던 함수가 <b>안 남아 있다</b> — 죽은 판이 돌면 안 된다 (5번)');
+  is(kb.guide, '열쇠 넣는 <b>안내는 그대로</b> 있다 — 재촉만 뺐지 길을 없앤 것이 아니다');
+  /* 밤일이 안 돌 때는 <b>그때</b> 말해야 한다 — 그건 서버에 물어본 결과다 */
+  const nw = await page.evaluate(() => {
+    NW.ok = false; NW.msg = 'SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다'; NW.at = '09:00';
+    const bad = nwBoxHtml();
+    NW.ok = true; NW.msg = '돌고 있습니다';
+    const good = nwBoxHtml();
+    return { bad: bad.replace(/\s+/g, ' '), good: good.replace(/\s+/g, ' ') };
+  });
+  is(/안 만들어지고 있습니다/.test(nw.bad) && /열쇠 넣기/.test(nw.bad),
+     '밤일이 <b>정말 안 돌 때는</b> 그때 말하고 넣는 길을 준다 — 실패를 성공처럼 말하지 않는다');
+  is(/돕니다/.test(nw.good) && !/열쇠 넣기/.test(nw.good),
+     '<b>돌고 있으면 조용하다</b> — 되는 것을 안 되는 것처럼 말하지 않는다');
 
   const gd = await page.evaluate(() => {
     nfGuide();
@@ -106,19 +129,9 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(gd && /최고 권한/.test(gd.t), 'service_role 경고가 있다 — 대화창에 붙이지 말라고');
   is(gd && /Clear cache and deploy/.test(gd.t), '재배포해야 열쇠가 들어간다는 것을 적었다');
 
-  const fold = await page.evaluate(() => {
-    nfGuideClose(); nfKeyMark(true);
-    const a = document.getElementById('osNfKeyHome').innerHTML === '';
-    nfKeyMark(false);
-    const b2 = document.getElementById('osNfKeyHome').innerHTML !== '';
-    OS.profile.role = 'member'; nfKeyPaint();
-    const c = document.getElementById('osNfKeyHome').innerHTML === '';
-    return { a, b2, c };
-  });
-  is(fold.a, '한 번 되면 배너가 접힌다');
-  is(fold.b2, '안 되면 다시 뜬다');
-  is(fold.c, '팀원에게는 안 보인다 — 대표만 넣을 수 있는 일이다');
-
+  /* 「한 번 되면 접힌다 · 안 되면 다시 뜬다 · 팀원에게는 안 보인다」 는
+     홈 배너를 재던 자리였습니다. 배너가 없어졌으므로 같이 뗍니다 —
+     없는 것을 재는 점검은 사람이 점검을 안 믿게 만듭니다 (8번). */
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('점검 실패 — '+bad+'가지'):'점검 통과 — 다 맞습니다.');
