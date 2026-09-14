@@ -72,8 +72,11 @@ const is = (c, m) => c ? ok(m) : no(m);
 
   /* ═══ 2. CRM 단계 — 규칙을 떼어 내 직접 돌린다 ═══ */
   console.log('\n[2] 계약완료 · 증권전달 단계가 도는가');
-  is(/const STAGES=\["미접촉","TA","AP","PC","CS","계약완료","증권전달"\]/.test(crm),
-    '단계 일곱 개가 정해져 있다');
+  /* 부재·거절이 <b>제 이름으로</b> 들어왔습니다. 예전에는 부재를 TA 로,
+     거절을 미접촉으로 뭉개서 단계만 보면 안 받는 사람과 통화된 사람이
+     같은 칸에 있었습니다 (5번). */
+  is(/const STAGES=\["미접촉","부재","거절","TA","AP","PC","CS","계약완료","증권전달"\]/.test(crm),
+    '단계 <b>아홉 개</b>가 정해져 있다 — 부재·거절도 제 이름으로');
   const stageSrc = crm.slice(crm.indexOf('const STAGES='), crm.indexOf('function nextAppt('));
   /* 마지막 통화 결과는 밖에서 넣어 준다 — 그래야 짐작 규칙을 그대로 돌려 볼 수 있다 */
   const mkS = res => {
@@ -91,7 +94,8 @@ const is = (c, m) => c ? ok(m) : no(m);
     is(S.stageOf({ id: 'x', stage: '없는단계' }) === '미접촉', '모르는 값이 들어오면 짐작으로 돌아간다');
     is(S.stageOf({ id: 'x' }) === '미접촉', '단계를 안 정했으면 통화 결과에서 짐작한다');
     is(mkS('상담').stageOf({ id: 'x' }) === 'AP', '상담까지 갔으면 AP 로 짐작한다 (하위호환)');
-    is(mkS('부재').stageOf({ id: 'x' }) === 'TA', '부재면 TA 로 짐작한다');
+    is(mkS('부재').stageOf({ id: 'x' }) === '부재', '부재면 <b>부재</b>다 — TA 로 안 뭉갠다');
+    is(mkS('거절').stageOf({ id: 'x' }) === '거절', '거절이면 <b>거절</b>이다 — 미접촉으로 안 뭉갠다');
     is(mkS('상담').stageOf({ id: 'x', stage: 'CS' }) === 'CS', '손으로 정한 값이 짐작을 이긴다');
     is(S.isWon({ id: 'x', stage: '계약완료' }) && S.isWon({ id: 'x', stage: '증권전달' }),
       '계약완료 · 증권전달 둘 다 계약으로 센다');
@@ -139,8 +143,8 @@ const is = (c, m) => c ? ok(m) : no(m);
 
   /* ═══ 4~7. 앱 ═══ */
   console.log('\n[4] 앱이 CRM 과 같은 규칙으로 단계를 읽는가');
-  is(/var AR_STAGES=\['미접촉','TA','AP','PC','CS','계약완료','증권전달'\]/.test(app),
-    '앱도 같은 일곱 단계를 안다');
+  is(/var AR_STAGES=\['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달'\]/.test(app),
+    '앱도 <b>같은 아홉 단계</b>를 안다 — 두 파일이 다른 말을 하면 어느 쪽이 맞는지 모른다');
   is(/function arStageOf\(/.test(app) && /function arWon\(/.test(app), '단계를 읽는 길이 있다');
   is(/stage,next_appt,contracted_at,policy_sent_at/.test(app), '서버에서 단계와 약속을 받아 온다');
   is(/AR\.noStage=true/.test(app) && /return q\(sb\.from\('dbs'\)\.select\(cols\+',source'\)\)/.test(app),
@@ -229,9 +233,10 @@ const is = (c, m) => c ? ok(m) : no(m);
     const cardNext = pfCardNextHtml('u1');
 
     return {
-      polN: byK('pol').length, wonN: byK('won').length, runN: byK('run').length,
-      polId: (byK('pol')[0] || {}).id, wonId: (byK('won')[0] || {}).id,
-      cntPol: cnt.pol, cntWon: cnt.won,
+      polN: byK('계약완료').length, wonN: byK('증권전달').length,
+      runN: byK('AP').length + byK('PC').length + byK('CS').length,
+      polId: (byK('계약완료')[0] || {}).id, wonId: (byK('증권전달')[0] || {}).id,
+      cntPol: cnt['계약완료'], cntWon: cnt['증권전달'],
       todo: todo,
       apptN: appts.length, apptHm: (appts[0] || {}).hm, apptNm: (appts[0] || {}).nm,
       nxtKinds: nxt.map(x => x.k), nxtNames: nxt.map(x => x.nm), nc: nc,
@@ -242,7 +247,7 @@ const is = (c, m) => c ? ok(m) : no(m);
 
   is(R.polN === 1 && R.polId === 'd1', '계약했는데 증권 못 보낸 사람이 따로 선다');
   is(R.wonN === 1 && R.wonId === 'd2', '증권을 막 전달한 사람이 따로 선다');
-  is(R.runN === 2, '계약된 사람은 「진행중」에 안 섞인다 (진행중 ' + R.runN + '명)');
+  is(R.runN === 2, '계약된 사람은 <b>AP·PC·CS 에 안 섞인다</b> (' + R.runN + '명)');
   is(R.cntPol === 1 && R.cntWon === 1, '칸마다 숫자가 맞는다');
   is(!R.nxtNames.includes('남의고객'), '남의 담당 고객은 내 화면에 안 나온다');
 
@@ -264,7 +269,8 @@ const is = (c, m) => c ? ok(m) : no(m);
   console.log('\n[5] 단계마다 다른 말을 하는가');
   is(/증권을 못 보냈습니다/.test(R.todo.d1 || ''), '증권 미전달 — 며칠째인지 짚어 준다 (' + (R.todo.d1 || '').slice(0, 40) + ')');
   is(/소개/.test(R.todo.d2 || ''), '증권 전달 직후 — 소개를 여쭙게 한다');
-  is(/약속 전날/.test(R.todo.d3 || ''), '약속이 잡혀 있으면 준비하라고 한다');
+  is(/자료 챙기고|자료를 준비/.test(R.todo.d3 || ''),
+     '약속이 잡혀 있으면 <b>준비하라</b>고 한다 — 「' + (R.todo.d3 || '').slice(0, 30) + '…」');
   is(/제안서/.test(R.todo.d4 || ''), 'PC 단계는 제안서 결론을 물으라고 한다');
   is(R.todo.d1 !== R.todo.d2 && R.todo.d2 !== R.todo.d4, '단계가 다르면 말도 다르다');
 
