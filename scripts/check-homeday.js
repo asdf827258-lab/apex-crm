@@ -30,8 +30,9 @@ const head = t => console.log('\n' + t);
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css',
                '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json' };
 const STUB = `
+window.__q=[];                       /* 어느 표를 몇 번 불렀나 — 7번을 재려면 필요합니다 */
 window.supabase={createClient:function(){
- var mk=function(){var a={select:function(){return a},eq:function(){return a},order:function(){return a},
+ var mk=function(t){window.__q.push(t||'?');var a={select:function(){return a},eq:function(){return a},order:function(){return a},
   limit:function(){return a},single:function(){return a},in:function(){return a},gte:function(){return a},
   lte:function(){return a},is:function(){return a},neq:function(){return a},not:function(){return a},
   range:function(){return a},insert:function(){return a},update:function(){return a},upsert:function(){return a},
@@ -80,7 +81,16 @@ const SEED = `(function(){
   window.__seed[d3]=[{k:'next',t:'장길산',s:'서류 보내기'}];
   window.mcalItems=function(){ return window.__seed; };
   /* 계약 마디는 따로 셉니다 */
-  window.mstDueList=function(){ return {due:[{},{}],soon:[],none:0,total:2}; };
+  /* <b>이미 읽어 둔 상태</b>로 둡니다 — 실제 앱은 고객·기록을 한 번 읽고 나면
+     다시 안 읽습니다. 빈 값만 돌려주는 흉내에서는 그 「이미 읽었나」 판정이
+     안 먹어서, 멀쩡한 앱을 두고 「자꾸 부른다」 고 잡게 됩니다 (8번). */
+  OSC.list=[{id:'c1',name_masked:'홍○동'}];
+  try{ CM.loaded=true; CM.meta=CM.meta||{}; }catch(e){}
+  try{ AR.loaded=true; GB.loaded=true; }catch(e){}
+  window.mstDueList=function(){ return {due:[
+    {c:{id:'c9',name_masked:'홍○판'},hit:{d:0,step:{m:3,ic:'📮',t:'석 달째 인사'}}},
+    {c:{id:'c8',name_masked:'김○돌'},hit:{d:0,step:{m:6,ic:'📮',t:'반년 점검'}}}
+  ],soon:[],none:0,total:2}; };
 })();`;
 
 (async () => {
@@ -237,6 +247,178 @@ const SEED = `(function(){
   });
   is(moved.after !== moved.before, '주를 보고 있으면 ‹ › 가 <b>주를 옮긴다</b> — ' +
      moved.before + ' → ' + moved.after);
+
+  /* ══════════════════════════════════════════════════════════════
+     [6-1] 「지금 이것 하세요」 — <b>따라만 가면 되는가</b>
+
+     갈래별 건수만 세워 두면 <b>여전히 고르셔야 합니다</b> — 「연락할 분
+     3건」 을 보고도 누구부터인지는 눌러 들어가 다시 고릅니다. 아침에
+     제일 힘든 것이 그 고르는 일입니다. 그래서 맨 위에 <b>딱 한 건</b>을
+     세웁니다.                                                        */
+  head('[6-1] 「지금 이것」 — <b>한 건씩 따라가면 된다</b>');
+  await pg.evaluate(() => { try { localStorage.removeItem('apex_hm_done'); } catch (e) {} go('home'); });
+  await pg.waitForTimeout(500);
+  await clearOvl(pg);
+  const now = await pg.evaluate(() => {
+    const d = document.querySelector('.hm-now');
+    const rows = document.querySelector('.hm-rows');
+    return { there: !!d, txt: d ? d.textContent.replace(/\s+/g, ' ') : '',
+             nm: (d && d.querySelector('.hm-now-m b')) ? d.querySelector('.hm-now-m b').textContent : '',
+             btn: d ? d.querySelectorAll('.hm-now-b button').length : 0,
+             first: !!(d && rows && (d.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING)),
+             n: hmSteps().length };
+  });
+  is(now.there && now.btn === 2, '<b>한 건</b>이 크게 서고 단추가 둘이다 (열기 · 했습니다)');
+  is(now.first, '갈래별 줄보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다');
+  is(/1번째/.test(now.txt), '<b>몇 번째인지</b> 적는다 — 「' + (now.txt.match(/\d+건 중 \S+번째[^·]*/) || [''])[0].trim() + '」');
+  /* 차례는 <b>HM_ORD 가 정한 그대로</b>입니다 — 시간이 정해진 약속이 맨 위,
+     그다음이 계약 마디. 여기서 차례를 따로 적으면 갈라집니다 (5번). */
+  is(now.nm === '홍길동' && /약속/.test(now.txt),
+     '차례대로 <b>약속부터</b> 선다 — 시간이 정해진 것이 먼저다 (지금 「' + now.nm + '」)');
+
+  head('[6-2] <b>기록으로 남는 것과 아닌 것을 구분해 말한다</b> (1번)');
+  const said = await pg.evaluate(() => {
+    const out = {};
+    /* 연락 차례까지 넘겨 가며 무엇이라 적는지 본다 */
+    const L = hmSteps();
+    out.kinds = L.map(x => x.k);
+    const A = window.HM_ACT;
+    out.real = Object.keys(A).filter(k => A[k].real).sort().join(',');
+    out.fake = Object.keys(A).filter(k => !A[k].real).sort().join(',');
+    out.txtNow = (document.querySelector('.hm-now-n') || {}).textContent || '';
+    return out;
+  });
+  is(said.real === 'madi,touch',
+     '<b>기록이 남는 것은 연락과 계약 마디뿐</b>이라고 표에 적혀 있다 — ' + said.real);
+  is(/기록으로 남습니다/.test(said.txtNow) || /오늘 하루 표시/.test(said.txtNow),
+     '지금 이 건이 <b>어느 쪽인지</b> 그 자리에 적는다 — 「' + said.txtNow.replace(/\s+/g, ' ').slice(0, 46) + '」');
+
+  head('[6-3] 끝내면 <b>다음 한 건</b>이 올라온다');
+  const walk = await pg.evaluate(async () => {
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      const r = hmNext();
+      if (!r.x) break;
+      seen.push(r.x.k + ':' + r.x.t);
+      hmDoneMark(r.x.key);          /* 실제 누르는 것과 같은 표시 */
+    }
+    hmPaint();
+    await new Promise(r => setTimeout(r, 120));
+    return { seen, left: hmNext().x ? hmNext().x.k : '',
+             txt: (document.querySelector('.hm-now') || {}).textContent || '' };
+  });
+  is(walk.seen.length === 4 && walk.seen[0] !== walk.seen[1],
+     '누를 때마다 <b>다른 건</b>이 올라온다 — ' + walk.seen.slice(0, 3).join(' → '));
+  is(walk.seen[0].indexOf('appt:') === 0 && walk.seen[1].indexOf('madi:') === 0,
+     'HM_ORD 가 정한 <b>그 차례</b>로 나온다 — 약속 → 계약 마디');
+  const fin = await pg.evaluate(async () => {
+    let guard = 0;
+    while (hmNext().x && guard++ < 40) hmDoneMark(hmNext().x.key);
+    hmPaint();
+    await new Promise(r => setTimeout(r, 120));
+    return (document.querySelector('.hm-card') || {}).textContent || '';
+  });
+  is(/다 하셨습니다/.test(fin), '<b>다 하면 다 하셨다고</b> 말한다 — 빈 칸으로 두지 않는다');
+
+  head('[6-4] <b>어제 찍은 표시가 오늘 따라오지 않는다</b>');
+  const stale = await pg.evaluate(() => {
+    const k = hmSteps()[0].key;
+    try { localStorage.setItem('apex_hm_done', JSON.stringify({ d: '2020-01-01', k: [k] })); } catch (e) {}
+    return { done: hmIsDone(k), first: hmNext().x ? hmNext().x.key : '' };
+  });
+  is(!stale.done && stale.first, '어제 것으로 찍혀 있어도 <b>오늘은 다시 섭니다</b> — 날짜가 바뀌면 처음부터');
+
+  /* ══════════════════════════════════════════════════════════════
+     [8] TFA 업무관리가 <b>홈에서</b> 돈다
+
+     하루 일을 두 화면에서 했습니다 — 고객은 홈에서, 내 일과 팀 일은
+     TFA 에서. 아침에 홈을 보고 또 건너가야 했습니다. 이제 홈에서 끝납니다.
+     ★ <b>새로 만들지 않았는가</b>가 제일 중요합니다 (5번). 따로 그리면
+       한쪽만 고쳐져 두 화면이 서로 다른 말을 하게 됩니다.            */
+  head('[8] TFA 업무관리가 <b>홈에서</b> 돈다');
+  await pg.evaluate(() => { go('home'); });
+  await pg.waitForTimeout(900);
+  await clearOvl(pg);
+  const tfa = await pg.evaluate(() => {
+    const host = document.getElementById('hmTfaHost');
+    const pane = document.getElementById('arPane');
+    return { host: !!host, pane: !!(host && host.querySelector('#arPane')),
+             cats: pane ? pane.querySelectorAll('.ar-cat').length : 0,
+             want: (typeof AR_CAT !== 'undefined') ? AR_CAT.length : -1,
+             go: !!document.querySelector('.hm-tfa-go'),
+             body: !!(pane && pane.querySelector('.ar-main')) };
+  });
+  is(tfa.host && tfa.pane, 'TFA 판이 <b>홈 안에</b> 서 있다 — 같은 칸 이름(#arPane)이라 다시 그리기가 그대로 된다');
+  is(tfa.cats === tfa.want && tfa.want > 0,
+     '칸이 <b>하나도 안 빠지고</b> 선다 — ' + tfa.cats + ' / AR_CAT ' + tfa.want + '개');
+  is(tfa.body, '고른 칸의 <b>본문까지</b> 홈에 선다 — 이름만 늘어놓지 않는다');
+  is(tfa.go, '<b>「전체 화면으로」</b> 가 있다 — 넓게 보고 싶으실 때');
+  /* 새로 그리지 않았는가 — 소스로 못 박는다 (5번) */
+  const tfaSrc = SRC.slice(SRC.indexOf('function hmTfaHtml('), SRC.indexOf('function hmTfaHtml(') + 900);
+  is(/arInnerHtml\(\)/.test(tfaSrc), 'TFA 가 쓰던 판(arInnerHtml)을 <b>그대로</b> 부른다 — 제 몸통을 안 갖는다 (5번)');
+  is((SRC.match(/function hmTfaHtml\s*\(/g) || []).length === 1, 'hmTfaHtml() 이 한 곳에 있다');
+
+  head('[8-1] 칸을 누르면 <b>홈에 머문 채</b> 바뀐다');
+  const sw = await pg.evaluate(async () => {
+    const btns = [...document.querySelectorAll('#arPane .ar-cat')];
+    const before = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
+    const t = btns.find(x => /팀원 관리/.test(x.textContent));
+    if (t) t.click();
+    await new Promise(r => setTimeout(r, 500));
+    const after = (document.querySelector('#arPane .ar-main') || {}).textContent || '';
+    return { cat: AR.cat, tab: (typeof lastTab !== 'undefined') ? lastTab : '?',
+             changed: before.slice(0, 150) !== after.slice(0, 150),
+             stillHome: !!document.getElementById('hmToday') };
+  });
+  is(sw.changed && sw.cat === 'team', '눌린 칸으로 <b>본문이 바뀐다</b> — 지금 「' + sw.cat + '」');
+  is(sw.tab === 'home' && sw.stillHome, '<b>홈을 안 떠난다</b> — 오늘 챙길 것도 그대로 있다');
+
+  head('[8-2] TFA 판이 <b>서버를 되풀이해 안 부른다</b> (7번)');
+  /* ★ 여기서 재는 것은 <b>이 판이 더한 몫</b>뿐입니다. 홈이 원래 부르던
+     것(고객·공지 등)까지 싸잡아 세면, 제가 건드리지도 않은 자리 때문에
+     빨간불이 켜져 사람이 점검을 안 믿게 됩니다 (8번).
+     그래서 arLoad 가 <b>실제로 서버까지 가는 횟수</b>만 셉니다 —
+     홈을 다시 열 때마다 여기서 새면 한도가 그것으로 나갑니다.        */
+  const armed = await pg.evaluate(async () => {
+    window.__arN = 0;
+    const real = window.arLoad;
+    window.arLoad = function (force) {
+      const was = (typeof AR !== 'undefined') && AR.loaded;
+      if (!was || force) window.__arN++;
+      return real.apply(this, arguments);
+    };
+    for (let i = 0; i < 3; i++) {
+      go('clients'); await new Promise(r => setTimeout(r, 250));
+      go('home');    await new Promise(r => setTimeout(r, 450));
+    }
+    window.arLoad = real;
+    return { n: window.__arN, pane: !!document.getElementById('arPane') };
+  });
+  is(armed.n === 0 && armed.pane,
+     '홈을 세 번 더 열어도 TFA 는 <b>다시 안 읽는다</b> — ' + armed.n + '번 ' +
+     '(arLoad 가 스스로 막는다. 여기서 새면 하루 수십 번이 그대로 요금이 된다)');
+  /* 코드로도 못 박는다 — 홈이 <b>TFA 가 아는 한 곳</b>을 부르는가 (5번) */
+  const arm = SRC.slice(SRC.indexOf('function hmArm('), SRC.indexOf('function hmArm(') + 900);
+  is(/osAiRepAfterRender\(\)/.test(arm),
+     '깨우는 일은 <b>TFA 가 아는 한 곳</b>에 맡긴다 — 홈에서 따로 적으면 한쪽만 고쳐진다 (5번)');
+
+  head('[8-3] 달력이 둘이어도 <b>둘 다</b> 바뀐다');
+  /* 홈 달력과 「스케줄 관리」 칸의 달력이 같이 섭니다. 예전에는 첫 자리를
+     그리고 그대로 나가(return) 나머지가 안 바뀌었습니다 — 눌리는데 안
+     바뀌면 고장 난 것으로 보입니다. */
+  const two = await pg.evaluate(async () => {
+    arGoCat('sched');
+    await new Promise(r => setTimeout(r, 600));
+    const cals = document.querySelectorAll('.mcal-grid, .mcal-wk').length;
+    const before = MCAL.ym;
+    mcalMove(1);
+    await new Promise(r => setTimeout(r, 400));
+    const titles = [...document.querySelectorAll('.mcal-hd b')].map(x => x.textContent.trim());
+    mcalMove(-1);
+    return { cals, before, titles, same: titles.length > 1 && titles.every(x => x === titles[0]) };
+  });
+  is(two.titles.length >= 2, '홈과 스케줄 관리에 <b>달력이 둘</b> 섰다 — ' + two.titles.length + '개');
+  is(two.same, '달을 넘기면 <b>둘 다</b> 따라 넘어간다 — ' + two.titles.join(' · '));
 
   head('[7] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
   const real = errs.filter(x => !/favicon|net::ERR|Failed to load resource|ERR_FAILED/i.test(x));
