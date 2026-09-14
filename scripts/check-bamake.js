@@ -89,13 +89,25 @@ const srv = http.createServer((rq, rs) => {
   const fr = page.frames().filter(f => /ba\.html/.test(f.url()))[0];
   is(!!fr, '화면이 실제로 실린다');
   if (fr) {
-    await fr.waitForTimeout(1000);
-    const inside = await fr.evaluate(() => ({
+    /* ★ 「1초 기다렸으니 다 실렸겠지」 로 재지 않는다. ba.html 은 6천 줄이
+       넘어서, 느린 기계에서는 그 사이에 스크립트가 아직 안 돈다. 그러면
+       <b>화면은 멀쩡한데 점검만</b> 「INFRAME is not defined」 로 터진다 —
+       기계가 느리다는 이유로 우는 알람은 사람이 점검을 안 믿게 만든다 (8번).
+       실려야 할 것이 <b>실제로 실렸는지</b>를 기다리고, 그래도 안 실리면
+       터지지 말고 <b>못 실렸다고 말한다.</b>                              */
+    let ready = true;
+    try {
+      await fr.waitForFunction(
+        () => typeof INFRAME !== 'undefined' && !!document.getElementById('baSaveBtn'),
+        { timeout: 20000 });
+    } catch (e) { ready = false; }
+    is(ready, '화면 안의 스크립트가 <b>끝까지 돈다</b>' + (ready ? '' : ' — 20초를 기다려도 안 돌았다'));
+    const inside = ready ? await fr.evaluate(() => ({
       alive: typeof S === 'object' && S !== null,
       inframe: INFRAME === true,
       btn: !!document.getElementById('baSaveBtn'),
       shown: document.getElementById('baSaveBtn').style.display !== 'none'
-    }));
+    })) : { alive: false, inframe: false, btn: false, shown: false };
     is(inside.alive, '화면 안이 <b>멈추지 않고</b> 살아 있다');
     is(inside.inframe && inside.btn && inside.shown, '워크스페이스 안이라 <b>「고객 365일에 저장」</b> 단추가 선다');
 
