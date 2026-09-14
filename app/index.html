@@ -13714,8 +13714,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 14:35';
-var APP_BUILD_NOTE="<b>홈을 열 때마다 서버를 다시 부르던 자리를 막았습니다.</b> 홈은 하루에 제일 많이 여는 화면입니다. 그런데 홈을 열 때마다 <b>공지 목록을 서버에서 다시 읽고</b> 있었습니다 — 그 대답이 「누가 확인했나」 표시를 되돌려 <b>한 번 더</b> 읽게 해서, 홈 한 번에 <b>두 번</b>이었습니다. 이미 읽은 것을 다시 읽는 것이라 화면에 보이는 것은 하나도 달라지지 않고, <b>요금만</b> 나갔습니다. 무료 한도를 세 배로 넘겨 로그인까지 막힌 적이 있는 자리입니다. 이제 <b>읽는 함수가 스스로</b> 「이미 읽었나」 를 압니다 — 홈을 몇 번을 다시 여셔도 <b>0번</b>입니다. 막는 자리를 부르는 쪽이 아니라 <b>읽는 쪽</b>에 둔 것은, 부르는 곳마다 두면 언젠가 한 곳을 빠뜨리기 때문입니다. <b>새 공지를 올리거나 내리거나 「다시 읽기」 를 누르시면 그때는 진짜로 다시 읽습니다</b> — 올리고도 안 뜨면 그게 더 나쁘기 때문입니다. 점검(<b>check-ntcbox</b>)이 <b>둘 다</b> 잽니다: 다섯 번 더 열어도 안 읽는가, 그리고 내린 뒤에는 다시 읽는가. 첫 화면이 뜰 때 부르는 횟수도 <b>66 → 59</b> 로 줄었습니다.";
+var APP_BUILD='2026-09-14 15:40';
+var APP_BUILD_NOTE="<b>홈을 열 때마다 서버를 다시 부르던 자리를 막았습니다 — 다만 새 공지는 그대로 옵니다.</b> 홈은 하루에 제일 많이 여는 화면입니다. 그런데 홈을 열 때마다 <b>공지 목록을 서버에서 다시 읽고</b> 있었습니다 — 그 대답이 「누가 확인했나」 를 되돌려 <b>한 번 더</b> 읽게 해서, 홈 한 번에 <b>두 번</b>이었습니다. 이미 읽은 것을 또 읽는 것이라 화면은 하나도 안 달라지고 <b>요금만</b> 나갔습니다. 무료 한도를 세 배로 넘겨 로그인까지 막힌 적이 있는 자리입니다. 이제 <b>읽는 함수가 스스로</b> 「방금 읽었나」 를 압니다 — 홈을 몇 번을 다시 여셔도 <b>0번</b>입니다. <b>그렇다고 영영 안 읽지는 않습니다.</b> 이 앱은 하루 종일 열어 두는 화면이라, 한 번 읽고 마는 막이를 걸면 대표님이 올린 새 공지가 팀원 화면에 <b>새로고침 전까지 안 옵니다</b> — 「확인해 주세요」 가 안 뜨는 것은 요금보다 나쁩니다. 그래서 <b>3분</b>으로 막습니다: 홈을 이리저리 오가는 동안은 한 번도 안 읽고, <b>새 공지는 늦어도 3분 안에</b> 옵니다. 올리거나 내리거나 「다시 읽기」 를 누르시면 <b>기다리지 않고 바로</b> 읽습니다. 함께, <b>돌아온 목록이 아까와 똑같으면 확인 기록은 되짚지 않습니다</b> — 홈 한 번에 두 번이던 그 두 번째가 이것이었습니다. 첫 화면이 뜰 때 부르는 횟수도 <b>66 → 59</b> 로 줄었습니다. 그리고 <b>전체지도에 「증권 전달」 을 넣었습니다</b> — 화면은 있는데 지도가 모르고 있어, 지도에서 찾으면 안 나오던 자리입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -46989,7 +46989,11 @@ function mykCss(){
 
    서버를 아껴 씁니다 (7번) — 칸이 열둘이어도 <b>부르는 것은 두 번</b>입니다.
    공지 목록 한 번, 확인 기록 한 번. 칸마다 부르지 않습니다.            */
-var OS_NTC={list:[],loaded:false,busy:false,err:'',max:12,posting:false};
+var OS_NTC={list:[],loaded:false,busy:false,err:'',max:12,posting:false,at:0,sig:null};
+/* 공지를 다시 읽기까지 <b>기다리는 시간</b>. 아예 안 읽으면 대표가 올린
+   새 공지가 팀원 화면에 <b>영영 안 옵니다</b> — 그건 요금보다 나쁩니다.
+   공지는 몇 분 늦어도 되지만 <b>안 오면 안 됩니다</b>. */
+var OS_NTC_TTL=180000;   /* 3분 */
 
 /* 서버 줄 하나를 앱이 쓰는 모양으로 — <b>한 곳에서만</b> 편다 (5번).
    여태 이 변환이 세 곳에 따로 적혀 있었다. */
@@ -47033,22 +47037,37 @@ function osNtcPaint(){
   var home=document.getElementById('osNoticeHome');if(home)home.innerHTML=osNoticeHomeHtml();
   var box=document.getElementById('osNtcAdmin');if(box)box.innerHTML=osNtcAdminHtml();
 }
+function osNtcSig(list){
+  /* <b>확인 기록 훑기(osAckScan)가 보는 것만</b> 줄로 엮는다 — 글·사진이
+     바뀐 것은 확인 기록과 상관이 없으므로 안 센다. */
+  var s=[],i,n;
+  for(i=0;i<(list||[]).length;i++){ n=list[i];
+    s.push(n.id+'|'+(n.on?1:0)+'|'+(n.mustAck?1:0)+'|'+(n.targets||[]).join(',')); }
+  return s.join(';');
+}
 function osNoticeLoad(force){
   var sb=osClient();
   if(!sb){OS_NOTICE=osNoticeLocalGet();OS_NTC.err='서버에 연결되어 있지 않습니다';osNoticeApply();return;}
-  /* ── <b>이미 읽은 공지를 홈 열 때마다 다시 읽지 않는다</b> (7번) ────
+  /* ── <b>홈 열 때마다 다시 읽지 않는다 — 그래도 3분 뒤에는 읽는다</b> (7번) ──
      홈은 하루에 제일 많이 여는 화면입니다. go('home') 이 이것을 부르는데
      막는 자리가 없어 <b>열 때마다</b> os_notices 를 읽었고, 그 대답이
      확인 기록 표시(OS_ACK.scanned)를 되돌려 <b>한 번 더</b> 읽게 했습니다 —
      홈 한 번에 두 번입니다. 무료 한도를 세 배로 넘겨 로그인까지 막힌
      적이 있습니다.
 
+     <b>그렇다고 영영 안 읽으면 안 됩니다.</b> 앱은 하루 종일 열어 두는
+     화면이라, 한 번 읽고 마는 막이를 걸면 대표가 올린 새 공지가 팀원
+     화면에 <b>새로고침 전까지 영영 안 옵니다.</b> 「확인해 주세요」 가
+     안 뜨는 것은 요금보다 나쁩니다. 그래서 <b>시간으로</b> 막습니다 —
+     홈을 이리저리 오가는 동안은 한 번도 안 읽고, 새 공지는 늦어도
+     3분 안에 옵니다.
+
      막는 자리를 <b>부르는 쪽</b>에 두면 부르는 곳마다 빠뜨립니다 (5번).
      그래서 <b>읽는 함수가 스스로</b> 압니다. 새 공지를 올리거나 내리거나
      「다시 읽기」 를 누르실 때는 force 로 부릅니다 — 그때는 진짜로 바뀐
-     뒤라 다시 읽는 것이 맞습니다.                                      */
-  if(OS_NTC.loaded&&!force)return;
+     뒤라 기다릴 이유가 없습니다.                                      */
   if(OS_NTC.busy)return;
+  if(OS_NTC.loaded&&!force&&(Date.now()-OS_NTC.at)<OS_NTC_TTL)return;
   OS_NTC.busy=true;
   try{
     /* id·targets·must_ack 도 함께 읽는다. 옛 표에는 그 칸이 없어 400 이 나므로,
@@ -47069,10 +47088,16 @@ function osNoticeLoad(force){
         var list=[];
         (r&&r.data||[]).forEach(function(row){var n=osNtcRow(row);if(n)list.push(n);});
         OS_NTC.list=list;OS_NTC.loaded=true;OS_NTC.busy=false;OS_NTC.err='';
+        OS_NTC.at=Date.now();
         /* OS_NOTICE 는 <b>목록의 첫 줄</b>이다 — 따로 세지 않는다 (5번) */
         if(list.length){OS_NOTICE=list[0];osNoticeLocalSet(OS_NOTICE);}
         else if(!OS_NOTICE){OS_NOTICE=osNoticeLocalGet();}
-        OS_ACK.loaded=false;OS_ACK.scanned=false;  /* 새 공지면 확인 기록도 다시 본다 */
+        /* 확인 기록은 <b>목록이 실제로 바뀌었을 때만</b> 다시 본다. 똑같은
+           목록에도 매번 되돌리면 osAckScan 이 서버를 <b>한 번 더</b> 부릅니다 —
+           대답이 같은데 요금만 나갑니다 (7번). 홈 한 번에 두 번이던 그 두 번째가
+           이것이었습니다. */
+        var sig=osNtcSig(list);
+        if(sig!==OS_NTC.sig){OS_NTC.sig=sig;OS_ACK.loaded=false;OS_ACK.scanned=false;}
         osNoticeApply();
       },function(){OS_NTC.busy=false;OS_NTC.err='공지를 못 읽었습니다';
                    OS_NOTICE=osNoticeLocalGet();osNoticeApply();});

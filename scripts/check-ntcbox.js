@@ -297,41 +297,72 @@ const SEED = `
   is(H.first === 1, '  칸 셋의 확인 기록을 <b>한 번에</b> 읽는다 — ' + H.first + '번');
   is(H.after === 1, '  여섯 번 더 그려도 <b>안 더 부른다</b> — ' + H.after + '번');
 
-  /* ── 8-1) <b>홈을 열 때마다 공지를 다시 읽지 않는다</b> (7번) ──
+  /* ── 8-1) <b>홈을 열 때마다 안 읽는다 — 그래도 시간이 지나면 읽는다</b> (7번) ──
      홈은 하루에 제일 많이 여는 화면입니다. go('home') 이 osNoticeLoad 를
      부르는데 막는 자리가 없어 <b>열 때마다</b> os_notices 를 읽었고, 그
      대답이 확인 기록 표시(OS_ACK.scanned)를 되돌려 <b>한 번 더</b> 읽게
      했습니다 — 홈 한 번에 두 번. 무료 한도를 세 배로 넘겨 로그인까지
      막힌 적이 있습니다.
-     다만 <b>진짜로 바뀐 뒤에는 다시 읽어야</b> 합니다 — 올리고도 안 뜨면
-     그게 더 나쁩니다. 그래서 둘 다 잽니다.                             */
-  console.log('\n[8-1] 홈을 여러 번 열어도 공지를 다시 안 읽는다 (7번)');
+
+     <b>그렇다고 영영 안 읽으면 안 됩니다.</b> 앱은 하루 종일 열어 두는
+     화면이라, 한 번 읽고 마는 막이를 걸면 대표가 올린 새 공지가 팀원
+     화면에 새로고침 전까지 안 옵니다 — 요금보다 나쁩니다. 처음에 그렇게
+     걸었다가 <b>check-noticeack [10] 이 잡아 주었습니다.</b>
+     그래서 <b>넷 다</b> 잽니다 — 안 읽나 · 시간이 지나면 읽나 ·
+     올린 뒤에는 바로 읽나 · 목록이 그대로면 확인 기록을 안 되짚나.     */
+  console.log('\n[8-1] 홈을 여러 번 열어도 안 읽는다 — 그래도 시간이 지나면 읽는다 (7번)');
   const J = await page.evaluate(async () => {
     const cnt = () => window.__calls.filter(c => c === 'os_notices.select').length;
-    OS_NTC.loaded = false; OS_NTC.busy = false;
+    /* 「맨 위 한 줄」 을 보는 osNSeenLoad 도 같은 표를 읽는다 — 재는 동안만 재운다 */
+    const keep = window.osNSeenLoad; window.osNSeenLoad = function () {};
+    OS_NTC.loaded = false; OS_NTC.busy = false; OS_NTC.at = 0; OS_NTC.sig = null;
     const a0 = cnt();
     osNoticeLoad();                       /* 처음 — 읽어야 한다 */
     await new Promise(r => setTimeout(r, 250));
     const first = cnt() - a0;
+
+    /* 홈을 다섯 번 더 연다 — 하나도 안 읽어야 한다 */
     let i; for (i = 0; i < 5; i++) { osNoticeLoad(); }
     await new Promise(r => setTimeout(r, 300));
     const again = cnt() - a0 - first;
-    /* 새 공지를 올린 뒤에는 다시 읽어야 한다 */
+
+    /* 3분이 지났다 — 그때는 <b>읽어야</b> 한다. 새 공지가 오는 길이다.
+       그리고 돌아온 목록이 <b>아까와 똑같으면</b> 확인 기록은 되짚지 말아야
+       한다. 되짚으면 osAckScan 이 os_notice_acks 를 <b>한 번 더</b> 부른다 —
+       홈 한 번에 두 번이던 그 두 번째가 이것이다. 되짚음은 <b>실제로 다시
+       읽을 때</b>만 드러나므로 여기서 잰다.                              */
+    const ackOf = () => window.__calls.filter(c => c === 'os_notice_acks.select').length;
+    const k0 = ackOf();
+    OS_NTC.at = Date.now() - (OS_NTC_TTL + 60000);
+    osNoticeLoad();
+    await new Promise(r => setTimeout(r, 350));
+    const later = cnt() - a0 - first - again;
+    const ackRewound = ackOf() - k0;
+
+    /* 올리거나 내린 뒤에는 <b>기다리지 않고</b> 읽어야 한다 */
+    const b0 = cnt();
     osNoticeLoad(true);
     await new Promise(r => setTimeout(r, 250));
-    const forced = cnt() - a0 - first - again;
-    return { first, again, forced };
+    const forced = cnt() - b0;
+    window.osNSeenLoad = keep;
+    return { first, again, later, forced, ackRewound };
   });
   is(J.first >= 1, '  처음에는 <b>읽는다</b> — ' + J.first + '번');
   is(J.again === 0, '  다섯 번 더 열어도 <b>안 읽는다</b> — ' + J.again + '번 ' +
      '(하루에 수십 번 여는 화면이라 여기서 새면 그대로 요금이 된다)');
-  is(J.forced >= 1, '  <b>올리거나 내린 뒤에는 다시 읽는다</b> — ' + J.forced +
-     '번 (안 읽으면 올리고도 안 떠서 그게 더 나쁘다)');
-  /* 부르는 쪽이 아니라 <b>읽는 함수가</b> 막는가 (5번) */
+  is(J.later >= 1, '  <b>시간이 지나면 다시 읽는다</b> — ' + J.later +
+     '번 (영영 안 읽으면 대표가 올린 새 공지가 팀원에게 안 간다)');
+  is(J.ackRewound === 0, '  그런데 목록이 그대로면 <b>확인 기록은 안 되짚는다</b> — ' +
+     J.ackRewound + '번 (되짚으면 서버를 한 번 더 부른다 · 홈 한 번에 두 번이던 그 두 번째)');
+  is(J.forced >= 1, '  <b>올리거나 내린 뒤에는 기다리지 않고 읽는다</b> — ' + J.forced + '번');
+  /* 부르는 쪽이 아니라 <b>읽는 함수가</b> 막는가 · 그 막이가 <b>시간으로</b> 열리는가 */
   const NSRC = require('fs').readFileSync(require('path').join(process.cwd(), 'app/index.html'), 'utf8');
-  const nfn = NSRC.slice(NSRC.indexOf('function osNoticeLoad('), NSRC.indexOf('function osNoticeLoad(') + 1400);
-  is(/OS_NTC\.loaded&&!force/.test(nfn.replace(/\s/g, '')),
+  const nfn = NSRC.slice(NSRC.indexOf('function osNoticeLoad('), NSRC.indexOf('function osNoticeLoad(') + 2600)
+                  .replace(/\s/g, '');
+  is(/OS_NTC\.loaded&&!force/.test(nfn),
      '  막는 자리가 <b>읽는 함수 안</b>에 있다 — 부르는 쪽에 두면 곳마다 빠뜨린다 (5번)');
+  is(/OS_NTC\.at\)<OS_NTC_TTL/.test(nfn),
+     '  막이가 <b>시간으로 열린다</b> — 「영영」 이 아니다');
 
   /* ── 9) 이름을 모르면 지어내지 않는다 (1번) ── */
   console.log('\n[9] 이름을 아직 못 받았으면 지어내지 않는다 (1번)');
