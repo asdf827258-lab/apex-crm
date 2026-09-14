@@ -184,6 +184,115 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(says === 0 || /id="osSetupHome"/.test(home),
      '  「홈 맨 위」 라고 <b>말하는 곳이 ' + says + '군데</b>인데, 홈에 그 자리가 실제로 있다 (5번)');
 
+  /* ── 5) <b>막혀 있는 것을 홈에서 그 자리에서 푼다</b> ────────────────
+     「준비 SQL 이 안 보인다」 에서 나온 칸입니다. 여태 저장이 막히면
+     「설정 → 조직도를 보세요」 라고만 했습니다 — 두 걸음이면 안 하십니다.
+
+     여기서 제일 위험한 것은 <b>쌍둥이</b>입니다 (5번). 무엇이 남았는지
+     아는 곳은 rdAuto() 하나여야 하고, 줄을 그리는 것도 rdRowHtml() 하나여야
+     합니다. 홈이 제 목록을 따로 만들면 출발 점검과 갈라져, 한쪽만 고쳐집니다.
+
+     그리고 <b>7번</b>. 홈은 하루에 수십 번 여는 화면인데 rdLoad 는 서버를
+     셋 부릅니다. 막는 자리가 없으면 그대로 요금이 됩니다.               */
+  console.log('\n[5] 막혀 있는 것이 <b>홈에</b> 뜨고, 거기서 바로 풀린다');
+  const rd = await page.evaluate(async () => {
+    /* 흉내 서버 — 대표인데 조직도·백업이 아직 비어 있다 (견본은 홍길동 · 3번) */
+    const mk = (tbl) => { const a = {};
+      ['select','order','limit','eq','neq','gte','lte','in','is','not','or','filter',
+       'range','single','maybeSingle','match','update','upsert','delete','insert']
+        .forEach(k => a[k] = () => a);
+      a.then = (res) => { window.__q.push(tbl);
+        const D = { profiles: [{ id: 'u1', name: '홍길동', role: 'member', active: true, workspace: null }],
+                    clients: [{ id: 'c1', consent_status: 'none' }], backups: [] };
+        return Promise.resolve({ data: D[tbl] || [], error: null }).then(res); };
+      return a; };
+    window.__q = [];
+    window.osClient = () => ({ from: mk, rpc: () => Promise.resolve({ data: null, error: null }) });
+    OS.session = { user: { id: 'u1' } };
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
+    /* <b>busy 도 내려놓는다.</b> CI 에는 네트워크가 있어 앞 절의 go('home')
+       이 띄운 <b>진짜</b> 요청이 아직 날고 있을 수 있다. 그러면 RD.busy 가
+       true 라 여기서 부른 것이 통째로 막혀, 「안 불렀다」 로 읽힌다 —
+       실제로 CI 에서만 「0번」 빨간불이 났다 (8번). */
+    SETUP.hide = false; RD.rows = null; RD.ms = 0; RD.busy = false;
+    const bk = () => window.__q.filter(t => t === 'backups').length;   /* rdLoad 만 읽는 표 */
+
+    /* <b>우리가 센 것이 들어올 때까지</b> 기다린다. RD.rows 를 기다리면
+       날고 있던 진짜 요청이 먼저 채워 넣어 일찍 빠져나온다. */
+    go('home');
+    for (let t = 0; t < 200 && bk() < 1; t++) await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 200));
+    const first = bk();
+    const card = document.querySelector('.hm-rdy');
+    const O = {
+      first,
+      shown: !!card,
+      rows: card ? card.querySelectorAll('.rd-r').length : 0,
+      acts: card ? card.querySelectorAll('.rd-go').length : 0,
+      title: card ? card.querySelector('.card-title').textContent.replace(/\s+/g, ' ') : '',
+      /* 배너가 서 있으면 SQL 줄은 <b>여기 또 적지 않는다</b> (5번) */
+      dupSql: !!(card && /서버 준비 SQL/.test(card.textContent))
+    };
+    /* 홈을 다섯 번 더 열어도 서버를 더 부르면 안 된다 (7번) */
+    /* <b>사이를 띄워</b> 연다. 붙여서 돌리면 RD.busy 가 막아 주어, 막이가
+       없어도 한 번밖에 안 나온다 — 실제보다 작게 재는 것이다 (8번).     */
+    let i; for (i = 0; i < 5; i++) {
+      go('clients'); await new Promise(r => setTimeout(r, 120));
+      go('home');    await new Promise(r => setTimeout(r, 220));
+    }
+    O.again = bk() - first;
+
+    /* 배너를 「나중에」 로 닫으면 — SQL 이 <b>이 칸으로 내려와야</b> 한다.
+       어디에도 안 뜨면 돌릴 길이 사라진다. */
+    setupLater();
+    go('home'); await new Promise(r => setTimeout(r, 400));
+    const c2 = document.querySelector('.hm-rdy');
+    O.afterLater = !!(c2 && /서버 준비 SQL/.test(c2.textContent));
+    O.laterAct = !!(c2 && /setupGo\(\)/.test(c2.innerHTML));
+    SETUP.hide = false;
+
+    /* 팀원에게는 안 뜬다 — 못 고칠 일을 매일 아침 보여 드리지 않는다 */
+    OS.profile.role = 'member'; go('home'); await new Promise(r => setTimeout(r, 300));
+    O.member = !!document.querySelector('.hm-rdy');
+    OS.profile.role = 'owner';
+    return O;
+  });
+  is(rd.shown, '  막혀 있는 것이 <b>홈에 뜬다</b> — ' + rd.title);
+  is(rd.rows >= 1 && rd.rows <= 3, '  <b>위에서 셋만</b> 세운다 — ' + rd.rows + '줄 (매일 여는 화면을 덮지 않는다)');
+  /* 칸이 아예 없으면 이 둘은 <b>0 이라서</b> 그냥 통과한다 — 그러면 무엇도
+     안 잡는 알람이다. 실제로 CI 에서 카드가 안 섰는데 이 둘만 초록이었다.
+     <b>칸이 섰다는 것</b>을 같이 걸어 둔다 (8번).                        */
+  is(rd.shown && rd.acts >= rd.rows && rd.acts >= 1,
+     '  줄마다 <b>누를 것</b>이 있다 — ' + rd.acts + '개 (「어디로 가세요」 로 끝나지 않는다)');
+  is(rd.shown && !rd.dupSql, '  배너가 서 있는 동안은 <b>SQL 을 여기 또 적지 않는다</b> (5번)');
+  is(rd.afterLater, '  배너를 <b>「나중에」 로 닫으면 이 칸으로 내려온다</b> — 어디에도 안 뜨면 돌릴 길이 사라진다');
+  is(rd.laterAct, '  그때 <b>복사하고 Supabase 열기</b> 가 그 줄에 그대로 있다');
+  is(rd.first === 1, '  홈을 열 때 서버는 <b>한 번</b>만 — ' + rd.first + '번');
+  is(rd.again === 0, '  다섯 번 더 열어도 <b>안 부른다</b> — ' + rd.again + '번 (7번)');
+  is(!rd.member, '  팀원에게는 <b>안 뜬다</b> — 못 고칠 일을 매일 아침 보여 드리지 않는다');
+  /* ── <b>고치신 직후에 옛말을 하지 않는가</b> ─────────────────────────
+     홈에 막이를 걸면서 <b>출발 점검까지</b> 막아 버린 적이 있습니다.
+     사장님은 SQL 을 돌리거나 조직도를 고친 <b>직후에</b> 이 화면을 여시는데,
+     그때 10분 막이에 걸려 「아직 안 됐습니다」 라고 옛말을 했습니다 —
+     방금 하신 일을 안 했다고 말하는 것입니다 (1번). check-ready 가
+     잡아 주었습니다. 여기서도 못 박아 둡니다.                          */
+  const fresh = await page.evaluate(async () => {
+    window.__q = [];
+    const bk = () => window.__q.filter(t => t === 'backups').length;
+    /* 방금 읽은 참이다 — 막이가 살아 있는 한가운데 */
+    RD.ms = Date.now();
+    const a0 = bk();
+    osReadyAfterRender();
+    for (let t = 0; t < 80 && bk() === a0; t++) await new Promise(r => setTimeout(r, 50));
+    return bk() - a0;
+  });
+  is(fresh >= 1, '  <b>출발 점검을 열면 기다리지 않고 다시 읽는다</b> — ' + fresh +
+     '번 (고치신 직후에 여시는 화면이라, 막으면 방금 하신 일을 안 했다고 말하게 된다)');
+  /* <b>쌍둥이가 아닌가</b> — 홈이 제 목록·제 줄그리기를 따로 만들지 않았는가 (5번) */
+  const H = SRC2.slice(SRC2.indexOf('function hmReadyRows('), SRC2.indexOf('var HM_CLI_DOOR'));
+  is(/rdAuto\(\)/.test(H) && /rdRowHtml\(/.test(SRC2.slice(SRC2.indexOf('function hmReadyHtml('), SRC2.indexOf('function hmReadyCss('))),
+     '  홈이 <b>rdAuto · rdRowHtml 을 그대로 쓴다</b> — 제 목록을 따로 만들면 출발 점검과 갈라진다 (5번)');
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('점검 실패 — '+bad+'가지'):'점검 통과 — 다 맞습니다.');

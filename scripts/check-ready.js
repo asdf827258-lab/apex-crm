@@ -156,7 +156,10 @@ window.supabase={createClient:function(){
     window.__clients.forEach(c => c.consent_status = 'granted');
     window.__backups = [{ id: 'b1', ref_date: new Date().toISOString().slice(0, 10), created_at: new Date().toISOString() }];
     RD_MAN.forEach(m => { if (!rdDone()[m.k]) rdMark(m.k); });
-    rdLoad();
+    /* <b>사장님이 실제로 하시는 것</b>으로 새로 본다 — 고친 뒤 이 화면을
+       다시 여는 것이다. rdLoad() 를 직접 부르면 「화면을 열면 기다리지 않고
+       읽는다」 가 깨져도 이 점검은 모른다 (8번). */
+    osReadyAfterRender();
   });
   await page.waitForTimeout(900);
   v = await view();
