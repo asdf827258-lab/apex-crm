@@ -1139,6 +1139,12 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-now-n{font-size:11.3px;color:var(--ink-4);line-height:1.65;margin-top:9px}
 .hm-now-n b{color:var(--ink-2)}
 @media(max-width:520px){.hm-big{font-size:21px}.hm-m span{display:none}.hm-now-m .m b{font-size:16px}}
+.hm-tfa{margin-top:14px}
+.hm-tfa .card-body{padding-top:4px}
+.hm-tfa-go{appearance:none;margin-left:auto;border:1px solid var(--ink-7);background:#fff;
+  font-family:inherit;font-size:11.5px;font-weight:800;color:var(--ink-3);
+  border-radius:999px;padding:5px 11px;cursor:pointer}
+.hm-tfa-go:hover{border-color:var(--primary);color:var(--primary)}
 /* ── 내 고객 — 홈에서 사람부터 보인다 ── */
 .hmc-card{margin:14px 0 0}
 .hmc-n{margin-left:8px;font-size:11.5px;font-weight:800;color:#1B64DA;background:#E8F2FF;
@@ -12870,19 +12876,25 @@ function mcalRealAsk(el){
    두 곳에서는 <b>날짜를 눌러도 아무 일이 안 일어났습니다</b> — 달 넘기기도
    마찬가지였습니다. 눌리는데 안 바뀌면 고장 난 것으로 보입니다.
    지금 <b>서 있는 자리</b>를 찾아 그 자리를 다시 그립니다.              */
+/* 달력이 <b>한 화면에 둘</b> 있을 수 있습니다 — 홈에 TFA 업무관리를 세우면서
+   홈 달력과 「스케줄 관리」 칸의 달력이 같이 섭니다. 예전에는 첫 자리를
+   그리고 <b>그대로 나가</b>(return) 나머지가 안 바뀌었습니다. 눌리는데 안
+   바뀌면 고장 난 것으로 보입니다. <b>있는 자리는 모두</b> 그립니다.
+   서로를 다시 부르지 않으므로 돌지 않습니다. */
 function mcalPaint(){
   var e=document.getElementById('mycalHost');
-  if(e){e.innerHTML=renderMyCal();return;}
+  if(e)e.innerHTML=renderMyCal();
   /* 홈 — 오늘 한 장과 달력을 함께 다시 그린다 */
-  if(document.getElementById('hmCalHost')&&typeof hmPaint==='function'){ hmPaint(); return; }
+  if(document.getElementById('hmCalHost')&&typeof hmPaint==='function'){ try{hmPaint();}catch(e1){} }
   /* 고객 365일 — 미션과 달력을 함께 다시 그린다 */
   if(document.getElementById('cli365Top')&&typeof cli365TopPaint==='function'){
-    cli365TopPaint();return;
+    try{cli365TopPaint();}catch(e2){}
   }
   /* TFA 업무관리 — 스케줄 관리 칸일 때만. 다른 칸을 보고 있는데 그리면
      보던 화면이 발밑에서 바뀐다. */
-  if(typeof AR!=='undefined'&&AR.cat==='sched'&&typeof arPaint==='function'){
-    try{arPaint();}catch(e2){}
+  if(typeof AR!=='undefined'&&AR.cat==='sched'&&typeof arPaint==='function'&&
+     document.getElementById('arPane')){
+    try{arPaint();}catch(e3){}
   }
 }
 
@@ -13679,8 +13691,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 11:20';
-var APP_BUILD_NOTE="<b>「지금 이것 하세요」 한 건이 맨 위에 섭니다.</b> 갈래별 건수만 세워 두면 「연락할 분 3건」 을 보고도 <b>누구부터인지 또 고르셔야</b> 했습니다. 아침에 제일 힘든 것이 그 고르는 일입니다. 이제 맨 위에 <b>딱 한 건</b>이 큼직하게 섭니다 — 누구를, 무엇을, 그리고 <b>「열기」·「했습니다」</b> 두 단추. 끝내면 다음 한 건이 올라옵니다. 차례는 약속 → 계약 마디 → 연락할 분 → 할 일 → 생일 → 도와줄 것 → 내 일정입니다. <b>기록으로 남는 것과 아닌 것을 구분해 적습니다</b> — <b>연락</b>은 실제 접촉 기록이 남아 그 분 주기가 오늘부터 다시 세고, <b>계약 마디</b>는 그 마디를 끝냈다고 적힙니다. 나머지는 앱이 알 길이 없어 <b>오늘 하루 표시</b>일 뿐이라고 그 자리에 밝힙니다. 그리고 <b>달력에 넣으신 일정이 이제 폰과 같이 보입니다.</b> 서버에 <b>내 일정</b> 자리를 만들어 같은 아이디로 들어가시면 사무실 PC 에서 넣은 것이 폰에서도 그대로 섭니다. <b>나만 봅니다</b> — 팀도 대표도 못 봅니다. ⚠️ <b>설정 → 준비 SQL 을 한 번 돌려 주셔야</b> 켜집니다. 안 돌리셨으면 예전처럼 이 브라우저에 담기고 <b>그렇다고 화면에 적습니다</b> — 돌리시는 순간 담겨 있던 것이 같이 올라갑니다. 고객 이름은 <b>「홍○동」 처럼</b> 적어 주세요, 주민번호는 받지 않습니다.";
+var APP_BUILD='2026-09-14 13:10';
+var APP_BUILD_NOTE="<b>TFA 업무관리가 홈으로 들어왔습니다 — 하루가 홈 한 장에서 끝납니다.</b> 그동안 고객은 홈에서, 내 일과 팀 일은 TFA 에서 봤습니다. 아침에 홈을 보고 또 건너가야 했습니다. 이제 홈 아래에 <b>TFA 판이 그대로</b> 섭니다 — 피드백 · 스케줄 관리 · 해야 할 일 · 오늘 터치할 사람 · 30일 고객관리 · 리더 할 일 · 팀원 관리 · 대표 브리핑까지 <b>열세 칸 전부</b>. 왼쪽에서 칸을 고르면 <b>홈을 떠나지 않고</b> 그 자리에서 바뀝니다. 넓게 보고 싶으시면 <b>「전체 화면으로」</b>. <b>새로 만든 것이 아니라 같은 판</b>입니다 — TFA 화면과 글자 하나 다르지 않고, 한쪽만 고쳐질 일이 없습니다. <b>서버도 더 안 부릅니다</b> — 홈을 하루에 수십 번 여셔도 읽는 것은 한 번입니다. 함께, <b>달력이 한 화면에 둘 있어도 둘 다 따라 넘어갑니다.</b> 홈 달력과 「스케줄 관리」 칸의 달력이 같이 서는데, 예전 방식이었다면 한쪽만 넘어가고 다른 쪽은 그대로 남았을 자리입니다 — 눌리는데 안 바뀌면 고장 난 것으로 보입니다. 이제 <b>있는 자리는 모두</b> 그립니다. 홈 차례는 <b>오늘 챙길 것 → 달력 → 내 고객 → 30일 고객관리 → TFA 업무관리 → 공지사항</b>입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18352,6 +18364,27 @@ function hmTodayHtml(){
      한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다. */
   return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div></div></div>';
 }
+/* ── 홈에서 <b>TFA 업무관리까지</b> ─────────────────────────────────
+   하루 일을 두 화면에서 했습니다 — 고객은 홈에서, 내 일과 팀 일은 TFA 에서.
+   그래서 아침에 홈을 보고 또 TFA 로 건너가야 했습니다.
+
+   ★ <b>새로 만들지 않습니다</b> (5번). TFA 가 쓰던 판(arInnerHtml)을 칸 이름
+     (#arPane)까지 그대로 세웁니다. 그래서 칸을 고르는 것도, 다시 그리는 것도
+     (arPaint) TFA 화면과 <b>글자 하나 다르지 않습니다.</b> 여기서 따로 그리면
+     한쪽만 고쳐져 두 화면이 서로 다른 말을 하게 됩니다.
+   ★ <b>서버는 한 번만</b> 부릅니다 (7번). arLoad 가 스스로 막습니다 — 홈을
+     하루에 수십 번 여셔도 읽는 것은 한 번입니다.                        */
+function hmTfaHtml(){
+  if(!OS.profile)return '';
+  try{ if(typeof arCss==='function')arCss(); }catch(e){}
+  if(typeof arInnerHtml!=='function')return '';
+  return '<div class="card hm-tfa"><div class="card-hd">'+
+    '<div class="card-title"><span class="ci">🧭</span>TFA 업무관리'+
+      '<button type="button" class="hm-tfa-go" onclick="go(\'airep\')">전체 화면으로 →</button></div>'+
+    '<div class="card-desc">내 일과 팀 일을 <b>여기서 그대로</b> 보십니다. '+
+      '왼쪽에서 칸을 고르면 이 자리에서 바뀝니다 — TFA 화면과 같은 판입니다.</div></div>'+
+    '<div class="card-body"><div id="arPane">'+arInnerHtml()+'</div></div></div>';
+}
 /* 홈에서도 <b>같은 달력 한 벌</b>을 봅니다 — 주간·월간을 여기서 바로 넘깁니다 */
 function hmCalHtml(){
   if(!OS.profile)return '';
@@ -18425,6 +18458,10 @@ function hmArm(){
   try{ if(typeof OSC!=='undefined'&&!(OSC.list||[]).length&&typeof osLoadClients==='function')osLoadClients(); }catch(e){}
   setTimeout(hmPaint,1200);
   setTimeout(hmPaint,3200);
+  /* TFA 판을 깨우는 것은 <b>TFA 가 아는 한 곳</b>에 맡깁니다 (5번) —
+     옷 입히기·기록 읽기·늦게 온 것 다시 그리기가 거기 다 들어 있습니다.
+     arLoad 가 스스로 막아 서버는 한 번만 부릅니다 (7번). */
+  try{ if(typeof osAiRepAfterRender==='function')osAiRepAfterRender(); }catch(e){}
 }
 /* ══ 홈 — <b>고객 관리 한 장</b> ═══════════════════════════════════════
    홈이 바로가기 카드밭이었습니다. 역할 바로가기 · 전체 도구 · 설정 안내 ·
@@ -18461,7 +18498,9 @@ function renderHome(){
     (OS.profile?('<div id="hmCalHost">'+hmCalHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmCliHost">'+hmCliHtml()+'</div>'):'')+
     (OS.profile?'<div id="ccHomeLine"></div>':'')+
-    /* ⑤ 공지사항 — 맨 아래. 읽을 것이지 할 것이 아니다 */
+    /* ⑤ TFA 업무관리 — 같은 판을 그대로 (5번). 여기서 하루가 다 끝납니다 */
+    (OS.profile?('<div id="hmTfaHost">'+hmTfaHtml()+'</div>'):'')+
+    /* ⑥ 공지사항 — 맨 아래. 읽을 것이지 할 것이 아니다 */
     '<div id="osNoticeHome"></div>'+
     '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
   '</div>';
