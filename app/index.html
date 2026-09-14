@@ -3082,7 +3082,7 @@ function osSecurityCardsHtml(){
     '<div class="frm"><div class="fld"><label>하루 한도 (회) · 0=무제한</label><input type="number" id="osAiLimitInput" value="'+lim+'" min="0" style="max-width:160px"/></div></div>'+
     '<div class="btn-row"><button class="btn btn-primary" onclick="osAiLimitSave()">한도 저장</button><span style="font-size:11px;color:var(--ink-5)">현재: '+(lim?(lim+'회/일'):'무제한')+'</span></div>'+
     '</div></div>';
-  return ipCard+limCard;
+  return ipCard+limCard+tdoSetHtml();
 }
 function osIpGuardSet(on){
   if(on){osIpSelfApprove(function(){osCfgSet('ip_guard','on',function(){osSetReload();});});}
@@ -3096,6 +3096,73 @@ function osIpSelfApprove(cb){
   },function(){if(cb)cb();})['catch'](function(){if(cb)cb();});}catch(e){if(cb)cb();}
 }
 function osAiLimitSave(){var v=parseInt(osVal('osAiLimitInput'),10);if(isNaN(v)||v<0)v=0;osCfgSet('ai_daily_limit',v);}
+/* ══ 「며칠 지나면 다시」 를 <b>사장님이</b> 정하신다 ══════════════════
+   여태 이 숫자는 arTouch() 의 if 사슬 안에 박혀 있었습니다. 회사마다
+   팀마다 다른 값인데 <b>코드에 박아 두면 그것이 거짓말</b>이 됩니다.
+   여기서 고치시면 그 값이 이기고, 비우시면 기본값으로 돌아갑니다 —
+   <b>지운 값을 0 으로 쓰지 않습니다</b> (1번). 값은 서버에 담기므로
+   팀 전체가 같은 기준으로 움직입니다. */
+function tdoSetHtml(){
+  var K=tdoOrder(),h,i,k,m,cur,def;
+  h='<div class="card set-card"><div class="card-hd"><div class="card-title">'+
+    '<span class="ci">📇</span>고객 상태 — 며칠 지나면 다시</div>'+
+    '<div class="card-desc">홈 <b>「지금 이것 하세요」</b> 와 TFA <b>「오늘 손댈 사람」</b> 이 '+
+    '이 기준으로 사람을 고릅니다. <b>비우면 기본값</b>으로 돌아갑니다. '+
+    '서버에 담기므로 <b>팀 전체가 같은 기준</b>으로 움직입니다.</div></div><div class="card-body">'+
+    '<div class="tdo-set">';
+  for(i=0;i<K.length;i++){
+    k=K[i];m=TDO[k];def=m.wait;cur=tdoWait(k);
+    h+='<div class="tdo-row"><div class="tdo-h"><b>'+osEsc(m.t)+'</b>'+
+        (m.st?('<span class="tdo-st">'+osEsc(m.st)+'</span>'):'')+
+        (tdoOn(k)?'<span class="tdo-ch">고치셨습니다</span>':'')+'</div>'+
+      '<div class="tdo-do">'+osEsc(tdoSample(k))+'</div>'+
+      '<div class="tdo-in"><input type="number" min="0" id="tdoW_'+k+'" value="'+cur+'"/>'+
+        '<span>일 지나면 · 기본 '+def+'일</span></div></div>';
+  }
+  return h+'</div><div class="btn-row" style="margin-top:12px">'+
+    '<button class="btn btn-primary" onclick="tdoSetSave()">기준 저장</button>'+
+    '<button class="btn btn-ghost" onclick="tdoSetReset()">기본값으로 되돌리기</button></div>'+
+    '</div></div>';
+}
+function tdoSetSave(){
+  var K=tdoOrder(),i,k,el,v,n=0,left;
+  left=K.length;
+  for(i=0;i<K.length;i++){
+    k=K[i];el=document.getElementById('tdoW_'+k);
+    v=el?(''+el.value).replace(/\s/g,''):'';
+    var num=parseInt(v,10);
+    /* 숫자가 아니거나 음수면 <b>손대지 않습니다</b> — 잘못 적은 것을
+       0 으로 담아 두면 그날부터 모두가 오늘 걸어야 할 사람이 됩니다. */
+    if(v===''||isNaN(num)||num<0){ osCfgSet('tdo_wait_'+k,''); }
+    else { osCfgSet('tdo_wait_'+k,num); n++; }
+  }
+  toast(n+'개 기준을 저장했습니다 — 비운 것은 기본값으로 돌아갑니다');
+  if(typeof hmPaint==='function')try{hmPaint();}catch(e){}
+  if(typeof arPaint==='function')try{arPaint();}catch(e2){}
+}
+function tdoSetReset(){
+  var K=tdoOrder(),i;
+  for(i=0;i<K.length;i++)osCfgSet('tdo_wait_'+K[i],'');
+  toast('기본값으로 되돌렸습니다');
+  if(typeof osSetReload==='function')try{osSetReload();}catch(e){}
+}
+function tdoSetCss(){
+  if(document.getElementById('tdoSetCss'))return;
+  var st=document.createElement('style');st.id='tdoSetCss';
+  st.textContent='.tdo-set{display:flex;flex-direction:column;gap:9px}'+
+   '.tdo-row{border:1px solid var(--ink-7);border-radius:10px;padding:10px 12px;background:var(--bg-1)}'+
+   '.tdo-h{display:flex;align-items:center;gap:7px;font-size:13px;letter-spacing:-.02em}'+
+   '.tdo-st{font-size:10px;font-weight:800;color:var(--ink-5);background:var(--ink-8);'+
+     'border-radius:99px;padding:1px 8px}'+
+   '.tdo-ch{font-size:10px;font-weight:800;color:#fff;background:var(--primary);'+
+     'border-radius:99px;padding:1px 8px}'+
+   '.tdo-do{font-size:11.5px;color:var(--ink-3);line-height:1.6;margin:5px 0 7px}'+
+   '.tdo-in{display:flex;align-items:center;gap:8px}'+
+   '.tdo-in input{width:88px;padding:6px 9px;border:1px solid var(--ink-7);border-radius:8px;'+
+     'font-size:13px;font-family:inherit}'+
+   '.tdo-in span{font-size:11.5px;color:var(--ink-5)}';
+  document.head.appendChild(st);
+}
 /* ── 승인을 기다리는 접속은 <b>맨 위에서 먼저 말한다</b> ──────────────
    접속 IP 승인제를 켜 두면, 각자 <b>맨 처음 한 곳만</b> 자동 승인되고 그
    뒤에 바뀐 자리는 전부 「대기」 가 된다(login_ips_ins_guard). 휴대폰 데이터,
@@ -4116,7 +4183,8 @@ function osBrainAfterRender(){var t=$('brainQ');if(t)t.focus();brainRenderThread
      셋  · 두뇌에게 물을 때 그 숫자를 함께 넘긴다.
             넘기는 것은 숫자뿐이다 — 고객 이름·연락처는 넘기지 않는다.        */
 var BCR={all:false};
-var BCR_ORD=['run','no','rej','new','old','bd','pol','won'];
+/* 차례는 TDO 표에서 센다 — 여기 또 적으면 갈린다 (5번) */
+function bcrOrd(){ return (typeof tdoOrder==='function')?tdoOrder():[]; }
 function bcrLead(){try{return (typeof arIsLead==='function')&&arIsLead();}catch(e){return false;}}
 function bcrWho(){var me=(typeof arMyId==='function')?arMyId():null;return (BCR.all&&bcrLead())?'':me;}
 function bcrReady(){return (typeof AR!=='undefined')&&!!AR.db;}
@@ -4153,8 +4221,9 @@ function bcrBodyHtml(){
   if(!c||!c.all)
     return '<div class="bcr-none">오늘 손댈 사람이 없습니다. 배정된 DB 가 생기면 여기 올라옵니다.</div>';
   h+='<div class="bcr-chips">';
-  for(i=0;i<BCR_ORD.length;i++){
-    k=BCR_ORD[i];if(!c[k])continue;
+  var ORD=bcrOrd();
+  for(i=0;i<ORD.length;i++){
+    k=ORD[i];if(!c[k])continue;
     h+='<button type="button" class="bcr-c '+(AR_TKC[k]||'')+'" '+
        'onclick="bcrGo(\''+((k==='bd'||k==='old')?'clients':'crm')+'\')">'+
        '<b>'+c[k]+'</b>'+osEsc(AR_TKL[k]||k)+'</button>';
@@ -8312,38 +8381,44 @@ function arTouch(who){
     if(r.stage==='증권전달'){
       /* 증권을 보낸 지 얼마 안 된 사람만. 이때가 소개를 받을 수 있는 유일한 때다 */
       var pd=r.pAt?arDaysAgo(r.pAt):9999;
-      if(pd<=30)out.push({k:'won',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:1,
+      if(pd<=tdoWait('won'))out.push({k:'won',id:r.id,nm:r.name,sub:r.region,src:r.src,who:r.who,go:'crm',ord:1,
                           d:pd,st:r.stage});
       continue;
     }
     if(r.res==='상담'){
       var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)?((''+r.appt).slice(0,10)+' '+(''+r.appt).slice(11,16)):'';
-      if(ap||r.days<=45)
+      if(ap||r.days<=tdoWait('run'))
         out.push({k:'run',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,ap:ap,who:r.who,go:'crm',
                   st:r.stage,ord:ap?0:1});
       continue;
     }
     if(r.n===0){
-      if(r.days>=3)out.push({k:'new',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:2});
+      if(r.days>=tdoWait('new'))out.push({k:'new',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:2});
       continue;
     }
     if(r.res==='거절'){
-      if(r.days>=14)out.push({k:'rej',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:5});
+      if(r.days>=tdoWait('rej'))out.push({k:'rej',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:5});
       continue;
     }
-    if(r.days>=7)out.push({k:'no',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:3});
+    if(r.days>=tdoWait('no'))out.push({k:'no',id:r.id,nm:r.name,sub:r.region,src:r.src,d:r.days,who:r.who,go:'crm',ord:3});
   }
   var cl=AR.cliRows||[];
   for(i=0;i<cl.length;i++){
     c=cl[i];
     if(who&&c.who!==who)continue;
     var bd=arBdIn(c.bd);
-    if(bd>=0&&bd<=7){
+    if(bd>=0&&bd<=tdoWait('bd')){
       out.push({k:'bd',id:c.id,nm:c.name,sub:'',d:bd,who:c.who,go:'clients',ord:0});
       continue;
     }
-    if(c.days>=90||!c.plan)
+    if(c.days>=tdoWait('old')||!c.plan)
       out.push({k:'old',id:c.id,nm:c.name,sub:'',d:c.days,plan:c.plan,who:c.who,go:'clients',ord:4});
+  }
+  /* <b>차례도 표에서</b>. 줄마다 손으로 적으면 표를 고쳐도 안 따라옵니다 (5번).
+     약속이 잡힌 진행중만은 그날 시간이 있어 맨 위로 올립니다. */
+  for(i=0;i<out.length;i++){
+    var mm=TDO[out[i].k];
+    out[i].ord=(mm?mm.ord:99)-((out[i].k==='run'&&out[i].ap)?0.5:0);
   }
   out.sort(function(a,b){return a.ord-b.ord||b.d-a.d;});
   for(i=0;i<out.length;i++)out[i].todo=arTodoOf(out[i]);
@@ -8354,17 +8429,92 @@ function arTkCount(who){
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
 }
-var AR_TKL={no:'부재',rej:'거절',run:'진행중','new':'미진행',old:'기고객',bd:'생일',pol:'증권',won:'계약'};
-var AR_TKC={no:'amb',rej:'red',run:'grn','new':'grn',old:'red',bd:'amb',pol:'red',won:'grn'};
+/* ══ 오늘 무엇을 — <b>표 하나</b> ═══════════════════════════════════════
+   사장님 말씀 그대로 — 「고객의 상태에 따라서 오늘 해야 할 일을 찾아주고
+   정리해 줘」.
+
+   여태 이 앱은 <b>세기만</b> 했습니다. 「부재 12 · 거절 5 · 진행중 3」 은
+   나오는데 <b>그래서 오늘 뭘 하라</b>는 말이 없었습니다. 숫자는 보고용이고
+   행동이 아닙니다.
+
+   그리고 여기 있던 것이 <b>쌍둥이 셋</b>이었습니다 — 이름표(AR_TKL) ·
+   색(AR_TKC) · 차례(BCR_ORD) 가 따로 있고, <b>며칠 지나면 다시 거는지</b>
+   는 arTouch() 의 if 사슬 안에 숫자로 박혀 있었습니다. 늘릴 때마다 한
+   곳을 빠뜨릴 자리였고, 사장님이 고치실 수도 없었습니다 (5번).
+
+   그래서 <b>한 표</b>로 모읍니다. 이름표·색·차례·기준일·무엇을 하는지가
+   한 줄에 같이 있습니다.
+
+     t    화면에 보이는 이름
+     st   사장님이 쓰시는 단계 말 (TA · AP · PC · CS …)
+     c    색
+     ord  차례 — 급한 것이 위로
+     wait <b>며칠 지나면 다시</b>. 사장님이 설정에서 고치실 수 있습니다.
+          여기 적힌 것은 <b>기본값</b>이고, 고치시면 그 값이 이깁니다.
+     go   눌렀을 때 가는 화면
+
+   <b>「오늘 무엇을」 은 여기 안 적습니다.</b> arTodoOf() 가 이미 그 일을
+   하고 있고, 그쪽이 <b>경과일과 단계까지</b> 봅니다 — 「계약하고 17일째
+   증권을 못 보냈습니다」 처럼. 여기 또 적으면 두 글이 갈려, 화면마다
+   다른 말을 하게 됩니다 (5번). 이 표는 <b>누구를 고를지</b>만 정합니다. */
+var TDO={
+ run :{t:'진행중',  st:'AP · PC',  c:'grn', ord:1, wait:45, go:'crm'},
+ bd  :{t:'생일',    st:'',         c:'amb', ord:0, wait:7,  go:'clients'},
+ pol :{t:'계약',    st:'계약완료', c:'red', ord:2, wait:0,  go:'crm'},
+ won :{t:'증권',    st:'증권전달', c:'grn', ord:3, wait:30, go:'crm'},
+ 'new':{t:'미진행', st:'미접촉',   c:'grn', ord:4, wait:3,  go:'crm'},
+ no  :{t:'부재',    st:'TA',       c:'amb', ord:5, wait:7,  go:'crm'},
+ rej :{t:'거절',    st:'',         c:'red', ord:6, wait:14, go:'crm'},
+ old :{t:'기고객',  st:'',         c:'red', ord:7, wait:90, go:'clients'}
+};
+/* 차례는 표에서 <b>세어</b> 뽑습니다 — 따로 적어 두면 갈립니다 (5번) */
+function tdoOrder(){
+  var k,a=[];
+  for(k in TDO)if(TDO.hasOwnProperty(k))a.push(k);
+  a.sort(function(x,y){return TDO[x].ord-TDO[y].ord;});
+  return a;
+}
+/* <b>며칠 지나면 다시</b> — 사장님이 고치신 값이 있으면 그것이 이깁니다.
+   숫자가 아니거나 음수면 기본값으로 돌아갑니다 (모르는 값을 0 으로 쓰지 않습니다). */
+function tdoWait(k){
+  var d=(TDO[k]&&TDO[k].wait)||0,v;
+  try{ v=(typeof osCfgGet==='function')?osCfgGet('tdo_wait_'+k,''):''; }catch(e){ v=''; }
+  if(v===''||v==null)return d;
+  var n=parseInt(v,10);
+  return (isNaN(n)||n<0)?d:n;
+}
+function tdoOn(k){ return !!(TDO[k]&&(''+((typeof osCfgGet==='function')?osCfgGet('tdo_wait_'+k,''):''))!==''); }
+/* 그 무리에 <b>실제로 하는 말</b> 하나를 보여 준다 — 설정 화면에서
+   「이 무리는 이런 말을 듣습니다」 를 적기 위해서다. 글을 여기서 만들지
+   않고 <b>arTodoOf 를 그대로 불러</b> 온다. 그래야 설정에 적힌 말과
+   실제로 뜨는 말이 안 갈린다 (5번). */
+function tdoSample(k){
+  var w=tdoWait(k);
+  try{ return arTodoOf({k:k,d:w,ap:'',st:'',plan:''})||''; }catch(e){ return ''; }
+}
+function tdoLabel(k){ return (TDO[k]&&TDO[k].t)||k||''; }
+function tdoColor(k){ return (TDO[k]&&TDO[k].c)||''; }
+/* 예전 이름 — 부르던 자리가 많아 <b>표를 가리키게</b>만 한다 (5번) */
+var AR_TKL={},AR_TKC={};
+(function(){var k;for(k in TDO)if(TDO.hasOwnProperty(k)){AR_TKL[k]=TDO[k].t;AR_TKC[k]=TDO[k].c;}})();
+/* <b>오늘 무엇을</b> 은 <b>반드시 씻는다</b>. arTodoOf 는 「적어 둔 일부터 —
+   ○○」 처럼 <b>사장님이 손으로 적으신 메모</b>를 그 글에 섞어 넣는다.
+   안 씻으면 메모에 꺾쇠가 들어간 순간 화면이 깨진다 (3번).
+   경고선은 <b>기준의 두 배</b>다 — 숫자를 또 박아 두면 사장님이 기준을
+   고치셔도 색만 옛 기준으로 남는다 (5번). */
+function tdoOver(x){
+  var w=tdoWait(x&&x.k);
+  return !!(w&&x&&x.d>=w*2&&x.d<9000);
+}
 function arTkRow(x,own){
-  return '<div class="ar-tk'+(((x.k==='no'&&x.d>=14)||(x.k==='old'&&x.d>=90))?' warn':'')+'" '+
+  return '<div class="ar-tk'+(tdoOver(x)?' warn':'')+'" '+
     'onclick="go(\''+x.go+'\')">'+
     '<span class="ar-bg '+AR_TKC[x.k]+'">'+AR_TKL[x.k]+'</span>'+
     '<span class="nm">'+(own?('<b class="own">'+osEsc(arNameOf(x.who))+'</b>'):'')+
       osEsc(x.nm)+(x.src?('<i class="src">'+osEsc(x.src)+'</i>'):'')+
       (x.sub?('<em>'+osEsc(x.sub)+'</em>'):'')+'</span>'+
     '<span class="dy">'+(x.k==='bd'?('D-'+x.d):(x.d>=9000?'기록 없음':(x.d+'일')))+'</span>'+
-    '<span class="do">'+osEsc(x.todo)+'</span></div>';
+    '<span class="do">'+osEsc(x.todo||'')+'</span></div>';
 }
 /* 팀원 한 사람을 펼쳤을 때 그 사람이 오늘 터치할 사람들 */
 function arTouchMini(who,n){
@@ -13771,7 +13921,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-14 18:40';
+var APP_BUILD='2026-09-15 00:10';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -18309,6 +18459,7 @@ function renderDashboard(){
 var HM_ORD=[
  {k:'appt', e:'📌', t:'약속',        s:'시간이 정해진 것부터', go:'crm'},
  {k:'madi', e:'📮', t:'계약 마디',   s:'계약하고 한 달 · 그 뒤 석 달마다', go:'clients'},
+ {k:'db',   e:'📇', t:'DB 고객',     s:'상태에 맞게 오늘 할 것',  go:'crm'},
  {k:'touch',e:'☎️', t:'연락할 분',   s:'주기가 돌아왔습니다',   go:'clients'},
  {k:'next', e:'▶',  t:'할 일',       s:'고객에게 약속한 것',    go:'clients'},
  {k:'bd',   e:'🎂', t:'생일',        s:'축하 문자 먼저',        go:'clients'},
@@ -18316,13 +18467,17 @@ var HM_ORD=[
 ];
 /* 오늘 몫을 <b>한 번만</b> 셉니다 — 카드도 띠도 이것을 봅니다 */
 function hmCount(){
-  var out={appt:0,touch:0,next:0,bd:0,help:0,madi:0,total:0},i,k;
-  try{
-    var day=(mcalItems()[mcalToday()]||[]);
-    for(i=0;i<day.length;i++){ k=day[i].k; if(out[k]!==undefined)out[k]++; }
-  }catch(e){}
-  /* 계약 마디는 달력에 안 찍습니다 — 따로 셉니다 */
-  try{ if(typeof mstDueList==='function')out.madi=(mstDueList().due||[]).length; }catch(e){}
+  /* <b>세는 곳과 세우는 곳이 같아야 합니다.</b> 예전에는 카드가 달력을 따로
+     세고 목록은 hmSteps 가 따로 만들어, 오늘 약속이 잡힌 분을 목록에서
+     빼자 <b>카드만 7, 목록은 6</b> 이 됐습니다. 어느 쪽이 맞는지 알 수
+     없는 숫자는 없느니만 못합니다. 그래서 <b>hmSteps 를 세어</b> 답합니다 (5번).
+
+     갈래도 손으로 적지 않습니다 — HM_ORD 에서 뽑습니다. 손으로 적으면
+     줄을 하나 늘릴 때 여기를 빠뜨려 그 갈래만 0 으로 남습니다. */
+  var out={total:0},i,k,L=[];
+  for(i=0;i<HM_ORD.length;i++)out[HM_ORD[i].k]=0;
+  try{ L=hmSteps(); }catch(e){ L=[]; }
+  for(i=0;i<L.length;i++){ k=L[i].k; if(out[k]!==undefined)out[k]++; }
   for(i=0;i<HM_ORD.length;i++)out.total+=out[HM_ORD[i].k]||0;
   return out;
 }
@@ -18378,12 +18533,39 @@ function hmSteps(){
     var x=items[i];
     out.push({k:x.k,id:x.id||'',my:x.my||'',t:x.t||'',s:x.s||''});
   }
+  /* ── <b>고객 상태에 맞는 오늘 할 일</b> ────────────────────────────
+     미접촉·TA·AP·PC·CS·거절·부재마다 무엇을 할지는 <b>TDO 표</b>가 압니다.
+     고르는 것은 arTouch 가 이미 하고 있으므로 <b>그대로 가져옵니다</b> —
+     여기서 다시 고르면 TFA 화면과 갈립니다 (5번).
+     이름표와 할 말은 줄에 실어 보냅니다. 달력 갈래(HM_ACT)와 고객 상태
+     (TDO)는 서로 다른 것이라 표가 둘인 것이 맞습니다.                 */
+  try{
+    if(typeof arTouch==='function'&&typeof arMyId==='function'){
+      var db=arTouch(arMyId()),today=mcalToday();
+      for(i=0;i<db.length;i++){
+        var y=db[i];
+        /* <b>오늘 약속이 잡힌 분은 여기 또 세우지 않습니다.</b> 달력이 이미
+           그 시간과 함께 세워 두었습니다. 두 번 서면 한쪽을 끝내도 다른
+           쪽이 남아, 「다 했는데 안 줄어든다」 가 됩니다 (5번).
+           시간이 안 정해진 상태(부재·거절·미진행·계약·증권…)만 여기 섭니다. */
+        if(y.k==='run'&&y.ap&&(''+y.ap).slice(0,10)===today)continue;
+        out.push({k:'db',tk:y.k,id:y.id||'',t:y.nm||'',s:y.todo||'',gox:y.go||'crm',
+                  e:'📇',kt:tdoLabel(y.k)+(TDO[y.k]&&TDO[y.k].st?(' · '+TDO[y.k].st):''),
+                  ord2:(TDO[y.k]?TDO[y.k].ord:99)});
+      }
+    }
+  }catch(e1){}
   /* HM_ORD 가 정한 차례를 그대로 따릅니다 — 순서를 두 곳에서 정하면 갈립니다 */
   var rank={},j;
   for(j=0;j<HM_ORD.length;j++)rank[HM_ORD[j].k]=j;
   rank.my=HM_ORD.length;            /* 내 일정은 맨 뒤 — 앱이 시킨 것이 먼저입니다 */
-  out.sort(function(a,b){ return (rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]); });
-  for(j=0;j<out.length;j++)out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||'');
+  out.sort(function(a,b){
+    var d=(rank[a.k]===undefined?99:rank[a.k])-(rank[b.k]===undefined?99:rank[b.k]);
+    if(d)return d;
+    return (a.ord2===undefined?0:a.ord2)-(b.ord2===undefined?0:b.ord2);
+  });
+  for(j=0;j<out.length;j++)
+    out[j].key=out[j].k+':'+(out[j].id||out[j].my||out[j].t)+':'+(out[j].m||out[j].tk||'');
   return out;
 }
 /* 무엇을 하면 되는지 — <b>표 하나</b>로 둡니다. 삼항 사슬로 늘어놓으면
@@ -18395,7 +18577,8 @@ var HM_ACT={
  next :{e:'▶', t:'할 일',      go:'clients', b:'했습니다',         real:false},
  bd   :{e:'🎂',t:'생일',      go:'clients', b:'축하 보냈습니다',   real:false},
  help :{e:'🤝',t:'도와줄 것',  go:'airep',   b:'했습니다',         real:false},
- my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false}
+ my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false},
+ db   :{e:'📇',t:'DB 고객',    go:'crm',     b:'했습니다',         real:false}
 };
 function hmNext(){
   var L=hmSteps(),i;
@@ -18408,6 +18591,15 @@ function hmOpen(key){
   for(i=0;i<L.length;i++)if(L[i].key===key){x=L[i];break;}
   if(!x)return;
   var A=HM_ACT[x.k]||{go:'clients'};
+  /* <b>어디로 보낼지는 그 줄이 안다.</b> 같은 「DB 고객」 줄이라도 배정 DB
+     에서 온 사람(부재·거절·진행중·계약·증권)은 <b>CRM</b> 으로, 고객 365일
+     에서 온 사람(기고객·생일)은 <b>그분 카드</b>로 가야 한다. 배정 DB 의
+     id 로 고객 카드를 열면 엉뚱한 사람이 뜨거나 아무것도 안 열린다.
+     그래서 arTouch 가 붙여 준 go 를 그대로 따른다 (5번). */
+  if(x.k==='db'){
+    if(x.gox==='clients'&&x.id&&typeof navGoCli==='function'){navGoCli(x.id);return;}
+    go(x.gox||'crm');return;
+  }
   if(x.id&&typeof navGoCli==='function'){navGoCli(x.id);return;}
   go(A.go);
 }
@@ -18428,10 +18620,14 @@ function hmNowHtml(){
   if(!r.x)
     return '<div class="hm-done">✅ <b>오늘 챙길 것을 다 하셨습니다.</b> '+r.n+'건 모두 끝냈습니다.</div>';
   var x=r.x,A=HM_ACT[x.k]||{e:'•',t:'',go:'clients',b:'했습니다',real:false};
+  /* 줄이 <b>제 이름표를 들고 오면</b> 그것을 먼저 씁니다 — 고객 상태(TDO)가
+     「부재 · TA」 처럼 갈래보다 정확히 말해 줍니다. 이름도 할 말도 <b>전부
+     씻습니다</b> — 할 말에는 사장님이 적으신 메모가 섞여 들어옵니다 (3번). */
+  var kt=x.kt||A.t, ee=x.e||A.e;
   return '<div class="hm-now">'+
-    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(A.t)+'</div>'+
-    '<div class="hm-now-m"><span class="e">'+A.e+'</span>'+
-      '<span class="m"><b>'+osEsc(x.t||A.t)+'</b>'+
+    '<div class="hm-now-k">'+r.n+'건 중 <b>'+(r.i+1)+'번째</b> · '+osEsc(kt)+'</div>'+
+    '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
+      '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
     '<div class="hm-now-b">'+
       '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
@@ -45773,6 +45969,7 @@ function osDiagCardHtml(){
 }
 /* ── 관리자: 가입 승인 큐 ── */
 function osSettingsAfterRender(){
+  try{ if(typeof tdoSetCss==='function')tdoSetCss(); }catch(e0){}
   if(typeof osSetCss==='function')osSetCss();
   if(typeof osSetSecApply==='function')setTimeout(osSetSecApply,0);
   try{osFoldApply();}catch(e){}
