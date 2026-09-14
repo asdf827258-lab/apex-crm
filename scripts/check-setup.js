@@ -293,6 +293,123 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(/rdAuto\(\)/.test(H) && /rdRowHtml\(/.test(SRC2.slice(SRC2.indexOf('function hmReadyHtml('), SRC2.indexOf('function hmReadyCss('))),
      '  홈이 <b>rdAuto · rdRowHtml 을 그대로 쓴다</b> — 제 목록을 따로 만들면 출발 점검과 갈라진다 (5번)');
 
+  /* ── 6) <b>준비 SQL 을 나눠서 돌릴 수 있는가</b> ─────────────────────
+     사장님이 RUN 에서 「연결 타임아웃으로 인해 연결이 종료됨」 을 받으셨습니다.
+     준비 SQL 은 297개 문장 · 37,000자를 <b>한 번에</b> 보냅니다.
+
+     여기서 제일 위험한 것은 <b>조각이 원본과 달라지는 것</b>입니다 (1번).
+     조각을 다 돌리셨는데 한 줄이 빠져 있으면, 사장님은 다 됐다고 아시고
+     그 기능만 조용히 안 됩니다. 그래서 <b>합치면 한 글자도 다르지 않은가</b>
+     를 맨 먼저 잽니다. 그다음이 <b>함수 몸통을 안 가르는가</b> 입니다 —
+     $fn$ 안에서 잘리면 그 조각은 통째로 안 돕니다.                     */
+  console.log('\n[6] 준비 SQL 을 <b>나눠서</b> 돌릴 수 있다 (타임아웃)');
+  const sp = await page.evaluate(() => {
+    const full = HX_SQL['00'].lines.join('\n');
+    const P = setupParts();
+    const joined = P.map(x => x.join('\n')).join('\n');
+    /* 조각마다 달러 따옴표가 <b>짝</b>이 맞아야 한다 — 안 맞으면 함수 몸통이 갈렸다 */
+    const tagsOk = P.every(part => {
+      const m = part.join('\n').match(/\$[a-zA-Z_]*\$/g) || [];
+      const st = [];
+      m.forEach(t => { if (st.length && st[st.length - 1] === t) st.pop(); else st.push(t); });
+      return st.length === 0;
+    });
+    /* <b>문장 한가운데서 끊기지 않았는가.</b> 조각마다, 주석과 빈 줄을
+       걷어낸 마지막 줄이 <b>;</b> 로 끝나야 한다. 안 그러면 그 조각은
+       반쪽짜리 문장으로 끝나 통째로 안 돈다.                            */
+    const wholeOk = P.every(part => {
+      const code = part.join('\n')
+        .replace(/\/\*[\s\S]*?\*\//g, '')      /* 주석을 걷어낸다 */
+        .replace(/\s+$/, '');
+      return code === '' || /;$/.test(code);
+    });
+    const sizes = P.map(x => x.join('\n').length);
+    const head = setupPartSql(0).slice(0, 400);
+    return {
+      n: P.length, same: joined === full, tagsOk, wholeOk, sizes,
+      max: Math.max.apply(null, sizes), full: full.length,
+      head,
+      /* 조각마다 머리말이 붙는가 — 새 세션에서 돌 수도 있다 */
+      allHead: P.every((x, i) => /set search_path = public;/.test(setupPartSql(i)) &&
+                                 /set lock_timeout/.test(setupPartSql(i))),
+      /* 조각 어디에도 -- 주석이 없어야 한다 (9번) */
+      noDash: P.every((x, i) => !/(^|\n)\s*--/.test(setupPartSql(i)))
+    };
+  });
+  is(sp.same, '  나눈 것을 <b>합치면 원본과 한 글자도 다르지 않다</b> — ' +
+     '한 줄이라도 빠지면 다 하신 줄 아시고 그 기능만 조용히 안 된다 (1번)');
+  is(sp.tagsOk, '  <b>함수 몸통($fn$)을 가르지 않는다</b> — 갈리면 그 조각이 통째로 안 돈다');
+  is(sp.wholeOk, '  <b>문장 한가운데서 끊기지 않는다</b> — 조각마다 온전한 문장으로 끝난다');
+  is(sp.n >= 3 && sp.n <= 12, '  <b>' + sp.n + '조각</b>으로 나뉜다 — 너무 잘게 나누면 누르시다 지치신다');
+  is(sp.max <= 12000, '  제일 큰 조각도 <b>' + sp.max + '자</b> — 통째(' + sp.full + '자)보다 확실히 작다');
+  is(sp.allHead, '  조각마다 <b>search_path 와 lock_timeout</b> 이 붙는다 — ' +
+     '조각은 새 세션에서 돌 수 있고, 잠금에 걸리면 영영 기다리면 안 된다');
+  is(sp.noDash, '  조각에 <code>--</code> 주석이 없다 (9번)');
+  /* 화면 — 단추가 실제로 서고, 눌러서 복사되는가 */
+  const spu = await page.evaluate(async () => {
+    OS.profile = { id: 'u1', name: '홍길동', role: 'owner', active: true, plan: 'vip' };
+    SETUP.hide = false; SETUP.split = false; SETUP.got = {};
+    const realCfg = window.osCfgGet;
+    window.osCfgGet = (k, d) => k === 'schema_version' ? '0' : realCfg(k, d);
+    window.__cp = ''; window.copyText = t => { window.__cp = '' + t; };
+    go('home');
+    const bar = () => document.querySelector('#dynPane .stp');
+    const btn = Array.from(bar().querySelectorAll('button'))
+                     .filter(b => /나눠서/.test(b.textContent))[0];
+    const had = !!btn; if (btn) btn.click();
+    const chips = bar().querySelectorAll('.stp-p');
+    const before = chips.length;
+    if (chips[1]) chips[1].click();
+    const got = window.__cp;
+    const marked = bar().querySelectorAll('.stp-p.got').length;
+    window.osCfgGet = realCfg; SETUP.split = false; SETUP.got = {};
+    return { had, before, len: got.length, second: got === setupPartSql(1), marked,
+             says: bar() ? /복사했다는 표시일 뿐/.test(bar().textContent) : false };
+  });
+  is(spu.had, '  배너에 <b>「⏱ 시간 초과가 났어요 — 나눠서」</b> 단추가 있다');
+  is(spu.before === sp.n, '  누르면 조각 단추가 <b>' + spu.before + '개</b> 선다');
+  is(spu.second && spu.len > 100, '  조각 단추를 누르면 <b>그 조각이 복사된다</b> — ' + spu.len + '자');
+  is(spu.marked === 1, '  누른 것만 <b>「복사함」</b> 으로 표시된다 — ' + spu.marked + '개');
+  is(spu.says, '  「복사함」 은 <b>복사했다는 표시일 뿐</b>이라고 적는다 — ' +
+     '돌았는지는 서버에 물어야 안다 (1번)');
+
+  /* ── <b>자르는 규칙 자체</b>를 견본으로 겨눈다 ─────────────────────────
+     지금 준비 SQL 은 <b>우연히</b> 안전한 자리에서만 잘립니다. 그래서
+     달러 따옴표를 안 보게 하거나 「; 로 끝났나」 를 안 보게 해도
+     빨간불이 안 켜졌습니다 — <b>안 울리는 알람</b>입니다 (8번).
+     규칙을 실제로 밟는 견본을 만들어 겨눕니다: 함수 몸통 안에 빈 줄이
+     있고, 문장 한가운데에도 빈 줄이 있는 SQL 입니다. 준비 SQL 이
+     언젠가 이런 모양이 되어도 그때 잡힙니다.                            */
+  const fx = await page.evaluate(() => {
+    const L = [
+      'set search_path = public;', '',
+      'create or replace function public.보기() returns int language plpgsql as $fn$',
+      'begin', '',                       /* 함수 몸통 <b>안</b>의 빈 줄 */
+      '  return 1;', '',
+      'end;',
+      '$fn$;', '',
+      'create table if not exists public.보기표(',
+      '  a int,', '',                    /* 문장 <b>한가운데</b>의 빈 줄 */
+      '  b int', ');', '',
+      'select 1;'
+    ];
+    const P = setupSplit(L, 1);          /* 예산 1 — 자를 수 있는 자리마다 자른다 */
+    const tagBad = P.filter(part => {
+      const m = part.join('\n').match(/\$[a-zA-Z_]*\$/g) || [];
+      const st = []; m.forEach(t => { if (st.length && st[st.length-1]===t) st.pop(); else st.push(t); });
+      return st.length !== 0;
+    }).length;
+    const halfBad = P.filter(part => {
+      const code = part.join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\s+$/, '');
+      return code !== '' && !/;$/.test(code);
+    }).length;
+    return { n: P.length, same: P.map(x => x.join('\n')).join('\n') === L.join('\n'),
+             tagBad, halfBad };
+  });
+  is(fx.same, '  견본: 잘게 잘라도 <b>합치면 그대로</b>다 — ' + fx.n + '조각');
+  is(fx.tagBad === 0, '  견본: <b>함수 몸통 안의 빈 줄에서 안 자른다</b> — 갈린 조각 ' + fx.tagBad + '개');
+  is(fx.halfBad === 0, '  견본: <b>문장 한가운데 빈 줄에서 안 자른다</b> — 반쪽 조각 ' + fx.halfBad + '개');
+
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('점검 실패 — '+bad+'가지'):'점검 통과 — 다 맞습니다.');
