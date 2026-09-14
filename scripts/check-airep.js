@@ -481,11 +481,14 @@ const AI_OK = `## 활동 보고
     '계약 뒤 할 일도 여기서 잡힌다 — 증권을 안 보내면 민원이 된다');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
-  ok(cnt.no >= 1, '부재를 따로 센다 (' + cnt.no + ')');
-  ok(cnt.rej >= 1, '거절을 따로 센다 (' + cnt.rej + ')');
-  ok(cnt.run >= 1, '상담까지 간 사람은 「진행중」으로 따로 센다 (' + cnt.run + ')');
-  ok(cnt['new'] >= 1, '한 번도 안 돌린 DB 도 잡힌다 (' + cnt['new'] + ')');
-  ok(cnt.old >= 1, '식은 고객도 같은 칸에 들어온다 (' + cnt.old + ')');
+  /* 상태 이름이 <b>한 벌</b>이 되었습니다 — 예전에는 no·rej·run·new 라는
+     세 번째 말이 따로 있었고, 부재는 TA 로 거절은 미접촉으로 뭉개졌습니다.
+     이제 단계 이름 그대로 셉니다 (5번). */
+  ok(cnt['부재'] >= 1, '부재를 <b>부재로</b> 따로 센다 (' + cnt['부재'] + ')');
+  ok(cnt['거절'] >= 1, '거절을 <b>거절로</b> 따로 센다 (' + cnt['거절'] + ')');
+  ok(cnt['AP'] >= 1, '상담까지 간 사람은 <b>AP</b> 로 따로 센다 (' + cnt['AP'] + ')');
+  ok(cnt['미접촉'] >= 1, '한 번도 안 돌린 DB 도 잡힌다 (' + cnt['미접촉'] + ')');
+  ok(cnt['기고객'] >= 1, '식은 고객도 같은 칸에 들어온다 (' + cnt['기고객'] + ')');
 
   /* 무엇을 해야 하는지가 줄마다 적혀 있는가 */
   const tkDo = await page.evaluate(() => Array.prototype.map.call(
@@ -497,11 +500,12 @@ const AI_OK = `## 활동 보고
     l.forEach(x => { m[x.k] = m[x.k] || x.todo; });
     return m;
   });
-  ok(/다시 겁니다|문자 먼저|마지막으로/.test(todos.no || ''), '부재 — 며칠 됐는지에 따라 다른 말 — ' + todos.no);
-  ok(/팔지 않습니다/.test(todos.rej || ''), '거절 — 다시 팔지 말라고 한다 — ' + todos.rej);
-  ok(/결론을 물어봅니다|자료를 준비/.test(todos.run || ''), '진행중 — 붙으라고 한다 — ' + todos.run);
-  ok(/첫 통화/.test(todos['new'] || ''), '미진행 — 오늘 첫 통화 — ' + todos['new']);
-  ok(/안부|적어 둔 일/.test(todos.old || ''), '기고객 — 안부 — ' + todos.old);
+  ok(/다시 겁니다|문자 먼저|마지막으로/.test(todos['부재'] || ''),
+     '부재 — 며칠 됐는지에 따라 다른 말 — ' + todos['부재']);
+  ok(/팔지 않습니다/.test(todos['거절'] || ''), '거절 — 다시 팔지 말라고 한다 — ' + todos['거절']);
+  ok(/다음 날짜|약속입니다|다음 약속/.test(todos['AP'] || ''), 'AP — 다음 자리를 잡으라고 한다 — ' + todos['AP']);
+  ok(/첫 통화/.test(todos['미접촉'] || ''), '미접촉 — 오늘 첫 통화 — ' + todos['미접촉']);
+  ok(/안부|적어 둔 일/.test(todos['기고객'] || ''), '기고객 — 안부 — ' + todos['기고객']);
 
   /* ── DB 종류가 CRM 에서 여기까지 그대로 따라오는가 ── */
   const src = await page.evaluate(() => {
@@ -588,7 +592,7 @@ const AI_OK = `## 활동 보고
   ok(!noScope, '설계사에게는 팀 전체 단추가 안 뜬다');
 
   /* 걸러 보기 */
-  await page.evaluate(() => arTkSet('no'));
+  await page.evaluate(() => arTkSet('부재'));
   await page.waitForTimeout(300);
   const onlyNo = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-tk .ar-bg'), e => e.textContent.trim()));
