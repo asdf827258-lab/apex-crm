@@ -156,6 +156,11 @@ window.supabase={createClient:function(){
     window.__clients.forEach(c => c.consent_status = 'granted');
     window.__backups = [{ id: 'b1', ref_date: new Date().toISOString().slice(0, 10), created_at: new Date().toISOString() }];
     RD_MAN.forEach(m => { if (!rdDone()[m.k]) rdMark(m.k); });
+    /* 폰 알람 — 머리 없는 브라우저는 알림을 늘 막습니다(permission 이 항상
+       denied). 사장님 폰에서는 「허용」 을 누르면 켜지는 자리라, 여기서만
+       <b>허용하신 폰</b>을 흉내 냅니다. 안 하면 「전부 채워도 100% 가 안 된다」
+       가 되어, 다 하신 사장님께 영영 남은 것이 있다고 말하게 됩니다. */
+    window.almCan = () => ({ sw: true, notif: true, push: true, ios: false, stand: true, perm: 'granted' });
     /* <b>사장님이 실제로 하시는 것</b>으로 새로 본다 — 고친 뒤 이 화면을
        다시 여는 것이다. rdLoad() 를 직접 부르면 「화면을 열면 기다리지 않고
        읽는다」 가 깨져도 이 점검은 모른다 (8번). */

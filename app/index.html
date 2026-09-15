@@ -1142,6 +1142,14 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-ok{background:var(--primary);color:#fff}
 .hm-ok:hover{filter:brightness(1.06)}
 .hm-now-n{font-size:11.3px;color:var(--ink-4);line-height:1.65;margin-top:9px}
+.hm-tools{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(26,86,219,.28)}
+.hm-tools-t{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--primary);margin-bottom:7px}
+.hm-tools-b{display:flex;flex-wrap:wrap;gap:6px}
+.hm-tool{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--primary);
+  background:var(--bg-1);color:var(--primary);border-radius:99px;padding:6px 12px;
+  font-size:11.5px;font-weight:800;letter-spacing:-.02em;cursor:pointer;font-family:inherit}
+.hm-tool:hover{background:var(--primary);color:#fff}
+.hm-tool span{font-size:13px;line-height:1}
 .hm-now-n b{color:var(--ink-2)}
 @media(max-width:520px){.hm-big{font-size:21px}.hm-m span{display:none}.hm-now-m .m b{font-size:16px}}
 .hm-tfa{margin-top:14px}
@@ -3119,6 +3127,12 @@ function tdoSetHtml(){
       '<div class="tdo-do"><b>오늘의 목표</b> — '+m.aim+'<br>'+m.way+'</div>'+
       '<div class="tdo-do" style="color:var(--ink-5)">지금 이렇게 말합니다 — 「'+
         osEsc(tdoSample(k))+'」</div>'+
+      /* <b>어느 도구가 열리는지</b> 그대로 보여 드립니다 — 안 보이면 다르게
+         하고 싶으셔도 무엇을 바꿔 달라고 하실지 모릅니다. */
+      (function(){var T=tdoTools(k),j,q='';
+        if(!T.length)return '';
+        for(j=0;j<T.length;j++)q+=(j?' · ':'')+(T[j].icon||'')+' '+osEsc(T[j].title||'');
+        return '<div class="tdo-do" style="color:var(--primary)">손에 쥘 것 — '+q+'</div>';})()+
       (m.rule==='daily'
         ? '<div class="tdo-in"><b style="font-size:12.5px">매일 뜹니다</b>'+
           '<span>붙잡고 있는 사람이라 기다릴 것이 없습니다</span></div>'
@@ -6908,6 +6922,19 @@ function rdAuto(){
       how:'설정 → 백업. 이것과 별개로 Supabase 자동 백업도 켜 두세요.',
       go:'settings'});
   }
+
+  /* 8. 폰 알람 — <b>이 폰이 켜져 있나</b>. 서버엔 안 묻는다 (7번) */
+  if(typeof almCan==='function'){
+    var ac=almCan(),aw=(typeof almWhy==='function')?almWhy().replace(/<[^>]*>/g,''):'';
+    add({k:'alarm',t:'폰 아침 알람',
+      st:(ac.perm==='granted')?'ok':(ac.perm==='denied'?'no':'warn'),
+      now:(ac.perm==='granted')
+            ?('켜짐 · 아침 '+((typeof almHour==='function')?almHour():8)+'시')
+            :(aw||'아직 켜지 않으셨습니다'),
+      how:'「내 폰에 설치」 화면에서 <b>이 폰에 알람 켜기</b> 를 누르세요. '+
+           '아이폰은 홈 화면에 먼저 담아야 알람이 옵니다. 고객 이름은 알람에 안 담깁니다.',
+      go:'phone_app'});
+  }
   return L;
 }
 function rdDays(a){
@@ -8490,38 +8517,78 @@ function arTkCount(who){
    증권을 못 보냈습니다」 처럼. 여기 또 적으면 두 글이 갈려, 화면마다
    다른 말을 하게 됩니다 (5번). 이 표는 <b>누구를 고를지</b>와
    <b>어떻게 연락할지</b>만 정합니다.                                    */
+/* ── <b>그 상태에서 손에 쥘 것</b> ──────────────────────────────────
+   사장님 말씀 — 「클로드 너가 선택할 수 있도록, 알람 뜨는 것처럼 고객의
+   상황에 맞게 띄워 줘」.
+
+   앱에 좋은 도구가 많은데 <b>오늘 할 일에서 못 닿았습니다.</b> 줄을 눌러도
+   CRM 으로만 갔습니다. 이제 상태마다 그 자리에서 쓸 것을 같이 띄웁니다.
+
+   <b>사장님이 직접 정해 주신 다섯</b>입니다 —
+     미접촉  정책·상품 뉴스 · TA 스크립트
+     AP      보장분석 상담자료 · 재무설계 실전화법서 · 보장 전·후 만들기
+     PC      비포&애프터 · 윤시현의 두뇌 · 재무설계 계산기
+     계약완료 증권 전달 · 비포&애프터(→ 가입설계 요청서)
+     거절    미끼상품&접촉전략 · 고객에게 전할 뉴스
+
+   <b>가입설계 요청서는 따로 열리는 화면이 아닙니다.</b> 비포&애프터 안에서
+   뽑습니다. 그래서 여기에는 비포&애프터를 적습니다 — 없는 화면 id 를 적어
+   두면 단추가 아예 안 서서, 사장님은 「왜 안 뜨지」 를 모르십니다.
+
+   나머지 여섯(부재·TA·CS·증권전달·생일·기고객)은 <b>새 도구를 지어내지
+   않고</b>, 위에서 사장님이 이미 고르신 것 중 같은 성격의 것을 씁니다 —
+   전화로 거는 자리는 AI 상담 어시스턴트(TA 스크립트가 그 안에 있습니다),
+   계약 직전은 비포&애프터, 연락할 구실이 필요한 자리는 뉴스. 화면(설정)에서
+   <b>어느 것이 열리는지 그대로 보이므로</b>, 다르게 하고 싶으시면 그 자리에서
+   아십니다.
+
+   <b>이름·아이콘은 여기 안 적습니다.</b> 메뉴(TABS)에서 navItemOf 로
+   가져옵니다 — 여기 또 적으면 메뉴에서 이름을 고쳤을 때 갈립니다 (5번).
+   그래서 <b>메뉴에 없는 id 는 아예 안 뜹니다</b> — 못 여는 단추를 세우면
+   눌렀는데 아무 일도 안 일어납니다.                                    */
 var TDO={
  'AP'  :{t:'AP',      c:'blu', ord:0, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['sangdam','fp_talk','frmake'],
          ch:'만남', aim:'약속을 지키고 <b>다음 자리</b>를 잡는다',
          way:'오늘 자리에서 결론을 재촉하지 않는다. 듣고, 다음에 볼 날을 받아 온다'},
  'PC'  :{t:'PC',      c:'blu', ord:1, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['baba','brain','finance'],
          ch:'전화', aim:'제안서에 <b>걸리는 것 한 가지</b>를 받아 낸다',
          way:'「어떠셨어요」 가 아니라 「어느 쪽이 제일 걸리셨어요」 로 묻는다'},
  'CS'  :{t:'CS',      c:'blu', ord:2, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['baba','finance'],
          ch:'만남', aim:'청약 서류와 <b>날짜</b>를 잡는다',
          way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다'},
  '계약완료':{t:'계약완료', c:'red', ord:3, rule:'daily', wait:0, src:'db', go:'crm',
+         tools:['pdel','baba'],
          ch:'만남', aim:'<b>증권을 직접</b> 전할 자리를 잡는다',
          way:'우편으로 보내지 않는다. 그 자리가 소개를 받는 유일한 자리다'},
  '증권전달':{t:'증권전달', c:'grn', ord:4, rule:'within', wait:15, src:'db', go:'crm',
+         tools:['pdel','news_live'],
          ch:'전화', aim:'잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다',
          way:'보험 이야기를 더 하지 않는다. 고마움과 청구 방법, 그리고 가족'},
  'TA'  :{t:'TA',      c:'amb', ord:5, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['cs_assist','sangdam'],
          ch:'전화', aim:'<b>만날 날짜</b>를 잡는다',
          way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다'},
  '부재' :{t:'부재',    c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['cs_assist'],
          ch:'전화', aim:'<b>한 번은 받으시게</b> 한다',
          way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄'},
  '미접촉':{t:'미접촉',  c:'grn', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['biz_news','cs_assist'],
          ch:'전화', aim:'<b>첫 통화</b> — 30초 안에 약속만',
          way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만'},
  '거절' :{t:'거절',    c:'red', ord:8, rule:'after',  wait:14, src:'db',  go:'crm',
+         tools:['mikki_talk','news_live'],
          ch:'문자', aim:'<b>문을 닫지 않게</b> 한다',
          way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다'},
  '생일' :{t:'생일',    c:'amb', ord:9, rule:'within', wait:7,  src:'cli', go:'clients',
+         tools:['news_live'],
          ch:'문자', aim:'<b>축하만</b> 전한다',
          way:'계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다'},
  '기고객':{t:'기고객',  c:'red', ord:10, rule:'after', wait:30, src:'cli', go:'clients',
+         tools:['news_live','sangdam'],
          ch:'전화', aim:'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다',
          way:'오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다'}
 };
@@ -8545,6 +8612,17 @@ function tdoWait(k){
   if(v===''||v==null)return d;
   var n=parseInt(v,10);
   return (isNaN(n)||n<0)?d:n;
+}
+/* 그 상태에서 <b>열 수 있는 도구</b>만 돌려준다. 이름·아이콘은 메뉴에서
+   가져오고, <b>메뉴에 없으면 빼 버린다</b> — 못 여는 단추를 세우면 눌렀는데
+   아무 일도 안 일어나고, 그때부터 다른 단추도 안 믿게 된다 (8번). */
+function tdoTools(k){
+  var L=(TDO[k]&&TDO[k].tools)||[],out=[],i,it;
+  for(i=0;i<L.length;i++){
+    it=(typeof navItemOf==='function')?navItemOf(L[i]):null;
+    if(it&&it.id)out.push(it);
+  }
+  return out;
 }
 /* <b>오늘 올릴 사람인가</b> — 규칙과 기준일이 정한다. 세 가지뿐이다:
      daily  매일  ·  after  N일 지나면  ·  within  N일 안에는 매일     */
@@ -12532,6 +12610,407 @@ function pwaCardHtml(x){
     '</div></div>';
 }
 
+/* ══ 폰 알람 — <b>앱을 안 열어도 아침에 울린다</b> ═══════════════════
+   사장님 말씀 — 「핸드폰으로도 알람이 뜨고 관리할 수 있도록 해야 하고」.
+
+   폰 달력(바로 아래)은 <b>약속</b>을 울려 줍니다. 여기는 <b>오늘 챙길 분</b>
+   을 울립니다 — 약속이 없는 날에도 부재·미접촉·PC 는 쌓입니다.
+
+   길이 <b>둘</b>입니다. 헷갈리기 쉬워 여기 적어 둡니다 —
+
+     ① <b>이 폰이 스스로</b> (almTick)  앱이 열려 있을 때, 정한 시각이
+        지났고 오늘 아직 안 울렸으면 한 번. <b>서버를 아예 안 부릅니다</b>
+        (7번). 건수와 상태까지 말합니다 — 방금 앱이 센 것이라 정확합니다.
+     ② <b>서버가 보내는 것</b> (netlify/functions/push.js)  앱이 닫혀
+        있어도 옵니다. 대신 <b>건수를 말하지 않습니다</b> — 서버는 오늘
+        누가 밀렸는지 모릅니다. 서버가 세려면 TDO 표를 서버에도 또 적어야
+        하고, 그러면 <b>화면과 알람이 다른 말</b>을 하게 됩니다 (5번).
+        그래서 「확인할 시간입니다」 까지만 하고, 숫자는 열어야 나옵니다.
+
+   ★ <b>고객 이름은 어느 쪽에도 안 담습니다</b> (3번). 알람은 애플·구글
+     서버를 거쳐 갑니다. ①은 이 폰에서만 뜨지만 그래도 이름을 안 적습니다 —
+     잠금화면은 남이 봅니다.
+   ★ <b>오늘 챙길 분이 없으면 안 울립니다.</b> 「0건」 알람은 알람이 아니라
+     방해입니다.
+   ★ 아이폰은 <b>홈 화면에 담아야</b> 알람이 옵니다(애플이 그렇게 정했습니다).
+     그래서 이 카드를 「내 폰에 설치」 화면, 담기 안내 <b>바로 밑</b>에 둡니다. */
+var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',synced:false};
+var ALM_KEY_TTL=3600000;            /* 서버 열쇠는 한 시간에 한 번만 묻는다 (7번) */
+var ALM_HOUR_KEY='apex_alm_hour';
+var ALM_DAY_KEY='apex_alm_day';
+var ALM_TAG='apex-today';
+var ALM_HOUR_DEF=8;
+
+/* 이 기기가 무엇을 할 수 있나 — <b>한 곳에서만</b> 답한다 (5번) */
+function almCan(){
+  var o={sw:false,notif:false,push:false,ios:false,stand:false,perm:'없음'};
+  try{
+    o.sw=!!(navigator&&navigator.serviceWorker);
+    o.notif=(typeof Notification!=='undefined');
+    o.push=(typeof PushManager!=='undefined');
+    o.ios=(typeof pwaIsIOS==='function')&&pwaIsIOS();
+    o.stand=(typeof pwaInstalled==='function')&&pwaInstalled();
+    if(o.notif)o.perm=Notification.permission;
+  }catch(e){}
+  return o;
+}
+/* <b>왜 안 울리는지</b> 한 줄로. 「안 됩니다」 만 적으면 다음에 무엇을
+   하실지 모르십니다 (1번). 막힌 것이 없으면 빈 글을 돌려준다. */
+function almWhy(){
+  var c=almCan();
+  if(!c.sw||!c.notif)
+    return '이 브라우저는 알람을 못 받습니다. 아이폰은 <b>사파리</b>, 안드로이드는 <b>크롬</b>으로 열어 주세요.';
+  if(c.ios&&!c.stand)
+    return '아이폰은 <b>홈 화면에 먼저 담아야</b> 알람이 옵니다 — 위에서 담고, 그 아이콘으로 다시 열어 주세요.';
+  if(c.perm==='denied')
+    return '이 사이트 알림을 <b>차단</b>해 두셨습니다. 브라우저 설정에서 「허용」 으로 바꿔 주셔야 켜집니다.';
+  return '';
+}
+/* 몇 시에 받을지 — <b>이 폰에만</b> 담는다. 사람마다 아침이 다르다.
+   서버 줄(push_subs.hour)은 서버가 쓰려고 받아 적는 사본이고,
+   <b>묻는 곳은 여기 하나</b>다 (5번). */
+function almHour(){
+  var v=null;
+  try{ v=localStorage.getItem(ALM_HOUR_KEY); }catch(e){ v=null; }
+  if(v===null||v==='')return ALM_HOUR_DEF;
+  var n=parseInt(v,10);
+  return (isNaN(n)||n<0||n>23)?ALM_HOUR_DEF:n;   /* 잘못 적은 값을 0시로 쓰지 않는다 (1번) */
+}
+function almHourSet(v){
+  var n=parseInt(v,10);
+  if(isNaN(n)||n<0||n>23){toast('0 시부터 23 시 사이로 적어 주세요');return;}
+  try{ localStorage.setItem(ALM_HOUR_KEY,''+n); }catch(e){}
+  try{ localStorage.removeItem(ALM_DAY_KEY); }catch(e){}   /* 시간을 바꾸셨으면 오늘 다시 울릴 수 있게 */
+  almHourPush(n);
+  almPaint();
+  toast(n+'시에 알려 드립니다');
+}
+/* 켜 두신 폰이 있으면 서버 줄의 시각도 맞춰 둔다 — 없으면 아무것도 안 한다 */
+function almHourPush(n){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb||!ALM.sub||!ALM.sub.endpoint)return;
+  try{ sb.from('push_subs').update({hour:n}).eq('endpoint',ALM.sub.endpoint).then(function(){},function(){}); }catch(e){}
+}
+/* ── 알람에 <b>무엇을 적을까</b> ────────────────────────────────────
+   <b>여기서 다시 세지 않습니다</b> (5번). 홈이 이미 세워 둔 hmSteps() 를
+   그대로 받아, 아직 안 끝낸 것만 셉니다. <b>이름은 한 글자도 안 담습니다</b>
+   (3번) — 상태와 건수뿐입니다. 없으면 null 을 돌려주고, 부르는 쪽은
+   <b>안 울립니다</b>.                                                */
+function almLine(){
+  var L=[];
+  try{ L=(typeof hmSteps==='function')?hmSteps():[]; }catch(e){ L=[]; }
+  var todo=[],i,x;
+  for(i=0;i<L.length;i++){
+    x=L[i];
+    try{ if(typeof hmIsDone==='function'&&hmIsDone(x.key))continue; }catch(e2){}
+    todo.push(x);
+  }
+  if(!todo.length)return null;
+  var by={},k,p=[],K=(typeof tdoOrder==='function')?tdoOrder():[];
+  for(i=0;i<todo.length;i++){
+    x=todo[i];
+    k=(x.k==='db')?(x.tk||'DB 고객'):((HM_ACT[x.k]||{}).t||x.k);
+    by[k]=(by[k]||0)+1;
+  }
+  for(i=0;i<K.length;i++)if(by[K[i]]){p.push(tdoLabel(K[i])+' '+by[K[i]]);delete by[K[i]];}
+  for(k in by)if(by.hasOwnProperty(k))p.push(k+' '+by[k]);
+  return {n:todo.length, title:'오늘 챙길 분 '+todo.length+'명',
+          body:p.join(' · ')};
+}
+/* 띄우기 — 서비스워커가 있으면 그쪽으로(아이폰은 그 길로만 뜹니다) */
+function almShow(d){
+  if(!d||!d.title)return false;
+  var o={body:d.body||'',tag:ALM_TAG,renotify:true,
+         icon:'icons/icon-192.png',badge:'icons/icon-192.png'};
+  try{
+    if(ALM.reg&&ALM.reg.showNotification){ ALM.reg.showNotification(d.title,o); return true; }
+    if(typeof Notification!=='undefined'&&Notification.permission==='granted'){
+      new Notification(d.title,o); return true; }
+  }catch(e){}
+  return false;
+}
+function almRing(){
+  if(almCan().perm!=='granted')return false;
+  var d=almLine();
+  return d?almShow(d):false;
+}
+/* ① 이 폰이 스스로 — 홈을 그릴 때 한 번 들여다본다.
+   <b>서버를 안 부릅니다</b> (7번). 오늘 이미 울렸으면 조용합니다. */
+function almTick(){
+  try{
+    if(almCan().perm!=='granted')return;
+    /* 일꾼을 <b>깨워 둔다</b> — 아이폰은 일꾼을 거쳐야만 알람이 뜹니다.
+       브라우저에 이미 켜져 있는 것을 한 번 물어볼 뿐, 서버는 안 부릅니다 (7번).
+       첫 판에 아직 못 받았으면 <b>안 울린 것으로 두고</b>(표시를 안 남기고)
+       다음 판에 다시 옵니다 — 못 뜬 것을 떴다고 적지 않습니다 (1번). */
+    almSync();
+    var t=(typeof arToday==='function')?arToday():'';
+    if(!t)return;
+    var last='';
+    try{ last=localStorage.getItem(ALM_DAY_KEY)||''; }catch(e){}
+    if(last===t)return;
+    var h=new Date(Date.now()+9*3600000).getUTCHours();   /* 한국 시각 */
+    if(h<almHour())return;
+    if(!almRing())return;                 /* 안 울렸으면 표시도 안 남긴다 — 내일 또 걸러진다 */
+    try{ localStorage.setItem(ALM_DAY_KEY,t); }catch(e){}
+  }catch(e){}
+}
+/* 지금 한 번 — <b>이 폰에서 뜨는지만</b> 봅니다. 서버는 안 거칩니다 */
+function almTest(){
+  if(almCan().perm!=='granted'){toast('먼저 「알람 켜기」 를 눌러 주세요');return;}
+  var d=almLine();
+  d=d?{title:d.title+' (시험)',body:d.body}
+     :{title:'APEX YUN PRO (시험)',body:'오늘 챙길 분이 없습니다 — 시험 알람입니다.'};
+  if(almShow(d))toast('띄웠습니다 — 알림창을 내려 보세요');
+  else toast('알람을 띄우지 못했습니다');
+}
+/* ②가 진짜 되는지 <b>그 자리에서</b> 확인합니다. 서버가 이 폰 주소로
+   한 번 보냅니다 — 앱을 닫고 눌러 보시면 닫혀 있어도 오는 것이 보입니다.
+   <b>되는 것을 안 되는 것처럼, 안 되는 것을 되는 것처럼 말하지 않습니다</b>
+   (1번) — 서버가 돌려준 말을 그대로 적습니다. */
+function almTestServer(){
+  if(!almPhoneOn()){toast('먼저 「이 폰에 알람 켜기」 를 눌러 주세요');return;}
+  ALM.busy='srv';ALM.err='';almPaint();
+  var say=function(m){ALM.busy='';ALM.err=m||'';almPaint();};
+  try{
+    fetch('/.netlify/functions/push',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({endpoint:ALM.sub.endpoint})})
+      .then(function(r){return r.json();}).then(function(j){
+        if(j&&j.ok){say('');toast('서버가 보냈습니다 — 알림창을 내려 보세요',6000);}
+        else say('서버가 못 보냈습니다 — '+((j&&j.reason)||'까닭을 못 받았습니다'));
+      },function(){ say('서버에 닿지 못했습니다.'); });
+  }catch(e){ say('서버에 닿지 못했습니다.'); }
+}
+/* base64url ↔ 바이트 */
+function almB64(s){
+  var pad=new Array(((4-s.length%4)%4)+1).join('=');
+  var raw=atob((s+pad).replace(/-/g,'+').replace(/_/g,'/'));
+  var out=new Uint8Array(raw.length),i;
+  for(i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);
+  return out;
+}
+function almB64u(buf){
+  if(!buf)return '';
+  var b=new Uint8Array(buf),s='',i;
+  for(i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+/* 알람 일꾼 켜기 — <b>화면 파일을 저장하지 않습니다</b>(app/sw.js 에 적어 뒀습니다) */
+function almReg(cb){
+  if(ALM.reg){if(cb)cb(ALM.reg);return;}
+  if(!almCan().sw){ALM.err='이 브라우저는 알람 일꾼을 못 켭니다.';almPaint();return;}
+  try{
+    navigator.serviceWorker.register('sw.js').then(function(r){
+      ALM.reg=r; ALM.err=''; almPaint(); if(cb)cb(r);
+    },function(e){
+      ALM.err='알람 일꾼을 못 켰습니다'+(e&&e.message?(' — '+e.message):'.'); almPaint();
+    });
+  }catch(e){ ALM.err='알람 일꾼을 못 켰습니다.'; almPaint(); }
+}
+/* 서버 열쇠 — <b>한 번만</b> 묻습니다 (7번). 없으면 없다고 적습니다 (1번) */
+function almKeyLoad(cb){
+  if(ALM.keyAt&&(Date.now()-ALM.keyAt)<ALM_KEY_TTL){if(cb)cb(ALM.key);return;}
+  ALM.busy='key';almPaint();
+  try{
+    fetch('/.netlify/functions/push?key=1').then(function(r){return r.json();}).then(function(j){
+      ALM.busy='';ALM.keyAt=Date.now();
+      ALM.key=(j&&j.key)||null;
+      ALM.keyErr=ALM.key?'':((j&&j.why)||'서버에 알람 열쇠가 아직 없습니다.');
+      almPaint(); if(cb)cb(ALM.key);
+    },function(){
+      ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;
+      ALM.keyErr='서버에 물어보지 못했습니다.'; almPaint(); if(cb)cb(null);
+    });
+  }catch(e){ ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;
+    ALM.keyErr='서버에 물어보지 못했습니다.'; almPaint(); if(cb)cb(null); }
+}
+/* 켜기 — 허락 → 일꾼 → (열쇠가 있으면) 서버에 이 폰을 담는다 */
+function almAsk(){
+  var c=almCan(),w=almWhy();
+  if(w){toast(w.replace(/<[^>]*>/g,''),8000);almPaint();return;}
+  ALM.busy='ask';ALM.err='';almPaint();
+  var after=function(p){
+    ALM.busy='';
+    if(p!=='granted'){ALM.err='알람을 허용하지 않으셨습니다.';almPaint();return;}
+    almReg(function(){ almSubscribe(); });
+  };
+  try{
+    var r=Notification.requestPermission(after);
+    if(r&&r.then)r.then(after,function(){ALM.busy='';ALM.err='허락을 묻지 못했습니다.';almPaint();});
+  }catch(e){ ALM.busy='';ALM.err='허락을 묻지 못했습니다.';almPaint(); }
+}
+/* 이 폰을 서버에 담는다 — 열쇠가 없으면 <b>①만</b> 되고, 카드가 그렇게 적는다 */
+function almSubscribe(){
+  if(!ALM.reg||!ALM.reg.pushManager){almPaint();return;}
+  almKeyLoad(function(key){
+    if(!key){almPaint();return;}
+    ALM.busy='sub';almPaint();
+    try{
+      ALM.reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:almB64(key)})
+        .then(function(s){ ALM.busy=''; ALM.sub=s; almSave(s); },
+              function(e){ ALM.busy='';
+                ALM.err='폰 알람을 못 켰습니다'+(e&&e.message?(' — '+e.message):'.'); almPaint(); });
+    }catch(e){ ALM.busy=''; ALM.err='폰 알람을 못 켰습니다.'; almPaint(); }
+  });
+}
+function almSave(s){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ALM.err='서버에 연결되어 있지 않습니다 — 이 폰에서만 울립니다.';almPaint();return;}
+  var j={};try{ j=s.toJSON?s.toJSON():{}; }catch(e){ j={}; }
+  var row={endpoint:s.endpoint,
+    p256dh:(j.keys&&j.keys.p256dh)||almB64u(s.getKey&&s.getKey('p256dh')),
+    auth:(j.keys&&j.keys.auth)||almB64u(s.getKey&&s.getKey('auth')),
+    ua:(''+(navigator.userAgent||'')).slice(0,120),
+    hour:almHour()};
+  ALM.busy='save';almPaint();
+  sb.from('push_subs').upsert(row,{onConflict:'endpoint'}).then(function(r){
+    ALM.busy='';
+    if(r&&r.error)ALM.err='이 폰을 서버에 못 담았습니다 — '+(r.error.message||'');
+    else{ALM.err='';toast('폰 알람을 켰습니다 — 아침 '+almHour()+'시에 알려 드립니다',6000);}
+    almPaint();
+  },function(){ALM.busy='';ALM.err='이 폰을 서버에 못 담았습니다.';almPaint();});
+}
+/* 끄기 — 브라우저에서 떼고 <b>서버 줄도 지운다</b>. 줄만 남으면 서버가
+   없는 폰에 계속 보내고, 무료 한도를 갉아먹습니다 (7번). */
+function almOff(){
+  var s=ALM.sub,ep=(s&&s.endpoint)||'';
+  ALM.busy='off';almPaint();
+  var done=function(){ALM.busy='';ALM.sub=null;almPaint();toast('이 폰 알람을 껐습니다');};
+  var del=function(){
+    var sb=(typeof osClient==='function')?osClient():null;
+    if(!sb||!ep){done();return;}
+    try{ sb.from('push_subs')['delete']().eq('endpoint',ep).then(done,done); }catch(e){ done(); }
+  };
+  if(!s){del();return;}
+  try{ s.unsubscribe().then(del,del); }catch(e){ del(); }
+}
+/* 카드를 열 때 <b>지금 켜져 있나</b>를 브라우저에 묻습니다 — 서버엔 안 묻습니다 (7번) */
+function almSync(){
+  if(ALM.synced)return;
+  ALM.synced=true;
+  if(!almCan().sw)return;
+  try{
+    navigator.serviceWorker.getRegistration().then(function(r){
+      if(!r){almPaint();return;}
+      ALM.reg=r;
+      if(!r.pushManager){almPaint();return;}
+      r.pushManager.getSubscription().then(function(s){ALM.sub=s||null;almPaint();},function(){almPaint();});
+    },function(){});
+  }catch(e){}
+}
+/* ── <b>한 번만</b> 알려 드리는 한 줄 ─────────────────────────────
+   설계사에게는 「출발 점검」이 안 열립니다(못 고칠 것을 매일 보여 드리는
+   것은 재촉일 뿐이라 그렇게 두었습니다). 그래서 <b>팀은 이 기능이 있는
+   줄도 모릅니다</b> — 200명·300명이면 그게 곧 아무도 안 켠다는 뜻입니다.
+
+   <b>재촉이 아니라 소개입니다.</b> 그래서 딱 이럴 때만 섭니다 —
+     · 이 브라우저가 알람을 <b>받을 수 있고</b>
+     · 아직 <b>한 번도 안 물어봤고</b>(허용도 차단도 아닌 상태)
+     · 닫으신 적이 없을 때
+   허용하시든 차단하시든 닫으시든, 그 뒤로는 <b>다시 안 뜹니다</b>.
+   헛것을 세우지 않습니다 (8번).                                     */
+var ALM_BYE_KEY='apex_alm_bye';
+function almNudgeOn(){
+  var c=almCan();
+  if(!c.sw||!c.notif)return false;          /* 못 받는 브라우저에 권하지 않는다 */
+  if(c.perm!=='default')return false;       /* 이미 정하셨다 */
+  try{ if(localStorage.getItem(ALM_BYE_KEY))return false; }catch(e){}
+  return true;
+}
+function almNudgeOff(){
+  try{ localStorage.setItem(ALM_BYE_KEY,'1'); }catch(e){}
+  almNudgePaint();
+}
+function almNudgeHtml(){
+  if(!OS.profile||!almNudgeOn())return '';
+  almCss();
+  return '<div class="alm-nudge">'+
+    '<span class="ic">🔔</span>'+
+    '<span class="tx"><b>아침에 폰이 알려 드릴까요?</b> 오늘 챙길 분이 있는 날만 울립니다. '+
+      '<span>고객 이름은 안 담깁니다</span></span>'+
+    '<button type="button" class="ok" onclick="almAskFromHome()">켜기</button>'+
+    '<button type="button" class="no" onclick="almNudgeOff()" aria-label="다시 안 보기">✕</button>'+
+  '</div>';
+}
+function almNudgePaint(){ var el=document.getElementById('almNudge'); if(el)el.innerHTML=almNudgeHtml(); }
+/* 홈에서 누르시면 <b>여기서 끝냅니다</b> — 「설치 화면으로 가서 찾으세요」 는
+   두 걸음이고, 두 걸음이면 안 하십니다. 아이폰처럼 먼저 담아야 하는 자리만
+   그 화면으로 모십니다.                                             */
+function almAskFromHome(){
+  var w=almWhy();
+  if(w){ toast(w.replace(/<[^>]*>/g,''),8000); go('phone_app'); return; }
+  almAsk();
+  setTimeout(almNudgePaint,900);
+}
+function almOn(){ return almCan().perm==='granted'; }
+function almPhoneOn(){ return !!(ALM.sub&&ALM.sub.endpoint); }
+function almPaint(){ var el=document.getElementById('almHost'); if(el)el.innerHTML=almCardHtml(); }
+function almCardHtml(){
+  var c=almCan(),w=almWhy(),d=almLine(),on=almOn(),ph=almPhoneOn();
+  var h='<div class="card"><div class="card-hd"><div class="card-title">'+
+      '<span class="ci">🔔</span>아침 알람 — 오늘 챙길 분'+
+      (on?'<span class="badge green">켜짐</span>':'<span class="badge">꺼짐</span>')+'</div>'+
+    '<div class="card-desc">앱을 안 열어도 <b>아침에 폰이 울립니다.</b> '+
+      '<b>고객 이름은 알람에 안 담습니다</b> — 잠금화면은 남이 봅니다. '+
+      '오늘 챙길 분이 없는 날은 <b>안 울립니다</b>.</div></div><div class="card-body">';
+  if(w)h+='<div class="alm-why">'+w+'</div>';
+  h+='<div class="btn-row">'+
+     (on?('<button class="btn btn-ghost" onclick="almTest()">🔔 지금 한 번 울려 보기</button>'+
+          (ph?'<button class="btn btn-ghost" onclick="almTestServer()">📡 서버에서 보내 보기</button>':'')+
+          '<button class="btn btn-ghost" onclick="almOff()">알람 끄기</button>')
+        :('<button class="btn btn-primary"'+(w?' disabled':'')+' onclick="almAsk()">'+
+          (ALM.busy?'켜는 중…':'🔔 이 폰에 알람 켜기')+'</button>'))+
+     '</div>';
+  h+='<div class="alm-hr"><label>몇 시에</label>'+
+     '<input type="number" id="almHourIn" min="0" max="23" value="'+almHour()+'"/>'+
+     '<span>시</span><button type="button" class="btn btn-ghost" '+
+     'onclick="almHourSet(osVal(\'almHourIn\'))">이 시각으로</button></div>';
+  /* <b>지금 무엇이 되고 무엇이 안 되는지</b> 그대로 적습니다 (1번) */
+  h+='<div class="alm-st">'+
+     '<div class="alm-r"><b>① 앱이 열려 있을 때</b><span class="'+(on?'y':'n')+'">'+
+       (on?'됩니다 — 건수까지 말합니다':'알람을 허용해 주세요')+'</span></div>'+
+     '<div class="alm-r"><b>② 앱이 닫혀 있을 때</b><span class="'+(ph?'y':'n')+'">'+
+       (ph?'됩니다 — 「확인할 시간입니다」 까지, 건수는 열어야 나옵니다'
+          :(ALM.keyErr?osEsc(ALM.keyErr):'아직입니다'))+'</span></div>'+
+     '</div>';
+  if(!ph&&ALM.keyErr)
+    h+='<div class="alm-why" style="margin-top:9px">서버가 보내는 알람(②)을 켜려면 '+
+       'Netlify 환경변수에 <b>VAPID_PUBLIC · VAPID_PRIVATE · VAPID_SUBJECT</b> 를 넣어야 합니다. '+
+       '열쇠는 <b>서버에만</b> 둡니다 — 코드·채팅에 적지 않습니다.</div>';
+  if(ALM.err)h+='<div class="alm-why" style="margin-top:9px">'+osEsc(ALM.err)+'</div>';
+  h+='<div class="alm-pv"><b>지금 울리면 이렇게 뜹니다</b><br>'+
+     (d?('「'+osEsc(d.title)+'」<br><span>'+osEsc(d.body)+'</span>')
+       :'<span>오늘 챙길 분이 없습니다 — <b>안 울립니다.</b></span>')+'</div>';
+  return h+'</div></div>';
+}
+function almCss(){
+  if(document.getElementById('almCss'))return;
+  var st=document.createElement('style');st.id='almCss';
+  st.textContent='.alm-why{font-size:11.5px;line-height:1.7;color:#92400E;background:#FFFBEB;'+
+    'border:1px solid #FDE68A;border-radius:9px;padding:9px 11px;margin-bottom:10px}'+
+   '.alm-hr{display:flex;align-items:center;gap:7px;margin:10px 0;font-size:12px;color:var(--ink-3)}'+
+   '.alm-hr input{width:72px;padding:6px 8px;border:1px solid var(--ink-7);border-radius:8px;'+
+     'font-family:inherit;font-size:13px;text-align:center}'+
+   '.alm-st{border-top:1px dashed var(--ink-7);padding-top:9px;margin-top:4px}'+
+   '.alm-r{display:flex;gap:8px;align-items:baseline;font-size:11.5px;line-height:1.8}'+
+   '.alm-r b{flex:none;min-width:118px}'+
+   '.alm-r .y{color:#15803D;font-weight:700}'+
+   '.alm-r .n{color:var(--ink-4)}'+
+   '.alm-pv{margin-top:11px;border:1px dashed var(--ink-7);border-radius:10px;padding:10px 12px;'+
+     'font-size:11.5px;line-height:1.7;color:var(--ink-3);background:var(--bg-1)}'+
+   '.alm-pv span{color:var(--ink-4)}'+
+   '.alm-nudge{display:flex;align-items:center;gap:9px;margin-bottom:11px;'+
+     'border:1px solid #BFDBFE;background:#EFF6FF;border-radius:12px;padding:9px 11px}'+
+   '.alm-nudge .ic{flex:none;font-size:16px}'+
+   '.alm-nudge .tx{flex:1;min-width:0;font-size:11.5px;line-height:1.6;color:#1E3A8A}'+
+   '.alm-nudge .tx span{color:#3B5BA5}'+
+   '.alm-nudge .ok{flex:none;border:0;background:var(--primary);color:#fff;border-radius:99px;'+
+     'padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}'+
+   '.alm-nudge .no{flex:none;border:0;background:transparent;color:#60789C;'+
+     'font-size:13px;cursor:pointer;padding:4px 2px;font-family:inherit}';
+  document.head.appendChild(st);
+}
 /* ══════════════════════════════════════════════════════════════════
    내 캘린더 — 폰 달력이 대신 울려 준다
 
@@ -13291,6 +13770,9 @@ function renderPhoneApp(){
         '<em>※ 담은 뒤 아이콘을 <b>길게 누르면</b> DB CRM · TFA 로 바로 가는 길이 나옵니다.</em></div>'+
     '</div></div></div>';
 
+  /* <b>담은 다음에 알람</b> — 아이폰은 담아야만 알람이 와서, 차례가 이렇습니다 */
+  h+='<div id="almHost"></div>';
+
   h+='<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📱</span>이 화면만 따로 담기</div>'+
     '<div class="card-desc">하루에 제일 많이 여는 화면은 <b>따로</b> 담아 두면 홈을 거치지 않고 바로 열립니다. '+
@@ -13595,7 +14077,8 @@ function go(tab){
     /* ① 오늘 챙길 것 — 고객·기록이 늦게 실려 오면 그때 다시 그린다 */
     try{ if(typeof hmArm==='function')hmArm(); }catch(e){}
     }
-  else if(tab==='phone_app'){dyn.innerHTML=renderPhoneApp();}
+  else if(tab==='phone_app'){dyn.innerHTML=renderPhoneApp();
+    try{ almCss(); almPaint(); almSync(); }catch(e){}}
   else if(tab==='mycal'){dyn.innerHTML='<div id="mycalHost">'+renderMyCal()+'</div>';}
   else if(tab==='ready'){dyn.innerHTML=renderReady();if(typeof osReadyAfterRender==='function')osReadyAfterRender();}
   else if(tab==='airep'){dyn.innerHTML=renderAiRep();if(typeof osAiRepAfterRender==='function')osAiRepAfterRender();}
@@ -14000,7 +14483,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-15 02:40';
+var APP_BUILD='2026-09-15 06:10';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -18693,6 +19176,18 @@ function hmDid(key){
   else toast('오늘 한 것으로 표시했습니다');
   hmPaint();
 }
+/* 그 사람 상태에 맞는 <b>도구 단추</b>. 메뉴에 있는 것만 서므로 누르면
+   반드시 열립니다. 없으면 <b>빈 줄을 안 세웁니다</b> — 아무것도 없는
+   자리를 만들어 두면 「여기 뭐가 있어야 하나」 하고 눈이 멈춥니다. */
+function hmToolsHtml(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k),L=(typeof tdoTools==='function')?tdoTools(k):[],i,h;
+  if(!L.length)return '';
+  h='<div class="hm-tools"><div class="hm-tools-t">손에 쥘 것</div><div class="hm-tools-b">';
+  for(i=0;i<L.length;i++)
+    h+='<button type="button" class="hm-tool" onclick="go(\''+L[i].id+'\')">'+
+       '<span>'+(L[i].icon||'')+'</span>'+osEsc(L[i].title||L[i].id)+'</button>';
+  return h+'</div></div>';
+}
 function hmNowHtml(){
   var r=hmNext();
   if(!r.n)return '';
@@ -18708,6 +19203,9 @@ function hmNowHtml(){
     '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
       '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
+    /* <b>손에 쥘 것</b> — 그 상태에서 쓸 도구를 바로 엽니다. 여태 이 좋은
+       것들이 만들어만 두고 오늘 할 일에서 안 닿았습니다. */
+    hmToolsHtml(x)+
     '<div class="hm-now-b">'+
       '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
       '<button type="button" class="hm-ok" onclick="hmDid(\''+osEsc(x.key)+'\')">'+osEsc(A.b)+'</button>'+
@@ -18851,6 +19349,106 @@ function hmReadyCss(){
     '.hm-rdy-go:hover{filter:brightness(.97)}';
   document.head.appendChild(st);
 }
+/* ══ 홈 — <b>대표가 보는 팀 전체의 오늘</b> ═══════════════════════════
+   여태 대표는 「오늘 우리 팀이 뭘 해야 하나」 를 한 장으로 못 봤습니다.
+   TFA 에서 「👥 팀 전체」 로 바꾸면 <b>줄이 통째로</b> 나오는데, 200~300명이
+   되면 그 줄을 다 읽을 수가 없습니다. 필요한 것은 줄이 아니라
+   <b>누가 몇 건이고, 무엇이 밀려 있나</b> 입니다.
+
+   <b>새로 세지 않습니다</b> (5번). arTouch('') 가 이미 팀 전체를 골라 두었고
+   상태 이름·차례는 TDO 가 압니다. 여기서는 <b>사람별로 묶기만</b> 합니다.
+   서버도 더 안 부릅니다 — 이미 읽어 둔 것을 씁니다 (7번).            */
+function hmTeamRows(){
+  if(typeof arTouch!=='function')return [];
+  var L=arTouch(''),by={},out=[],i,x,k;
+  for(i=0;i<L.length;i++){
+    x=L[i]; k=x.who||'';
+    if(!k)continue;                       /* 담당자를 모르는 줄은 사람에 안 붙인다 (1번) */
+    if(!by[k])by[k]={who:k,n:0,st:{}};
+    by[k].n++;
+    by[k].st[x.k]=(by[k].st[x.k]||0)+1;
+  }
+  for(k in by)if(by.hasOwnProperty(k))out.push(by[k]);
+  out.sort(function(a,b){return b.n-a.n;});
+  return out;
+}
+var HM_TEAM_SHOW=6;
+function hmTeamHtml(){
+  if(!OS.profile)return '';
+  if(typeof arIsLead!=='function'||!arIsLead())return '';   /* 리더에게만 */
+  if(typeof AR==='undefined')return '';
+  /* <b>아직 못 읽었으면 0 이라고 말하지 않습니다</b> — 「오늘 팀이 할 일이
+     없다」 는 뜻이 되어 버립니다 (1번). */
+  if(!AR.loaded)
+    return '<div class="card hm-team"><div class="card-body">'+
+      '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b></div>'+
+      '<div class="hm-tm-none">팀 기록을 읽는 중입니다. 잠시만요.</div></div></div>';
+  var R=hmTeamRows(),i,j,tot=0,h,K=tdoOrder();
+  for(i=0;i<R.length;i++)tot+=R[i].n;
+  h='<div class="card hm-team"><div class="card-body">'+
+    '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b>'+
+      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\'\')">TFA 에서 전부 →</button></div>';
+  if(!R.length)
+    return h+'<div class="hm-tm-none">오늘 팀에서 손댈 사람이 없습니다. '+
+      '배정된 DB 가 생기면 여기 올라옵니다.</div></div></div>';
+  h+='<div class="hm-tm-sum"><b>'+tot+'건</b> · 설계사 <b>'+R.length+'명</b>'+
+     ' <span>많은 분부터</span></div>';
+  for(i=0;i<R.length&&i<HM_TEAM_SHOW;i++){
+    var r=R[i],chips='';
+    for(j=0;j<K.length;j++){
+      var c=r.st[K[j]];if(!c)continue;
+      chips+='<span class="hm-tm-c '+tdoColor(K[j])+'">'+osEsc(tdoLabel(K[j]))+' '+c+'</span>';
+    }
+    h+='<button type="button" class="hm-tm-r" onclick="hmTeamOpen(\''+osEsc(r.who)+'\')">'+
+       '<span class="nm">'+osEsc(arNameOf(r.who))+'</span>'+
+       '<span class="ch">'+chips+'</span>'+
+       '<span class="n">'+r.n+'</span><span class="ar">›</span></button>';
+  }
+  if(R.length>HM_TEAM_SHOW)
+    h+='<button type="button" class="hm-tm-more" onclick="hmTeamOpen(\'\')">'+
+       '+'+(R.length-HM_TEAM_SHOW)+'명 더 보기 →</button>';
+  return h+'</div></div>';
+}
+/* 눌러서 <b>그 사람 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
+   한 사람을 고르는 것은 <b>TFA 가 아는 한 곳</b>(AR.tkAll)에 맡긴다 (5번). */
+function hmTeamOpen(who){
+  try{
+    AR.cat='touch';
+    AR.tkAll=true;                       /* 팀 전체로 두고 */
+    AR.open=who||'';                     /* 그 사람을 펼친다 */
+  }catch(e){}
+  go('airep');
+}
+function hmTeamCss(){
+  if(document.getElementById('hmTeamCss'))return;
+  var st=document.createElement('style');st.id='hmTeamCss';
+  st.textContent='.hm-tm-h{display:flex;align-items:center;gap:7px;font-size:14px;'+
+    'letter-spacing:-.03em;margin-bottom:9px}'+
+   '.hm-tm-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:3px 11px;font-size:11px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit}'+
+   '.hm-tm-sum{font-size:12px;color:var(--ink-3);margin-bottom:9px}'+
+   '.hm-tm-sum span{color:var(--ink-5);font-size:11px}'+
+   '.hm-tm-none{font-size:11.5px;color:var(--ink-4);line-height:1.7;padding:4px 2px}'+
+   '.hm-tm-r{display:flex;align-items:center;gap:8px;width:100%;text-align:left;'+
+     'border:1px solid var(--ink-7);background:var(--bg-1);border-radius:10px;'+
+     'padding:9px 11px;margin-bottom:6px;cursor:pointer;font-family:inherit}'+
+   '.hm-tm-r:hover{filter:brightness(.98)}'+
+   '.hm-tm-r .nm{flex:none;font-size:12.5px;font-weight:800;letter-spacing:-.02em;min-width:52px}'+
+   '.hm-tm-r .ch{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}'+
+   '.hm-tm-r .n{flex:none;font-size:13px;font-weight:900;color:var(--primary)}'+
+   '.hm-tm-r .ar{flex:none;color:var(--ink-5);font-size:13px}'+
+   '.hm-tm-c{font-size:10px;font-weight:800;border-radius:99px;padding:1px 7px;'+
+     'background:var(--ink-8);color:var(--ink-3)}'+
+   '.hm-tm-c.red{background:#FEE2E2;color:#B91C1C}'+
+   '.hm-tm-c.amb{background:#FEF3C7;color:#92400E}'+
+   '.hm-tm-c.grn{background:#DCFCE7;color:#15803D}'+
+   '.hm-tm-c.blu{background:#DBEAFE;color:#1D4ED8}'+
+   '.hm-tm-more{width:100%;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:10px;padding:8px;font-size:11.5px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit}';
+  document.head.appendChild(st);
+}
 var HM_CLI_DOOR=[
  ['clients','🗂️','고객 365일','한 분씩 깊게'],
  ['crm','📇','DB 통합 CRM','받은 DB 를 한 판에'],
@@ -18887,6 +19485,10 @@ function hmCliHtml(){
 function hmPaint(){
   var a=document.getElementById('hmToday');
   if(a)a.innerHTML=hmTodayHtml();
+  /* 팀 칸도 같이 — 기록이 늦게 실려 오면 그때 채워집니다 */
+  try{ if(typeof almNudgePaint==='function')almNudgePaint(); }catch(e0){}
+  var t=document.getElementById('hmTeamHost');
+  if(t)t.innerHTML=hmTeamHtml();
   var b=document.getElementById('hmCalHost');
   if(b)b.innerHTML=hmCalHtml();
   var c=document.getElementById('hmCliHost');
@@ -18906,6 +19508,10 @@ function hmArm(){
   try{ if(typeof setupCss==='function')setupCss();
        if(typeof setupPaint==='function')setupPaint(); }catch(e){}
   /* 막혀 있는 것 — rdLoad 가 스스로 막아 10분에 한 번만 부릅니다 (7번) */
+  try{ if(typeof hmTeamCss==='function')hmTeamCss(); }catch(e5){}
+  /* 폰 알람 ① — <b>서버를 안 부릅니다</b>. 정한 시각이 지났고 오늘 아직
+     안 울렸을 때만 한 번 뜹니다 (7번). */
+  try{ if(typeof almTick==='function')setTimeout(almTick,1500); }catch(e6){}
   try{ if(typeof rdPaint==='function')rdPaint();
        if(typeof rdLoad==='function')rdLoad(); }catch(e){}
 }
@@ -18953,6 +19559,12 @@ function renderHome(){
     (OS.profile?cusFindHtml():'')+
     /* ① 오늘 챙길 것 ② 달력 ③ 내 고객 ④ 30일 고객관리 (달력은 한 벌·5번) */
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
+    /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
+       밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
+    (OS.profile?('<div id="almNudge"></div>'):'')+
+    /* <b>대표는 내 오늘 바로 밑에서 팀 전체를 봅니다.</b> 리더가 아니면
+       빈 칸이라 안 보입니다 — 못 볼 것을 세워 두지 않습니다. */
+    (OS.profile?'<div id="hmTeamHost"></div>':'')+
     (OS.profile?('<div id="hmCalHost">'+hmCalHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmCliHost">'+hmCliHtml()+'</div>'):'')+
     (OS.profile?'<div id="ccHomeLine"></div>':'')+
@@ -29747,6 +30359,49 @@ var OS_PLAN_SQL=[
   "  for delete to authenticated using (owner_id = auth.uid());",
   ""
 ];
+/* ── 폰 알람 — <b>이 폰이 알람을 받겠다는 표시</b> ────────────────────
+   서버가 아침에 알람을 보내려면 「어느 폰에 보낼지」를 알아야 합니다.
+   그 주소(endpoint)와 봉인 열쇠 두 개를 여기 담습니다.
+
+   ★ <b>고객 이야기는 한 글자도 안 담깁니다.</b> 이름도 숫자도 없습니다 —
+     주소와 열쇠, 그리고 몇 시에 받고 싶은지뿐입니다 (3번).
+   ★ <b>나만 봅니다.</b> owner_id = auth.uid() 하나로 묶습니다. 남의 폰
+     주소를 읽을 수 있으면 남에게 알람을 보낼 수 있게 됩니다.
+   ★ owner_id 는 <b>서버가 채웁니다</b>(default auth.uid()).
+   ★ 같은 폰을 두 번 담지 않습니다 — endpoint 가 유일 키입니다 (5-1).
+     브라우저가 주는 endpoint 는 그 기기·그 브라우저에 하나뿐입니다.    */
+var OS_PUSH_SQL=[
+  "create table if not exists public.push_subs(",
+  "  id        uuid primary key default gen_random_uuid(),",
+  "  owner_id  uuid not null default auth.uid(),",
+  "  endpoint  text not null unique,",
+  "  p256dh    text not null,",
+  "  auth      text not null,",
+  "  ua        text default '',",
+  "  hour      int  not null default 8,",
+  "  fail      int  not null default 0,",
+  "  last_at   timestamptz,",
+  "  created_at timestamptz not null default now()",
+  ");",
+  "alter table public.push_subs enable row level security;",
+  "create index if not exists push_subs_owner on public.push_subs(owner_id);",
+  "",
+  "/* 나만 — 읽기·넣기·고치기·지우기 모두 본인으로 묶는다 */",
+  "drop policy if exists push_subs_select on public.push_subs;",
+  "create policy push_subs_select on public.push_subs",
+  "  for select to authenticated using (owner_id = auth.uid());",
+  "drop policy if exists push_subs_insert on public.push_subs;",
+  "create policy push_subs_insert on public.push_subs",
+  "  for insert to authenticated with check (owner_id = auth.uid());",
+  "drop policy if exists push_subs_update on public.push_subs;",
+  "create policy push_subs_update on public.push_subs",
+  "  for update to authenticated using (owner_id = auth.uid())",
+  "  with check (owner_id = auth.uid());",
+  "drop policy if exists push_subs_delete on public.push_subs;",
+  "create policy push_subs_delete on public.push_subs",
+  "  for delete to authenticated using (owner_id = auth.uid());",
+  ""
+];
 var OS_TODO_SQL=[
   "/* ── 팀 할 일 — 지점장급 이상이 적고, 담당자를 정한다 ─────────────",
   "   모두가 본다. 확인(체크)은 담당자 본인만 한다.",
@@ -30453,7 +31108,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   /* 계정 함수는 OS_ACCT_FN_SQL 한 곳에만, 팀 할 일은 OS_TODO_SQL 한 곳에만 (5번) */
-  ].concat(OS_ACCT_FN_SQL).concat(OS_TODO_SQL).concat(OS_PLAN_SQL).concat([
+  ].concat(OS_ACCT_FN_SQL).concat(OS_TODO_SQL).concat(OS_PLAN_SQL).concat(OS_PUSH_SQL).concat([
   "",
   "",
   "/* ══════ 내 소개 — 상담자료 맨 앞에 나가는 얼굴 ══════",
@@ -30593,7 +31248,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '38')",
+  "values ('schema_version', '39')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -32605,7 +33260,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=38;   /* 38: 내 일정(my_plans) — 폰과 같이 본다 */
+var SETUP_VER=39;   /* 39: 폰 알람(push_subs) — 어느 폰에 보낼지만 담는다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════
