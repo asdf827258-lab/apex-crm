@@ -235,7 +235,61 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(C.b===0, '30일로 고치시면 <b>안 올라온다</b> — '+C.b+'명 (기준이 진짜로 쓰인다)');
   is(C.c===0, '증권전달을 3일로 줄이시면 5일 된 분이 <b>내려간다</b> — '+C.c+'명');
 
-  console.log('\n[8] 콘솔');
+  console.log('\n[8] 상태마다 <b>손에 쥘 것</b> — 그 자리에서 열린다');
+  const G=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    const K=tdoOrder(),out={};
+    /* 표에 적어 둔 id 와, 그중 <b>실제로 메뉴에 있어 열리는</b> 것 */
+    out.listed={}; out.live={}; out.dead=[];
+    K.forEach(k=>{
+      const ids=(TDO[k].tools||[]);
+      out.listed[k]=ids.slice();
+      out.live[k]=tdoTools(k).map(it=>it.id);
+      ids.forEach(id=>{ if(out.live[k].indexOf(id)<0)out.dead.push(k+'/'+id); });
+    });
+    out.none=K.filter(k=>!tdoTools(k).length);
+    /* 표에 이름·아이콘을 또 적어 두지 않았나 (5번) */
+    out.dupName=K.filter(k=>TDO[k].title||TDO[k].icon||TDO[k].toolName);
+    /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나 */
+    const real=window.navItemOf;
+    window.navItemOf=function(id){ return id==='baba'?null:real(id); };
+    out.gone=tdoTools('PC').map(it=>it.id);
+    window.navItemOf=real;
+    /* 홈에 실제로 그려지고, 눌러서 그 화면이 열리나 */
+    AR.db=[{id:'p1',who:'me',name:'홍길동',region:'광주',src:'일반',stage:'PC',
+            appt:'',days:10,n:3,cAt:'',pAt:''}];
+    AR.cliRows=[];
+    go('home'); await new Promise(r=>setTimeout(r,700));
+    const btns=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-tool'));
+    out.btnTxt=btns.map(b=>b.textContent.replace(/\s+/g,' ').trim());
+    let went=''; const g=window.go; window.go=function(t){went=t;};
+    if(btns[0])btns[0].click();
+    window.go=g; out.went=went;
+    return out;
+  },SEED);
+  /* 사장님이 <b>직접 정해 주신 다섯</b> — 여기가 바뀌면 사장님 말씀이 지워진 것이다 */
+  const BOSS={ '미접촉':['biz_news','cs_assist'], 'AP':['sangdam','fp_talk','frmake'],
+               'PC':['baba','brain','finance'], '계약완료':['pdel','baba'],
+               '거절':['mikki_talk','news_live'] };
+  const off=Object.keys(BOSS).filter(k=>(G.listed[k]||[]).join(',')!==BOSS[k].join(','));
+  is(off.length===0, '사장님이 정하신 <b>다섯 상태</b>의 도구가 그대로다'+
+     (off.length?(' ← '+off.map(k=>k+': '+(G.listed[k]||[]).join(',')).join(' / ')):''));
+  /* ↓ 이것이 실제로 잡았다 — 'req'(가입설계 요청서)는 비포&애프터 <b>안에</b>
+       있는 것이라 탭이 아니었고, 단추가 조용히 안 서고 있었다. */
+  is(G.dead.length===0, '표에 적은 도구가 <b>전부 열리는 화면</b>이다'+
+     (G.dead.length?(' ← '+G.dead.join(' · ')+' 는 메뉴에 없다'):''));
+  is(G.none.length===0, '<b>열한 상태 모두</b> 손에 쥘 것이 있다'+
+     (G.none.length?(' ← '+G.none.join(',')):''));
+  is(G.dupName.length===0, '표에 <b>이름·아이콘을 또 안 적는다</b> — 메뉴에서 가져온다 (5번)');
+  is(G.gone.length===2&&G.gone.indexOf('baba')<0,
+     '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.gone.join(',')+
+     ' (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
+  is(G.btnTxt.length===3, 'PC 줄에 단추가 <b>세 개</b> 선다 — '+G.btnTxt.join(' · '));
+  is(/비포&애프터|윤시현|계산기/.test(G.btnTxt.join(' ')),
+     '단추에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
+  is(G.went==='baba', '눌렀더니 <b>그 화면으로</b> 간다 — '+(G.went||'아무 데도'));
+
+  console.log('\n[9] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
