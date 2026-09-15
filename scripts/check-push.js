@@ -57,19 +57,20 @@ const SEED=`
   try{ localStorage.removeItem('apex_alm_day'); localStorage.removeItem('apex_alm_hour'); }catch(e){}
   window.toast=function(){};`;
 
-/* ── 서버 함수를 <b>환경변수를 바꿔 가며</b> 불러 온다 ── */
+/* ── 서버 함수를 <b>환경변수를 바꿔 가며</b> 불러 온다 ──
+   봉하기·서명은 scripts/push-core.js 한 곳에 있으므로 그것도 같이 다시
+   읽어야 합니다 — 안 그러면 처음 읽은 열쇠가 그대로 남습니다. */
 function loadPush(env){
-  const p=path.join(ROOT,'netlify/functions/push.js');
+  const core=path.join(ROOT,'scripts/push-core.js');
+  const http=path.join(ROOT,'netlify/functions/push.js');
+  const cron=path.join(ROOT,'netlify/functions/push-cron.js');
   const keep={};
   Object.keys(env).forEach(k=>{keep[k]=process.env[k];
     if(env[k]===null)delete process.env[k]; else process.env[k]=env[k];});
-  delete require.cache[require.resolve(p)];
-  const m=require(p);
-  const src=fs.readFileSync(p,'utf8');
-  const box={exports:{}};
-  new Function('require','module','exports',src+'\nmodule.exports.__t={seal,vapidAuth};')(require,box,box.exports);
+  [core,http,cron].forEach(f=>{delete require.cache[require.resolve(f)];});
+  const C=require(core), H=require(http), R=require(cron);
   Object.keys(keep).forEach(k=>{if(keep[k]===undefined)delete process.env[k];else process.env[k]=keep[k];});
-  return {handler:m.handler, seal:box.exports.__t.seal, vapidAuth:box.exports.__t.vapidAuth};
+  return {handler:H.handler, cron:R.handler, seal:C.seal, vapidAuth:C.vapidAuth};
 }
 const ub=s=>Buffer.from(String(s).replace(/-/g,'+').replace(/_/g,'/'),'base64');
 const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -280,7 +281,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const r1=JSON.parse((await noKey.handler({httpMethod:'GET',queryStringParameters:{key:'1'}})).body);
   is(r1.key===null&&/열쇠/.test(r1.why||''),
      '열쇠가 없으면 <b>없다고 대답한다</b> — 「'+(r1.why||'')+'」 (1번)');
-  const r2=JSON.parse((await noKey.handler({httpMethod:'GET',queryStringParameters:{}})).body);
+  const r2=JSON.parse((await noKey.cron()).body);
   is(r2.ok===false&&r2.sent===0, '열쇠가 없으면 <b>보낸 척하지 않는다</b> — sent '+r2.sent);
   const r3=JSON.parse((await loadPush(ENV).handler({httpMethod:'GET',queryStringParameters:{key:'1'}})).body);
   is(r3.key===PUB&&!r3.why, '열쇠가 있으면 <b>공개 열쇠만</b> 돌려준다');
@@ -301,7 +302,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   };
   const sched=loadPush(ENV);
   const kh=new Date(Date.now()+9*3600000).getUTCHours();
-  const r4=JSON.parse((await sched.handler({httpMethod:'GET',queryStringParameters:{}})).body);
+  const r4=JSON.parse((await sched.cron()).body);
   global.fetch=realFetch;
   const q=calls.filter(c=>/push_subs\?hour=eq\./.test(c.u))[0];
   is(!!q&&q.u.indexOf('hour=eq.'+kh)>=0, '<b>그 시각으로 정해 둔 폰만</b> 부른다 — 한국 '+kh+'시');
@@ -334,8 +335,50 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const NFC=NF.replace(/\/\*[\s\S]*?\*\//g,'');
   is(!/arTouch|AR_STAGES|var TDO|'미접촉'|'부재'|tdoDue/.test(NFC),
      '서버에 <b>상태 표를 베껴 두지 않았다</b> (5번)');
-  is(/\[functions\."push"\]/.test(TOML)&&/schedule = "0 \* \* \* \*"/.test(TOML),
+  is(/\[functions\."push-cron"\]\s*\n\s*schedule = "0 \* \* \* \*"/.test(TOML),
      '<b>매시 정각</b>에 돌게 적어 두었다 — 사람마다 받고 싶은 시각이 다르다');
+
+  console.log('\n[6-3] <b>예약 함수를 HTTP 로 부르지 않는다</b> — 실제로 났던 사고');
+  /* Netlify 는 예약(schedule)으로 등록한 함수를 <b>HTTP 로 못 부르게</b>
+     막습니다 — 403 을 돌려줍니다. 처음에 한 함수에 세 가지(열쇠 주기 ·
+     시험 보내기 · 예약 보내기)를 다 넣고 예약을 걸었더니, 앱이 열쇠를 못
+     받아 <b>폰 알람이 조용히 안 켜졌습니다.</b> 사장님이 켜셨는데
+     push_subs 가 0줄이었습니다. 배포해 보기 전에는 몰랐습니다 — 점검이
+     핸들러를 <b>직접</b> 불렀지 HTTP 로 부르지 않았기 때문입니다 (8번). */
+  /* <b>토막별로</b> 읽는다. 「[functions."X"] 부터 다음 schedule 까지」 로
+     긁으면 예약이 안 걸린 토막이 <b>뒷 토막의 예약</b>을 집어 와 헛것을
+     잡습니다 (8번). 주석(#)으로 꺼 둔 예약도 예약이 아닙니다 —
+     daily-brief 가 그렇게 꺼져 있습니다. */
+  const onCron={};
+  TOML.split(/\n(?=\[)/).forEach(sec=>{
+    const m=sec.match(/^\[functions\."([^"]+)"\]/);
+    if(!m)return;
+    if(sec.split('\n').slice(1).some(l=>/^\s*schedule\s*=/.test(l)))onCron[m[1]]=true;
+  });
+  /* 앱이 HTTP 로 부르는 함수들 — 소스에서 그대로 긁는다 */
+  const walk=d=>{let o=[];for(const e of fs.readdirSync(d,{withFileTypes:true})){
+    const f=path.join(d,e.name);
+    if(e.isDirectory())o=o.concat(walk(f));
+    else if(/\.(html|js)$/.test(e.name))o.push(f);} return o;};
+  const APPS=walk(path.join(ROOT,'app')).concat([path.join(ROOT,'db-crm.html')])
+    .filter(f=>fs.existsSync(f)).map(f=>fs.readFileSync(f,'utf8')).join('\n');
+  const called={},re2=/\/\.netlify\/functions\/([A-Za-z0-9_-]+)/g;
+  let m2; while((m2=re2.exec(APPS)))called[m2[1]]=true;
+  const clash=Object.keys(called).filter(n=>onCron[n]);
+  is(clash.length===0,
+     '앱이 부르는 함수 중에 <b>예약이 걸린 것이 없다</b>'+
+     (clash.length?(' ← '+clash.join(', ')+' 는 예약이라 HTTP 로 부르면 403 이다'):
+      ' — '+Object.keys(called).sort().join(' · ')));
+  is(!!onCron['push-cron'], '보내는 일은 <b>push-cron</b> 이 예약으로 한다');
+  is(!onCron['push'], '<b>push 에는 예약을 안 건다</b> — 앱이 불러야 하는 자리다');
+  is(!!called['push'], '앱은 <b>push</b> 를 부른다 — '+Object.keys(called).sort().join(' · '));
+  /* 봉하는 법이 두 벌이 되면 한쪽만 고쳐진다 (5번) */
+  const fnHttp=fs.readFileSync(path.join(ROOT,'netlify/functions/push.js'),'utf8');
+  const fnCron=fs.readFileSync(path.join(ROOT,'netlify/functions/push-cron.js'),'utf8');
+  is(/require\(.*push-core/.test(fnHttp)&&/require\(.*push-core/.test(fnCron),
+     '두 함수가 <b>같은 곳</b>을 가리킨다 — push-core.js (5번)');
+  is(!/createECDH|createCipheriv|WebPush: info/.test(fnHttp+fnCron),
+     '봉하는 법이 <b>두 벌이 안 된다</b> — 함수 안에 암호가 안 적혀 있다');
 
   console.log('\n[6-2] 홈에서 <b>한 번만</b> 알려 드린다 — 재촉이 아니라 소개');
   const N=await page.evaluate(async(seed)=>{
