@@ -145,6 +145,24 @@ function ready() {
   if (!SB_KEY) return '서버가 장부를 못 읽습니다 — SUPABASE_SERVICE_ROLE_KEY 가 없습니다.';
   return '';
 }
+/* ── <b>한 기기에 한 번</b> ────────────────────────────────────
+   홈 화면에 아이콘을 여럿 담으면(달력·CRM·TFA·고객365일) 아이폰은 그것을
+   <b>각각 다른 웹앱</b>으로 봅니다. 그래서 같은 폰인데 구독 줄이 여러 개
+   생기고, 그대로 두면 아침에 <b>그 수만큼</b> 울립니다. 「0건 알람은
+   방해」라고 해 놓고 중복으로 울리면 같은 잘못입니다.
+
+   같은 사람(owner_id)·같은 기기(ua)는 <b>가장 최근에 켠 줄</b>에만 보냅니다.
+   기기 이름(ua)이 비어 있으면 묶지 않습니다 — 모르는 것을 같은 것으로
+   치면 <b>안 울려야 할 폰이 아니라 울려야 할 폰이 빠집니다</b> (1번). */
+function onePerDevice(rows) {
+  const by = new Map();
+  for (const r of rows) {
+    const k = (r.owner_id || '') + '\u0000' + (r.ua || ('@' + r.endpoint));
+    const p = by.get(k);
+    if (!p || String(r.created_at || '') > String(p.created_at || '')) by.set(k, r);
+  }
+  return Array.from(by.values());
+}
 function kstHour() {
   return new Date(Date.now() + 9 * 3600 * 1000).getUTCHours();
 }
@@ -157,5 +175,5 @@ function morning() {
 
 module.exports = {
   PUB, SUBJECT, JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN,
-  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning
+  b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice
 };
