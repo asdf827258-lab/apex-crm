@@ -1142,6 +1142,14 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-ok{background:var(--primary);color:#fff}
 .hm-ok:hover{filter:brightness(1.06)}
 .hm-now-n{font-size:11.3px;color:var(--ink-4);line-height:1.65;margin-top:9px}
+.hm-tools{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(26,86,219,.28)}
+.hm-tools-t{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--primary);margin-bottom:7px}
+.hm-tools-b{display:flex;flex-wrap:wrap;gap:6px}
+.hm-tool{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--primary);
+  background:var(--bg-1);color:var(--primary);border-radius:99px;padding:6px 12px;
+  font-size:11.5px;font-weight:800;letter-spacing:-.02em;cursor:pointer;font-family:inherit}
+.hm-tool:hover{background:var(--primary);color:#fff}
+.hm-tool span{font-size:13px;line-height:1}
 .hm-now-n b{color:var(--ink-2)}
 @media(max-width:520px){.hm-big{font-size:21px}.hm-m span{display:none}.hm-now-m .m b{font-size:16px}}
 .hm-tfa{margin-top:14px}
@@ -3115,6 +3123,12 @@ function tdoSetHtml(){
       '<div class="tdo-do"><b>오늘의 목표</b> — '+m.aim+'<br>'+m.way+'</div>'+
       '<div class="tdo-do" style="color:var(--ink-5)">지금 이렇게 말합니다 — 「'+
         osEsc(tdoSample(k))+'」</div>'+
+      /* <b>어느 도구가 열리는지</b> 그대로 보여 드립니다 — 안 보이면 다르게
+         하고 싶으셔도 무엇을 바꿔 달라고 하실지 모릅니다. */
+      (function(){var T=tdoTools(k),j,q='';
+        if(!T.length)return '';
+        for(j=0;j<T.length;j++)q+=(j?' · ':'')+(T[j].icon||'')+' '+osEsc(T[j].title||'');
+        return '<div class="tdo-do" style="color:var(--primary)">손에 쥘 것 — '+q+'</div>';})()+
       (m.rule==='daily'
         ? '<div class="tdo-in"><b style="font-size:12.5px">매일 뜹니다</b>'+
           '<span>붙잡고 있는 사람이라 기다릴 것이 없습니다</span></div>'
@@ -8486,38 +8500,78 @@ function arTkCount(who){
    증권을 못 보냈습니다」 처럼. 여기 또 적으면 두 글이 갈려, 화면마다
    다른 말을 하게 됩니다 (5번). 이 표는 <b>누구를 고를지</b>와
    <b>어떻게 연락할지</b>만 정합니다.                                    */
+/* ── <b>그 상태에서 손에 쥘 것</b> ──────────────────────────────────
+   사장님 말씀 — 「클로드 너가 선택할 수 있도록, 알람 뜨는 것처럼 고객의
+   상황에 맞게 띄워 줘」.
+
+   앱에 좋은 도구가 많은데 <b>오늘 할 일에서 못 닿았습니다.</b> 줄을 눌러도
+   CRM 으로만 갔습니다. 이제 상태마다 그 자리에서 쓸 것을 같이 띄웁니다.
+
+   <b>사장님이 직접 정해 주신 다섯</b>입니다 —
+     미접촉  정책·상품 뉴스 · TA 스크립트
+     AP      보장분석 상담자료 · 재무설계 실전화법서 · 보장 전·후 만들기
+     PC      비포&애프터 · 윤시현의 두뇌 · 재무설계 계산기
+     계약완료 증권 전달 · 비포&애프터(→ 가입설계 요청서)
+     거절    미끼상품&접촉전략 · 고객에게 전할 뉴스
+
+   <b>가입설계 요청서는 따로 열리는 화면이 아닙니다.</b> 비포&애프터 안에서
+   뽑습니다. 그래서 여기에는 비포&애프터를 적습니다 — 없는 화면 id 를 적어
+   두면 단추가 아예 안 서서, 사장님은 「왜 안 뜨지」 를 모르십니다.
+
+   나머지 여섯(부재·TA·CS·증권전달·생일·기고객)은 <b>새 도구를 지어내지
+   않고</b>, 위에서 사장님이 이미 고르신 것 중 같은 성격의 것을 씁니다 —
+   전화로 거는 자리는 AI 상담 어시스턴트(TA 스크립트가 그 안에 있습니다),
+   계약 직전은 비포&애프터, 연락할 구실이 필요한 자리는 뉴스. 화면(설정)에서
+   <b>어느 것이 열리는지 그대로 보이므로</b>, 다르게 하고 싶으시면 그 자리에서
+   아십니다.
+
+   <b>이름·아이콘은 여기 안 적습니다.</b> 메뉴(TABS)에서 navItemOf 로
+   가져옵니다 — 여기 또 적으면 메뉴에서 이름을 고쳤을 때 갈립니다 (5번).
+   그래서 <b>메뉴에 없는 id 는 아예 안 뜹니다</b> — 못 여는 단추를 세우면
+   눌렀는데 아무 일도 안 일어납니다.                                    */
 var TDO={
  'AP'  :{t:'AP',      c:'blu', ord:0, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['sangdam','fp_talk','frmake'],
          ch:'만남', aim:'약속을 지키고 <b>다음 자리</b>를 잡는다',
          way:'오늘 자리에서 결론을 재촉하지 않는다. 듣고, 다음에 볼 날을 받아 온다'},
  'PC'  :{t:'PC',      c:'blu', ord:1, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['baba','brain','finance'],
          ch:'전화', aim:'제안서에 <b>걸리는 것 한 가지</b>를 받아 낸다',
          way:'「어떠셨어요」 가 아니라 「어느 쪽이 제일 걸리셨어요」 로 묻는다'},
  'CS'  :{t:'CS',      c:'blu', ord:2, rule:'daily',  wait:0,  src:'db',  go:'crm',
+         tools:['baba','finance'],
          ch:'만남', aim:'청약 서류와 <b>날짜</b>를 잡는다',
          way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다'},
  '계약완료':{t:'계약완료', c:'red', ord:3, rule:'daily', wait:0, src:'db', go:'crm',
+         tools:['pdel','baba'],
          ch:'만남', aim:'<b>증권을 직접</b> 전할 자리를 잡는다',
          way:'우편으로 보내지 않는다. 그 자리가 소개를 받는 유일한 자리다'},
  '증권전달':{t:'증권전달', c:'grn', ord:4, rule:'within', wait:15, src:'db', go:'crm',
+         tools:['pdel','news_live'],
          ch:'전화', aim:'잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다',
          way:'보험 이야기를 더 하지 않는다. 고마움과 청구 방법, 그리고 가족'},
  'TA'  :{t:'TA',      c:'amb', ord:5, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['cs_assist','sangdam'],
          ch:'전화', aim:'<b>만날 날짜</b>를 잡는다',
          way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다'},
  '부재' :{t:'부재',    c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['cs_assist'],
          ch:'전화', aim:'<b>한 번은 받으시게</b> 한다',
          way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄'},
  '미접촉':{t:'미접촉',  c:'grn', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm',
+         tools:['biz_news','cs_assist'],
          ch:'전화', aim:'<b>첫 통화</b> — 30초 안에 약속만',
          way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만'},
  '거절' :{t:'거절',    c:'red', ord:8, rule:'after',  wait:14, src:'db',  go:'crm',
+         tools:['mikki_talk','news_live'],
          ch:'문자', aim:'<b>문을 닫지 않게</b> 한다',
          way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다'},
  '생일' :{t:'생일',    c:'amb', ord:9, rule:'within', wait:7,  src:'cli', go:'clients',
+         tools:['news_live'],
          ch:'문자', aim:'<b>축하만</b> 전한다',
          way:'계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다'},
  '기고객':{t:'기고객',  c:'red', ord:10, rule:'after', wait:30, src:'cli', go:'clients',
+         tools:['news_live','sangdam'],
          ch:'전화', aim:'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다',
          way:'오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다'}
 };
@@ -8541,6 +8595,17 @@ function tdoWait(k){
   if(v===''||v==null)return d;
   var n=parseInt(v,10);
   return (isNaN(n)||n<0)?d:n;
+}
+/* 그 상태에서 <b>열 수 있는 도구</b>만 돌려준다. 이름·아이콘은 메뉴에서
+   가져오고, <b>메뉴에 없으면 빼 버린다</b> — 못 여는 단추를 세우면 눌렀는데
+   아무 일도 안 일어나고, 그때부터 다른 단추도 안 믿게 된다 (8번). */
+function tdoTools(k){
+  var L=(TDO[k]&&TDO[k].tools)||[],out=[],i,it;
+  for(i=0;i<L.length;i++){
+    it=(typeof navItemOf==='function')?navItemOf(L[i]):null;
+    if(it&&it.id)out.push(it);
+  }
+  return out;
 }
 /* <b>오늘 올릴 사람인가</b> — 규칙과 기준일이 정한다. 세 가지뿐이다:
      daily  매일  ·  after  N일 지나면  ·  within  N일 안에는 매일     */
@@ -13965,8 +14030,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-15 01:20';
-var APP_BUILD_NOTE="<b>고객 상태를 한 벌로 합쳤습니다 — 그리고 상태마다 어떻게 연락할지 적었습니다.</b> 여태 같은 사람을 <b>세 가지 말</b>로 불렀습니다 — 단계(미접촉·TA·AP·PC·CS·계약완료·증권전달) · 통화 결과(부재·거절·상담) · 오늘 할 일(new·no·rej·run·pol·won). 그래서 전체를 한눈에 볼 수가 없었습니다. 게다가 <b>부재는 TA 로, 거절은 미접촉으로 뭉개져</b> 단계만 보면 <b>안 받는 사람과 통화가 된 사람이 같은 칸</b>에 있었고, 거절한 분이 <b>한 번도 안 건 분</b>과 섞였습니다. 이제 <b>한 사람은 한 상태</b>입니다 — 미접촉 · 부재 · 거절 · TA · AP · PC · CS · 계약완료 · 증권전달 · 생일 · 기고객. 통화 결과는 <b>사건 기록</b>일 뿐이고 상태가 그쪽으로 옮겨 갑니다. 손으로 정하신 단계가 있으면 그것이 이깁니다. <b>DB 통합 CRM 화면도 같은 말</b>을 씁니다 — 따로 있는 파일이라 갈리기 쉬운 자리였습니다. 그리고 상태마다 <b>방향성</b>을 적었습니다 — <b>무엇으로</b>(전화·문자·만남) · <b>오늘의 목표</b> · <b>어디서 시작하나</b>. 예를 들어 부재는 「전화 · 한 번은 받으시게 한다 · 안 받은 시간에 또 걸지 않는다, 시간대를 바꾸고 그 전에 문자 한 줄」. <b>언제 뜨는지도 세 가지로 또렷해졌습니다</b> — <b>매일</b>(AP·PC·CS·계약완료 — 붙잡고 있는 사람) · <b>N일 지나면</b>(부재 3 · 미접촉 3 · 거절 14 · 기고객 30) · <b>N일 안에는 매일</b>(증권전달 15 · 생일 7). 사장님이 주신 값 그대로이고, 설정에서 언제든 고치시면 팀 전체가 따라갑니다. 점검(<b>check-tdo</b>) 32자리. 만들면서 <b>날짜 때문에 밤에만 빨간불이 나던 헛알람 둘</b>도 같이 고쳤습니다 — 점검이 UTC 로 「오늘」 을 만들었는데 앱은 한국 시간으로 셉니다.";
+var APP_BUILD='2026-09-15 03:05';
+var APP_BUILD_NOTE="<b>오늘 할 일 줄마다 「손에 쥘 것」이 붙었습니다 — 그리고 대표는 팀 전체의 오늘을 홈 한 장으로 봅니다.</b> 앱에 좋은 도구가 많은데 <b>오늘 할 일에서 못 닿았습니다</b> — 줄을 눌러도 CRM 으로만 갔습니다. 이제 <b>상태마다 그 자리에서 쓸 것</b>을 같이 띄웁니다. 사장님이 직접 정해 주신 대로 — <b>미접촉</b>은 정책·상품 뉴스와 AI 상담 어시스턴트, <b>AP</b> 는 보장분석 상담자료·재무설계 실전화법서·보장분석 전&amp;후 만들기, <b>PC</b> 는 비포&amp;애프터·윤시현의 두뇌·재무설계 계산기, <b>계약완료</b> 는 증권 전달과 비포&amp;애프터(거기서 가입설계 요청서를 뽑습니다), <b>거절</b> 은 미끼상품&amp;접촉전략과 고객에게 전할 뉴스. 나머지 여섯(부재·TA·CS·증권전달·생일·기고객)은 새 도구를 지어내지 않고 그중 같은 성격의 것을 씁니다. 단추 이름·아이콘은 <b>메뉴에서 그대로 가져옵니다</b> — 두 곳에 적으면 갈립니다(5번). 그래서 <b>메뉴에 없는 화면은 단추가 아예 안 섭니다</b> — 눌렀는데 아무 일도 안 나는 단추를 세우지 않습니다. 만들면서 실제로 하나 걸렸습니다 — 「가입설계 요청서」는 따로 열리는 화면이 아니라 <b>비포&amp;애프터 안</b>에 있는 것이라, 그대로 두었으면 계약완료·CS 줄의 단추가 <b>조용히 안 서고</b> 있었을 것입니다. 그리고 <b>대표 홈에 「오늘 팀 전체」</b> 가 섰습니다 — 설계사별로 <b>몇 건 · 무엇이 밀렸는지</b>를 상태 칩으로 묶어, 많은 분부터 보여 드립니다. 누르면 TFA 「오늘 손댈 사람」이 <b>그분을 펼친 채</b> 열립니다. <b>새로 세지 않고 서버도 더 안 부릅니다</b> — 이미 읽어 둔 것을 사람별로 묶기만 합니다(5·7번). <b>리더에게만</b> 뜨고, 아직 못 읽었을 때는 「0건」 이 아니라 <b>「읽는 중」</b> 이라고 적습니다(1번). 점검 <b>check-tdo</b> 8자리를 더하고 <b>check-hmteam</b> 19자리를 새로 만들었습니다 — 여섯 가지를 일부러 되돌려 빨간불이 켜지는 것까지 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -18650,6 +18715,18 @@ function hmDid(key){
   else toast('오늘 한 것으로 표시했습니다');
   hmPaint();
 }
+/* 그 사람 상태에 맞는 <b>도구 단추</b>. 메뉴에 있는 것만 서므로 누르면
+   반드시 열립니다. 없으면 <b>빈 줄을 안 세웁니다</b> — 아무것도 없는
+   자리를 만들어 두면 「여기 뭐가 있어야 하나」 하고 눈이 멈춥니다. */
+function hmToolsHtml(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k),L=(typeof tdoTools==='function')?tdoTools(k):[],i,h;
+  if(!L.length)return '';
+  h='<div class="hm-tools"><div class="hm-tools-t">손에 쥘 것</div><div class="hm-tools-b">';
+  for(i=0;i<L.length;i++)
+    h+='<button type="button" class="hm-tool" onclick="go(\''+L[i].id+'\')">'+
+       '<span>'+(L[i].icon||'')+'</span>'+osEsc(L[i].title||L[i].id)+'</button>';
+  return h+'</div></div>';
+}
 function hmNowHtml(){
   var r=hmNext();
   if(!r.n)return '';
@@ -18665,6 +18742,9 @@ function hmNowHtml(){
     '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
       '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
+    /* <b>손에 쥘 것</b> — 그 상태에서 쓸 도구를 바로 엽니다. 여태 이 좋은
+       것들이 만들어만 두고 오늘 할 일에서 안 닿았습니다. */
+    hmToolsHtml(x)+
     '<div class="hm-now-b">'+
       '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
       '<button type="button" class="hm-ok" onclick="hmDid(\''+osEsc(x.key)+'\')">'+osEsc(A.b)+'</button>'+
@@ -18808,6 +18888,106 @@ function hmReadyCss(){
     '.hm-rdy-go:hover{filter:brightness(.97)}';
   document.head.appendChild(st);
 }
+/* ══ 홈 — <b>대표가 보는 팀 전체의 오늘</b> ═══════════════════════════
+   여태 대표는 「오늘 우리 팀이 뭘 해야 하나」 를 한 장으로 못 봤습니다.
+   TFA 에서 「👥 팀 전체」 로 바꾸면 <b>줄이 통째로</b> 나오는데, 200~300명이
+   되면 그 줄을 다 읽을 수가 없습니다. 필요한 것은 줄이 아니라
+   <b>누가 몇 건이고, 무엇이 밀려 있나</b> 입니다.
+
+   <b>새로 세지 않습니다</b> (5번). arTouch('') 가 이미 팀 전체를 골라 두었고
+   상태 이름·차례는 TDO 가 압니다. 여기서는 <b>사람별로 묶기만</b> 합니다.
+   서버도 더 안 부릅니다 — 이미 읽어 둔 것을 씁니다 (7번).            */
+function hmTeamRows(){
+  if(typeof arTouch!=='function')return [];
+  var L=arTouch(''),by={},out=[],i,x,k;
+  for(i=0;i<L.length;i++){
+    x=L[i]; k=x.who||'';
+    if(!k)continue;                       /* 담당자를 모르는 줄은 사람에 안 붙인다 (1번) */
+    if(!by[k])by[k]={who:k,n:0,st:{}};
+    by[k].n++;
+    by[k].st[x.k]=(by[k].st[x.k]||0)+1;
+  }
+  for(k in by)if(by.hasOwnProperty(k))out.push(by[k]);
+  out.sort(function(a,b){return b.n-a.n;});
+  return out;
+}
+var HM_TEAM_SHOW=6;
+function hmTeamHtml(){
+  if(!OS.profile)return '';
+  if(typeof arIsLead!=='function'||!arIsLead())return '';   /* 리더에게만 */
+  if(typeof AR==='undefined')return '';
+  /* <b>아직 못 읽었으면 0 이라고 말하지 않습니다</b> — 「오늘 팀이 할 일이
+     없다」 는 뜻이 되어 버립니다 (1번). */
+  if(!AR.loaded)
+    return '<div class="card hm-team"><div class="card-body">'+
+      '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b></div>'+
+      '<div class="hm-tm-none">팀 기록을 읽는 중입니다. 잠시만요.</div></div></div>';
+  var R=hmTeamRows(),i,j,tot=0,h,K=tdoOrder();
+  for(i=0;i<R.length;i++)tot+=R[i].n;
+  h='<div class="card hm-team"><div class="card-body">'+
+    '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b>'+
+      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\'\')">TFA 에서 전부 →</button></div>';
+  if(!R.length)
+    return h+'<div class="hm-tm-none">오늘 팀에서 손댈 사람이 없습니다. '+
+      '배정된 DB 가 생기면 여기 올라옵니다.</div></div></div>';
+  h+='<div class="hm-tm-sum"><b>'+tot+'건</b> · 설계사 <b>'+R.length+'명</b>'+
+     ' <span>많은 분부터</span></div>';
+  for(i=0;i<R.length&&i<HM_TEAM_SHOW;i++){
+    var r=R[i],chips='';
+    for(j=0;j<K.length;j++){
+      var c=r.st[K[j]];if(!c)continue;
+      chips+='<span class="hm-tm-c '+tdoColor(K[j])+'">'+osEsc(tdoLabel(K[j]))+' '+c+'</span>';
+    }
+    h+='<button type="button" class="hm-tm-r" onclick="hmTeamOpen(\''+osEsc(r.who)+'\')">'+
+       '<span class="nm">'+osEsc(arNameOf(r.who))+'</span>'+
+       '<span class="ch">'+chips+'</span>'+
+       '<span class="n">'+r.n+'</span><span class="ar">›</span></button>';
+  }
+  if(R.length>HM_TEAM_SHOW)
+    h+='<button type="button" class="hm-tm-more" onclick="hmTeamOpen(\'\')">'+
+       '+'+(R.length-HM_TEAM_SHOW)+'명 더 보기 →</button>';
+  return h+'</div></div>';
+}
+/* 눌러서 <b>그 사람 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
+   한 사람을 고르는 것은 <b>TFA 가 아는 한 곳</b>(AR.tkAll)에 맡긴다 (5번). */
+function hmTeamOpen(who){
+  try{
+    AR.cat='touch';
+    AR.tkAll=true;                       /* 팀 전체로 두고 */
+    AR.open=who||'';                     /* 그 사람을 펼친다 */
+  }catch(e){}
+  go('airep');
+}
+function hmTeamCss(){
+  if(document.getElementById('hmTeamCss'))return;
+  var st=document.createElement('style');st.id='hmTeamCss';
+  st.textContent='.hm-tm-h{display:flex;align-items:center;gap:7px;font-size:14px;'+
+    'letter-spacing:-.03em;margin-bottom:9px}'+
+   '.hm-tm-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:3px 11px;font-size:11px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit}'+
+   '.hm-tm-sum{font-size:12px;color:var(--ink-3);margin-bottom:9px}'+
+   '.hm-tm-sum span{color:var(--ink-5);font-size:11px}'+
+   '.hm-tm-none{font-size:11.5px;color:var(--ink-4);line-height:1.7;padding:4px 2px}'+
+   '.hm-tm-r{display:flex;align-items:center;gap:8px;width:100%;text-align:left;'+
+     'border:1px solid var(--ink-7);background:var(--bg-1);border-radius:10px;'+
+     'padding:9px 11px;margin-bottom:6px;cursor:pointer;font-family:inherit}'+
+   '.hm-tm-r:hover{filter:brightness(.98)}'+
+   '.hm-tm-r .nm{flex:none;font-size:12.5px;font-weight:800;letter-spacing:-.02em;min-width:52px}'+
+   '.hm-tm-r .ch{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px}'+
+   '.hm-tm-r .n{flex:none;font-size:13px;font-weight:900;color:var(--primary)}'+
+   '.hm-tm-r .ar{flex:none;color:var(--ink-5);font-size:13px}'+
+   '.hm-tm-c{font-size:10px;font-weight:800;border-radius:99px;padding:1px 7px;'+
+     'background:var(--ink-8);color:var(--ink-3)}'+
+   '.hm-tm-c.red{background:#FEE2E2;color:#B91C1C}'+
+   '.hm-tm-c.amb{background:#FEF3C7;color:#92400E}'+
+   '.hm-tm-c.grn{background:#DCFCE7;color:#15803D}'+
+   '.hm-tm-c.blu{background:#DBEAFE;color:#1D4ED8}'+
+   '.hm-tm-more{width:100%;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:10px;padding:8px;font-size:11.5px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit}';
+  document.head.appendChild(st);
+}
 var HM_CLI_DOOR=[
  ['clients','🗂️','고객 365일','한 분씩 깊게'],
  ['crm','📇','DB 통합 CRM','받은 DB 를 한 판에'],
@@ -18844,6 +19024,9 @@ function hmCliHtml(){
 function hmPaint(){
   var a=document.getElementById('hmToday');
   if(a)a.innerHTML=hmTodayHtml();
+  /* 팀 칸도 같이 — 기록이 늦게 실려 오면 그때 채워집니다 */
+  var t=document.getElementById('hmTeamHost');
+  if(t)t.innerHTML=hmTeamHtml();
   var b=document.getElementById('hmCalHost');
   if(b)b.innerHTML=hmCalHtml();
   var c=document.getElementById('hmCliHost');
@@ -18863,6 +19046,7 @@ function hmArm(){
   try{ if(typeof setupCss==='function')setupCss();
        if(typeof setupPaint==='function')setupPaint(); }catch(e){}
   /* 막혀 있는 것 — rdLoad 가 스스로 막아 10분에 한 번만 부릅니다 (7번) */
+  try{ if(typeof hmTeamCss==='function')hmTeamCss(); }catch(e5){}
   try{ if(typeof rdPaint==='function')rdPaint();
        if(typeof rdLoad==='function')rdLoad(); }catch(e){}
 }
@@ -18906,6 +19090,9 @@ function renderHome(){
     (OS.profile?'<div id="hmReadyHost"></div>':'')+
     /* ① 오늘 챙길 것 ② 달력 ③ 내 고객 ④ 30일 고객관리 (달력은 한 벌·5번) */
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
+    /* <b>대표는 내 오늘 바로 밑에서 팀 전체를 봅니다.</b> 리더가 아니면
+       빈 칸이라 안 보입니다 — 못 볼 것을 세워 두지 않습니다. */
+    (OS.profile?'<div id="hmTeamHost"></div>':'')+
     (OS.profile?('<div id="hmCalHost">'+hmCalHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmCliHost">'+hmCliHtml()+'</div>'):'')+
     (OS.profile?'<div id="ccHomeLine"></div>':'')+
