@@ -616,8 +616,14 @@ window.APEX_SB = window.APEX_SB || {
   --ease:cubic-bezier(.4,0,.2,1); --dur:.18s;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{height:100%;-webkit-text-size-adjust:100%;}
-body{font-family:var(--font);background:var(--ink-9);color:var(--ink-1);font-size:13px;line-height:1.55;letter-spacing:-.018em;word-break:keep-all;-webkit-font-smoothing:antialiased;height:100%;}
+/* <b>아래로 당겨도 새로고침되지 않게</b> 합니다.
+   폰에서 화면을 아래로 당기면 브라우저가 페이지를 다시 읽습니다. 그러면
+   보고 계시던 자리(펼친 칸·스크롤·쓰던 글)를 잃습니다. 사장님 말씀 —
+   「내가 킨 화면이 내가 끄지 않는 이상 처음으로 돌아가지 않도록」.
+   스크롤은 그대로 되고, <b>당겨서 새로고침만</b> 막습니다.
+   일부러 새로 읽고 싶으실 때는 화면마다 있는 「↻ 새로 읽기」 를 쓰십니다. */
+html{height:100%;-webkit-text-size-adjust:100%;overscroll-behavior-y:contain;}
+body{overscroll-behavior-y:contain;font-family:var(--font);background:var(--ink-9);color:var(--ink-1);font-size:13px;line-height:1.55;letter-spacing:-.018em;word-break:keep-all;-webkit-font-smoothing:antialiased;height:100%;}
 button,input,select,textarea{font-family:var(--font);outline:none;}
 a{color:inherit;text-decoration:none;}
 
@@ -768,7 +774,7 @@ a{color:inherit;text-decoration:none;}
 .key-pill.ok .dot{background:#34D399;}
 
 /* ── 메인 ── */
-.main{height:100vh;overflow-y:auto;background:var(--ink-9);scrollbar-width:thin;scrollbar-color:var(--ink-6) transparent;}
+.main{height:100vh;overflow-y:auto;overscroll-behavior-y:contain;background:var(--ink-9);scrollbar-width:thin;scrollbar-color:var(--ink-6) transparent;}
 .main::-webkit-scrollbar{width:6px;}
 .main::-webkit-scrollbar-thumb{background:var(--ink-6);border-radius:99px;}
 .tab-pane{display:none;padding:22px 26px 72px;max-width:1080px;}
@@ -13961,6 +13967,23 @@ function go(tab){
   if(tab!==lastTab)prevTab=lastTab;
   lastTab=tab;
   try{localStorage.setItem('apex_last_tab',tab);}catch(e){}
+  /* <b>주소(해시)도 여기서 같이 적는다.</b>
+     예전에는 이 줄이 go() <b>맨 끝</b>에 있었다. 그런데 위에서 보듯
+     CRM·계산기·지도·비포&애프터·한장비교·미끼레이더·과실비교·미끼화법·
+     상담자료·증권전달·보험맵 <b>열한 화면</b>이 그 줄에 닿기 전에 먼저
+     빠져나간다. 그래서 그 화면들을 열면 주소가 <b>직전 화면(대개 #home)에
+     그대로 멈춰</b> 있었다.
+
+     그 상태로 폰에서 <b>화면을 아래로 당기면</b>(당겨서 새로고침) 앱이 다시
+     뜨는데, bootTab() 이 <b>주소를 먼저</b> 보므로 보던 화면이 아니라
+     <b>홈이 열렸다.</b> 사장님이 「스크롤하거나 페이지를 밀면 갑자기 홈으로
+     돌아온다」 고 하신 그 자리다. 앱이 메모리에서 내려갔다 다시 뜰 때도
+     (아이폰에서 흔하다) 같았다.
+
+     lastTab 도 똑같은 이유로 안 적히다가 이 자리로 옮겨 고쳤다 —
+     주소만 저 뒤에 남아 있었다. <b>「지금 어디」를 적는 곳은 한 곳</b>이다
+     (5번). 덤으로 주소를 복사해 드리면 <b>그 화면</b>이 열린다. */
+  try{ if(window.history&&history.replaceState)history.replaceState(null,'','#'+tab); }catch(e){}
   if(!_ok){
     osFullMode('');
     var dynB=$('dynPane');if(dynB)dynB.innerHTML=osBlockedPageHtml(tab);
@@ -14132,7 +14155,7 @@ function go(tab){
   else dyn.innerHTML=renderToolPage(tab);
   if(!(tab==='settings'&&typeof osScrollArmed==='function'&&osScrollArmed()))$('main').scrollTop=0;
   if(tab!=='settings'&&typeof osScrollDisarm==='function')osScrollDisarm();
-  try{if(window.history&&history.replaceState)history.replaceState(null,'','#'+tab);}catch(e){}
+  /* 주소는 <b>위에서 이미</b> 적었다 — 여기 또 적으면 두 곳이 된다 (5번) */
   if(window.innerWidth<=880){$('sidebar').classList.remove('open');$('scrim').classList.remove('on');}
 }
 function exitFinance(){go(prevTab||'home');}
@@ -14476,8 +14499,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-15 15:10';
-var APP_BUILD_NOTE="<b>바탕화면에 캘린더 아이콘이 생겼습니다 — 그리고 아침 알람이 두 번 울리는 것을 미리 막았습니다.</b> 「내 폰에 설치」 → <b>이 화면만 따로 담기</b> 맨 앞에 <b>📅 내 캘린더</b> 가 섰습니다. 주소를 폰에 붙여넣고 홈 화면에 추가하시면 아이콘이 하나 더 생기고, <b>누르면 달력부터</b> 열립니다. 거기서 오늘·이번 달 일정을 보고 <b>폰 기본 달력(iCloud·구글)으로 내보내기</b>도 그대로 됩니다 — 고객 이름은 기본 마스킹입니다(3번). <b>「어플로 들어가도 되나요」 — 됩니다.</b> 오히려 <b>아이폰은 홈 화면에 담아야만</b> 알람이 옵니다. 다만 만들면서 함정을 하나 찾았습니다 — 아이폰은 홈 화면 <b>아이콘마다 다른 웹앱</b>으로 봅니다. 저장칸도 알람 구독도 따로라, 달력·CRM·TFA 아이콘마다 알람을 켜시면 같은 폰이 아침에 <b>그 수만큼</b> 울립니다. 「오늘 챙길 분이 없으면 안 울린다」 고 해 놓고 중복으로 울리면 같은 잘못입니다. 그래서 <b>두 겹으로</b> 막았습니다 — ① 바탕화면 아이콘에서는 <b>켜는 단추를 안 세우고</b> 「APEX 본 앱에서 한 번만 켜시면 됩니다」 라고 적습니다. ② 서버도 <b>같은 사람·같은 기기에는 한 번만</b> 보냅니다(가장 최근에 켠 것으로). 기기를 모르는 줄은 묶지 않습니다 — 모르는 것을 같은 것으로 치면 <b>울려야 할 폰이 빠집니다</b>(1번). 점검(<b>check-push</b>)에 12자리를 더했습니다. 만들면서 <b>제 점검이 헛것이던 자리</b>도 하나 잡았습니다 — 중복 막는 함수를 <b>직접 불러</b> 보기만 하고, 예약이 실제로 그것을 쓰는지는 안 재고 있었습니다. 이제 예약을 돌려 <b>정말로 안 보내는지</b> 봅니다. 다섯을 일부러 되돌려 빨간불도 확인했습니다.";
+var APP_BUILD='2026-09-15 17:30';
+var APP_BUILD_NOTE="<b>보시던 화면이 갑자기 홈으로 돌아가던 것을 고쳤습니다.</b> 사장님 말씀 — 「스크롤하거나 페이지를 밀면 갑자기 홈으로 돌아온다. 내가 킨 화면이 내가 끄지 않는 이상 처음으로 돌아가지 않도록」. 까닭이 <b>둘</b>이었고 둘 다 「지금 어디인가」를 <b>두 곳에서</b> 적고 있어서 생긴 일이었습니다(5번). ① 앱을 세우는 자리에 <b>go('home')</b> 이 박혀 있었습니다. 그것이 맨 끝의 go(bootTab()) 보다 <b>먼저</b> 돌면서 보던 화면 기억을 통째로 지웠습니다 — 화면 이름·저장값·주소(#해시) 셋 다 home 으로 덮였고, 그다음 bootTab() 은 <b>방금 덮인 값</b>을 읽었습니다. ② 주소(#해시)를 적는 줄이 go() <b>맨 끝</b>에 있었습니다. 그런데 DB 통합 CRM·재무설계 계산기·지도·비포&amp;애프터·한장 보험료 비교·미끼레이더·과실비교·미끼화법·상담자료·증권 전달·보험맵 <b>열한 화면</b>은 그 줄에 닿기 전에 먼저 빠져나갑니다. 그래서 그 화면들을 열어도 주소가 직전 화면에 <b>멈춰</b> 있었습니다. 이제 둘 다 <b>「지금 어디」를 적는 한 자리</b>에서 같이 적습니다. 열세 화면을 열고 실제로 새로고침해 <b>전부 그 자리에 남는 것</b>을 확인했습니다. 덤으로 주소를 복사해 드리면 <b>그 화면</b>이 열립니다. 그리고 폰에서 <b>화면을 아래로 당겨도 새로고침되지 않게</b> 막았습니다 — 스크롤은 그대로입니다. 일부러 새로 읽고 싶으실 때는 화면마다 있는 「↻ 새로 읽기」 를 쓰십니다. 점검(<b>check-stay</b>)에 다섯 자리를 더했습니다. 셋을 일부러 되돌려 보니 <b>열세 화면이 전부 홈으로 튕기는 것</b>까지 그대로 재현됐습니다 — 사장님이 겪으신 그 증상입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -35805,7 +35828,20 @@ renderNav();
 try{navFoldApply();}catch(e){}
 updateKeyPill();
 osVerPaint();
-go('home');
+/* <b>첫 화면을 여기서 정하지 않습니다.</b>
+   예전에는 이 자리에서 go('home') 을 불렀습니다. 그런데 그것이 파일 맨
+   끝의 go(bootTab()) 보다 <b>먼저</b> 돌면서 「보던 화면」 기억을 통째로
+   지웠습니다 — lastTab · apex_last_tab · 주소(#해시) 셋 다 home 으로
+   덮였고, 그 뒤 bootTab() 은 <b>방금 덮인 값</b>을 읽었습니다.
+
+   그래서 폰에서 화면을 아래로 당기거나(당겨서 새로고침) 앱이 메모리에서
+   내려갔다 다시 뜨면, <b>무엇을 보고 계셨든 홈</b>이 열렸습니다.
+   사장님이 「스크롤하거나 페이지를 밀면 갑자기 홈으로 돌아온다」 고 하신
+   그 자리입니다.
+
+   <b>첫 화면을 정하는 곳은 파일 맨 끝 한 곳</b>입니다 (5번) —
+   go(bootTab()). bootTab() 은 여기보다 뒤에 정의되므로 여기서는 부를 수도
+   없습니다. check-stay 가 이 줄이 되살아나는지 지킵니다. */
 try{osCapApply();}catch(e){}
 </script>
 
