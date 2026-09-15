@@ -42,12 +42,26 @@ const WAIT=`
       })();
     });
   };
+  /* <b>앱이 칠할 때까지</b> 기다린다. 「옆 칸이 찼으니 됐겠지」 로는 못 잰다 —
+     #hmCliHost 같은 칸은 renderHome() 이 <b>그 자리에서</b> 채우므로 기다림이
+     0초가 되고, 그러면 「안 뜬다」 쪽 판정이 <b>헛되게 통과</b>한다.
+     아직 안 그려진 것을 「안 뜬다」 로 읽는 점검은 알람이 아니다 (8번).
+     그래서 hmPaint 를 한 겹 싸서 <b>실제로 칠해진 것</b>을 센다.        */
+  window.__painted=0;
+  (function(){var real=window.hmPaint;
+    window.hmPaint=function(){var r=real.apply(this,arguments);window.__painted++;return r;};})();
   window.__home=function(){
+    var n=window.__painted;
     go('home');
-    return window.__wait(function(){
-      var h=document.getElementById('hmTeamHost');
-      return (h&&h.innerHTML.length)?h:null;
-    });
+    return window.__wait(function(){ return (window.__painted>n)?true:null; },8000)
+      .then(function(){
+        /* <b>설 자리면 설 때까지</b> 기다린다 — 칠하기가 한 번 더 남아 있을
+           수 있습니다. 안 설 자리(설계사)는 이미 한 번 칠해진 뒤라 「없다」
+           가 참입니다. 이렇게 해야 타이밍에 기대지 않습니다 (8번). */
+        if(typeof arIsLead==='function'&&arIsLead())
+          return window.__wait(function(){
+            return document.querySelector('#dynPane .hm-team'); },8000);
+      });
   };`;
 
 /* 견본 — 설계사 여덟 명에게 열두 건. <b>날짜는 앱에게 물어</b> 만든다(KST). */
@@ -123,14 +137,10 @@ const SEED=(role)=>WAIT+`
   is(R.shown, '대표 화면에 <b>「오늘 팀 전체」</b> 가 선다'+(R.why?(' ← '+R.why):''));
   const M=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home');
     /* 설계사에게는 <b>안 떠야</b> 하므로 「뜨기를」 기다릴 수 없습니다.
-       대신 <b>대표라면 떴을 만큼</b> 기다린 뒤에 봅니다 — 그래야 「아직 안
-       그려졌을 뿐」 과 「안 뜬다」 를 가릅니다. */
-    await window.__wait(function(){
-      var h=document.getElementById('hmCliHost');
-      return (h&&h.innerHTML.length)?h:null;
-    });
+       대신 앱이 <b>실제로 칠한 뒤에</b> 봅니다 — 그래야 「아직 안 그려졌을
+       뿐」 과 「안 뜬다」 를 가릅니다. */
+    await window.__home();
     const c=document.querySelector('#dynPane .hm-team');
     const body=document.getElementById('dynPane').textContent;
     return { shown:!!c, leaked:/홍길순|홍말순|홍갑돌/.test(body) };

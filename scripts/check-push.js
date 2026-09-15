@@ -343,20 +343,25 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     const out={},mk=(perm,sw)=>{
       window.almCan=()=>({sw:sw!==false,notif:sw!==false,push:true,ios:false,stand:true,perm:perm});
     };
-    /* <b>시간을 세지 않고 결과를 기다린다.</b> 홈 칸은 hmArm() 이 1.2초
-       뒤에 칠하고, 그 전에 서버를 부릅니다. CI 에는 네트워크가 있어 그
-       부름이 실제로 나가므로 「700밀리초면 그려졌겠지」 는 <b>CI 에서만
-       빨간불</b>이 납니다 — 헛알람입니다 (8번).
-       한 줄이 <b>안 떠야</b> 하는 자리도 있어, 늘 옆 칸(hmCliHost)이
-       칠해지는 것을 기다린 뒤에 봅니다 — 「아직 안 그려졌을 뿐」 과
-       「안 뜬다」 를 가르는 자리입니다. */
+    /* <b>시간을 세지 않고, 앱이 칠할 때까지</b> 기다린다. 홈 칸은 hmArm()
+       이 1.2초 뒤에 칠하므로 「700밀리초면 됐겠지」 는 CI 에서만 빨간불이
+       납니다. 그렇다고 옆 칸이 차기를 기다려도 안 됩니다 — #hmCliHost 는
+       renderHome() 이 <b>그 자리에서</b> 채워 기다림이 0초가 되고, 그러면
+       한 줄이 <b>안 떠야</b> 하는 자리가 <b>헛되게 통과</b>합니다 (8번).
+       hmPaint 를 한 겹 싸서 <b>실제로 칠해진 것</b>을 셉니다. */
     const wait=(fn,ms)=>new Promise(done=>{ const t0=Date.now();
       (function tick(){ let v=null; try{ v=fn(); }catch(e){}
-        if(v||Date.now()-t0>(ms||6000))return done(v||null);
+        if(v||Date.now()-t0>(ms||8000))return done(v||null);
         setTimeout(tick,60); })(); });
-    const shown=async()=>{ go('home');
-      await wait(()=>{const h=document.getElementById('hmCliHost');
-        return (h&&h.innerHTML.length)?h:null;});
+    let painted=0;
+    (function(){const real=window.hmPaint;
+      window.hmPaint=function(){const r=real.apply(this,arguments);painted++;return r;};})();
+    const shown=async()=>{ const n=painted; go('home');
+      await wait(()=>painted>n?true:null);
+      /* <b>뜰 자리면 뜰 때까지</b> 기다린다 — 칠하기가 한 번 더 남아 있을 수
+         있습니다. 안 뜰 자리는 이미 한 번 칠해진 뒤라 「없다」 가 참입니다.
+         이렇게 해야 타이밍에 기대지 않습니다 (8번). */
+      if(almNudgeOn())await wait(()=>document.querySelector('#dynPane .alm-nudge'));
       const e=document.querySelector('#dynPane .alm-nudge');
       return e?e.textContent.replace(/\s+/g,' ').trim():''; };
     try{ localStorage.removeItem('apex_alm_bye'); }catch(e){}
@@ -375,9 +380,10 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     let went='',asked=0;
     const g=window.go,a=window.almAsk;
     window.go=function(t){went=t;}; window.almAsk=function(){asked++;};
-    document.querySelector('#dynPane .alm-nudge .ok').click();
+    const btn=document.querySelector('#dynPane .alm-nudge .ok');
+    if(btn)btn.click();
     window.go=g; window.almAsk=a;
-    out.asked=asked; out.went=went;
+    out.asked=asked; out.went=went; out.btn=!!btn;
     delete window.almCan;
     return out;
   },SEED);
@@ -387,7 +393,8 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(N.on===''&&N.no==='', '이미 정하신 분께는 <b>안 뜬다</b> — 켜셨든 막으셨든');
   is(N.cant==='', '<b>못 받는 브라우저에는 안 권한다</b> — 못 할 일을 권하면 헛것이다 (8번)');
   is(N.afterBye===''&&N.afterByeReopen==='', '✕ 를 누르시면 <b>다시 안 뜬다</b>');
-  is(N.asked===1&&N.went==='', '홈에서 <b>그 자리에서</b> 켠다 — 설치 화면까지 안 가신다');
+  is(N.btn&&N.asked===1&&N.went==='', '홈에서 <b>그 자리에서</b> 켠다 — 설치 화면까지 안 가신다'+
+     (N.btn?'':' ← 단추가 안 섰다'));
 
   console.log('\n[7] 출발 점검이 이 줄을 안다');
   const R=await page.evaluate(async(seed)=>{
