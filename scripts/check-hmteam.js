@@ -26,10 +26,42 @@ const srv=http.createServer((rq,rs)=>{
 });
 let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++;};
 
+/* <b>시간을 세지 않고 결과를 기다린다.</b> 홈은 hmArm() 이 1.2초 뒤에 칠하고,
+   그 전에 cmLoadAll 이 서버를 부릅니다. CI 에는 네트워크가 있어 그 부름이
+   실제로 나가므로, 「700밀리초 기다렸으니 그려졌겠지」 는 <b>CI 에서만
+   빨간불</b>이 납니다 — 헛알람입니다 (8번). 그려질 때까지 봅니다.       */
+const WAIT=`
+  window.__wait=function(fn,ms){
+    ms=ms||6000;
+    return new Promise(function(done){
+      var t0=Date.now();
+      (function tick(){
+        var v; try{ v=fn(); }catch(e){ v=null; }
+        if(v||Date.now()-t0>ms)return done(v||null);
+        setTimeout(tick,60);
+      })();
+    });
+  };
+  window.__home=function(){
+    go('home');
+    return window.__wait(function(){
+      var h=document.getElementById('hmTeamHost');
+      return (h&&h.innerHTML.length)?h:null;
+    });
+  };`;
+
 /* 견본 — 설계사 여덟 명에게 열두 건. <b>날짜는 앱에게 물어</b> 만든다(KST). */
-const SEED=(role)=>`
+const SEED=(role)=>WAIT+`
   OS.session={user:{id:'me'}};
   OS.profile={id:'me',name:'홍길동',role:'${role}',active:true,plan:'vip'};
+  /* <b>늦게 온 서버 대답이 내 정보를 지우지 못하게</b> 한다.
+     CI 에는 네트워크가 있어 osLoadProfile 의 진짜 요청이 나갑니다. 로그인
+     안 된 판이라 빈 손으로 돌아오고, osProfileApply 가 OS.profile=null 로
+     지웁니다 — 그러면 홈이 아예 안 서서 <b>CI 에서만</b> 빨간불이 납니다.
+     여기서 재려는 것은 로그인이 아니라 <b>팀 카드</b>입니다 (8번). */
+  window.osLoadProfile=function(){};
+  window.osProfileApply=function(){};
+  window.osShowLoginGate=function(){};
   (function(){
     var mk=function(id,nm,team){
       var r={id:id,name:nm,role:'member',team:team,total:10,last:'',lastAtt:'',days:3,any:true,
@@ -76,15 +108,29 @@ const SEED=(role)=>`
   console.log('\n[1] 리더에게만 뜬다 (3번)');
   const R=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     const c=document.querySelector('#dynPane .hm-team');
+    /* 못 섰으면 <b>무엇 때문인지</b> 같이 돌려준다 — 「안 선다」 만 적으면
+       다음 사람이 또 처음부터 찾습니다 */
     return { shown:!!c, txt:c?c.textContent.replace(/\s+/g,' ').trim():'',
-             rows:document.querySelectorAll('#dynPane .hm-team .hm-tm-r').length };
+             rows:document.querySelectorAll('#dynPane .hm-team .hm-tm-r').length,
+             why:c?'':('프로필 '+(OS.profile?'있음':'없음')+
+                       ' · 리더 '+((typeof arIsLead==='function'&&arIsLead())?'예':'아니오')+
+                       ' · 자리 '+(document.getElementById('hmTeamHost')?'있음':'없음')+
+                       ' · 읽음 '+(AR.loaded?'예':'아니오')+
+                       ' · 화면 '+(window.TAB||'?')) };
   },SEED('owner'));
-  is(R.shown, '대표 화면에 <b>「오늘 팀 전체」</b> 가 선다');
+  is(R.shown, '대표 화면에 <b>「오늘 팀 전체」</b> 가 선다'+(R.why?(' ← '+R.why):''));
   const M=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    go('home');
+    /* 설계사에게는 <b>안 떠야</b> 하므로 「뜨기를」 기다릴 수 없습니다.
+       대신 <b>대표라면 떴을 만큼</b> 기다린 뒤에 봅니다 — 그래야 「아직 안
+       그려졌을 뿐」 과 「안 뜬다」 를 가릅니다. */
+    await window.__wait(function(){
+      var h=document.getElementById('hmCliHost');
+      return (h&&h.innerHTML.length)?h:null;
+    });
     const c=document.querySelector('#dynPane .hm-team');
     const body=document.getElementById('dynPane').textContent;
     return { shown:!!c, leaked:/홍길순|홍말순|홍갑돌/.test(body) };
@@ -95,7 +141,7 @@ const SEED=(role)=>`
   console.log('\n[2] 사람별로 묶인다 — 새로 안 센다 (5번)');
   const G=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     const rows=hmTeamRows(), all=arTouch('');
     let sum=0; rows.forEach(r=>sum+=r.n);
     const c=document.querySelector('#dynPane .hm-team');
@@ -128,7 +174,7 @@ const SEED=(role)=>`
   console.log('\n[3] 아직 못 읽었으면 0 이라고 말하지 않는다 (1번)');
   const L=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     /* <b>아직 읽는 중인 그 순간</b>을 그대로 만든다. arLoad 를 잠시 세워 두지
        않으면 재는 사이에 스스로 끝나 버려, 이 알람은 영영 안 울린다 (8번). */
     const real=window.arLoad; window.arLoad=function(){};
@@ -149,12 +195,18 @@ const SEED=(role)=>`
      '진짜 없을 때는 <b>왜 비었는지</b> 말한다 — 「'+L.empty.slice(0,52)+'…」');
 
   console.log('\n[4] 서버를 더 안 부른다 (7번)');
+  /* <b>시간 창으로 세지 않습니다.</b> 홈에는 이 카드 말고도 서버를 부르는
+     것이 있어(출근 기록·AI 보고), CI 처럼 네트워크가 있는 자리에서는 남의
+     부름이 창 안에 들어와 <b>헛알람</b>이 납니다 (8번). 카드 그리는 줄을
+     <b>그 자리에서</b> 부르고 바로 셉니다 — 그 사이에 낀 것은 이 카드가
+     부른 것뿐입니다. */
   const N=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     window.__net.length=0;
-    hmTeamHtml(); hmTeamRows(); hmPaint();
-    await new Promise(r=>setTimeout(r,500));
+    hmTeamRows(); hmTeamHtml(); hmTeamCss();
+    const t=document.getElementById('hmTeamHost');
+    if(t)t.innerHTML=hmTeamHtml();
     return { n:window.__net.length, urls:window.__net.slice(0,3) };
   },SEED('owner'));
   is(N.n===0, '카드를 그려도 <b>서버를 한 번도 안 부른다</b> — '+N.n+'번'+
@@ -165,7 +217,7 @@ const SEED=(role)=>`
   console.log('\n[5] 눌러서 그 사람 것으로 펼쳐진다');
   const O=await page.evaluate(async(seed)=>{
     (0,eval)(seed);
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     let went=''; const g=window.go; window.go=function(t){went=t;};
     document.querySelectorAll('#dynPane .hm-team .hm-tm-r')[1].click();
     const one={went,cat:AR.cat,all:AR.tkAll,open:AR.open};
@@ -186,7 +238,7 @@ const SEED=(role)=>`
     /* 꺾쇠가 섞인 이름을 <b>맨 위로</b> 올려 잘리지 않게 한다 */
     AR.db=[{id:'z1',who:'u8',name:'홍길동',region:'',src:'',stage:'PC',appt:'',days:2,n:1,cAt:'',pAt:''},
            {id:'z2',who:'u8',name:'홍길동',region:'',src:'',stage:'부재',appt:'',days:9,n:1,cAt:'',pAt:''}];
-    go('home'); await new Promise(r=>setTimeout(r,700));
+    await window.__home();
     const c=document.querySelector('#dynPane .hm-team');
     return { html:c?c.innerHTML:'', txt:c?c.textContent:'' };
   },SEED('owner'));

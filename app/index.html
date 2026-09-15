@@ -12864,6 +12864,50 @@ function almSync(){
     },function(){});
   }catch(e){}
 }
+/* ── <b>한 번만</b> 알려 드리는 한 줄 ─────────────────────────────
+   설계사에게는 「출발 점검」이 안 열립니다(못 고칠 것을 매일 보여 드리는
+   것은 재촉일 뿐이라 그렇게 두었습니다). 그래서 <b>팀은 이 기능이 있는
+   줄도 모릅니다</b> — 200명·300명이면 그게 곧 아무도 안 켠다는 뜻입니다.
+
+   <b>재촉이 아니라 소개입니다.</b> 그래서 딱 이럴 때만 섭니다 —
+     · 이 브라우저가 알람을 <b>받을 수 있고</b>
+     · 아직 <b>한 번도 안 물어봤고</b>(허용도 차단도 아닌 상태)
+     · 닫으신 적이 없을 때
+   허용하시든 차단하시든 닫으시든, 그 뒤로는 <b>다시 안 뜹니다</b>.
+   헛것을 세우지 않습니다 (8번).                                     */
+var ALM_BYE_KEY='apex_alm_bye';
+function almNudgeOn(){
+  var c=almCan();
+  if(!c.sw||!c.notif)return false;          /* 못 받는 브라우저에 권하지 않는다 */
+  if(c.perm!=='default')return false;       /* 이미 정하셨다 */
+  try{ if(localStorage.getItem(ALM_BYE_KEY))return false; }catch(e){}
+  return true;
+}
+function almNudgeOff(){
+  try{ localStorage.setItem(ALM_BYE_KEY,'1'); }catch(e){}
+  almNudgePaint();
+}
+function almNudgeHtml(){
+  if(!OS.profile||!almNudgeOn())return '';
+  almCss();
+  return '<div class="alm-nudge">'+
+    '<span class="ic">🔔</span>'+
+    '<span class="tx"><b>아침에 폰이 알려 드릴까요?</b> 오늘 챙길 분이 있는 날만 울립니다. '+
+      '<span>고객 이름은 안 담깁니다</span></span>'+
+    '<button type="button" class="ok" onclick="almAskFromHome()">켜기</button>'+
+    '<button type="button" class="no" onclick="almNudgeOff()" aria-label="다시 안 보기">✕</button>'+
+  '</div>';
+}
+function almNudgePaint(){ var el=document.getElementById('almNudge'); if(el)el.innerHTML=almNudgeHtml(); }
+/* 홈에서 누르시면 <b>여기서 끝냅니다</b> — 「설치 화면으로 가서 찾으세요」 는
+   두 걸음이고, 두 걸음이면 안 하십니다. 아이폰처럼 먼저 담아야 하는 자리만
+   그 화면으로 모십니다.                                             */
+function almAskFromHome(){
+  var w=almWhy();
+  if(w){ toast(w.replace(/<[^>]*>/g,''),8000); go('phone_app'); return; }
+  almAsk();
+  setTimeout(almNudgePaint,900);
+}
 function almOn(){ return almCan().perm==='granted'; }
 function almPhoneOn(){ return !!(ALM.sub&&ALM.sub.endpoint); }
 function almPaint(){ var el=document.getElementById('almHost'); if(el)el.innerHTML=almCardHtml(); }
@@ -12920,7 +12964,16 @@ function almCss(){
    '.alm-r .n{color:var(--ink-4)}'+
    '.alm-pv{margin-top:11px;border:1px dashed var(--ink-7);border-radius:10px;padding:10px 12px;'+
      'font-size:11.5px;line-height:1.7;color:var(--ink-3);background:var(--bg-1)}'+
-   '.alm-pv span{color:var(--ink-4)}';
+   '.alm-pv span{color:var(--ink-4)}'+
+   '.alm-nudge{display:flex;align-items:center;gap:9px;margin-bottom:11px;'+
+     'border:1px solid #BFDBFE;background:#EFF6FF;border-radius:12px;padding:9px 11px}'+
+   '.alm-nudge .ic{flex:none;font-size:16px}'+
+   '.alm-nudge .tx{flex:1;min-width:0;font-size:11.5px;line-height:1.6;color:#1E3A8A}'+
+   '.alm-nudge .tx span{color:#3B5BA5}'+
+   '.alm-nudge .ok{flex:none;border:0;background:var(--primary);color:#fff;border-radius:99px;'+
+     'padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer;font-family:inherit}'+
+   '.alm-nudge .no{flex:none;border:0;background:transparent;color:#60789C;'+
+     'font-size:13px;cursor:pointer;padding:4px 2px;font-family:inherit}';
   document.head.appendChild(st);
 }
 /* ══════════════════════════════════════════════════════════════════
@@ -19390,6 +19443,7 @@ function hmPaint(){
   var a=document.getElementById('hmToday');
   if(a)a.innerHTML=hmTodayHtml();
   /* 팀 칸도 같이 — 기록이 늦게 실려 오면 그때 채워집니다 */
+  try{ if(typeof almNudgePaint==='function')almNudgePaint(); }catch(e0){}
   var t=document.getElementById('hmTeamHost');
   if(t)t.innerHTML=hmTeamHtml();
   var b=document.getElementById('hmCalHost');
@@ -19458,6 +19512,9 @@ function renderHome(){
     (OS.profile?'<div id="hmReadyHost"></div>':'')+
     /* ① 오늘 챙길 것 ② 달력 ③ 내 고객 ④ 30일 고객관리 (달력은 한 벌·5번) */
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
+    /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
+       밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
+    (OS.profile?('<div id="almNudge"></div>'):'')+
     /* <b>대표는 내 오늘 바로 밑에서 팀 전체를 봅니다.</b> 리더가 아니면
        빈 칸이라 안 보입니다 — 못 볼 것을 세워 두지 않습니다. */
     (OS.profile?'<div id="hmTeamHost"></div>':'')+

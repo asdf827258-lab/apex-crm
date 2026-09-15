@@ -43,6 +43,12 @@ const FAKE=`
 const SEED=`
   OS.session={user:{id:'me'}};
   OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
+  /* 늦게 온 「내 정보 읽기」가 OS.profile 을 지우면 홈이 아예 안 섭니다.
+     CI 에는 네트워크가 있어 그 요청이 진짜로 나갑니다 — 여기서 재려는
+     것은 로그인이 아니라 <b>알람</b>입니다 (8번). */
+  window.osLoadProfile=function(){};
+  window.osProfileApply=function(){};
+  window.osShowLoginGate=function(){};
   AR.loaded=true; AR.busy=false; AR.cliRows=[];
   AR.db=[
    {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:''},
@@ -103,7 +109,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   console.log('\n[2] 알람 글 — 이름이 한 글자도 없다 (3번)');
   const L=await page.evaluate(async(a)=>{
     (0,eval)(a.seed); (0,eval)(a.fake);
-    go('home'); await new Promise(r=>setTimeout(r,800));
+    go('home'); await new Promise(r=>setTimeout(r,300));
     const d=almLine(), steps=hmSteps().length;
     AR.db=[]; AR.cliRows=[];
     const none=almLine();
@@ -330,6 +336,58 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      '서버에 <b>상태 표를 베껴 두지 않았다</b> (5번)');
   is(/\[functions\."push"\]/.test(TOML)&&/schedule = "0 \* \* \* \*"/.test(TOML),
      '<b>매시 정각</b>에 돌게 적어 두었다 — 사람마다 받고 싶은 시각이 다르다');
+
+  console.log('\n[6-2] 홈에서 <b>한 번만</b> 알려 드린다 — 재촉이 아니라 소개');
+  const N=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    const out={},mk=(perm,sw)=>{
+      window.almCan=()=>({sw:sw!==false,notif:sw!==false,push:true,ios:false,stand:true,perm:perm});
+    };
+    /* <b>시간을 세지 않고 결과를 기다린다.</b> 홈 칸은 hmArm() 이 1.2초
+       뒤에 칠하고, 그 전에 서버를 부릅니다. CI 에는 네트워크가 있어 그
+       부름이 실제로 나가므로 「700밀리초면 그려졌겠지」 는 <b>CI 에서만
+       빨간불</b>이 납니다 — 헛알람입니다 (8번).
+       한 줄이 <b>안 떠야</b> 하는 자리도 있어, 늘 옆 칸(hmCliHost)이
+       칠해지는 것을 기다린 뒤에 봅니다 — 「아직 안 그려졌을 뿐」 과
+       「안 뜬다」 를 가르는 자리입니다. */
+    const wait=(fn,ms)=>new Promise(done=>{ const t0=Date.now();
+      (function tick(){ let v=null; try{ v=fn(); }catch(e){}
+        if(v||Date.now()-t0>(ms||6000))return done(v||null);
+        setTimeout(tick,60); })(); });
+    const shown=async()=>{ go('home');
+      await wait(()=>{const h=document.getElementById('hmCliHost');
+        return (h&&h.innerHTML.length)?h:null;});
+      const e=document.querySelector('#dynPane .alm-nudge');
+      return e?e.textContent.replace(/\s+/g,' ').trim():''; };
+    try{ localStorage.removeItem('apex_alm_bye'); }catch(e){}
+    mk('default'); out.first=await shown();
+    mk('granted'); out.on=await shown();
+    mk('denied');  out.no=await shown();
+    mk('default',false); out.cant=await shown();
+    /* 닫으면 <b>다시 안 뜬다</b> */
+    mk('default'); await shown(); almNudgeOff();
+    out.afterBye=(document.querySelector('#dynPane .alm-nudge')||{}).textContent||'';
+    out.afterByeReopen=await shown();
+    try{ localStorage.removeItem('apex_alm_bye'); }catch(e){}
+    /* 홈에서 눌러 <b>그 자리에서</b> 켜진다 */
+    mk('default');
+    await shown();
+    let went='',asked=0;
+    const g=window.go,a=window.almAsk;
+    window.go=function(t){went=t;}; window.almAsk=function(){asked++;};
+    document.querySelector('#dynPane .alm-nudge .ok').click();
+    window.go=g; window.almAsk=a;
+    out.asked=asked; out.went=went;
+    delete window.almCan;
+    return out;
+  },SEED);
+  is(/아침에 폰이 알려 드릴까요/.test(N.first),
+     '아직 한 번도 안 물어본 분께 <b>한 줄</b>이 뜬다 — 「'+N.first.slice(0,30)+'…」');
+  is(/고객 이름은 안 담/.test(N.first), '거기서도 <b>이름은 안 담는다</b>고 먼저 말한다 (3번)');
+  is(N.on===''&&N.no==='', '이미 정하신 분께는 <b>안 뜬다</b> — 켜셨든 막으셨든');
+  is(N.cant==='', '<b>못 받는 브라우저에는 안 권한다</b> — 못 할 일을 권하면 헛것이다 (8번)');
+  is(N.afterBye===''&&N.afterByeReopen==='', '✕ 를 누르시면 <b>다시 안 뜬다</b>');
+  is(N.asked===1&&N.went==='', '홈에서 <b>그 자리에서</b> 켠다 — 설치 화면까지 안 가신다');
 
   console.log('\n[7] 출발 점검이 이 줄을 안다');
   const R=await page.evaluate(async(seed)=>{
