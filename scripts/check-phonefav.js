@@ -257,6 +257,10 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
       ios: /홈 화면에 추가/.test(t),
       and: /앱 설치/.test(t),
       apps: document.querySelectorAll('.pwa-app').length,
+      /* <b>표와 같은 수</b>로 잰다. 「셋」 처럼 개수를 박아 두면 화면을 하나
+         더 담을 수 있게 할 때마다 이 줄이 낡아 거짓말이 된다 (8번). */
+      appsTable: (typeof PWA_APPS !== 'undefined') ? PWA_APPS.length : -1,
+      appsFirst: (typeof PWA_APPS !== 'undefined' && PWA_APPS[0]) ? PWA_APPS[0].id : '',
       urls: Array.prototype.map.call(document.querySelectorAll('.pa-m code'), e => e.textContent),
       item: it, guides: gs,
       inGroups: Array.prototype.some.call(
@@ -271,7 +275,10 @@ const ok = (c, m) => { if (!c) fail.push(m); else console.log('  ✓ ' + m); };
   ok(r.guides[0] === '내 폰에 설치', '맨 위 첫 단추다 — ' + (r.guides[0] || '없음') + ' / ' + r.guides.join(' · '));
   ok(r.ios, '아이폰에서 하는 길을 적어 준다');
   ok(r.and, '안드로이드에서 하는 길도 적어 준다');
-  ok(r.apps === 3, '따로 담을 화면 셋을 보여 준다');
+  ok(r.apps > 0 && r.apps === r.appsTable,
+     '따로 담을 화면을 <b>표에 적힌 만큼</b> 보여 준다 — ' + r.apps + '개 (표 ' + r.appsTable + ')');
+  ok(r.appsFirst === 'mycal',
+     '맨 앞이 <b>내 캘린더</b> 다 — 아침에 제일 먼저 여는 것이라 그렇다 (' + r.appsFirst + ')');
   ok(r.urls.every(u => /\?go=/.test(u)), '주소가 그 화면으로 바로 간다 — ' + (r.urls[0] || ''));
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? (' — ' + errs[0]) : ''));

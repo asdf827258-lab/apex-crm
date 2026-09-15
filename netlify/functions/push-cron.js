@@ -31,7 +31,10 @@ exports.handler = async function () {
   if (!g.ok) return { statusCode: 200, headers: P.JSON_HEAD,
     body: JSON.stringify({ ok: false, sent: 0, reason: '장부를 못 읽었습니다 — ' + g.text.slice(0, 160) }) };
 
-  const rows = g.json || [];
+  /* <b>한 폰에 한 번만</b> — 홈 화면 아이콘을 여럿 담으면 아이폰은 그것을
+     각각 다른 웹앱으로 보아 구독이 여러 개 생깁니다. 그대로 두면 아침에
+     그 수만큼 울립니다. */
+  const rows = P.onePerDevice(g.json || []);
   const msg = P.morning();
   let sent = 0, gone = 0, failed = 0;
   for (const row of rows) {

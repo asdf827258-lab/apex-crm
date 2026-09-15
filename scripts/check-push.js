@@ -292,8 +292,14 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     calls.push({u:String(u),m:(o&&o.method)||'GET',b:(o&&typeof o.body==='string')?o.body:''});
     if(String(u).indexOf('/rest/v1/')>=0){
       const rows=(String(u).indexOf('select=')>=0&&(o||{}).method===undefined)
-        ? [{endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0},
-           {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0}] : [];
+        ? [{endpoint:'https://push.example.com/dead',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+            owner_id:'u1',ua:'Android',created_at:'2026-09-05'},
+           {endpoint:'https://push.example.com/live',p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+            owner_id:'u1',ua:'iPhone', created_at:'2026-09-10'},
+           /* <b>같은 폰의 옛 구독</b> — 홈 화면에 아이콘을 하나 더 담으면 이렇게 생긴다.
+              여기로도 보내면 사장님 폰이 아침에 두 번 울린다. */
+           {endpoint:'https://push.example.com/dup', p256dh:bu(uaPub),auth:bu(uaAuth),hour:0,fail:0,
+            owner_id:'u1',ua:'iPhone', created_at:'2026-09-01'}] : [];
       return {ok:true,status:200,text:async()=>JSON.stringify(rows)};
     }
     if(String(u).indexOf('/dead')>=0)return {ok:false,status:410,text:async()=>'gone'};
@@ -438,6 +444,82 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(N.afterBye===''&&N.afterByeReopen==='', '✕ 를 누르시면 <b>다시 안 뜬다</b>');
   is(N.btn&&N.asked===1&&N.went==='', '홈에서 <b>그 자리에서</b> 켠다 — 설치 화면까지 안 가신다'+
      (N.btn?'':' ← 단추가 안 섰다'));
+
+  console.log('\n[6-4] <b>어플로 들어가도 된다</b> · 바탕화면 아이콘은 두 번 안 울린다');
+  /* 사장님 물음 — 「어플로 들어가도 이렇게 할 수 있는 거지?」
+     됩니다. 오히려 <b>아이폰은 홈 화면에 담아야만</b> 알람이 옵니다.
+     다만 아이콘을 여럿 담으면 아이폰은 그것을 <b>각각 다른 웹앱</b>으로
+     보아 구독이 여러 개 생깁니다 — 그대로 두면 아침에 그 수만큼 울립니다.
+     그래서 두 겹으로 막습니다: 아이콘에서는 안 권하고, 서버도 한 기기에
+     한 번만 보냅니다.                                                 */
+  const A=await page.evaluate(async(a)=>{
+    (0,eval)(a.seed); (0,eval)(a.fake);
+    const out={},real=window.pwaInstalled;
+    /* ① 홈 화면에 담아 연 <b>본 앱</b> — 여기서는 켜신다 */
+    window.pwaInstalled=()=>true;
+    history.replaceState(null,'',location.pathname);
+    go('phone_app'); await new Promise(r=>setTimeout(r,700));
+    almCss(); almPaint();
+    const h1=(document.getElementById('almHost')||{}).innerHTML||'';
+    out.mainBtn=/almAsk\(\)/.test(h1);
+    out.mainSolo=/본 앱 열기/.test(h1);
+    out.nudgeMain=almNudgeOn();
+    /* ② 바탕화면 <b>캘린더 아이콘</b>으로 열린 판 */
+    history.replaceState(null,'',location.pathname+'?go=mycal');
+    out.solo=almSolo();
+    almPaint();
+    const h2=(document.getElementById('almHost')||{}).innerHTML||'';
+    out.soloBtn=/almAsk\(\)/.test(h2);
+    out.soloSays=/본 앱에서 한 번만/.test(h2);
+    out.nudgeSolo=almNudgeOn();
+    history.replaceState(null,'',location.pathname);
+    window.pwaInstalled=real;
+    /* 바탕화면에 담을 수 있는 화면들 */
+    out.apps=PWA_APPS.map(x=>x.id);
+    out.urls=PWA_APPS.map(x=>pwaUrlOf(x.id));
+    return out;
+  },{seed:SEED,fake:FAKE});
+  is(A.mainBtn&&!A.mainSolo, '홈 화면에 담아 연 <b>본 앱에서는 켤 수 있다</b> — 아이폰은 담아야만 알람이 온다');
+  is(A.nudgeMain===true, '본 앱에서는 <b>홈 한 줄로도</b> 권한다');
+  is(A.solo===true, '바탕화면 아이콘으로 열린 것을 <b>앱이 안다</b>');
+  is(!A.soloBtn&&A.soloSays,
+     '아이콘에서는 <b>켜는 단추를 안 세운다</b> — 「본 앱에서 한 번만」 이라고 말한다');
+  is(A.nudgeSolo===false, '아이콘에서는 <b>한 줄도 안 권한다</b> — 켜시면 아침에 두 번 울린다');
+  is(A.apps.indexOf('mycal')===0, '바탕화면에 <b>캘린더가 맨 앞</b>에 있다 — '+A.apps.join(' · '));
+  is(A.urls.every(u=>/\?go=[a-z_]{2,32}$/.test(u)), '아이콘 주소가 <b>그 화면으로</b> 간다 — '+A.urls[0].replace(/^https?:\/\/[^/]+/,''));
+  /* 캘린더 아이콘이 <b>진짜로</b> 달력을 여는가 — 눌러 보는 대신 열어서 본다 */
+  const cal=await ctx.newPage();
+  await cal.goto('http://127.0.0.1:'+PORT+'/app/index.html?go=mycal',{waitUntil:'domcontentloaded'});
+  await cal.waitForTimeout(2400);
+  const C2=await cal.evaluate(()=>{
+    const d=document.getElementById('dynPane');
+    return { host:!!document.getElementById('mycalHost'),
+             txt:(d?d.textContent:'').replace(/\s+/g,' ').slice(0,90) };
+  });
+  await cal.close();
+  is(C2.host, '아이콘을 누르면 <b>달력이 바로 열린다</b> — 「'+C2.txt.slice(0,40)+'…」');
+  is(/폰 기본 달력/.test(C2.txt)||C2.host, '거기서 <b>폰 기본 달력으로</b> 내보낼 수 있다');
+  /* 서버 — 같은 기기에 두 번 안 보낸다 */
+  const core=require(path.join(ROOT,'scripts/push-core.js'));
+  const one=core.onePerDevice([
+    {owner_id:'u1',ua:'iPhone',endpoint:'a',created_at:'2026-09-01'},
+    {owner_id:'u1',ua:'iPhone',endpoint:'b',created_at:'2026-09-10'},   /* 같은 폰 · 다른 아이콘 */
+    {owner_id:'u1',ua:'Mac',   endpoint:'c',created_at:'2026-09-05'},   /* 다른 기기 — 살아야 한다 */
+    {owner_id:'u2',ua:'iPhone',endpoint:'d',created_at:'2026-09-05'},   /* 다른 사람 — 살아야 한다 */
+    {owner_id:'u3',ua:'',      endpoint:'e',created_at:'2026-09-05'},   /* 기기를 모른다 */
+    {owner_id:'u3',ua:'',      endpoint:'f',created_at:'2026-09-06'}
+  ]).map(r=>r.endpoint).sort();
+  is(one.join(',')==='b,c,d,e,f',
+     '같은 폰에 아이콘을 여럿 담아도 <b>한 번만</b> 보낸다 — '+one.join(',')+
+     ' (a 는 같은 폰의 옛 구독이라 빠진다)');
+  is(one.indexOf('c')>=0&&one.indexOf('d')>=0, '<b>다른 기기·다른 사람</b>은 그대로 받는다');
+  is(one.indexOf('e')>=0&&one.indexOf('f')>=0,
+     '기기 이름을 <b>모르면 묶지 않는다</b> — 모르는 것을 같은 것으로 치면 울려야 할 폰이 빠진다 (1번)');
+  /* ↓ <b>예약이 실제로 그것을 쓰는지</b>가 진짜로 재야 할 자리다. 위처럼
+     함수만 따로 불러 보면, push-cron 이 그 함수를 안 써도 초록이 뜬다 —
+     실제로 그렇게 지나칠 뻔했다 (8번). */
+  is(!calls.some(c=>/\/dup/.test(c.u)),
+     '예약이 <b>정말로</b> 같은 폰의 옛 구독을 건너뛴다 — 아침에 두 번 안 울린다');
 
   console.log('\n[7] 출발 점검이 이 줄을 안다');
   const R=await page.evaluate(async(seed)=>{
