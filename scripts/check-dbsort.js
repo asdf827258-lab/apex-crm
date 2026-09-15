@@ -115,7 +115,11 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
     AR.db=['보장분석10DB','보장분석2DB','보장분석1DB','일반'].map((sv,i)=>({
       id:'s'+i,who:'me',name:'홍길동',region:'광주',src:sv,stage:'부재',
       appt:'',days:9,n:1,cAt:'',pAt:''}));
-    /* TFA 「오늘 손댈 사람」 칸을 <b>실제로</b> 연다 — 거기에 종류 단추가 선다 */
+    /* TFA 「오늘 손댈 사람」 칸을 <b>실제로</b> 연다 — 거기에 종류 단추가 선다.
+       ※ arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+         돌아오면 AR.db 를 빈 것으로 덮어 <b>심어 둔 견본이 날아간다.</b>
+         그러면 칩이 0개가 되어 <b>CI 에서만</b> 빨간불이 난다 — 헛알람이다 (8번). */
+    window.arLoad=function(){};
     AR.cat='touch'; AR.tkAll=false; AR.tks=''; AR.tk='all';
     try{ localStorage.setItem('apex_ar_cat','touch'); }catch(e){}
     try{ go('airep'); }catch(e){}
@@ -126,7 +130,10 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
      window.osShowLoginGate=function(){};window.toast=function(){};`);
   is(V.sorted.join(' · ')==='보장분석1DB · 보장분석 2DB · 보장분석2DB · 보장분석10DB · 일반',
      '앱 안에서 세워 보니 <b>차례대로</b> — '+V.sorted.join(' · '));
-  await page.waitForTimeout(900);
+  /* <b>시간을 세지 않고</b> 칩이 설 때까지 기다린다 */
+  await page.waitForFunction(
+    ()=>document.querySelectorAll('#dynPane .ar-fsrc .ar-fc').length>1,
+    {timeout:9000}).catch(()=>{});
   const chips=await page.evaluate(()=>
     [].slice.call(document.querySelectorAll('#dynPane .ar-fsrc .ar-fc'))
       .map(e=>e.textContent.replace(/\d+$/,'').trim()).filter(x=>x&&!/종류 전체/.test(x)));
