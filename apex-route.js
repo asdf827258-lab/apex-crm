@@ -228,6 +228,138 @@ function cityOptions(sel){
   return out.join("");
 }
 
+/* ── <b>시를 검색해서 고른다</b> — 네이버 주소 검색창처럼 ──────────
+   사장님 말씀 — 「네이버 주소 검색창에서 입력하는 것처럼 비슷한 주소에
+   검색해서 할 수 있도록」.
+
+   여태는 <b>펼침 목록</b>이었습니다. 시·군이 126곳이라 도별로 묶어 뒀어도
+   폰에서는 한참 굴려야 했고, 「학하동」 같이 <b>동 이름만 적힌</b> 분은
+   어디로 가야 할지 손이 멈췄습니다.
+
+   이제 치면 추려집니다.
+     · <b>시 이름</b>으로 — 「여수」 → 여수시
+     · <b>적힌 그대로</b> — 「전남여수」 · 「여수시」 도 찾힙니다
+     · <b>초성</b>으로 — 「ㅅㅊ」 → 순천시
+     · <b>도 이름</b>으로 — 「전남」 → 전남 시·군이 다 나옵니다
+
+   <b>짐작해서 넣지 않습니다</b> (1번). 검색은 사장님이 고르시는 길을 넓힐
+   뿐이고, 못 찾으면 <b>못 찾았다고</b> 적습니다.                       */
+var CITY_CHO="ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ";
+function cityCho(s){
+  var o="",i,c;
+  for(i=0;i<(s||"").length;i++){
+    c=s.charCodeAt(i);
+    o+=(c>=0xAC00&&c<=0xD7A3)?CITY_CHO.charAt(Math.floor((c-0xAC00)/588)):s.charAt(i);
+  }
+  return o;
+}
+/* 고를 수 있는 시를 <b>한 곳</b>에서 모은다 — 목록도 검색도 이것만 본다 (5번) */
+function cityAll(){
+  var out=[],seen={},k,g,i;
+  function add(sido,city){ if(city&&!seen[city]){seen[city]=1;out.push({c:city,s:sido||""})} }
+  add("광주","광주광역시");
+  for(g in CITY_GWANG)add(g,CITY_GWANG[g]);
+  for(k in CITY_SGG)add(CITY_SGG[k][0],CITY_SGG[k][1]);
+  for(i=0;i<CITY_EXTRA.length;i++)add(CITY_EXTRA[i][0],CITY_EXTRA[i][1]);
+  return out;
+}
+/* 글자로 찾기. <b>내 고객이 많은 시</b>를 먼저 보여 준다 — 아침마다 고르는
+   곳이 거기이기 때문이다. 빈 글자면 그 순서 그대로 돌려준다. */
+function citySearch(qs,limit){
+  var q=String(qs==null?"":qs).replace(/\s+/g,"");
+  /* <b>초성은 초성만 쳤을 때</b>만 본다. 「여수」 를 초성(ㅇㅅ)으로도 견주면
+     「고양시」(ㄱㅇㅅ)가 딸려 온다 — 헛것을 보여 주는 검색은 안 찾아 주는
+     검색보다 나쁘다 (8번). 그리고 초성은 <b>시 이름에만</b> 건다. 도 이름을
+     붙여 견주면 「계룡시 충남」 의 초성에 「ㅅㅊ」 이 걸려 순천을 찾는데
+     계룡이 나온다. */
+  var choOnly=!!q&&/^[ㄱ-ㅎ]+$/.test(q);
+  var mine={};
+  try{ dbs.forEach(function(d){ var c=cityOf(d); if(c)mine[c]=(mine[c]||0)+1 }) }catch(e){}
+  var L=cityAll().map(function(x){
+    var name=x.c, bare=name.replace(/(특별자치)?(시|군|도)$/,"").replace(/광역시$/,"");
+    var score=-1;
+    if(!q)score=0;
+    else if(choOnly){
+      var cb=cityCho(bare), cn=cityCho(name);
+      if(cb.indexOf(q)===0)score=3;                                   /* 초성이 맨 앞부터 */
+      else if(cb.indexOf(q)>=0||cn.indexOf(q)>=0)score=1;             /* 초성이 들어 있다 */
+    }
+    else if(name.indexOf(q)===0||bare.indexOf(q)===0)score=3;         /* 맨 앞부터 같다 */
+    else if(name.indexOf(q)>=0)score=2;                              /* 이름 안에 있다 */
+    else if(x.s&&x.s.indexOf(q)===0)score=1;                         /* 도 이름으로 */
+    return score<0?null:{c:name,s:x.s,n:mine[name]||0,score:score};
+  }).filter(Boolean);
+  L.sort(function(a,b){ return b.score-a.score || b.n-a.n || (a.c<b.c?-1:1) });
+  return limit?L.slice(0,limit):L;
+}
+/* 한 줄의 검색 칸 + 추려진 목록. 고른 값은 <b>그 줄에</b> 적어 둔다.
+
+   ★ <b>onclick="..." 을 쓰지 않습니다.</b> 이 파일은 통째로 감싸여 있어
+     (즉시실행함수) 안의 함수가 전역이 아닙니다. HTML 속성에 적은 onclick 은
+     전역만 찾으므로 <b>눌러도 아무 일이 안 일어납니다.</b> 이 파일이 원래
+     쓰던 대로 <b>그린 뒤 el.onclick 으로</b> 붙입니다 (5번 — 한 가지 방식으로). */
+var CITY_PICK_MAX=8;
+function cityPickHtml(i,sel){
+  return '<div class="ct-pick" data-cpick="'+i+'">'+
+    '<input class="ct-q" type="text" inputmode="search" autocomplete="off" '+
+      'placeholder="시 이름을 치세요 — 여수 · ㅅㅊ · 전남">'+
+    '<div class="ct-sel'+(sel?'':' none')+'" data-cval="'+E(sel||"")+'">'+
+      cityPickSelHtml(sel)+'</div>'+
+    '<div class="ct-list"></div></div>';
+}
+function cityPickSelHtml(v){
+  return v?('✓ '+E(v)+' <button type="button" class="ct-x">지우기</button>')
+          :'아직 안 골랐습니다 — 안 고른 줄은 그대로 둡니다';
+}
+function cityPickBox(i){ return document.querySelector('[data-cpick="'+i+'"]') }
+/* 그려 놓은 칸들에 <b>손을 붙인다</b> — 그리기가 끝난 뒤 한 번 부른다 */
+function cityPickWire(root){
+  Array.prototype.forEach.call((root||document).querySelectorAll("[data-cpick]"),function(box){
+    var i=+box.getAttribute("data-cpick");
+    var inp=box.querySelector(".ct-q");
+    if(inp){
+      inp.oninput=function(){ cityPickType(i,this.value) };
+      inp.onfocus=function(){ cityPickType(i,this.value) };
+    }
+    cityPickWireSel(box,i);
+  });
+}
+function cityPickWireSel(box,i){
+  var x=box.querySelector(".ct-sel .ct-x");
+  if(x)x.onclick=function(){ cityPickSet(i,"") };
+}
+function cityPickType(i,v){
+  var box=cityPickBox(i); if(!box)return;
+  var L=citySearch(v,CITY_PICK_MAX), list=box.querySelector(".ct-list");
+  if(!L.length){
+    list.innerHTML='<div class="ct-no">찾는 시가 없습니다 — 다르게 쳐 보시거나, '+
+      '<b>안 고르고 두셔도</b> 됩니다. 짐작해서 넣지 않습니다.</div>';
+    return;
+  }
+  list.innerHTML=L.map(function(x){
+    return '<button type="button" class="ct-i" data-city="'+E(x.c)+'">'+E(x.c)+
+      (x.s?('<small>'+E(x.s)+'</small>'):'')+
+      (x.n?('<i>내 고객 '+x.n+'명</i>'):'')+'</button>';
+  }).join("");
+  Array.prototype.forEach.call(list.querySelectorAll("[data-city]"),function(el){
+    el.onclick=function(){ cityPickSet(i,el.getAttribute("data-city")) };
+  });
+}
+function cityPickSet(i,v){
+  var box=cityPickBox(i); if(!box)return;
+  var sel=box.querySelector(".ct-sel");
+  sel.setAttribute("data-cval",v||"");
+  sel.className="ct-sel"+(v?"":" none");
+  sel.innerHTML=cityPickSelHtml(v);
+  cityPickWireSel(box,i);
+  box.querySelector(".ct-list").innerHTML="";
+  var q=box.querySelector(".ct-q"); if(q)q.value="";
+}
+function cityPickVal(i){
+  var box=cityPickBox(i); if(!box)return "";
+  var sel=box.querySelector(".ct-sel");
+  return sel?(sel.getAttribute("data-cval")||""):"";
+}
 /* 표준 시 이름으로 도를 찾는다 — 찾는 자리가 둘이 되지 않게 여기 하나만 */
 function cityStdSido(city){
   if(!city)return "";
@@ -262,23 +394,24 @@ function cityFixOpen(){
     '<b>적힌 글자만으로는 어느 시인지 정할 수 없는 분들입니다.</b> '+
     '「광주」처럼 두 곳에 다 있는 이름이거나, 시 이름이 안 적혀 있습니다. '+
     '한 줄에서 한 번 고르면 <b>그 줄의 사람이 모두 같이</b> 정해집니다. '+
-    '고르지 않은 줄은 그대로 둡니다 — 짐작해서 넣지 않습니다.</div>';
+    '고르지 않은 줄은 그대로 둡니다 — 짐작해서 넣지 않습니다.<br>'+
+    '<b>칸에 치면 찾아 줍니다</b> — 「여수」 · 「전남」 · 초성 「ㅅㅊ」 도 됩니다.</div>';
   h+='<div class="rt-card">'+G.map(function(g,i){
     var hint=g.cand.length?('두 곳에 다 있는 이름입니다 — '+g.cand.join(" 또는 ")):'시 이름이 안 적혀 있습니다';
     return '<div class="rt-row"><div class="rt-no">'+g.rows.length+'</div>'+
       '<div class="rt-who" style="flex:1;min-width:0"><b>'+E(g.text)+'</b><small>'+E(hint)+'</small>'+
-      '<select data-cfix="'+i+'" style="width:100%;margin-top:6px">'+
-        cityOptions(g.cand.length===1?g.cand[0]:"")+'</select></div></div>';
+      cityPickHtml(i,g.cand.length===1?g.cand[0]:"")+'</div></div>';
   }).join("")+'</div>';
   q("rtTidyB").innerHTML=h;
+  cityPickWire(q("rtTidyB"));      /* 그린 뒤에 손을 붙인다 — 안 붙이면 눌러도 안 먹는다 */
   q("rtTidyGo").classList.remove("hidden");
   q("rtTidyGo").textContent="고른 것만 저장";
   q("rtTidyGo").onclick=function(){
     var jobs=[];
-    Array.prototype.forEach.call(q("rtTidyB").querySelectorAll("[data-cfix]"),function(el){
-      var v=el.value; if(!v)return;
-      var g=G[+el.getAttribute("data-cfix")];
-      var sd=cityStdSido(v);
+    Array.prototype.forEach.call(q("rtTidyB").querySelectorAll("[data-cpick]"),function(el){
+      var i=+el.getAttribute("data-cpick"), v=cityPickVal(i);
+      if(!v)return;                      /* 안 고른 줄은 <b>그대로 둔다</b> (1번) */
+      var g=G[i], sd=cityStdSido(v);
       g.rows.forEach(function(d){ jobs.push({id:d.id,patch:{sigungu:v,sido:sd||null}}) });
     });
     if(!jobs.length){ say("고른 줄이 없습니다.",3000); return }
@@ -1217,6 +1350,25 @@ function styles(){
   ".rt-sum span{display:block;font-size:11px;color:var(--muted);font-weight:800}",
   ".rt-sum strong{display:block;font-size:19px;color:var(--navy);margin-top:3px}",
   ".rt-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:11px 2px;border-bottom:1px solid #eef1f4}",
+  /* 시 검색 칸 — 네이버 주소 검색창처럼 치면 추려진다 */
+  ".ct-pick{margin-top:7px}",
+  ".ct-q{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;"+
+    "font-family:inherit;font-size:13px;outline:none}",
+  ".ct-q:focus{border-color:#1A56DB;box-shadow:0 0 0 3px rgba(26,86,219,.12)}",
+  ".ct-sel{margin-top:6px;font-size:12px;font-weight:800;color:#15803D;"+
+    "background:#F0FDF4;border:1px solid #BBF7D0;border-radius:9px;padding:6px 10px}",
+  ".ct-sel.none{color:#94A3B8;background:#F8FAFC;border-color:#E2E8F0;font-weight:600}",
+  ".ct-x{margin-left:6px;border:0;background:transparent;color:#64748B;font-size:11px;"+
+    "cursor:pointer;text-decoration:underline;font-family:inherit}",
+  ".ct-list{margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:236px;overflow-y:auto}",
+  ".ct-i{display:flex;align-items:baseline;gap:7px;width:100%;text-align:left;cursor:pointer;"+
+    "border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 11px;"+
+    "font-family:inherit;font-size:13px;font-weight:700;color:#0F172A}",
+  ".ct-i:hover{background:#F1F5FF;border-color:#1A56DB}",
+  ".ct-i small{font-size:11px;font-weight:600;color:#94A3B8}",
+  ".ct-i i{margin-left:auto;font-style:normal;font-size:11px;font-weight:800;color:#1A56DB}",
+  ".ct-no{font-size:11.5px;line-height:1.7;color:#92400E;background:#FFFBEB;"+
+    "border:1px solid #FDE68A;border-radius:9px;padding:9px 11px}",
   ".rt-row:last-child{border-bottom:0}",
   ".rt-no{width:26px;height:26px;flex:none;border-radius:8px;background:#eef2f6;color:#596575;display:grid;place-items:center;font-weight:900;font-size:12px}",
   ".rt-who{flex:1;min-width:150px}.rt-who b{color:var(--navy)}",
