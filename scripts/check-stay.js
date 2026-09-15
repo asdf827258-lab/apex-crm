@@ -17,7 +17,9 @@
      1. 다른 화면에서 osSetReload 를 불러도 그 자리에 그대로 있는가
      2. 같은 사람으로 토큰이 갱신돼도 화면을 다시 안 그리는가
      3. 그때 입력하던 글이 살아 있는가
-     4. 사람이 바뀌면(로그아웃·다른 계정) 그때는 제대로 다시 그리는가   */
+     4. 사람이 바뀌면(로그아웃·다른 계정) 그때는 제대로 다시 그리는가
+     5. <b>새로고침해도 보던 화면 그대로인가</b> — 사장님 말씀 「내가 킨
+        화면이 내가 끄지 않는 이상 처음으로 돌아가지 않도록」            */
 const { chromium } = require('playwright');
 const http = require('http'); const fs = require('fs'); const path = require('path');
 const ROOT = process.cwd(), PORT = 8849;
@@ -189,6 +191,55 @@ const is = (c, m) => c ? ok(m) : no(m);
   });
   is(mem.saved === 'contracts', '보던 화면이 기억된다 (' + mem.saved + ')');
   is(mem.boot === 'contracts', '다음에 켤 때 그 화면으로 간다 (' + mem.boot + ')');
+
+  /* ── 5 ── 사장님 말씀: 「내가 킨 화면이 내가 끄지 않는 이상
+     처음으로 돌아가지 않도록」                                        */
+  console.log('\n[5] 새로고침해도 <b>보던 화면 그대로</b>인가');
+  const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+
+  /* ① 첫 화면을 정하는 곳이 <b>한 곳</b>인가 (5번)
+     초기화 자리에 go('home') 이 박혀 있으면, 그것이 파일 맨 끝의
+     go(bootTab()) 보다 먼저 돌아 「보던 화면」 기억을 통째로 지운다 —
+     lastTab · apex_last_tab · 주소(#해시) 셋 다 home 으로 덮이고,
+     bootTab() 은 방금 덮인 값을 읽는다. 그래서 폰에서 화면을 아래로
+     당기면(당겨서 새로고침) 무엇을 보고 있었든 홈이 열렸다. */
+  const boots = (SRC.match(/^\s*go\((?:'home'|"home"|bootTab\(\))\);\s*$/gm) || [])
+    .map(x => x.trim());
+  is(boots.length === 1 && boots[0] === 'go(bootTab());',
+     '첫 화면을 정하는 줄이 <b>하나</b>다 — ' + (boots.join(' / ') || '없음') +
+     (boots.length > 1 ? '  ← 초기화의 go(\'home\') 이 보던 화면을 지운다' : ''));
+
+  /* ② 주소를 적는 곳도 한 곳 — go() 맨 끝에 두면 빠른 return 갈래
+     (CRM·계산기·지도·비포&애프터·한장비교·미끼레이더·과실비교·미끼화법·
+     상담자료·증권전달·보험맵)가 그 줄에 <b>닿지 못하고</b> 먼저 나간다. */
+  const hashSets = (SRC.match(/history\.replaceState\(null,\s*''\s*,\s*'#'\+tab\)/g) || []);
+  is(hashSets.length === 1, '주소(#해시)를 적는 줄도 <b>하나</b>다 — ' + hashSets.length + '곳');
+  const goHead = SRC.slice(SRC.indexOf('function go(tab){'),
+                           SRC.indexOf('function go(tab){') + 3000);
+  is(/lastTab=tab;[\s\S]{0,1400}replaceState/.test(goHead),
+     '주소를 <b>「지금 어디」를 적는 그 자리</b>에서 같이 적는다 — 빠른 return 보다 앞이다');
+
+  /* ③ 아래로 당겨도 새로고침되지 않게 */
+  is(/html\{[^}]*overscroll-behavior-y:\s*contain/.test(SRC) &&
+     /\.main\{[^}]*overscroll-behavior-y:\s*contain/.test(SRC),
+     '<b>아래로 당겨도 새로고침되지 않는다</b> — 스크롤 칸과 바탕 둘 다 막았다');
+
+  /* ④ <b>진짜로</b> 새로고침해서 본다. 코드를 읽어 짐작하지 않는다.
+     빠른 return 갈래를 골라 넣는다 — 여기가 주소를 못 적던 자리다. */
+  const KEEP = ['crm', 'finance', 'apexmap', 'onecmp', 'mikki', 'car_fault',
+                'mikki_talk', 'sangdam', 'pdel', 'bohum', 'clients', 'airep', 'mycal'];
+  const lost = [];
+  for (const t of KEEP) {
+    await page.evaluate(x => { try { go(x); } catch (e) {} }, t);
+    await page.waitForTimeout(260);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(1800);
+    const got = await page.evaluate(() => (typeof lastTab === 'string' ? lastTab : ''));
+    if (got !== t) lost.push(t + '→' + got);
+  }
+  is(lost.length === 0,
+     KEEP.length + '개 화면이 <b>새로고침해도 그 자리</b>에 남는다' +
+     (lost.length ? ('  ← ' + lost.join(', ')) : ''));
 
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 100) : ''));
