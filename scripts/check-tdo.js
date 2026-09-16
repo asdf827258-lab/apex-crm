@@ -375,7 +375,11 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     const line=i=>{const d=document.querySelectorAll('#dynPane .ar-fs')[i];
       return d?[].slice.call(d.querySelectorAll('.ar-fc')).map(e=>({
         t:e.textContent.trim(),on:e.classList.contains('on')})):[];};
-    const snap=()=>({rows:rows(),team:line(0),who:line(1),st:line(2),src:line(3),
+    /* 위의 <b>다섯 쪽지</b>도 같은 병을 앓고 있었다 — 옛 이름으로 읽어 전부 0 */
+    const tiles=()=>[].slice.call(document.querySelectorAll('#dynPane .ar-top .ar-tl'))
+      .map(e=>((e.querySelector('.k')||{}).textContent||'').split(' —')[0]+' '+
+              ((e.querySelector('.v')||{}).textContent||'').replace(/명$/,''));
+    const snap=()=>({rows:rows(),team:line(0),who:line(1),st:line(2),src:line(3),tiles:tiles(),
       note:(document.querySelector('#dynPane .ar-none')||{}).textContent||''});
     const out={};
     out.mine=snap();
@@ -434,6 +438,15 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      '상태와 종류가 <b>겹쳐서</b> 먹는다 — 부재 + 일반 '+P.noGen.rows+'명');
   is(!/AP|CS|계약완료|생일/.test(txt(P.all.st)),
      '<b>0 인 칸은 안 세운다</b> — 열두 상태를 다 늘어놓으면 눈이 미끄러진다');
+  /* 다섯 쪽지 — 진행중(AP·PC·CS 합) · 증권 미전달(계약완료) · 부재 · 기고객 · 생일 */
+  is((P.all.tiles||[]).length===5, '위에 <b>다섯 쪽지</b>가 선다 — '+(P.all.tiles||[]).join(' | '));
+  is(/진행중 1/.test((P.all.tiles||[]).join(' ')),
+     '<b>진행중</b>은 AP·PC·CS 를 <b>합쳐</b> 센다 — '+(P.all.tiles||[])[0]+
+     ' (여태 옛 이름으로 읽어 전부 0 이었다)');
+  is(/부재 3/.test((P.all.tiles||[]).join(' ')),
+     '<b>부재</b> 쪽지에도 숫자가 찍힌다 — '+((P.all.tiles||[]).filter(t=>/부재/.test(t))[0]||'없음'));
+  is(/부재 1/.test((P.team2.tiles||[]).join(' ')),
+     '쪽지도 <b>고른 팀만</b> 센다 — '+((P.team2.tiles||[]).filter(t=>/부재/.test(t))[0]||'없음'));
   is(P.member.team.length===0||!/팀 전체/.test(txt(P.member.team)),
      '<b>팀원에게는 고르개가 안 선다</b> — 남의 것을 못 보시는 분께 세우면 눌러도 아무 일이 없다');
 

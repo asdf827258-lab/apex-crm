@@ -8493,6 +8493,9 @@ function arTalk(kind){
    손으로 적은 목록이 표보다 늦게 늙은 것입니다. 그래서 이제 <b>표에서
    뽑습니다</b> — 상태를 하나 늘리면 칸도 저절로 늡니다. 「소개완료」 와
    「TA」 는 여태 칸 자체가 없었는데, 이제 생깁니다.                    */
+/* <b>진행중</b>은 상태 하나가 아니라 AP·PC·CS 셋이다 — 세는 자리를
+   하나로 둔다. 여기저기서 더하면 한 곳을 빠뜨린다 (5번) */
+function arTkRun(c){ c=c||{}; return (c['AP']||0)+(c['PC']||0)+(c['CS']||0); }
 function arTkChips(){
   var K=tdoOrder(),out=[{k:'all',e:'🗂',t:'전체'}],i;
   for(i=0;i<K.length;i++)out.push({k:K[i],e:(TDO[K[i]]&&TDO[K[i]].e)||'•',t:tdoLabel(K[i])});
@@ -8909,7 +8912,7 @@ function arTkWhoSet(v){AR.tkWho=(AR.tkWho===v)?'':v;if(AR.tkWho)AR.tkAll=true;ar
 function arTkTeamSet(v){AR.tkTeam=(AR.tkTeam===v)?'':v;AR.tkWho='';arPaint();}
 /* 한 줄짜리 고르개를 <b>한 곳</b>에서 만든다 — 팀 줄과 사람 줄이 같은 모양이다 */
 function arPickRowHtml(o){
-  var h='<div class="ar-fs" style="margin-bottom:8px">'+
+  var h='<div class="ar-fs ar-fpick" style="margin-bottom:8px">'+
     '<button type="button" class="ar-fc'+(o.cur?'':' on')+'" onclick="'+o.fn+'(\'\')">'+
       o.allLabel+'<span>'+o.allN+'</span></button>',i,x;
   for(i=0;i<o.list.length&&i<14;i++){
@@ -8959,7 +8962,10 @@ function arTouchHtml(){
     if(rows.length>=80)break;
     rows.push(arTkRow(x,!who));
   }
-  var chips='<div class="ar-fs">';
+  /* 상태 칸 줄에 <b>제 이름표</b>를 준다 — 위에 팀·담당자 고르개가 서면서
+     「.ar-fs 중 종류가 아닌 것」 으로는 더 이상 골라낼 수가 없어졌다.
+     점검이 그 자리를 잰다 (8번). */
+  var chips='<div class="ar-fs ar-ftk">';
   /* <b>0 인 칸은 안 세웁니다.</b> 열두 상태를 다 늘어놓으면 아홉 개가 0 이라
      눈이 미끄러집니다 — 홈 「오늘 챙길 것」 과 같은 규칙입니다.
      지금 고른 칸은 0 이어도 남깁니다. 안 그러면 「눌렀더니 그 칸이
@@ -9016,12 +9022,18 @@ function arTouchHtml(){
       (who?'':'팀 전체입니다. 담당자 이름이 앞에 붙습니다. ')+
       '부재 · 거절 · 진행중 · 기고객 · 계약 뒤까지 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
       scope+narrowLine+
+      /* ── 다섯 쪽지도 <b>옛 이름</b>으로 세고 있었다 ────────────────
+         c.run · c.pol · c.no · c.old · c.bd 는 상태 이름이 바뀌기 전 말이다.
+         세는 곳은 새 이름으로 세는데 여기서는 옛 이름으로 읽어, <b>다섯
+         쪽지가 전부 0</b> 이었다. 칸과 똑같은 병이다 (5번).
+         「진행중」 은 AP·PC·CS 셋을 합친 것이라 이름을 표에서 그대로
+         가져올 수 없다 — 여기서 <b>더해서</b> 쓴다. */
       '<div class="ar-top" style="grid-template-columns:repeat(5,1fr)">'+
-        tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
-        tile(c.pol||0,'명','증권 미전달 — 급함',c.pol>0)+
-        tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
-        tile(c.old||0,'명','기고객 — 식었음',c.old>0)+
-        tile(c.bd||0,'명','생일 — 이번 주',0)+
+        tile(arTkRun(c),'명','진행중 — 지금 붙어야',arTkRun(c)>0)+
+        tile(c['계약완료']||0,'명','증권 미전달 — 급함',(c['계약완료']||0)>0)+
+        tile(c['부재']||0,'명','부재 — 다시 걸기',(c['부재']||0)>0)+
+        tile(c['기고객']||0,'명','기고객 — 식었음',(c['기고객']||0)>0)+
+        tile(c['생일']||0,'명','생일 — 이번 주',0)+
       '</div>'+chips+
       (rows.length?('<div class="ar-tks">'+rows.join('')+'</div>')
         :'<div class="ar-none">이 조건에 맞는 사람이 없습니다. 잘 돌리고 계십니다.</div>'),

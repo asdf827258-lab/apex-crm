@@ -473,12 +473,25 @@ const AI_OK = `## 활동 보고
   await open('touch');
   txt = await pane();
   ok(/오늘 터치할 사람/.test(txt), '부재·거절과 기고객이 한 칸에 모였다');
+  /* ── 상태 칸은 이제 <b>표에서 뽑힌다</b> ─────────────────────────
+     여태 이 목록이 <b>손으로</b> 적혀 있었다 — no·rej·run·new·old·bd·pol·won.
+     그런데 상태는 그사이 제 이름(부재·거절·AP·PC·CS·계약완료·증권전달·
+     소개완료…)으로 바뀌었다. 세는 곳은 새 이름으로 세고 칸은 옛 이름으로
+     읽어서, <b>모든 칸이 0 으로 뜨고 눌러도 아무도 안 남았다.</b>
+     그래서 여기서 재는 것도 <b>「아홉 개인가」 가 아니라 「표에서 뽑히고,
+     계약 뒤 자리가 있고, 세운 칸에 사람이 있나」</b> 로 바꾼다 (8번).
+     0 인 칸은 안 세우므로 <b>개수를 박아 두면 헛알람</b>이 된다. */
   const tk = await page.evaluate(() => Array.prototype.map.call(
-    document.querySelectorAll('#arPane .ar-fs:not(.ar-fsrc) .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
-  /* 계약 뒤에도 할 일이 남는다 — 증권 미전달·계약 직후가 뒤에 붙어 아홉이다 */
-  ok(tk.length === 9, '전체·부재·거절·진행중·미진행·기고객·생일·증권 미전달·계약 직후 아홉 (' + tk.length + ')');
-  ok(/증권 미전달/.test(tk.join(' ')) && /계약 직후/.test(tk.join(' ')),
+    document.querySelectorAll('#arPane .ar-ftk .ar-fc'), e => e.textContent.replace(/\s+/g, ' ').trim()));
+  const tkAll = await page.evaluate(() => arTkChips().map(x => x.k));
+  ok(tkAll.length >= 11 && tkAll[0] === 'all',
+    '상태 칸이 <b>표에서 뽑힌다</b> — ' + tkAll.length + '가지 (손으로 적어 두면 상태가 늘 때 빠뜨린다)');
+  ok(tkAll.indexOf('계약완료') >= 0 && tkAll.indexOf('증권전달') >= 0 && tkAll.indexOf('소개완료') >= 0,
     '계약 뒤 할 일도 여기서 잡힌다 — 증권을 안 보내면 민원이 된다');
+  ok(tk.length >= 2 && /전체/.test(tk[0]),
+    '<b>사람이 있는 칸만</b> 선다 — ' + tk.join(' · ') + ' (0 인 칸을 늘어놓으면 눈이 미끄러진다)');
+  ok(!/\b(no|rej|run|new|old|bd|pol|won)\b/.test(tk.join(' ')),
+    '칸에 <b>옛 이름이 안 남아</b> 있다');
   const cnt = await page.evaluate(() => arTkCount('p2'));
   ok(cnt.all > 0, '터치할 사람이 잡힌다 (' + cnt.all + '명)');
   /* 상태 이름이 <b>한 벌</b>이 되었습니다 — 예전에는 no·rej·run·new 라는
