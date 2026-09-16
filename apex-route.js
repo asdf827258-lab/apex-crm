@@ -1369,6 +1369,17 @@ function styles(){
   ".rt-nokey{position:absolute;inset:0;background:#fff;overflow:auto;padding:26px;display:grid;place-items:start center}",
   ".rt-card{background:#fff;border:1px solid var(--line);border-radius:15px;padding:14px;margin-bottom:11px}",
   ".rt-h{font-size:13px;font-weight:900;color:var(--navy);margin:16px 0 9px}",
+  /* 🎯 오늘 이 지역 미션 — 한눈에 보이게, 손가락으로 누를 만하게 */
+  ".rt-miss{margin:4px 0 12px;padding:14px 15px;border-radius:14px;background:linear-gradient(135deg,#eef6ff,#f8fbff);border:1px solid #c9ddff}",
+  ".rt-mh{font-size:14px;font-weight:900;color:#1b4f9c;margin-bottom:6px}",
+  ".rt-mb{font-size:13px;line-height:1.65;color:#245ea8}",
+  ".rt-dots{display:flex;gap:6px;margin:10px 0 2px;flex-wrap:wrap}",
+  ".rt-dot{width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid #b9d3f7}",
+  ".rt-dot.on{background:#3182f6;border-color:#3182f6}",
+  ".rt-mgo{margin-top:11px;min-height:40px}",
+  ".rt-mn{margin-top:9px;font-size:11.5px;color:#7089ad;line-height:1.5}",
+  ".rt-row.done{opacity:.55}",
+  ".rt-row.done .rt-no{background:#d9e6f7;color:#6b86a8}",
   ".rt-h:first-child{margin-top:0}",
   ".rt-stop{display:flex;gap:11px;align-items:flex-start;padding:11px 0;border-bottom:1px dashed #e9edf1}",
   ".rt-stop:last-child{border-bottom:0}",
@@ -1764,7 +1775,70 @@ function render(){
     }
   }
 
-  /* ── 틈에 끼워 넣을 사람 ── */
+  /* ══ 오늘 이 지역 미션 ══════════════════════════════════════════════
+   사장님 말씀 — 「그 부근 <b>약속을 잡도록 미션처럼</b> 해줘야해」.
+
+   여태 이 자리는 <b>이름이 여덟 줄</b> 이었습니다. 목록은 「무엇을 할지」 를
+   말해 주지 않습니다 — 몇 명까지 걸어야 하는지, 지금 어디까지 왔는지,
+   다음이 누구인지가 안 보입니다. 그래서 두 명쯤 걸다가 놓습니다.
+
+   미션으로 바꿉니다 —
+     · <b>후보 몇 명</b> 중 <b>오늘 몇 명</b>에게 걸었나
+     · 그래서 <b>약속이 몇 건</b> 잡혔나
+     · <b>다음은 누구</b>인가 — 누르면 그 줄이 펴집니다
+     · 다 돌면 <b>다 돌았다</b>고 말합니다
+
+   ★ 숫자는 전부 <b>실제 통화 기록</b>에서 셉니다. 목표치를 지어내
+     「3명 중 1명」 처럼 적지 않습니다 — 제가 정한 숫자를 사장님 성적표로
+     만들면 안 됩니다 (1번).                                            */
+function missToday(region,owner){
+  var t=todayKey(), seen={}, called=0, appt=0;
+  try{
+    (calls||[]).forEach(function(c){
+      if(!c||!c.call_at)return;
+      if(dayKey(c.call_at)!==t)return;
+      var d=findDb(c.db_id); if(!d)return;
+      if(owner&&d.assigned_to!==owner)return;
+      if(region&&!cityMatch(d,region))return;
+      if(!seen[c.db_id]){ seen[c.db_id]=1; called++; }
+      if(c.appointment_at)appt++;
+    });
+  }catch(e){}
+  return {called:called,appt:appt};
+}
+/* 오늘 이미 건 사람인가 — 목록에서 <b>지나온 자리</b>를 표시한다 */
+function missDone(d){
+  var t=todayKey(),hit=false;
+  try{
+    (getCalls(d.id)||[]).forEach(function(c){ if(c&&c.call_at&&dayKey(c.call_at)===t)hit=true });
+  }catch(e){}
+  return hit;
+}
+function missCard(region,owner,top){
+  var M=missToday(region,owner), n=top.length, i, dots="", next=-1;
+  for(i=0;i<n;i++){
+    var on=missDone(top[i].d);
+    dots+='<span class="rt-dot'+(on?' on':'')+'"></span>';
+    if(!on&&next<0)next=i;
+  }
+  var where=region?E(region):"고른 지역";
+  var line;
+  if(!n) line='이 지역에는 <b>지금 걸 분이 없습니다.</b>';
+  else if(next<0) line='<b>오늘 '+n+'분 다 돌았습니다.</b> 여기서 더 하실 것이 없습니다.';
+  else line='후보 <b>'+n+'분</b> 중 오늘 <b>'+M.called+'분</b>에게 거셨습니다. '+
+            (M.appt?('그래서 <b>약속 '+M.appt+'건</b>이 잡혔습니다.')
+                   :'아직 잡힌 약속은 없습니다.');
+  return '<div class="rt-miss">'+
+    '<div class="rt-mh">🎯 오늘 '+where+' — 가는 김에 붙이기</div>'+
+    '<div class="rt-mb">'+line+'</div>'+
+    (n?('<div class="rt-dots">'+dots+'</div>'):'')+
+    ((next>=0)?('<button type="button" class="btn btn-dark btn-sm rt-mgo" data-mgo="'+next+'">'+
+       '다음 → '+E(top[next].d.customer_name||"고객")+'</button>'):'')+
+    '<div class="rt-mn">오늘 <b>실제로 남긴 통화</b>만 셉니다 — 목표치를 지어내지 않습니다.</div>'+
+  '</div>';
+}
+
+/* ── 틈에 끼워 넣을 사람 ── */
   var cands=pool(region,owner).map(function(d){
     var f=fitIn(stops,d);
     return {d:d,fit:f};
@@ -1776,6 +1850,7 @@ function render(){
     return a.fit?-1:(b.fit?1:0);
   });
   var top=cands.slice(0,8);
+  side.push(missCard(region,owner,top));
   side.push('<div class="rt-h">추가로 연락 드릴 고객님 '+
     (stops.length?'<small style="font-weight:700;color:var(--muted)">— 약속 사이 빈틈 기준</small>'
                  :'<small style="font-weight:700;color:var(--muted)">— 오래 방치된 순</small>')+'</div>');
@@ -1795,10 +1870,14 @@ function render(){
       else if(c.fit.ok) tag='<span class="badge green">'+E(c.fit.where)+' · 여유 '+c.fit.slack+'분</span>'+
         '<span class="badge blue" style="margin-left:4px">돌아가는 시간 +'+c.fit.add+'분</span>';
       else tag='<span class="badge yellow">'+E(c.fit.where)+' — '+Math.abs(c.fit.slack)+'분 모자람</span>';
-      return '<div class="rt-row"><div class="rt-no">'+(i+1)+'</div>'+
+      /* 오늘 이미 건 분은 <b>지나온 자리</b>로 표시한다 — 두 번 걸지 않게 */
+      var did=missDone(d);
+      return '<div class="rt-row'+(did?' done':'')+'" id="rtCand'+i+'"><div class="rt-no">'+(i+1)+'</div>'+
         '<div class="rt-who"><b>'+E(d.customer_name)+'</b>'+
         '<small>'+E(placeOf(d)||"동네 미입력")+(d.phone?" · "+E(d.phone):"")+'</small>'+
-        '<div style="margin-top:5px">'+tag+'</div></div>'+
+        '<div style="margin-top:5px">'+tag+
+          (did?'<span class="badge green" style="margin-left:4px">오늘 걸었음</span>':'')+
+        '</div></div>'+
         '<div class="rt-act">'+
           (telHref(d)?('<a class="btn btn-primary btn-sm" href="'+E(telHref(d))+'">📞 전화</a>'+
                        '<a class="btn btn-light btn-sm" href="'+E(sms)+'">💬 문자</a>')
@@ -1844,6 +1923,16 @@ function render(){
 
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-pin]"),function(b){
     b.onclick=function(){ pinOne(b.getAttribute("data-pin")) };
+  });
+  /* 「다음 → 홍길동」 — 그 줄로 데려가고 <b>멘트를 펴 준다</b>. 이름만
+     알려 주고 끝내면 다시 눈으로 찾아야 한다. */
+  Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-mgo]"),function(b){
+    b.onclick=function(){
+      var i=b.getAttribute("data-mgo"), row=q("rtCand"+i);
+      var t=q("rtSide").querySelector('[data-rtalk="'+i+'"]');
+      if(t&&q("rtRT"+i)&&q("rtRT"+i).getAttribute("data-on")!=="1")t.click();
+      if(row&&row.scrollIntoView)try{ row.scrollIntoView({block:"center",behavior:"smooth"}) }catch(e){ row.scrollIntoView() }
+    };
   });
   Array.prototype.forEach.call(q("rtSide").querySelectorAll("[data-rcall]"),function(b){
     b.onclick=function(){ q("rtWrap").classList.remove("on");

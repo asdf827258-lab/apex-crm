@@ -824,6 +824,130 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
      '약속이 없으면 <시각을 지어내지 않는다> — 오전·오후만 여쭙는다 (1번)');
   is(/복사/.test(talkTxt), '<복사> 단추가 있다 — 문자 앱이 안 열려도 카톡에 붙일 수 있다');
 
+  /* ═══ [17] 부근 약속을 <미션처럼> ══════════════════════════════════
+     사장님 말씀 — 「지역동선 화면에서 <b>실제로 되는지</b>, 그리고 그 부근
+     <b>약속을 잡도록 미션처럼</b> 해줘야해」.
+
+     여태 이 자리는 <b>이름이 여덟 줄</b> 이었습니다. 목록은 「무엇을 할지」
+     를 말해 주지 않습니다 — 몇 명까지 걸어야 하는지, 지금 어디까지 왔는지,
+     다음이 누구인지가 안 보입니다. 그래서 두 명쯤 걸다가 놓습니다.
+
+     ※ 여기는 <b>화면이 이미 순천시로 걸린 채</b>입니다([16] 에서 눌렀습니다).
+       새 판을 또 세우지 않습니다 — 같은 것을 두 번 세우면 그것도 쌍둥이다 (5번). */
+  head('[17] 부근 약속을 <미션처럼> — 몇 명 중 몇 명, 다음은 누구');
+  const M1 = await pg.evaluate(() => {
+    const m = document.querySelector('#rtSide .rt-miss');
+    return { on: !!m, txt: m ? m.innerText.replace(/\s+/g, ' ').trim() : '',
+             dots: m ? m.querySelectorAll('.rt-dot').length : 0,
+             lit: m ? m.querySelectorAll('.rt-dot.on').length : 0,
+             go: (m && m.querySelector('[data-mgo]')) ? m.querySelector('[data-mgo]').textContent.trim() : '',
+             rows: document.querySelectorAll('#rtSide .rt-row').length };
+  });
+  is(M1.on, '<🎯 미션 카드>가 목록 위에 선다 — 이름만 여덟 줄이던 자리');
+  is(/가는 김에/.test(M1.txt), '무엇을 하는 자리인지 <제목에> 적는다 — 「' + M1.txt.slice(0, 24) + '…」');
+  is(M1.dots === M1.rows && M1.rows > 0,
+     '점이 <후보 수만큼> 있다 — 점 ' + M1.dots + ' · 줄 ' + M1.rows);
+  is(M1.lit === 0, '아직 아무도 안 걸었으면 <점이 하나도 안 켜진다> — ' + M1.lit + '개');
+  is(/다음 →/.test(M1.go), '<「다음 → 이름」>이 선다 — ' + (M1.go || '안 섬'));
+
+  /* 오늘 한 통 남기면 <b>화면이 따라오는가</b> — 견본 서버가 쓰기를 반영한다 */
+  const M2 = await pg.evaluate(() => {
+    const first = document.querySelector('#rtSide .rt-row');
+    const who = (first.querySelector('b') || {}).textContent || '';
+    const id = (first.querySelector('[data-rcall]') || {}).getAttribute('data-rcall');
+    const t = new Date(); const p = n => String(n).padStart(2, '0');
+    calls.push({ id: 'kmiss', db_id: id, created_by: profile.id, result: '부재',
+      call_at: t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) +
+               'T' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':00', appointment_at: null, memo: '' });
+    /* render 는 감싸여 있어 못 부른다 — <b>화면을 흔들어</b> 다시 그린다.
+       시 고르개의 change 가 render 를 부른다(apex-route 가 그렇게 붙였다). */
+    document.getElementById('rtRegion').dispatchEvent(new Event('change'));
+    const m = document.querySelector('#rtSide .rt-miss');
+    return { who,
+      lit: m ? m.querySelectorAll('.rt-dot.on').length : 0,
+      txt: m ? m.innerText.replace(/\s+/g, ' ').trim() : '',
+      done: [...document.querySelectorAll('#rtSide .rt-row.done')]
+              .map(x => (x.querySelector('b') || {}).textContent || ''),
+      /* 견본은 <b>전부 홍길동</b>이라 이름으로는 구분이 안 된다 —
+         <b>줄 번호</b>로 잰다. 「다음」 이 가리키는 줄이 지나온 줄이면 안 된다. */
+      goIdx: (m && m.querySelector('[data-mgo]')) ? m.querySelector('[data-mgo]').getAttribute('data-mgo') : '',
+      doneIdx: [...document.querySelectorAll('#rtSide .rt-row')]
+                 .map((x, i) => x.classList.contains('done') ? String(i) : '').filter(Boolean),
+      go: (m && m.querySelector('[data-mgo]')) ? m.querySelector('[data-mgo]').textContent.trim() : '' };
+  });
+  is(M2.lit === 1, '오늘 한 통을 남기니 <점이 하나 켜진다> — ' + M2.lit + '개');
+  is(M2.done.length === 1 && M2.done[0] === M2.who,
+     '<「오늘 걸었음」>이 그 줄에 붙는다 — ' + (M2.done.join(',') || '안 붙음') + ' (두 번 걸지 않게)');
+  is(/1분/.test(M2.txt), '카드의 숫자도 <같이> 올라간다 — 「' + M2.txt.replace(/^[^후]*/, '').slice(0, 34) + '…」');
+  is(M2.goIdx !== '' && M2.doneIdx.indexOf(M2.goIdx) < 0,
+     '다음은 <아직 안 건 줄>이다 — ' + (M2.goIdx + '번째') +
+     ' (지나온 줄 ' + (M2.doneIdx.join(',') || '없음') + ' · 건 사람을 또 시키지 않는다)');
+  /* 숫자를 <b>어디서 세는지</b> — 목표치를 지어내 성적표로 만들면 안 된다 (1번) */
+  const rtSrc = fs.readFileSync(path.join(ROOT, 'apex-route.js'), 'utf8');
+  const missSrc = rtSrc.slice(rtSrc.indexOf('function missToday('), rtSrc.indexOf('function missCard('));
+  is(/calls/.test(missSrc) && /appointment_at/.test(missSrc),
+     '숫자를 <실제 통화 기록>에서 센다 — 「3명 중 1명」 같은 목표치를 지어내지 않는다 (1번)');
+  is(/지어내지 않습니다/.test(M2.txt), '무엇을 세는지 <화면에 적는다> — 숫자만 띄우면 어디서 왔는지 모른다');
+
+  /* 「다음 →」 이 <b>그 줄을 펴 주는가</b> — 이름만 알려 주면 다시 눈으로 찾아야 한다 */
+  const M3 = await pg.evaluate(() => {
+    const g = document.querySelector('#rtSide [data-mgo]'); if (!g) return { no: true };
+    const i = g.getAttribute('data-mgo');
+    g.click();
+    const box = document.getElementById('rtRT' + i);
+    return { open: !!box && !box.classList.contains('hidden'),
+             txt: box ? box.innerText.replace(/\s+/g, ' ').trim().slice(0, 40) : '' };
+  });
+  is(!M3.no && M3.open, '누르면 그 줄의 <멘트가 펴진다> — 이름만 알려 주고 끝내지 않는다');
+  is(/APEX|안녕하세요/.test(M3.txt || ''), '펴진 자리에 <할 말이 그대로> 있다 — 「' + (M3.txt || '') + '…」');
+
+  /* 다 돌면 <b>다 돌았다</b>고 말하고, 없는 다음을 만들지 않는다 (1번) */
+  const M4 = await pg.evaluate(() => {
+    const t = new Date(); const p = n => String(n).padStart(2, '0');
+    const now = t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()) +
+                'T' + p(t.getHours()) + ':' + p(t.getMinutes()) + ':00';
+    [...document.querySelectorAll('#rtSide [data-rcall]')].forEach((b, i) => {
+      calls.push({ id: 'kall' + i, db_id: b.getAttribute('data-rcall'), created_by: profile.id,
+        result: '부재', call_at: now, appointment_at: null, memo: '' });
+    });
+    /* render 는 감싸여 있어 못 부른다 — <b>화면을 흔들어</b> 다시 그린다.
+       시 고르개의 change 가 render 를 부른다(apex-route 가 그렇게 붙였다). */
+    document.getElementById('rtRegion').dispatchEvent(new Event('change'));
+    const m = document.querySelector('#rtSide .rt-miss');
+    return { txt: m ? m.innerText.replace(/\s+/g, ' ').trim() : '',
+             go: !!(m && m.querySelector('[data-mgo]')) };
+  });
+  is(/다 돌았습니다/.test(M4.txt), '다 돌면 <다 돌았다>고 말한다 — 「' + M4.txt.replace(/^[^오]*/, '').slice(0, 30) + '…」');
+  is(!M4.go, '다 돌면 <「다음」 단추가 사라진다> — 없는 다음을 만들지 않는다 (1번)');
+
+  head('[17-1] 📍 동네가 <본화면에서도> — 시 칸 없이 한 줄로');
+  const P1 = await pg.evaluate(() => {
+    const b = document.querySelector('#rtSide [data-pin]');
+    if (!b) return { no: true };
+    const id = b.getAttribute('data-pin');
+    b.click();
+    return { id, open: !!document.querySelector('#rtPinE.open'),
+             addr: !!document.getElementById('rtPinAddr'),
+             city: !!document.querySelector('#rtPinB [data-cpick]') };
+  });
+  is(!P1.no && P1.open, '본화면의 <📍 동네>도 그 창을 연다 — 창은 한 곳이다 (5번)');
+  is(P1.addr && !P1.city, '거기서도 <시 칸 없이 한 줄>이다 — 같은 것을 두 번 적게 하지 않는다');
+  const P2 = await pg.evaluate(() => {
+    const a = document.getElementById('rtPinAddr');
+    a.value = '순천 해룡면 신대리'; a.dispatchEvent(new Event('input', { bubbles: true }));
+    const h = (document.getElementById('rtPinHint') || {}).textContent || '';
+    document.getElementById('rtPinGo').click();
+    return h;
+  });
+  is(/순천시/.test(P2), '치는 동안 <시를 잡았다>고 말한다 — 「' + P2.trim() + '」');
+  const P3 = await pg.waitForFunction(id => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const d = (v('dbs') || []).filter(x => x.id === id)[0];
+    return (d && d.addr === '순천 해룡면 신대리') ? { addr: d.addr, region: d.region } : null;
+  }, P1.id, { timeout: 20000 }).then(h => h.jsonValue(), () => null);
+  is(!!P3 && P3.region === '순천시',
+     '<본화면에서도 그대로 저장된다> — ' + (P3 ? (P3.addr + ' · ' + P3.region) : '안 들어감'));
+
   is(hardErr(errs).length === 0, hardErr(errs).length
      ? ('콘솔 에러 ' + hardErr(errs).length + '건 — ' + hardErr(errs).slice(0, 2).join(' | ')) : '끝까지 콘솔 에러 <0건>');
   await ctx.close();
