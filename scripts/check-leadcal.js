@@ -61,9 +61,16 @@ const srv = http.createServer((rq, rs) => {
     /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
        늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
     window.arLoad = function () {};
-    AR.db = [{ id: 'd1', who: 'me', name: '홍길동', name_masked: '홍○동',
+    /* 배정 DB 줄에는 <b>가린 이름 칸이 없습니다.</b> arLoad 가 만드는 줄은
+       {id,who,name,region,...} 뿐이고, name 에는 DB 통합 CRM 이 화면에
+       그대로 보여 주는 <b>실명</b>이 들어 있습니다. 예전 견본은 여기에
+       name_masked 를 <b>손으로 넣어 두고</b> 그것이 쓰이는지 쟀습니다 —
+       <b>앱에 없는 칸</b>을 재고 있었던 것입니다 (8번). 이제 진짜 모양
+       그대로 심습니다. 가리는 것은 <b>폰 달력으로 나갈 때</b>이고,
+       그쪽은 check-calface 가 잽니다 (3번). */
+    AR.db = [{ id: 'd1', who: 'me', name: '홍길동',
                appt: t + 'T14:00:00', region: '강남' },
-             { id: 'd2', who: 'me', name: '홍길순', name_masked: '홍○순',
+             { id: 'd2', who: 'me', name: '홍길순',
                appt: '2000-01-01T09:00:00', region: '' }];
     const it = mcalItems();
     const today = (it[t] || []).filter(x => x.k === 'appt');
@@ -72,7 +79,9 @@ const srv = http.createServer((rq, rs) => {
              kind: !!MCAL_KIND.appt };
   });
   is(B.today === 1 && B.kind, '  오늘 약속이 오늘 자리에 찍힌다 — 「' + B.t + ' ' + B.s + '」');
-  is(/○/.test(B.t), '  달력에는 <b>가린 이름</b>으로 찍힌다 (3번)');
+  is(B.t === '홍길동',
+     '  약속은 <b>배정 DB 의 이름 그대로</b> 찍힌다 — ' + B.t +
+     ' (그 표에는 가린 이름 칸이 없다. 폰 달력으로 나갈 때만 가린다 · 3번)');
   is(B.all === 1, '  <b>지나간 약속을 오늘로 끌어오지 않는다</b> — 없는 일정을 만들지 않는다 (1번)');
 
   /* 「리더 할 일」 은 앱에서 걷어냈습니다 — 사업단에서 안 쓰는
