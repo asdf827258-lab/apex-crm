@@ -153,6 +153,95 @@ if (/if\(sel&&!seen\[sel\]\)out\.splice/.test(src.replace(/\s/g, '')) ||
   ok('이미 저장된 이름이 목록에 없으면 그것도 넣어 줍니다');
 else fail('저장된 시가 목록에 없으면 창을 열었다 닫기만 해도 지워집니다');
 
+/* ══ 시를 <b>검색해서</b> 고른다 — 네이버 주소 검색창처럼 ══════════
+   사장님 말씀 — 「네이버 주소 검색창에서 입력하는 것처럼 비슷한 주소에
+   검색해서 할 수 있도록」. 펼침 목록은 시·군이 126곳이라 폰에서 한참
+   굴려야 했습니다.
+
+   여기서 지키는 것 —
+     ① 이름·초성·도 이름으로 <b>찾아진다</b>
+     ② <b>헛것을 안 부른다</b> — 「여수」 를 쳤는데 고양시가 나오면
+        안 찾아 주는 것보다 나쁘다 (8번)
+     ③ 내 고객이 많은 시가 <b>먼저</b> 나온다
+     ④ 못 찾으면 <b>못 찾았다고</b> 한다 — 짐작해서 안 넣는다 (1번)
+     ⑤ 눌러서 고르는 손이 <b>붙어 있다</b> — 이 파일은 통째로 감싸여
+        있어 onclick="..." 은 전역을 찾지 못한다. 눌러도 안 먹는다.     */
+console.log('\n[검색] 치면 찾아 주는가');
+const SEARCH = (function () {
+  const a = src.indexOf('var CITY_SGG='), b = src.indexOf('function cityPickHtml(');
+  if (a < 0 || b < 0) return null;
+  const seed = [['순천시', 214], ['여수시', 183], ['대전광역시', 168], ['광양시', 123], ['광주광역시', 32]];
+  const dbs = [];
+  seed.forEach(([c, m]) => { for (let i = 0; i < m; i++) dbs.push({ sigungu: c }); });
+  try {
+    return new Function('var dbs=' + JSON.stringify(dbs) + ';var E=function(x){return String(x)};' +
+      src.slice(a, b) + '\nreturn {citySearch:citySearch,cityAll:cityAll,cityCho:cityCho};')();
+  } catch (e) { return null; }
+})();
+n++;
+if (SEARCH) ok('검색하는 곳이 있다 — citySearch');
+else fail('검색하는 곳을 못 찾았습니다 (citySearch)');
+
+if (SEARCH) {
+  const top = (q, k) => (SEARCH.citySearch(q, k || 5) || []).map(x => x.c);
+  const has = (q, c) => top(q, 8).indexOf(c) >= 0;
+
+  n++; if (top('여수')[0] === '여수시') ok('「여수」 → 여수시가 맨 앞이다');
+       else fail('「여수」 를 쳤는데 여수시가 맨 앞이 아니다 — ' + top('여수').join(' · '));
+
+  /* ↓ 실제로 났던 헛것. 초성까지 늘 견주면 「여수」(ㅇㅅ)가 「고양시」(ㄱㅇㅅ)를 부른다 */
+  n++; if (top('여수').length === 1) ok('「여수」 에 <b>딴 시가 안 딸려 온다</b> — ' + top('여수').join(' · '));
+       else fail('「여수」 에 딴 시가 딸려 온다 — ' + top('여수').join(' · ') +
+                 ' (초성은 초성만 쳤을 때만 봐야 한다)');
+  n++; if (top('대전').length === 1 && top('대전')[0] === '대전광역시')
+         ok('「대전」 도 하나만 — 당진시가 안 딸려 온다');
+       else fail('「대전」 에 딴 시가 딸려 온다 — ' + top('대전').join(' · '));
+
+  n++; if (has('ㅅㅊ', '순천시')) ok('초성 「ㅅㅊ」 으로 <b>순천시</b>를 찾는다');
+       else fail('초성 「ㅅㅊ」 으로 순천시를 못 찾는다 — ' + top('ㅅㅊ', 8).join(' · '));
+  /* ↓ 이것도 실제로 났던 헛것. 도 이름까지 붙여 초성을 만들면
+       「계룡시 충남」 의 초성에 ㅅㅊ 이 걸려 순천을 찾는데 계룡이 나온다 */
+  n++; if (!has('ㅅㅊ', '계룡시')) ok('초성은 <b>시 이름에만</b> 건다 — 「계룡시 충남」 이 안 걸린다');
+       else fail('「ㅅㅊ」 에 계룡시가 나온다 — 도 이름을 붙여 초성을 만들면 헛것이 걸린다');
+
+  n++; if (top('ㅅㅊ')[0] === '순천시' && top('ㅇㅅ')[0] === '여수시')
+         ok('<b>내 고객이 많은 시</b>가 먼저 나온다 — 순천 214 · 여수 183');
+       else fail('내 고객이 많은 시가 먼저 안 나온다 — ' + top('ㅅㅊ').join(' · '));
+
+  n++; const gw = top('광주', 8);
+       if (gw.indexOf('광주광역시') >= 0 && gw.indexOf('경기 광주시') >= 0)
+         ok('「광주」 는 <b>두 곳을 다</b> 보여 준다 — 고르시게 한다 (1번)');
+       else fail('「광주」 에 두 곳이 다 안 나온다 — ' + gw.join(' · '));
+
+  n++; if (top('전남', 8).indexOf('순천시') >= 0) ok('<b>도 이름</b>으로도 찾는다 — 「전남」');
+       else fail('「전남」 으로 전남 시·군을 못 찾는다');
+
+  n++; if (SEARCH.citySearch('없는곳', 5).length === 0)
+         ok('없는 것은 <b>없다고</b> 한다 — 짐작해서 안 채운다 (1번)');
+       else fail('없는 글자에도 무언가를 돌려준다');
+
+  n++; if ((SEARCH.citySearch('', 0) || []).length === SEARCH.cityAll().length)
+         ok('빈 칸이면 <b>전부</b> 보여 준다 — ' + SEARCH.cityAll().length + '곳');
+       else fail('빈 칸일 때 목록이 줄어든다');
+}
+
+console.log('\n[손] 눌러서 고르는 손이 붙어 있는가');
+/* apex-route.js 는 통째로 감싸여 있다(즉시실행함수). HTML 속성에 적은
+   onclick="cityPick…" 은 <b>전역</b>을 찾으므로 눌러도 아무 일이 안 난다.
+   실제로 그렇게 짰다가 브라우저에서 눌러 보고 알았다. */
+const PICK = src.slice(src.indexOf('function cityPickHtml('), src.indexOf('function cityStdSido(city){'));
+n++; if (!/onclick="/.test(PICK)) ok('HTML 속성에 <b>onclick 을 안 적는다</b> — 감싼 파일이라 안 먹는다');
+     else fail('onclick="…" 을 적었다 — 이 파일에서는 눌러도 아무 일이 안 난다');
+n++; if (/\.onclick\s*=/.test(PICK) && /function cityPickWire\(/.test(PICK))
+       ok('그린 뒤 <b>el.onclick 으로</b> 붙인다 — 이 파일이 원래 쓰던 방식이다 (5번)');
+     else fail('손을 붙이는 곳(cityPickWire)이 없다');
+n++; if (/cityPickWire\(q\("rtTidyB"\)\)/.test(src))
+       ok('시 정해 주기 화면이 <b>그린 뒤 손을 붙인다</b>');
+     else fail('그려만 놓고 손을 안 붙인다 — 눌러도 안 먹는다');
+n++; if (/querySelectorAll\("\[data-cpick\]"\)/.test(src) && !/querySelectorAll\("\[data-cfix\]"\)/.test(src))
+       ok('저장할 때 <b>고른 값</b>을 읽는다 — 옛 펼침 목록을 안 본다');
+     else fail('저장하는 곳이 옛 펼침 목록(data-cfix)을 본다');
+
 console.log('\n' + '─'.repeat(30));
 if (bad) { console.log('시 분류 점검 실패 — ' + bad + '곳'); process.exit(1); }
 console.log('시 분류 점검 통과 — ' + n + '가지를 봤습니다.');
