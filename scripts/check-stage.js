@@ -147,8 +147,18 @@ const is = (c, m) => c ? ok(m) : no(m);
     '앱도 <b>같은 아홉 단계</b>를 안다 — 두 파일이 다른 말을 하면 어느 쪽이 맞는지 모른다');
   is(/function arStageOf\(/.test(app) && /function arWon\(/.test(app), '단계를 읽는 길이 있다');
   is(/stage,next_appt,contracted_at,policy_sent_at/.test(app), '서버에서 단계와 약속을 받아 온다');
-  is(/AR\.noStage=true/.test(app) && /return q\(sb\.from\('dbs'\)\.select\(cols\+',source'\)\)/.test(app),
-    '단계 칸이 없는 서버면 한 칸 내려가 다시 부른다 — 화면 전체가 안 죽는다');
+  /* 이제 dbs 는 <b>쪽을 나눠</b> 읽는다(read → arPageAll). 그래도 되돌아가기는
+     그대로 살아 있어야 한다 — 단계 칸이 없는 서버면 한 칸 내려가고, 종류
+     칸도 없으면 한 칸 더 내려간다. 글자 모양이 아니라 <b>세 단이 다 있는지</b>
+     를 본다. 모양만 보면 고칠 때마다 헛알람이 난다 (8번). */
+  is(/AR\.noStage=true/.test(app) && /read\(cols\+',source'\)/.test(app),
+    '단계 칸이 없는 서버면 <b>한 칸 내려가</b> 다시 부른다 — 화면 전체가 안 죽는다');
+  is(/AR\.noSrc=true/.test(app) && /return read\(cols\)/.test(app),
+    '종류 칸도 없으면 <b>한 칸 더</b> 내려간다 — 종류만 못 볼 뿐 나머지는 돈다');
+  is(/read\(cols\+',source,stage,next_appt,contracted_at,policy_sent_at'\)/.test(app),
+    '<b>제일 먼저</b>는 단계·약속까지 다 달라고 한다 — 있으면 다 쓴다');
+  is(/var read=function\(c\)\{[\s\S]{0,200}?arPageAll\(/.test(app),
+    '세 단이 <b>모두 쪽을 나눠</b> 읽는다 — 되돌아간 판에서만 1,000줄에 잘리면 더 나쁘다');
   is(/\['pol','📜','증권 미전달'\]/.test(app) && /\['won','🏆','계약 직후'\]/.test(app),
     '오늘 터치할 사람에 계약 뒤 칸이 생겼다');
 

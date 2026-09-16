@@ -242,6 +242,78 @@ const SEED=(role)=>WAIT+`
   is(!!O.one.open&&O.one.open!=='me', '<b>그 사람이 펼쳐진 채</b>로 열린다 — '+O.one.open);
   is(O.all.open==='', '「전부 →」 는 <b>아무도 안 펼치고</b> 전체로 연다');
 
+  console.log('\n[5-1] <b>그룹 · 사람을 골라</b> 그것만 본다');
+  /* 사장님 말씀 — 「팀 전체만 보이는데, 내가 그룹 / 또는 누군가를 선택하면
+     그 사람만 볼수 있도록 만들어」. */
+  const P=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    await window.__home();
+    const box=()=>document.querySelector('#dynPane .hm-team');
+    const chips=()=>[].slice.call(box().querySelectorAll('.hm-tm-p')).map(e=>e.textContent.trim());
+    const names=()=>[].slice.call(box().querySelectorAll('.hm-tm-r .nm')).map(e=>e.textContent.trim());
+    const out={chips:chips(),allNames:names(),sel:!!box().querySelector('.hm-tm-sel')};
+    /* 2팀만 */
+    hmTmSet('t:t2');
+    out.teamNames=names(); out.teamTitle=(box().querySelector('.hm-tm-h b')||{}).textContent||'';
+    /* 한 사람만 */
+    hmTmSet('p:u2');
+    out.oneNames=names(); out.oneTitle=(box().querySelector('.hm-tm-h b')||{}).textContent||'';
+    out.oneGo=(box().querySelector('.hm-tm-go')||{}).textContent||'';
+    /* 전체로 되돌리기 */
+    hmTmSet('');
+    out.backNames=names();
+    /* 고른 쪽에 아무도 없으면 <b>왜 비었는지</b> 말한다 */
+    hmTmSet('t:zz');
+    out.emptyTxt=(box().querySelector('.hm-tm-none')||{}).textContent||'';
+    hmTmSet('');
+    return out;
+  },SEED('owner'));
+  is(P.chips[0]==='전체'&&P.chips.length>=4,
+     '<b>전체 · 팀</b> 단추가 선다 — '+P.chips.join(' · '));
+  is(P.sel, '<b>설계사 고르기</b> 칸이 있다 — 사람이 많아지면 단추로는 안 된다');
+  is(P.teamNames.length>0&&P.teamNames.every(n=>['홍갑돌','홍을돌','홍병돌'].indexOf(n)>=0),
+     '팀을 고르면 <b>그 팀 사람만</b> 남는다 — '+P.teamNames.join(' · '));
+  is(/2팀/.test(P.teamTitle), '제목도 <b>고른 팀</b>으로 바뀐다 — '+P.teamTitle);
+  is(P.oneNames.length===1&&P.oneNames[0]==='홍길순',
+     '사람을 고르면 <b>그 한 분만</b> 남는다 — '+P.oneNames.join(' · '));
+  is(/홍길순/.test(P.oneTitle)&&/이분 것/.test(P.oneGo),
+     '그 분 이름으로 제목이 서고 <b>TFA 도 그 분 것</b>으로 연다 — '+P.oneTitle);
+  is(P.backNames.length===P.allNames.length&&P.allNames.length>1,
+     '<b>전체로 되돌아온다</b> — '+P.backNames.length+'명 (못 돌아오면 갇힌다)');
+  is(/전체/.test(P.emptyTxt),
+     '고른 쪽이 비면 <b>왜 비었는지</b> 말한다 — 「'+P.emptyTxt.replace(/\s+/g,' ').slice(0,36)+'…」');
+
+  console.log('\n[5-2] <b>권한대로</b>만 보인다 — 화면이 서버보다 넓으면 안 된다');
+  /* 서버(RLS)는 dbs_select 에서 「관리자거나, 내 것이거나, 내 팀 사람 것」
+     으로 막는다. 화면이 더 넓게 보여 주면 남의 팀 이름이 뜨는데 눌러도
+     빈 칸만 나온다 — 그것이 지금까지의 모습이었다. */
+  const LD=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    await window.__home();
+    const box=document.querySelector('#dynPane .hm-team');
+    const names=box?[].slice.call(box.querySelectorAll('.hm-tm-r .nm')).map(e=>e.textContent.trim()):[];
+    return {see:hmTmSee(),names,ids:hmTmScopeIds()};
+  },SEED('leader'));
+  is(LD.see==='team', '지점장은 <b>자기 팀</b>까지다 — '+LD.see);
+  is(LD.names.length>0&&LD.names.every(n=>['홍길동','홍길순','홍말순'].indexOf(n)>=0),
+     '지점장 화면에 <b>남의 팀 사람이 없다</b> — '+LD.names.join(' · '));
+  is(LD.ids.indexOf('u4')<0&&LD.ids.indexOf('u7')<0,
+     '볼 수 있는 사람에 <b>2·3팀이 안 들어 있다</b> — '+LD.ids.length+'명');
+
+  const ME=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    await window.__home();
+    return {see:hmTmSee(),ids:hmTmScopeIds()};
+  },SEED('member'));
+  is(ME.see==='me'&&ME.ids.length===1&&ME.ids[0]==='me',
+     '설계사는 <b>본인만</b>이다 — '+ME.ids.join(' · '));
+
+  const OW=await page.evaluate(async(seed)=>{
+    (0,eval)(seed); await window.__home();
+    return {see:hmTmSee(),n:hmTmScopeIds().length};
+  },SEED('owner'));
+  is(OW.see==='all'&&OW.n>=8, '대표는 <b>전체</b>를 본다 — '+OW.n+'명');
+
   console.log('\n[6] 이름을 씻는다 (3번)');
   const E=await page.evaluate(async(seed)=>{
     (0,eval)(seed);

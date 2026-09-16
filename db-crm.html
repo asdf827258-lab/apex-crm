@@ -557,16 +557,40 @@ async function startApp(){
 }
 let crmTeams=[],crmTeamOf={};
 function teamName(pid){const t=crmTeams.find(x=>x.id===crmTeamOf[pid]);return t?t.name:""}
+/* ── 서버는 한 판에 1,000줄까지만 준다 ──────────────────────────────
+   1,293건이 배정돼 있는데 대시보드가 1,000건에서 끝나던 자리다. 넘는 줄은
+   에러도 없이 사라져서, 숫자가 그럴듯해 아무도 못 본다. 쪽을 나눠 끝까지
+   읽는다. 부르는 쪽은 흔들리지 않는 차례를 반드시 함께 준다 — 차례가
+   흔들리면 쪽 사이에서 같은 줄이 두 번 오거나 아예 빠진다. */
+const CRM_PAGE=1000;
+async function pageAll(make,cap){
+  const out=[],lim=cap||100000;
+  for(let from=0;;from+=CRM_PAGE){
+    const r=await make(from,from+CRM_PAGE-1);
+    if(r&&r.error)return {data:out,error:r.error,cut:false};
+    const d=(r&&r.data)||[];
+    out.push(...d);
+    if(d.length<CRM_PAGE)return {data:out,error:null,cut:false};
+    if(out.length>=lim)return {data:out,error:null,cut:true};
+  }
+}
 async function loadAll(){
   const [p,d,c,a,t,tm,cf,cl]=await Promise.all([
     sb.from("profiles").select("id,name,role,active").eq("active",true).order("name"),
-    sb.from("dbs").select("*").order("created_at",{ascending:false}),
-    sb.from("calls").select("*").order("call_at",{ascending:false}),
-    sb.from("attendance").select("*"),
+    pageAll((x,y)=>sb.from("dbs").select("*")
+      .order("created_at",{ascending:false}).order("id",{ascending:true}).range(x,y)),
+    pageAll((x,y)=>sb.from("calls").select("*")
+      .order("call_at",{ascending:false}).order("id",{ascending:true}).range(x,y)),
+    /* 출근표에는 id 칸이 없다 — 날짜+사람으로 차례를 못 박는다.
+       없는 칸으로 차례를 잡으면 표가 통째로 안 온다 */
+    pageAll((x,y)=>sb.from("attendance").select("*")
+      .order("att_date",{ascending:false}).order("member_id",{ascending:true}).range(x,y)),
     sb.from("teams").select("id,name,color").order("name"),
-    sb.from("team_members").select("team_id,member_id"),
+    pageAll((x,y)=>sb.from("team_members").select("team_id,member_id")
+      .order("member_id",{ascending:true}).range(x,y)),
     sb.from("app_config").select("key,value").eq("key","db_sources"),
-    sb.from("clients").select("advisor_id,name_masked")
+    pageAll((x,y)=>sb.from("clients").select("advisor_id,name_masked")
+      .order("advisor_id",{ascending:true}).range(x,y))
   ]);
   if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
   profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
