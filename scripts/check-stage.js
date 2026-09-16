@@ -186,6 +186,9 @@ const is = (c, m) => c ? ok(m) : no(m);
       const q = n => (n < 10 ? '0' : '') + n;
       return x.getFullYear() + '-' + q(x.getMonth() + 1) + '-' + q(x.getDate()); };
 
+    /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+       늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
+    window.arLoad = function () {};
     AR.loaded = true;
     AR.db = [
       /* 계약은 했는데 증권을 20일째 못 보냄 — 가장 급한 사람 */

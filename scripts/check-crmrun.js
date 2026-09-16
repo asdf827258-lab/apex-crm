@@ -599,10 +599,35 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
   }, { timeout: 20000 }).then(h => h.jsonValue(), () => '');
   is(/두 곳에 다 있는 이름입니다/.test(fixB) && /경기 광주시/.test(fixB),
      '<후보 둘을 들고> 온다 — 광주광역시 또는 경기 광주시');
-  is(/<select data-cfix/.test(fixB),
-     '<치는 칸이 아니라 고르는 칸>이다 — 치면 또 갈라진다');
-  is(/value="경기 광주시"/.test(fixB),
-     '목록에 <「경기 광주시」도 있다> — 없으면 고를 방법이 아예 없다');
+  /* 예전에는 <select> 하나였다. 시·군이 126곳이라 폰에서 한참 굴려야 해서
+     <b>검색 칸</b>으로 바꿨다(사장님 말씀 — 네이버 주소 검색창처럼).
+
+     여기서 지키던 <b>뜻</b>은 「고르는 칸이어야 한다」 가 아니라
+     <b>「사장님이 친 글자가 그대로 저장되면 안 된다」</b> 이다 — 치는 대로
+     담기면 「여수」·「여수시」·「전남여수」 로 또 갈라진다. 검색 칸은 찾기만
+     하고, <b>담기는 값은 눌러서 고른 표준 이름</b>뿐이다. 그 뜻을 그대로
+     잰다 — 치기만 해서는 아무것도 안 담기는지 <b>실제로 쳐 본다</b>.   */
+  is(/class="ct-q"/.test(fixB)&&/data-cpick=/.test(fixB),
+     '<찾아서 고르는 칸>이다 — 126곳을 굴리지 않는다');
+  const typed = await pg.evaluate(() => {
+    const q = document.querySelector('#rtTidyB .ct-q');
+    if (!q) return '(칸이 없다)';
+    q.value = '여수시';                         /* 친다 — 고르지는 않는다 */
+    q.dispatchEvent(new Event('input', { bubbles: true }));
+    /* 담긴 값은 화면에서 읽는다 — 그 파일은 감싸여 있어 밖에서 못 부른다 */
+    const sel = document.querySelector('#rtTidyB [data-cpick] .ct-sel');
+    return sel ? (sel.getAttribute('data-cval') || '') : '(칸이 없다)';
+  });
+  is(typed === '', '<치기만 해서는 안 담긴다> — 친 글자가 그대로 저장되면 또 갈라진다');
+  const found = await pg.evaluate(() => {
+    const q = document.querySelector('#rtTidyB .ct-q');
+    q.value = '광주';
+    q.dispatchEvent(new Event('input', { bubbles: true }));
+    return [].slice.call(document.querySelectorAll('#rtTidyB .ct-i'))
+             .map(e => e.getAttribute('data-city'));
+  });
+  is(found.indexOf('경기 광주시') >= 0 && found.indexOf('광주광역시') >= 0,
+     '「광주」 를 치면 <두 곳이 다 나온다> — ' + found.join(' · ') + ' (없으면 고를 방법이 없다)');
 
   /* 안 고르면 아무것도 안 바뀐다 */
   await pg.evaluate(() => document.getElementById('rtTidyGo').click());
@@ -615,8 +640,12 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
 
   /* 한 번 고르니 두 명이 같이 정해진다 */
   await pg.evaluate(() => {
-    const el = document.querySelector('#rtTidyB [data-cfix]');
-    el.value = '광주광역시';
+    /* <b>실제로 눌러서</b> 고른다 — 값을 몰래 넣지 않는다 */
+    const q = document.querySelector('#rtTidyB .ct-q');
+    q.value = '광주';
+    q.dispatchEvent(new Event('input', { bubbles: true }));
+    const hit = document.querySelector('#rtTidyB .ct-i[data-city="광주광역시"]');
+    if (hit) hit.click();
     document.getElementById('rtTidyGo').click();
   });
   await pg.waitForFunction(() => {

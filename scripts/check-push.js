@@ -49,6 +49,11 @@ const SEED=`
   window.osLoadProfile=function(){};
   window.osProfileApply=function(){};
   window.osShowLoginGate=function(){};
+  /* arLoad 도 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+     <b>늦게 돌아와</b> AR.db 를 빈 것으로 덮습니다. 그러면 「오늘 챙길 분」이
+     0명이 되어 알람이 안 울리고, <b>CI 에서만</b> 빨간불이 납니다 — 헛알람입니다 (8번).
+     [2] 는 300ms 만 기다려 살아남고 [3] 은 800ms 라 죽었습니다. */
+  window.arLoad=function(){};
   AR.loaded=true; AR.busy=false; AR.cliRows=[];
   AR.db=[
    {id:'d2',who:'me',name:'홍길순',region:'광주',src:'일반',stage:'PC',appt:'',days:10,n:3,cAt:'',pAt:''},
@@ -129,6 +134,9 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     (0,eval)(a.seed); (0,eval)(a.fake);
     go('home'); await new Promise(r=>setTimeout(r,800));
     const out={};
+    /* 재기 <b>직전에</b> 견본이 살아 있는지 같이 적어 둔다 — 나중에 또 지워지면
+       「안 울린다」가 아니라 <b>「견본이 날아갔다」</b>고 말해 준다 */
+    out.seed=(AR.db||[]).length;
     const kst=()=>new Date(Date.now()+9*3600000).getUTCHours();
     /* 아직 안 된 시각 — 지금보다 뒤로 정해 둔다 */
     localStorage.setItem('apex_alm_hour',String(Math.min(23,kst()+1)));
@@ -153,6 +161,7 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     return out;
   },{seed:SEED,fake:FAKE});
   is(T.early===0, '정한 시각 <b>전에는 안 울린다</b>');
+  is(T.seed===3, '재기 직전에 <b>심어 둔 견본이 살아 있다</b> — '+T.seed+'/3건 (0건이면 점검이 오염된 것이지 앱이 고장난 것이 아닙니다)');
   is(T.first===1, '시각이 지나면 <b>한 번 울린다</b>');
   is(T.net===0,   '울릴 때 <b>서버를 한 번도 안 부른다</b> — '+T.net+'번 (7번)');
   is(T.stamp===T.today, '울린 날을 <b>적어 둔다</b> — '+T.stamp);
