@@ -43,7 +43,13 @@ const SEED=`
   try{osHideLoginGate();}catch(e){}
   CM.who={me:'윤시현',u2:'박서준'};CM.pick='';
   AR.loaded=true;AR.busy=false;AR.cliRows=[];
-  AR.db=[{id:'b1',who:'me',name:'홍길동',region:'순천',src:'일반',stage:'부재',
+  /* 오늘 약속 둘 — <b>담당자가 다르다</b>. 여태 이 줄은 아무도 안 걸러
+     담당자를 고르셔도 남의 약속이 그대로 섞여 나왔다. */
+  AR.db=[{id:'ap1',who:'me',name:'내약속',region:'순천',src:'일반',stage:'AP',
+          appt:'@TODAY@T09:00',days:1,n:1,cAt:'',pAt:''},
+         {id:'ap2',who:'u2',name:'남의약속',region:'여수',src:'일반',stage:'AP',
+          appt:'@TODAY@T10:00',days:1,n:1,cAt:'',pAt:''},
+         {id:'b1',who:'me',name:'홍길동',region:'순천',src:'일반',stage:'부재',
           appt:'',days:9,n:1,cAt:'',pAt:''},
          {id:'b2',who:'u2',name:'임꺽정',region:'여수',src:'일반',stage:'TA',
           appt:'',days:4,n:1,cAt:'',pAt:''},
@@ -55,6 +61,10 @@ const SEED=`
             {id:'c2',advisor_id:'u2',name_masked:'임*정',created_at:'2026-01-02'},
             {id:'c3',advisor_id:'me',name_masked:'장*수',created_at:'2026-01-02'},
             {id:'c4',advisor_id:'me',name_masked:'최*수',created_at:'2026-01-02'}];`;
+
+/* 앱이 쓰는 <b>한국 날짜</b>로 맞춘다 — UTC 로 심으면 밤에 하루가 어긋난다 */
+const TODAY=new Date(Date.now()+9*3600*1000).toISOString().slice(0,10);
+const SEED2=SEED.split('@TODAY@').join(TODAY);
 
 (async()=>{
   await new Promise(r=>srv.listen(PORT,r));
@@ -75,7 +85,7 @@ const SEED=`
     /* 「실명으로 내보내기」 를 켜면 그때만 그대로 나간다 */
     mcalCfgSet('real',true); out.out2=mcalOutName(OSC.list[0]); mcalCfgSet('real',false);
     return out;
-  },SEED);
+  },SEED2);
   is(A.mine==='홍길동',
      '이 브라우저가 <b>배정 DB</b> 에서 되찾는다 — 홍*동 → '+A.mine+' (고객 명부에는 가린 이름만 올라간다)');
   is(A.other==='임꺽정', '<b>남의 담당</b> 고객도 그 담당자 것에서 찾는다 — 임*정 → '+A.other);
@@ -107,15 +117,15 @@ const SEED=`
               .map(x=>x.textContent.replace(/\s+/g,' ').trim()),
       mask:(document.querySelector('#dynPane .mcal-mask')||{}).textContent||'' };
   });
-  is(B.n===4, '네 분이 모두 선다 — '+B.n+'줄');
-  is(B.doN===B.n, '줄마다 <b>무엇을 할지</b> 가 붙는다 — '+B.doN+'/'+B.n+'줄');
+  is(B.n===6, '<b>여섯 줄</b>이 선다 — 고객 넷 + 오늘 약속 둘 ('+B.n+'줄)');
+  is(B.doN===4, '<b>연락할 분</b>마다 무엇을 할지가 붙는다 — '+B.doN+'줄 (약속 줄에는 시각이 적힌다)');
   is(/전화|소식/.test(B.txt[0])&&/한 번도 연락한 적이 없습니다/.test(B.txt[0]),
      '무엇을 · 왜 를 <b>그대로</b> 적는다 — 「'+B.txt[0].replace(/^[^가-힣]*/,'').slice(0,40)+'…」');
   /* 고객 365일 규칙(CC_RULES)을 여기서 또 적지 않았나 — 두 벌이면 갈린다 (5번) */
   const body=SRC.slice(SRC.indexOf('function mcalDoOf('),SRC.indexOf('function mcalWhoName('));
   is(/ccPlan\(/.test(body)&&!/한 번도 연락한 적이 없습니다/.test(body),
      '무엇을 할지는 <b>고객 365일 규칙 한 곳</b>에서 가져온다 (5번) — 여기 또 안 적었다');
-  is(B.whoN===B.n, '줄마다 <b>담당자 이름</b>이 붙는다 — '+B.whoN+'/'+B.n+'줄');
+  is(B.whoN===B.n, '줄마다 <b>담당자 이름</b>이 붙는다 — '+B.whoN+'/'+B.n+'줄 (약속 줄에도)');
   is(B.whos.indexOf('박서준')>=0&&B.whos.indexOf('윤시현')>=0,
      '<b>누가 맡은 분인지</b> 그대로 — '+B.whos.filter(Boolean).join(' · '));
   is(B.picks.length>=3, '<b>담당자 고르개</b>가 달력 위에 선다 — '+B.picks.join(' / '));
@@ -133,10 +143,19 @@ const SEED=`
     out.back=[].slice.call(document.querySelectorAll('#dynPane .mcal-it')).length;
     return out;
   });
-  is(C.pick==='u2'&&C.after.length===1&&C.after[0]==='임꺽정',
+  is(C.pick==='u2'&&C.after.length===2&&C.after.indexOf('임꺽정')>=0,
      '한 사람을 고르면 <b>그분 것만</b> 남는다 — '+(C.after.join(',')||'없음')+
      ' (고르개는 고객 365일과 한 벌이다)');
-  is(C.back===4, '같은 칸을 <b>다시 누르면 전체</b>로 — '+C.back+'줄');
+  /* ↓ 사장님이 겪으신 그 자리 — 담당자를 눌렀는데 <b>남의 약속</b>이 섞여
+       나왔다. 고객 줄만 걸러지고 약속 줄(배정 DB)은 아무도 안 걸렀다. */
+  is(C.after.indexOf('남의약속')>=0&&C.after.indexOf('내약속')<0,
+     '<b>약속 줄도 같이</b> 걸린다 — '+(C.after.join(',')||'없음')+
+     ' (여태 약속은 아무도 안 걸러 남의 것이 섞여 나왔다)');
+  is(C.back===6, '같은 칸을 <b>다시 누르면 전체</b>로 — '+C.back+'줄');
+  /* 고르개 숫자가 <b>이 달력</b>을 세는가 — 고객 명부를 세면 목록과 어긋난다 */
+  is(/전체 6/.test(B.picks.join(' ')),
+     '고르개가 <b>이 달력에 선 것</b>을 센다 — '+B.picks.join(' / ')+
+     ' (고객 명부를 세면 「전체 109」 라 적고 밑에는 여덟 줄이 뜬다)');
 
   console.log('\n[6] 글자가 <b>안 잘린다</b> · 콘솔');
   /* 윗줄(.mcal-it .m span)이 <b>한 줄로 자르게</b> 해 두어, 여기서 되돌려야 한다.

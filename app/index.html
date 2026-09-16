@@ -13330,8 +13330,12 @@ function mcalItems(){
     if(ds<TD){it.late=ds;ds=TD;}
     (out[ds]=out[ds]||[]).push(it);
   };
+  /* <b>여기서는 안 거릅니다.</b> 거르는 자리는 mcalMine 한 곳입니다 (5번).
+     여태 고객 줄만 ccScope 로 걸러지고 <b>약속 줄(배정 DB)은 아무도 안
+     걸렀습니다.</b> 그래서 담당자를 고르셔도 남의 약속이 그대로 섞여
+     나왔습니다. 거르는 자리가 둘이면 한쪽을 빠뜨립니다. */
   var all=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[];
-  var mine=(typeof ccScope==='function')?ccScope(all):all;
+  var mine=all;
   var i,c,m,last,cy;
   for(i=0;i<mine.length;i++){
     c=mine[i];
@@ -13679,6 +13683,25 @@ function mcalDot(list){
     h+='<i style="background:'+(MCAL_KIND[k]?MCAL_KIND[k].c:'#8B95A1')+'"></i>';}
   return h;
 }
+/* ── 담당자를 고르면 <b>달력이 통째로</b> 그 사람 것이 된다 ──────────
+   날짜 칸의 숫자도, 주간에 펴지는 글도, 아래 목록도 같이 걸립니다.
+   여태 <b>고객 줄만</b> 걸러지고 <b>약속 줄은 그대로</b>여서, 담당자를
+   눌러도 남의 약속이 섞여 나왔습니다. 거르는 자리를 <b>여기 하나</b>로
+   모읍니다 (5번).
+
+   ★ <b>담당자가 없는 줄</b>(내가 넣은 일정 · 도와줄 것)은 사람을 고르시면
+     빠집니다. 그 줄에는 「누구 것」이 없어서, 남겨 두면 고른 사람 것인
+     줄 알게 됩니다 (1번).                                              */
+function mcalMine(list){
+  var p='';
+  try{ p=(typeof CM!=='undefined'&&CM.pick)||''; }catch(e){ p=''; }
+  if(!p)return list||[];
+  var out=[],i,L=list||[];
+  for(i=0;i<L.length;i++)if((L[i].who||'')===p)out.push(L[i]);
+  return out;
+}
+/* 하루치를 꺼내는 자리도 하나로 — 꺼낼 때마다 거르는 것을 잊지 않게 */
+function mcalDay(items,ds){ return mcalMine((items||{})[ds]||[]); }
 function mcalGridHtml(){
   var ym=mcalYm(),items=mcalItems(),today=mcalToday();
   var first=new Date(ym+'-01T00:00:00Z'),start=(first.getUTCDay()+6)%7;   /* 월요일 시작 */
@@ -13690,7 +13713,7 @@ function mcalGridHtml(){
   for(i=0;i<start;i++)h+='<div class="mcal-d off"></div>';
   for(i=1;i<=last;i++){
     ds=ym+'-'+('0'+i).slice(-2);
-    n=items[ds]||[];
+    n=mcalDay(items,ds);
     h+='<button type="button" class="mcal-d'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
        (n.length?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="n">'+i+'</span>'+
@@ -13709,7 +13732,7 @@ function mcalWeekHtml(){
   var nm=['월','화','수','목','금','토','일'];
   h+='<div class="mcal-wgrid">';
   for(i=0;i<7;i++){
-    ds=mcalShift(st,i);n=items[ds]||[];
+    ds=mcalShift(st,i);n=mcalDay(items,ds);
     h+='<button type="button" class="mcal-wd'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
        (i>=5?' we':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="wh"><b>'+nm[i]+'</b><i>'+(+ds.slice(8,10))+'</i>'+
@@ -13787,8 +13810,11 @@ function mcalManyWho(items){
   return false;
 }
 function mcalDayHtml(){
-  var ds=MCAL.sel||mcalToday(),items=(mcalItems()[ds]||[]);
-  var many=mcalManyWho(items);
+  var ds=MCAL.sel||mcalToday(),ALL=mcalItems(),items=mcalDay(ALL,ds);
+  /* 고르개는 <b>거르기 전</b>을 세어야 한다 — 거른 뒤를 세면 고른 사람만
+     남아 다른 사람을 다시 고를 수가 없다 */
+  var raw=(ALL[ds]||[]);
+  var many=mcalManyWho(raw);
   /* 「09월 10일」 로 찍히던 자리 — 앞의 0 을 떼어 사람이 읽는 대로 적는다 */
   var ttl=(ds===mcalToday()?'오늘':((+ds.slice(5,7))+'월 '+(+ds.slice(8,10))+'일'));
   var body;
@@ -13830,8 +13856,15 @@ function mcalDayHtml(){
        으로 두어, 새 화면이 붙어도 겹치지 않게 합니다.                  */
   var picks='';
   try{
-    if(MCAL.picks&&typeof cmWhoChipsHtml==='function'&&typeof OSC!=='undefined'&&OSC.list)
-      picks=cmWhoChipsHtml(OSC.list)||'';
+    if(MCAL.picks&&typeof cmWhoChipsHtml==='function'){
+      /* <b>이 달력에 선 것</b>을 셉니다. 여태 고객 명부(OSC.list)를 세어서
+         「전체 109 · 윤시현 2」 라고 적어 놓고, 밑에는 <b>여덟 줄</b>이
+         떴습니다 — 숫자와 목록이 서로 다른 것을 세고 있었습니다.
+         담당자가 없는 줄(내 일정 · 도와줄 것)은 고를 것이 없으니 뺍니다. */
+      var wl=[],wi;
+      for(wi=0;wi<raw.length;wi++)if(raw[wi].who)wl.push({advisor_id:raw[wi].who});
+      picks=cmWhoChipsHtml(wl)||'';
+    }
   }catch(e){picks='';}
   /* 아직 <b>가려진 채</b>인 분이 있으면 그 수와 까닭을 적습니다. 말없이 별표만
      두면 사장님은 「왜 이분만 별표지」 를 계속 궁금해하십니다 (1번). */
@@ -13868,7 +13901,7 @@ function mcalCardHtml(opt){
   /* 담당자 고르개를 이 화면에서 켤지 — <b>마지막으로 세운 카드</b>가 정한다.
      다시 그릴 때(mcalPaint)도 그대로 따라간다 */
   MCAL.picks=!!o.picks;
-  items=mcalItems(); tn=(items[today]||[]).length;
+  items=mcalItems(); tn=mcalDay(items,today).length;
   var apps=(o.apps&&typeof PWA_APPS!=='undefined')?PWA_APPS:[];
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📅</span>'+osEsc(o.title||'내 캘린더')+'</div>'+
@@ -14786,8 +14819,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-17 04:20';
-var APP_BUILD_NOTE="<b>지역 동선 — 부근 약속을 미션으로.</b> 여태 이 자리는 <b>이름이 여덟 줄</b>이었습니다. 목록은 「무엇을 할지」 를 말해 주지 않습니다 — 몇 명까지 걸어야 하는지, 지금 어디까지 왔는지, 다음이 누구인지가 안 보입니다. 그래서 두 명쯤 걸다가 놓습니다. 이제 목록 위에 <b>🎯 미션 카드</b>가 섭니다 — <b>「후보 5분 중 오늘 1분에게 거셨습니다. 그래서 약속 1건이 잡혔습니다」</b>. 후보 수만큼 <b>점</b>이 있고, 건 사람만큼 켜집니다. 오늘 이미 건 분은 줄에 <b>「오늘 걸었음」</b>이 붙고 흐려집니다 — 두 번 걸지 않으시게. <b>「다음 → 홍길동」</b> 을 누르면 그 줄로 데려가고 <b>멘트까지 펴 드립니다</b>(이름만 알려 주면 다시 눈으로 찾아야 합니다). 다 돌면 <b>「오늘 5분 다 돌았습니다」</b> 하고 <b>「다음」 단추가 사라집니다</b> — 없는 다음을 만들지 않습니다(1번). <b>숫자는 전부 실제 통화 기록에서 셉니다.</b> 「3명 중 1명」 같은 <b>목표치를 지어내지 않습니다</b> — 제가 정한 숫자를 사장님 성적표로 만들면 안 됩니다. 무엇을 세는지도 카드에 적어 두었습니다. 그리고 <b>📍 동네가 본화면에서도 되는지</b> 확인했습니다 — 지역 동선을 실제로 열고 순천시를 눌러, 📍 동네에서 <b>시 칸 없이 한 줄</b>로 「순천 해룡면 신대리」 를 적고 저장하니 <b>주소와 순천시가 그대로</b> 들어갔습니다. 점검 <b>check-crmrun</b> 에 <b>[17]·[17-1] 스무 자리</b>를 더했습니다 — 새 점검을 따로 만들지 않았습니다. 거기가 이미 진짜 서버 흉내로 이 화면을 띄우고 있어, 또 세우면 그것도 쌍둥이입니다(5번). 되돌려 셋을 확인했습니다 — 카드를 빼면 <b>열한 줄</b>, 「다음」 이 건 사람을 또 가리키면 <b>세 줄</b>, 다 돌아도 단추가 남으면 <b>세 줄</b>이 빨개집니다.";
+var APP_BUILD='2026-09-16 21:30';
+var APP_BUILD_NOTE="<b>담당자를 눌러도 남의 약속이 섞여 나오던 것.</b> 「이번 주·이번 달」 에서 담당자 한 분을 고르면 <b>고객 줄만</b> 걸러지고 <b>약속 줄은 그대로</b> 남았습니다. 박수진을 눌렀는데 윤시현의 3시 약속이 그 밑에 그대로 서 있었습니다 — 팀을 나눠 보시라고 만든 단추가 <b>거꾸로 남의 일정을 보여 주고</b> 있었습니다. 까닭은 <b>거르는 자리가 둘</b>이어서였습니다(5번). 고객은 한 곳에서 걸러지고, 배정 DB 에서 온 약속은 <b>아무 데서도</b> 안 걸러졌습니다. 이제 거르는 자리를 <b>mcalMine 한 곳</b>으로 모았습니다 — 날짜 칸의 숫자도, 주간에 펴지는 글도, 아래 목록도 <b>같이</b> 걸립니다. <b>담당자가 없는 줄</b>(내가 넣은 일정·도와줄 것)은 사람을 고르시면 빠집니다 — 「누구 것」이 없는 줄을 남겨 두면 고른 분 것인 줄 알게 됩니다(1번). <b>고르개의 숫자도 이 달력을 셉니다.</b> 여태 고객 명부를 세어 「전체 109」 라 적어 놓고 밑에는 여덟 줄이 떴습니다 — 숫자와 목록이 서로 다른 것을 세고 있었습니다. 그리고 <b>준비 SQL 이 안 뜨던 까닭</b>을 찾았습니다. 터치 횟수 칸을 만드는 줄이 「출근 현황」 묶음 안에 들어 있었는데, 그 묶음의 딱지는 <b>표</b>가 있나만 보고 「이미 실행됨」 이라고 적습니다. 표는 있고 <b>칸</b>만 없는 자리를 딱지가 못 본 것입니다 — 그래서 사장님 화면에 <b>영영 안 떴습니다</b>. 칸을 더하는 줄은 언제나 뜨는 <b>보정</b> 묶음으로 옮겼고, <b>서버에는 제가 이미 칸을 만들어 두었습니다</b> (있는지 먼저 확인하고, 만들고, 다시 확인했습니다). 점검 <b>check-calface</b> 에 오늘 약속 두 줄(담당자가 서로 다른)을 심어 넉 자리를 더했습니다. 되돌려 둘을 확인했습니다 — 거르는 자리를 도로 흩으면 <b>두 줄</b>, 고르개가 다시 고객 명부를 세면 <b>한 줄</b>이 빨개집니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -32010,12 +32043,6 @@ var HX_SQL={
   "/* 최근 접속시각(재실행 안전) — 있으면 건너뜀 */",
   "alter table public.attendance add column if not exists last_seen timestamptz;",
   "",
-  "/* ── 터치 횟수를 손으로 적는 칸 (재실행 안전) ──────────────────",
-  "   여태 터치 횟수는 통화 기록 건수를 그대로 썼다. 그런데 문자·카톡·",
-  "   만남은 통화 기록이 안 남아서, 다섯 번 손댔는데 두 번이라고 나왔다.",
-  "   적어 두면 그 수를 쓰고, 비워 두면 예전처럼 통화 건수를 센다.",
-  "   0 과 「안 적음」은 다르다 — 0 은 「아직 한 번도 안 손댔다」 이다. */",
-  "alter table public.dbs add column if not exists touch_count integer;",
   "alter table public.attendance enable row level security;",
   "",
   "drop policy if exists attendance_select on public.attendance;",
@@ -32495,6 +32522,18 @@ var HX_SQL={
  ]},
  '18':{label:"DB CRM · 소속 구분 컬럼 보정",need:[],repair:true,lines:[
   "set search_path = public;",
+  "",
+  "/* ── 터치 횟수를 손으로 적는 칸 (재실행 안전) ──────────────────",
+  "   여태 터치 횟수는 통화 기록 건수를 그대로 썼다. 그런데 문자·카톡·",
+  "   만남은 통화 기록이 안 남아서, 다섯 번 손댔는데 두 번이라고 나왔다.",
+  "   적어 두면 그 수를 쓰고, 비워 두면 예전처럼 통화 건수를 센다.",
+  "   0 과 「안 적음」은 다르다 — 0 은 「아직 한 번도 안 손댔다」 이다.",
+  "",
+  "   ※ 이 줄은 원래 「출근 현황」 칸에 넣어 두었는데, 그 칸은 attendance",
+  "     표가 이미 있으면 「이미 실행됨」 으로 떠서 아무도 안 눌렀다.",
+  "     표는 있는데 칸이 없는 자리를 배지가 못 본 것이다. 칸을 더하는",
+  "     줄은 언제나 뜨는 보정 칸에 둔다. */",
+  "alter table public.dbs add column if not exists touch_count integer;",
   "",
   "alter table public.teams add column if not exists color text default '#1A56DB';",
   "alter table public.teams add column if not exists leader_id uuid references public.profiles(id) on delete set null;",
