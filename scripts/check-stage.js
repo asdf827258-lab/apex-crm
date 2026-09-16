@@ -78,22 +78,61 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* 목록을 <b>글자 그대로 베껴 두면</b> 단계를 하나 더할 때마다 이 줄이
      빨개진다 — 고칠 것이 없는데 빨개지는 점검이다 (8번). 재야 하는 것은
      ① 뭉개던 두 가지가 제 이름으로 있는가 ② 두 파일이 같은 말을 하는가. */
-  const listOf=(src,pat)=>{ const m=src.match(pat); if(!m)return null;
-    try{ return JSON.parse(m[1].replace(/'/g,'"')); }catch(e){ return null; } };
-  const CRM_S=listOf(crm,/const STAGES=(\[[^\]]*\])/),
-        APP_S=listOf(app,/var AR_STAGES=(\[[^\]]*\])/);
-  is(!!CRM_S, 'CRM 이 단계 목록을 <b>한 곳</b>에 들고 있다 — '+(CRM_S?CRM_S.length+'가지':'못 찾음'));
+  /* ── 단계 목록은 이제 <b>두 파일이 함께 싣는 한 곳</b>에 있다 ──────
+     여태는 두 파일에 따로 적어 두고 여기서 <b>글자를 견주었다.</b> 견주는
+     것은 갈린 뒤에야 안다 — 갈리기 전에 막는 것이 낫다. 이제 둘 다
+     apex-stage.js 를 싣고 거기서 읽는다 (5번). 그래서 여기서 재는 것도
+     「같은가」 가 아니라 <b>「정말로 그 파일에서 읽는가」</b> 로 바뀐다. */
+  const stagePath=path.join(ROOT,'apex-stage.js');
+  is(fs.existsSync(stagePath), '단계표가 <b>한 곳</b>에 있다 — apex-stage.js');
+  const SHARED=(()=>{ try{
+    const vm=require('vm'),ctx={window:{}}; ctx.globalThis=ctx; vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(stagePath,'utf8'),ctx);
+    return ctx.window.APEX_STAGE||null;
+  }catch(e){ return null; } })();
+  is(!!SHARED, '그 표가 실제로 돈다 — '+(SHARED?SHARED.order.length+'가지':'못 읽음'));
+  const CRM_S=SHARED?SHARED.order.slice():null, APP_S=CRM_S;
   const MUST=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'];
   const miss=CRM_S?MUST.filter(k=>CRM_S.indexOf(k)<0):MUST;
   is(miss.length===0, '뭉개던 <b>부재·거절</b>도, <b>소개완료</b>도 제 이름으로 있다'+
      (miss.length?(' ← '+miss.join(',')+' 없음'):''));
+  is(/<script src="apex-stage\.js"><\/script>/.test(crm), 'CRM 이 그 표를 <b>싣는다</b>');
+  is(/<script src="\.\.\/apex-stage\.js"><\/script>/.test(app), '본체도 그 표를 <b>싣는다</b>');
+  /* <b>다시 적어 두지 않았나.</b> 한쪽이 몰래 제 목록을 들고 있으면 공용
+     표를 고쳐도 그 화면만 안 따라온다 — 예전에 그래서 갈렸다 (5번) */
+  is(!/const STAGES\s*=\s*\[\s*["']미접촉/.test(crm),
+     'CRM 이 단계를 <b>또 적어 두지 않았다</b>');
+  is(!/var AR_STAGES\s*=\s*\[\s*["']미접촉/.test(app),
+     '본체도 단계를 <b>또 적어 두지 않았다</b>');
+  is(!/const STAGE_GO\s*=\s*\{/.test(crm),
+     '다음으로 가는 길도 CRM 에 <b>또 적지 않았다</b> — APEX_STAGE.next 하나만 본다');
+  /* 할 말(목표·방법)도 한 곳에서만 나오나 */
+  is(!/aim:'<b>한 번은 받으시게<\/b> 한다'/.test(app),
+     '본체 TDO 가 <b>할 말을 또 적어 두지 않았다</b> — apex-stage.js 에서 붙여 온다');
+  is(/TDO\[k\]\.ch=m\.ch;/.test(app)&&/TDO\[k\]\.aim=m\.aim;/.test(app),
+     '본체가 그 표에서 <b>수단·목표·방법·도구</b>를 붙여 온다');
+  /* 도구 이름표가 <b>메뉴와 같은가</b> — 베낀 것은 갈린다. 여기서 묶어 둔다 */
+  if(SHARED&&SHARED.tool){
+    const tabsM=app.match(/var TABS=\[[\s\S]*?\n\];/);
+    let TABS=null;
+    try{ TABS=new Function(tabsM[0]+'\nreturn TABS;')(); }catch(e){ TABS=null; }
+    const byId={};
+    if(TABS)TABS.forEach(g=>(g.items||[]).forEach(it=>{byId[it.id]=it;}));
+    const wrong=Object.keys(SHARED.tool).filter(id=>!byId[id]||byId[id].title!==SHARED.tool[id].t);
+    is(!!TABS, '본체 메뉴를 떼어 낼 수 있다 — '+(TABS?Object.keys(byId).length+'개 화면':'못 찾음'));
+    is(wrong.length===0,
+       '도구 이름표가 <b>메뉴와 글자 하나 안 다르다</b> — '+Object.keys(SHARED.tool).length+'개'+
+       (wrong.length?(' ← '+wrong.map(id=>id+'('+((byId[id]&&byId[id].title)||'메뉴에 없음')+')').join(', ')):''));
+  }
   const stageSrc = crm.slice(crm.indexOf('const STAGES='), crm.indexOf('function nextAppt('));
   /* 마지막 통화 결과는 밖에서 넣어 준다 — 그래야 짐작 규칙을 그대로 돌려 볼 수 있다 */
   const mkS = res => {
     try {
-      return new Function('__res',
-        'function result(){return __res}\n' + stageSrc +
-        '\nreturn {stageOf:stageOf,stageAuto:stageAuto,isWon:isWon,needPolicy:needPolicy,stageSet:stageSet};')(res);
+      return new Function('__res','__SHARED',
+        /* 브라우저에서는 window.APEX_STAGE 가 <b>맨 이름</b>으로도 잡힌다.
+           떼어 내 돌릴 때는 그 둘을 손으로 넣어 준다 */
+        'var APEX_STAGE=__SHARED,window={APEX_STAGE:__SHARED};\nfunction result(){return __res}\n' + stageSrc +
+        '\nreturn {stageOf:stageOf,stageAuto:stageAuto,isWon:isWon,needPolicy:needPolicy,stageSet:stageSet};')(res,SHARED);
     } catch (e) { return null; }
   };
   const S = mkS('미진행');
@@ -176,10 +215,8 @@ const is = (c, m) => c ? ok(m) : no(m);
 
   /* ═══ 4~7. 앱 ═══ */
   console.log('\n[4] 앱이 CRM 과 같은 규칙으로 단계를 읽는가');
-  is(!!APP_S && !!CRM_S && JSON.stringify(APP_S)===JSON.stringify(CRM_S),
-    '앱과 CRM 이 <b>글자 하나 · 차례 하나 안 다르다</b> — '+
-    (APP_S?APP_S.join('·'):'못 찾음')+(CRM_S&&APP_S&&JSON.stringify(APP_S)!==JSON.stringify(CRM_S)
-      ?(' ↔ CRM 은 '+CRM_S.join('·')):''));
+  is(!!APP_S, '앱과 CRM 이 <b>같은 표 하나</b>를 읽는다 — '+
+    (APP_S?APP_S.join('·'):'못 찾음')+' (갈릴 자리가 없다)');
   is(/function arStageOf\(/.test(app) && /function arWon\(/.test(app), '단계를 읽는 길이 있다');
   is(/stage,next_appt,contracted_at,policy_sent_at/.test(app), '서버에서 단계와 약속을 받아 온다');
   /* 이제 dbs 는 <b>쪽을 나눠</b> 읽는다(read → arPageAll). 그래도 되돌아가기는

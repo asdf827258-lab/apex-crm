@@ -86,10 +86,18 @@ is(noId.length === 0, noId.length ? ('사라진 id — ' + noId.join(' · ')) :
    'id ' + IDS.length + '개가 그대로 있다 (dbModal · callModal · touchBody …)');
 
 head('[5] <단계 이름>이 양쪽에서 같은 글자다 — 문자열로 견준다');
+/* 단계 이름은 이제 <b>apex-stage.js 한 곳</b>에 있다. db-crm.html 안에서
+   글자를 찾으면 <b>고친 것이 없는데 빨개진다</b> — 헛알람이다 (8번).
+   그래서 ① 그 파일을 싣는가 ② 그 파일에 이름이 다 있는가 를 본다. */
 const STAGE = ['미접촉', 'TA', 'AP', 'PC', 'CS', '계약완료', '증권전달'];
-const noStage = STAGE.filter(s => !HTML.includes("'" + s + "'") && !HTML.includes('"' + s + '"'));
-is(noStage.length === 0, noStage.length ? ('db-crm.html 에서 사라진 단계 — ' + noStage.join(' · ')) :
-   '단계 일곱(' + STAGE.join(' · ') + ')이 db-crm.html 에 있다');
+const STAGE_SRC = (() => { try {
+  return require('fs').readFileSync(require('path').join(process.cwd(), 'apex-stage.js'), 'utf8');
+} catch (e) { return ''; } })();
+is(/<script src="apex-stage\.js"><\/script>/.test(HTML),
+   'db-crm.html 이 <b>단계표를 싣는다</b> — apex-stage.js');
+const noStage = STAGE.filter(s => !STAGE_SRC.includes("'" + s + "'") && !STAGE_SRC.includes('"' + s + '"'));
+is(noStage.length === 0, noStage.length ? ('단계표에서 사라진 단계 — ' + noStage.join(' · ')) :
+   '단계 일곱(' + STAGE.join(' · ') + ')이 <b>두 화면이 함께 읽는 표</b>에 있다');
 const useStage = ['AP', 'PC', 'CS', '계약완료'];
 const noUse = useStage.filter(s => !(ROUTE + CARE).includes(s));
 is(noUse.length === 0, noUse.length ? ('감싸는 쪽이 모르는 단계 — ' + noUse.join(' · ')) :
