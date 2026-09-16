@@ -158,8 +158,9 @@ const txt=el=>el.textContent.replace(/\s+/g,' ').trim();
     const out={};
     /* 차례는 STAGES 하나가 안다 — 여기서 또 적으면 두 벌이 된다 */
     out.next={}; STAGES.forEach(k=>{out.next[k]=sgNextOf({id:'x',stage:k})});
-    /* 표에 <b>빠진 단계</b>가 있으면 그 자리에서 단추가 조용히 안 선다 */
-    out.missing=STAGES.filter(k=>!(k in STAGE_GO));
+    /* 표에 <b>빠진 단계</b>가 있으면 그 자리에서 단추가 조용히 안 선다.
+       길은 이제 <b>apex-stage.js 한 곳</b>에 있다 — 본체와 같은 파일이다 (5번) */
+    out.missing=STAGES.filter(k=>!(k in APEX_STAGE.go));
     renderDb();
     const btn=id=>{const t=[].slice.call(document.querySelectorAll('#dbBody tr'))
       .filter(r=>r.innerHTML.indexOf("sgUp('"+id+"')")>=0)[0]; return !!t; };

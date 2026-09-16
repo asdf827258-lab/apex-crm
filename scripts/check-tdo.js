@@ -82,7 +82,19 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(two.ap==='AP'&&two.none==='미접촉', '상담은 <b>AP</b> · 아무것도 없으면 <b>미접촉</b>');
   is(two.byHand==='PC', '<b>손으로 정하신 단계가 이긴다</b> — '+two.byHand);
   /* db-crm.html 은 <b>따로 있는 파일</b>이다 — 거기와 갈리면 두 화면이 다른 말을 한다 */
-  const crmStages=((CRM.match(/const STAGES=\[([^\]]*)\]/)||[])[1]||'').replace(/\s/g,'');
+  /* 단계 목록은 이제 <b>두 파일이 함께 싣는 apex-stage.js</b> 한 곳에 있다.
+     여태는 두 곳에 적어 두고 여기서 <b>글자를 견주었다</b> — 견주는 것은
+     갈린 뒤에야 안다. 이제 갈릴 자리가 없으니, 재는 것도 「같은가」 가 아니라
+     <b>「정말 그 파일에서 읽는가」</b> 로 바뀐다 (5번). */
+  const SHARED=(()=>{ try{
+    const vm=require('vm'),ctx={window:{}}; ctx.globalThis=ctx; vm.createContext(ctx);
+    vm.runInContext(require('fs').readFileSync(
+      require('path').join(process.cwd(),'apex-stage.js'),'utf8'),ctx);
+    return ctx.window.APEX_STAGE||null;
+  }catch(e){ return null; } })();
+  const crmStages=SHARED?SHARED.order.map(x=>'"'+x+'"').join(','):'';
+  is(/<script src="apex-stage\.js"><\/script>/.test(CRM),
+     'DB CRM 이 <b>그 표를 싣는다</b> — 따로 적어 두지 않는다');
   is(crmStages===two.stages.map(x=>'"'+x+'"').join(','),
      'DB CRM 화면도 <b>글자 하나 안 다르다</b> — '+crmStages.slice(0,40)+'…');
   const crmFlat=CRM.replace(/\s/g,'');
