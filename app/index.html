@@ -14606,8 +14606,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-16 09:40';
-var APP_BUILD_NOTE="<b>1,000건에서 조용히 잘리던 것을 고쳤습니다.</b> 사장님이 보신 그대로였습니다 — 배정 DB 는 <b>1,293건</b>인데 대시보드는 <b>1,000건에서 끝났습니다.</b> 서버는 한 번에 <b>1,000줄까지만</b> 주는데, 그 위는 <b>에러도 없이</b> 안 옵니다. 그래서 1,000줄을 받아 들고 「다 받았다」고 믿고 있었습니다. 숫자가 그럴듯해서 아무도 못 봅니다. <b>「오늘 손댈 사람」에서 사람이 통째로 빠지던 것</b>도 같은 자리였습니다. 이제 <b>쪽을 나눠 끝까지</b> 읽습니다 — 덜 온 판이 오면 끝, 꽉 찬 판이면 더 있습니다. 쪽을 나눌 때는 <b>차례를 못 박습니다</b>(두 칸으로) — 안 그러면 쪽 사이에서 같은 줄이 두 번 오거나 아예 빠집니다. <b>본체 21곳 · CRM 5곳</b>을 고쳤습니다. 배정 DB·통화·고객·출근 전부입니다 — 33명이면 출근표는 30일치만 해도 1,000줄에 닿습니다. 통화는 <b>최근 4,000통까지</b>만 읽고 서버를 아낍니다(7번). 거기서 멈추면 <b>멈췄다고 말합니다</b> — 말 없이 자르는 것이 지금 고친 바로 그 버릇입니다(1번). 한 줄만 읽는 자리 여섯 곳은 코드에 <b>왜 안전한지 한 줄 적어</b> 두었습니다. 곁들여 <b>출근 현황이 빈 채로 서던 것</b>도 고쳤습니다 — 아직 없는 칸(last_seen)을 이름으로 부르는 바람에 서버가 표를 통째로 거절하고 있었습니다. 이제 그 칸을 빼고 다시 부릅니다. 점검 <b>check-dbpage</b> 를 새로 만들었습니다 — 1,000줄만 주는 <b>가짜 서버</b>를 세워 1,293건·2,000건·0건을 실제로 읽어 보고, 쪽을 안 나눈 자리가 하나라도 남으면 <b>그 자리를 이름으로</b> 알려 줍니다.";
+var APP_BUILD='2026-09-16 11:20';
+var APP_BUILD_NOTE="<b>홈에서 그룹·사람을 골라 봅니다. 그리고 권한대로만 보입니다.</b> 사장님 말씀대로 「오늘 팀 전체」 칸에 <b>고르는 줄</b>을 세웠습니다 — <b>전체 · 팀 단추 · 설계사 고르기</b>. 팀을 누르면 그 팀만, 사람을 고르면 <b>그 한 분만</b> 남고 제목도 「홍길동 님의 오늘」 로 바뀝니다. 그 자리에서 <b>TFA 도 그분 것</b>으로 엽니다. 고른 쪽에 아무도 없으면 <b>왜 비었는지</b> 적고 전체로 돌아가는 길을 보여 드립니다 — 못 돌아오면 갇힙니다. 고치면서 <b>권한이 새던 자리</b>를 찾았습니다. 서버는 「관리자거나, 내 것이거나, <b>내 팀 사람 것</b>」 으로 막고 있는데 <b>화면은 안 막고 있었습니다.</b> 지점장이 홈에서 <b>회사 전체</b>를 보고 있었습니다. 이제 <b>대표·앱 관리자·본부장은 전체, 지점장·교육매니저는 자기 팀, 설계사는 본인만</b> 입니다. 「누구 것을 볼 수 있나」 를 아는 자리를 <b>한 곳</b>으로 모았습니다(5번) — 두 곳에 두면 한쪽만 고쳐 또 샙니다. 점검 <b>check-hmteam</b> 에 열세 자리를 더했습니다. 막이를 일부러 빼 보니 지점장 화면에 <b>2·3팀 사람이 그대로 올라오는 것</b>을 확인했습니다 — 그게 지금까지의 모습이었습니다. 곁들여 <b>바탕화면 캘린더</b>도 고쳤습니다 — 주로 볼지 달로 볼지 고르신 것이 <b>다시 열어도 그대로</b> 섭니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -19475,12 +19475,71 @@ function hmReadyCss(){
    <b>새로 세지 않습니다</b> (5번). arTouch('') 가 이미 팀 전체를 골라 두었고
    상태 이름·차례는 TDO 가 압니다. 여기서는 <b>사람별로 묶기만</b> 합니다.
    서버도 더 안 부릅니다 — 이미 읽어 둔 것을 씁니다 (7번).            */
+/* ── 「누구 것을 볼 수 있나」는 여기 <b>한 곳</b>만 안다 (5번) ──────────
+   대표 · 앱 관리자 · 본부장  : 전체
+   지점장 · 교육매니저        : <b>자기 팀</b>
+   설계사                     : <b>본인만</b>
+
+   서버(RLS)도 같은 선을 긋고 있습니다 — dbs_select 는 「관리자거나, 내
+   것이거나, 내 팀 사람 것」 입니다. 그런데 <b>화면은 안 막고 있었습니다.</b>
+   지점장이 홈에서 <b>회사 전체</b>를 보고 있었습니다. 화면이 서버보다 넓게
+   보여 주면 남의 팀 이름이 뜨는데 눌러도 빈 칸만 나옵니다.               */
+function hmTmSee(){
+  if(typeof osIsAppAdmin==='function'&&osIsAppAdmin())return 'all';
+  var r=(typeof osRoleNorm==='function')?osRoleNorm():'member';
+  if(r==='branch_manager')return 'all';
+  if(r==='leader'||r==='education_manager')return 'team';
+  return 'me';
+}
+function hmTmMe(){ return (typeof OS!=='undefined'&&OS.profile&&OS.profile.id)||''; }
+function hmTmMyTeam(){
+  var me=hmTmMe();
+  return (typeof GB!=='undefined'&&GB.teamOf&&GB.teamOf[me])||'';
+}
+/* 내가 볼 수 있는 사람들. <b>본인은 언제나</b> 들어간다 — 팀이 아직
+   안 정해진 분이 자기 것마저 못 보면 홈이 빈 채로 섭니다. */
+function hmTmScopeIds(){
+  var mode=hmTmSee(),me=hmTmMe(),
+      rs=(typeof GB!=='undefined'&&GB.rows)||[],out=[],i,t=hmTmMyTeam();
+  if(mode==='me')return me?[me]:[];
+  for(i=0;i<rs.length;i++){
+    if(mode==='team'&&(!t||rs[i].team!==t))continue;
+    out.push(rs[i].id);
+  }
+  if(me&&out.indexOf(me)<0)out.push(me);
+  return out;
+}
+/* ── 지금 <b>누구 것</b>을 보고 있나 — 아는 자리는 한 곳뿐이다 (5번) ──
+   ''  볼 수 있는 전부 · 't:<팀>' 그 팀만 · 'p:<사람>' 그 사람만          */
+var HMTM={pick:''};
+function hmTmSet(v){
+  HMTM.pick=(v||'');
+  if(typeof hmPaint==='function')hmPaint();
+}
+/* 내 범위 안에 <b>실제로 사람이 있는</b> 팀만 단추로 세운다 — 빈 팀 단추를
+   눌러 아무것도 안 나오면 고장 난 것으로 보입니다. */
+function hmTmTeams(){
+  var T=(typeof GB!=='undefined'&&GB.teams)||[],
+      of=(typeof GB!=='undefined'&&GB.teamOf)||{},
+      ids=hmTmScopeIds(),has={},out=[],i;
+  for(i=0;i<ids.length;i++)if(of[ids[i]])has[of[ids[i]]]=1;
+  for(i=0;i<T.length;i++)if(has[T[i].id])out.push(T[i]);
+  return out;
+}
 function hmTeamRows(){
   if(typeof arTouch!=='function')return [];
   var L=arTouch(''),by={},out=[],i,x,k;
+  var ok={},ids=hmTmScopeIds(),of=(typeof GB!=='undefined'&&GB.teamOf)||{};
+  for(i=0;i<ids.length;i++)ok[ids[i]]=1;
+  var pk=HMTM.pick||'',
+      pt=(pk.indexOf('t:')===0)?pk.slice(2):'',
+      pp=(pk.indexOf('p:')===0)?pk.slice(2):'';
   for(i=0;i<L.length;i++){
     x=L[i]; k=x.who||'';
     if(!k)continue;                       /* 담당자를 모르는 줄은 사람에 안 붙인다 (1번) */
+    if(!ok[k])continue;                   /* <b>볼 수 없는 사람은 세지도 않는다</b> */
+    if(pp&&k!==pp)continue;               /* 한 사람만 보기 */
+    if(pt&&of[k]!==pt)continue;           /* 한 팀만 보기 */
     if(!by[k])by[k]={who:k,n:0,st:{}};
     by[k].n++;
     by[k].st[x.k]=(by[k].st[x.k]||0)+1;
@@ -19502,12 +19561,23 @@ function hmTeamHtml(){
       '<div class="hm-tm-none">팀 기록을 읽는 중입니다. 잠시만요.</div></div></div>';
   var R=hmTeamRows(),i,j,tot=0,h,K=tdoOrder();
   for(i=0;i<R.length;i++)tot+=R[i].n;
+  var pk=HMTM.pick||'',
+      pp=(pk.indexOf('p:')===0)?pk.slice(2):'',
+      pt=(pk.indexOf('t:')===0)?pk.slice(2):'',
+      mode=hmTmSee(),
+      ttl=pp?(arNameOf(pp)+' 님의 오늘')
+            :(pt?(hmTmTeamName(pt)+' 오늘')
+                :(mode==='team'?'우리 팀 오늘':'오늘 팀 전체'));
   h='<div class="card hm-team"><div class="card-body">'+
-    '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b>'+
-      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\'\')">TFA 에서 전부 →</button></div>';
+    '<div class="hm-tm-h"><span class="ci">👥</span><b>'+osEsc(ttl)+'</b>'+
+      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\''+osEsc(pp)+'\')">'+
+        'TFA 에서 '+(pp?'이분 것':'전부')+' →</button></div>'+
+    hmTmPickHtml();
   if(!R.length)
-    return h+'<div class="hm-tm-none">오늘 팀에서 손댈 사람이 없습니다. '+
-      '배정된 DB 가 생기면 여기 올라옵니다.</div></div></div>';
+    return h+'<div class="hm-tm-none">'+
+      (pk?'고르신 쪽에는 오늘 손댈 사람이 없습니다. 위에서 <b>전체</b>를 눌러 보십시오.'
+        :'오늘 팀에서 손댈 사람이 없습니다. 배정된 DB 가 생기면 여기 올라옵니다.')+
+      '</div></div></div>';
   h+='<div class="hm-tm-sum"><b>'+tot+'건</b> · 설계사 <b>'+R.length+'명</b>'+
      ' <span>많은 분부터</span></div>';
   for(i=0;i<R.length&&i<HM_TEAM_SHOW;i++){
@@ -19525,6 +19595,38 @@ function hmTeamHtml(){
     h+='<button type="button" class="hm-tm-more" onclick="hmTeamOpen(\'\')">'+
        '+'+(R.length-HM_TEAM_SHOW)+'명 더 보기 →</button>';
   return h+'</div></div>';
+}
+function hmTmTeamName(id){
+  var T=(typeof GB!=='undefined'&&GB.teams)||[],i;
+  for(i=0;i<T.length;i++)if(T[i].id===id)return T[i].name||'팀';
+  return '팀';
+}
+/* ── 고르는 줄 — 전체 / 팀 / 사람 ──────────────────────────────────
+   사장님 말씀 — 「팀 전체만 보이는데, 내가 그룹 / 또는 누군가를 선택하면
+   그 사람만 볼수 있도록」. 팀이 하나뿐이면 팀 단추는 안 세웁니다 —
+   고를 것이 하나인 단추는 자리만 먹습니다.                             */
+function hmTmPickHtml(){
+  var pk=HMTM.pick||'',T=hmTmTeams(),ids=hmTmScopeIds(),
+      rs=(typeof GB!=='undefined'&&GB.rows)||[],i,h='',who=[];
+  /* 사람 목록 — 내 범위 안에서 <b>이름이 있는</b> 분만 */
+  for(i=0;i<rs.length;i++)if(ids.indexOf(rs[i].id)>=0)who.push(rs[i]);
+  who.sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;});
+  if(T.length<2&&who.length<2)return '';         /* 고를 것이 없으면 안 세운다 */
+  h='<div class="hm-tm-pick">'+
+    '<button type="button" class="hm-tm-p'+(pk?'':' on')+'" onclick="hmTmSet(\'\')">전체</button>';
+  for(i=0;i<T.length;i++)
+    h+='<button type="button" class="hm-tm-p'+(pk==='t:'+T[i].id?' on':'')+'" '+
+       'onclick="hmTmSet(\'t:'+osEsc(T[i].id)+'\')">'+osEsc(T[i].name||'팀')+'</button>';
+  if(who.length>1){
+    h+='<select class="hm-tm-sel" aria-label="설계사 고르기" '+
+       'onchange="hmTmSet(this.value)">'+
+       '<option value=""'+(pk.indexOf('p:')===0?'':' selected')+'>설계사 고르기</option>';
+    for(i=0;i<who.length;i++)
+      h+='<option value="p:'+osEsc(who[i].id)+'"'+(pk==='p:'+who[i].id?' selected':'')+'>'+
+         osEsc(who[i].name||'팀원')+'</option>';
+    h+='</select>';
+  }
+  return h+'</div>';
 }
 /* 눌러서 <b>그 사람 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
    한 사람을 고르는 것은 <b>TFA 가 아는 한 곳</b>(AR.tkAll)에 맡긴다 (5번). */
@@ -19544,6 +19646,15 @@ function hmTeamCss(){
    '.hm-tm-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
      'border-radius:99px;padding:3px 11px;font-size:11px;font-weight:800;color:var(--ink-3);'+
      'cursor:pointer;font-family:inherit}'+
+   /* 고르는 줄 — 좁은 폰에서 <b>가로로 밀리지 않게</b> 접어 내린다 */
+   '.hm-tm-pick{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}'+
+   '.hm-tm-p{appearance:none;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:7px 13px;font-size:12px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit;min-height:34px}'+
+   '.hm-tm-p.on{background:var(--primary);border-color:var(--primary);color:#fff}'+
+   '.hm-tm-sel{appearance:none;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:7px 12px;font-size:12px;font-weight:800;color:var(--ink-3);'+
+     'font-family:inherit;min-height:34px;max-width:100%}'+
    '.hm-tm-sum{font-size:12px;color:var(--ink-3);margin-bottom:9px}'+
    '.hm-tm-sum span{color:var(--ink-5);font-size:11px}'+
    '.hm-tm-none{font-size:11.5px;color:var(--ink-4);line-height:1.7;padding:4px 2px}'+
