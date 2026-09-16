@@ -263,11 +263,28 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
             appt:'',days:10,n:3,cAt:'',pAt:''}];
     AR.cliRows=[];
     go('home'); await new Promise(r=>setTimeout(r,700));
-    const btns=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-tool'));
-    out.btnTxt=btns.map(b=>b.textContent.replace(/\s+/g,' ').trim());
+    /* <b>「무엇을 할까요?」</b> 로 묻고 번호로 고르게 하는가 */
+    out.ask=(document.querySelector('#dynPane .hm-now .hm-ask-t')||{}).textContent||'';
+    const opts=[].slice.call(document.querySelectorAll('#dynPane .hm-now .hm-ask-o'));
+    out.btnTxt=opts.map(b=>b.textContent.replace(/\s+/g,' ').trim());
+    out.nos=opts.map(b=>(b.querySelector('.no')||{}).textContent||'');
+    /* 머리줄에 <b>같은 말이 두 번</b> 안 적히는가 */
+    out.head=(document.querySelector('#dynPane .hm-now .hm-now-k')||{}).textContent||'';
+    /* 손가락으로 누를 만한가 */
+    out.small=opts.filter(b=>b.getBoundingClientRect().height<44).length;
     let went=''; const g=window.go; window.go=function(t){went=t;};
-    if(btns[0])btns[0].click();
-    window.go=g; out.went=went;
+    if(opts[1])opts[1].click();          /* ②번 = 첫 도구 */
+    out.went=went;
+    /* ①번은 <b>그 사람 자리</b>로 보낸다 */
+    went=''; if(opts[0])opts[0].click();
+    out.first=went;
+    window.go=g;
+    /* 마지막 갈래는 <b>「이미 했습니다」</b> — 눌러 보고 실제로 표시되는가 */
+    const key=(hmNext().x||{}).key||'';
+    const before=hmIsDone(key);
+    const last=opts[opts.length-1];
+    if(last)last.click();
+    out.didWorks=(!before&&hmIsDone(key));
     return out;
   },SEED);
   /* 사장님이 <b>직접 정해 주신 다섯</b> — 여기가 바뀌면 사장님 말씀이 지워진 것이다 */
@@ -287,10 +304,23 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.gone.length===2&&G.gone.indexOf('baba')<0,
      '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.gone.join(',')+
      ' (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
-  is(G.btnTxt.length===3, 'PC 줄에 단추가 <b>세 개</b> 선다 — '+G.btnTxt.join(' · '));
+  /* 사장님 말씀 — 「클로드 내게 권한 물어보는것처럼 <b>선택해서</b> 할수
+     있도록」. 도구 단추만 늘어놓는 것이 아니라 <b>묻고 고르게</b> 한다. */
+  is(/무엇을 할까요/.test(G.ask), '<b>「무엇을 할까요?」</b> 하고 묻는다 — '+(G.ask||'안 묻는다'));
+  is(G.nos.join('')==='12345', '갈래마다 <b>번호</b>가 붙는다 — '+G.nos.join('·'));
+  is(G.btnTxt.length===5,
+     'PC 는 <b>다섯 갈래</b>가 선다 — 할 일 하나 + 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
+  is(/전화로/.test(G.btnTxt[0]||'')&&/걸리셨어요/.test(G.btnTxt[0]||''),
+     '①번은 <b>무엇을 어떻게</b> 할지 그대로 적는다 — 「'+(G.btnTxt[0]||'').slice(0,40)+'…」');
   is(/비포&애프터|윤시현|계산기/.test(G.btnTxt.join(' ')),
-     '단추에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
-  is(G.went==='baba', '눌렀더니 <b>그 화면으로</b> 간다 — '+(G.went||'아무 데도'));
+     '도구 갈래에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
+  is(!/받아 낸다/.test(G.head),
+     '머리줄에 <b>같은 말을 두 번 안 적는다</b> — ①번에 이미 있다 · 「'+G.head.trim()+'」');
+  is(G.small===0, '갈래가 <b>손가락으로 누를 만하다</b> — 44px 아래면 폰에서 빗나간다');
+  is(G.went==='baba', '도구 갈래를 누르니 <b>그 화면으로</b> 간다 — '+(G.went||'아무 데도'));
+  is(G.first==='crm'||G.first==='clients',
+     '①번을 누르니 <b>그 사람 자리로</b> 간다 — '+(G.first||'아무 데도'));
+  is(G.didWorks, '<b>「이미 했습니다」</b> 를 고르면 정말로 표시된다 — 고르기만 하고 안 되면 헛것이다');
 
   console.log('\n[9] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));

@@ -289,11 +289,23 @@ const SEED = `(function(){
     const rows = document.querySelector('.hm-rows');
     return { there: !!d, txt: d ? d.textContent.replace(/\s+/g, ' ') : '',
              nm: (d && d.querySelector('.hm-now-m b')) ? d.querySelector('.hm-now-m b').textContent : '',
-             btn: d ? d.querySelectorAll('.hm-now-b button').length : 0,
+             /* 「열기 · 했습니다」 두 단추를 <b>「무엇을 할까요?」 갈래</b>로
+                바꿨습니다 — 읽고 나서 다시 고르는 두 동작을 한 동작으로.
+                여기서 재려는 것은 <b>한 건이 크게 서고 그 자리에서 된다</b>
+                는 것이니, 갈래가 몇이고 <b>끝냈다고 말할 자리</b>가 있는지
+                를 봅니다. 모양이 바뀌었다고 느슨하게 재면 안 됩니다 (8번). */
+             btn: d ? d.querySelectorAll('.hm-ask-o').length : 0,
+             ask: !!(d && d.querySelector('.hm-ask-t')),
+             /* 끝냈다는 말은 갈래마다 다르다 — 「보냈습니다」 · 「만났습니다」.
+                표(HM_ACT)에 적힌 그대로 쓰므로 <b>「이미 」</b> 로 견준다 */
+             hasDid: !!(d && [].slice.call(d.querySelectorAll('.hm-ask-o'))
+                        .filter(b => /이미 /.test(b.textContent)).length),
              first: !!(d && rows && (d.compareDocumentPosition(rows) & Node.DOCUMENT_POSITION_FOLLOWING)),
              n: hmSteps().length };
   });
-  is(now.there && now.btn === 2, '<b>한 건</b>이 크게 서고 단추가 둘이다 (열기 · 했습니다)');
+  is(now.there && now.btn >= 2 && now.ask,
+     '<b>한 건</b>이 크게 서고 <b>「무엇을 할까요?」</b> 갈래가 선다 — '+now.btn+'가지');
+  is(now.hasDid, '그 갈래 안에 <b>「이미 했습니다」</b> 가 있다 — 끝냈다고 말할 자리가 없으면 목록이 안 줄어든다');
   is(now.first, '갈래별 줄보다 <b>위에</b> 선다 — 제일 먼저 눈에 들어와야 한다');
   is(/1번째/.test(now.txt), '<b>몇 번째인지</b> 적는다 — 「' + (now.txt.match(/\d+건 중 \S+번째[^·]*/) || [''])[0].trim() + '」');
   /* 차례는 <b>HM_ORD 가 정한 그대로</b>입니다 — 시간이 정해진 약속이 맨 위,
