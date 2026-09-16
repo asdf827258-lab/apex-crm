@@ -137,13 +137,26 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     /* 재기 <b>직전에</b> 견본이 살아 있는지 같이 적어 둔다 — 나중에 또 지워지면
        「안 울린다」가 아니라 <b>「견본이 날아갔다」</b>고 말해 준다 */
     out.seed=(AR.db||[]).length;
-    const kst=()=>new Date(Date.now()+9*3600000).getUTCHours();
-    /* 아직 안 된 시각 — 지금보다 뒤로 정해 둔다 */
-    localStorage.setItem('apex_alm_hour',String(Math.min(23,kst()+1)));
+    /* ── <b>시계를 손에 쥐고</b> 잰다 ─────────────────────────────────
+       여태는 「지금 시각 + 1」 을 <b>아직 안 된 시각</b>으로 썼다. 그런데
+       밤 11시에 돌리면 +1 이 24 라 23 으로 깎여 <b>지금</b>이 되고,
+       「전에는 안 울린다」 가 빨개진다 — <b>하루 중 한 시간에만</b> 켜지는
+       헛알람이었다. 고칠 것이 없는데 빨개지는 점검은 안 잡는 것보다
+       나쁘다 (8번). 그래서 시각을 <b>오전 10시 반으로 고정</b>하고 잰다.
+       날짜는 그대로라 arToday() 도 오늘을 그대로 말한다.              */
+    const realNow=Date.now;
+    (function(){
+      const d=new Date();
+      const fixed=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),1,30,0); /* KST 10:30 */
+      Date.now=function(){return fixed;};
+    })();
+    out.fixedKst=new Date(Date.now()+9*3600000).getUTCHours();
+    /* 아직 안 된 시각 — 고정한 시각보다 뒤 */
+    localStorage.setItem('apex_alm_hour','11');
     localStorage.removeItem('apex_alm_day');
     window.__rang.length=0; almTick(); out.early=window.__rang.length;
     /* 이미 지난 시각 */
-    localStorage.setItem('apex_alm_hour','0');
+    localStorage.setItem('apex_alm_hour','9');
     window.__rang.length=0; window.__net.length=0;
     almTick(); out.first=window.__rang.length; out.net=window.__net.length;
     out.stamp=localStorage.getItem('apex_alm_day')||'';
@@ -158,8 +171,11 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     /* 잘못 적은 값 */
     ['','abc','-3','99'].forEach((v,i)=>{localStorage.setItem('apex_alm_hour',v);out['h'+i]=almHour();});
     localStorage.removeItem('apex_alm_hour'); out.def=almHour();
+    Date.now=realNow;                      /* 시계를 돌려 놓는다 */
     return out;
   },{seed:SEED,fake:FAKE});
+  is(T.fixedKst===10, '재는 동안 <b>시계를 오전 10시 반</b>으로 잡아 둔다 — '+T.fixedKst+
+     '시 (밤 11시에 돌려도 같은 답이 나와야 한다)');
   is(T.early===0, '정한 시각 <b>전에는 안 울린다</b>');
   is(T.seed===3, '재기 직전에 <b>심어 둔 견본이 살아 있다</b> — '+T.seed+'/3건 (0건이면 점검이 오염된 것이지 앱이 고장난 것이 아닙니다)');
   is(T.first===1, '시각이 지나면 <b>한 번 울린다</b>');
