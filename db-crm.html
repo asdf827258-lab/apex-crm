@@ -46,6 +46,25 @@
     .section-head h3{margin:0;color:var(--navy);font-size:18px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{width:auto;min-width:145px}
     .findn{font-size:12px;font-weight:800;color:#4e5968;margin:-6px 0 12px 2px}
+    /* 단계 길 — 폰에서는 옆으로 밀어 봅니다. 칸은 손가락으로 누를 만한 크기(44px) */
+    .sg-rail{margin:0 0 13px}
+    .sg-line{display:flex;align-items:stretch;gap:3px;overflow-x:auto;padding:3px 1px 7px;-webkit-overflow-scrolling:touch}
+    .sg-step{flex:0 0 auto;min-width:76px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      padding:7px 10px;border:1px solid var(--line);border-radius:13px;background:#fff;cursor:pointer;font-family:inherit;line-height:1.25}
+    .sg-step b{font-size:12px;font-weight:800;color:#4e5968;white-space:nowrap}
+    .sg-step i{font-style:normal;font-size:17px;font-weight:900;color:var(--navy)}
+    .sg-step.green{background:var(--greenbg)}.sg-step.red{background:var(--redbg)}
+    .sg-step.yellow{background:var(--yellowbg)}.sg-step.blue{background:#e8f3ff}.sg-step.gray{background:#eef1f4}
+    .sg-step.zero{opacity:.42}
+    .sg-step.on{border-color:var(--blue);box-shadow:0 0 0 2px rgba(49,130,246,.22)}
+    .sg-step.on b,.sg-step.on i{color:var(--blue2)}
+    .sg-ar{flex:0 0 auto;align-self:center;color:#c3cad3;font-size:15px;font-weight:900}
+    .sg-warn{display:block;width:100%;margin-top:2px;padding:10px 13px;border:1px solid #FCA5A5;border-radius:12px;
+      background:#FEF2F2;color:#B91C1C;font-weight:800;font-size:13px;font-family:inherit;text-align:left;cursor:pointer}
+    .sg-warn.on{box-shadow:0 0 0 2px rgba(220,38,38,.2)}
+    .sg-up{margin-top:4px;padding:4px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;
+      font-family:inherit;font-size:11px;font-weight:800;color:#3182f6;cursor:pointer;white-space:nowrap}
+    .sg-up:hover{background:#f0f7ff;border-color:#bcd8fb}
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
     th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;white-space:nowrap}
     td{padding:12px;border-bottom:1px solid #edf0f2;font-size:13px;vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
@@ -191,6 +210,10 @@
     <div class="content">
       <section class="page active" id="page-dashboard">
         <div class="hero"><div><h2 id="dashboardTitle">배정 DB 현황</h2><p>로그인한 계정 권한에 맞는 데이터만 표시됩니다.</p></div></div>
+        <div class="card section" style="margin-bottom:18px">
+          <div class="section-head"><div><h3>단계 — 지금 어디까지 왔나</h3><p>칸을 누르면 그 단계만 모아 봅니다</p></div></div>
+          <div id="sgDash" class="sg-rail"></div>
+        </div>
         <div class="grid kpis">
           <div class="card kpi"><div class="label">총 배정 DB</div><div class="value" id="kTotal">0</div><div class="sub">조회 가능한 전체 DB</div></div>
           <div class="card kpi"><div class="label">TA 완료</div><div class="value" id="kDone">0</div><div class="sub" id="kDoneRate">진행률 0%</div></div>
@@ -215,6 +238,7 @@
            여기에 또 적어 두면 두 벌이 되어, 예전처럼 부재·거절이 빠진 채로
            남는다 — 그때 그 고객들의 단계가 저장하면서 지워졌다. -->
       <select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option></select></div>
+          <div id="sgRail" class="sg-rail"></div>
           <div id="dbFindN" class="findn"></div><div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
           <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
@@ -415,6 +439,15 @@ function stageSet(d){return STAGES.indexOf((d&&d.stage||"").trim())>=0}
 function stageBadge(d){
   const s=stageOf(d);
   return `<span class="badge ${STAGE_C[s]||"gray"}"${stageSet(d)?"":' title="아직 손으로 정하지 않아 통화 결과에서 짐작한 값입니다"'}>${s}${stageSet(d)?"":"?"}</span>`;
+}
+/* ── 이 단계가 <b>무엇을 들고 있나</b> — 한 곳에서만 안다 (5번) ────
+   계약일·증권 전달일·증권번호를 어느 단계가 들고 있는지가 <b>수정 창</b>과
+   <b>저장</b> 두 곳에 따로 적혀 있었다. 단계를 하나 더할 때 한쪽만 고치면,
+   그 고객을 열었을 때 칸이 안 서고 <b>그대로 저장하면 null 로 지워진다.</b>
+   부재·거절에서 단계가 지워지던 것과 같은 모양이다.                   */
+function stageNeeds(s){
+  return { won:(s==="계약완료"||s==="증권전달"||s==="소개완료"),
+           pol:(s==="증권전달"||s==="소개완료") };
 }
 /* 계약까지 갔나 — 업적·보고서가 이 기준을 함께 쓴다.
    <b>소개완료</b>는 증권까지 전해 드리고 소개까지 받은 자리다 — 계약이
@@ -849,6 +882,7 @@ function renderDashboard(){
   $("recentBody").innerHTML=dbs.slice(0,8).map(d=>{const c=lastCall(d);return `<tr><td class="name">${esc(d.customer_name)}</td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region)}</td><td>${badge(result(d))}</td><td>${esc(pname(c?.created_by||d.created_by))}</td><td>${c?fmt(c.call_at,true):"-"}</td></tr>`}).join("")||`<tr><td colspan="6" class="empty">등록된 DB가 없습니다.</td></tr>`;
   const count={부재:done.filter(d=>result(d)==="부재").length,거절:done.filter(d=>result(d)==="거절").length,상담:consult.length};
   $("bars").innerHTML=["부재","거절","상담"].map(k=>{const pct=done.length?Math.round(count[k]/done.length*100):0;return `<div class="barrow"><strong>${k}</strong><div class="bar"><span style="width:${pct}%"></span></div><span>${count[k]}</span></div>`}).join("");
+  sgDash();
   renderDashAttendance();
 }
 /* 대시보드 하단 오늘 출근관리 — 접속(로그인) 시각 표시 (attendance 테이블 공유) */
@@ -911,6 +945,107 @@ function dbHit(d,q){
   }
   return false;
 }
+/* ══ 단계 길 — <b>지금 어디까지 왔나</b>를 한 줄로 (sg*) ═══════════════
+   여태 단계는 <b>목록 맨 끝 칸의 배지 하나</b>였습니다. 배정이 1,000건을
+   넘고부터는 「지금 TA 가 몇 명인가」 를 알려면 거르개를 <b>열 번</b> 바꿔
+   가며 세어야 했습니다. 세어 본 뒤 다음 사람을 보려면 다시 전체로
+   돌아가야 했습니다. 단계는 <b>일의 순서</b>인데 화면에는 순서가 없었습니다.
+
+   그래서 목록 위에 <b>열 단계를 한 줄 길</b>로 깔고, 칸마다 <b>인원</b>을
+   적습니다. 칸을 누르면 그 단계만 남습니다.
+
+   조심한 것 —
+   · 칸을 누르면 <b>거르개(#stageFilter) 를 그대로 움직입니다.</b> 여기서
+     따로 기억해 두면 거르개와 길이 서로 다른 말을 합니다 (5번).
+   · 차례도 <b>STAGES 하나</b>가 압니다. 여기서 또 늘어놓지 않습니다 —
+     단계를 더할 때 빠뜨릴 자리를 안 만듭니다.
+   · 인원은 <b>이미 받아 둔 목록</b>에서 셉니다. 서버를 다시 부르지
+     않습니다 (7번).
+   · 찾기·담당자·종류 거르개는 <b>그대로 먹인 채</b> 셉니다 — 그래야
+     「광주 + TA 몇 명」 이 보입니다. 단계만 빼고 셉니다.              */
+function sgRows(){
+  const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",
+        rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
+  return dbs.filter(d=>dbHit(d,q)&&(!owner||d.assigned_to===owner)&&
+                       (!rf||result(d)===rf)&&(!sf||srcOf(d)===sf));
+}
+/* 길 모양은 <b>한 곳</b>에서만 만든다 — 대시보드와 DB 관리가 같은 것을 쓴다 */
+function sgRailHtml(rows,cur){
+  const cnt={};rows.forEach(d=>{const k=stageOf(d);cnt[k]=(cnt[k]||0)+1});
+  const pol=rows.filter(needPolicy).length;
+  let h='<div class="sg-line">'+
+    '<button type="button" class="sg-step'+(cur===""?" on":"")+'" onclick="sgPick(\'\')">'+
+    '<b>전체</b><i>'+rows.length+'</i></button>';
+  STAGES.forEach(k=>{
+    const n=cnt[k]||0;
+    h+='<span class="sg-ar">›</span>'+
+       '<button type="button" class="sg-step '+(STAGE_C[k]||"gray")+
+       (cur===k?" on":"")+(n?"":" zero")+'" onclick="sgPick(\''+k+'\')">'+
+       '<b>'+esc(k)+'</b><i>'+n+'</i></button>';
+  });
+  h+='</div>';
+  /* 계약은 됐는데 증권이 안 나간 사람 — 밀리면 민원이 된다 */
+  if(pol)h+='<button type="button" class="sg-warn'+(cur==="__nopol__"?" on":"")+
+    '" onclick="sgPick(\'__nopol__\')">증권 미전달 '+pol+'명 — 밀리면 민원이 됩니다</button>';
+  return h;
+}
+function sgRail(){const h=$("sgRail");if(h)h.innerHTML=sgRailHtml(sgRows(),$("stageFilter")?.value||"")}
+function sgDash(){const h=$("sgDash");if(h)h.innerHTML=sgRailHtml(dbs,"")}
+/* 같은 칸을 다시 누르면 전체로 돌아간다 — 빠져나갈 길을 안 주면 갇힌다 */
+function sgPick(v){
+  const f=$("stageFilter");if(!f)return;
+  f.value=(f.value===v)?"":v;
+  /* 대시보드에서 누르셨으면 <b>DB 관리로 데려갑니다</b> — 거기서
+     goPage 가 renderAll 을 부르므로 목록도 같이 걸러집니다 */
+  if(!$("page-db")||!$("page-db").classList.contains("active")){goPage("db");return}
+  renderDb();sgDash();
+}
+/* ── 다음 단계 — <b>앞으로 나아가는 길</b> ─────────────────────────
+   처음에는 STAGES 의 <b>바로 다음 칸</b>을 다음 단계로 삼았습니다. 그랬더니
+   「미접촉 → <b>부재</b>」 가 떴습니다. 부재는 <b>나아간 것이 아닙니다</b> —
+   전화를 걸었는데 안 받으신 것입니다. 거절도 마찬가지입니다. 이 둘은
+   <b>옆길</b>이고, <b>통화 기록이 정합니다</b>(stageAuto). 그래서 여기서는
+   앞으로 가는 길만 적습니다 — 부재·거절로 <b>가는 길은 안 적습니다.</b>
+
+   부재에서 다시 통화가 되면 TA 입니다. 거절은 여기서 끝이라 다음이
+   없습니다 — <b>없는 자리를 지어내지 않습니다</b> (1번). 되살리시려면
+   통화를 남기시거나 수정 창에서 손으로 고르시면 됩니다.
+
+   STAGES 에 단계를 더하고 여기에 안 적으면 그 자리에서 단추가 조용히
+   안 섭니다 — <b>check-sgrail 이 그것을 셉니다</b> (8번).                */
+const STAGE_GO={'미접촉':'TA','부재':'TA','거절':'','TA':'AP','AP':'PC','PC':'CS',
+                'CS':'계약완료','계약완료':'증권전달','증권전달':'소개완료','소개완료':''};
+function sgNextOf(d){
+  const s=stageOf(d);
+  const to=STAGE_GO[s]||"";
+  return (STAGES.indexOf(to)>=0)?to:"";
+}
+function sgUpBtn(d){
+  if(!canEditDb(d))return "";
+  const to=sgNextOf(d);if(!to)return "";
+  return '<br><button type="button" class="sg-up" onclick="sgUp(\''+d.id+'\')">→ '+esc(to)+'</button>';
+}
+/* 목록 줄에서 <b>그 자리에서</b> 한 칸 올린다. 여태는 수정 창을 열고,
+   단계를 고르고, 저장을 눌러야 했다 — 세 번이 한 번이 된다.
+   다만 <b>날짜가 필요한 단계</b>로 올라갈 때는 수정 창을 엽니다.
+   계약일·증권 전달일을 여기서 지어내면 안 됩니다 (1번).              */
+async function sgUp(id){
+  const d=dbs.find(x=>x.id===id);if(!d)return;
+  if(!canEditDb(d)){toast("내 고객이 아니면 단계를 바꿀 수 없습니다.");return}
+  const from=stageOf(d),to=sgNextOf(d);if(!to)return;
+  const k=stageNeeds(to);
+  if(k.won||k.pol){
+    openDb(id);
+    const sel=$("dbStage");if(sel){sel.value=to;stagePick()}
+    toast("「"+to+"」 는 날짜가 필요합니다 — 확인하시고 저장해 주세요.",6000);
+    return;
+  }
+  if(!confirm(d.customer_name+" 님을 「"+from+"」 에서 「"+to+"」 로 올릴까요?"))return;
+  const {error}=await sb.from("dbs").update({stage:to}).eq("id",id);
+  if(error){wErr(error,"단계 올리기");return}
+  toast(d.customer_name+" 님 → "+to);
+  await loadAll();
+}
 function renderDb(){
   const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
   const gf=$("stageFilter")?.value||"";
@@ -920,14 +1055,14 @@ function renderDb(){
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
     <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
+    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}${sgUpBtn(d)}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="13" class="empty">${q?`「${esc(q)}」 로 찾은 DB 가 없습니다.<br><small>이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모로 찾을 수 있습니다.</small>`:"조회할 DB가 없습니다."}</td></tr>`;
-  bulkBarUpd();
+  bulkBarUpd();sgRail();
 }
 /* 몇 건이 걸렸는지 그 자리에 적는다 — 걸러 놓고 말을 안 하면
    사장님은 자료가 사라진 줄 안다 */
@@ -1053,7 +1188,7 @@ function openDb(id=""){
 /* 계약까지 갔을 때만 날짜·증권번호를 묻는다 — 안 그러면 칸만 늘어난다 */
 function stagePick(){
   const s=$("dbStage")?.value||"";
-  const won=(s==="계약완료"||s==="증권전달"||s==="소개완료"),pol=(s==="증권전달"||s==="소개완료");
+  const k=stageNeeds(s),won=k.won,pol=k.pol;
   $("wonField")?.classList.toggle("hidden",!won);
   $("polField")?.classList.toggle("hidden",!pol);
   $("polNoField")?.classList.toggle("hidden",!won);
@@ -1076,9 +1211,7 @@ async function saveDb(){
     /* 계약일·증권일·증권번호를 <b>어느 단계에서 들고 있나</b> — 한 곳에서 정한다 (5번).
        소개완료는 증권전달 다음 자리라 둘 다 그대로 들고 있어야 한다.
        여기서 빠뜨리면 단계를 올리는 순간 계약일이 <b>null 로 지워진다</b>. */
-    const st=payload.stage,
-          won=(st==="계약완료"||st==="증권전달"||st==="소개완료"),
-          pol=(st==="증권전달"||st==="소개완료");
+    const st=payload.stage,k=stageNeeds(st),won=k.won,pol=k.pol;
     payload.contracted_at=won?($("contractedAt")?.value||null):null;
     payload.policy_sent_at=pol?($("policySentAt")?.value||null):null;
     payload.policy_no=won?(($("policyNo")?.value||"").trim()||null):null;
