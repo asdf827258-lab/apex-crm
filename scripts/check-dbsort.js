@@ -144,9 +144,24 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
     [].slice.call(document.querySelectorAll('#dynPane .ar-fsrc .ar-fc'))
       .map(e=>e.textContent.replace(/\d+$/,'').trim()).filter(x=>x&&!/종류 전체/.test(x)));
   /* <b>칩이 없으면 통과시키지 않는다.</b> 「칩이 없는 판이라 통과」 는
-     아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번). */
+     아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번).
+     그리고 <b>안 섰으면 무엇 때문인지 적는다.</b> 「0개」 만 적으면
+     다음 사람이 또 처음부터 찾는다 — 실제로 두 번 그랬다. */
+  const why = chips.length>=4 ? '' : await page.evaluate(()=>{
+    const p=document.getElementById('dynPane')||{};
+    const n=(s)=>document.querySelectorAll(s).length;
+    let touch=-1,src='?';
+    try{ const l=arTouch(''); touch=l.length;
+         src=JSON.stringify(Object.keys(arSrcCount(''))); }catch(e){ src='터짐:'+e.message; }
+    let wait='?'; try{ wait=String(tdoWait('부재')); }catch(e){}
+    return ' ← AR.db '+((AR&&AR.db&&AR.db.length)||0)+'줄 · arTouch '+touch+'명 · 종류 '+src+
+           ' · 부재기준 '+wait+'일 · AR.cat '+(AR&&AR.cat)+
+           ' · 판 '+((p.innerHTML||'').length)+'자 · .ar-fs '+n('#dynPane .ar-fs')+
+           ' · OS.profile '+(!!(window.OS&&OS.profile))+
+           ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80);
+  }).catch(e=>' ← 물어보지도 못했다: '+e.message);
   is(chips.length>=4, 'TFA 에 <b>종류 단추가 선다</b> — '+chips.length+'개'+
-     (chips.length?(' ('+chips.join(' · ')+')'):''));
+     (chips.length?(' ('+chips.join(' · ')+')'):why));
   is(chips.length>=4&&JSON.stringify(chips)===JSON.stringify(chips.slice().sort(A.cmp)),
      '그 단추들이 <b>차례대로</b> 선다 — '+chips.join(' · '));
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
