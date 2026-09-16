@@ -493,46 +493,68 @@ const hardErr = (e) => e.filter(x => !/favicon|net::ERR|Failed to load resource|
     mapBtn: !!document.getElementById('rtPinMap')
   }));
   is(pinEd.hasAddr, '📍 를 누르면 <동네를 손으로 적는 칸>이 열린다 — 주소 검색에서 안 막힌다');
-  is(pinEd.hasCity, '<시(市)는 검색해서> 고른다 — 손으로 치면 또 갈라진다');
+  /* 사장님 말씀 — 「시를 우선 <b>두 번 입력</b>하는데, 왼쪽에 시 입력하는 칸은
+     삭제하고, 위치 지정해서 <b>대략적 입력만</b> 하도록 만들어」.
+     왼쪽 시 고르개에서 한 번, 주소 찾기에서 「순천시 조례동」 으로 또 한 번
+     — 같은 것을 두 번 적게 하던 칸입니다. 이제 <b>한 줄만</b> 적습니다. */
+  is(!pinEd.hasCity, '<시 고르는 칸이 없다> — 같은 것을 두 번 적게 하지 않는다');
   is(/지도에 점으로는 안 찍/.test(pinEd.warn),
      '손으로 적으면 <지도에는 안 찍힌다>고 먼저 말한다 — 「적었으니 다 됐다」고 믿게 두지 않는다 (1번)');
   is(pinEd.mapBtn, '거기서 <주소 찾기로> 넘어갈 수 있다');
 
-  /* 손으로 적어 저장하면 <그대로> 들어가는가 */
-  /* 함수를 직접 부르지 않는다 — 이 파일은 통째로 감싸여 있어 전역이 아니다.
-     <b>사람이 하는 그대로</b> 치고 누른다. 그래야 실제로 되는지 잰다 (8번). */
-  await pg.evaluate(() => {
-    const q = document.querySelector('#rtPinB .ct-q');
-    q.value = '순천';
-    q.dispatchEvent(new Event('input', { bubbles: true }));
+  /* 치시는 동안 <b>어느 시로 잡히는지</b> 그 자리에서 말하는가 —
+     저장하고 나서야 알면 늦다. 사람이 하는 그대로 치고 본다 (8번). */
+  const hint = await pg.evaluate(() => {
+    const a = document.getElementById('rtPinAddr'), out = {};
+    const type = v => { a.value = v; a.dispatchEvent(new Event('input', { bubbles: true }));
+                        return (document.getElementById('rtPinHint') || {}).textContent || ''; };
+    out.city = type('순천 조례동 한아름아파트');
+    out.none = type('조례동 한아름아파트');
+    return out;
   });
-  await pg.waitForFunction(() => {
-    const l = document.querySelectorAll('#rtPinB .ct-list .ct-i');
-    return l.length > 0;
-  }, { timeout: 10000 });
-  const cityHit = await pg.evaluate(() => {
-    const b = [...document.querySelectorAll('#rtPinB .ct-list .ct-i')]
-      .filter(e => e.getAttribute('data-city') === '순천시')[0];
-    if (!b) return '';
-    b.click();
-    return (document.querySelector('#rtPinB .ct-sel') || {}).getAttribute
-      ? document.querySelector('#rtPinB .ct-sel').getAttribute('data-cval') : '';
-  });
-  is(cityHit === '순천시', '<쳐서 추려진 목록에서> 시를 고를 수 있다 — ' + (cityHit || '못 고름'));
+  is(/순천시/.test(hint.city), '치는 동안 <어느 시로 잡히는지> 바로 말한다 — 「' + hint.city.trim() + '」');
+  is(/못 잡/.test(hint.none),
+     '못 잡으면 <못 잡았다고> 말한다 — 「' + hint.none.trim().slice(0, 40) + '…」 (1번)');
+
+  /* 한 줄만 적어도 <b>시까지</b> 들어가는가 */
   await pg.evaluate(() => {
-    document.getElementById('rtPinAddr').value = '조례동 한아름아파트';
+    const a = document.getElementById('rtPinAddr');
+    a.value = '순천 조례동 한아름아파트';
+    a.dispatchEvent(new Event('input', { bubbles: true }));
     document.getElementById('rtPinGo').click();
   });
   const pinTyped = await pg.waitForFunction(id => {
     const v = n => { try { return eval(n) } catch (e) { return [] } };
     const d = (v('dbs') || []).filter(x => x.id === id)[0];
-    return (d && d.addr === '조례동 한아름아파트') ? { addr: d.addr, region: d.region, lat: d.lat } : null;
+    return (d && d.addr === '순천 조례동 한아름아파트')
+      ? { addr: d.addr, region: d.region, lat: d.lat } : null;
   }, pinWho, { timeout: 20000 }).then(h => h.jsonValue(), () => null);
   is(!!pinTyped, '<손으로 적은 동네가 그대로> 저장된다 — ' + (pinTyped ? pinTyped.addr : '안 들어감'));
   is(!!pinTyped && pinTyped.region === '순천시',
-     '<고른 시도 같이> 들어간다 — ' + (pinTyped ? pinTyped.region : ''));
+     '<한 줄만 적어도 시가 같이> 들어간다 — ' + (pinTyped ? pinTyped.region : '') +
+     ' (시를 또 고르지 않는다)');
   is(!!pinTyped && !pinTyped.lat,
      '손으로 적었을 뿐이니 <좌표는 안 지어낸다> (1번) — 지도에 찍으려면 주소 찾기를 쓴다');
+
+  /* 시를 <b>못 잡았을 때</b> — 예전에 정해 둔 시를 지우지 않는가 (1번).
+     ↓ 이것이 제일 위험한 자리다. 「조례동」 만 고치셨는데 순천시가 날아가면
+       그분은 지도에서도 동선에서도 사라진다. */
+  await pg.evaluate(() => document.querySelector('#rtNearB [data-pin]').click());
+  await seen(pg, '#rtPinE.open');
+  await pg.evaluate(() => {
+    const a = document.getElementById('rtPinAddr');
+    a.value = '조례동 두 번째';
+    a.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('rtPinGo').click();
+  });
+  const pinKeep = await pg.waitForFunction(id => {
+    const v = n => { try { return eval(n) } catch (e) { return [] } };
+    const d = (v('dbs') || []).filter(x => x.id === id)[0];
+    return (d && d.addr === '조례동 두 번째') ? { addr: d.addr, region: d.region } : null;
+  }, pinWho, { timeout: 20000 }).then(h => h.jsonValue(), () => null);
+  is(!!pinKeep && pinKeep.region === '순천시',
+     '시를 <못 잡으면 예전 것을 그대로> 둔다 — ' + (pinKeep ? (pinKeep.region || '지워짐') : '안 들어감') +
+     ' (모르는 것을 지우는 것도 지어내는 것이다 · 1번)');
 
   /* 지도로 찍는 길도 <그대로> 산다 */
   await pg.evaluate(() => document.querySelector('#rtNearB [data-pin]').click());
