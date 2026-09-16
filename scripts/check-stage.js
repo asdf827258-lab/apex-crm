@@ -231,8 +231,6 @@ const is = (c, m) => c ? ok(m) : no(m);
     '<b>제일 먼저</b>는 단계·약속까지 다 달라고 한다 — 있으면 다 쓴다');
   is(/var read=function\(c\)\{[\s\S]{0,200}?arPageAll\(/.test(app),
     '세 단이 <b>모두 쪽을 나눠</b> 읽는다 — 되돌아간 판에서만 1,000줄에 잘리면 더 나쁘다');
-  is(/\['pol','📜','증권 미전달'\]/.test(app) && /\['won','🏆','계약 직후'\]/.test(app),
-    '오늘 터치할 사람에 계약 뒤 칸이 생겼다');
 
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1200 } });
@@ -326,7 +324,11 @@ const is = (c, m) => c ? ok(m) : no(m);
       apptN: appts.length, apptHm: (appts[0] || {}).hm, apptNm: (appts[0] || {}).nm,
       nxtKinds: nxt.map(x => x.k), nxtNames: nxt.map(x => x.nm), nc: nc,
       nHtml: nHtml, cardNext: cardNext,
-      ymNow: pfYm(), ymAdd: pfYmAdd(pfYm(), 1), ymAdd12: pfYmAdd('2026-12', 1)
+      ymNow: pfYm(), ymAdd: pfYmAdd(pfYm(), 1), ymAdd12: pfYmAdd('2026-12', 1),
+      /* 오늘 터치할 사람의 <b>상태 칸</b> — 손으로 적은 목록이 아니라
+         표에서 뽑히는지 본다. 예전에는 여기 옛 이름이 박혀 있어서
+         칸이 전부 0 으로 떴다 */
+      tkChips: (typeof arTkChips === 'function') ? arTkChips().map(x => x.k) : []
     };
   });
 
@@ -335,6 +337,14 @@ const is = (c, m) => c ? ok(m) : no(m);
   is(R.runN === 2, '계약된 사람은 <b>AP·PC·CS 에 안 섞인다</b> (' + R.runN + '명)');
   is(R.cntPol === 1 && R.cntWon === 1, '칸마다 숫자가 맞는다');
   is(!R.nxtNames.includes('남의고객'), '남의 담당 고객은 내 화면에 안 나온다');
+  /* 계약 뒤에도 할 일이 남는다. 여기서 끊기면 증권이 안 나가고 소개도 안 나온다.
+     ★ 칸 목록을 <b>손으로 적어 두면</b> 상태 이름이 바뀔 때 조용히 늙는다 —
+       실제로 옛 이름(pol·won)으로 남아 칸이 전부 0 으로 떴다 (5번). */
+  is(R.tkChips.indexOf('계약완료')>=0 && R.tkChips.indexOf('증권전달')>=0
+     && R.tkChips.indexOf('소개완료')>=0,
+    '오늘 터치할 사람에 <b>계약 뒤 칸</b>이 있다 — '+R.tkChips.join(' · '));
+  is(R.tkChips[0]==='all' && R.tkChips.length>=11,
+    '칸이 <b>표에서 뽑힌다</b> — '+R.tkChips.length+'가지 (손으로 적어 두면 상태가 늘 때 빠뜨린다)');
 
   console.log('\n[4-2] AI 도 단계를 보고 말하는가');
   is(/function arStageText\(/.test(app), 'AI 에게 넘기는 사실에 단계 분포가 들어간다');

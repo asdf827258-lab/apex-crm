@@ -334,7 +334,110 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      '①번을 누르니 <b>그 사람 자리로</b> 간다 — '+(G.first||'아무 데도'));
   is(G.didWorks, '<b>「이미 했습니다」</b> 를 고르면 정말로 표시된다 — 고르기만 하고 안 되면 헛것이다');
 
-  console.log('\n[9] 콘솔');
+  /* ══ [9] <b>팀별 · 개인별</b>로 나눠 보는가 ═════════════════════
+     사장님 말씀 — 「오늘 터치할 사람도 <b>팀원별로 분류가 안 되어 있고</b>,
+     모든 DB 분류에서 개인별로 나누고 팀별로 나누어서 봐야 관리가 되지」.
+
+     ★ 여기서 <b>진짜 버그 하나</b>를 잡았습니다. 상태 칸 목록(AR_TK)이
+       <b>옛 이름</b>(no·rej·run·new·old·bd·pol·won)으로 손으로 적혀 있는데,
+       세는 곳(arTkCount)은 <b>새 이름</b>(부재·거절·AP·PC…)으로 셌습니다.
+       그래서 <b>모든 칸이 0 으로 떴고, 눌러도 아무도 안 남았습니다.</b>
+       화면은 멀쩡해 보이는데 거르개가 통째로 죽어 있었습니다.
+
+     여기서 재는 것 —
+       · 팀 줄과 담당자 줄이 <b>실제로</b> 선다 (리더에게만)
+       · 고르면 <b>목록·상태 칸·종류 칸</b> 이 같이 좁아진다
+       · 상태 칸을 누르면 <b>정말로</b> 그 상태만 남는다 (0 이 아니다)
+       · 같은 칸을 다시 누르면 전체로 돌아온다                        */
+  console.log('\n[9] <b>팀별 · 개인별</b>로 나눠 보는가');
+  const P=await page.evaluate(()=>{
+    document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove());
+    window.toast=function(){};
+    OS.session={user:{id:'u1'}};
+    OS.profile={id:'u1',name:'윤시현',role:'owner',active:true,plan:'vip'};
+    GB.loaded=true;
+    GB.teams=[{id:'t1',name:'온탑1팀'},{id:'t2',name:'온탑2팀'}];
+    GB.teamOf={u1:'t1',u2:'t1',u3:'t2',u4:'t2'};
+    GB.rows=[{id:'u1',name:'윤시현'},{id:'u2',name:'홍판서'},
+             {id:'u3',name:'박서준'},{id:'u4',name:'조혜인'}];
+    window.arLoad=function(){};
+    /* 견본은 <b>홍길동</b> 집안입니다 (3번) */
+    const mk=(id,who,st,src)=>({id:id,who:who,name:'홍길동'+id,region:'순천',src:src,
+      stage:st,cAt:'',pAt:'',got:'2026-09-01',n:1,last:'',res:'부재',appt:'',memo:'',days:9});
+    AR.loaded=true;AR.busy=false;AR.cliRows=[];
+    AR.db=[mk('a','u1','부재','일반'),   mk('b','u1','TA','보장분석3DB'),
+           mk('c','u2','부재','개척'),   /* 종류를 갈라 둔다 — 「부재 + 일반」 이 부재 전부와 달라야 잰 것이 된다 */
+           mk('d','u3','PC','보장분석3DB'),mk('e','u3','부재','일반'),
+           mk('f','u4','TA','개척')];
+    AR.cat='touch';AR.tk='all';AR.tks='';AR.tkAll=false;AR.tkWho='';AR.tkTeam='';
+    go('airep');
+    const rows=()=>document.querySelectorAll('#dynPane .ar-tks .ar-tk').length;
+    const line=i=>{const d=document.querySelectorAll('#dynPane .ar-fs')[i];
+      return d?[].slice.call(d.querySelectorAll('.ar-fc')).map(e=>({
+        t:e.textContent.trim(),on:e.classList.contains('on')})):[];};
+    const snap=()=>({rows:rows(),team:line(0),who:line(1),st:line(2),src:line(3),
+      note:(document.querySelector('#dynPane .ar-none')||{}).textContent||''});
+    const out={};
+    out.mine=snap();
+    arTkAllSet(true);      out.all=snap();
+    arTkTeamSet('t2');     out.team2=snap();
+    arTkWhoSet('u3');      out.who3=snap();
+    arTkTeamSet('t2');     out.back=snap();
+    /* <b>손으로 함수를 부르지 않는다.</b> 화면에 선 칸을 실제로 누른다 —
+       칸이 옛 이름을 들고 있으면 눌러도 아무 일이 안 일어나고, 그것이
+       바로 여태 있던 병이다. 함수를 직접 부르면 그 병을 못 본다 (8번). */
+    const tap=(i,word)=>{
+      const d=document.querySelectorAll('#dynPane .ar-fs')[i]; if(!d)return false;
+      const b=[].slice.call(d.querySelectorAll('.ar-fc'))
+        .filter(e=>e.textContent.indexOf(word)>=0)[0];
+      if(!b)return false; b.click(); return true;
+    };
+    out.tapNo=tap(2,'부재');   out.no=snap();
+    out.tapGen=tap(3,'일반');  out.noGen=snap();
+    tap(2,'전체'); tap(3,'종류 전체');
+    /* 팀원(리더 아님)에게는 고르개가 안 선다 */
+    OS.profile.role='member'; arPaint();
+    out.member=snap();
+    OS.profile.role='owner'; AR.tkAll=true; arPaint();
+    return out;
+  });
+  const txt=L=>(L||[]).map(x=>x.t).join(' | ');
+  const onOf=L=>((L||[]).filter(x=>x.on)[0]||{}).t||'(없음)';
+  is(/팀 전체/.test(txt(P.all.team))&&P.all.team.length===3,
+     '<b>팀 줄</b>이 선다 — '+txt(P.all.team));
+  is(/담당자 전체/.test(txt(P.all.who))&&P.all.who.length===5,
+     '<b>담당자 줄</b>이 선다 — '+txt(P.all.who));
+  is(P.mine.rows===2&&/윤시현/.test(onOf(P.mine.who)),
+     '처음에는 <b>내 것</b>부터 — '+P.mine.rows+'명 · 켜진 칸 '+onOf(P.mine.who));
+  is(P.all.rows===6, '담당자 전체를 누르면 <b>여섯 명</b> — '+P.all.rows);
+  is(P.team2.rows===3&&/온탑2팀/.test(onOf(P.team2.team)),
+     '팀을 고르면 <b>그 팀만</b> — '+P.team2.rows+'명 ('+onOf(P.team2.team)+')');
+  is(P.team2.who.length===3&&!/윤시현/.test(txt(P.team2.who)),
+     '<b>담당자 줄도 그 팀 사람만</b> 남는다 — '+txt(P.team2.who));
+  is(P.team2.src.length===4&&/개척/.test(txt(P.team2.src)),
+     '<b>종류 칸도 그 팀 것을 센다</b> — '+txt(P.team2.src)+
+     ' (「모든 DB 분류에서 개인별·팀별로」 가 이 뜻이다)');
+  is(P.who3.rows===2&&/박서준/.test(onOf(P.who3.who)),
+     '팀 <b>안에서 한 사람</b>을 다시 고른다 — '+P.who3.rows+'명 ('+onOf(P.who3.who)+')');
+  is(/온탑2팀 · 박서준/.test(P.who3.note),
+     '<b>지금 무엇을 세고 있는지</b> 한 줄로 적는다 — 「'+(P.who3.note||'').trim().slice(0,40)+'…」');
+  is(P.back.rows===6&&/팀 전체/.test(onOf(P.back.team)),
+     '같은 칸을 <b>다시 누르면 전체</b>로 — '+P.back.rows+'명');
+  /* ★ 여기가 죽어 있던 자리다 */
+  is(P.all.st.length===4&&/부재3/.test(txt(P.all.st).replace(/\s/g,'')),
+     '<b>상태 칸에 숫자가 찍힌다</b> — '+txt(P.all.st)+
+     ' (옛 이름으로 읽던 때는 전부 0 이었다)');
+  is(P.tapNo&&P.no.rows===3,
+     '<b>상태 칸을 눌러</b> 보니 정말로 그 상태만 남는다 — 부재 '+P.no.rows+'명'+
+     (P.tapNo?'':' ← 그 칸이 화면에 없다'));
+  is(P.tapGen&&P.noGen.rows===2,
+     '상태와 종류가 <b>겹쳐서</b> 먹는다 — 부재 + 일반 '+P.noGen.rows+'명');
+  is(!/AP|CS|계약완료|생일/.test(txt(P.all.st)),
+     '<b>0 인 칸은 안 세운다</b> — 열두 상태를 다 늘어놓으면 눈이 미끄러진다');
+  is(P.member.team.length===0||!/팀 전체/.test(txt(P.member.team)),
+     '<b>팀원에게는 고르개가 안 선다</b> — 남의 것을 못 보시는 분께 세우면 눌러도 아무 일이 없다');
+
+  console.log('\n[10] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
