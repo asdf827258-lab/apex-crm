@@ -115,10 +115,16 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
     AR.db=['보장분석10DB','보장분석2DB','보장분석1DB','일반'].map((sv,i)=>({
       id:'s'+i,who:'me',name:'홍길동',region:'광주',src:sv,stage:'부재',
       appt:'',days:9,n:1,cAt:'',pAt:''}));
+    (function(seeded){ try{ Object.defineProperty(AR,'db',
+      {get:function(){return seeded;},set:function(){},configurable:true}); }catch(e){} })(AR.db);
     /* TFA 「오늘 손댈 사람」 칸을 <b>실제로</b> 연다 — 거기에 종류 단추가 선다.
        ※ arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
          돌아오면 AR.db 를 빈 것으로 덮어 <b>심어 둔 견본이 날아간다.</b>
-         그러면 칩이 0개가 되어 <b>CI 에서만</b> 빨간불이 난다 — 헛알람이다 (8번). */
+         그러면 칩이 0개가 되어 <b>CI 에서만</b> 빨간불이 난다 — 헛알람이다 (8번).
+       ※ 세워 두는 것만으로는 모자랐다. 세우기 <b>전에 이미 나간</b> 요청은
+         못 세운다 — 그것이 늦게 돌아오면 그때 덮는다. 로컬은 곧바로 실패해
+         2.4초를 기다리는 동안 끝나지만, CI 는 진짜로 다녀오느라 늦는다.
+         그래서 견본을 <b>덮을 수 없게</b> 박아 둔다 — 언제 돌아오든 안 날아간다. */
     window.arLoad=function(){};
     AR.cat='touch'; AR.tkAll=false; AR.tks=''; AR.tk='all';
     try{ localStorage.setItem('apex_ar_cat','touch'); }catch(e){}
