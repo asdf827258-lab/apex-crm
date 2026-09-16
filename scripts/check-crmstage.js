@@ -233,7 +233,89 @@ const SEED=`
        '본체와 CRM 이 <b>한 칸도 안 다르다</b> — '+byApp.join(' · '));
   }
 
-  console.log('\n[6] 콘솔');
+  /* ══ [6] 상황을 누르면 <b>무엇을 도와드릴까요</b> ════════════════
+     사장님 말씀 — 「고객 상황(부재/거절/AP/PC/증권전달 등)에 클릭하면
+     무얼 도와줄지 물어보라고 했는데 안 뜬다」.
+
+     여기서 재는 것 —
+       · 딱지가 <b>정말 눌린다</b> (글자만 바꿔 놓고 안 눌리면 소용없다)
+       · 그 단계의 <b>목표·방법</b>이 선다 — 본체와 같은 표에서 온다
+       · <b>없는 갈래는 안 선다</b> — 거절은 다음 단계가 없다 (1번)
+       · <b>못 하는 일은 안 선다</b> — 남의 고객이면 단계·수정이 빠진다
+       · 고르면 <b>정말로 그 일이 일어난다</b> — 눌러서 창이 열리는지 본다 */
+  console.log('\n[6] 상황을 누르면 <b>무엇을 도와드릴까요</b>');
+  const ASK=await page.evaluate(()=>{
+    /* 목록을 <b>실제로 세우고</b> 잰다 — 안 세우면 딱지가 0개라 무엇을 재는지 알 수 없다 */
+    goPage('db'); renderDb();
+    const read=()=>({
+      open:!!(document.getElementById('askModal')||{}).classList
+           &&document.getElementById('askModal').classList.contains('open'),
+      aim:(document.querySelector('#askBody .ask-aim .v')||{}).textContent||'',
+      way:(document.querySelector('#askBody .ask-aim .w')||{}).textContent||'',
+      sum:(document.querySelector('#askBody .ask-sum')||{}).textContent||'',
+      opts:[].slice.call(document.querySelectorAll('#askBody .ask-o')).map(e=>({
+        t:e.querySelector('.m b').textContent,rec:e.classList.contains('rec')}))
+    });
+    const shut=()=>{const m=document.getElementById('askModal');if(m)m.classList.remove('open')};
+    const out={};
+    const badges=document.querySelectorAll('#dbBody .sg-badge');
+    out.badgeN=badges.length;
+    /* d1 부재 · d2 거절 · d3 AP — 목록 차례는 화면이 정한다. 이름으로 찾는다 */
+    const rowOf=nm=>{
+      const tr=[].slice.call(document.querySelectorAll('#dbBody tr'))
+        .filter(r=>r.textContent.indexOf(nm)>=0)[0];
+      return tr?tr.querySelector('.sg-badge'):null;
+    };
+    ['홍길순','홍말순','홍갑돌'].forEach((nm,i)=>{
+      const b=rowOf(nm); if(!b){out['r'+i]={miss:1};return}
+      b.click(); out['r'+i]=read(); shut();
+    });
+    /* 남의 고객으로 만들어 두고 다시 — 못 하는 일이 빠지나 */
+    const keep=profile.role; profile.role='member';
+    const d=dbs.find(x=>x.id==='d1'); const kw=d.assigned_to; d.assigned_to='someone';
+    renderDb();
+    const b2=rowOf('홍길순'); if(b2){b2.click(); out.other=read(); shut();}
+    d.assigned_to=kw; profile.role=keep; renderDb();
+    /* 정말로 그 일이 일어나나 — ① 을 누르면 접촉 창이 열린다 */
+    const b3=rowOf('홍길순');
+    if(b3){b3.click();
+      const first=document.querySelector('#askBody .ask-o');
+      if(first)first.click();
+      out.calledOpen=document.getElementById('callModal').classList.contains('open');
+      out.calledWho=(document.getElementById('callSummary')||{}).textContent||'';
+      document.getElementById('callModal').classList.remove('open');
+    }
+    return out;
+  });
+  is(ASK.badgeN>=3, '상황 딱지가 <b>누를 수 있는 단추</b>로 선다 — '+ASK.badgeN+'개');
+  is(ASK.r0&&ASK.r0.open===true, '부재를 누르면 <b>창이 열린다</b>');
+  is(/한 번은 받으시게/.test((ASK.r0||{}).aim||''),
+     '그 단계의 <b>목표</b>가 그대로 선다 — 「'+((ASK.r0||{}).aim||'없음')+'」');
+  is(/시간대를 바꾸고/.test((ASK.r0||{}).way||''),
+     '<b>어떻게</b> 하는지도 같이 선다 — 본체 홈과 같은 표에서 온다 (5번)');
+  is(/홍길순/.test((ASK.r0||{}).sum||'')&&/부재/.test((ASK.r0||{}).sum||''),
+     '누구의 <b>어떤 상황</b>인지 머리에 적힌다');
+  const t0=((ASK.r0||{}).opts||[]).map(o=>o.t);
+  is(t0.some(t=>/결과를 남긴다/.test(t)), '① <b>하고 나서 결과를 남기는</b> 갈래가 맨 위다');
+  is(t0.some(t=>/「TA」 로 올린다/.test(t)), '부재의 <b>다음은 TA</b> — 표가 정한 대로');
+  is(((ASK.r0||{}).opts||[]).filter(o=>o.rec).length>=2,
+     '<b>기록으로 남는</b> 갈래가 따로 표시된다 — 열어 본 것과 한 것은 다르다 (1번)');
+  const rej=((ASK.r1||{}).opts||[]).map(o=>o.t);
+  is(rej.length>0&&!rej.some(t=>/로 올린다/.test(t)),
+     '<b>거절은 다음 단계를 안 만든다</b> — 없는 자리를 지어내지 않는다 (1번)');
+  is(/문을 닫지 않게/.test((ASK.r1||{}).aim||''), '거절에는 거절의 말이 선다');
+  const ap=((ASK.r2||{}).opts||[]).map(o=>o.t);
+  is(ap.some(t=>/「PC」 로 올린다/.test(t)), 'AP 의 다음은 <b>PC</b> 다');
+  is(ap.some(t=>/보장분석 상담자료 열기|재무설계 실전화법서 열기|보장분석 전&후 만들기 열기/.test(t)),
+     'AP 에서 쥘 <b>도구</b>가 이름으로 선다 — 메뉴 이름 그대로');
+  const ot=((ASK.other||{}).opts||[]).map(o=>o.t);
+  is(ot.length>0&&!ot.some(t=>/로 올린다|메모·정보 고치기/.test(t)),
+     '<b>남의 고객이면 못 하는 갈래가 안 선다</b> — 눌렀는데 「권한 없음」 만 뜨는 단추를 안 세운다');
+  is(ot.some(t=>/결과를 남긴다/.test(t)), '그래도 <b>연락하고 남기는</b> 것은 누구나 된다');
+  is(ASK.calledOpen===true&&/홍길순/.test(ASK.calledWho||''),
+     '고르면 <b>정말로 그 일이 일어난다</b> — ① 을 누르니 그분 접촉 창이 열렸다');
+
+  console.log('\n[7] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
