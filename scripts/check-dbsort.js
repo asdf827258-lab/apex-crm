@@ -103,7 +103,15 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
   console.log('\n[5] 화면에서도 <b>정말로</b> 그 차례로 선다');
   await new Promise(r=>srv.listen(PORT,r));
   const b=await chromium.launch();
-  const page=await b.newPage({viewport:{width:430,height:900}});
+  const ctx=await b.newContext({viewport:{width:430,height:900}});
+  /* <b>바깥으로 안 나간다.</b> 이 자리에서 재는 것은 「종류 단추가 사람이 읽는
+     차례로 서는가」 하나입니다. 그런데 CI 에만 네트워크가 있어, 페이지가 뜨자마자
+     나간 진짜 요청이 <b>나중에</b> 돌아와 심어 둔 견본을 덮거나 화면을 갈아엎습니다.
+     재려는 것과 아무 상관 없는 까닭으로 <b>CI 에서만</b> 빨간불이 켜집니다 —
+     헛알람은 안 잡는 것보다 나쁩니다 (8번). 그래서 집 안(127.0.0.1)만 열어 둡니다.
+     check-homeday · check-navfold 도 같은 자리를 같은 방법으로 막습니다.      */
+  await ctx.route('**://**', r=>r.request().url().indexOf('127.0.0.1:'+PORT)>=0?r.continue():r.abort());
+  const page=await ctx.newPage();
   const errs=[]; page.on('pageerror',e=>errs.push(String(e).slice(0,120)));
   await page.goto('http://127.0.0.1:'+PORT+'/app/index.html',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(2400);
@@ -131,50 +139,19 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
     try{ go('airep'); }catch(e){}
     const read=()=>[].slice.call(document.querySelectorAll('#dynPane .ar-fsrc .ar-fc'))
       .map(e=>e.textContent.replace(/\d+$/,'').trim()).filter(x=>x&&!/종류 전체/.test(x));
-    /* <b>끝내 안 서면 무엇 때문인지 적는다.</b> 「0개」 만 적으면 다음
-       사람이 또 처음부터 찾는다 — 실제로 두 번 그랬다 (8번). */
-    const why=()=>{
-      const p=document.getElementById('dynPane')||{};
-      let touch=-1,src='?';
-      try{ touch=arTouch('').length; src=JSON.stringify(Object.keys(arSrcCount(''))); }
-      catch(e){ src='터짐:'+e.message; }
-      let wait='?'; try{ wait=String(tdoWait('부재')); }catch(e){}
-      return ' ← AR.db '+((AR&&AR.db&&AR.db.length)||0)+'줄 · arTouch '+touch+'명 · 종류 '+src+
-             ' · 부재기준 '+wait+'일 · AR.cat '+(AR&&AR.cat)+
-             ' · 판 '+((p.innerHTML||'').length)+'자 · .ar-fs '+
-             document.querySelectorAll('#dynPane .ar-fs').length+
-             ' · OS.profile '+(!!(window.OS&&OS.profile))+
-             ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80)+
-             /* <b>그래서 무슨 화면인가</b> — 판 길이만으로는 못 짚는다.
-                두 판 모두 3075자로 똑같았다. 우연이 아니라 <b>늘 같은 화면</b>이다. */
-             ' · 판머리 「'+((p.textContent||'').replace(/\s+/g,' ').trim().slice(0,150))+'」';
-    };
     return new Promise(done=>{
       let n=0;
       (function tick(){
         AR.loaded=true; AR.busy=false; AR.db=rows();
-        /* <b>판이 없으면 다시 연다.</b> 다시 그리기(arPaint)만으로는 모자랐다 —
-           CI 에서 판 자체가 사라져 있었다. 견본도 살아 있고(AR.db 4줄) 셈도
-           맞는데(arTouch 4명) <b>.ar-fs 가 0</b> 이었다. 뒤늦게 끝난 첫 판이
-           보던 화면을 덮어 쓴 것이다. 그리기만 되풀이하면 <b>없는 판</b>을
-           칠하게 되어 영영 0개다 — 그래서 틱마다 열려 있는지 보고 연다. */
-        if(!document.querySelector('#dynPane .ar-fs')){ try{ go('airep'); }catch(e){} }
-        /* <b>고른 무리를 틱마다 다시 고른다.</b> 판머리가 말해 줬다 —
-           판은 TFA 가 맞는데 「왼쪽에서 고르면 이 자리에서 바로 봅니다」
-           라는 <b>고르기 전 화면</b>이었다. 즉 길을 잘못 든 것이 아니라
-           <b>고른 무리가 풀린</b> 것이다. 뒤늦게 끝난 첫 판이 AR.cat 을
-           되돌려 놓는다. go() 보다 <b>먼저</b> 정하면 go() 가 다시 읽어
-           가므로, 열고 <b>난 뒤에</b> 정하고 그린다. */
-        /* <b>앱이 쓰는 문으로 고른다.</b> AR.cat 을 손으로 적는 것만으로는
-           모자랐다 — CI 에서 AR.cat 은 'touch' 인데도 판은 「왼쪽에서
-           고르면 …」 인 채였다. 무리를 고르는 일은 arGoCat 한 곳이 하고,
-           거기서 그 칸이 쓰는 것까지 챙긴다. 손으로 값만 바꾸면 <b>고른
-           척</b>만 하는 것이다 (5번 — 한 곳만 안다). */
-        try{ if(typeof arGoCat==='function')arGoCat('touch'); else AR.cat='touch'; }catch(e){}
-        AR.tkAll=false; AR.tks=''; AR.tk='all';
         try{ arPaint(); }catch(e){}
         const c=read();
-        if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:c.length>=4?'':why()});
+        /* 빨간불이 켜지면 <b>왜인지</b>도 같이 들고 나간다 — 「0개」 만 적으면
+           CI 로그를 보고도 어디를 볼지 알 수가 없다 */
+        if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:(c.length>=4)?'':
+          ('arPane='+!!document.getElementById('arPane')+
+           ' cat='+AR.cat+' db='+(AR.db||[]).length+
+           ' 나='+(function(){try{return OS.session.user.id;}catch(e){return '(없음)';}})()+
+           ' 터치='+((typeof arTouch==='function')?arTouch(arTkWho()).length:-1))});
         setTimeout(tick,120);
       })();
     });
@@ -188,12 +165,12 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
   /* <b>칩이 없으면 통과시키지 않는다.</b> 「칩이 없는 판이라 통과」 는
      아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번). */
   is(chips.length>=4, 'TFA 에 <b>종류 단추가 선다</b> — '+chips.length+'개'+
-     (chips.length?(' ('+chips.join(' · ')+')'):(V.why||'')));
+     (chips.length?(' ('+chips.join(' · ')+')'):(' ← '+(V.why||''))));
   is(chips.length>=4&&JSON.stringify(chips)===JSON.stringify(chips.slice().sort(A.cmp)),
      '그 단추들이 <b>차례대로</b> 선다 — '+chips.join(' · '));
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
-  await b.close(); srv.close();
+  await ctx.close(); await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('✗ '+bad+'개 — DB 종류가 아직 뒤죽박죽입니다')
                  :'✓ DB 종류가 본체·CRM 어디서나 사람이 읽는 차례로 섭니다.');
