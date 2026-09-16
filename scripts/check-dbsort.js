@@ -150,6 +150,14 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
       let n=0;
       (function tick(){
         AR.loaded=true; AR.busy=false; AR.db=rows();
+        /* <b>판이 없으면 다시 연다.</b> 다시 그리기(arPaint)만으로는 모자랐다 —
+           CI 에서 판 자체가 사라져 있었다. 견본도 살아 있고(AR.db 4줄) 셈도
+           맞는데(arTouch 4명) <b>.ar-fs 가 0</b> 이었다. 뒤늦게 끝난 첫 판이
+           보던 화면을 덮어 쓴 것이다. 그리기만 되풀이하면 <b>없는 판</b>을
+           칠하게 되어 영영 0개다 — 그래서 틱마다 열려 있는지 보고 연다. */
+        if(!document.querySelector('#dynPane .ar-fs')){
+          AR.cat='touch'; try{ go('airep'); }catch(e){}
+        }
         try{ arPaint(); }catch(e){}
         const c=read();
         if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:c.length>=4?'':why()});
