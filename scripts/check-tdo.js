@@ -135,6 +135,9 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const SEED=`
     OS.session={user:{id:'me'}};
     OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
+    /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+       늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
+    window.arLoad = function () {};
     AR.loaded=true; AR.busy=false; AR.cliRows=[];
     (function(){
       var T=arToday(), ago=function(n){
