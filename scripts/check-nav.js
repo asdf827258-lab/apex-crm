@@ -442,6 +442,77 @@ async function boot(page) {
     ? '숨은 화면이 전부 어딘가에서 열린다 — go() 로든, 칸으로든'
     : '열 길이 없어진 화면이 있다 — ' + stranded.join(', '));
 
+  /* ══ <b>간편 버전</b> — 메뉴가 너무 많다 ═══════════════════════════
+     사장님 말씀 — 「간편 버전도 만들어서 … 메뉴가 너무 많아서 효율적인
+     방안을 찾고 개선해보자. <b>단 하나도 빼놓지 말고</b>, 정확히 하나씩
+     분류해서 토스 어플처럼 쉽게」.
+
+     여기서 재는 것 —
+       · 화면 <b>전부</b>가 「쓰는 때」 로 분류돼 있다 (하나도 안 빠진다)
+       · 간편으로 바꾸면 <b>정말로</b> 줄이 줄어든다
+       · 세는 숫자와 <b>서는 줄 수</b>가 같다 (95 라 적고 83개 서면 안 된다)
+       · <b>찾기는 언제나 전부</b>에서 — 간편이라고 못 찾으면 없어진 것이다
+       · 「전체」 를 누르면 <b>다 돌아온다</b>                              */
+  console.log('\n[10] <b>간편 버전</b> — 쓰는 때로 분류하고, 매일 여는 것만');
+  const EZ = await page.evaluate(() => {
+    const src = { };
+    const rows = () => document.querySelectorAll('#navBody .nav-group .nav-row').length;
+    const bar  = () => (document.querySelector('.nav-ez-n') || {}).textContent || '';
+    const gs   = () => [].slice.call(document.querySelectorAll('#navBody .nav-group'))
+      .map(g => ((g.querySelector('.ngl-t') || {}).textContent || '') + ':' +
+                ((g.querySelector('.ngl-n') || {}).textContent || ''));
+    /* 분류표가 화면 전부를 덮나 — <b>여기가 핵심</b> */
+    const ids = []; (typeof TABS !== 'undefined' ? TABS : []).forEach(
+      g => (g.items || []).forEach(it => ids.push(it.id)));
+    src.total = ids.length;
+    src.miss  = ids.filter(id => !NAV_WHEN[id]);
+    src.ghost = Object.keys(NAV_WHEN).filter(k => ids.indexOf(k) < 0);
+    src.buckets = NAV_WHEN_G.map(w => w.k);
+    src.badBucket = ids.filter(id => src.buckets.indexOf(NAV_WHEN[id]) < 0);
+    /* 간편에 세운 것이 <b>진짜 있는 화면</b>인가 */
+    src.pickGhost = EZ_PICK.filter(id => ids.indexOf(id) < 0);
+    src.pickAsked = ['home','airep','crm','frmake','bohum'].filter(id => EZ_PICK.indexOf(id) < 0);
+    ezSet(false); renderNav();
+    src.allRows = rows(); src.allBar = bar(); src.allNote = !!document.querySelector('.nav-ez-note');
+    ezSet(true);  renderNav();
+    src.ezRows = rows(); src.ezBar = bar(); src.ezGroups = gs();
+    src.ezNote = ((document.querySelector('.nav-ez-note') || {}).textContent || '');
+    /* 간편인데도 찾기는 전부에서 */
+    NAV_Q = '세금'; renderNav();
+    src.findRows = rows(); src.findG = gs();
+    NAV_Q = ''; ezSet(false); renderNav();
+    src.backRows = rows();
+    return src;
+  });
+  is(EZ.miss.length === 0,
+    '화면 <b>' + EZ.total + '개가 하나도 안 빠지고</b> 분류돼 있다' +
+    (EZ.miss.length ? (' ← ' + EZ.miss.join(', ') + ' 가 빠졌다') : ''));
+  is(EZ.ghost.length === 0,
+    '<b>없는 화면</b>을 분류해 두지 않았다' + (EZ.ghost.length ? (' ← ' + EZ.ghost.join(', ')) : ''));
+  is(EZ.badBucket.length === 0,
+    '분류가 <b>여섯 묶음 안</b>에 있다 — ' + EZ.buckets.join(' · ') +
+    (EZ.badBucket.length ? (' ← ' + EZ.badBucket.join(', ')) : ''));
+  is(EZ.pickGhost.length === 0,
+    '간편에 세운 것이 <b>진짜 있는 화면</b>이다' + (EZ.pickGhost.length ? (' ← ' + EZ.pickGhost.join(', ')) : ''));
+  is(EZ.pickAsked.length === 0,
+    '사장님이 짚어 주신 <b>다섯이 다 들어</b> 있다 — 홈 · TFA · DB CRM · 전&후 만들기 · 아카데미' +
+    (EZ.pickAsked.length ? (' ← ' + EZ.pickAsked.join(', ') + ' 없음') : ''));
+  is(EZ.allBar === EZ.allRows + ' / ' + EZ.allRows,
+    '전체에서 <b>세는 숫자와 서는 줄이 같다</b> — ' + EZ.allBar + ' (줄 ' + EZ.allRows + ')');
+  is(!EZ.allNote, '전체일 때는 <b>안내줄이 없다</b> — 다 보이는데 설명할 것이 없다');
+  is(EZ.ezRows > 0 && EZ.ezRows < EZ.allRows / 3,
+    '간편으로 바꾸면 <b>정말 줄어든다</b> — ' + EZ.allRows + '줄 → ' + EZ.ezRows + '줄');
+  is(EZ.ezBar === EZ.ezRows + ' / ' + EZ.allRows,
+    '간편에서도 <b>숫자와 줄이 같다</b> — ' + EZ.ezBar);
+  is(EZ.ezGroups.length >= 4 && /오늘/.test(EZ.ezGroups.join(' ')),
+    '<b>쓰는 때로 묶여</b> 선다 — ' + EZ.ezGroups.join(' · '));
+  is(/없어진 것이 아닙니다/.test(EZ.ezNote) && /찾기/.test(EZ.ezNote),
+    '<b>없어진 것이 아니라고</b> 그 자리에서 말한다 (1번)');
+  is(EZ.findRows > 0 && /법인/.test(EZ.findG.join(' ')),
+    '간편이어도 <b>찾기는 전부</b>에서 — 「세금」 을 치니 ' + EZ.findG.join(' · '));
+  is(EZ.backRows === EZ.allRows,
+    '「전체」 를 누르면 <b>다 돌아온다</b> — ' + EZ.backRows + '줄');
+
   const hard = errs.filter(m => !/ResizeObserver|Failed to fetch|NetworkError/i.test(m));
   is(hard.length === 0, '중간에 터진 곳이 없다' + (hard.length ? ' — ' + hard[0].slice(0, 90) : ''));
 

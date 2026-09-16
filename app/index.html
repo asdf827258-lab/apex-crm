@@ -700,6 +700,18 @@ a{color:inherit;text-decoration:none;}
 .nav-find .nf-x{flex:0 0 auto;border:0;background:transparent;color:rgba(255,255,255,.55);
   cursor:pointer;font-size:12px;line-height:1;padding:2px 3px;}
 .nav-find .nf-x:hover{color:#fff;}
+.nav-ez{display:flex;align-items:center;gap:6px;margin:0 8px 8px;padding:5px;
+  border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);}
+.nav-ez-b{flex:1;appearance:none;border:0;border-radius:9px;background:transparent;
+  color:rgba(255,255,255,.62);font-family:inherit;font-size:12px;font-weight:800;
+  padding:8px 6px;cursor:pointer;letter-spacing:-.02em;}
+.nav-ez-b.on{background:rgba(255,255,255,.16);color:#fff;}
+.nav-ez-n{flex:none;font-size:10px;font-weight:700;color:rgba(255,255,255,.45);
+  padding:0 7px 0 3px;white-space:nowrap;}
+.nav-ez-note{margin:0 8px 10px;padding:9px 11px;border-radius:11px;font-size:11px;
+  line-height:1.7;font-weight:500;color:rgba(255,255,255,.55);
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);}
+.nav-ez-note b{color:#FFD666;font-weight:800;}
 .nav-pin{margin:0 8px 10px;padding:8px 6px 6px;border-radius:12px;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);}
 .nav-pin.rec{background:rgba(255,255,255,.03);}
@@ -7168,7 +7180,7 @@ function rdCss(){
    팀원은 자기 것을 스스로, 리더는 팀원 전원 것을 같은 화면에서 본다.
    숫자는 체크판·성장판·DB 통합 CRM·고객 365일에 이미 남은 기록에서 그대로 끌어온다.
    저장은 쓰던 saved_reports(kind='ai_report') 를 그대로 쓴다 — 새 표를 만들지 않는다. */
-var AR={memo:'',face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,db:null,cliRows:null,talk:null,calls:null,
+var AR={memo:'',face:'',cat:'',open:'',busy:'',err:'',loaded:false,at:'',f:'all',tk:'all',tkAll:false,tkWho:'',tkTeam:'',db:null,cliRows:null,talk:null,calls:null,
         rep:{},qn:0,qt:0,qmsg:'',crm:null,cli:null,team:'',q:''};
 var AR_KIND='ai_report';
 var AR_SEC=[
@@ -8474,12 +8486,25 @@ function arTalk(kind){
    부재·거절 재관리와 기고객 재관리를 따로 두었더니 두 군데를 오가야 했다.
    오늘 연락할 사람은 어차피 한 줄로 세워야 한다. 무엇을 해야 하는지까지 옆에 적는다.
    「부재 6건」 이 아니라 「고객12 · 12일째 · 문자 먼저 남기고 걸기」 여야 손이 움직인다. */
-var AR_TK=[
- ['all','🗂','전체'],['no','📵','부재'],['rej','🚫','거절'],
- ['run','🔥','진행중'],['new','🆕','미진행'],['old','❄️','기고객'],['bd','🎂','생일'],
- /* 계약 뒤에도 할 일이 남는다. 여기서 끊기면 증권이 안 나가고 소개도 안 나온다 */
- ['pol','📜','증권 미전달'],['won','🏆','계약 직후']
-];
+/* ── 상태 칸은 <b>표에서 뽑는다</b> (5번) ─────────────────────────
+   여기 <b>손으로 적어 둔 목록</b>이 있었습니다 — no · rej · run · new · old ·
+   bd · pol · won. 그런데 상태는 그 사이에 <b>제 이름</b>으로 바뀌었습니다
+   (부재 · 거절 · AP · PC · CS · 미접촉 · 기고객 · 생일 · 계약완료 · 증권전달 ·
+   소개완료 · TA). 세는 곳(arTkCount)은 새 이름으로 세고, <b>칸은 옛 이름으로
+   읽어</b> — 모든 칸이 <b>0 으로 떴고, 눌러도 아무도 안 남았습니다.</b>
+   화면은 멀쩡해 보이는데 거르개가 통째로 죽어 있었습니다.
+
+   손으로 적은 목록이 표보다 늦게 늙은 것입니다. 그래서 이제 <b>표에서
+   뽑습니다</b> — 상태를 하나 늘리면 칸도 저절로 늡니다. 「소개완료」 와
+   「TA」 는 여태 칸 자체가 없었는데, 이제 생깁니다.                    */
+/* <b>진행중</b>은 상태 하나가 아니라 AP·PC·CS 셋이다 — 세는 자리를
+   하나로 둔다. 여기저기서 더하면 한 곳을 빠뜨린다 (5번) */
+function arTkRun(c){ c=c||{}; return (c['AP']||0)+(c['PC']||0)+(c['CS']||0); }
+function arTkChips(){
+  var K=tdoOrder(),out=[{k:'all',e:'🗂',t:'전체'}],i;
+  for(i=0;i<K.length;i++)out.push({k:K[i],e:(TDO[K[i]]&&TDO[K[i]].e)||'•',t:tdoLabel(K[i])});
+  return out;
+}
 function arTkSet(k){AR.tk=k;arPaint();}
 function arTk(){return AR.tk||'all';}
 /* ── DB 종류를 <b>사람이 읽는 차례</b>로 ─────────────────────────
@@ -8525,8 +8550,12 @@ function arSrcSort(L){ return (L||[]).slice().sort(arSrcCmp); }
 /* DB 종류로 좁혀 보기 — CRM 에서 대표가 정한 종류가 그대로 넘어온다 */
 function arTkSrcSet(v){AR.tks=(AR.tks===v)?'':v;arPaint();}
 function arTkSrc(){return AR.tks||'';}
-function arSrcCount(who){
-  var l=arTouch(who),i,c={},v;
+/* 종류별 인원 — <b>보고 있는 범위 안에서</b> 센다. 목록을 밖에서 주면
+   그것을 세고, 안 주면 예전처럼 담당자로 뽑아 센다.
+   「모든 DB 분류에서 개인별·팀별로 나눠 봐야 관리가 된다」 는 말씀이
+   이것이다 — 팀을 고르면 종류 숫자도 그 팀 것이어야 한다. */
+function arSrcCount(who,L){
+  var l=L||arTouch(who),i,c={},v;
   for(i=0;i<l.length;i++){v=l[i].src||'';if(v)c[v]=(c[v]||0)+1;}
   return c;
 }
@@ -8623,10 +8652,11 @@ function arTouch(who){
   for(i=0;i<out.length;i++)out[i].todo=arTodoOf(out[i]);
   return out;
 }
-function arTkCount(who){
+function arTkCount(who,L){
   /* 갈래를 손으로 적지 않습니다 — 표에서 뽑습니다. 적어 두면 상태를 하나
-     늘릴 때 여기를 빠뜨려 그 상태만 0 으로 남습니다 (5번). */
-  var l=arTouch(who),i,K=tdoOrder(),c={all:l.length};
+     늘릴 때 여기를 빠뜨려 그 상태만 0 으로 남습니다 (5번).
+     목록을 밖에서 주면 <b>그 범위 안에서</b> 셉니다 (팀을 고르셨을 때). */
+  var l=L||arTouch(who),i,K=tdoOrder(),c={all:l.length};
   for(i=0;i<K.length;i++)c[K[i]]=0;
   for(i=0;i<l.length;i++)c[l[i].k]=(c[l[i].k]||0)+1;
   return c;
@@ -8709,24 +8739,24 @@ function arTkCount(who){
    그래서 <b>메뉴에 없는 id 는 아예 안 뜹니다</b> — 못 여는 단추를 세우면
    눌렀는데 아무 일도 안 일어납니다.                                    */
 var TDO={
- 'AP'  :{t:'AP',      c:'blu', ord:0, rule:'daily',  wait:0,  src:'db',  go:'crm'},
- 'PC'  :{t:'PC',      c:'blu', ord:1, rule:'daily',  wait:0,  src:'db',  go:'crm'},
- 'CS'  :{t:'CS',      c:'blu', ord:2, rule:'daily',  wait:0,  src:'db',  go:'crm'},
- '계약완료':{t:'계약완료', c:'red', ord:3, rule:'daily', wait:0, src:'db', go:'crm'},
- '증권전달':{t:'증권전달', c:'grn', ord:4, rule:'within', wait:15, src:'db', go:'crm'},
+ 'AP'  :{e:'🤝',t:'AP',      c:'blu', ord:0, rule:'daily',  wait:0,  src:'db',  go:'crm'},
+ 'PC'  :{e:'📄',t:'PC',      c:'blu', ord:1, rule:'daily',  wait:0,  src:'db',  go:'crm'},
+ 'CS'  :{e:'✍️',t:'CS',      c:'blu', ord:2, rule:'daily',  wait:0,  src:'db',  go:'crm'},
+ '계약완료':{e:'🏆',t:'계약완료', c:'red', ord:3, rule:'daily', wait:0, src:'db', go:'crm'},
+ '증권전달':{e:'📜',t:'증권전달', c:'grn', ord:4, rule:'within', wait:15, src:'db', go:'crm'},
  /* <b>소개완료</b> — 증권을 전해 드리고 소개까지 받은 자리다. 여기서 끝이
     아니다. 소개해 주신 분이 제일 궁금한 것은 <b>그분이 잘 됐는지</b>다.
     결과를 알려 드리면 다음 소개가 온다 — 안 알려 드리면 거기서 끊긴다. */
- '소개완료':{t:'소개완료', c:'blu', ord:5, rule:'after', wait:30, src:'db', go:'crm'},
- 'TA'  :{t:'TA',      c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm'},
- '부재' :{t:'부재',    c:'amb', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm'},
- '미접촉':{t:'미접촉',  c:'grn', ord:8, rule:'after',  wait:3,  src:'db',  go:'crm'},
- '거절' :{t:'거절',    c:'red', ord:9, rule:'after',  wait:14, src:'db',  go:'crm'},
- '생일' :{t:'생일',    c:'amb', ord:10, rule:'within', wait:7,  src:'cli', go:'clients',
+ '소개완료':{e:'🙌',t:'소개완료', c:'blu', ord:5, rule:'after', wait:30, src:'db', go:'crm'},
+ 'TA'  :{e:'☎️',t:'TA',      c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm'},
+ '부재' :{e:'📵',t:'부재',    c:'amb', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm'},
+ '미접촉':{e:'🆕',t:'미접촉',  c:'grn', ord:8, rule:'after',  wait:3,  src:'db',  go:'crm'},
+ '거절' :{e:'🚫',t:'거절',    c:'red', ord:9, rule:'after',  wait:14, src:'db',  go:'crm'},
+ '생일' :{e:'🎂',t:'생일',    c:'amb', ord:10, rule:'within', wait:7,  src:'cli', go:'clients',
          tools:['news_live'],
          ch:'문자', aim:'<b>축하만</b> 전한다',
          way:'계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다'},
- '기고객':{t:'기고객',  c:'red', ord:11, rule:'after', wait:30, src:'cli', go:'clients',
+ '기고객':{e:'❄️',t:'기고객',  c:'red', ord:11, rule:'after', wait:30, src:'cli', go:'clients',
          tools:['news_live','sangdam'],
          ch:'전화', aim:'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다',
          way:'오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다'}
@@ -8839,10 +8869,95 @@ function arTouchMini(who,n){
     Math.min(l.length,(n||10))+'명</span></div>'+
     '<div class="ar-sb" style="padding:6px 14px 12px"><div class="ar-tks">'+h+'</div></div></div>';
 }
-function arTkWho(){return (AR.tkAll&&arIsLead())?'':arMyId();}
-function arTkAllSet(v){AR.tkAll=v;arPaint();}
+/* ══ <b>누구 것을 보고 있나</b> — 여기 하나가 안다 (5번) ═══════════
+   사장님 말씀 — 「오늘 터치할 사람도 <b>팀원별로 분류가 안 되어 있고</b>,
+   모든 DB 분류에서 개인별로 나누고 팀별로 나누어서 봐야 관리가 되지」.
+
+   여태 이 자리에는 <b>단추 두 개</b>뿐이었습니다 — 「내 것」 과 「팀 전체」.
+   팀이 둘 이상이면 「팀 전체」 는 <b>남의 팀까지 한 덩어리</b>였고, 그 안에서
+   누가 몇 명인지는 <b>줄을 세어야</b> 알 수 있었습니다. 그래서 팀장이
+   「우리 팀 오늘 몇 건인가」 를 이 화면에서 답할 수가 없었습니다.
+
+   이제 <b>팀 → 담당자 → 상태 → 종류</b> 네 줄로 좁힙니다. 네 줄이 <b>겹쳐서</b>
+   먹으므로 「온탑2팀 · 박서준 · 부재 · 보장분석3DB 몇 명」 이 한눈에 섭니다.
+
+   ★ 거르는 자리는 <b>arTkRows 한 곳</b>입니다. 세는 곳과 그리는 곳이 같은
+     샘을 쓰지 않으면 「숫자는 5인데 밑에는 8줄」 이 됩니다 — 달력에서
+     실제로 그랬습니다 (5번).
+   ★ <b>팀원은 고르개가 없습니다.</b> 남의 것을 볼 수 없는 분께 고르개를
+     세우면 눌러도 아무 일이 안 일어납니다 (8번).                        */
+function arTeamOf(id){
+  try{ return (typeof GB!=='undefined'&&GB.teamOf&&GB.teamOf[id])||''; }catch(e){ return ''; }
+}
+function arTeamName(id){
+  var T=(typeof GB!=='undefined'&&GB.teams)||[],i;
+  for(i=0;i<T.length;i++)if(T[i].id===id)return T[i].name||'팀';
+  return '';
+}
+function arTkWho(){
+  if(!arIsLead())return arMyId();        /* 팀원은 언제나 본인 것 */
+  if(AR.tkWho)return AR.tkWho;           /* 한 분을 고르셨으면 그분 */
+  return AR.tkAll?'':arMyId();           /* 아니면 전체 / 내 것 */
+}
+function arTkTeam(){ return arIsLead()?(AR.tkTeam||''):''; }
+/* 팀으로 거르는 자리도 여기 하나 */
+function arTkScope(L){
+  var t=arTkTeam(),out=[],i,LL=L||[];
+  if(!t)return LL;
+  for(i=0;i<LL.length;i++)if(arTeamOf(LL[i].who)===t)out.push(LL[i]);
+  return out;
+}
+/* <b>오늘 손댈 사람</b> — 보고 있는 범위의 목록. 화면도 숫자도 여기서 온다 */
+function arTkRows(){ return arTkScope(arTouch(arTkWho())); }
+function arTkAllSet(v){AR.tkAll=v;AR.tkWho='';arPaint();}
+function arTkWhoSet(v){AR.tkWho=(AR.tkWho===v)?'':v;if(AR.tkWho)AR.tkAll=true;arPaint();}
+/* 팀을 바꾸면 <b>고른 사람은 푼다</b> — 그 팀에 없는 분일 수 있다.
+   남겨 두면 「팀을 골랐는데 0명」 이 되고, 왜 0명인지 화면이 말해 주지 않는다 */
+function arTkTeamSet(v){AR.tkTeam=(AR.tkTeam===v)?'':v;AR.tkWho='';arPaint();}
+/* 한 줄짜리 고르개를 <b>한 곳</b>에서 만든다 — 팀 줄과 사람 줄이 같은 모양이다 */
+function arPickRowHtml(o){
+  var h='<div class="ar-fs ar-fpick" style="margin-bottom:8px">'+
+    '<button type="button" class="ar-fc'+(o.cur?'':' on')+'" onclick="'+o.fn+'(\'\')">'+
+      o.allLabel+'<span>'+o.allN+'</span></button>',i,x;
+  for(i=0;i<o.list.length&&i<14;i++){
+    x=o.list[i];
+    h+='<button type="button" class="ar-fc'+(o.cur===x.id?' on':'')+'" onclick="'+
+      o.fn+'(\''+x.id+'\')">'+osEsc(x.nm)+'<span>'+x.n+'</span></button>';
+  }
+  return h+'</div>';
+}
+/* 팀 줄 — 팀이 <b>둘 이상</b>일 때만 선다. 하나뿐이면 고를 것이 없다 */
+function arTkTeamsHtml(){
+  if(!arIsLead())return '';
+  var T=(typeof GB!=='undefined'&&GB.teams)||[];
+  if(T.length<2)return '';
+  var all=arTouch(''),c={},i,list=[];
+  for(i=0;i<all.length;i++){var k=arTeamOf(all[i].who);if(k)c[k]=(c[k]||0)+1;}
+  for(i=0;i<T.length;i++)if(c[T[i].id])list.push({id:T[i].id,nm:T[i].name||'팀',n:c[T[i].id]});
+  if(list.length<2)return '';
+  list.sort(function(a,b){return b.n-a.n;});
+  return arPickRowHtml({cur:arTkTeam(),fn:'arTkTeamSet',allLabel:'🏢 팀 전체',
+                        allN:all.length,list:list});
+}
+/* 담당자 줄 — <b>고른 팀 안에서</b> 센다. 팀을 좁히면 사람도 같이 좁아진다.
+   ★ 고르개는 <b>거르기 전</b>을 세어야 다른 분을 다시 고를 수 있다 */
+function arTkWhosHtml(){
+  if(!arIsLead())return '';
+  var base=arTkScope(arTouch('')),c={},i,k,list=[],me=arMyId();
+  for(i=0;i<base.length;i++){k=base[i].who||'';if(k)c[k]=(c[k]||0)+1;}
+  for(k in c)if(c.hasOwnProperty(k))list.push({id:k,nm:arNameOf(k),n:c[k]});
+  if(list.length<2)return '';
+  list.sort(function(a,b){
+    var am=(a.id===me)?1:0,bm=(b.id===me)?1:0;     /* 내 것이 언제나 맨 앞 */
+    return bm-am||b.n-a.n||(''+a.nm).localeCompare(''+b.nm,'ko');
+  });
+  return arPickRowHtml({cur:(AR.tkWho||(AR.tkAll?'':me)),fn:'arTkWhoSet',
+                        allLabel:'🙋 담당자 전체',allN:base.length,list:list});
+}
 function arTouchHtml(){
-  var who=arTkWho(),lead=arIsLead(),l=arTouch(who),c=arTkCount(who),k=arTk(),i,rows=[];
+  /* 목록도 숫자도 <b>같은 샘</b>에서 온다 (arTkRows) — 따로 뽑으면
+     「숫자는 5인데 밑에는 8줄」 이 된다 (5번) */
+  var who=arTkWho(),lead=arIsLead(),l=arTkRows(),c=arTkCount(who,l),k=arTk(),i,rows=[];
   var sk=arTkSrc();
   for(i=0;i<l.length;i++){
     var x=l[i];
@@ -8851,15 +8966,26 @@ function arTouchHtml(){
     if(rows.length>=80)break;
     rows.push(arTkRow(x,!who));
   }
-  var chips='<div class="ar-fs">';
-  for(i=0;i<AR_TK.length;i++){
-    var t=AR_TK[i];
-    chips+='<button type="button" class="ar-fc'+(k===t[0]?' on':'')+'" onclick="arTkSet(\''+t[0]+'\')">'+
-      t[1]+' '+osEsc(t[2])+'<span>'+(c[t[0]]||0)+'</span></button>';
+  /* 상태 칸 줄에 <b>제 이름표</b>를 준다 — 위에 팀·담당자 고르개가 서면서
+     「.ar-fs 중 종류가 아닌 것」 으로는 더 이상 골라낼 수가 없어졌다.
+     점검이 그 자리를 잰다 (8번). */
+  var chips='<div class="ar-fs ar-ftk">';
+  /* <b>0 인 칸은 안 세웁니다.</b> 열두 상태를 다 늘어놓으면 아홉 개가 0 이라
+     눈이 미끄러집니다 — 홈 「오늘 챙길 것」 과 같은 규칙입니다.
+     지금 고른 칸은 0 이어도 남깁니다. 안 그러면 「눌렀더니 그 칸이
+     사라져」 다시 전체로 돌아갈 길이 없습니다 (8번). */
+  var TKC=arTkChips(),tn;
+  for(i=0;i<TKC.length;i++){
+    var t=TKC[i]; tn=c[t.k]||0;
+    if(t.k!=='all'&&!tn&&k!==t.k)continue;
+    chips+='<button type="button" class="ar-fc'+(k===t.k?' on':'')+'" onclick="arTkSet(\''+t.k+'\')">'+
+      t.e+' '+osEsc(t.t)+'<span>'+tn+'</span></button>';
   }
   chips+='</div>';
   /* 종류가 둘 이상일 때만 보여 준다 — 하나뿐이면 고를 것이 없다 */
-  var sc=arSrcCount(who),sks=[],skk;
+  /* 종류 칸도 <b>지금 보고 있는 범위</b>를 센다 — 팀을 고르면 종류 숫자도
+     그 팀 것이다. 「모든 DB 분류에서 개인별·팀별로」 가 이 뜻이다 */
+  var sc=arSrcCount(who,l),sks=[],skk;
   for(skk in sc)if(sc.hasOwnProperty(skk))sks.push(skk);
   /* 건수순으로 세우면 「5DB · 6DB · 3DB · 7DB」 처럼 섭니다 — 눈이 멈춥니다.
      <b>사람이 읽는 차례</b>로 세웁니다 (arSrcCmp 한 곳에서 정합니다) */
@@ -8876,23 +9002,42 @@ function arTouchHtml(){
     return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
       '<div class="k">'+kk+'</div></div>';
   };
-  var scope=lead?('<div class="ar-fs" style="margin-bottom:10px">'+
-    '<button type="button" class="ar-fc'+(who?' on':'')+'" onclick="arTkAllSet(false)">🙋 내 것</button>'+
-    '<button type="button" class="ar-fc'+(who?'':' on')+'" onclick="arTkAllSet(true)">👥 팀 전체'+
-      '<span>'+arTouch('').length+'</span></button></div>'):'';
+  /* ── 고르개 네 줄 — <b>팀 → 담당자 → 상태 → 종류</b> ──────────────
+     여태는 「내 것 / 팀 전체」 두 단추뿐이라, 팀이 둘 이상이면 남의 팀까지
+     한 덩어리였습니다. 이제 팀과 담당자를 따로 고릅니다. 팀원에게는
+     고르개가 안 섭니다 — 남의 것을 못 보시는 분께 세워 봐야 눌러도
+     아무 일이 안 일어납니다 (8번).                                     */
+  var scope=arTkTeamsHtml()+arTkWhosHtml();
+  /* <b>지금 무엇을 세고 있는지</b> 한 줄로 적습니다. 안 적으면 숫자가
+     줄었을 때 「왜 줄었지」 를 화면이 답해 주지 않습니다 (1번) */
+  var nowT=arTkTeam(),nowW=(AR.tkWho||''),narrow=[];
+  if(nowT)narrow.push(arTeamName(nowT)||'고른 팀');
+  if(nowW)narrow.push(arNameOf(nowW));
+  else if(lead&&!AR.tkAll)narrow.push('내 것');
+  var narrowLine=narrow.length
+    ? ('<div class="ar-none" style="margin:0 0 10px;text-align:left">지금 <b>'+
+       osEsc(narrow.join(' · '))+'</b> 만 세고 있습니다 — '+l.length+'명. '+
+       '위 칸에서 <b>같은 칸을 다시 누르면</b> 전체로 돌아갑니다.</div>')
+    : '';
   return arCard('☎️','오늘 터치할 사람',
       /* 공용 단계표를 못 읽었으면 <b>그 자리에서 말합니다.</b> 조용히 빈칸으로
          두면 「오늘은 할 말이 없구나」 로 읽으십니다 (1번) */
       (TDO_NOTABLE?'<b style="color:#F04452">단계표(apex-stage.js)를 못 읽었습니다 — 무엇을 할지가 빈칸으로 뜹니다. 새로고침해 주세요.</b> ':'')+
       (who?'':'팀 전체입니다. 담당자 이름이 앞에 붙습니다. ')+
       '부재 · 거절 · 진행중 · 기고객 · 계약 뒤까지 한 줄로 세웠습니다. 오른쪽에 무엇을 해야 하는지 적혀 있습니다',
-      scope+
+      scope+narrowLine+
+      /* ── 다섯 쪽지도 <b>옛 이름</b>으로 세고 있었다 ────────────────
+         c.run · c.pol · c.no · c.old · c.bd 는 상태 이름이 바뀌기 전 말이다.
+         세는 곳은 새 이름으로 세는데 여기서는 옛 이름으로 읽어, <b>다섯
+         쪽지가 전부 0</b> 이었다. 칸과 똑같은 병이다 (5번).
+         「진행중」 은 AP·PC·CS 셋을 합친 것이라 이름을 표에서 그대로
+         가져올 수 없다 — 여기서 <b>더해서</b> 쓴다. */
       '<div class="ar-top" style="grid-template-columns:repeat(5,1fr)">'+
-        tile(c.run||0,'명','진행중 — 지금 붙어야',c.run>0)+
-        tile(c.pol||0,'명','증권 미전달 — 급함',c.pol>0)+
-        tile(c.no||0,'명','부재 — 다시 걸기',c.no>0)+
-        tile(c.old||0,'명','기고객 — 식었음',c.old>0)+
-        tile(c.bd||0,'명','생일 — 이번 주',0)+
+        tile(arTkRun(c),'명','진행중 — 지금 붙어야',arTkRun(c)>0)+
+        tile(c['계약완료']||0,'명','증권 미전달 — 급함',(c['계약완료']||0)>0)+
+        tile(c['부재']||0,'명','부재 — 다시 걸기',(c['부재']||0)>0)+
+        tile(c['기고객']||0,'명','기고객 — 식었음',(c['기고객']||0)>0)+
+        tile(c['생일']||0,'명','생일 — 이번 주',0)+
       '</div>'+chips+
       (rows.length?('<div class="ar-tks">'+rows.join('')+'</div>')
         :'<div class="ar-none">이 조건에 맞는 사람이 없습니다. 잘 돌리고 계십니다.</div>'),
@@ -12257,6 +12402,120 @@ function navVisGroups(){
   for(i=0;i<g.length;i++)if(!g[i].hide)vis.push(g[i]);   /* 한 칸에 모은 것은 메뉴에 두 번 안 세운다 */
   return vis;
 }
+/* ══ <b>간편 버전</b> — 메뉴가 너무 많다 ═══════════════════════════
+   사장님 말씀 — 「간편 버전도 만들어서 TFA업무관리 / 홈 / 보장분석
+   전&후 만들기 / DB통합CRM / 보험마스터아카데미 등만 보이게끔.
+   메뉴가 너무 많아서 효율적인 방안을 찾고 개선해보자. <b>단 하나도
+   빼놓지 말고</b>, 정확히 하나씩 분류해서 토스 어플처럼 쉽게」.
+
+   화면이 95개입니다. 열일곱 칸으로 묶여 있어도 서랍을 열면 글자가
+   빽빽합니다. 그래서 두 가지를 합니다 —
+
+   ① <b>쓰는 때로 분류한다.</b> 95개를 <b>하나도 빼놓지 않고</b> 여섯
+      묶음에 넣습니다. 「무슨 기능인가」 가 아니라 <b>「언제 여는가」</b>
+      로 나눕니다 — 사람은 기능 이름이 아니라 <b>하던 일</b>로 찾습니다.
+   ② <b>간편 버전</b>에서는 그중 매일 여는 것만 세웁니다.
+
+   ★ <b>아무것도 지우지 않습니다.</b> 간편 버전에서 안 보이는 화면도
+     찾기 칸에 치면 그대로 열리고, 음성으로도 열리고, ?go= 주소로도
+     열립니다. 「전체」 로 한 번 누르면 다 돌아옵니다 (1번).
+   ★ 분류표에 <b>빠진 화면이 하나라도 있으면</b> check-nav 가 빨간불을
+     켭니다 — 새 화면을 만들고 여기 안 적으면 그 자리에서 걸립니다 (8번). */
+var NAV_WHEN_G=[
+ {k:'today',e:'🌅',t:'오늘',            s:'매일 여는 것'},
+ {k:'meet', e:'🤝',t:'고객 만나기',      s:'준비하고 · 앞에서 쓰는 것'},
+ {k:'after',e:'📮',t:'계약하고 나서',    s:'증권 · 청구 · 사후관리'},
+ {k:'grow', e:'📣',t:'고객 늘리기',      s:'콘텐츠 · 광고 · 미끼'},
+ {k:'know', e:'📚',t:'찾아보고 배우기',  s:'자료 · 교재 · 투자 · 법인'},
+ {k:'run',  e:'⚙️',t:'팀 · 설정',        s:'조직 · 내 설정'}
+];
+/* 화면 <b>하나하나</b>가 어느 때 것인가 — 95개 전부 */
+var NAV_WHEN={
+ /* 🌅 오늘 — 매일 여는 것 */
+ home:'today', airep:'today', crm:'today', clients:'today', mycal:'today',
+ assistant:'today', voiceasst:'today', ckboard:'today',
+ /* 🤝 고객 만나기 — 준비하고, 앞에서 쓰는 것 */
+ fact_find:'meet', bojang:'meet', baba:'meet', frmake:'meet', compare:'meet',
+ onecmp:'meet', ai_prop:'meet', katalk:'meet', interpret:'meet', treatpay:'meet',
+ wallets:'meet', cs_assist:'meet', cs_needs:'meet', ins_asst:'meet', cs_gso:'meet',
+ sangdam:'meet', utphoto:'meet', fp_deck:'meet', fp_talk:'meet', mikki_talk:'meet',
+ finance:'meet', calc:'meet', brain:'meet',
+ /* 📮 계약하고 나서 */
+ pdel:'after', contracts:'after', endorse:'after', claims:'after',
+ med_silbi:'after', med_checkup:'after', med_disclosure:'after', car_fault:'after',
+ /* 📣 고객 늘리기 */
+ mikki:'grow', news_live:'grow', biz_news:'grow', blog:'grow', threads:'grow',
+ insta:'grow', video:'grow', calendar:'grow', simui:'grow',
+ mkt_meta:'grow', mkt_volume:'grow', mkt_combine:'grow', mkt_landing:'grow',
+ mkt_card:'grow', ext_reply:'grow', ext_thread:'grow', ext_naver:'grow',
+ /* 📚 찾아보고 배우기 */
+ ref_jeonsan:'know', ref_underwrite:'know', ref_kcd:'know', ref_surgery:'know',
+ ref_hira:'know', ref_hidden:'know',
+ biz_diag:'know', biz_fund:'know', biz_tax:'know', biz_ins:'know',
+ biz_retire:'know', biz_staff:'know',
+ inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
+ bohum:'know', manual:'know', apexmap:'know', apexmaster:'know',
+ academy_notion:'know', academy:'know', mycoach:'know', growboard:'know',
+ /* ⚙️ 팀 · 설정 */
+ org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
+ report:'run', branch_coach:'run', hq:'run',
+ settings:'run', pricing:'run', terms:'run', ready:'run', health:'run',
+ phone_app:'run', voice:'run'
+};
+/* 간편 버전에 세울 것 — <b>매일 여는 것</b>만. 나머지는 「전체」 에 있다.
+   사장님이 짚어 주신 다섯(홈 · TFA · 전&후 만들기 · DB CRM · 아카데미)이
+   전부 들어 있다. */
+var EZ_PICK=['home','airep','crm','clients','mycal',
+             'frmake','bojang','sangdam','finance',
+             'pdel','bohum','manual','settings'];
+var EZ_KEY='apex_nav_easy_v1';
+function ezOn(){
+  try{ return localStorage.getItem(EZ_KEY)==='1'; }catch(e){ return false; }
+}
+function ezSet(v){
+  try{ localStorage.setItem(EZ_KEY,v?'1':'0'); }catch(e){}
+  try{ renderNav(); }catch(e){}
+  if(typeof toast==='function')
+    toast(v?'간편 버전입니다 — 매일 여는 것만 세웁니다. 나머지는 찾기 칸에 치면 그대로 열립니다.'
+           :'전체 메뉴입니다.');
+}
+function ezToggle(){ ezSet(!ezOn()); }
+/* 간편 버전의 묶음 — <b>쓰는 때</b>로 묶는다. 권한은 그대로 먹인다
+   (visibleTabs) — 못 여는 화면을 세우면 눌러도 아무 일이 안 난다 (8번) */
+function ezGroups(){
+  var g=(typeof visibleTabs==='function')?visibleTabs():TABS,by={},i,j,it,k,out=[];
+  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++){
+    it=g[i].items[j];
+    if(EZ_PICK.indexOf(it.id)<0)continue;
+    k=NAV_WHEN[it.id]||'run';
+    (by[k]=by[k]||[]).push(it);
+  }
+  for(i=0;i<NAV_WHEN_G.length;i++){
+    var w=NAV_WHEN_G[i];
+    if(by[w.k]&&by[w.k].length)
+      out.push({group:w.t,icon:w.e,items:by[w.k]});
+  }
+  return out;
+}
+/* 서랍 맨 위 단추 — 지금 어느 쪽인지와 <b>무엇이 빠져 있는지</b>를 같이 적는다.
+   숫자를 안 적으면 「메뉴가 없어졌다」 로 읽으십니다 (1번). */
+function ezBarHtml(){
+  /* <b>세는 것과 서는 것을 같게</b> 한다. 전체 모드에서 서는 칸은 hide 를
+     뺀 수다 — 95 라고 적어 놓고 83개가 서면 열둘이 사라진 것처럼 보인다 (1번). */
+  /* <b>navVisGroups 가 세는 것과 똑같이</b> 센다 — 한 칸에 모은 묶음(hide)도
+     빼고, 그 안의 hide 줄도 뺀다. 세는 규칙이 둘이면 숫자가 어긋난다 (5번). */
+  var on=ezOn(),g=navVisGroups(),i,j,full=0,shown=0;
+  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++)if(!g[i].items[j].hide)full++;
+  if(on){ var E=ezGroups(); for(i=0;i<E.length;i++)shown+=E[i].items.length; }
+  else shown=full;
+  return '<div class="nav-ez">'+
+    '<button type="button" class="nav-ez-b'+(on?' on':'')+'" onclick="ezSet(true)">🌿 간편</button>'+
+    '<button type="button" class="nav-ez-b'+(on?'':' on')+'" onclick="ezSet(false)">🗂 전체</button>'+
+    '<span class="nav-ez-n">'+shown+' / '+full+'</span></div>'+
+    (on?('<div class="nav-ez-note">여기 없는 화면도 <b>없어진 것이 아닙니다</b> — '+
+         '위 찾기 칸에 치면 그대로 열립니다(찾기는 <b>언제나 전부</b>에서 찾습니다). '+
+         '「전체」 를 누르면 '+full+'개가 다 돌아옵니다.</div>'):'');
+}
 function navRamp(i,n){
   var t=(n>1)?(i/(n-1)):0;                        /* 0 = 맨 위, 1 = 맨 아래 */
   var h=266-212*t,s=0.82-0.36*t;                  /* 보라 → 남색 → 청록 → 초록 → 금빛 */
@@ -14163,8 +14422,10 @@ function renderNav(){
 /* 목록만 다시 그린다 — 찾을 때마다 도는 자리다 */
 function navPaintBody(){
   var body=document.getElementById('navBody'); if(!body)return;
-  var h=navTopHtml();
-  var vis=navVisGroups();   /* 갈래를 세는 곳은 한 곳 (5번) */
+  var h=ezBarHtml()+navTopHtml();
+  /* <b>찾을 때는 언제나 전부</b>에서 찾는다 — 간편 버전이라고 못 찾으면
+     「없어졌다」 가 된다. 간편은 <b>세워 두는 것</b>만 줄이는 것이다 (1번). */
+  var vis=(ezOn()&&!NAV_Q)?ezGroups():navVisGroups();
   /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
      처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
   NAV_LOOSE=false;
@@ -14193,7 +14454,7 @@ function navPaintBody(){
                    :g.items.filter(function(it){return !it.hide;});
     if(NAV_Q&&!items.length)return;
     found+=items.length;
-    var ic=NAVG_ICON[name]||'•';
+    var ic=g.icon||NAVG_ICON[name]||'•';   /* 간편 버전의 묶음은 제 그림글자를 들고 온다 */
     /* 이름표는 <b>눌러도 아무 일이 없다</b> — 그래서 button 이 아니라 div 다.
        button 으로 두면 눌러 보고 「고장 났나」 하신다 (8번과 같은 이유). */
     h+='<div class="nav-group" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
@@ -14851,7 +15112,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-17 09:10';
+var APP_BUILD='2026-09-17 10:40';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -20070,6 +20331,7 @@ function hmTeamOpen(who){
   try{
     AR.cat='touch';
     AR.tkAll=true;                       /* 팀 전체로 두고 */
+    AR.tkWho=''; AR.tkTeam='';           /* 앞서 고른 팀·사람은 푼다 — 남기면 그 사람이 안 보인다 */
     AR.open=who||'';                     /* 그 사람을 펼친다 */
   }catch(e){}
   go('airep');
