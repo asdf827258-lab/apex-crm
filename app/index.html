@@ -700,6 +700,18 @@ a{color:inherit;text-decoration:none;}
 .nav-find .nf-x{flex:0 0 auto;border:0;background:transparent;color:rgba(255,255,255,.55);
   cursor:pointer;font-size:12px;line-height:1;padding:2px 3px;}
 .nav-find .nf-x:hover{color:#fff;}
+.nav-ez{display:flex;align-items:center;gap:6px;margin:0 8px 8px;padding:5px;
+  border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);}
+.nav-ez-b{flex:1;appearance:none;border:0;border-radius:9px;background:transparent;
+  color:rgba(255,255,255,.62);font-family:inherit;font-size:12px;font-weight:800;
+  padding:8px 6px;cursor:pointer;letter-spacing:-.02em;}
+.nav-ez-b.on{background:rgba(255,255,255,.16);color:#fff;}
+.nav-ez-n{flex:none;font-size:10px;font-weight:700;color:rgba(255,255,255,.45);
+  padding:0 7px 0 3px;white-space:nowrap;}
+.nav-ez-note{margin:0 8px 10px;padding:9px 11px;border-radius:11px;font-size:11px;
+  line-height:1.7;font-weight:500;color:rgba(255,255,255,.55);
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);}
+.nav-ez-note b{color:#FFD666;font-weight:800;}
 .nav-pin{margin:0 8px 10px;padding:8px 6px 6px;border-radius:12px;
   background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);}
 .nav-pin.rec{background:rgba(255,255,255,.03);}
@@ -12343,6 +12355,120 @@ function navVisGroups(){
   for(i=0;i<g.length;i++)if(!g[i].hide)vis.push(g[i]);   /* 한 칸에 모은 것은 메뉴에 두 번 안 세운다 */
   return vis;
 }
+/* ══ <b>간편 버전</b> — 메뉴가 너무 많다 ═══════════════════════════
+   사장님 말씀 — 「간편 버전도 만들어서 TFA업무관리 / 홈 / 보장분석
+   전&후 만들기 / DB통합CRM / 보험마스터아카데미 등만 보이게끔.
+   메뉴가 너무 많아서 효율적인 방안을 찾고 개선해보자. <b>단 하나도
+   빼놓지 말고</b>, 정확히 하나씩 분류해서 토스 어플처럼 쉽게」.
+
+   화면이 95개입니다. 열일곱 칸으로 묶여 있어도 서랍을 열면 글자가
+   빽빽합니다. 그래서 두 가지를 합니다 —
+
+   ① <b>쓰는 때로 분류한다.</b> 95개를 <b>하나도 빼놓지 않고</b> 여섯
+      묶음에 넣습니다. 「무슨 기능인가」 가 아니라 <b>「언제 여는가」</b>
+      로 나눕니다 — 사람은 기능 이름이 아니라 <b>하던 일</b>로 찾습니다.
+   ② <b>간편 버전</b>에서는 그중 매일 여는 것만 세웁니다.
+
+   ★ <b>아무것도 지우지 않습니다.</b> 간편 버전에서 안 보이는 화면도
+     찾기 칸에 치면 그대로 열리고, 음성으로도 열리고, ?go= 주소로도
+     열립니다. 「전체」 로 한 번 누르면 다 돌아옵니다 (1번).
+   ★ 분류표에 <b>빠진 화면이 하나라도 있으면</b> check-nav 가 빨간불을
+     켭니다 — 새 화면을 만들고 여기 안 적으면 그 자리에서 걸립니다 (8번). */
+var NAV_WHEN_G=[
+ {k:'today',e:'🌅',t:'오늘',            s:'매일 여는 것'},
+ {k:'meet', e:'🤝',t:'고객 만나기',      s:'준비하고 · 앞에서 쓰는 것'},
+ {k:'after',e:'📮',t:'계약하고 나서',    s:'증권 · 청구 · 사후관리'},
+ {k:'grow', e:'📣',t:'고객 늘리기',      s:'콘텐츠 · 광고 · 미끼'},
+ {k:'know', e:'📚',t:'찾아보고 배우기',  s:'자료 · 교재 · 투자 · 법인'},
+ {k:'run',  e:'⚙️',t:'팀 · 설정',        s:'조직 · 내 설정'}
+];
+/* 화면 <b>하나하나</b>가 어느 때 것인가 — 95개 전부 */
+var NAV_WHEN={
+ /* 🌅 오늘 — 매일 여는 것 */
+ home:'today', airep:'today', crm:'today', clients:'today', mycal:'today',
+ assistant:'today', voiceasst:'today', ckboard:'today',
+ /* 🤝 고객 만나기 — 준비하고, 앞에서 쓰는 것 */
+ fact_find:'meet', bojang:'meet', baba:'meet', frmake:'meet', compare:'meet',
+ onecmp:'meet', ai_prop:'meet', katalk:'meet', interpret:'meet', treatpay:'meet',
+ wallets:'meet', cs_assist:'meet', cs_needs:'meet', ins_asst:'meet', cs_gso:'meet',
+ sangdam:'meet', utphoto:'meet', fp_deck:'meet', fp_talk:'meet', mikki_talk:'meet',
+ finance:'meet', calc:'meet', brain:'meet',
+ /* 📮 계약하고 나서 */
+ pdel:'after', contracts:'after', endorse:'after', claims:'after',
+ med_silbi:'after', med_checkup:'after', med_disclosure:'after', car_fault:'after',
+ /* 📣 고객 늘리기 */
+ mikki:'grow', news_live:'grow', biz_news:'grow', blog:'grow', threads:'grow',
+ insta:'grow', video:'grow', calendar:'grow', simui:'grow',
+ mkt_meta:'grow', mkt_volume:'grow', mkt_combine:'grow', mkt_landing:'grow',
+ mkt_card:'grow', ext_reply:'grow', ext_thread:'grow', ext_naver:'grow',
+ /* 📚 찾아보고 배우기 */
+ ref_jeonsan:'know', ref_underwrite:'know', ref_kcd:'know', ref_surgery:'know',
+ ref_hira:'know', ref_hidden:'know',
+ biz_diag:'know', biz_fund:'know', biz_tax:'know', biz_ins:'know',
+ biz_retire:'know', biz_staff:'know',
+ inv_stock:'know', inv_fund:'know', inv_perf:'know', inv_econ:'know',
+ bohum:'know', manual:'know', apexmap:'know', apexmaster:'know',
+ academy_notion:'know', academy:'know', mycoach:'know', growboard:'know',
+ /* ⚙️ 팀 · 설정 */
+ org:'run', attend:'run', audit:'run', teamhub:'run', daily:'run',
+ report:'run', branch_coach:'run', hq:'run',
+ settings:'run', pricing:'run', terms:'run', ready:'run', health:'run',
+ phone_app:'run', voice:'run'
+};
+/* 간편 버전에 세울 것 — <b>매일 여는 것</b>만. 나머지는 「전체」 에 있다.
+   사장님이 짚어 주신 다섯(홈 · TFA · 전&후 만들기 · DB CRM · 아카데미)이
+   전부 들어 있다. */
+var EZ_PICK=['home','airep','crm','clients','mycal',
+             'frmake','bojang','sangdam','finance',
+             'pdel','bohum','manual','settings'];
+var EZ_KEY='apex_nav_easy_v1';
+function ezOn(){
+  try{ return localStorage.getItem(EZ_KEY)==='1'; }catch(e){ return false; }
+}
+function ezSet(v){
+  try{ localStorage.setItem(EZ_KEY,v?'1':'0'); }catch(e){}
+  try{ renderNav(); }catch(e){}
+  if(typeof toast==='function')
+    toast(v?'간편 버전입니다 — 매일 여는 것만 세웁니다. 나머지는 찾기 칸에 치면 그대로 열립니다.'
+           :'전체 메뉴입니다.');
+}
+function ezToggle(){ ezSet(!ezOn()); }
+/* 간편 버전의 묶음 — <b>쓰는 때</b>로 묶는다. 권한은 그대로 먹인다
+   (visibleTabs) — 못 여는 화면을 세우면 눌러도 아무 일이 안 난다 (8번) */
+function ezGroups(){
+  var g=(typeof visibleTabs==='function')?visibleTabs():TABS,by={},i,j,it,k,out=[];
+  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++){
+    it=g[i].items[j];
+    if(EZ_PICK.indexOf(it.id)<0)continue;
+    k=NAV_WHEN[it.id]||'run';
+    (by[k]=by[k]||[]).push(it);
+  }
+  for(i=0;i<NAV_WHEN_G.length;i++){
+    var w=NAV_WHEN_G[i];
+    if(by[w.k]&&by[w.k].length)
+      out.push({group:w.t,icon:w.e,items:by[w.k]});
+  }
+  return out;
+}
+/* 서랍 맨 위 단추 — 지금 어느 쪽인지와 <b>무엇이 빠져 있는지</b>를 같이 적는다.
+   숫자를 안 적으면 「메뉴가 없어졌다」 로 읽으십니다 (1번). */
+function ezBarHtml(){
+  /* <b>세는 것과 서는 것을 같게</b> 한다. 전체 모드에서 서는 칸은 hide 를
+     뺀 수다 — 95 라고 적어 놓고 83개가 서면 열둘이 사라진 것처럼 보인다 (1번). */
+  /* <b>navVisGroups 가 세는 것과 똑같이</b> 센다 — 한 칸에 모은 묶음(hide)도
+     빼고, 그 안의 hide 줄도 뺀다. 세는 규칙이 둘이면 숫자가 어긋난다 (5번). */
+  var on=ezOn(),g=navVisGroups(),i,j,full=0,shown=0;
+  for(i=0;i<g.length;i++)for(j=0;j<g[i].items.length;j++)if(!g[i].items[j].hide)full++;
+  if(on){ var E=ezGroups(); for(i=0;i<E.length;i++)shown+=E[i].items.length; }
+  else shown=full;
+  return '<div class="nav-ez">'+
+    '<button type="button" class="nav-ez-b'+(on?' on':'')+'" onclick="ezSet(true)">🌿 간편</button>'+
+    '<button type="button" class="nav-ez-b'+(on?'':' on')+'" onclick="ezSet(false)">🗂 전체</button>'+
+    '<span class="nav-ez-n">'+shown+' / '+full+'</span></div>'+
+    (on?('<div class="nav-ez-note">여기 없는 화면도 <b>없어진 것이 아닙니다</b> — '+
+         '위 찾기 칸에 치면 그대로 열립니다(찾기는 <b>언제나 전부</b>에서 찾습니다). '+
+         '「전체」 를 누르면 '+full+'개가 다 돌아옵니다.</div>'):'');
+}
 function navRamp(i,n){
   var t=(n>1)?(i/(n-1)):0;                        /* 0 = 맨 위, 1 = 맨 아래 */
   var h=266-212*t,s=0.82-0.36*t;                  /* 보라 → 남색 → 청록 → 초록 → 금빛 */
@@ -14249,8 +14375,10 @@ function renderNav(){
 /* 목록만 다시 그린다 — 찾을 때마다 도는 자리다 */
 function navPaintBody(){
   var body=document.getElementById('navBody'); if(!body)return;
-  var h=navTopHtml();
-  var vis=navVisGroups();   /* 갈래를 세는 곳은 한 곳 (5번) */
+  var h=ezBarHtml()+navTopHtml();
+  /* <b>찾을 때는 언제나 전부</b>에서 찾는다 — 간편 버전이라고 못 찾으면
+     「없어졌다」 가 된다. 간편은 <b>세워 두는 것</b>만 줄이는 것이다 (1번). */
+  var vis=(ezOn()&&!NAV_Q)?ezGroups():navVisGroups();
   /* 먼저 <b>엄하게</b> 찾는다. 하나도 없을 때만 한 글자 틀린 것까지 봐 준다 —
      처음부터 넓게 잡으면 엉뚱한 메뉴가 위에 올라와 더 못 찾으신다. */
   NAV_LOOSE=false;
@@ -14279,7 +14407,7 @@ function navPaintBody(){
                    :g.items.filter(function(it){return !it.hide;});
     if(NAV_Q&&!items.length)return;
     found+=items.length;
-    var ic=NAVG_ICON[name]||'•';
+    var ic=g.icon||NAVG_ICON[name]||'•';   /* 간편 버전의 묶음은 제 그림글자를 들고 온다 */
     /* 이름표는 <b>눌러도 아무 일이 없다</b> — 그래서 button 이 아니라 div 다.
        button 으로 두면 눌러 보고 「고장 났나」 하신다 (8번과 같은 이유). */
     h+='<div class="nav-group" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
@@ -14937,8 +15065,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-17 00:40';
-var APP_BUILD_NOTE="<b>오늘 터치할 사람 — 팀별 · 개인별로 나눠 봅니다.</b> 여태 이 자리에는 단추가 <b>둘</b>뿐이었습니다 — 「내 것」 과 「팀 전체」. 팀이 둘 이상이면 「팀 전체」 는 <b>남의 팀까지 한 덩어리</b>였고, 그 안에서 누가 몇 명인지는 줄을 세어야 알 수 있었습니다. 팀장이 「우리 팀 오늘 몇 건인가」 를 이 화면에서 답할 수가 없었습니다. 이제 <b>팀 → 담당자 → 상태 → 종류</b> 네 줄로 좁힙니다. 네 줄이 <b>겹쳐서</b> 먹어서 「온탑2팀 · 박서준 · 부재 · 일반 몇 명」 이 한눈에 섭니다. 지금 무엇을 세고 있는지도 <b>한 줄로 적습니다</b> — 안 적으면 숫자가 줄었을 때 왜 줄었는지 화면이 답해 주지 않습니다. 팀을 바꾸면 <b>고른 사람은 풉니다</b> — 그 팀에 없는 분일 수 있어, 남겨 두면 「골랐는데 0명」 이 됩니다. <b>팀원에게는 고르개가 안 섭니다</b> — 남의 것을 못 보시는 분께 세우면 눌러도 아무 일이 없습니다. <b>여기서 죽어 있던 거르개를 찾았습니다.</b> 상태 칸 목록이 <b>옛 이름</b>(no·rej·run·new…)으로 손으로 적혀 있는데, 세는 곳은 <b>새 이름</b>(부재·거절·AP·PC…)으로 세고 있었습니다. 그래서 <b>모든 칸이 0 으로 떴고, 눌러도 아무도 안 남았습니다</b> — 화면은 멀쩡해 보이는데 거르개가 통째로 죽어 있었던 것입니다. 이제 칸을 <b>표에서 뽑습니다</b>. 여태 칸 자체가 없던 <b>TA · 소개완료</b> 도 생겼고, <b>0 인 칸은 안 세웁니다</b>. <b>DB 통합 CRM 에도 팀 칸을 놓았습니다.</b> 팀을 고르면 목록도 <b>단계 길의 숫자도</b> 같이 걸립니다 — 거르개 조건이 두 곳에 따로 적혀 있어서, 하나만 고치면 「목록은 셋인데 길은 여섯」 이 됩니다. 한 곳으로 모았습니다(5번). 점검 <b>check-tdo</b> 에 열다섯 자리, <b>check-crmstage</b> 에 열 자리를 더했습니다 — 손으로 함수를 부르지 않고 <b>화면에 선 칸을 실제로 누릅니다</b>. 되돌려 셋을 확인했습니다 — 칸을 다시 옛 이름으로 적으면 <b>두 줄</b>, 팀으로 안 거르면 <b>두 줄</b>, 거르개를 다시 두 곳에 적으면 <b>한 줄</b>이 빨개집니다.";
+var APP_BUILD='2026-09-17 01:30';
+var APP_BUILD_NOTE="<b>간편 버전 — 메뉴를 열세 칸으로.</b> 화면이 <b>95개</b>입니다. 열일곱 묶음으로 묶여 있어도 서랍을 열면 글자가 빽빽합니다. 그래서 두 가지를 했습니다. ① <b>95개를 하나도 빼놓지 않고</b> 여섯 묶음에 넣었습니다 — 「무슨 기능인가」 가 아니라 <b>「언제 여는가」</b> 로 나눴습니다. 사람은 기능 이름이 아니라 <b>하던 일</b>로 찾습니다. 🌅 <b>오늘</b>(8) · 🤝 <b>고객 만나기</b>(23) · 📮 <b>계약하고 나서</b>(8) · 📣 <b>고객 늘리기</b>(17) · 📚 <b>찾아보고 배우기</b>(24) · ⚙️ <b>팀·설정</b>(15). ② 서랍 맨 위에 <b>「🌿 간편 / 🗂 전체」</b> 단추를 놓았습니다. 간편을 누르면 <b>83줄이 13줄</b>이 됩니다 — 매일 여는 것만, 쓰는 때로 묶여서. 사장님이 짚어 주신 <b>홈 · TFA 업무관리 · DB 통합 CRM · 보장분석 전&후 만들기 · 보험 마스터 아카데미</b> 가 전부 들어 있습니다. <b>아무것도 지우지 않았습니다.</b> 간편에서 안 보이는 화면도 <b>찾기 칸에 치면 그대로 열리고</b>(찾기는 언제나 <b>전부</b>에서 찾습니다), 음성으로도 열리고, 「전체」 를 한 번 누르면 83개가 다 돌아옵니다. 그 말을 <b>그 자리에 적어</b> 두었습니다 — 안 적으면 「메뉴가 없어졌다」 로 읽으십니다(1번). 숫자도 <b>서는 줄과 똑같이</b> 셉니다 — 「95」 라 적어 놓고 83개가 서면 열둘이 사라진 것처럼 보입니다. 점검 <b>check-nav</b> 에 열세 자리를 더했습니다 — <b>분류표에 화면이 하나라도 빠지면</b> 그 자리에서 빨간불이 켜집니다. 새 화면을 만들고 분류를 안 적으면 CI 가 잡습니다(8번). 되돌려 둘을 확인했습니다 — 분류에서 하나를 빼면 <b>두 줄</b>, 간편이 안 먹게 하면 <b>세 줄</b>이 빨개집니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
