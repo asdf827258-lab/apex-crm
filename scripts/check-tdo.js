@@ -298,7 +298,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
        있는 것이라 탭이 아니었고, 단추가 조용히 안 서고 있었다. */
   is(G.dead.length===0, '표에 적은 도구가 <b>전부 열리는 화면</b>이다'+
      (G.dead.length?(' ← '+G.dead.join(' · ')+' 는 메뉴에 없다'):''));
-  is(G.none.length===0, '<b>열한 상태 모두</b> 손에 쥘 것이 있다'+
+  is(G.none.length===0, '<b>'+Object.keys(G.listed).length+'가지 상태 모두</b> 손에 쥘 것이 있다'+
      (G.none.length?(' ← '+G.none.join(',')):''));
   is(G.dupName.length===0, '표에 <b>이름·아이콘을 또 안 적는다</b> — 메뉴에서 가져온다 (5번)');
   is(G.gone.length===2&&G.gone.indexOf('baba')<0,
