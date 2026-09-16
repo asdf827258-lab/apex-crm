@@ -228,6 +228,46 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   is(/mycalHost/.test(nav.dyn), '  go(\'mycal\') 로 열린다');
   is(/내 캘린더/.test(nav.dyn), '  열면 캘린더가 그려져 있다');
 
+  console.log('\n[8] 주 · 월 — 고른 것이 <b>다음에 열어도</b> 그대로다');
+  /* 사장님 말씀 — 「캘린더버전 현재 떠있는것, 주 / 월로 선택해서 볼수 있도록」.
+     단추는 있었는데 <b>어디에도 안 적혀</b> 아이콘으로 다시 열 때마다 「월」 로
+     되돌아갔습니다. 바탕화면 아이콘은 하루에도 몇 번씩 여는 자리입니다. */
+  const seg = await page.evaluate(() => {
+    go('mycal');
+    const g = document.querySelector('.mcal-seg');
+    const bs = g ? [].slice.call(g.querySelectorAll('button')) : [];
+    const box = e => { const r = e.getBoundingClientRect(); return { w: Math.round(r.w || r.width), h: Math.round(r.height) }; };
+    return { has: !!g, labels: bs.map(e => e.textContent),
+             small: bs.filter(e => box(e).h < 40).length,
+             pressed: bs.filter(e => e.getAttribute('aria-pressed') === 'true').length };
+  });
+  is(seg.has && seg.labels.join('') === '주월', '  <b>주 · 월</b> 단추가 선다 — ' + seg.labels.join(' · '));
+  is(seg.pressed === 1, '  지금 보는 쪽이 <b>눌린 채로</b> 보인다 — 어느 쪽인지 알 수 있다');
+  is(seg.small === 0, '  <b>손가락으로 누를 만한</b> 크기다 — 작으면 폰에서 자꾸 빗나간다');
+
+  const keep = await page.evaluate(async () => {
+    mcalSetView('week');
+    const saved = (function () { try { return localStorage.getItem('apex_mcal_view'); } catch (e) { return null; } })();
+    /* <b>다시 연 척</b>을 한다 — 저장된 것에서 다시 시작하는가 */
+    const again = (typeof mcalViewSaved === 'function') ? mcalViewSaved() : '?';
+    mcalSetView('month');
+    const saved2 = (function () { try { return localStorage.getItem('apex_mcal_view'); } catch (e) { return null; } })();
+    return { now: mcalView(), saved, again, saved2 };
+  });
+  is(keep.saved === 'week', '  「주」 를 고르면 <b>적어 둔다</b> — ' + keep.saved);
+  is(keep.again === 'week', '  <b>다시 열어도 주</b>로 선다 — 매번 다시 안 누르신다');
+  is(keep.saved2 === 'month', '  「월」 로 되돌리면 <b>그것도 적는다</b> — 한쪽만 기억하면 못 빠져나온다');
+
+  const wk = await page.evaluate(() => {
+    mcalSetView('week');
+    const h = document.getElementById('mycalHost');
+    const on = !!(h && h.querySelector('.mcal-wk, .mcal-week'));
+    mcalSetView('month');
+    const mo = !!(h && h.querySelector('.mcal-grid, .mcal-g'));
+    return { on, mo, html: (h ? h.innerHTML.length : 0) };
+  });
+  is(wk.html > 0, '  고르면 <b>그 자리에서 다시 그린다</b> — 눌렀는데 안 바뀌면 고장 난 것으로 보인다');
+
   is(errs.length === 0, '중간에 터진 곳이 없다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await browser.close();

@@ -1148,6 +1148,21 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .hm-ok{background:var(--primary);color:#fff}
 .hm-ok:hover{filter:brightness(1.06)}
 .hm-now-n{font-size:11.3px;color:var(--ink-4);line-height:1.65;margin-top:9px}
+/* 「무엇을 할까요?」 — 번호를 눌러 고르는 갈래. 폰에서 한 손에 들어와야
+   하므로 한 줄에 하나씩 세우고, 누를 자리를 <b>44px</b> 위로 잡는다. */
+.hm-ask{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(26,86,219,.28)}
+.hm-ask-t{font-size:12.5px;font-weight:900;letter-spacing:-.02em;color:var(--primary);margin-bottom:8px}
+.hm-ask-o{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  border:1px solid var(--ink-8);background:var(--bg-1);border-radius:12px;
+  padding:11px 12px;margin:6px 0;cursor:pointer;font-family:inherit;min-height:48px}
+.hm-ask-o:hover{border-color:var(--primary);background:#F5F9FF}
+.hm-ask-o .no{flex:none;width:22px;height:22px;border-radius:7px;background:var(--primary);
+  color:#fff;font-size:11.5px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.hm-ask-o .e{flex:none;font-size:16px}
+.hm-ask-o .m{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.hm-ask-o .m b{font-size:13.5px;font-weight:800;letter-spacing:-.02em;color:var(--ink-1)}
+.hm-ask-o .m span{font-size:11.5px;font-weight:600;color:var(--ink-4);line-height:1.5}
+.hm-ask-o .ar{flex:none;color:var(--ink-5)}
 .hm-tools{margin-top:11px;padding-top:10px;border-top:1px dashed rgba(26,86,219,.28)}
 .hm-tools-t{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--primary);margin-bottom:7px}
 .hm-tools-b{display:flex;flex-wrap:wrap;gap:6px}
@@ -1191,7 +1206,9 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .mcal-seg{margin-left:auto;display:inline-flex;gap:2px;background:var(--ink-8);
   border-radius:10px;padding:2px}
 .mcal-seg button{appearance:none;border:0;background:transparent;color:var(--ink-4);
-  font-family:inherit;font-size:12px;font-weight:800;padding:5px 12px;border-radius:8px;cursor:pointer}
+  font-family:inherit;font-size:12px;font-weight:800;padding:5px 12px;border-radius:8px;cursor:pointer;
+  /* 손가락으로 누르는 자리다 — 폰에서 <b>44px</b> 아래로는 자꾸 빗나간다 */
+  min-width:44px;min-height:40px}
 .mcal-seg button[aria-pressed="true"]{background:var(--primary);color:#fff}
 .mcal-tdy{appearance:none;border:0;font-family:inherit;font-size:11.5px;font-weight:800;
   color:#1B64DA;background:#E8F2FF;border-radius:999px;padding:5px 11px;cursor:pointer}
@@ -6821,7 +6838,7 @@ function rdLoad(force){
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace')),
-    q(sb.from('clients').select('id,consent_status')),
+    arAll(sb,'clients','id,consent_status','id'),
     q(sb.from('backups').select('id,ref_date,created_at').order('created_at',{ascending:false}).limit(1))
   ]).then(function(res){
     out.prof=res[0];out.cli=res[1];out.bak=res[2];
@@ -7219,6 +7236,48 @@ function arRank(r){
   return l.length;
 }
 
+/* ── 서버는 <b>한 판에 1,000줄까지만</b> 준다 ────────────────────────
+   `.limit(4000)` 을 적어도 그 위에서 잘린다. 넘는 줄은 <b>에러도 없이</b>
+   사라져서, 1,293건이 배정돼 있는데 화면은 <b>1,000건에서 끝났다.</b>
+   숫자가 그럴듯해서 아무도 못 본다 — 「오늘 손댈 사람」에서 사람이
+   통째로 빠지던 자리다 (1번). <b>쪽을 나눠 끝까지</b> 읽는다.
+
+   부르는 쪽은 <b>흔들리지 않는 차례</b>를 반드시 함께 준다. 차례가
+   흔들리면 쪽 사이에서 같은 줄이 두 번 오거나 아예 빠진다.
+   `cap` 에 닿아 멈추면 `cut:true` 로 <b>덜 읽었다고 말한다</b> —
+   말 없이 자르는 것이 지금 고치는 바로 그 버릇이다.                  */
+var AR_PAGE=1000;
+function arPageAll(make,cap){
+  var out=[],lim=cap||100000;
+  function step(from){
+    return make(from,from+AR_PAGE-1).then(function(r){
+      if(r&&r.error)return {error:r.error,data:out,cut:false};
+      var d=(r&&r.data)||[];
+      out=out.concat(d);
+      if(d.length<AR_PAGE)return {data:out,error:null,cut:false};   /* 덜 왔으면 끝 */
+      if(out.length>=lim)return {data:out,error:null,cut:true};      /* 여기까지만 */
+      return step(from+AR_PAGE);
+    });
+  }
+  return step(0);
+}
+/* 표 하나를 <b>끝까지</b> 읽는 흔한 모양. key 는 쪽을 나눌 때 못 박을 칸이다 —
+   출근표처럼 <b>id 칸이 없는</b> 표도 있어서 부르는 쪽이 정해 준다.
+   앞에 「-」 를 붙이면 내림차순이다. 여러 칸을 주면 앞에서부터 못 박는다 —
+   같은 값이 수두룩한 칸 하나만으로 나누면 쪽 사이에서 줄이 샌다.        */
+function arAll(sb,tbl,cols,key,tune,cap){
+  var ks=(typeof key==='string')?[key]:(key||['id']);
+  return arPageAll(function(a,b){
+    var x=sb.from(tbl).select(cols),i,d;
+    if(typeof tune==='function')x=tune(x);
+    for(i=0;i<ks.length;i++){
+      d=ks[i].charAt(0)==='-';
+      x=x.order(d?ks[i].slice(1):ks[i],{ascending:!d});
+    }
+    return x.range(a,b).then(function(r){return r;},
+                            function(e){return {error:e||{message:'실패'}};});
+  },cap);
+}
 /* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
 function arLoad(force){
   var sb=(typeof osClient==='function')?osClient():null;
@@ -7238,29 +7297,49 @@ function arLoad(force){
     /* 단계 칸은 migration_41 을 돌린 서버에만 있다. 없으면 한 칸씩 내려가며
        다시 부른다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 된다 */
     var down=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
-    return q(sb.from('dbs').select(cols+',source,stage,next_appt,contracted_at,policy_sent_at')).then(function(r){
+    /* id 차례로 못 박고 쪽을 나눈다 — 배정일은 같은 날이 수두룩해서
+       그것만으로 나누면 쪽 사이에서 줄이 새거나 겹친다 */
+    var read=function(c){
+      return arPageAll(function(a,b){
+        return q(sb.from('dbs').select(c).order('id',{ascending:true}).range(a,b));
+      });
+    };
+    return read(cols+',source,stage,next_appt,contracted_at,policy_sent_at').then(function(r){
       if(!r||!r.error)return r;
       if(!down((r.error||{}).message))return r;
       AR.noStage=true;
-      return q(sb.from('dbs').select(cols+',source')).then(function(r2){
+      return read(cols+',source').then(function(r2){
         if(!r2||!r2.error)return r2;
         if(!down((r2.error||{}).message))return r2;
         AR.noSrc=true;
-        return q(sb.from('dbs').select(cols));
+        return read(cols);
       });
     });
   };
   Promise.all([
     qDbs(),
-    /* 마지막 통화가 30일보다 오래됐어도 알아야 한다 — 그게 다시 걸 사람이다 */
-    q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
-       .order('call_at',{ascending:false}).limit(4000)),
-    q(sb.from('clients').select('id,advisor_id,name_masked,created_at')),
-    q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')),
+    /* 마지막 통화가 30일보다 오래됐어도 알아야 한다 — 그게 다시 걸 사람이다.
+       최근 것부터 4,000통까지만 읽는다 — 그 위는 서버를 아껴 안 읽고,
+       <b>덜 읽었다고 말한다</b>(AR.callsCut · 7번). */
+    arPageAll(function(a,b){
+      return q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
+         .order('call_at',{ascending:false}).order('db_id',{ascending:true}).range(a,b));
+    },4000),
+    arPageAll(function(a,b){
+      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at')
+         .order('id',{ascending:true}).range(a,b));
+    }),
+    arPageAll(function(a,b){
+      return q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')
+         .order('id',{ascending:true}).range(a,b));
+    }),
     q(sb.from('saved_reports').select('id,title,content,created_at').eq('kind',AR_KIND)
        .order('created_at',{ascending:false}).limit(300))
   ]).then(function(r){
     AR.busy='';AR.loaded=true;AR.at=new Date().toLocaleTimeString('ko-KR');
+    /* 통화를 4,000통에서 끊었으면 <b>끊었다고</b> 적어 둔다 — 화면이
+       「이게 전부」인 것처럼 말하지 않게 한다 (1번) */
+    AR.callsCut=!!(r[1]&&r[1].cut);
     var dbs=r[0].error?[]:(r[0].data||[]),calls=r[1].error?[]:(r[1].data||[]);
     var d30s=d30+'T00:00:00',c30=[],ci;
     for(ci=0;ci<calls.length;ci++)if((''+(calls[ci].call_at||''))>=d30s)c30.push(calls[ci]);
@@ -13097,7 +13176,15 @@ function almCss(){
 /* view — 「월」 이 기본, 「주」 로 바꾸면 그 주 이레를 넓게 폅니다.
    달력은 한 벌이라 여기서 바꾸면 <b>내 캘린더 · TFA 스케줄 · 고객 365일 ·
    홈</b> 네 곳이 같이 바뀝니다 (5번).                                  */
-var MCAL={ym:'',sel:'',shown:false,view:'month',wk:''};
+/* 주로 볼지 달로 볼지는 <b>이 브라우저에 적어 둡니다.</b> 안 적어 두면
+   바탕화면 아이콘으로 열 때마다 「월」 로 되돌아갑니다 — 아이콘은 하루에도
+   몇 번씩 여는 자리라, 매번 「주」 를 다시 누르셔야 했습니다. */
+var MCAL_VIEW_KEY='apex_mcal_view';
+function mcalViewSaved(){
+  try{ return localStorage.getItem(MCAL_VIEW_KEY)==='week'?'week':'month'; }
+  catch(e){ return 'month'; }
+}
+var MCAL={ym:'',sel:'',shown:false,view:mcalViewSaved(),wk:''};
 var MCAL_KEY='apex_mycal_cfg';
 function mcalNow(){return new Date(Date.now()+9*3600*1000);}
 function mcalToday(){return mcalNow().toISOString().slice(0,10);}
@@ -13137,6 +13224,8 @@ function mcalWk(){ return MCAL.wk||mcalWkStart(mcalToday()); }
 function mcalView(){ return MCAL.view==='week'?'week':'month'; }
 function mcalSetView(v){
   MCAL.view=(v==='week')?'week':'month';
+  /* <b>고른 것을 적어 둡니다</b> — 다음에 열 때 그대로 섭니다 */
+  try{ localStorage.setItem(MCAL_VIEW_KEY,MCAL.view); }catch(e){}
   /* 보기를 바꾸면 <b>고른 날 쪽으로</b> 따라갑니다. 주로 바꿨는데 엉뚱한
      주가 서 있으면 「왜 안 보이지」가 됩니다.                        */
   var base=MCAL.sel||mcalToday();
@@ -14567,7 +14656,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-15 20:10';
+var APP_BUILD='2026-09-16 18:50';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -17468,9 +17557,9 @@ function gbLoad(){
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d30)),
-    q(sb.from('calls').select('created_by,call_at').gte('call_at',d30+'T00:00:00')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d30+'T00:00:00')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
+    arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],function(x){return x.gte('call_at',d30+'T00:00:00');},4000),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
@@ -18399,6 +18488,8 @@ function fpRepNames(){
     if(c&&ids.indexOf(c)<0)ids.push(c);
   }
   if(!ids.length||!sb){fpDeckPaint();return;}
+  /* 「쪽나누기OK」 — 위에서 .limit(30) 으로 읽은 자료의 고객만 묻는다.
+     ids 가 서른 개를 못 넘어 쪽을 나눌 일이 없다. */
   sb.from('clients').select('id,name_masked').in('id',ids).then(function(r){
     var map={},rows=(r&&r.data)||[],j;
     for(j=0;j<rows.length;j++)map[rows[j].id]=rows[j].name_masked||'';
@@ -18997,7 +19088,7 @@ function osAttendLoad(){
   var uid=OS.profile&&OS.profile.id;
   if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
-  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),sb.from('attendance').select('member_id,att_date'),sb.from('profiles').select('id,workspace')]).then(function(res){
+  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),sb.from('profiles').select('id,workspace')]).then(function(res){
     var pr=res[0],at=res[1],ws=res[2];
     if(pr.error){if(cal)cal.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">출근 데이터를 불러오지 못했습니다. attendance 테이블/권한(RLS)을 확인하세요. <span style="color:var(--ink-4)">('+osEsc(pr.error.message||'')+')</span></div>';return;}
     /* CRM 계정이 새지 않도록 — 승인된 APEX 회원만, 구분 못 읽으면 표시 안 함 */
@@ -19196,7 +19287,9 @@ function hmSteps(){
            시간이 안 정해진 상태(미접촉·부재·거절·TA·PC·계약완료…)만 여기 섭니다. */
         if(y.ap&&(''+y.ap).slice(0,10)===today)continue;
         out.push({k:'db',tk:y.k,id:y.id||'',t:y.nm||'',s:y.todo||'',gox:y.go||'crm',
-                  e:'📇',kt:tdoLabel(y.k)+(TDO[y.k]?(' · '+TDO[y.k].ch+' · '+TDO[y.k].aim.replace(/<[^>]*>/g,'')):''),
+                  /* 목표(aim)는 <b>「무엇을 할까요?」 ①번</b>에 그대로 섭니다.
+                     머리줄에 또 적으면 같은 말이 두 번이라 눈이 미끄러집니다. */
+                  e:'📇',kt:tdoLabel(y.k)+(TDO[y.k]?(' · '+TDO[y.k].ch):''),
                   ord2:(TDO[y.k]?TDO[y.k].ord:99)});
       }
     }
@@ -19260,17 +19353,76 @@ function hmDid(key){
   else toast('오늘 한 것으로 표시했습니다');
   hmPaint();
 }
-/* 그 사람 상태에 맞는 <b>도구 단추</b>. 메뉴에 있는 것만 서므로 누르면
-   반드시 열립니다. 없으면 <b>빈 줄을 안 세웁니다</b> — 아무것도 없는
-   자리를 만들어 두면 「여기 뭐가 있어야 하나」 하고 눈이 멈춥니다. */
-function hmToolsHtml(x){
-  var k=(x&&x.k==='db')?x.tk:(x&&x.k),L=(typeof tdoTools==='function')?tdoTools(k):[],i,h;
-  if(!L.length)return '';
-  h='<div class="hm-tools"><div class="hm-tools-t">손에 쥘 것</div><div class="hm-tools-b">';
-  for(i=0;i<L.length;i++)
-    h+='<button type="button" class="hm-tool" onclick="go(\''+L[i].id+'\')">'+
-       '<span>'+(L[i].icon||'')+'</span>'+osEsc(L[i].title||L[i].id)+'</button>';
-  return h+'</div></div>';
+/* ══ <b>「무엇을 할까요?」</b> — 골라서 하는 자리 ═══════════════════
+   사장님 말씀 — 「고객에게 각 상황마다 어떻게 해야할지, 클로드 내게 권한
+   물어보는것처럼 <b>선택해서</b> 할수 있도록 하라고했는데 전혀 안되고 있어」.
+
+   여태는 <b>도구 단추만</b> 한 줄로 늘어놓았습니다. 무엇을 하라는 말은
+   위에 글로 적혀 있고, 단추는 밑에 따로 있었습니다. 그래서 <b>읽고 나서
+   다시 고르는</b> 두 동작이 됐습니다.
+
+   이제 <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래 몇 개를 세우고, 누르면
+   그 자리에서 그 일이 벌어집니다.
+
+   ★ 갈래는 <b>TDO 표 하나</b>에서만 나옵니다 (5번). 상태마다 무엇을 할지
+     적어 둔 표가 이미 있습니다 — 여기서 또 적으면 두 벌이 되어 한쪽만
+     고치게 됩니다. ch(수단) · aim(목표) · way(방법) · tools(도구) 그대로입니다.
+   ★ <b>없는 갈래는 안 만듭니다.</b> 도구가 없는 상태는 도구 줄이 안 섭니다.  */
+var HM_PICK_TOOLS=3;
+function hmPicks(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k),
+      m=(typeof TDO!=='undefined'&&TDO[k])||null,
+      L=(typeof tdoTools==='function')?tdoTools(k):[],
+      out=[],i;
+  /* ① 그 상태에서 <b>제일 먼저 할 일</b> — 표가 적어 둔 그대로.
+     ★ 고객 상태(TDO) 표에 없는 줄도 있습니다 — 약속·내 일정·계약 마디 같은
+       <b>달력 갈래</b>(HM_ACT)입니다. 그 줄에도 <b>여는 갈래는 반드시</b>
+       세웁니다. 안 그러면 「열기」 가 사라져 그 줄은 <b>손댈 길이 없어집니다.</b>
+       실제로 그렇게 만들었다가 점검이 잡았습니다 (8번). */
+  if(m)out.push({t:(m.ch||'연락')+'로 '+String(m.aim||'').replace(/<[^>]*>/g,''),
+                 s:String(m.way||'').replace(/<[^>]*>/g,''),
+                 e:(m.ch==='만남'?'🤝':(m.ch==='문자'?'💬':'☎️')),
+                 act:'open'});
+  else{
+    var A=(typeof HM_ACT!=='undefined'&&HM_ACT[x&&x.k])||{e:'▶',t:'할 일'};
+    out.push({t:(x&&x.t)||A.t||'열기',s:(x&&x.s)||'',e:A.e||'▶',act:'open'});
+  }
+  /* ② 손에 쥘 도구 — 메뉴에 있는 것만이라 누르면 반드시 열립니다 */
+  for(i=0;i<L.length&&i<HM_PICK_TOOLS;i++)
+    out.push({t:(L[i].title||L[i].id)+' 열기',s:'',e:L[i].icon||'🧰',
+              act:'go',go:L[i].id});
+  /* ③ 끝났으면 끝났다고, 아니면 오늘은 넘긴다 */
+  /* 갈래마다 끝냈다는 말이 다릅니다 — 「보냈습니다」 · 「만났습니다」.
+     표(HM_ACT)에 적어 둔 그대로 씁니다 (5번) */
+  var B=(typeof HM_ACT!=='undefined'&&HM_ACT[x&&x.k])||{};
+  out.push({t:'이미 '+(B.b||'했습니다'),s:'오늘 한 것으로 표시합니다',e:'✅',act:'did'});
+  return out;
+}
+function hmPicksHtml(x){
+  var P=hmPicks(x),i,h,key=(x&&x.key)||'';
+  if(!P.length)return '';
+  h='<div class="hm-ask"><div class="hm-ask-t">무엇을 할까요?</div>';
+  for(i=0;i<P.length;i++)
+    h+='<button type="button" class="hm-ask-o" '+
+       'onclick="hmPick(\''+osEsc(key)+'\','+i+')">'+
+       '<span class="no">'+(i+1)+'</span>'+
+       '<span class="e">'+P[i].e+'</span>'+
+       '<span class="m"><b>'+osEsc(P[i].t)+'</b>'+
+       (P[i].s?('<span>'+osEsc(P[i].s)+'</span>'):'')+'</span>'+
+       '<span class="ar">›</span></button>';
+  return h+'</div>';
+}
+/* 고르면 <b>그 자리에서</b> 그 일이 벌어진다. 무엇을 하는지는 원래 있던
+   함수에 그대로 맡긴다 — 여기서 또 만들면 두 벌이 된다 (5번). */
+function hmPick(key,i){
+  var L=hmSteps(),j,x=null;
+  for(j=0;j<L.length;j++)if(L[j].key===key){x=L[j];break;}
+  if(!x)return;
+  var P=hmPicks(x),p=P[i];
+  if(!p)return;
+  if(p.act==='go'){ go(p.go); return; }
+  if(p.act==='did'){ hmDid(key); return; }
+  hmOpen(key);
 }
 function hmNowHtml(){
   var r=hmNext();
@@ -19287,13 +19439,10 @@ function hmNowHtml(){
     '<div class="hm-now-m"><span class="e">'+ee+'</span>'+
       '<span class="m"><b>'+osEsc(x.t||kt)+'</b>'+
       (x.s?('<span>'+osEsc(x.s)+'</span>'):'')+'</span></div>'+
-    /* <b>손에 쥘 것</b> — 그 상태에서 쓸 도구를 바로 엽니다. 여태 이 좋은
-       것들이 만들어만 두고 오늘 할 일에서 안 닿았습니다. */
-    hmToolsHtml(x)+
-    '<div class="hm-now-b">'+
-      '<button type="button" class="hm-go" onclick="hmOpen(\''+osEsc(x.key)+'\')">열기 →</button>'+
-      '<button type="button" class="hm-ok" onclick="hmDid(\''+osEsc(x.key)+'\')">'+osEsc(A.b)+'</button>'+
-    '</div>'+
+    /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
+       그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
+       늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
+    hmPicksHtml(x)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
@@ -19442,12 +19591,71 @@ function hmReadyCss(){
    <b>새로 세지 않습니다</b> (5번). arTouch('') 가 이미 팀 전체를 골라 두었고
    상태 이름·차례는 TDO 가 압니다. 여기서는 <b>사람별로 묶기만</b> 합니다.
    서버도 더 안 부릅니다 — 이미 읽어 둔 것을 씁니다 (7번).            */
+/* ── 「누구 것을 볼 수 있나」는 여기 <b>한 곳</b>만 안다 (5번) ──────────
+   대표 · 앱 관리자 · 본부장  : 전체
+   지점장 · 교육매니저        : <b>자기 팀</b>
+   설계사                     : <b>본인만</b>
+
+   서버(RLS)도 같은 선을 긋고 있습니다 — dbs_select 는 「관리자거나, 내
+   것이거나, 내 팀 사람 것」 입니다. 그런데 <b>화면은 안 막고 있었습니다.</b>
+   지점장이 홈에서 <b>회사 전체</b>를 보고 있었습니다. 화면이 서버보다 넓게
+   보여 주면 남의 팀 이름이 뜨는데 눌러도 빈 칸만 나옵니다.               */
+function hmTmSee(){
+  if(typeof osIsAppAdmin==='function'&&osIsAppAdmin())return 'all';
+  var r=(typeof osRoleNorm==='function')?osRoleNorm():'member';
+  if(r==='branch_manager')return 'all';
+  if(r==='leader'||r==='education_manager')return 'team';
+  return 'me';
+}
+function hmTmMe(){ return (typeof OS!=='undefined'&&OS.profile&&OS.profile.id)||''; }
+function hmTmMyTeam(){
+  var me=hmTmMe();
+  return (typeof GB!=='undefined'&&GB.teamOf&&GB.teamOf[me])||'';
+}
+/* 내가 볼 수 있는 사람들. <b>본인은 언제나</b> 들어간다 — 팀이 아직
+   안 정해진 분이 자기 것마저 못 보면 홈이 빈 채로 섭니다. */
+function hmTmScopeIds(){
+  var mode=hmTmSee(),me=hmTmMe(),
+      rs=(typeof GB!=='undefined'&&GB.rows)||[],out=[],i,t=hmTmMyTeam();
+  if(mode==='me')return me?[me]:[];
+  for(i=0;i<rs.length;i++){
+    if(mode==='team'&&(!t||rs[i].team!==t))continue;
+    out.push(rs[i].id);
+  }
+  if(me&&out.indexOf(me)<0)out.push(me);
+  return out;
+}
+/* ── 지금 <b>누구 것</b>을 보고 있나 — 아는 자리는 한 곳뿐이다 (5번) ──
+   ''  볼 수 있는 전부 · 't:<팀>' 그 팀만 · 'p:<사람>' 그 사람만          */
+var HMTM={pick:''};
+function hmTmSet(v){
+  HMTM.pick=(v||'');
+  if(typeof hmPaint==='function')hmPaint();
+}
+/* 내 범위 안에 <b>실제로 사람이 있는</b> 팀만 단추로 세운다 — 빈 팀 단추를
+   눌러 아무것도 안 나오면 고장 난 것으로 보입니다. */
+function hmTmTeams(){
+  var T=(typeof GB!=='undefined'&&GB.teams)||[],
+      of=(typeof GB!=='undefined'&&GB.teamOf)||{},
+      ids=hmTmScopeIds(),has={},out=[],i;
+  for(i=0;i<ids.length;i++)if(of[ids[i]])has[of[ids[i]]]=1;
+  for(i=0;i<T.length;i++)if(has[T[i].id])out.push(T[i]);
+  return out;
+}
 function hmTeamRows(){
   if(typeof arTouch!=='function')return [];
   var L=arTouch(''),by={},out=[],i,x,k;
+  var ok={},ids=hmTmScopeIds(),of=(typeof GB!=='undefined'&&GB.teamOf)||{};
+  for(i=0;i<ids.length;i++)ok[ids[i]]=1;
+  var pk=HMTM.pick||'',
+      pt=(pk.indexOf('t:')===0)?pk.slice(2):'',
+      pp=(pk.indexOf('p:')===0)?pk.slice(2):'';
   for(i=0;i<L.length;i++){
     x=L[i]; k=x.who||'';
     if(!k)continue;                       /* 담당자를 모르는 줄은 사람에 안 붙인다 (1번) */
+    if(!ok[k])continue;                   /* <b>볼 수 없는 사람은 세지도 않는다</b> */
+    if(pp&&k!==pp)continue;               /* 한 사람만 보기 */
+    if(pt&&of[k]!==pt)continue;           /* 한 팀만 보기 */
     if(!by[k])by[k]={who:k,n:0,st:{}};
     by[k].n++;
     by[k].st[x.k]=(by[k].st[x.k]||0)+1;
@@ -19469,12 +19677,23 @@ function hmTeamHtml(){
       '<div class="hm-tm-none">팀 기록을 읽는 중입니다. 잠시만요.</div></div></div>';
   var R=hmTeamRows(),i,j,tot=0,h,K=tdoOrder();
   for(i=0;i<R.length;i++)tot+=R[i].n;
+  var pk=HMTM.pick||'',
+      pp=(pk.indexOf('p:')===0)?pk.slice(2):'',
+      pt=(pk.indexOf('t:')===0)?pk.slice(2):'',
+      mode=hmTmSee(),
+      ttl=pp?(arNameOf(pp)+' 님의 오늘')
+            :(pt?(hmTmTeamName(pt)+' 오늘')
+                :(mode==='team'?'우리 팀 오늘':'오늘 팀 전체'));
   h='<div class="card hm-team"><div class="card-body">'+
-    '<div class="hm-tm-h"><span class="ci">👥</span><b>오늘 팀 전체</b>'+
-      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\'\')">TFA 에서 전부 →</button></div>';
+    '<div class="hm-tm-h"><span class="ci">👥</span><b>'+osEsc(ttl)+'</b>'+
+      '<button type="button" class="hm-tm-go" onclick="hmTeamOpen(\''+osEsc(pp)+'\')">'+
+        'TFA 에서 '+(pp?'이분 것':'전부')+' →</button></div>'+
+    hmTmPickHtml();
   if(!R.length)
-    return h+'<div class="hm-tm-none">오늘 팀에서 손댈 사람이 없습니다. '+
-      '배정된 DB 가 생기면 여기 올라옵니다.</div></div></div>';
+    return h+'<div class="hm-tm-none">'+
+      (pk?'고르신 쪽에는 오늘 손댈 사람이 없습니다. 위에서 <b>전체</b>를 눌러 보십시오.'
+        :'오늘 팀에서 손댈 사람이 없습니다. 배정된 DB 가 생기면 여기 올라옵니다.')+
+      '</div></div></div>';
   h+='<div class="hm-tm-sum"><b>'+tot+'건</b> · 설계사 <b>'+R.length+'명</b>'+
      ' <span>많은 분부터</span></div>';
   for(i=0;i<R.length&&i<HM_TEAM_SHOW;i++){
@@ -19492,6 +19711,163 @@ function hmTeamHtml(){
     h+='<button type="button" class="hm-tm-more" onclick="hmTeamOpen(\'\')">'+
        '+'+(R.length-HM_TEAM_SHOW)+'명 더 보기 →</button>';
   return h+'</div></div>';
+}
+/* ══ 오늘 어디로 가나 — 약속과 <b>그 주변</b> ════════════════════════
+   사장님 말씀 — 「지역 동선도, 홈 화면에서 고객 만남 약속과 주변 TA 돌릴
+   미션을 오늘 성공하게 해줘」.
+
+   ★ 지역 동선을 <b>여기에 다시 만들지 않습니다</b> (5번). 길 찾기·지도·
+     동네 찍기는 <b>DB 통합 CRM 한 곳</b>에만 있습니다. 두 벌이 되면 한쪽만
+     고쳐 놓고 「왜 다르지」 가 됩니다. 홈은 <b>오늘 어디로 가는지</b>와
+     <b>그 근처에 걸 분이 몇인지</b>만 세워 두고, 누르면 그 도구로 넘깁니다.
+
+   ★ 같은 시(市)인지는 <b>공백만 지워서</b> 견줍니다. 시 이름을 여기서 또
+     짐작해 묶으면 표가 두 벌이 됩니다 — 시를 표준 이름으로 고치는 일은
+     🗺️ 지역 동선의 <b>「시 정해 주기」</b> 한 곳에서 합니다.             */
+function hmRtKey(v){ return String(v==null?'':v).replace(/\s+/g,''); }
+/* 오늘 잡힌 약속 — <b>내 하루</b>다. 남의 약속은 여기 안 선다 (3번) */
+function hmRtAppts(){
+  var t=(typeof arToday==='function')?arToday():'',
+      db=(typeof AR!=='undefined'&&AR.db)||[],me=hmTmMe(),out=[],i,r,d;
+  for(i=0;i<db.length;i++){
+    r=db[i];
+    if(me&&r.who&&r.who!==me)continue;
+    d=''+(r.appt||'');
+    if(!t||d.slice(0,10)!==t)continue;
+    out.push({id:r.id,nm:r.name||'',rg:r.region||'',hm:d.slice(11,16),st:r.stage||''});
+  }
+  out.sort(function(a,b){ return (a.hm||'99:99')<(b.hm||'99:99')?-1:1; });
+  return out;
+}
+/* 그 지역에서 <b>오늘 걸 분</b> — 약속 간 김에 같이 도는 사람들.
+   지역을 <b>모르는 줄은 안 붙입니다</b> — 0 으로 세면 「없다」가 됩니다 (1번). */
+function hmRtNear(){
+  var ap=hmRtAppts(),rg={},i,x,out=[],seen={},
+      me=hmTmMe(),L=(typeof arTouch==='function')?arTouch(me||''):[];
+  if(!ap.length)return [];
+  for(i=0;i<ap.length;i++){ if(ap[i].rg)rg[hmRtKey(ap[i].rg)]=1; seen[ap[i].id]=1; }
+  for(i=0;i<L.length;i++){
+    x=L[i];
+    if(seen[x.id])continue;              /* 약속에 이미 선 분은 또 안 센다 */
+    if(!x.sub)continue;                  /* 지역을 모르면 안 붙인다 */
+    if(!rg[hmRtKey(x.sub)])continue;
+    out.push(x);
+  }
+  return out;
+}
+var HM_RT_SHOW=5;
+function hmRtHtml(){
+  if(typeof OS==='undefined'||!OS.profile)return '';
+  if(typeof AR==='undefined')return '';
+  /* <b>아직 못 읽었으면 「없다」고 말하지 않습니다</b> (1번) */
+  if(!AR.loaded)return '';
+  var ap=hmRtAppts();
+  if(!ap.length)return '';               /* 오늘 갈 데가 없으면 자리를 안 먹는다 */
+  var near=hmRtNear(),i,h,noRg=0;
+  for(i=0;i<ap.length;i++)if(!ap[i].rg)noRg++;
+  h='<div class="card hm-rt"><div class="card-body">'+
+    '<div class="hm-rt-h"><span class="ci">🚗</span><b>오늘 어디로 가시나</b>'+
+      '<button type="button" class="hm-rt-go" onclick="hmRtOpen()">🗺️ 지역 동선 →</button></div>';
+  h+='<div class="hm-rt-ap">';
+  for(i=0;i<ap.length;i++)
+    h+='<button type="button" class="hm-rt-r" onclick="hmRtPerson(\''+osEsc(ap[i].id)+'\')">'+
+       '<span class="tm">'+osEsc(ap[i].hm||'시간 미정')+'</span>'+
+       '<span class="nm">'+osEsc(ap[i].nm||'고객')+'</span>'+
+       '<span class="rg">'+osEsc(ap[i].rg||'지역 모름')+'</span>'+
+       '<span class="ar">›</span></button>';
+  h+='</div>';
+  if(near.length){
+    h+='<div class="hm-rt-n"><b>그 지역에서 오늘 걸 분 '+near.length+'명</b>'+
+       ' <span>간 김에 같이 돕니다</span></div><div class="hm-rt-chips">';
+    for(i=0;i<near.length&&i<HM_RT_SHOW;i++)
+      h+='<button type="button" class="hm-rt-c '+
+         ((typeof tdoColor==='function')?tdoColor(near[i].k):'')+'" '+
+         'onclick="hmRtPerson(\''+osEsc(near[i].id)+'\')">'+
+         osEsc(near[i].nm||'고객')+'<i>'+osEsc((typeof tdoLabel==='function')?tdoLabel(near[i].k):near[i].k)+'</i>'+
+         '</button>';
+    if(near.length>HM_RT_SHOW)
+      h+='<button type="button" class="hm-rt-c more" onclick="hmRtOpen()">+'+
+         (near.length-HM_RT_SHOW)+'명 더 →</button>';
+    h+='</div>';
+  }else{
+    h+='<div class="hm-rt-n0">'+
+       (noRg===ap.length
+         ? '약속에 <b>지역이 안 적혀</b> 있어 주변을 못 찾았습니다 — 🗺️ 지역 동선에서 시(市)를 정해 주십시오.'
+         : '그 지역에 오늘 <b>더 걸 분은 없습니다.</b> 지어내지 않습니다.')+
+       '</div>';
+  }
+  h+='<div class="hm-rt-f">길 찾기·동네 찍기는 <b>🗺️ 지역 동선</b> 한 곳에서 합니다 — '+
+     '여기서는 오늘 갈 곳만 봅니다.</div>';
+  return h+'</div></div>';
+}
+/* 눌러서 <b>그 고객 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
+   한 고객을 펼치는 것은 <b>TFA 가 아는 한 곳</b>에 맡긴다 (5번). */
+function hmRtPerson(id){
+  try{ AR.cat='touch'; AR.tkAll=false; AR.open=id||''; }catch(e){}
+  go('airep');
+}
+function hmRtOpen(){ go('crm'); }
+function hmRtCss(){
+  if(document.getElementById('hmRtCss'))return;
+  var st=document.createElement('style');st.id='hmRtCss';
+  st.textContent='.hm-rt-h{display:flex;align-items:center;gap:7px;font-size:14px;'+
+    'letter-spacing:-.03em;margin-bottom:9px}'+
+   '.hm-rt-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:4px 11px;font-size:11px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit;min-height:30px}'+
+   '.hm-rt-ap{display:flex;flex-direction:column;gap:6px}'+
+   '.hm-rt-r{display:flex;align-items:center;gap:9px;width:100%;text-align:left;'+
+     'border:1px solid var(--ink-8);background:var(--bg-1);border-radius:12px;'+
+     'padding:10px 12px;cursor:pointer;font-family:inherit;min-height:46px}'+
+   '.hm-rt-r .tm{font-size:12.5px;font-weight:900;color:var(--primary);'+
+     'min-width:44px;flex:none}'+
+   '.hm-rt-r .nm{font-size:13.5px;font-weight:800;color:var(--ink-1);'+
+     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+   '.hm-rt-r .rg{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-4);'+
+     'white-space:nowrap}'+
+   '.hm-rt-r .ar{color:var(--ink-5);flex:none}'+
+   '.hm-rt-n{font-size:12px;color:var(--ink-3);margin:11px 0 7px}'+
+   '.hm-rt-n span{color:var(--ink-5)}'+
+   '.hm-rt-n0{font-size:12px;color:var(--ink-4);margin-top:11px;line-height:1.6}'+
+   '.hm-rt-chips{display:flex;flex-wrap:wrap;gap:6px}'+
+   '.hm-rt-c{border:1px solid var(--ink-7);background:var(--bg-1);border-radius:99px;'+
+     'padding:7px 12px;font-size:12px;font-weight:800;color:var(--ink-2);cursor:pointer;'+
+     'font-family:inherit;min-height:34px;display:inline-flex;align-items:center;gap:5px}'+
+   '.hm-rt-c i{font-style:normal;font-size:10.5px;font-weight:800;color:var(--ink-5)}'+
+   '.hm-rt-f{margin-top:11px;font-size:11px;color:var(--ink-5);line-height:1.6}';
+  document.head.appendChild(st);
+}
+function hmTmTeamName(id){
+  var T=(typeof GB!=='undefined'&&GB.teams)||[],i;
+  for(i=0;i<T.length;i++)if(T[i].id===id)return T[i].name||'팀';
+  return '팀';
+}
+/* ── 고르는 줄 — 전체 / 팀 / 사람 ──────────────────────────────────
+   사장님 말씀 — 「팀 전체만 보이는데, 내가 그룹 / 또는 누군가를 선택하면
+   그 사람만 볼수 있도록」. 팀이 하나뿐이면 팀 단추는 안 세웁니다 —
+   고를 것이 하나인 단추는 자리만 먹습니다.                             */
+function hmTmPickHtml(){
+  var pk=HMTM.pick||'',T=hmTmTeams(),ids=hmTmScopeIds(),
+      rs=(typeof GB!=='undefined'&&GB.rows)||[],i,h='',who=[];
+  /* 사람 목록 — 내 범위 안에서 <b>이름이 있는</b> 분만 */
+  for(i=0;i<rs.length;i++)if(ids.indexOf(rs[i].id)>=0)who.push(rs[i]);
+  who.sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;});
+  if(T.length<2&&who.length<2)return '';         /* 고를 것이 없으면 안 세운다 */
+  h='<div class="hm-tm-pick">'+
+    '<button type="button" class="hm-tm-p'+(pk?'':' on')+'" onclick="hmTmSet(\'\')">전체</button>';
+  for(i=0;i<T.length;i++)
+    h+='<button type="button" class="hm-tm-p'+(pk==='t:'+T[i].id?' on':'')+'" '+
+       'onclick="hmTmSet(\'t:'+osEsc(T[i].id)+'\')">'+osEsc(T[i].name||'팀')+'</button>';
+  if(who.length>1){
+    h+='<select class="hm-tm-sel" aria-label="설계사 고르기" '+
+       'onchange="hmTmSet(this.value)">'+
+       '<option value=""'+(pk.indexOf('p:')===0?'':' selected')+'>설계사 고르기</option>';
+    for(i=0;i<who.length;i++)
+      h+='<option value="p:'+osEsc(who[i].id)+'"'+(pk==='p:'+who[i].id?' selected':'')+'>'+
+         osEsc(who[i].name||'팀원')+'</option>';
+    h+='</select>';
+  }
+  return h+'</div>';
 }
 /* 눌러서 <b>그 사람 것</b>으로 — TFA 「오늘 손댈 사람」 을 그 사람으로 펼친다.
    한 사람을 고르는 것은 <b>TFA 가 아는 한 곳</b>(AR.tkAll)에 맡긴다 (5번). */
@@ -19511,6 +19887,15 @@ function hmTeamCss(){
    '.hm-tm-go{margin-left:auto;border:1px solid var(--ink-7);background:var(--bg-1);'+
      'border-radius:99px;padding:3px 11px;font-size:11px;font-weight:800;color:var(--ink-3);'+
      'cursor:pointer;font-family:inherit}'+
+   /* 고르는 줄 — 좁은 폰에서 <b>가로로 밀리지 않게</b> 접어 내린다 */
+   '.hm-tm-pick{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}'+
+   '.hm-tm-p{appearance:none;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:7px 13px;font-size:12px;font-weight:800;color:var(--ink-3);'+
+     'cursor:pointer;font-family:inherit;min-height:34px}'+
+   '.hm-tm-p.on{background:var(--primary);border-color:var(--primary);color:#fff}'+
+   '.hm-tm-sel{appearance:none;border:1px solid var(--ink-7);background:var(--bg-1);'+
+     'border-radius:99px;padding:7px 12px;font-size:12px;font-weight:800;color:var(--ink-3);'+
+     'font-family:inherit;min-height:34px;max-width:100%}'+
    '.hm-tm-sum{font-size:12px;color:var(--ink-3);margin-bottom:9px}'+
    '.hm-tm-sum span{color:var(--ink-5);font-size:11px}'+
    '.hm-tm-none{font-size:11.5px;color:var(--ink-4);line-height:1.7;padding:4px 2px}'+
@@ -19573,6 +19958,9 @@ function hmPaint(){
   try{ if(typeof almNudgePaint==='function')almNudgePaint(); }catch(e0){}
   var t=document.getElementById('hmTeamHost');
   if(t)t.innerHTML=hmTeamHtml();
+  /* 오늘 동선 — 기록이 늦게 실려 오면 그때 채워집니다 */
+  var rt=document.getElementById('hmRtHost');
+  if(rt)rt.innerHTML=hmRtHtml();
   var b=document.getElementById('hmCalHost');
   if(b)b.innerHTML=hmCalHtml();
   var c=document.getElementById('hmCliHost');
@@ -19593,6 +19981,7 @@ function hmArm(){
        if(typeof setupPaint==='function')setupPaint(); }catch(e){}
   /* 막혀 있는 것 — rdLoad 가 스스로 막아 10분에 한 번만 부릅니다 (7번) */
   try{ if(typeof hmTeamCss==='function')hmTeamCss(); }catch(e5){}
+  try{ if(typeof hmRtCss==='function')hmRtCss(); }catch(e5b){}
   /* 폰 알람 ① — <b>서버를 안 부릅니다</b>. 정한 시각이 지났고 오늘 아직
      안 울렸을 때만 한 번 뜹니다 (7번). */
   try{ if(typeof almTick==='function')setTimeout(almTick,1500); }catch(e6){}
@@ -19646,6 +20035,10 @@ function renderHome(){
     /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
        밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
     (OS.profile?('<div id="almNudge"></div>'):'')+
+    /* <b>오늘 어디로 가시나</b> — 약속이 있는 날에만 섭니다. 없으면 빈 칸이라
+       자리를 안 먹습니다. 「오늘 챙길 것」 바로 밑이라야 뜻이 통합니다 —
+       챙길 분을 보고 나서 <b>어디로 가는지</b>를 봅니다. */
+    (OS.profile?'<div id="hmRtHost"></div>':'')+
     /* <b>대표는 내 오늘 바로 밑에서 팀 전체를 봅니다.</b> 리더가 아니면
        빈 칸이라 안 보입니다 — 못 볼 것을 세워 두지 않습니다. */
     (OS.profile?'<div id="hmTeamHost"></div>':'')+
@@ -23348,8 +23741,8 @@ function tdLoad(){
     sb.from('profiles').select('id,name,role,active,status').order('name'),
     sb.from('teams').select('id,name,color,leader_id,goal_note').order('name'),
     sb.from('team_members').select('team_id,member_id'),
-    sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
-    sb.from('clients').select('id,advisor_id,created_at').gte('created_at',d30+'T00:00:00'),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
+    arAll(sb,'clients','id,advisor_id,created_at',['-created_at','id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
     sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('reports').select('author_id,created_at').gte('created_at',d30+'T00:00:00'),
     sb.from('profiles').select('id,workspace')
@@ -23485,10 +23878,10 @@ function osBackupRun(kind){
   var t=osTodayStr();
   Promise.all([
     sb.from('profiles').select('id,name,role,active'),
-    sb.from('clients').select('id,advisor_id,name_masked,created_at'),
+    arAll(sb,'clients','id,advisor_id,name_masked,created_at',['-created_at','id']),
     sb.from('saved_reports').select('id,advisor_id,client_id,kind,title,created_at'),
     sb.from('reports').select('id,author_id,author_name,kind,title,body,created_at'),
-    sb.from('attendance').select('member_id,att_date'),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),
     sb.from('teams').select('id,name,leader_id'),
     sb.from('team_members').select('team_id,member_id')
     /* ai_dept_reports · ai_ideas 는 2026-08-20 에 화면을 지우면서 백업에서도 뺐다.
@@ -25725,6 +26118,7 @@ function acCrmLoad(){
   if(AC.loading)return; AC.loading=true;
   var from=acStart()||osTodayStr();
   Promise.all([
+    /* 「쪽나누기OK」 — 한 사람의 며칠치다. 하루에 한 줄이라 안 넘친다. */
     sb.from('attendance').select('att_date').eq('member_id',uid).gte('att_date',from),
     sb.from('clients').select('id,created_at').eq('advisor_id',uid),
     sb.from('saved_reports').select('id,kind,created_at').eq('advisor_id',uid),
@@ -29047,8 +29441,9 @@ function ckCrmLoad(){
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,active,workspace').order('name')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00'))
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],
+          function(x){return x.gte('call_at',d7+'T00:00:00');},4000)
   ]).then(function(r){
     CKC.busy=false;CKC.loaded=true;
     if(r[1].error||r[2].error){
@@ -29187,10 +29582,10 @@ function txLoad(){
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
     q(orgSelect(sb)),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d56)),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d56+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d56+'T00:00:00')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d56);}),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],function(x){return x.gte('call_at',d56+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d56+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d56+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d56)),
     q(sb.from('suggestions').select('id,member_id,title,status,created_at').order('created_at',{ascending:false}).limit(200))
@@ -29475,9 +29870,9 @@ function coLoad(){
     q(sb.from('profiles').select('id,name,role,active,workspace,plan').order('name')),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d13)),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d13+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d13);}),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],function(x){return x.gte('call_at',d13+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d13)),
     q(sb.from('coach_logs').select('id,member_id,coach_id,coach_date,strength,weak,todo,recheck_date,note')
        .order('coach_date',{ascending:false}).limit(300)),
@@ -29883,9 +30278,10 @@ function mcLoad(){
        .eq('member_id',me).order('coach_date',{ascending:false}).limit(30)),
     q(sb.from('coach_notes').select('id,log_id,member_id,body,share,created_at')
        .eq('member_id',me).order('created_at',{ascending:false}).limit(60)),
-    q(sb.from('attendance').select('member_id,att_date').eq('member_id',me).gte('att_date',d13)),
-    q(sb.from('calls').select('created_by,call_at,result').eq('created_by',me).gte('call_at',d13+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to').eq('assigned_to',me)),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.eq('member_id',me).gte('att_date',d13);}),
+    arAll(sb,'calls','created_by,call_at,result',['-call_at','created_by'],
+          function(x){return x.eq('created_by',me).gte('call_at',d13+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id',function(x){return x.eq('assigned_to',me);}),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').eq('member_id',me).gte('check_date',d13))
   ]).then(function(r){
     MC.busy=false;MC.loaded=true;
@@ -33908,12 +34304,14 @@ function ctLoad(){
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d7)),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d7)),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d7);}),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d7+'T00:00:00')),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],
+          function(x){return x.gte('call_at',d7+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],
+          function(x){return x.gte('created_at',d7+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',w+'T00:00:00'))
   ]).then(function(r){
     CT.warn=[];
@@ -36728,6 +37126,150 @@ function insWhoAll(T) {
 
    금액 단위는 만원으로 통일한다 — 1억 = 10,000만, 3,000만원 = 3,000만.  */
 var BABA={rows:null,at:'',src:{}};
+/* ══ ③ 간편 — <b>고객이 고른 담보만</b> ════════════════════════════
+   사장님 말씀 — 「간편 버전해서, 핵심만 그리고, 고객이 선택한것만 볼수
+   있도록해. 이미지도 간편 버전이니 새로이해」.
+
+   ★ 고르는 목록은 <b>자료에서 실제로 읽어 낸 담보</b>뿐입니다. 없는 것을
+     세워 두면 골라 놓고 빈칸이 나옵니다 (1번).
+   ★ 처음에는 <b>핵심 넷</b>이 골라져 있습니다 — 암 · 뇌·심장 · 실손 ·
+     수술·입원. 바꾸시면 그대로 기억합니다.
+   ★ 고른 것은 <b>여기 한 곳</b>만 압니다 (5번). 프롬프트·그림·인쇄가
+     같은 자리를 봅니다 — 두 곳에 두면 화면과 종이가 달라집니다.       */
+var BABA_CORE=['암','뇌·심장','실손','수술·입원'];
+var BABA_PICK_KEY='apex_baba_pick';
+var BABA_PICK=null;
+function babaPickLoad(){
+  if(BABA_PICK)return BABA_PICK;
+  try{
+    var raw=localStorage.getItem(BABA_PICK_KEY);
+    BABA_PICK=raw?JSON.parse(raw):null;
+  }catch(e){ BABA_PICK=null; }
+  if(!BABA_PICK||!BABA_PICK.length)BABA_PICK=BABA_CORE.slice();
+  return BABA_PICK;
+}
+function babaPickSave(){
+  try{ localStorage.setItem(BABA_PICK_KEY,JSON.stringify(BABA_PICK||[])); }catch(e){}
+}
+/* 자료에서 <b>실제로 읽어 낸</b> 담보 갈래. INS_AREA 차례를 그대로 따른다 —
+   여기서 또 차례를 적으면 두 벌이 된다 (5번). */
+function babaPickAll(){
+  var L=(typeof babaPlans==='function')?babaPlans():[],
+      A=(typeof INS_AREA!=='undefined')?INS_AREA:[],
+      has={},out=[],i,k,c;
+  for(i=0;i<L.length;i++){
+    c=L[i].cov||{};
+    for(k in c)if(Object.prototype.hasOwnProperty.call(c,k)&&c[k]>0)has[k]=1;
+  }
+  for(i=0;i<A.length;i++)if(has[A[i].k])out.push(A[i].k);
+  return out;
+}
+function babaPickOn(k){ return babaPickLoad().indexOf(k)>=0; }
+function babaPickToggle(k){
+  var L=babaPickLoad(),i=L.indexOf(k);
+  if(i>=0)L.splice(i,1); else L.push(k);
+  BABA_PICK=L; babaPickSave();
+  var e=document.getElementById('babaPick');
+  if(e)e.innerHTML=babaPickHtml();
+}
+function babaPickReset(){
+  BABA_PICK=BABA_CORE.slice(); babaPickSave();
+  var e=document.getElementById('babaPick');
+  if(e)e.innerHTML=babaPickHtml();
+}
+/* 지금 고른 것 중 <b>자료에 있는 것</b>만. 없는 것을 넘기면 빈칸이 나온다 */
+function babaPicked(){
+  var all=babaPickAll(),L=babaPickLoad(),out=[],i;
+  for(i=0;i<all.length;i++)if(L.indexOf(all[i])>=0)out.push(all[i]);
+  return out;
+}
+function babaPickRest(){
+  var all=babaPickAll(),L=babaPickLoad(),out=[],i;
+  for(i=0;i<all.length;i++)if(L.indexOf(all[i])<0)out.push(all[i]);
+  return out;
+}
+/* 간편을 고르셨을 때만 서는 칸. 그림도 여기서 같이 보여 드립니다 —
+   무엇을 고르면 무엇이 나오는지 <b>고르는 그 자리에서</b> 보이게. */
+function babaPickBoxHtml(){
+  var m=(typeof PDFMODE!=='undefined'&&PDFMODE.baba)||'full';
+  if(m!=='simple')return '';
+  babaPickCss();
+  return '<div class="baba-pick" id="babaPick">'+babaPickHtml()+'</div>'+
+    '<div class="baba-pick-svg">'+babaSimpleSvg()+'</div>';
+}
+function babaPickCss(){
+  if(document.getElementById('babaPickCss'))return;
+  var st=document.createElement('style');st.id='babaPickCss';
+  st.textContent='.baba-pick{border:1px solid var(--ink-8);border-radius:14px;'+
+     'background:var(--bg-1);padding:13px;margin:0 0 11px}'+
+   '.baba-pick-t{font-size:12.5px;font-weight:800;color:var(--ink-2);margin-bottom:9px}'+
+   '.baba-pick-t span{font-weight:700;color:var(--ink-5);font-size:11px;margin-left:5px}'+
+   '.baba-pick-b{display:flex;flex-wrap:wrap;gap:6px}'+
+   '.baba-pick-c{border:1px solid var(--ink-7);background:var(--bg-1);border-radius:99px;'+
+     'padding:9px 14px;font-size:12.5px;font-weight:800;color:var(--ink-3);cursor:pointer;'+
+     'font-family:inherit;min-height:40px}'+
+   '.baba-pick-c.on{background:var(--primary);border-color:var(--primary);color:#fff}'+
+   '.baba-pick-f{margin-top:10px;font-size:11.5px;color:var(--ink-4);line-height:1.65}'+
+   '.baba-pick-r{border:1px solid var(--ink-7);background:var(--bg-1);border-radius:99px;'+
+     'padding:5px 11px;font-size:11px;font-weight:800;color:var(--ink-3);cursor:pointer;'+
+     'font-family:inherit;margin-left:4px;min-height:30px}'+
+   '.baba-pick-none{font-size:12.5px;color:var(--ink-4);line-height:1.7}'+
+   '.baba-pick-svg{margin:0 0 13px;padding:11px 13px;border:1px dashed var(--ink-7);'+
+     'border-radius:14px;background:var(--bg-1);overflow-x:auto}';
+  document.head.appendChild(st);
+}
+function babaPickHtml(){
+  var all=babaPickAll(),i,h,on=babaPicked(),rest=babaPickRest();
+  if(!all.length)
+    return '<div class="baba-pick-none">아직 <b>읽어 낸 담보가 없습니다.</b> '+
+      '위에 보장분석 PDF 를 먼저 올리시면, 읽어 낸 담보만 여기에 뜹니다 — '+
+      '없는 담보를 세워 두지 않습니다.</div>';
+  h='<div class="baba-pick-t">고객이 <b>볼 것만</b> 고르십니다 '+
+    '<span>'+on.length+'가지 고름 · '+all.length+'가지 중</span></div>'+
+    '<div class="baba-pick-b">';
+  for(i=0;i<all.length;i++)
+    h+='<button type="button" class="baba-pick-c'+(babaPickOn(all[i])?' on':'')+'" '+
+       'aria-pressed="'+(babaPickOn(all[i])?'true':'false')+'" '+
+       'onclick="babaPickToggle(\''+osEsc(all[i])+'\')">'+osEsc(all[i])+'</button>';
+  h+='</div>';
+  h+='<div class="baba-pick-f">'+
+     (rest.length
+       ? ('<b>안 고른 '+rest.length+'가지</b>는 이 장에서 <b>뺍니다</b> — '+osEsc(rest.join(' · '))+
+          '. 뺐다고 해서 그 담보가 없어지는 것은 아닙니다.')
+       : '아홉 갈래를 <b>다 고르셨습니다</b> — 간편판이 길어집니다. 몇 가지만 남기시면 한 장에 듭니다.')+
+     ' <button type="button" class="baba-pick-r" onclick="babaPickReset()">핵심 넷으로</button></div>';
+  return h;
+}
+/* ── 간편판 그림 — <b>직접 그립니다</b> (9번) ───────────────────────
+   남의 자료 삽화를 복제하지 않습니다. 사진은 인쇄에서 뭉개지고 화면 크기
+   마다 달라지지만, SVG 는 어디서나 같은 선으로 섭니다.
+
+   그리는 것은 <b>고른 담보의 전·후 막대</b> 하나뿐입니다. 숫자를 안 쓰고
+   <b>길이만</b>으로 「이만큼에서 이만큼으로」 를 보여 줍니다 — 금액은 표에
+   적혀 있고, 그림이 또 숫자를 말하면 두 곳이 달라질 수 있습니다 (5번).  */
+function babaSimpleSvg(picked){
+  /* <b>「안 넘김」과 「하나도 안 고름」은 다릅니다</b> (1번).
+     빈 목록을 「안 넘김」으로 보면, 하나도 안 고르셨는데 <b>기본 넷이
+     그려집니다</b> — 고객은 그것을 고른 줄 압니다.                     */
+  var P=(picked==null)?babaPicked():picked,
+      n=Math.min(P.length,6),i,y,h='',row=34,top=40,H=top+row*Math.max(n,1)+26;
+  for(i=0;i<n;i++){
+    y=top+row*i;
+    h+='<text x="0" y="'+(y+13)+'" font-size="12" font-weight="700" fill="#4E5968">'+
+       osEsc(P[i])+'</text>'+
+       '<rect x="96" y="'+(y+2)+'" width="78" height="14" rx="7" fill="#E5E8EB"/>'+
+       '<rect x="182" y="'+(y+2)+'" width="140" height="14" rx="7" fill="#3182F6"/>';
+  }
+  if(!n)h='<text x="0" y="56" font-size="12" fill="#8B95A1">고르신 담보가 없습니다</text>';
+  return '<svg viewBox="0 0 330 '+H+'" width="100%" role="img" '+
+    'aria-label="고르신 담보의 전·후 비교 그림" style="max-width:330px">'+
+    '<text x="96" y="22" font-size="11" font-weight="800" fill="#8B95A1">지금</text>'+
+    '<text x="182" y="22" font-size="11" font-weight="800" fill="#3182F6">바꾸면</text>'+
+    h+
+    '<text x="0" y="'+(H-6)+'" font-size="10" fill="#8B95A1">'+
+    '막대 길이는 <b>보기용</b>입니다 — 실제 금액은 위 표를 보십시오</text>'+
+    '</svg>';
+}
 
 /* 회사마다 다르게 쓰는 말. 앞의 것이 대표 이름이다.
    ※ 여기 없는 담보는 표에서 직접 줄을 더할 수 있다. */
@@ -41591,7 +42133,11 @@ function dropSlot(toolId,s){
     '<div class="dz-ic">📄</div><div class="dz-t">클릭 또는 PDF 드래그</div><div class="dz-s">PDF · 최대 '+PDF_MAX_MB+'MB</div></div>'+
     '<div class="file-list" data-files="'+key+'">'+fileChips(key)+'</div></div>';
 }
-function setPdfMode(id,m){PDFMODE[id]=m;document.querySelectorAll('[data-pmode^="'+id+':"]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pmode')===id+':'+m);});}
+function setPdfMode(id,m){PDFMODE[id]=m;document.querySelectorAll('[data-pmode^="'+id+':"]').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-pmode')===id+':'+m);});
+  /* 모드를 바꾸면 <b>고르는 칸</b>도 같이 섰다 앉습니다 — 자리만 두고 안
+     그리면 「간편을 골랐는데 아무것도 안 뜬다」 가 됩니다. */
+  if(id==='baba'){var e=document.getElementById('babaPickBox');
+    if(e&&typeof babaPickBoxHtml==='function')e.innerHTML=babaPickBoxHtml();}}
 function setPdfSlots(id,n){PDFSLOTS[id]=n;go(currentTab());}
 /* ── 「지금 어느 화면인가」는 <b>한 곳만 안다</b> (CLAUDE.md 5번) ──────
    이 함수는 화면(DOM)에서 <b>다시 세어</b> 답하고 있었다. 그런데 메뉴를
@@ -41656,7 +42202,8 @@ var PDF_TOOLS=[
  note:'기존 보장과 신규 제안을 비교해 리모델링 결과를 만듭니다. 아래에서 <b>분석 모드</b>를 먼저 선택하세요.',
  modes:[
   {id:'full',title:'① 전체 담보 비교',desc:'모든 보험 담보를 정밀 비교 — 설계사·꼼꼼한 고객용'},
-  {id:'senior',title:'② 시니어 간소화',desc:'핵심담보·치료비·가격 위주, 쉬운 말 — 어르신·자녀 설명용'}
+  {id:'senior',title:'② 시니어 간소화',desc:'핵심담보·치료비·가격 위주, 쉬운 말 — 어르신·자녀 설명용'},
+  {id:'simple',title:'③ 간편',desc:'고객이 <b>고른 담보만</b> · 핵심만 한 장 — 폰으로 보여 드릴 때'}
  ],
  slots:[{id:'base',label:'기존 보장분석 PDF',req:true,multi:true}],
  slotCountOptions:[1,2,3,4,5,6],slotDefault:2,slotCountLabel:'신규 제안서 수',newLabel:'신규 제안서 ',
@@ -41665,6 +42212,44 @@ var PDF_TOOLS=[
   var news=parts.filter(function(p){return !/기존/.test(p.slot);});
   var docB=base.map(function(p){return p.name+'\n'+p.text;}).join('\n\n')||'(기존 보장 PDF 없음)';
   var docN=news.map(function(p){return '['+p.slot+']\n'+p.text;}).join('\n\n')||'(신규 제안 PDF 없음)';
+  /* ── ③ <b>간편</b> — 고객이 <b>고른 담보만</b> ────────────────────
+     사장님 말씀 — 「간편 버전해서, 핵심만 그리고, <b>고객이 선택한것만</b>
+     볼수 있도록해」.
+
+     ① 전체는 설계사용이라 표가 깁니다. ② 시니어는 쉬운 말이지만 무엇을
+     볼지는 여전히 우리가 정합니다. ③ 간편은 <b>고객이 고른 것만</b>
+     봅니다 — 폰으로 마주 앉아 보여 드릴 때 쓰는 판입니다.
+
+     ★ 고른 담보는 <b>읽어 낸 것 중에서만</b> 고르게 합니다. 자료에 없는
+       담보를 목록에 세우면 골라 놓고 빈칸이 나옵니다 (1번).
+     ★ <b>안 고른 것은 「뺐습니다」 라고 밝힙니다.</b> 조용히 빼면 그 담보가
+       없는 것처럼 보입니다 — 돈 이야기에서 제일 위험한 자리입니다.      */
+  if((o.mode||'full')==='simple'){
+   var picked=(o.picked&&o.picked.length)?o.picked:[];
+   var pickTxt=picked.length?picked.join(' · '):'(고르신 것이 없어 핵심 담보로 보여 드립니다)';
+   return {system:sys('기존 보장과 신규 제안을 비교하되, <b>고객이 고른 담보만</b> 다룬다. '+
+     '폰 화면에서 마주 앉아 보여 주는 한 장이다. 표는 짧게, 글자는 크게, 문장은 한 줄로. '+
+     '고르지 않은 담보는 다루지 않되, 뺐다는 사실은 반드시 적는다. '+
+     '읽어 낸 값이 없으면 「자료에 없음」 이라 적고 숫자를 만들지 않는다. '+
+     '보험료·보장은 심사 결과에 따른다는 것을 빠뜨리지 않는다.'),
+    user:'아래 [기존]과 [신규]를 비교하되 <b>고른 담보만</b> 다뤄 <간편 비포/애프터>를 만들어줘.\n\n'+
+      '[고객이 고른 담보]\n'+pickTxt+'\n\n'+
+      (picked.length?('[고르지 않아 뺀 담보]\n'+((o.rest&&o.rest.length)?o.rest.join(' · '):'(없음)')+'\n\n'):'')+
+      '[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n'+
+      '[형식 — 짧게, 한 장]\n'+
+      '> **한 줄 요약** — 고르신 담보에서 무엇이 좋아지는지 한 문장.\n\n'+
+      '## 고르신 것만 비교\n'+
+      '표: | 담보 | 지금 | 바꾸면 | 차이 |  — <b>고른 담보 줄만</b>. 읽어 낸 값이 없으면 「자료에 없음」.\n\n'+
+      '## 매달 내는 돈\n'+
+      '월 보험료 전/후 한 줄. 추정이면 추정이라고 적는다.\n\n'+
+      '## 뺀 것\n'+
+      '- 고르지 않아 이 장에 안 담은 담보를 <b>그대로 적는다.</b> 없으면 「없음」.\n'+
+      '- 「뺐다고 해서 그 담보가 없어지는 것은 아닙니다」 를 한 줄 덧붙인다.\n\n'+
+      '## 확인할 것\n'+
+      '- 보험료·보장은 <b>심사 결과에 따릅니다.</b>\n'+
+      '- 이 장은 고르신 담보만 담은 <b>요약</b>입니다. 전체는 ① 전체 담보 비교에서 봅니다.',
+    max:3000};
+  }
   if((o.mode||'full')==='senior'){
    return {system:sys('기존 보장과 신규 제안을 비교하는 비포/애프터를 만든다. 대상은 고령 고객 → 아주 쉽게, 핵심담보·치료비·가격(월 보험료) 위주.\n[쉬운 말 규칙]\n- 어려운 보험 용어는 괄호로 풀어 설명(예: 진단비 = 진단만 받아도 주는 목돈).\n- 문장은 짧게. 표는 4~6줄로 단순하게. Markdown 표와 콜아웃(>)을 사용.\n- 과장·불안조장 금지. 추정은 (추정), 모르는 수치는 \'확인 필요\'.\n- 의학·지급 단정 금지, 최종은 약관·보험사 기준.'),
     user:'아래 [기존]과 [신규]를 비교해 <어르신·자녀 설명용 간소화 비포/애프터>를 만들어줘.\n핵심만: 암/뇌/심장 진단비, 입원·수술, 실손, 월 보험료(가격).\n\n[기존 보장]\n'+docB+'\n\n[신규 제안]\n'+docN+'\n\n[형식 — 표/콜아웃 사용, 쉬운 말]\n> **한 줄 요약** — 이번에 무엇이 가장 좋아지는지 한 문장.\n\n## 핵심만 비교\n표: | 무엇 | 지금(기존) | 바꾸면(신규) | 좋아지는 점 |  — 5줄 내외(핵심담보·치료비·월 보험료)\n\n## 가장 크게 좋아지는 3가지\n- 쉬운 말로 3가지, 각 한두 문장.\n\n## 매달 내는 돈은 이렇게 바뀌어요\n월 보험료 비교를 쉽게(표). 그리고 다 낼 때까지 총액(총납입)도 한 줄로 쉽게 비교. (추정은 추정 표기)\n\n## 자녀분께 보여드릴 한 줄\n> 가족이 봐도 안심되는 한 문장.',max:3800};
@@ -41952,6 +42537,9 @@ function renderPdfTool(p){
     '<span style="font-size:10px;color:var(--ink-5)">엔진: '+engLbl+' · 이미지형 PDF 자동 판독</span></div>';
   h+='<div class="result" id="pres_'+p.id+'"></div>';
   if(p.id==='baba'){
+    /* ③ 간편일 때만 <b>고르는 칸</b>이 섭니다. 다른 모드에서는 빈 칸이라
+       자리를 안 먹습니다 — 안 쓰는 칸을 세워 두면 「이건 뭐지」 가 됩니다. */
+    h+='<div id="babaPickBox">'+(typeof babaPickBoxHtml==='function'?babaPickBoxHtml():'')+'</div>';
     h+='<div id="babaCo">'+(typeof babaCoHtml==='function'?babaCoHtml():'')+'</div>';
     h+='<div id="babaDict">'+(typeof babaDictHtml==='function'?babaDictHtml():'')+'</div>';
     h+='<div id="babaGrid">'+(typeof babaGridHtml==='function'?babaGridHtml():'')+'</div>';
@@ -41962,6 +42550,10 @@ function renderPdfTool(p){
 function collectPdfOpts(p){
   var o={};
   if(p.modes)o.mode=PDFMODE[p.id]||p.modes[0].id;
+  /* 고른 담보를 <b>그대로</b> 넘깁니다 — 여기서 다시 고르면 화면과 갈립니다 (5번) */
+  if(p.id==='baba'&&o.mode==='simple'&&typeof babaPicked==='function'){
+    o.picked=babaPicked(); o.rest=babaPickRest();
+  }
   if(p.sample){var t=document.querySelector('[data-psample="'+p.id+'"]');o.sample=t?t.value.trim():'';}
   if(p.chipsets){o.points=[];document.querySelectorAll('[data-pchip="'+p.id+'"]').forEach(function(b){if(b.classList.contains('on'))o.points.push(b.textContent.trim());});var c=document.querySelector('[data-pcomment="'+p.id+'"]');o.comment=c?c.value.trim():'';}
   return o;
@@ -49198,9 +49790,21 @@ function schLoad(){
   var t=schToday(),w7=schDaysAgo(6),w30=schDaysAgo(29);
   Promise.all([
     sb.from('profiles').select('id,name,role,active,status').order('name'),
-    sb.from('attendance').select('member_id,att_date,first_seen,last_seen').gte('att_date',w30),
+    /* last_seen 칸은 <b>준비 SQL 을 돌린 서버에만</b> 있다. 없는 칸을 이름으로
+       집어서 부르면 서버가 <b>표를 통째로 거절해서</b> 출근 칸이 빈 채로
+       선다 — 실제로 그렇게 서 있었다. 한 번 거절당하면 그 칸을 빼고 다시
+       부른다. 마지막 접속만 못 볼 뿐 출근은 그대로 보인다 (1번).
+       읽는 쪽(schRender)은 이미 last_seen 이 없으면 first_seen 을 쓴다. */
+    arAll(sb,'attendance','member_id,att_date,first_seen,last_seen',['-att_date','member_id'],
+          function(x){return x.gte('att_date',w30);}).then(function(a){
+      if(!a||!a.error)return a;
+      if(!/column|42703|does not exist|schema cache/i.test(''+((a.error||{}).message||'')))return a;
+      SCH.noLastSeen=true;
+      return arAll(sb,'attendance','member_id,att_date,first_seen',['-att_date','member_id'],
+                   function(x){return x.gte('att_date',w30);});
+    }),
     sb.from('saved_reports').select('advisor_id,kind,title,created_at').neq('kind','ai_report').gte('created_at',w30+'T00:00:00'),
-    sb.from('clients').select('id,advisor_id,created_at').gte('created_at',w30+'T00:00:00'),
+    arAll(sb,'clients','id,advisor_id,created_at',['-created_at','id'],function(x){return x.gte('created_at',w30+'T00:00:00');}),
     sb.from('ai_usage').select('member_id,usage_date,cnt').gte('usage_date',w30),
     sb.from('reports').select('id,author_id,author_name,kind,title,created_at,read_at').order('created_at',{ascending:false}).limit(100),
     sb.from('teams').select('id,name,color,leader_id'),
@@ -49475,7 +50079,7 @@ function osPickClient(cb){
       close();cb(c.id,c.name_masked||name);
     });
   };
-  sb.from('clients').select('id,name_masked').order('created_at',{ascending:false}).then(function(r){
+  arAll(sb,'clients','id,name_masked',['-created_at','id']).then(function(r){
     var host=document.getElementById('osCliPickList');if(!host)return;
     var rows=(r&&r.data)||[];
     host.innerHTML=rows.length?rows.map(function(c){return '<button class="osCliPickRow" data-id="'+c.id+'" data-nm="'+osEsc(c.name_masked||'')+'" style="display:block;width:100%;text-align:left;border:1px solid #EEF2F7;background:#fff;border-radius:10px;padding:10px 12px;margin:4px 0;font-size:13.5px;font-weight:700;color:#0F172A;cursor:pointer">'+osEsc(c.name_masked||'(이름 없음)')+'</button>';}).join(''):'<div style="padding:12px;color:#94A3B8;font-size:12.5px">등록된 고객이 없습니다. 아래에서 새 고객을 만들어 바로 저장하세요.</div>';
@@ -49522,7 +50126,11 @@ function osCliInfoLoad(){var sb=osClient();if(!sb||!OSC.current)return;
     if(typeof cusCrmLoad==='function')cusCrmLoad(true);  /* 연락처를 알고 나서 한 번 더 */
     set('cliPhone',d.phone);set('cliBirth',d.birth_year);set('cliIncome',d.monthly_income);
     set('cliExp',d.monthly_fixed_expense);set('cliMemo',d.household_notes);var g=$('cliGender');if(g)g.value=d.gender||'';
-    try{CM_BASE[OSC.current.id]={by:d.birth_year,gd:d.gender,inc:d.monthly_income,exp:d.monthly_fixed_expense};}catch(e){}
+    /* 맨 위 고정 줄도 이것을 읽습니다 — <b>읽는 자리는 한 곳</b>입니다 (5번).
+       연락처를 안 담아 두면 고정 줄에서 전화 단추가 영영 안 뜹니다. */
+    try{CM_BASE[OSC.current.id]={by:d.birth_year,gd:d.gender,inc:d.monthly_income,
+                                 exp:d.monthly_fixed_expense,ph:d.phone};}catch(e){}
+    try{oscTopPaint();}catch(e2){}
   });
 }
 /* ── 고객정보 저장 ───────────────────────────────────────────
@@ -49577,9 +50185,14 @@ function osCliInfoSave(){var sb=osClient();if(!sb||!OSC.current)return;
   });
 }
 function osRepListLoad(){var sb=osClient(),host=$('oscReps');if(!sb||!OSC.current||!host)return;
+  /* 아직 못 읽었으면 전·후 칸이 「없습니다」 라고 <b>말하지 않게</b> 합니다 (1번) */
+  try{OSC.repsLoaded=false;oscBaPaint();}catch(e0){}
   sb.from('saved_reports').select('id,kind,title,created_at,content').eq('client_id',OSC.current.id).neq('kind',CM_KIND).order('created_at',{ascending:false}).then(function(r){
     if(r.error){host.innerHTML=sqlNeedHtml('10','상담자료를 담을 자리');return;}
     OSC.reps=r.data||[];
+    /* 전·후 칸도 <b>같은 목록</b>을 본다 — 두 번 읽지 않는다 (5번·7번) */
+    OSC.repsLoaded=true;
+    try{oscBaPaint();}catch(e1){}
     CUS.repN=OSC.reps.length;if(typeof cusPaint==='function')cusPaint();
     if(!OSC.reps.length){host.innerHTML='<div class="osc-empty">아직 저장된 자료가 없습니다. AI 보장분석·비포&애프터 결과의 <b>💾 고객 365일 저장</b>, 재무설계 계산기의 <b>💾</b> 버튼으로 저장하세요.</div>';return;}
     var lbl={bojang:'📑 AI 보장분석',baba:'🔄 비포&애프터',finance:'📊 재무설계',consult:'🎯 컨설팅',fact_find:'📝 상담카드'};
@@ -50167,8 +50780,8 @@ function ccLoadCalls(){
     ccAfter();
   };
   Promise.all([
-    q(sb.from('dbs').select('id,customer_name')),
-    q(sb.from('calls').select('db_id,call_at').order('call_at',{ascending:false}).limit(4000))
+    arAll(sb,'dbs','id,customer_name','id'),
+    arAll(sb,'calls','db_id,call_at',['-call_at','db_id'],null,4000)
   ]).then(function(r){
     if(r[0].error||r[1].error){fail();return;}
     CC.busy=false;CC.loaded=true;
@@ -50768,6 +51381,7 @@ function cmBaseLoad(id,then){
   if(CM_BASE[id]){then(CM_BASE[id]);return;}
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){then(null);return;}
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 (.single) */
   sb.from('clients').select('birth_year,gender,monthly_income,monthly_fixed_expense')
     .eq('id',id).single().then(function(r){
       var d=(r&&!r.error&&r.data)||null;
@@ -52001,6 +52615,7 @@ function osClientsAfterRender(){
   if(OSC.view==='detail'&&OSC.current){
     if(typeof cusCss==='function')cusCss();
     osBindDrop();osLoadDocs();osLoadAnalysis();osCliInfoLoad();osRepListLoad();cusCrmLoad();frLoad();
+    try{oscPolLoad();}catch(e0){}
     if(!CM.loaded)cmLoadAll(function(){if(OSC.current)cmDetailPaint(OSC.current.id);});
   }
 }
@@ -52035,12 +52650,12 @@ function osLoadClients(){
     for(i=0;i<rows.length;i++)CM.who[rows[i].id]=rows[i].name||'';
     if(OSC.list&&OSC.list.length)osRenderList();
   },function(){});
-  sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at,phone')
-    .order('created_at',{ascending:false}).then(function(r){
+  arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at,phone',
+        ['-created_at','id']).then(function(r){
     if(!r.error){done(r.data);return;}
     /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
-    sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at')
-      .order('created_at',{ascending:false}).then(function(r2){
+    arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at',
+          ['-created_at','id']).then(function(r2){
       if(r2.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r2.error.message)+'</div>');return;}
       done(r2.data);
     });
@@ -52125,10 +52740,210 @@ function osOpenClient(id){
   OSC.current=c;OSC.view='detail';go('clients');
 }
 function osBackToList(){OSC.view='list';OSC.current=null;cusReset();go('clients');}
+/* ══ 고객 365일 — 맨 위 고정 줄 · 보장분석 전·후 ═══════════════════
+   사장님 말씀 —
+     「고객정보 맨 위, 어디서든 볼 수 있도록 만들어주고」
+     「보장분석 문서 / 보장분석 / 고객맞춤보장분석풀리포트 / 다 지워버려」
+     「보장분석 전 / 후 자료가 여기에 뜨게끔 하고 이걸 읽어내서 터치할 수 있도록」
+
+   이름·나이·연락처는 상담 내내 눈에 있어야 합니다. 아래로 내려가면
+   누구 화면인지 사라져서, 다시 위로 올라가 확인하고 내려오게 됩니다.  */
+function oscAge(by){
+  var y=parseInt(by,10);
+  if(!y||y<1900||y>2200)return null;          /* 모르면 <b>null</b> 이다 (1번) */
+  return (new Date().getFullYear())-y+1;
+}
+function oscTopHtml(c){
+  if(!c)return '';
+  var b=(typeof CM_BASE!=='undefined'&&CM_BASE[c.id])||{},
+      nm=(typeof cmName==='function')?cmName(c):(c.name_masked||''),
+      age=oscAge(b.by),
+      gd=b.gd==='M'?'남':(b.gd==='F'?'여':''),
+      ph=b.ph||'',
+      bits=[];
+  /* <b>모르는 것은 「모름」 이라고 적습니다</b> — 빈칸으로 두면 0 으로 읽힙니다 */
+  bits.push('<span class="k">나이</span>'+(age?(age+'세'):'<i>모름</i>'));
+  bits.push('<span class="k">성별</span>'+(gd||'<i>모름</i>'));
+  /* 만원 단위다 — 이름이 단위를 말한다 (4번). 1,200 처럼 쉼표를 찍어 준다 */
+  var incMan=(b.inc==null||b.inc==='')?null:osNum(b.inc);
+  bits.push('<span class="k">월 소득</span>'+
+    (incMan==null?'<i>모름</i>':(incMan.toLocaleString('ko-KR')+'만원')));
+  return '<div class="osc-top-in">'+
+    '<b class="nm">'+osEsc(nm||'고객')+'</b>'+
+    '<div class="bits">'+bits.join('')+'</div>'+
+    (ph?('<a class="tel" href="tel:'+osEsc(ph)+'">📞 '+osEsc(ph)+'</a>'):'')+
+    '<button type="button" class="ed" onclick="oscTopEdit()">고치기</button>'+
+    '</div>';
+}
+function oscTopPaint(){
+  var e=document.getElementById('oscTopBar');
+  if(e&&OSC.current)e.innerHTML=oscTopHtml(OSC.current);
+}
+/* 「고치기」 는 <b>고객 정보 칸으로 내려</b> 준다 — 새 창을 또 만들지 않는다 (5번) */
+function oscTopEdit(){
+  var e=document.getElementById('cliPhone');
+  if(!e)return;
+  try{ e.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e2){ e.scrollIntoView(); }
+  try{ e.focus({preventScroll:true}); }catch(e3){}
+}
+/* ── 보장분석 <b>전·후</b> 자료 — 여기서 바로 연다 ────────────────
+   저장된 상담 자료 칸에 다른 것들과 섞여 있어서, 정작 상담에서 제일 많이
+   여는 <b>전·후</b> 를 찾느라 스크롤했습니다. 여기서 <b>따로</b> 세웁니다.
+   없으면 <b>없다고 적고</b> 만들러 가는 길을 보여 줍니다 — 지어내지 않습니다. */
+function oscBaRows(){
+  var L=(typeof OSC!=='undefined'&&OSC.reps)||[],out=[],i;
+  for(i=0;i<L.length;i++)if(L[i].kind==='baba')out.push({i:i,x:L[i]});
+  return out;
+}
+function oscBaHtml(){
+  var R=oscBaRows(),i,h;
+  h='<div class="osc-panel osc-ba"><h3 style="font-size:15px;font-weight:800;margin-bottom:6px">'+
+    '🔄 보장분석 전·후 <span style="font-size:11px;font-weight:600;color:#9CA3AF">'+
+    '눌러서 바로 보십니다</span></h3>';
+  if(!(typeof OSC!=='undefined'&&OSC.repsLoaded))
+    return h+'<div class="osc-loading">전·후 자료를 찾는 중…</div></div>';
+  if(!R.length)
+    return h+'<div class="osc-empty">이 고객의 <b>전·후 자료가 아직 없습니다.</b> '+
+      '만들어 저장하시면 여기 올라옵니다 — 지어내지 않습니다.</div>'+
+      '<div class="btn-row" style="margin-top:10px">'+
+      '<button class="btn btn-primary" onclick="oscBaGo()">🔄 비포&애프터 만들기</button>'+
+      '</div></div>';
+  h+='<div class="osc-ba-list">';
+  for(i=0;i<R.length;i++)
+    h+='<button type="button" class="osc-ba-r" onclick="osRepView('+R[i].i+')">'+
+       '<span class="ic">🔄</span>'+
+       '<span class="tt">'+osEsc(R[i].x.title||'비포&애프터')+'</span>'+
+       '<span class="dt">'+osEsc(osFmtDate(R[i].x.created_at))+'</span>'+
+       '<span class="ar">›</span></button>';
+  h+='</div><div class="btn-row" style="margin-top:10px">'+
+     '<button class="btn btn-ghost" onclick="oscBaGo()">🔄 새로 만들기</button></div>';
+  return h+'</div>';
+}
+function oscBaPaint(){
+  var e=document.getElementById('oscBaHost');
+  if(e)e.innerHTML=oscBaHtml();
+}
+function oscBaGo(){ go('baba'); }
+/* ── 이 고객이 <b>가입한 보험</b> ─────────────────────────────────
+   사장님 말씀 — 「고객의 보험 내용도 고객 365에 입력하는데 뜰수 있게 해줘」.
+
+   여태 이 자료는 <b>보장분석을 돌릴 때만</b> 읽었습니다. 화면 어디에도
+   안 서 있어서, 상담 전에 「이분 뭐 들고 계시지」 를 확인하려면 분석을
+   다시 돌려야 했습니다.
+
+   ★ 월 보험료는 <b>원(月)</b> 단위로 들어 있습니다 — 그래서 변수 이름도
+     premWon 입니다 (4번). 이름이 거짓말하면 부르는 쪽이 틀립니다.
+   ★ 값이 없으면 <b>「확인 필요」</b> 라고 적습니다. 0 으로 적으면
+     「보험료가 없다」 는 뜻이 되어 버립니다 (1번).                     */
+var OSCP={cid:'',busy:false,rows:null,err:''};
+function oscPolLoad(force){
+  var sb=(typeof osClient==='function')?osClient():null,
+      c=(typeof OSC!=='undefined')&&OSC.current;
+  if(!sb||!c)return;
+  if(!force&&OSCP.cid===c.id&&(OSCP.rows||OSCP.busy))return;   /* 두 번 안 읽는다 (7번) */
+  OSCP.cid=c.id; OSCP.busy=true; OSCP.rows=null; OSCP.err='';
+  oscPolPaint();
+  arAll(sb,'policies','id,insurer,product_name,monthly_premium,payment_term,coverage_term,renewable',
+        'id',function(x){return x.eq('client_id',c.id);}).then(function(r){
+    OSCP.busy=false;
+    if(r&&r.error){ OSCP.err=(r.error.message||'')+''; OSCP.rows=null; oscPolPaint(); return; }
+    OSCP.rows=(r&&r.data)||[];
+    oscPolPaint();
+  },function(e){ OSCP.busy=false; OSCP.err=(e&&e.message)||'네트워크 오류'; oscPolPaint(); });
+}
+function oscPolHtml(){
+  var h='<div class="osc-panel osc-pol"><h3 style="font-size:15px;font-weight:800;margin-bottom:6px">'+
+    '🛡️ 가입한 보험 <span style="font-size:11px;font-weight:600;color:#9CA3AF">'+
+    'PDF 에서 읽어 검수한 계약</span></h3>';
+  if(OSCP.err)
+    return h+'<div class="osc-empty">보험 내용을 <b>못 읽었습니다</b> — '+osEsc(OSCP.err.slice(0,80))+'</div></div>';
+  if(OSCP.busy||OSCP.rows===null)
+    return h+'<div class="osc-loading">가입한 보험을 찾는 중…</div></div>';
+  if(!OSCP.rows.length)
+    return h+'<div class="osc-empty">아직 <b>읽어 둔 계약이 없습니다.</b> '+
+      '아래 <b>📂 예전 자료</b> 를 펴서 증권·제안서 PDF 를 올리시면 여기 올라옵니다.</div></div>';
+  var i,p,totWon=0,unknown=0,premWon;
+  for(i=0;i<OSCP.rows.length;i++){
+    premWon=OSCP.rows[i].monthly_premium;
+    if(premWon==null||premWon==='')unknown++; else totWon+=Number(premWon)||0;
+  }
+  h+='<div class="osc-pol-sum"><b>'+OSCP.rows.length+'건</b>'+
+     ' · 월 <b>'+Math.round(totWon).toLocaleString('ko-KR')+'원</b>'+
+     (unknown?(' <span>('+unknown+'건은 보험료 확인 필요 — 안 더했습니다)</span>'):'')+
+     '</div><div class="osc-pol-list">';
+  for(i=0;i<OSCP.rows.length;i++){
+    p=OSCP.rows[i]; premWon=p.monthly_premium;
+    h+='<div class="osc-pol-r">'+
+       '<span class="co">'+osEsc(p.insurer||'회사 확인 필요')+'</span>'+
+       '<span class="pd">'+osEsc(p.product_name||'상품명 확인 필요')+'</span>'+
+       '<span class="mp">'+((premWon==null||premWon==='')
+          ? '<i>보험료 확인 필요</i>'
+          : (Math.round(Number(premWon)).toLocaleString('ko-KR')+'원/월'))+'</span>'+
+       (p.payment_term?('<span class="tm">'+osEsc(p.payment_term)+'</span>'):'')+
+       '</div>';
+  }
+  return h+'</div><div class="osc-note" style="margin-top:9px">보험료·보장은 '+
+    '<b>심사 결과에 따릅니다</b> (2번). 읽어 낸 값이라 실제 증권과 다를 수 있습니다.</div></div>';
+}
+function oscPolPaint(){
+  var e=document.getElementById('oscPolHost');
+  if(e)e.innerHTML=oscPolHtml();
+}
+function oscBaCss(){
+  if(document.getElementById('oscBaCss'))return;
+  var st=document.createElement('style');st.id='oscBaCss';
+  st.textContent='.osc-top{position:sticky;top:0;z-index:40;background:var(--bg-0,#fff);'+
+     'border-bottom:1px solid var(--ink-8,#EEF2F7);margin:0 0 12px;padding:9px 0}'+
+   '.osc-top-in{display:flex;align-items:center;gap:9px;flex-wrap:wrap}'+
+   '.osc-top .nm{font-size:15px;font-weight:900;letter-spacing:-.03em}'+
+   '.osc-top .bits{display:flex;gap:10px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3,#6B7280)}'+
+   '.osc-top .bits .k{font-weight:800;color:var(--ink-5,#9CA3AF);margin-right:3px}'+
+   '.osc-top .bits i{font-style:normal;color:var(--ink-5,#9CA3AF)}'+
+   '.osc-top .tel{margin-left:auto;font-size:12px;font-weight:800;color:#1B64DA;'+
+     'background:#E8F2FF;border-radius:999px;padding:6px 11px;text-decoration:none;min-height:32px;'+
+     'display:inline-flex;align-items:center}'+
+   '.osc-top .ed{border:1px solid var(--ink-7,#E5E8EB);background:var(--bg-1,#fff);border-radius:999px;'+
+     'padding:6px 11px;font-size:11.5px;font-weight:800;color:var(--ink-3,#6B7280);cursor:pointer;'+
+     'font-family:inherit;min-height:32px}'+
+   '.osc-ba-list{display:flex;flex-direction:column;gap:6px}'+
+   '.osc-ba-r{display:flex;align-items:center;gap:9px;width:100%;text-align:left;'+
+     'border:1px solid var(--ink-8,#EEF2F7);background:var(--bg-1,#fff);border-radius:11px;'+
+     'padding:11px 12px;cursor:pointer;font-family:inherit;min-height:46px}'+
+   '.osc-ba-r .tt{font-size:13.5px;font-weight:800;color:var(--ink-1,#0F172A);'+
+     'white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+   '.osc-ba-r .dt{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--ink-4,#9CA3AF);white-space:nowrap}'+
+   '.osc-ba-r .ar{color:var(--ink-5,#9CA3AF);flex:none}'+
+   '.osc-pol-sum{font-size:12.5px;color:var(--ink-3,#6B7280);margin-bottom:9px}'+
+   '.osc-pol-sum span{color:var(--ink-5,#9CA3AF);font-size:11.5px}'+
+   '.osc-pol-list{display:flex;flex-direction:column;gap:6px}'+
+   '.osc-pol-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;'+
+     'border:1px solid var(--ink-8,#EEF2F7);border-radius:11px;padding:10px 12px}'+
+   '.osc-pol-r .co{font-size:11.5px;font-weight:800;color:var(--ink-4,#9CA3AF);'+
+     'background:var(--ink-8,#F3F4F6);border-radius:999px;padding:3px 9px}'+
+   '.osc-pol-r .pd{font-size:13px;font-weight:800;color:var(--ink-1,#0F172A);'+
+     'flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+   '.osc-pol-r .mp{font-size:12.5px;font-weight:800;color:var(--ink-2,#334155)}'+
+   '.osc-pol-r .mp i{font-style:normal;font-weight:700;color:var(--ink-5,#9CA3AF)}'+
+   '.osc-pol-r .tm{font-size:11px;font-weight:700;color:var(--ink-5,#9CA3AF)}'+
+   '.osc-old{margin-top:16px;border:1px solid var(--ink-8,#EEF2F7);border-radius:12px;'+
+     'background:var(--bg-1,#fff);padding:0 12px}'+
+   '.osc-old>summary{cursor:pointer;padding:13px 0;font-size:13px;font-weight:800;'+
+     'color:var(--ink-3,#6B7280);list-style:none}'+
+   '.osc-old>summary::-webkit-details-marker{display:none}'+
+   '.osc-old>summary small{font-weight:600;color:var(--ink-5,#9CA3AF);margin-left:6px}'+
+   '.osc-old[open]>summary{border-bottom:1px solid var(--ink-8,#EEF2F7);margin-bottom:10px}'+
+   '.osc-old .osc-panel{border:0;padding-left:0;padding-right:0}';
+  document.head.appendChild(st);
+}
 function osClientDetailHtml(c){
   var nm=cmName(c);var cs=c.consent_status||'none';
+  oscBaCss();
   return '<div class="osc-wrap">'+
     '<div class="osc-detail-back" onclick="osBackToList()">← 고객 목록</div>'+
+    /* <b>고객정보를 맨 위에 붙여 둡니다</b> — 사장님 말씀대로 「어디서든
+       볼 수 있도록」. 아래로 내려가도 이 줄은 따라옵니다. 칸 전체를 붙이면
+       화면 절반을 먹으므로 <b>꼭 필요한 것만</b> 한 줄로 세웁니다. */
+    '<div id="oscTopBar" class="osc-top">'+oscTopHtml(c)+'</div>'+
     '<div class="osc-bar"><div><div class="osc-title" style="font-size:20px;font-weight:800">'+osEsc(nm)+'</div>'+
       '<div class="osc-sub" style="font-size:12px;color:#6B7280;margin-top:3px">'+osFmtDate(c.created_at)+' 등록 · <span class="osc-badge '+cs+'">'+osConsentLabel(cs)+'</span></div></div>'+
     '</div>'+
@@ -52153,6 +52968,18 @@ function osClientDetailHtml(c){
       '<button class="btn btn-primary" style="margin-top:10px" onclick="osCliInfoSave()">💾 정보 저장</button>'+
     '</div>'+
     '<div id="cmPanels">'+cmPanelsHtml(c.id)+'</div>'+
+    /* <b>보장분석 전·후</b> — 사장님이 여기서 바로 여시는 자리 */
+    '<div id="oscBaHost">'+oscBaHtml()+'</div>'+
+    /* <b>가입한 보험</b> — 상담 전에 「이분 뭐 들고 계시지」 를 여기서 본다 */
+    '<div id="oscPolHost">'+oscPolHtml()+'</div>'+
+    /* ── 예전 세 칸은 <b>접어 둡니다</b> ─────────────────────────────
+       사장님 말씀 — 「보장분석 문서 / 보장분석 / 고객맞춤보장분석풀리포트 /
+       다 지워버려 눈에 안보이게」. 눈에서 치우되 <b>지우지는 않습니다</b> —
+       PDF 를 여기로 올려야 담보가 들어오고, 그 담보로 전·후가 만들어집니다.
+       통째로 없애면 그 길이 끊깁니다. 접어 두면 자리를 안 먹고, 필요할 때
+       한 번 눌러 펴시면 됩니다. */
+    '<details class="osc-old" id="oscOld"><summary>📂 예전 자료 — 문서 올리기 · 보장분석 · 풀리포트 '+
+      '<small>여기 올린 PDF 에서 담보를 읽어 전·후를 만듭니다</small></summary>'+
     '<div class="osc-panel">'+
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">보장분석 문서</h3>'+
       '<p style="font-size:12.5px;color:#6B7280;line-height:1.6">이 고객의 보장분석 리포트·제안서 PDF를 업로드하면, 담보를 구조화 추출하고 사람이 검수한 뒤 전후비교·상담 리포트로 이어집니다.</p>'+
@@ -52172,6 +52999,7 @@ function osClientDetailHtml(c){
       '<div id="oscAnalysis"><div class="osc-loading">분석 상태를 불러오는 중…</div></div>'+
     '</div>'+
     frPanelHtml()+
+    '</details>'+
     '<div class="osc-panel" style="margin-top:16px">'+
       '<h3 style="font-size:15px;font-weight:800;margin-bottom:6px">저장된 상담 자료 <span style="font-size:11px;font-weight:600;color:#9CA3AF">AI 보장분석 · 비포&애프터 · 재무설계</span></h3>'+
       '<div id="oscReps"><div class="osc-loading">저장 자료를 불러오는 중…</div></div>'+
@@ -52470,8 +53298,12 @@ function cusCrmLoad(again){
     }
     return hit;
   };
-  sb.from('dbs').select(cols)
-    .eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'').then(function(r){
+  /* <b>쪽을 나눠</b> 끝까지 읽는다. 서버는 한 판에 1,000줄까지만 주고
+     넘는 줄은 <b>에러도 없이</b> 안 온다 — 배정이 1,000건을 넘는 분은
+     여기서 통째로 안 보였을 자리다(1번 · #382). */
+  arAll(sb,'dbs',cols,'id',function(x){
+    return x.eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'');
+  }).then(function(r){
     if(r&&r.error){cusPaint();return;}
     var hit=pick((r&&r.data)||[]),ids,i;
     if(!hit.length){cusPaint();return;}
@@ -52955,6 +53787,7 @@ function osLoadAnalysis(){
   var sb=osClient();if(!sb||!OSC.current)return;
   var cid=OSC.current.id;
   // 1) 고객 상황(컨텍스트)
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 */
   sb.from('clients').select('id,birth_year,gender,monthly_income,monthly_fixed_expense,affordability_limit,household_notes').eq('id',cid).then(function(cr){
     OSA.ctx=(cr.data&&cr.data[0])||{};
     // 2) 최신 분석 케이스
@@ -54614,6 +55447,7 @@ function frLoad(){
   if(FR.cid!==c.id){FR.docs=[];FR.runs={};FR.imgPages=0;FR.readAt=null;FR.readErr='';}
   FR.cid=c.id;
   frSet('<div class="osc-loading">이 고객의 계약과 담보를 불러오는 중…</div>');
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 */
   sb.from('clients').select('id,birth_year,gender,monthly_income,monthly_fixed_expense,affordability_limit,household_notes').eq('id',c.id).then(function(cr){
     FR.client=(cr&&cr.data&&cr.data[0])||{};
     return sb.from('policies').select('id,insurer,product_name,monthly_premium,payment_term,coverage_term,renewable,source_document_id,policyholder,insured').eq('client_id',c.id);
