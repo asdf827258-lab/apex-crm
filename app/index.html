@@ -6817,7 +6817,7 @@ function rdLoad(force){
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace')),
-    q(sb.from('clients').select('id,consent_status')),
+    arAll(sb,'clients','id,consent_status','id'),
     q(sb.from('backups').select('id,ref_date,created_at').order('created_at',{ascending:false}).limit(1))
   ]).then(function(res){
     out.prof=res[0];out.cli=res[1];out.bak=res[2];
@@ -7215,6 +7215,48 @@ function arRank(r){
   return l.length;
 }
 
+/* ── 서버는 <b>한 판에 1,000줄까지만</b> 준다 ────────────────────────
+   `.limit(4000)` 을 적어도 그 위에서 잘린다. 넘는 줄은 <b>에러도 없이</b>
+   사라져서, 1,293건이 배정돼 있는데 화면은 <b>1,000건에서 끝났다.</b>
+   숫자가 그럴듯해서 아무도 못 본다 — 「오늘 손댈 사람」에서 사람이
+   통째로 빠지던 자리다 (1번). <b>쪽을 나눠 끝까지</b> 읽는다.
+
+   부르는 쪽은 <b>흔들리지 않는 차례</b>를 반드시 함께 준다. 차례가
+   흔들리면 쪽 사이에서 같은 줄이 두 번 오거나 아예 빠진다.
+   `cap` 에 닿아 멈추면 `cut:true` 로 <b>덜 읽었다고 말한다</b> —
+   말 없이 자르는 것이 지금 고치는 바로 그 버릇이다.                  */
+var AR_PAGE=1000;
+function arPageAll(make,cap){
+  var out=[],lim=cap||100000;
+  function step(from){
+    return make(from,from+AR_PAGE-1).then(function(r){
+      if(r&&r.error)return {error:r.error,data:out,cut:false};
+      var d=(r&&r.data)||[];
+      out=out.concat(d);
+      if(d.length<AR_PAGE)return {data:out,error:null,cut:false};   /* 덜 왔으면 끝 */
+      if(out.length>=lim)return {data:out,error:null,cut:true};      /* 여기까지만 */
+      return step(from+AR_PAGE);
+    });
+  }
+  return step(0);
+}
+/* 표 하나를 <b>끝까지</b> 읽는 흔한 모양. key 는 쪽을 나눌 때 못 박을 칸이다 —
+   출근표처럼 <b>id 칸이 없는</b> 표도 있어서 부르는 쪽이 정해 준다.
+   앞에 「-」 를 붙이면 내림차순이다. 여러 칸을 주면 앞에서부터 못 박는다 —
+   같은 값이 수두룩한 칸 하나만으로 나누면 쪽 사이에서 줄이 샌다.        */
+function arAll(sb,tbl,cols,key,tune,cap){
+  var ks=(typeof key==='string')?[key]:(key||['id']);
+  return arPageAll(function(a,b){
+    var x=sb.from(tbl).select(cols),i,d;
+    if(typeof tune==='function')x=tune(x);
+    for(i=0;i<ks.length;i++){
+      d=ks[i].charAt(0)==='-';
+      x=x.order(d?ks[i].slice(1):ks[i],{ascending:!d});
+    }
+    return x.range(a,b).then(function(r){return r;},
+                            function(e){return {error:e||{message:'실패'}};});
+  },cap);
+}
 /* ── 불러오기 — 체크판·성장판·CRM·고객 365일을 한 번에 ── */
 function arLoad(force){
   var sb=(typeof osClient==='function')?osClient():null;
@@ -7234,29 +7276,49 @@ function arLoad(force){
     /* 단계 칸은 migration_41 을 돌린 서버에만 있다. 없으면 한 칸씩 내려가며
        다시 부른다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 된다 */
     var down=function(m){return /column|42703|does not exist|schema cache/i.test(''+(m||''));};
-    return q(sb.from('dbs').select(cols+',source,stage,next_appt,contracted_at,policy_sent_at')).then(function(r){
+    /* id 차례로 못 박고 쪽을 나눈다 — 배정일은 같은 날이 수두룩해서
+       그것만으로 나누면 쪽 사이에서 줄이 새거나 겹친다 */
+    var read=function(c){
+      return arPageAll(function(a,b){
+        return q(sb.from('dbs').select(c).order('id',{ascending:true}).range(a,b));
+      });
+    };
+    return read(cols+',source,stage,next_appt,contracted_at,policy_sent_at').then(function(r){
       if(!r||!r.error)return r;
       if(!down((r.error||{}).message))return r;
       AR.noStage=true;
-      return q(sb.from('dbs').select(cols+',source')).then(function(r2){
+      return read(cols+',source').then(function(r2){
         if(!r2||!r2.error)return r2;
         if(!down((r2.error||{}).message))return r2;
         AR.noSrc=true;
-        return q(sb.from('dbs').select(cols));
+        return read(cols);
       });
     });
   };
   Promise.all([
     qDbs(),
-    /* 마지막 통화가 30일보다 오래됐어도 알아야 한다 — 그게 다시 걸 사람이다 */
-    q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
-       .order('call_at',{ascending:false}).limit(4000)),
-    q(sb.from('clients').select('id,advisor_id,name_masked,created_at')),
-    q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')),
+    /* 마지막 통화가 30일보다 오래됐어도 알아야 한다 — 그게 다시 걸 사람이다.
+       최근 것부터 4,000통까지만 읽는다 — 그 위는 서버를 아껴 안 읽고,
+       <b>덜 읽었다고 말한다</b>(AR.callsCut · 7번). */
+    arPageAll(function(a,b){
+      return q(sb.from('calls').select('db_id,created_by,call_at,result,memo,appointment_at')
+         .order('call_at',{ascending:false}).order('db_id',{ascending:true}).range(a,b));
+    },4000),
+    arPageAll(function(a,b){
+      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at')
+         .order('id',{ascending:true}).range(a,b));
+    }),
+    arPageAll(function(a,b){
+      return q(sb.from('saved_reports').select('id,client_id,content').eq('kind','client_meta')
+         .order('id',{ascending:true}).range(a,b));
+    }),
     q(sb.from('saved_reports').select('id,title,content,created_at').eq('kind',AR_KIND)
        .order('created_at',{ascending:false}).limit(300))
   ]).then(function(r){
     AR.busy='';AR.loaded=true;AR.at=new Date().toLocaleTimeString('ko-KR');
+    /* 통화를 4,000통에서 끊었으면 <b>끊었다고</b> 적어 둔다 — 화면이
+       「이게 전부」인 것처럼 말하지 않게 한다 (1번) */
+    AR.callsCut=!!(r[1]&&r[1].cut);
     var dbs=r[0].error?[]:(r[0].data||[]),calls=r[1].error?[]:(r[1].data||[]);
     var d30s=d30+'T00:00:00',c30=[],ci;
     for(ci=0;ci<calls.length;ci++)if((''+(calls[ci].call_at||''))>=d30s)c30.push(calls[ci]);
@@ -14532,8 +14594,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-15 19:40';
-var APP_BUILD_NOTE="<b>DB 종류가 차례대로 서고, 시(市)는 검색해서 고릅니다.</b> ① <b>DB 종류 정렬</b> — 종류는 손으로 적는 글자라 <b>새로 만든 차례대로</b> 쌓여 「보장분석5DB · 6DB · 일반 · 3DB · 소개 · 7DB」 처럼 섰습니다. 이제 <b>이름 안의 숫자를 숫자로 읽어</b> 세웁니다 — 보장분석 1 → 2 → 3 … 17 순입니다. 글자 순서로만 보면 10 이 2 보다 앞에 섭니다. <b>띄어쓰기는 견줄 때만</b> 지웁니다. 「보장분석 4DB」 와 「보장분석4DB」 가 <b>나란히</b> 서서, 같은 것이 둘로 갈린 것도 그 자리에서 보이십니다 — 합쳐 드리지는 않습니다(우리가 고쳐 쓰지 않습니다 · 1번). <b>TFA 종류 단추 · DB 종류별 표 · CRM 등록칸 · CRM 거르개</b> 네 곳이 다 같은 차례입니다. 새 DB 를 등록할 때 <b>기본은 그대로 「일반」</b> 입니다 — 차례를 바꿨다고 엉뚱한 종류가 미리 골라지면 그대로 저장됩니다. ② <b>시 정해 주기를 검색창으로</b> — 사장님 말씀대로 네이버 주소 검색창처럼 만들었습니다. 시·군이 126곳이라 펼침 목록은 폰에서 한참 굴려야 했습니다. 이제 <b>치면 추려집니다</b> — 「여수」 · 「전남」 · 초성 「ㅅㅊ」 도 됩니다. <b>내 고객이 많은 시</b>가 먼저 나오고, 「광주」 처럼 두 곳에 다 있는 이름은 <b>둘 다</b> 보여 드려 고르시게 합니다. 못 찾으면 <b>못 찾았다고</b> 적고 안 고른 줄은 그대로 둡니다 — 짐작해서 안 넣습니다(1번). 만들면서 헛것 둘을 잡았습니다 — 초성을 늘 견주면 「여수」(ㅇㅅ)가 <b>고양시</b>(ㄱㅇㅅ)를 부르고, 초성에 도 이름을 붙이면 「ㅅㅊ」 에 순천 대신 <b>계룡시</b>(계룡시 충남)가 나왔습니다. 눌러도 안 먹던 것도 고쳤습니다 — 그 파일은 통째로 감싸여 있어 onclick 속성이 전역을 못 찾습니다. 점검 <b>check-dbsort</b> 15자리를 새로 만들고 <b>check-cityclass</b> 에 16자리를 더했습니다. 여섯을 일부러 되돌려 빨간불도 봤습니다. 곁들여 배정 DB 의 <b>「광주」 28건</b>을 광주광역시로 정했습니다.";
+var APP_BUILD='2026-09-16 09:40';
+var APP_BUILD_NOTE="<b>1,000건에서 조용히 잘리던 것을 고쳤습니다.</b> 사장님이 보신 그대로였습니다 — 배정 DB 는 <b>1,293건</b>인데 대시보드는 <b>1,000건에서 끝났습니다.</b> 서버는 한 번에 <b>1,000줄까지만</b> 주는데, 그 위는 <b>에러도 없이</b> 안 옵니다. 그래서 1,000줄을 받아 들고 「다 받았다」고 믿고 있었습니다. 숫자가 그럴듯해서 아무도 못 봅니다. <b>「오늘 손댈 사람」에서 사람이 통째로 빠지던 것</b>도 같은 자리였습니다. 이제 <b>쪽을 나눠 끝까지</b> 읽습니다 — 덜 온 판이 오면 끝, 꽉 찬 판이면 더 있습니다. 쪽을 나눌 때는 <b>차례를 못 박습니다</b>(두 칸으로) — 안 그러면 쪽 사이에서 같은 줄이 두 번 오거나 아예 빠집니다. <b>본체 21곳 · CRM 5곳</b>을 고쳤습니다. 배정 DB·통화·고객·출근 전부입니다 — 33명이면 출근표는 30일치만 해도 1,000줄에 닿습니다. 통화는 <b>최근 4,000통까지</b>만 읽고 서버를 아낍니다(7번). 거기서 멈추면 <b>멈췄다고 말합니다</b> — 말 없이 자르는 것이 지금 고친 바로 그 버릇입니다(1번). 한 줄만 읽는 자리 여섯 곳은 코드에 <b>왜 안전한지 한 줄 적어</b> 두었습니다. 곁들여 <b>출근 현황이 빈 채로 서던 것</b>도 고쳤습니다 — 아직 없는 칸(last_seen)을 이름으로 부르는 바람에 서버가 표를 통째로 거절하고 있었습니다. 이제 그 칸을 빼고 다시 부릅니다. 점검 <b>check-dbpage</b> 를 새로 만들었습니다 — 1,000줄만 주는 <b>가짜 서버</b>를 세워 1,293건·2,000건·0건을 실제로 읽어 보고, 쪽을 안 나눈 자리가 하나라도 남으면 <b>그 자리를 이름으로</b> 알려 줍니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -17425,9 +17487,9 @@ function gbLoad(){
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d30)),
-    q(sb.from('calls').select('created_by,call_at').gte('call_at',d30+'T00:00:00')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d30+'T00:00:00')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
+    arAll(sb,'calls','created_by,call_at',['-call_at','created_by'],function(x){return x.gte('call_at',d30+'T00:00:00');},4000),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d30)),
     q(sb.from('daily_checks').select('member_id,items').eq('scope','pass')),
@@ -18356,6 +18418,8 @@ function fpRepNames(){
     if(c&&ids.indexOf(c)<0)ids.push(c);
   }
   if(!ids.length||!sb){fpDeckPaint();return;}
+  /* 「쪽나누기OK」 — 위에서 .limit(30) 으로 읽은 자료의 고객만 묻는다.
+     ids 가 서른 개를 못 넘어 쪽을 나눌 일이 없다. */
   sb.from('clients').select('id,name_masked').in('id',ids).then(function(r){
     var map={},rows=(r&&r.data)||[],j;
     for(j=0;j<rows.length;j++)map[rows[j].id]=rows[j].name_masked||'';
@@ -18954,7 +19018,7 @@ function osAttendLoad(){
   var uid=OS.profile&&OS.profile.id;
   if(uid){try{sb.from('attendance').upsert({member_id:uid,att_date:osAttToday()},{onConflict:'member_id,att_date'}).then(function(){},function(){});}catch(e){}}
   osBackupBoot();
-  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),sb.from('attendance').select('member_id,att_date'),sb.from('profiles').select('id,workspace')]).then(function(res){
+  Promise.all([sb.from('profiles').select('id,name,role,active,status').order('name'),arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),sb.from('profiles').select('id,workspace')]).then(function(res){
     var pr=res[0],at=res[1],ws=res[2];
     if(pr.error){if(cal)cal.innerHTML='<div class="notice" style="background:#FFFBEB;border-color:#FDE68A;color:#B45309;font-size:11.5px">출근 데이터를 불러오지 못했습니다. attendance 테이블/권한(RLS)을 확인하세요. <span style="color:var(--ink-4)">('+osEsc(pr.error.message||'')+')</span></div>';return;}
     /* CRM 계정이 새지 않도록 — 승인된 APEX 회원만, 구분 못 읽으면 표시 안 함 */
@@ -23301,8 +23365,8 @@ function tdLoad(){
     sb.from('profiles').select('id,name,role,active,status').order('name'),
     sb.from('teams').select('id,name,color,leader_id,goal_note').order('name'),
     sb.from('team_members').select('team_id,member_id'),
-    sb.from('attendance').select('member_id,att_date').gte('att_date',d30),
-    sb.from('clients').select('id,advisor_id,created_at').gte('created_at',d30+'T00:00:00'),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d30);}),
+    arAll(sb,'clients','id,advisor_id,created_at',['-created_at','id'],function(x){return x.gte('created_at',d30+'T00:00:00');}),
     sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d30+'T00:00:00'),
     sb.from('reports').select('author_id,created_at').gte('created_at',d30+'T00:00:00'),
     sb.from('profiles').select('id,workspace')
@@ -23438,10 +23502,10 @@ function osBackupRun(kind){
   var t=osTodayStr();
   Promise.all([
     sb.from('profiles').select('id,name,role,active'),
-    sb.from('clients').select('id,advisor_id,name_masked,created_at'),
+    arAll(sb,'clients','id,advisor_id,name_masked,created_at',['-created_at','id']),
     sb.from('saved_reports').select('id,advisor_id,client_id,kind,title,created_at'),
     sb.from('reports').select('id,author_id,author_name,kind,title,body,created_at'),
-    sb.from('attendance').select('member_id,att_date'),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id']),
     sb.from('teams').select('id,name,leader_id'),
     sb.from('team_members').select('team_id,member_id')
     /* ai_dept_reports · ai_ideas 는 2026-08-20 에 화면을 지우면서 백업에서도 뺐다.
@@ -25678,6 +25742,7 @@ function acCrmLoad(){
   if(AC.loading)return; AC.loading=true;
   var from=acStart()||osTodayStr();
   Promise.all([
+    /* 「쪽나누기OK」 — 한 사람의 며칠치다. 하루에 한 줄이라 안 넘친다. */
     sb.from('attendance').select('att_date').eq('member_id',uid).gte('att_date',from),
     sb.from('clients').select('id,created_at').eq('advisor_id',uid),
     sb.from('saved_reports').select('id,kind,created_at').eq('advisor_id',uid),
@@ -29000,8 +29065,9 @@ function ckCrmLoad(){
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
   Promise.all([
     q(sb.from('profiles').select('id,name,active,workspace').order('name')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00'))
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],
+          function(x){return x.gte('call_at',d7+'T00:00:00');},4000)
   ]).then(function(r){
     CKC.busy=false;CKC.loaded=true;
     if(r[1].error||r[2].error){
@@ -29140,10 +29206,10 @@ function txLoad(){
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
     q(orgSelect(sb)),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d56)),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d56+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d56+'T00:00:00')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d56);}),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],function(x){return x.gte('call_at',d56+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],function(x){return x.gte('created_at',d56+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,kind,created_at').neq('kind','ai_report').gte('created_at',d56+'T00:00:00')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d56)),
     q(sb.from('suggestions').select('id,member_id,title,status,created_at').order('created_at',{ascending:false}).limit(200))
@@ -29428,9 +29494,9 @@ function coLoad(){
     q(sb.from('profiles').select('id,name,role,active,workspace,plan').order('name')),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d13)),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d13+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d13);}),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],function(x){return x.gte('call_at',d13+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d13)),
     q(sb.from('coach_logs').select('id,member_id,coach_id,coach_date,strength,weak,todo,recheck_date,note')
        .order('coach_date',{ascending:false}).limit(300)),
@@ -29836,9 +29902,10 @@ function mcLoad(){
        .eq('member_id',me).order('coach_date',{ascending:false}).limit(30)),
     q(sb.from('coach_notes').select('id,log_id,member_id,body,share,created_at')
        .eq('member_id',me).order('created_at',{ascending:false}).limit(60)),
-    q(sb.from('attendance').select('member_id,att_date').eq('member_id',me).gte('att_date',d13)),
-    q(sb.from('calls').select('created_by,call_at,result').eq('created_by',me).gte('call_at',d13+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to').eq('assigned_to',me)),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.eq('member_id',me).gte('att_date',d13);}),
+    arAll(sb,'calls','created_by,call_at,result',['-call_at','created_by'],
+          function(x){return x.eq('created_by',me).gte('call_at',d13+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id',function(x){return x.eq('assigned_to',me);}),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').eq('member_id',me).gte('check_date',d13))
   ]).then(function(r){
     MC.busy=false;MC.loaded=true;
@@ -33861,12 +33928,14 @@ function ctLoad(){
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace').order('name')),
     q(sb.from('daily_checks').select('member_id,check_date,scope,items').gte('check_date',d7)),
-    q(sb.from('attendance').select('member_id,att_date').gte('att_date',d7)),
+    arAll(sb,'attendance','member_id,att_date',['-att_date','member_id'],function(x){return x.gte('att_date',d7);}),
     q(sb.from('teams').select('id,name,leader_id')),
     q(sb.from('team_members').select('team_id,member_id')),
-    q(sb.from('calls').select('db_id,created_by,call_at,result').gte('call_at',d7+'T00:00:00')),
-    q(sb.from('dbs').select('id,assigned_to')),
-    q(sb.from('clients').select('advisor_id,created_at').gte('created_at',d7+'T00:00:00')),
+    arAll(sb,'calls','db_id,created_by,call_at,result',['-call_at','db_id'],
+          function(x){return x.gte('call_at',d7+'T00:00:00');},4000),
+    arAll(sb,'dbs','id,assigned_to','id'),
+    arAll(sb,'clients','advisor_id,created_at',['-created_at','advisor_id'],
+          function(x){return x.gte('created_at',d7+'T00:00:00');}),
     q(sb.from('saved_reports').select('advisor_id,created_at').neq('kind','ai_report').gte('created_at',w+'T00:00:00'))
   ]).then(function(r){
     CT.warn=[];
@@ -49151,9 +49220,21 @@ function schLoad(){
   var t=schToday(),w7=schDaysAgo(6),w30=schDaysAgo(29);
   Promise.all([
     sb.from('profiles').select('id,name,role,active,status').order('name'),
-    sb.from('attendance').select('member_id,att_date,first_seen,last_seen').gte('att_date',w30),
+    /* last_seen 칸은 <b>준비 SQL 을 돌린 서버에만</b> 있다. 없는 칸을 이름으로
+       집어서 부르면 서버가 <b>표를 통째로 거절해서</b> 출근 칸이 빈 채로
+       선다 — 실제로 그렇게 서 있었다. 한 번 거절당하면 그 칸을 빼고 다시
+       부른다. 마지막 접속만 못 볼 뿐 출근은 그대로 보인다 (1번).
+       읽는 쪽(schRender)은 이미 last_seen 이 없으면 first_seen 을 쓴다. */
+    arAll(sb,'attendance','member_id,att_date,first_seen,last_seen',['-att_date','member_id'],
+          function(x){return x.gte('att_date',w30);}).then(function(a){
+      if(!a||!a.error)return a;
+      if(!/column|42703|does not exist|schema cache/i.test(''+((a.error||{}).message||'')))return a;
+      SCH.noLastSeen=true;
+      return arAll(sb,'attendance','member_id,att_date,first_seen',['-att_date','member_id'],
+                   function(x){return x.gte('att_date',w30);});
+    }),
     sb.from('saved_reports').select('advisor_id,kind,title,created_at').neq('kind','ai_report').gte('created_at',w30+'T00:00:00'),
-    sb.from('clients').select('id,advisor_id,created_at').gte('created_at',w30+'T00:00:00'),
+    arAll(sb,'clients','id,advisor_id,created_at',['-created_at','id'],function(x){return x.gte('created_at',w30+'T00:00:00');}),
     sb.from('ai_usage').select('member_id,usage_date,cnt').gte('usage_date',w30),
     sb.from('reports').select('id,author_id,author_name,kind,title,created_at,read_at').order('created_at',{ascending:false}).limit(100),
     sb.from('teams').select('id,name,color,leader_id'),
@@ -49428,7 +49509,7 @@ function osPickClient(cb){
       close();cb(c.id,c.name_masked||name);
     });
   };
-  sb.from('clients').select('id,name_masked').order('created_at',{ascending:false}).then(function(r){
+  arAll(sb,'clients','id,name_masked',['-created_at','id']).then(function(r){
     var host=document.getElementById('osCliPickList');if(!host)return;
     var rows=(r&&r.data)||[];
     host.innerHTML=rows.length?rows.map(function(c){return '<button class="osCliPickRow" data-id="'+c.id+'" data-nm="'+osEsc(c.name_masked||'')+'" style="display:block;width:100%;text-align:left;border:1px solid #EEF2F7;background:#fff;border-radius:10px;padding:10px 12px;margin:4px 0;font-size:13.5px;font-weight:700;color:#0F172A;cursor:pointer">'+osEsc(c.name_masked||'(이름 없음)')+'</button>';}).join(''):'<div style="padding:12px;color:#94A3B8;font-size:12.5px">등록된 고객이 없습니다. 아래에서 새 고객을 만들어 바로 저장하세요.</div>';
@@ -50125,8 +50206,8 @@ function ccLoadCalls(){
     ccAfter();
   };
   Promise.all([
-    q(sb.from('dbs').select('id,customer_name')),
-    q(sb.from('calls').select('db_id,call_at').order('call_at',{ascending:false}).limit(4000))
+    arAll(sb,'dbs','id,customer_name','id'),
+    arAll(sb,'calls','db_id,call_at',['-call_at','db_id'],null,4000)
   ]).then(function(r){
     if(r[0].error||r[1].error){fail();return;}
     CC.busy=false;CC.loaded=true;
@@ -50726,6 +50807,7 @@ function cmBaseLoad(id,then){
   if(CM_BASE[id]){then(CM_BASE[id]);return;}
   var sb=(typeof osClient==='function')?osClient():null;
   if(!sb){then(null);return;}
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 (.single) */
   sb.from('clients').select('birth_year,gender,monthly_income,monthly_fixed_expense')
     .eq('id',id).single().then(function(r){
       var d=(r&&!r.error&&r.data)||null;
@@ -51990,12 +52072,12 @@ function osLoadClients(){
     for(i=0;i<rows.length;i++)CM.who[rows[i].id]=rows[i].name||'';
     if(OSC.list&&OSC.list.length)osRenderList();
   },function(){});
-  sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at,phone')
-    .order('created_at',{ascending:false}).then(function(r){
+  arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at,phone',
+        ['-created_at','id']).then(function(r){
     if(!r.error){done(r.data);return;}
     /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
-    sb.from('clients').select('id,advisor_id,name_masked,consent_status,created_at')
-      .order('created_at',{ascending:false}).then(function(r2){
+    arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at',
+          ['-created_at','id']).then(function(r2){
       if(r2.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r2.error.message)+'</div>');return;}
       done(r2.data);
     });
@@ -52131,8 +52213,8 @@ function osCallsLoad(){
   var sb=osClient(),host=document.getElementById('oscCalls'),c=OSC.current;
   if(!sb||!host||!c)return;
   var real=cmRealOf(c.id);
-  sb.from('dbs').select('id,customer_name,region,source,assigned_date,assigned_to')
-    .eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'').then(function(r){
+  arAll(sb,'dbs','id,customer_name,region,source,assigned_date,assigned_to','id',
+        function(x){return x.eq('assigned_to',c.advisor_id||(OS.profile&&OS.profile.id)||'');}).then(function(r){
     if(r&&r.error){host.innerHTML='<div class="osc-empty">통화 기록을 불러오지 못했습니다.</div>';return;}
     var rows=(r&&r.data)||[],hit=[],i,nm;
     for(i=0;i<rows.length;i++){
@@ -52148,6 +52230,7 @@ function osCallsLoad(){
       return;
     }
     var ids=hit.map(function(x){return x.id;});
+    /* 「쪽나누기OK」 — 그 고객의 <b>최근 60통</b>만 본다 */
     sb.from('calls').select('db_id,call_at,result,memo,appointment_at')
       .in('db_id',ids).order('call_at',{ascending:false}).limit(60).then(function(r2){
       var cs=(r2&&!r2.error&&r2.data)||[];
@@ -52649,6 +52732,7 @@ function osLoadAnalysis(){
   var sb=osClient();if(!sb||!OSC.current)return;
   var cid=OSC.current.id;
   // 1) 고객 상황(컨텍스트)
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 */
   sb.from('clients').select('id,birth_year,gender,monthly_income,monthly_fixed_expense,affordability_limit,household_notes').eq('id',cid).then(function(cr){
     OSA.ctx=(cr.data&&cr.data[0])||{};
     // 2) 최신 분석 케이스
@@ -54308,6 +54392,7 @@ function frLoad(){
   if(FR.cid!==c.id){FR.docs=[];FR.runs={};FR.imgPages=0;FR.readAt=null;FR.readErr='';}
   FR.cid=c.id;
   frSet('<div class="osc-loading">이 고객의 계약과 담보를 불러오는 중…</div>');
+  /* 「쪽나누기OK」 — 고객 <b>한 분</b>이다 */
   sb.from('clients').select('id,birth_year,gender,monthly_income,monthly_fixed_expense,affordability_limit,household_notes').eq('id',c.id).then(function(cr){
     FR.client=(cr&&cr.data&&cr.data[0])||{};
     return sb.from('policies').select('id,insurer,product_name,monthly_premium,payment_term,coverage_term,renewable,source_document_id,policyholder,insured').eq('client_id',c.id);
