@@ -7571,23 +7571,30 @@ function arCrmDeepText(who){
    무너지는 사람은 <b>고쳐야 할 것이 완전히 다르다.</b> AI 가 그것을
    보고 말하게 단계별로 나눠서 넘긴다. */
 function arStageText(who){
-  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,appt=0;
+  var L=(AR.db||[]),i,r,c={},order=AR_STAGES,tot=0,pol=0,intro=0,done=0,appt=0;
   for(i=0;i<L.length;i++){
     r=L[i];
     if(who&&r.who!==who)continue;
     tot++;
     c[r.stage||'미접촉']=(c[r.stage||'미접촉']||0)+1;
     if(r.stage==='계약완료')pol++;
+    /* 소개를 <b>여쭐 차례</b>인 사람과 <b>이미 받은</b> 사람은 다르다 —
+       뭉치면 「소개 몇 건 받았나」 를 셀 수가 없다 (1번) */
     if(r.stage==='증권전달')intro++;
+    if(r.stage==='소개완료')done++;
     if(r.appt)appt++;
   }
   if(!tot)return '[단계] 맡은 DB 가 없습니다.\n';
   var s='[단계별 분포 — 맡은 DB '+tot+'건]\n',parts=[];
   for(i=0;i<order.length;i++)if(c[order[i]])parts.push(order[i]+' '+c[order[i]]+'건');
   s+='- '+(parts.join(' · ')||'기록 없음')+'\n';
-  s+='- 계약까지 간 사람 '+(pol+intro)+'명 (계약률 '+Math.round((pol+intro)/tot*100)+'%)\n';
+  /* 소개완료도 <b>계약이 없어진 것이 아니다</b> — 여기서 빼면 단계를 올리는
+     순간 계약률이 떨어져 보인다 (1번) */
+  var won=pol+intro+done;
+  s+='- 계약까지 간 사람 '+won+'명 (계약률 '+Math.round(won/tot*100)+'%)\n';
   if(pol)s+='- 계약은 됐는데 증권을 아직 못 보낸 사람 '+pol+'명 — 밀리면 민원이 됩니다\n';
   if(intro)s+='- 증권을 전달한 사람 '+intro+'명 — 소개를 받을 수 있는 자리입니다\n';
+  if(done)s+='- 소개까지 받은 사람 '+done+'명 — 그분들께 결과를 알려 드릴 차례입니다\n';
   s+='- 앞으로 잡혀 있는 상담 약속 '+appt+'건\n';
   return s;
 }
@@ -7912,7 +7919,7 @@ function arDbCalc(dbs,calls){
    거절한 사람이 <b>한 번도 안 건 사람</b>과 섞인다. 그래서 「부재가 몇
    명인가」 를 단계로는 셀 수가 없었다 — 통화 기록을 따로 훑어야 했다.
    이제 <b>있는 그대로</b> 둔다.                                       */
-var AR_STAGES=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달'];
+var AR_STAGES=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'];
 function arStageOf(x,res){
   var s=(''+((x&&x.stage)||'')).trim();
   if(AR_STAGES.indexOf(s)>=0)return s;
@@ -7921,7 +7928,7 @@ function arStageOf(x,res){
   if(res==='거절')return '거절';
   return '미접촉';
 }
-function arWon(r){return r&&(r.stage==='계약완료'||r.stage==='증권전달');}
+function arWon(r){return r&&(r.stage==='계약완료'||r.stage==='증권전달'||r.stage==='소개완료');}
 /* 다시 걸어야 할 사람 — 부재·거절·한 번도 안 돌린 것 중 일주일이 지난 것 */
 function arCold(who,minDays){
   var l=AR.db||[],out=[],i,r;
@@ -8469,16 +8476,25 @@ function arTk(){return AR.tk||'all';}
    있는 파일이라 거기에도 같은 규칙이 있고, check-dbsort 가 <b>두 곳이
    한 칸도 안 다른지</b> 실제로 세워 보고 견줍니다.                    */
 function arSrcKey(s){ return String(s==null?'':s).replace(/\s+/g,''); }
+/* 글자는 <b>한국어 가나다</b>로 견준다. 코드값으로 견주면 영문이 한글보다
+   앞에 서서 「DB 12 인터넷매니저」·「NS홈쇼핑 화재보험」이 맨 위에 섰다.
+   가나다로 보면 한글이 먼저 서고 영문은 뒤로 간다 — 사람이 찾는 차례다.
+   ICU 가 없는 자리에서도 안 죽게 되돌아갈 길을 둔다. */
+function arSrcTxt(a,b){
+  try{ return String(a).localeCompare(String(b),'ko'); }
+  catch(e){ return a<b?-1:(a>b?1:0); }
+}
 function arSrcCmp(a,b){
   var x=arSrcKey(a).match(/(\d+|\D+)/g)||[], y=arSrcKey(b).match(/(\d+|\D+)/g)||[],
       n=Math.min(x.length,y.length),i,p,r,pn,rn,d;
   for(i=0;i<n;i++){
     p=x[i]; r=y[i]; pn=/^\d/.test(p); rn=/^\d/.test(r);
+    /* 숫자끼리는 <b>숫자로</b> — 가나다로만 보면 10DB 가 1DB 보다 앞에 선다 */
     if(pn&&rn){ d=(+p)-(+r); if(d)return d; }
-    else if(p!==r) return p<r?-1:1;
+    else if(p!==r){ d=arSrcTxt(p,r); if(d)return d; }
   }
   if(x.length!==y.length)return x.length-y.length;
-  return (a<b)?-1:((a>b)?1:0);      /* 띄어쓰기만 다른 것은 <b>글자 그대로</b> */
+  return arSrcTxt(a,b);             /* 띄어쓰기만 다른 것은 <b>글자 그대로</b> */
 }
 function arSrcSort(L){ return (L||[]).slice().sort(arSrcCmp); }
 /* DB 종류로 좁혀 보기 — CRM 에서 대표가 정한 종류가 그대로 넘어온다 */
@@ -8500,6 +8516,9 @@ function arTodoOf(x){
     ? '증권을 막 전달했습니다. 지금 소개를 여쭙는 것이 가장 자연스럽습니다'
     : (x.d<=14?'전달한 지 '+x.d+'일. 잘 받으셨는지 확인하고 소개를 여쭙습니다'
               :'보름째입니다. 청구 방법을 한 번 더 알려 드리고 가족 보장을 엽니다');
+  if(k==='소개완료')return (x.d<=30)
+    ? '소개를 받으셨습니다. 그분을 만나고 나면 <b>결과를 알려 드리는 것</b>이 다음 소개를 부릅니다'
+    : '소개해 주신 지 '+x.d+'일. 어떻게 됐는지 한 번 알려 드리고 안부를 여쭙습니다';
   if(k==='부재')return (x.d>=30)?'마지막으로 한 번 — 안 되면 정리합니다'
     :(x.d>=14?'문자 먼저 남기고 그다음에 겁니다':'다른 시간대로 다시 겁니다');
   if(k==='거절')return '팔지 않습니다. 소식 하나만 문자로 보냅니다';
@@ -8546,7 +8565,9 @@ function arTouch(who){
     /* 언제부터 센 날인가 — 계약·증권은 <b>그날부터</b> 센다 */
     var d=r.days;
     if(st==='계약완료'&&r.cAt)d=arDaysAgo(r.cAt);
-    if(st==='증권전달'&&r.pAt)d=arDaysAgo(r.pAt);
+    /* 소개완료도 마지막으로 뵌 날이 <b>증권 전달일</b>이다. 배정일부터 세면
+       반년 전에 배정된 분이 단계를 올리는 그날 바로 「30일 지났다」로 뜬다 */
+    if((st==='증권전달'||st==='소개완료')&&r.pAt)d=arDaysAgo(r.pAt);
     if(!tdoDue(st,d))continue;
     /* 오늘 약속이 잡혀 있으면 시간까지 들고 올라간다 */
     var ap=(r.appt&&(''+r.appt).slice(0,10)>=t)
@@ -8651,7 +8672,7 @@ function arTkCount(who){
    뽑습니다. 그래서 여기에는 비포&애프터를 적습니다 — 없는 화면 id 를 적어
    두면 단추가 아예 안 서서, 사장님은 「왜 안 뜨지」 를 모르십니다.
 
-   나머지 여섯(부재·TA·CS·증권전달·생일·기고객)은 <b>새 도구를 지어내지
+   나머지 일곱(부재·TA·CS·증권전달·소개완료·생일·기고객)은 <b>새 도구를 지어내지
    않고</b>, 위에서 사장님이 이미 고르신 것 중 같은 성격의 것을 씁니다 —
    전화로 거는 자리는 AI 상담 어시스턴트(TA 스크립트가 그 안에 있습니다),
    계약 직전은 비포&애프터, 연락할 구실이 필요한 자리는 뉴스. 화면(설정)에서
@@ -8683,27 +8704,34 @@ var TDO={
          tools:['pdel','news_live'],
          ch:'전화', aim:'잘 받으셨는지 확인하고 <b>소개 한 분</b>을 여쭙는다',
          way:'보험 이야기를 더 하지 않는다. 고마움과 청구 방법, 그리고 가족'},
- 'TA'  :{t:'TA',      c:'amb', ord:5, rule:'after',  wait:3,  src:'db',  go:'crm',
+ /* <b>소개완료</b> — 증권을 전해 드리고 소개까지 받은 자리다. 여기서 끝이
+    아니다. 소개해 주신 분이 제일 궁금한 것은 <b>그분이 잘 됐는지</b>다.
+    결과를 알려 드리면 다음 소개가 온다 — 안 알려 드리면 거기서 끊긴다. */
+ '소개완료':{t:'소개완료', c:'blu', ord:5, rule:'after', wait:30, src:'db', go:'crm',
+         tools:['clients','news_live'],
+         ch:'전화', aim:'소개해 주신 분께 <b>어떻게 됐는지</b> 알려 드린다',
+         way:'소개받은 분 이야기를 먼저 한다. 새 부탁을 오늘 붙이지 않는다'},
+ 'TA'  :{t:'TA',      c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm',
          tools:['cs_assist','sangdam'],
          ch:'전화', aim:'<b>만날 날짜</b>를 잡는다',
          way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다'},
- '부재' :{t:'부재',    c:'amb', ord:6, rule:'after',  wait:3,  src:'db',  go:'crm',
+ '부재' :{t:'부재',    c:'amb', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm',
          tools:['cs_assist'],
          ch:'전화', aim:'<b>한 번은 받으시게</b> 한다',
          way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄'},
- '미접촉':{t:'미접촉',  c:'grn', ord:7, rule:'after',  wait:3,  src:'db',  go:'crm',
+ '미접촉':{t:'미접촉',  c:'grn', ord:8, rule:'after',  wait:3,  src:'db',  go:'crm',
          tools:['biz_news','cs_assist'],
          ch:'전화', aim:'<b>첫 통화</b> — 30초 안에 약속만',
          way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만'},
- '거절' :{t:'거절',    c:'red', ord:8, rule:'after',  wait:14, src:'db',  go:'crm',
+ '거절' :{t:'거절',    c:'red', ord:9, rule:'after',  wait:14, src:'db',  go:'crm',
          tools:['mikki_talk','news_live'],
          ch:'문자', aim:'<b>문을 닫지 않게</b> 한다',
          way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다'},
- '생일' :{t:'생일',    c:'amb', ord:9, rule:'within', wait:7,  src:'cli', go:'clients',
+ '생일' :{t:'생일',    c:'amb', ord:10, rule:'within', wait:7,  src:'cli', go:'clients',
          tools:['news_live'],
          ch:'문자', aim:'<b>축하만</b> 전한다',
          way:'계약 이야기를 오늘 붙이지 않는다. 그것이 다음 자리를 만든다'},
- '기고객':{t:'기고객',  c:'red', ord:10, rule:'after', wait:30, src:'cli', go:'clients',
+ '기고객':{t:'기고객',  c:'red', ord:11, rule:'after', wait:30, src:'cli', go:'clients',
          tools:['news_live','sangdam'],
          ch:'전화', aim:'<b>안부</b>를 묻고 다음에 할 일을 적어 둔다',
          way:'오래 못 뵌 것을 먼저 말한다. 용건부터 꺼내면 그것이 용건이 된다'}
@@ -10404,6 +10432,11 @@ function pfNextList(who){
       var pd=r.pAt?arDaysAgo(r.pAt):9999;
       if(pd<=45)out.push({k:'intro',nm:r.name,who:r.who,src:r.src,when:r.pAt||'',
                         why:'소개를 여쭙고 가족 보장을 엽니다'});
+      continue;
+    }
+    if(r.stage==='소개완료'){
+      out.push({k:'introback',nm:r.name,who:r.who,src:r.src,when:r.pAt||'',
+                why:'소개해 주신 분께 어떻게 됐는지 알려 드립니다'});
       continue;
     }
     if(r.res==='상담'){out.push({k:'warm',nm:r.name,who:r.who,src:r.src,when:r.last||'',
@@ -14656,7 +14689,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-16 18:50';
+var APP_BUILD='2026-09-16 21:30';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -31891,6 +31924,13 @@ var HX_SQL={
   ");",
   "/* 최근 접속시각(재실행 안전) — 있으면 건너뜀 */",
   "alter table public.attendance add column if not exists last_seen timestamptz;",
+  "",
+  "/* ── 터치 횟수를 손으로 적는 칸 (재실행 안전) ──────────────────",
+  "   여태 터치 횟수는 통화 기록 건수를 그대로 썼다. 그런데 문자·카톡·",
+  "   만남은 통화 기록이 안 남아서, 다섯 번 손댔는데 두 번이라고 나왔다.",
+  "   적어 두면 그 수를 쓰고, 비워 두면 예전처럼 통화 건수를 센다.",
+  "   0 과 「안 적음」은 다르다 — 0 은 「아직 한 번도 안 손댔다」 이다. */",
+  "alter table public.dbs add column if not exists touch_count integer;",
   "alter table public.attendance enable row level security;",
   "",
   "drop policy if exists attendance_select on public.attendance;",

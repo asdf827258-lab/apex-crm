@@ -110,58 +110,63 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
   const V=await page.evaluate(seed=>{
     (0,eval)(seed);
     const L=arSrcSort(['보장분석10DB','보장분석2DB','일반','보장분석 2DB','보장분석1DB']);
-    /* TFA 「오늘 손댈 사람」 의 종류 칩이 실제로 그 차례로 서는가 */
-    AR.loaded=true; AR.busy=false; AR.cliRows=[];
-    AR.db=['보장분석10DB','보장분석2DB','보장분석1DB','일반'].map((sv,i)=>({
+    /* TFA 「오늘 손댈 사람」 칸을 <b>실제로</b> 열고, 거기 선 종류 단추를 읽는다.
+
+       ※ <b>CI 에만 네트워크가 있습니다.</b> 그래서 페이지가 뜨자마자 나간
+         진짜 요청이 <b>나중에</b> 돌아와 AR.db 를 빈 것으로 덮습니다. 한 번
+         심어 두고 기다리기만 하면, 기다리는 사이에 견본이 날아가 칩이
+         0개가 됩니다 — <b>CI 에서만</b> 빨간불이 나는 헛알람입니다 (8번).
+         arLoad 를 세워 두는 것만으로는 <b>이미 날아간 요청</b>을 못 막습니다.
+
+         그래서 <b>틱마다 다시 심고 다시 그립니다.</b> 늦게 온 응답이 덮어도
+         다음 틱에 되돌아옵니다. 읽는 것도 <b>같은 자리</b>에서 합니다 —
+         읽으러 가는 사이에 덮일 틈을 안 줍니다. */
+    const rows=()=>['보장분석10DB','보장분석2DB','보장분석1DB','일반'].map((sv,i)=>({
       id:'s'+i,who:'me',name:'홍길동',region:'광주',src:sv,stage:'부재',
       appt:'',days:9,n:1,cAt:'',pAt:''}));
-    (function(seeded){ try{ Object.defineProperty(AR,'db',
-      {get:function(){return seeded;},set:function(){},configurable:true}); }catch(e){} })(AR.db);
-    /* TFA 「오늘 손댈 사람」 칸을 <b>실제로</b> 연다 — 거기에 종류 단추가 선다.
-       ※ arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
-         돌아오면 AR.db 를 빈 것으로 덮어 <b>심어 둔 견본이 날아간다.</b>
-         그러면 칩이 0개가 되어 <b>CI 에서만</b> 빨간불이 난다 — 헛알람이다 (8번).
-       ※ 세워 두는 것만으로는 모자랐다. 세우기 <b>전에 이미 나간</b> 요청은
-         못 세운다 — 그것이 늦게 돌아오면 그때 덮는다. 로컬은 곧바로 실패해
-         2.4초를 기다리는 동안 끝나지만, CI 는 진짜로 다녀오느라 늦는다.
-         그래서 견본을 <b>덮을 수 없게</b> 박아 둔다 — 언제 돌아오든 안 날아간다. */
     window.arLoad=function(){};
+    AR.loaded=true; AR.busy=false; AR.cliRows=[]; AR.db=rows();
     AR.cat='touch'; AR.tkAll=false; AR.tks=''; AR.tk='all';
     try{ localStorage.setItem('apex_ar_cat','touch'); }catch(e){}
     try{ go('airep'); }catch(e){}
-    return {sorted:L};
+    const read=()=>[].slice.call(document.querySelectorAll('#dynPane .ar-fsrc .ar-fc'))
+      .map(e=>e.textContent.replace(/\d+$/,'').trim()).filter(x=>x&&!/종류 전체/.test(x));
+    /* <b>끝내 안 서면 무엇 때문인지 적는다.</b> 「0개」 만 적으면 다음
+       사람이 또 처음부터 찾는다 — 실제로 두 번 그랬다 (8번). */
+    const why=()=>{
+      const p=document.getElementById('dynPane')||{};
+      let touch=-1,src='?';
+      try{ touch=arTouch('').length; src=JSON.stringify(Object.keys(arSrcCount(''))); }
+      catch(e){ src='터짐:'+e.message; }
+      let wait='?'; try{ wait=String(tdoWait('부재')); }catch(e){}
+      return ' ← AR.db '+((AR&&AR.db&&AR.db.length)||0)+'줄 · arTouch '+touch+'명 · 종류 '+src+
+             ' · 부재기준 '+wait+'일 · AR.cat '+(AR&&AR.cat)+
+             ' · 판 '+((p.innerHTML||'').length)+'자 · .ar-fs '+
+             document.querySelectorAll('#dynPane .ar-fs').length+
+             ' · OS.profile '+(!!(window.OS&&OS.profile))+
+             ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80);
+    };
+    return new Promise(done=>{
+      let n=0;
+      (function tick(){
+        AR.loaded=true; AR.busy=false; AR.db=rows();
+        try{ arPaint(); }catch(e){}
+        const c=read();
+        if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:c.length>=4?'':why()});
+        setTimeout(tick,120);
+      })();
+    });
   },`OS.session={user:{id:'me'}};
      OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
      window.osLoadProfile=function(){};window.osProfileApply=function(){};
      window.osShowLoginGate=function(){};window.toast=function(){};`);
   is(V.sorted.join(' · ')==='보장분석1DB · 보장분석 2DB · 보장분석2DB · 보장분석10DB · 일반',
      '앱 안에서 세워 보니 <b>차례대로</b> — '+V.sorted.join(' · '));
-  /* <b>시간을 세지 않고</b> 칩이 설 때까지 기다린다 */
-  await page.waitForFunction(
-    ()=>document.querySelectorAll('#dynPane .ar-fsrc .ar-fc').length>1,
-    {timeout:9000}).catch(()=>{});
-  const chips=await page.evaluate(()=>
-    [].slice.call(document.querySelectorAll('#dynPane .ar-fsrc .ar-fc'))
-      .map(e=>e.textContent.replace(/\d+$/,'').trim()).filter(x=>x&&!/종류 전체/.test(x)));
+  const chips=V.chips||[];
   /* <b>칩이 없으면 통과시키지 않는다.</b> 「칩이 없는 판이라 통과」 는
-     아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번).
-     그리고 <b>안 섰으면 무엇 때문인지 적는다.</b> 「0개」 만 적으면
-     다음 사람이 또 처음부터 찾는다 — 실제로 두 번 그랬다. */
-  const why = chips.length>=4 ? '' : await page.evaluate(()=>{
-    const p=document.getElementById('dynPane')||{};
-    const n=(s)=>document.querySelectorAll(s).length;
-    let touch=-1,src='?';
-    try{ const l=arTouch(''); touch=l.length;
-         src=JSON.stringify(Object.keys(arSrcCount(''))); }catch(e){ src='터짐:'+e.message; }
-    let wait='?'; try{ wait=String(tdoWait('부재')); }catch(e){}
-    return ' ← AR.db '+((AR&&AR.db&&AR.db.length)||0)+'줄 · arTouch '+touch+'명 · 종류 '+src+
-           ' · 부재기준 '+wait+'일 · AR.cat '+(AR&&AR.cat)+
-           ' · 판 '+((p.innerHTML||'').length)+'자 · .ar-fs '+n('#dynPane .ar-fs')+
-           ' · OS.profile '+(!!(window.OS&&OS.profile))+
-           ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80);
-  }).catch(e=>' ← 물어보지도 못했다: '+e.message);
+     아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번). */
   is(chips.length>=4, 'TFA 에 <b>종류 단추가 선다</b> — '+chips.length+'개'+
-     (chips.length?(' ('+chips.join(' · ')+')'):why));
+     (chips.length?(' ('+chips.join(' · ')+')'):(V.why||'')));
   is(chips.length>=4&&JSON.stringify(chips)===JSON.stringify(chips.slice().sort(A.cmp)),
      '그 단추들이 <b>차례대로</b> 선다 — '+chips.join(' · '));
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));

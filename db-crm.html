@@ -49,6 +49,25 @@
     .section-head h3{margin:0;color:var(--navy);font-size:18px}.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{width:auto;min-width:145px}
     .findn{font-size:12px;font-weight:800;color:#4e5968;margin:-6px 0 12px 2px}
+    /* 단계 길 — 폰에서는 옆으로 밀어 봅니다. 칸은 손가락으로 누를 만한 크기(44px) */
+    .sg-rail{margin:0 0 13px}
+    .sg-line{display:flex;align-items:stretch;gap:3px;overflow-x:auto;padding:3px 1px 7px;-webkit-overflow-scrolling:touch}
+    .sg-step{flex:0 0 auto;min-width:76px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+      padding:7px 10px;border:1px solid var(--line);border-radius:13px;background:#fff;cursor:pointer;font-family:inherit;line-height:1.25}
+    .sg-step b{font-size:12px;font-weight:800;color:#4e5968;white-space:nowrap}
+    .sg-step i{font-style:normal;font-size:17px;font-weight:900;color:var(--navy)}
+    .sg-step.green{background:var(--greenbg)}.sg-step.red{background:var(--redbg)}
+    .sg-step.yellow{background:var(--yellowbg)}.sg-step.blue{background:#e8f3ff}.sg-step.gray{background:#eef1f4}
+    .sg-step.zero{opacity:.42}
+    .sg-step.on{border-color:var(--blue);box-shadow:0 0 0 2px rgba(49,130,246,.22)}
+    .sg-step.on b,.sg-step.on i{color:var(--blue2)}
+    .sg-ar{flex:0 0 auto;align-self:center;color:#c3cad3;font-size:15px;font-weight:900}
+    .sg-warn{display:block;width:100%;margin-top:2px;padding:10px 13px;border:1px solid #FCA5A5;border-radius:12px;
+      background:#FEF2F2;color:#B91C1C;font-weight:800;font-size:13px;font-family:inherit;text-align:left;cursor:pointer}
+    .sg-warn.on{box-shadow:0 0 0 2px rgba(220,38,38,.2)}
+    .sg-up{margin-top:4px;padding:4px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;
+      font-family:inherit;font-size:11px;font-weight:800;color:#3182f6;cursor:pointer;white-space:nowrap}
+    .sg-up:hover{background:#f0f7ff;border-color:#bcd8fb}
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
     th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:12px;text-align:left;white-space:nowrap}
     td{padding:12px;border-bottom:1px solid #edf0f2;font-size:13px;vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
@@ -196,6 +215,10 @@
     <div class="content">
       <section class="page active" id="page-dashboard">
         <div class="hero"><div><h2 id="dashboardTitle">배정 DB 현황</h2><p>로그인한 계정 권한에 맞는 데이터만 표시됩니다.</p></div></div>
+        <div class="card section" style="margin-bottom:18px">
+          <div class="section-head"><div><h3>단계 — 지금 어디까지 왔나</h3><p>칸을 누르면 그 단계만 모아 봅니다</p></div></div>
+          <div id="sgDash" class="sg-rail"></div>
+        </div>
         <div class="grid kpis">
           <div class="card kpi"><div class="label">총 배정 DB</div><div class="value" id="kTotal">0</div><div class="sub">조회 가능한 전체 DB</div></div>
           <div class="card kpi"><div class="label">TA 완료</div><div class="value" id="kDone">0</div><div class="sub" id="kDoneRate">진행률 0%</div></div>
@@ -216,7 +239,11 @@
       <section class="page" id="page-db">
         <div class="hero"><div><h2>DB 관리</h2><p id="dbScopeText">담당자별로 배정된 고객을 관리합니다.</p></div></div>
         <div class="card section">
-          <div class="toolbar"><input id="search" type="search" autocomplete="off" placeholder="찾기 — 이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모" oninput="renderDb()" style="min-width:280px;flex:1"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option><option value="__nopol__">증권 미전달만</option></select></div>
+          <div class="toolbar"><input id="search" type="search" autocomplete="off" placeholder="찾기 — 이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모" oninput="renderDb()" style="min-width:280px;flex:1"><select id="ownerFilter" onchange="renderDb()"><option value="">전체 담당자</option></select><select id="srcFilter" onchange="renderDb()"><option value="">전체 종류</option></select><select id="resultFilter" onchange="renderDb()"><option value="">전체 결과</option><option>미진행</option><option>부재</option><option>거절</option><option>상담</option></select><!-- 단계 목록은 STAGES 한 곳에서 fillStages() 가 채운다 (5번).
+           여기에 또 적어 두면 두 벌이 되어, 예전처럼 부재·거절이 빠진 채로
+           남는다 — 그때 그 고객들의 단계가 저장하면서 지워졌다. -->
+      <select id="stageFilter" onchange="renderDb()"><option value="">전체 단계</option></select></div>
+          <div id="sgRail" class="sg-rail"></div>
           <div id="dbFindN" class="findn"></div><div class="bulkbar" id="bulkBar"><span id="bulkCnt">0건 선택</span><select id="bulkOwner"></select><button class="btn btn-primary btn-sm" onclick="bulkAssign()">선택 담당자 일괄 변경</button><button class="btn btn-light btn-sm" onclick="bulkClear()">선택 해제</button></div>
           <div class="table-wrap"><table><thead><tr><th id="bulkTh" class="hidden"></th><th>배정일</th><th>고객</th><th>담당자</th><th>종류</th><th>지역</th><th>결과</th><th>단계</th><th>접촉</th><th>상담 약속</th><th>녹음</th><th>단톡 문구</th><th>관리</th></tr></thead><tbody id="dbBody"></tbody></table></div>
         </div>
@@ -306,7 +333,12 @@
       </div></div>
     <div class="field"><label>지역</label><input id="region" placeholder="순천"></div>
     <div class="field"><label>DB 보고명</label><input id="reportName" value="보장분석 3DB"></div>
-    <div class="field"><label>단계</label><select id="dbStage" onchange="stagePick()"><option value="">자동 (통화 결과로 짐작)</option><option>미접촉</option><option>TA</option><option>AP</option><option>PC</option><option>CS</option><option>계약완료</option><option>증권전달</option></select></div>
+    <div class="field"><label>단계</label><select id="dbStage" onchange="stagePick()"><option value="">자동 (통화 결과로 짐작)</option></select></div>
+    <!-- 사장님 말씀 — 「터치 횟수 · 별도 칸을 만들고 표기는 그대로」.
+         비워 두면 예전처럼 통화 기록 건수를 셉니다. 0 을 적으시면
+         「아직 한 번도 안 손댔다」는 뜻이라 0 으로 섭니다 (1번). -->
+    <div class="field"><label>터치 횟수 <small style="font-weight:600;color:#94A3B8">비우면 통화 기록으로 셈</small></label>
+      <input type="number" id="dbTouch" min="0" step="1" placeholder="비우면 자동"></div>
     <div class="field hidden" id="wonField"><label>계약일</label><input type="date" id="contractedAt"></div>
     <div class="field hidden" id="polField"><label>증권 전달일</label><input type="date" id="policySentAt"></div>
     <div class="field hidden" id="polNoField"><label>증권번호</label><input id="policyNo" placeholder="증권에 적힌 번호"></div>
@@ -334,6 +366,14 @@
     <div class="formgrid">
     <div class="field"><label>통화일시</label><input type="datetime-local" id="callAt"></div>
     <div class="field"><label>결과</label><select id="callResult" onchange="toggleAppointment()"><option>부재</option><option>거절</option><option>상담</option></select></div>
+    <!-- 사장님 말씀 — 「고객 접촉[TA] / 수정[상담표기]에서가 다른데 … 하나로
+         합쳐달라고」. 통화 결과와 단계는 <b>다른 것</b>입니다 — 결과는 이 통화
+         하나가 어떻게 됐나, 단계는 이 고객이 <b>지금 어디까지</b> 왔나.
+         그런데 여태 두 자리에서 따로 골라야 했고, 목록도 서로 달랐습니다.
+         이제 <b>여기서 같이</b> 정합니다. 비워 두면 결과대로 따라갑니다. -->
+    <div class="field"><label>단계 <small style="font-weight:600;color:#94A3B8">비우면 결과대로</small></label>
+      <select id="callStage"><option value="">결과대로 (아래에 적힌 대로)</option></select></div>
+    <div class="field full"><div class="notice" id="callStageHint" style="margin:0"></div></div>
     <div class="field"><label>1차 콜매니저 녹음</label><select id="callIssue"><option value="false">문제 없음</option><option value="true">문제 있음</option></select></div>
     <div class="field hidden" id="appointmentField"><label>상담 약속일시</label><input type="datetime-local" id="appointmentAt"></div>
     <div class="field full"><label>메모</label><textarea id="callMemo"></textarea></div>
@@ -390,10 +430,12 @@ function lastCall(d){return getCalls(d.id)[0]} function result(d){return lastCal
    뭉개서 단계만 보면 안 받는 사람과 통화된 사람이 같은 칸에 있었다.
    app/index.html 의 AR_STAGES 와 <b>글자 하나 다르지 않아야</b> 한다 —
    두 화면이 다른 말을 하면 어느 쪽이 맞는지 알 수 없다. */
-const STAGES=["미접촉","부재","거절","TA","AP","PC","CS","계약완료","증권전달"];
-const STAGE_C={미접촉:"gray",부재:"yellow",거절:"red",TA:"yellow",AP:"blue",PC:"blue",CS:"blue",계약완료:"red",증권전달:"green"};
+const STAGES=["미접촉","부재","거절","TA","AP","PC","CS","계약완료","증권전달","소개완료"];
+const STAGE_C={미접촉:"gray",부재:"yellow",거절:"red",TA:"yellow",AP:"blue",PC:"blue",CS:"blue",계약완료:"red",증권전달:"green",소개완료:"green"};
 function stageAuto(d){
-  const r=result(d);
+  /* 통화 창은 <b>아직 저장 안 된 결과</b>를 물어본다. 그럴 때는 그 결과를
+     그대로 쓴다 — 규칙을 저쪽에 또 적지 않기 위해서다 (5번). */
+  const r=(d&&d.__result)?d.__result:result(d);
   if(r==="상담")return "AP";
   if(r==="거절")return "거절";   /* 예전에는 미접촉으로 뭉갰다 — 한 번도 안 건 사람과 섞였다 */
   if(r==="부재")return "부재";   /* 예전에는 TA 로 뭉갰다 — 통화가 된 사람과 섞였다 */
@@ -410,9 +452,21 @@ function stageBadge(d){
   const s=stageOf(d);
   return `<span class="badge ${STAGE_C[s]||"gray"}"${stageSet(d)?"":' title="아직 손으로 정하지 않아 통화 결과에서 짐작한 값입니다"'}>${s}${stageSet(d)?"":"?"}</span>`;
 }
-/* 계약까지 갔나 — 업적·보고서가 이 기준을 함께 쓴다 */
-function isWon(d){const s=stageOf(d);return s==="계약완료"||s==="증권전달"}
-/* 계약은 됐는데 증권을 아직 안 보낸 사람 — 놓치면 민원이 된다 */
+/* ── 이 단계가 <b>무엇을 들고 있나</b> — 한 곳에서만 안다 (5번) ────
+   계약일·증권 전달일·증권번호를 어느 단계가 들고 있는지가 <b>수정 창</b>과
+   <b>저장</b> 두 곳에 따로 적혀 있었다. 단계를 하나 더할 때 한쪽만 고치면,
+   그 고객을 열었을 때 칸이 안 서고 <b>그대로 저장하면 null 로 지워진다.</b>
+   부재·거절에서 단계가 지워지던 것과 같은 모양이다.                   */
+function stageNeeds(s){
+  return { won:(s==="계약완료"||s==="증권전달"||s==="소개완료"),
+           pol:(s==="증권전달"||s==="소개완료") };
+}
+/* 계약까지 갔나 — 업적·보고서가 이 기준을 함께 쓴다.
+   <b>소개완료</b>는 증권까지 전해 드리고 소개까지 받은 자리다 — 계약이
+   없어진 것이 아니므로 여기서 빠지면 업적이 줄어든다 (1번). */
+function isWon(d){const s=stageOf(d);return s==="계약완료"||s==="증권전달"||s==="소개완료"}
+/* 계약은 됐는데 증권을 아직 안 보낸 사람 — 놓치면 민원이 된다.
+   증권전달·소개완료는 이미 전해 드린 뒤라 여기 안 든다 */
 function needPolicy(d){return stageOf(d)==="계약완료"}
 /* 다음 약속 — dbs.next_appt 를 먼저 본다.
    마지막 통화에만 기대면, 약속을 잡은 뒤 부재 통화가 한 번 더 들어가는
@@ -426,11 +480,41 @@ function nextAppt(d){
 }
 function absentCount(d){return calls.filter(c=>c.db_id===d.id&&c.result==="부재").length}
 /* 접촉 횟수 — 부재만이 아니라 실제로 건 통화 전부 */
-function touchCount(d){return calls.filter(c=>c.db_id===d.id).length}
+/* ══ 터치 횟수 — <b>적어 둔 칸이 있으면 그것</b>을 쓴다 ═══════════════
+   사장님 말씀 — 「터치 횟수 - 별도 관리 현재 횟수로 체크하는데 - 별도 칸을
+   만들고 표기는 그대로 해줘」.
+
+   여태는 <b>통화 기록 건수</b>를 그대로 터치 횟수로 썼습니다. 그런데 문자로
+   찍은 것, 만나고 온 것, 카톡으로 말 붙인 것은 통화 기록이 안 남습니다 —
+   실제로 다섯 번 손댔는데 화면은 두 번이라고 말했습니다.
+
+   이제 <b>손으로 적는 칸</b>(dbs.touch_count)이 따로 있습니다. 적어 두시면
+   그 수를 쓰고, 안 적으셨으면 예전처럼 통화 건수를 셉니다.
+   <b>표기는 그대로</b>입니다 — 불 다섯 개 게이지.
+
+   ★ 0 과 <b>「안 적음」은 다릅니다</b> (1번). 0 을 적어 두셨으면 「아직 한
+     번도 안 손댔다」는 뜻이고, 안 적으셨으면 「통화 건수로 세라」는 뜻입니다.
+     그래서 null·빈칸만 「안 적음」으로 봅니다.                            */
+function touchCalls(d){return calls.filter(c=>c.db_id===d.id).length}
+function touchManual(d){
+  const v=d&&d.touch_count;
+  if(v===null||v===undefined||v==="")return null;     /* 안 적으셨다 */
+  const n=Number(v);
+  return Number.isFinite(n)&&n>=0?Math.round(n):null;
+}
+function touchCount(d){
+  const m=touchManual(d);
+  return m===null?touchCalls(d):m;
+}
 /* 접촉 5번이면 불 5개가 다 채워지는 게이지 */
 function touchDots(d){
   const n=touchCount(d), max=5, full=Math.min(n,max);
-  let h='<span class="tdots" title="접촉 '+n+'회">';
+  /* 표기는 그대로 두되, <b>어디서 온 수인지</b>는 손을 얹으면 보이게 한다 —
+     화면에 글자를 더 붙이면 사장님이 보시던 모양이 달라진다 */
+  const why=(touchManual(d)===null)
+    ? ('접촉 '+n+'회 — 통화 기록에서 셌습니다')
+    : ('접촉 '+n+'회 — 손으로 적어 두신 수입니다 (통화 기록은 '+touchCalls(d)+'회)');
+  let h='<span class="tdots" title="'+esc(why)+'">';
   for(let i=0;i<max;i++) h+='<i class="td'+(i<full?' on':'')+'"></i>';
   h+='</span><small class="tdn">'+n+'/'+max+'</small>';
   if(n>max) h+='<small class="tdover">+'+(n-max)+'</small>';
@@ -631,7 +715,7 @@ async function loadAll(){
   const sv=(cf&&!cf.error&&cf.data&&cf.data[0])?(cf.data[0].value||""):"";
   dbSources=sv.split(",").map(x=>x.trim()).filter(Boolean);
   cliKeys={};((cl&&!cl.error&&cl.data)||[]).forEach(x=>{cliKeys[(x.advisor_id||"")+"|"+(x.name_masked||"")]=1});
-  fillProfiles();fillSources();renderAll();
+  fillProfiles();fillSources();fillStages();renderAll();
   /* 홈 「고객 찾기」에서 이름을 들고 왔으면 <b>한 번만</b> 그 사람을 찾아 세운다.
      자료가 다 온 뒤라야 찾을 수 있어 여기서 한다. */
   if(!cusFindDone){
@@ -679,16 +763,25 @@ const SRC_FALLBACK=["일반","방송","보장분석","농협","소개","지인",
      check-dbsort 가 <b>실제로 세워 보고</b> 두 곳이 한 칸도 안 다른지
      견줍니다 — 갈리면 빨간불이 켜집니다 (5번). */
 function srcKeyOf(x){ return String(x==null?"":x).replace(/\s+/g,"") }
+/* 글자는 <b>한국어 가나다</b>로 견준다. 코드값으로 견주면 영문이 한글보다
+   앞에 서서 「DB 12 인터넷매니저」·「NS홈쇼핑 화재보험」이 맨 위에 섰다.
+   본체(app/index.html)의 arSrcTxt 와 <b>같은 규칙</b>이어야 한다 — 두 화면이
+   다른 차례로 세우면 어느 쪽이 맞는지 알 수 없다. */
+function srcTxt(a,b){
+  try{ return String(a).localeCompare(String(b),'ko') }
+  catch(e){ return a<b?-1:(a>b?1:0) }
+}
 function srcCmp(a,b){
   const x=srcKeyOf(a).match(/(\d+|\D+)/g)||[], y=srcKeyOf(b).match(/(\d+|\D+)/g)||[];
   const n=Math.min(x.length,y.length);
   for(let i=0;i<n;i++){
     const p=x[i], r=y[i], pn=/^\d/.test(p), rn=/^\d/.test(r);
+    /* 숫자끼리는 <b>숫자로</b> — 가나다로만 보면 10DB 가 1DB 보다 앞에 선다 */
     if(pn&&rn){ const d=(+p)-(+r); if(d)return d }
-    else if(p!==r) return p<r?-1:1;
+    else if(p!==r){ const d=srcTxt(p,r); if(d)return d }
   }
   if(x.length!==y.length)return x.length-y.length;
-  return (a<b)?-1:((a>b)?1:0);
+  return srcTxt(a,b);
 }
 function srcSort(L){ return (L||[]).slice().sort(srcCmp) }
 function srcList(){
@@ -709,6 +802,42 @@ function srcSafe(v){v=(v||"").trim();if(v&&v!==SRC_ADD)return v;
 /* 이 DB 가 이미 고객 365일에 있나 */
 function inClients(d){return !!cliKeys[(d.assigned_to||"")+"|"+crmMask((d.customer_name||"").trim())]}
 const SRC_ADD="__add__";
+/* ══ 단계 고르는 칸은 <b>STAGES 한 곳</b>에서 만든다 (5번) ═══════════
+   여태 세 곳에 따로 적혀 있었다 —
+     STAGES 배열        : 미접촉 <b>부재 거절</b> TA AP PC CS 계약완료 증권전달 (9)
+     수정 폼 #dbStage   : 미접촉 TA AP PC CS 계약완료 증권전달 (7) ← 둘이 빠짐
+     거르개 #stageFilter: 같은 7가지                              ← 역시 빠짐
+
+   그래서 <b>「부재」·「거절」 고객을 수정 창에서 열면 단계 칸이 빈 채로</b>
+   섰다. 고를 option 이 없으니 select 가 아무것도 못 고른다. 그대로 저장을
+   누르면 stage 가 <b>null 로 지워졌다.</b> 손으로 정해 둔 상태가 사라지고,
+   거르개로 그 사람들을 찾을 수도 없었다. 브라우저로 직접 확인했다.
+
+   이제 세 자리가 <b>같은 표</b>를 보고 선다. 표에 한 가지를 더하면 세 곳이
+   같이 늘어난다 — 한 곳만 고치고 넘어갈 자리가 없다.                    */
+function fillStages(){
+  const opt=x=>`<option value="${esc(x)}">${esc(x)}</option>`;
+  const sel=$("dbStage");
+  if(sel){
+    const v=sel.value;
+    sel.innerHTML='<option value="">자동 (통화 결과로 짐작)</option>'+STAGES.map(opt).join("");
+    sel.value=(STAGES.indexOf(v)>=0)?v:"";
+  }
+  const f=$("stageFilter");
+  if(f){
+    const v=f.value;
+    f.innerHTML='<option value="">전체 단계</option>'+STAGES.map(opt).join("")+
+      '<option value="__nopol__">증권 미전달만</option>';
+    f.value=(v==="__nopol__"||STAGES.indexOf(v)>=0)?v:"";
+  }
+  /* 통화 창에서도 <b>같은 표</b>로 고른다 — 여기서 또 적으면 네 벌이 된다 */
+  const c=$("callStage");
+  if(c){
+    const v=c.value;
+    c.innerHTML='<option value="">결과대로 (아래에 적힌 대로)</option>'+STAGES.map(opt).join("");
+    c.value=(STAGES.indexOf(v)>=0)?v:"";
+  }
+}
 function fillSources(){
   const list=srcList();
   const sel=$("dbSource");
@@ -792,6 +921,7 @@ function renderDashboard(){
   $("recentBody").innerHTML=dbs.slice(0,8).map(d=>{const c=lastCall(d);return `<tr><td class="name">${esc(d.customer_name)}</td><td>${esc(pname(d.assigned_to))}</td><td>${esc(d.region)}</td><td>${badge(result(d))}</td><td>${esc(pname(c?.created_by||d.created_by))}</td><td>${c?fmt(c.call_at,true):"-"}</td></tr>`}).join("")||`<tr><td colspan="6" class="empty">등록된 DB가 없습니다.</td></tr>`;
   const count={부재:done.filter(d=>result(d)==="부재").length,거절:done.filter(d=>result(d)==="거절").length,상담:consult.length};
   $("bars").innerHTML=["부재","거절","상담"].map(k=>{const pct=done.length?Math.round(count[k]/done.length*100):0;return `<div class="barrow"><strong>${k}</strong><div class="bar"><span style="width:${pct}%"></span></div><span>${count[k]}</span></div>`}).join("");
+  sgDash();
   renderDashAttendance();
 }
 /* 대시보드 하단 오늘 출근관리 — 접속(로그인) 시각 표시 (attendance 테이블 공유) */
@@ -839,6 +969,107 @@ function dbHit(d,q){
   const lq=String(q).replace(/\s/g,"").toLowerCase();
   return dbPool(d).some(v=>v&&String(v).replace(/\s/g,"").toLowerCase().includes(lq));
 }
+/* ══ 단계 길 — <b>지금 어디까지 왔나</b>를 한 줄로 (sg*) ═══════════════
+   여태 단계는 <b>목록 맨 끝 칸의 배지 하나</b>였습니다. 배정이 1,000건을
+   넘고부터는 「지금 TA 가 몇 명인가」 를 알려면 거르개를 <b>열 번</b> 바꿔
+   가며 세어야 했습니다. 세어 본 뒤 다음 사람을 보려면 다시 전체로
+   돌아가야 했습니다. 단계는 <b>일의 순서</b>인데 화면에는 순서가 없었습니다.
+
+   그래서 목록 위에 <b>열 단계를 한 줄 길</b>로 깔고, 칸마다 <b>인원</b>을
+   적습니다. 칸을 누르면 그 단계만 남습니다.
+
+   조심한 것 —
+   · 칸을 누르면 <b>거르개(#stageFilter) 를 그대로 움직입니다.</b> 여기서
+     따로 기억해 두면 거르개와 길이 서로 다른 말을 합니다 (5번).
+   · 차례도 <b>STAGES 하나</b>가 압니다. 여기서 또 늘어놓지 않습니다 —
+     단계를 더할 때 빠뜨릴 자리를 안 만듭니다.
+   · 인원은 <b>이미 받아 둔 목록</b>에서 셉니다. 서버를 다시 부르지
+     않습니다 (7번).
+   · 찾기·담당자·종류 거르개는 <b>그대로 먹인 채</b> 셉니다 — 그래야
+     「광주 + TA 몇 명」 이 보입니다. 단계만 빼고 셉니다.              */
+function sgRows(){
+  const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",
+        rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
+  return dbs.filter(d=>dbHit(d,q)&&(!owner||d.assigned_to===owner)&&
+                       (!rf||result(d)===rf)&&(!sf||srcOf(d)===sf));
+}
+/* 길 모양은 <b>한 곳</b>에서만 만든다 — 대시보드와 DB 관리가 같은 것을 쓴다 */
+function sgRailHtml(rows,cur){
+  const cnt={};rows.forEach(d=>{const k=stageOf(d);cnt[k]=(cnt[k]||0)+1});
+  const pol=rows.filter(needPolicy).length;
+  let h='<div class="sg-line">'+
+    '<button type="button" class="sg-step'+(cur===""?" on":"")+'" onclick="sgPick(\'\')">'+
+    '<b>전체</b><i>'+rows.length+'</i></button>';
+  STAGES.forEach(k=>{
+    const n=cnt[k]||0;
+    h+='<span class="sg-ar">›</span>'+
+       '<button type="button" class="sg-step '+(STAGE_C[k]||"gray")+
+       (cur===k?" on":"")+(n?"":" zero")+'" onclick="sgPick(\''+k+'\')">'+
+       '<b>'+esc(k)+'</b><i>'+n+'</i></button>';
+  });
+  h+='</div>';
+  /* 계약은 됐는데 증권이 안 나간 사람 — 밀리면 민원이 된다 */
+  if(pol)h+='<button type="button" class="sg-warn'+(cur==="__nopol__"?" on":"")+
+    '" onclick="sgPick(\'__nopol__\')">증권 미전달 '+pol+'명 — 밀리면 민원이 됩니다</button>';
+  return h;
+}
+function sgRail(){const h=$("sgRail");if(h)h.innerHTML=sgRailHtml(sgRows(),$("stageFilter")?.value||"")}
+function sgDash(){const h=$("sgDash");if(h)h.innerHTML=sgRailHtml(dbs,"")}
+/* 같은 칸을 다시 누르면 전체로 돌아간다 — 빠져나갈 길을 안 주면 갇힌다 */
+function sgPick(v){
+  const f=$("stageFilter");if(!f)return;
+  f.value=(f.value===v)?"":v;
+  /* 대시보드에서 누르셨으면 <b>DB 관리로 데려갑니다</b> — 거기서
+     goPage 가 renderAll 을 부르므로 목록도 같이 걸러집니다 */
+  if(!$("page-db")||!$("page-db").classList.contains("active")){goPage("db");return}
+  renderDb();sgDash();
+}
+/* ── 다음 단계 — <b>앞으로 나아가는 길</b> ─────────────────────────
+   처음에는 STAGES 의 <b>바로 다음 칸</b>을 다음 단계로 삼았습니다. 그랬더니
+   「미접촉 → <b>부재</b>」 가 떴습니다. 부재는 <b>나아간 것이 아닙니다</b> —
+   전화를 걸었는데 안 받으신 것입니다. 거절도 마찬가지입니다. 이 둘은
+   <b>옆길</b>이고, <b>통화 기록이 정합니다</b>(stageAuto). 그래서 여기서는
+   앞으로 가는 길만 적습니다 — 부재·거절로 <b>가는 길은 안 적습니다.</b>
+
+   부재에서 다시 통화가 되면 TA 입니다. 거절은 여기서 끝이라 다음이
+   없습니다 — <b>없는 자리를 지어내지 않습니다</b> (1번). 되살리시려면
+   통화를 남기시거나 수정 창에서 손으로 고르시면 됩니다.
+
+   STAGES 에 단계를 더하고 여기에 안 적으면 그 자리에서 단추가 조용히
+   안 섭니다 — <b>check-sgrail 이 그것을 셉니다</b> (8번).                */
+const STAGE_GO={'미접촉':'TA','부재':'TA','거절':'','TA':'AP','AP':'PC','PC':'CS',
+                'CS':'계약완료','계약완료':'증권전달','증권전달':'소개완료','소개완료':''};
+function sgNextOf(d){
+  const s=stageOf(d);
+  const to=STAGE_GO[s]||"";
+  return (STAGES.indexOf(to)>=0)?to:"";
+}
+function sgUpBtn(d){
+  if(!canEditDb(d))return "";
+  const to=sgNextOf(d);if(!to)return "";
+  return '<br><button type="button" class="sg-up" onclick="sgUp(\''+d.id+'\')">→ '+esc(to)+'</button>';
+}
+/* 목록 줄에서 <b>그 자리에서</b> 한 칸 올린다. 여태는 수정 창을 열고,
+   단계를 고르고, 저장을 눌러야 했다 — 세 번이 한 번이 된다.
+   다만 <b>날짜가 필요한 단계</b>로 올라갈 때는 수정 창을 엽니다.
+   계약일·증권 전달일을 여기서 지어내면 안 됩니다 (1번).              */
+async function sgUp(id){
+  const d=dbs.find(x=>x.id===id);if(!d)return;
+  if(!canEditDb(d)){toast("내 고객이 아니면 단계를 바꿀 수 없습니다.");return}
+  const from=stageOf(d),to=sgNextOf(d);if(!to)return;
+  const k=stageNeeds(to);
+  if(k.won||k.pol){
+    openDb(id);
+    const sel=$("dbStage");if(sel){sel.value=to;stagePick()}
+    toast("「"+to+"」 는 날짜가 필요합니다 — 확인하시고 저장해 주세요.",6000);
+    return;
+  }
+  if(!confirm(d.customer_name+" 님을 「"+from+"」 에서 「"+to+"」 로 올릴까요?"))return;
+  const {error}=await sb.from("dbs").update({stage:to}).eq("id",id);
+  if(error){wErr(error,"단계 올리기");return}
+  toast(d.customer_name+" 님 → "+to);
+  await loadAll();
+}
 function renderDb(){
   const q=($("search")?.value||"").trim(),owner=$("ownerFilter")?.value||"",rf=$("resultFilter")?.value||"",sf=$("srcFilter")?.value||"";
   const gf=$("stageFilter")?.value||"";
@@ -848,14 +1079,14 @@ function renderDb(){
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
     <td>${fmt(d.assigned_date)}</td><td class="name"><button type="button" class="cus-open" onclick="cusOpen('${d.id}')" title="고객 한 장 — 고객 365일과 같은 카드">${esc(d.customer_name)}</button><br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
+    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}${sgUpBtn(d)}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
     <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||`<tr><td colspan="13" class="empty">${q?`「${esc(q)}」 로 찾은 DB 가 없습니다.<br><small>이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모로 찾을 수 있습니다.</small>`:"조회할 DB가 없습니다."}</td></tr>`;
-  bulkBarUpd();
+  bulkBarUpd();sgRail();
 }
 /* 몇 건이 걸렸는지 그 자리에 적는다 — 걸러 놓고 말을 안 하면
    사장님은 자료가 사라진 줄 안다 */
@@ -963,7 +1194,15 @@ function openDb(id=""){
   /* 개척 DB 는 본인이 직접 넣는다. 이미 배정된 것도 내 것이면 본인이 연다. */
   if(id&&!canEditDb(d)){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(id&&!canEditDb(d)){toast("다른 팀의 DB 는 수정할 수 없습니다.");return}$("dbModalTitle").textContent=d?"DB 수정":"DB 등록";$("dbId").value=d?.id||"";$("assignedDate").value=d?.assigned_date||today();$("assignedTo").value=d?.assigned_to||(canManageTeam()?(profiles[0]?.id||""):(profile?.id||""));$("customerName").value=d?.customer_name||"";$("phone").value=d?.phone||"";fillSources();$("dbSource").value=srcOf(d||{});if(!$("dbSource").value||$("dbSource").value===SRC_ADD)$("dbSource").selectedIndex=0;SRC_LAST=$("dbSource").value;$("region").value=d?.region||"순천";$("reportName").value=d?.report_name||"보장분석 3DB";$("dbMemo").value=d?.memo||"";
+  /* 목록을 <b>먼저 채우고</b> 값을 넣는다 — 안 그러면 고를 option 이 없어
+     빈칸이 되고, 그대로 저장하면 단계가 지워진다. 실제로 부재·거절이
+     그렇게 지워지고 있었다. */
+  try{ fillStages(); }catch(e){}
   $("dbStage").value=STAGES.indexOf((d?.stage||"").trim())>=0?d.stage:"";
+  if($("dbTouch")){
+    const tv=d?d.touch_count:null;
+    $("dbTouch").value=(tv===null||tv===undefined||tv==="")?"":String(tv);
+  }
   $("contractedAt").value=(d?.contracted_at||"").slice(0,10);
   $("policySentAt").value=(d?.policy_sent_at||"").slice(0,10);
   $("policyNo").value=d?.policy_no||"";
@@ -973,7 +1212,7 @@ function openDb(id=""){
 /* 계약까지 갔을 때만 날짜·증권번호를 묻는다 — 안 그러면 칸만 늘어난다 */
 function stagePick(){
   const s=$("dbStage")?.value||"";
-  const won=(s==="계약완료"||s==="증권전달"),pol=(s==="증권전달");
+  const k=stageNeeds(s),won=k.won,pol=k.pol;
   $("wonField")?.classList.toggle("hidden",!won);
   $("polField")?.classList.toggle("hidden",!pol);
   $("polNoField")?.classList.toggle("hidden",!won);
@@ -986,10 +1225,22 @@ async function saveDb(){
   /* 단계는 고른 것만 보낸다. 「자동」이면 null 로 지워서 예전처럼 짐작하게 둔다 */
   const stg=$("dbStage")?.value||"";
   payload.stage=STAGES.indexOf(stg)>=0?stg:null;
-  payload.contracted_at=(payload.stage==="계약완료"||payload.stage==="증권전달")?($("contractedAt")?.value||null):null;
-  payload.policy_sent_at=(payload.stage==="증권전달")?($("policySentAt")?.value||null):null;
-  payload.policy_no=(payload.stage==="계약완료"||payload.stage==="증권전달")?(($("policyNo")?.value||"").trim()||null):null;
-  if(payload.stage==="증권전달"&&!payload.contracted_at){toast("증권전달이면 계약일도 적어 주세요.");return}
+  /* 터치 횟수 — <b>빈칸은 null</b>(통화 건수로 셈), 0 은 0 이다 (1번) */
+  {
+    const tv=($("dbTouch")?.value||"").trim();
+    const tn=tv===""?null:Math.max(0,Math.round(Number(tv)));
+    payload.touch_count=(tv!==""&&Number.isFinite(tn))?tn:null;
+  }
+  {
+    /* 계약일·증권일·증권번호를 <b>어느 단계에서 들고 있나</b> — 한 곳에서 정한다 (5번).
+       소개완료는 증권전달 다음 자리라 둘 다 그대로 들고 있어야 한다.
+       여기서 빠뜨리면 단계를 올리는 순간 계약일이 <b>null 로 지워진다</b>. */
+    const st=payload.stage,k=stageNeeds(st),won=k.won,pol=k.pol;
+    payload.contracted_at=won?($("contractedAt")?.value||null):null;
+    payload.policy_sent_at=pol?($("policySentAt")?.value||null):null;
+    payload.policy_no=won?(($("policyNo")?.value||"").trim()||null):null;
+    if(pol&&!payload.contracted_at){toast(st+"이면 계약일도 적어 주세요.");return}
+  }
   if(!payload.assigned_date||!payload.assigned_to||!payload.customer_name){toast("배정일·담당자·고객명을 입력해 주세요.");return}
   if(id&&!canEditDb(dbs.find(x=>x.id===id))){toast("내 고객이 아니면 수정할 수 없습니다.");return}
   if(!inMyScope(payload.assigned_to)){toast("내가 맡을 수 없는 담당자로는 배정할 수 없습니다.");return}
@@ -997,6 +1248,18 @@ async function saveDb(){
   let {error}=await put(payload);
   /* 단계 칸이 아직 없는 서버 — 단계만 빼고 저장해서 일을 막지 않는다.
      migration_41 을 안 돌렸을 뿐인데 DB 저장 자체가 막히면 안 된다. */
+  /* 터치 칸이 아직 없는 서버 — 그것만 빼고 저장해서 일을 막지 않는다 */
+  if(error&&/touch_count/i.test((error.message||"")+"")&&
+     /column|42703|does not exist|schema cache/i.test((error.message||"")+"")){
+    const p4=Object.assign({},payload); delete p4.touch_count;
+    const r4=await put(p4);
+    if(!r4.error){
+      closeModal("dbModal");await loadAll();
+      toast("DB를 저장했습니다. 터치 횟수는 아직 서버에 칸이 없어 빼고 저장했습니다 — migration_48_touch_count.sql 을 한 번 실행하세요.");
+      return;
+    }
+    error=r4.error;
+  }
   if(error&&/stage|contracted_at|policy_sent_at|policy_no/i.test((error.message||"")+"")&&
      /column|42703|does not exist|schema cache|constraint/i.test((error.message||"")+"")){
     const p3=Object.assign({},payload);
@@ -1203,10 +1466,32 @@ async function removeDb(id){
   }
   await loadAll();toast(`${nm} 을(를) 지웠습니다.`);
 }
-function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
+function openCall(id){const d=dbs.find(x=>x.id===id);$("callDbId").value=id;$("callAt").value=dtLocal();$("callResult").value="부재";$("callIssue").value="false";$("appointmentAt").value="";$("callMemo").value="";
+  /* 단계 칸은 <b>비워</b> 둔다 — 비우면 결과대로 따라간다. 지금 단계를 미리
+     넣어 두면, 결과를 바꿔도 예전 단계가 그대로 남아 안 따라간다. */
+  try{ fillStages(); if($("callStage"))$("callStage").value=""; }catch(e){}
+  try{ if($("callStage"))$("callStage").onchange=callStageHint; }catch(e){}$("callSummary").innerHTML=`<b>${esc(d.customer_name)}</b> · 담당 ${esc(pname(d.assigned_to))} · ${esc(d.region||"-")}`;toggleAppointment();renderHistory(id);$("callModal").classList.add("open")}
 function toggleAppointment(){
   try{ taPaint(); taRestore(); }catch(e){}
-$("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담")}
+  $("appointmentField").classList.toggle("hidden",$("callResult").value!=="상담");
+  callStageHint();
+}
+/* 결과를 고르면 <b>단계가 어떻게 되는지</b> 그 자리에서 말한다.
+   옮기는 규칙은 <b>stageAuto 한 곳</b>만 안다 (5번) — 여기서 또 적으면
+   화면이 말하는 것과 실제로 저장되는 것이 갈린다. */
+function callStageFromResult(r){
+  return stageAuto({ id:"__tmp__", __result:r });
+}
+function callStageHint(){
+  const box=$("callStageHint"); if(!box)return;
+  const r=$("callResult")?.value||"";
+  const pick=$("callStage")?.value||"";
+  const auto=callStageFromResult(r);
+  box.innerHTML=pick
+    ? `이 통화를 저장하면 단계가 <b>${esc(pick)}</b> 로 정해집니다 — 손으로 고르신 값입니다.`
+    : `이 통화를 저장하면 단계가 <b>${esc(auto)}</b> 가 됩니다 — 결과(<b>${esc(r||"?")}</b>)를 그대로 따릅니다. `+
+      `다르게 하시려면 위에서 고르십시오.`;
+}
 /* ── 통화 이력 — 고칠 수 있어야 한다 ────────────────────────────
    지금까지 한 번 남긴 기록은 손댈 수 없었다. 그런데 저장이 오류로
    두세 번 들어가는 일이 있고, 결과를 잘못 고른 일도 있다.
@@ -1313,10 +1598,25 @@ async function saveCall(){
   savingCall=false;
   if(btn){btn.disabled=false;btn.textContent=btn.dataset.t||"저장"}
   if(error){wErr(error,editCallId?"통화기록 수정":"통화기록 저장");return}
+  /* ── 통화 결과와 단계를 <b>한 번에</b> ─────────────────────────────
+     여태는 통화를 남기고 나서 <b>수정 창을 또 열어</b> 단계를 골라야 했다.
+     두 자리가 따로 놀아서, 실제로는 단계가 안 따라가는 고객이 쌓였다.
+     이제 이 창에서 같이 정한다. 손으로 고르셨으면 그것을, 안 고르셨으면
+     결과대로(stageAuto) 넣는다.
+
+     ★ 고칠 권한이 없으면 <b>건드리지 않는다</b> — 통화는 남기되 단계는
+       그대로 둔다. 못 하는 일을 한 척하지 않는다 (1번). */
+  const dbRow=dbs.find(x=>x.id===$("callDbId").value);
+  const wantStage=($("callStage")?.value||"")||callStageFromResult(resultV);
+  if(!editCallId&&dbRow&&canEditDb(dbRow)&&STAGES.indexOf(wantStage)>=0&&dbRow.stage!==wantStage){
+    const st=await sb.from("dbs").update({stage:wantStage}).eq("id",dbRow.id);
+    if(st&&st.error)wErr(st.error,"단계 저장");
+  }
   const was=editCallId;editCallId=null;
   const t=document.querySelector("#callModal h3");if(t)t.textContent="통화 기록";
   closeModal("callModal");await loadAll();
-  toast(was?"통화 기록을 고쳤습니다.":`${profile.name} 이름으로 통화기록을 저장했습니다.`);
+  toast(was?"통화 기록을 고쳤습니다."
+           :`${profile.name} 이름으로 통화기록을 저장했습니다 — 단계 ${wantStage}.`);
 }
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}

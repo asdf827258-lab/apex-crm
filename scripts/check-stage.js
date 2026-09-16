@@ -75,8 +75,18 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* 부재·거절이 <b>제 이름으로</b> 들어왔습니다. 예전에는 부재를 TA 로,
      거절을 미접촉으로 뭉개서 단계만 보면 안 받는 사람과 통화된 사람이
      같은 칸에 있었습니다 (5번). */
-  is(/const STAGES=\["미접촉","부재","거절","TA","AP","PC","CS","계약완료","증권전달"\]/.test(crm),
-    '단계 <b>아홉 개</b>가 정해져 있다 — 부재·거절도 제 이름으로');
+  /* 목록을 <b>글자 그대로 베껴 두면</b> 단계를 하나 더할 때마다 이 줄이
+     빨개진다 — 고칠 것이 없는데 빨개지는 점검이다 (8번). 재야 하는 것은
+     ① 뭉개던 두 가지가 제 이름으로 있는가 ② 두 파일이 같은 말을 하는가. */
+  const listOf=(src,pat)=>{ const m=src.match(pat); if(!m)return null;
+    try{ return JSON.parse(m[1].replace(/'/g,'"')); }catch(e){ return null; } };
+  const CRM_S=listOf(crm,/const STAGES=(\[[^\]]*\])/),
+        APP_S=listOf(app,/var AR_STAGES=(\[[^\]]*\])/);
+  is(!!CRM_S, 'CRM 이 단계 목록을 <b>한 곳</b>에 들고 있다 — '+(CRM_S?CRM_S.length+'가지':'못 찾음'));
+  const MUST=['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달','소개완료'];
+  const miss=CRM_S?MUST.filter(k=>CRM_S.indexOf(k)<0):MUST;
+  is(miss.length===0, '뭉개던 <b>부재·거절</b>도, <b>소개완료</b>도 제 이름으로 있다'+
+     (miss.length?(' ← '+miss.join(',')+' 없음'):''));
   const stageSrc = crm.slice(crm.indexOf('const STAGES='), crm.indexOf('function nextAppt('));
   /* 마지막 통화 결과는 밖에서 넣어 준다 — 그래야 짐작 규칙을 그대로 돌려 볼 수 있다 */
   const mkS = res => {
@@ -99,16 +109,39 @@ const is = (c, m) => c ? ok(m) : no(m);
     is(mkS('상담').stageOf({ id: 'x', stage: 'CS' }) === 'CS', '손으로 정한 값이 짐작을 이긴다');
     is(S.isWon({ id: 'x', stage: '계약완료' }) && S.isWon({ id: 'x', stage: '증권전달' }),
       '계약완료 · 증권전달 둘 다 계약으로 센다');
+    /* 소개완료는 증권까지 드리고 <b>소개까지 받은</b> 자리다. 계약이 없어진
+       것이 아닌데 여기서 빠지면, 단계를 올리는 순간 업적이 줄어든다 (1번) */
+    is(S.isWon({ id: 'x', stage: '소개완료' }), '<b>소개완료</b>도 계약으로 센다 — 업적이 줄지 않는다');
     is(!S.isWon({ id: 'x', stage: 'CS' }), 'CS 는 아직 계약이 아니다');
-    is(S.needPolicy({ id: 'x', stage: '계약완료' }) && !S.needPolicy({ id: 'x', stage: '증권전달' }),
-      '증권을 아직 안 보낸 사람만 골라낸다');
+    is(S.needPolicy({ id: 'x', stage: '계약완료' }) && !S.needPolicy({ id: 'x', stage: '증권전달' })
+       && !S.needPolicy({ id: 'x', stage: '소개완료' }),
+      '증권을 아직 안 보낸 사람만 골라낸다 — 소개완료는 이미 드린 뒤다');
     is(!S.stageSet({ id: 'x' }) && S.stageSet({ id: 'x', stage: 'PC' }),
       '짐작한 값과 손으로 정한 값을 구분한다');
   }
   is(/id="dbStage"/.test(crm) && /function stagePick\(/.test(crm), '수정 창에서 단계를 고를 수 있다');
   is(/id="contractedAt"/.test(crm) && /id="policySentAt"/.test(crm) && /id="policyNo"/.test(crm),
     '계약일 · 증권 전달일 · 증권번호를 적을 수 있다');
-  is(/증권전달이면 계약일도 적어 주세요/.test(crm), '증권만 있고 계약일이 없는 일을 막는다');
+  is(/이면 계약일도 적어 주세요/.test(crm), '증권만 있고 계약일이 없는 일을 막는다');
+  /* 계약일·증권일·증권번호를 <b>어느 단계가 들고 있나</b>. 여기가 한 자리에
+     안 모여 있으면, 단계를 더할 때 조용히 빠져서 <b>저장하는 순간 계약일이
+     null 로 지워진다.</b> 글자를 보지 않고 떼어 내 돌려 본다. */
+  const keepM=crm.match(/function stageNeeds\(s\)\{[\s\S]{0,400}?\n\}/);
+  is(!!keepM, '계약일·증권일을 들고 있는 단계가 <b>한 자리</b>에 적혀 있다 — stageNeeds');
+  /* 한 곳에 적어 두기만 하고 <b>안 쓰면</b> 소용이 없다 — 두 자리가 정말 그것을 보나 */
+  is(/const k=stageNeeds\(s\)/.test(crm)&&/k=stageNeeds\(st\)/.test(crm),
+     '<b>수정 창과 저장</b>이 둘 다 그 한 곳을 본다 (5번) — 따로 적으면 한쪽만 늙는다');
+  if(keepM){
+    const keep=st=>{ try{ return new Function('st',
+      keepM[0]+'\nreturn stageNeeds(st);')(st); }catch(e){ return null; } };
+    const K=st=>keep(st)||{};
+    is(K('계약완료').won===true && K('계약완료').pol===false,
+      '계약완료 — <b>계약일·증권번호</b>는 들고, 증권 전달일은 아직 안 묻는다');
+    is(K('증권전달').won===true && K('증권전달').pol===true, '증권전달 — 셋 다 들고 있다');
+    is(K('소개완료').won===true && K('소개완료').pol===true,
+      '<b>소개완료도 셋 다 들고 있다</b> — 단계를 올려도 계약일이 안 지워진다');
+    is(K('CS').won===false && K('CS').pol===false, 'CS 는 아직 아무것도 안 묻는다 — 칸만 늘지 않는다');
+  }
   is(/id="stageFilter"/.test(crm) && /__nopol__/.test(crm), '증권 미전달만 따로 뽑아 볼 수 있다');
   is(/migration_41_calls\.sql 을 한 번 실행하세요/.test(crm),
     'SQL 을 안 돌린 서버에서도 저장이 막히지 않는다 — 무엇을 해야 하는지 말한다');
@@ -143,8 +176,10 @@ const is = (c, m) => c ? ok(m) : no(m);
 
   /* ═══ 4~7. 앱 ═══ */
   console.log('\n[4] 앱이 CRM 과 같은 규칙으로 단계를 읽는가');
-  is(/var AR_STAGES=\['미접촉','부재','거절','TA','AP','PC','CS','계약완료','증권전달'\]/.test(app),
-    '앱도 <b>같은 아홉 단계</b>를 안다 — 두 파일이 다른 말을 하면 어느 쪽이 맞는지 모른다');
+  is(!!APP_S && !!CRM_S && JSON.stringify(APP_S)===JSON.stringify(CRM_S),
+    '앱과 CRM 이 <b>글자 하나 · 차례 하나 안 다르다</b> — '+
+    (APP_S?APP_S.join('·'):'못 찾음')+(CRM_S&&APP_S&&JSON.stringify(APP_S)!==JSON.stringify(CRM_S)
+      ?(' ↔ CRM 은 '+CRM_S.join('·')):''));
   is(/function arStageOf\(/.test(app) && /function arWon\(/.test(app), '단계를 읽는 길이 있다');
   is(/stage,next_appt,contracted_at,policy_sent_at/.test(app), '서버에서 단계와 약속을 받아 온다');
   /* 이제 dbs 는 <b>쪽을 나눠</b> 읽는다(read → arPageAll). 그래도 되돌아가기는
