@@ -190,6 +190,9 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* CRM 의 KPI 를 여기로 가져왔는가 — 그것도 <b>그 달치만</b> */
   const K = await page.evaluate(async () => {
     /* 이 달 배정 3건 · 지난달 배정 5건 을 심는다 */
+    /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+       늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
+    window.arLoad = function () {};
     const ym = pfYm(), a = ym.split('-');
     const prev = new Date(+a[0], +a[1] - 2, 1);
     const pym = prev.getFullYear() + '-' + ('0' + (prev.getMonth() + 1)).slice(-2);

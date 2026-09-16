@@ -38,6 +38,9 @@ const srv = http.createServer((rq, rs) => {
   const A = await page.evaluate(() => {
     /* 견본 사람은 홍길동 (CLAUDE.md 3번) */
     const t = mcalToday();
+    /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+       늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
+    window.arLoad = function () {};
     AR.db = [{ id: 'd1', who: 'me', name: '홍길동', name_masked: '홍○동',
                appt: t + 'T14:00:00', region: '강남' }];
     AR.cliRows = [];
@@ -55,6 +58,9 @@ const srv = http.createServer((rq, rs) => {
   console.log('\n[2] 약속(DB 통합 CRM)이 달력에 찍힌다');
   const B = await page.evaluate(() => {
     const t = mcalToday();
+    /* arLoad 를 <b>세워 둔다.</b> CI 에는 네트워크가 있어 진짜 요청이 나가고,
+       늦게 돌아와 AR.db 를 빈 것으로 덮습니다 — <b>CI 에서만</b> 빨간불이 납니다 (8번). */
+    window.arLoad = function () {};
     AR.db = [{ id: 'd1', who: 'me', name: '홍길동', name_masked: '홍○동',
                appt: t + 'T14:00:00', region: '강남' },
              { id: 'd2', who: 'me', name: '홍길순', name_masked: '홍○순',
