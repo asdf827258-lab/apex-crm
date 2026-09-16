@@ -1191,7 +1191,9 @@ body.apexmap-mode #apexMapScreen{display:block;}
 .mcal-seg{margin-left:auto;display:inline-flex;gap:2px;background:var(--ink-8);
   border-radius:10px;padding:2px}
 .mcal-seg button{appearance:none;border:0;background:transparent;color:var(--ink-4);
-  font-family:inherit;font-size:12px;font-weight:800;padding:5px 12px;border-radius:8px;cursor:pointer}
+  font-family:inherit;font-size:12px;font-weight:800;padding:5px 12px;border-radius:8px;cursor:pointer;
+  /* 손가락으로 누르는 자리다 — 폰에서 <b>44px</b> 아래로는 자꾸 빗나간다 */
+  min-width:44px;min-height:40px}
 .mcal-seg button[aria-pressed="true"]{background:var(--primary);color:#fff}
 .mcal-tdy{appearance:none;border:0;font-family:inherit;font-size:11.5px;font-weight:800;
   color:#1B64DA;background:#E8F2FF;border-radius:999px;padding:5px 11px;cursor:pointer}
@@ -13124,7 +13126,15 @@ function almCss(){
 /* view — 「월」 이 기본, 「주」 로 바꾸면 그 주 이레를 넓게 폅니다.
    달력은 한 벌이라 여기서 바꾸면 <b>내 캘린더 · TFA 스케줄 · 고객 365일 ·
    홈</b> 네 곳이 같이 바뀝니다 (5번).                                  */
-var MCAL={ym:'',sel:'',shown:false,view:'month',wk:''};
+/* 주로 볼지 달로 볼지는 <b>이 브라우저에 적어 둡니다.</b> 안 적어 두면
+   바탕화면 아이콘으로 열 때마다 「월」 로 되돌아갑니다 — 아이콘은 하루에도
+   몇 번씩 여는 자리라, 매번 「주」 를 다시 누르셔야 했습니다. */
+var MCAL_VIEW_KEY='apex_mcal_view';
+function mcalViewSaved(){
+  try{ return localStorage.getItem(MCAL_VIEW_KEY)==='week'?'week':'month'; }
+  catch(e){ return 'month'; }
+}
+var MCAL={ym:'',sel:'',shown:false,view:mcalViewSaved(),wk:''};
 var MCAL_KEY='apex_mycal_cfg';
 function mcalNow(){return new Date(Date.now()+9*3600*1000);}
 function mcalToday(){return mcalNow().toISOString().slice(0,10);}
@@ -13164,6 +13174,8 @@ function mcalWk(){ return MCAL.wk||mcalWkStart(mcalToday()); }
 function mcalView(){ return MCAL.view==='week'?'week':'month'; }
 function mcalSetView(v){
   MCAL.view=(v==='week')?'week':'month';
+  /* <b>고른 것을 적어 둡니다</b> — 다음에 열 때 그대로 섭니다 */
+  try{ localStorage.setItem(MCAL_VIEW_KEY,MCAL.view); }catch(e){}
   /* 보기를 바꾸면 <b>고른 날 쪽으로</b> 따라갑니다. 주로 바꿨는데 엉뚱한
      주가 서 있으면 「왜 안 보이지」가 됩니다.                        */
   var base=MCAL.sel||mcalToday();
