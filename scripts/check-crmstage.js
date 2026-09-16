@@ -48,7 +48,10 @@ const SEED=`
        {id:'d2',assigned_to:'me',customer_name:'홍말순',stage:'거절',source:'일반',
         assigned_date:'2026-09-01',region:'순천시',touch_count:7},
        {id:'d3',assigned_to:'me',customer_name:'홍갑돌',stage:'AP',source:'개척',
-        assigned_date:'2026-09-01',region:'여수시',touch_count:0}];
+        assigned_date:'2026-09-01',region:'여수시',touch_count:0},
+       {id:'d4',assigned_to:'me',customer_name:'홍복동',stage:'소개완료',source:'일반',
+        assigned_date:'2026-03-02',region:'광양시',touch_count:null,
+        contracted_at:'2026-05-10',policy_sent_at:'2026-05-20',policy_no:'P-2026-0510'}];
   calls=[{id:'c1',db_id:'d1',created_by:'me',call_at:'2026-09-10T09:00:00Z',result:'부재'},
          {id:'c2',db_id:'d1',created_by:'me',call_at:'2026-09-11T09:00:00Z',result:'부재'},
          {id:'c3',db_id:'d2',created_by:'me',call_at:'2026-09-11T09:00:00Z',result:'거절'}];
@@ -107,6 +110,33 @@ const SEED=`
   is(B.d2.shown==='거절'&&B.d2.saved==='거절',
      '<b>거절</b>도 그대로다 — 화면 '+B.d2.shown+' · 저장 '+B.d2.saved);
   is(B.d3.saved==='AP', '<b>AP</b> 처럼 되던 것도 그대로다 — '+B.d3.saved);
+
+  console.log('\n[2-1] <b>소개완료</b> — 단계를 올려도 계약일이 안 지워진다');
+  /* 단계를 하나 더할 때 <b>제일 잘 빠지는 자리</b>다. 목록에만 넣고
+     stagePick·saveDb 의 조건을 안 고치면, 그 고객을 열었을 때 계약일 칸이
+     아예 안 서고 — 그대로 저장을 누르면 <b>계약일·증권번호가 null 로
+     지워진다.</b> 부재·거절에서 단계가 지워지던 것과 같은 모양이다. */
+  const B2=await page.evaluate((seed)=>{
+    (0,eval)(seed);
+    openDb('d4');
+    const g=id=>document.getElementById(id);
+    const seen=id=>{const e=g(id);return !!e&&!e.classList.contains('hidden')};
+    const out={ shown:g('dbStage').value,
+                wonOn:seen('wonField'), polOn:seen('polField'), noOn:seen('polNoField'),
+                cAt:g('contractedAt').value, pAt:g('policySentAt').value, no:g('policyNo').value };
+    /* 다른 단계로 내렸다가 되돌리면 칸이 따라 서고 사라지나 */
+    g('dbStage').value='CS'; stagePick(); out.csOff=!seen('wonField')&&!seen('polField');
+    g('dbStage').value='소개완료'; stagePick(); out.backOn=seen('wonField')&&seen('polField');
+    closeModal('dbModal');
+    return out;
+  },SEED);
+  is(B2.shown==='소개완료', '<b>소개완료</b> 고객을 열면 그 단계가 골라져 있다 — '+(B2.shown||'빈칸'));
+  is(B2.wonOn&&B2.polOn&&B2.noOn,
+     '<b>계약일 · 증권 전달일 · 증권번호</b> 칸이 셋 다 선다 — 안 서면 저장할 때 null 로 지워진다');
+  is(B2.cAt==='2026-05-10'&&B2.pAt==='2026-05-20'&&B2.no==='P-2026-0510',
+     '적어 두신 값이 <b>그대로</b> 뜬다 — '+B2.cAt+' · '+B2.pAt+' · '+B2.no);
+  is(B2.csOff, 'CS 로 내리면 그 칸들이 <b>도로 숨는다</b> — 칸만 늘지 않는다');
+  is(B2.backOn, '소개완료로 되돌리면 <b>다시 선다</b>');
 
   console.log('\n[3] 통화 창에서 <b>결과와 단계를 같이</b> 정한다');
   const C=await page.evaluate((seed)=>{

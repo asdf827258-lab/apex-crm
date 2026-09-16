@@ -27,7 +27,7 @@ if(window.__APEX_ROUTE__)return; window.__APEX_ROUTE__=1;
 
 /* ── 원래 화면이 이미 만들어 둔 것들 ─────────────────────────────
    $ · esc · fmt · toast · dbs · calls · profiles · profile · sb ·
-   stageOf · nextAppt · getCalls · result · pname · openCall · loadAll
+   stageOf · isWon · nextAppt · getCalls · result · pname · openCall · loadAll
    전부 db-crm.html 안에 있습니다. 여기서는 빌려 씁니다. */
 var q=function(id){return document.getElementById(id)};
 function E(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
@@ -1078,8 +1078,10 @@ function candidates(d0,when,limit){
     if(d.id===d0.id)return;
     if(!sameRegion(d0,d))return;
     if(d.assigned_to!==d0.assigned_to)return;
-    var s=stageOf(d);
-    if(s==="계약완료"||s==="증권전달")return;
+    /* 계약까지 간 분은 TA 대상이 아니다. <b>어디까지가 계약인가</b>는
+       db-crm.html 의 isWon 한 곳만 안다 — 여기서 또 세면 단계를 하나
+       더할 때 이 두 자리가 조용히 빠진다 (5번). */
+    if(isWon(d))return;
     if(nextAppt(d))return;
     if(result(d)==="거절")return;
     var cs=getCalls(d.id), last=cs[0], n=cs.length;
@@ -1466,8 +1468,10 @@ function pool(region,owner){
   dbs.forEach(function(d){
     if(owner&&d.assigned_to!==owner)return;
     if(region&&!cityMatch(d,region))return;
-    var s=stageOf(d);
-    if(s==="계약완료"||s==="증권전달")return;
+    /* 계약까지 간 분은 TA 대상이 아니다. <b>어디까지가 계약인가</b>는
+       db-crm.html 의 isWon 한 곳만 안다 — 여기서 또 세면 단계를 하나
+       더할 때 이 두 자리가 조용히 빠진다 (5번). */
+    if(isWon(d))return;
     if(nextAppt(d))return;
     if(result(d)==="거절")return;
     out.push(d);
