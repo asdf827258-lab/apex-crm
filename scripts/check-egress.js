@@ -58,12 +58,16 @@ const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const bk = (SRC.match(/function osBackupRun[\s\S]{0,3000}?\n\}\n/) || [''])[0];
   is(bk.length > 200, '  자동 백업 코드를 찾았다');
   /* 주석에 적힌 표 이름을 코드로 착각하면 안 된다 — 실제 sb.from() 만 본다 */
-  const tabs = (bk.match(/sb\.from\('([a-z_]+)'\)/g) || []).map(x => x.match(/'([a-z_]+)'/)[1]);
+  /* 쪽을 나눠 읽는 자리는 arAll(sb,'표', …) 꼴이다 — <b>그것도 한 자리</b>다.
+     sb.from( 만 세면 자리를 덜 세어, 멀쩡한 r[6] 을 「없는 자리」라고 잡는다.
+     안 잡는 점검보다 <b>헛것을 잡는 점검이 더 나쁘다</b> (8번). */
+  const tabs = (bk.match(/(?:sb\.from\(|arAll\(sb\s*,\s*)'([a-z_]+)'/g) || [])
+                 .map(x => x.match(/'([a-z_]+)'/)[1]);
   const dead = tabs.filter(t => t === 'ai_dept_reports' || t === 'ai_ideas');
   is(dead.length === 0, '  날마다 도는 백업이 지운 화면의 표를 안 실어 나른다' +
      (dead.length ? ' — ' + dead.join(',') : ' (' + tabs.join(' · ') + ')'));
   const idx = (bk.match(/r\[(\d+)\]/g) || []).map(x => +x.match(/\d+/)[0]);
-  const froms = (bk.match(/sb\.from\(/g) || []).length;
+  const froms = tabs.length;
   is(idx.every(i => i < froms),
      '  꾸러미가 없는 자리를 안 가리킨다 (표 ' + froms + '개 · 가장 큰 자리 ' + Math.max(0, ...idx) + ')');
 

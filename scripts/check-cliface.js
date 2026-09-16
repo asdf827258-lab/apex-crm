@@ -46,6 +46,14 @@ const SEED=(o)=>`
   window.osLoadDocs=function(){};window.osLoadAnalysis=function(){};
   window.osCallsLoad=function(){};window.frLoad=function(){};window.osBindDrop=function(){};
   window.osCliInfoLoad=function(){};
+  /* ★ osRepListLoad · oscPolLoad 도 <b>세워 둔다.</b> 이 둘은 첫 줄에서
+       「아직 못 읽음」 으로 되돌려 놓고 서버를 부릅니다. CI 에는 네트워크가
+       있어 그 요청이 <b>진짜로 나가고</b>, 로그인 안 된 판이라 빈 손으로
+       돌아와 <b>「찾는 중…」 에서 멈춥니다.</b> 로컬에서는 supabase 자체가
+       안 실려 첫 줄 전에 되돌아가므로 <b>CI 에서만</b> 빨간불이 났습니다.
+       여기서 재려는 것은 <b>화면</b>이지 불러오기가 아닙니다 (8번). */
+  window.osRepListLoad=function(){};
+  window.oscPolLoad=function(){};
   OSC.view='detail';
   OSC.current={id:'c1',advisor_id:'me',name_masked:'홍○동',created_at:'2026-01-02T00:00:00Z',
                consent_status:'none'};
