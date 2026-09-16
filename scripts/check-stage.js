@@ -126,11 +126,14 @@ const is = (c, m) => c ? ok(m) : no(m);
   /* 계약일·증권일·증권번호를 <b>어느 단계가 들고 있나</b>. 여기가 한 자리에
      안 모여 있으면, 단계를 더할 때 조용히 빠져서 <b>저장하는 순간 계약일이
      null 로 지워진다.</b> 글자를 보지 않고 떼어 내 돌려 본다. */
-  const keepM=crm.match(/const st=payload\.stage,[\s\S]{0,400}?pol=\([^)]*\);/);
-  is(!!keepM, '계약일·증권일을 들고 있는 단계가 <b>한 자리</b>에 적혀 있다');
+  const keepM=crm.match(/function stageNeeds\(s\)\{[\s\S]{0,400}?\n\}/);
+  is(!!keepM, '계약일·증권일을 들고 있는 단계가 <b>한 자리</b>에 적혀 있다 — stageNeeds');
+  /* 한 곳에 적어 두기만 하고 <b>안 쓰면</b> 소용이 없다 — 두 자리가 정말 그것을 보나 */
+  is(/const k=stageNeeds\(s\)/.test(crm)&&/k=stageNeeds\(st\)/.test(crm),
+     '<b>수정 창과 저장</b>이 둘 다 그 한 곳을 본다 (5번) — 따로 적으면 한쪽만 늙는다');
   if(keepM){
-    const keep=st=>{ try{ return new Function('payload',
-      keepM[0]+'\nreturn {won:won,pol:pol};')({stage:st}); }catch(e){ return null; } };
+    const keep=st=>{ try{ return new Function('st',
+      keepM[0]+'\nreturn stageNeeds(st);')(st); }catch(e){ return null; } };
     const K=st=>keep(st)||{};
     is(K('계약완료').won===true && K('계약완료').pol===false,
       '계약완료 — <b>계약일·증권번호</b>는 들고, 증권 전달일은 아직 안 묻는다');
