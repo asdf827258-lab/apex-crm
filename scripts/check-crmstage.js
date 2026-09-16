@@ -315,7 +315,78 @@ const SEED=`
   is(ASK.calledOpen===true&&/홍길순/.test(ASK.calledWho||''),
      '고르면 <b>정말로 그 일이 일어난다</b> — ① 을 누르니 그분 접촉 창이 열렸다');
 
-  console.log('\n[7] 콘솔');
+  /* ══ [7] <b>팀별 · 개인별</b>로 나눠 보는가 ════════════════════════
+     사장님 말씀 — 「개인별로 나누고 팀별로 나누어서 봐야지 관리가 되지.
+     고객관리이자 팀원 관리를 하려면 <b>명확히 분류가 되어 있어야</b> 한다」.
+
+     여태 이 화면에는 <b>담당자</b> 거르개만 있었습니다. 팀이 둘 이상이면
+     팀장이 「우리 팀 몇 건인가」 를 여기서 답할 수가 없었습니다.
+
+     ★ 같이 고친 것 — 거르개 조건이 <b>sgRows 와 renderDb 두 곳</b>에
+       똑같이 적혀 있었습니다. 팀을 한쪽에만 붙이면 <b>목록은 걸러지는데
+       단계 길의 숫자는 안 걸러집니다</b> — 숫자와 목록이 다른 것을
+       세게 됩니다 (5번). 그래서 dbRows 한 곳으로 모았고, 여기서
+       <b>길의 숫자까지</b> 함께 잽니다.                                */
+  console.log('\n[7] <b>팀별 · 개인별</b>로 나눠 보는가');
+  const TEAM=await page.evaluate(()=>{
+    /* 팀을 둘로 갈라 심는다 — 견본은 홍길동 집안 (3번) */
+    profiles=[{id:'u1',name:'윤시현',role:'admin',active:true},
+              {id:'u2',name:'홍판서',role:'member',active:true},
+              {id:'u3',name:'박서준',role:'member',active:true},
+              {id:'u4',name:'조혜인',role:'member',active:true}];
+    profile=profiles[0];
+    crmTeams=[{id:'t1',name:'온탑1팀'},{id:'t2',name:'온탑2팀'}];
+    crmTeamOf={u1:'t1',u2:'t1',u3:'t2',u4:'t2'};
+    const mk=(id,who,st,src)=>({id:id,assigned_to:who,customer_name:'홍길동'+id,stage:st,
+      source:src,assigned_date:'2026-09-01',region:'순천시',touch_count:null});
+    dbs=[mk('ta','u1','부재','일반'),mk('tb','u1','TA','개척'),
+         mk('tc','u2','부재','일반'),
+         mk('td','u3','PC','개척'),mk('te','u3','부재','일반'),mk('tf','u4','TA','개척')];
+    calls=[];
+    fillProfiles();fillSources();fillStages();goPage('db');renderDb();
+    const num=w=>{const b=[].slice.call(document.querySelectorAll('#sgRail .sg-step'))
+      .filter(e=>e.textContent.indexOf(w)>=0)[0];
+      return b?(+((b.textContent.match(/(\d+)\s*$/)||[])[1]||0)):-1;};
+    const snap=()=>({rows:document.querySelectorAll('#dbBody tr').length,
+      own:[].slice.call(document.querySelectorAll('#ownerFilter option')).map(o=>o.textContent),
+      team:[].slice.call(document.querySelectorAll('#teamFilter option')).map(o=>o.textContent),
+      hidden:document.getElementById('teamFilter').classList.contains('hidden'),
+      all:num('전체'),no:num('부재'),ta:num('TA')});
+    const out={};
+    out.first=snap();
+    document.getElementById('teamFilter').value='t2'; dbTeamPick(); out.t2=snap();
+    document.getElementById('ownerFilter').value='u3'; renderDb();  out.t2u3=snap();
+    document.getElementById('teamFilter').value='t1'; dbTeamPick(); out.t1=snap();
+    out.t1own=document.getElementById('ownerFilter').value;
+    document.getElementById('teamFilter').value='';   dbTeamPick(); out.back=snap();
+    /* 팀이 하나뿐이면 고를 것이 없다 */
+    crmTeams=[{id:'t1',name:'온탑1팀'}]; fillProfiles();
+    out.oneHidden=document.getElementById('teamFilter').classList.contains('hidden');
+    crmTeams=[{id:'t1',name:'온탑1팀'},{id:'t2',name:'온탑2팀'}]; fillProfiles(); renderDb();
+    return out;
+  });
+  is(TEAM.first.team.length===3&&!TEAM.first.hidden,
+     '<b>팀 거르개</b>가 선다 — '+TEAM.first.team.join(' | '));
+  is(TEAM.first.rows===6&&TEAM.first.all===6,
+     '처음에는 <b>여섯 줄</b> — 목록 '+TEAM.first.rows+' · 길 '+TEAM.first.all);
+  is(TEAM.t2.rows===3, '팀을 고르면 <b>그 팀만</b> — '+TEAM.t2.rows+'줄');
+  /* ★ 여기가 두 곳에 따로 적혀 있던 자리다 */
+  is(TEAM.t2.all===3&&TEAM.t2.no===1&&TEAM.t2.ta===1,
+     '<b>단계 길의 숫자도 같이 걸린다</b> — 전체 '+TEAM.t2.all+' · 부재 '+TEAM.t2.no+
+     ' · TA '+TEAM.t2.ta+' (거르개가 두 곳에 적혀 있으면 여기가 6 으로 남는다)');
+  is(TEAM.t2.own.length===3&&!/윤시현/.test(TEAM.t2.own.join('')),
+     '<b>담당자 목록도 그 팀 사람만</b> — '+TEAM.t2.own.join(' | '));
+  is(TEAM.t2u3.rows===2&&TEAM.t2u3.all===2,
+     '팀 <b>안에서 한 사람</b>을 다시 고른다 — '+TEAM.t2u3.rows+'줄');
+  is(TEAM.t1own==='',
+     '다른 팀으로 옮기면 <b>고른 담당자를 푼다</b> — 그 팀에 없는 분을 들고 있으면 0건이 된다 (1번)');
+  is(TEAM.t1.rows===3, '옮긴 팀은 <b>그 팀 것</b>이 선다 — '+TEAM.t1.rows+'줄');
+  is(TEAM.back.rows===6&&TEAM.back.own.length===5,
+     '「전체 팀」 으로 돌아오면 <b>다 보인다</b> — '+TEAM.back.rows+'줄 · 담당자 '+(TEAM.back.own.length-1)+'명');
+  is(TEAM.oneHidden,
+     '팀이 <b>하나뿐이면 거르개가 안 선다</b> — 고를 것이 없는 칸을 세우지 않는다');
+
+  console.log('\n[8] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
