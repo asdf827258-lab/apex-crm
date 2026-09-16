@@ -361,6 +361,37 @@ function cityPickVal(i){
   return sel?(sel.getAttribute("data-cval")||""):"";
 }
 /* 표준 시 이름으로 도를 찾는다 — 찾는 자리가 둘이 되지 않게 여기 하나만 */
+/* ── 적으신 글에서 <b>시를 알아낸다</b> ──────────────────────────────
+   여태 이 창은 시를 <b>두 번</b> 물었습니다 — 왼쪽 「시(市)」 칸에서 한 번
+   고르고, 「주소로 찾기」 에서 또 「순천시 조례동」 을 쳤습니다. 같은 것을
+   두 번 적게 하는 칸은 없애는 것이 맞습니다.
+
+   이제 <b>한 줄만</b> 적으시면 그 글에서 시를 찾아냅니다.
+     · 「순천 조례동」 → 순천시          · 「서울 강남구 역삼동」 → 서울특별시
+     · 「조례동」      → <b>못 찾음</b>. 그러면 시를 <b>안 건드립니다</b> —
+                        모르는 것을 짐작해 넣지 않습니다 (1번).
+     · 「고성 어디」   → <b>둘로 갈립니다</b>(강원 고성군 · 경남 고성군).
+                        하나로 못 좁히면 역시 <b>안 정합니다</b> — 둘 중
+                        하나를 골라 넣으면 그게 지어내는 것입니다.
+   한 글자짜리 이름은 아무 데나 걸리므로 보지 않습니다.                 */
+function cityFromText(t){
+  var s=String(t==null?"":t).replace(/\s+/g,"");
+  if(!s)return "";
+  var L=cityAll(),hit={},n=0,i,name,flat,bare;
+  for(i=0;i<L.length;i++){
+    name=L[i].c;
+    flat=name.replace(/\s+/g,"");
+    /* <b>짧은 이름</b>도 본다 — 사람은 「서울특별시」 라고 안 칩니다.
+       「특별시·광역시·특별자치시」 까지 떼야 「서울」 이 나옵니다. 「시」 만
+       떼면 「서울특별」 이 되어 아무것도 안 걸립니다. */
+    bare=flat.replace(/(특별자치시|특별자치도|특별시|광역시|자치시|자치도|시|군|도)$/,"");
+    if(bare.length<2)continue;
+    if(s.indexOf(flat)>=0||s.indexOf(bare)>=0){ if(!hit[name]){hit[name]=1;n++;} }
+  }
+  if(n!==1)return "";
+  for(i in hit)if(hit.hasOwnProperty(i))return i;
+  return "";
+}
 function cityStdSido(city){
   if(!city)return "";
   if(city==="광주광역시")return "광주";
@@ -2225,32 +2256,45 @@ function pinEditOpen(id){
   PIN_ID=id;
   pinEditModal();
   q("rtPinT").textContent="📍 "+(d.customer_name||"고객")+" 님 동네";
+  var now=regionName(d);
   q("rtPinB").innerHTML=
-    '<div class="rt-f"><label>시(市) <small style="font-weight:600;color:#8b95a1">'+
-      '치면 추려집니다 — 여수 · ㅅㅊ · 전남</small></label>'+
-      cityPickHtml(0,regionName(d)||"")+'</div>'+
-    '<div class="rt-f" style="margin-top:12px"><label>동네 · 상세 위치 '+
-      '<small style="font-weight:600;color:#8b95a1">손으로 적으셔도 됩니다</small></label>'+
-      '<input type="text" id="rtPinAddr" placeholder="조례동 · 왕지동 현대아파트" value="'+
+    '<div class="rt-f"><label>어디쯤인지 <b>한 줄로</b> '+
+      '<small style="font-weight:600;color:#8b95a1">대략만 적으셔도 됩니다</small></label>'+
+      '<input type="text" id="rtPinAddr" placeholder="순천 조례동 · 여수 왕지동 현대아파트" value="'+
       E(placeOf(d)||"")+'"></div>'+
+    '<div class="rt-hint" id="rtPinHint"></div>'+
     '<div class="notice" style="margin-top:12px">'+
+      '<b>시(市)는 적으신 글에서 알아냅니다</b> — 따로 고르지 않으셔도 됩니다. '+
+      '못 알아내면 <b>지금 적힌 시를 그대로 둡니다</b>(짐작해 바꾸지 않습니다).<br>'+
       '손으로 적으면 <b>지도에 점으로는 안 찍힙니다.</b> 동선 시간 계산에도 '+
       '안 들어갑니다 — 그건 좌표가 있어야 합니다. 지도에 올리시려면 아래 '+
       '<b>🗺️ 주소로 찾기</b> 를 쓰십시오.'+
       (ptOf(d)?'<br>지금 이 고객은 <b>좌표가 이미 있습니다</b> — 여기서 글자만 고치면 좌표는 그대로 둡니다.':'')+
     '</div>';
-  cityPickWire(q("rtPinB"));
+  /* 치시는 동안 <b>어느 시로 잡히는지</b> 바로 보여 드립니다 — 저장하고
+     나서야 알면 늦습니다. 못 잡으면 못 잡았다고 적습니다 (1번). */
+  var hint=function(){
+    var v=(q("rtPinAddr")||{}).value||"", c=cityFromText(v), el=q("rtPinHint");
+    if(!el)return;
+    el.innerHTML=c
+      ? '→ <b>'+E(c)+'</b> 로 잡았습니다'
+      : (v.replace(/\s+/g,"")
+          ? ('→ 시를 <b>못 잡았습니다</b>'+(now?(' — 지금 적힌 <b>'+E(now)+'</b> 를 그대로 둡니다'):' — 시는 빈 채로 둡니다'))
+          : (now?('지금 적힌 시 — <b>'+E(now)+'</b>'):'아직 시가 안 적혀 있습니다'));
+  };
+  q("rtPinAddr").oninput=hint; hint();
   q("rtPinMap").onclick=function(){
+    var seed=((q("rtPinAddr")||{}).value||"").replace(/^\s+|\s+$/g,"");
     q("rtPinE").classList.remove("open");
-    pinPick(PIN_ID);
+    pinPick(PIN_ID,seed);
   };
   q("rtPinGo").onclick=pinEditSave;
   q("rtPinE").classList.add("open");
 }
 function pinEditSave(){
   var d=findDb(PIN_ID); if(!d)return;
-  var city=cityPickVal(0),
-      addr=((q("rtPinAddr")||{}).value||"").replace(/^\s+|\s+$/g,"");
+  var addr=((q("rtPinAddr")||{}).value||"").replace(/^\s+|\s+$/g,""),
+      city=cityFromText(addr);
   var patch={addr:addr||null};
   /* <b>안 고른 것은 안 건드린다.</b> 빈 값으로 덮으면 예전에 적어 둔 시가
      사라진다 — 모르는 것을 지우는 것도 지어내는 것과 같다 (1번). */
@@ -2264,18 +2308,31 @@ function pinEditSave(){
   sb.from("dbs").update(patch).eq("id",d.id).then(function(r){
     if(r&&r.error){ say("저장하지 못했습니다: "+(r.error.message||""),6000); return }
     q("rtPinE").classList.remove("open");
-    say((city?city+" ":"")+(addr||"")+" 로 적었습니다."+
-        (city&&!ptOf(d)?" 지도에 찍으시려면 🗺️ 주소로 찾기 를 한 번 눌러 주십시오.":""),4000);
+    /* 무엇이 들어갔고 <b>무엇이 안 들어갔는지</b>를 그대로 말한다 (1번) */
+    say((addr||"(빈 칸)")+" 로 적었습니다."+
+        (city?(" 시는 "+city+" 로 잡았습니다."):" 시는 못 잡아 그대로 두었습니다.")+
+        (!ptOf(d)?" 지도에 찍으시려면 🗺️ 주소로 찾기 를 한 번 눌러 주십시오.":""),5000);
     if(window.loadAll)Promise.resolve(loadAll()).then(render); else render();
   });
 }
+/* 힌트 한 줄 — 치시는 동안 어느 시로 잡히는지 */
+(function(){
+  var st=document.getElementById("rtStyleHint");
+  if(st)return;
+  st=document.createElement("style"); st.id="rtStyleHint";
+  st.textContent=".rt-hint{margin-top:7px;font-size:12.5px;font-weight:700;color:#3182f6;line-height:1.5}";
+  document.head.appendChild(st);
+})();
 /* 누르면 <b>고치는 칸</b>이 먼저 열린다 */
 function pinOne(id){ pinEditOpen(id); }
 /* 지도에서 찾기 — 예전 길 그대로. 좌표까지 들어온다. */
-function pinPick(id){
+function pinPick(id,seed){
   var d=findDb(id); if(!d)return;
   if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
-  pickOpen(E(d.customer_name||"고객")+" 님 동네",(d.addr||regionName(d)||"").trim(),function(p){
+  /* 방금 치신 글을 <b>그대로</b> 들고 갑니다 — 여기서 시를 또 치게 하면
+     같은 것을 두 번 적는 것이 됩니다. */
+  pickOpen(E(d.customer_name||"고객")+" 님 동네",
+    (seed!=null&&seed!=="")?seed:(d.addr||regionName(d)||"").trim(),function(p){
     var txt=p.label+(p.dong&&p.label.indexOf(p.dong)<0?" ("+p.dong+")":"");
     var patch={addr:txt,lat:p.lat,lng:p.lng};
     /* 적힌 지역과 다른 시·군이 나오면 좌표만 넣습니다 — 여수가 순천시로
