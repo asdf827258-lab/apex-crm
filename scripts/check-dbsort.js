@@ -165,8 +165,13 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
            <b>고른 무리가 풀린</b> 것이다. 뒤늦게 끝난 첫 판이 AR.cat 을
            되돌려 놓는다. go() 보다 <b>먼저</b> 정하면 go() 가 다시 읽어
            가므로, 열고 <b>난 뒤에</b> 정하고 그린다. */
-        AR.cat='touch'; AR.tkAll=false; AR.tks=''; AR.tk='all';
-        try{ localStorage.setItem('apex_ar_cat','touch'); }catch(e){}
+        /* <b>앱이 쓰는 문으로 고른다.</b> AR.cat 을 손으로 적는 것만으로는
+           모자랐다 — CI 에서 AR.cat 은 'touch' 인데도 판은 「왼쪽에서
+           고르면 …」 인 채였다. 무리를 고르는 일은 arGoCat 한 곳이 하고,
+           거기서 그 칸이 쓰는 것까지 챙긴다. 손으로 값만 바꾸면 <b>고른
+           척</b>만 하는 것이다 (5번 — 한 곳만 안다). */
+        try{ if(typeof arGoCat==='function')arGoCat('touch'); else AR.cat='touch'; }catch(e){}
+        AR.tkAll=false; AR.tks=''; AR.tk='all';
         try{ arPaint(); }catch(e){}
         const c=read();
         if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:c.length>=4?'':why()});
