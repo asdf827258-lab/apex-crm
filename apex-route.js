@@ -1351,6 +1351,10 @@ function styles(){
   ".rt-sum strong{display:block;font-size:19px;color:var(--navy);margin-top:3px}",
   ".rt-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:11px 2px;border-bottom:1px solid #eef1f4}",
   /* 시 검색 칸 — 네이버 주소 검색창처럼 치면 추려진다 */
+  /* 동네 고치는 칸 — 폰에서도 한 손에 들어오게 */
+  ".rt-f label{display:block;font-size:12.5px;font-weight:800;color:#333d4b;margin-bottom:6px}",
+  ".rt-f input[type=text]{width:100%;box-sizing:border-box;border:1px solid #e5e8eb;border-radius:10px;padding:11px 12px;font-size:14px;font-family:inherit;min-height:44px}",
+  ".rt-f input[type=text]:focus{outline:0;border-color:#3182f6}",
   ".ct-pick{margin-top:7px}",
   ".ct-q{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;"+
     "font-family:inherit;font-size:13px;outline:none}",
@@ -2173,7 +2177,98 @@ function naviUrl(d){
 }
 
 /* ── 그 자리에서 한 사람 동네 찍기 ────────────────────────────── */
-function pinOne(id){
+/* ── 📍 동네 — <b>내 손으로 정확히 적는 칸</b> ──────────────────────
+   사장님 말씀 — 「우선 동네 누르면, 수정으로 들어가서 지역을 내가 스스로
+   정확히 입력할수 있도록 해줘」.
+
+   여태 이 단추는 <b>카카오 주소 찾기</b>로 바로 넘어갔습니다. 주소 찾기는
+   실제로 있는 주소만 찾아 주므로, 고객이 말한 동네가 안 걸리면 <b>거기서
+   막혔습니다.</b> 전화 걸면서 「아, ○○동 사세요?」 하고 듣는 그 순간에
+   바로 적을 수 있어야 합니다.
+
+   그래서 <b>고치는 칸</b>을 먼저 엽니다 —
+     · 시(市) 는 이미 만들어 둔 <b>검색</b>으로 고릅니다 (치면 추려집니다)
+     · 동네는 <b>손으로 칩니다</b> — 「조례동」 · 「왕지동 현대아파트」
+     · 지도로 찍고 싶으시면 그 자리에서 <b>주소 찾기</b>로 넘어갑니다
+
+   ★ 손으로 적으면 <b>좌표는 안 생깁니다.</b> 지도에 점으로는 안 찍히고
+     동선 시간 계산에도 안 들어갑니다. 그 말을 <b>화면에 그대로</b>
+     적습니다 — 「적었으니 다 된다」고 믿게 두면 안 됩니다 (1번).      */
+function pinEditModal(){
+  styles();
+  if(q("rtPinE"))return;
+  var m=document.createElement("div");
+  m.className="modal"; m.id="rtPinE";
+  m.innerHTML=
+    '<div class="modal-box" style="width:min(560px,100%)">'+
+      '<div class="modal-head"><h3 id="rtPinT">동네 적기</h3>'+
+        '<button class="close" id="rtPinX">×</button></div>'+
+      '<div class="modal-body" id="rtPinB"></div>'+
+      '<div class="modal-foot">'+
+        '<button class="btn btn-light" id="rtPinC">그만두기</button>'+
+        '<button class="btn btn-light" id="rtPinMap">🗺️ 주소로 찾기</button>'+
+        '<button class="btn btn-primary" id="rtPinGo">저장</button>'+
+      '</div>'+
+    '</div>';
+  document.body.appendChild(m);
+  var c=function(){ m.classList.remove("open") };
+  q("rtPinX").onclick=c; q("rtPinC").onclick=c;
+}
+var PIN_ID="";
+function pinEditOpen(id){
+  var d=findDb(id); if(!d)return;
+  if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
+  PIN_ID=id;
+  pinEditModal();
+  q("rtPinT").textContent="📍 "+(d.customer_name||"고객")+" 님 동네";
+  q("rtPinB").innerHTML=
+    '<div class="rt-f"><label>시(市) <small style="font-weight:600;color:#8b95a1">'+
+      '치면 추려집니다 — 여수 · ㅅㅊ · 전남</small></label>'+
+      cityPickHtml(0,regionName(d)||"")+'</div>'+
+    '<div class="rt-f" style="margin-top:12px"><label>동네 · 상세 위치 '+
+      '<small style="font-weight:600;color:#8b95a1">손으로 적으셔도 됩니다</small></label>'+
+      '<input type="text" id="rtPinAddr" placeholder="조례동 · 왕지동 현대아파트" value="'+
+      E(placeOf(d)||"")+'"></div>'+
+    '<div class="notice" style="margin-top:12px">'+
+      '손으로 적으면 <b>지도에 점으로는 안 찍힙니다.</b> 동선 시간 계산에도 '+
+      '안 들어갑니다 — 그건 좌표가 있어야 합니다. 지도에 올리시려면 아래 '+
+      '<b>🗺️ 주소로 찾기</b> 를 쓰십시오.'+
+      (ptOf(d)?'<br>지금 이 고객은 <b>좌표가 이미 있습니다</b> — 여기서 글자만 고치면 좌표는 그대로 둡니다.':'')+
+    '</div>';
+  cityPickWire(q("rtPinB"));
+  q("rtPinMap").onclick=function(){
+    q("rtPinE").classList.remove("open");
+    pinPick(PIN_ID);
+  };
+  q("rtPinGo").onclick=pinEditSave;
+  q("rtPinE").classList.add("open");
+}
+function pinEditSave(){
+  var d=findDb(PIN_ID); if(!d)return;
+  var city=cityPickVal(0),
+      addr=((q("rtPinAddr")||{}).value||"").replace(/^\s+|\s+$/g,"");
+  var patch={addr:addr||null};
+  /* <b>안 고른 것은 안 건드린다.</b> 빈 값으로 덮으면 예전에 적어 둔 시가
+     사라진다 — 모르는 것을 지우는 것도 지어내는 것과 같다 (1번). */
+  if(city){
+    patch.region=city;
+    if(HAS_STD){
+      patch.sigungu=city;
+      var sd=cityStdSido(city); if(sd)patch.sido=sd;
+    }
+  }
+  sb.from("dbs").update(patch).eq("id",d.id).then(function(r){
+    if(r&&r.error){ say("저장하지 못했습니다: "+(r.error.message||""),6000); return }
+    q("rtPinE").classList.remove("open");
+    say((city?city+" ":"")+(addr||"")+" 로 적었습니다."+
+        (city&&!ptOf(d)?" 지도에 찍으시려면 🗺️ 주소로 찾기 를 한 번 눌러 주십시오.":""),4000);
+    if(window.loadAll)Promise.resolve(loadAll()).then(render); else render();
+  });
+}
+/* 누르면 <b>고치는 칸</b>이 먼저 열린다 */
+function pinOne(id){ pinEditOpen(id); }
+/* 지도에서 찾기 — 예전 길 그대로. 좌표까지 들어온다. */
+function pinPick(id){
   var d=findDb(id); if(!d)return;
   if(!HAS_DB){ say("서버에 위치 칸이 없습니다 — migration_46_db_geo.sql 을 한 번 실행하세요.",6000); return }
   pickOpen(E(d.customer_name||"고객")+" 님 동네",(d.addr||regionName(d)||"").trim(),function(p){
