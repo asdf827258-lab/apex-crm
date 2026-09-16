@@ -158,9 +158,15 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
            맞는데(arTouch 4명) <b>.ar-fs 가 0</b> 이었다. 뒤늦게 끝난 첫 판이
            보던 화면을 덮어 쓴 것이다. 그리기만 되풀이하면 <b>없는 판</b>을
            칠하게 되어 영영 0개다 — 그래서 틱마다 열려 있는지 보고 연다. */
-        if(!document.querySelector('#dynPane .ar-fs')){
-          AR.cat='touch'; try{ go('airep'); }catch(e){}
-        }
+        if(!document.querySelector('#dynPane .ar-fs')){ try{ go('airep'); }catch(e){} }
+        /* <b>고른 무리를 틱마다 다시 고른다.</b> 판머리가 말해 줬다 —
+           판은 TFA 가 맞는데 「왼쪽에서 고르면 이 자리에서 바로 봅니다」
+           라는 <b>고르기 전 화면</b>이었다. 즉 길을 잘못 든 것이 아니라
+           <b>고른 무리가 풀린</b> 것이다. 뒤늦게 끝난 첫 판이 AR.cat 을
+           되돌려 놓는다. go() 보다 <b>먼저</b> 정하면 go() 가 다시 읽어
+           가므로, 열고 <b>난 뒤에</b> 정하고 그린다. */
+        AR.cat='touch'; AR.tkAll=false; AR.tks=''; AR.tk='all';
+        try{ localStorage.setItem('apex_ar_cat','touch'); }catch(e){}
         try{ arPaint(); }catch(e){}
         const c=read();
         if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:c.length>=4?'':why()});
