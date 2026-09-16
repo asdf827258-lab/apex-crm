@@ -103,7 +103,15 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
   console.log('\n[5] 화면에서도 <b>정말로</b> 그 차례로 선다');
   await new Promise(r=>srv.listen(PORT,r));
   const b=await chromium.launch();
-  const page=await b.newPage({viewport:{width:430,height:900}});
+  const ctx=await b.newContext({viewport:{width:430,height:900}});
+  /* <b>바깥으로 안 나간다.</b> 이 자리에서 재는 것은 「종류 단추가 사람이 읽는
+     차례로 서는가」 하나입니다. 그런데 CI 에만 네트워크가 있어, 페이지가 뜨자마자
+     나간 진짜 요청이 <b>나중에</b> 돌아와 심어 둔 견본을 덮거나 화면을 갈아엎습니다.
+     재려는 것과 아무 상관 없는 까닭으로 <b>CI 에서만</b> 빨간불이 켜집니다 —
+     헛알람은 안 잡는 것보다 나쁩니다 (8번). 그래서 집 안(127.0.0.1)만 열어 둡니다.
+     check-homeday · check-navfold 도 같은 자리를 같은 방법으로 막습니다.      */
+  await ctx.route('**://**', r=>r.request().url().indexOf('127.0.0.1:'+PORT)>=0?r.continue():r.abort());
+  const page=await ctx.newPage();
   const errs=[]; page.on('pageerror',e=>errs.push(String(e).slice(0,120)));
   await page.goto('http://127.0.0.1:'+PORT+'/app/index.html',{waitUntil:'domcontentloaded'});
   await page.waitForTimeout(2400);
@@ -137,7 +145,13 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
         AR.loaded=true; AR.busy=false; AR.db=rows();
         try{ arPaint(); }catch(e){}
         const c=read();
-        if(c.length>=4||++n>60)return done({sorted:L,chips:c});
+        /* 빨간불이 켜지면 <b>왜인지</b>도 같이 들고 나간다 — 「0개」 만 적으면
+           CI 로그를 보고도 어디를 볼지 알 수가 없다 */
+        if(c.length>=4||++n>60)return done({sorted:L,chips:c,why:(c.length>=4)?'':
+          ('arPane='+!!document.getElementById('arPane')+
+           ' cat='+AR.cat+' db='+(AR.db||[]).length+
+           ' 나='+(function(){try{return OS.session.user.id;}catch(e){return '(없음)';}})()+
+           ' 터치='+((typeof arTouch==='function')?arTouch(arTkWho()).length:-1))});
         setTimeout(tick,120);
       })();
     });
@@ -151,12 +165,12 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
   /* <b>칩이 없으면 통과시키지 않는다.</b> 「칩이 없는 판이라 통과」 는
      아무것도 안 재는 것이다 — 안 울리는 알람이다 (8번). */
   is(chips.length>=4, 'TFA 에 <b>종류 단추가 선다</b> — '+chips.length+'개'+
-     (chips.length?(' ('+chips.join(' · ')+')'):''));
+     (chips.length?(' ('+chips.join(' · ')+')'):(' ← '+(V.why||''))));
   is(chips.length>=4&&JSON.stringify(chips)===JSON.stringify(chips.slice().sort(A.cmp)),
      '그 단추들이 <b>차례대로</b> 선다 — '+chips.join(' · '));
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
-  await b.close(); srv.close();
+  await ctx.close(); await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('✗ '+bad+'개 — DB 종류가 아직 뒤죽박죽입니다')
                  :'✓ DB 종류가 본체·CRM 어디서나 사람이 읽는 차례로 섭니다.');
