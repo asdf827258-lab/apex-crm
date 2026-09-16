@@ -144,7 +144,10 @@ const REAL=['보장분석5DB','보장분석6DB','일반','보장분석3DB','소�
              ' · 판 '+((p.innerHTML||'').length)+'자 · .ar-fs '+
              document.querySelectorAll('#dynPane .ar-fs').length+
              ' · OS.profile '+(!!(window.OS&&OS.profile))+
-             ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80);
+             ' · cfg '+JSON.stringify(Object.keys((window.OS&&OS.cfg)||{})).slice(0,80)+
+             /* <b>그래서 무슨 화면인가</b> — 판 길이만으로는 못 짚는다.
+                두 판 모두 3075자로 똑같았다. 우연이 아니라 <b>늘 같은 화면</b>이다. */
+             ' · 판머리 「'+((p.textContent||'').replace(/\s+/g,' ').trim().slice(0,150))+'」';
     };
     return new Promise(done=>{
       let n=0;
