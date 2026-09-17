@@ -54,6 +54,22 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      tiny  13px 아래로 찍힌 글자 수
      size  글자 크기 가짓수
      small 44px 아래인 누름 자리 수                                    */
+/* 화면 <b>전부</b>를 한 번에 재는 기준선 — 한 화면씩 적지 않습니다.
+   화면이 늘 때마다 여기를 고쳐야 하면 이 줄이 곧 낡아 거짓말이 됩니다.
+   7단계(9/17 21:00) 인라인 font-size 1,545자리를 계단으로 옮긴 뒤 —
+   보이는 글자 5,169개 중 13px 아래가 <b>503 → 0</b>, 옆으로 새는 화면 0. */
+const ALL_BASE = { tiny: 0, wide: 0 };
+/* 따로 열리는 세 화면 — <b>잰 값 그대로</b> 적습니다. 0 을 목표로 적지 않습니다 (1번).
+   8단계(9/17 22:30) 계산기 178→<b>0</b> · CRM 16→<b>0</b>.
+   전·후는 559→<b>557</b> 에서 멈췄습니다 — 작은 글자가 &lt;style&gt; 한 덩이에 있는데
+   그 덩이를 <b>고객에게 보여 드리는 무대</b>와 나눠 쓰고 있어, 크기를 올리면
+   16:9 한 장이 넘칩니다(실제로 넉 장이 720px 를 넘어 점검이 잡았습니다).
+   무대와 만들기 화면의 CSS 를 <b>가르는 일</b>이 먼저라, 그것만 따로 합니다. */
+const SOLO = [
+  { t: '재무설계 계산기',    url: '/app/finance.html', tiny: 0 },
+  { t: '보장 전·후 만들기', url: '/app/ba.html',      tiny: 557 },
+  { t: 'DB 통합 CRM',      url: '/db-crm.html',      tiny: 0 }
+];
 const BASE = {
   /*          작은 글자   계단    빗나감
      0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
@@ -298,6 +314,81 @@ const SEED = `
   is(!WIDE.shown, '<b>넓은 화면에서는 안 선다</b> — 왼쪽 기둥이 있는데 아래에 또 세우면 같은 것이 두 곳이 된다 (5번)');
   is(WIDE.pad === 0, '넓은 화면에서는 <b>바닥 여백도 안 준다</b> — ' + WIDE.pad + 'px');
   await wide.close();
+
+  /* ── <b>네 화면만 재는 자는 네 화면만 지킨다</b> ──────────────────
+     1단계에서 「작은 글자 0」 이라고 적었습니다. 그것은 <b>여기 네 화면에
+     보이던 글자</b>에 대해서만 참이었습니다. 앱에는 화면이 <b>여든여덟</b>
+     개고, 나머지 여든넷에는 알람이 없었습니다 — 5단계에서 자를 고쳐 목록에
+     자료를 심자마자 12.5px 가 셋 튀어나온 것이 그 증거입니다.
+     그래서 <b>모든 화면</b>을 한 번 훑습니다. 한 화면씩 기준선을 두지
+     않습니다 — 화면이 늘 때마다 여기를 고쳐야 해서 곧 낡습니다. <b>전체
+     합계</b> 하나만 못 박습니다. */
+  console.log('\n[전부] <b>모든 화면</b>에 작은 글자가 없는가 — 네 화면만 지키지 않는다');
+  const ALL = await page.evaluate((seed) => {
+    (0, eval)(seed);
+    const ids = [];
+    try { (TABS || []).forEach(g => (g.items || []).forEach(x => { if (x.id && !x.hide) ids.push(x.id); })); } catch (e) {}
+    let tiny = 0, total = 0, wide = 0, seen = 0;
+    const worst = [];
+    for (const t of ids) {
+      try { go(t); } catch (e) { continue; }
+      const pane = document.getElementById('dynPane');
+      if (!pane) continue;
+      seen++;
+      let n = 0;
+      pane.querySelectorAll('*').forEach(e => {
+        if (!e.offsetParent) return;
+        const c = e.childNodes[0];
+        const tx = (c && c.nodeType === 3) ? (c.nodeValue || '').trim() : '';
+        if (!tx) return;
+        total++;
+        if (parseFloat(getComputedStyle(e).fontSize) < 13) { tiny++; n++; }
+      });
+      if (document.documentElement.scrollWidth > window.innerWidth + 1) wide++;
+      if (n) worst.push(t + ':' + n);
+    }
+    return { tiny, total, wide, seen, worst: worst.slice(0, 6).join(' · ') };
+  }, SEED);
+  is(ALL.seen >= 80, '화면 <b>' + ALL.seen + '개</b>를 열어 봤다 — 메뉴에서 그대로 뽑는다(손으로 안 적는다)');
+  is(ALL.tiny <= ALL_BASE.tiny,
+     '<b>13px 아래 글자</b> ' + ALL.tiny + '개 / 보이는 글자 ' + ALL.total + '개 — 기준선 ' + ALL_BASE.tiny +
+     (ALL.tiny > ALL_BASE.tiny ? (' ← 늘었습니다: ' + ALL.worst) : ''));
+  is(ALL.wide <= ALL_BASE.wide,
+     '<b>옆으로 새는 화면</b> ' + ALL.wide + '개 — 기준선 ' + ALL_BASE.wide +
+     (ALL.wide > ALL_BASE.wide ? ' ← 늘었습니다' : ''));
+
+  /* ── <b>따로 열리는 세 화면</b> ────────────────────────────────────
+     본체(app/index.html) 안의 88개 화면만 재고 있었습니다. 그런데 사장님이
+     고객 앞에서 제일 오래 펴 두시는 것은 <b>따로 열리는 화면</b>입니다 —
+     재무설계 계산기 · 보장 전·후 만들기 · DB 통합 CRM. 이 셋에는 자가
+     <b>한 번도 닿은 적이 없습니다.</b> 처음 재 보니 —
+       계산기 226자 중 <b>178</b> · 전·후 589자 중 <b>559</b> · CRM 63자 중 <b>16</b>
+     이 13px 아래였습니다. 본체보다 훨씬 나빴습니다.                      */
+  console.log('\n[따로] <b>따로 열리는 세 화면</b>도 읽히는가');
+  for (const F of SOLO) {
+    const sp = await ctx.newPage();
+    await sp.goto('http://127.0.0.1:' + PORT + F.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    await sp.waitForTimeout(1800);
+    const r = await sp.evaluate(() => {
+      /* DB 통합 CRM 은 설정 화면이 먼저 선다 — 본 화면을 열어야 잴 수 있다 */
+      try { const g = document.getElementById('configScreen');
+            if (g) { g.classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } } catch (e) {}
+      let tiny = 0, total = 0;
+      document.body.querySelectorAll('*').forEach(e => {
+        if (!e.offsetParent) return;
+        const c = e.childNodes[0];
+        const tx = (c && c.nodeType === 3) ? (c.nodeValue || '').trim() : '';
+        if (!tx) return;
+        total++;
+        if (parseFloat(getComputedStyle(e).fontSize) < 13) tiny++;
+      });
+      return { tiny, total, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 };
+    });
+    await sp.close();
+    is(r.tiny <= F.tiny,
+       '<b>' + F.t + '</b> — 13px 아래 ' + r.tiny + '개 / 보이는 글자 ' + r.total +
+       ' · 기준선 ' + F.tiny + (r.tiny > F.tiny ? ' ← 늘었습니다' : ''));
+  }
 
   console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
   const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
