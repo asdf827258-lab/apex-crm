@@ -59,6 +59,17 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
    7단계(9/17 21:00) 인라인 font-size 1,545자리를 계단으로 옮긴 뒤 —
    보이는 글자 5,169개 중 13px 아래가 <b>503 → 0</b>, 옆으로 새는 화면 0. */
 const ALL_BASE = { tiny: 0, wide: 0 };
+/* 따로 열리는 세 화면 — <b>잰 값 그대로</b> 적습니다. 0 을 목표로 적지 않습니다 (1번).
+   8단계(9/17 22:30) 계산기 178→<b>0</b> · CRM 16→<b>0</b>.
+   전·후는 559→<b>557</b> 에서 멈췄습니다 — 작은 글자가 &lt;style&gt; 한 덩이에 있는데
+   그 덩이를 <b>고객에게 보여 드리는 무대</b>와 나눠 쓰고 있어, 크기를 올리면
+   16:9 한 장이 넘칩니다(실제로 넉 장이 720px 를 넘어 점검이 잡았습니다).
+   무대와 만들기 화면의 CSS 를 <b>가르는 일</b>이 먼저라, 그것만 따로 합니다. */
+const SOLO = [
+  { t: '재무설계 계산기',    url: '/app/finance.html', tiny: 0 },
+  { t: '보장 전·후 만들기', url: '/app/ba.html',      tiny: 557 },
+  { t: 'DB 통합 CRM',      url: '/db-crm.html',      tiny: 0 }
+];
 const BASE = {
   /*          작은 글자   계단    빗나감
      0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
@@ -345,6 +356,39 @@ const SEED = `
   is(ALL.wide <= ALL_BASE.wide,
      '<b>옆으로 새는 화면</b> ' + ALL.wide + '개 — 기준선 ' + ALL_BASE.wide +
      (ALL.wide > ALL_BASE.wide ? ' ← 늘었습니다' : ''));
+
+  /* ── <b>따로 열리는 세 화면</b> ────────────────────────────────────
+     본체(app/index.html) 안의 88개 화면만 재고 있었습니다. 그런데 사장님이
+     고객 앞에서 제일 오래 펴 두시는 것은 <b>따로 열리는 화면</b>입니다 —
+     재무설계 계산기 · 보장 전·후 만들기 · DB 통합 CRM. 이 셋에는 자가
+     <b>한 번도 닿은 적이 없습니다.</b> 처음 재 보니 —
+       계산기 226자 중 <b>178</b> · 전·후 589자 중 <b>559</b> · CRM 63자 중 <b>16</b>
+     이 13px 아래였습니다. 본체보다 훨씬 나빴습니다.                      */
+  console.log('\n[따로] <b>따로 열리는 세 화면</b>도 읽히는가');
+  for (const F of SOLO) {
+    const sp = await ctx.newPage();
+    await sp.goto('http://127.0.0.1:' + PORT + F.url, { waitUntil: 'domcontentloaded' }).catch(() => {});
+    await sp.waitForTimeout(1800);
+    const r = await sp.evaluate(() => {
+      /* DB 통합 CRM 은 설정 화면이 먼저 선다 — 본 화면을 열어야 잴 수 있다 */
+      try { const g = document.getElementById('configScreen');
+            if (g) { g.classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); } } catch (e) {}
+      let tiny = 0, total = 0;
+      document.body.querySelectorAll('*').forEach(e => {
+        if (!e.offsetParent) return;
+        const c = e.childNodes[0];
+        const tx = (c && c.nodeType === 3) ? (c.nodeValue || '').trim() : '';
+        if (!tx) return;
+        total++;
+        if (parseFloat(getComputedStyle(e).fontSize) < 13) tiny++;
+      });
+      return { tiny, total, wide: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1 };
+    });
+    await sp.close();
+    is(r.tiny <= F.tiny,
+       '<b>' + F.t + '</b> — 13px 아래 ' + r.tiny + '개 / 보이는 글자 ' + r.total +
+       ' · 기준선 ' + F.tiny + (r.tiny > F.tiny ? ' ← 늘었습니다' : ''));
+  }
 
   console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
   const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
