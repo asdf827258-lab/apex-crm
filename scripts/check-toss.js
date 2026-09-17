@@ -59,11 +59,13 @@ const BASE = {
      0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
      1단계(9/17 10:40) <b>글자 계단</b>을 여섯으로 못 박고 앱 CSS 의
        font-size 1,451자리를 전부 토큰으로 옮긴 뒤 — 작은 글자가
-       <b>네 화면 모두 0</b> 이 되었습니다. 기준선을 그만큼 조입니다.   */
-  home:    { tiny: 0, size: 7, small: 49 },
-  airep:   { tiny: 0, size: 4, small: 11 },
-  clients: { tiny: 0, size: 3, small: 31 },
-  mycal:   { tiny: 0, size: 3, small: 34 }
+       <b>네 화면 모두 0</b>.
+     2단계(9/17 12:10) <b>엄지</b> — 누르는 자리에 44px 바닥을 깔고
+       아래 탭바를 놓은 뒤 — 빗나가는 자리도 <b>네 화면 모두 0</b>.   */
+  home:    { tiny: 0, size: 7, small: 0, screens: 3.5 },
+  airep:   { tiny: 0, size: 4, small: 0, screens: 2.5 },
+  clients: { tiny: 0, size: 3, small: 0, screens: 1.3 },
+  mycal:   { tiny: 0, size: 3, small: 0, screens: 1.8 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
@@ -116,7 +118,12 @@ const SEED = `
     let small = 0, btn = 0, worst = 99;
     pane.querySelectorAll('button,a,select,input[type=checkbox]').forEach(e => {
       if (!e.offsetParent) return;
-      const r = e.getBoundingClientRect();
+      /* <b>손이 닿는 자리</b>를 잰다 — 체크 네모는 13px 여도 감싼 줄(label)이
+         44px 면 손가락은 안 빗나간다. 네모만 재면 고칠 수 없는 것을 세게
+         되고, 고칠 수 없는 숫자는 사람이 곧 안 믿는다 (8번). */
+      let box = e;
+      if (e.tagName === 'INPUT') { const lab = e.closest('label'); if (lab) box = lab; }
+      const r = box.getBoundingClientRect();
       if (!r.height) return;
       btn++;
       if (r.height < 44) { small++; if (r.height < worst) worst = Math.round(r.height); }
@@ -127,7 +134,12 @@ const SEED = `
       top: Object.entries(sizes).sort((x, y) => y[1] - x[1]).slice(0, 4).map(x => x[0] + 'px×' + x[1]).join(' · '),
       wide: document.documentElement.scrollWidth > window.innerWidth + 1,
       scrollW: document.documentElement.scrollWidth,
-      screens: Math.round(document.documentElement.scrollHeight / window.innerHeight * 10) / 10
+      /* ★ <b>세로는 문서가 아니라 「굴러가는 판」을 재야 한다.</b>
+         이 앱은 #dynPane 안에서 굴러가므로 문서 높이는 늘 화면만 하다.
+         그래서 여기가 <b>1.1화면</b>이라고 적고 있었는데 실제 홈은
+         <b>6.4화면</b>이었다 — 편한 숫자를 적어 두는 자는 자가 아니다 (1번). */
+      screens: Math.round(pane.scrollHeight / window.innerHeight * 10) / 10,
+      px: Math.round(pane.scrollHeight)
     };
   }, { seed: SEED, tab });
 
@@ -154,8 +166,115 @@ const SEED = `
     is(!M.wide,
       '<b>옆으로 안 샙니다</b> — 폭 ' + M.scrollW + 'px / 390px' +
       (M.wide ? ' ← 가로로 샙니다. 글이 잘리고, 잘린 줄은 아무도 안 읽습니다' : '') +
-      ' · 세로 ' + M.screens + '화면');
+      ' · 세로 ' + M.screens + '화면(' + M.px + 'px)');
+    /* <b>세로도 기준선을 둔다</b> — 한 화면 한 가지로 가는 길이라 */
+    if (B.screens !== undefined)
+      is(M.screens <= B.screens,
+        '<b>세로로 안 길다</b> — ' + M.screens + '화면 · 기준선 ' + B.screens +
+        (M.screens > B.screens ? ' ← 길어졌습니다. 카드를 또 늘리지 않았는지 보십시오'
+                               : (M.screens < B.screens ? ' (짧아졌습니다 — 기준선도 같이 내려 주십시오)' : '')));
   }
+
+  /* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════
+     폰에서 메뉴는 왼쪽 위 ☰ 뒤에 있었습니다. 한 손으로 들면 거기가 제일
+     안 닿는 자리입니다.
+
+     여기서 재는 것 —
+       · 폰에서 <b>선다</b> · 넓은 화면에서는 <b>안 선다</b>(두 곳이 되면 안 됨)
+       · 누르면 <b>정말로 그 화면</b>으로 간다
+       · <b>지금 화면</b>이 켜져 있다 (navMark 한 곳이 정한다)
+       · 「더보기」 가 <b>원래 있던 서랍</b>을 연다
+       · 탭바가 <b>글을 안 덮는다</b>                                    */
+  /* ══ <b>홈은 한 화면 한 가지</b> ═══════════════════════════════════
+     매일 제일 먼저 봐야 할 것이 <b>첫 화면 안</b>에 있어야 합니다. 재 보니
+     「오늘 할 일」 이 <b>1,707px 아래</b> — 두 화면 넘게 굴려야 나왔습니다.
+     그리고 홈이 <b>5,429px · 여섯 화면 반</b>이었습니다.
+
+     여기서 재는 것 —
+       · 「오늘 할 일」 이 <b>첫 화면 안</b>에 있다
+       · 큰 카드는 <b>접혀</b> 있고, 머리를 누르면 <b>그 자리에서</b> 펴진다
+       · 편 것을 <b>기억한다</b> (다시 그려도 펴져 있다)
+       · 접힌 머리에 적힌 숫자는 <b>그 카드가 세는 것</b>이다               */
+  console.log('\n[홈] 한 화면 한 가지');
+  const HM = await page.evaluate((seed) => {
+    (0, eval)(seed); try { go('home'); } catch (e) {}
+    const pane = document.getElementById('dynPane');
+    const H = () => Math.round(pane.scrollHeight);
+    const now = document.querySelector('.hm-now');
+    const out = { closed: H(), nowTop: now ? Math.round(now.getBoundingClientRect().top) : -1,
+                  vh: window.innerHeight };
+    const folds = [].slice.call(document.querySelectorAll('.hm-fold'));
+    out.n = folds.length;
+    out.heads = folds.map(f => (f.querySelector('.hm-fold-h') || {}).textContent
+      ? f.querySelector('.hm-fold-h').textContent.replace(/\s+/g, ' ').trim() : '');
+    out.allClosed = folds.every(f => (f.querySelector('.hm-fold-b') || {}).hidden === true);
+    const cal = document.getElementById('hmFold_cal');
+    if (cal) {
+      cal.querySelector('.hm-fold-h').click();
+      out.open = H();
+      const d = document.querySelector('#hmCalHost .mcal-d');
+      out.shown = !!(d && d.offsetParent);
+      try { go('clients'); go('home'); } catch (e) {}
+      out.remembered = !document.querySelector('#hmFold_cal .hm-fold-b').hidden;
+      document.querySelector('#hmFold_cal .hm-fold-h').click();
+      out.reclosed = H();
+    }
+    return out;
+  }, SEED);
+  is(HM.nowTop >= 0 && HM.nowTop < HM.vh,
+    '<b>「오늘 할 일」 이 첫 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px (화면 ' + HM.vh + 'px)');
+  is(HM.n >= 3, '큰 카드가 <b>접혀</b> 있다 — ' + HM.n + '개');
+  is(HM.allClosed === true, '처음에는 <b>다 접힌 채</b>로 연다');
+  is(HM.open > HM.closed, '머리를 누르면 <b>그 자리에서 펴진다</b> — ' + HM.closed + 'px → ' + HM.open + 'px');
+  is(HM.shown === true, '펴면 <b>안에 있던 것이 그대로</b> 보인다 — 지운 것이 아니다');
+  is(HM.remembered === true, '<b>편 것을 기억한다</b> — 다시 그려도 펴져 있다');
+  is(HM.reclosed === HM.closed, '도로 접으면 <b>원래대로</b> — ' + HM.reclosed + 'px');
+  is((HM.heads || []).every(h => !/NaN|undefined|null/.test(h)),
+    '접힌 머리에 <b>부서진 숫자가 없다</b> — ' + (HM.heads || []).join(' / '));
+
+  console.log('\n[아래 탭바] 엄지가 늘 닿는 자리');
+  const TBR = await page.evaluate((seed) => {
+    (0, eval)(seed); try { go('home'); } catch (e) {}
+    const bar = document.getElementById('tabBar');
+    const out = { has: !!bar };
+    if (!bar) return out;
+    out.shown = getComputedStyle(bar).display !== 'none';
+    const btns = [].slice.call(bar.querySelectorAll('.tb-b'));
+    out.n = btns.length;
+    out.labels = btns.map(e => e.textContent.replace(/\s+/g, ' ').trim());
+    out.h = Math.round(bar.getBoundingClientRect().height);
+    out.small = btns.filter(e => e.getBoundingClientRect().height < 44).length;
+    out.onHome = btns.filter(e => e.classList.contains('on')).map(e => e.textContent.trim());
+    const by = t => btns.filter(e => e.textContent.indexOf(t) >= 0)[0];
+    if (by('고객')) { by('고객').click(); out.went = lastTab; out.onCli = btns.filter(e => e.classList.contains('on')).length; }
+    if (by('더보기')) { by('더보기').click(); out.drawer = document.getElementById('sidebar').classList.contains('open'); by('더보기').click(); }
+    try { go('home'); } catch (e) {}
+    out.pad = parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0;
+    return out;
+  }, SEED);
+  is(TBR.has && TBR.shown, '폰에서 <b>아래 탭바가 선다</b>' + (TBR.h ? (' — 높이 ' + TBR.h + 'px') : ''));
+  is(TBR.n >= 4, '칸이 <b>넷 이상</b> 있다 — ' + (TBR.labels || []).join(' | '));
+  is(TBR.small === 0, '탭바 칸도 <b>44px 아래가 없다</b>' + (TBR.small ? (' ← ' + TBR.small + '개') : ''));
+  is((TBR.onHome || []).length === 1 && /홈/.test((TBR.onHome || [''])[0]),
+    '<b>지금 화면</b>이 켜져 있다 — ' + (TBR.onHome || []).join(','));
+  is(TBR.went === 'clients' && TBR.onCli === 1,
+    '누르면 <b>그 화면으로</b> 가고 켜진 칸도 따라온다 — ' + TBR.went);
+  is(TBR.drawer === true, '「더보기」 가 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
+  is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
+  /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
+  const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  await wide.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+  const wp = await wide.newPage();
+  await wp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await wp.waitForTimeout(2000);
+  const WIDE = await wp.evaluate(() => {
+    const bar = document.getElementById('tabBar');
+    return { shown: !!bar && getComputedStyle(bar).display !== 'none',
+             pad: parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0 };
+  });
+  is(!WIDE.shown, '<b>넓은 화면에서는 안 선다</b> — 왼쪽 기둥이 있는데 아래에 또 세우면 같은 것이 두 곳이 된다 (5번)');
+  is(WIDE.pad === 0, '넓은 화면에서는 <b>바닥 여백도 안 준다</b> — ' + WIDE.pad + 'px');
+  await wide.close();
 
   console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
   const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
