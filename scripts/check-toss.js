@@ -62,10 +62,10 @@ const BASE = {
        <b>네 화면 모두 0</b>.
      2단계(9/17 12:10) <b>엄지</b> — 누르는 자리에 44px 바닥을 깔고
        아래 탭바를 놓은 뒤 — 빗나가는 자리도 <b>네 화면 모두 0</b>.   */
-  home:    { tiny: 0, size: 7, small: 0 },
-  airep:   { tiny: 0, size: 4, small: 0 },
-  clients: { tiny: 0, size: 3, small: 0 },
-  mycal:   { tiny: 0, size: 3, small: 0 }
+  home:    { tiny: 0, size: 7, small: 0, screens: 3.5 },
+  airep:   { tiny: 0, size: 4, small: 0, screens: 2.5 },
+  clients: { tiny: 0, size: 3, small: 0, screens: 1.3 },
+  mycal:   { tiny: 0, size: 3, small: 0, screens: 1.8 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
@@ -134,7 +134,12 @@ const SEED = `
       top: Object.entries(sizes).sort((x, y) => y[1] - x[1]).slice(0, 4).map(x => x[0] + 'px×' + x[1]).join(' · '),
       wide: document.documentElement.scrollWidth > window.innerWidth + 1,
       scrollW: document.documentElement.scrollWidth,
-      screens: Math.round(document.documentElement.scrollHeight / window.innerHeight * 10) / 10
+      /* ★ <b>세로는 문서가 아니라 「굴러가는 판」을 재야 한다.</b>
+         이 앱은 #dynPane 안에서 굴러가므로 문서 높이는 늘 화면만 하다.
+         그래서 여기가 <b>1.1화면</b>이라고 적고 있었는데 실제 홈은
+         <b>6.4화면</b>이었다 — 편한 숫자를 적어 두는 자는 자가 아니다 (1번). */
+      screens: Math.round(pane.scrollHeight / window.innerHeight * 10) / 10,
+      px: Math.round(pane.scrollHeight)
     };
   }, { seed: SEED, tab });
 
@@ -161,7 +166,13 @@ const SEED = `
     is(!M.wide,
       '<b>옆으로 안 샙니다</b> — 폭 ' + M.scrollW + 'px / 390px' +
       (M.wide ? ' ← 가로로 샙니다. 글이 잘리고, 잘린 줄은 아무도 안 읽습니다' : '') +
-      ' · 세로 ' + M.screens + '화면');
+      ' · 세로 ' + M.screens + '화면(' + M.px + 'px)');
+    /* <b>세로도 기준선을 둔다</b> — 한 화면 한 가지로 가는 길이라 */
+    if (B.screens !== undefined)
+      is(M.screens <= B.screens,
+        '<b>세로로 안 길다</b> — ' + M.screens + '화면 · 기준선 ' + B.screens +
+        (M.screens > B.screens ? ' ← 길어졌습니다. 카드를 또 늘리지 않았는지 보십시오'
+                               : (M.screens < B.screens ? ' (짧아졌습니다 — 기준선도 같이 내려 주십시오)' : '')));
   }
 
   /* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════
@@ -174,6 +185,53 @@ const SEED = `
        · <b>지금 화면</b>이 켜져 있다 (navMark 한 곳이 정한다)
        · 「더보기」 가 <b>원래 있던 서랍</b>을 연다
        · 탭바가 <b>글을 안 덮는다</b>                                    */
+  /* ══ <b>홈은 한 화면 한 가지</b> ═══════════════════════════════════
+     매일 제일 먼저 봐야 할 것이 <b>첫 화면 안</b>에 있어야 합니다. 재 보니
+     「오늘 할 일」 이 <b>1,707px 아래</b> — 두 화면 넘게 굴려야 나왔습니다.
+     그리고 홈이 <b>5,429px · 여섯 화면 반</b>이었습니다.
+
+     여기서 재는 것 —
+       · 「오늘 할 일」 이 <b>첫 화면 안</b>에 있다
+       · 큰 카드는 <b>접혀</b> 있고, 머리를 누르면 <b>그 자리에서</b> 펴진다
+       · 편 것을 <b>기억한다</b> (다시 그려도 펴져 있다)
+       · 접힌 머리에 적힌 숫자는 <b>그 카드가 세는 것</b>이다               */
+  console.log('\n[홈] 한 화면 한 가지');
+  const HM = await page.evaluate((seed) => {
+    (0, eval)(seed); try { go('home'); } catch (e) {}
+    const pane = document.getElementById('dynPane');
+    const H = () => Math.round(pane.scrollHeight);
+    const now = document.querySelector('.hm-now');
+    const out = { closed: H(), nowTop: now ? Math.round(now.getBoundingClientRect().top) : -1,
+                  vh: window.innerHeight };
+    const folds = [].slice.call(document.querySelectorAll('.hm-fold'));
+    out.n = folds.length;
+    out.heads = folds.map(f => (f.querySelector('.hm-fold-h') || {}).textContent
+      ? f.querySelector('.hm-fold-h').textContent.replace(/\s+/g, ' ').trim() : '');
+    out.allClosed = folds.every(f => (f.querySelector('.hm-fold-b') || {}).hidden === true);
+    const cal = document.getElementById('hmFold_cal');
+    if (cal) {
+      cal.querySelector('.hm-fold-h').click();
+      out.open = H();
+      const d = document.querySelector('#hmCalHost .mcal-d');
+      out.shown = !!(d && d.offsetParent);
+      try { go('clients'); go('home'); } catch (e) {}
+      out.remembered = !document.querySelector('#hmFold_cal .hm-fold-b').hidden;
+      document.querySelector('#hmFold_cal .hm-fold-h').click();
+      out.reclosed = H();
+    }
+    return out;
+  }, SEED);
+  is(HM.nowTop >= 0 && HM.nowTop < HM.vh,
+    '<b>「오늘 할 일」 이 첫 화면 안</b>에 있다 — 위에서 ' + HM.nowTop + 'px (화면 ' + HM.vh + 'px)');
+  is(HM.n >= 3, '큰 카드가 <b>접혀</b> 있다 — ' + HM.n + '개');
+  is(HM.allClosed === true, '처음에는 <b>다 접힌 채</b>로 연다');
+  is(HM.open > HM.closed, '머리를 누르면 <b>그 자리에서 펴진다</b> — ' + HM.closed + 'px → ' + HM.open + 'px');
+  is(HM.shown === true, '펴면 <b>안에 있던 것이 그대로</b> 보인다 — 지운 것이 아니다');
+  is(HM.remembered === true, '<b>편 것을 기억한다</b> — 다시 그려도 펴져 있다');
+  is(HM.reclosed === HM.closed, '도로 접으면 <b>원래대로</b> — ' + HM.reclosed + 'px');
+  is((HM.heads || []).every(h => !/NaN|undefined|null/.test(h)),
+    '접힌 머리에 <b>부서진 숫자가 없다</b> — ' + (HM.heads || []).join(' / '));
+
   console.log('\n[아래 탭바] 엄지가 늘 닿는 자리');
   const TBR = await page.evaluate((seed) => {
     (0, eval)(seed); try { go('home'); } catch (e) {}
