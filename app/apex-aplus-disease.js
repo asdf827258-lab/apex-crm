@@ -61,7 +61,7 @@
 
   function card() {
     return '' +
-    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔎</span>유병자 인수예외질환 조회 <span style="font-size:10px;font-weight:800;color:#1A56DB;background:#EFF4FF;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:2px">실제 보험사 기준</span></div>' +
+    '<div class="card"><div class="card-hd"><div class="card-title"><span class="ci">🔎</span>유병자 인수예외질환 조회 <span style="font-size:var(--t6);font-weight:800;color:#1A56DB;background:#EFF4FF;border-radius:999px;padding:3px 8px;margin-left:6px;vertical-align:2px">실제 보험사 기준</span></div>' +
     '<div class="card-desc">질환명을 넣으면 24개 보험사의 <b>인수예외 여부·최소경과·치료기간·수술여부·가능상품구분</b>을 원본 그대로 찾아옵니다. AI 추정이 아니라 보험사가 제출한 실제 기준입니다. (키 불필요)</div></div>' +
     '<div class="card-body">' +
       '<div class="frm cols2">' +
@@ -72,7 +72,7 @@
       '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 12px">' +
         QUICK.map(function (k) {
-          return '<button type="button" onclick="apdQuick(\'' + E(k) + '\')" style="font-size:11px;background:#fff;border:1px solid var(--ink-7);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-3)">' + E(k) + '</button>';
+          return '<button type="button" onclick="apdQuick(\'' + E(k) + '\')" style="font-size:var(--t6);background:#fff;border:1px solid var(--ink-7);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink-3)">' + E(k) + '</button>';
         }).join('') +
       '</div>' +
       '<div class="btn-row">' +
@@ -82,7 +82,7 @@
         '<a class="btn btn-ghost" href="https://www.aplusga.com/APA/SV/disease.do?sales=Y" target="_blank" rel="noopener">↗ 원본 페이지</a>' +
       '</div>' +
       '<div class="calc-res" id="apd_res"></div>' +
-      '<div class="notice" style="margin-top:12px;font-size:11px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">' +
+      '<div class="notice" style="margin-top:12px;font-size:var(--t6);color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">' +
         '자료 출처 : <b>A+에셋 유병자 인수예외질환 검색</b>(공개 페이지)을 조회할 때마다 그대로 가져옵니다. ' +
         '<b>팀 내부 조회용</b>이며 고객에게 전달하는 자료로 쓰지 않습니다. ' +
         '실제 인수 여부·부담보 조건은 해당 보험사 심사 결과와 약관이 우선하며, 청약서 질문에는 사실 그대로 고지해야 합니다.' +
@@ -107,9 +107,9 @@
 
     var h = '<div class="result-hd" style="border:0;background:transparent;padding:0 0 9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
       '<span class="rl">총 ' + state.total + '건 · 보험사 ' + Object.keys(insurers).length + '곳</span>' +
-      (state.byInsurer ? '<span style="font-size:11px;color:var(--ink-4)">보험사순</span>' : '') +
-      (state.truncated ? '<span style="font-size:11px;color:#B45309;background:#FEF3C7;border-radius:999px;padding:3px 9px">건수가 많아 앞 500건만 가져왔습니다 — 질환명이나 보험사를 좁혀 주세요</span>' : '') +
-      (shown.length < rows.length ? '<span style="font-size:11px;color:var(--ink-4)">화면에는 ' + shown.length + '건 표시</span>' : '') +
+      (state.byInsurer ? '<span style="font-size:var(--t6);color:var(--ink-4)">보험사순</span>' : '') +
+      (state.truncated ? '<span style="font-size:var(--t6);color:#B45309;background:#FEF3C7;border-radius:999px;padding:3px 9px">건수가 많아 앞 500건만 가져왔습니다 — 질환명이나 보험사를 좁혀 주세요</span>' : '') +
+      (shown.length < rows.length ? '<span style="font-size:var(--t6);color:var(--ink-4)">화면에는 ' + shown.length + '건 표시</span>' : '') +
       '</div>';
 
     h += '<div style="overflow-x:auto"><table class="uw-table" style="min-width:900px">' +
@@ -128,12 +128,12 @@
     h += shown.map(function (r) {
       return '<tr>' +
         '<td class="p">' + E(clean(r.INSR_NM)) + '</td>' +
-        '<td style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#64748B">' + dash(r.CATEGORY_CD) + '</td>' +
+        '<td style="font-family:ui-monospace,Menlo,monospace;font-size:var(--t6);color:#64748B">' + dash(r.CATEGORY_CD) + '</td>' +
         '<td style="font-weight:700">' + E(clean(r.TREATMENT_ITEM)) + '</td>' +
         '<td>' + dash(r.DISEASE_PRD) + '</td>' +
         '<td>' + dash(r.TREATMENT_PRD) + '</td>' +
         '<td>' + dash(r.SURGERY) + '</td>' +
-        '<td style="font-size:11px">' + dash(r.PSB_PRDT_GB) + '</td>' +
+        '<td style="font-size:var(--t6)">' + dash(r.PSB_PRDT_GB) + '</td>' +
         '<td class="m">' + dash(r.BIGO) + '</td>' +
         '<td class="m">' + E(clean(r.CRET_DTM)) + '</td>' +
       '</tr>';
@@ -177,7 +177,7 @@
 
     state.busy = true;
     state.byInsurer = false;
-    msg('<div style="padding:26px 0;text-align:center;color:var(--ink-4);font-size:12px">조회 중…</div>');
+    msg('<div style="padding:26px 0;text-align:center;color:var(--ink-4);font-size:var(--t6)">조회 중…</div>');
 
     var url = '/api/aplus-disease?all=1&q=' + encodeURIComponent(q) +
               '&insr=' + encodeURIComponent(insr) + '&prdt=' + encodeURIComponent(prdt);
@@ -189,15 +189,15 @@
       state.truncated = !!d.truncated;
 
       if (!state.rows.length) {
-        msg('<div style="padding:24px 0;text-align:center;color:var(--ink-4);font-size:12px">' +
-            '조회된 인수예외 기준이 없습니다.<br><span style="font-size:11px">질환명을 더 짧게(예: “갑상선”) 넣어 보세요. ' +
+        msg('<div style="padding:24px 0;text-align:center;color:var(--ink-4);font-size:var(--t6)">' +
+            '조회된 인수예외 기준이 없습니다.<br><span style="font-size:var(--t6)">질환명을 더 짧게(예: “갑상선”) 넣어 보세요. ' +
             '예외 목록에 없다고 해서 인수가 보장되는 것은 아니며, 최종 판단은 보험사 심사입니다.</span></div>');
         return;
       }
       msg(table());
     })['catch'](function (e) {
-      msg('<div style="padding:20px 0;text-align:center;color:#B91C1C;font-size:12px">' + E(e.message || e) +
-          '<br><span style="font-size:11px;color:var(--ink-4)">잠시 후 다시 시도하시거나 위 “원본 페이지”로 확인해 주세요.</span></div>');
+      msg('<div style="padding:20px 0;text-align:center;color:#B91C1C;font-size:var(--t6)">' + E(e.message || e) +
+          '<br><span style="font-size:var(--t6);color:var(--ink-4)">잠시 후 다시 시도하시거나 위 “원본 페이지”로 확인해 주세요.</span></div>');
     }).then(function () { state.busy = false; });
   };
 
