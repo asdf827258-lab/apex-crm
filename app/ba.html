@@ -30,7 +30,13 @@
 :root{--dkb:#3182F6;--dkb2:#1B64DA;--dkm:#3182F6;--dkg:#F9FAFB;
  --nv:#191F28;--gy:#6B7684;--gy2:#8B95A1;--ln:#E5E8EB;--bg:#F2F4F6;
  --bl:#3182F6;--bl2:#E8F3FF;--gd:#B99A3A;--rd:#DC2626;--rd2:#FEF2F2;
- --gr:#0F766E;--gr2:#ECFDF5;--or:#B45309;--or2:#FFFBEB;--pu:#7C3AED;--pu2:#F5F3FF}
+ --gr:#0F766E;--gr2:#ECFDF5;--or:#B45309;--or2:#FFFBEB;--pu:#7C3AED;--pu2:#F5F3FF;
+  /* ── <b>글자 계단</b> — 본체(app/index.html)와 <b>같은 여섯 칸</b>입니다.
+     이름이 갈리면 두 화면의 글자 크기가 따로 놀고, 같은 앱이 아닌 것처럼 보입니다.
+     <b>13px 이 바닥</b>입니다 — 폰에서 그 아래는 안경을 벗으면 안 읽힙니다.
+     apex-hold.js · apex-next.js 가 여기 값을 그대로 씁니다. ── */
+  --t1:24px; --t2:20px; --t3:17px; --t4:15px; --t5:14px; --t6:13px;
+}
 *{box-sizing:border-box}html,body{margin:0;padding:0}
 body{font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
  background:var(--bg);color:var(--nv);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
@@ -2236,7 +2242,7 @@ function padHtml(p,sd,i,field){
       '<span>담보 적기 ▾</span></div>'+
       (nn?('<div class="padsum">'+padSum(bag)+'</div>'):'');
   var h='<div style="border-top:1px solid #F1F3F5;padding-top:10px;margin-top:4px">'+
-    (field==='cov2'?'<div style="font-size:12px;font-weight:800;color:var(--or);margin-bottom:7px">배서 후 담보 — 여기 적은 것만 남습니다</div>':'')+
+    (field==='cov2'?'<div style="font-size:var(--t6,13px);font-weight:800;color:var(--or);margin-bottom:7px">배서 후 담보 — 여기 적은 것만 남습니다</div>':'')+
     '<div class="gsel">'+
     STD.map(function(g,gi){
       var n=0;g.rows.forEach(function(r){if(num(bag[r.k])!==null)n++;});
@@ -2368,8 +2374,8 @@ function payPanel(){
       '<td>'+esc(r.pol.start||'—')+'</td>'+
       '<td class="r">'+(c.mTot===null?'—':(Math.round(c.mTot/12)+'년'))+'</td>'+
       '<td class="r">'+(c.prem===null?'—':fee(c.prem))+
-        ((r.act==='endo'&&r.aMon!==null&&r.aMon!==c.prem)?('<br><span style="color:var(--or);font-size:10.5px">→ '+fee(r.aMon)+'</span>'):'')+
-        (c.done?'<br><span style="color:var(--gr);font-size:10.5px">납입완료</span>':'')+'</td>'+
+        ((r.act==='endo'&&r.aMon!==null&&r.aMon!==c.prem)?('<br><span style="color:var(--or);font-size:var(--t6,13px)">→ '+fee(r.aMon)+'</span>'):'')+
+        (c.done?'<br><span style="color:var(--gr);font-size:var(--t6,13px)">납입완료</span>':'')+'</td>'+
       '<td class="r" style="color:var(--gy2)">'+(c.paid===null?'—':fee(c.paid))+'</td>'+
       '<td class="r">'+(r.act==='cancel'?'<b style="color:var(--rd)">0 · 해지</b>':((r.aLeft===null||r.aLeft===undefined)?'—':fee(r.aLeft)))+'</td>'+
       '<td class="r">'+((r.aTot===null||r.aTot===undefined)?'—':fee(r.aTot))+'</td>'+
@@ -2447,7 +2453,7 @@ function manClear(){if(!confirm('손으로 고치신 칸을 전부 되돌립니�
 function scenHtml(){
   /* 기본값이 들어 있다 — <b>안 치셔도</b> 그려진다. 고치실 분만 펴신다 */
   var sm=EVENTS.map(function(e){return e.ic+' '+e.t+' '+(num(S.scen[e.k].cost)?won(num(S.scen[e.k].cost)):'미설정');}).join('  ·  ');
-  var h='<div class="card"><h2><span class="n">6</span>치료 기준 <small style="font-size:12px;font-weight:700;color:var(--gy2)">기본값이 들어 있습니다</small>'+
+  var h='<div class="card"><h2><span class="n">6</span>치료 기준 <small style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">기본값이 들어 있습니다</small>'+
     '<span class="r"><button class="mini'+(S.scenOpen?' on':'')+'" onclick="scenToggle()">'+(S.scenOpen?'접기':'⚙ 고치기')+'</button></span></h2>'+
     '<div class="note i" style="margin-top:0">'+esc(sm)+'<br>이 값은 <b>APEX 기본 시나리오(평균 예시)</b>입니다 — 실제 치료비는 병원·치료법·개인에 따라 크게 다릅니다. 고치실 수 있습니다.</div>';
   if(!S.scenOpen)return h+'</div>';
@@ -2455,7 +2461,7 @@ function scenHtml(){
   EVENTS.forEach(function(ev){
     var s=S.scen[ev.k];
     h+='<div style="border:1px solid var(--ln);border-radius:12px;padding:13px 14px">'+
-      '<div style="font-size:14px;font-weight:800;margin-bottom:9px">'+ev.ic+' '+esc(ev.t)+'</div><div class="f c3">'+
+      '<div style="font-size:var(--t5,14px);font-weight:800;margin-bottom:9px">'+ev.ic+' '+esc(ev.t)+'</div><div class="f c3">'+
       '<div class="u"><label>기준 치료비</label><input value="'+esc(s.cost)+'" placeholder="미입력" inputmode="decimal" onfocus="this.select()" oninput="setScen(\''+ev.k+'\',\'cost\',this.value)"><i>만원</i></div>'+
       '<div class="u"><label>입원일수</label><input value="'+esc(s.days)+'" placeholder="미입력" inputmode="numeric" onfocus="this.select()" oninput="setScen(\''+ev.k+'\',\'days\',this.value)"><i>일</i></div>'+
       '<div class="u"><label>소득중단</label><input value="'+esc(s.off)+'" placeholder="미입력" inputmode="numeric" onfocus="this.select()" oninput="setScen(\''+ev.k+'\',\'off\',this.value)"><i>개월</i></div>'+
@@ -2475,7 +2481,7 @@ function setSrc(v){S.src=v;save();}
 function kbHtml(){
   var k=S.kbInfo;
   return '<div class="kb"><div class="kh"><b>📄 KB 보장분석 PDF</b>'+
-    '<span style="font-size:12px;color:var(--gy);font-weight:700">한 부만 올리면 계약과 담보가 아래에 그대로 섭니다</span>'+
+    '<span style="font-size:var(--t6,13px);color:var(--gy);font-weight:700">한 부만 올리면 계약과 담보가 아래에 그대로 섭니다</span>'+
     '<button class="btn" onclick="kbPick()">파일 고르기</button></div><div id="kbBox">'+
     (k?kbDoneHtml(k):'<div class="kd">KB손해보험 홈페이지에서 내려받은 <b>「보장분석」 PDF</b> 를 올리시면 계약과 담보를 <b>글자 그대로</b> 읽습니다. '+
       'AI 가 뜻을 지어내지 않고, <b>사진·캡처는 못 읽습니다.</b></div><div class="drop" id="kbDrop">여기에 <b>PDF 를 끌어다</b> 놓으셔도 됩니다</div>')+
@@ -3405,7 +3411,7 @@ function ageHtml(){
   '<div class="note i">이 순서는 <b>나이와 상관없이</b> 같습니다. 나이는 <b>어디에 무게를 두느냐</b>를 바꿉니다.</div>';
   /* 담보안 — 고객 만나러 가시기 전에 <b>이 한 장</b>을 뽑아 가십니다 */
   h+='<div class="ghd">📋 이 나이대 <b>담보안</b> '+
-     '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 표준 담보를 나이대 기준으로 · 왜 그런지는 눌러서 폅니다 · <b>인쇄하면 전부 나옵니다</b></span></div>'+
+     '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">— 표준 담보를 나이대 기준으로 · 왜 그런지는 눌러서 폅니다 · <b>인쇄하면 전부 나옵니다</b></span></div>'+
      agePlanHtml();
   /* 연령대 카드 */
   h+='<div class="ages">'+AGE_GUIDE.map(function(g){
@@ -4003,7 +4009,7 @@ var ASSUME_F=[
 ];
 function assumeHtml(){
   var A=S.assume||{},d=blank().assume;
-  var h='<div class="ghd">⚙ 셈하는 기준 — <span style="font-size:12px;font-weight:700;color:var(--gy2)">여기 숫자가 위 「적정 금액」을 만듭니다</span></div>'+
+  var h='<div class="ghd">⚙ 셈하는 기준 — <span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">여기 숫자가 위 「적정 금액」을 만듭니다</span></div>'+
     '<p class="gsub">「적정 5억」 같은 값은 <b>가정</b>에서 나옵니다. 그 가정을 숨기면 숫자가 <b>사실처럼</b> 보입니다 — '+
     '그래서 드러내 놓고, <b>고치실 수 있게</b> 두었습니다. 사장님 기준이 다르면 <b>그쪽이 맞습니다.</b></p>'+
     '<div class="asg">';
@@ -4157,7 +4163,7 @@ function fitEasyHtml(){
   if(typeof NHIS_EASY==='undefined')
     return '<div class="note w">쉬운 말 표(apex-nhis.js)를 못 읽었습니다 — <b>아무 말도 지어내지 않습니다.</b></div>';
   var h='<div class="ghd">💬 이대로 읽으시면 됩니다 '+
-    '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 어려운 말을 쓰지 않았습니다</span></div>';
+    '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">— 어려운 말을 쓰지 않았습니다</span></div>';
   h+='<div class="nhqs">'+NHIS_EASY.map(function(x){
     return '<div class="nhq"><div class="nqq">"'+esc(x.q)+'"</div><div class="nqa">'+x.a+'</div></div>';
   }).join('')+'</div>';
@@ -4194,7 +4200,7 @@ function fitHtml(){
     '<div class="noprint" style="margin:0 0 11px">'+
       '<button class="mini'+(S.fitStudy?' on':'')+'" onclick="fitStudyOpen()">'+
         (S.fitStudy?'📖 공부하기 켜짐 — 끄기':'📖 공부하기 — 이 칸이 무엇인지 · 어떻게 셈했는지')+'</button>'+
-      '<span style="font-size:12px;font-weight:700;color:var(--gy2);margin-left:8px">'+
+      '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2);margin-left:8px">'+
         '신입부터 경력자까지 <b>혼자 보면서</b> 익히는 자리입니다 — <b>인쇄하면 늘 나옵니다</b></span></div>'+
     fitTabsHtml();
   if(o.need.length)
@@ -4213,7 +4219,7 @@ function fitHtml(){
       '. 100점을 넘어도 100으로 셉니다 — <b>넘치는 것을 자랑하지 않습니다.</b></div></div>';
   h+=fitSec('sum',g);
   /* (2) 항목별 */
-  g='<div class="ghd">항목별 진단 — <span style="font-size:12px;font-weight:700;color:var(--gy2)">적정 금액이 어떻게 나왔는지 그대로 적었습니다</span></div>';
+  g='<div class="ghd">항목별 진단 — <span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">적정 금액이 어떻게 나왔는지 그대로 적었습니다</span></div>';
   g+='<div class="fitrows">'+o.rows.map(function(r){
     return '<div class="fr2"><div class="fh2">'+r.ic+' <b>'+esc(r.t)+'</b>'+
         '<span class="fgb" style="background:'+r.grade.c+'">'+r.grade.g+'</span>'+
@@ -4265,7 +4271,7 @@ function fitHtml(){
   h+=fitSec('cap',g);
   /* (5) 준비 순서 + 비교하는 법 */
   g='<div class="ghd">이 나이대는 <b>이렇게 봅니다</b> '+
-      '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 혼자 보시면서 무슨 말을 할지 잡으시는 자리입니다</span></div>'+
+      '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">— 혼자 보시면서 무슨 말을 할지 잡으시는 자리입니다</span></div>'+
     fitAgeHtml()+
     '<div class="ghd">그래서 이 순서로 준비합니다</div>'+fitPlan(o);
   /* 비교하는 법 */
@@ -4512,7 +4518,7 @@ function nhFold(k,ttl,sub,inner){
 function brainStudyHtml(){
   if(typeof NHIS_WHY==='undefined')return '';
   var h='<div class="ghd">🏥 병원비 공부방 '+
-    '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 고객에게 읽는 말이 아니라 <b>사장님이 먼저 아셔야 하는 것</b>입니다</span></div>';
+    '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">— 고객에게 읽는 말이 아니라 <b>사장님이 먼저 아셔야 하는 것</b>입니다</span></div>';
   /* 왜 정확히 알아야 하는가 — 틀렸을 때 무슨 일이 벌어지는지로 적는다 */
   h+=nhFold('why','① 이걸 모르면 무슨 일이 생기나요','틀리게 말하면 고객이 그 말을 믿고 준비를 안 합니다',
     NHIS_WHY.map(function(x){
@@ -4731,7 +4737,7 @@ function brainHtml(){
   var B=brainPick();
   if(B.hot.length){
     h+='<div class="ghd">이 고객에게 <b>바로 걸리는 말</b> '+
-      '<span style="font-size:12px;font-weight:700;color:var(--gy2)">— 진단에서 실제로 잡힌 것만 골랐습니다</span></div>'+
+      '<span style="font-size:var(--t6,13px);font-weight:700;color:var(--gy2)">— 진단에서 실제로 잡힌 것만 골랐습니다</span></div>'+
       '<div class="brains">'+B.hot.map(function(x){return brainCard(x.d,x.you,x.why);}).join('')+'</div>';
   }else{
     h+='<div class="note i">계약과 고객 정보를 넣으시면 <b>이 고객에게 바로 걸리는 말</b>이 여기 먼저 섭니다.</div>';
@@ -6109,7 +6115,7 @@ function kbPreview(K,name){
   for(i=0;i<K.contracts.length;i++)for(j=0;j<(K.contracts[i].covs||[]).length;j++){n++;
     var v=K.contracts[i].covs[j];
     if(!mapName(v.std||v.raw)&&!mapName(v.raw))no++;}
-  var h='<div style="font-size:13px;font-weight:800;margin-bottom:8px">📄 '+esc(name)+' — 읽었습니다</div><div class="chips">'+
+  var h='<div style="font-size:var(--t6,13px);font-weight:800;margin-bottom:8px">📄 '+esc(name)+' — 읽었습니다</div><div class="chips">'+
     '<span>계약 <b>'+K.contracts.length+'건</b></span><span>담보 <b>'+n+'개</b></span>'+
     (K.noAmt?('<span class="w">금액 못 읽음 <b>'+K.noAmt+'개</b></span>'):'<span class="g">금액 <b>전부</b> 읽음</span>')+
     (no?('<span class="w">우리가 못 알아본 담보 <b>'+no+'개</b></span>'):'<span class="g">담보 이름 <b>전부</b> 알아봄</span>')+
@@ -6152,7 +6158,7 @@ function toast(msg,ms){
     t=document.createElement("div"); t.id="baToast";
     t.style.cssText="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);"+
       "max-width:min(90vw,520px);padding:12px 18px;border-radius:12px;background:#191F28;"+
-      "color:#fff;font-size:14px;line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.25);"+
+      "color:#fff;font-size:var(--t5,14px);line-height:1.5;box-shadow:0 8px 24px rgba(0,0,0,.25);"+
       "z-index:9999;opacity:0;transition:opacity .18s;pointer-events:none;text-align:center";
     document.body.appendChild(t);
   }
@@ -6236,7 +6242,7 @@ function nxCss(){
   if(document.getElementById('nxCssTag'))return;
   var st=document.createElement('style'); st.id='nxCssTag';
   st.textContent=
-   '.nx-ok{font-size:13px;font-weight:700;color:#166534;background:#F0FDF4;border:1px solid #BBF7D0;'+
+   '.nx-ok{font-size:var(--t6,13px);font-weight:700;color:#166534;background:#F0FDF4;border:1px solid #BBF7D0;'+
      'border-radius:12px;padding:10px 12px;line-height:1.6}'+
    '.nx-next{margin-top:12px}';
   document.head.appendChild(st);
