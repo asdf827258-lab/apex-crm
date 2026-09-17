@@ -65,6 +65,17 @@ function holdJong(w){
 }
 function holdEul(w){ return esc(w)+(holdJong(w)?'을':'를'); }
 function holdIga(w){ return esc(w)+(holdJong(w)?'이':'가'); }
+/* <b>으로 / 로</b> — 받침이 없으면 「로」, <b>받침이 ㄹ 이어도 「로」</b>,
+   그 밖의 받침이면 「으로」. ㄹ 을 빠뜨리면 「서울으로」 가 됩니다.
+   「상담 로 남겼고」 라고 찍혔었습니다. */
+function holdRo(w){
+  var t=String(w==null?'':w).replace(/<[^>]*>/g,''),c,j;
+  if(!t)return esc(w);
+  c=t.charCodeAt(t.length-1);
+  if(!(c>=0xAC00&&c<=0xD7A3))return esc(w)+'로';   /* 한글이 아니면 짐작하지 않는다 */
+  j=(c-0xAC00)%28;
+  return esc(w)+((j===0||j===8)?'로':'으로');      /* 8 = 받침 ㄹ */
+}
 
 /* ── 뼈대 ──────────────────────────────────────────────────────────
    <b>올 것의 모양</b>을 회색으로 세워 둡니다. 글자를 안 적습니다 —
@@ -156,6 +167,7 @@ g.holdCss   = holdCss;
 g.holdJong  = holdJong;
 g.holdEul   = holdEul;
 g.holdIga   = holdIga;
+g.holdRo    = holdRo;
 g.HOLD_VIEW = HOLD_VIEW;
 g.HOLD_RANK = HOLD_RANK;
 

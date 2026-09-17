@@ -199,9 +199,11 @@ var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', '
      뜻이 다릅니다 — 이것은 <b>같은 것을 두 곳에 두지 않으려고</b> 일부러 뺀
      자리입니다 (5번). 두 화면(app/index.html · db-crm.html)이 함께 싣습니다.
        apex-hold.js  손에 자료가 있나 — 「아직」·「없음」·「못 받음」
+       apex-next.js  「다음 한 걸음」 칸의 모양 — 말은 화면마다, 모양은 하나
      ※ apex-stage.js 의 APEX_STAGE 는 부르는 쪽이 typeof 로 감싸서 여기 없습니다. */
   'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
-  'holdJong', 'holdEul', 'holdIga', 'HOLD_VIEW', 'HOLD_RANK'];
+  'holdJong', 'holdEul', 'holdIga', 'holdRo', 'HOLD_VIEW', 'HOLD_RANK',
+  'nextCss', 'nextSheet', 'nextSheetHide'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;

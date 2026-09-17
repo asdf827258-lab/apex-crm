@@ -2494,6 +2494,8 @@ body{letter-spacing:-.02em}
   </div>
 </div>
 
+<!-- 「다음 한 걸음」 칸의 <b>모양</b>은 한 곳이다(apex-next.js) — 말만 화면마다 다르다 (5번) -->
+<script src="../../apex-next.js"></script>
 <script>
 
 const KEY='apex_policy_delivery_v1';
@@ -4157,6 +4159,52 @@ function printView(){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('printing', v===cur));
   window.print();
 }
+/* ══════════════════════════════════════════════════════════════════
+   흐름 한 줄 (nx*) — <b>뽑았으면 기록까지</b>
+
+   속지·안내장을 뽑고 나면 여기서 끝이었습니다. 그런데 증권 전달은
+   뽑는 것이 끝이 아니라 <b>만나서 드리고, CRM 에 올리는 것</b>까지입니다.
+   그 마지막 한 걸음을 아무도 말해 주지 않아서, 전달은 했는데 단계가
+   <b>계약완료에 그대로 멈춘</b> 고객이 쌓였습니다. 그러면 소개를 챙길
+   자리(소개완료)가 영영 안 열립니다.
+
+   ★ <b>「인쇄했습니다」라고 적지 않습니다.</b> afterprint 는 인쇄를 취소해도
+     울립니다 — 안 한 것을 했다고 적으면 그것이 거짓말입니다 (1번).
+     인쇄 창이 닫힌 그 자리에서 <b>다음에 할 일</b>만 말합니다.
+   ★ 단추는 <b>진짜로 갑니다</b> (8번). 워크스페이스 안이면 바깥에 부탁해
+     DB 통합 CRM 으로 옮기고, 혼자 열었으면 새 탭으로 엽니다.
+   ══════════════════════════════════════════════════════════════════ */
+function nxAfterPrint(){
+  /* 발표 중에는 안 세운다 — 고객이 보고 계신 화면이다 */
+  if(document.body.classList.contains('presenting'))return;
+  /* 칸과 단추 모양은 <b>apex-next.js</b> 가 입힌다 — 이 화면에는 더 적을 말의 옷이 없다 (5번) */
+  nextSheet('nxNext',
+    '<div class="nx-card" role="status">'+
+      '<div class="nx-next">다음 — 전달하고 나면 <b>DB 통합 CRM 에 「증권전달」로</b> 올려 주세요</div>'+
+      '<div class="nx-sub">그래야 <b>소개를 챙길 자리</b>(소개완료)가 열립니다. '+
+        '올리지 않으면 계약완료에 그대로 멈춰, 이 고객은 다시 안 떠오릅니다.</div>'+
+      '<div class="nx-btns">'+
+        '<button class="nx-go" onclick="nxCrm()">🗄️ DB 통합 CRM 열기</button>'+
+        '<button class="nx-stop" onclick="nxClose()">나중에</button>'+
+      '</div>'+
+    '</div>');
+}
+function nxClose(){ nextSheetHide('nxNext'); }
+function nxCrm(){
+  nxClose();
+  /* 워크스페이스 안이면 <b>바깥에 부탁한다</b> — 새 탭을 또 열면 로그인이 둘이 된다 */
+  try{
+    if(window.parent&&window.parent!==window){
+      window.parent.postMessage({type:'apexPdelGo',go:'crm'},'*');
+      return;
+    }
+  }catch(e){}
+  window.open('../../db-crm.html','_blank','noopener');
+}
+/* 인쇄 창이 닫히면 한 번 — <b>부르는 자리를 하나로</b> 둔다 (5번).
+   printView·printOnly·Ctrl+P 가 모두 여기로 모인다. */
+window.addEventListener('afterprint',function(){ try{ nxAfterPrint(); }catch(e){} });
+
 (function(){
   try{ TSIT=localStorage.getItem('apex_delivery_sit')||'all'; }catch(e){}
   tRender(); lCourse(); lTeach();
