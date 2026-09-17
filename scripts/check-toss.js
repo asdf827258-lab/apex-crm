@@ -55,11 +55,15 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      size  글자 크기 가짓수
      small 44px 아래인 누름 자리 수                                    */
 const BASE = {
-  /*          작은 글자   계단    빗나감    ← 2026-09-17 실측 그대로 */
-  home:    { tiny: 141, size: 18, small: 50 },
-  airep:   { tiny:  63, size: 11, small: 11 },
-  clients: { tiny:  50, size:  9, small: 31 },
-  mycal:   { tiny:  64, size: 10, small: 34 }
+  /*          작은 글자   계단    빗나감
+     0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
+     1단계(9/17 10:40) <b>글자 계단</b>을 여섯으로 못 박고 앱 CSS 의
+       font-size 1,451자리를 전부 토큰으로 옮긴 뒤 — 작은 글자가
+       <b>네 화면 모두 0</b> 이 되었습니다. 기준선을 그만큼 조입니다.   */
+  home:    { tiny: 0, size: 7, small: 49 },
+  airep:   { tiny: 0, size: 4, small: 11 },
+  clients: { tiny: 0, size: 3, small: 31 },
+  mycal:   { tiny: 0, size: 3, small: 34 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
