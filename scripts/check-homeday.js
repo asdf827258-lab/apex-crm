@@ -197,6 +197,22 @@ const SEED = `(function(){
 
   /* ─────────────────────────────────────────────────────────── */
   head('[4] 달력이 <b>주간·월간</b> 둘 다 선다');
+  /* ── 홈 달력은 이제 <b>접힌 채로</b> 열립니다 (토스판 3단계) ─────────
+     홈이 여섯 화면 반이라 큰 카드 셋을 접었습니다. 접힌 것은 화면에
+     안 서므로 크기를 재면 <b>0px</b> 이 나옵니다 — 카드가 망가진 것이
+     아니라 <b>안 편 것</b>입니다. 그러니 <b>펴고</b> 잽니다.
+     여기서 「펴진다」 는 것 자체도 한 줄로 잽니다 — 안 펴지면 그 안의
+     것은 영영 못 봅니다 (1번).                                        */
+  const opened = await pg.evaluate(() => {
+    const box = document.getElementById('hmFold_cal');
+    if (!box) return 'noFold';
+    const h = box.querySelector('.hm-fold-h');
+    if (box.querySelector('.hm-fold-b').hidden) h.click();
+    return box.querySelector('.hm-fold-b').hidden ? 'stuck' : 'open';
+  });
+  is(opened !== 'stuck', '접힌 <b>달력이 펴진다</b> — ' +
+     (opened === 'noFold' ? '접기 상자가 없습니다(예전 판)' : '머리를 누르니 열렸습니다'));
+  await pg.waitForTimeout(150);
   const seg = await pg.evaluate(() => {
     const s = document.querySelector('#hmCalHost .mcal-seg');
     return { there: !!s, txt: s ? s.textContent.replace(/\s+/g, '') : '',
