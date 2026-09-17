@@ -32,7 +32,20 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   await new Promise(r => srv.listen(0, r));
   const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
-  const page = await browser.newPage();
+  /* ── <b>바깥으로 안 나간다</b> ────────────────────────────────────────
+     app/finance.html 은 머리에서 pdf.js 를 <b>cdnjs 에서</b> 받아 온다.
+     그 줄이 늦으면 domcontentloaded 가 안 떨어지고, 30초를 넘겨 이 점검이
+     통째로 터진다 — <b>CI 에서만</b> 그랬다. 여기서 재는 것은 「보고 있는
+     탭이 아니라 고객이 트랙을 정하는가」 지 CDN 이 빠른가가 아니다.
+     고칠 것이 없는데 빨개지는 점검은 안 잡는 것보다 나쁘다 (8번).
+
+     끊지 않고 <b>빈 것으로 대답</b>한다 — 끊으면 오류가 한 줄 나고,
+     이 점검은 콘솔이 조용한지도 본다. check-stage 가 쓰는 그 방법이다. */
+  const ctx = await browser.newContext();
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + srv.address().port) >= 0
+    ? r.continue()
+    : r.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 140)));
 
