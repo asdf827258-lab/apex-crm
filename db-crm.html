@@ -56,7 +56,12 @@
     .main{margin-left:242px}.topbar{height:72px;position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
     .topbar h1{font-size:var(--t2,20px);color:var(--navy);margin:0}.top-actions{display:flex;gap:8px}.content{max-width:1600px;margin:auto;padding:28px}.page{display:none}.page.active{display:block}
     .hero{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:22px}.hero h2{font-size:28px;color:var(--navy);margin:0 0 7px}.hero p{margin:0;color:var(--muted)}
-    .grid{display:grid;gap:16px}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 8px rgba(25,31,40,.03)}
+    /* ★ <b>격자 칸은 기본으로 안 줄어듭니다.</b> grid 자식의 min-width 는 auto(=내용
+   크기)라, 안에 넓은 것(표·입력줄)이 하나 있으면 칸이 그만큼 버티고 <b>화면 밖으로</b>
+   밀려납니다. 폰에서 옆으로 새던 자리가 여기였습니다 — 잘린 줄은 아무도 안 읽습니다.
+   바닥을 0 으로 내려 주면 칸이 줄고, 넓은 것은 제 안에서 굴러갑니다. */
+    .grid{display:grid;gap:16px}
+    .grid>*{min-width:0}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 8px rgba(25,31,40,.03)}
     .kpi{padding:19px}.kpi .label{color:var(--muted);font-size:var(--t5,14px);font-weight:800}.kpi .value{font-size:31px;font-weight:900;color:var(--navy);margin-top:9px}.kpi .sub{font-size:var(--t6,13px);color:var(--muted);margin-top:7px}
     .split{grid-template-columns:1.25fr .75fr}.section{padding:20px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
     .section-head h3{margin:0;color:var(--navy);font-size:var(--t3,17px)}.section-head p{margin:4px 0 0;color:var(--muted);font-size:var(--t6,13px)}
@@ -82,6 +87,32 @@
       font-family:inherit;font-size:var(--t6,13px);font-weight:800;color:#3182f6;cursor:pointer;white-space:nowrap}
     .sg-up:hover{background:#f0f7ff;border-color:#bcd8fb}
     .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px}table{width:100%;border-collapse:collapse;min-width:1050px;background:#fff}
+    /* ══ 폰에서는 <b>표를 카드로 접는다</b> ══════════════════════════════
+       칸이 열셋인 표는 폰에 <b>절대</b> 안 들어갑니다. 옆으로 굴리게 두면
+       고객 앞에서 손가락으로 표를 밀며 찾게 되고, 그 사이 대화가 끊깁니다.
+       한 줄을 <b>한 장</b>으로 세우고, 칸 이름을 왼쪽에 붙입니다.
+       이름은 <b>머리줄에서 그대로</b> 가져옵니다(data-th) — 여기 또 적으면
+       칸을 하나 늘릴 때 한쪽만 고쳐집니다 (5번).
+       빈 손·기다림·못 받음 줄(td[colspan])은 접지 않습니다 — 그 줄은 표가
+       아니라 <b>한 문장</b>입니다. ══════════════════════════════════════ */
+    @media(max-width:760px){
+      .table-wrap{overflow:visible;border:0;border-radius:0}
+      .table-wrap table{min-width:0;display:block}
+      .table-wrap thead{display:none}
+      .table-wrap tbody{display:block}
+      .table-wrap tr{display:block;border:1px solid var(--line);border-radius:14px;
+        background:#fff;padding:11px 13px;margin-bottom:10px}
+      .table-wrap td{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+        border:0;padding:7px 0;text-align:right;min-height:44px}
+      .table-wrap td+td{border-top:1px solid var(--line)}
+      .table-wrap td::before{content:attr(data-th);flex:none;text-align:left;
+        font-size:var(--t6,13px);font-weight:800;color:var(--muted)}
+      /* 이름표가 없는 칸(체크네모·안내 한 줄)은 통째로 한 줄 */
+      .table-wrap td:not([data-th]){display:block;text-align:left}
+      .table-wrap td:not([data-th])::before{content:none}
+      .table-wrap td[colspan]{border:0;padding:0}
+      .table-wrap .actions{justify-content:flex-end;flex-wrap:wrap}
+    }
     th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:var(--t6,13px);text-align:left;white-space:nowrap}
     td{padding:12px;border-bottom:1px solid #edf0f2;font-size:var(--t6,13px);vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
     .badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:var(--t6,13px);font-weight:900}.green{background:var(--greenbg);color:#087f5b}.red{background:var(--redbg);color:var(--red)}
@@ -1287,11 +1318,11 @@ function renderDb(){
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
-    <td>${fmt(d.assigned_date)}</td><td class="name">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td>${esc(pname(d.assigned_to))}</td><td><span class="badge gray">${esc(srcOf(d))}</span></td><td>${esc(d.region||"-")}</td>
-    <td>${badge(result(d))}</td><td>${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}${sgUpBtn(d)}</td><td>${touchDots(d)}</td><td>${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
-    <td>${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
-    <td><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
-    <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
+    <td data-th="배정일">${fmt(d.assigned_date)}</td><td class="name" data-th="고객">${esc(d.customer_name)}<br><small>${esc(d.phone||"-")}</small></td><td data-th="담당자">${esc(pname(d.assigned_to))}</td><td data-th="종류"><span class="badge gray">${esc(srcOf(d))}</span></td><td data-th="지역">${esc(d.region||"-")}</td>
+    <td data-th="결과">${badge(result(d))}</td><td data-th="단계">${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}${sgUpBtn(d)}</td><td data-th="접촉">${touchDots(d)}</td><td data-th="상담 약속">${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
+    <td data-th="녹음">${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
+    <td data-th="단톡 문구"><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
+    <td data-th="관리"><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
   </tr>`}).join("")||dbEmptyCell(q);
