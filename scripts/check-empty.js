@@ -185,8 +185,56 @@ const PUT = `function(st){
   is(floors.every(x => x.tiny === 0), '<b>13px 아래 글자가 0개</b>');
   is(floors.every(x => x.smallBtn === 0), '<b>44px 아래 단추가 0개</b>');
 
+  /* ── DB 통합 CRM — <b>다른 파일, 같은 판</b> ────────────────────────
+     사장님이 제일 먼저 말씀하신 화면입니다. 여태 이 화면은 못 받아도
+     <b>토스트 한 줄</b>만 띄우고 표는 「조회할 DB가 없습니다」로 남았습니다.
+     토스트는 몇 초 뒤 사라지고, 남은 글자는 <b>배정이 안 온 것</b>과 똑같습니다. */
+  head('[12] <b>DB 통합 CRM</b> 도 세 상태가 다른가 — 같은 판(apex-hold.js)을 쓴다');
+  const cp = await ctx.newPage();
+  const cerrs = [];
+  cp.on('pageerror', e => cerrs.push(String(e).slice(0, 160)));
+  await cp.goto('http://127.0.0.1:' + PORT + '/db-crm.html', { waitUntil: 'domcontentloaded' });
+  await cp.waitForTimeout(1500);
+  const crm = async (st) => await cp.evaluate((s) => {
+    document.getElementById('configScreen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    window.toast = function () {};
+    profile = { id: 'me', name: '홍길동', role: 'admin', active: true };
+    profiles = [profile]; calls = []; dbs = []; crmTeams = []; crmTeamOf = {}; cliKeys = {};
+    DBL.loaded = (s !== 'wait'); DBL.busy = (s === 'wait'); DBL.err = (s === 'fail') ? 'Failed to fetch' : '';
+    try { goPage('db'); renderDb(); } catch (e) { return { boom: String(e).slice(0, 110) }; }
+    const t = document.getElementById('dbBody');
+    const sk = t.querySelector('.hold-skc');
+    return {
+      txt: (t.innerText || '').replace(/\s+/g, ' ').trim(),
+      skel: t.querySelectorAll('.hold-sk').length,
+      fail: t.querySelectorAll('.hold-fail').length,
+      again: [...t.querySelectorAll('.hold-go')].map(e => (e.innerText || '').trim()),
+      /* ★ 토큰이 <b>없는</b> 화면이다. 대체값을 안 달면 이 줄이 통째로 무효가 되어
+         뼈대가 <b>투명하게</b> 선다 — 화면은 멀쩡한데 아무것도 안 보인다. */
+      skBg: sk ? getComputedStyle(sk).backgroundColor : '',
+      skH: sk ? Math.round(sk.getBoundingClientRect().height) : 0,
+      goH: [...t.querySelectorAll('.hold-go')].map(e => Math.round(e.getBoundingClientRect().height))
+    };
+  }, st);
+  const kw = await crm('wait'), kn = await crm('none'), kf = await crm('fail');
+  is(!kw.boom && !kn.boom && !kf.boom, '세 상태를 그리는 동안 <b>안 터진다</b>' + (kw.boom || kn.boom || kf.boom || ''));
+  is(kw.txt !== kn.txt && kn.txt !== kf.txt && kw.txt !== kf.txt, '<b>세 화면이 서로 다르다</b>');
+  is(kw.skel > 0 && !/조회할 DB가 없습니다/.test(kw.txt), '아직일 때 <b>「없습니다」라고 안 하고 뼈대를 세운다</b>');
+  is(kf.fail > 0 && !/조회할 DB가 없습니다/.test(kf.txt), '못 받았을 때 <b>「없습니다」라고 안 한다</b>');
+  is(/Failed to fetch/.test(kf.txt), '<b>서버가 준 말</b>을 표에 그대로 적는다 — 토스트는 사라진다');
+  is(kf.again.some(t => /다시 읽기/.test(t)), '<b>다시 읽기</b> 단추가 표 안에 선다');
+  is(/조회할 DB가 없습니다/.test(kn.txt), '다 왔는데 0건이면 <b>그때는 없다고 적는다</b>');
+
+  head('[13] <b>토큰이 없는 화면에서도 보이는가</b> — 제일 찾기 어려운 고장');
+  is(/rgb\(/.test(kw.skBg) && kw.skBg !== 'rgba(0, 0, 0, 0)',
+     '뼈대에 <b>색이 실제로 실린다</b> — ' + (kw.skBg || '(빈 값)') + ' · var() 에 대체값이 붙어 있다');
+  is(kw.skH >= 20, '뼈대가 <b>높이를 갖는다</b> — ' + kw.skH + 'px');
+  is(kf.goH.length > 0 && kf.goH.every(h => h >= 44), '다시 읽기 단추가 <b>44px 이상</b> — ' + kf.goH.join('·') + 'px');
+
   head('[11] 이 판을 그리는 동안 <b>터진 곳이 없다</b>');
-  is(errs.length === 0, '콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
+  is(errs.length === 0, '본체 콘솔 에러 ' + errs.length + '건' + (errs.length ? ' — ' + errs.slice(0, 3).join(' / ') : ''));
+  is(cerrs.length === 0, 'CRM 콘솔 에러 ' + cerrs.length + '건' + (cerrs.length ? ' — ' + cerrs.slice(0, 3).join(' / ') : ''));
 
   console.log('\n' + (bad ? ('✗ 빈 손·기다림·실패 — ' + bad + '자리가 막혔습니다')
                           : '✓ 빈 손·기다림·실패가 서로 다른 화면입니다'));
