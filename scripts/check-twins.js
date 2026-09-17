@@ -194,7 +194,14 @@ var BROWSER = ('window document location navigator history screen console alert 
    <b>여기 적힌 것만</b> 봐주고 나머지는 잡는다.                       */
 var EXTERNAL = ['supabase', 'PENSION', 'html2canvas', 'PptxGenJS', 'pdfjsLib', 'JSZip',
   'saveAs', 'marked', 'Chart', 'gtag', 'dataLayer', 'APEX_SB', 'APEX_CFG', 'kakao', 'Kakao',
-  'TossPayments'];
+  'TossPayments',
+  /* <b>우리가 만든 공용 파일</b>에서 오는 것들. 남의 라이브러리와 섞여 있지만
+     뜻이 다릅니다 — 이것은 <b>같은 것을 두 곳에 두지 않으려고</b> 일부러 뺀
+     자리입니다 (5번). 두 화면(app/index.html · db-crm.html)이 함께 싣습니다.
+       apex-hold.js  손에 자료가 있나 — 「아직」·「없음」·「못 받음」
+     ※ apex-stage.js 의 APEX_STAGE 는 부르는 쪽이 typeof 로 감싸서 여기 없습니다. */
+  'holdReady', 'holdOf', 'holdAll', 'holdSkel', 'holdSay', 'holdCss',
+  'holdJong', 'holdEul', 'holdIga', 'HOLD_VIEW', 'HOLD_RANK'];
 
 function scriptsOf(src) {
   var out = [], re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi, m;
