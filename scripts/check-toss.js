@@ -1,0 +1,184 @@
+/* ══════════════════════════════════════════════════════════════════
+   check-toss.js — <b>토스처럼 되어 가고 있나.</b> 자(尺)입니다.
+
+   사장님 말씀 — 「토스어플처럼 만들 계획과 프로젝트를 짜보자」.
+
+   「토스처럼」 을 <b>느낌으로</b> 고치면 고쳤는지 아닌지 아무도 모릅니다.
+   그래서 <b>재는 자를 먼저</b> 만듭니다. 이 점검은 「예쁜가」 를 묻지
+   않습니다 — 예쁜 것은 잴 수 없습니다. <b>손이 닿는가 · 눈에 읽히는가 ·
+   한 화면에 들어오는가</b> 셋만 잽니다. 셋 다 숫자입니다.
+
+   ── 재는 것 넷 ────────────────────────────────────────────────────
+     ① <b>작은 글자</b>  13px 아래로 찍힌 글자가 몇 개인가
+        폰에서 12px 는 안경을 벗으면 안 읽힙니다. 사장님은 고객 앞에서
+        이 화면을 여십니다.
+     ② <b>글자 계단</b>  화면 하나에 글자 크기가 몇 가지인가
+        21가지면 계단이 아니라 비탈입니다. 눈이 어디가 중요한지 못
+        고릅니다.
+     ③ <b>빗나가는 자리</b>  높이 44px 아래인 누름 자리가 몇 개인가
+        애플이 정한 손가락 크기가 44px 입니다. 그 아래는 옆을 누릅니다.
+     ④ <b>옆으로 새나</b>  폰 너비에서 가로 스크롤이 생기는가
+        가로로 새면 글이 잘리고, 잘린 줄은 아무도 안 읽습니다.
+
+   ── 어떻게 빨간불이 켜지나 ────────────────────────────────────────
+   <b>기준선(BASE)을 지금 값으로 못 박아 둡니다.</b> 그래서 오늘은 전부
+   초록입니다. 여기서 <b>나빠지면</b> 그 자리에서 빨간불이 켜집니다 —
+   새 화면을 만들면서 10px 글자를 또 뿌리면 걸립니다.
+
+   한 단계를 끝낼 때마다 <b>기준선을 그만큼 조입니다.</b> 그러면 되돌아
+   가는 것도 막힙니다. 기준선은 <b>사람이 손으로</b> 내립니다 — 저절로
+   내려가게 두면 나빠진 것을 그대로 새 기준으로 삼습니다 (1번).
+
+   ★ <b>0 을 목표로 적지 않습니다.</b> 아직 못 간 자리를 「됐다」 고
+     적으면 그것이 거짓말입니다. 지금 값을 그대로 적고, 고칠 때마다
+     내립니다.
+   ══════════════════════════════════════════════════════════════════ */
+const { chromium } = require('playwright');
+const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
+const ROOT = process.cwd(), PORT = 8983;
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript', '.css': 'text/css' };
+const srv = http.createServer((rq, rs) => {
+  let p = decodeURIComponent(url.parse(rq.url).pathname.split('?')[0]);
+  const f = path.join(ROOT, p);
+  if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rs.writeHead(404); rs.end('no'); return; }
+  rs.writeHead(200, { 'Content-Type': MIME[path.extname(f)] || 'application/octet-stream' });
+  fs.createReadStream(f).pipe(rs);
+});
+let bad = 0;
+const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+
+/* ── <b>기준선</b> — 2026-09-17 에 잰 값 ──────────────────────────────
+   고칠 때마다 손으로 내립니다. 올리지 않습니다 — 올리는 순간 이 자는
+   자가 아니라 변명이 됩니다.
+
+     tiny  13px 아래로 찍힌 글자 수
+     size  글자 크기 가짓수
+     small 44px 아래인 누름 자리 수                                    */
+const BASE = {
+  /*          작은 글자   계단    빗나감    ← 2026-09-17 실측 그대로 */
+  home:    { tiny: 141, size: 18, small: 50 },
+  airep:   { tiny:  63, size: 11, small: 11 },
+  clients: { tiny:  50, size:  9, small: 31 },
+  mycal:   { tiny:  64, size: 10, small: 34 }
+};
+
+/* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
+   잰 값이 날마다 안 바뀝니다 — 서버에서 오는 대로 재면 자가 흔들립니다. */
+const SEED = `
+  document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(function(x){x.remove()});
+  window.toast=function(){};
+  OS.session={user:{id:'u1'}};
+  OS.profile={id:'u1',name:'윤시현',role:'owner',active:true,plan:'vip'};
+  window.arLoad=function(){};
+  (function(){
+    var mk=function(id,st){return {id:id,who:'u1',name:'홍길동'+id,region:'순천',src:'일반',
+      stage:st,cAt:'',pAt:'',got:'2026-09-01',n:1,last:'',res:'부재',appt:'',memo:'',days:9};};
+    AR.loaded=true; AR.busy=false; AR.cliRows=[];
+    AR.db=[mk('a','부재'),mk('b','TA'),mk('c','PC')];
+    AR.cat='touch'; AR.tk='all'; AR.tks=''; AR.tkAll=false; AR.tkWho=''; AR.tkTeam='';
+  })();`;
+
+(async () => {
+  await new Promise(r => srv.listen(PORT, r));
+  const b = await chromium.launch();
+  /* <b>아이폰 크기</b>로 잽니다 — 사장님이 고객 앞에서 여시는 것은 폰입니다 */
+  const ctx = await b.newContext({ viewport: { width: 390, height: 844 } });
+  /* 바깥으로 안 나갑니다 — 재는 것은 글자 크기지 서버가 아닙니다 (8번) */
+  await ctx.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+  const page = await ctx.newPage();
+  const errs = [];
+  page.on('pageerror', e => errs.push(String(e).slice(0, 140)));
+  await page.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(2200);
+
+  const measure = async (tab) => await page.evaluate((a) => {
+    (0, eval)(a.seed);
+    try { go(a.tab); } catch (e) {}
+    const pane = document.getElementById('dynPane');
+    if (!pane) return null;
+    /* <b>보이는 글자만</b> 셉니다. 숨은 칸까지 세면 고치지도 않은 자리가
+       숫자를 올려 놓아 어디를 고칠지 알 수가 없습니다. */
+    const sizes = {}; let tiny = 0, total = 0;
+    pane.querySelectorAll('*').forEach(e => {
+      if (!e.offsetParent) return;
+      const n = e.childNodes[0];
+      const t = (n && n.nodeType === 3) ? (n.nodeValue || '').trim() : '';
+      if (!t) return;
+      const fs = Math.round(parseFloat(getComputedStyle(e).fontSize) * 2) / 2;
+      sizes[fs] = (sizes[fs] || 0) + 1; total++;
+      if (fs < 13) tiny++;
+    });
+    /* 손가락이 닿는가 — <b>눌러서 뭔가 일어나는 것</b>만 셉니다 */
+    let small = 0, btn = 0, worst = 99;
+    pane.querySelectorAll('button,a,select,input[type=checkbox]').forEach(e => {
+      if (!e.offsetParent) return;
+      const r = e.getBoundingClientRect();
+      if (!r.height) return;
+      btn++;
+      if (r.height < 44) { small++; if (r.height < worst) worst = Math.round(r.height); }
+    });
+    return {
+      tiny, total, btn, small, worst: (worst === 99 ? 0 : worst),
+      size: Object.keys(sizes).length,
+      top: Object.entries(sizes).sort((x, y) => y[1] - x[1]).slice(0, 4).map(x => x[0] + 'px×' + x[1]).join(' · '),
+      wide: document.documentElement.scrollWidth > window.innerWidth + 1,
+      scrollW: document.documentElement.scrollWidth,
+      screens: Math.round(document.documentElement.scrollHeight / window.innerHeight * 10) / 10
+    };
+  }, { seed: SEED, tab });
+
+  const NAME = { home: '홈', airep: 'TFA 업무관리', clients: '고객 365일', mycal: '내 캘린더' };
+  const now = {};
+  for (const tab of Object.keys(BASE)) {
+    console.log('\n[' + NAME[tab] + '] 폰(390px)에서 재 봅니다');
+    const M = await measure(tab);
+    now[tab] = M;
+    if (!M) { is(false, '화면이 안 섭니다 — ' + tab); continue; }
+    const B = BASE[tab];
+    is(M.tiny <= B.tiny,
+      '<b>작은 글자</b>(13px 아래) ' + M.tiny + '개 / 글자 ' + M.total + '개 — 기준선 ' + B.tiny +
+      (M.tiny > B.tiny ? ' ← 늘었습니다. 새로 넣은 자리에 작은 글자를 뿌리지 않았는지 보십시오'
+                       : (M.tiny < B.tiny ? ' (줄었습니다 — 기준선도 같이 내려 주십시오)' : '')));
+    is(M.size <= B.size,
+      '<b>글자 계단</b> ' + M.size + '가지 — 기준선 ' + B.size + ' · 많이 쓰는 것: ' + M.top +
+      (M.size > B.size ? ' ← 늘었습니다. 새 크기를 만들지 말고 있는 것을 쓰십시오' : ''));
+    is(M.small <= B.small,
+      '<b>빗나가는 자리</b>(44px 아래) ' + M.small + '개 / 누를 곳 ' + M.btn + '개 — 기준선 ' + B.small +
+      (M.worst ? (' · 제일 작은 것 ' + M.worst + 'px') : '') +
+      (M.small > B.small ? ' ← 늘었습니다' : ''));
+    /* 가로로 새는 것은 <b>기준선이 없습니다</b> — 새면 그냥 틀린 것입니다 */
+    is(!M.wide,
+      '<b>옆으로 안 샙니다</b> — 폭 ' + M.scrollW + 'px / 390px' +
+      (M.wide ? ' ← 가로로 샙니다. 글이 잘리고, 잘린 줄은 아무도 안 읽습니다' : '') +
+      ' · 세로 ' + M.screens + '화면');
+  }
+
+  console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
+  const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const css = (APP.match(/<style[\s\S]*?<\/style>/g) || []).join('\n');
+  /* <b>토큰이 이미 있습니다</b>(--r-xs·--r-sm·--r·--r-md·--r-lg · --shadow-*).
+     그런데 그 자리를 안 쓰고 숫자를 직접 적은 곳이 훨씬 많습니다.
+     여기도 기준선을 두고, 줄 때마다 내립니다. */
+  const shadows = new Set((css.match(/box-shadow:[^;}"]*/g) || []).map(s => s.trim()));
+  const radii = new Set((APP.match(/border-radius:\s*\d+px/g) || []).map(s => s.replace(/\s/g, '')));
+  const SHADOW_BASE = 34, RADIUS_BASE = 22;   /* 2026-09-17 실측 그대로 */
+  is(shadows.size <= SHADOW_BASE,
+    '<b>그림자</b>를 ' + shadows.size + '가지로 씁니다 — 기준선 ' + SHADOW_BASE +
+    ' (토큰은 --shadow-xs·sm·md 다섯 개뿐입니다)');
+  is(radii.size <= RADIUS_BASE,
+    '<b>모서리 둥글기</b>를 ' + radii.size + '가지로 씁니다 — 기준선 ' + RADIUS_BASE +
+    ' (토큰은 --r-xs·sm·r·md·lg 다섯 개뿐입니다)');
+  /* 토큰이 <b>있기는 한가</b> — 없으면 위 두 줄이 무슨 말인지 알 수 없다 */
+  is(/--r-xs:/.test(css) && /--shadow-xs:/.test(css) && /--primary:/.test(css),
+    '색·둥글기·그림자 <b>토큰이 한 곳</b>에 있다 (:root)');
+
+  is(errs.length === 0, '재는 동안 터진 곳이 없다' + (errs.length ? (' ← ' + errs[0]) : ''));
+
+  await ctx.close(); await b.close(); srv.close();
+  console.log('\n──────────────────────────────');
+  console.log(bad
+    ? ('✗ ' + bad + '개 — 폰에서 전보다 나빠진 자리가 있습니다')
+    : '✓ 폰에서 읽히고 · 손이 닿고 · 옆으로 안 샙니다 (기준선 안쪽)');
+  console.log('  기준선은 scripts/check-toss.js 의 BASE 입니다 — 좋아지면 손으로 내려 주십시오.');
+  process.exit(bad ? 1 : 0);
+})().catch(e => { console.log('✗ 점검 자체가 터졌습니다: ' + e.message); srv.close(); process.exit(1); });
