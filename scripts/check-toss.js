@@ -61,11 +61,25 @@ const BASE = {
        font-size 1,451자리를 전부 토큰으로 옮긴 뒤 — 작은 글자가
        <b>네 화면 모두 0</b>.
      2단계(9/17 12:10) <b>엄지</b> — 누르는 자리에 44px 바닥을 깔고
-       아래 탭바를 놓은 뒤 — 빗나가는 자리도 <b>네 화면 모두 0</b>.   */
+       아래 탭바를 놓은 뒤 — 빗나가는 자리도 <b>네 화면 모두 0</b>.
+     5단계(9/17 16:40) <b>자가 자기를 속이고 있었습니다.</b> 고객 목록(OSC)을
+       안 심어서 「고객 365일」·「내 캘린더」를 <b>아직 읽는 중인</b> 화면으로
+       재고 있었습니다 — 목록이 비어 있으니 줄에 붙은 글자를 <b>한 번도 센
+       적이 없습니다.</b> 그때는 「읽는 중」과 「없습니다」가 같은 그림이라
+       아무도 못 봤고, 5단계에서 그 둘을 갈라 놓으니 드러났습니다.
+       홍길동 세 분을 심고 다시 재니 —
+         · 작은 글자 12.5px 가 <b>3개</b> 나왔습니다 (cliMonthHtml 의 인라인
+           style 자리 — 1단계는 &lt;style&gt; 두 덩이만 옮겼습니다). 고쳐서 0.
+         · 세로가 1.3→<b>2.8</b>화면, 1.8→<b>2.4</b>화면. 이것은 나빠진 것이
+           아니라 <b>여태 안 재던 것을 재기 시작한 것</b>입니다. 기준선을
+           잰 값 그대로 적습니다 — 편한 숫자를 적어 두는 자는 자가 아닙니다.
+         · 글자 계단 3→<b>4</b>: 「오늘 몫 N명」 한 자리가 --t5 입니다.
+       ※ 남은 인라인 font-size 가 아직 <b>1,900자리쯤</b> 있습니다 (JS 문자열
+         안의 style= 라 1단계 변환이 지나갔습니다). 다음 판에서 옮깁니다.   */
   home:    { tiny: 0, size: 7, small: 0, screens: 3.5 },
   airep:   { tiny: 0, size: 4, small: 0, screens: 2.5 },
-  clients: { tiny: 0, size: 3, small: 0, screens: 1.3 },
-  mycal:   { tiny: 0, size: 3, small: 0, screens: 1.8 }
+  clients: { tiny: 0, size: 4, small: 0, screens: 2.8 },
+  mycal:   { tiny: 0, size: 3, small: 0, screens: 2.4 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
@@ -76,12 +90,21 @@ const SEED = `
   OS.session={user:{id:'u1'}};
   OS.profile={id:'u1',name:'윤시현',role:'owner',active:true,plan:'vip'};
   window.arLoad=function(){};
+  /* ★ <b>자료가 손에 있는 화면</b>을 잽니다. 여태 OSC(고객 목록)를 안 심어서
+     이 자는 <b>아직 읽는 중인</b> 화면을 재고 있었습니다 — 그때는 「읽는 중」과
+     「없습니다」가 같은 그림이라 아무도 못 봤습니다. 5단계에서 그 둘을 갈라
+     놓으니 드러났습니다. 사장님이 보시는 것은 <b>다 온 화면</b>입니다. */
+  window.osLoadClients=function(){};
   (function(){
     var mk=function(id,st){return {id:id,who:'u1',name:'홍길동'+id,region:'순천',src:'일반',
       stage:st,cAt:'',pAt:'',got:'2026-09-01',n:1,last:'',res:'부재',appt:'',memo:'',days:9};};
     AR.loaded=true; AR.busy=false; AR.cliRows=[];
     AR.db=[mk('a','부재'),mk('b','TA'),mk('c','PC')];
     AR.cat='touch'; AR.tk='all'; AR.tks=''; AR.tkAll=false; AR.tkWho=''; AR.tkTeam='';
+    OSC.loaded=true; OSC.busy=false; OSC.err=''; OSC.q='';
+    OSC.list=[{id:'c1',advisor_id:'u1',name_masked:'홍○○',created_at:'2026-09-01'},
+              {id:'c2',advisor_id:'u1',name_masked:'홍○○',created_at:'2026-09-02'},
+              {id:'c3',advisor_id:'u1',name_masked:'홍○○',created_at:'2026-09-03'}];
   })();`;
 
 (async () => {
