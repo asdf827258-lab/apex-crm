@@ -1707,6 +1707,48 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
 .istudio-captxt{font-size:var(--t5);line-height:1.75;color:var(--ink-2)}
 .istudio-tags{font-size:var(--t6);line-height:1.85;color:#1A56DB;word-break:break-all}
 .istudio-note{margin-top:14px;font-size:var(--t6);color:var(--ink-4);background:var(--ink-8);border:1px solid var(--ink-7);border-radius:10px;padding:10px 12px;line-height:1.6}
+
+/* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════════
+   폰에서 메뉴는 <b>왼쪽 위 ☰</b> 뒤에 있었습니다. 한 손으로 들면 거기가
+   제일 안 닿는 자리입니다 — 엄지는 <b>아래</b>에 있습니다. 그래서 매일
+   여는 넷과 서랍을 아래에 고정합니다.
+
+   ★ <b>폰에서만</b> 섭니다(640px 아래). 넓은 화면은 왼쪽 기둥이 그대로
+     있어 아래에 또 세우면 같은 것이 두 곳이 됩니다 (5번).
+   ★ 어느 화면인지는 <b>navMark 한 곳</b>이 정합니다 — 여기서 또 세지
+     않습니다.                                                          */
+.tabbar{display:none}
+@media(max-width:640px){
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;
+    z-index:150;background:var(--white);border-top:1px solid var(--ink-7);
+    box-shadow:var(--shadow-sm);padding-bottom:env(safe-area-inset-bottom,0px)}
+  .tb-b{appearance:none;border:0;background:none;font-family:inherit;cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    min-height:56px;padding:7px 2px 6px;color:var(--ink-5);font-size:var(--t6);font-weight:700;
+    letter-spacing:-.02em}
+  .tb-b .e{font-size:var(--t3);line-height:1}
+  .tb-b.on{color:var(--primary)}
+  .tb-b.on .e{transform:translateY(-1px)}
+  /* 탭바가 <b>글을 덮지 않게</b> 바닥을 띄웁니다 */
+  .main{padding-bottom:calc(66px + env(safe-area-inset-bottom,0px))}
+
+  /* ── <b>엄지로 누르는 자리는 44px 아래로 안 내려간다</b> ────────────
+     애플이 정한 손가락 크기가 44px 입니다. 그 아래는 <b>옆을 누릅니다.</b>
+     재 보니 홈에서 누를 곳 78개 중 <b>49개</b>가 44px 아래였고, 그중
+     스물넷이 달력 날짜 칸이었습니다.                                  */
+  #dynPane button,#dynPane .btn,#dynPane a.btn,#dynPane select{min-height:44px}
+  /* <b>글 속의 링크</b>는 min-height 가 안 먹습니다(inline). 대신 위아래
+     여백을 줍니다 — 줄 높이는 그대로인데 <b>누르는 네모만</b> 커집니다.
+     36px 짜리 링크가 48px 가 됩니다. */
+  #dynPane a{padding-top:6px;padding-bottom:6px}
+  #dynPane a.btn,#dynPane a.tb-b{padding-top:inherit;padding-bottom:inherit}
+  /* <b>체크는 네모가 아니라 줄 전체</b>가 누르는 자리입니다. 체크 네모만
+     키우면 13px 가 20px 이 될 뿐이라 여전히 빗나갑니다 — 감싼 줄을
+     44px 로 세웁니다. */
+  #dynPane label:has(input[type=checkbox]){min-height:44px;display:flex;
+    align-items:center;gap:8px}
+  #dynPane input[type=checkbox]{width:20px;height:20px;flex:none}
+}
 </style>
 </head>
 <body>
@@ -1767,6 +1809,9 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
     <div id="dynPane"></div>
   </main>
 </div>
+
+<!-- 아래 탭바 — 폰에서만 섭니다. 속은 tbPaint() 가 채웁니다 -->
+<nav class="tabbar" id="tabBar" aria-label="아래 메뉴"></nav>
 
 <!-- 보장분석 전·후 만들기 전용 화면 — 재무설계와 같은 방식(별도 파일 + iframe) -->
 <div id="baScreen">
@@ -12524,6 +12569,63 @@ function navRamp(i,n){
 function navMark(tab){
   var i,L=document.querySelectorAll('.tab-btn');
   for(i=0;i<L.length;i++)L[i].classList.toggle('on',L[i].getAttribute('data-tab')===tab);
+  /* 아래 탭바도 <b>여기서</b> 같이 칠한다 — 「지금 어느 화면인가」 를
+     두 곳이 따로 세면 한쪽만 늙는다 (5번) */
+  try{ tbPaint(tab); }catch(e){}
+}
+
+/* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════════
+   폰에서 메뉴는 왼쪽 위 <b>☰</b> 뒤에 있었습니다. 한 손으로 들면 거기가
+   제일 안 닿는 자리입니다 — 엄지는 <b>아래</b>에 있습니다.
+
+   ★ 칸은 <b>표 하나</b>에서 나옵니다. 삼항 사슬로 늘어놓으면 칸을 늘릴 때
+     반드시 하나를 빠뜨립니다 (5번).
+   ★ <b>못 여는 화면은 안 세웁니다</b> — 권한이 없는 분께 세워 두면 눌러도
+     「이용할 수 없습니다」 만 뜹니다 (8번).
+   ★ <b>새 화면을 만들지 않았습니다.</b> 네 칸은 이미 있는 화면으로 가고,
+     「더보기」 는 원래 있던 서랍(toggleNav)을 그대로 엽니다.            */
+var TB=[
+ {id:'home',    e:'🏠',t:'홈'},
+ {id:'clients', e:'📇',t:'고객'},
+ {id:'crm',     e:'🗂',t:'DB'},
+ {id:'mycal',   e:'📅',t:'달력'},
+ {id:'__more',  e:'☰', t:'더보기'}
+];
+function tbCan(id){
+  if(id==='__more')return true;
+  try{ return (typeof osTabAllowed!=='function')||osTabAllowed(id); }catch(e){ return true; }
+}
+function tbHtml(cur){
+  var h='',i,x;
+  for(i=0;i<TB.length;i++){
+    x=TB[i];
+    if(!tbCan(x.id))continue;
+    h+='<button type="button" class="tb-b'+((cur&&cur===x.id)?' on':'')+'" '+
+       'onclick="tbGo(\''+x.id+'\')" aria-label="'+osEsc(x.t)+'">'+
+       '<span class="e">'+x.e+'</span><span>'+osEsc(x.t)+'</span></button>';
+  }
+  return h;
+}
+/* 속이 비었거나 <b>칸 수가 달라졌으면</b> 다시 짓습니다 — 권한은 나중에
+   들어오기도 합니다(프로필을 늦게 받는 판). 그때 한 칸이 빠진 채로 남으면
+   그 사람은 영영 그 칸을 못 봅니다 (1번). */
+function tbPaint(cur){
+  var host=document.getElementById('tabBar'); if(!host)return;
+  var want=0,i;
+  for(i=0;i<TB.length;i++)if(tbCan(TB[i].id))want++;
+  if(host.children.length!==want)host.innerHTML=tbHtml(cur);
+  else{
+    var L=host.querySelectorAll('.tb-b'),k=0;
+    for(i=0;i<TB.length;i++){
+      if(!tbCan(TB[i].id))continue;
+      if(L[k])L[k].classList.toggle('on',cur===TB[i].id);
+      k++;
+    }
+  }
+}
+function tbGo(id){
+  if(id==='__more'){ try{ toggleNav(); }catch(e){} return; }
+  try{ go(id); }catch(e){}
 }
 /* ══════════════════════════════════════════════════════════════════
    즐겨찾기 · 메뉴 찾기 · 최근 쓴 것
@@ -15098,8 +15200,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-17 10:40';
-var APP_BUILD_NOTE="<b>글자 계단 — 폰에서 작은 글자가 사라졌습니다.</b> 어제 자로 재 보니 홈 한 화면에 글자 크기가 <b>열여덟 가지</b>였고, 글자 220개 중 <b>141개가 13px 아래</b>였습니다. 계단이 아니라 비탈입니다 — 눈이 어디가 중요한지 못 고릅니다. 게다가 폰에서 12px 는 안경을 벗으면 안 읽힙니다. 이 화면을 <b>고객 앞에서</b> 여시는데 말입니다. 그래서 계단을 <b>여섯</b>으로 못 박았습니다 — <b>24 · 20 · 17 · 15 · 14 · 13</b>. <b>13px 가 바닥</b>이고 그 아래로는 안 내려갑니다. 예전에는 <b>8.5px</b> 까지 있었습니다 — 그것은 글자가 아니라 무늬입니다. 앱 CSS 의 font-size 를 <b>1,451자리</b> 전부 이 계단으로 옮겼습니다 — 붙박이 CSS 492자리, 화면이 만들어 넣는 CSS 959자리. 이제 크기를 직접 적지 않고 <b>있는 계단을 고릅니다</b>. 새 크기를 만들면 점검이 그 자리에서 셉니다. <b>인쇄는 한 자리도 안 건드렸습니다</b> — 종이는 화면과 사정이 다릅니다(4-1). 제안서·보고서 팝업 아홉 곳은 px 그대로 두었고, 토큰이 한 자도 안 들어갔는지 세어 확인했습니다. 재 보니 — <b>작은 글자가 네 화면 모두 0개</b>가 되었습니다(홈 141→0 · TFA 63→0 · 고객 365일 50→0 · 내 캘린더 64→0). 계단도 홈 <b>18→7가지</b> · TFA 11→4 · 고객 365일 9→3 · 내 캘린더 10→3. 옆으로 새는 곳은 <b>한 군데도 없습니다</b>. 기준선도 그만큼 <b>손으로</b> 내렸습니다 — 이제 작은 글자가 <b>하나라도</b> 생기면 그 자리에서 빨간불이 켜집니다. <b>다음은 엄지</b>입니다 — 홈에서 누를 곳 78개 중 49개가 아직 44px 아래이고, 아래 탭바가 없습니다.";
+var APP_BUILD='2026-09-17 12:10';
+var APP_BUILD_NOTE="<b>엄지 — 아래 탭바가 생겼고, 빗나가는 자리가 사라졌습니다.</b> 폰에서 메뉴는 <b>왼쪽 위 ☰</b> 뒤에 있었습니다. 한 손으로 들면 거기가 제일 안 닿는 자리입니다 — 엄지는 <b>아래</b>에 있습니다. 그래서 매일 여는 넷과 서랍을 아래에 고정했습니다 — <b>🏠 홈 · 📇 고객 · 🗂 DB · 📅 달력 · ☰ 더보기</b>. 「더보기」 는 <b>원래 있던 서랍</b>을 그대로 엽니다 — 새 메뉴를 또 만들지 않았습니다(5번). 지금 어느 화면인지도 <b>원래 아는 자리 하나</b>(navMark)가 같이 칠합니다. <b>넓은 화면에서는 안 섭니다</b> — 왼쪽 기둥이 그대로 있는데 아래에 또 세우면 같은 것이 두 곳이 됩니다. 탭바가 글을 덮지 않게 바닥도 띄웠습니다. 그리고 <b>누르는 자리에 44px 바닥</b>을 깔았습니다. 애플이 정한 손가락 크기가 44px 이고, 그 아래는 <b>옆을 누릅니다</b>. 재 보니 홈에서 누를 곳 78개 중 <b>49개</b>가 44px 아래였고 제일 작은 것이 <b>12px</b> 였습니다. 달력 날짜 칸 스물넷이 34px 였습니다. <b>글 속의 링크</b>는 min-height 가 안 먹어서(inline) 위아래 여백으로 <b>누르는 네모만</b> 키웠습니다 — 줄 높이는 그대로인데 36px 가 48px 가 됩니다. <b>체크는 네모가 아니라 줄 전체</b>가 누르는 자리라, 감싼 줄을 44px 로 세웠습니다 — 네모만 키우면 13px 가 20px 이 될 뿐이라 여전히 빗나갑니다. 재 보니 — <b>빗나가는 자리가 네 화면 모두 0개</b>가 되었습니다(홈 49→0 · TFA 11→0 · 고객 365일 31→0 · 내 캘린더 34→0). 옆으로 새는 곳도 없습니다. 점검에 탭바 <b>아홉 자리</b>를 더했습니다 — 폰에서 서나 · 넓은 화면에서 안 서나 · 눌러서 정말 그 화면으로 가나 · 지금 화면이 켜지나 · 더보기가 서랍을 여나 · 글을 안 덮나. 되돌려 둘을 확인했습니다 — 44px 바닥을 빼면 <b>다섯 줄</b>, 탭바를 넓은 화면에도 세우면 <b>한 줄</b>이 빨개집니다. <b>다음은 홈 한 화면</b>입니다 — 「오늘 할 일 하나」 를 맨 위로 올리고 나머지를 접습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
