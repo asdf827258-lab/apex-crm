@@ -9,6 +9,10 @@
        본체(app/index.html)도 <b>같은 파일</b>을 싣는다. 여태 이 지식이 본체에만
        있어서, 이 화면에서는 단계를 눌러도 아무 말이 없었다 (5번). -->
   <script src="apex-stage.js"></script>
+  <!-- 손에 자료가 있나 — 「아직」·「없음」·「못 받음」을 가르는 곳도 <b>하나</b>다(apex-hold.js).
+       여태 이 화면은 못 받아도 토스트 한 줄만 띄우고 표는 <b>「조회할 DB가 없습니다」</b>로
+       남았다. 사장님은 배정이 안 온 줄 아신다 — 못 읽은 것을 0 으로 적은 것이다 (1번). -->
+  <script src="apex-hold.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
@@ -418,6 +422,9 @@
 <script>
 const CONFIG_KEY="apexSupabaseConfigV1";
 let sb=null, session=null, profile=null, profiles=[], dbs=[], calls=[], attendance=[], attErr=null;
+/* 손에 자료가 있나 — 칸 이름을 본체(OSC·AR)와 <b>똑같이</b> 둡니다. 이름이 갈리면
+   apex-hold.js 가 못 읽고, 못 읽으면 <b>ok 로 착각</b>합니다 (5번). */
+let DBL={loaded:false,busy:false,err:''};
 /* DB 종류 목록 — 대표가 정하고 모두가 같은 것을 본다 (app_config.db_sources) */
 let dbSources=[];
 /* 고객 365일로 이미 넘긴 사람 — "담당자|마스킹이름" 으로 기억한다.
@@ -717,6 +724,7 @@ async function pageAll(make,cap){
   }
 }
 async function loadAll(){
+  DBL.busy=true;DBL.err="";
   const [p,d,c,a,t,tm,cf,cl]=await Promise.all([
     sb.from("profiles").select("id,name,role,active").eq("active",true).order("name"),
     pageAll((x,y)=>sb.from("dbs").select("*")
@@ -734,7 +742,17 @@ async function loadAll(){
     pageAll((x,y)=>sb.from("clients").select("advisor_id,name_masked")
       .order("advisor_id",{ascending:true}).range(x,y))
   ]);
-  if(p.error||d.error||c.error){toast("데이터 조회 중 오류가 발생했습니다.");return}
+  if(p.error||d.error||c.error){
+    /* <b>토스트만 띄우고 끝내지 않습니다.</b> 토스트는 몇 초 뒤 사라지고, 남은 표는
+       「조회할 DB가 없습니다」 라고 <b>단정</b>합니다 — 배정이 안 온 것과 못 받은 것이
+       화면에서 같아집니다 (1번). 못 받았다고 표에 적고 다시 읽을 자리를 세웁니다. */
+    DBL.busy=false;DBL.loaded=true;
+    DBL.err=((p.error||d.error||c.error)||{}).message||"데이터 조회 중 오류가 발생했습니다.";
+    toast("데이터 조회 중 오류가 발생했습니다.");
+    try{holdCss();renderDb();}catch(e){}
+    return;
+  }
+  DBL.busy=false;DBL.loaded=true;DBL.err="";
   profiles=p.data||[];dbs=d.data||[];calls=c.data||[];attendance=(a&&!a.error&&a.data)?a.data:[];attErr=(a&&a.error)?a.error:null;
   crmTeams=(t&&!t.error&&t.data)||[];crmTeamOf={};((tm&&!tm.error&&tm.data)||[]).forEach(m=>crmTeamOf[m.member_id]=m.team_id);
   const sv=(cf&&!cf.error&&cf.data&&cf.data[0])?(cf.data[0].value||""):"";
@@ -1228,7 +1246,24 @@ function sgAskDo(i){
   if(p.act==="edit"){openDb(d.id);return}
   if(p.act==="go"){window.open("app/index.html?go="+encodeURIComponent(p.go),"_blank");return}
 }
+/* 표가 비었을 때 <b>무슨 말을 할까</b> — 「없다」고 말할 자격이 있는지 먼저 묻는다.
+   묻는 자리는 apex-hold.js 하나다 (5번). 표 칸 수는 머리줄에서 세어 온다 —
+   손으로 13 이라 적어 두면 칸을 하나 늘릴 때 여기만 어긋나 줄이 찌그러진다. */
+function dbEmptyCell(q){
+  const cols=document.querySelectorAll("#dbBody")[0]?.closest("table")
+               ?.querySelectorAll("thead th").length||13;
+  const box=(typeof holdSay==="function")
+    ? {wait:()=>holdSay("wait",{what:"배정 DB",n:4}),
+       fail:()=>holdSay("fail",{what:"배정 DB",why:DBL.err,again:"DBL.err='';loadAll()"}),
+       ok:()=>null}[holdReady(DBL)]()
+    : null;
+  if(box)return `<tr><td colspan="${cols}">${box}</td></tr>`;
+  return `<tr><td colspan="${cols}" class="empty">${q
+    ?`「${esc(q)}」 로 찾은 DB 가 없습니다.<br><small>이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모로 찾을 수 있습니다.</small>`
+    :"조회할 DB가 없습니다."}</td></tr>`;
+}
 function renderDb(){
+  try{ holdCss(); }catch(e){}      /* 옷을 쓰는 화면에서 부른다 (5번) */
   const q=($("search")?.value||"").trim();
   const rows=dbRows(true);
   dbFindNote(q,rows.length);
@@ -1242,7 +1277,7 @@ function renderDb(){
     <td><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
-  </tr>`}).join("")||`<tr><td colspan="13" class="empty">${q?`「${esc(q)}」 로 찾은 DB 가 없습니다.<br><small>이름 · 초성(ㄱㅊㅅ) · 번호 뒷자리 · 지역 · 시 · 담당자 · 종류 · 메모로 찾을 수 있습니다.</small>`:"조회할 DB가 없습니다."}</td></tr>`;
+  </tr>`}).join("")||dbEmptyCell(q);
   bulkBarUpd();sgRail();
 }
 /* 몇 건이 걸렸는지 그 자리에 적는다 — 걸러 놓고 말을 안 하면

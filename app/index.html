@@ -2000,6 +2000,9 @@ body.fpdeck-mode #fpDeckScreen{display:block;}
      흩어져 있어, CRM 에서 단계를 눌러도 아무 말이 없었다 (5번).
      저장소 뿌리에 있으므로 이 파일에서는 한 칸 위다. -->
 <script src="../apex-stage.js"></script>
+<!-- 손에 자료가 있나 — 「아직」·「없음」·「못 받음」을 가르는 곳도 <b>하나</b>다(apex-hold.js).
+     본체와 DB 통합 CRM 이 함께 싣는다 (5번). -->
+<script src="../apex-hold.js"></script>
 
 
 
@@ -9090,6 +9093,17 @@ function arTouchHtml(){
     return '<div class="ar-tl'+(warn?' warn':'')+'"><div class="v">'+v+'<span>'+u+'</span></div>'+
       '<div class="k">'+kk+'</div></div>';
   };
+  /* ── <b>손에 없으면 숫자를 안 세웁니다</b> ────────────────────────
+     배정 DB 가 아직 안 왔거나 못 받았는데 쪽지 다섯을 「0명」 으로 세우면,
+     사장님은 <b>오늘 붙을 사람이 없다</b>고 읽으십니다. 못 읽은 것을 0 으로
+     적으면 「없다」 는 뜻이 됩니다 (1번) — 값이 없으면 화면을 안 세웁니다. */
+  var arHd=holdReadyOr(AR);
+  if(arHd!=='ok'){
+    try{ holdCss(); }catch(eH){}
+    return arCard('☎️','오늘 터치할 사람',
+      '부재 · 거절 · 진행중 · 기고객 · 계약 뒤까지 한 줄로 세우는 자리입니다',
+      holdSayOr(arHd,{what:'오늘 터치할 사람', n:4, why:(AR.err||''), again:'arLoad(true)'}),'');
+  }
   /* ── 고르개 네 줄 — <b>팀 → 담당자 → 상태 → 종류</b> ──────────────
      여태는 「내 것 / 팀 전체」 두 단추뿐이라, 팀이 둘 이상이면 남의 팀까지
      한 덩어리였습니다. 이제 팀과 담당자를 따로 고릅니다. 팀원에게는
@@ -14296,6 +14310,15 @@ function mcalTitle(){
   return (a.slice(0,4)===b.slice(0,4)?'':a.slice(0,4)+'년 ')+f(a)+' ~ '+
          (a.slice(0,7)===b.slice(0,7)?((+b.slice(8,10))+'일'):f(b));
 }
+/* 「오늘 N건」 — <b>고객 목록이 손에 있을 때만</b> 건수를 적습니다.
+   달력은 OSC.list 에서 나옵니다. 아직 안 왔는데 「오늘 0건」 이라고 찍으면
+   사장님은 그날 약속이 없다고 읽으십니다 — 못 읽은 것을 0 으로 적은 것이라
+   「없다」 는 뜻이 되어 버립니다 (1번). 묻는 자리는 holdReady 하나입니다 (5번). */
+var MCAL_TDY={ wait:'오늘 <b>읽는 중</b>', fail:'오늘 <b>못 받음</b>' };
+function mcalTdyLabel(tn){
+  var r=holdReadyOr(typeof OSC!=='undefined'?OSC:null);
+  return MCAL_TDY[r]||('오늘 '+tn+'건');
+}
 function mcalCardHtml(opt){
   /* 내 일정을 <b>여기 한 곳</b>에서 읽어 옵니다 (5번). 달력을 세우는 자리가
      여기뿐이라 홈·내 캘린더·TFA 스케줄·고객 365일 넷이 저절로 같이 얻습니다.
@@ -14326,7 +14349,7 @@ function mcalCardHtml(opt){
         '<button type="button" onclick="mcalSetView(\'week\')" aria-pressed="'+(mcalView()==='week')+'">주</button>'+
         '<button type="button" onclick="mcalSetView(\'month\')" aria-pressed="'+(mcalView()==='month')+'">월</button>'+
       '</span>'+
-      '<button type="button" class="mcal-tdy" onclick="mcalGoToday()">오늘 '+tn+'건</button>'+
+      '<button type="button" class="mcal-tdy" onclick="mcalGoToday()">'+mcalTdyLabel(tn)+'</button>'+
     '</div>'+
     (mcalView()==='week'?mcalWeekHtml():mcalGridHtml())+
     '<div class="mcal-lg">'+Object.keys(MCAL_KIND).map(function(k){
@@ -15226,8 +15249,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-17 15:30';
-var APP_BUILD_NOTE="<b>색·모서리·그림자 — 계단 하나로 모았습니다.</b> 토큰은 <b>처음부터 있었습니다</b> (--r-xs·sm·기본·md·lg · --shadow-xs·sm·md). 그런데 그 자리를 안 쓰고 <b>숫자를 직접</b> 적은 곳이 훨씬 많았습니다 — 모서리 둥글기 <b>스물한 가지</b>(1·2·3·4·5·6·7·8·9·10·11·12·13·14·15·16·18·20·22·24), 그림자 <b>스물아홉 가지</b>. 같은 카드인데 옆 카드와 모서리가 1px 씩 다르면, 눈은 그것을 <b>다른 것</b>으로 읽습니다. <b>둥글기 663자리 · 그림자 34자리</b>를 계단으로 옮겼습니다. 계단은 여섯입니다 — <b>6 · 8 · 12 · 16 · 20 · 알약(999)</b>. 그림자도 여섯 — <b>xs · sm · 기본 · md · lg · 파랑</b>. 모달과 서랍처럼 <b>화면 위에 뜬 것</b>을 위해 --shadow-lg 를, 딱지·칩을 위해 --r-pill 을 새로 두었습니다. <b>안 건드린 것</b> — 「0 0 0 3px」 처럼 눌렀을 때 생기는 것은 그림자가 아니라 <b>테두리 고리</b>라 계단 밖입니다. 여러 값짜리 둘(<b>바텀시트 윗모서리 22 22 0 0</b> · <b>말풍선 꼬리 4 16 16 16</b>)도 그대로 뒀습니다 — <b>모양이 곧 뜻</b>이라 토큰 하나로 못 적습니다. 인쇄·제안서 팝업도 한 자리도 안 건드렸습니다 — 거기엔 :root 가 없어 토큰이 가면 값이 통째로 사라집니다. <b>그리고 자를 제자리에 맞췄습니다.</b> 여태 그림자를 <b>모든 &lt;style&gt;</b> 에서 세고 있었는데, 그중 아홉은 새 창에 띄우는 문서라 <b>손댈 수가 없습니다</b>. 손댈 수 없는 것을 세면 숫자가 안 내려가고, 안 내려가는 숫자는 사람이 곧 안 믿습니다. 이제 <b>앱의 붙박이 CSS</b> 만 세고, <b>직접 적은 것</b>만 셉니다 — 둘 다 <b>0</b> 입니다. 되돌려 확인했습니다 — 그림자 하나·둥글기 하나를 직접 적으면 <b>두 줄</b>이 빨개집니다.";
+var APP_BUILD='2026-09-17 18:05';
+var APP_BUILD_NOTE="<b>「아직」과 「없습니다」는 다른 말입니다.</b> 홈을 세 상태로 열어 글자를 찍어 봤습니다 — 자료가 <b>아직 안 왔을 때</b> 1,082자, <b>진짜 0건일 때</b> 1,116자, <b>못 받았을 때</b> 1,082자. 세 화면이 <b>똑같이</b> 「오늘 챙길 것이 없습니다」 라고 적고 있었습니다. 고객 앞에서 서버가 잠깐 안 되면 화면은 「없습니다」 라고 <b>단정</b>하고, 사장님은 그날 전화를 통째로 건너뛰십니다. 못 읽은 것을 0 으로 적으면 「보장이 없다」 는 뜻이 되어 버린다 — 우리가 첫 줄에 적어 둔 그것입니다. <b>세 자리를 갈라 놓았습니다.</b> ① <b>아직</b>이면 「읽는 중」이라 적고 <b>뼈대</b>를 세웁니다. 「불러오는 중…」 한 줄을 세우면 자료가 올 때 화면이 통째로 튀어 <b>누르려던 자리가 손가락 아래에서 사라집니다</b> — 뼈대는 올 것과 같은 높이라 안 튑니다. ② <b>못 받았으면</b> 「못 받았습니다 · 몇 건인지 지금은 모릅니다 · 0건이라는 뜻이 아닙니다」 라고 적고 <b>서버가 준 말을 그대로</b> 옮긴 뒤 <b>↻ 다시 읽기</b> 를 세웁니다. ③ <b>다 왔는데 0건</b>일 때만 「없습니다」 라고 적고, <b>무엇이 채우는지</b>와 <b>고객 365일 열기 ›</b> 를 함께 세웁니다. 달력의 「오늘 N건」 도 같습니다 — 모르면 「오늘 읽는 중」·「오늘 못 받음」 이고, 「오늘 터치할 사람」 의 쪽지 다섯도 <b>모르면 아예 안 세웁니다</b>. 묻는 자리는 <b>한 곳</b>입니다(holdReady) — 상태를 늘려도 빠뜨릴 자리가 없습니다. 조사도 받침을 보고 고릅니다 — 「것<b>를</b>」 이라고 찍혔었습니다. 넘어져도 「읽는 중」 으로 굳지 않습니다. <b>그리고 자가 자기를 속이고 있었습니다.</b> 이 자는 고객 목록을 안 심어서 「고객 365일」 을 <b>아직 읽는 중인</b> 화면으로 재고 있었습니다 — 줄에 붙은 글자를 <b>한 번도 센 적이 없습니다</b>. 홍길동 세 분을 심고 다시 재니 <b>12.5px 글자 셋</b>이 나왔습니다. 고쳐서 0. <b>DB 통합 CRM 도 같은 자리였습니다</b> — 못 받으면 토스트 한 줄만 띄우고 표는 「조회할 DB가 없습니다」 로 남았습니다. 토스트는 몇 초 뒤 사라지고, 남은 글자는 <b>배정이 안 온 것</b>과 똑같습니다. 이제 표 안에 못 받았다고 적고 <b>↻ 다시 읽기</b> 를 세웁니다. 두 화면이 같은 판을 쓰도록 <b>apex-hold.js</b> 한 곳에 두었습니다 — apex-stage.js 와 같은 자리입니다. 그 판의 색·둥글기에는 <b>대체값</b>을 달았습니다. DB 통합 CRM 에는 :root 계단이 없어, 대체값이 없으면 <b>뼈대가 투명하게</b> 서서 화면은 멀쩡한데 아무것도 안 보입니다 — 제일 찾기 어려운 고장입니다. 되돌려 확인했습니다 — 일곱 판을 되돌리니 <b>11·5·5·8</b> 자리가 빨개집니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -19741,6 +19764,20 @@ function renderDashboard(){
    <b>죽은 판을 남겨 두지 않습니다</b> — 안 부르는 함수가 남아 있으면
    다음 사람이 그것을 고치고 화면이 안 바뀐다고 합니다 (5번). */
 
+/* 못 읽었으면 <b>그 자리에서 말합니다</b> — apex-stage.js 와 같은 규칙입니다.
+   조용히 터지면 홈이 통째로 안 뜨고, 왜 그런지 아무도 모릅니다 (1번).
+   그때 상태는 <b>「아직」</b> 으로 답합니다 — 모르는 것을 「없다」 고 말하지
+   않는 것이 이 판 전체의 뜻이라, 판이 없을 때도 그 뜻을 지킵니다. */
+var HOLD_NOTABLE=(typeof holdSay!=='function');
+var HOLD_MISS='<b style="color:#F04452">기다림·빈 손 판(apex-hold.js)을 못 읽었습니다 — 새로고침해 주세요.</b>';
+function holdSayOr(st,o){ return HOLD_NOTABLE?HOLD_MISS:holdSay(st,o); }
+function holdReadyOr(s){ return HOLD_NOTABLE?'wait':holdReady(s); }
+
+/* 「손에 자료가 있나」(hold*) 는 <b>apex-hold.js 한 곳</b>이 압니다 (5번) —
+   본체와 DB 통합 CRM 이 같은 서버를 읽고 같은 상태를 마주하므로, 한쪽만
+   「아직」과 「없음」을 가르면 같은 순간에 두 화면이 다른 말을 합니다.
+   holdReady · holdOf · holdAll · holdSay · holdSkel · holdCss 가 거기 있습니다. */
+
 /* ══════════════════════════════════════════════════════════════════
    홈 — 따라만 가면 되는 한 장 (hm*)
 
@@ -20010,8 +20047,54 @@ function hmNowHtml(){
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
     '</div>';
 }
+/* ── 홈이 <b>기대고 있는 통</b> ─────────────────────────────────────
+   홈의 오늘 건수는 두 통에서 나옵니다 —
+     · OSC.list  달력(mcalItems)·계약 마디(mstDueList) 가 읽는 고객 목록
+     · AR.db     오늘 터치할 분(arTouch) 이 읽는 배정 DB
+   <b>둘 중 하나라도 아직이면 「없습니다」 라고 말할 자격이 없습니다.</b>
+   여기 한 곳만 압니다 — 세는 쪽(hmCount)이 따로 또 물으면 갈립니다 (5번). */
+function hmHold(){
+  var w=holdAll([
+    holdReadyOr(typeof OSC!=='undefined'?OSC:null),
+    holdReadyOr(typeof AR !=='undefined'?AR :null)
+  ]);
+  /* 둘 다 왔는데 오늘 몫이 0 이면 — 그때는 <b>진짜</b> 없는 것이다 */
+  return (w==='ok')?'none':w;
+}
+/* 못 받은 까닭 — <b>서버가 준 말 그대로</b> 옮깁니다. 지어내지 않습니다 (1번) */
+function hmHoldWhy(){
+  var a=(typeof OSC!=='undefined'&&OSC.err)?OSC.err:'';
+  var b=(typeof AR !=='undefined'&&AR.err )?AR.err :'';
+  if(a&&b&&a!==b)return a+' · '+b;
+  return a||b||'';
+}
+/* 다시 읽기 — <b>부르는 자리를 새로 만들지 않습니다</b> (5번).
+   각 통이 이미 가진 불러오기를 그대로 부르고, 막아 둔 빗장만 풉니다. */
+function hmReload(){
+  try{ if(typeof OSC!=='undefined'){OSC.loaded=false;OSC.busy=false;OSC.err='';}
+       if(typeof osLoadClients==='function')osLoadClients(); }catch(e){}
+  try{ if(typeof AR!=='undefined')AR.err='';
+       if(typeof arLoad==='function')arLoad(true); }catch(e2){}
+  try{ hmPaint(); }catch(e3){}
+}
+/* 머리글 — <b>삼항 사슬로 늘어놓지 않습니다</b> (5번). 상태가 넷이라
+   사슬로 쓰면 하나를 빠뜨리고, 빠뜨린 자리는 <b>빈 글자</b>로 섭니다. */
+var HM_BIG={
+  /* 건수가 있을 때(ok)는 숫자를 그 자리에서 찍으므로 여기 안 둡니다 —
+     <b>안 쓰는 칸을 남겨 두지 않습니다</b> (5번). */
+  wait:'오늘 챙길 것을 <em>읽는 중</em>입니다',
+  fail:'오늘 챙길 것을 <em>못 받았습니다</em>',
+  none:'오늘 챙길 것이 <em>없습니다</em>'
+};
+var HM_SUB={
+  ok  :function(c){ return '<b>맨 위 한 건</b>만 보시면 됩니다. 끝내면 다음 한 건이 올라옵니다.'; },
+  wait:function(){ return '<b>아직 「없다」는 뜻이 아닙니다</b> — 다 읽으면 이 자리에 건수가 뜹니다.'; },
+  fail:function(){ return '<b>몇 건인지 지금은 모릅니다.</b> 0건이라는 뜻이 아니니, 아래에서 다시 읽어 주세요.'; },
+  none:function(){ return '주기가 돌아오거나 약속이 잡히면 이 자리에 뜹니다.'; }
+};
 function hmTodayHtml(){
   if(!OS.profile)return '';
+  try{ holdCss(); }catch(e){}     /* 옷을 쓰는 화면에서 부른다 (5번) */
   var c=hmCount(),i,rows='',no=1;
   for(i=0;i<HM_ORD.length;i++){
     var o=HM_ORD[i],n=c[o.k]||0;
@@ -20025,14 +20108,17 @@ function hmTodayHtml(){
   var head='<div class="card hm-card"><div class="card-body">'+
     '<div class="hm-top"><span class="hm-d">'+osEsc(hmTodayLabel())+'</span>'+
       '<button type="button" class="hm-cal" onclick="go(\'mycal\')">📅 내 캘린더</button></div>'+
-    '<h2 class="hm-big">'+(c.total
-      ? ('오늘 챙길 것 <em>'+c.total+'건</em>입니다')
-      : '오늘 챙길 것이 <em>없습니다</em>')+'</h2>'+
-    '<p class="hm-sub">'+(c.total
-      ? '<b>맨 위 한 건</b>만 보시면 됩니다. 끝내면 다음 한 건이 올라옵니다.'
-      : '주기가 돌아오거나 약속이 잡히면 이 자리에 뜹니다.')+'</p>';
+    '<h2 class="hm-big">'+(c.total?('오늘 챙길 것 <em>'+c.total+'건</em>입니다'):HM_BIG[hmHold()])+'</h2>'+
+    '<p class="hm-sub">'+HM_SUB[c.total?'ok':hmHold()](c)+'</p>';
   if(!c.total)
-    return head+'<div class="hm-done">✅ <b>비어 있습니다.</b> 아래 달력에서 이번 주와 이번 달을 미리 보실 수 있습니다.</div></div></div>';
+    /* <b>여기가 거짓말하던 자리입니다.</b> 아직 안 왔을 때도, 못 받았을 때도
+       똑같이 「비어 있습니다」 라고 적었습니다. 세 자리를 갈라 놓습니다 (1번). */
+    return head+holdSayOr(hmHold(),{
+      what:'오늘 챙길 것', n:3, said:true,   /* 머리줄(h2)이 이미 적었습니다 */
+      why:hmHoldWhy(),
+      again:'hmReload()',
+      fill:'고객을 넣고 상태를 적어 두시면, 주기가 돌아오는 날 이 자리에 섭니다.',
+      goT:'고객 365일 열기', go:"go('clients')"})+'</div></div>';
   /* 「지금 이것」 을 맨 앞에 — 갈래별 줄은 그 아래에 그대로 둡니다.
      한 건씩 따라가셔도 되고, 전체를 훑어보셔도 됩니다. */
   return head+hmNowHtml()+'<div class="hm-rows">'+rows+'</div></div></div>';
@@ -52818,7 +52904,10 @@ function cmCss(){
   document.head.appendChild(st);
 }
 
-var OSC={list:[],view:'list',current:null,q:'',docs:[]};
+/* loaded·busy·err 세 칸 — <b>다른 통들과 같은 이름</b>이라 holdOf 가 그대로 읽습니다.
+   여태 이 통에는 이 칸이 <b>없었습니다.</b> 그래서 아직 안 읽었을 때도 list 가 []
+   라, 홈도 달력도 <b>「없습니다」 라고 단정</b>했습니다 (1번). */
+var OSC={list:[],view:'list',current:null,q:'',docs:[],loaded:false,busy:false,err:''};
 var OS_BUCKET='coverage-docs';
 /* ══ 고객 365일 — 열면 <b>오늘 무엇을 할지</b>부터 ═══════════════════
    달력과 「오늘 챙길 분」 은 <b>고객 관리</b> 이야기인데, 여태 「내 캘린더」
@@ -52883,16 +52972,16 @@ function cliMonthHtml(){
   var bar='<div style="height:9px;border-radius:99px;background:#EEF1F5;overflow:hidden;margin:9px 0 7px">'+
     '<i style="display:block;height:100%;width:'+pct+'%;background:'+
     (pct>=100?'#059669':(pct>=50?'#1A56DB':'#F59E0B'))+'"></i></div>';
-  var head='<div style="font-size:13px;font-weight:800;color:#0F172A">'+
+  var head='<div style="font-size:var(--t6);font-weight:800;color:#0F172A">'+
     '이번 달 '+m.goal+'명 중 <b style="color:#1A56DB">'+m.done+'명</b> 하셨습니다'+
     (m.set?'':' <span style="font-weight:700;color:var(--ink-5)">(맡으신 고객 전원)</span>')+'</div>';
   if(!m.left)
     return head+bar+'<div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;color:#15803D">'+
       '✅ <b>이번 달 몫을 다 채우셨습니다.</b></div>';
   return head+bar+
-    '<div style="font-size:12.5px;color:var(--ink-3);line-height:1.7">'+
+    '<div style="font-size:var(--t6);color:var(--ink-3);line-height:1.7">'+
       '남은 <b>'+m.left+'명</b> ÷ 남은 영업일 <b>'+m.biz+'일</b> → '+
-      '<b style="color:#B42318;font-size:14px">오늘 몫 '+m.quota+'명</b></div>';
+      '<b style="color:#B42318;font-size:var(--t5)">오늘 몫 '+m.quota+'명</b></div>';
 }
 function cliMission(){
   var all=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[];
@@ -53230,6 +53319,7 @@ function cli365TopPaint(){
       : '');
 }
 function renderClientsPage(){
+  try{ holdCss(); }catch(eC){}    /* 옷을 쓰는 화면에서 부른다 (5번) */
   if(!OS.profile){
     return '<div class="osc-wrap"><div class="osc-gate">'+
       '<div class="ic">🔒</div><h3>로그인이 필요합니다</h3>'+
@@ -53251,7 +53341,10 @@ function renderClientsPage(){
       '<input class="osc-search" id="oscSearch" placeholder="이름·초성(ㄱㅊㅅ)·연락처 뒷자리·가족 이름으로 찾기" oninput="osClientsFilter(this.value)" value="'+osEsc(OSC.q)+'"/>'+
       '<button class="os-btn" style="width:auto;padding:9px 16px" onclick="osNewClient()">+ 새 고객</button>'+
     '</div>'+
-    '<div id="oscList" class="osc-list"><div class="osc-loading">불러오는 중…</div></div>'+
+    /* <b>기다림도 화면입니다.</b> 「불러오는 중…」 한 줄을 세우면 목록이
+       올 때 화면이 통째로 튀어, 누르려던 자리가 손가락 아래에서 사라집니다.
+       올 것과 같은 모양의 뼈대를 세워 두면 안 튑니다. */
+    '<div id="oscList" class="osc-list">'+holdSayOr('wait',{what:'고객 목록',n:5})+'</div>'+
   '</div>';
 }
 function osClientsAfterRender(){
@@ -53264,8 +53357,22 @@ function osClientsAfterRender(){
   }
 }
 function osLoadClients(){
-  var sb=osClient();if(!sb)return;
+  var sb=osClient();
+  /* 서버가 없으면 <b>그렇다고 적습니다.</b> 조용히 돌아가면 화면은 영영
+     「읽는 중」 으로 남고, 사장님은 기다리다 앱이 죽은 줄 아십니다 (1번). */
+  if(!sb){OSC.busy=false;OSC.loaded=true;OSC.err='서버에 연결되어 있지 않습니다.';return;}
+  if(OSC.busy)return;                       /* 두 번 부르지 않습니다 (7번) */
+  OSC.busy=true;OSC.err='';
+  /* <b>넘어져도 「읽는 중」으로 남겨 두지 않습니다.</b> busy 가 true 로 굳으면
+     뼈대가 영영 돌고, 화면은 고장난 줄도 모른 채 기다립니다 (1번). */
+  var oops=function(e){
+    OSC.busy=false;OSC.loaded=true;OSC.err=(e&&e.message)||'네트워크 오류';
+    try{holdCss();}catch(e5){}
+    try{osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'OSC.loaded=false;osLoadClients()'}));}catch(e6){}
+    try{if(typeof hmPaint==='function')hmPaint();}catch(e7){}
+  };
   var done=function(rows){
+    OSC.busy=false;OSC.loaded=true;OSC.err='';
     OSC.list=rows||[];
     /* 켜면 언제나 내 고객부터 보인다. 팀 전체는 위 담당자 줄에서 「전체」 를 눌러야 나온다.
        지점장·대표가 팀 전체를 한 덩어리로 마주하면 내 것이 어디 있는지부터 못 찾는다. */
@@ -53300,10 +53407,18 @@ function osLoadClients(){
     /* 연락처 칸이 아직 없는 서버 — 그것 없이 다시 부른다 */
     arAll(sb,'clients','id,advisor_id,name_masked,consent_status,created_at',
           ['-created_at','id']).then(function(r2){
-      if(r2.error){osSetList('<div class="osc-empty">목록을 불러오지 못했습니다: '+osEsc(r2.error.message)+'</div>');return;}
+      if(r2.error){
+        /* <b>못 받았다고 적고 다시 부를 자리를 세웁니다.</b> 여태는 까닭만
+           적고 끝이라, 사장님이 하실 수 있는 일이 새로고침밖에 없었습니다 (8번). */
+        OSC.busy=false;OSC.loaded=true;OSC.err=(r2.error.message||'네트워크 오류');
+        try{holdCss();}catch(e3){}
+        osSetList(holdSayOr('fail',{what:'고객 목록',why:OSC.err,again:'OSC.loaded=false;osLoadClients()'}));
+        try{if(typeof hmPaint==='function')hmPaint();}catch(e4){}
+        return;
+      }
       done(r2.data);
-    });
-  });
+    },oops);
+  },oops);
 }
 function osRenderList(){
   var q=(OSC.q||'').replace(/^\s+|\s+$/g,'');
