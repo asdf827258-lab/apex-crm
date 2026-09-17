@@ -13,6 +13,9 @@
        여태 이 화면은 못 받아도 토스트 한 줄만 띄우고 표는 <b>「조회할 DB가 없습니다」</b>로
        남았다. 사장님은 배정이 안 온 줄 아신다 — 못 읽은 것을 0 으로 적은 것이다 (1번). -->
   <script src="apex-hold.js"></script>
+  <!-- 「다음 한 걸음」 칸의 <b>모양</b>도 한 곳이다(apex-next.js). 말은 화면마다 다르지만
+       모양은 같아야 한다 — 세 파일에 각각 적으면 단추 색을 한 번만 고치게 된다 (5번). -->
+  <script src="apex-next.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <style>
@@ -407,6 +410,15 @@
     <div class="field full"><label>메모</label><textarea id="callMemo"></textarea></div>
   </div><div id="history" style="margin-top:18px"></div></div>
   <div class="modal-foot"><button class="btn btn-light" onclick="closeModal('callModal')">취소</button><button class="btn btn-primary" onclick="saveCall()">통화 저장</button></div>
+</div></div>
+
+<!-- 「다음 ▸」 — 통화를 저장하면 <b>여기로 이어집니다</b>.
+     여태는 저장하면 창이 닫히고 표로 떨어졌습니다. 다음에 누구를 걸지는
+     사장님이 표에서 <b>다시 찾으셔야</b> 했고, 하루에 서른 번 그랬습니다.
+     이제 저장한 자리에서 다음 한 분이 바로 섭니다 — 「지금 걸기」 하나입니다. -->
+<div class="modal" id="nextModal"><div class="modal-box" style="max-width:520px">
+  <div class="modal-head"><h3>다음 한 분</h3><button class="close" onclick="closeModal('nextModal')">×</button></div>
+  <div class="modal-body" id="nextBody"></div>
 </div></div>
 
 <!-- 「무엇을 도와드릴까요?」 — 목록에서 <b>상황</b>을 누르면 여기가 열린다.
@@ -1731,7 +1743,128 @@ async function saveCall(){
   closeModal("callModal");await loadAll();
   toast(was?"통화 기록을 고쳤습니다."
            :`${profile.name} 이름으로 통화기록을 저장했습니다 — 단계 ${wantStage}.`);
+  /* ── 여기서 <b>끊기던 자리</b> ────────────────────────────────────
+     토스트 한 줄 띄우고 표로 떨어뜨렸습니다. 고친 것일 때는 그대로 둡니다 —
+     고치러 들어오신 분은 이어서 걸 생각이 아니십니다. */
+  if(!was)try{ nxShow($("callDbId").value, resultV, wantStage); }catch(e){}
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   흐름 한 줄 (nx*) — <b>전화 → 기록 → 다음 분 → 전화</b>
+
+   여태 이 흐름은 <b>기록에서 끊겼습니다.</b> 저장을 누르면 창이 닫히고
+   표로 떨어집니다. 다음에 누구를 걸지는 사장님이 표를 다시 훑어 고르셔야
+   했고, 하루에 서른 번 그 일을 하셨습니다. <b>고르는 일이 아침에 제일
+   힘든 일</b>인데, 앱이 그것을 매번 되돌려 드리고 있었습니다.
+
+   이제 저장한 그 자리에서 <b>다음 한 분</b>이 섭니다. 누를 곳은 하나입니다.
+
+   ★ <b>어디서 뽑은 다음인지 말합니다.</b> 「오늘의 알림에서」인지 「지금
+     보시는 목록에서」인지 적지 않으면, 왜 이 분인지 알 수가 없고 그때부터
+     그 단추를 안 믿게 됩니다 (8번).
+   ★ <b>모르면 「다 하셨습니다」라고 하지 않습니다.</b> 자료가 아직이거나
+     못 받았으면 그렇게 적습니다 (1번 · 5단계와 같은 규칙).
+   ★ 할 말은 <b>apex-stage.js</b> 에서 옵니다 — 여기서 또 적으면 갈립니다 (5번).
+   ══════════════════════════════════════════════════════════════════ */
+/* 지금 훑고 계신 줄이 어느 것인가 — <b>한 곳만</b> 안다 (5번).
+   삼항 사슬로 나열하면 화면을 하나 늘릴 때 반드시 빠뜨린다. */
+var NX_LIST={
+  "page-touch":{ from:"오늘의 알림", rows:()=>touchItems(profile?profile.id:"").map(it=>({id:it.d.id,why:it.why})) },
+  "page-db"   :{ from:"지금 보시는 목록", rows:()=>dbRows(true).map(d=>({id:d.id,why:""})) }
+};
+function nxWhere(){
+  const pg=(document.querySelector(".page.active")||{}).id||"";
+  return NX_LIST[pg]||null;
+}
+/* 다음 한 분 — <b>방금 그분은 빼고</b> 맨 위 한 분. 차례를 여기서 다시
+   정하지 않는다. 목록이 세워 둔 차례가 곧 급한 차례다 (5번). */
+function nxNext(skipId){
+  const w=nxWhere(); if(!w)return null;
+  const L=w.rows()||[];
+  for(let i=0;i<L.length;i++){
+    if(L[i].id===skipId)continue;
+    const d=dbs.find(x=>x.id===L[i].id);
+    if(d)return {d,why:L[i].why,from:w.from};
+  }
+  return null;
+}
+/* 그분께 무엇을 할지 — apex-stage.js 한 곳에서 (5번) */
+function nxSay(d){
+  const st=(typeof stageOf==="function")?stageOf(d):"";
+  const m=(window.APEX_STAGE&&APEX_STAGE.of)?APEX_STAGE.of(st):null;
+  if(!m)return "";
+  return `<div class="nx-aim"><b>${esc(st)}</b> · ${esc(m.ch)} — ${m.aim}</div>`+
+         `<div class="nx-way">${m.way}</div>`;
+}
+function nxShow(doneId,resultV,stage){
+  nxCss();
+  const done=dbs.find(x=>x.id===doneId);
+  /* 조사는 <b>받침을 보고</b> 고른다 (apex-hold.js) — 「상담 로 남겼고」·「부재 입니다」
+     라고 찍혔었다. 고객 앞에 띄우는 글이다. */
+  const ro=(typeof holdRo==="function")?holdRo:(w=>esc(w)+"로");
+  const head=`<div class="nx-done">✅ <b>${esc((done&&done.customer_name)||"방금 그분")}</b> — `+
+    `${ro(resultV||"")} 남겼고 단계는 <b>${esc(stage||"")}</b>입니다</div>`;
+  /* 자료를 손에 못 쥐었으면 <b>「다 하셨습니다」라고 하지 않는다</b> (1번) */
+  const hd=(typeof holdReady==="function")?holdReady(DBL):"ok";
+  const body=NX_VIEW[hd==="ok"?(nxNext(doneId)?"go":"end"):hd](doneId);
+  $("nextBody").innerHTML=head+body;
+  $("nextModal").classList.add("open");
+}
+/* 넷을 표 하나로 — 삼항 사슬로 늘어놓으면 하나를 빠뜨린다 (5번) */
+var NX_VIEW={
+  go:function(skip){
+    const n=nxNext(skip);
+    return `<div class="nx-card">`+
+      `<div class="nx-from">다음 — ${esc(n.from)}에서</div>`+
+      `<div class="nx-nm">${esc(n.d.customer_name)}`+
+        (n.d.region?` <span>${esc(n.d.region)}</span>`:"")+`</div>`+
+      (n.why?`<div class="nx-why">${esc(n.why)}</div>`:"")+
+      nxSay(n.d)+
+    `</div>`+
+    `<div class="nx-btns">`+
+      `<button class="btn btn-primary nx-go" onclick="nxGo('${n.d.id}')">📞 지금 걸기</button>`+
+      `<button class="btn btn-light nx-stop" onclick="closeModal('nextModal')">오늘은 여기까지</button>`+
+    `</div>`;
+  },
+  end:function(){
+    const w=nxWhere();
+    return `<div class="nx-card nx-end">🎉 <b>${esc((w&&w.from)||"이 목록")}에는 더 없습니다.</b>`+
+      `<div class="nx-why">여기까지가 이 목록의 끝입니다 — 다른 목록에는 남아 있을 수 있습니다.</div></div>`+
+      `<div class="nx-btns">`+
+      `<button class="btn btn-primary nx-go" onclick="closeModal('nextModal');goPage('touch')">🔔 오늘의 알림 열기</button>`+
+      `<button class="btn btn-light nx-stop" onclick="closeModal('nextModal')">닫기</button></div>`;
+  },
+  wait:function(){
+    return `<div class="nx-card">${(typeof holdSay==="function")?holdSay("wait",{what:"다음 목록",n:2}):"읽는 중입니다"}</div>`+
+      `<div class="nx-btns"><button class="btn btn-light nx-stop" onclick="closeModal('nextModal')">닫기</button></div>`;
+  },
+  fail:function(){
+    return `<div class="nx-card">${(typeof holdSay==="function")
+      ?holdSay("fail",{what:"다음 목록",why:DBL.err,again:"DBL.err='';closeModal('nextModal');loadAll()"})
+      :"못 받았습니다"}</div>`+
+      `<div class="nx-btns"><button class="btn btn-light nx-stop" onclick="closeModal('nextModal')">닫기</button></div>`;
+  }
+};
+function nxGo(id){ closeModal("nextModal"); openCall(id); }
+/* 옷은 <b>한 번만</b> — 쓰는 자리에서 부른다 (5번) */
+/* 이 화면만 쓰는 <b>말</b>의 옷. 칸과 단추 모양은 apex-next.js 가 입힌다 (5번) */
+function nxCss(){
+  nextCss();
+  if(document.getElementById("nxCssTag"))return;
+  const st=document.createElement("style");st.id="nxCssTag";
+  st.textContent=
+   ".nx-done{font-size:13px;font-weight:700;color:#166534;background:#F0FDF4;border:1px solid #BBF7D0;"+
+     "border-radius:12px;padding:11px 13px;line-height:1.6;margin-bottom:13px}"+
+   ".nx-end{background:#F6F8FB}"+
+   ".nx-from{font-size:12px;font-weight:800;color:#1A56DB;letter-spacing:-.02em;margin-bottom:6px}"+
+   ".nx-nm{font-size:20px;font-weight:900;letter-spacing:-.03em;color:#0D1117}"+
+   ".nx-nm span{font-size:13px;font-weight:700;color:#9CA3AF;margin-left:6px}"+
+   ".nx-why{font-size:13px;font-weight:600;color:#6B7280;margin-top:5px}"+
+   ".nx-aim{font-size:14px;font-weight:700;color:#0D1117;margin-top:11px}"+
+   ".nx-way{font-size:13px;font-weight:600;color:#374151;margin-top:4px}";
+  document.head.appendChild(st);
+}
+
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
 function closeModal(id){$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}

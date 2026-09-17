@@ -1468,6 +1468,8 @@ body.presenting .show:not(.deck){border:0;box-shadow:none}
 <!-- 급여·비급여·국가제도는 <b>이 파일 한 벌</b>만 있습니다.
      윤시현의 두뇌도, 자동 보장분석도 여기를 가리킵니다 (5번). -->
 <script src="apex-nhis.js"></script>
+<!-- 「다음 한 걸음」 칸의 <b>모양</b>은 한 곳이다(apex-next.js) — 말만 화면마다 다르다 (5번) -->
+<script src="../apex-next.js"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    보장 전 · 후 만들기
@@ -6188,8 +6190,58 @@ window.addEventListener('message',function(e){
   }
   if(d.type==='apexBaLoad'){ baLoadFromHost(d.state); return; }
   if(d.type==='apexBaAsk'){ baSaveToClient(); return; }   /* 바깥 💾 단추가 자료를 달라고 한 것 */
-  if(d.type==='apexBaSaved'){ toast('💾 '+(d.name||'고객')+'님 자료로 저장했습니다'); return; }
+  if(d.type==='apexBaSaved'){ nxSaved(d.name||''); return; }
 });
+
+/* ══════════════════════════════════════════════════════════════════
+   흐름 한 줄 (nx*) — <b>만들었으면 보여 드리는 데까지</b>
+
+   여태 저장을 누르면 <b>토스트 한 줄</b>이 뜨고 사라졌습니다. 자료는
+   담겼는데 <b>다음에 뭘 하는지</b>는 아무도 말해 주지 않았습니다.
+   그래서 만들어 놓고 그냥 나가신 자료가 쌓였습니다.
+
+   전·후를 만든 다음은 <b>고객에게 보여 드리는 것</b>입니다. 그 자리는
+   이미 있습니다 — 「한 장씩 넘기기 → 발표 시작」. 그런데 「보는 방식」
+   줄을 먼저 찾아 토글을 켜야 나옵니다. 두 동작입니다.
+
+   이제 저장한 그 자리에서 <b>한 번</b>에 갑니다.
+
+   ★ <b>없는 자리로 보내지 않습니다</b> (8번). 누르면 이미 있는
+     setDeck(true) · deckShow(true) 를 그대로 부릅니다 — 여기서 발표를
+     새로 만들지 않습니다 (5번).
+   ══════════════════════════════════════════════════════════════════ */
+function nxSaved(name){
+  nxCss();
+  nextSheet('nxSaved',
+    '<div class="nx-card" role="status">'+
+      '<div class="nx-ok">💾 <b>'+esc(name||'고객')+'</b>님 자료로 저장했습니다 — 고객 365일에 담겼습니다</div>'+
+      '<div class="nx-next">다음 — <b>고객에게 보여 드리기</b></div>'+
+      '<div class="nx-sub">한 장씩 넘기며 보여 드립니다. 설계사 도구는 치워지고 자료만 남습니다.</div>'+
+      '<div class="nx-btns">'+
+        '<button class="nx-go" onclick="nxShowDeck()">🔳 지금 보여 드리기</button>'+
+        '<button class="nx-stop" onclick="nxClose()">계속 고치기</button>'+
+      '</div>'+
+    '</div>');
+}
+function nxClose(){ nextSheetHide('nxSaved'); }
+/* 발표로 — <b>이미 있는 자리</b>를 그대로 부른다 (5번) */
+function nxShowDeck(){
+  nxClose();
+  try{ setDeck(true); }catch(e){}
+  try{ deckShow(true); }catch(e){}
+}
+/* 이 화면만 쓰는 <b>말</b>의 옷. 칸과 단추 모양은 apex-next.js 가 입힌다 (5번) */
+function nxCss(){
+  nextCss();
+  if(document.getElementById('nxCssTag'))return;
+  var st=document.createElement('style'); st.id='nxCssTag';
+  st.textContent=
+   '.nx-ok{font-size:13px;font-weight:700;color:#166534;background:#F0FDF4;border:1px solid #BBF7D0;'+
+     'border-radius:12px;padding:10px 12px;line-height:1.6}'+
+   '.nx-next{margin-top:12px}';
+  document.head.appendChild(st);
+}
+
 /* 열리자마자 「나 여기 있습니다」 — 바깥이 이 고객 자료를 내려 준다 */
 if(INFRAME)baPost({type:'apexBaReady'});
 
