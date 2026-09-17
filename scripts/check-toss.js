@@ -55,11 +55,17 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
      size  글자 크기 가짓수
      small 44px 아래인 누름 자리 수                                    */
 const BASE = {
-  /*          작은 글자   계단    빗나감    ← 2026-09-17 실측 그대로 */
-  home:    { tiny: 141, size: 18, small: 50 },
-  airep:   { tiny:  63, size: 11, small: 11 },
-  clients: { tiny:  50, size:  9, small: 31 },
-  mycal:   { tiny:  64, size: 10, small: 34 }
+  /*          작은 글자   계단    빗나감
+     0단계(9/17 09:20) 141·18·50 / 63·11·11 / 50·9·31 / 64·10·34
+     1단계(9/17 10:40) <b>글자 계단</b>을 여섯으로 못 박고 앱 CSS 의
+       font-size 1,451자리를 전부 토큰으로 옮긴 뒤 — 작은 글자가
+       <b>네 화면 모두 0</b>.
+     2단계(9/17 12:10) <b>엄지</b> — 누르는 자리에 44px 바닥을 깔고
+       아래 탭바를 놓은 뒤 — 빗나가는 자리도 <b>네 화면 모두 0</b>.   */
+  home:    { tiny: 0, size: 7, small: 0 },
+  airep:   { tiny: 0, size: 4, small: 0 },
+  clients: { tiny: 0, size: 3, small: 0 },
+  mycal:   { tiny: 0, size: 3, small: 0 }
 };
 
 /* 견본은 <b>홍길동</b> 집안입니다 (3번). 화면마다 같은 것을 심어야
@@ -112,7 +118,12 @@ const SEED = `
     let small = 0, btn = 0, worst = 99;
     pane.querySelectorAll('button,a,select,input[type=checkbox]').forEach(e => {
       if (!e.offsetParent) return;
-      const r = e.getBoundingClientRect();
+      /* <b>손이 닿는 자리</b>를 잰다 — 체크 네모는 13px 여도 감싼 줄(label)이
+         44px 면 손가락은 안 빗나간다. 네모만 재면 고칠 수 없는 것을 세게
+         되고, 고칠 수 없는 숫자는 사람이 곧 안 믿는다 (8번). */
+      let box = e;
+      if (e.tagName === 'INPUT') { const lab = e.closest('label'); if (lab) box = lab; }
+      const r = box.getBoundingClientRect();
       if (!r.height) return;
       btn++;
       if (r.height < 44) { small++; if (r.height < worst) worst = Math.round(r.height); }
@@ -152,6 +163,60 @@ const SEED = `
       (M.wide ? ' ← 가로로 샙니다. 글이 잘리고, 잘린 줄은 아무도 안 읽습니다' : '') +
       ' · 세로 ' + M.screens + '화면');
   }
+
+  /* ══ <b>아래 탭바</b> — 엄지가 늘 닿는 자리 ════════════════════════
+     폰에서 메뉴는 왼쪽 위 ☰ 뒤에 있었습니다. 한 손으로 들면 거기가 제일
+     안 닿는 자리입니다.
+
+     여기서 재는 것 —
+       · 폰에서 <b>선다</b> · 넓은 화면에서는 <b>안 선다</b>(두 곳이 되면 안 됨)
+       · 누르면 <b>정말로 그 화면</b>으로 간다
+       · <b>지금 화면</b>이 켜져 있다 (navMark 한 곳이 정한다)
+       · 「더보기」 가 <b>원래 있던 서랍</b>을 연다
+       · 탭바가 <b>글을 안 덮는다</b>                                    */
+  console.log('\n[아래 탭바] 엄지가 늘 닿는 자리');
+  const TBR = await page.evaluate((seed) => {
+    (0, eval)(seed); try { go('home'); } catch (e) {}
+    const bar = document.getElementById('tabBar');
+    const out = { has: !!bar };
+    if (!bar) return out;
+    out.shown = getComputedStyle(bar).display !== 'none';
+    const btns = [].slice.call(bar.querySelectorAll('.tb-b'));
+    out.n = btns.length;
+    out.labels = btns.map(e => e.textContent.replace(/\s+/g, ' ').trim());
+    out.h = Math.round(bar.getBoundingClientRect().height);
+    out.small = btns.filter(e => e.getBoundingClientRect().height < 44).length;
+    out.onHome = btns.filter(e => e.classList.contains('on')).map(e => e.textContent.trim());
+    const by = t => btns.filter(e => e.textContent.indexOf(t) >= 0)[0];
+    if (by('고객')) { by('고객').click(); out.went = lastTab; out.onCli = btns.filter(e => e.classList.contains('on')).length; }
+    if (by('더보기')) { by('더보기').click(); out.drawer = document.getElementById('sidebar').classList.contains('open'); by('더보기').click(); }
+    try { go('home'); } catch (e) {}
+    out.pad = parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0;
+    return out;
+  }, SEED);
+  is(TBR.has && TBR.shown, '폰에서 <b>아래 탭바가 선다</b>' + (TBR.h ? (' — 높이 ' + TBR.h + 'px') : ''));
+  is(TBR.n >= 4, '칸이 <b>넷 이상</b> 있다 — ' + (TBR.labels || []).join(' | '));
+  is(TBR.small === 0, '탭바 칸도 <b>44px 아래가 없다</b>' + (TBR.small ? (' ← ' + TBR.small + '개') : ''));
+  is((TBR.onHome || []).length === 1 && /홈/.test((TBR.onHome || [''])[0]),
+    '<b>지금 화면</b>이 켜져 있다 — ' + (TBR.onHome || []).join(','));
+  is(TBR.went === 'clients' && TBR.onCli === 1,
+    '누르면 <b>그 화면으로</b> 가고 켜진 칸도 따라온다 — ' + TBR.went);
+  is(TBR.drawer === true, '「더보기」 가 <b>원래 있던 서랍</b>을 연다 — 새 메뉴를 또 만들지 않았다 (5번)');
+  is(TBR.pad >= TBR.h, '탭바가 <b>글을 안 덮는다</b> — 바닥 여백 ' + TBR.pad + 'px / 탭바 ' + TBR.h + 'px');
+  /* 넓은 화면에서는 <b>안 선다</b> — 왼쪽 기둥이 그대로 있어 두 곳이 된다 */
+  const wide = await b.newContext({ viewport: { width: 1280, height: 900 } });
+  await wide.route('**://**', r => r.request().url().indexOf('127.0.0.1:' + PORT) >= 0 ? r.continue() : r.abort());
+  const wp = await wide.newPage();
+  await wp.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
+  await wp.waitForTimeout(2000);
+  const WIDE = await wp.evaluate(() => {
+    const bar = document.getElementById('tabBar');
+    return { shown: !!bar && getComputedStyle(bar).display !== 'none',
+             pad: parseInt(getComputedStyle(document.getElementById('main')).paddingBottom, 10) || 0 };
+  });
+  is(!WIDE.shown, '<b>넓은 화면에서는 안 선다</b> — 왼쪽 기둥이 있는데 아래에 또 세우면 같은 것이 두 곳이 된다 (5번)');
+  is(WIDE.pad === 0, '넓은 화면에서는 <b>바닥 여백도 안 준다</b> — ' + WIDE.pad + 'px');
+  await wide.close();
 
   console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
   const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
