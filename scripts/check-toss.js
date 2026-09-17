@@ -278,19 +278,35 @@ const SEED = `
 
   console.log('\n[전체] 규약을 쓰고 있나 — CSS 를 글자로 본다');
   const APP = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
-  const css = (APP.match(/<style[\s\S]*?<\/style>/g) || []).join('\n');
-  /* <b>토큰이 이미 있습니다</b>(--r-xs·--r-sm·--r·--r-md·--r-lg · --shadow-*).
-     그런데 그 자리를 안 쓰고 숫자를 직접 적은 곳이 훨씬 많습니다.
-     여기도 기준선을 두고, 줄 때마다 내립니다. */
-  const shadows = new Set((css.match(/box-shadow:[^;}"]*/g) || []).map(s => s.trim()));
-  const radii = new Set((APP.match(/border-radius:\s*\d+px/g) || []).map(s => s.replace(/\s/g, '')));
-  const SHADOW_BASE = 34, RADIUS_BASE = 22;   /* 2026-09-17 실측 그대로 */
-  is(shadows.size <= SHADOW_BASE,
-    '<b>그림자</b>를 ' + shadows.size + '가지로 씁니다 — 기준선 ' + SHADOW_BASE +
-    ' (토큰은 --shadow-xs·sm·md 다섯 개뿐입니다)');
-  is(radii.size <= RADIUS_BASE,
-    '<b>모서리 둥글기</b>를 ' + radii.size + '가지로 씁니다 — 기준선 ' + RADIUS_BASE +
-    ' (토큰은 --r-xs·sm·r·md·lg 다섯 개뿐입니다)');
+  const BL = APP.match(/<style[\s\S]*?<\/style>/g) || [];
+  /* ★ <b>앱의 붙박이 CSS 두 블록만</b> 셉니다. 나머지 <style> 은 제안서·
+     보고서처럼 <b>새 창에 띄우는 문서</b>라 :root 가 없습니다 — 거기에
+     토큰을 넣으면 값이 통째로 사라집니다. 손댈 수 없는 것을 세면
+     숫자가 안 내려가고, 안 내려가는 숫자는 사람이 곧 안 믿습니다 (8번). */
+  const css = (BL[0] || '') + (BL[1] || '');
+  /* <b>직접 적은</b> 것만 셉니다 — var(…) 는 이미 계단을 쓰는 것입니다.
+     none · inset · 「0 0 0 Npx」(눌렀을 때 생기는 <b>테두리 고리</b>)는
+     그림자가 아니라 테두리라 계단 밖입니다. */
+  const rawShadow = new Set((css.match(/box-shadow:\s*[^;}"']+/g) || [])
+    .map(x => x.split(/:(.+)/)[1].trim())
+    .filter(v => !/^var\(|^none$|^inset|^0 0 0 /.test(v)));
+  const rawRadius = new Set((css.match(/border-radius:\s*[0-9.]+px[^;}"']*/g) || [])
+    .map(x => x.split(/:(.+)/)[1].trim()));
+  /* 여러 값짜리(「22px 22px 0 0」 · 「4px 16px 16px 16px」)는 <b>모양이 뜻</b>입니다 —
+     바텀시트 윗모서리 · 말풍선 꼬리. 토큰 하나로 못 적습니다. */
+  const multi = [...rawRadius].filter(v => /\s/.test(v));
+  const single = [...rawRadius].filter(v => !/\s/.test(v));
+  const SHADOW_BASE = 0, RADIUS_BASE = 0;   /* 4단계에서 0 으로 내렸습니다 */
+  is(rawShadow.size <= SHADOW_BASE,
+    '<b>직접 적은 그림자</b>가 ' + rawShadow.size + '가지 — 기준선 ' + SHADOW_BASE +
+    ' (계단: --shadow-xs·sm·기본·md·lg·blue)' +
+    (rawShadow.size ? (' ← ' + [...rawShadow][0].slice(0, 46)) : ''));
+  is(single.length <= RADIUS_BASE,
+    '<b>직접 적은 둥글기</b>가 ' + single.length + '가지 — 기준선 ' + RADIUS_BASE +
+    ' (계단: --r-xs·sm·기본·md·lg·pill)' + (single.length ? (' ← ' + single.join(' ')) : ''));
+  is(multi.length <= 2,
+    '여러 값짜리는 <b>' + multi.length + '가지</b>만 남았다 — ' + multi.join(' / ') +
+    ' (바텀시트 윗모서리 · 말풍선 꼬리 — 모양이 뜻이라 토큰으로 못 적는다)');
   /* 토큰이 <b>있기는 한가</b> — 없으면 위 두 줄이 무슨 말인지 알 수 없다 */
   is(/--r-xs:/.test(css) && /--shadow-xs:/.test(css) && /--primary:/.test(css),
     '색·둥글기·그림자 <b>토큰이 한 곳</b>에 있다 (:root)');
