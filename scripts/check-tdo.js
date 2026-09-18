@@ -308,15 +308,19 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      2026-09-18 말씀 그대로 —
        · AP  「보장분석상담자료 / 재무설계상담자료」 · 화법 · 컨셉 둘 · 전·후
        · PC  「보장분석 전&후 비교자료 / 재무설계 계산기」
-       · 거절·부재  「카카오톡 메시지나, 전할 뉴스」                        */
+       · 거절·부재  「카카오톡 메시지나, 전할 뉴스」
+     카톡 문구는 <b>화면으로 보내지 않고 그 자리에서 짓습니다</b> — 「제안서
+     카톡설명」 은 제안서가 있을 때 쓰는 화면이라 아직 상담이 안 이어진
+     자리에는 맞지 않습니다. 그래서 여기 도구 목록에는 안 넣고,
+     check-hmsheet 가 <b>그 자리에서 지어지는지</b>를 따로 봅니다.        */
   const BOSS={
     '미접촉' :['biz_news','cs_assist'],
     'AP'    :['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake'],
     'PC'    :['baba','finance'],
     '계약완료':['pdel'],
     '증권전달':['pdel'],
-    '거절'   :['katalk','news_live'],
-    '부재'   :['katalk','news_live']
+    '거절'   :['news_live'],
+    '부재'   :['news_live']
   };
   const off=Object.keys(BOSS)
     .map(k=>({k:k, miss:BOSS[k].filter(t=>(G.listed[k]||[]).indexOf(t)<0)}))
