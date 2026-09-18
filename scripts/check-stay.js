@@ -203,10 +203,27 @@ const is = (c, m) => c ? ok(m) : no(m);
      lastTab · apex_last_tab · 주소(#해시) 셋 다 home 으로 덮이고,
      bootTab() 은 방금 덮인 값을 읽는다. 그래서 폰에서 화면을 아래로
      당기면(당겨서 새로고침) 무엇을 보고 있었든 홈이 열렸다. */
-  const boots = (SRC.match(/^\s*go\((?:'home'|"home"|bootTab\(\))\);\s*$/gm) || [])
-    .map(x => x.trim());
+  /* <b>부팅 때 도는 줄만</b> 센다. 여태는 함수 안에 있는 go('home') 까지
+     세었다 — 「← 홈」 단추처럼 <b>사장님이 누르실 때</b> 도는 것은 첫 화면을
+     정하는 것이 아닌데도 빨간불이 켜졌다. 헛것을 잡는 점검은 안 잡는
+     점검보다 나쁘다 (8번).
+
+     이 파일은 최상위 함수를 <b>칸 0</b>에서 연다. 그래서 어떤 줄이 함수
+     안인지는 <b>바로 앞의 최상위 `function`</b> 과 <b>바로 앞의 최상위 `}`</b>
+     중 어느 것이 뒤에 있는지로 갈린다.
+
+     ★ 이것은 <b>모양</b>을 보는 곁가지다. 진짜 자물쇠는 아래 「13개 화면이
+       새로고침해도 그 자리」 — 실제로 다시 열어 보는 시험이다.            */
+  const atTop = (idx) => {
+    const before = SRC.slice(0, idx);
+    return before.lastIndexOf('\nfunction ') <= before.lastIndexOf('\n}');
+  };
+  const bootRe = /^[ \t]*go\((?:'home'|"home"|bootTab\(\))\);[ \t]*$/gm;
+  const boots = [];
+  let bm;
+  while ((bm = bootRe.exec(SRC)) !== null) if (atTop(bm.index)) boots.push(bm[0].trim());
   is(boots.length === 1 && boots[0] === 'go(bootTab());',
-     '첫 화면을 정하는 줄이 <b>하나</b>다 — ' + (boots.join(' / ') || '없음') +
+     '<b>부팅 때</b> 첫 화면을 정하는 줄이 하나다 — ' + (boots.join(' / ') || '없음') +
      (boots.length > 1 ? '  ← 초기화의 go(\'home\') 이 보던 화면을 지운다' : ''));
 
   /* ② 주소를 적는 곳도 한 곳 — go() 맨 끝에 두면 빠른 return 갈래
