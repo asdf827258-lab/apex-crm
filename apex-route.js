@@ -2474,6 +2474,19 @@ function routeOpen(dateStr,region){
   render();
 }
 window.apexRouteOpen=routeOpen;
+/* ── <b>시 이름으로 찾기</b>가 죽어 있었다 ──────────────────────────
+   db-crm.html 의 찾기 재료(dbPool)가 <b>typeof cityOf==="function"</b> 으로
+   묻고 있었는데, cityOf 는 이 파일 안(IIFE)에만 있어서 바깥에서는 늘
+   undefined 였다. 그래서 그 칸이 <b>언제나 빈 글자</b>였고 —
+   지역이 「순천」인 고객을 <b>「순천시」로 치면 안 찾혔다.</b>
+   화면이 안 깨지니 아무도 못 봤다. <b>조용히 아무 일도 안 하는 자리</b>가
+   제일 늦게 발견된다 (8번).
+
+   ★ 밖으로 내보내는 것은 <b>같은 함수</b>다. function 을 두고 나중에
+     window.X 를 <b>다른 것</b>으로 덮어쓰지 않는다 (5번).
+   ★ 부르는 쪽의 typeof 확인은 <b>그대로 둔다</b> — 이 파일을 못 실으면
+     찾기가 시 이름만 못 쓸 뿐, 나머지는 그대로 돌아야 한다.        */
+window.cityOf=cityOf;
 
 /* ── 시작 ───────────────────────────────────────────────────────── */
 function boot(){
