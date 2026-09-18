@@ -50,13 +50,21 @@
     .btn-dark{background:var(--navy);color:#fff}.btn-light{background:#eef2f6;color:var(--text)}.btn-danger{background:var(--redbg);color:var(--red)}
     .btn-sm{padding:7px 10px;font-size:var(--t6,13px);border-radius:9px}.wide{width:100%}
     .setup-note{background:#eef6ff;color:#245ea8;border-radius:13px;padding:13px;line-height:1.55;font-size:var(--t6,13px);margin-top:14px}
-    .app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:242px;background:var(--navy);padding:21px 15px;color:#fff;z-index:20}
+    .app{min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:242px;background:var(--navy);padding:21px 15px;color:#fff;z-index:20;transition:transform .2s}
+/* ── <b>넓게 보기</b> — 서랍을 접어 표에 242px 을 내어 준다 ──────────────
+   DB 목록은 칸이 <b>열셋</b>이다. 1280px 노트북에서 표가 쓸 수 있는 자리는
+   940px 뿐이라 여백을 아무리 줄여도 옆으로 밀렸다. 글자는 더 못 줄인다 —
+   CRM 화면은 13px 아래 글자를 <b>하나도 두지 않기로</b> 했다(토스판).
+   그래서 서랍을 <b>접는다.</b> 없애지 않는다 — 다시 누르면 돌아오고,
+   고르신 것은 이 브라우저에 남는다.                                      */
+    .app.wide .sidebar{transform:translateX(-100%)}
+    .app.wide .main{margin-left:0}
     .brand{display:flex;gap:10px;align-items:center;padding:0 8px 23px}.brand .mark{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#54a3ff,#1b64da);display:grid;place-items:center;font-weight:900}
     .brand strong{font-size:var(--t3,17px)}.brand small{display:block;color:#9ba6b4;margin-top:2px}.nav{display:grid;gap:7px}
     .nav button{border:0;background:transparent;color:#adb7c3;text-align:left;padding:13px 14px;border-radius:12px;font-weight:800}
     .nav button.active,.nav button:hover{background:#2a3039;color:#fff}.user{position:absolute;left:15px;right:15px;bottom:17px;background:#262d36;border-radius:14px;padding:13px}
     .user small{color:#9ba6b4}.user strong{display:block;margin:4px 0}.user button{background:transparent;border:0;color:#d9e0e8;padding:0;font-size:var(--t6,13px)}
-    .main{margin-left:242px}.topbar{height:72px;position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
+    .main{margin-left:242px;transition:margin-left .2s}.topbar{height:72px;position:sticky;top:0;z-index:10;background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px}
     .topbar h1{font-size:var(--t2,20px);color:var(--navy);margin:0}.top-actions{display:flex;gap:8px}.content{max-width:1600px;margin:auto;padding:28px}.page{display:none}.page.active{display:block}
     .hero{display:flex;align-items:end;justify-content:space-between;gap:15px;margin-bottom:22px}.hero h2{font-size:28px;color:var(--navy);margin:0 0 7px}.hero p{margin:0;color:var(--muted)}
     /* ★ <b>격자 칸은 기본으로 안 줄어듭니다.</b> grid 자식의 min-width 는 auto(=내용
@@ -66,7 +74,10 @@
     .grid{display:grid;gap:16px}
     .grid>*{min-width:0}.kpis{grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:18px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 2px 8px rgba(25,31,40,.03)}
     .kpi{padding:19px}.kpi .label{color:var(--muted);font-size:var(--t5,14px);font-weight:800}.kpi .value{font-size:31px;font-weight:900;color:var(--navy);margin-top:9px}.kpi .sub{font-size:var(--t6,13px);color:var(--muted);margin-top:7px}
-    .split{grid-template-columns:1.25fr .75fr}.section{padding:20px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
+    .split{grid-template-columns:1.25fr .75fr}.section{padding:20px}
+      /* 표가 든 칸만 좌우를 줄인다 — 칸 열셋짜리 표에 20px 씩은 사치다.
+         :has 를 못 쓰는 브라우저면 그냥 예전대로 선다(조용히 넘어간다). */
+      .section:has(.table-wrap){padding-left:11px;padding-right:11px}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:15px}
     .section-head h3{margin:0;color:var(--navy);font-size:var(--t3,17px)}.section-head p{margin:4px 0 0;color:var(--muted);font-size:var(--t6,13px)}
     .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.toolbar input,.toolbar select{width:auto;min-width:145px}
     .findn{font-size:var(--t6,13px);font-weight:800;color:#4e5968;margin:-6px 0 12px 2px}
@@ -116,13 +127,21 @@
       .table-wrap td[colspan]{border:0;padding:0}
       .table-wrap .actions{justify-content:flex-end;flex-wrap:wrap}
     }
-    th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:12px;border-bottom:1px solid var(--line);font-size:var(--t6,13px);text-align:left;white-space:nowrap}
-    td{padding:12px;border-bottom:1px solid #edf0f2;font-size:var(--t6,13px);vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
+    /* 칸이 <b>열셋</b>이라 좌우 여백 12px 이 곧 312px 이다 — 표 1,227px 중 4분의 1이
+   글자가 아니라 빈자리였다. 그래서 <b>좌우만</b> 줄인다. 위아래(10px)는
+   손가락이 누를 크기라 그대로 둔다. */
+      th{position:sticky;top:0;background:#f8fafc;color:#596575;padding:10px 7px;border-bottom:1px solid var(--line);font-size:var(--t6,13px);text-align:left;white-space:nowrap}
+    td{padding:10px 7px;border-bottom:1px solid #edf0f2;font-size:var(--t6,13px);vertical-align:middle;white-space:nowrap}tr:hover td{background:#fbfcfe}.name{font-weight:900;color:var(--navy)}
     .cus-open{background:none;border:0;padding:0;font:inherit;color:#1D4ED8;font-weight:800;cursor:pointer;text-align:left}
     .cus-open:hover{text-decoration:underline}
     .badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:var(--t6,13px);font-weight:900}.green{background:var(--greenbg);color:#087f5b}.red{background:var(--redbg);color:var(--red)}
     .yellow{background:var(--yellowbg);color:#ad6900}.blue{background:#e8f3ff;color:var(--blue2)}.gray{background:#eef1f4;color:#66717f}
-    .actions{display:flex;gap:5px}.empty{text-align:center;padding:42px;color:var(--muted)}.notice{background:#eef6ff;color:#245ea8;padding:14px;border-radius:13px;line-height:1.55;font-size:var(--t6,13px)}
+    /* 표 안 <b>small</b> 은 브라우저 기본이 0.83배라 13px 이 <b>10.8px</b> 로 찍혔다.
+   전화번호가 그랬다 — 고객 앞에서 못 읽는다. 이 화면은 13px 을 바닥으로 삼는다. */
+      .table-wrap small{font-size:var(--t6,13px)}
+      .actions{display:flex;gap:3px}
+      /* 표 안 단추는 넷이 나란히 선다 — 여기서만 좁힌다. 다른 자리 단추는 그대로 */
+      .table-wrap .actions .btn-sm{padding:6px 7px}.empty{text-align:center;padding:42px;color:var(--muted)}.notice{background:#eef6ff;color:#245ea8;padding:14px;border-radius:13px;line-height:1.55;font-size:var(--t6,13px)}
     .bars{display:grid;gap:14px}.barrow{display:grid;grid-template-columns:70px 1fr 38px;align-items:center;gap:10px;font-size:var(--t6,13px)}.bar{height:9px;background:#edf0f3;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:var(--blue)}
     .modal{display:none;position:fixed;inset:0;background:rgba(10,16,24,.48);z-index:100;align-items:center;justify-content:center;padding:18px}.modal.open{display:flex}
     .modal-box{width:min(780px,100%);max-height:92vh;overflow:auto;background:#fff;border-radius:20px;box-shadow:var(--shadow)}
@@ -132,10 +151,10 @@
     .toast{position:fixed;right:24px;bottom:24px;background:var(--navy);color:#fff;padding:13px 17px;border-radius:12px;opacity:0;transform:translateY(10px);transition:.22s;z-index:200}.toast.show{opacity:1;transform:none}
     .mobile-menu{display:none}
     @media(max-width:1050px){.kpis{grid-template-columns:1fr 1fr}.split{grid-template-columns:1fr}}
-    .tdots{display:inline-flex;gap:3px;vertical-align:middle}
-    .tdots .td{width:9px;height:9px;border-radius:50%;background:#e5e8eb;box-shadow:inset 0 0 0 1px #dbe0e6}
+    .tdots{display:inline-flex;gap:2px;vertical-align:middle}
+    .tdots .td{width:7px;height:7px;border-radius:50%;background:#e5e8eb;box-shadow:inset 0 0 0 1px #dbe0e6}
     .tdots .td.on{background:#3182f6;box-shadow:0 0 0 2px rgba(49,130,246,.15)}
-    .tdn{margin-left:6px;font-size:var(--t6,13px);font-weight:800;color:#6b7684}
+    .tdn{margin-left:4px;font-size:var(--t6,13px);font-weight:800;color:#6b7684}
     .tdover{margin-left:4px;font-size:var(--t6,13px);font-weight:800;color:#f04452}
     .nav .grp{font-size:var(--t6,13px);color:#5f6b7a;font-weight:800;letter-spacing:.5px;padding:13px 9px 4px}
     .tbadge{display:inline-block;min-width:18px;text-align:center;background:#f04452;color:#fff;border-radius:999px;font-size:var(--t6,13px);font-weight:800;padding:2px 6px;margin-left:6px}
@@ -174,7 +193,7 @@
     .gd img{width:100%;margin-top:10px;border:1px solid var(--line);border-radius:11px}
     .bulkbar{display:none;align-items:center;gap:9px;background:#eef4ff;border:1px solid #c9ddff;border-radius:11px;padding:9px 13px;margin-bottom:11px;font-size:var(--t6,13px);font-weight:800;color:#245ea8}
     .bulkbar.on{display:flex}
-    @media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.mobile-menu{display:inline-flex}.topbar{padding:0 16px}.content{padding:18px}.hero{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.toolbar input,.toolbar select{width:100%}}
+    @media(max-width:760px){.wide-btn{display:none}.sidebar{transform:translateX(-100%);transition:.25s}.sidebar.open{transform:none}.main{margin-left:0}.mobile-menu{display:inline-flex}.topbar{padding:0 16px}.content{padding:18px}.hero{align-items:flex-start;flex-direction:column}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.toolbar input,.toolbar select{width:100%}}
     @media(max-width:460px){.kpis{grid-template-columns:1fr}.content{padding:14px}}
   .notice-line{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;border-radius:10px;padding:10px 13px;font-size:var(--t6,13px);line-height:1.6;margin-bottom:12px;font-weight:600}
 
@@ -238,6 +257,11 @@
 .sg-badge{border:0;background:none;padding:0;cursor:pointer;font:inherit}
 .sg-badge:hover .badge{box-shadow:0 0 0 2px rgba(49,130,246,.25)}
 .sg-badge .ask-hint{display:block;font-size:var(--t6,13px);font-weight:700;color:#3182F6;margin-top:2px}
+/* 줄마다 「무엇을 할까요 ›」 를 되풀이하면 그 칸 하나가 104px 이 된다. 넓은
+   화면에서는 <b>›</b> 만 남긴다 — 딱지 자체가 단추이고 title 이 말해 준다.
+   폰 카드는 한 줄에 하나씩 서므로 <b>글 그대로</b> 보여 준다. */
+      .sg-badge .ask-hint .hint-long{display:none}
+      @media(max-width:760px){ .sg-badge .ask-hint .hint-long{display:inline} }
 </style>
 </head>
 <body>
@@ -289,7 +313,7 @@
   <main class="main">
     <header class="topbar">
       <div style="display:flex;gap:10px;align-items:center"><button class="btn btn-light mobile-menu" onclick="toggleSidebar()">☰</button><h1 id="pageTitle">대시보드</h1></div>
-      <div class="top-actions"><button class="btn btn-light" onclick="loadAll()">새로고침</button><button class="btn btn-primary" id="newDbBtn" onclick="openDb()">+ DB 등록</button></div>
+      <div class="top-actions"><button class="btn btn-light wide-btn" id="wideBtn" onclick="dbWide()" title="서랍을 접어 표를 넓게 봅니다">⇔ 넓게</button><button class="btn btn-light" onclick="loadAll()">새로고침</button><button class="btn btn-primary" id="newDbBtn" onclick="openDb()">+ DB 등록</button></div>
     </header>
     <div class="content">
       <section class="page active" id="page-dashboard">
@@ -496,6 +520,12 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]));
 const today=()=>new Date().toISOString().slice(0,10);
 function dtLocal(d=new Date()){const p=n=>String(n).padStart(2,"0");return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`}
+/* 표 안에서 쓰는 <b>짧은 날짜</b> — 「2026. 09. 01.」 은 빈칸까지 열두 자라
+   칸 하나를 90px 먹는다. 칸이 열셋인 표에서는 그 값이 너무 비싸다.
+   <b>연도를 버리지 않는다</b> — 배정일은 해가 넘어가면 뜻이 달라진다 (1번). */
+function fmtD(v){if(!v)return "-";const d=new Date(v);if(isNaN(d))return v;
+  const p=n=>(n<10?"0":"")+n;
+  return String(d.getFullYear()).slice(2)+"."+p(d.getMonth()+1)+"."+p(d.getDate());}
 function fmt(v,time=false){if(!v)return "-";const d=new Date(v);if(isNaN(d))return v;return new Intl.DateTimeFormat("ko-KR",time?{month:"numeric",day:"numeric",hour:"numeric",minute:"2-digit"}:{year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}
 /* 지점장이 자기 범위를 화면에서 바로 알 수 있게 */
 function toast(msg,ms){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),ms||1900)}
@@ -563,7 +593,7 @@ function stageBadge(d){
   return `<button type="button" class="sg-badge" onclick="sgAsk('${d.id}')" `+
     `title="누르면 이 상황에서 무엇을 할지 묻습니다">`+
     `<span class="badge ${STAGE_C[s]||"gray"}">${s}${stageSet(d)?"":"?"}</span>`+
-    `<span class="ask-hint">무엇을 할까요 ›</span></button>`;
+    `<span class="ask-hint"><span class="hint-long">무엇을 할까요 </span>›</span></button>`;
 }
 /* ── 이 단계가 <b>무엇을 들고 있나</b> — 한 곳에서만 안다 (5번) ────
    계약일·증권 전달일·증권번호를 어느 단계가 들고 있는지가 <b>수정 창</b>과
@@ -713,6 +743,9 @@ window.addEventListener("message",e=>{
 });
 
 function init(){
+  /* 서랍을 접었는지 <b>먼저</b> 세운다 — 로그인 화면이 떠 있어도 위 띠 단추의
+     글자는 맞아야 한다. 담아 둔 것이 없으면 펼친 채다. */
+  try{ dbWideInit(); }catch(e){}
   const fileCfg=(window.APEX_CONFIG && !String(window.APEX_CONFIG.url||"").includes("YOUR_PROJECT")) ? window.APEX_CONFIG : null;
   /* 이 브라우저에 한 번 잘못 저장된 설정이 <b>올바른 기본값을 영원히 이기고</b> 있었다.
      되돌릴 단추도 화면에 없어서, 한 번 어긋나면 그 브라우저에서는 계속 안 열렸다.
@@ -878,6 +911,35 @@ function mountTaScript(pg){
   f.src="ta-script.html?v=2026-08-16_10:30";f.dataset.mounted="1";
 }
 function toggleSidebar(){$("sidebar").classList.toggle("open")}
+/* ── 넓게 보기 ─────────────────────────────────────────────────────
+   서랍을 접었나 폈나를 아는 곳은 <b>여기 한 곳</b>이다 (5번). 화면 클래스를
+   통째로 대입하지 않고 classList 로만 만진다 — 다른 곳이 붙여 둔 클래스를
+   잃지 않는다 (5번).
+
+   고르신 것은 <b>이 브라우저에만</b> 남는다. 못 담아도 화면은 그대로 돈다. */
+const DBW_KEY="apex_crm_wide";
+function dbWideOn(){ return document.getElementById("app").classList.contains("wide"); }
+function dbWidePaint(){
+  const b=document.getElementById("wideBtn"); if(!b)return;
+  const on=dbWideOn();
+  b.textContent = on ? "⇔ 좁게" : "⇔ 넓게";
+  b.title = on ? "서랍을 다시 펼칩니다" : "서랍을 접어 표를 넓게 봅니다";
+  b.setAttribute("aria-pressed", on ? "true" : "false");
+}
+function dbWide(on){
+  const el=document.getElementById("app"); if(!el)return;
+  const want = (on===undefined) ? !dbWideOn() : !!on;
+  el.classList.toggle("wide", want);
+  try{ localStorage.setItem(DBW_KEY, want?"1":"0"); }catch(e){}
+  dbWidePaint();
+}
+/* 열 때 지난번 고르신 대로 — 담아 둔 것이 없으면 <b>펼친 채</b>로 둔다.
+   서랍이 처음부터 접혀 있으면 「메뉴가 어디 갔지」가 된다. */
+function dbWideInit(){
+  let v=null; try{ v=localStorage.getItem(DBW_KEY); }catch(e){}
+  if(v==="1") document.getElementById("app").classList.add("wide");
+  dbWidePaint();
+}
 /* ── DB 종류(카테고리) ──
    목록은 서버 app_config 의 db_sources 한 줄에 있다. 대표가 고치면 모두에게 반영된다.
    팀원은 고르기만 한다 — 목록을 고치는 쓰기 권한이 서버에서 막혀 있다. */
@@ -1342,10 +1404,10 @@ function renderDb(){
   $("bulkTh").classList.toggle("hidden",!canManageTeam());
   $("dbBody").innerHTML=rows.map(d=>{const c=lastCall(d),rs=recStatus(d);return `<tr>
     ${canManageTeam()&&canEditDb(d)?`<td><input type="checkbox" class="dbck" value="${d.id}" onchange="bulkBarUpd()"></td>`:(canManageTeam()?"<td></td>":"")}
-    <td data-th="배정일">${fmt(d.assigned_date)}</td><td class="name" data-th="고객"><button type="button" class="cus-open" onclick="cusOpen('${d.id}')" title="고객 한 장 — 고객 365일과 같은 카드">${esc(d.customer_name)}</button><br><small>${esc(d.phone||"-")}</small></td><td data-th="담당자">${esc(pname(d.assigned_to))}</td><td data-th="종류"><span class="badge gray">${esc(srcOf(d))}</span></td><td data-th="지역">${esc(d.region||"-")}</td>
+    <td data-th="배정일">${fmtD(d.assigned_date)}</td><td class="name" data-th="고객"><button type="button" class="cus-open" onclick="cusOpen('${d.id}')" title="고객 한 장 — 고객 365일과 같은 카드">${esc(d.customer_name)}</button><br><small>${esc(d.phone||"-")}</small></td><td data-th="담당자">${esc(pname(d.assigned_to))}</td><td data-th="종류"><span class="badge gray">${esc(srcOf(d))}</span></td><td data-th="지역">${esc(d.region||"-")}</td>
     <td data-th="결과">${badge(result(d))}</td><td data-th="단계">${stageBadge(d)}${needPolicy(d)?'<br><small style="color:#DC2626;font-weight:700">증권 미전달</small>':""}${sgUpBtn(d)}</td><td data-th="접촉">${touchDots(d)}</td><td data-th="상담 약속">${(()=>{const a=nextAppt(d);return a?fmt(a,true):"-"})()}</td>
     <td data-th="녹음">${rs==="완료"?'<span class="badge green">완료</span>':rs==="미완료"?'<span class="badge red">미완료</span>':'<span class="badge gray">해당없음</span>'}</td>
-    <td data-th="단톡 문구"><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})'>문구 복사</button></td>
+    <td data-th="단톡 문구"><button class="btn btn-light btn-sm" onclick='copyText(${JSON.stringify(report(d))})' title="단톡에 붙일 문구를 복사합니다">복사</button></td>
     <td data-th="관리"><div class="actions"><button class="btn btn-primary btn-sm" onclick="openCall('${d.id}')">접촉</button>${canEditDb(d)?(inClients(d)
       ?`<button class="btn btn-light btn-sm" style="color:#059669;border-color:#A7F3D0;background:#ECFDF5" onclick="toClient('${d.id}')" title="이미 고객 365일에 있습니다">365 ✓</button>`
       :`<button class="btn btn-light btn-sm" onclick="toClient('${d.id}')" title="고객 365일로 넘겨 장기 관리로 돌립니다">365</button>`):""}${canEditDb(d)?`<button class="btn btn-light btn-sm" onclick="openDb('${d.id}')">수정</button>`:""}${canDeleteDb(d)?`<button class="btn btn-danger btn-sm" onclick="removeDb('${d.id}')">삭제</button>`:""}</div></td>
@@ -2005,7 +2067,7 @@ function nxCss(){
 
 async function toggleGroup(id,value){const {error}=await sb.from("calls").update({group_reported:value}).eq("id",id);if(error)wErr(error,"단톡 보고 표시");else await loadAll()}
 async function toggleRecording(id,value){const {error}=await sb.from("calls").update({recording_delivered:value,recording_delivered_at:value?new Date().toISOString():null}).eq("id",id);if(error)wErr(error,"녹취 전달 표시");else await loadAll()}
-function closeModal(id){if(id==="cusModal")for(const k in CUS_SHOW)delete CUS_SHOW[k];$(id).classList.remove("open")} function toggleSidebar(){$("sidebar").classList.toggle("open")}
+function closeModal(id){if(id==="cusModal")for(const k in CUS_SHOW)delete CUS_SHOW[k];$(id).classList.remove("open")}   /* toggleSidebar 는 <b>위에 한 곳</b>에만 둔다 — 여기 있던 같은 함수를 지웠다 (5번) */
 function copyText(t){navigator.clipboard?.writeText(t).then(()=>toast("문구를 복사했습니다.")).catch(()=>prompt("복사하세요.",t))}
 window.addEventListener("click",e=>{if(e.target.classList.contains("modal"))e.target.classList.remove("open")});
 /* ═══════════ v2 — 오늘의 알림 · KPI · 통계 · AI 피드백 · 사용 안내 ═══════════ */

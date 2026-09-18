@@ -299,13 +299,34 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.didWorks=(!before&&hmIsDone(key));
     return out;
   },SEED);
-  /* 사장님이 <b>직접 정해 주신 다섯</b> — 여기가 바뀌면 사장님 말씀이 지워진 것이다 */
-  const BOSS={ '미접촉':['biz_news','cs_assist'], 'AP':['sangdam','fp_talk','frmake'],
-               'PC':['baba','brain','finance'], '계약완료':['pdel','baba'],
-               '거절':['mikki_talk','news_live'] };
-  const off=Object.keys(BOSS).filter(k=>(G.listed[k]||[]).join(',')!==BOSS[k].join(','));
-  is(off.length===0, '사장님이 정하신 <b>다섯 상태</b>의 도구가 그대로다'+
-     (off.length?(' ← '+off.map(k=>k+': '+(G.listed[k]||[]).join(',')).join(' / ')):''));
+  /* ── 사장님이 <b>직접 정해 주신 것</b> — 여기가 비면 말씀이 지워진 것이다 ──
+     <b>차례와 개수를 못 박지 않는다.</b> 예전에는 목록을 글자 그대로 견주었는데,
+     도구를 더해 달라는 말씀을 그대로 옮기자 <b>그 말씀 때문에</b> 빨간불이
+     켜졌다 — 알람이 사장님을 막아선 것이다. 그래서 <b>반드시 들어 있어야 할
+     것</b>만 본다. 더 담는 것은 막지 않고 <b>빠지는 것</b>만 잡는다 (8번).
+
+     2026-09-18 말씀 그대로 —
+       · AP  「보장분석상담자료 / 재무설계상담자료」 · 화법 · 컨셉 둘 · 전·후
+       · PC  「보장분석 전&후 비교자료 / 재무설계 계산기」
+       · 거절·부재  「카카오톡 메시지나, 전할 뉴스」
+     카톡 문구는 <b>화면으로 보내지 않고 그 자리에서 짓습니다</b> — 「제안서
+     카톡설명」 은 제안서가 있을 때 쓰는 화면이라 아직 상담이 안 이어진
+     자리에는 맞지 않습니다. 그래서 여기 도구 목록에는 안 넣고,
+     check-hmsheet 가 <b>그 자리에서 지어지는지</b>를 따로 봅니다.        */
+  const BOSS={
+    '미접촉' :['biz_news','cs_assist'],
+    'AP'    :['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake'],
+    'PC'    :['baba','finance'],
+    '계약완료':['pdel'],
+    '증권전달':['pdel'],
+    '거절'   :['news_live'],
+    '부재'   :['news_live']
+  };
+  const off=Object.keys(BOSS)
+    .map(k=>({k:k, miss:BOSS[k].filter(t=>(G.listed[k]||[]).indexOf(t)<0)}))
+    .filter(x=>x.miss.length);
+  is(off.length===0, '사장님이 정하신 도구가 <b>상태마다 다 들어 있다</b>'+
+     (off.length?(' ← 빠진 것 '+off.map(x=>x.k+': '+x.miss.join(',')).join(' / ')):''));
   /* ↓ 이것이 실제로 잡았다 — 'req'(가입설계 요청서)는 비포&애프터 <b>안에</b>
        있는 것이라 탭이 아니었고, 단추가 조용히 안 서고 있었다. */
   is(G.dead.length===0, '표에 적은 도구가 <b>전부 열리는 화면</b>이다'+

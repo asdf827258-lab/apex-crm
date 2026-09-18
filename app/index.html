@@ -14722,6 +14722,10 @@ function osFullMode(on){
   try{ var ba=document.getElementById('baScreen'); if(ba)ba.classList.remove('on'); }catch(e){}
 }
 function go(tab){
+  /* 홈으로 돌아오면 <b>돌아가는 띠</b>는 제 할 일을 다 했다. 메뉴로 돌아오셔도
+     사라져야 한다 — 「← 홈」 을 누르셨을 때만 지우면, 메뉴로 오신 뒤에도
+     띠가 남아 <b>안 끝난 일이 있는 것처럼</b> 보인다. */
+  try{ if(tab==='home'&&typeof hmBackHide==='function')hmBackHide(); }catch(e){}
   /* 위 띠(⭐ 즐겨찾기)는 <b>늘 그대로</b> 있다 — 접거나 펴지 않는다.
      고른 칸이 어디인지는 navMark 가 그 띠 안에서 표시해 준다.
      서랍(세로 메뉴)은 화면을 통째로 덮으므로 그대로 닫는다. */
@@ -15284,7 +15288,7 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-18 13:00';
+var APP_BUILD='2026-09-18 17:10';
 var APP_BUILD_NOTE="<b>고객 한 사람이 한 장에 서고, 홈에서 한 칸으로 찾습니다.</b> 한 사람이 여태 네 곳에 나뉘어 있었습니다 — 배정·단계·증권번호·계약 월납은 <b>DB 통합 CRM</b>에, 통화는 그 옆에, 문서·소득은 <b>고객 365일</b>에, 가족·접촉기록은 또 다른 자리에. 상담 직전에 두 화면을 다 열어 봐야 했습니다. 이제 <b>고객 365일에서 고객을 열면 맨 위에 한 장</b>이 서고, <b>DB 통합 CRM 에서 이름을 누르면 같은 카드</b>가 뜹니다. 카드를 그리는 자리가 한 벌(<b>apex-cusone.js</b>)이라 두 화면이 달라질 수 없습니다. <b>연락기록은 한 줄기</b>입니다 — CRM 통화와 고객 365일 접촉이 섞여 시간순으로 서고, 줄마다 어디서 온 기록인지 적습니다. <b>홈 맨 위에 고객 찾기 칸</b>을 두었습니다. 이름·초성(ㅎㄱㄷ)·번호 뒷자리(<b>010-9999-3456</b> 통째로도)·지역 어느 것으로 쳐도 <b>고객 365일과 배정 DB 를 함께</b> 훑고, 누르면 같은 한 장으로 갑니다. 아직 365 로 안 넘긴 사람은 <b>「아직 고객 365일에 없습니다」</b>라고 적고 CRM 에서 그 사람을 찾아 세웁니다. <b>증권번호·계약 월납·계약일·증권 전달일</b>은 새로 만든 것이 아니라 이미 서버에 있었는데 화면에 안 보이던 값입니다. 금액은 <b>반올림하지 않습니다</b> — 187,000원은 「19만원」이 아니라 <b>「18만 7,000원」</b>으로 적습니다. <b>가족을 줄로</b> 적는 자리를 열었습니다(서버에 저장되니 실명 대신 자리와 나이만 적으십시오). <b>이름은 가린 것이 기본</b>이고, CRM 카드에서 실명을 보려면 한 번 더 누르고 닫으면 다시 가려집니다. 보험사·설계번호·납입수단·납입일·청약철회는 <b>아직 담을 자리가 없어</b> 빈 칸으로도 그리지 않았습니다 — 적어도 저장될 데가 없기 때문입니다. 초성 표·이름 가리기·찾는 셈이 두 화면에 두 벌이던 것도 한 벌로 줄였습니다. <b>그리고 팀원 찾기에서 치던 글자가 날아가던 자리를 한 겹 더 막았습니다</b> — 치고 계시는 동안에는 판을 아예 다시 세우지 않고 줄·칩·「몇 명」만 갈아 끼웁니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
@@ -19941,6 +19945,16 @@ function hmSteps(){
                   /* 목표(aim)는 <b>「무엇을 할까요?」 ①번</b>에 그대로 섭니다.
                      머리줄에 또 적으면 같은 말이 두 번이라 눈이 미끄러집니다. */
                   e:'📇',kt:tdoLabel(y.k)+(TDO[y.k]?(' · '+TDO[y.k].ch):''),
+                  /* <b>DB 종류·지역·통화 시도</b>도 함께 싣는다. TA 첫 마디가 종류에
+                     맞으려면(사장님 말씀) 이 줄이 그것을 알아야 한다. 안 실으면
+                     taSay 가 늘 <b>일반</b>으로 떨어져, 열일곱 가지 보장분석 DB 가
+                     전부 같은 인사를 받는다 — 화면은 멀쩡해 보이는데 말만 어긋난다.
+                     <b>이름과 메모는 안 싣는다</b> (3번). */
+                  src:y.src||'', region:y.sub||'',   /* arTouch 는 지역을 <b>sub</b> 로 준다 */
+                  /* arTouch 가 주는 것만 싣는다 — <b>없는 칸을 지어내지 않는다</b> (1번).
+                     통화 시도 횟수는 arTouch 가 안 준다. 그래서 안 싣고, AI 에게도
+                     안 보낸다 — 「몇 회」를 짐작해 적으면 그것이 사실이 된다. */
+                  days:(typeof y.d==='number')?y.d:null,
                   ord2:(TDO[y.k]?TDO[y.k].ord:99)});
       }
     }
@@ -20019,7 +20033,10 @@ function hmDid(key){
      적어 둔 표가 이미 있습니다 — 여기서 또 적으면 두 벌이 되어 한쪽만
      고치게 됩니다. ch(수단) · aim(목표) · way(방법) · tools(도구) 그대로입니다.
    ★ <b>없는 갈래는 안 만듭니다.</b> 도구가 없는 상태는 도구 줄이 안 섭니다.  */
-var HM_PICK_TOOLS=3;
+/* AP 한 자리에만 도구가 <b>여섯</b>이다 — 상담자료 둘 · 화법 · 컨셉 둘 · 전·후.
+   셋에서 자르면 사장님이 말씀하신 것 중 절반이 <b>안 보인다.</b> 번호가 붙어
+   있으니 늘어도 고르기 어렵지 않다. */
+var HM_PICK_TOOLS=6;
 function hmPicks(x){
   var k=(x&&x.k==='db')?x.tk:(x&&x.k),
       m=(typeof TDO!=='undefined'&&TDO[k])||null,
@@ -20038,6 +20055,11 @@ function hmPicks(x){
     var A=(typeof HM_ACT!=='undefined'&&HM_ACT[x&&x.k])||{e:'▶',t:'할 일'};
     out.push({t:(x&&x.t)||A.t||'열기',s:(x&&x.s)||'',e:A.e||'▶',act:'open'});
   }
+  /* ①-2 <b>보낼 말</b> — 거절·부재·미접촉에서는 그 자리에서 짓습니다.
+     화면을 옮기지 않습니다 — 사장님 말씀이 「바로 그 자리에서」 였습니다. */
+  if(hmKtCan(x))
+    out.push({t:'카톡으로 보낼 말 짓기',s:'이름은 AI 에게 안 보냅니다 — 「고객님」으로 나갑니다',
+              e:'💬',act:'kt'});
   /* ② 손에 쥘 도구 — 메뉴에 있는 것만이라 누르면 반드시 열립니다 */
   for(i=0;i<L.length&&i<HM_PICK_TOOLS;i++)
     out.push({t:(L[i].title||L[i].id)+' 열기',s:'',e:L[i].icon||'🧰',
@@ -20063,19 +20085,354 @@ function hmPicksHtml(x){
        '<span class="ar">›</span></button>';
   return h+'</div>';
 }
+/* ══ 홈을 <b>안 떠난다</b> — 도구를 홈 위에 덮는다 ══════════════════
+   여태 「무엇을 할까요?」 에서 도구를 고르면 go() 가 <b>홈을 헐고</b> 그 화면으로
+   갔습니다. 돌아오려면 메뉴를 찾아 홈을 다시 누르고, 그러고 나서 <b>몇 건 중
+   몇 번째였는지를 다시 찾아야</b> 했습니다. 오늘 열 건을 그렇게 하면 화면을
+   스무 번 옮겨 다닙니다.
+
+   그래서 <b>덮습니다.</b> 홈은 아래 그대로 서 있고, 닫으면 그 자리입니다.
+
+   ★ 여기가 아는 것은 <b>주소뿐</b>입니다. 「어느 탭이 어떤 화면인가」는 go() 가
+     이미 압니다 — 여기 또 적으면 두 곳이 되고, 하나를 고치면 다른 하나가
+     옛말을 합니다 (5번). 그래서 <b>주소가 있는 것(따로 있는 파일)만</b> 덮개로
+     열고, 앱 안에서 그리는 화면은 go() 에 맡기되 <b>돌아오는 길을 띠로</b> 세웁니다.
+
+   ★ <b>앱을 다시 싣지 않습니다</b> (7번). 덮개에 app/index.html 을 물리면
+     4.3MB 를 한 번 더 읽습니다. 따로 있는 파일만 물립니다.              */
+function hmSheetUrl(id){
+  /* 표를 <b>부를 때</b> 만듭니다 — 주소 상수가 이 줄보다 아래에 적혀 있어도
+     안 깨집니다. 한 곳에만 적는 것은 그대로입니다 (5번). */
+  var M={};
+  if(typeof FIN_URL     !=='undefined')M.finance   =FIN_URL;
+  if(typeof BA_URL      !=='undefined')M.frmake    =BA_URL;
+  if(typeof SANGDAM_URL !=='undefined')M.sangdam   =SANGDAM_URL;
+  if(typeof FP_DECK_URL !=='undefined')M.fp_deck   =FP_DECK_URL;
+  if(typeof FP_TALK_URL !=='undefined')M.fp_talk   =FP_TALK_URL;
+  if(typeof PDEL_URL    !=='undefined')M.pdel      =PDEL_URL;
+  if(typeof MKTALK_URL  !=='undefined')M.mikki_talk=MKTALK_URL;
+  return M[id]||'';
+}
+/* 지금 무엇을 하러 나갔나 — <b>여기 한 곳</b>만 압니다 (5번) */
+var HMS={key:'',id:'',sheet:false};
+function hmSheetCss(){
+  if(document.getElementById('hmSheetCss'))return;
+  var st=document.createElement('style');st.id='hmSheetCss';
+  st.textContent=
+    '#hmSheet{position:fixed;inset:0;z-index:9000;background:#fff;display:none;flex-direction:column}'+
+    '#hmSheet.on{display:flex}'+
+    '.hmsh-top{display:flex;align-items:center;gap:9px;padding:10px 12px;border-bottom:1px solid #E5E8EB;background:#fff;flex:0 0 auto}'+
+    '.hmsh-m{flex:1;min-width:0;line-height:1.35}'+
+    '.hmsh-m b{display:block;font-size:var(--t4,15px);font-weight:900;color:#191F28;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '.hmsh-m span{display:block;font-size:var(--t6,13px);font-weight:700;color:#6B7684;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '.hmsh-b{flex:0 0 auto;border:0;border-radius:10px;padding:9px 13px;font-weight:800;font-size:var(--t6,13px);cursor:pointer}'+
+    '.hmsh-did{background:#3182F6;color:#fff}.hmsh-x{background:#F2F4F6;color:#4E5968}'+
+    '#hmSheet iframe{flex:1 1 auto;width:100%;border:0;display:block}'+
+    /* 발표 중에는 띠가 화면을 가립니다 — 덱이 몸에 붙이는 표시를 따릅니다 */
+    'body.presenting #hmBack{display:none!important}'+
+    '#hmBack{position:fixed;left:0;right:0;bottom:0;z-index:8500;display:flex;align-items:center;gap:9px;'+
+      'padding:9px 12px;background:#191F28;color:#fff;box-shadow:0 -4px 16px rgba(0,0,0,.18)}'+
+    '#hmBack .m{flex:1;min-width:0;font-size:var(--t6,13px);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'+
+    '#hmBack button{flex:0 0 auto;border:0;border-radius:9px;padding:8px 12px;font-weight:800;font-size:var(--t6,13px);cursor:pointer}'+
+    '#hmBack .did{background:#3182F6;color:#fff}#hmBack .home{background:#F2F4F6;color:#191F28}';
+  document.head.appendChild(st);
+}
+/* 지금 이 줄이 누구인가 — <b>세는 곳은 hmSteps 하나</b>입니다 (5번) */
+function hmStepOf(key){
+  var L=hmSteps(),j;
+  for(j=0;j<L.length;j++)if(L[j].key===key)return L[j];
+  return null;
+}
+function hmSheetOpen(id,key,toolT){
+  var u=hmSheetUrl(id);
+  HMS.key=key||'';HMS.id=id||'';
+  /* 주소가 없으면 <b>go() 에 맡기고</b> 돌아오는 띠를 세웁니다 */
+  if(!u){ HMS.sheet=false; hmBackShow(toolT); go(id); return; }
+  hmSheetCss();
+  var x=hmStepOf(key),r=hmNext();
+  var el=document.getElementById('hmSheet');
+  if(!el){
+    el=document.createElement('div');el.id='hmSheet';
+    el.innerHTML='<div class="hmsh-top" id="hmShTop"></div><iframe id="hmShFrame" title="도구"></iframe>';
+    document.body.appendChild(el);
+  }
+  /* 이름과 할 말은 <b>전부 씻어서</b> 옮깁니다 — 메모가 섞여 들어옵니다 (3번) */
+  document.getElementById('hmShTop').innerHTML=
+    '<div class="hmsh-m"><b>'+osEsc(toolT||'')+'</b><span>'+
+      (r.n?(r.n+'건 중 '+(r.i+1)+'번째'):'오늘 챙길 것')+
+      ((x&&x.t)?(' · '+osEsc(x.t)):'')+'</span></div>'+
+    '<button type="button" class="hmsh-b hmsh-did" onclick="hmSheetClose(true)">✓ 했습니다</button>'+
+    '<button type="button" class="hmsh-b hmsh-x" onclick="hmSheetClose(false)">닫기</button>';
+  var f=document.getElementById('hmShFrame');
+  /* 판 번호를 붙입니다 — 안 붙이면 브라우저가 지난번 것을 그대로 씁니다 */
+  var want=u+(u.indexOf('?')>=0?'&':'?')+'v='+encodeURIComponent(APP_BUILD);
+  if(f.getAttribute('src')!==want)f.setAttribute('src',want);
+  el.classList.add('on');
+  HMS.sheet=true;
+  document.body.classList.add('hm-sheet-on');
+}
+/* 닫으면 <b>그 자리</b>입니다. 「했습니다」로 닫으면 오늘 한 것으로 표시합니다. */
+function hmSheetClose(done){
+  var el=document.getElementById('hmSheet');
+  if(el)el.classList.remove('on');
+  document.body.classList.remove('hm-sheet-on');
+  HMS.sheet=false;
+  var k=HMS.key;HMS.key='';HMS.id='';
+  if(done&&k){ try{ hmDid(k); }catch(e){} return; }   /* hmDid 가 알아서 다시 그립니다 */
+  try{ hmPaint(); }catch(e){}
+}
+/* ── 주소가 없는 화면 — go() 로 가되 <b>돌아오는 길</b>을 띠로 세운다 ──
+   앱 안에서 그리는 화면(두뇌·니즈 시뮬레이터·전할 뉴스·고객 365일)은 덮개에
+   못 물립니다. 그 판을 여기서 또 그리면 「어느 탭이 무엇인가」가 두 곳이
+   되기 때문입니다 (5번). 대신 <b>한 번 눌러 돌아오는 길</b>을 둡니다. */
+function hmBackShow(toolT){
+  hmSheetCss();
+  var el=document.getElementById('hmBack');
+  if(!el){ el=document.createElement('div');el.id='hmBack';document.body.appendChild(el); }
+  var r=hmNext(),x=hmStepOf(HMS.key);
+  el.innerHTML='<span class="m">'+osEsc(toolT||'')+
+    (r.n?(' · '+r.n+'건 중 '+(r.i+1)+'번째'):'')+
+    ((x&&x.t)?(' · '+osEsc(x.t)):'')+'</span>'+
+    '<button type="button" class="did" onclick="hmBackDone(true)">✓ 했습니다</button>'+
+    '<button type="button" class="home" onclick="hmBackDone(false)">← 홈</button>';
+  el.style.display='flex';
+}
+function hmBackHide(){
+  var el=document.getElementById('hmBack');
+  if(el)el.style.display='none';
+  HMS.key='';HMS.id='';
+}
+function hmBackDone(done){
+  var k=HMS.key;
+  hmBackHide();
+  go('home');
+  if(done&&k){ try{ hmDid(k); }catch(e){} }
+}
+/* ══ 거절·부재 — <b>그 자리에서</b> 보낼 말을 짓는다 ══════════════════
+   사장님 말씀: 「거절·부재 고객에겐 카카오톡 메시지나 전할 뉴스를 만들어
+   줘, <b>바로 그 자리에서</b> 할 수 있도록.」
+
+   ★ <b>이름을 AI 에게 보내지 않습니다</b> (3번). 보내는 것은 「어느 단계인가 ·
+     어떤 DB 인가 · 몇 번 걸었나 · 지역이 어디인가」 뿐이고, 받아 온 글도
+     <b>「고객님」</b> 으로 나갑니다. 메모도 안 보냅니다 — 거기에 이름이 섞입니다.
+   ★ <b>한도·나이·개월 수 같은 숫자를 못 쓰게</b> 합니다 (2번). 시행령에 있고
+     개정되면 바뀌는 값이라, 외운 숫자를 말하는 것이 이 자리에서 가장 위험합니다.
+   ★ <b>단정하지 않게</b> 합니다 — 「비과세입니다」 · 「무조건 나옵니다」 는 결론이라
+     요건 하나가 어긋나면 고객 앞에서 무너집니다.
+   ★ <b>못 받으면 지어내지 않습니다</b> (1번) — 못 받았다고 적고 다시 눌러 주십사 합니다.
+   ★ <b>한 번만 부릅니다</b> (7번). 지은 글은 그 자리에 남고, 다시 지으려면
+     사장님이 다시 누르셔야 합니다.                                        */
+var HMKT={};   /* 줄 열쇠 → {st:'busy'|'ok'|'fail', txt:'', err:''} */
+function hmKtSt(key){ return (key&&HMKT[key]&&HMKT[key].st)||''; }
+function hmKtSys(){
+  return '너는 보험 설계사가 고객에게 보낼 <카카오톡 한 통>을 대신 쓴다.\n'+
+    '지켜야 하는 것:\n'+
+    '1) 세 줄에서 다섯 줄. 존댓말. 이모지는 쓰지 않는다.\n'+
+    '2) 고객 호칭은 반드시 "고객님". 이름을 지어내지 않는다.\n'+
+    '3) 팔지 않는다. 상품 이름·보험료·수치를 적지 않는다.\n'+
+    '4) 한도·나이·개월 수·퍼센트 같은 숫자를 절대 적지 않는다.\n'+
+    '5) "비과세입니다" "무조건 나옵니다" "전액 보장됩니다" 같은 단정을 쓰지 않는다.\n'+
+    '6) 보장이나 보험료를 말해야 하면 "심사 결과에 따릅니다"를 붙인다.\n'+
+    '7) 답에는 <b>문구만</b> 적는다. 설명·머리말·따옴표를 붙이지 않는다.';
+}
+/* AI 에게 넘기는 <b>상황</b> — 이름도 메모도 안 담습니다 (3번) */
+function hmKtWhy(x){
+  var st=(x&&x.tk)||(x&&x.kt)||'', L=[];
+  L.push('- 지금 단계: '+(st||'모름'));
+  if(x&&x.src)L.push('- DB 종류: '+x.src);
+  if(x&&x.region)L.push('- 지역: '+x.region);
+  if(x&&typeof x.days==='number')L.push('- 마지막 접촉으로부터: '+x.days+'일');
+  return L.join('\n');
+}
+function hmKtRun(key){
+  var x=hmStepOf(key); if(!x)return;
+  if(hmKtSt(key)==='busy')return;                 /* 되풀이해 부르지 않는다 (7번) */
+  if(typeof aiReady==='function'&&!aiReady()){
+    HMKT[key]={st:'fail',txt:'',err:'AI 키가 연결되어 있지 않습니다 — 설정에서 연결해 주세요'};
+    hmPaint();return;
+  }
+  HMKT[key]={st:'busy',txt:'',err:''};
+  hmPaint();
+  var user='아래 상황의 고객에게 보낼 카카오톡 한 통을 써 줘.\n\n'+hmKtWhy(x)+
+    '\n\n이 분은 아직 상담이 이어지지 않은 분이다. 오늘 할 일은 파는 것이 아니라 '+
+    '문을 닫지 않게 하는 것이다.';
+  try{
+    callAI(hmKtSys(),user,900,'brain').then(function(out){
+      var t=String(out==null?'':out).replace(/^["「'\s]+|["」'\s]+$/g,'');
+      if(!t){ HMKT[key]={st:'fail',txt:'',err:'빈 답이 왔습니다'}; }
+      else   { HMKT[key]={st:'ok',txt:t,err:''}; }
+      hmPaint();
+    },function(e){
+      /* 실패를 성공처럼 말하지 않는다 (1번) */
+      HMKT[key]={st:'fail',txt:'',err:(e&&e.message)||'못 받았습니다'};
+      hmPaint();
+    });
+  }catch(e){ HMKT[key]={st:'fail',txt:'',err:'못 불렀습니다'}; hmPaint(); }
+}
+function hmKtCopy(key){
+  var r=HMKT[key];
+  if(!r||r.st!=='ok'||!r.txt){toast('아직 문구가 없습니다');return;}
+  copyText(r.txt);
+}
+/* 네 자리를 <b>갈라</b> 적는다 — 아직 · 짓는 중 · 지었다 · 못 지었다 (1번) */
+var HMKT_VIEW={
+  busy:function(){ return '<div class="hm-kt"><div class="hm-kt-w">✍️ <b>보낼 말을 짓는 중…</b> 이름은 보내지 않습니다.</div></div>'; },
+  fail:function(r,key){ return '<div class="hm-kt"><div class="hm-kt-f">⚠️ <b>문구를 못 지었습니다</b> — '+osEsc(r.err||'')+
+      '<br><span class="hm-kt-a" onclick="hmKtRun(\''+osEsc(key)+'\')">다시 짓기</span></div></div>'; },
+  ok:function(r,key){ return '<div class="hm-kt"><div class="hm-kt-t">'+osEsc(r.txt)+'</div>'+
+      '<div class="hm-kt-b"><button type="button" onclick="hmKtCopy(\''+osEsc(key)+'\')">📋 복사</button>'+
+      '<button type="button" class="g" onclick="hmKtRun(\''+osEsc(key)+'\')">다시 짓기</button></div>'+
+      '<div class="hm-kt-n">AI 가 지은 글입니다. <b>보내시기 전에 한 번 읽어 주세요.</b></div></div>'; }
+};
+function hmKtHtml(key){
+  var r=HMKT[key]; if(!r||!r.st)return '';
+  var F=HMKT_VIEW[r.st]; return F?F(r,key):'';
+}
+function hmKtCss(){
+  if(document.getElementById('hmKtCss'))return;
+  var st=document.createElement('style');st.id='hmKtCss';
+  st.textContent=
+    '.hm-kt{margin-top:10px}'+
+    '.hm-kt-w,.hm-kt-f{border-radius:11px;padding:11px 13px;font-size:var(--t6,13px);line-height:1.7}'+
+    '.hm-kt-w{background:#F1F5F9;color:#4E5968;font-weight:700}'+
+    '.hm-kt-f{background:#FFFBEB;border:1px solid #FDE68A;color:#92400E}'+
+    '.hm-kt-a{cursor:pointer;text-decoration:underline;font-weight:800}'+
+    '.hm-kt-t{background:#FEF9C3;border:1px solid #FDE68A;border-radius:11px;padding:12px 13px;'+
+      'font-size:var(--t5,14px);line-height:1.8;color:#191F28;white-space:pre-wrap;font-weight:600}'+
+    '.hm-kt-b{display:flex;gap:7px;margin-top:8px}'+
+    '.hm-kt-b button{border:0;border-radius:9px;padding:9px 13px;font-weight:800;font-size:var(--t6,13px);'+
+      'background:#3182F6;color:#fff;cursor:pointer}'+
+    '.hm-kt-b button.g{background:#F2F4F6;color:#4E5968}'+
+    '.hm-kt-n{font-size:var(--t6,13px);color:#6B7684;font-weight:700;margin-top:7px;line-height:1.6}';
+  document.head.appendChild(st);
+}
+/* ══ 증권전달 — <b>추가 계약과 가족 소개</b>를 그 자리에서 읽는다 ══════
+   말하는 차례는 <b>apex-stage.js 한 곳</b>에 있습니다 (5번). 여기서는 접었다
+   폈다 세우기만 합니다 — 다섯 토막을 한꺼번에 펴 두면 홈이 길어집니다. */
+var HMPD={};   /* 줄 열쇠 → 펼친 토막 번호 (0 이면 접힘) */
+function hmPdToggle(key,n){
+  HMPD[key]=(HMPD[key]===n)?0:n;
+  try{ hmPaint(); }catch(e){}
+}
+function hmPdHtml(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k);
+  if(k!=='증권전달'&&k!=='계약완료')return '';
+  var L=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.pdel)||null;
+  if(!L||!L.length)return '';
+  var key=(x&&x.key)||'', open=HMPD[key]||0, h='',i;
+  for(i=0;i<L.length;i++){
+    var it=L[i], on=(open===it.n);
+    h+='<div class="hm-pd-i'+(on?' on':'')+'">'+
+       '<button type="button" class="hm-pd-h" onclick="hmPdToggle(\''+osEsc(key)+'\','+it.n+')">'+
+         '<span class="no">'+it.n+'</span><span class="e">'+it.ic+'</span>'+
+         '<span class="t">'+it.t+'</span><span class="ar">'+(on?'▾':'›')+'</span></button>'+
+       (on?('<div class="hm-pd-b">'+
+            '<div class="w">'+it.why+'</div>'+
+            '<div class="s">'+osEsc(it.say)+'</div>'+
+            '<div class="hm-pd-c"><button type="button" onclick="hmPdCopy('+it.n+')">📋 복사</button></div>'+
+            '<div class="n">⚠ '+it.no+'</div></div>'):'')+
+       '</div>';
+  }
+  return '<div class="hm-pd"><div class="hm-pd-t">📮 <b>이 자리에서 하는 다섯 가지</b>'+
+    '<span>추가 계약과 가족 소개가 나오는 유일한 자리입니다</span></div>'+h+'</div>';
+}
+function hmPdCopy(n){
+  var L=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.pdel)||[],i;
+  for(i=0;i<L.length;i++)if(L[i].n===n){ copyText(String(L[i].say).replace(/<[^>]*>/g,'')); return; }
+  toast('그 토막을 못 찾았습니다');
+}
+function hmPdCss(){
+  if(document.getElementById('hmPdCss'))return;
+  var st=document.createElement('style');st.id='hmPdCss';
+  st.textContent=
+    '.hm-pd{margin-top:10px;border:1px solid #BBF7D0;background:#F0FDF4;border-radius:12px;padding:11px}'+
+    '.hm-pd-t{font-size:var(--t6,13px);font-weight:800;color:#15803D;line-height:1.5}'+
+    '.hm-pd-t span{display:block;font-weight:700;color:#4E5968;margin-top:2px}'+
+    '.hm-pd-i{margin-top:7px;background:#fff;border:1px solid #DCFCE7;border-radius:10px;overflow:hidden}'+
+    '.hm-pd-i.on{border-color:#86EFAC}'+
+    '.hm-pd-h{width:100%;display:flex;align-items:center;gap:8px;background:none;border:0;cursor:pointer;'+
+      'padding:11px 12px;text-align:left;font-family:inherit}'+
+    '.hm-pd-h .no{flex:0 0 auto;width:20px;height:20px;border-radius:50%;background:#15803D;color:#fff;'+
+      'font-size:var(--t6,13px);font-weight:900;display:flex;align-items:center;justify-content:center}'+
+    '.hm-pd-h .e{flex:0 0 auto;font-size:var(--t5,14px)}'+
+    '.hm-pd-h .t{flex:1;min-width:0;font-size:var(--t6,13px);font-weight:700;color:#191F28;line-height:1.5}'+
+    '.hm-pd-h .t span{background:#DCFCE7;color:#15803D;border-radius:999px;padding:1px 7px;font-weight:800;white-space:nowrap}'+
+    '.hm-pd-h .ar{flex:0 0 auto;color:#8B95A1;font-weight:800}'+
+    '.hm-pd-b{padding:0 12px 12px}'+
+    '.hm-pd-b .w{font-size:var(--t6,13px);line-height:1.7;color:#4E5968;font-weight:700}'+
+    '.hm-pd-b .s{margin-top:8px;background:#F7FAF8;border-radius:9px;padding:11px 12px;white-space:pre-wrap;'+
+      'font-size:var(--t5,14px);line-height:1.85;font-weight:600;color:#191F28}'+
+    '.hm-pd-c{margin-top:7px}'+
+    '.hm-pd-c button{border:0;border-radius:9px;padding:8px 13px;font-weight:800;font-size:var(--t6,13px);'+
+      'background:#15803D;color:#fff;cursor:pointer}'+
+    '.hm-pd-b .n{margin-top:8px;font-size:var(--t6,13px);line-height:1.65;color:#92400E;font-weight:700}';
+  document.head.appendChild(st);
+}
+/* ══ TA — <b>DB 종류에 맞는 첫 마디</b>를 그 자리에 띄운다 ══════════
+   사장님 말씀: 「오늘 터치할 고객 — DB 종류에 맞게 <b>TA 를 바로</b> 띄워 달라.」
+
+   무슨 말을 할지는 <b>apex-stage.js 한 곳</b>에 있습니다 — DB 통합 CRM 도 같은
+   파일을 싣기 때문에 두 화면이 같은 분께 <b>같은 말</b>을 합니다 (5번).
+   여기서는 그것을 <b>세우기만</b> 합니다.
+
+   ★ 종류를 못 알아봐도 <b>화면을 안 비웁니다</b> — 일반 인사로 갑니다 (1번).  */
+function hmTaHtml(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k);
+  if(k!=='TA')return '';
+  var S=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.taSay)?APEX_STAGE.taSay(x&&x.src):null;
+  if(!S)return '';
+  var src=(x&&x.src)?osEsc(x.src):'';
+  return '<div class="hm-ta">'+
+    '<div class="hm-ta-h">☎️ <b>'+osEsc(S.t)+'</b>'+(src?('<span>'+src+'</span>'):'')+'</div>'+
+    '<div class="hm-ta-t">'+osEsc(S.say)+'</div>'+
+    '<div class="hm-ta-b"><button type="button" onclick="hmTaCopy(\''+osEsc((x&&x.key)||'')+'\')">📋 복사</button></div>'+
+    '<div class="hm-ta-n">'+S.tip+'</div>'+
+    '</div>';
+}
+function hmTaCopy(key){
+  var x=hmStepOf(key);
+  var S=(x&&typeof APEX_STAGE!=='undefined'&&APEX_STAGE.taSay)?APEX_STAGE.taSay(x.src):null;
+  if(!S){toast('첫 마디를 못 찾았습니다');return;}
+  copyText(S.say);
+}
+function hmTaCss(){
+  if(document.getElementById('hmTaCss'))return;
+  var st=document.createElement('style');st.id='hmTaCss';
+  st.textContent=
+    '.hm-ta{margin-top:10px;border:1px solid #BFDBFE;background:#F0F7FF;border-radius:12px;padding:11px 13px}'+
+    '.hm-ta-h{font-size:var(--t6,13px);font-weight:800;color:#1A56DB;display:flex;align-items:center;gap:7px;flex-wrap:wrap}'+
+    '.hm-ta-h span{background:#DBEAFE;color:#1E40AF;border-radius:999px;padding:2px 8px;font-size:var(--t6,13px);font-weight:800}'+
+    '.hm-ta-t{margin-top:8px;background:#fff;border-radius:10px;padding:11px 12px;white-space:pre-wrap;'+
+      'font-size:var(--t5,14px);line-height:1.85;font-weight:600;color:#191F28}'+
+    '.hm-ta-b{display:flex;gap:7px;margin-top:8px}'+
+    '.hm-ta-b button{border:0;border-radius:9px;padding:9px 13px;font-weight:800;font-size:var(--t6,13px);'+
+      'background:#1A56DB;color:#fff;cursor:pointer}'+
+    '.hm-ta-n{margin-top:8px;font-size:var(--t6,13px);line-height:1.65;color:#4E5968;font-weight:700}';
+  document.head.appendChild(st);
+}
+/* 이 줄에서 <b>보낼 말</b>을 지어도 되는 자리인가 — 표 하나로 둔다 (5번).
+   상담이 아직 안 이어진 자리에서만 씁니다. 계약 뒤에는 마디(MST_STEPS)가
+   사람이 쓴 문구를 이미 들고 있습니다 — 거기에 AI 를 겹치지 않습니다. */
+var HMKT_OK={'거절':1,'부재':1,'미접촉':1};
+function hmKtCan(x){
+  var k=(x&&x.k==='db')?x.tk:(x&&x.k);
+  return !!HMKT_OK[k];
+}
 /* 고르면 <b>그 자리에서</b> 그 일이 벌어진다. 무엇을 하는지는 원래 있던
    함수에 그대로 맡긴다 — 여기서 또 만들면 두 벌이 된다 (5번). */
 function hmPick(key,i){
-  var L=hmSteps(),j,x=null;
-  for(j=0;j<L.length;j++)if(L[j].key===key){x=L[j];break;}
+  var x=hmStepOf(key);
   if(!x)return;
   var P=hmPicks(x),p=P[i];
   if(!p)return;
-  if(p.act==='go'){ go(p.go); return; }
+  /* 도구는 <b>홈을 덮고</b> 열린다 — 닫으면 이 자리로 돌아온다 */
+  if(p.act==='go'){ hmSheetOpen(p.go,key,p.t); return; }
+  if(p.act==='kt'){ hmKtRun(key); return; }
   if(p.act==='did'){ hmDid(key); return; }
   hmOpen(key);
 }
 function hmNowHtml(){
+  try{ hmKtCss(); hmTaCss(); hmPdCss(); }catch(e){}   /* 옷을 쓰는 화면에서 부른다 (5번) */
   var r=hmNext();
   if(!r.n)return '';
   if(!r.x)
@@ -20093,7 +20450,7 @@ function hmNowHtml(){
     /* <b>묻고 고르게</b> 합니다 — 번호가 붙은 갈래를 세우고, 누르면
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
-    hmPicksHtml(x)+
+    hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
