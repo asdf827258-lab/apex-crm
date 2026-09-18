@@ -1934,10 +1934,14 @@ h2 em.e{color:var(--edu-d)}
           </div>
         </div>
 
-        <div class="f"><label>월 보험료 &mdash; 제안서 그대로 <b>달러</b>로</label>
+        <div class="f"><label>월 보험료 &mdash; 넣는 값은 <b>달러</b></label>
           <input id="dPrem" type="number" step="0.01" min="1">
-          <div class="hint">제안서에 적힌 <b>달러 금액</b>을 그대로 적으십시오 &mdash; 화면에는 원화로 보여 드립니다.
-            바꾸면 비례 계산됩니다.<br>
+          <button type="button" id="dPremProp"
+            style="margin-top:7px;min-height:44px;padding:0 14px;border:1px solid var(--line);
+                   border-radius:999px;background:#fff;font:inherit;font-size:13px;font-weight:800;
+                   color:var(--usd-d);cursor:pointer">제안서 값으로</button>
+          <div class="hint">열면 <b>월 100만원</b> 자리에서 시작합니다 &mdash; 배수로 셈하시기 쉽도록.
+            제안서 값은 위 단추로 돌아옵니다. 바꾸면 비례 계산됩니다.<br>
             <b id="paidEcho">—</b></div>
         </div>
 
@@ -2232,7 +2236,7 @@ h2 em.e{color:var(--edu-d)}
         <div class="ph">바꾸는 즉시 다시 계산됩니다</div>
 
         <div class="f"><label>월 납입금액</label>
-          <input id="gwPay" type="number" value="50" step="10" min="1">
+          <input id="gwPay" type="number" value="100" step="10" min="1">
           <div class="hint">단위: <b>만원</b></div>
         </div>
 
@@ -2853,7 +2857,7 @@ h2 em.e{color:var(--edu-d)}
           <input id="eFxIn" type="number" step="10" value="1484"></div>
       </div>
       <div class="f" style="margin:14px 0 0;max-width:260px"><label>월 납입액 (만원)</label>
-        <input id="eMon" type="number" step="5" min="0" value="30">
+        <input id="eMon" type="number" step="5" min="0" value="100">
         <div class="hint">지원금 말고 <b>따로 넣는 돈</b>이 있다면 적어 주십시오</div></div>
       <div class="f" style="margin:14px 0 0;max-width:520px">
         <label>나올 때 환율 (유학 시점) &mdash; <b id="eFxOutEcho">1,484</b>원</label>
@@ -4953,7 +4957,26 @@ const CRISIS = [
 /* ═══════════════════════════════════════════════
    상태 · 유틸
    ═══════════════════════════════════════════════ */
-const S = {prod:'met', prem:MET_PREM, scen:'cur', sw:MET_SW_YEAR, idx:null, fxIn:1484, fxOut:1484};
+/* ── <b>열면 월 100만원</b> ─────────────────────────────────────────
+   사장님 말씀 — 「기본값은 모두 계산하기 쉽게 100만원으로 먼저 세팅해서」.
+   고객 앞에서는 <b>배수로</b> 셈합니다 — 100만원이 기준이면 200만원은 두 배,
+   50만원은 반입니다. 26만 4,033원에서 시작하면 그 암산이 안 됩니다.
+
+   달러 상품이라 <b>그 원화에 해당하는 달러</b>를 거꾸로 잡습니다. 환급률표는
+   비율이라 어떤 보험료로도 그대로 태워집니다(scale).
+
+   ★ <b>제안서 값을 버리는 것이 아닙니다</b> — 옆 단추 한 번이면 돌아옵니다.
+     제안서에 적힌 달러는 사장님이 고객과 맞대 보셔야 하는 숫자입니다 (1번).
+   ★ 환율을 움직여도 <b>달러는 안 바뀝니다</b> — 계약은 달러로 맺습니다.
+     100만원은 <b>처음 세워 두는 자리</b>일 뿐입니다.                      */
+const KRW_START = 1000000;                 /* 원 (4번) */
+const DEF_FX    = 1484;
+/* ★ <b>센트로 반올림하면 100만원이 안 됩니다.</b> $673.85 × 1,484 = 999,993원 —
+   7원이 샙니다. 「계산하기 쉽게 100만원」이라고 해 놓고 99만 9,993원을 띄우면
+   그 자리에서 믿음이 깎입니다. 그래서 <b>속으로는 정확한 값</b>을 들고,
+   칸에는 센트까지만 적습니다. 화면의 원화는 <b>정확히 100만원</b>입니다. */
+const premForKrw = fx => KRW_START / fx;
+const S = {prod:'met', prem:premForKrw(DEF_FX), scen:'cur', sw:MET_SW_YEAR, idx:null, fxIn:DEF_FX, fxOut:DEF_FX};
 const $ = s=>document.querySelector(s);
 const nf  = n=>Math.round(n).toLocaleString('ko-KR');
 const usd = n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
@@ -5285,11 +5308,18 @@ function segBind(sel,key,after){
   });
 }
 segBind('#iProd','prod',()=>{
-  S.prem = S.prod==='met'?MET_PREM:AIA_PREM;
+  /* 상품을 바꿔도 <b>같은 100만원</b>에서 견줍니다 — 기준이 다르면 비교가 안 됩니다 */
+  S.prem = premForKrw(S.fxIn);
   S.scen = 'cur'; S.idx = null;
-  $('#dPrem').value = S.prem;
+  $('#dPrem').value = S.prem.toFixed(2);   /* 칸에는 센트까지 */
 });
 $('#dPrem').oninput = e=>{ S.prem=Math.max(1,+e.target.value||1); render(); };
+/* <b>제안서에 적힌 달러</b>로 한 번에 — 고객과 맞대 보셔야 하는 숫자입니다 (1번) */
+$('#dPremProp').onclick = ()=>{
+  S.prem = S.prod==='met' ? MET_PREM : AIA_PREM;
+  $('#dPrem').value = S.prem;
+  render();
+};
 $('#iScen').onchange = e=>{ S.scen=e.target.value; render(); };
 $('#iSwitch').onchange= e=>{ S.sw=+e.target.value; S.idx=null; render(); };
 $('#iYear').oninput  = e=>{ S.idx=+e.target.value; render(); };
@@ -5297,7 +5327,7 @@ $('#iFxIn').oninput  = e=>{ S.fxIn=Math.max(100,+e.target.value||100); render();
 $('#iFxOut').oninput = e=>{ S.fxOut=Math.max(100,+e.target.value||100); $('#iFxRange').value=S.fxOut; render(); };
 $('#iFxRange').oninput=e=>{ S.fxOut=+e.target.value; $('#iFxOut').value=S.fxOut; render(); };
 
-$('#dPrem').value = MET_PREM;
+$('#dPrem').value = S.prem.toFixed(2);   /* 열면 월 100만원 자리 — 칸에는 센트까지 */
 
 
 
@@ -5734,7 +5764,7 @@ window.__apexT = {
    ═══════════════════════════════════════════════ */
 const EDU = {age:0, order:2000000, region:100000, local:0,
              go:19, prod:'met', scen:'cur', fxIn:1484, fxOut:1484,
-             costUsd:50000, years:4, spread:2, mon:30};
+             costUsd:50000, years:4, spread:2, mon:100};   /* 월 100만원에서 시작 — 배수로 셈하기 쉽게 */
 
 const $e = s=>document.querySelector(s);
 const enf = n=>Math.round(n).toLocaleString('ko-KR');
@@ -7503,7 +7533,7 @@ function cpnLoad(force){
     var end = Math.max(age+1, num('gwEnd',65));
     var yrs = end-age;
     var pyr = G.payYrs>0 ? Math.min(G.payYrs, yrs) : yrs;
-    return { m:Math.max(0,num('gwPay',50)), age:age, end:end, yrs:yrs,
+    return { m:Math.max(0,num('gwPay',100)), age:age, end:end, yrs:yrs,   /* 칸이 비면 월 100만원 — 화면 기본값과 같게 */
              i:num('gwRet',6)/100/12, ret:num('gwRet',6),
              pn:Math.round(pyr*12), tn:Math.round(yrs*12), pyr:pyr };
   }

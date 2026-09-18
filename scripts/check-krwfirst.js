@@ -75,13 +75,41 @@ const wonNum = (t) => {
   const A = await read();
   is(/^월 [\d,]+만/.test(A.sub), '머리줄이 <b>「월 …만…원」</b>으로 시작한다 — ' + A.sub.slice(0, 44));
   is(!/^월 \$/.test(A.sub), '머리줄이 <b>「월 $」로 시작하지 않는다</b>');
-  is(/\(\$177\.92\)/.test(A.sub), '달러가 <b>괄호로</b> 따라온다 — 제안서와 맞대 보셔야 한다 (1번)');
+  is(/\(\$[\d,]+\.\d\d\)/.test(A.sub), '달러가 <b>괄호로</b> 따라온다 — 제안서와 맞대 보셔야 한다 (1번)');
   is(/^월 [\d,]+만/.test(A.echo), '입력 옆 메아리도 <b>원화가 먼저</b>다 — ' + A.echo.slice(0, 48));
 
-  head('[2] <b>만원으로 뭉개지 않는다</b> — 5년이면 24만원이 차이 난다 (1번)');
+  /* ── <b>열면 월 100만원</b> ────────────────────────────────────────
+     사장님 말씀 — 「기본값은 모두 계산하기 쉽게 100만원으로 먼저 세팅해서」.
+     고객 앞에서는 배수로 셈합니다 — 100만원이 기준이면 200만원은 두 배입니다.
+     26만 4,033원에서 시작하면 그 암산이 안 됩니다.
+     ★ 센트로 반올림하면 999,993원이 되어 <b>7원이 샙니다</b>. 「100만원」이라
+       해 놓고 99만 9,993원을 띄우면 그 자리에서 믿음이 깎입니다 (1번). */
+  head('[2] <b>열면 월 100만원</b> — 배수로 셈하시기 쉽도록');
   const w1484 = wonNum(A.sub);
-  is(w1484 !== null && w1484 % 10000 !== 0,
-     '<b>원 단위까지</b> 적는다 — ' + (w1484 === null ? '(못 읽음)' : w1484.toLocaleString('ko-KR') + '원'));
+  is(w1484 === 1000000, '달러 트랙이 <b>정확히 100만원</b>에서 선다 — ' +
+     (w1484 === null ? '(못 읽음)' : w1484.toLocaleString('ko-KR') + '원'));
+  const DEF = await pg.evaluate(() => {
+    const v = id => { const e = document.getElementById(id); return e ? +e.value : null; };
+    return { pen: v('iPrem'), gw: v('gwPay'), edu: v('eMon'), prem: v('dPrem') };
+  });
+  is(DEF.pen === 100, '연금 <b>월 납입금액</b>도 100만원 — ' + DEF.pen + '만원');
+  is(DEF.gw === 100,  '보증 <b>월 납입금액</b>도 100만원 — ' + DEF.gw + '만원');
+  is(DEF.edu === 100, '교육 <b>월 납입액</b>도 100만원 — ' + DEF.edu + '만원');
+
+  head('[2-1] <b>제안서 값은 한 번에 돌아온다</b> — 버리는 것이 아니다 (1번)');
+  const P = await pg.evaluate(() => {
+    const b = document.getElementById('dPremProp');
+    if (!b) return { no: true };
+    b.click();
+    const sub = document.querySelector('.sub2');
+    return { prem: +document.getElementById('dPrem').value,
+             sub: (sub ? sub.innerText : '').replace(/\s+/g, ' ').trim() };
+  });
+  is(!P.no, '<b>제안서 값으로</b> 단추가 있다');
+  is(P.prem === 177.92, '누르면 제안서에 적힌 <b>$177.92</b>로 돌아온다 — ' + P.prem);
+  is(wonNum(P.sub) === Math.round(177.92 * 1484),
+     '그때 원화도 <b>같이 따라온다</b> — ' + (wonNum(P.sub) || 0).toLocaleString('ko-KR') + '원');
+  await set('dPrem', (1000000 / 1484).toFixed(2));
 
   head('[3] <b>환율을 움직이면 같이 바뀐다</b> — 실시간');
   await set('iFxIn', 1600); await set('iFxOut', 1600);
@@ -91,13 +119,17 @@ const wonNum = (t) => {
   const w1600 = wonNum(B.sub), w1300 = wonNum(C.sub);
   is(w1600 !== null && w1600 !== w1484, '환율 1,600원 — 숫자가 <b>바뀐다</b> (' + (w1600 || 0).toLocaleString('ko-KR') + '원)');
   is(w1300 !== null && w1300 < w1484, '환율 1,300원 — <b>줄어든다</b> (' + (w1300 || 0).toLocaleString('ko-KR') + '원)');
-  is(/\(\$177\.92\)/.test(B.sub) && /\(\$177\.92\)/.test(C.sub), '환율이 바뀌어도 <b>달러는 그대로</b>다 — 달러가 변하면 그건 딴 상품이다');
+  const usdOf = t => (/\(\$([\d,.]+)\)/.exec(t) || [])[1] || '';
+  is(usdOf(B.sub) && usdOf(B.sub) === usdOf(C.sub) && usdOf(B.sub) === usdOf(A.sub),
+     '환율이 바뀌어도 <b>달러는 그대로</b>다 ($' + usdOf(B.sub) + ') — 달러가 변하면 그건 딴 상품이다');
 
   head('[4] <b>셈이 맞는가</b> — 원화 = 달러 × 환율 (지어낸 숫자가 아니다)');
-  const ok = (w, fx) => w !== null && Math.abs(w - 177.92 * fx) <= 1;
-  is(ok(w1484, 1484), '1,484원 → ' + (w1484 || 0).toLocaleString('ko-KR') + '원 (셈 ' + Math.round(177.92 * 1484).toLocaleString('ko-KR') + '원)');
-  is(ok(w1600, 1600), '1,600원 → ' + (w1600 || 0).toLocaleString('ko-KR') + '원 (셈 ' + Math.round(177.92 * 1600).toLocaleString('ko-KR') + '원)');
-  is(ok(w1300, 1300), '1,300원 → ' + (w1300 || 0).toLocaleString('ko-KR') + '원 (셈 ' + Math.round(177.92 * 1300).toLocaleString('ko-KR') + '원)');
+  /* 칸에 적힌 달러를 그대로 읽어 견준다 — 숫자를 여기 또 적으면 기본값을
+     바꿀 때 이 점검만 낡는다 (5번) */
+  const cents = await pg.evaluate(() => +document.getElementById('dPrem').value);
+  const ok = (w, fx) => w !== null && Math.abs(w - cents * fx) <= 10;
+  is(ok(w1600, 1600), '1,600원 → ' + (w1600 || 0).toLocaleString('ko-KR') + '원 (셈 ' + Math.round(cents * 1600).toLocaleString('ko-KR') + '원)');
+  is(ok(w1300, 1300), '1,300원 → ' + (w1300 || 0).toLocaleString('ko-KR') + '원 (셈 ' + Math.round(cents * 1300).toLocaleString('ko-KR') + '원)');
 
   head('[5] <b>보험료를 바꾸면</b> 원화도 따라온다');
   await set('iFxIn', 1484); await set('iFxOut', 1484);
@@ -107,7 +139,7 @@ const wonNum = (t) => {
   is(w300 !== null && Math.abs(w300 - 300 * 1484) <= 1,
      '$300 → <b>' + (w300 || 0).toLocaleString('ko-KR') + '원</b> (셈 ' + (300 * 1484).toLocaleString('ko-KR') + '원)');
   is(/\(\$300\.00\)/.test(D.sub), '괄호 안 달러도 <b>따라 바뀐다</b>');
-  await set('dPrem', 177.92);
+  await set('dPrem', (1000000 / 1484).toFixed(2));
 
   head('[6] <b>교육자금</b>도 원화가 큰 글자다');
   const E = await pg.evaluate(() => {
