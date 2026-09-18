@@ -46,21 +46,26 @@ var MAP={
  '미접촉':{ch:'전화',aim:'<b>첫 통화</b> — 30초 안에 약속만',
    way:'누구인지 먼저 밝힌다. 설명은 만나서, 전화로는 날짜만',
    tools:['biz_news','cs_assist']},
+ /* <b>부재</b> — 또 거는 것만으로는 안 받으신다. 그 전에 <b>남길 말</b>이 있어야
+    하고, 팔지 않는 <b>소식 하나</b>가 문을 연다. */
  '부재' :{ch:'전화',aim:'<b>한 번은 받으시게</b> 한다',
    way:'안 받은 시간에 또 걸지 않는다 — 시간대를 바꾸고, 그 전에 문자 한 줄',
-   tools:['cs_assist']},
+   tools:['cs_assist','katalk','news_live']},
  '거절' :{ch:'문자',aim:'<b>문을 닫지 않게</b> 한다',
    way:'팔지 않는다. 그분께 쓸모 있는 소식 하나만 보내고 기다린다',
-   tools:['mikki_talk','news_live']},
+   tools:['katalk','news_live','mikki_talk']},
  'TA'   :{ch:'전화',aim:'<b>만날 날짜</b>를 잡는다',
    way:'상품 설명을 전화로 하지 않는다. 날짜 두 개를 드리고 고르시게 한다',
    tools:['cs_assist','sangdam']},
+ /* <b>AP</b> — 만나서 <b>무엇을 펴 놓을지</b> 고르는 자리다. 그래서 도구가 많다.
+    상담자료 둘(보장분석·재무설계) · <b>화법</b> · <b>컨셉</b> 둘 · 전·후 만들기.
+    고르시게 두는 것이지 다 쓰라는 것이 아니다. */
  'AP'   :{ch:'만남',aim:'약속을 지키고 <b>다음 자리</b>를 잡는다',
    way:'오늘 자리에서 결론을 재촉하지 않는다. 듣고, 다음에 볼 날을 받아 온다',
-   tools:['sangdam','fp_talk','frmake']},
+   tools:['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake']},
  'PC'   :{ch:'전화',aim:'제안서에 <b>걸리는 것 한 가지</b>를 받아 낸다',
    way:'「어떠셨어요」 가 아니라 「어느 쪽이 제일 걸리셨어요」 로 묻는다',
-   tools:['baba','brain','finance']},
+   tools:['baba','finance','brain']},
  'CS'   :{ch:'만남',aim:'청약 서류와 <b>날짜</b>를 잡는다',
    way:'설명을 다시 하지 않는다. 언제 어디서 쓸지만 정한다',
    tools:['baba','finance']},
@@ -98,6 +103,9 @@ var TOOL={
  baba      :{e:'🔄',t:'비포&애프터'},
  brain     :{e:'🧠',t:'윤시현의 두뇌'},
  finance   :{e:'📊',t:'재무설계 계산기'},
+ fp_deck   :{e:'📊',t:'재무설계 상담자료'},
+ cs_needs  :{e:'⚡',t:'니즈 시뮬레이터'},
+ katalk    :{e:'💬',t:'제안서 카톡설명'},
  pdel      :{e:'📮',t:'증권 전달'},
  clients   :{e:'🗂️',t:'고객 365일'}
 };
