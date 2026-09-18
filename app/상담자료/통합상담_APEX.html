@@ -1934,9 +1934,14 @@ h2 em.e{color:var(--edu-d)}
           </div>
         </div>
 
-        <div class="f"><label>월 보험료 (USD)</label>
+        <div class="f"><label>월 보험료 &mdash; 넣는 값은 <b>달러</b></label>
           <input id="dPrem" type="number" step="0.01" min="1">
-          <div class="hint">제안서 기준값이 들어갑니다. 바꾸면 비례 계산됩니다.<br>
+          <button type="button" id="dPremProp"
+            style="margin-top:7px;min-height:44px;padding:0 14px;border:1px solid var(--line);
+                   border-radius:999px;background:#fff;font:inherit;font-size:13px;font-weight:800;
+                   color:var(--usd-d);cursor:pointer">제안서 값으로</button>
+          <div class="hint">열면 <b>월 100만원</b> 자리에서 시작합니다 &mdash; 배수로 셈하시기 쉽도록.
+            제안서 값은 위 단추로 돌아옵니다. 바꾸면 비례 계산됩니다.<br>
             <b id="paidEcho">—</b></div>
         </div>
 
@@ -2231,7 +2236,7 @@ h2 em.e{color:var(--edu-d)}
         <div class="ph">바꾸는 즉시 다시 계산됩니다</div>
 
         <div class="f"><label>월 납입금액</label>
-          <input id="gwPay" type="number" value="50" step="10" min="1">
+          <input id="gwPay" type="number" value="100" step="10" min="1">
           <div class="hint">단위: <b>만원</b></div>
         </div>
 
@@ -2852,7 +2857,7 @@ h2 em.e{color:var(--edu-d)}
           <input id="eFxIn" type="number" step="10" value="1484"></div>
       </div>
       <div class="f" style="margin:14px 0 0;max-width:260px"><label>월 납입액 (만원)</label>
-        <input id="eMon" type="number" step="5" min="0" value="30">
+        <input id="eMon" type="number" step="5" min="0" value="100">
         <div class="hint">지원금 말고 <b>따로 넣는 돈</b>이 있다면 적어 주십시오</div></div>
       <div class="f" style="margin:14px 0 0;max-width:520px">
         <label>나올 때 환율 (유학 시점) &mdash; <b id="eFxOutEcho">1,484</b>원</label>
@@ -4952,7 +4957,26 @@ const CRISIS = [
 /* ═══════════════════════════════════════════════
    상태 · 유틸
    ═══════════════════════════════════════════════ */
-const S = {prod:'met', prem:MET_PREM, scen:'cur', sw:MET_SW_YEAR, idx:null, fxIn:1484, fxOut:1484};
+/* ── <b>열면 월 100만원</b> ─────────────────────────────────────────
+   사장님 말씀 — 「기본값은 모두 계산하기 쉽게 100만원으로 먼저 세팅해서」.
+   고객 앞에서는 <b>배수로</b> 셈합니다 — 100만원이 기준이면 200만원은 두 배,
+   50만원은 반입니다. 26만 4,033원에서 시작하면 그 암산이 안 됩니다.
+
+   달러 상품이라 <b>그 원화에 해당하는 달러</b>를 거꾸로 잡습니다. 환급률표는
+   비율이라 어떤 보험료로도 그대로 태워집니다(scale).
+
+   ★ <b>제안서 값을 버리는 것이 아닙니다</b> — 옆 단추 한 번이면 돌아옵니다.
+     제안서에 적힌 달러는 사장님이 고객과 맞대 보셔야 하는 숫자입니다 (1번).
+   ★ 환율을 움직여도 <b>달러는 안 바뀝니다</b> — 계약은 달러로 맺습니다.
+     100만원은 <b>처음 세워 두는 자리</b>일 뿐입니다.                      */
+const KRW_START = 1000000;                 /* 원 (4번) */
+const DEF_FX    = 1484;
+/* ★ <b>센트로 반올림하면 100만원이 안 됩니다.</b> $673.85 × 1,484 = 999,993원 —
+   7원이 샙니다. 「계산하기 쉽게 100만원」이라고 해 놓고 99만 9,993원을 띄우면
+   그 자리에서 믿음이 깎입니다. 그래서 <b>속으로는 정확한 값</b>을 들고,
+   칸에는 센트까지만 적습니다. 화면의 원화는 <b>정확히 100만원</b>입니다. */
+const premForKrw = fx => KRW_START / fx;
+const S = {prod:'met', prem:premForKrw(DEF_FX), scen:'cur', sw:MET_SW_YEAR, idx:null, fxIn:DEF_FX, fxOut:DEF_FX};
 const $ = s=>document.querySelector(s);
 const nf  = n=>Math.round(n).toLocaleString('ko-KR');
 const usd = n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
@@ -4970,6 +4994,26 @@ function won(n){
    붙는 원화도 달라야 한다. 하나로 뭉치면 환차익이 화면에서 사라진다. */
 function usdIn(n){  return usd(n)+' <span class="kw">약 '+won(n*S.fxIn)+'</span>'; }
 function usdOut(n){ return usd(n)+' <span class="kw">약 '+won(n*S.fxOut)+'</span>'; }
+/* ── <b>원화가 먼저</b> ─────────────────────────────────────────────
+   사장님 말씀 — 「월보험료가 USD 로 되어 있는데 원화 기준으로 보여 주라고,
+   괄호로 USD 금액」. 고객이 통장에서 빠져나가는 것을 느끼는 단위는 <b>원</b>입니다.
+   달러가 앞에 서면 매달 얼마인지 머릿속으로 한 번 더 곱해야 합니다.
+
+   ★ <b>달 단위 금액은 만원으로 뭉개지 않습니다.</b> 「26만원」과
+     「26만 4,033원」은 5년이면 <b>24만원</b> 차이입니다 — 제안서와 안 맞는
+     숫자를 고객 앞에 띄우면 그 자리에서 설명이 꼬입니다 (1번).
+   ★ 넣는 돈은 <b>가입환율</b>, 받는 돈은 <b>수령환율</b>입니다. 하나로 뭉치면
+     환차익이 화면에서 사라집니다 — 위 usdIn/usdOut 과 같은 규칙입니다. */
+function wonFine(n){                       /* n 은 <b>원</b> 입니다 (4번) */
+  const v=Math.round(n), a=Math.abs(v), sgn=v<0?'-':'';
+  if(a<10000) return sgn+a.toLocaleString('ko-KR')+'원';
+  if(a>=100000000) return won(v);          /* 억 단위는 기존 셈 그대로 */
+  const m=Math.trunc(a/10000), r=a%10000;
+  return sgn+m.toLocaleString('ko-KR')+'만'+(r?' '+r.toLocaleString('ko-KR')+'원':'원');
+}
+/* n 은 <b>달러</b> 입니다 — 원화를 앞에, 달러를 괄호에 */
+function krwOfUsdIn(n){  return wonFine(n*S.fxIn)+' <span class="kw">($'+n.toFixed(2)+')</span>'; }
+function krwOfUsdOut(n){ return wonFine(n*S.fxOut)+' <span class="kw">($'+n.toFixed(2)+')</span>'; }
 /* 아래 원화가 어느 환율에서 나온 값인지 — 화면 위에 붙여 두고 슬라이더를 따라 움직인다 */
 function fxBar(){
   const el=$('#dFxBar'); if(!el) return;
@@ -5027,7 +5071,8 @@ function render(){
   fxBar();
   const sl=$('#iYear'); sl.max=R.length-1; sl.value=S.idx;
   $('#yrEcho').textContent = r.l;
-  $('#paidEcho').innerHTML = `5년 총납입 ${usd(S.prem*60)} · 가입환율 기준 ${won(S.prem*60*S.fxIn)}`;
+  /* 적자마자 <b>월 얼마인지</b> 원화로 답한다 — 환율을 움직여도 같이 바뀐다 */
+  $('#paidEcho').innerHTML = `월 <b>${krwOfUsdIn(S.prem)}</b> · 5년 총납입 ${won(S.prem*60*S.fxIn)} <span class="kw">(${usd(S.prem*60)})</span>`;
   $('#wrapSwitch').style.display = S.prod==='met' ? '' : 'none';
   $('#wrapScen').style.display   = (S.prod==='aia' || S.sw) ? '' : 'none';
 
@@ -5055,7 +5100,7 @@ function render(){
   $('#resBox').innerHTML = `
     <span class="pill">${S.prod==='met'?'메트라이프 백만달러':'AIA 글로벌 파워'} · ${r.l}</span>
     <div class="pn">${S.prod==='met'?'무배당 백만인을 위한 달러종신보험Plus':'무배당 AIA 글로벌 파워 미국달러 연금보험 1형'}</div>
-    <div class="sub2">월 $${S.prem.toFixed(2)} · 5년납 ${r.sw?'· 저축전환 후':''} · 가입환율 ${nf(S.fxIn)}원 → 수령환율 ${nf(S.fxOut)}원</div>
+    <div class="sub2">월 ${krwOfUsdIn(S.prem)} · 5년납 ${r.sw?'· 저축전환 후':''} · 가입환율 ${nf(S.fxIn)}원 → 수령환율 ${nf(S.fxOut)}원</div>
     <div class="split">
       <div><div class="lbl">달러 기준 환급률</div>
         <div class="big g">${r.rt.toFixed(2)}<span style="font-size:.45em">%</span></div>
@@ -5263,11 +5308,18 @@ function segBind(sel,key,after){
   });
 }
 segBind('#iProd','prod',()=>{
-  S.prem = S.prod==='met'?MET_PREM:AIA_PREM;
+  /* 상품을 바꿔도 <b>같은 100만원</b>에서 견줍니다 — 기준이 다르면 비교가 안 됩니다 */
+  S.prem = premForKrw(S.fxIn);
   S.scen = 'cur'; S.idx = null;
-  $('#dPrem').value = S.prem;
+  $('#dPrem').value = S.prem.toFixed(2);   /* 칸에는 센트까지 */
 });
 $('#dPrem').oninput = e=>{ S.prem=Math.max(1,+e.target.value||1); render(); };
+/* <b>제안서에 적힌 달러</b>로 한 번에 — 고객과 맞대 보셔야 하는 숫자입니다 (1번) */
+$('#dPremProp').onclick = ()=>{
+  S.prem = S.prod==='met' ? MET_PREM : AIA_PREM;
+  $('#dPrem').value = S.prem;
+  render();
+};
 $('#iScen').onchange = e=>{ S.scen=e.target.value; render(); };
 $('#iSwitch').onchange= e=>{ S.sw=+e.target.value; S.idx=null; render(); };
 $('#iYear').oninput  = e=>{ S.idx=+e.target.value; render(); };
@@ -5275,7 +5327,7 @@ $('#iFxIn').oninput  = e=>{ S.fxIn=Math.max(100,+e.target.value||100); render();
 $('#iFxOut').oninput = e=>{ S.fxOut=Math.max(100,+e.target.value||100); $('#iFxRange').value=S.fxOut; render(); };
 $('#iFxRange').oninput=e=>{ S.fxOut=+e.target.value; $('#iFxOut').value=S.fxOut; render(); };
 
-$('#dPrem').value = MET_PREM;
+$('#dPrem').value = S.prem.toFixed(2);   /* 열면 월 100만원 자리 — 칸에는 센트까지 */
 
 
 
@@ -5712,7 +5764,7 @@ window.__apexT = {
    ═══════════════════════════════════════════════ */
 const EDU = {age:0, order:2000000, region:100000, local:0,
              go:19, prod:'met', scen:'cur', fxIn:1484, fxOut:1484,
-             costUsd:50000, years:4, spread:2, mon:30};
+             costUsd:50000, years:4, spread:2, mon:100};   /* 월 100만원에서 시작 — 배수로 셈하기 쉽게 */
 
 const $e = s=>document.querySelector(s);
 const enf = n=>Math.round(n).toLocaleString('ko-KR');
@@ -5727,6 +5779,11 @@ const eusd = n=>(n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('ko-KR');
 /* 달러 옆에 늘 원화를 붙인다 — 넣을 때는 가입환율, 받을 때는 유학 시점 환율 */
 function eusdIn(n){  return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxIn)+'</span>'; }
 function eusdOut(n){ return eusd(n)+' <span class="kw">약 '+ewon(n*EDU.fxOut)+'</span>'; }
+/* <b>원화가 먼저</b> — 달러 트랙과 같은 규칙입니다. 유학 자금은 부모님이
+   「달러로 얼마」가 아니라 <b>「원으로 얼마」</b>로 셈하십니다.
+   n 은 <b>달러</b> 입니다 (4번). 넣는 돈은 가입환율, 받는 돈은 유학 시점 환율. */
+function ekrwIn(n){  return ewon(n*EDU.fxIn)+' <span class="kw">('+eusd(n)+')</span>'; }
+function ekrwOut(n){ return ewon(n*EDU.fxOut)+' <span class="kw">('+eusd(n)+')</span>'; }
 /* 아래 원화가 어느 환율에서 나온 값인지 — 슬라이더를 따라 움직인다 */
 function eduFxBar(){
   const el=$e('#eFxBar'); if(!el) return;
@@ -5883,21 +5940,24 @@ function renderEduMon(){
         <div class="ar">&rarr;</div>
         <div class="b"><b>${ewon(m.won)}</b><span>5년 총납입 &middot; ${eusd(m.usd)}<br>넣을 때 ${enf(EDU.fxIn)}원</span></div>
         <div class="ar">&rarr;</div>
-        <div class="b hot"><b>${eusd(at.usd)}</b>
+        <div class="b hot"><b>${ewon(at.won)}</b>
           <span>${at.l} &middot; 환급률 ${at.rt.toFixed(2)}%<br>
-          약 ${ewon(at.won)} (나올 때 ${enf(EDU.fxOut)}원)</span></div>
+          ${eusd(at.usd)} &middot; 나올 때 ${enf(EDU.fxOut)}원</span></div>
       </div>
 
       <div class="mile-wrap" style="margin-top:18px"><table class="mile">
-        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 (USD)</th>
-          <th>원화 (${enf(EDU.fxOut)}원)</th><th>낸 돈 대비</th></tr></thead>
+        <!-- <b>원화가 먼저</b>입니다 — 부모님은 「달러로 얼마」가 아니라 「원으로 얼마」로 셈하십니다.
+             달러는 그 뒤에 그대로 둡니다. 없애지 않습니다 — 제안서가 달러로 적혀 있어
+             둘을 맞대 보셔야 합니다 (1번). -->
+        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 <span class="mini">원화 (${enf(EDU.fxOut)}원)</span></th>
+          <th>달러</th><th>낸 돈 대비</th></tr></thead>
         <tbody>${rows.map(r=>`
           <tr class="${r.key?'key':''}">
             <td>${r.l}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
             <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}>
               <b>${r.rt.toFixed(2)}%</b>${r.est?'<span class="mini">추정</span>':''}</td>
-            <td>${eusd(r.usd)}</td>
-            <td>${ewon(r.won)}</td>
+            <td><b>${ewon(r.won)}</b></td>
+            <td class="mini">${eusd(r.usd)}</td>
             <td class="${r.diff>=0?'up':''}" ${r.diff<0?'style="color:var(--red)"':''}>
               ${r.diff>=0?'+':''}${ewon(r.diff)}</td></tr>`).join('')}</tbody>
       </table></div>
@@ -5960,9 +6020,12 @@ function renderEdu(){
       <div><div class="lbl">받게 될 지원금 총액</div>
         <div class="big">${ewon(c.paid)}</div>
         <div class="sm">${EDU.age}세부터 ${EDU.go}세까지 실제로 통장에 들어올 돈입니다.</div></div>
+      <!-- <b>원화가 큰 글자</b>입니다 — 부모님이 유학비를 셈하시는 단위는 원입니다.
+           달러는 바로 아래 괄호로 그대로 둡니다. 없애지 않습니다 — 제안서가 달러라
+           둘을 맞대 보셔야 합니다 (1번). 환율을 움직이면 큰 글자가 같이 바뀝니다. -->
       <div><div class="lbl">달러 상품에서 찾을 때 (${EDU.go}세 · ${c.years}년 경과)</div>
-        <div class="big ${c.rate>=100?'g':''}" ${c.rate<100?'style="color:var(--red)"':''}>${eusd(c.usd)}</div>
-        <div class="sm"><b style="color:#fff">약 ${ewon(c.usd*EDU.fxOut)}</b>
+        <div class="big ${c.rate>=100?'g':''}" ${c.rate<100?'style="color:var(--red)"':''}>${ewon(c.usd*EDU.fxOut)}</div>
+        <div class="sm"><b style="color:#fff">(${eusd(c.usd)})</b>
           <span class="kw">· 나올 때 ${enf(EDU.fxOut)}원 기준</span><br>
           환급률 <b>${c.rate.toFixed(2)}%</b> 적용
           &mdash; ${EDU.prod==='met'?'메트라이프 백만달러':'AIA 글로벌 파워'} 5년납 제안서 표<br>
@@ -6031,15 +6094,18 @@ function renderEdu(){
         ${EDU.prod==='met'?'메트는 <b>5년 + 하루</b>와 <b>10년 + 하루</b>에 유지보너스가 붙어 환급률이 계단처럼 뜁니다 &mdash; 하루 차이로 갈립니다.':''}
       </div>
       <div class="mile-wrap"><table class="mile">
-        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 (USD)</th>
-          <th>원화 (${enf(EDU.fxOut)}원)</th><th>납입 재원 대비</th></tr></thead>
+        <!-- <b>원화가 먼저</b>입니다 — 부모님은 「달러로 얼마」가 아니라 「원으로 얼마」로 셈하십니다.
+             달러는 그 뒤에 그대로 둡니다. 없애지 않습니다 — 제안서가 달러로 적혀 있어
+             둘을 맞대 보셔야 합니다 (1번). -->
+        <thead><tr><th>찾는 시점</th><th>환급률</th><th>받는 금액 <span class="mini">원화 (${enf(EDU.fxOut)}원)</span></th>
+          <th>달러</th><th>납입 재원 대비</th></tr></thead>
         <tbody>${W.map(r=>{
           const diff = r.won - c.premWon;
           return `<tr class="${r.key?'key':''}">
             <td>${r.l}${r.est?' <span class="mini">표 범위 밖</span>':''}</td>
             <td class="${r.rt>=100?'up':''}" ${r.rt<100?'style="color:var(--red)"':''}><b>${r.rt.toFixed(2)}%</b>${r.est?'<span class="mini">추정</span>':''}</td>
-            <td>${eusd(r.usd)}</td>
-            <td>${ewon(r.won)}</td>
+            <td><b>${ewon(r.won)}</b></td>
+            <td class="mini">${eusd(r.usd)}</td>
             <td class="${diff>=0?'up':''}" ${diff<0?'style="color:var(--red)"':''}>
               ${diff>=0?'+':''}${ewon(diff)}</td></tr>`;
         }).join('')}</tbody>
@@ -7467,7 +7533,7 @@ function cpnLoad(force){
     var end = Math.max(age+1, num('gwEnd',65));
     var yrs = end-age;
     var pyr = G.payYrs>0 ? Math.min(G.payYrs, yrs) : yrs;
-    return { m:Math.max(0,num('gwPay',50)), age:age, end:end, yrs:yrs,
+    return { m:Math.max(0,num('gwPay',100)), age:age, end:end, yrs:yrs,   /* 칸이 비면 월 100만원 — 화면 기본값과 같게 */
              i:num('gwRet',6)/100/12, ret:num('gwRet',6),
              pn:Math.round(pyr*12), tn:Math.round(yrs*12), pyr:pyr };
   }
