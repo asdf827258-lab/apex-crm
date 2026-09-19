@@ -194,6 +194,26 @@ const type = async (pg, txt) => {
      '「홍」 셋에서 「홍길」 둘로 <b>좁혀졌다</b> — ' + got.join(', '));
 
   /* ─────────────────────────────────────────────────────────── */
+  head('[3-1] 자료가 <b>늦게 와도</b> 치던 글자를 뺏지 않는다');
+  /* 이 화면은 자료가 오면 1.8초·4.2초 뒤에 판을 다시 세웁니다(arPaint).
+     그 판 안에 찾는 칸이 들어 있어, 치는 중에 겹치면 <b>커서와 친 글자</b>를
+     잃었습니다. 느린 기계에서만 겹쳐 CI 에서 먼저 걸렸습니다.
+     여기서는 기다리지 않고 <b>그 자리에서 arPaint 를 불러</b> 확실히 잽니다. */
+  const late = await pg.evaluate(() => {
+    const el = document.getElementById('arFind');
+    el.focus();
+    arPaint();                       /* 늦게 온 자료가 판을 다시 세우는 그 순간 */
+    const a = document.activeElement;
+    return { v: (document.getElementById('arFind') || {}).value || '',
+             id: a ? a.id : '', n: document.querySelectorAll('#arTeamList .ar-row').length };
+  });
+  is(late.v === '홍길', '판이 다시 서도 <b>친 글자가 그대로</b> 있다 — 「' + late.v + '」');
+  is(late.id === 'arFind', '커서도 칸에 남아 있다 — 지금 ' + (late.id ? '#' + late.id : '아무 데도 아님'));
+  got = await names(pg);
+  is(got.length === 2 && got.indexOf('홍판서') < 0,
+     '줄도 찾은 그대로다 — ' + got.join(', '));
+
+  /* ─────────────────────────────────────────────────────────── */
   head('[4] 없으면 <b>없다고 말한다</b>');
   await type(pg, '없는사람');
   got = await names(pg);
