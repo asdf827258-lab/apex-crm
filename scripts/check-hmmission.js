@@ -234,11 +234,20 @@ const showStage = (page, st) => page.evaluate((st) => {
        것만 본다 — 「상증법 제18조」 를 금액으로 착각하지 않으려는 것과 같다 (8번) */
     const nums = body.match(/\d+\s*(만원|억|원|퍼센트|%|세|개월|년|일)/g) || [];
     const said = /비과세\s*(상품)?입니다|무조건\s*(지급|나옵)|전액\s*보장(됩니다|합니다)|반드시\s*지급/.test(body);
-    return { nums: nums, said: said, len: body.length };
+    /* <b>그대로 읽을 말</b>에 태그가 섞이지 않았나 — say 는 화면이 씻어서
+       세우므로, 태그를 넣으면 고객 앞에서 &lt;b&gt; 가 <b>글자로 찍힌다</b>.
+       실제로 그랬다. why·no·tip 은 굵게 쓰는 자리라 여기서 안 본다. */
+    const tagged = APEX_STAGE.pdel.concat(APEX_STAGE.taSrc).concat([APEX_STAGE.taSay('')])
+      .filter(x => x && /<[^>]+>/.test(x.say || ''))
+      .map(x => (x.n ? ('증권전달 ' + x.n) : ('TA ' + x.k)));
+    return { nums: nums, said: said, len: body.length, tagged: tagged };
   });
   is(N.nums.length === 0, '  한도·나이·개월 수가 <b>하나도 없다</b>' +
      (N.nums.length ? (' ← ' + N.nums.join(' / ')) : ' (' + N.len + '자)'));
   is(!N.said, '  <b>단정하는 말이 없다</b> — 지급은 약관과 심사가 정한다');
+  is(N.tagged.length === 0,
+     '  <b>그대로 읽을 말에 태그가 없다</b> — 넣으면 고객 앞에서 &lt;b&gt; 가 글자로 찍힌다' +
+     (N.tagged.length ? (' ← ' + N.tagged.join(' / ')) : ''));
 
   console.log('\n[9] 조용히 터지지 않았나');
   is(errs.length === 0, '  콘솔 오류 없음' + (errs.length ? ' — ' + errs.slice(0, 2).join(' / ') : ''));
