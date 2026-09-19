@@ -116,7 +116,20 @@ const api = http.createServer((rq, rs) => {
   const API = 'http://127.0.0.1:' + api.address().port;
   const browser = await chromium.launch();
   /* 폰에서 공지를 보는 사람이 대부분이다 */
-  const page = await browser.newPage({ viewport: { width: 390, height: 820 } });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 820 } });
+  /* ── <b>바깥을 막는다.</b> 이 점검만 안 막고 있었다 ──────────────────
+     CI 에는 네트워크가 있어 <b>부팅 때 나간 진짜 공지 읽기</b>가 늦게 돌아온다.
+     그때 osNoticeApply → osAckScan 이 돌고, osAckScan 은 os_notice_acks 를
+     <b>한 번 더</b> 읽는다. 아래 [7] 은 그 표를 부른 횟수를 세므로, 그 늦은
+     대답이 끼어들면 「1번」이어야 할 것이 <b>2번</b>이 된다 — 앱은 멀쩡한데
+     CI 에서만 빨간불이다. 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).
+     이 파일 안의 흉내 서버(API)와 화면 서버만 통과시킨다.              */
+  await ctx.route('**://**', r => {
+    const u = r.request().url();
+    return (u.indexOf('127.0.0.1:') >= 0 || u.indexOf('localhost:') >= 0)
+      ? r.continue() : r.abort();
+  });
+  const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 150)));
   await page.goto('http://127.0.0.1:' + srv.address().port + '/app/', { waitUntil: 'domcontentloaded' });
