@@ -24,6 +24,21 @@
      2) clients 에는 그 길이 <b>아예 없었습니다</b> — 새로 하나 놓습니다.
      3) saved_reports 도 같습니다 (보장분석 리포트).
 
+   ── 같이 따라 바뀌는 것 <b>(숨기지 않고 적습니다)</b> ──────────────
+     is_viewer_all 명단은 ('admin','owner','master','hq','branch_manager')
+     입니다. 그래서 이 마이그레이션은 <b>master 2명</b>에게도 고객·리포트를
+     엽니다 — 지금은 「자기 것만」 입니다. master 는 이미 DB·통화·실적을
+     전부 보는 자리라 고객만 못 보는 쪽이 오히려 어긋난 것입니다.
+     'hq' 는 지금 쓰는 사람이 <b>한 명도 없습니다</b>(35명: member 24 ·
+     leader 5 · admin 3 · master 2 · branch_manager 1). 넣어 두는 것은
+     can_see_perf · leads_team 의 명단과 <b>글자 하나까지 같게</b> 맞춰
+     두려는 것입니다 — 명단이 두 벌이면 한쪽만 늙습니다 (5번).
+
+     is_team_viewer() 는 <b>안 건드립니다</b> — is_leader() 를 거치는데
+     거기에도 branch_manager 가 없습니다. dbs_team_read · calls_team_read
+     가 그 함수를 쓰지만, 위 1) 의 dbs_master_select · calls_master_select
+     만으로 이미 풀리므로 <b>더 넓히지 않습니다</b>.
+
    ── 일부러 <b>안</b> 건드린 것 ───────────────────────────────────
      · is_my_teammate() — 설계사 격리가 여기 걸려 있습니다. 손대면
        설계사가 남의 고객을 보게 됩니다. 그대로 둡니다.
