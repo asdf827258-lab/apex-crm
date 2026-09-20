@@ -20458,6 +20458,375 @@ function hmDid(key){
   else toast('오늘 한 것으로 표시했습니다');
   hmPaint();
 }
+/* ══ <b>홈에서 바로 — 단계 옮기기 · 고객 넣고 고치기</b> (hdb*) ═════
+   사장님 말씀 —
+     「DB통합CRM에서 DB관리 들어가면 이렇게 상황에 맞게 하는데, 이걸
+      <b>홈에서 바로바로 단계별로</b> 할수 있도록 만들고, 통합CRM에도
+      반영되도록. 홈 화면 내에서 <b>고객을 입력하고 수정하고 고치는</b>
+      것까지 가능하도록」
+
+   ── 무엇을 <b>안</b> 만들었나 ──────────────────────────────────────
+   단계의 차례도, 다음 단계도, 어느 단계가 날짜를 들고 있는지도 <b>여기
+   적지 않았다.</b> 전부 apex-stage.js 가 안다 — DB 통합 CRM 도 같은 파일을
+   싣는다. 여기 또 적으면 단계를 하나 더할 때 한쪽만 고치게 되고, 같은
+   고객이 두 화면에서 <b>다른 단계</b>로 보인다 (CLAUDE.md 5번).
+
+   ── 어디에 쓰나 ────────────────────────────────────────────────────
+   <b>dbs 표 한 곳</b>이다. DB 통합 CRM 이 읽는 그 표다. 그래서 홈에서 누른
+   것이 CRM 에 그대로 뜬다 — 옮겨 적는 자리가 없으니 어긋날 자리도 없다.
+
+   ── 지어내지 않는 것 ───────────────────────────────────────────────
+   ★ <b>계약일·증권 전달일을 여기서 만들지 않는다</b> (1번). 그 날짜가
+     필요한 단계로 올라갈 때는 <b>고치기 창을 열어</b> 적으시게 한다.
+     DB 통합 CRM 의 sgUp() 과 같은 규칙이다.
+   ★ <b>남의 고객은 못 고친다.</b> 설계사는 자기 것, 지점장은 자기 팀,
+     대표·관리자·마스터는 전부 — 서버 규칙과 같은 명단이다. 못 고치는
+     분께는 단추를 <b>안 세운다</b>. 눌러도 안 되는 단추를 세우면 그때부터
+     다른 단추도 안 믿게 된다 (8번).
+   ★ <b>실명은 서버에 그대로 안 올린다</b>… 는 고객 365일 규칙이고,
+     배정 DB(dbs.customer_name)는 팀이 함께 보는 자리라 지금 그대로 둔다
+     (3번 · 2026-09-11 결정). 여기서 새로 가리지도, 벗기지도 않는다.     */
+var HDB={id:'',busy:'',open:false,err:''};
+/* 그 줄을 찾는 곳은 <b>한 곳</b> — AR.db 다 (5번) */
+function hdbRow(id){
+  var L=(typeof AR!=='undefined'&&AR.db)||[],i;
+  for(i=0;i<L.length;i++)if(L[i].id===id)return L[i];
+  return null;
+}
+/* 고칠 수 있나 — db-crm.html 의 canEditDb 와 <b>같은 규칙</b>이다 */
+function hdbCan(r){
+  if(!r)return false;
+  var me=(typeof arMyId==='function')?arMyId():'';
+  if(me&&r.who===me)return true;
+  if(typeof hwhoAllTeams==='function'&&hwhoAllTeams())return true;
+  if(typeof arIsLead==='function'&&arIsLead()){
+    var mt=(typeof arTeamOf==='function')?arTeamOf(me):'';
+    return !!(mt&&(typeof arTeamOf==='function')&&arTeamOf(r.who)===mt);
+  }
+  return false;
+}
+function hdbStages(){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.order)?APEX_STAGE.order:[]; }catch(e){ return []; }
+}
+function hdbNextOf(st){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.next)?APEX_STAGE.next(st):''; }catch(e){ return ''; }
+}
+function hdbNeeds(st){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.needs)?APEX_STAGE.needs(st):{won:false,pol:false}; }
+  catch(e){ return {won:false,pol:false}; }
+}
+/* 고친 값을 <b>손에 든 줄에도</b> 바로 넣는다 — 서버를 한 번 더 부르지
+   않기 위해서다 (7번). 다음에 arLoad 가 돌 때 서버 값으로 맞춰진다. */
+function hdbLocal(id,patch){
+  var r=hdbRow(id),k;
+  if(!r)return;
+  for(k in patch)if(patch.hasOwnProperty(k))r[k]=patch[k];
+  if(patch.stage&&typeof arTodoOf==='function'){
+    try{ r.k=patch.stage; r.todo=arTodoOf({k:patch.stage,d:r.days,nm:r.name}); }catch(e){}
+  }
+}
+function hdbPaint(){
+  try{ if(typeof hmPaint==='function')hmPaint(); }catch(e){}
+  try{ if(typeof arPaint==='function'&&document.getElementById('arPane'))arPaint(); }catch(e2){}
+}
+/* 서버가 왜 거절했는지 <b>그 자리에서</b> 말한다 — 조용히 넘어가면
+   눌렀는데 아무 일이 없고, 그때부터 이 화면을 안 믿게 된다 (1번·8번) */
+function hdbErr(e,what){
+  var m=(e&&(e.message||e.msg))||'알 수 없는 오류';
+  HDB.err=what+' 실패 — '+m;
+  if(typeof toast==='function')toast(HDB.err,7000);
+  hdbPaint();
+}
+/* ── 단계 한 칸 올리기 ─────────────────────────────────────────── */
+function hdbUp(id){
+  var r=hdbRow(id);
+  if(!r)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 단계를 바꿀 수 없습니다.'); return; }
+  var to=hdbNextOf(r.stage);
+  if(!to)return;
+  var k=hdbNeeds(to);
+  /* 날짜가 필요한 자리는 <b>지어내지 않고</b> 물어본다 (1번) */
+  if(k.won||k.pol){
+    hdbOpen(id,to);
+    if(typeof toast==='function')toast('「'+to+'」 는 날짜가 필요합니다 — 적으시고 저장해 주세요.',6000);
+    return;
+  }
+  hdbTo(id,to);
+}
+/* ── 어느 단계로든 ─────────────────────────────────────────────── */
+function hdbTo(id,to){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r||!to)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 단계를 바꿀 수 없습니다.'); return; }
+  if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다.'); return; }
+  var k=hdbNeeds(to);
+  if((k.won||k.pol)&&!(k.won&&r.cAt)){ hdbOpen(id,to); return; }
+  var from=r.stage;
+  HDB.busy=id; HDB.err=''; hdbPaint();
+  sb.from('dbs').update({stage:to}).eq('id',id).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ hdbErr(res.error,'단계 올리기'); return; }
+    hdbLocal(id,{stage:to});
+    if(typeof toast==='function')toast(r.name+' 님 · '+from+' → '+to);
+    hdbPaint();
+  },function(e){ HDB.busy=''; hdbErr(e,'단계 올리기'); });
+}
+/* ── 통화 결과를 그 자리에서 ──────────────────────────────────────
+   DB 통합 CRM 의 「접촉 n/5」 와 결과(미진행·부재·거절)는 <b>calls 표</b>가
+   셉니다. 그래서 여기서도 같은 표에 한 줄을 넣습니다 — 다른 데 적으면
+   CRM 의 숫자가 안 움직입니다 (5번).                                   */
+function hdbCall(id,result){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 기록할 수 없습니다.'); return; }
+  if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다.'); return; }
+  HDB.busy=id; HDB.err=''; hdbPaint();
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var row={db_id:id,result:result,call_at:new Date().toISOString()};
+  if(me)row.created_by=me;
+  sb.from('calls').insert(row).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ hdbErr(res.error,'통화 기록'); return; }
+    /* 손에 든 줄도 같이 — 다시 부르지 않는다 (7번) */
+    hdbLocal(id,{n:(r.n||0)+1,res:result,last:(new Date()).toISOString().slice(0,10),days:0});
+    if(typeof toast==='function')toast(r.name+' 님 · '+result+' 로 기록했습니다');
+    hdbPaint();
+  },function(e){ HDB.busy=''; hdbErr(e,'통화 기록'); });
+}
+/* ── 고객 넣고·고치기 창 ─────────────────────────────────────────
+   홈을 <b>안 벗어납니다</b> — 덮개로 뜹니다(사장님 말씀의 뼈대).
+   쓰는 곳은 DB 통합 CRM 과 <b>같은 표</b>(dbs)라 저장하면 그쪽에도 그대로
+   뜹니다. 여기서 값을 따로 들고 있지 않으니 어긋날 자리가 없습니다.   */
+function hdbCss(){
+  if(document.getElementById('hdbCss'))return;
+  var st=document.createElement('style');st.id='hdbCss';
+  st.textContent=
+   /* 단계 줄 — 홈 카드 안 */
+   '.hdb{margin-top:10px;padding-top:10px;border-top:1px dashed var(--ink-7)}'+
+   '.hdb-h{font-size:var(--t6);font-weight:800;color:var(--ink-4);margin-bottom:7px}'+
+   '.hdb-h b{color:var(--ink-2)}'+
+   '.hdb-r{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}'+
+   '.hdb-b{min-height:44px;padding:9px 13px;border:1px solid var(--ink-7);border-radius:var(--r-pill);'+
+     'background:#fff;font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--ink-3);cursor:pointer}'+
+   '.hdb-b.go{background:#2B5FD9;border-color:#2B5FD9;color:#fff}'+
+   '.hdb-b.no{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}'+
+   '.hdb-b.ed{background:#F5F7FA}'+
+   '.hdb-b[disabled]{opacity:.55;cursor:default}'+
+   '.hdb-now{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:var(--t6);color:var(--ink-4);margin-bottom:7px}'+
+   '.hdb-now .sg{font-weight:900;padding:3px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
+   '.hdb-err{font-size:var(--t6);line-height:1.6;color:#B91C1C;background:#FEF2F2;'+
+     'border:1px solid #FECACA;border-radius:var(--r-xs);padding:7px 9px;margin-bottom:7px}'+
+   /* 창 */
+   '#hdbSheet{position:fixed;inset:0;z-index:9200;background:rgba(15,23,42,.42);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#hdbSheet.on{display:flex}'+
+   '.hdb-box{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:16px 16px 20px}'+
+   '@media(min-width:620px){#hdbSheet{align-items:center}.hdb-box{border-radius:18px}}'+
+   '.hdb-tt{font-size:var(--t3);font-weight:900;color:var(--ink-1);margin-bottom:3px}'+
+   '.hdb-st{font-size:var(--t6);color:var(--ink-4);line-height:1.6;margin-bottom:12px}'+
+   '.hdb-f{margin-bottom:10px}'+
+   '.hdb-f label{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-4);margin-bottom:4px}'+
+   '.hdb-f input,.hdb-f select,.hdb-f textarea{width:100%;min-height:44px;padding:10px 11px;'+
+     'border:1px solid var(--ink-7);border-radius:var(--r-xs);font-family:inherit;'+
+     'font-size:var(--t5);color:var(--ink-1);background:#fff}'+
+   '.hdb-f textarea{min-height:66px;resize:vertical}'+
+   '.hdb-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}'+
+   '@media(max-width:480px){.hdb-2{grid-template-columns:1fr}}'+
+   '.hdb-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}'+
+   '.hdb-btns button{flex:1;min-width:120px;min-height:46px;border:0;border-radius:12px;'+
+     'font-family:inherit;font-size:var(--t5);font-weight:900;cursor:pointer}'+
+   '.hdb-save{background:#2B5FD9;color:#fff}.hdb-cancel{background:#F2F4F6;color:#4E5968}'+
+   '.hdb-del{background:#FEF2F2;color:#B91C1C;flex:0 0 auto!important;min-width:84px!important}';
+  document.head.appendChild(st);
+}
+/* 창을 <b>한 번만</b> 만든다 — 열 때마다 만들면 겹겹이 쌓인다 */
+function hdbHost(){
+  var e=document.getElementById('hdbSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='hdbSheet';
+  e.innerHTML='<div class="hdb-box" id="hdbBox"></div>';
+  /* 덮개 바깥을 누르면 닫습니다 — 닫는 길이 하나뿐이면 갇힙니다 */
+  e.addEventListener('click',function(ev){ if(ev.target===e)hdbClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function hdbClose(){
+  var e=document.getElementById('hdbSheet');
+  if(e)e.classList.remove('on');
+  HDB.open=false;HDB.id='';
+}
+/* 새로 넣기 — id 가 없으면 새 줄 */
+function hdbNew(){ hdbOpen('',''); }
+function hdbOpen(id,wantStage){
+  hdbCss();
+  var r=id?hdbRow(id):null;
+  if(id&&!r)return;
+  if(r&&!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 고칠 수 없습니다.'); return; }
+  HDB.id=id||'';HDB.open=true;HDB.err='';
+  var host=hdbHost();
+  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,wantStage||'');
+  host.classList.add('on');
+  try{ var f=document.getElementById('hdbName'); if(f)f.focus(); }catch(e){}
+}
+function hdbFormHtml(r,wantStage){
+  var S=hdbStages(),i,st=wantStage||(r?r.stage:'미접촉');
+  var k=hdbNeeds(st);
+  var v=function(x){ return (typeof osEsc==='function')?osEsc(x==null?'':x):(x==null?'':x); };
+  var opt='';
+  for(i=0;i<S.length;i++)opt+='<option value="'+v(S[i])+'"'+(S[i]===st?' selected':'')+'>'+v(S[i])+'</option>';
+  var me=(typeof arMyId==='function')?arMyId():'';
+  var today=(new Date()).toISOString().slice(0,10);
+  return '<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>'+
+    '<div class="hdb-st">여기서 저장하면 <b>DB 통합 CRM 에도 그대로</b> 뜹니다 — 같은 표를 씁니다.</div>'+
+    (HDB.err?('<div class="hdb-err">'+v(HDB.err)+'</div>'):'')+
+    '<div class="hdb-f"><label for="hdbName">고객명</label>'+
+      '<input id="hdbName" type="text" value="'+v(r?r.name:'')+'" placeholder="홍길동"></div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbPhone">연락처</label>'+
+        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(r?(r.phone||''):'')+'" placeholder="010-0000-0000"></div>'+
+      '<div class="hdb-f"><label for="hdbRegion">지역</label>'+
+        '<input id="hdbRegion" type="text" value="'+v(r?r.region:'')+'" placeholder="천안"></div>'+
+    '</div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbSrc">DB 종류</label>'+
+        '<input id="hdbSrc" type="text" value="'+v(r?r.src:'일반')+'" placeholder="보장분석3DB"></div>'+
+      '<div class="hdb-f"><label for="hdbStage">단계</label>'+
+        '<select id="hdbStage" onchange="hdbStagePick()">'+opt+'</select></div>'+
+    '</div>'+
+    '<div class="hdb-2" id="hdbDates"'+((k.won||k.pol)?'':' hidden')+'>'+
+      '<div class="hdb-f"><label for="hdbCAt">계약일</label>'+
+        '<input id="hdbCAt" type="date" value="'+v(r?r.cAt:'')+'"></div>'+
+      '<div class="hdb-f" id="hdbPolBox"'+(k.pol?'':' hidden')+'><label for="hdbPAt">증권 전달일</label>'+
+        '<input id="hdbPAt" type="date" value="'+v(r?r.pAt:'')+'"></div>'+
+    '</div>'+
+    (r?'':'<div class="hdb-f"><label for="hdbGot">배정일</label>'+
+        '<input id="hdbGot" type="date" value="'+today+'"></div>')+
+    '<div class="hdb-btns">'+
+      '<button type="button" class="hdb-save" onclick="hdbSave()">저장</button>'+
+      '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
+      (r&&hdbCan(r)?'<button type="button" class="hdb-del" onclick="hdbDel(\'' + (r.id) + '\')">지우기</button>':'')+
+    '</div>'+
+    '<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
+      v((typeof hwhoName==='function'&&r&&r.who)?hwhoName(r.who):((typeof arNameOf==='function'&&me)?arNameOf(me):'나'))+
+      '</b> 입니다. 담당자를 바꾸는 것은 DB 통합 CRM 에서 합니다 — 여기서 두 곳이 배정하면 어긋납니다.</div>';
+}
+/* 단계를 고르면 <b>필요한 날짜 칸만</b> 연다 — 어느 단계가 무엇을 들고
+   있는지는 apex-stage.js 가 안다 (5번) */
+function hdbStagePick(){
+  var sel=document.getElementById('hdbStage');
+  if(!sel)return;
+  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),p=document.getElementById('hdbPolBox');
+  if(d)d.hidden=!(k.won||k.pol);
+  if(p)p.hidden=!k.pol;
+}
+function hdbVal(id){
+  var e=document.getElementById(id);
+  return e?(''+(e.value||'')).replace(/^\s+|\s+$/g,''):'';
+}
+function hdbSave(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ HDB.err='서버에 연결되어 있지 않습니다.'; hdbRepaintForm(); return; }
+  var id=HDB.id,r=id?hdbRow(id):null;
+  var nm=hdbVal('hdbName');
+  if(!nm){ HDB.err='고객명을 적어 주세요.'; hdbRepaintForm(); return; }
+  var st=hdbVal('hdbStage'),k=hdbNeeds(st);
+  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt');
+  /* 날짜가 필요한 단계인데 비어 있으면 <b>저장하지 않는다.</b> 오늘 날짜로
+     채워 넣으면 그것이 계약일이 되어 버린다 — 지어내지 않는다 (1번). */
+  if(k.won&&!cAt){ HDB.err='「'+st+'」 이면 계약일을 적어 주세요 — 여기서 날짜를 지어내지 않습니다.'; hdbRepaintForm(); return; }
+  if(k.pol&&!pAt){ HDB.err='「'+st+'」 이면 증권 전달일을 적어 주세요.'; hdbRepaintForm(); return; }
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var p={customer_name:nm,phone:hdbVal('hdbPhone')||null,region:hdbVal('hdbRegion')||null,
+         source:hdbVal('hdbSrc')||'일반',stage:st,
+         contracted_at:k.won?(cAt||null):null,
+         policy_sent_at:k.pol?(pAt||null):null,
+         updated_at:new Date().toISOString()};
+  if(!id){
+    p.assigned_to=r?r.who:me;
+    p.assigned_date=hdbVal('hdbGot')||(new Date()).toISOString().slice(0,10);
+    p.report_name='보장분석 3DB';
+    if(me)p.created_by=me;
+    if(!p.assigned_to){ HDB.err='담당자를 알 수 없습니다 — 다시 로그인해 주세요.'; hdbRepaintForm(); return; }
+  }
+  HDB.busy='save';HDB.err='';hdbRepaintForm();
+  var q=id?sb.from('dbs').update(p).eq('id',id):sb.from('dbs').insert(p);
+  q.then(function(res){
+    HDB.busy='';
+    if(res&&res.error){
+      HDB.err='저장하지 못했습니다 — '+((res.error.message||'')||'알 수 없는 오류');
+      hdbRepaintForm();return;
+    }
+    if(id)hdbLocal(id,{name:nm,phone:p.phone||'',region:p.region||'',src:p.source,
+                       stage:st,cAt:cAt||'',pAt:pAt||''});
+    hdbClose();
+    if(typeof toast==='function')toast(nm+' 님을 저장했습니다 — DB 통합 CRM 에도 올라갑니다');
+    /* 새로 넣은 줄은 손에 없다 — 그때만 서버를 다시 부른다 (7번) */
+    if(!id&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
+    hdbPaint();
+  },function(e){
+    HDB.busy='';
+    HDB.err='저장하지 못했습니다 — '+((e&&e.message)||'네트워크 오류');
+    hdbRepaintForm();
+  });
+}
+function hdbRepaintForm(){
+  var b=document.getElementById('hdbBox');
+  if(!b||!HDB.open)return;
+  var keep={n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
+            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt')};
+  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,keep.st);
+  /* 치던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
+     그 자리에서 창을 닫으신다 */
+  var put=function(i,v){ var e=document.getElementById(i); if(e&&v)e.value=v; };
+  put('hdbName',keep.n);put('hdbPhone',keep.p);put('hdbRegion',keep.g);
+  put('hdbSrc',keep.s);put('hdbCAt',keep.c);put('hdbPAt',keep.o);
+  hdbStagePick();
+}
+function hdbDel(id){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r||!sb)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 지울 수 없습니다.'); return; }
+  /* <b>한 번 더 물어본다</b> — 되돌릴 수 없는 자리다 */
+  if(!confirm(r.name+' 님을 DB 에서 지울까요?\n통화 기록까지 같이 사라지고, 되돌릴 수 없습니다.'))return;
+  HDB.busy='del';HDB.err='';hdbRepaintForm();
+  sb.from('dbs')['delete']().eq('id',id).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ HDB.err='지우지 못했습니다 — '+(res.error.message||''); hdbRepaintForm(); return; }
+    var L=(typeof AR!=='undefined'&&AR.db)||[],i;
+    for(i=0;i<L.length;i++)if(L[i].id===id){L.splice(i,1);break;}
+    hdbClose();
+    if(typeof toast==='function')toast(r.name+' 님을 지웠습니다');
+    hdbPaint();
+  },function(e){ HDB.busy=''; HDB.err='지우지 못했습니다 — '+((e&&e.message)||'네트워크 오류'); hdbRepaintForm(); });
+}
+/* ── 홈 카드 안에 서는 줄 ─────────────────────────────────────────
+   「무엇을 할까요?」 밑에 붙는다. <b>지금 단계가 무엇이고</b>, 한 칸
+   올리면 어디로 가고, 통화가 안 됐으면 무엇을 누르는지가 한 줄에 있다. */
+function hdbStripHtml(x){
+  if(!x||x.k!=='db'||!x.id)return '';
+  var r=hdbRow(x.id);
+  if(!r)return '';
+  hdbCss();
+  var can=hdbCan(r),to=hdbNextOf(r.stage),busy=(HDB.busy===r.id);
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  var h='<div class="hdb"><div class="hdb-h">📇 <b>'+v(r.name)+'</b> 님 — 지금 단계와 오늘 기록</div>';
+  if(HDB.err)h+='<div class="hdb-err">'+v(HDB.err)+'</div>';
+  h+='<div class="hdb-now"><span class="sg">'+v(r.stage)+'</span>'+
+     '<span>접촉 '+(r.n||0)+'회'+(r.res?(' · 마지막 '+v(r.res)):'')+'</span></div>';
+  if(!can)
+    return h+'<div class="hdb-h">이 분은 <b>다른 분 고객</b>이라 여기서 못 고칩니다 — 보기만 합니다.</div></div>';
+  h+='<div class="hdb-r">';
+  if(to)h+='<button type="button" class="hdb-b go"'+(busy?' disabled':'')+' onclick="hdbUp(\'' + r.id + '\')">'+
+      (busy?'…':('→ '+v(to)+' 로 올리기'))+'</button>';
+  h+='<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'부재\')">📵 부재</button>'+
+     '<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'상담\')">🤝 통화됨</button>'+
+     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'거절\')">🚫 거절</button>'+
+     '<button type="button" class="hdb-b ed" onclick="hdbOpen(\'' + r.id + '\',\'\')">✏️ 고치기</button>'+
+     '</div>';
+  h+='<div class="hdb-h">누르면 <b>DB 통합 CRM 에도 그대로</b> 올라갑니다 — 같은 표를 씁니다.</div>';
+  return h+'</div>';
+}
 /* ══ <b>「무엇을 할까요?」</b> — 골라서 하는 자리 ═══════════════════
    사장님 말씀 — 「고객에게 각 상황마다 어떻게 해야할지, 클로드 내게 권한
    물어보는것처럼 <b>선택해서</b> 할수 있도록 하라고했는데 전혀 안되고 있어」.
@@ -20891,6 +21260,9 @@ function hmNowHtml(){
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
     hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
+    /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
+       배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
+    hdbStripHtml(x)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
@@ -20960,6 +21332,8 @@ function hmTodayHtml(){
        잘못 읽으면 그 자리에서 사고가 난다 (사장님 말씀 ③·④) */
     hwhoBarHtml()+
     '<div class="hm-top"><span class="hm-d">'+osEsc(hmTodayLabel())+'</span>'+
+      /* 홈을 <b>안 벗어나고</b> 고객을 넣는다 — 덮개로 뜬다 (사장님 말씀 ⑦) */
+      '<button type="button" class="hm-cal" onclick="hdbNew()">➕ 고객 넣기</button>'+
       '<button type="button" class="hm-cal" onclick="go(\'mycal\')">📅 내 캘린더</button></div>'+
     '<h2 class="hm-big">'+(c.total?('오늘 챙길 것 <em>'+c.total+'건</em>입니다'):HM_BIG[hmHold()])+'</h2>'+
     '<p class="hm-sub">'+HM_SUB[c.total?'ok':hmHold()](c)+'</p>';
