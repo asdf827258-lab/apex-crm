@@ -75,7 +75,22 @@ const AFTER = [
   await new Promise(r => srv.listen(0, r));
   const browser = await chromium.launch();
   /* 폰 크기에서 재야 화면 튐이 보인다 */
-  const page = await browser.newPage({ viewport: { width: 480, height: 820 } });
+  const ctx = await browser.newContext({ viewport: { width: 480, height: 820 } });
+  /* ── <b>바깥을 막는다</b> ───────────────────────────────────────────
+     여기 [7] 은 <b>스크롤이 움직였나</b>를 잰다 — 누르기 전과 뒤의 위치를
+     견준다. 그런데 이 점검만 바깥을 안 막고 있었다.
+
+     CI 에는 네트워크가 있다. 부팅 때 나간 진짜 읽기(공지·뉴스 …)가 <b>늦게</b>
+     돌아와 화면을 다시 그리면 문서 높이가 바뀌고, 그 순간 스크롤이 튄다 —
+     누른 단추 탓이 아닌데 <b>[7] 의 세 줄이 통째로</b> 빨개진다. 앱은 멀쩡한데
+     CI 에서만 빨간불이다. check-noticeack 에서 똑같은 일이 있었다.
+
+     헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).
+     <b>약하게 만든 것이 아니다</b> — 튐을 재는 세 줄은 그대로 있고,
+     일부러 스크롤을 움직여 보면 그 자리가 그대로 빨개진다.          */
+  await ctx.route('**://**', r =>
+    r.request().url().indexOf('127.0.0.1:' + srv.address().port) >= 0 ? r.continue() : r.abort());
+  const page = await ctx.newPage();
   const errs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 170)));
   await page.goto('http://127.0.0.1:' + srv.address().port + '/app/index.html',
