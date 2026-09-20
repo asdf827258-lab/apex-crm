@@ -13878,6 +13878,107 @@ function mcalBdDate(md){
    오늘 것만이 아니라 <b>앞으로</b>도 찍는다.
      연락 예정 = 마지막 연락 + 그 사람 주기 (한 번도 없으면 오늘)
      다음 할 일 · 생일 · 도와줄 것 마감                              */
+/* ══ <b>매일 하는 일이 달력에 미리 세팅돼 있다</b> (mrt*) ═══════════
+   사장님 말씀 — 「매일 하는 일들이 쌓이고 <b>월간 캘린더에 이미 세팅이 다
+   되도록</b> 해줘 — 거기서 하면, <b>한 것들은 체크가 되도록</b>」
+
+   ── 표를 새로 만들지 않았다 ────────────────────────────────────────
+   매일 하는 일은 <b>실행 체크판</b>(CK_ITEMS.day)에 이미 열한 줄이 있다.
+   여기서 또 적으면 한 줄을 고칠 때 한쪽만 고쳐져, 달력과 체크판이 <b>다른
+   일</b>을 말하게 된다 (CLAUDE.md 5번). 그래서 <b>그 표를 그대로</b> 쓴다.
+
+   ── 담는 자리도 같다 ───────────────────────────────────────────────
+   체크판이 쓰는 그 열쇠(apex_ck_day_<날짜>)에 그대로 담는다. 그래서
+   <b>달력에서 체크한 것이 체크판에도 그대로</b> 켜져 있고, 그 반대도 같다.
+   서버(daily_checks)로도 같은 모양으로 올라간다 — 옮겨 적는 자리가 없다.
+
+   ★ <b>지난 날·앞날은 체크하지 않는다</b> (1번). 내일 할 일을 오늘 체크해
+     두면 그것이 「했다」 가 되어 버린다. 지난 날은 남아 있는 기록을
+     <b>보여만</b> 준다. 체크는 오늘 자리에서만 켜진다.
+   ★ 달력 칸에는 <b>한 줄</b>로 접어 세운다. 열한 줄을 서른 날에 펴면
+     달력이 통째로 글자밭이 된다.                                        */
+function mrtItems(){
+  try{ return (typeof CK_ITEMS!=='undefined'&&CK_ITEMS.day)?CK_ITEMS.day:[]; }catch(e){ return []; }
+}
+/* 체크판과 <b>같은 열쇠</b>다 — 여기서 이름을 새로 지으면 두 곳이 갈린다 */
+function mrtKey(ds){ return 'apex_ck_day_'+ds; }
+function mrtLoad(ds){
+  try{ var v=JSON.parse(localStorage.getItem(mrtKey(ds))||'{}'); return (v&&typeof v==='object')?v:{}; }
+  catch(e){ return {}; }
+}
+function mrtDone(ds){
+  var m=mrtLoad(ds),L=mrtItems(),n=0,i;
+  for(i=0;i<L.length;i++)if(m[L[i][0]])n++;
+  return n;
+}
+/* 오늘만 켤 수 있다 — 왜 그런지는 위에 적어 두었다 */
+function mrtToday(ds){ return ds===mcalToday(); }
+function mrtToggle(ds,id){
+  if(!mrtToday(ds)){
+    if(typeof toast==='function')toast('오늘 것만 여기서 체크합니다 — 안 한 날을 한 것으로 적을 수 없습니다.',5000);
+    return;
+  }
+  /* <b>체크판이 쓰는 그 함수를 그대로</b> 부른다 (5번). 여기서 따로 저장하면
+     서버로 올리는 자리(ckPush)를 빠뜨려, 달력에서 누른 것만 안 올라간다. */
+  if(typeof ckToggle==='function'){ ckToggle('day',id); }
+  else { var m=mrtLoad(ds); if(m[id])delete m[id]; else m[id]=1;
+         try{ localStorage.setItem(mrtKey(ds),JSON.stringify(m)); }catch(e){} }
+  try{ mcalPaint(); }catch(e2){}
+}
+function mrtAllDone(ds){ var L=mrtItems(); return L.length>0&&mrtDone(ds)>=L.length; }
+/* 고른 날의 열한 줄 — 달력 아래에 편다 */
+function mrtPanelHtml(ds){
+  var L=mrtItems();
+  if(!L.length)return '';
+  var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),i,x,on,h;
+  var ahead=ds>mcalToday();
+  mrtCss();
+  /* <b>지난 날과 앞날을 갈라 적는다.</b> 앞날에 「지난 기록입니다」 라고
+     적으면 화면이 거짓말을 한다 (1번). 앞날은 아직 아무 일도 없었다. */
+  h='<div class="mrt"><div class="mrt-hd">📋 <b>매일 하는 일</b> '+
+    (ahead?'<span class="mrt-n">하루 '+L.length+'가지</span>'
+          :('<span class="mrt-n'+(n>=L.length?' all':'')+'">'+n+' / '+L.length+'</span>'))+
+    (today?''
+     :('<span class="mrt-ro">'+(ahead
+        ? '아직 오지 않은 날입니다 — 체크는 <b>그날</b> 자리에서 켜집니다'
+        : '지난 기록입니다 — 체크는 <b>오늘</b> 자리에서만 켜집니다')+'</span>'))+
+    '</div>';
+  for(i=0;i<L.length;i++){
+    x=L[i];on=!ahead&&!!m[x[0]];
+    h+='<button type="button" class="mrt-it'+(on?' on':'')+(today?'':' ro')+'" '+
+      (today?('onclick="mrtToggle(\''+ds+'\',\''+x[0]+'\')"'):'disabled')+'>'+
+      '<span class="bx">'+(on?'✓':'')+'</span>'+
+      '<span class="m"><b>'+osEsc(x[1])+'</b>'+
+        (x[2]?('<span>'+osEsc(x[2])+'</span>'):'')+'</span></button>';
+  }
+  return h+'<div class="mrt-ft">체크판과 <b>같은 자리</b>에 담깁니다 — 여기서 켠 것이 실행 체크판에도 켜져 있습니다.</div></div>';
+}
+function mrtCss(){
+  if(document.getElementById('mrtCss'))return;
+  var st=document.createElement('style');st.id='mrtCss';
+  st.textContent=
+   '.mrt{margin-top:12px;border:1px solid var(--ink-7);border-radius:var(--r);padding:11px 12px;background:#FAFBFC}'+
+   '.mrt-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t6);'+
+     'font-weight:800;color:var(--ink-3);margin-bottom:8px}'+
+   '.mrt-n{font-weight:900;padding:2px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
+   '.mrt-n.all{background:#ECFDF5;color:#047857}'+
+   '.mrt-ro{font-weight:700;color:var(--ink-5)}'+
+   '.mrt-it{display:flex;align-items:flex-start;gap:9px;width:100%;min-height:44px;'+
+     'padding:8px 9px;margin-bottom:4px;border:1px solid var(--ink-8);border-radius:var(--r-xs);'+
+     'background:#fff;font-family:inherit;text-align:left;cursor:pointer}'+
+   '.mrt-it.ro{cursor:default;opacity:.82}'+
+   '.mrt-it.on{border-color:#A7F3D0;background:#F0FDF7}'+
+   '.mrt-it .bx{flex:none;width:22px;height:22px;margin-top:1px;border:1px solid var(--ink-7);'+
+     'border-radius:7px;background:#fff;color:#047857;font-weight:900;font-size:var(--t6);'+
+     'display:flex;align-items:center;justify-content:center}'+
+   '.mrt-it.on .bx{border-color:#047857;background:#D1FAE5}'+
+   '.mrt-it .m{min-width:0;line-height:1.45}'+
+   '.mrt-it .m b{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-2)}'+
+   '.mrt-it.on .m b{color:#065F46}'+
+   '.mrt-it .m span{display:block;font-size:var(--t6);color:var(--ink-5)}'+
+   '.mrt-ft{font-size:var(--t6);color:var(--ink-5);line-height:1.6;margin-top:7px}';
+  document.head.appendChild(st);
+}
 function mcalItems(){
   /* 날이 이미 지난 것은 <b>오늘</b> 자리로 끌어온다. 지난 날에 그대로 두면
      달력에서는 안 보이는데 「오늘의 터치」 에는 서 있어서 두 화면이 어긋난다.
@@ -13937,6 +14038,35 @@ function mcalItems(){
   for(i=0;i<MY.length;i++){
     var y=MY[i];if(!y||!y.d)continue;
     (out[y.d]=out[y.d]||[]).push({k:'my',my:y.id,t:y.t,s:y.hm||''});
+  }
+  /* ── <b>매일 하는 일은 이미 세팅돼 있다</b> (사장님 말씀 ①) ────────
+     보고 계신 달의 <b>날마다</b> 한 줄로 찍는다. 열한 줄을 서른 날에
+     펴면 달력이 글자밭이 되므로 여기서는 「n / 11」 한 줄로 접고,
+     그 날을 누르면 아래에 펴진다(mrtPanelHtml).
+
+     ★ <b>who 를 달아 둔다</b> — 안 달면 담당자를 고르는 순간 mcalMine 이
+       걸러 내 루틴이 사라진다. 이건 <b>내</b> 루틴이라 팀원 화면을 볼
+       때는 안 서는 것이 맞다.
+     ★ <b>앞날은 「0 / 11」 이 아니라 그냥 세워 둔다</b> — 아직 안 한 것을
+       0 으로 적으면 「못 했다」 로 읽힌다 (1번).                         */
+  var RT=(typeof mrtItems==='function')?mrtItems():[];
+  if(RT.length){
+    var meR='';
+    try{ meR=(typeof arMyId==='function')?(arMyId()||''):''; }catch(eR){ meR=''; }
+    var ymR=(typeof mcalYm==='function')?mcalYm():TD.slice(0,7);
+    var lastR=new Date(Date.UTC(+ymR.slice(0,4),+ymR.slice(5,7),0)).getUTCDate(),dR,dsR;
+    var putR=function(dsx){
+      var done=mrtDone(dsx),past=(dsx<=TD);
+      (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
+        rt:dsx,n:done,tot:RT.length,
+        s:past?(done+' / '+RT.length+(done>=RT.length?' · 다 했습니다':'')):('하루 '+RT.length+'가지')});
+    };
+    for(dR=1;dR<=lastR;dR++){
+      dsR=ymR+'-'+('0'+dR).slice(-2);
+      putR(dsR);
+    }
+    /* 보고 있는 달이 이번 달이 아니어도 <b>오늘</b>은 늘 선다 — 홈은 오늘만 읽는다 */
+    if(TD.slice(0,7)!==ymR)putR(TD);
   }
   return out;
 }
@@ -14097,7 +14227,8 @@ function mypWhereTxt(){
 var MCAL_KIND={my:{e:'✏️',t:'내 일정',c:'#475569'},
              appt:{e:'📌',t:'약속',c:'#DC2626'},
              touch:{e:'☎️',t:'연락',c:'#1B64DA'},next:{e:'▶',t:'할 일',c:'#0F766E'},
-             bd:{e:'🎂',t:'생일',c:'#B45309'},help:{e:'🤝',t:'도와줄 것',c:'#7C3AED'}};
+             bd:{e:'🎂',t:'생일',c:'#B45309'},help:{e:'🤝',t:'도와줄 것',c:'#7C3AED'},
+             rt:{e:'📋',t:'매일 하는 일',c:'#0369A1'}};
 
 /* ── ics ── 폰 기본 달력이 읽는 글. 여기서 틀리면 달력이 통째로 안 받는다.
    · 줄은 CRLF · 75바이트를 넘으면 접는다(다음 줄 앞에 빈칸 하나)
@@ -14235,6 +14366,27 @@ function mcalDownload(kind){
 }
 
 /* ── 화면 ── */
+/* <b>잡힌 건수</b>에는 매일 하는 일을 안 넣는다 — 안 그러면 아무것도
+   없는 날도 「1건」 으로 떠서, 아래를 열면 「잡힌 것이 없습니다」 가 뜬다.
+   세는 곳은 여기 하나다 (5번). 점(dot)에는 그대로 찍는다 — 「이 날에도
+   할 일이 세팅돼 있다」 를 보여 주는 것이 사장님이 시키신 것이다. */
+function mcalCnt(list){
+  var n=0,i;
+  for(i=0;i<(list||[]).length;i++)if(list[i].k!=='rt')n++;
+  return n;
+}
+/* 이 날 매일 하는 일을 <b>다 했나</b> — 칸에 ✓ 를 찍을지 정한다 */
+function mcalRtDone(list){
+  var i,x;
+  for(i=0;i<(list||[]).length;i++){
+    x=list[i];
+    if(x.k!=='rt')continue;
+    /* 앞날에는 ✓ 를 안 찍는다 — 아직 안 한 것을 했다고 적는 것이다 (1번) */
+    if(x.rt&&x.rt>mcalToday())return false;
+    return (x.tot>0&&x.n>=x.tot);
+  }
+  return false;
+}
 function mcalDot(list){
   var seen={},h='',i,k;
   for(i=0;i<list.length;i++){k=list[i].k;if(seen[k])continue;seen[k]=1;
@@ -14280,10 +14432,12 @@ function mcalGridHtml(){
   for(i=1;i<=last;i++){
     ds=ym+'-'+('0'+i).slice(-2);
     n=mcalDay(items,ds);
+    var cn=mcalCnt(n),rd=mcalRtDone(n);
     h+='<button type="button" class="mcal-d'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
-       (n.length?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
+       (cn?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="n">'+i+'</span>'+
-       (n.length?('<span class="dots">'+mcalDot(n)+'</span><span class="cnt">'+n.length+'</span>'):'')+
+       (n.length?('<span class="dots">'+mcalDot(n)+'</span>'):'')+
+       (cn?('<span class="cnt">'+cn+'</span>'):(rd?'<span class="cnt ok">✓</span>':''))+
        '</button>';
   }
   h+='</div>';
@@ -14299,10 +14453,11 @@ function mcalWeekHtml(){
   h+='<div class="mcal-wgrid">';
   for(i=0;i<7;i++){
     ds=mcalShift(st,i);n=mcalDay(items,ds);
+    var wc=mcalCnt(n);
     h+='<button type="button" class="mcal-wd'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
        (i>=5?' we':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="wh"><b>'+nm[i]+'</b><i>'+(+ds.slice(8,10))+'</i>'+
-         (n.length?('<em>'+n.length+'</em>'):'')+'</span>'+
+         (wc?('<em>'+wc+'</em>'):'')+'</span>'+
        '<span class="wb">';
     if(!n.length)h+='<span class="wn">—</span>';
     for(j=0;j<n.length&&j<4;j++){
@@ -14384,8 +14539,16 @@ function mcalDayHtml(){
   /* 「09월 10일」 로 찍히던 자리 — 앞의 0 을 떼어 사람이 읽는 대로 적는다 */
   var ttl=(ds===mcalToday()?'오늘':((+ds.slice(5,7))+'월 '+(+ds.slice(8,10))+'일'));
   var body;
+  /* 매일 하는 일은 <b>줄로 세우지 않고</b> 아래에 편다 — 줄로도 세우면
+     같은 것이 두 번 서서, 하나를 체크해도 다른 쪽이 안 변한다 (5번) */
+  var rtOn=false,itemsX=[];
+  for(var ri=0;ri<items.length;ri++){
+    if(items[ri].k==='rt'){ rtOn=true; continue; }
+    itemsX.push(items[ri]);
+  }
+  items=itemsX;
   if(!items.length)
-    body='<div class="mcal-none">이 날은 잡힌 것이 없습니다.</div>';
+    body=rtOn?'':'<div class="mcal-none">이 날은 잡힌 것이 없습니다.</div>';
   else body=items.map(function(x){
       var K=MCAL_KIND[x.k]||{e:'•',t:'',c:'#8B95A1'};
       var go=x.k==='help'?'airep':'clients';
@@ -14412,6 +14575,8 @@ function mcalDayHtml(){
           (x.late?('<span class="lt">'+osEsc(x.late.slice(5).replace('-','/'))+' 지났음</span>'):'')+'</span>'+
         whoTxt+(x.vip?'<span class="vip">👑</span>':'')+'</button>';
     }).join('');
+  /* 이 날의 <b>매일 하는 일</b> — 한 줄씩 펴서 그 자리에서 체크한다 */
+  if(rtOn&&typeof mrtPanelHtml==='function')body+=mrtPanelHtml(ds);
   /* 담당자 고르개는 <b>고객 365일과 같은 것</b>을 씁니다(CM.pick) — 여기서
      고르시면 그쪽도 같이 걸러집니다. 두 벌로 만들면 어느 쪽이 맞는지
      알 수 없습니다 (5번). 혼자 맡고 계시면 아예 안 뜹니다.
@@ -14476,7 +14641,7 @@ function mcalCardHtml(opt){
   /* 담당자 고르개를 이 화면에서 켤지 — <b>마지막으로 세운 카드</b>가 정한다.
      다시 그릴 때(mcalPaint)도 그대로 따라간다 */
   MCAL.picks=!!o.picks;
-  items=mcalItems(); tn=mcalDay(items,today).length;
+  items=mcalItems(); tn=mcalCnt(mcalDay(items,today));
   var apps=(o.apps&&typeof PWA_APPS!=='undefined')?PWA_APPS:[];
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📅</span>'+osEsc(o.title||'내 캘린더')+'</div>'+
@@ -15410,8 +15575,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-20 05:50';
-var APP_BUILD_NOTE="<b>메뉴를 접을 수 있게 했습니다 — 메인 메뉴와 폰 계산기 둘 다.</b> 「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서 어지러워」 · 「재무설계계산기도 핸드폰으로 키니까, 안보인다」 하신 자리입니다. 먼저 <b>재 봤습니다</b>(390×844) — 서람을 열면 <b>4,125px</b>로 열네 묶음이 전부 펀져 <b>다섯 화면</b>이었고, 계산기는 왼쪽 입력칸이 <b>2,258px</b> 를 먹어 보고서가 <b>3.2 화면 아래</b>(2,712px)에서 시작했습니다 — 문서 4,744px 중 절반 넘게 메뉴였습니다. 이제 <b>메뉴 묶음 이름을 누르면 접힙니다</b>(4,125 → <b>863px</b> · 한 화면). 폰에서는 <b>계산기 입력칸이 접힌 채로 열려</b> 보고서가 <b>515px</b> 에 — 첫 화면에 서고, 머리띄의 「✏️ 고객정보 입력」 한 번이면 돌아옵니다. <b>PC 는 하나도 안 바뀝니다.</b> — 접기는 <b>예전에 한 번 걷어냈던</b> 장치입니다. 그때 접힌 칸을 「없어진 것」 으로 보셔서 「메뉴가 안 보인다」 는 말이 나왔습니다. 그래서 이번엔 <b>접혀 있다는 사실이 글자로 남습니다</b> — 접힌 줄에도 <b>칸 수가 그대로</b> 남고(「상담 도구 13」), 목록 맨 위에 <b>「접어 둔 묶음 n개 · 다 펴기」</b> 가 서고, <b>찾는 중에는 언제나 다 펀집니다</b>(1번). 지금 열려 있는 화면이 든 묶음도 저절로 펀니다. 계산기 입력칸은 <b>display:none 으로 가릴 뿐</b>이라 가린 채로도 값이 읽혀 <b>계산이 안 멈추는 것</b>까지 재 봤습니다. <code>check-navgrp</code>·<code>check-finsbm</code> 두 점검을 새로 만들어 <b>39자리</b>를 걸었고, 일곱 가지를 하나씩 되돌려 <b>일곱 번 다 빨간불</b>을 확인했습니다.";
+var APP_BUILD='2026-09-20 12:20';
+var APP_BUILD_NOTE="<b>홈에서 다 끝냅니다 — 단계도, 고객도, 매일 하는 일도.</b> 사장님이 짚어 주신 일곱 가지입니다. <b>① 매일 하는 일이 달력에 미리 서 있습니다</b> — 이 달 서른 날 <b>한 날도 안 빠지고</b> 찍히고, 날짜를 누르면 열한 가지가 그 자리에서 펴져 체크됩니다. 표를 새로 만들지 않았습니다 — <b>실행 체크판(CK_ITEMS)을 그대로</b> 쓰고, 담는 자리도 체크판이 쓰는 그 열쇠라 <b>달력에서 켠 것이 체크판에도 켜져</b> 있습니다(5번). 앞날은 안 켜집니다 — 내일 할 일을 오늘 체크해 두면 그것이 「했다」가 됩니다(1번). <b>② 고객 365의 담당자 줄을 맨 위로</b> 올렸습니다 — 갈라지긴 했는데 줄이 맨 아래, 그 위가 900px 였습니다. <b>③ 홈도 그 담당자 것만</b> 뜹니다. 여태 「누구 것인가」를 아는 곳이 셋이라(CM.pick · AR.tkWho · 홈은 아예 없었습니다) 고객 365에서 팀원을 골라 놓고 홈으로 오면 내 것이 떴습니다 — 이제 <b>hwhoId() 한 곳</b>만 압니다. 고치다 찾은 것 — 매니저가 홈을 열면 띠에는 「내 화면입니다」라 적고 밑에는 <b>온 팀 줄</b>을 세우고 있었습니다(1번). <b>④ 팀원 화면을 따로</b> 봅니다 — 지점장은 자기 팀원만, 대표·관리자는 전부. 남의 화면을 보는 동안 띠가 노랗게 바뀌어 「내 것이 아닙니다」가 계속 떠 있습니다. <b>⑤ 비포&애프터를 빼고 「보장분석 전&후 만들기」로 고정</b>했습니다 — 고객 카드·풀리포트·단계 도구(PC·CS·계약완료) 전부. 만드는 화면이 둘이면 만든 자료가 두 자리로 갈립니다(5번). <b>⑥ 홈에서 단계를 바로 옮깁니다</b> — 「→ 다음 단계」·부재·통화됨·거절·고치기가 그 자리에 섭니다. 쓰는 곳은 <b>dbs·calls</b>, DB 통합 CRM 이 읽는 그 표라 누른 것이 그대로 CRM 에 뜹니다. 계약일·증권일은 <b>지어내지 않습니다</b> — 필요한 단계로 올릴 때 창이 뜨고, 비워 둔 채로는 저장이 안 되며 왜 안 되는지 그 자리에서 말합니다(1번). <b>⑦ 홈을 안 벗어나고 고객을 넣고 고치고 지웁니다.</b> 남의 고객은 단추를 아예 안 세웁니다(8번). 단계 규칙은 <b>apex-stage.js 한 곳</b>에 모았습니다 — db-crm.html 에만 있던 stageNeeds 를 옮기고 저쪽이 그것을 부르게 했습니다. <code>check-hdb</code>(31자리)·<code>check-mrt</code>(26자리)를 새로 만들어 <b>어느 표에 무엇을 썼는지</b>를 보게 했고, 열두 가지를 하나씩 되돌려 <b>열두 번 다 빨간불</b>을 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -20360,6 +20525,10 @@ function hmSteps(){
   }
   for(i=0;i<items.length;i++){
     var x=items[i];
+    /* <b>매일 하는 일은 여기 안 세웁니다.</b> 달력에 이미 한 줄로 서 있고,
+       여기 또 세우면 같은 것이 두 곳에 있어 한쪽을 체크해도 다른 쪽이
+       안 줄어듭니다 (5번). 홈에서는 달력 칸을 누르시면 펴집니다. */
+    if(x.k==='rt')continue;
     out.push({k:x.k,id:x.id||'',my:x.my||'',t:x.t||'',s:x.s||''});
   }
   /* ── <b>고객 상태에 맞는 오늘 할 일</b> ────────────────────────────
@@ -21919,7 +22088,7 @@ function hmFoldWrap(k,e,t,sub,inner){
 /* 머리에 적을 숫자 — <b>그 카드가 이미 세는 것</b>만 가져옵니다.
    못 세면 빈 글자를 돌려주고, 머리에는 아무 숫자도 안 적습니다 (1번). */
 function hmFoldCalSub(){
-  try{ return '오늘 '+mcalDay(mcalItems(),mcalToday()).length+'건'; }catch(e){ return ''; }
+  try{ return '오늘 '+mcalCnt(mcalDay(mcalItems(),mcalToday()))+'건'; }catch(e){ return ''; }
 }
 function hmFoldCliSub(){
   try{
@@ -29990,8 +30159,13 @@ function ckMemoSave(m){try{localStorage.setItem(ckMemoKey(),JSON.stringify(m));}
 function ckSweep(){
   try{
     var keep=[ckKey('day'),ckKey('week'),ckKey('month'),ckMemoKey(),'apex_ck_tab','apex_ck_help'],drop=[],i,k;
+    /* <b>이번 달 하루치는 남긴다</b> — 달력이 지난 날의 「몇 개 했나」 를
+       보여 주기 때문이다. 지우면 어제 칸이 <b>0/11</b> 로 떠서 「안 했다」
+       로 읽힌다 — 못 읽은 것을 0 으로 적는 그 병이다 (1번).
+       한 달치 서른 줄이라 저장 공간은 그대로 작다 (7번). */
+    var mth='apex_ck_day_'+(ckDayK().slice(0,7));
     for(i=0;i<localStorage.length;i++){k=localStorage.key(i);
-      if(k&&k.indexOf('apex_ck_')===0&&keep.indexOf(k)<0)drop.push(k);}
+      if(k&&k.indexOf('apex_ck_')===0&&keep.indexOf(k)<0&&k.indexOf(mth)!==0)drop.push(k);}
     for(i=0;i<drop.length;i++)localStorage.removeItem(drop[i]);
   }catch(e){}
 }
