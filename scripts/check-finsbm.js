@@ -189,6 +189,19 @@ const look = (page) => page.evaluate(() => {
   is(!!pick && pick.id === 'tab-edufund', '  칸을 고르면 <b>그 보고서가 열린다</b> — ' + (pick ? pick.id : 'null'));
   is(!!pick && pick.shut === true, '  고르고 나면 카테고리가 <b>저절로 다시 접힌다</b>');
   is(!!pick && /교육자금/.test(pick.t), '  단추 이름도 <b>고른 칸으로</b> 바뀐다 — ' + (pick ? pick.t : ''));
+  /* 칸을 바꾸는 길은 <b>누르는 것 하나가 아니다</b> — 상담 순서가 건너뛰고,
+     인쇄 모듈이 제 손으로 켠 칸을 옮긴다. 그 길로 가도 단추가 따라와야
+     한다. 안 따라오면 교육자금을 보면서 「종합 대시보드」 라고 적힌다 (1번). */
+  const jump = await page.evaluate(async () => {
+    const b = [...document.querySelectorAll('.top-tab-grid .report-tab')]
+      .find(x => /보험 대시보드/.test(x.textContent || ''));
+    document.querySelectorAll('.report-tab').forEach(x => x.classList.remove('on'));
+    if (b) b.classList.add('on');                    /* 누르지 않고 켠 칸만 옮긴다 */
+    await new Promise(r => setTimeout(r, 500));
+    return ((document.getElementById('tbmBtn') || {}).textContent || '').trim();
+  });
+  is(/보험 대시보드/.test(jump || ''),
+     '  안 누르고 칸이 옮겨져도 <b>단추가 따라온다</b> — ' + jump);
 
   console.log('\n[5] <b>PC 는 하나도 안 바뀐다</b>');
   await page.setViewportSize({ width: 1440, height: 900 });

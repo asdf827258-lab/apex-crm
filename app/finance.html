@@ -2167,12 +2167,24 @@ function tbmInit(){
   /* 칸을 하나 고르면 <b>접고</b> 그 보고서를 보여 준다. 칸마다 onclick 이
      이미 달려 있으니 여기서 건드리지 않고, 판 위에서 한 번만 듣는다. */
   var g=document.querySelector('.top-tab-grid');
-  if(g)g.addEventListener('click',function(ev){
+  if(!g)return;
+  g.addEventListener('click',function(ev){
     if(!ev.target||!ev.target.closest)return;
     if(!ev.target.closest('.report-tab'))return;
     if(!sbmPhone()){ tbmPaint(); return; }   /* PC 는 접지 않는다 */
     setTimeout(function(){ tbmSet(true); },0);
   });
+  /* ⚠ 칸을 바꾸는 길이 <b>누르는 것 하나가 아니다</b> — 상담 순서에서
+     건너뛰기도 하고, 인쇄 모듈이 제 손으로 켠 칸을 옮기기도 한다.
+     그런 길로 옮겨 가면 단추에는 <b>옛 칸 이름</b>이 남아, 교육자금을
+     보면서 「종합 대시보드」 라고 적혀 있게 된다 — 화면이 거짓말한다 (1번).
+     그래서 부르는 자리를 하나하나 찾아다니지 않고, <b>켜진 칸이 바뀌는 것</b>
+     자체를 본다. 답을 아는 곳은 여전히 한 곳이다 (5번).
+     서버를 부르는 것이 아니라 판 안의 일이라 되풀이해도 값이 안 든다 (7번). */
+  try{
+    if(window.MutationObserver)new MutationObserver(function(){ tbmPaint(); })
+      .observe(g,{subtree:true,attributes:true,attributeFilter:['class']});
+  }catch(e){}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tbmInit);
 else tbmInit();
