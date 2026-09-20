@@ -21458,7 +21458,7 @@ function hmTaPickHtml(x){
     h+='<button type="button" class="hm-tap-c'+(L[i].k===cur?' on':'')+'" '+
        'onclick="hmTaPick(\''+osEsc(x.key||'')+'\',\''+osEsc(L[i].k)+'\')">'+osEsc(L[i].chip)+'</button>';
   return '<div class="hm-tap'+(own?' own':'')+'">'+
-    '<span class="lb">'+(own?'고르신 상황입니다 — ':'상황이 다르면 ')+'</span>'+h+
+    '<span class="lb">'+(own?'고르신 상황':'상황')+'</span>'+h+
     (own?'<button type="button" class="hm-tap-b" onclick="hmTaMine()">↩ 이 분 상태로</button>':'')+
     '</div>';
 }
@@ -21504,16 +21504,24 @@ function hmTaCss(){
   st.textContent=
     '.hm-ta{margin-top:10px;border:1px solid #BFDBFE;background:#F0F7FF;border-radius:12px;padding:11px 13px}'+
     /* 상황 고르는 줄 — 손가락이 닿게 34px 이상, 좁은 화면에서는 줄바꿈 */
-    '.hm-tap{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}'+
-    '.hm-tap .lb{font-size:var(--t6,13px);color:var(--ink-5);font-weight:700}'+
-    '.hm-tap-c{min-height:34px;padding:6px 10px;border:1px solid var(--ink-7);border-radius:999px;'+
+    /* ⚠ <b>한 줄</b>로 둡니다. 두 줄이 되면 홈이 0.2화면 길어집니다 — 홈은
+       제일 많이 여는 화면이라 그 0.2가 비쌉니다(check-toss 가 잽니다).
+       그래도 손가락 크기(44px)는 안 줄입니다 — 그 아래는 옆을 누릅니다.
+       넷이 안 들어가는 좁은 폰에서는 <b>옆으로 굴러갑니다</b>(감추지 않습니다). */
+    '.hm-tap{margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;'+
+      'overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}'+
+    '.hm-tap::-webkit-scrollbar{display:none}'+
+    '.hm-tap .lb{flex:0 0 auto;font-size:var(--t6,13px);color:var(--ink-5);font-weight:700}'+
+    '.hm-tap-c{flex:0 0 auto;min-height:44px;padding:6px 11px;border:1px solid var(--ink-7);'+
+      'border-radius:999px;white-space:nowrap;'+
       'background:#fff;font-family:inherit;font-size:var(--t6,13px);font-weight:700;'+
       'color:var(--ink-3);cursor:pointer}'+
     '.hm-tap-c.on{background:#1A56DB;border-color:#1A56DB;color:#fff}'+
     /* 손으로 고른 동안은 <b>색이 다릅니다</b> — 이 분의 단계가 아니라 내가 고른 것입니다 */
     '.hm-tap.own .lb{color:#92400E}'+
     '.hm-tap.own .hm-tap-c.on{background:#B45309;border-color:#B45309}'+
-    '.hm-tap-b{min-height:34px;padding:6px 10px;border:0;border-radius:999px;font-family:inherit;'+
+    '.hm-tap-b{flex:0 0 auto;min-height:44px;padding:6px 11px;border:0;border-radius:999px;'+
+      'white-space:nowrap;font-family:inherit;'+
       'font-size:var(--t6,13px);font-weight:800;background:#FEF3C7;color:#92400E;cursor:pointer}'+
     '.hm-ta-h{font-size:var(--t6,13px);font-weight:800;color:#1A56DB;display:flex;align-items:center;gap:7px;flex-wrap:wrap}'+
     '.hm-ta-h span{background:#DBEAFE;color:#1E40AF;border-radius:999px;padding:2px 8px;font-size:var(--t6,13px);font-weight:800}'+
