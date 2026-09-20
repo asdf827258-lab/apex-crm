@@ -53,9 +53,16 @@ const SEED = `
   await page.goto('http://127.0.0.1:' + PORT + '/app/index.html', { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2400);
   await page.evaluate(() => document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x => x.remove()));
-  /* 지난 날 기록이 남아 있는지도 봐야 하므로 <b>어제 것</b>을 하나 심는다 */
+  /* 지난 날 기록이 남아 있는지도 봐야 하므로 <b>어제 것</b>을 하나 심는다.
+     ⚠ 어제가 언제인지는 <b>앱에게 묻습니다</b>(mcalToday). 앱은 한국시간으로
+     날을 셉니다(mcalNow = 지금+9시간). 여기서 UTC 로 세면 <b>UTC 낮 15시부터
+     자정까지</b>, 즉 하루의 아홉 시간 동안 하루가 어긋나 심어 놓은 것을
+     못 찾고 빨간불이 켜집니다 — 실제로 그렇게 울었습니다. 날을 세는 곳은
+     한 곳이어야 합니다 (5번). */
   await page.evaluate(() => {
-    const d = new Date(); d.setUTCDate(d.getUTCDate() - 1);
+    const t = (typeof mcalToday === 'function') ? mcalToday()
+            : new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    const d = new Date(t + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
     localStorage.setItem('apex_ck_day_' + d.toISOString().slice(0, 10), JSON.stringify({ d1: 1, d2: 1 }));
   });
   await page.evaluate(SEED);
