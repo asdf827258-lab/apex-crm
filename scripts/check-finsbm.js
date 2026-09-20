@@ -20,6 +20,11 @@
      [5] <b>PC 는 하나도 안 바뀐다</b> — 981px 이상에서는 입력칸이 그대로 서고
          접기 단추는 아예 안 뜬다. 안 그러면 상담 중에 화면이 달라진다
      [6] 접은 채로도 <b>탭을 옮겨 다닐 수 있다</b> — 계산기가 살아 있다
+     [7] <b>카테고리 열두 칸</b>도 접힌다 — 입력칸을 접어도 그 위에 카테고리가
+         두 칸씩 여섯 줄(282px)로 서서 보고서를 또 밀어냈다. 「위에 카테고리가
+         창을 다 잡고 있어서」 는 이 자리를 말씀하신 것이다.
+         접힌 동안에도 <b>지금 어느 칸인지</b>는 단추에 적혀 있어야 한다 —
+         안 적으면 접힌 것이 아니라 길을 잃은 것이다.
    ══════════════════════════════════════════════════════════════════ */
 const { chromium } = require('playwright');
 const http = require('http'), fs = require('fs'), path = require('path'), url = require('url');
@@ -46,6 +51,18 @@ const look = (page) => page.evaluate(() => {
     btn: btn ? { t: (btn.textContent || '').trim(), disp: getComputedStyle(btn).display, h: Math.round(btn.getBoundingClientRect().height) } : null,
     close: cls ? { disp: getComputedStyle(cls).display, h: Math.round(cls.getBoundingClientRect().height) } : null,
     shut: document.body.classList.contains('sbm-shut'),
+    top: bx('.report-topbar'),
+    grid: bx('.top-tab-grid'),
+    tshut: document.body.classList.contains('tbm-shut'),
+    tbn: (function(){ var b=document.getElementById('tbmBtn'); if(!b)return null;
+      var c=getComputedStyle(b);
+      return { t:(b.textContent||'').trim(), disp:c.display,
+        h:Math.round(b.getBoundingClientRect().height),
+        /* 글자색과 바탕색을 같이 담는다 — 흰 글자에 흰 바탕이면 안 보인다 */
+        fg:c.color, bg:c.backgroundColor }; })(),
+    tabs: document.querySelectorAll('.top-tab-grid .report-tab').length,
+    now: (function(){ var o=document.querySelector('.top-tab-grid .report-tab.on .rt-title');
+      return o?(o.textContent||'').trim():''; })(),
     /* 가려도 값이 읽히는가 — 계산이 이 값들 위에 선다 */
     reads: (function () { const e = document.getElementById('s_inf'); return e ? e.value : null; })(),
     age: (function () { const e = document.getElementById('s_age'); return e ? e.value : null; })()
@@ -127,6 +144,65 @@ const look = (page) => page.evaluate(() => {
   is(!!tab && tab.h > 200, '  그 탭에 <b>내용이 그려진다</b> — ' + (tab ? tab.h : 0) + 'px');
   is(!!tab && tab.shut === true, '  탭을 옮겨도 <b>접힌 채로</b> 있다');
 
+  console.log('\n[7] <b>카테고리 열두 칸</b>도 접힌다');
+  const g1 = await look(page);
+  is(g1.tshut === true && !!g1.grid && g1.grid.disp === 'none',
+     '  처음 여시면 카테고리가 <b>접힌 채</b>로 시작한다');
+  /* 접힌 동안에도 <b>어디에 서 있는지</b>가 단추에 적혀 있어야 한다 (1번) */
+  is(!!g1.tbn && g1.now !== '' && g1.tbn.t.indexOf(g1.now) >= 0,
+     '  접혀 있어도 <b>지금 어느 칸인지</b> 단추에 적힌다 — ' + (g1.tbn ? g1.tbn.t : '없음'));
+  is(!!g1.tbn && g1.tbn.h >= 44, '  카테고리 단추 ' + (g1.tbn ? g1.tbn.h : 0) + 'px (44px 이상)');
+  /* 글자가 <b>눈에 보이는가.</b> 옆 단추를 그대로 베꼈다가 밝은 머리띠 위에
+     흰 글자를 올려 안 보인 적이 있다 — 사진을 찍어 보고 알았다.
+     글자와 바탕의 <b>밝기 차</b>를 실제로 잰다 (WCAG 대비 3 이상). */
+  const con = (a, b) => {
+    const lum = (c) => { const m = String(c).match(/[\d.]+/g) || [0, 0, 0];
+      const f = m.slice(0, 3).map(v => { v = +v / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; };
+    const x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  const cr = g1.tbn ? con(g1.tbn.fg, g1.tbn.bg) : 0;
+  is(cr >= 3, '  카테고리 단추 글자가 <b>눈에 보인다</b> — 밝기 차 ' + cr.toFixed(1) +
+     ' (3 이상) · ' + (g1.tbn ? g1.tbn.fg + ' / ' + g1.tbn.bg : ''));
+  await page.evaluate(() => { const b = document.getElementById('tbmBtn'); if (b) b.click(); });
+  await page.waitForTimeout(420);
+  const g2 = await look(page);
+  is(g2.tshut === false && !!g2.grid && g2.grid.disp !== 'none' && g2.tabs >= 12,
+     '  단추를 누르면 <b>열두 칸이 다 뜬다</b> — ' + g2.tabs + '칸');
+  /* 접었을 때 머리띠가 <b>실제로</b> 줄어들어야 한다. 클래스만 붙고 높이가
+     그대로면 아무것도 안 접힌 것이다 (8번) */
+  is(!!g1.top && !!g2.top && g2.top.h - g1.top.h >= 150,
+     '  접으면 머리띠가 <b>그만큼 짧아진다</b> — 접음 ' + (g1.top ? g1.top.h : '?') +
+     'px · 폄 ' + (g2.top ? g2.top.h : '?') + 'px');
+  /* 하나 고르면 그 보고서로 가고 <b>저절로 다시 접힌다</b> */
+  const pick = await page.evaluate(async () => {
+    const b = [...document.querySelectorAll('.top-tab-grid .report-tab')]
+      .find(x => /교육자금/.test(x.textContent || ''));
+    if (!b) return null;
+    b.click(); await new Promise(r => setTimeout(r, 800));
+    const on = document.querySelector('.tab-pane.on');
+    return { id: on ? on.id : '', shut: document.body.classList.contains('tbm-shut'),
+             t: ((document.getElementById('tbmBtn') || {}).textContent || '').trim() };
+  });
+  is(!!pick && pick.id === 'tab-edufund', '  칸을 고르면 <b>그 보고서가 열린다</b> — ' + (pick ? pick.id : 'null'));
+  is(!!pick && pick.shut === true, '  고르고 나면 카테고리가 <b>저절로 다시 접힌다</b>');
+  is(!!pick && /교육자금/.test(pick.t), '  단추 이름도 <b>고른 칸으로</b> 바뀐다 — ' + (pick ? pick.t : ''));
+  /* 칸을 바꾸는 길은 <b>누르는 것 하나가 아니다</b> — 상담 순서가 건너뛰고,
+     인쇄 모듈이 제 손으로 켠 칸을 옮긴다. 그 길로 가도 단추가 따라와야
+     한다. 안 따라오면 교육자금을 보면서 「종합 대시보드」 라고 적힌다 (1번). */
+  const jump = await page.evaluate(async () => {
+    const b = [...document.querySelectorAll('.top-tab-grid .report-tab')]
+      .find(x => /보험 대시보드/.test(x.textContent || ''));
+    document.querySelectorAll('.report-tab').forEach(x => x.classList.remove('on'));
+    if (b) b.classList.add('on');                    /* 누르지 않고 켠 칸만 옮긴다 */
+    await new Promise(r => setTimeout(r, 500));
+    return ((document.getElementById('tbmBtn') || {}).textContent || '').trim();
+  });
+  is(/보험 대시보드/.test(jump || ''),
+     '  안 누르고 칸이 옮겨져도 <b>단추가 따라온다</b> — ' + jump);
+
   console.log('\n[5] <b>PC 는 하나도 안 바뀐다</b>');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.waitForTimeout(500);
@@ -135,10 +211,13 @@ const look = (page) => page.evaluate(() => {
      '  PC 에서 입력칸이 <b>그대로 선다</b> — ' + pc.sidebar.w + 'px (접어 둔 채로 넓혀도)');
   is(pc.btn.disp === 'none', '  PC 에서는 접기 단추가 <b>아예 안 뜬다</b>');
   is(pc.close.disp === 'none', '  PC 에서는 닫기 단추도 <b>안 뜬다</b>');
+  is(!!pc.grid && pc.grid.disp !== 'none' && pc.tabs >= 12,
+     '  PC 에서 카테고리가 <b>그대로 선다</b> — ' + pc.tabs + '칸 (접어 둔 채로 넓혀도)');
+  is(!!pc.tbn && pc.tbn.disp === 'none', '  PC 에서는 카테고리 접기 단추가 <b>아예 안 뜬다</b>');
 
   is(errs.length === 0, '  화면이 터지지 않았다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await ctx.close(); await browser.close(); srv.close();
-  console.log('\n' + (bad ? '✗ 폰 계산기 — 고칠 자리 ' + bad + '곳' : '✓ 폰 계산기 — 열자마자 보고서가 서고, 입력칸은 한 번 누르면 돌아옵니다'));
+  console.log('\n' + (bad ? '✗ 폰 계산기 — 고칠 자리 ' + bad + '곳' : '✓ 폰 계산기 — 열자마자 보고서가 서고, 입력칸·카테고리는 한 번 누르면 돌아옵니다'));
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

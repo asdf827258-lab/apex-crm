@@ -64,18 +64,27 @@ async function readSide(page, ids) {
     }, ids);
   } catch (e) { return null; }
 }
+/* 상담자료에 적는다 — 칸을 손으로 치지 않고 <b>다리로</b> 넣는다.
+   덱마다 칸 생김새가 다르다. CRM 도 실제로는 이 말(apex:put)로만 건네고,
+   받아 오는 것도 이 말(apex:snap)이라, 여기로 넣어야 진짜 길을 재는 것이다.
+   2026-09-18 에 이 자리 덱이 바뀌었을 때(#407) 점검이 옛 덱의 칸 이름을
+   손으로 들고 있던 탓에 화면은 멀쩡한데 빨간불이 켜졌다.              */
 async function fillDeck(page, vals) {
-  const fr = await frameOf(page, 'fpDeckFrame');
-  if (!fr) return false;
-  await fr.evaluate(v => {
-    Object.keys(v).forEach(k => {
-      const e = document.getElementById(k); if (!e) return;
-      e.value = v[k];
-      try { e.dispatchEvent(new Event('input', { bubbles: true })); } catch (x) {}
-      try { e.dispatchEvent(new Event('change', { bubbles: true })); } catch (x) {}
-    });
-  }, vals);
-  return true;
+  return await page.evaluate(v => new Promise(res => {
+    if (typeof fpAsk !== 'function') { res(false); return; }
+    var to = setTimeout(() => res(false), 8000);
+    fpAsk('deck', 'apex:put', { f: v }, function (m) { clearTimeout(to); res(!!(m && m.ok)); });
+  }), vals);
+}
+/* 다리가 서기를 기다린다 — 덱이 「apex:ready」 를 보내면 앱이 켜 주는 불이다.
+   틀 안의 함수 이름으로 재면 덱을 갈아 끼울 때마다 점검이 낡는다.     */
+async function waitBridge(page, ms) {
+  const until = Date.now() + (ms || 45000);
+  while (Date.now() < until) {
+    if (await page.evaluate(() => !!(window.FPD && FPD.ready))) return true;
+    await sleep(400);
+  }
+  return false;
 }
 
 (async () => {
@@ -102,8 +111,8 @@ async function fillDeck(page, vals) {
 
   console.log('\n[2] 상담자료에 적고 계산기를 열면 — 단추를 안 눌러도');
   await page.evaluate(() => { go('fp_deck'); fpDeckOpen(); });
-  const deck = await waitInFrame(page, 'fpDeckFrame', () => typeof window.apexToFin === 'function');
-  is(!!deck, '상담자료가 다 떴다 (앱과 이어지는 다리까지)');
+  const deck = await waitBridge(page);
+  is(deck, '상담자료가 다 떴다 (앱과 이어지는 다리까지)');
   if (!deck) { await browser.close(); srv.close(); process.exit(1); }
 
   is(await fillDeck(page, { f_name: '홍길동', f_age: '47', f_job: '자영업', f_income: '620',

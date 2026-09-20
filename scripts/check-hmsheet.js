@@ -96,11 +96,26 @@ const look = (page) => page.evaluate(() => {
   console.log('\n[1] 사장님이 정하신 도구가 <b>갈래로 다 선다</b>');
   const A = await look(page);
   is(A.homeAlive, '  홈에 <b>「지금 이것」</b> 이 섰다');
-  const want = ['보장분석 상담자료', '재무설계 상담자료', '재무설계 실전화법서',
-                '윤시현의 두뇌', '니즈 시뮬레이터', '보장분석 전&후 만들기'];
+  /* ── 이름을 <b>여기 손으로 적지 않는다</b> ─────────────────────────
+     적어 뒀다가 실제로 낡았다. 다른 PR 이 메뉴에서 「재무설계 상담자료」
+     를 <b>「재무&보장 상담자료」</b> 로 바꾸자, 화면은 멀쩡한데 이 점검만
+     빨간불이 켜졌다 — <b>헛것을 잡는 점검</b>이 된 것이다 (8번).
+
+     그래서 <b>그 단계가 무엇을 쥐는지는 apex-stage.js</b> 에 묻고,
+     <b>그 이름이 무엇인지는 메뉴</b>(navItemOf)에 묻는다. 둘 다 앱이
+     실제로 쓰는 곳이라, 이름을 바꾸면 이 점검도 저절로 따라온다 (5번). */
+  const want = await page.evaluate(() => {
+    const ids = (window.APEX_STAGE && APEX_STAGE.map && APEX_STAGE.map['AP'])
+      ? (APEX_STAGE.map['AP'].tools || []) : [];
+    return ids.map(id => {
+      const it = (typeof navItemOf === 'function') ? navItemOf(id) : null;
+      return it ? (it.title || '') : '';
+    }).filter(Boolean);
+  });
+  is(want.length >= 5, '  AP 가 쥘 도구를 <b>표에서 읽었다</b> — ' + want.length + '가지 · ' + want.join(' / '));
   const miss = want.filter(t => !A.opts.some(o => o.indexOf(t) >= 0));
-  is(miss.length === 0,
-     '  AP 에서 <b>여섯 가지</b>가 다 보인다' + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
+  is(want.length > 0 && miss.length === 0,
+     '  AP 에서 <b>' + want.length + '가지</b>가 다 보인다' + (miss.length ? (' ← 빠진 것 ' + miss.join(' / ')) : ''));
 
   /* ── [2][3][4] 덮개 ── */
   console.log('\n[2] 도구를 누르면 <b>덮개</b>가 뜨고 <b>그 파일</b>을 문다');

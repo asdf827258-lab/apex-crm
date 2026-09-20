@@ -1073,6 +1073,28 @@ a { color: inherit; text-decoration: none; }
     font-family: inherit; font-size: var(--t6,13px); font-weight: 900; cursor: pointer;
     background: rgba(255,255,255,.12); color: #fff; }
 }
+/* 카테고리 열두 칸 접기 — <b>폰에서만.</b> 두 칸씩 여섯 줄이라 600px 가
+   넘어, 폰으로 열면 보고서는 한 글자도 안 보이고 카테고리만 가득 찼다.
+   사장님 말씀: 「위에 카테고리가 창을 다 잡고 있어서 … 메뉴 숨길 수 있도록 해」.
+
+   ★ 접힌 동안에도 <b>지금 어느 칸인지</b>는 단추에 적혀 있다 —
+     「📂 종합 대시보드 ▾」. 안 적으면 접힌 것이 아니라 길을 잃은 것이다.
+   ★ 하나 고르면 <b>저절로 다시 접힌다</b> — 고른 보고서가 바로 보이게.
+   ★ display:none 으로만 가린다 — 칸은 그대로 있어 switchTab 이 계속 찾는다.
+   ★ 인쇄에는 안 걸린다(@media screen) — 인쇄 CSS 가 이미 제 몫을 한다. */
+.tbm-btn { display: none; }
+@media screen and (max-width: 980px) {
+  body.tbm-shut .top-tab-grid { display: none; }
+  /* ⚠ 머리띠는 <b>밝은 바탕</b>(#F9FAFB)입니다. 옆의 「입력 닫기」 단추를
+     그대로 베껴 흰 글자에 반투명 흰 바탕을 줬더니 <b>글자가 안 보였습니다</b> —
+     그 단추는 <b>어두운 입력칸 안</b>에 서는 것이라 거기서만 맞습니다.
+     사진을 찍어 보고 알았습니다. 여기는 밝은 바탕에 맞춰 칠합니다. */
+  .tbm-btn { display: inline-flex; align-items: center; gap: 6px; flex: none;
+    min-height: 44px; padding: 10px 14px; border: 1px solid #C7D2FE;
+    border-radius: 999px; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; font-family: inherit; font-size: var(--t6,13px);
+    font-weight: 900; cursor: pointer; background: #EEF2FF; color: #1A56DB; }
+}
 
 /* ══════════════════════════════
    인쇄 / PDF
@@ -1613,6 +1635,8 @@ a { color: inherit; text-decoration: none; }
       </div>
       <!-- 폰에서만 서는 단추 — 머리띄가 sticky 라 어디를 봐도 여기 있다 -->
       <button type="button" class="sbm-btn" id="sbmBtn" onclick="sbmToggle()" aria-expanded="false">✏️ 고객정보 입력</button>
+      <!-- 폰에서만 — 카테고리 열두 칸이 첫 화면을 통째로 잡아먹던 자리 -->
+      <button type="button" class="tbm-btn" id="tbmBtn" onclick="tbmToggle()" aria-expanded="false">📂 카테고리</button>
     </div>
     <div class="top-tab-grid">
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
@@ -2107,6 +2131,63 @@ function sbmInit(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sbmInit);
 else sbmInit();
+
+/* ══ 카테고리 열두 칸 접기 (폰) ══════════════════════════════════
+   「지금 폰인가」 는 sbmPhone() 한 곳만 안다 — 여기서 다시 재지 않는다 (5번).
+   「지금 어느 칸인가」 도 다시 세지 않는다 — 켜진 칸(.report-tab.on)이
+   이미 답을 들고 있으니 그것을 읽는다. 두 곳이 답하면 어긋난다.      */
+var TBM_KEY='apex_fin_tbm_v1';
+/* 처음 여시는 분은 <b>접힌 채</b>로 — 그래야 보고서가 먼저 보인다 */
+function tbmShut(){
+  try{ var v=localStorage.getItem(TBM_KEY); return v===null?true:(v==='1'); }
+  catch(e){ return true; }
+}
+function tbmNow(){
+  var on=document.querySelector('.top-tab-grid .report-tab.on .rt-title');
+  return on?(on.textContent||'').trim():'';
+}
+function tbmPaint(){
+  var shut=sbmPhone()&&tbmShut();
+  document.body.classList.toggle('tbm-shut',shut);
+  var b=document.getElementById('tbmBtn');
+  if(b){
+    var now=tbmNow();
+    b.textContent=shut?('📂 '+(now||'카테고리')+' ▾'):'✕ 카테고리 닫기';
+    b.setAttribute('aria-expanded',shut?'false':'true');
+  }
+}
+function tbmSet(shut){
+  try{ localStorage.setItem(TBM_KEY,shut?'1':'0'); }catch(e){}
+  tbmPaint();
+}
+function tbmToggle(){ tbmSet(!tbmShut()); }
+function tbmInit(){
+  tbmPaint();
+  try{ window.addEventListener('resize',tbmPaint); }catch(e){}
+  /* 칸을 하나 고르면 <b>접고</b> 그 보고서를 보여 준다. 칸마다 onclick 이
+     이미 달려 있으니 여기서 건드리지 않고, 판 위에서 한 번만 듣는다. */
+  var g=document.querySelector('.top-tab-grid');
+  if(!g)return;
+  g.addEventListener('click',function(ev){
+    if(!ev.target||!ev.target.closest)return;
+    if(!ev.target.closest('.report-tab'))return;
+    if(!sbmPhone()){ tbmPaint(); return; }   /* PC 는 접지 않는다 */
+    setTimeout(function(){ tbmSet(true); },0);
+  });
+  /* ⚠ 칸을 바꾸는 길이 <b>누르는 것 하나가 아니다</b> — 상담 순서에서
+     건너뛰기도 하고, 인쇄 모듈이 제 손으로 켠 칸을 옮기기도 한다.
+     그런 길로 옮겨 가면 단추에는 <b>옛 칸 이름</b>이 남아, 교육자금을
+     보면서 「종합 대시보드」 라고 적혀 있게 된다 — 화면이 거짓말한다 (1번).
+     그래서 부르는 자리를 하나하나 찾아다니지 않고, <b>켜진 칸이 바뀌는 것</b>
+     자체를 본다. 답을 아는 곳은 여전히 한 곳이다 (5번).
+     서버를 부르는 것이 아니라 판 안의 일이라 되풀이해도 값이 안 든다 (7번). */
+  try{
+    if(window.MutationObserver)new MutationObserver(function(){ tbmPaint(); })
+      .observe(g,{subtree:true,attributes:true,attributeFilter:['class']});
+  }catch(e){}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',tbmInit);
+else tbmInit();
 
 /* 네이버증권 연동 */
 function jsEsc(v){ return String(v || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }

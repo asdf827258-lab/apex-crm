@@ -80,7 +80,16 @@ window.supabase={createClient:function(){
     return t;
   });
   ok(menu.indexOf('sangdam|보장분석 상담자료') >= 0, '상담자료 → 보장분석 상담자료');
-  ok(menu.indexOf('fp_deck|재무설계 상담자료') >= 0, '재무설계 상담자료 가 메뉴에 있다');
+  /* 이름 글자를 못 박지 않는다. 이름이 바뀌는 건 죄가 아니고 <b>한쪽만</b>
+     바뀌는 게 죄다 — 2026-09-18 에 메뉴가 「재무&보장 상담자료」로 바뀌었는데
+     db-crm 쪽 이름표(APEX_STAGE.tool)가 안 따라와, 같은 화면을 두 이름으로
+     불렀다 (5번). 그러니 「있는가」와 「같은가」만 본다. */
+  const fpDeckName = (menu.filter(x => x.indexOf('fp_deck|') === 0)[0] || '').split('|')[1] || '';
+  ok(!!fpDeckName, '재무·보장 상담자료가 메뉴에 있다 — ' + (fpDeckName || '없음'));
+  const fpDeckElse = await page.evaluate(() =>
+    (window.APEX_STAGE && APEX_STAGE.tool && APEX_STAGE.tool.fp_deck || {}).t || '');
+  ok(fpDeckElse === fpDeckName,
+    '단계 도구도 메뉴와 같은 이름으로 부른다 — ' + fpDeckName + ' / ' + (fpDeckElse || '없음'));
   ok(menu.indexOf('fp_talk|재무설계 실전화법서') >= 0, '재무설계 실전화법서 가 메뉴에 있다');
   ok(menu.filter(x => /^sangdam\|/.test(x)).length === 1, '보장분석 상담자료는 하나만 있다');
 
@@ -168,21 +177,33 @@ window.supabase={createClient:function(){
   ok(dOpen.mode, '상담자료가 전체화면으로 열린다');
   ok(dOpen.ready, '상담자료가 앱에 연결됐다고 알려 온다');
 
-  const df = page.frames().find(f => decodeURIComponent(f.url()).indexOf('재무설계/상담자료') >= 0);
-  ok(!!df, '상담자료 안으로 들어갈 수 있다');
+  /* 어느 덱이 물려 있는지는 <b>앱만 안다.</b> 여기에 길을 또 적지 않는다 (5번).
+     2026-09-18 에 이 자리가 재무설계/상담자료.html 에서 상담자료/KB보장분석.html
+     으로 바뀌었는데(#407), 점검이 길을 손으로 들고 있던 탓에 옛 문서를 찾다가
+     빨간불이 됐다. 화면은 멀쩡했다 — 점검이 낡은 것이었다. */
+  const deckUrl = await page.evaluate(() => FP_DECK_URL);
+  const df = page.frames().find(f => decodeURIComponent(f.url()).indexOf(deckUrl) >= 0);
+  ok(!!df, '상담자료 안으로 들어갈 수 있다 — ' + deckUrl);
   if (!df) { await browser.close(); srv.close(); console.log('실패'); process.exit(1); }
 
-  /* 상담을 실제로 입력한다 */
-  await df.evaluate(() => {
-    var set = function (id, v) { var e = document.getElementById(id); if (e) { e.value = v;
-      try { e.dispatchEvent(new Event('input', { bubbles: true })); } catch (x) {} } };
-    set('f_name', '박정우'); set('f_age', '47'); set('f_gender', 'F'); set('f_job', '자영업');
-    set('f_income', '620'); set('f_sincome', '180'); set('f_etc', '40');
-    set('f_ret', '62'); set('f_retspend', '410'); set('f_np', '155');
-    set('f_home', '62000'); set('f_debt', '18000'); set('f_ins', '46');
-    set('c_cancer', '5000'); set('c_brain', '2000'); set('c_death', '15000');
-    if (typeof addKid === 'function') { document.getElementById('kids').innerHTML = ''; addKid('박서준', 16); addKid('박서연', 12); }
-  });
+  /* 상담을 실제로 입력한다 — 칸을 손으로 치지 않고 <b>다리로</b> 넣는다.
+     덱마다 칸 생김새가 다르고, CRM 도 실제로는 이 말(apex:put)로만 말을 건다.
+     그래서 덱을 갈아 끼워도 여기는 안 깨지고, 다리가 끊기면 바로 걸린다. */
+  const FACTS = { f_name: '홍길동', f_age: '47', f_gender: 'F', f_job: '자영업',
+    f_income: '620', f_sincome: '180', f_etc: '40', f_living: '320', f_house: '95',
+    f_edu: '70', f_ins: '46', f_ret: '62', f_retspend: '410', f_np: '155', f_pp: '35',
+    f_home: '62000', f_debt: '18000', f_dc: '4200', f_save: '80',
+    c_cancer: '5000', c_brain: '2000', c_heart: '2000', c_care: '1000', c_death: '15000' };
+  const KIDS = [{ 'k-name': '자녀1', 'k-age': '16' }, { 'k-name': '자녀2', 'k-age': '12' }];
+  const deckPut = d => page.evaluate(v => new Promise(res => {
+    var to = setTimeout(() => res(false), 8000);
+    fpAsk('deck', 'apex:put', v, function (m) { clearTimeout(to); res(!!(m && m.ok)); });
+  }), d);
+  const deckSnap = () => page.evaluate(() => new Promise(res => {
+    var to = setTimeout(() => res(null), 8000);
+    fpAsk('deck', 'apex:snap', null, function (m) { clearTimeout(to); res((m && m.data) || null); });
+  }));
+  ok(await deckPut({ f: FACTS, kids: KIDS }), '상담자료에 팩트파인딩을 적었다');
   await page.waitForTimeout(400);
 
   /* 저장 — 고객 고르기까지 */
@@ -206,14 +227,14 @@ window.supabase={createClient:function(){
   });
   ok(saved.n === 1 && saved.kind === 'fp_deck', '고객 파일로 한 건 저장됐다');
   ok(saved.cid === 'cl1', '고른 고객에게 붙었다');
-  ok(saved.name === '박정우' && saved.age === '47', '입력한 이름·나이가 그대로 담겼다');
+  ok(saved.name === '홍길동' && saved.age === '47', '입력한 이름·나이가 그대로 담겼다');
   ok(saved.income === '620' && saved.cancer === '5000', '소득·진단금까지 담겼다');
   ok(saved.kids === 2, '자녀 ' + saved.kids + '명도 담겼다');
   /* 설계사 칸(a_name·a_org…)을 없앤 뒤로 아홉 개가 줄었다. 줄어든 게 맞다 —
      설계사 소개는 「내 소개」 한 곳에서 관리하고, 고객 파일에는 안 섞인다. */
   ok(saved.keys >= 35, '고객 입력칸 ' + saved.keys + '개가 통째로 담겼다');
   ok(!saved.hasAdv, '설계사 칸은 고객 파일에 안 섞인다');
-  ok(/박정우/.test(saved.title || ''), '제목에 고객 이름이 들어간다 — ' + saved.title);
+  ok(/홍길동/.test(saved.title || ''), '제목에 고객 이름이 들어간다 — ' + saved.title);
 
   /* 목록에 뜨는지 */
   const listed = await page.evaluate(() => ({
@@ -221,24 +242,20 @@ window.supabase={createClient:function(){
     t: (document.getElementById('fpRepPane') || {}).textContent || '' }));
   ok(listed.n === 1 && /김○○/.test(listed.t), '저장한 상담이 목록에 뜬다');
 
-  /* 창을 비우고 → 다시 열기로 되돌아오는지 */
-  await df.evaluate(() => {
-    ['f_name', 'f_age', 'f_income', 'c_cancer'].forEach(function (id) {
-      var e = document.getElementById(id); if (e) e.value = '';
-    });
-    document.getElementById('kids').innerHTML = '';
-  });
+  /* 창에 <b>딴 값을 덮어 놓고</b> → 다시 열기로 되돌아오는지.
+     비우고 재는 것보다 세다 — 되돌리기가 「빈칸만 채우는」 시늉이면 여기서 걸린다. */
+  await deckPut({ f: { f_name: '덮은값', f_age: '1', f_income: '1', c_cancer: '1' },
+                  kids: [{ 'k-name': '자녀1', 'k-age': '1' }] });
   await page.evaluate(() => fpRepOpen(0));
-  await page.waitForTimeout(1600);
-  const back = await df.evaluate(() => {
-    var g = function (id) { var e = document.getElementById(id); return e ? e.value : null; };
-    return { name: g('f_name'), age: g('f_age'), income: g('f_income'), cancer: g('c_cancer'),
-      kids: document.querySelectorAll('#kids .kid-row').length,
-      kid1: (document.querySelector('#kids .k-name') || {}).value || '' };
-  });
-  ok(back.name === '박정우' && back.age === '47', '다시 열면 이름·나이가 되돌아온다');
-  ok(back.income === '620' && back.cancer === '5000', '소득·진단금도 되돌아온다');
-  ok(back.kids === 2 && back.kid1 === '박서준', '자녀 줄도 그대로 살아난다');
+  await page.waitForTimeout(1800);
+  const back = (await deckSnap()) || {};
+  const bf = back.f || {};
+  ok(bf.f_name === '홍길동' && bf.f_age === '47', '다시 열면 이름·나이가 되돌아온다');
+  ok(bf.f_income === '620' && bf.c_cancer === '5000', '소득·진단금도 되돌아온다');
+  /* 자녀는 <b>나이</b>만 되살아난다 — 지금 덱은 자녀 이름을 받는 칸이 없다.
+     없는 이름을 지어 붙여 되돌리지 않는 것이 맞다 (1번). */
+  const kages = ((back.kids) || []).map(k => k['k-age']).join(',');
+  ok(kages === '16,12', '자녀 나이도 그대로 살아난다 — ' + kages);
   if (SHOT) await page.screenshot({ path: SHOT + '/fp-deck-open.png' });
   await page.evaluate(() => exitFpDeck());
   await page.waitForTimeout(200);
@@ -249,7 +266,7 @@ window.supabase={createClient:function(){
     var o = fpToFin(d);
     return { o: o, n: Object.keys(o).length };
   });
-  ok(mapped.o.s_name === '박정우', '계산기 고객명으로 넘어간다');
+  ok(mapped.o.s_name === '홍길동', '계산기 고객명으로 넘어간다');
   ok(mapped.o.s_age === '47' && mapped.o.s_rage === '62', '나이·은퇴나이가 넘어간다');
   ok(mapped.o.s_gender === '여성', '성별이 계산기 표기로 바뀐다 (F → 여성)');
   ok(mapped.o.s_gross === '7440', '월소득 620 → 연 총급여 7440 으로 환산된다');
@@ -283,7 +300,7 @@ window.supabase={createClient:function(){
       return { name: g('s_name'), age: g('s_age'), gross: g('s_gross'), gender: g('s_gender') };
     } catch (e) { return { err: e.message }; }
   });
-  ok(finVals.name === '박정우' && finVals.gross === '7440',
+  ok(finVals.name === '홍길동' && finVals.gross === '7440',
     '계산기 칸에 실제로 들어갔다 (' + finVals.name + ' / 연 ' + finVals.gross + '만원)');
   ok(finVals.gender === '여성', '성별 칸도 맞게 들어갔다');
   if (SHOT) await page.screenshot({ path: SHOT + '/fp-calc.png' });

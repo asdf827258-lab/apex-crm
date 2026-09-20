@@ -66,8 +66,19 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
   });
 
   console.log('\n[1] 달력에 네 가지가 날짜에 찍힌다');
-  is(seed.kinds.join(',') === 'bd,help,next,touch',
-     '  연락 · 할 일 · 생일 · 도와줄 것 — ' + seed.kinds.join(' · '));
+  /* ── 갈래를 <b>글자 그대로</b> 견주지 않는다 ─────────────────────
+     예전에는 'bd,help,next,touch' 와 똑같아야 통과였다. 그런데
+     2026-09-20 에 <b>매일 하는 일(rt)</b> 이 달력에 들어왔다 — 사장님이
+     「월간 캘린더에 이미 세팅이 다 되도록」 하라 하신 것이다. 갈래가 하나
+     늘었다고 빨간불이 켜지면, <b>잘 고쳐 놓고도</b> 자가 운다 (8번).
+
+     여기서 지키려던 것은 「이 넷이 날짜에 찍히나」 다. 그것만 본다.
+     대신 <b>넷 중 하나라도 빠지면</b> 그대로 빨간불이다.             */
+  const WANT = ['bd', 'help', 'next', 'touch'];
+  const missK = WANT.filter(k => seed.kinds.indexOf(k) < 0);
+  is(missK.length === 0,
+     '  연락 · 할 일 · 생일 · 도와줄 것 — ' + seed.kinds.join(' · ') +
+     (missK.length ? (' ← 빠진 것 ' + missK.join(',')) : ''));
   is(seed.touchToday >= 1, '  한 번도 연락한 적 없는 분은 오늘 자리에 찍힌다');
   is(seed.next === seed.ahead3, '  「다음 할 일」 은 마감 날에 찍힌다');
   is(seed.help === seed.ahead2, '  「도와줄 것」 도 마감 날에 찍힌다');
@@ -80,7 +91,12 @@ const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) ba
     const keep = CM.meta.c3;
     CM.meta.c3 = { fp: { f_ins: 20, c_cancer: 3000, c_death: 5000 }, touch: [{ at: day(70), how: '전화' }] };
     const it = mcalItems(), td = (it[mcalToday()] || []);
-    const past = Object.keys(it).filter(d => d < mcalToday()).length;
+    /* <b>매일 하는 일(rt)은 빼고</b> 센다. 그것은 「지난 날에 남은 일」 이
+       아니라 <b>그날 무엇을 했는지 적어 둔 기록</b>이라, 지난 칸에도
+       그대로 서 있는 것이 맞다. 여기서 보려는 것은 「끝내지 못한 고객 일이
+       지난 날에 처박혀 있지 않나」 다 — 그 뜻은 그대로 지킨다.        */
+    const past = Object.keys(it).filter(d =>
+      d < mcalToday() && it[d].some(x => x.k !== 'rt')).length;
     const plan = ccPlanList(OSC.list).length;
     const html = mcalDayHtml();
     CM.meta.c3 = keep;

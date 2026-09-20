@@ -13878,6 +13878,126 @@ function mcalBdDate(md){
    오늘 것만이 아니라 <b>앞으로</b>도 찍는다.
      연락 예정 = 마지막 연락 + 그 사람 주기 (한 번도 없으면 오늘)
      다음 할 일 · 생일 · 도와줄 것 마감                              */
+/* ══ <b>매일 하는 일이 달력에 미리 세팅돼 있다</b> (mrt*) ═══════════
+   사장님 말씀 — 「매일 하는 일들이 쌓이고 <b>월간 캘린더에 이미 세팅이 다
+   되도록</b> 해줘 — 거기서 하면, <b>한 것들은 체크가 되도록</b>」
+
+   ── 표를 새로 만들지 않았다 ────────────────────────────────────────
+   매일 하는 일은 <b>실행 체크판</b>(CK_ITEMS.day)에 이미 열한 줄이 있다.
+   여기서 또 적으면 한 줄을 고칠 때 한쪽만 고쳐져, 달력과 체크판이 <b>다른
+   일</b>을 말하게 된다 (CLAUDE.md 5번). 그래서 <b>그 표를 그대로</b> 쓴다.
+
+   ── 담는 자리도 같다 ───────────────────────────────────────────────
+   체크판이 쓰는 그 열쇠(apex_ck_day_<날짜>)에 그대로 담는다. 그래서
+   <b>달력에서 체크한 것이 체크판에도 그대로</b> 켜져 있고, 그 반대도 같다.
+   서버(daily_checks)로도 같은 모양으로 올라간다 — 옮겨 적는 자리가 없다.
+
+   ★ <b>지난 날·앞날은 체크하지 않는다</b> (1번). 내일 할 일을 오늘 체크해
+     두면 그것이 「했다」 가 되어 버린다. 지난 날은 남아 있는 기록을
+     <b>보여만</b> 준다. 체크는 오늘 자리에서만 켜진다.
+   ★ 달력 칸에는 <b>한 줄</b>로 접어 세운다. 열한 줄을 서른 날에 펴면
+     달력이 통째로 글자밭이 된다.                                        */
+function mrtItems(){
+  try{ return (typeof CK_ITEMS!=='undefined'&&CK_ITEMS.day)?CK_ITEMS.day:[]; }catch(e){ return []; }
+}
+/* 체크판과 <b>같은 열쇠</b>다 — 여기서 이름을 새로 지으면 두 곳이 갈린다 */
+function mrtKey(ds){ return 'apex_ck_day_'+ds; }
+function mrtLoad(ds){
+  try{ var v=JSON.parse(localStorage.getItem(mrtKey(ds))||'{}'); return (v&&typeof v==='object')?v:{}; }
+  catch(e){ return {}; }
+}
+function mrtDone(ds){
+  var m=mrtLoad(ds),L=mrtItems(),n=0,i;
+  for(i=0;i<L.length;i++)if(m[L[i][0]])n++;
+  return n;
+}
+/* 오늘만 켤 수 있다 — 왜 그런지는 위에 적어 두었다 */
+function mrtToday(ds){ return ds===mcalToday(); }
+function mrtToggle(ds,id){
+  if(!mrtToday(ds)){
+    if(typeof toast==='function')toast('오늘 것만 여기서 체크합니다 — 안 한 날을 한 것으로 적을 수 없습니다.',5000);
+    return;
+  }
+  /* <b>체크판이 쓰는 그 함수를 그대로</b> 부른다 (5번). 여기서 따로 저장하면
+     서버로 올리는 자리(ckPush)를 빠뜨려, 달력에서 누른 것만 안 올라간다. */
+  if(typeof ckToggle==='function'){ ckToggle('day',id); }
+  else { var m=mrtLoad(ds); if(m[id])delete m[id]; else m[id]=1;
+         try{ localStorage.setItem(mrtKey(ds),JSON.stringify(m)); }catch(e){} }
+  try{ mcalPaint(); }catch(e2){}
+}
+function mrtAllDone(ds){ var L=mrtItems(); return L.length>0&&mrtDone(ds)>=L.length; }
+/* ── <b>접어 둔다</b> ──────────────────────────────────────────────
+   열한 줄을 늘 펴 두니 고객 365일과 내 캘린더가 <b>0.9 화면씩</b> 길어졌다
+   (2.8 → 3.7 · 2.4 → 3.3). check-toss 가 그 자리를 쟀다.
+   접어 두되 <b>몇 개 했는지는 접힌 줄에 그대로</b> 남긴다 — 숫자가 보이면
+   「없어진 것」 으로 안 읽힌다. 메뉴 묶음을 접을 때와 같은 규칙이다. */
+var MRT={open:''};
+function mrtOpenIs(ds){ return MRT.open===ds; }
+function mrtOpenSet(ds){ MRT.open=(MRT.open===ds)?'':ds; try{ mcalPaint(); }catch(e){} }
+/* 고른 날의 열한 줄 — 달력 아래에 편다 */
+function mrtPanelHtml(ds){
+  var L=mrtItems();
+  if(!L.length)return '';
+  var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),i,x,on,h;
+  var ahead=ds>mcalToday();
+  mrtCss();
+  /* <b>지난 날과 앞날을 갈라 적는다.</b> 앞날에 「지난 기록입니다」 라고
+     적으면 화면이 거짓말을 한다 (1번). 앞날은 아직 아무 일도 없었다. */
+  var op=mrtOpenIs(ds);
+  h='<div class="mrt'+(op?' on':'')+'">'+
+    '<button type="button" class="mrt-hd" aria-expanded="'+(op?'true':'false')+'" '+
+      'onclick="mrtOpenSet(\''+ds+'\')">'+
+    '<span class="ar">▾</span>📋 <b>매일 하는 일</b> '+
+    (ahead?'<span class="mrt-n">하루 '+L.length+'가지</span>'
+          :('<span class="mrt-n'+(n>=L.length?' all':'')+'">'+n+' / '+L.length+
+            (n>=L.length?' ✓':'')+'</span>'))+
+    (today?''
+     :('<span class="mrt-ro">'+(ahead
+        ? '아직 오지 않은 날입니다 — 체크는 <b>그날</b> 자리에서 켜집니다'
+        : '지난 기록입니다 — 체크는 <b>오늘</b> 자리에서만 켜집니다')+'</span>'))+
+    '</button>';
+  if(!op)return h+'</div>';
+  for(i=0;i<L.length;i++){
+    x=L[i];on=!ahead&&!!m[x[0]];
+    h+='<button type="button" class="mrt-it'+(on?' on':'')+(today?'':' ro')+'" '+
+      (today?('onclick="mrtToggle(\''+ds+'\',\''+x[0]+'\')"'):'disabled')+'>'+
+      '<span class="bx">'+(on?'✓':'')+'</span>'+
+      '<span class="m"><b>'+osEsc(x[1])+'</b>'+
+        (x[2]?('<span>'+osEsc(x[2])+'</span>'):'')+'</span></button>';
+  }
+  return h+'<div class="mrt-ft">체크판과 <b>같은 자리</b>에 담깁니다 — 여기서 켠 것이 실행 체크판에도 켜져 있습니다.</div></div>';
+}
+function mrtCss(){
+  if(document.getElementById('mrtCss'))return;
+  var st=document.createElement('style');st.id='mrtCss';
+  st.textContent=
+   '.mrt{margin-top:12px;border:1px solid var(--ink-7);border-radius:var(--r);padding:11px 12px;background:#FAFBFC}'+
+   '.mrt-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-height:44px;'+
+     'border:0;background:transparent;font-family:inherit;text-align:left;cursor:pointer;'+
+     'font-size:var(--t6);font-weight:800;color:var(--ink-3)}'+
+   '.mrt.on .mrt-hd{margin-bottom:8px}'+
+   '.mrt-hd .ar{flex:none;font-size:var(--t6);line-height:1;opacity:.7;'+
+     'transform:rotate(-90deg);transition:transform .16s var(--ease)}'+
+   '.mrt.on .mrt-hd .ar{transform:none}'+
+   '.mrt-n{font-weight:900;padding:2px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
+   '.mrt-n.all{background:#ECFDF5;color:#047857}'+
+   '.mrt-ro{font-weight:700;color:var(--ink-5)}'+
+   '.mrt-it{display:flex;align-items:flex-start;gap:9px;width:100%;min-height:44px;'+
+     'padding:8px 9px;margin-bottom:4px;border:1px solid var(--ink-8);border-radius:var(--r-xs);'+
+     'background:#fff;font-family:inherit;text-align:left;cursor:pointer}'+
+   '.mrt-it.ro{cursor:default;opacity:.82}'+
+   '.mrt-it.on{border-color:#A7F3D0;background:#F0FDF7}'+
+   '.mrt-it .bx{flex:none;width:22px;height:22px;margin-top:1px;border:1px solid var(--ink-7);'+
+     'border-radius:7px;background:#fff;color:#047857;font-weight:900;font-size:var(--t6);'+
+     'display:flex;align-items:center;justify-content:center}'+
+   '.mrt-it.on .bx{border-color:#047857;background:#D1FAE5}'+
+   '.mrt-it .m{min-width:0;line-height:1.45}'+
+   '.mrt-it .m b{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-2)}'+
+   '.mrt-it.on .m b{color:#065F46}'+
+   '.mrt-it .m span{display:block;font-size:var(--t6);color:var(--ink-5)}'+
+   '.mrt-ft{font-size:var(--t6);color:var(--ink-5);line-height:1.6;margin-top:7px}';
+  document.head.appendChild(st);
+}
 function mcalItems(){
   /* 날이 이미 지난 것은 <b>오늘</b> 자리로 끌어온다. 지난 날에 그대로 두면
      달력에서는 안 보이는데 「오늘의 터치」 에는 서 있어서 두 화면이 어긋난다.
@@ -13937,6 +14057,35 @@ function mcalItems(){
   for(i=0;i<MY.length;i++){
     var y=MY[i];if(!y||!y.d)continue;
     (out[y.d]=out[y.d]||[]).push({k:'my',my:y.id,t:y.t,s:y.hm||''});
+  }
+  /* ── <b>매일 하는 일은 이미 세팅돼 있다</b> (사장님 말씀 ①) ────────
+     보고 계신 달의 <b>날마다</b> 한 줄로 찍는다. 열한 줄을 서른 날에
+     펴면 달력이 글자밭이 되므로 여기서는 「n / 11」 한 줄로 접고,
+     그 날을 누르면 아래에 펴진다(mrtPanelHtml).
+
+     ★ <b>who 를 달아 둔다</b> — 안 달면 담당자를 고르는 순간 mcalMine 이
+       걸러 내 루틴이 사라진다. 이건 <b>내</b> 루틴이라 팀원 화면을 볼
+       때는 안 서는 것이 맞다.
+     ★ <b>앞날은 「0 / 11」 이 아니라 그냥 세워 둔다</b> — 아직 안 한 것을
+       0 으로 적으면 「못 했다」 로 읽힌다 (1번).                         */
+  var RT=(typeof mrtItems==='function')?mrtItems():[];
+  if(RT.length){
+    var meR='';
+    try{ meR=(typeof arMyId==='function')?(arMyId()||''):''; }catch(eR){ meR=''; }
+    var ymR=(typeof mcalYm==='function')?mcalYm():TD.slice(0,7);
+    var lastR=new Date(Date.UTC(+ymR.slice(0,4),+ymR.slice(5,7),0)).getUTCDate(),dR,dsR;
+    var putR=function(dsx){
+      var done=mrtDone(dsx),past=(dsx<=TD);
+      (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
+        rt:dsx,n:done,tot:RT.length,
+        s:past?(done+' / '+RT.length+(done>=RT.length?' · 다 했습니다':'')):('하루 '+RT.length+'가지')});
+    };
+    for(dR=1;dR<=lastR;dR++){
+      dsR=ymR+'-'+('0'+dR).slice(-2);
+      putR(dsR);
+    }
+    /* 보고 있는 달이 이번 달이 아니어도 <b>오늘</b>은 늘 선다 — 홈은 오늘만 읽는다 */
+    if(TD.slice(0,7)!==ymR)putR(TD);
   }
   return out;
 }
@@ -14097,7 +14246,8 @@ function mypWhereTxt(){
 var MCAL_KIND={my:{e:'✏️',t:'내 일정',c:'#475569'},
              appt:{e:'📌',t:'약속',c:'#DC2626'},
              touch:{e:'☎️',t:'연락',c:'#1B64DA'},next:{e:'▶',t:'할 일',c:'#0F766E'},
-             bd:{e:'🎂',t:'생일',c:'#B45309'},help:{e:'🤝',t:'도와줄 것',c:'#7C3AED'}};
+             bd:{e:'🎂',t:'생일',c:'#B45309'},help:{e:'🤝',t:'도와줄 것',c:'#7C3AED'},
+             rt:{e:'📋',t:'매일 하는 일',c:'#0369A1'}};
 
 /* ── ics ── 폰 기본 달력이 읽는 글. 여기서 틀리면 달력이 통째로 안 받는다.
    · 줄은 CRLF · 75바이트를 넘으면 접는다(다음 줄 앞에 빈칸 하나)
@@ -14235,6 +14385,27 @@ function mcalDownload(kind){
 }
 
 /* ── 화면 ── */
+/* <b>잡힌 건수</b>에는 매일 하는 일을 안 넣는다 — 안 그러면 아무것도
+   없는 날도 「1건」 으로 떠서, 아래를 열면 「잡힌 것이 없습니다」 가 뜬다.
+   세는 곳은 여기 하나다 (5번). 점(dot)에는 그대로 찍는다 — 「이 날에도
+   할 일이 세팅돼 있다」 를 보여 주는 것이 사장님이 시키신 것이다. */
+function mcalCnt(list){
+  var n=0,i;
+  for(i=0;i<(list||[]).length;i++)if(list[i].k!=='rt')n++;
+  return n;
+}
+/* 이 날 매일 하는 일을 <b>다 했나</b> — 칸에 ✓ 를 찍을지 정한다 */
+function mcalRtDone(list){
+  var i,x;
+  for(i=0;i<(list||[]).length;i++){
+    x=list[i];
+    if(x.k!=='rt')continue;
+    /* 앞날에는 ✓ 를 안 찍는다 — 아직 안 한 것을 했다고 적는 것이다 (1번) */
+    if(x.rt&&x.rt>mcalToday())return false;
+    return (x.tot>0&&x.n>=x.tot);
+  }
+  return false;
+}
 function mcalDot(list){
   var seen={},h='',i,k;
   for(i=0;i<list.length;i++){k=list[i].k;if(seen[k])continue;seen[k]=1;
@@ -14250,12 +14421,39 @@ function mcalDot(list){
    ★ <b>담당자가 없는 줄</b>(내가 넣은 일정 · 도와줄 것)은 사람을 고르시면
      빠집니다. 그 줄에는 「누구 것」이 없어서, 남겨 두면 고른 사람 것인
      줄 알게 됩니다 (1번).                                              */
+/* 「누구 것인가」 는 <b>hwhoPick() 한 곳</b>에 묻는다 (5번).
+   매니저는 hwhoId() 가 답하고, 설계사에게는 고르개가 없어 예전처럼
+   CM.pick(=본인)이 그대로 답한다 — 설계사 화면은 하나도 안 바뀐다. */
+function hwhoPick(){
+  var v='';
+  try{ v=(typeof hwhoId==='function')?hwhoId():''; }catch(e){ v=''; }
+  if(v===HWHO_ALL)return '';        /* 팀 전체를 고르셨으면 안 거른다 */
+  if(v)return v;
+  /* <b>설계사는 언제나 제 것이다</b> (3번). 고를 것이 없으니 고른 값도 없다 —
+     그때 「안 골랐으니 다 보여 준다」 로 읽으면 달력과 계약 마디에 <b>남의
+     고객이 섞인다.</b> 서버가 이미 막고 있지만, 그 한 줄이 느슨해지는 날
+     여기로 샌다. 실제로 check-askall 이 그 자리를 잡았다 (8번). */
+  try{
+    if(typeof hwhoCan==='function'&&!hwhoCan()){
+      var me=(typeof arMyId==='function')?(arMyId()||''):'';
+      if(me)return me;
+    }
+  }catch(e1){}
+  try{ return (typeof CM!=='undefined'&&CM.pick)||''; }catch(e2){ return ''; }
+}
 function mcalMine(list){
-  var p='';
-  try{ p=(typeof CM!=='undefined'&&CM.pick)||''; }catch(e){ p=''; }
+  var p=hwhoPick();
   if(!p)return list||[];
-  var out=[],i,L=list||[];
-  for(i=0;i<L.length;i++)if((L[i].who||'')===p)out.push(L[i]);
+  var out=[],i,L=list||[],w;
+  for(i=0;i<L.length;i++){
+    w=L[i].who||'';
+    /* <b>임자가 적혀 있고 그것이 내가 아닐 때만</b> 뺀다.
+       임자가 없는 줄 — 내 일정(my) · 도와줄 것(help) — 은 고객이 아니라
+       <b>내 것</b>이다. 그것까지 빼면 담당자를 고르는 순간 내 일정이
+       달력에서 사라진다. 실제로 그랬고, check-homeday 가 12자리를 걸어
+       잡았다 (8번). 「모르면 안 거른다」 는 1번 규칙이기도 하다. */
+    if(!w||w===p)out.push(L[i]);
+  }
   return out;
 }
 /* 하루치를 꺼내는 자리도 하나로 — 꺼낼 때마다 거르는 것을 잊지 않게 */
@@ -14272,10 +14470,12 @@ function mcalGridHtml(){
   for(i=1;i<=last;i++){
     ds=ym+'-'+('0'+i).slice(-2);
     n=mcalDay(items,ds);
+    var cn=mcalCnt(n),rd=mcalRtDone(n);
     h+='<button type="button" class="mcal-d'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
-       (n.length?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
+       (cn?' has':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="n">'+i+'</span>'+
-       (n.length?('<span class="dots">'+mcalDot(n)+'</span><span class="cnt">'+n.length+'</span>'):'')+
+       (n.length?('<span class="dots">'+mcalDot(n)+'</span>'):'')+
+       (cn?('<span class="cnt">'+cn+'</span>'):(rd?'<span class="cnt ok">✓</span>':''))+
        '</button>';
   }
   h+='</div>';
@@ -14291,10 +14491,11 @@ function mcalWeekHtml(){
   h+='<div class="mcal-wgrid">';
   for(i=0;i<7;i++){
     ds=mcalShift(st,i);n=mcalDay(items,ds);
+    var wc=mcalCnt(n);
     h+='<button type="button" class="mcal-wd'+(ds===today?' now':'')+(ds===MCAL.sel?' sel':'')+
        (i>=5?' we':'')+'" onclick="mcalPick(\''+ds+'\')">'+
        '<span class="wh"><b>'+nm[i]+'</b><i>'+(+ds.slice(8,10))+'</i>'+
-         (n.length?('<em>'+n.length+'</em>'):'')+'</span>'+
+         (wc?('<em>'+wc+'</em>'):'')+'</span>'+
        '<span class="wb">';
     if(!n.length)h+='<span class="wn">—</span>';
     for(j=0;j<n.length&&j<4;j++){
@@ -14376,8 +14577,16 @@ function mcalDayHtml(){
   /* 「09월 10일」 로 찍히던 자리 — 앞의 0 을 떼어 사람이 읽는 대로 적는다 */
   var ttl=(ds===mcalToday()?'오늘':((+ds.slice(5,7))+'월 '+(+ds.slice(8,10))+'일'));
   var body;
+  /* 매일 하는 일은 <b>줄로 세우지 않고</b> 아래에 편다 — 줄로도 세우면
+     같은 것이 두 번 서서, 하나를 체크해도 다른 쪽이 안 변한다 (5번) */
+  var rtOn=false,itemsX=[];
+  for(var ri=0;ri<items.length;ri++){
+    if(items[ri].k==='rt'){ rtOn=true; continue; }
+    itemsX.push(items[ri]);
+  }
+  items=itemsX;
   if(!items.length)
-    body='<div class="mcal-none">이 날은 잡힌 것이 없습니다.</div>';
+    body=rtOn?'':'<div class="mcal-none">이 날은 잡힌 것이 없습니다.</div>';
   else body=items.map(function(x){
       var K=MCAL_KIND[x.k]||{e:'•',t:'',c:'#8B95A1'};
       var go=x.k==='help'?'airep':'clients';
@@ -14404,6 +14613,8 @@ function mcalDayHtml(){
           (x.late?('<span class="lt">'+osEsc(x.late.slice(5).replace('-','/'))+' 지났음</span>'):'')+'</span>'+
         whoTxt+(x.vip?'<span class="vip">👑</span>':'')+'</button>';
     }).join('');
+  /* 이 날의 <b>매일 하는 일</b> — 한 줄씩 펴서 그 자리에서 체크한다 */
+  if(rtOn&&typeof mrtPanelHtml==='function')body+=mrtPanelHtml(ds);
   /* 담당자 고르개는 <b>고객 365일과 같은 것</b>을 씁니다(CM.pick) — 여기서
      고르시면 그쪽도 같이 걸러집니다. 두 벌로 만들면 어느 쪽이 맞는지
      알 수 없습니다 (5번). 혼자 맡고 계시면 아예 안 뜹니다.
@@ -14419,8 +14630,12 @@ function mcalDayHtml(){
          「전체 109 · 윤시현 2」 라고 적어 놓고, 밑에는 <b>여덟 줄</b>이
          떴습니다 — 숫자와 목록이 서로 다른 것을 세고 있었습니다.
          담당자가 없는 줄(내 일정 · 도와줄 것)은 고를 것이 없으니 뺍니다. */
+      /* <b>매일 하는 일은 안 센다</b> — 고를 수 있는 것이 아니라 날마다
+         서는 내 몫이다. 세면 「전체 7 / 윤시현 5」 처럼 한 줄씩 부풀어,
+         숫자와 밑의 목록이 또 어긋난다 (5번). */
       var wl=[],wi;
-      for(wi=0;wi<raw.length;wi++)if(raw[wi].who)wl.push({advisor_id:raw[wi].who});
+      for(wi=0;wi<raw.length;wi++)
+        if(raw[wi].who&&raw[wi].k!=='rt')wl.push({advisor_id:raw[wi].who});
       picks=cmWhoChipsHtml(wl)||'';
     }
   }catch(e){picks='';}
@@ -14468,7 +14683,7 @@ function mcalCardHtml(opt){
   /* 담당자 고르개를 이 화면에서 켤지 — <b>마지막으로 세운 카드</b>가 정한다.
      다시 그릴 때(mcalPaint)도 그대로 따라간다 */
   MCAL.picks=!!o.picks;
-  items=mcalItems(); tn=mcalDay(items,today).length;
+  items=mcalItems(); tn=mcalCnt(mcalDay(items,today));
   var apps=(o.apps&&typeof PWA_APPS!=='undefined')?PWA_APPS:[];
   return '<div class="card"><div class="card-hd"><div class="card-title">'+
       '<span class="ci">📅</span>'+osEsc(o.title||'내 캘린더')+'</div>'+
@@ -15402,8 +15617,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-20 05:50';
-var APP_BUILD_NOTE="<b>메뉴를 접을 수 있게 했습니다 — 메인 메뉴와 폰 계산기 둘 다.</b> 「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서 어지러워」 · 「재무설계계산기도 핸드폰으로 키니까, 안보인다」 하신 자리입니다. 먼저 <b>재 봤습니다</b>(390×844) — 서람을 열면 <b>4,125px</b>로 열네 묶음이 전부 펀져 <b>다섯 화면</b>이었고, 계산기는 왼쪽 입력칸이 <b>2,258px</b> 를 먹어 보고서가 <b>3.2 화면 아래</b>(2,712px)에서 시작했습니다 — 문서 4,744px 중 절반 넘게 메뉴였습니다. 이제 <b>메뉴 묶음 이름을 누르면 접힙니다</b>(4,125 → <b>863px</b> · 한 화면). 폰에서는 <b>계산기 입력칸이 접힌 채로 열려</b> 보고서가 <b>515px</b> 에 — 첫 화면에 서고, 머리띄의 「✏️ 고객정보 입력」 한 번이면 돌아옵니다. <b>PC 는 하나도 안 바뀝니다.</b> — 접기는 <b>예전에 한 번 걷어냈던</b> 장치입니다. 그때 접힌 칸을 「없어진 것」 으로 보셔서 「메뉴가 안 보인다」 는 말이 나왔습니다. 그래서 이번엔 <b>접혀 있다는 사실이 글자로 남습니다</b> — 접힌 줄에도 <b>칸 수가 그대로</b> 남고(「상담 도구 13」), 목록 맨 위에 <b>「접어 둔 묶음 n개 · 다 펴기」</b> 가 서고, <b>찾는 중에는 언제나 다 펀집니다</b>(1번). 지금 열려 있는 화면이 든 묶음도 저절로 펀니다. 계산기 입력칸은 <b>display:none 으로 가릴 뿐</b>이라 가린 채로도 값이 읽혀 <b>계산이 안 멈추는 것</b>까지 재 봤습니다. <code>check-navgrp</code>·<code>check-finsbm</code> 두 점검을 새로 만들어 <b>39자리</b>를 걸었고, 일곱 가지를 하나씩 되돌려 <b>일곱 번 다 빨간불</b>을 확인했습니다.";
+var APP_BUILD='2026-09-20 14:05';
+var APP_BUILD_NOTE="<b>폰 계산기 — 위에 있던 <u>카테고리 열두 칸</u>도 접힙니다.</b> 「왼쪽 메뉴 <b>위에 카테고리가 창을 다 잡고 있어서</b>」 하신 자리입니다. 왼쪽 입력칸은 접어 두었는데 그 위 카테고리가 <b>두 칸씩 여섯 줄</b>로 서서 보고서를 또 밀어냈습니다 — 머리띠만 <b>471px</b>, 폰 화면의 절반이었습니다. 이제 <b>189px</b> 로 시작합니다. 접힌 동안에도 <b>지금 어느 칸인지</b>가 단추에 적혀 있습니다 — 「📂 종합 대시보드 ▾」. 안 적으면 접힌 것이 아니라 <b>길을 잃은 것</b>입니다. 한 칸을 고르면 <b>저절로 다시 접혀</b> 고른 보고서가 바로 보이고, 단추 이름도 그 칸으로 바뀝니다. 칸은 <code>display:none</code> 으로만 가려 <b>판에 그대로</b> 있습니다 — 계산이 안 멈춥니다. <b>PC 는 한 군데도 안 바뀝니다</b>(981px 이상) · 인쇄에도 안 걸립니다. 그리고 홈 <b>담당자 띠의 한 문장이 두 줄로 끊겨</b> 있던 것을 고쳤습니다 — 「👤 <b>내 화면</b>」 과 「입니다 —」 가 따로 떨어져 찍혔습니다(그 칸이 <code>flex</code> 라 굵은 글자가 딴 덩어리로 떨어져 나갔습니다). 또 <b>main 이 이틀째 빨간불</b>이던 것을 잡았습니다 — 화면은 멀쩡했고 <b>점검이 낡은 것</b>이었습니다. 「재무&amp;보장 상담자료」 덱이 바뀌었는데 점검이 <b>옛 문서 길을 손으로 들고</b> 있었습니다. 이제 앱이 아는 길만 봅니다(5번). <code>check-finsbm</code> 에 여덟 자리를 더하고 <b>다섯 가지를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다(8번)."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -20169,9 +20384,196 @@ function hmDoneMark(key){
   try{ localStorage.setItem(HM_DONE_KEY,JSON.stringify({d:mcalToday(),k:L})); }catch(e){}
 }
 function hmIsDone(key){ return hmDoneToday().indexOf(key)>=0; }
+/* ══ <b>지금 누구 화면을 보고 있나</b> — 아는 곳은 여기 하나다 ══════
+   사장님 말씀 둘 —
+     「홈에서도, <b>그 담당자 것만</b> 뜨도록 만들고」
+     「내가 팀원들것 들어가서 <b>팀원의 화면을 따로</b> 볼수 있도록 만들어
+       [관리자는 자기 팀원것]」
+
+   여태 「누구 것인가」 를 아는 곳이 <b>셋</b>이었다 —
+     · 고객 365일 : CM.pick
+     · TFA 업무관리 : AR.tkWho
+     · 홈          : <b>없었다</b> — 언제나 arMyId() 였다
+   그래서 고객 365일에서 팀원을 골라 놓고 홈으로 오면 <b>내 것</b>이 떴다.
+   같은 앱이 두 말을 한 것이다 (CLAUDE.md 5번).
+
+   이제 <b>hwhoId() 하나</b>만 안다. 고객 365일의 칩도 여기에 쓴다
+   (cmWhoSet → hwhoSet). CM.pick 은 <b>이 값을 비추는 거울</b>일 뿐이니
+   다른 곳에서 직접 대입하지 않는다 — 대입하면 거울과 원본이 갈린다.
+
+   ★ <b>고를 수 있는 사람은 권한이 정한다.</b> 설계사는 고르개가 아예 안
+     선다 — 남의 것을 못 보시는 분께 세워 봐야 눌러도 아무 일이 없다 (8번).
+     지점장은 <b>자기 팀원</b>만, 대표·관리자·마스터는 전부.
+   ★ 남의 화면을 보는 중에는 <b>띠가 계속 떠 있다</b>. 내 것인 줄 알고
+     전화를 걸면 그 자리에서 사고가 난다.                                */
+/* id:'' 는 <b>아직 안 고르셨다</b>는 뜻이고, 그때는 <b>내 것</b>이다.
+   '*' 는 <b>팀 전체</b>를 일부러 고르신 것이다.
+
+   ★ 처음에 '' 를 「전체」로 읽었다가, 띠에는 「내 화면입니다」 라고 적고
+     밑에는 <b>온 팀 줄</b>을 세웠다. 화면이 거짓말을 한 것이다 (1번).
+     그래서 <b>안 고르셨으면 내 것</b>으로 못 박고, 전체는 눌러야 한다. */
+var HWHO={id:'',init:false};
+var HWHO_ALL='*';
+/* ── <b>기본값은 홈에서만 정한다</b> ───────────────────────────────
+   「안 고르셨으면 내 것」 은 <b>홈의 규칙</b>이다 (사장님 말씀 ③).
+   달력과 고객 365일은 예전부터 <b>안 고르면 다 보여 주던</b> 자리다 —
+   거기까지 말없이 좁히면, 매니저가 팀 달력을 보던 것이 어느 날 갑자기
+   제 것만 뜬다. 실제로 그렇게 만들었다가 check-calface 가 잡았다 (8번).
+
+   그래서 기본값을 <b>몰래 셈하지 않고</b> 홈을 열 때 한 번 <b>정해 둔다.</b>
+   정해 두면 홈·달력·고객 365일이 같은 값을 보게 되어 어긋날 자리가 없다. */
+function hwhoInit(){
+  if(HWHO.init||!hwhoCan())return;
+  var me=(typeof arMyId==='function')?(arMyId()||''):'';
+  if(!me)return;                    /* 아직 모르면 다음에 — 모르면 안 정한다 (1번) */
+  HWHO.id=me; HWHO.init=true;
+  try{ if(typeof CM!=='undefined'){ CM.pick=me; CM.picked=true; } }catch(e){}
+}
+/* 지금 보고 있는 담당자 — '' 면 <b>안 고르셨다</b>, '*' 면 <b>팀 전체</b> */
+function hwhoId(){
+  if(!hwhoCan())return '';          /* 설계사는 언제나 자기 것 — 고를 것이 없다 */
+  return HWHO.id||'';
+}
+/* 홈이 실제로 <b>누구의 줄</b>을 세울지 — 팀 전체면 '' (아무도 안 거른다) */
+function hwhoFor(){
+  var v=hwhoId();
+  if(v===HWHO_ALL)return '';
+  if(v)return v;
+  return (typeof arMyId==='function')?arMyId():'';
+}
+function hwhoIsAll(){ return hwhoId()===HWHO_ALL; }
+function hwhoIsMe(){
+  var v=hwhoId();
+  if(v===HWHO_ALL)return false;
+  return !v||v===((typeof arMyId==='function')?arMyId():'');
+}
+/* 남의 화면을 볼 수 있는 자리인가 — <b>여기서만</b> 묻는다 */
+function hwhoCan(){ return (typeof arIsLead==='function')?arIsLead():false; }
+/* 지점장은 <b>자기 팀</b>까지. 대표·관리자·마스터는 전부 (서버 규칙과 같은 명단) */
+function hwhoAllTeams(){
+  var r=(typeof osRole==='function')?osRole():'member';
+  if(typeof osIsOwner==='function'&&osIsOwner())return true;
+  return ['admin','owner','master','hq','branch_manager','education_manager'].indexOf(r)>=0;
+}
+/* 고를 수 있는 사람들 — 이름과 <b>오늘 챙길 건수</b>를 같이 준다.
+   건수를 안 적으면 누구를 열어야 할지 알 수 없어 하나씩 눌러 보게 된다. */
+function hwhoList(){
+  if(!hwhoCan())return [];
+  var all=[],i,c={},k,out=[],me=(typeof arMyId==='function')?arMyId():'';
+  try{ all=(typeof arTouch==='function')?arTouch(''):[]; }catch(e){ all=[]; }
+  var myTeam=(typeof arTeamOf==='function')?arTeamOf(me):'';
+  var wide=hwhoAllTeams();
+  for(i=0;i<all.length;i++){
+    k=all[i].who||'';
+    if(!k)continue;
+    /* 지점장은 <b>자기 팀원만</b> — 남의 팀은 아예 안 세운다 */
+    if(!wide&&myTeam&&(typeof arTeamOf==='function')&&arTeamOf(k)!==myTeam)continue;
+    c[k]=(c[k]||0)+1;
+  }
+  for(k in c)if(c.hasOwnProperty(k))
+    out.push({id:k,nm:(typeof arNameOf==='function')?arNameOf(k):'팀원',n:c[k]});
+  out.sort(function(a,b){
+    var am=(a.id===me)?1:0,bm=(b.id===me)?1:0;      /* 내 것이 언제나 맨 앞 */
+    return bm-am||b.n-a.n||(''+a.nm).localeCompare(''+b.nm,'ko');
+  });
+  return out;
+}
+function hwhoName(id){
+  if(!id)return '';
+  if(typeof arNameOf==='function'){var n=arNameOf(id);if(n&&n!=='팀원')return n;}
+  try{ if(CM.who&&CM.who[id])return CM.who[id]; }catch(e){}
+  return '팀원';
+}
+/* 바꾸면 <b>세 화면이 같이</b> 따라온다 — 홈·고객 365일·달력.
+   한쪽만 다시 그리면 「골랐는데 저쪽은 그대로」 가 된다 (5번). */
+function hwhoSet(v){
+  if(!hwhoCan())return;
+  /* 같은 칸을 다시 눌러도 <b>빈 값으로 두지 않는다</b> — 빈 값은 「내 것」
+     이고, 그러면 팀원을 두 번 눌렀을 때 말없이 내 화면으로 돌아간다.
+     되돌아오는 길은 「← 내 화면으로」 하나뿐이어야 한다 (8번). */
+  HWHO.id=v||'';
+  try{ if(typeof CM!=='undefined'){ CM.pick=hwhoFor(); CM.picked=true; } }catch(e){}
+  try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
+  try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
+  try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+}
+/* 「내 화면으로」 — 되돌아올 길은 <b>언제나 한 번</b>이어야 한다 */
+function hwhoMe(){
+  var me=(typeof arMyId==='function')?arMyId():'';
+  if(!hwhoCan())return;
+  HWHO.id=me?me:'';
+  try{ if(typeof CM!=='undefined'){ CM.pick=hwhoFor(); CM.picked=true; } }catch(e){}
+  try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
+  try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
+  try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+}
+/* 홈 맨 위 띠 — <b>지금 누구 화면인지</b>와 고르개. 설계사에게는 안 선다 */
+function hwhoBarHtml(){
+  if(!hwhoCan())return '';
+  var L=hwhoList();
+  if(L.length<2)return '';                 /* 고를 사람이 없으면 세우지 않는다 */
+  var cur=hwhoId(),me=(typeof arMyId==='function')?arMyId():'',i,x,tot=0;
+  var mine=hwhoIsMe(),all=hwhoIsAll();
+  for(i=0;i<L.length;i++)tot+=L[i].n;
+  var h='<div class="hwho'+(mine?'':' other')+'">'+
+    /* ⚠ 한 문장은 <b>한 덩어리</b>로 싼다. 이 칸이 flex 라서 <b> 를 그냥 두면
+       그 자리가 따로 떨어져 「내 화면 / 입니다 —」 로 줄이 끊긴다. 폰에서
+       실제로 그렇게 찍혔다 — 굵은 글자마다 줄이 바뀌던 그 병이다. */
+    '<div class="hwho-now"><span class="hwho-tx">'+
+      (mine ? '👤 <b>내 화면</b>입니다 — 팀원을 누르면 그 분 화면을 그대로 봅니다.'
+       : all ? ('🏢 <b>팀 전체</b>를 보고 있습니다 — '+L.length+'명 것이 섞여 있습니다. '+
+                '<b>내 것이 아닙니다.</b>')
+             : ('👀 지금 <b>'+osEsc(hwhoName(cur))+'</b> 님 화면을 보고 있습니다 — '+
+                '<b>내 것이 아닙니다.</b>'))+
+      '</span>'+
+      (mine?'':'<button type="button" class="hwho-back" onclick="hwhoMe()">← 내 화면으로</button>')+
+    '</div><div class="hwho-row">';
+  for(i=0;i<L.length&&i<14;i++){
+    x=L[i];
+    h+='<button type="button" class="hwho-c'+(cur===x.id?' on':'')+
+      (x.id===me?' me':'')+'" onclick="hwhoSet(\''+x.id+'\')">'+
+      osEsc(x.nm)+(x.id===me?' (나)':'')+'<span>'+x.n+'</span></button>';
+  }
+  /* <b>팀 전체</b>는 맨 뒤에 따로 — 기본이 아니라 <b>일부러 고르는</b> 것이다 */
+  h+='<button type="button" class="hwho-c all'+(all?' on':'')+'" '+
+     'onclick="hwhoSet(\''+HWHO_ALL+'\')">🏢 팀 전체<span>'+tot+'</span></button>';
+  return h+'</div></div>';
+}
+function hwhoCss(){
+  if(document.getElementById('hwhoCss'))return;
+  var st=document.createElement('style');st.id='hwhoCss';
+  st.textContent=
+   '.hwho{margin:0 0 12px;padding:10px 12px;border-radius:var(--r);'+
+     'border:1px solid #DBE7FF;background:#F7FAFF}'+
+   /* 남의 화면일 때는 <b>색이 다르다</b> — 스쳐 봐도 내 것이 아닌 줄 안다 */
+   '.hwho.other{border-color:#FCD34D;background:#FFFBEB}'+
+   '.hwho-now{font-size:var(--t6);line-height:1.6;color:var(--ink-4);'+
+     'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}'+
+   '.hwho-tx{flex:1 1 auto;min-width:0}'+
+   '.hwho-now b{color:var(--ink-2)}'+
+   '.hwho.other .hwho-now{color:#92400E}.hwho.other .hwho-now b{color:#78350F}'+
+   '.hwho-back{margin-left:auto;flex:none;min-height:34px;padding:6px 11px;border:0;'+
+     'border-radius:var(--r-pill);font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'cursor:pointer;background:#92400E;color:#fff}'+
+   '.hwho-row{display:flex;gap:6px;flex-wrap:wrap}'+
+   '.hwho-c{min-height:34px;padding:6px 11px;border:1px solid var(--ink-7);'+
+     'border-radius:var(--r-pill);background:#fff;font-family:inherit;font-size:var(--t6);'+
+     'font-weight:700;color:var(--ink-3);cursor:pointer}'+
+   '.hwho-c.me{border-color:#C7D2FE;background:#EEF2FF;color:#4F46E5}'+
+   '.hwho-c.on{background:#2B5FD9;border-color:#2B5FD9;color:#fff}'+
+   '.hwho-c.me.on{background:#4F46E5;border-color:#4F46E5}'+
+   '.hwho-c.all{border-color:#FDE68A;background:#FFFBEB;color:#92400E}'+
+   '.hwho-c.all.on{background:#B45309;border-color:#B45309;color:#fff}'+
+   '.hwho-c span{margin-left:5px;font-weight:800;opacity:.75}';
+  document.head.appendChild(st);
+}
 /* 오늘 것을 <b>한 줄씩</b> 폅니다. 세는 곳(hmCount)과 같은 샘을 씁니다 (5번) */
 function hmSteps(){
-  var out=[],items=(typeof mcalItems==='function')?(mcalItems()[mcalToday()]||[]):[],i;
+  /* 달력 줄도 <b>거른 뒤</b>에 가져온다 — mcalItems 를 날것으로 읽으면
+     팀원을 골라 놓아도 약속·생일·할 일은 <b>온 팀 것</b>이 그대로 올라왔다.
+     꺼내는 자리는 mcalDay 하나다 (5번). */
+  var out=[],items=(typeof mcalDay==='function'&&typeof mcalItems==='function')
+      ?mcalDay(mcalItems(),mcalToday()):[],i;
   /* 계약 마디 — 마디가 이미 센 것을 그대로 가져옵니다 */
   var md=(typeof mstDueList==='function')?mstDueList():null;
   if(md&&md.due&&md.due.length){
@@ -20184,6 +20586,10 @@ function hmSteps(){
   }
   for(i=0;i<items.length;i++){
     var x=items[i];
+    /* <b>매일 하는 일은 여기 안 세웁니다.</b> 달력에 이미 한 줄로 서 있고,
+       여기 또 세우면 같은 것이 두 곳에 있어 한쪽을 체크해도 다른 쪽이
+       안 줄어듭니다 (5번). 홈에서는 달력 칸을 누르시면 펴집니다. */
+    if(x.k==='rt')continue;
     out.push({k:x.k,id:x.id||'',my:x.my||'',t:x.t||'',s:x.s||''});
   }
   /* ── <b>고객 상태에 맞는 오늘 할 일</b> ────────────────────────────
@@ -20194,7 +20600,10 @@ function hmSteps(){
      (TDO)는 서로 다른 것이라 표가 둘인 것이 맞습니다.                 */
   try{
     if(typeof arTouch==='function'&&typeof arMyId==='function'){
-      var db=arTouch(arMyId()),today=mcalToday();
+      /* <b>누구 것인지는 hwhoFor() 한 곳</b>이 안다 (5번) — 예전에는
+         여기서 arMyId() 를 직접 불러, 고객 365일에서 팀원을 골라 놓아도
+         홈은 늘 내 것이었다. */
+      var db=arTouch(hwhoFor()),today=mcalToday();
       for(i=0;i<db.length;i++){
         var y=db[i];
         /* <b>오늘 약속이 잡힌 분은 여기 또 세우지 않습니다.</b> 달력이 이미
@@ -20278,6 +20687,375 @@ function hmDid(key){
   if(x.k==='madi'&&x.id&&x.m&&typeof mstMark==='function'){ mstMark(x.id,x.m,true); }
   else toast('오늘 한 것으로 표시했습니다');
   hmPaint();
+}
+/* ══ <b>홈에서 바로 — 단계 옮기기 · 고객 넣고 고치기</b> (hdb*) ═════
+   사장님 말씀 —
+     「DB통합CRM에서 DB관리 들어가면 이렇게 상황에 맞게 하는데, 이걸
+      <b>홈에서 바로바로 단계별로</b> 할수 있도록 만들고, 통합CRM에도
+      반영되도록. 홈 화면 내에서 <b>고객을 입력하고 수정하고 고치는</b>
+      것까지 가능하도록」
+
+   ── 무엇을 <b>안</b> 만들었나 ──────────────────────────────────────
+   단계의 차례도, 다음 단계도, 어느 단계가 날짜를 들고 있는지도 <b>여기
+   적지 않았다.</b> 전부 apex-stage.js 가 안다 — DB 통합 CRM 도 같은 파일을
+   싣는다. 여기 또 적으면 단계를 하나 더할 때 한쪽만 고치게 되고, 같은
+   고객이 두 화면에서 <b>다른 단계</b>로 보인다 (CLAUDE.md 5번).
+
+   ── 어디에 쓰나 ────────────────────────────────────────────────────
+   <b>dbs 표 한 곳</b>이다. DB 통합 CRM 이 읽는 그 표다. 그래서 홈에서 누른
+   것이 CRM 에 그대로 뜬다 — 옮겨 적는 자리가 없으니 어긋날 자리도 없다.
+
+   ── 지어내지 않는 것 ───────────────────────────────────────────────
+   ★ <b>계약일·증권 전달일을 여기서 만들지 않는다</b> (1번). 그 날짜가
+     필요한 단계로 올라갈 때는 <b>고치기 창을 열어</b> 적으시게 한다.
+     DB 통합 CRM 의 sgUp() 과 같은 규칙이다.
+   ★ <b>남의 고객은 못 고친다.</b> 설계사는 자기 것, 지점장은 자기 팀,
+     대표·관리자·마스터는 전부 — 서버 규칙과 같은 명단이다. 못 고치는
+     분께는 단추를 <b>안 세운다</b>. 눌러도 안 되는 단추를 세우면 그때부터
+     다른 단추도 안 믿게 된다 (8번).
+   ★ <b>실명은 서버에 그대로 안 올린다</b>… 는 고객 365일 규칙이고,
+     배정 DB(dbs.customer_name)는 팀이 함께 보는 자리라 지금 그대로 둔다
+     (3번 · 2026-09-11 결정). 여기서 새로 가리지도, 벗기지도 않는다.     */
+var HDB={id:'',busy:'',open:false,err:''};
+/* 그 줄을 찾는 곳은 <b>한 곳</b> — AR.db 다 (5번) */
+function hdbRow(id){
+  var L=(typeof AR!=='undefined'&&AR.db)||[],i;
+  for(i=0;i<L.length;i++)if(L[i].id===id)return L[i];
+  return null;
+}
+/* 고칠 수 있나 — db-crm.html 의 canEditDb 와 <b>같은 규칙</b>이다 */
+function hdbCan(r){
+  if(!r)return false;
+  var me=(typeof arMyId==='function')?arMyId():'';
+  if(me&&r.who===me)return true;
+  if(typeof hwhoAllTeams==='function'&&hwhoAllTeams())return true;
+  if(typeof arIsLead==='function'&&arIsLead()){
+    var mt=(typeof arTeamOf==='function')?arTeamOf(me):'';
+    return !!(mt&&(typeof arTeamOf==='function')&&arTeamOf(r.who)===mt);
+  }
+  return false;
+}
+function hdbStages(){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.order)?APEX_STAGE.order:[]; }catch(e){ return []; }
+}
+function hdbNextOf(st){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.next)?APEX_STAGE.next(st):''; }catch(e){ return ''; }
+}
+function hdbNeeds(st){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.needs)?APEX_STAGE.needs(st):{won:false,pol:false}; }
+  catch(e){ return {won:false,pol:false}; }
+}
+/* 고친 값을 <b>손에 든 줄에도</b> 바로 넣는다 — 서버를 한 번 더 부르지
+   않기 위해서다 (7번). 다음에 arLoad 가 돌 때 서버 값으로 맞춰진다. */
+function hdbLocal(id,patch){
+  var r=hdbRow(id),k;
+  if(!r)return;
+  for(k in patch)if(patch.hasOwnProperty(k))r[k]=patch[k];
+  if(patch.stage&&typeof arTodoOf==='function'){
+    try{ r.k=patch.stage; r.todo=arTodoOf({k:patch.stage,d:r.days,nm:r.name}); }catch(e){}
+  }
+}
+function hdbPaint(){
+  try{ if(typeof hmPaint==='function')hmPaint(); }catch(e){}
+  try{ if(typeof arPaint==='function'&&document.getElementById('arPane'))arPaint(); }catch(e2){}
+}
+/* 서버가 왜 거절했는지 <b>그 자리에서</b> 말한다 — 조용히 넘어가면
+   눌렀는데 아무 일이 없고, 그때부터 이 화면을 안 믿게 된다 (1번·8번) */
+function hdbErr(e,what){
+  var m=(e&&(e.message||e.msg))||'알 수 없는 오류';
+  HDB.err=what+' 실패 — '+m;
+  if(typeof toast==='function')toast(HDB.err,7000);
+  hdbPaint();
+}
+/* ── 단계 한 칸 올리기 ─────────────────────────────────────────── */
+function hdbUp(id){
+  var r=hdbRow(id);
+  if(!r)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 단계를 바꿀 수 없습니다.'); return; }
+  var to=hdbNextOf(r.stage);
+  if(!to)return;
+  var k=hdbNeeds(to);
+  /* 날짜가 필요한 자리는 <b>지어내지 않고</b> 물어본다 (1번) */
+  if(k.won||k.pol){
+    hdbOpen(id,to);
+    if(typeof toast==='function')toast('「'+to+'」 는 날짜가 필요합니다 — 적으시고 저장해 주세요.',6000);
+    return;
+  }
+  hdbTo(id,to);
+}
+/* ── 어느 단계로든 ─────────────────────────────────────────────── */
+function hdbTo(id,to){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r||!to)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 단계를 바꿀 수 없습니다.'); return; }
+  if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다.'); return; }
+  var k=hdbNeeds(to);
+  if((k.won||k.pol)&&!(k.won&&r.cAt)){ hdbOpen(id,to); return; }
+  var from=r.stage;
+  HDB.busy=id; HDB.err=''; hdbPaint();
+  sb.from('dbs').update({stage:to}).eq('id',id).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ hdbErr(res.error,'단계 올리기'); return; }
+    hdbLocal(id,{stage:to});
+    if(typeof toast==='function')toast(r.name+' 님 · '+from+' → '+to);
+    hdbPaint();
+  },function(e){ HDB.busy=''; hdbErr(e,'단계 올리기'); });
+}
+/* ── 통화 결과를 그 자리에서 ──────────────────────────────────────
+   DB 통합 CRM 의 「접촉 n/5」 와 결과(미진행·부재·거절)는 <b>calls 표</b>가
+   셉니다. 그래서 여기서도 같은 표에 한 줄을 넣습니다 — 다른 데 적으면
+   CRM 의 숫자가 안 움직입니다 (5번).                                   */
+function hdbCall(id,result){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 기록할 수 없습니다.'); return; }
+  if(!sb){ if(typeof toast==='function')toast('서버에 연결되어 있지 않습니다.'); return; }
+  HDB.busy=id; HDB.err=''; hdbPaint();
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var row={db_id:id,result:result,call_at:new Date().toISOString()};
+  if(me)row.created_by=me;
+  sb.from('calls').insert(row).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ hdbErr(res.error,'통화 기록'); return; }
+    /* 손에 든 줄도 같이 — 다시 부르지 않는다 (7번) */
+    hdbLocal(id,{n:(r.n||0)+1,res:result,last:(new Date()).toISOString().slice(0,10),days:0});
+    if(typeof toast==='function')toast(r.name+' 님 · '+result+' 로 기록했습니다');
+    hdbPaint();
+  },function(e){ HDB.busy=''; hdbErr(e,'통화 기록'); });
+}
+/* ── 고객 넣고·고치기 창 ─────────────────────────────────────────
+   홈을 <b>안 벗어납니다</b> — 덮개로 뜹니다(사장님 말씀의 뼈대).
+   쓰는 곳은 DB 통합 CRM 과 <b>같은 표</b>(dbs)라 저장하면 그쪽에도 그대로
+   뜹니다. 여기서 값을 따로 들고 있지 않으니 어긋날 자리가 없습니다.   */
+function hdbCss(){
+  if(document.getElementById('hdbCss'))return;
+  var st=document.createElement('style');st.id='hdbCss';
+  st.textContent=
+   /* 단계 줄 — 홈 카드 안 */
+   '.hdb{margin-top:10px;padding-top:10px;border-top:1px dashed var(--ink-7)}'+
+   '.hdb-h{font-size:var(--t6);font-weight:800;color:var(--ink-4);margin-bottom:7px}'+
+   '.hdb-h b{color:var(--ink-2)}'+
+   '.hdb-r{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}'+
+   '.hdb-b{min-height:44px;padding:9px 13px;border:1px solid var(--ink-7);border-radius:var(--r-pill);'+
+     'background:#fff;font-family:inherit;font-size:var(--t6);font-weight:800;color:var(--ink-3);cursor:pointer}'+
+   '.hdb-b.go{background:#2B5FD9;border-color:#2B5FD9;color:#fff}'+
+   '.hdb-b.no{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}'+
+   '.hdb-b.ed{background:#F5F7FA}'+
+   '.hdb-b[disabled]{opacity:.55;cursor:default}'+
+   '.hdb-now{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:var(--t6);color:var(--ink-4);margin-bottom:7px}'+
+   '.hdb-now .sg{font-weight:900;padding:3px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
+   '.hdb-err{font-size:var(--t6);line-height:1.6;color:#B91C1C;background:#FEF2F2;'+
+     'border:1px solid #FECACA;border-radius:var(--r-xs);padding:7px 9px;margin-bottom:7px}'+
+   /* 창 */
+   '#hdbSheet{position:fixed;inset:0;z-index:9200;background:rgba(15,23,42,.42);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#hdbSheet.on{display:flex}'+
+   '.hdb-box{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:16px 16px 20px}'+
+   '@media(min-width:620px){#hdbSheet{align-items:center}.hdb-box{border-radius:18px}}'+
+   '.hdb-tt{font-size:var(--t3);font-weight:900;color:var(--ink-1);margin-bottom:3px}'+
+   '.hdb-st{font-size:var(--t6);color:var(--ink-4);line-height:1.6;margin-bottom:12px}'+
+   '.hdb-f{margin-bottom:10px}'+
+   '.hdb-f label{display:block;font-size:var(--t6);font-weight:800;color:var(--ink-4);margin-bottom:4px}'+
+   '.hdb-f input,.hdb-f select,.hdb-f textarea{width:100%;min-height:44px;padding:10px 11px;'+
+     'border:1px solid var(--ink-7);border-radius:var(--r-xs);font-family:inherit;'+
+     'font-size:var(--t5);color:var(--ink-1);background:#fff}'+
+   '.hdb-f textarea{min-height:66px;resize:vertical}'+
+   '.hdb-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}'+
+   '@media(max-width:480px){.hdb-2{grid-template-columns:1fr}}'+
+   '.hdb-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}'+
+   '.hdb-btns button{flex:1;min-width:120px;min-height:46px;border:0;border-radius:12px;'+
+     'font-family:inherit;font-size:var(--t5);font-weight:900;cursor:pointer}'+
+   '.hdb-save{background:#2B5FD9;color:#fff}.hdb-cancel{background:#F2F4F6;color:#4E5968}'+
+   '.hdb-del{background:#FEF2F2;color:#B91C1C;flex:0 0 auto!important;min-width:84px!important}';
+  document.head.appendChild(st);
+}
+/* 창을 <b>한 번만</b> 만든다 — 열 때마다 만들면 겹겹이 쌓인다 */
+function hdbHost(){
+  var e=document.getElementById('hdbSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='hdbSheet';
+  e.innerHTML='<div class="hdb-box" id="hdbBox"></div>';
+  /* 덮개 바깥을 누르면 닫습니다 — 닫는 길이 하나뿐이면 갇힙니다 */
+  e.addEventListener('click',function(ev){ if(ev.target===e)hdbClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function hdbClose(){
+  var e=document.getElementById('hdbSheet');
+  if(e)e.classList.remove('on');
+  HDB.open=false;HDB.id='';
+}
+/* 새로 넣기 — id 가 없으면 새 줄 */
+function hdbNew(){ hdbOpen('',''); }
+function hdbOpen(id,wantStage){
+  hdbCss();
+  var r=id?hdbRow(id):null;
+  if(id&&!r)return;
+  if(r&&!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 고칠 수 없습니다.'); return; }
+  HDB.id=id||'';HDB.open=true;HDB.err='';
+  var host=hdbHost();
+  document.getElementById('hdbBox').innerHTML=hdbFormHtml(r,wantStage||'');
+  host.classList.add('on');
+  try{ var f=document.getElementById('hdbName'); if(f)f.focus(); }catch(e){}
+}
+function hdbFormHtml(r,wantStage){
+  var S=hdbStages(),i,st=wantStage||(r?r.stage:'미접촉');
+  var k=hdbNeeds(st);
+  var v=function(x){ return (typeof osEsc==='function')?osEsc(x==null?'':x):(x==null?'':x); };
+  var opt='';
+  for(i=0;i<S.length;i++)opt+='<option value="'+v(S[i])+'"'+(S[i]===st?' selected':'')+'>'+v(S[i])+'</option>';
+  var me=(typeof arMyId==='function')?arMyId():'';
+  var today=(new Date()).toISOString().slice(0,10);
+  return '<div class="hdb-tt">'+(r?('✏️ '+v(r.name)+' 님 고치기'):'➕ 고객 새로 넣기')+'</div>'+
+    '<div class="hdb-st">여기서 저장하면 <b>DB 통합 CRM 에도 그대로</b> 뜹니다 — 같은 표를 씁니다.</div>'+
+    (HDB.err?('<div class="hdb-err">'+v(HDB.err)+'</div>'):'')+
+    '<div class="hdb-f"><label for="hdbName">고객명</label>'+
+      '<input id="hdbName" type="text" value="'+v(r?r.name:'')+'" placeholder="홍길동"></div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbPhone">연락처</label>'+
+        '<input id="hdbPhone" type="tel" inputmode="numeric" value="'+v(r?(r.phone||''):'')+'" placeholder="010-0000-0000"></div>'+
+      '<div class="hdb-f"><label for="hdbRegion">지역</label>'+
+        '<input id="hdbRegion" type="text" value="'+v(r?r.region:'')+'" placeholder="천안"></div>'+
+    '</div>'+
+    '<div class="hdb-2">'+
+      '<div class="hdb-f"><label for="hdbSrc">DB 종류</label>'+
+        '<input id="hdbSrc" type="text" value="'+v(r?r.src:'일반')+'" placeholder="보장분석3DB"></div>'+
+      '<div class="hdb-f"><label for="hdbStage">단계</label>'+
+        '<select id="hdbStage" onchange="hdbStagePick()">'+opt+'</select></div>'+
+    '</div>'+
+    '<div class="hdb-2" id="hdbDates"'+((k.won||k.pol)?'':' hidden')+'>'+
+      '<div class="hdb-f"><label for="hdbCAt">계약일</label>'+
+        '<input id="hdbCAt" type="date" value="'+v(r?r.cAt:'')+'"></div>'+
+      '<div class="hdb-f" id="hdbPolBox"'+(k.pol?'':' hidden')+'><label for="hdbPAt">증권 전달일</label>'+
+        '<input id="hdbPAt" type="date" value="'+v(r?r.pAt:'')+'"></div>'+
+    '</div>'+
+    (r?'':'<div class="hdb-f"><label for="hdbGot">배정일</label>'+
+        '<input id="hdbGot" type="date" value="'+today+'"></div>')+
+    '<div class="hdb-btns">'+
+      '<button type="button" class="hdb-save" onclick="hdbSave()">저장</button>'+
+      '<button type="button" class="hdb-cancel" onclick="hdbClose()">닫기</button>'+
+      (r&&hdbCan(r)?'<button type="button" class="hdb-del" onclick="hdbDel(\'' + (r.id) + '\')">지우기</button>':'')+
+    '</div>'+
+    '<div class="hdb-st" style="margin:10px 0 0">담당자는 <b>'+
+      v((typeof hwhoName==='function'&&r&&r.who)?hwhoName(r.who):((typeof arNameOf==='function'&&me)?arNameOf(me):'나'))+
+      '</b> 입니다. 담당자를 바꾸는 것은 DB 통합 CRM 에서 합니다 — 여기서 두 곳이 배정하면 어긋납니다.</div>';
+}
+/* 단계를 고르면 <b>필요한 날짜 칸만</b> 연다 — 어느 단계가 무엇을 들고
+   있는지는 apex-stage.js 가 안다 (5번) */
+function hdbStagePick(){
+  var sel=document.getElementById('hdbStage');
+  if(!sel)return;
+  var k=hdbNeeds(sel.value),d=document.getElementById('hdbDates'),p=document.getElementById('hdbPolBox');
+  if(d)d.hidden=!(k.won||k.pol);
+  if(p)p.hidden=!k.pol;
+}
+function hdbVal(id){
+  var e=document.getElementById(id);
+  return e?(''+(e.value||'')).replace(/^\s+|\s+$/g,''):'';
+}
+function hdbSave(){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){ HDB.err='서버에 연결되어 있지 않습니다.'; hdbRepaintForm(); return; }
+  var id=HDB.id,r=id?hdbRow(id):null;
+  var nm=hdbVal('hdbName');
+  if(!nm){ HDB.err='고객명을 적어 주세요.'; hdbRepaintForm(); return; }
+  var st=hdbVal('hdbStage'),k=hdbNeeds(st);
+  var cAt=hdbVal('hdbCAt'),pAt=hdbVal('hdbPAt');
+  /* 날짜가 필요한 단계인데 비어 있으면 <b>저장하지 않는다.</b> 오늘 날짜로
+     채워 넣으면 그것이 계약일이 되어 버린다 — 지어내지 않는다 (1번). */
+  if(k.won&&!cAt){ HDB.err='「'+st+'」 이면 계약일을 적어 주세요 — 여기서 날짜를 지어내지 않습니다.'; hdbRepaintForm(); return; }
+  if(k.pol&&!pAt){ HDB.err='「'+st+'」 이면 증권 전달일을 적어 주세요.'; hdbRepaintForm(); return; }
+  var me=(typeof arMyId==='function')?arMyId():null;
+  var p={customer_name:nm,phone:hdbVal('hdbPhone')||null,region:hdbVal('hdbRegion')||null,
+         source:hdbVal('hdbSrc')||'일반',stage:st,
+         contracted_at:k.won?(cAt||null):null,
+         policy_sent_at:k.pol?(pAt||null):null,
+         updated_at:new Date().toISOString()};
+  if(!id){
+    p.assigned_to=r?r.who:me;
+    p.assigned_date=hdbVal('hdbGot')||(new Date()).toISOString().slice(0,10);
+    p.report_name='보장분석 3DB';
+    if(me)p.created_by=me;
+    if(!p.assigned_to){ HDB.err='담당자를 알 수 없습니다 — 다시 로그인해 주세요.'; hdbRepaintForm(); return; }
+  }
+  HDB.busy='save';HDB.err='';hdbRepaintForm();
+  var q=id?sb.from('dbs').update(p).eq('id',id):sb.from('dbs').insert(p);
+  q.then(function(res){
+    HDB.busy='';
+    if(res&&res.error){
+      HDB.err='저장하지 못했습니다 — '+((res.error.message||'')||'알 수 없는 오류');
+      hdbRepaintForm();return;
+    }
+    if(id)hdbLocal(id,{name:nm,phone:p.phone||'',region:p.region||'',src:p.source,
+                       stage:st,cAt:cAt||'',pAt:pAt||''});
+    hdbClose();
+    if(typeof toast==='function')toast(nm+' 님을 저장했습니다 — DB 통합 CRM 에도 올라갑니다');
+    /* 새로 넣은 줄은 손에 없다 — 그때만 서버를 다시 부른다 (7번) */
+    if(!id&&typeof arLoad==='function')try{ arLoad(true); }catch(e){}
+    hdbPaint();
+  },function(e){
+    HDB.busy='';
+    HDB.err='저장하지 못했습니다 — '+((e&&e.message)||'네트워크 오류');
+    hdbRepaintForm();
+  });
+}
+function hdbRepaintForm(){
+  var b=document.getElementById('hdbBox');
+  if(!b||!HDB.open)return;
+  var keep={n:hdbVal('hdbName'),p:hdbVal('hdbPhone'),g:hdbVal('hdbRegion'),
+            s:hdbVal('hdbSrc'),st:hdbVal('hdbStage'),c:hdbVal('hdbCAt'),o:hdbVal('hdbPAt')};
+  b.innerHTML=hdbFormHtml(HDB.id?hdbRow(HDB.id):null,keep.st);
+  /* 치던 것을 <b>도로 넣어 준다</b> — 오류 한 줄 때문에 다 다시 치게 하면
+     그 자리에서 창을 닫으신다 */
+  var put=function(i,v){ var e=document.getElementById(i); if(e&&v)e.value=v; };
+  put('hdbName',keep.n);put('hdbPhone',keep.p);put('hdbRegion',keep.g);
+  put('hdbSrc',keep.s);put('hdbCAt',keep.c);put('hdbPAt',keep.o);
+  hdbStagePick();
+}
+function hdbDel(id){
+  var r=hdbRow(id),sb=(typeof osClient==='function')?osClient():null;
+  if(!r||!sb)return;
+  if(!hdbCan(r)){ if(typeof toast==='function')toast('내 고객이 아니면 지울 수 없습니다.'); return; }
+  /* <b>한 번 더 물어본다</b> — 되돌릴 수 없는 자리다 */
+  if(!confirm(r.name+' 님을 DB 에서 지울까요?\n통화 기록까지 같이 사라지고, 되돌릴 수 없습니다.'))return;
+  HDB.busy='del';HDB.err='';hdbRepaintForm();
+  sb.from('dbs')['delete']().eq('id',id).then(function(res){
+    HDB.busy='';
+    if(res&&res.error){ HDB.err='지우지 못했습니다 — '+(res.error.message||''); hdbRepaintForm(); return; }
+    var L=(typeof AR!=='undefined'&&AR.db)||[],i;
+    for(i=0;i<L.length;i++)if(L[i].id===id){L.splice(i,1);break;}
+    hdbClose();
+    if(typeof toast==='function')toast(r.name+' 님을 지웠습니다');
+    hdbPaint();
+  },function(e){ HDB.busy=''; HDB.err='지우지 못했습니다 — '+((e&&e.message)||'네트워크 오류'); hdbRepaintForm(); });
+}
+/* ── 홈 카드 안에 서는 줄 ─────────────────────────────────────────
+   「무엇을 할까요?」 밑에 붙는다. <b>지금 단계가 무엇이고</b>, 한 칸
+   올리면 어디로 가고, 통화가 안 됐으면 무엇을 누르는지가 한 줄에 있다. */
+function hdbStripHtml(x){
+  if(!x||x.k!=='db'||!x.id)return '';
+  var r=hdbRow(x.id);
+  if(!r)return '';
+  hdbCss();
+  var can=hdbCan(r),to=hdbNextOf(r.stage),busy=(HDB.busy===r.id);
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  var h='<div class="hdb"><div class="hdb-h">📇 <b>'+v(r.name)+'</b> 님 — 지금 단계와 오늘 기록</div>';
+  if(HDB.err)h+='<div class="hdb-err">'+v(HDB.err)+'</div>';
+  h+='<div class="hdb-now"><span class="sg">'+v(r.stage)+'</span>'+
+     '<span>접촉 '+(r.n||0)+'회'+(r.res?(' · 마지막 '+v(r.res)):'')+'</span></div>';
+  if(!can)
+    return h+'<div class="hdb-h">이 분은 <b>다른 분 고객</b>이라 여기서 못 고칩니다 — 보기만 합니다.</div></div>';
+  h+='<div class="hdb-r">';
+  if(to)h+='<button type="button" class="hdb-b go"'+(busy?' disabled':'')+' onclick="hdbUp(\'' + r.id + '\')">'+
+      (busy?'…':('→ '+v(to)+' 로 올리기'))+'</button>';
+  h+='<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'부재\')">📵 부재</button>'+
+     '<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'상담\')">🤝 통화됨</button>'+
+     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'거절\')">🚫 거절</button>'+
+     '<button type="button" class="hdb-b ed" onclick="hdbOpen(\'' + r.id + '\',\'\')">✏️ 고치기</button>'+
+     '</div>';
+  h+='<div class="hdb-h">누르면 <b>DB 통합 CRM 에도 그대로</b> 올라갑니다 — 같은 표를 씁니다.</div>';
+  return h+'</div>';
 }
 /* ══ <b>「무엇을 할까요?」</b> — 골라서 하는 자리 ═══════════════════
    사장님 말씀 — 「고객에게 각 상황마다 어떻게 해야할지, 클로드 내게 권한
@@ -20637,24 +21415,54 @@ function hmPdCss(){
    여기서는 그것을 <b>세우기만</b> 합니다.
 
    ★ 종류를 못 알아봐도 <b>화면을 안 비웁니다</b> — 일반 인사로 갑니다 (1번).  */
+/* ── <b>그 자리에서 할 말</b> — TA 만이 아니다 ─────────────────────
+   사장님 말씀 — 「TA 스크립트 보고 상황에 맞게 짜던지, <b>부재 거절 기고객</b>
+   에 맞게 너가 스크립트를 참조해서 만들어」.
+
+   여태는 <b>TA 한 자리</b>에만 첫 마디가 떴습니다. 정작 말이 제일 어려운
+   자리는 안 받으신 분·거절하신 분·오래 못 뵌 분인데 그 자리는 비어 있었습니다.
+
+   말은 <b>apex-stage.js 한 곳</b>(APEX_STAGE.script)에서 가져옵니다 — DB
+   통합 CRM 도 같은 파일을 싣습니다. 여기서 또 적으면 두 화면이 같은 고객에게
+   다른 말을 합니다 (5번).
+
+   ★ <b>말할 것만 적지 않습니다.</b> ta-script 의 거절처리처럼 「다음 한마디 ·
+     금지 표현 · 종료 기준」 을 같이 세웁니다. 무엇을 말하면 안 되는지와 언제
+     그만두는지를 안 적으면, 붙잡다 그 고객을 영영 잃습니다.
+   ★ <b>없는 자리는 안 세웁니다</b> (1번) — AP·PC 처럼 화법이 없는 단계는
+     빈손으로 돌아오고, 그러면 이 칸이 아예 안 섭니다. */
 function hmTaHtml(x){
   var k=(x&&x.k==='db')?x.tk:(x&&x.k);
-  if(k!=='TA')return '';
-  var S=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.taSay)?APEX_STAGE.taSay(x&&x.src):null;
+  var S=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.script)
+        ?APEX_STAGE.script(k,x&&x.src):null;
   if(!S)return '';
-  var src=(x&&x.src)?osEsc(x.src):'';
+  /* DB 종류 딱지는 <b>첫 마디일 때만</b> — 두 번째 전화에서 출처를 또
+     되뇌면 그것이 압박이 됩니다 */
+  var src=(S.src&&x&&x.src)?osEsc(x.src):'';
+  /* 이름표는 <b>span.lb</b> 로 둔다 — b 로 두고 display:block 을 걸었더니
+     본문 안의 굵은 글씨까지 줄이 끊겨 「다음이 없습니다」 와 「.」 가
+     따로 떨어졌다. 화면에서 보고 잡았다. */
+  var part=function(cls,lab,txt){
+    return txt?('<div class="hm-ta-p '+cls+'"><span class="lb">'+lab+'</span>'+txt+'</div>'):'';
+  };
   return '<div class="hm-ta">'+
     '<div class="hm-ta-h">☎️ <b>'+osEsc(S.t)+'</b>'+(src?('<span>'+src+'</span>'):'')+'</div>'+
     '<div class="hm-ta-t">'+osEsc(S.say)+'</div>'+
     '<div class="hm-ta-b"><button type="button" onclick="hmTaCopy(\''+osEsc((x&&x.key)||'')+'\')">📋 복사</button></div>'+
+    part('nx','다음 한마디 ',osEsc(S.next))+
+    part('no','이 말은 안 합니다 ',S.avoid)+
+    part('st','여기서 그만둡니다 ',S.stop)+
     '<div class="hm-ta-n">'+S.tip+'</div>'+
     '</div>';
 }
 function hmTaCopy(key){
-  var x=hmStepOf(key);
-  var S=(x&&typeof APEX_STAGE!=='undefined'&&APEX_STAGE.taSay)?APEX_STAGE.taSay(x.src):null;
-  if(!S){toast('첫 마디를 못 찾았습니다');return;}
-  copyText(S.say);
+  var x=hmStepOf(key),k=(x&&x.k==='db')?x.tk:(x&&x.k);
+  var S=(x&&typeof APEX_STAGE!=='undefined'&&APEX_STAGE.script)
+        ?APEX_STAGE.script(k,x.src):null;
+  if(!S){toast('할 말을 못 찾았습니다');return;}
+  /* <b>다음 한마디까지</b> 같이 복사합니다 — 첫 마디만 들고 가면 그다음에
+     막힙니다. 금지·종료는 제가 보는 것이라 안 담습니다. */
+  copyText(S.say+(S.next?('\n\n다음 한마디\n'+S.next.replace(/<[^>]*>/g,'')):''));
 }
 function hmTaCss(){
   if(document.getElementById('hmTaCss'))return;
@@ -20668,7 +21476,16 @@ function hmTaCss(){
     '.hm-ta-b{display:flex;gap:7px;margin-top:8px}'+
     '.hm-ta-b button{border:0;border-radius:9px;padding:9px 13px;font-weight:800;font-size:var(--t6,13px);'+
       'background:#1A56DB;color:#fff;cursor:pointer}'+
-    '.hm-ta-n{margin-top:8px;font-size:var(--t6,13px);line-height:1.65;color:#4E5968;font-weight:700}';
+    '.hm-ta-n{margin-top:8px;font-size:var(--t6,13px);line-height:1.65;color:#4E5968;font-weight:700}'+
+    /* 다음 한마디 · 금지 · 종료 — <b>색으로 갈라</b> 둡니다. 한 덩어리로 두면
+       급할 때 「하지 마세요」 를 「하세요」 로 읽습니다. */
+    '.hm-ta-p{margin-top:7px;border-radius:10px;padding:9px 11px;font-size:var(--t6,13px);'+
+      'line-height:1.7;white-space:pre-wrap}'+
+    '.hm-ta-p .lb{display:block;font-weight:900;margin-bottom:3px}'+
+    '.hm-ta-p b{font-weight:900}'+
+    '.hm-ta-p.nx{background:#EFF6FF;color:#1E3A8A}'+
+    '.hm-ta-p.no{background:#FEF2F2;color:#991B1B}'+
+    '.hm-ta-p.st{background:#F5F7FA;color:#334155}';
   document.head.appendChild(st);
 }
 /* 이 줄에서 <b>보낼 말</b>을 지어도 되는 자리인가 — 표 하나로 둔다 (5번).
@@ -20712,6 +21529,9 @@ function hmNowHtml(){
        그 자리에서 그 일이 벌어집니다. 여태는 도구 단추만 한 줄로
        늘어놓아, 읽고 나서 다시 고르는 두 동작이 됐습니다. */
     hmTaHtml(x)+hmPdHtml(x)+hmPicksHtml(x)+hmKtHtml(x.key)+
+    /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
+       배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
+    hdbStripHtml(x)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
@@ -20765,6 +21585,9 @@ var HM_SUB={
 function hmTodayHtml(){
   if(!OS.profile)return '';
   try{ holdCss(); }catch(e){}     /* 옷을 쓰는 화면에서 부른다 (5번) */
+  try{ hwhoCss(); }catch(eW){}    /* 같은 규칙 — 쓰는 화면에서 부른다 */
+  /* <b>홈의 기본값은 내 것</b> — 여기서 한 번 정해 둔다 (위 hwhoInit 설명) */
+  try{ hwhoInit(); }catch(eI){}
   var c=hmCount(),i,rows='',no=1;
   for(i=0;i<HM_ORD.length;i++){
     var o=HM_ORD[i],n=c[o.k]||0;
@@ -20776,7 +21599,12 @@ function hmTodayHtml(){
       '<span class="hm-n">'+n+'</span><span class="hm-ar">›</span></button>';
   }
   var head='<div class="card hm-card"><div class="card-body">'+
+    /* <b>누구 화면인지가 제일 먼저</b> 선다 — 밑의 숫자를 내 것으로
+       잘못 읽으면 그 자리에서 사고가 난다 (사장님 말씀 ③·④) */
+    hwhoBarHtml()+
     '<div class="hm-top"><span class="hm-d">'+osEsc(hmTodayLabel())+'</span>'+
+      /* 홈을 <b>안 벗어나고</b> 고객을 넣는다 — 덮개로 뜬다 (사장님 말씀 ⑦) */
+      '<button type="button" class="hm-cal" onclick="hdbNew()">➕ 고객 넣기</button>'+
       '<button type="button" class="hm-cal" onclick="go(\'mycal\')">📅 내 캘린더</button></div>'+
     '<h2 class="hm-big">'+(c.total?('오늘 챙길 것 <em>'+c.total+'건</em>입니다'):HM_BIG[hmHold()])+'</h2>'+
     '<p class="hm-sub">'+HM_SUB[c.total?'ok':hmHold()](c)+'</p>';
@@ -21362,7 +22190,7 @@ function hmFoldWrap(k,e,t,sub,inner){
 /* 머리에 적을 숫자 — <b>그 카드가 이미 세는 것</b>만 가져옵니다.
    못 세면 빈 글자를 돌려주고, 머리에는 아무 숫자도 안 적습니다 (1번). */
 function hmFoldCalSub(){
-  try{ return '오늘 '+mcalDay(mcalItems(),mcalToday()).length+'건'; }catch(e){ return ''; }
+  try{ return '오늘 '+mcalCnt(mcalDay(mcalItems(),mcalToday()))+'건'; }catch(e){ return ''; }
 }
 function hmFoldCliSub(){
   try{
@@ -29433,8 +30261,13 @@ function ckMemoSave(m){try{localStorage.setItem(ckMemoKey(),JSON.stringify(m));}
 function ckSweep(){
   try{
     var keep=[ckKey('day'),ckKey('week'),ckKey('month'),ckMemoKey(),'apex_ck_tab','apex_ck_help'],drop=[],i,k;
+    /* <b>이번 달 하루치는 남긴다</b> — 달력이 지난 날의 「몇 개 했나」 를
+       보여 주기 때문이다. 지우면 어제 칸이 <b>0/11</b> 로 떠서 「안 했다」
+       로 읽힌다 — 못 읽은 것을 0 으로 적는 그 병이다 (1번).
+       한 달치 서른 줄이라 저장 공간은 그대로 작다 (7번). */
+    var mth='apex_ck_day_'+(ckDayK().slice(0,7));
     for(i=0;i<localStorage.length;i++){k=localStorage.key(i);
-      if(k&&k.indexOf('apex_ck_')===0&&keep.indexOf(k)<0)drop.push(k);}
+      if(k&&k.indexOf('apex_ck_')===0&&keep.indexOf(k)<0&&k.indexOf(mth)!==0)drop.push(k);}
     for(i=0;i<drop.length;i++)localStorage.removeItem(drop[i]);
   }catch(e){}
 }
@@ -52884,6 +53717,17 @@ function cmWhoCount(rows){
    (CM.pick) 그리는 자리 둘을 같이 다시 그려야 합니다. 한쪽만 다시 그리면
    「골랐는데 달력은 그대로」 가 됩니다 (5번). */
 function cmWhoSet(v){
+  /* <b>여기서 CM.pick 에 직접 대입하지 않는다.</b> 「누구 것인가」 를 아는
+     곳은 hwhoId() 하나다 — 여기서 또 정하면 홈과 갈린다 (5번).
+     매니저가 아니면 hwhoSet 이 아무것도 안 하므로, 그때만 제자리에서 바꾼다
+     (설계사는 자기 고객뿐이라 칩이 애초에 안 선다). */
+  /* <b>같은 칸을 다시 누르면 전체로</b> 돌아간다 — 고객 365일·달력이
+     예전부터 그랬다. 홈의 띠는 「← 내 화면으로」 라는 <b>제 길</b>이 있어
+     토글이 필요 없지만, 여기서는 그 길이 이것뿐이다. 없애 놓으면 한 사람을
+     고른 뒤 전체로 돌아갈 방법이 사라진다 (check-clients·check-calface 가 잡았다). */
+  if(typeof hwhoCan==='function'&&hwhoCan()){
+    hwhoSet((hwhoId&&hwhoId()===v)?HWHO_ALL:v); return;
+  }
   CM.pick=(CM.pick===v)?'':v;
   try{ osRenderList(); }catch(e){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e2){}
@@ -52892,7 +53736,7 @@ function cmWhoToggle(){CM.byWho=!CM.byWho;if(CM.byWho)CM.fam=false;osRenderList(
 function cmWhoChipsHtml(all){
   var list=cmWhoCount(all);
   if(list.length<2)return '';   /* 나 혼자면 고를 것이 없다 */
-  var h='<div class="cm-bar cm-whos"><span class="cm-wl">담당자</span>'+
+  var h='<div class="cm-bar cm-whos"><span class="cm-wl">👤 담당자</span>'+
     '<button type="button" class="cm-sb'+(CM.pick?'':' on')+'" onclick="cmWhoSet(\'\')">전체 '+
       '<span>'+all.length+'</span></button>',i,x;
   for(i=0;i<list.length&&i<14;i++){
@@ -52901,7 +53745,18 @@ function cmWhoChipsHtml(all){
       ((OS.profile&&x.id===OS.profile.id)?' me':'')+'" onclick="cmWhoSet(\''+x.id+'\')">'+
       osEsc(x.nm)+'<span>'+x.n+'</span></button>';
   }
-  return h+'</div>';
+  h+='</div>';
+  /* <b>지금 누구 것을 보고 있는지</b>를 글자로 적는다. 칩 색만으로는
+     스쳐 지나가고, 그러면 아래 숫자를 전부 내 것으로 읽으신다 (1번). */
+  var nm=CM.pick?(CM.who[CM.pick]||'이 담당자'):'';
+  var n=0;
+  if(CM.pick){ for(i=0;i<all.length;i++)if((all[i].advisor_id||'')===CM.pick)n++; }
+  h+='<div class="cm-wnow">'+(CM.pick
+      ? ('지금 <b>'+osEsc(nm)+'</b> 님 고객만 보고 있습니다 — '+n+'명. '+
+         '<b>같은 칸을 다시 누르면</b> 전체로 돌아갑니다.')
+      : ('담당자 <b>'+list.length+'명</b>의 고객이 다 섞여 있습니다 — '+
+         '이름을 누르면 그 분 것만 봅니다.'))+'</div>';
+  return h;
 }
 function cmWhoGroupHtml(rows){
   var by={},order=[],i,k,c;
@@ -52937,13 +53792,23 @@ function cmBarHtml(){
     '<button type="button" class="cm-sb'+(CM.fam?' on':'')+'" '+
     'onclick="cmFamToggle()">👨‍👩‍👧 가족으로 묶기</button></div>';
 }
+/* ── 담당자 줄은 <b>맨 위</b>에 선다 ───────────────────────────────
+   사장님 말씀 — 「고객 365에서 담당자들이 분류되도록 만들어 [지금 되어
+   있지만 <b>딱 보이게</b>]」. 갈라지기는 했는데 줄이 <b>맨 아래</b>에
+   있었다 — 쪽지판·이번 주 계획·최근 본 고객·오늘 챙길 고객을 다 지나야
+   나왔다. 재 보니 그 위가 900px 였다. 안 보이면 없는 것과 같다.
+
+   이제 <b>제일 먼저</b> 세운다. 「지금 누구 것을 보고 있는지」 가 목록보다
+   먼저 눈에 들어와야, 밑에 뜨는 숫자를 내 것으로 잘못 읽지 않는다.      */
 function cmTopHtml(q,all){
-  if(q)return ccBoardHtml(all)+cmWhoChipsHtml(all);
+  if(q)return ccBoardHtml(all);
   /* 「오늘 챙길 고객」 은 지금 고른 담당자 것만 센다.
      내 것만 보는 중인데 남의 고객이 위에 뜨면 그게 내 일인 줄 안다. */
   var mine=all,i;
   if(CM.pick){mine=[];for(i=0;i<all.length;i++)if(all[i].advisor_id===CM.pick)mine.push(all[i]);}
-  return ccBoardHtml(all)+ccPlanHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmWhoChipsHtml(all)+cmBarHtml();
+  /* <b>담당자 줄은 여기 안 세운다.</b> 화면 맨 위(#cliWho)에 한 줄만 선다 —
+     여기에도 세우면 같은 줄이 두 번 서서, 하나를 눌러도 다른 쪽이 안 변한다 (5번). */
+  return ccBoardHtml(all)+ccPlanHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -53216,8 +54081,13 @@ function cmCss(){
     '.cm-call .r{font-size:var(--t6);font-weight:800;color:#fff;text-align:center;border-radius:var(--r-pill);padding:2px 0}'+
     '.cm-call .m{font-size:var(--t6);color:#334155;line-height:1.5;min-width:0}'+
     '@media(max-width:520px){.cm-call{grid-template-columns:66px 46px minmax(0,1fr);gap:7px}}'+
-    '.cm-whos{margin:0 0 12px;padding-bottom:11px;border-bottom:1px solid var(--ink-8)}'+
-    '.cm-whos .cm-wl{font-size:var(--t6);font-weight:800;color:var(--ink-5);margin-right:2px}'+
+    /* 담당자 줄은 <b>맨 위</b>다 — 눈에 먼저 들어오게 테를 두르고 바탕을 깐다.
+       예전에는 맨 아래에 줄만 하나 그어 두어, 900px 를 내려야 나왔다. */
+    '.cm-whos{margin:0 0 12px;padding:10px 11px 9px;border:1px solid #DBE7FF;'+
+      'border-radius:var(--r);background:#F7FAFF;flex-wrap:wrap}'+
+    '.cm-whos .cm-wl{font-size:var(--t6);font-weight:800;color:#2B5FD9;margin-right:2px}'+
+    '.cm-wnow{font-size:var(--t6);line-height:1.6;color:var(--ink-4);margin:-6px 0 12px;padding:0 3px}'+
+    '.cm-wnow b{color:var(--ink-2)}'+
     '.cm-sb.me{border-color:#C7D2FE;background:#EEF2FF;color:#4F46E5}'+
     '.cm-sb.me.on{background:#4F46E5;color:#fff;border-color:#4F46E5}'+
     '.cm-sb span{margin-left:5px;font-size:var(--t6);font-weight:800;opacity:.75}'+
@@ -53682,6 +54552,15 @@ function mstToggle(id,m){
    계약일을 넣어 달라고 말합니다 — 조용히 빠뜨리지 않습니다 (1번).    */
 function mstDueList(){
   var all=(typeof OSC!=='undefined'&&OSC.list)?OSC.list:[],i,c,r,due=[],soon=[],none=0;
+  /* 보고 있는 담당자 것만 — 묻는 곳은 hwhoPick() 하나다 (5번).
+     매니저가 팀원을 골라 놓았는데 계약 마디만 온 팀 것이 뜨면,
+     남의 고객에게 「6개월 마디」 문자를 보내게 된다. */
+  var pw=(typeof hwhoPick==='function')?hwhoPick():'';
+  if(pw){
+    var kept=[],ki;
+    for(ki=0;ki<all.length;ki++)if((all[ki].advisor_id||'')===pw)kept.push(all[ki]);
+    all=kept;
+  }
   for(i=0;i<all.length;i++){
     c=all[i];r=mstOf(c);
     if(!r){none++;continue;}
@@ -53823,7 +54702,24 @@ function cliMissionHtml(){
     '<div class="mcal-day" style="border:none;padding:0">'+rows+'</div>'+tail;
 }
 /* 고객·관리 기록이 들어온 뒤에 다시 그린다 — 빈 숫자로 뜨면 안 보느니만 못하다 */
+/* ── 담당자 줄은 <b>화면 맨 위</b>다 ─────────────────────────────────
+   사장님 말씀 — 「담당자들이 분류되도록 만들어 [지금 되어있지만 <b>딱
+   보이게</b>]」.
+
+   목록 맨 위로 올려 봤는데도 <b>2,040px</b> 였다. 그 위에 「🎯 오늘의
+   미션」 카드가 <b>1,881px</b> — 두 화면이 넘게 서 있기 때문이다.
+   2.4 화면을 내려야 보이는 것은 「딱 보이게」 가 아니다.
+
+   그래서 <b>미션 카드보다 위</b>에 세운다. 고객 365일을 열면 제일 먼저
+   보이는 것이 「지금 누구 고객을 보고 있나」 다.                        */
+function cliWhoPaint(){
+  var e=document.getElementById('cliWho');
+  if(!e)return;
+  e.innerHTML=(typeof cmWhoChipsHtml==='function')
+    ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '';
+}
 function cli365TopPaint(){
+  cliWhoPaint();
   var e=document.getElementById('cli365Top');
   if(!e)return;
   e.innerHTML=cliMissionHtml()+mstCardHtml()+
@@ -53846,6 +54742,9 @@ function renderClientsPage(){
   cmCss();
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
   return '<div class="osc-wrap">'+
+    /* 제일 먼저 — 지금 누구 고객을 보고 있나 */
+    '<div id="cliWho">'+((typeof cmWhoChipsHtml==='function')
+      ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '')+'</div>'+
     '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
       (typeof mcalCardHtml==='function'
         ? mcalCardHtml({title:'이번 달 고객 관리',
@@ -53926,7 +54825,8 @@ function osLoadClients(){
     if(!CM.picked&&OS.profile&&OS.profile.id){
       var mine=0,mi;
       for(mi=0;mi<OSC.list.length;mi++)if(OSC.list[mi].advisor_id===OS.profile.id)mine++;
-      if(mine)CM.pick=OS.profile.id;
+      /* 처음에는 <b>내 것</b>부터 — 값을 넣는 자리는 HWHO 하나다 (5번) */
+      if(mine){ try{ HWHO.id=OS.profile.id; }catch(eH){} CM.pick=OS.profile.id; }
       CM.picked=true;
     }
     /* 관리 기록이 와야 온도·다음 할 일이 나온다. 먼저 한 번 그리고, 오면 다시 그린다 */
@@ -53989,6 +54889,9 @@ function osRenderList(){
   h+=(CM.byWho&&!q)?cmWhoGroupHtml(rows)
     :((CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows));
   osSetList(h);
+  /* 맨 위 담당자 줄도 <b>같이</b> 다시 그린다 — 한쪽만 그리면 고른 것이
+     저쪽에 안 비친다 (5번) */
+  try{ cliWhoPaint(); }catch(eW){}
 }
 function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
 function osClientsFilter(v){OSC.q=v;osRenderList();}
@@ -54112,7 +55015,7 @@ function oscBaHtml(){
     return h+'<div class="osc-empty">이 고객의 <b>전·후 자료가 아직 없습니다.</b> '+
       '만들어 저장하시면 여기 올라옵니다 — 지어내지 않습니다.</div>'+
       '<div class="btn-row" style="margin-top:10px">'+
-      '<button class="btn btn-primary" onclick="oscBaGo()">🔄 비포&애프터 만들기</button>'+
+      '<button class="btn btn-primary" onclick="oscBaGo()">🔀 보장분석 전&후 만들기</button>'+
       '</div></div>';
   h+='<div class="osc-ba-list">';
   for(i=0;i<R.length;i++)
@@ -54122,14 +55025,25 @@ function oscBaHtml(){
        '<span class="dt">'+osEsc(osFmtDate(R[i].x.created_at))+'</span>'+
        '<span class="ar">›</span></button>';
   h+='</div><div class="btn-row" style="margin-top:10px">'+
-     '<button class="btn btn-ghost" onclick="oscBaGo()">🔄 새로 만들기</button></div>';
+     '<button class="btn btn-ghost" onclick="oscBaGo()">🔀 보장분석 전&후 만들기</button></div>';
   return h+'</div>';
 }
 function oscBaPaint(){
   var e=document.getElementById('oscBaHost');
   if(e)e.innerHTML=oscBaHtml();
 }
-function oscBaGo(){ go('baba'); }
+/* ── <b>여기서 여는 것은 「보장분석 전&후 만들기」 하나다</b> ─────────
+   사장님 말씀 — 「고객 365에서 비포&애프터는 삭제해버리고, 보장분석
+   전&후 만들기가 여기에 고정되어 있어야 한다」.
+
+   전·후를 만드는 화면이 <b>둘</b>이었다 — baba(비포&애프터)와
+   frmake(보장분석 전&후 만들기). 고객 카드에서 어느 쪽으로 가느냐에 따라
+   만든 자료가 <b>다른 자리</b>에 쌓여, 같은 고객인데 한쪽에서는 전·후가
+   있고 다른 쪽에서는 없었다. 들어가는 길을 <b>하나로</b> 못 박는다 (5번).
+
+   ★ baba 를 <b>지우지는 않는다.</b> 메뉴 찾기·음성·?go=baba 로는 그대로
+     열린다 — 예전에 만들어 둔 자료를 못 보게 하면 안 된다 (1번).       */
+function oscBaGo(){ go('frmake'); }
 /* ── 이 고객이 <b>가입한 보험</b> ─────────────────────────────────
    사장님 말씀 — 「고객의 보험 내용도 고객 365에 입력하는데 뜰수 있게 해줘」.
 
@@ -56818,9 +57732,11 @@ function frGo(v){
 }
 /* 서버·검수 없이 PDF 두 장으로 바로 도는 길. 고객은 열어 둔 채로 다녀온다 —
    돌아오면 go('clients') 가 이 고객 상세로 되돌린다. */
+/* 이름은 frOpenBaba 그대로 둔다 — 부르는 자리가 여럿이라 이름을 바꾸면
+   한 곳을 빠뜨린다. <b>여는 화면만</b> 전&후 만들기로 바꾼다 (5번). */
 function frOpenBaba(){
-  toast('비포&애프터를 엽니다 — 읽고 나서 풀리포트의 「✍ 계약·담보 조치」나 전후 비교 표에서 <b>🔄 가져오기</b>를 누르세요',7000);
-  if(typeof go==='function')go('baba');
+  toast('보장분석 전&후 만들기를 엽니다 — 만든 뒤 풀리포트의 「✍ 계약·담보 조치」나 전후 비교 표에서 <b>🔄 가져오기</b>를 누르세요',7000);
+  if(typeof go==='function')go('frmake');
 }
 function frToggle(k){FR.open[k]=!FR.open[k];frPaint();}
 
@@ -56851,7 +57767,9 @@ function frPaint(){
     frTabBtn('read','🔍 읽기 점검')+
     ((typeof osRole==='function'&&osRole()==='admin')?frTabBtn('scen','⚙ 치료 시나리오','gold'):'')+
     '<span class="fr-do">'+
-      '<button class="gh" onclick="frOpenBaba()">🔄 빠른 비포&애프터</button>'+
+      /* 「빠른 비포&애프터」 를 뺐다 — 전·후를 만드는 길이 둘이면 만든 것이
+         두 자리로 갈린다 (5번). 이 자리에서 여는 것은 <b>전&후 만들기</b> 하나다. */
+      '<button class="gh" onclick="frOpenBaba()">🔀 보장분석 전&후 만들기</button>'+
       '<button class="gh" onclick="frLoad()">↻ 다시 불러오기</button>'+
       '<button class="gh" onclick="frPrint(\'ba\')">🖨 전·후 한 장만</button>'+
       '<button onclick="frPrint()">🖨 보고서 저장 (A4)</button>'+

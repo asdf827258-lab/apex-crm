@@ -267,7 +267,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.dupName=K.filter(k=>TDO[k].title||TDO[k].icon||TDO[k].toolName);
     /* 메뉴에서 빠지면(등급·권한) 단추도 같이 빠지나 */
     const real=window.navItemOf;
-    window.navItemOf=function(id){ return id==='baba'?null:real(id); };
+    window.navItemOf=function(id){ return id==='frmake'?null:real(id); };
     out.gone=tdoTools('PC').map(it=>it.id);
     window.navItemOf=real;
     /* 홈에 실제로 그려지고, 눌러서 그 화면이 열리나 */
@@ -284,9 +284,16 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     out.head=(document.querySelector('#dynPane .hm-now .hm-now-k')||{}).textContent||'';
     /* 손가락으로 누를 만한가 */
     out.small=opts.filter(b=>b.getBoundingClientRect().height<44).length;
+    /* <b>「열렸나」 를 재지, 「go() 가 불렸나」 를 재지 않는다.</b>
+       도구 중에는 홈을 안 벗어나고 <b>덮개</b>로 뜨는 것이 있다(전&후
+       만들기·계산기·상담자료…). 그때는 go() 가 안 불린다 — 그것을 「아무
+       데도 안 갔다」 로 읽으면, 더 잘 고쳐 놓고 빨간불이 켜진다 (8번). */
     let went=''; const g=window.go; window.go=function(t){went=t;};
     if(opts[1])opts[1].click();          /* ②번 = 첫 도구 */
-    out.went=went;
+    await new Promise(r=>setTimeout(r,300));
+    out.went=went||((typeof HMS!=='undefined'&&HMS.sheet&&HMS.id)?HMS.id:'');
+    out.asSheet=!went&&!!(typeof HMS!=='undefined'&&HMS.sheet);
+    try{ if(typeof hmSheetClose==='function')hmSheetClose(); }catch(e){}
     /* ①번은 <b>그 사람 자리</b>로 보낸다 */
     went=''; if(opts[0])opts[0].click();
     out.first=went;
@@ -307,7 +314,8 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
 
      2026-09-18 말씀 그대로 —
        · AP  「보장분석상담자료 / 재무설계상담자료」 · 화법 · 컨셉 둘 · 전·후
-       · PC  「보장분석 전&후 비교자료 / 재무설계 계산기」
+       · PC  「보장분석 전&후 비교자료 / 재무설계 계산기」 — 그래서 PC 의
+         첫 도구는 <b>frmake</b>(전&후 만들기)다. 예전에는 baba 였다.
        · 거절·부재  「카카오톡 메시지나, 전할 뉴스」
      카톡 문구는 <b>화면으로 보내지 않고 그 자리에서 짓습니다</b> — 「제안서
      카톡설명」 은 제안서가 있을 때 쓰는 화면이라 아직 상담이 안 이어진
@@ -316,7 +324,10 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   const BOSS={
     '미접촉' :['biz_news','cs_assist'],
     'AP'    :['sangdam','fp_deck','fp_talk','brain','cs_needs','frmake'],
-    'PC'    :['baba','finance'],
+    /* 2026-09-20 — 사장님 말씀대로 <b>비포&애프터를 빼고</b> 「보장분석
+       전&후 만들기」 로 바꿨다. 전·후를 만드는 화면이 둘이면 만든 자료가
+       두 자리로 갈린다 (5번). */
+    'PC'    :['frmake','finance'],
     '계약완료':['pdel'],
     '증권전달':['pdel'],
     '거절'   :['news_live'],
@@ -334,7 +345,7 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
   is(G.none.length===0, '<b>'+Object.keys(G.listed).length+'가지 상태 모두</b> 손에 쥘 것이 있다'+
      (G.none.length?(' ← '+G.none.join(',')):''));
   is(G.dupName.length===0, '표에 <b>이름·아이콘을 또 안 적는다</b> — 메뉴에서 가져온다 (5번)');
-  is(G.gone.length===2&&G.gone.indexOf('baba')<0,
+  is(G.gone.length===2&&G.gone.indexOf('frmake')<0,
      '메뉴에 없는 사람에게는 <b>그 단추가 안 선다</b> — '+G.gone.join(',')+
      ' (못 여는 단추를 세우면 눌렀는데 아무 일도 안 난다)');
   /* 사장님 말씀 — 「클로드 내게 권한 물어보는것처럼 <b>선택해서</b> 할수
@@ -345,12 +356,13 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
      'PC 는 <b>다섯 갈래</b>가 선다 — 할 일 하나 + 도구 셋 + 했습니다 ('+G.btnTxt.length+')');
   is(/전화로/.test(G.btnTxt[0]||'')&&/걸리셨어요/.test(G.btnTxt[0]||''),
      '①번은 <b>무엇을 어떻게</b> 할지 그대로 적는다 — 「'+(G.btnTxt[0]||'').slice(0,40)+'…」');
-  is(/비포&애프터|윤시현|계산기/.test(G.btnTxt.join(' ')),
+  is(/전&후 만들기|윤시현|계산기/.test(G.btnTxt.join(' ')),
      '도구 갈래에 <b>메뉴에 적힌 이름</b>이 그대로 뜬다');
   is(!/받아 낸다/.test(G.head),
      '머리줄에 <b>같은 말을 두 번 안 적는다</b> — ①번에 이미 있다 · 「'+G.head.trim()+'」');
   is(G.small===0, '갈래가 <b>손가락으로 누를 만하다</b> — 44px 아래면 폰에서 빗나간다');
-  is(G.went==='baba', '도구 갈래를 누르니 <b>그 화면으로</b> 간다 — '+(G.went||'아무 데도'));
+  is(G.went==='frmake', '도구 갈래를 누르니 <b>그 도구가 열린다</b> — '+
+     (G.went?(G.went+(G.asSheet?' (덮개로 — 홈을 안 벗어난다)':' (화면으로)')):'아무 데도'));
   is(G.first==='crm'||G.first==='clients',
      '①번을 누르니 <b>그 사람 자리로</b> 간다 — '+(G.first||'아무 데도'));
   is(G.didWorks, '<b>「이미 했습니다」</b> 를 고르면 정말로 표시된다 — 고르기만 하고 안 되면 헛것이다');
