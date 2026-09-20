@@ -54,9 +54,12 @@ const look = (page) => page.evaluate(() => {
     top: bx('.report-topbar'),
     grid: bx('.top-tab-grid'),
     tshut: document.body.classList.contains('tbm-shut'),
-    tbn: (function(){ var b=document.getElementById('tbmBtn'); return b?{
-      t:(b.textContent||'').trim(), disp:getComputedStyle(b).display,
-      h:Math.round(b.getBoundingClientRect().height)}:null; })(),
+    tbn: (function(){ var b=document.getElementById('tbmBtn'); if(!b)return null;
+      var c=getComputedStyle(b);
+      return { t:(b.textContent||'').trim(), disp:c.display,
+        h:Math.round(b.getBoundingClientRect().height),
+        /* 글자색과 바탕색을 같이 담는다 — 흰 글자에 흰 바탕이면 안 보인다 */
+        fg:c.color, bg:c.backgroundColor }; })(),
     tabs: document.querySelectorAll('.top-tab-grid .report-tab').length,
     now: (function(){ var o=document.querySelector('.top-tab-grid .report-tab.on .rt-title');
       return o?(o.textContent||'').trim():''; })(),
@@ -149,6 +152,20 @@ const look = (page) => page.evaluate(() => {
   is(!!g1.tbn && g1.now !== '' && g1.tbn.t.indexOf(g1.now) >= 0,
      '  접혀 있어도 <b>지금 어느 칸인지</b> 단추에 적힌다 — ' + (g1.tbn ? g1.tbn.t : '없음'));
   is(!!g1.tbn && g1.tbn.h >= 44, '  카테고리 단추 ' + (g1.tbn ? g1.tbn.h : 0) + 'px (44px 이상)');
+  /* 글자가 <b>눈에 보이는가.</b> 옆 단추를 그대로 베꼈다가 밝은 머리띠 위에
+     흰 글자를 올려 안 보인 적이 있다 — 사진을 찍어 보고 알았다.
+     글자와 바탕의 <b>밝기 차</b>를 실제로 잰다 (WCAG 대비 3 이상). */
+  const con = (a, b) => {
+    const lum = (c) => { const m = String(c).match(/[\d.]+/g) || [0, 0, 0];
+      const f = m.slice(0, 3).map(v => { v = +v / 255;
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+      return 0.2126 * f[0] + 0.7152 * f[1] + 0.0722 * f[2]; };
+    const x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+  const cr = g1.tbn ? con(g1.tbn.fg, g1.tbn.bg) : 0;
+  is(cr >= 3, '  카테고리 단추 글자가 <b>눈에 보인다</b> — 밝기 차 ' + cr.toFixed(1) +
+     ' (3 이상) · ' + (g1.tbn ? g1.tbn.fg + ' / ' + g1.tbn.bg : ''));
   await page.evaluate(() => { const b = document.getElementById('tbmBtn'); if (b) b.click(); });
   await page.waitForTimeout(420);
   const g2 = await look(page);
