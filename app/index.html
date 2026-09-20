@@ -14426,8 +14426,19 @@ function mcalDot(list){
    CM.pick(=본인)이 그대로 답한다 — 설계사 화면은 하나도 안 바뀐다. */
 function hwhoPick(){
   var v='';
-  try{ v=(typeof hwhoFor==='function')?hwhoFor():''; }catch(e){ v=''; }
+  try{ v=(typeof hwhoId==='function')?hwhoId():''; }catch(e){ v=''; }
+  if(v===HWHO_ALL)return '';        /* 팀 전체를 고르셨으면 안 거른다 */
   if(v)return v;
+  /* <b>설계사는 언제나 제 것이다</b> (3번). 고를 것이 없으니 고른 값도 없다 —
+     그때 「안 골랐으니 다 보여 준다」 로 읽으면 달력과 계약 마디에 <b>남의
+     고객이 섞인다.</b> 서버가 이미 막고 있지만, 그 한 줄이 느슨해지는 날
+     여기로 샌다. 실제로 check-askall 이 그 자리를 잡았다 (8번). */
+  try{
+    if(typeof hwhoCan==='function'&&!hwhoCan()){
+      var me=(typeof arMyId==='function')?(arMyId()||''):'';
+      if(me)return me;
+    }
+  }catch(e1){}
   try{ return (typeof CM!=='undefined'&&CM.pick)||''; }catch(e2){ return ''; }
 }
 function mcalMine(list){
@@ -14619,8 +14630,12 @@ function mcalDayHtml(){
          「전체 109 · 윤시현 2」 라고 적어 놓고, 밑에는 <b>여덟 줄</b>이
          떴습니다 — 숫자와 목록이 서로 다른 것을 세고 있었습니다.
          담당자가 없는 줄(내 일정 · 도와줄 것)은 고를 것이 없으니 뺍니다. */
+      /* <b>매일 하는 일은 안 센다</b> — 고를 수 있는 것이 아니라 날마다
+         서는 내 몫이다. 세면 「전체 7 / 윤시현 5」 처럼 한 줄씩 부풀어,
+         숫자와 밑의 목록이 또 어긋난다 (5번). */
       var wl=[],wi;
-      for(wi=0;wi<raw.length;wi++)if(raw[wi].who)wl.push({advisor_id:raw[wi].who});
+      for(wi=0;wi<raw.length;wi++)
+        if(raw[wi].who&&raw[wi].k!=='rt')wl.push({advisor_id:raw[wi].who});
       picks=cmWhoChipsHtml(wl)||'';
     }
   }catch(e){picks='';}
@@ -20397,13 +20412,27 @@ function hmIsDone(key){ return hmDoneToday().indexOf(key)>=0; }
    ★ 처음에 '' 를 「전체」로 읽었다가, 띠에는 「내 화면입니다」 라고 적고
      밑에는 <b>온 팀 줄</b>을 세웠다. 화면이 거짓말을 한 것이다 (1번).
      그래서 <b>안 고르셨으면 내 것</b>으로 못 박고, 전체는 눌러야 한다. */
-var HWHO={id:''};
+var HWHO={id:'',init:false};
 var HWHO_ALL='*';
-/* 지금 보고 있는 담당자 — '' 면 <b>내 것</b>, '*' 면 <b>팀 전체</b> */
+/* ── <b>기본값은 홈에서만 정한다</b> ───────────────────────────────
+   「안 고르셨으면 내 것」 은 <b>홈의 규칙</b>이다 (사장님 말씀 ③).
+   달력과 고객 365일은 예전부터 <b>안 고르면 다 보여 주던</b> 자리다 —
+   거기까지 말없이 좁히면, 매니저가 팀 달력을 보던 것이 어느 날 갑자기
+   제 것만 뜬다. 실제로 그렇게 만들었다가 check-calface 가 잡았다 (8번).
+
+   그래서 기본값을 <b>몰래 셈하지 않고</b> 홈을 열 때 한 번 <b>정해 둔다.</b>
+   정해 두면 홈·달력·고객 365일이 같은 값을 보게 되어 어긋날 자리가 없다. */
+function hwhoInit(){
+  if(HWHO.init||!hwhoCan())return;
+  var me=(typeof arMyId==='function')?(arMyId()||''):'';
+  if(!me)return;                    /* 아직 모르면 다음에 — 모르면 안 정한다 (1번) */
+  HWHO.id=me; HWHO.init=true;
+  try{ if(typeof CM!=='undefined'){ CM.pick=me; CM.picked=true; } }catch(e){}
+}
+/* 지금 보고 있는 담당자 — '' 면 <b>안 고르셨다</b>, '*' 면 <b>팀 전체</b> */
 function hwhoId(){
   if(!hwhoCan())return '';          /* 설계사는 언제나 자기 것 — 고를 것이 없다 */
-  if(HWHO.id===HWHO_ALL)return HWHO_ALL;
-  return HWHO.id||((typeof arMyId==='function')?(arMyId()||''):'');
+  return HWHO.id||'';
 }
 /* 홈이 실제로 <b>누구의 줄</b>을 세울지 — 팀 전체면 '' (아무도 안 거른다) */
 function hwhoFor(){
@@ -21513,6 +21542,8 @@ function hmTodayHtml(){
   if(!OS.profile)return '';
   try{ holdCss(); }catch(e){}     /* 옷을 쓰는 화면에서 부른다 (5번) */
   try{ hwhoCss(); }catch(eW){}    /* 같은 규칙 — 쓰는 화면에서 부른다 */
+  /* <b>홈의 기본값은 내 것</b> — 여기서 한 번 정해 둔다 (위 hwhoInit 설명) */
+  try{ hwhoInit(); }catch(eI){}
   var c=hmCount(),i,rows='',no=1;
   for(i=0;i<HM_ORD.length;i++){
     var o=HM_ORD[i],n=c[o.k]||0;
@@ -53646,7 +53677,13 @@ function cmWhoSet(v){
      곳은 hwhoId() 하나다 — 여기서 또 정하면 홈과 갈린다 (5번).
      매니저가 아니면 hwhoSet 이 아무것도 안 하므로, 그때만 제자리에서 바꾼다
      (설계사는 자기 고객뿐이라 칩이 애초에 안 선다). */
-  if(typeof hwhoCan==='function'&&hwhoCan()){ hwhoSet(v); return; }
+  /* <b>같은 칸을 다시 누르면 전체로</b> 돌아간다 — 고객 365일·달력이
+     예전부터 그랬다. 홈의 띠는 「← 내 화면으로」 라는 <b>제 길</b>이 있어
+     토글이 필요 없지만, 여기서는 그 길이 이것뿐이다. 없애 놓으면 한 사람을
+     고른 뒤 전체로 돌아갈 방법이 사라진다 (check-clients·check-calface 가 잡았다). */
+  if(typeof hwhoCan==='function'&&hwhoCan()){
+    hwhoSet((hwhoId&&hwhoId()===v)?HWHO_ALL:v); return;
+  }
   CM.pick=(CM.pick===v)?'':v;
   try{ osRenderList(); }catch(e){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e2){}
@@ -53720,12 +53757,14 @@ function cmBarHtml(){
    이제 <b>제일 먼저</b> 세운다. 「지금 누구 것을 보고 있는지」 가 목록보다
    먼저 눈에 들어와야, 밑에 뜨는 숫자를 내 것으로 잘못 읽지 않는다.      */
 function cmTopHtml(q,all){
-  if(q)return cmWhoChipsHtml(all)+ccBoardHtml(all);
+  if(q)return ccBoardHtml(all);
   /* 「오늘 챙길 고객」 은 지금 고른 담당자 것만 센다.
      내 것만 보는 중인데 남의 고객이 위에 뜨면 그게 내 일인 줄 안다. */
   var mine=all,i;
   if(CM.pick){mine=[];for(i=0;i<all.length;i++)if(all[i].advisor_id===CM.pick)mine.push(all[i]);}
-  return cmWhoChipsHtml(all)+ccBoardHtml(all)+ccPlanHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmBarHtml();
+  /* <b>담당자 줄은 여기 안 세운다.</b> 화면 맨 위(#cliWho)에 한 줄만 선다 —
+     여기에도 세우면 같은 줄이 두 번 서서, 하나를 눌러도 다른 쪽이 안 변한다 (5번). */
+  return ccBoardHtml(all)+ccPlanHtml(all)+cmRecentHtml()+cmTodoHtml(mine)+cmBarHtml();
 }
 function cmRowHtml(c){
   var m=cmOf(c.id),tp=cmTemp(c.id),nm=cmName(c),cs=c.consent_status||'none';
@@ -54619,7 +54658,24 @@ function cliMissionHtml(){
     '<div class="mcal-day" style="border:none;padding:0">'+rows+'</div>'+tail;
 }
 /* 고객·관리 기록이 들어온 뒤에 다시 그린다 — 빈 숫자로 뜨면 안 보느니만 못하다 */
+/* ── 담당자 줄은 <b>화면 맨 위</b>다 ─────────────────────────────────
+   사장님 말씀 — 「담당자들이 분류되도록 만들어 [지금 되어있지만 <b>딱
+   보이게</b>]」.
+
+   목록 맨 위로 올려 봤는데도 <b>2,040px</b> 였다. 그 위에 「🎯 오늘의
+   미션」 카드가 <b>1,881px</b> — 두 화면이 넘게 서 있기 때문이다.
+   2.4 화면을 내려야 보이는 것은 「딱 보이게」 가 아니다.
+
+   그래서 <b>미션 카드보다 위</b>에 세운다. 고객 365일을 열면 제일 먼저
+   보이는 것이 「지금 누구 고객을 보고 있나」 다.                        */
+function cliWhoPaint(){
+  var e=document.getElementById('cliWho');
+  if(!e)return;
+  e.innerHTML=(typeof cmWhoChipsHtml==='function')
+    ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '';
+}
 function cli365TopPaint(){
+  cliWhoPaint();
   var e=document.getElementById('cli365Top');
   if(!e)return;
   e.innerHTML=cliMissionHtml()+mstCardHtml()+
@@ -54642,6 +54698,9 @@ function renderClientsPage(){
   cmCss();
   if(OSC.view==='detail'&&OSC.current)return osClientDetailHtml(OSC.current);
   return '<div class="osc-wrap">'+
+    /* 제일 먼저 — 지금 누구 고객을 보고 있나 */
+    '<div id="cliWho">'+((typeof cmWhoChipsHtml==='function')
+      ? cmWhoChipsHtml((typeof OSC!=='undefined'&&OSC.list)?OSC.list:[]) : '')+'</div>'+
     '<div id="cli365Top">'+cliMissionHtml()+mstCardHtml()+
       (typeof mcalCardHtml==='function'
         ? mcalCardHtml({title:'이번 달 고객 관리',
@@ -54786,6 +54845,9 @@ function osRenderList(){
   h+=(CM.byWho&&!q)?cmWhoGroupHtml(rows)
     :((CM.fam&&!q)?cmFamGroupHtml(rows):cmRowsHtml(rows));
   osSetList(h);
+  /* 맨 위 담당자 줄도 <b>같이</b> 다시 그린다 — 한쪽만 그리면 고른 것이
+     저쪽에 안 비친다 (5번) */
+  try{ cliWhoPaint(); }catch(eW){}
 }
 function osSetList(html){var el=document.getElementById('oscList');if(el)el.innerHTML=html;}
 function osClientsFilter(v){OSC.q=v;osRenderList();}
