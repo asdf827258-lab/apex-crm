@@ -1052,6 +1052,27 @@ a { color: inherit; text-decoration: none; }
   .main { height: auto; overflow: visible; }
   .top-tab-grid { grid-template-columns: repeat(2,1fr); }
 }
+/* 입력칸 접기 — <b>폰에서만.</b> 인쇄에는 안 걸리게 screen 을 붙인다
+   (인쇄 CSS 가 이미 .sidebar 를 숨긴다 — 두 곳이 같은 일을 하게 두지 않는다) */
+.sbm-btn { display: none; }
+.sbm-close { display: none; }
+@media screen and (max-width: 980px) {
+  body.sbm-shut .sidebar { display: none; }
+  /* 폰에서 머리띄를 <b>줄로 나눈다</b> — 한 줄에 세 덩어리를 놓으니
+     제목이 81px 로 눌려 네 줄로 꺾였다(재 보니 머리띄만 223px). */
+  .report-top-head { flex-wrap: wrap; }
+  .report-top-head > div:first-child { flex: 1 1 100%; }
+  .report-top-head > .report-action-row { flex: 1 1 100%; margin-bottom: 0; }
+  .sbm-btn { display: inline-flex; align-items: center; gap: 6px; flex: none;
+    min-height: 44px; padding: 10px 14px; border: 0; border-radius: 999px;
+    font-family: inherit; font-size: var(--t6,13px); font-weight: 900; cursor: pointer;
+    background: var(--primary, #1A56DB); color: #fff; box-shadow: 0 6px 16px rgba(26,86,219,.22); }
+  .sbm-close { display: flex; align-items: center; justify-content: center; gap: 6px;
+    width: 100%; min-height: 44px; margin-top: 10px; padding: 10px 14px;
+    border: 1px solid rgba(255,255,255,.22); border-radius: 12px;
+    font-family: inherit; font-size: var(--t6,13px); font-weight: 900; cursor: pointer;
+    background: rgba(255,255,255,.12); color: #fff; }
+}
 
 /* ══════════════════════════════
    인쇄 / PDF
@@ -1270,6 +1291,8 @@ a { color: inherit; text-decoration: none; }
   <div class="sb-top">
     <div class="sb-logo">APEX <span>YUN PRO</span></div>
     <div class="sb-sub">VIP 재무설계 현금흐름표</div>
+    <!-- 되돌아올 길을 <b>이 자리에서</b> 보여 드린다 -->
+    <button type="button" class="sbm-close" onclick="sbmSet(true)">✕ 입력 닫고 보고서 보기</button>
   </div>
 
   <!-- 물가상승률 — 접힌 칸 안에 있어서 아무도 못 찾았다.
@@ -1588,6 +1611,8 @@ a { color: inherit; text-decoration: none; }
         <div class="report-kicker">APEX YUN PRO · TOTAL REPORT</div>
         <div class="report-title">종합보고서 메뉴</div>
       </div>
+      <!-- 폰에서만 서는 단추 — 머리띄가 sticky 라 어디를 봐도 여기 있다 -->
+      <button type="button" class="sbm-btn" id="sbmBtn" onclick="sbmToggle()" aria-expanded="false">✏️ 고객정보 입력</button>
     </div>
     <div class="top-tab-grid">
       <button class="report-tab on" onclick="switchTab('dashboard',this)"><div class="rt-ico">📊</div><div class="rt-title">종합 대시보드</div><div class="rt-sub">핵심 요약</div></button>
@@ -2023,6 +2048,65 @@ function switchTab(tab, btn) {
   }
 }
 function sbToggle(head) { head.closest('.sb-section').classList.toggle('on'); }
+
+/* ══ 폰에서는 왼쪽 입력칸을 <b>접어 둔다</b> ════════════════════════
+   사장님 말씀 — 「재무설계계산기도 핸드폰으로 키니까 안보인다. 왼쪽 메뉴
+   위에 카테고리가 창을 다 잡고 있어서」.
+
+   390×844 폰에서 재 봤습니다 —
+     왼쪽 입력칸(.sidebar)  2,258px   ← 화면 2.7 개
+     보고서 머리띠 + 탭 10개   455px
+     보고서가 시작되는 자리   2,712px  ← <b>3.2 화면을 내려야</b> 나온다
+   문서 4,744px 중 <b>절반 넘게</b>가 입력칸이었습니다. 폰으로 열면
+   계산기가 아니라 입력칸 목록이 세 화면 서는 것입니다.
+
+   그래서 폰에서만 입력칸을 접어 두고, 보고서가 <b>첫 화면</b>에 서게
+   합니다. PC(981px 이상)는 <b>하나도 안 바뀝니다</b> — 아래 CSS 가
+   @media screen and (max-width:980px) 안에만 있습니다.
+
+   ★ 접은 것이 <b>없어진 것으로 보이지 않게</b> 합니다 —
+     머리띠에 「✏️ 고객정보 입력」 단추가 <b>늘 붙어</b> 다니고(sticky),
+     열면 입력칸 맨 위에 「닫고 보고서 보기」 가 섭니다. 되돌아올 길이
+     안 보이면 접힌 것이 아니라 없어진 것입니다.
+   ★ 입력칸은 display:none 으로만 가립니다 — DOM 에 그대로 있으니
+     값은 계속 읽힙니다(계산이 안 멈춥니다).
+
+   「지금 폰인가」 를 아는 곳은 sbmPhone() <b>한 곳</b>입니다 (5번). */
+var SBM_KEY='apex_fin_sbm_v1';
+function sbmPhone(){
+  try{ return window.matchMedia('(max-width:980px)').matches; }
+  catch(e){ return window.innerWidth<=980; }
+}
+/* 처음 여시는 분은 <b>접힌 채</b>로 시작합니다 — 그래야 계산기가 먼저 보입니다 */
+function sbmShut(){
+  try{ var v=localStorage.getItem(SBM_KEY); return v===null?true:(v==='1'); }
+  catch(e){ return true; }
+}
+function sbmPaint(){
+  var shut=sbmPhone()&&sbmShut();
+  document.body.classList.toggle('sbm-shut',shut);
+  var b=document.getElementById('sbmBtn');
+  if(b){
+    b.textContent=shut?'✏️ 고객정보 입력':'✕ 입력 닫기';
+    b.setAttribute('aria-expanded',shut?'false':'true');
+  }
+}
+function sbmSet(shut){
+  try{ localStorage.setItem(SBM_KEY,shut?'1':'0'); }catch(e){}
+  sbmPaint();
+  if(!sbmPhone())return;
+  /* 연 쪽·닫은 쪽 <b>어디로 갔는지</b> 눈으로 보이게 옮겨 준다 */
+  var go=document.querySelector(shut?'.main':'.sidebar');
+  if(go&&go.scrollIntoView)try{ go.scrollIntoView({block:'start'}); }catch(e){ go.scrollIntoView(); }
+}
+function sbmToggle(){ sbmSet(!sbmShut()); }
+function sbmInit(){
+  sbmPaint();
+  /* 폰을 돌리거나 창을 줄였을 때도 맞게 — 되풀이해 부르지 않는다 (7번) */
+  try{ window.addEventListener('resize',sbmPaint); }catch(e){}
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sbmInit);
+else sbmInit();
 
 /* 네이버증권 연동 */
 function jsEsc(v){ return String(v || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,' '); }

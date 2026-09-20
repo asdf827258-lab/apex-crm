@@ -678,11 +678,13 @@ a{color:inherit;text-decoration:none;}
      --gc 바탕색  --ge 왼쪽 띠 색  --gt 글씨색  --ga 짙기  --gb 띠 짙기 */
 .nav-group{margin-bottom:6px;border-radius:var(--r);overflow:hidden;
  background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * .32));}
-/* 칸 이름은 <b>이름표</b>다 — 누르는 것이 아니다.
-   예전에는 눌러서 접었다 폈다. 그래서 「메뉴가 없어졌다」 는 말이 나왔다 —
-   접힌 것을 지워진 것으로 보신 것이다. 이제 <b>늘 펴져 있다.</b>
-   cursor:pointer 도 빼서 「눌러도 되는 것」처럼 보이지 않게 한다. */
-.nav-group-label{display:flex;align-items:center;gap:8px;width:100%;border:none;text-align:left;font-family:inherit;
+/* 칸 이름을 누르면 그 묶음이 <b>접힙니다.</b>
+   예전에도 접혀 봤고, 그때 「메뉴가 없어졌다」 는 말이 나왔습니다 —
+   접힌 것을 지워진 것으로 보셔서입니다. 그래서 이번엔 접혀도
+   <b>칸 수가 그대로 남고</b>(.ngl-n 은 접혀도 안 숨긴다),
+   화살표가 옆으로 누워져 「접혔다」 를 보여 줍니다.
+   어디에서 그리는지는 navGrp* 에 적어 두었습니다. */
+.nav-group-label{display:flex;align-items:center;gap:8px;width:100%;border:none;text-align:left;font-family:inherit;cursor:pointer;
  font-size:var(--t5);font-weight:800;letter-spacing:-.01em;line-height:1.25;padding:11px 12px;
  color:rgb(var(--gt,190 210 245));
  background:rgb(var(--gc,90 120 200) / calc(var(--ga,.26) * 1.34));
@@ -755,9 +757,26 @@ a{color:inherit;text-decoration:none;}
 .nav-none{margin:10px 12px;font-size:var(--t6);line-height:1.7;color:rgba(255,255,255,.55);font-weight:500;}
 /* 손가락으로 누르는 화면에서는 별표를 늘 보이게 — 마우스가 없으니 hover 가 없다 */
 @media (hover:none){.nav-star{color:rgba(255,255,255,.42);padding:0 10px;}}
-/* 늘 펴져 있다 — max-height 로 잘라 두지 않는다. 1600px 을 넘는 칸이
-   생기면 <b>말없이</b> 아래가 잘리기 때문이다. */
+/* 퍼져 있을 때는 max-height 로 잘라 두지 않는다. 1600px 을 넘는 칸이
+   생기면 <b>말없이</b> 아래가 잘리기 때문이다.
+   접을 때만 display:none 으로 통째 내린다 — 절반만 보이는 일이 없게. */
 .nav-group-items{padding:5px 6px 6px;}
+.nav-group.shut .nav-group-items{display:none;}
+.ngl-ar{flex:none;font-size:var(--t6);line-height:1;opacity:.72;transition:transform .16s var(--ease);}
+.nav-group.shut .ngl-ar{transform:rotate(-90deg);}
+/* 접힌 줄은 <b>흐릿하게 만들지 않는다</b> — 흐릿하면 꺼진 것으로 보인다.
+   칸 수(.ngl-n)를 오히려 한 톤 진하게 해 「여기 n 개 있다」 를 말해 준다. */
+.nav-group.shut .ngl-n{background:rgb(var(--gc,90 120 200) / .92);}
+.nav-grp-bar{display:flex;align-items:center;gap:8px;margin:2px 0 8px;padding:8px 10px;
+ border-radius:var(--r);font-size:var(--t6);line-height:1.5;
+ border:1px solid rgba(147,197,253,.24);background:rgba(96,165,250,.10);color:rgba(219,234,254,.86);}
+.nav-grp-bar.on{border-color:rgba(253,224,71,.34);background:rgba(250,204,21,.13);color:#FDE68A;}
+.nav-grp-bar span{flex:1;min-width:0;}
+.nav-grp-bar b{color:#fff;}
+.nav-grp-bar button{flex:none;min-height:32px;padding:6px 11px;border:0;border-radius:var(--r-pill);
+ font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;
+ background:rgba(255,255,255,.16);color:#fff;}
+.nav-grp-bar button:hover{background:rgba(255,255,255,.28);}
 .sb-guide{width:100%;display:flex;align-items:center;gap:8px;font-family:inherit;text-align:left;cursor:pointer;
  margin:2px 0 9px;padding:11px 13px;border:1px solid rgba(147,197,253,.28);border-radius:var(--r);
  background:linear-gradient(135deg,rgba(96,165,250,.20),rgba(129,140,248,.14));
@@ -12652,16 +12671,80 @@ function navRamp(i,n){
           a:(0.44-0.32*t).toFixed(3),             /* 짙기 — 위가 진하고 아래로 옅어진다 */
           b:(0.94-0.62*t).toFixed(3)};            /* 색 띠도 같이 옅어진다 */
 }
-/* ── 왼쪽 메뉴는 <b>늘 펴져 있다</b> ────────────────────────────────
-   예전에는 칸 이름을 눌러 접었다 폈다 했고, 「모두 펴기 / 모두 접기」 도
-   있었다. 그런데 접힌 칸은 <b>없어진 것처럼</b> 보인다 — 「메뉴가 안 보인다」
-   는 말이 여기서 나왔다. 접혀 있는 줄 모르면 아무리 찾아도 못 찾는다.
+/* ── 메뉴 묶음을 <b>접을 수 있다</b> ────────────────────────────────
+   사장님 말씀 — 「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서
+   어지러워」. 폰에서 재 보니 서랍을 열면 <b>4,060px</b> 이었습니다. 화면이
+   844px 이니 <b>다섯 화면</b>입니다. 열네 묶음이 전부 펴져 있어서입니다.
+   묶음 이름만 남기면 600px — <b>한 화면</b>에 다 섭니다.
 
-   그래서 접는 장치를 <b>통째로</b> 걷어냈다. 접기가 없으니
-     · 어느 칸이 펴졌는지 기억할 것이 없다 (localStorage 도 안 쓴다)
-     · 「지금 화면이 든 칸을 몰래 펴 주는」 navReveal 도 필요 없다
-     · 「모두 접기」 직후에 도로 펴지던 자리(NAVG_SHUT)도 사라진다
-   지웠으면 <b>부르는 자리까지</b> 지운다 — 안 그러면 죽은 판이 돈다 (5번). */
+   <b>예전에 한 번 걷어냈던 장치입니다.</b> 그때 접힌 칸을 <b>없어진 것</b>
+   으로 보셔서 「메뉴가 안 보인다」 는 말이 나왔습니다. 그래서 이번에는
+   접혀 있다는 사실이 <b>화면에 글자로 남게</b> 합니다 —
+
+     ① 접힌 줄에도 <b>칸 수가 그대로</b> 남는다 (「상담 도구 13」).
+        숫자가 보이면 「거기 열셋이 있다」 로 읽힙니다. 없어진 것이 아닙니다.
+     ② 접어 둔 묶음이 하나라도 있으면 목록 맨 위에 <b>「접어 둔 묶음 n개 ·
+        다 펴기」</b> 한 줄이 섭니다. 접힌 줄 모르고 헤매실 일이 없습니다.
+     ③ <b>찾는 중에는 언제나 다 펴집니다</b> — 접혀 있어서 못 찾으면
+        없는 것과 같습니다 (1번).
+     ④ <b>지금 열려 있는 화면이 든 묶음은 저절로 펴집니다.</b> 내가 있는
+        자리가 접혀 있으면 길을 잃습니다.
+
+   「어느 묶음이 접혔나」 를 아는 곳은 navGrpShut() <b>한 곳</b>입니다 (5번).
+   접힌 상태는 이 브라우저에만 남습니다 — 팀원 화면은 안 건드립니다. */
+var NAV_GRP_KEY='apex_nav_grp_shut_v1';
+/* 접어 둔 묶음 이름들 — <b>여기서만</b> 읽는다 */
+function navGrpShut(){
+  try{ var v=JSON.parse(localStorage.getItem(NAV_GRP_KEY)||'[]'); return (v&&v.length)?v:[]; }
+  catch(e){ return []; }
+}
+function navGrpIs(name){ return navGrpShut().indexOf(String(name||''))>=0; }
+function navGrpSave(list){
+  try{ localStorage.setItem(NAV_GRP_KEY,JSON.stringify(list||[])); }catch(e){}
+}
+function navGrpToggle(el){
+  var name=el&&el.getAttribute?el.getAttribute('data-g'):String(el||'');
+  if(!name)return;
+  var l=navGrpShut(),k=l.indexOf(name);
+  if(k>=0)l.splice(k,1); else l.push(name);
+  navGrpSave(l);
+  try{ navPaintBody(); }catch(e){}
+}
+/* 다 접기 / 다 펴기 — 지금 서 있는 묶음 이름으로만 채운다 */
+function navGrpAll(shut){
+  if(!shut){ navGrpSave([]); }
+  else{
+    var vis=(typeof ezOn==='function'&&ezOn())?ezGroups():navVisGroups(),l=[],i;
+    for(i=0;i<vis.length;i++)l.push(vis[i].group);
+    navGrpSave(l);
+  }
+  try{ navPaintBody(); }catch(e){}
+  if(typeof toast==='function')
+    toast(shut?'묶음을 다 접었습니다 — 이름을 누르면 그 자리에서 다시 펴집니다. 칸은 그대로 있습니다.'
+              :'다 폈습니다.');
+}
+/* 지금 열려 있는 화면이 든 묶음은 <b>펴 둔다</b> — 내 자리가 접혀 있으면 길을 잃는다 */
+function navGrpReveal(tab){
+  if(!tab)return;
+  var vis=navVisGroups(),l=navGrpShut(),i,j,hit='',k;
+  for(i=0;i<vis.length&&!hit;i++)
+    for(j=0;j<vis[i].items.length;j++)
+      if(vis[i].items[j].id===tab){ hit=vis[i].group; break; }
+  if(!hit)return;
+  k=l.indexOf(hit); if(k<0)return;
+  l.splice(k,1); navGrpSave(l);
+}
+/* 접어 둔 것이 있다고 <b>글자로</b> 적는다 — 이 한 줄이 「없어졌다」 를 막는다 */
+function navGrpBarHtml(){
+  var n=navGrpShut().length;
+  if(!n)
+    return '<div class="nav-grp-bar off">'+
+      '<span>묶음 이름을 누르면 <b>접힙니다</b> — 접어도 칸은 그대로 있습니다.</span>'+
+      '<button type="button" onclick="navGrpAll(true)">다 접기</button></div>';
+  return '<div class="nav-grp-bar on">'+
+    '<span>📁 접어 둔 묶음 <b>'+n+'개</b> — 없어진 것이 아닙니다.</span>'+
+    '<button type="button" onclick="navGrpAll(false)">다 펴기</button></div>';
+}
 function navMark(tab){
   var i,L=document.querySelectorAll('.tab-btn');
   for(i=0;i<L.length;i++)L[i].classList.toggle('on',L[i].getAttribute('data-tab')===tab);
@@ -14604,6 +14687,9 @@ function renderNav(){
   var fi=document.getElementById('navFind');
   if(fi&&document.activeElement!==fi&&fi.value!==NAV_Q)fi.value=NAV_Q;
   var fx=document.getElementById('navFindX'); if(fx)fx.hidden=!NAV_Q;
+  /* 지금 열려 있는 화면이 든 묶음은 <b>펴 둔다</b> — 내 자리가 접혀 있으면
+     길을 잃는다. 「지금 어느 화면인가」 는 currentTab() 한 곳에서만 묻는다 (5번). */
+  try{ if(typeof currentTab==='function')navGrpReveal(currentTab()); }catch(e){}
   navPaintBody();
   /* 가로 띠도 <b>같은 자리에서</b> 다시 그린다 — 따로 그리면 등급이
      바뀌었을 때 한쪽만 갱신돼 없는 칸이 남는다 (CLAUDE.md 5번) */
@@ -14637,6 +14723,8 @@ function navPaintBody(){
   var ppl=NAV_Q?navPeopleHtml(NAV_Q,NAV_LOOSE)
                :{h:'',n:0,cliRead:true,teamRead:true};
   h+=ppl.h;
+  /* 접어 둔 묶음이 있으면 <b>글자로</b> 적는다 — 「메뉴가 없어졌다」 를 막는 한 줄 */
+  if(!NAV_Q)h+=navGrpBarHtml();
   var found=0;
   vis.forEach(function(g,i){
     var c=navRamp(i,vis.length),name=g.group;
@@ -14648,13 +14736,17 @@ function navPaintBody(){
     if(NAV_Q&&!items.length)return;
     found+=items.length;
     var ic=g.icon||NAVG_ICON[name]||'•';   /* 간편 버전의 묶음은 제 그림글자를 들고 온다 */
-    /* 이름표는 <b>눌러도 아무 일이 없다</b> — 그래서 button 이 아니라 div 다.
-       button 으로 두면 눌러 보고 「고장 났나」 하신다 (8번과 같은 이유). */
-    h+='<div class="nav-group" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
-       '<div class="nav-group-label">'+
+    /* 찾는 중에는 <b>언제나 펴 둔다</b> — 접혀 있어서 못 찾으면 없는 것과 같다 (1번) */
+    var shut=!NAV_Q&&navGrpIs(name);
+    /* 이름표를 누르면 그 묶음이 접힌다. 접어도 <b>칸 수는 그대로 남는다</b> —
+       숫자가 보여야 「없어진 것」 으로 안 읽으신다. button 인 이유이기도 하다. */
+    h+='<div class="nav-group'+(shut?' shut':'')+'" style="--gc:'+c.c+';--ge:'+c.e+';--gt:'+c.w+';--ga:'+c.a+';--gb:'+c.b+'">'+
+       '<button type="button" class="nav-group-label" data-g="'+esc(name)+'" '+
+         'aria-expanded="'+(shut?'false':'true')+'" onclick="navGrpToggle(this)">'+
+         '<span class="ngl-ar">▾</span>'+
          '<span class="ngl-left"><span class="ngl-ic">'+ic+'</span>'+
          '<span class="ngl-t">'+esc(name)+'</span></span>'+
-         '<span class="ngl-n">'+items.length+'</span></div>'+
+         '<span class="ngl-n">'+items.length+'</span></button>'+
        '<div class="nav-group-items">';
     items.forEach(function(it){ h+=navBtnHtml(it); });
     h+='</div></div>';
@@ -15310,8 +15402,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-19 06:20';
-var APP_BUILD_NOTE="<b>설계사는 자기 고객만 봅니다 — 화면에서도 한 번 더 막았습니다.</b> 「팀원들이 홈과 보고에서 모두 자기 것만 보는지」 확인해 달라 하신 자리입니다. <b>서버는 이미 막고 있었습니다.</b> 고객 표의 읽기 규칙이 <code>advisor_id = auth.uid() or is_admin() or is_my_teammate(advisor_id)</code> 인데 <code>is_my_teammate</code> 는 <b>부르는 사람의 역할이 leader 일 때만</b> 참이라, 설계사에게는 남의 줄이 <b>애초에 안 옵니다.</b> 실제 계정 35명(설계사 24 · 팀장 5 · 관리자 3 · master 2 · 대표 1)의 역할 글자도 전부 그 규칙과 맞습니다. <b>그런데 화면에는 거르는 곳이 없었습니다.</b> 서버가 남의 것을 준 척하고 재 보니 — 홈 「오늘 챙길 것」과 TFA 업무관리는 <b>안 보였지만</b>, <b>홈 찾기</b>와 <b>고객 365일</b>에는 <b>남의 고객이 그대로 떴습니다.</b> 서버 규칙 한 줄이 느슨해지는 날 그 둘로 조용히 샙니다. 고객 실명이 걸린 자리라(3번) 그 하루가 비쌉니다. 이제 <b>받는 자리 한 곳</b>(<code>osMineOnly</code>)에서 거릅니다 — 아래로 내려가는 모든 화면(고객 365일 · 홈 찾기 · 달력 · 계약 마디)이 그대로 따라옵니다(5번). <b>매니저는 안 거릅니다</b> — 팀을 봐야 하는 자리입니다. 그리고 <b>모르면 안 거릅니다</b>(1번) — 프로필을 아직 못 읽었을 때 걸러 버리면 <b>내 고객까지</b> 사라져 「고객이 없습니다」 라는 더 나쁜 거짓말이 됩니다. <code>check-mineonly</code> 를 새로 만들어 <b>13자리</b>를 걸었고, 세 가지를 하나씩 되돌려 <b>세 번 다 빨간불</b>을 확인했습니다.";
+var APP_BUILD='2026-09-20 05:50';
+var APP_BUILD_NOTE="<b>메뉴를 접을 수 있게 했습니다 — 메인 메뉴와 폰 계산기 둘 다.</b> 「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서 어지러워」 · 「재무설계계산기도 핸드폰으로 키니까, 안보인다」 하신 자리입니다. 먼저 <b>재 봤습니다</b>(390×844) — 서람을 열면 <b>4,125px</b>로 열네 묶음이 전부 펀져 <b>다섯 화면</b>이었고, 계산기는 왼쪽 입력칸이 <b>2,258px</b> 를 먹어 보고서가 <b>3.2 화면 아래</b>(2,712px)에서 시작했습니다 — 문서 4,744px 중 절반 넘게 메뉴였습니다. 이제 <b>메뉴 묶음 이름을 누르면 접힙니다</b>(4,125 → <b>863px</b> · 한 화면). 폰에서는 <b>계산기 입력칸이 접힌 채로 열려</b> 보고서가 <b>515px</b> 에 — 첫 화면에 서고, 머리띄의 「✏️ 고객정보 입력」 한 번이면 돌아옵니다. <b>PC 는 하나도 안 바뀝니다.</b> — 접기는 <b>예전에 한 번 걷어냈던</b> 장치입니다. 그때 접힌 칸을 「없어진 것」 으로 보셔서 「메뉴가 안 보인다」 는 말이 나왔습니다. 그래서 이번엔 <b>접혀 있다는 사실이 글자로 남습니다</b> — 접힌 줄에도 <b>칸 수가 그대로</b> 남고(「상담 도구 13」), 목록 맨 위에 <b>「접어 둔 묶음 n개 · 다 펴기」</b> 가 서고, <b>찾는 중에는 언제나 다 펀집니다</b>(1번). 지금 열려 있는 화면이 든 묶음도 저절로 펀니다. 계산기 입력칸은 <b>display:none 으로 가릴 뿐</b>이라 가린 채로도 값이 읽혀 <b>계산이 안 멈추는 것</b>까지 재 봤습니다. <code>check-navgrp</code>·<code>check-finsbm</code> 두 점검을 새로 만들어 <b>39자리</b>를 걸었고, 일곱 가지를 하나씩 되돌려 <b>일곱 번 다 빨간불</b>을 확인했습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

@@ -1,9 +1,19 @@
-/* 메뉴 — 하루 동선대로 묶고, <b>늘 펴 둔다.</b>
+/* 메뉴 — 하루 동선대로 묶고, <b>기본은 펴져 있다.</b>
 
    화면이 예순 개가 넘어서 예전에는 카테고리로 묶어 <b>평소엔 접어</b> 뒀다.
    그런데 접힌 칸은 <b>없어진 것처럼</b> 보인다 — 「메뉴가 안 보인다」 는 말이
    여기서 나왔다. 접혀 있는 줄 모르면 아무리 찾아도 못 찾는다.
    그래서 접기를 <b>통째로</b> 걷어냈다.
+
+   ── <b>2026-09-20 에 사장님이 되돌리라 하셨다.</b> ───────────────────
+   「메인 메뉴 카테고리도 숨길수 있도록하고 다 펼쳐져있어서 어지러워」.
+   폰에서 재 보니 서랍이 <b>4,125px</b>, 화면 다섯 개였다 — 열네 묶음이 전부
+   펴져 있어서다. 그래서 <b>접기가 돌아왔다.</b> 다만 <b>기본은 그대로 펴짐</b>
+   이고, 접는 것은 누르셨을 때만이다. 지난번에 깨졌던 자리(「접힌 것이
+   없어진 것으로 보인다」)는 <b>check-navgrp</b> 가 따로 지킨다 — 접힌 줄에도
+   칸 수가 남는가 · 「접어 둔 묶음 n개 · 다 펴기」 가 서는가 · 찾을 때는 다
+   펴지는가. <b>여기서 그것을 또 재지 않는다</b> — 같은 것을 두 곳에서 재면
+   한쪽만 늙는다 (CLAUDE.md 5번).
 
    메뉴를 건드리는 것은 위험하다. 잘못하면 화면이 아예 안 보이거나 —
    더 나쁘게는 — 요금제 문이 조용히 따라 움직인다. 그래서 여기서 직접
@@ -11,9 +21,10 @@
 
      · 칸이 다 나오는가, 메뉴가 한 개도 안 빠졌는가
      · 메뉴마다 원래 구분(ak)을 달고 다니는가 — 이게 없으면 유료 문이 움직인다
-     · <b>모든 칸이 펴져 있는가</b> — 안 보이는 메뉴 단추가 하나도 없는가
-     · 접는 장치가 <b>코드에도</b> 안 남아 있는가 (죽은 판이 돌면 안 된다 · 5번)
-     · 칸 이름이 <b>눌러도 되는 것처럼</b> 안 보이는가 (단추가 아니라 이름표)
+     · <b>처음 열면 모든 칸이 펴져 있는가</b> — 안 보이는 메뉴 단추가 하나도 없는가
+     · <b>예전</b> 접기 함수가 되살아나지 않았는가 — 지금은 navGrp* 하나뿐이다.
+       둘이 같이 있으면 <b>쌍둥이</b>가 돈다 (5번)
+     · 칸 이름이 <b>눌러도 되는 것처럼</b> 보이는가 — 이제는 정말 눌리므로
      · 위에서 아래로 색이 한 줄기로 옅어지는가, 글씨가 배경에 안 묻는가
      · 다른 데서 건너뛴 화면도 메뉴에서 바로 보이는가
      · 좁은 화면에서 이름이 안 잘리고 옆으로 안 밀리는가                 */
@@ -280,10 +291,10 @@ async function boot(page) {
   /* ── 3) 왼쪽 메뉴는 <b>늘 펴져 있다</b> ────────────────────────────
      예전에는 칸 이름을 눌러 접었다 폈다 했다. 그런데 접힌 칸은 <b>없어진
      것처럼</b> 보인다 — 「메뉴가 안 보인다」 는 말이 여기서 나왔다.
-     그래서 접기를 통째로 걷어냈다. 여기서 재는 것은 <b>결과</b>다:
-     「지금 이 순간, 메뉴 단추가 눈에 보이는가」. 어떻게 만들든 이 질문에
-     답하면 된다 (CLAUDE.md 8번). */
-  console.log('\n[3] 왼쪽 메뉴가 늘 펴져 있다 — 접히지 않는다');
+     지금은 접을 수 있지만 <b>기본은 펴짐</b>이다. 여기서 재는 것은 <b>결과</b>다:
+     「처음 열었을 때, 메뉴 단추가 눈에 보이는가」. 어떻게 만들든 이
+     질문에 답하면 된다 (CLAUDE.md 8번). 접어 둔 뒤의 일은 check-navgrp 가 본다. */
+  console.log('\n[3] 처음 열면 왼쪽 메뉴가 <b>다 펴져</b> 있다');
   const alwaysOpen = await page.evaluate(new Function(`
     var visH=${VIS_H};
     var els = [].slice.call(document.querySelectorAll('#navHost .nav-group'));
@@ -301,36 +312,41 @@ async function boot(page) {
       hasToggle: typeof window.navToggle === 'function',
       hasAllSet: typeof window.navAllSet === 'function',
       hasReveal: typeof window.navReveal === 'function',
-      allBtns: document.querySelectorAll('#navHost .nav-allbtns button').length,
-      carets: document.querySelectorAll('#navHost .ngl-caret').length,
-      collapsed: document.querySelectorAll('#navHost .nav-group.collapsed').length };
+      /* <b>지금 쓰는 이름</b>으로 센다 — 안 쓰는 이름(.collapsed · .ngl-caret)을
+         세면 늘 0 이 나와, 아무것도 안 재고도 통과한다 (8번). */
+      shut: document.querySelectorAll('#navHost .nav-group.shut').length,
+      ars: document.querySelectorAll('#navHost .ngl-ar').length,
+      bar: document.querySelectorAll('#navHost .nav-grp-bar').length };
   `));
-  is(alwaysOpen.collapsed === 0,
-     '접힌 칸이 <b>하나도 없다</b> (' + alwaysOpen.collapsed + '/' + alwaysOpen.n + ')');
+  is(alwaysOpen.shut === 0,
+     '처음 열면 접힌 칸이 <b>하나도 없다</b> (' + alwaysOpen.shut + '/' + alwaysOpen.n + ')');
   is(alwaysOpen.shortest > 20,
      '가장 짧은 칸도 <b>속이 보인다</b> — 「' + alwaysOpen.shortName + '」 ' + alwaysOpen.shortest + 'px');
   is(alwaysOpen.hidden === 0,
      '눈에 안 보이는 메뉴 단추가 <b>없다</b>' + (alwaysOpen.hidden ? ' ← ' + alwaysOpen.hidden + '개' : ''));
   is(alwaysOpen.seen >= 60, '메뉴가 다 보인다 (' + alwaysOpen.seen + '개)');
 
-  /* ── 4) 접는 장치가 <b>아예 없다</b> ── */
-  console.log('\n[4] 접는 장치가 남아 있지 않다');
-  is(alwaysOpen.allBtns === 0, '「모두 펴기 / 모두 접기」 단추가 <b>없다</b>');
-  is(alwaysOpen.carets === 0, '접힘 화살표(▾)가 <b>없다</b>');
+  /* ── 4) 접는 장치는 <b>한 벌뿐</b>이다 ── */
+  console.log('\n[4] 접는 장치는 <b>한 벌뿐</b>이다 (navGrp*)');
+  is(alwaysOpen.ars === alwaysOpen.n,
+     '묶음마다 접힘 화살표가 <b>하나씩</b> 있다 (' + alwaysOpen.ars + '/' + alwaysOpen.n + ')');
+  is(alwaysOpen.bar === 1,
+     '접기 안내줄은 <b>한 줄뿐</b>이다 (' + alwaysOpen.bar + '줄) — 둘이면 쌍둥이다 (5번)');
   const alive = [alwaysOpen.hasToggle && 'navToggle', alwaysOpen.hasAllSet && 'navAllSet',
                  alwaysOpen.hasReveal && 'navReveal'].filter(Boolean);
   is(alive.length === 0,
-     '접기 함수(navToggle · navAllSet · navReveal)가 <b>안 남아 있다</b>' +
+     '<b>예전</b> 접기 함수(navToggle · navAllSet · navReveal)는 <b>안 되살아났다</b>' +
      (alive.length ? ' ← 아직 있습니다: ' + alive.join(', ') : ''));
-  /* 칸 이름은 <b>눌러도 아무 일이 없는</b> 이름표다 — 눌러 보고 「고장 났나」 하시면 안 된다 */
+  /* 칸 이름은 이제 <b>누르면 접힌다</b> — 누를 수 있는 것처럼 <b>보여야</b> 한다.
+     생김새만 이름표면 아무도 안 눌러 보셔서 「접기」 를 넣은 뜻이 없다. */
   const labelKind = await page.evaluate(() => {
     var L = [].slice.call(document.querySelectorAll('#navHost .nav-group-label'));
     return { n: L.length, btn: L.filter(function (e) { return e.tagName === 'BUTTON'; }).length,
              ptr: L.filter(function (e) { return getComputedStyle(e).cursor === 'pointer'; }).length };
   });
-  is(labelKind.btn === 0 && labelKind.ptr === 0,
-     '칸 이름은 <b>이름표</b>다 — 누르는 것처럼 안 보인다 (단추 ' + labelKind.btn +
-     '개 · 손가락 커서 ' + labelKind.ptr + '개)');
+  is(labelKind.n > 0 && labelKind.btn === labelKind.n && labelKind.ptr === labelKind.n,
+     '칸 이름은 <b>누를 수 있게</b> 보인다 — 단추 ' + labelKind.btn + '/' + labelKind.n +
+     ' · 손가락 커서 ' + labelKind.ptr + '/' + labelKind.n);
   is(labelKind.n >= 10, '카테고리 이름은 다 보인다 (' + labelKind.n + '칸)');
 
   /* ── 5) 어느 화면으로 건너뛰어도 그 메뉴가 바로 보인다 ── */
