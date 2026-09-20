@@ -77,7 +77,7 @@ const SEED = `
       badge: [...document.querySelectorAll('.mcal-grid .mcal-d:not(.off) .cnt')].map(x => x.textContent),
       tdyLbl: ((document.querySelector('.mcal-tdy') || {}).textContent || '').trim(),
       panel: P ? { n: P.querySelectorAll('.mrt-it').length, on: P.querySelectorAll('.mrt-it.on').length,
-                   ro: P.querySelectorAll('.mrt-it.ro').length,
+                   ro: P.querySelectorAll('.mrt-it.ro').length, open: P.classList.contains('on'),
                    hd: (P.querySelector('.mrt-hd') || {}).innerText.replace(/\s+/g, ' ').trim() } : null,
       store: localStorage.getItem('apex_ck_day_' + T),
       ck: (typeof ckLoad === 'function') ? JSON.stringify(ckLoad('day')) : null,
@@ -103,8 +103,17 @@ const SEED = `
 
   console.log('\n[2] 날을 누르면 <b>그 자리에서</b> 펴지고 체크된다');
   await page.evaluate(() => mcalPick(mcalToday())); await page.waitForTimeout(450);
+  const shut = await look();
+  /* <b>접혀 있어도 몇 개 했는지는 보인다.</b> 접힌 것이 「없어진 것」 으로
+     보이면 안 된다 — 메뉴 묶음을 접을 때와 같은 규칙이다 (8번). */
+  is(!!shut.panel && !shut.panel.open, '  처음에는 <b>접혀 있다</b> — 열한 줄을 늘 펴 두면 화면이 0.9 화면씩 길어진다');
+  is(!!shut.panel && shut.panel.n === 0, '  접히면 줄이 <b>안 그려진다</b>');
+  is(!!shut.panel && /\d+ \/ \d+|하루 \d+가지/.test(shut.panel.hd),
+     '  접힌 줄에도 <b>몇 개 했는지 남는다</b> — 「' + (shut.panel ? shut.panel.hd.slice(0, 26) : '') + '」');
+  await page.evaluate(() => mrtOpenSet(mcalToday())); await page.waitForTimeout(450);
   const b = await look();
-  is(!!b.panel && b.panel.n === a.items, '  오늘 칸을 누르니 <b>' + (b.panel ? b.panel.n : 0) + '줄</b>이 펴진다');
+  is(!!b.panel && b.panel.open, '  누르면 <b>펴진다</b>');
+  is(!!b.panel && b.panel.n === a.items, '  오늘 칸에 <b>' + (b.panel ? b.panel.n : 0) + '줄</b>이 선다');
   is(!!b.panel && b.panel.ro === 0, '  오늘 것은 <b>눌린다</b>');
   const small = await page.evaluate(() => [...document.querySelectorAll('.mrt-it')].filter(x => x.getBoundingClientRect().height < 44).length);
   is(small === 0, '  줄이 <b>손가락으로 누를 만하다</b> (44px)');
@@ -125,7 +134,7 @@ const SEED = `
     const ds = d.toISOString().slice(0, 10);
     /* 앞날에 기록이 <b>있는 척</b> 해 본다 — 그래도 켜지면 안 된다 */
     localStorage.setItem('apex_ck_day_' + ds, JSON.stringify({ d1: 1 }));
-    mcalPick(ds); return ds;
+    mcalPick(ds); mrtOpenSet(ds); return ds;
   });
   await page.waitForTimeout(450);
   const d = await look();
@@ -161,7 +170,7 @@ const SEED = `
   console.log('\n[5] 지난 날은 <b>보여만</b> 준다');
   const yst = await page.evaluate(() => {
     const d = new Date(mcalToday() + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - 1);
-    const ds = d.toISOString().slice(0, 10); mcalPick(ds); return ds;
+    const ds = d.toISOString().slice(0, 10); mcalPick(ds); mrtOpenSet(ds); return ds;
   });
   await page.waitForTimeout(450);
   const e = await look();

@@ -13926,6 +13926,14 @@ function mrtToggle(ds,id){
   try{ mcalPaint(); }catch(e2){}
 }
 function mrtAllDone(ds){ var L=mrtItems(); return L.length>0&&mrtDone(ds)>=L.length; }
+/* ── <b>접어 둔다</b> ──────────────────────────────────────────────
+   열한 줄을 늘 펴 두니 고객 365일과 내 캘린더가 <b>0.9 화면씩</b> 길어졌다
+   (2.8 → 3.7 · 2.4 → 3.3). check-toss 가 그 자리를 쟀다.
+   접어 두되 <b>몇 개 했는지는 접힌 줄에 그대로</b> 남긴다 — 숫자가 보이면
+   「없어진 것」 으로 안 읽힌다. 메뉴 묶음을 접을 때와 같은 규칙이다. */
+var MRT={open:''};
+function mrtOpenIs(ds){ return MRT.open===ds; }
+function mrtOpenSet(ds){ MRT.open=(MRT.open===ds)?'':ds; try{ mcalPaint(); }catch(e){} }
 /* 고른 날의 열한 줄 — 달력 아래에 편다 */
 function mrtPanelHtml(ds){
   var L=mrtItems();
@@ -13935,14 +13943,20 @@ function mrtPanelHtml(ds){
   mrtCss();
   /* <b>지난 날과 앞날을 갈라 적는다.</b> 앞날에 「지난 기록입니다」 라고
      적으면 화면이 거짓말을 한다 (1번). 앞날은 아직 아무 일도 없었다. */
-  h='<div class="mrt"><div class="mrt-hd">📋 <b>매일 하는 일</b> '+
+  var op=mrtOpenIs(ds);
+  h='<div class="mrt'+(op?' on':'')+'">'+
+    '<button type="button" class="mrt-hd" aria-expanded="'+(op?'true':'false')+'" '+
+      'onclick="mrtOpenSet(\''+ds+'\')">'+
+    '<span class="ar">▾</span>📋 <b>매일 하는 일</b> '+
     (ahead?'<span class="mrt-n">하루 '+L.length+'가지</span>'
-          :('<span class="mrt-n'+(n>=L.length?' all':'')+'">'+n+' / '+L.length+'</span>'))+
+          :('<span class="mrt-n'+(n>=L.length?' all':'')+'">'+n+' / '+L.length+
+            (n>=L.length?' ✓':'')+'</span>'))+
     (today?''
      :('<span class="mrt-ro">'+(ahead
         ? '아직 오지 않은 날입니다 — 체크는 <b>그날</b> 자리에서 켜집니다'
         : '지난 기록입니다 — 체크는 <b>오늘</b> 자리에서만 켜집니다')+'</span>'))+
-    '</div>';
+    '</button>';
+  if(!op)return h+'</div>';
   for(i=0;i<L.length;i++){
     x=L[i];on=!ahead&&!!m[x[0]];
     h+='<button type="button" class="mrt-it'+(on?' on':'')+(today?'':' ro')+'" '+
@@ -13958,8 +13972,13 @@ function mrtCss(){
   var st=document.createElement('style');st.id='mrtCss';
   st.textContent=
    '.mrt{margin-top:12px;border:1px solid var(--ink-7);border-radius:var(--r);padding:11px 12px;background:#FAFBFC}'+
-   '.mrt-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:var(--t6);'+
-     'font-weight:800;color:var(--ink-3);margin-bottom:8px}'+
+   '.mrt-hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-height:44px;'+
+     'border:0;background:transparent;font-family:inherit;text-align:left;cursor:pointer;'+
+     'font-size:var(--t6);font-weight:800;color:var(--ink-3)}'+
+   '.mrt.on .mrt-hd{margin-bottom:8px}'+
+   '.mrt-hd .ar{flex:none;font-size:var(--t6);line-height:1;opacity:.7;'+
+     'transform:rotate(-90deg);transition:transform .16s var(--ease)}'+
+   '.mrt.on .mrt-hd .ar{transform:none}'+
    '.mrt-n{font-weight:900;padding:2px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
    '.mrt-n.all{background:#ECFDF5;color:#047857}'+
    '.mrt-ro{font-weight:700;color:var(--ink-5)}'+
@@ -14414,8 +14433,16 @@ function hwhoPick(){
 function mcalMine(list){
   var p=hwhoPick();
   if(!p)return list||[];
-  var out=[],i,L=list||[];
-  for(i=0;i<L.length;i++)if((L[i].who||'')===p)out.push(L[i]);
+  var out=[],i,L=list||[],w;
+  for(i=0;i<L.length;i++){
+    w=L[i].who||'';
+    /* <b>임자가 적혀 있고 그것이 내가 아닐 때만</b> 뺀다.
+       임자가 없는 줄 — 내 일정(my) · 도와줄 것(help) — 은 고객이 아니라
+       <b>내 것</b>이다. 그것까지 빼면 담당자를 고르는 순간 내 일정이
+       달력에서 사라진다. 실제로 그랬고, check-homeday 가 12자리를 걸어
+       잡았다 (8번). 「모르면 안 거른다」 는 1번 규칙이기도 하다. */
+    if(!w||w===p)out.push(L[i]);
+  }
   return out;
 }
 /* 하루치를 꺼내는 자리도 하나로 — 꺼낼 때마다 거르는 것을 잊지 않게 */
