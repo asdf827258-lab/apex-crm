@@ -225,9 +225,37 @@ const AI_OK = `## 활동 보고
        확인한다. 안 그러면 「빼기」와 「없애기」를 구분 못 한다.
      ★ <b>고객 체크</b>는 「오늘 터치할 사람」 바로 뒤다. 앞엣것은 TA
        앞단(부재·거절·기고객), 이것은 TA 뒤(AP·PC·CS)라 그 차례가 맞다. */
-  ok(cats.length === 12, '왼쪽에 카테고리 열두 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|오늘 터치할 사람|고객 체크|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
+  /* ── 2026-09-21 · <b>열둘 → 열하나</b> ────────────────────────────
+     사장님 말씀 「오늘 터치할 사람도 * <b>[아래 글이 모두 적용 되었다면
+     지워버려]</b>」. 그 「아래 글」(홈 아침 미션 다섯 · 고객 체크)이 다
+     섰으므로 이 칸을 왼쪽 목록에서 뺐다. 상태로 맞춰 보면 빠진 사람이
+     없다 — 미접촉·TA·부재·기고객·거절은 홈 아침 미션이, AP·PC·CS 는
+     고객 체크가, 계약완료·증권전달·생일·식은은 달력과 해야 할 일이 본다.
+     ★ <b>지운 것이 아니다</b> — 아래에서 그것을 따로 확인한다. */
+  ok(cats.length === 11, '왼쪽에 카테고리 열한 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|고객 체크|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('오늘 터치할 사람') < 0,
+    'TFA 왼쪽에서 <b>오늘 터치할 사람이 빠졌다</b> — 홈 아침 미션과 고객 체크가 대신한다');
+  /* <b>빼기와 없애기를 가른다</b> — 표에는 남아 있어야 하고, 불러야 열려야 한다.
+     표에서 아예 지우면 🔎 메뉴 찾기·arGoCat·arBodyHtml 셋이 한꺼번에 죽는다. */
+  const tch = await page.evaluate(() => {
+    const row = (window.AR_CAT || []).filter(c => c[0] === 'touch')[0];
+    let found = 0;
+    try {
+      NAV_Q = '오늘 터치할 사람'; renderNav();
+      found = Array.prototype.filter.call(document.querySelectorAll('#navHost .tab-btn'),
+        b => /터치할 사람/.test(b.textContent)).length;
+      NAV_Q = ''; renderNav();
+    } catch (e) {}
+    return { inTable: !!row, hidden: !!(row && row[5]), found: found };
+  });
+  ok(tch.inTable && tch.hidden, '표(AR_CAT)에는 <b>남아 있고</b> 여섯째 자리에 hide 가 달렸다');
+  ok(tch.found > 0, '<b>지운 것이 아니다</b> — 🔎 메뉴 찾기로 「오늘 터치할 사람」 이 나온다');
+  await open('touch');
+  const tchTxt = await pane();
+  ok(/오늘 터치할 사람|다시 걸|식은/.test(tchTxt), '불러서 열면 <b>그 판이 그대로</b> 선다 (arGoCat)');
+  await open();
   ok(cats.indexOf('본인 점수판') < 0, '본인 점수판 칸은 없어졌다 — 내 업적 안으로 들어갔다');
   ok(cats.indexOf('내 코칭') < 0 && cats.indexOf('본인 점검란') < 0,
     'TFA 왼쪽에서 <b>내 코칭·본인 점검란이 빠졌다</b> — 간소화');

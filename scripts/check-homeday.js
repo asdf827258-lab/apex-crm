@@ -403,13 +403,17 @@ const SEED = `(function(){
     const pane = document.getElementById('arPane');
     return { host: !!host, pane: !!(host && host.querySelector('#arPane')),
              cats: pane ? pane.querySelectorAll('.ar-cat').length : 0,
-             want: (typeof AR_CAT !== 'undefined') ? AR_CAT.length : -1,
+             /* 눈에서 뺀 칸(여섯째 자리 hide)은 세지 않는다 — 일부러 안 세운 것이다.
+                2026-09-21 「오늘 터치할 사람」이 그렇게 빠졌다. */
+             want: (typeof AR_CAT !== 'undefined') ? AR_CAT.filter(c => !c[5]).length : -1,
+             hid: (typeof AR_CAT !== 'undefined') ? AR_CAT.filter(c => c[5]).map(c => c[0]) : [],
              go: !!document.querySelector('.hm-tfa-go'),
              body: !!(pane && pane.querySelector('.ar-main')) };
   });
   is(tfa.host && tfa.pane, 'TFA 판이 <b>홈 안에</b> 서 있다 — 같은 칸 이름(#arPane)이라 다시 그리기가 그대로 된다');
   is(tfa.cats === tfa.want && tfa.want > 0,
-     '칸이 <b>하나도 안 빠지고</b> 선다 — ' + tfa.cats + ' / AR_CAT ' + tfa.want + '개');
+     '칸이 <b>하나도 안 빠지고</b> 선다 — ' + tfa.cats + ' / AR_CAT ' + tfa.want + '개'
+     + (tfa.hid.length ? ' (눈에서 뺀 칸 ' + tfa.hid.join(', ') + ' 은 뺀 수)' : ''));
   is(tfa.body, '고른 칸의 <b>본문까지</b> 홈에 선다 — 이름만 늘어놓지 않는다');
   is(tfa.go, '<b>「전체 화면으로」</b> 가 있다 — 넓게 보고 싶으실 때');
   /* 새로 그리지 않았는가 — 소스로 못 박는다 (5번) */
