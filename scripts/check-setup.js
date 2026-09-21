@@ -354,6 +354,13 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     window.__cp = ''; window.copyText = t => { window.__cp = '' + t; };
     go('home');
     const bar = () => document.querySelector('#dynPane .stp');
+    /* ⚠ 뒷길 다섯(복사만·주소만·나눠서·글로 보기·나중에)은 <b>「안 될 때 ▾」</b>
+       뒤에 접혀 있다 — 2026-09-21 · 배너가 425px 라 홈에서 「오늘 할 일」 이
+       883px 로 밀려 첫 화면을 벗어났고 check-toss 가 잡았다. <b>지운 것이
+       아니라</b> 한 번 뒤이므로, 점검도 그 길을 그대로 밟는다 (8번). */
+    const more = Array.from(bar().querySelectorAll('button'))
+                      .filter(b => /안 될 때/.test(b.textContent))[0];
+    const hadMore = !!more; if (more) more.click();
     const btn = Array.from(bar().querySelectorAll('button'))
                      .filter(b => /나눠서/.test(b.textContent))[0];
     const had = !!btn; if (btn) btn.click();
@@ -363,10 +370,12 @@ let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++
     const got = window.__cp;
     const marked = bar().querySelectorAll('.stp-p.got').length;
     window.osCfgGet = realCfg; SETUP.split = false; SETUP.got = {};
-    return { had, before, len: got.length, second: got === setupPartSql(1), marked,
+    SETUP.more = false;
+    return { had, hadMore, before, len: got.length, second: got === setupPartSql(1), marked,
              says: bar() ? /복사했다는 표시일 뿐/.test(bar().textContent) : false };
   });
-  is(spu.had, '  배너에 <b>「⏱ 시간 초과가 났어요 — 나눠서」</b> 단추가 있다');
+  is(spu.hadMore, '  배너에 <b>「안 될 때 ▾」</b> 가 있다 — 뒷길로 가는 문');
+  is(spu.had, '  펴면 <b>「⏱ 시간 초과가 났어요 — 나눠서」</b> 단추가 있다');
   is(spu.before === sp.n, '  누르면 조각 단추가 <b>' + spu.before + '개</b> 선다');
   is(spu.second && spu.len > 100, '  조각 단추를 누르면 <b>그 조각이 복사된다</b> — ' + spu.len + '자');
   is(spu.marked === 1, '  누른 것만 <b>「복사함」</b> 으로 표시된다 — ' + spu.marked + '개');
