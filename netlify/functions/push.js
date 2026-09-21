@@ -54,17 +54,28 @@ exports.handler = async function (event) {
     if (!tok) return { statusCode: 401, headers: P.JSON_HEAD,
       body: JSON.stringify({ ok: false, reason: '로그인한 뒤에 해 주세요.' }) };
 
-    /* 이 토큰이 누구인가 — Supabase 에게 묻는다 */
-    let uid = '';
+    /* 이 토큰이 누구인가 — Supabase 에게 묻는다.
+       ⚠ 2026-09-22 아침에 여기서 물렸습니다. 폰을 덮어 두셨다가 여시면
+         앱이 들고 있던 표의 <b>시간이 지나</b> 있어서, 그것을 그대로
+         보냈습니다. 앱 쪽은 이제 누르는 그 자리에서 표를 새로 받습니다.
+       ★ 여기서 돌려보내는 말은 <b>앱이 쓰는 말과 달라야</b> 합니다.
+         여태 두 자리가 똑같은 문장이라, 화면만 봐서는 <b>폰이 못 보낸
+         것인지 서버가 물린 것인지</b> 알 수가 없었습니다 (1번).
+         그래서 서버가 무슨 대답을 했는지(상태 번호)도 같이 적습니다. */
+    let uid = '', st = 0, why = '';
     try {
       const base = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
       const who = await fetch(base + '/auth/v1/user',
         { headers: { apikey: P.SB_KEY, Authorization: 'Bearer ' + tok } });
+      st = who.status || 0;
       const j = await who.json().catch(() => null);
       uid = (j && j.id) || '';
-    } catch (e) { uid = ''; }
+      if (!uid) why = String((j && (j.msg || j.message || j.error_description)) || '').slice(0, 80);
+    } catch (e) { uid = ''; why = '서버에 닿지 못했습니다'; }
     if (!uid) return { statusCode: 401, headers: P.JSON_HEAD,
-      body: JSON.stringify({ ok: false, reason: '로그인이 확인되지 않았습니다 — 다시 로그인해 주세요.' }) };
+      body: JSON.stringify({ ok: false, reason:
+        '서버가 로그인 표를 확인하지 못했습니다 — 앱을 닫았다 여신 뒤 다시 눌러 주세요.'
+        + ' (서버 대답 ' + (st || '없음') + (why ? (' · ' + why) : '') + ')' }) };
 
     const pr = await P.sb('profiles?id=eq.' + encodeURIComponent(uid) + '&select=role&limit=1');
     const role = ((pr.json || [])[0] || {}).role || '';
