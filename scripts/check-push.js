@@ -607,8 +607,13 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   await kkPage.waitForTimeout(2600);
   await kkPage.evaluate(()=>document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()));
   KEYROW=null;                          /* 서버에 열쇠가 <b>없는</b> 자리에서 시작한다 */
+  /* ⚠ 머리 없는 브라우저는 알림이 <b>늘 denied</b> 입니다. 홈은 알람이 막힌
+     자리에서는 서버에 열쇠를 안 묻게 해 두었으므로(뜻 없는 404 를 안 만들려고),
+     여기서는 <b>허용된 폰</b>을 그대로 흉내 냅니다 — 재려는 것은 크롬이
+     아니라 우리 코드입니다. */
   await kkPage.evaluate(`OS.session={user:{id:'me',email:'hong@example.com'},access_token:'t'};
     OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
+    try{ Object.defineProperty(Notification,'permission',{get:function(){return 'granted';}}); }catch(e){}
     window.osLoadProfile=function(){}; window.osShowLoginGate=function(){}; window.toast=function(){};`);
   /* <b>화면을 진짜로 엽니다</b> — 아무 것도 손으로 세우지 않습니다.
      여태는 #almHost 를 우리가 만들어 붙이고 almPaint() 를 손으로 불러
