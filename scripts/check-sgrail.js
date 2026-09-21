@@ -173,8 +173,14 @@ const txt=el=>el.textContent.replace(/\s+/g,' ').trim();
     /* 진짜로 올라가나 — 서버로 <b>무엇을</b> 보내는지 받아 둔다.
        이 판에는 진짜 서버가 없으므로(sb=null) 흉내를 하나 세운다. */
     const sent=[]; const realLoad=window.loadAll;
+      /* ⚠ 진짜 supabase-js 는 <b>.select() 로 바뀐 줄을 돌려줍니다.</b>
+         db-crm 이 「0줄인데 됐다고 말하던 것」 을 고치면서 쓰기 끝마다
+         .select("id") 를 붙였습니다 — 가짜 서버가 진짜와 다르면 여기서
+         터집니다(2026-09-21 CI 가 실제로 그렇게 잡았습니다). */
     sb={from:function(t){const a={update:function(p){sent.push({t:t,p:p});
-      return {eq:function(){return Promise.resolve({error:null})}}}};return a}};
+      const c={eq:function(){return c},select:function(){return c},
+        then:function(ok,no){return Promise.resolve({error:null,data:[{id:'x'}]}).then(ok,no)}};
+      return c}};return a}};
     window.confirm=function(){return true};
     window.loadAll=function(){return Promise.resolve()};
     return sgUp('d1').then(function(){
@@ -207,8 +213,14 @@ const txt=el=>el.textContent.replace(/\s+/g,' ').trim();
   const E=await page.evaluate(()=>{
     const out={};
     const sent=[]; const realLoad=window.loadAll;
+      /* ⚠ 진짜 supabase-js 는 <b>.select() 로 바뀐 줄을 돌려줍니다.</b>
+         db-crm 이 「0줄인데 됐다고 말하던 것」 을 고치면서 쓰기 끝마다
+         .select("id") 를 붙였습니다 — 가짜 서버가 진짜와 다르면 여기서
+         터집니다(2026-09-21 CI 가 실제로 그렇게 잡았습니다). */
     sb={from:function(t){const a={update:function(p){sent.push({t:t,p:p});
-      return {eq:function(){return Promise.resolve({error:null})}}}};return a}};
+      const c={eq:function(){return c},select:function(){return c},
+        then:function(ok,no){return Promise.resolve({error:null,data:[{id:'x'}]}).then(ok,no)}};
+      return c}};return a}};
     window.confirm=function(){return true};
     window.loadAll=function(){return Promise.resolve()};
     /* d4 는 PC → CS 라 날짜가 필요 없다. CS 로 올려 둔 뒤 CS → 계약완료 를 본다 */
