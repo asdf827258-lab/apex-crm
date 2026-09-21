@@ -15890,8 +15890,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 11:20';
-var APP_BUILD_NOTE="<b>홈에서 눌러도 안 되던 진짜 까닭 — 서버가 막고 있었고, 앱은 막힌 줄 모르고 「됐습니다」라고 말하고 있었습니다.</b> 사장님 말씀 「홈화면에서 다 되게하자 했는데 안된다」. 진짜 DB 에 대표 계정으로 <b>직접 눌러</b> 재 봤습니다 — 팀원 고객의 상황을 바꾸면 <b>0줄</b>, 지우면 <b>0줄</b>. 그런데 화면은 「홍길동 님 · TA → AP」 라고 말하고 값까지 바꿨습니다. <b>새로고침하면 원래대로.</b> Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 「0줄 바뀜」</b>으로 돌려주는데, 우리는 <code>error</code> 만 보고 성공으로 쳤습니다. 36명 중 <b>8명</b>(지점장 5·대표 2·본부장 1)이 이 상태였습니다. 지어내지 않는다(1번)를 정면으로 어긴 자리입니다. ① <b>서버</b> — 읽기(<code>is_viewer_all</code>)와 쓰기(<code>is_editor_all</code>)를 <b>따로</b> 두고, 쓰기 명단에 <code>master</code>·<code>branch_manager</code> 를 넣었습니다(사장님 결정 — 대표·본부장까지, 지점장은 보기만). 넣고 다시 눌러 확인 — 대표 <b>0줄 → 1줄</b>, 지점장 <b>0줄 그대로</b>, 설계사 그대로. ② <b>앱</b> — <code>hdbWrote()</code> 한 곳이 「서버가 정말 받았나」에 답합니다. 쓰기 끝에 <code>.select()</code> 를 붙여 <b>바뀐 줄을 세고</b>, 0줄이면 손에 든 값도 <b>안 고치고</b> 「서버가 받지 않았습니다 — 고치실 수 있는 분은 담당 설계사와 대표·본부장입니다」라고 적습니다. <b>「모름」과 「0줄」도 갈라</b> 적습니다(1번). ③ 단추를 <b>서버와 같은 명단</b>으로(<code>HDB_EDIT_ROLES</code> 한 곳) — 지점장에게는 단추를 안 내주고 <b>누구 고객이고 누가 고칠 수 있는지</b> 적습니다. <b>점검이 이걸 못 본 까닭</b> — 가짜 서버가 늘 빈 배열만 줬습니다. 빈 배열은 「0줄」인데 우리가 그걸 성공으로 읽었으니, 점검은 <b>거짓말하는 판을 그대로 통과</b>시켰습니다. 이제 가짜 서버가 몇 줄을 바꿨는지 말하고, <code>.select()</code> 를 <b>안 부르면 안 돌려줍니다</b>(진짜 PostgREST 그대로). 되돌려 확인: 줄 수 안 세기 <b>3자리</b> · 지점장 명단에 넣기 <b>2자리</b> · <code>.select()</code> 떼기 <b>단계 6·통화 2·지우기 1자리</b> 빨간불. 처음엔 <code>.select()</code> 떼기가 <b>안 울렸습니다</b> — 가짜 서버가 진짜와 달랐던 것이라 그쪽을 고쳤습니다. <code>check-dbpage</code> 가 <code>['delete']().select('id')</code> 를 「쪽 안 나눈 큰 표 읽기」로 잘못 잡던 헛알람도 고쳤습니다(진짜 새는 자리는 여전히 뭅니다)."
+var APP_BUILD='2026-09-21 14:55';
+var APP_BUILD_NOTE="<b>홈에서 따라만 하시면 됩니다 — 한 분씩, 소식까지 들고, 막히면 다음 분으로.</b> 사장님 말씀 「오늘 해야할일을 홈에서 모두 다 할수 있도록 · TA-AP-PC-CS 상황에 맞게 계속 띄우고 · <b>따라만 하면 그대로 관리</b>할수 있도록 · 상황에 맞게 <b>뉴스 읽어주면서 전달</b>드리고」. ① <b>홈이 늘 같은 모양</b>이 됐습니다. <b>매일</b> 떴다 사라지던 출발 점검·팀 <b>1,048px</b>(화면 한 장 넘게)를 맨 아래 <b>「⚙️ 관리 · 점검」 한 줄</b>로 접었습니다. 지운 것이 아니라 머리에 「안 된 것 7」 처럼 적히고 누르면 펴집니다. <b>서버 준비 SQL 은 홈 맨 위에 그대로 둡니다</b> — 한 번 접어 봤다가 점검이 잡았습니다. 여러 화면이 「홈 맨 위 서버 준비 SQL」 이라고 가리키고 있어 묻으면 그 안내가 전부 거짓말이 되고(1번), 그것은 <b>한 번 하면 영영 사라지는</b> 것이라 「자꾸 달라지는」 범인도 아니었습니다. <b>3,541px → 2,402px</b>(폰 4.2화면 → 2.8화면). ② <b>📰 오늘 보낼 소식</b> 한 줄이 한 분 카드 안에 <b>단계와 상관없이</b> 섭니다. 여태 뉴스는 거절·기고객·증권전달에만 붙어서 TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없었습니다. 문구는 뉴스 화면과 <b>같은 것</b>을 부릅니다(두 벌로 안 만듭니다, 5번). ③ <b>「다음 분 → 오늘은 뒤로」</b>. 오늘 못 닿는 분이 맨 위에 서 있으면 하루가 거기서 멈췄습니다. <b>「했습니다」로 표시하지 않습니다</b> — 안 한 일을 했다고 적는 것이라(1번), 기록이 아니라 <b>오늘 보는 차례</b>만 바꿉니다. 내일 다시 올라오고, 「미뤄 둔 N분 다시 보기」 로 그 자리에서 되돌리실 수 있습니다. ④ <b>📸 오늘 올릴 것</b> — 같은 모양의 한 줄. 받아 둔 <b>진짜 기사</b>에서 오늘 한 건을 골라 제목·언론사·날짜·원문을 그대로 옮기고, 누르면 <b>인스타 캡션·카드뉴스·보낼 문구</b> 로 바로 갑니다. 오늘 고른 기사는 <b>하루 동안 안 바뀝니다</b> — 열 때마다 달라지면 그게 바로 「화면이 자꾸 다르다」 입니다. 소식을 안 받았으면 <b>지어내지 않고</b> 「안 받았습니다」 라고 적습니다(9번). 점검 <b>「홈 한 장」</b>을 새로 만들어 <b>눈에 보이는 칸의 차례와 높이</b>로 「준비할 것이 있을 때와 없을 때가 같은 화면인가」 를 잽니다. 되돌려 확인: 출발 점검 도로 풀기 <b>4자리</b> · 준비 SQL 을 접힌 안으로 묻기 <b>3자리</b> · 다음 분 단추 빼기 <b>4자리</b> · 소식 줄 빼기 <b>2자리</b> 빨간불. 자를 두 번 고쳤습니다 — 처음엔 id 만 견줘 <b>안 울렸고</b>(빈 칸도 id 는 그대로), 다음엔 100px 자리로 재서 소식 한 줄까지 <b>헛빨간불</b>을 냈습니다. 지금은 <b>반 화면</b> 자리로 잽니다. 그리고 <b>준비 SQL 배너를 짧게</b> 했습니다 — 점검(check-toss)이 잡았습니다. 위로 되돌리고 보니 배너가 <b>425px</b> 라 「오늘 할 일」 이 <b>883px</b> 로 밀려 첫 화면(844px)을 벗어났습니다. 단추가 <b>여덟 개</b>였습니다. 할 일 둘(<b>복사하고 Supabase 열기 · 다 됐는지 확인</b>)만 남기고, 안 될 때 쓰는 다섯(복사만·주소만·나눠서·글로 보기·나중에)은 <b>「안 될 때 ▾」</b> 한 번 뒤로 접었습니다. <b>지운 것이 아닙니다</b> — 판을 두 벌로 만들지 않았으므로(5번) 준비 화면도 같이 짧아졌습니다. → 「오늘 할 일」 <b>758px</b>, 첫 화면 안. 되돌려 확인: 「안 될 때」 문 없애기 → <b>빨간불</b> · 다섯을 도로 펴 두기 → <b>917px 빨간불</b>."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -20937,8 +20937,72 @@ var HM_ACT={
  my   :{e:'✏️',t:'내 일정',    go:'mycal',   b:'했습니다',         real:false},
  db   :{e:'📇',t:'DB 고객',    go:'crm',     b:'했습니다',         real:false}
 };
+/* ══ <b>오늘 소식 한 줄</b> — 단계와 상관없이 ══════════════════════
+   사장님 말씀 — 「고객 관리 및 <b>상황에 맞게 뉴스 읽어주면서 전달</b>」.
+   여태 뉴스는 거절·기고객·증권전달의 도구 목록에만 있었습니다. 정작
+   TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없어, 전화를 걸 이유를 사장님이
+   매번 새로 만드셔야 했습니다.
+
+   ★ 기사도 문구도 <b>여기서 만들지 않습니다</b> (5·9번). 📸 오늘 올릴 것이
+     고른 그 기사를 그대로 쓰고, 보낼 문구는 nlCopy 가 만듭니다 — 홈과
+     뉴스 화면이 <b>같은 글</b>을 씁니다.
+   ★ 받아 둔 소식이 없으면 <b>아무 줄도 안 세웁니다</b>. 「없음」 이라고
+     적힌 빈 줄은 자리만 먹습니다.                                    */
+function hmNowNewsHtml(){
+  var i=-1;
+  try{ i=(typeof hmIgIdx==='function')?hmIgIdx():-1; }catch(e){ return ''; }
+  if(i<0)return '';
+  var it=(NLIVE.items||[])[i]; if(!it||!it.t)return '';
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  return '<div class="hm-nw"><div class="hm-nw-t">📰 <b>오늘 보낼 소식</b> — '+v(it.t)+'</div>'+
+    '<div class="hm-nw-b">'+
+      '<button type="button" class="btn btn-ghost" onclick="nlCopy('+i+')">💬 보낼 문구 복사</button>'+
+      (it.u?('<a class="btn btn-ghost" href="'+v(it.u)+'" target="_blank" rel="noopener">원문 ↗</a>'):'')+
+    '</div></div>';
+}
+/* ══ <b>오늘은 뒤로</b> — 하루가 한 분에 걸려 멈추지 않게 ══════════
+   오늘 못 닿는 분이 맨 위에 그대로 서 있으면 그 다음 분으로 갈 길이
+   없습니다. 「했습니다」 로 표시하면 <b>안 한 일을 했다고 적는 것</b>이라
+   그럴 수도 없습니다 (1번). 그래서 <b>뒤로 미루기</b>를 따로 둡니다 —
+   기록이 아니라 <b>오늘 보는 차례</b>만 바꿉니다. 내일은 다시 올라옵니다. */
+var HM_SKIP_KEY='apex_hm_skip_v1';
+function hmSkipAll(){
+  try{
+    var o=JSON.parse(localStorage.getItem(HM_SKIP_KEY)||'null');
+    if(o&&o.d===((typeof mcalToday==='function')?mcalToday():'')&&o.k&&o.k.push)return o.k;
+  }catch(e){}
+  return [];
+}
+function hmSkipped(key){ return hmSkipAll().indexOf(key)>=0; }
+function hmSkip(key){
+  if(!key)return;
+  var L=hmSkipAll();
+  if(L.indexOf(key)<0)L.push(key);
+  try{ localStorage.setItem(HM_SKIP_KEY,JSON.stringify(
+       {d:(typeof mcalToday==='function')?mcalToday():'',k:L})); }catch(e){}
+  if(typeof toast==='function')toast('오늘은 뒤로 미뤘습니다 — 내일 다시 올라옵니다');
+  hmPaint();
+}
+function hmSkipClear(){
+  try{ localStorage.removeItem(HM_SKIP_KEY); }catch(e){}
+  if(typeof toast==='function')toast('미뤄 둔 분들을 다시 세웠습니다');
+  hmPaint();
+}
+function hmSkipHtml(r){
+  if(!r||!r.x)return '';
+  var n=hmSkipAll().length;
+  return '<div class="hm-nx">'+
+    (r.n>1?('<button type="button" class="hm-nx-b" onclick="hmSkip(\''+r.x.key+'\')">'+
+            '다음 분 → <span>오늘은 뒤로</span></button>'):'')+
+    (n?('<button type="button" class="hm-nx-u" onclick="hmSkipClear()">미뤄 둔 '+n+'분 다시 보기</button>'):'')+
+  '</div>';
+}
+/* 지금 볼 분 — <b>끝낸 것</b>과 <b>오늘 미룬 것</b>을 건너뛴다.
+   미룬 것밖에 안 남았으면 그때는 그것을 다시 세운다 — 할 일이 남았는데
+   빈 화면을 보여 드리면 「다 했다」 로 읽히기 때문이다 (1번). */
 function hmNext(){
   var L=hmSteps(),i;
+  for(i=0;i<L.length;i++)if(!hmIsDone(L[i].key)&&!hmSkipped(L[i].key))return {x:L[i],i:i,n:L.length};
   for(i=0;i<L.length;i++)if(!hmIsDone(L[i].key))return {x:L[i],i:i,n:L.length};
   return {x:null,i:L.length,n:L.length};
 }
@@ -22002,6 +22066,12 @@ function hmNowHtml(){
     /* <b>단계를 그 자리에서</b> 옮긴다 — DB 통합 CRM 까지 안 가도 된다.
        배정 DB 에서 올라온 줄에만 선다(hdbStripHtml 이 스스로 가린다). */
     hdbStripHtml(x)+
+    /* <b>단계와 상관없이</b> 오늘 소식 한 줄 — 사장님 말씀 「상황에 맞게
+       뉴스 읽어주면서 전달드리고」. 여태는 거절·기고객·증권전달에만 뉴스가
+       붙어서, TA·AP·PC·CS 에는 <b>연락할 구실</b>이 없었습니다. */
+    hmNowNewsHtml()+
+    /* <b>다음 분으로</b> — 오늘 못 닿는 분에 걸려 하루가 멈추면 안 됩니다 */
+    hmSkipHtml(r)+
     '<div class="hm-now-n">'+(A.real
       ? '누르면 <b>기록으로 남습니다</b> — 그래서 이 분은 주기가 오늘부터 다시 셉니다.'
       : '누르면 <b>오늘 하루 표시</b>만 됩니다 — 앱이 실제로 하셨는지는 알 수 없습니다.')+'</div>'+
@@ -22601,6 +22671,8 @@ function hmPaint(){
        (곁들여: 점검이 쓰는 머리 없는 브라우저는 알림이 늘 denied 라서,
         이 한 줄 덕에 <b>홈을 여는 점검마다</b> 뜻 없는 404 가 안 찍힙니다.
         헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 — 8번.) */
+  try{ if(typeof hmFoldMngPaint==='function')hmFoldMngPaint(); }catch(eM){}
+  try{ if(typeof hmFoldIgPaint==='function')hmFoldIgPaint(); }catch(eI2){}
   try{
     if(typeof almkCan==='function'&&almkCan()&&!ALM.keyAt&&
        typeof almCan==='function'&&almCan().perm!=='denied'&&
@@ -22693,6 +22765,160 @@ function hmFoldWrap(k,e,t,sub,inner){
 }
 /* 머리에 적을 숫자 — <b>그 카드가 이미 세는 것</b>만 가져옵니다.
    못 세면 빈 글자를 돌려주고, 머리에는 아무 숫자도 안 적습니다 (1번). */
+/* 「⚙️ 관리」 머리에 적을 것 — <b>이미 세고 있는 것</b>만 가져옵니다.
+   서버를 새로 부르지 않습니다 (7번). 못 세는 것은 <b>안 적습니다</b> —
+   0 이라고 적으면 「다 됐다」는 뜻이 되어 버립니다 (1번).             */
+function hmFoldMngSub(){
+  var p=[];
+  /* ⚠ 서버 준비 SQL 은 <b>이 안에 없습니다</b>(홈 맨 위에 그대로 있습니다).
+     여기서 세면 펴 봐야 없는 것을 세는 셈이 됩니다 (1번). */
+  try{ var L=(typeof hmReadyRows==='function')?hmReadyRows():[];
+       if(L.length)p.push('안 된 것 '+L.length); }catch(e1){}
+  try{ var t=(typeof hwhoList==='function')?hwhoList():[];
+       if(t.length>1)p.push('팀 '+t.length+'명'); }catch(e2){}
+  return p.length?p.join(' · '):'';
+}
+/* 접힌 머리의 <b>숫자만</b> 다시 씁니다 — 통째로 다시 그리면 펴 두신 것이
+   접히고 보던 자리가 맨 위로 튑니다 (hmFoldToggle 위 설명과 같은 까닭). */
+function hmFoldMngPaint(){
+  var box=document.getElementById('hmFold_mng'); if(!box)return;
+  var t=box.querySelector('.hm-fold-h .t'); if(!t)return;
+  var sub=hmFoldMngSub(),sp=t.querySelector('span');
+  if(!sub){ if(sp)sp.remove(); return; }
+  if(!sp){ sp=document.createElement('span'); t.appendChild(sp); }
+  sp.textContent=sub;
+}
+/* ══ 📸 오늘 올릴 것 (hmIg*) ═══════════════════════════════════════
+   사장님 말씀 — 「오늘 인스타 올릴 뉴스도 만들어서」.
+
+   ★ 기사를 <b>지어내지 않습니다</b> (9번). 「고객에게 전할 뉴스」가 이미
+     받아 둔 <b>진짜 기사</b>(NLIVE)에서 고르고, 제목·언론사·날짜·링크를
+     그대로 옮깁니다. 아직 못 받았으면 <b>못 받았다고 적고</b> 받아 오는
+     자리로 모십니다 — 없는 것을 그럴듯하게 채우지 않습니다 (1번).
+   ★ <b>서버를 새로 부르지 않습니다</b> (7번). 이 브라우저에 담긴 것만 봅니다.
+   ★ 만드는 것은 <b>이미 있는 도구</b>가 합니다 (5번) — 카드뉴스는
+     nlToCard, 보낼 문구는 nlCopy 를 그대로 부릅니다. 여기서 또 만들면
+     한쪽만 고쳐져 두 화면이 다른 글을 씁니다.
+   ★ 오늘 고른 기사는 <b>하루 동안 안 바뀝니다.</b> 열 때마다 다른 것이
+     뜨면 그것이 바로 「화면이 자꾸 다르다」 입니다. 고른 것을 이 브라우저에
+     적어 두고, 그 기사가 목록에서 사라졌을 때만 다시 고릅니다.       */
+var HM_IG_KEY='apex_hm_ig_v1';
+function hmIgToday(){
+  try{ return (typeof mcalToday==='function')?mcalToday():(new Date()).toISOString().slice(0,10); }
+  catch(e){ return (new Date()).toISOString().slice(0,10); }
+}
+/* 오늘 고른 기사의 <b>자리 번호</b>를 돌려준다. 없으면 -1 */
+function hmIgIdx(){
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  if(!L.length)return -1;
+  var key='',i;
+  try{ var o=JSON.parse(localStorage.getItem(HM_IG_KEY)||'null');
+       if(o&&o.d===hmIgToday())key=o.k||''; }catch(e){}
+  if(key)for(i=0;i<L.length;i++)if((L[i].u||L[i].t)===key)return i;
+  /* 오늘 것이 없거나 그 기사가 사라졌으면 <b>맨 위(제일 새 것)</b>로 고른다 */
+  hmIgSet(0);
+  return 0;
+}
+function hmIgSet(i){
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  if(!L[i])return;
+  try{ localStorage.setItem(HM_IG_KEY,JSON.stringify({d:hmIgToday(),k:L[i].u||L[i].t})); }catch(e){}
+}
+/* <b>다른 기사로</b> — 다음 것으로 넘기고 그것을 오늘 것으로 적어 둔다 */
+function hmIgNext(){
+  var L=(typeof NLIVE!=='undefined'&&NLIVE.items)?NLIVE.items:[];
+  if(L.length<2){ if(typeof toast==='function')toast('받아 둔 소식이 하나뿐입니다'); return; }
+  hmIgSet((hmIgIdx()+1)%L.length);
+  var el=document.getElementById('hmIgHost'); if(el)el.innerHTML=hmIgHtml();
+  try{ hmFoldIgPaint(); }catch(e){}
+}
+function hmIgSub(){
+  var i=hmIgIdx();
+  if(i<0)return '아직 소식을 안 받았습니다';
+  var it=NLIVE.items[i];
+  return (''+(it.t||'')).slice(0,22)+((''+(it.t||'')).length>22?'…':'');
+}
+function hmFoldIgPaint(){
+  var box=document.getElementById('hmFold_ig'); if(!box)return;
+  var t=box.querySelector('.hm-fold-h .t'); if(!t)return;
+  var sp=t.querySelector('span');
+  if(!sp){ sp=document.createElement('span'); t.appendChild(sp); }
+  sp.textContent=hmIgSub();
+}
+/* 캡션은 <b>이미 있는 도구</b>로 보냅니다 — 제목만 실어 보내고, 만드는 것은
+   그 도구가 합니다. 도구가 그려지기 <b>전에</b> 채우면 못 찾으므로 기다립니다. */
+function hmIgCaption(){
+  var i=hmIgIdx(); if(i<0)return;
+  var t=(NLIVE.items[i]||{}).t||'';
+  if(!t)return;
+  go('insta');
+  var n=0,put=function(){
+    var el=document.querySelector('#card_insta_caption [data-input="topic"]');
+    if(!el){ if(n++<25)return setTimeout(put,200);
+             if(typeof toast==='function')toast('인스타 칸을 못 찾았습니다 — 주제를 붙여넣어 주세요',6000);
+             return; }
+    el.value=t;
+    try{ el.scrollIntoView({block:'center'}); el.focus(); }catch(e){}
+    if(typeof toast==='function')toast('오늘 소식을 주제로 넣었습니다 — ✨ 생성하기 를 누르세요',6000);
+  };
+  setTimeout(put,260);
+}
+function hmIgHtml(){
+  if(!OS.profile)return '';
+  hmIgCss();                      /* 옷은 <b>쓰는 화면에서</b> 부른다 (5번) */
+  try{ if(typeof nlLoad==='function'&&(typeof NLIVE==='undefined'||!NLIVE.items.length))nlLoad(); }catch(e){}
+  var v=function(x){ return (typeof osEsc==='function')?osEsc(x):x; };
+  var i=hmIgIdx();
+  if(i<0)
+    return '<div class="hm-ig"><div class="hm-ig-no"><b>아직 오늘 소식을 안 받았습니다.</b> '+
+      '여기서 소식을 <b>지어내지 않습니다</b> — 받아 와야 보여 드릴 수 있습니다.</div>'+
+      '<div class="hm-ig-b"><button type="button" class="btn btn-primary" '+
+      'onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div></div>';
+  var it=NLIVE.items[i];
+  return '<div class="hm-ig">'+
+    '<div class="hm-ig-t">'+v(it.t||'')+'</div>'+
+    '<div class="hm-ig-m">'+v(it.s||'')+((it.d)?(' · '+v((''+it.d).slice(0,16))):'')+
+      (it.u?(' · <a href="'+v(it.u)+'" target="_blank" rel="noopener">원문 ↗</a>'):'')+'</div>'+
+    '<div class="hm-ig-b">'+
+      '<button type="button" class="btn btn-primary" onclick="hmIgCaption()">📸 인스타 캡션 만들기</button>'+
+      '<button type="button" class="btn btn-ghost" onclick="nlToCard('+i+')">🎨 카드뉴스로</button>'+
+      '<button type="button" class="btn btn-ghost" onclick="nlCopy('+i+')">💬 고객에게 보낼 문구</button>'+
+      '<button type="button" class="btn btn-ghost" onclick="hmIgNext()">다른 기사로 ↻</button>'+
+    '</div>'+
+    '<div class="hm-ig-n">숫자와 시행일은 <b>원문에서 한 번 더</b> 확인하고 쓰십시오 — '+
+      '기사를 옮겨 적는 자리이지 앱이 판단하는 자리가 아닙니다.</div></div>';
+}
+function hmIgCss(){
+  if(document.getElementById('hmIgCss'))return;
+  var st=document.createElement('style');st.id='hmIgCss';
+  st.textContent=
+   '.hm-ig{padding:2px 0}'+
+   '.hm-ig-t{font-size:var(--t5);font-weight:900;color:var(--ink-1);line-height:1.5}'+
+   '.hm-ig-m{margin-top:5px;font-size:var(--t6);color:var(--ink-5)}'+
+   '.hm-ig-m a{color:var(--primary);font-weight:700}'+
+   '.hm-ig-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}'+
+   '.hm-ig-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
+   '.hm-ig-no{font-size:var(--t6);line-height:1.7;color:#92400E;background:#FFFBEB;'+
+     'border:1px solid #FDE68A;border-radius:var(--r-sm);padding:10px 12px}'+
+   '.hm-ig-n{margin-top:10px;font-size:var(--t6);line-height:1.7;color:var(--ink-4);'+
+     'border-top:1px dashed var(--ink-7);padding-top:9px}'+
+   /* 한 분 카드 안의 <b>오늘 보낼 소식</b> 한 줄 */
+   '.hm-nw{margin-top:10px;border:1px solid #C7D2FE;background:#EEF2FF;'+
+     'border-radius:var(--r-sm);padding:10px 12px}'+
+   '.hm-nw-t{font-size:var(--t6);line-height:1.6;color:#3730A3}'+
+   '.hm-nw-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}'+
+   '.hm-nw-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
+   /* <b>다음 분</b> 줄 */
+   '.hm-nx{display:flex;gap:7px;flex-wrap:wrap;margin-top:11px;'+
+     'border-top:1px dashed var(--ink-7);padding-top:11px}'+
+   '.hm-nx-b{flex:1 1 auto;min-height:48px;border:1px solid var(--ink-7);background:#fff;'+
+     'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t5);font-weight:900;'+
+     'color:var(--ink-2);cursor:pointer;padding:10px 14px}'+
+   '.hm-nx-b span{display:block;font-size:var(--t6);font-weight:600;color:var(--ink-5);margin-top:2px}'+
+   '.hm-nx-u{flex:0 0 auto;min-height:48px;border:0;background:transparent;color:var(--primary);'+
+     'font-family:inherit;font-size:var(--t6);font-weight:800;cursor:pointer;padding:10px 6px}';
+  document.head.appendChild(st);
+}
 function hmFoldCalSub(){
   try{ return '오늘 '+mcalCnt(mcalDay(mcalItems(),mcalToday()))+'건'; }catch(e){ return ''; }
 }
@@ -22739,11 +22965,14 @@ function renderHome(){
        에서 못 찾으신 것을 홈 1,850px 로 옮기면 똑같습니다. 안 보이면
        없는 것입니다.                                                  */
     (OS.profile?('<div id="almkBand"></div>'):'')+
-    (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
-    /* 준비 SQL · 막혀 있는 것은 <b>그 바로 밑</b>입니다. 끝나면 빈 칸이라
-       안 보입니다 — 평소에는 고객 관리를 가리지 않습니다. */
+    /* ⚠ <b>준비 SQL 은 여기 그대로 둡니다.</b> 한 번은 접어서 맨 아래로
+       내렸는데 check-setup 이 잡았습니다 — 여러 화면이 「<b>홈 맨 위</b>
+       서버 준비 SQL」 이라고 가리키고 있어, 묻으면 그 안내들이 전부
+       거짓말이 됩니다 (1번). 게다가 이것은 <b>한 번 하면 영영 사라지는</b>
+       것이라 「화면이 자꾸 달라지는」 범인이 아닙니다. 매일 떴다 사라지던
+       것은 <b>출발 점검</b> 쪽이고, 그것만 접었습니다.                */
     (OS.profile?'<div id="osSetupHome"></div>':'')+
-    (OS.profile?'<div id="hmReadyHost"></div>':'')+
+    (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
     /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
        밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
     (OS.profile?('<div id="almNudge"></div>'):'')+
@@ -22751,9 +22980,8 @@ function renderHome(){
        자리를 안 먹습니다. 「오늘 챙길 것」 바로 밑이라야 뜻이 통합니다 —
        챙길 분을 보고 나서 <b>어디로 가는지</b>를 봅니다. */
     (OS.profile?'<div id="hmRtHost"></div>':'')+
-    /* <b>대표는 내 오늘 바로 밑에서 팀 전체를 봅니다.</b> 리더가 아니면
-       빈 칸이라 안 보입니다 — 못 볼 것을 세워 두지 않습니다. */
-    (OS.profile?'<div id="hmTeamHost"></div>':'')+
+    /* 팀 전체도 <b>「⚙️ 관리」 안</b>으로 옮겼습니다 — 오늘 내가 할 일과
+       팀을 보는 일은 다른 일입니다. */
     /* <b>고객 찾기</b> — 배정 DB 까지 훑습니다. 서랍의 찾기는 이미 읽어 둔
        것만 보므로, 아직 고객 365일로 안 넘긴 분은 여기서만 나옵니다.
        자리는 <b>접은 것들 바로 위</b>입니다 — 위의 줄들은 「오늘 챙길 것
@@ -22773,6 +23001,29 @@ function renderHome(){
     /* ⑤ TFA 업무관리 — 같은 판을 그대로 (5번). 여기서 하루가 다 끝납니다 */
     (OS.profile?hmFoldWrap('tfa','🧭','TFA 업무관리',hmFoldTfaSub(),
         '<div id="hmTfaHost">'+hmTfaHtml()+'</div>'):'')+
+    /* 📸 <b>오늘 올릴 것</b> — 사장님 말씀 「오늘 인스타 올릴 뉴스도 만들어서」.
+       달력·고객·TFA 와 <b>같은 모양의 한 줄</b>입니다. 머리에 오늘 고른
+       기사 제목이 적혀 있어, 펴지 않고도 무엇인지 아십니다. */
+    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것',hmIgSub(),
+        '<div id="hmIgHost">'+hmIgHtml()+'</div>'):'')+
+    /* ── <b>관리·점검은 한 줄로</b> ───────────────────────────────────
+       사장님 말씀 — 「홈 화면이 너무 복잡하고 <b>화면이 자꾸 달라서</b>
+       힘들다」. 재 보니 그 말씀이 맞았습니다. 홈이 3,541px(폰 4.2화면)에
+       단추 104개였고, 그중 <b>준비 SQL 425px · 출발 점검 778px · 팀
+       270px</b> 가 상태에 따라 떴다 사라졌다 했습니다. <b>1,473px</b>,
+       화면 한 장 반이 매번 나타났다 없어지니 <b>같은 화면일 수가</b>
+       없었습니다.
+
+       그래서 <b>매일 떴다 사라지던 둘</b>(출발 점검·팀)을 여기 한 줄로
+       접습니다. <b>준비 SQL 은 홈 맨 위에 그대로 둡니다</b> — 한 번 하면
+       영영 사라지는 것이고, 여러 화면이 「홈 맨 위」 라고 가리킵니다.
+       지운 것이 아닙니다 —
+       머리에 무엇이 몇 개 남았는지 적고, 누르면 그 자리에서 펴지고,
+       편 채로 두면 다음에도 펴져 있습니다(달력·고객·TFA 와 같은 방식).
+       이제 <b>있으나 없으나 홈 모양이 같습니다.</b>                 */
+    (OS.profile?hmFoldWrap('mng','⚙️','관리 · 점검',hmFoldMngSub(),
+        '<div id="hmReadyHost"></div>'+
+        '<div id="hmTeamHost"></div>'):'')+
     /* ⑥ 공지사항 — 맨 아래. 읽을 것이지 할 것이 아니다 */
     '<div id="osNoticeHome"></div>'+
     '<div class="notice" style="margin-top:16px;color:var(--ink-4);background:var(--ink-8);border-color:var(--ink-7)">모든 AI 출력은 <b>약관·심사가 최종</b>이며, 고위험 제안은 관리자 승인 후 고객에게 안내합니다. 게시·발송 전 준법감시 확인을 권장합니다.</div>'+
@@ -36174,7 +36425,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
 var SETUP_VER=40;   /* 40: 알람 열쇠(push_keys) — 서버만 읽는다. Netlify 없이 앱에서 담는다 */
-var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,got:{}};
+var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,more:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════
    사장님이 「연결 타임아웃으로 인해 연결이 종료됨」 을 받으셨습니다.
@@ -36327,6 +36578,13 @@ function setupUrl(){
   if(typeof copyText==='function')copyText(SUPA_SQL_URL);
 }
 
+/* 뒷길을 폈다 접는다. 나누기·글로 보기를 쓰고 계시면 <b>접지 않습니다</b> —
+   접으면 지금 보고 계신 것이 눈앞에서 사라집니다. */
+function setupMore(v){
+  SETUP.more=!!v;
+  if(!SETUP.more){ SETUP.split=false; SETUP.manual=false; }
+  setupPaint();
+}
 function setupBarHtml(){
   if(!setupShow())return '';
   var step=SETUP.opened;
@@ -36337,13 +36595,27 @@ function setupBarHtml(){
         ? '붙여넣기(Ctrl+V) 하고 <b>RUN</b> 을 누른 뒤, 돌아와서 <b>다 됐는지 확인</b>을 눌러 주세요.'
         : '버튼을 누르면 <b>SQL 복사</b>와 <b>Supabase 열기</b>가 한 번에 됩니다. 붙여넣고 RUN 만 누르면 끝입니다.')+
       '</div></div></div>'+
-    '<div class="stp-w">이걸 하기 전까지 <b>팀 코칭 기록 저장 · 건의함 함께 보기 · 조직도 계정 연결 · 팀 하루 한 장 피드백 보내기</b>가 되지 않습니다. '+
+    '<div class="stp-w">이걸 하기 전까지 <b>팀 코칭 기록 · 건의함 · 조직도 · 하루 한 장 피드백</b>이 저장되지 않습니다. '+
       '몇 번을 다시 실행해도 안전합니다.</div>'+
+    /* ── 단추는 <b>할 일 두 개</b>만 ───────────────────────────────────
+       2026-09-21 · check-toss 가 잡았습니다 — 이 배너가 <b>425px</b> 라
+       홈에서 「오늘 할 일」 이 <b>883px</b> 로 밀려 첫 화면(844px)을
+       벗어났습니다. 단추가 여덟 개였습니다.
+
+       나머지 다섯(복사만·주소만·나눠서·글로 보기·나중에)은 <b>안 될 때</b>
+       쓰는 뒷길입니다. 접어 두고 「다른 방법 ▾」 한 번으로 펴게 했습니다 —
+       <b>지운 것이 아닙니다.</b> 판을 두 벌로 만들지 않았으므로(5번)
+       준비 화면도 같이 짧아집니다.                                    */
     '<div class="btn-row stp-b">'+
       '<button class="btn '+(step?'btn-ghost':'btn-primary')+'" onclick="setupGo()">'+
         (step?'다시 복사하고 열기':'📋 복사하고 Supabase 열기')+'</button>'+
       '<button class="btn '+(step?'btn-primary':'btn-ghost')+'" onclick="setupCheck()"'+(SETUP.busy?' disabled':'')+'>'+
         (SETUP.busy?'확인 중…':'✅ 다 됐는지 확인')+'</button>'+
+      '<button class="btn btn-ghost" onclick="setupMore('+(SETUP.more?'false':'true')+')" '+
+        'aria-expanded="'+(SETUP.more?'true':'false')+'">'+
+        (SETUP.more?'접기 ▴':'안 될 때 ▾')+'</button>'+
+    '</div>'+
+    (SETUP.more?('<div class="btn-row stp-b">'+
       '<button class="btn btn-ghost" onclick="setupCopyOnly()">복사만</button>'+
       '<button class="btn btn-ghost" onclick="setupUrl()">주소만 복사</button>'+
       '<button class="btn '+(SETUP.split?'btn-primary':'btn-ghost')+'" '+
@@ -36352,7 +36624,7 @@ function setupBarHtml(){
       '<button class="btn btn-ghost" onclick="setupManual('+(SETUP.manual?'false':'true')+')">'+
         (SETUP.manual?'글 접기':'글로 보기')+'</button>'+
       '<button class="btn btn-ghost" onclick="setupLater()">나중에</button>'+
-    '</div>'+
+    '</div>'):'')+
     (SETUP.split?setupPartsHtml():'')+
     (SETUP.blocked?('<div class="stp-w" style="margin-top:10px">새 창이 막혀 있습니다. '+
       '<b>'+osEsc(SUPA_SQL_URL)+'</b> 를 주소창에 붙여넣어 여세요.</div>'):'')+
