@@ -578,6 +578,13 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   await kkPage.waitForTimeout(500);
   is(await kkPage.evaluate(()=>!!document.querySelector('[onclick="almkToggle()"]')),
      '열쇠가 없으면 <b>만들기 단추</b>가 그 자리에 선다');
+  /* ★ <b>열기만 해도</b> 보여야 한다. 여태는 「알람 켜기」 를 눌러야 서버에
+     열쇠를 물어봤고, 그제서야 단추가 떴다 — 화면을 열어 본 사장님 눈에는
+     아무것도 없었다(「안 보인다」). 그리는 자리에서 묻는지 본다.        */
+  const ixk = fs.readFileSync(path.join(ROOT,'app/index.html'),'utf8');
+  const pblk = (ixk.split("tab==='phone_app'")[1]||'').slice(0,300);
+  is(/almKeyLoad\(/.test(pblk),
+     '<b>화면을 열 때</b> 열쇠를 묻는다 — 눌러야 보이면 못 찾으신다 (1번)');
   await kkPage.evaluate(()=>almkToggle()); await kkPage.waitForTimeout(400);
   /* 만드는 <b>동안</b> 바깥으로 나가는 것이 있나 — 열쇠는 이 브라우저 밖으로 나가면 안 된다 (10번) */
   const kkOut=[]; const kkSpy=r=>{const u=r.url(); if(u.indexOf('127.0.0.1:'+PORT)<0)kkOut.push(u);};
