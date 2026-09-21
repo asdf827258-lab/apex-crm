@@ -8004,8 +8004,15 @@ var AR_CAT=[
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
  ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
- ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
- ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
+/* ── <b>내 코칭 · 본인 점검란은 여기서 뺐습니다</b> ─────────────────
+   사장님 말씀 (2026-09-21) — 「TFA 업무관리가 간소화할것 … <b>내 코칭 ·
+   본인 점검란 없애기</b>」. <b>지운 것이 아닙니다</b> — 이 둘은 TFA 가
+   큰 메뉴의 화면(renderMyCoach · renderAcademy)을 빌려 그리던 것이라,
+   여기서 빼도 <b>☰ 서랍의 「내 코칭」·「APEX 본인 점검란」은 그대로</b>
+   입니다. 쌓아 두신 기록도 그대로 있습니다.
+   ★ 덤으로 <b>화면이 짧아집니다.</b> 「고객 체크」 칸을 늘리면서 TFA 가
+     2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 다시
+     기준 안쪽입니다 — 자(尺)를 올리는 대신 <b>실제로 줄였습니다</b>. */
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
  /* ── 🩺 <b>고객 체크</b> ─────────────────────────────────────────────
     사장님 말씀 — 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들
@@ -8032,14 +8039,6 @@ function arCat(){return AR.cat||'feed';}
 function arGoCat(k){
   AR.cat=k;AR.open='';AR.memo='';try{localStorage.setItem('apex_ar_cat',k);}catch(e){}
   /* 안 여는 칸은 안 읽는다 — 열 때 그 칸이 쓰는 기록만 가져온다 */
-  if(k==='coach'){
-    try{if(typeof MC!=='undefined'&&typeof mcLoad==='function'){MC.loaded=false;mcLoad();
-      setTimeout(function(){if(AR.cat==='coach'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
-  }
-  if(k==='acad'){
-    try{if(typeof AC!=='undefined'&&!AC.data&&!AC.loading&&typeof acCrmLoad==='function'){acCrmLoad();
-      setTimeout(function(){if(AR.cat==='acad'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
-  }
   /* 대표 브리핑은 <b>미리 만들어 둔 한 장</b>을 읽어 와야 몸통이 찬다.
      안 부르면 스피너만 돈다 — 없는 것과 같다. */
   if(k==='brief'){
@@ -11851,13 +11850,6 @@ function arBodyHtml(cat){
   if(cat==='skill')return arSkillHtml();
   if(cat==='todo')return arTodoHtml();
   if(cat==='score')return arScoreHtml()+arWeekHtml();
-  /* 내 코칭·본인 점검란은 원래 화면이 쓰던 그리기 함수를 그대로 부른다.
-     칸 이름(#mcPane · #acadBody)도 그대로 둔다 — 기존 코드가 그 이름으로 다시 그린다. */
-  if(cat==='coach'){
-    if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
-    if(typeof mcInnerHtml!=='function')return '<div class="ar-none">내 코칭을 불러오지 못했습니다.</div>';
-    return '<div id="mcPane">'+mcInnerHtml()+'</div>';
-  }
   if(cat==='brief'){
     if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
     if(typeof schCanView!=='function'||!schCanView())
@@ -11865,10 +11857,6 @@ function arBodyHtml(cat){
              '리더 권한은 대표가 설정 → 팀원 권한 관리에서 지정합니다.</div>';
     if(typeof schInnerHtml!=='function')return '<div class="ar-none">대표 브리핑을 불러오지 못했습니다.</div>';
     return schInnerHtml();
-  }
-  if(cat==='acad'){
-    if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
-    return '<div id="acadBody">'+acBody()+'</div>';
   }
   if(cat==='perf'){
     if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
@@ -16197,8 +16185,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 22:20';
-var APP_BUILD_NOTE="<b>🩺 고객 체크 — 읽은 증권으로 무엇을 터치할지.</b> 사장님 말씀 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들을 <b>고객 체크로 따로 관리</b>해줘. <b>고객님의 보험을 읽었다면 무엇으로 터치할지</b>」. TFA 업무관리에 칸 하나를 세웠습니다 — AP·PC·CS 에 있는 분만 서고, 그 분께 <b>오늘 꺼낼 담보 한 가지</b>와 다음 한마디가 섭니다. <b>어려웠던 까닭은 자료가 없어서가 아니었습니다</b> — 「보장분석 전·후 만들기」가 이미 고객별로 서버에 남기고 있었는데(saved_reports · ba_state) <b>아무도 다시 안 읽었습니다.</b> 이제 읽어 옵니다. 담보 이름은 저장할 때 같이 적게 했습니다 — 이름을 아는 곳은 그쪽 하나라, 본체가 다시 계산하면 셈이 두 곳에 생깁니다(5번). <b>안 읽었으면 말을 안 만듭니다</b> — 「아직 증권을 안 읽었습니다」라고 적고 보장분석으로 모십니다(1번). 이름이 안 이어지면 <b>비슷한 이름에 건너짓지 않고</b> 못 찾았다고 적습니다 — 다른 분 증권을 이 분 것이라고 말하면 그 자리에서 끝납니다. 금액은 <b>「못 찾음」·「없음」·숫자</b> 셋을 갈라 적습니다(1번) — ba.html 의 diff 가 못 읽음과 0 을 뭉개고 있어서입니다. 서버는 <b>칸을 여는 그때 한 번</b>만, 그것도 <b>요약만</b> 받습니다(7번). 홈 아침 미션을 5/5 끝내시면 「🩺 고객 체크 열기」로 바로 갑니다. 점검 <b>check-cuschk</b> 를 늘렸습니다.";
+var APP_BUILD='2026-09-21 23:05';
+var APP_BUILD_NOTE="<b>🩺 고객 체크 — 읽은 증권으로 무엇을 터치할지.</b> 사장님 말씀 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들을 <b>고객 체크로 따로 관리</b>해줘. <b>고객님의 보험을 읽었다면 무엇으로 터치할지</b>」. TFA 업무관리에 칸 하나를 세웠습니다 — AP·PC·CS 에 있는 분만 서고, 그 분께 <b>오늘 꺼낼 담보 한 가지</b>와 다음 한마디가 섭니다. <b>어려웠던 까닭은 자료가 없어서가 아니었습니다</b> — 「보장분석 전·후 만들기」가 이미 고객별로 서버에 남기고 있었는데(saved_reports · ba_state) <b>아무도 다시 안 읽었습니다.</b> 이제 읽어 옵니다. 담보 이름은 저장할 때 같이 적게 했습니다 — 이름을 아는 곳은 그쪽 하나라, 본체가 다시 계산하면 셈이 두 곳에 생깁니다(5번). <b>안 읽었으면 말을 안 만듭니다</b> — 「아직 증권을 안 읽었습니다」라고 적고 보장분석으로 모십니다(1번). 이름이 안 이어지면 <b>비슷한 이름에 건너짓지 않고</b> 못 찾았다고 적습니다 — 다른 분 증권을 이 분 것이라고 말하면 그 자리에서 끝납니다. 금액은 <b>「못 찾음」·「없음」·숫자</b> 셋을 갈라 적습니다(1번) — ba.html 의 diff 가 못 읽음과 0 을 뭉개고 있어서입니다. 서버는 <b>칸을 여는 그때 한 번</b>만, 그것도 <b>요약만</b> 받습니다(7번). 홈 아침 미션을 5/5 끝내시면 「🩺 고객 체크 열기」로 바로 갑니다. 점검 <b>check-cuschk</b> 를 늘렸습니다.　—　TFA 에서 <b>내 코칭 · 본인 점검란</b>을 뺀습니다(사장님 말씀 「TFA 업무관리가 간소화할것」). <b>지운 것이 아닙니다</b> — 둘 다 ☰ 서람의 「내 코칭」·「APEX 본인 점검란」에 그대로 있고 쌓아 둔 기록도 그대로입니다. 덩으로 <b>화면이 짧아졌습니다</b> — 「고객 체크」 칸을 늘리면서 TFA 가 2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 <b>2.4화면</b>입니다. 자(尺)를 올리는 대신 실제로 줄였고, 기준선도 같이 내렸습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
