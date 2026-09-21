@@ -78,15 +78,16 @@ const SEED = (o) => `
  window.osLoadClients=function(){};window.confirm=function(){return true;};
  GB.loaded=true;GB.teams=[{id:'t1',name:'1팀'}];GB.teamOf={me:'t1'};GB.rows=[{id:'me',name:'홍길동'}];
  var _e={};window.arRowOf=function(i){return i==='me'?{id:'me',name:'홍길동',sc:_e,raw:_e}:null;};
- AR.rep={};AR.loaded=true;AR.busy='';AR.err='';
- AR.db=${o.none ? '[]' : `[
+ AR.rep={};AR.loaded=${o.hold === 'wait' ? 'false' : 'true'};AR.busy='${o.hold === 'wait' ? 'y' : ''}';
+ AR.err='${o.hold === 'fail' ? '네트워크 오류' : ''}';
+ AR.db=${(o.none || o.hold) ? '[]' : `[
    {id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
    {id:'d2',who:'me',name:'홍길동B',region:'순천',src:'소개',stage:'미접촉',days:5,n:0,res:'미진행',cAt:'',pAt:''},
    {id:'d5',who:'me',name:'홍길동E',region:'광양',src:'개척',stage:'거절',days:20,n:2,res:'거절',cAt:'',pAt:''},
    {id:'d3',who:'me',name:'홍길동C',region:'순천',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''},
    {id:'d4',who:'me',name:'홍길동D',region:'순천',src:'일반',stage:'PC',days:6,n:3,res:'상담',cAt:'',pAt:''}]`};
  /* 고객 365일에서 온 분 — <b>여기에만</b> 출생년도가 있다 */
- AR.cliRows=${o.none ? '[]' : `[{id:'c1',who:'me',name:'홍길동F',plan:'',due:'',bd:'',man:null,
+ AR.cliRows=${(o.none || o.hold) ? '[]' : `[{id:'c1',who:'me',name:'홍길동F',plan:'',due:'',bd:'',man:null,
                                  ever:true,at:'2026-08-01',days:51,by:1985}]`};
  AR.calls=[];CM.loaded=true;CM.who={me:'홍길동'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
@@ -366,6 +367,23 @@ const SEED = (o) => `
   is(marks.every(m => stage.indexOf(m) >= 0), '  그 말은 <b>apex-stage.js</b> 에 있다');
   is(/APEX_STAGE\.script\(/.test(src.slice(src.indexOf('function hmMsSay'), src.indexOf('function hmMsSay') + 400)),
      '  미션도 <b>APEX_STAGE.script</b> 를 부른다 — DB 통합 CRM 과 같은 말');
+
+  console.log('\n[10-2] <b>아직 못 읽은 것</b>을 「없다」 고 말하지 않는다 (1번)');
+  /* ⚠ 「없습니다」 는 <b>결론</b>이다. 읽는 중에 그렇게 적으면 사장님은 오늘
+     아무도 없는 줄 아시고 아침을 그냥 넘기신다. 묻는 자리는 hmHold 한 곳 (5번). */
+  const W = await open({ hold: 'wait' });
+  await openMs(W.p);
+  const w = await txt(W.p);
+  is(/읽는 중/.test(w) && !/연락할 분이 없습니다/.test(w),
+     '  <b>읽는 중</b>일 때는 「없다」 고 안 한다');
+  const F = await open({ hold: 'fail' });
+  await openMs(F.p);
+  const f = await txt(F.p);
+  is(/못 받았습니다/.test(f) && /0명이라는 뜻이 아닙니다/.test(f),
+     '  <b>못 받았을</b> 때도 0명이라고 안 한다');
+  is(/다시 읽기/.test(f), '  <b>다시 읽는 길</b>을 준다');
+  is(await F.p.evaluate(() => hmMsHold() === hmHold()),
+     '  <b>「오늘 챙길 것」 과 같은 답</b>을 쓴다 — 여기서 또 재지 않는다 (5번)');
 
   console.log('\n[11] 뽑힌 분이 없으면 <b>사람을 지어내지 않는다</b> (1번)');
   const Z = await open({ none: true });
