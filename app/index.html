@@ -8000,7 +8000,23 @@ function arWhen(at){
    두 번 눌러 찾아 들어가야 하면 안 보게 된다. */
 var AR_CAT=[
  ['feed', '🧾','피드백',        'AI 가 쓴 내 보고 다섯 칸',        'me'],
- ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me'],
+/* ── <b>스케줄 관리도 메뉴에서 뺐습니다</b> (2026-09-21) ────────────
+   사장님 말씀 — 「스케줄관리 [ 위에 <b>홈에서 한달 해야할 미션들을 따로
+   표기</b>해두기 ] — <b>이게 반영되었다면</b>, TFA 업무관리에서 메뉴 지우기」.
+
+   조건이 채워졌습니다 — 홈 <b>📅 이번 주 · 이번 달</b> 달력이 이제 날마다
+   <b>🌅 아침 미션 n / 5 · 하루 n / 11</b> 을 적고, 날짜를 누르면 다섯에
+   🌅 표가 붙어 펴집니다(mrtPanelHtml).
+
+   이 칸이 들고 있던 넷이 다 다른 자리에 있습니다 —
+     달력          → 홈 📅 <b>같은 한 벌</b>입니다 (mcalCardHtml, 5번)
+     약속          → 그 달력에 날짜로 찍힙니다
+     다음 할 일    → 그 달력 + ✅ 해야 할 일
+     이번 주 체크판 → 실행 체크판 · 달력의 매일 하는 일
+
+   ★ <b>지운 것이 아닙니다</b> — 여섯째 자리 hide 라, 🔎 메뉴 찾기로
+     「스케줄」 을 치면 그대로 열립니다. */
+ ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me', true],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
  ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
@@ -8013,7 +8029,26 @@ var AR_CAT=[
    ★ 덤으로 <b>화면이 짧아집니다.</b> 「고객 체크」 칸을 늘리면서 TFA 가
      2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 다시
      기준 안쪽입니다 — 자(尺)를 올리는 대신 <b>실제로 줄였습니다</b>. */
- ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
+/* ── <b>오늘 터치할 사람은 메뉴에서 뺐습니다</b> (2026-09-21) ───────
+   사장님 말씀 — 「오늘 터치할 사람도 * <b>[아래 글이 모두 적용 되었다면
+   지워버려]</b>」. 그 「아래 글」이 <b>홈 아침 미션 다섯</b>과 <b>고객
+   체크</b>였고, 둘 다 섰습니다. 그래서 이 칸이 하던 일이 이제 이렇게
+   나뉩니다 — 빠진 사람이 없는지 <b>상태로</b> 맞춰 봅니다.
+
+     미접촉 · TA · 부재 · 기고객 · 거절 → 🌅 홈 아침 미션 (HM_MS_POOL)
+     AP · PC · CS                      → 🩺 고객 체크 (CHK)
+     계약완료 · 증권전달 · 생일 · 식은  → 📅 달력 · ✅ 해야 할 일
+
+   ★ <b>지운 것이 아닙니다.</b> 여섯 번째 자리에 <b>hide</b> 를 답니다 —
+     왼쪽 목록에서만 빠지고,
+       · 🔎 메뉴 찾기로 「오늘 터치할 사람」 을 치면 그대로 나오고
+         (찾기는 이 표를 통째로 봅니다 — renderNav 의 「화면 안의 칸」)
+       · 홈 <b>🗺️ 지역 동선</b>·<b>팀 카드</b>가 한 분을 펼칠 때 여기로 오고
+         (hmRtPerson · hmTeamOpen)
+       · 「해야 할 일」의 다시 걸 사람·식은 고객·생일 줄이 여기로 옵니다.
+     <b>삼항 사슬로 나열하지 않고 표에 한 칸을 더합니다</b> — 칸을 늘릴 때
+     빠뜨릴 자리를 만들지 않습니다 (5번). */
+ ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me', true],
  /* ── 🩺 <b>고객 체크</b> ─────────────────────────────────────────────
     사장님 말씀 — 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들
     <b>고객 체크로 따로 관리</b>해줘」. 위의 「오늘 터치할 사람」이 <b>TA 앞단</b>
@@ -8209,8 +8244,11 @@ function arTodoList(){
       out.push({k:'ck',e:'📋',t:u[i][1],s:'오늘 체크판',go:'ckboard',bad:false,d:0,ck:u[i][0]});
   }
   var tk=arTkCount(me);
+  /* 진행중(AP·PC·CS)은 <b>고객 체크</b>가 봅니다 — 읽은 증권으로 무엇을
+     터치할지까지 그 칸이 말해 줍니다. 「오늘 터치할 사람」 으로 보내면
+     같은 분을 두 곳에서 다루게 됩니다 (5번). */
   if(tk.run)out.push({k:'run',e:'🔥',t:'진행중인 사람 '+tk.run+'명',
-    s:'지금 붙어야 하는 사람들',go:'',bad:true,d:0,cat:'touch'});
+    s:'읽은 증권으로 무엇을 터치할지',go:'',bad:true,d:0,cat:'check'});
   if(tk.no)out.push({k:'cold',e:'☎️',t:'다시 걸 사람 '+tk.no+'명',
     s:'오늘 터치할 사람에서',go:'',bad:true,d:0,cat:'touch'});
   if(tk.old)out.push({k:'old',e:'❄️',t:'식은 고객 '+tk.old+'명',
@@ -11889,6 +11927,10 @@ function arInnerHtml(){
   h+='<div class="ar-shd">내 관리</div>';
   for(i=0;i<AR_CAT.length;i++){
     c=AR_CAT[i];
+    /* 여섯째 자리가 <b>hide</b> 다 — 왼쪽 목록에서만 뺀다. 표에서 지우지
+       않는 까닭은 🔎 메뉴 찾기(renderNav)·arGoCat·arBodyHtml 이 이 표
+       하나를 보기 때문이다. 지우면 그 셋이 한꺼번에 죽는다 (5번). */
+    if(c[5])continue;
     if(c[0]==='lead')h+='<div class="ar-shd">팀 관리</div>';
     n=arCatN(c[0]);
     h+='<button type="button" class="ar-cat'+(cat===c[0]?' on':'')+'" onclick="arGoCat(\''+c[0]+'\')">'+
@@ -11953,8 +11995,9 @@ function arPaintTail(){
 function renderAiRep(){
   arCss();
   return osPage('관리','TFA 업무관리',
-    '피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리를 '+
-    '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서.',
+    '피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · 고객 체크 · 30일 고객관리를 '+
+    '왼쪽에서 고르면 이 자리에서 바로 봅니다. 지점장은 리더 할 일과 팀원 관리까지 같은 칸에서. '+
+    '아침에 누구에게 전화할지는 <b>홈 🌅 아침 미션</b>에서 합니다.',
     '<div id="arPane">'+arInnerHtml()+'</div>');
 }
 function osAiRepAfterRender(){
@@ -11972,9 +12015,9 @@ var OS_HELP={
  airep:['🧭','TFA 업무관리','왼쪽에서 고르면 이 자리에서 다 봅니다',[
    ['①','아침에 들어오면 창이 하나 뜹니다','오늘 약속 · 밀린 것 · 다시 걸 DB · 식은 고객 · 오늘 공부. 「오늘 할 일 열기」를 누르면 여기로 옵니다.'],
    ['②','오전 8시가 지나면 보고가 저절로 만들어집니다','팀원은 자기 것, 지점장은 팀원 전원 것. 하루 한 번만 만듭니다. 앱을 열어 두었으면 8시에, 꺼져 있었으면 그날 처음 켤 때 만듭니다. 아침 창 아래에서 끌 수 있습니다.'],
-   ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 점수판 · 부재거절 재관리 · 기고객 재관리. 붉은 숫자는 남은 건수입니다.'],
+   ['②','왼쪽에서 볼 것을 고릅니다','피드백 · 스케줄 · 역량 · 해야 할 일 · 내 업적 · <b>고객 체크</b> · 30일 고객관리. 붉은 숫자는 남은 건수입니다.'],
    ['③','「해야 할 일」부터 지웁니다','밀린 것이 맨 위에 옵니다. 체크판 항목은 여기서 바로 눌러도 됩니다.'],
-   ['④','「오늘 터치할 사람」에서 오늘 연락할 사람을 봅니다','부재 · 거절 · 진행중 · 미진행 · 기고객 · 생일이 한 줄로 섭니다. 오른쪽에 <b>무엇을 해야 하는지</b> 적혀 있습니다. 「무슨 말로 열까」를 누르면 첫 마디와 전할 소식을 AI 가 만들어 줍니다.'],
+   ['④','오늘 연락할 사람은 <b>두 자리</b>로 나뉘었습니다','<b>전화 걸 분(TA 앞단)</b>은 홈 🌅 아침 미션에서, <b>상담 중인 분(AP·PC·CS)</b>은 여기 <b>🩺 고객 체크</b>에서 봅니다. 옛 「오늘 터치할 사람」 한 줄판이 그리우시면 🔎 메뉴 찾기에 그 이름을 치시면 그대로 열립니다 — 지운 것이 아닙니다.'],
    ['⑤','「피드백」에서 AI 보고를 받습니다','활동 보고 · 활동 격려 · 공부할 부분 · 상담 컨셉 · 다음 7일 다섯 칸입니다.'],
    ['⑥','지점장은 「리더 할 일」과 「팀원 관리」까지','리더 할 일은 누구나 볼 수 있고 체크는 지점장만 합니다. 팀원 관리에서 「전원 보고 한 번에 받기」를 누르면 팀 전체가 만들어집니다.']
  ],[
@@ -14488,6 +14531,29 @@ function mrtDone(ds){
   for(i=0;i<L.length;i++)if(m[L[i][0]])n++;
   return n;
 }
+/* ── <b>그 날의 아침 미션 다섯</b> ───────────────────────────────────
+   사장님 말씀 — 「스케줄관리 [ 위에 <b>홈에서 한달 해야할 미션들을 따로
+   표기</b>해두기 ] — 이게 반영되었다면 TFA 업무관리에서 메뉴 지우기」.
+
+   달력은 여태 「하루 열한 가지 중 몇 개」만 적었습니다. 그런데 아침에
+   꼭 해야 하는 것은 <b>그 안의 다섯</b>입니다 — 여섯 개를 했어도 그 다섯이
+   안 들어 있으면 아침이 안 끝난 것입니다. 그래서 다섯을 <b>따로</b> 셉니다.
+
+   ★ 다섯이 무엇인지는 <b>HM_MS 하나</b>가 압니다 — 여기 또 적으면 미션을
+     고칠 때 달력만 옛말을 하게 됩니다 (5번).
+   ★ 담는 자리도 같습니다 — 체크판의 그 열쇠(apex_ck_day_<날짜>)입니다.
+     홈에서 미션을 체크하면 달력에도 그대로 켜집니다.                 */
+function mrtMs(ds){
+  var m=mrtLoad(ds),L=(typeof HM_MS!=='undefined')?HM_MS:[],n=0,i;
+  for(i=0;i<L.length;i++)if(m[L[i].ck])n++;
+  return {n:n,tot:L.length};
+}
+/* 이 줄이 아침 미션인가 — 몇 번째인지도 같이 준다(①②③④⑤ 를 그대로 쓴다) */
+function mrtMsOf(id){
+  var L=(typeof HM_MS!=='undefined')?HM_MS:[],i;
+  for(i=0;i<L.length;i++)if(L[i].ck===id)return L[i];
+  return null;
+}
 /* 오늘만 켤 수 있다 — 왜 그런지는 위에 적어 두었다 */
 function mrtToday(ds){ return ds===mcalToday(); }
 function mrtToggle(ds,id){
@@ -14515,7 +14581,7 @@ function mrtOpenSet(ds){ MRT.open=(MRT.open===ds)?'':ds; try{ mcalPaint(); }catc
 function mrtPanelHtml(ds){
   var L=mrtItems();
   if(!L.length)return '';
-  var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),i,x,on,h;
+  var m=mrtLoad(ds),n=mrtDone(ds),today=mrtToday(ds),ms=mrtMs(ds),i,x,on,h,mi;
   var ahead=ds>mcalToday();
   mrtCss();
   /* <b>지난 날과 앞날을 갈라 적는다.</b> 앞날에 「지난 기록입니다」 라고
@@ -14525,6 +14591,11 @@ function mrtPanelHtml(ds){
     '<button type="button" class="mrt-hd" aria-expanded="'+(op?'true':'false')+'" '+
       'onclick="mrtOpenSet(\''+ds+'\')">'+
     '<span class="ar">▾</span>📋 <b>매일 하는 일</b> '+
+    /* 아침 미션 다섯을 <b>먼저</b> 적는다 — 아침에 끝내야 하는 것이 그 다섯이다.
+       무엇이 다섯인지는 HM_MS 하나가 안다 (5번). */
+    (ahead?'<span class="mrt-n ms">🌅 아침 '+ms.tot+'가지</span>'
+          :('<span class="mrt-n ms'+(ms.n>=ms.tot?' all':'')+'">🌅 아침 '+ms.n+' / '+ms.tot+
+            (ms.n>=ms.tot?' ✓':'')+'</span>'))+
     (ahead?'<span class="mrt-n">하루 '+L.length+'가지</span>'
           :('<span class="mrt-n'+(n>=L.length?' all':'')+'">'+n+' / '+L.length+
             (n>=L.length?' ✓':'')+'</span>'))+
@@ -14535,14 +14606,15 @@ function mrtPanelHtml(ds){
     '</button>';
   if(!op)return h+'</div>';
   for(i=0;i<L.length;i++){
-    x=L[i];on=!ahead&&!!m[x[0]];
-    h+='<button type="button" class="mrt-it'+(on?' on':'')+(today?'':' ro')+'" '+
+    x=L[i];on=!ahead&&!!m[x[0]];mi=mrtMsOf(x[0]);
+    h+='<button type="button" class="mrt-it'+(on?' on':'')+(today?'':' ro')+(mi?' ms':'')+'" '+
       (today?('onclick="mrtToggle(\''+ds+'\',\''+x[0]+'\')"'):'disabled')+'>'+
       '<span class="bx">'+(on?'✓':'')+'</span>'+
-      '<span class="m"><b>'+osEsc(x[1])+'</b>'+
+      '<span class="m"><b>'+(mi?('<i class="mrt-ms">🌅'+mi.n+'</i> '):'')+osEsc(x[1])+'</b>'+
         (x[2]?('<span>'+osEsc(x[2])+'</span>'):'')+'</span></button>';
   }
-  return h+'<div class="mrt-ft">체크판과 <b>같은 자리</b>에 담깁니다 — 여기서 켠 것이 실행 체크판에도 켜져 있습니다.</div></div>';
+  return h+'<div class="mrt-ft">🌅 가 붙은 다섯은 <b>홈 아침 미션</b>입니다 — 홈에서 켠 것이 여기에도 켜집니다. '+
+    '체크판과 <b>같은 자리</b>에 담기므로 실행 체크판에도 그대로 있습니다.</div></div>';
 }
 function mrtCss(){
   if(document.getElementById('mrtCss'))return;
@@ -14558,6 +14630,12 @@ function mrtCss(){
    '.mrt.on .mrt-hd .ar{transform:none}'+
    '.mrt-n{font-weight:900;padding:2px 9px;border-radius:var(--r-pill);background:#EEF2FF;color:#4F46E5}'+
    '.mrt-n.all{background:#ECFDF5;color:#047857}'+
+   /* 아침 미션 다섯은 <b>다른 빛깔</b>로 — 하루치 숫자와 나란히 서므로 */
+   '.mrt-n.ms{background:#FFF7ED;color:#C2410C}'+
+   '.mrt-n.ms.all{background:#ECFDF5;color:#047857}'+
+   '.mrt-it.ms{border-color:#FED7AA;background:#FFFBF5}'+
+   '.mrt-it.ms.on{border-color:#A7F3D0;background:#F0FDF4}'+
+   '.mrt-ms{font-style:normal;font-weight:900;color:#C2410C;margin-right:2px}'+
    '.mrt-ro{font-weight:700;color:var(--ink-5)}'+
    '.mrt-it{display:flex;align-items:flex-start;gap:9px;width:100%;min-height:44px;'+
      'padding:8px 9px;margin-bottom:4px;border:1px solid var(--ink-8);border-radius:var(--r-xs);'+
@@ -14652,10 +14730,17 @@ function mcalItems(){
     var ymR=(typeof mcalYm==='function')?mcalYm():TD.slice(0,7);
     var lastR=new Date(Date.UTC(+ymR.slice(0,4),+ymR.slice(5,7),0)).getUTCDate(),dR,dsR;
     var putR=function(dsx){
-      var done=mrtDone(dsx),past=(dsx<=TD);
+      var done=mrtDone(dsx),past=(dsx<=TD),ms=mrtMs(dsx);
+      /* <b>아침 미션 다섯을 앞에 적습니다</b> — 하루 열한 가지 가운데 아침에
+         꼭 끝내야 하는 것이 그 다섯입니다. 뒤에 하루치를 같이 적어 둡니다.
+         앞날은 <b>「0 / 5」 가 아니라 몇 가지인지만</b> 적습니다 — 아직 안 한
+         것을 0 으로 적으면 「못 했다」 로 읽힙니다 (1번). */
       (out[dsx]=out[dsx]||[]).push({k:'rt',who:meR,t:'매일 하는 일',
-        rt:dsx,n:done,tot:RT.length,
-        s:past?(done+' / '+RT.length+(done>=RT.length?' · 다 했습니다':'')):('하루 '+RT.length+'가지')});
+        rt:dsx,n:done,tot:RT.length,ms:ms.n,mstot:ms.tot,
+        s:past
+          ?('🌅 아침 미션 '+ms.n+' / '+ms.tot+' · 하루 '+done+' / '+RT.length+
+            (done>=RT.length?' · 다 했습니다':''))
+          :('🌅 아침 미션 '+ms.tot+'가지 · 하루 '+RT.length+'가지')});
     };
     for(dR=1;dR<=lastR;dR++){
       dsR=ymR+'-'+('0'+dR).slice(-2);
@@ -16202,8 +16287,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 23:40';
-var APP_BUILD_NOTE="<b>🩺 고객 체크 — 읽은 증권으로 무엇을 터치할지.</b> 사장님 말씀 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들을 <b>고객 체크로 따로 관리</b>해줘. <b>고객님의 보험을 읽었다면 무엇으로 터치할지</b>」. TFA 업무관리에 칸 하나를 세웠습니다 — AP·PC·CS 에 계신 분만 서고, 그 분께 <b>오늘 꺼낼 담보 한 가지</b>와 다음 한마디가 섭니다. <b>어려웠던 까닭은 자료가 없어서가 아니었습니다</b> — 「보장분석 전·후 만들기」가 이미 고객별로 서버에 남기고 있었는데(saved_reports · ba_state) <b>아무도 다시 안 읽었습니다.</b> 이제 읽어 옵니다. 담보 이름은 저장할 때 같이 적게 했습니다 — 이름을 아는 곳은 그쪽 하나라, 본체가 다시 계산하면 셈이 두 곳에 생깁니다(5번). <b>안 읽었으면 말을 안 만듭니다</b> — 「아직 증권을 안 읽었습니다」라고 적고 보장분석으로 모십니다(1번). 이름이 안 이어지면 <b>비슷한 이름에 건너짚지 않고</b> 못 찾았다고 적습니다 — 다른 분 증권을 이 분 것이라고 말하면 그 자리에서 끝납니다. 금액은 <b>「못 찾음」·「없음」·숫자</b> 셋을 갈라 적습니다(1번) — ba.html 의 diff 가 못 읽음과 0 을 뭉개고 있어서입니다. 서버는 <b>칸을 여는 그때 한 번</b>만, 그것도 <b>요약만</b> 받습니다(7번). 홈 아침 미션을 5/5 끝내시면 「🩺 고객 체크 열기」로 바로 갑니다. 점검 <b>check-cuschk</b> 를 늘렸습니다.　—　TFA 에서 <b>내 코칭 · 본인 점검란</b>을 뺐습니다(사장님 말씀 「TFA 업무관리가 간소화할것」). <b>지운 것이 아닙니다</b> — 둘 다 ☰ 서랍 <b>「🎓 교육 자료」</b> 안에 섭니다. 쌓아 둔 기록도 그대로입니다. 원래 이 둘은 <b>가려 둔 묶음</b>에 있었고, 가려 둔 까닭이 「다른 화면 안에서 열린다」 였는데 <b>그 다른 화면이 바로 TFA</b> 였습니다 — 빼는 순간 「내 코칭」은 <b>열 길이 없어졌고</b> check-nav 가 그 자리에서 잡았습니다. 새 묶음을 만들어 세웠더니 이번엔 서랍이 다 접어도 912px 이 되어 한 화면(844px)을 넘겼습니다(check-navgrp). 그래서 <b>묶음을 늘리지 않고</b> 교육 자료 안에 붙였습니다 — 문(권한·등급)은 묶음이 아니라 <b>각자의 ak</b> 로 판정해 옮겨도 그대로입니다. 덤으로 <b>화면이 짧아졌습니다</b> — 「고객 체크」 칸을 늘리면서 TFA 가 2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 <b>2.4화면</b>입니다. 자(尺)를 올리는 대신 실제로 줄였고, 기준선도 같이 내렸습니다.";
+var APP_BUILD='2026-09-22 00:35';
+var APP_BUILD_NOTE="<b>🧭 TFA 업무관리를 간소화합니다 ② — 열둘이 열로.</b> 사장님 말씀 「오늘 터치할 사람도 * <b>[아래 글이 모두 적용 되었다면 지워버려]</b>」 · 「스케줄관리 [ <b>위에 홈에서 한달 해야할 미션들을 따로 표기</b>해두기 ] — <b>이게 반영되었다면</b> 메뉴 지우기」. 두 조건이 다 채워져서 <b>두 칸을 뺐습니다</b>.　—　<b>오늘 터치할 사람</b>이 하던 일은 이제 이렇게 나뉩니다 — 상태로 맞춰 보면 <b>빠지는 분이 없습니다</b>. 미접촉·TA·부재·기고객·거절은 <b>홈 🌅 아침 미션</b>이, AP·PC·CS 는 <b>🩺 고객 체크</b>가, 계약완료·증권전달·생일·식은 분은 <b>📅 달력</b>과 <b>✅ 해야 할 일</b>이 봅니다. 「해야 할 일」의 <b>진행중인 사람</b> 줄은 이제 고객 체크로 갑니다 — 같은 분을 두 곳에서 다루지 않습니다(5번).　—　<b>스케줄 관리</b>를 빼기 전에 <b>조건부터 채웠습니다.</b> 홈 달력이 날마다 <b>「🌅 아침 미션 n / 5 · 하루 n / 11」</b> 을 적고, 날짜를 누르면 그 다섯 줄에 <b>🌅 표가 붙어</b> 펴집니다. 홈에서 미션을 체크하면 달력에도 그대로 켜집니다 — <b>담는 자리가 같기 때문</b>입니다(실행 체크판의 그 열쇠). 다섯이 무엇인지는 <b>HM_MS 한 곳</b>만 압니다 — 달력에 또 적으면 미션을 고칠 때 달력만 옛말을 합니다(5번). 이 칸이 들고 있던 달력·약속·다음 할 일·이번 주 체크판은 모두 그 달력과 해야 할 일에 이미 있습니다.　—　<b>지운 것이 아닙니다.</b> 두 칸 다 표(AR_CAT)에 남아 있고 <b>여섯째 자리에 hide</b> 만 달았습니다 — 🔎 메뉴 찾기에 「오늘 터치할 사람」·「스케줄」 을 치면 그대로 열리고, 홈 <b>🗺️ 지역 동선</b>·<b>팀 카드</b>가 한 분을 펼칠 때도 그 판으로 갑니다. 표에서 아예 지우면 메뉴 찾기·arGoCat·arBodyHtml <b>셋이 한꺼번에 죽습니다</b>(5번).　—　점검 <b>check-airep</b> 을 늘렸습니다 — 열 칸인지, 두 칸이 목록에서 빠졌는지, 그래도 <b>표에 남아 있고 찾기로 나오고 불러서 열리는지</b>, 달력이 아침 미션 수를 <b>HM_MS 에서</b> 가져오는지, 펴면 <b>그 다섯 줄에만</b> 🌅 가 붙는지까지 봅니다. <b>check-homeday</b> 는 홈 안 TFA 칸을 hide 를 뺀 수로 셉니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.

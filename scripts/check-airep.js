@@ -225,9 +225,68 @@ const AI_OK = `## 활동 보고
        확인한다. 안 그러면 「빼기」와 「없애기」를 구분 못 한다.
      ★ <b>고객 체크</b>는 「오늘 터치할 사람」 바로 뒤다. 앞엣것은 TA
        앞단(부재·거절·기고객), 이것은 TA 뒤(AP·PC·CS)라 그 차례가 맞다. */
-  ok(cats.length === 12, '왼쪽에 카테고리 열두 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|오늘 터치할 사람|고객 체크|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
+  /* ── 2026-09-21 · <b>열둘 → 열하나</b> ────────────────────────────
+     사장님 말씀 「오늘 터치할 사람도 * <b>[아래 글이 모두 적용 되었다면
+     지워버려]</b>」. 그 「아래 글」(홈 아침 미션 다섯 · 고객 체크)이 다
+     섰으므로 이 칸을 왼쪽 목록에서 뺐다. 상태로 맞춰 보면 빠진 사람이
+     없다 — 미접촉·TA·부재·기고객·거절은 홈 아침 미션이, AP·PC·CS 는
+     고객 체크가, 계약완료·증권전달·생일·식은은 달력과 해야 할 일이 본다.
+     ★ <b>지운 것이 아니다</b> — 아래에서 그것을 따로 확인한다. */
+  ok(cats.length === 10, '왼쪽에 카테고리 열 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|본인 역량 체크|해야 할 일|내 업적 · 월간보고|고객 체크|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
     '순서가 요청대로다 — ' + cats.join(' · '));
+  ok(cats.indexOf('오늘 터치할 사람') < 0,
+    'TFA 왼쪽에서 <b>오늘 터치할 사람이 빠졌다</b> — 홈 아침 미션과 고객 체크가 대신한다');
+  /* 사장님 말씀 「스케줄관리 … 이게 반영되었다면 메뉴 지우기」 — 그 조건은
+     홈 달력이 날마다 아침 미션을 적는 것이다. 아래 [달력] 에서 그것을 본다. */
+  ok(cats.indexOf('스케줄 관리') < 0,
+    'TFA 왼쪽에서 <b>스케줄 관리가 빠졌다</b> — 홈 달력이 한 달 미션을 적는다');
+  /* <b>빼기와 없애기를 가른다</b> — 표에는 남아 있어야 하고, 불러야 열려야 한다.
+     표에서 아예 지우면 🔎 메뉴 찾기·arGoCat·arBodyHtml 셋이 한꺼번에 죽는다. */
+  const tch = await page.evaluate(() => {
+    const row = (window.AR_CAT || []).filter(c => c[0] === 'touch')[0];
+    let found = 0;
+    try {
+      NAV_Q = '오늘 터치할 사람'; renderNav();
+      found = Array.prototype.filter.call(document.querySelectorAll('#navHost .tab-btn'),
+        b => /터치할 사람/.test(b.textContent)).length;
+      NAV_Q = ''; renderNav();
+    } catch (e) {}
+    return { inTable: !!row, hidden: !!(row && row[5]), found: found };
+  });
+  ok(tch.inTable && tch.hidden, '표(AR_CAT)에는 <b>남아 있고</b> 여섯째 자리에 hide 가 달렸다');
+  ok(tch.found > 0, '<b>지운 것이 아니다</b> — 🔎 메뉴 찾기로 「오늘 터치할 사람」 이 나온다');
+  await open('touch');
+  const tchTxt = await pane();
+  ok(/오늘 터치할 사람|다시 걸|식은/.test(tchTxt), '불러서 열면 <b>그 판이 그대로</b> 선다 (arGoCat)');
+  await open('sched');
+  const schTxt = await pane();
+  ok(schTxt.length > 200, '스케줄 관리도 불러서 열면 그대로 선다 (' + schTxt.length + '자)');
+  await open();
+
+  /* ── <b>홈 달력이 한 달 미션을 적는가</b> — 스케줄 관리를 뺀 조건 ──
+     조건을 안 보고 칸만 빼면 사장님 말씀의 앞부분을 어긴 것이다.
+     ★ 다섯이 무엇인지는 HM_MS 하나가 안다 — 여기서 또 적지 않는다 (5번). */
+  const cal = await page.evaluate(() => {
+    const out = { ms: 0, tot: 0, line: '', panel: '', marks: 0 };
+    try {
+      const T = mcalToday(), items = mcalItems()[T] || [];
+      const rt = items.filter(x => x.k === 'rt')[0];
+      if (rt) { out.ms = rt.ms; out.tot = rt.mstot; out.line = rt.s || ''; }
+      /* 접힌 채로는 줄이 안 그려진다 — 펴 놓고 본다 */
+      if (!mrtOpenIs(T)) MRT.open = T;
+      out.panel = mrtPanelHtml(T) || '';
+      out.marks = (out.panel.match(/mrt-ms/g) || []).length;
+    } catch (e) { out.err = String(e); }
+    return out;
+  });
+  const hmN = await page.evaluate(() => (window.HM_MS || []).length);
+  ok(cal.tot === hmN && hmN > 0,
+    '달력 날짜 줄이 <b>아침 미션 수</b>를 HM_MS 에서 가져온다 — ' + cal.tot + ' / HM_MS ' + hmN + '개');
+  ok(/아침 미션/.test(cal.line), '날짜 줄에 <b>🌅 아침 미션</b> 이 적힌다 — ' + cal.line);
+  ok(/하루/.test(cal.line), '하루 열한 가지도 같이 적힌다 — 다섯만 적으면 나머지가 없어 보인다');
+  ok(cal.marks === hmN,
+    '펴면 그 <b>다섯 줄에만</b> 🌅 가 붙는다 — ' + cal.marks + ' / ' + hmN);
   ok(cats.indexOf('본인 점수판') < 0, '본인 점수판 칸은 없어졌다 — 내 업적 안으로 들어갔다');
   ok(cats.indexOf('내 코칭') < 0 && cats.indexOf('본인 점검란') < 0,
     'TFA 왼쪽에서 <b>내 코칭·본인 점검란이 빠졌다</b> — 간소화');
