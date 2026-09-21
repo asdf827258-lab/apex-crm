@@ -13332,7 +13332,7 @@ function pwaCardHtml(x){
      방해입니다.
    ★ 아이폰은 <b>홈 화면에 담아야</b> 알람이 옵니다(애플이 그렇게 정했습니다).
      그래서 이 카드를 「내 폰에 설치」 화면, 담기 안내 <b>바로 밑</b>에 둡니다. */
-var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',synced:false};
+var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',keyAns:0,synced:false};
 /* ══ 알람 열쇠 만들기 — <b>이 브라우저 안에서만</b> ═══════════════════
    사장님 말씀 — 「핸드폰이 꺼져도 알람이 울리도록 만들고」.
 
@@ -13341,13 +13341,22 @@ var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',synced:fals
    없을 뿐입니다. 그런데 그 열쇠를 <b>만들 길</b>이 어디에도 없어서,
    「넣으세요」 라고 적어 두고 끝이었습니다.
 
-   ★ 열쇠는 <b>이 브라우저가 만듭니다</b>(WebCrypto). 서버로도, 채팅으로도,
-     코드로도 나가지 않습니다 (10번). 만든 값은 화면에만 뜨고, 새로고침하면
-     사라집니다 — 어디에도 안 담습니다.
-   ★ 비밀 열쇠는 <b>남이 보면 안 됩니다.</b> 그 자리에서 그렇게 적습니다.
-   ★ 만들기만 합니다 — <b>넣는 것은 사장님</b>입니다. 앱이 Netlify 를
-     대신 만질 수는 없습니다. 어디에 넣는지 길을 적어 둡니다 (1번).      */
-var ALMK={open:false,busy:false,err:'',pub:'',priv:'',sub:'',show:false};
+   ★ 열쇠는 <b>이 브라우저가 만듭니다</b>(WebCrypto). 채팅으로도 코드로도
+     나가지 않습니다 (10번).
+   ★ 비밀 열쇠는 <b>서버로만</b> 갑니다 — 서버만 읽는 자리(push_keys)에
+     담기고 앱으로 되돌아오지 않습니다. 화면에는 가려서 뜹니다.
+   ★ <b>단추 두 번이면 끝납니다</b> — Netlify 에 들어가실 필요 없습니다.
+     담는 것은 대표·관리자만 됩니다(서버가 로그인 표를 보고 막습니다).
+
+   ⚠ 2026-09-21 — 다 만들어 놓고도 사장님이 <b>세 번</b> 「안 보인다」고
+     하셨습니다. 재어 보니 단추가 <b>1,656px</b> 아래, 폰 화면 두 개를
+     내려야 나오는 자리에 있었습니다. 코드가 아니라 <b>자리</b>가 틀렸던
+     것입니다. 그래서 지금은 —
+       · 열쇠가 없으면 설치 화면에서 알람 칸이 <b>맨 위</b>로 올라오고
+       · 그 칸 안에서도 열쇠가 <b>첫 줄</b>에 섭니다
+       · 홈에도 <b>한 줄</b>이 떠서 거기서 바로 갑니다 (대표·관리자만)
+     되면 셋 다 <b>저절로 사라집니다</b> — 헛것을 안 세웁니다 (8번).   */
+var ALMK={open:true,busy:false,err:'',pub:'',priv:'',sub:'',show:false};
 var ALM_KEY_TTL=3600000;            /* 서버 열쇠는 한 시간에 한 번만 묻는다 (7번) */
 var ALM_HOUR_KEY='apex_alm_hour';
 var ALM_DAY_KEY='apex_alm_day';
@@ -13527,15 +13536,15 @@ function almKeyLoad(cb){
   ALM.busy='key';almPaint();
   try{
     fetch('/.netlify/functions/push?key=1').then(function(r){return r.json();}).then(function(j){
-      ALM.busy='';ALM.keyAt=Date.now();
+      ALM.busy='';ALM.keyAt=Date.now();ALM.keyAns=1;
       ALM.key=(j&&j.key)||null;
       ALM.keyErr=ALM.key?'':((j&&j.why)||'서버에 알람 열쇠가 아직 없습니다.');
       almPaint(); if(cb)cb(ALM.key);
     },function(){
-      ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;
+      ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;ALM.keyAns=-1;
       ALM.keyErr='서버에 물어보지 못했습니다.'; almPaint(); if(cb)cb(null);
     });
-  }catch(e){ ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;
+  }catch(e){ ALM.busy='';ALM.keyAt=Date.now();ALM.key=null;ALM.keyAns=-1;
     ALM.keyErr='서버에 물어보지 못했습니다.'; almPaint(); if(cb)cb(null); }
 }
 /* 켜기 — 허락 → 일꾼 → (열쇠가 있으면) 서버에 이 폰을 담는다 */
@@ -13669,7 +13678,13 @@ function almSolo(){
 function almGoMain(){ try{ location.href=location.pathname; }catch(e){} }
 function almOn(){ return almCan().perm==='granted'; }
 function almPhoneOn(){ return !!(ALM.sub&&ALM.sub.endpoint); }
-function almPaint(){ var el=document.getElementById('almHost'); if(el)el.innerHTML=almCardHtml(); }
+function almPaint(){
+  var el=document.getElementById('almHost'); if(el)el.innerHTML=almCardHtml();
+  /* 열쇠 칸(설치 화면 맨 위)·홈 한 줄도 <b>여기서</b> 같이 그린다 — 따로
+     그리면 열쇠를 담은 뒤에도 한쪽이 남아 「아직 안 됐다」 고 거짓말한다 (5번) */
+  try{ almkCardPaint(); }catch(e){}
+  try{ almkBandPaint(); }catch(e){}
+}
 function almCardHtml(){
   var c=almCan(),w=almWhy(),d=almLine(),on=almOn(),ph=almPhoneOn();
   /* 바탕화면 아이콘에서는 <b>켜는 단추를 안 세웁니다</b> — 여기서 켜면 같은
@@ -13714,16 +13729,85 @@ function almCardHtml(){
           :(ALM.key?'서버는 <b>준비됐습니다</b> — 위 「🔔 이 폰에 알람 켜기」 만 누르시면 됩니다'
                    :(ALM.keyErr?osEsc(ALM.keyErr):'아직입니다')))+'</span></div>'+
      '</div>';
+  /* ⚠ 열쇠 만드는 칸을 <b>여기서 그리지 않습니다</b> — 이 줄까지 오려면
+     폰에서 1,656px 를 내려야 했고, 그래서 세 번 「안 보인다」 셨습니다.
+     열쇠는 이 화면 <b>맨 위</b>(almkHost)에 제 칸으로 섭니다. 여기서는
+     <b>가리키기만</b> 합니다 — 같은 것을 두 곳에 두지 않습니다 (5번). */
   if(!ph&&ALM.keyErr)
-    h+='<div class="alm-why" style="margin-top:9px">서버가 보내는 알람(②)을 켜려면 '+
-       'Netlify 환경변수에 <b>VAPID_PUBLIC · VAPID_PRIVATE · VAPID_SUBJECT</b> 를 넣어야 합니다. '+
-       '열쇠는 <b>서버에만</b> 둡니다 — 코드·채팅에 적지 않습니다. '+
-       '아래 <b>🔑 열쇠 만들기</b> 로 이 자리에서 만드실 수 있습니다.</div>'+almkHtml();
+    h+='<div class="alm-why" style="margin-top:9px">'+
+       (almkCan()
+         ? '서버가 보내는 알람(②)을 켜려면 <b>알람 열쇠</b>가 서버에 있어야 합니다. '+
+           '이 화면 <b>맨 위 🔑 칸</b>에서 단추 두 번이면 끝납니다.'
+         : '서버가 보내는 알람(②)은 <b>대표·관리자</b>가 서버에 알람 열쇠를 담으면 켜집니다. '+
+           '①(앱이 열려 있을 때)은 지금도 됩니다.')+'</div>';
   if(ALM.err)h+='<div class="alm-why" style="margin-top:9px">'+osEsc(ALM.err)+'</div>';
   h+='<div class="alm-pv"><b>지금 울리면 이렇게 뜹니다</b><br>'+
      (d?('「'+osEsc(d.title)+'」<br><span>'+osEsc(d.body)+'</span>')
        :'<span>오늘 챙길 분이 없습니다 — <b>안 울립니다.</b></span>')+'</div>';
   return h+'</div></div>';
+}
+/* ── 열쇠를 <b>지금 만들어야 하나</b> · <b>이 사람이 담을 수 있나</b> ──
+   두 물음에 답하는 곳은 <b>여기 하나뿐</b>입니다 (5번). 설치 화면 맨 위,
+   알람 칸 안내, 홈 한 줄 — 셋이 모두 이 답을 봅니다. 세 곳에서 따로
+   세면 열쇠를 담은 뒤에도 한 곳이 남아 거짓말을 합니다.
+
+   ★ 담을 수 있는 사람만 부릅니다 — 서버가 대표·관리자만 받으므로,
+     팀원에게 세워 봐야 눌러도 막힙니다. 못 할 일을 권하지 않습니다 (8번).
+   ★ <b>서버가 대답을 했을 때만</b> 섭니다 — 인터넷이 잠깐 끊긴 것과
+     「열쇠가 없다」 는 다른 말입니다 (1번). keyAns 가 그 구분입니다. */
+/* ⚠ 명단은 <b>서버가 쥐고 있습니다</b> — netlify/functions/push.js 의
+   ['owner','admin','master'] 가 진짜 문지기입니다. 여기서는 <b>그 명단
+   그대로</b> 물어, 못 할 사람에게 단추를 안 세웁니다.
+
+   ★ osIsAppAdmin() 을 쓰면 안 됩니다 — 거기에는 <b>master 가 빠져</b>
+     있습니다. 진짜 데이터에서 오늘 로그인한 대표 두 분 중 한 분이 master
+     이고, 그분께는 열쇠 칸이 <b>아예 안 떴습니다.</b> 서버는 받아 주는데
+     앱이 안 보여 주면 「안 보인다」 가 됩니다. check-push 가 두 명단이
+     어긋나면 빨간불을 켭니다 (8번).                                  */
+var ALMK_ROLES=['owner','admin','master'];
+function almkCan(){
+  try{
+    if(!OS.profile)return false;
+    var r=((typeof osRole==='function')?osRole():'').toLowerCase();
+    if(ALMK_ROLES.indexOf(r)>=0)return true;
+    return !!(typeof osIsOwner==='function'&&osIsOwner());
+  }catch(e){ return false; }
+}
+function almkNeed(){ return almkCan()&&ALM.keyAns>0&&!ALM.key; }
+
+/* 설치 화면 <b>맨 위</b> 칸 — 없으면 빈 글자라 자리를 안 먹습니다 */
+function almkCardHtml(){
+  if(!almkNeed())return '';
+  almCss();
+  return '<div class="card almk-card"><div class="card-hd"><div class="card-title">'+
+      '<span class="ci">🔑</span>알람 열쇠 — <b>한 걸음 남았습니다</b></div>'+
+    '<div class="card-desc">폰이 <b>꺼져 있을 때</b>도 울리려면 서버에 알람 열쇠가 있어야 합니다. '+
+      '지금은 없습니다. <b>단추 두 번</b>이면 끝나고, 그 뒤로 이 칸은 사라집니다.</div></div>'+
+    '<div class="card-body">'+almkHtml()+'</div></div>';
+}
+function almkCardPaint(){ var el=document.getElementById('almkHost'); if(el)el.innerHTML=almkCardHtml(); }
+
+/* 홈 <b>한 줄</b> — 설치 화면까지 가실 일이 없으니 여기서 부릅니다.
+   누르면 열쇠 칸이 <b>펴진 채로</b> 열리고 화면이 거기로 갑니다. */
+function almkBandHtml(){
+  if(!almkNeed())return '';
+  almCss();
+  return '<div class="almk-band"><span class="ic">🔑</span>'+
+    '<span class="tx"><b>폰이 꺼져 있을 때 울리는 알람이 아직입니다.</b> '+
+      '서버에 알람 열쇠만 담으면 됩니다 — <span>단추 두 번, 1분</span></span>'+
+    '<button type="button" class="ok" onclick="almkGo()">열쇠 담기 →</button></div>';
+}
+function almkBandPaint(){ var el=document.getElementById('almkBand'); if(el)el.innerHTML=almkBandHtml(); }
+function almkGo(){
+  ALMK.open=true; if(!ALMK.sub)ALMK.sub=almkSub();
+  go('phone_app');
+  /* 화면이 그려진 <b>뒤에</b> 옮깁니다 — 그리기 전에 부르면 못 찾습니다 */
+  setTimeout(function(){
+    try{
+      var el=document.getElementById('almkHost');
+      if(el&&el.scrollIntoView)el.scrollIntoView({block:'start'});
+    }catch(e){}
+  },260);
 }
 function almkB64u(bytes){
   var s='',i;
@@ -13896,7 +13980,20 @@ function almCss(){
    '.alm-nudge .ok{flex:none;border:0;background:var(--primary);color:#fff;border-radius:var(--r-pill);'+
      'padding:6px 14px;font-size:var(--t6);font-weight:800;cursor:pointer;font-family:inherit}'+
    '.alm-nudge .no{flex:none;border:0;background:transparent;color:#60789C;'+
-     'font-size:var(--t6);cursor:pointer;padding:4px 2px;font-family:inherit}';
+     'font-size:var(--t6);cursor:pointer;padding:4px 2px;font-family:inherit}'+
+   /* 열쇠 칸은 <b>눈에 띄어야</b> 합니다 — 설치 화면 맨 위에서 한 걸음
+      남았다고 말하는 자리입니다. 담고 나면 통째로 사라집니다. */
+   '.almk-card{border-color:#FDE68A;background:#FFFDF5}'+
+   '.almk-card .almk{background:#fff}'+
+   /* 홈 한 줄 — 알람 권유 줄과 <b>같은 모양</b>으로 두되 색만 다릅니다.
+      모양이 다르면 화면마다 다른 앱처럼 보입니다. */
+   '.almk-band{display:flex;align-items:center;gap:9px;margin-bottom:11px;'+
+     'border:1px solid #FDE68A;background:#FFFBEB;border-radius:var(--r);padding:9px 11px}'+
+   '.almk-band .ic{flex:none;font-size:var(--t3)}'+
+   '.almk-band .tx{flex:1;min-width:0;font-size:var(--t6);line-height:1.6;color:#92400E}'+
+   '.almk-band .tx span{color:#B45309}'+
+   '.almk-band .ok{flex:none;border:0;background:#B45309;color:#fff;border-radius:var(--r-pill);'+
+     'padding:8px 14px;min-height:40px;font-size:var(--t6);font-weight:800;cursor:pointer;font-family:inherit}';
   document.head.appendChild(st);
 }
 /* ══════════════════════════════════════════════════════════════════
@@ -15017,6 +15114,10 @@ function mcalPopMaybe(){
 function renderPhoneApp(){
   var ios=pwaIsIOS(),on=pwaInstalled();
   var h='';
+  /* ★ <b>열쇠가 맨 위</b>입니다. 없을 때만 섭니다 — 담고 나면 빈 칸이라
+     자리를 안 먹습니다. 밑에 두었더니 폰에서 <b>1,656px</b> 아래였고,
+     사장님이 세 번 「안 보인다」 하셨습니다. 안 보이면 없는 것입니다. */
+  h+='<div id="almkHost"></div>';
   if(on)h+='<div class="notice" style="background:#F0FDF4;border-color:#BBF7D0;color:#166534">'+
     '<b>이미 앱으로 열고 계십니다.</b> 주소창 없이 열렸다면 잘 담긴 것입니다.</div>';
 
@@ -15789,8 +15890,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 04:10';
-var APP_BUILD_NOTE="<b>폰 알람 — 이제 <u>단추 두 번</u>으로 끝납니다. Netlify 에 들어가실 필요 없습니다.</b> 여태는 열쇠를 만들어 드리고 <code>VAPID_PUBLIC·VAPID_PRIVATE·VAPID_SUBJECT</code> 세 줄을 Netlify 환경변수에 <b>손으로 옮겨 넣으시라</b>고 했습니다. 그 한 걸음 때문에 알람이 켜지지 못한 채로 있었습니다. 이제 <b>📲 내 폰에 설치</b> 화면에서 <b>① 만들기 → ② 서버에 담기</b>, 두 번이면 끝입니다. 열쇠는 이 브라우저가 만들고(WebCrypto), 비밀 열쇠는 <b>서버로만</b> 가서 <b>서버만 읽는 자리</b>(<code>push_keys</code>)에 담깁니다 — 앱으로 되돌아오지 않고, 서버가 앱에 주는 것은 <b>공개 열쇠 하나뿐</b>입니다(10번). <b>대표·관리자만</b> 담을 수 있습니다 — 열쇠가 바뀌면 이미 담긴 폰이 전부 못 받으므로 아무나 덮으면 안 됩니다. 모양(65바이트·32바이트)이 안 맞으면 <b>담지 않습니다</b> — 담아 두고 아침에 조용히 실패하는 것이 제일 나쁩니다(1번). 담은 뒤에는 <b>서버에 다시 물어</b> 확인하고, 「② 앱이 닫혀 있을 때」 줄이 이제 <b>두 단계로</b> 말합니다 — 열쇠가 준비되면 「서버는 준비됐습니다 — 위 알람 켜기만 누르시면 됩니다」. 이미 Netlify 환경변수에 넣어 두셨다면 <b>그쪽이 먼저</b>입니다(표가 덮지 않습니다). <code>check-push</code> 에 열세 자리를 더해 <b>한 바퀴가 실제로 도는지</b> — 만들고·담고·표에서 읽어 <b>그 열쇠로 서명까지 되는지</b> — 를 잽니다. 되돌려 확인: 권한 검사 빼기 · 비밀 열쇠 같이 내보내기 · 모양 검사 빼기 <b>세 번 다 빨간불</b>."
+var APP_BUILD='2026-09-21 10:05';
+var APP_BUILD_NOTE="<b>「안 보인다」 · 「홈에서 부탁한 게 잘 안된다」 — 재 보니 둘 다 맞았습니다.</b> ① <b>알람 열쇠</b>는 다 만들어져 있었는데 폰에서 <b>1,656px</b> 아래, 화면 두 개를 내려야 나오는 자리였습니다. 세 곳을 옮겼습니다 — <b>📲 내 폰에 설치</b>의 <b>첫 칸</b>이 열쇠 칸이 되고(「① 만들기」 <b>490px</b>), 펴진 채로 뜨고, <b>홈 맨 위에도 한 줄</b>이 떠서(<b>305px</b>) 누르면 열쇠 칸이 눈앞으로 옵니다. 담고 나면 <b>셋 다 사라집니다</b> — 끝난 일을 세워 두면 재촉이 됩니다(8번). ② 열쇠를 담을 수 있는 사람을 <b>서버와 다른 명단</b>으로 묻고 있었습니다 — 서버는 owner·admin·<b>master</b> 를 받는데 앱은 <code>osIsAppAdmin()</code>(owner·admin)으로 물어, <b>master 로 로그인한 대표에게는 열쇠 칸이 아예 안 떴습니다.</b> 이제 <code>ALMK_ROLES</code> 한 곳에서 <b>서버와 같은 명단</b>으로 묻고, 두 명단이 갈리면 CI 가 빨간불을 켭니다. ③ <b>홈</b> — 내게 배정된 분이 <b>0건</b>이면 「누구 것을 보나」 띠가 <b>통째로 사라져</b>, 팀원 화면으로 건너갈 길이 없었습니다(사장님 말씀 ④가 <b>0건인 날에만 말없이</b> 안 되던 자리입니다). 이제 <b>0건인 내 이름도 명단에 남고</b>, 0 은 「모른다」가 아니라 「오늘은 없다」로 적습니다(1번). ④ 0건일 때 「주기가 돌아오면 뜹니다」 라고만 하던 줄도 고쳤습니다 — 배정된 분이 없으면 영영 안 뜨니, <b>「위에서 팀원을 누르시면 그 분 화면이 그대로 뜹니다 — 팀 전체로는 N건」</b> 이라고 무엇을 하면 되는지 말합니다(1번). <b>점검이 그동안 초록이었던 것</b>이 진짜 문제였습니다 — <code>check-push</code> 는 <code>#almHost</code> 를 손으로 붙이고 「단추가 있다」만, <code>check-askall</code> 은 언제나 내 것을 한 줄 심어 두고 재고 있었습니다. 이제 <b>390×844 폰</b>에서 화면을 진짜로 열어 <b>y 좌표</b>를 재고, 배정 0건 대표로도 재고, 앱·서버 명단을 견줍니다. 되돌려 확인: 열쇠 칸 맨 밑으로 → <b>1,956px 빨간불</b> · 홈 한 줄 빼기 → <b>빨간불</b> · master 빼기 → <b>빨간불</b> · 0건 내 이름 빼기 → <b>3자리 빨간불</b> · 안내 문구 빼기 → <b>빨간불</b>. 자동 점검이 한 자리를 잡았습니다 — <b>제가 낸 빨간불</b>입니다. 홈에서 알람 열쇠를 서버에 묻게 해 두었는데, 점검이 쓰는 가짜 서버에는 그 주소가 없어 <b>뜻 없는 404</b> 가 콘솔에 찍혔습니다(투자 화면과 아무 상관 없는 자리입니다). 홈을 여는 점검 17개를 하나씩 돌려 빨간 것이 <code>check-invest</code> 하나임을 확인했지만, <b>점검 17개를 고치지 않았습니다</b> — 그러면 앞으로 홈을 여는 점검마다 같은 404 를 만납니다. 대신 앱을 고쳤고, 고치고 보니 이쪽이 원래 맞습니다 — <b>알람이 막혀 있는 브라우저에서는 홈에서 열쇠를 묻지 않습니다.</b> 거기서 담아 봐야 그 자리에서는 켤 수가 없습니다(8번) — 못 할 일을 권하지 않고, 서버도 덜 부릅니다(7번). 일부러 📲 내 폰에 설치 로 들어가시면 <b>거기서는 그대로</b> 묻습니다. <code>check-push</code> 는 그 자리에서 <b>허용된 폰을 흉내</b> 냅니다 — 재려는 것은 크롬이 아니라 우리 코드입니다."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -20635,6 +20736,16 @@ function hwhoList(){
   try{ all=(typeof arTouch==='function')?arTouch(''):[]; }catch(e){ all=[]; }
   var myTeam=(typeof arTeamOf==='function')?arTeamOf(me):'';
   var wide=hwhoAllTeams();
+  /* ★ <b>나는 오늘 0건이어도 명단에 넣는다.</b> 2026-09-21 —
+     대표 계정에 배정된 DB 가 <b>0건</b>이면 명단에 팀원 한 사람만 남아
+     L.length<2 로 <b>띠가 통째로 사라졌습니다.</b> 그래서 홈은 「오늘 챙길
+     것이 없습니다」 만 띄우고, 팀원 화면으로 <b>건너갈 길이 아예 없었습니다</b>
+     — 사장님 말씀 ④(팀원 화면을 따로 들어가 볼 수 있게)가 <b>0건인 날에만
+     말없이 안 되던</b> 자리입니다. 진짜 데이터에서 대표 한 계정이 정확히
+     그 모양입니다(배정 0건).
+     0 은 <b>「모른다」가 아니라 「오늘은 없다」</b>입니다 — 세어서 나온 0 이니
+     그대로 적습니다 (1번). */
+  if(me)c[me]=0;
   for(i=0;i<all.length;i++){
     k=all[i].who||'';
     if(!k)continue;
@@ -21875,7 +21986,24 @@ var HM_SUB={
   ok  :function(c){ return '<b>맨 위 한 건</b>만 보시면 됩니다. 끝내면 다음 한 건이 올라옵니다.'; },
   wait:function(){ return '<b>아직 「없다」는 뜻이 아닙니다</b> — 다 읽으면 이 자리에 건수가 뜹니다.'; },
   fail:function(){ return '<b>몇 건인지 지금은 모릅니다.</b> 0건이라는 뜻이 아니니, 아래에서 다시 읽어 주세요.'; },
-  none:function(){ return '주기가 돌아오거나 약속이 잡히면 이 자리에 뜹니다.'; }
+  /* ★ <b>0 인 까닭이 둘</b>입니다 — 「오늘은 없다」 와 「나한테는 아무도
+     배정이 안 돼 있다」. 대표 계정에 배정 0건이면 뒤엣것인데, 여태는 앞엣
+     것처럼 「주기가 돌아오면 뜹니다」 라고만 했습니다. 영영 안 뜹니다 —
+     배정된 분이 없으니까요. <b>무엇을 하면 되는지</b> 말합니다 (1번). */
+  none:function(){
+    try{
+      if(typeof hwhoCan==='function'&&hwhoCan()&&
+         typeof hwhoIsMe==='function'&&hwhoIsMe()){
+        var L=(typeof hwhoList==='function')?hwhoList():[],i,me='',mine=null,tot=0;
+        me=(typeof arMyId==='function')?arMyId():'';
+        for(i=0;i<L.length;i++){ tot+=L[i].n; if(L[i].id===me)mine=L[i]; }
+        if(mine&&mine.n===0&&tot>0)
+          return '<b>내게 배정된 분이 오늘은 없습니다.</b> 위에서 <b>팀원</b>을 '+
+                 '누르시면 그 분 화면이 그대로 뜹니다 — 팀 전체로는 <b>'+tot+'건</b>입니다.';
+      }
+    }catch(e){}
+    return '주기가 돌아오거나 약속이 잡히면 이 자리에 뜹니다.';
+  }
 };
 function hmTodayHtml(){
   if(!OS.profile)return '';
@@ -22398,6 +22526,23 @@ function hmPaint(){
   if(a)a.innerHTML=hmTodayHtml();
   /* 팀 칸도 같이 — 기록이 늦게 실려 오면 그때 채워집니다 */
   try{ if(typeof almNudgePaint==='function')almNudgePaint(); }catch(e0){}
+  /* 알람 열쇠 한 줄 — <b>담을 수 있는 분께만</b>, 그리고 서버에는
+     <b>딱 한 번만</b> 묻습니다(keyAt 가 있으면 다시 안 묻습니다, 7번).
+     팀원에게는 묻지도 세우지도 않습니다 — 눌러도 서버가 막습니다 (8번).
+
+     ★ 알람을 <b>막아 둔 브라우저</b>에서는 아예 안 묻습니다. 여기서 열쇠를
+       담아 봐야 이 자리에서는 켤 수가 없습니다 — 못 할 일을 권하지 않고,
+       서버도 그만큼 덜 부릅니다 (7·8번). 일부러 📲 내 폰에 설치 로
+       들어가시면 <b>거기서는 그대로</b> 묻습니다.
+       (곁들여: 점검이 쓰는 머리 없는 브라우저는 알림이 늘 denied 라서,
+        이 한 줄 덕에 <b>홈을 여는 점검마다</b> 뜻 없는 404 가 안 찍힙니다.
+        헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 — 8번.) */
+  try{
+    if(typeof almkCan==='function'&&almkCan()&&!ALM.keyAt&&
+       typeof almCan==='function'&&almCan().perm!=='denied'&&
+       typeof almKeyLoad==='function')almKeyLoad();
+    if(typeof almkBandPaint==='function')almkBandPaint();
+  }catch(e0){}
   var t=document.getElementById('hmTeamHost');
   if(t)t.innerHTML=hmTeamHtml();
   /* 오늘 동선 — 기록이 늦게 실려 오면 그때 채워집니다 */
@@ -22520,6 +22665,16 @@ function renderHome(){
        1,554px 를 차지해서, 매일 제일 먼저 봐야 할 것이 <b>두 화면 아래</b>에
        있었습니다. 설정은 설정이고 오늘 할 일은 오늘 할 일입니다 —
        <b>매일 여는 화면의 첫 자리</b>는 오늘 할 일이어야 합니다.         */
+    /* ── 알람 열쇠 <b>한 줄</b> ───────────────────────────────────────
+       여기 한 줄만 예외로 위에 둡니다. <b>대표·관리자</b>에게만, <b>서버에
+       알람 열쇠가 없을 때만</b> 서고, 담고 나면 <b>통째로 사라집니다</b>.
+       한 번 짚고 없어지는 56px 이라 「설정을 위에 둔다」 와는 다릅니다.
+
+       왜 위인가 — 처음에는 「오늘 할 일」 밑에 두었는데 폰에서 재 보니
+       <b>1,850px</b>, 화면 두 개 아래였습니다. 설치 화면 맨 밑(1,656px)
+       에서 못 찾으신 것을 홈 1,850px 로 옮기면 똑같습니다. 안 보이면
+       없는 것입니다.                                                  */
+    (OS.profile?('<div id="almkBand"></div>'):'')+
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
     /* 준비 SQL · 막혀 있는 것은 <b>그 바로 밑</b>입니다. 끝나면 빈 칸이라
        안 보입니다 — 평소에는 고객 관리를 가리지 않습니다. */

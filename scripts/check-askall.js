@@ -144,6 +144,44 @@ const SEED=(role)=>`
     }
     await ctx.close();
   }
+  /* ── ④-2 <b>내 배정이 0건인 대표</b> ────────────────────────────────
+     2026-09-21 — 진짜 데이터에서 대표 한 계정에 배정된 DB 가 <b>0건</b>
+     이었습니다. 그러면 고르개 명단에 팀원 한 사람만 남아 <b>띠가 통째로
+     사라지고</b>, 홈은 「오늘 챙길 것이 없습니다」 만 띄운 채 팀원 화면으로
+     <b>건너갈 길이 없었습니다</b> — ④가 <b>0건인 날에만 말없이</b> 안 되던
+     자리입니다. 위의 ③④ 는 언제나 내 것을 한 줄 심어 두고 재서 못 봤습니다.
+     안 울리는 알람은 알람이 아닙니다 (8번).                            */
+  {
+    const {ctx,p}=await mk('branch_manager');
+    /* 내 것만 걷어 낸다 — <b>다른 건 그대로</b>. 0 은 「모른다」가 아니라
+       「오늘은 없다」 이므로 화면은 그대로 서야 한다 (1번). */
+    /* 팀원도 <b>한 사람만</b> 남긴다 — 그래야 명단이 한 줄이 되고, 내가
+       빠지면 L.length<2 로 <b>띠가 통째로 사라지던</b> 그 자리가 된다.
+       둘을 남겨 두면 띠는 그대로 서서 <b>안 울리는 알람</b>이 된다 (8번). */
+    await p.evaluate(()=>{ AR.db=AR.db.filter(x=>x.who==='u2');
+                           OSC.list=OSC.list.filter(x=>x.advisor_id==='u2');
+                           hmPaint(); });
+    await p.waitForTimeout(700);
+    const z=await p.evaluate(()=>({bar:!!document.querySelector('.hwho'),
+      chips:[...document.querySelectorAll('.hwho-c')].map(x=>x.innerText.replace(/\s+/g,' ').trim()),
+      steps:hmSteps().map(x=>x.t),
+      me:(hwhoList().filter(x=>x.id==='me')[0]||{}).n}));
+    ok('④ 내 배정이 0건이어도 <b>고르개가 선다</b>',z.bar&&z.chips.length>=2,z.chips.join(' | '));
+    ok('④ 0건인 내 이름도 <b>명단에 남는다</b> — 0 은 「오늘은 없다」다',z.me===0,'내 건수 '+z.me);
+    ok('④ 0건이라고 <b>남의 것을 대신 세우지 않는다</b>',z.steps.length===0,z.steps.join(' · ')||'(비어 있음)');
+    /* 0 인 까닭이 둘이다 — 「오늘은 없다」 와 「나한테는 배정이 없다」.
+       뒤엣것에 「주기가 돌아오면 뜹니다」 라고만 하면 <b>영영 안 뜹니다</b> (1번) */
+    const z1=await p.evaluate(()=>((document.querySelector('.hm-sub')||
+      document.querySelector('.hm-card')||{}).innerText||'').replace(/\s+/g,' '));
+    ok('④ 0건이면 <b>무엇을 하면 되는지</b> 적는다 — 「주기가 돌아오면」 으로 끝내지 않는다',
+       /배정된 분이 오늘은 없습니다/.test(z1)&&/팀원/.test(z1),
+       (z1.match(/내게 배정된[^.]*\./)||[''])[0].slice(0,70));
+    await p.evaluate(()=>hwhoSet('u2'));await p.waitForTimeout(700);
+    const z2=await p.evaluate(()=>({steps:hmSteps().map(x=>x.t),
+      back:!!document.querySelector('.hwho-back')}));
+    ok('④ 0건이어도 <b>팀원 화면으로 건너간다</b>',z2.steps.join()==='홍길순B,홍○순'&&z2.back,z2.steps.join(' · '));
+    await ctx.close();
+  }
   /* ── ⑤ 비포&애프터 → 전&후 만들기 ── */
   {
     const {ctx,p}=await mk('member');
