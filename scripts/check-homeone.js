@@ -73,7 +73,9 @@ const SEED = (o) => `
  window.cmLoadAll=function(cb){if(cb)cb();};
  /* 준비할 것이 <b>있는 판</b>과 <b>없는 판</b>을 갈라 만든다 */
  window.setupShow=function(){return ${o.setup ? 'true' : 'false'};};
- window.setupCanRun=function(){return ${o.setup ? 'true' : 'false'};};
+ window.setupCanRun=function(){return true;};
+ /* 출발 점검이 <b>있는 판</b>과 <b>없는 판</b> — 이것이 매일 떴다 사라지던 것 */
+ ${o.ready === false ? 'window.hmReadyRows=function(){return [];};' : ''}
  try{ ${o.news
     ? `localStorage.setItem('apex_newslive',JSON.stringify({at:'2026-09-21',got:3,drop:0,items:${JSON.stringify(NEWS)}}));`
     : `localStorage.removeItem('apex_newslive');`}
@@ -136,21 +138,27 @@ const tall = (p) => p.evaluate(() => {
     return { ctx, p, errs };
   };
 
-  console.log('\n[1] <b>칸 차례가 늘 같다</b> — 준비할 것이 있든 없든');
-  const A = await open({ setup: true, news: true });
-  const B = await open({ setup: false, news: true });
+  console.log('\n[1] <b>매일 보는 칸 차례가 늘 같다</b>');
+  /* ⚠ <b>서버 준비 SQL 은 여기서 재지 않습니다.</b> 한 번 접어 봤다가
+     check-setup 이 잡았습니다 — 여러 화면이 「홈 맨 위 서버 준비 SQL」 이라고
+     가리키고 있어 묻으면 그 안내가 전부 거짓말이 됩니다(1번). 그리고 그것은
+     <b>한 번 하면 영영 사라지는</b> 것이라 「자꾸 달라지는」 범인이 아닙니다.
+     범인은 <b>매일 떴다 사라지던</b> 출발 점검(778px)·팀(270px) 이었고,
+     여기서 재는 것도 그것입니다. 「홈 맨 위에 있나」 는 check-setup 이 봅니다. */
+  const A = await open({ setup: false, news: true });
+  const B = await open({ setup: false, news: true, ready: false });
   const ba = await bones(A.p), bb = await bones(B.p);
   is(ba.length > 0 && ba.join('|') === bb.join('|'),
-     '  준비할 것이 있을 때와 없을 때 <b>뼈대가 같다</b>');
+     '  <b>출발 점검이 있을 때와 없을 때가 같은 화면</b>이다');
   if (ba.join('|') !== bb.join('|')) {
     console.log('     있을 때 · ' + ba.join(' → '));
     console.log('     없을 때 · ' + bb.join(' → '));
   } else console.log('     ' + ba.join(' → '));
-  const C = await open({ setup: true, news: false });
+  const C = await open({ setup: false, news: false });
   is((await bones(C.p)).join('|') === ba.join('|'),
      '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다');
 
-  console.log('\n[2] <b>짧아졌다</b> — 폰에서 2.8화면 이하');
+  console.log('\n[2] <b>짧아졌다</b> — 폰에서 3.0화면 이하');
   /* ── 기준선 · 왜 3.0 인가 ─────────────────────────────────────────
      2026-09-21 · 고치기 전 <b>4.2화면</b>(3,541px). 접고 나서 2.7화면.
      그 뒤에 사장님 말씀대로 카드 안에 <b>오늘 보낼 소식 한 줄</b>(90px)과
@@ -180,9 +188,17 @@ const tall = (p) => p.evaluate(() => {
     return { 펴짐: !b2.hidden, 안에: [...b2.children].map(e => e.id),
       높이: Math.round(b2.getBoundingClientRect().height) };
   });
-  is(m2.펴짐 && m2.안에.indexOf('osSetupHome') >= 0 && m2.안에.indexOf('hmReadyHost') >= 0 &&
+  is(m2.펴짐 && m2.안에.indexOf('hmReadyHost') >= 0 &&
      m2.안에.indexOf('hmTeamHost') >= 0 && m2.높이 > 300,
-     '  펴면 <b>셋이 다 있다</b> — 지운 것이 아니다 · ' + m2.높이 + 'px');
+     '  펴면 <b>둘이 다 있다</b> — 지운 것이 아니다 · ' + m2.높이 + 'px');
+  /* ★ 준비 SQL 은 <b>이 안에 있으면 안 된다</b> — 여러 화면이 「홈 맨 위」
+     라고 가리킨다. 한 번 여기 넣었다가 check-setup 이 잡았다 (1번). */
+  is(m2.안에.indexOf('osSetupHome') < 0,
+     '  <b>준비 SQL 은 여기 없다</b> — 홈 맨 위에 있어야 안내가 거짓이 안 된다');
+  is(await A.p.evaluate(() => {
+       const st = document.getElementById('osSetupHome'), t = document.getElementById('hmToday');
+       return !!(st && t && (st.compareDocumentPosition(t) & Node.DOCUMENT_POSITION_FOLLOWING));
+     }), '  준비 SQL 자리가 <b>오늘 챙길 것보다 위</b>에 있다');
 
   console.log('\n[4] 📸 오늘 올릴 것 — <b>받아 둔 진짜 기사</b>만');
   await A.p.evaluate(() => hmFoldToggle('ig')); await A.p.waitForTimeout(500);
