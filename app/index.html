@@ -13333,6 +13333,21 @@ function pwaCardHtml(x){
    ★ 아이폰은 <b>홈 화면에 담아야</b> 알람이 옵니다(애플이 그렇게 정했습니다).
      그래서 이 카드를 「내 폰에 설치」 화면, 담기 안내 <b>바로 밑</b>에 둡니다. */
 var ALM={reg:null,sub:null,busy:'',err:'',key:null,keyAt:0,keyErr:'',synced:false};
+/* ══ 알람 열쇠 만들기 — <b>이 브라우저 안에서만</b> ═══════════════════
+   사장님 말씀 — 「핸드폰이 꺼져도 알람이 울리도록 만들고」.
+
+   앱이 닫혀 있을 때 울리는 길(②)은 <b>이미 다 만들어져</b> 있습니다.
+   서버에 열쇠 세 줄(VAPID_PUBLIC · VAPID_PRIVATE · VAPID_SUBJECT)이
+   없을 뿐입니다. 그런데 그 열쇠를 <b>만들 길</b>이 어디에도 없어서,
+   「넣으세요」 라고 적어 두고 끝이었습니다.
+
+   ★ 열쇠는 <b>이 브라우저가 만듭니다</b>(WebCrypto). 서버로도, 채팅으로도,
+     코드로도 나가지 않습니다 (10번). 만든 값은 화면에만 뜨고, 새로고침하면
+     사라집니다 — 어디에도 안 담습니다.
+   ★ 비밀 열쇠는 <b>남이 보면 안 됩니다.</b> 그 자리에서 그렇게 적습니다.
+   ★ 만들기만 합니다 — <b>넣는 것은 사장님</b>입니다. 앱이 Netlify 를
+     대신 만질 수는 없습니다. 어디에 넣는지 길을 적어 둡니다 (1번).      */
+var ALMK={open:false,busy:false,err:'',pub:'',priv:'',sub:'',show:false};
 var ALM_KEY_TTL=3600000;            /* 서버 열쇠는 한 시간에 한 번만 묻는다 (7번) */
 var ALM_HOUR_KEY='apex_alm_hour';
 var ALM_DAY_KEY='apex_alm_day';
@@ -13697,17 +13712,124 @@ function almCardHtml(){
   if(!ph&&ALM.keyErr)
     h+='<div class="alm-why" style="margin-top:9px">서버가 보내는 알람(②)을 켜려면 '+
        'Netlify 환경변수에 <b>VAPID_PUBLIC · VAPID_PRIVATE · VAPID_SUBJECT</b> 를 넣어야 합니다. '+
-       '열쇠는 <b>서버에만</b> 둡니다 — 코드·채팅에 적지 않습니다.</div>';
+       '열쇠는 <b>서버에만</b> 둡니다 — 코드·채팅에 적지 않습니다. '+
+       '아래 <b>🔑 열쇠 만들기</b> 로 이 자리에서 만드실 수 있습니다.</div>'+almkHtml();
   if(ALM.err)h+='<div class="alm-why" style="margin-top:9px">'+osEsc(ALM.err)+'</div>';
   h+='<div class="alm-pv"><b>지금 울리면 이렇게 뜹니다</b><br>'+
      (d?('「'+osEsc(d.title)+'」<br><span>'+osEsc(d.body)+'</span>')
        :'<span>오늘 챙길 분이 없습니다 — <b>안 울립니다.</b></span>')+'</div>';
   return h+'</div></div>';
 }
+function almkB64u(bytes){
+  var s='',i;
+  for(i=0;i<bytes.length;i++)s+=String.fromCharCode(bytes[i]);
+  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+/* 보낼 곳 주소 — 로그인한 메일을 <b>그대로</b> 씁니다. 없으면 비워 둡니다:
+   mailto: 주소를 지어내면 푸시 서버가 우리를 못 찾습니다 (1번). */
+function almkSub(){
+  var m='';
+  try{ m=(OS.session&&OS.session.user&&OS.session.user.email)||''; }catch(e){ m=''; }
+  return m?('mailto:'+m):'';
+}
+function almkToggle(){
+  ALMK.open=!ALMK.open;
+  if(ALMK.open&&!ALMK.sub)ALMK.sub=almkSub();
+  almPaint();
+}
+function almkMake(){
+  if(ALMK.busy)return;
+  var C=(window.crypto&&window.crypto.subtle)?window.crypto.subtle:null;
+  if(!C){ ALMK.err='이 브라우저에서는 열쇠를 만들 수 없습니다 — 다른 브라우저에서 열어 주세요.'; almPaint(); return; }
+  ALMK.busy=true; ALMK.err=''; ALMK.pub=''; ALMK.priv=''; almPaint();
+  C.generateKey({name:'ECDSA',namedCurve:'P-256'},true,['sign','verify']).then(function(kp){
+    return Promise.all([C.exportKey('raw',kp.publicKey),C.exportKey('jwk',kp.privateKey)]);
+  }).then(function(a){
+    var raw=new Uint8Array(a[0]);
+    /* 서버가 65바이트만 받습니다 — 아니면 <b>만들었다고 말하지 않습니다</b> (1번) */
+    if(raw.length!==65)throw new Error('열쇠 모양이 65바이트가 아닙니다('+raw.length+')');
+    if(!a[1]||!a[1].d)throw new Error('비밀 열쇠를 못 꺼냈습니다');
+    ALMK.pub=almkB64u(raw); ALMK.priv=a[1].d; ALMK.busy=false; ALMK.show=false; almPaint();
+  })['catch'](function(e){
+    ALMK.busy=false; ALMK.err='열쇠를 못 만들었습니다'+(e&&e.message?(' — '+e.message):'.'); almPaint();
+  });
+}
+function almkShow(){ ALMK.show=!ALMK.show; almPaint(); }
+function almkSubSet(v){ ALMK.sub=(''+(v||'')).replace(/^\s+|\s+$/g,''); almPaint(); }
+function almkCopy(which){
+  var t=(which==='pub')?ALMK.pub:(which==='priv')?ALMK.priv:ALMK.sub;
+  if(!t){ if(typeof toast==='function')toast('아직 만들지 않았습니다'); return; }
+  if(typeof copyText==='function')copyText(t);
+}
+/* ⚠ 이름표(lab)는 <b>우리가 적은 글</b>이라 그대로 내보냅니다. 값(val)만
+   씻습니다. 이름표까지 씻었더니 &lt;b&gt; 가 <b>글자로 찍혔습니다</b> —
+   증권전달 화법에서 났던 그 병과 같은 자리입니다(#405). 사진을 찍어 보고
+   알았습니다.                                                          */
+function almkRow(lab,name,val,which,hide){
+  var v=(typeof osEsc==='function')?osEsc:function(x){return x;};
+  var seen=hide?(ALMK.show?val:(val?val.slice(0,4)+'••••••••••••••••••••••••':'')):val;
+  return '<div class="almk-r"><div class="almk-n">'+v(name)+
+    '<span>'+lab+'</span></div>'+
+    '<div class="almk-v'+(hide?' hide':'')+'">'+(val?v(seen):'<i>아직 없습니다</i>')+'</div>'+
+    '<div class="almk-bs">'+
+      (hide?('<button type="button" class="btn btn-ghost" onclick="almkShow()">'+(ALMK.show?'가리기':'보기')+'</button>'):'')+
+      '<button type="button" class="btn btn-ghost" onclick="almkCopy(\''+which+'\')">복사</button>'+
+    '</div></div>';
+}
+function almkHtml(){
+  if(!ALMK.open)
+    return '<div class="btn-row" style="margin-top:9px">'+
+      '<button type="button" class="btn btn-primary" onclick="almkToggle()">🔑 열쇠 만들기</button></div>';
+  var v=(typeof osEsc==='function')?osEsc:function(x){return x;};
+  var h='<div class="almk">'+
+    '<div class="almk-t">🔑 알람 열쇠 만들기</div>'+
+    '<div class="almk-d">열쇠는 <b>이 브라우저 안에서</b> 만들어집니다 — 서버로도, 저에게도 '+
+      '나가지 않습니다. 새로고침하면 사라지니 <b>바로 옮겨 넣어 주십시오.</b></div>'+
+    '<div class="btn-row">'+
+      '<button type="button" class="btn btn-primary"'+(ALMK.busy?' disabled':'')+' onclick="almkMake()">'+
+        (ALMK.busy?'만드는 중…':(ALMK.pub?'다시 만들기':'만들기'))+'</button>'+
+      '<button type="button" class="btn btn-ghost" onclick="almkToggle()">닫기</button>'+
+    '</div>';
+  if(ALMK.err)h+='<div class="alm-why" style="margin-top:9px">'+v(ALMK.err)+'</div>';
+  h+=almkRow('서버가 앱에게 보여 주는 열쇠입니다','VAPID_PUBLIC',ALMK.pub,'pub',false);
+  h+=almkRow('<b>남에게 보이면 안 됩니다</b> — 채팅·메모에 붙이지 마십시오','VAPID_PRIVATE',ALMK.priv,'priv',true);
+  h+='<div class="almk-r"><div class="almk-n">VAPID_SUBJECT<span>푸시 서버가 우리를 찾는 주소입니다</span></div>'+
+     '<div class="almk-v"><input id="almkSub" type="text" value="'+v(ALMK.sub)+'" '+
+       'placeholder="mailto:주소를적어주세요" onchange="almkSubSet(this.value)"></div>'+
+     '<div class="almk-bs"><button type="button" class="btn btn-ghost" onclick="almkCopy(\'sub\')">복사</button></div></div>';
+  if(!ALMK.sub)
+    h+='<div class="alm-why" style="margin-top:9px"><b>주소가 비어 있습니다.</b> '+
+       '연락 받으실 메일을 <code>mailto:</code> 를 붙여 적어 주십시오 — 없는 주소를 지어 넣으면 '+
+       '푸시 서버가 우리를 못 찾습니다.</div>';
+  h+='<div class="almk-how"><b>넣는 곳</b> — Netlify → 이 사이트 → '+
+     '<b>Site configuration</b> → <b>Environment variables</b> → <b>Add a variable</b>. '+
+     '세 줄을 각각 이름 그대로 넣고 저장한 뒤, <b>Deploys → Trigger deploy</b> 로 한 번 다시 올리시면 '+
+     '그때부터 폰이 꺼져 있어도 아침에 울립니다. 넣으신 뒤 이 화면을 새로고침하면 '+
+     '위 ②가 <b>됩니다</b> 로 바뀝니다.</div>';
+  return h+'</div>';
+}
 function almCss(){
   if(document.getElementById('almCss'))return;
   var st=document.createElement('style');st.id='almCss';
-  st.textContent='.alm-why{font-size:var(--t6);line-height:1.7;color:#92400E;background:#FFFBEB;'+
+  st.textContent=
+   /* 열쇠 만드는 칸 */
+   '.almk{margin-top:10px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:11px 12px;background:#F8FAFC}'+
+   '.almk-t{font-size:var(--t5);font-weight:900;color:var(--ink-1);margin-bottom:4px}'+
+   '.almk-d{font-size:var(--t6);line-height:1.7;color:var(--ink-4);margin-bottom:9px}'+
+   '.almk-r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;'+
+     'border-top:1px dashed var(--ink-7);padding:9px 0}'+
+   '.almk-n{flex:0 0 100%;font-size:var(--t6);font-weight:900;color:var(--ink-2)}'+
+   '.almk-n span{display:block;font-weight:600;color:var(--ink-4)}'+
+   '.almk-v{flex:1 1 180px;min-width:0;font-family:ui-monospace,Menlo,Consolas,monospace;'+
+     'font-size:var(--t6);word-break:break-all;color:var(--ink-2);background:#fff;'+
+     'border:1px solid var(--ink-7);border-radius:var(--r-xs);padding:7px 9px}'+
+   '.almk-v i{color:var(--ink-5);font-style:normal}'+
+   '.almk-v input{width:100%;border:0;outline:none;font-family:inherit;font-size:var(--t6);color:inherit}'+
+   '.almk-bs{display:flex;gap:6px;flex:0 0 auto}'+
+   '.almk-bs .btn{min-height:44px}'+
+   '.almk-how{margin-top:10px;font-size:var(--t6);line-height:1.8;color:var(--ink-3);'+
+     'background:#EEF2FF;border:1px solid #C7D2FE;border-radius:var(--r-xs);padding:10px 12px}'+
+   '.alm-why{font-size:var(--t6);line-height:1.7;color:#92400E;background:#FFFBEB;'+
     'border:1px solid #FDE68A;border-radius:var(--r-sm);padding:9px 11px;margin-bottom:10px}'+
    '.alm-hr{display:flex;align-items:center;gap:7px;margin:10px 0;font-size:var(--t6);color:var(--ink-3)}'+
    '.alm-hr input{width:72px;padding:6px 8px;border:1px solid var(--ink-7);border-radius:var(--r-sm);'+
@@ -15617,8 +15739,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 01:10';
-var APP_BUILD_NOTE="<b>홈에서 고객 상황을 <u>어느 단계로든</u> 바꿉니다 — DB 통합 CRM 과 똑같이.</b> 「홈에서 고객관리가 모두 이루어져야 된다」 하신 자리입니다. 여태 홈에서는 <b>한 칸 앞으로</b>만 갈 수 있었습니다(→ 다음 단계). 되돌리거나 건너뛰려면 DB 통합 CRM 까지 가야 했습니다. 이제 <b>단계 딱지 자체가 단추</b>입니다 — 누르면 열 칸(미접촉·부재·거절·TA·AP·PC·CS·계약완료·증권전달·소개완료)이 그 자리에서 펴지고, 고르면 <code>dbs</code> 의 그 단계로 그대로 옮겨집니다. <b>옆에 새 단추를 세우지 않았습니다</b> — 옆에 세우면 줄이 또 길어지고 「어디를 눌러야 하나」 가 하나 더 늡니다(DB 통합 CRM 이 하는 그대로입니다). 고르개는 <b>접힌 채로</b> 시작해 홈이 안 길어집니다. <b>색도 같습니다</b> — 색표(gray·yellow·red·blue·green)를 <code>apex-stage.js</code> 한 곳으로 옮기고 DB 통합 CRM 이 그것을 읽게 했습니다. 같은 고객이 두 화면에서 다른 색이면 서로 다른 것으로 읽힙니다(5번). <b>계약일·증권 전달일은 지어내지 않습니다</b> — 그 날짜가 필요한 단계를 고르면 창이 떠서 물어보고, 적기 전에는 아무것도 안 씁니다(1번). 이미 적혀 있으면 묻지 않습니다. <b>지금 그 단계는 다시 못 누릅니다</b> — 눌러도 아무 일 없는 단추는 세우지 않습니다. 남의 고객은 딱지가 글자로만 서고 안 눌립니다(3번). <code>check-hdb</code> 에 열여섯 자리를 더하고 <b>세 가지를 되돌려 세 번 다 빨간불</b>을 확인했습니다."
+var APP_BUILD='2026-09-21 02:00';
+var APP_BUILD_NOTE="<b>홈에서 고객 상황을 <u>어느 단계로든</u> 바꿉니다 · 폰이 꺼져도 울리는 알람의 <u>열쇠를 이 자리에서</u> 만듭니다.</b> ① 「홈에서 고객관리가 모두 이루어져야 된다」 — 여태 홈에서는 <b>한 칸 앞으로</b>만 갈 수 있었습니다. 이제 <b>단계 딱지 자체가 단추</b>라, 누르면 열 칸(미접촉·부재·거절·TA·AP·PC·CS·계약완료·증권전달·소개완료)이 펴지고 고르면 <code>dbs</code> 의 그 단계로 그대로 옮겨집니다. 옆에 새 단추를 세우지 않았습니다 — DB 통합 CRM 이 하는 그대로입니다. 고르개는 <b>접힌 채로</b> 시작해 홈이 안 길어지고, <b>색도 같습니다</b>(색표를 <code>apex-stage.js</code> 한 곳으로 옮겼습니다). 계약일·증권 전달일이 필요한 단계는 <b>창을 띄워 묻고</b> 적기 전에는 아무것도 안 씁니다(1번). ② 「핸드폰이 꺼져도 알람이 울리도록」 — 이 길은 <b>이미 다 만들어져</b> 있었고 서버에 열쇠 세 줄이 없을 뿐이었습니다. 그런데 그 열쇠를 <b>만들 길이 없어</b> 「넣으세요」 라고 적어 두고 끝이었습니다. 이제 설정의 아침 알람 칸에서 <b>🔑 열쇠 만들기</b> 를 누르면 <b>이 브라우저 안에서</b> 만들어집니다 — 서버로도 저에게도 나가지 않습니다(10번). 비밀 열쇠는 <b>가려 두고</b> 눌러야 보이며, Netlify 어디에 넣는지까지 적어 둡니다. 점검이 <b>만든 열쇠로 서버가 실제로 서명이 되는지</b>까지 잽니다 — 모양만 재면 짝이 안 맞는 열쇠도 통과합니다(실제로 그런 열쇠를 넣어 보고 빨간불을 확인했습니다). <b>다섯 가지를 되돌려 다섯 번 다 빨간불</b>을 확인했습니다."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
