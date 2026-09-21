@@ -452,8 +452,23 @@ async function boot(page) {
 
   is(hidden.length > 0, '숨김 그룹에 있는 화면을 읽었다 (' + hidden.join(', ') + ')');
   is(folded.ar.length > 0, 'TFA 업무관리가 칸 목록을 들고 있다 (' + folded.ar.length + '칸)');
-  is(folded.ar.indexOf('coach') >= 0, '「내 코칭」이 TFA 업무관리 안에 칸으로 있다');
-  is(folded.ar.indexOf('acad') >= 0, '「본인 점검란」이 TFA 업무관리 안에 칸으로 있다');
+  /* ── 2026-09-21 · <b>TFA 에서 빠지고 서랍으로 갔다</b> ──────────────
+     사장님 말씀 「TFA 업무관리가 <b>간소화</b>할것 … 내 코칭 · 본인 점검란
+     없애기」. TFA 왼쪽에서 뺐다.
+     ⚠ 그때 이 점검이 <b>「열 길이 없어진 화면이 있다 — mycoach」</b> 로
+       잡았다. 가려 둔 까닭이 「다른 화면 안에서 열린다」 였는데 그 다른
+       화면이 바로 TFA 였기 때문이다. 그래서 가림을 풀어 ☰ 서랍에 세웠다.
+     <b>없애기와 옮기기를 가른다</b> — TFA 에는 없고, 서랍에는 있어야 한다. */
+  is(folded.ar.indexOf('coach') < 0 && folded.ar.indexOf('acad') < 0,
+     'TFA 업무관리에서 <b>내 코칭·본인 점검란이 빠졌다</b> — 간소화');
+  const drawer = await page.evaluate(() => {
+    const out = [];
+    try { (window.TABS || []).forEach(g => { if (g.hide) return;
+      (g.items || []).forEach(it => out.push(it.id)); }); } catch (e) {}
+    return out;
+  });
+  is(drawer.indexOf('mycoach') >= 0 && drawer.indexOf('academy') >= 0,
+     '<b>지운 것이 아니다</b> — ☰ 서랍에 「내 코칭」·「APEX 본인 점검란」이 선다');
   is(stranded.length === 0, stranded.length === 0
     ? '숨은 화면이 전부 어딘가에서 열린다 — go() 로든, 칸으로든'
     : '열 길이 없어진 화면이 있다 — ' + stranded.join(', '));

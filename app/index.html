@@ -7630,6 +7630,8 @@ function arCliRows(clients,metas,last){
       /* 출생년도 — <b>있는 그대로</b>. 없으면 null 로 둡니다. 0 으로 채우면
          「모름」이 「0살」이 됩니다 (1번). */
       by:(c.birth_year==null?null:c.birth_year),
+      /* 가린 이름 — 배정 DB 와 이어 붙일 때 씁니다. 실명은 안 싣습니다 (3번) */
+      nm:c.name_masked||'',
       name:((typeof cmRealOf==='function'&&cmRealOf(c.id))||c.name_masked||'(이름 없음)'),
       plan:(m.next&&m.next.what)?m.next.what:'',
       due:(m.next&&m.next.due)?m.next.due:'',
@@ -8002,9 +8004,21 @@ var AR_CAT=[
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
  ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
- ['coach','🌱','내 코칭',       '받은 코칭과 내 답',               'me'],
- ['acad', '✅','본인 점검란',    '주차별로 스스로 확인',             'me'],
+/* ── <b>내 코칭 · 본인 점검란은 여기서 뺐습니다</b> ─────────────────
+   사장님 말씀 (2026-09-21) — 「TFA 업무관리가 간소화할것 … <b>내 코칭 ·
+   본인 점검란 없애기</b>」. <b>지운 것이 아닙니다</b> — 이 둘은 TFA 가
+   큰 메뉴의 화면(renderMyCoach · renderAcademy)을 빌려 그리던 것이라,
+   여기서 빼도 <b>☰ 서랍의 「내 코칭」·「APEX 본인 점검란」은 그대로</b>
+   입니다. 쌓아 두신 기록도 그대로 있습니다.
+   ★ 덤으로 <b>화면이 짧아집니다.</b> 「고객 체크」 칸을 늘리면서 TFA 가
+     2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 다시
+     기준 안쪽입니다 — 자(尺)를 올리는 대신 <b>실제로 줄였습니다</b>. */
  ['touch','☎️','오늘 터치할 사람','부재·거절·진행중·기고객 한 줄로',  'me'],
+ /* ── 🩺 <b>고객 체크</b> ─────────────────────────────────────────────
+    사장님 말씀 — 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들
+    <b>고객 체크로 따로 관리</b>해줘」. 위의 「오늘 터치할 사람」이 <b>TA 앞단</b>
+    이라면 이 칸은 <b>TA 뒤</b>입니다 — 겹치지 않습니다. */
+ ['check','🩺','고객 체크',      'AP·PC·CS — 읽은 증권으로 무엇을 터치할지','me'],
  ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me'],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
  /* ── 「DB 를 나눠 주고 나면 그 다음이 안 보인다」 ────────────────────
@@ -8025,14 +8039,6 @@ function arCat(){return AR.cat||'feed';}
 function arGoCat(k){
   AR.cat=k;AR.open='';AR.memo='';try{localStorage.setItem('apex_ar_cat',k);}catch(e){}
   /* 안 여는 칸은 안 읽는다 — 열 때 그 칸이 쓰는 기록만 가져온다 */
-  if(k==='coach'){
-    try{if(typeof MC!=='undefined'&&typeof mcLoad==='function'){MC.loaded=false;mcLoad();
-      setTimeout(function(){if(AR.cat==='coach'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
-  }
-  if(k==='acad'){
-    try{if(typeof AC!=='undefined'&&!AC.data&&!AC.loading&&typeof acCrmLoad==='function'){acCrmLoad();
-      setTimeout(function(){if(AR.cat==='acad'&&typeof arPaint==='function')arPaint();},1800);}}catch(e){}
-  }
   /* 대표 브리핑은 <b>미리 만들어 둔 한 장</b>을 읽어 와야 몸통이 찬다.
      안 부르면 스피너만 돈다 — 없는 것과 같다. */
   if(k==='brief'){
@@ -11541,6 +11547,297 @@ function dbpHtml(){
     '<iframe src="/edu-pipeline.html?v='+encodeURIComponent(v)+'" title="DB · 업적관리" '+
     'loading="lazy" style="display:block;width:100%;height:78vh;min-height:560px;border:0"></iframe></div>';
 }
+/* ══════ 🩺 <b>고객 체크</b> — 읽은 증권으로 무엇을 터치하나 ══════════
+   사장님 말씀 (2026-09-21) —
+     「TA가 모두 끝난다면 / AP · PC · CS 상황에 맞게 해야되는것들
+      <b>「고객 체크」로 따로 관리</b>해줘. <b>고객님의 보험을 읽었다면
+      무엇으로 터치할지</b> — 이게 가장 어려울 것 같아」
+
+   ── 어려웠던 까닭은 자료가 없어서가 아니었습니다 ──────────────────
+   「보장분석 전·후 만들기」는 <b>이미 고객별로</b> 서버에 남기고 있었습니다 —
+   saved_reports(kind='ba_state', client_id=…) 에 {state, sum}. 그런데
+   <b>아무도 그것을 다시 안 읽었습니다.</b> 저장만 하고, 그 뒤 터치에 쓰는
+   자리가 없었습니다. 그래서 여기서 <b>읽어 옵니다</b>.
+   (담보 이름은 ba.html 이 저장할 때 같이 적게 했습니다 — 이름을 아는 곳은
+    거기 하나입니다. 여기서 다시 계산하면 셈이 두 곳에 생깁니다, 5번.)
+
+   ── <b>서버를 아껴 씁니다</b> (7번) ───────────────────────────────
+   ★ <b>sum 만</b> 받아 옵니다. state 는 담보 표가 통째로 든 큰 덩이라
+     목록에서 받지 않습니다 — 그 화면을 열 때 그쪽이 알아서 받습니다.
+   ★ <b>한 번만</b> 부릅니다. 칸을 열 때 한 번, 그 뒤로는 손으로
+     「다시 읽기」를 누르셔야 다시 부릅니다. 되풀이하는 타이머가 없습니다.
+
+   ── <b>지어내지 않습니다</b> (1번) ────────────────────────────────
+   읽은 기록이 없으면 말을 만들지 않고 「아직 증권을 안 읽었습니다」 라고
+   적고 보장분석으로 모십니다. 이 줄이 이 화면에서 제일 중요합니다.       */
+var CHK_KIND='ba_state';
+var CHKS={rows:null,by:{},busy:false,err:'',at:'',noSum:false,open:''};
+
+/* 이름으로 잇습니다 — 단계는 배정 DB(dbs), 읽은 기록은 고객 365일(clients)에
+   있어서 둘을 이어야 합니다. 서버에는 <b>가린 이름</b>만 있으므로 가린
+   모양끼리 견줍니다 (3번). 통화 기록을 잇는 방법(arCliRows)과 같습니다.
+   ⚠ <b>동명이인은 못 가립니다.</b> 그래서 화면에 그렇게 적어 둡니다 (1번). */
+/* 이미 가려진 글자인가 — 가린 것을 <b>또 가리면</b> 모양이 달라집니다 */
+function chkMasked(s){ return /[*○]/.test(s); }
+function chkKey(name){
+  var s=(''+(name==null?'':name)).replace(/^\s+|\s+$/g,'');
+  if(!s)return '';
+  if(chkMasked(s))return s.replace(/\s/g,'');
+  return ((typeof osMaskName==='function')?osMaskName(s):s).replace(/\s/g,'');
+}
+/* 고객 365일 줄을 <b>두 갈래</b>로 담습니다 (5번은 지키되 이을 길은 둘) —
+   ① <b>실명끼리</b> : 실명은 이 기기에만 있습니다(3번). 있으면 이것이
+      제일 정확합니다 — 가린 모양이 예전 방식이어도 이어집니다.
+   ② <b>가린 것끼리</b> : 실명을 안 적어 두셨을 때. 서버에는 가린 것만
+      있으므로 이쪽이 기본입니다.
+   ⚠ 둘 다 안 맞으면 <b>안 이어진 채로 둡니다</b> — 비슷한 이름을 골라
+     붙이면 <b>다른 사람의 증권</b>을 그 분 것이라고 말하게 됩니다 (1번). */
+function chkCliBy(){
+  var L=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[],o={},i,r,real,mk;
+  for(i=0;i<L.length;i++){
+    r=L[i];
+    real=(''+(r.name||'')).replace(/\s/g,'');
+    if(real&&!chkMasked(real)&&!o['r:'+real])o['r:'+real]=r;
+    mk=chkKey(r.nm||r.name);
+    if(mk&&!o['m:'+mk])o['m:'+mk]=r;
+  }
+  return o;
+}
+/* 실명이 먼저, 그다음 가린 것 — 못 찾으면 <b>null</b> (1번) */
+function chkFind(by,name){
+  var s=(''+(name==null?'':name)).replace(/\s/g,'');
+  if(!s)return null;
+  return by['r:'+s]||by['m:'+chkKey(s)]||null;
+}
+/* 고객 체크에 설 분들 — AP·PC·CS <b>전원</b>입니다.
+   「오늘 터치할 사람」과 달리 주기로 거르지 않습니다 — 여기는 <b>빠짐없이
+   훑는</b> 자리라, 주기가 안 돌아왔다고 빼면 그 분이 잊힙니다. */
+function chkPeople(){
+  var db=(typeof AR!=='undefined'&&AR.db)?AR.db:[],who='',out=[],i,by=chkCliBy();
+  try{ who=(typeof hwhoFor==='function')?hwhoFor():''; }catch(e){}
+  for(i=0;i<db.length;i++){
+    var r=db[i];
+    if(who&&r.who!==who)continue;
+    if(typeof APEX_STAGE==='undefined'||!APEX_STAGE.chkOf(r.stage))continue;
+    var c=chkFind(by,r.name);
+    out.push({id:r.id,nm:r.name,stage:r.stage,region:r.region,src:r.src,
+              days:r.days,appt:r.appt,
+              /* 고객 365일에서 이어 붙은 줄 — 없으면 null. 지어내지 않습니다 */
+              cid:c?c.id:'', read:c?(CHKS.by[c.id]||null):null});
+  }
+  /* 차례는 apex-stage 가 아는 단계 차례를 따릅니다 (5번) */
+  var ord={};
+  try{ (APEX_STAGE.chkList()||[]).forEach(function(x,n){ord[x.k]=n;}); }catch(e2){}
+  out.sort(function(a,b){
+    return (ord[a.stage]===undefined?9:ord[a.stage])-(ord[b.stage]===undefined?9:ord[b.stage])
+        || (b.days||0)-(a.days||0);
+  });
+  return out;
+}
+/* 읽은 기록을 받아 온다 — <b>sum 만</b>, <b>한 번만</b> (7번) */
+function chkLoad(force){
+  var sb=(typeof osClient==='function')?osClient():null;
+  if(!sb){CHKS.err='서버에 연결되어 있지 않습니다.';chkPaint();return;}
+  if(CHKS.busy)return;
+  if(CHKS.rows&&!force)return;
+  CHKS.busy=true;CHKS.err='';chkPaint();
+  var done=function(rows,noSum){
+    CHKS.busy=false;CHKS.rows=rows||[];CHKS.noSum=!!noSum;CHKS.by={};
+    var i,r;
+    for(i=0;i<CHKS.rows.length;i++){
+      r=CHKS.rows[i];
+      if(!r.client_id)continue;
+      /* 한 고객에 <b>제일 새 것</b> 하나 — 차례가 새 것부터 오므로 먼저 온 것을 둡니다 */
+      if(!CHKS.by[r.client_id])
+        CHKS.by[r.client_id]={at:(''+(r.created_at||'')).slice(0,10),sum:r.sum||null};
+    }
+    CHKS.at=new Date().toLocaleTimeString('ko-KR');
+    chkPaint();
+  };
+  var oops=function(e){
+    CHKS.busy=false;CHKS.rows=[];CHKS.err=(e&&e.message)||'못 받았습니다.';chkPaint();
+  };
+  /* 요약 칸만 집어 받습니다. 옛 서버가 그 문법을 거절하면 <b>한 칸 내려</b>
+     다시 부릅니다 — 못 읽는 칸 하나 때문에 화면 전체가 안 뜨면 안 됩니다. */
+  var q=function(cols){
+    return sb.from('saved_reports').select(cols).eq('kind',CHK_KIND)
+             .order('created_at',{ascending:false}).limit(400);
+  };
+  q('client_id,created_at,sum:content->sum').then(function(r){
+    if(r&&r.error){
+      q('client_id,created_at').then(function(r2){
+        if(r2&&r2.error)return oops(r2.error);
+        done((r2&&r2.data)||[],true);
+      },oops);
+      return;
+    }
+    done((r&&r.data)||[],false);
+  },oops);
+}
+/* ── <b>무엇으로 터치할까</b> — 읽은 것에서 한 가지만 ────────────────
+   ★ 말은 apex-stage(APEX_STAGE.chk)가 들고 있습니다 (5번). 여기는 그 말에
+     <b>담보 이름 한 개</b>를 끼워 넣을 뿐입니다.
+   ★ <b>어느 담보를 꺼내나</b> — AP·PC 는 <b>채워지는 곳</b>(gain), CS 는
+     <b>줄어드는 곳</b>(loss)을 먼저 봅니다. 청약 직전에 물어야 할 것은
+     「좋아지는 것」이 아니라 「나빠지는 것」입니다.
+   ★ ba.html 의 diff 는 <b>못 읽음과 0 을 뭉갭니다</b>(C.b[k]||0). 그래서
+     기존이 0 이거나 없으면 「기존에서 <b>못 찾았다</b>」 고 그대로 적습니다 —
+     「보장이 없다」 고 단정하지 않습니다 (1번).
+   ★ 금액은 <b>읽은 값을 그대로</b> 보여 주고, 말에는 안 넣습니다 (2번).  */
+var CHK_PICK={AP:'gain', PC:'gain', CS:'loss'};
+function chkPickCov(stage,sum){
+  if(!sum||!sum.top)return null;
+  var first=CHK_PICK[stage]||'gain', other=(first==='gain')?'loss':'gain';
+  var L=(sum.top[first]||[]);
+  if(!L.length)L=(sum.top[other]||[]);
+  var x=L[0];
+  if(!x||!x.n)return null;
+  return {n:x.n, b:x.b, a:x.a, from:(L===(sum.top.loss||[]))?'loss':'gain'};
+}
+/* 그 분께 오늘 할 말 — 세 갈래를 <b>갈라</b> 돌려줍니다 (1번) */
+function chkSay(p){
+  var C=(typeof APEX_STAGE!=='undefined'&&APEX_STAGE.chkOf)?APEX_STAGE.chkOf(p.stage):null;
+  if(!C)return null;
+  if(!p.cid)  return {C:C,why:'nocli', line:C.none};
+  if(!p.read) return {C:C,why:'noread',line:C.none};
+  var cov=chkPickCov(p.stage,p.read.sum);
+  if(!cov)    return {C:C,why:'nosum', line:'', at:p.read.at};
+  return {C:C,why:'ok',
+          line:C.had.split('{cov}').join(osEsc(cov.n)),
+          cov:cov, at:p.read.at};
+}
+function chkCopy(id){
+  var L=chkPeople(),i,p=null;
+  for(i=0;i<L.length;i++)if(L[i].id===id){p=L[i];break;}
+  var s=p?chkSay(p):null;
+  if(!s||!s.line){ if(typeof toast==='function')toast('할 말을 못 찾았습니다'); return; }
+  var t=(typeof plainOf==='function')?plainOf(s.line):(''+s.line).replace(/<[^>]*>/g,'');
+  t=t.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+  if(typeof copyText==='function')copyText(t+'\n\n'+(''+s.C.ask).replace(/<[^>]*>/g,''));
+}
+function chkGoBa(){ if(typeof go==='function')go('frmake'); }
+function chkOpenCli(cid){
+  if(cid&&typeof navGoCli==='function'){ navGoCli(cid); return; }
+  if(typeof go==='function')go('crm');
+}
+/* ── 화면 ─────────────────────────────────────────────────────────── */
+var CHK_WHY={
+  nocli :'<b>고객 365일에서 이 분을 못 찾았습니다.</b> 카드가 없거나, 가려 둔 이름이 달라서입니다 — '+
+        '비슷한 이름을 골라 붙이지 않습니다(다른 분 증권을 이 분 것이라고 말하게 됩니다). '+
+        '카드를 만들고 증권을 읽으면 여기에 할 말이 섭니다.',
+  noread:'<b>아직 증권을 안 읽었습니다.</b> 보장분석 전·후 만들기에서 읽고 <b>고객 365일에 저장</b>하면 여기에 섭니다.',
+  nosum :'<b>읽은 기록은 있는데 담보 이름이 안 담겨 있습니다</b> — 예전에 저장한 것입니다. 그 화면에서 한 번 다시 저장하시면 여기에 담보가 뜹니다.'
+};
+function chkRowHtml(p){
+  var s=chkSay(p);
+  if(!s)return '';
+  var head='<div class="chk-h"><span class="e">'+s.C.e+'</span>'+
+    '<span class="m"><b>'+osEsc(p.nm||'고객')+'</b>'+
+    '<span>'+osEsc(s.C.t)+(p.region?(' · '+osEsc(p.region)):'')+
+      (p.src?(' · '+osEsc(p.src)):'')+'</span></span>'+
+    (s.at?('<i>'+osEsc(s.at)+' 읽음</i>'):'<i class="no">안 읽음</i>')+'</div>';
+  var body;
+  if(s.why==='ok'){
+    body='<div class="chk-say">'+s.line+'</div>'+
+      '<div class="chk-cov">'+(s.cov.from==='loss'?'📉 줄어드는 곳':'📈 채워지는 곳')+' — <b>'+
+        osEsc(s.cov.n)+'</b> '+chkAmt(s.cov)+'</div>'+
+      '<div class="chk-ask">다음 한마디 — '+s.C.ask+'</div>'+
+      '<div class="chk-b">'+
+        '<button type="button" class="btn btn-primary" onclick="chkCopy(\''+osEsc(p.id)+'\')">📋 복사</button>'+
+        (p.cid?('<button type="button" class="btn btn-ghost" onclick="chkOpenCli(\''+osEsc(p.cid)+'\')">🗂 고객 카드</button>'):'')+
+        '<button type="button" class="btn btn-ghost" onclick="chkGoBa()">📝 전·후 만들기</button></div>';
+  }else{
+    body='<div class="chk-no">'+CHK_WHY[s.why]+'</div>'+
+      (s.C.none?('<div class="chk-say soft">'+s.C.none+'</div>'):'')+
+      '<div class="chk-b">'+
+        '<button type="button" class="btn btn-primary" onclick="chkGoBa()">📝 증권 읽으러 가기</button>'+
+        (p.cid?('<button type="button" class="btn btn-ghost" onclick="chkOpenCli(\''+osEsc(p.cid)+'\')">🗂 고객 카드</button>'):'')+
+      '</div>';
+  }
+  return '<div class="chk-row">'+head+body+'</div>';
+}
+/* 금액은 <b>읽은 값 그대로</b>. 이름이 말하는 단위는 <b>만원</b>입니다 (4번).
+   ★ <b>못 찾음 · 없음 · 금액</b> 셋을 가릅니다 (1번). vizWon 은 0 을 「0원」
+     으로 적는데, 여기서 0 은 「그 담보가 없다」 는 뜻이고 null 은 「못 읽었다」
+     는 뜻입니다 — 둘을 같은 말로 적으면 안 됩니다. */
+function chkWon(v){
+  if(v===null||v===undefined||v==='')return '<em>못 찾음</em>';
+  var n=Number(v);
+  if(!isFinite(n))return '<em>못 찾음</em>';
+  if(n<=0)return '<em>없음</em>';
+  return osEsc((typeof vizWon==='function')?vizWon(n):(n+'만원'));
+}
+function chkAmt(c){ return '<span class="chk-ba">'+chkWon(c.b)+' → '+chkWon(c.a)+'</span>'; }
+function chkHtml(){
+  if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
+  chkCss();
+  if(CHKS.rows===null&&!CHKS.busy)setTimeout(function(){chkLoad();},20);
+  var P=chkPeople(),i,rows='';
+  for(i=0;i<P.length;i++)rows+=chkRowHtml(P[i]);
+  var n={ok:0,no:0};
+  for(i=0;i<P.length;i++){ var s=chkSay(P[i]); if(s&&s.why==='ok')n.ok++; else n.no++; }
+  var head='<div class="chk-top">'+
+    '<div class="chk-t">🩺 <b>고객 체크</b> — AP · PC · CS</div>'+
+    '<div class="chk-d">TA 가 끝난 분들입니다. <b>읽은 증권</b>에서 오늘 꺼낼 한 가지를 세웠습니다. '+
+      '읽은 기록이 없으면 <b>말을 만들지 않습니다</b> — 먼저 읽고 오시면 여기에 섭니다.</div>'+
+    '<div class="chk-n">'+P.length+'명 · 할 말이 선 분 <b>'+n.ok+'</b> · 먼저 읽어야 할 분 <b>'+n.no+'</b>'+
+      (CHKS.at?(' <span>'+osEsc(CHKS.at)+' 기준</span>'):'')+
+      '<button type="button" onclick="chkLoad(true)">↻ 다시 읽기</button></div>'+
+    (CHKS.busy?'<div class="chk-wait">읽은 기록을 받아 오는 중입니다…</div>':'')+
+    (CHKS.err?('<div class="chk-err">'+osEsc(CHKS.err)+'</div>'):'')+
+    '</div>';
+  if(!P.length)
+    return head+'<div class="ar-none">AP · PC · CS 에 있는 분이 <b>없습니다.</b> '+
+      '사람을 지어내지 않습니다 — 상담이 잡히면 여기에 섭니다.</div>';
+  return head+rows+
+    '<div class="chk-note">이름은 <b>가린 모양</b>으로 이어 붙입니다 — '+
+    '같은 이름이 둘이면 앱이 못 가립니다. 이상하면 고객 카드에서 확인해 주세요.</div>';
+}
+function chkPaint(){
+  var el=document.getElementById('chkPane');
+  if(el)el.innerHTML=chkHtml();
+}
+function chkCss(){
+  if(document.getElementById('chkCss'))return;
+  var st=document.createElement('style');st.id='chkCss';
+  st.textContent=
+   '.chk-top{margin-bottom:12px}'+
+   '.chk-t{font-size:var(--t3);font-weight:900;color:var(--ink-1)}'+
+   '.chk-d{margin-top:5px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.chk-n{margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;'+
+     'font-size:var(--t6);font-weight:800;color:var(--ink-3)}'+
+   '.chk-n span{font-weight:600;color:var(--ink-5)}'+
+   '.chk-n button{margin-left:auto;min-height:38px;border:1px solid var(--ink-7);background:#fff;'+
+     'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'color:var(--ink-2);cursor:pointer;padding:7px 12px}'+
+   '.chk-wait{margin-top:9px;font-size:var(--t6);color:var(--ink-4)}'+
+   '.chk-err{margin-top:9px;font-size:var(--t6);color:#991B1B;background:#FEF2F2;'+
+     'border:1px solid #FECACA;border-radius:var(--r-sm);padding:9px 11px}'+
+   '.chk-row{border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:12px 13px;margin-bottom:10px;background:#fff}'+
+   '.chk-h{display:flex;gap:9px;align-items:baseline}'+
+   '.chk-h .e{font-size:18px}'+
+   '.chk-h .m{flex:1;min-width:0}'+
+   '.chk-h .m b{font-size:var(--t5);font-weight:900;color:var(--ink-1)}'+
+   '.chk-h .m span{display:block;margin-top:2px;font-size:var(--t6);color:var(--ink-5);font-weight:700}'+
+   '.chk-h i{font-style:normal;font-size:var(--t6);font-weight:800;color:#047857;white-space:nowrap}'+
+   '.chk-h i.no{color:#92400E}'+
+   '.chk-say{margin-top:10px;background:#F0F7FF;border:1px solid #BFDBFE;border-radius:10px;'+
+     'padding:10px 12px;font-size:var(--t5);line-height:1.8;font-weight:600;color:#191F28}'+
+   '.chk-say.soft{background:var(--ink-9,#F5F7FA);border-color:var(--ink-7);color:var(--ink-3)}'+
+   '.chk-cov{margin-top:8px;font-size:var(--t6);line-height:1.6;color:var(--ink-3);font-weight:700}'+
+   '.chk-ba{display:inline-block;margin-left:6px;background:var(--ink-9,#F5F7FA);border-radius:999px;'+
+     'padding:3px 10px;font-weight:800;color:var(--ink-2)}'+
+   '.chk-ba em{font-style:normal;color:#92400E;font-weight:800}'+
+   '.chk-ask{margin-top:8px;font-size:var(--t6);line-height:1.7;color:#1E3A8A;'+
+     'background:#EFF6FF;border-radius:8px;padding:8px 10px}'+
+   '.chk-no{margin-top:10px;border:1px solid #FDE68A;background:#FFFBEB;border-radius:10px;'+
+     'padding:10px 12px;font-size:var(--t6);line-height:1.7;color:#92400E}'+
+   '.chk-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}'+
+   '.chk-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
+   '.chk-note{margin-top:12px;font-size:var(--t6);line-height:1.7;color:var(--ink-4);'+
+     'border-top:1px dashed var(--ink-7);padding-top:10px}';
+  document.head.appendChild(st);
+}
 function arBodyHtml(cat){
   /* 다시 읽는 중이라고 <b>보고 있던 판을 통째로 지우지 않는다.</b> 지우면
      찾던 칸·친 글자·펼쳐 둔 사람이 한꺼번에 사라진다. 새로 읽기·조직도
@@ -11553,13 +11850,6 @@ function arBodyHtml(cat){
   if(cat==='skill')return arSkillHtml();
   if(cat==='todo')return arTodoHtml();
   if(cat==='score')return arScoreHtml()+arWeekHtml();
-  /* 내 코칭·본인 점검란은 원래 화면이 쓰던 그리기 함수를 그대로 부른다.
-     칸 이름(#mcPane · #acadBody)도 그대로 둔다 — 기존 코드가 그 이름으로 다시 그린다. */
-  if(cat==='coach'){
-    if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
-    if(typeof mcInnerHtml!=='function')return '<div class="ar-none">내 코칭을 불러오지 못했습니다.</div>';
-    return '<div id="mcPane">'+mcInnerHtml()+'</div>';
-  }
   if(cat==='brief'){
     if(!OS.profile)return '<div class="ar-none">로그인 후 볼 수 있습니다.</div>';
     if(typeof schCanView!=='function'||!schCanView())
@@ -11568,16 +11858,14 @@ function arBodyHtml(cat){
     if(typeof schInnerHtml!=='function')return '<div class="ar-none">대표 브리핑을 불러오지 못했습니다.</div>';
     return schInnerHtml();
   }
-  if(cat==='acad'){
-    if(typeof acBody!=='function')return '<div class="ar-none">본인 점검란을 불러오지 못했습니다.</div>';
-    return '<div id="acadBody">'+acBody()+'</div>';
-  }
   if(cat==='perf'){
     if(!PF.loaded&&!PF.loading)setTimeout(pfLoad,20);
     return pfMeHtml();
   }
   if(cat==='care')return ccTeamHtml();
   if(cat==='touch')return arTouchHtml();
+  /* 읽은 기록은 <b>그 칸을 열 때</b> 한 번만 받아 옵니다 (7번) */
+  if(cat==='check')return '<div id="chkPane">'+chkHtml()+'</div>';
   if(cat==='cold'||cat==='old')return arTouchHtml();
   if(cat==='lead')return arLeadHtml();
   if(cat==='dbperf')return dbpHtml();
@@ -12470,6 +12758,28 @@ var TABS=[
    {id:'apexmap',icon:'🗺️',title:'APEX 전체 지도',cnt:'89',hide:true,ak:'업무매뉴얼 지도 자비스 전체'},
    {id:'apexmaster',icon:'🎓',title:'APEX 마스터 과정',cnt:'14',ak:'업무매뉴얼 마스터 과정 신입 교육 따라하기 익히기 하루한장'},
    {id:'academy_notion',icon:'📓',title:'APEX ACADEMY | 노션',cnt:'',ak:'업무매뉴얼'},
+   /* ── <b>TFA 에서 뺀 둘을 여기에 세웁니다</b> (2026-09-21) ─────────
+      사장님 말씀 — 「TFA 업무관리가 간소화할것 … 내 코칭 없애기 ·
+      본인 점검란 없애기」. TFA 왼쪽에서 뺐습니다.
+
+      ⚠ 그런데 이 둘은 <b>가려 둔 묶음</b>(hide)에 있었습니다. 가려 둔 까닭이
+      「다른 화면 안에서 열린다」 였는데, 그 <b>다른 화면이 바로 TFA</b> 였습니다.
+      그래서 TFA 에서 빼는 순간 <b>「내 코칭」은 열 길이 없어집니다</b> —
+      check-nav 가 그 자리에서 잡았습니다(「열 길이 없어진 화면이 있다 — mycoach」).
+
+      <b>없애는 것이 아니라 옮기는 것</b>이므로 ☰ 서랍에 세웁니다. 다만
+      <b>새 묶음을 만들지 않고</b> 여기 붙입니다 — 묶음을 하나 늘렸더니 다 접어도
+      서랍이 912px 이 되어 한 화면(844px)을 넘었습니다(check-navgrp 가 잡음).
+      문(권한·등급)은 묶음이 아니라 <b>각자의 ak</b> 로 판정하므로 옮겨도 그대로입니다.
+
+      함께 있던 <b>실행 체크판은 따라오지 않습니다</b> — 바로 아래에 까닭을 적었습니다. */
+   /* 실행 체크판만 <b>눈에서 뺍니다</b> — 이것은 <b>TEAM 총괄 관리</b> 안에서
+      오늘 체크·이번 주·업무 루트 세 얼굴로 이미 열립니다(TH_CKMAP). 사이드바에
+      또 세우면 같은 것이 두 곳에 섭니다(5번). 지운 것이 아니라 찾기·음성·
+      ?go=ckboard 로 그대로 열리고, TFA 「해야 할 일」이 go('ckboard') 로 부릅니다. */
+   {id:'ckboard',icon:'📋',title:'실행 체크판',cnt:'',hide:true,ak:'업무매뉴얼'},
+   {id:'mycoach',icon:'🌱',title:'내 코칭',cnt:'',ak:'업무매뉴얼 코칭'},
+   {id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:'',ak:'업무매뉴얼 점검'}
  ]},
  {group:'시스템',items:[
    {id:'settings',icon:'⚙️',title:'설정',cnt:'',ak:'시스템 설정'},
@@ -12482,14 +12792,9 @@ var TABS=[
    {id:'phone_app',icon:'📲',title:'내 폰에 설치',cnt:'',hide:true,ak:'홈 폰에 담기 설치 앱 홈화면 추가 pwa'},
    {id:'mycal',icon:'📅',title:'내 캘린더',cnt:'',ak:'홈 달력 일정 알림 캘린더'}
  ]},
- /* 아래 셋은 메뉴에 세우지 않는다 — 다른 화면 안에서 열린다.
+ /* 아래 것들은 메뉴에 세우지 않는다 — 다른 화면 안에서 열린다.
     지우지 않는 이유: 권한·요금제 판정과 음성 명령이 이 목록을 보고 돈다. */
  {group:'건의함',hide:true,items:[{id:'voice',icon:'💬',title:'건의함 · 불편한 점',cnt:'',ak:'건의함'}]},
- {group:'업무매뉴얼 도구',key:'업무매뉴얼',hide:true,items:[
-   {id:'ckboard',icon:'📋',title:'실행 체크판',cnt:'',ak:'업무매뉴얼'},
-   {id:'mycoach',icon:'🌱',title:'내 코칭',cnt:'',ak:'업무매뉴얼'},
-   {id:'academy',icon:'✅',title:'APEX 본인 점검란',cnt:'',ak:'업무매뉴얼'}
- ]},
  {group:'성장·교육',hide:true,items:[{id:'growboard',icon:'📈',title:'성장판',cnt:'',ak:'성장·교육'}]}
 
 ];
@@ -15897,8 +16202,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 20:10';
-var APP_BUILD_NOTE="<b>오늘 소식을 저절로 받아 옵니다 — 하루 한 번만.</b> 사장님 말씀 「오늘 뉴스 받아오는 것도 <b>자동으로</b> 안 되나」. 아침 미션 ②④⑤ 는 받아 둔 소식이 있어야 채워지는데, 받아 오는 것이 손이라 안 누르면 다섯 가지 중 셋이 빈 채로 하루가 갔습니다. ⚠ 그렇다고 저절로 부르는 것은 이 앱에서 <b>제일 비쌀던 실수</b>가 난 자리입니다 — 안 보는 화면이 60초마다 본문 120건을 받아 무료 한도를 <b>세 배</b>로 넘겨 로그인까지 막혔습니다(7번). 그래서 <b>타이머를 안 겁니다.</b> <b>홈을 여는 그때</b> 한 번만 보고, ① 오늘 것이 이미 있으면 안 부르고, ② 오늘 한 번 해 봤으면 <b>못 받았어도 다시 안 두드리고</b>, ③ 다른 탭에 가 있으면 <b>쉽고</b>, ④ 로그인 전에는 안 부릅니다. 받아 오면 <b>📸 오늘 올릴 것</b>과 <b>🌅 아침 미션</b>이 그 자리에서 같이 채워집니다. 못 받으면 <b>지어내지 않고</b> 못 받았다고 적고 손으로 받는 단추를 세웁니다(1번). 값 — 사람당 하루 한 번. 받아 오는 창구는 같은 것을 15분 동안 다시 안 받아 오므로, 팀이 아침에 몰려도 바깥으로 나가는 것은 몇 번뿐입니다. 점검 <b>check-nlauto</b> 를 늘렸습니다 — 타이머가 없나 · 한 번만 부르나 · 오늘 것이 있으면 안 부르나 · 못 받은 날도 한 번뿐인가 · 안 보는 동안 쉬나 · 로그인 전에는 안 부르나 · 받아 오면 홈이 그 자리에서 채워지나.";
+var APP_BUILD='2026-09-21 23:40';
+var APP_BUILD_NOTE="<b>🩺 고객 체크 — 읽은 증권으로 무엇을 터치할지.</b> 사장님 말씀 「TA가 모두 끝난다면 AP/PC/CS 상황에 맞게 해야되는것들을 <b>고객 체크로 따로 관리</b>해줘. <b>고객님의 보험을 읽었다면 무엇으로 터치할지</b>」. TFA 업무관리에 칸 하나를 세웠습니다 — AP·PC·CS 에 계신 분만 서고, 그 분께 <b>오늘 꺼낼 담보 한 가지</b>와 다음 한마디가 섭니다. <b>어려웠던 까닭은 자료가 없어서가 아니었습니다</b> — 「보장분석 전·후 만들기」가 이미 고객별로 서버에 남기고 있었는데(saved_reports · ba_state) <b>아무도 다시 안 읽었습니다.</b> 이제 읽어 옵니다. 담보 이름은 저장할 때 같이 적게 했습니다 — 이름을 아는 곳은 그쪽 하나라, 본체가 다시 계산하면 셈이 두 곳에 생깁니다(5번). <b>안 읽었으면 말을 안 만듭니다</b> — 「아직 증권을 안 읽었습니다」라고 적고 보장분석으로 모십니다(1번). 이름이 안 이어지면 <b>비슷한 이름에 건너짚지 않고</b> 못 찾았다고 적습니다 — 다른 분 증권을 이 분 것이라고 말하면 그 자리에서 끝납니다. 금액은 <b>「못 찾음」·「없음」·숫자</b> 셋을 갈라 적습니다(1번) — ba.html 의 diff 가 못 읽음과 0 을 뭉개고 있어서입니다. 서버는 <b>칸을 여는 그때 한 번</b>만, 그것도 <b>요약만</b> 받습니다(7번). 홈 아침 미션을 5/5 끝내시면 「🩺 고객 체크 열기」로 바로 갑니다. 점검 <b>check-cuschk</b> 를 늘렸습니다.　—　TFA 에서 <b>내 코칭 · 본인 점검란</b>을 뺐습니다(사장님 말씀 「TFA 업무관리가 간소화할것」). <b>지운 것이 아닙니다</b> — 둘 다 ☰ 서랍 <b>「🎓 교육 자료」</b> 안에 섭니다. 쌓아 둔 기록도 그대로입니다. 원래 이 둘은 <b>가려 둔 묶음</b>에 있었고, 가려 둔 까닭이 「다른 화면 안에서 열린다」 였는데 <b>그 다른 화면이 바로 TFA</b> 였습니다 — 빼는 순간 「내 코칭」은 <b>열 길이 없어졌고</b> check-nav 가 그 자리에서 잡았습니다. 새 묶음을 만들어 세웠더니 이번엔 서랍이 다 접어도 912px 이 되어 한 화면(844px)을 넘겼습니다(check-navgrp). 그래서 <b>묶음을 늘리지 않고</b> 교육 자료 안에 붙였습니다 — 문(권한·등급)은 묶음이 아니라 <b>각자의 ak</b> 로 판정해 옮겨도 그대로입니다. 덤으로 <b>화면이 짧아졌습니다</b> — 「고객 체크」 칸을 늘리면서 TFA 가 2.6화면이 되어 check-toss 가 잡았는데(기준 2.5), 둘을 빼니 <b>2.4화면</b>입니다. 자(尺)를 올리는 대신 실제로 줄였고, 기준선도 같이 내렸습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -22322,6 +22627,12 @@ function hmMsGoCheck(){
   if(!el)return;
   try{ el.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){ el.scrollIntoView(); }
 }
+/* 🩺 <b>고객 체크</b>로 — 사장님 말씀 「TA가 모두 끝난다면 AP/PC/CS」.
+   여는 것은 <b>TFA 가 아는 길</b>을 그대로 씁니다 (5번). */
+function hmMsGoChk(){
+  try{ if(typeof arGoCat==='function')arGoCat('check'); }catch(e){}
+  if(typeof go==='function')go('airep');
+}
 /* 아직 읽는 중인가 · 못 받았나 · 진짜 없나 — <b>「오늘 챙길 것」 과 같은
    답</b>을 씁니다. 여기서 또 재면 두 칸이 서로 다른 말을 합니다 (5번). */
 function hmMsHold(){
@@ -22547,7 +22858,9 @@ function hmMsFinHtml(){
       '제안서를 보신 분(PC) · 청약하실 분(CS).</div>'+
     (p.length?('<div class="hm-ms-fin-n">'+p.join(' · ')+'</div>')
              :('<div class="hm-ms-fin-n">오늘 AP·PC·CS 로 올라온 분은 <b>없습니다</b>.</div>'))+
-    '<div class="hm-ms-b"><button type="button" class="btn btn-primary" onclick="hmMsGoCheck()">↑ 오늘 챙길 것으로</button></div>'+
+    '<div class="hm-ms-b">'+
+      '<button type="button" class="btn btn-primary" onclick="hmMsGoChk()">🩺 고객 체크 열기</button>'+
+      '<button type="button" class="btn btn-ghost" onclick="hmMsGoCheck()">↑ 오늘 챙길 것으로</button></div>'+
     '<div class="hm-ms-n">잘못 누르셨으면 위의 <b>✓ 칸</b>을 다시 누르시면 되돌아갑니다.</div></div>';
 }
 function hmMsHtml(){

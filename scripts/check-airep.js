@@ -217,12 +217,28 @@ const AI_OK = `## 활동 보고
      DB 를 나눠 준 다음이 사람 머리에만 있었다 — 상담까지 갔는지, 계약이 됐는지.
      팀원 관리(전원을 한눈에) 앞에 세운다: 나눠 준 것이 어떻게 됐는지를 보고
      그 다음에 사람을 본다. */
-  ok(cats.length === 13, '왼쪽에 카테고리 열세 개가 선다 (' + cats.length + ')');
-  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|내 코칭|본인 점검란|오늘 터치할 사람|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
+  /* ── 2026-09-21 · <b>열세 → 열둘</b> ──────────────────────────────
+     사장님 말씀 「TFA 업무관리가 <b>간소화</b>할것 … 내 코칭 없애기 ·
+     본인 점검란 없애기」. 둘을 빼고 <b>고객 체크</b>를 넣어 열둘이 됐다.
+     ★ <b>지운 것이 아니다.</b> 내 코칭·본인 점검란은 TFA 가 큰 메뉴의
+       화면을 빌려 그리던 것이라 ☰ 서랍에 그대로 있다 — 아래에서 그것을
+       확인한다. 안 그러면 「빼기」와 「없애기」를 구분 못 한다.
+     ★ <b>고객 체크</b>는 「오늘 터치할 사람」 바로 뒤다. 앞엣것은 TA
+       앞단(부재·거절·기고객), 이것은 TA 뒤(AP·PC·CS)라 그 차례가 맞다. */
+  ok(cats.length === 12, '왼쪽에 카테고리 열두 개가 선다 (' + cats.length + ')');
+  ok(cats.join('|') === '피드백|스케줄 관리|본인 역량 체크|해야 할 일|내 업적 · 월간보고|오늘 터치할 사람|고객 체크|30일 고객관리|리더 할 일|DB · 업적관리|팀원 관리|대표 브리핑',
     '순서가 요청대로다 — ' + cats.join(' · '));
   ok(cats.indexOf('본인 점수판') < 0, '본인 점수판 칸은 없어졌다 — 내 업적 안으로 들어갔다');
-  ok(cats.indexOf('내 코칭') >= 0 && cats.indexOf('본인 점검란') >= 0,
-    '내 코칭·본인 점검란이 여기로 들어왔다 — 실행 체크판에서 안 찾아도 된다');
+  ok(cats.indexOf('내 코칭') < 0 && cats.indexOf('본인 점검란') < 0,
+    'TFA 왼쪽에서 <b>내 코칭·본인 점검란이 빠졌다</b> — 간소화');
+  /* <b>빼기와 없애기를 가른다</b> — 서랍에 그대로 있어야 한다 */
+  const drawer = await page.evaluate(() => {
+    const ids = [];
+    try { TABS.forEach(g => g.items.forEach(it => ids.push(it.id))); } catch (e) {}
+    return { coach: ids.indexOf('mycoach') >= 0, acad: ids.indexOf('academy') >= 0 };
+  });
+  ok(drawer.coach && drawer.acad,
+    '<b>지운 것이 아니다</b> — ☰ 서랍에 「내 코칭」·「APEX 본인 점검란」이 그대로 있다');
   const heads = await page.evaluate(() => Array.prototype.map.call(
     document.querySelectorAll('#arPane .ar-shd'), e => e.textContent.trim()));
   ok(heads.join('|') === '내 관리|팀 관리', '내 관리 / 팀 관리로 나뉜다 — ' + heads.join(' · '));
@@ -818,15 +834,22 @@ const AI_OK = `## 활동 보고
   ok(ldg.n >= 10, '리더 할 일 줄마다 그 화면으로 가는 단추가 붙는다 (' + ldg.n + '개)');
   ok(ldg.stop, '그 단추를 눌러도 체크는 안 바뀐다 (stopPropagation)');
 
-  for (const [cat, sel, nm] of [['coach', '#mcPane', '내 코칭'], ['acad', '#acadBody', '본인 점검란']]) {
-    await open(cat);
-    await page.waitForTimeout(2400);
-    const got = await page.evaluate(s2 => {
+  /* ── 2026-09-21 · <b>내 코칭 · 본인 점검란을 여기서 안 엽니다</b> ──
+     TFA 왼쪽에서 뺐으므로 이 자리도 같이 지웁니다 — 안 쓰는 길을 남겨
+     두면 다음 사람이 「있는 줄 알고」 찾습니다. 서랍에 그대로 있다는 것은
+     위에서 이미 재고 있습니다.
+     대신 <b>새로 들어온 칸</b>을 잽니다 — 늘어난 칸을 아무도 안 재면
+     빈 칸이 서 있어도 모릅니다 (8번). */
+  {
+    await open('check');
+    await page.waitForTimeout(2600);
+    const got = await page.evaluate(() => {
       const p = document.getElementById('arPane');
-      return { pane: !!p.querySelector(s2), len: (p.textContent || '').trim().length };
-    }, sel);
-    ok(got.pane, nm + ' 이 여기서 열린다 (' + sel + ')');
-    ok(got.len > 200, nm + ' 에 내용이 찬다 (' + got.len + '자)');
+      return { pane: !!p.querySelector('#chkPane'), len: (p.textContent || '').trim().length,
+               says: /고객 체크/.test(p.textContent || '') };
+    });
+    ok(got.pane, '🩺 고객 체크가 여기서 열린다 (#chkPane)');
+    ok(got.says && got.len > 200, '고객 체크에 내용이 찬다 (' + got.len + '자)');
   }
 
   await open('team');

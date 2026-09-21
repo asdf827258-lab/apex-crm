@@ -178,9 +178,20 @@ window.supabase={createClient:function(){
   });
   ok(found.byName, '「TEAM 총괄」 로 찾으면 나온다');
   ok(found.byOld, '옛 이름 「실행 체크판」 으로 찾아도 나온다');
-  ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(t =>
-    ok(nav.indexOf(t) < 0, '사이드바에서 ' + t + ' 이 사라졌다'));
-  ['ckboard', 'mycoach', 'academy', 'growboard'].forEach(async t => { });
+  /* 실행 체크판은 <b>이 허브 안에서</b> 오늘 체크·이번 주·업무 루트 세 얼굴로
+     열린다(TH_CKMAP). 성장판도 마찬가지다. 사이드바에 또 세우면 같은 것이 두
+     곳에 선다 — 그래서 눈에서만 뺐다. */
+  ['ckboard', 'growboard'].forEach(t =>
+    ok(nav.indexOf(t) < 0, '사이드바에서 ' + t + ' 이 사라졌다 — 여기 안에서 열린다'));
+  /* ── 2026-09-21 · <b>내 코칭 · 본인 점검란은 사이드바로 나왔다</b> ─────
+     사장님 말씀 「TFA 업무관리가 간소화할것 … 내 코칭 · 본인 점검란 없애기」.
+     이 둘은 <b>이 허브가 아니라 TFA</b> 안에서 열리고 있었다(TH_CAT 에 없다).
+     TFA 에서 빼는 순간 열 길이 없어져 check-nav 가 잡았고, 그래서 ☰ 서랍
+     「교육 자료」 에 세웠다. <b>여기서 열리지 않으므로 숨기면 안 된다.</b> */
+  ok(await page.evaluate(() => (window.TH_CAT || []).every(c => ['coach', 'acad'].indexOf(c[0]) < 0)),
+    '이 허브는 내 코칭·본인 점검란을 품지 않는다 — 그래서 숨기면 안 된다');
+  ['mycoach', 'academy'].forEach(t =>
+    ok(nav.indexOf(t) >= 0, '사이드바에 ' + t + ' 이 선다 — 여기서도 TFA 에서도 안 열린다'));
   const still = await page.evaluate(() =>
     ['ckboard', 'mycoach', 'academy', 'growboard'].map(t => t + ':' + osTabAllowed(t)));
   ok(still.every(x => /:true$/.test(x)), '사라졌어도 여전히 열 수 있다 — ' + still.join(' '));

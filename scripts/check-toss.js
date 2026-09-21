@@ -143,7 +143,11 @@ const BASE = {
        ★ 더 줄이려면 「📋 복사」 단추 줄에 끼워 넣어야 하는데, 그러면 44px
          자리가 비좁아집니다. 높이보다 손가락이 먼저입니다.              */
   home:    { tiny: 0, size: 7, small: 0, screens: 3.9 },
-  airep:   { tiny: 0, size: 4, small: 0, screens: 2.5 },
+  /* 2026-09-21 · 2.5 → <b>2.4</b>. 「고객 체크」 칸을 늘리면서 2.6 이 되어
+     여기가 잡았고, 기준을 올리는 대신 <b>내 코칭 · 본인 점검란</b>을 왼쪽에서
+     뺐습니다(둘 다 ☰ 서랍에 그대로 있습니다). 그래서 오히려 짧아졌습니다 —
+     짧아졌으면 기준선도 같이 내리라고 이 점검이 적어 둡니다. */
+  airep:   { tiny: 0, size: 4, small: 0, screens: 2.4 },
   clients: { tiny: 0, size: 4, small: 0, screens: 2.9 },
   mycal:   { tiny: 0, size: 3, small: 0, screens: 2.5 }
 };
