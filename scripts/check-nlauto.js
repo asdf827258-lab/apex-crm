@@ -172,7 +172,19 @@ const SEED = (o) => `
 
   console.log('\n[6] 로그인 전에는 <b>안 부른다</b>');
   const F = await open({ anon: true });
-  is(hits === 0, '  로그인 안 했으면 <b>안 부른다</b> — ' + hits + '번');
+  is(hits === 0, '  로그인 안 했으면 <b>홈이 안 부른다</b> — ' + hits + '번');
+  /* ⚠ 위 줄만으로는 <b>nlAuto 안의 지킴이</b>를 재지 못한다. hmArm 이 이미
+     「로그인 안 했으면 돌아간다」 로 막고 있어서, 지킴이를 빼도 그 길로는
+     안 불린다 — 실제로 빼 보니 <b>초록</b>이었다. 안 울리는 알람은 알람이
+     아니다 (8번). 그래서 <b>직접 불러</b> 본다. */
+  const anonCall = await F.p.evaluate(() => {
+    try { localStorage.removeItem('apex_nl_auto_v1'); } catch (e) {}
+    OS.profile = null;
+    return nlAuto();
+  });
+  await F.p.waitForTimeout(400);
+  is(anonCall === false && hits === 0,
+     '  <b>직접 불러도</b> 로그인 전에는 안 부른다 — ' + hits + '번');
 
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
