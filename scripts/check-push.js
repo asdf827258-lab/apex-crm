@@ -23,8 +23,23 @@
 const { chromium } = require('playwright');
 const http=require('http'),fs=require('fs'),path=require('path'),url=require('url'),crypto=require('crypto');
 const ROOT=process.cwd(),PORT=8903;
+let KEYROW=null;                       /* [9] 가 담으면 여기 들어온다 */
 const srv=http.createServer((rq,rs)=>{
-  let p=decodeURIComponent(url.parse(rq.url).pathname);let f=path.join(ROOT,p);
+  let p=decodeURIComponent(url.parse(rq.url).pathname);
+  /* 앱이 <b>진짜로 부르는 그 주소</b>를 여기서 받습니다 — 404 를 주면 앱은
+     「못 물어봤다」 로 적고, 그러면 열쇠 칸이 아예 안 서서 자리를 못 잽니다. */
+  if(p.indexOf('/.netlify/functions/push')===0){
+    if(rq.method==='POST'){
+      let bd='';rq.on('data',d=>bd+=d);rq.on('end',()=>{
+        try{ KEYROW=JSON.parse(bd); }catch(e){ KEYROW=null; }
+        rs.writeHead(200,{'Content-Type':'application/json'});
+        rs.end(JSON.stringify(KEYROW?{ok:true}:{ok:false,reason:'못 읽음'}));});
+      return; }
+    rs.writeHead(200,{'Content-Type':'application/json'});
+    rs.end(JSON.stringify(KEYROW?{key:KEYROW.pub,why:'',from:'db',has:true}
+                                :{key:null,why:'서버에 알람 열쇠가 아직 없습니다.',from:'env',has:false}));
+    return; }
+  let f=path.join(ROOT,p);
   if(fs.existsSync(f)&&fs.statSync(f).isDirectory())f=path.join(f,'index.html');
   if(!fs.existsSync(f)){rs.writeHead(404);rs.end('no');return;}
   rs.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});fs.createReadStream(f).pipe(rs);
@@ -205,17 +220,31 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
     window.pwaIsIOS=realIOS; window.pwaInstalled=realStand;
     /* 서버 열쇠가 없다 */
     ALM.keyErr='서버에 알람 열쇠(VAPID_PUBLIC)가 아직 없습니다.'; ALM.sub=null;
+    ALM.key=null; ALM.keyAns=1;
     almPaint();
     out.noKey=(document.getElementById('almHost')||{}).textContent||'';
     out.hasHost=!!document.getElementById('almHost');
+    /* <b>설계사에게는</b> 뭐라고 하나 — 눌러도 서버가 막으므로 만들기 단추를
+       세우면 안 되고, 그러면 누가 해 주는지는 말해야 한다 (1번). */
+    var realRole=OS.profile.role; OS.profile.role='member'; ALM.keyAt=Date.now();
+    almPaint();
+    out.mem=(document.getElementById('almHost')||{}).textContent||'';
+    out.memCard=!!document.querySelector('.almk-card');
+    out.memBand=!!document.querySelector('.almk-band');
+    OS.profile.role=realRole; almPaint();
     return out;
   },{seed:SEED});
   is(W.hasHost, '「내 폰에 설치」 화면에 <b>알람 카드가 선다</b>');
   is(/홈 화면에 먼저 담아야/.test(W.ios), '아이폰은 <b>먼저 담아야 한다</b>고 말한다 — 「'+W.ios.replace(/<[^>]*>/g,'').slice(0,40)+'…」');
   is(/홈 화면에 먼저 담아야/.test(W.iosCard), '그 말을 <b>카드에도</b> 적는다');
   is(W.ok==='', '담고 허락하면 <b>막는 말이 없다</b>');
-  is(/VAPID_PUBLIC/.test(W.noKey)&&/Netlify/.test(W.noKey),
-     '서버 열쇠가 없으면 <b>무엇을 넣어야 하는지</b> 적는다 (1번)');
+  /* ⚠ 여기는 원래 「VAPID_PUBLIC 을 Netlify 에 넣으세요」 가 적혔는지 봤다.
+     이제 앱이 서버에 <b>직접</b> 담으므로 그 말은 거짓이 됐다. 대신 <b>어디로
+     가면 되는지</b>를 적는지 본다 — 「없습니다」 로 끝내면 1번 위반이다. */
+  is(/맨 위/.test(W.noKey)&&/🔑/.test(W.noKey)&&!/Netlify/.test(W.noKey),
+     '서버 열쇠가 없으면 <b>어디서 하면 되는지</b> 적는다 (1번) — 이제 Netlify 로 안 보낸다');
+  is(/대표|관리자/.test(W.mem)&&!W.memCard&&!W.memBand,
+     '<b>설계사에게는 만들기를 안 권한다</b> — 눌러도 서버가 막는다. 대신 누가 해 주는지 말한다 (1·8번)');
   is(/② 앱이 닫혀 있을 때/.test(W.noKey),
      '<b>①과 ②를 갈라</b> 지금 무엇이 되는지 그대로 적는다 — 되는 것을 안 되는 것처럼 말하지 않는다');
   is(!/VAPID_(PRIVATE|PUBLIC|SUBJECT)\s*[:=]\s*['"][^'"]{12,}/.test(SRC),
@@ -566,21 +595,61 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      「넣으세요」 라고 적어 두고 끝이었다. 여기서 재는 것은 <b>만든 열쇠가
      서버 코드로 실제로 서명이 되는가</b>다 — 모양만 보면 안 통하는 열쇠도
      통과한다 (8번). */
-  const kkCtx = await b.newContext({ viewport:{width:430,height:1000} });
+  /* ★ <b>사장님 폰 그대로 390×844</b> 로 잽니다. 430×1000 으로 재면
+     한 화면이 156px 더 길어 「보인다」 가 나옵니다 — 헛것을 잡는 점검보다
+     <b>안 잡는 점검</b>이 딱 이 모양입니다 (8번). */
+  const VW=390, VH=844;
+  const kkCtx = await b.newContext({ viewport:{width:VW,height:VH} });
   await kkCtx.route('**://**', r => r.request().url().indexOf('127.0.0.1:'+PORT)>=0 ? r.continue() : r.abort());
   const kkPage = await kkCtx.newPage();
   const kkErr=[]; kkPage.on('pageerror',e=>kkErr.push(String(e).slice(0,140)));
   await kkPage.goto('http://127.0.0.1:'+PORT+'/app/index.html',{waitUntil:'domcontentloaded'});
   await kkPage.waitForTimeout(2600);
   await kkPage.evaluate(()=>document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()));
-  await kkPage.evaluate(`OS.session={user:{id:'me',email:'hong@example.com'}};
+  KEYROW=null;                          /* 서버에 열쇠가 <b>없는</b> 자리에서 시작한다 */
+  await kkPage.evaluate(`OS.session={user:{id:'me',email:'hong@example.com'},access_token:'t'};
     OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
-    ALM.keyErr='서버에 알람 열쇠(VAPID_PUBLIC)가 아직 없습니다.';
-    if(!document.getElementById('almHost')){var d=document.createElement('div');d.id='almHost';document.body.appendChild(d);}
-    almCss(); almPaint();`);
-  await kkPage.waitForTimeout(500);
-  is(await kkPage.evaluate(()=>!!document.querySelector('[onclick="almkToggle()"]')),
+    window.osLoadProfile=function(){}; window.osShowLoginGate=function(){}; window.toast=function(){};`);
+  /* <b>화면을 진짜로 엽니다</b> — 아무 것도 손으로 세우지 않습니다.
+     여태는 #almHost 를 우리가 만들어 붙이고 almPaint() 를 손으로 불러
+     「단추가 있다」 를 재고 있었습니다. 그래서 단추가 <b>1,656px</b> 아래
+     있어도 초록이었습니다. 사장님은 세 번 「안 보인다」 하셨는데 점검은
+     세 번 다 초록이었습니다 — <b>안 울리는 알람</b>이었습니다 (8번). */
+  await kkPage.evaluate(()=>go('phone_app'));
+  await kkPage.waitForTimeout(2200);
+  is(await kkPage.evaluate(()=>!!document.querySelector('[onclick="almkMake()"]')),
      '열쇠가 없으면 <b>만들기 단추</b>가 그 자리에 선다');
+  /* ★★ <b>제일 중요한 줄</b> — 첫 화면 안에 있는가.
+     코드가 맞아도 폰 두 개를 내려야 나오면 <b>없는 것</b>입니다. */
+  const kkPos = await kkPage.evaluate(()=>{
+    const pick=s=>{const e=document.querySelector(s);if(!e)return null;
+      const r=e.getBoundingClientRect();return {top:Math.round(r.top+scrollY),h:Math.round(r.height)};};
+    return {make:pick('[onclick="almkMake()"]'), card:pick('.almk-card'),
+      first:((document.querySelector('#dynPane .card-title')||{}).innerText||'').replace(/\s+/g,' ').trim()};
+  });
+  is(!!kkPos.make && kkPos.make.top + kkPos.make.h <= VH,
+     '<b>첫 화면 안에 선다</b> — 내리지 않고 보인다 · ' +
+     (kkPos.make ? (kkPos.make.top+'px (화면 '+VH+'px)') : '단추가 없다'));
+  is(/열쇠/.test(kkPos.first||''),
+     '설치 화면 <b>첫 칸이 열쇠</b>다 — 맨 밑에 두면 못 찾으신다 · ' + (kkPos.first||'(없음)'));
+  /* ★ <b>홈에서도</b> 부른다 — 설치 화면까지 들어가 보실 일이 없다.
+     역시 <b>첫 화면 안</b>이라야 뜻이 있다. */
+  await kkPage.evaluate(()=>go('home'));
+  await kkPage.waitForTimeout(2200);
+  const kkBand = await kkPage.evaluate(()=>{
+    const e=document.querySelector('.almk-band .ok'); if(!e)return null;
+    const r=e.getBoundingClientRect(); return {top:Math.round(r.top+scrollY),h:Math.round(r.height)};
+  });
+  is(!!kkBand && kkBand.top + kkBand.h <= VH,
+     '<b>홈에도 한 줄</b>이 서고, 그것도 첫 화면 안이다 · ' +
+     (kkBand ? (kkBand.top+'px') : '한 줄이 없다'));
+  /* 눌러서 <b>거기로 간다</b> — 「설치 화면에 가서 찾으세요」 는 두 걸음이다 */
+  if(kkBand)await kkPage.click('.almk-band .ok');
+  await kkPage.waitForTimeout(1500);
+  is(await kkPage.evaluate(()=>{
+       const e=document.querySelector('[onclick="almkMake()"]'); if(!e)return false;
+       const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight;
+     }), '한 줄을 누르면 <b>열쇠 칸이 눈앞에</b> 온다 — 가서 찾으라고 하지 않는다');
   /* ★ <b>열기만 해도</b> 보여야 한다. 여태는 「알람 켜기」 를 눌러야 서버에
      열쇠를 물어봤고, 그제서야 단추가 떴다 — 화면을 열어 본 사장님 눈에는
      아무것도 없었다(「안 보인다」). 그리는 자리에서 묻는지 본다.        */
@@ -588,7 +657,6 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const pblk = (ixk.split("tab==='phone_app'")[1]||'').slice(0,300);
   is(/almKeyLoad\(/.test(pblk),
      '<b>화면을 열 때</b> 열쇠를 묻는다 — 눌러야 보이면 못 찾으신다 (1번)');
-  await kkPage.evaluate(()=>almkToggle()); await kkPage.waitForTimeout(400);
   /* 만드는 <b>동안</b> 바깥으로 나가는 것이 있나 — 열쇠는 이 브라우저 밖으로 나가면 안 된다 (10번) */
   const kkOut=[]; const kkSpy=r=>{const u=r.url(); if(u.indexOf('127.0.0.1:'+PORT)<0)kkOut.push(u);};
   kkPage.on('request',kkSpy);
@@ -628,8 +696,29 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      '만들면 <b>「② 서버에 담기」</b> 가 바로 옆에 선다 — Netlify 로 보내지 않는다');
   is(/담기|끝납니다/.test(KK.txt) && !/Environment variables/.test(KK.txt),
      '<b>누르면 끝난다</b>고 적어 준다 — 옮겨 적으시라고 하지 않는다 (1번)');
+  /* ★ <b>담고 나면 셋 다 사라지는가.</b> 끝난 일을 계속 세워 두면 그것이
+     재촉이 되고, 그 다음부터는 아무도 안 봅니다 — 「헛것을 잡는 점검은 안
+     잡는 점검보다 나쁘다」 와 같은 자리입니다 (8번).                  */
+  await kkPage.evaluate(()=>almkSave());
+  for(let i=0;i<50;i++){ if(await kkPage.evaluate(()=>!!ALM.key||!!ALMK.err))break; await kkPage.waitForTimeout(200); }
+  await kkPage.waitForTimeout(800);
+  const kkDone = await kkPage.evaluate(()=>({
+    key:!!ALM.key, err:ALMK.err, need:almkNeed(),
+    card:!!document.querySelector('.almk-card'),
+    st:((document.querySelectorAll('#almHost .alm-r')[1]||{}).innerText||'').replace(/\s+/g,' ')}));
+  is(kkDone.key && !kkDone.err, '눌러서 <b>서버에 담긴다</b>'+(kkDone.err?(' ← '+kkDone.err):''));
+  is(!!KEYROW && (KEYROW.priv||'').length>=40 && /^mailto:/.test(KEYROW.subject||''),
+     '  서버가 받은 것이 <b>비밀 열쇠와 주소</b>다 · '+((KEYROW||{}).subject||'(없음)'));
+  is(kkDone.need===false && kkDone.card===false,
+     '<b>담고 나면 열쇠 칸이 사라진다</b> — 끝난 일을 세워 두지 않는다 (8번)');
+  is(/됐습니다|됩니다/.test(kkDone.st||''),
+     '  ②가 <b>된다</b>고 바뀐다 · '+(kkDone.st||'(못 읽음)'));
+  await kkPage.evaluate(()=>go('home'));
+  await kkPage.waitForTimeout(1600);
+  is(await kkPage.evaluate(()=>!document.querySelector('.almk-band')),
+     '<b>홈 한 줄도 같이 사라진다</b> — 한쪽만 남으면 거짓말이 된다 (5번)');
   is(kkErr.length===0, '만드는 동안 안 터졌다'+(kkErr.length?(' ← '+kkErr[0]):''));
-  await kkCtx.close();
+  await kkCtx.close(); KEYROW=null;
 
   console.log('\n[10] <b>Netlify 없이 끝난다</b> — 만들고 그 자리에서 담는다');
   /* 사장님 말씀 — 「너가 마무리하라고」. 여태는 만들어 드리고 Netlify 환경변수에
