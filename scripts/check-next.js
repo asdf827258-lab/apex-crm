@@ -106,9 +106,17 @@ const SEED = `
   const S1 = await pg.evaluate(async () => {
     /* sb·loadAll 은 <b>let/function</b> 이라 window 에 안 붙는다 —
        window.sb 에 넣으면 갈아끼운 줄 알고 진짜가 그대로 돈다. 바로 대입한다. */
-    const chain = { select: () => chain, eq: () => Promise.resolve({ error: null }),
-                    insert: () => Promise.resolve({ error: null }),
-                    update: () => chain, order: () => chain, range: () => Promise.resolve({ error: null, data: [] }) };
+    /* ⚠ 진짜 supabase-js 는 <b>.select() 로 바뀐 줄을 돌려준다.</b> db-crm 이
+       「0줄인데 됐다고 말하던 것」 을 고치면서 쓰기 끝마다 .select("id") 를
+       붙였다 — 가짜가 진짜와 다르면 여기서 터진다(2026-09-21 CI 가 그렇게
+       잡았다). 그래서 <b>이어지는 사슬</b>로 만들고, 기다리면 바뀐 줄을 준다.
+       읽기(range)만 예전처럼 빈 목록을 준다 — 쪽 나눠 읽는 자리다. */
+    const chain = { select: () => chain, eq: () => chain, in: () => chain, is: () => chain,
+                    neq: () => chain, gte: () => chain, not: () => chain, single: () => chain,
+                    insert: () => chain, update: () => chain, upsert: () => chain,
+                    delete: () => chain, order: () => chain, limit: () => chain,
+                    range: () => Promise.resolve({ error: null, data: [] }),
+                    then: (ok, no) => Promise.resolve({ error: null, data: [{ id: 'x' }] }).then(ok, no) };
     const realSb = sb, realLoad = loadAll;
     sb = { from: () => chain };
     loadAll = async function () { };                 /* 다시 읽기는 여기서 안 잰다 */

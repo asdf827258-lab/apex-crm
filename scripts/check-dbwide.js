@@ -171,6 +171,29 @@ const measure = (page, seed) => page.evaluate((s) => {
   await p3.waitForTimeout(1400);
   const F = await measure(p3, SEED);
   is(!F.btnSeen, '  폰에서는 <b>안 보인다</b> — 서랍이 이미 접혀 있어 누를 일이 없다');
+  /* ── 폰에서 <b>좌우 여백</b> ────────────────────────────────────────
+     2026-09-21 · 사장님 「DB관리에서 <b>좌우칸 더 줄여</b>」.
+     재 보니 390px 폰에서 글이 <b>40px</b> 부터 시작했습니다 —
+     바깥(.content 14) + 칸(.section 12) + 줄 카드(tr 13 + 테두리 1).
+     좌우 합쳐 <b>80px</b>, 화면의 <b>20%</b> 가 글자가 아니라 빈자리였습니다.
+     ★ 위아래와 글자 크기는 <b>여기서 안 건드립니다</b> — 줄 사이는 손가락이
+       누를 자리이고, 글자는 [5] 가 따로 봅니다. 좁히려고 그 둘을 줄이면
+       고친 것이 아니라 옮긴 것입니다.                                  */
+  const G = await p3.evaluate(() => {
+    const W = document.documentElement.clientWidth;
+    const row = document.querySelector('#dbBody tr');
+    const td = document.querySelector('#dbBody td');
+    if (!row || !td) return null;
+    const r = row.getBoundingClientRect(), t = td.getBoundingClientRect();
+    return { W, 왼: Math.round(t.left), 오: Math.round(W - t.right),
+      줄폭: Math.round(r.width), 세로: getComputedStyle(row).paddingTop };
+  });
+  is(!!G && G.왼 <= 24 && G.오 <= 24,
+     '  글이 <b>' + (G ? G.왼 : '?') + 'px</b> 부터 시작한다 — 좌우 24px 이하 (고치기 전 40px)');
+  is(!!G && G.줄폭 >= G.W - 30,
+     '  줄 카드가 <b>화면 폭을 거의 다</b> 쓴다 — ' + (G ? G.줄폭 : '?') + '/' + (G ? G.W : '?') + 'px');
+  is(!!G && parseFloat(G.세로) >= 10,
+     '  <b>위아래는 안 줄였다</b> — ' + (G ? G.세로 : '?') + ' (손가락이 누를 자리다)');
   await ctx3.close();
 
   console.log('\n[7] 조용히 터지지 않았나');
