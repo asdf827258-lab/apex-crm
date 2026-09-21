@@ -753,6 +753,25 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const call = (method, q, body) => FN.handler({ httpMethod: method, queryStringParameters: q || {}, body: body || '' })
     .then(r => { try { return JSON.parse(r.body); } catch (e) { return { _raw: r.body, _st: r.statusCode }; } });
 
+  /* ── <b>앱과 서버가 같은 명단을 보는가</b> ─────────────────────────
+     2026-09-21 — 앱은 osIsAppAdmin()(owner·admin)으로, 서버는
+     owner·admin·<b>master</b> 로 물었습니다. 그래서 <b>master 로 로그인한
+     대표에게는 열쇠 칸이 아예 안 떴습니다</b> — 서버는 받아 주는데 앱이
+     안 보여 주니 「안 보인다」 가 됩니다. 명단이 갈리면 빨간불을 켭니다
+     (5번 — 같은 것을 두 곳에 두면 한쪽만 늙습니다).                  */
+  {
+    const fnSrc = fs.readFileSync(path.join(ROOT,'netlify/functions/push.js'),'utf8');
+    const ixSrc = fs.readFileSync(path.join(ROOT,'app/index.html'),'utf8');
+    const grab = (src,re) => { const m = src.match(re);
+      return m ? m[1].split(',').map(x=>x.replace(/['"\s]/g,'')).filter(Boolean).sort().join(',') : ''; };
+    const srvRoles = grab(fnSrc, /\[([^\]]*)\]\.indexOf\(role\)/);
+    const appRoles = grab(ixSrc, /ALMK_ROLES\s*=\s*\[([^\]]*)\]/);
+    is(!!srvRoles && srvRoles===appRoles,
+       '앱과 서버가 <b>같은 명단</b>으로 문을 연다 — 서버 [' + (srvRoles||'못 읽음') +
+       '] · 앱 [' + (appRoles||'못 읽음') + ']');
+    is(/master/.test(appRoles), '  <b>master</b> 가 앱 명단에 있다 — 대표 계정이 실제로 master 다');
+  }
+
   /* 아무나 못 담는다 */
   ROLE = 'member';
   const noRole = await call('POST', { a: 'setkey' },
