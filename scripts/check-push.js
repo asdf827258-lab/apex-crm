@@ -704,6 +704,37 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   /* ★ <b>담고 나면 셋 다 사라지는가.</b> 끝난 일을 계속 세워 두면 그것이
      재촉이 되고, 그 다음부터는 아무도 안 봅니다 — 「헛것을 잡는 점검은 안
      잡는 점검보다 나쁘다」 와 같은 자리입니다 (8번).                  */
+  /* ── 2026-09-22 · <b>「로그인이 확인되지 않았습니다」 가 두 곳에 있었다</b> ──
+     아침에 사장님이 폰에서 「② 서버에 담기」 를 누르셨는데 그 말이 떴습니다.
+     앱은 멀쩡히 쓰고 계셨습니다. 까닭은 <b>앱이 들고 있던 표의 시간이
+     지나</b> 있었던 것인데, 화면만 봐서는 <b>폰이 못 보낸 것인지 서버가
+     물린 것인지</b> 알 수가 없었습니다 — 두 자리가 <b>똑같은 문장</b>을
+     쓰고 있었기 때문입니다. 여기서 셋을 봅니다.                        */
+  const almTokSrc = (ixk.split('function almkTok(')[1]||'').slice(0,700);
+  is(/getSession\s*\(/.test(almTokSrc),
+     '표를 <b>누르는 그 자리에서 새로 받는다</b> — 열 때 담아 둔 것만 쓰지 않는다');
+  /* 진짜로 새 표를 쓰는가 — 들고 있던 것을 낡게 만들어 놓고 불러 본다 */
+  const fresh = await kkPage.evaluate(() => new Promise(res => {
+    /* 이 판에는 진짜 Supabase 가 없다. almkTok 이 보는 <b>그 자리</b>(OS.sb)에
+       가짜를 세워 두고, 끝나면 되돌린다 — 뒤 시험이 영향을 안 받게. */
+    const keptSb = OS.sb, kept = OS.session;
+    OS.sb = { auth: { getSession: () => Promise.resolve({ data: { session: { access_token: '새표' } } }) } };
+    OS.session = { access_token: '낡은표' };
+    almkTok(t => { const held = (OS.session||{}).access_token;
+      OS.sb = keptSb; OS.session = kept; res({ got: t, held: held }); });
+  }));
+  is(fresh.got === '새표', '  낡은 표를 들고 있어도 <b>새 표를 받아서</b> 보낸다 — ' + fresh.got);
+  is(fresh.held === '새표', '  받은 표를 <b>담아 둔다</b> — 다음에 부르는 곳도 같이 새것을 쓴다');
+  /* 표가 아예 없을 때 — <b>서버 말이 아니라 폰 말</b>로 적어야 한다 */
+  const kkNoTok = await kkPage.evaluate(() => { ALMK.err=''; almkSend(''); return ALMK.err; });
+  const srvMsg = fs.readFileSync(path.join(ROOT,'netlify/functions/push.js'),'utf8')
+    .split("if (!uid) return")[1] || '';
+  const srvLine = ((srvMsg.match(/reason:\s*\n?\s*'([^']+)'/)||[])[1]||'').trim();
+  is(/폰/.test(kkNoTok), '표가 없으면 <b>폰 쪽 말</b>로 적는다 — ' + (kkNoTok||'(없음)'));
+  is(!!srvLine && kkNoTok.slice(0,12) !== srvLine.slice(0,12),
+     '<b>서버가 하는 말과 다른 말</b>이다 — 같은 문장이면 어느 쪽이 물렸는지 알 수 없다 (1번)');
+  await kkPage.evaluate(()=>{ ALMK.err=''; });
+
   await kkPage.evaluate(()=>almkSave());
   for(let i=0;i<50;i++){ if(await kkPage.evaluate(()=>!!ALM.key||!!ALMK.err))break; await kkPage.waitForTimeout(200); }
   await kkPage.waitForTimeout(800);
