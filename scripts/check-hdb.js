@@ -194,10 +194,92 @@ const SEED = `
   await page.evaluate(() => hdbUp('d2')); await page.waitForTimeout(400);
   is((await W()).length === 0, '  불러도 <b>아무것도 안 나간다</b> — ' + (await say()).slice(0, 30));
 
+  console.log('\n[8] <b>어느 단계로든</b> 옮긴다 — DB 통합 CRM 과 같은 열 칸 (5번)');
+  /* 여태는 <b>한 칸 앞으로</b>만 갈 수 있었다. 되돌리거나 건너뛰려면
+     DB 통합 CRM 까지 가야 했다. 사장님 말씀 — 「홈에서 고객관리가 모두
+     이루어져야 된다」. */
+  /* ⚠ 어느 줄이 화면에 섰는지는 <b>화면에게 묻는다</b>. 앞 자리에서 d1 을
+     지우기까지 하므로, 여기서 이름을 손으로 적으면 엉뚱한 줄을 잡는다. */
+  const rid = await page.evaluate(() => {
+    const L = (typeof hmSteps === 'function') ? hmSteps() : [];
+    for (let i = 0; i < L.length; i++)
+      if (L[i].k === 'db') { const r = hdbRow(L[i].id); if (r && hdbCan(r)) return L[i].id; }
+    return '';
+  });
+  is(!!rid, '  홈에 <b>내가 고칠 수 있는 줄</b>이 서 있다 — ' + (rid || '없음'));
+  await page.evaluate(() => { HDB.sg = ''; hdbPaint(); }); await page.waitForTimeout(350);
+  const b0 = await page.evaluate(() => {
+    const e = document.querySelector('.hdb-sgb');
+    return e ? { tag: e.tagName, cls: e.className, txt: (e.textContent || '').trim(),
+                 h: Math.round(e.getBoundingClientRect().height),
+                 open: !!document.querySelector('.hdb-sgs') } : null;
+  });
+  is(!!b0 && b0.tag === 'BUTTON', '  단계 딱지가 <b>누를 수 있다</b> — 옆에 새 단추를 안 세운다');
+  is(!!b0 && b0.h >= 44, '  딱지가 손가락 크기다 — ' + (b0 ? b0.h : 0) + 'px');
+  is(!!b0 && b0.open === false, '  고르개는 <b>접힌 채로</b> 시작한다 — 열 칸을 늘 펴면 홈이 길어진다');
+  /* 색은 <b>한 곳</b>에서 온다 — 같은 고객이 두 화면에서 다른 색이면 안 된다 */
+  is(!!b0 && /sg-(gray|yellow|red|blue|green)/.test(b0.cls),
+     '  딱지 색이 <b>CRM 과 같은 다섯 가지</b>다 — ' + (b0 ? b0.cls : ''));
+  const ixc = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const cblk = (ixc.split('function hdbColor(st){')[1] || '').split('function hdbNeeds(')[0];
+  is(/APEX_STAGE\.color/.test(cblk), '  색을 <b>apex-stage 에게 묻는다</b>');
+  const dbc = fs.readFileSync(path.join(ROOT, 'db-crm.html'), 'utf8');
+  is(/APEX_STAGE\.colors/.test(dbc) && !/미접촉:"gray"/.test(dbc),
+     '  DB 통합 CRM 도 <b>같은 곳</b>에서 읽는다 — 색표가 두 벌이 아니다 (5번)');
+
+  await page.evaluate(i => hdbSgToggle(i), rid); await page.waitForTimeout(400);
+  const chips = await page.evaluate(() => [...document.querySelectorAll('.hdb-sg')]
+    .map(x => ({ t: (x.textContent || '').trim(), off: !!x.disabled, h: Math.round(x.getBoundingClientRect().height) })));
+  const order = await page.evaluate(() => (window.APEX_STAGE && APEX_STAGE.order) ? APEX_STAGE.order.slice() : []);
+  is(chips.length === order.length && chips.every((c, i) => c.t === order[i]),
+     '  열 칸이 <b>apex-stage 차례 그대로</b> 선다 — ' + chips.map(c => c.t).join('·'));
+  is(chips.every(c => c.h >= 44), '  칸마다 손가락 크기다');
+  const cur = await page.evaluate(i => (hdbRow(i) || {}).stage || '', rid);
+  is(chips.filter(c => c.off).length === 1 && (chips.find(c => c.off) || {}).t === cur,
+     '  <b>지금 그 단계는 다시 못 누른다</b> — 눌러도 아무 일 없는 단추를 안 세운다 (8번) · ' + cur);
+
+  /* ★ 날짜가 <b>안</b> 필요한 단계 — 그 자리에서 dbs 에 쓴다 */
+  await W();
+  await page.evaluate(i => hdbSgPick(i, '미접촉'), rid); await page.waitForTimeout(600);
+  const back = await W();
+  const bw = back.filter(x => x.t === 'dbs' && x.op === 'update');
+  is(bw.length === 1 && bw[0].id === rid && bw[0].pay && bw[0].pay.stage === '미접촉',
+     '  <b>되돌리는 것도 된다</b> — dbs.update {stage:"미접촉"} · ' + JSON.stringify(bw.map(x => x.pay)));
+  is(await page.evaluate(() => !document.querySelector('.hdb-sgs')),
+     '  고르고 나면 <b>저절로 접힌다</b>');
+  /* ⚠ 맨 위 카드는 단계가 바뀌면 <b>다른 분으로 바뀔 수 있다</b>(급한 순서라).
+     그러니 화면 맨 위가 아니라 <b>그 줄의 딱지</b>를 본다. */
+  const st1 = await page.evaluate(i => ({ row: (hdbRow(i) || {}).stage || '',
+    strip: hdbStripHtml({ k: 'db', id: i, t: 'x' }) }), rid);
+  is(st1.row === '미접촉', '  손에 든 줄도 <b>바로 그 단계</b>가 된다 — ' + st1.row);
+  is(/hdb-sgb[^>]*>미접촉/.test(st1.strip.replace(/\s+/g, ' ')),
+     '  그 줄의 딱지도 <b>바로 그 단계</b>로 그려진다');
+
+  /* ★ 날짜가 필요한 단계 — <b>쓰지 않고 묻는다</b> (1번).
+     ⚠ 계약일이 <b>이미 적혀 있으면</b> 안 묻는 것이 맞다 — 있는 값을 또
+     묻는 것도 성가심이다. 그래서 여기서는 <b>비워 놓고</b> 잰다. */
+  await page.evaluate(() => { try { hdbClose(); } catch (e) {} }); await page.waitForTimeout(250);
+  await page.evaluate(i => { hdbLocal(i, { cAt: '', pAt: '' }); HDB.sg = i; hdbPaint(); }, rid);
+  await page.waitForTimeout(350);
+  await W();
+  await page.evaluate(i => hdbSgPick(i, '계약완료'), rid); await page.waitForTimeout(700);
+  const ask = await W();
+  const aw = ask.filter(x => x.t === 'dbs');
+  const sheet = await page.evaluate(() => ({
+    on: !!(document.getElementById('hdbSheet') || {}).classList &&
+        document.getElementById('hdbSheet').classList.contains('on'),
+    stage: (document.getElementById('hdbStage') || {}).value || '',
+    dates: !(document.getElementById('hdbDates') || { hidden: true }).hidden
+  }));
+  is(aw.length === 0, '  계약완료로 고르면 <b>아무것도 안 쓴다</b> — 날짜를 지어내지 않는다 (1번)');
+  is(sheet.on && sheet.stage === '계약완료' && sheet.dates,
+     '  대신 <b>창을 띄워 날짜를 묻는다</b> — 단계 ' + sheet.stage + ' · 날짜칸 ' + (sheet.dates ? '열림' : '닫힘'));
+  await page.evaluate(() => hdbClose()); await page.waitForTimeout(300);
+
   is(errs.length === 0, '  화면이 터지지 않았다' + (errs.length ? ' — ' + errs[0] : ''));
 
   await ctx.close(); await browser.close(); srv.close();
   console.log('\n' + (bad ? '✗ 홈 DB — 고칠 자리 ' + bad + '곳'
-    : '✓ 홈 DB — 홈에서 단계를 옮기고 고객을 넣고 고칩니다. 쓰는 표는 CRM 과 같습니다'));
+    : '✓ 홈 DB — 홈에서 어느 단계로든 옮기고 고객을 넣고 고칩니다. 쓰는 표도 색도 CRM 과 같습니다'));
   process.exit(bad ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

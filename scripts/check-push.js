@@ -29,6 +29,8 @@ const srv=http.createServer((rq,rs)=>{
   if(!fs.existsSync(f)){rs.writeHead(404);rs.end('no');return;}
   rs.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});fs.createReadStream(f).pipe(rs);
 });
+const b64u=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64u=x=>Buffer.from(String(x).replace(/-/g,'+').replace(/_/g,'/'),'base64');
 let bad=0; const is=(ok,m)=>{console.log((ok?'  ✓ ':'  ✗ ')+m); if(!ok)bad++;};
 
 /* 알림을 <b>가짜로</b> 바꾼다 — 띄우려 한 것을 그대로 받아 적는다 */
@@ -556,12 +558,71 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(R.go==='phone_app', '누르면 <b>켜는 자리로</b> 간다 — '+R.go);
   is(/이름은 알람에 안 담/.test(R.how||''), '거기서도 <b>이름을 안 담는다</b>고 말한다 (3번)');
 
+  console.log('\n[9] <b>열쇠를 이 자리에서 만든다</b> — 만들 길이 없으면 ②는 영영 안 켜진다');
+  /* 알람 ②는 다 만들어져 있었는데 <b>열쇠를 만들 길</b>이 어디에도 없어서
+     「넣으세요」 라고 적어 두고 끝이었다. 여기서 재는 것은 <b>만든 열쇠가
+     서버 코드로 실제로 서명이 되는가</b>다 — 모양만 보면 안 통하는 열쇠도
+     통과한다 (8번). */
+  const kkCtx = await b.newContext({ viewport:{width:430,height:1000} });
+  await kkCtx.route('**://**', r => r.request().url().indexOf('127.0.0.1:'+PORT)>=0 ? r.continue() : r.abort());
+  const kkPage = await kkCtx.newPage();
+  const kkErr=[]; kkPage.on('pageerror',e=>kkErr.push(String(e).slice(0,140)));
+  await kkPage.goto('http://127.0.0.1:'+PORT+'/app/index.html',{waitUntil:'domcontentloaded'});
+  await kkPage.waitForTimeout(2600);
+  await kkPage.evaluate(()=>document.querySelectorAll('#osLoginGate,#osGuideOvl,#osOvl,#osGuide').forEach(x=>x.remove()));
+  await kkPage.evaluate(`OS.session={user:{id:'me',email:'hong@example.com'}};
+    OS.profile={id:'me',name:'홍길동',role:'owner',active:true,plan:'vip'};
+    ALM.keyErr='서버에 알람 열쇠(VAPID_PUBLIC)가 아직 없습니다.';
+    if(!document.getElementById('almHost')){var d=document.createElement('div');d.id='almHost';document.body.appendChild(d);}
+    almCss(); almPaint();`);
+  await kkPage.waitForTimeout(500);
+  is(await kkPage.evaluate(()=>!!document.querySelector('[onclick="almkToggle()"]')),
+     '열쇠가 없으면 <b>만들기 단추</b>가 그 자리에 선다');
+  await kkPage.evaluate(()=>almkToggle()); await kkPage.waitForTimeout(400);
+  /* 만드는 <b>동안</b> 바깥으로 나가는 것이 있나 — 열쇠는 이 브라우저 밖으로 나가면 안 된다 (10번) */
+  const kkOut=[]; const kkSpy=r=>{const u=r.url(); if(u.indexOf('127.0.0.1:'+PORT)<0)kkOut.push(u);};
+  kkPage.on('request',kkSpy);
+  await kkPage.evaluate(()=>almkMake());
+  for(let i=0;i<40;i++){ if(await kkPage.evaluate(()=>!!ALMK.pub||!!ALMK.err))break; await kkPage.waitForTimeout(200); }
+  kkPage.off('request',kkSpy);
+  const KK = await kkPage.evaluate(()=>({pub:ALMK.pub,priv:ALMK.priv,sub:ALMK.sub,err:ALMK.err,
+    hid:((document.querySelector('.almk-v.hide')||{}).textContent||''),
+    txt:((document.querySelector('.almk')||{}).innerText||'')}));
+  is(!KK.err && !!KK.pub && !!KK.priv, '눌러서 <b>열쇠가 만들어진다</b>'+(KK.err?(' ← '+KK.err):''));
+  is(kkOut.length===0, '만드는 동안 <b>바깥으로 아무것도 안 나간다</b> (10번)'+(kkOut.length?(' ← '+kkOut[0]):''));
+  /* ★ 제일 중요한 것 — 서버가 <b>이 열쇠로 실제로 서명</b>할 수 있는가 */
+  let kkOk=false, kkWhy='';
+  try{
+    const kkPubB = unb64u(KK.pub);
+    if (kkPubB.length !== 65) throw new Error('공개 열쇠가 65바이트가 아니다('+kkPubB.length+')');
+    if (unb64u(KK.priv).length !== 32) throw new Error('비밀 열쇠가 32바이트가 아니다');
+    const kkJwk = { kty:'EC', crv:'P-256',
+      x:b64u(kkPubB.subarray(1,33)), y:b64u(kkPubB.subarray(33,65)), d:b64u(unb64u(KK.priv)) };
+    const kkMsg = Buffer.from('apex.vapid.test','utf8');
+    const kkSig = crypto.sign('sha256', kkMsg,
+      { key: crypto.createPrivateKey({format:'jwk',key:kkJwk}), dsaEncoding:'ieee-p1363' });
+    if (kkSig.length !== 64) throw new Error('서명이 64바이트가 아니다('+kkSig.length+')');
+    kkOk = crypto.verify('sha256', kkMsg,
+      { key: crypto.createPublicKey({format:'jwk',key:{kty:'EC',crv:'P-256',x:kkJwk.x,y:kkJwk.y}}),
+        dsaEncoding:'ieee-p1363' }, kkSig);
+  }catch(e){ kkWhy = e && e.message ? e.message : '알 수 없음'; }
+  is(kkOk, '<b>서버가 그 열쇠로 실제로 서명한다</b> — push-core 가 쓰는 그 방법 그대로'+(kkWhy?(' ← '+kkWhy):''));
+  /* 비밀 열쇠는 눈앞에 그대로 펼쳐 두지 않는다 */
+  is(/•/.test(KK.hid), '비밀 열쇠는 <b>가려 둔다</b> — 눌러야 보인다');
+  is(/mailto:/.test(KK.sub||''), '보낼 곳 주소를 <b>로그인한 메일로</b> 채워 둔다 — ' + (KK.sub||'비어 있음'));
+  /* 태그가 글자로 찍히지 않는다 — 이 저장소에서 실제로 났던 사고(#405) */
+  is(!/<b>|<\/b>|&lt;b&gt;/.test(KK.txt), '<b>태그가 글자로 안 찍힌다</b>');
+  is(/Environment variables/.test(KK.txt) && /Trigger deploy/.test(KK.txt),
+     '<b>어디에 넣는지</b> 길을 적어 준다 — 만들어만 주고 끝내지 않는다 (1번)');
+  is(kkErr.length===0, '만드는 동안 안 터졌다'+(kkErr.length?(' ← '+kkErr[0]):''));
+  await kkCtx.close();
+
   console.log('\n[8] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
   console.log('\n──────────────────────────────');
   console.log(bad?('✗ '+bad+'개 — 폰 알람이 아직 못 미덥습니다')
-                 :'✓ 폰이 아침에 울리고, 알람에 고객 이름이 없습니다.');
+                 :'✓ 폰이 아침에 울리고, 알람에 고객 이름이 없습니다. 열쇠는 이 자리에서 만듭니다.');
   process.exit(bad?1:0);
 })();
