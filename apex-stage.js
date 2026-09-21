@@ -302,6 +302,15 @@ var SAY={
        '찾아뵙겠다는 말은 <b>먼저 꺼내지 않습니다.</b> 오시라 하실 때 갑니다.',
   tip:'<b>짧을수록 좋습니다.</b> 오래 붙잡는 것이 정성이 아니라, 빨리 끊어 드리는 것이 정성입니다.'}
 };
+/* ── 단계 <b>색</b>도 한 곳에서 ──────────────────────────────────
+   DB 통합 CRM 과 홈이 같은 단계를 <b>다른 색</b>으로 칠하면, 같은 고객을
+   두 화면에서 보고 서로 다른 것으로 읽습니다. db-crm.html 에만 있던
+   STAGE_C 를 여기로 옮기고 저쪽이 이것을 읽게 했습니다 (5번).
+   값은 다섯 가지뿐입니다 — gray·yellow·red·blue·green. */
+var COLOR={미접촉:'gray',부재:'yellow',거절:'red',TA:'yellow',AP:'blue',
+           PC:'blue',CS:'blue',계약완료:'red',증권전달:'green',소개완료:'green'};
+function stageColor(st){ return COLOR[String(st==null?'':st)]||'gray'; }
+
 /* 상황 목록은 <b>여기서만</b> 나옵니다 — 화면이 제 손으로 또 늘어놓으면
    하나를 더할 때 한쪽만 늘어납니다 (5번). 적은 차례 그대로 나갑니다. */
 function sayList(){
@@ -344,6 +353,8 @@ g.APEX_STAGE={
   /* 그 상황에서 <b>그대로 말할 것</b> — 부재·거절·기고객, 그리고 첫 마디 */
   say:SAY,
   sayList:sayList,
+  color:stageColor,
+  colors:COLOR,
   script:stageScript,
   /* 증권전달 자리에서 <b>말하는 차례</b> — 추가 계약과 가족 소개까지 */
   pdel:PDEL_STEP,
