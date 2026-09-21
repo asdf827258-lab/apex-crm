@@ -14229,15 +14229,18 @@ function almkTok(cb){
   try{ old=(OS.session&&OS.session.access_token)||''; }catch(e){ old=''; }
   var sb=null; try{ sb=(typeof osClient==='function')?osClient():null; }catch(e2){ sb=null; }
   if(!sb||!sb.auth||typeof sb.auth.getSession!=='function'){ cb(old); return; }
-  var done=false,fin=function(t){ if(done)return; done=true; cb(t||old); };
+  /* 시간 제한은 <b>osWait 한 곳</b>이 겁니다 (5번). 여기서 setTimeout 을
+     따로 걸면 시계가 두 벌이 되고, 서버가 조용히 죽었을 때 띠를 세우는
+     자리(osServerDown)를 지나치지 않게 됩니다 — check-nohang 이 그것을
+     잡습니다. 지쳐도 reject 가 아니라 <b>답을 만들어</b> 주므로
+     여기서는 받은 것만 보면 됩니다. */
   try{
-    sb.auth.getSession().then(function(r){
+    osWait(sb.auth.getSession(),'로그인 표 확인').then(function(r){
       var ns=(r&&r.data&&r.data.session)||null;
       if(ns){ try{ OS.session=ns; }catch(e3){} }
-      fin(ns&&ns.access_token);
-    },function(){ fin(''); });
-  }catch(e4){ fin(''); }
-  setTimeout(function(){ fin(''); },6000);
+      cb((ns&&ns.access_token)||old);
+    },function(){ cb(old); });
+  }catch(e4){ cb(old); }
 }
 function almkSave(){
   if(ALMK.busy)return;
