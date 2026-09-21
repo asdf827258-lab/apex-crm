@@ -92,6 +92,11 @@ const SEED = (o) => `
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
  window.setupShow=function(){return false;};window.setupCanRun=function(){return true;};
+ /* 정책·상품 뉴스에 <b>올려 둔 소식</b> — ⑤ 가 그 길을 내는지 본다.
+    제목은 기사 제목이라 그대로 쓴다 (고객 이름이 아니다) */
+ window.bizNewsExtra=function(){return ${o.biz === false ? '[]' : `[{cat:'finance',tag:'새소식',date:'2026-09',
+   title:'실손보험 청구 전산화 2단계 시행 — 의원급 확대',desc:'출처: 연합뉴스 · 원문에서 숫자와 시행일을 확인하고 쓰세요.',
+   url:'https://example.com/a'}]`};};
  try{ ${o.news === false
     ? `localStorage.removeItem('apex_newslive');`
     : `localStorage.setItem('apex_newslive',JSON.stringify({at:'2026-09-21',got:2,drop:0,items:${JSON.stringify(NEWS)}}));`}
@@ -125,6 +130,9 @@ const SEED = (o) => `
     await p.evaluate(SEED(o || {})); await p.waitForTimeout(2400);
     return { ctx, p, errs };
   };
+  /* ⚠ 미션 칸은 <b>접힌 채로</b> 섭니다(홈의 규칙 · check-toss 가 지킵니다).
+     그래서 속을 보려면 먼저 <b>펴야</b> 합니다 — 안 펴고 재면 높이가 0 입니다. */
+  const openMs = async (p) => { await p.evaluate(() => { if (!hmFoldOpen('ms')) hmFoldToggle('ms'); }); await p.waitForTimeout(240); };
   const jump = async (p, i) => { await p.evaluate(j => hmMsJump(j), i); await p.waitForTimeout(260); };
   const txt = (p) => p.evaluate(() => { const e = document.getElementById('hmMsHost'); return e ? e.innerText : ''; });
 
@@ -146,10 +154,21 @@ const SEED = (o) => `
       hostH: host ? Math.round(host.getBoundingClientRect().height) : 0
     };
   });
-  is(s1.has && s1.open, '  미션 칸이 서고 <b>처음에는 펴져</b> 있다');
+  /* ⚠ 홈에는 「<b>처음에는 다 접힌 채로 연다</b>」 는 규칙이 있습니다 —
+     사장님 말씀 「홈 화면이 너무 복잡하다」 에서 나온 규칙이고 check-toss 가
+     지킵니다. 한 번 펴 두었다가 「오늘 할 일」 이 1,173px 로 밀려 첫 화면
+     밖으로 나갔습니다. 그래서 여기서는 <b>접혀 있는지</b>를 봅니다. */
+  is(s1.has && !s1.open, '  미션 칸이 서고 <b>처음에는 접혀</b> 있다 — 홈의 규칙 그대로');
   is(s1.sts.length === 5, '  다섯 칸이다 — ' + s1.sts.join(' '));
   is(s1.above, '  자리가 <b>「오늘 챙길 것」 바로 위</b>다');
-  is(/0\/5/.test(s1.head) && /①/.test(s1.head), '  머리가 <b>어디까지 왔는지</b> 말한다 — ' + s1.head);
+  is(/0\/5/.test(s1.head) && /①/.test(s1.head),
+     '  <b>접힌 채로도</b> 머리가 어디까지 왔는지 말한다 — ' + s1.head);
+  await openMs(A.p);
+  const s1b = await A.p.evaluate(() => {
+    const e = document.getElementById('hmMsHost');
+    return { open: hmFoldOpen('ms'), h: e ? Math.round(e.getBoundingClientRect().height) : 0 };
+  });
+  is(s1b.open && s1b.h > 100, '  누르면 <b>그 자리에서 펴진다</b> — ' + s1b.h + 'px');
 
   console.log('\n[2] <b>체크는 실행 체크판 한 통에만</b> 담긴다 (5번)');
   const ckBefore = await A.p.evaluate(() => ckLoad('day'));
@@ -254,6 +273,7 @@ const SEED = (o) => `
 
   console.log('\n[7] <b>소식을 못 받았으면 지어내지 않는다</b> (1·9번)');
   const N = await open({ news: false });
+  await openMs(N.p);
   await jump(N.p, 1);
   const n2 = await txt(N.p);
   is(/지어내지 않습니다/.test(n2), '  ② 가 <b>지어내지 않는다</b>고 적는다');
@@ -266,6 +286,24 @@ const SEED = (o) => `
   const n4 = await txt(N.p);
   is(!/\[/.test(n4) || !/https?:/.test(n4), '  ④ 카톡 글에 <b>없는 기사</b>를 넣지 않는다');
   is(/전화 드려도 될까요/.test(n4), '  그래도 <b>안부 글은 선다</b> — 칸을 안 비운다');
+
+  console.log('\n[7-2] ⑤ 가 <b>정책·상품 뉴스</b> 길도 낸다 — 「정책상품뉴스에 있음」');
+  await jump(A.p, 4);
+  const t7b = await txt(A.p);
+  is(/정책·상품 뉴스/.test(t7b) && /1건/.test(t7b), '  올려 둔 소식 <b>건수</b>를 적고 길을 낸다');
+  /* ⚠ <b>앱이 몰래 바꾸지 않는다</b> — 오늘 고른 기사는 그대로 서 있어야 한다.
+     저쪽 것으로 슬쩍 갈아 끼우면 사장님이 고른 것이 사라진다 (1번). */
+  is(t7b.indexOf(NEWS[0].t) >= 0 && /캐러셀 만들기/.test(t7b),
+     '  <b>오늘 고른 기사</b>는 그대로 서 있다 — 몰래 갈아 끼우지 않는다');
+  /* 제목을 여기 옮겨 적지 않았다 — 저쪽을 고치면 한쪽만 갈린다 (5번) */
+  const bizSrc = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const fn = bizSrc.slice(bizSrc.indexOf('function hmMsBizHtml'), bizSrc.indexOf('function hmMsBizHtml') + 500);
+  is(!/\.title/.test(fn), '  <b>건수만</b> 센다 — 제목을 여기 옮겨 적지 않았다 (5번)');
+  const NB = await open({ news: false, biz: false });
+  await openMs(NB.p);
+  await jump(NB.p, 4);
+  const nb = await txt(NB.p);
+  is(!/정책·상품 뉴스에 올려 둔/.test(nb), '  올려 둔 것이 없으면 <b>그 줄을 안 세운다</b> — 0건을 적지 않는다');
 
   console.log('\n[8] 다 하면 <b>고객 체크</b>로 넘긴다 — 「TA가 모두 끝났으니」');
   await A.p.evaluate(() => { HM_MS.forEach(m => { if (!ckLoad('day')[m.ck]) ckToggle('day', m.ck); }); HM_MSP.j = null; hmMsPaint(); });
@@ -291,6 +329,7 @@ const SEED = (o) => `
 
   console.log('\n[9] <b>칸이 한 화면을 안 넘는다</b> · 홈은 3.8화면 이하');
   const B = await open({});
+  await openMs(B.p);
   /* ⚠ <b>미션만 돌리면 제일 긴 경우를 못 잰다.</b> 처음에 그렇게 재서
      ③ 전화가 702px 로 나왔는데, 나이를 <b>아는</b> 분 차례가 되면 까닭
      두 줄이 더 붙어 900px 이 됐다 — 점검은 초록인데 화면은 넘쳤다.
@@ -330,6 +369,7 @@ const SEED = (o) => `
 
   console.log('\n[11] 뽑힌 분이 없으면 <b>사람을 지어내지 않는다</b> (1번)');
   const Z = await open({ none: true });
+  await openMs(Z.p);
   const z = await txt(Z.p);
   is(/지어내지 않습니다/.test(z), '  <b>지어내지 않는다</b>고 적는다');
   is(!/홍길동[A-F]/.test(z), '  없는 이름을 <b>만들지 않는다</b>');
