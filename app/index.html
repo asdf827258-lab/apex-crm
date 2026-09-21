@@ -13705,9 +13705,14 @@ function almCardHtml(){
   h+='<div class="alm-st">'+
      '<div class="alm-r"><b>① 앱이 열려 있을 때</b><span class="'+(on?'y':'n')+'">'+
        (on?'됩니다 — 건수까지 말합니다':'알람을 허용해 주세요')+'</span></div>'+
-     '<div class="alm-r"><b>② 앱이 닫혀 있을 때</b><span class="'+(ph?'y':'n')+'">'+
+     /* ⚠ ②는 <b>두 가지</b>가 다 돼야 합니다 — 서버에 열쇠가 있고, 이 폰이
+        담겨 있어야 합니다. 여태는 둘을 뭉뚱그려 「아직입니다」 라고만 해서,
+        열쇠를 다 넣으신 뒤에도 무엇이 남았는지 알 수 없었습니다.
+        이제 <b>다음에 무엇을 할지</b> 말합니다 (1번). */
+     '<div class="alm-r"><b>② 앱이 닫혀 있을 때</b><span class="'+(ph?'y':(ALM.key?'w':'n'))+'">'+
        (ph?'됩니다 — 「확인할 시간입니다」 까지, 건수는 열어야 나옵니다'
-          :(ALM.keyErr?osEsc(ALM.keyErr):'아직입니다'))+'</span></div>'+
+          :(ALM.key?'서버는 <b>준비됐습니다</b> — 위 「🔔 이 폰에 알람 켜기」 만 누르시면 됩니다'
+                   :(ALM.keyErr?osEsc(ALM.keyErr):'아직입니다')))+'</span></div>'+
      '</div>';
   if(!ph&&ALM.keyErr)
     h+='<div class="alm-why" style="margin-top:9px">서버가 보내는 알람(②)을 켜려면 '+
@@ -13755,6 +13760,44 @@ function almkMake(){
   });
 }
 function almkShow(){ ALMK.show=!ALMK.show; almPaint(); }
+/* ── 만든 열쇠를 <b>서버에 바로 담는다</b> ────────────────────────────
+   사장님 말씀 — 「너가 마무리하라고」. 여태는 만들어 드리고 Netlify 에
+   손으로 옮겨 넣으시라고 했습니다. 그 한 걸음 때문에 알람이 안 켜졌습니다.
+
+   ★ 비밀 열쇠는 <b>서버로만</b> 갑니다 — 서버만 읽는 자리(push_keys)에
+     담기고, 앱으로 되돌아오지 않습니다 (10번).
+   ★ 대표·관리자만 담을 수 있습니다 — 서버가 로그인 표를 보고 막습니다.
+     열쇠가 바뀌면 이미 담긴 폰이 전부 못 받으므로 아무나 덮으면 안 됩니다.
+   ★ 담은 뒤 <b>서버에 다시 물어</b> 확인합니다 — 「담았습니다」 라고만 하고
+     실제로는 안 담겼으면 그것이 제일 나쁩니다 (1번).                    */
+function almkTok(){
+  var t='';
+  try{ t=(OS.session&&OS.session.access_token)||''; }catch(e){ t=''; }
+  return t;
+}
+function almkSave(){
+  if(ALMK.busy)return;
+  if(!ALMK.pub||!ALMK.priv){ ALMK.err='먼저 「① 만들기」 를 눌러 주세요.'; almPaint(); return; }
+  if(!ALMK.sub){ ALMK.err='보낼 곳 주소를 mailto:메일 로 적어 주세요.'; almPaint(); return; }
+  var tok=almkTok();
+  if(!tok){ ALMK.err='로그인이 확인되지 않았습니다 — 다시 로그인해 주세요.'; almPaint(); return; }
+  ALMK.busy=true; ALMK.err=''; almPaint();
+  fetch('/.netlify/functions/push?a=setkey',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({token:tok,pub:ALMK.pub,priv:ALMK.priv,subject:ALMK.sub})
+  }).then(function(r){return r.json();}).then(function(j){
+    ALMK.busy=false;
+    if(!j||!j.ok){ ALMK.err=(j&&j.reason)||'담지 못했습니다.'; almPaint(); return; }
+    ALM.keyAt=0;                       /* 담았다는 말만 믿지 않는다 — 다시 묻는다 */
+    almKeyLoad(function(key){
+      if(key){ ALMK.open=false; ALMK.pub=''; ALMK.priv=''; ALMK.show=false;
+        if(typeof toast==='function')
+          toast('알람 열쇠를 서버에 담았습니다 — 이제 폰이 꺼져 있어도 울립니다',7000); }
+      else { ALMK.err='담기는 했는데 서버가 아직 못 읽습니다 — 잠시 뒤 새로고침해 주세요.'; }
+      almPaint();
+    });
+  },function(){ ALMK.busy=false; ALMK.err='서버에 닿지 못했습니다 — 잠시 뒤 다시 해 주세요.'; almPaint(); });
+}
 function almkSubSet(v){ ALMK.sub=(''+(v||'')).replace(/^\s+|\s+$/g,''); almPaint(); }
 function almkCopy(which){
   var t=(which==='pub')?ALMK.pub:(which==='priv')?ALMK.priv:ALMK.sub;
@@ -13783,11 +13826,14 @@ function almkHtml(){
   var v=(typeof osEsc==='function')?osEsc:function(x){return x;};
   var h='<div class="almk">'+
     '<div class="almk-t">🔑 알람 열쇠 만들기</div>'+
-    '<div class="almk-d">열쇠는 <b>이 브라우저 안에서</b> 만들어집니다 — 서버로도, 저에게도 '+
-      '나가지 않습니다. 새로고침하면 사라지니 <b>바로 옮겨 넣어 주십시오.</b></div>'+
+    '<div class="almk-d">① <b>만들기</b> → ② <b>서버에 담기</b>. 두 번만 누르시면 끝납니다 — '+
+      '<b>Netlify 에 들어가실 필요 없습니다.</b> 열쇠는 이 브라우저가 만들고, 비밀 열쇠는 '+
+      '<b>서버로만</b> 갑니다(서버만 읽는 자리에 담깁니다).</div>'+
     '<div class="btn-row">'+
-      '<button type="button" class="btn btn-primary"'+(ALMK.busy?' disabled':'')+' onclick="almkMake()">'+
-        (ALMK.busy?'만드는 중…':(ALMK.pub?'다시 만들기':'만들기'))+'</button>'+
+      '<button type="button" class="btn'+(ALMK.pub?' btn-ghost':' btn-primary')+'"'+(ALMK.busy?' disabled':'')+
+        ' onclick="almkMake()">'+(ALMK.busy?'…':(ALMK.pub?'다시 만들기':'① 만들기'))+'</button>'+
+      (ALMK.pub?('<button type="button" class="btn btn-primary"'+(ALMK.busy?' disabled':'')+
+        ' onclick="almkSave()">'+(ALMK.busy?'담는 중…':'② 서버에 담기')+'</button>'):'')+
       '<button type="button" class="btn btn-ghost" onclick="almkToggle()">닫기</button>'+
     '</div>';
   if(ALMK.err)h+='<div class="alm-why" style="margin-top:9px">'+v(ALMK.err)+'</div>';
@@ -13801,11 +13847,10 @@ function almkHtml(){
     h+='<div class="alm-why" style="margin-top:9px"><b>주소가 비어 있습니다.</b> '+
        '연락 받으실 메일을 <code>mailto:</code> 를 붙여 적어 주십시오 — 없는 주소를 지어 넣으면 '+
        '푸시 서버가 우리를 못 찾습니다.</div>';
-  h+='<div class="almk-how"><b>넣는 곳</b> — Netlify → 이 사이트 → '+
-     '<b>Site configuration</b> → <b>Environment variables</b> → <b>Add a variable</b>. '+
-     '세 줄을 각각 이름 그대로 넣고 저장한 뒤, <b>Deploys → Trigger deploy</b> 로 한 번 다시 올리시면 '+
-     '그때부터 폰이 꺼져 있어도 아침에 울립니다. 넣으신 뒤 이 화면을 새로고침하면 '+
-     '위 ②가 <b>됩니다</b> 로 바뀝니다.</div>';
+  h+='<div class="almk-how"><b>②를 누르면 끝납니다.</b> 위 「② 앱이 닫혀 있을 때」 가 '+
+     '<b>됩니다</b> 로 바뀌면 다 된 것입니다.<br>'+
+     '<span style="color:var(--ink-5)">※ Netlify 환경변수(<code>VAPID_*</code>)에 이미 넣어 두셨다면 '+
+     '그쪽이 먼저입니다 — 여기서 담은 것이 그것을 덮지 않습니다.</span></div>';
   return h+'</div>';
 }
 function almCss(){
@@ -13838,6 +13883,7 @@ function almCss(){
    '.alm-r{display:flex;gap:8px;align-items:baseline;font-size:var(--t6);line-height:1.8}'+
    '.alm-r b{flex:none;min-width:118px}'+
    '.alm-r .y{color:#15803D;font-weight:700}'+
+   '.alm-r .w{color:#B45309;font-weight:700}'+
    '.alm-r .n{color:var(--ink-4)}'+
    '.alm-pv{margin-top:11px;border:1px dashed var(--ink-7);border-radius:var(--r-sm);padding:10px 12px;'+
      'font-size:var(--t6);line-height:1.7;color:var(--ink-3);background:var(--bg-1)}'+
@@ -15743,8 +15789,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-21 02:40';
-var APP_BUILD_NOTE="<b>「열쇠 만들기가 안 보인다」 — 그럴 수밖에 없었습니다.</b> 그 단추는 <b>「🔔 이 폰에 알람 켜기」 를 먼저 눌러야</b> 서버에 열쇠를 물어보고, 그제서야 뜨는 조건이었습니다. 화면을 열어만 보신 눈에는 <b>아무것도 없었습니다.</b> 이제 <b>📲 내 폰에 설치</b> 화면을 <b>열기만 하면</b> 그 자리에서 묻고, 열쇠가 없으면 「🔑 열쇠 만들기」 가 바로 뜹니다(한 시간에 한 번만 묻습니다 · 7번). 가는 길도 다시 적습니다 — <b>설정이 아니라</b> 메뉴 찾기에서 <b>「내 폰에 설치」</b> 이거나, 홈에 뜨는 알람 안내를 누르시면 그 자리로 갑니다. <code>check-push</code> 가 이제 <b>그리는 자리에서 묻는지</b>까지 봅니다 — 되돌려 보고 빨간불을 확인했습니다(8번)."
+var APP_BUILD='2026-09-21 04:10';
+var APP_BUILD_NOTE="<b>폰 알람 — 이제 <u>단추 두 번</u>으로 끝납니다. Netlify 에 들어가실 필요 없습니다.</b> 여태는 열쇠를 만들어 드리고 <code>VAPID_PUBLIC·VAPID_PRIVATE·VAPID_SUBJECT</code> 세 줄을 Netlify 환경변수에 <b>손으로 옮겨 넣으시라</b>고 했습니다. 그 한 걸음 때문에 알람이 켜지지 못한 채로 있었습니다. 이제 <b>📲 내 폰에 설치</b> 화면에서 <b>① 만들기 → ② 서버에 담기</b>, 두 번이면 끝입니다. 열쇠는 이 브라우저가 만들고(WebCrypto), 비밀 열쇠는 <b>서버로만</b> 가서 <b>서버만 읽는 자리</b>(<code>push_keys</code>)에 담깁니다 — 앱으로 되돌아오지 않고, 서버가 앱에 주는 것은 <b>공개 열쇠 하나뿐</b>입니다(10번). <b>대표·관리자만</b> 담을 수 있습니다 — 열쇠가 바뀌면 이미 담긴 폰이 전부 못 받으므로 아무나 덮으면 안 됩니다. 모양(65바이트·32바이트)이 안 맞으면 <b>담지 않습니다</b> — 담아 두고 아침에 조용히 실패하는 것이 제일 나쁩니다(1번). 담은 뒤에는 <b>서버에 다시 물어</b> 확인하고, 「② 앱이 닫혀 있을 때」 줄이 이제 <b>두 단계로</b> 말합니다 — 열쇠가 준비되면 「서버는 준비됐습니다 — 위 알람 켜기만 누르시면 됩니다」. 이미 Netlify 환경변수에 넣어 두셨다면 <b>그쪽이 먼저</b>입니다(표가 덮지 않습니다). <code>check-push</code> 에 열세 자리를 더해 <b>한 바퀴가 실제로 도는지</b> — 만들고·담고·표에서 읽어 <b>그 열쇠로 서명까지 되는지</b> — 를 잽니다. 되돌려 확인: 권한 검사 빼기 · 비밀 열쇠 같이 내보내기 · 모양 검사 빼기 <b>세 번 다 빨간불</b>."
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -33005,6 +33051,22 @@ var OS_PUSH_SQL=[
   "alter table public.push_subs enable row level security;",
   "create index if not exists push_subs_owner on public.push_subs(owner_id);",
   "",
+  "/* 알람 열쇠 — 서버만 읽습니다. 앱에서 만들어 담으면 여기 들어옵니다.",
+  "   RLS 를 켜고 정책을 하나도 두지 않으면 anon·authenticated 는 한 줄도",
+  "   못 봅니다. 비밀 열쇠가 앱으로 새면 남이 우리 이름으로 고객 폰에",
+  "   알림을 쏠 수 있습니다. 줄은 하나만 둡니다. */",
+  "create table if not exists public.push_keys(",
+  "  id      text primary key default 'default',",
+  "  pub     text not null,",
+  "  priv    text not null,",
+  "  subject text not null,",
+  "  made_by uuid,",
+  "  made_at timestamptz not null default now(),",
+  "  constraint push_keys_one_row check (id = 'default')",
+  ");",
+  "alter table public.push_keys enable row level security;",
+  "revoke all on public.push_keys from anon, authenticated;",
+  "",
   "/* 나만 — 읽기·넣기·고치기·지우기 모두 본인으로 묶는다 */",
   "drop policy if exists push_subs_select on public.push_subs;",
   "create policy push_subs_select on public.push_subs",
@@ -33867,7 +33929,7 @@ var HX_SQL={
   "  for each row execute function public.touch_updated_at();",
   "",
   "insert into public.app_config(key, value)",
-  "values ('schema_version', '39')",
+  "values ('schema_version', '40')",
   "on conflict (key) do update set value = excluded.value, updated_at = now();",
   "",
   "notify pgrst, 'reload schema';",
@@ -35892,7 +35954,7 @@ function hxPaint(){var el=document.getElementById('hxPane');if(el)el.innerHTML=h
    지금까지는 시스템 점검을 찾아 들어가 맨 아래까지 내려야 SQL 이 있었다.
    홈 맨 위에 띄우고, 버튼 하나로 복사와 Supabase 열기를 같이 한다.
    SQL 마지막 줄이 서버에 표시를 남기므로, 다 됐는지도 앱이 스스로 안다. */
-var SETUP_VER=39;   /* 39: 폰 알람(push_subs) — 어느 폰에 보낼지만 담는다 */
+var SETUP_VER=40;   /* 40: 알람 열쇠(push_keys) — 서버만 읽는다. Netlify 없이 앱에서 담는다 */
 var SETUP={busy:false,opened:false,hide:false,manual:false,blocked:false,split:false,got:{}};
 
 /* ══ 준비 SQL 을 <b>나눠서</b> 돌린다 ══════════════════════════════════

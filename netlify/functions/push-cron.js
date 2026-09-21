@@ -22,7 +22,7 @@
 const P = require('../../scripts/push-core.js');
 
 exports.handler = async function () {
-  const bad = P.ready();
+  const bad = await P.ready();
   if (bad) return { statusCode: 200, headers: P.JSON_HEAD,
     body: JSON.stringify({ ok: false, sent: 0, reason: bad }) };
 
