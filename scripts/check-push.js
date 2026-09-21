@@ -288,7 +288,10 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   }catch(e){ leak=false; }
   is(!leak, '<b>다른 폰 열쇠로는 못 푼다</b> — 봉했다는 말이 참이다');
   /* VAPID 서명 */
-  const auth=P.vapidAuth('https://fcm.googleapis.com/fcm/send/abc');
+  /* vapidAuth 는 이제 <b>열쇠를 받아</b> 쓴다 — 열쇠가 환경변수에도 표에도
+     올 수 있게 되면서 바뀌었다. 여기서는 위에서 만든 그 열쇠를 그대로 준다. */
+  const auth=P.vapidAuth('https://fcm.googleapis.com/fcm/send/abc',
+    {pub:ENV.VAPID_PUBLIC,priv:ENV.VAPID_PRIVATE,subject:ENV.VAPID_SUBJECT});
   const m=auth.match(/^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/);
   let sigOk=false,aud='';
   if(m){
@@ -619,10 +622,106 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   is(/mailto:/.test(KK.sub||''), '보낼 곳 주소를 <b>로그인한 메일로</b> 채워 둔다 — ' + (KK.sub||'비어 있음'));
   /* 태그가 글자로 찍히지 않는다 — 이 저장소에서 실제로 났던 사고(#405) */
   is(!/<b>|<\/b>|&lt;b&gt;/.test(KK.txt), '<b>태그가 글자로 안 찍힌다</b>');
-  is(/Environment variables/.test(KK.txt) && /Trigger deploy/.test(KK.txt),
-     '<b>어디에 넣는지</b> 길을 적어 준다 — 만들어만 주고 끝내지 않는다 (1번)');
+  /* 이제 Netlify 를 안 거친다 — 「② 서버에 담기」 가 그 자리에 있고,
+     누르면 무엇이 끝나는지 적혀 있어야 한다. 만들어만 주고 끝내면 안 된다 (1번). */
+  is(await kkPage.evaluate(()=>!!document.querySelector('[onclick="almkSave()"]')),
+     '만들면 <b>「② 서버에 담기」</b> 가 바로 옆에 선다 — Netlify 로 보내지 않는다');
+  is(/담기|끝납니다/.test(KK.txt) && !/Environment variables/.test(KK.txt),
+     '<b>누르면 끝난다</b>고 적어 준다 — 옮겨 적으시라고 하지 않는다 (1번)');
   is(kkErr.length===0, '만드는 동안 안 터졌다'+(kkErr.length?(' ← '+kkErr[0]):''));
   await kkCtx.close();
+
+  console.log('\n[10] <b>Netlify 없이 끝난다</b> — 만들고 그 자리에서 담는다');
+  /* 사장님 말씀 — 「너가 마무리하라고」. 여태는 만들어 드리고 Netlify 환경변수에
+     손으로 옮겨 넣으시라고 했습니다. 그 한 걸음 때문에 알람이 안 켜졌습니다.
+     여기서 재는 것은 <b>한 바퀴가 실제로 도는가</b>입니다 —
+     앱이 만들고 → 서버가 대표인지 보고 → 표에 담고 → 그 열쇠로 서명이 되는가.
+     Supabase 자리에 가짜 서버를 세워 <b>진짜 길 그대로</b> 돌립니다.      */
+  const SBP = PORT + 2;
+  let ROW = null, ROLE = 'owner';
+  const fakeSb = http.createServer(async (rq, rs) => {
+    const u2 = url.parse(rq.url, true);
+    let bd = ''; for await (const c of rq) bd += c;
+    const J = (o, st) => { rs.writeHead(st || 200, { 'Content-Type': 'application/json' }); rs.end(JSON.stringify(o)); };
+    if (u2.pathname === '/auth/v1/user')
+      return J((rq.headers.authorization || '').indexOf('tok-ok') >= 0
+        ? { id: '11111111-1111-1111-1111-111111111111' } : {});
+    if (u2.pathname === '/rest/v1/profiles') return J([{ role: ROLE }]);
+    if (u2.pathname === '/rest/v1/push_keys') {
+      if (rq.method === 'POST') { ROW = JSON.parse(bd); return J({}, 201); }
+      return J(ROW ? [{ pub: ROW.pub, priv: ROW.priv, subject: ROW.subject }] : []);
+    }
+    return J([]);
+  });
+  await new Promise(r => fakeSb.listen(SBP, r));
+  process.env.SUPABASE_URL = 'http://127.0.0.1:' + SBP;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
+  /* 열쇠가 <b>환경변수에 있으면 그쪽이 먼저</b> — 표가 덮지 않는다 */
+  delete process.env.VAPID_PUBLIC; delete process.env.VAPID_PRIVATE; delete process.env.VAPID_SUBJECT;
+  Object.keys(require.cache).forEach(k => { if (/push-core|functions\/push\.js/.test(k)) delete require.cache[k]; });
+  const CORE = require(path.join(ROOT, 'scripts/push-core.js'));
+  const FN = require(path.join(ROOT, 'netlify/functions/push.js'));
+  const call = (method, q, body) => FN.handler({ httpMethod: method, queryStringParameters: q || {}, body: body || '' })
+    .then(r => { try { return JSON.parse(r.body); } catch (e) { return { _raw: r.body, _st: r.statusCode }; } });
+
+  /* 아무나 못 담는다 */
+  ROLE = 'member';
+  const noRole = await call('POST', { a: 'setkey' },
+    JSON.stringify({ token: 'tok-ok', pub: 'x', priv: 'y', subject: 'mailto:a@b.c' }));
+  is(noRole.ok === false && /대표|관리자/.test(noRole.reason || ''),
+     '설계사는 <b>열쇠를 못 담는다</b> — 바뀌면 담긴 폰이 전부 못 받는다 · ' + (noRole.reason || ''));
+  const noTok = await call('POST', { a: 'setkey' },
+    JSON.stringify({ token: '', pub: 'x', priv: 'y', subject: 'mailto:a@b.c' }));
+  is(noTok.ok === false, '로그인 없이도 <b>못 담는다</b> · ' + (noTok.reason || ''));
+
+  /* 모양이 틀리면 담지 않는다 — 담아 두고 아침에 조용히 실패하는 것이 제일 나쁘다 */
+  ROLE = 'owner';
+  const badShape = await call('POST', { a: 'setkey' },
+    JSON.stringify({ token: 'tok-ok', pub: 'x', priv: 'y', subject: 'mailto:a@b.c' }));
+  is(badShape.ok === false && /65바이트|모양/.test(badShape.reason || ''),
+     '<b>모양이 틀린 열쇠는 안 담는다</b> — 담아 두고 아침에 조용히 실패하지 않는다 (1번)');
+  is(ROW === null, '  안 담은 것은 <b>정말로 안 담겼다</b>');
+
+  /* 제대로 된 열쇠 — 담기고, 그 열쇠로 서명이 된다 */
+  const real = crypto.generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+  const rj = real.privateKey.export({ format: 'jwk' });
+  const rawPub = Buffer.concat([Buffer.from([4]), unb64u(rj.x), unb64u(rj.y)]);
+  const okSave = await call('POST', { a: 'setkey' }, JSON.stringify({
+    token: 'tok-ok', pub: b64u(rawPub), priv: rj.d, subject: 'mailto:hong@example.com' }));
+  is(okSave.ok === true, '대표가 누르면 <b>담긴다</b>' + (okSave.ok ? '' : (' ← ' + (okSave.reason || ''))));
+  is(!!ROW && ROW.made_by === '11111111-1111-1111-1111-111111111111',
+     '  <b>누가 담았는지</b> 남는다 — ' + ((ROW || {}).made_by || '안 남음'));
+  const getK = await call('GET', {}, '');
+  is(getK.has === true && getK.from === 'db' && getK.key === b64u(rawPub),
+     '서버가 <b>표에서 읽어</b> 앱에 공개 열쇠를 준다 — 출처 ' + (getK.from || ''));
+  /* ★ 비밀 열쇠가 앱으로 <b>절대</b> 안 나간다 (10번) */
+  is(JSON.stringify(getK).indexOf(rj.d) < 0,
+     '<b>비밀 열쇠는 앱으로 안 나간다</b> — 나가면 남이 우리 이름으로 고객 폰에 알림을 쏜다');
+  const rdy = await CORE.ready();
+  is(rdy === '', '<b>서버가 보낼 준비가 됐다</b>' + (rdy ? (' ← ' + rdy) : ''));
+  /* 담긴 열쇠로 실제 서명 */
+  let dbSign = false;
+  try {
+    const KK2 = await CORE.keys();
+    const pb = unb64u(KK2.pub);
+    const sg = crypto.sign('sha256', Buffer.from('t', 'utf8'), {
+      key: crypto.createPrivateKey({ format: 'jwk', key: { kty: 'EC', crv: 'P-256',
+        x: b64u(pb.subarray(1, 33)), y: b64u(pb.subarray(33, 65)), d: b64u(unb64u(KK2.priv)) } }),
+      dsaEncoding: 'ieee-p1363' });
+    dbSign = (sg.length === 64);
+  } catch (e) { dbSign = false; }
+  is(dbSign, '<b>표에서 읽은 열쇠로 실제로 서명한다</b> — 담기만 하고 못 쓰면 헛일이다');
+
+  /* 환경변수가 있으면 <b>그쪽이 먼저</b> — 이미 넣어 두신 분 것을 안 덮는다 */
+  process.env.VAPID_PUBLIC = b64u(rawPub); process.env.VAPID_PRIVATE = rj.d;
+  process.env.VAPID_SUBJECT = 'mailto:env@example.com';
+  Object.keys(require.cache).forEach(k => { if (/push-core/.test(k)) delete require.cache[k]; });
+  const CORE2 = require(path.join(ROOT, 'scripts/push-core.js'));
+  const K3 = await CORE2.keys();
+  is(K3.from === 'env' && K3.subject === 'mailto:env@example.com',
+     '<b>환경변수가 있으면 그쪽이 먼저</b>다 — 표가 덮지 않는다 · 출처 ' + K3.from);
+  delete process.env.VAPID_PUBLIC; delete process.env.VAPID_PRIVATE; delete process.env.VAPID_SUBJECT;
+  fakeSb.close();
 
   console.log('\n[8] 콘솔');
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));

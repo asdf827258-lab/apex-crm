@@ -20,18 +20,82 @@ exports.handler = async function (event) {
   const q = (event && event.queryStringParameters) || {};
   const method = (event && event.httpMethod) || 'GET';
 
-  /* ① 앱이 열쇠를 묻는다 — 없으면 <b>없다고</b> 대답한다 (1번) */
+  /* ① 앱이 열쇠를 묻는다 — 없으면 <b>없다고</b> 대답한다 (1번).
+     ⚠ 나가는 것은 <b>공개 열쇠 하나뿐</b>이다. 비밀 열쇠는 여기서 절대
+        안 내보낸다 — 있는지 없는지(has)만 말한다 (10번). */
   if (method === 'GET') {
-    const why = P.PUB ? '' : '서버에 알람 열쇠(VAPID_PUBLIC)가 아직 없습니다.';
+    const K = await P.keys();
+    const why = K.pub ? '' : '서버에 알람 열쇠가 아직 없습니다.';
     return { statusCode: 200, headers: P.JSON_HEAD,
-      body: JSON.stringify({ key: P.PUB || null, why: why }) };
+      body: JSON.stringify({ key: K.pub || null, why: why, from: K.from, has: !!(K.pub && K.priv) }) };
   }
 
   if (method !== 'POST')
     return { statusCode: 405, headers: P.JSON_HEAD,
       body: JSON.stringify({ ok: false, reason: '쓸 수 없는 방법입니다' }) };
 
-  const bad = P.ready();
+  /* ①-2 <b>열쇠를 저장한다</b> — 앱에서 만든 것을 서버에 담는다.
+     여태는 Netlify 환경변수에 손으로 넣어야 했다. 그 한 걸음 때문에
+     알람이 켜지지 못한 채로 있었다.
+
+     ★ <b>아무나 못 바꾼다.</b> 로그인한 사람의 표를 Supabase 에게 물어
+       확인하고, 그 사람이 <b>대표·관리자</b> 일 때만 받는다. 열쇠가 바뀌면
+       이미 담긴 폰들이 전부 못 받게 되므로, 아무나 덮으면 알람이 조용히
+       죽는다.
+     ★ 받은 것은 <b>되돌려 주지 않는다</b> — 저장됐다는 말만 한다 (10번).
+     ★ 모양을 먼저 본다. 65바이트·32바이트가 아니면 <b>담지 않는다</b> —
+       담아 두고 아침에 조용히 실패하는 것이 제일 나쁘다 (1번).          */
+  if ((q.a || '') === 'setkey') {
+    if (!P.SB_KEY) return { statusCode: 200, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '서버가 장부를 못 읽습니다.' }) };
+    let body = {};
+    try { body = JSON.parse(event.body || '{}') || {}; } catch (e) { body = {}; }
+    const tok = String(body.token || '').trim();
+    if (!tok) return { statusCode: 401, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '로그인한 뒤에 해 주세요.' }) };
+
+    /* 이 토큰이 누구인가 — Supabase 에게 묻는다 */
+    let uid = '';
+    try {
+      const base = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
+      const who = await fetch(base + '/auth/v1/user',
+        { headers: { apikey: P.SB_KEY, Authorization: 'Bearer ' + tok } });
+      const j = await who.json().catch(() => null);
+      uid = (j && j.id) || '';
+    } catch (e) { uid = ''; }
+    if (!uid) return { statusCode: 401, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '로그인이 확인되지 않았습니다 — 다시 로그인해 주세요.' }) };
+
+    const pr = await P.sb('profiles?id=eq.' + encodeURIComponent(uid) + '&select=role&limit=1');
+    const role = ((pr.json || [])[0] || {}).role || '';
+    if (['owner', 'admin', 'master'].indexOf(role) < 0)
+      return { statusCode: 403, headers: P.JSON_HEAD,
+        body: JSON.stringify({ ok: false, reason: '대표·관리자만 알람 열쇠를 넣을 수 있습니다.' }) };
+
+    const pub = String(body.pub || ''), priv = String(body.priv || ''), subject = String(body.subject || '');
+    const n = (x) => { try { return P.unb64u(x).length; } catch (e) { return 0; } };
+    if (n(pub) !== 65) return { statusCode: 400, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '공개 열쇠 모양이 맞지 않습니다(65바이트가 아닙니다).' }) };
+    if (n(priv) !== 32) return { statusCode: 400, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '비밀 열쇠 모양이 맞지 않습니다(32바이트가 아닙니다).' }) };
+    if (!/^mailto:\S+@\S+$/.test(subject)) return { statusCode: 400, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '보낼 곳 주소를 mailto:메일 로 적어 주세요.' }) };
+
+    const w = await P.sb('push_keys?on_conflict=id', {
+      method: 'POST',
+      headers: { apikey: P.SB_KEY, Authorization: 'Bearer ' + P.SB_KEY,
+        'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ id: 'default', pub: pub, priv: priv, subject: subject,
+        made_by: uid, made_at: new Date().toISOString() })
+    });
+    if (!w.ok) return { statusCode: 200, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: false, reason: '저장하지 못했습니다 — ' + String(w.text || '').slice(0, 160) }) };
+    P.keysForget();
+    return { statusCode: 200, headers: P.JSON_HEAD,
+      body: JSON.stringify({ ok: true, saved: true }) };
+  }
+
+  const bad = await P.ready();
   if (bad) return { statusCode: 200, headers: P.JSON_HEAD,
     body: JSON.stringify({ ok: false, reason: bad }) };
 

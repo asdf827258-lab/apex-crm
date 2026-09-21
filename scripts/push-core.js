@@ -13,16 +13,49 @@
  * 나누면 <b>봉하는 법이 두 벌</b>이 되기 쉽습니다 (5번). 그래서 봉하기·
  * 서명·장부는 여기 <b>한 곳</b>에 두고 두 함수가 가리키기만 합니다.
  *
- * ★ 열쇠는 환경변수에만 둡니다 (10번) — 코드에 적지 않습니다.
+ * ★ 열쇠는 <b>환경변수나 push_keys 표</b>에만 둡니다 (10번) — 코드에 적지 않습니다.
+ *   둘 다 있으면 환경변수가 먼저입니다. 표는 서버만 읽습니다.
  * ★ 고객 이름은 여기 오지 않습니다 (3번).
  */
 const crypto = require('crypto');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-const PUB     = process.env.VAPID_PUBLIC  || '';
-const PRIV    = process.env.VAPID_PRIVATE || '';
-const SUBJECT = process.env.VAPID_SUBJECT || '';
+/* ── 열쇠는 <b>두 곳</b>에서 올 수 있다 ──────────────────────────
+   ① 환경변수 VAPID_* — 예전부터 쓰던 자리. <b>있으면 이것이 먼저</b>다.
+   ② push_keys 표(서버만 읽는다) — 앱에서 만들어 저장한 것.
+
+   ②를 만든 까닭: ①을 넣으려면 Netlify 화면에 들어가 세 줄을 손으로
+   붙여 넣어야 한다. 설계사가 혼자 하기 어려운 자리라, 알람을 다 만들어
+   놓고도 <b>켜지지 못한 채</b>로 있었다. 이제 앱에서 단추 하나로 끝난다.
+
+   ★ 표에서 읽은 열쇠도 <b>앱으로는 안 나간다</b> — 나가는 것은 공개 열쇠
+     하나뿐이다(그것은 원래 공개용이다). 비밀 열쇠는 여기서만 쓴다 (10번).
+   ★ 한 번 읽으면 이 함수 안에 담아 둔다 — 알람 한 번에 수백 통을 보내는데
+     줄마다 서버를 부르면 안 된다 (7번).                                */
+const ENV_PUB     = process.env.VAPID_PUBLIC  || '';
+const ENV_PRIV    = process.env.VAPID_PRIVATE || '';
+const ENV_SUBJECT = process.env.VAPID_SUBJECT || '';
+let KEYS = null;                 /* {pub,priv,subject,from} — 한 번만 읽는다 */
+async function keys() {
+  if (KEYS) return KEYS;
+  if (ENV_PUB && ENV_PRIV && ENV_SUBJECT) {
+    KEYS = { pub: ENV_PUB, priv: ENV_PRIV, subject: ENV_SUBJECT, from: 'env' };
+    return KEYS;
+  }
+  /* 장부를 못 읽으면 <b>없다고</b> 한다 — 빈 열쇠로 보내는 시늉을 하지 않는다 (1번) */
+  if (!SB_KEY) return { pub: ENV_PUB, priv: ENV_PRIV, subject: ENV_SUBJECT, from: 'env' };
+  try {
+    const r = await sb('push_keys?id=eq.default&select=pub,priv,subject&limit=1');
+    const row = (r && r.json && r.json[0]) || null;
+    if (row && row.pub && row.priv && row.subject) {
+      KEYS = { pub: row.pub, priv: row.priv, subject: row.subject, from: 'db' };
+      return KEYS;
+    }
+  } catch (e) { /* 못 읽으면 아래에서 「없다」 고 말한다 */ }
+  return { pub: ENV_PUB, priv: ENV_PRIV, subject: ENV_SUBJECT, from: 'env' };
+}
+function keysForget() { KEYS = null; }   /* 새로 저장한 직후 다시 읽게 */
 
 const JSON_HEAD = { 'Content-Type': 'application/json; charset=utf-8' };
 const TABLE = 'push_subs';
@@ -79,25 +112,25 @@ function seal(plain, p256dh, auth) {
 }
 
 /* ── 우리가 보냈다는 서명 (RFC 8292 · VAPID) ──────────────────── */
-function vapidKey() {
-  const pub = unb64u(PUB);
+function vapidKey(K) {
+  const pub = unb64u(K.pub);
   if (pub.length !== 65) throw new Error('VAPID_PUBLIC 이 65바이트가 아닙니다');
   return crypto.createPrivateKey({ format: 'jwk', key: {
     kty: 'EC', crv: 'P-256',
     x: b64u(pub.subarray(1, 33)), y: b64u(pub.subarray(33, 65)),
-    d: b64u(unb64u(PRIV))
+    d: b64u(unb64u(K.priv))
   }});
 }
-function vapidAuth(endpoint) {
+function vapidAuth(endpoint, K) {
   const aud = new URL(endpoint).origin;
   const head = b64u(Buffer.from(JSON.stringify({ typ: 'JWT', alg: 'ES256' }), 'utf8'));
   const body = b64u(Buffer.from(JSON.stringify({
-    aud: aud, exp: Math.floor(Date.now() / 1000) + TTL, sub: SUBJECT
+    aud: aud, exp: Math.floor(Date.now() / 1000) + TTL, sub: K.subject
   }), 'utf8'));
   /* 서명은 r||s 64바이트 그대로여야 한다 — DER 로 보내면 401 이 돌아온다 */
   const sig = crypto.sign('sha256', Buffer.from(head + '.' + body, 'utf8'),
-    { key: vapidKey(), dsaEncoding: 'ieee-p1363' });
-  return 'vapid t=' + head + '.' + body + '.' + b64u(sig) + ', k=' + PUB;
+    { key: vapidKey(K), dsaEncoding: 'ieee-p1363' });
+  return 'vapid t=' + head + '.' + body + '.' + b64u(sig) + ', k=' + K.pub;
 }
 
 /* ── 한 폰에 한 번 ─────────────────────────────────────────────── */
@@ -110,7 +143,7 @@ async function sendOne(row, msg) {
       'Content-Type': 'application/octet-stream',
       'Content-Length': String(body.length),
       TTL: String(TTL),
-      Authorization: vapidAuth(row.endpoint)
+      Authorization: vapidAuth(row.endpoint, await keys())
     },
     body: body
   });
@@ -139,10 +172,11 @@ async function touch(endpoint, failed) {
   });
 }
 
-function ready() {
-  if (!PUB || !PRIV) return '서버에 알람 열쇠(VAPID_PUBLIC · VAPID_PRIVATE)가 아직 없습니다.';
-  if (!SUBJECT) return '서버에 VAPID_SUBJECT(mailto: 주소)가 아직 없습니다.';
+async function ready() {
   if (!SB_KEY) return '서버가 장부를 못 읽습니다 — SUPABASE_SERVICE_ROLE_KEY 가 없습니다.';
+  const K = await keys();
+  if (!K.pub || !K.priv) return '서버에 알람 열쇠가 아직 없습니다 — 앱의 「🔑 알람 켜기 마무리」 를 눌러 주세요.';
+  if (!K.subject) return '서버에 보낼 곳 주소(mailto:)가 아직 없습니다.';
   return '';
 }
 /* ── <b>한 기기에 한 번</b> ────────────────────────────────────
@@ -174,6 +208,7 @@ function morning() {
 }
 
 module.exports = {
-  PUB, SUBJECT, JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN,
+  JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN, SB_KEY,
+  keys, keysForget,
   b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice
 };
