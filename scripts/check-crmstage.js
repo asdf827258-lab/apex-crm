@@ -387,6 +387,55 @@ const SEED=`
      '팀이 <b>하나뿐이면 거르개가 안 선다</b> — 고를 것이 없는 칸을 세우지 않는다');
 
   console.log('\n[8] 콘솔');
+  console.log('\n[9] <b>서버가 안 받으면 「됐습니다」라고 하지 않는다</b>');
+  /* ══ 홈에서 먼저 찾은 병이 이 화면에도 똑같이 있었다 (2026-09-21) ══
+     Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 「0줄 바뀜」</b>
+     으로 돌려준다. error 만 보고 성공으로 치면 화면은 바뀌고 토스트까지
+     뜨는데 <b>서버는 그대로</b>다 — 새로고침하면 원래대로.
+     진짜 DB 로 재 본 값: 지점장이 팀원 고객을 바꾸면 <b>0줄</b>이다.
+     여기서는 그 자리를 그대로 만들어, <b>안 됐으면 안 됐다고</b> 말하는지 본다. */
+  const H=await page.evaluate(async(seed)=>{
+    (0,eval)(seed);
+    window.__T='';window.__W=[];
+    const realToast=window.toast; window.toast=function(m){window.__T=m;};
+    const realConfirm=window.confirm; window.confirm=function(){return true;};
+    const realLoad=window.loadAll; window.loadAll=async function(){};
+    /* 진짜 PostgREST 처럼 — <b>.select() 를 부른 쪽에만</b> 줄을 돌려준다.
+       안 그러면 앱이 .select() 를 빠뜨려도 점검이 초록이라 그대로 나간다 (8번). */
+    const mk=t=>{const st={t,op:'',sel:false};const a={
+      update:()=>{st.op='update';return a;}, insert:()=>{st.op='insert';return a;},
+      upsert:()=>{st.op='upsert';return a;}, delete:()=>{st.op='delete';return a;},
+      select:()=>{st.sel=true;return a;}, eq:()=>a, in:()=>a, order:()=>a, limit:()=>a, single:()=>a,
+      then:(o,n)=>{window.__W.push(st.t+'.'+st.op+(st.sel?'+select':''));
+        if(st.op&&!st.sel)return Promise.resolve({error:null}).then(o,n);
+        const rows=(!st.op)?[]:(window.__RLS?[]:[{id:'x'}]);
+        return Promise.resolve({data:rows,error:null}).then(o,n);}};return a;};
+    const realSb=sb; sb={from:mk};
+    const out={};
+    /* ① 막혔을 때 — 「됐습니다」 라고 하면 안 된다 */
+    window.__RLS=true; window.__T=''; window.__W=[];
+    await sgUp('d3');
+    out.blockSay=window.__T; out.blockSent=window.__W.join(' · ');
+    const nBefore=dbs.length;
+    window.__T='';
+    await removeDb('d3');
+    out.delSay=window.__T; out.delKept=(dbs.length===nBefore);
+    /* ② 받아 줄 때 — 그대로 되어야 한다 */
+    window.__RLS=false; window.__T='';
+    await sgUp('d3');
+    out.okSay=window.__T;
+    sb=realSb; window.toast=realToast; window.confirm=realConfirm; window.loadAll=realLoad;
+    return out;
+  },SEED);
+  is(/받지 않았습니다|권한/.test(H.blockSay)&&!/→/.test(H.blockSay),
+     '  0줄이면 <b>「됐습니다」라고 안 한다</b> — 「'+(H.blockSay||'아무 말 없음').slice(0,46)+'」');
+  is(/담당 설계사|대표/.test(H.blockSay), '  <b>누가 고칠 수 있는지</b>까지 말한다 (1번)');
+  is(/\+select/.test(H.blockSent),
+     '  쓰기 끝에 <b>.select()</b> 를 붙여 줄을 센다 — 안 붙이면 0건과 「모름」을 못 가른다 · '+H.blockSent);
+  is(/받지 않았습니다|권한/.test(H.delSay)&&H.delKept,
+     '  <b>0줄이면 목록에서도 안 지운다</b>');
+  is(/→/.test(H.okSay), '  <b>서버가 받으면 그대로 된다</b> — 「'+(H.okSay||'말 없음').slice(0,30)+'」');
+
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();
