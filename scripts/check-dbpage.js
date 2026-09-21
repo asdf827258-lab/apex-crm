@@ -114,7 +114,12 @@ function fakeServer(total){
       const rest=src.slice(m.index+m[0].length, m.index+m[0].length+400);
       const nxt=rest.indexOf('sb.from(');
       const tail=(nxt>0?rest.slice(0,nxt):rest);
-      if(/^\s*\.(update|insert|upsert|delete)\b/.test(tail))continue;   /* 쓰는 것은 안 본다 */
+      /* 쓰는 것은 안 본다. <b>대괄호로 부르는 것도</b> 쓰는 것이다 —
+         delete 는 예약어라 ES5 에서 sb.from('dbs')['delete']() 로 씁니다.
+         점(.)만 보다가 2026-09-21 에 hdbDel 의 .select('id') 를 「쪽을 안
+         나눈 큰 표 읽기」로 잘못 잡았습니다. 지우는 줄은 한 줄입니다 —
+         헛것을 잡는 점검은 안 잡는 점검보다 나쁩니다 (8번). */
+      if(/^\s*(\.(update|insert|upsert|delete)\b|\[\s*['"](update|insert|upsert|delete)['"]\s*\])/.test(tail))continue;
       if(!/\.select\(/.test(tail))continue;
       if(/\.range\(/.test(tail))continue;
       if(/\.eq\([^)]*\)[\s\S]*\.(single|maybeSingle)\(/.test(tail))continue;

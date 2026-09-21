@@ -52,11 +52,22 @@ const SEED=(role)=>`
  window.osClient=function(){var mk=function(t){var st={t:t,op:'',pay:null,id:''};var a={
    update:function(p){st.op='update';st.pay=p;return a;},insert:function(p){st.op='insert';st.pay=p;return a;},
    upsert:function(p){st.op='upsert';st.pay=p;return a;},'delete':function(){st.op='delete';return a;},
-   select:function(){return a;},order:function(){return a;},range:function(){return a;},limit:function(){return a;},
+   select:function(){st.sel=true;return a;},order:function(){return a;},range:function(){return a;},limit:function(){return a;},
    single:function(){return a;},gte:function(){return a;},'in':function(){return a;},is:function(){return a;},
    neq:function(){return a;},not:function(){return a;},eq:function(k,v){st.id=v;return a;},
    then:function(o,n){window.__W.push({t:st.t,op:st.op,id:st.id,pay:st.pay});
-     return Promise.resolve({data:[],error:null}).then(o,n);}};return a;};
+         /* ★ 진짜 서버처럼 <b>몇 줄을 바꿨는지</b> 돌려준다.
+            Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 0줄</b>로
+            돌려준다 — 여태 이 가짜 서버가 늘 빈 배열만 줘서, 앱이 「0줄인데
+            됐다고 말하는」 병을 <b>한 번도 못 봤다</b>(2026-09-21).
+            window.__RLS 를 켜면 그 자리를 그대로 만든다. */
+         /* ★ <b>.select() 를 부른 쪽에만</b> 줄을 돌려준다 — 진짜 PostgREST
+            가 그렇다. 안 부르면 data 가 없고, 그러면 「0줄」인지 「안 알려
+            줌」인지 <b>구분할 수 없다</b>(1번). 여기서 늘 돌려주면 앱이
+            .select() 를 빠뜨려도 점검이 초록이라 그대로 나간다 (8번). */
+     if(st.op&&!st.sel)return Promise.resolve({error:null}).then(o,n);
+     var rows=(!st.op)?[]:(window.__RLS?[]:[{id:st.id||'new-1'}]);
+     return Promise.resolve({data:rows,error:null}).then(o,n);}};return a;};
    return {from:function(t){return mk(t);},rpc:function(){return Promise.resolve({data:null,error:null});}};};
  HWHO.id='';CM.pick='';CM.picked=true;go('home');`;
 (async()=>{
