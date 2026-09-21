@@ -1050,6 +1050,14 @@ a { color: inherit; text-decoration: none; }
   .app { grid-template-columns: 1fr; height: auto; overflow: visible; }
   .sidebar { height: auto; max-height: none; }
   .main { height: auto; overflow: visible; }
+  /* ⚠ 격자 칸은 <b>min-width 가 auto</b> 라서, 안에 넓은 것이 하나만 있어도
+     칸이 통째로 그만큼 부풀고 <b>화면이 옆으로 밀립니다.</b> 폰에서 보고서
+     여덟 장이 390px 을 넘던 것(교육자금 642px · 상속·증여 610px · 투자
+     510px …)이 전부 이 한 줄이었습니다 — 여덟 군데가 깨진 게 아니라
+     칸이 안 줄어든 것입니다. PC 는 .main 에 overflow-y:auto 가 걸려 있어
+     원래 안 새지만, 폰에서는 그것을 visible 로 풀어서 막을 것이 없었습니다.
+     넓은 것은 아래에서 <b>제 칸 안에서만</b> 옆으로 굴러가게 합니다. */
+  .main, .sidebar { min-width: 0; }
   .top-tab-grid { grid-template-columns: repeat(2,1fr); }
 }
 /* 입력칸 접기 — <b>폰에서만.</b> 인쇄에는 안 걸리게 screen 을 붙인다
@@ -8695,7 +8703,12 @@ window.addEventListener('DOMContentLoaded', function(){
 .ff-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .ff-grid.c3{grid-template-columns:repeat(3,1fr)}
 .ff-grid.c2{grid-template-columns:1fr 1fr}
-.ff-f{display:flex;flex-direction:column;gap:3px}
+/* ⚠ 격자 칸은 min-width 가 auto 라, 폭을 안 준 <input> 이 제 기본 크기
+   (약 190px)만큼 자리를 붙잡아 두 칸이 423px 로 벌어졌습니다. 그 한 자리가
+   팩트파인딩 화면을 폰에서 옆으로 밀고 있었습니다. 칸은 줄어들게 두고,
+   입력칸은 제 칸을 꽉 채우게 합니다 — 넓은 화면에서는 달라지는 것이 없습니다. */
+.ff-f{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ff-f input,.ff-f select,.ff-f textarea{width:100%;min-width:0}
 .ff-f label{font-size:var(--t6,13px);color:#64748B;font-weight:700}
 .ff-f input,.ff-f select,.ff-f textarea{border:1px solid #D8E0EC;border-radius:8px;padding:8px 10px;font-size:var(--t6,13px);font-family:inherit;color:#101828;background:#fff}
 .ff-f input:focus,.ff-f select:focus,.ff-f textarea:focus{outline:none;border-color:#3182F6}
