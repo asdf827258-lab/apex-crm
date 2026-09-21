@@ -67,12 +67,25 @@ const SEED = `
        insert:function(p){st.op='insert';st.pay=p;return api;},
        upsert:function(p){st.op='upsert';st.pay=p;return api;},
        'delete':function(){st.op='delete';return api;},
-       select:function(){return api;},order:function(){return api;},range:function(){return api;},
+       select:function(){st.sel=true;return api;},order:function(){return api;},range:function(){return api;},
        limit:function(){return api;},single:function(){return api;},gte:function(){return api;},
        'in':function(){return api;},is:function(){return api;},neq:function(){return api;},not:function(){return api;},
        eq:function(k,v){st.id=v;return api;},
-       then:function(ok,no){ window.__W.push({t:st.tbl,op:st.op,id:st.id,pay:st.pay});
-                             return Promise.resolve({data:[],error:null}).then(ok,no); }
+       then:function(ok,no){
+         window.__W.push({t:st.tbl,op:st.op,id:st.id,pay:st.pay});
+         /* ★ 진짜 서버처럼 <b>몇 줄을 바꿨는지</b> 돌려준다.
+            Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 0줄</b>로
+            돌려준다 — 여태 이 가짜 서버가 늘 빈 배열만 줘서, 앱이 「0줄인데
+            됐다고 말하는」 병을 <b>한 번도 못 봤다</b>(2026-09-21).
+            window.__RLS 를 켜면 그 자리를 그대로 만든다. */
+         /* ★ <b>.select() 를 부른 쪽에만</b> 줄을 돌려준다 — 진짜 PostgREST
+            가 그렇다. 안 부르면 data 가 없고, 그러면 「0줄」인지 「안 알려
+            줌」인지 <b>구분할 수 없다</b>(1번). 여기서 늘 돌려주면 앱이
+            .select() 를 빠뜨려도 점검이 초록이라 그대로 나간다 (8번). */
+         if(st.op&&!st.sel)return Promise.resolve({error:null}).then(ok,no);
+         var rows=(!st.op)?[]:(window.__RLS?[]:[{id:st.id||'new-1'}]);
+         return Promise.resolve({data:rows,error:null}).then(ok,no);
+       }
      };
      return api;
    };
@@ -189,8 +202,13 @@ const SEED = `
     return { can: hdbCan(r), strip: hdbStripHtml({ k: 'db', id: 'd2', t: r.name }) };
   });
   is(other.can === false, '  설계사는 남의 고객을 <b>못 고친다</b>');
-  is(/다른 분 고객/.test(other.strip) && !/올리기<\/button>/.test(other.strip),
+  is(!/올리기<\/button>/.test(other.strip) && !/hdbSgToggle/.test(other.strip),
      '  <b>단추를 아예 안 세운다</b> — 눌러도 안 되는 단추를 세우면 다른 단추도 안 믿게 된다 (8번)');
+  /* 「못 고칩니다」 만 적으면 고장으로 보인다 — <b>누구 것이고 누가 고칠 수
+     있는지</b>까지 적어야 다음에 무엇을 할지 아신다 (1번) */
+  is(/못 바꿉니다|못 고칩니다/.test(other.strip) && /담당 설계사/.test(other.strip) && /대표/.test(other.strip),
+     '  <b>왜 안 되는지·누가 할 수 있는지</b> 적는다 — ' +
+     ((other.strip.replace(/<[^>]*>/g,'').match(/이분은[^.]*\./)||[''])[0]||'(못 읽음)').slice(0,56));
   await page.evaluate(() => hdbUp('d2')); await page.waitForTimeout(400);
   is((await W()).length === 0, '  불러도 <b>아무것도 안 나간다</b> — ' + (await say()).slice(0, 30));
 
@@ -275,6 +293,84 @@ const SEED = `
   is(sheet.on && sheet.stage === '계약완료' && sheet.dates,
      '  대신 <b>창을 띄워 날짜를 묻는다</b> — 단계 ' + sheet.stage + ' · 날짜칸 ' + (sheet.dates ? '열림' : '닫힘'));
   await page.evaluate(() => hdbClose()); await page.waitForTimeout(300);
+
+  console.log('\n[9] <b>서버가 안 받으면 「됐습니다」라고 하지 않는다</b>');
+  /* ══ 이 저장소에서 제일 비싸게 배운 자리 (2026-09-21) ══════════════
+     사장님 말씀 — 「홈화면에서 다 되게하자 했는데 안된다」.
+     진짜 DB 에 대표 계정으로 눌러 보고 알았습니다. Supabase 는 RLS 로 막힌
+     <b>UPDATE·DELETE 를 에러가 아니라 「0줄 바뀜」</b>으로 돌려줍니다.
+     우리는 res.error 만 보고 성공으로 쳐서, 화면을 바꾸고 「홍길동 님 ·
+     TA → AP」 토스트까지 띄웠습니다. <b>새로고침하면 원래대로.</b>
+     재 본 값 — 대표(master)가 팀원 고객을 바꾸면 0줄, 지우면 0줄.
+
+     점검이 이걸 못 본 까닭은 <b>가짜 서버가 늘 빈 배열만</b> 줬기 때문입니다.
+     빈 배열은 「0줄」인데 우리는 그것을 성공으로 읽고 있었으니, 점검은
+     <b>거짓말하는 판을 그대로 통과</b>시켰습니다 (8번).
+     이제 가짜 서버가 <b>몇 줄을 바꿨는지</b> 말하고, __RLS 로 막힌 자리를
+     그대로 만들어 봅니다.                                             */
+  /* 앞 칸들이 d1 을 지웠으므로 <b>여기서 쓸 줄을 새로 심는다</b> —
+     남은 것에 기대면 앞 칸을 고칠 때마다 여기가 같이 깨진다 */
+  const rid9 = await page.evaluate(() => {
+    AR.db.push({ id: 'z9', who: 'me', name: '홍길동Z9', region: '순천', src: '일반',
+                 stage: 'TA', days: 4, n: 1, res: '부재', cAt: '', pAt: '' });
+    hdbPaint(); return 'z9';
+  });
+  await page.waitForTimeout(300);
+  is((await page.evaluate(i => !!hdbRow(i), rid9)) === true, '  잴 줄을 심었다 — ' + rid9);
+  const st9 = await page.evaluate(i => hdbRow(i).stage, rid9);
+  const n9  = await page.evaluate(i => hdbRow(i).n || 0, rid9);
+  const len9 = await page.evaluate(() => AR.db.length);
+  await page.evaluate(() => { window.__RLS = true; window.__T = ''; });
+
+  await page.evaluate(i => hdbTo(i, 'AP'), rid9); await page.waitForTimeout(600);
+  const r9a = await page.evaluate(i => ({ stage: hdbRow(i).stage, t: window.__T || '', err: HDB.err }), rid9);
+  is(r9a.stage === st9,
+     '  0줄이면 <b>손에 든 값도 안 고친다</b> — ' + st9 + ' 그대로 (화면만 바뀌면 거짓말이 된다)');
+  is(!/→/.test(r9a.t) && /받지 않았습니다|권한/.test(r9a.t + r9a.err),
+     '  <b>「됐습니다」라고 안 한다</b> — 「' + (r9a.t || r9a.err || '아무 말 없음').slice(0, 46) + '」');
+  is(/담당 설계사|대표/.test(r9a.t + r9a.err),
+     '  <b>누가 고칠 수 있는지</b>까지 말한다 (1번)');
+
+  await page.evaluate(() => { window.__T = ''; });
+  await page.evaluate(i => hdbCall(i, '부재'), rid9); await page.waitForTimeout(600);
+  is((await page.evaluate(i => hdbRow(i).n || 0, rid9)) === n9,
+     '  통화 기록도 <b>0줄이면 접촉 횟수를 안 올린다</b> — ' + n9 + '회 그대로');
+
+  await page.evaluate(() => { window.__T = ''; HDB.id = ''; });
+  await page.evaluate(i => hdbDel(i), rid9); await page.waitForTimeout(700);
+  is((await page.evaluate(() => AR.db.length)) === len9,
+     '  <b>0줄이면 목록에서도 안 지운다</b> — ' + len9 + '줄 그대로');
+
+  /* ★ 막힌 것만 잡고 <b>되는 것은 그대로</b> 되어야 한다 — 늘 빨간불인
+     점검은 안 울리는 알람만큼 나쁘다 (8번) */
+  await page.evaluate(() => { window.__RLS = false; window.__T = ''; });
+  await page.evaluate(i => hdbTo(i, 'AP'), rid9); await page.waitForTimeout(600);
+  const r9b = await page.evaluate(i => ({ stage: hdbRow(i).stage, t: window.__T || '' }), rid9);
+  is(r9b.stage === 'AP' && /→/.test(r9b.t),
+     '  <b>서버가 받으면 그대로 된다</b> — ' + (r9b.t || '(말 없음)').slice(0, 40));
+
+  console.log('\n[10] <b>고칠 수 있는 사람 명단이 서버와 같다</b>');
+  /* 서버(public.is_editor_all): admin·owner·master·hq·branch_manager.
+     앱이 더 넓으면 <b>단추는 뜨는데 0줄</b>이 되고, 더 좁으면 할 수 있는
+     일을 못 하게 막는다. 2026-09-21 사장님 결정 — 대표·본부장까지,
+     지점장(leader)은 보기만. */
+  const ROLE9 = await page.evaluate(() => {
+    const out = {}, real = OS.profile.role;
+    ['member', 'leader', 'manager', 'education_manager', 'branch_manager', 'master', 'admin', 'owner']
+      .forEach(function (rr) { OS.profile.role = rr; out[rr] = hdbCan(hdbRow('d2')); });
+    OS.profile.role = real;
+    return out;
+  });
+  is(ROLE9.master === true && ROLE9.branch_manager === true &&
+     ROLE9.admin === true && ROLE9.owner === true,
+     '  대표·본부장·관리자는 <b>팀원 고객을 고칠 수 있다</b>');
+  is(ROLE9.leader === false && ROLE9.member === false &&
+     ROLE9.manager === false && ROLE9.education_manager === false,
+     '  지점장·교육담당·설계사는 <b>남의 고객에 단추가 안 뜬다</b> — 서버가 안 받는 자리다');
+  const src9 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const m9 = src9.match(/HDB_EDIT_ROLES\s*=\s*\[([^\]]*)\]/);
+  is(!!m9 && /master/.test(m9[1]) && /branch_manager/.test(m9[1]) && !/leader/.test(m9[1]),
+     '  명단이 <b>한 곳</b>에 적혀 있다 (HDB_EDIT_ROLES) — ' + (m9 ? m9[1].replace(/['"\s]/g, '') : '못 읽음'));
 
   is(errs.length === 0, '  화면이 터지지 않았다' + (errs.length ? ' — ' + errs[0] : ''));
 
