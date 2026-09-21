@@ -62,7 +62,11 @@ const SEED = (o) => `
  GB.rows=[{id:'me',name:'홍길동'},{id:'u2',name:'홍길순'}];
  var _e={};window.arRowOf=function(i){var m={me:'홍길동',u2:'홍길순'};return m[i]?{id:i,name:m[i],sc:_e,raw:_e}:null;};
  AR.rep={};AR.loaded=true;AR.busy='';AR.err='';
+ /* 내 고객을 <b>둘 이상</b> 둔다 — 한 분뿐이면 「다음 분」 이 설 이유가
+    없어서, 그 단추를 안 만들어도 점검이 초록이 된다 (8번) */
  AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'일반',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
+        {id:'d3',who:'me',name:'홍길동C',region:'순천',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''},
+        {id:'d4',who:'me',name:'홍길동D',region:'순천',src:'일반',stage:'PC',days:6,n:3,res:'상담',cAt:'',pAt:''},
         {id:'d2',who:'u2',name:'홍길순B',region:'천안',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''}];
  AR.cliRows=[];AR.calls=[];CM.loaded=true;CM.who={me:'홍길동',u2:'홍길순'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
@@ -103,9 +107,13 @@ const bones = (p) => p.evaluate(() => {
     const r = e.getBoundingClientRect();
     if (r.height <= 8) return null;
     const id = e.id || (e.className.toString().split(/\s+/)[0] || e.tagName.toLowerCase());
-    /* 높이는 <b>100px 자리</b>로 뭉뚱그린다 — 글자 한 줄 차이로 헛빨간불이
-       나면 안 되지만, 화면 한 장이 생겼다 없어지는 것은 잡아야 한다 */
-    return id + '~' + Math.round(r.height / 100);
+    /* 높이는 <b>400px(반 화면) 자리</b>로 뭉뚱그린다. 100px 로 쟀더니
+       카드 <b>안</b>에 소식 한 줄(90px)이 늘어난 것까지 「다른 화면」으로
+       쳤다 — 그건 칸이 생긴 것이 아니라 <b>안에서 말이 달라진 것</b>이고,
+       이 점검이 스스로 그렇게 적어 두었다. 잡으려는 것은 준비 SQL 425px ·
+       출발 점검 778px 처럼 <b>화면 한 장 반이 통째로</b> 생겼다 없어지는
+       것이다. 헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번).         */
+    return id + '~' + Math.round(r.height / 400);
   }).filter(Boolean);
 });
 const tall = (p) => p.evaluate(() => {
@@ -143,9 +151,16 @@ const tall = (p) => p.evaluate(() => {
      '  소식을 못 받았을 때도 <b>뼈대가 같다</b> — 칸은 서고 안에서만 말이 달라진다');
 
   console.log('\n[2] <b>짧아졌다</b> — 폰에서 2.8화면 이하');
+  /* ── 기준선 · 왜 3.0 인가 ─────────────────────────────────────────
+     2026-09-21 · 고치기 전 <b>4.2화면</b>(3,541px). 접고 나서 2.7화면.
+     그 뒤에 사장님 말씀대로 카드 안에 <b>오늘 보낼 소식 한 줄</b>(90px)과
+     <b>다음 분</b> 줄(70px)을 더해 2.85화면이 됐다. 얻은 것이 분명하고
+     둘 다 매일 쓰는 줄이라 그만큼은 치른다.
+     이 자는 <b>생각 없이 늘어나는 것</b>을 막으려는 것이다 — 3.0 을 넘기면
+     무엇을 얻고 치렀는지 여기에 적고 올려야 한다 (check-toss 와 같은 규칙). */
   const hA = await tall(A.p);
-  is(hA > 0 && hA <= 844 * 2.8,
-     '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(1) + '개 (2.8개 이하 · 고치기 전 4.2개)');
+  is(hA > 0 && hA <= 844 * 3.0,
+     '  홈 높이 <b>' + hA + 'px</b> = 화면 ' + (hA / 844).toFixed(1) + '개 (3.0개 이하 · 고치기 전 4.2개)');
 
   console.log('\n[3] ⚙️ 관리 — 접혀 있고, 머리가 말해 주고, 펴면 다 있다');
   const m1 = await A.p.evaluate(() => {
@@ -220,6 +235,45 @@ const tall = (p) => p.evaluate(() => {
   await A.p.evaluate(() => hmIgNext()); await A.p.waitForTimeout(600);
   const next = await A.p.evaluate(() => (document.getElementById('hmIgHost') || {}).innerText.split('\n')[0]);
   is(!!next && next !== again, '  「다른 기사로」 를 누르면 <b>바뀐다</b> — ' + (next || '').slice(0, 26));
+
+  console.log('\n[7] <b>따라만 하면 된다</b> — 소식 한 줄 · 다음 분');
+  /* 사장님 말씀 — 「TA-AP-PC-CS 상황에 맞게 계속 띄우고 <b>따라만 하면
+     그대로 관리</b>할수 있도록」, 「상황에 맞게 뉴스 읽어주면서 전달」.
+     여태 뉴스는 거절·기고객·증권전달의 도구 목록에만 있어 TA·AP·PC·CS 에는
+     <b>연락할 구실</b>이 없었고, 오늘 못 닿는 분이 맨 위에 그대로 서 있으면
+     그 다음 분으로 갈 길이 없었다.                                     */
+  const nw = await A.p.evaluate(() => {
+    const e = document.querySelector('.hm-nw');
+    return { 있나: !!e, 글: e ? e.innerText.replace(/\s+/g, ' ') : '',
+      복사: !!document.querySelector('.hm-nw [onclick^="nlCopy"]') };
+  });
+  is(nw.있나 && nw.글.indexOf(NEWS[0].t) >= 0,
+     '  한 분 카드에 <b>오늘 보낼 소식</b>이 단계와 상관없이 선다');
+  is(nw.복사, '  <b>보낼 문구</b>는 뉴스 화면과 같은 것을 부른다 (5번)');
+  /* 소식을 못 받았으면 <b>빈 줄을 안 세운다</b> — 「없음」 은 자리만 먹는다 */
+  is(await C.p.evaluate(() => !document.querySelector('.hm-nw')),
+     '  받아 둔 소식이 없으면 <b>그 줄을 아예 안 세운다</b>');
+
+  const w0 = await A.p.evaluate(() => ((document.querySelector('.hm-now-m .m b') || {}).innerText || '').trim());
+  const nx = await A.p.evaluate(() => {
+    const e = document.querySelector('.hm-nx-b'); return e ? e.innerText.replace(/\s+/g, ' ') : '';
+  });
+  is(/다음 분/.test(nx), '  <b>다음 분</b> 단추가 있다 — 「' + nx + '」');
+  await A.p.evaluate(() => { const e = document.querySelector('.hm-nx-b'); if (e) e.click(); });
+  await A.p.waitForTimeout(800);
+  const w1 = await A.p.evaluate(() => ((document.querySelector('.hm-now-m .m b') || {}).innerText || '').trim());
+  is(!!w0 && !!w1 && w0 !== w1, '  누르면 <b>다음 분으로 넘어간다</b> — ' + w0 + ' → ' + w1);
+  /* ★ 미룬 것을 <b>했다고 적지 않는다</b> (1번) — 기록이 아니라 차례만 바꾼다 */
+  is(await A.p.evaluate(() => (window.__W || []).length === 0 && !/했/.test(window.__T || '')),
+     '  미루는 것은 <b>기록이 아니다</b> — 안 한 일을 했다고 적지 않는다 (1번)');
+  const back = await A.p.evaluate(() => {
+    const e = document.querySelector('.hm-nx-u'); return e ? e.innerText.replace(/\s+/g, ' ') : '';
+  });
+  is(/다시 보기/.test(back), '  <b>되돌릴 길</b>이 있다 — 「' + back + '」');
+  await A.p.evaluate(() => { const e = document.querySelector('.hm-nx-u'); if (e) e.click(); });
+  await A.p.waitForTimeout(800);
+  is((await A.p.evaluate(() => ((document.querySelector('.hm-now-m .m b') || {}).innerText || '').trim())) === w0,
+     '  누르면 <b>미뤄 둔 분이 도로</b> 올라온다 — ' + w0);
 
   is(A.errs.length === 0 && B.errs.length === 0 && C.errs.length === 0,
      '  화면이 터지지 않았다' + (A.errs[0] || B.errs[0] || C.errs[0] || ''));
