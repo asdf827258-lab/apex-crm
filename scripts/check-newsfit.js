@@ -150,6 +150,82 @@ const pr2 = F.aiPrompt([{ src: '통화 메모', at: '2026-08-01', t: dirty }], [
 is(!/\d{6}\s*-\s*\d{7}/.test(pr2) && pr2.indexOf('김홍락') < 0,
    'AI 에게 보내는 글은 <b>씻고 나간다</b>');
 
+head('[7-4] <b>직업을 읽는다</b> — 다만 말할 수 있는 세 가지만 (1번)');
+/* 사장님 물음 (2026-09-22) — 「직업 연령대도 읽어서 맞출수 있어?」
+   됩니다. 다만 <b>짐작 없이 말할 수 있는 것만</b> 읽습니다 — 사업자·직역연금·
+   동종업계 셋뿐입니다. 「생산직」·「청소」·「it」 로 갈래를 정하려면 「이런 일을
+   하니 이런 소식이 궁금하시다」는 <b>우리 짐작</b>을 엹어야 합니다.           */
+is((F.jobHit('순천시청 공무원') || {}).cat === 'econ',
+   '<b>공무원</b>은 읽는다 — 직역연금 자리라 노후 이야기의 결이 다르다');
+is((F.jobHit('장교') || {}).cat === 'econ', '  <b>장교·군인</b>도 같다');
+is((F.jobHit('보호감찰소직원') || {}).cat === 'econ', '  <b>보호감찰소</b>도 같다');
+is((F.jobHit('보험설계사') || {}).cat === 'ins',
+   '<b>같은 업계</b>에 계시면 보험 — 업계 소식을 일로 보신다');
+is(F.jobHit('생산직/설비') === null, '<b>생산직</b>은 안 읽는다 — 짐작을 얹어야 한다');
+is(F.jobHit('청소') === null && F.jobHit('it') === null,
+   '  <b>청소·it</b> 도 안 읽는다 — 실제로 적혀 있는 직업들이다');
+is(F.jobHit('퇴직한 공무원') === null,
+   '<b>「퇴직」이 있으면 안 읽는다</b> — 지금 그 자리가 아니다');
+is(F.jobHit('') === null && F.jobHit(null) === null, '  빈 칸은 당연히 안 읽는다');
+const jobFit = fit({ f_job: '순천시청 공무원' }, []);
+is(jobFit.read && jobFit.cat === 'econ' && plain(jobFit.why && jobFit.why.say).indexOf('순천시청') >= 0,
+   '근거에 <b>적힌 그대로</b> 적혀 나온다 — 「' +
+   plain(jobFit.why && jobFit.why.say).slice(0, 44) + '」');
+is(fit({ f_job: '제조업 대표' }, []).cat === 'fund',
+   '  <b>사장님은 정책자금</b>으로 — 한 사람이 두 갈래로 갈리지 않는다 (5번)');
+
+head('[7-5] <b>나이대는 가장 약한 근거</b>로 다룬다 (1번)');
+const band = b => F.fit({ fp: {}, notes: [], band: b, today: T });
+is(band('2030').read && band('2030').cat === 'help',
+   '<b>20·30대</b> — 청년·신혼부부·출산 지원은 실제로 나이로 갈린다');
+is(band('60').read && band('60').cat === 'econ',
+   '<b>60대 이상</b> — 연금·기초연금도 그렇다');
+is(band('4050').read === false,
+   '<b>40·50대는 안 만들었다</b> — 나이로 갈리는 제도가 없어 ' +
+   '지어내느니 <b>모른다고</b> 한다');
+is(band('').read === false && band(null).read === false,
+   '  출생연도를 모르면 당연히 모른다 — 배정 DB 에는 그 칸이 아예 없다');
+const strong = F.fit({ fp: { f_job: '자영업' }, notes: [], band: '2030', today: T });
+is(strong.cat === 'fund',
+   '<b>진짜 근거가 나이대를 이긴다</b> — 자영업 + 20·30대 → ' + plain(strong.cat));
+is((strong.alts || []).length > 0,
+   '  진 것은 <b>alts 로 남긴다</b> — 사장님이 바꾸실 수 있게');
+is(plain(band('60').why && band('60').why.src).indexOf('출생년도') >= 0,
+   '  근거가 <b>어디서 왔는지</b> 적는다 — 「' + plain(band('60').why && band('60').why.src) + '」');
+
+head('[7-6] <b>칸에 든 것이 연도인지 날짜인지</b> 가린다 (1번)');
+/* 실제 자료 — clients.birth_year 에 <b>생년월일</b>을 적어 두신 분이 7분
+   계셨다(19600324 · 850627). 그냥 버리면 <b>아는 나이를 모른다</b>고 적게 되고,
+   마음대로 고치면 지어내는 것이다. <b>틀림없을 때만</b> 읽는다.        */
+const ST = require(path.join(ROOT, 'apex-stage.js')).APEX_STAGE;
+const born = v => ST.bornYear(v, 2026);
+is(born(1988) === 1988, '네 자리는 <b>그대로</b> 연도다');
+is(born(19600324) === 1960, '여덟 자리 <b>YYYYMMDD</b> → 앞 네 자리 · 실제로 적혀 있던 값이다');
+is(born(850627) === 1985 && born(741201) === 1974,
+   '여섯 자리 <b>YYMMDD</b> → 나이가 말이 되는 쪽이 <b>하나뿐일 때만</b>');
+is(born(20315) === 2002, '  다섯 자리는 <b>앞의 0 이 떨어진</b> 여섯 자리다 (020315)');
+is(born(200315) === 0,
+   '<b>둘 다 말이 되면 모른다고</b> 한다 — 200315 는 1920 도 2020 도 된다 (1번)');
+is(born(19601332) === 0 && born(196) === 0 && born(null) === 0,
+   '  달·날이 말이 안 되거나 모양이 아니면 <b>안 읽는다</b>');
+is(ST.ageBand(19600324, 2026) === '60' && ST.ageBand(850627, 2026) === '4050',
+   '  나이대도 그만큼 더 읽힌다 — <b>세는 곳은 여전히 한 곳</b>이다 (5번)');
+
+head('[7-7] <b>주소를 「집 알아보시는 분」으로 읽지 않는다</b> (8번)');
+/* 실제 메모 — 화재보험 상담을 하신 분인데 주소에 「…돌산청솔<b>2단지
+   아파트</b>)」 가 있어 부동산으로 읽혔다. 「아파트」는 <b>사는 곳</b>이지
+   <b>하시려는 일</b>이 아니다 — 나머지 낱말과 결이 달라 빼다.              */
+const addr = '강남동로 46-25 204동 1102호 (우두리 돌산청솔 2단지아파트)';
+is(fit({}, [{ src: '가구 메모', at: '', t: addr }]).cat !== 'realty',
+   '주소에 들어 있는 「<b>아파트</b>」 를 부동산 관심으로 안 읽는다');
+is(fit({}, [{ src: '가구 메모', at: '', t: '전세 재계약 알아보시는 중' }]).cat === 'realty',
+   '  진짜 <b>하시려는 일</b>은 그대로 읽는다 — 넓게 말고 확실한 것만 (8번)');
+/* 읽기 <b>전에</b> 씩지 않으면 주민등록번호가 그대로 화면 근거로 박힌다 */
+const rrn = fit({}, [{ src: '가구 메모', at: '',
+  t: '식당운영 / 홍길동 951222-2512231 / 010-1234-5678' }]);
+is(rrn.read && plain(rrn.why && rrn.why.quote).indexOf('2512231') < 0,
+   '<b>화면 근거에도</b> 주민등록번호가 안 박힌다 — 읽기 <b>전에</b> 씻는다 (3번)');
+
 head('[8] <b>동명이인은 안 잇는다</b> (3번)');
 const pool = [{ name: '홍길동', id: 'a' }, { name: '홍길동', id: 'b' }, { name: '홍길순', id: 'c' }];
 const two = F.tie('홍길동', pool);
@@ -219,6 +295,21 @@ const idxSrc = (ix.split('function ccNewsIdx(')[1] || '').slice(0, 420);
 is(/if\(!want\)return -1/.test(idxSrc),
    '갈래를 못 읽었으면 <b>기사를 안 고른다</b> — 맨 앞 기사를 그냥 주던 자리였다');
 is(/goodItem/.test(idxSrc), '  고른 기사가 <b>진짜 기사인지</b> 한 번 더 본다 (9번)');
+/* ── 새로 붙인 세 줄이 <b>실제로 연결되어</b> 있나 ────────────── */
+const fitSrc = (ix.split('function ccFitOf(')[1] || '').slice(0, 520);
+is(/band:ccBandOf\(id\)/.test(fitSrc),
+   '<b>나이대를 같이 넘긴다</b> — 안 넘기면 표만 있고 아무도 안 쓴다');
+const bandSrc = (ix.split('function ccBandOf(')[1] || '').slice(0, 420);
+is(/APEX_STAGE\.ageBand/.test(bandSrc),
+   '  나이대를 <b>여기서 안 센다</b> — APEX_STAGE.ageBand 한 곳이 센다 (5번)');
+is(/AR\.cliRows/.test(bandSrc) && !/f_age/.test(bandSrc),
+   '  출생연도는 <b>고객 365일</b> 에서만 찾는다 — f_age 에는 「12」 같은 값이 들어 있다');
+is(/select\('id,advisor_id,name_masked,created_at,birth_year,household_notes'\)/.test(ix),
+   '<b>가구 메모를 한 칸 더</b> 받는다 — 부르는 횟수는 그대로다 (7번)');
+const notesSrc = (ix.split('function ccFitNotes(')[1] || '').slice(0, 900);
+is(/C\[i\]\.hn/.test(notesSrc),
+   '  그 가구 메모가 <b>실제로 엔진에 들어간다</b> — 고객 365일 분들은 ' +
+   '통화 메모가 한 줄도 안 잡힌다');
 
 console.log('\n' + '─'.repeat(30));
 console.log(bad ? ('✗ 고객 ↔ 소식 — 고칠 자리 ' + bad + '곳')

@@ -218,6 +218,58 @@ var BIZ = {
   }
 };
 
+/* ══ 4-2. <b>직업</b>에서 읽는다 ═══════════════════════════════════════
+   사장님 말씀 (2026-09-22) — 「직업 연령대도 읽어서 맞출수 있어!?」
+
+   직업은 <b>사장님이 적어 두신 글</b>이라 짐작이 아니다. 다만 <b>정말
+   말할 수 있는 것만</b> 적는다.
+     ① 사업을 하신다      → 정책자금 (BIZ 가 본다 · 위 RULES)
+     ② 직역연금 자리      → 경제·연금. 공무원·교사·군인은 국민연금이
+        아니라 <b>제 연금</b>이 있어, 노후 이야기의 결이 다르다
+     ③ 같은 업계에 계신다 → 보험. 업계 소식을 <b>일로</b> 보신다
+   ★ <b>그 밖의 직업은 안 읽는다.</b> 「생산직」·「청소」·「IT」 로 갈래를
+     정하려면 「이런 일을 하니 이런 보험이 필요하다」 는 <b>우리 짐작</b>을
+     얹어야 한다. 그건 지어내는 것이다 (1번). 못 읽었다고 적는다.       */
+var JOB = [
+ {cat:'econ', w:78,
+  kw:['공무원','교사','교원','교장','교감','군인','장교','부사관','직업군인',
+      '시청','군청','구청','도청','경찰','소방','우체국','교도','보호감찰','공단','공사'],
+  no:['퇴직','그만','전 ','옛'],
+  why:'직역연금(공무원·사학·군인연금) 자리입니다 — 노후 이야기의 결이 다릅니다'},
+ {cat:'ins',  w:72,
+  kw:['보험설계사','설계사','손해사정','재무설계','FC','GA','보험대리점'],
+  no:['그만','퇴사'],
+  why:'같은 업계에 계십니다 — 업계 소식을 일로 보십니다'}
+];
+function jobHit(job) {
+  var s = txt(job); if (!s) return null;
+  var i, j, r, bad;
+  for (i = 0; i < JOB.length; i++) {
+    r = JOB[i]; bad = false;
+    for (j = 0; j < (r.no || []).length; j++) if (s.indexOf(r.no[j]) >= 0) { bad = true; break; }
+    if (bad) continue;
+    for (j = 0; j < r.kw.length; j++)
+      if (s.indexOf(r.kw[j]) >= 0) return { cat:r.cat, w:r.w, word:r.kw[j], why:r.why };
+  }
+  return null;
+}
+
+/* ══ 4-3. <b>나이대</b>에서 읽는다 — 다만 <b>약한 근거</b>로 ══════════
+   나이는 지어낸 값이 아니라 <b>출생년도에서 나온</b> 값이다. 그래서 쓸 수
+   있다. 다만 나이만으로 「이 분은 이게 궁금하시다」 고 말하면 그건 짐작에
+   가깝다. 그래서 <b>힘을 가장 낮게</b> 두고, 다른 근거가 하나라도 있으면
+   그쪽이 이기게 한다.
+
+   ★ 나이대는 여기서 세지 않는다. <b>APEX_STAGE.ageBand 한 곳</b>이 센다
+     (5번) — 부르는 쪽이 그 값을 넣어 준다.
+   ★ <b>40·50대는 안 만든다.</b> 20·30대의 청년·신혼부부·출산 지원과
+     60대의 연금·기초연금은 <b>실제로 나이로 갈리는 제도</b>지만, 40·50대는
+     그런 것이 없다. 없는 결을 지어내느니 <b>안 읽는다</b> (1번).        */
+var BAND = {
+ '2030':{cat:'help', w:42, why:'20·30대 — 청년·신혼부부·출산 지원은 실제로 나이로 갈립니다'},
+ '60'  :{cat:'econ', w:42, why:'60대 이상 — 연금·기초연금은 실제로 나이로 갈립니다'}
+};
+
 /* ══ 5. 메모에서 읽는 근거 ══════════════════════════════════════════
    통화 메모 791건 · DB 메모 702건 · 가구 메모 38건. 사장님이 고객
    이야기를 실제로 적어 두신 곳은 여기다.
@@ -227,7 +279,12 @@ var BIZ = {
      나머지는 <b>alts</b> 로 같이 돌려준다 — 사장님이 바꾸실 수 있게. */
 var WORDS = [
  {cat:'fund',   w:88, kw:BIZ.yes, no:BIZ.no},
- {cat:'realty', w:82, kw:['전세','월세','청약','분양','이사','집 사','집을 사','아파트','주담대',
+ /* ⚠ <b>「아파트」를 뻐다</b> (2026-09-22 · 실제 자료로 돌려 보고). 사장님은
+    메모에 <b>주소를 적으십니다</b> — 「강남동로 46-25 204동 1102호 (우두리
+    돌산청솔<b>2단지아파트</b>)」. 화재보험 상담단 분을 「집을 알아보시는
+    분」으로 읽었습니다. 나머지 낱말은 다 <b>하시려는 일</b>을 가리키는데
+    「아파트」만 그냥 <b>사는 곳</b>입니다. 틀리느니 안 고릅니다 (8번). */
+ {cat:'realty', w:82, kw:['전세','월세','청약','분양','이사','집 사','집을 사','주담대',
                           '주택담보','재건축','재개발','임대차','전세금','보증금'],
                       no:['관심 없','생각 없','안 한다','아니라고']},
  /* ⚠ <b>「자녀」 한 낱말을 뺐다</b> (2026-09-22). 실제 자료로 돌려 보니
@@ -310,7 +367,8 @@ function daysBetween(a, b) {
    ★ <b>근거(why)가 없으면 cat 을 비운다.</b> 이 한 줄이 이 파일의 핵심이다. */
 function fit(input) {
   var x = { fp: (input && input.fp) || {}, notes: (input && input.notes) || [],
-            vipMan: manOf(input && input.vipMan) || 0 };
+            vipMan: manOf(input && input.vipMan) || 0,
+            band: txt(input && input.band) };
   var today = (input && input.today) || '';
   var found = [], i, r, n, h, d;
 
@@ -321,10 +379,23 @@ function fit(input) {
     found.push({ cat:r.cat, w:r.w, rule:r.id, src:'고객 365일 · 재무설계 답',
                  at:'', quote:'', say:r.say(x), old:null });
   }
-  /* ② 글에서 */
+  /* ①-2 직업에서 — 사업자는 위 RULES 가 이미 봤다 */
+  var J = jobHit(x.fp.f_job);
+  if (J) found.push({ cat:J.cat, w:J.w, rule:'직업:' + J.word, src:'고객 365일 · 재무설계 답',
+                      at:'', quote:'', say:'직업이 「' + txt(x.fp.f_job) + '」 — ' + J.why, old:null });
+  /* ①-3 나이대에서 — <b>가장 약한 근거</b>다 */
+  if (BAND[x.band]) {
+    var B = BAND[x.band];
+    found.push({ cat:B.cat, w:B.w, rule:'나이대:' + x.band, src:'고객 365일 · 출생년도',
+                 at:'', quote:'', say:B.why, old:null });
+  }
+  /* ② 글에서 — <b>읽기 전에 씩는다</b>. 가구 메모에는 주민등록번호·전화번호가
+     실제로 들어 있었습니다. 씩지 않으면 그 토막이 그대로 <b>근거 인용</b>으로
+     화면에 박힙니다. 이름은 이 브라우저 안이라 그대로 두고, AI 로 보낼 때
+     aiPrompt 가 한 번 더 가립니다 (3번). */
   for (i = 0; i < x.notes.length; i++) {
     n = x.notes[i] || {};
-    h = wordHit(n.t);
+    h = wordHit(scrub(n.t));
     if (!h) continue;
     d = (today && n.at) ? daysBetween(String(n.at).slice(0,10), today) : null;
     found.push({ cat:h.cat, w:(d !== null && d > OLD_DAYS) ? Math.round(h.w * 0.6) : h.w,
@@ -471,7 +542,7 @@ function aiTake(raw, notes) {
 
 g.APEX_FIT = {
   cats:CATS, catOf:function (id) { return CATID[id] || null; },
-  field:FIELD, rules:RULES, words:WORDS, biz:BIZ,
+  field:FIELD, rules:RULES, words:WORDS, biz:BIZ, job:JOB, band:BAND, jobHit:jobHit,
   manOf:manOf, cut:cut, wordHit:wordHit, oldDays:OLD_DAYS, scrub:scrub,
   fit:fit, need:needOf, tie:tie,
   goodItem:goodItem, pick:pick,
