@@ -261,8 +261,22 @@ window.supabase={createClient:function(){ return {
   /* ★ <b>아무도 예상업적을 안 적은 팀</b>에 「0원」 이라고 적으면 「이 팀은
      기대할 게 없다」 가 된다. 못 적은 것과 0 은 다르다 (1번).
      t2 는 진행 한 건인데 예상업적이 비어 있는 팀이다. */
-  is(/안 적음/.test(all.t2) && !/\b0\b[^%]*진행/.test(all.t2),
-    '아무도 안 적은 <b>진행 예상</b>을 0 으로 적지 않는다 (1번)');
+  /* ⚠ 줄 전체 글을 보면 안 된다 — 그 줄에는 「<b>목표</b> 안 적음」 이 이미
+     있어서, 「진행 예상」 을 0 으로 되돌려 놔도 초록이 뜬다. 실제로 그렇게
+     한 번 뚫렸다. <b>그 칸 하나</b>를 집어서 본다 (8번). */
+  const expCell = await pg.evaluate(() => {
+    const tr = document.querySelector('[data-goteam="t2"]');
+    const td = tr ? tr.querySelectorAll('td')[7] : null;   /* 진행 예상 칸 */
+    const tr1 = document.querySelector('[data-goteam="t1"]');
+    const td1 = tr1 ? tr1.querySelectorAll('td')[7] : null;
+    return { head: [...document.querySelectorAll('#allteams th')].map(x => x.textContent.trim())[7],
+      none: td ? td.textContent.trim() : '', some: td1 ? td1.textContent.trim() : '' };
+  });
+  is(expCell.head === '진행 예상', '  재는 칸이 <b>진행 예상</b> 이 맞다 — ' + expCell.head);
+  is(expCell.none === '안 적음',
+    '아무도 안 적은 <b>진행 예상</b>을 0 으로 적지 않는다 (1번) — ' + (expCell.none || '(빈칸)'));
+  is(/\d/.test(expCell.some),
+    '  적은 팀은 <b>숫자로</b> 적는다 — ' + expCell.some);
   const expOk = await pg.evaluate(() => {
     const s1 = teamStat('t1'), s2 = teamStat('t2');
     return { a: s1.expN, b: s2.expN };
