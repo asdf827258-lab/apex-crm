@@ -236,6 +236,11 @@ const tall = (p) => p.evaluate(() => {
   await C.p.evaluate(() => hmFoldToggle('ig')); await C.p.waitForTimeout(500);
   const z = await C.p.evaluate(() => ({
     속: (document.getElementById('hmIgHost') || {}).innerText || '',
+    /* ★ <b>소식 자리만</b> 따로 재다. 같은 칸 안에 📣 SNS 관리가 같이 서서,
+       통째로 길이를 재면 <b>소식을 안 지어냈는데도</b> 빨간불이 된다 —
+       헛것을 잡는 점검은 안 잡는 점검보다 나쁘다 (8번). */
+    소식: ((document.querySelector('#hmIgHost .hm-ig-no') ||
+            document.querySelector('#hmIgHost .hm-ig-t') || {}).innerText || ''),
     머리: ((document.querySelector('#hmFold_ig .t') || {}).innerText || '').replace(/\s+/g, ' ')
   }));
   /* ⚠ 「안 받았습니다」(아직 안 가져옴)와 「못 받았습니다」(가져오려다 실패)는
@@ -244,8 +249,8 @@ const tall = (p) => p.evaluate(() => {
      있어야 한다 (1·9번). */
   is(/(안|못) 받았습니다/.test(z.속) && /지어내지 않습니다/.test(z.속),
      '  소식이 없으면 <b>없다고</b> 적고, <b>안 지어낸다</b>고 밝힌다');
-  is(!NEWS.some(x => z.속.indexOf(x.t) >= 0) && z.속.length < 300,
-     '  <b>없는 제목을 만들지 않는다</b>');
+  is(!NEWS.some(x => z.속.indexOf(x.t) >= 0) && z.소식.length < 300,
+     '  <b>없는 제목을 만들지 않는다</b> — 소식 자리 ' + z.소식.length + '자');
   is(/받아 오기/.test(z.속), '  <b>어디서 받아 오는지</b> 길을 준다 (1번)');
   is(/안 받았습니다/.test(z.머리), '  머리도 <b>그대로</b> 말한다 — 「' + z.머리.replace(/\n/g,' ').slice(0, 40) + '」');
 

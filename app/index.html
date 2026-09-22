@@ -17778,15 +17778,27 @@ var VA_LAT={'에스엔에스':'sns','에센에스':'sns','에스엔에쓰':'sns'
  '씨알엠':'crm','시알엠':'crm','씨아르엠':'crm','디비':'db','에이아이':'ai',
  '피피티':'ppt','티에이':'ta','오티':'ot','케이피아이':'kpi','에스엔알':'snr'};
 function vaLat(s){var k;s=''+(s||'');for(k in VA_LAT)s=s.split(k).join(VA_LAT[k]);return s;}
+/* ★ <b>숫자가 바뀔다고 말이 안 먹으면 안 됩니다.</b>
+   체크판의 「전화 5통」은 사장님 말씀으로 「전화 10통」이 됐습니다
+   (2026-09-22 ⑨). 그런데 사장님은 몇 달째 「전화 5통 체크해줘」 라고
+   말해 오셨고, 그 말이 그날부터 안 먹었습니다.
+   그래서 <b>한 번 더</b> 찾습니다 — 양쪽에서 숫자를 뺄 채로 견줍니다.
+   「전화 통」 = 「전화 통」 입니다.
+   ★ <b>없는 것을 만들지는 않습니다</b> (1번) — 고르는 것은 여전히 그 목록
+     안에서이고, 첫 판이 찾았으면 둘째 판은 아예 안 돕니다.               */
 function vaPickOf(q,list,f){
   q=vaLat(vaNorm(q));
   if(!q||!list||!list.length)return null;
-  var best=null,sc=0,i,v;
-  for(i=0;i<list.length;i++){
-    v=vaScore(q,vaLat(vaNorm(f(list[i]))));
-    if(v>sc){sc=v;best=list[i];}
-  }
-  return sc>=0.34?best:null;
+  var pick=function(qq,g){
+    var best=null,sc=0,i,v;
+    for(i=0;i<list.length;i++){
+      v=vaScore(qq,g(vaLat(vaNorm(f(list[i])))));
+      if(v>sc){sc=v;best=list[i];}
+    }
+    return sc>=0.34?best:null;
+  };
+  var same=function(s){ return s; }, noNum=function(s){ return (''+s).replace(/\d+/g,''); };
+  return pick(q,same)||pick(noNum(q),noNum);
 }
 function vaCut(s,n){s=(''+(s==null?'':s)).replace(/\s+/g,' ').replace(/^\s+|\s+$/g,'');
   return s.length>n?(s.slice(0,n)+'…'):s;}
@@ -18043,7 +18055,9 @@ var VA_ACT=[
  }},
 
 {k:'체크',n:'오늘 할 일 체크하기',v:['what'],w:1,
- ex:'전화 5통 체크해줘',
+ /* 보기로 드리는 말에 <b>수를 안 넣습니다</b> — 항목 이름이 바뎀 때마다
+    이 줄이 낙아 거짓말이 됩니다. 숫자를 말씀하셔도 찾습니다. */
+ ex:'전화 체크해줘',
  q:{what:'어떤 것을 체크할까요?'},
  re:/체크해|체크했|체크완료|체크처리|체크표시|했다고체크/,
  cut:[/^(.+?)\s*(?:체크|끝냈다고)\s*(?:해줘|해|했어|완료|처리|표시)?\s*(?:줘|주세요)?\s*$/,

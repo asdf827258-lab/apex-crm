@@ -119,7 +119,17 @@ window.supabase={createClient:function(){
   let r = await say('전화 5통 체크해줘');
   let st = await page.evaluate(() => ({ m: ckLoad('day'), n: CK_ITEMS.day.length }));
   ok(st.m.d4 === 1, '"전화 5통 체크해줘" → 그 항목이 실제로 체크된다');
-  ok(/전화 5통 체크했습니다/.test(r.spoke), '무엇을 체크했는지 말해 준다 — ' + r.spoke.slice(0, 40));
+  /* ★ 답은 <b>항목 이름 그대로</b> 나와야 합니다. 말씀하신 글자를 되놀려 주면
+     사장님은 어느 줄이 체크됐는지 모르십니다. 그리고 <b>이름을 여기 박지
+     않습니다</b> — 「전화 5통」은 사장님 말씀으로 「전화 10통」이 됐고
+     (2026-09-22 ⑨), 박아 두면 이름이 바뎀 때마다 점검이 먼저 거짓말을 합니다. */
+  const d4 = await page.evaluate(() => {
+    for (let i = 0; i < CK_ITEMS.day.length; i++)
+      if (CK_ITEMS.day[i][0] === 'd4') return CK_ITEMS.day[i][1];
+    return '';
+  });
+  ok(r.spoke.indexOf(d4 + ' 체크했습니다') >= 0,
+     '무엇을 체크했는지 <b>항목 이름 그대로</b> 말해 준다 · 「' + d4 + '」 — ' + r.spoke.slice(0, 40));
   ok(/\d+개 남았습니다/.test(r.spoke), '몇 개 남았는지까지 알려 준다');
   ok(r.ai === 0, '이 정도 말은 AI 없이 그 자리에서 알아듣는다');
 
