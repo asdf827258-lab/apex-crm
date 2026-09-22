@@ -75,13 +75,18 @@ const SEED = (o) => `
    'delete':function(){return a;},
    select:function(c){st.cols=c||'';return a;},order:function(){return a;},range:function(){return a;},
    limit:function(){return a;},single:function(){return a;},gte:function(){return a;},
-   'in':function(){return a;},is:function(){return a;},neq:function(){return a;},not:function(){return a;},
+   /* ⑩ 이제 앱은 kind 둘을 <b>한 번에</b> 묻습니다(.in) — 서버를 한 번 더
+      안 부르려고 그렇게 했습니다 (7번). 가짜 서버도 그렇게 받아야 합니다. */
+   'in':function(k,v){if(k==='kind')st.kinds=v||[];return a;},
+   is:function(){return a;},neq:function(){return a;},not:function(){return a;},
    eq:function(k,v){if(k==='kind')st.kind=v;return a;},
    then:function(ok,no){
-     if(st.t==='saved_reports'&&st.kind==='ba_state'){
+     var wants=function(x){ return st.kind===x||((st.kinds||[]).indexOf(x)>=0); };
+     if(st.t==='saved_reports'&&wants('ba_state')){
        window.__HIT=(window.__HIT||0)+1; window.__COLS=st.cols;
        return Promise.resolve({data:${o.none ? '[]' : `[
-         {client_id:'c1',created_at:'2026-09-18T09:00:00Z',
+         {client_id:'c2',kind:'finance',created_at:'2026-09-20T09:00:00Z',sum:null},
+         {client_id:'c1',kind:'ba_state',created_at:'2026-09-18T09:00:00Z',
           sum:{name:'홍**가',loss:1,gain:3,cov:24,
                top:{gain:[{k:'cancer',n:'일반암 (최초 1회)',b:0,a:5000}],
                     loss:[{k:'silNB',n:'비급여의료비',b:3000,a:null}]}}}
@@ -331,6 +336,55 @@ const SEED = (o) => `
     is(/MIKKI_URL\s*\+\s*'\?cov='/.test(blk),
        '  <b>담보 이름만 넘긴다</b> — ?cov=');
   }
+  console.log('\n[15] 💵 <b>재무설계(달러·연금) → 홈에서 이어 가기</b> (사장님 말씀 ⑩)');
+  /* 「재무설계(달러·연금) → 고객 365일 정리 → <b>홈에서 추가 관리 연계</b>」
+     계산기에서 💾 를 누르면 고객 365일에 담깁니다(kind='finance').
+     여태 담기기만 하고 거기서 끝이었습니다 — 이제 홈이 읽습니다.
+
+     여기서 재는 것 —
+       ① 정리해 둔 분이 <b>그 자리에 선다</b>
+       ② <b>금액을 옮겨 적지 않는다</b> (1번·2번) — 계산기가 말하는 그 값이 맞다
+       ③ <b>한 분도 없으면 칸을 안 세운다</b> — 「아직 안 하셨습니다」는 잔소리다
+       ④ <b>서버를 한 번 더 안 부른다</b> (7번) — 증권과 같이 실어 온다
+       ⑤ <b>증권과 안 섞인다</b> — 재무설계를 「읽은 증권」으로 세면 없는 것을
+          읽었다고 말하게 된다 (1번) */
+  {
+    const F = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const box = el.querySelector('.hm-chk-fin');
+      return { t: box ? box.textContent.replace(/\s+/g, ' ') : '',
+        go: !!(box && box.querySelector('[onclick*="hmFinGo"]')),
+        n: hmFinOf().length, read: hmChkEye().read,
+        rows: hmFinOf().map(x => x.p.nm + '@' + x.at) };
+    });
+    is(F.n === 1, '  정리해 둔 분을 <b>센다</b> — ' + F.n + '명 · ' + F.rows.join(', '));
+    is(/재무설계를 정리해 둔 분/.test(F.t), '  홈 칸에 <b>그 줄이 선다</b> — 「' + F.t.slice(0, 46) + '…」');
+    is(F.go, '  <b>계산기로 가는 단추</b>가 있다 — 말만 하고 길을 안 주면 안 한다');
+    is(/달러·연금/.test(F.t), '  <b>달러·연금</b>이라고 말한다 (사장님 말씀 그대로)');
+    /* ② 금액을 옮겨 적지 않는다 — 두 곳이 어긋나면 어느 쪽이 맞는지 알 수 없다 */
+    is(!/\d[\d,]*\s*(만원|원|억)/.test(F.t),
+       '  <b>금액을 옮겨 적지 않는다</b> (1번·2번) — ' +
+       ((F.t.match(/\d[\d,]*\s*(만원|원|억)/g) || []).join(',') || '없음'));
+    /* ⑤ 증권과 안 섞인다 — 견본에는 증권 하나·재무설계 하나가 따로 들어 있다 */
+    is(F.read === 1, '  <b>증권 읽은 분</b>은 그대로 1명이다 — 재무설계가 섞이지 않았다 (1번)');
+  }
+  /* ③ 한 분도 없으면 칸을 안 세운다 */
+  {
+    const N = await A.p.evaluate(() => {
+      const keep = CHKS.fin; CHKS.fin = {};
+      const el = document.createElement('div'); el.innerHTML = hmChkHtml();
+      const has = !!el.querySelector('.hm-chk-fin');
+      CHKS.fin = keep;
+      return has;
+    });
+    is(N === false, '  한 분도 없으면 <b>칸을 안 세운다</b> — 「아직 안 하셨습니다」는 잔소리다');
+  }
+  /* ④ 서버를 한 번 더 안 부른다 — 증권과 <b>한 번에</b> 받아 온다 */
+  const H10 = await A.p.evaluate(() => ({ hit: window.__HIT || 0, cols: window.__COLS || '' }));
+  is(H10.hit === 1, '  서버를 <b>한 번만</b> 부른다 (7번) — saved_reports ' + H10.hit + '번');
+  is(/(^|,)kind(,|$)/.test(H10.cols),
+     '  받아 올 때 <b>kind 를 같이</b> 받는다 — 둘을 가르려면 그 칸이 있어야 한다 · ' + H10.cols);
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 고객 체크 — 읽은 증권으로 터치합니다. 안 읽었으면 그렇다고 적습니다.');
