@@ -15958,6 +15958,10 @@ function go(tab){
      고른 칸이 어디인지는 navMark 가 그 띠 안에서 표시해 준다.
      서랍(세로 메뉴)은 화면을 통째로 덮으므로 그대로 닫는다. */
   try{ if(typeof tnPaint==='function')tnPaint(); }catch(e){}
+  /* 덮개는 <b>화면을 넘어가지 않는다</b> — 한 화면에서 열린 것이 다음
+     화면을 덮고 있으면 앱이 멈춘 것처럼 보인다. */
+  try{ if(typeof objClose==='function')objClose(); }catch(e){}
+  try{ if(typeof crqClose==='function')crqClose(); }catch(e){}
   try{
     var _sb=$('sidebar'),_sc=$('scrim');
     if(_sb&&_sb.classList.contains('open')){_sb.classList.remove('open');if(_sc)_sc.classList.remove('on');}
@@ -22358,6 +22362,8 @@ function crqStart(){
 function crqLeave(){
   if(!CRQ.in)return;
   CRQ.in=false;
+  /* 닫는 일은 go() 맨 위에서 <b>한 꺼번에</b> 합니다 (5번) — 여기서도 닫으면
+     바로 밑에서 여는 덮개와 순서가 엉타리게 얽힙니다. */
   if(!OS.profile)return;
   var o=crqGet();
   if(o.did||o.at||o.no)return;       /* 하셨거나 이미 정하셨습니다 */
@@ -22454,6 +22460,142 @@ function crqCss(){
    '.crq-b .ok{background:#2B5FD9;border-color:#2B5FD9;color:#fff}';
   document.head.appendChild(st);
 }
+/* ══ ⑧ <b>거절처리</b> — 그 말이 나왔을 때 무엇을 말하나 ═══════════════
+   사장님 말씀 ⑧ (2026-09-22) —
+     「TA멘트 전문가 수준으로 <b>거절처리부터 길게</b> 만들고, 그걸 <b>오늘
+      챙길것에 띄우고 관리</b>하게」
+
+   ★ <b>말을 새로 지어내지 않았습니다</b> (1번). ta-script.html 의 거절처리
+     열일곱 가지를 apex-stage.js <b>한 곳</b>으로 옮겨 두 화면이 같이 읽습니다 (5번).
+   ★ 「🚫 거절」 단추는 <b>바로 기록하지 않습니다.</b> 먼저 무엇을 말할지
+     보여 드리고, 정말 끝이면 그 자리에서 기록합니다 — 거절은 한 번 적히면
+     그 고객에게 다시 전화를 안 겁니다.
+   ★ 네 가지를 <b>같이</b> 적습니다 — 바로 말할 멘트 · 다음 한마디 ·
+     <b>금지 표현</b> · <b>종료 기준</b>. 「무엇을 말할까」만 적고 「무엇을
+     말하면 안 되나」와 「언제 그만두나」를 안 적으면, 붙잡다 그 고객을
+     영영 잃습니다.
+   ★ 이름은 <b>이 브라우저 안에서만</b> 끼워 넣습니다 (3번) — 어디로도 안 갑니다. */
+var OBJ={id:'',i:0};
+function objList(){
+  try{ return (window.APEX_STAGE&&APEX_STAGE.objList)?APEX_STAGE.objList():[]; }
+  catch(e){ return []; }
+}
+/* 이름·DB 종류를 끼워 넣는다 — <b>모르면 적힌 그대로</b> 둔다 (1번) */
+function objFill(t,r){
+  try{
+    var me='';
+    try{ me=(typeof arNameOf==='function'&&typeof arMyId==='function')?arNameOf(arMyId()):''; }catch(e2){}
+    if(me==='팀원')me='';
+    return (window.APEX_STAGE&&APEX_STAGE.objFill)
+      ? APEX_STAGE.objFill(t,me,(r&&r.src)||'')
+      : (''+(t||''));
+  }catch(e){ return ''+(t||''); }
+}
+function objOpen(id){
+  var L=objList();
+  if(!L.length){ if(typeof toast==='function')toast('거절처리 글을 못 읽었습니다'); return; }
+  OBJ.id=id||''; OBJ.i=0;
+  objCss(); objPaint();
+  var h=document.getElementById('objSheet');
+  if(h)h.classList.add('on');
+}
+function objPick(n){ OBJ.i=+n||0; objPaint(); }
+function objClose(){
+  var e=document.getElementById('objSheet');
+  if(e)e.classList.remove('on');
+}
+function objHost(){
+  var e=document.getElementById('objSheet');
+  if(e)return e;
+  e=document.createElement('div');e.id='objSheet';
+  e.innerHTML='<div class="obj-box" id="objBox"></div>';
+  e.addEventListener('click',function(ev){ if(ev.target===e)objClose(); });
+  document.body.appendChild(e);
+  return e;
+}
+function objPaint(){
+  var L=objList(),o=L[OBJ.i]||L[0];
+  if(!o)return;
+  var r=(OBJ.id&&typeof hdbRow==='function')?hdbRow(OBJ.id):null;
+  var v=function(t){ return (typeof osEsc==='function')?osEsc(t):t; };
+  var tabs='',i;
+  for(i=0;i<L.length;i++)
+    tabs+='<button type="button" class="obj-t'+(i===OBJ.i?' on':'')+'" onclick="objPick('+i+')">'+
+      v(L[i].title)+'</button>';
+  var row=function(e,t,s,cls){
+    return '<div class="obj-r'+(cls?(' '+cls):'')+'"><div class="obj-k">'+e+' '+t+'</div>'+
+      '<div class="obj-v">'+v(s).split('\n').join('<br>')+'</div></div>';
+  };
+  objHost();
+  document.getElementById('objBox').innerHTML=
+    '<div class="obj-tt">🚫 <b>거절처리</b>'+(r?(' — '+v(r.name)+' 님'):'')+'</div>'+
+    '<div class="obj-s">고객이 한 말을 고르면 <b>그대로 읽을 말</b>이 섭니다. '+
+      '금지 표현과 종료 기준을 <b>같이</b> 보십시오 — 붙잡다 그 고객을 영영 잃습니다.</div>'+
+    '<div class="obj-ts">'+tabs+'</div>'+
+    '<div class="obj-tone">🎯 '+v(o.tone||'')+'</div>'+
+    row('💬','바로 말할 멘트',objFill(o.text,r))+
+    row('➡️','다음 한마디',objFill(o.follow,r))+
+    row('🚷','이 말은 하지 않습니다',o.avoid||'','no')+
+    row('🛑','여기서 끝냅니다',o.stop||'','st')+
+    (o.tip?row('💡','한 가지만 더',o.tip):'')+
+    '<div class="obj-b">'+
+      '<button type="button" class="ok" onclick="objCopy()">📋 멘트 복사</button>'+
+      (OBJ.id?('<button type="button" class="no" onclick="objDone()">🚫 거절로 기록</button>'):'')+
+      '<button type="button" onclick="objClose()">닫기</button>'+
+    '</div>'+
+    '<div class="obj-s" style="margin:10px 0 0">기록하면 <b>DB 통합 CRM 에도 그대로</b> 올라가고, '+
+      '그 뒤로는 <b>전화를 안 겁니다</b> — 다음은 파는 전화가 아니라 소식 하나로 엽니다.</div>';
+}
+function objCopy(){
+  var L=objList(),o=L[OBJ.i]||L[0];
+  if(!o)return;
+  var r=(OBJ.id&&typeof hdbRow==='function')?hdbRow(OBJ.id):null;
+  var t=objFill(o.text,r)+'\n\n[다음 한마디]\n'+objFill(o.follow,r)+
+        '\n\n[하지 않습니다]\n'+(o.avoid||'').replace(/<[^>]*>/g,'')+
+        '\n\n[여기서 끝냅니다]\n'+(o.stop||'').replace(/<[^>]*>/g,'');
+  if(typeof copyText==='function')copyText(t);
+  else if(typeof toast==='function')toast('복사하지 못했습니다');
+}
+/* 정말 끝일 때만 — <b>기록하는 곳은 hdbCall 한 곳</b>입니다 (5번) */
+function objDone(){
+  var id=OBJ.id;
+  objClose();
+  if(id&&typeof hdbCall==='function')hdbCall(id,'거절');
+}
+function objCss(){
+  objHost();
+  if(document.getElementById('objCss'))return;
+  var st=document.createElement('style');st.id='objCss';
+  st.textContent=
+   '#objSheet{position:fixed;inset:0;z-index:9350;background:rgba(15,23,42,.46);display:none;'+
+     'align-items:flex-end;justify-content:center}'+
+   '#objSheet.on{display:flex}'+
+   '.obj-box{width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#fff;'+
+     'border-radius:18px 18px 0 0;padding:16px 15px 20px}'+
+   '@media(min-width:620px){#objSheet{align-items:center}.obj-box{border-radius:18px}}'+
+   '.obj-tt{font-size:var(--t3);font-weight:900;color:var(--ink-1)}'+
+   '.obj-s{margin-top:7px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.obj-s b{color:var(--ink-2)}'+
+   '.obj-ts{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 4px}'+
+   '.obj-t{min-height:40px;padding:8px 11px;border:1px solid var(--ink-7);border-radius:var(--r-pill);'+
+     'background:#fff;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'color:var(--ink-4);cursor:pointer}'+
+   '.obj-t.on{background:#0F172A;border-color:#0F172A;color:#fff}'+
+   '.obj-tone{margin:9px 0 2px;font-size:var(--t6);font-weight:800;color:#1D4ED8}'+
+   '.obj-r{margin-top:10px;border:1px solid var(--ink-7);border-radius:var(--r-sm);padding:10px 11px}'+
+   '.obj-r.no{border-color:#FECACA;background:#FEF2F2}'+
+   '.obj-r.st{border-color:#FDE68A;background:#FFFBEB}'+
+   '.obj-k{font-size:var(--t6);font-weight:900;color:var(--ink-3);margin-bottom:5px}'+
+   '.obj-r.no .obj-k{color:#B91C1C}.obj-r.st .obj-k{color:#92400E}'+
+   '.obj-v{font-size:var(--t5);line-height:1.8;color:var(--ink-1);white-space:normal;word-break:keep-all}'+
+   '.obj-b{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}'+
+   '.obj-b button{flex:1 1 auto;min-width:120px;min-height:48px;border:1px solid var(--ink-7);'+
+     'border-radius:12px;background:#F2F4F6;font-family:inherit;font-size:var(--t5);'+
+     'font-weight:900;color:#4E5968;cursor:pointer}'+
+   '.obj-b .ok{background:#2B5FD9;border-color:#2B5FD9;color:#fff}'+
+   '.obj-b .no{background:#FEF2F2;border-color:#FECACA;color:#B91C1C}';
+  document.head.appendChild(st);
+}
 function hdbStripHtml(x){
   if(!x||x.k!=='db'||!x.id)return '';
   var r=hdbRow(x.id);
@@ -22486,7 +22628,9 @@ function hdbStripHtml(x){
       (busy?'…':('→ '+v(to)+' 로 올리기'))+'</button>';
   h+='<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'부재\')">📵 부재</button>'+
      '<button type="button" class="hdb-b"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'상담\')">🤝 통화됨</button>'+
-     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="hdbCall(\'' + r.id + '\',\'거절\')">🚫 거절</button>'+
+     /* ⑧ <b>바로 적지 않습니다.</b> 먼저 무엇을 말할지 보여 드리고, 정말 끝이면
+        그 창에서 기록합니다 — 거절은 한 번 적힐면 그 고객께 다시 전화를 안 겁니다. */
+     '<button type="button" class="hdb-b no"'+(busy?' disabled':'')+' onclick="objOpen(\'' + r.id + '\')">🚫 거절</button>'+
      '<button type="button" class="hdb-b ed" onclick="hdbOpen(\'' + r.id + '\',\'\')">✏️ 고치기</button>'+
      '</div>';
   h+='<div class="hdb-h">누르면 <b>DB 통합 CRM 에도 그대로</b> 올라갑니다 — 같은 표를 씁니다.</div>';

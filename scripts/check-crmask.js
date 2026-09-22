@@ -78,7 +78,7 @@ const SEED = `
   await p.waitForTimeout(700);
   /* ★ 앱이 <b>뜨면서</b> 부르는 것까지 세면 이 줄은 언제나 빨간불이고,
      그러면 이 절이 <b>무엇을 재는지</b> 알 수 없다. 재려는 것은
-     「묻는 덤개가 서버를 부르나」 하나다 — 여기서 다시 센다 (8번). */
+     「묻는 덮개가 서버를 부르나」 하나다 — 여기서 다시 센다 (8번). */
   srvHits = 0; hitUrls.length = 0;
 
   const sheet = () => p.evaluate(() => {
@@ -151,16 +151,40 @@ const SEED = `
   await p.evaluate(() => go('home')); await p.waitForTimeout(350);
   is((await sheet()).on === false, '  안 묻는다 — 하고 나온 분께 물으면 앱이 안 보고 있다는 뜻이 된다');
 
-  console.log('\n[7] <b>서버를 안 부른다</b> (7번) · 터진 곳이 없다');
+  console.log('\n[7] 덮개가 <b>다음 화면을 안 덮는다</b>');
+  /* ★ 실제로 그러고 있었습니다. 나갈 때 뜼는 덮개를 안 닫았더니, 다음
+     화면으로 가도 그 덮개가 <b>화면을 통째로 덮고</b> 있었고, 앱이 멈춘
+     것처럼 보였습니다. check-stayput 이 먼저 잡았습니다 (8번). */
+  await p.evaluate(() => { localStorage.removeItem('apex_crm_when'); go('crm'); });
+  await p.waitForTimeout(350);
+  is((await sheet()).on, '  들어가면 뜼고');
+  await p.evaluate(() => go('clients')); await p.waitForTimeout(350);
+  /* 여기서 뜼는 것은 <b>맞습니다</b> — 나가실 때 여쭤보는 그 덮개입니다.
+     잘못된 것은 <b>그 다음</b>입니다 — 달아나지 않고 또 화면을 옮기면,
+     덮개가 그대로 따라가 새 화면을 통째로 덮습니다. 앱이 멈춘 것처럼
+     보입니다 — check-stayput 이 먼저 잡은 자리입니다 (8번). */
+  is((await sheet()).on, '  나갈 때 여쭤보는 덮개는 <b>거기서 뜼는 게 맞다</b>');
+  await p.evaluate(() => go('home')); await p.waitForTimeout(350);
+  const G = await p.evaluate(() => {
+    const e = document.getElementById('crqSheet');
+    const hit = document.elementFromPoint(innerWidth >> 1, 24);
+    return { on: !!(e && e.classList.contains('on')),
+      covers: !!(hit && e && (hit === e || e.contains(hit))) };
+  });
+  is(G.on === false, '  <b>또 옮기면 사라진다</b> — 달아나지 않는다');
+  is(G.covers === false, '  새 화면의 <b>맨 윗줄을 안 덮는다</b>');
+  await p.evaluate(() => { crqClose(); localStorage.removeItem('apex_crm_when'); });
+
+  console.log('\n[8] <b>서버를 안 부른다</b> (7번) · 터진 곳이 없다');
   /* ★ 앱은 뜨면서 제 일로 소식도 받아 옵니다. 그것까지 세면 이 줄은
      언제나 빨간불이고, 그러면 <b>무엇을 재는지 알 수 없습니다</b> — 헛것을
-     잡는 점검은 안 잡는 점검보다 나쁘다 (8번). 그래서 <b>묻는 덤개의 글</b>을
+     잡는 점검은 안 잡는 점검보다 나쁘다 (8번). 그래서 <b>묻는 덮개의 글</b>을
      직접 봅니다 — 거기에 서버를 부르는 줄이 없으면 부를 길이 없습니다. */
   const SRC = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
   const blk = (SRC.split('var CRQ=')[1] || '').split('function hdbStripHtml')[0];
   is(blk.length > 1000, '  ⑦ 칸이 index.html 에 있다 — ' + blk.length + '자');
   is(!/fetch\s*\(|osClient\s*\(|\.from\s*\(/.test(blk),
-     '  묻는 덤개에 <b>서버를 부르는 줄이 없다</b> (7번)');
+     '  묻는 덮개에 <b>서버를 부르는 줄이 없다</b> (7번)');
   is(/localStorage/.test(blk), '  고르신 시각은 <b>이 브라우저에만</b> 담긴다 (3번)');
   is(/document\.hidden/.test(blk),
      '  화면이 <b>뒤로 가 있으면 쉰다</b> — 안 보는 화면에서 돌지 않는다 (7번)');
