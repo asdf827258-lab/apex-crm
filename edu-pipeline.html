@@ -82,6 +82,43 @@ table.gx tr.mb .goal input{width:96px;border:0;background:#fff;border-radius:6px
 table.gx tr.mb .goal input:focus{box-shadow:inset 0 0 0 2px var(--blue)}
 table.gx tr.mb .goal input:disabled{background:transparent}
 table.gx tr.mb .gpct{margin-left:8px;font-size:12.5px;font-weight:800}
+/* 목표 셋은 <b>눈으로도 갈라</b> 둔다 — 한 줄에 나란히 서므로 */
+table.gx tr.mb .goal.cs{color:var(--purple)}
+table.gx tr.mb .goal.cs input{width:56px;text-align:right}
+table.gx tr.mb .goal.per{color:var(--tx2);background:var(--grey);border-radius:6px;padding:2px 8px}
+table.gx tr.mb .goal.per i{font-style:normal;font-weight:600;color:var(--tx3)}
+/* 이름 밑에 붙는 예상업적 — 표를 옆으로 밀지 않고도 보이게 */
+table.gx td.cli{padding-bottom:0}
+table.gx td.cli .pex{display:block;padding:0 10px 7px;font-size:11.5px;font-weight:800;
+  line-height:1.2;color:var(--blue-d);white-space:nowrap}
+table.gx td.cli .pex .z{font-style:normal;font-weight:600;color:var(--tx4)}
+table.gx td.cli .pex em{font-style:normal;margin-left:5px;padding:1px 5px;border-radius:5px}
+table.gx td.cli .pex em.lo{background:var(--red-l);color:var(--red)}
+table.gx td.cli .pex em.hi{background:var(--green-l);color:var(--green)}
+table.gx td.cli .pex em.ok{background:var(--green-l);color:var(--green);margin-left:0}
+/* 팀을 접는 단추 — 접어도 팀 줄은 그대로 남는다 */
+table.gx tr.tm .tf{background:none;border:0;cursor:pointer;color:var(--blue-d);font-size:13px;
+  padding:0 7px 0 0;transition:transform .15s}
+table.gx tr.tm.shut .tf{transform:rotate(-90deg);display:inline-block}
+table.gx tr.tm.shut td{background:linear-gradient(90deg,#F2F4F6,#FAFBFC);color:var(--tx2)}
+table.gx tr.tm .tn{margin-left:9px;font-size:12.5px;font-weight:600;color:var(--tx3)}
+/* 전체 팀 한눈에 */
+table.at{border-collapse:separate;border-spacing:0;width:100%;min-width:900px;font-size:13.5px}
+table.at th{background:var(--grey);color:var(--tx2);font-weight:700;font-size:12px;text-align:left;
+  padding:8px 10px;white-space:nowrap;position:sticky;top:0;z-index:2}
+table.at th.n,table.at td.n{text-align:right}
+table.at td{border-bottom:1px solid #F0F2F4;padding:9px 10px;white-space:nowrap}
+table.at tbody tr{cursor:pointer}
+table.at tbody tr:hover td{background:#F7FAFF}
+table.at td .ar{display:inline-block;color:var(--blue-d);margin-right:6px;transition:transform .15s}
+table.at tr.shut td .ar{transform:rotate(-90deg)}
+table.at tr.shut td{color:var(--tx3)}
+table.at tr.sum{cursor:default}
+table.at tr.sum td{background:#FBFCFD;font-weight:800;border-top:2px solid var(--grey2)}
+table.at tr.sum:hover td{background:#FBFCFD}
+table.at .z{font-style:normal;font-weight:600;color:var(--tx4);font-size:12px}
+table.at b.ok{color:var(--green)}
+table.at b.bad{color:var(--red)}
 table.gx td.act{white-space:nowrap;padding:0 6px;text-align:center}
 table.gx td.act button{background:none;border:0;color:var(--tx4);cursor:pointer;font-size:13px;
   padding:6px 7px;font-weight:800;border-radius:6px}
@@ -188,6 +225,8 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
     <div class="sp"></div>
     <button class="btn gh" id="b-xls">엑셀 내보내기</button>
   </div>
+  <!-- 팀별로 한 줄씩. 아래 큰 판을 옆으로 밀지 않고도 팀 상태가 보입니다. -->
+  <div id="allteams"></div>
   <div id="board"></div>
 </section>
 
@@ -269,11 +308,36 @@ let TEAMS = [], MEMBERS = [], ROWS = [], ORG_MISS = [];
    monthly_perf.goal_prem 그대로다. 그 자리 단위는 <b>만원</b>이라
    화면에 낼 때 10,000 을 곱하고, 적을 때 나눈다. 같은 것을 두 곳에
    적으시게 만들면 반드시 어긋난다. */
-let GOALS = {};                 /* {팀원id: 만원} */
+let GOALS = {};                 /* {팀원id: 만원} — 월간목표(월초보험료) */
+/* ── <b>목표 건수</b> — 고객명당목표가 여기서 나온다 ────────────────────
+   사장님 말씀 — 「[월간목표] [고객명당목표]를 따로 관리하기 위함이야.
+   <b>정확히 분리해</b>」.
+
+   ★ <b>적는 것은 둘</b>이다 — 이 달에 올릴 <b>금액</b>과 <b>건수</b>.
+     고객명당목표는 그 둘에서 <b>나오는 값</b>이라 따로 안 적는다. 세 칸을
+     다 적게 하면 서로 안 맞는 날이 반드시 온다 (5번).
+   ★ 담기는 자리도 새로 만들지 않는다 — 「내 업적 · 월간보고」가 쓰는
+     그 줄(monthly_perf.goal_case)이다. 여기서 고치면 그쪽도 바뀐다. */
+let CASES = {};                 /* {팀원id: 건} — 목표 건수 */
 const goalMonth = () => FILTER.month || TODAY_S.slice(0, 7);
 /* 이 화면은 AP·PC 를 밀도 있게 보는 자리다 — 처음부터 그 눈으로 연다.
    위 「전체 단계」로 언제든 넓힐 수 있다. */
 let FILTER = { month: '', team: '', mem: '', stage: '__appc', q: '' };
+/* ── <b>팀은 접어 둡니다</b> ─────────────────────────────────────────
+   사장님 말씀 — 「팀 별로 따로 보고, <b>전체적으로 따로</b> 볼 수 있도록
+   하고, <b>접어두기 칸</b>을 만들어서 한번에 관리하자」.
+   ★ 접어도 <b>팀 줄은 그대로 남습니다</b> — 목표·체결·진행이 그 줄에
+     적혀 있어, 접은 채로도 그 팀이 어떤지 보입니다. 숨는 것이 아니라
+     <b>안이 접히는</b> 것입니다 (본체 서랍과 같은 방식).
+   ★ 접어 둔 것은 이 브라우저가 기억합니다. 다음에 열어도 그대로입니다. */
+const FOLD_KEY = 'apex_dbp_fold_v1';
+let FOLD = {};
+try { FOLD = JSON.parse(localStorage.getItem(FOLD_KEY) || '{}') || {}; } catch (e) { FOLD = {}; }
+const foldIs = tid => FOLD[tid] === true;
+function foldSet(tid, on) {
+  if (on) FOLD[tid] = true; else delete FOLD[tid];
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify(FOLD)); } catch (e) { }
+}
 let SHARE = { team: '' }, DBM = '';
 
 const TODAY = new Date(); TODAY.setHours(0, 0, 0, 0);
@@ -384,10 +448,20 @@ async function boot() {
   renderBoard();
 }
 async function loadGoals() {
-  GOALS = {};
+  GOALS = {}; CASES = {};
   try {
     const { data, error } = await sb.rpc('pipeline_goals', { p_period: goalMonth() });
     if (!error) (data || []).forEach(g => { GOALS[g.owner_id] = +g.goal_prem || 0; });
+  } catch (e) { }
+  /* 목표 건수는 문(pipeline_goals)이 안 돌려준다. 같은 줄을 그대로 읽는다 —
+     보이는 범위는 서버(RLS)가 정한다. <b>못 읽으면 없는 채로 둔다</b> —
+     0 으로 채우면 「0건이 목표」 가 되어 버린다 (1번). */
+  try {
+    const { data, error } = await sb.from('monthly_perf')
+      .select('owner_id,goal_case').eq('period', goalMonth());
+    if (!error) (data || []).forEach(m => {
+      if (m.goal_case != null) CASES[m.owner_id] = +m.goal_case || 0;
+    });
   } catch (e) { }
 }
 async function reload() {
@@ -516,6 +590,28 @@ function selOf(field, val, list, pre, dis, labels) {
   return `<select data-f="${field}" class="${pre}${esc(val)}"${dis ? ' disabled' : ''}>` +
     list.map(o => `<option value="${esc(o)}"${o === val ? ' selected' : ''}>${esc(labels ? (labels[o] || o) : o)}</option>`).join('') + `</select>`;
 }
+/* ── 고객 이름 <b>바로 밑</b>에 예상업적 ──────────────────────────────
+   사장님 말씀 — 「고객 이름 옆에 [예상업적] 을 표기해서 <b>꾸준히 터치하도록</b>
+   남겨줘」. 예상업적 칸은 표 오른쪽에 있는데 이 표가 1,660px 이라, 이름을
+   보면서 같이 볼 수가 없었습니다. 손으로 옆으로 밀어야 보였습니다.
+
+   ★ <b>안 적으신 것을 0 으로 적지 않습니다</b> (1번). 0 으로 적으면
+     「이 분은 기대할 게 없다」 는 뜻이 되어 버립니다. 안 적었다고 적습니다.
+   ★ <b>고객명당목표가 있을 때만</b> 모자란 만큼을 같이 적습니다. 없으면
+     금액만 적습니다 — 없는 목표를 들이대며 「모자랍니다」 라고 하지 않습니다.
+   ★ 체결된 건은 <b>계약</b>업적을 적습니다. 그 분은 이제 「얼마 기대한다」
+     가 아니라 「얼마 하셨다」 입니다.                                    */
+function pexTXT(r) {
+  const done = isDone(r);
+  const v = done ? (+r.contract || +r.expect || 0) : (+r.expect || 0);
+  if (!v) return `<i class="z">예상업적 안 적음</i>`;
+  const head = (done ? '계약 ' : '예상 ') + manWonR(v);
+  if (done) return `<em class="ok">${head}</em>`;
+  const per = perOf(r.mid);
+  if (!per) return head;
+  const gap = v - per;
+  return `${head}<em class="${gap < 0 ? 'lo' : 'hi'}" title="고객명당목표 ${won(per)}원과 견준 것입니다">${gap < 0 ? '−' : '+'}${manWonR(Math.abs(gap))}</em>`;
+}
 function rowHTML(r) {
   const n = dnum(r.date), ro = !canEdit(r), d = ro ? ' disabled' : '';
   const cls = r.closed ? ' dim' : (ro ? ' ro' : '');
@@ -525,7 +621,8 @@ function rowHTML(r) {
     <td style="white-space:nowrap"><input type="date" data-f="dbdate" value="${esc(r.dbdate)}" style="width:auto"${d}></td>
     <td><input data-f="dbtype" value="${esc(r.dbtype)}" class="dbt" style="font-weight:700;color:#6D28D9" placeholder="DB종류"${d}></td>
     <td><input data-f="region" value="${esc(r.region)}" placeholder="지역"${d}></td>
-    <td><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}></td>
+    <td class="cli"><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}>
+      <span class="pex" data-pex="${r.id}" data-pex-mid="${r.mid}">${pexTXT(r)}</span></td>
     <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto"${d}>${dd}</td>
     <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"${d}></td>
     <td class="n"><input data-f="contract" inputmode="numeric" class="con" value="${r.contract ? won(r.contract) : ''}" placeholder="-"${d}></td>
@@ -547,14 +644,51 @@ function monthDone(mid) {
   const m = goalMonth();
   return ROWS.filter(r => r.mid === mid && isDone(r) && ym(r.cdate) === m);
 }
+/* 원을 받아 「25만」 처럼 적는다. 이름 끝의 <b>R</b> 이 「원을 받는다」 는
+   뜻이다 (CLAUDE.md 4번 — xxxWon 은 만원, xxxWonR 은 원). 이름 옆에
+   붙는 글이라 만 밑은 접는다. 억이 넘으면 억으로 적는다. */
+const manWonR = v => {
+  const n = Math.round((+v || 0) / 10000);
+  return n >= 10000 ? (Math.round(n / 1000) / 10) + '억' : won(n) + '만';
+};
+/* <b>고객명당목표</b>(원) — 월간목표 ÷ 목표 건수. 둘 중 하나라도 없으면
+   0 을 돌려준다. 부르는 쪽은 0 을 「아직 없다」 로 읽고 <b>아무 말도 안
+   적는다</b> — 없는 목표로 「모자랍니다」 라고 하면 그것이 지어내기다 (1번). */
+function perOf(mid) {
+  const g = (GOALS[mid] || 0) * 10000, c = +CASES[mid] || 0;
+  return (g && c) ? Math.round(g / c) : 0;
+}
 function goalHTML(mid, ro) {
   const g = (GOALS[mid] || 0) * 10000;
+  const gc = +CASES[mid] || 0, per = perOf(mid);
   const got = monthDone(mid).reduce((a, r) => a + (+r.contract || +r.expect || 0), 0);
   const pct = g ? Math.round(got / g * 100) : 0;
   const col = pct >= 100 ? '#00B26B' : pct >= 60 ? '#FF9500' : '#8B95A1';
-  return `<span class="goal">${goalMonth().slice(5)}월 목표
-    <input data-goal="${mid}" inputmode="numeric" value="${g ? won(g) : ''}" placeholder="0"${ro ? ' disabled' : ''}>원</span>` +
-    (g ? `<span class="gpct" style="color:${col}" title="${goalMonth().replace('-', '.')} 에 체결한 계약업적 합계입니다">체결 ${won(got)}원 · ${pct}%</span>` : '');
+  const live = ROWS.filter(r => r.mid === mid && isLive(r)).length;
+  const d = ro ? ' disabled' : '';
+  return `<span class="goal">${goalMonth().slice(5)}월 <b>월간목표</b>
+      <input data-goal="${mid}" inputmode="numeric" value="${g ? won(g) : ''}" placeholder="0"${d}>원</span>` +
+    `<span class="goal cs"><b>목표 건수</b>
+      <input data-case="${mid}" inputmode="numeric" value="${gc || ''}" placeholder="0"${d}>건</span>` +
+    `<span class="goal per" data-per="${mid}"
+       title="월간목표 ÷ 목표 건수 입니다. 따로 적지 않습니다 — 세 칸을 다 적게 하면 서로 안 맞는 날이 옵니다.">${perTXT(mid)}</span>` +
+    (g ? `<span class="gpct" style="color:${col}" title="${goalMonth().replace('-', '.')} 에 체결한 계약업적 합계입니다">체결 ${won(got)}원 · ${pct}%</span>` : '') +
+    (per ? `<span class="gpct" style="color:${live >= gc ? '#00B26B' : '#8B95A1'}" title="목표 건수만큼 사람이 붙어 있는지 봅니다">진행 ${live} / ${gc}명</span>` : '');
+}
+/* 고객명당목표 한 조각만 따로 — 숫자를 치는 <b>도중에</b> 판을 다시 세우면
+   커서가 날아간다. 이 조각만 갈아 끼운다. */
+function perTXT(mid) {
+  const per = perOf(mid);
+  return `<b>고객명당목표</b> ` +
+    (per ? `${won(per)}원` : `<i>목표 건수를 적으시면 나옵니다</i>`);
+}
+function perPaint(mid) {
+  const el = document.querySelector(`[data-per="${mid}"]`);
+  if (el) el.innerHTML = perTXT(mid);
+  $$(`[data-pex-mid="${mid}"]`).forEach(x => {
+    const r = ROWS.find(z => z.id === x.getAttribute('data-pex'));
+    if (r) x.innerHTML = pexTXT(r);
+  });
 }
 function memSum(mid) {
   const L = ROWS.filter(r => r.mid === mid);
@@ -583,8 +717,75 @@ function teamSum(tid) {
   return `진행 ${live.length}건 · 예상 ${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원 · 계약 ${done.length}건` +
     (pol ? ` · <span style="color:#F04452">증권 미전달 ${pol}</span>` : '');
 }
+/* ══ <b>전체 팀 한눈에</b> ═══════════════════════════════════════════
+   사장님 말씀 — 「팀 별로 따로 보고, <b>전체적으로 따로 볼 수 있도록</b>
+   하고, 접어두기 칸을 만들어서 <b>한번에 관리</b>하자」.
+
+   아래 큰 판은 1,660px 이라 팀이 넷이면 손으로 한참 밀어야 합니다.
+   여기 <b>팀마다 한 줄</b>로 접어 둡니다 — 누르면 그 팀만 아래에서 펴집니다.
+   ★ 숫자는 <b>아래 판과 같은 셈</b>을 씁니다(teamGoal·teamSum 이 아니라
+     같은 자리에서 뽑습니다) — 두 곳이 따로 세면 반드시 어긋납니다 (5번).
+   ★ 목표를 안 적으신 팀은 <b>달성률을 안 적습니다</b> — 0% 라고 적으면
+     「못 했다」 가 되는데, 못 한 게 아니라 <b>안 적으신</b> 것입니다 (1번). */
+function teamStat(tid) {
+  const ids = memsOf(tid).map(m => m.id);
+  const L = ROWS.filter(r => ids.includes(r.mid));
+  const live = L.filter(isLive), done = L.filter(isDone);
+  const goal = memsOf(tid).reduce((a, m) => a + (GOALS[m.id] || 0), 0) * 10000;
+  const cases = memsOf(tid).reduce((a, m) => a + (+CASES[m.id] || 0), 0);
+  const got = memsOf(tid).reduce((a, m) => a + monthDone(m.id)
+    .reduce((b, r) => b + (+r.contract || +r.expect || 0), 0), 0);
+  /* ★ 진행 예상은 <b>한 사람이라도 적었을 때만</b> 숫자로 적는다. 아무도
+     안 적었는데 「0원」 이라고 적으면 <b>「이 팀은 기대할 게 없다」</b> 가
+     되어 버린다 — 못 적은 것과 0 은 다르다 (1번). */
+  const expN = live.filter(r => +r.expect > 0).length;
+  return { n: ids.length, live: live.length, done: done.length, goal, cases, got,
+    exp: live.reduce((a, r) => a + (+r.expect || 0), 0), expN,
+    per: (goal && cases) ? Math.round(goal / cases) : 0,
+    pol: L.filter(r => !r.closed && r.stage === '계약완료').length };
+}
+function renderAllTeams() {
+  const el = $('#allteams'); if (!el) return;
+  const teams = TEAMS.filter(t => memsOf(t.id).length);
+  if (!teams.length) { el.innerHTML = ''; return; }
+  const shutN = teams.filter(t => foldIs(t.id)).length;
+  const tot = teams.reduce((a, t) => {
+    const s = teamStat(t.id);
+    a.n += s.n; a.live += s.live; a.done += s.done; a.goal += s.goal; a.got += s.got;
+    a.exp += s.exp; a.expN += s.expN;
+    return a;
+  }, { n: 0, live: 0, done: 0, goal: 0, got: 0, exp: 0, expN: 0 });
+  /* 적힌 것이 하나도 없으면 숫자를 안 적는다 — 위 teamStat 에 적은 그 까닭이다 */
+  const expTxt = s => s.expN ? won(s.exp) : '<i class="z">안 적음</i>';
+  const pctTxt = (got, goal) => goal ? `<b class="${got >= goal ? 'ok' : ''}">${Math.round(got / goal * 100)}%</b>`
+    : `<i class="z">목표 안 적음</i>`;
+  el.innerHTML = `<div class="card"><h2>전체 팀 한눈에
+      <span class="sub">${goalMonth().replace('-', '.')} 기준 · 팀 줄을 누르면 아래에서 접히고 펴집니다</span>
+      <span class="sp"></span>
+      <button class="btn gh sm" id="b-foldall">${shutN === teams.length ? '모두 펴기' : '모두 접기'}</button></h2>
+    <div class="tw"><table class="at"><thead><tr>
+      <th>팀</th><th class="n">월간목표</th><th class="n">목표 건수</th><th class="n">고객명당목표</th>
+      <th class="n">체결</th><th class="n">달성</th><th class="n">진행</th><th class="n">진행 예상</th><th class="n">증권 미전달</th>
+    </tr></thead><tbody>` +
+    teams.map(t => { const s = teamStat(t.id); return `<tr data-goteam="${t.id}" class="${foldIs(t.id) ? 'shut' : ''}">
+      <td><span class="ar">▾</span>${esc(t.name)} <span class="z">${s.n}명</span></td>
+      <td class="n">${s.goal ? won(s.goal) : '<i class="z">-</i>'}</td>
+      <td class="n">${s.cases ? s.cases + '건' : '<i class="z">-</i>'}</td>
+      <td class="n">${s.per ? won(s.per) : '<i class="z">-</i>'}</td>
+      <td class="n">${won(s.got)}</td>
+      <td class="n">${pctTxt(s.got, s.goal)}</td>
+      <td class="n">${s.live}건</td>
+      <td class="n">${expTxt(s)}</td>
+      <td class="n">${s.pol ? `<b class="bad">${s.pol}</b>` : '<i class="z">0</i>'}</td></tr>`; }).join('') +
+    `<tr class="sum"><td>전체 <span class="z">${tot.n}명</span></td>
+      <td class="n">${tot.goal ? won(tot.goal) : '<i class="z">-</i>'}</td>
+      <td class="n"></td><td class="n"></td>
+      <td class="n">${won(tot.got)}</td><td class="n">${pctTxt(tot.got, tot.goal)}</td>
+      <td class="n">${tot.live}건</td><td class="n">${expTxt(tot)}</td><td class="n"></td></tr>` +
+    `</tbody></table></div></div>`;
+}
 function renderBoard() {
-  renderFilters(); renderKpi();
+  renderFilters(); renderKpi(); renderAllTeams();
   const L = rowsFiltered();
   const teams = FILTER.team ? TEAMS.filter(t => t.id === FILTER.team) : TEAMS;
   let html = `<div class="tw"><table class="gx"><thead><tr>
@@ -599,11 +800,21 @@ function renderBoard() {
   teams.forEach(t => {
     const ms = memsOf(t.id).filter(m => !FILTER.mem || m.id === FILTER.mem);
     if (!ms.length) return;
-    html += `<tr class="tm"><td colspan="14">${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
+    /* 「줄이 있나」 는 <b>접기 전에</b> 센다 — 접었다고 「자료가 없습니다」 라고
+       적으면 그것이 거짓말이다 (1번). */
+    const has = ms.some(m => L.some(r => r.mid === m.id));
+    if (has) any = true;
+    const shut = foldIs(t.id);
+    html += `<tr class="tm${shut ? ' shut' : ''}"><td colspan="14">
+      <button type="button" class="tf" data-tfold="${t.id}" aria-expanded="${shut ? 'false' : 'true'}"
+        title="${shut ? '이 팀을 폅니다' : '이 팀을 접습니다 — 팀 줄과 숫자는 그대로 남습니다'}">▾</button>${esc(t.name)}${t.leader ? ` <span style="font-weight:600;color:#4E5968">· 팀장 ${esc(t.leader)}</span>` : ''}
+      <span class="tn">${ms.length}명 · ${L.filter(r => ms.some(m => m.id === r.mid)).length}건</span>
       <span style="float:right;font-weight:600;font-size:12.5px;color:#8B95A1">${teamGoal(t.id)}${teamSum(t.id)}</span></td></tr>`;
+    /* 접힌 팀은 <b>안만</b> 안 그린다. 위 줄은 그대로 서 있어서 목표·체결·
+       진행이 보인다 — 없어진 것이 아니라 접힌 것이다. */
+    if (shut) return;
     ms.forEach(m => {
       const rs = sortRows(L.filter(r => r.mid === m.id));
-      if (rs.length) any = true;
       html += `<tr class="mb"><td colspan="14">${esc(m.name)}${goalHTML(m.id, !canEdit({ mid: m.id }))}<span class="msum">${memSum(m.id)}</span></td></tr>`;
       html += rs.map(rowHTML).join('');
       if (canEdit({ mid: m.id })) html += `<tr class="addr"><td colspan="14"><button data-addmid="${m.id}">+ ${esc(m.name)} 새 건 추가</button></td></tr>`;
@@ -615,21 +826,66 @@ function renderBoard() {
     `<div class="help">아직 배정된 DB 가 없습니다. <b>DB 통합 CRM</b> 에서 DB 를 배정하면 이 자리에 뜹니다.</div>`);
 }
 
+/* 전체 표에서 팀 줄을 누르면 <b>아래 판의 그 팀</b>이 접히고 펴진다.
+   접는 것을 아는 자리는 FOLD 하나다 — 두 곳이 따로 기억하면 어긋난다 (5번). */
+$('#allteams').addEventListener('click', e => {
+  const b = e.target.closest('#b-foldall');
+  if (b) {
+    const teams = TEAMS.filter(t => memsOf(t.id).length);
+    const allShut = teams.every(t => foldIs(t.id));
+    teams.forEach(t => foldSet(t.id, !allShut));
+    renderBoard(); return;
+  }
+  const tr = e.target.closest('[data-goteam]'); if (!tr) return;
+  const tid = tr.dataset.goteam;
+  foldSet(tid, !foldIs(tid));
+  renderBoard();
+  if (!foldIs(tid)) {
+    const row = [...document.querySelectorAll('#board tr.tm')]
+      .find(x => (x.querySelector('[data-tfold]') || {}).dataset?.tfold === tid);
+    if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+});
+
 const board = $('#board');
 function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? ROWS.find(r => r.id === tr.dataset.id) : null; }
-let goalT;
+let goalT, caseT;
 board.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.goal) {
     const mid = el.dataset.goal;
     const manwon = Math.round((+String(el.value).replace(/[^\d]/g, '') || 0) / 10000);
     GOALS[mid] = manwon;
+    perPaint(mid);              /* 고객명당목표가 따라 바뀐다 — 판은 안 세운다 */
     clearTimeout(goalT);
     goalT = setTimeout(async () => {
       const { error } = await sb.rpc('pipeline_goal_set',
         { p_owner: mid, p_period: goalMonth(), p_goal: manwon });
       toast(error ? ('목표를 저장하지 못했습니다 — ' + error.message)
-        : `${memName(mid)} ${goalMonth().slice(5)}월 목표 ${won(manwon * 10000)}원`);
+        : `${memName(mid)} ${goalMonth().slice(5)}월 월간목표 ${won(manwon * 10000)}원`);
+    }, 800);
+    return;
+  }
+  /* ── 목표 건수 ────────────────────────────────────────────────────
+     문(pipeline_goal_set)은 <b>금액만</b> 받는다. 건수는 같은 줄을 그대로
+     쓴다 — 「내 업적 · 월간보고」가 이미 그렇게 쓰는 자리다 (5번).
+     ★ <b>금액도 같이 보낸다.</b> 그 달 줄이 아직 없을 때 건수만 보내면
+       새로 만들어지면서 금액이 0 으로 깔린다 — 적어 두신 목표가 사라진다.
+     ★ 판을 다시 세우지 않는다. 숫자를 치는 도중에 세우면 커서가 날아간다
+       (본체 arPaint 에서 겪은 그 자리다). 바뀌는 조각만 갈아 끼운다.   */
+  if (el.dataset.case) {
+    const mid = el.dataset.case;
+    const n = Math.max(0, Math.round(+String(el.value).replace(/[^\d]/g, '') || 0));
+    CASES[mid] = n;
+    perPaint(mid);
+    clearTimeout(caseT);
+    caseT = setTimeout(async () => {
+      const { error } = await sb.from('monthly_perf').upsert(
+        { owner_id: mid, period: goalMonth(), goal_case: n, goal_prem: (GOALS[mid] || 0) },
+        { onConflict: 'owner_id,period' });
+      toast(error ? ('목표 건수를 저장하지 못했습니다 — ' + error.message)
+        : `${memName(mid)} ${goalMonth().slice(5)}월 목표 ${n}건` +
+          (perOf(mid) ? ` · 고객명당 ${won(perOf(mid))}원` : ''));
     }, 800);
     return;
   }
@@ -637,6 +893,12 @@ board.addEventListener('input', e => {
   const r = rowOf(el); if (!r) return;
   if (NUMF[el.dataset.f]) r[el.dataset.f] = +String(el.value).replace(/[^\d]/g, '') || 0;
   else r[el.dataset.f] = el.value;
+  /* 예상업적을 고치면 <b>이름 밑 글도 같이</b> 바뀐다. 한쪽만 바뀌면
+     같은 숫자를 두 곳이 다르게 말한다 (5번). 그 조각만 갈아 끼운다. */
+  if (el.dataset.f === 'expect' || el.dataset.f === 'contract') {
+    const px = document.querySelector(`[data-pex="${r.id}"]`);
+    if (px) px.innerHTML = pexTXT(r);
+  }
   queueSave(r, el.dataset.f);
 });
 board.addEventListener('change', e => {
@@ -700,6 +962,8 @@ board.addEventListener('keydown', e => {
   if (n) { const t = n.querySelector(`[data-f="${f}"]`); if (t && !t.disabled) { t.focus(); t.select && t.select(); } }
 });
 board.addEventListener('click', async e => {
+  const tf = e.target.closest('[data-tfold]');
+  if (tf) { foldSet(tf.dataset.tfold, !foldIs(tf.dataset.tfold)); renderBoard(); return; }
   const del = e.target.closest('[data-del]');
   if (del) {
     const r = ROWS.find(x => x.id === del.dataset.del); if (!r) return;
