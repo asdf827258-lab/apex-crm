@@ -304,11 +304,48 @@ var TA_AGE=[
    ★ 나이를 세는 데 쓰는 것은 <b>연도뿐</b>이다. 생일이 지났는지까지 따지지
      않는다 — 그건 말투를 고르는 데 쓸 값이라 한두 살 차이가 뜻이 없고,
      따지는 척하면 정확한 것처럼 보여 더 위험하다.                     */
+function mmddOk(m,d){ return m>=1&&m<=12&&d>=1&&d<=31; }
+/* 출생년도 칸에 <b>생년월일</b>을 적어 두신 분이 계십니다 — 19600324 · 850627
+   처럼. 칸 이름은 연도인데 사람은 날짜를 적습니다. 이것을 그냥 버리면
+   <b>아는 나이를 「모른다」</b>고 적게 되고, 마음대로 고치면 지어내는 것이
+   됩니다 (1번). 그래서 <b>틀림없을 때만</b> 읽습니다.
+     네 자리  1900~2200        → 그대로 연도
+     여덟 자리 YYYYMMDD        → 앞 네 자리. 달·날이 말이 되어야 합니다
+     여섯 자리 YYMMDD          → 19YY 와 20YY 중 <b>나이가 말이 되는 쪽이
+        하나뿐일 때만</b>. 둘 다 말이 되면(200315 → 1920·2020) <b>모른다</b>
+        고 합니다. 반만 맞히는 것보다 모른다고 하는 것이 낫습니다.
+   ★ 다섯 자리는 <b>앞의 0 이 떨어진 여섯 자리</b>입니다 — 숫자 칸이라
+     020315 이 20315 로 들어옵니다. 0 을 도로 붙여 읽습니다.
+   ★ <b>고쳐 적지는 않습니다.</b> 읽을 때만 이렇게 읽습니다.            */
+function bornYear(v,nowYear){
+  var n=Number(v);
+  if(!n||!isFinite(n)||n<0)return 0;
+  n=Math.floor(n);
+  if(n>=1900&&n<=2200)return n;
+  var now=Number(nowYear);
+  if(!now||!isFinite(now))now=(new Date()).getFullYear();
+  var s=String(n);
+  if(s.length===5)s='0'+s;
+  if(s.length===8){
+    var y8=Number(s.slice(0,4));
+    if(y8>=1900&&y8<=2200&&mmddOk(Number(s.slice(4,6)),Number(s.slice(6,8))))return y8;
+    return 0;
+  }
+  if(s.length===6){
+    if(!mmddOk(Number(s.slice(2,4)),Number(s.slice(4,6))))return 0;
+    var t=Number(s.slice(0,2)),ok=[],c;
+    for(c=1900;c<=2000;c+=100){
+      if(now-(c+t)>=0&&now-(c+t)<=110)ok.push(c+t);
+    }
+    return ok.length===1?ok[0]:0;   /* 둘 다 말이 되면 <b>모른다</b> (1번) */
+  }
+  return 0;
+}
 function ageBand(birthYear,nowYear){
-  var y=Number(birthYear);
-  if(!y||!isFinite(y)||y<1900||y>2200)return '';
   var n=Number(nowYear);
   if(!n||!isFinite(n))n=(new Date()).getFullYear();
+  var y=bornYear(birthYear,n);
+  if(!y)return '';
   var a=n-y;
   if(a<0||a>120)return '';      /* 말이 안 되는 값이면 <b>모른다</b>고 한다 */
   if(a<40)return '2030';
@@ -542,6 +579,8 @@ g.APEX_STAGE={
   /* <b>나이대</b> — 아는 분께만. 모르면 ageBand 가 <b>빈손</b>으로 돌려준다 (1번) */
   taAge:TA_AGE,
   ageBand:ageBand,
+  /* 칸에 든 값이 <b>연도인지 날짜인지</b> 가리는 곳도 한 곳뿐이다 (5번) */
+  bornYear:bornYear,
   ageOf:ageOf,
   /* <b>카톡 첫 줄과 끝 줄</b> — 가운데 소식은 부르는 쪽이 넣는다 (5·9번) */
   ktOpen:ktOpen,

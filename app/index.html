@@ -7498,11 +7498,14 @@ function arLoad(force){
          .order('call_at',{ascending:false}).order('db_id',{ascending:true}).range(a,b));
     },4000),
     arPageAll(function(a,b){
-      /* <b>birth_year</b> 한 칸을 같이 받습니다 — 부르는 횟수는 그대로입니다 (7번).
+      /* <b>birth_year · household_notes</b> 두 칸을 같이 받습니다 — 부르는
+         횟수는 그대로입니다 (7번). 가구 메모는 사장님이 고객 이야기를
+         실제로 적어 두신 곳이라, 여기가 없으면 고객 365일 분들은 읽을
+         글이 <b>한 줄도 없습니다</b>. 실명은 이 브라우저에서만 머물달니다 (3번).
          나이대 화법은 <b>이 값이 있는 분께만</b> 붙습니다. 배정 DB(dbs)에는
          이 칸이 아예 없어서, 거기서 올라온 분은 앱이 나이를 알 길이 없습니다 —
          그때는 짐작하지 않고 <b>모른다고 적습니다</b> (1번). */
-      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at,birth_year')
+      return q(sb.from('clients').select('id,advisor_id,name_masked,created_at,birth_year,household_notes')
          .order('id',{ascending:true}).range(a,b));
     }),
     arPageAll(function(a,b){
@@ -7634,6 +7637,9 @@ function arCliRows(clients,metas,last){
       /* 출생년도 — <b>있는 그대로</b>. 없으면 null 로 둡니다. 0 으로 채우면
          「모름」이 「0살」이 됩니다 (1번). */
       by:(c.birth_year==null?null:c.birth_year),
+      /* 가구 메모 — 소식 갈래를 읽는 데 씁니다. 실명이 섞여 있을 수
+         있어 <b>서버로 돌려보내지 않고</b>, AI 로 보낼 때는 가립니다 (3번) */
+      hn:(c.household_notes||''),
       /* 가린 이름 — 배정 DB 와 이어 붙일 때 씁니다. 실명은 안 싣습니다 (3번) */
       nm:c.name_masked||'',
       name:((typeof cmRealOf==='function'&&cmRealOf(c.id))||c.name_masked||'(이름 없음)'),
@@ -16354,8 +16360,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 16:05';
-var APP_BUILD_NOTE="<b>🔎 사장님 고객 109분께 실제로 돌려 보고 — 오독 네 가지를 막았습니다.</b> 말씀하신 대로 <b>진짜 자료</b>로 시험했습니다. 처음에는 34분이 읽혔는데, 들여다보니 <b>네 가지가 틀리게</b> 읽히고 있었습니다. 막고 나니 <b>13분</b>입니다 — 줄어든 것이 아니라 <b>정직해진</b> 것입니다.　—　<b>① 「종결」된 분을 보험으로 읽고 있었습니다.</b> 「기존 다른 담당자한테 보장분석받고 모두 정리했다고함 <b>종결</b>」 — 끝난 분입니다. <b>② 「식당업무중」을 사장님으로 읽었습니다.</b> 거기서 <b>일하시는</b> 분입니다. 이제 「근무·업무중·직원·다님」 이 있으면 안 읽습니다. <b>③ 「자녀 컨설팅」을 육아 지원금으로 읽었습니다.</b> 자녀 <b>보험</b> 상담 이야기였습니다. 「자녀」 한 낱말을 빼고 <b>어린 자녀를 가리키는 말</b>만 남겼습니다. <b>④ 「증권전달」·병력으로 보험을 고르고 있었습니다.</b> 증권전달은 <b>이미 판 것</b>이라 근거가 못 되고, 「맹장수술 6년전 4일 입원」 같은 <b>병력</b>은 고객에게 꺼낼 말이 아닙니다.　—　<b>인용이 옆의 병력을 끌고 오던 것도 고쳤습니다.</b> 「당뇨합병증/<b>식당운영</b>/」 에서 사업자를 읽었는데 화면에는 당뇨까지 같이 떴습니다. 이제 <b>걸린 조각 하나</b>만 인용합니다 — 「식당운영」.　—　<b>⚠ 메모에서 주민등록번호를 찾았습니다</b>(두 건). 전화번호·메일·다른 고객 실명도 섞여 있습니다. AI 로 나가면 되돌릴 방법이 없어서, <b>보내기 전에 씻습니다</b> — 주민번호·전화·계좌·메일·이름을 <b>○</b> 로 바꿉니다. 판정에 쓰는 말은 그대로 남깁니다.　—　<b>지금 사장님 자료로는 이렇게 읽힙니다.</b> 🛡️ 보험 7분 · 🏠 부동산 2분 · 🏢 정책자금 3분 · 🎁 지원금 1분. 나머지 <b>40분은 「아직 못 읽음」</b> 입니다 — <b>「직업」 한 줄만 적으시면 36분이 읽힙니다.</b> 지어내지 않고 그렇게 적습니다.";
+var APP_BUILD='2026-09-22 20:10';
+var APP_BUILD_NOTE="<b>📋 아침에 이 카드 하나만 보시면 전화가 됩니다 — 그리고 나이만 보고 고르던 것을 멈췄습니다.</b> 말씀하신 「<b>나이대만 보고 고르지 말고, 매일 아침 고객을 미팅할 수 있도록 자료를 정말 완벽하고 꼼꼼하게 준비해 줘</b>」 에 대한 답입니다.　—　<b>① 나이만으로는 이제 소식을 안 고릅니다.</b> 지난 판에서는 읽힌 33분 중 <b>19분이 나이만 보고</b> 고른 것이었습니다. 그건 근거가 아니라 <b>짐작</b>입니다. 이제 나이대는 <b>진짜 근거가 둘이고 힘이 똑같을 때만</b> 기울이고, 그때도 「60대라 연금 쪽으로 기울였습니다」 라고 <b>화면에 적습니다</b>. 다른 근거가 하나도 없으면 <b>못 읽었다</b>고 합니다.　—　<b>② 대신 「📋 이 분께 적혀 있는 것」 칸을 새로 세웠습니다.</b> 소식을 못 읽어도 <b>미팅은 됩니다</b> — <b>다음에 하기로 한 것</b>(날짜와 함께) · <b>지난번에 하신 것 3건</b>(날짜와 함께 그대로) · 직업 · 나이대 · <b>적어 두신 숫자</b>(수입 · 나가는 돈 · 노후 · 집·빚 · 지금 있는 보장) · 가구 메모 · 통화 메모, 그리고 배정 DB 분은 <b>잡아 둔 약속 · 마지막 통화(몇 번째인지까지)</b>. 사장님 109분 중 <b>61분께 이 칸이 섭니다.</b>　—　<b>③ 우리가 해석해서 얹는 말은 한 줄도 없습니다.</b> 「청약」·「TA」·「증권드림」은 <b>업무 기록</b>이지 고객의 관심사가 아닙니다. 갈래를 그것으로 읽으면 헛것을 잡습니다 — <b>날짜와 함께 그대로</b> 보여 드립니다. 어제 무엇을 했는지가 오늘 첫 마디를 만듭니다.　—　<b>④ 「모름」과 「0」을 가릅니다.</b> 사망보험금 빈칸은 <b>안 적으신 것</b>이고 0 은 <b>「없다고 적으심」</b>입니다. 섞으면 보장이 없는 분과 안 물어본 분이 같아 보입니다. 큰 금액은 <b>억</b>으로 적습니다.　—　<b>⑤ 「청약」 오독을 막았습니다.</b> 이 업에서 「청약」은 <b>보험 청약</b>인데 <b>주택청약</b>으로 읽고 있었습니다 — 사장님 기록 11건이 전부 보험 청약이었습니다. 계약을 넣어 드린 분께 부동산 기사를 보낼 뻔했습니다. 이제 「주택청약·청약통장·청약가점」만 부동산으로 읽습니다.　—　<b>소식 갈래는 6분 → 13분</b>입니다(가구 메모를 한 칸 더 받고 직업표를 더해서). 나머지 분께는 <b>지어내지 않고</b> 「아직 읽을 것이 없습니다」 라고 적고, 무엇을 적으시면 되는지 말씀드립니다. <b>「직업」 한 줄</b>을 적으시면 76분이 더 읽힙니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -22872,6 +22878,50 @@ function hmMsNoNews(){
     '여기서 소식을 <b>지어내지 않습니다</b>. '+
     '<button type="button" onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div>';
 }
+/* ── 📋 <b>이 분께 적혀 있는 것</b> — 아침에 이것만 보고 전화하십니다 ──
+   ★ 우리가 <b>해석해서 얹는 말은 한 줄도 없습니다.</b> 사장님이 적으신
+     글자 그대로입니다. 지난 접촉 「청약」·「증권드림」 은 <b>업무 기록</b>이지
+     고객의 관심사가 아니라, 갈래를 이것으로 읽지 않습니다 (8번).
+   ★ <b>안 적혀 있는 것도 말합니다.</b> 줄이 없는 것과 값이 없는 것은 다릅니다. */
+function hmMsBrOpen(){ return hmFoldOpen('msbr'); }
+function hmMsBrToggle(){ hmFoldSet('msbr',!hmMsBrOpen()); hmMsPaint(); }
+/* 접은 머리 한 줄 — 접혀 있어도 <b>제일 중요한 것</b>은 보입니다.
+   접은 것이지 없앤 것이 아닙니다 — 누르시면 전부 폴니다.             */
+function hmMsBrTop(b){
+  if(!b.n)return '아직 적힌 것이 없습니다';
+  var r=b.rows[0],v=r.v.replace(/<[^>]+>/g,'');
+  return (r.k?(r.k+' — '):'')+v.slice(0,24)+(v.length>24?'…':'')+
+         (b.n>1?(' 외 '+(b.n-1)+'줄'):'');
+}
+/* ★ <b>아침에 한 화면을 넘으면</b> 안 보십니다. 처음에는 펼쳐 두었는데
+   재 보니 카드가 <b>1040px</b> 이었습니다(한 화면 844px). 그래서 접어 두고
+   머리에 <b>제일 중요한 한 줄</b>을 적습니다 — check-msfive 가 재줍니다.   */
+function hmMsBriefHtml(x){
+  if(!x||!x.id)return '';
+  if(typeof ccBriefOf!=='function')return '';
+  var b=ccBriefOf(x.id),h='',i,r,on=hmMsBrOpen();
+  if(!b.n&&!b.miss.length)return '';
+  if(on){
+    if(!b.n)
+      h+='<div class="bz">이 분께는 <b>아직 적혀 있는 것이 하나도 없습니다.</b> '+
+         '통화하시면서 한 줄씩 적어 두시면 내일 아침에 여기 섭니다.</div>';
+    for(i=0;i<b.rows.length;i++){
+      r=b.rows[i];
+      h+='<div class="br"><span class="i">'+osEsc(r.ic)+'</span>'+
+         '<span class="k">'+osEsc(r.k||'')+'</span>'+
+         '<span class="v">'+osEsc(r.v)+
+         (r.at?('<em>'+osEsc(r.at)+'</em>'):'')+
+         (r.src?('<u>'+osEsc(r.src)+'</u>'):'')+'</span></div>';
+    }
+    if(b.miss.length)
+      h+='<div class="bm">안 적혀 있는 것 — <b>「'+osEsc(b.miss.join('」 · 「'))+'」</b>'+
+         '<button type="button" onclick="hmMsOpen()">✏️ 적어 두기</button></div>';
+  }
+  return '<div class="hm-ms-brief">'+
+    '<button type="button" class="bh" onclick="hmMsBrToggle()" aria-expanded="'+(on?'true':'false')+'">'+
+      '📋 <b>적혀 있는 것</b> '+osEsc(hmMsBrTop(b))+
+      '<span>'+(on?'접기 ▴':'전부 보기 ▾')+'</span></button>'+h+'</div>';
+}
 function hmMsNewsLine(x){
   if(typeof APEX_FIT==='undefined')return '<div class="hm-ms-nonews">'+NLFIT_MISS+'</div>';
   if(!x||!x.id)return '';
@@ -22979,7 +23029,10 @@ var HM_MS_BODY={
  plan:function(P){
    var x=hmMsWho(),S=hmMsSay(x);
    if(!x)return HM_MS_BODY.almn(P);
-   return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsNewsLine(x)+
+   /* 준비 자료는 <b>여기 한 곳</b>에만 섭니다. ③ 전화 칸은 나이대 고르기·
+      다섯 마디 틀·용건으로 이미 <b>한 화면이 꽉</b> 차, 거기 또 넣으면 844px 를
+      넘억니다(재 봤습니다). 아침 차례가 ② 준비 → ③ 전화라 여기서 보시면 됩니다. */
+   return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsBriefHtml(x)+hmMsNewsLine(x)+
      (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
         '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>')+
      '<div class="hm-ms-b">'+
@@ -23277,6 +23330,26 @@ function hmMsCss(){
    '.hm-ms-why b{color:#0C4A6E}'+
    '.hm-ms-why .s{display:block;margin-top:3px;font-weight:700;color:#0369A1;opacity:.85}'+
    '.hm-ms-why .o{display:block;margin-top:3px;font-weight:700;color:#B45309}'+
+   /* 📋 이 분께 적혀 있는 것 — 아침에 <b>이것부터</b> 보십니다 */
+   '.hm-ms-brief{margin-top:8px;border:1px solid #E5E7EB;background:#fff;border-radius:var(--r-sm);'+
+     'padding:4px 11px;font-size:var(--t6);line-height:1.5;color:#374151}'+
+   '.hm-ms-brief .bh{display:block;width:100%;min-height:44px;border:0;background:none;padding:2px 0;'+
+     'font-family:inherit;font-size:var(--t6);font-weight:800;color:#111827;text-align:left;cursor:pointer}'+
+   '.hm-ms-brief .bh span{float:right;font-weight:800;color:#2563EB;margin-left:6px}'+
+   '.hm-ms-brief .br{display:flex;gap:6px;padding:4px 0;border-top:1px solid #F3F4F6}'+
+   '.hm-ms-brief .br .k:empty{display:none}'+
+   '.hm-ms-brief .br:first-of-type{border-top:0}'+
+   '.hm-ms-brief .i{flex:0 0 auto}'+
+   '.hm-ms-brief .k{flex:0 0 86px;font-weight:800;color:#6B7280}'+
+   '.hm-ms-brief .v{flex:1 1 auto;min-width:0;word-break:break-all;color:#111827}'+
+   '.hm-ms-brief .v em{font-style:normal;font-weight:700;color:#2563EB;margin-left:5px}'+
+   '.hm-ms-brief .v u{text-decoration:none;font-weight:700;color:#9CA3AF;margin-left:5px}'+
+   '.hm-ms-brief .bz{color:#B45309;background:#FFFBEB;border-radius:9px;padding:7px 9px}'+
+   '.hm-ms-brief .bm{margin-top:7px;padding-top:7px;border-top:1px dashed #E5E7EB;color:#9CA3AF;font-weight:700}'+
+   '.hm-ms-brief .bm b{color:#B45309}'+
+   '.hm-ms-brief .bm button{display:block;margin-top:6px;min-height:44px;border:1px solid #E5E7EB;'+
+     'border-radius:9px;padding:9px 13px;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'background:#fff;color:#374151;cursor:pointer}'+
    '.hm-ms-biz{margin-top:9px;border:1px solid #C7D2FE;background:#EEF2FF;border-radius:var(--r-sm);'+
      'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#3730A3}'+
    '.hm-ms-biz button{display:block;margin-top:7px;min-height:44px;border:0;border-radius:9px;'+
@@ -54918,7 +54991,23 @@ function ccFitOf(id){
      (30일 고객관리의 VIP 기준과 같은 값). 여기서 새 숫자를 만들지 않는다 (5번). */
   var cfg=(typeof ccCfg==='function')?ccCfg():{};
   return APEX_FIT.fit({fp:(m&&m.fp)||{},notes:ccFitNotes(id),vipMan:cfg.vipMan||0,
+    band:ccBandOf(id),
     today:(typeof ccToday==='function')?ccToday():''});
+}
+/* ── <b>나이대</b> — 출생연도가 적힌 분께만 ────────────────────
+   나이대를 <b>여기서 세지 않습니다</b>. 세는 곳은 APEX_STAGE.ageBand
+   한 곳입니다 (5번) — 여기는 그 분의 <b>출생연도를 찾아</b> 넘길 뿐입니다.
+   출생연도는 <b>고객 365일(clients.birth_year)</b> 에만 있습니다. 배정
+   DB 에서 올라온 분은 그 칸이 아예 없어 <b>빈손</b>으로 돌아갑니다 —
+   짐작해 붙이면 화면이 그것을 사실로 적습니다 (1번).
+   ★ 재무설계 답의 <b>f_age 는 안 씁니다</b> — 거기에는 「12」 같은 값이
+     실제로 들어 있습니다(자녀 나이를 적으신 듯합니다). 믿을 수 없는
+     칸으로 나이를 세면 엉뜬한 소식을 보냅니다.                        */
+function ccBandOf(id){
+  if(!id||typeof APEX_STAGE==='undefined'||!APEX_STAGE.ageBand)return '';
+  var L=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[],i;
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id)return APEX_STAGE.ageBand(L[i].by,null)||'';
+  return '';
 }
 /* 브라우저가 <b>이미 들고 있는</b> 글만 넘깁니다 (7번). 통화 메모 전부는
    서버에만 있고, 새벽 5시 작업이 그것까지 읽습니다 — 메모를 브라우저로
@@ -54930,7 +55019,37 @@ function ccFitNotes(id){
     if(L[i].id!==id)continue;                 /* 같은 줄일 때만 — 이름으로 안 잇는다 */
     out.push({src:'통화 메모',at:L[i].last||'',t:L[i].memo});
   }
+  /* 고객 365일 분들은 위 통화 메모가 <b>한 줄도 안 잡힙니다</b> — 그것은
+     배정 DB 줄에 붙어 있고 여기는 고객 줄이기 때문입니다. 그래서
+     <b>가구 메모</b>를 같이 봅니다 — 사장님이 그 분 이야기를 적어 두신
+     곳입니다. 날짜가 없으므로 <b>오래됐다고 적지 않습니다</b> — 언제
+     적으셨는지 모르는데 「몇 일 지났다」고 적으면 그것이 지어내는 것입니다 (1번). */
+  var C=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
+  for(i=0;i<C.length;i++){
+    if(!C[i]||!C[i].hn)continue;
+    if(C[i].id!==id)continue;
+    out.push({src:'가구 메모',at:'',t:C[i].hn});
+  }
   return out;
+}
+/* ── 아침 미팅 <b>준비 자료</b> ────────────────────────────
+   사장님 말씀 — 「매일 아침 고객을 미팅할 수 있도록 <b>자료를 정말
+   완벽하고 꼼꾼하게</b> 준비해 줘」. 여기서는 <b>모으기만</b> 합니다 —
+   무엇을 보여 드릴지는 apex-newsfit 의 brief 가 정합니다 (5번).
+   실명은 <b>씨서 넘깁니다</b> — 메모에 다른 고객 실명이 섞여 있습니다 (3번). */
+function ccBriefOf(id){
+  if(typeof APEX_FIT==='undefined'||!APEX_FIT.brief)return {rows:[],miss:[],n:0};
+  var m=(typeof cmOf==='function')?cmOf(id):null,hn='',i;
+  var C=(typeof AR!=='undefined'&&AR.cliRows)?AR.cliRows:[];
+  for(i=0;i<C.length;i++)if(C[i]&&C[i].id===id){hn=C[i].hn||'';break;}
+  var nm=[];
+  try{ if(typeof cmRealOf==='function'&&cmRealOf(id))nm.push(cmRealOf(id)); }catch(e){}
+  if(m&&m.fam)nm.push(m.fam);
+  /* 배정 DB 줄이면 약속·마지막 통화가 거기 있다 — 같은 카드에 같이 세운다 */
+  var db=null,L=(typeof AR!=='undefined'&&AR.db)?AR.db:[];
+  for(i=0;i<L.length;i++)if(L[i]&&L[i].id===id){db=L[i];break;}
+  return APEX_FIT.brief({fp:(m&&m.fp)||{},hn:hn,touch:(m&&m.touch)||[],db:db,
+    next:(m&&m.next)||{},notes:ccFitNotes(id),band:ccBandOf(id),names:nm});
 }
 /* 갈래 하나만 돌려주던 옛 이름 — 부르던 자리를 그대로 둔다 (5번).
    <b>못 읽으면 빈 글자</b>를 돌려준다. 예전처럼 「보험」으로 채우지 않는다. */

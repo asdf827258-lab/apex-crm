@@ -218,6 +218,65 @@ var BIZ = {
   }
 };
 
+/* ══ 4-2. <b>직업</b>에서 읽는다 ═══════════════════════════════════════
+   사장님 말씀 (2026-09-22) — 「직업 연령대도 읽어서 맞출수 있어!?」
+
+   직업은 <b>사장님이 적어 두신 글</b>이라 짐작이 아니다. 다만 <b>정말
+   말할 수 있는 것만</b> 적는다.
+     ① 사업을 하신다      → 정책자금 (BIZ 가 본다 · 위 RULES)
+     ② 직역연금 자리      → 경제·연금. 공무원·교사·군인은 국민연금이
+        아니라 <b>제 연금</b>이 있어, 노후 이야기의 결이 다르다
+     ③ 같은 업계에 계신다 → 보험. 업계 소식을 <b>일로</b> 보신다
+   ★ <b>그 밖의 직업은 안 읽는다.</b> 「생산직」·「청소」·「IT」 로 갈래를
+     정하려면 「이런 일을 하니 이런 보험이 필요하다」 는 <b>우리 짐작</b>을
+     얹어야 한다. 그건 지어내는 것이다 (1번). 못 읽었다고 적는다.       */
+var JOB = [
+ {cat:'econ', w:78,
+  kw:['공무원','교사','교원','교장','교감','군인','장교','부사관','직업군인',
+      '시청','군청','구청','도청','경찰','소방','우체국','교도','보호감찰','공단','공사'],
+  no:['퇴직','그만','전 ','옛'],
+  why:'직역연금(공무원·사학·군인연금) 자리입니다 — 노후 이야기의 결이 다릅니다'},
+ {cat:'ins',  w:72,
+  kw:['보험설계사','설계사','손해사정','재무설계','FC','GA','보험대리점'],
+  no:['그만','퇴사'],
+  why:'같은 업계에 계십니다 — 업계 소식을 일로 보십니다'}
+];
+function jobHit(job) {
+  var s = txt(job); if (!s) return null;
+  var i, j, r, bad;
+  for (i = 0; i < JOB.length; i++) {
+    r = JOB[i]; bad = false;
+    for (j = 0; j < (r.no || []).length; j++) if (s.indexOf(r.no[j]) >= 0) { bad = true; break; }
+    if (bad) continue;
+    for (j = 0; j < r.kw.length; j++)
+      if (s.indexOf(r.kw[j]) >= 0) return { cat:r.cat, w:r.w, word:r.kw[j], why:r.why };
+  }
+  return null;
+}
+
+/* ══ 4-3. 나이대는 <b>근거가 아니다</b> — 동점일 때만 기울인다 ════
+   사장님 말씀 (2026-09-22) — 「<b>나이대만 보고 고르지 말고</b>, 매일 아침
+   고객을 미팅할 수 있도록 자료를 정말 완벽하고 꼼꾼하게 준비해 줘」.
+
+   맞는 말씀이다. 처음에는 나이대를 힘 42 짜리 <b>근거로</b> 썼는데,
+   실제 자료로 돌려 보니 <b>읽힌 33분 중 19분이 나이만 보고</b> 고른 것이었다.
+   그것은 근거가 아니라 <b>짐작</b>이다. 「60대시니 연금이 궁금하실 것」은
+   그럴듯할 뿐 적혀 있는 사실이 아니다 (1번).
+
+   그래서 지금은 —
+     ★ <b>나이대만으로는 절대 소식을 안 고릅니다.</b> 다른 근거가 하나도
+       없으면 <b>못 읽었다</b>고 적고, 무엇을 채우면 되는지 말합니다.
+     ★ 진짜 근거가 <b>둘 이상이고 힘이 같을 때만</b> 나이대로 기울입니다.
+       그때도 <b>기울였다고 화면에 적습니다</b>(tilt).
+     ★ 40·50대는 여전히 없습니다 — 나이로 갈리는 제도가 없습니다.
+   나이대 자체는 <b>준비 자료(brief)</b> 에 그대로 적혀 나가고, 화법은
+   APEX_STAGE.taAge 가 따로 들고 있습니다 — 거기서는 쓸모가 있습니다. */
+var BAND_T = { '2030':'20·30대', '4050':'40·50대', '60':'60대 이상' };
+var BAND = {
+ '2030':{cat:'help', w:42, why:'20·30대 — 청년·신혼부부·출산 지원은 실제로 나이로 갈립니다'},
+ '60'  :{cat:'econ', w:42, why:'60대 이상 — 연금·기초연금은 실제로 나이로 갈립니다'}
+};
+
 /* ══ 5. 메모에서 읽는 근거 ══════════════════════════════════════════
    통화 메모 791건 · DB 메모 702건 · 가구 메모 38건. 사장님이 고객
    이야기를 실제로 적어 두신 곳은 여기다.
@@ -227,7 +286,16 @@ var BIZ = {
      나머지는 <b>alts</b> 로 같이 돌려준다 — 사장님이 바꾸실 수 있게. */
 var WORDS = [
  {cat:'fund',   w:88, kw:BIZ.yes, no:BIZ.no},
- {cat:'realty', w:82, kw:['전세','월세','청약','분양','이사','집 사','집을 사','아파트','주담대',
+ /* ⚠ <b>「아파트」를 뻐다</b> (2026-09-22 · 실제 자료로 돌려 보고). 사장님은
+    메모에 <b>주소를 적으십니다</b> — 「강남동로 46-25 204동 1102호 (우두리
+    돌산청솔<b>2단지아파트</b>)」. 화재보험 상담단 분을 「집을 알아보시는
+    분」으로 읽었습니다. 나머지 낱말은 다 <b>하시려는 일</b>을 가리키는데
+    「아파트」만 그냥 <b>사는 곳</b>입니다. 틀리느니 안 고릅니다 (8번).
+    ⚠ <b>「청약」도 뻐고 「주택청약·청약통장·청약가점」만 남겼습니다</b>
+    (2026-09-22). 이 업에서 「청약」은 <b>보험 청약</b>입니다 — 사장님 기록
+    11건이 전부 그 뜻이었습니다(「청약/청구/소개」). 주택청약으로 읽으면
+    계약을 넣은 분께 <b>부동산 기사</b>를 보내게 됩니다.                    */
+ {cat:'realty', w:82, kw:['전세','월세','주택청약','청약통장','청약가점','분양','이사','집 사','집을 사','주담대',
                           '주택담보','재건축','재개발','임대차','전세금','보증금'],
                       no:['관심 없','생각 없','안 한다','아니라고']},
  /* ⚠ <b>「자녀」 한 낱말을 뺐다</b> (2026-09-22). 실제 자료로 돌려 보니
@@ -310,7 +378,8 @@ function daysBetween(a, b) {
    ★ <b>근거(why)가 없으면 cat 을 비운다.</b> 이 한 줄이 이 파일의 핵심이다. */
 function fit(input) {
   var x = { fp: (input && input.fp) || {}, notes: (input && input.notes) || [],
-            vipMan: manOf(input && input.vipMan) || 0 };
+            vipMan: manOf(input && input.vipMan) || 0,
+            band: txt(input && input.band) };
   var today = (input && input.today) || '';
   var found = [], i, r, n, h, d;
 
@@ -321,10 +390,17 @@ function fit(input) {
     found.push({ cat:r.cat, w:r.w, rule:r.id, src:'고객 365일 · 재무설계 답',
                  at:'', quote:'', say:r.say(x), old:null });
   }
-  /* ② 글에서 */
+  /* ①-2 직업에서 — 사업자는 위 RULES 가 이미 봤다 */
+  var J = jobHit(x.fp.f_job);
+  if (J) found.push({ cat:J.cat, w:J.w, rule:'직업:' + J.word, src:'고객 365일 · 재무설계 답',
+                      at:'', quote:'', say:'직업이 「' + txt(x.fp.f_job) + '」 — ' + J.why, old:null });
+  /* ② 글에서 — <b>읽기 전에 씩는다</b>. 가구 메모에는 주민등록번호·전화번호가
+     실제로 들어 있었습니다. 씩지 않으면 그 토막이 그대로 <b>근거 인용</b>으로
+     화면에 박힙니다. 이름은 이 브라우저 안이라 그대로 두고, AI 로 보낼 때
+     aiPrompt 가 한 번 더 가립니다 (3번). */
   for (i = 0; i < x.notes.length; i++) {
     n = x.notes[i] || {};
-    h = wordHit(n.t);
+    h = wordHit(scrub(n.t));
     if (!h) continue;
     d = (today && n.at) ? daysBetween(String(n.at).slice(0,10), today) : null;
     found.push({ cat:h.cat, w:(d !== null && d > OLD_DAYS) ? Math.round(h.w * 0.6) : h.w,
@@ -332,13 +408,26 @@ function fit(input) {
                  quote:h.quote, say:'', old:(d !== null && d > OLD_DAYS) ? d : null });
   }
 
-  if (!found.length) return { read:false, cat:'', why:null, alts:[], need:needOf(x) };
+  /* ★ <b>나이대는 여기 안 끼어 있다.</b> found 가 비었으면 60대이든
+     20대이든 <b>못 읽은 것</b>이다 — 나이로 때우지 않는다 (1번). */
+  if (!found.length) return { read:false, cat:'', why:null, alts:[], need:needOf(x), tilt:null };
 
   found.sort(function (a, b) { return b.w - a.w; });
+  /* 동점일 때만 나이대로 기울인다 — 그리고 <b>기울였다고 적는다</b> */
+  var tilt = null, B = BAND[x.band];
+  if (B) {
+    for (i = 0; i < found.length; i++) {
+      if (found[i].w < found[0].w) break;          /* 동점인 동안만 본다 */
+      if (found[i].cat !== B.cat || i === 0) continue;
+      tilt = { band:x.band, why:B.why };
+      found.unshift(found.splice(i, 1)[0]);
+      break;
+    }
+  }
   var top = found[0], alts = [], seen = {};
   seen[top.cat] = 1;
   for (i = 1; i < found.length; i++) if (!seen[found[i].cat]) { seen[found[i].cat] = 1; alts.push(found[i]); }
-  return { read:true, cat:top.cat, why:top, alts:alts.slice(0, 3), need:[] };
+  return { read:true, cat:top.cat, why:top, alts:alts.slice(0, 3), need:[], tilt:tilt };
 }
 
 /* 못 읽었을 때 <b>무엇을 채우면 읽히는지</b> 말한다. 「모릅니다」 로
@@ -424,6 +513,122 @@ function scrub(s, names) {
   });
   return t;
 }
+/* ══ 9. <b>아침 미팅 준비 자료</b> — 지어내지 않고 <b>모아 드린다</b> ══════
+   사장님 말씀 (2026-09-22) — 「나이대만 보고 고르지 말고, 매일 아침 고객을
+   미팅할 수 있도록 <b>자료를 정말 완벽하고 꼼꼼하게</b> 준비해 줘」.
+
+   그래서 여기가 하는 일은 <b>판단이 아니라 모으기</b>다. 한 분에 대해 앱
+   안에 적혀 있는 것을 <b>하나도 안 빠뜨리고</b> 한 자리에 세운다. 우리가
+   해석해서 얹는 말은 한 줄도 없다 — 사장님 글자 그대로다.
+
+     ★ <b>값이 없으면 줄을 안 세운다.</b> 대신 「안 적혀 있는 것」으로 모아
+       마지막에 적는다 — 빠뜨린 것이 아니라 <b>없는 것</b>임을 아셔야 한다.
+     ★ <b>「모름」과 「0」을 가른다.</b> 사망보험금 빈칸은 「안 적으심」이고
+       0 은 「없다고 적으심」이다. 섞으면 보장이 없는 분과 안 물어본 분이
+       같아 보인다 (1번).
+     ★ <b>지난 접촉 기록은 해석하지 않는다.</b> 「청약」·「TA」·「증권드림」
+       은 업무 기록이지 고객의 관심사가 아니다. 소식 갈래를 여기서 읽으면
+       헛것을 잡는다 (8번). <b>날짜와 함께 그대로 보여 드린다</b> — 어제
+       무엇을 했는지가 오늘 첫 마디를 만든다.
+     ★ <b>씻고 내보낸다.</b> 주민등록번호·전화·계좌가 메모에 실제로 있다 (3번).
+     ★ 금액은 <b>만원</b>으로 받아 억으로 적는다 (4번).                    */
+var BRIEF_FP = [
+ {t:'수입', ks:['f_income','f_sincome','f_etc']},
+ {t:'나가는 돈', ks:['f_house','f_loan','f_edu','f_ins','f_living']},
+ {t:'노후', ks:['f_ret','f_retspend','f_np','f_pp','f_dc']},
+ {t:'집·빚', ks:['f_home','f_debt']},
+ {t:'지금 있는 보장', ks:['c_cancer','c_brain','c_heart','c_care','c_death']}
+];
+/* <b>만원</b>을 받는다 (4번). 억이 넘으면 억으로 적는다 — 「50,000만원」은
+   한 박자 늦게 읽힌다.                                                  */
+function briefWon(v) {
+  var n = manOf(v); if (n === null) return '';
+  if (n === 0) return '0';
+  if (n >= 10000) {
+    var eok = Math.floor(n / 10000), rest = n % 10000;
+    return eok + '억' + (rest ? (' ' + rest.toLocaleString() + '만원') : '');
+  }
+  return n.toLocaleString() + '만원';
+}
+function briefOne(fp, k) {
+  var f = FIELD[k]; if (!f) return '';
+  var raw = fp[k];
+  if (f.u === '글') { var t = txt(raw); return t ? (f.t + ' ' + t) : ''; }
+  var n = manOf(raw); if (n === null) return '';
+  if (f.u === '세') return f.t + ' ' + n + '세';
+  /* 0 은 <b>적으신 값</b>이다 — 보장 칸의 0 은 「없다」는 뜻이라 꼭 말한다 */
+  if (n === 0) return f.t + ' <b>0</b>' + (k.charAt(0) === 'c' ? ' (없다고 적으심)' : '');
+  return f.t + ' ' + briefWon(n);
+}
+/* 한 분에 대해 <b>적혀 있는 것 전부</b>. 없는 것은 miss 로 따로 모은다.  */
+function brief(input) {
+  var x = input || {}, fp = x.fp || {}, rows = [], miss = [], i, v, L, g, seg;
+  var names = x.names || [];
+  var wash = function (t) { return scrub(t, names).replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, ''); };
+
+  /* ① 잡아 둔 약속·마지막 통화 — <b>배정 DB 줄</b>의 사실이다.
+     고객 365일 분들은 이 칸이 없고, 배정 DB 분들은 이것밖에 없다 —
+     한 틀로 모으면 <b>둘 다 같은 카드</b>를 보시게 된다 (5번).       */
+  var db = x.db || {};
+  if (txt(db.appt))
+    rows.push({ ic:'📅', k:'잡아 둔 약속', v:txt(db.appt).replace('T', ' ').slice(0, 16),
+                at:'', src:'DB 통합 CRM' });
+  if (txt(db.res) && txt(db.res) !== '미진행')
+    rows.push({ ic:'☎️', k:'마지막 통화', v:txt(db.res) + (db.n > 1 ? (' · 지금까지 ' + db.n + '번') : ''),
+                at:txt(db.last).slice(0, 10), src:'DB 통합 CRM' });
+
+  /* ② 다음에 하기로 한 것 — 약속은 <b>맨 위</b>다 */
+  var nx = x.next || {};
+  if (txt(nx.what))
+    rows.push({ ic:'📌', k:'다음에 하기로 한 것', v:wash(nx.what),
+                at:txt(nx.due), src:'고객 365일' });
+  else miss.push('다음에 할 일');
+
+  /* ② 지난번에 하신 것 — <b>해석하지 않고 그대로</b>, 날짜와 함께 */
+  L = (x.touch || []).slice(0).filter(function (t) { return t && txt(t.note); });
+  L.sort(function (a, b) { return txt(b.at) < txt(a.at) ? -1 : 1; });
+  for (i = 0; i < L.length && i < 3; i++)
+    rows.push({ ic:'🕘', k:(i ? '' : '지난번에 하신 것'), v:wash(L[i].note),
+                at:txt(L[i].at).slice(0, 10), src:txt(L[i].how) });
+  if (!L.length) miss.push('지난 접촉 기록');
+
+  /* ③ 그 분이 어떤 분인가 — 직업·나이대 */
+  v = txt(fp.f_job);
+  if (v) rows.push({ ic:'💼', k:'직업', v:v, at:'', src:'재무설계 답' });
+  else miss.push('직업');
+  if (txt(x.band)) rows.push({ ic:'🎂', k:'나이대', v:BAND_T[x.band] || txt(x.band),
+                               at:'', src:'출생연도' });
+  else miss.push('출생연도');
+
+  /* ④ 적어 두신 숫자 — 있는 칸만. <b>0 은 0 이라고</b> 적는다 */
+  var anyFp = false;
+  for (g = 0; g < BRIEF_FP.length; g++) {
+    var parts = [];
+    for (i = 0; i < BRIEF_FP[g].ks.length; i++) {
+      if (BRIEF_FP[g].ks[i] === 'f_job') continue;
+      seg = briefOne(fp, BRIEF_FP[g].ks[i]);
+      if (seg) parts.push(seg);
+    }
+    if (!parts.length) continue;
+    anyFp = true;
+    rows.push({ ic:'💰', k:BRIEF_FP[g].t, v:parts.join(' · '), at:'', src:'재무설계 답' });
+  }
+  if (!anyFp) miss.push('재무설계 답');
+
+  /* ⑤ 적어 두신 글 — 가구 메모 · 통화 메모 · DB 메모 */
+  var any = false;
+  if (txt(x.hn)) { rows.push({ ic:'🏠', k:'가구 메모', v:wash(x.hn), at:'', src:'고객 365일' }); any = true; }
+  L = x.notes || [];
+  for (i = 0; i < L.length && i < 4; i++) {
+    if (!L[i] || !txt(L[i].t)) continue;
+    rows.push({ ic:'📝', k:txt(L[i].src) || '메모', v:wash(L[i].t),
+                at:txt(L[i].at).slice(0, 10), src:'' });
+    any = true;
+  }
+  if (!any) miss.push('메모 한 줄');
+
+  return { rows:rows, miss:miss, n:rows.length };
+}
 function aiPrompt(notes, names) {
   var L = [], i;
   for (i = 0; i < (notes || []).length && i < 12; i++)
@@ -471,7 +676,9 @@ function aiTake(raw, notes) {
 
 g.APEX_FIT = {
   cats:CATS, catOf:function (id) { return CATID[id] || null; },
-  field:FIELD, rules:RULES, words:WORDS, biz:BIZ,
+  field:FIELD, rules:RULES, words:WORDS, biz:BIZ, job:JOB, band:BAND, bandT:BAND_T, jobHit:jobHit,
+  /* 아침 미팅 준비 자료 — <b>판단이 아니라 모으기</b>다 */
+  brief:brief, briefWon:briefWon, briefOne:briefOne, briefFp:BRIEF_FP,
   manOf:manOf, cut:cut, wordHit:wordHit, oldDays:OLD_DAYS, scrub:scrub,
   fit:fit, need:needOf, tie:tie,
   goodItem:goodItem, pick:pick,
