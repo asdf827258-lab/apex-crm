@@ -486,6 +486,39 @@ const SEED = (o) => `
   is(evH > 0 && evH <= 844, '  접어 두면 미션 칸이 <b>' + evH + 'px</b> — 한 화면(844) 이하');
   is(EV.errs.length === 0, '  터진 곳이 없다' + (EV.errs.length ? ' — ' + EV.errs[0] : ''));
 
+  console.log('\n[13] ⑨ <b>따라만 가면 오늘 고객 열 분</b> (사장님 말씀 ⑨)');
+  /* 「따라만 가면 <b>오늘 고객 10명 관리 완성</b>. 홈 화면에서 모든 걸 해결」
+     ★ 수를 <b>글자로 박아 두지 않았나</b> 를 같이 봅니다 — 박아 두면 미션은
+       열 분을 부르는데 체크판은 다섯을 적어 둘이 따로 놉니다 (5번).
+     ★ 「완성」은 <b>체크가 아니라 기록</b>으로 셉니다 (1번) — 단추 네 번에
+       「열 분 관리 완성」이 되면 그것은 거짓말입니다. */
+  const NINE = await A.p.evaluate(() => {
+    const t = osTodayStr();
+    const P = hmMsPeople();
+    const before = hmMsCare();
+    const r = P.length ? hdbRow(P[0].id) : null;
+    if (r) r.last = t;                       /* 한 분께 오늘 날짜로 기록이 남는다 */
+    const after = hmMsCare();
+    if (r) r.last = '';
+    return { n: HM_MS_N, picked: P.length, before, after,
+      titles: HM_MS.map(m => m.t),
+      ck: CK_ITEMS.day.filter(x => ['d3', 'd4', 'd5'].indexOf(x[0]) >= 0).map(x => x[1]),
+      head: (document.querySelector('#hmFold_ms .hm-fold-h') || {}).innerText || '' };
+  });
+  is(NINE.n === 10, '  <b>열 분</b>이다 — HM_MS_N ' + NINE.n);
+  is(NINE.titles.some(t => /열 통/.test(t)) && NINE.titles.some(t => /카톡 열/.test(t)),
+     '  미션 이름이 <b>그 수를 따른다</b> — ' + NINE.titles.join(' / '));
+  is(NINE.ck.every(t => /10/.test(t)),
+     '  체크판도 <b>같은 수</b>를 말한다 (5번) — ' + NINE.ck.join(' / '));
+  const src13 = fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8');
+  const blk13 = (src13.split('var HM_MS=[')[1] || '').split('var HM_MS_POOL')[0];
+  is(!/다섯 분|전화 다섯|카톡 다섯/.test(blk13),
+     '  미션 표에 <b>수를 글자로 안 박았다</b> — 하나 바꿀 때 한 군데를 빠뜨리지 않는다 (5번)');
+  is(NINE.after.done === NINE.before.done + 1,
+     '  한 분을 대하면 <b>세는 수가 하나 오른다</b> — ' +
+     NINE.before.done + '/' + NINE.before.all + ' → ' + NINE.after.done + '/' + NINE.after.all);
+  is(/오늘 관리 \d+\/\d+명/.test(NINE.head),
+     '  <b>접어 두셔도</b> 몇 분을 대했는지 보인다 — ' + NINE.head.replace(/\s+/g, ' '));
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 아침 미션 다섯 — 홈에서 다 됩니다.');
