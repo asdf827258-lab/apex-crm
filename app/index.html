@@ -25059,9 +25059,13 @@ function hmIgNext(){
 }
 function hmIgSub(){
   var i=hmIgIdx();
-  if(i<0)return '아직 소식을 안 받았습니다';
+  /* ⑪ 접어 두셔도 <b>오늘 올렸나</b>가 보이게 합니다 — 그것이 권유입니다.
+     덤개를 또 띄우지 않습니다 — 홈에 덤개가 둘 뜨면 그때부터 안 읽으십니다. */
+  var tail='';
+  try{ tail=' · '+snsSub(); }catch(e){ tail=''; }
+  if(i<0)return '아직 소식을 안 받았습니다'+tail;
   var it=NLIVE.items[i];
-  return (''+(it.t||'')).slice(0,22)+((''+(it.t||'')).length>22?'…':'');
+  return (''+(it.t||'')).slice(0,18)+((''+(it.t||'')).length>18?'…':'')+tail;
 }
 function hmFoldIgPaint(){
   var box=document.getElementById('hmFold_ig'); if(!box)return;
@@ -25098,7 +25102,8 @@ function hmIgHtml(){
     return '<div class="hm-ig"><div class="hm-ig-no"><b>아직 오늘 소식을 안 받았습니다.</b> '+
       '여기서 소식을 <b>지어내지 않습니다</b> — 받아 와야 보여 드릴 수 있습니다.</div>'+
       '<div class="hm-ig-b"><button type="button" class="btn btn-primary" '+
-      'onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div></div>';
+      'onclick="go(\'news_live\')">🌐 오늘 뉴스 받아 오기</button></div>'+
+      snsHtml()+'</div>';
   var it=NLIVE.items[i];
   return '<div class="hm-ig">'+
     '<div class="hm-ig-t">'+v(it.t||'')+'</div>'+
@@ -25111,7 +25116,81 @@ function hmIgHtml(){
       '<button type="button" class="btn btn-ghost" onclick="hmIgNext()">다른 기사로 ↻</button>'+
     '</div>'+
     '<div class="hm-ig-n">숫자와 시행일은 <b>원문에서 한 번 더</b> 확인하고 쓰십시오 — '+
-      '기사를 옮겨 적는 자리이지 앱이 판단하는 자리가 아닙니다.</div></div>';
+      '기사를 옮겨 적는 자리이지 앱이 판단하는 자리가 아닙니다.</div>'+
+    snsHtml()+'</div>';
+}
+/* ══ ⑪ <b>SNS 관리</b> — 인스타 · 블로그 · 올렸나 ═══════════════════
+   사장님 말씀 ⑪ (2026-09-22) — 「인스타 & 블로그 자동화 → <b>SNS관리 버튼</b> ·
+   <b>매일 알람 권유</b> · <b>승인하면 발행</b>」
+
+   ★ <b>대신 올려 드리지 않습니다.</b> 이 앱에는 인스타그램·네이버 블로그에
+     글을 올릴 열쇠가 없습니다. 있는 척하면 사장님은 올라간 줄 아시고
+     그날을 넘기십니다 (1번). 그래서 <b>여기서 하는 일</b>을 그 자리에
+     적어 둡니다 — 글과 그림을 만들어 드리고, 올리는 것은 사장님이 하시고,
+     <b>올리셨으면 ✅ 를 눌러</b> 기록합니다.
+   ★ <b>권유는 조르는 것이 아닙니다.</b> 오늘 아직이면 머리에 그렇게 적고,
+     올리셨으면 며칠째인지 적습니다. 따로 덮개를 띄우지 않습니다 —
+     홈에 덮개가 둘 뜨면 그때부터 아무것도 안 읽으십니다.
+   ★ <b>담는 곳은 실행 체크판 한 통</b>입니다 (5번) — d10(SNS 1건).
+     새 저장칸을 만들면 달력·체크판과 어긋납니다.                       */
+function snsDoneToday(){
+  try{ return !!(ckLoad('day')||{}).d10; }catch(e){ return false; }
+}
+/* 이번 달 며칠 올렸나 — <b>기록이 있는 날만</b> 셉니다 (1번) */
+function snsMonth(){
+  var n=0,d,i,t,k;
+  try{ t=(typeof mcalToday==='function')?mcalToday():(new Date()).toISOString().slice(0,10); }
+  catch(e){ t=(new Date()).toISOString().slice(0,10); }
+  var ym=t.slice(0,7);
+  for(i=1;i<=31;i++){
+    d=ym+'-'+(i<10?'0':'')+i;
+    if(d>t)break;
+    /* 열쇠 모양을 여기 또 적지 않습니다 — mrtKey 가 그 자리입니다 (5번) */
+    try{ k=JSON.parse(localStorage.getItem(mrtKey(d))||'null'); }catch(e2){ k=null; }
+    if(k&&k.d10)n++;
+  }
+  return n;
+}
+function snsSub(){
+  var m=snsMonth();
+  return (snsDoneToday()?'오늘 올렸습니다':'오늘 아직')+(m?(' · 이번 달 '+m+'일'):'');
+}
+function snsDid(){
+  if(typeof ckToggle!=='function'){ if(typeof toast==='function')toast('체크판을 못 찾았습니다'); return; }
+  if(!snsDoneToday())ckToggle('day','d10');
+  if(typeof toast==='function')toast('올리신 것으로 담았습니다 — 체크판에도 같이 들어갑니다');
+  snsPaint();
+}
+function snsUndo(){
+  if(typeof ckToggle!=='function')return;
+  if(snsDoneToday())ckToggle('day','d10');
+  snsPaint();
+}
+function snsGoBlog(){ try{ go('blog'); }catch(e){} }
+function snsPaint(){
+  var el=document.getElementById('hmIgHost');
+  if(el)el.innerHTML=hmIgHtml();
+  try{ hmFoldIgPaint(); }catch(e){}
+}
+/* 📸 오늘 올릴 것 <b>아래</b>에 붙는 한 칸 — 인스타와 블로그를 한 자리에서 */
+function snsHtml(){
+  var done=snsDoneToday(),m=snsMonth();
+  return '<div class="hm-sns">'+
+    '<div class="hm-sns-h">📣 <b>SNS 관리</b> — 인스타 · 블로그</div>'+
+    '<div class="hm-sns-s">이 앱은 <b>글과 그림까지</b> 만들어 드립니다. '+
+      '<b>올리는 것은 사장님이 하십니다</b> — 인스타·네이버에 대신 올릴 열쇠가 없습니다. '+
+      '그렇게 할 수 있는 척하면 올라간 줄 아시고 그날을 넘기십니다.</div>'+
+    '<div class="hm-sns-b">'+
+      '<button type="button" class="go" onclick="snsGoBlog()">📝 블로그 글 쓰러 가기</button>'+
+      (done
+        ? '<button type="button" class="ok" onclick="snsUndo()">✅ 오늘 올렸습니다 — 되돌리기</button>'
+        : '<button type="button" class="ok" onclick="snsDid()">✅ 올렸습니다</button>')+
+    '</div>'+
+    '<div class="hm-sns-n">'+
+      (done?('오늘 올리셨습니다.'):('<b>오늘은 아직입니다.</b> 위에서 캡션이나 카드뉴스를 만들어 올리신 뒤 ✅ 를 눌러 주세요.'))+
+      (m?(' 이번 달 <b>'+m+'일</b> 올리셨습니다.'):' 이번 달 기록은 <b>아직 없습니다</b> — 0일이라고 적지 않습니다.')+
+      ' 담기는 곳은 <b>실행 체크판</b>(SNS 1건) 한 통입니다.'+
+    '</div></div>';
 }
 function hmIgCss(){
   if(document.getElementById('hmIgCss'))return;
@@ -25125,6 +25204,18 @@ function hmIgCss(){
    '.hm-ig-b .btn{min-height:44px;padding:8px 12px;font-size:var(--t6)}'+
    '.hm-ig-no{font-size:var(--t6);line-height:1.7;color:#92400E;background:#FFFBEB;'+
      'border:1px solid #FDE68A;border-radius:var(--r-sm);padding:10px 12px}'+
+   '.hm-sns{margin-top:11px;border:1px solid #DDD6FE;background:#F5F3FF;'+
+     'border-radius:var(--r-sm);padding:11px 12px}'+
+   '.hm-sns-h{font-size:var(--t5);font-weight:900;color:#5B21B6}'+
+   '.hm-sns-s{margin-top:6px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-sns-s b{color:var(--ink-2)}'+
+   '.hm-sns-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}'+
+   '.hm-sns-b button{flex:1 1 auto;min-width:140px;min-height:46px;border:1px solid var(--ink-7);'+
+     'border-radius:var(--r-sm);background:#fff;font-family:inherit;font-size:var(--t6);'+
+     'font-weight:800;color:var(--ink-2);cursor:pointer;padding:9px 11px}'+
+   '.hm-sns-b .ok{background:#5B21B6;border-color:#5B21B6;color:#fff}'+
+   '.hm-sns-n{margin-top:9px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-sns-n b{color:var(--ink-2)}'+
    '.hm-ig-n{margin-top:10px;font-size:var(--t6);line-height:1.7;color:var(--ink-4);'+
      'border-top:1px dashed var(--ink-7);padding-top:9px}'+
    /* 한 분 카드 안의 <b>오늘 보낼 소식</b> 한 줄 */
@@ -25242,7 +25333,7 @@ function renderHome(){
     /* 📸 <b>오늘 올릴 것</b> — 사장님 말씀 「오늘 인스타 올릴 뉴스도 만들어서」.
        달력·고객·TFA 와 <b>같은 모양의 한 줄</b>입니다. 머리에 오늘 고른
        기사 제목이 적혀 있어, 펴지 않고도 무엇인지 아십니다. */
-    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것',hmIgSub(),
+    (OS.profile?hmFoldWrap('ig','📸','오늘 올릴 것 · SNS 관리',hmIgSub(),
         '<div id="hmIgHost">'+hmIgHtml()+'</div>'):'')+
     /* ── <b>관리·점검은 한 줄로</b> ───────────────────────────────────
        사장님 말씀 — 「홈 화면이 너무 복잡하고 <b>화면이 자꾸 달라서</b>
