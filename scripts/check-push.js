@@ -763,11 +763,15 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
      앱이 만들고 → 서버가 대표인지 보고 → 표에 담고 → 그 열쇠로 서명이 되는가.
      Supabase 자리에 가짜 서버를 세워 <b>진짜 길 그대로</b> 돌립니다.      */
   const SBP = PORT + 2;
-  let ROW = null, ROLE = 'owner';
+  let ROW = null, ROLE = 'owner', BADKEY = false;
   const fakeSb = http.createServer(async (rq, rs) => {
     const u2 = url.parse(rq.url, true);
     let bd = ''; for await (const c of rq) bd += c;
     const J = (o, st) => { rs.writeHead(st || 200, { 'Content-Type': 'application/json' }); rs.end(JSON.stringify(o)); };
+    /* ⚠ 열쇠가 틀리면 Supabase 는 <b>무엇을 묻든</b> 이 한 줄만 돌려준다.
+       진짜 서버가 실제로 그랬다 — 2026-09-22 사장님 화면. */
+    if (BADKEY) return J({ message: 'Invalid API key',
+                           hint: 'Double check your Supabase `anon` or `service_role` API key.' }, 401);
     if (u2.pathname === '/auth/v1/user')
       return J((rq.headers.authorization || '').indexOf('tok-ok') >= 0
         ? { id: '11111111-1111-1111-1111-111111111111' } : {});
@@ -864,6 +868,51 @@ const bu=x=>Buffer.from(x).toString('base64').replace(/\+/g,'-').replace(/\//g,'
   const K3 = await CORE2.keys();
   is(K3.from === 'env' && K3.subject === 'mailto:env@example.com',
      '<b>환경변수가 있으면 그쪽이 먼저</b>다 — 표가 덮지 않는다 · 출처 ' + K3.from);
+  console.log('\n[6-9] 🩺 <b>열쇠가 틀렸을 때 사장님 탓을 하지 않는가</b> (1번)');
+  /* ⚠ 2026-09-22 아침. 사장님 화면에 이렇게 떴습니다 —
+       「서버가 로그인 표를 확인하지 못했습니다 — 앱을 닫았다 여신 뒤 다시
+        눌러 주세요. (서버 대답 401 · Invalid API key)」
+     사장님은 앱을 껐다 켜기를 되풀이하셨습니다. 그런데 「Invalid API key」는
+     <b>사장님 로그인이 아니라 서버가 내민 열쇠</b>가 거절당한 것입니다.
+     고칠 곳은 Netlify 환경변수 한 줄이었습니다.
+     <b>허물을 엉뚱한 사람에게 돌리면 영영 못 고칩니다.</b>               */
+  {
+    BADKEY = true;
+    const r = await call('POST', { a: 'setkey' },
+      /* 열쇠 모양은 안 봐도 된다 — 그 앞에서 막힐 일이다 */
+      JSON.stringify({ token: 'tok-ok', pub: 'x', priv: 'y', subject: 'mailto:a@b.c' }));
+    is(r && r.ok === false, '열쇠가 틀리면 <b>담기지 않는다</b>');
+    is(!!(r && r.keyFault),
+       '<b>서버가 「내 열쇠 탓」이라고 말한다</b> (keyFault) — 이 한 글자가 ' +
+       '「앱을 껐다 켜세요」 를 스무 번 하느냐 마느냐를 가른다');
+    is(!/닫았다 여신/.test(String((r && r.reason) || '')),
+       '  <b>「앱을 닫았다 여세요」 라고 안 한다</b> — 그래 봐야 안 고쳐진다');
+    is(!/<b>|<\/b>/.test(String((r && r.reason) || '')),
+       '  이유는 <b>맨 글자</b>로만 온다 — Supabase 원문이 섞이는 자리라 ' +
+       '화면이 날것으로 그리면 남의 글이 우리 화면에서 돈다');
+    /* 🩺 진단 — <b>열쇠는 한 글자도 안 나간다</b> (10번) */
+    const d = await call('GET', { diag: '1' });
+    is(!!(d && d.key), '🩺 <b>살펴보기</b>가 열린다 — 안 보이면 못 고친다 (8번)');
+    const flat = JSON.stringify(d || {});
+    is(flat.indexOf(process.env.SUPABASE_SERVICE_ROLE_KEY) < 0,
+       '  <b>열쇠 글자는 한 자도 안 나온다</b> (10번) — 모양과 대답만');
+    is(/invalid api key/i.test(flat),
+       '  <b>Supabase 가 뭐라 했는지</b>는 그대로 보여 준다 — 그것이 고칠 실마리다');
+    is(d && d.key && d.key.kind && typeof d.key.len === 'number',
+       '  열쇠 <b>모양</b>(꼴·글자 수)을 말한다 — ' + JSON.stringify((d && d.key) || {}));
+    BADKEY = false;
+  }
+  /* <b>다른 프로젝트 열쇠</b>도 똑같이 「Invalid API key」다 — 고칠 법이 달라 갈라야 한다 */
+  is(CORE.keyShape('eyJhbGciOiJIUzI1NiJ9.' +
+       Buffer.from(JSON.stringify({ role: 'service_role', ref: 'somewhereelse' })).toString('base64url') +
+       '.x').refOk === false,
+     '<b>다른 프로젝트 열쇠</b>를 가려낸다 — 같은 말이 와도 고칠 법이 다르다');
+  is((CORE.keyShape(process.env.SUPABASE_SERVICE_ROLE_KEY) || {}).kind === 'other',
+     '  모르는 꼴은 <b>모른다고</b> 한다 (1번)');
+  is(CORE.isKeyFault({ msg: 'Invalid API key' }) === true &&
+     CORE.isKeyFault({ msg: 'invalid JWT: token is malformed' }) === false,
+     '<b>열쇠 탓과 표 탓을 가른다</b> — 토큰이 상했으면 그때는 정말 다시 로그인이다');
+
   delete process.env.VAPID_PUBLIC; delete process.env.VAPID_PRIVATE; delete process.env.VAPID_SUBJECT;
   fakeSb.close();
 

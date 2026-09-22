@@ -21,6 +21,15 @@ const crypto = require('crypto');
 
 const SB_URL = process.env.SUPABASE_URL || 'https://miakdhxtqofpndtlyzxa.supabase.co';
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+/* 「이 표가 누구 것인가」를 묻는 데는 <b>anon 열쇠면 됩니다</b> — 그게 원래 그
+   열쇠가 하는 일이고, 브라우저가 늘 그렇게 씁니다(RLS 가 지킵니다 · 10번).
+   ⚠ 2026-09-22. 여기서 <b>service_role 로 물었다가</b> 물렸습니다. 그 열쇠가
+     거절당하자 Supabase 가 「Invalid API key」를 돌려줬고, 앱은 그것을
+     <b>「사장님 로그인이 확인 안 됩니다」</b> 로 옮겨 적었습니다. 사장님은
+     앱을 닫았다 열기를 되풀이하셨습니다 — 고칠 곳은 <b>서버 열쇠</b>였습니다.
+     열쇠 하나가 틀렸다고 <b>엉뚱한 사람에게 허물을 돌리면</b> 영영 못 고칩니다 (1번).
+   anon 이 없으면 옛날처럼 SB_KEY 로 묻되, <b>무엇으로 물었는지 말합니다</b>. */
+const SB_ANON = process.env.SUPABASE_ANON_KEY || '';
 /* ── 열쇠는 <b>두 곳</b>에서 올 수 있다 ──────────────────────────
    ① 환경변수 VAPID_* — 예전부터 쓰던 자리. <b>있으면 이것이 먼저</b>다.
    ② push_keys 표(서버만 읽는다) — 앱에서 만들어 저장한 것.
@@ -56,6 +65,70 @@ async function keys() {
   return { pub: ENV_PUB, priv: ENV_PRIV, subject: ENV_SUBJECT, from: 'env' };
 }
 function keysForget() { KEYS = null; }   /* 새로 저장한 직후 다시 읽게 */
+
+/* ── <b>이 표가 누구 것인가</b> ────────────────────────────────────
+   돌려주는 것 — { uid, status, msg, by }
+     uid 가 있으면 그 사람이다. 없으면 <b>왜 못 봤는지</b>를 그대로 담는다.
+     by  는 <b>무엇으로 물었나</b> — 'anon' 이면 제대로, 'service' 면 임시.   */
+async function whoIs(token) {
+  const ak = SB_ANON || SB_KEY;
+  const by = SB_ANON ? 'anon' : 'service';
+  if (!ak) return { uid: '', status: 0, msg: '서버에 Supabase 열쇠가 없습니다', by: 'none' };
+  try {
+    const r = await fetch(SB_URL + '/auth/v1/user',
+      { headers: { apikey: ak, Authorization: 'Bearer ' + String(token || '') } });
+    const j = await r.json().catch(() => null);
+    const uid = (j && j.id) || '';
+    const msg = uid ? '' : String((j && (j.msg || j.message || j.error_description)) || '').slice(0, 90);
+    return { uid: uid, status: r.status || 0, msg: msg, by: by };
+  } catch (e) { return { uid: '', status: 0, msg: '서버에 닿지 못했습니다', by: by }; }
+}
+/* <b>「Invalid API key」는 사장님 탓이 아니다</b> — 서버가 내민 열쇠를 Supabase 가
+   거절한 것이다. 이 한 줄이 있고 없고가 「앱을 껐다 켜세요」를 스무 번 하느냐
+   마느냐를 가른다.                                                        */
+function isKeyFault(d) {
+  return /invalid api key/i.test(String((d && d.msg) || ''));
+}
+
+/* ── 🩺 <b>서버 열쇠가 성한가</b> ───────────────────────────────────
+   ★ <b>열쇠 자체는 한 글자도 안 내보낸다</b> (10번). 내보내는 것은
+     <b>모양</b>(무슨 꼴인지·몇 글자인지)과 <b>Supabase 의 대답</b>뿐이다.
+   ★ JWT 의 가운데 토막(payload)은 서명이 아니라 <b>누구나 읽을 수 있는 자리</b>다.
+     거기서 role 과 ref(어느 프로젝트 것인지)만 본다 — 열쇠가 <b>다른 프로젝트</b>
+     것이어도 똑같이 「Invalid API key」가 나오기 때문에, 이 둘을 갈라야 한다. */
+function keyShape(k) {
+  const s = String(k || '');
+  if (!s) return { kind: 'none', len: 0 };
+  const out = { kind: 'other', len: s.length };
+  if (/^sb_secret_/.test(s)) { out.kind = 'sb_secret'; return out; }
+  if (/^sb_publishable_/.test(s)) { out.kind = 'sb_publishable'; return out; }
+  const p = s.split('.');
+  if (p.length === 3) {
+    out.kind = 'jwt';
+    try {
+      const j = JSON.parse(Buffer.from(p[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+      out.role = String(j.role || '');
+      out.ref = String(j.ref || '');
+      out.refOk = !!(out.ref && SB_URL.indexOf(out.ref) >= 0);
+    } catch (e) { /* 못 읽으면 모양만 말한다 */ }
+  }
+  return out;
+}
+async function keyDiag() {
+  const d = { url: String(SB_URL).replace(/^https?:\/\//, ''),
+              key: keyShape(SB_KEY), anon: !!SB_ANON, vapidEnv: !!(ENV_PUB && ENV_PRIV && ENV_SUBJECT) };
+  if (!SB_KEY) { d.live = { status: 0, msg: 'SUPABASE_SERVICE_ROLE_KEY 가 아예 없습니다' }; return d; }
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/push_keys?select=id&limit=1',
+      { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY } });
+    const t = (await r.text()).slice(0, 120);
+    let msg = '';
+    if (!r.ok) { try { const j = JSON.parse(t); msg = String(j.message || j.msg || j.hint || t); }
+                 catch (e) { msg = t; } }
+    d.live = { status: r.status || 0, msg: msg };
+  } catch (e) { d.live = { status: 0, msg: '서버에 닿지 못했습니다' }; }
+  return d;
+}
 
 const JSON_HEAD = { 'Content-Type': 'application/json; charset=utf-8' };
 const TABLE = 'push_subs';
@@ -208,7 +281,8 @@ function morning() {
 }
 
 module.exports = {
-  JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN, SB_KEY,
+  JSON_HEAD, TABLE, TTL, TEST_GAP_MS, MAX_PER_RUN, SB_KEY, SB_ANON,
+  whoIs, isKeyFault, keyDiag, keyShape,
   keys, keysForget,
   b64u, unb64u, seal, vapidAuth, sendOne, sb, drop, touch, ready, kstHour, morning, onePerDevice
 };
