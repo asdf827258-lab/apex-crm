@@ -285,35 +285,40 @@ const is = (c, m) => c ? ok(m) : no(m);
       hasBoard: t.indexOf('지점 총괄') >= 0,
       /* 맨 위인가 — 사업계획서가 지점 총괄보다, 총괄이 팀원 목록보다 앞에 */
       order: [t.indexOf('사업계획서'), t.indexOf('지점 총괄')],
-      mates: !!document.getElementById('pf_sh_u2') && !!document.getElementById('pf_sh_u3')
+      goalIn: !!document.getElementById('pf_tgoal'),
+      mates: !!document.getElementById('pf_sh_u2') || !!document.getElementById('pf_sh_u3'),
+      go: !!(host.innerHTML || '').match(/arGoCat\('dbperf'\)/)
     };
   });
   is(L.hasPlan, '사업계획서 칸이 나온다');
   is(L.hasBoard, '지점 총괄이 나온다');
   is(L.order[0] >= 0 && L.order[0] < L.order[1], '사업계획서가 지점 총괄보다 위에 있다');
-  is(L.mates, '팀원별로 목표를 나눌 칸이 생긴다');
+  /* ── 2026-09-22 · <b>목표는 여기서 안 적는다</b> ────────────────────
+     사장님 말씀 「팀원관리에서 <b>목표 이건 DB업적관리에 넣어버리고</b> …
+     한번에 관리하자」. 여태 목표를 적는 자리가 둘이었고 둘 다 같은 줄
+     (monthly_perf.goal_prem)에 담겨서, 한쪽에서 고치면 다른 쪽 화면은
+     그대로였다 — 어느 것이 지금 목표인지 알 수 없었다 (5번).
+     여기 남는 것은 <b>글로 적는 계획</b> 하나다. */
+  is(!L.goalIn, '<b>팀 전체 목표 칸이 없어졌다</b> — 목표는 DB · 업적관리 한 곳에서 적는다 (5번)');
+  is(!L.mates, '<b>팀원별로 나누는 칸도 없어졌다</b> — 팀원마다 그 화면에서 바로 적는다');
+  is(L.go, '<b>어디서 적는지 길을 알려 준다</b> — 「목표는 DB · 업적관리에서 →」');
 
-  console.log('\n[5] 「적용」 이 팀원 목표만 건드리는가');
+  console.log('\n[5] 계획은 <b>글만</b> 담는다 — 팀원 목표를 건드리지 않는다');
   const A = await page.evaluate(async () => {
-    /* 팀원이 이미 올린 실적이 있다 — 이게 지워지면 안 된다 */
+    /* 팀원이 이미 올린 목표·실적이 있다 — 계획을 저장해도 이게 안 바뀌어야 한다 */
     window.__db.monthly_perf.push({ owner_id: 'u2', period: pfYm(), goal_prem: 100, act_prem: 450, act_case: 3 });
     document.getElementById('pf_tplan').value = '이달은 보장분석 재점검에 집중';
-    document.getElementById('pf_tgoal').value = '900';
-    document.getElementById('pf_sh_u2').value = '400';
-    document.getElementById('pf_sh_u3').value = '500';
-    pfPlanSave(1);
+    pfPlanSave();
     await new Promise(r => setTimeout(r, 1100));
     const u2 = window.__db.monthly_perf.find(x => x.owner_id === 'u2' && x.period === pfYm());
-    const u3 = window.__db.monthly_perf.find(x => x.owner_id === 'u3' && x.period === pfYm());
     const plan = window.__db.team_plans[0] || {};
-    return { u2: u2 || {}, u3: u3 || {}, plan: plan, toast: (window.__toasts || []).slice(-1)[0] || '' };
+    return { u2: u2 || {}, plan: plan, toast: (window.__toasts || []).slice(-1)[0] || '' };
   });
-  is(+A.u2.goal_prem === 400, '팀원 목표가 내려간다 (u2 = ' + A.u2.goal_prem + ')');
-  is(+A.u2.act_prem === 450, '팀원이 올린 <b>실적은 안 건드린다</b> (' + A.u2.act_prem + '만원 그대로)');
-  is(A.u2.from_team === true, '내려온 목표임을 표시해 둔다 — 팀원 화면에서 구분된다');
-  is(+A.u3.goal_prem === 500, '아직 줄이 없던 팀원에게도 새로 만들어 넣는다');
-  is(A.plan.applied_at, '적용한 시각이 남는다');
-  is(/내려보냈습니다/.test(A.toast), '몇 명에게 갔는지 알려 준다 — ' + A.toast);
+  is(A.plan.plan === '이달은 보장분석 재점검에 집중', '글로 적은 계획이 담긴다 — ' + (A.plan.plan || '(없음)'));
+  is(+A.u2.goal_prem === 100, '팀원 <b>목표를 안 건드린다</b> (u2 = ' + A.u2.goal_prem + '만원 그대로)');
+  is(+A.u2.act_prem === 450, '팀원이 올린 <b>실적도 안 건드린다</b> (' + A.u2.act_prem + '만원 그대로)');
+  is(!('share' in A.plan) || !A.plan.share, '<b>나눈 값을 새로 쓰지 않는다</b> — 적는 자리가 하나다 (5번)');
+  is(/저장했습니다/.test(A.toast), '저장했다고 알려 준다 — ' + A.toast);
 
   console.log('\n[6] 영업보고서가 이미지로 나가는가');
   const C = await page.evaluate(async () => {

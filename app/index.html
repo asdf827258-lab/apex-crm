@@ -11276,38 +11276,42 @@ function pfFeedbackSave(oid){
    그래서 여기서 쓴 목표를 <b>「적용」 한 번으로</b> 팀원 목표칸에 내려보낸다.
    다만 팀원이 스스로 적은 값이 있으면 화면에 그렇다고 밝힌다 —
    소리 없이 덮으면 팀원은 자기가 적은 게 사라졌다고 느낀다.            */
+/* ── <b>목표는 여기서 안 적습니다</b> (2026-09-22) ────────────────────
+   사장님 말씀 — 「팀원관리에서 <b>목표 이건 DB업적관리에 넣어버리고</b>,
+   팀 별로 따로 보고, 전체적으로 따로 볼 수 있도록 하고, 접어두기 칸을
+   만들어서 <b>한번에 관리</b>하자」.
+
+   여태 목표를 적는 자리가 <b>둘</b>이었습니다 —
+     ① 여기 사업계획서 : 팀 전체 목표 → 팀원별로 나눠 「적용」
+     ② DB · 업적관리   : 팀원마다 월간목표
+   둘 다 <b>같은 줄</b>(monthly_perf.goal_prem)에 담기는데, 한쪽에서 고치면
+   다른 쪽 화면은 그대로여서 <b>어느 것이 지금 목표인지</b> 알 수 없었습니다.
+   그래서 <b>적는 자리를 하나로</b> 모았습니다 (5번).
+
+   여기 남는 것은 <b>글로 적는 계획</b> 하나입니다 — 숫자가 아니라
+   「무엇에 집중하는가」 입니다. 목표 숫자는 DB · 업적관리에서 적으시면
+   <b>고객명당목표</b>까지 같이 나오고, 고객 이름 옆 예상업적과 바로 견줍니다. */
 function pfTeamPlanHtml(){
   if(!pfIsLead())return '';
-  var p=PF.plan||{},mates=pfPlanMates();
-  var tot=+p.goal_prem||0;
-  var sum=0,i;
-  for(i=0;i<mates.length;i++)sum+=+((p.share||{})[mates[i].id]||0);
-
+  var p=PF.plan||{};
   return '<div class="card" style="border-color:#FDE68A;background:#FFFDF5"><div class="card-hd">'+
     '<div class="card-title"><span class="ci">📋</span>'+pfYmLabel(pfYm())+' 사업계획서 '+
-    '<span class="badge">리더만</span>'+
-    (p.applied_at?' <span class="badge green">적용됨</span>':'')+'</div>'+
-    '<div class="card-desc">여기 적은 목표를 <b>「적용」</b> 하면 팀원 각자의 목표칸에 그대로 내려갑니다. '+
+    '<span class="badge">리더만</span></div>'+
+    '<div class="card-desc">이 달 팀이 <b>무엇에 집중하는가</b>를 글로 적는 자리입니다. '+
     '팀을 고르면 <b>그 팀</b> 계획서를 씁니다 — 지금은 <b>'+osEsc(pfTeamName(pfTeamId())||'팀 없음')+'</b>.</div></div>'+
     '<div class="card-body">'+pfTeamBarHtml()+
     '<div class="fld"><label>이달 팀 사업계획 — 무엇에 집중하는가</label>'+
     '<textarea id="pf_tplan" rows="4" placeholder="예: 기존 고객 보장분석 재점검 집중 · 소개 확보 주 3건 · 신입 2명 동행 상담 주 2회">'+
     osEsc(p.plan||'')+'</textarea></div>'+
-    '<div class="frm cols2" style="margin-top:8px">'+
-      finNum('pf_tgoal','팀 전체 목표',tot||'','만원')+
-    '</div>'+
-    (mates.length?('<div style="margin-top:12px"><div style="font-size:var(--t6);font-weight:900;color:#0B1B34;margin-bottom:7px">'+
-      '팀원별로 나누기 <span style="font-weight:600;color:#94A3B8">— 합계 '+prNum(sum)+'만 / 팀 목표 '+prNum(tot)+'만</span></div>'+
-      '<div class="frm cols2">'+mates.map(function(x){
-        return finNum('pf_sh_'+x.id,x.name,(p.share||{})[x.id]||'','만원');
-      }).join('')+'</div></div>'):
-      '<div class="notice" style="margin-top:9px">팀원 명단을 아직 못 읽었습니다. 「↻ 새로 읽기」 를 눌러 주세요.</div>')+
     '<div class="btn-row" style="margin-top:11px">'+
-      '<button class="btn btn-ghost" onclick="pfPlanSave(0)">저장만</button>'+
-      '<button class="btn btn-primary" onclick="pfPlanSave(1)">📥 저장하고 팀원에게 적용</button>'+
+      '<button class="btn btn-primary" onclick="pfPlanSave()">💾 계획 저장</button>'+
+      /* DB · 업적관리는 <b>TFA 안의 칸</b>이다 — 큰 메뉴에 없다. 그 칸으로 보낸다 */
+      '<button class="btn btn-ghost" onclick="arGoCat(\'dbperf\')">📊 목표는 DB · 업적관리에서 →</button>'+
     '</div>'+
-    '<div class="acad-note" style="margin-top:9px">적용하면 팀원 화면의 목표칸이 이 값으로 바뀌고, '+
-    '「팀 사업계획서에서 내려온 값」 이라고 표시됩니다. 팀원이 그 위에 다시 적을 수도 있습니다.</div>'+
+    '<div class="acad-note" style="margin-top:9px"><b>목표 숫자는 여기서 안 적습니다.</b> '+
+    '📊 <b>DB · 업적관리</b>에서 팀원마다 <b>월간목표</b>와 <b>목표 건수</b>를 적으시면 '+
+    '<b>고객명당목표</b>가 나오고, 고객 이름 옆 예상업적과 바로 견줍니다. '+
+    '적는 자리가 둘이면 어느 것이 지금 목표인지 알 수 없어집니다.</div>'+
     '</div></div>';
 }
 function pfTeamMates(){
@@ -11386,34 +11390,19 @@ function pfWhy(what,err){
     return what+' — 로그인이 풀렸습니다. 새로고침 후 다시 들어와 주세요.';
   return what+' — '+m.slice(0,80);
 }
-function pfPlanSave(apply){
+/* <b>글로 적는 계획만</b> 담습니다. 목표 숫자를 팀원에게 내려보내던
+   길은 없앴습니다 — 그 일은 이제 DB · 업적관리에서 팀원마다 직접
+   적으시는 것이 전부입니다. 담기는 줄이 하나라 어긋날 자리가 없습니다 (5번).
+   ⚠ 옛 값(goal_prem·share)은 <b>건드리지 않습니다.</b> 지난 달 계획서를
+     열었을 때 적어 두셨던 것이 사라지면 안 됩니다 — 안 읽을 뿐입니다. */
+function pfPlanSave(){
   var sb=(typeof osClient==='function')?osClient():null,tid=pfTeamId();
   if(!sb){toast('로그인 후 저장할 수 있습니다');return;}
   if(!tid){toast('팀을 먼저 골라 주세요');return;}
-  var mates=pfPlanMates(),share={},i;
-  for(i=0;i<mates.length;i++){
-    var v=+finV('pf_sh_'+mates[i].id,0);
-    if(v>0)share[mates[i].id]=v;
-  }
-  var row={team_id:tid,period:pfYm(),plan:(osVal('pf_tplan')||''),
-    goal_prem:+finV('pf_tgoal',0),share:share,updated_by:pfMyId()};
-  if(apply)row.applied_at=new Date().toISOString();
+  var row={team_id:tid,period:pfYm(),plan:(osVal('pf_tplan')||''),updated_by:pfMyId()};
   sb.from('team_plans').upsert(row,{onConflict:'team_id,period'}).then(function(r){
     if(r&&r.error){toast(pfWhy('사업계획서를 저장하지 못했습니다',r.error),7000);return;}
-    if(!apply){toast('사업계획서를 저장했습니다');PF.loaded=false;pfLoad();return;}
-    /* 팀원 목표칸에 내려보낸다 — 목표만 건드리고 실적은 손대지 않는다 */
-    var keys=Object.keys(share);
-    if(!keys.length){toast('저장했습니다 — 나눌 목표가 없어 적용은 건너뜁니다');PF.loaded=false;pfLoad();return;}
-    Promise.all(keys.map(function(oid){
-      return sb.from('monthly_perf').upsert(
-        {owner_id:oid,period:pfYm(),goal_prem:share[oid],from_team:true},
-        {onConflict:'owner_id,period'});
-    })).then(function(res){
-      var er=res.filter(function(x){return x&&x.error;});
-      toast(er.length?pfWhy(er.length+'명에게 목표를 못 내려보냈습니다',er[0].error)
-                     :(keys.length+'명에게 목표를 내려보냈습니다'),er.length?7000:2600);
-      PF.loaded=false;pfLoad();
-    });
+    toast('사업계획서를 저장했습니다');PF.loaded=false;pfLoad();
   });
 }
 
@@ -16361,8 +16350,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 10:40';
-var APP_BUILD_NOTE="<b>📈 매일 미션을 어떻게 이루셨는지 홈에서 평가합니다 — TFA 는 열셋에서 여덟으로.</b> 사장님 말씀 「TFA업무관리에서 <b>30일 고객관리</b>는 / <b>홈 화면에 매일 미션을 어떻게 이루었는지를 평가</b>해줘 / 기존 양식은 지워버려」 · 「<b>내 업적 * 월간보고</b> 우선 메뉴 없애기」.　—　<b>① 홈 🌅 아침 미션 안에 「📈 이번 달 어떻게 하셨나」</b> 를 세웠습니다. 다섯을 <b>다 한 날이 며칠</b>인지, <b>어느 미션이 자주 빠지는지</b>(막대로), <b>내리 며칠</b> 하셨는지. 칸 머리에 <b>「이번 달 N일 다 함」</b> 이 적혀 접은 채로도 보입니다.　—　<b>지어내지 않습니다.</b> <b>아직 안 온 날은 안 셉니다</b> — 이 달이 30일이고 오늘이 22일이면 22일까지만 봅니다. <b>앱을 안 여신 날</b>은 「못 한 날」이 아니라 <b>모르는 날</b>이라 따로 세고 화면에 그렇게 적습니다. 아무 기록도 없으면 <b>숫자를 아예 안 적습니다</b> — 「0일 다 함」 은 못 한 것처럼 읽힙니다. 셈은 <b>실행 체크판이 담은 그 자리</b>에서만 옵니다 — 달력에서 보시는 것과 같은 숫자입니다. 서버는 안 부릅니다.　—　<b>② TFA 에서 두 칸을 뺐습니다.</b> <b>내 업적 · 월간보고</b>의 목표는 이제 <b>📊 DB · 업적관리</b>에 있습니다 (월간목표 · 목표 건수 · 고객명당목표 — 담기는 자리가 같은 줄이라 두 화면이 같은 숫자를 말합니다). <b>30일 고객관리</b>가 하던 「어떻게 이루었나」 는 위 홈 평가로 갔습니다. <b>지운 것이 아닙니다</b> — 🔎 메뉴 찾기로 치면 그대로 열리고, <b>월간보고를 아직 안 내셨으면</b> 아침 창과 「해야 할 일」이 그 줄을 세워 낼 자리로 모십니다.　—　⚠ <b>30일 주기 자체는 안 지웠습니다.</b> 그것은 양식이 아니라 뼈대라, 홈 「오늘 챙길 것」·달력·아침 미션이 모두 그 셈으로 오늘 누구를 챙길지 정합니다. 지우면 홈이 텅 빕니다. 없앤 것은 <b>TFA 안의 그 판</b>입니다.　—　덤으로 <b>TFA 가 2.4화면 → 2.2화면</b>으로 짧아졌습니다. 자를 올린 것이 아니라 실제로 줄었고, 기준선도 같이 내렸습니다.";
+var APP_BUILD='2026-09-22 11:30';
+var APP_BUILD_NOTE="<b>🎯 목표를 적는 자리를 하나로 모았습니다.</b> 사장님 말씀 「팀원관리에서 <b>목표 이건 DB업적관리에 넣어버리고</b> … <b>한번에 관리</b>하자」.　—　여태 목표를 적는 자리가 <b>둘</b>이었습니다 — 팀원 관리의 <b>사업계획서</b>(팀 전체 목표를 팀원별로 나눠 「적용」)와 <b>📊 DB · 업적관리</b>(팀원마다 월간목표). 그런데 둘 다 <b>같은 줄</b>에 담깁니다. 한쪽에서 고치면 다른 쪽 화면은 그대로여서, <b>어느 것이 지금 목표인지</b> 알 수가 없었습니다.　—　이제 <b>목표는 DB · 업적관리 한 곳</b>에서만 적습니다. 팀원마다 <b>월간목표</b>와 <b>목표 건수</b>를 적으시면 <b>고객명당목표</b>가 나오고, 고객 이름 옆 예상업적과 바로 견줍니다. 사업계획서에 남는 것은 <b>글로 적는 계획</b> 하나입니다 — 「이 달 무엇에 집중하는가」. 그 칸에서 <b>「목표는 DB · 업적관리에서 →」</b> 단추로 바로 넘어갑니다.　—　⚠ <b>적어 두셨던 옛 값은 안 지웁니다</b> — 안 읽을 뿐입니다. 지난 달 계획서를 여셨을 때 적어 두신 것이 사라지면 안 되기 때문입니다. 팀원이 올린 <b>실적과 목표도 안 건드립니다</b> — 점검이 그것을 봅니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
