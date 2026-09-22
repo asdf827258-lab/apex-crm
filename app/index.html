@@ -6941,7 +6941,7 @@ var GEN=[
    사람만 할 수 있는 것은 따로 모아 하나씩 지워 나가게 한다.
    "다 됐나?" 를 물을 곳이 한 군데는 있어야 한다.                        */
 
-var RD={rows:null,busy:false,err:'',at:'',ms:0};
+var RD={rows:null,busy:false,err:'',at:'',ms:0,diag:null};
 /* 출발 점검을 <b>다시 읽기까지 기다리는 시간</b>. 홈에서도 부르게 되어
    막는 자리가 필요해졌습니다 — 홈은 하루에 수십 번 여는 화면이라 그냥
    부르면 열 때마다 서버를 셋씩 부릅니다 (7번). 설정·조직도는 자주 바뀌는
@@ -7008,20 +7008,12 @@ function rdLoad(force){
   };
   if(!sb||!OS.profile){RD.busy=false;RD.err='로그인 후 확인할 수 있습니다.';rdPaint();return;}
   var q=function(p){return p.then(function(r){return r;},function(e){return {error:e||{message:'실패'}};});};
-  /* 🩺 <b>서버 열쇠</b>도 같이 묻습니다. Supabase 가 아니라 우리 서버라
-     수가 안 늘고, 이 화면은 <b>가끔 여는 곳</b>입니다 (7번).
-     열쇠가 거절당하면 <b>새벽 5시 AI 작업·밤 작업·브리핑·시세</b>가 함께
-     멈춥니다 — 그런데 여태까지 <b>아무데서도 보이지 않았습니다</b> (8번). */
-  var qd=fetch('/.netlify/functions/push?diag=1')
-    .then(function(r){return r.json();},function(){return null;})
-    .then(function(j){return j;},function(){return null;});
   Promise.all([
     q(sb.from('profiles').select('id,name,role,active,workspace')),
     arAll(sb,'clients','id,consent_status','id'),
-    q(sb.from('backups').select('id,ref_date,created_at').order('created_at',{ascending:false}).limit(1)),
-    qd
+    q(sb.from('backups').select('id,ref_date,created_at').order('created_at',{ascending:false}).limit(1))
   ]).then(function(res){
-    out.prof=res[0];out.cli=res[1];out.bak=res[2];out.diag=res[3];
+    out.prof=res[0];out.cli=res[1];out.bak=res[2];
     fin();
   },function(){RD.busy=false;RD.err='서버에서 확인하지 못했습니다.';rdPaint();});
 }
@@ -7130,12 +7122,14 @@ function rdAuto(){
      2026-09-22 사장님 화면에 「401 · Invalid API key」 가 뗴는데, 앱은 그것을
      「로그인을 다시 하세요」 로 옮겨 적었다. 고칠 곳은 Netlify 한 줄이었다.
      ★ 열쇠 <b>글자는 여기 안 나온다</b> — 모양과 대답뿐이다 (10번). */
-  var dg=r.diag;
-  if(!dg||!dg.key){
+  var dg=RD.diag;
+  /* 아직 <b>안 물어봤으면</b> 줄을 안 세운다 — 모르는 것을 「남았다」고
+     적으면 홈의 「안 된 것 n」 이 헛수를 셎니다 (1번). */
+  if(dg&&!dg.key){
     add({k:'sbkey',t:'서버 열쇠(Supabase)',st:'warn',now:'확인하지 못했습니다',
       how:'서버에 닿지 못했습니다. 잠시 뒤 「🔄 다시 확인」 을 눌러 주세요.',
       go:'phone_app'});
-  }else{
+  }else if(dg){
     var dk=dg.key||{},dl=dg.live||{},dok=!!(dl.status>=200&&dl.status<300);
     var dsay=(dk.kind==='none')?'서버에 열쇠가 아예 없습니다'
       :(dk.kind==='jwt'&&dk.refOk===false)?('다른 프로젝트(「'+(dk.ref||'?')+'」) 열쇠입니다')
@@ -7297,13 +7291,26 @@ function renderReady(){
     '<div class="card-desc">서버·설정·조직도를 실제로 읽어 확인합니다.</div></div>'+
     '<div class="card-body">'+
     '<div class="btn-row" style="margin-bottom:12px">'+
-      '<button class="btn btn-primary" onclick="rdLoad(true)">🔄 다시 확인</button>'+
+      '<button class="btn btn-primary" onclick="rdLoad(true);rdDiagLoad()">🔄 다시 확인</button>'+
       '<button class="btn btn-ghost" onclick="rdCopy()">📋 남은 것 복사</button></div>'+
     '<div id="rdPane">'+rdInnerHtml()+'</div>'+
     '</div></div>';
   return osPage('점검','출발 점검',
     '아직 안 된 것만 모아서 보여 줍니다. 앱이 확인할 수 있는 것은 직접 확인했습니다.',
     hero+card);
+}
+/* 🩺 <b>서버 열쇠</b>은 따로 묻습니다 — 열쇠가 거절당하면 새벽 5시
+   AI 작업·밤 작업·브리핑·시세·폰 알람이 <b>통째로</b> 멈춥니다.
+   ⚠ <b>rdLoad 안에 넣었다가 물렸습니다.</b> 홈도 rdLoad 를 부르므로, 홈을
+     여는 매번 서버를 한 번 더 부르고 있었습니다 (7번). check-invest 가
+     콘솔 404 로 잡았습니다 — 점검이 제 일을 했습니다.
+   이제 <b>이 화면을 여실 때만</b> 묻습니다. 아직 안 물어봤으면 그 줄을
+   <b>안 세웁니다</b> — 모르는 것을 「남았다」고 적지 않습니다 (1번). */
+function rdDiagLoad(){
+  fetch('/.netlify/functions/push?diag=1')
+    .then(function(r){return r.json();})
+    .then(function(j){ RD.diag=j||{}; rdPaint(); },
+          function(){ RD.diag={}; rdPaint(); });
 }
 function osReadyAfterRender(){
   /* <b>화면을 여는 것 자체가 「지금 확인해 주세요」</b> 다. 사장님은 SQL 을
@@ -7313,6 +7320,7 @@ function osReadyAfterRender(){
      홈은 곁다리로 열리니 막이를 두고, <b>여기는 뚫습니다</b> — 하루에
      수십 번 여는 화면이 아닙니다 (7번).                                */
   rdLoad(true);
+  rdDiagLoad();
 }
 function rdCopy(){
   if(!RD.rows){toast('먼저 확인을 눌러 주세요');return;}

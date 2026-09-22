@@ -182,6 +182,7 @@ window.supabase={createClient:function(){
   });
   /* <b>시계로 기다리지 않는다</b> — 값이 될 때까지 기다린다. 900ms 로 재던
      것이 느린 판에서 덜 끝나 빨간불이 켜졌다 (8번). */
+  await page.evaluate(() => rdDiagLoad());
   await page.waitForFunction(
     () => { const x = rdAuto().filter(r => r.k === 'sbkey')[0]; return !!(x && x.st === 'ok'); },
     null, { timeout: 8000 }).catch(() => {});
@@ -215,13 +216,28 @@ window.supabase={createClient:function(){
      그 열쇠 하나가 막히면 새벽 5시 AI 작업·밤 작업·브리핑·시세·폰 알람이
      <b>통째로</b> 멈춥니다. 여기서 보이게 하고, <b>사장님 탓을 하지 않는지</b>
      그리고 <b>열쇠 글자가 새지 않는지</b>를 잽니다 (1·8·10번).            */
+  /* ★ <b>아직 안 물어봤으면 줄을 안 세운다.</b> 처음엔 이 묻기를 rdLoad
+     안에 넣었는데, <b>홈도 rdLoad 를 부릅니다</b> — 홈을 여는 매번 서버를
+     한 번 더 부르고 있었습니다 (7번). check-invest 가 콘솔 404 로 잡았습니다
+     — 점검이 제 일을 했습니다.                                            */
+  const before = await page.evaluate(() => {
+    RD.diag = null;
+    return { has: !!rdAuto().filter(r => r.k === 'sbkey')[0] };
+  });
+  ok(!before.has,
+     '아직 <b>안 물어봤으면 줄을 안 세운다</b> — 모르는 것을 「남았다」고 안 적는다 (1번)');
+  const rdLoadSrc = (fs.readFileSync(path.join(ROOT, 'app/index.html'), 'utf8')
+    .split('function rdLoad(')[1] || '').slice(0, 1400);
+  ok(!/functions\/push/.test(rdLoadSrc),
+     '  서버 열쇠는 <b>rdLoad 안에서 안 묻는다</b> — 홈도 rdLoad 를 부른다 (7번)');
+
   const SECRET = 'eyJhbGciOiJIUzI1NiJ9.SECRET_DO_NOT_LEAK.sig';
   /* 흉내를 갈아 끼우고 <b>그 값이 실제로 올 때까지</b> 기다린다 (시계 금지) */
   const setDiag = async (body, want) => {
     await page.unroute('**/functions/push**').catch(() => {});
     await page.route('**/functions/push**', r =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
-    await page.evaluate(() => rdLoad(true));
+    await page.evaluate(() => { rdLoad(true); rdDiagLoad(); });
     /* ⚠ 기다리다 시간이 넘어도 <b>터지지 않는다</b>. 줄을 통째로 빼 보니
        여기서 예외가 나 점검이 <b>빨간불 대신 죽었고</b>, 뒤의 여덟 줄을
        아예 못 쟀다. 한 곳이 망가지면 나머지가 눈이 먼다 — 아래 ok() 들이
