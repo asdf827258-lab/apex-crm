@@ -111,8 +111,11 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
     return { n:rows.length,
       txt:rows.map(x=>x.textContent.replace(/\s+/g,' ').trim()),
       doN:rows.filter(x=>x.querySelector('.mcal-do')).length,
-      whoN:rows.filter(x=>x.querySelector('.mcal-who')).length,
-      whos:rows.map(x=>(x.querySelector('.mcal-who')||{}).textContent||''),
+      /* ⑫ 담당자는 따로 떨어진 딱지가 아니라 <b>이름 바로 앞</b>에 붙습니다 —
+         네이버 캘린더처럼 「담당자 : 스케줄」 로 읽힙니다 (사장님 말씀 ⑫). */
+      whoN:rows.filter(x=>/\s:\s/.test(((x.querySelector('b')||{}).textContent||''))).length,
+      whos:rows.map(x=>(((x.querySelector('b')||{}).textContent||'').split(' : ')[1]?
+                        ((x.querySelector('b')||{}).textContent||'').split(' : ')[0]:'')),
       picks:[].slice.call(document.querySelectorAll('#dynPane .mcal-day .cm-whos .cm-sb'))
               .map(x=>x.textContent.replace(/\s+/g,' ').trim()),
       mask:(document.querySelector('#dynPane .mcal-mask')||{}).textContent||'' };
@@ -125,7 +128,7 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
   const body=SRC.slice(SRC.indexOf('function mcalDoOf('),SRC.indexOf('function mcalWhoName('));
   is(/ccPlan\(/.test(body)&&!/한 번도 연락한 적이 없습니다/.test(body),
      '무엇을 할지는 <b>고객 365일 규칙 한 곳</b>에서 가져온다 (5번) — 여기 또 안 적었다');
-  is(B.whoN===B.n, '줄마다 <b>담당자 이름</b>이 붙는다 — '+B.whoN+'/'+B.n+'줄 (약속 줄에도)');
+  is(B.whoN===B.n, '줄마다 <b>「담당자 : 」</b>가 앞에 붙는다 — '+B.whoN+'/'+B.n+'줄 (약속 줄에도)');
   is(B.whos.indexOf('박서준')>=0&&B.whos.indexOf('윤시현')>=0,
      '<b>누가 맡은 분인지</b> 그대로 — '+B.whos.filter(Boolean).join(' · '));
   is(B.picks.length>=3, '<b>담당자 고르개</b>가 달력 위에 선다 — '+B.picks.join(' / '));
@@ -143,6 +146,8 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
     out.back=[].slice.call(document.querySelectorAll('#dynPane .mcal-it')).length;
     return out;
   });
+  /* ⑫ 이제 그 칸은 「담당자 : 이름」 입니다 — 이름만 떼 재니다 */
+  C.after=C.after.map(function(t){ var a=(''+t).split(' : '); return a.length>1?a[1]:a[0]; });
   is(C.pick==='u2'&&C.after.length===2&&C.after.indexOf('임꺽정')>=0,
      '한 사람을 고르면 <b>그분 것만</b> 남는다 — '+(C.after.join(',')||'없음')+
      ' (고르개는 고객 365일과 한 벌이다)');
@@ -178,6 +183,49 @@ const SEED2=SEED.split('@TODAY@').join(TODAY);
      '긴 줄이 <b>두 줄 다 접혀서</b> 보인다 — 「'+(((D.tail||{}).t||'').slice(0,26))+'…」'+
      ((!wrapOk(D.head)&&D.head)?(' ← 윗줄이 '+D.head.ws+(D.head.cut?'·잘림':'')):'')+
      ((!wrapOk(D.tail)&&D.tail)?(' ← 아랫줄이 '+D.tail.ws+(D.tail.cut?'·잘림':'')):''));
+  console.log('\n[7] ⑫ <b>한 달치 할 일</b> + <b>「담당자 : 스케줄」</b> (사장님 말씀 ⑫)');
+  /* 「캘린더 한달치 할일 + 네이버캘린더 <b>배경화면처럼 담당자 : 스케줄</b>」
+       ① 이 달 <b>어느 날을 눌러도</b> 할 일이 세팅돼 있다
+       ② 앞날에는 <b>「0 / 11」 을 안 적는다</b> (1번) — 아직 안 한 것을
+          0 으로 적으면 「못 했다」로 읽힌다
+       ③ 주간에도 <b>「담당자 : 」</b>가 앞에 붙는다
+       ④ <b>혼자 보는 화면에는 안 붙는다</b> — 줄마다 제 이름이 서면 글자만 는다 */
+  const M=await page.evaluate(()=>{
+    const all=mcalItems(), ym=mcalYm(), td=mcalToday();
+    const last=new Date(Date.UTC(+ym.slice(0,4),+ym.slice(5,7),0)).getUTCDate();
+    let have=0, miss=[], future='', past='';
+    for(let d=1;d<=last;d++){
+      const ds=ym+'-'+('0'+d).slice(-2);
+      const rt=(all[ds]||[]).filter(x=>x.k==='rt')[0];
+      if(rt){ have++; if(ds>td&&!future)future=rt.s||''; if(ds<=td&&!past)past=rt.s||''; }
+      else miss.push(ds);
+    }
+    return { last, have, miss, future, past };
+  });
+  is(M.have===M.last, '  이 달 <b>모든 날</b>에 할 일이 세팅돼 있다 — '+M.have+'/'+M.last+'일'+
+     (M.miss.length?(' ← 빠진 날 '+M.miss.slice(0,3).join(',')):''));
+  is(!!M.future && !/0\s*\/\s*\d/.test(M.future),
+     '  앞날에는 <b>「0 / n」 을 안 적는다</b> (1번) — 「'+M.future+'」');
+  is(!!M.past && /\d+\s*\/\s*\d+/.test(M.past),
+     '  지난 날에는 <b>몇 가지 했는지</b> 적는다 — 「'+M.past+'」');
+
+  const WK=await page.evaluate(()=>{
+    mcalSetView('week');
+    const h=mcalWeekHtml();
+    const el=document.createElement('div'); el.innerHTML=h;
+    const one=[...el.querySelectorAll('.wi')].map(x=>x.textContent.replace(/\s+/g,' ').trim());
+    /* 혼자일 때 — 담당자를 하나로 좁혀 보면 이름이 안 붙어야 한다 */
+    const keep=CM.pick; cmWhoSet('u2');
+    const el2=document.createElement('div'); el2.innerHTML=mcalWeekHtml();
+    const solo=[...el2.querySelectorAll('.wi')].map(x=>x.textContent.replace(/\s+/g,' ').trim());
+    cmWhoSet('u2'); CM.pick=keep;
+    mcalSetView('month');
+    return { one, solo };
+  });
+  is(WK.one.some(t=>/\s:\s/.test(t)),
+     '  주간에도 <b>「담당자 : 」</b>가 앞에 붙는다 — '+(WK.one.filter(t=>/\s:\s/.test(t))[0]||'(없음)'));
+  is(WK.solo.length>0 && WK.solo.every(t=>!/\s:\s/.test(t)),
+     '  <b>혼자 보는 화면에는 안 붙는다</b> — '+(WK.solo[0]||'(없음)'));
   is(errs.length===0, '터진 곳이 없다'+(errs.length?(' ← '+errs[0]):''));
 
   await b.close(); srv.close();

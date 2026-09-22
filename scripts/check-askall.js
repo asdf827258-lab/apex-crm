@@ -41,6 +41,10 @@ const SEED=(role)=>`
  AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석3DB',stage:'미접촉',days:9,n:0,res:'미진행',cAt:'',pAt:''},
         {id:'d2',who:'u2',name:'홍길순B',region:'천안',src:'일반',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
         {id:'d3',who:'u3',name:'홍갑돌C',region:'세종',src:'일반',stage:'AP',days:2,n:2,res:'상담',cAt:'',pAt:''}];
+ /* 서버에 있는 <b>온전한 줄</b> — 목록(AR.db)은 이 중 몇 칸만 읽어 옵니다 */
+ window.__DBROW={d1:{id:'d1',assigned_to:'me',assigned_date:'2026-09-01',customer_name:'홍길동A',
+   phone:'010-1111-2222',region:'순천',source:'보장분석3DB',report_name:'보장분석 3DB',
+   memo:'',stage:'미접촉',contracted_at:null,policy_sent_at:null,policy_no:null,touch_count:null}};
  AR.cliRows=[];AR.calls=[];
  CM.loaded=true;CM.who={me:'홍길동',u2:'홍길순',u3:'홍갑돌'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';
@@ -55,7 +59,17 @@ const SEED=(role)=>`
    select:function(){st.sel=true;return a;},order:function(){return a;},range:function(){return a;},limit:function(){return a;},
    single:function(){return a;},gte:function(){return a;},'in':function(){return a;},is:function(){return a;},
    neq:function(){return a;},not:function(){return a;},eq:function(k,v){st.id=v;return a;},
-   then:function(o,n){window.__W.push({t:st.t,op:st.op,id:st.id,pay:st.pay});
+   then:function(o,n){
+     /* ★ <b>읽기는 「나간 글」이 아니다.</b> 그리고 고치기 창은 열 때
+        <b>그 한 줄만</b> 다시 받아 옵니다(2026-09-22 — 목록에 없는 칸을
+        빈칸으로 세워 두면 저장할 때 연락처가 지워졌습니다). 가짜 서버도
+        그 줄을 돌려줘야 칸이 섭니다. */
+     if(!st.op){
+       var one=(st.t==='dbs'&&st.id&&window.__DBROW&&window.__DBROW[st.id])
+               ?[JSON.parse(JSON.stringify(window.__DBROW[st.id]))]:[];
+       return Promise.resolve({data:one,error:null}).then(o,n);
+     }
+     window.__W.push({t:st.t,op:st.op,id:st.id,pay:st.pay});
          /* ★ 진짜 서버처럼 <b>몇 줄을 바꿨는지</b> 돌려준다.
             Supabase 는 RLS 로 막힌 UPDATE·DELETE 를 <b>에러가 아니라 0줄</b>로
             돌려준다 — 여태 이 가짜 서버가 늘 빈 배열만 줘서, 앱이 「0줄인데
