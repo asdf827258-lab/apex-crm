@@ -11934,7 +11934,14 @@ function chkHtml(){
   for(i=0;i<P.length;i++)rows+=chkRowHtml(P[i]);
   var n={ok:0,no:0};
   for(i=0;i<P.length;i++){ var s=chkSay(P[i]); if(s&&s.why==='ok')n.ok++; else n.no++; }
-  var head='<div class="chk-top">'+
+  /* ★ <b>리더는 팀원 것도 볼 수 있어야 합니다.</b> 고르개를 여기 안 세워 두는
+     바람에 <b>내 것만</b> 보였습니다. 새로 만들지 않고 홈이 쓰는 그 고르개
+     (hwhoBarHtml)를 그대로 세웁니다 — 누가 무엇을 볼 수 있는지를 <b>두 곳에서
+     따로 정하면</b> 한쪽만 늘습니다 (5번). 권한은 hwhoCan()·hwhoList() 가 이미
+     압니다 — 설계사에겐 아예 안 뗴니다.                                 */
+  var pick='';
+  try{ if(typeof hwhoBarHtml==='function'){ if(typeof hwhoCss==='function')hwhoCss(); pick=hwhoBarHtml(); } }catch(e0){ pick=''; }
+  var head=pick+'<div class="chk-top">'+
     '<div class="chk-t">🩺 <b>고객 체크</b> — AP · PC · CS</div>'+
     '<div class="chk-d">TA 가 끝난 분들입니다. <b>읽은 증권</b>에서 오늘 꺼낼 한 가지를 세웠습니다. '+
       '읽은 기록이 없으면 <b>말을 만들지 않습니다</b> — 먼저 읽고 오시면 여기에 섭니다.</div>'+
@@ -16514,8 +16521,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 23:20';
-var APP_BUILD_NOTE="<b>📐 ① TFA 업무관리가 한눈에 들어옵니다 — 넓이를 다 씁니다.</b> 말씀하신 「TFA 업무관리 칸이 한눈에 안 들어와, 넓이를 한눈에 전부 보이게」 부터 했습니다. 먼저 <b>재 봤습니다</b> — 짐작하지 않았습니다.　—　<b>① 넓은 화면인데 폭을 안 쓰고 있었습니다.</b> 1440px 화면에서 본문이 <b>694px</b> 만 쓰고 오른쪽이 그냥 비어 있었습니다(화면 전체를 1080px 로 묶는 줄이 있었습니다). 이제 <b>834px</b>, 1920px 에서는 762 → <b>1,222px</b> 입니다.　—　<b>② 왼쪽 갈래 설명이 여덟 중 다섯이 잘려 있었습니다.</b> 「고객 체크」 가 무엇을 하는 칸인지 「AP·PC·CS — 읽은 증권으로 무엇을 터치할…」 에서 끊겨 못 읽으셨을 겁니다. 이제 <b>두 줄까지 접어</b> 다 보입니다 — 잘린 것 <b>0개</b>.　—　<b>③ 폰은 그대로입니다.</b> 390px 에서는 한 줄로 떨어지는 것이 맞아 건드리지 않았고, 옆으로 새지 않는지 같이 잽니다.　—　점검(check-airep)이 이제 <b>1440·1920·390 세 폭</b>에서 잽니다 — 폭이 줄거나 설명이 다시 잘리면 빨간불이 켜집니다. 되돌려 네 자리를 확인했습니다. 그러다 제 점검의 흠도 하나 고쳤습니다 — 잘림을 <b>세로만</b> 재고 있어서, 한 줄로 자르면 (가로로 넘칩니다) 빨간불이 안 켜졌습니다.";
+var APP_BUILD='2026-09-23 00:20';
+var APP_BUILD_NOTE="<b>🩺 ① 고객 체크 — 홈에서 「KB보장분석만 넣어 주세요」 라고 말합니다. 그리고 리더는 팀원 것도 봅니다.</b>　—　<b>① 홈에 새 칸이 섰습니다</b>(「오늘 챙길 것」 바로 밑). 「📄 <b>KB보장분석만 넣어 주세요.</b> 그 다음은 <b>저희가 관리해 드릴게요.</b>」 증권을 한 번 읽어 두면 그 담보로 <b>오늘 무슨 말을 꺼낼지</b>를 앱이 매일 세워 드린다는 것을, 설계사가 홈에서 바로 알아보게 했습니다. 단추 하나로 <b>넣는 자리</b>까지 갑니다.　—　<b>② 기다리는 분이 몇 명인지 이름까지</b> 적습니다. 이미 넣어 두신 분은 「✅ n명은 오늘 꺼낼 한 가지가 서 있습니다」 로 따로 셉니다. <b>넣기 전에는 아무 말도 지어내지 않습니다</b> — 그래야 「넣으면 된다」는 말이 사실이 됩니다.　—　<b>③ AP·PC·CS 에 한 분도 없으면 칸을 안 세웁니다.</b> 빈 칸은 자리만 먹습니다.　—　<b>④ 리더는 팀원 것도 봅니다.</b> 말씀하신 「내가 다른 사람들 열람이 안 돼」 를 고쳤습니다. 고객 체크 화면에 <b>누구 것을 보는지 고르개</b>가 섰습니다 — 홈이 쓰던 그 고르개를 <b>그대로</b> 씁니다. 권한은 이미 있는 규칙이 압니다(지점장은 자기 팀, 대표는 전부). 설계사에겐 <b>아예 안 뜹니다.</b> 고르면 <b>고객 체크 화면과 홈 칸이 같이</b> 바뀝니다 — 눌러도 그대로면 고장으로 보입니다.　—　점검(check-cuschk)에 <b>열두 줄</b>을 더했습니다. 되돌려 다섯 자리 빨간불을 확인했습니다. 그러다 제 점검의 흠도 둘 고쳤습니다 — 하나는 <b>언제나 참</b>이던 줄, 하나는 <b>함수만 불러 보고</b> 홈에 실제로 걸렸는지는 안 보던 줄입니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -21403,6 +21410,10 @@ function hwhoSet(v){
   try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
   try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+  /* ★ 고객 체크도 이 고르개를 봅니다 — 안 부르면 골라도 화면이 그대로입니다.
+     고르는 곳과 그리는 곳이 따로 놀면 사장님은 <b>고장으로</b> 보십니다. */
+  try{ if(typeof chkPaint==='function'&&document.getElementById('chkPane'))chkPaint(); }catch(e4){}
+  try{ if(typeof hmChkPaint==='function')hmChkPaint(); }catch(e5){}
 }
 /* 「내 화면으로」 — 되돌아올 길은 <b>언제나 한 번</b>이어야 한다 */
 function hwhoMe(){
@@ -21413,6 +21424,10 @@ function hwhoMe(){
   try{ if(typeof hmPaint==='function')hmPaint(); }catch(e1){}
   try{ if(typeof osRenderList==='function')osRenderList(); }catch(e2){}
   try{ if(typeof mcalPaint==='function')mcalPaint(); }catch(e3){}
+  /* ★ 고객 체크도 이 고르개를 봅니다 — 안 부르면 골라도 화면이 그대로입니다.
+     고르는 곳과 그리는 곳이 따로 놀면 사장님은 <b>고장으로</b> 보십니다. */
+  try{ if(typeof chkPaint==='function'&&document.getElementById('chkPane'))chkPaint(); }catch(e4){}
+  try{ if(typeof hmChkPaint==='function')hmChkPaint(); }catch(e5){}
 }
 /* 홈 맨 위 띠 — <b>지금 누구 화면인지</b>와 고르개. 설계사에게는 안 선다 */
 function hwhoBarHtml(){
@@ -24151,6 +24166,118 @@ function hmFoldToggle(k){
   if(h){ h.setAttribute('aria-expanded',v?'true':'false');
          var ar=h.querySelector('.ar'); if(ar)ar.textContent=v?'▴':'▾'; }
 }
+/* ══ 🩺 <b>고객 체크 — KB보장분석만 넣어 주시면 됩니다</b> ═══════════
+   사장님 말씀 (2026-09-22) —
+     「가장 중요한 건, 고객 체크는 <b>홈 화면에서</b>, KB보장분석을 넣어
+      주면 <b>저희가 관리해 드릴게요!</b> 하면서 띄울 수 있도록 만들어.
+      설계사 입장에서 <b>내가 KB보장분석만 넣으면 관리가 자동으로
+      되는구나</b> 하는 걸 인지시켜」
+
+   그래서 이 칸이 하는 말은 하나입니다 — <b>증권 하나만 넣으시면, 그
+   다음은 앱이 합니다.</b> 그것이 사실이어야 하므로 —
+     ★ 넣은 분께는 <b>오늘 꺼낼 한 가지</b>가 실제로 서 있어야 합니다.
+       (chkSay 가 세웁니다 — 여기서 새로 만들지 않습니다 · 5번)
+     ★ 안 넣은 분께는 <b>지어내지 않습니다.</b> 「아직 읽을 것이 없습니다」
+       라고 적고 <b>넣는 자리로 바로 보냅니다</b> (1번).
+     ★ 아무도 없으면 <b>칸을 안 세웁니다</b> — 빈 칸은 자리만 먹습니다.  */
+function hmChkStat(){
+  var P=[],i,s,n={all:0,ok:0,need:0};
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return n; }
+  n.all=P.length;
+  for(i=0;i<P.length;i++){
+    try{ s=chkSay(P[i]); }catch(e2){ s=null; }
+    if(!s)continue;
+    if(s.why==='ok')n.ok++; else n.need++;
+  }
+  return n;
+}
+/* 넣어야 할 분 — <b>가장 오래 기다린 분부터</b>. 세 분까지만 보여 드립니다 */
+function hmChkNeed(){
+  var P=[],out=[],i,s;
+  try{ P=(typeof chkPeople==='function')?chkPeople():[]; }catch(e){ return out; }
+  for(i=0;i<P.length;i++){
+    try{ s=chkSay(P[i]); }catch(e2){ s=null; }
+    if(s&&s.why!=='ok')out.push({p:P[i],why:s.why,C:s.C});
+  }
+  out.sort(function(a,b){ return (b.p.days||0)-(a.p.days||0); });
+  return out;
+}
+function hmChkGo(){ try{ if(typeof arGoCat==='function')arGoCat('check'); }catch(e){} }
+/* 증권 넣는 자리로 — <b>있는 화면으로 보냅니다.</b> 없는 길을 만들지 않습니다 */
+function hmChkBa(){ try{ go('frmake'); }catch(e){} }
+function hmChkPaint(){
+  var el=document.getElementById('hmChkHost');
+  if(el)el.innerHTML=hmChkHtml();
+}
+function hmChkSub(){
+  var n=hmChkStat();
+  if(!n.all)return '';
+  if(!n.need)return n.ok+'분 모두 할 말이 섰습니다';
+  return '증권만 넣으면 되는 분 '+n.need+'명';
+}
+function hmChkHtml(){
+  if(!OS.profile)return '';
+  if(typeof chkPeople!=='function')return '';
+  /* 읽은 기록을 아직 안 받아 왔으면 여기서 받아 옵니다 — 한 번만 (7번) */
+  try{ if(typeof CHKS!=='undefined'&&CHKS.rows===null&&!CHKS.busy&&typeof chkLoad==='function')
+         setTimeout(function(){chkLoad();},20); }catch(e){}
+  var n=hmChkStat();
+  if(!n.all)return '';                      /* 아무도 없으면 안 세웁니다 */
+  hmChkCss();
+  var h='<div class="hm-chk">'+
+    '<div class="hm-chk-t">🩺 <b>고객 체크</b> — AP · PC · CS <b>'+n.all+'명</b></div>';
+  if(n.need){
+    var L=hmChkNeed(),i,x,names=[];
+    for(i=0;i<L.length&&i<3;i++)names.push(osEsc(L[i].p.nm||'고객'));
+    h+='<div class="hm-chk-cta">'+
+      '<div class="hm-chk-big">📄 <b>KB보장분석만 넣어 주세요.</b><br>'+
+        '그 다음은 <b>저희가 관리해 드릴게요.</b></div>'+
+      '<div class="hm-chk-sub">증권을 한 번 읽어 두면, 그 담보로 <b>오늘 무슨 말을 꺼낼지</b>를 '+
+        '앱이 매일 세워 드립니다. 넣기 전에는 <b>아무 말도 지어내지 않습니다.</b></div>'+
+      '<div class="hm-chk-who">기다리는 분 <b>'+n.need+'명</b>'+
+        (names.length?(' — '+names.join(' · ')+(n.need>names.length?(' 외 '+(n.need-names.length)+'명'):'')):'')+
+      '</div>'+
+      '<div class="hm-chk-b">'+
+        '<button type="button" class="ok" onclick="hmChkBa()">📄 KB보장분석 넣기</button>'+
+        '<button type="button" onclick="hmChkGo()">🩺 고객 체크 열기</button>'+
+      '</div></div>';
+  }
+  if(n.ok){
+    h+='<div class="hm-chk-ok">✅ <b>'+n.ok+'명</b>은 이미 넣어 두셔서 '+
+      '<b>오늘 꺼낼 한 가지</b>가 서 있습니다.'+
+      (n.need?'':' <b>다 하셨습니다.</b>')+
+      '<button type="button" onclick="hmChkGo()">보러 가기 →</button></div>';
+  }
+  return h+'</div>';
+}
+function hmChkCss(){
+  if(document.getElementById('hmChkCss'))return;
+  var st=document.createElement('style');st.id='hmChkCss';
+  st.textContent=
+   '.hm-chk{margin:12px 0;border:1.5px solid #BFDBFE;background:#F8FBFF;'+
+     'border-radius:var(--r);padding:13px 14px}'+
+   '.hm-chk-t{font-size:var(--t5);font-weight:900;color:#1E3A8A}'+
+   '.hm-chk-cta{margin-top:9px;border:1px solid #93C5FD;background:#fff;'+
+     'border-radius:var(--r-sm);padding:12px 13px}'+
+   '.hm-chk-big{font-size:var(--t4);font-weight:900;line-height:1.55;color:#0F172A}'+
+   '.hm-chk-big b{color:#1D4ED8}'+
+   '.hm-chk-sub{margin-top:7px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   '.hm-chk-sub b{color:var(--ink-2)}'+
+   '.hm-chk-who{margin-top:8px;font-size:var(--t6);font-weight:700;color:#92400E;'+
+     'background:#FFFBEB;border-radius:9px;padding:7px 9px}'+
+   '.hm-chk-b{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}'+
+   '.hm-chk-b button{flex:1 1 auto;min-height:46px;border:1px solid var(--ink-7);'+
+     'border-radius:var(--r-sm);background:#fff;font-family:inherit;font-size:var(--t6);'+
+     'font-weight:800;color:var(--ink-2);cursor:pointer;padding:10px 12px}'+
+   '.hm-chk-b .ok{background:#1D4ED8;border-color:#1D4ED8;color:#fff}'+
+   '.hm-chk-ok{margin-top:9px;font-size:var(--t6);line-height:1.7;color:#065F46;'+
+     'background:#ECFDF5;border:1px solid #A7F3D0;border-radius:var(--r-sm);padding:10px 11px}'+
+   '.hm-chk-ok b{color:#047857}'+
+   '.hm-chk-ok button{display:block;margin-top:7px;min-height:44px;border:0;border-radius:9px;'+
+     'padding:9px 13px;font-family:inherit;font-size:var(--t6);font-weight:800;'+
+     'background:#047857;color:#fff;cursor:pointer}';
+  document.head.appendChild(st);
+}
 function hmFoldWrap(k,e,t,sub,inner){
   var open=hmFoldOpen(k);
   return '<div class="hm-fold'+(open?' on':'')+'" id="hmFold_'+k+'">'+
@@ -24382,6 +24509,9 @@ function renderHome(){
     (OS.profile?hmFoldWrap('ms','\uD83C\uDF05','\uC544\uCE68 \uBBF8\uC158',hmMsSub(),
         '<div id="hmMsHost">'+hmMsHtml()+'</div>'):'')+
     (OS.profile?('<div id="hmToday">'+hmTodayHtml()+'</div>'):'')+
+    /* 🩺 <b>고객 체크</b> — 「오늘 챙길 것」 바로 밑입니다. 챙길 분을 보고 나서
+       <b>그 분들 증권이 들어와 있는지</b>를 보는 차례라야 말이 됩니다. */
+    (OS.profile?('<div id="hmChkHost">'+hmChkHtml()+'</div>'):'')+
     /* <b>한 번만</b> — 아직 한 번도 안 물어본 분께만. 「오늘 챙길 것」 바로
        밑이라야 뜻이 통합니다 — 「이분들을 아침에 알려 드릴까요」 */
     (OS.profile?('<div id="almNudge"></div>'):'')+

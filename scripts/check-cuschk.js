@@ -195,6 +195,72 @@ const SEED = (o) => `
   is(/onclick="hmMsGoChk\(\)"/.test(SRC) && /arGoCat\('check'\)/.test(SRC),
      '  「🩺 고객 체크 열기」 가 <b>이 칸</b>을 연다');
 
+  console.log('\n[12] 🏠 <b>홈에서 「KB보장분석만 넣어 주세요」 라고 말한다</b>');
+  /* 사장님 말씀 (2026-09-22) —
+       「가장 중요한 건, 고객 체크는 <b>홈 화면에서</b>, KB보장분석을 넣어
+        주면 <b>저희가 관리해 드릴게요!</b> 하면서 띄울 수 있도록. 설계사
+        입장에서 <b>내가 KB보장분석만 넣으면 관리가 자동으로 되는구나</b>
+        하는 걸 인지시켜」
+     그래서 여기서 재는 것은 <b>그 말이 실제로 뜨는가</b>, 그리고 <b>그 말이
+     사실인가</b>(넣은 분께는 할 말이 서 있고, 안 넣은 분께는 안 지어낸다). */
+  {
+    const H = await A.p.evaluate(() => {
+      const el = document.createElement('div');
+      el.innerHTML = hmChkHtml();
+      const t = el.textContent || '';
+      return { t: t, has: !!el.querySelector('.hm-chk'),
+               ba: !!el.querySelector('.hm-chk-b .ok'),
+               stat: hmChkStat(), sub: hmChkSub() };
+    });
+    /* ⚠ <b>함수만 불러 보면 모자란다.</b> 홈에서 그 칸을 통째로 뺀다도
+       hmChkHtml() 은 멀줦하게 돕니다 — 되돌려 보니 빨간불이 안 켜졌습니다.
+       <b>홈이 실제로 건다</b>는 것까지 같이 재다 (8번).                  */
+    is(/id="hmChkHost"/.test(SRC) && /hmChkHtml\(\)/.test(SRC),
+       '홈 화면이 <b>그 칸을 실제로 건다</b> (#hmChkHost)');
+    is(H.has, '  홈에 <b>🦺 고객 체크 칸</b>이 선다');
+    is(/KB보장분석/.test(H.t) && /넣어 주세요/.test(H.t),
+       '  <b>「KB보장분석만 넣어 주세요」</b> 라고 말한다');
+    is(/관리해 드릴게요/.test(H.t),
+       '  <b>「그 다음은 저희가 관리해 드릴게요」</b> — 넣기만 하면 된다는 것을 말한다');
+    is(H.ba, '  <b>넣는 자리로 가는 단추</b>가 있다 — 말만 하고 길을 안 주면 안 한다');
+    is(/지어내지 않습니다/.test(H.t),
+       '  <b>넣기 전에는 안 지어낸다</b>고 같이 적는다 (1번)');
+    is(H.stat.all > 0 && (H.stat.ok + H.stat.need) === H.stat.all,
+       '  숫자가 <b>맞아떨어진다</b> — 전체 ' + H.stat.all + ' = 선 분 ' + H.stat.ok +
+       ' + 기다리는 분 ' + H.stat.need);
+    /* ⚠ 처음엔 이 줄을 `? true : true` 로 적어 <b>언제나 참</b>이었다 — 재는
+       척만 하는 줄이다. 글자에서 숫자를 그대로 찾는다 (8번). */
+    is(H.t.indexOf('기다리는 분') >= 0 && H.t.indexOf(String(H.stat.need) + '명') >= 0,
+       '  <b>몇 분이 기다리는지</b> 적는다 — ' + H.sub);
+    /* ★ <b>아무도 없으면 칸을 안 세운다</b> — 빈 칸은 자리만 먹는다.
+       ⚠ open({none:true}) 은 「읽은 기록이 없다」지 「사람이 없다」가 아니다.
+         그걸로 쟀다가 헛것을 잡을 뻔했다 — 여기서는 명단을 비워 본다. */
+    const z0 = await A.p.evaluate(() => {
+      const keep = AR.db; AR.db = [];
+      const r = { html: hmChkHtml(), sub: hmChkSub(), n: hmChkStat().all };
+      AR.db = keep;
+      return r;
+    });
+    is(z0.n === 0 && z0.html === '', '  <b>AP·PC·CS 에 한 분도 없으면 칸을 안 세운다</b>');
+    is(z0.sub === '', '  머리에도 <b>아무 말도 안 적는다</b> (1번)');
+  }
+
+  console.log('\n[13] 👀 <b>리더는 팀원 것도 본다</b> — 고르개가 이 화면에도 선다');
+  /* 사장님 말씀 — 「고객 체크는 <b>내가 다른 사람들 열람이 안 돼</b>,
+     리더는 자기 권한에 맞게 볼 수 있도록」.
+     고르개(hwhoBarHtml)는 이미 홈에 있습니다 — <b>새로 만들지 않고</b>
+     그것을 이 화면에도 세웁니다 (5번). 권한은 hwhoCan/hwhoList 가 이미
+     압니다. 고르고 나서 <b>화면이 따라 바뀌는지</b>까지 봅니다.        */
+  is(/var head=pick\+/.test(SRC), '고객 체크가 <b>고르개를 먼저</b> 세운다');
+  is(/pick=hwhoBarHtml\(\)/.test(SRC),
+     '  <b>홈이 쓰는 그 고르개</b>를 그대로 쓴다 — 권한 규칙을 두 곳에 안 적는다 (5번)');
+  const hset = (SRC.split('function hwhoSet(')[1] || '').slice(0, 900);
+  is(/chkPaint\(\)/.test(hset),
+     '  고르면 <b>고객 체크도 다시 그린다</b> — 안 그리면 눌러도 그대로라 고장으로 보인다');
+  is(/hmChkPaint\(\)/.test(hset), '  <b>홈 칸도</b> 같이 바뀐다');
+  const hme = (SRC.split('function hwhoMe(')[1] || '').slice(0, 900);
+  is(/chkPaint\(\)/.test(hme), '  <b>「내 화면으로」</b> 로 돌아올 때도 같이 바뀐다');
+
   console.log('\n[11] 한 분도 없으면 <b>사람을 지어내지 않는다</b> (1번)');
   const Z = await open({ none: true });
   const z = await txt(Z.p);
