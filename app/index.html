@@ -8019,7 +8019,20 @@ var AR_CAT=[
  ['sched','📅','스케줄 관리',   '오늘·이번 주 약속과 할 일',        'me', true],
  ['skill','🎓','본인 역량 체크', '배워서 터치할 것 열두 개',         'me'],
  ['todo', '✅','해야 할 일',    '밀린 것부터 위에',                'me'],
- ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me'],
+/* ── <b>내 업적 · 월간보고도 메뉴에서 뺐습니다</b> (2026-09-22) ───────
+   사장님 말씀 — 「<b>내 업적 * 월간보고 우선 메뉴 없애기</b>」.
+
+   이 칸이 들고 있던 <b>목표</b>는 이제 <b>📊 DB · 업적관리</b>에 있습니다 —
+   그쪽에서 팀원마다 <b>월간목표 · 목표 건수</b>를 적으시면 <b>고객명당목표</b>가
+   나오고, 고객 이름 옆에 예상업적이 서서 바로 견줍니다. 담기는 자리는
+   <b>같은 줄</b>(monthly_perf)이라 두 화면이 같은 숫자를 말합니다 (5번).
+
+   ★ <b>지운 것이 아닙니다.</b> 여섯째 자리 hide 라 —
+     · 🔎 메뉴 찾기로 「내 업적」·「월간보고」 를 치면 그대로 열리고
+     · <b>월간보고를 아직 안 내셨으면</b> 아침 창과 「해야 할 일」이
+       그 줄을 세워 여기로 모십니다. 낼 자리가 없어지지 않습니다.
+     · 리더가 보는 「팀원 관리」의 피드백·제출 현황은 그대로입니다. */
+ ['perf', '💰','내 업적 · 월간보고','목표·실적 · 타율 · 점수판 · 보고서 한 판에','me', true],
 /* ── <b>내 코칭 · 본인 점검란은 여기서 뺐습니다</b> ─────────────────
    사장님 말씀 (2026-09-21) — 「TFA 업무관리가 간소화할것 … <b>내 코칭 ·
    본인 점검란 없애기</b>」. <b>지운 것이 아닙니다</b> — 이 둘은 TFA 가
@@ -8054,7 +8067,20 @@ var AR_CAT=[
     <b>고객 체크로 따로 관리</b>해줘」. 위의 「오늘 터치할 사람」이 <b>TA 앞단</b>
     이라면 이 칸은 <b>TA 뒤</b>입니다 — 겹치지 않습니다. */
  ['check','🩺','고객 체크',      'AP·PC·CS — 읽은 증권으로 무엇을 터치할지','me'],
- ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me'],
+/* ── <b>30일 고객관리는 홈의 미션 평가로 바뀌었습니다</b> (2026-09-22) ──
+   사장님 말씀 — 「TFA업무관리에서 <b>30일 고객관리</b>는 / <b>홈 화면에
+   매일 미션을 어떻게 이루었는지를 평가</b>해줘 / <b>기존 양식은 지워버려</b>」.
+
+   그래서 이 칸을 메뉴에서 뺐고, 평가는 <b>홈 🌅 아침 미션</b> 안에
+   세웠습니다(<b>📈 이번 달 어떻게 하셨나</b>) — 다 한 날이 며칠인지, 어느
+   미션이 자주 빠지는지, 내리 며칠 하셨는지. 칸 머리에 <b>「이번 달 N일
+   다 함」</b> 이 적혀 접은 채로도 보입니다.
+
+   ⚠ <b>30일 주기 자체는 안 지웁니다.</b> 그것은 양식이 아니라 뼈대라,
+     홈 「오늘 챙길 것」·달력·아침 미션이 모두 그 셈(ccCycle·ccLastAt)으로
+     누구를 오늘 챙길지 정합니다. 지우면 홈이 텅 빕니다. 없앤 것은
+     <b>TFA 안의 그 판</b>입니다. */
+ ['care', '🎯','30일 고객관리',  '팀원별 달성률 · 아직 못 돈 고객',   'me', true],
  ['lead', '🧑‍🏫','리더 할 일','누구나 봅니다 · 지점장이 체크합니다','all'],
  /* ── 「DB 를 나눠 주고 나면 그 다음이 안 보인다」 ────────────────────
     배정한 DB 가 상담까지 갔는지, 계약이 됐는지, 증권을 전했는지가
@@ -8255,6 +8281,15 @@ function arTodoList(){
     s:'오늘 터치할 사람에서',go:'',bad:false,d:0,cat:'touch'});
   if(tk.bd)out.push({k:'bd',e:'🎂',t:'이번 주 생일 '+tk.bd+'명',
     s:'축하 문자 먼저',go:'',bad:false,d:0,cat:'touch'});
+  /* ── <b>월간보고를 낼 길을 여기에도 둔다</b> (2026-09-22) ──────────
+     「내 업적 · 월간보고」 를 왼쪽 목록에서 뺐다. 아침 창에는 이 줄이
+     이미 있었지만 그 창은 <b>하루 한 번</b>만 뜬다 — 그것만 믿으면 그
+     창을 닫으신 날은 낼 길이 없다. 안 내셨을 때만 선다. */
+  try{
+    if(typeof PF!=='undefined'&&PF.loaded&&!(PF.mine&&PF.mine.submitted_at))
+      out.push({k:'perf',e:'💰',t:'이달 월간보고를 아직 안 냈습니다',
+        s:'적고 「제출」까지 누르셔야 올라갑니다',go:'',bad:true,d:0,cat:'perf'});
+  }catch(eP){}
   var st=arStudyLeft();
   if(st.length)out.push({k:'stu',e:'🎓',t:'오늘 공부 — '+st[0][1],s:st[0][3],go:'',bad:false,d:0,cat:'skill'});
   out.sort(function(a,b){return (b.bad?1:0)-(a.bad?1:0)||b.d-a.d;});
@@ -16326,8 +16361,8 @@ function owCss(){
    화면이 안 바뀌었다고 할 때 가장 먼저 볼 것. 새로고침이 안 먹었는지,
    정말로 안 고쳐진 것인지 이 날짜 하나로 갈린다.
    PR 을 올릴 때마다 이 두 줄을 함께 고친다. */
-var APP_BUILD='2026-09-22 09:20';
-var APP_BUILD_NOTE="<b>📊 DB · 업적관리 — 고객 이름 옆에 예상업적이 섭니다.</b> 사장님 말씀 「고객 이름 옆에 <b>[예상업적]</b> 을 표기해서 꾸준히 터치하도록 남겨줘. <b>[월간목표] [고객명당목표]</b> 를 따로 관리하기 위함이야. <b>정확히 분리해</b>」.　—　<b>① 이름 밑에 예상업적.</b> 예상업적 칸은 표 오른쪽에 있는데 이 표가 1,660px 이라, 이름을 보면서 같이 볼 수가 없었습니다 — 손으로 옆으로 밀어야 했습니다. 이제 이름 바로 밑에 섭니다. <b>안 적으신 것은 「예상업적 안 적음」</b> 이라고 적습니다 — 0 으로 적으면 「이 분은 기대할 게 없다」 는 뜻이 됩니다(1번). 체결된 분은 <b>계약</b>업적으로 바뀝니다.　—　<b>② 목표를 정확히 갈랐습니다.</b> 적는 칸은 <b>둘</b>입니다 — <b>월간목표</b>(금액)와 <b>목표 건수</b>(건). <b>고객명당목표</b> 는 그 둘에서 <b>나오는 값</b>이라 적는 칸을 두지 않았습니다. 세 칸을 다 적게 하면 서로 안 맞는 날이 반드시 옵니다(5번). 건수를 안 적으셨으면 <b>고객명당목표를 안 적습니다</b>(1번). 그리고 고객명당목표가 있으면 이름 밑 예상업적 옆에 <b>모자라거나 넘는 만큼</b>이 같이 적힙니다 — 목표가 없으면 아무 말도 안 합니다. 담기는 자리는 <b>「내 업적 · 월간보고」가 쓰는 그 줄</b>입니다(monthly_perf) — 새 표를 만들지 않았습니다.　—　<b>③ 팀별로 접고, 전체를 따로 봅니다.</b> 판 위에 <b>「전체 팀 한눈에」</b> 를 세웠습니다 — 팀마다 한 줄, 맨 아래 전체 한 줄. 목표·목표 건수·고객명당목표·체결·달성률·진행·진행 예상·증권 미전달이 한 줄에 섭니다. 그 줄을 누르면 아래 큰 판의 <b>그 팀이 접히고 펴집니다</b>. <b>접어도 팀 줄은 그대로 남아</b> 숫자가 보입니다 — 없어진 것이 아닙니다. <b>모두 접기 · 모두 펴기</b> 도 있고, 접어 둔 것은 다음에 열어도 그대로입니다. <b>아무도 예상업적을 안 적은 팀</b>에는 합계를 0 으로 적지 않고 「안 적음」 이라고 적습니다(1번).　—　점검 <b>check-dbperf</b> 를 새로 만들었습니다 — 화면을 실제로 띄워 스물일곱 자리를 봅니다.";
+var APP_BUILD='2026-09-22 10:40';
+var APP_BUILD_NOTE="<b>📈 매일 미션을 어떻게 이루셨는지 홈에서 평가합니다 — TFA 는 열셋에서 여덟으로.</b> 사장님 말씀 「TFA업무관리에서 <b>30일 고객관리</b>는 / <b>홈 화면에 매일 미션을 어떻게 이루었는지를 평가</b>해줘 / 기존 양식은 지워버려」 · 「<b>내 업적 * 월간보고</b> 우선 메뉴 없애기」.　—　<b>① 홈 🌅 아침 미션 안에 「📈 이번 달 어떻게 하셨나」</b> 를 세웠습니다. 다섯을 <b>다 한 날이 며칠</b>인지, <b>어느 미션이 자주 빠지는지</b>(막대로), <b>내리 며칠</b> 하셨는지. 칸 머리에 <b>「이번 달 N일 다 함」</b> 이 적혀 접은 채로도 보입니다.　—　<b>지어내지 않습니다.</b> <b>아직 안 온 날은 안 셉니다</b> — 이 달이 30일이고 오늘이 22일이면 22일까지만 봅니다. <b>앱을 안 여신 날</b>은 「못 한 날」이 아니라 <b>모르는 날</b>이라 따로 세고 화면에 그렇게 적습니다. 아무 기록도 없으면 <b>숫자를 아예 안 적습니다</b> — 「0일 다 함」 은 못 한 것처럼 읽힙니다. 셈은 <b>실행 체크판이 담은 그 자리</b>에서만 옵니다 — 달력에서 보시는 것과 같은 숫자입니다. 서버는 안 부릅니다.　—　<b>② TFA 에서 두 칸을 뺐습니다.</b> <b>내 업적 · 월간보고</b>의 목표는 이제 <b>📊 DB · 업적관리</b>에 있습니다 (월간목표 · 목표 건수 · 고객명당목표 — 담기는 자리가 같은 줄이라 두 화면이 같은 숫자를 말합니다). <b>30일 고객관리</b>가 하던 「어떻게 이루었나」 는 위 홈 평가로 갔습니다. <b>지운 것이 아닙니다</b> — 🔎 메뉴 찾기로 치면 그대로 열리고, <b>월간보고를 아직 안 내셨으면</b> 아침 창과 「해야 할 일」이 그 줄을 세워 낼 자리로 모십니다.　—　⚠ <b>30일 주기 자체는 안 지웠습니다.</b> 그것은 양식이 아니라 뼈대라, 홈 「오늘 챙길 것」·달력·아침 미션이 모두 그 셈으로 오늘 누구를 챙길지 정합니다. 지우면 홈이 텅 빕니다. 없앤 것은 <b>TFA 안의 그 판</b>입니다.　—　덤으로 <b>TFA 가 2.4화면 → 2.2화면</b>으로 짧아졌습니다. 자를 올린 것이 아니라 실제로 줄었고, 기준선도 같이 내렸습니다.";
 
 /* ── Netlify 설정 화면 바로가기 ──────────────────────────────────
    「환경변수에 넣으세요」 라고만 적어 두면 어디로 가야 하는지 찾다가 만다.
@@ -22786,9 +22821,13 @@ function hmMsJump(i){
 }
 /* 머리에 적을 한 줄 — 접어 두셔도 <b>어디까지 왔는지</b>는 보입니다 */
 function hmMsSub(){
-  var n=hmMsCount(),c=hmMsCur();
-  if(c<0)return n+'/5 · 다 하셨습니다';
-  return n+'/5 · '+HM_MS[c].n+' '+HM_MS[c].t;
+  var n=hmMsCount(),c=hmMsCur(),ev='';
+  try{ ev=hmMsEvSub(); }catch(e){ ev=''; }
+  /* 평가 한 줄은 <b>있을 때만</b> 붙인다 — 아직 기록이 없으면 아무 말도 안
+     한다. 「이번 달 0일 다 함」 은 못 한 것처럼 읽힌다 (1번). */
+  var tail=ev?(' · '+ev):'';
+  if(c<0)return n+'/5 · 다 하셨습니다'+tail;
+  return n+'/5 · '+HM_MS[c].n+' '+HM_MS[c].t+tail;
 }
 function hmFoldMsPaint(){
   var box=document.getElementById('hmFold_ms'); if(!box)return;
@@ -22987,18 +23026,112 @@ function hmMsFinHtml(){
       '<button type="button" class="btn btn-ghost" onclick="hmMsGoCheck()">↑ 오늘 챙길 것으로</button></div>'+
     '<div class="hm-ms-n">잘못 누르셨으면 위의 <b>✓ 칸</b>을 다시 누르시면 되돌아갑니다.</div></div>';
 }
+/* ══ 🌅 아침 미션을 <b>어떻게 이루셨나</b> — 이번 달 평가 ══════════════
+   사장님 말씀 — 「TFA업무관리에서 <b>30일 고객관리</b>는 / <b>홈 화면에
+   매일 미션을 어떻게 이루었는지를 평가</b>해줘 / 기존 양식은 지워버려」.
+
+   ── 지어내지 않습니다 (1번) ──────────────────────────────────────
+   ★ <b>아직 안 온 날은 안 셉니다.</b> 이 달이 30일이고 오늘이 22일이면
+     22일까지만 봅니다. 앞날을 「못 했다」 로 세면 그것이 거짓말입니다.
+   ★ <b>기록이 없는 날</b>과 <b>하나도 안 한 날</b>을 가릅니다. 앱을 아예
+     안 연 날은 「못 했다」 가 아니라 <b>모르는</b> 날입니다 — 따로 셉니다.
+   ★ 아무 기록도 없으면 <b>숫자를 안 적습니다</b>. 0% 라고 적으면 못 한
+     것으로 읽히는데, 못 한 게 아니라 아직 아무 일도 없는 것입니다.
+   ── 한 곳에서만 셉니다 (5번) ─────────────────────────────────────
+     다섯이 무엇인지는 HM_MS, 담긴 자리는 mrtLoad — 달력·체크판이 쓰는
+     그 자리입니다. 여기서 또 적으면 세 화면이 다른 말을 합니다.
+   ── 서버를 안 부릅니다 (7번) ─────────────────────────────────────
+     이 브라우저에 이미 담긴 것만 읽습니다. 날마다 물으면 한 달에 30번입니다.
+   ── <b>접어 둡니다</b> ────────────────────────────────────────────
+     아침 미션 칸은 한 화면(844px) 안에 들어야 합니다(check-msfive).
+     그래서 여기는 접힌 채로 두고, <b>한 줄 요약만</b> 칸 머리에 올립니다.  */
+var HM_MSEV={open:false};
+function hmMsEvDone(m){ var n=0,i; for(i=0;i<HM_MS.length;i++)if(m[HM_MS[i].ck])n++; return n; }
+function hmMsEvStat(){
+  var out={days:0,kept:0,full:0,none:0,per:[],streak:0,upto:'',worst:-1};
+  var T=(typeof mcalToday==='function')?mcalToday():'';
+  var i; for(i=0;i<HM_MS.length;i++)out.per.push(0);
+  if(!T||typeof mrtLoad!=='function')return out;
+  var ym=T.slice(0,7),last=+T.slice(8,10),d,ds,m,n;
+  for(d=1;d<=last;d++){
+    ds=ym+'-'+('0'+d).slice(-2);
+    out.days++;
+    m=mrtLoad(ds);
+    /* 하루치 열한 가지 중 <b>아무것도</b> 안 담겼으면 그 날은 기록이 없다 */
+    if(!Object.keys(m).length){ out.none++; continue; }
+    out.kept++;
+    n=hmMsEvDone(m);
+    for(i=0;i<HM_MS.length;i++)if(m[HM_MS[i].ck])out.per[i]++;
+    if(n>=HM_MS.length)out.full++;
+  }
+  /* 내리 며칠 — 오늘이 아직 안 끝났으면 <b>어제까지</b>로 셉니다.
+     오늘 아침에 「내리 0일」 이라고 적으면 어제까지 애쓰신 것이 없어집니다. */
+  var todayFull=hmMsEvDone(mrtLoad(T))>=HM_MS.length;
+  out.upto=todayFull?'오늘':'어제';
+  for(d=todayFull?last:(last-1);d>=1;d--){
+    ds=ym+'-'+('0'+d).slice(-2);
+    if(hmMsEvDone(mrtLoad(ds))>=HM_MS.length)out.streak++; else break;
+  }
+  /* 가장 많이 빠진 것 — 기록이 있는 날이 있을 때만 말합니다 (1번) */
+  if(out.kept){
+    var lo=1e9; for(i=0;i<out.per.length;i++)if(out.per[i]<lo){lo=out.per[i];out.worst=i;}
+  }
+  return out;
+}
+/* 칸 머리에 붙는 <b>한 줄</b> — 접힌 채로도 보입니다 */
+function hmMsEvSub(){
+  var v=hmMsEvStat();
+  if(!v.kept)return '';                       /* 아직 아무 기록이 없다 — 숫자를 안 적는다 */
+  return '이번 달 ' + v.full + '일 다 함';
+}
+function hmMsEvToggle(){ HM_MSEV.open=!HM_MSEV.open; hmMsPaint(); }
+function hmMsEvHtml(){
+  var v=hmMsEvStat(),i,h='';
+  var op=HM_MSEV.open;
+  h+='<div class="hm-ev'+(op?' on':'')+'">'+
+     '<button type="button" class="hm-ev-h" aria-expanded="'+(op?'true':'false')+'" onclick="hmMsEvToggle()">'+
+     '<span class="ar">▾</span>📈 <b>이번 달 어떻게 하셨나</b>'+
+     (v.kept?('<span class="n">'+v.full+' / '+v.kept+'일</span>')
+            :('<span class="n none">아직 기록이 없습니다</span>'))+'</button>';
+  if(!op)return h+'</div>';
+  if(!v.kept)
+    return h+'<div class="hm-ev-b"><div class="hm-ev-none">이번 달에 아직 <b>담긴 기록이 없습니다.</b> '+
+      '위에서 미션을 하나 체크하시면 그 날부터 셉니다 — <b>지난 날은 지어내지 않습니다</b>.</div></div></div>';
+  h+='<div class="hm-ev-b">';
+  h+='<div class="hm-ev-top"><b>'+v.full+'일</b> 다 하셨습니다 '+
+     '<span>기록이 있는 '+v.kept+'일 가운데</span></div>';
+  if(v.streak>0)
+    h+='<div class="hm-ev-st">🔥 '+v.upto+'까지 <b>내리 '+v.streak+'일</b> 다섯 가지를 다 하셨습니다</div>';
+  for(i=0;i<HM_MS.length;i++){
+    var n=v.per[i],pc=v.kept?Math.round(n/v.kept*100):0;
+    h+='<div class="hm-ev-r'+(i===v.worst?' lo':'')+'">'+
+       '<span class="k">'+HM_MS[i].n+' '+osEsc(HM_MS[i].t)+'</span>'+
+       '<span class="bar"><i style="width:'+pc+'%"></i></span>'+
+       '<span class="v">'+n+'일</span></div>';
+  }
+  if(v.worst>=0&&v.per[v.worst]<v.kept)
+    h+='<div class="hm-ev-w">가장 많이 빠진 것은 <b>'+HM_MS[v.worst].n+' '+osEsc(HM_MS[v.worst].t)+'</b>입니다 — '+
+       '오늘은 이것부터 해 보십시오.'+
+       '<button type="button" class="btn btn-ghost" onclick="hmMsJump('+v.worst+')">그 칸으로 →</button></div>';
+  if(v.none>0)
+    h+='<div class="hm-ev-n">앱을 안 여신 날이 <b>'+v.none+'일</b> 있습니다 — 그 날은 '+
+       '<b>못 한 날로 세지 않았습니다</b>. 기록이 없는 것과 안 한 것은 다릅니다.</div>';
+  h+='<div class="hm-ev-n">이 셈은 <b>실행 체크판에 담긴 그 기록</b>입니다 — 달력에서 보시는 것과 같습니다.</div>';
+  return h+'</div></div>';
+}
 function hmMsHtml(){
   if(!OS.profile)return '';
   hmMsCss();                        /* 옷은 <b>쓰는 화면에서</b> 부른다 (5번) */
   var c=hmMsCur();
-  if(c<0)return hmMsStepsHtml()+hmMsFinHtml();
+  if(c<0)return hmMsStepsHtml()+hmMsFinHtml()+hmMsEvHtml();
   var m=HM_MS[c],P=hmMsPeople(),fn=HM_MS_BODY[m.kind];
   return hmMsStepsHtml()+
     '<div class="hm-ms-hd"><span class="e">'+m.e+'</span>'+
       '<span class="t"><b>'+osEsc(m.n+' '+m.t)+'</b><span>'+m.d+'</span></span></div>'+
     (fn?fn(P):'')+
     '<div class="hm-ms-done"><button type="button" class="btn btn-primary" '+
-      'onclick="hmMsDid(\''+m.ck+'\')">✓ '+osEsc(m.t)+' 했습니다 <span>체크판에도 같이 담깁니다</span></button></div>';
+      'onclick="hmMsDid(\''+m.ck+'\')">✓ '+osEsc(m.t)+' 했습니다 <span>체크판에도 같이 담깁니다</span></button></div>'+
+    hmMsEvHtml();
 }
 function hmMsPaint(){
   var el=document.getElementById('hmMsHost');
@@ -23080,6 +23213,36 @@ function hmMsCss(){
      'border-radius:var(--r-sm);font-family:inherit;font-size:var(--t6);font-weight:800;'+
      'color:var(--ink-2);cursor:pointer}'+
    '.hm-ms-n{margin-top:9px;font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
+   /* 📈 이번 달 평가 — 접힌 채로 둡니다. 아침 미션 칸이 한 화면을 넘으면
+      아침에 못 보십니다(check-msfive 가 844px 로 잽니다). */
+   '.hm-ev{margin-top:11px;border:1px solid var(--ink-7);border-radius:var(--r-sm);background:#FAFBFC}'+
+   '.hm-ev-h{display:flex;align-items:center;gap:7px;width:100%;min-height:44px;padding:0 11px;'+
+     'border:0;background:transparent;font-family:inherit;text-align:left;cursor:pointer;'+
+     'font-size:var(--t6);font-weight:800;color:var(--ink-3)}'+
+   '.hm-ev-h .ar{flex:none;opacity:.7;transition:transform .15s}'+
+   '.hm-ev.on .hm-ev-h .ar{transform:rotate(180deg)}'+
+   '.hm-ev-h .n{margin-left:auto;font-weight:900;color:#C2410C;background:#FFF7ED;'+
+     'border-radius:var(--r-pill);padding:2px 9px}'+
+   '.hm-ev-h .n.none{color:var(--ink-4);background:var(--ink-8);font-weight:700}'+
+   '.hm-ev-b{padding:2px 11px 11px}'+
+   '.hm-ev-top{font-size:var(--t5);font-weight:800;color:var(--ink-1);letter-spacing:-.03em}'+
+   '.hm-ev-top b{color:#C2410C}'+
+   '.hm-ev-top span{font-size:var(--t6);font-weight:600;color:var(--ink-4);margin-left:5px}'+
+   '.hm-ev-st{margin-top:6px;font-size:var(--t6);font-weight:700;color:#047857;'+
+     'background:#ECFDF5;border-radius:var(--r-xs);padding:6px 9px}'+
+   '.hm-ev-r{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:var(--t6)}'+
+   '.hm-ev-r .k{flex:none;width:9.4em;font-weight:700;color:var(--ink-3);overflow:hidden;'+
+     'text-overflow:ellipsis;white-space:nowrap}'+
+   '.hm-ev-r .bar{flex:1;height:8px;border-radius:4px;background:var(--ink-8);overflow:hidden}'+
+   '.hm-ev-r .bar i{display:block;height:100%;background:#93C5FD}'+
+   '.hm-ev-r .v{flex:none;width:3.2em;text-align:right;font-weight:800;color:var(--ink-3)}'+
+   '.hm-ev-r.lo .k{color:#B91C1C}'+
+   '.hm-ev-r.lo .bar i{background:#FCA5A5}'+
+   '.hm-ev-w{margin-top:9px;border:1px solid #FED7AA;background:#FFF7ED;border-radius:var(--r-sm);'+
+     'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#9A3412}'+
+   '.hm-ev-w .btn{margin-top:7px;display:block;width:100%}'+
+   '.hm-ev-n{margin-top:8px;font-size:var(--t6);line-height:1.6;color:var(--ink-4)}'+
+   '.hm-ev-none{font-size:var(--t6);line-height:1.7;color:var(--ink-4)}'+
    '.hm-ms-biz{margin-top:9px;border:1px solid #C7D2FE;background:#EEF2FF;border-radius:var(--r-sm);'+
      'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#3730A3}'+
    '.hm-ms-biz button{display:block;margin-top:7px;min-height:44px;border:0;border-radius:9px;'+

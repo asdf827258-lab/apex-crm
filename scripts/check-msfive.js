@@ -393,6 +393,69 @@ const SEED = (o) => `
   is(!/홍길동[A-F]/.test(z), '  없는 이름을 <b>만들지 않는다</b>');
   is(/고객 넣기|DB 통합 CRM/.test(z), '  <b>무엇을 하면 되는지</b> 말한다');
 
+  /* ══ 2026-09-22 · 📈 <b>이번 달 어떻게 하셨나</b> ════════════════════
+     사장님 말씀 — 「TFA업무관리에서 <b>30일 고객관리</b>는 / <b>홈 화면에
+     매일 미션을 어떻게 이루었는지를 평가</b>해줘 / 기존 양식은 지워버려」.
+     그 칸을 TFA 에서 빼고 평가를 여기로 옮겼습니다. 재는 것은 <b>지어내지
+     않는가</b> 입니다 (1번).                                            */
+  console.log('\n[12] 📈 <b>이번 달 어떻게 하셨나</b> — 지어내지 않는가');
+  const EV = await open({});
+  await openMs(EV.p);
+  const e0 = await EV.p.evaluate(() => {
+    const box = document.querySelector('.hm-ev');
+    const head = box ? box.querySelector('.hm-ev-h').innerText.replace(/\s+/g, ' ') : '';
+    return { has: !!box, open: box ? box.classList.contains('on') : false, head,
+      sub: (document.querySelector('#hmFold_ms .hm-fold-h .t') || {}).innerText || '' };
+  });
+  is(e0.has, '  칸이 아침 미션 안에 선다');
+  is(!e0.open, '  <b>접힌 채로</b> 선다 — 아침 미션 칸이 한 화면을 넘으면 안 된다');
+  /* 아직 아무 기록도 없는 판 — <b>0 이라고 적으면 안 된다</b> */
+  is(/아직 기록이 없습니다/.test(e0.head) && !/0 \/ 0/.test(e0.head),
+     '  기록이 없으면 <b>숫자를 안 적는다</b> (1번) — ' + e0.head);
+  is(!/이번 달 0일/.test(e0.sub),
+     '  칸 머리에도 <b>「0일 다 함」 을 안 적는다</b> (1번) — ' + e0.sub.replace(/\s+/g, ' '));
+  /* 이제 <b>지난 날 기록</b>을 넣어 본다 — 오늘·어제·그제 다 했고, 나흘 전은
+     둘만, 그 앞은 아예 안 연 날. 세는 법이 맞는지 여기서 갈린다. */
+  const ev = await EV.p.evaluate(() => {
+    const T = mcalToday(), ym = T.slice(0, 7), dd = +T.slice(8, 10);
+    const key = n => 'apex_ck_day_' + ym + '-' + ('0' + n).slice(-2);
+    const all = {}; HM_MS.forEach(m => all[m.ck] = 1);
+    const two = { d2: 1, d3: 1 };
+    try {
+      for (let i = 1; i <= dd; i++) localStorage.removeItem(key(i));
+      localStorage.setItem(key(dd), JSON.stringify(all));
+      if (dd - 1 >= 1) localStorage.setItem(key(dd - 1), JSON.stringify(all));
+      if (dd - 2 >= 1) localStorage.setItem(key(dd - 2), JSON.stringify(all));
+      if (dd - 3 >= 1) localStorage.setItem(key(dd - 3), JSON.stringify(two));
+    } catch (e) { }
+    const v = hmMsEvStat();
+    HM_MSEV.open = true; hmMsPaint();
+    const box = document.querySelector('.hm-ev');
+    return { v, dd, txt: box ? box.innerText.replace(/\s+/g, ' ') : '',
+      sub: (document.querySelector('#hmFold_ms .hm-fold-h .t') || {}).innerText.replace(/\s+/g, ' ') || '' };
+  });
+  const want = Math.min(3, ev.dd), wantKept = Math.min(4, ev.dd);
+  is(ev.v.days === ev.dd, '  <b>아직 안 온 날은 안 센다</b> — 이 달 ' + ev.v.days + '일까지만 (오늘 ' + ev.dd + '일)');
+  is(ev.v.kept === wantKept, '  기록이 있는 날만 <b>바탕으로</b> 삼는다 — ' + ev.v.kept + '일');
+  is(ev.v.none === ev.dd - wantKept,
+     '  앱을 안 연 날은 <b>따로 센다</b> — ' + ev.v.none + '일 (못 한 날로 안 센다 · 1번)');
+  is(ev.v.full === want, '  다섯을 다 한 날을 센다 — ' + ev.v.full + '일');
+  is(ev.v.streak === want, '  <b>내리 며칠</b>을 센다 — ' + ev.v.streak + '일');
+  is(/못 한 날로 세지 않았습니다/.test(ev.txt) || ev.v.none === 0,
+     '  안 연 날을 <b>그렇다고 적는다</b> (1번)');
+  is(/이번 달 \d+일 다 함/.test(ev.sub), '  칸 머리에 <b>한 줄</b>이 붙는다 — ' + ev.sub);
+  /* 가장 많이 빠진 것 — ④⑤ 는 나흘 전에 안 했으므로 ①②③ 보다 적어야 한다 */
+  is(ev.v.worst >= 0 && ev.v.per[ev.v.worst] <= Math.min.apply(null, ev.v.per),
+     '  <b>가장 많이 빠진 것</b>을 집어 준다 — ' + (ev.v.worst >= 0 ? (ev.v.worst + 1) + '번' : '(없음)'));
+  /* 접혀 있을 때 아침 미션 칸이 한 화면을 안 넘는지 — 여기가 제일 중요하다 */
+  const evH = await EV.p.evaluate(() => {
+    HM_MSEV.open = false; hmMsPaint();
+    const e = document.getElementById('hmMsHost');
+    return e ? Math.round(e.getBoundingClientRect().height) : 0;
+  });
+  is(evH > 0 && evH <= 844, '  접어 두면 미션 칸이 <b>' + evH + 'px</b> — 한 화면(844) 이하');
+  is(EV.errs.length === 0, '  터진 곳이 없다' + (EV.errs.length ? ' — ' + EV.errs[0] : ''));
+
   await b.close(); srv.close();
   console.log('\n' + '─'.repeat(30));
   console.log(bad ? ('✗ ' + bad + '가지 빨간불') : '✓ 아침 미션 다섯 — 홈에서 다 됩니다.');
