@@ -32,6 +32,17 @@ const F = require(path.join(ROOT, 'apex-newsfit.js')).APEX_FIT;
 
 let bad = 0;
 const is = (ok, m) => { console.log((ok ? '  ✓ ' : '  ✗ ') + m); if (!ok) bad++; };
+/* ⚠ 점검이 <b>자기가 재는 것이 깨져도</b> 끝까지 돌아야 한다. 한 자리를
+   되돌려 봤더니 점검이 빨간불 대신 <b>터져 버려서</b>, 뒤의 두 자리를
+   아예 못 쟀다 — 그러면 한 곳이 망가졌을 때 나머지가 통째로 눈이 먼다.
+   그래서 화면에 적을 글을 만들 때는 <b>없을 수도 있다</b>고 보고 만든다. */
+const plain = v => {
+  if (v === null || v === undefined) return '(없음)';
+  /* 덩어리가 오면 그대로 「[object Object]」 라고 찍힌다 — 빨간불이 켜졌을 때
+     <b>무엇이 왔는지</b> 안 보이면 고치는 데 시간이 두 배로 든다. */
+  var t = (typeof v === 'object') ? JSON.stringify(v) : String(v);
+  return t.replace(/<[^>]+>/g, '');
+};
 const head = t => console.log('\n' + t);
 const T = '2026-09-22';
 const fit = (fp, notes) => F.fit({ fp: fp || {}, notes: notes || [], today: T });
@@ -41,7 +52,7 @@ const empty = fit({}, []);
 is(empty.read === false && empty.cat === '',
    '적힌 것이 하나도 없으면 <b>못 읽음</b> — 조용히 어느 갈래로 안 떨어진다');
 is(empty.need.length > 0,
-   '  <b>무엇을 채우면 읽히는지</b> 말한다 — ' + empty.need.join(' · '));
+   '  <b>무엇을 채우면 읽히는지</b> 말한다 — ' + plain((empty.need||[]).join(' · ')));
 /* 옛 규칙이 샌 그 자리를 그대로 재현해 본다 */
 is(fit({ f_ins: '' }, []).read === false, '  빈 글자만 있는 것도 <b>못 읽음</b>이다');
 is(fit({ c_cancer: '', c_death: '' }, []).read === false,
@@ -50,7 +61,7 @@ is(fit({ c_cancer: '', c_death: '' }, []).read === false,
 head('[2] <b>「모름」과 「0」을 가른다</b> (1번)');
 const zero = fit({ c_cancer: '0', c_death: '0' }, []);
 is(zero.read && zero.cat === 'ins', '0 으로 <b>적으신</b> 것은 읽는다 — ' + zero.cat);
-is(/0/.test(zero.why.say), '  근거에 <b>0 이라고 적혀 있다</b>고 쓴다 — ' + zero.why.say.replace(/<[^>]+>/g, ''));
+is(/0/.test(plain(zero.why && zero.why.say)), '  근거에 <b>0 이라고 적혀 있다</b>고 쓴다 — ' + plain(zero.why && zero.why.say));
 is(F.manOf('') === null && F.manOf('0') === 0,
    '  빈칸은 <b>null</b>, 0 은 <b>0</b> — 섞지 않는다');
 
@@ -66,24 +77,24 @@ is(fit({ f_debt: '15000' }, []).read === false,
    '대출 잔액만 있으면 <b>안 읽는다</b> — 주택담보인지 신용인지 모른다');
 const hl = fit({ f_home: '60000', f_loan: '120' }, []);
 is(hl.read && hl.cat === 'realty', '거주 부동산이 <b>같이</b> 적혀 있으면 부동산으로 읽는다');
-is(/거주 부동산/.test(hl.why.say) && /대출/.test(hl.why.say),
-   '  근거에 <b>둘 다</b> 적는다 — ' + hl.why.say.replace(/<[^>]+>/g, ''));
+is(/거주 부동산/.test(plain(hl.why && hl.why.say)) && /대출/.test(plain(hl.why && hl.why.say)),
+   '  근거에 <b>둘 다</b> 적는다 — ' + plain(hl.why && hl.why.say));
 
 head('[5] <b>인용은 원문 그대로다</b>');
 const memo = '가게 임대료 부담된다고 하심';
 const biz = fit({}, [{ src: '통화 메모', at: '2026-08-12', t: memo }]);
 is(biz.read && biz.cat === 'fund', '메모에서 <b>정책자금</b>을 읽는다 — 옛 규칙에 아예 없던 갈래다');
-const q = biz.why.quote.replace(/^…|…$/g, '');
+const q = plain(biz.why && biz.why.quote).replace(/^…|…$/g, '');
 is(memo.indexOf(q) >= 0, '  근거 문장이 <b>원문에 실제로 있다</b> — 「' + q + '」');
-is(biz.why.src === '통화 메모' && biz.why.at === '2026-08-12',
-   '  <b>어디서 언제</b> 나온 글인지 같이 말한다 — ' + biz.why.src + ' · ' + biz.why.at);
+is(!!biz.why && biz.why.src === '통화 메모' && biz.why.at === '2026-08-12',
+   '  <b>어디서 언제</b> 나온 글인지 같이 말한다 — ' + plain(biz.why && biz.why.src) + ' · ' + plain(biz.why && biz.why.at));
 
 head('[6] <b>오래된 근거는 오래됐다고</b> 말한다');
 const old = fit({}, [{ src: '통화 메모', at: '2024-08-12', t: '전세 만기 이야기' }]);
-is(old.read && old.why.old > F.oldDays, '두 해 전 메모는 <b>며칠 지났는지</b>를 달고 온다 — ' + old.why.old + '일');
+is(old.read && !!old.why && old.why.old > F.oldDays, '두 해 전 메모는 <b>며칠 지났는지</b>를 달고 온다 — ' + plain(old.why && old.why.old) + '일');
 const fresh = fit({}, [{ src: '통화 메모', at: '2026-09-20', t: '전세 만기 이야기' }]);
-is(fresh.why.old === null, '  최근 메모에는 안 붙인다');
-is(fresh.why.w > old.why.w, '  오래된 것은 <b>힘이 깎인다</b> — ' + old.why.w + ' < ' + fresh.why.w);
+is(!!fresh.why && fresh.why.old === null, '  최근 메모에는 안 붙인다');
+is(!!fresh.why && !!old.why && fresh.why.w > old.why.w, '  오래된 것은 <b>힘이 깎인다</b> — ' + plain(old.why && old.why.w) + ' < ' + plain(fresh.why && fresh.why.w));
 
 head('[7] <b>AI 는 고르기만</b> 한다 — 지어내면 버린다');
 const notes = [{ src: '통화 메모', at: '2026-08-12', t: memo }];
@@ -92,8 +103,8 @@ is(/그대로|복사/.test(pr) && /억지로 고르지/.test(pr),
    'AI 에게 <b>원문 그대로 복사</b>하라고 · <b>억지로 고르지 말라</b>고 시킨다');
 is(pr.indexOf('홍길동') < 0 && !/010-/.test(pr), '  <b>이름·전화번호가 안 들어간다</b> (3번)');
 const made = F.aiTake('{"cat":"fund","quote":"자영업을 하신다","why":"x"}', notes);
-is(made.ok === false && /지어냈/.test(made.why),
-   '메모에 <b>없는 문장</b>을 돌려주면 버린다 — ' + made.why.replace(/<[^>]+>/g, ''));
+is(made.ok === false && /지어냈/.test(plain(made.why)),
+   '메모에 <b>없는 문장</b>을 돌려주면 버린다 — ' + plain(made.why));
 is(F.aiTake('{"cat":"연금","quote":"가게 임대료"}', notes).ok === false,
    '<b>없는 갈래</b>를 말하면 버린다');
 is(F.aiTake('{"cat":"","quote":""}', notes).ok === false, '<b>못 골랐다</b>고 하면 그대로 못 읽음이다');
@@ -104,7 +115,7 @@ is(F.aiTake('말이 안 되는 글', notes).ok === false, '깨진 답도 버린�
 head('[8] <b>동명이인은 안 잇는다</b> (3번)');
 const pool = [{ name: '홍길동', id: 'a' }, { name: '홍길동', id: 'b' }, { name: '홍길순', id: 'c' }];
 const two = F.tie('홍길동', pool);
-is(two.ok === false && /같은 이름/.test(two.why), '같은 이름이 둘이면 <b>안 잇고</b> 그렇다고 말한다');
+is(two.ok === false && /같은 이름/.test(plain(two.why)), '같은 이름이 둘이면 <b>안 잇고</b> 그렇다고 말한다');
 is(F.tie('홍길순', pool).ok === true, '한 분뿐이면 잇는다');
 is(F.tie('없는사람', pool).ok === false, '못 찾으면 <b>안 잇는다</b>');
 
