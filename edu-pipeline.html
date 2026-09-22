@@ -92,6 +92,17 @@ table.gx td.cli{padding-bottom:0}
 table.gx td.cli .pex{display:block;padding:0 10px 7px;font-size:11.5px;font-weight:800;
   line-height:1.2;color:var(--blue-d);white-space:nowrap}
 table.gx td.cli .pex .z{font-style:normal;font-weight:600;color:var(--tx4)}
+/* 「예상업적 안 적음」 을 <b>누르면 그 자리가 입력칸</b>이 된다. 표가
+   1,660px 이라 오른쪽 예상업적 칸까지 밀고 가야 적을 수 있었다.
+   적는 곳은 늘었지만 <b>저장하는 길은 그대로 하나</b>다 — 같은
+   data-f="expect" 라 기존 입력 처리기가 그대로 받는다 (5번). */
+table.gx td.cli .pex.ed{cursor:pointer;border-radius:6px}
+table.gx td.cli .pex.ed:hover{background:var(--blue-l)}
+table.gx td.cli .pex.ed .pen{font-weight:700;color:var(--blue);margin-left:4px;opacity:0}
+table.gx td.cli .pex.ed:hover .pen{opacity:1}
+table.gx td.cli .pex input.pexin{width:104px;padding:2px 6px;font-size:12px;font-weight:800;
+  text-align:right;border:1.5px solid var(--blue);border-radius:6px;color:var(--blue-d);
+  font-family:inherit;background:#fff}
 table.gx td.cli .pex em{font-style:normal;margin-left:5px;padding:1px 5px;border-radius:5px}
 table.gx td.cli .pex em.lo{background:var(--red-l);color:var(--red)}
 table.gx td.cli .pex em.hi{background:var(--green-l);color:var(--green)}
@@ -250,6 +261,7 @@ table.cx .z{color:#D1D6DB} table.cx .g{color:var(--green);font-weight:800;font-s
     <div class="chips" id="share-chips"></div>
     <div style="height:12px"></div>
     <div class="opt">
+      <label><input type="checkbox" id="o-appc" checked> <b>AP·PC 단계만</b></label>
       <label><input type="checkbox" id="o-off"> 보류·무산 포함</label>
       <label><input type="checkbox" id="o-db" checked> DB종류 표시</label>
       <label><input type="checkbox" id="o-pol" checked> 증권전달 표시</label>
@@ -604,7 +616,7 @@ function selOf(field, val, list, pre, dis, labels) {
 function pexTXT(r) {
   const done = isDone(r);
   const v = done ? (+r.contract || +r.expect || 0) : (+r.expect || 0);
-  if (!v) return `<i class="z">예상업적 안 적음</i>`;
+  if (!v) return `<i class="z">예상업적 안 적음<b class="pen">✎ 적기</b></i>`;
   const head = (done ? '계약 ' : '예상 ') + manWonR(v);
   if (done) return `<em class="ok">${head}</em>`;
   const per = perOf(r.mid);
@@ -622,7 +634,7 @@ function rowHTML(r) {
     <td><input data-f="dbtype" value="${esc(r.dbtype)}" class="dbt" style="font-weight:700;color:#6D28D9" placeholder="DB종류"${d}></td>
     <td><input data-f="region" value="${esc(r.region)}" placeholder="지역"${d}></td>
     <td class="cli"><input data-f="client" value="${esc(r.client)}" placeholder="이름"${d}>
-      <span class="pex" data-pex="${r.id}" data-pex-mid="${r.mid}">${pexTXT(r)}</span></td>
+      <span class="pex${ro ? '' : ' ed'}" data-pex="${r.id}" data-pex-mid="${r.mid}"${ro ? '' : ' title="눌러서 예상업적을 적습니다"'}>${pexTXT(r)}</span></td>
     <td style="white-space:nowrap"><input type="date" data-f="date" value="${esc(r.date)}" style="width:auto"${d}>${dd}</td>
     <td class="n"><input data-f="expect" inputmode="numeric" value="${r.expect ? won(r.expect) : ''}" placeholder="0"${d}></td>
     <td class="n"><input data-f="contract" inputmode="numeric" class="con" value="${r.contract ? won(r.contract) : ''}" placeholder="-"${d}></td>
@@ -849,6 +861,41 @@ $('#allteams').addEventListener('click', e => {
 
 const board = $('#board');
 function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? ROWS.find(r => r.id === tr.dataset.id) : null; }
+/* ── 이름 밑에서 예상업적 바로 적기 ─────────────────────────────────
+   새로 저장하는 길을 내지 않는다. 칸 이름을 표와 <b>똑같이</b> 두어
+   기존 입력 처리기가 그대로 받게 한다 — 두 길이 되면 한쪽만 늙는다 (5번). */
+function pexEdit(sp) {
+  if (sp.querySelector('input')) return;
+  const r = rowOf(sp); if (!r || !canEdit(r)) return;
+  sp.innerHTML = `<input class="pexin" data-f="expect" inputmode="numeric" ` +
+    `placeholder="예상업적(원)" value="${r.expect ? won(r.expect) : ''}">`;
+  const inp = sp.querySelector('input'); inp.focus(); inp.select();
+}
+function pexClose(sp) {
+  const r = rowOf(sp); if (!r) return;
+  sp.innerHTML = pexTXT(r);
+  /* 표 오른쪽 예상업적 칸도 같이 맞춘다 — 같은 숫자를 두 곳이 다르게
+     말하면 사장님은 어느 쪽이 맞는지 알 수 없다 (5번) */
+  const tr = sp.closest('tr[data-id]');
+  const cell = tr && tr.querySelector('td.n input[data-f="expect"]');
+  if (cell) cell.value = r.expect ? won(r.expect) : '';
+}
+board.addEventListener('click', e => {
+  if (e.target.closest('input,select,button')) return;
+  const sp = e.target.closest('.pex.ed'); if (sp) pexEdit(sp);
+});
+board.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el.classList && el.classList.contains('pexin')) {
+    const sp = el.closest('.pex'); if (sp) setTimeout(() => pexClose(sp), 0);
+  }
+});
+board.addEventListener('keydown', e => {
+  const el = e.target;
+  if (el.classList && el.classList.contains('pexin') && (e.key === 'Enter' || e.key === 'Escape')) {
+    e.preventDefault(); el.blur();
+  }
+});
 let goalT, caseT;
 board.addEventListener('input', e => {
   const el = e.target;
@@ -897,7 +944,9 @@ board.addEventListener('input', e => {
      같은 숫자를 두 곳이 다르게 말한다 (5번). 그 조각만 갈아 끼운다. */
   if (el.dataset.f === 'expect' || el.dataset.f === 'contract') {
     const px = document.querySelector(`[data-pex="${r.id}"]`);
-    if (px) px.innerHTML = pexTXT(r);
+    /* 이름 밑 칸에서 치고 있는 중이면 다시 그리지 않는다 — 그리면
+       치던 칸이 사라져 한 글자마다 입력이 끊긴다 */
+    if (px && !el.closest('.pex')) px.innerHTML = pexTXT(r);
   }
   queueSave(r, el.dataset.f);
 });
@@ -1109,13 +1158,17 @@ function pill(c, x, y, h, txt, cx) {
 }
 function shareOpts() {
   return { off: $('#o-off').checked, db: $('#o-db').checked, memo: $('#o-memo').checked,
-    money: $('#o-money').checked, empty: $('#o-empty').checked, pol: $('#o-pol').checked };
+    money: $('#o-money').checked, empty: $('#o-empty').checked, pol: $('#o-pol').checked,
+    appc: $('#o-appc').checked };
 }
 function teamData(tid, o) {
   const out = [];
   memsOf(tid).forEach(m => {
     let rs = ROWS.filter(r => r.mid === m.id);
     if (!o.off) rs = rs.filter(r => !r.closed);
+    /* 팀장에게 보내는 한 장은 <b>지금 상담이 도는 건</b>만 본다. 계약·증권까지
+       섞으면 한 장이 길어져 카톡에서 잘리고, 정작 볼 AP·PC 가 묻힌다. */
+    if (o.appc) rs = rs.filter(r => r.stage === 'AP' || r.stage === 'PC');
     rs = sortRows(rs);
     if (rs.length || o.empty) out.push({ m, rs });
   });
@@ -1156,7 +1209,8 @@ function buildCanvas(tid) {
   c.fillStyle = '#fff'; c.font = f(800, 17); c.textAlign = 'center'; c.fillText('A+', PAD + 22, 49); c.textAlign = 'left';
   c.font = f(800, 26); c.fillText(`${t.name} 진행현황`, PAD + 58, 44);
   c.font = f(600, 14); c.fillStyle = '#CFE3FF';
-  c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')} · 팀원 ${data.length}명`, PAD + 58, 70);
+  c.fillText(`${t.leader ? '팀장 ' + t.leader + ' · ' : ''}기준 ${TODAY_S.replace(/-/g, '.')} · 팀원 ${data.length}명` +
+    (o.appc ? ' · AP·PC 단계만' : ''), PAD + 58, 70);
 
   const all = data.flatMap(x => x.rs), live = all.filter(isLive), done = all.filter(isDone);
   const pol = all.filter(r => !r.closed && r.stage === '계약완료').length;
@@ -1164,9 +1218,16 @@ function buildCanvas(tid) {
   c.fillStyle = '#F7F9FC'; rr(c, PAD, ky, CW, 46, 12); c.fill();
   const intro = all.reduce((a, r) => a + (+r.introN || 0), 0);
   const appc = all.filter(r => !r.closed && (r.stage === 'AP' || r.stage === 'PC')).length;
-  const kp = [['AP · PC', `${appc}건`], ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
-  ['계약업적', `${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}원`],
-  ['받은 소개', `${intro}명`], ['증권 미전달', `${pol}건`]];
+  /* ★ AP·PC 만 담은 장에서는 <b>계약·소개·증권 칸을 세우지 않는다.</b>
+       담지도 않은 것을 「0건」 으로 적으면 「이 팀은 계약이 없다」 는
+       뜻이 되어 버린다 — 안 담았으면 안 적는다 (1번). */
+  const kp = o.appc
+    ? [['AP · PC', `${appc}건`],
+       ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
+       ['팀원', `${data.length}명`]]
+    : [['AP · PC', `${appc}건`], ['진행중 예상', `${won(live.reduce((a, r) => a + (+r.expect || 0), 0))}원`],
+       ['계약업적', `${won(done.reduce((a, r) => a + (+r.contract || +r.expect || 0), 0))}원`],
+       ['받은 소개', `${intro}명`], ['증권 미전달', `${pol}건`]];
   const kw = CW / kp.length;
   kp.forEach((k, i) => {
     const x = PAD + kw * i + kw / 2; c.textAlign = 'center';
@@ -1215,7 +1276,7 @@ function buildCanvas(tid) {
       x += col.w;
     });
     y += TH;
-    if (!L.length) { c.font = f(600, 13.5); c.fillStyle = '#B0B8C1'; c.fillText('진행중인 건 없음', PAD + 12, y + RH / 2); y += RH; }
+    if (!L.length) { c.font = f(600, 13.5); c.fillStyle = '#B0B8C1'; c.fillText(o.appc ? 'AP·PC 단계인 건 없음' : '진행중인 건 없음', PAD + 12, y + RH / 2); y += RH; }
     L.forEach((r, i) => {
       if (i % 2) { c.fillStyle = '#FCFDFE'; c.fillRect(PAD, y, CW, RH); }
       const dead = !!r.closed;
@@ -1277,7 +1338,7 @@ function renderShare() {
   drawPreview();
 }
 $('#share-chips').onclick = e => { const c = e.target.closest('[data-t]'); if (!c) return; SHARE.team = c.dataset.t; renderShare(); };
-['#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty', '#o-pol'].forEach(s => $(s).onchange = () => drawPreview());
+['#o-appc', '#o-off', '#o-db', '#o-memo', '#o-money', '#o-empty', '#o-pol'].forEach(s => $(s).onchange = () => drawPreview());
 let PREV = null;
 async function drawPreview() {
   if (!SHARE.team) { $('#prev').innerHTML = `<div class="empty">보여 줄 팀이 없습니다.</div>`; return; }
@@ -1305,11 +1366,11 @@ $('#b-copy').onclick = () => {
 $('#b-png').onclick = () => { if (PREV) PREV.toBlob(b => { dl(b, fileName()); toast('저장했습니다'); }); };
 $('#b-txt').onclick = () => {
   const o = shareOpts(), t = TEAMS.find(x => x.id === SHARE.team) || {}, data = teamData(SHARE.team, o);
-  const L = [`[${t.name} 진행현황] ${TODAY_S.replace(/-/g, '.')}`, ''];
+  const L = [`[${t.name} 진행현황${o.appc ? ' · AP·PC 단계만' : ''}] ${TODAY_S.replace(/-/g, '.')}`, ''];
   data.forEach(g => {
     const lv = g.rs.filter(isLive);
     L.push(`▶ ${g.m.name} — 진행 ${lv.length}건 · 예상 ${won(lv.reduce((a, r) => a + (+r.expect || 0), 0))}원`);
-    if (!g.rs.length) L.push('   (진행건 없음)');
+    if (!g.rs.length) L.push(o.appc ? '   (AP·PC 단계인 건 없음)' : '   (진행건 없음)');
     g.rs.forEach(r => {
       const b = [];
       if (o.db && r.dbtype) b.push(r.dbtype);
