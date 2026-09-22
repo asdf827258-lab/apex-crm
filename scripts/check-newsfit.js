@@ -265,13 +265,23 @@ head('[7-8] 📋 <b>아침 미팅 준비 자료</b> — 모으기지 판단이 �
 const B1 = F.brief({
   fp:{ f_job:'순천시청 공무원', f_ins:'80', f_home:'50000', c_cancer:'3000', c_death:'0' },
   band:'4050', hn:'고등학교친구 / 홍길동 951222-2512231',
-  touch:[{at:'2026-09-04',how:'처리',note:'청약'},{at:'2026-08-12',how:'처리',note:'치아보험/남편보험정리'}],
+  /* ★ 견본을 <b>일부러 뒤죽박죽으로</b> 둔다. 처음에는 이미 최신순으로 적어
+     두어, <b>차례를 세우는 줄을 통째 떼어도</b> 점검이 통과했다. 사장님
+     기록은 실제로 09-13 · 09-14 · 09-08 처럼 <b>순서가 없습니다</b> — 그러면
+     「지난번」이 지난번이 아니게 됩니다 (8번).                          */
+  touch:[{at:'2026-08-12',how:'처리',note:'치아보험/남편보험정리'},
+         {at:'2026-09-04',how:'처리',note:'청약'},
+         {at:'2026-07-01',how:'전화',note:'첫 통화'},
+         {at:'2026-06-02',how:'전화',note:'부재'}],   /* 네 건 — 세 건만 서야 한다 */
   next:{due:'2026-09-30',what:'연금제안'}, names:['홍길동'] });
 const V = k => { for (var i=0;i<B1.rows.length;i++) if (B1.rows[i].k === k) return B1.rows[i]; return null; };
 is(plain(V('다음에 하기로 한 것') && V('다음에 하기로 한 것').v) === '연금제안',
    '<b>다음에 하기로 한 것</b>이 맨 위에 선다 — 아침에 제일 먼저 보실 줄이다');
 is(plain(V('지난번에 하신 것') && V('지난번에 하신 것').at) === '2026-09-04',
-   '<b>지난 접촉은 날짜와 함께</b> · 최근 것부터 선다');
+   '<b>지난 접촉은 날짜와 함께</b> · <b>최근 것부터</b> 선다 — ' +
+   '적힌 차례는 뒤죽박죽이다');
+is(B1.rows.filter(function (r) { return r.ic === '\ud83d\udd58'; }).length === 3,
+   '  지난 접촉은 <b>세 건까지</b>만 — 아침에 열 개를 읽으실 수는 없다');
 is(plain(V('지난번에 하신 것') && V('지난번에 하신 것').v) === '청약',
    '  <b>그대로</b> 보여 드린다 — 「청약」을 소식 갈래로 <b>해석하지 않는다</b> (8번)');
 is(F.fit({ fp:{}, notes:[{src:'지난 접촉',at:'2026-09-04',t:'청약'}], today:T }).read === false,
@@ -399,10 +409,17 @@ is(/names:nm/.test(brSrc) && /cmRealOf/.test(brSrc),
 const bhSrc = (ix.split('function hmMsBriefHtml(')[1] || '').slice(0, 1400);
 is(/ccBriefOf/.test(bhSrc) && /b\.miss/.test(bhSrc),
    '카드가 그것을 <b>그려 준다</b> — 안 적혀 있는 것까지 같이');
-const planSrc = (ix.split(' plan:function(P){')[1] || '').slice(0, 420);
-const callSrc = (ix.split(' call:function(P){')[1] || '').slice(0, 520);
-is(/hmMsBriefHtml\(x\)/.test(planSrc) && /hmMsBriefHtml\(x\)/.test(callSrc),
-   '<b>② 어떻게 연락할지·③ 전화 다섯 통</b> 두 칸에 다 선다 — 아침에 여는 자리다');
+const planSrc = (ix.split(' plan:function(P){')[1] || '').slice(0, 800);
+const callSrc = (ix.split(' call:function(P){')[1] || '').slice(0, 800);
+is(/hmMsBriefHtml\(x\)/.test(planSrc) && !/hmMsBriefHtml/.test(callSrc),
+   '<b>② 어떻게 연락할지</b> 칸 <b>한 곳에만</b> 선다 — ③ 전화 칸은 나이대 고르기·다섯 마디 틀·용건으로 이미 <b>844px 꽉</b> 이다');
+/* ★ <b>접힌 채로 여는지</b>도 재다. 펼쳐 두었더니 카드가 1040px 였고, 아침에
+   한 화면(844px)을 넘으면 사장님이 안 보십니다.                              */
+const brOn = (ix.split('function hmMsBriefHtml(')[1] || '').slice(0, 1600);
+is(/hmMsBrOpen\(\)/.test(brOn) && /if\(on\)\{/.test(brOn),
+   '  <b>접힌 채로</b> 엽니다 — 펼쳐 두었더니 1040px 였다 (check-msfive 가 재는 자리)');
+is(/hmMsBrTop/.test(brOn),
+   '  그래도 머리에 <b>제일 중요한 한 줄</b>은 보인다 — 접은 것이지 없앤 것이 아니다');
 is(/t:C\[i\]\.hn/.test(notesSrc),
    '  그 가구 메모가 <b>실제로 엔진에 들어간다</b> — 고객 365일 분들은 ' +
    '통화 메모가 한 줄도 안 잡힌다');

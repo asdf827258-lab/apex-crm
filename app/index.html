@@ -22883,28 +22883,44 @@ function hmMsNoNews(){
      글자 그대로입니다. 지난 접촉 「청약」·「증권드림」 은 <b>업무 기록</b>이지
      고객의 관심사가 아니라, 갈래를 이것으로 읽지 않습니다 (8번).
    ★ <b>안 적혀 있는 것도 말합니다.</b> 줄이 없는 것과 값이 없는 것은 다릅니다. */
+function hmMsBrOpen(){ return hmFoldOpen('msbr'); }
+function hmMsBrToggle(){ hmFoldSet('msbr',!hmMsBrOpen()); hmMsPaint(); }
+/* 접은 머리 한 줄 — 접혀 있어도 <b>제일 중요한 것</b>은 보입니다.
+   접은 것이지 없앤 것이 아닙니다 — 누르시면 전부 폴니다.             */
+function hmMsBrTop(b){
+  if(!b.n)return '아직 적힌 것이 없습니다';
+  var r=b.rows[0],v=r.v.replace(/<[^>]+>/g,'');
+  return (r.k?(r.k+' — '):'')+v.slice(0,24)+(v.length>24?'…':'')+
+         (b.n>1?(' 외 '+(b.n-1)+'줄'):'');
+}
+/* ★ <b>아침에 한 화면을 넘으면</b> 안 보십니다. 처음에는 펼쳐 두었는데
+   재 보니 카드가 <b>1040px</b> 이었습니다(한 화면 844px). 그래서 접어 두고
+   머리에 <b>제일 중요한 한 줄</b>을 적습니다 — check-msfive 가 재줍니다.   */
 function hmMsBriefHtml(x){
   if(!x||!x.id)return '';
   if(typeof ccBriefOf!=='function')return '';
-  var b=ccBriefOf(x.id),h,i,r;
+  var b=ccBriefOf(x.id),h='',i,r,on=hmMsBrOpen();
   if(!b.n&&!b.miss.length)return '';
-  h='<div class="hm-ms-brief"><div class="bh">📋 이 분께 <b>적혀 있는 것</b>'+
-    (b.n?('<i>'+b.n+'줄</i>'):'')+'</div>';
-  if(!b.n)
-    h+='<div class="bz">이 분께는 <b>아직 적혀 있는 것이 하나도 없습니다.</b> '+
-       '통화하시면서 한 줄씩 적어 두시면 내일 아침에 여기 섭니다.</div>';
-  for(i=0;i<b.rows.length;i++){
-    r=b.rows[i];
-    h+='<div class="br"><span class="i">'+osEsc(r.ic)+'</span>'+
-       (r.k?('<span class="k">'+osEsc(r.k)+'</span>'):'<span class="k"></span>')+
-       '<span class="v">'+osEsc(r.v)+
-       (r.at?('<em>'+osEsc(r.at)+'</em>'):'')+
-       (r.src?('<u>'+osEsc(r.src)+'</u>'):'')+'</span></div>';
+  if(on){
+    if(!b.n)
+      h+='<div class="bz">이 분께는 <b>아직 적혀 있는 것이 하나도 없습니다.</b> '+
+         '통화하시면서 한 줄씩 적어 두시면 내일 아침에 여기 섭니다.</div>';
+    for(i=0;i<b.rows.length;i++){
+      r=b.rows[i];
+      h+='<div class="br"><span class="i">'+osEsc(r.ic)+'</span>'+
+         '<span class="k">'+osEsc(r.k||'')+'</span>'+
+         '<span class="v">'+osEsc(r.v)+
+         (r.at?('<em>'+osEsc(r.at)+'</em>'):'')+
+         (r.src?('<u>'+osEsc(r.src)+'</u>'):'')+'</span></div>';
+    }
+    if(b.miss.length)
+      h+='<div class="bm">안 적혀 있는 것 — <b>「'+osEsc(b.miss.join('」 · 「'))+'」</b>'+
+         '<button type="button" onclick="hmMsOpen()">✏️ 적어 두기</button></div>';
   }
-  if(b.miss.length)
-    h+='<div class="bm">안 적혀 있는 것 — <b>'+osEsc(b.miss.join('」 · 「'))+'</b>'+
-       '<button type="button" onclick="hmMsOpen()">✏️ 적어 두기</button></div>';
-  return h+'</div>';
+  return '<div class="hm-ms-brief">'+
+    '<button type="button" class="bh" onclick="hmMsBrToggle()" aria-expanded="'+(on?'true':'false')+'">'+
+      '📋 <b>적혀 있는 것</b> '+osEsc(hmMsBrTop(b))+
+      '<span>'+(on?'접기 ▴':'전부 보기 ▾')+'</span></button>'+h+'</div>';
 }
 function hmMsNewsLine(x){
   if(typeof APEX_FIT==='undefined')return '<div class="hm-ms-nonews">'+NLFIT_MISS+'</div>';
@@ -23013,6 +23029,9 @@ var HM_MS_BODY={
  plan:function(P){
    var x=hmMsWho(),S=hmMsSay(x);
    if(!x)return HM_MS_BODY.almn(P);
+   /* 준비 자료는 <b>여기 한 곳</b>에만 섭니다. ③ 전화 칸은 나이대 고르기·
+      다섯 마디 틀·용건으로 이미 <b>한 화면이 꽉</b> 차, 거기 또 넣으면 844px 를
+      넘억니다(재 봤습니다). 아침 차례가 ② 준비 → ③ 전화라 여기서 보시면 됩니다. */
    return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+hmMsBriefHtml(x)+hmMsNewsLine(x)+
      (S?('<div class="hm-ms-say"><span class="lb">💬 첫 마디</span>'+osEsc(S.say)+'</div>'):
         '<div class="hm-ms-nonews">이 상태에는 <b>정해 둔 첫 마디가 없습니다</b> — 지어내지 않습니다.</div>')+
@@ -23028,7 +23047,7 @@ var HM_MS_BODY={
    var R=HM_MS_POOL[x.k]||{};
    return hmMsWhoHtml(x,HM_MSP.i+1,P.length)+
      (R.call===false?('<div class="hm-ms-warn">'+R.why+'</div>'):'')+
-     hmMsBriefHtml(x)+hmMsAgeHtml(x)+hmMsFrameHtml(x)+
+     hmMsAgeHtml(x)+hmMsFrameHtml(x)+
      (S?('<div class="hm-ms-say"><span class="lb">💬 ③ 용건 — 이 분께 할 말</span>'+osEsc(S.say)+'</div>'):'')+
      '<div class="hm-ms-b">'+
        (S?'<button type="button" class="btn btn-primary" onclick="hmMsSayCopy()">📋 복사</button>':'')+
@@ -23312,11 +23331,13 @@ function hmMsCss(){
    '.hm-ms-why .s{display:block;margin-top:3px;font-weight:700;color:#0369A1;opacity:.85}'+
    '.hm-ms-why .o{display:block;margin-top:3px;font-weight:700;color:#B45309}'+
    /* 📋 이 분께 적혀 있는 것 — 아침에 <b>이것부터</b> 보십니다 */
-   '.hm-ms-brief{margin-top:9px;border:1px solid #E5E7EB;background:#fff;border-radius:var(--r-sm);'+
-     'padding:9px 11px;font-size:var(--t6);line-height:1.6;color:#374151}'+
-   '.hm-ms-brief .bh{font-weight:800;color:#111827;margin-bottom:6px;display:flex;align-items:center;gap:6px}'+
-   '.hm-ms-brief .bh i{font-style:normal;font-weight:700;font-size:var(--t7);color:#6B7280}'+
+   '.hm-ms-brief{margin-top:8px;border:1px solid #E5E7EB;background:#fff;border-radius:var(--r-sm);'+
+     'padding:4px 11px;font-size:var(--t6);line-height:1.5;color:#374151}'+
+   '.hm-ms-brief .bh{display:block;width:100%;min-height:44px;border:0;background:none;padding:2px 0;'+
+     'font-family:inherit;font-size:var(--t6);font-weight:800;color:#111827;text-align:left;cursor:pointer}'+
+   '.hm-ms-brief .bh span{float:right;font-weight:800;color:#2563EB;margin-left:6px}'+
    '.hm-ms-brief .br{display:flex;gap:6px;padding:4px 0;border-top:1px solid #F3F4F6}'+
+   '.hm-ms-brief .br .k:empty{display:none}'+
    '.hm-ms-brief .br:first-of-type{border-top:0}'+
    '.hm-ms-brief .i{flex:0 0 auto}'+
    '.hm-ms-brief .k{flex:0 0 86px;font-weight:800;color:#6B7280}'+
