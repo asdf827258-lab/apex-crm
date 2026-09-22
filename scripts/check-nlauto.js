@@ -65,7 +65,11 @@ const SEED = (o) => `
  GB.loaded=true;GB.teams=[];GB.rows=[{id:'me',name:'홍길동'}];
  var _e={};window.arRowOf=function(i){return i==='me'?{id:'me',name:'홍길동',sc:_e,raw:_e}:null;};
  AR.rep={};AR.loaded=true;AR.busy='';AR.err='';
- AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''}];
+ /* ⚠ 2026-09-22 부터 아침 미션 ② 의 소식은 <b>그 분을 읽어서</b> 고른다.
+    읽을 것이 없으면 <b>안 준다</b>. 그래서 견본에 메모를 하나 넣어 둔다 —
+    안 넣으면 「소식이 섰다」 를 잴 수가 없다(그건 화면이 아니라 견본 탓이다). */
+ AR.db=[{id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:'',
+   memo:'실손 갱신 보험료 부담된다고 하심',last:'2026-09-15'}];
  AR.cliRows=[];AR.calls=[];CM.loaded=true;CM.who={me:'홍길동'};
  OSC.loaded=true;OSC.busy=false;OSC.err='';OSC.list=[];
  window.cmLoadAll=function(cb){if(cb)cb();};
@@ -135,6 +139,9 @@ const SEED = (o) => `
   is(paint.ig.indexOf(NEWS[0].title) >= 0, '  📸 오늘 올릴 것이 <b>다시 칠해졌다</b>');
   is(paint.head.indexOf('실손보험') >= 0, '  접힌 머리도 <b>그 제목</b>을 안다 — ' + paint.head);
   is(ms.indexOf(NEWS[0].title) >= 0, '  🌅 아침 미션 ② 에도 <b>그 소식</b>이 섰다');
+  /* 그 소식이 <b>왜</b> 이 분께 가는지도 같이 적혀야 한다 — 사장님이 그
+     자리에서 맞는지 보셔야 한다 (1번 · check-newsfit 과 같은 잣대). */
+  is(ms.indexOf('실손 갱신') >= 0, '  <b>왜 그 갈래인지</b>도 같이 적혀 있다 — 적어 두신 그 글자로');
 
   console.log('\n[3] <b>오늘 것이 이미 있으면</b> 안 부른다');
   const B = await open({ have: true });
