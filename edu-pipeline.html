@@ -92,6 +92,16 @@ table.gx td.cli{padding-bottom:0}
 table.gx td.cli .pex{display:block;padding:0 10px 7px;font-size:11.5px;font-weight:800;
   line-height:1.2;color:var(--blue-d);white-space:nowrap}
 table.gx td.cli .pex .z{font-style:normal;font-weight:600;color:var(--tx4)}
+    /* ✍️ 여기서 바로 넣는 칸 — 손가락이 닿게 44px */
+    table.gx td.cli .pex .pexb{min-height:34px;padding:5px 9px;border:1px dashed #C7D2FE;
+      border-radius:7px;background:#F5F7FF;font-family:inherit;font-size:11.5px;
+      font-weight:800;color:#4338CA;cursor:pointer}
+    table.gx td.cli .pex .pexb:hover{background:#EEF2FF}
+    table.gx td.cli .pex .pexin{display:inline-flex;align-items:center;gap:4px;
+      font-size:11.5px;font-weight:800;color:var(--tx3)}
+    table.gx td.cli .pex .pexin input{width:74px;min-height:34px;padding:4px 7px;
+      border:1.5px solid #6366F1;border-radius:7px;font-family:inherit;font-size:12px;
+      font-weight:800;text-align:right;color:#312E81}
 table.gx td.cli .pex em{font-style:normal;margin-left:5px;padding:1px 5px;border-radius:5px}
 table.gx td.cli .pex em.lo{background:var(--red-l);color:var(--red)}
 table.gx td.cli .pex em.hi{background:var(--green-l);color:var(--green)}
@@ -601,10 +611,22 @@ function selOf(field, val, list, pre, dis, labels) {
      금액만 적습니다 — 없는 목표를 들이대며 「모자랍니다」 라고 하지 않습니다.
    ★ 체결된 건은 <b>계약</b>업적을 적습니다. 그 분은 이제 「얼마 기대한다」
      가 아니라 「얼마 하셨다」 입니다.                                    */
+/* ── ✍️ <b>여기서 바로 넣습니다</b> ─────────────────────────────────
+   사장님 말씀 (2026-09-22) — 「DB업적관리에서 <b>고객별로 예상 업적 바로
+   입력</b>할 수 있도록 해. <b>예상업적 안 적음 칸에 입력</b>하도록 해 줘」.
+   예상 칸은 표에 이미 있지만 <b>열세 칸 중 여섯째</b>라, 폰에서는 옆으로
+   밀려 보이지 않습니다. 이름 바로 밑 이 자리가 <b>눈이 가는 자리</b>입니다.
+   ★ <b>같은 값을 두 곳에 두지 않습니다</b> (5번) — 여기에 치면 표의 예상
+     칸도 같이 바뀌고, 저장은 원래 쓰던 queueSave 한 길로 갑니다.
+   ★ 만원 단위로 받습니다. 「50」 이라고 치시면 <b>50만원</b>입니다 —
+     칸에 그렇게 적어 둡니다 (4번 · 이름이 단위를 말한다).            */
 function pexTXT(r) {
   const done = isDone(r);
   const v = done ? (+r.contract || +r.expect || 0) : (+r.expect || 0);
-  if (!v) return `<i class="z">예상업적 안 적음</i>`;
+  if (!v) {
+    if (!canEdit(r)) return `<i class="z">예상업적 안 적음</i>`;
+    return `<button type="button" class="pexb" data-pexadd="${r.id}">✍️ 예상업적 넣기</button>`;
+  }
   const head = (done ? '계약 ' : '예상 ') + manWonR(v);
   if (done) return `<em class="ok">${head}</em>`;
   const per = perOf(r.mid);
@@ -850,6 +872,56 @@ $('#allteams').addEventListener('click', e => {
 const board = $('#board');
 function rowOf(el) { const tr = el.closest('tr[data-id]'); return tr ? ROWS.find(r => r.id === tr.dataset.id) : null; }
 let goalT, caseT;
+/* 「✍️ 예상업적 넣기」 를 누르면 <b>그 자리</b>에 칸이 열립니다.
+   ★ 새 저장 길을 만들지 않습니다 — 표의 예상 칸에 값을 넣고 원래 쓰던
+     input 흐름을 그대로 태웁니다 (5번). 두 길이 되면 한쪽만 늙습니다. */
+function pexOpen(id) {
+  const host = document.querySelector(`[data-pex="${id}"]`);
+  const r = ROWS.find(z => z.id === id);
+  if (!host || !r || !canEdit(r)) return;
+  host.innerHTML = `<span class="pexin"><input type="text" inputmode="numeric" `
+    + `data-pexv="${id}" placeholder="예: 50" aria-label="예상업적(만원)"> 만원</span>`;
+  const el = host.querySelector('input');
+  if (el) { el.focus(); el.select(); }
+}
+/* 다 치면 <b>표의 예상 칸</b>에 옮겨 담고, 원래 길로 저장합니다 */
+function pexPut(id, raw) {
+  const r = ROWS.find(z => z.id === id);
+  if (!r) return;
+  const man = Math.max(0, Math.round(+String(raw).replace(/[^\d]/g, '') || 0));
+  /* 안 치고 나가셨으면 <b>0 으로 적지 않습니다</b> — 안 적은 것이지 0 이
+     아닙니다 (1번). 넣기 단추로 되돌립니다. */
+  if (!man) { const h = document.querySelector(`[data-pex="${id}"]`); if (h) h.innerHTML = pexTXT(r); return; }
+  r.expect = man * 10000;
+  const cell = document.querySelector(`tr[data-id="${id}"] input[data-f="expect"]`);
+  if (cell) cell.value = won(r.expect);
+  const h = document.querySelector(`[data-pex="${id}"]`);
+  if (h) h.innerHTML = pexTXT(r);
+  queueSave(r, 'expect');
+  toast(`${r.client || '이 분'} 예상업적 ${manWonR(r.expect)}원`);
+}
+board.addEventListener('click', e => {
+  const b = e.target.closest('[data-pexadd]');
+  if (!b) return;
+  e.preventDefault();
+  pexOpen(b.getAttribute('data-pexadd'));
+});
+/* ⚠ <b>칸을 지우는 일은 한 박자 뒤에</b> 합니다. 브라우저가 blur 를 아직
+   처리하는 중에 그 칸을 innerHTML 로 갈아 끼우면 터집니다 —
+     「The node to be removed is no longer a child of this node.
+       Perhaps it was moved in a 'blur' event handler?」
+   점검이 이것을 잡았습니다. 칸 밖을 누르실 때마다 터지던 자리입니다.  */
+function pexLater(id, v) { setTimeout(function () { pexPut(id, v); }, 0); }
+board.addEventListener('keydown', e => {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.pexv) return;
+  if (e.key === 'Enter') { e.preventDefault(); pexLater(el.dataset.pexv, el.value); }
+  if (e.key === 'Escape') { pexLater(el.dataset.pexv, ''); }
+});
+board.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.pexv) pexLater(el.dataset.pexv, el.value);
+});
 board.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.goal) {

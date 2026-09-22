@@ -157,8 +157,13 @@ window.supabase={createClient:function(){ return {
   is(pex.length > 0 && pex.every(x => x.pex !== null),
     '줄마다 이름 밑에 한 줄이 붙는다 — ' + pex.length + '줄');
   const none = pex.filter(x => !x.col)[0];
-  is(!!none && /안 적음/.test(none.pex) && !/0/.test(none.pex),
+  /* ★ <b>글자가 아니라 뜻을 재다.</b> 안 적은 것을 <b>0 으로 적지
+     않는다</b>는 것이 지킬 일입니다 (1번). 그러면서 사장님 말씀대로
+     <b>그 자리에서 바로 넣는 길</b>이 있어야 합니다 (2026-09-22).    */
+  is(!!none && !/(^|[^\d])0([^\d]|$)/.test(none.pex),
     '<b>안 적으신 것을 0 으로 적지 않는다</b> (1번) — ' + (none ? none.pex : '(없음)'));
+  is(!!none && /예상업적 넣기/.test(none.pex),
+    '  <b>그 자리에서 바로 넣는 길</b>이 있다 — 표의 예상 칸은 열세째라 폰에서 안 보인다');
   const some = pex.filter(x => x.col && !/계약/.test(x.pex))[0];
   is(!!some && /만/.test(some.pex),
     '적으신 것은 <b>만원으로 접어</b> 적는다 — ' + (some ? some.pex : '(없음)'));
@@ -177,6 +182,61 @@ window.supabase={createClient:function(){ return {
   });
   is(sync.before !== sync.after && /100만/.test(sync.after),
     '예상업적을 고치면 <b>이름 밑 글도 같이</b> 바뀐다 — ' + sync.before + ' → ' + sync.after);
+
+  head('[2-2] ✍️ <b>그 자리에서 바로 넣어진다</b> (사장님 말씀 · 2026-09-22)');
+  /* 「DB업적관리에서 <b>고객별로 예상 업적 바로 입력</b>할 수 있도록 해.
+     <b>예상업적 안 적음 칸에 입력</b>하도록 해 줘」
+     눌러 보고, 쳐 보고, <b>표의 예상 칸까지 따라 바뀌는지</b> 봅니다.   */
+  const add1 = await pg.evaluate(async () => {
+    const tr = [...document.querySelectorAll('#board tr.r')]
+      .find(x => !x.querySelector('[data-f="expect"]').value);
+    if (!tr) return { skip: true };
+    const b = tr.querySelector('[data-pexadd]');
+    if (!b) return { noBtn: true };
+    b.click();
+    await new Promise(r => setTimeout(r, 60));
+    const inp = tr.querySelector('[data-pexv]');
+    if (!inp) return { noInput: true };
+    inp.value = '50';
+    inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await new Promise(r => setTimeout(r, 140));
+    /* ★ <b>판을 다시 세워 본다.</b> 화면만 고쳐 놓고 줄에는 안 담았으면
+       여기서 값이 사라진다 — 밖에서 잴 수 있는 방법이 이것이다.
+       (window.ROWS 로 재려 했는데 밖에서 안 보인다. 안 보이는 것을
+        재는 척하면 그 줄은 <b>언제나 참</b>이 된다 · 8번)           */
+    const id = tr.dataset.id;
+    const pex = tr.querySelector('.pex').textContent.trim();
+    const col = tr.querySelector('[data-f="expect"]').value;
+    renderBoard();
+    await new Promise(r => setTimeout(r, 80));
+    const again = document.querySelector(`tr[data-id="${id}"] [data-f="expect"]`);
+    return { pex, col, kept: again ? again.value : '' };
+  });
+  is(!add1.skip && !add1.noBtn, '「✍️ 예상업적 넣기」 를 <b>누를 수 있다</b>');
+  is(!add1.noInput, '  누르면 <b>그 자리에 칸이 열린다</b> — 다른 화면으로 안 보낸다');
+  is(/50만/.test(add1.pex || ''),
+     '  <b>「50」 이라고 치면 50만원</b>이 된다 — ' + (add1.pex || '(안 바뀜)'));
+  is((add1.col || '').replace(/[^\d]/g, '') === '500000',
+     '  <b>표의 예상 칸도 같이</b> 바뀐다 (5번) — ' + (add1.col || '(빔)'));
+  is((add1.kept || '').replace(/[^\d]/g, '') === '500000',
+     '  <b>판을 다시 세워도 남는다</b> — 화면만 고치고 줄에는 안 담으면 여기서 사라진다 · ' +
+     (add1.kept || '(사라짐)'));
+  /* ★ <b>안 치고 나가면 0 으로 안 적는다</b> — 안 적은 것이지 0 이 아니다 (1번) */
+  const add0 = await pg.evaluate(async () => {
+    const tr = [...document.querySelectorAll('#board tr.r')]
+      .find(x => !x.querySelector('[data-f="expect"]').value);
+    if (!tr) return { skip: true };
+    tr.querySelector('[data-pexadd]').click();
+    await new Promise(r => setTimeout(r, 60));
+    const inp = tr.querySelector('[data-pexv]');
+    inp.value = '';
+    inp.dispatchEvent(new Event('focusout', { bubbles: true }));
+    await new Promise(r => setTimeout(r, 140));
+    return { pex: tr.querySelector('.pex').textContent.trim(),
+             col: tr.querySelector('[data-f="expect"]').value };
+  });
+  is(!add0.skip && !/0/.test(add0.col || '') && /넣기/.test(add0.pex || ''),
+     '  <b>안 치고 나가면 0 으로 안 적는다</b> — 넣기 단추로 돌아온다 (1번)');
 
   head('[3] <b>월간목표 · 목표 건수 · 고객명당목표</b> — 정확히 분리 (사장님 말씀)');
   const g = await pg.evaluate(() => {
