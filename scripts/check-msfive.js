@@ -81,7 +81,11 @@ const SEED = (o) => `
  AR.rep={};AR.loaded=${o.hold === 'wait' ? 'false' : 'true'};AR.busy='${o.hold === 'wait' ? 'y' : ''}';
  AR.err='${o.hold === 'fail' ? '네트워크 오류' : ''}';
  AR.db=${(o.none || o.hold) ? '[]' : `[
-   {id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:''},
+   /* ⚠ <b>메모가 있는 분</b>과 <b>없는 분</b>을 둘 다 둔다. 2026-09-22 부터
+      소식은 그 분을 <b>읽어서</b> 고른다 — 읽을 것이 없으면 안 준다. 둘 다
+      없으면 「기사가 실린다」 도 「못 읽음이라 안 준다」 도 잴 수 없다. */
+   {id:'d1',who:'me',name:'홍길동A',region:'순천',src:'보장분석',stage:'TA',days:9,n:1,res:'부재',cAt:'',pAt:'',
+    memo:'실손 갱신 보험료 부담된다고 하심',last:'2026-09-15'},
    {id:'d2',who:'me',name:'홍길동B',region:'순천',src:'소개',stage:'미접촉',days:5,n:0,res:'미진행',cAt:'',pAt:''},
    {id:'d5',who:'me',name:'홍길동E',region:'광양',src:'개척',stage:'거절',days:20,n:2,res:'거절',cAt:'',pAt:''},
    {id:'d3',who:'me',name:'홍길동C',region:'순천',src:'일반',stage:'AP',days:3,n:2,res:'상담',cAt:'',pAt:''},
@@ -204,11 +208,27 @@ const SEED = (o) => `
   is(s3.mine.indexOf('홍길동C') < 0 && s3.mine.indexOf('홍길동D') < 0,
      '  AP·PC 는 <b>안 뽑는다</b> — 다 하고 나서 볼 분들이다');
 
-  console.log('\n[4] ②④ 에 <b>받아 둔 진짜 기사</b>가 실린다');
+  console.log('\n[4] ②④ 에 <b>받아 둔 진짜 기사</b>가 실린다 — 단 <b>읽힌 분께만</b>');
+  /* ── 2026-09-22 · 소식이 <b>한 분씩</b> 갈린다 ─────────────────────
+     사장님 말씀 「고객 정보를 읽어서 어떤 뉴스를 전달할지 … 잘못된 값을
+     입력 또는 추출하지 않도록」. 여태 다섯 분 모두에게 <b>같은 기사 한
+     건</b>이 갔다. 이제 그 분을 읽어서 고르고, <b>못 읽으면 안 준다</b>. */
   await jump(A.p, 1);
+  await A.p.evaluate(() => { HM_MSP.i = 0; hmMsPaint(); });   /* 메모가 있는 분(홍길동A) */
   const t2 = await txt(A.p);
-  is(t2.indexOf(NEWS[0].t) >= 0, '  ② 에 오늘 보낼 소식 제목이 그대로 — ' + NEWS[0].t.slice(0, 22) + '…');
+  is(t2.indexOf(NEWS[0].t) >= 0, '  ② 에 그 분 갈래의 기사 제목이 그대로 — ' + NEWS[0].t.slice(0, 22) + '…');
   is(t2.indexOf(NEWS[0].s) >= 0, '  <b>언론사</b>까지 적는다 (9번)');
+  is(/왜|적혀|메모/.test(t2) && t2.indexOf('실손 갱신') >= 0,
+     '  <b>왜 그 갈래인지</b> 적어 준다 — 사장님이 그 자리에서 맞는지 보셔야 한다 (1번)');
+  /* 읽을 것이 없는 분 — <b>아무 기사나 주지 않는다</b> */
+  await A.p.evaluate(() => { HM_MSP.i = 1; hmMsPaint(); });   /* 메모가 없는 분(홍길동B) */
+  const t2b = await txt(A.p);
+  is(/아직 읽을 것이 없습니다/.test(t2b),
+     '  읽을 것이 없으면 <b>그렇다고 적는다</b> — 여태는 아무 기사나 줬다 (1번)');
+  is(t2b.indexOf(NEWS[0].t) < 0 && t2b.indexOf(NEWS[1].t) < 0,
+     '  그때 <b>기사를 안 준다</b>');
+  is(/적어 주시면 읽힙니다/.test(t2b), '  <b>무엇을 채우면 읽히는지</b> 말한다');
+  await A.p.evaluate(() => { HM_MSP.i = 0; hmMsPaint(); });
   await jump(A.p, 3);
   const t4 = await txt(A.p);
   is(t4.indexOf(NEWS[0].t) >= 0 && t4.indexOf(NEWS[0].u) >= 0,

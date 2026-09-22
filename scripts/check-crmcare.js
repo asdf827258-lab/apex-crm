@@ -431,26 +431,39 @@ window.supabase={createClient:function(){
       { t: '종부세 개편안', u: 'https://x/2', s: '한경', d: '', cats: ['tax', 'realty'] },
       { t: '실손보험 개편', u: 'https://x/3', s: '매경', d: '', cats: ['ins'] }
     ];
-    CM.meta['v100'].fp = { f_ins: 100 };                 /* VIP → 세금 */
-    CM.meta['a29'].fp = { f_ins: 20, f_debt: 15000 };    /* 대출 있음 → 부동산 */
+    /* ── 2026-09-22 · <b>근거 없이 갈래를 안 만든다</b> ────────────────
+       사장님 말씀 「잘못된 값을 입력 또는 추출하지 않도록 정말 정밀하게」.
+       옛 규칙은 적힌 것이 없는 분을 전원 <b>보험</b>으로 보냈다 — 109명 중
+       105명이 보험이었고 그중 94명이 이 경우였다. 이제 <b>못 읽음</b>이다. */
+    CM.meta['v100'].fp = { f_ins: 100 };                 /* 설정한 기준 이상 → 세금 */
+    CM.meta['a29'].fp = { f_ins: 20, f_debt: 15000 };    /* 대출 <b>잔액만</b> → 못 읽음 */
     CM.meta['a30'].fp = { f_ins: 20, f_edu: 90 };        /* 교육비 → 지원금 */
-    CM.meta['a31'].fp = { f_ins: 20 };                   /* 보장이 비었다 → 보험 */
+    CM.meta['a31'].fp = { f_ins: 20 };                   /* 보장 칸이 <b>비었다</b> → 못 읽음 */
+    CM.meta['a32'] = CM.meta['a32'] || cmBlank();
+    CM.meta['a32'].fp = { c_cancer: '0', c_death: '0' }; /* 0 으로 <b>적었다</b> → 보험 */
+    CM.meta['a33'] = CM.meta['a33'] || cmBlank();
+    CM.meta['a33'].fp = { f_home: 60000, f_loan: 120 };  /* 집 + 대출 → 부동산 */
     var copied = [];
     var save = window.copyText; window.copyText = t => copied.push(t);
-    ccNews('v100'); ccNews('a31');
+    ccNews('v100'); ccNews('a32'); ccNews('a31');        /* 셋째는 <b>못 읽음</b>이라 안 복사돼야 한다 */
     window.copyText = save;
     return {
       vip: ccNewsCat('v100'), debt: ccNewsCat('a29'), edu: ccNewsCat('a30'), bare: ccNewsCat('a31'),
+      zero: ccNewsCat('a32'), home: ccNewsCat('a33'),
+      bareNeed: (ccFitOf('a31').need || []).length,
       copied: copied
     };
   });
-  ok(r.vip === 'tax', 'VIP 에게는 세금 소식을 고른다');
-  ok(r.debt === 'realty', '대출이 있으면 부동산 소식');
+  ok(r.vip === 'tax', '설정하신 기준 이상으로 내시는 분께는 세금 소식');
+  ok(r.debt === '', '<b>대출 잔액만으로 부동산이라 안 한다</b> — 주택담보인지 모른다 (1번)');
+  ok(r.home === 'realty', '거주 부동산이 <b>같이</b> 적혀 있으면 부동산 소식');
   ok(r.edu === 'help', '교육비가 있으면 지원금·혜택 소식');
-  ok(r.bare === 'ins', '보장이 비어 있으면 보험 소식');
-  ok(r.copied.length === 2, '두 번 눌렀으니 두 번 복사됐다');
-  ok(/종부세 개편안/.test(r.copied[0]), 'VIP 에게 갈 문구에 세금 기사가 담겼다');
-  ok(/실손보험 개편/.test(r.copied[1]), '보장이 빈 고객에게는 보험 기사가 담겼다');
+  ok(r.bare === '', '<b>보장 칸이 비어 있으면 못 읽음</b> — 여기로 94명이 샜다 (1번)');
+  ok(r.bareNeed > 0, '  <b>무엇을 채우면 읽히는지</b> 말한다');
+  ok(r.zero === 'ins', '0 으로 <b>적으신</b> 것은 읽는다 — 「모름」과 「0」은 다르다 (1번)');
+  ok(r.copied.length === 2, '<b>못 읽은 분께는 안 보낸다</b> — 세 번 눌러 두 번 복사됐다');
+  ok(/종부세 개편안/.test(r.copied[0]), '세금으로 읽힌 분께 세금 기사가 담겼다');
+  ok(/실손보험 개편/.test(r.copied[1]), '보험으로 읽힌 분께 보험 기사가 담겼다');
   ok(/고객님/.test(r.copied[0]) && !/라○○/.test(r.copied[0]),
     '문구에 고객 이름은 안 넣는다 — 「고객님」 으로만');
 
