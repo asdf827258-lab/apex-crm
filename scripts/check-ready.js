@@ -161,11 +161,23 @@ window.supabase={createClient:function(){
        <b>허용하신 폰</b>을 흉내 냅니다. 안 하면 「전부 채워도 100% 가 안 된다」
        가 되어, 다 하신 사장님께 영영 남은 것이 있다고 말하게 됩니다. */
     window.almCan = () => ({ sw: true, notif: true, push: true, ios: false, stand: true, perm: 'granted' });
+    /* 🔑 서버 열쇠·💼 직업도 <b>다 하신 상태</b>로 둔다 — 새 줄을 넣고 여기를
+       안 고치면 「전부 채워도 100% 가 안 된다」 가 되어, 다 하신 사장님께
+       영영 남은 것이 있다고 말하게 된다 (8번 — 헛것을 잡는 점검). */
+    window.CM = window.CM || {}; CM.loaded = true;
+    CM.meta = { a: { fp: { f_job: '순천시청 공무원' } }, b: { fp: { f_job: '자영업' } } };
     /* <b>사장님이 실제로 하시는 것</b>으로 새로 본다 — 고친 뒤 이 화면을
        다시 여는 것이다. rdLoad() 를 직접 부르면 「화면을 열면 기다리지 않고
        읽는다」 가 깨져도 이 점검은 모른다 (8번). */
     osReadyAfterRender();
   });
+  /* 열쇠가 성한 대답을 돌려주게 — 사장님이 Netlify 한 줄을 고치신 뒤다 */
+  await page.route('**/functions/push**', r =>
+    r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: true,
+      key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
+      live: { status: 200, msg: '' } }) }));
+  await page.evaluate(() => rdLoad(true));
   await page.waitForTimeout(900);
   v = await view();
   ok(v.no === 0 && v.warn === 0, '전부 채우면 남은 것이 0개가 된다');
@@ -189,6 +201,75 @@ window.supabase={createClient:function(){
   });
   ok(!blocked.allowed, '팀원에게는 열리지 않는다');
   ok(/대표만/.test(blocked.toast), '왜 안 열리는지 말해 준다');
+
+  /* ── 🔑 <b>서버 열쇠 줄</b> ─────────────────────────────────────────
+     2026-09-22. 사장님 화면에 「401 · Invalid API key」 가 떴는데, 앱은
+     그것을 「로그인을 다시 하세요」 로 옮겨 적었습니다. 사장님은 앱을
+     껐다 켜기를 되풀이하셨고, <b>막힌 곳은 아무 화면에도 안 보였습니다</b>.
+     그 열쇠 하나가 막히면 새벽 5시 AI 작업·밤 작업·브리핑·시세·폰 알람이
+     <b>통째로</b> 멈춥니다. 여기서 보이게 하고, <b>사장님 탓을 하지 않는지</b>
+     그리고 <b>열쇠 글자가 새지 않는지</b>를 잽니다 (1·8·10번).            */
+  const SECRET = 'eyJhbGciOiJIUzI1NiJ9.SECRET_DO_NOT_LEAK.sig';
+  const setDiag = async (body) => {
+    await page.unroute('**/functions/push**').catch(() => {});
+    await page.route('**/functions/push**', r =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
+    await page.evaluate(() => rdLoad(true));
+    await page.waitForTimeout(700);
+  };
+  const rowOf = (k) => page.evaluate((kk) => {
+    const x = rdAuto().filter(r => r.k === kk)[0] || null;
+    return x ? { st: x.st, now: x.now, how: x.how, t: x.t } : null;
+  }, k);
+
+  await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: false,
+                  key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
+                  live: { status: 401, msg: 'Invalid API key' } });
+  let K = await rowOf('sbkey');
+  ok(!!K, '🔑 <b>서버 열쇠</b> 줄이 출발 점검에 선다 — 여태 아무 화면에도 없었다');
+  ok(K && K.st === 'no', '  열쇠가 거절당하면 <b>「남음」</b> 으로 뜬다 · ' + (K && K.now));
+  ok(K && !/로그인/.test(K.now + ' ' + K.how),
+     '  <b>「로그인을 다시 하세요」 라고 안 한다</b> — 그래 봐야 안 고쳐진다 (1번)');
+  ok(K && /SUPABASE_SERVICE_ROLE_KEY/.test(K.how) && /Netlify/.test(K.how),
+     '  <b>어디를 고치는지</b> 그대로 적는다 — Netlify 의 그 한 줄');
+  ok(K && /새벽 5시|밤 작업|브리핑/.test(K.how),
+     '  <b>같이 멈추는 것</b>도 말한다 — 알람만의 문제가 아니다');
+
+  await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: false,
+                  key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'someotherproj', refOk: false },
+                  live: { status: 401, msg: 'Invalid API key' } });
+  K = await rowOf('sbkey');
+  ok(K && /다른 프로젝트/.test(K.now),
+     '<b>다른 프로젝트 열쇠</b>를 가려낸다 — 같은 말이 와도 고칠 법이 다르다 · ' + (K && K.now));
+
+  await setDiag({ url: 'miakdhxtqofpndtlyzxa.supabase.co', anon: true,
+                  key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'miakdhxtqofpndtlyzxa', refOk: true },
+                  live: { status: 200, msg: '' } });
+  K = await rowOf('sbkey');
+  ok(K && K.st === 'ok', '<b>성하면 「됨」</b> 으로 뜬다 — 헛것을 안 잡는다 (8번) · ' + (K && K.now));
+
+  /* 열쇠 글자가 <b>화면에 새는지</b> — 서버가 실수로 실어 보내도 여기서 걸린다 */
+  await setDiag({ url: 'x.supabase.co', anon: false, key_RAW: SECRET,
+                  key: { kind: 'jwt', len: 218, role: 'service_role', ref: 'x', refOk: true },
+                  live: { status: 401, msg: 'Invalid API key' } });
+  await page.evaluate(() => go('ready'));
+  await page.waitForTimeout(600);
+  const leak = await page.evaluate(() => (document.getElementById('rdPane') || {}).textContent || '');
+  ok(leak.indexOf('SECRET_DO_NOT_LEAK') < 0,
+     '<b>열쇠 글자는 화면에 한 자도 안 뜬다</b> (10번) — 서버가 실어 보내도 여기서 안 그린다');
+
+  /* 💼 <b>직업 한 줄</b> — 소식을 고르는 데 값이 제일 큰 칸이다 */
+  await page.evaluate(() => {
+    window.CM = window.CM || {}; CM.loaded = true;
+    CM.meta = { a: { fp: { f_job: '순천시청 공무원' } }, b: { fp: {} }, c: { fp: { f_job: '' } } };
+  });
+  const J = await rowOf('job');
+  ok(!!J, '💼 <b>고객 직업 한 줄</b> 줄이 선다');
+  ok(J && /1 \/ 3/.test(J.now), '  <b>몇 분이 적혀 있는지</b> 센다 · ' + (J && J.now));
+  ok(J && J.st === 'warn', '  다 안 적혔으면 <b>「확인」</b> — 0명이면 「남음」');
+  ok(!!(J && /짐작/.test(J.how)),
+     '  <b>아무 직업이나 읽는 게 아니라고</b> 미리 말한다 — 적어 놓고 안 읽히면 속은 기분이다 (1번)');
+  await page.unroute('**/functions/push**').catch(() => {});
 
   ok(errs.length === 0, '자바스크립트 오류 없음' + (errs.length ? ' — ' + errs.join(' / ') : ''));
 
