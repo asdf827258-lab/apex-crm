@@ -302,6 +302,24 @@ const SEED = (o) => `
        '  <b>🎣 이 담보로 미끼 레이더</b> 단추가 선다');
     is(E.one.length >= 1 && /일반암|비급여/.test(E.one[0].mk || ''),
        '  그 단추가 <b>담보 이름을 그대로</b> 들고 간다 — ' + (E.one[0] ? E.one[0].mk : ''));
+    /* ★ <b>안 받아 온 것을 0 으로 적지 않는다</b> (1번) — 이 줄이 없으면
+       이 절은 「모름」을 한 번도 안 재는 점검이 된다. 걱본에는 세 숫자가
+       다 들어 있어, 그대로만 재면 0 으로 깔아도 초록불이었다 (8번). */
+    const NUL = await A.p.evaluate(() => {
+      const keepR = CHKS.rows, keepC = AR.cliRows;
+      CHKS.rows = null; AR.cliRows = null;
+      const n = hmChkEye();
+      const el = document.createElement('div'); el.innerHTML = hmChkEyeHtml();
+      const t = el.textContent || '';
+      CHKS.rows = keepR; AR.cliRows = keepC;
+      return { n: n, t: t };
+    });
+    is(NUL.n.cli === null && NUL.n.read === null,
+       '  아직 안 받아 왔으면 <b>null(모름)</b> 이다 — 0 이 아니다');
+    is(/—/.test(NUL.t) && !/고객 카드 0명/.test(NUL.t),
+       '  화면에도 <b>「—」</b> 로 적는다 — 「고객 카드 0명」은 「고객이 없다」는 뜻이다 (1번)');
+    is(/안 받아 온 것/.test(NUL.t),
+       '  <b>「—」가 무슨 뜻인지</b>까지 적는다 — 「' + NUL.t.replace(/\s+/g, ' ').slice(-46) + '」');
   }
   /* ④ <b>홈은 갈래를 안 가른다.</b> 되돌려 보면, 홈에 갈래 표를 만들어 넣는
      순간 여기가 빨간불이 됩니다 — 두 곳이 다른 답을 하는 날을 막습니다 (5번). */
